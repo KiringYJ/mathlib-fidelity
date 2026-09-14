@@ -6,6 +6,7 @@ Authors: David Loeffler
 module
 
 public import Mathlib.Algebra.Group.AddChar
+public import Mathlib.LinearAlgebra.Eigenspace.Charpoly
 public import Mathlib.LinearAlgebra.Matrix.Charpoly.Disc
 public import Mathlib.LinearAlgebra.Matrix.GeneralLinearGroup.Defs
 
@@ -88,14 +89,9 @@ section Field
 
 variable {K : Type*} [Field K] {m : Matrix (Fin 2) (Fin 2) K}
 
-/-- The total scalar expression `m.trace / 2` for a `2 × 2` matrix. Unlike
-`parabolicEigenvalue`, this is defined for every matrix and is not presented as an eigenvalue in
-characteristic two. -/
-def halfTrace (m : Matrix (Fin 2) (Fin 2) K) : K := m.trace / 2
-
 lemma sub_scalar_sq_eq_discr [NeZero (2 : K)] :
-    (m - scalar _ m.halfTrace) ^ 2 = scalar _ (m.discr / 4) := by
-  simp only [halfTrace, scalar_apply, trace_fin_two, discr_fin_two, trace_fin_two,
+    (m - scalar _ (m.trace / 2)) ^ 2 = scalar _ (m.discr / 4) := by
+  simp only [scalar_apply, trace_fin_two, discr_fin_two, trace_fin_two,
     det_fin_two, sq, (by norm_num : (4 : K) = 2 * 2)]
   ext i j
   fin_cases i <;>
@@ -103,17 +99,53 @@ lemma sub_scalar_sq_eq_discr [NeZero (2 : K)] :
   · simp [Matrix.mul_apply]
     field
 
-/-- The unique eigenvalue of a parabolic `2 × 2` matrix. The proof is an explicit final argument;
-the result is the ordinary scalar `K`, definitionally equal to `m.halfTrace`. -/
-def parabolicEigenvalue [NeZero (2 : K)] (m : Matrix (Fin 2) (Fin 2) K)
-    (_hm : m.IsParabolic) : K := m.halfTrace
+/-- Any two eigenvalues of a parabolic `2 × 2` matrix are equal. This does not assert that an
+eigenvalue exists over the coefficient field. -/
+lemma IsParabolic.eigenvalue_unique (hm : m.IsParabolic) {μ ν : K}
+    (hμ : Module.End.HasEigenvalue m.toLin' μ) (hν : Module.End.HasEigenvalue m.toLin' ν) :
+    μ = ν := by
+  rw [Module.End.hasEigenvalue_iff_isRoot_charpoly, Matrix.charpoly_toLin', charpoly_fin_two,
+    IsRoot.def] at hμ hν
+  simp only [eval_add, eval_sub, eval_pow, eval_X, eval_C, eval_mul] at hμ hν
+  have hdisc : m.trace ^ 2 = 4 * m.det := by
+    simpa [discr_fin_two, sub_eq_zero] using hm.2
+  by_contra hne
+  have hfactor : (μ - ν) * (μ + ν - m.trace) = 0 := by
+    linear_combination hμ - hν
+  have hsum : μ + ν = m.trace := by
+    rcases mul_eq_zero.mp hfactor with h | h
+    · exact (hne (sub_eq_zero.mp h)).elim
+    · exact sub_eq_zero.mp h
+  have hdet : μ * ν = m.det := by
+    rw [← hsum] at hμ
+    linear_combination -hμ
+  have hs : (μ - ν) ^ 2 = 0 := by
+    rw [← hsum, ← hdet] at hdisc
+    linear_combination hdisc
+  exact hne (sub_eq_zero.mp (sq_eq_zero_iff.mp hs))
 
-@[simp] lemma parabolicEigenvalue_eq_halfTrace [NeZero (2 : K)] (hm : m.IsParabolic) :
-    m.parabolicEigenvalue hm = m.halfTrace := rfl
+/-- Half the trace is an eigenvalue of a parabolic `2 × 2` matrix when two is nonzero. -/
+lemma IsParabolic.hasEigenvalue_trace_div_two [NeZero (2 : K)] (hm : m.IsParabolic) :
+    Module.End.HasEigenvalue m.toLin' (m.trace / 2) := by
+  rw [Module.End.hasEigenvalue_iff_isRoot_charpoly, Matrix.charpoly_toLin', charpoly_fin_two,
+    IsRoot.def]
+  simp only [eval_add, eval_sub, eval_pow, eval_X, eval_C, eval_mul]
+  have hdisc : m.trace ^ 2 = 4 * m.det := by
+    simpa [discr_fin_two, sub_eq_zero] using hm.2
+  field_simp
+  rw [hdisc]
+  ring
 
-lemma IsParabolic.sub_eigenvalue_sq_eq_zero [NeZero (2 : K)] (hm : m.IsParabolic) :
-    (m - scalar _ (m.parabolicEigenvalue hm)) ^ 2 = 0 := by
-  simp [parabolicEigenvalue_eq_halfTrace, -scalar_apply, sub_scalar_sq_eq_discr, hm.2]
+/-- A scalar is an eigenvalue of a parabolic `2 × 2` matrix if and only if it is half the trace,
+when two is nonzero. -/
+lemma IsParabolic.hasEigenvalue_iff_eq_trace_div_two [NeZero (2 : K)] (hm : m.IsParabolic)
+    {μ : K} : Module.End.HasEigenvalue m.toLin' μ ↔ μ = m.trace / 2 :=
+  ⟨fun hμ ↦ hm.eigenvalue_unique hμ hm.hasEigenvalue_trace_div_two,
+    fun hμ ↦ hμ ▸ hm.hasEigenvalue_trace_div_two⟩
+
+lemma IsParabolic.sub_trace_div_two_sq_eq_zero [NeZero (2 : K)] (hm : m.IsParabolic) :
+    (m - scalar _ (m.trace / 2)) ^ 2 = 0 := by
+  simp [-scalar_apply, sub_scalar_sq_eq_discr, hm.2]
 
 /-- Characterization of parabolic elements: they have the form `a + m` where `a` is scalar and
 `m` is nonzero and nilpotent. -/
@@ -121,7 +153,7 @@ lemma isParabolic_iff_exists [NeZero (2 : K)] :
     m.IsParabolic ↔ ∃ a n, m = scalar _ a + n ∧ n ≠ 0 ∧ n ^ 2 = 0 := by
   constructor
   · exact fun hm ↦ ⟨_, _, (add_sub_cancel ..).symm, sub_ne_zero.mpr fun h ↦ hm.1 ⟨_, h.symm⟩,
-      hm.sub_eigenvalue_sq_eq_zero⟩
+      hm.sub_trace_div_two_sq_eq_zero⟩
   · rintro ⟨a, n, hm, hn0, hnsq⟩
     constructor
     · refine fun ⟨b, hb⟩ ↦ hn0 ?_
@@ -132,7 +164,7 @@ lemma isParabolic_iff_exists [NeZero (2 : K)] :
         rw [← map_zero (scalar (Fin 2)), scalar_inj, div_eq_zero_iff] at this
         have : (4 : K) ≠ 0 := by simpa [show (4 : K) = 2 ^ 2 by norm_num] using NeZero.ne _
         tauto
-      rw [← sub_scalar_sq_eq_discr, hm, halfTrace, trace_add, scalar_apply, trace_diagonal]
+      rw [← sub_scalar_sq_eq_discr, hm, trace_add, scalar_apply, trace_diagonal]
       simp [mul_div_cancel_left₀ _ (NeZero.ne (2 : K)),
         (Matrix.isNilpotent_trace_of_isNilpotent ⟨2, hnsq⟩).eq_zero, hnsq]
 
@@ -218,16 +250,6 @@ variable {R K : Type*} [CommRing R] [Field K]
 /-- Synonym of `Matrix.IsParabolic`, for dot-notation. -/
 abbrev IsParabolic (g : GL (Fin 2) R) : Prop := g.val.IsParabolic
 
-/-- Half the trace of a general linear group element, for dot-notation. -/
-abbrev halfTrace (g : GL (Fin 2) K) : K := g.val.halfTrace
-
-/-- The unique eigenvalue of a parabolic general linear group element, for dot-notation. -/
-abbrev parabolicEigenvalue [NeZero (2 : K)] (g : GL (Fin 2) K) (hg : IsParabolic g) : K :=
-  g.val.parabolicEigenvalue hg
-
-@[simp] lemma parabolicEigenvalue_eq_halfTrace {g : GL (Fin 2) K} [NeZero (2 : K)]
-    (hg : IsParabolic g) : g.parabolicEigenvalue hg = g.halfTrace := rfl
-
 @[simp] lemma isParabolic_conj_iff (g h : GL (Fin 2) R) :
     IsParabolic (g * h * g⁻¹) ↔ IsParabolic h := by
   simp [IsParabolic]
@@ -264,13 +286,10 @@ lemma fixpointPolynomial_eq_zero_iff {g : GL (Fin 2) R} :
   · rintro ⟨a, ha⟩
     simp [← ha]
 
-lemma parabolicEigenvalue_ne_zero {g : GL (Fin 2) K} [NeZero (2 : K)] (hg : IsParabolic g) :
-    g.parabolicEigenvalue hg ≠ 0 := by
+lemma IsParabolic.trace_ne_zero {g : GL (Fin 2) K} [NeZero (2 : K)] (hg : IsParabolic g) :
+    g.val.trace ≠ 0 := by
   have : g.val.trace ^ 2 = 4 * g.val.det := by simpa [sub_eq_zero, discr_fin_two] using hg.2
-  change g.val.parabolicEigenvalue hg ≠ 0
-  rw [Matrix.parabolicEigenvalue_eq_halfTrace, Matrix.halfTrace, div_ne_zero_iff,
-    eq_true_intro (two_ne_zero' K), and_true,
-    Ne, ← sq_eq_zero_iff, this, show (4 : K) = 2 ^ 2 by norm_num, mul_eq_zero,
+  rw [Ne, ← sq_eq_zero_iff, this, show (4 : K) = 2 ^ 2 by norm_num, mul_eq_zero,
     sq_eq_zero_iff, not_or]
   exact ⟨NeZero.ne _, g.det_ne_zero⟩
 

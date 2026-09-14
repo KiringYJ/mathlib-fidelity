@@ -63,6 +63,14 @@ manual work around them.
 - Prefer standard mathematical concepts, notation, and proof decomposition at
   the public surface. Equivalent expressibility through implementation details
   is not an equivalent user interface.
+- Choose the mathematically faithful and natural public interface before
+  minimizing imports or dependency weight. A heavier import is not by itself an
+  API defect when it supplies the standard abstraction that the statement
+  actually uses. Measure build, elaboration, and maintenance costs only after
+  fixing the mathematical contract. Resolve a genuine import cycle or a
+  demonstrated unacceptable cost by refactoring module boundaries or extracting
+  shared substrate, not by weakening the public mathematics or replacing it
+  with an implementation proxy.
 - Let smart constructors, local automation, and closure lemmas construct and
   propagate routine evidence. When the evidence cannot be established, fail
   with a domain-specific explanation; never fall back to a totalized operation
