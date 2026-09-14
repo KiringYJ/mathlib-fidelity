@@ -1,20 +1,26 @@
 # Mathematical fidelity and API hygiene backlog
 
-This file records public mathematical interfaces that should be audited or migrated under the
-strict-domain, representation, public-notation, and function-presentation policies in
-`FORK_DESIGN.md`.  It is an
-implementation backlog, not a claim that Lean is unsound and not a claim that every total
-implementation or custom notation is defective.  A documented fallback is still non-strict when
-the ordinary public operation erases its mathematical domain.  An explicitly named/default-taking
-extension is not a *silent-totalization* defect, but that fact alone does not make it
-mathematician-facing: it can still be the wrong primary interface if papers would instead state a
-domain condition, work on a constrained object, or pass to an a.e.-equivalence class.  An
-unreachable implementation fallback is acceptable only when the public boundary proves it
-unreachable and exposes the actual mathematical object.
+This file records completed migrations and unresolved audit candidates under the strict-domain,
+representation, public-notation, and function-presentation policies in `FORK_DESIGN.md`.  A checked
+item records a completed migration or an explicit classification decision.  An unchecked item is
+only a hypothesis to investigate: neither its diagnosis nor its proposed replacement is approved
+until it passes the fidelity gate below.  Imperative wording in a candidate heading names the
+suspected problem; it does not authorize that particular repair.
 
-The list is sorted by estimated effort for a coherent migration, from smallest to largest.  Only the
-bucket order is asserted; entries within one bucket are not finely ranked without a dependency
-prototype.  Effort does not measure mathematical importance:
+Mathematical fidelity is not the same as partiality or proof-carrying syntax.  A total operation may
+be a genuine extended invariant, an order-theoretic operation, or a choice operator whose input
+carries existence evidence and whose theorems prove the specifying property.  A no-witness branch
+is still a fallback governed by the transitional-only rule below.  Conversely, adding a proof
+argument proves only that the chosen hypothesis is sufficient; it does not show that the hypothesis
+is the exact mathematical domain.
+Even a coherent total operation is not faithful under an ordinary name or notation when that surface
+invites a different standard mathematical reading.  Notation, discoverability, theorem duplication,
+and tactic transparency are secondary API-quality questions, but names and notation become fidelity
+issues when they obscure the represented object or change how a statement is naturally read.
+
+The list is grouped by estimated effort for investigation, prototyping, and any migration that is
+later accepted.  Bucket placement is provisional; entries within one bucket are not finely ranked
+without a dependency prototype.  Effort does not measure mathematical importance:
 
 - **S**: a bounded declaration or theorem family with an existing strict substrate; normally a few
   files.
@@ -22,18 +28,40 @@ prototype.  Effort does not measure mathematical importance:
 - **L**: a cross-module API with notation, instances, or many downstream consumers; stage the work.
 - **XL**: foundational hierarchy or ubiquitous notation; prototype first and migrate in slices.
 
-For every strict-partiality migration in the S--XL sections below:
+Before promoting an unchecked candidate to an implementation task:
 
-1. expose definedness through an input type, proof argument, or explicit partiality;
-2. give any retained total extension a name that identifies its fallback;
-3. audit theorem statements that currently succeed on the invalid-domain branch;
-4. preserve a proved bridge on the valid domain and record interface strictness separately from
-   implementation strictness;
-5. add negative tests showing that strict code cannot recover the old fallback, including after
-   simplification; and
-6. run targeted builds plus the affected downstream tests at the final source state.
+1. state the intended object by a specifying or universal property, not by the current
+   implementation or proposed carrier;
+2. determine its exact domain and separate necessary conditions from convenient sufficient
+   hypotheses supplied by typeclasses or automation;
+3. classify the current total behavior as a genuine total invariant, explicitly sourced convention,
+   choice/representative, checked projection, or semantically unsupported fallback; a fallback does
+   not remain as a permanent public extension; when identifiable mathematical literature uses the
+   same total convention for the same inputs and degenerate cases, audit it as an independent total
+   mathematical object with its own specifying properties; record the bibliographic citation and
+   exact definition, theorem, or page--a more explicit name, source-code docstring, or convenient
+   theorem is not enough;
+4. test positive, negative, degenerate, characteristic-sensitive, and nonunique examples so that a
+   strict facade does not exclude valid mathematics or manufacture canonicity;
+5. audit whether the proposed name and notation communicate that exact object without inviting a
+   standard but different reading, then choose among a relation, extended-valued invariant,
+   canonical value, representative, subtype, proof argument, or explicit partiality type; and
+6. prototype real consumers and record the candidate as accepted, reframed, rejected, or still
+   unknown before scheduling a migration.
 
-## S -- bounded corrections and strict facades
+For an accepted strict-partiality migration, preserve a proved bridge on the valid domain and remove
+the fallback from the public surface rather than merely renaming it.  A total extension may remain
+only as a private transitional implementation helper when the public boundary proves that its
+fallback is unreachable or that the result is independent of it.  Record its consumers and removal
+condition, and remove it before declaring the migration complete.  Audit statements that exploit the
+branch, add negative tests for the actual boundary, and run the affected downstream checks at the
+final source state.
+
+This transitional-only rule is the canonical policy in `FORK_DESIGN.md`.  A literature-supported
+total object is reviewed on its own mathematics; it is not a permanent extension of the partial
+operation.
+
+## S -- bounded candidates and completed corrections
 
 - [x] **Correct the stale `Measure.map` module overview.**
   The overview now describes pushforward only along an a.e.-measurable map and no longer documents
@@ -67,12 +95,14 @@ For every strict-partiality migration in the S--XL sections below:
 - [ ] **Put `ArchimedeanClass.stdPart` on finite elements.**
   `Mathlib/Algebra/Order/Ring/StandardPart.lean:273` maps infinite inputs to zero, conflating them
   with infinitesimals in results such as `stdPart_eq_zero`.  Use the existing `FiniteElement K`
-  domain and retain any ambient zero extension under an explicit name.
+  domain.  Remove the ambient zero extension from the public surface unless matching mathematical
+  literature is found; if implementation still needs it, keep it private behind finite-input proofs.
 
 - [ ] **Require `1 < q` for `ArithmeticFunction.ofPowerSeries`.**
   `Mathlib/NumberTheory/ArithmeticFunction/LFunction.lean:66` uses the constant coefficient when
   `q ≤ 1`; algebra-hom laws intentionally exploit that branch.  Put the injective-power
-  hypothesis in the constructor and name any constant-coefficient extension explicitly.
+  hypothesis in the constructor.  Do not export the constant-coefficient branch as a replacement
+  operation without literature giving it that mathematical interpretation.
 
 - [ ] **Give `Nat.maxPrimeFac` its actual domain.**
   `Mathlib/Data/Nat/MaxPrimeFac.lean:39` returns zero at zero and one at one, neither of which is a
@@ -82,15 +112,17 @@ For every strict-partiality migration in the S--XL sections below:
   `FiniteMeasure.normalize` in
   `Mathlib/MeasureTheory/Measure/ProbabilityMeasure.lean:468` returns an arbitrary Dirac probability
   measure when the input measure has mass zero.  Put `μ ≠ 0` at the ordinary normalization boundary;
-  retain any arbitrary-Dirac extension under an explicit name.
+  do not retain the arbitrary-Dirac branch as a public operation.  A private implementation helper is
+  acceptable only when nonzero-mass evidence makes the branch unreachable.
 
 - [ ] **Require primitivity for `DirichletCharacter.rootNumber`.**
   `Mathlib/NumberTheory/LSeries/DirichletContinuation.lean:272` exposes the primitive-character
   Gauss-sum formula for every character and documents the nonprimitive result as junk.  Require
-  `IsPrimitive χ` for the ordinary root number, or name the unrestricted expression as a formula.
-  Do not conflate it with the separate root number obtained from an induced primitive character.
+  `IsPrimitive χ` for the ordinary root number.  Keep the unrestricted expression public as a
+  separate Gauss-sum formula only if literature uses it as such; otherwise keep it private.  Do not
+  conflate it with the separate root number obtained from an induced primitive character.
 
-## M -- subsystem migrations
+## M -- subsystem audit candidates
 
 - [ ] **Make finite multiplicity a checked projection.**
   `Mathlib/RingTheory/Multiplicity.lean:47` defines `multiplicity` as
@@ -113,6 +145,16 @@ For every strict-partiality migration in the S--XL sections below:
   not exist.  Require `p ≠ 0` for finite root multisets and finite multiplicities, retaining infinity
   where appropriate.  Ordinary set-valued root loci may remain defined for arbitrary polynomials.
 
+- [ ] **Audit the zero-polynomial convention in `Polynomial.natDegree`.**
+  `Polynomial.degree` and `Polynomial.natDegree` in
+  `Mathlib/Algebra/Polynomial/Degree/Defs.lean:48` and `:52` respectively retain `⊥` and project the
+  zero polynomial to zero.  The different name and documentation identify a natural-valued
+  projection, but they do not establish that the zero convention is standard mathematical usage.
+  Find literature using this convention before retaining it as a public invariant; otherwise
+  require nonzeroness at the natural-valued boundary and keep the projection fallback private.
+  Audit actual theorem statements rather than treating every internal use as paper-facing degree
+  notation.
+
 - [ ] **Make scheme order of vanishing carry its point and function domains.**
   `AlgebraicGeometry.Scheme.ord` in `Mathlib/AlgebraicGeometry/OrderOfVanishing.lean:52` returns
   zero for the zero rational function and for points not of codimension one.  Reuse `ordHom` for the
@@ -126,8 +168,8 @@ For every strict-partiality migration in the S--XL sections below:
 
 - [ ] **Require injectivity for `LinearMap.leftInverse`.**
   `Mathlib/LinearAlgebra/Basis/VectorSpace.lean:266` returns the zero map for a noninjective linear
-  map.  Make the constructor consume injectivity (or splitting data) and explicitly name any
-  zero-default extension.
+  map.  Make the constructor consume injectivity or splitting data, and remove the zero-default
+  extension from the public surface.
 
 - [ ] **Bundle admissible root pairs for root-chain data.**
   `RootPairing.chainTopCoeff`, `chainBotCoeff`, `chainTopIdx`, and `chainBotIdx` in
@@ -144,13 +186,19 @@ For every strict-partiality migration in the S--XL sections below:
 - [ ] **Make Newton iteration preserve derivative invertibility.**
   `Polynomial.newtonMap` in `Mathlib/Dynamics/Newton.lean:44` returns its input when the derivative
   value is not a unit, creating spurious fixed points.  Require unit evidence for a step and design
-  iteration around propagation or explicit failure; keep the identity extension under its own name.
+  iteration around propagation or explicit failure.  Do not expose the identity fallback as a
+  Newton operation without matching literature.
 
-- [ ] **Put periods and periodic orbits on periodic points.**
-  `Function.minimalPeriod` and `Function.periodicOrbit` in
-  `Mathlib/Dynamics/PeriodicPts/Defs.lean:245` and `:401` return zero and the empty cycle for a
-  nonperiodic point.  Use a periodic-point input for ordinary period/orbit names; migrate the
-  inherited `MulAction.period` convention too.
+- [ ] **Give the zero return-time generator a literature-supported mathematical name.**
+  `Function.minimalPeriod` in `Mathlib/Dynamics/PeriodicPts/Defs.lean:245` is zero at a nonperiodic
+  point, but this is not an arbitrary failure value: `isPeriodicPt_iff_minimalPeriod_dvd` at
+  line 359 identifies it as the generator of all return times, including the submonoid `{0}` for a
+  nonperiodic point.  The divisibility theorem shows that the total generator carries information,
+  but not that it belongs in the public API.  Find literature using zero with this object and
+  convention; otherwise keep the generator private and put `minimalPeriod` on periodic points.
+  Likewise, `periodicOrbit` at line 401 uses the empty cycle to detect nonperiodicity.  Retain that
+  total classifier publicly only with matching literature evidence; otherwise keep it private and
+  expose only the actual orbit of a periodic point.
 
 - [ ] **Use extended graph distance and girth until finiteness is proved.**
   `SimpleGraph.dist` in `Mathlib/Combinatorics/SimpleGraph/Metric.lean:206` maps unreachable pairs
@@ -170,11 +218,19 @@ For every strict-partiality migration in the S--XL sections below:
 - [ ] **Give `Nat.log` and `Nat.clog` their extremal domains.**
   `Mathlib/Data/Nat/Log.lean:62` and `:335` accept bases at most one and other inputs for which the
   advertised largest/least exponent characterization fails.  Encode the precise base and argument
-  conditions; preserve any computational defaults under explicit names.
+  conditions.  Keep defaulting recursion private unless literature defines the same total arithmetic
+  functions on those degenerate inputs.
 
-- [ ] **Make `Nat.findGreatest` report absence.**
-  `Mathlib/Data/Nat/Find.lean:165` returns zero when no bounded witness satisfies the predicate.
-  Require existence, return `Option ℕ`, or rename the defaulting search.
+- [ ] **Make `Nat.findGreatest` return evidence or explicit absence.**
+  `Mathlib/Data/Nat/Find.lean:162` defines it as the largest bounded witness, or zero when none
+  exists.  Thus zero can mean either an actual greatest witness when `P 0` holds or absence when it
+  does not; the result alone does not distinguish the cases.  This is a primary mathematical
+  workflow, not merely an internal search: `ruzsaSzemerediNumber` in
+  `Mathlib/Combinatorics/Extremal/RuzsaSzemeredi.lean:50` and `mulRothNumber` in
+  `Mathlib/Combinatorics/Additive/AP/Three/Defs.lean:262` are mathematical extrema defined through
+  it, and their specification proofs explicitly supply a witness.  Make that existence evidence an
+  input to a proof-carrying greatest-witness operation, migrate those consumers, and keep the
+  defaulting recursion private unless literature supports this exact zero-sentinel convention.
 
 - [ ] **Require eventual constancy for monotone-sequence limits.**
   `monotonicSequenceLimitIndex` and `monotonicSequenceLimit` in
@@ -195,14 +251,18 @@ For every strict-partiality migration in the S--XL sections below:
   proof-carrying `coordChangeHomeomorph` at line 795 is the existing strict substrate.  The analogous
   `coordChangeL` in `Mathlib/Topology/VectorBundle/Basic.lean:266` returns the identity outside the
   overlap.  Make the ordinary coordinate-change operations take overlap evidence or a point in the
-  overlap, and keep total representatives only under names that identify their implementation role.
-  Preserve technical local-map representatives such as trivialization inverses when all exported
-  statements prove that their values outside the base set are irrelevant.
+  overlap.  Keep ambient representatives private, including technical trivialization inverses, and
+  only when every exported statement proves that values outside the base set are irrelevant.
 
-- [ ] **Make conditional probability require a normalizable event.**
+- [ ] **Identify the exact event contract for conditional probability.**
   `ProbabilityTheory.cond` in `Mathlib/Probability/ConditionalProbability.lean:76` exposes
-  `(μ s)⁻¹ • μ.restrict s` as `μ[· | s]` for every set.  Require measurability and
-  `0 < μ s < ∞`, or explicitly identify the normalization extension.
+  `(μ s)⁻¹ • μ.restrict s` as `μ[· | s]` for every set.  Positive finite mass alone makes the result
+  a probability measure (`cond_isProbabilityMeasure_of_finite` at line 154), while concentration on
+  the intended event is available under the weaker completion-stable condition
+  `NullMeasurableSet s μ` (`ae_cond_mem₀` at line 196).  Do not impose `MeasurableSet s` as the
+  exact domain.  Decide separately whether arbitrary non-null-measurable sets should mean
+  conditioning on `toMeasurable μ s`; that public interpretation also requires matching literature.
+  Otherwise expose conditioning only on the validated event domain.
 
 - [ ] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
   `ContinuousMap.mkD` in `Mathlib/Topology/ContinuousMap/Basic.lean:320` honestly takes an explicit
@@ -213,8 +273,8 @@ For every strict-partiality migration in the S--XL sections below:
   instead: an a.e.-continuous family determines an a.e.-class of `C(Y, E)`-valued maps, independent
   of the representative on the null set.  Carry a.e. continuity at that boundary and separately
   require the strong measurability and integrability used downstream; quotienting alone does not
-  prove them.  Keep `mkD` only as an explicitly technical representative constructor if still needed
-  behind that boundary.
+  prove them.  If implementation still needs `mkD`, keep it private behind that boundary so its
+  fallback cannot appear in public theorem statements.
 
 - [ ] **Prevent impossible regularity requests from becoming zero operators.**
   `TestFunction.fderivCLM`, `lineDerivCLM`, and supported-map derivatives in
@@ -227,10 +287,14 @@ For every strict-partiality migration in the S--XL sections below:
   `toFun` is zero when the original domain is not dense.  The output partiality does not encode this
   missing construction hypothesis; use dense-domain evidence or the adjoint relation.
 
-- [ ] **Require uniform continuity for `CauchyFilter.extend`.**
+- [ ] **Give completion extension its full existence and uniqueness contract.**
   `Mathlib/Topology/UniformSpace/Completion.lean:224` evaluates at an arbitrarily selected point
-  when the function is not uniformly continuous.  Make uniform continuity part of the extension
-  input and name any arbitrary extension explicitly.
+  when the function is not uniformly continuous.  Uniform continuity removes that branch but does
+  not by itself make a continuous extension into the original codomain exist: the continuity
+  theorem at line 242 also assumes `CompleteSpace β`, and uniqueness needs the relevant separation
+  hypothesis.
+  Use completeness as a convenient sufficient interface or carry exact pointwise limit
+  existence/uniqueness; do not present uniform continuity alone as the mathematical domain.
 
 - [ ] **Make vector-measure products and densities conditional constructions.**
   `VectorMeasure.prod` in `Mathlib/MeasureTheory/VectorMeasure/Prod.lean:52` chooses zero when no
@@ -242,19 +306,24 @@ For every strict-partiality migration in the S--XL sections below:
   `Mathlib/InformationTheory/KullbackLeibler/Basic.lean:57` accepts arbitrary measures although its
   mass correction is justified for finite measures; for example, zero against an infinite-mass
   measure collapses to zero through `ν.real univ`.  Either restrict the public divergence to finite
-  measures or specify and verify a genuine infinite-measure extension before migrating theorems.
+  measures or specify and verify a literature-supported infinite-measure definition before
+  migrating theorems.
 
 - [ ] **Make `LinearMap.index` carry Fredholm-style finiteness.**
   `Mathlib/Algebra/Module/LinearMap/Index.lean:40` subtracts natural `finrank`s of kernel and
   cokernel without finite-rank hypotheses.  State the appropriate finiteness assumptions and audit
   the intended general-ring scope.
 
-- [ ] **Give Euler characteristic both required finiteness conditions.**
+- [ ] **Define the intended module-level and vector-space Euler characteristics separately.**
   `GradedObject.eulerChar` and its complex wrapper in
   `Mathlib/Algebra/Homology/EulerCharacteristic.lean:118` inherit zero from `finsum` on infinite
-  support and from `finrank` on infinite-dimensional terms.  Require finite-dimensional relevant
-  objects and finite actual support; coordinate with the XL `finrank` migration and the separate
-  `finsum` classification audit.
+  support and from `finrank` on infinite-rank terms.  The construction assumes only `[Ring R]`, so
+  "finite-dimensional objects" is not its general domain: a module can have finite nonzero rank
+  without being finite, and torsion modules can have genuine rank zero.  For the existing invariant,
+  require finite support of the `finrank` summands rather than finite actual object support, and
+  audit whether finite rank or a cardinal/extended rank is intended.  Give the usual
+  finite-dimensional vector-space Euler characteristic its own precise interface.  Also correct the
+  module overview's claim that every module not free of finite rank receives zero.
 
 - [ ] **Require a finite residue field for elliptic local factors.**
   `WeierstrassCurve.localPolynomial` in
@@ -268,23 +337,24 @@ For every strict-partiality migration in the S--XL sections below:
   analytic/meromorphic domains; the natural analytic order also collapses genuine infinite order.
   Require the germ hypothesis and retain infinity until finite order is proved.
 
-## L -- staged cross-module migrations
+## L -- staged cross-module audit candidates
 
 - [ ] **Put matroid closure on subsets of the ground set.**
   `Matroid.closure` in `Mathlib/Combinatorics/Matroid/Closure.lean:135` deliberately extends closure
   to every `Set α` by replacing `X` with `X ∩ M.E`; the module describes off-ground inputs as junk,
   and the resulting operation is not extensive on all `Set α`.  Reuse `Matroid.subtypeClosure` at
-  line 116 to make the ordinary closure domain-bearing, or prototype an equally strict proof-last
-  interface.  Retain the intersection convention only under an explicit extension name if real
-  consumers still require it.  The current surface has roughly 258 `M.closure` matching lines across
+  line 116 to make the ordinary closure domain-bearing, or prototype an equally faithful proof-last
+  interface.  Keep the intersection convention private unless literature supports it as a public
+  closure operation.  The current surface has roughly 258 `M.closure` matching lines across
   nine maintained files, so migrate the closure theorem family and its rank, minor, circuit, and loop
   consumers as one staged change.
 
 - [ ] **Require integrality for `minpoly`.**
   `Mathlib/FieldTheory/Minpoly/Basic.lean:41` assigns polynomial zero to a nonintegral element;
   `minpoly.aeval` at line 89 then states unconditionally that every element is a root of its minimal
-  polynomial.  Put `IsIntegral` in the ordinary construction and theorem family; keep an explicitly
-  named zero extension only as a bridge.
+  polynomial.  Put `IsIntegral` in the ordinary construction and theorem family.  If the zero branch
+  is temporarily needed to implement bridges, keep it private and prove it unreachable at the
+  public boundary.
 
 - [ ] **Replace finite separable/inseparable degree projections outside their domains.**
   `Field.finSepDegree` in `Mathlib/FieldTheory/SeparableDegree.lean:141` uses `Nat.card` even for a
@@ -304,29 +374,33 @@ For every strict-partiality migration in the S--XL sections below:
   `Mathlib/RingTheory/UniqueFactorizationDomain/Finsupp.lean:32` and
   `Mathlib/RingTheory/UniqueFactorizationDomain/NormalizedFactors.lean:35` likewise return empty data
   at zero.  Use a nonzero carrier or explicit failure for finite lists/counts; keep units admissible
-  with empty factorization.  `Associates.factors` already supplies a faithful extended precedent by
-  returning `⊤` at zero (`Mathlib/RingTheory/UniqueFactorizationDomain/FactorSet.lean:223`).
+  with empty factorization.  `Associates.factors` returns `⊤` at zero
+  (`Mathlib/RingTheory/UniqueFactorizationDomain/FactorSet.lean:223`), which is a useful internal
+  extended-value precedent but not literature evidence for a public convention.
 
 - [ ] **Migrate natural cardinalities away from infinity-to-zero.**
   `Nat.card` in `Mathlib/SetTheory/Cardinal/Finite.lean:41` and `Set.ncard` in
   `Mathlib/Data/Set/Card.lean:613` return zero on infinite inputs.  Require `Finite α`/`s.Finite` for
   natural values and use `ENat.card`/`Set.encard` globally.
 
-- [ ] **Make lossy extended-value conversions checked or explicitly defaulted.**
+- [ ] **Make lossy extended-value conversions checked and keep zero fallbacks private.**
   `ENat.toNat` (`Mathlib/Data/ENat/Basic.lean:118`), `Cardinal.toNat`
   (`Mathlib/SetTheory/Cardinal/ToNat.lean:31`), and `ENNReal.toNNReal`/`toReal`
   (`Mathlib/Basic/ENNReal/Basic.lean:225`) send infinity to zero.  Provide proof-bearing finite
-  conversions and reserve `...OrZero`-style names for the current maps.
+  conversions and keep infinity-to-zero maps private; a more explicit public name does not prevent
+  their accidental use as genuine conversions.
 
 - [ ] **Separate chosen preimages from true inverses and true extensions.**
   `Function.invFun` in `Mathlib/Logic/Function/Basic.lean:526` picks an arbitrary element outside
   the range and a chosen preimage for noninjective maps.  Use equivalences/bijections for inverse
-  functions and a range-indexed chosen-preimage operation for the weaker construction.
-  `Function.extend` in the same file at line 835 explicitly takes an outside-range fallback, which is
-  legitimate, but without `g.FactorsThrough f` it chooses one representative's `g`-value for a
-  fiber and cannot agree with every original `g`-value on that fiber.  Require `FactorsThrough` for
-  the ordinary extension name; keep an unrestricted chosen-representative construction under a
-  descriptive name.
+  functions.  A chosen-preimage construction may remain public only as a separately sourced
+  mathematical choice operator, not as an inverse fallback.
+  `Function.extend` in the same file at line 835 explicitly takes an outside-range fallback, but
+  explicitness alone does not make it a faithful extension.  Without `g.FactorsThrough f` it chooses
+  one representative's `g`-value for a fiber and cannot agree with every original `g`-value on that
+  fiber.  Require `FactorsThrough` for
+  the ordinary extension name.  Keep an unrestricted chosen-representative construction private
+  unless literature treats that choice operation itself as the intended public object.
 
 - [ ] **Make subgroup indices finite only with evidence.**
   `Subgroup.index` and `Subgroup.relIndex` in `Mathlib/GroupTheory/Index.lean:57` and `:64` return
@@ -343,29 +417,39 @@ For every strict-partiality migration in the S--XL sections below:
 - [ ] **Put affine combinations on affine weights.**
   `Finset.affineCombination` in `Mathlib/LinearAlgebra/AffineSpace/Combination.lean:348` accepts
   arbitrary weights and chooses a base point; only weights summing to one give the intrinsic affine
-  combination.  Use the affine-weight hyperplane (or a sum-one proof) and explicitly name a
-  basepoint-dependent extension.
+  combination.  Use the affine-weight hyperplane or a sum-one proof.  A basepoint-dependent operation
+  is public only if independently supported as a mathematical construction, not merely because it
+  can be given a descriptive name.
 
-- [ ] **Require invertible derivatives for vector-field pullback and regularity for Lie brackets.**
+- [ ] **Separate pointwise vector-field pullback from regularity theorems.**
   `VectorField.mpullbackWithin`/`mpullback` in
-  `Mathlib/Geometry/Manifold/VectorField/Pullback.lean:100` and `:107` return zero when the derivative
-  is noninvertible.  `mlieBracketWithin`/`mlieBracket` in
+  `Mathlib/Geometry/Manifold/VectorField/Pullback.lean:100` and `:107` return zero when the
+  derivative is noninvertible.  `mlieBracketWithin`/`mlieBracket` in
   `Mathlib/Geometry/Manifold/VectorField/LieBracket.lean:63` and `:73` accept fields without the
-  differentiability needed by the mathematical bracket.  Redesign around local diffeomorphisms and
-  differentiable vector-field objects.
+  differentiability needed by the mathematical bracket.  For one point and one target vector, the
+  exact contract is existence and uniqueness of a vector related by the derivative; the derivative
+  need not be an isomorphism.  An invertible derivative gives a pullback operator for every target
+  vector, and a local diffeomorphism is a still stronger convenient facade.  Keep these pointwise,
+  operator-level, local-regularity, and globally differentiable interfaces distinct, and put bracket
+  regularity in the theorem or bundled object that actually uses it.
 
 - [ ] **Audit and strictify local-frame/trivialization evaluation at its public boundary.**
   `IsLocalFrameOn.coeff` in
   `Mathlib/Geometry/Manifold/VectorBundle/LocalFrame.lean:186` returns zero outside the frame's set;
   pretrivializations/trivializations in `Mathlib/Topology/FiberBundle/Trivialization.lean:69` also
-  expose chosen ambient values.  Preserve globally defined implementation representatives where
-  useful, but require base-set membership for ordinary coordinate/evaluation names.
+  expose chosen ambient values.  Require base-set membership for ordinary coordinate/evaluation
+  names.  Keep globally defined implementation representatives private and only behind proofs that
+  their off-domain values cannot affect public results.
 
-- [ ] **Replace arbitrary `Filter.lim` values with existence-certified limits.**
+- [ ] **Audit the choice-based `Filter.lim` projection and its theorem boundaries.**
   `Filter.lim` and `Filter.limUnder` in `Mathlib/Topology/Defs/Filter.lean:255` and `:260` use
-  `Classical.epsilon` and choose an arbitrary point when no limit exists.  Existence must be explicit;
-  uniqueness claims additionally need the appropriate separation and nontrivial-filter conditions.
-  Migrate `IsDenseInducing.extend`/`extendFrom` consumers with the same boundary discipline.
+  `Classical.epsilon` and choose a point satisfying the limit relation when one exists.  This is a
+  choice projection, not by itself a false mathematical statement.  Inventory whether any public
+  theorem omits convergence, separation, or nontrivial-filter hypotheses.  Retaining the ordinary
+  `lim` name for a value at nonconvergent filters additionally requires literature using the same
+  total convention; otherwise expose the choice only behind existence evidence and keep any
+  fallback private.  Audit `IsDenseInducing.extend`/`extendFrom` under the same distinction between
+  a chosen representative and a claimed canonical extension.
 
 - [x] **Make measure pushforward require a.e. measurability.**
   `Measure.map` now takes a proof of a.e. measurability, normally synthesized by `fun_prop`, and
@@ -447,8 +531,8 @@ For every strict-partiality migration in the S--XL sections below:
 - [ ] **Remove fake zeros at Gamma poles.**
   `Complex.Gamma` and `Real.Gamma` in
   `Mathlib/Analysis/SpecialFunctions/Gamma/Basic.lean:287` and `:402` return zero at nonpositive
-  integer poles.  Use pole-excluding inputs or a meromorphic-function object, with any pointwise
-  extension explicitly named.
+  integer poles.  Use pole-excluding inputs or a meromorphic-function object; do not retain a
+  pointwise pole value publicly without literature using that convention.
 
 - [ ] **Separate ordinary hypergeometric functions from convergence/pole fallbacks.**
   `ordinaryHypergeometric` in
@@ -472,35 +556,44 @@ For every strict-partiality migration in the S--XL sections below:
   depending on junk values are already deprecated.  Put normality/continuity evidence in the named
   interface and retain generic transfinite iteration under a distinct name.
 
-## XL -- foundational prototypes and repository-wide migrations
+## XL -- foundational audit candidates; no migration is authorized
 
-- [ ] **Prototype strict inverse and division, then migrate totalized algebra in slices.**
+- [ ] **Classify inverse and division semantics before prototyping any hierarchy split.**
   Follow the deferred acceptance criteria in `FORK_DESIGN.md`; this item does not authorize a
-  production migration before the prototype passes them.  The inventory must include scalar
+  production migration.  First decide where total inversion is independently meaningful algebraic
+  structure, where literature supports a total convention guarded by theorem hypotheses, and where an
+  unsupported branch leaks into a claimed mathematical result.  A proof-bearing inverse is not
+  automatically more faithful than a total inverse, and the audit must state the equations and
+  universal properties each interface is intended to preserve.  The inventory must include scalar
   inverse/division by zero, negative powers, rational casts, simplifier/tactic behavior, and
-  `Matrix.inv` in `Mathlib/LinearAlgebra/Matrix/NonsingularInverse.lean:169`, which returns zero when
-  the determinant is not a unit.  Ordinary operations require nonzero/unit evidence; useful total
-  extensions remain explicitly named.  Treat Euclidean quotient/remainder as a separate design
-  slice within this epic: `EuclideanDomain` requires `a / 0 = 0` and derives `a % 0 = a` in
-  `Mathlib/Algebra/EuclideanDomain/Defs.lean:159` and `:152`, respectively, while a nonzero Euclidean
-  divisor need not be a unit and its quotient is not exact field division.
+  `Matrix.inv` in `Mathlib/LinearAlgebra/Matrix/NonsingularInverse.lean:169`, which returns zero
+  when the determinant is not a unit.  Treat matrix inversion, scalar field inversion, units, and
+  Euclidean quotient/remainder as separate mathematical contracts: `EuclideanDomain` requires
+  `a / 0 = 0` and derives `a % 0 = a` in
+  `Mathlib/Algebra/EuclideanDomain/Defs.lean:159` and `:152`, respectively, while a nonzero
+  Euclidean divisor need not be a unit and its quotient is not exact field division.
 
-- [ ] **Make natural subtraction and predecessor expose their domains.**
-  `Nat.sub` returns zero when the subtrahend is larger, and `Nat.pred 0 = 0`; the current source calls
-  these results garbage values in `Mathlib/Data/Nat/PSub.lean:15`.  Promote the existing
-  `Nat.psub`/`Nat.ppred` operations, defined at lines 44 and 32, or proof-bearing wrappers requiring
-  `b ≤ a`/`0 < a`, to the mathematician-facing boundary.  A separately named truncated
-  subtraction/monus may remain total, but ordinary subtraction and predecessor must not silently use
-  those invalid-domain zeros.  This is an XL theorem/notation migration even though the faithful
-  primitives already exist; a strict public layer may bridge the Lean-core operations only after
-  proving their domains.
+- [ ] **Separate natural monus from partial subtraction and predecessor.**
+  `Nat.sub` returns zero when the subtrahend is larger, and `Nat.pred 0 = 0`; the current source
+  calls these results garbage values in `Mathlib/Data/Nat/PSub.lean:15`.  Truncated subtraction is a
+  legitimate monus operation with order-theoretic laws, but exposing it as ordinary `Nat.sub` and
+  `a - b` makes it easy to read a theorem as partial or group subtraction while silently truncating
+  outside `b ≤ a`.  Make `Nat.psub`/`Nat.ppred`, defined at lines 44 and 32, or proof-bearing
+  wrappers the ordinary subtraction/predecessor boundary.  If literature supports monus as the
+  intended mathematical object, expose it under the literature's name and notation; otherwise keep
+  the truncating operation private.  Remove the ordinary subtraction surface because it invites the
+  wrong mathematical reading even when monus itself is independently justified.  Audit and migrate
+  theorem statements whose natural reading currently depends on that ambiguous surface.
 
-- [ ] **Introduce strict conditional suprema and infima.**
+- [ ] **Base conditional extrema on exact `IsLUB`/`IsGLB` existence.**
   `ConditionallyCompleteLattice` in
   `Mathlib/Order/ConditionallyCompleteLattice/Defs.lean:46` supplies total `sSup`/`sInf` although
-  their specification requires nonempty bounded sets; unbounded and empty cases receive arbitrary
-  order values.  Prototype domain-bearing set/indexed operations and migrate notation carefully.
-  Complete-lattice suprema/infima are not implicated.
+  the generic specification uses nonempty bounded sets.  Those hypotheses are sufficient, not the
+  exact domain: `ConditionallyCompleteLinearOrderBot` makes `sSup ∅ = ⊥`, and
+  `isLUB_csSup'` proves the correct empty case from boundedness alone.  Prototype an interface whose
+  core evidence is `IsLUB s a` or `IsGLB s a`, with constructors for the applicable bounded,
+  nonempty, bottom, and top cases.  Audit only genuinely unsupported cases; complete-lattice extrema
+  and canonical empty extrema are not defects.
 
 - [ ] **Replace `Module.finrank`'s infinite-to-zero convention.**
   `Module.finrank` in `Mathlib/LinearAlgebra/Dimension/Finrank.lean:62` is
@@ -509,39 +602,65 @@ For every strict-partiality migration in the S--XL sections below:
   `AffineSubspace.finDim` (`Mathlib/LinearAlgebra/AffineSpace/Dimension.lean:51`) and other derived
   invariants without conflating finite rank with finite generation over general semirings.
 
-- [ ] **Make derivatives exist before they have values.**
+- [ ] **Keep derivative relations primary and audit value projections separately.**
   `fderivWithin`/`fderiv` (`Mathlib/Analysis/Calculus/FDeriv/Defs.lean:151`, `:160`),
   `derivWithin`/`deriv` (`Mathlib/Analysis/Calculus/Deriv/Basic.lean:145`, `:153`), and
-  `lineDerivWithin`/`lineDeriv` (`Mathlib/Analysis/Calculus/LineDeriv/Basic.lean:100`, `:108`) return
-  zero at nondifferentiable points; within-set derivatives can also be nonunique.  Build strict
-  values on `Has*Deriv*`/differentiability plus unique-differentiability data, then audit every
-  theorem whose statement currently relies on the zero branch.
+  `lineDerivWithin`/`lineDeriv`
+  (`Mathlib/Analysis/Calculus/LineDeriv/Basic.lean:100`, `:108`) return zero at nondifferentiable
+  points; within-set derivatives can also be nonunique.  The faithful
+  general object is already the `Has*Deriv*` relation, including settings where several ambient maps
+  satisfy it.  Preserve that relational API.  Audit value-returning projections and theorems for
+  accidental reliance on the zero branch; offer a canonical value only when existence and the
+  relevant uniqueness are established.  Treat `UniqueDiffWithinAt` as a common sufficient
+  hypothesis, not the definition of every legitimate within-set derivative.
 
-- [ ] **Make Bochner integral notation carry existence and completeness.**
+- [ ] **Separate integrability from existence of a target-valued Bochner integral.**
   `MeasureTheory.integral` in `Mathlib/MeasureTheory/Integral/Bochner/Basic.lean:158` returns zero
-  when the function is nonintegrable or the target is incomplete.  A strict integral needs the
-  function and codomain hypotheses at the public boundary; expectation and moment APIs must migrate
-  with it.  The lower Lebesgue integral is not part of this defect.
+  when the function is nonintegrable or the target is incomplete.  `CompleteSpace` is a standard
+  sufficient condition for the general construction, but not an exact necessity for every
+  individual function: an integrable simple function has a target-valued integral given by a finite
+  sum even in an incomplete target.  Keep
+  `Integrable` and target-valued existence distinct, audit theorems that use the fallback, and
+  prototype an existence-certified integral before deciding whether notation or expectation APIs
+  should change.  The lower Lebesgue integral is not part of this candidate.
 
-- [ ] **Replace zero/one defaults for nonsummable infinite sums and products.**
+- [ ] **Audit `tsum`/`tprod` choice projections against `HasSum`/`HasProd`.**
   `tsum` and `tprod` in `Mathlib/Topology/Algebra/InfiniteSum/Defs.lean:132` and `:142` return zero
   and one when `HasSum`/`HasProd` fails, with additional uniqueness concerns in nonseparated spaces.
-  Make `HasSum`/`HasProd` or summability/multipliability the ordinary boundary and migrate dependent
-  series, products, and power-series evaluation in coherent slices.  Coordinate, rather than
-  conflate, this work with the separate `finsum`-based Euler-characteristic task.
+  `HasSum`/`HasProd` are already the faithful relational cores, while `tsum`/`tprod` are total value
+  projections.  Identify theorem statements or consumers that actually exploit fallback or
+  nonuniqueness; do not infer that every syntactically unguarded term is a false statement.  Keeping
+  zero or one under ordinary infinite-sum/product names outside the convergence domain requires
+  literature using those exact conventions.  Without it, keep the fallback only in a private
+  implementation helper whose branch cannot reach public statements, and make the relational or
+  summable boundary mathematician-facing.
+  Coordinate any accepted slice with dependent series, power-series evaluation, and the separate
+  `finsum`-based Euler-characteristic audit.
 
-- [ ] **Split real and complex special functions from their silent extensions.**
+- [ ] **Reassess public `finsum`/`finprod` totalization on infinite support.**
+  Their names and source docstrings disclose the zero/one result outside finite support, but that is
+  not literature evidence for treating those values as finite sums or products.  Find mathematical
+  sources using the same convention under the same operators.  Without such evidence, require finite
+  support at the public boundary and keep any total fallback private; audit `eulerChar` and other
+  consumers independently rather than inheriting the implementation convention.
+
+- [ ] **Audit special-function extensions family by family.**
   `Real.log` (`Mathlib/Analysis/SpecialFunctions/Log/Basic.lean:44`) is absolute-value log off zero
   and zero at zero; `Real.sqrt` (`Mathlib/Analysis/Real/Sqrt.lean:112`) is zero on negatives;
   `Real.arcsin`/`arccos` (`Mathlib/Analysis/SpecialFunctions/Trigonometric/Inverse.lean:35`, `:276`)
   clamp outside `[-1,1]`; and `Real.rpow` (`Mathlib/Analysis/SpecialFunctions/Pow/Real.lean:35`)
   totalizes zero/negative-base cases under ordinary notation.  `Complex.log` and `Complex.arg` in
   `Mathlib/Analysis/SpecialFunctions/Complex/Log.lean:30` and
-  `Mathlib/Analysis/SpecialFunctions/Complex/Arg.lean:30` assign zero at zero.  Design strict
-  positive/nonnegative/interval/nonzero domains and separately name absolute, clamped, or other
-  chosen extensions; preserve the legitimate principal-branch choice away from zero.  Audit
-  trigonometric, entropy, logarithm, and power theorems whose unrestricted statements use fallback
-  coincidences.
+  `Mathlib/Analysis/SpecialFunctions/Complex/Arg.lean:30` assign zero at zero.  These are not one
+  domain problem: `Real.log` is intentionally `log |x|` on nonzero reals and preserves
+  multiplicative laws, while valid real powers of a nonpositive base depend on the exponent
+  (integral powers and positive powers of zero are genuine cases).  Record each function's
+  specifying laws, branch choices, and degenerate cases before proposing constrained carriers or
+  renames.  The source's description of `Real.log` as an "unconventional extension" is not evidence
+  for retaining it publicly.  A total definition needs matching literature for the same real/complex
+  domain and must be specified as an independent mathematical object; otherwise its fallback is only
+  a private transitional bridge.  Preserve the useful algebraic and analytic theorem families in
+  either design.
 
 ## Representation fidelity lint -- total objects whose representation changes the semantics
 
@@ -549,8 +668,8 @@ These are not undefined-operation-to-junk-value defects.  The represented object
 legitimate, but its inherited instances, indexing convention, or container shape can differ from
 the standard object suggested by informal notation.  Keep this lint separate from strict-partiality
 migrations: require names, types, documentation, and theorem statements to identify which object is
-actually formalized, and provide a conventional facade when downstream mathematics uses another
-standard representation.
+actually formalized, and provide a literature-supported facade when downstream mathematics uses
+another standard representation.
 
 - [ ] **[S] Distinguish finite product metric spaces from Euclidean space.**
   The instance for `Fin n → ℝ` is the finite Pi metric with sup distance, as documented and defined
@@ -569,20 +688,30 @@ standard representation.
   `LinearMap.singularValues` in
   `Mathlib/Analysis/InnerProductSpace/SingularValues.lean:94` is a countably infinite sequence whose
   finite-dimensional tail is zero.  The module documentation at lines 18--19 and 36--51 explicitly
-  chooses this valid convention to avoid dependent indexing.  Keep the sequence when it is useful,
-  but do not describe it without qualification as the usual finite list/family of singular values.
-  Provide a finite/rank-indexed facade when a theorem or paper uses that convention, and audit
-  downstream cardinality, positivity, product, and ordering statements for the intended index set.
+  chooses this representation to avoid dependent indexing, but a source-code design choice does not
+  establish a mathematical convention.  Find literature using the same infinite zero-padded
+  sequence before retaining it publicly.  Otherwise keep it private and provide the
+  finite/domain-dimension/rank-indexed family used by the target literature.  Audit downstream
+  cardinality, positivity, product, and ordering statements for the intended index set.
 
 - [ ] **[L] Distinguish zero-encoded element order from an extended order.**
   `orderOf` and `addOrderOf` in `Mathlib/GroupTheory/OrderOfElement.lean:178` encode infinite order as
-  zero.  This convention is lossless because every finite order is positive and
-  `orderOf_eq_zero_iff` at line 211 characterizes the sentinel; it is not an arbitrary junk value.
-  Provide an extended-valued ordinary invariant and require `IsOfFinOrder`/`IsOfFinAddOrder` for a
-  natural-valued projection when theorem statements perform ordinary comparisons or arithmetic that
-  would misread zero.  Keep explicitly identified zero-encoding APIs where useful.
+  zero.  The encoding is lossless because every finite order is positive and
+  `orderOf_eq_zero_iff` at line 211 characterizes the sentinel, but losslessness alone does not make
+  zero the literature-standard mathematical value of infinite order.  Find literature using this
+  exact convention before retaining the ordinary name; otherwise use an extended-valued invariant
+  and require `IsOfFinOrder`/`IsOfFinAddOrder` for a natural-valued projection.  Keep the zero
+  encoding private rather than exporting a second public order operation merely for implementation
+  convenience.
 
-## Notation and term-structure hygiene -- valid terms with misleading surface syntax
+## Deferred API hygiene -- subordinate to mathematical fidelity
+
+The remaining notation, presentation, and proof-maintenance candidates are not mathematical
+fidelity work unless a concrete statement is naturally misread or changes meaning.  Do not schedule
+them ahead of unresolved mathematical-domain and representation questions merely to make the API
+more uniform, searchable, generated, or tactic-independent.
+
+### Notation and term-structure hygiene -- valid terms with misleading surface syntax
 
 These entries are not mathematical-unsoundness or strict-partiality findings.  They track syntax
 that impersonates a general Lean application form, hides the declaration head or a meaningful
@@ -600,10 +729,11 @@ have stable roles and a searchable named declaration remains available.
 
 - [ ] **[S--M] Remove the `P[X]` expectation macro that competes with element lookup.**
   `Mathlib/Probability/Notation.lean:48`--`:53` expands arbitrary adjacent terms `P[X]` to an
-  integral and explicitly warns that the grammar conflicts with Lean's `GetElem` notation.  Prefer
-  the already named integral API or the visibly symbolic `𝔼[X]` surface, then add a regression test
-  that an invalid list lookup is diagnosed as a lookup error rather than reconsidered as
-  expectation syntax.
+  integral against the explicit measure `P` and warns that the grammar conflicts with Lean's
+  `GetElem` notation.  Prefer the named integral API while retaining `P` explicitly.  Do not replace
+  it mechanically with `𝔼[X]`: that notation uses the ambient `volume` measure and is equivalent
+  only when `P` is that selected measure.  Add a regression test that an invalid list lookup is
+  diagnosed as a lookup error rather than reconsidered as expectation syntax.
 
 - [ ] **[S] Remove the exported Diophantine proof-DSL surface.**
   `Mathlib/NumberTheory/Dioph.lean:489`--`:631` exports `D∧`, `D∨`, `D∃`, `D+`, and related notation
@@ -622,14 +752,15 @@ have stable roles and a searchable named declaration remains available.
   identifier-shaped bracket forms after migration; any genuinely conventional symbolic surface
   should be proposed and justified separately.
 
-- [ ] **[M] Put affine-line notation over a named affine-line declaration.**
+- [ ] **[M] Give pair affine span a searchable head without asserting nondegeneracy.**
   `Mathlib/LinearAlgebra/AffineSpace/AffineSubspace/Defs.lean:1075`--`:1077` defines
   `line[k, p₁, p₂]` only as notation for the affine span of a generated pair.  The 154 textual uses
   across 18 maintained files cannot search for or apply a declaration named by the apparent head.
-  Register the conventional owner/name under the naming policy, make the notation expand through
-  that declaration, and migrate canonical theorem statements to the named term.  Remove the bracket
-  form unless a downstream comparison shows that it is materially clearer than ordinary
-  application without reintroducing parser or discovery costs.
+  When `p₁ = p₂`, this affine span is a singleton, not a one-dimensional line.  Introduce a named
+  pair-span operation whose contract preserves that degenerate case, and reserve an unqualified
+  affine-line declaration for an interface carrying whatever nondegeneracy and scalar hypotheses
+  its dimensional claim needs.  Make any retained notation expand through the accurately named
+  operation; remove the bracket form only if downstream comparison supports that API decision.
 
 - [ ] **[M] Make `RatFunc K` canonical over the colliding `K⟮X⟯` notation.**
   `Mathlib/FieldTheory/RatFunc/Defs.lean:71` uses the same `⟮...⟯` delimiters as the generated-field
@@ -650,7 +781,7 @@ have stable roles and a searchable named declaration remains available.
   environment search, and retain only explicit category-specific assistance if a downstream
   prototype shows that ordinary application cannot provide acceptable inference or diagnostics.
 
-- [ ] **[L] Replace bracketed explicit-instance facades with ordinary explicit structure APIs.**
+- [ ] **[L] Evaluate bracketed explicit-instance facades against ordinary explicit structure APIs.**
   The topology family in `Mathlib/Topology/Defs/Basic.lean:192`--`:210` and
   `Mathlib/Topology/UniformSpace/Defs.lean:206`--`:212`, `:629`--`:637` includes `IsOpen[t]`,
   `closure[t]`, `Continuous[t₁, t₂]`, `𝓤[u]`, and `UniformContinuous[u₁, u₂]`.  The measure-theory
@@ -662,10 +793,13 @@ have stable roles and a searchable named declaration remains available.
   `Kernel` types at `Mathlib/MeasureTheory/Measure/MeasureSpaceDef.lean:77`--`:83` and
   `Mathlib/Probability/Kernel/Defs.lean:51`--`:70`.  These forms expose meaningful structures but
   encode them through a bespoke `Predicate[structure]` or `Type[structure]` application convention;
-  together the spellings have roughly 568 textual hits across 87 maintained files.  Give anonymous
-  instance binders stable names, choose ordinary named arguments, membership, projections, or
-  explicitly parameterized named relations/types as the canonical forms, and remove their custom
-  delaborators.  Preserve unsuffixed ambient predicates where one instance genuinely is ambient.
+  together the spellings have roughly 568 textual hits across 87 maintained files.  This is a
+  compositionality and discoverability candidate, not a mathematical-fidelity defect: the visible
+  bracket argument does expose the selected structure.  Prototype stable binder names and ordinary
+  named arguments, membership, projections, or explicitly parameterized relations/types against
+  real consumers.  Remove custom delaborators only if the replacement preserves readability,
+  nesting, elaboration, and diagnostics.  Preserve unsuffixed ambient predicates where one instance
+  genuinely is ambient.
 
 - [ ] **[L] Disambiguate the two `R[M]` monoid-algebra parsers.**
   `Mathlib/Algebra/MonoidAlgebra/Defs.lean:90`--`:123` installs the identical generic
@@ -684,7 +818,7 @@ have stable roles and a searchable named declaration remains available.
   compositional mechanism for synthesizing routine model arguments; preserve their improved
   diagnostics without making an alternate identifier language the primary public syntax.
 
-## Function-presentation hygiene -- one fact with curried and tuple views
+### Function-presentation hygiene -- one fact with curried and tuple views
 
 These entries are not objections to `Function.curry`, `Function.uncurry`, `↿f`, or the
 normalization lemmas that make them usable.  They track cases where beta/eta-equivalent
@@ -693,7 +827,7 @@ mathematical facts.  Keep a product or dependent-sum argument when it is the act
 domain, and keep structured curry/uncurry results when topology, measurability, boundedness,
 linearity, or another invariant adds hypotheses or preservation content.
 
-- [ ] **[M] Canonicalize tuple/curried duplicates for finite and infinite big operators.**
+- [ ] **[M] Share tuple/curried implementations without presuming one public theorem name.**
   `Mathlib/Algebra/BigOperators/Group/Finset/Sigma.lean:51`--`:101` maintains four adjacent
   `prod_*`/`prod_*'` pairs whose primed proofs are direct applications of the tuple-function
   versions; `@[to_additive]` generates the corresponding sum families.  The pattern continues in
@@ -702,12 +836,13 @@ linearity, or another invariant adds hypotheses or preservation content.
   `expect_product'` separately, and
   `Mathlib/Topology/Algebra/InfiniteSum/Constructions.lean:162`--`:172` gives both
   `Multipliable.tprod_prod'` and `Multipliable.tprod_prod_uncurry` together with their additive
-  versions.  Retain one theorem per product/sum/expectation fact and transport the integrand at the
-  call site; correct docstrings that currently call a curried argument "uncurried."  Classify
+  versions.  Reuse one proof or generate exact transports where possible, but retain multiple public
+  views when they materially improve theorem search, rewrite orientation, elaboration, or
+  automation.  Correct docstrings that currently call a curried argument "uncurried."  Classify
   `prod_sigma`/`prod_sigma'` separately because the `Sigma` value may be the genuine dependent
   indexing domain rather than a presentation tuple.
 
-- [ ] **[M] Reduce hand-written bare bridge families to a minimal generated normalization layer.**
+- [ ] **[M] Audit bare bridge families for generated proofs and useful orientations.**
   `Set.image_prod`, `Set.image_uncurry_prod`, and `Set.image2_curry` in
   `Mathlib/Data/Set/NAry.lean:73`--`:85` state one image computation through three spellings.
   `Mathlib/Data/Finset/NAry.lean:276`--`:281` gives both directions definitionally, and
@@ -717,9 +852,10 @@ linearity, or another invariant adds hypotheses or preservation content.
   `Primrec₂.uncurry`/`Primrec₂.curry` in
   `Mathlib/Computability/Primrec/Basic.lean:325`--`:388`, and the paired pointwise-algebra
   simplification lemmas in `Mathlib/Algebra/Group/Pi/Lemmas.lean:480`--`:518` and
-  `Mathlib/Algebra/Notation/Pi/Basic.lean:121`--`:129`.  Select the curried normal form where these
-  are ordinary multiargument functions, retain only the `[simp]` directions needed to normalize
-  boundary expressions, and generate any unavoidable compatibility names mechanically.  Do not
+  `Mathlib/Algebra/Notation/Pi/Basic.lean:121`--`:129`.  Select an implementation normal form where
+  these are ordinary multiargument functions, but determine public names, rewrite directions, and
+  `[simp]` attributes from real consumers rather than theorem equivalence alone.  Generate
+  mechanical proofs when they reduce maintenance without degrading discovery.  Do not
   remove `Primrec₂` itself merely because its implementation encodes two arguments by a product,
   and do not merge `Option.map₂_curry` with `Option.map_uncurry`: independent optional arguments
   and one optional pair are different semantic inputs.
@@ -751,20 +887,23 @@ linearity, or another invariant adds hypotheses or preservation content.
   identifier contains case-insensitive `curry`, `curried`, `currying`, or `uncurr*`; this lexical
   query was rerun at the final documentation state.  Suffixes and textual call counts alone were too
   noisy to classify the matches.
-  Prototype a lint that normalizes only the bare `Function.curry`/`Function.uncurry`,
-  `Sigma.curry`/`Sigma.uncurry`, and recursive `↿f` transports, compares theorem propositions
-  modulo beta/eta conversion, and reports a candidate only when an existing declaration supplies
-  the same mathematical fact.  Use the measure/integral and big-operator pairs above as positive
-  controls.  Negative controls include `ContinuousMap.uncurry` and `Homeomorph.curry` in
+  Prototype an audit lint that transports quantified integrands to a common typed binder domain,
+  normalizes the bare `Function.curry`/`Function.uncurry`, `Sigma.curry`/`Sigma.uncurry`, and
+  recursive `↿f` views, and optionally recognizes equality symmetry before comparing propositions.
+  Beta/eta conversion alone cannot match the advertised positive controls because their binder
+  types differ, and some paired integral theorems reverse equality orientation.  Require the lint to
+  emit a checkable transport proof and report candidates rather than errors.  Use the
+  measure/integral and big-operator pairs above as positive controls.  Negative controls include
+  `ContinuousMap.uncurry` and `Homeomorph.curry` in
   `Mathlib/Topology/CompactOpen.lean:430`--`:471` and `:556`, the multilinear and continuous
   multilinear equivalences in `Mathlib/LinearAlgebra/Multilinear/Curry.lean` and
   `Mathlib/Analysis/Normed/Module/Multilinear/Curry.lean`, categorical closed-structure currying,
   and genuine product, tensor, direct-sum, finite-support, or dependent-sum domains.  Companion
   normalization lemmas for an admitted structured construction inherit that construction's
-  exclusion.  Run the lint in audit mode over the inherited tree and as a diff-scoped warning for
-  new declarations before considering repository-wide enforcement.
+  exclusion.  Run the lint in audit mode over the inherited tree; consider a diff-scoped warning
+  only after all positive and negative controls are classified without false equivalences.
 
-## Proof and API-boundary hygiene -- rewrites that depend on extra transparency
+### Proof and API-boundary hygiene -- rewrites that depend on extra transparency
 
 `erw` is logically sound, but its success where `rw` fails can expose a missing public rewrite
 lemma, a coercion or representation boundary, or definitional-equality dependence in downstream
@@ -772,11 +911,11 @@ proofs.  Treat each occurrence as API-debt evidence to classify, not as proof th
 has the same root cause.  Repair the exposed interface or proof normal form before mechanically
 changing the tactic.
 
-- [ ] **[L] Eliminate `erw` invocations from maintained proofs.**
+- [ ] **[L] Classify `erw` invocations and repair demonstrated API boundaries.**
   The current maintained Lean trees contain 430 tactic invocations across 191 files (426 across 189
-  `Mathlib/` files).  Several sites already identify an API or definitional-equality problem:
-  `Mathlib/AlgebraicGeometry/ValuativeCriterion.lean:167`--`:171` attributes its `erw` to a
-  `map_top` composition mismatch; `Mathlib/RingTheory/QuasiFinite/Weakly.lean:204` says its use
+  `Mathlib/` files).  Several sites suggest an API or definitional-equality problem:
+  `Mathlib/AlgebraicGeometry/ValuativeCriterion.lean:167`--`:171` tentatively attributes its `erw`
+  to a `map_top` composition mismatch; `Mathlib/RingTheory/QuasiFinite/Weakly.lean:204` says its use
   should disappear when `Ideal.map` stops taking hom classes; and
   `Mathlib/RingTheory/Ideal/IsPrincipal.lean:110`--`:113` explains that the rewrite sees through an
   equality between two subtype presentations.  Inventory the occurrences by missing lemma,
@@ -784,33 +923,31 @@ changing the tactic.
   limitation.  For each family, add the natural public lemma or stable normal form and migrate its
   consumers to `rw`, `simp`, `change`, or an explicit equality transport that records the intended
   boundary.  Use `Mathlib/Tactic/CategoryTheory/CheckCompositions.lean:20` where applicable to
-  diagnose composition discrepancies.  Finish with a repository-wide negative scan for tactic
-  invocations; documentation and the `erw?` diagnostic implementation are outside this migration
-  unless their own APIs become obsolete.
+  diagnose possible composition discrepancies, without treating its report as proof of an API
+  defect.  Remove an `erw` only when the replacement exposes a better stable boundary; otherwise
+  retain it.  Negative-scan only the specific sites or families an accepted migration retires.
+  Exclude documentation, the `erw?` implementation, and diagnostic fixtures such as
+  `MathlibTest/Tactic/ErwQuestion.lean`, which intentionally demonstrate `rw` failure followed by
+  `erw` success.
 
-## Resolved classification audits
+## Resolved and corrected classification audits
 
 The 2026-09-13 classification pass resolved the families below against the strict-domain and
 compositional-notation contracts.  A checked item records a classification decision, not completion
-of any open migration task that it references:
+of any open migration task that it references.  A 2026-09-15 correction pass found that the earlier
+audit sometimes inferred an exact domain from a convenient sufficient hypothesis or treated every
+total projection as junk.  The unchecked entries above were revised where a concrete counterexample
+was found, and none should inherit validation merely from the earlier scan:
 
-- [x] **`finsum`/`finprod` are explicit finite-support extensions.**  Their names, definition
-  docstrings, notation docstrings, and theorem families identify the zero/one result on infinite
-  support, so the core operations are excluded from the silent-totalization backlog.  The existing
-  `eulerChar` task remains open because an ordinary integer-valued invariant must not inherit either
-  that fallback or `finrank`'s infinite-to-zero convention.
 - [x] **Matroid closure needs a strict ordinary boundary.**  Intersecting with `M.E` is an intentional
   implementation convention, but the ordinary `closure` name does not identify that extension and
   the module already provides the domain-bearing `subtypeClosure`.  The L task above records the
   canonical migration.
 - [x] **Local bundle representatives split at the exported coordinate API.**  Globally defined
-  trivialization representatives may retain irrelevant values outside their base sets when every
-  semantic statement proves independence from them.  Ordinary `coordChange` operations expose those
-  values under a mathematical name, so the M task above moves their overlap into the public domain.
-- [x] **`Polynomial.natDegree` is an explicit natural-valued projection.**  The faithful
-  `Polynomial.degree : WithBot ℕ` remains public, the zero convention is documented, and bridges to
-  `natDegree` require nonzeroness where it matters.  Do not promote the projection wholesale; audit a
-  paper-facing consumer only when it omits evidence needed by its intended statement.
+  trivialization representatives may exist privately when every semantic statement proves
+  independence from their values outside the base sets.  Ordinary `coordChange` operations expose
+  those values under a mathematical name, so the M task above moves their overlap into the public
+  domain and keeps the ambient representatives out of the public API.
 - [x] **Computational decoders and searches are excluded by default.**  Explicit `getD`, `headI`, tape
   blanks, parser defaults, and noncanonical decoders belong to computational representation
   contracts.  Reopen a case only when it is exported as a checked mathematical inverse or primary
@@ -819,16 +956,19 @@ of any open migration task that it references:
   `Mathlib/LinearAlgebra/LinearIndependent/Defs.lean:462` is the positive control: its input carries
   both linear independence and span membership and the implementation is the inverse of a proved
   linear equivalence.  Continue to flag reachable invalid branches or names asserting unsupported
-  uniqueness; the existing `Function.invFun`, `Function.extend`, and `LinearMap.leftInverse` tasks
-  are such separate cases.
-- [x] **An explicit default is neither automatically faithful nor automatically defective.**  Keep
-  technical representative constructors behind proved boundaries.  Promote a concrete operation
-  when users are asked to write the defaulted surrogate in place of the mathematical object;
-  integration-facing `ContinuousMap.mkD` remains the positive migration case above.
+  uniqueness.  `Function.invFun`, `Function.extend`, and `LinearMap.leftInverse` remain separate
+  audit candidates: first distinguish a legitimate chosen preimage or representative from a name or
+  theorem that falsely asserts inverse laws.
+- [x] **An explicit default does not justify a public mathematical operation.**  A technical
+  representative constructor may remain only privately behind a proved boundary that makes its
+  fallback unreachable or proves representative independence.  The integration-facing
+  `ContinuousMap.mkD` entry above remains a candidate until its proposed a.e.-class interface is
+  validated against real consumers.
 - [x] **Conditional expectation and probability brackets are conventional secondary surfaces.**
   `μ[f | 𝓐]`, `μ[|s]`, and `μ[t | s]` have stable named expansions, preserve nesting, and elaborate
-  correctly when both scopes are active.  Keep the notation; the domain defects in `condExp` and
-  `ProbabilityTheory.cond` remain separate strictness tasks.
+  correctly when both scopes are active.  Keep the notation; the construction contracts of `condExp`
+  and `ProbabilityTheory.cond` remain separate audit candidates.  In particular, do not assume that
+  ordinary measurability is the exact event domain when null measurability suffices.
 - [x] **The audited Unicode and indexed shortcuts remain admissible.**  `πₓ`/`πₘ`, `⦋m⦌ₙ`,
   generated intermediate fields, and `Mᵐ⁰` expose stable operands and expand through documented
   named structures or functor operations; the truncated-simplex proof is routine and can also be
@@ -840,21 +980,28 @@ of any open migration task that it references:
 
 ## Audit coverage and limits
 
-The 2026-09-11 pass searched the current working-tree source across 9,063 Lean files (about 1.93
-million lines) in `Mathlib/`, `MathlibTest/`, `Archive/`, `Counterexamples/`, and `Wanted/`.  Candidate
-generation included explicit junk/arbitrary-value language, choice without witnesses, lossy
-`.toNat`/`.toReal`/`.unzeroD` conversions, zero/one branches, conditional suprema/infima, `erw`
+The 2026-09-11 pass searched the then-current source across 9,063 Lean files (about 1.93
+million lines) in `Mathlib/`, `MathlibTest/`, `Archive/`, `Counterexamples/`, and `Wanted/`.
+Candidate generation included explicit junk/arbitrary-value language, choice without witnesses,
+lossy `.toNat`/`.toReal`/`.unzeroD` conversions, zero/one branches, conditional suprema/infima, `erw`
 invocations, and failure lemmas for summability, integrability, differentiability, measurability,
 and finiteness.
-The public definitions above were then inspected by mathematical domain rather than accepted from
-keyword matches alone.
+Selected public definitions were then inspected, but the scan did not prove that every proposed
+replacement used the exact mathematical object or domain.
 
-The scan deliberately excludes `.lake/`, `Cache/`, generated dependencies, and ordinary test-only or
-metaprogramming defaults from the public mathematical backlog.  It is a high-confidence inventory,
-not a declaration-by-declaration proof of completeness: a mathematically misleading abstraction can
-have no textual marker, and final migration order still needs dependency prototypes and real
-downstream formalizations.  New findings should be inserted by coherent migration effort, not by
-discovery date.
+Those repository scans did not establish external mathematical usage for fallback conventions.
+Consequently, no fallback discovered by them is approved as a public extension.  An item may instead
+propose an independently specified total mathematical object only after recording the required
+literature citation and exact matching convention.
+
+The scan deliberately excluded `.lake/`, `Cache/`, generated dependencies, and ordinary test-only or
+metaprogramming defaults.  It is historical candidate-generation evidence, not a validated inventory
+of defects and not a declaration-by-declaration completeness result.  A mathematically misleading
+abstraction can have no textual marker, while a zero branch or `Classical.choose` can implement a
+well-defined internal construction without justifying its public mathematical name.  New findings
+may be inserted as evidence-backed unchecked candidates; promote them to implementation only after
+the fidelity gate above, then group accepted work by coherent migration effort rather than discovery
+date.
 
 A separate 2026-09-11 notation pass inspected 5,641 term-syntax declaration lines in the same 9,063
 Lean files and manually classified 52 identifier-attached bracket declarations, together with
@@ -872,6 +1019,7 @@ duplicated presentations.  The only named hit outside `Mathlib/` was the unfoldi
 `MathlibTest/FunPropMinimal.lean`; no non-`Mathlib/` public theorem family was promoted.  The scan
 manually separated beta/eta transport from structured topology, measurability, multilinearity,
 category theory, finite-support, and genuine product or dependent-sum mathematics.  It cannot prove
-the absence of arbitrarily named equivalent theorems with no presentation marker; the proposed
-elaborated-statement lint is the
-required next probe for that boundary.
+the absence of arbitrarily named equivalent theorems with no presentation marker.  The proposed
+elaborated-statement lint remains an audit experiment: it must first handle typed binder transport,
+equality orientation, attributes, and theorem-search value without identifying merely equivalent
+presentations as redundant APIs.

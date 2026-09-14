@@ -14,7 +14,8 @@ this fork.
 
 `FORK_DESIGN.md` is the human-facing source of truth for the fork's design
 philosophy and deferred foundational roadmap. In particular, it records the
-strict-totalization direction without authorizing the total-inverse migration.
+strict-domain direction and transitional-totalization policy without
+authorizing the total-inverse migration.
 
 The policies below are project-local overrides. `main` is this fork's canonical
 workspace source of truth and default branch. The upstream `master` branch is
@@ -204,10 +205,13 @@ interfaces where actual formalization exposes semantic or ergonomic friction.
 
 For a mathematically partial operation, the strict public API must expose its
 domain through an input type, proof argument, or explicit partiality. A total
-extension may exist behind a proved boundary or under an explicit name, but it
-must not silently inherit the ordinary mathematical name and erase definedness
-from the type. Automation may discharge real obligations; it must fail clearly
-rather than fall back to a reachable totalized operation.
+extension is permitted only as a private transitional implementation bridge
+behind a proved boundary, with a tracked removal condition; renaming it does
+not make it an acceptable permanent public API. A genuinely total object may
+be public only when exact mathematical literature and specifying properties
+establish it independently of the partial operation. Automation may discharge
+real obligations; it must fail clearly rather than fall back to a reachable
+totalized operation.
 
 See `FORK_DESIGN.md` for the complete design contract, including the rule that
 source-expression domain obligations are checked before simplification, the
@@ -231,9 +235,10 @@ concrete use cases before redesigning existing code.
 - Does a predicate name identify what is measurable and whether measurability
   is ordinary or almost everywhere? Does order terminology distinguish a
   greatest element from a merely maximal one when the stronger result is proved?
-- If a total extension is independently useful, does its name and documentation
-  identify the extension rather than reuse the partial mathematical operation's
-  name?
+- If a total object is claimed to be independently mathematical, which exact
+  literature and specifying properties establish its degenerate cases? If it
+  is merely an implementation extension, is it private, transitional, and tied
+  to a concrete removal condition?
 - Can a thin facade improve semantic fidelity without duplicating a parallel
   theorem ecosystem?
 - If a better public interface replaces an established one, is there a
@@ -273,6 +278,10 @@ For an explicitly authorized public-API canonicalization:
 4. When compatibility is explicitly out of scope, remove obsolete notation,
    aliases, ambient-only instances, and legacy subtype spellings across the
    repository. Do not preserve them merely to conceal an incomplete migration.
+   Totalized compatibility surfaces are an unconditional exception: remove
+   every public shim, and remove every private transitional adapter before
+   declaring its migration complete, regardless of the general compatibility
+   policy.
 5. Rename declarations when their mathematical category changes, not merely
    their typography. Keep established terminology primary and implementation
    class names out of the public mathematical language.
@@ -356,8 +365,9 @@ and documentation checks when they remain applicable to the affected area.
   mathematical concept naturally while reusing a sound generic core.
 - **strict public API**: an interface whose ordinary mathematical operations
   expose their domains instead of relying on silent fallback values.
-- **explicit total extension**: a deliberately total operation whose name and
-  documentation identify the chosen extension outside the ordinary domain.
+- **transitional total extension**: private implementation machinery used only
+  while consumers migrate to a faithful domain-bearing API; it has an explicit
+  removal condition and is not a permanent public mathematical operation.
 
 ## Workspace Configuration
 

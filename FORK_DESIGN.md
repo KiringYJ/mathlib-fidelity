@@ -35,9 +35,15 @@ preference does not override the design commitments in this document.
   in an input type, a proof argument, or an explicit partiality type.
 - Do not silently extend a partial mathematical operation with a junk or
   arbitrary value while continuing to present it as the same operation.
-- A useful total extension may exist, but its name and documentation must say
-  what extension was chosen. A convenient implementation convention is not by
-  itself the mathematical object.
+- A total fallback is not a second permanent public API. It may exist only as
+  a private transitional implementation bridge during a migration, with a
+  stated removal condition. The public boundary must prove that its fallback
+  is unreachable or that the result is independent of the chosen value.
+- If mathematical literature defines a genuinely total object on the same
+  inputs, including the degenerate cases, treat that as an independent
+  mathematical object with its own specifying properties rather than as a
+  retained extension of the partial operation. Record the exact source and
+  convention; a renamed operation or source-code docstring is not evidence.
 - Keep domain and other semantic obligations machine-visible. A theorem that
   happens to hold on a totalized fallback branch must not use that accident to
   hide a missing hypothesis in its intended mathematical statement.
@@ -51,8 +57,9 @@ preference does not override the design commitments in this document.
   alone does not resolve this interface mismatch. This is an interface policy,
   not a claim that choosing a nonunique construction is mathematically invalid.
 - Distinguish a strict public interface from a strict implementation. A proved
-  bridge may initially reuse a totalized implementation on its valid domain;
-  that does not establish that the implementation dependency has been removed.
+  bridge may initially reuse a totalized implementation on its valid domain,
+  but only as private transitional machinery. Track and remove that dependency
+  before declaring the migration complete.
 
 ### API quality and quality of life
 
@@ -565,8 +572,9 @@ migration.
 ## Deferred Total-Inverse Roadmap
 
 The names in this section, including `TotalizedField` and `NZ`, are working
-names. They describe a candidate migration to prototype and measure, not an API
-decision already implemented.
+prototype names, not candidate permanent public APIs. Any totalized structure
+introduced by the prototype is private transitional machinery and must be
+removed before the migration is complete.
 
 ### 0. Inventory before refactoring
 
@@ -575,10 +583,13 @@ operations, characteristic-sensitive behavior, theorem dependencies,
 simplifier rules, tactics, and analysis APIs that rely on total inverse or
 division. Classify totalizations rather than searching and replacing blindly:
 
-1. independently meaningful total mathematical operations with suitable names;
-2. implementation extensions that can remain behind a strict proved boundary;
-3. silent totalizations that leak invalid-domain semantics through a public
-   mathematical name.
+1. independently meaningful total mathematical objects supported by exact
+   literature and specifying properties;
+2. private implementation extensions that may exist only as transitional
+   bridges with explicit removal conditions;
+3. totalizations that leak invalid-domain semantics through a public
+   declaration, notation, coercion, instance, or mathematical name and must be
+   removed.
 
 Record both interface and implementation status for each migrated area. A
 strict statement proved through a validated bridge is progress, but it is not
@@ -595,9 +606,10 @@ global rename:
   predicate. It already records a property-level existence claim, but it is not
   a strict operational API, and its conversions back to the current hierarchy
   construct totalized inverse data;
-- investigate an explicitly named totalized extension and a one-way bridge from
-  that extension to the strict property, without an automatic bridge that
-  recreates totalization in the reverse direction;
+- isolate any required totalized implementation behind a private transitional
+  adapter and a one-way bridge to the strict property, without an automatic
+  bridge that recreates totalization in the reverse direction; record the
+  adapter's consumers and removal condition;
 - account for all data and laws carried by the current hierarchy, including
   rational casts and scalar operations, rather than treating the work as a
   rename of one inverse field;
@@ -634,9 +646,12 @@ migration:
 - numerals are not assumed nonzero without the characteristic hypotheses needed
   in the ambient algebraic structure;
 - strict code cannot fall back to a reachable legacy totalized `/` or inverse;
+- no public declaration, notation, coercion, instance, or delaborator exposes
+  a transitional totalized operation;
 - error messages identify the failed mathematical obligation instead of exposing
   an undiagnosed coercion or instance-search failure;
-- pretty-printing distinguishes strict and explicitly totalized operations;
+- pretty-printing exposes only the faithful public operation and never
+  normalizes a term back to a transitional totalized form;
 - nested fractions, function composition, and denominator clearing remain
   readable in a real downstream development.
 
@@ -646,16 +661,17 @@ If a later task authorizes the migration and the prototype meets its acceptance
 criteria, first preserve a compiling compatibility state, then weaken
 dependencies module by module. A possible sequence is:
 
-1. introduce the strict property and explicit totalized boundary;
-2. move existing consumers to an explicitly totalized requirement where needed
-   without claiming that they are already strict;
+1. introduce the strict property and a private transitional adapter;
+2. identify and instrument legacy consumers that still depend on totalized
+   behavior without promoting that dependency to a new public requirement;
 3. provide proved adapters on valid domains;
 4. migrate coherent downstream slices to the strict API;
 5. weaken module requirements only after checking that their statements and
    implementations no longer rely on totalized semantics;
 6. add checks that prevent new unnecessary dependencies on the totalized layer;
-7. remove compatibility surfaces only after their consumers and replacement
-   paths are known.
+7. remove every transitional totalized adapter and compatibility surface after
+   its consumers and replacement paths are known; the migration is not complete
+   while any remains.
 
 Do not begin with a repository-wide mechanical rename that has not accounted
 for casts, notation, tactics, instance coherence, performance, and downstream
