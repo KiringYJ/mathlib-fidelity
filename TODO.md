@@ -75,10 +75,11 @@ operation.
   general-linear-group scalar wrappers have been removed, so split characteristic-two cases can
   supply their own eigenvalue evidence without a trace-based choice being imposed.
 
-- [ ] **Make real-valued Dirichlet density conditional on existence.**
-  `Mathlib/NumberTheory/NumberField/DirichletDensity.lean:90` defines
-  `NumberField.Set.dirichletDensity` as zero when no density exists.  Use
-  `HasDirichletDensity` at the ordinary boundary and explicitly name any zero-default projection.
+- [x] **Represent Dirichlet density by its subsingleton fiber.**
+  `HasDirichletDensity S δ` is the ordinary relational API, while `DirichletDensity S` is the
+  subtype of certified real values and is a subsingleton by uniqueness of limits.  No zero-default
+  or choice-based real-valued projection is retained.  The remaining analytic specification is
+  tracked separately under the M candidates.
 
 - [ ] **Restrict number-field heights to algebraic inputs and fix their documentation.**
   `absMulHeight₁` and `absLogHeight₁` in
@@ -123,6 +124,20 @@ operation.
   conflate it with the separate root number obtained from an induced primitive character.
 
 ## M -- subsystem audit candidates
+
+- [ ] **Complete the analytic specification of number-field Dirichlet density.**
+  `primeIdealZetaSum` and `HasDirichletDensity` in
+  `Mathlib/NumberTheory/NumberField/DirichletDensity.lean:55` and `:83` still use real `tsum` and
+  division, while `HasDirichletDensity.le_one` branches on summability at `:144` and reaches the
+  nonsummable-to-zero fallback at `:147`.  Prove summability of the all-prime series for every real
+  `s > 1`, deduce summability for subsets and strict positivity of the denominator, and remove
+  fallback-dependent proof branches.  Establish the prime-sum asymptotic against
+  `log (1 / (s - 1))`, or an equivalent bridge through the Dedekind zeta Euler product, so the
+  ratio definition is connected to the standard logarithmic normalizations.  Reuse
+  `NumberField.tendsto_sub_one_mul_dedekindZeta_nhdsGT` as available residue evidence, but do not
+  treat it alone as the missing prime-sum theorem.  Decide the public boundary of
+  `primeIdealZetaSum` together with the XL `tsum`/`tprod` audit; keep `HasDirichletDensity` as the
+  relational normal form and do not reopen the completed density-fiber migration.
 
 - [ ] **Make finite multiplicity a checked projection.**
   `Mathlib/RingTheory/Multiplicity.lean:47` defines `multiplicity` as
