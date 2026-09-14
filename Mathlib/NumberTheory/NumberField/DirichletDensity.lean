@@ -22,17 +22,18 @@ $$
 $$
 when this limit exists. The sum in the denominator runs over all nonzero prime ideals of `𝓞 K`.
 
-This is captured by the predicate `HasDirichletDensity S δ`, stating that the ratio tends to `δ`,
-and by the definition `dirichletDensity S`, the density as a real number (with junk value `0` when
-it does not exist).
+This is captured by the predicate `HasDirichletDensity S δ`, stating that the ratio tends to `δ`.
+The type `DirichletDensity S` carries a real number together with such a proof; it is empty when no
+density exists and a subsingleton because limits in `ℝ` are unique.
 
 ## Main results
 
-* `NumberField.primeIdealZetaSum_le_card_of_finite` — for a finite `S`, the partial sum is bounded
-  above by the number of elements of `S`.
-* `NumberField.hasDirichletDensity_empty` — the empty set has Dirichlet density `0`.
-* `NumberField.dirichletDensity_nonneg` — the Dirichlet density is nonnegative.
-* `NumberField.dirichletDensity_le_one` — the Dirichlet density is at most `1`.
+* `NumberField.Set.primeIdealZetaSum_le_card_of_finite` — for a finite `S`, the partial sum is
+  bounded above by the number of elements of `S`.
+* `NumberField.Set.hasDirichletDensity_empty` — the empty set has Dirichlet density `0`.
+* `NumberField.Set.DirichletDensity` — the subsingleton type of certified densities of a set.
+* `NumberField.Set.HasDirichletDensity.nonneg` — a Dirichlet density is nonnegative.
+* `NumberField.Set.HasDirichletDensity.le_one` — a Dirichlet density is at most `1`.
 
 -/
 
@@ -83,49 +84,56 @@ def HasDirichletDensity (δ : ℝ) : Prop :=
   Tendsto (fun s : ℝ ↦ S.primeIdealZetaSum s /
     primeIdealZetaSum (univ : Set (HeightOneSpectrum (𝓞 K))) s) (𝓝[>] 1) (𝓝 δ)
 
-open scoped Classical in
-/-- The Dirichlet density of `S` as a real number, taking the junk value `0` when `S` has no
-density. As with `tsum`, this value only has content when `S` has a density; the genuine statement
-that `S` has density `0` is `HasDirichletDensity S 0`. -/
-def dirichletDensity : ℝ :=
-  if h : ∃ δ, S.HasDirichletDensity δ then h.choose else 0
-
 variable {S}
 
-/-- If `S` has no Dirichlet density, then `dirichletDensity S = 0`. -/
-theorem dirichletDensity_eq_zero_of_not_hasDirichletDensity
-    (h : ∀ δ, ¬ S.HasDirichletDensity δ) : S.dirichletDensity = 0 := by
-  rw [dirichletDensity, dite_eq_right (not_exists.mpr h)]
+/-- A set has at most one Dirichlet density. -/
+theorem HasDirichletDensity.unique {δ ε : ℝ} (hδ : S.HasDirichletDensity δ)
+    (hε : S.HasDirichletDensity ε) : δ = ε :=
+  tendsto_nhds_unique hδ hε
 
-/-- If `S` has Dirichlet density `δ`, then `dirichletDensity S = δ`. -/
-theorem HasDirichletDensity.dirichletDensity_eq {δ : ℝ} (h : S.HasDirichletDensity δ) :
-    S.dirichletDensity = δ := by
-  rw [dirichletDensity, dite_eq_left ⟨δ, h⟩, tendsto_nhds_unique (Exists.choose_spec ⟨δ, h⟩) h]
+/-- The type of Dirichlet densities of `S`. It is empty when no density exists and contains at most
+one element. Keeping the witness in `Type` avoids extracting it from propositional existence. -/
+abbrev DirichletDensity (S : Set (HeightOneSpectrum (𝓞 K))) :=
+  {δ : ℝ // S.HasDirichletDensity δ}
+
+instance : Subsingleton (DirichletDensity S) where
+  allEq d e := Subtype.ext (d.property.unique e.property)
+
+/-- Bundle a real number known to be the Dirichlet density of `S`. -/
+protected abbrev HasDirichletDensity.toDirichletDensity {δ : ℝ}
+    (h : S.HasDirichletDensity δ) : DirichletDensity S :=
+  ⟨δ, h⟩
+
+namespace DirichletDensity
+
+/-- A certified Dirichlet density satisfies the ordinary relational predicate. -/
+protected theorem hasDirichletDensity (d : DirichletDensity S) :
+    S.HasDirichletDensity (d : ℝ) :=
+  d.property
+
+end DirichletDensity
+
+/-- Coercing a bundled Dirichlet density to `ℝ` returns the certified value. -/
+@[simp]
+theorem coe_toDirichletDensity {δ : ℝ} (h : S.HasDirichletDensity δ) :
+    (h.toDirichletDensity : ℝ) = δ :=
+  rfl
+
+/-- The certified-density fiber is nonempty exactly when some Dirichlet density exists. -/
+theorem nonempty_dirichletDensity_iff :
+    Nonempty (DirichletDensity S) ↔ ∃ δ, S.HasDirichletDensity δ :=
+  nonempty_subtype
 
 /-- The empty set has Dirichlet density `0`. -/
 theorem hasDirichletDensity_empty :
     HasDirichletDensity (∅ : Set (HeightOneSpectrum (𝓞 K))) 0 := by
   simp [HasDirichletDensity, primeIdealZetaSum_def]
 
-/-- The Dirichlet density of the empty set is `0`. -/
-@[simp]
-theorem dirichletDensity_empty :
-    dirichletDensity (∅ : Set (HeightOneSpectrum (𝓞 K))) = 0 :=
-  hasDirichletDensity_empty.dirichletDensity_eq
-
 /-- The Dirichlet density is nonnegative. -/
 theorem HasDirichletDensity.nonneg {δ : ℝ} (h : S.HasDirichletDensity δ) :
     0 ≤ δ :=
   ge_of_tendsto h <| Eventually.of_forall fun s ↦
     div_nonneg (S.primeIdealZetaSum_nonneg s) (univ.primeIdealZetaSum_nonneg s)
-
-variable (S) in
-/-- The Dirichlet density of `S` is nonnegative. -/
-theorem dirichletDensity_nonneg : 0 ≤ S.dirichletDensity := by
-  rw [dirichletDensity]
-  split_ifs with h
-  · exact h.choose_spec.nonneg
-  · exact le_rfl
 
 /-- The Dirichlet density is at most `1`. -/
 theorem HasDirichletDensity.le_one {δ : ℝ} (h : S.HasDirichletDensity δ) :
@@ -137,13 +145,5 @@ theorem HasDirichletDensity.le_one {δ : ℝ} (h : S.HasDirichletDensity δ) :
   · exact div_le_one_of_le₀ (hs.tsum_subtype_le _ S (fun _ ↦ by positivity))
       (tsum_nonneg fun _ ↦ by positivity)
   · grw [tsum_eq_zero_of_not_summable hs, div_zero, zero_le_one]
-
-variable (S) in
-/-- The Dirichlet density of `S` is at most `1`. -/
-theorem dirichletDensity_le_one : S.dirichletDensity ≤ 1 := by
-  rw [dirichletDensity]
-  split_ifs with h
-  · exact h.choose_spec.le_one
-  · exact zero_le_one
 
 end NumberField.Set
