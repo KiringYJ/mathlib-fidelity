@@ -105,9 +105,12 @@ operation.
   hypothesis in the constructor.  Do not export the constant-coefficient branch as a replacement
   operation without literature giving it that mathematical interpretation.
 
-- [ ] **Give `Nat.maxPrimeFac` its actual domain.**
-  `Mathlib/Data/Nat/MaxPrimeFac.lean:39` returns zero at zero and one at one, neither of which is a
-  greatest prime divisor.  Require `1 < n` or return explicit failure.
+- [x] **Give `Nat.maxPrimeFac` its actual domain.**
+  `Nat.maxPrimeFac n hn` requires `hn : 1 < n` and computes the last element of the nonempty
+  prime-factor list without a fallback. `exists_isGreatest_prime_dvd_iff` characterizes this exact
+  domain: zero has unbounded prime divisors and one has none. The theorem family uses the same
+  domain, with fixed points exactly the primes. Tests cover computation, rejected inputs, and
+  rewriting with independently supplied domain proofs.
 
 - [ ] **Require nonzero mass for `FiniteMeasure.normalize`.**
   `FiniteMeasure.normalize` in
