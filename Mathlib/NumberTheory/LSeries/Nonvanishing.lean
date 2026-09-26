@@ -19,8 +19,7 @@ if `χ` is a Dirichlet character, `s ∈ ℂ` with `1 ≤ s.re`, and either `χ`
 then the L-function of `χ` does not vanish at `s`.
 
 As a consequence, we have the corresponding statement for the Riemann ζ function:
-`riemannZeta_ne_zero_of_one_le_re` (which does not require `s ≠ 1`, since the junk value at `s = 1`
-happens to be non-zero).
+`riemannZeta_ne_zero_of_one_le_re`, for `s ≠ 1` with `1 ≤ s.re`.
 
 These results are prerequisites for the **Prime Number Theorem** and
 **Dirichlet's Theorem** on primes in arithmetic progressions.
@@ -408,13 +407,10 @@ variable {χ} in
 theorem LFunction_apply_one_ne_zero (hχ : χ ≠ 1) : LFunction χ 1 ≠ 0 :=
   LFunction_ne_zero_of_one_le_re χ (.inl hχ) <| one_re ▸ le_rfl
 
-/-- The Riemann Zeta Function does not vanish on the closed half-plane `re s ≥ 1`.
-(Note that the value at `s = 1` is a junk value, which happens to be nonzero.) -/
-lemma _root_.riemannZeta_ne_zero_of_one_le_re ⦃s : ℂ⦄ (hs : 1 ≤ s.re) :
-    riemannZeta s ≠ 0 := by
-  rcases eq_or_ne s 1 with rfl | hs₀
-  · exact riemannZeta_one_ne_zero
-  · exact LFunction_modOne_eq (χ := 1) ▸ LFunction_ne_zero_of_one_le_re _ (.inr hs₀) hs
+/-- The Riemann zeta function does not vanish at `s` if `s ≠ 1` and `s.re ≥ 1`. -/
+lemma _root_.riemannZeta_ne_zero_of_one_le_re ⦃s : ℂ⦄ (hs₀ : s ≠ 1) (hs : 1 ≤ s.re) :
+    riemannZeta s ≠ 0 :=
+  LFunction_modOne_eq (χ := 1) ▸ LFunction_ne_zero_of_one_le_re _ (.inr hs₀) hs
 
 end nonvanishing
 
