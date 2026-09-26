@@ -11,19 +11,15 @@ public import Mathlib.Order.Lattice.Nat
 /-!
 # Greatest prime factor of a natural number
 
-This file defines `Nat.maxPrimeFac`, the greatest prime factor of a natural number greater than
-one, with explicit values at zero and one.
+This file defines `Nat.maxPrimeFac n hn`, the greatest prime factor of a natural number `n`,
+with an explicit proof `hn : 1 < n`.
 
 ## Implementation notes
 
-The list `n.primeFactorsList` is empty exactly when `n = 0` or `n = 1`. We choose the junk values
-`maxPrimeFac 0 = 0` and `maxPrimeFac 1 = 1` so that:
-* `maxPrimeFac n ≤ n` holds for all `n`. This forces `maxPrimeFac 0 = 0`.
-* `maxPrimeFac n ∣ n` holds for all `n`. This forces `maxPrimeFac 1 = 1`.
-
-Choosing `maxPrimeFac 1 = 0` instead would make `IsLUB {p : ℕ | p.Prime ∧ p ∣ n} (maxPrimeFac n)`
-(but not `IsGreatest {p : ℕ | p.Prime ∧ p ∣ n} (maxPrimeFac n)`) hold for all `n ≠ 0` and would make
-`maxPrimeFac_eq_sSup` hold unconditionally thanks to the junk value `sSup ∅ = 0` on `ℕ`.
+The prime-divisor set has a greatest element exactly when `1 < n`, as expressed by
+`Nat.exists_isGreatest_prime_dvd_iff`. At zero it contains every prime and is unbounded;
+at one it is empty. On the valid domain, the sorted list `n.primeFactorsList` is nonempty,
+so its last element computes the greatest prime factor without a default value.
 -/
 
 @[expose] public section
@@ -32,116 +28,97 @@ namespace Nat
 
 variable {m n p : ℕ}
 
-/-- The greatest prime divisor of a natural number `n > 1`.
+/-- The greatest prime divisor of a natural number `n > 1`. -/
+def maxPrimeFac (n : ℕ) (hn : 1 < n) : ℕ :=
+  n.primeFactorsList.getLast ((primeFactorsList_ne_nil n).2 hn)
 
-At the exceptional inputs `n = 0` and `n = 1`, it returns the explicit default `n` because
-`n.primeFactorsList` is empty. -/
-def maxPrimeFac (n : ℕ) : ℕ := n.primeFactorsList.getLastD n
-
-@[simp] lemma maxPrimeFac_zero : maxPrimeFac 0 = 0 := by simp [maxPrimeFac]
-@[simp] lemma maxPrimeFac_one : maxPrimeFac 1 = 1 := by simp [maxPrimeFac]
-
-lemma prime_maxPrimeFac_of_one_lt (h : 1 < n) : n.maxPrimeFac.Prime := by
-  have : n.primeFactorsList ≠ [] := by simp; lia
-  simpa [maxPrimeFac, List.getLast?_eq_getLast_of_ne_nil this]
-    using prime_of_mem_primeFactorsList <| List.getLast_mem _
+lemma prime_maxPrimeFac (hn : 1 < n) : (n.maxPrimeFac hn).Prime :=
+  prime_of_mem_primeFactorsList <| List.getLast_mem _
 
 /-- The greatest prime factor of a natural number divides it. -/
-lemma maxPrimeFac_dvd : ∀ {n : ℕ}, maxPrimeFac n ∣ n
-  | 0 | 1 => by simp
-  | n + 2 => by
-    have : (n + 2).primeFactorsList ≠ [] := by simp
-    simpa [maxPrimeFac, List.getLast?_eq_getLast_of_ne_nil this]
-      using dvd_of_mem_primeFactorsList <| List.getLast_mem _
+lemma maxPrimeFac_dvd (hn : 1 < n) : maxPrimeFac n hn ∣ n :=
+  dvd_of_mem_primeFactorsList <| List.getLast_mem _
 
-/-- Every prime factor of a nonzero natural number is at most its greatest prime factor. -/
-lemma le_maxPrimeFac (hn : n ≠ 0) (hp : p.Prime) (h_dvd : p ∣ n) :
-    p ≤ maxPrimeFac n := by
-  have := (mem_primeFactorsList hn).2 ⟨hp, h_dvd⟩
-  simpa [maxPrimeFac, List.getLast?_eq_getLast_of_ne_nil <| List.ne_nil_of_mem this]
+/-- Every prime factor of a natural number greater than one is at most its greatest prime factor. -/
+lemma le_maxPrimeFac (hn : 1 < n) (hp : p.Prime) (h_dvd : p ∣ n) :
+    p ≤ maxPrimeFac n hn := by
+  have := (mem_primeFactorsList (Nat.ne_zero_of_lt hn)).2 ⟨hp, h_dvd⟩
+  simpa only [maxPrimeFac]
     using (primeFactorsList_sorted n).pairwise.rel_getLast this
 
 /-- The greatest prime factor of a natural number greater than one is the greatest of its prime
 factors. -/
 lemma isGreatest_maxPrimeFac (hn : 1 < n) :
-    IsGreatest {p : ℕ | p.Prime ∧ p ∣ n} (maxPrimeFac n) :=
-  ⟨⟨prime_maxPrimeFac_of_one_lt hn, maxPrimeFac_dvd⟩,
-    fun _ hp => le_maxPrimeFac (zero_lt_of_lt hn).ne' hp.1 hp.2⟩
+    IsGreatest {p : ℕ | p.Prime ∧ p ∣ n} (maxPrimeFac n hn) :=
+  ⟨⟨prime_maxPrimeFac hn, maxPrimeFac_dvd hn⟩, fun _ hp => le_maxPrimeFac hn hp.1 hp.2⟩
+
+/-- A natural number has a greatest prime divisor exactly when it is greater than one. -/
+lemma exists_isGreatest_prime_dvd_iff :
+    (∃ p, IsGreatest {p : ℕ | p.Prime ∧ p ∣ n} p) ↔ 1 < n := by
+  constructor
+  · rintro ⟨p, hp⟩
+    have hn : n ≠ 0 := by
+      rintro rfl
+      exact not_bddAbove_setOfPred_prime ⟨p, fun q hq => hp.2 ⟨hq, dvd_zero q⟩⟩
+    exact hp.1.1.one_lt.trans_le (Nat.le_of_dvd (Nat.pos_of_ne_zero hn) hp.1.2)
+  · intro hn
+    exact ⟨maxPrimeFac n hn, isGreatest_maxPrimeFac hn⟩
 
 /-- The greatest prime factor of a natural number greater than one is the least upper bound of
 its prime factors. -/
 lemma isLUB_maxPrimeFac (hn : 1 < n) :
-    IsLUB {p : ℕ | p.Prime ∧ p ∣ n} (maxPrimeFac n) :=
+    IsLUB {p : ℕ | p.Prime ∧ p ∣ n} (maxPrimeFac n hn) :=
   (isGreatest_maxPrimeFac hn).isLUB
 
 lemma maxPrimeFac_le_iff (hn : 1 < n) :
-    n.maxPrimeFac ≤ m ↔ ∀ p, p.Prime → p ∣ n → p ≤ m := by
+    n.maxPrimeFac hn ≤ m ↔ ∀ p, p.Prime → p ∣ n → p ≤ m := by
   simp [isLUB_le_iff <| isLUB_maxPrimeFac hn, upperBounds]
 
 @[simp]
-lemma one_le_maxPrimeFac_iff : ∀ {n : ℕ}, 1 ≤ maxPrimeFac n ↔ 1 ≤ n
-  | 0 | 1 => by simp
-  | n + 2 => by simpa using (prime_maxPrimeFac_of_one_lt <| by lia).one_lt.le
+lemma one_le_maxPrimeFac (hn : 1 < n) : 1 ≤ maxPrimeFac n hn :=
+  (prime_maxPrimeFac hn).one_lt.le
 
 @[simp]
-lemma one_lt_maxPrimeFac_iff : ∀ {n : ℕ}, 1 < maxPrimeFac n ↔ 1 < n
-  | 0 | 1 => by simp
-  | n + 2 => by simpa using (prime_maxPrimeFac_of_one_lt <| by lia).one_lt
+lemma one_lt_maxPrimeFac (hn : 1 < n) : 1 < maxPrimeFac n hn :=
+  (prime_maxPrimeFac hn).one_lt
 
-/-- The greatest prime factor of a product of nonzero natural numbers is the maximum of their
-greatest prime factors. -/
-lemma maxPrimeFac_mul (hm : m ≠ 0) (hn : n ≠ 0) :
-    maxPrimeFac (m * n) = max (maxPrimeFac m) (maxPrimeFac n) := by
-  obtain rfl | hm : m = 1 ∨ 1 < m := by lia
-  · simp
-    lia
-  obtain rfl | hn : n = 1 ∨ 1 < n := by lia
-  · simp
-    lia
+/-- The greatest prime factor of a product of natural numbers greater than one is the maximum
+of their greatest prime factors. -/
+lemma maxPrimeFac_mul (hm : 1 < m) (hn : 1 < n) :
+    maxPrimeFac (m * n) (one_lt_mul'' hm hn) = max (maxPrimeFac m hm) (maxPrimeFac n hn) := by
   refine eq_of_forall_ge_iff fun c ↦ ?_
-  simp +contextual [maxPrimeFac_le_iff, one_lt_mul'' hm hn, Nat.Prime.dvd_mul, or_imp,
-    forall_and, *]
+  simp +contextual [maxPrimeFac_le_iff, Nat.Prime.dvd_mul, or_imp, forall_and]
 
 /-- The greatest prime factor of a power with nonzero exponent is the greatest prime factor of
 its base. -/
 @[simp]
-lemma maxPrimeFac_pow : ∀ {k : ℕ}, k ≠ 0 → ∀ n, maxPrimeFac (n ^ k) = maxPrimeFac n
-  | k + 1, _, 0 | 1, _, n => by simp
-  | k + 2, _, n + 1 => by
-    rw [pow_succ, maxPrimeFac_mul (pow_ne_zero _ (by lia)) (by lia), maxPrimeFac_pow (by lia)]
-    simp
+lemma maxPrimeFac_pow (hn : 1 < n) {k : ℕ} (hk : k ≠ 0) :
+    maxPrimeFac (n ^ k) (one_lt_pow hk hn) = maxPrimeFac n hn := by
+  apply le_antisymm
+  · exact le_maxPrimeFac hn (prime_maxPrimeFac _)
+      ((prime_maxPrimeFac _).dvd_of_dvd_pow (maxPrimeFac_dvd _))
+  · exact le_maxPrimeFac _ (prime_maxPrimeFac hn) (dvd_pow (maxPrimeFac_dvd hn) hk)
 
 /-- The greatest prime factor of a prime is the prime itself. -/
 @[simp]
-lemma Prime.maxPrimeFac_eq_self (hp : p.Prime) : maxPrimeFac p = p := by
+lemma Prime.maxPrimeFac_eq_self (hp : p.Prime) : maxPrimeFac p hp.one_lt = p := by
   apply le_antisymm
-  · exact Nat.le_of_dvd hp.pos maxPrimeFac_dvd
-  · exact le_maxPrimeFac hp.ne_zero hp (dvd_refl p)
+  · exact Nat.le_of_dvd hp.pos (maxPrimeFac_dvd hp.one_lt)
+  · exact le_maxPrimeFac hp.one_lt hp (dvd_refl p)
 
-/-- The fixed points of `maxPrimeFac` are zero, one, and the primes. -/
+/-- The fixed points of `maxPrimeFac` are the primes. -/
 @[simp]
-lemma maxPrimeFac_eq_self_iff : maxPrimeFac n = n ↔ n ≤ 1 ∨ n.Prime where
-  mp h := by
-    by_cases hn : n ≤ 1
-    · exact Or.inl hn
-    · exact Or.inr <| h ▸ prime_maxPrimeFac_of_one_lt (lt_of_not_ge hn)
-  mpr := by
-    rintro (hn | hn)
-    · obtain rfl | rfl : n = 0 ∨ n = 1 := by lia
-      all_goals simp
-    · exact hn.maxPrimeFac_eq_self
+lemma maxPrimeFac_eq_self_iff (hn : 1 < n) : maxPrimeFac n hn = n ↔ n.Prime where
+  mp h := h ▸ prime_maxPrimeFac hn
+  mpr hp := hp.maxPrimeFac_eq_self
 
 /-- The greatest prime factor of a natural number is at most that number. -/
-lemma maxPrimeFac_le : ∀ {n : ℕ}, maxPrimeFac n ≤ n
-  | 0 | 1 => by simp
-  | n + 2 => Nat.le_of_dvd (by lia) maxPrimeFac_dvd
+lemma maxPrimeFac_le (hn : 1 < n) : maxPrimeFac n hn ≤ n :=
+  Nat.le_of_dvd (Nat.zero_lt_of_lt hn) (maxPrimeFac_dvd hn)
 
-/-- Away from `n = 1`, the computable greatest prime factor agrees with its supremum
-characterization. -/
-lemma maxPrimeFac_eq_sSup (hn_one : n ≠ 1) :
-    maxPrimeFac n = sSup {p : ℕ | p.Prime ∧ p ∣ n} := by
-  obtain rfl | hn : n = 0 ∨ 1 < n := by lia
-  · simpa using (Set.Infinite.Nat.sSup_eq_zero infinite_setOfPred_prime).symm
-  · exact ((isLUB_maxPrimeFac hn).csSup_eq ⟨_, (isGreatest_maxPrimeFac hn).1⟩).symm
+/-- The computable greatest prime factor agrees with its supremum characterization. -/
+lemma maxPrimeFac_eq_sSup (hn : 1 < n) :
+    maxPrimeFac n hn = sSup {p : ℕ | p.Prime ∧ p ∣ n} :=
+  ((isLUB_maxPrimeFac hn).csSup_eq ⟨_, (isGreatest_maxPrimeFac hn).1⟩).symm
 
 end Nat
