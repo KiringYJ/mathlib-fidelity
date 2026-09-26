@@ -23,7 +23,8 @@ All definitions and theorems are in the `DirichletCharacter` namespace.
 * `LFunction χ s`: the L-function, defined as a linear combination of Hurwitz zeta functions.
 * `completedLFunction χ s`: the completed L-function, which for *almost* all `s` is equal to
   `LFunction χ s * gammaFactor χ s` where `gammaFactor χ s` is the archimedean Gamma-factor.
-* `rootNumber`: the global root number of the L-series of `χ` (for `χ` primitive; junk otherwise).
+* `rootNumber χ hχ`: the global root number of the L-series of `χ`, where `hχ` proves that `χ` is
+  primitive.
 
 ## Main theorems
 
@@ -36,8 +37,9 @@ All definitions and theorems are in the `DirichletCharacter` namespace.
 * `differentiable_completedLFunction`: if `χ` is nontrivial then `completedLFunction χ s` is
   differentiable everywhere.
 * `IsPrimitive.completedLFunction_one_sub`: the **functional equation** for Dirichlet L-functions,
-  showing that if `χ` is primitive modulo `N`, then
-  `completedLFunction χ s = N ^ (s - 1 / 2) * rootNumber χ * completedLFunction χ⁻¹ s`.
+  showing that if `χ` is primitive modulo `N`, with proof `hχ`, then
+  `completedLFunction χ (1 - s) =
+    N ^ (s - 1 / 2) * rootNumber χ hχ * completedLFunction χ⁻¹ s`.
 -/
 
 @[expose] public section
@@ -265,15 +267,18 @@ lemma LFunction_eq_completed_div_gammaFactor (χ : DirichletCharacter ℂ N) (s 
 
 open scoped Classical in
 /--
-Global root number of `χ` (for `χ` primitive; junk otherwise). Defined as
+Global root number of a primitive Dirichlet character `χ`, with primitivity witnessed by `hχ`.
+Defined as
 `gaussSum χ stdAddChar / I ^ a / N ^ (1 / 2)`, where `a = 0` if even, `a = 1` if odd. (The factor
 `1 / I ^ a` is the Archimedean root number.) This is a complex number of absolute value 1.
 -/
-noncomputable def rootNumber (χ : DirichletCharacter ℂ N) : ℂ :=
+@[nolint unusedArguments]
+noncomputable def rootNumber (χ : DirichletCharacter ℂ N) (_hχ : IsPrimitive χ) : ℂ :=
   gaussSum χ stdAddChar / I ^ (if χ.Even then 0 else 1) / N ^ (1 / 2 : ℂ)
 
 /-- The root number of the unique Dirichlet character modulo 1 is 1. -/
-lemma rootNumber_modOne (χ : DirichletCharacter ℂ 1) : rootNumber χ = 1 := by
+@[simp] lemma rootNumber_modOne (χ : DirichletCharacter ℂ 1) (hχ : IsPrimitive χ) :
+    rootNumber χ hχ = 1 := by
   simp [rootNumber, gaussSum, -univ_unique, ← singleton_eq_univ (1 : ZMod 1),
     (show stdAddChar (1 : ZMod 1) = 1 from AddChar.map_zero_eq_one _),
     (show χ.Even from map_one _)]
@@ -282,11 +287,12 @@ namespace IsPrimitive
 
 /-- **Functional equation** for primitive Dirichlet L-functions. -/
 theorem completedLFunction_one_sub {χ : DirichletCharacter ℂ N} (hχ : IsPrimitive χ) (s : ℂ) :
-    completedLFunction χ (1 - s) = N ^ (s - 1 / 2) * rootNumber χ * completedLFunction χ⁻¹ s := by
+    completedLFunction χ (1 - s) =
+      N ^ (s - 1 / 2) * rootNumber χ hχ * completedLFunction χ⁻¹ s := by
   classical
   -- First handle special case of Riemann zeta
   rcases eq_or_ne N 1 with rfl | hN
-  · simp [completedLFunction_modOne_eq, completedRiemannZeta_one_sub, rootNumber_modOne]
+  · simp [completedLFunction_modOne_eq, completedRiemannZeta_one_sub]
   -- facts about `χ` as function
   have h_sum : ∑ j, χ j = 0 := by
     refine χ.sum_eq_zero_of_ne_one (fun h ↦ hN.symm ?_)

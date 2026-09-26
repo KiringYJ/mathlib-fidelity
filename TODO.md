@@ -120,12 +120,12 @@ operation.
   do not retain the arbitrary-Dirac branch as a public operation.  A private implementation helper is
   acceptable only when nonzero-mass evidence makes the branch unreachable.
 
-- [ ] **Require primitivity for `DirichletCharacter.rootNumber`.**
-  `Mathlib/NumberTheory/LSeries/DirichletContinuation.lean:272` exposes the primitive-character
-  Gauss-sum formula for every character and documents the nonprimitive result as junk.  Require
-  `IsPrimitive χ` for the ordinary root number.  Keep the unrestricted expression public as a
-  separate Gauss-sum formula only if literature uses it as such; otherwise keep it private.  Do not
-  conflate it with the separate root number obtained from an induced primitive character.
+- [x] **Require primitivity for `DirichletCharacter.rootNumber`.**
+  `rootNumber χ hχ` requires `hχ : IsPrimitive χ` and retains the nonzero-modulus hypothesis.
+  The functional equation supplies its existing primitivity proof, and the modulus-one root
+  number remains one. No unrestricted root-number wrapper is retained. Tests distinguish missing
+  primitivity, a nonprimitive character at positive modulus, and primitive modulus zero;
+  the operation continues to use the original character and modulus, not an induced character.
 
 ## M -- subsystem audit candidates
 
