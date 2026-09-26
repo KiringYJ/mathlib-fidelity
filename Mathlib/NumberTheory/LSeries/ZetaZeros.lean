@@ -42,7 +42,7 @@ lemma mem_riemannZetaZeros {z : ℂ} :
 private lemma riemannZetaZeros_codiscreteWithin_compl_one :
     riemannZetaZerosᶜ ∈ Filter.codiscreteWithin {1}ᶜ := by
   refine analyticOn_riemannZeta.preimage_zero_mem_codiscreteWithin (x := 2) ?_ (by simp) ?_
-  · exact riemannZeta_ne_zero_of_one_le_re Nat.one_le_ofNat
+  · exact riemannZeta_ne_zero_of_one_le_re (by norm_num) Nat.one_le_ofNat
   · exact isConnected_compl_singleton_of_one_lt_rank (by simp) 1
 
 /-- The complement of the zero set of `riemannZeta` is codiscrete. -/

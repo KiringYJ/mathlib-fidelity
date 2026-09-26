@@ -88,10 +88,11 @@ operation.
   algebraic-number carrier); also correct the multiplicative docstring, which currently says its
   fallback is zero.
 
-- [ ] **Remove the pole-only branch from `riemannZeta_ne_zero_of_one_le_re`.**
-  `Mathlib/NumberTheory/LSeries/Nonvanishing.lean:413` omits `s ≠ 1` because the chosen value at
-  the pole happens to be nonzero.  State the mathematical theorem away from the pole; treat a strict
-  zeta/L-series evaluation separately under the L backlog.
+- [x] **Remove the pole-only branch from `riemannZeta_ne_zero_of_one_le_re`.**
+  The theorem now requires `s ≠ 1` and directly specializes Dirichlet L-function nonvanishing
+  away from the pole. The zero-set consumer supplies this evidence, and a regression test rejects
+  the former invocation using only `1 ≤ s.re`. Strict zeta/L-series evaluation remains separate
+  under the L backlog.
 
 - [ ] **Put `ArchimedeanClass.stdPart` on finite elements.**
   `Mathlib/Algebra/Order/Ring/StandardPart.lean:273` maps infinite inputs to zero, conflating them
