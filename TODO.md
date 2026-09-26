@@ -94,11 +94,13 @@ operation.
   the former invocation using only `1 ≤ s.re`. Strict zeta/L-series evaluation remains separate
   under the L backlog.
 
-- [ ] **Put `ArchimedeanClass.stdPart` on finite elements.**
-  `Mathlib/Algebra/Order/Ring/StandardPart.lean:273` maps infinite inputs to zero, conflating them
-  with infinitesimals in results such as `stdPart_eq_zero`.  Use the existing `FiniteElement K`
-  domain.  Remove the ambient zero extension from the public surface unless matching mathematical
-  literature is found; if implementation still needs it, keep it private behind finite-input proofs.
+- [x] **Put `ArchimedeanClass.stdPart` on finite elements.**
+  The canonical ordered ring homomorphism `stdPart : FiniteElement K →+*o ℝ` has no ambient
+  extension or fallback. Its kernel consists exactly of infinitesimals; arithmetic and unit
+  inversion use the generic homomorphism laws. `IsGLB`/`IsLUB` specify the strict real cuts, with
+  `sInf`/`sSup` equalities derived using nonempty witnesses. Hyperreal convergence supplies finite
+  inputs, and the infinite-value theorem `stdPart_omega` is removed. Tests cover closure, real
+  embeddings, infinitesimals, units, excluded infinite inputs, and cut endpoint behavior.
 
 - [ ] **Require `1 < q` for `ArithmeticFunction.ofPowerSeries`.**
   `Mathlib/NumberTheory/ArithmeticFunction/LFunction.lean:66` uses the constant coefficient when

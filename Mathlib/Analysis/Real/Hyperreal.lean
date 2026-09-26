@@ -24,7 +24,8 @@ non-archimedean fields. In particular:
 
 - `ArchimedeanClass` can be used to measure whether an element is infinitesimal (`0 < mk x`) or
   infinite (`mk x < 0`).
-- `ArchimedeanClass.stdPart` generalizes the standard part function to a general ordered field.
+- `ArchimedeanClass.stdPart` maps the finite elements of a general ordered field to their standard
+  real parts.
 
 ## TODO
 
@@ -170,7 +171,7 @@ theorem archimdeanClassMk_coe {x : ℝ} (hx : x ≠ 0) : mk (x : ℝ*) = 0 :=
   mk_map_of_archimedean' coeRingHom hx
 
 @[simp]
-theorem stdPart_coe (x : ℝ) : stdPart (x : ℝ*) = x :=
+theorem stdPart_coe (x : ℝ) : stdPart (FiniteElement.ofArchimedean coeRingHom x) = x :=
   stdPart_map_real coeRingHom x
 
 /-! ### Basic constants -/
@@ -214,11 +215,6 @@ theorem abs_omega : |ω| = ω :=
 @[simp]
 theorem archimedeanClassMk_omega_neg : mk ω < 0 :=
   fun n ↦ by simpa using! coe_lt_omega n
-
-@[simp]
-theorem stdPart_omega : stdPart ω = 0 := by
-  rw [stdPart_eq_zero]
-  exact archimedeanClassMk_omega_neg.ne
 
 /-! #### ε -/
 
@@ -296,17 +292,19 @@ theorem archimedeanClassMk_nonneg_of_tendsto {x : ℝ*} {r : ℝ} (hx : x.Tendst
   obtain ⟨t, ht⟩ := exists_gt r
   exact mk_nonneg_of_le_of_le_of_archimedean coeRingHom (hx.1 s hs) (hx.2 t ht)
 
-theorem stdPart_of_tendsto {x : ℝ*} {r : ℝ} (hx : x.Tendsto (𝓝 r)) : stdPart x = r := by
-  rw [tendsto_iff_forall] at hx
-  exact stdPart_eq coeRingHom hx.1 hx.2
+theorem stdPart_of_tendsto {x : ℝ*} {r : ℝ} (hx : x.Tendsto (𝓝 r)) :
+    stdPart (FiniteElement.mk x (archimedeanClassMk_nonneg_of_tendsto hx)) = r := by
+  apply stdPart_eq coeRingHom
+  · exact (tendsto_iff_forall.1 hx).1
+  · exact (tendsto_iff_forall.1 hx).2
 
 theorem archimedeanClassMk_pos_of_tendsto {x : ℝ*} (hx : x.Tendsto (𝓝 0)) : 0 < mk x := by
-  apply (archimedeanClassMk_nonneg_of_tendsto hx).lt_of_ne'
-  rw [← stdPart_eq_zero, stdPart_of_tendsto hx]
+  exact stdPart_eq_zero.mp (stdPart_of_tendsto hx)
 
 @[simp]
-theorem stdPart_epsilon : stdPart ε = 0 :=
-  stdPart_eq_zero.2 <| archimedeanClassMk_epsilon_pos.ne'
+theorem stdPart_epsilon :
+    stdPart (FiniteElement.mk ε archimedeanClassMk_epsilon_pos.le) = 0 :=
+  stdPart_eq_zero.2 archimedeanClassMk_epsilon_pos
 
 theorem epsilon_lt_of_pos {r : ℝ} : 0 < r → ε < r :=
   lt_of_pos_of_archimedean coeRingHom archimedeanClassMk_epsilon_pos

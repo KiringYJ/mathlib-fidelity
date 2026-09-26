@@ -16,8 +16,9 @@ import Mathlib.Algebra.Order.Archimedean.Real.Hom
 /-!
 # Standard part function
 
-Given a finite element in a non-archimedean field, the standard part function rounds it to the
-unique closest real number. That is, it chops off any infinitesimals.
+The standard part maps finite elements of a linearly ordered field to real numbers through the
+Archimedean residue field. When the field contains an explicitly embedded copy of the reals,
+the standard part is the unique real number whose difference from the input is infinitesimal.
 
 Let `K` be a linearly ordered field. The subset of finite elements (i.e. those bounded by a natural
 number) is a `ValuationSubring`, which means we can construct its residue field
@@ -25,9 +26,11 @@ number) is a `ValuationSubring`, which means we can construct its residue field
 This field inherits a `LinearOrder` instance, which makes it into an Archimedean linearly ordered
 field, meaning we can uniquely embed it in the reals.
 
-Given a finite element of the field, the `ArchimedeanClass.stdPart` function returns the real number
-corresponding to this unique embedding. This function generalizes, among other things, the standard
-part function on `Hyperreal`.
+The ordered ring homomorphism `ArchimedeanClass.stdPart : FiniteElement K →+*o ℝ` uses this unique
+embedding. Its input type excludes infinite elements, and its kernel consists of infinitesimals.
+Use the ordinary homomorphism laws for arithmetic on finite elements. Inverses are available for
+units of the ring of finite elements, via `map_units_inv`; finite elements need not form a field.
+This construction generalizes the standard part on `Hyperreal`.
 
 ## References
 
@@ -54,6 +57,7 @@ namespace FiniteElement
 
 @[simp] theorem val_zero : (0 : FiniteElement K).1 = 0 := rfl
 @[simp] theorem val_one : (1 : FiniteElement K).1 = 1 := rfl
+@[simp] theorem val_neg (x : FiniteElement K) : (-x).1 = -x.1 := rfl
 @[simp] theorem val_add (x y : FiniteElement K) : (x + y).1 = x.1 + y.1 := rfl
 @[simp] theorem val_sub (x y : FiniteElement K) : (x - y).1 = x.1 - y.1 := rfl
 @[simp] theorem val_mul (x y : FiniteElement K) : (x * y).1 = x.1 * y.1 := rfl
@@ -113,6 +117,18 @@ instance : FloorRing (FiniteElement K) :=
     obtain ⟨n, hn⟩ := x.2
     refine ⟨n, (le_abs_self x).trans ?_⟩
     simpa using! hn
+
+/-- Lift an ordered ring homomorphism from an Archimedean ring to the finite elements of `K`. -/
+def ofArchimedean (f : R →+*o K) : R →+*o FiniteElement K where
+  toFun r := .mk (f r) (mk_map_nonneg_of_archimedean f r)
+  map_zero' := Subtype.ext (map_zero f)
+  map_one' := Subtype.ext (map_one f)
+  map_add' x y := Subtype.ext (map_add f x y)
+  map_mul' x y := Subtype.ext (map_mul f x y)
+  monotone' _ _ h := f.monotone' h
+
+@[simp]
+theorem val_ofArchimedean (f : R →+*o K) (r : R) : (ofArchimedean f r).1 = f r := rfl
 
 end FiniteElement
 
@@ -229,24 +245,13 @@ theorem mk_ratCast (q : ℚ) : mk (q : FiniteElement K) = q := by
     ← FiniteElement.mk_natCast, FiniteElement.mk_mul_mk]
   simp_all
 
-/-- An embedding from an Archimedean field into `K` induces an embedding into
+/-- An embedding from an Archimedean ring into `K` induces an embedding into
 `FiniteResidueField K`. -/
-def ofArchimedean (f : R →+*o K) : R →+*o FiniteResidueField K where
-  toFun r := mk <| .mk _ (mk_map_nonneg_of_archimedean f r)
-  map_zero' := by simp
-  map_one' := by simp
-  map_add' x y := by
-    simp_rw [map_add]
-    exact mk.map_add
-      (.mk _ (mk_map_nonneg_of_archimedean f x)) (.mk _ (mk_map_nonneg_of_archimedean f y))
-  map_mul' x y := by
-    simp_rw [map_mul]
-    exact mk.map_mul
-      (.mk _ (mk_map_nonneg_of_archimedean f x)) (.mk _ (mk_map_nonneg_of_archimedean f y))
-  monotone' x y h := mk.monotone' <| f.monotone' h
+def ofArchimedean (f : R →+*o K) : R →+*o FiniteResidueField K :=
+  mk.comp (FiniteElement.ofArchimedean f)
 
 theorem ofArchimedean_apply (f : R →+*o K) (r : R) :
-    ofArchimedean f r = mk (.mk _ (mk_map_nonneg_of_archimedean f r)) :=
+    ofArchimedean f r = mk (FiniteElement.ofArchimedean f r) :=
   rfl
 
 theorem ofArchimedean_injective (f : R →+*o K) : Function.Injective (ofArchimedean f) := by
@@ -265,214 +270,137 @@ end FiniteResidueField
 
 /-! ### Standard part -/
 
-/-- The standard part of a `FiniteElement` is the unique real number with an infinitesimal
-difference.
-
-For any infinite inputs, this function outputs a junk value of 0. -/
+/-- The standard part on finite elements, obtained from the residue field's unique ordered
+embedding into `ℝ`. Its kernel is the ideal of infinitesimals. -/
 @[no_expose]
-def stdPart (x : K) : ℝ :=
-  if h : 0 ≤ mk x then
-    OrderRingHom.comp Classical.ofNonempty FiniteResidueField.mk (.mk x h) else 0
+def stdPart : FiniteElement K →+*o ℝ :=
+  OrderRingHom.comp Classical.ofNonempty FiniteResidueField.mk
 
-theorem stdPart_of_mk_nonneg (f : FiniteResidueField K →+*o ℝ) (h : 0 ≤ mk x) :
-    stdPart x = f (.mk <| .mk x h) := by
-  rw [stdPart, dite_eq_left h, OrderRingHom.comp_apply]
-  congr
-  exact Subsingleton.allEq _ _
-
-@[simp]
-theorem stdPart_eq_zero {x : K} : stdPart x = 0 ↔ mk x ≠ 0 where
-  mpr h := by
-    obtain h | h := h.lt_or_gt
-    · exact dite_eq_right h.not_ge
-    · rw [stdPart, dite_eq_left h.le, OrderRingHom.comp_apply, FiniteResidueField.mk_eq_zero.2 h,
-        map_zero]
-  mp := by
-    contrapose!
-    intro h
-    rwa [stdPart_of_mk_nonneg Classical.ofNonempty h.ge, map_ne_zero, FiniteResidueField.mk_ne_zero]
-
-alias ⟨_, stdPart_of_mk_ne_zero⟩ := stdPart_eq_zero
-
-theorem stdPart_monotoneOn : MonotoneOn stdPart {x : K | 0 ≤ mk x} := by
-  intro x (hx : 0 ≤ mk x) y (hy : 0 ≤ mk y) h
-  unfold stdPart
-  rw [dite_eq_left hx, dite_eq_left hy]
-  apply OrderRingHom.monotone'
-  rwa [FiniteElement.mk_le_mk]
+theorem stdPart_apply (f : FiniteResidueField K →+*o ℝ) (x : FiniteElement K) :
+    stdPart x = f (FiniteResidueField.mk x) := by
+  change (Classical.ofNonempty : FiniteResidueField K →+*o ℝ) (FiniteResidueField.mk x) = _
+  congr 1
+  exact Subsingleton.elim _ _
 
 @[simp]
-theorem stdPart_zero : stdPart (0 : K) = 0 := by
-  rw [stdPart, dite_eq_left] <;> simp
+theorem stdPart_eq_zero {x : FiniteElement K} : stdPart x = 0 ↔ 0 < mk x.1 := by
+  rw [stdPart_apply Classical.ofNonempty, map_eq_zero, FiniteResidueField.mk_eq_zero]
 
-@[simp]
-theorem stdPart_one : stdPart (1 : K) = 1 := by
-  rw [stdPart, dite_eq_left] <;> simp
+theorem stdPart_ne_zero {x : FiniteElement K} : stdPart x ≠ 0 ↔ mk x.1 = 0 := by
+  rw [ne_eq, stdPart_eq_zero, not_lt, x.2.ge_iff_eq']
 
-@[simp]
-theorem stdPart_neg (x : K) : stdPart (-x) = -stdPart x := by
-  simp_rw [stdPart, ArchimedeanClass.mk_neg]
-  split_ifs
-  · rw [← FiniteElement.neg_mk, map_neg]
-  · simp
+/-- A finite element has nonzero standard part exactly when it is a unit in the ring of finite
+elements, so its inverse is finite as well. -/
+theorem stdPart_ne_zero_iff_isUnit {x : FiniteElement K} : stdPart x ≠ 0 ↔ IsUnit x := by
+  rw [stdPart_ne_zero, FiniteElement.isUnit_iff_mk_eq_zero]
 
-@[simp]
-theorem stdPart_inv (x : K) : stdPart x⁻¹ = (stdPart x)⁻¹ := by
-  obtain hx | hx := eq_or_ne (mk x) 0
-  · unfold stdPart
-    have hx' : 0 ≤ mk x⁻¹ := by simp_all
-    rw [dite_eq_left hx.ge, dite_eq_left hx']
-    · apply eq_inv_of_mul_eq_one_left
-      suffices FiniteElement.mk x⁻¹ hx' * .mk x hx.ge = 1 by
-        rw [← map_mul, this, map_one]
-      ext
-      apply inv_mul_cancel₀
-      aesop
-  · rw [stdPart_of_mk_ne_zero hx, stdPart_of_mk_ne_zero, inv_zero]
-    rwa [mk_inv, neg_ne_zero]
+theorem stdPart_add_eq_right {x y : FiniteElement K} (hx : 0 < mk x.1) :
+    stdPart (x + y) = stdPart y := by
+  rw [map_add, stdPart_eq_zero.2 hx, zero_add]
 
-theorem stdPart_add (hx : 0 ≤ mk x) (hy : 0 ≤ mk y) : stdPart (x + y) = stdPart x + stdPart y := by
-  unfold stdPart
-  rw [dite_eq_left hx, dite_eq_left hy, dite_eq_left]
-  exact map_add _ (FiniteElement.mk x hx) (.mk y hy)
-
-theorem stdPart_add_eq_right (hx : 0 < mk x) : stdPart (x + y) = stdPart y := by
-  obtain hy | hy := le_or_gt 0 (mk y)
-  · rw [stdPart_add hx.le hy, stdPart_of_mk_ne_zero hx.ne', zero_add]
-  · rw [stdPart_of_mk_ne_zero hy.ne, stdPart_of_mk_ne_zero]
-    rw [mk_add_eq_mk_right (hy.trans hx)]
-    exact hy.ne
-
-theorem stdPart_add_eq_left (hy : 0 < mk y) : stdPart (x + y) = stdPart x := by
+theorem stdPart_add_eq_left {x y : FiniteElement K} (hy : 0 < mk y.1) :
+    stdPart (x + y) = stdPart x := by
   rw [add_comm, stdPart_add_eq_right hy]
 
-theorem stdPart_sub (hx : 0 ≤ mk x) (hy : 0 ≤ mk y) : stdPart (x - y) = stdPart x - stdPart y := by
-  rw [sub_eq_add_neg, sub_eq_add_neg, stdPart_add hx, stdPart_neg]
-  rwa [mk_neg]
+theorem stdPart_sub_eq_right {x y : FiniteElement K} (hx : 0 < mk x.1) :
+    stdPart (x - y) = -stdPart y := by
+  rw [map_sub, stdPart_eq_zero.2 hx, zero_sub]
 
-theorem stdPart_sub_eq_right (hx : 0 < mk x) : stdPart (x - y) = -stdPart y := by
-  rw [sub_eq_add_neg, stdPart_add_eq_right hx, stdPart_neg]
-
-theorem stdPart_sub_eq_left (hy : 0 < mk y) : stdPart (x - y) = stdPart x := by
-  rw [sub_eq_add_neg, stdPart_add_eq_left (by simpa)]
-
-theorem stdPart_mul (hx : 0 ≤ mk x) (hy : 0 ≤ mk y) : stdPart (x * y) = stdPart x * stdPart y := by
-  unfold stdPart
-  rw [dite_eq_left hx, dite_eq_left hy, dite_eq_left]
-  exact map_mul _ (FiniteElement.mk x hx) (.mk y hy)
-
-theorem stdPart_div (hx : 0 ≤ mk x) (hy : 0 ≤ -mk y) :
-    stdPart (x / y) = stdPart x / stdPart y := by
-  rw [div_eq_mul_inv, div_eq_mul_inv, stdPart_mul hx, stdPart_inv]
-  rwa [mk_inv]
+theorem stdPart_sub_eq_left {x y : FiniteElement K} (hy : 0 < mk y.1) :
+    stdPart (x - y) = stdPart x := by
+  rw [map_sub, stdPart_eq_zero.2 hy, sub_zero]
 
 @[simp]
-theorem stdPart_ratCast (q : ℚ) : stdPart (q : K) = q := by
-  rw [stdPart_of_mk_nonneg Classical.ofNonempty (mk_ratCast_nonneg q), FiniteElement.mk_ratCast,
-    FiniteResidueField.mk_ratCast, map_ratCast]
+theorem stdPart_ratCast (q : ℚ) : stdPart (q : FiniteElement K) = q := by
+  rw [stdPart_apply Classical.ofNonempty, FiniteResidueField.mk_ratCast, map_ratCast]
 
 @[simp]
-theorem stdPart_intCast (n : ℤ) : stdPart (n : K) = n :=
-  mod_cast stdPart_ratCast n
-
-@[simp]
-theorem stdPart_natCast (n : ℕ) : stdPart (n : K) = n :=
-  mod_cast stdPart_intCast n
-
-@[simp]
-theorem stdPart_ofNat (n : ℕ) [n.AtLeastTwo] : stdPart (ofNat(n) : K) = n :=
-  stdPart_natCast n
-
-@[simp]
-theorem stdPart_map_real (f : ℝ →+*o K) (r : ℝ) : stdPart (f r) = r := by
-  rw [stdPart, dite_eq_left]
+theorem stdPart_map_real (f : ℝ →+*o K) (r : ℝ) :
+    stdPart (FiniteElement.ofArchimedean f r) = r := by
+  change (Classical.ofNonempty : FiniteResidueField K →+*o ℝ)
+    (FiniteResidueField.ofArchimedean f r) = r
   exact r.ringHom_apply <| OrderRingHom.comp _ (FiniteResidueField.ofArchimedean f)
 
 @[simp]
-theorem stdPart_real (r : ℝ) : stdPart r = r :=
-  stdPart_map_real (.id ℝ) r
+theorem stdPart_real (x : FiniteElement ℝ) : stdPart x = x.1 := by
+  have hx : FiniteElement.ofArchimedean (OrderRingHom.id ℝ) x.1 = x := Subtype.ext rfl
+  simpa only [hx] using stdPart_map_real (OrderRingHom.id ℝ) x.1
 
-theorem ofArchimedean_stdPart (f : ℝ →+*o K) (hx : 0 ≤ mk x) :
-    FiniteResidueField.ofArchimedean f (stdPart x) = .mk (.mk x hx) := by
-  rw [stdPart, dite_eq_left hx, ← OrderRingHom.comp_apply, ← OrderRingHom.comp_assoc,
-    OrderRingHom.comp_apply, OrderRingHom.apply_eq_self]
+theorem ofArchimedean_stdPart (f : ℝ →+*o K) (x : FiniteElement K) :
+    FiniteResidueField.ofArchimedean f (stdPart x) = FiniteResidueField.mk x := by
+  rw [stdPart_apply Classical.ofNonempty, ← OrderRingHom.comp_apply, OrderRingHom.apply_eq_self]
 
-theorem stdPart_nonneg {x : K} (h : 0 ≤ x) : 0 ≤ stdPart x := by
-  obtain hx | hx := eq_or_ne (ArchimedeanClass.mk x) 0
-  · rw [stdPart, dite_eq_left hx.ge]
-    exact map_nonneg _ h
-  · rw [stdPart_of_mk_ne_zero hx]
-
-theorem stdPart_nonpos {x : K} (h : x ≤ 0) : stdPart x ≤ 0 := by
-  simpa using stdPart_nonneg (neg_nonneg.2 h)
-
-/-- The standard part of `x` is the unique real `r` such that `x - r` is infinitesimal. -/
-theorem mk_sub_pos_iff (f : ℝ →+*o K) {r : ℝ} (hx : 0 ≤ mk x) :
-    0 < mk (x - f r) ↔ stdPart x = r := by
+/-- The standard part of `x` is the unique real `r` such that `x - f r` is infinitesimal. -/
+theorem mk_sub_pos_iff (f : ℝ →+*o K) {x : FiniteElement K} {r : ℝ} :
+    0 < mk (x.1 - f r) ↔ stdPart x = r := by
   refine (FiniteResidueField.mk_eq_zero
-    (x := .mk x hx - .mk _ (mk_map_nonneg_of_archimedean f r))).symm.trans ?_
-  rw [map_sub, ← FiniteResidueField.ofArchimedean_apply, ← ofArchimedean_stdPart f hx,
+    (x := x - FiniteElement.ofArchimedean f r)).symm.trans ?_
+  rw [map_sub, ← FiniteResidueField.ofArchimedean_apply, ← ofArchimedean_stdPart f x,
     sub_eq_zero, FiniteResidueField.ofArchimedean_inj f]
 
-theorem mk_sub_stdPart_pos (f : ℝ →+*o K) (hx : 0 ≤ mk x) : 0 < mk (x - f (stdPart x)) :=
-  (mk_sub_pos_iff f hx).2 rfl
+theorem mk_sub_stdPart_pos (f : ℝ →+*o K) (x : FiniteElement K) :
+    0 < mk (x.1 - f (stdPart x)) :=
+  (mk_sub_pos_iff f).2 rfl
 
-theorem lt_of_lt_stdPart (f : ℝ →+*o K) {r : ℝ} (hx : 0 ≤ mk x) (h : r < stdPart x) : f r < x := by
+theorem lt_of_lt_stdPart (f : ℝ →+*o K) {x : FiniteElement K} {r : ℝ}
+    (h : r < stdPart x) : f r < x.1 := by
   rw [← sub_lt_sub_iff_right (c := f (stdPart x)), ← map_sub]
   apply lt_of_mk_lt_mk_of_nonpos
-  · rw [mk_map_of_archimedean', mk_sub_pos_iff f hx]
+  · rw [mk_map_of_archimedean', mk_sub_pos_iff f]
     rw [ne_eq, sub_eq_zero]
     exact h.ne
   · simpa using f.monotone' h.le
 
-theorem lt_of_stdPart_lt (f : ℝ →+*o K) {r : ℝ} (hx : 0 ≤ mk x) (h : stdPart x < r) : x < f r := by
-  rw [← neg_lt_neg_iff, ← map_neg]
-  apply lt_of_lt_stdPart <;> simpa
+theorem lt_of_stdPart_lt (f : ℝ →+*o K) {x : FiniteElement K} {r : ℝ}
+    (h : stdPart x < r) : x.1 < f r := by
+  have h' : -r < stdPart (-x) := by simpa using neg_lt_neg h
+  simpa using lt_of_lt_stdPart (x := -x) f h'
 
-theorem stdPart_le_of_le (f : ℝ →+*o K) {r : ℝ} (hx : 0 ≤ mk x) (h : x ≤ f r) : stdPart x ≤ r :=
-  le_imp_le_iff_lt_imp_lt.2 (lt_of_lt_stdPart f hx) h
+theorem stdPart_le_of_le (f : ℝ →+*o K) {x : FiniteElement K} {r : ℝ}
+    (h : x.1 ≤ f r) : stdPart x ≤ r :=
+  le_imp_le_iff_lt_imp_lt.2 (lt_of_lt_stdPart f) h
 
-theorem le_stdPart_of_le (f : ℝ →+*o K) {r : ℝ} (hx : 0 ≤ mk x) (h : f r ≤ x) : r ≤ stdPart x :=
-  le_imp_le_iff_lt_imp_lt.2 (lt_of_stdPart_lt f hx) h
+theorem le_stdPart_of_le (f : ℝ →+*o K) {x : FiniteElement K} {r : ℝ}
+    (h : f r ≤ x.1) : r ≤ stdPart x :=
+  le_imp_le_iff_lt_imp_lt.2 (lt_of_stdPart_lt f) h
 
-theorem stdPart_eq (f : ℝ →+*o K) {r : ℝ} (hl : ∀ s < r, f s ≤ x) (hr : ∀ s > r, x ≤ f s) :
-    stdPart x = r := by
-  have hx : 0 ≤ mk x := by
-    apply mk_nonneg_of_le_of_le_of_archimedean f (hl (r - 1) _) (hr (r + 1) _) <;> simp
+theorem stdPart_eq (f : ℝ →+*o K) {x : FiniteElement K} {r : ℝ}
+    (hl : ∀ s < r, f s ≤ x.1) (hr : ∀ s > r, x.1 ≤ f s) : stdPart x = r := by
   obtain h | rfl | h := lt_trichotomy (stdPart x) r
   · obtain ⟨s, hs, hs'⟩ := exists_between h
-    cases (le_stdPart_of_le f hx (hl _ hs')).not_gt hs
+    cases (le_stdPart_of_le f (hl _ hs')).not_gt hs
   · rfl
   · obtain ⟨s, hs, hs'⟩ := exists_between h
-    cases (stdPart_le_of_le f hx (hr _ hs)).not_gt hs'
+    cases (stdPart_le_of_le f (hr _ hs)).not_gt hs'
 
-theorem stdPart_eq_sInf (f : ℝ →+*o K) (x : K) : stdPart x = sInf {r | x < f r} := by
-  obtain hx | hx := le_or_gt 0 (mk x)
-  · obtain ⟨a, ha⟩ := exists_int_lt_of_mk_nonneg hx
-    obtain ⟨b, hb⟩ := exists_int_gt_of_mk_nonneg hx
-    have hn : {r | x < f r}.Nonempty := ⟨b, by simpa using hb⟩
-    have hb : BddBelow {r | x < f r} := by
-      refine ⟨a, fun r hr ↦ ?_⟩
-      by_contra! hra
-      exact (f.monotone' hra.le).not_gt (by simpa using ha.trans hr)
-    apply stdPart_eq f <;> intro r hr
-    · simpa using notMem_of_lt_csInf hr hb
-    · obtain ⟨s, hs, hs'⟩ := (csInf_lt_iff hb hn).1 hr
-      exact hs.le.trans (f.monotone' hs'.le)
-  · rw [stdPart_of_mk_ne_zero hx.ne]
-    have hr {r} := hx.trans_le (mk_map_nonneg_of_archimedean f r)
-    obtain h | h := le_or_gt 0 x
-    · convert! Real.sInf_empty.symm
-      rw [Set.eq_empty_iff_forall_notMem]
-      exact fun r ↦ (lt_of_mk_lt_mk_of_nonneg hr h).not_gt
-    · convert! Real.sInf_univ.symm
-      rw [Set.eq_univ_iff_forall]
-      exact fun r ↦ lt_of_mk_lt_mk_of_nonpos hr h.le
+/-- The standard part is the greatest lower bound of the strict upper real cut. -/
+theorem isGLB_stdPart (f : ℝ →+*o K) (x : FiniteElement K) :
+    IsGLB {r : ℝ | x.1 < f r} (stdPart x) := by
+  constructor
+  · intro r hr
+    exact stdPart_le_of_le f hr.le
+  · intro a ha
+    by_contra! h
+    obtain ⟨r, hr, hra⟩ := exists_between h
+    exact (ha (lt_of_stdPart_lt f hr)).not_gt hra
 
-theorem stdPart_eq_sSup (f : ℝ →+*o K) (x : K) : stdPart x = sSup {r | f r < x} := by
-  rw [← neg_inj, ← stdPart_neg, stdPart_eq_sInf f, ← Real.sInf_neg]
-  congr 1
-  ext
-  simp [neg_lt]
+/-- The standard part is the least upper bound of the strict lower real cut. -/
+theorem isLUB_stdPart (f : ℝ →+*o K) (x : FiniteElement K) :
+    IsLUB {r : ℝ | f r < x.1} (stdPart x) := by
+  constructor
+  · intro r hr
+    exact le_stdPart_of_le f hr.le
+  · intro a ha
+    by_contra! h
+    obtain ⟨r, har, hr⟩ := exists_between h
+    exact (ha (lt_of_lt_stdPart f hr)).not_gt har
+
+theorem stdPart_eq_sInf (f : ℝ →+*o K) (x : FiniteElement K) :
+    stdPart x = sInf {r : ℝ | x.1 < f r} :=
+  ((isGLB_stdPart f x).csInf_eq ⟨stdPart x + 1, lt_of_stdPart_lt f (lt_add_one _)⟩).symm
+
+theorem stdPart_eq_sSup (f : ℝ →+*o K) (x : FiniteElement K) :
+    stdPart x = sSup {r : ℝ | f r < x.1} :=
+  ((isLUB_stdPart f x).csSup_eq ⟨stdPart x - 1, lt_of_lt_stdPart f (sub_one_lt _)⟩).symm
 
 end ArchimedeanClass
