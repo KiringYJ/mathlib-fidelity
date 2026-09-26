@@ -132,19 +132,56 @@ lemma mulHeight_eq {ι : Type*} {x : ι → K} (hx : x ≠ 0) :
     prod_archAbsVal_eq, prod_nonarchAbsVal_eq fun v ↦ ⨆ i, v (x i)]
 
 open Classical IntermediateField in
-/-- The absolute multiplicative height of an algebraic number. This is defined for elements of any
-field of characteristic zero, with a junk value of `0` if the element is not algebraic. -/
-noncomputable def absMulHeight₁ {K : Type*} [Field K] [CharZero K] (x : K) : ℝ :=
-  if hx : IsIntegral ℚ x then
-    haveI : FiniteDimensional ℚ ℚ⟮x⟯ := adjoin.finiteDimensional hx
-    haveI : NumberField ℚ⟮x⟯ := {}
-    (Height.mulHeight₁ (AdjoinSimple.gen ℚ x)) ^ (Module.finrank ℚ ℚ⟮x⟯ : ℝ)⁻¹
-  else 1
+/-- The absolute multiplicative height of an element algebraic over `ℚ` in a field of
+characteristic zero, computed in `ℚ⟮x⟯` and normalized by its degree over `ℚ`.
+The hypothesis `IsIntegral ℚ x` expresses algebraicity over `ℚ`, not integrality over `ℤ`. -/
+noncomputable def absMulHeight₁ {K : Type*} [Field K] [CharZero K] (x : K)
+    (hx : IsIntegral ℚ x) : ℝ :=
+  haveI : FiniteDimensional ℚ ℚ⟮x⟯ := adjoin.finiteDimensional hx
+  haveI : NumberField ℚ⟮x⟯ := {}
+  (Height.mulHeight₁ (AdjoinSimple.gen ℚ x)) ^ (Module.finrank ℚ ℚ⟮x⟯ : ℝ)⁻¹
 
-/-- The absolute logarithmic height of an algebraic number. This is defined for elements of any
-field of characteristic zero, with a junk value of `0` if the element is not algebraic. -/
-noncomputable def absLogHeight₁ {K : Type*} [Field K] [CharZero K] (x : K) : ℝ :=
-  (absMulHeight₁ x).log
+/-- The absolute logarithmic height of an element algebraic over `ℚ` in a field of
+characteristic zero, defined as the logarithm of its absolute multiplicative height. -/
+noncomputable def absLogHeight₁ {K : Type*} [Field K] [CharZero K] (x : K)
+    (hx : IsIntegral ℚ x) : ℝ :=
+  (absMulHeight₁ x hx).log
+
+section AbsoluteHeight
+
+variable {L : Type*} [Field L] [CharZero L]
+
+open IntermediateField
+
+/-- The absolute multiplicative height of an algebraic element is at least one. -/
+lemma one_le_absMulHeight₁ (x : L) (hx : IsIntegral ℚ x) : 1 ≤ absMulHeight₁ x hx := by
+  let : FiniteDimensional ℚ ℚ⟮x⟯ := adjoin.finiteDimensional hx
+  let : NumberField ℚ⟮x⟯ := {}
+  exact Real.one_le_rpow (Height.one_le_mulHeight₁ (AdjoinSimple.gen ℚ x))
+    (inv_nonneg.mpr (Nat.cast_nonneg _))
+
+lemma absMulHeight₁_pos (x : L) (hx : IsIntegral ℚ x) : 0 < absMulHeight₁ x hx :=
+  zero_lt_one.trans_le (one_le_absMulHeight₁ x hx)
+
+@[simp]
+lemma absMulHeight₁_zero (h : IsIntegral ℚ (0 : L)) : absMulHeight₁ (0 : L) h = 1 := by
+  simp only [absMulHeight₁, show AdjoinSimple.gen ℚ (0 : L) = 0 from Subtype.ext rfl,
+    Height.mulHeight₁_zero, Real.one_rpow]
+
+@[simp]
+lemma absMulHeight₁_one (h : IsIntegral ℚ (1 : L)) : absMulHeight₁ (1 : L) h = 1 := by
+  simp only [absMulHeight₁, show AdjoinSimple.gen ℚ (1 : L) = 1 from Subtype.ext rfl,
+    Height.mulHeight₁_one, Real.one_rpow]
+
+@[simp]
+lemma absLogHeight₁_zero (h : IsIntegral ℚ (0 : L)) : absLogHeight₁ (0 : L) h = 0 := by
+  simp [absLogHeight₁]
+
+@[simp]
+lemma absLogHeight₁_one (h : IsIntegral ℚ (1 : L)) : absLogHeight₁ (1 : L) h = 0 := by
+  simp [absLogHeight₁]
+
+end AbsoluteHeight
 
 variable (K) in
 lemma totalWeight_eq_sum_mult : totalWeight K = ∑ v : InfinitePlace K, v.mult := by

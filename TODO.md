@@ -81,12 +81,12 @@ operation.
   or choice-based real-valued projection is retained.  The remaining analytic specification is
   tracked separately under the M candidates.
 
-- [ ] **Restrict number-field heights to algebraic inputs and fix their documentation.**
-  `absMulHeight₁` and `absLogHeight₁` in
-  `Mathlib/NumberTheory/Height/NumberField.lean:137` and `:146` map a nonalgebraic element to
-  multiplicative height one and logarithmic height zero.  Require `IsIntegral ℚ x` (or an
-  algebraic-number carrier); also correct the multiplicative docstring, which currently says its
-  fallback is zero.
+- [x] **Restrict number-field heights to algebraic inputs and fix their documentation.**
+  `NumberField.absMulHeight₁ x hx` and `absLogHeight₁ x hx` require `hx : IsIntegral ℚ x`,
+  expressing algebraicity over `ℚ`. The degree-normalized formula is unchanged on that domain,
+  and the nonalgebraic fallback is removed. Positivity and zero/one simplification lemmas support
+  the logarithmic operation and boundary inputs. Tests cover number-field elements, nonintegral
+  rationals, proof independence, and the exclusion of a transcendental rational-function generator.
 
 - [x] **Remove the pole-only branch from `riemannZeta_ne_zero_of_one_le_re`.**
   The theorem now requires `s ≠ 1` and directly specializes Dirichlet L-function nonvanishing
