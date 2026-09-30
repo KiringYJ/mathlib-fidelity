@@ -271,7 +271,7 @@ Rewrite `.agent-workbench.lock.json` only after all selected writes/deletes comp
 3. Load `manifest.yaml`.
 4. Resolve the selected profile from `profiles/<profile>.yaml`.
 5. If a profile has `extends`, load the parent profile first.
-6. Concatenate modules in this order:
+6. Build the ordered module list:
    - parent profile modules
    - child profile modules
    - explicit `modules:` listed in `.agent-workbench.yaml` that are not already included
@@ -295,7 +295,7 @@ manual-edits: preserve-marked-sections-only
 
 Rules:
 
-- Compose the body from the selected guide modules.
+- Compose the body from the selected guide modules in resolved order: strip leading and trailing whitespace from each module file, and join the results with `\n\n---\n\n` (a blank line, a `---` line, and a blank line). Substitute that body literally for `{{modules}}` and add no newline after it, so the template's final newline is the file's only trailing newline. Leave `{{manual_blocks}}` empty when there are no manual blocks.
 - Preserve existing content inside every manual block exactly:
   - `<!-- agent-workbench:manual-begin -->`
   - `<!-- agent-workbench:manual-end -->`

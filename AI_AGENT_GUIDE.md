@@ -61,6 +61,8 @@ Before adopting or changing a dependency or SDK, consult version-specific offici
 
 Update documentation when behavior, commands, configuration, public APIs, layout, or onboarding changes. Keep `README.md` user-facing; place maintainer architecture, internal sync mechanics, and implementation notes in dedicated maintainer docs unless users need them.
 
+---
+
 # Prompting and Agent Execution
 
 This module keeps reusable prompts outcome-oriented and compatible with capable agentic models. It incorporates the [OpenAI GPT-6 Astra prompting guidance](https://developers.openai.com/api/docs/guides/latest-model/gpt-6-astra.md#prompting-best-practices), checked on 2026-09-05, while keeping the workbench vendor-neutral. Model-specific request settings belong in vendor configuration.
@@ -125,6 +127,8 @@ For mathematical prose in ChatGPT, use `\( ... \)` for inline math and `\[ ... \
 
 The [OpenAI Model Spec (2026-08-18)](https://model-spec.openai.com/2026-08-18.html) specifies the bracket delimiters as default assistant style. The explicit dollar-delimiter restriction here is a workbench preference for consistency, not a guarantee about every client's renderer. For source files, code examples, exports, and other renderers, follow the requested target format and project conventions, including dollar delimiters when that target requires them.
 
+---
+
 # Git and Change Management
 
 ## Safe Staging
@@ -159,6 +163,8 @@ Use the standard type that best describes the change. For non-trivial commits, a
 ## Review Before Final Response
 
 Before reporting completion, confirm the diff contains only intended work, generated markers and project-specific content were preserved, and verification commands and outcomes are recorded.
+
+---
 
 # Repository-Tracked Workspace Configuration
 
@@ -221,6 +227,8 @@ The retired `workspace-config` identifier and orphan branch layout are unsupport
 
 The old branch ceases to be authoritative only after every intended file is present and verified on the normal branch. Stage, commit, push, or delete a legacy branch only when the user requests that exact Git action; branch deletion remains a separate destructive cleanup.
 
+---
+
 # Security and Safety
 
 ## Secrets and Sensitive Data
@@ -266,6 +274,8 @@ The sync process may update only:
 
 Any broader edit requires explicit user authorization. Sync may classify generated artifacts as confirmed upstream removal, confirmed removal with local edits, suspected legacy removal, deselected by local config, source changed / migration required, or local unmanaged, but it must not delete downstream artifacts without explicit user confirmation. Deletion candidates must be normalized, allowlisted managed output paths; local/unmanaged artifacts are preserved by default, and kept removals should be recorded in `retainedRemovals`.
 
+---
+
 # Testing and Verification
 
 ## Test-First Bias
@@ -295,6 +305,8 @@ Complete required checks. Broaden or repeat them only after further changes, fai
 
 Use `AI_AGENT_PROJECT.md` as the source of truth for build and test commands. If commands are missing, infer conservatively from standard manifests and report the assumption. A successful run has no unexplained warnings, formatter diffs, or stale generated output; report exact commands and summaries for pre-existing failures.
 
+---
+
 # Review Discipline
 
 Use a skeptical review stance: correctness and simplicity beat cleverness and speed.
@@ -321,6 +333,8 @@ Treat these as blockers unless the user explicitly accepts the risk:
 ## Summary Standard
 
 Final summaries should include changed files grouped by purpose, verification commands and results, preserved manual content, and remaining risks or follow-up items.
+
+---
 
 # Portable Agent Workflows
 
@@ -484,6 +498,8 @@ outcome and retain any explicit user workflow boundary.
 | `math-pdf-reader` | `research-math` | Bounded child | Theorem, proof, formula, or notation verification. Literal page navigation, rendering, and metadata extraction: `peripheral`; non-mathematical artifact handling: `technical`; main-theorem or adversarial proof audit: `critical-proof`. Preserve the PDF evidence boundary and fail closed on unreadable content. |
 | `skill-authoring` | `technical` | Bounded child | Routine entrypoint edits: `peripheral`; workflow design: `technical`; difficult runtime/safety-policy decisions: `mixed`. |
 | `sync-agent-workbench` | `peripheral` | Leader workflow | Routine inventory and prescribed sync: `peripheral`; nontrivial reconciliation: `technical`; complex provenance or local-edit conflicts: `mixed`. Preserve sync scope and project-owned files. |
+
+---
 
 # Rigorous Research
 
