@@ -6,6 +6,12 @@
 .lake
 # Local oh-my-codex runtime state
 /.omx/
+# Local oh-my-claudecode runtime state
+/.omc/
+# Local Claude Code settings, instructions, and worktrees
+/.claude/settings.local.json
+/.claude/worktrees/
+/CLAUDE.local.md
 # Python bytecode cache directories
 **/__pycache__/
 # Progress file from scripts/rm_set_option.py
