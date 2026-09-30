@@ -299,7 +299,7 @@ Rules:
 - Preserve existing content inside every manual block exactly:
   - `<!-- agent-workbench:manual-begin -->`
   - `<!-- agent-workbench:manual-end -->`
-- Put preserved manual blocks near the top under a `## Preserved Manual Notes` heading, or leave them where the template indicates manual blocks.
+- When manual blocks exist, substitute this for `{{manual_blocks}}`: `## Preserved Manual Notes\n\n`, then every block in its current file order, each copied verbatim from its begin marker through its end marker, markers included, and followed by `\n\n`. The module body follows directly. If markers are unbalanced or nested, leave `AI_AGENT_GUIDE.md` unchanged, do not advance the `guide` scope, and report them.
 - Do not preserve unmarked manual edits in `AI_AGENT_GUIDE.md`; tell the user that only marked blocks are retained.
 - The result must be idempotent: running sync again with the same inputs should produce the same file.
 
