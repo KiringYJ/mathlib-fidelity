@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-30T21:31:23Z",
+  "generatedAt": "2026-09-30T22:17:26Z",
   "source": {
     "repo": "KiringYJ/agent-workbench",
     "branch": "main",
     "requestedRef": "main",
-    "resolvedCommit": "aad73c6a8b2b9ec996cf767318956cc8daa2a95a"
+    "resolvedCommit": "bdd3f7e2b4e6299fbe9c33c1aadd37d550376986"
   },
   "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
   "profile": "research",
@@ -21,24 +21,24 @@
   },
   "scopes": {
     "guide": {
-      "resolvedCommit": "aad73c6a8b2b9ec996cf767318956cc8daa2a95a",
+      "resolvedCommit": "bdd3f7e2b4e6299fbe9c33c1aadd37d550376986",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T21:31:23Z"
+      "lastReconciledAt": "2026-09-30T22:17:26Z"
     },
     "entrypoints": {
-      "resolvedCommit": "aad73c6a8b2b9ec996cf767318956cc8daa2a95a",
+      "resolvedCommit": "bdd3f7e2b4e6299fbe9c33c1aadd37d550376986",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T21:31:23Z"
+      "lastReconciledAt": "2026-09-30T22:17:26Z"
     },
     "portable_prompts": {
-      "resolvedCommit": "aad73c6a8b2b9ec996cf767318956cc8daa2a95a",
+      "resolvedCommit": "bdd3f7e2b4e6299fbe9c33c1aadd37d550376986",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T21:31:23Z"
+      "lastReconciledAt": "2026-09-30T22:17:26Z"
     },
     "portable_skills": {
-      "resolvedCommit": "aad73c6a8b2b9ec996cf767318956cc8daa2a95a",
+      "resolvedCommit": "bdd3f7e2b4e6299fbe9c33c1aadd37d550376986",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T21:31:23Z"
+      "lastReconciledAt": "2026-09-30T22:17:26Z"
     }
   },
   "installedArtifacts": [
@@ -170,8 +170,8 @@
       "name": ".claude/rules/agent-routing.md",
       "sourcePath": "templates/claude.agent-routing.md.tpl",
       "outputPath": ".claude/rules/agent-routing.md",
-      "sourceChecksum": "sha256:484cb0e1700946e91959f42c3ff9d3e05ae730c27e0462463fa9bcdb02d7da70",
-      "lastAppliedOutputChecksum": "sha256:484cb0e1700946e91959f42c3ff9d3e05ae730c27e0462463fa9bcdb02d7da70",
+      "sourceChecksum": "sha256:75a5a2a5ce5219798105f3149d004f1fa81892150e3519ffb673b6b03891a361",
+      "lastAppliedOutputChecksum": "sha256:75a5a2a5ce5219798105f3149d004f1fa81892150e3519ffb673b6b03891a361",
       "resourceManifest": [],
       "markerVersion": "agent-workbench: managed platform-binding",
       "profile": "research",
