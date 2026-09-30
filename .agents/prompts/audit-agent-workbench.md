@@ -92,6 +92,11 @@ Do not modify files in audit mode. Inspect and report only.
    - `.git/info/exclude` and `.gitignore` do not hide managed project-wide paths. Personal, machine-local, generated, cached, or secret-bearing files may remain ignored.
    - If a legacy `workspace-config` branch exists, report whether it contains content missing from `main`. Missing content is a migration failure; a fully superseded branch is cleanup debt and must not be deleted in audit mode.
 
+14. Platform routing bindings
+   - When the Claude target is enabled, `.claude/rules/agent-routing.md`, and `.claude/agents/<name>.md` for each registered `templates/claude-agents/<name>.md.tpl`, exist and match their workbench templates byte for byte.
+   - When the Codex target is enabled, `.codex/agent-routing.md` exists and matches its workbench template byte for byte.
+   - The **Skill Model and Reasoning Routing** section of `AI_AGENT_GUIDE.md` names tiers only; runtime model identifiers and effort values appear only in the bindings.
+
 ## Output
 
 Return a structured report:
