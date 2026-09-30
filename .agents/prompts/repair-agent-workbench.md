@@ -54,7 +54,7 @@ Do not create or refresh a separate workspace configuration branch. Do not stage
    - If missing in a repo that has generated workbench artifacts, run the same legacy infer-and-warn classification used by sync before rebuilding the baseline.
    - If malformed, report the parse/schema problem and ask whether to rebuild the baseline, run legacy infer-and-warn, or abort.
    - Never delete downstream artifacts while repairing the ledger unless the user explicitly confirms deletion after seeing the classified candidates.
-   - Recreate the ledger only with normalized repository-relative paths inside allowed managed outputs.
+   - Recreate the ledger only with normalized repository-relative paths inside allowed managed outputs, in the form the sync prompt's **Ledger record conventions** specify.
    - Migrate schema version 1 ledgers only after portable outputs are reconciled. When available, use `skills/sync-agent-workbench/scripts/migrate_lockfile.rb` with the expected source repo/branch/requested ref to verify source identity, registered destinations, and exact current bytes; recompute workflow checksums and resource manifests; preserve unrelated records and retained evidence; and write a schema version 2 candidate to a new sibling temporary path. Inspect and parse the candidate before atomically replacing the live ledger. Never finalize migration from a mismatched source, stale adapter checksums, or an unmatched/duplicate legacy record.
 12. Repair portable workflows:
    - Read registered `portable_prompts` and `portable_skills` directly from `manifest.yaml`.

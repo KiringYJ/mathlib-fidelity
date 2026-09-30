@@ -130,7 +130,7 @@ The `workspace-config` module identifier and orphan-branch layout are retired. T
 
 `.agent-workbench.lock.json` is an agent-owned provenance/baseline ledger. It records what the last successful sync actually installed for each scope so later syncs can detect removed, deselected, locally edited, or migrated artifacts. It is shared project configuration and should be tracked in normal repository history with the managed files it describes.
 
-Minimum lockfile shape:
+Lockfile shape:
 
 ```json
 {
@@ -183,7 +183,32 @@ Minimum lockfile shape:
 }
 ```
 
-Artifact records should include all generated files in a skill folder (`scripts/`, `references/`, `assets/`) through `resourceManifest`. Record a Claude discovery mirror as another `portable_skills` artifact with the same `sourcePath` and a `.claude/skills/<name>/...` output path. Record each platform routing binding file as a `platform_binding` artifact in the `entrypoints` scope with id `platform_binding:<output path>`. `manifestDigest` should cover the resolved manifest and selected profile enough to explain why the desired artifact set changed.
+### Ledger record conventions
+
+Write the ledger deterministically so every agent records the same sync the same way:
+
+- Write UTF-8 JSON without a byte order mark, indented by two spaces, with LF line endings, unescaped non-ASCII characters, and one trailing newline. Use only the top-level fields shown above, in that order.
+- `source.repo` and `source.branch` copy `.agent-workbench.yaml`. `source.requestedRef` is the ref the user asked this sync to use: `source.branch` unless the user named another ref. `manifestDigest` is the `sha256:` checksum of the resolved `manifest.yaml` bytes, and `targets` copies the `targets` of `.agent-workbench.yaml`.
+- `scopes` holds one entry per scope that has a baseline, in the order `guide`, `entrypoints`, `portable_prompts`, `portable_skills`. A sync updates only the entries of the scopes it reconciled.
+- Timestamps are UTC `YYYY-MM-DDTHH:MM:SSZ`. One sync writes one timestamp to `generatedAt` and to every `lastReconciledAt` it updates.
+- Give every managed record these fields in this order: `id`, `kind`, `scope`, `name`, `sourcePath`, `outputPath`, `sourceChecksum`, `lastAppliedOutputChecksum`, `resourceManifest`, `markerVersion`, `profile` (the selected profile), and `managed` (`true`).
+- `sourceChecksum` is the `sha256:` checksum of the file at `sourcePath` in the resolved source; `lastAppliedOutputChecksum` is that of the output after the sync.
+- `entrypoint` records cover `CLAUDE.md`, `AGENTS.md`, and `GEMINI.md`; `vendor_config` records cover `opencode.json` and `.codex/config.toml`. `AI_AGENT_PROJECT.md` and `.agent-workbench.yaml` get no record.
+
+| Kind | Scope | `id` | `name` | `sourcePath` | `markerVersion` |
+| --- | --- | --- | --- | --- | --- |
+| `guide` | `guide` | `guide:AI_AGENT_GUIDE.md` | `AI_AGENT_GUIDE.md` | `templates/AI_AGENT_GUIDE.md.tpl` | `agent-workbench: managed` |
+| `entrypoint` | `entrypoints` | `entrypoint:<output path>` | output path | its template | `none` |
+| `vendor_config` | `entrypoints` | `vendor_config:<output path>` | output path | its template | `none` |
+| `platform_binding` | `entrypoints` | `platform_binding:<output path>` | output path | its template | `agent-workbench: managed platform-binding` |
+| `portable_prompt` | `portable_prompts` | `portable_prompt:<name>` | registered name | registered path | `agent-workbench: managed portable-prompt` |
+| `portable_skill` | `portable_skills` | `portable_skill:<name>`, or `portable_skill:<name>:claude` for the `.claude/skills/` mirror | registered name | registered `SKILL.md` path | `agent-workbench: managed portable-skill` |
+
+- `resourceManifest` lists every other file in a registered skill directory (`scripts/`, `references/`, `assets/`), sorted by `path` in byte order, as `path`, `sourceChecksum`, and `lastAppliedOutputChecksum`. For the guide it lists every selected module in resolved order as `sourcePath` and `sourceChecksum`. It is empty for the other kinds.
+- Order managed records by scope (`guide`, `entrypoints`, `portable_prompts`, `portable_skills`), then by `outputPath` in byte order.
+- A record whose artifact stays on disk without being regenerated, such as a deselected target, a kept removal, or a `managed: false` record, stays unchanged after the managed records. Only a confirmed deletion drops a record.
+- A new `retainedRemovals` entry has `id`, `outputPath`, `status`, `recordedAt`, and `reason`, in this order; keep existing entries as they are.
+- When a sync reconciles a scope, rewrite that scope's records in this form, matching existing records by `outputPath`, so ledgers written by earlier syncs converge.
 
 ### Legacy capability metadata migration
 
@@ -192,12 +217,12 @@ Schema version 1 ledgers may contain a `vendor_adapters` scope and per-artifact 
 During a full sync, portable-workflows sync, or lockfile repair:
 
 1. Match legacy records to current registered prompts and skills by normalized `sourcePath` and `outputPath`.
-2. Preserve unrelated artifact records, pre-migration timestamps, local-edit evidence, and `retainedRemovals`. Portable-workflow checksums and resource manifests are replaced only with verified current provenance in step 5.
+2. Preserve unrelated artifact records, pre-migration timestamps, and `retainedRemovals`. Portable-workflow checksums and resource manifests are replaced only with verified current provenance in step 5.
 3. Move managed Claude skill records into the `portable_skills` scope and use the canonical skill path as their source.
 4. Reconcile the registered prompt and skill files first. Then, when available, run `skills/sync-agent-workbench/scripts/migrate_lockfile.rb` with the resolved workbench manifest, consumer root, expected source repo/branch/requested ref, real manifest digest, resolved commit, and reconciliation timestamp. The expected source identity must match the v1 ledger; otherwise stop with source changed / migration required. Write to a new sibling temporary path, never over the live ledger.
 5. The migration must verify current source/output bytes, reject destinations outside the exact registered portable-workflow paths, recompute workflow checksums and resource manifests, and preserve unrelated artifact records and retained evidence. A stale generated adapter is not valid v2 provenance.
 6. Drop the obsolete `vendor_adapters` scope and `capability`/`vendor` fields only after the affected portable workflow scope reconciles successfully.
-7. Inspect and parse the candidate, finish any other active-scope updates, and only then atomically replace the live ledger with schema version 2. Do not delete an unmatched or duplicate legacy artifact; classify it with the normal removal rules and request any required decision.
+7. Inspect and parse the candidate, finish any other active-scope updates, and only then atomically replace the live ledger with schema version 2. The candidate is intermediate: before it replaces the live ledger, bring its envelope and the records of every scope this sync reconciled into the **Ledger record conventions** form, which adds `markerVersion` and drops other fields, and leave other records as preserved. Do not delete an unmatched or duplicate legacy artifact; classify it with the normal removal rules and request any required decision.
 
 ### Active scopes and baseline advancement
 
