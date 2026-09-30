@@ -9,7 +9,7 @@ description: Synchronize, audit, or repair composable agent-workbench policy in 
 
 ## Dispatch
 
-Use the exact model, effort, delivery boundary, and escalation rule for `sync-agent-workbench` in `AI_AGENT_GUIDE.md`'s **Skill Model and Reasoning Routing** table.
+Use the tier, delivery boundary, and escalation rule for `sync-agent-workbench` in `AI_AGENT_GUIDE.md`'s **Skill Model and Reasoning Routing** table, and resolve the tier through the active platform binding.
 
 ## Workflow
 
@@ -20,7 +20,7 @@ Use the exact model, effort, delivery boundary, and escalation rule for `sync-ag
    - Repair: follow `.agents/prompts/repair-agent-workbench.md` when present.
 3. Modify only the files allowed by the selected prompt.
 4. Keep `AI_AGENT_PROJECT.md` manual after initial creation.
-5. Keep vendor entrypoints thin and canonical content under `AI_AGENT_GUIDE.md`, `.agents/prompts/`, and `.agents/skills/`.
+5. Keep vendor entrypoints thin and canonical content under `AI_AGENT_GUIDE.md`, `.agents/prompts/`, and `.agents/skills/`. Runtime model and effort settings belong only in the platform routing bindings for enabled targets.
 6. Use `.agents/skills/` as the shared skill tree. When the Claude target is enabled, copy the registered managed source/resource set to `.claude/skills/` for discovery and keep corresponding managed files byte-identical; preserve unregistered local files only in `.agents/skills/`. Do not add per-workflow adapter prose or create other vendor mirrors by default.
 7. Treat install as first sync: `.agent-workbench.yaml` is human-owned desired config and `.agent-workbench.lock.json` is the agent-owned provenance/baseline ledger.
 8. For a schema version 1 ledger, reconcile portable outputs before using `scripts/migrate_lockfile.rb`; pass the expected source repo/branch/requested ref so it can reject cross-source provenance, validate unique registered destinations and current bytes, recompute portable-workflow provenance, and write only to a new output path. Inspect the candidate before replacing the live ledger.

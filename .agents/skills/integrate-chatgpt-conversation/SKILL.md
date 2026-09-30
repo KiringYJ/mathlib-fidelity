@@ -9,13 +9,14 @@ description: Retrieve and integrate the current accessible branch of a user-supp
 
 ## Dispatch
 
-Use the exact model, effort, delivery boundary, and escalation rule for
+Use the tier, delivery boundary, and escalation rule for
 `integrate-chatgpt-conversation` in `AI_AGENT_GUIDE.md`'s **Skill Model and
-Reasoning Routing** table. When the request includes downstream synthesis,
-review, or file updates, use the mixed technical/editorial tier as the
-controller default. Use the peripheral tier only when the task is explicitly
-limited to retrieval or literal extraction. Reclassify independent mathematical
-review and critical-proof work separately.
+Reasoning Routing** table, and resolve the tier through the active platform
+binding. When the request includes downstream synthesis, review, or file
+updates, use the mixed technical/editorial tier as the controller default. Use
+the peripheral tier only when the task is explicitly limited to retrieval or
+literal extraction. Reclassify independent mathematical review and
+critical-proof work separately.
 
 Use the live conversation as evidence for the current task. Retrieve it before
 synthesizing, reviewing, or editing anything that depends on it. When the user

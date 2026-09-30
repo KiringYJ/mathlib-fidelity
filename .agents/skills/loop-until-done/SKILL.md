@@ -9,7 +9,7 @@ description: Keep working on a requested task through bounded work, root-cause d
 
 ## Dispatch
 
-Use the exact model, effort, delivery boundary, and escalation rule for `loop-until-done` in `AI_AGENT_GUIDE.md`'s **Skill Model and Reasoning Routing** table.
+Use the tier, delivery boundary, and escalation rule for `loop-until-done` in `AI_AGENT_GUIDE.md`'s **Skill Model and Reasoning Routing** table, and resolve the tier through the active platform binding.
 
 ## Workflow
 

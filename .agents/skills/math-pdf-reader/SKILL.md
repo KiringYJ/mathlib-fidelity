@@ -9,11 +9,12 @@ description: Read, transcribe, summarize, or verify mathematical PDFs with high 
 
 ## Dispatch
 
-Use the exact model, effort, delivery boundary, and escalation rule for
-`math-pdf-reader` in `AI_AGENT_GUIDE.md`'s **Skill Model and Reasoning Routing**
-table. Literal navigation and metadata extraction are peripheral work;
-mathematical verification or interpretation is research-mathematics work, and
-main-theorem or adversarial proof audit is critical-proof work.
+Use the tier, delivery boundary, and escalation rule for `math-pdf-reader` in
+`AI_AGENT_GUIDE.md`'s **Skill Model and Reasoning Routing** table, and resolve
+the tier through the active platform binding. Literal navigation and metadata
+extraction are peripheral work; mathematical verification or interpretation is
+research-mathematics work, and main-theorem or adversarial proof audit is
+critical-proof work.
 
 ## Evidence Principles
 
