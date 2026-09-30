@@ -60,6 +60,7 @@ Do not modify files in audit mode. Inspect and report only.
    - Is valid schema version 2 JSON with `source.resolvedCommit`, `manifestDigest`, `syncMode`, `targets`, scoped baselines, `installedArtifacts`, and `retainedRemovals` when present.
    - Reports schema version 1 `vendor_adapters`, `capability`, or `vendor` fields as a known migration requirement rather than an upstream removal.
    - Records only normalized repository-relative output paths inside allowed managed output paths.
+   - Follows the sync prompt's **Ledger record conventions**; report deviations as `WARN`, because a sync that reconciles the scope rewrites them.
    - Does not contain absolute paths, `..` traversal, or application source paths as managed deletion candidates.
    - Separates human config (`.agent-workbench.yaml`) from agent-owned baseline/provenance state.
    - Reports retained removals and malformed/stale lockfile state without modifying files.

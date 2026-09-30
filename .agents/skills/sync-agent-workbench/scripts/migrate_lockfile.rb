@@ -88,7 +88,7 @@ module AgentWorkbench
       raise LockfileMigrationError, "refusing to overwrite migration output: #{output}" if output.exist?
 
       content = "#{JSON.pretty_generate(value)}\n"
-      output.open(File::WRONLY | File::CREAT | File::EXCL, 0o600) { |file| file.write(content) }
+      output.open(File::WRONLY | File::CREAT | File::EXCL | File::BINARY, 0o600) { |file| file.write(content) }
     end
 
     def registered_paths(manifest, section)
