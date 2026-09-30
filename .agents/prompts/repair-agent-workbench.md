@@ -34,7 +34,7 @@ Do not create or refresh a separate workspace configuration branch. Do not stage
 1. Inspect the repository and current instruction files.
 2. Read `.agent-workbench.yaml`; if missing or unusable, recreate it from `templates/agent-workbench.yaml.tpl` using `profile: base` unless the user requested another profile. Keep it as human-owned desired configuration only. If it selects the retired `workspace-config` module, replace that identifier with `repository-workspace`; there is no compatibility alias.
 3. Resolve profile and modules using `manifest.yaml` and `profiles/*.yaml`.
-4. Recreate `AI_AGENT_GUIDE.md` from selected modules.
+4. Recreate `AI_AGENT_GUIDE.md` from selected modules, composed as the sync prompt's **AI_AGENT_GUIDE.md generation** section specifies.
 5. Preserve every existing `AI_AGENT_GUIDE.md` manual block exactly:
    - `<!-- agent-workbench:manual-begin -->`
    - `<!-- agent-workbench:manual-end -->`
