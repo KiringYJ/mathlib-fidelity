@@ -35,7 +35,12 @@ to Haiku 4.5, Sonnet 5.5, Opus 5.5, and Fable 5.1 on the Anthropic API; Haiku
 - Environment overrides such as `CLAUDE_CODE_EFFORT_LEVEL` and
   `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`, organization model or effort limits, and
   model availability can change what actually runs. When a tier's settings are
-  not honoured, report the recommended tier and the actual settings.
+  not honoured, report the recommended tier and the actual settings. As of
+  2026-10-01, the Claude desktop app sets `CLAUDE_CODE_EFFORT_LEVEL` from its
+  effort selector, and that variable overrides frontmatter `effort`, so tier
+  subagents there keep their bound model but run at the session effort, except
+  `peripheral`, which has none. Choose the session effort with that in mind,
+  and report it as the actual effort when dispatching.
 - For a named specialist, such as a plugin-provided agent, pass the tier's
   model as the per-call `model` when the specialist's definition differs. Its
   effort stays as defined, so report the recommended tier and actual effort
