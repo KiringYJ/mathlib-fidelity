@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-30T22:32:51Z",
+  "generatedAt": "2026-09-30T22:54:53Z",
   "source": {
     "repo": "KiringYJ/agent-workbench",
     "branch": "main",
     "requestedRef": "main",
-    "resolvedCommit": "d5e85d8b33fd608b2311e50666c0cf3a33f96622"
+    "resolvedCommit": "1135b30b8f220fbb24f83516fd6f03d3c27b2786"
   },
   "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
   "profile": "research",
@@ -21,24 +21,24 @@
   },
   "scopes": {
     "guide": {
-      "resolvedCommit": "d5e85d8b33fd608b2311e50666c0cf3a33f96622",
+      "resolvedCommit": "1135b30b8f220fbb24f83516fd6f03d3c27b2786",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T22:32:51Z"
+      "lastReconciledAt": "2026-09-30T22:54:53Z"
     },
     "entrypoints": {
-      "resolvedCommit": "d5e85d8b33fd608b2311e50666c0cf3a33f96622",
+      "resolvedCommit": "1135b30b8f220fbb24f83516fd6f03d3c27b2786",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T22:32:51Z"
+      "lastReconciledAt": "2026-09-30T22:54:53Z"
     },
     "portable_prompts": {
-      "resolvedCommit": "d5e85d8b33fd608b2311e50666c0cf3a33f96622",
+      "resolvedCommit": "1135b30b8f220fbb24f83516fd6f03d3c27b2786",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T22:32:51Z"
+      "lastReconciledAt": "2026-09-30T22:54:53Z"
     },
     "portable_skills": {
-      "resolvedCommit": "d5e85d8b33fd608b2311e50666c0cf3a33f96622",
+      "resolvedCommit": "1135b30b8f220fbb24f83516fd6f03d3c27b2786",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T22:32:51Z"
+      "lastReconciledAt": "2026-09-30T22:54:53Z"
     }
   },
   "installedArtifacts": [
@@ -268,8 +268,8 @@
       "name": "sync-agent-workbench",
       "sourcePath": "prompts/sync-agent-workbench.md",
       "outputPath": ".agents/prompts/sync-agent-workbench.md",
-      "sourceChecksum": "sha256:20abdd0e4006f7c3fd0ee71d758163e4bf3b91da4f6255ad6f06882c5d7d23bb",
-      "lastAppliedOutputChecksum": "sha256:20abdd0e4006f7c3fd0ee71d758163e4bf3b91da4f6255ad6f06882c5d7d23bb",
+      "sourceChecksum": "sha256:bf0c1e0f19dd02eff315120c628f86a96013a1400c25e9a0d321c9dadf4d7478",
+      "lastAppliedOutputChecksum": "sha256:bf0c1e0f19dd02eff315120c628f86a96013a1400c25e9a0d321c9dadf4d7478",
       "resourceManifest": [],
       "markerVersion": "agent-workbench: managed portable-prompt",
       "profile": "research",
@@ -282,8 +282,8 @@
       "name": "audit-agent-workbench",
       "sourcePath": "prompts/audit-agent-workbench.md",
       "outputPath": ".agents/prompts/audit-agent-workbench.md",
-      "sourceChecksum": "sha256:dd55da6c8b2fb9d6469b39ee776ad803d0ecc833f310f06babb2139d725629e3",
-      "lastAppliedOutputChecksum": "sha256:dd55da6c8b2fb9d6469b39ee776ad803d0ecc833f310f06babb2139d725629e3",
+      "sourceChecksum": "sha256:48831945fb4c5b839437eed15fdf9f060ecc0e118b1c74943f79d3556b822266",
+      "lastAppliedOutputChecksum": "sha256:48831945fb4c5b839437eed15fdf9f060ecc0e118b1c74943f79d3556b822266",
       "resourceManifest": [],
       "markerVersion": "agent-workbench: managed portable-prompt",
       "profile": "research",
@@ -296,8 +296,8 @@
       "name": "repair-agent-workbench",
       "sourcePath": "prompts/repair-agent-workbench.md",
       "outputPath": ".agents/prompts/repair-agent-workbench.md",
-      "sourceChecksum": "sha256:aa5db033e41c92ddf501141d5cf77c05f4b1b2ee81a61e34f8dc9061882b4e9b",
-      "lastAppliedOutputChecksum": "sha256:aa5db033e41c92ddf501141d5cf77c05f4b1b2ee81a61e34f8dc9061882b4e9b",
+      "sourceChecksum": "sha256:0c87be903c66b5f8a90121727db204141a2d02358b8d715d5061b05f0b07387c",
+      "lastAppliedOutputChecksum": "sha256:0c87be903c66b5f8a90121727db204141a2d02358b8d715d5061b05f0b07387c",
       "resourceManifest": [],
       "markerVersion": "agent-workbench: managed portable-prompt",
       "profile": "research",
