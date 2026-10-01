@@ -135,16 +135,16 @@ lemma isProbabilityMeasure_gammaMeasure {a r : ℝ} (ha : 0 < a) (hr : 0 < r) :
 section GammaCDF
 
 lemma cdf_gammaMeasure_eq_integral {a r : ℝ} (ha : 0 < a) (hr : 0 < r) (x : ℝ) :
+    haveI := isProbabilityMeasure_gammaMeasure ha hr
     cdf (gammaMeasure a r) x = ∫ x in Iic x, gammaPDFReal a r x := by
-  have : IsProbabilityMeasure (gammaMeasure a r) := isProbabilityMeasure_gammaMeasure ha hr
   rw [cdf_eq_real, gammaMeasure, measureReal_def, withDensity_apply _ measurableSet_Iic]
   refine (integral_eq_lintegral_of_nonneg_ae ?_ ?_).symm
   · exact ae_of_all _ fun b ↦ by simp [gammaPDFReal_nonneg ha hr]
   · fun_prop
 
 lemma cdf_gammaMeasure_eq_lintegral {a r : ℝ} (ha : 0 < a) (hr : 0 < r) (x : ℝ) :
+    haveI := isProbabilityMeasure_gammaMeasure ha hr
     cdf (gammaMeasure a r) x = ENNReal.toReal (∫⁻ x in Iic x, gammaPDF a r x) := by
-  have : IsProbabilityMeasure (gammaMeasure a r) := isProbabilityMeasure_gammaMeasure ha hr
   simp only [gammaPDF, cdf_eq_real]
   simp [gammaMeasure, gammaPDF, measureReal_def]
 

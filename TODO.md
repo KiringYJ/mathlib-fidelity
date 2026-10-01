@@ -126,6 +126,32 @@ operation.
   Tests cover rejected and misleading evidence, ambient instances, proof independence, and a
   portmanteau transfer from probability measures to finite measures.
 
+- [x] **Give `ProbabilityTheory.cdf` its exact domain.**
+  `cdf μ` requires `[IsFiniteMeasureOnIic μ]`, finiteness of every ray `Iic x`, and is the
+  Stieltjes function `x ↦ μ.real (Iic x)`.  This is exactly the domain on which the formula gives a
+  real-valued Stieltjes function generating `μ`; the cdf is then the unique such function with
+  limit 0 at -∞ (Siegrist, *Probability, Mathematical Statistics, and Stochastic Processes*,
+  §3.9), and `cdf_measure_stieltjesFunction` with `eq_of_cdf` makes `μ ↦ cdf μ` a bijection onto
+  the Stieltjes functions with limit 0 at -∞.  When some ray has infinite measure, a locally finite
+  measure determines its Stieltjes functions only up to an additive constant; Folland,
+  *Real analysis*, 2nd ed., Theorem 1.16, normalizes `F(0) = 0` there.  Finite measures, for which
+  Folland, §1.5, calls the function the (cumulative) distribution function, are those with bounded
+  cdf.  Infinite measures such as Lebesgue measure on `[0, ∞)` are included, as in Isabelle's
+  `cdf_interval_measure` and in Karamata's Tauberian theorem (Bingham--Goldie--Teugels,
+  *Regular variation*, Theorem 1.7.1).  The class `IsFiniteMeasureOnIic` is new; finite measures
+  supply it automatically, and it is closed under restriction, sums, and `ℝ≥0` multiples.  The
+  former definition applied `condCDF` to the product with a Dirac measure for every measure.  It
+  returned the cdf of `(μ univ)⁻¹ • μ` for a finite nonzero measure and still returned a
+  probability cdf for a zero or non-finite measure, so `cdf_le_one`, `tendsto_cdf_atTop`, and the
+  instance `IsProbabilityMeasure (cdf μ).measure` held for every measure.  The first now assumes
+  `IsZeroOrProbabilityMeasure μ` and the other two `IsProbabilityMeasure μ`; statements about the
+  total mass assume `IsFiniteMeasure μ`.  The definition no longer depends on `condCDF`.  The
+  `SFinite` instances of the gamma, exponential, and Pareto measures, added for the former
+  `[SFinite μ]` argument of `cdf` and without other users, are removed.  Tests cover locally
+  finite, sigma-finite, s-finite, and infinite-ray exclusions, an infinite measure that is finite
+  on rays, finite- and probability-only statements, unnormalized values, proof independence, and
+  rewriting.
+
 - [x] **Require primitivity for `DirichletCharacter.rootNumber`.**
   `rootNumber χ hχ` requires `hχ : IsPrimitive χ` and retains the nonzero-modulus hypothesis.
   The functional equation supplies its existing primitivity proof, and the modulus-one root
@@ -288,6 +314,22 @@ operation.
   exact domain.  Decide separately whether arbitrary non-null-measurable sets should mean
   conditioning on `toMeasurable μ s`; that public interpretation also requires matching literature.
   Otherwise expose conditioning only on the validated event domain.
+
+- [ ] **Require a finite measure for the conditional cdf.**
+  `ProbabilityTheory.condCDF` in `Mathlib/Probability/Kernel/Disintegration/CondCDF.lean:240`
+  accepts every `ρ : Measure (α × ℝ)`, but its specifying integral identities, such as
+  `setLIntegral_condCDF`, require `IsFiniteMeasure ρ`.  `condCDF_le_one` and
+  `tendsto_condCDF_atTop` hold for every `ρ` because `toRatCDF` replaces a function that is not a
+  rational cdf at a point by `defaultRatCDF`.  Retain the freedom to choose a version on
+  `ρ.fst`-null sets, as for `condDistrib`, and put finiteness at the construction boundary.
+
+- [ ] **Give parametric distributions their parameter domains.**
+  `gammaMeasure a r`, `expMeasure r`, `paretoMeasure t r`, and `betaMeasure α β` in
+  `Mathlib/Probability/Distributions/` accept all real parameters, although their
+  `IsProbabilityMeasure` lemmas assume positive parameters; the `cdf` formulas for the first three
+  therefore supply the instance locally with `haveI`.  `geometricMeasure p` returns `dirac 0` when
+  `p = 0`.  Classify the exact parameter domain of each family before choosing between constrained
+  parameter types and proof arguments.
 
 - [ ] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
   `ContinuousMap.mkD` in `Mathlib/Topology/ContinuousMap/Basic.lean:320` honestly takes an explicit

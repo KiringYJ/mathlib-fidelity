@@ -101,10 +101,12 @@ lemma isProbabilityMeasure_expMeasure {r : ℝ} (hr : 0 < r) :
 section ExponentialCDF
 
 lemma cdf_expMeasure_eq_integral {r : ℝ} (hr : 0 < r) (x : ℝ) :
+    haveI := isProbabilityMeasure_expMeasure hr
     cdf (expMeasure r) x = ∫ x in Iic x, exponentialPDFReal r x :=
   cdf_gammaMeasure_eq_integral zero_lt_one hr x
 
 lemma cdf_expMeasure_eq_lintegral {r : ℝ} (hr : 0 < r) (x : ℝ) :
+    haveI := isProbabilityMeasure_expMeasure hr
     cdf (expMeasure r) x = ENNReal.toReal (∫⁻ x in Iic x, exponentialPDF r x) :=
   cdf_gammaMeasure_eq_lintegral zero_lt_one hr x
 
@@ -163,6 +165,7 @@ lemma lintegral_exponentialPDF_eq_antiDeriv {r : ℝ} (hr : 0 < r) (x : ℝ) :
 
 /-- The CDF of the exponential distribution equals ``1 - exp (-(r * x))`` -/
 lemma cdf_expMeasure_eq {r : ℝ} (hr : 0 < r) (x : ℝ) :
+    haveI := isProbabilityMeasure_expMeasure hr
     cdf (expMeasure r) x = if 0 ≤ x then 1 - exp (-(r * x)) else 0 := by
   rw [cdf_expMeasure_eq_lintegral hr, lintegral_exponentialPDF_eq_antiDeriv hr x,
     ENNReal.toReal_ofReal_eq_iff]
