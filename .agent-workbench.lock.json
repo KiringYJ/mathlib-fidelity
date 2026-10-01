@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-30T23:38:48Z",
+  "generatedAt": "2026-10-01T22:45:57Z",
   "source": {
     "repo": "KiringYJ/agent-workbench",
     "branch": "main",
     "requestedRef": "main",
-    "resolvedCommit": "cb9ff5914aef08c276bd5d694f17412a700d0a22"
+    "resolvedCommit": "0c11a24f19e705f1be1b4ca3c520fcf1045e3f38"
   },
   "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
   "profile": "research",
@@ -21,24 +21,24 @@
   },
   "scopes": {
     "guide": {
-      "resolvedCommit": "cb9ff5914aef08c276bd5d694f17412a700d0a22",
+      "resolvedCommit": "0c11a24f19e705f1be1b4ca3c520fcf1045e3f38",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T23:38:48Z"
+      "lastReconciledAt": "2026-10-01T22:45:57Z"
     },
     "entrypoints": {
-      "resolvedCommit": "cb9ff5914aef08c276bd5d694f17412a700d0a22",
+      "resolvedCommit": "0c11a24f19e705f1be1b4ca3c520fcf1045e3f38",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T23:38:48Z"
+      "lastReconciledAt": "2026-10-01T22:45:57Z"
     },
     "portable_prompts": {
-      "resolvedCommit": "cb9ff5914aef08c276bd5d694f17412a700d0a22",
+      "resolvedCommit": "0c11a24f19e705f1be1b4ca3c520fcf1045e3f38",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T23:38:48Z"
+      "lastReconciledAt": "2026-10-01T22:45:57Z"
     },
     "portable_skills": {
-      "resolvedCommit": "cb9ff5914aef08c276bd5d694f17412a700d0a22",
+      "resolvedCommit": "0c11a24f19e705f1be1b4ca3c520fcf1045e3f38",
       "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-09-30T23:38:48Z"
+      "lastReconciledAt": "2026-10-01T22:45:57Z"
     }
   },
   "installedArtifacts": [
@@ -408,8 +408,8 @@
       "name": "integrate-chatgpt-conversation",
       "sourcePath": "skills/integrate-chatgpt-conversation/SKILL.md",
       "outputPath": ".agents/skills/integrate-chatgpt-conversation/SKILL.md",
-      "sourceChecksum": "sha256:8f6571c85768e813e2ab785bf094dee5024d20f5a0d3f9b7b7143b5f4d240aef",
-      "lastAppliedOutputChecksum": "sha256:8f6571c85768e813e2ab785bf094dee5024d20f5a0d3f9b7b7143b5f4d240aef",
+      "sourceChecksum": "sha256:5966e442bc64ec6b535a1ea158c7f69a69d3f6648531b124f98a994452f7a45f",
+      "lastAppliedOutputChecksum": "sha256:5966e442bc64ec6b535a1ea158c7f69a69d3f6648531b124f98a994452f7a45f",
       "resourceManifest": [],
       "markerVersion": "agent-workbench: managed portable-skill",
       "profile": "research",
@@ -531,8 +531,8 @@
       "name": "integrate-chatgpt-conversation",
       "sourcePath": "skills/integrate-chatgpt-conversation/SKILL.md",
       "outputPath": ".claude/skills/integrate-chatgpt-conversation/SKILL.md",
-      "sourceChecksum": "sha256:8f6571c85768e813e2ab785bf094dee5024d20f5a0d3f9b7b7143b5f4d240aef",
-      "lastAppliedOutputChecksum": "sha256:8f6571c85768e813e2ab785bf094dee5024d20f5a0d3f9b7b7143b5f4d240aef",
+      "sourceChecksum": "sha256:5966e442bc64ec6b535a1ea158c7f69a69d3f6648531b124f98a994452f7a45f",
+      "lastAppliedOutputChecksum": "sha256:5966e442bc64ec6b535a1ea158c7f69a69d3f6648531b124f98a994452f7a45f",
       "resourceManifest": [],
       "markerVersion": "agent-workbench: managed portable-skill",
       "profile": "research",
