@@ -57,7 +57,7 @@ lemma sup_mem (ha : a ∈ L) (hb : b ∈ L) : a ⊔ b ∈ L := L.supClosed ha hb
 lemma inf_mem (ha : a ∈ L) (hb : b ∈ L) : a ⊓ b ∈ L := L.infClosed ha hb
 lemma sdiff_mem (ha : a ∈ L) (hb : b ∈ L) : a \ b ∈ L := L.sdiff_mem' ha hb
 
-@[simp] lemma mem_carrier : a ∈ L.carrier ↔ a ∈ L := .rfl
+lemma mem_carrier : a ∈ L.carrier ↔ a ∈ L := .rfl
 @[simp] lemma mem_toSublattice : a ∈ L.toSublattice ↔ a ∈ L := .rfl
 @[simp] lemma coe_toSublattice (L : GeneralizedBooleanSubalgebra α) :
     (L.toSublattice : Set α) = L := rfl

@@ -88,7 +88,8 @@ theorem mem_stage_iff_symmDiff_subset {k : ℕ} {p : almostEqualPairs ℕ} :
       fun h ↦ (Nat.not_lt_of_ge hn) (hp n h)
     tauto
 
-@[simp]
+-- Higher priority than `mem_stage`, which would otherwise unfold the left-hand side.
+@[simp high]
 theorem singletonLeft_mem_stage_iff {i k : ℕ} :
     singletonLeft i ∈ stage k ↔ i < k := by
   rw [mem_stage_iff_symmDiff_subset]
