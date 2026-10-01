@@ -301,7 +301,8 @@ sets. -/
 def Indistinguishable (m : SigmaAlgebra β) (x y : β) : Prop :=
   ∀ s ∈ m, x ∈ s ↔ y ∈ s
 
-@[refl] lemma indistinguishable_refl (m : SigmaAlgebra β) (x : β) : m.Indistinguishable x x :=
+@[refl, simp] lemma indistinguishable_refl (m : SigmaAlgebra β) (x : β) :
+    m.Indistinguishable x x :=
   fun _ _ ↦ Iff.rfl
 
 @[symm] lemma Indistinguishable.symm {m : SigmaAlgebra β} {x y : β}
@@ -335,7 +336,7 @@ theorem indistinguishable_iff_forall_mem {m : SigmaAlgebra β} {x y : β} :
     m.Indistinguishable x y ↔ ∀ s ∈ m, x ∈ s ↔ y ∈ s :=
   Iff.rfl
 
-@[simp] lemma self_mem_indistinguishabilityClass (m : SigmaAlgebra β) (x : β) :
+lemma self_mem_indistinguishabilityClass (m : SigmaAlgebra β) (x : β) :
     x ∈ m.indistinguishabilityClass x :=
   m.indistinguishable_refl x
 
