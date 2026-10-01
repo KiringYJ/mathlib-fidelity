@@ -55,25 +55,24 @@ theorem map_mul_right_eq_self (μ : Measure G) [IsMulRightInvariant μ] (g : G) 
   fun hg ↦ IsMulRightInvariant.map_mul_right_eq_self g hg
 
 @[to_additive MeasureTheory.isAddLeftInvariant_smul]
-instance isMulLeftInvariant_smul [MeasurableConstSMul G G] [IsMulLeftInvariant μ] (c : ℝ≥0∞) :
+instance isMulLeftInvariant_smul [IsMulLeftInvariant μ] (c : ℝ≥0∞) :
     IsMulLeftInvariant (c • μ) :=
   ⟨fun g hg => by
     rw [Measure.map_smul _ hg.aemeasurable, map_mul_left_eq_self μ g hg]⟩
 
 @[to_additive MeasureTheory.isAddRightInvariant_smul]
-instance isMulRightInvariant_smul [MeasurableConstSMul Gᵐᵒᵖ G] [IsMulRightInvariant μ] (c : ℝ≥0∞) :
+instance isMulRightInvariant_smul [IsMulRightInvariant μ] (c : ℝ≥0∞) :
     IsMulRightInvariant (c • μ) :=
   ⟨fun g hg => by
     rw [Measure.map_smul _ hg.aemeasurable, map_mul_right_eq_self μ g hg]⟩
 
 @[to_additive MeasureTheory.isAddLeftInvariant_smul_nnreal]
-instance isMulLeftInvariant_smul_nnreal [MeasurableConstSMul G G] [IsMulLeftInvariant μ] (c : ℝ≥0) :
+instance isMulLeftInvariant_smul_nnreal [IsMulLeftInvariant μ] (c : ℝ≥0) :
     IsMulLeftInvariant (c • μ) :=
   MeasureTheory.isMulLeftInvariant_smul (c : ℝ≥0∞)
 
 @[to_additive MeasureTheory.isAddRightInvariant_smul_nnreal]
-instance isMulRightInvariant_smul_nnreal [MeasurableConstSMul Gᵐᵒᵖ G] [IsMulRightInvariant μ]
-    (c : ℝ≥0) :
+instance isMulRightInvariant_smul_nnreal [IsMulRightInvariant μ] (c : ℝ≥0) :
     IsMulRightInvariant (c • μ) :=
   MeasureTheory.isMulRightInvariant_smul (c : ℝ≥0∞)
 
@@ -177,8 +176,8 @@ instance Measure.prod.instIsMulRightInvariant [IsMulRightInvariant μ] [SigmaFin
   infer_instance
 
 @[to_additive]
-theorem isMulLeftInvariant_map {H : Type*} [SigmaAlgebra H] [Mul H] [MeasurableMul H]
-    [IsMulLeftInvariant μ] (f : G →ₙ* H) (hf : Measurable f) (h_surj : Surjective f) :
+theorem isMulLeftInvariant_map {H : Type*} [SigmaAlgebra H] [Mul H] [IsMulLeftInvariant μ]
+    (f : G →ₙ* H) (hf : Measurable f) (h_surj : Surjective f) :
     IsMulLeftInvariant (Measure.map f μ hf.aemeasurable) := by
   refine ⟨fun h hh => ?_⟩
   rw [map_map hf.aemeasurable hh.aemeasurable]
@@ -839,13 +838,13 @@ theorem haar_singleton [ContinuousMul G] [BorelSpace G] (g : G) : μ {g} = μ {(
   simp only [mul_one, preimage_mul_left_singleton, inv_inv]
 
 @[to_additive IsAddHaarMeasure.smul]
-theorem IsHaarMeasure.smul [MeasurableConstSMul G G] {c : ℝ≥0∞} (cpos : c ≠ 0) (ctop : c ≠ ∞) :
+theorem IsHaarMeasure.smul {c : ℝ≥0∞} (cpos : c ≠ 0) (ctop : c ≠ ∞) :
     IsHaarMeasure (c • μ) :=
   { lt_top_of_isCompact := fun _K hK => ENNReal.mul_lt_top ctop.lt_top hK.measure_lt_top
     toIsOpenPosMeasure := isOpenPosMeasure_smul μ cpos }
 
 @[to_additive IsAddHaarMeasure.nnreal_smul]
-lemma IsHaarMeasure.nnreal_smul [MeasurableConstSMul G G] {c : ℝ≥0} (hc : c ≠ 0) :
+lemma IsHaarMeasure.nnreal_smul {c : ℝ≥0} (hc : c ≠ 0) :
     IsHaarMeasure (c • μ) :=
   .smul _ (by simp [hc]) (Option.some_ne_none _)
 
@@ -881,7 +880,7 @@ theorem isHaarMeasure_map [BorelSpace G] [ContinuousMul G] {H : Type*} [Group H]
     toIsOpenPosMeasure := hf.isOpenPosMeasure_map h_surj }
 
 @[to_additive]
-protected theorem IsHaarMeasure.comap [BorelSpace G] [MeasurableMul G]
+protected theorem IsHaarMeasure.comap [BorelSpace G]
     [Group H] [TopologicalSpace H] [BorelSpace H] {mH : MeasurableMul H}
     (μ : Measure H) [IsHaarMeasure μ] {f : G →* H} (hf : Topology.IsOpenEmbedding f) :
     (μ.comap f).IsHaarMeasure where
@@ -898,7 +897,7 @@ a Haar measure. See also `isHaarMeasure_map`. -/
 homomorphism is again an additive Haar measure. See also `isAddHaarMeasure_map`. -/]
 theorem isHaarMeasure_map_of_isFiniteMeasure
     [BorelSpace G] [ContinuousMul G] {H : Type*} [Group H]
-    [TopologicalSpace H] [SigmaAlgebra H] [BorelSpace H] [ContinuousMul H]
+    [TopologicalSpace H] [SigmaAlgebra H] [BorelSpace H]
     [IsFiniteMeasure μ] (f : G →* H) (hf : Continuous f) (h_surj : Surjective f) :
     IsHaarMeasure (Measure.map f μ hf.measurable.aemeasurable) where
   toIsMulLeftInvariant := isMulLeftInvariant_map f.toMulHom hf.measurable h_surj
