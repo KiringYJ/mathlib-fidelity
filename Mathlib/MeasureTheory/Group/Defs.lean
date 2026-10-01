@@ -17,7 +17,7 @@ In this file we define typeclasses for measures invariant under (scalar) multipl
   says that the measure `μ` is invariant under scalar multiplication by `c : M`;
 - `MeasureTheory.VAddInvariantMeasure M α μ` is the additive version of this typeclass;
 - `MeasureTheory.Measure.IsMulLeftInvariant μ`, `MeasureTheory.Measure.IsMulRightInvariant μ`
-  say that the measure `μ` is invariant under multiplication on the left and on the right,
+  say that the measure `μ` is invariant under the measurable left and right multiplications,
   respectively.
 - `MeasureTheory.Measure.IsAddLeftInvariant μ`, `MeasureTheory.Measure.IsAddRightInvariant μ`
   are the additive versions of these typeclasses.
@@ -37,7 +37,7 @@ If the left/right multiplication is measurable
 these definitions are equivalent.
 
 The definitions that use `MeasureTheory.Measure.map`
-imply that the left (resp., right) multiplication is `AEMeasurable`.
+require invariance only under the left (resp., right) multiplications that are measurable.
 -/
 
 public section
@@ -67,27 +67,45 @@ namespace Measure
 
 variable {G : Type*} [SigmaAlgebra G]
 
-/-- A measure `μ` on a measurable additive group is left invariant
-  if the measure of left translations of a set are equal to the measure of the set itself. -/
+/-- A measure `μ` on a type `G` with an addition is left invariant if, for every `g : G` such
+that the left translation `(g + ·)` is measurable, the pushforward of `μ` along `(g + ·)` is `μ`.
+For such `g`, this is equivalent to `μ ((g + ·) ⁻¹' s) = μ s` for every measurable set `s`.
+
+If `(g + ·)` is not measurable, the condition for `g` is vacuous. Under `[MeasurableAdd G]`,
+every left translation is measurable, so the condition is required for every `g : G`. -/
 class IsAddLeftInvariant [Add G] (μ : Measure G) : Prop where
   map_add_left_eq_self : ∀ g : G,
     ∀ (hg : Measurable (g + ·) := by fun_prop), map (g + ·) μ hg.aemeasurable = μ
 
-/-- A measure `μ` on a measurable group is left invariant
-  if the measure of left translations of a set are equal to the measure of the set itself. -/
+/-- A measure `μ` on a type `G` with a multiplication is left invariant if, for every `g : G`
+such that the left multiplication `(g * ·)` is measurable, the pushforward of `μ` along `(g * ·)`
+is `μ`. For such `g`, this is equivalent to `μ ((g * ·) ⁻¹' s) = μ s` for every measurable set
+`s`.
+
+If `(g * ·)` is not measurable, the condition for `g` is vacuous. Under `[MeasurableMul G]`,
+every left multiplication is measurable, so the condition is required for every `g : G`. -/
 @[to_additive existing]
 class IsMulLeftInvariant [Mul G] (μ : Measure G) : Prop where
   map_mul_left_eq_self : ∀ g : G,
     ∀ (hg : Measurable (g * ·) := by fun_prop), map (g * ·) μ hg.aemeasurable = μ
 
-/-- A measure `μ` on a measurable additive group is right invariant
-  if the measure of right translations of a set are equal to the measure of the set itself. -/
+/-- A measure `μ` on a type `G` with an addition is right invariant if, for every `g : G` such
+that the right translation `(· + g)` is measurable, the pushforward of `μ` along `(· + g)` is `μ`.
+For such `g`, this is equivalent to `μ ((· + g) ⁻¹' s) = μ s` for every measurable set `s`.
+
+If `(· + g)` is not measurable, the condition for `g` is vacuous. Under `[MeasurableAdd G]`,
+every right translation is measurable, so the condition is required for every `g : G`. -/
 class IsAddRightInvariant [Add G] (μ : Measure G) : Prop where
   map_add_right_eq_self : ∀ g : G,
     ∀ (hg : Measurable (· + g) := by fun_prop), map (· + g) μ hg.aemeasurable = μ
 
-/-- A measure `μ` on a measurable group is right invariant
-  if the measure of right translations of a set are equal to the measure of the set itself. -/
+/-- A measure `μ` on a type `G` with a multiplication is right invariant if, for every `g : G`
+such that the right multiplication `(· * g)` is measurable, the pushforward of `μ` along
+`(· * g)` is `μ`. For such `g`, this is equivalent to `μ ((· * g) ⁻¹' s) = μ s` for every
+measurable set `s`.
+
+If `(· * g)` is not measurable, the condition for `g` is vacuous. Under `[MeasurableMul G]`,
+every right multiplication is measurable, so the condition is required for every `g : G`. -/
 @[to_additive existing]
 class IsMulRightInvariant [Mul G] (μ : Measure G) : Prop where
   map_mul_right_eq_self : ∀ g : G,
