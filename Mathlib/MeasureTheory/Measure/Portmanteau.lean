@@ -70,9 +70,12 @@ Some specific considerations on the assumptions in the different implications:
   of the type class `HasOuterApproxClosed`. Type class inference knows that for example the more
   common assumptions of metrizability or pseudo-emetrizability suffice.
 * Where formulations are currently only provided for probability measures, one can obtain the
-  finite measure formulations using the characterization of convergence of finite measures by
-  their total masses and their probability-normalized versions, i.e., by
-  `MeasureTheory.FiniteMeasure.tendsto_normalize_iff_tendsto`.
+  finite measure formulations using the characterization of convergence of finite measures to a
+  nonzero limit by their total masses and their probability-normalized versions, i.e., by
+  `MeasureTheory.FiniteMeasure.tendsto_normalize_iff_tendsto`. The normalized versions are taken
+  along the indices where the finite measures are nonzero; a zero limit is characterized by the
+  convergence of the total masses to zero, see
+  `MeasureTheory.FiniteMeasure.tendsto_zero_of_tendsto_zero_mass`.
 
 ## References
 
