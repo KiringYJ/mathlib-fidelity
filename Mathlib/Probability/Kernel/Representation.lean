@@ -11,6 +11,7 @@ public import Mathlib.Probability.Kernel.Defs
 
 import Mathlib.Analysis.SpecialFunctions.Sigmoid
 import Mathlib.Probability.CDF
+import Mathlib.Probability.Kernel.Composition.MapComap
 
 /-!
 # Representation of kernels
