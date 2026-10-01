@@ -288,8 +288,8 @@ For an explicitly authorized public-API canonicalization:
 6. During iteration, build the narrow affected modules. At the final source
    state, run `lake build`,
    `lake build MathlibTest Archive Counterexamples Wanted`, `lake test`,
-   `lake exe mk_all --check`, and `git diff --check` for a cross-cutting
-   refactor of this scale.
+   `lake lint`, `lake exe lint-style`, `lake exe mk_all --check`, and
+   `git diff --check` for a cross-cutting refactor of this scale.
 7. Add repository-wide negative scans for every removed surface, obsolete
    theorem name, compatibility shim, legacy representation, and newly added
    `sorry` or `admit`. A later core edit or byte-level normalization invalidates
@@ -329,10 +329,19 @@ the scope and risk of the change; do not report it unless it actually ran.
 ```powershell
 lake test
 lake exe mk_all
+lake exe lint-style Mathlib.Import.Path
+lake lint
 ```
 
-Run `lake exe mk_all` when adding a new module. Reuse relevant upstream linter
-and documentation checks when they remain applicable to the affected area.
+Run `lake exe mk_all` when adding a new module. CI also runs both linter
+families: `lake exe lint-style` applies the text-based style linters to the
+listed modules and their imports, and `lake lint` runs the environment linters
+(`batteries/runLinter`) over `Mathlib`. A successful build does not imply that
+the environment linters pass; for example, they reject underscores in
+automatically generated declaration names. For a narrow change,
+`#lint in Mathlib.Import.Path` in a scratch file checks the affected module
+before the full `lake lint`. Reuse relevant upstream documentation checks when
+they remain applicable to the affected area.
 
 ## Important Files and Directories
 
