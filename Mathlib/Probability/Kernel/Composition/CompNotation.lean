@@ -40,7 +40,6 @@ variable {α β : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β}
 Notation for `MeasureTheory.Measure.bind` -/
 scoped[ProbabilityTheory] notation:100 κ:101 " ∘ₘ " μ:100 => MeasureTheory.Measure.bind μ κ
 
-@[simp]
 lemma comp_apply_univ [IsMarkovKernel κ] : (κ ∘ₘ μ) Set.univ = μ Set.univ := by
   simp [bind_apply .univ κ.aemeasurable]
 
