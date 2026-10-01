@@ -881,7 +881,7 @@ theorem isHaarMeasure_map [BorelSpace G] [ContinuousMul G] {H : Type*} [Group H]
 
 @[to_additive]
 protected theorem IsHaarMeasure.comap [BorelSpace G]
-    [Group H] [TopologicalSpace H] [BorelSpace H] {mH : MeasurableMul H}
+    [Group H] [TopologicalSpace H] [BorelSpace H] [MeasurableMul H]
     (μ : Measure H) [IsHaarMeasure μ] {f : G →* H} (hf : Topology.IsOpenEmbedding f) :
     (μ.comap f).IsHaarMeasure where
   map_mul_left_eq_self g hg :=
