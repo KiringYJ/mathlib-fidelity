@@ -818,7 +818,7 @@ namespace MeasurePreserving
 variable {δ : Type*} [SigmaAlgebra δ] {μa : Measure α} {μb : Measure β} {μc : Measure γ}
   {μd : Measure δ}
 
-lemma aemeasurable_prodMk_of_skew [SFinite μa] [SFinite μc]
+lemma aemeasurable_prodMk_of_skew [SFinite μc]
     {f : α → β} (hf : MeasurePreserving f μa μb) {g : α → γ → δ}
     (hgm : Measurable (uncurry g))
     (hg : ∀ᵐ a ∂μa, map (g a) μc hgm.of_uncurry_left.aemeasurable = μd) :

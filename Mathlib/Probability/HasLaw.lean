@@ -263,7 +263,7 @@ lemma hasLaw_dirac_iff [IsProbabilityMeasure P] [MeasurableSingletonClass 𝓧] 
   mpr := hasLaw_dirac_of_ae_eq
 
 lemma indepFun_iff_hasLaw_prodMk_prod [IsFiniteMeasure P] {𝓨 : Type*} {m𝓨 : SigmaAlgebra 𝓨}
-    {ν : Measure 𝓨} [SFinite μ] [SFinite ν] {Y : Ω → 𝓨}
+    {ν : Measure 𝓨} {Y : Ω → 𝓨}
     (hX : HasLaw X μ P) (hY : HasLaw Y ν P) :
     X ⟂ᵢ[P] Y ↔ HasLaw (fun ω ↦ (X ω, Y ω)) (μ.prod ν (by
       have : IsFiniteMeasure μ := hX.isFiniteMeasure_iff.mp inferInstance

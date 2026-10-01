@@ -54,11 +54,11 @@ for probability measures. In that case, it satisfies `cdf μ x = μ.real (Iic x)
 `ProbabilityTheory.cdf_eq_real`). -/
 @[wikidata Q386228]
 noncomputable
-def cdf (μ : Measure ℝ) [SFinite μ] : StieltjesFunction ℝ :=
+def cdf (μ : Measure ℝ) : StieltjesFunction ℝ :=
   condCDF ((dirac Unit.unit).prod μ) Unit.unit
 
 section ExplicitMeasureArg
-variable (μ : Measure ℝ) [SFinite μ]
+variable (μ : Measure ℝ)
 
 /-- The cdf is non-negative. -/
 lemma cdf_nonneg (x : ℝ) : 0 ≤ cdf μ x := condCDF_nonneg _ _ _
@@ -97,8 +97,7 @@ lemma measure_cdf [IsProbabilityMeasure μ] : (cdf μ).measure = μ := by
 
 end ExplicitMeasureArg
 
-lemma cdf_measure_stieltjesFunction (f : StieltjesFunction ℝ) [SFinite f.measure]
-    (hf0 : Tendsto f atBot (𝓝 0))
+lemma cdf_measure_stieltjesFunction (f : StieltjesFunction ℝ) (hf0 : Tendsto f atBot (𝓝 0))
     (hf1 : Tendsto f atTop (𝓝 1)) :
     cdf f.measure = f := by
   refine (cdf f.measure).eq_of_measure_of_tendsto_atBot f ?_ (tendsto_cdf_atBot _) hf0
