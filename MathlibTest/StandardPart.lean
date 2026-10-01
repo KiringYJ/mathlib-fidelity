@@ -25,6 +25,13 @@ example (x y : FiniteElement ℝ*) : stdPart (x * y) = stdPart x * stdPart y := 
 example (r : ℝ) : stdPart (FiniteElement.ofArchimedean coeRingHom r) = r := by
   simp
 
+example (r : ℝ) (h : 0 ≤ mk (r : ℝ*)) : stdPart (FiniteElement.mk (r : ℝ*) h) = r := by
+  simp
+
+example (r s : ℝ) (h : 0 ≤ mk ((r + s : ℝ) : ℝ*)) :
+    stdPart (FiniteElement.mk ((r + s : ℝ) : ℝ*) h) = r + s := by
+  simp
+
 example : stdPart (FiniteElement.mk ε archimedeanClassMk_epsilon_pos.le) = 0 := by
   simp
 

@@ -170,8 +170,10 @@ theorem archimedeanClassMk_coe_nonneg (x : ℝ) : 0 ≤ mk (x : ℝ*) :=
 theorem archimdeanClassMk_coe {x : ℝ} (hx : x ≠ 0) : mk (x : ℝ*) = 0 :=
   mk_map_of_archimedean' coeRingHom hx
 
-@[simp]
-theorem stdPart_coe (x : ℝ) : stdPart (FiniteElement.ofArchimedean coeRingHom x) = x :=
+-- Rewrite before `simp` pushes the cast into a compound real argument.
+@[simp↓]
+theorem stdPart_coe (x : ℝ) :
+    stdPart (FiniteElement.mk (x : ℝ*) (archimedeanClassMk_coe_nonneg x)) = x :=
   stdPart_map_real coeRingHom x
 
 /-! ### Basic constants -/
