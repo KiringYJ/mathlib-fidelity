@@ -26,8 +26,8 @@ The main definitions are
   distribution (a.k.a. convergence in law, weak convergence of measures);
 * `MeasureTheory.ProbabilityMeasure.toFiniteMeasure`: Interpret a probability measure as
   a finite measure;
-* `MeasureTheory.FiniteMeasure.normalize`: Normalize a finite measure to a probability measure
-  (returns junk for the zero measure).
+* `MeasureTheory.FiniteMeasure.normalize`: Normalize a nonzero finite measure to a probability
+  measure.
 * `MeasureTheory.ProbabilityMeasure.map`: The push-forward `f* μ` of a probability measure
   `μ` on `Ω` along an almost everywhere measurable function `f : Ω → Ω'`.
 
@@ -41,8 +41,8 @@ The main definitions are
   `MeasureTheory.lintegral` sense) of all bounded continuous nonnegative random variables is
   `MeasureTheory.ProbabilityMeasure.tendsto_iff_forall_lintegral_tendsto`.
 * `MeasureTheory.FiniteMeasure.tendsto_normalize_iff_tendsto`: The convergence of finite
-  measures to a nonzero limit is characterized by the convergence of the probability-normalized
-  versions and of the total masses.
+  measures to a nonzero limit is characterized by the convergence of the total masses and of the
+  probability-normalized versions, taken along the indices where the finite measures are nonzero.
 * `MeasureTheory.ProbabilityMeasure.continuous_map`: For a continuous function `f : Ω → Ω'`, the
   push-forward of probability measures `f* : ProbabilityMeasure Ω → ProbabilityMeasure Ω'` is
   continuous.
@@ -198,6 +198,10 @@ theorem coeFn_comp_toFiniteMeasure_eq_coeFn (ν : ProbabilityMeasure Ω) :
 theorem toFiniteMeasure_apply_eq_apply (ν : ProbabilityMeasure Ω) (s : Set Ω) :
     ν.toFiniteMeasure s = ν s := rfl
 
+theorem toFiniteMeasure_injective :
+    Function.Injective (toFiniteMeasure : ProbabilityMeasure Ω → FiniteMeasure Ω) :=
+  fun _ _ h ↦ Subtype.ext <| congr_arg FiniteMeasure.toMeasure h
+
 @[simp]
 theorem ennreal_coeFn_eq_coeFn_toMeasure (ν : ProbabilityMeasure Ω) (s : Set Ω) :
     (ν s : ℝ≥0∞) = (ν : Measure Ω) s := by
@@ -261,6 +265,8 @@ set_option backward.isDefEq.respectTransparency.types false in
 
 theorem toFiniteMeasure_nonzero (μ : ProbabilityMeasure Ω) : μ.toFiniteMeasure ≠ 0 := by
   simp [← FiniteMeasure.mass_nonzero_iff]
+
+instance (μ : ProbabilityMeasure Ω) : NeZero μ.toFiniteMeasure := ⟨μ.toFiniteMeasure_nonzero⟩
 
 /-- The type of probability measures is a measurable space when equipped with the Giry monad. -/
 instance : SigmaAlgebra (ProbabilityMeasure Ω) :=
@@ -452,166 +458,185 @@ section NormalizeFiniteMeasure
 
 /-! ### Normalization of finite measures to probability measures
 
-This section is about normalizing finite measures to probability measures.
+This section is about normalizing nonzero finite measures to probability measures, i.e., dividing
+them by their total mass. Normalization is defined exactly on the nonzero finite measures:
+`MeasureTheory.FiniteMeasure.normalize μ hμ` takes a proof `hμ : μ ≠ 0`. The proof may be omitted
+when the tactic `finite_measure_ne_zero` finds it, for example as a local hypothesis, as a
+hypothesis about all members of a family, or through a `NeZero` instance such as the one for
+probability measures.
 
-The weak convergence of finite measures to nonzero limit measures is characterized by
-the convergence of the total mass and the convergence of the normalized probability
-measures.
+The weak convergence of finite measures to a nonzero limit measure is characterized by the
+convergence of the total masses and the convergence of the normalized probability measures along
+the indices where the finite measures are nonzero.
 -/
+
+open Lean Elab Tactic in
+/-- The default discharger for the hypothesis `μ ≠ 0` of `MeasureTheory.FiniteMeasure.normalize`.
+
+It closes the goal with a local hypothesis `μ ≠ 0`, with a `NeZero μ` instance (for example for
+`μ = P.toFiniteMeasure` with `P` a probability measure), or by applying a local hypothesis about a
+family, such as `∀ i, μs i ≠ 0` or `∀ ν ∈ S, ν ≠ 0`. Other evidence, such as `μ.mass ≠ 0`, the
+property of an element of `{ν : FiniteMeasure Ω // ν ≠ 0}`, or `smul_ne_zero hc hμ`, is passed
+explicitly. Otherwise the tactic fails with an explanation.
+
+It never chooses the finite measure itself: if the measure is not determined when the tactic runs,
+it fails instead of assigning it from a hypothesis. -/
+elab (name := finiteMeasureNeZero) "finite_measure_ne_zero" : tactic => do
+  if (← instantiateMVars (← getMainTarget)).hasExprMVar then
+    throwError "FiniteMeasure.normalize: the measure to normalize is not determined; \
+      pass it explicitly"
+  -- The bounded search only applies quantified hypotheses; without `intro` and `exfalso` it
+  -- fails quickly in large contexts.
+  evalTactic (← `(tactic|
+    first
+      | assumption
+      | exact NeZero.ne _
+      | solve_by_elim (maxDepth := 3) -intro -exfalso
+      | fail "FiniteMeasure.normalize needs a proof that the finite measure is nonzero"))
 
 namespace FiniteMeasure
 
-variable {Ω : Type*} [Nonempty Ω] {m0 : SigmaAlgebra Ω} (μ : FiniteMeasure Ω)
+variable {Ω : Type*} {m0 : SigmaAlgebra Ω}
 
-/-- Normalize a finite measure so that it becomes a probability measure, i.e., divide by the
-total mass. -/
-def normalize : ProbabilityMeasure Ω :=
-  if zero : μ.mass = 0 then ⟨Measure.dirac ‹Nonempty Ω›.some, Measure.dirac.isProbabilityMeasure⟩
-  else
-    { val := μ.mass⁻¹ • (μ : Measure Ω)
-      property := by
-        refine ⟨?_⟩
-        simp only [Measure.coe_smul, Pi.smul_apply, Measure.nnreal_smul_coe_apply,
-          ENNReal.coe_inv zero, ennreal_mass]
-        rw [← Ne, ← ENNReal.coe_ne_zero, ennreal_mass] at zero
-        exact ENNReal.inv_mul_cancel zero μ.prop.measure_univ_lt_top.ne }
+/-- Normalize a nonzero finite measure so that it becomes a probability measure, i.e., divide it by
+its total mass. The proof `hμ : μ ≠ 0` can usually be omitted; see `finite_measure_ne_zero`.
 
-set_option backward.isDefEq.respectTransparency.types false in
-@[simp]
-theorem self_eq_mass_mul_normalize (s : Set Ω) : μ s = μ.mass * μ.normalize s := by
-  obtain rfl | h := eq_or_ne μ 0
-  · simp
-  have mass_nonzero : μ.mass ≠ 0 := by rwa [μ.mass_nonzero_iff]
-  simp only [normalize, dite_eq_right mass_nonzero]
-  simp [mul_inv_cancel_left₀ mass_nonzero, coeFn_def]
+Since `hμ` is an explicit argument, write `(μ.normalize) s` or `μ.normalize hμ s` to evaluate the
+normalized measure on a set `s`. -/
+def normalize (μ : FiniteMeasure Ω) (hμ : μ ≠ 0 := by finite_measure_ne_zero) :
+    ProbabilityMeasure Ω where
+  val := μ.mass⁻¹ • (μ : Measure Ω)
+  property := by
+    have hm : μ.mass ≠ 0 := (mass_nonzero_iff μ).mpr hμ
+    refine ⟨?_⟩
+    simp only [Measure.coe_smul, Pi.smul_apply, Measure.nnreal_smul_coe_apply,
+      ENNReal.coe_inv hm, ennreal_mass]
+    rw [← ENNReal.coe_ne_zero, ennreal_mass] at hm
+    exact ENNReal.inv_mul_cancel hm (measure_lt_top _ _).ne
 
-theorem self_eq_mass_smul_normalize : μ = μ.mass • μ.normalize.toFiniteMeasure := by
-  apply eq_of_forall_apply_eq
-  intro s _s_mble
-  rw [μ.self_eq_mass_mul_normalize s, smul_apply, smul_eq_mul,
-    ProbabilityMeasure.coeFn_comp_toFiniteMeasure_eq_coeFn]
-
-theorem normalize_eq_of_nonzero (nonzero : μ ≠ 0) (s : Set Ω) : μ.normalize s = μ.mass⁻¹ * μ s := by
-  simp only [μ.self_eq_mass_mul_normalize, μ.mass_nonzero_iff.mpr nonzero, inv_mul_cancel_left₀,
-    Ne, not_false_iff]
-
-theorem normalize_eq_inv_mass_smul_of_nonzero (nonzero : μ ≠ 0) :
-    μ.normalize.toFiniteMeasure = μ.mass⁻¹ • μ := by
-  nth_rw 3 [μ.self_eq_mass_smul_normalize]
-  rw [← smul_assoc]
-  simp only [μ.mass_nonzero_iff.mpr nonzero, smul_eq_mul, inv_mul_cancel₀, Ne,
-    not_false_iff, one_smul]
-
-theorem toMeasure_normalize_eq_of_nonzero (nonzero : μ ≠ 0) :
-    (μ.normalize : Measure Ω) = μ.mass⁻¹ • μ := by
-  ext1 s _s_mble
-  rw [← μ.normalize.ennreal_coeFn_eq_coeFn_toMeasure s, μ.normalize_eq_of_nonzero nonzero s,
-    ENNReal.coe_mul, ennreal_coeFn_eq_coeFn_toMeasure]
-  exact Measure.coe_nnreal_smul_apply _ _ _
+variable {μ : FiniteMeasure Ω}
 
 @[simp]
-theorem _root_.ProbabilityMeasure.toFiniteMeasure_normalize_eq_self {m0 : SigmaAlgebra Ω}
+theorem toMeasure_normalize (hμ : μ ≠ 0) :
+    (μ.normalize hμ : Measure Ω) = μ.mass⁻¹ • (μ : Measure Ω) := rfl
+
+@[simp]
+theorem toFiniteMeasure_normalize (hμ : μ ≠ 0) :
+    (μ.normalize hμ).toFiniteMeasure = μ.mass⁻¹ • μ := rfl
+
+@[simp]
+theorem normalize_apply (hμ : μ ≠ 0) (s : Set Ω) : μ.normalize hμ s = μ.mass⁻¹ * μ s := by
+  rw [← ProbabilityMeasure.toFiniteMeasure_apply_eq_apply, toFiniteMeasure_normalize,
+    smul_apply, smul_eq_mul]
+
+theorem mass_mul_normalize_apply (hμ : μ ≠ 0) (s : Set Ω) : μ.mass * μ.normalize hμ s = μ s := by
+  rw [normalize_apply, ← mul_assoc, mul_inv_cancel₀ ((mass_nonzero_iff μ).mpr hμ), one_mul]
+
+theorem mass_smul_normalize (hμ : μ ≠ 0) : μ.mass • (μ.normalize hμ).toFiniteMeasure = μ := by
+  rw [toFiniteMeasure_normalize, smul_smul, mul_inv_cancel₀ ((mass_nonzero_iff μ).mpr hμ),
+    one_smul]
+
+/-- The normalization of a nonzero finite measure `μ` is the unique probability measure whose
+multiple by the total mass of `μ` is `μ`. -/
+theorem eq_normalize_iff {P : ProbabilityMeasure Ω} (hμ : μ ≠ 0) :
+    P = μ.normalize hμ ↔ μ.mass • P.toFiniteMeasure = μ := by
+  refine ⟨fun h ↦ h ▸ mass_smul_normalize hμ, fun h ↦ ?_⟩
+  apply ProbabilityMeasure.toFiniteMeasure_injective
+  rw [toFiniteMeasure_normalize, eq_inv_smul_iff₀ ((mass_nonzero_iff μ).mpr hμ), h]
+
+/-- Normalization is invariant under multiplication by a nonzero scalar. -/
+theorem normalize_smul {c : ℝ≥0} (hc : c ≠ 0) (hμ : μ ≠ 0) :
+    (c • μ).normalize (smul_ne_zero hc hμ) = μ.normalize hμ := by
+  apply Subtype.ext
+  change (c • μ).mass⁻¹ • ((c • μ : FiniteMeasure Ω) : Measure Ω) = μ.mass⁻¹ • (μ : Measure Ω)
+  have hcm : (c • μ).mass = c * μ.mass := by simp [mass]
+  rw [hcm, toMeasure_smul, smul_smul, mul_inv_rev, mul_assoc, inv_mul_cancel₀ hc, mul_one]
+
+@[simp]
+theorem _root_.MeasureTheory.ProbabilityMeasure.toFiniteMeasure_normalize_eq_self
     (μ : ProbabilityMeasure Ω) : μ.toFiniteMeasure.normalize = μ := by
-  apply ProbabilityMeasure.eq_of_forall_apply_eq
-  intro s _s_mble
-  rw [μ.toFiniteMeasure.normalize_eq_of_nonzero μ.toFiniteMeasure_nonzero s]
-  simp only [ProbabilityMeasure.mass_toFiniteMeasure, inv_one, one_mul, μ.coeFn_toFiniteMeasure]
+  rw [eq_comm, eq_normalize_iff, ProbabilityMeasure.mass_toFiniteMeasure, one_smul]
 
-/-- Averaging with respect to a finite measure is the same as integrating against
+/-- Averaging with respect to a nonzero finite measure is the same as integrating against
 `MeasureTheory.FiniteMeasure.normalize`. -/
 theorem average_eq_integral_normalize {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    (nonzero : μ ≠ 0) (f : Ω → E) :
-    average (μ : Measure Ω) f = ∫ ω, f ω ∂(μ.normalize : Measure Ω) := by
-  rw [μ.toMeasure_normalize_eq_of_nonzero nonzero, average]
+    (hμ : μ ≠ 0) (f : Ω → E) :
+    average (μ : Measure Ω) f = ∫ ω, f ω ∂(μ.normalize hμ : Measure Ω) := by
+  rw [toMeasure_normalize, average]
   congr
-  simp [ENNReal.coe_inv (μ.mass_nonzero_iff.mpr nonzero), ennreal_mass]
+  simp [ENNReal.coe_inv ((mass_nonzero_iff μ).mpr hμ), ennreal_mass]
+
+variable {γ : Type*} {F : Filter γ} {μs : γ → FiniteMeasure Ω}
+
+/-- Finite measures whose total masses converge to a nonzero limit are eventually nonzero. -/
+theorem eventually_ne_zero_of_tendsto_mass {m : ℝ≥0}
+    (h : Tendsto (fun i ↦ (μs i).mass) F (𝓝 m)) (hm : m ≠ 0) : ∀ᶠ i in F, μs i ≠ 0 := by
+  filter_upwards [h.eventually_ne hm] with i hi
+  exact (mass_nonzero_iff _).mp hi
 
 variable [TopologicalSpace Ω]
 
-theorem testAgainstNN_eq_mass_mul (f : Ω →ᵇ ℝ≥0) :
-    μ.testAgainstNN f = μ.mass * μ.normalize.toFiniteMeasure.testAgainstNN f := by
-  nth_rw 1 [μ.self_eq_mass_smul_normalize]
-  rw [μ.normalize.toFiniteMeasure.smul_testAgainstNN_apply μ.mass f, smul_eq_mul]
-
-theorem normalize_testAgainstNN (nonzero : μ ≠ 0) (f : Ω →ᵇ ℝ≥0) :
-    μ.normalize.toFiniteMeasure.testAgainstNN f = μ.mass⁻¹ * μ.testAgainstNN f := by
-  simp [μ.testAgainstNN_eq_mass_mul, inv_mul_cancel_left₀ <| μ.mass_nonzero_iff.mpr nonzero]
+theorem testAgainstNN_normalize (hμ : μ ≠ 0) (f : Ω →ᵇ ℝ≥0) :
+    (μ.normalize hμ).toFiniteMeasure.testAgainstNN f = μ.mass⁻¹ * μ.testAgainstNN f := by
+  rw [toFiniteMeasure_normalize, smul_testAgainstNN_apply, smul_eq_mul]
 
 variable [OpensSigmaAlgebra Ω]
-variable {μ}
 
-theorem tendsto_testAgainstNN_of_tendsto_normalize_testAgainstNN_of_tendsto_mass {γ : Type*}
-    {F : Filter γ} {μs : γ → FiniteMeasure Ω}
-    (μs_lim : Tendsto (fun i ↦ (μs i).normalize) F (𝓝 μ.normalize))
-    (mass_lim : Tendsto (fun i ↦ (μs i).mass) F (𝓝 μ.mass)) (f : Ω →ᵇ ℝ≥0) :
-    Tendsto (fun i ↦ (μs i).testAgainstNN f) F (𝓝 (μ.testAgainstNN f)) := by
-  by_cases h_mass : μ.mass = 0
-  · simp only [μ.mass_zero_iff.mp h_mass, zero_testAgainstNN_apply, zero_mass] at mass_lim ⊢
-    exact tendsto_zero_testAgainstNN_of_tendsto_zero_mass mass_lim f
-  simp_rw [fun i ↦ (μs i).testAgainstNN_eq_mass_mul f, μ.testAgainstNN_eq_mass_mul f]
-  rw [ProbabilityMeasure.tendsto_nhds_iff_toFiniteMeasure_tendsto_nhds] at μs_lim
-  rw [tendsto_iff_forall_testAgainstNN_tendsto] at μs_lim
-  have lim_pair :
-    Tendsto (fun i ↦ (⟨(μs i).mass, (μs i).normalize.toFiniteMeasure.testAgainstNN f⟩ : ℝ≥0 × ℝ≥0))
-      F (𝓝 ⟨μ.mass, μ.normalize.toFiniteMeasure.testAgainstNN f⟩) :=
-    (Prod.tendsto_iff _ _).mpr ⟨mass_lim, μs_lim f⟩
-  exact tendsto_mul.comp lim_pair
+/-- Normalization is continuous on the nonzero finite measures. -/
+theorem continuous_normalize :
+    Continuous fun ν : {ν : FiniteMeasure Ω // ν ≠ 0} ↦ ν.1.normalize ν.2 := by
+  rw [(ProbabilityMeasure.toFiniteMeasure_isEmbedding Ω).continuous_iff]
+  simp only [Function.comp_def, toFiniteMeasure_normalize]
+  exact ((continuous_mass.comp continuous_subtype_val).inv₀
+    fun ν ↦ (mass_nonzero_iff _).mpr ν.2).smul continuous_subtype_val
 
-theorem tendsto_normalize_testAgainstNN_of_tendsto {γ : Type*} {F : Filter γ}
-    {μs : γ → FiniteMeasure Ω} (μs_lim : Tendsto μs F (𝓝 μ)) (nonzero : μ ≠ 0) (f : Ω →ᵇ ℝ≥0) :
-    Tendsto (fun i ↦ (μs i).normalize.toFiniteMeasure.testAgainstNN f) F
-      (𝓝 (μ.normalize.toFiniteMeasure.testAgainstNN f)) := by
-  have lim_mass := μs_lim.mass
-  have aux : {(0 : ℝ≥0)}ᶜ ∈ 𝓝 μ.mass :=
-    isOpen_compl_singleton.mem_nhds (μ.mass_nonzero_iff.mpr nonzero)
-  have eventually_nonzero : ∀ᶠ i in F, μs i ≠ 0 := by
-    simp_rw [← mass_nonzero_iff]
-    exact lim_mass aux
-  have eve : ∀ᶠ i in F,
-      (μs i).normalize.toFiniteMeasure.testAgainstNN f =
-        (μs i).mass⁻¹ * (μs i).testAgainstNN f := by
-    filter_upwards [eventually_iff.mp eventually_nonzero]
-    intro i hi
-    apply normalize_testAgainstNN _ hi
-  simp_rw [tendsto_congr' eve, μ.normalize_testAgainstNN nonzero]
-  have lim_pair :
-    Tendsto (fun i ↦ (⟨(μs i).mass⁻¹, (μs i).testAgainstNN f⟩ : ℝ≥0 × ℝ≥0)) F
-      (𝓝 ⟨μ.mass⁻¹, μ.testAgainstNN f⟩) := by
-    refine (Prod.tendsto_iff _ _).mpr ⟨?_, ?_⟩
-    · exact (continuousOn_inv₀.continuousAt aux).tendsto.comp lim_mass
-    · exact tendsto_iff_forall_testAgainstNN_tendsto.mp μs_lim f
-  exact tendsto_mul.comp lim_pair
+/-- Finite measures converging to a nonzero limit are eventually nonzero. -/
+theorem eventually_ne_zero_of_tendsto (h : Tendsto μs F (𝓝 μ)) (hμ : μ ≠ 0) :
+    ∀ᶠ i in F, μs i ≠ 0 :=
+  eventually_ne_zero_of_tendsto_mass h.mass ((mass_nonzero_iff μ).mpr hμ)
 
-/-- If the normalized versions of finite measures converge weakly and their total masses
-also converge, then the finite measures themselves converge weakly. -/
-theorem tendsto_of_tendsto_normalize_testAgainstNN_of_tendsto_mass {γ : Type*} {F : Filter γ}
-    {μs : γ → FiniteMeasure Ω} (μs_lim : Tendsto (fun i ↦ (μs i).normalize) F (𝓝 μ.normalize))
-    (mass_lim : Tendsto (fun i ↦ (μs i).mass) F (𝓝 μ.mass)) : Tendsto μs F (𝓝 μ) := by
-  rw [tendsto_iff_forall_testAgainstNN_tendsto]
-  exact fun f ↦
-    tendsto_testAgainstNN_of_tendsto_normalize_testAgainstNN_of_tendsto_mass μs_lim mass_lim f
+/-- If finite measures converge to a nonzero limit, then their normalizations converge to the
+normalization of the limit, along the indices where the finite measures are nonzero. -/
+theorem tendsto_normalize_of_tendsto (h : Tendsto μs F (𝓝 μ)) (hμ : μ ≠ 0) :
+    Tendsto (fun i : {i // μs i ≠ 0} ↦ (μs i).normalize i.2) (F.comap (↑))
+      (𝓝 (μ.normalize hμ)) := by
+  have hsub : Tendsto (fun i : {i // μs i ≠ 0} ↦ (⟨μs i, i.2⟩ : {ν : FiniteMeasure Ω // ν ≠ 0}))
+      (F.comap (↑)) (𝓝 ⟨μ, hμ⟩) := tendsto_subtype_rng.mpr (h.comp tendsto_comap)
+  simpa only [Function.comp_def] using (continuous_normalize.tendsto _).comp hsub
 
-/-- If finite measures themselves converge weakly to a nonzero limit measure, then their
-normalized versions also converge weakly. -/
-theorem tendsto_normalize_of_tendsto {γ : Type*} {F : Filter γ} {μs : γ → FiniteMeasure Ω}
-    (μs_lim : Tendsto μs F (𝓝 μ)) (nonzero : μ ≠ 0) :
-    Tendsto (fun i ↦ (μs i).normalize) F (𝓝 μ.normalize) := by
-  rw [ProbabilityMeasure.tendsto_nhds_iff_toFiniteMeasure_tendsto_nhds,
-    tendsto_iff_forall_testAgainstNN_tendsto]
-  exact fun f ↦ tendsto_normalize_testAgainstNN_of_tendsto μs_lim nonzero f
+/-- Version of `MeasureTheory.FiniteMeasure.tendsto_normalize_of_tendsto` for families of nonzero
+finite measures. -/
+theorem tendsto_normalize_of_tendsto_of_forall_ne_zero (h : Tendsto μs F (𝓝 μ)) (hμ : μ ≠ 0)
+    (hμs : ∀ i, μs i ≠ 0) :
+    Tendsto (fun i ↦ (μs i).normalize (hμs i)) F (𝓝 (μ.normalize hμ)) := by
+  have hsub : Tendsto (fun i ↦ (⟨μs i, hμs i⟩ : {ν : FiniteMeasure Ω // ν ≠ 0})) F
+      (𝓝 ⟨μ, hμ⟩) := tendsto_subtype_rng.mpr h
+  simpa only [Function.comp_def] using (continuous_normalize.tendsto _).comp hsub
 
-/-- The weak convergence of finite measures to a nonzero limit can be characterized by the weak
-convergence of both their normalized versions (probability measures) and their total masses. -/
-theorem tendsto_normalize_iff_tendsto {γ : Type*} {F : Filter γ} {μs : γ → FiniteMeasure Ω}
-    (nonzero : μ ≠ 0) :
-    Tendsto (fun i ↦ (μs i).normalize) F (𝓝 μ.normalize) ∧
-        Tendsto (fun i ↦ (μs i).mass) F (𝓝 μ.mass) ↔
+/-- The weak convergence of finite measures to a nonzero limit is characterized by the convergence
+of their total masses and of their normalizations, the latter along the indices where the finite
+measures are nonzero. -/
+theorem tendsto_normalize_iff_tendsto (hμ : μ ≠ 0) :
+    Tendsto (fun i : {i // μs i ≠ 0} ↦ (μs i).normalize i.2) (F.comap (↑))
+        (𝓝 (μ.normalize hμ)) ∧ Tendsto (fun i ↦ (μs i).mass) F (𝓝 μ.mass) ↔
       Tendsto μs F (𝓝 μ) := by
-  constructor
-  · rintro ⟨normalized_lim, mass_lim⟩
-    exact tendsto_of_tendsto_normalize_testAgainstNN_of_tendsto_mass normalized_lim mass_lim
-  · intro μs_lim
-    exact ⟨tendsto_normalize_of_tendsto μs_lim nonzero, μs_lim.mass⟩
+  refine ⟨fun ⟨h_norm, h_mass⟩ ↦ ?_, fun h ↦ ⟨tendsto_normalize_of_tendsto h hμ, h.mass⟩⟩
+  rw [← tendsto_comap'_iff (i := ((↑) : {i // μs i ≠ 0} → γ)) (by
+    rw [Subtype.range_coe_subtype]
+    exact eventually_ne_zero_of_tendsto_mass h_mass ((mass_nonzero_iff μ).mpr hμ))]
+  have := (h_mass.comp tendsto_comap).smul
+    ((ProbabilityMeasure.toFiniteMeasure_continuous.tendsto _).comp h_norm)
+  simpa only [Function.comp_def, mass_smul_normalize] using this
+
+/-- Version of `MeasureTheory.FiniteMeasure.tendsto_normalize_iff_tendsto` for families of nonzero
+finite measures. -/
+theorem tendsto_normalize_iff_tendsto_of_forall_ne_zero (hμ : μ ≠ 0) (hμs : ∀ i, μs i ≠ 0) :
+    Tendsto (fun i ↦ (μs i).normalize (hμs i)) F (𝓝 (μ.normalize hμ)) ∧
+        Tendsto (fun i ↦ (μs i).mass) F (𝓝 μ.mass) ↔
+      Tendsto μs F (𝓝 μ) :=
+  ⟨fun ⟨h_norm, h_mass⟩ ↦
+      (tendsto_normalize_iff_tendsto hμ).1 ⟨h_norm.comp tendsto_comap, h_mass⟩,
+    fun h ↦ ⟨tendsto_normalize_of_tendsto_of_forall_ne_zero h hμ hμs, h.mass⟩⟩
 
 end FiniteMeasure --namespace
 

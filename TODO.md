@@ -115,12 +115,16 @@ operation.
   domain, with fixed points exactly the primes. Tests cover computation, rejected inputs, and
   rewriting with independently supplied domain proofs.
 
-- [ ] **Require nonzero mass for `FiniteMeasure.normalize`.**
-  `FiniteMeasure.normalize` in
-  `Mathlib/MeasureTheory/Measure/ProbabilityMeasure.lean:468` returns an arbitrary Dirac probability
-  measure when the input measure has mass zero.  Put `μ ≠ 0` at the ordinary normalization boundary;
-  do not retain the arbitrary-Dirac branch as a public operation.  A private implementation helper is
-  acceptable only when nonzero-mass evidence makes the branch unreachable.
+- [x] **Require nonzero mass for `FiniteMeasure.normalize`.**
+  `FiniteMeasure.normalize μ hμ` requires `hμ : μ ≠ 0`, its exact domain: `eq_normalize_iff`
+  characterizes the result as the unique probability measure `P` with `μ.mass • P = μ`. The
+  arbitrary-Dirac branch and the `[Nonempty Ω]` assumption it needed are removed. The default
+  discharger `finite_measure_ne_zero` uses local hypotheses, including ones about all members of a
+  family, and `NeZero` instances, and refuses to choose an undetermined measure. Convergence to a
+  nonzero limit is characterized along the indices where the finite measures are nonzero, using
+  `continuous_normalize` on the nonzero finite measures and continuity of scalar multiplication.
+  Tests cover rejected and misleading evidence, ambient instances, proof independence, and a
+  portmanteau transfer from probability measures to finite measures.
 
 - [x] **Require primitivity for `DirichletCharacter.rootNumber`.**
   `rootNumber χ hχ` requires `hχ : IsPrimitive χ` and retains the nonzero-modulus hypothesis.
