@@ -102,11 +102,17 @@ operation.
   inputs, and the infinite-value theorem `stdPart_omega` is removed. Tests cover closure, real
   embeddings, infinitesimals, units, excluded infinite inputs, and cut endpoint behavior.
 
-- [ ] **Require `1 < q` for `ArithmeticFunction.ofPowerSeries`.**
-  `Mathlib/NumberTheory/ArithmeticFunction/LFunction.lean:66` uses the constant coefficient when
-  `q ≤ 1`; algebra-hom laws intentionally exploit that branch.  Put the injective-power
-  hypothesis in the constructor.  Do not export the constant-coefficient branch as a replacement
-  operation without literature giving it that mathematical interpretation.
+- [x] **Require `1 < q` for `ArithmeticFunction.ofPowerSeries`.**
+  `ofPowerSeries q hq` requires `hq : 1 < q` and is the formal Dirichlet series `f(q⁻ˢ)`: its value
+  at `qᵏ` is the `k`-th coefficient of `f`, and it vanishes away from the powers of `q`.  This is
+  the exact domain: `k ↦ qᵏ` is injective exactly when `1 < q`, there is no Dirichlet series
+  `0⁻ˢ`, and for nontrivial `R` no `R`-algebra map sends `X` to `1⁻ˢ = 1`, because `1 - X` is a
+  unit.  The former branch substituted `X ↦ 0` for every `q ≤ 1`, which disagrees with `f(1)` even
+  for polynomials; the algebra-hom laws and `ofPowerSeries_apply_one` relied on it.  The
+  Euler-product theorem takes `∀ i, 1 < q i` beside `Northcott q`, and prime powers supply the
+  evidence through `IsPrimePow.one_lt`.  The only other consumer, the elliptic local Euler factor,
+  is migrated by the M item on finite residue fields.  Tests cover the rejected bases, a composite
+  base, proof independence, and rewriting.
 
 - [x] **Give `Nat.maxPrimeFac` its actual domain.**
   `Nat.maxPrimeFac n hn` requires `hn : 1 < n` and computes the last element of the nonempty
@@ -394,11 +400,20 @@ operation.
   finite-dimensional vector-space Euler characteristic its own precise interface.  Also correct the
   module overview's claim that every module not free of finite rank receives zero.
 
-- [ ] **Require a finite residue field for elliptic local factors.**
-  `WeierstrassCurve.localPolynomial` in
-  `Mathlib/AlgebraicGeometry/EllipticCurve/LFunction.lean:43` permits an infinite residue field;
-  `Nat.card` then makes its field size and point count zero.  Propagate finite-residue-field evidence
-  through local power series and Euler factors.
+- [x] **Require a finite residue field for elliptic local factors.**
+  `WeierstrassCurve.localPolynomial`, `localPowerSeries`, and `localEulerFactor` require
+  `[Finite (IsLocalRing.ResidueField R)]`.  Serre, *Facteurs locaux des fonctions zêta des variétés
+  algébriques*, Sém. Delange--Pisot--Poitou 11 (1969/70), Exp. 19, defines the local polynomial
+  as `det(1 - πT)` on the inertia invariants, where the geometric Frobenius `π` is the inverse of
+  the canonical Frobenius generator, which he defines for a finite residue field (§2.2, (13)); this
+  covers every reduction type, and the Euler factor substitutes `Nv⁻ˢ` with `Nv = Card(k(v))`
+  (§1.2).  For an infinite residue field `q` was `0`, so the Euler factor reached the
+  `ofPowerSeries` fallback and was `1`, and the good-reduction coefficients were not the local
+  factor of any place.  Completeness of `R` is not required.  The completed integers of a ring with
+  finite quotients have a finite residue field, identified with `A ⧸ v` by
+  `adicCompletionIntegers.quotientAlgEquivResidueField`, so its size is the absolute norm and
+  `WeierstrassCurve.LFunction` needs no new residue-field hypothesis.  `Finite W.Point` over a
+  finite ring makes the point count a count of a finite type.
 
 - [ ] **Make analytic and meromorphic orders domain-bearing.**
   `analyticOrderAt`/`analyticOrderNatAt` in `Mathlib/Analysis/Analytic/Order.lean:47` and `:61`, and
