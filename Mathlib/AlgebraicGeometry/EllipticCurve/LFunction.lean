@@ -21,6 +21,13 @@ In this file, we define the L-function of an elliptic curve given by a Weierstra
 
 * `WeierstrassCurve.LFunction`: the L-function of an elliptic curve over a number field.
 
+## Main statements
+
+* `WeierstrassCurve.localPolynomial_eq_of_isMinimal`: the local polynomial can be computed from any
+  minimal Weierstrass equation.
+* `WeierstrassCurve.variableChange_localPolynomial`, `WeierstrassCurve.variableChange_LFunction`:
+  the local polynomial and the L-function are invariant under a change of variables.
+
 ## Implementation notes
 
 The local factors are defined for an elliptic curve at a discrete valuation ring `R` with finite
@@ -32,7 +39,9 @@ the residue field is finite ([serre1970], §2.2, (13)). The Euler factor substit
 The local polynomial applies its formula to a chosen minimal model. For a singular curve this
 choice is not determined by the curve: the nodal cubic `y² + xy = x³` and its rescaling by a
 uniformizer are both minimal, with multiplicative and additive reduction respectively. For an
-elliptic curve the formula should not depend on the choice, but this is not yet proved.
+elliptic curve the minimal models differ by changes of variables with coefficients in `R` and `u`
+a unit (`WeierstrassCurve.variableChange_integral_of_isMinimal`), which preserve the reduction
+type and the number of points of the reduction, so the choice does not matter.
 
 ## References
 
@@ -77,6 +86,92 @@ noncomputable def localEulerFactor [W.IsElliptic] [Finite (IsLocalRing.ResidueFi
     ArithmeticFunction ℤ :=
   .ofPowerSeries (Nat.card (IsLocalRing.ResidueField R)) Finite.one_lt_card (W.localPowerSeries R)
 
+/-! ### Independence of the minimal model -/
+
+/-- Two minimal Weierstrass equations of an elliptic curve have reductions with the same number
+of points over the residue field. -/
+lemma natCard_point_reduction_eq_of_isMinimal {W W' : WeierstrassCurve K} [W.IsElliptic]
+    [IsMinimal R W] [IsMinimal R W'] {C : VariableChange K} (hC : C • W = W') :
+    Nat.card (W'.reduction R).toAffine.Point = Nat.card (W.reduction R).toAffine.Point := by
+  obtain ⟨CR, rfl⟩ := variableChange_integral_of_isMinimal R hC
+  subst hC
+  rw [reduction_variableChange_baseChange]
+  exact Affine.Point.natCard_variableChange _
+
+variable [W.IsElliptic] [Finite (IsLocalRing.ResidueField R)]
+
+open Classical Polynomial in
+/-- The local polynomial of an elliptic curve given by a minimal Weierstrass equation is computed
+by that equation. -/
+theorem localPolynomial_eq_of_isMinimal [IsMinimal R W] :
+    W.localPolynomial R =
+      letI q : ℤ := Nat.card (IsLocalRing.ResidueField R)
+      letI a : ℤ := q + 1 - (Nat.card (W.reduction R).toAffine.Point)
+      if W.HasGoodReduction R then 1 - C a * X + C q * X ^ 2
+      else if W.HasSplitMultiplicativeReduction R then 1 - X
+      else if W.HasMultiplicativeReduction R then 1 + X
+      else 1 := by
+  have hC : (W.exists_isMinimal R).choose • W = W.minimal R := rfl
+  simp only [localPolynomial, hasGoodReduction_iff_of_isMinimal R hC,
+    hasSplitMultiplicativeReduction_iff_of_isMinimal R hC,
+    hasMultiplicativeReduction_iff_of_isMinimal R hC, natCard_point_reduction_eq_of_isMinimal R hC]
+
+open Classical in
+/-- The local polynomial of an elliptic curve is invariant under a change of variables. -/
+@[simp]
+theorem variableChange_localPolynomial (C : VariableChange K) :
+    (C • W).localPolynomial R = W.localPolynomial R := by
+  have hC : (((C • W).exists_isMinimal R).choose * C * (W.exists_isMinimal R).choose⁻¹) •
+      W.minimal R = (C • W).minimal R := by
+    simp only [minimal, smul_smul, inv_mul_cancel_right]
+  simp only [localPolynomial, hasGoodReduction_iff_of_isMinimal R hC,
+    hasSplitMultiplicativeReduction_iff_of_isMinimal R hC,
+    hasMultiplicativeReduction_iff_of_isMinimal R hC, natCard_point_reduction_eq_of_isMinimal R hC]
+
+/-- The local power series of an elliptic curve is invariant under a change of variables. -/
+@[simp]
+theorem variableChange_localPowerSeries (C : VariableChange K) :
+    (C • W).localPowerSeries R = W.localPowerSeries R := by
+  simp only [localPowerSeries, variableChange_localPolynomial]
+
+/-- The local Euler factor of an elliptic curve is invariant under a change of variables. -/
+@[simp]
+theorem variableChange_localEulerFactor (C : VariableChange K) :
+    (C • W).localEulerFactor R = W.localEulerFactor R := by
+  simp only [localEulerFactor, variableChange_localPowerSeries]
+
+open Polynomial in
+/-- The local polynomial of an elliptic curve with good reduction, given by a minimal Weierstrass
+equation, is `1 - a T + q T ^ 2`, where `q` is the size of the residue field and `a = q + 1 - N`
+for the number `N` of points of the reduction. -/
+theorem localPolynomial_of_hasGoodReduction [h : W.HasGoodReduction R] :
+    W.localPolynomial R = 1 - C ((Nat.card (IsLocalRing.ResidueField R) : ℤ) + 1 -
+      Nat.card (W.reduction R).toAffine.Point) * X +
+        C (Nat.card (IsLocalRing.ResidueField R) : ℤ) * X ^ 2 := by
+  rw [localPolynomial_eq_of_isMinimal, ite_eq_left h]
+
+open Polynomial in
+/-- The local polynomial of an elliptic curve with split multiplicative reduction is `1 - T`. -/
+theorem localPolynomial_of_hasSplitMultiplicativeReduction
+    [h : W.HasSplitMultiplicativeReduction R] : W.localPolynomial R = 1 - X := by
+  rw [localPolynomial_eq_of_isMinimal, ite_eq_right h.not_hasGoodReduction, ite_eq_left h]
+
+open Polynomial in
+/-- The local polynomial of an elliptic curve with nonsplit multiplicative reduction is `1 + T`. -/
+theorem localPolynomial_of_not_hasSplitMultiplicativeReduction
+    [h : W.HasMultiplicativeReduction R] (h' : ¬ W.HasSplitMultiplicativeReduction R) :
+    W.localPolynomial R = 1 + X := by
+  rw [localPolynomial_eq_of_isMinimal, ite_eq_right h.not_hasGoodReduction, ite_eq_right h',
+    ite_eq_left h]
+
+/-- The local polynomial of an elliptic curve with additive reduction is `1`. -/
+theorem localPolynomial_of_hasAdditiveReduction [h : W.HasAdditiveReduction R] :
+    W.localPolynomial R = 1 := by
+  rw [localPolynomial_eq_of_isMinimal, ite_eq_right h.not_hasGoodReduction,
+    ite_eq_right fun h' ↦ HasAdditiveReduction.not_hasMultiplicativeReduction R h
+      h'.toHasMultiplicativeReduction,
+    ite_eq_right h.not_hasMultiplicativeReduction]
+
 end LocalField
 
 section NumberField
@@ -103,6 +198,17 @@ noncomputable def LFunction : ArithmeticFunction ℤ :=
 /-- The L-series of an elliptic curve over a number field. -/
 protected noncomputable def LSeries (s : ℂ) :=
   LSeries ((↑) ∘ W.LFunction) s
+
+/-- The L-function of an elliptic curve is invariant under a change of variables. -/
+@[simp]
+theorem variableChange_LFunction (C : VariableChange K) : (C • W).LFunction = W.LFunction := by
+  simp only [LFunction, baseChange, ← map_variableChange, variableChange_localEulerFactor]
+
+/-- The L-series of an elliptic curve is invariant under a change of variables. -/
+@[simp]
+theorem variableChange_LSeries (C : VariableChange K) (s : ℂ) :
+    (C • W).LSeries s = W.LSeries s := by
+  rw [WeierstrassCurve.LSeries, WeierstrassCurve.LSeries, variableChange_LFunction]
 
 end NumberField
 

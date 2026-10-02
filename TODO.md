@@ -425,15 +425,24 @@ operation.
   (16) and (17)).  `(W.baseChange A).IsElliptic` is an instance, so the global L-function needs only
   `[W.IsElliptic]`.
 
-- [ ] **Prove that elliptic local factors do not depend on the chosen minimal model.**
+- [x] **Prove that elliptic local factors do not depend on the chosen minimal model.**
   `WeierstrassCurve.localPolynomial` applies its formula to `W.minimal R`, a `Classical.choose`.
-  For an elliptic curve the minimal Weierstrass equations over `R` should be unique up to a change
-  of variables with `u ∈ Rˣ` and `r, s, t ∈ R` (recalled as Silverman, *The Arithmetic of Elliptic
-  Curves*, Proposition VII.1.3, not checked), which preserves the reduction type and the point
-  count of the reduction.  Prove this invariance, so that the chosen model is a representative
-  rather than unexplained data.  Also prove that the factor over `R` agrees with the factor over
-  its completion, which justifies admitting an incomplete `R`, and check that the
-  split-multiplicative criterion matches Serre's split torus (§2.4, case b).
+  For an elliptic curve a change of variables between two minimal Weierstrass equations has
+  `u ∈ Rˣ` and `r, s, t ∈ R` (`variableChange_integral_of_isMinimal`): minimality makes the
+  discriminant valuations equal, and `Δ ≠ 0` then forces `v(u) = 1`.  Such a change preserves the
+  reduction type, including the splitting of `nodePolynomial`, which transforms by `T ↦ uT + s` up
+  to the unit `u⁶`, and the number of points of the reduction, through
+  `Affine.Point.variableChangeEquiv`.  Hence `localPolynomial_eq_of_isMinimal` computes the local
+  polynomial from any minimal Weierstrass equation, so the chosen model is only a representative,
+  and the local polynomial, Euler factor, L-function, and L-series are invariant under changes of
+  variables.
+
+- [ ] **Compare elliptic local factors over `R` and its completion, and audit the split criterion.**
+  `WeierstrassCurve.localPolynomial` admits an incomplete discrete valuation ring `R`, while Serre
+  defines the local factor through the completion (§1.2).  Prove that the factor over `R` agrees
+  with the factor over its completion, which justifies admitting an incomplete `R`.  Also check
+  that the criterion of `HasSplitMultiplicativeReduction`, the splitting of `nodePolynomial` over
+  the residue field, matches Serre's split torus (§2.4, case b).
 
 - [ ] **Make analytic and meromorphic orders domain-bearing.**
   `analyticOrderAt`/`analyticOrderNatAt` in `Mathlib/Analysis/Analytic/Order.lean:47` and `:61`, and
