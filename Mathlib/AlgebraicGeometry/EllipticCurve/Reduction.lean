@@ -27,6 +27,8 @@ fraction fields of discrete valuation rings.
   which is a Weierstrass curve over the residue field.
 * `IsGoodReduction`: a predicate expressing that a given minimal Weierstrass equation
   has valuation of its discriminant equal to zero.
+* `nodePolynomial`: the polynomial whose splitting over the residue field defines split
+  multiplicative reduction.
 
 ## Main statements
 
@@ -34,6 +36,11 @@ fraction fields of discrete valuation rings.
   an integral Weierstrass equation.
 * `exists_isMinimal`: any Weierstrass curve is isomorphic to one given by
   a minimal Weierstrass equation.
+* `variableChange_integral_of_isMinimal`: the minimal Weierstrass equations of an elliptic curve
+  differ by changes of variables with coefficients in the valuation ring and `u` a unit.
+* `reduction_variableChange_baseChange`, `hasGoodReduction_iff_of_isMinimal`,
+  `hasSplitMultiplicativeReduction_iff_of_isMinimal`: the reduction and its type do not depend on
+  the choice of minimal Weierstrass equation.
 
 ## References
 
@@ -153,6 +160,23 @@ lemma integralModel_Δ_eq (W : WeierstrassCurve K) [hW : IsIntegral R W] :
   conv_rhs => rw [← baseChange_integralModel_eq R W]
   simp [baseChange]
 
+/-- A change of variables with coefficients in `R` preserves integrality. -/
+instance isIntegral_variableChange_baseChange (W : WeierstrassCurve K) [IsIntegral R W]
+    (CR : VariableChange R) : IsIntegral R (CR.baseChange K • W) :=
+  ⟨CR • integralModel R W, by
+    conv_lhs => rw [← baseChange_integralModel_eq R W]
+    exact map_variableChange (integralModel R W) CR (algebraMap R K)⟩
+
+/-- The integral model of a Weierstrass equation after a change of variables with coefficients
+in `R` is the corresponding change of variables of its integral model. -/
+lemma integralModel_variableChange_baseChange [FaithfulSMul R K] (W : WeierstrassCurve K)
+    [IsIntegral R W] (CR : VariableChange R) :
+    integralModel R (CR.baseChange K • W) = CR • integralModel R W := by
+  refine map_injective (FaithfulSMul.algebraMap_injective R K) ?_
+  change (integralModel R (CR.baseChange K • W))⁄K = (CR • integralModel R W).map (algebraMap R K)
+  rw [baseChange_integralModel_eq, ← map_variableChange]
+  exact congrArg (CR.baseChange K • ·) (baseChange_integralModel_eq R W).symm
+
 variable [IsDomain R] [ValuationRing R] [IsFractionRing R K]
 
 open ValuationRing
@@ -245,6 +269,62 @@ theorem variableChange_integral_of_u_integral : ∃ CR : VariableChange R, CR.ba
 
 end UIntegral
 
+section NodePolynomial
+
+open Polynomial
+
+variable {R : Type*} [CommRing R]
+
+/-- The polynomial `c₄ T ^ 2 + a₁ c₄ T - (54 b₆ - 3 b₂ b₄ + a₂ c₄)` of a Weierstrass curve.
+A minimal Weierstrass equation with multiplicative reduction has split multiplicative reduction if
+and only if this polynomial of its integral model splits over the residue field.
+
+To see how this expression arises, note that a singular point `(x₀, y₀)` has second order Taylor
+expansion `(Y - y₀)^2 + a_1(X - x₀)(Y - y₀) - (3x₀ + a_2)(X - x₀)^2`, where
+`c₄ x₀ = 18 b₆ - b₂ b₄`. When `c₄` is invertible, the singular point is a node, and the roots of
+this polynomial are the slopes of the tangent lines there. -/
+noncomputable def nodePolynomial (W : WeierstrassCurve R) : R[X] :=
+  C W.c₄ * X ^ 2 + C (W.a₁ * W.c₄) * X - C (54 * W.b₆ - 3 * W.b₂ * W.b₄ + W.a₂ * W.c₄)
+
+variable (D : VariableChange R) (W : WeierstrassCurve R)
+
+/-- Under a change of variables `(u, r, s, t)`, the polynomial `nodePolynomial` transforms by the
+substitution `T ↦ uT + s` up to the factor `u ^ 6`. -/
+lemma variableChange_nodePolynomial :
+    C ((D.u : R) ^ 6) * (D • W).nodePolynomial =
+      W.nodePolynomial.comp (C (D.u : R) * X + C D.s) := by
+  have h₂ : (D.u : R) ^ 6 * (D • W).c₄ = W.c₄ * D.u ^ 2 := by
+    rw [variableChange_c₄]
+    linear_combination (D.u : R) ^ 2 * W.c₄ * pow_mul_pow_eq_one 4 D.u.mul_inv
+  have h₁ : (D.u : R) ^ 6 * ((D • W).a₁ * (D • W).c₄) = (W.a₁ + 2 * D.s) * W.c₄ * D.u := by
+    rw [variableChange_a₁, variableChange_c₄]
+    linear_combination (W.a₁ + 2 * D.s) * W.c₄ * D.u * pow_mul_pow_eq_one 5 D.u.mul_inv
+  have h₀ : (D.u : R) ^ 6 *
+      (54 * (D • W).b₆ - 3 * (D • W).b₂ * (D • W).b₄ + (D • W).a₂ * (D • W).c₄) =
+        54 * W.b₆ - 3 * W.b₂ * W.b₄ + W.a₂ * W.c₄ - D.s * W.a₁ * W.c₄ - D.s ^ 2 * W.c₄ := by
+    rw [variableChange_b₆, variableChange_b₂, variableChange_b₄, variableChange_a₂,
+      variableChange_c₄, c₄]
+    linear_combination (54 * (W.b₆ + 2 * D.r * W.b₄ + D.r ^ 2 * W.b₂ + 4 * D.r ^ 3) -
+      3 * (W.b₂ + 12 * D.r) * (W.b₄ + D.r * W.b₂ + 6 * D.r ^ 2) +
+        (W.a₂ - D.s * W.a₁ + 3 * D.r - D.s ^ 2) * (W.b₂ ^ 2 - 24 * W.b₄)) *
+          pow_mul_pow_eq_one 6 D.u.mul_inv
+  rw [nodePolynomial, nodePolynomial, mul_sub, mul_add, ← mul_assoc, ← mul_assoc, ← C_mul,
+    ← C_mul, ← C_mul, h₂, h₁, h₀]
+  simp only [sub_comp, add_comp, mul_comp, C_comp, X_comp, pow_comp, ofNat_comp, map_mul, map_add,
+    map_sub, map_pow, map_ofNat]
+  ring1
+
+/-- Whether `nodePolynomial` splits over a field is invariant under a change of variables. -/
+lemma splits_map_nodePolynomial_variableChange_iff {k : Type*} [Field k] (φ : R →+* k) :
+    ((D • W).nodePolynomial.map φ).Splits ↔ (W.nodePolynomial.map φ).Splits := by
+  have hu : φ D.u ≠ 0 := (D.u.isUnit.map φ).ne_zero
+  rw [← splits_mul_iff_right (C_ne_zero.mpr (pow_ne_zero 6 hu)) (Splits.C _), ← map_pow,
+    ← map_C φ, ← Polynomial.map_mul, variableChange_nodePolynomial, Polynomial.map_comp,
+    Polynomial.map_add, Polynomial.map_mul, map_C, map_X, map_C,
+    ← splits_iff_comp_splits_of_degree_eq_one (degree_linear hu)]
+
+end NodePolynomial
+
 section Minimal
 
 variable (R : Type*) [CommRing R] [IsDomain R] [IsDiscreteValuationRing R]
@@ -304,6 +384,89 @@ noncomputable def minimal (W : WeierstrassCurve K) : WeierstrassCurve K :=
 instance {W : WeierstrassCurve K} :
     IsMinimal R (W.minimal R) := (W.exists_isMinimal R).choose_spec
 
+instance (W : WeierstrassCurve K) [W.IsElliptic] : (W.minimal R).IsElliptic :=
+  inferInstanceAs ((W.exists_isMinimal R).choose • W).IsElliptic
+
+/-- A change of variables with coefficients in `R` does not change the valuation of the
+discriminant. -/
+lemma valuation_Δ_aux_variableChange_baseChange (W : WeierstrassCurve K) [IsIntegral R W]
+    (CR : VariableChange R) :
+    valuation_Δ_aux R (CR.baseChange K • W) = valuation_Δ_aux R W := by
+  apply Subtype.ext
+  rw [valuation_Δ_aux_eq_of_isIntegral, valuation_Δ_aux_eq_of_isIntegral, variableChange_Δ,
+    map_mul, map_pow, Units.val_inv_eq_inv_val, map_inv₀]
+  have : valuation K (maximalIdeal R) (algebraMap R K CR.u) = 1 :=
+    ((maximalIdeal R).valuation_eq_one_iff_notMem (K := K)).mpr
+      (IsLocalRing.notMem_maximalIdeal.mpr CR.u.isUnit)
+  simp [VariableChange.baseChange, VariableChange.map, this]
+
+/-- A change of variables with coefficients in `R` preserves minimality. -/
+instance isMinimal_variableChange_baseChange (W : WeierstrassCurve K) [IsMinimal R W]
+    (CR : VariableChange R) : IsMinimal R (CR.baseChange K • W) where
+  val_Δ_maximal := by
+    refine ⟨by simp only [one_smul]; infer_instance, fun j hj hle ↦ ?_⟩
+    have hj' : IsIntegral R ((j * CR.baseChange K) • W) := by rwa [mul_smul]
+    have key := (IsMinimal.val_Δ_maximal (R := R) (W := W)).2 hj'
+    simp only [one_smul, mul_smul, valuation_Δ_aux_variableChange_baseChange] at hle key ⊢
+    exact key hle
+
+section VariableChange
+
+/-! ### Uniqueness of minimal Weierstrass equations -/
+
+variable {W W' : WeierstrassCurve K} [IsMinimal R W] [IsMinimal R W'] {C : VariableChange K}
+  (hC : C • W = W')
+
+include hC
+
+/-- Two minimal Weierstrass equations for the same curve have discriminants of the same
+valuation. -/
+lemma valuation_Δ_eq_of_isMinimal :
+    valuation K (maximalIdeal R) W'.Δ = valuation K (maximalIdeal R) W.Δ := by
+  have h₁ := (IsMinimal.val_Δ_maximal (R := R) (W := W)).2
+    (show IsIntegral R (C • W) by rw [hC]; infer_instance)
+  have h₂ := (IsMinimal.val_Δ_maximal (R := R) (W := W')).2
+    (show IsIntegral R (C⁻¹ • W') by rw [← hC, inv_smul_smul]; infer_instance)
+  simp only [one_smul, hC] at h₁
+  simp only [one_smul] at h₂
+  rw [← hC, inv_smul_smul, hC] at h₂
+  have key : valuation_Δ_aux R W' = valuation_Δ_aux R W :=
+    (le_total _ _).elim (fun h ↦ le_antisymm h (h₂ h)) fun h ↦ le_antisymm (h₁ h) h
+  have := congrArg Subtype.val key
+  rwa [valuation_Δ_aux_eq_of_isIntegral, valuation_Δ_aux_eq_of_isIntegral] at this
+
+/-- The `u` coefficient of a change of variables between two minimal Weierstrass equations of an
+elliptic curve has valuation one. -/
+lemma valuation_u_eq_one_of_isMinimal [W.IsElliptic] : valuation K (maximalIdeal R) C.u = 1 := by
+  have h := valuation_Δ_eq_of_isMinimal R hC
+  rw [← hC, variableChange_Δ, map_mul, map_pow, Units.val_inv_eq_inv_val, map_inv₀,
+    mul_eq_right₀ ((Valuation.ne_zero_iff _).mpr W.isUnit_Δ.ne_zero), inv_pow, inv_eq_one] at h
+  exact (pow_eq_one_iff_of_nonneg zero_le (by norm_num)).mp h
+
+/-- The `u` coefficient of a change of variables between two minimal Weierstrass equations of an
+elliptic curve is the image of a unit of the valuation ring. -/
+lemma exists_algebraMap_eq_u_of_isMinimal [W.IsElliptic] : ∃ u : Rˣ, algebraMap R K u = C.u := by
+  obtain ⟨u, hu⟩ := associated_of_valuation_eq (A := R) (1 : K) (C.u : K)
+    (by rw [map_one, valuation_u_eq_one_of_isMinimal R hC])
+  exact ⟨u, by simpa [Units.smul_def, Algebra.smul_def] using hu⟩
+
+/-- A change of variables between two minimal Weierstrass equations of an elliptic curve has
+coefficients in the valuation ring, with `u` a unit: minimal Weierstrass equations are unique up
+to such changes of variables. -/
+theorem variableChange_integral_of_isMinimal [W.IsElliptic] :
+    ∃ CR : VariableChange R, CR.baseChange K = C :=
+  have ⟨_, hu⟩ := exists_algebraMap_eq_u_of_isMinimal R hC
+  variableChange_integral_of_u_integral hC hu
+
+/-- Two minimal Weierstrass equations for the same elliptic curve have `c₄` invariants of the same
+valuation. -/
+lemma valuation_c₄_eq_of_isMinimal [W.IsElliptic] :
+    valuation K (maximalIdeal R) W'.c₄ = valuation K (maximalIdeal R) W.c₄ := by
+  rw [← hC, variableChange_c₄, map_mul, map_pow, Units.val_inv_eq_inv_val, map_inv₀,
+    valuation_u_eq_one_of_isMinimal R hC, inv_one, one_pow, one_mul]
+
+end VariableChange
+
 end Minimal
 
 section Reduction
@@ -356,18 +519,14 @@ class HasAdditiveReduction (W : WeierstrassCurve K) : Prop extends IsMinimal R W
   additiveReduction : valuation K (maximalIdeal R) W.c₄ < 1
 
 -- TODO: add characterization in terms of the discriminant when the characteristic is not 2
-open Polynomial in
 /-- A minimal Weierstrass equation has split multiplicative reduction if and only if
-the polynomial `c₄ T ^ 2 + a₁ c₄ T - (54 b₆ - 3 b₂ b₄ + a₂ c₄)` splits in the residue field.
-
-To see how this expression arises, note that the node `(x₀, y₀)` has second order Taylor expansion
-`(Y - y₀)^2 + a_1(X - x₀)(Y - y₀) - (3x₀ + a_2)(X - x₀)^2` where `x₀ = (18 b₆ - b₂ b₄) / c₄`. -/
+the polynomial `nodePolynomial`, that is `c₄ T ^ 2 + a₁ c₄ T - (54 b₆ - 3 b₂ b₄ + a₂ c₄)`, of its
+integral model splits in the residue field. -/
 @[mk_iff]
 class HasSplitMultiplicativeReduction (W : WeierstrassCurve K) : Prop
     extends W.HasMultiplicativeReduction R where
-  splitMultiplicativeReduction : letI I := W.integralModel R
-    Splits <| .map (algebraMap R (ResidueField R)) <|
-      C I.c₄ * X ^ 2 + C (I.a₁ * I.c₄) * X - C (54 * I.b₆ - 3 * I.b₂ * I.b₄ + I.a₂ * I.c₄)
+  splitMultiplicativeReduction :
+    ((W.integralModel R).nodePolynomial.map (algebraMap R (ResidueField R))).Splits
 
 variable {W : WeierstrassCurve K}
 
@@ -400,6 +559,62 @@ theorem HasMultiplicativeReduction.not_hasAdditiveReduction (hW : W.HasMultiplic
 theorem HasAdditiveReduction.not_hasMultiplicativeReduction (hW : W.HasAdditiveReduction R) :
     ¬ W.HasMultiplicativeReduction R :=
   fun h ↦ hW.additiveReduction.ne h.multiplicativeReduction
+
+section VariableChange
+
+/-! ### Independence of the reduction from the minimal Weierstrass equation -/
+
+/-- The reduction of a minimal Weierstrass equation after a change of variables with coefficients
+in `R` is the reduction of the original equation after the reduced change of variables. -/
+lemma reduction_variableChange_baseChange (W : WeierstrassCurve K) [IsMinimal R W]
+    (CR : VariableChange R) :
+    (CR.baseChange K • W).reduction R = CR.map (residue R) • W.reduction R := by
+  rw [reduction, reduction, integralModel_variableChange_baseChange, map_variableChange]
+
+variable {W W' : WeierstrassCurve K} [IsMinimal R W] [IsMinimal R W'] {C : VariableChange K}
+  (hC : C • W = W')
+
+include hC
+
+/-- Good reduction does not depend on the choice of minimal Weierstrass equation. -/
+lemma hasGoodReduction_iff_of_isMinimal : W'.HasGoodReduction R ↔ W.HasGoodReduction R := by
+  rw [hasGoodReduction_iff, hasGoodReduction_iff, valuation_Δ_eq_of_isMinimal R hC]
+  exact and_congr_left fun _ ↦ ⟨fun _ ↦ inferInstance, fun _ ↦ inferInstance⟩
+
+/-- Multiplicative reduction of an elliptic curve does not depend on the choice of minimal
+Weierstrass equation. -/
+lemma hasMultiplicativeReduction_iff_of_isMinimal [W.IsElliptic] :
+    W'.HasMultiplicativeReduction R ↔ W.HasMultiplicativeReduction R := by
+  rw [hasMultiplicativeReduction_iff, hasMultiplicativeReduction_iff,
+    valuation_Δ_eq_of_isMinimal R hC, valuation_c₄_eq_of_isMinimal R hC]
+  exact and_congr_left fun _ ↦ ⟨fun _ ↦ inferInstance, fun _ ↦ inferInstance⟩
+
+/-- Additive reduction of an elliptic curve does not depend on the choice of minimal Weierstrass
+equation. -/
+lemma hasAdditiveReduction_iff_of_isMinimal [W.IsElliptic] :
+    W'.HasAdditiveReduction R ↔ W.HasAdditiveReduction R := by
+  rw [hasAdditiveReduction_iff, hasAdditiveReduction_iff,
+    valuation_Δ_eq_of_isMinimal R hC, valuation_c₄_eq_of_isMinimal R hC]
+  exact and_congr_left fun _ ↦ ⟨fun _ ↦ inferInstance, fun _ ↦ inferInstance⟩
+
+/-- Split multiplicative reduction of an elliptic curve does not depend on the choice of minimal
+Weierstrass equation. -/
+lemma hasSplitMultiplicativeReduction_iff_of_isMinimal [W.IsElliptic] :
+    W'.HasSplitMultiplicativeReduction R ↔ W.HasSplitMultiplicativeReduction R := by
+  obtain ⟨CR, rfl⟩ := variableChange_integral_of_isMinimal R hC
+  subst hC
+  have key := splits_map_nodePolynomial_variableChange_iff CR (integralModel R W)
+    (algebraMap R (ResidueField R))
+  rw [← integralModel_variableChange_baseChange R W CR] at key
+  have hm : (CR.baseChange K • W).HasMultiplicativeReduction R ↔ W.HasMultiplicativeReduction R :=
+    hasMultiplicativeReduction_iff_of_isMinimal R rfl
+  refine ⟨fun h ↦ ?_, fun h ↦ ?_⟩
+  · have := hm.mp h.toHasMultiplicativeReduction
+    exact ⟨key.mp h.splitMultiplicativeReduction⟩
+  · have := hm.mpr h.toHasMultiplicativeReduction
+    exact ⟨key.mpr h.splitMultiplicativeReduction⟩
+
+end VariableChange
 
 end Reduction
 
