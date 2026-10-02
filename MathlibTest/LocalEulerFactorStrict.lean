@@ -1,4 +1,6 @@
 import Mathlib.AlgebraicGeometry.EllipticCurve.LFunction
+import Mathlib.NumberTheory.Padics.RingHoms
+import Mathlib.RingTheory.LaurentSeries
 
 /-!
 # Strict local Euler factors
@@ -214,5 +216,38 @@ example [W.IsElliptic] : ArithmeticFunction ℤ := W.LFunction
 example [W.IsElliptic] (s : ℂ) : ℂ := W.LSeries s
 
 end Global
+
+/-! ### Local fields: `ℚ_[p]` and Laurent series over a finite field -/
+
+section LocalFields
+
+open LaurentSeries
+
+example (p : ℕ) [Fact p.Prime] : Nat.card (ResidueField ℤ_[p]) = p :=
+  PadicInt.natCard_residueField
+
+example (k : Type*) [Field k] : Nat.card (ResidueField k⟦X⟧) = Nat.card k :=
+  PowerSeries.natCard_residueField
+
+-- Over an infinite field the residue field of the power series ring is infinite.
+/--
+error: failed to synthesize instance of type class
+  Finite (ResidueField ℚ⟦X⟧)
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example : Finite (ResidueField ℚ⟦X⟧) := inferInstance
+
+-- The local factors over `ℚ_[p]` and over `𝔽((t))` need no hand-made evidence.
+example (p : ℕ) [Fact p.Prime] (W : WeierstrassCurve ℚ_[p]) [W.IsElliptic] :
+    ArithmeticFunction ℤ :=
+  W.localEulerFactor ℤ_[p]
+
+example (k : Type*) [Field k] [Finite k] (W : WeierstrassCurve k⸨X⸩) [W.IsElliptic] :
+    ArithmeticFunction ℤ :=
+  W.localEulerFactor k⟦X⟧
+
+end LocalFields
 
 end
