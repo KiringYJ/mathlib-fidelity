@@ -12,10 +12,14 @@ split, or rewrite them merely for upstream pull-request acceptability. Upstream
 remains a source of useful code and updates, not the target design authority for
 this fork.
 
-`FORK_DESIGN.md` is the human-facing source of truth for the fork's design
-philosophy and deferred foundational roadmap. In particular, it records the
-strict-domain direction and transitional-totalization policy without
-authorizing the total-inverse migration.
+`FORK_DESIGN.md` owns what the library should be: every design rule about
+semantics and domains, interfaces and quality of life, naming and notation,
+generality, and the admission and canonicalization of external material, plus
+the deferred foundational roadmap, which it records without authorizing the
+total-inverse migration. This file owns how work is done here: branches,
+reconciliation, contribution and intake mechanics, the refactor protocol,
+commands, and constraints. It does not restate design rules; on a design
+question, `FORK_DESIGN.md` decides.
 
 The policies below are project-local overrides. `main` is this fork's canonical
 workspace source of truth and default branch. The upstream `master` branch is
@@ -90,28 +94,19 @@ or prepare an upstream pull request, and never push to `upstream`.
 
 ## Contributions and Curated External Source Intake
 
-This repository accepts external pull requests that follow its mathematical,
-API, provenance, licensing, testing, and review policies. Policy compliance
-makes a contribution eligible for review; it does not guarantee merger. The
-maintainer may request revisions or decline a contribution because of scope,
-duplication, maintenance cost, or conflict with the fork's design direction.
+Contribution and intake policy, including review eligibility, the division of
+work between contributors and maintainers, admission criteria, integration
+modes, and provenance requirements, is in `FORK_DESIGN.md`. This section covers
+the mechanics.
 
 ### Moving `main` and open pull requests
 
-Contributors must expect that periodic upstream reconciliation can change the
-merge base of an open pull request. Maintainers should batch those rewrites,
-avoid unnecessary churn during active review, and may freeze reconciliation
-while a substantial pull request is close to merger.
-
-Contributors own the mathematical content, original implementation, and
-responses to substantive review. Maintainers own branch maintenance and
-integration fallout caused solely by upstream reconciliation or fork-wide
-canonical API migrations. When the pull request author has granted maintainer
-access, a maintainer may prepare the rebase and resolve that repository-driven
-fallout. A force-update may be used only after verifying that the hosting
-service and branch rules permit it. This policy is not standing authorization
-to write to a contributor's branch: both the author's branch permission and
-explicit authorization for the current operation remain required. If either is
+When the author of an open pull request has granted maintainer access, a
+maintainer may prepare the rebase and resolve repository-driven fallout. A
+force-update may be used only after verifying that the hosting service and
+branch rules permit it. This policy is not standing authorization to write to a
+contributor's branch: both the author's branch permission and explicit
+authorization for the current operation remain required. If either is
 unavailable, coordinate the update with the contributor. If maintainer edits
 also expose workflow-secret access, treat that access as security-sensitive and
 do not use it beyond the authorized integration work.
@@ -126,18 +121,7 @@ If the live head has changed, stop, incorporate the contributor's new commits,
 and begin a new update transaction with a newly captured head object ID; do not
 merely recapture the advanced head and overwrite it.
 
-External formalizations may be proposed through a pull request or selected by
-the maintainer from other repositories. A suggestion, public repository, or
-valid result does not by itself create a review deadline or permanent backlog.
-Intake may slow or stop when the available audit and migration capacity is
-exhausted.
-
-Do not reject mathematically valid and legally ingestible content merely because
-it is small, niche, or presently uses a poor API. Separate admission from
-canonicalization: audit the mathematical content and provenance first, then
-migrate selected material to this fork's faithful API and conventions. API,
-namespace, import, or proof-style defects are maintainer integration work. They
-do not justify preserving a second noncanonical public interface.
+### Intake procedure
 
 Before copying or adapting external material, verify the exact source revision,
 license and redistribution conditions, per-file authorship, third-party content,
@@ -146,77 +130,15 @@ status, and overlap with existing declarations. Record the source and every
 integration in `UPSTREAMS.md`. If permission is absent or unclear, retain only a
 reference until a separate license review establishes an authorized path.
 
-Multiple Git remotes may be used to track sources, but remotes do not imply
-admission or merge authority. Shared-history forks may support selective
-cherry-picks or ports. Independent repositories should normally remain Lake
-dependencies or be migrated through reviewed source integration; do not merge
-unrelated histories merely to ingest their content.
+## Design Contract
 
-## Mathematician-Facing Design Commitments
-
-Mathematical fidelity and API quality are coequal requirements. Do not trade
-away intended domains or hypotheses for convenience, and do not accept
-dependent-type plumbing as the necessary price of fidelity. Preserve genuine
-proof obligations while making routine evidence construction, propagation,
-rewriting, and diagnostics library responsibilities.
-
-The public mathematical API should primarily serve mathematicians and
-downstream formalizers. Implementation generality and reuse matter, but the
-surface language should preserve the concepts and proof decomposition used in
-mathematical practice whenever Lean permits it.
-
-Equivalent formal expressibility is not sufficient evidence of API
-equivalence. Evaluate an interface by whether:
-
-- its statements and operations faithfully represent the mathematical object;
-- a mathematician can discover declarations from standard concepts and
-  terminology;
-- notation matches canonical mathematical operations where that distinction
-  carries meaning;
-- common constructions compose without exposing representation details; and
-- proof code communicates the mathematical reason a step works rather than a
-  library-specific decomposition that happens to be equivalent.
-
-For set-system objects such as sigma-algebras and Dynkin systems, membership,
-inclusion, ordinary unions, generated structures, and classical named proof
-principles should be available in forms that preserve their mathematical
-distinctions. A generic internal theorem may remain canonical internally while
-a thin mathematician-facing facade supplies the natural conceptual entry
-point.
-
-Develop API improvements against real formalizations. A motivating theorem,
-paper, or repeated proof pattern is evidence about the right abstraction and
-should be retained when deciding API boundaries. Prefer a useful concrete
-interface that has survived real use over premature generalization. Generalize
-after downstream cases demonstrate the reusable structure.
-
-Treat a mathematically sound, faithful, and conceptually natural proof as an
-API test. If such a proof remains complicated or tedious to express in Lean,
-that is an API design failure to diagnose and repair, not ordinary downstream
-cost. Change the representation, theorem shapes, normal forms, facades,
-coercions, elaboration, diagnostics, or automation as appropriate so the formal
-proof can follow the mathematics. A shorter proof does not count as an
-improvement if it weakens the statement, hides hypotheses or domains, or relies
-on totalized fallback semantics.
-
-Preserve strong upstream substrate when it is mathematically and technically
-sound. This fork is not different for the sake of being different; it changes
-interfaces where actual formalization exposes semantic or ergonomic friction.
-
-For a mathematically partial operation, the strict public API must expose its
-domain through an input type, proof argument, or explicit partiality. A total
-extension is permitted only as a private transitional implementation bridge
-behind a proved boundary, with a tracked removal condition; renaming it does
-not make it an acceptable permanent public API. A genuinely total object may
-be public only when exact mathematical literature and specifying properties
-establish it independently of the partial operation. Automation may discharge
-real obligations; it must fail clearly rather than fall back to a reachable
-totalized operation.
-
-See `FORK_DESIGN.md` for the complete design contract, including the rule that
-source-expression domain obligations are checked before simplification, the
-strict-interface versus strict-implementation distinction, and the deferred
-total-inverse prototype and acceptance criteria.
+Before work that touches a public API, a domain, a name or notation, the level
+of generality, or external material, read the matching parts of
+`FORK_DESIGN.md`: Coequal Design Goals for design rules, and Contributions,
+Curated Intake, and Canonicalization together with Source Repositories and
+Provenance for external material. The heuristics and the refactor protocol
+below are working tools derived from those rules; when they seem to disagree,
+`FORK_DESIGN.md` decides.
 
 ## Working API Heuristics
 
@@ -228,6 +150,8 @@ concrete use cases before redesigning existing code.
   need to vary explicitly?
 - Does a partial operation preserve its domain obligation in the public type,
   proof arguments, or an explicit partiality type?
+- Is each domain the exact canonical one, rather than a convenient sufficient
+  condition or the narrower class for which one text names the operation?
 - Can routine evidence be constructed and propagated automatically without
   concealing a genuine unresolved obligation?
 - Can simplification, coercion insertion, or instance search erase a domain
@@ -310,7 +234,7 @@ and report inherited failures accurately without expanding the refactor.
   modules are added.
 - `MathlibTest/`, `Archive/`, `Counterexamples/`, and `scripts/` provide tests,
   historical material, examples, and repository tooling.
-- `FORK_DESIGN.md` records the fork's design philosophy and deferred roadmap.
+- `FORK_DESIGN.md` is the authoritative design contract and deferred roadmap.
 - `UPSTREAMS.md` records external source identity, license evidence,
   provenance, integration mode, and status.
 - `AI_AGENT_GUIDE.md` is generated shared agent policy.
@@ -351,8 +275,8 @@ they remain applicable to the affected area.
 
 - `README.md`: fork overview, branch model, setup, contribution policy, and
   upstream resource links.
-- `FORK_DESIGN.md`: fork purpose, API commitments, and deferred foundational
-  migration plans.
+- `FORK_DESIGN.md`: authoritative design contract: purpose, design rules,
+  contribution and intake policy, and deferred foundational migration plans.
 - `UPSTREAMS.md`: canonical source-repository and provenance registry.
 - `.github/CONTRIBUTING.md`: contribution requirements for pull requests to
   this fork and the separate upstream boundary.
