@@ -169,19 +169,22 @@ operation.
 
 ## M -- subsystem audit candidates
 
-- [ ] **Complete the analytic specification of number-field Dirichlet density.**
-  `primeIdealZetaSum` and `HasDirichletDensity` in
-  `Mathlib/NumberTheory/NumberField/DirichletDensity.lean:55` and `:83` still use real `tsum` and
-  division, while `HasDirichletDensity.le_one` branches on summability at `:144` and reaches the
-  nonsummable-to-zero fallback at `:147`.  Prove summability of the all-prime series for every real
-  `s > 1`, deduce summability for subsets and strict positivity of the denominator, and remove
-  fallback-dependent proof branches.  Establish the prime-sum asymptotic against
-  `log (1 / (s - 1))`, or an equivalent bridge through the Dedekind zeta Euler product, so the
-  ratio definition is connected to the standard logarithmic normalizations.  Reuse
-  `NumberField.tendsto_sub_one_mul_dedekindZeta_nhdsGT` as available residue evidence, but do not
-  treat it alone as the missing prime-sum theorem.  Decide the public boundary of
-  `primeIdealZetaSum` together with the XL `tsum`/`tprod` audit; keep `HasDirichletDensity` as the
-  relational normal form and do not reopen the completed density-fiber migration.
+- [x] **Complete the analytic specification of number-field Dirichlet density.**
+  `LSeriesSummable_dedekindZeta` and `summable_absNorm_rpow` establish convergence from the
+  existing ideal-counting asymptotic. The prime-ideal series and every subseries converge for
+  real `s > 1`, and nonempty sets have positive sums. `HasDirichletDensity.le_one` uses these
+  facts instead of a nonsummable-to-zero branch; the full set has density one.
+  `dedekindZeta_re_eq_tsum` identifies the norm-counting series with the sum over nonzero ideals.
+  Finite prime sieving and dominated convergence prove `log_dedekindZeta_eq_tsum`, the
+  logarithmic Euler product. The logarithmic remainder is bounded by twice the prime-ideal
+  sum at two. Combined with the positive residue and its pole limit, this proves
+  `tendsto_primeIdealZetaSum_div_log` and `hasDirichletDensity_iff_tendsto_div_log`, connecting
+  the ratio definition to the standard logarithmic normalization. Finite sets have density
+  zero. The relational API and certified-density fiber are preserved, and regression tests
+  cover normalization, complement decomposition, finite sets, and independence from values
+  outside the right-hand germ. The separate public convergence-domain audit for
+  `primeIdealZetaSum` remains explicitly tracked under the XL `tsum`/`tprod` item below; this
+  analytic completion does not classify unrestricted evaluation as a strict operation.
 
 - [ ] **Make finite multiplicity a checked projection.**
   `Mathlib/RingTheory/Multiplicity.lean:47` defines `multiplicity` as
@@ -760,6 +763,12 @@ operation.
   summable boundary mathematician-facing.
   Coordinate any accepted slice with dependent series, power-series evaluation, and the separate
   `finsum`-based Euler-characteristic audit.
+  In particular, the analytic Dirichlet-density work above proves convergence and denominator
+  positivity on its right-hand germ, but `NumberField.Set.primeIdealZetaSum` still has an
+  unrestricted real input. Audit its public projection against its exact convergence domain.
+  The sufficient condition `s > 1` is not the exact domain for every subset: finite sets converge
+  for every real `s`. Preserve the established density relation and normalization theorems when
+  selecting a domain-bearing projection.
 
 - [ ] **Reassess public `finsum`/`finprod` totalization on infinite support.**
   Their names and source docstrings disclose the zero/one result outside finite support, but that is
