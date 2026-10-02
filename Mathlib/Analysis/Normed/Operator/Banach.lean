@@ -404,20 +404,19 @@ lemma isClosed_range_iff_antilipschitz_of_injective (f : E →L[𝕜] F)
   exact hf'.isClosed_range f.uniformContinuous
 
 /-- A choice of continuous left inverse of an injective continuous linear map with closed range:
-this is `LinearMap.leftInverse` as a continuous linear map;
-by injectivity, the junk value of `leftInverse` never matters, and continuity of the inverse
-follows form the closed range condition. -/
+this is `LinearMap.leftInverse` as a continuous linear map, and continuity of the inverse
+follows from the closed range condition. -/
 noncomputable def leftInverse_of_injective_of_isClosed_range
     (f : E →L[𝕜] F) (hf : Injective f) (hf' : IsClosed (range f)) : f.range →L[𝕜] E :=
   letI K := f.antilipschitzConstant_of_injective_of_isClosed_range hf hf'
   letI hfK := f.antilipschitz_antiLipschitzConstant_of_injective_of_isClosed_range hf hf'
-  LinearMap.mkContinuous f.rangeRestrict.leftInverse K (by
+  LinearMap.mkContinuous
+    (f.rangeRestrict.leftInverse ((LinearMap.injective_rangeRestrict_iff _).mpr hf)) K (by
     rintro ⟨y, x, rfl⟩
     have aux := hfK.le_mul_dist x 0
     simp only [dist_zero_right, map_zero] at aux
     convert! aux
-    exact f.rangeRestrict.leftInverse_apply_of_inj
-      (by rw [ker_codRestrict]; exact LinearMap.ker_eq_bot.mpr hf) x)
+    exact f.rangeRestrict.leftInverse_apply ((LinearMap.injective_rangeRestrict_iff _).mpr hf) x)
 
 end
 
