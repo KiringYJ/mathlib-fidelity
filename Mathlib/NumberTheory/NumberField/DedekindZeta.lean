@@ -17,7 +17,7 @@ In this file, we define and prove results about the Dedekind zeta function of a 
 ## Main definitions and results
 
 * `NumberField.dedekindZeta`: the Dedekind zeta function.
-* `NumberField.dedekindZeta_residue`: the value of the residue at `s = 1` of the Dedekind
+* `NumberField.dedekindZetaResidue`: the value of the residue at `s = 1` of the Dedekind
   zeta function.
 * `NumberField.tendsto_sub_one_mul_dedekindZeta_nhdsGT`: **Dirichlet class number formula**
   computation of the residue of the Dedekind zeta function at `s = 1`, see Chap. 7 of
@@ -53,29 +53,29 @@ def dedekindZeta (s : ℂ) :=
 The value of the residue at `s = 1` of the Dedekind zeta function, see
 `NumberField.tendsto_sub_one_mul_dedekindZeta_nhdsGT`.
 -/
-def dedekindZeta_residue : ℝ :=
+def dedekindZetaResidue : ℝ :=
   (2 ^ nrRealPlaces K * (2 * π) ^ nrComplexPlaces K * regulator K * classNumber K) /
     (torsionOrder K * Real.sqrt |discr K|)
 
-theorem dedekindZeta_residue_def :
-    dedekindZeta_residue K =
+theorem dedekindZetaResidue_def :
+    dedekindZetaResidue K =
       (2 ^ nrRealPlaces K * (2 * π) ^ nrComplexPlaces K * regulator K * classNumber K) /
       (torsionOrder K * Real.sqrt |discr K|) := rfl
 
-theorem dedekindZeta_residue_pos : 0 < dedekindZeta_residue K := by
+theorem dedekindZetaResidue_pos : 0 < dedekindZetaResidue K := by
   refine div_pos ?_ ?_
   · exact mul_pos (mul_pos (by positivity) (regulator_pos K)) (Nat.cast_pos.mpr (classNumber_pos K))
   · exact mul_pos (Nat.cast_pos.mpr (torsionOrder_pos K)) <|
       Real.sqrt_pos_of_pos <| abs_pos.mpr (Int.cast_ne_zero.mpr (discr_ne_zero K))
 
-theorem dedekindZeta_residue_ne_zero : dedekindZeta_residue K ≠ 0 :=
-  (dedekindZeta_residue_pos K).ne'
+theorem dedekindZetaResidue_ne_zero : dedekindZetaResidue K ≠ 0 :=
+  (dedekindZetaResidue_pos K).ne'
 
 /--
 **Dirichlet class number formula**
 -/
 theorem tendsto_sub_one_mul_dedekindZeta_nhdsGT :
-    Tendsto (fun s : ℝ ↦ (s - 1) * dedekindZeta K s) (𝓝[>] 1) (𝓝 (dedekindZeta_residue K)) := by
+    Tendsto (fun s : ℝ ↦ (s - 1) * dedekindZeta K s) (𝓝[>] 1) (𝓝 (dedekindZetaResidue K)) := by
   refine LSeries_tendsto_sub_mul_nhds_one_of_tendsto_sum_div_and_nonneg _ ?_
     (fun _ ↦ Nat.cast_nonneg _)
   refine ((Ideal.tendsto_norm_le_div_atTop₀ K).comp tendsto_natCast_atTop_atTop).congr fun n ↦ ?_
