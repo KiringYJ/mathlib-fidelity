@@ -415,6 +415,26 @@ operation.
   `WeierstrassCurve.LFunction` needs no new residue-field hypothesis.  `Finite W.Point` over a
   finite ring makes the point count a count of a finite type.
 
+- [x] **Require an elliptic curve for elliptic local factors.**
+  The local factors, `WeierstrassCurve.LFunction`, and `WeierstrassCurve.LSeries` also require
+  `[W.IsElliptic]`.  The local polynomial applies its formula to `W.minimal R`, a
+  `Classical.choose`, and for a singular curve the minimal models need not agree: for the nodal
+  cubic `y² + xy = x³` every integral model is minimal, and the model and its rescaling by a
+  uniformizer have multiplicative and additive reduction, so the local polynomial had degree one
+  or zero depending on the choice.  Serre's local factors are those of an elliptic curve (§2.4,
+  (16) and (17)).  `(W.baseChange A).IsElliptic` is an instance, so the global L-function needs only
+  `[W.IsElliptic]`.
+
+- [ ] **Prove that elliptic local factors do not depend on the chosen minimal model.**
+  `WeierstrassCurve.localPolynomial` applies its formula to `W.minimal R`, a `Classical.choose`.
+  For an elliptic curve the minimal Weierstrass equations over `R` should be unique up to a change
+  of variables with `u ∈ Rˣ` and `r, s, t ∈ R` (recalled as Silverman, *The Arithmetic of Elliptic
+  Curves*, Proposition VII.1.3, not checked), which preserves the reduction type and the point
+  count of the reduction.  Prove this invariance, so that the chosen model is a representative
+  rather than unexplained data.  Also prove that the factor over `R` agrees with the factor over
+  its completion, which justifies admitting an incomplete `R`, and check that the
+  split-multiplicative criterion matches Serre's split torus (§2.4, case b).
+
 - [ ] **Make analytic and meromorphic orders domain-bearing.**
   `analyticOrderAt`/`analyticOrderNatAt` in `Mathlib/Analysis/Analytic/Order.lean:47` and `:61`, and
   `meromorphicOrderAt` in `Mathlib/Analysis/Meromorphic/Order.lean:50`, return zero outside their
