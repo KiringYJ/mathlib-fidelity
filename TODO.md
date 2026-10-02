@@ -139,7 +139,9 @@ operation.
   cdf.  Infinite measures such as Lebesgue measure on `[0, ∞)` are included, as in Isabelle's
   `cdf_interval_measure` and in Karamata's Tauberian theorem (Bingham--Goldie--Teugels,
   *Regular variation*, Theorem 1.7.1).  The class `IsFiniteMeasureOnIic` is new; finite measures
-  supply it automatically, and it is closed under restriction, sums, and `ℝ≥0` multiples.  The
+  supply it automatically, and it is closed under restriction, sums, and `ℝ≥0` multiples.
+  On `ℝ`, restrictions of measures that are finite on compact sets to `Ici a` or `Ioi a` supply it
+  as well, and the class implies local finiteness, hence σ-finiteness.  The
   former definition applied `condCDF` to the product with a Dirac measure for every measure.  It
   returned the cdf of `(μ univ)⁻¹ • μ` for a finite nonzero measure and still returned a
   probability cdf for a zero or non-finite measure, so `cdf_le_one`, `tendsto_cdf_atTop`, and the

@@ -5,9 +5,9 @@ Authors: Rémy Degenne
 -/
 module
 
+public import Mathlib.MeasureTheory.Constructions.BorelSpace.FiniteOnIic
 public import Mathlib.MeasureTheory.Measure.Real
 public import Mathlib.MeasureTheory.Measure.Stieltjes
-public import Mathlib.MeasureTheory.Measure.Typeclasses.FiniteOnIic
 public import Mathlib.Tactic.CrossRefAttribute
 public import Mathlib.Topology.UnitInterval
 
