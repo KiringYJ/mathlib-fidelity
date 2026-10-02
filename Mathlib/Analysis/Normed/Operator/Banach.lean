@@ -386,13 +386,13 @@ lemma antilipschitz_of_injective_of_isClosed_range (f : E →L[𝕜] F)
 
 /-- A choice of anti-Lipschitz constant for `f : E →L[𝕜] F` injective with closed range
 (assuming `E` and `F` are Banach spaces). -/
-noncomputable def antilipschitzConstant_of_injective_of_isClosed_range (f : E →L[𝕜] F)
+noncomputable def antilipschitzConstantOfInjectiveOfIsClosedRange (f : E →L[𝕜] F)
     (hf : Injective f) (hf' : IsClosed (Set.range f)) : ℝ≥0 :=
   Classical.choose (f.antilipschitz_of_injective_of_isClosed_range hf hf')
 
-lemma antilipschitz_antiLipschitzConstant_of_injective_of_isClosed_range (f : E →L[𝕜] F)
+lemma antilipschitz_antilipschitzConstantOfInjectiveOfIsClosedRange (f : E →L[𝕜] F)
     (hf : Injective f) (hf' : IsClosed (Set.range f)) :
-    AntilipschitzWith (f.antilipschitzConstant_of_injective_of_isClosed_range hf hf') f :=
+    AntilipschitzWith (f.antilipschitzConstantOfInjectiveOfIsClosedRange hf hf') f :=
   Classical.choose_spec (f.antilipschitz_of_injective_of_isClosed_range hf hf')
 
 /-- An injective bounded linear operator between Banach spaces has closed range
@@ -406,10 +406,10 @@ lemma isClosed_range_iff_antilipschitz_of_injective (f : E →L[𝕜] F)
 /-- A choice of continuous left inverse of an injective continuous linear map with closed range:
 this is `LinearMap.leftInverse` as a continuous linear map, and continuity of the inverse
 follows from the closed range condition. -/
-noncomputable def leftInverse_of_injective_of_isClosed_range
+noncomputable def leftInverseOfInjectiveOfIsClosedRange
     (f : E →L[𝕜] F) (hf : Injective f) (hf' : IsClosed (range f)) : f.range →L[𝕜] E :=
-  letI K := f.antilipschitzConstant_of_injective_of_isClosed_range hf hf'
-  letI hfK := f.antilipschitz_antiLipschitzConstant_of_injective_of_isClosed_range hf hf'
+  letI K := f.antilipschitzConstantOfInjectiveOfIsClosedRange hf hf'
+  letI hfK := f.antilipschitz_antilipschitzConstantOfInjectiveOfIsClosedRange hf hf'
   LinearMap.mkContinuous
     (f.rangeRestrict.leftInverse ((LinearMap.injective_rangeRestrict_iff _).mpr hf)) K (by
     rintro ⟨y, x, rfl⟩

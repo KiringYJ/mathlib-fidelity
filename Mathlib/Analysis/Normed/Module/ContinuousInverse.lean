@@ -256,7 +256,7 @@ lemma of_injective_of_isClosed_range_of_closedComplement_range {f : E →L[R] F}
     f.HasLeftInverse := by
   -- We compose the continuous inverse of `f : E → range f` with the projection `p : F → range f`.
   obtain ⟨p, hp⟩ := hf''
-  refine ⟨(f.leftInverse_of_injective_of_isClosed_range hf hf').comp p, fun x ↦ ?_⟩
+  refine ⟨(f.leftInverseOfInjectiveOfIsClosedRange hf hf').comp p, fun x ↦ ?_⟩
   simpa [hp ⟨f x, by simp⟩] using!
     f.rangeRestrict.leftInverse_apply ((LinearMap.injective_rangeRestrict_iff _).mpr hf) x
 
