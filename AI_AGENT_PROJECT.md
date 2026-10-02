@@ -322,6 +322,11 @@ and the provenance ledger, but must never rewrite this project file.
   API explanations, construction choices, and usage guidance in Lean module and
   declaration docstrings. Do not add standalone API design or migration documents
   under `docs/`, or create a parallel documentation tree for that purpose.
+- In file headers, name authors by their real names, as mathlib does:
+  `Copyright (c) <year> <name>. All rights reserved.` and `Authors: <name>`.
+  For a file written on the maintainer's behalf, take the name from
+  `git config user.name`, which matches the maintainer's existing headers;
+  never use a GitHub handle.
 - Inspect the current branch before editing. Personal changes belong on `main`
   or an explicitly selected topic branch; use `upstream/master` only as the
   official baseline reference.
