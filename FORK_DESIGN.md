@@ -90,8 +90,15 @@ The library should retain real domain obligations while eliminating repetitive
 manual work around them.
 
 - Prefer standard mathematical concepts, notation, and proof decomposition at
-  the public surface. Equivalent expressibility through implementation details
-  is not an equivalent user interface.
+  the public surface, which serves mathematicians and downstream formalizers
+  first. Equivalent expressibility through implementation details is not an
+  equivalent user interface. Judge an interface by whether its statements and
+  operations faithfully represent the object; a mathematician can discover its
+  declarations from standard concepts and terminology; its notation matches
+  the canonical operations where that distinction carries meaning; common
+  constructions compose without exposing representation details; and proof
+  code shows the mathematical reason a step works rather than an equivalent
+  library-specific decomposition.
 - Choose the mathematically faithful and natural public interface before
   minimizing imports or dependency weight. A heavier import is not by itself an
   API defect when it supplies the standard abstraction that the statement
@@ -117,8 +124,15 @@ manual work around them.
   inspectable proof terms and make the mathematical reason for each step
   visible in the theorem interface.
 - Test abstractions against real downstream formalizations before treating
-  them as settled. A facade is worthwhile when it restores a natural concept
-  without creating a competing theorem ecosystem.
+  them as settled, and keep the motivating theorem, paper, or repeated proof
+  pattern as evidence when deciding API boundaries. A facade is worthwhile
+  when it restores a natural concept without creating a competing theorem
+  ecosystem: a generic internal theorem may stay canonical internally while a
+  thin mathematician-facing facade supplies the conceptual entry point. For
+  set-system objects such as sigma-algebras and Dynkin systems, membership,
+  inclusion, ordinary unions, generated structures, and the classical named
+  proof principles should be available in forms that keep their mathematical
+  distinctions.
 
 #### Notation and compositional term structure
 
@@ -464,10 +478,8 @@ request is close to merger. Contributors own the mathematical content, original
 implementation, and substantive review responses. Maintainers own integration
 fallout caused solely by repository-driven upstream reconciliation or
 fork-wide canonical API migrations, subject to the contributor granting branch
-access when work must be pushed to the contributor's branch. Before rewriting
-`main`, maintainers retain each open pull request's old merge base and head
-object ID ephemerally so that only contributor commits are replayed and any
-force-update uses an exact lease.
+access when work must be pushed to the contributor's branch. The rebase and
+force-update procedure for open pull requests is in `AI_AGENT_PROJECT.md`.
 
 External formalizations may be proposed through a pull request or selected by
 the maintainer from other repositories. A suggestion, public repository, or
@@ -574,24 +586,18 @@ migration.
   the local remote named `upstream`; it is not the target audience for fork-only
   changes.
 - `main` is a maintained Fidelity transformation stack over the latest
-  reconciled `upstream/master`. Routine reconciliation replays that stack by
-  rebase instead of accumulating upstream merge commits.
-- Reconciliation is batched rather than triggered by every upstream commit.
-  Published release tags and `palomar/<slug>` delivery branches remain separate
-  snapshots and are not moved with `main`.
-- Git ancestry records the upstream base of the replayed stack; no separate
-  last-reconciled SHA is maintained.
+  reconciled `upstream/master`, replayed by rebase rather than merged. Keep its
+  changes logically separated so the stack can be replayed and design
+  decisions reviewed; this discipline serves the fork itself, not upstream pull
+  requests. The branch model and reconciliation procedure are in
+  `AI_AGENT_PROJECT.md`.
 - Reuse upstream definitions and theorems when they are mathematically and
-  technically sound. The fork should differ for a reason, not merely for
-  novelty.
+  technically sound. The fork should differ for a reason, such as semantic or
+  ergonomic friction exposed by actual formalization, not merely for novelty.
 - Fork changes may deliberately break upstream API compatibility when a
   coherent migration establishes a materially better mathematical interface.
   The cost must still be justified by downstream use, maintenance, performance,
   and verification evidence.
-- Keep changes logically separated and rebasable so the Fidelity stack can be
-  replayed on upstream updates and design decisions can be reviewed. This
-  discipline serves the fork itself; it is not preparation for upstream pull
-  requests.
 - Additional source repositories do not become alternate design authorities.
   Material becomes part of this library only through the same faithful,
   canonicalizing integration process.
