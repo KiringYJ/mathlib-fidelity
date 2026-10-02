@@ -538,6 +538,12 @@ lemma nonsingularPointEquiv_symm_some {x y : R} (h : W'.Nonsingular x y) :
     W'.nonsingularPointEquiv.symm (.some ⟨⟨x, y⟩, h⟩) = .some _ _ h :=
   rfl
 
+/-- A Weierstrass curve over a finite ring has finitely many nonsingular points. -/
+instance [Finite R] : Finite W'.Point :=
+  have : Finite (WithZero {xy : R × R // W'.Nonsingular xy.fst xy.snd}) :=
+    inferInstanceAs (Finite (Option _))
+  .of_equiv _ W'.nonsingularPointEquiv.symm
+
 section IsElliptic
 
 variable [Nontrivial R] [W'.IsElliptic]

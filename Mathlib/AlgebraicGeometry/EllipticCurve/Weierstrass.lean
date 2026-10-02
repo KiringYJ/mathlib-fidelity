@@ -456,6 +456,9 @@ variable {A : Type v} [CommRing A] (f : R →+* A)
 instance : (W.map f).IsElliptic := by
   simp only [isElliptic_iff, map_Δ, W.isUnit_Δ.map]
 
+instance [Algebra R A] : (W.baseChange A).IsElliptic :=
+  inferInstanceAs (W.map (algebraMap R A)).IsElliptic
+
 set_option linter.docPrime false in
 lemma coe_map_Δ' : (W.map f).Δ' = f W.Δ' := by
   rw [coe_Δ', map_Δ, coe_Δ']
