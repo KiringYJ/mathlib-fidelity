@@ -39,6 +39,9 @@ requiring `𝓞 K`. This is so that `ℤ` and `𝓞 ℚ` can be used interchange
   of `K` is different from 1 for at most finitely many `v`.
 *  The valuation subrings of the field at the `v`-valuation and it's adic completion are
    discrete valuation rings.
+* `IsDedekindDomain.HeightOneSpectrum.adicCompletionIntegers.quotientAlgEquivResidueField`: the
+  residue field of the completed integers at `v` is the residue field `A ⧸ v` of `A`. It is finite
+  when `A` has finite quotients, and its size is then the absolute norm of `v`.
 
 ## Tags
 number field, places, finite places
@@ -84,6 +87,96 @@ instance : IsDiscreteValuationRing (v.adicCompletionIntegers K) where
       ← (Valued.v : Valuation (v.adicCompletion K) ℤᵐ⁰).map_eq_zero_iff]
 
 end DVR
+
+namespace IsDedekindDomain.HeightOneSpectrum.adicCompletionIntegers
+
+/-! ### The residue field of the completed integers -/
+
+open IsLocalRing Topology
+
+variable {A : Type*} [CommRing A] [IsDedekindDomain A] (K : Type*) [Field K] [Algebra A K]
+  [IsFractionRing A K] (v : HeightOneSpectrum A)
+
+variable {K v} in
+/-- Every element of the completed integers is congruent to an element of `A` modulo the maximal
+ideal. -/
+theorem exists_algebraMap_sub_mem_maximalIdeal (x : v.adicCompletionIntegers K) :
+    ∃ a : A, algebraMap A (v.adicCompletionIntegers K) a - x ∈
+      maximalIdeal (v.adicCompletionIntegers K) := by
+  have hs : {z : v.adicCompletion K | Valued.v (z - x) < 1} ∈ 𝓝 (x : v.adicCompletion K) :=
+    Valued.mem_nhds.2 ⟨1, fun y hy ↦ by simpa [Valuation.restrict_lt_one_iff] using hy⟩
+  obtain ⟨_, hmem, k, rfl⟩ :=
+    mem_closure_iff_nhds.1 (denseRange_algebraMap K v (x : v.adicCompletion K)) _ hs
+  have hz : Valued.v (algebraMap K (v.adicCompletion K) k - x) < 1 := hmem
+  have hk : v.valuation K k ≤ 1 := by
+    have h := Valuation.map_add_le Valued.v hz.le x.2
+    rw [sub_add_cancel] at h
+    rwa [← valuedAdicCompletion_eq_valuation']
+  obtain ⟨a, ha⟩ := exists_valuation_sub_lt_of_integer v hk 1
+  refine ⟨a, (Valuation.mem_maximalIdeal_iff (v.adicCompletion K) Valued.v).2 ?_⟩
+  have hsplit : algebraMap A (v.adicCompletion K) a - x =
+      algebraMap K (v.adicCompletion K) (algebraMap A K a - k) +
+        (algebraMap K (v.adicCompletion K) k - x) := by
+    rw [map_sub, ← IsScalarTower.algebraMap_apply]
+    ring
+  change Valued.v (algebraMap A (v.adicCompletion K) a - x) < 1
+  rw [hsplit]
+  refine Valuation.map_add_lt _ ?_ hz
+  exact (valuedAdicCompletion_eq_valuation' v (algebraMap A K a - k)).trans_lt (by simpa using ha)
+
+/-- Every residue class of the completed integers is represented by an element of `A`. -/
+theorem algebraMap_residueField_surjective :
+    Function.Surjective (algebraMap A (IsLocalRing.ResidueField (v.adicCompletionIntegers K))) := by
+  intro y
+  obtain ⟨x, rfl⟩ := residue_surjective y
+  obtain ⟨a, ha⟩ := exists_algebraMap_sub_mem_maximalIdeal x
+  refine ⟨a, ?_⟩
+  rw [IsScalarTower.algebraMap_apply A (v.adicCompletionIntegers K), ResidueField.algebraMap_eq,
+    ← sub_eq_zero, ← map_sub, residue_eq_zero_iff]
+  exact ha
+
+/-- An element of `A` vanishes in the residue field of the completed integers if and only if it
+lies in `v`. -/
+theorem ker_algebraMap_residueField :
+    RingHom.ker (algebraMap A (IsLocalRing.ResidueField (v.adicCompletionIntegers K))) =
+      v.asIdeal := by
+  ext a
+  rw [RingHom.mem_ker, IsScalarTower.algebraMap_apply A (v.adicCompletionIntegers K),
+    ResidueField.algebraMap_eq, residue_eq_zero_iff, ← valuation_lt_one_iff_mem (K := K),
+    ← valuedAdicCompletion_eq_valuation]
+  exact Valuation.mem_maximalIdeal_iff (v.adicCompletion K) Valued.v
+
+/-- The residue field of the completed integers at `v` is the residue field `A ⧸ v` of `A`. -/
+noncomputable def quotientAlgEquivResidueField :
+    (A ⧸ v.asIdeal) ≃ₐ[A] IsLocalRing.ResidueField (v.adicCompletionIntegers K) :=
+  (Ideal.quotientEquivAlgOfEq A (ker_algebraMap_residueField K v).symm).trans
+    (Ideal.quotientKerAlgEquivOfSurjective (f := Algebra.ofId A _)
+      (algebraMap_residueField_surjective K v))
+
+/-- The residue fields of `A` and of its completed integers at `v` have the same size. -/
+theorem natCard_residueField :
+    Nat.card (IsLocalRing.ResidueField (v.adicCompletionIntegers K)) = Nat.card (A ⧸ v.asIdeal) :=
+  (Nat.card_congr (quotientAlgEquivResidueField K v).toEquiv).symm
+
+/-- The residue field of the completed integers is finite if and only if `A ⧸ v` is. -/
+theorem finite_residueField_iff :
+    Finite (IsLocalRing.ResidueField (v.adicCompletionIntegers K)) ↔ Finite (A ⧸ v.asIdeal) :=
+  (quotientAlgEquivResidueField K v).toEquiv.finite_iff.symm
+
+/-- The completed integers of a ring with finite quotients, such as the ring of integers of a
+number field, have a finite residue field. -/
+instance finite_residueField [Ring.HasFiniteQuotients A] :
+    Finite (IsLocalRing.ResidueField (v.adicCompletionIntegers K)) :=
+  (finite_residueField_iff K v).2 (Ring.HasFiniteQuotients.finiteQuotient v.ne_bot)
+
+/-- The size of the residue field of the completed integers is the absolute norm of `v`. Both are
+sizes of finite sets when `A` has finite quotients, as for the ring of integers of a number
+field. -/
+theorem natCard_residueField_eq_absNorm [Infinite A] :
+    Nat.card (IsLocalRing.ResidueField (v.adicCompletionIntegers K)) = absNorm v.asIdeal := by
+  rw [natCard_residueField, absNorm_apply, Submodule.cardQuot_apply]
+
+end IsDedekindDomain.HeightOneSpectrum.adicCompletionIntegers
 
 namespace NumberField
 
