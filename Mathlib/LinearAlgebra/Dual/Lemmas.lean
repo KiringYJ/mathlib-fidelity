@@ -481,13 +481,13 @@ theorem dualAnnihilator_inj {W W' : Subspace K V} :
 an arbitrary extension of `φ` to an element of the dual of `V`.
 That is, `dualLift W φ` sends `w ∈ W` to `φ x` and `x` in a chosen complement of `W` to `0`. -/
 noncomputable def dualLift (W : Subspace K V) : Module.Dual K W →ₗ[K] Module.Dual K V :=
-  W.subtype.leftInverse.dualMap
+  (W.subtype.leftInverse W.injective_subtype).dualMap
 
 variable {W : Subspace K V}
 
 @[simp]
 theorem dualLift_of_subtype {φ : Module.Dual K W} (w : W) : W.dualLift φ (w : V) = φ w :=
-  congr_arg φ <| LinearMap.leftInverse_apply_of_inj W.ker_subtype _
+  congr_arg φ <| LinearMap.leftInverse_apply W.injective_subtype _
 
 theorem dualLift_of_mem {φ : Module.Dual K W} {w : V} (hw : w ∈ W) : W.dualLift φ w = φ ⟨w, hw⟩ :=
   dualLift_of_subtype ⟨w, hw⟩

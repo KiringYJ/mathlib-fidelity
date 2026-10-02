@@ -259,27 +259,32 @@ theorem LinearMap.exists_leftInverse_of_injective (f : V →ₗ[K] V') (hf_inj :
   rw [Basis.ofVectorSpace_apply_self, fb_eq, hC.constr_basis]
   exact leftInverse_invFun (LinearMap.ker_eq_bot.1 hf_inj) _
 
-/-- The left inverse of `f : E →ₗ[𝕜] F`.
+/-- A choice of linear left inverse of an injective linear map `f : E →ₗ[𝕜] F`.
 
-If `f` is not injective, then we use the junk value `0`. -/
+This choice is generally nonunique away from the range of `f`. -/
 noncomputable
-def LinearMap.leftInverse (f : V →ₗ[K] V') : V' →ₗ[K] V :=
-  if h_inj : LinearMap.ker f = ⊥ then
-  (f.exists_leftInverse_of_injective h_inj).choose
-  else 0
+def LinearMap.leftInverse (f : V →ₗ[K] V') (hf : Function.Injective f) : V' →ₗ[K] V :=
+  (f.exists_leftInverse_of_injective (LinearMap.ker_eq_bot.mpr hf)).choose
 
-theorem LinearMap.leftInverse_comp_of_inj {f : V →ₗ[K] V'} (h_inj : LinearMap.ker f = ⊥) :
-    f.leftInverse ∘ₗ f = LinearMap.id := by
-  simpa [leftInverse, h_inj] using (f.exists_leftInverse_of_injective h_inj).choose_spec
+theorem LinearMap.leftInverse_comp {f : V →ₗ[K] V'} (hf : Function.Injective f) :
+    f.leftInverse hf ∘ₗ f = LinearMap.id :=
+  (f.exists_leftInverse_of_injective (LinearMap.ker_eq_bot.mpr hf)).choose_spec
 
-/-- If `f` is injective, then the left inverse composed with `f` is the identity. -/
-theorem LinearMap.leftInverse_apply_of_inj {f : V →ₗ[K] V'} (h_inj : LinearMap.ker f = ⊥) (x : V) :
-    f.leftInverse (f x) = x :=
-  LinearMap.ext_iff.mp (f.leftInverse_comp_of_inj h_inj) x
+/-- The chosen left inverse of an injective linear map sends `f x` to `x`. -/
+theorem LinearMap.leftInverse_apply {f : V →ₗ[K] V'} (hf : Function.Injective f) (x : V) :
+    f.leftInverse hf (f x) = x :=
+  LinearMap.ext_iff.mp (f.leftInverse_comp hf) x
+
+theorem LinearMap.exists_leftInverse_iff_injective (f : V →ₗ[K] V') :
+    (∃ g : V' →ₗ[K] V, g.comp f = LinearMap.id) ↔ Function.Injective f := by
+  constructor
+  · rintro ⟨g, hg⟩
+    exact (show Function.LeftInverse g f from fun x ↦ LinearMap.ext_iff.mp hg x).injective
+  · exact fun hf ↦ f.exists_leftInverse_of_injective (LinearMap.ker_eq_bot.mpr hf)
 
 theorem Submodule.exists_isCompl (p : Submodule K V) : ∃ q : Submodule K V, IsCompl p q :=
-  ⟨LinearMap.ker p.subtype.leftInverse,
-    LinearMap.isCompl_of_proj <| LinearMap.leftInverse_apply_of_inj p.ker_subtype⟩
+  ⟨LinearMap.ker (p.subtype.leftInverse p.injective_subtype),
+    LinearMap.isCompl_of_proj <| LinearMap.leftInverse_apply p.injective_subtype⟩
 
 instance Submodule.complementedLattice : ComplementedLattice (Submodule K V) :=
   ⟨Submodule.exists_isCompl⟩

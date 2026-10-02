@@ -254,12 +254,11 @@ has closed range and its range has a closed complement. -/
 lemma of_injective_of_isClosed_range_of_closedComplement_range {f : E →L[R] F}
     (hf : Injective f) (hf' : IsClosed (range f)) (hf'' : Submodule.ClosedComplemented f.range) :
     f.HasLeftInverse := by
-  have : (f.rangeRestrict).ker = ⊥ := by
-    rw [ker_codRestrict]; exact LinearMap.ker_eq_bot.mpr hf
   -- We compose the continuous inverse of `f : E → range f` with the projection `p : F → range f`.
   obtain ⟨p, hp⟩ := hf''
   refine ⟨(f.leftInverse_of_injective_of_isClosed_range hf hf').comp p, fun x ↦ ?_⟩
-  simpa [hp ⟨f x, by simp⟩] using! f.rangeRestrict.leftInverse_apply_of_inj this x
+  simpa [hp ⟨f x, by simp⟩] using!
+    f.rangeRestrict.leftInverse_apply ((LinearMap.injective_rangeRestrict_iff _).mpr hf) x
 
 end
 

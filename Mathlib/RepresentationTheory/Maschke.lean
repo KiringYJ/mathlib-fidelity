@@ -149,10 +149,11 @@ theorem exists_leftInverse_of_injective (f : V →ₗ[k[G]] W) (hf : LinearMap.k
   let : Module k V := .compHom V (algebraMap k A)
   have := IsScalarTower.of_compHom k A W
   have := IsScalarTower.of_compHom k A V
-  set φ := (f.restrictScalars k).leftInverse
+  have hf' : Function.Injective (f.restrictScalars k) := by
+    simpa only [LinearMap.coe_restrictScalars] using LinearMap.ker_eq_bot.mp hf
+  set φ := (f.restrictScalars k).leftInverse hf'
   have hφ : ∀ (x : V), φ (f x) = x := by
-    apply LinearMap.leftInverse_apply_of_inj
-    simp [hf]
+    exact LinearMap.leftInverse_apply hf'
   have _ : Fintype G := Fintype.ofFinite G
   refine ⟨φ.equivariantProjection G, LinearMap.ext ?_⟩
   exact φ.equivariantProjection_condition G _ (.mk0 _ <| NeZero.ne _) <| hφ

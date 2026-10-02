@@ -228,10 +228,14 @@ operation.
   `LieModule.lowerCentralSeriesLast` inherit misleading values.  Require nilpotency evidence or use
   an extended natural invariant, then migrate the element, group, and Lie families coherently.
 
-- [ ] **Require injectivity for `LinearMap.leftInverse`.**
-  `Mathlib/LinearAlgebra/Basis/VectorSpace.lean:266` returns the zero map for a noninjective linear
-  map.  Make the constructor consume injectivity or splitting data, and remove the zero-default
-  extension from the public surface.
+- [x] **Require injectivity for `LinearMap.leftInverse`.**
+  `LinearMap.leftInverse f hf` chooses a linear left inverse using `hf : Function.Injective f`,
+  with no noninjective fallback. `exists_leftInverse_iff_injective` characterizes this exact domain
+  over a division ring, including subsingleton domains. The composition and application laws take
+  the same evidence; the choice is not asserted to be unique away from the range. Subspace
+  complements, dual extensions, Maschke's theorem, and continuous inverses supply their existing
+  injectivity proofs. Tests cover missing and invalid evidence, zero-dimensional domains,
+  nonsurjective inclusions, proof independence, rewriting, and nonuniqueness of left inverses.
 
 - [ ] **Bundle admissible root pairs for root-chain data.**
   `RootPairing.chainTopCoeff`, `chainBotCoeff`, `chainTopIdx`, and `chainBotIdx` in
