@@ -18,7 +18,8 @@ This file constructs L-functions as formal Dirichlet series.
 
 ## Main definitions
 
-* `ArithmeticFunction.ofPowerSeries q f`: L-function `f(q⁻ˢ)` obtained from a power series `f(T)`.
+* `ArithmeticFunction.ofPowerSeries q hq f`: L-function `f(q⁻ˢ)` obtained from a power series
+  `f(T)`, for `hq : 1 < q`.
 * `ArithmeticFunction.eulerProduct f`: the Euler product of a family `f i` of Dirichlet series.
 
 ## Implementation notes
@@ -59,98 +60,87 @@ section CommSemiring
 variable [CommSemiring R]
 
 set_option backward.isDefEq.respectTransparency.types false in
-/-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)`.
+/-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)`, for `1 < q`.
 For example, if `f = 1 + X + X² + ...` and `q = p`, then `f(q⁻ˢ) = 1 + p⁻ˢ + p⁻²ˢ + ...`.
 
-If `q ≤ 1` then `k ↦ q ^ k` is not injective, so we use the junk value `f.constantCoeff`. -/
-noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →ₐ[R] ArithmeticFunction R where
-  toFun f := if hq : 1 < q then
-    ⟨Function.extend (q ^ ·) (f.coeff ·) 0, by simp [Nat.ne_zero_of_lt hq]⟩ else
-      algebraMap R (ArithmeticFunction R) f.constantCoeff
-  map_zero' := by ext; split_ifs <;> simp [Function.extend]
-  -- note that `ofPowerSeries.map_one'` relies on the junk value `f.constantCoeff`.
+Its value at `qᵏ` is the `k`-th coefficient of `f`, and it vanishes away from the powers of `q`;
+this is well defined because `k ↦ qᵏ` is injective, which holds exactly when `1 < q`. No other
+base is meaningful: there is no Dirichlet series `0⁻ˢ`, and when `R` is nontrivial no `R`-algebra
+map sends `X` to `1⁻ˢ = 1`, since `1 - X` is a unit. -/
+noncomputable def ofPowerSeries (q : ℕ) (hq : 1 < q) :
+    PowerSeries R →ₐ[R] ArithmeticFunction R where
+  toFun f := ⟨Function.extend (q ^ ·) (f.coeff ·) 0, by simp [Nat.ne_zero_of_lt hq]⟩
+  map_zero' := by ext; simp [Function.extend]
   map_one' := by
     ext n
-    split_ifs with hq
-    · by_cases hn : ∃ k, q ^ k = n
-      · obtain ⟨a, rfl⟩ := hn
-        simp [(Nat.pow_right_injective hq).extend_apply, one_apply, hq.ne']
-      · simp [hn, one_apply_ne (fun H ↦ hn ⟨0, H.symm⟩)]
-    · simp
+    by_cases hn : ∃ k, q ^ k = n
+    · obtain ⟨a, rfl⟩ := hn
+      simp [(Nat.pow_right_injective hq).extend_apply, one_apply, hq.ne']
+    · simp [hn, one_apply_ne (fun H ↦ hn ⟨0, H.symm⟩)]
   map_add' f g := by
     ext n
-    split_ifs with hq
-    · by_cases h : ∃ a, q ^ a = n
-      · obtain ⟨a, rfl⟩ := h
-        simp [(Nat.pow_right_injective hq).extend_apply]
-      · simp [h]
-    · by_cases hn : n = 1 <;> simp [hn]
+    by_cases h : ∃ a, q ^ a = n
+    · obtain ⟨a, rfl⟩ := h
+      simp [(Nat.pow_right_injective hq).extend_apply]
+    · simp [h]
   map_mul' f g := by
     ext n
-    split_ifs with hq
-    · simp_rw [mul_apply, coe_mk]
-      by_cases hn : ∃ a, q ^ a = n
-      · obtain ⟨k, rfl⟩ := hn
-        rw [(Nat.pow_right_injective hq).extend_apply]
-        have hs : (Finset.antidiagonal k).map (.prodMap ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩
-            ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩) ⊆ (q ^ k).divisorsAntidiagonal :=
-          Nat.antidiagonal_map_subset_divisorsAntidiagonal_pow hq k
-        rw [PowerSeries.coeff_mul k f g, ← Finset.sum_subset hs]
-        · simp [(Nat.pow_right_injective hq).extend_apply]
-        · intro (a, b) hab h
-          by_cases ha : ∃ i, q ^ i = a
-          · by_cases hb : ∃ j, q ^ j = b
-            · obtain ⟨i, rfl⟩ := ha
-              obtain ⟨j, rfl⟩ := hb
-              rw [Nat.mem_divisorsAntidiagonal, ← pow_add, Nat.pow_right_inj hq] at hab
-              simp_rw [Finset.mem_map, not_exists, not_and, Finset.mem_antidiagonal] at h
-              simpa using h (i, j) hab.1
-            · rwa [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
-          · rwa [Function.extend_apply', Pi.zero_apply, zero_mul]
-      · rw [Function.extend_apply' _ _ _ hn, Pi.zero_apply, Finset.sum_eq_zero]
-        intro (a, b) hk
-        obtain ⟨hab, -⟩ := Nat.mem_divisorsAntidiagonal.mp hk
+    simp_rw [mul_apply, coe_mk]
+    by_cases hn : ∃ a, q ^ a = n
+    · obtain ⟨k, rfl⟩ := hn
+      rw [(Nat.pow_right_injective hq).extend_apply]
+      have hs : (Finset.antidiagonal k).map (.prodMap ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩
+          ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩) ⊆ (q ^ k).divisorsAntidiagonal :=
+        Nat.antidiagonal_map_subset_divisorsAntidiagonal_pow hq k
+      rw [PowerSeries.coeff_mul k f g, ← Finset.sum_subset hs]
+      · simp [(Nat.pow_right_injective hq).extend_apply]
+      · intro (a, b) hab h
         by_cases ha : ∃ i, q ^ i = a
         · by_cases hb : ∃ j, q ^ j = b
           · obtain ⟨i, rfl⟩ := ha
             obtain ⟨j, rfl⟩ := hb
-            rw [← pow_add] at hab
-            exact (hn ⟨i + j, hab⟩).elim
+            rw [Nat.mem_divisorsAntidiagonal, ← pow_add, Nat.pow_right_inj hq] at hab
+            simp_rw [Finset.mem_map, not_exists, not_and, Finset.mem_antidiagonal] at h
+            simpa using h (i, j) hab.1
           · rwa [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
         · rwa [Function.extend_apply', Pi.zero_apply, zero_mul]
-    · simp
+    · rw [Function.extend_apply' _ _ _ hn, Pi.zero_apply, Finset.sum_eq_zero]
+      intro (a, b) hk
+      obtain ⟨hab, -⟩ := Nat.mem_divisorsAntidiagonal.mp hk
+      by_cases ha : ∃ i, q ^ i = a
+      · by_cases hb : ∃ j, q ^ j = b
+        · obtain ⟨i, rfl⟩ := ha
+          obtain ⟨j, rfl⟩ := hb
+          rw [← pow_add] at hab
+          exact (hn ⟨i + j, hab⟩).elim
+        · rwa [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
+      · rwa [Function.extend_apply', Pi.zero_apply, zero_mul]
   commutes' x := by
     ext n
-    split_ifs with hq
-    · simp only [Algebra.algebraMap_eq_smul_one, coe_mk]
-      by_cases hn : ∃ k, q ^ k = n
-      · obtain ⟨k, rfl⟩ := hn
-        simp [(Nat.pow_right_injective hq).extend_apply, one_apply, hq.ne']
-      · rw [Function.extend_apply' _ _ _ hn, Pi.zero_apply, smul_map, one_apply_ne, smul_zero]
-        contrapose hn
-        exact ⟨0, by simp [hn]⟩
-    · simp
+    simp only [Algebra.algebraMap_eq_smul_one, coe_mk]
+    by_cases hn : ∃ k, q ^ k = n
+    · obtain ⟨k, rfl⟩ := hn
+      simp [(Nat.pow_right_injective hq).extend_apply, one_apply, hq.ne']
+    · rw [Function.extend_apply' _ _ _ hn, Pi.zero_apply, smul_map, one_apply_ne, smul_zero]
+      contrapose hn
+      exact ⟨0, by simp [hn]⟩
 
-set_option backward.isDefEq.respectTransparency.types false in
 theorem ofPowerSeries_apply {q : ℕ} (hq : 1 < q) (f : PowerSeries R) (n : ℕ) :
-    ofPowerSeries q f n = Function.extend (q ^ ·) (f.coeff ·) 0 n := by
-  simp [ofPowerSeries, dite_eq_left hq]
+    ofPowerSeries q hq f n = Function.extend (q ^ ·) (f.coeff ·) 0 n :=
+  rfl
 
 theorem ofPowerSeries_apply_pow {q : ℕ} (hq : 1 < q) (f : PowerSeries R) (k : ℕ) :
-    ofPowerSeries q f (q ^ k) = f.coeff k := by
+    ofPowerSeries q hq f (q ^ k) = f.coeff k := by
   rw [ofPowerSeries_apply hq, (Nat.pow_right_injective hq).extend_apply]
 
-theorem ofPowerSeries_apply_zero (q : ℕ) (f : PowerSeries R) : ofPowerSeries q f 0 = 0 := by
+theorem ofPowerSeries_apply_zero {q : ℕ} (hq : 1 < q) (f : PowerSeries R) :
+    ofPowerSeries q hq f 0 = 0 := by
   simp
 
-set_option backward.isDefEq.respectTransparency.types false in
 @[simp]
--- note that `ofPowerSeries_apply_one` relies on the junk value `f.constantCoeff`.
-theorem ofPowerSeries_apply_one (q : ℕ) (f : PowerSeries R) :
-    ofPowerSeries q f 1 = f.constantCoeff := by
-  by_cases hq : 1 < q
-  · rw [← pow_zero q, ofPowerSeries_apply_pow hq, PowerSeries.coeff_zero_eq_constantCoeff]
-  · simp [ofPowerSeries, dite_eq_right hq]
+theorem ofPowerSeries_apply_one {q : ℕ} (hq : 1 < q) (f : PowerSeries R) :
+    ofPowerSeries q hq f 1 = f.constantCoeff := by
+  rw [← pow_zero q, ofPowerSeries_apply_pow hq, PowerSeries.coeff_zero_eq_constantCoeff]
 
 end CommSemiring
 
@@ -160,36 +150,35 @@ variable [CommRing R]
 
 /-- In `ArithmeticFunction.ofPowerSeries`, replacing the base `q` with a power `q ^ k` corresponds
 to substituting `X` with `X ^ k` in the original power series. -/
-theorem ofPowerSeries_pow (q : ℕ) {k : ℕ} (hk : k ≠ 0) (f : PowerSeries R) :
-    ofPowerSeries (q ^ k) f = ofPowerSeries q (f.subst (PowerSeries.X ^ k)) := by
-  by_cases hq : 1 < q
-  · ext n
-    by_cases hn : ∃ i, q ^ i = n
-    · obtain ⟨i, rfl⟩ := hn
-      rw [ofPowerSeries_apply_pow hq, PowerSeries.coeff_subst_X_pow hk]
-      split_ifs with hn
-      · obtain ⟨j, rfl⟩ := hn
-        rw [pow_mul, ofPowerSeries_apply_pow (one_lt_pow' hq hk)]
-        simp [hk]
-      · rw [ofPowerSeries_apply (one_lt_pow' hq hk), Function.extend_apply', Pi.zero_apply]
-        simp_rw [← pow_mul, Nat.pow_right_inj hq, eq_comm, ← dvd_def]
-        exact hn
-    · rwa [ofPowerSeries_apply hq, ofPowerSeries_apply (one_lt_pow' hq hk),
-        Function.extend_apply', Function.extend_apply']
-      contrapose! hn
-      obtain ⟨i, rfl⟩ := hn
-      exact ⟨k * i, pow_mul q k i⟩
-  · simp [ofPowerSeries, hq, hk]
+theorem ofPowerSeries_pow {q : ℕ} (hq : 1 < q) {k : ℕ} (hk : k ≠ 0) (f : PowerSeries R) :
+    ofPowerSeries (q ^ k) (one_lt_pow' hq hk) f =
+      ofPowerSeries q hq (f.subst (PowerSeries.X ^ k)) := by
+  ext n
+  by_cases hn : ∃ i, q ^ i = n
+  · obtain ⟨i, rfl⟩ := hn
+    rw [ofPowerSeries_apply_pow hq, PowerSeries.coeff_subst_X_pow hk]
+    split_ifs with hn
+    · obtain ⟨j, rfl⟩ := hn
+      rw [pow_mul, ofPowerSeries_apply_pow (one_lt_pow' hq hk)]
+      simp [hk]
+    · rw [ofPowerSeries_apply (one_lt_pow' hq hk), Function.extend_apply', Pi.zero_apply]
+      simp_rw [← pow_mul, Nat.pow_right_inj hq, eq_comm, ← dvd_def]
+      exact hn
+  · rwa [ofPowerSeries_apply hq, ofPowerSeries_apply (one_lt_pow' hq hk),
+      Function.extend_apply', Function.extend_apply']
+    contrapose! hn
+    obtain ⟨i, rfl⟩ := hn
+    exact ⟨k * i, pow_mul q k i⟩
 
 -- todo: generalize to `CommSemiring`
 /-- `ArithmeticFunction.ofPowerSeries` produces multiplicative power series. -/
 theorem isMultiplicative_ofPowerSeries_of_isPrimePow
-    (q : ℕ) (hq : IsPrimePow q) (f : PowerSeries R) (hf : f.constantCoeff = 1) :
-    IsMultiplicative (ofPowerSeries q f) := by
-  refine ⟨(ofPowerSeries_apply_one q f).trans hf, fun {m n} hmn ↦ ?_⟩
+    {q : ℕ} (hq : IsPrimePow q) (f : PowerSeries R) (hf : f.constantCoeff = 1) :
+    IsMultiplicative (ofPowerSeries q hq.one_lt f) := by
+  refine ⟨(ofPowerSeries_apply_one hq.one_lt f).trans hf, fun {m n} hmn ↦ ?_⟩
   obtain ⟨p, k, hp, hk, rfl⟩ := hq
   rw [← Nat.prime_iff] at hp
-  rw [ofPowerSeries_pow p hk.ne']
+  rw [ofPowerSeries_pow hp.one_lt hk.ne']
   by_cases hm : ∃ i, p ^ i = m
   · obtain ⟨i, rfl⟩ := hm
     by_cases hn : ∃ j, p ^ j = n
@@ -330,17 +319,16 @@ theorem isMultiplicative_eulerProduct (f : ι → ArithmeticFunction R)
 
 /-- Given arithmetic functions `f(q⁻ˢ)` with `q → ∞`, the partial products `∏ i ∈ s, f i` converge
 to the Euler product pointwise. -/
-theorem tendsTo_eulerProduct_ofPowerSeries (q : ι → ℕ) [hq : Northcott q]
+theorem tendsTo_eulerProduct_ofPowerSeries (q : ι → ℕ) (hq : ∀ i, 1 < q i) [hN : Northcott q]
     (f : ι → PowerSeries R) (hf : ∀ i, (f i).constantCoeff = 1) (n : ℕ) :
-    ∀ᶠ s in atTop, (∏ i ∈ s, ofPowerSeries (q i) (f i)) n =
-      eulerProduct (fun i ↦ ofPowerSeries (q i) (f i)) n := by
+    ∀ᶠ s in atTop, (∏ i ∈ s, ofPowerSeries (q i) (hq i) (f i)) n =
+      eulerProduct (fun i ↦ ofPowerSeries (q i) (hq i) (f i)) n := by
   apply tendsTo_eulerProduct_of_tendsTo
-  refine fun n ↦ (tendsto_atTop.mp ((northcott_iff_tendsto q).mp hq) (n + 1)).mono fun i hi ↦ ?_
+  refine fun n ↦ (tendsto_atTop.mp ((northcott_iff_tendsto q).mp hN) (n + 1)).mono fun i hi ↦ ?_
   rcases n with rfl | rfl | n
   · simp
   · simp [hf]
-  · have hqi : 1 < q i := by lia
-    rw [ofPowerSeries_apply hqi, Function.extend_apply', Pi.zero_apply, one_apply_ne (by lia)]
+  · rw [ofPowerSeries_apply (hq i), Function.extend_apply', Pi.zero_apply, one_apply_ne (by lia)]
     rintro ⟨k, hk⟩
     have h : k ≠ 0 := fun h ↦ by simp_all
     grind [Nat.le_pow h.pos (a := q i)]
