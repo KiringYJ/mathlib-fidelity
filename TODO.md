@@ -600,6 +600,41 @@ operation.
   the iterated construction explicitly. The formal infinity-scaled Lebesgue counterexample
   separates the constructions and disproves uniqueness from s-finiteness alone.
 
+- [ ] **Audit the domains of formal multilinear left and right inverses together.**
+  `FormalMultilinearSeries.leftInv` and `rightInv` in
+  `Mathlib/Analysis/Analytic/Inverse.lean:66` and `:169` accept an arbitrary series `p` and
+  continuous linear equivalence `i`; their inverse laws `leftInv_comp` and `comp_rightInv` at
+  lines 101 and 245 require `p 1 = (continuousMultilinearCurryFin1 𝕜 E F).symm i`.
+  A Lean-checked counterexample takes the real zero series,
+  `i = ContinuousLinearEquiv.refl ℝ ℝ`, and `x = 0`: the constructor accepts these inputs, but
+  `p.comp (p.rightInv i 0) ≠ FormalMultilinearSeries.id ℝ ℝ 0`. Evaluating degree one via
+  `comp_coeff_one` and `id_apply_one` gives zero on the left and one on the right.
+  Specify the intended inverse laws and distinguish one-sided splittings from a two-sided inverse
+  before choosing the exact domain; do not assume an invertible first-order term is necessary for
+  every one-sided inverse. Coordinate with the composition/basepoint audit below. Prototype
+  matching and mismatched first-order data, noninvertible one-sided splittings, degenerate spaces,
+  nonzero constants, and analytic inverse/convergence consumers before accepting a migration.
+  Existing linear right-inverse interfaces are positive controls:
+  `LinearMap.exists_rightInverse_of_surjective` requires full range and a projective target, while
+  `ContinuousLinearMap.HasRightInverse.rightInverse` consumes a proof that a continuous linear
+  right inverse exists; neither has an invalid-input fallback.
+
+- [ ] **Audit formal multilinear composition and the meaning of constant terms and basepoints.**
+  `FormalMultilinearSeries.comp` in `Mathlib/Analysis/Analytic/Composition.lean:237` accepts
+  arbitrary series but ignores the inner constant term; `comp_removeZero` at line 285 records
+  this behavior. The `id 𝕜 E x` family at line 343 retains a constant term, and `id_comp` at
+  line 406 matches the identity's constant with the input series. Distinguish substitution of
+  series at a common origin from composition of Taylor expansions at matching basepoints.
+  `HasFPowerSeriesWithinAt.comp` and `HasFPowerSeriesAt.comp` at lines 703 and 824 are positive
+  controls: the outer expansion is taken at `f x`, so nonzero inner constants can be legitimate.
+  Establish the exact specification before choosing a proof argument, centered-series interface,
+  or a distinct operation name; do not impose a zero-constant condition on every valid analytic
+  composition. Include polynomial outer series and convergent translations when auditing
+  substitution at nonzero constants. Review `leftInv`/`rightInv`, their identity and associativity
+  laws, coefficient/radius estimates, and real analytic consumers as one coordinated subsystem.
+  A source comment disclosing the ignored constant is evidence of the convention, not approval
+  of its public mathematical name; apply the fidelity gate before scheduling implementation.
+
 - [ ] **Make `NormedSpace.exp` require its algebra and convergence context.**
   `Mathlib/Analysis/Normed/Algebra/Exponential.lean:127` returns one if no `Algebra ℚ 𝔸`
   exists and otherwise delegates to a power-series sum without encoding summability in the
