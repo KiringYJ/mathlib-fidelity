@@ -28,6 +28,16 @@ preference does not override the design commitments in this document.
 
 ## Coequal Design Goals
 
+These goals do different jobs rather than forming a ranking. Mathematical
+fidelity fixes the semantics: which object, on which exact domain, under which
+hypotheses. Type-theoretic naturalness then fixes the API and interface that
+present those semantics: among faithful encodings, choose the one most natural
+in the type theory and in the existing library, judged by compiling real call
+sites with each candidate. Quality of life is always required: within those two
+decisions, make the interface as convenient as possible through instances,
+closure lemmas, automation, and diagnostics, without changing the semantics or
+the interface.
+
 ### Mathematical fidelity
 
 - A public operation bearing an ordinary mathematical name should expose the
@@ -247,11 +257,6 @@ the condition is local to one use, and an explicit partial-map object when its
 domain and composition are part of the mathematics. Choose the interface that
 keeps the semantic obligation visible without exporting incidental dependent
 plumbing.
-
-When several encodings are equally faithful, prefer the one most natural in the
-type theory and the existing library, then the one that imposes the least
-plumbing. Decide by compiling real call sites with each candidate rather than
-by preference.
 
 When reviewing a representation, ask first whether it creates a value,
 proposition, or canonical choice that the mathematics does not provide. If it
