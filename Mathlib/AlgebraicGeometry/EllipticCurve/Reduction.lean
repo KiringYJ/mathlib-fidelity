@@ -5,7 +5,7 @@ Authors: Bryan Wang
 -/
 module
 
-public import Mathlib.AlgebraicGeometry.EllipticCurve.VariableChange
+public import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Basic
 public import Mathlib.RingTheory.DiscreteValuationRing.Basic
 public import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 public import Mathlib.RingTheory.Valuation.Discrete.IsDiscreteValuationRing
@@ -41,10 +41,15 @@ fraction fields of discrete valuation rings.
 * `reduction_variableChange_baseChange`, `hasGoodReduction_iff_of_isMinimal`,
   `hasSplitMultiplicativeReduction_iff_of_isMinimal`: the reduction and its type do not depend on
   the choice of minimal Weierstrass equation.
+* `splits_nodePolynomial_iff_of_singular`,
+  `hasSplitMultiplicativeReduction_iff_exists_tangentSlopes`: the splitting criterion is equivalent
+  to two distinct rational tangent slopes at the node, in every characteristic.
 
 ## References
 
 * [J Silverman, *The Arithmetic of Elliptic Curves*][silverman2009]
+* J. T. Tate, [*The arithmetic of elliptic curves*](https://doi.org/10.1007/BF01389745), §§2, 6
+* [J.-P. Serre, *Facteurs locaux des fonctions zêta des variétés algébriques*, §2.4][serre1970]
 
 ## Tags
 
@@ -286,6 +291,122 @@ this polynomial are the slopes of the tangent lines there. -/
 noncomputable def nodePolynomial (W : WeierstrassCurve R) : R[X] :=
   C W.c₄ * X ^ 2 + C (W.a₁ * W.c₄) * X - C (54 * W.b₆ - 3 * W.b₂ * W.b₄ + W.a₂ * W.c₄)
 
+variable {W : WeierstrassCurve R} {x y : R}
+
+@[simp]
+lemma map_nodePolynomial {S : Type*} [CommRing S] (W : WeierstrassCurve R) (f : R →+* S) :
+    (W.map f).nodePolynomial = W.nodePolynomial.map f := by
+  simp [nodePolynomial, Polynomial.map_sub, Polynomial.map_add, Polynomial.map_mul,
+    Polynomial.map_pow, map_ofNat]
+
+private lemma singular_coefficients (h : W.toAffine.Equation x y)
+    (hs : ¬ W.toAffine.Nonsingular x y) :
+    (VariableChange.mk 1 x 0 y • W).a₃ = 0 ∧
+      (VariableChange.mk 1 x 0 y • W).a₄ = 0 ∧
+      (VariableChange.mk 1 x 0 y • W).a₆ = 0 := by
+  have hEq := (Affine.equation_iff' x y).mp h
+  have hpartials : W.a₁ * y - (3 * x ^ 2 + 2 * W.a₂ * x + W.a₄) = 0 ∧
+      2 * y + W.a₁ * x + W.a₃ = 0 := by
+    simpa only [Affine.nonsingular_iff', h, true_and, not_or, not_not] using hs
+  simp only [variableChange_a₃, variableChange_a₄, variableChange_a₆, Units.val_one,
+    inv_one, one_pow, one_mul, zero_mul, mul_zero, sub_zero]
+  refine ⟨?_, ?_, ?_⟩
+  · linear_combination hpartials.2
+  · linear_combination -hpartials.1
+  · linear_combination -hEq
+
+/-- The `x`-coordinate of a singular point is determined by the Weierstrass invariants when
+`c₄` is nonzero. This identity does not divide by `2` or `3`. -/
+lemma c₄_mul_x_of_singular (h : W.toAffine.Equation x y)
+    (hs : ¬ W.toAffine.Nonsingular x y) :
+    W.c₄ * x = 18 * W.b₆ - W.b₂ * W.b₄ := by
+  obtain ⟨h₃, h₄, h₆⟩ := singular_coefficients h hs
+  have hb₄ : W.b₄ + x * W.b₂ + 6 * x ^ 2 = 0 := by
+    have : (VariableChange.mk 1 x 0 y • W).b₄ = 0 := by simp [b₄, h₃, h₄]
+    simpa [variableChange_b₄] using this
+  have hb₆ : W.b₆ + 2 * x * W.b₄ + x ^ 2 * W.b₂ + 4 * x ^ 3 = 0 := by
+    have : (VariableChange.mk 1 x 0 y • W).b₆ = 0 := by simp [b₆, h₃, h₆]
+    simpa [variableChange_b₆] using this
+  rw [c₄]
+  linear_combination (W.b₂ + 12 * x) * hb₄ - 18 * hb₆
+
+/-- At a singular point, `c₄` is the square of the discriminant of the tangent quadratic.
+Consequently `c₄ ≠ 0` excludes a repeated tangent in every characteristic. -/
+lemma c₄_eq_square_of_singular (h : W.toAffine.Equation x y)
+    (hs : ¬ W.toAffine.Nonsingular x y) :
+    W.c₄ = (W.a₁ ^ 2 + 4 * (3 * x + W.a₂)) ^ 2 := by
+  obtain ⟨h₃, h₄, h₆⟩ := singular_coefficients h hs
+  have hc := variableChange_c₄ W (VariableChange.mk (1 : Rˣ) x 0 y)
+  simp only [Units.val_one, inv_one, one_pow, one_mul] at hc
+  rw [← hc, c₄, b₄, h₃, h₄, b₂, variableChange_a₁, variableChange_a₂]
+  simp only [Units.val_one, inv_one, one_pow, one_mul, mul_zero, zero_mul,
+    add_zero, sub_zero]
+  ring
+
+/-- At a singular point, `nodePolynomial` is `c₄` times the polynomial of tangent slopes. -/
+lemma nodePolynomial_eq_of_singular (h : W.toAffine.Equation x y)
+    (hs : ¬ W.toAffine.Nonsingular x y) :
+    W.nodePolynomial = C W.c₄ * (X ^ 2 + C W.a₁ * X - C (3 * x + W.a₂)) := by
+  have hx := c₄_mul_x_of_singular h hs
+  have hc : 54 * W.b₆ - 3 * W.b₂ * W.b₄ + W.a₂ * W.c₄ =
+      W.c₄ * (3 * x + W.a₂) := by linear_combination -3 * hx
+  rw [nodePolynomial, hc]
+  simp only [map_mul]
+  ring
+
+/-- The exact translated equation at a singular point. Its quadratic part is the tangent cone,
+and its only higher-degree term is `-u ^ 3`. In particular, the vertical line is not tangent. -/
+lemma evalEval_polynomial_add_of_singular (h : W.toAffine.Equation x y)
+    (hs : ¬ W.toAffine.Nonsingular x y) (u v : R) :
+    W.toAffine.polynomial.evalEval (x + u) (y + v) =
+      v ^ 2 + W.a₁ * u * v - (3 * x + W.a₂) * u ^ 2 - u ^ 3 := by
+  have hEq := (Affine.equation_iff' x y).mp h
+  have hpartials : W.a₁ * y - (3 * x ^ 2 + 2 * W.a₂ * x + W.a₄) = 0 ∧
+      2 * y + W.a₁ * x + W.a₃ = 0 := by
+    simpa only [Affine.nonsingular_iff', h, true_and, not_or, not_not] using hs
+  rw [Affine.evalEval_polynomial]
+  linear_combination hEq + u * hpartials.1 + v * hpartials.2
+
+section Field
+
+variable {k : Type*} [Field k] {W : WeierstrassCurve k} {x y : k}
+
+/-- At a singular point with `c₄ ≠ 0`, splitting of `nodePolynomial` is equivalent to having
+two distinct tangent slopes in the ground field. This holds also in characteristics `2` and `3`. -/
+lemma splits_nodePolynomial_iff_of_singular (h : W.toAffine.Equation x y)
+    (hs : ¬ W.toAffine.Nonsingular x y) (hc : W.c₄ ≠ 0) :
+    W.nodePolynomial.Splits ↔ ∃ m₁ m₂ : k, m₁ ≠ m₂ ∧
+      m₁ ^ 2 + W.a₁ * m₁ = 3 * x + W.a₂ ∧
+      m₂ ^ 2 + W.a₁ * m₂ = 3 * x + W.a₂ := by
+  let p : k[X] := X ^ 2 + C W.a₁ * X - C (3 * x + W.a₂)
+  have hp : p.degree = 2 := by
+    have heq : p = Cubic.toPoly ⟨0, 1, W.a₁, -(3 * x + W.a₂)⟩ := by
+      simp [p, Cubic.toPoly, sub_eq_add_neg]
+    rw [heq]
+    exact Cubic.degree_of_b_ne_zero' one_ne_zero
+  rw [nodePolynomial_eq_of_singular h hs,
+    splits_mul_iff_right (C_ne_zero.mpr hc) (Splits.C _)]
+  change p.Splits ↔ _
+  constructor
+  · intro hpSplit
+    obtain ⟨m, hm⟩ := hpSplit.exists_eval_eq_zero (hp ▸ by norm_num)
+    have hm' : m ^ 2 + W.a₁ * m = 3 * x + W.a₂ := by
+      simpa [p, sub_eq_zero] using hm
+    refine ⟨m, -W.a₁ - m, ?_, hm', ?_⟩
+    · intro heq
+      apply hc
+      rw [c₄_eq_square_of_singular h hs]
+      have hm₁ : 2 * m + W.a₁ = 0 := by linear_combination heq
+      have hm₂ : W.a₁ ^ 2 + 4 * (3 * x + W.a₂) = (2 * m + W.a₁) ^ 2 := by
+        linear_combination -4 * hm'
+      rw [hm₂, hm₁]
+      simp
+    · linear_combination hm'
+  · rintro ⟨m₁, m₂, hne, hm₁, hm₂⟩
+    exact Splits.of_degree_eq_two hp (by simpa [p, sub_eq_zero] using hm₁)
+
+end Field
+
 variable (D : VariableChange R) (W : WeierstrassCurve R)
 
 /-- Under a change of variables `(u, r, s, t)`, the polynomial `nodePolynomial` transforms by the
@@ -506,23 +627,43 @@ lemma hasGoodReduction_iff_isElliptic_reduction {W : WeierstrassCurve K} [hW : I
   hasGoodReduction_iff_isElliptic_reduction
 
 /-- A minimal Weierstrass equation has multiplicative reduction if and only if
-the valuation of its discriminant is less than 1 and the valuation of `a₄` equals 1. -/
+the valuation of its discriminant is less than 1 and the valuation of `c₄` equals 1. -/
 @[mk_iff]
 class HasMultiplicativeReduction (W : WeierstrassCurve K) : Prop extends IsMinimal R W where
   badReduction : valuation K (maximalIdeal R) W.Δ < 1
   multiplicativeReduction : valuation K (maximalIdeal R) W.c₄ = 1
 
 /-- A minimal Weierstrass equation has additive reduction if and only if
-the valuation of its discriminant is less than 1 and the valuation of `a₄` is less than 1. -/
+the valuation of its discriminant is less than 1 and the valuation of `c₄` is less than 1. -/
 @[mk_iff]
 class HasAdditiveReduction (W : WeierstrassCurve K) : Prop extends IsMinimal R W where
   badReduction : valuation K (maximalIdeal R) W.Δ < 1
   additiveReduction : valuation K (maximalIdeal R) W.c₄ < 1
 
 -- TODO: add characterization in terms of the discriminant when the characteristic is not 2
-/-- A minimal Weierstrass equation has split multiplicative reduction if and only if
-the polynomial `nodePolynomial`, that is `c₄ T ^ 2 + a₁ c₄ T - (54 b₆ - 3 b₂ b₄ + a₂ c₄)`, of its
-integral model splits in the residue field. -/
+/-- A minimal Weierstrass equation has split multiplicative reduction if and only if it has
+multiplicative reduction and the `nodePolynomial` of its integral model splits in the residue field.
+
+For an elliptic curve over a local field, here is the comparison with the split torus in
+[serre1970], §2.4(b). Write `k` for the residue field. Multiplicative reduction gives `Δ = 0` and
+`c₄ ≠ 0` on the reduced curve. It has a unique singular point `(x₀, y₀)`, a node rational over `k`,
+in every characteristic
+(Tate, *The arithmetic of elliptic curves*, §2, p. 182). Its tangent cone is
+`v² + a₁uv - (3x₀ + a₂)u²`, and `nodePolynomial` is `c₄` times its slope polynomial
+`T² + a₁T - (3x₀ + a₂)`. The lemmas below prove this algebraic criterion, including that the two
+tangent slopes are distinct when `c₄ ≠ 0`.
+
+Over the field containing the tangent slopes `m₁`, `m₂`, the ratio
+`(y - y₀ - m₁(x - x₀)) / (y - y₀ - m₂(x - x₀))`, extended to the value `1` at infinity,
+identifies the smooth locus with `𝔾ₘ` as an algebraic group (Tate, loc. cit., (9)). If both slopes
+lie in `k`, this isomorphism is defined over `k`. Otherwise they are conjugate over a separable
+quadratic extension, and interchanging them inverts the ratio: the resulting torus is nonsplit.
+The smooth locus is the identity component of the Néron special fibre (Tate, §6, p. 191), so this
+is exactly Serre's split/nonsplit distinction, also in characteristics `2` and `3`.
+
+The existence of the rational node and the algebraic-group/Néron-model identifications in this
+comparison are source-backed geometric facts, not yet formalized here. The formal lemmas below
+establish the tangent criterion at a given singular point; they do not construct a Néron model. -/
 @[mk_iff]
 class HasSplitMultiplicativeReduction (W : WeierstrassCurve K) : Prop
     extends W.HasMultiplicativeReduction R where
@@ -530,6 +671,50 @@ class HasSplitMultiplicativeReduction (W : WeierstrassCurve K) : Prop
     ((W.integralModel R).nodePolynomial.map (algebraMap R (ResidueField R))).Splits
 
 variable {W : WeierstrassCurve K}
+
+/-- Multiplicative reduction means that the reduced discriminant vanishes while the reduced
+`c₄` does not. These are the nodal, rather than cuspidal, singularity conditions. -/
+lemma hasMultiplicativeReduction_iff_reduction [IsMinimal R W] :
+    W.HasMultiplicativeReduction R ↔ (W.reduction R).Δ = 0 ∧ (W.reduction R).c₄ ≠ 0 := by
+  rw [hasMultiplicativeReduction_iff, and_iff_right (inferInstance : IsMinimal R W)]
+  simp only [reduction, map_Δ, map_c₄, ne_eq, residue_eq_zero_iff]
+  have hΔ : valuation K (maximalIdeal R) (algebraMap R K (integralModel R W).Δ) < 1 ↔
+      (integralModel R W).Δ ∈ IsLocalRing.maximalIdeal R := valuation_lt_one_iff_mem _ _
+  have hc₄ : valuation K (maximalIdeal R) (algebraMap R K (integralModel R W).c₄) < 1 ↔
+      (integralModel R W).c₄ ∈ IsLocalRing.maximalIdeal R := valuation_lt_one_iff_mem _ _
+  rw [← hΔ, ← hc₄, integralModel_Δ_eq R W, integralModel_c₄_eq R W]
+  refine and_congr_right fun _ ↦ ?_
+  rw [not_lt]
+  have hle : valuation K (maximalIdeal R) W.c₄ ≤ 1 := by
+    rw [← integralModel_c₄_eq R W]
+    exact valuation_le_one _ _
+  exact ⟨fun h ↦ h.ge, fun h ↦ le_antisymm hle h⟩
+
+/-- For a multiplicative minimal equation, the splitting criterion can be read directly from
+the reduced curve, without referring to a lift of its coefficients. -/
+lemma hasSplitMultiplicativeReduction_iff_reduction [W.HasMultiplicativeReduction R] :
+    W.HasSplitMultiplicativeReduction R ↔ (W.reduction R).nodePolynomial.Splits := by
+  constructor
+  · intro h
+    simpa only [reduction, map_nodePolynomial, ResidueField.algebraMap_eq] using
+      h.splitMultiplicativeReduction
+  · intro h
+    exact ⟨by simpa only [reduction, map_nodePolynomial, ResidueField.algebraMap_eq] using h⟩
+
+/-- Given the singular point of a multiplicative reduction, split multiplicative reduction is
+equivalent to two distinct tangent slopes in the residue field. The existence of this rational
+node and the identification of the smooth locus with the Néron identity component are explained
+in the docstring of `HasSplitMultiplicativeReduction`; those geometric assertions are not proved
+by this lemma. -/
+lemma hasSplitMultiplicativeReduction_iff_exists_tangentSlopes [W.HasMultiplicativeReduction R]
+    {x y : ResidueField R} (h : (W.reduction R).toAffine.Equation x y)
+    (hs : ¬ (W.reduction R).toAffine.Nonsingular x y) :
+    W.HasSplitMultiplicativeReduction R ↔ ∃ m₁ m₂ : ResidueField R, m₁ ≠ m₂ ∧
+      m₁ ^ 2 + (W.reduction R).a₁ * m₁ = 3 * x + (W.reduction R).a₂ ∧
+      m₂ ^ 2 + (W.reduction R).a₁ * m₂ = 3 * x + (W.reduction R).a₂ := by
+  rw [hasSplitMultiplicativeReduction_iff_reduction R]
+  exact splits_nodePolynomial_iff_of_singular h hs
+    ((hasMultiplicativeReduction_iff_reduction R).mp inferInstance).2
 
 theorem hasGoodReduction_or_hasMultiplicativeReduction_or_hasAdditiveReduction [IsMinimal R W] :
     W.HasGoodReduction R ∨ W.HasMultiplicativeReduction R ∨ W.HasAdditiveReduction R := by
