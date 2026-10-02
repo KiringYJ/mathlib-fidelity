@@ -15,7 +15,9 @@ on every initial ray `Iic x`. On `ℝ` these are exactly the measures generated 
 monotone function with a finite limit at `-∞`; the function `x ↦ μ.real (Iic x)` is then the
 unique such function with limit `0` at `-∞` that generates `μ` (see `ProbabilityTheory.cdf`).
 Finite measures, such as probability measures, are finite on initial rays; so are infinite
-measures such as the restriction of Lebesgue measure to `[0, ∞)`.
+measures such as the restriction of Lebesgue measure to `[0, ∞)`. On a linear order in which
+every ray `Ici y` is closed, a measure that is finite on initial rays is locally finite, hence
+σ-finite when the topology is second countable.
 -/
 
 public section
@@ -58,5 +60,27 @@ instance isFiniteMeasureOnIic_add (μ ν : Measure α) [IsFiniteMeasureOnIic μ]
 instance isFiniteMeasureOnIic_smul_nnreal (μ : Measure α) [IsFiniteMeasureOnIic μ] (c : ℝ≥0) :
     IsFiniteMeasureOnIic (c • μ) :=
   ⟨fun x ↦ ENNReal.mul_lt_top ENNReal.coe_lt_top (measure_Iic_lt_top μ x)⟩
+
+section LinearOrder
+
+variable {β : Type*} {mβ : SigmaAlgebra β} [TopologicalSpace β] [LinearOrder β]
+  [ClosedIciTopology β]
+
+/-- A measure that is finite on initial rays, on a linear order in which every ray `Ici y` is
+closed, is locally finite: a point lies in an open ray `Iio y` of finite measure, unless it is the
+greatest element, whose ray `Iic x` is the whole space. -/
+-- see Note [lower instance priority]
+instance (priority := 100) IsFiniteMeasureOnIic.toIsLocallyFiniteMeasure (μ : Measure β)
+    [IsFiniteMeasureOnIic μ] : IsLocallyFiniteMeasure μ :=
+  ⟨fun x ↦ by
+    by_cases hx : ∃ y, x < y
+    · obtain ⟨y, hxy⟩ := hx
+      exact ⟨Iio y, Iio_mem_nhds hxy,
+        (measure_mono Iio_subset_Iic_self).trans_lt (measure_Iic_lt_top μ y)⟩
+    · simp only [not_exists, not_lt] at hx
+      have h : Iic x = univ := eq_univ_of_forall hx
+      exact ⟨univ, Filter.univ_mem, h ▸ measure_Iic_lt_top μ x⟩⟩
+
+end LinearOrder
 
 end MeasureTheory

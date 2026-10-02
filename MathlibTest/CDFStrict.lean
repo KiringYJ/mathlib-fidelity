@@ -134,11 +134,12 @@ example (μ : Measure ℝ) [IsFiniteMeasure μ] : IsProbabilityMeasure (cdf μ).
 
 /-! ### Infinite measures that are finite on rays -/
 
--- Lebesgue measure on `[0, ∞)` is infinite, but every ray `Iic x` has finite measure.
-instance : IsFiniteMeasureOnIic ((volume : Measure ℝ).restrict (Ici 0)) :=
-  ⟨fun x ↦ by
-    rw [Measure.restrict_apply measurableSet_Iic, Iic_inter_Ici]
-    exact measure_Icc_lt_top⟩
+-- Lebesgue measure on a right half-line is infinite, but every ray `Iic x` has finite measure.
+example (a : ℝ) : IsFiniteMeasureOnIic ((volume : Measure ℝ).restrict (Ici a)) :=
+  inferInstance
+
+example (a : ℝ) : IsFiniteMeasureOnIic ((volume : Measure ℝ).restrict (Ioi a)) :=
+  inferInstance
 
 example (x : ℝ) : cdf ((volume : Measure ℝ).restrict (Ici 0)) x = max x 0 := by
   rw [cdf_eq_real, measureReal_restrict_apply measurableSet_Iic, Iic_inter_Ici,
@@ -163,6 +164,52 @@ example (μ ν : Measure ℝ) [IsFiniteMeasureOnIic μ] [IsFiniteMeasureOnIic ν
 example (μ : Measure ℝ) [IsFiniteMeasureOnIic μ] (c : ℝ≥0) (x : ℝ) :
     cdf (c • μ) x = c * cdf μ x := by
   simp [cdf_eq_real]
+
+-- A measure on `ℝ` that is finite on rays is locally finite, hence s-finite and sigma-finite.
+example (μ : Measure ℝ) [IsFiniteMeasureOnIic μ] : IsLocallyFiniteMeasure μ :=
+  inferInstance
+
+example (μ : Measure ℝ) [IsFiniteMeasureOnIic μ] : SigmaFinite μ :=
+  inferInstance
+
+example (μ : Measure ℝ) [IsFiniteMeasureOnIic μ] : SFinite μ :=
+  inferInstance
+
+-- The bridge also applies on an order with a greatest element.
+example (μ : Measure unitInterval) [IsFiniteMeasureOnIic μ] : IsLocallyFiniteMeasure μ :=
+  inferInstance
+
+-- Searches through the bridge fail cleanly when the evidence is missing.
+/--
+error: failed to synthesize instance of type class
+  IsLocallyFiniteMeasure count
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example : IsLocallyFiniteMeasure (count : Measure ℝ) :=
+  inferInstance
+
+/--
+error: failed to synthesize instance of type class
+  IsLocallyFiniteMeasure μ
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example (μ : Measure unitInterval) : IsLocallyFiniteMeasure μ :=
+  inferInstance
+
+-- Counting measure is not finite on compact sets, so its half-line restriction is excluded.
+/--
+error: failed to synthesize instance of type class
+  IsFiniteMeasureOnIic (count.restrict (Ici 0))
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example : IsFiniteMeasureOnIic ((count : Measure ℝ).restrict (Ici 0)) :=
+  inferInstance
 
 -- Automation finds the finiteness of rays.
 example (μ : Measure ℝ) [IsFiniteMeasureOnIic μ] (x : ℝ) : μ (Iic x) ≠ ∞ := by
