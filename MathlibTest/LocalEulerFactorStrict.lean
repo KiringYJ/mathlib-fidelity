@@ -4,9 +4,9 @@ import Mathlib.AlgebraicGeometry.EllipticCurve.LFunction
 # Strict local Euler factors
 
 These tests ensure that `ArithmeticFunction.ofPowerSeries` takes a base `q` with `1 < q`, that the
-local factors of a Weierstrass curve require a finite residue field, and that this evidence is
-supplied automatically at the finite places of a number field, where the residue field size is
-the absolute norm.
+local factors of a Weierstrass curve require an elliptic curve and a finite residue field, and that
+this evidence is supplied automatically at the finite places of a number field, where the residue
+field size is the absolute norm.
 -/
 
 open ArithmeticFunction IsDedekindDomain IsLocalRing NumberField PowerSeries
@@ -132,7 +132,7 @@ example (R : Type*) [CommRing R] [IsDomain R] [IsDiscreteValuationRing R] {L : T
     Finite ((E.minimal R).reduction R).toAffine.Point :=
   inferInstance
 
-/-! ### Local factors of Weierstrass curves need a finite residue field -/
+/-! ### Local factors need an elliptic curve and a finite residue field -/
 
 section LocalFactor
 
@@ -146,17 +146,73 @@ error: failed to synthesize instance of type class
 Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 -/
 #guard_msgs in
-example : ArithmeticFunction ℤ := W.localEulerFactor R
+example [W.IsElliptic] : ArithmeticFunction ℤ := W.localEulerFactor R
 
-example [Finite (ResidueField R)] : W.localEulerFactor R 1 = 1 := by
+/--
+error: failed to synthesize instance of type class
+  W.IsElliptic
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example [Finite (ResidueField R)] : ArithmeticFunction ℤ := W.localEulerFactor R
+
+example [W.IsElliptic] [Finite (ResidueField R)] : W.localEulerFactor R 1 = 1 := by
   simp [WeierstrassCurve.localEulerFactor, WeierstrassCurve.localPowerSeries,
     PowerSeries.constantCoeff_invOfUnit]
 
+-- The nodal cubic `y² + xy = x³` is singular, and its minimal models over `R` have different
+-- reduction types, so it has no local polynomial.
+example : ¬ (⟨1, 0, 0, 0, 0⟩ : WeierstrassCurve K).IsElliptic := by
+  rw [WeierstrassCurve.isElliptic_iff]
+  simp [WeierstrassCurve.Δ, WeierstrassCurve.b₂, WeierstrassCurve.b₄, WeierstrassCurve.b₆,
+    WeierstrassCurve.b₈]
+
+/--
+error: failed to synthesize instance of type class
+  { a₁ := 1, a₂ := 0, a₃ := 0, a₄ := 0, a₆ := 0 }.IsElliptic
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example [Finite (ResidueField R)] : Polynomial ℤ :=
+  (⟨1, 0, 0, 0, 0⟩ : WeierstrassCurve K).localPolynomial R
+
 -- At the finite places of a number field the evidence is found automatically.
-example (K : Type*) [Field K] [NumberField K] (W : WeierstrassCurve K)
+example (K : Type*) [Field K] [NumberField K] (W : WeierstrassCurve K) [W.IsElliptic]
     (p : HeightOneSpectrum (𝓞 K)) : ArithmeticFunction ℤ :=
   (W.baseChange (p.adicCompletion K)).localEulerFactor (p.adicCompletionIntegers K)
 
 end LocalFactor
+
+/-! ### The global L-function and L-series need an elliptic curve -/
+
+section Global
+
+variable (K : Type*) [Field K] [NumberField K] (W : WeierstrassCurve K)
+
+/--
+error: failed to synthesize instance of type class
+  W.IsElliptic
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example : ArithmeticFunction ℤ := W.LFunction
+
+/--
+error: failed to synthesize instance of type class
+  W.IsElliptic
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example (s : ℂ) : ℂ := W.LSeries s
+
+example [W.IsElliptic] : ArithmeticFunction ℤ := W.LFunction
+
+example [W.IsElliptic] (s : ℂ) : ℂ := W.LSeries s
+
+end Global
 
 end
