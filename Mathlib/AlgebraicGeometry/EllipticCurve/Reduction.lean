@@ -336,7 +336,7 @@ open IsDiscreteValuationRing IsDedekindDomain.HeightOneSpectrum
 open scoped Classical in
 /-- The valuation of the discriminant of a Weierstrass curve `W`,
 which is at most 1 if `W` is integral. Zero otherwise. -/
-noncomputable def valuation_Δ_aux (W : WeierstrassCurve K) :
+noncomputable def discriminantValuationAux (W : WeierstrassCurve K) :
     { v : ℤᵐ⁰ // v ≤ 1 } :=
   if h : IsIntegral R W then
     ⟨valuation K (maximalIdeal R) W.Δ, by
@@ -345,9 +345,9 @@ noncomputable def valuation_Δ_aux (W : WeierstrassCurve K) :
       exact valuation_le_one (maximalIdeal R) r⟩
   else ⟨⊥, bot_le⟩
 
-lemma valuation_Δ_aux_eq_of_isIntegral (W : WeierstrassCurve K) [hW : IsIntegral R W] :
-    valuation_Δ_aux R W = valuation K (maximalIdeal R) W.Δ := by
-  simp [valuation_Δ_aux, hW]
+lemma discriminantValuationAux_eq_of_isIntegral (W : WeierstrassCurve K) [hW : IsIntegral R W] :
+    discriminantValuationAux R W = valuation K (maximalIdeal R) W.Δ := by
+  simp [discriminantValuationAux, hW]
 
 /-- A Weierstrass equation over the fraction field `K` is minimal if the (multiplicative) valuation
 of its discriminant is maximal among all isomorphic integral Weierstrass equations.
@@ -357,7 +357,7 @@ class IsMinimal (W : WeierstrassCurve K) : Prop where
   val_Δ_maximal :
     MaximalFor
       (fun (C : VariableChange K) ↦ IsIntegral R (C • W))
-      (fun (C : VariableChange K) ↦ valuation_Δ_aux R (C • W))
+      (fun (C : VariableChange K) ↦ discriminantValuationAux R (C • W))
       (1 : VariableChange K)
 
 omit [IsFractionRing R K] in
@@ -368,7 +368,7 @@ theorem exists_isMinimal (W : WeierstrassCurve K) :
     ∃ C : VariableChange K, IsMinimal R (C • W) := by
   obtain ⟨C, hC⟩ := exists_maximalFor_of_wellFoundedGT
     (fun (C : VariableChange K) ↦ IsIntegral R (C • W))
-    (fun (C : VariableChange K) ↦ valuation_Δ_aux R (C • W))
+    (fun (C : VariableChange K) ↦ discriminantValuationAux R (C • W))
     (exists_isIntegral R W)
   refine ⟨C, ⟨⟨by simp only [one_smul, hC.1], ?_⟩⟩⟩
   intro j hj; rw [← smul_assoc] at hj
@@ -389,11 +389,12 @@ instance (W : WeierstrassCurve K) [W.IsElliptic] : (W.minimal R).IsElliptic :=
 
 /-- A change of variables with coefficients in `R` does not change the valuation of the
 discriminant. -/
-lemma valuation_Δ_aux_variableChange_baseChange (W : WeierstrassCurve K) [IsIntegral R W]
+lemma discriminantValuationAux_variableChange_baseChange (W : WeierstrassCurve K) [IsIntegral R W]
     (CR : VariableChange R) :
-    valuation_Δ_aux R (CR.baseChange K • W) = valuation_Δ_aux R W := by
+    discriminantValuationAux R (CR.baseChange K • W) = discriminantValuationAux R W := by
   apply Subtype.ext
-  rw [valuation_Δ_aux_eq_of_isIntegral, valuation_Δ_aux_eq_of_isIntegral, variableChange_Δ,
+  rw [discriminantValuationAux_eq_of_isIntegral, discriminantValuationAux_eq_of_isIntegral,
+    variableChange_Δ,
     map_mul, map_pow, Units.val_inv_eq_inv_val, map_inv₀]
   have : valuation K (maximalIdeal R) (algebraMap R K CR.u) = 1 :=
     ((maximalIdeal R).valuation_eq_one_iff_notMem (K := K)).mpr
@@ -407,7 +408,7 @@ instance isMinimal_variableChange_baseChange (W : WeierstrassCurve K) [IsMinimal
     refine ⟨by simp only [one_smul]; infer_instance, fun j hj hle ↦ ?_⟩
     have hj' : IsIntegral R ((j * CR.baseChange K) • W) := by rwa [mul_smul]
     have key := (IsMinimal.val_Δ_maximal (R := R) (W := W)).2 hj'
-    simp only [one_smul, mul_smul, valuation_Δ_aux_variableChange_baseChange] at hle key ⊢
+    simp only [one_smul, mul_smul, discriminantValuationAux_variableChange_baseChange] at hle key ⊢
     exact key hle
 
 section VariableChange
@@ -430,10 +431,10 @@ lemma valuation_Δ_eq_of_isMinimal :
   simp only [one_smul, hC] at h₁
   simp only [one_smul] at h₂
   rw [← hC, inv_smul_smul, hC] at h₂
-  have key : valuation_Δ_aux R W' = valuation_Δ_aux R W :=
+  have key : discriminantValuationAux R W' = discriminantValuationAux R W :=
     (le_total _ _).elim (fun h ↦ le_antisymm h (h₂ h)) fun h ↦ le_antisymm (h₁ h) h
   have := congrArg Subtype.val key
-  rwa [valuation_Δ_aux_eq_of_isIntegral, valuation_Δ_aux_eq_of_isIntegral] at this
+  rwa [discriminantValuationAux_eq_of_isIntegral, discriminantValuationAux_eq_of_isIntegral] at this
 
 /-- The `u` coefficient of a change of variables between two minimal Weierstrass equations of an
 elliptic curve has valuation one. -/
