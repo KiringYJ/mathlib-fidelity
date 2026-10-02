@@ -11,6 +11,7 @@ public import Mathlib.NumberTheory.RamificationInertia.Valuation
 public import Mathlib.RingTheory.DedekindDomain.Factorization
 public import Mathlib.RingTheory.RamificationInertia.Inertia
 public import Mathlib.RingTheory.Valuation.Archimedean
+public import Mathlib.RingTheory.Valuation.Discrete.IsDiscreteValuationRing
 public import Mathlib.Topology.Algebra.Valued.NormedValued
 
 import Mathlib.Algebra.FiniteSupport.Basic
@@ -177,6 +178,25 @@ theorem natCard_residueField_eq_absNorm [Infinite A] :
   rw [natCard_residueField, absNorm_apply, Submodule.cardQuot_apply]
 
 end IsDedekindDomain.HeightOneSpectrum.adicCompletionIntegers
+
+namespace IsDiscreteValuationRing
+
+variable (R : Type*) [CommRing R] [IsDomain R] [IsDiscreteValuationRing R]
+  {K : Type*} [Field K] [Algebra R K] [IsFractionRing R K]
+
+/-- The canonical residue-field isomorphism of a discrete valuation ring with its completion. -/
+noncomputable def residueFieldEquivAdicCompletion :
+    IsLocalRing.ResidueField R ≃ₐ[R]
+      IsLocalRing.ResidueField ((maximalIdeal R).adicCompletionIntegers K) :=
+  IsDedekindDomain.HeightOneSpectrum.adicCompletionIntegers.quotientAlgEquivResidueField K
+    (maximalIdeal R)
+
+/-- Completing a discrete valuation ring preserves finiteness of its residue field. -/
+instance finite_residueField_adicCompletion [Finite (IsLocalRing.ResidueField R)] :
+    Finite (IsLocalRing.ResidueField ((maximalIdeal R).adicCompletionIntegers K)) :=
+  Finite.of_equiv _ (residueFieldEquivAdicCompletion R (K := K)).toEquiv
+
+end IsDiscreteValuationRing
 
 namespace NumberField
 
