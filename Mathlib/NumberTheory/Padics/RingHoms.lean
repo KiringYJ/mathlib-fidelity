@@ -350,6 +350,13 @@ def residueField : IsLocalRing.ResidueField ℤ_[p] ≃+* ZMod p :=
   (Ideal.quotEquivOfEq PadicInt.ker_toZMod.symm).trans <|
     RingHom.quotientKerEquivOfSurjective (ZMod.ringHom_surjective PadicInt.toZMod)
 
+instance : Finite (IsLocalRing.ResidueField ℤ_[p]) :=
+  .of_equiv _ residueField.symm.toEquiv
+
+/-- The residue field of the `p`-adic integers has `p` elements. -/
+theorem natCard_residueField : Nat.card (IsLocalRing.ResidueField ℤ_[p]) = p := by
+  rw [Nat.card_congr residueField.toEquiv, Nat.card_zmod]
+
 open scoped Classical in
 /-- `appr n x` gives a value `v : ℕ` such that `x` and `↑v : ℤ_p` are congruent mod `p^n`.
 See `appr_spec`. -/

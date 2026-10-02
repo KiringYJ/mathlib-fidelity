@@ -357,6 +357,13 @@ def residueFieldOfPowerSeries : ResidueField k⟦X⟧ ≃+* k :=
   Ideal.quotEquivOfEq (ker_coeff_eq_max_ideal).symm |>.trans
     (RingHom.quotientKerEquivOfSurjective constantCoeff_surj)
 
+instance [Finite k] : Finite (ResidueField k⟦X⟧) :=
+  .of_equiv _ residueFieldOfPowerSeries.symm.toEquiv
+
+/-- The residue field of the ring of power series over a field `k` has as many elements as `k`. -/
+theorem natCard_residueField : Nat.card (ResidueField k⟦X⟧) = Nat.card k :=
+  Nat.card_congr residueFieldOfPowerSeries.toEquiv
+
 end IsDiscreteValuationRing
 
 
