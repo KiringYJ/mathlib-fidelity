@@ -437,12 +437,23 @@ operation.
   and the local polynomial, Euler factor, L-function, and L-series are invariant under changes of
   variables.
 
-- [ ] **Compare elliptic local factors over `R` and its completion, and audit the split criterion.**
-  `WeierstrassCurve.localPolynomial` admits an incomplete discrete valuation ring `R`, while Serre
-  defines the local factor through the completion (§1.2).  Prove that the factor over `R` agrees
-  with the factor over its completion, which justifies admitting an incomplete `R`.  Also check
-  that the criterion of `HasSplitMultiplicativeReduction`, the splitting of `nodePolynomial` over
-  the residue field, matches Serre's split torus (§2.4, case b).
+- [x] **Compare elliptic local factors over `R` and its completion, and audit the split criterion.**
+  `localPolynomial_baseChange_adicCompletion`, `localPowerSeries_baseChange_adicCompletion`, and
+  `localEulerFactor_baseChange_adicCompletion` prove equality over an arbitrary discrete valuation
+  ring with finite residue field and its actual adic completion.  Minimality survives completion
+  by density: a change of variables yielding an integral equation can be approximated over the
+  original fraction field with the same discriminant valuation.  The canonical residue-field
+  isomorphism preserves the reduction type and point count.
+  `hasSplitMultiplicativeReduction_iff_exists_tangentSlopes` proves that, at a singular point of a
+  multiplicative reduction, splitting of `nodePolynomial` is equivalent to two distinct rational
+  tangent slopes, including in characteristics 2 and 3.  Tate, *The arithmetic of elliptic curves*
+  (1974), §2, p. 182, (9), identifies the smooth locus with the torus using the ratio of the tangent
+  lines; §6, p. 191, identifies it with the connected component of the special fibre.  This agrees
+  with Serre's split torus and the factors `1 - T` and `1 + T` (§2.4(b), (17)).  The rational node's
+  existence and the algebraic-group/Néron-model identifications are source-audited geometric facts;
+  the formalization proves the tangent criterion at a given singular point, not those geometric
+  constructions.  Regression tests cover split and nonsplit nodes over both `ZMod 2` and `ZMod 3`,
+  a translated node, and the failure of the criterion when `c₄ = 0`.
 
 - [ ] **Make analytic and meromorphic orders domain-bearing.**
   `analyticOrderAt`/`analyticOrderNatAt` in `Mathlib/Analysis/Analytic/Order.lean:47` and `:61`, and

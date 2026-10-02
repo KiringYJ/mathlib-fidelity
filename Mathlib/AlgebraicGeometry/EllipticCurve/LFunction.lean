@@ -6,10 +6,9 @@ Authors: Thomas Browning
 module
 
 public import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Point
-public import Mathlib.AlgebraicGeometry.EllipticCurve.Reduction
+public import Mathlib.AlgebraicGeometry.EllipticCurve.Completion
 public import Mathlib.NumberTheory.ArithmeticFunction.LFunction
 public import Mathlib.NumberTheory.LSeries.Basic
-public import Mathlib.NumberTheory.NumberField.Completion.FinitePlace
 public import Mathlib.RingTheory.PowerSeries.Inverse
 
 /-!
@@ -27,6 +26,8 @@ In this file, we define the L-function of an elliptic curve given by a Weierstra
   minimal Weierstrass equation.
 * `WeierstrassCurve.variableChange_localPolynomial`, `WeierstrassCurve.variableChange_LFunction`:
   the local polynomial and the L-function are invariant under a change of variables.
+* `WeierstrassCurve.localPolynomial_baseChange_adicCompletion`: completing the discrete valuation
+  ring does not change the local polynomial.
 
 ## Implementation notes
 
@@ -34,7 +35,9 @@ The local factors are defined for an elliptic curve at a discrete valuation ring
 residue field. The local polynomial is `det(1 - πT)` on the inertia invariants, where the
 geometric Frobenius `π` is the inverse of the canonical Frobenius generator, which is defined when
 the residue field is finite ([serre1970], §2.2, (13)). The Euler factor substitutes `q⁻ˢ`, where
-`q` is the size of the residue field ([serre1970], §1.2). The ring `R` need not be complete.
+`q` is the size of the residue field ([serre1970], §1.2). The ring `R` need not be complete:
+`localPolynomial_baseChange_adicCompletion` proves agreement with the polynomial over its
+completion.
 
 The local polynomial applies its formula to a chosen minimal model. For a singular curve this
 choice is not determined by the curve: the nodal cubic `y² + xy = x³` and its rescaling by a
@@ -173,6 +176,59 @@ theorem localPolynomial_of_hasAdditiveReduction [h : W.HasAdditiveReduction R] :
     ite_eq_right h.not_hasMultiplicativeReduction]
 
 end LocalField
+
+section Completion
+
+open IsDedekindDomain.HeightOneSpectrum IsDiscreteValuationRing
+
+variable (R : Type*) [CommRing R] [IsDomain R] [IsDiscreteValuationRing R]
+  {K : Type*} [Field K] [Algebra R K] [IsFractionRing R K]
+  (W : WeierstrassCurve K) [W.IsElliptic] [Finite (IsLocalRing.ResidueField R)]
+
+local notation "K̂" => adicCompletion K (IsDiscreteValuationRing.maximalIdeal R)
+local notation "R̂" => adicCompletionIntegers K (IsDiscreteValuationRing.maximalIdeal R)
+
+private lemma localPolynomial_baseChange_adicCompletion_of_isMinimal [IsMinimal R W] :
+    (W.baseChange K̂).localPolynomial R̂ = W.localPolynomial R := by
+  let e := residueFieldEquivAdicCompletion R (K := K)
+  have hq : Nat.card (IsLocalRing.ResidueField R̂) =
+      Nat.card (IsLocalRing.ResidueField R) := Nat.card_congr e.toEquiv.symm
+  have hN : Nat.card ((W.baseChange K̂).reduction R̂).toAffine.Point =
+      Nat.card (W.reduction R).toAffine.Point := by
+    rw [reduction_baseChange_adicCompletion]
+    exact Affine.Point.natCard_map_equiv e.toRingEquiv
+  simp only [localPolynomial_eq_of_isMinimal, hq, hN]
+  rw [hasGoodReduction_baseChange_adicCompletion_iff R W,
+    hasSplitMultiplicativeReduction_baseChange_adicCompletion_iff R W,
+    hasMultiplicativeReduction_baseChange_adicCompletion_iff R W]
+
+/-- The local polynomial of an elliptic curve is unchanged by completing the discrete valuation
+ring. In particular, its definition over an incomplete ring agrees with the convention of
+[serre1970], §1.2. -/
+theorem localPolynomial_baseChange_adicCompletion :
+    (W.baseChange K̂).localPolynomial R̂ = W.localPolynomial R := by
+  calc
+    (W.baseChange K̂).localPolynomial R̂ =
+        ((W.minimal R).baseChange K̂).localPolynomial R̂ := by
+      simp only [minimal, baseChange, ← map_variableChange, variableChange_localPolynomial]
+    _ = (W.minimal R).localPolynomial R :=
+      localPolynomial_baseChange_adicCompletion_of_isMinimal R (W.minimal R)
+    _ = W.localPolynomial R := by simp only [minimal, variableChange_localPolynomial]
+
+/-- The local power series of an elliptic curve is unchanged by completion. -/
+theorem localPowerSeries_baseChange_adicCompletion :
+    (W.baseChange K̂).localPowerSeries R̂ = W.localPowerSeries R := by
+  simp only [localPowerSeries, localPolynomial_baseChange_adicCompletion]
+
+/-- The local Euler factor of an elliptic curve is unchanged by completion. -/
+theorem localEulerFactor_baseChange_adicCompletion :
+    (W.baseChange K̂).localEulerFactor R̂ = W.localEulerFactor R := by
+  have hq : Nat.card (IsLocalRing.ResidueField R̂) =
+      Nat.card (IsLocalRing.ResidueField R) :=
+    Nat.card_congr (residueFieldEquivAdicCompletion R (K := K)).toEquiv.symm
+  simp only [localEulerFactor, localPowerSeries_baseChange_adicCompletion, hq]
+
+end Completion
 
 section NumberField
 

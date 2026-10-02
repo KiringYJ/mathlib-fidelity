@@ -544,6 +544,16 @@ instance [Finite R] : Finite W'.Point :=
     inferInstanceAs (Finite (Option _))
   .of_equiv _ W'.nonsingularPointEquiv.symm
 
+/-- Transporting a Weierstrass equation along a ring isomorphism preserves the number of
+nonsingular points, including the point at infinity. -/
+lemma Point.natCard_map_equiv (e : R ≃+* S) :
+    Nat.card (W'.map e.toRingHom).Point = Nat.card W'.Point := by
+  apply Nat.card_congr
+  refine (nonsingularPointEquiv _).trans ?_
+  refine Equiv.trans ?_ W'.nonsingularPointEquiv.symm
+  exact (Equiv.subtypeEquiv (e.toEquiv.prodCongr e.toEquiv)
+    (fun xy ↦ (W'.map_nonsingular e.injective xy.1 xy.2).symm)).optionCongr.symm
+
 section IsElliptic
 
 variable [Nontrivial R] [W'.IsElliptic]
