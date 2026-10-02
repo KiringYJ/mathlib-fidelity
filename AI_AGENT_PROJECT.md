@@ -270,7 +270,11 @@ For an explicitly authorized public-API canonicalization:
    Test that insufficient hypotheses fail both at the named operation and at
    ambient instance inference. Also test explicit local constructors and routine
    sufficient conditions. Keep exact mathematical domains distinct from the
-   narrower conditions used by automatic instances.
+   narrower conditions used by automatic instances. Pin each negative test to
+   its exact failure with `#guard_msgs`; `fail_if_success` also passes on
+   unrelated errors. Give a default discharger's tactic syntax an explicit
+   `(name := …)` and bound its search, so that failures stay fast and the
+   syntax passes the environment linters.
 3. Prototype the replacement in real consumers. Closure-heavy proofs should
    use the operations of the structure that owns the invariant; cross a
    predicate-membership bridge only at an interface that genuinely requires

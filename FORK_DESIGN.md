@@ -33,6 +33,18 @@ preference does not override the design commitments in this document.
 - A public operation bearing an ordinary mathematical name should expose the
   domain on which that operation is mathematically defined. Encode the domain
   in an input type, a proof argument, or an explicit partiality type.
+- Take that domain to be the exact domain on which the operation is
+  canonical: the largest class of inputs on which its defining specification
+  determines a unique value, without an arbitrary normalization, and agrees
+  with the standard operation wherever the literature defines it. Do not
+  shrink it to a convenient sufficient condition or to the narrower class for
+  which a particular text names the operation; such classes belong in
+  hypotheses, specializations, and documentation. For example,
+  `ProbabilityTheory.cdf` takes every measure that is finite on each ray
+  `Iic x`, where `x ↦ μ.real (Iic x)` is the unique generating Stieltjes
+  function with limit 0 at -∞, although many texts define the cdf only for
+  probability or finite measures. Stop where extending further would require
+  an arbitrary choice, such as normalizing a locally finite measure at `0`.
 - Do not silently extend a partial mathematical operation with a junk or
   arbitrary value while continuing to present it as the same operation.
 - A total fallback is not a second permanent public API. It may exist only as
@@ -236,6 +248,11 @@ domain and composition are part of the mathematics. Choose the interface that
 keeps the semantic obligation visible without exporting incidental dependent
 plumbing.
 
+When several encodings are equally faithful, prefer the one most natural in the
+type theory and the existing library, then the one that imposes the least
+plumbing. Decide by compiling real call sites with each candidate rather than
+by preference.
+
 When reviewing a representation, ask first whether it creates a value,
 proposition, or canonical choice that the mathematics does not provide. If it
 does, repair the semantic boundary. If it merely hides a lower-level
@@ -420,6 +437,11 @@ downstream cases before adding new structure. Keep a specialization when it
 provides a natural statement, namespace, or theorem-search entry point. The
 goal is the most reusable natural theorem, not the weakest imaginable
 assumptions or the highest possible abstraction level.
+
+This evidence requirement governs new structure and weaker hypotheses. It does
+not delay instances and closure lemmas that only propagate routine evidence
+along standard implications, such as finiteness on rays implying local
+finiteness; supply those together with the structure they serve.
 
 ## Contributions, Curated Intake, and Canonicalization
 
