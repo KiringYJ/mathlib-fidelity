@@ -976,6 +976,62 @@ lemma finite_preimage_xRep0 (x : F) : {P : W.Point | P.xRep 0 = x}.Finite := by
     | .some x' y h => simp_all [Point.xRep_some]
   exact (finite_preimage_xRep x).union (Set.finite_singleton 0) |>.subset this
 
+/-! ### Changes of variables -/
+
+namespace Point
+
+variable (C : VariableChange R)
+
+/-- The equivalence between the nonsingular points of `C • W` and those of `W` induced by a change
+of variables `C = (u, r, s, t)`, which sends an affine point `(x, y)` of `C • W` to the affine point
+`(u²x + r, u³y + u²sx + t)` of `W`. -/
+def variableChangeEquiv : (C • W').toAffine.Point ≃ W'.Point where
+  toFun P := match P with
+    | 0 => 0
+    | some x y h => some _ _ <| (variableChange_nonsingular C x y).mp h
+  invFun P := match P with
+    | 0 => 0
+    | some x y h => some (C.u⁻¹ ^ 2 * (x - C.r)) (C.u⁻¹ ^ 3 * (y - C.s * (x - C.r) - C.t)) <|
+        (variableChange_nonsingular C _ _).mpr <| by
+          convert h using 2
+          · linear_combination (x - C.r) * pow_mul_pow_eq_one 2 C.u.mul_inv
+          · linear_combination (y - C.s * (x - C.r) - C.t) * pow_mul_pow_eq_one 3 C.u.mul_inv
+              + C.s * (x - C.r) * pow_mul_pow_eq_one 2 C.u.mul_inv
+  left_inv := by
+    rintro (_ | ⟨x, y, h⟩)
+    · rfl
+    · simp only [some.injEq]
+      constructor
+      · linear_combination x * pow_mul_pow_eq_one 2 C.u.inv_mul
+      · linear_combination y * pow_mul_pow_eq_one 3 C.u.inv_mul
+  right_inv := by
+    rintro (_ | ⟨x, y, h⟩)
+    · rfl
+    · simp only [some.injEq]
+      constructor
+      · linear_combination (x - C.r) * pow_mul_pow_eq_one 2 C.u.mul_inv
+      · linear_combination (y - C.s * (x - C.r) - C.t) * pow_mul_pow_eq_one 3 C.u.mul_inv
+          + C.s * (x - C.r) * pow_mul_pow_eq_one 2 C.u.mul_inv
+
+@[simp]
+lemma variableChangeEquiv_zero : variableChangeEquiv C (0 : (C • W').toAffine.Point) = 0 :=
+  rfl
+
+@[simp]
+lemma variableChangeEquiv_some {x y : R} (h : (C • W').toAffine.Nonsingular x y) :
+    variableChangeEquiv C (some x y h) = some _ _ ((variableChange_nonsingular C x y).mp h) :=
+  rfl
+
+@[simp]
+lemma variableChangeEquiv_symm_zero : (variableChangeEquiv C).symm (0 : W'.Point) = 0 :=
+  rfl
+
+/-- A change of variables preserves the number of nonsingular points. -/
+lemma natCard_variableChange : Nat.card (C • W').toAffine.Point = Nat.card W'.Point :=
+  Nat.card_congr (variableChangeEquiv C)
+
+end Point
+
 end Affine
 
 end WeierstrassCurve

@@ -167,6 +167,21 @@ lemma equation_iff_variableChange (x y : R) :
   congr! 1
   ring1
 
+private lemma mk_mul_eq_mul_mk (C : VariableChange R) (x y : R) :
+    VariableChange.mk 1 x 0 y * C = VariableChange.mk C.u 0 C.s 0 *
+      VariableChange.mk 1 (C.u ^ 2 * x + C.r) 0 (C.u ^ 3 * y + C.u ^ 2 * C.s * x + C.t) := by
+  ext <;> simp only [VariableChange.mul_def, Units.val_mul, Units.val_one] <;> ring1
+
+/-- An affine point `(x, y)` satisfies the Weierstrass equation of `C • W` if and only if
+`(u²x + r, u³y + u²sx + t)` satisfies that of `W`, where `C = (u, r, s, t)`. -/
+lemma variableChange_equation (C : VariableChange R) (x y : R) :
+    (C • W).toAffine.Equation x y ↔
+      W.Equation (C.u ^ 2 * x + C.r) (C.u ^ 3 * y + C.u ^ 2 * C.s * x + C.t) := by
+  rw [equation_iff_variableChange, equation_iff_variableChange (W := W), ← mul_smul,
+    mk_mul_eq_mul_mk, mul_smul, equation_zero, equation_zero, variableChange_a₆]
+  simp only [mul_zero, add_zero, zero_mul, sub_zero, zero_pow two_ne_zero, zero_pow three_ne_zero,
+    ← Units.val_pow_eq_pow_val, Units.mul_right_eq_zero]
+
 /-! ## The nonsingular condition in affine coordinates -/
 
 variable (W) in
@@ -232,6 +247,19 @@ lemma nonsingular_iff_variableChange (x y : R) :
     nonsingular_zero, variableChange_a₃, variableChange_a₄, inv_one, Units.val_one]
   simp only [variableChange_def]
   congr! 3 <;> ring1
+
+/-- An affine point `(x, y)` of `C • W` is nonsingular if and only if `(u²x + r, u³y + u²sx + t)` is
+a nonsingular point of `W`, where `C = (u, r, s, t)`. -/
+lemma variableChange_nonsingular (C : VariableChange R) (x y : R) :
+    (C • W).toAffine.Nonsingular x y ↔
+      W.Nonsingular (C.u ^ 2 * x + C.r) (C.u ^ 3 * y + C.u ^ 2 * C.s * x + C.t) := by
+  rw [nonsingular_iff_variableChange, nonsingular_iff_variableChange (W := W), ← mul_smul,
+    mk_mul_eq_mul_mk, mul_smul, nonsingular_zero, nonsingular_zero, variableChange_a₃,
+    variableChange_a₄, variableChange_a₆]
+  simp only [mul_zero, add_zero, zero_mul, sub_zero, zero_pow two_ne_zero, zero_pow three_ne_zero,
+    ← Units.val_pow_eq_pow_val, Units.mul_right_eq_zero, ne_eq]
+  by_cases h₃ : (VariableChange.mk 1 (C.u ^ 2 * x + C.r) 0 (C.u ^ 3 * y + C.u ^ 2 * C.s * x + C.t)
+    • W).a₃ = 0 <;> simp [h₃]
 
 private lemma equation_zero_iff_nonsingular_zero_of_Δ_ne_zero (hΔ : W.Δ ≠ 0) :
     W.Equation 0 0 ↔ W.Nonsingular 0 0 := by
