@@ -250,4 +250,84 @@ example (k : Type*) [Field k] [Finite k] (W : WeierstrassCurve k⸨X⸩) [W.IsEl
 
 end LocalFields
 
+/-! ### The local factors do not depend on the minimal Weierstrass equation -/
+
+section MinimalModel
+
+open WeierstrassCurve
+
+variable (R : Type*) [CommRing R] [IsDomain R] [IsDiscreteValuationRing R] {K : Type*} [Field K]
+  [Algebra R K] [IsFractionRing R K] (W : WeierstrassCurve K)
+
+-- A change of variables transports nonsingular points.
+example (S : Type*) [CommRing S] (E : WeierstrassCurve S) (C : VariableChange S) :
+    Nat.card (C • E).toAffine.Point = Nat.card E.toAffine.Point :=
+  WeierstrassCurve.Affine.Point.natCard_variableChange C
+
+-- Minimal Weierstrass equations of an elliptic curve differ by integral changes of variables.
+example [W.IsElliptic] [IsMinimal R W] (C : VariableChange K) [IsMinimal R (C • W)] :
+    ∃ CR : VariableChange R, CR.baseChange K = C :=
+  WeierstrassCurve.variableChange_integral_of_isMinimal R (W := W) rfl
+
+-- For a singular curve they need not, so the statement requires an elliptic curve.
+/--
+error: failed to synthesize instance of type class
+  W.IsElliptic
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example [IsMinimal R W] (C : VariableChange K) [IsMinimal R (C • W)] :
+    ∃ CR : VariableChange R, CR.baseChange K = C :=
+  WeierstrassCurve.variableChange_integral_of_isMinimal R (W := W) rfl
+
+-- Changes of variables with coefficients in `R` preserve integrality and minimality, and carry
+-- the reduction along; other changes of variables are not assumed to preserve integrality.
+example [IsIntegral R W] (CR : VariableChange R) : IsIntegral R (CR.baseChange K • W) :=
+  inferInstance
+
+example [IsMinimal R W] (CR : VariableChange R) : IsMinimal R (CR.baseChange K • W) :=
+  inferInstance
+
+example [IsMinimal R W] (CR : VariableChange R) :
+    (CR.baseChange K • W).reduction R = CR.map (IsLocalRing.residue R) • W.reduction R :=
+  WeierstrassCurve.reduction_variableChange_baseChange R W CR
+
+/--
+error: failed to synthesize instance of type class
+  WeierstrassCurve.IsIntegral R (C • W)
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example [IsIntegral R W] (C : VariableChange K) : IsIntegral R (C • W) := inferInstance
+
+-- The chosen minimal model of an elliptic curve is elliptic.
+example [W.IsElliptic] : (W.minimal R).IsElliptic := inferInstance
+
+variable [W.IsElliptic] [Finite (ResidueField R)]
+
+example (C : VariableChange K) : (C • W).localPolynomial R = W.localPolynomial R :=
+  WeierstrassCurve.variableChange_localPolynomial R W C
+
+example (C : VariableChange K) : (C • W).localEulerFactor R = W.localEulerFactor R :=
+  WeierstrassCurve.variableChange_localEulerFactor R W C
+
+-- A minimal Weierstrass equation computes the local polynomial directly.
+example [W.HasSplitMultiplicativeReduction R] : W.localPolynomial R = 1 - Polynomial.X :=
+  WeierstrassCurve.localPolynomial_of_hasSplitMultiplicativeReduction R W
+
+example [W.HasMultiplicativeReduction R] (h : ¬ W.HasSplitMultiplicativeReduction R) :
+    W.localPolynomial R = 1 + Polynomial.X :=
+  WeierstrassCurve.localPolynomial_of_not_hasSplitMultiplicativeReduction R W h
+
+example [W.HasAdditiveReduction R] : W.localPolynomial R = 1 :=
+  WeierstrassCurve.localPolynomial_of_hasAdditiveReduction R W
+
+example (K : Type*) [Field K] [NumberField K] (E : WeierstrassCurve K) [E.IsElliptic]
+    (C : VariableChange K) (s : ℂ) : (C • E).LSeries s = E.LSeries s :=
+  WeierstrassCurve.variableChange_LSeries E C s
+
+end MinimalModel
+
 end
