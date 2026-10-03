@@ -469,6 +469,30 @@ theorem id_comp' (p : FormalMultilinearSeries 𝕜 E F) (x : F) (v0 : Fin 0 → 
     (id 𝕜 F x).comp p = p := by
   simp [h]
 
+/-- Composing with a series followed by a continuous linear map `u` amounts to composing with the
+series itself after precomposing the outer series with `u`. -/
+theorem comp_compFormalMultilinearSeries (q : FormalMultilinearSeries 𝕜 G H) (u : F →L[𝕜] G)
+    (p : FormalMultilinearSeries 𝕜 E F) :
+    q.comp (u.compFormalMultilinearSeries p) = (q.compContinuousLinearMap u).comp p := by
+  ext n v
+  rfl
+
+/-- Applying a continuous linear map `u` after a composite of series amounts to applying it after
+the outer series. -/
+theorem _root_.ContinuousLinearMap.compFormalMultilinearSeries_comp (u : G →L[𝕜] H)
+    (q : FormalMultilinearSeries 𝕜 F G) (p : FormalMultilinearSeries 𝕜 E F) :
+    u.compFormalMultilinearSeries (q.comp p) = (u.compFormalMultilinearSeries q).comp p := by
+  ext n v
+  simp [FormalMultilinearSeries.comp]
+
+/-- Precomposing a composite of series with a continuous linear map `u` amounts to precomposing
+the inner series with `u`. -/
+theorem comp_compContinuousLinearMap (q : FormalMultilinearSeries 𝕜 F G)
+    (p : FormalMultilinearSeries 𝕜 E F) (u : H →L[𝕜] E) :
+    q.comp (p.compContinuousLinearMap u) = (q.comp p).compContinuousLinearMap u := by
+  ext n v
+  simp [FormalMultilinearSeries.comp]
+
 /-! ### Summability properties of the composition of formal power series -/
 
 
