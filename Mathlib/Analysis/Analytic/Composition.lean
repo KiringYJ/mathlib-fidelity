@@ -58,7 +58,8 @@ diagonal and truncated at any order, this is the composition of jets of
 the outer one. In the coordinates of §12.6, a jet is described by its source, its target, and the
 polynomial representative of its translate to the origin, and composition composes these
 polynomials. The constant coefficient `p 0 0` is the target of the inner jet, while `q` does not
-record the source of the outer jet.
+record the source of the outer jet. `FormalMultilinearSeriesCat` records this convention as a
+category, in which the matching of basepoints is part of the type of morphisms.
 
 Composition of formal multilinear series is therefore not the substitution of `p` into a series `q`
 expanded at the same origin as `p`. When `p 0 0 ≠ 0`, such a substitution would have to re-expand
