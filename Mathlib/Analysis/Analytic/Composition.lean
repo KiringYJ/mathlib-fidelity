@@ -46,6 +46,25 @@ summability of the norms, this implies the overall convergence.
 * `FormalMultilinearSeries.comp_assoc` states that composition is associative on formal
   multilinear series.
 
+## Constant coefficients and basepoints
+
+A formal multilinear series does not record the point at which it is expanded. In `q.comp p`, the
+outer series `q` is understood as an expansion at the constant coefficient `p 0 0` of the inner
+series, as in `HasFPowerSeriesAt.comp`, where `q` is a power series of `g` at `f x` and `p` is a
+power series of `f` at `x`. Hence `q.comp p` uses only the coefficients of `p` of positive order,
+and its constant coefficient is that of `q`. For real finite-dimensional spaces, restricted to the
+diagonal and truncated at any order, this is the composition of jets of
+[kolar_michor_slovak1993], §12.3, which is defined when the target of the inner jet is the source of
+the outer one. In the coordinates of §12.6, a jet is described by its source, its target, and the
+polynomial representative of its translate to the origin, and composition composes these
+polynomials. The constant coefficient `p 0 0` is the target of the inner jet, while `q` does not
+record the source of the outer jet.
+
+Composition of formal multilinear series is therefore not the substitution of `p` into a series `q`
+expanded at the same origin as `p`. When `p 0 0 ≠ 0`, such a substitution would have to re-expand
+`q` around `p 0 0`, as `FormalMultilinearSeries.changeOrigin` does within the ball of convergence,
+and it differs from `q.comp p` in general, already when `q` has finitely many nonzero coefficients.
+
 ## Implementation details
 
 The main technical difficulty is to write down things. In particular, we need to define precisely
@@ -64,6 +83,10 @@ double sums in a careful way. The change of variables is a canonical (combinator
 `Composition.sigmaEquivSigmaPi` between `(Σ (a : Composition n), Composition a.length)` and
 `(Σ (c : Composition n), Π (i : Fin c.length), Composition (c.blocksFun i))`, and is described
 in more details below in the paragraph on associativity.
+
+## References
+
+* [Kolář, Michor, Slovák, *Natural operations in differential geometry*][kolar_michor_slovak1993]
 -/
 
 @[expose] public section
@@ -231,8 +254,13 @@ is defined to be the sum of `q.compAlongComposition p c` over all compositions o
 `∑'_{k} ∑'_{i₁ + ... + iₖ = n} qₖ (p_{i_1} (...), ..., p_{i_k} (...))`, where one puts all variables
 `v_0, ..., v_{n-1}` in increasing order in the dots.
 
-In general, the composition `q ∘ p` only makes sense when the constant coefficient of `p` vanishes.
-We give a general formula but which ignores the value of `p 0` instead.
+The outer series `q` is understood as an expansion at the constant coefficient `p 0 0` of the
+inner series: if `q` and `p` are power series of `g` at `f x` and of `f` at `x`, then `q.comp p` is
+a power series of `g ∘ f` at `x` (`HasFPowerSeriesAt.comp`). Accordingly, the formula uses only the
+coefficients of `p` of positive order (`comp_removeZero`), and the constant coefficient of
+`q.comp p` is that of `q` (`comp_coeff_zero`). For real finite-dimensional spaces this is the
+composition of jets. It is not the substitution of `p` into a series expanded at the same origin
+as `p`; see the module documentation.
 -/
 protected def comp (q : FormalMultilinearSeries 𝕜 F G) (p : FormalMultilinearSeries 𝕜 E F) :
     FormalMultilinearSeries 𝕜 E G := fun n => ∑ c : Composition n, q.compAlongComposition p c
@@ -281,6 +309,8 @@ theorem removeZero_comp_of_pos (q : FormalMultilinearSeries 𝕜 F G)
   refine Finset.sum_congr rfl fun c _hc => ?_
   rw [removeZero_of_pos _ (c.length_pos_of_pos hn)]
 
+/-- Composition uses only the coefficients of the inner series of positive order: the constant
+coefficient of the inner series is the point at which the outer series is expanded. -/
 @[simp]
 theorem comp_removeZero (q : FormalMultilinearSeries 𝕜 F G) (p : FormalMultilinearSeries 𝕜 E F) :
     q.comp p.removeZero = q.comp p := by ext n; simp [FormalMultilinearSeries.comp]
@@ -328,8 +358,8 @@ theorem compAlongComposition_nnnorm {n : ℕ} (q : FormalMultilinearSeries 𝕜 
 /-!
 ### The identity formal power series
 
-We will now define the identity power series, and show that it is a neutral element for left and
-right composition.
+We will now define the identity power series, and show that it is a right identity for composition,
+and a left identity for the series whose constant coefficient is its own.
 -/
 
 
@@ -337,9 +367,10 @@ section
 
 variable (𝕜 E)
 
-/-- The identity formal multilinear series, with all coefficients equal to `0` except for `n = 1`
-where it is (the continuous multilinear version of) the identity. We allow an arbitrary
-constant coefficient `x`. -/
+/-- The formal multilinear series of the identity map expanded at `x`: its constant coefficient is
+`x`, its coefficient of order `1` is (the continuous multilinear version of) the identity, and all
+its other coefficients vanish. It is a right identity for composition for every `x` (`comp_id`),
+and a left identity for `p` when `x = p 0 0` (`id_comp`). -/
 def id (x : E) : FormalMultilinearSeries 𝕜 E E
   | 0 => ContinuousMultilinearMap.uncurry0 𝕜 _ x
   | 1 => (continuousMultilinearCurryFin1 𝕜 E E).symm (ContinuousLinearMap.id 𝕜 E)
