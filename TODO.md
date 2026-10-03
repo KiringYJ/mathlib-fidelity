@@ -600,24 +600,31 @@ operation.
   the iterated construction explicitly. The formal infinity-scaled Lebesgue counterexample
   separates the constructions and disproves uniqueness from s-finiteness alone.
 
-- [ ] **Audit the domains of formal multilinear left and right inverses together.**
-  `FormalMultilinearSeries.leftInv` and `rightInv` in
-  `Mathlib/Analysis/Analytic/Inverse.lean:66` and `:169` accept an arbitrary series `p` and
-  continuous linear equivalence `i`; their inverse laws `leftInv_comp` and `comp_rightInv` at
-  lines 101 and 245 require `p 1 = (continuousMultilinearCurryFin1 𝕜 E F).symm i`.
-  A Lean-checked counterexample takes the real zero series,
-  `i = ContinuousLinearEquiv.refl ℝ ℝ`, and `x = 0`: the constructor accepts these inputs, but
-  `p.comp (p.rightInv i 0) ≠ FormalMultilinearSeries.id ℝ ℝ 0`. Evaluating degree one via
-  `comp_coeff_one` and `id_apply_one` gives zero on the left and one on the right.
-  Specify the intended inverse laws and distinguish one-sided splittings from a two-sided inverse
-  before choosing the exact domain; do not assume an invertible first-order term is necessary for
-  every one-sided inverse. Coordinate with the composition/basepoint audit below. Prototype
-  matching and mismatched first-order data, noninvertible one-sided splittings, degenerate spaces,
-  nonzero constants, and analytic inverse/convergence consumers before accepting a migration.
-  Existing linear right-inverse interfaces are positive controls:
-  `LinearMap.exists_rightInverse_of_surjective` requires full range and a projective target, while
-  `ContinuousLinearMap.HasRightInverse.rightInverse` consumes a proof that a continuous linear
-  right inverse exists; neither has an invalid-input fallback.
+- [x] **Require one-sided linear inverses for formal multilinear one-sided inverses.**
+  `FormalMultilinearSeries.leftInv p r hr x` and `rightInv p s hs x` take a continuous linear left,
+  respectively right, inverse of the linear term `p₁` with `Function.LeftInverse` or
+  `Function.RightInverse` evidence, replacing an equivalence `i` that only the inverse laws tied to
+  `p 1`; the zero-series counterexample is no longer constructible. Comparing linear terms gives the
+  exact existence domains, `exists_comp_eq_id_iff_hasLeftInverse` and
+  `exists_comp_eq_id_iff_hasRightInverse` through `ContinuousLinearMap.HasLeftInverse` and
+  `HasRightInverse`, so an invertible linear term is not required. Both predicates now live in
+  `Mathlib/Topology/Algebra/Module/ContinuousLinearMap/OneSidedInverse.lean`, split from the
+  finite-dimensional and Banach criteria so that analytic modules need not import those. One-sided
+  inverses of a noninvertible linear term need not be unique, and the linear inverse selects one,
+  characterized among the formal one-sided inverses with the given constant coefficient: the left
+  inverse is the one whose coefficients depend on their vector arguments only through their images
+  under `r` (`leftInv_compContinuousLinearMap`,
+  `eq_leftInv_of_comp_eq_id_of_compContinuousLinearMap_eq`), and the right inverse the one whose
+  coefficients of positive order take values in the range of `s` (`rightInv_apply_mem_range`,
+  `eq_rightInv_of_comp_eq_id_of_apply_mem_range`). With both linear inverses, `leftInv_eq_rightInv`,
+  `eq_rightInv_of_comp_eq_id_left`, and `eq_leftInv_of_comp_eq_id_right` give coincidence and
+  uniqueness for each constant coefficient. The constructed inverses converge when `p` does, left
+  inverses of split injective linear terms included, although other formal one-sided inverses of a
+  noninvertible linear term can have radius zero. `OpenPartialHomeomorph.hasFPowerSeriesAt_symm`
+  assumes only a continuous linear left inverse, which its conclusion then shows to be two-sided.
+  Tests cover missing and invalid evidence, the former counterexample, nonzero constants, injective
+  and surjective noninvertible linear terms with nonunique inverses, a zero-dimensional domain,
+  proof independence, the characterizations, uniqueness, convergence, and the analytic inverse.
 
 - [x] **Classify formal multilinear composition as composition at matching basepoints.**
   `FormalMultilinearSeries.comp` reads the outer series as an expansion at the constant coefficient

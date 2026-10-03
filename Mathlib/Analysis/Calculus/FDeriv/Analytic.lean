@@ -415,7 +415,8 @@ theorem OpenPartialHomeomorph.analyticAt_symm' (f : OpenPartialHomeomorph E F) {
     {i : E ≃L[𝕜] F} (h0 : a ∈ f.source) (h : AnalyticAt 𝕜 f a) (h' : fderiv 𝕜 f a = i) :
     AnalyticAt 𝕜 f.symm (f a) := by
   rcases h with ⟨p, hp⟩
-  have : p 1 = (continuousMultilinearCurryFin1 𝕜 E F).symm i := by simp [← h', hp.fderiv_eq]
+  have : Function.LeftInverse (i.symm : F →L[𝕜] E) (continuousMultilinearCurryFin1 𝕜 E F (p 1)) :=
+    fun v ↦ by simp [← hp.fderiv_eq, h']
   exact (f.hasFPowerSeriesAt_symm h0 hp this).analyticAt
 
 /-- If an open partial homeomorphism `f` is analytic at a point `f.symm a`, with invertible

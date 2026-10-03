@@ -29,9 +29,10 @@ lemma analyticAt_localInverse (hf : AnalyticAt 𝕜 f x) (hf' : deriv f x ≠ 0)
   have hfd : HasStrictFDerivAt f i.toContinuousLinearMap x := hf.hasStrictDerivAt
   let R : OpenPartialHomeomorph 𝕜 𝕜 := hfd.toOpenPartialHomeomorph _
   have hx : x ∈ R.source := HasStrictFDerivAt.mem_toOpenPartialHomeomorph_source _
-  refine R.hasFPowerSeriesAt_symm hx hf.hasFPowerSeriesAt (i := i) ?_ |>.analyticAt
-  ext
-  simp [i]
+  refine R.hasFPowerSeriesAt_symm hx hf.hasFPowerSeriesAt (r := (i.symm : 𝕜 →L[𝕜] 𝕜)) ?_
+    |>.analyticAt
+  intro v
+  simp [i, hf']
 
 end AnalyticAt
 
