@@ -27,7 +27,9 @@ terms shows that this is necessary, and the constructions below take such a line
 data. Formal one-sided inverses need not be unique when `p₁` is not invertible, and the linear
 inverse selects one of them. When `p₁` is invertible, a formal left inverse and a formal right
 inverse with the same constant coefficient coincide, so both constructions give the unique formal
-inverse with that constant coefficient.
+inverse with that constant coefficient. In `FormalMultilinearSeriesCat`, the existence statements
+say that `FormalMultilinearSeriesCat.linearTerm` reflects split monomorphisms and split
+epimorphisms, and the coincidence makes it reflect isomorphisms.
 
 ## Main statements
 

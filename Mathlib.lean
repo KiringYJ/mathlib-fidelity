@@ -1676,6 +1676,7 @@ public import Mathlib.Analysis.Analytic.ChangeOrigin
 public import Mathlib.Analysis.Analytic.Composition
 public import Mathlib.Analysis.Analytic.Constructions
 public import Mathlib.Analysis.Analytic.ConvergenceRadius
+public import Mathlib.Analysis.Analytic.FormalMultilinearSeriesCat
 public import Mathlib.Analysis.Analytic.Inverse
 public import Mathlib.Analysis.Analytic.IsolatedZeros
 public import Mathlib.Analysis.Analytic.IteratedFDeriv
