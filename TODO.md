@@ -619,21 +619,23 @@ operation.
   `ContinuousLinearMap.HasRightInverse.rightInverse` consumes a proof that a continuous linear
   right inverse exists; neither has an invalid-input fallback.
 
-- [ ] **Audit formal multilinear composition and the meaning of constant terms and basepoints.**
-  `FormalMultilinearSeries.comp` in `Mathlib/Analysis/Analytic/Composition.lean:237` accepts
-  arbitrary series but ignores the inner constant term; `comp_removeZero` at line 285 records
-  this behavior. The `id 𝕜 E x` family at line 343 retains a constant term, and `id_comp` at
-  line 406 matches the identity's constant with the input series. Distinguish substitution of
-  series at a common origin from composition of Taylor expansions at matching basepoints.
-  `HasFPowerSeriesWithinAt.comp` and `HasFPowerSeriesAt.comp` at lines 703 and 824 are positive
-  controls: the outer expansion is taken at `f x`, so nonzero inner constants can be legitimate.
-  Establish the exact specification before choosing a proof argument, centered-series interface,
-  or a distinct operation name; do not impose a zero-constant condition on every valid analytic
-  composition. Include polynomial outer series and convergent translations when auditing
-  substitution at nonzero constants. Review `leftInv`/`rightInv`, their identity and associativity
-  laws, coefficient/radius estimates, and real analytic consumers as one coordinated subsystem.
-  A source comment disclosing the ignored constant is evidence of the convention, not approval
-  of its public mathematical name; apply the fidelity gate before scheduling implementation.
+- [x] **Classify formal multilinear composition as composition at matching basepoints.**
+  `FormalMultilinearSeries.comp` reads the outer series as an expansion at the constant coefficient
+  `p 0 0` of the inner series; a formal series does not record its own expansion point. For real
+  finite-dimensional spaces, on the diagonal and at each finite order, this is the composition of
+  jets of Kolář, Michor, and Slovák, *Natural operations in differential geometry*, §12.3, in the
+  coordinates of §12.6, where the target of the inner jet is the source of the outer one; over a
+  general field and normed spaces it is the same convention as `HasFPowerSeriesAt.comp`. Every pair
+  of series is composable in this sense, so the ignored inner constant is not a fallback and no
+  zero-constant condition applies; `HasFPowerSeriesAt.comp`, `HasFiniteFPowerSeriesAt.comp`,
+  `CPolynomialAt.comp`, and the inverse theory all use matching basepoints. Substitution into a
+  series expanded at the same origin is a different operation: it would re-expand the outer series
+  around `p 0 0`, as `FormalMultilinearSeries.changeOrigin` does within the ball of convergence,
+  and in general disagrees with `comp`, already for polynomials. `id 𝕜 E x` is the expansion of the
+  identity at `x`, a right identity for every `x` and a left identity exactly for a matching
+  constant. The documentation now states this convention, and tests pin a matched analytic
+  composition, independence from the inner constant, the polynomial substitution example, and the
+  identity laws.
 
 - [ ] **Make `NormedSpace.exp` require its algebra and convergence context.**
   `Mathlib/Analysis/Normed/Algebra/Exponential.lean:127` returns one if no `Algebra ℚ 𝔸`
