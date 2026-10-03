@@ -50,3 +50,18 @@ example : (id ℝ ℝ 1).comp (id ℝ ℝ 0) ≠ id ℝ ℝ 0 := by
   have := congr_arg (fun q : FormalMultilinearSeries ℝ ℝ ℝ ↦ q 0 fun _ ↦ 0) h
   simp only [comp_coeff_zero', id_apply_zero] at this
   norm_num at this
+
+/-- Precomposing the outer series with a continuous linear map is the same as postcomposing the
+inner series with it. -/
+example (q : FormalMultilinearSeries ℝ ℝ ℝ) (u : ℝ →L[ℝ] ℝ) (p : FormalMultilinearSeries ℝ ℝ ℝ) :
+    q.comp (u.compFormalMultilinearSeries p) = (q.compContinuousLinearMap u).comp p :=
+  comp_compFormalMultilinearSeries q u p
+
+/-- Continuous linear maps on the outside and on the inside of a composite. -/
+example (u : ℝ →L[ℝ] ℝ) (q p : FormalMultilinearSeries ℝ ℝ ℝ) :
+    u.compFormalMultilinearSeries (q.comp p) = (u.compFormalMultilinearSeries q).comp p :=
+  u.compFormalMultilinearSeries_comp q p
+
+example (q p : FormalMultilinearSeries ℝ ℝ ℝ) (u : ℝ →L[ℝ] ℝ) :
+    q.comp (p.compContinuousLinearMap u) = (q.comp p).compContinuousLinearMap u :=
+  comp_compContinuousLinearMap q p u
