@@ -8,30 +8,50 @@ module
 public import Mathlib.Analysis.Analytic.Composition
 public import Mathlib.Analysis.Analytic.Linear
 public import Mathlib.Tactic.Positivity
+public import Mathlib.Topology.Algebra.Module.ContinuousLinearMap.OneSidedInverse
 
 /-!
 
 # Inverse of analytic functions
 
-We construct the left and right inverse of a formal multilinear series with invertible linear term,
-we prove that they coincide and study their properties (notably convergence). We deduce that the
-inverse of an analytic open partial homeomorphism is analytic.
+We construct formal left and right inverses of a formal multilinear series whose linear term has a
+continuous linear left or right inverse, we prove that they coincide when the linear term is
+invertible and study their properties (notably convergence). We deduce that the inverse of an
+analytic open partial homeomorphism is analytic.
+
+A formal left inverse of `p : FormalMultilinearSeries 𝕜 E F` with constant coefficient `x` is a
+series `q` with `q.comp p = id 𝕜 E x`, and a formal right inverse of `p` with constant coefficient
+`x` is a series `q` with `p.comp q = id 𝕜 F (p 0 0)` and `q 0 0 = x`. They exist exactly when the
+linear term `p₁` of `p` has a continuous linear left, respectively right, inverse: comparing linear
+terms shows that this is necessary, and the constructions below take such a linear inverse as
+data. Formal one-sided inverses need not be unique when `p₁` is not invertible, and the linear
+inverse selects one of them. When `p₁` is invertible, a formal left inverse and a formal right
+inverse with the same constant coefficient coincide, so both constructions give the unique formal
+inverse with that constant coefficient.
 
 ## Main statements
 
-* `p.leftInv i x`: the formal left inverse of the formal multilinear series `p`, with constant
-  coefficient `x`, for `i : E ≃L[𝕜] F` which coincides with `p₁`.
-* `p.rightInv i x`: the formal right inverse of the formal multilinear series `p`, with constant
-  coefficient `x`, for `i : E ≃L[𝕜] F` which coincides with `p₁`.
-* `p.leftInv_comp` says that `p.leftInv i x` is indeed a left inverse to `p` when `p₁ = i`.
-* `p.rightInv_comp` says that `p.rightInv i x` is indeed a right inverse to `p` when `p₁ = i`.
-* `p.leftInv_eq_rightInv`: the two inverses coincide.
-* `p.radius_rightInv_pos_of_radius_pos`: if a power series has a positive radius of convergence,
-  then so does its inverse.
+* `p.leftInv r hr x`: the formal left inverse of the formal multilinear series `p`, with constant
+  coefficient `x`, constructed from a continuous linear left inverse `r` of `p₁`.
+* `p.rightInv s hs x`: the formal right inverse of the formal multilinear series `p`, with constant
+  coefficient `x`, constructed from a continuous linear right inverse `s` of `p₁`.
+* `p.leftInv_comp` says that `p.leftInv r hr x` is indeed a left inverse to `p`.
+* `p.comp_rightInv` says that `p.rightInv s hs x` is indeed a right inverse to `p`.
+* `p.exists_comp_eq_id_iff_hasLeftInverse` and `p.exists_comp_eq_id_iff_hasRightInverse`:
+  formal one-sided inverses exist exactly when `p₁` has a continuous linear one-sided inverse.
+* `p.eq_leftInv_of_comp_eq_id_of_compContinuousLinearMap_eq` and
+  `p.eq_rightInv_of_comp_eq_id_of_apply_mem_range` characterize the two constructions among the
+  formal one-sided inverses with a given constant coefficient.
+* `p.leftInv_eq_rightInv`: the two inverses coincide when `p₁` has both one-sided inverses, and
+  `p.eq_rightInv_of_comp_eq_id_left`, `p.eq_leftInv_of_comp_eq_id_right` show that they are then
+  unique.
+* `p.radius_rightInv_pos_of_radius_pos`, `p.radius_leftInv_pos_of_radius_pos`: if a power series
+  has a positive radius of convergence, then so do `p.rightInv s hs x` and `p.leftInv r hr x`.
+  Other formal one-sided inverses need not converge when `p₁` is not invertible.
 
 * `OpenPartialHomeomorph.hasFPowerSeriesAt_symm` shows that, if an open partial homeomorph has a
-  power series `p` at a point, with invertible linear part, then the inverse also has a power series
-  at the image point, given by `p.leftInv`.
+  power series `p` at a point `a` and `p₁` has a continuous linear left inverse `r`, then the
+  inverse also has a power series at the image point, given by `p.leftInv r hr a`.
 -/
 
 @[expose] public section
@@ -50,40 +70,55 @@ namespace FormalMultilinearSeries
 /-! ### The left inverse of a formal multilinear series -/
 
 
-/-- The left inverse of a formal multilinear series, where the `n`-th term is defined inductively
-in terms of the previous ones to make sure that `(leftInv p i) ∘ p = id`. For this, the linear term
-`p₁` in `p` should be invertible. In the definition, `i` is a linear isomorphism that should
-coincide with `p₁`, so that one can use its inverse in the construction. The definition does not
-use that `i = p₁`, but proofs that the definition is well-behaved do.
+/-- The formal left inverse of a formal multilinear series `p` constructed from a continuous linear
+left inverse `r` of its linear term `p₁`, with constant coefficient `x`, so that
+`(p.leftInv r hr x).comp p = id 𝕜 E x` (`leftInv_comp`).
 
 The `n`-th term in `q ∘ p` is `∑ qₖ (p_{j₁}, ..., p_{jₖ})` over `j₁ + ... + jₖ = n`. In this
-expression, `qₙ` appears only once, in `qₙ (p₁, ..., p₁)`. We adjust the definition so that this
-term compensates the rest of the sum, using `i⁻¹` as an inverse to `p₁`.
+expression, `qₙ` appears only once, in `qₙ (p₁, ..., p₁)`. The `n`-th term of the left inverse is
+defined inductively in terms of the previous ones so that this term compensates the rest of the sum,
+using `r` to recover the arguments of `qₙ` from their images under `p₁`.
 
-These formulas only make sense when the constant term `p₀` vanishes. The definition we give is
-general, but it ignores the value of `p₀`.
+Formal left inverses of `p` exist exactly when `p₁` has a continuous linear left inverse
+(`exists_comp_eq_id_iff_hasLeftInverse`). They are not unique in general, and different left
+inverses of a noninvertible `p₁` give different formal left inverses. This one is the unique formal
+left inverse with constant coefficient `x` whose coefficients depend on their vector arguments only
+through their images under `r` (`leftInv_compContinuousLinearMap`,
+`eq_leftInv_of_comp_eq_id_of_compContinuousLinearMap_eq`). When `p₁` is invertible, `r` is its
+inverse and `p.leftInv r hr x` is the unique formal left inverse with constant coefficient `x`
+(`eq_rightInv_of_comp_eq_id_left`, `leftInv_eq_rightInv`).
+
+The construction uses only the coefficients of `p` of positive order (`leftInv_removeZero`): as in
+`FormalMultilinearSeries.comp`, the constant coefficient of `p` is the point at which the left
+inverse is expanded.
 -/
-noncomputable def leftInv (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E) :
+@[nolint unusedArguments]
+noncomputable def leftInv (p : FormalMultilinearSeries 𝕜 E F) (r : F →L[𝕜] E)
+    (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
     FormalMultilinearSeries 𝕜 F E
   | 0 => ContinuousMultilinearMap.uncurry0 𝕜 _ x
-  | 1 => (continuousMultilinearCurryFin1 𝕜 F E).symm i.symm
+  | 1 => (continuousMultilinearCurryFin1 𝕜 F E).symm r
   | n + 2 =>
     -∑ c : { c : Composition (n + 2) // c.length < n + 2 },
-        (leftInv p i x (c : Composition (n + 2)).length).compAlongComposition
-          (p.compContinuousLinearMap i.symm) c
+        (leftInv p r hr x (c : Composition (n + 2)).length).compAlongComposition
+          (p.compContinuousLinearMap r) c
 
 @[simp]
-theorem leftInv_coeff_zero (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E) :
-    p.leftInv i x 0 = ContinuousMultilinearMap.uncurry0 𝕜 _ x := by rw [leftInv]
+theorem leftInv_coeff_zero (p : FormalMultilinearSeries 𝕜 E F) (r : F →L[𝕜] E)
+    (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    p.leftInv r hr x 0 = ContinuousMultilinearMap.uncurry0 𝕜 _ x := by rw [leftInv]
 
 @[simp]
-theorem leftInv_coeff_one (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E) :
-    p.leftInv i x 1 = (continuousMultilinearCurryFin1 𝕜 F E).symm i.symm := by rw [leftInv]
+theorem leftInv_coeff_one (p : FormalMultilinearSeries 𝕜 E F) (r : F →L[𝕜] E)
+    (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    p.leftInv r hr x 1 = (continuousMultilinearCurryFin1 𝕜 F E).symm r := by rw [leftInv]
 
 /-- The left inverse does not depend on the zeroth coefficient of a formal multilinear
 series. -/
-theorem leftInv_removeZero (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E) :
-    p.removeZero.leftInv i x = p.leftInv i x := by
+theorem leftInv_removeZero (p : FormalMultilinearSeries 𝕜 E F) (r : F →L[𝕜] E)
+    (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p.removeZero 1)))
+    (hr' : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    p.removeZero.leftInv r hr x = p.leftInv r hr' x := by
   ext1 n
   induction n using Nat.strong_induction_on with | _ n IH
   match n with
@@ -96,19 +131,21 @@ theorem leftInv_removeZero (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[�
     ext v
     simp [IH _ hc]
 
-/-- The left inverse to a formal multilinear series is indeed a left inverse, provided its linear
-term is invertible. -/
-theorem leftInv_comp (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E)
-    (h : p 1 = (continuousMultilinearCurryFin1 𝕜 E F).symm i) :
-    (leftInv p i x).comp p = id 𝕜 E x := by
+/-- The left inverse to a formal multilinear series is indeed a left inverse. -/
+theorem leftInv_comp (p : FormalMultilinearSeries 𝕜 E F) (r : F →L[𝕜] E)
+    (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    (leftInv p r hr x).comp p = id 𝕜 E x := by
+  obtain ⟨L, hL⟩ : ∃ L, continuousMultilinearCurryFin1 𝕜 E F (p 1) = L := ⟨_, rfl⟩
+  have h : p 1 = (continuousMultilinearCurryFin1 𝕜 E F).symm L := by simp [← hL]
+  have hr' : ∀ v, r (L v) = v := by rw [← hL]; exact hr
   ext n v
   match n with
   | 0 =>
     simp only [comp_coeff_zero', leftInv_coeff_zero, ContinuousMultilinearMap.uncurry0_apply,
       id_apply_zero]
   | 1 =>
-    simp only [leftInv_coeff_one, comp_coeff_one, h, id_apply_one, ContinuousLinearEquiv.coe_apply,
-      ContinuousLinearEquiv.symm_apply_apply, continuousMultilinearCurryFin1_symm_apply]
+    simp only [leftInv_coeff_one, comp_coeff_one, h, id_apply_one,
+      continuousMultilinearCurryFin1_symm_apply, hr']
   | n + 2 =>
     have A :
       (Finset.univ : Finset (Composition (n + 2))) =
@@ -122,22 +159,22 @@ theorem leftInv_comp (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F)
         {Composition.ones (n + 2)} := by
       simp
     have C :
-      ((p.leftInv i x (Composition.ones (n + 2)).length)
+      ((p.leftInv r hr x (Composition.ones (n + 2)).length)
           fun j : Fin (Composition.ones n.succ.succ).length =>
           p 1 fun _ => v ((Fin.castLE (Composition.length_le _)) j)) =
-        p.leftInv i x (n + 2) fun j : Fin (n + 2) => p 1 fun _ => v j := by
+        p.leftInv r hr x (n + 2) fun j : Fin (n + 2) => p 1 fun _ => v j := by
       apply FormalMultilinearSeries.congr _ (Composition.ones_length _) fun j hj1 hj2 => ?_
       exact FormalMultilinearSeries.congr _ rfl fun k _ _ => by congr
     have D :
-      (p.leftInv i x (n + 2) fun j : Fin (n + 2) => p 1 fun _ => v j) =
+      (p.leftInv r hr x (n + 2) fun j : Fin (n + 2) => p 1 fun _ => v j) =
         -∑ c ∈ {c : Composition (n + 2) | c.length < n + 2}.toFinset,
-            (p.leftInv i x c.length) (p.applyComposition c v) := by
+            (p.leftInv r hr x c.length) (p.applyComposition c v) := by
       simp only [leftInv, _root_.neg_apply, neg_inj, _root_.sum_apply]
       convert!
         (sum_toFinset_eq_subtype (fun c : Composition (n + 2) => c.length < n + 2)
               (fun c : Composition (n + 2) =>
                 (ContinuousMultilinearMap.compAlongComposition
-                    (p.compContinuousLinearMap (i.symm : F →L[𝕜] E)) c (p.leftInv i x c.length))
+                    (p.compContinuousLinearMap r) c (p.leftInv r hr x c.length))
                   fun j : Fin (n + 2) => p 1 fun _ : Fin 1 => v j)).symm.trans
           _
       simp only [compContinuousLinearMap_applyComposition,
@@ -146,47 +183,86 @@ theorem leftInv_comp (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F)
       ext c
       congr
       ext k
-      simp [h]
+      simp [h, hr']
     simp [FormalMultilinearSeries.comp, A, Finset.sum_union B,
       applyComposition_ones, C, D, -Set.toFinset_ofPred, -Finset.union_singleton]
+
+/-- The coefficients of the left inverse depend on their vector arguments only through their images
+under `r`: the left inverse is unchanged by precomposition with the continuous linear projection
+`p₁ ∘ r` onto the range of `p₁` along the kernel of `r`. -/
+theorem leftInv_compContinuousLinearMap (p : FormalMultilinearSeries 𝕜 E F) (r : F →L[𝕜] E)
+    (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    (p.leftInv r hr x).compContinuousLinearMap
+        ((continuousMultilinearCurryFin1 𝕜 E F (p 1)).comp r) =
+      p.leftInv r hr x := by
+  have hr' (w : F) : r (continuousMultilinearCurryFin1 𝕜 E F (p 1) (r w)) = r w := hr (r w)
+  ext n w
+  match n with
+  | 0 =>
+    simp only [compContinuousLinearMap_apply, leftInv_coeff_zero,
+      ContinuousMultilinearMap.uncurry0_apply]
+  | 1 =>
+    simp only [compContinuousLinearMap_apply, leftInv_coeff_one,
+      continuousMultilinearCurryFin1_symm_apply, Function.comp_apply,
+      ContinuousLinearMap.comp_apply, hr']
+  | n + 2 =>
+    simp only [compContinuousLinearMap_apply, leftInv, _root_.neg_apply, _root_.sum_apply,
+      ContinuousMultilinearMap.compAlongComposition_apply,
+      compContinuousLinearMap_applyComposition]
+    have hw : r ∘ (continuousMultilinearCurryFin1 𝕜 E F (p 1)).comp r ∘ w = r ∘ w := by
+      ext k
+      simp only [Function.comp_apply, ContinuousLinearMap.coe_comp, hr']
+    rw [hw]
 
 /-! ### The right inverse of a formal multilinear series -/
 
 
-/-- The right inverse of a formal multilinear series, where the `n`-th term is defined inductively
-in terms of the previous ones to make sure that `p ∘ (rightInv p i) = id`. For this, the linear
-term `p₁` in `p` should be invertible. In the definition, `i` is a linear isomorphism that should
-coincide with `p₁`, so that one can use its inverse in the construction. The definition does not
-use that `i = p₁`, but proofs that the definition is well-behaved do.
+/-- The formal right inverse of a formal multilinear series `p` constructed from a continuous linear
+right inverse `s` of its linear term `p₁`, with constant coefficient `x`, so that
+`p.comp (p.rightInv s hs x) = id 𝕜 F (p 0 0)` (`comp_rightInv`).
 
 The `n`-th term in `p ∘ q` is `∑ pₖ (q_{j₁}, ..., q_{jₖ})` over `j₁ + ... + jₖ = n`. In this
-expression, `qₙ` appears only once, in `p₁ (qₙ)`. We adjust the definition of `qₙ` so that this
-term compensates the rest of the sum, using `i⁻¹` as an inverse to `p₁`.
+expression, `qₙ` appears only once, in `p₁ (qₙ)`. The `n`-th term of the right inverse is defined
+inductively in terms of the previous ones so that this term compensates the rest of the sum, using
+`s` to choose `qₙ` from the required value of `p₁ (qₙ)`.
 
-These formulas only make sense when the constant term `p₀` vanishes. The definition we give is
-general, but it ignores the value of `p₀`.
+Formal right inverses of `p` exist exactly when `p₁` has a continuous linear right inverse
+(`exists_comp_eq_id_iff_hasRightInverse`). They are not unique in general, and different right
+inverses of a noninvertible `p₁` give different formal right inverses. This one is the unique
+formal right inverse with constant coefficient `x` whose coefficients of positive order take values
+in the range of `s` (`rightInv_apply_mem_range`, `eq_rightInv_of_comp_eq_id_of_apply_mem_range`).
+When `p₁` is invertible, `s` is its inverse and `p.rightInv s hs x` is the unique formal right
+inverse with constant coefficient `x` (`eq_leftInv_of_comp_eq_id_right`, `leftInv_eq_rightInv`).
+
+The construction uses only the coefficients of `p` of positive order (`rightInv_removeZero`).
 -/
-noncomputable def rightInv (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E) :
+@[nolint unusedArguments]
+noncomputable def rightInv (p : FormalMultilinearSeries 𝕜 E F) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
     FormalMultilinearSeries 𝕜 F E
   | 0 => ContinuousMultilinearMap.uncurry0 𝕜 _ x
-  | 1 => (continuousMultilinearCurryFin1 𝕜 F E).symm i.symm
+  | 1 => (continuousMultilinearCurryFin1 𝕜 F E).symm s
   | n + 2 =>
-    let q : FormalMultilinearSeries 𝕜 F E := fun k => if k < n + 2 then rightInv p i x k else 0;
-    -(i.symm : F →L[𝕜] E).compContinuousMultilinearMap ((p.comp q) (n + 2))
+    let q : FormalMultilinearSeries 𝕜 F E := fun k => if k < n + 2 then rightInv p s hs x k else 0;
+    -s.compContinuousMultilinearMap ((p.comp q) (n + 2))
 
 @[simp]
-theorem rightInv_coeff_zero (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E) :
-    p.rightInv i x 0 = ContinuousMultilinearMap.uncurry0 𝕜 _ x := by rw [rightInv]
+theorem rightInv_coeff_zero (p : FormalMultilinearSeries 𝕜 E F) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    p.rightInv s hs x 0 = ContinuousMultilinearMap.uncurry0 𝕜 _ x := by rw [rightInv]
 
 @[simp]
-theorem rightInv_coeff_one (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E) :
-    p.rightInv i x 1 = (continuousMultilinearCurryFin1 𝕜 F E).symm i.symm := by rw [rightInv]
+theorem rightInv_coeff_one (p : FormalMultilinearSeries 𝕜 E F) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    p.rightInv s hs x 1 = (continuousMultilinearCurryFin1 𝕜 F E).symm s := by rw [rightInv]
 
 set_option backward.isDefEq.respectTransparency false in
 /-- The right inverse does not depend on the zeroth coefficient of a formal multilinear
 series. -/
-theorem rightInv_removeZero (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E) :
-    p.removeZero.rightInv i x = p.rightInv i x := by
+theorem rightInv_removeZero (p : FormalMultilinearSeries 𝕜 E F) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p.removeZero 1)))
+    (hs' : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    p.removeZero.rightInv s hs x = p.rightInv s hs' x := by
   ext1 n
   induction n using Nat.strong_induction_on with | _ n IH
   match n with
@@ -225,12 +301,13 @@ theorem comp_rightInv_aux1 {n : ℕ} (hn : 0 < n) (p : FormalMultilinearSeries �
   simp [FormalMultilinearSeries.comp, A, Finset.sum_union B, C, -Set.toFinset_ofPred,
     -add_right_inj, -Composition.single_length, -Finset.union_singleton]
 
-theorem comp_rightInv_aux2 (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E) (n : ℕ)
+theorem comp_rightInv_aux2 (p : FormalMultilinearSeries 𝕜 E F) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) (n : ℕ)
     (v : Fin (n + 2) → F) :
     ∑ c ∈ {c : Composition (n + 2) | 1 < c.length}.toFinset,
-        p c.length (applyComposition (fun k : ℕ => ite (k < n + 2) (p.rightInv i x k) 0) c v) =
+        p c.length (applyComposition (fun k : ℕ => ite (k < n + 2) (p.rightInv s hs x k) 0) c v) =
       ∑ c ∈ {c : Composition (n + 2) | 1 < c.length}.toFinset,
-        p c.length ((p.rightInv i x).applyComposition c v) := by
+        p c.length ((p.rightInv s hs x).applyComposition c v) := by
   have N : 0 < n + 2 := by simp
   refine sum_congr rfl fun c hc => p.congr rfl fun j hj1 hj2 => ?_
   have : ∀ k, c.blocksFun k < n + 2 := by
@@ -240,11 +317,13 @@ theorem comp_rightInv_aux2 (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[�
   simp [applyComposition, this]
 
 set_option backward.isDefEq.respectTransparency false in
-/-- The right inverse to a formal multilinear series is indeed a right inverse, provided its linear
-term is invertible and its constant term vanishes. -/
-theorem comp_rightInv (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E)
-    (h : p 1 = (continuousMultilinearCurryFin1 𝕜 E F).symm i) :
-    p.comp (rightInv p i x) = id 𝕜 F (p 0 0) := by
+/-- The right inverse to a formal multilinear series is indeed a right inverse. -/
+theorem comp_rightInv (p : FormalMultilinearSeries 𝕜 E F) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    p.comp (rightInv p s hs x) = id 𝕜 F (p 0 0) := by
+  obtain ⟨L, hL⟩ : ∃ L, continuousMultilinearCurryFin1 𝕜 E F (p 1) = L := ⟨_, rfl⟩
+  have h : p 1 = (continuousMultilinearCurryFin1 𝕜 E F).symm L := by simp [← hL]
+  have hs' : ∀ w, L (s w) = w := by rw [← hL]; exact hs
   ext (n v)
   match n with
   | 0 =>
@@ -253,19 +332,20 @@ theorem comp_rightInv (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F
     ext i
     exact i.elim0
   | 1 =>
-    simp only [comp_coeff_one, h, rightInv_coeff_one, ContinuousLinearEquiv.apply_symm_apply,
-      id_apply_one, ContinuousLinearEquiv.coe_apply, continuousMultilinearCurryFin1_symm_apply]
+    simp only [comp_coeff_one, h, rightInv_coeff_one, id_apply_one,
+      continuousMultilinearCurryFin1_symm_apply, hs']
   | n + 2 =>
     have N : 0 < n + 2 := by simp
-    simp [comp_rightInv_aux1 N, h, rightInv, comp_rightInv_aux2, -Set.toFinset_ofPred]
+    simp [comp_rightInv_aux1 N, h, rightInv, comp_rightInv_aux2, hs', -Set.toFinset_ofPred]
 
 set_option backward.isDefEq.respectTransparency false in
-theorem rightInv_coeff (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E)
+theorem rightInv_coeff (p : FormalMultilinearSeries 𝕜 E F) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E)
     (n : ℕ) (hn : 2 ≤ n) :
-    p.rightInv i x n =
-      -(i.symm : F →L[𝕜] E).compContinuousMultilinearMap
+    p.rightInv s hs x n =
+      -s.compContinuousMultilinearMap
           (∑ c ∈ ({c | 1 < Composition.length c}.toFinset : Finset (Composition n)),
-            p.compAlongComposition (p.rightInv i x) c) := by
+            p.compAlongComposition (p.rightInv s hs x) c) := by
   match n with
   | 0 => exact False.elim (zero_lt_two.not_ge hn)
   | 1 => exact False.elim (one_lt_two.not_ge hn)
@@ -277,27 +357,166 @@ theorem rightInv_coeff (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] 
     have : ((p 1) fun _ : Fin 1 => 0) = 0 := ContinuousMultilinearMap.map_zero _
     simp [comp_rightInv_aux1 N, this, comp_rightInv_aux2, -Set.toFinset_ofPred]
 
-/-! ### Coincidence of the left and the right inverse -/
+/-- The coefficients of positive order of the right inverse take values in the range of `s`. -/
+theorem rightInv_apply_mem_range (p : FormalMultilinearSeries 𝕜 E F) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E)
+    {n : ℕ} (hn : 0 < n) (v : Fin n → F) : p.rightInv s hs x n v ∈ Set.range s := by
+  match n with
+  | 1 => exact ⟨v 0, by simp⟩
+  | n + 2 =>
+    rw [rightInv_coeff p s hs x (n + 2) (by lia), _root_.neg_apply,
+      ContinuousLinearMap.compContinuousMultilinearMap_coe, Function.comp_apply, ← map_neg]
+    exact Set.mem_range_self _
+
+/-! ### Existence, coincidence and uniqueness of formal inverses -/
 
 
-theorem leftInv_eq_rightInv (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) (x : E)
-    (h : p 1 = (continuousMultilinearCurryFin1 𝕜 E F).symm i) :
-    leftInv p i x = rightInv p i x :=
+/-- A formal left inverse of `p` coincides with a formal right inverse of `p` that has the same
+constant coefficient. -/
+theorem eq_of_comp_eq_id_of_comp_eq_id (p : FormalMultilinearSeries 𝕜 E F)
+    {q q' : FormalMultilinearSeries 𝕜 F E} {x : E} (hq : q.comp p = id 𝕜 E x)
+    (hq' : p.comp q' = id 𝕜 F (p 0 0)) (hx : q' 0 0 = x) : q = q' :=
   calc
-    leftInv p i x = (leftInv p i x).comp (id 𝕜 F (p 0 0)) := by simp
-    _ = (leftInv p i x).comp (p.comp (rightInv p i x)) := by rw [comp_rightInv p i _ h]
-    _ = ((leftInv p i x).comp p).comp (rightInv p i x) := by rw [comp_assoc]
-    _ = (id 𝕜 E x).comp (rightInv p i x) := by rw [leftInv_comp p i _ h]
-    _ = rightInv p i x := by simp [id_comp' _ _ 0]
+    q = q.comp (id 𝕜 F (p 0 0)) := (comp_id q _).symm
+    _ = q.comp (p.comp q') := by rw [hq']
+    _ = (q.comp p).comp q' := (comp_assoc _ _ _).symm
+    _ = (id 𝕜 E x).comp q' := by rw [hq]
+    _ = q' := id_comp' q' x 0 hx.symm
+
+/-- The formal left and right inverses of `p` with the same constant coefficient coincide. The two
+hypotheses together say that `p₁` is invertible, with inverse `r = r ∘ p₁ ∘ s = s`. -/
+theorem leftInv_eq_rightInv (p : FormalMultilinearSeries 𝕜 E F) (r : F →L[𝕜] E)
+    (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    leftInv p r hr x = rightInv p s hs x :=
+  p.eq_of_comp_eq_id_of_comp_eq_id (leftInv_comp p r hr x) (comp_rightInv p s hs x) (by simp)
+
+/-- If the linear term of `p` has a continuous linear right inverse `s`, then every formal left
+inverse of `p` is the formal right inverse constructed from `s`. When the linear term is
+invertible, this is the uniqueness of the formal inverse with a given constant coefficient. -/
+theorem eq_rightInv_of_comp_eq_id_left (p : FormalMultilinearSeries 𝕜 E F) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) {x : E}
+    {q : FormalMultilinearSeries 𝕜 F E} (hq : q.comp p = id 𝕜 E x) :
+    q = p.rightInv s hs x :=
+  p.eq_of_comp_eq_id_of_comp_eq_id hq (comp_rightInv p s hs x) (by simp)
+
+/-- If the linear term of `p` has a continuous linear left inverse `r`, then every formal right
+inverse of `p` with constant coefficient `x` is the formal left inverse constructed from `r`. When
+the linear term is invertible, this is the uniqueness of the formal inverse with a given constant
+coefficient. -/
+theorem eq_leftInv_of_comp_eq_id_right (p : FormalMultilinearSeries 𝕜 E F) (r : F →L[𝕜] E)
+    (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))) {x : E}
+    {q : FormalMultilinearSeries 𝕜 F E} (hq : p.comp q = id 𝕜 F (p 0 0)) (hx : q 0 0 = x) :
+    q = p.leftInv r hr x :=
+  (p.eq_of_comp_eq_id_of_comp_eq_id (leftInv_comp p r hr x) hq hx).symm
+
+/-- The formal left inverse constructed from `r` is the formal inverse of `r ∘ p`, whose linear
+term is the identity, precomposed with `r`. -/
+theorem leftInv_eq_rightInv_compFormalMultilinearSeries_compContinuousLinearMap
+    (p : FormalMultilinearSeries 𝕜 E F) (r : F →L[𝕜] E)
+    (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))) (x : E) :
+    p.leftInv r hr x =
+      ((r.compFormalMultilinearSeries p).rightInv (ContinuousLinearMap.id 𝕜 E) (fun v ↦ hr v)
+        x).compContinuousLinearMap r := by
+  have hQ : ((p.leftInv r hr x).compContinuousLinearMap
+      (continuousMultilinearCurryFin1 𝕜 E F (p 1))).comp (r.compFormalMultilinearSeries p) =
+      id 𝕜 E x := by
+    rw [comp_compFormalMultilinearSeries, compContinuousLinearMap_comp,
+      leftInv_compContinuousLinearMap, leftInv_comp]
+  rw [← eq_rightInv_of_comp_eq_id_left _ _ (fun v ↦ hr v) hQ, compContinuousLinearMap_comp,
+    leftInv_compContinuousLinearMap]
+
+/-- The formal left inverse constructed from `r` is the only formal left inverse with constant
+coefficient `x` whose coefficients depend on their vector arguments only through their images
+under `r`, that is, which is unchanged by precomposition with `p₁ ∘ r`. -/
+theorem eq_leftInv_of_comp_eq_id_of_compContinuousLinearMap_eq (p : FormalMultilinearSeries 𝕜 E F)
+    (r : F →L[𝕜] E) (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1)))
+    {x : E} {q : FormalMultilinearSeries 𝕜 F E} (hq : q.comp p = id 𝕜 E x)
+    (hq' : q.compContinuousLinearMap ((continuousMultilinearCurryFin1 𝕜 E F (p 1)).comp r) = q) :
+    q = p.leftInv r hr x := by
+  have hP : Function.RightInverse (ContinuousLinearMap.id 𝕜 E)
+      (continuousMultilinearCurryFin1 𝕜 E E ((r.compFormalMultilinearSeries p) 1)) := fun v ↦ hr v
+  have hQ : (q.compContinuousLinearMap (continuousMultilinearCurryFin1 𝕜 E F (p 1))).comp
+      (r.compFormalMultilinearSeries p) = id 𝕜 E x := by
+    rw [comp_compFormalMultilinearSeries, compContinuousLinearMap_comp, hq', hq]
+  rw [leftInv_eq_rightInv_compFormalMultilinearSeries_compContinuousLinearMap p r hr x,
+    ← eq_rightInv_of_comp_eq_id_left _ _ hP hQ, compContinuousLinearMap_comp, hq']
+
+/-- The formal right inverse constructed from `s` is the only formal right inverse with constant
+coefficient `x` whose coefficients of positive order take values in the range of `s`. -/
+theorem eq_rightInv_of_comp_eq_id_of_apply_mem_range (p : FormalMultilinearSeries 𝕜 E F)
+    (s : F →L[𝕜] E) (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1)))
+    {x : E} {q : FormalMultilinearSeries 𝕜 F E} (hq : p.comp q = id 𝕜 F (p 0 0))
+    (hx : q 0 0 = x) (hrange : ∀ n, 0 < n → ∀ v, q n v ∈ Set.range s) :
+    q = p.rightInv s hs x := by
+  have hproj {y : E} (hy : y ∈ Set.range s) :
+      s (continuousMultilinearCurryFin1 𝕜 E F (p 1) y) = y := by
+    obtain ⟨w, rfl⟩ := hy
+    rw [hs w]
+  have heq : p.comp q = p.comp (p.rightInv s hs x) := hq.trans (comp_rightInv p s hs x).symm
+  ext1 n
+  induction n using Nat.strong_induction_on with | _ n IH
+  match n with
+  | 0 =>
+    ext v
+    rw [Subsingleton.elim v 0, hx]
+    simp
+  | n + 1 =>
+    ext v
+    have N : 0 < n + 1 := n.succ_pos
+    rw [← hproj (hrange _ N v), ← hproj (rightInv_apply_mem_range p s hs x N v)]
+    congr 1
+    have h1 := congr_arg (fun t : FormalMultilinearSeries 𝕜 F F ↦ t (n + 1) v) heq
+    simp only [comp_rightInv_aux1 N] at h1
+    have hsum : ∑ c ∈ {c : Composition (n + 1) | 1 < c.length}.toFinset,
+          p c.length (q.applyComposition c v) =
+        ∑ c ∈ {c : Composition (n + 1) | 1 < c.length}.toFinset,
+          p c.length ((p.rightInv s hs x).applyComposition c v) := by
+      refine sum_congr rfl fun c hc => p.congr rfl fun j hj1 hj2 => ?_
+      have : ∀ k, c.blocksFun k < n + 1 := by
+        simp only [Set.mem_toFinset (s := {c : Composition (n + 1) | 1 < c.length}),
+          Set.mem_ofPred_eq] at hc
+        refine (Composition.ne_single_iff N).1 ?_
+        simp [Composition.eq_single_iff_length, ne_of_gt hc]
+      simp [applyComposition, IH _ (this _)]
+    rw [hsum, add_right_inj] at h1
+    simpa [Matrix.vec_single_eq_const] using h1
+
+/-- A formal multilinear series has a formal left inverse, with any prescribed constant
+coefficient, if and only if its linear term has a continuous linear left inverse. -/
+theorem exists_comp_eq_id_iff_hasLeftInverse (p : FormalMultilinearSeries 𝕜 E F) (x : E) :
+    (∃ q : FormalMultilinearSeries 𝕜 F E, q.comp p = id 𝕜 E x) ↔
+      (continuousMultilinearCurryFin1 𝕜 E F (p 1)).HasLeftInverse := by
+  constructor
+  · rintro ⟨q, hq⟩
+    refine ⟨continuousMultilinearCurryFin1 𝕜 F E (q 1), fun v ↦ ?_⟩
+    have := congr_arg (fun t ↦ t 1 fun _ ↦ v) hq
+    simpa [comp_coeff_one, Matrix.vec_single_eq_const] using this
+  · rintro ⟨r, hr⟩
+    exact ⟨p.leftInv r hr x, leftInv_comp p r hr x⟩
+
+/-- A formal multilinear series has a formal right inverse if and only if its linear term has a
+continuous linear right inverse. -/
+theorem exists_comp_eq_id_iff_hasRightInverse (p : FormalMultilinearSeries 𝕜 E F) :
+    (∃ q : FormalMultilinearSeries 𝕜 F E, p.comp q = id 𝕜 F (p 0 0)) ↔
+      (continuousMultilinearCurryFin1 𝕜 E F (p 1)).HasRightInverse := by
+  constructor
+  · rintro ⟨q, hq⟩
+    refine ⟨continuousMultilinearCurryFin1 𝕜 F E (q 1), fun w ↦ ?_⟩
+    have := congr_arg (fun t ↦ t 1 fun _ ↦ w) hq
+    simpa [comp_coeff_one, Matrix.vec_single_eq_const] using this
+  · rintro ⟨s, hs⟩
+    exact ⟨p.rightInv s hs 0, comp_rightInv p s hs 0⟩
 
 /-!
 ### Convergence of the inverse of a power series
 
-Assume that `p` is a convergent multilinear series, and let `q` be its (left or right) inverse.
-Using the left-inverse formula gives
+Assume that `p` is a convergent multilinear series with invertible linear term `p₁`, and let `q`
+be its (left or right) inverse. Using the left-inverse formula gives
 $$
-q_n = - (p_1)^{-n} \sum_{k=0}^{n-1} \sum_{i_1 + \dotsc + i_k = n} q_k (p_{i_1}, \dotsc, p_{i_k}).
+q_n = - (p_1)^{-n} \sum_{k=0}^{n-1} \sum_{i_1 + \dotsc + i_k = n} q_k (p_{i_1}, \dotsc, p_{i_k}),
 $$
+where `(p₁)^{-n}` stands for precomposition with `p₁⁻¹` in each of the `n` variables.
 Assume for simplicity that we are in dimension `1` and `p₁ = 1`. In the formula for `qₙ`, the term
 `q_{n-1}` appears with a multiplicity of `n-1` (choosing the index `i_j` for which `i_j = 2` while
 all the other indices are equal to `1`), which indicates that `qₙ` might grow like `n!`. This is
@@ -309,7 +528,9 @@ $$
 q_n = - (p_1)^{-1} \sum_{k=2}^n \sum_{i_1 + \dotsc + i_k = n} p_k (q_{i_1}, \dotsc, q_{i_k}).
 $$
 Here, `q_{n-1}` can only appear in the term with `k = 2`, and it only appears twice, so there is
-hope this formula can lead to an at most geometric behavior.
+hope this formula can lead to an at most geometric behavior. For the one-sided inverses
+constructed above, `p₁⁻¹` is replaced by the chosen linear inverse `r` or `s`: the estimate below
+only uses `s`, and `radius_leftInv_pos_of_radius_pos` reduces left inverses to right inverses.
 
 Let `Qₙ = ‖qₙ‖`. Bounding `‖pₖ‖` with `C r^k` gives an inequality
 $$
@@ -426,16 +647,17 @@ expression for `∑_{k<n+1} aᵏ Qₖ` in terms of a sum of powers of the same s
 in the specific setup we are interesting in, by reducing to the general bound in
 `radius_rightInv_pos_of_radius_pos_aux1`. -/
 theorem radius_rightInv_pos_of_radius_pos_aux2 {x : E} {n : ℕ} (hn : 2 ≤ n + 1)
-    (p : FormalMultilinearSeries 𝕜 E F) (i : E ≃L[𝕜] F) {r a C : ℝ} (hr : 0 ≤ r) (ha : 0 ≤ a)
-    (hC : 0 ≤ C) (hp : ∀ n, ‖p n‖ ≤ C * r ^ n) :
-    ∑ k ∈ Ico 1 (n + 1), a ^ k * ‖p.rightInv i x k‖ ≤
-      ‖(i.symm : F →L[𝕜] E)‖ * a +
-        ‖(i.symm : F →L[𝕜] E)‖ * C *
-          ∑ k ∈ Ico 2 (n + 1), (r * ∑ j ∈ Ico 1 n, a ^ j * ‖p.rightInv i x j‖) ^ k :=
-  let I := ‖(i.symm : F →L[𝕜] E)‖
+    (p : FormalMultilinearSeries 𝕜 E F) (s : F →L[𝕜] E)
+    (hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))) {r a C : ℝ}
+    (hr : 0 ≤ r) (ha : 0 ≤ a) (hC : 0 ≤ C) (hp : ∀ n, ‖p n‖ ≤ C * r ^ n) :
+    ∑ k ∈ Ico 1 (n + 1), a ^ k * ‖p.rightInv s hs x k‖ ≤
+      ‖s‖ * a +
+        ‖s‖ * C *
+          ∑ k ∈ Ico 2 (n + 1), (r * ∑ j ∈ Ico 1 n, a ^ j * ‖p.rightInv s hs x j‖) ^ k :=
+  let I := ‖s‖
   calc
-    ∑ k ∈ Ico 1 (n + 1), a ^ k * ‖p.rightInv i x k‖ =
-        a * I + ∑ k ∈ Ico 2 (n + 1), a ^ k * ‖p.rightInv i x k‖ := by
+    ∑ k ∈ Ico 1 (n + 1), a ^ k * ‖p.rightInv s hs x k‖ =
+        a * I + ∑ k ∈ Ico 2 (n + 1), a ^ k * ‖p.rightInv s hs x k‖ := by
       simp only [I, LinearIsometryEquiv.norm_map, pow_one, rightInv_coeff_one,
         show Ico (1 : ℕ) 2 = {1} from Nat.Ico_succ_singleton 1,
         sum_singleton, ← sum_Ico_consecutive _ one_le_two hn]
@@ -443,18 +665,18 @@ theorem radius_rightInv_pos_of_radius_pos_aux2 {x : E} {n : ℕ} (hn : 2 ≤ n +
         a * I +
           ∑ k ∈ Ico 2 (n + 1),
             a ^ k *
-              ‖(i.symm : F →L[𝕜] E).compContinuousMultilinearMap
+              ‖s.compContinuousMultilinearMap
                   (∑ c ∈ ({c | 1 < Composition.length c}.toFinset : Finset (Composition k)),
-                    p.compAlongComposition (p.rightInv i x) c)‖ := by
+                    p.compAlongComposition (p.rightInv s hs x) c)‖ := by
       congr! 2 with j hj
-      rw [rightInv_coeff _ _ _ _ (mem_Ico.1 hj).1, norm_neg]
+      rw [rightInv_coeff _ _ _ _ _ (mem_Ico.1 hj).1, norm_neg]
     _ ≤
-        a * ‖(i.symm : F →L[𝕜] E)‖ +
+        a * ‖s‖ +
           ∑ k ∈ Ico 2 (n + 1),
             a ^ k *
               (I *
                 ∑ c ∈ ({c | 1 < Composition.length c}.toFinset : Finset (Composition k)),
-                  C * r ^ c.length * ∏ j, ‖p.rightInv i x (c.blocksFun j)‖) := by
+                  C * r ^ c.length * ∏ j, ‖p.rightInv s hs x (c.blocksFun j)‖) := by
       gcongr with j
       apply (ContinuousLinearMap.norm_compContinuousMultilinearMap_le _ _).trans
       gcongr
@@ -465,27 +687,29 @@ theorem radius_rightInv_pos_of_radius_pos_aux2 {x : E} {n : ℕ} (hn : 2 ≤ n +
       apply hp
     _ = I * a + I * C * ∑ k ∈ Ico 2 (n + 1), a ^ k *
           ∑ c ∈ ({c | 1 < Composition.length c}.toFinset : Finset (Composition k)),
-            r ^ c.length * ∏ j, ‖p.rightInv i x (c.blocksFun j)‖ := by
-      simp_rw [I, mul_assoc C, ← mul_sum, ← mul_assoc, mul_comm _ ‖(i.symm : F →L[𝕜] E)‖,
+            r ^ c.length * ∏ j, ‖p.rightInv s hs x (c.blocksFun j)‖ := by
+      simp_rw [I, mul_assoc C, ← mul_sum, ← mul_assoc, mul_comm _ ‖s‖,
         mul_assoc, ← mul_sum, ← mul_assoc, mul_comm _ C, mul_assoc, ← mul_sum]
       ring
     _ ≤ I * a + I * C *
-        ∑ k ∈ Ico 2 (n + 1), (r * ∑ j ∈ Ico 1 n, a ^ j * ‖p.rightInv i x j‖) ^ k := by
+        ∑ k ∈ Ico 2 (n + 1), (r * ∑ j ∈ Ico 1 n, a ^ j * ‖p.rightInv s hs x j‖) ^ k := by
       gcongr _ + _ * _ * ?_
       simp_rw [mul_pow]
       apply
-        radius_right_inv_pos_of_radius_pos_aux1 n (fun k => ‖p.rightInv i x k‖)
+        radius_right_inv_pos_of_radius_pos_aux1 n (fun k => ‖p.rightInv s hs x k‖)
           (fun k => norm_nonneg _) hr ha
 
-/-- If a a formal multilinear series has a positive radius of convergence, then its right inverse
-also has a positive radius of convergence. -/
+/-- If a formal multilinear series has a positive radius of convergence, then so does its formal
+right inverse `p.rightInv s hs x`. When the linear term of `p` is not invertible, other formal right
+inverses of `p` can have radius zero. -/
 theorem radius_rightInv_pos_of_radius_pos
-    {p : FormalMultilinearSeries 𝕜 E F} {i : E ≃L[𝕜] F} {x : E}
-    (hp : 0 < p.radius) : 0 < (p.rightInv i x).radius := by
+    {p : FormalMultilinearSeries 𝕜 E F} {s : F →L[𝕜] E}
+    {hs : Function.RightInverse s (continuousMultilinearCurryFin1 𝕜 E F (p 1))} {x : E}
+    (hp : 0 < p.radius) : 0 < (p.rightInv s hs x).radius := by
   obtain ⟨C, r, Cpos, rpos, ple⟩ :
     ∃ (C r : _) (_ : 0 < C) (_ : 0 < r), ∀ n : ℕ, ‖p n‖ ≤ C * r ^ n :=
     le_mul_pow_of_radius_pos p hp
-  let I := ‖(i.symm : F →L[𝕜] E)‖
+  let I := ‖s‖
   -- choose `a` small enough to make sure that `∑_{k ≤ n} aᵏ Qₖ` will be controllable by
   -- induction
   obtain ⟨a, apos, ha1, ha2⟩ :
@@ -507,7 +731,7 @@ theorem radius_rightInv_pos_of_radius_pos
     exact ⟨a, ha.1, ha.2.1.le, ha.2.2.le⟩
   -- check by induction that the partial sums are suitably bounded, using the choice of `a` and the
   -- inductive control from Lemma `radius_rightInv_pos_of_radius_pos_aux2`.
-  let S n := ∑ k ∈ Ico 1 n, a ^ k * ‖p.rightInv i x k‖
+  let S n := ∑ k ∈ Ico 1 n, a ^ k * ‖p.rightInv s hs x k‖
   have IRec : ∀ n, 1 ≤ n → S n ≤ (I + 1) * a := by
     apply Nat.le_induction
     · simp only [S]
@@ -521,7 +745,7 @@ theorem radius_rightInv_pos_of_radius_pos
           _ ≤ 1 / 2 := by rwa [← mul_assoc]
       calc
         S (n + 1) ≤ I * a + I * C * ∑ k ∈ Ico 2 (n + 1), (r * S n) ^ k :=
-          radius_rightInv_pos_of_radius_pos_aux2 In p i rpos.le apos.le Cpos.le ple
+          radius_rightInv_pos_of_radius_pos_aux2 In p s hs rpos.le apos.le Cpos.le ple
         _ = I * a + I * C * (((r * S n) ^ 2 - (r * S n) ^ (n + 1)) / (1 - r * S n)) := by
           rw [geom_sum_Ico' _ In]; exact ne_of_lt (rSn.trans_lt (by norm_num))
         _ ≤ I * a + I * C * ((r * S n) ^ 2 / (1 / 2)) := by
@@ -535,27 +759,34 @@ theorem radius_rightInv_pos_of_radius_pos
         _ ≤ (I + 1) * a := by gcongr
   -- conclude that all coefficients satisfy `aⁿ Qₙ ≤ (I + 1) a`.
   let a' : NNReal := ⟨a, apos.le⟩
-  suffices H : (a' : ENNReal) ≤ (p.rightInv i x).radius by
+  suffices H : (a' : ENNReal) ≤ (p.rightInv s hs x).radius by
     apply lt_of_lt_of_le _ H
     -- Prior to https://github.com/leanprover/lean4/pull/2734, this was `exact_mod_cast apos`.
     simpa only [ENNReal.coe_pos]
   apply le_radius_of_eventually_le _ ((I + 1) * a)
   filter_upwards [Ici_mem_atTop 1] with n (hn : 1 ≤ n)
   calc
-    ‖p.rightInv i x n‖ * (a' : ℝ) ^ n = a ^ n * ‖p.rightInv i x n‖ := mul_comm _ _
-    _ ≤ ∑ k ∈ Ico 1 (n + 1), a ^ k * ‖p.rightInv i x k‖ :=
-      (haveI : ∀ k ∈ Ico 1 (n + 1), 0 ≤ a ^ k * ‖p.rightInv i x k‖ := fun k _ => by positivity
+    ‖p.rightInv s hs x n‖ * (a' : ℝ) ^ n = a ^ n * ‖p.rightInv s hs x n‖ := mul_comm _ _
+    _ ≤ ∑ k ∈ Ico 1 (n + 1), a ^ k * ‖p.rightInv s hs x k‖ :=
+      (haveI : ∀ k ∈ Ico 1 (n + 1), 0 ≤ a ^ k * ‖p.rightInv s hs x k‖ := fun k _ => by positivity
       single_le_sum this (by simp [hn]))
     _ ≤ (I + 1) * a := IRec (n + 1) (by simp)
 
-/-- If a a formal multilinear series has a positive radius of convergence, then its left inverse
-also has a positive radius of convergence. -/
+/-- If a formal multilinear series has a positive radius of convergence, then so does its formal
+left inverse `p.leftInv r hr x`: by
+`leftInv_eq_rightInv_compFormalMultilinearSeries_compContinuousLinearMap`, it is a formal right
+inverse of `r ∘ p` precomposed with `r`. When the linear term of `p` is not invertible, other
+formal left inverses of `p` can have radius zero. -/
 theorem radius_leftInv_pos_of_radius_pos
-    {p : FormalMultilinearSeries 𝕜 E F} {i : E ≃L[𝕜] F} {x : E}
-    (hp : 0 < p.radius) (h : p 1 = (continuousMultilinearCurryFin1 𝕜 E F).symm i) :
-    0 < (p.leftInv i x).radius := by
-  rw [leftInv_eq_rightInv _ _ _ h]
-  exact radius_rightInv_pos_of_radius_pos hp
+    {p : FormalMultilinearSeries 𝕜 E F} {r : F →L[𝕜] E}
+    {hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))} {x : E}
+    (hp : 0 < p.radius) : 0 < (p.leftInv r hr x).radius := by
+  rw [leftInv_eq_rightInv_compFormalMultilinearSeries_compContinuousLinearMap p r hr x]
+  have hQ_pos : 0 < ((r.compFormalMultilinearSeries p).rightInv (ContinuousLinearMap.id 𝕜 E)
+      (fun v ↦ hr v) x).radius :=
+    radius_rightInv_pos_of_radius_pos (hp.trans_le (p.radius_le_radius_continuousLinearMap_comp r))
+  exact (ENNReal.div_pos hQ_pos.ne' enorm_ne_top).trans_le
+    (div_le_radius_compContinuousLinearMap _ r)
 
 end FormalMultilinearSeries
 
@@ -650,44 +881,48 @@ lemma HasFPowerSeriesAt.eventually_hasSum_of_comp {f : E → F} {g : F → G}
     exact cauchySeq_finset_of_norm_bounded Z (fun i ↦ le_rfl)
   exact tendsto_nhds_of_cauchySeq_of_subseq C tendsto_finset_range L
 
-/-- If an open partial homeomorphism `f` is defined at `a` and has a power series expansion there
-with invertible linear term, then `f.symm` has a power series expansion at `f a`, given by the
-inverse of the initial power series. -/
+/-- If an open partial homeomorphism `f` is defined at `a` and has a power series expansion `p`
+there whose linear term has a continuous linear left inverse `r`, then `f.symm` has a power series
+expansion at `f a`, given by the formal left inverse `p.leftInv r hr a`.
+
+Only a left inverse is assumed; the chain rule applied to `f ∘ f.symm`, the identity near `f a`,
+then shows that `r` is also a right inverse of the linear term. -/
 theorem OpenPartialHomeomorph.hasFPowerSeriesAt_symm (f : OpenPartialHomeomorph E F) {a : E}
-    {i : E ≃L[𝕜] F} (h0 : a ∈ f.source) {p : FormalMultilinearSeries 𝕜 E F}
-    (h : HasFPowerSeriesAt f p a) (hp : p 1 = (continuousMultilinearCurryFin1 𝕜 E F).symm i) :
-    HasFPowerSeriesAt f.symm (p.leftInv i a) (f a) := by
-  have A : HasFPowerSeriesAt (f.symm ∘ f) ((p.leftInv i a).comp p) a := by
-    have : HasFPowerSeriesAt (ContinuousLinearMap.id 𝕜 E) ((p.leftInv i a).comp p) a := by
-      rw [leftInv_comp _ _ _ hp]
+    (h0 : a ∈ f.source) {p : FormalMultilinearSeries 𝕜 E F} (h : HasFPowerSeriesAt f p a)
+    {r : F →L[𝕜] E} (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 𝕜 E F (p 1))) :
+    HasFPowerSeriesAt f.symm (p.leftInv r hr a) (f a) := by
+  have A : HasFPowerSeriesAt (f.symm ∘ f) ((p.leftInv r hr a).comp p) a := by
+    have : HasFPowerSeriesAt (ContinuousLinearMap.id 𝕜 E) ((p.leftInv r hr a).comp p) a := by
+      rw [leftInv_comp]
       exact (ContinuousLinearMap.id 𝕜 E).hasFPowerSeriesAt a
     apply this.congr
     filter_upwards [f.open_source.mem_nhds h0] with x hx using by simp [hx]
-  have B : ∀ᶠ (y : E) in 𝓝 0, HasSum (fun n ↦ (p.leftInv i a n) fun _ ↦ f (a + y) - f a)
+  have B : ∀ᶠ (y : E) in 𝓝 0, HasSum (fun n ↦ (p.leftInv r hr a n) fun _ ↦ f (a + y) - f a)
       (f.symm (f (a + y))) := by
-    simpa using! A.eventually_hasSum_of_comp h (radius_leftInv_pos_of_radius_pos h.radius_pos hp)
-  have C : ∀ᶠ (y : E) in 𝓝 a, HasSum (fun n ↦ (p.leftInv i a n) fun _ ↦ f y - f a)
+    simpa using! A.eventually_hasSum_of_comp h (radius_leftInv_pos_of_radius_pos h.radius_pos)
+  have C : ∀ᶠ (y : E) in 𝓝 a, HasSum (fun n ↦ (p.leftInv r hr a n) fun _ ↦ f y - f a)
       (f.symm (f y)) := by
     rw [← sub_eq_zero_of_eq (a := a) rfl] at B
     have : ContinuousAt (fun x ↦ x - a) a := by fun_prop
     simpa using! this.preimage_mem_nhds B
   have D : ∀ᶠ (y : E) in 𝓝 (f.symm (f a)),
-      HasSum (fun n ↦ (p.leftInv i a n) fun _ ↦ f y - f a) y := by
+      HasSum (fun n ↦ (p.leftInv r hr a n) fun _ ↦ f y - f a) y := by
     simp only [h0, OpenPartialHomeomorph.left_inv]
     filter_upwards [C, f.open_source.mem_nhds h0] with x hx h'x
     simpa [h'x] using! hx
-  have E : ∀ᶠ z in 𝓝 (f a), HasSum (fun n ↦ (p.leftInv i a n) fun _ ↦ f (f.symm z) - f a)
+  have E : ∀ᶠ z in 𝓝 (f a), HasSum (fun n ↦ (p.leftInv r hr a n) fun _ ↦ f (f.symm z) - f a)
       (f.symm z) := by
     have : ContinuousAt f.symm (f a) := f.continuousAt_symm (f.map_source h0)
     exact this D
-  have F : ∀ᶠ z in 𝓝 (f a), HasSum (fun n ↦ (p.leftInv i a n) fun _ ↦ z - f a) (f.symm z) := by
+  have F : ∀ᶠ z in 𝓝 (f a), HasSum (fun n ↦ (p.leftInv r hr a n) fun _ ↦ z - f a)
+      (f.symm z) := by
     filter_upwards [f.open_target.mem_nhds (f.map_source h0), E] with z hz h'z
     simpa [hz] using! h'z
-  rcases EMetric.mem_nhds_iff.1 F with ⟨r, r_pos, hr⟩
-  refine ⟨min r (p.leftInv i a).radius, min_le_right _ _,
-    lt_min r_pos (radius_leftInv_pos_of_radius_pos h.radius_pos hp), fun {y} hy ↦ ?_⟩
-  have : y + f a ∈ Metric.eball (f a) r := by
+  rcases EMetric.mem_nhds_iff.1 F with ⟨ρ, ρ_pos, hρ⟩
+  refine ⟨min ρ (p.leftInv r hr a).radius, min_le_right _ _,
+    lt_min ρ_pos (radius_leftInv_pos_of_radius_pos h.radius_pos), fun {y} hy ↦ ?_⟩
+  have : y + f a ∈ Metric.eball (f a) ρ := by
     simp only [Metric.mem_eball, edist_eq_enorm_sub, sub_zero, lt_min_iff,
       add_sub_cancel_right] at hy ⊢
     exact hy.1
-  simpa [add_comm] using! hr this
+  simpa [add_comm] using! hρ this
