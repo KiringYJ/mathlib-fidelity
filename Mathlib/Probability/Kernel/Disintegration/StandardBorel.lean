@@ -29,7 +29,9 @@ For `κ : Kernel α (β × ℝ)`, the construction of the conditional kernel pro
 * Build a measurable function `f : (α × β) → ℚ → ℝ` such that for all measurable sets
   `s` and all `q : ℚ`, `∫ x in s, f (a, x) q ∂(Kernel.fst κ a) = (κ a).real (s ×ˢ Iic (q : ℝ))`.
   We restrict to `ℚ` here to be able to prove the measurability.
-* Extend that function to `(α × β) → StieltjesFunction ℝ`. See the file `MeasurableStieltjes.lean`.
+* Choose a measurable function `(α × β) → StieltjesFunction ℝ` with the property `IsCondKernelCDF`
+  that agrees with it almost everywhere at every rational. Its existence is proved in the file
+  `CDFToKernel.lean`, with the tools of the file `MeasurableStieltjes.lean`.
 * Finally obtain from the measurable Stieltjes function a measure on `ℝ` for each element of `α × β`
   in a measurable way: we have obtained a `Kernel (α × β) ℝ`.
   See the file `CDFToKernel.lean` for that step.
@@ -124,16 +126,29 @@ lemma isRatCondKernelCDF_density_Iic (κ : Kernel α (γ × ℝ)) [IsFiniteKerne
     IsRatCondKernelCDF (fun (p : α × γ) q ↦ density κ (fst κ) p.1 p.2 (Iic q)) κ (fst κ) :=
   (isRatCondKernelCDFAux_density_Iic κ).isRatCondKernelCDF
 
-/-- The conditional kernel CDF of a kernel `κ : Kernel α (γ × ℝ)`, where `γ` is countably generated.
--/
+/-- A conditional kernel CDF of a finite kernel `κ : Kernel α (γ × ℝ)` with respect to `fst κ`,
+where `γ` is countably generated. Its existence follows from `isRatCondKernelCDF_density_Iic`.
+
+Every conditional kernel CDF of `κ` agrees with it `fst κ a`-almost everywhere for every `a`
+(`ProbabilityTheory.IsCondKernelCDF.ae_eq_condKernelCDF`). Only this almost-everywhere class is
+determined by `κ`: a measurable modification on `fst κ a`-null sets that still consists of
+probability cdfs is another conditional kernel CDF (`ProbabilityTheory.IsCondKernelCDF.congr`), so
+the values of `condKernelCDF κ` on such null sets are a choice. -/
 noncomputable
 def condKernelCDF (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] : α × γ → StieltjesFunction ℝ :=
-  stieltjesOfMeasurableRat (fun (p : α × γ) q ↦ density κ (fst κ) p.1 p.2 (Iic q))
-    (isRatCondKernelCDF_density_Iic κ).measurable
+  (isRatCondKernelCDF_density_Iic κ).exists_isCondKernelCDF.choose
 
 lemma isCondKernelCDF_condKernelCDF (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
     IsCondKernelCDF (condKernelCDF κ) κ (fst κ) :=
-  isCondKernelCDF_stieltjesOfMeasurableRat (isRatCondKernelCDF_density_Iic κ)
+  (isRatCondKernelCDF_density_Iic κ).exists_isCondKernelCDF.choose_spec.1
+
+/-- Every conditional kernel CDF of `κ` with respect to `fst κ` agrees with `condKernelCDF κ`
+`fst κ a`-almost everywhere. -/
+lemma _root_.ProbabilityTheory.IsCondKernelCDF.ae_eq_condKernelCDF {κ : Kernel α (γ × ℝ)}
+    [IsFiniteKernel κ] {f : α × γ → StieltjesFunction ℝ} (hf : IsCondKernelCDF f κ (fst κ))
+    (a : α) :
+    ∀ᵐ b ∂(fst κ a), f (a, b) = condKernelCDF κ (a, b) :=
+  hf.ae_eq (isCondKernelCDF_condKernelCDF κ) a
 
 /-- Auxiliary definition for `ProbabilityTheory.Kernel.condKernel`.
 A conditional kernel for `κ : Kernel α (γ × ℝ)` where `γ` is countably generated. -/

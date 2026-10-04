@@ -85,27 +85,26 @@ This is why the domain is a class rather than the hypothesis `SigmaFinite ρ.fst
 depend on the proof of the evidence.
 
 The existence of a conditional cdf is proved with the more general tools about kernel CDFs
-developed in the file `Mathlib/Probability/Kernel/Disintegration/CDFToKernel.lean`. In that file, we
-build a function `α × β → StieltjesFunction ℝ` (which is `α × β → ℝ → ℝ` with additional
-properties) from a function `α × β → ℚ → ℝ`. The restriction to `ℚ` allows to prove some
-properties like measurability more easily. Here we apply that construction to the case `β = Unit`
-and then drop `β`. The function on `ℚ` is given by the Radon-Nikodym derivatives
-`(ρ.IicSnd r).rnDeriv ρ.fst` at rational `r`, and `stieltjesOfMeasurableRat` extends it to a family
-of Stieltjes functions. These tools require a finite measure. For a measure `ρ` with a σ-finite
-first marginal, we choose a measurable function `w : α → ℝ≥0` that is positive and satisfies
-`∫⁻ a, w a ∂ρ.fst < 1`, and we apply them to the finite measure
-`ρ' := ρ.withDensity fun p ↦ w p.1`, using the Radon-Nikodym derivatives of `ρ` itself, which are
-also densities of the rays of `ρ'` with respect to `ρ'.fst`. The weight `w` is then divided out of
-the identity for the rays.
+developed in the file `Mathlib/Probability/Kernel/Disintegration/CDFToKernel.lean`. In that file, a
+function `α × β → ℚ → ℝ` with the property `IsRatCondKernelCDF` gives a function
+`α × β → StieltjesFunction ℝ` (which is `α × β → ℝ → ℝ` with additional properties) with the
+property `IsCondKernelCDF` (`ProbabilityTheory.IsRatCondKernelCDF.exists_isCondKernelCDF`). The
+restriction to `ℚ` allows to prove some properties like measurability more easily. Here we apply
+that statement to the case `β = Unit` and then drop `β`. The function on `ℚ` is given by the
+Radon-Nikodym derivatives `(ρ.IicSnd r).rnDeriv ρ.fst` at rational `r`. These tools require a
+finite measure. For a measure `ρ` with a σ-finite first marginal, we choose a measurable function
+`w : α → ℝ≥0` that is positive and satisfies `∫⁻ a, w a ∂ρ.fst < 1`, and we apply them to the
+finite measure `ρ' := ρ.withDensity fun p ↦ w p.1`, using the Radon-Nikodym derivatives of `ρ`
+itself, which are also densities of the rays of `ρ'` with respect to `ρ'.fst`. The weight `w` is
+then divided out of the identity for the rays.
 
 Uniqueness follows from `MeasureTheory.ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite` at rational
 points and the right continuity of Stieltjes functions.
 
-This construction is not canonical. Radon-Nikodym derivatives are determined only almost
-everywhere, and `stieltjesOfMeasurableRat` replaces the derivatives by a default function at the
-points where they do not form a Stieltjes function on `ℚ`. The declarations of the construction are
-private and only serve to prove that a conditional cdf exists. The specification `IsCondCDF` and the
-evidence `HasUniqueCondCDF` do not depend on these choices.
+This construction is not canonical: Radon-Nikodym derivatives and conditional kernel CDFs are
+determined only almost everywhere. The declarations of the construction are private and only serve
+to prove that a conditional cdf exists. The specification `IsCondCDF` and the evidence
+`HasUniqueCondCDF` do not depend on these choices.
 
 Chang and Pollard [chang_pollard1997] disintegrate a σ-finite measure with respect to a σ-finite
 mixing measure (Definition 1, p. 292). For such a measure that has a disintegration, they show that
@@ -362,11 +361,6 @@ private lemma preCDF_le_one (ρ : Measure (α × ℝ)) [SigmaFinite ρ.fst] :
   simp only [lintegral_one, Measure.restrict_apply, MeasurableSet.univ, univ_inter]
   exact Measure.IicSnd_le_fst ρ r s
 
-/-- The family of Stieltjes functions built from the Radon-Nikodym derivatives `preCDF`. It is a
-conditional cdf whenever `ρ.fst` is σ-finite. -/
-private noncomputable def condCDFAux (ρ : Measure (α × ℝ)) : α → StieltjesFunction ℝ :=
-  stieltjesOfMeasurableRat (fun a r ↦ (preCDF ρ r a).toReal) measurable_preCDF'
-
 /-! #### Reweighting by a function of the first coordinate
 
 A conditional cdf of `ρ` is built from the finite case by reweighting `ρ` with a positive function
@@ -399,12 +393,13 @@ private lemma eq_of_withDensity_weight {μ ν : Measure α} {g : α → ℝ≥0�
   simp only [Pi.mul_apply]
   rw [mul_comm (w a) (g a), mul_assoc, ENNReal.mul_inv_cancel (hw₀ a) (hw_top a), mul_one]
 
-/-- The family `condCDFAux ρ` is a conditional cdf of `ρ`, if `ρ.fst` is σ-finite and `w` is a
-positive finite measurable function that is `ρ.fst`-integrable. The proof applies the construction
-for finite measures to the finite measure `ρ.withDensity fun p ↦ w p.1`. -/
-private lemma isCondCDF_condCDFAux_of_weight [SigmaFinite ρ.fst] (hw : Measurable w)
+/-- A conditional cdf of `ρ` exists if `ρ.fst` is σ-finite and `w` is a positive finite measurable
+function that is `ρ.fst`-integrable. The proof applies the construction for finite kernels to the
+finite measure `ρ.withDensity fun p ↦ w p.1` and divides the weight out of the identity for the
+rays. -/
+private lemma exists_isCondCDF_of_weight [SigmaFinite ρ.fst] (hw : Measurable w)
     (hw₀ : ∀ a, w a ≠ 0) (hw_top : ∀ a, w a ≠ ∞) (hw_int : ∫⁻ a, w a ∂ρ.fst ≠ ∞) :
-    IsCondCDF ρ (condCDFAux ρ) := by
+    ∃ F, IsCondCDF ρ F := by
   set ρ' : Measure (α × ℝ) := ρ.withDensity fun p ↦ w p.1
   have h_fst : ρ'.fst = ρ.fst.withDensity w := fst_withDensity_fst hw
   have h_Iic (x : ℝ) : ρ'.IicSnd x = (ρ.IicSnd x).withDensity w := IicSnd_withDensity_fst hw x
@@ -461,35 +456,32 @@ private lemma isCondCDF_condCDFAux_of_weight [SigmaFinite ρ.fst] (hw : Measurab
       setIntegral := fun _ s hs q ↦ by
         simp only [Kernel.const_apply]
         rw [h_setIntegral q hs, measureReal_def, measureReal_def, Measure.IicSnd_apply _ _ hs] }
-  have h_rat := h_aux.isRatCondKernelCDF
-  have h_cdf := isCondKernelCDF_stieltjesOfMeasurableRat h_rat
-  -- `condCDFAux ρ a` is the Stieltjes function of the kernel construction at `((), a)`.
-  have h_eq (a : α) : condCDFAux ρ a = stieltjesOfMeasurableRat
-      (fun (p : Unit × α) r ↦ (preCDF ρ r p.2).toReal) h_rat.measurable ((), a) :=
-    (stieltjesOfMeasurableRat_unit_prod measurable_preCDF' a).symm
-  have h_density (x : ℝ) :
-      ρ'.fst.withDensity (fun a ↦ ENNReal.ofReal (condCDFAux ρ a x)) = ρ'.IicSnd x := by
+  -- A conditional kernel CDF of the constant kernel `ρ'` gives a conditional cdf of `ρ'`.
+  obtain ⟨g, hg, -⟩ := h_aux.isRatCondKernelCDF.exists_isCondKernelCDF
+  have hg_meas (x : ℝ) : Measurable fun a ↦ g ((), a) x :=
+    (hg.measurable x).comp measurable_prodMk_left
+  refine ⟨fun a ↦ g ((), a), hg_meas, fun a ↦ hg.tendsto_atBot_zero ((), a),
+    fun a ↦ hg.tendsto_atTop_one ((), a), fun x s hs ↦ ?_⟩
+  have h_density :
+      ρ'.fst.withDensity (fun a ↦ ENNReal.ofReal (g ((), a) x)) = ρ'.IicSnd x := by
     ext t ht
     rw [withDensity_apply _ ht, Measure.IicSnd_apply _ _ ht]
-    simpa only [Kernel.const_apply, ← h_eq] using h_cdf.setLIntegral () ht x
-  refine ⟨measurable_stieltjesOfMeasurableRat measurable_preCDF',
-    tendsto_stieltjesOfMeasurableRat_atBot measurable_preCDF',
-    tendsto_stieltjesOfMeasurableRat_atTop measurable_preCDF', fun x s hs ↦ ?_⟩
+    simpa only [Kernel.const_apply] using hg.setLIntegral () ht x
   -- Divide the weight out of the identity for `ρ'`.
-  have h_density' : ρ.fst.withDensity (fun a ↦ ENNReal.ofReal (condCDFAux ρ a x)) = ρ.IicSnd x := by
-    refine eq_of_withDensity_weight hw ?_ hw₀ hw_top ?_
-    · exact (measurable_stieltjesOfMeasurableRat measurable_preCDF' x).ennreal_ofReal
-    · rw [← h_fst, ← h_Iic]
-      exact h_density x
+  have h_density' :
+      ρ.fst.withDensity (fun a ↦ ENNReal.ofReal (g ((), a) x)) = ρ.IicSnd x := by
+    refine eq_of_withDensity_weight hw (hg_meas x).ennreal_ofReal hw₀ hw_top ?_
+    rw [← h_fst, ← h_Iic]
+    exact h_density
   rw [← withDensity_apply _ hs, h_density', Measure.IicSnd_apply _ _ hs]
 
 end Reweight
 
-/-- The family `condCDFAux ρ` is a conditional cdf of `ρ` whenever `ρ.fst` is σ-finite. -/
-private lemma isCondCDF_condCDFAux (ρ : Measure (α × ℝ)) [SigmaFinite ρ.fst] :
-    IsCondCDF ρ (condCDFAux ρ) := by
+/-- A conditional cdf of `ρ` exists whenever `ρ.fst` is σ-finite. -/
+private lemma exists_isCondCDF_of_sigmaFinite_fst (ρ : Measure (α × ℝ)) [SigmaFinite ρ.fst] :
+    ∃ F, IsCondCDF ρ F := by
   obtain ⟨w, hw_pos, hw_meas, hw_lt⟩ := exists_pos_lintegral_lt_of_sigmaFinite ρ.fst one_ne_zero
-  exact isCondCDF_condCDFAux_of_weight (w := fun a ↦ (w a : ℝ≥0∞)) hw_meas.coe_nnreal_ennreal
+  exact exists_isCondCDF_of_weight (w := fun a ↦ (w a : ℝ≥0∞)) hw_meas.coe_nnreal_ennreal
     (fun a ↦ ENNReal.coe_ne_zero.2 (hw_pos a).ne') (fun _ ↦ ENNReal.coe_ne_top)
     (hw_lt.trans ENNReal.one_lt_top).ne
 
@@ -513,7 +505,7 @@ private lemma ae_eq_of_isCondCDF_of_sigmaFinite (ρ : Measure (α × ℝ)) [Sigm
 -- see Note [lower instance priority]
 instance (priority := 100) hasUniqueCondCDF_of_sigmaFinite_fst (ρ : Measure (α × ℝ))
     [SigmaFinite ρ.fst] : HasUniqueCondCDF ρ where
-  exists_isCondCDF := ⟨condCDFAux ρ, isCondCDF_condCDFAux ρ⟩
+  exists_isCondCDF := exists_isCondCDF_of_sigmaFinite_fst ρ
   ae_eq_of_isCondCDF := fun _ _ hF hG ↦ ae_eq_of_isCondCDF_of_sigmaFinite ρ hF hG
 
 end Construction

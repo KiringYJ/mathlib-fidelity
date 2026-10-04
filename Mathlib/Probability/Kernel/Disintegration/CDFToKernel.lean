@@ -40,10 +40,26 @@ Let `κ : Kernel α (β × ℝ)` and `ν : Kernel α β`.
 
 ## Main statements
 
-* `ProbabilityTheory.isCondKernelCDF_stieltjesOfMeasurableRat`: if `f : α × β → ℚ → ℝ` has the
-  property `IsRatCondKernelCDF`, then `stieltjesOfMeasurableRat f` is a function
-  `α × β → StieltjesFunction ℝ` with the property `IsCondKernelCDF`.
+* `ProbabilityTheory.IsRatCondKernelCDF.exists_isCondKernelCDF`: if `f : α × β → ℚ → ℝ` has the
+  property `IsRatCondKernelCDF` and `κ` is finite, then there is a function
+  `α × β → StieltjesFunction ℝ` with the property `IsCondKernelCDF` that agrees with `f` at every
+  rational, `(ν a)`-almost everywhere for every `a : α`.
+* `ProbabilityTheory.IsCondKernelCDF.ae_eq`: two conditional kernel CDFs of `κ` with respect to `ν`
+  agree `(ν a)`-almost everywhere for every `a : α`. Conversely,
+  `ProbabilityTheory.IsCondKernelCDF.congr` modifies a conditional kernel CDF on null sets.
+* `ProbabilityTheory.IsCondKernelCDF.sigmaFinite`: if `κ` has a conditional kernel CDF with respect
+  to `ν`, then every measure `ν a` is σ-finite.
 * `ProbabilityTheory.compProd_toKernel`: for `hf : IsCondKernelCDF f κ ν`, `ν ⊗ₖ hf.toKernel f = κ`.
+
+## Implementation notes
+
+A conditional kernel CDF is determined only `(ν a)`-almost everywhere. The existence proof extends
+`f (a, b)` from `ℚ` to `ℝ` at the points `(a, b)` where it satisfies `IsRatStieltjesPoint`, which
+`IsRatCondKernelCDF` requires for `(ν a)`-almost every `b`, and uses the cdf of `dirac 0` at the
+other points. That value is an arbitrary choice: any measurable family of probability cdfs could be
+used on the exceptional null sets (`ProbabilityTheory.IsCondKernelCDF.congr`). The construction and
+its lemmas are therefore private and serve only as the witness of
+`ProbabilityTheory.IsRatCondKernelCDF.exists_isCondKernelCDF`.
 
 -/
 
@@ -58,7 +74,130 @@ namespace ProbabilityTheory
 variable {α β : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β}
   {κ : Kernel α (β × ℝ)} {ν : Kernel α β}
 
+/-! ### A private representative
+
+`stieltjesOfMeasurableRat f hf` extends `f a` from `ℚ` to `ℝ` at every `a` where
+`IsRatStieltjesPoint f a` holds, and is the cdf of `dirac 0` at the other points. That value is an
+arbitrary choice, so the construction is private: it serves only as the witness of
+`ProbabilityTheory.IsRatCondKernelCDF.exists_isCondKernelCDF`, whose hypothesis confines the
+replacement to null sets. -/
+
+section ToRatCDF
+
+variable {f : α → ℚ → ℝ}
+
+/-- The rational cdf of `dirac 0`, used in place of a function on `ℚ` that is not a rational
+cdf. -/
+private def defaultRatCDF (q : ℚ) := if q < 0 then (0 : ℝ) else 1
+
+private lemma monotone_defaultRatCDF : Monotone defaultRatCDF := by
+  unfold defaultRatCDF
+  intro x y hxy
+  dsimp only
+  split_ifs with h_1 h_2 h_2
+  exacts [le_rfl, zero_le_one, absurd (hxy.trans_lt h_2) h_1, le_rfl]
+
+private lemma tendsto_defaultRatCDF_atTop : Tendsto defaultRatCDF atTop (𝓝 1) := by
+  refine (tendsto_congr' ?_).mp tendsto_const_nhds
+  rw [EventuallyEq, eventually_atTop]
+  exact ⟨0, fun q hq => (ite_eq_right (not_lt.mpr hq)).symm⟩
+
+private lemma tendsto_defaultRatCDF_atBot : Tendsto defaultRatCDF atBot (𝓝 0) := by
+  refine (tendsto_congr' ?_).mp tendsto_const_nhds
+  rw [EventuallyEq, eventually_atBot]
+  refine ⟨-1, fun q hq => (ite_eq_left (hq.trans_lt ?_)).symm⟩
+  linarith
+
+private lemma iInf_rat_gt_defaultRatCDF (t : ℚ) :
+    ⨅ r : Ioi t, defaultRatCDF r = defaultRatCDF t := by
+  simp only [defaultRatCDF]
+  have h_bdd : BddBelow (range fun r : ↥(Ioi t) ↦ ite ((r : ℚ) < 0) (0 : ℝ) 1) := by
+    refine ⟨0, fun x hx ↦ ?_⟩
+    obtain ⟨y, rfl⟩ := mem_range.mpr hx
+    dsimp only
+    split_ifs
+    exacts [le_rfl, zero_le_one]
+  split_ifs with h
+  · refine le_antisymm ?_ (le_ciInf fun x ↦ ?_)
+    · obtain ⟨q, htq, hq_neg⟩ : ∃ q, t < q ∧ q < 0 := ⟨t / 2, by linarith, by linarith⟩
+      refine (ciInf_le h_bdd ⟨q, htq⟩).trans ?_
+      exact (ite_eq_left hq_neg).le
+    · split_ifs
+      exacts [le_rfl, zero_le_one]
+  · refine le_antisymm ?_ ?_
+    · refine (ciInf_le h_bdd ⟨t + 1, lt_add_one t⟩).trans ?_
+      split_ifs
+      exacts [zero_le_one, le_rfl]
+    · refine le_ciInf fun x ↦ ?_
+      rw [ite_eq_right]
+      rw [not_lt] at h ⊢
+      exact h.trans (mem_Ioi.mp x.prop).le
+
+private lemma isRatStieltjesPoint_defaultRatCDF (a : α) :
+    IsRatStieltjesPoint (fun (_ : α) ↦ defaultRatCDF) a where
+  mono := monotone_defaultRatCDF
+  tendsto_atTop_one := tendsto_defaultRatCDF_atTop
+  tendsto_atBot_zero := tendsto_defaultRatCDF_atBot
+  iInf_rat_gt_eq := iInf_rat_gt_defaultRatCDF
+
+open scoped Classical in
+/-- Replace `f a` by `defaultRatCDF` at every `a` such that `IsRatStieltjesPoint f a` fails. -/
+private noncomputable def toRatCDF (f : α → ℚ → ℝ) : α → ℚ → ℝ := fun a ↦
+  if IsRatStieltjesPoint f a then f a else defaultRatCDF
+
+private lemma toRatCDF_of_isRatStieltjesPoint {a : α} (h : IsRatStieltjesPoint f a) (q : ℚ) :
+    toRatCDF f a q = f a q := by
+  rw [toRatCDF, ite_eq_left h]
+
+private lemma measurable_toRatCDF (hf : Measurable f) : Measurable (toRatCDF f) :=
+  Measurable.ite (measurableSet_isRatStieltjesPoint hf) hf measurable_const
+
+private lemma isMeasurableRatCDF_toRatCDF (hf : Measurable f) :
+    IsMeasurableRatCDF (toRatCDF f) where
+  isRatStieltjesPoint a := by
+    classical
+    exact IsRatStieltjesPoint.ite (IsRatStieltjesPoint f) id
+      (fun _ ↦ isRatStieltjesPoint_defaultRatCDF a)
+  measurable := measurable_toRatCDF hf
+
+/-- Extend `toRatCDF f` from `ℚ` to `ℝ`, giving a family of Stieltjes functions. -/
+private noncomputable def stieltjesOfMeasurableRat (f : α → ℚ → ℝ) (hf : Measurable f) :
+    α → StieltjesFunction ℝ :=
+  (isMeasurableRatCDF_toRatCDF hf).stieltjesFunction
+
+private lemma stieltjesOfMeasurableRat_eq (hf : Measurable f) (a : α) (r : ℚ) :
+    stieltjesOfMeasurableRat f hf a r = toRatCDF f a r :=
+  IsMeasurableRatCDF.stieltjesFunction_eq _ a r
+
+private lemma stieltjesOfMeasurableRat_nonneg (hf : Measurable f) (a : α) (r : ℝ) :
+    0 ≤ stieltjesOfMeasurableRat f hf a r := IsMeasurableRatCDF.stieltjesFunction_nonneg _ a r
+
+private lemma tendsto_stieltjesOfMeasurableRat_atBot (hf : Measurable f) (a : α) :
+    Tendsto (stieltjesOfMeasurableRat f hf a) atBot (𝓝 0) :=
+  IsMeasurableRatCDF.tendsto_stieltjesFunction_atBot _ a
+
+private lemma tendsto_stieltjesOfMeasurableRat_atTop (hf : Measurable f) (a : α) :
+    Tendsto (stieltjesOfMeasurableRat f hf a) atTop (𝓝 1) :=
+  IsMeasurableRatCDF.tendsto_stieltjesFunction_atTop _ a
+
+private lemma measurable_stieltjesOfMeasurableRat (hf : Measurable f) (x : ℝ) :
+    Measurable fun a ↦ stieltjesOfMeasurableRat f hf a x :=
+  IsMeasurableRatCDF.measurable_stieltjesFunction _ x
+
+private lemma measure_stieltjesOfMeasurableRat_Iic (hf : Measurable f) (a : α) (x : ℝ) :
+    (stieltjesOfMeasurableRat f hf a).measure (Iic x)
+      = ENNReal.ofReal (stieltjesOfMeasurableRat f hf a x) :=
+  IsMeasurableRatCDF.measure_stieltjesFunction_Iic _ _ _
+
+private lemma isProbabilityMeasure_stieltjesOfMeasurableRat (hf : Measurable f) (a : α) :
+    IsProbabilityMeasure (stieltjesOfMeasurableRat f hf a).measure :=
+  IsMeasurableRatCDF.instIsProbabilityMeasure_stieltjesFunction _ _
+
+end ToRatCDF
+
 section stieltjesOfMeasurableRat
+
+attribute [local instance] isProbabilityMeasure_stieltjesOfMeasurableRat
 
 variable {f : α × β → ℚ → ℝ}
 
@@ -91,20 +230,20 @@ lemma IsRatCondKernelCDF.iInf_rat_gt_eq (hf : IsRatCondKernelCDF f κ ν) (a : �
     ∀ᵐ b ∂(ν a), ∀ q, ⨅ r : Ioi q, f (a, b) r = f (a, b) q := by
   filter_upwards [hf.isRatStieltjesPoint_ae a] with b hb using hb.iInf_rat_gt_eq
 
-lemma stieltjesOfMeasurableRat_ae_eq (hf : IsRatCondKernelCDF f κ ν) (a : α) (q : ℚ) :
+private lemma stieltjesOfMeasurableRat_ae_eq (hf : IsRatCondKernelCDF f κ ν) (a : α) (q : ℚ) :
     (fun b ↦ stieltjesOfMeasurableRat f hf.measurable (a, b) q) =ᵐ[ν a] fun b ↦ f (a, b) q := by
   filter_upwards [hf.isRatStieltjesPoint_ae a] with a ha
   rw [stieltjesOfMeasurableRat_eq, toRatCDF_of_isRatStieltjesPoint ha]
 
-lemma setIntegral_stieltjesOfMeasurableRat_rat (hf : IsRatCondKernelCDF f κ ν) (a : α) (q : ℚ)
-    {s : Set β} (hs : MeasurableSet s) :
+private lemma setIntegral_stieltjesOfMeasurableRat_rat (hf : IsRatCondKernelCDF f κ ν) (a : α)
+    (q : ℚ) {s : Set β} (hs : MeasurableSet s) :
     ∫ b in s, stieltjesOfMeasurableRat f hf.measurable (a, b) q ∂(ν a)
       = (κ a).real (s ×ˢ Iic (q : ℝ)) := by
   rw [setIntegral_congr_ae hs (g := fun b ↦ f (a, b) q) ?_, hf.setIntegral a hs]
   filter_upwards [stieltjesOfMeasurableRat_ae_eq hf a q] with b hb using fun _ ↦ hb
 
-lemma setLIntegral_stieltjesOfMeasurableRat_rat [IsFiniteKernel κ] (hf : IsRatCondKernelCDF f κ ν)
-    (a : α) (q : ℚ) {s : Set β} (hs : MeasurableSet s) :
+private lemma setLIntegral_stieltjesOfMeasurableRat_rat [IsFiniteKernel κ]
+    (hf : IsRatCondKernelCDF f κ ν) (a : α) (q : ℚ) {s : Set β} (hs : MeasurableSet s) :
     ∫⁻ b in s, ENNReal.ofReal (stieltjesOfMeasurableRat f hf.measurable (a, b) q) ∂(ν a)
       = κ a (s ×ˢ Iic (q : ℝ)) := by
   rw [← ofReal_integral_eq_lintegral_ofReal]
@@ -114,8 +253,8 @@ lemma setLIntegral_stieltjesOfMeasurableRat_rat [IsFiniteKernel κ] (hf : IsRatC
     exact hf.integrable a q
   · exact ae_of_all _ (fun x ↦ stieltjesOfMeasurableRat_nonneg _ _ _)
 
-lemma setLIntegral_stieltjesOfMeasurableRat [IsFiniteKernel κ] (hf : IsRatCondKernelCDF f κ ν)
-    (a : α) (x : ℝ) {s : Set β} (hs : MeasurableSet s) :
+private lemma setLIntegral_stieltjesOfMeasurableRat [IsFiniteKernel κ]
+    (hf : IsRatCondKernelCDF f κ ν) (a : α) (x : ℝ) {s : Set β} (hs : MeasurableSet s) :
     ∫⁻ b in s, ENNReal.ofReal (stieltjesOfMeasurableRat f hf.measurable (a, b) x) ∂(ν a)
       = κ a (s ×ˢ Iic x) := by
   -- We have the result for `x : ℚ` thanks to `setLIntegral_stieltjesOfMeasurableRat_rat`.
@@ -170,13 +309,13 @@ lemma setLIntegral_stieltjesOfMeasurableRat [IsFiniteKernel κ] (hf : IsRatCondK
   · exact fun i ↦ (hs.prod measurableSet_Iic).nullMeasurableSet
   · exact ⟨h_nonempty.some, measure_ne_top _ _⟩
 
-lemma lintegral_stieltjesOfMeasurableRat [IsFiniteKernel κ] (hf : IsRatCondKernelCDF f κ ν)
+private lemma lintegral_stieltjesOfMeasurableRat [IsFiniteKernel κ] (hf : IsRatCondKernelCDF f κ ν)
     (a : α) (x : ℝ) :
     ∫⁻ b, ENNReal.ofReal (stieltjesOfMeasurableRat f hf.measurable (a, b) x) ∂(ν a)
       = κ a (univ ×ˢ Iic x) := by
   rw [← setLIntegral_univ, setLIntegral_stieltjesOfMeasurableRat hf _ _ MeasurableSet.univ]
 
-lemma integrable_stieltjesOfMeasurableRat [IsFiniteKernel κ] (hf : IsRatCondKernelCDF f κ ν)
+private lemma integrable_stieltjesOfMeasurableRat [IsFiniteKernel κ] (hf : IsRatCondKernelCDF f κ ν)
     (a : α) (x : ℝ) :
     Integrable (fun b ↦ stieltjesOfMeasurableRat f hf.measurable (a, b) x) (ν a) := by
   have : (fun b ↦ stieltjesOfMeasurableRat f hf.measurable (a, b) x)
@@ -191,8 +330,8 @@ lemma integrable_stieltjesOfMeasurableRat [IsFiniteKernel κ] (hf : IsRatCondKer
   · rw [lintegral_stieltjesOfMeasurableRat hf]
     exact measure_ne_top _ _
 
-lemma setIntegral_stieltjesOfMeasurableRat [IsFiniteKernel κ] (hf : IsRatCondKernelCDF f κ ν)
-    (a : α) (x : ℝ) {s : Set β} (hs : MeasurableSet s) :
+private lemma setIntegral_stieltjesOfMeasurableRat [IsFiniteKernel κ]
+    (hf : IsRatCondKernelCDF f κ ν) (a : α) (x : ℝ) {s : Set β} (hs : MeasurableSet s) :
     ∫ b in s, stieltjesOfMeasurableRat f hf.measurable (a, b) x ∂(ν a)
       = (κ a).real (s ×ˢ Iic x) := by
   rw [← ENNReal.ofReal_eq_ofReal_iff, ofReal_measureReal]
@@ -202,12 +341,6 @@ lemma setIntegral_stieltjesOfMeasurableRat [IsFiniteKernel κ] (hf : IsRatCondKe
   rw [ofReal_integral_eq_lintegral_ofReal, setLIntegral_stieltjesOfMeasurableRat hf _ _ hs]
   · exact (integrable_stieltjesOfMeasurableRat hf _ _).restrict
   · exact ae_of_all _ (fun _ ↦ stieltjesOfMeasurableRat_nonneg _ _ _)
-
-lemma integral_stieltjesOfMeasurableRat [IsFiniteKernel κ] (hf : IsRatCondKernelCDF f κ ν)
-    (a : α) (x : ℝ) :
-    ∫ b, stieltjesOfMeasurableRat f hf.measurable (a, b) x ∂(ν a)
-      = (κ a).real (univ ×ˢ Iic x) := by
-  rw [← setIntegral_univ, setIntegral_stieltjesOfMeasurableRat hf _ _ MeasurableSet.univ]
 
 end stieltjesOfMeasurableRat
 
@@ -430,14 +563,65 @@ lemma IsCondKernelCDF.lintegral [IsFiniteKernel κ]
     ∫⁻ b, ENNReal.ofReal (f (a, b) x) ∂(ν a) = κ a (univ ×ˢ Iic x) := by
   rw [← hf.setLIntegral _ MeasurableSet.univ, Measure.restrict_univ]
 
-lemma isCondKernelCDF_stieltjesOfMeasurableRat {f : α × β → ℚ → ℝ} (hf : IsRatCondKernelCDF f κ ν)
-    [IsFiniteKernel κ] :
+/-- If `κ` has a conditional kernel CDF with respect to `ν`, then every measure `ν a` is σ-finite:
+the sets where `‖f (a, ·) n‖ ≥ 1 / 2`, for `n : ℕ`, have finite measure since `f (a, ·) n` is
+integrable, and they cover `β` since `f (a, b)` tends to `1` at `+∞`. -/
+lemma IsCondKernelCDF.sigmaFinite (hf : IsCondKernelCDF f κ ν) (a : α) : SigmaFinite (ν a) := by
+  refine ⟨⟨⟨fun n : ℕ ↦ {b | 1 / 2 ≤ ‖f (a, b) n‖}, fun _ ↦ mem_univ _,
+    fun n ↦ (hf.integrable a n).measure_norm_ge_lt_top (by norm_num), ?_⟩⟩⟩
+  refine eq_univ_of_forall fun b ↦ ?_
+  have h := (hf.tendsto_atTop_one (a, b)).comp tendsto_natCast_atTop_atTop
+  obtain ⟨n, hn⟩ := (h.eventually (lt_mem_nhds (by norm_num : (1 / 2 : ℝ) < 1))).exists
+  exact mem_iUnion.2 ⟨n, hn.le.trans (Real.le_norm_self _)⟩
+
+/-- Two conditional kernel CDFs of `κ` with respect to `ν` agree `(ν a)`-almost everywhere. -/
+lemma IsCondKernelCDF.ae_eq {f g : α × β → StieltjesFunction ℝ} (hf : IsCondKernelCDF f κ ν)
+    (hg : IsCondKernelCDF g κ ν) (a : α) :
+    ∀ᵐ b ∂(ν a), f (a, b) = g (a, b) := by
+  have := hf.sigmaFinite a
+  have h_rat (q : ℚ) : ∀ᵐ b ∂(ν a), f (a, b) q = g (a, b) q :=
+    ae_eq_of_forall_setIntegral_eq_of_sigmaFinite (μ := ν a)
+      (fun _ _ _ ↦ (hf.integrable a q).integrableOn) (fun _ _ _ ↦ (hg.integrable a q).integrableOn)
+      fun s hs _ ↦ by rw [hf.setIntegral a hs q, hg.setIntegral a hs q]
+  filter_upwards [ae_all_iff.2 h_rat] with b hb
+  ext x
+  rw [← StieltjesFunction.iInf_rat_gt_eq (f (a, b)) x,
+    ← StieltjesFunction.iInf_rat_gt_eq (g (a, b)) x]
+  exact iInf_congr fun r ↦ hb r
+
+/-- A conditional kernel CDF can be modified on `(ν a)`-null sets: a family `g` that is measurable,
+tends to `0` at `-∞` and to `1` at `+∞` for every `p : α × β`, and agrees `(ν a)`-almost everywhere
+with a conditional kernel CDF `f` for every `a`, is again a conditional kernel CDF. -/
+lemma IsCondKernelCDF.congr {g : α × β → StieltjesFunction ℝ} (hf : IsCondKernelCDF f κ ν)
+    (hg : ∀ x, Measurable fun p ↦ g p x) (hg_atBot : ∀ p, Tendsto (g p) atBot (𝓝 0))
+    (hg_atTop : ∀ p, Tendsto (g p) atTop (𝓝 1)) (h : ∀ a, ∀ᵐ b ∂(ν a), f (a, b) = g (a, b)) :
+    IsCondKernelCDF g κ ν where
+  measurable := hg
+  integrable a x := (hf.integrable a x).congr (by filter_upwards [h a] with b hb; rw [hb])
+  tendsto_atTop_one := hg_atTop
+  tendsto_atBot_zero := hg_atBot
+  setIntegral a s hs x := by
+    rw [← hf.setIntegral a hs x]
+    exact setIntegral_congr_ae hs (by filter_upwards [h a] with b hb _; rw [hb])
+
+private lemma isCondKernelCDF_stieltjesOfMeasurableRat {f : α × β → ℚ → ℝ}
+    (hf : IsRatCondKernelCDF f κ ν) [IsFiniteKernel κ] :
     IsCondKernelCDF (stieltjesOfMeasurableRat f hf.measurable) κ ν where
   measurable := measurable_stieltjesOfMeasurableRat hf.measurable
   integrable := integrable_stieltjesOfMeasurableRat hf
   tendsto_atTop_one := tendsto_stieltjesOfMeasurableRat_atTop hf.measurable
   tendsto_atBot_zero := tendsto_stieltjesOfMeasurableRat_atBot hf.measurable
   setIntegral a _ hs x := setIntegral_stieltjesOfMeasurableRat hf a x hs
+
+/-- A rational conditional kernel CDF `f` of a finite kernel `κ` with respect to `ν` gives a
+conditional kernel CDF of `κ` with respect to `ν` that agrees with `f` at every rational,
+`(ν a)`-almost everywhere for every `a`. Such a conditional kernel CDF is determined only
+`(ν a)`-almost everywhere (`ProbabilityTheory.IsCondKernelCDF.ae_eq`). -/
+lemma IsRatCondKernelCDF.exists_isCondKernelCDF {f : α × β → ℚ → ℝ}
+    (hf : IsRatCondKernelCDF f κ ν) [IsFiniteKernel κ] :
+    ∃ g : α × β → StieltjesFunction ℝ, IsCondKernelCDF g κ ν ∧
+      ∀ a (q : ℚ), (fun b ↦ g (a, b) q) =ᵐ[ν a] fun b ↦ f (a, b) q :=
+  ⟨_, isCondKernelCDF_stieltjesOfMeasurableRat hf, stieltjesOfMeasurableRat_ae_eq hf⟩
 
 end IsCondKernelCDF
 
