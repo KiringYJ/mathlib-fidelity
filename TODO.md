@@ -351,9 +351,10 @@ operation.
   `condCDF ρ` requires `[HasUniqueCondCDF ρ]`: some `F` satisfies `IsCondCDF ρ F`, and any two such
   families agree `ρ.fst`-a.e.  `IsCondCDF ρ F` says that every `F a` is the cdf of a probability
   measure, that `a ↦ F a x` is measurable, and that `∫⁻ a in s, ENNReal.ofReal (F a x) ∂ρ.fst` is
-  `ρ (s ×ˢ Iic x)` for every measurable `s` and every real `x`.  `condCDF ρ` chooses one such
-  family, which `IsCondCDF.ae_eq_condCDF` determines up to `ρ.fst`-null sets, the version freedom of
-  `condDistrib`.  A finite measure is only a sufficient condition:
+  `ρ (s ×ˢ Iic x)` for every measurable `s` and every real `x`.  Such a family is determined only up
+  to `ρ.fst`-null sets, the version freedom of `condDistrib`, and the item on almost-everywhere
+  classes below makes `condCDF ρ` their class, which every conditional cdf represents
+  (`IsCondCDF.mem_condCDF`).  A finite measure is only a sufficient condition:
   `hasUniqueCondCDF_of_sigmaFinite_fst` supplies the class whenever `ρ.fst` is σ-finite, for
   instance for `volume.prod (gaussianReal 0 1)`, whose conditional cdf is a.e. the standard Gaussian
   cdf; `Measure.prod.instSigmaFiniteFst` finds the σ-finite first marginal of every product of a
@@ -384,13 +385,13 @@ operation.
   `ρ` by a positive integrable function of the first coordinate, which makes it finite without
   changing the ray derivatives, and applies the finite-kernel existence statement of `CDFToKernel`
   to its Radon--Nikodym derivatives.  That construction and its lemmas are private to
-  `CondCDF.lean` and serve only the existence proof; `condCDF` is chosen from the existence
+  `CondCDF.lean` and serve only the existence proof; `condCDF` is obtained from the existence
   statement and does not unfold to them.  `IsCondCDF.integrable`, `setIntegral`, `integral`,
-  `isCondKernelCDF`, and `ofReal_ae_eq_rnDeriv` hold for every representative.  The Bochner-integral
-  and kernel statements keep `IsFiniteMeasure ρ` as a hypothesis, which the finite-kernel
-  disintegration in `StandardBorel` supplies.  Tests cover the rejected measures, routine evidence,
-  an infinite measure in the domain, the zero measure, null-set modifications, proof independence,
-  and rewriting.
+  `isCondKernelCDF`, and `ofReal_ae_eq_rnDeriv` hold for every conditional cdf.  The
+  Bochner-integral and kernel statements keep `IsFiniteMeasure ρ` as a hypothesis, which the
+  finite-kernel disintegration in `StandardBorel` supplies.  Tests cover the rejected measures,
+  routine evidence, an infinite measure in the domain, the zero measure, null-set modifications,
+  proof independence, and rewriting.
 
 - [ ] **Identify the exact domain of `Measure.condKernel` and `condDistrib`.**
   `Measure.condKernel` in `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:382` and
@@ -524,10 +525,12 @@ operation.
   it.  Its statements in `CDFToKernel` all assumed `IsRatCondKernelCDF`, which confines the default
   to null sets, so no downstream public object exposed it on a set of positive measure; but
   `condKernelCDF` unfolded to it on null sets, and for the zero kernel `κ : Kernel Unit (ℝ × ℝ)` it
-  gave `condKernelCDF κ ((), 0) 0 = 1`.  `Kernel.condKernelCDF` is now chosen from the existence
-  statement, `IsCondKernelCDF.ae_eq_condKernelCDF` determines it up to `fst κ a`-null sets, and
-  `condKernelReal`, from which the witness of `Kernel.exists_isMarkovKernel_isCondKernel` is built
-  when `α` is uncountable, is built from it as before.  The existence proof for `condCDF` takes its
+  gave `condKernelCDF κ ((), 0) 0 = 1`.  `Kernel.condKernelCDF` no longer unfolds to it: the item
+  on almost-everywhere classes below makes it the class of the conditional kernel CDFs, which
+  `IsCondKernelCDF.ae_eq` determines up to `fst κ a`-null sets, and the private `condKernelReal`,
+  from which the witness of `Kernel.exists_isMarkovKernel_isCondKernel` is built when `α` is
+  uncountable, takes its conditional kernel CDF from the same statement.  The existence proof for
+  `condCDF` takes its
   conditional kernel CDF from the same statement, so the private `condCDFAux` is removed.  The next
   item treats the arbitrary point of `borelMarkovFromReal` in the same way, and the
   conditional-kernel item above records the open domain question, which also concerns
@@ -899,18 +902,22 @@ operation.
   classes.**
   The specification of a conditional kernel, `ρ.fst ⊗ₘ η = ρ` or `fst κ ⊗ₖ η = κ`, determines `η`
   only up to `ρ.fst`-null sets, respectively up to `fst κ a`-null sets for every `a`, and the same
-  holds for conditional cdfs.  `Measure.condKernel`, `Kernel.condKernel`, `condCDF`, and
-  `Kernel.condKernelCDF` are nevertheless chosen representatives, and `condDistrib`,
-  `condExpKernel`, and `posterior` are built from them, so the checked items above that choose them
-  from existence statements leave a choice public.  Expose each as its class: a germ along
-  `ae ρ.fst`, or along the filter of properties that hold `fst κ a`-almost everywhere for every
-  `a`, with membership of representatives, the relational specifications `IsCondKernel`,
-  `IsCondCDF`, `IsCondKernelCDF`, and `HasCondDistrib`, and theorems stated for every member.
-  `condExpKernel` also needs its exact domain, a sub-σ-algebra, for the trimmed measure along
-  which it is a class.  Migrate `Integral.lean`, `Unique.lean`, `CondDistrib.lean`,
+  holds for conditional cdfs.  `Measure.condKernel` and `Kernel.condKernel` are nevertheless
+  chosen representatives, and `condDistrib`, `condExpKernel`, and `posterior` are built from them,
+  so the checked items above that choose them from existence statements leave a choice public.
+  Expose each as its class, with membership of representatives, the relational specifications
+  `IsCondKernel` and `HasCondDistrib`, and theorems stated for every solution of the
+  specification.  `condExpKernel` also needs its exact domain, a sub-σ-algebra, for the trimmed
+  measure along which it is a class.  Migrate `Integral.lean`, `Unique.lean`, `CondDistrib.lean`,
   `Condexp.lean`, conditional independence, `ZeroOne.lean`, the conditional sub-Gaussian moment
-  generating function, `Posterior.lean`, and `BayesEstimator.lean`, and make `condKernelReal` and
-  `condKernelUnitReal`, which serve only existence proofs, private.
+  generating function, `Posterior.lean`, and `BayesEstimator.lean`.
+  The conditional cdfs are done: `condCDF ρ` is the germ along `ae ρ.fst` of the conditional cdfs
+  and `Kernel.condKernelCDF κ` their germ along `(fst κ).fiberwiseAE`, the filter of properties
+  that hold `fst κ a`-almost everywhere for every `a`.  `Filter.Germ` has a membership of
+  representatives (`Mathlib/Order/Filter/Germ/Representative.lean`), each germ is obtained from a
+  germ-level existence statement whose solution is unique, the lemmas about the chosen
+  representatives are stated for every solution of `IsCondCDF` or `IsCondKernelCDF`, and
+  `condKernelReal` and `condKernelUnitReal`, which serve only existence proofs, are private.
 
 - [ ] **Replace chosen almost-everywhere representatives elsewhere in measure theory by their
   classes.**

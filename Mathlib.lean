@@ -6256,6 +6256,7 @@ public import Mathlib.Order.Filter.FilterProduct
 public import Mathlib.Order.Filter.Finite
 public import Mathlib.Order.Filter.Germ.Basic
 public import Mathlib.Order.Filter.Germ.OrderedMonoid
+public import Mathlib.Order.Filter.Germ.Representative
 public import Mathlib.Order.Filter.IndicatorFunction
 public import Mathlib.Order.Filter.Interval
 public import Mathlib.Order.Filter.IsBounded
@@ -6542,6 +6543,7 @@ public import Mathlib.Probability.Kernel.Disintegration.Integral
 public import Mathlib.Probability.Kernel.Disintegration.MeasurableStieltjes
 public import Mathlib.Probability.Kernel.Disintegration.StandardBorel
 public import Mathlib.Probability.Kernel.Disintegration.Unique
+public import Mathlib.Probability.Kernel.FiberwiseAE
 public import Mathlib.Probability.Kernel.Integral
 public import Mathlib.Probability.Kernel.Invariance
 public import Mathlib.Probability.Kernel.IonescuTulcea.Maps

@@ -7,6 +7,7 @@ module
 
 public import Mathlib.MeasureTheory.Measure.Decomposition.RadonNikodym
 public import Mathlib.MeasureTheory.Measure.Prod
+public import Mathlib.Order.Filter.Germ.Representative
 public import Mathlib.Probability.Kernel.Disintegration.CDFToKernel
 
 /-!
@@ -28,15 +29,16 @@ probability cdfs, and agrees `ρ.fst`-almost everywhere with a conditional cdf i
 (`ProbabilityTheory.IsCondCDF.congr`). The class `ProbabilityTheory.HasUniqueCondCDF ρ` says that a
 conditional cdf of `ρ` exists and that any two of them agree `ρ.fst`-almost everywhere, so that a
 conditional cdf is determined up to such modifications. It is the exact domain of
-`ProbabilityTheory.condCDF ρ`, which chooses one conditional cdf.
+`ProbabilityTheory.condCDF ρ`, the `ρ.fst`-almost-everywhere class of the conditional cdfs of `ρ`,
+which is canonical: no conditional cdf is chosen.
 
 Instance search derives `HasUniqueCondCDF ρ` from `SigmaFinite ρ.fst`
 (`ProbabilityTheory.hasUniqueCondCDF_of_sigmaFinite_fst`), which it finds for a finite measure `ρ`
 and for the product of a σ-finite measure with a finite measure
 (`MeasureTheory.Measure.prod.instSigmaFiniteFst`); otherwise that instance can be supplied locally.
 The domain includes infinite measures: the first marginal of `volume.prod (gaussianReal 0 1)` is
-Lebesgue measure, which is σ-finite, and the conditional cdf of this measure is almost everywhere
-the cdf of `gaussianReal 0 1`.
+Lebesgue measure, which is σ-finite, and the conditional cdf of this measure is the class of the
+constant family `fun _ ↦ cdf (gaussianReal 0 1)`.
 
 The σ-finiteness of `ρ` itself is not enough. Planar Lebesgue measure is σ-finite, but its first
 marginal is infinity times Lebesgue measure, and every probability cdf that is positive everywhere,
@@ -54,35 +56,37 @@ This is why the domain is a class rather than the hypothesis `SigmaFinite ρ.fst
   right-continuous.
 * `ProbabilityTheory.HasUniqueCondCDF ρ`: a conditional cdf of `ρ` exists, and any two of them agree
   `ρ.fst`-almost everywhere. This is the exact domain of `condCDF`.
-* `ProbabilityTheory.condCDF ρ : α → StieltjesFunction ℝ`: a conditional cdf of a measure `ρ` such
-  that `HasUniqueCondCDF ρ`.
+* `ProbabilityTheory.condCDF ρ : (ae ρ.fst).Germ (StieltjesFunction ℝ)`: the conditional cdf of a
+  measure `ρ` such that `HasUniqueCondCDF ρ`, as the `ρ.fst`-almost-everywhere class of its
+  conditional cdfs. A family `F` represents it, written `F ∈ condCDF ρ`, when `F` agrees
+  `ρ.fst`-almost everywhere with a conditional cdf.
 
 ## Main statements
 
 * `ProbabilityTheory.hasUniqueCondCDF_of_sigmaFinite_fst`: if `ρ.fst` is σ-finite, then
   `HasUniqueCondCDF ρ` holds.
-* `ProbabilityTheory.isCondCDF_condCDF`: `condCDF ρ` is a conditional cdf of `ρ`.
-* `ProbabilityTheory.IsCondCDF.ae_eq_condCDF`: every conditional cdf of `ρ` agrees
-  `ρ.fst`-almost everywhere with `condCDF ρ`.
+* `ProbabilityTheory.IsCondCDF.mem_condCDF`: every conditional cdf of `ρ` represents `condCDF ρ`.
+* `ProbabilityTheory.exists_isCondCDF_mem_condCDF`: `condCDF ρ` is represented by a conditional cdf.
+* `ProbabilityTheory.IsCondCDF.mem_condCDF_iff`: given a conditional cdf `F`, the representatives
+  of `condCDF ρ` are the families that agree with `F` `ρ.fst`-almost everywhere.
+* `ProbabilityTheory.isCondCDF_of_mem_condCDF`: a representative of `condCDF ρ` that is measurable
+  in `a` and consists of probability cdfs is a conditional cdf.
 * `ProbabilityTheory.IsCondCDF.congr`: a measurable family of probability cdfs that agrees
   `ρ.fst`-almost everywhere with a conditional cdf is a conditional cdf.
-* `ProbabilityTheory.setLIntegral_condCDF`: for all `x : ℝ` and all measurable sets `s`,
-  `∫⁻ a in s, ENNReal.ofReal (condCDF ρ a x) ∂ρ.fst = ρ (s ×ˢ Iic x)`.
 * `ProbabilityTheory.IsCondCDF.ofReal_ae_eq_rnDeriv`: if `ρ.fst` is σ-finite, every conditional cdf
   `F` is a version of the Radon-Nikodym derivative of `ρ.IicSnd x` with respect to `ρ.fst`:
   `ENNReal.ofReal (F a x) = (ρ.IicSnd x).rnDeriv ρ.fst a` for `ρ.fst`-almost every `a`.
 * `ProbabilityTheory.IsCondCDF.integrable`, `ProbabilityTheory.IsCondCDF.setIntegral`,
   `ProbabilityTheory.IsCondCDF.integral` and `ProbabilityTheory.IsCondCDF.isCondKernelCDF`: the
   statements about Bochner integrals and kernels hold for every conditional cdf of a finite measure.
-  `ProbabilityTheory.integrable_condCDF`, `ProbabilityTheory.setIntegral_condCDF`,
-  `ProbabilityTheory.integral_condCDF` and `ProbabilityTheory.isCondKernelCDF_condCDF` are their
-  specializations to `condCDF ρ`. They assume `IsFiniteMeasure ρ`.
+  They assume `IsFiniteMeasure ρ`.
 
 ## Implementation notes
 
-`HasUniqueCondCDF ρ` is a class, so that `condCDF ρ a x` keeps its form as a function of `a` and
-`x` and the evidence is found by instance search. It is a proposition, so `condCDF ρ` does not
-depend on the proof of the evidence.
+`HasUniqueCondCDF ρ` is a class, so that `condCDF ρ` takes only `ρ` and the evidence is found by
+instance search. It is a proposition, so `condCDF ρ` does not depend on the proof of the evidence.
+Statements about a conditional cdf are stated for every `F` with `IsCondCDF ρ F`; `condCDF ρ` names
+their common almost-everywhere class.
 
 The existence of a conditional cdf is proved with the more general tools about kernel CDFs
 developed in the file `Mathlib/Probability/Kernel/Disintegration/CDFToKernel.lean`. In that file, a
@@ -512,118 +516,81 @@ end Construction
 
 /-! ### Conditional cdf -/
 
-/-- A conditional cdf of the measure `ρ : Measure (α × ℝ)`, as a family of Stieltjes functions
-`a ↦ condCDF ρ a`, for a measure `ρ` such that `HasUniqueCondCDF ρ`.
+/-- Some germ along `ae ρ.fst` is represented by a conditional cdf of `ρ`. By the uniqueness in
+`HasUniqueCondCDF ρ`, such a germ is unique, and every conditional cdf represents it
+(`ProbabilityTheory.IsCondCDF.mem_condCDF`). -/
+lemma exists_germ_isCondCDF (ρ : Measure (α × ℝ)) [h : HasUniqueCondCDF ρ] :
+    ∃ φ : (ae ρ.fst).Germ (StieltjesFunction ℝ), ∃ F, IsCondCDF ρ F ∧ F ∈ φ :=
+  let ⟨F, hF⟩ := h.exists_isCondCDF
+  ⟨F, F, hF, Filter.Germ.coe_mem F⟩
 
-It is a conditional cdf in the sense of `IsCondCDF` (`ProbabilityTheory.isCondCDF_condCDF`) and
-every conditional cdf of `ρ` agrees with it `ρ.fst`-almost everywhere
-(`ProbabilityTheory.IsCondCDF.ae_eq_condCDF`). Only this almost-everywhere class is determined by
-`ρ`: a measurable modification of `condCDF ρ` on a `ρ.fst`-null set that still consists of
-probability cdfs is another conditional cdf, so the values of `condCDF ρ` on a `ρ.fst`-null set
-are a choice. -/
-noncomputable def condCDF (ρ : Measure (α × ℝ)) [h : HasUniqueCondCDF ρ] :
-    α → StieltjesFunction ℝ :=
-  h.exists_isCondCDF.choose
+/-- The conditional cdf of the measure `ρ : Measure (α × ℝ)`, for a measure `ρ` such that
+`HasUniqueCondCDF ρ`: the `ρ.fst`-almost-everywhere class of the conditional cdfs of `ρ`, as a germ
+along `ae ρ.fst` of families of Stieltjes functions.
 
-/-- `condCDF ρ` is a conditional cdf of `ρ`. -/
-lemma isCondCDF_condCDF (ρ : Measure (α × ℝ)) [h : HasUniqueCondCDF ρ] :
-    IsCondCDF ρ (condCDF ρ) :=
-  h.exists_isCondCDF.choose_spec
+A family `F` represents it, written `F ∈ condCDF ρ`, when `F` agrees `ρ.fst`-almost everywhere with
+a conditional cdf of `ρ`. Every conditional cdf in the sense of `IsCondCDF` represents it
+(`ProbabilityTheory.IsCondCDF.mem_condCDF`), and a representative that is measurable in `a` and
+consists of probability cdfs is a conditional cdf (`ProbabilityTheory.isCondCDF_of_mem_condCDF`).
+The class is determined by `ρ`, while the values of a conditional cdf on a `ρ.fst`-null set are
+not (`ProbabilityTheory.IsCondCDF.congr`). -/
+noncomputable def condCDF (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] :
+    (ae ρ.fst).Germ (StieltjesFunction ℝ) :=
+  (exists_germ_isCondCDF ρ).choose
 
-/-- Every conditional cdf of `ρ` agrees `ρ.fst`-almost everywhere with `condCDF ρ`. -/
-lemma IsCondCDF.ae_eq_condCDF {ρ : Measure (α × ℝ)} [HasUniqueCondCDF ρ]
-    {F : α → StieltjesFunction ℝ} (hF : IsCondCDF ρ F) :
-    ∀ᵐ a ∂ρ.fst, F a = condCDF ρ a :=
-  HasUniqueCondCDF.ae_eq_of_isCondCDF hF (isCondCDF_condCDF ρ)
+variable {ρ : Measure (α × ℝ)} {F G : α → StieltjesFunction ℝ}
 
-/-- The conditional cdf is non-negative for all `a : α`. -/
-theorem condCDF_nonneg (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (a : α) (r : ℝ) :
-    0 ≤ condCDF ρ a r :=
-  (isCondCDF_condCDF ρ).nonneg a r
+/-- Every conditional cdf of `ρ` represents `condCDF ρ`. -/
+lemma IsCondCDF.mem_condCDF [HasUniqueCondCDF ρ] (hF : IsCondCDF ρ F) : F ∈ condCDF ρ := by
+  obtain ⟨G, hG, hG_mem⟩ := (exists_germ_isCondCDF ρ).choose_spec
+  exact Filter.Germ.mem_of_eventuallyEq hG_mem (HasUniqueCondCDF.ae_eq_of_isCondCDF hG hF)
 
-/-- The conditional cdf is lower or equal to 1 for all `a : α`. -/
-theorem condCDF_le_one (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (a : α) (x : ℝ) :
-    condCDF ρ a x ≤ 1 :=
-  (isCondCDF_condCDF ρ).le_one a x
+/-- `condCDF ρ` is represented by a conditional cdf of `ρ`. -/
+lemma exists_isCondCDF_mem_condCDF (ρ : Measure (α × ℝ)) [h : HasUniqueCondCDF ρ] :
+    ∃ F, IsCondCDF ρ F ∧ F ∈ condCDF ρ :=
+  let ⟨F, hF⟩ := h.exists_isCondCDF
+  ⟨F, hF, hF.mem_condCDF⟩
 
-/-- The conditional cdf tends to 0 at -∞ for all `a : α`. -/
-theorem tendsto_condCDF_atBot (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (a : α) :
-    Tendsto (condCDF ρ a) atBot (𝓝 0) :=
-  (isCondCDF_condCDF ρ).tendsto_atBot_zero a
+/-- Given a conditional cdf `F` of `ρ`, the representatives of `condCDF ρ` are the families that
+agree with `F` `ρ.fst`-almost everywhere. -/
+lemma IsCondCDF.mem_condCDF_iff [HasUniqueCondCDF ρ] (hF : IsCondCDF ρ F) :
+    G ∈ condCDF ρ ↔ ∀ᵐ a ∂ρ.fst, G a = F a :=
+  Filter.Germ.mem_iff_eventuallyEq hF.mem_condCDF
 
-/-- The conditional cdf tends to 1 at +∞ for all `a : α`. -/
-theorem tendsto_condCDF_atTop (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (a : α) :
-    Tendsto (condCDF ρ a) atTop (𝓝 1) :=
-  (isCondCDF_condCDF ρ).tendsto_atTop_one a
-
-/-- The conditional cdf is a measurable function of `a : α` for all `x : ℝ`. -/
-theorem measurable_condCDF (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (x : ℝ) :
-    Measurable fun a ↦ condCDF ρ a x :=
-  (isCondCDF_condCDF ρ).measurable x
-
-/-- The conditional cdf is a strongly measurable function of `a : α` for all `x : ℝ`. -/
-theorem stronglyMeasurable_condCDF (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (x : ℝ) :
-    StronglyMeasurable fun a ↦ condCDF ρ a x :=
-  (measurable_condCDF ρ x).stronglyMeasurable
-
-/-- The identity `∫⁻ a in s, ENNReal.ofReal (condCDF ρ a x) ∂ρ.fst = ρ (s ×ˢ Iic x)` for a
-measurable set `s`, which holds at every real `x`. -/
-theorem setLIntegral_condCDF (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (x : ℝ) {s : Set α}
-    (hs : MeasurableSet s) :
-    ∫⁻ a in s, ENNReal.ofReal (condCDF ρ a x) ∂ρ.fst = ρ (s ×ˢ Iic x) :=
-  (isCondCDF_condCDF ρ).setLIntegral x hs
-
-/-- The identity of `setLIntegral_condCDF` for the whole space. -/
-theorem lintegral_condCDF (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (x : ℝ) :
-    ∫⁻ a, ENNReal.ofReal (condCDF ρ a x) ∂ρ.fst = ρ (univ ×ˢ Iic x) :=
-  (isCondCDF_condCDF ρ).lintegral x
-
-/-- For a finite measure, the conditional cdf is integrable at each `x : ℝ`. -/
-theorem integrable_condCDF (ρ : Measure (α × ℝ)) [IsFiniteMeasure ρ] (x : ℝ) :
-    Integrable (fun a ↦ condCDF ρ a x) ρ.fst :=
-  (isCondCDF_condCDF ρ).integrable x
-
-/-- The real-valued version of `setLIntegral_condCDF`, for a finite measure. -/
-theorem setIntegral_condCDF (ρ : Measure (α × ℝ)) [IsFiniteMeasure ρ] (x : ℝ) {s : Set α}
-    (hs : MeasurableSet s) : ∫ a in s, condCDF ρ a x ∂ρ.fst = ρ.real (s ×ˢ Iic x) :=
-  (isCondCDF_condCDF ρ).setIntegral x hs
-
-/-- The real-valued version of `lintegral_condCDF`, for a finite measure. -/
-theorem integral_condCDF (ρ : Measure (α × ℝ)) [IsFiniteMeasure ρ] (x : ℝ) :
-    ∫ a, condCDF ρ a x ∂ρ.fst = ρ.real (univ ×ˢ Iic x) :=
-  (isCondCDF_condCDF ρ).integral x
-
-/-- For a finite measure `ρ`, `condCDF ρ` is a conditional kernel CDF of the constant kernel with
-value `ρ` with respect to the constant kernel with value `ρ.fst`. -/
-lemma isCondKernelCDF_condCDF (ρ : Measure (α × ℝ)) [IsFiniteMeasure ρ] :
-    IsCondKernelCDF (fun p : Unit × α ↦ condCDF ρ p.2) (Kernel.const Unit ρ)
-      (Kernel.const Unit ρ.fst) :=
-  (isCondCDF_condCDF ρ).isCondKernelCDF
+/-- A representative of `condCDF ρ` that is measurable in `a` and consists of probability cdfs is a
+conditional cdf of `ρ`. -/
+lemma isCondCDF_of_mem_condCDF [HasUniqueCondCDF ρ] (hG : G ∈ condCDF ρ)
+    (hG_meas : ∀ x, Measurable fun a ↦ G a x) (hG_atBot : ∀ a, Tendsto (G a) atBot (𝓝 0))
+    (hG_atTop : ∀ a, Tendsto (G a) atTop (𝓝 1)) :
+    IsCondCDF ρ G := by
+  obtain ⟨F, hF, hF_mem⟩ := exists_isCondCDF_mem_condCDF ρ
+  exact hF.congr hG_meas hG_atBot hG_atTop (Filter.Germ.eventuallyEq_of_mem hF_mem hG)
 
 section Measure
 
-/-- The measure associated to the conditional cdf gives the mass `condCDF ρ a x` to `Iic x`. -/
-theorem measure_condCDF_Iic (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (a : α) (x : ℝ) :
-    (condCDF ρ a).measure (Iic x) = ENNReal.ofReal (condCDF ρ a x) := by
-  rw [← sub_zero (condCDF ρ a x)]
-  exact (condCDF ρ a).measure_Iic (tendsto_condCDF_atBot ρ a) _
+namespace IsCondCDF
 
-/-- The measure associated to the conditional cdf is a probability measure. -/
-theorem measure_condCDF_univ (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (a : α) :
-    (condCDF ρ a).measure univ = 1 := by
+/-- The measure associated to a conditional cdf `F` gives the mass `F a x` to `Iic x`. -/
+theorem measure_Iic (hF : IsCondCDF ρ F) (a : α) (x : ℝ) :
+    (F a).measure (Iic x) = ENNReal.ofReal (F a x) := by
+  rw [← sub_zero (F a x)]
+  exact (F a).measure_Iic (hF.tendsto_atBot_zero a) _
+
+/-- The measure associated to a conditional cdf is a probability measure. -/
+theorem isProbabilityMeasure (hF : IsCondCDF ρ F) (a : α) :
+    IsProbabilityMeasure (F a).measure := by
+  constructor
   rw [← ENNReal.ofReal_one, ← sub_zero (1 : ℝ)]
-  exact StieltjesFunction.measure_univ _ (tendsto_condCDF_atBot ρ a) (tendsto_condCDF_atTop ρ a)
+  exact StieltjesFunction.measure_univ _ (hF.tendsto_atBot_zero a) (hF.tendsto_atTop_one a)
 
-instance instIsProbabilityMeasureCondCDF (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] (a : α) :
-    IsProbabilityMeasure (condCDF ρ a).measure :=
-  ⟨measure_condCDF_univ ρ a⟩
-
-/-- The function `a ↦ (condCDF ρ a).measure` is measurable. -/
-theorem measurable_measure_condCDF (ρ : Measure (α × ℝ)) [HasUniqueCondCDF ρ] :
-    Measurable fun a => (condCDF ρ a).measure :=
+/-- For a conditional cdf `F`, the function `a ↦ (F a).measure` is measurable. -/
+theorem measurable_measure (hF : IsCondCDF ρ F) : Measurable fun a ↦ (F a).measure :=
+  have := hF.isProbabilityMeasure
   .measure_of_isPiSystem_of_isProbabilityMeasure (borel_eq_generateFrom_Iic ℝ) isPiSystem_Iic <| by
-    simp_rw [forall_mem_range, measure_condCDF_Iic]
-    exact fun u ↦ (measurable_condCDF ρ u).ennreal_ofReal
+    simp_rw [forall_mem_range, hF.measure_Iic]
+    exact fun u ↦ (hF.measurable u).ennreal_ofReal
+
+end IsCondCDF
 
 end Measure
 
