@@ -190,10 +190,10 @@ lemma IsCondKernel.isProbabilityMeasure_ae [IsFiniteKernel κ.fst] [κ.IsCondKer
 section Countable
 variable [Countable α] (κCond : α → Kernel β Ω)
 
-/-- Auxiliary definition for `ProbabilityTheory.Kernel.condKernel`.
-
-A conditional kernel for `κ : Kernel α (β × Ω)` where `α` is countable and `Ω` is a measurable
-space. -/
+/-- The kernel `(a, b) ↦ κCond a b` on `α × β`, for a countable `α`. When every `κCond a` is a
+Markov conditional kernel of `κ a` for an s-finite `κ : Kernel α (β × Ω)`, it disintegrates `κ`
+(`ProbabilityTheory.Kernel.condKernelCountable.instIsCondKernel`); this supplies the witness of
+`ProbabilityTheory.Kernel.exists_isMarkovKernel_isCondKernel` when `α` is countable. -/
 noncomputable def condKernelCountable
     (h_class : ∀ x y, x ∈ (inferInstance : SigmaAlgebra α).indistinguishabilityClass y →
       κCond x = κCond y) :

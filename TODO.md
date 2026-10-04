@@ -376,7 +376,7 @@ operation.
   and rewriting.
 
 - [ ] **Identify the exact domain of `Measure.condKernel` and `condDistrib`.**
-  `Measure.condKernel` in `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:391` and
+  `Measure.condKernel` in `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:382` and
   `condDistrib` in `Mathlib/Probability/Kernel/CondDistrib.lean:65` require a finite measure, which
   is a sufficient condition.  The conditional-cdf result above does not transfer automatically,
   because a Markov disintegration along `ρ.fst` and the ray identity diverge outside σ-finite
@@ -509,32 +509,54 @@ operation.
   `condKernelCDF` unfolded to it on null sets, and for the zero kernel `κ : Kernel Unit (ℝ × ℝ)` it
   gave `condKernelCDF κ ((), 0) 0 = 1`.  `Kernel.condKernelCDF` is now chosen from the existence
   statement, `IsCondKernelCDF.ae_eq_condKernelCDF` determines it up to `fst κ a`-null sets, and
-  `condKernelReal` and the uncountable branch of `Kernel.condKernel` are built from it as before.
-  The existence proof for `condCDF` takes its conditional kernel CDF from the same statement, so the
-  private `condCDFAux` is removed.  The next item records the arbitrary point of
-  `borelMarkovFromReal`, and the conditional-kernel item above the open domain question, which also
-  concerns `[IsFiniteKernel κ]`.  Tests cover the private names, existence, σ-finiteness,
-  uniqueness, the domain of `condKernelCDF`, its density version, its value at the atom of
+  `condKernelReal`, from which the witness of `Kernel.exists_isMarkovKernel_isCondKernel` is built
+  when `α` is uncountable, is built from it as before.  The existence proof for `condCDF` takes its
+  conditional kernel CDF from the same statement, so the private `condCDFAux` is removed.  The next
+  item treats the arbitrary point of `borelMarkovFromReal` in the same way, and the
+  conditional-kernel item above records the open domain question, which also concerns
+  `[IsFiniteKernel κ]`.  Tests cover the private names, existence, σ-finiteness, uniqueness, the
+  domain of `condKernelCDF`, its density version, its value at the atom of
   `const Unit (dirac (0, 1))`, and a modification on the null set of that kernel; both conditional
   kernel CDFs of the zero kernel; the zero rational family, which fails only
   `isRatStieltjesPoint_ae` for the zero kernel with respect to `const Unit (dirac 0)`, where no
   conditional kernel CDF exists; and the rejection of the zero rational family and of the cdf of
   `dirac 0` for `const Unit (dirac (0, 1))`.
 
-- [ ] **Keep the arbitrary point of `borelMarkovFromReal` out of the public API.**
-  `Kernel.borelMarkovFromReal Ω η` in
-  `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:215` pulls `η a` back along
+- [x] **Keep the arbitrary point of `borelMarkovFromReal` out of the public API.**
+  `Kernel.exists_isMarkovKernel_isCondKernel` and `Measure.exists_isMarkovKernel_isCondKernel` in
+  `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean` are the public boundary: a finite
+  kernel `κ : Kernel α (β × Ω)`, where `Ω` is a nonempty standard Borel space and `α` is countable
+  or `β` is countably generated, and a finite measure on `α × Ω` are disintegrated by Markov
+  kernels.  `Kernel.condKernel` and `Measure.condKernel` are chosen from these statements, and
+  `eq_condKernel_of_kernel_eq_compProd` and `eq_condKernel_of_measure_eq_compProd` determine them up
+  to `fst κ a`- and `ρ.fst`-null sets.  `borelMarkovFromReal Ω η` pulls `η a` back along
   `embeddingReal Ω` where `η a` gives the complement of its range measure zero, and pulls back the
-  Dirac mass at the image of `Classical.ofNonempty : Ω` elsewhere; its docstring calls that kernel
-  arbitrary.  `borelMarkovFromReal_apply` and `borelMarkovFromReal_apply'` (lines 224 and 235)
-  expose the branch, and the instance `instIsMarkovKernelBorelMarkovFromReal` (line 258) holds for
-  every Markov `η` only through it.  In `condKernelBorel` (line 347) and `condKernelUnitBorel`
-  (line 370) the branch acts only on `fst κ a`-null sets (`h_ae` in
-  `compProd_fst_borelMarkovFromReal_eq_comapRight_compProd`, line 270), so `Kernel.condKernel` and
-  `Measure.condKernel` expose it only on null sets, as the former default of
-  `stieltjesOfMeasurableRat` was.  Classify the construction; if it is a representative constructor,
-  keep it private behind the disintegration statements, as in the item above, and choose the
-  standard Borel conditional kernels from them.  Coordinate with the conditional-kernel item above.
+  Dirac mass at the image of `Classical.ofNonempty : Ω` elsewhere.  `borelMarkovFromReal_apply` and
+  `borelMarkovFromReal_apply'` exposed that branch for every `η`, and the instance
+  `instIsMarkovKernelBorelMarkovFromReal` held for every Markov `η` only through it.  In
+  `condKernelBorel` and `condKernelUnitBorel` the branch acted only on `fst κ a`-null sets (`h_ae`
+  in `compProd_fst_borelMarkovFromReal_eq_comapRight_compProd`), so no conditional kernel built
+  from it exposed the branch on a set of positive measure, but `Kernel.condKernel` and
+  `Measure.condKernel` unfolded to it there, and `Measure.condKernel_apply` exposed that unfolding.
+  As a function of an arbitrary `η` the construction has a fallback branch, but it now only builds
+  witnesses: it and the lemmas that the existence proofs use are private to `StandardBorel.lean`,
+  and no public definition unfolds to them.  The boundary proves representative independence: the
+  public kernels are choices that `eq_condKernel_of_kernel_eq_compProd` and
+  `eq_condKernel_of_measure_eq_compProd` determine up to null sets.  As for the construction behind
+  `condKernelCDF`, the resolved audit "An explicit default does not justify a public mathematical
+  operation" below therefore lets them stay private without a removal condition.
+  The `_apply` lemmas, the finite-kernel instance, `condKernelBorel`, `condKernelUnitBorel` and
+  their instances, `Measure.condKernel_apply`, and the `irreducible_def` equations
+  `Kernel.condKernel_def` and `Measure.condKernel_def` are removed, and the s-finite and Markov
+  instances became private lemmas.  For countable `α` the existence proof still glues the
+  conditional kernels of the measures `κ a`, but `Kernel.condKernel` no longer unfolds to that
+  gluing.  The finite-measure and finite-kernel domains are unchanged; the conditional-kernel item
+  above records the open domain question.  Tests cover the names that exposed the branch, including
+  the instances and the `_def` equations; both existence statements; `Kernel.condKernel` for a
+  countable `α` and for a countably generated `β`; the Markov and disintegration instances;
+  almost-everywhere uniqueness; the value of `Measure.condKernel` at the atom of `dirac (0, 1)`;
+  two conditional kernels of that measure that differ off the atom; the rejection of the constant
+  kernel `dirac 0`; and the finite-measure and finite-kernel domains.
 
 - [ ] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
   `ContinuousMap.mkD` in `Mathlib/Topology/ContinuousMap/Basic.lean:320` honestly takes an explicit
