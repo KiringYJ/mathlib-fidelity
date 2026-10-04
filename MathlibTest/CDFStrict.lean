@@ -16,8 +16,7 @@ measures require such a measure; that instance search finds routine evidence; an
 open MeasureTheory Measure Set Filter
 open ProbabilityTheory (cdf cdf_eq_real cdf_le_one cdf_le_measureReal_univ measure_cdf
   tendsto_cdf_atBot tendsto_cdf_atTop tendsto_cdf_atTop_measureReal_univ
-  cdf_measure_stieltjesFunction cdf_expMeasure_eq isProbabilityMeasure_expMeasure expMeasure
-  gaussianReal)
+  cdf_measure_stieltjesFunction cdf_expMeasure_eq expMeasure gaussianReal)
 open scoped Topology ENNReal NNReal
 
 noncomputable section
@@ -255,10 +254,9 @@ example (μ : Measure ℝ) [IsFiniteMeasure μ] : IsFiniteMeasure (cdf μ).measu
 example (μ : Measure ℝ) [IsProbabilityMeasure μ] : IsProbabilityMeasure (cdf μ).measure :=
   inferInstance
 
--- Evidence that depends on hypotheses is supplied locally.
+-- Evidence carried by the term is found by instance search.
 example {r : ℝ} (hr : 0 < r) (x : ℝ) (hx : 0 ≤ x) :
-    haveI := isProbabilityMeasure_expMeasure hr
-    cdf (expMeasure r) x = 1 - Real.exp (-(r * x)) := by
+    cdf (expMeasure r hr) x = 1 - Real.exp (-(r * x)) := by
   simp [cdf_expMeasure_eq hr, hx]
 
 /-! ### The cdf of a finite measure is not normalized -/

@@ -338,13 +338,46 @@ operation.
   rational cdf at a point by `defaultRatCDF`.  Retain the freedom to choose a version on
   `ρ.fst`-null sets, as for `condDistrib`, and put finiteness at the construction boundary.
 
-- [ ] **Give parametric distributions their parameter domains.**
-  `gammaMeasure a r`, `expMeasure r`, `paretoMeasure t r`, and `betaMeasure α β` in
-  `Mathlib/Probability/Distributions/` accept all real parameters, although their
-  `IsProbabilityMeasure` lemmas assume positive parameters; the `cdf` formulas for the first three
-  therefore supply the instance locally with `haveI`.  `geometricMeasure p` returns `dirac 0` when
-  `p = 0`.  Classify the exact parameter domain of each family before choosing between constrained
-  parameter types and proof arguments.
+- [x] **Give parametric distributions their parameter domains.**
+  `gammaMeasure a r ha hr`, `expMeasure r hr`, `paretoMeasure t r ht hr`, and
+  `betaMeasure α β hα hβ` take proofs that their parameters are positive, and
+  `geometricMeasure p hp` takes `hp : p ≠ 0`; the densities `gammaPDFReal`, `exponentialPDFReal`,
+  `paretoPDFReal`, `betaPDFReal`, and their `ℝ≥0∞`-valued versions take the same proofs, as does the
+  beta normalizing constant `beta`, whose total formula `Γ(α) Γ(β) / Γ(α + β)` gave
+  `beta (-1) (1 / 2) = 0` from the zero value of `Real.Gamma` at its pole `-1`, although the beta
+  function has a pole there.  These are the exact domains: `x ^ (a - 1) * exp (-(r * x))` on
+  `(0, ∞)`, `exp (-(r * x))` on `[0, ∞)`, `x ^ (-(r + 1))` on `[t, ∞)`, and
+  `x ^ (α - 1) * (1 - x) ^ (β - 1)` on `(0, 1)` are integrable exactly for positive parameters, and
+  the masses `(1 - p) ^ n * p` sum to one exactly when `p ≠ 0`.  Siegrist, *Probability,
+  Mathematical Statistics, and Stochastic Processes*, defines the distributions for these parameters
+  in §5.8 (with scale `1 / r`), §14.2, §5.36, §5.17, and §11.3; the last takes `p ∈ (0, 1]` and
+  counts the failures before the first success on `ℕ`, so the degenerate
+  `geometricMeasure 1 hp = dirac 0` is retained.  The densities specify the distributions, so a
+  degenerate limit such as a shape-zero gamma distribution at `dirac 0` would be a separate object
+  with its own specification and source.  Invalid gamma, exponential, and beta parameters previously
+  gave the zero measure or an infinite measure, while mathlib's powers of negative bases gave
+  `paretoMeasure t r` with `t < 0`, `r < 0`, and `0 < cos (r * π)` the mass `cos (r * π) ^ 2`:
+  `paretoMeasure (-1) (-2)` was the probability measure with density `-2 * x` on `[-1, 0]`.
+  `geometricMeasure 0` was `dirac 0`, which made `IsProbabilityMeasure (geometricMeasure p)` an
+  instance for every `p`.  `IsProbabilityMeasure` is now a global instance for each family, so the
+  `cdf` formulas no longer supply it with `haveI`, and `isProbabilityMeasureBeta` is renamed
+  `isProbabilityMeasure_betaMeasure`.  As for `PMF.binomial p h n`, the proofs are explicit
+  arguments without a default discharger, which would capture the set in `gammaMeasure a r s` and
+  the point in `gammaPDFReal a r x`.  Tests cover missing and nonnegative-only evidence, instance
+  search, the degenerate geometric distribution, proof independence, and rewriting.
+
+- [ ] **Classify the zero-scale Gaussian and Cauchy cases.**
+  `gaussianReal μ 0` and `cauchyMeasure x₀ 0` in
+  `Mathlib/Probability/Distributions/Gaussian/Real.lean:222` and
+  `Mathlib/Probability/Distributions/Cauchy.lean:170` are `dirac μ` and `dirac x₀` by explicit
+  branches, while the densities `gaussianPDFReal μ 0` and `cauchyPDFReal x₀ 0` are zero, as the
+  simp lemmas `gaussianPDFReal_zero_var` and `cauchyPDFReal_scale_zero` state.  A Dirac measure
+  has no density, so these zero values are not probability densities, although zero is the
+  Radon--Nikodym derivative of its absolutely continuous part; `rnDeriv_gaussianReal`
+  (`Gaussian/Real.lean:266`) uses this for every `v` and would need a separate zero-variance
+  statement if the densities required a nonzero scale.  Retain each Dirac branch only with
+  literature that defines the degenerate distribution for the same parameter; otherwise require a
+  nonzero scale there too.
 
 - [ ] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
   `ContinuousMap.mkD` in `Mathlib/Topology/ContinuousMap/Basic.lean:320` honestly takes an explicit
