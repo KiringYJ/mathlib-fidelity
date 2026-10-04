@@ -366,18 +366,37 @@ operation.
   the point in `gammaPDFReal a r x`.  Tests cover missing and nonnegative-only evidence, instance
   search, the degenerate geometric distribution, proof independence, and rewriting.
 
-- [ ] **Classify the zero-scale Gaussian and Cauchy cases.**
-  `gaussianReal μ 0` and `cauchyMeasure x₀ 0` in
-  `Mathlib/Probability/Distributions/Gaussian/Real.lean:222` and
-  `Mathlib/Probability/Distributions/Cauchy.lean:170` are `dirac μ` and `dirac x₀` by explicit
-  branches, while the densities `gaussianPDFReal μ 0` and `cauchyPDFReal x₀ 0` are zero, as the
-  simp lemmas `gaussianPDFReal_zero_var` and `cauchyPDFReal_scale_zero` state.  A Dirac measure
-  has no density, so these zero values are not probability densities, although zero is the
-  Radon--Nikodym derivative of its absolutely continuous part; `rnDeriv_gaussianReal`
-  (`Gaussian/Real.lean:266`) uses this for every `v` and would need a separate zero-variance
-  statement if the densities required a nonzero scale.  Retain each Dirac branch only with
-  literature that defines the degenerate distribution for the same parameter; otherwise require a
-  nonzero scale there too.
+- [x] **Classify the zero-scale Gaussian and Cauchy cases.**
+  The degenerate Gaussian distribution `gaussianReal μ 0 = dirac μ` is retained.  Bogachev,
+  *Gaussian measures* (AMS, 1998), Definition 1.1.1, calls a Borel probability measure on `ℝ`
+  Gaussian if it is a Dirac measure or has a normal density, and assigns variance zero to the
+  Dirac case; Siegrist, *Probability, Mathematical Statistics, and Stochastic Processes*, §5.6,
+  treats a constant as normal with variance zero where convenient and notes that the density and
+  distribution function formulas do not hold for it.  `charFun_gaussianReal` specifies
+  `gaussianReal μ v` for every `v`, and the degenerate case is load-bearing: `IsGaussian` requires
+  the image under the zero functional to be `gaussianReal 0 0`, and a pre-Brownian motion has law
+  `gaussianReal 0 0` at time zero.  A Dirac measure has no Lebesgue density, so
+  `gaussianPDFReal μ v hv` and `gaussianPDF μ v hv` take `hv : v ≠ 0`, and the zero values at
+  `v = 0` with their simp lemmas `gaussianPDFReal_zero_var` and `gaussianPDF_zero_var` are
+  removed.  `rnDeriv_gaussianReal` takes the same proof, and `rnDeriv_gaussianReal_zero_var` states
+  that the Radon--Nikodym derivative of the degenerate distribution vanishes.  The joint
+  measurability lemmas `Measurable.gaussianPDFReal` and `Measurable.gaussianPDF` take the nonzero
+  variance pointwise and replace the uncurried versions, and `measurable_gaussianReal` splits at
+  `v = 0`.  For `γ = 0` the Cauchy density formula vanishes away from `x₀`, so no probability
+  measure has it as a density, and the law of `x₀ + γ Z` for a standard Cauchy `Z` is the point
+  mass at `x₀`.  No checked source calls that law a Cauchy distribution: Siegrist, §5.32, requires
+  a positive scale, and Samorodnitsky--Taqqu, *Stable non-Gaussian random processes* (1994), allow
+  scale zero for stable laws in Definition 1.1.6 but give the Cauchy distribution `S₁(σ, 0, μ)` by
+  its density (1.1.13).  As for a shape-zero gamma distribution, the point mass would be a
+  separate object with its own specification and source.  `cauchyMeasure x₀ γ hγ`,
+  `cauchyPDFReal x₀ γ hγ`, and `cauchyPDF x₀ γ hγ` therefore take `hγ : γ ≠ 0`.  The Dirac branch,
+  `cauchyMeasure_zero_scale`, and the zero-density simp lemmas are removed;
+  `cauchyMeasure_of_scale_ne_zero` is removed because `cauchyMeasure` now unfolds to the measure
+  with density `cauchyPDF x₀ γ hγ`; and `cauchyPDF_pos` is renamed `cauchyPDFReal_pos` after its
+  statement.  Tests cover missing and nonnegative-only evidence, the unprovable zero-scale
+  obligation, the retained degenerate Gaussian distribution with its atom, characteristic
+  function, zero-map image, and `IsGaussian` instance, both Radon--Nikodym derivatives,
+  measurability automation, proof independence, and rewriting.
 
 - [ ] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
   `ContinuousMap.mkD` in `Mathlib/Topology/ContinuousMap/Basic.lean:320` honestly takes an explicit
