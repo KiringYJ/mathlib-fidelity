@@ -339,8 +339,9 @@ operation.
   `condDistrib`.  A finite measure is only a sufficient condition:
   `hasUniqueCondCDF_of_sigmaFinite_fst` supplies the class whenever `ρ.fst` is σ-finite, for
   instance for `volume.prod (gaussianReal 0 1)`, whose conditional cdf is a.e. the standard Gaussian
-  cdf; instance search does not find that this marginal is σ-finite, so a local instance supplies
-  it.  Chang and Pollard, *Conditioning as disintegration*, Statistica Neerlandica 51 (1997),
+  cdf; `Measure.prod.instSigmaFiniteFst` finds the σ-finite first marginal of every product of a
+  σ-finite measure with a finite measure, and `instSigmaFiniteSnd` does the same for second
+  marginals.  Chang and Pollard, *Conditioning as disintegration*, Statistica Neerlandica 51 (1997),
   disintegrate a σ-finite measure with respect to a σ-finite mixing measure (Definition 1, p. 292);
   for such a measure with a disintegration, the disintegrating measures can be taken to be
   probabilities exactly when the image measure is σ-finite and serves as the mixing measure

@@ -291,6 +291,35 @@ theorem map_snd_prod
   rw [map_apply ht measurable_snd.aemeasurable, ← univ_prod,
     prod_prod univ t MeasurableSet.univ ht h, smul_apply, smul_eq_mul]
 
+/-- The first marginal of a unique product is the first factor scaled by the mass of the second. -/
+@[simp]
+theorem fst_prod
+    (h : HasUniqueProduct μ ν := by
+      first
+      | assumption
+      | exact MeasureTheory.hasUniqueProduct_zero_left _
+      | exact MeasureTheory.hasUniqueProduct_zero_right _
+      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
+      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
+      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (μ.prod ν h).fst = (ν univ) • μ :=
+  map_fst_prod h
+
+/-- The second marginal of a unique product is the second factor scaled by the mass of the
+first. -/
+@[simp]
+theorem snd_prod
+    (h : HasUniqueProduct μ ν := by
+      first
+      | assumption
+      | exact MeasureTheory.hasUniqueProduct_zero_left _
+      | exact MeasureTheory.hasUniqueProduct_zero_right _
+      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
+      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
+      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (μ.prod ν h).snd = (μ univ) • ν :=
+  map_snd_prod h
+
 /-- The first projection pulls null sets back to null sets for a unique product. -/
 @[fun_prop]
 theorem quasiMeasurePreserving_fst_prod
@@ -333,6 +362,20 @@ instance prod.instIsFiniteMeasure [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
 instance prod.instIsProbabilityMeasure [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] :
     IsProbabilityMeasure (μ.prod ν) := by
   rw [prod_eq_productBySections μ ν]
+  infer_instance
+
+/-- The first marginal of the product of a σ-finite measure and a finite measure is σ-finite. It
+is a finite multiple of the first factor (`MeasureTheory.Measure.fst_prod`). -/
+instance prod.instSigmaFiniteFst [SigmaFinite μ] [IsFiniteMeasure ν] :
+    SigmaFinite (μ.prod ν).fst := by
+  rw [fst_prod, ← ENNReal.coe_toNNReal (measure_ne_top ν univ), coe_nnreal_smul]
+  infer_instance
+
+/-- The second marginal of the product of a finite measure and a σ-finite measure is σ-finite. It
+is a finite multiple of the second factor (`MeasureTheory.Measure.snd_prod`). -/
+instance prod.instSigmaFiniteSnd [IsFiniteMeasure μ] [SigmaFinite ν] :
+    SigmaFinite (μ.prod ν).snd := by
+  rw [snd_prod, ← ENNReal.coe_toNNReal (measure_ne_top μ univ), coe_nnreal_smul]
   infer_instance
 
 /-- Coordinatewise pushforwards commute with the unique product when both product domains hold. -/
