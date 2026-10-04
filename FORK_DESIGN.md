@@ -61,6 +61,18 @@ the interface.
   a private transitional implementation bridge during a migration, with a
   stated removal condition. The public boundary must prove that its fallback
   is unreachable or that the result is independent of the chosen value.
+- When the defining specification determines an object only up to an
+  equivalence, such as almost-everywhere equality, the canonical object is the
+  equivalence class, not a chosen representative. Expose the class, for
+  example as a germ along the almost-everywhere filter or an `AEEqFun`,
+  together with membership of representatives and the relational
+  specification. Do not export a representative chosen by `Classical.choose`,
+  however it is named or documented: the habit of informal texts to fix "a
+  version" does not make a choice canonical. Concrete representatives may
+  appear only as private witnesses inside proofs of Prop-valued existence
+  statements. Such a witness construction is a proof device, not an
+  implementation bridge: no public definition unfolds to it, so it needs no
+  removal condition.
 - If mathematical literature defines a genuinely total object on the same
   inputs, including the degenerate cases, treat that as an independent
   mathematical object with its own specifying properties rather than as a
