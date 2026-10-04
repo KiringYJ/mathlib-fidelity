@@ -6,6 +6,7 @@ Authors: Rémy Degenne
 module
 
 public import Mathlib.Probability.Kernel.Composition.MeasureCompProd
+public import Mathlib.Probability.Kernel.FiberwiseAE
 public import Mathlib.Probability.Kernel.Disintegration.Basic
 public import Mathlib.Probability.Kernel.Disintegration.CondCDF
 public import Mathlib.Probability.Kernel.Disintegration.Density
@@ -51,10 +52,9 @@ The first step (building the measurable function on `ℚ`) is done differently d
 * If `α` is countable, we can proceed separately for each `a : α`: the finite measure `κ a` has a
   conditional kernel `(κ a).condKernel : Kernel β Ω`. Since `α` is countable, measurability is not
   an issue and we can put those together into a `Kernel (α × β) Ω`. For a measure on `β × ℝ`, a
-  conditional kernel is built from `condKernelUnitReal`, the kernel of the conditional cdf
-  `ProbabilityTheory.condCDF`, which is chosen among the conditional cdfs whose existence is proved
-  in the `CondCDF.lean` file; for a general standard Borel space `Ω`, we go through the measurable
-  embedding of `Ω` into `ℝ`.
+  conditional kernel is built from the kernel of a conditional cdf in the sense of
+  `ProbabilityTheory.IsCondCDF`, whose existence is proved in the `CondCDF.lean` file; for a general
+  standard Borel space `Ω`, we go through the measurable embedding of `Ω` into `ℝ`.
 * If `α` is not countable, we can't proceed separately for each `a : α` and have to build a function
   `f : α × β → ℚ → ℝ` which is measurable on the product. We are able to do so if `β` has a
   countably generated σ-algebra (this is the case in particular for standard Borel spaces).
@@ -142,64 +142,99 @@ lemma isRatCondKernelCDF_density_Iic (κ : Kernel α (γ × ℝ)) [IsFiniteKerne
     IsRatCondKernelCDF (fun (p : α × γ) q ↦ density κ (fst κ) p.1 p.2 (Iic q)) κ (fst κ) :=
   (isRatCondKernelCDFAux_density_Iic κ).isRatCondKernelCDF
 
-/-- A conditional kernel CDF of a finite kernel `κ : Kernel α (γ × ℝ)` with respect to `fst κ`,
-where `γ` is countably generated. Its existence follows from `isRatCondKernelCDF_density_Iic`.
+/-- Some germ along `(fst κ).fiberwiseAE` is represented by a conditional kernel CDF of `κ` with
+respect to `fst κ`. Since two conditional kernel CDFs agree `fst κ a`-almost everywhere for every
+`a` (`ProbabilityTheory.IsCondKernelCDF.ae_eq`), such a germ is unique, and every conditional
+kernel CDF represents it (`ProbabilityTheory.IsCondKernelCDF.mem_condKernelCDF`). -/
+lemma exists_germ_isCondKernelCDF (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
+    ∃ φ : (fst κ).fiberwiseAE.Germ (StieltjesFunction ℝ), ∃ f,
+      IsCondKernelCDF f κ (fst κ) ∧ f ∈ φ :=
+  let ⟨f, hf, _⟩ := (isRatCondKernelCDF_density_Iic κ).exists_isCondKernelCDF
+  ⟨f, f, hf, Filter.Germ.coe_mem f⟩
 
-Every conditional kernel CDF of `κ` agrees with it `fst κ a`-almost everywhere for every `a`
-(`ProbabilityTheory.IsCondKernelCDF.ae_eq_condKernelCDF`). Only this almost-everywhere class is
-determined by `κ`: a measurable modification on `fst κ a`-null sets that still consists of
-probability cdfs is another conditional kernel CDF (`ProbabilityTheory.IsCondKernelCDF.congr`), so
-the values of `condKernelCDF κ` on such null sets are a choice. -/
+/-- The conditional kernel CDF of a finite kernel `κ : Kernel α (γ × ℝ)` with respect to `fst κ`,
+where `γ` is countably generated: the class of the conditional kernel CDFs of `κ` along
+`(fst κ).fiberwiseAE`, that is, up to `fst κ a`-null sets for every `a`.
+
+A family `f` represents it, written `f ∈ condKernelCDF κ`, when for every `a` it agrees
+`fst κ a`-almost everywhere with a conditional kernel CDF of `κ`. Every conditional kernel CDF
+represents it (`ProbabilityTheory.IsCondKernelCDF.mem_condKernelCDF`); one exists by
+`isRatCondKernelCDF_density_Iic`. The values of a conditional kernel CDF on `fst κ a`-null sets are
+not determined by `κ` (`ProbabilityTheory.IsCondKernelCDF.congr`). -/
 noncomputable
-def condKernelCDF (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] : α × γ → StieltjesFunction ℝ :=
-  (isRatCondKernelCDF_density_Iic κ).exists_isCondKernelCDF.choose
+def condKernelCDF (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
+    (fst κ).fiberwiseAE.Germ (StieltjesFunction ℝ) :=
+  (exists_germ_isCondKernelCDF κ).choose
 
-lemma isCondKernelCDF_condKernelCDF (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
-    IsCondKernelCDF (condKernelCDF κ) κ (fst κ) :=
-  (isRatCondKernelCDF_density_Iic κ).exists_isCondKernelCDF.choose_spec.1
+/-- Every conditional kernel CDF of `κ` with respect to `fst κ` represents `condKernelCDF κ`. -/
+lemma _root_.ProbabilityTheory.IsCondKernelCDF.mem_condKernelCDF {κ : Kernel α (γ × ℝ)}
+    [IsFiniteKernel κ] {f : α × γ → StieltjesFunction ℝ} (hf : IsCondKernelCDF f κ (fst κ)) :
+    f ∈ condKernelCDF κ := by
+  obtain ⟨g, hg, hg_mem⟩ := (exists_germ_isCondKernelCDF κ).choose_spec
+  exact Filter.Germ.mem_of_eventuallyEq hg_mem (eventuallyEq_fiberwiseAE_iff.2 (hg.ae_eq hf))
 
-/-- Every conditional kernel CDF of `κ` with respect to `fst κ` agrees with `condKernelCDF κ`
-`fst κ a`-almost everywhere. -/
-lemma _root_.ProbabilityTheory.IsCondKernelCDF.ae_eq_condKernelCDF {κ : Kernel α (γ × ℝ)}
-    [IsFiniteKernel κ] {f : α × γ → StieltjesFunction ℝ} (hf : IsCondKernelCDF f κ (fst κ))
-    (a : α) :
-    ∀ᵐ b ∂(fst κ a), f (a, b) = condKernelCDF κ (a, b) :=
-  hf.ae_eq (isCondKernelCDF_condKernelCDF κ) a
+/-- `condKernelCDF κ` is represented by a conditional kernel CDF of `κ`. -/
+lemma exists_isCondKernelCDF_mem_condKernelCDF (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
+    ∃ f, IsCondKernelCDF f κ (fst κ) ∧ f ∈ condKernelCDF κ :=
+  let ⟨f, hf, _⟩ := (isRatCondKernelCDF_density_Iic κ).exists_isCondKernelCDF
+  ⟨f, hf, hf.mem_condKernelCDF⟩
 
-/-- A conditional kernel for `κ : Kernel α (γ × ℝ)` where `γ` is countably generated. It is used to
-build the witness of `ProbabilityTheory.Kernel.exists_isMarkovKernel_isCondKernel` when `α` is
-uncountable. -/
-noncomputable
-def condKernelReal (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] : Kernel (α × γ) ℝ :=
-  (isCondKernelCDF_condKernelCDF κ).toKernel
+/-- Given a conditional kernel CDF `f` of `κ`, the representatives of `condKernelCDF κ` are the
+families that agree with `f` `fst κ a`-almost everywhere for every `a`. -/
+lemma _root_.ProbabilityTheory.IsCondKernelCDF.mem_condKernelCDF_iff {κ : Kernel α (γ × ℝ)}
+    [IsFiniteKernel κ] {f g : α × γ → StieltjesFunction ℝ} (hf : IsCondKernelCDF f κ (fst κ)) :
+    g ∈ condKernelCDF κ ↔ ∀ a, ∀ᵐ b ∂(fst κ a), g (a, b) = f (a, b) :=
+  (Filter.Germ.mem_iff_eventuallyEq hf.mem_condKernelCDF).trans eventuallyEq_fiberwiseAE_iff
 
-instance instIsMarkovKernelCondKernelReal (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
+/-- A representative of `condKernelCDF κ` that is measurable and consists of probability cdfs is a
+conditional kernel CDF of `κ`. -/
+lemma isCondKernelCDF_of_mem_condKernelCDF {κ : Kernel α (γ × ℝ)} [IsFiniteKernel κ]
+    {g : α × γ → StieltjesFunction ℝ} (hg : g ∈ condKernelCDF κ)
+    (hg_meas : ∀ x, Measurable fun p ↦ g p x) (hg_atBot : ∀ p, Tendsto (g p) atBot (𝓝 0))
+    (hg_atTop : ∀ p, Tendsto (g p) atTop (𝓝 1)) :
+    IsCondKernelCDF g κ (fst κ) := by
+  obtain ⟨f, hf, hf_mem⟩ := exists_isCondKernelCDF_mem_condKernelCDF κ
+  exact hf.congr hg_meas hg_atBot hg_atTop
+    (eventuallyEq_fiberwiseAE_iff.1 (Filter.Germ.eventuallyEq_of_mem hf_mem hg))
+
+/-- A conditional kernel for `κ : Kernel α (γ × ℝ)`, where `γ` is countably generated, built from a
+conditional kernel CDF. It serves only to build the witness of
+`ProbabilityTheory.Kernel.exists_isMarkovKernel_isCondKernel` when `α` is uncountable. -/
+private noncomputable def condKernelReal (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
+    Kernel (α × γ) ℝ :=
+  (isRatCondKernelCDF_density_Iic κ).exists_isCondKernelCDF.choose_spec.1.toKernel
+
+private lemma isMarkovKernel_condKernelReal (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
     IsMarkovKernel (condKernelReal κ) := by
   rw [condKernelReal]
   infer_instance
 
-lemma compProd_fst_condKernelReal (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
+private lemma compProd_fst_condKernelReal (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
     fst κ ⊗ₖ condKernelReal κ = κ := by
   rw [condKernelReal, compProd_toKernel]
 
-/-- A conditional kernel for `κ : Kernel Unit (α × ℝ)`. It is used to build the witness of
-`MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel`. -/
-noncomputable
-def condKernelUnitReal (κ : Kernel Unit (α × ℝ)) [IsFiniteKernel κ] : Kernel (Unit × α) ℝ :=
-  (isCondKernelCDF_condCDF (κ ())).toKernel
+/-- A conditional kernel for `κ : Kernel Unit (α × ℝ)`, built from a conditional cdf of `κ ()`. It
+serves only to build the witness of `MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel`. -/
+private noncomputable def condKernelUnitReal (κ : Kernel Unit (α × ℝ)) [IsFiniteKernel κ] :
+    Kernel (Unit × α) ℝ :=
+  (HasUniqueCondCDF.exists_isCondCDF (ρ := κ ())).choose_spec.isCondKernelCDF.toKernel
 
-instance instIsMarkovKernelCondKernelUnitReal (κ : Kernel Unit (α × ℝ)) [IsFiniteKernel κ] :
+private lemma isMarkovKernel_condKernelUnitReal (κ : Kernel Unit (α × ℝ)) [IsFiniteKernel κ] :
     IsMarkovKernel (condKernelUnitReal κ) := by
   rw [condKernelUnitReal]
   infer_instance
 
-instance condKernelUnitReal.instIsCondKernel (κ : Kernel Unit (α × ℝ)) [IsFiniteKernel κ] :
-    κ.IsCondKernel κ.condKernelUnitReal where
+private lemma isCondKernel_condKernelUnitReal (κ : Kernel Unit (α × ℝ)) [IsFiniteKernel κ] :
+    κ.IsCondKernel (condKernelUnitReal κ) where
   disintegrate := by
     rw [condKernelUnitReal]
-    exact compProd_toKernel (isCondKernelCDF_condCDF (κ ()))
+    exact compProd_toKernel
+      (HasUniqueCondCDF.exists_isCondCDF (ρ := κ ())).choose_spec.isCondKernelCDF
 
 end Real
+
+attribute [local instance] isMarkovKernel_condKernelReal isMarkovKernel_condKernelUnitReal
+  isCondKernel_condKernelUnitReal
 
 section BorelSnd
 

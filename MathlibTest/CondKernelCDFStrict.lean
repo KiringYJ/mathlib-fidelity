@@ -8,9 +8,10 @@ These tests check that the construction with the former default, `stieltjesOfMea
 public; that a rational conditional kernel CDF of a finite kernel gives a conditional kernel CDF
 that agrees with it almost everywhere at every rational; that a conditional kernel CDF forces the
 measures `ν a` to be σ-finite and is determined exactly up to null sets, so that
-`ProbabilityTheory.Kernel.condKernelCDF`, which requires a finite kernel, is a choice with which
-every conditional kernel CDF agrees almost everywhere and which is determined at atoms; and that
-the specification and its rational version reject the former default on sets of positive measure.
+`ProbabilityTheory.Kernel.condKernelCDF`, which requires a finite kernel, is the class of the
+conditional kernel CDFs, which every one of them represents and whose representatives are determined
+at atoms, while no conditional kernel CDF is chosen; and that the specification and its rational
+version reject the former default on sets of positive measure.
 -/
 
 open MeasureTheory Set Filter ProbabilityTheory
@@ -35,6 +36,40 @@ noncomputable section
 /-- error: Unknown identifier `isCondKernelCDF_stieltjesOfMeasurableRat` -/
 #guard_msgs in
 #check isCondKernelCDF_stieltjesOfMeasurableRat
+
+/-! ### No conditional kernel CDF is chosen -/
+
+/-- error: Unknown constant `ProbabilityTheory.Kernel.isCondKernelCDF_condKernelCDF` -/
+#guard_msgs in
+#check Kernel.isCondKernelCDF_condKernelCDF
+
+/-- error: Unknown constant `ProbabilityTheory.IsCondKernelCDF.ae_eq_condKernelCDF` -/
+#guard_msgs in
+#check IsCondKernelCDF.ae_eq_condKernelCDF
+
+/-- error: Unknown constant `ProbabilityTheory.Kernel.condKernelReal` -/
+#guard_msgs in
+#check Kernel.condKernelReal
+
+/-- error: Unknown constant `ProbabilityTheory.Kernel.compProd_fst_condKernelReal` -/
+#guard_msgs in
+#check Kernel.compProd_fst_condKernelReal
+
+/-- error: Unknown constant `ProbabilityTheory.Kernel.instIsMarkovKernelCondKernelReal` -/
+#guard_msgs in
+#check Kernel.instIsMarkovKernelCondKernelReal
+
+/-- error: Unknown constant `ProbabilityTheory.Kernel.condKernelUnitReal` -/
+#guard_msgs in
+#check Kernel.condKernelUnitReal
+
+/-- error: Unknown constant `ProbabilityTheory.Kernel.instIsMarkovKernelCondKernelUnitReal` -/
+#guard_msgs in
+#check Kernel.instIsMarkovKernelCondKernelUnitReal
+
+/-- error: Unknown constant `ProbabilityTheory.Kernel.condKernelUnitReal.instIsCondKernel` -/
+#guard_msgs in
+#check Kernel.condKernelUnitReal.instIsCondKernel
 
 /-! ### Existence and uniqueness -/
 
@@ -68,25 +103,35 @@ section StandardBorel
 variable {α γ : Type*} [SigmaAlgebra α] [SigmaAlgebra γ] [SigmaAlgebra.CountablyGenerated γ]
   (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ]
 
--- `condKernelCDF κ` is a conditional kernel CDF, every conditional kernel CDF agrees with it
--- `fst κ a`-almost everywhere, and its kernel disintegrates `κ`.
-example : IsCondKernelCDF (Kernel.condKernelCDF κ) κ (Kernel.fst κ) :=
-  Kernel.isCondKernelCDF_condKernelCDF κ
+-- Every conditional kernel CDF represents `condKernelCDF κ`, some conditional kernel CDF does, and
+-- two representatives agree `fst κ a`-almost everywhere for every `a`.
+example {f : α × γ → StieltjesFunction ℝ} (hf : IsCondKernelCDF f κ (Kernel.fst κ)) :
+    f ∈ Kernel.condKernelCDF κ :=
+  hf.mem_condKernelCDF
 
-example {f : α × γ → StieltjesFunction ℝ} (hf : IsCondKernelCDF f κ (Kernel.fst κ)) (a : α) :
-    ∀ᵐ b ∂(Kernel.fst κ a), f (a, b) = Kernel.condKernelCDF κ (a, b) :=
-  hf.ae_eq_condKernelCDF a
+example : ∃ f, IsCondKernelCDF f κ (Kernel.fst κ) ∧ f ∈ Kernel.condKernelCDF κ :=
+  Kernel.exists_isCondKernelCDF_mem_condKernelCDF κ
 
-example : Kernel.fst κ ⊗ₖ Kernel.condKernelReal κ = κ :=
-  Kernel.compProd_fst_condKernelReal κ
+example {f g : α × γ → StieltjesFunction ℝ} (hf : f ∈ Kernel.condKernelCDF κ)
+    (hg : g ∈ Kernel.condKernelCDF κ) (a : α) :
+    ∀ᵐ b ∂(Kernel.fst κ a), f (a, b) = g (a, b) :=
+  Kernel.eventuallyEq_fiberwiseAE_iff.1 (Filter.Germ.eventuallyEq_of_mem hf hg) a
 
--- At each rational, `condKernelCDF κ` is `fst κ a`-almost everywhere the kernel density of the ray.
-example (a : α) (q : ℚ) :
-    (fun b ↦ Kernel.condKernelCDF κ (a, b) q)
+-- A representative that is measurable and consists of probability cdfs is a conditional kernel CDF.
+example {g : α × γ → StieltjesFunction ℝ} (hg : g ∈ Kernel.condKernelCDF κ)
+    (hg_meas : ∀ x, Measurable fun p ↦ g p x) (hg_atBot : ∀ p, Tendsto (g p) atBot (𝓝 0))
+    (hg_atTop : ∀ p, Tendsto (g p) atTop (𝓝 1)) :
+    IsCondKernelCDF g κ (Kernel.fst κ) :=
+  Kernel.isCondKernelCDF_of_mem_condKernelCDF hg hg_meas hg_atBot hg_atTop
+
+-- At each rational, every representative of `condKernelCDF κ` is `fst κ a`-almost everywhere the
+-- kernel density of the ray.
+example {f : α × γ → StieltjesFunction ℝ} (hf : f ∈ Kernel.condKernelCDF κ) (a : α) (q : ℚ) :
+    (fun b ↦ f (a, b) q)
       =ᵐ[Kernel.fst κ a] fun b ↦ Kernel.density κ (Kernel.fst κ) a b (Iic (q : ℝ)) := by
   obtain ⟨g, hg, hg_ae⟩ := (Kernel.isRatCondKernelCDF_density_Iic κ).exists_isCondKernelCDF
-  filter_upwards [hg.ae_eq_condKernelCDF a, hg_ae a q] with b hb hb'
-  rw [← hb, hb']
+  filter_upwards [hg.mem_condKernelCDF_iff.1 hf a, hg_ae a q] with b hb hb'
+  rw [hb, hb']
 
 end StandardBorel
 
@@ -99,8 +144,19 @@ error: failed to synthesize instance of type class
 Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 -/
 #guard_msgs in
-example : Unit × ℝ → StieltjesFunction ℝ :=
+example : (Kernel.fst (Kernel.const Unit (Measure.count : Measure (ℝ × ℝ)))).fiberwiseAE.Germ
+    (StieltjesFunction ℝ) :=
   Kernel.condKernelCDF (Kernel.const Unit (Measure.count : Measure (ℝ × ℝ)))
+
+/--
+error: failed to synthesize instance of type class
+  IsFiniteKernel (Kernel.const Unit Measure.count)
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example (f : Unit × ℝ → StieltjesFunction ℝ) : Prop :=
+  f ∈ Kernel.condKernelCDF (Kernel.const Unit (Measure.count : Measure (ℝ × ℝ)))
 
 /-! ### A positive control: a point mass -/
 
@@ -131,12 +187,13 @@ theorem isCondKernelCDF_κ₀₁ :
       Measure.dirac_apply' _ measurableSet_Iic, Measure.dirac_apply' _ (hs.prod measurableSet_Iic)]
     by_cases h0 : (0 : ℝ) ∈ s <;> by_cases h1 : (1 : ℝ) ≤ x <;> simp [h0, h1]
 
--- At the atom `0` of the first marginal the conditional kernel CDF is determined: `condKernelCDF`
--- is the cdf of `dirac 1` there, whatever choice it makes on null sets.
-example : Kernel.condKernelCDF κ₀₁ ((), 0) = cdf (Measure.dirac (1 : ℝ)) := by
-  have h := isCondKernelCDF_κ₀₁.ae_eq_condKernelCDF ()
+-- At the atom `0` of the first marginal the conditional kernel CDF is determined: every
+-- representative of `condKernelCDF` is the cdf of `dirac 1` there, whatever it does on null sets.
+example {f : Unit × ℝ → StieltjesFunction ℝ} (hf : f ∈ Kernel.condKernelCDF κ₀₁) :
+    f ((), 0) = cdf (Measure.dirac (1 : ℝ)) := by
+  have h := isCondKernelCDF_κ₀₁.mem_condKernelCDF_iff.1 hf ()
   rw [fst_κ₀₁, ae_dirac_eq, Filter.eventually_pure] at h
-  exact h.symm
+  exact h
 
 /-! ### A conditional kernel CDF is determined only almost everywhere -/
 
