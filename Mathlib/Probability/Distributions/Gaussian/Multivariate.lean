@@ -23,13 +23,38 @@ Gaussian distributions over `EuclideanSpace ℝ ι`.
 * `stdGaussian E`: Standard Gaussian distribution on a finite-dimensional real inner product space
   `E`. This is the random vector whose coordinates in an orthonormal basis are independent standard
   Gaussian.
-* `multivariateGaussian μ S`: The multivariate Gaussian distribution on `EuclideanSpace ℝ ι`
-  with mean `μ` and covariance matrix `S`, when `S` is a positive semidefinite matrix.
+* `multivariateGaussian μ S hS`: The multivariate Gaussian distribution on `EuclideanSpace ℝ ι`
+  with mean `μ` and covariance matrix `S`, for a proof `hS` that `S` is positive semidefinite.
+
+## Parameter domain
+
+`multivariateGaussian μ S hS` takes a proof `hS : S.PosSemidef`, which includes the symmetry of
+`S`. This is the exact domain of the Gaussian distribution with mean `μ` and covariance matrix
+`S`: every covariance matrix is symmetric and positive semidefinite
+(`isPosSemidef_covarianceBilin`), each such `S` is the covariance matrix of
+`multivariateGaussian μ S hS` (`covarianceBilin_multivariateGaussian`), and a Gaussian measure is
+determined by its mean and covariance (`IsGaussian.ext`). The formula
+`x ↦ exp (⟪x, μ⟫ * I - x ⬝ᵥ S *ᵥ x / 2)` for the characteristic function only depends on the
+symmetric part of `S`, so for a matrix `S` that is not symmetric it describes at most the
+distribution whose covariance matrix is that symmetric part, not `S`.
+
+A singular `S` is included. The distribution is then degenerate: it is supported by a proper
+affine subspace and has no density with respect to the Lebesgue measure. [siegrist_random], §5.7,
+includes these distributions by calling a random vector normal when each of its linear functionals
+is normal, constants included, which is the definition of `IsGaussian`. For instance, the zero
+matrix gives `Measure.dirac μ` (`multivariateGaussian_zero_cov`).
+
+The proof is an explicit argument without a default value: a default would take the set in
+`multivariateGaussian μ S s` as a proof.
 
 ## TODO
 
-- Generalize `multivariateGaussian μ S` when `S` is a symmetric trace class operator over a
+- Generalize `multivariateGaussian μ S hS` when `S` is a positive trace-class operator over a
   Hilbert space.
+
+## References
+
+* [K. Siegrist, *Probability, Mathematical Statistics, and Stochastic Processes*][siegrist_random]
 
 ## Tags
 
@@ -171,38 +196,33 @@ section multivariateGaussian
 
 variable [DecidableEq ι]
 
-/-- Multivariate Gaussian measure on `EuclideanSpace ℝ ι` with mean `μ` and covariance
-matrix `S`. This only makes sense when `S` is positive semidefinite,
-as then `CFC.sqrt S * CFC.sqrt S = S`. Otherwise `CFC.sqrt S = 0`, and
-`multivariateGaussian μ S = Measure.dirac μ` (see `multivariateGaussian_of_not_posSemidef`). -/
+/-- The multivariate Gaussian distribution on `EuclideanSpace ℝ ι` with mean `μ` and covariance
+matrix `S`, for a positive semidefinite `S`. It is the image of the standard Gaussian distribution
+under `x ↦ μ + A x` for the positive semidefinite square root `A = CFC.sqrt S`, which satisfies
+`A * A = S`. -/
+@[nolint unusedArguments]
 noncomputable
-def multivariateGaussian (μ : EuclideanSpace ℝ ι) (S : Matrix ι ι ℝ) :
+def multivariateGaussian (μ : EuclideanSpace ℝ ι) (S : Matrix ι ι ℝ) (_hS : S.PosSemidef) :
     Measure (EuclideanSpace ℝ ι) :=
   (stdGaussian (EuclideanSpace ℝ ι)).map (fun x ↦ μ + toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt S) x)
 
-lemma multivariateGaussian_of_not_posSemidef (μ : EuclideanSpace ℝ ι) {S : Matrix ι ι ℝ}
-    (hS : ¬ S.PosSemidef) : multivariateGaussian μ S = .dirac μ := by
-  have hsqrt : CFC.sqrt S = 0 := by
-    rw [CFC.sqrt, cfcₙ_apply_of_not_predicate]
-    change ¬ (S - 0).PosSemidef
-    simpa
-  rw [multivariateGaussian]
-  calc
-    (stdGaussian (EuclideanSpace ℝ ι)).map
-        (fun x ↦ μ + toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt S) x) =
-        (stdGaussian (EuclideanSpace ℝ ι)).map (fun _ ↦ μ) := by
-      apply Measure.map_congr (ae_of_all _ fun x ↦ ?_) (by fun_prop)
-      simp [hsqrt]
-    _ = .dirac μ := by simp
-
 @[simp]
 lemma multivariateGaussian_zero_one :
-    multivariateGaussian 0 (1 : Matrix ι ι ℝ) = stdGaussian (EuclideanSpace ℝ ι) := by
+    multivariateGaussian 0 (1 : Matrix ι ι ℝ) PosSemidef.one =
+      stdGaussian (EuclideanSpace ℝ ι) := by
+  simp [multivariateGaussian]
+
+/-- The multivariate Gaussian distribution with zero covariance matrix is the Dirac measure at its
+mean. -/
+@[simp]
+lemma multivariateGaussian_zero_cov (μ : EuclideanSpace ℝ ι) :
+    multivariateGaussian μ 0 PosSemidef.zero = Measure.dirac μ := by
   simp [multivariateGaussian]
 
 variable {μ : EuclideanSpace ℝ ι} {S : Matrix ι ι ℝ}
 
-instance isGaussian_multivariateGaussian : IsGaussian (multivariateGaussian μ S) := by
+instance isGaussian_multivariateGaussian (hS : S.PosSemidef) :
+    IsGaussian (multivariateGaussian μ S hS) := by
   have h : (fun x ↦ μ + (toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt S)) x) =
     (fun x ↦ μ + x) ∘ ((toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt S))) := rfl
   simp only [multivariateGaussian]
@@ -211,17 +231,20 @@ instance isGaussian_multivariateGaussian : IsGaussian (multivariateGaussian μ S
   infer_instance
 
 @[simp]
-lemma integral_id_multivariateGaussian : ∫ x, x ∂(multivariateGaussian μ S) = μ := by
+lemma integral_id_multivariateGaussian (hS : S.PosSemidef) :
+    ∫ x, x ∂(multivariateGaussian μ S hS) = μ := by
   rw [multivariateGaussian, integral_map (by fun_prop) (by fun_prop),
     integral_add (integrable_const _), integral_const]
   · simp [ContinuousLinearMap.integral_comp_comm _ IsGaussian.integrable_fun_id]
   · exact (toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt S)).integrable_comp
       (IsGaussian.integrable_id (μ := stdGaussian (EuclideanSpace ℝ ι)))
 
-lemma integral_id_multivariateGaussian' : (multivariateGaussian μ S)[id] = μ := by simp
+lemma integral_id_multivariateGaussian' (hS : S.PosSemidef) :
+    (multivariateGaussian μ S hS)[id] = μ := by
+  simp
 
 lemma covarianceBilin_multivariateGaussian (hS : S.PosSemidef) (x y : EuclideanSpace ℝ ι) :
-    covarianceBilin (multivariateGaussian μ S) x y = x ⬝ᵥ S *ᵥ y := by
+    covarianceBilin (multivariateGaussian μ S hS) x y = x ⬝ᵥ S *ᵥ y := by
   have h : (fun x ↦ μ + x) ∘ ((toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt S))) =
     (fun x ↦ μ + (toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt S)) x) := rfl
   simp only [multivariateGaussian]
@@ -236,7 +259,7 @@ lemma covarianceBilin_multivariateGaussian (hS : S.PosSemidef) (x y : EuclideanS
   · exact IsGaussian.memLp_two_id
 
 lemma covariance_eval_multivariateGaussian (hS : S.PosSemidef) (i j : ι) :
-    cov[fun x ↦ x i, fun x ↦ x j; multivariateGaussian μ S] = S i j := by
+    cov[fun x ↦ x i, fun x ↦ x j; multivariateGaussian μ S hS] = S i j := by
   have (i : ι) : (fun x : EuclideanSpace ℝ ι ↦ x i) =
       fun x ↦ ⟪EuclideanSpace.basisFun ι ℝ i, x⟫ := by ext; simp [PiLp.inner_apply]
   rw [this, this, ← covarianceBilin_apply_eq_cov, covarianceBilin_multivariateGaussian hS]
@@ -244,12 +267,12 @@ lemma covariance_eval_multivariateGaussian (hS : S.PosSemidef) (i j : ι) :
   · exact IsGaussian.memLp_two_id
 
 lemma variance_eval_multivariateGaussian (hS : S.PosSemidef) (i : ι) :
-    Var[fun x ↦ x i; multivariateGaussian μ S] = S i i := by
+    Var[fun x ↦ x i; multivariateGaussian μ S hS] = S i i := by
   rw [← covariance_self, covariance_eval_multivariateGaussian hS]
   exact Measurable.aemeasurable <| by fun_prop
 
 lemma measurePreserving_eval_multivariateGaussian (hS : S.PosSemidef) {i : ι} :
-    MeasurePreserving (fun x ↦ x i) (multivariateGaussian μ S)
+    MeasurePreserving (fun x ↦ x i) (multivariateGaussian μ S hS)
       (gaussianReal (μ i) (S i i).toNNReal) where
   measurable := by fun_prop
   map_eq := by
@@ -262,7 +285,7 @@ lemma measurePreserving_eval_multivariateGaussian (hS : S.PosSemidef) {i : ι} :
     exact IsGaussian.integrable_id
 
 lemma charFun_multivariateGaussian (hS : S.PosSemidef) (x : EuclideanSpace ℝ ι) :
-    charFun (multivariateGaussian μ S) x =
+    charFun (multivariateGaussian μ S hS) x =
       exp (⟪x, μ⟫ * I - x ⬝ᵥ S *ᵥ x / 2) := by
   simp [IsGaussian.charFun_eq', covarianceBilin_multivariateGaussian hS]
 
@@ -271,9 +294,10 @@ coordinates indexed by `J ⊆ I`, one obtains the multivariate Gaussian measure 
 covariance matrix is given by the corresponding submatrix. -/
 lemma measurePreserving_restrict₂_multivariateGaussian {ι : Type*} [DecidableEq ι] {I J : Finset ι}
     {μ : EuclideanSpace ℝ I} {S : Matrix I I ℝ} (hS : S.PosSemidef) (hJI : J ⊆ I) :
-    MeasurePreserving (EuclideanSpace.restrict₂ hJI) (multivariateGaussian μ S)
+    MeasurePreserving (EuclideanSpace.restrict₂ hJI) (multivariateGaussian μ S hS)
       (multivariateGaussian (μ.restrict₂ hJI)
-        (S.submatrix (fun i : J ↦ ⟨i.1, hJI i.2⟩) (fun i : J ↦ ⟨i.1, hJI i.2⟩))) where
+        (S.submatrix (fun i : J ↦ ⟨i.1, hJI i.2⟩) (fun i : J ↦ ⟨i.1, hJI i.2⟩))
+        (hS.submatrix _)) where
   measurable := by fun_prop
   map_eq := by
     apply IsGaussian.ext
@@ -292,16 +316,22 @@ lemma measurePreserving_restrict₂_multivariateGaussian {ι : Type*} [Decidable
     any_goals exact Measurable.aestronglyMeasurable (by fun_prop)
     · exact IsGaussian.memLp_two_id
 
+/-- The multivariate Gaussian distribution depends measurably on its mean and covariance
+matrix. -/
 @[fun_prop]
-lemma measurable_multivariateGaussian : Measurable (multivariateGaussian (ι := ι)).uncurry := by
+lemma _root_.Measurable.multivariateGaussian {α : Type*} {mα : SigmaAlgebra α}
+    {μ : α → EuclideanSpace ℝ ι} {S : α → Matrix ι ι ℝ} (hμ : Measurable μ) (hS : Measurable S)
+    (hS₀ : ∀ a, (S a).PosSemidef) :
+    Measurable fun a ↦ multivariateGaussian (μ a) (S a) (hS₀ a) := by
   rw [Measure.measurable_measure]
   intro s hs
-  simp only [Function.uncurry, multivariateGaussian]
+  simp only [ProbabilityTheory.multivariateGaussian]
   conv =>
     rhs
-    intro b
+    intro a
     rw [Measure.map_apply hs (by fun_prop)]
-  let A := {((μ, S), x) | μ + toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt S) x ∈ s}
+  let A := {p : α × EuclideanSpace ℝ ι |
+    μ p.1 + toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt (S p.1)) p.2 ∈ s}
   exact measurable_measure_prodMk_left (s := A) <| hs.preimage (by fun_prop)
 
 end multivariateGaussian

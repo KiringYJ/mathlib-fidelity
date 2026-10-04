@@ -79,14 +79,15 @@ Note that we build a measure over `I → ℝ` rather than `EuclideanSpace I ℝ`
 we want to extend this family to a measure over `ℝ≥0 → ℝ` through the Kolmogorov's extension
 theorem, which is phrased in this language. -/
 noncomputable def projectiveFamily (I : Finset ℝ≥0) : Measure (I → ℝ) :=
-  multivariateGaussian 0 (covMatrix I) |>.map (MeasurableEquiv.toLp 2 (I → ℝ)).symm
+  (multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I)).map
+    (MeasurableEquiv.toLp 2 (I → ℝ)).symm
     (MeasurableEquiv.toLp 2 (I → ℝ)).symm.measurable.aemeasurable
 
 /-- Up to a measurable equivalence, `projectiveFamily I` is the centered multivariate Gaussian
 with covariance matrix `covMatrix I`. -/
 lemma measurePreserving_ofLp_multivariateGaussian (I : Finset ℝ≥0) :
     MeasurePreserving ofLp
-      (multivariateGaussian 0 (covMatrix I)) (projectiveFamily I) where
+      (multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I)) (projectiveFamily I) where
   measurable := by fun_prop
   map_eq := rfl
 
@@ -94,14 +95,14 @@ lemma measurePreserving_ofLp_multivariateGaussian (I : Finset ℝ≥0) :
 with covariance matrix `covMatrix I`. -/
 lemma measurePreserving_toLp_projectiveFamily (I : Finset ℝ≥0) :
     MeasurePreserving (toLp 2) (projectiveFamily I)
-      (multivariateGaussian 0 (covMatrix I)) where
+      (multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I)) where
   measurable := by fun_prop
   map_eq := by
     have hsource : AEMeasurable (MeasurableEquiv.toLp 2 (I → ℝ)).symm
-        (multivariateGaussian 0 (covMatrix I)) :=
+        (multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I)) :=
       (MeasurableEquiv.toLp 2 (I → ℝ)).symm.measurable.aemeasurable
     have htarget : AEMeasurable (toLp 2)
-        ((multivariateGaussian 0 (covMatrix I)).map
+        ((multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I)).map
           (MeasurableEquiv.toLp 2 (I → ℝ)).symm hsource) := by
       fun_prop
     rw [projectiveFamily, Measure.map_map hsource htarget]
@@ -110,20 +111,20 @@ lemma measurePreserving_toLp_projectiveFamily (I : Finset ℝ≥0) :
 lemma integral_projectiveFamily {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (I : Finset ℝ≥0) (f : (I → ℝ) → E) :
     ∫ x, f x ∂projectiveFamily I =
-      ∫ x, f (ofLp x) ∂multivariateGaussian 0 (covMatrix I) := by
+      ∫ x, f (ofLp x) ∂multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I) := by
   simp [projectiveFamily, integral_map_equiv]
 
 @[to_fun covariance_fun_projectiveFamily]
 lemma covariance_projectiveFamily (I : Finset ℝ≥0) (f g : (I → ℝ) → ℝ) :
     cov[f, g; projectiveFamily I] =
-      cov[f ∘ ofLp, g ∘ ofLp; multivariateGaussian 0 (covMatrix I)] := by
+      cov[f ∘ ofLp, g ∘ ofLp; multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I)] := by
   rw [projectiveFamily, covariance_map_equiv]
   rfl
 
 @[to_fun variance_fun_projectiveFamily]
 lemma variance_projectiveFamily (I : Finset ℝ≥0) (f : (I → ℝ) → ℝ) :
     Var[f; projectiveFamily I] =
-      Var[f ∘ ofLp; multivariateGaussian 0 (covMatrix I)] := by
+      Var[f ∘ ofLp; multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I)] := by
   rw [projectiveFamily, variance_map_equiv]
   rfl
 
@@ -203,15 +204,15 @@ lemma isProjectiveMeasureFamily_projectiveFamily :
     IsProjectiveMeasureFamily (α := fun _ ↦ ℝ) projectiveFamily := by
   intro I J hJI
   have hsource : AEMeasurable (MeasurableEquiv.toLp 2 (I → ℝ)).symm
-      (multivariateGaussian 0 (covMatrix I)) :=
+      (multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I)) :=
     (MeasurableEquiv.toLp 2 (I → ℝ)).symm.measurable.aemeasurable
   have hrestrict : AEMeasurable (Finset.restrict₂ (π := fun _ ↦ ℝ) hJI)
-      ((multivariateGaussian 0 (covMatrix I)).map
+      ((multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I)).map
         (MeasurableEquiv.toLp 2 (I → ℝ)).symm hsource) :=
     (Finset.measurable_restrict₂ _).aemeasurable
   have hcomp := hsource.comp_aemeasurable hrestrict
   change projectiveFamily J =
-    (((multivariateGaussian 0 (covMatrix I)).map
+    (((multivariateGaussian 0 (covMatrix I) (posSemidef_covMatrix I)).map
       (MeasurableEquiv.toLp 2 (I → ℝ)).symm hsource).map
         (Finset.restrict₂ (π := fun _ ↦ ℝ) hJI) hrestrict)
   rw [Measure.map_map hsource hrestrict]
