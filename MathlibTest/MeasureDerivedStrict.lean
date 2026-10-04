@@ -125,24 +125,31 @@ example (ν : ProbabilityMeasure α) (f : α → β) (hf₁ hf₂ : AEMeasurable
 
 variable {Ω : Type*} [SigmaAlgebra Ω] [StandardBorelSpace Ω] [Nonempty Ω]
 
-set_option linter.unusedVariables false in
-example (μ : Measure α) [IsFiniteMeasure μ] (X : α → β) (Y : α → Ω) : True := by
-  fail_if_success
-    let _κ : Kernel β Ω := condDistrib Y X μ
+/--
+error: could not synthesize default value for parameter 'hXY' using tactics
+---
+error: `fun_prop` was unable to prove `AEMeasurable (fun a => (X a, Y a)) μ`
+
+Issues:
+  No theorems found for `X` in order to prove `AEMeasurable (fun a => X a) μ`
+-/
+#guard_msgs in
+example (μ : Measure α) [IsFiniteMeasure μ] (X : α → β) (Y : α → Ω) : True :=
+  let _c := condDistrib Y X μ
   trivial
 
 example (μ : Measure α) [IsFiniteMeasure μ] (X : α → β) (Y : α → Ω)
-    (hXY : AEMeasurable (fun a ↦ (X a, Y a)) μ) : Kernel β Ω :=
+    (hXY : AEMeasurable (fun a ↦ (X a, Y a)) μ) : Kernel.AEClass (ae (μ.map X hXY.fst)) Ω :=
   condDistrib Y X μ
 
 example (μ : Measure α) [IsFiniteMeasure μ] (X : α → β) (Y : α → Ω)
-    (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ) : Kernel β Ω :=
+    (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ) : Kernel.AEClass (ae (μ.map X hX)) Ω :=
   condDistrib Y X μ
 
 example (μ : Measure α) [IsFiniteMeasure μ] (X : α → β) (Y : α → Ω)
     (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ) :
-    IsMarkovKernel (condDistrib Y X μ) := by
-  infer_instance
+    ∃ η : Kernel β Ω, IsMarkovKernel η ∧ η ∈ condDistrib Y X μ :=
+  exists_isMarkovKernel_mem_condDistrib
 
 example (μ : Measure α) [IsFiniteMeasure μ] (X : α → β) (Y : α → Ω)
     (hXY₁ hXY₂ : AEMeasurable (fun a ↦ (X a, Y a)) μ) :

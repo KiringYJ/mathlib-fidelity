@@ -5,182 +5,174 @@ Authors: Kexing Ying, Rémy Degenne
 -/
 module
 
+public import Mathlib.Probability.Kernel.CompProdEqIff
 public import Mathlib.Probability.Kernel.Disintegration.Integral
 
 /-!
-# Uniqueness of the conditional kernel
+# Uniqueness of conditional kernels
 
-We prove that the conditional kernels `ProbabilityTheory.Kernel.condKernel` and
-`MeasureTheory.Measure.condKernel` are almost everywhere unique.
+We prove that conditional kernels with values in a countably generated space are unique almost
+everywhere: two finite kernels that disintegrate a finite measure `ρ` agree `ρ.fst`-almost
+everywhere, and two finite kernels that disintegrate a finite kernel `κ` agree `fst κ a`-almost
+everywhere for every `a`. Consequently the finite representatives of the classes
+`MeasureTheory.Measure.condKernel ρ` and `ProbabilityTheory.Kernel.condKernel κ` are exactly the
+finite conditional kernels.
 
 ## Main statements
 
-* `ProbabilityTheory.eq_condKernel_of_kernel_eq_compProd`: a.e. uniqueness of
-  `ProbabilityTheory.Kernel.condKernel`
-* `ProbabilityTheory.eq_condKernel_of_measure_eq_compProd`: a.e. uniqueness of
-  `MeasureTheory.Measure.condKernel`
-* `ProbabilityTheory.Kernel.condKernel_apply_eq_condKernel`: the kernel `condKernel` is almost
-  everywhere equal to the measure `condKernel`.
+* `MeasureTheory.Measure.IsCondKernel.ae_eq`: a.e. uniqueness of conditional kernels of a measure.
+* `ProbabilityTheory.Kernel.IsCondKernel.ae_eq`: a.e. uniqueness of conditional kernels of a kernel.
+* `MeasureTheory.Measure.mem_condKernel_iff`: a finite kernel represents `ρ.condKernel` if and only
+  if it disintegrates `ρ`.
+* `ProbabilityTheory.Kernel.mem_condKernel_iff`: a finite kernel represents `κ.condKernel` if and
+  only if it disintegrates `κ`.
+* `ProbabilityTheory.Kernel.comap_mem_condKernel_of_mem`: the restriction to the fiber over `a` of
+  a representative of `κ.condKernel` represents the conditional kernel of the measure `κ a`.
 -/
 
 public section
 
-open MeasureTheory Set Filter SigmaAlgebra
+open MeasureTheory Set Filter SigmaAlgebra ProbabilityTheory
 
 open scoped ENNReal MeasureTheory Topology ProbabilityTheory
 
-namespace ProbabilityTheory
+variable {α β Ω : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β} [SigmaAlgebra Ω]
 
-variable {α β Ω : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β}
-  [SigmaAlgebra Ω] [StandardBorelSpace Ω] [Nonempty Ω]
-
-section Measure
+namespace MeasureTheory.Measure
 
 variable {ρ : Measure (α × Ω)} [IsFiniteMeasure ρ]
 
-/-! ### Uniqueness of `Measure.condKernel`
+/-! ### Uniqueness of conditional kernels of a measure -/
 
-The conditional kernel of a measure is unique almost everywhere. -/
+/-- Two s-finite conditional kernels of `ρ` agree `ρ.fst`-almost everywhere on a measurable set.
 
-/-- An s-finite kernel which satisfies the disintegration property of the given measure `ρ` is
-almost everywhere equal to the disintegration kernel of `ρ` when evaluated on a measurable set.
-
-This theorem in the case of finite kernels is weaker than `eq_condKernel_of_measure_eq_compProd`
-which asserts that the kernels are equal almost everywhere and not just on a given measurable
-set. -/
-theorem eq_condKernel_of_measure_eq_compProd' (κ : Kernel α Ω) [IsSFiniteKernel κ]
-    (hκ : ρ = ρ.fst ⊗ₘ κ) {s : Set Ω} (hs : MeasurableSet s) :
-    ∀ᵐ x ∂ρ.fst, κ x s = ρ.condKernel x s := by
+For finite kernels with values in a countably generated space,
+`MeasureTheory.Measure.IsCondKernel.ae_eq` gives the stronger statement that the kernels agree
+almost everywhere, not just on a given measurable set. -/
+theorem IsCondKernel.ae_eq_apply (η η' : Kernel α Ω) [IsSFiniteKernel η] [IsSFiniteKernel η']
+    [ρ.IsCondKernel η] [ρ.IsCondKernel η'] {s : Set Ω} (hs : MeasurableSet s) :
+    ∀ᵐ x ∂ρ.fst, η x s = η' x s := by
   refine ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite
-    (Kernel.measurable_coe κ hs) (Kernel.measurable_coe ρ.condKernel hs) (fun t ht _ ↦ ?_)
-  conv_rhs => rw [Measure.setLIntegral_condKernel_eq_measure_prod ht hs, hκ]
-  exact (Measure.compProd_apply_prod ht hs).symm
+    (Kernel.measurable_coe η hs) (Kernel.measurable_coe η' hs) (fun t ht _ ↦ ?_)
+  have h (ξ : Kernel α Ω) [IsSFiniteKernel ξ] [ρ.IsCondKernel ξ] :
+      ∫⁻ x in t, ξ x s ∂ρ.fst = ρ (t ×ˢ s) := by
+    conv_rhs => rw [← ρ.disintegrate ξ]
+    exact (compProd_apply_prod ht hs).symm
+  rw [h η, h η']
 
-/-- Auxiliary lemma for `eq_condKernel_of_measure_eq_compProd`.
-Uniqueness of the disintegration kernel on ℝ. -/
-lemma eq_condKernel_of_measure_eq_compProd_real {ρ : Measure (α × ℝ)} [IsFiniteMeasure ρ]
-    (κ : Kernel α ℝ) [IsFiniteKernel κ] (hκ : ρ = ρ.fst ⊗ₘ κ) :
-    ∀ᵐ x ∂ρ.fst, κ x = ρ.condKernel x := by
-  have huniv : ∀ᵐ x ∂ρ.fst, κ x Set.univ = ρ.condKernel x Set.univ :=
-    eq_condKernel_of_measure_eq_compProd' κ hκ MeasurableSet.univ
-  suffices ∀ᵐ x ∂ρ.fst, ∀ ⦃t⦄, MeasurableSet t → κ x t = ρ.condKernel x t by
-    filter_upwards [this] with x hx
-    ext t ht; exact hx ht
-  apply SigmaAlgebra.ae_induction_on_inter Real.borel_eq_generateFrom_Iic_rat
-    Real.isPiSystem_Iic_rat
-  · simp
-  · simp only [iUnion_singleton_eq_range, mem_range, forall_exists_index, forall_apply_eq_imp_iff]
-    exact ae_all_iff.2 fun q ↦ eq_condKernel_of_measure_eq_compProd' κ hκ measurableSet_Iic
-  · filter_upwards [huniv] with x hxuniv t ht heq
-    rw [measure_compl ht <| measure_ne_top _ _, heq, hxuniv, measure_compl ht <| measure_ne_top _ _]
-  · refine ae_of_all _ (fun x f hdisj hf heq ↦ ?_)
-    rw [measure_iUnion hdisj hf, measure_iUnion hdisj hf]
-    exact tsum_congr heq
+/-- Two finite conditional kernels of a finite measure `ρ` with values in a countably generated
+space agree `ρ.fst`-almost everywhere. -/
+theorem IsCondKernel.ae_eq [SigmaAlgebra.CountablyGenerated Ω] (η η' : Kernel α Ω)
+    [IsFiniteKernel η] [IsFiniteKernel η'] [ρ.IsCondKernel η] [ρ.IsCondKernel η'] :
+    ∀ᵐ x ∂ρ.fst, η x = η' x :=
+  Kernel.ae_eq_of_compProd_eq ((ρ.disintegrate η).trans (ρ.disintegrate η').symm)
 
-/-- A finite kernel which satisfies the disintegration property is almost everywhere equal to the
-disintegration kernel. -/
-theorem eq_condKernel_of_measure_eq_compProd (κ : Kernel α Ω) [IsFiniteKernel κ]
-    (hκ : ρ = ρ.fst ⊗ₘ κ) :
-    ∀ᵐ x ∂ρ.fst, κ x = ρ.condKernel x := by
-  -- The idea is to transport the question to `ℝ` from `Ω` using `embeddingReal`
-  -- and then construct a measure on `α × ℝ`
-  let f := embeddingReal Ω
-  have hf := measurableEmbedding_embeddingReal Ω
-  set ρ' : Measure (α × ℝ) := ρ.map (Prod.map id f) with hρ'def
-  have hρ' : ρ'.fst = ρ.fst := by
-    ext s hs
-    rw [hρ'def, Measure.fst_apply, Measure.fst_apply, Measure.map_apply]
-    exacts [rfl, measurable_fst hs, hs, hs]
-  have hρ'' : ∀ᵐ x ∂ρ.fst, Kernel.map κ f hf.measurable x = ρ'.condKernel x := by
-    rw [← hρ']
-    refine eq_condKernel_of_measure_eq_compProd_real (Kernel.map κ f) ?_
-    ext s hs
-    conv_lhs => rw [hρ'def, hκ]
-    rw [Measure.map_apply hs (measurable_id.prodMap hf.measurable).aemeasurable, hρ',
-      Measure.compProd_apply hs, Measure.compProd_apply (measurable_id.prodMap hf.measurable hs)]
-    congr with a
-    rw [Kernel.map_apply' _ _ (measurable_prodMk_left hs) hf.measurable]
-    rfl
-  suffices ∀ᵐ x ∂ρ.fst, ∀ s, MeasurableSet s → ρ'.condKernel x s = ρ.condKernel x (f ⁻¹' s) by
-    filter_upwards [hρ'', this] with x hx h
-    rw [Kernel.map_apply _ _ hf.measurable] at hx
-    ext s hs
-    rw [← Set.preimage_image_eq s hf.injective,
-      ← Measure.map_apply (hf.measurableSet_image.2 hs) hf.measurable.aemeasurable, hx,
-      h _ <| hf.measurableSet_image.2 hs]
-  suffices ρ.map (Prod.map id f) = (ρ.fst ⊗ₘ (Kernel.map ρ.condKernel f)) by
-    rw [← hρ'] at this
-    have heq := eq_condKernel_of_measure_eq_compProd_real _ this
-    rw [hρ'] at heq
-    filter_upwards [heq] with x hx s hs
-    rw [← hx, Kernel.map_apply _ _ hf.measurable,
-      Measure.map_apply hs hf.measurable.aemeasurable]
+/-! ### Representatives of the conditional kernel of a measure -/
+
+variable [StandardBorelSpace Ω] [Nonempty Ω]
+
+/-- Every finite conditional kernel of `ρ` represents `ρ.condKernel`. -/
+theorem IsCondKernel.mem_condKernel {η : Kernel α Ω} [IsFiniteKernel η] [ρ.IsCondKernel η] :
+    η ∈ ρ.condKernel := by
+  obtain ⟨η₀, _, _, hη₀⟩ := ρ.exists_isMarkovKernel_mem_condKernel
+  exact Kernel.AEClass.mem_of_eventuallyEq hη₀ (IsCondKernel.ae_eq η₀ η)
+
+/-- An s-finite representative of `ρ.condKernel` disintegrates `ρ`. -/
+theorem isCondKernel_of_mem_condKernel {η : Kernel α Ω} [IsSFiniteKernel η]
+    (hη : η ∈ ρ.condKernel) :
+    ρ.IsCondKernel η := by
+  obtain ⟨η₀, _, _, hη₀⟩ := ρ.exists_isMarkovKernel_mem_condKernel
+  constructor
+  rw [Measure.compProd_congr (Kernel.AEClass.eventuallyEq_of_mem hη hη₀), ρ.disintegrate η₀]
+
+/-- A finite kernel represents `ρ.condKernel` if and only if it disintegrates `ρ`. -/
+theorem mem_condKernel_iff {η : Kernel α Ω} [IsFiniteKernel η] :
+    η ∈ ρ.condKernel ↔ ρ.IsCondKernel η :=
+  ⟨isCondKernel_of_mem_condKernel, fun _ ↦ IsCondKernel.mem_condKernel⟩
+
+/-- A Markov kernel `κ` represents the conditional kernel of `μ ⊗ₘ κ`. -/
+lemma mem_condKernel_compProd (μ : Measure α) [IsFiniteMeasure μ] (κ : Kernel α Ω)
+    [IsMarkovKernel κ] :
+    κ ∈ (μ ⊗ₘ κ).condKernel :=
+  mem_condKernel_iff.2 ⟨by rw [Measure.fst_compProd]⟩
+
+end MeasureTheory.Measure
+
+namespace ProbabilityTheory.Kernel
+
+/-! ### Uniqueness of conditional kernels of a kernel -/
+
+variable {κ : Kernel α (β × Ω)} [IsFiniteKernel κ]
+
+/-- The restriction to the fiber over `a` of a conditional kernel of `κ` is a conditional kernel
+of the measure `κ a`. -/
+lemma IsCondKernel.isCondKernel_comap (η : Kernel (α × β) Ω) [IsSFiniteKernel η]
+    [κ.IsCondKernel η] (a : α) :
+    (κ a).IsCondKernel (comap η (fun b ↦ (a, b)) measurable_prodMk_left) := by
+  constructor
   ext s hs
-  conv_lhs => rw [← ρ.disintegrate ρ.condKernel]
-  rw [Measure.compProd_apply hs,
-    Measure.map_apply hs (measurable_id.prodMap hf.measurable).aemeasurable,
-    Measure.compProd_apply]
-  · congr with a
-    rw [Kernel.map_apply' _ _ (measurable_prodMk_left hs) hf.measurable]
-    rfl
-  · exact measurable_id.prodMap hf.measurable hs
+  conv_rhs => rw [← κ.disintegrate η]
+  rw [Measure.compProd_apply hs, compProd_apply hs, fst_apply]
+  rfl
 
-lemma condKernel_compProd (μ : Measure α) [IsFiniteMeasure μ] (κ : Kernel α Ω) [IsMarkovKernel κ] :
-    (μ ⊗ₘ κ).condKernel =ᵐ[μ] κ := by
-  suffices κ =ᵐ[(μ ⊗ₘ κ).fst] (μ ⊗ₘ κ).condKernel by symm; rwa [Measure.fst_compProd] at this
-  refine eq_condKernel_of_measure_eq_compProd _ ?_
-  rw [Measure.fst_compProd]
-
-end Measure
-
-section KernelAndMeasure
-
-lemma Kernel.apply_eq_measure_condKernel_of_compProd_eq
-    {ρ : Kernel α (β × Ω)} [IsFiniteKernel ρ] {κ : Kernel (α × β) Ω} [IsFiniteKernel κ]
-    (hκ : Kernel.fst ρ ⊗ₖ κ = ρ) (a : α) :
-    (fun b ↦ κ (a, b)) =ᵐ[Kernel.fst ρ a] (ρ a).condKernel := by
-  have : ρ a = (ρ a).fst ⊗ₘ Kernel.comap κ (fun b ↦ (a, b)) measurable_prodMk_left := by
-    ext s hs
-    conv_lhs => rw [← hκ]
-    rw [Measure.compProd_apply hs, Kernel.compProd_apply hs]
-    rfl
-  have h := eq_condKernel_of_measure_eq_compProd _ this
-  rw [Kernel.fst_apply]
+/-- Two finite conditional kernels of a finite kernel `κ` with values in a countably generated space
+agree `fst κ a`-almost everywhere for every `a`. -/
+theorem IsCondKernel.ae_eq [SigmaAlgebra.CountablyGenerated Ω] (η η' : Kernel (α × β) Ω)
+    [IsFiniteKernel η] [IsFiniteKernel η'] [κ.IsCondKernel η] [κ.IsCondKernel η'] (a : α) :
+    ∀ᵐ b ∂(fst κ a), η (a, b) = η' (a, b) := by
+  have := IsCondKernel.isCondKernel_comap (κ := κ) η a
+  have := IsCondKernel.isCondKernel_comap (κ := κ) η' a
+  have h := Measure.IsCondKernel.ae_eq (ρ := κ a) (comap η (fun b ↦ (a, b)) measurable_prodMk_left)
+    (comap η' (fun b ↦ (a, b)) measurable_prodMk_left)
+  rw [fst_apply]
   filter_upwards [h] with b hb
-  rw [← hb, Kernel.comap_apply]
+  simpa [comap_apply] using hb
 
-/-- For `fst κ a`-almost all `b`, the conditional kernel `Kernel.condKernel κ` applied to `(a, b)`
-is equal to the conditional kernel of the measure `κ a` applied to `b`. -/
-lemma Kernel.condKernel_apply_eq_condKernel [CountableOrCountablyGenerated α β]
-    (κ : Kernel α (β × Ω)) [IsFiniteKernel κ] (a : α) :
-    (fun b ↦ Kernel.condKernel κ (a, b)) =ᵐ[Kernel.fst κ a] (κ a).condKernel :=
-  Kernel.apply_eq_measure_condKernel_of_compProd_eq (κ.disintegrate _) a
+variable [StandardBorelSpace Ω]
 
-lemma condKernel_const [CountableOrCountablyGenerated α β] (ρ : Measure (β × Ω)) [IsFiniteMeasure ρ]
-    (a : α) :
-    (fun b ↦ Kernel.condKernel (Kernel.const α ρ) (a, b)) =ᵐ[ρ.fst] ρ.condKernel := by
-  have h := Kernel.condKernel_apply_eq_condKernel (Kernel.const α ρ) a
-  simp_rw [Kernel.fst_apply, Kernel.const_apply] at h
-  filter_upwards [h] with b hb using hb
+/-- The restriction to the fiber over `a` of a finite conditional kernel of `κ` represents the
+conditional kernel of the measure `κ a`. -/
+lemma IsCondKernel.comap_mem_condKernel [Nonempty Ω] {η : Kernel (α × β) Ω} [IsFiniteKernel η]
+    [κ.IsCondKernel η] (a : α) :
+    comap η (fun b ↦ (a, b)) measurable_prodMk_left ∈ (κ a).condKernel :=
+  have := IsCondKernel.isCondKernel_comap (κ := κ) η a
+  Measure.IsCondKernel.mem_condKernel
 
-end KernelAndMeasure
+/-! ### Representatives of the conditional kernel of a kernel -/
 
-section Kernel
+variable [Nonempty Ω] [CountableOrCountablyGenerated α β]
 
-/-! ### Uniqueness of `Kernel.condKernel`
+/-- Every finite conditional kernel of `κ` represents `condKernel κ`. -/
+theorem IsCondKernel.mem_condKernel {η : Kernel (α × β) Ω} [IsFiniteKernel η]
+    [κ.IsCondKernel η] :
+    η ∈ condKernel κ := by
+  obtain ⟨η₀, _, _, hη₀⟩ := exists_isMarkovKernel_mem_condKernel κ
+  exact AEClass.mem_of_eventuallyEq hη₀
+    (eventuallyEq_fiberwiseAE_iff.2 (IsCondKernel.ae_eq η₀ η))
 
-The conditional kernel is unique almost everywhere. -/
+/-- An s-finite representative of `condKernel κ` disintegrates `κ`. -/
+theorem isCondKernel_of_mem_condKernel {η : Kernel (α × β) Ω} [IsSFiniteKernel η]
+    (hη : η ∈ condKernel κ) :
+    κ.IsCondKernel η := by
+  obtain ⟨η₀, _, _, hη₀⟩ := exists_isMarkovKernel_mem_condKernel κ
+  constructor
+  rw [compProd_congr (eventuallyEq_fiberwiseAE_iff.1 (AEClass.eventuallyEq_of_mem hη hη₀)),
+    κ.disintegrate η₀]
 
-/-- A finite kernel which satisfies the disintegration property is almost everywhere equal to the
-disintegration kernel. -/
-theorem eq_condKernel_of_kernel_eq_compProd [CountableOrCountablyGenerated α β]
-    {ρ : Kernel α (β × Ω)} [IsFiniteKernel ρ] {κ : Kernel (α × β) Ω} [IsFiniteKernel κ]
-    (hκ : Kernel.fst ρ ⊗ₖ κ = ρ) (a : α) :
-    ∀ᵐ x ∂(Kernel.fst ρ a), κ (a, x) = Kernel.condKernel ρ (a, x) := by
-  filter_upwards [Kernel.condKernel_apply_eq_condKernel ρ a,
-    Kernel.apply_eq_measure_condKernel_of_compProd_eq hκ a] with a h1 h2
-  rw [h1, h2]
+/-- A finite kernel represents `condKernel κ` if and only if it disintegrates `κ`. -/
+theorem mem_condKernel_iff {η : Kernel (α × β) Ω} [IsFiniteKernel η] :
+    η ∈ condKernel κ ↔ κ.IsCondKernel η :=
+  ⟨isCondKernel_of_mem_condKernel, fun _ ↦ IsCondKernel.mem_condKernel⟩
 
-end Kernel
+/-- The restriction to the fiber over `a` of a representative of `condKernel κ` represents the
+conditional kernel of the measure `κ a`. -/
+lemma comap_mem_condKernel_of_mem {η : Kernel (α × β) Ω} (hη : η ∈ condKernel κ) (a : α) :
+    comap η (fun b ↦ (a, b)) measurable_prodMk_left ∈ (κ a).condKernel := by
+  obtain ⟨η₀, _, _, hη₀⟩ := exists_isMarkovKernel_mem_condKernel κ
+  refine AEClass.mem_of_eventuallyEq (IsCondKernel.comap_mem_condKernel (κ := κ) (η := η₀) a) ?_
+  have h := eventuallyEq_fiberwiseAE_iff.1 (AEClass.eventuallyEq_of_mem hη₀ hη) a
+  rw [fst_apply] at h
+  filter_upwards [h] with b hb
+  simpa [comap_apply] using hb
 
-end ProbabilityTheory
+end ProbabilityTheory.Kernel

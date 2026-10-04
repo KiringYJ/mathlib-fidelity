@@ -7,21 +7,28 @@ Authors: Rémy Degenne, Paulo Rauber
 module
 
 public import Mathlib.Probability.HasLaw
+public import Mathlib.Probability.Kernel.CondDistrib
 
 import Mathlib.Probability.Kernel.Composition.Lemmas
 
 /-!
 # A predicate for having a specified conditional distribution
 
-We introduce a predicate `HasCondDistrib Y X κ P` stating that the conditional distribution of `Y`
-given `X` under the measure `P` is equal to the kernel `κ`.
+We introduce a predicate `HasCondDistrib Y X κ P` stating that the kernel `κ` is a version of the
+conditional distribution of `Y` given `X` under the measure `P`.
 The statement requires the pair `(X, Y)` to be a.e. measurable and says that its law under `P` is
 equal to `(P.map X) ⊗ₘ κ`, the product of the law of `X` under `P` and the kernel `κ`.
 
 ## Main definitions
 
-* `HasCondDistrib Y X κ P` : predicate stating that the conditional distribution of `Y` given `X`
-  under the measure `P` is equal to the kernel `κ`.
+* `HasCondDistrib Y X κ P` : predicate stating that the kernel `κ` is a version of the conditional
+  distribution of `Y` given `X` under the measure `P`.
+
+## Main statements
+
+* `ProbabilityTheory.mem_condDistrib_iff_hasCondDistrib`: if `Y` takes values in a nonempty standard
+  Borel space and `P` is finite, a finite kernel `κ` satisfies `HasCondDistrib Y X κ P` exactly when
+  it represents the almost-everywhere class `condDistrib Y X P`.
 
 -/
 
@@ -35,8 +42,10 @@ variable {Ω 𝓧 𝓨 𝓩 : Type*} {mΩ : SigmaAlgebra Ω}
   {m𝓧 : SigmaAlgebra 𝓧} {m𝓨 : SigmaAlgebra 𝓨} {m𝓩 : SigmaAlgebra 𝓩}
   {P : Measure Ω} {X : Ω → 𝓧} {Y : Ω → 𝓨} {κ : Kernel 𝓧 𝓨}
 
-/-- Predicate stating that the conditional distribution of `Y` given `X` under the measure `P`
-is equal to the kernel `κ`. -/
+/-- Predicate stating that the kernel `κ` is a version of the conditional distribution of `Y` given
+`X` under the measure `P`: the law of `(X, Y)` is `(P.map X) ⊗ₘ κ`. Versions are determined only up
+to `P.map X`-null sets; `ProbabilityTheory.mem_condDistrib_iff_hasCondDistrib` identifies the
+finite versions with the finite representatives of the class `condDistrib Y X P`. -/
 @[fun_prop]
 structure HasCondDistrib (Y : Ω → 𝓨) (X : Ω → 𝓧) (κ : Kernel 𝓧 𝓨)
     (P : Measure Ω) : Prop where
@@ -69,6 +78,24 @@ lemma HasCondDistrib.hasLaw_of_const [IsProbabilityMeasure P] {Q : Measure 𝓨}
       rw [h.map_eq, Measure.snd_compProd]
       simp [Measure.map_apply (hf := h.aemeasurable_fst)]
     rwa [Measure.snd_map_prodMk₀ h.aemeasurable_fst (by fun_prop)] at h_snd
+
+section CondDistrib
+
+variable [StandardBorelSpace 𝓨] [Nonempty 𝓨] [IsFiniteMeasure P]
+
+/-- A finite kernel `κ` is a conditional distribution of `Y` given `X` exactly when it represents
+`condDistrib Y X P`. -/
+lemma mem_condDistrib_iff_hasCondDistrib (hXY : AEMeasurable (fun ω ↦ (X ω, Y ω)) P)
+    [IsFiniteKernel κ] : κ ∈ condDistrib Y X P hXY ↔ HasCondDistrib Y X κ P :=
+  ⟨fun h ↦ ⟨hXY, (compProd_map_condDistrib hXY.fst hXY.snd h).symm⟩,
+    fun h ↦ mem_condDistrib_of_measure_eq_compProd hXY.fst hXY.snd h.map_eq⟩
+
+/-- A finite conditional distribution of `Y` given `X` represents `condDistrib Y X P`. -/
+lemma HasCondDistrib.mem_condDistrib [IsFiniteKernel κ] (h : HasCondDistrib Y X κ P) :
+    κ ∈ condDistrib Y X P h.aemeasurable :=
+  (mem_condDistrib_iff_hasCondDistrib h.aemeasurable).2 h
+
+end CondDistrib
 
 variable [SFinite P] [IsSFiniteKernel κ]
 

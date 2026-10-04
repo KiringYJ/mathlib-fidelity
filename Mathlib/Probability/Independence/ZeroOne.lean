@@ -82,10 +82,11 @@ theorem condExp_eq_zero_or_one_of_condIndepSet_self
     (hm : m ≤ m0) [hμ : IsFiniteMeasure μ] {t : Set Ω} (ht : MeasurableSet t)
     (h_indep : CondIndepSet m hm t t μ) :
     ∀ᵐ ω ∂μ, (μ⟦t | m⟧) ω = 0 ∨ (μ⟦t | m⟧) ω = 1 := by
+  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
   -- TODO: Why is not inferred?
-  have (a : _) : IsFiniteMeasure (condExpKernel μ m a) := inferInstance
-  have h := ae_of_ae_trim hm (Kernel.measure_eq_zero_or_one_of_indepSet_self h_indep)
-  filter_upwards [condExpKernel_ae_eq_condExp hm ht, h] with ω hω_eq hω
+  have (a : _) : IsFiniteMeasure (η a) := inferInstance
+  have h := ae_of_ae_trim hm (Kernel.measure_eq_zero_or_one_of_indepSet_self (h_indep η hη))
+  filter_upwards [condExpKernel_ae_eq_condExp hη ht, h] with ω hω_eq hω
   rwa [← hω_eq, measureReal_eq_zero_iff, measureReal_def, ENNReal.toReal_eq_one_iff]
 
 open Filter
@@ -102,7 +103,7 @@ theorem condIndep_biSup_compl [StandardBorelSpace Ω]
     (hm : m ≤ m0) [IsFiniteMeasure μ]
     (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) (t : Set ι) :
     CondIndep m (⨆ n ∈ t, s n) (⨆ n ∈ tᶜ, s n) hm μ :=
-  Kernel.indep_biSup_compl h_le h_indep t
+  fun η hη ↦ Kernel.indep_biSup_compl h_le (h_indep η hη) t
 
 section Abstract
 
@@ -137,7 +138,7 @@ theorem condIndep_biSup_limsup [StandardBorelSpace Ω]
     (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) (hf : ∀ t, p t → tᶜ ∈ f)
     {t : Set ι} (ht : p t) :
     CondIndep m (⨆ n ∈ t, s n) (limsup s f) hm μ :=
-  Kernel.indep_biSup_limsup h_le h_indep hf ht
+  fun η hη ↦ Kernel.indep_biSup_limsup h_le (h_indep η hη) hf ht
 
 theorem Kernel.indep_iSup_directed_limsup (h_le : ∀ n, s n ≤ m0) (h_indep : iIndep s κ μα)
     (hf : ∀ t, p t → tᶜ ∈ f) (hns : Directed (· ≤ ·) ns) (hnsp : ∀ a, p (ns a)) :
@@ -169,7 +170,7 @@ theorem condIndep_iSup_directed_limsup [StandardBorelSpace Ω]
     (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ)
     (hf : ∀ t, p t → tᶜ ∈ f) (hns : Directed (· ≤ ·) ns) (hnsp : ∀ a, p (ns a)) :
     CondIndep m (⨆ a, ⨆ n ∈ ns a, s n) (limsup s f) hm μ :=
-  Kernel.indep_iSup_directed_limsup h_le h_indep hf hns hnsp
+  fun η hη ↦ Kernel.indep_iSup_directed_limsup h_le (h_indep η hη) hf hns hnsp
 
 theorem Kernel.indep_iSup_limsup (h_le : ∀ n, s n ≤ m0) (h_indep : iIndep s κ μα)
     (hf : ∀ t, p t → tᶜ ∈ f)
@@ -195,7 +196,7 @@ theorem condIndep_iSup_limsup [StandardBorelSpace Ω]
     (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) (hf : ∀ t, p t → tᶜ ∈ f)
     (hns : Directed (· ≤ ·) ns) (hnsp : ∀ a, p (ns a)) (hns_univ : ∀ n, ∃ a, n ∈ ns a) :
     CondIndep m (⨆ n, s n) (limsup s f) hm μ :=
-  Kernel.indep_iSup_limsup h_le h_indep hf hns hnsp hns_univ
+  fun η hη ↦ Kernel.indep_iSup_limsup h_le (h_indep η hη) hf hns hnsp hns_univ
 
 theorem Kernel.indep_limsup_self (h_le : ∀ n, s n ≤ m0) (h_indep : iIndep s κ μα)
     (hf : ∀ t, p t → tᶜ ∈ f)
@@ -214,7 +215,7 @@ theorem condIndep_limsup_self [StandardBorelSpace Ω]
     (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) (hf : ∀ t, p t → tᶜ ∈ f)
     (hns : Directed (· ≤ ·) ns) (hnsp : ∀ a, p (ns a)) (hns_univ : ∀ n, ∃ a, n ∈ ns a) :
     CondIndep m (limsup s f) (limsup s f) hm μ :=
-  Kernel.indep_limsup_self h_le h_indep hf hns hnsp hns_univ
+  fun η hη ↦ Kernel.indep_limsup_self h_le (h_indep η hη) hf hns hnsp hns_univ
 
 theorem Kernel.measure_zero_or_one_of_measurableSet_limsup (h_le : ∀ n, s n ≤ m0)
     (h_indep : iIndep s κ μα)
@@ -241,10 +242,11 @@ theorem condExp_zero_or_one_of_measurableSet_limsup [StandardBorelSpace Ω]
     (hf : ∀ t, p t → tᶜ ∈ f) (hns : Directed (· ≤ ·) ns) (hnsp : ∀ a, p (ns a))
     (hns_univ : ∀ n, ∃ a, n ∈ ns a) {t : Set Ω} (ht_tail : t ∈ limsup s f) :
     ∀ᵐ ω ∂μ, (μ⟦t | m⟧) ω = 0 ∨ (μ⟦t | m⟧) ω = 1 := by
-  have h := ae_of_ae_trim hm
-    (Kernel.measure_zero_or_one_of_measurableSet_limsup h_le h_indep hf hns hnsp hns_univ ht_tail)
+  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
+  have h := ae_of_ae_trim hm (Kernel.measure_zero_or_one_of_measurableSet_limsup h_le
+    (h_indep η hη) hf hns hnsp hns_univ ht_tail)
   have ht : MeasurableSet t := (limsup_le_iSup.trans (iSup_le h_le)) ht_tail
-  filter_upwards [condExpKernel_ae_eq_condExp hm ht, h] with ω hω_eq hω
+  filter_upwards [condExpKernel_ae_eq_condExp hη ht, h] with ω hω_eq hω
   rwa [← hω_eq, measureReal_eq_zero_iff, measureReal_def, ENNReal.toReal_eq_one_iff]
 
 end Abstract
@@ -275,7 +277,7 @@ theorem condIndep_limsup_atTop_self [StandardBorelSpace Ω]
     (hm : m ≤ m0) [IsFiniteMeasure μ]
     (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) :
     CondIndep m (limsup s atTop) (limsup s atTop) hm μ :=
-  Kernel.indep_limsup_atTop_self h_le h_indep
+  fun η hη ↦ Kernel.indep_limsup_atTop_self h_le (h_indep η hη)
 
 theorem Kernel.measure_zero_or_one_of_measurableSet_limsup_atTop (h_le : ∀ n, s n ≤ m0)
     (h_indep : iIndep s κ μα) {t : Set Ω} (ht_tail : t ∈ limsup s atTop) :
@@ -330,7 +332,7 @@ theorem condIndep_limsup_atBot_self [StandardBorelSpace Ω]
     (hm : m ≤ m0) [IsFiniteMeasure μ]
     (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) :
     CondIndep m (limsup s atBot) (limsup s atBot) hm μ :=
-  Kernel.indep_limsup_atBot_self h_le h_indep
+  fun η hη ↦ Kernel.indep_limsup_atBot_self h_le (h_indep η hη)
 
 /-- **Kolmogorov's 0-1 law**, kernel version: any event in the tail σ-algebra of an independent
 sequence of sub-σ-algebras has probability 0 or 1 almost surely. -/
