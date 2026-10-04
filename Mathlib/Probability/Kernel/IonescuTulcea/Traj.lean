@@ -57,8 +57,8 @@ expectation.
   `traj κ b` gives the distribution of the whole trajectory.
 * `condExp_traj`: If `a ≤ b`, the conditional expectation of `f` with respect to `traj κ a`
   given the information up to time `b` is obtained by integrating `f` against `traj κ b`.
-* `condDistrib_trajMeasure`: a regular conditional probability distribution of the point at time
-  `a + 1` given the trajectory up to time `a` corresponds to the kernel `κ a`.
+* `mem_condDistrib_trajMeasure`: the kernel `κ a` represents the regular conditional probability
+  distribution of the point at time `a + 1` given the trajectory up to time `a`.
 
 
 ## Implementation notes
@@ -869,13 +869,14 @@ lemma map_frestrictLe_trajMeasure_compProd_eq_map_trajMeasure {a : ℕ} :
           ((Π i : Iic a, X i) × X (a + 1)) ↦ η x) hk
     _ = ((traj κ 0) ∘ₘ ν).map (fun x ↦ (frestrictLe a x, x (a + 1))) := hright.symm
 
-/-- A regular conditional probability distribution of the point at time `a + 1` given the
-trajectory up to time `a` corresponds to the kernel `κ a`. -/
-lemma condDistrib_trajMeasure {a : ℕ} [StandardBorelSpace (X (a + 1))] [Nonempty (X (a + 1))] :
-    condDistrib (fun x ↦ x (a + 1)) (frestrictLe a) (trajMeasure μ₀ κ)
-      =ᵐ[(trajMeasure μ₀ κ).map (frestrictLe a)] κ a := by
-  apply condDistrib_ae_eq_of_measure_eq_compProd_of_measurable (by fun_prop) (by fun_prop)
-  exact map_frestrictLe_trajMeasure_compProd_eq_map_trajMeasure.symm
+/-- The kernel `κ a` represents the regular conditional probability distribution of the point at
+time `a + 1` given the trajectory up to time `a`. -/
+lemma mem_condDistrib_trajMeasure {a : ℕ} [StandardBorelSpace (X (a + 1))]
+    [Nonempty (X (a + 1))] :
+    κ a ∈ condDistrib (fun x ↦ x (a + 1)) (frestrictLe a) (trajMeasure μ₀ κ) :=
+  mem_condDistrib_of_measure_eq_compProd (Measurable.aemeasurable (by fun_prop))
+    (Measurable.aemeasurable (by fun_prop))
+    map_frestrictLe_trajMeasure_compProd_eq_map_trajMeasure.symm
 
 end trajMeasure
 

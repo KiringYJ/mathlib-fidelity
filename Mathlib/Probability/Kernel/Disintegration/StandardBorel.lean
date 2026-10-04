@@ -5,6 +5,7 @@ Authors: Rémy Degenne
 -/
 module
 
+public import Mathlib.Probability.Kernel.AEClass
 public import Mathlib.Probability.Kernel.Composition.MeasureCompProd
 public import Mathlib.Probability.Kernel.FiberwiseAE
 public import Mathlib.Probability.Kernel.Disintegration.Basic
@@ -19,14 +20,15 @@ public import Mathlib.MeasureTheory.Constructions.Polish.EmbeddingReal
 Let `κ : Kernel α (β × Ω)` be a finite kernel, where `Ω` is a nonempty standard Borel space. Then
 if `α` is countable or `β` has a countably generated σ-algebra (for example if it is standard
 Borel), then there exists a Markov kernel `η : Kernel (α × β) Ω` such that `κ = fst κ ⊗ₖ η`. The
-conditional kernel `condKernel κ` is chosen among these kernels.
-We also define a conditional kernel for a finite measure `ρ : Measure (β × Ω)`, where `Ω` is a
-nonempty standard Borel space. This is a Markov kernel `ρ.condKernel : Kernel β Ω`, chosen among
-the Markov kernels `η` with `ρ = ρ.fst ⊗ₘ η`.
+conditional kernel `condKernel κ` is the class of these kernels up to `fst κ a`-null sets for every
+`a`.
+We also define the conditional kernel of a finite measure `ρ : Measure (β × Ω)`, where `Ω` is a
+nonempty standard Borel space: the `ρ.fst`-almost-everywhere class `ρ.condKernel` of the Markov
+kernels `η : Kernel β Ω` with `ρ = ρ.fst ⊗ₘ η`.
 A conditional kernel is determined almost everywhere (see the file `Unique.lean`), and only almost
 everywhere: every Markov kernel that agrees with a conditional kernel almost everywhere is one too
 (`MeasureTheory.Measure.compProd_congr`, `ProbabilityTheory.Kernel.compProd_congr`). So `κ` and `ρ`
-do not determine the values of these choices on null sets.
+determine these classes, but not the values of a conditional kernel on null sets.
 
 In order to obtain a disintegration for any standard Borel space `Ω`, we use that these spaces embed
 measurably into `ℝ`: it then suffices to define a suitable kernel for `Ω = ℝ`. The private
@@ -49,10 +51,12 @@ For `κ : Kernel α (β × ℝ)`, the construction of a conditional kernel proce
 
 The first step (building the measurable function on `ℚ`) is done differently depending on whether
 `α` is countable or not.
-* If `α` is countable, we can proceed separately for each `a : α`: the finite measure `κ a` has a
-  conditional kernel `(κ a).condKernel : Kernel β Ω`. Since `α` is countable, measurability is not
-  an issue and we can put those together into a `Kernel (α × β) Ω`. For a measure on `β × ℝ`, a
-  conditional kernel is built from the kernel of a conditional cdf in the sense of
+* If `α` is countable, we can proceed separately for each `a : α`: the finite measure `κ a` is
+  disintegrated by a Markov kernel `Kernel β Ω`
+  (`MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel`). Since `α` is countable,
+  measurability is not an issue and we can put chosen such kernels together into a
+  `Kernel (α × β) Ω`, which serves as the witness of the existence statement. For a measure on
+  `β × ℝ`, a conditional kernel is built from the kernel of a conditional cdf in the sense of
   `ProbabilityTheory.IsCondCDF`, whose existence is proved in the `CondCDF.lean` file; for a general
   standard Borel space `Ω`, we go through the measurable embedding of `Ω` into `ℝ`.
 * If `α` is not countable, we can't proceed separately for each `a : α` and have to build a function
@@ -64,14 +68,16 @@ The conditional kernel is defined under the typeclass assumption
 `CountableOrCountablyGenerated α β`, which encodes the property
 `Countable α ∨ CountablyGenerated β`.
 
-Properties of integrals involving `condKernel` are collated in the file `Integral.lean`.
-The conditional kernel is unique (almost everywhere w.r.t. `fst κ`): this is proved in the file
-`Unique.lean`.
+Properties of integrals against conditional kernels are collated in the file `Integral.lean`.
+Conditional kernels are unique almost everywhere, so that the finite representatives of the classes
+are exactly the finite conditional kernels: this is proved in the file `Unique.lean`.
 
 ## Main definitions
 
-* `ProbabilityTheory.Kernel.condKernel κ : Kernel (α × β) Ω`: conditional kernel described above.
-* `MeasureTheory.Measure.condKernel ρ : Kernel β Ω`: conditional kernel of a measure.
+* `ProbabilityTheory.Kernel.condKernel κ : Kernel.AEClass (fst κ).fiberwiseAE Ω`: the conditional
+  kernel described above.
+* `MeasureTheory.Measure.condKernel ρ : Kernel.AEClass (ae ρ.fst) Ω`: the conditional kernel of a
+  measure.
 
 ## Main statements
 
@@ -79,10 +85,10 @@ The conditional kernel is unique (almost everywhere w.r.t. `fst κ`): this is pr
   `fst κ ⊗ₖ η = κ` exists.
 * `MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel`: a Markov kernel `η` with
   `ρ.fst ⊗ₘ η = ρ` exists.
-* `ProbabilityTheory.Kernel.condKernel.instIsCondKernel`: `fst κ ⊗ₖ condKernel κ = κ`, available
-  through `ProbabilityTheory.Kernel.disintegrate`.
-* `MeasureTheory.Measure.condKernel.instIsCondKernel`: `ρ.fst ⊗ₘ ρ.condKernel = ρ`, available
-  through `MeasureTheory.Measure.disintegrate`.
+* `ProbabilityTheory.Kernel.exists_isMarkovKernel_mem_condKernel` and
+  `MeasureTheory.Measure.exists_isMarkovKernel_mem_condKernel`: the conditional kernels are
+  represented by Markov kernels that disintegrate `κ`, respectively `ρ`. The file `Unique.lean`
+  shows that the Markov representatives are exactly these Markov kernels.
 -/
 
 @[expose] public section
@@ -386,8 +392,6 @@ end BorelSnd
 
 section Measure
 
-variable {ρ : Measure (α × Ω)} [IsFiniteMeasure ρ]
-
 /-- A finite measure `ρ` on `α × Ω`, where `Ω` is a nonempty standard Borel space, is disintegrated
 by a Markov kernel: there is a Markov kernel `η : Kernel α Ω` with `ρ.fst ⊗ₘ η = ρ`. -/
 theorem _root_.MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel (ρ : Measure (α × Ω))
@@ -403,35 +407,42 @@ theorem _root_.MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel (ρ : Me
   rw [Measure.compProd, h1, h2, disintegrate]
   simp
 
-/-- Conditional kernel of a measure on a product space: a Markov kernel such that
-`ρ.fst ⊗ₘ ρ.condKernel = ρ` (`MeasureTheory.Measure.disintegrate`).
+/-- Some class of kernels along `ae ρ.fst` contains a Markov kernel that disintegrates `ρ`. Since
+two finite conditional kernels of `ρ` agree `ρ.fst`-almost everywhere
+(`MeasureTheory.Measure.IsCondKernel.ae_eq`), such a class is unique. -/
+lemma _root_.MeasureTheory.Measure.exists_aeClass_isCondKernel (ρ : Measure (α × Ω))
+    [IsFiniteMeasure ρ] :
+    ∃ c : AEClass (ae ρ.fst) Ω, ∃ η : Kernel α Ω, IsMarkovKernel η ∧ ρ.IsCondKernel η ∧ η ∈ c :=
+  let ⟨η, h₁, h₂⟩ := ρ.exists_isMarkovKernel_isCondKernel
+  ⟨AEClass.mk _ η, η, h₁, h₂, AEClass.mem_mk _ η⟩
 
-It is chosen among the Markov kernels with this property, which exist by
-`MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel`. Every finite kernel with this property
-agrees with it `ρ.fst`-almost everywhere (`ProbabilityTheory.eq_condKernel_of_measure_eq_compProd`).
-Only this almost-everywhere class is determined by `ρ`: every Markov kernel that agrees with
-`ρ.condKernel` `ρ.fst`-almost everywhere also disintegrates `ρ`
-(`MeasureTheory.Measure.compProd_congr`), so the values of `ρ.condKernel` on `ρ.fst`-null sets are a
-choice. -/
+/-- The conditional kernel of a finite measure `ρ` on a product space `α × Ω`, where `Ω` is a
+nonempty standard Borel space: the `ρ.fst`-almost-everywhere class of the Markov kernels `η` with
+`ρ.fst ⊗ₘ η = ρ`.
+
+A kernel represents it, written `η ∈ ρ.condKernel`, when it agrees `ρ.fst`-almost everywhere with
+such a kernel. A finite kernel represents it if and only if it disintegrates `ρ`
+(`MeasureTheory.Measure.mem_condKernel_iff`), and a Markov representative exists
+(`MeasureTheory.Measure.exists_isMarkovKernel_mem_condKernel`). The class is determined by `ρ`,
+while the values of a conditional kernel on a `ρ.fst`-null set are not. -/
 noncomputable
 def _root_.MeasureTheory.Measure.condKernel (ρ : Measure (α × Ω)) [IsFiniteMeasure ρ] :
-    Kernel α Ω :=
-  ρ.exists_isMarkovKernel_isCondKernel.choose
+    AEClass (ae ρ.fst) Ω :=
+  ρ.exists_aeClass_isCondKernel.choose
 
-instance _root_.MeasureTheory.Measure.condKernel.instIsCondKernel (ρ : Measure (α × Ω))
-    [IsFiniteMeasure ρ] : ρ.IsCondKernel ρ.condKernel :=
-  ρ.exists_isMarkovKernel_isCondKernel.choose_spec.2
+/-- `ρ.condKernel` is represented by a Markov kernel that disintegrates `ρ`. -/
+lemma _root_.MeasureTheory.Measure.exists_isMarkovKernel_mem_condKernel (ρ : Measure (α × Ω))
+    [IsFiniteMeasure ρ] :
+    ∃ η : Kernel α Ω, IsMarkovKernel η ∧ ρ.IsCondKernel η ∧ η ∈ ρ.condKernel :=
+  ρ.exists_aeClass_isCondKernel.choose_spec
 
-instance _root_.MeasureTheory.Measure.instIsMarkovKernelCondKernel
-    (ρ : Measure (α × Ω)) [IsFiniteMeasure ρ] : IsMarkovKernel ρ.condKernel :=
-  ρ.exists_isMarkovKernel_isCondKernel.choose_spec.1
-
-/-- If the singleton `{x}` has non-zero mass for `ρ.fst`, then for all `s : Set Ω`,
-`ρ.condKernel x s = (ρ.fst {x})⁻¹ * ρ ({x} ×ˢ s)` . -/
-lemma _root_.MeasureTheory.Measure.condKernel_apply_of_ne_zero [MeasurableSingletonClass α]
-    {x : α} (hx : ρ.fst {x} ≠ 0) (s : Set Ω) :
-    ρ.condKernel x s = (ρ.fst {x})⁻¹ * ρ ({x} ×ˢ s) :=
-  Measure.IsCondKernel.apply_of_ne_zero _ _ hx _
+/-- Equal measures have the same representatives of their conditional kernels. Since the type of
+`ρ.condKernel` depends on `ρ`, this transports membership along an equation `ρ = ρ'`. -/
+lemma _root_.MeasureTheory.Measure.mem_condKernel_congr {ρ ρ' : Measure (α × Ω)}
+    [IsFiniteMeasure ρ] [IsFiniteMeasure ρ'] (h : ρ = ρ') {η : Kernel α Ω} :
+    η ∈ ρ.condKernel ↔ η ∈ ρ'.condKernel := by
+  subst h
+  rfl
 
 end Measure
 
@@ -444,32 +455,43 @@ Markov kernel `η : Kernel (α × β) Ω` with `fst κ ⊗ₖ η = κ`. -/
 theorem exists_isMarkovKernel_isCondKernel :
     ∃ η : Kernel (α × β) Ω, IsMarkovKernel η ∧ κ.IsCondKernel η := by
   by_cases hα : Countable α
-  · exact ⟨condKernelCountable (fun a ↦ (κ a).condKernel)
-      (fun x y h ↦ by simp [apply_congr_of_indistinguishable _ h]), inferInstance, inferInstance⟩
+  · let κCond a := (κ a).exists_isMarkovKernel_isCondKernel.choose
+    have h_markov a : IsMarkovKernel (κCond a) :=
+      (κ a).exists_isMarkovKernel_isCondKernel.choose_spec.1
+    have h_cond a : (κ a).IsCondKernel (κCond a) :=
+      (κ a).exists_isMarkovKernel_isCondKernel.choose_spec.2
+    exact ⟨condKernelCountable κCond
+      (fun x y h ↦ by simp [κCond, apply_congr_of_indistinguishable _ h]), inferInstance,
+      inferInstance⟩
   · have := h.countableOrCountablyGenerated.resolve_left hα
     exact exists_isMarkovKernel_isCondKernel_of_countablyGenerated κ
 
-/-- Conditional kernel of a kernel `κ : Kernel α (β × Ω)`: a Markov kernel such that
-`fst κ ⊗ₖ condKernel κ = κ` (`ProbabilityTheory.Kernel.disintegrate`).
+/-- Some class of kernels along `(fst κ).fiberwiseAE` contains a Markov kernel that disintegrates
+`κ`. Since two finite conditional kernels of `κ` agree `fst κ a`-almost everywhere for every `a`
+(`ProbabilityTheory.Kernel.IsCondKernel.ae_eq`), such a class is unique. -/
+lemma exists_aeClass_isCondKernel :
+    ∃ c : AEClass (fst κ).fiberwiseAE Ω, ∃ η : Kernel (α × β) Ω,
+      IsMarkovKernel η ∧ κ.IsCondKernel η ∧ η ∈ c :=
+  let ⟨η, h₁, h₂⟩ := exists_isMarkovKernel_isCondKernel κ
+  ⟨AEClass.mk _ η, η, h₁, h₂, AEClass.mem_mk _ η⟩
 
-It is chosen among the Markov kernels with this property, which exist whenever `Ω` is a nonempty
-standard Borel space and either `α` is countable or `β` is countably generated
-(`ProbabilityTheory.Kernel.exists_isMarkovKernel_isCondKernel`). For every `a`, every finite kernel
-with this property agrees with it at `(a, b)` for `fst κ a`-almost every `b`
-(`ProbabilityTheory.eq_condKernel_of_kernel_eq_compProd`). Only these almost-everywhere classes are
-determined by `κ`: every Markov kernel that agrees with `condKernel κ` in this sense also
-disintegrates `κ` (`ProbabilityTheory.Kernel.compProd_congr`), so the values of `condKernel κ` on
-such null sets are a choice. -/
+/-- The conditional kernel of a finite kernel `κ : Kernel α (β × Ω)`, where `Ω` is a nonempty
+standard Borel space and either `α` is countable or `β` is countably generated: the class along
+`(fst κ).fiberwiseAE` of the Markov kernels `η` with `fst κ ⊗ₖ η = κ`, that is, of these kernels up
+to `fst κ a`-null sets for every `a`.
+
+A finite kernel represents it if and only if it disintegrates `κ`
+(`ProbabilityTheory.Kernel.mem_condKernel_iff`), and a Markov representative exists
+(`ProbabilityTheory.Kernel.exists_isMarkovKernel_mem_condKernel`). The class is determined by `κ`,
+while the values of a conditional kernel on such null sets are not. -/
 noncomputable
-def condKernel : Kernel (α × β) Ω :=
-  (exists_isMarkovKernel_isCondKernel κ).choose
+def condKernel : AEClass (fst κ).fiberwiseAE Ω :=
+  (exists_aeClass_isCondKernel κ).choose
 
-/-- `condKernel κ` is a Markov kernel. -/
-instance instIsMarkovKernelCondKernel : IsMarkovKernel (condKernel κ) :=
-  (exists_isMarkovKernel_isCondKernel κ).choose_spec.1
-
-instance condKernel.instIsCondKernel : κ.IsCondKernel κ.condKernel :=
-  (exists_isMarkovKernel_isCondKernel κ).choose_spec.2
+/-- `condKernel κ` is represented by a Markov kernel that disintegrates `κ`. -/
+lemma exists_isMarkovKernel_mem_condKernel :
+    ∃ η : Kernel (α × β) Ω, IsMarkovKernel η ∧ κ.IsCondKernel η ∧ η ∈ condKernel κ :=
+  (exists_aeClass_isCondKernel κ).choose_spec
 
 end CountableOrCountablyGenerated
 

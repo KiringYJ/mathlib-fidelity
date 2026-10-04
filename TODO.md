@@ -394,13 +394,14 @@ operation.
   proof independence, and rewriting.
 
 - [ ] **Identify the exact domain of `Measure.condKernel` and `condDistrib`.**
-  `Measure.condKernel` in `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:382` and
-  `condDistrib` in `Mathlib/Probability/Kernel/CondDistrib.lean:65` require a finite measure, which
-  is a sufficient condition.  The conditional-cdf result above does not transfer automatically,
-  because a Markov disintegration along `ρ.fst` and the ray identity diverge outside σ-finite
-  marginals, as two paper computations show.  On `Unit × ℝ`, `∞ • dirac ((), 0)` has the unique
-  Markov disintegration `dirac 0`, although every cdf that is positive exactly on `[0, ∞)`
-  satisfies the ray identity.  Conversely, on `ℝ × ℝ` the sum over `a : ℝ` of
+  `Measure.condKernel` in `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:429` and
+  `condDistrib` in `Mathlib/Probability/Kernel/CondDistrib.lean:77` require a finite measure, which
+  is a sufficient condition; `condExpKernel` and `posterior` have the same finite-measure domain.
+  The conditional-cdf result above does not transfer automatically, because a Markov
+  disintegration along `ρ.fst` and the ray identity diverge outside σ-finite marginals, as two
+  paper computations show.  On `Unit × ℝ`, `∞ • dirac ((), 0)` has the unique Markov
+  disintegration `dirac 0`, although every cdf that is positive exactly on `[0, ∞)` satisfies the
+  ray identity.  Conversely, on `ℝ × ℝ` the sum over `a : ℝ` of
   `(dirac a).prod (gaussianReal 0 1)`, plus the image of Lebesgue measure on `[0, 1]` under
   `(·, 0)`, has the unique conditional cdf of `gaussianReal 0 1` but no disintegration along its
   first marginal, since it gives `univ ×ˢ {0}` mass one.  First fix the specification, including
@@ -547,9 +548,10 @@ operation.
   `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean` are the public boundary: a finite
   kernel `κ : Kernel α (β × Ω)`, where `Ω` is a nonempty standard Borel space and `α` is countable
   or `β` is countably generated, and a finite measure on `α × Ω` are disintegrated by Markov
-  kernels.  `Kernel.condKernel` and `Measure.condKernel` are chosen from these statements, and
-  `eq_condKernel_of_kernel_eq_compProd` and `eq_condKernel_of_measure_eq_compProd` determine them up
-  to `fst κ a`- and `ρ.fst`-null sets.  `borelMarkovFromReal Ω η` pulls `η a` back along
+  kernels.  `Kernel.condKernel` and `Measure.condKernel` are obtained from these statements: the
+  item on almost-everywhere classes below makes them the classes of the disintegrating Markov
+  kernels, which `Kernel.IsCondKernel.ae_eq` and `Measure.IsCondKernel.ae_eq` determine up to
+  `fst κ a`- and `ρ.fst`-null sets.  `borelMarkovFromReal Ω η` pulls `η a` back along
   `embeddingReal Ω` where `η a` gives the complement of its range measure zero, and pulls back the
   Dirac mass at the image of `Classical.ofNonempty : Ω` elsewhere.  `borelMarkovFromReal_apply` and
   `borelMarkovFromReal_apply'` exposed that branch for every `η`, and the instance
@@ -561,10 +563,11 @@ operation.
   As a function of an arbitrary `η` the construction has a fallback branch, but it now only builds
   witnesses: it and the lemmas that the existence proofs use are private to `StandardBorel.lean`,
   and no public definition unfolds to them.  The boundary proves representative independence: the
-  public kernels are choices that `eq_condKernel_of_kernel_eq_compProd` and
-  `eq_condKernel_of_measure_eq_compProd` determine up to null sets.  As for the construction behind
-  `condKernelCDF`, the resolved audit "An explicit default does not justify a public mathematical
-  operation" below therefore lets them stay private without a removal condition.
+  public classes do not depend on the witness, since `Kernel.IsCondKernel.ae_eq` and
+  `Measure.IsCondKernel.ae_eq` determine every disintegrating kernel up to null sets.  As for the
+  construction behind `condKernelCDF`, the resolved audit "An explicit default does not justify a
+  public mathematical operation" below therefore lets them stay private without a removal
+  condition.
   The `_apply` lemmas, the finite-kernel instance, `condKernelBorel`, `condKernelUnitBorel` and
   their instances, `Measure.condKernel_apply`, and the `irreducible_def` equations
   `Kernel.condKernel_def` and `Measure.condKernel_def` are removed, and the s-finite and Markov
@@ -573,10 +576,10 @@ operation.
   gluing.  The finite-measure and finite-kernel domains are unchanged; the conditional-kernel item
   above records the open domain question.  Tests cover the names that exposed the branch, including
   the instances and the `_def` equations; both existence statements; `Kernel.condKernel` for a
-  countable `α` and for a countably generated `β`; the Markov and disintegration instances;
-  almost-everywhere uniqueness; the value of `Measure.condKernel` at the atom of `dirac (0, 1)`;
-  two conditional kernels of that measure that differ off the atom; the rejection of the constant
-  kernel `dirac 0`; and the finite-measure and finite-kernel domains.
+  countable `α` and for a countably generated `β`; the Markov representatives of both classes;
+  almost-everywhere uniqueness; the value of every representative of `Measure.condKernel` at the
+  atom of `dirac (0, 1)`; two representatives that differ off the atom; the rejection of the
+  constant kernel `dirac 0`; and the finite-measure and finite-kernel domains.
 
 - [ ] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
   `ContinuousMap.mkD` in `Mathlib/Topology/ContinuousMap/Basic.lean:320` honestly takes an explicit
@@ -898,26 +901,63 @@ operation.
   totalized expectation.  Use `MemLp`/moment hypotheses for finite values and design extended values
   without a junk mean.
 
-- [ ] **Replace chosen conditional kernels and conditional cdfs by their almost-everywhere
+- [x] **Replace chosen conditional kernels and conditional cdfs by their almost-everywhere
   classes.**
   The specification of a conditional kernel, `ρ.fst ⊗ₘ η = ρ` or `fst κ ⊗ₖ η = κ`, determines `η`
   only up to `ρ.fst`-null sets, respectively up to `fst κ a`-null sets for every `a`, and the same
-  holds for conditional cdfs.  `Measure.condKernel` and `Kernel.condKernel` are nevertheless
-  chosen representatives, and `condDistrib`, `condExpKernel`, and `posterior` are built from them,
-  so the checked items above that choose them from existence statements leave a choice public.
-  Expose each as its class, with membership of representatives, the relational specifications
-  `IsCondKernel` and `HasCondDistrib`, and theorems stated for every solution of the
-  specification.  `condExpKernel` also needs its exact domain, a sub-σ-algebra, for the trimmed
-  measure along which it is a class.  Migrate `Integral.lean`, `Unique.lean`, `CondDistrib.lean`,
-  `Condexp.lean`, conditional independence, `ZeroOne.lean`, the conditional sub-Gaussian moment
-  generating function, `Posterior.lean`, and `BayesEstimator.lean`.
-  The conditional cdfs are done: `condCDF ρ` is the germ along `ae ρ.fst` of the conditional cdfs
-  and `Kernel.condKernelCDF κ` their germ along `(fst κ).fiberwiseAE`, the filter of properties
-  that hold `fst κ a`-almost everywhere for every `a`.  `Filter.Germ` has a membership of
-  representatives (`Mathlib/Order/Filter/Germ/Representative.lean`), each germ is obtained from a
-  germ-level existence statement whose solution is unique, the lemmas about the chosen
-  representatives are stated for every solution of `IsCondCDF` or `IsCondKernelCDF`, and
-  `condKernelReal` and `condKernelUnitReal`, which serve only existence proofs, are private.
+  holds for conditional cdfs.  `Kernel.AEClass l β` in `Mathlib/Probability/Kernel/AEClass.lean` is
+  the type of kernels modulo eventual equality along a filter `l`, with a membership of
+  representatives, and every class has a representative.  `Measure.condKernel ρ` is the class
+  along `ae ρ.fst` and `Kernel.condKernel κ` the class along `(fst κ).fiberwiseAE` of the Markov
+  kernels that disintegrate; each is obtained from a class-level existence statement whose solution
+  is unique, and a Markov representative exists.  Finite conditional kernels with values in a
+  countably generated space are unique almost everywhere (`IsCondKernel.ae_eq`), so a finite kernel
+  represents these classes exactly when it satisfies `IsCondKernel` (`mem_condKernel_iff`).
+  `condDistrib Y X μ` is the class along `ae (μ.map X)` of the conditional kernel of the joint law,
+  and a finite kernel represents it exactly when it satisfies `HasCondDistrib`
+  (`mem_condDistrib_iff_hasCondDistrib`).  `posterior κ μ` is the class along `ae (κ ∘ₘ μ)` of the
+  conditional kernel of the joint law with swapped coordinates.  `condExpKernel μ hm` now takes the
+  proof `hm : m ≤ mΩ` that `m` is a sub-σ-algebra and is the class along `ae (μ.trim hm)` of the
+  kernels that disintegrate the diagonal law.  The Markov instances of the former chosen kernels,
+  their measurability lemmas, their `_apply` and `_eq` equations, and the lemmas comparing a kernel
+  with a chosen one are removed; `Kernel.comap_mem_condKernel_of_mem` replaces
+  `Kernel.condKernel_apply_eq_condKernel`.  In `Integral.lean`, `Unique.lean`, `CondDistrib.lean`,
+  `Condexp.lean`, `Posterior.lean`, `BayesEstimator.lean`, and `IonescuTulcea/Traj.lean`, statements
+  about the classes hold for every representative, statements about the values of a representative
+  hold for every Markov representative or, where the proof allows, for every finite or s-finite one,
+  and the integrals of `Integral.lean` hold for every s-finite kernel that satisfies
+  `IsCondKernel`.  Lemmas whose conclusion became a membership are named accordingly, for example
+  `id_mem_condDistrib_self` and `id_mem_posterior_id`.  Conditional independence, the conditionally
+  sub-Gaussian moment generating function, and `ZeroOne.lean` quantify over the representatives of
+  `condExpKernel μ hm`; since kernel independence and `Kernel.HasSubgaussianMGF` are invariant under
+  almost-everywhere equality, `condIndep_iff_of_mem` and its variants and
+  `hasCondSubgaussianMGF_iff_of_mem` reduce them to any single representative.
+  `condIndepFun_iff_condDistrib_prod_ae_eq_prodMkRight`, which compared two chosen kernels, became
+  the membership statement `condIndepFun_iff_prodMkRight_mem_condDistrib`, and
+  `IsArgminEstimator.of_mem` checks an argmin estimator on one representative of the posterior.
+  The conditional cdfs were done first: `condCDF ρ` is the germ along `ae ρ.fst` of the
+  conditional cdfs and `Kernel.condKernelCDF κ` their germ along `(fst κ).fiberwiseAE`, the filter
+  of properties that hold `fst κ a`-almost everywhere for every `a`.  `Filter.Germ` has a
+  membership of representatives (`Mathlib/Order/Filter/Germ/Representative.lean`), each germ is
+  obtained from a germ-level existence statement whose solution is unique, the lemmas about the
+  chosen representatives are stated for every solution of `IsCondCDF` or `IsCondKernelCDF`, and
+  `condKernelReal` and `condKernelUnitReal`, which serve only existence proofs, are private.  The
+  finite-measure and finite-kernel domains are unchanged; the item on the exact domain of
+  `Measure.condKernel` and `condDistrib` above keeps that question open.  Tests cover the removed
+  surfaces, membership, the existence and uniqueness of representatives, the value of every
+  representative at an atom, two representatives that differ off the atom, the rejection by every
+  class of a kernel that is wrong on a set of positive measure, the identity kernel as the
+  conditional expectation kernel given the full σ-algebra, the reduction of conditional independence
+  and of the conditionally sub-Gaussian property to one representative, and the sub-σ-algebra and
+  finite-measure domains.
+
+- [ ] **Decide whether `HasArgminEstimator.argminEstimator` may name an arbitrary choice.**
+  `HasArgminEstimator.argminEstimator` in `Mathlib/Probability/Decision/BayesEstimator.lean:182`
+  takes `Classical.choose` of `HasArgminEstimator.exists_isArgminEstimator`.  The argmin estimators
+  of a problem need not agree almost everywhere, so they do not form an equivalence class, and the
+  definite name asserts a uniqueness that the specification does not provide.  Its only consumer,
+  `HasArgminEstimator.bayesRisk_eq`, holds for every argmin estimator.  Decide under the
+  witness-choice audit below whether to remove it in favor of the existence statement.
 
 - [ ] **Replace chosen almost-everywhere representatives elsewhere in measure theory by their
   classes.**
@@ -940,8 +980,8 @@ operation.
 
 - [x] **Require measurable random variables for conditional distributions.**
   `ProbabilityTheory.condDistrib` now requires joint a.e. measurability of `fun a ↦ (X a, Y a)`,
-  normally synthesized by `fun_prop`, while retaining the normal freedom to choose versions on null
-  conditioning fibres.
+  normally synthesized by `fun_prop`; the conditional distribution is the class of its versions,
+  which may differ on null conditioning fibres.
 
 - [x] **Require measurability in `Kernel.map`.**
   `Kernel.map` now takes a measurability proof, normally synthesized by `fun_prop`; the zero fallback
@@ -1410,10 +1450,10 @@ was found, and none should inherit validation merely from the earlier scan:
   the value.  Continue to flag reachable invalid branches or names asserting unsupported
   uniqueness.  A chosen representative of an object determined only up to an equivalence is not
   covered: the 2026-10-05 equivalence-class rule of `FORK_DESIGN.md` replaces it by the class, so
-  the chosen left inverse of `LinearMap.leftInverse` and the chosen conditional kernels are open
-  items above.  `Function.invFun` and `Function.extend` remain separate audit candidates: first
-  distinguish a legitimate chosen preimage or representative from a name or theorem that falsely
-  asserts inverse laws.
+  the chosen left inverse of `LinearMap.leftInverse` is an open item above, and the chosen
+  conditional kernels have become their almost-everywhere classes.  `Function.invFun` and
+  `Function.extend` remain separate audit candidates: first distinguish a legitimate chosen
+  preimage or representative from a name or theorem that falsely asserts inverse laws.
 - [x] **An explicit default does not justify a public mathematical operation.**  A technical
   representative constructor may remain only privately behind a proved boundary that makes its
   fallback unreachable or proves representative independence.  The integration-facing

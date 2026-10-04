@@ -19,8 +19,9 @@ This file deals with independence of random variables specifically.
 
 Note that we define independence with respect to a kernel and a measure. This notion of independence
 is a generalization of both independence and conditional independence.
-For conditional independence, `κ` is the conditional kernel `ProbabilityTheory.condExpKernel` and
-`μ` is the ambient measure. For (non-conditional) independence, `κ = Kernel.const Unit μ` and the
+For conditional independence, `κ` is a representative of the conditional kernel
+`ProbabilityTheory.condExpKernel μ hm` and the measure is the restriction `μ.trim hm` of the
+ambient measure `μ`. For (non-conditional) independence, `κ = Kernel.const Unit μ` and the
 measure is the Dirac measure on `Unit`.
 
 ## Main definition
