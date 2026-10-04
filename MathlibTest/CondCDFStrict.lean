@@ -241,27 +241,29 @@ theorem measure_univ_ρ₀ : ρ₀ univ = ∞ := by
 
 example : ¬ IsFiniteMeasure ρ₀ := fun _ ↦ measure_ne_top ρ₀ univ measure_univ_ρ₀
 
--- Its first marginal is Lebesgue measure, which is σ-finite, but instance search does not know it.
+-- Its first marginal is Lebesgue measure, and instance search finds that it is σ-finite.
 theorem fst_ρ₀ : ρ₀.fst = volume := by
-  rw [Measure.fst, Measure.map_fst_prod]
+  simp
+
+example : SigmaFinite ρ₀.fst := inferInstance
+
+example : SigmaFinite ((gaussianReal 0 1).prod (volume : Measure ℝ)).snd := inferInstance
+
+-- The marginal instances need the other factor to be finite: the first marginal of planar
+-- Lebesgue measure is infinity times Lebesgue measure, which is not σ-finite.
+example : ((volume : Measure ℝ).prod (volume : Measure ℝ)).fst = ∞ • (volume : Measure ℝ) := by
   simp
 
 /--
 error: failed to synthesize instance of type class
-  SigmaFinite ρ₀.fst
+  SigmaFinite (volume.prod volume ⋯).fst
 
 Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 -/
 #guard_msgs in
-example : SigmaFinite ρ₀.fst := inferInstance
+example : SigmaFinite ((volume : Measure ℝ).prod (volume : Measure ℝ)).fst := inferInstance
 
-theorem sigmaFinite_fst_ρ₀ : SigmaFinite ρ₀.fst := by
-  rw [fst_ρ₀]
-  infer_instance
-
-attribute [local instance] sigmaFinite_fst_ρ₀
-
--- With this evidence, the conditional cdf of the infinite measure is defined.
+-- So the conditional cdf of the infinite measure is defined without local evidence.
 example : HasUniqueCondCDF ρ₀ :=
   inferInstance
 

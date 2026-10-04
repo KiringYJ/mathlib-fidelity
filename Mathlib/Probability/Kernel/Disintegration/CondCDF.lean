@@ -31,11 +31,14 @@ conditional cdf is determined up to such modifications. It is the exact domain o
 `ProbabilityTheory.condCDF ρ`, which chooses one conditional cdf.
 
 Instance search derives `HasUniqueCondCDF ρ` from `SigmaFinite ρ.fst`
-(`ProbabilityTheory.hasUniqueCondCDF_of_sigmaFinite_fst`), which it finds for a finite measure `ρ`;
-otherwise that instance can be supplied locally. The domain includes infinite measures: the first
-marginal of `volume.prod (gaussianReal 0 1)` is Lebesgue measure, which is σ-finite, and the
-conditional cdf of this measure is almost everywhere the cdf of `gaussianReal 0 1`. The
-σ-finiteness of `ρ` itself is not enough. Planar Lebesgue measure is σ-finite, but its first
+(`ProbabilityTheory.hasUniqueCondCDF_of_sigmaFinite_fst`), which it finds for a finite measure `ρ`
+and for the product of a σ-finite measure with a finite measure
+(`MeasureTheory.Measure.prod.instSigmaFiniteFst`); otherwise that instance can be supplied locally.
+The domain includes infinite measures: the first marginal of `volume.prod (gaussianReal 0 1)` is
+Lebesgue measure, which is σ-finite, and the conditional cdf of this measure is almost everywhere
+the cdf of `gaussianReal 0 1`.
+
+The σ-finiteness of `ρ` itself is not enough. Planar Lebesgue measure is σ-finite, but its first
 marginal is infinity times Lebesgue measure, and every probability cdf that is positive everywhere,
 taken as a constant family, is a conditional cdf of it. Two different such families do not agree
 almost everywhere, so `HasUniqueCondCDF` fails for planar Lebesgue measure. Conversely, the class is
