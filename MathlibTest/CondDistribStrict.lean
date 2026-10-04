@@ -9,9 +9,10 @@ of kernels modulo null sets, so that no chosen kernel, with its Markov instance 
 public; that a finite kernel represents them exactly when it disintegrates the corresponding joint
 law, which for `condDistrib` is the relation `HasCondDistrib`, that Markov representatives exist,
 and that every Markov representative of a conditional distribution computes conditional
-probabilities; that argmin estimators are checked on a single representative of the posterior; that
-a kernel that agrees with a representative except on a null set is again a representative; and that
-a kernel that is wrong on a set of positive measure is not.
+probabilities; that argmin estimators are checked on a single representative of the posterior and
+that no argmin estimator is chosen from their existence; that a kernel that agrees with a
+representative except on a null set is again a representative; and that a kernel that is wrong on
+a set of positive measure is not.
 -/
 
 open MeasureTheory ProbabilityTheory
@@ -67,6 +68,18 @@ error: Unknown identifier `ProbabilityTheory.condDistrib_ae_eq_of_measure_eq_com
 /-- error: Unknown identifier `ProbabilityTheory.integrable_toReal_condDistrib` -/
 #guard_msgs in
 #check ProbabilityTheory.integrable_toReal_condDistrib
+
+/-! ### No argmin estimator is chosen from their existence -/
+
+/-- error: Unknown constant `ProbabilityTheory.HasArgminEstimator.argminEstimator` -/
+#guard_msgs in
+#check ProbabilityTheory.HasArgminEstimator.argminEstimator
+
+/--
+error: Unknown constant `ProbabilityTheory.HasArgminEstimator.isArgminEstimator_argminEstimator`
+-/
+#guard_msgs in
+#check ProbabilityTheory.HasArgminEstimator.isArgminEstimator_argminEstimator
 
 /-! ### Conditional distributions -/
 
@@ -132,6 +145,13 @@ example {ℓ : Ω → 𝓨 → ℝ≥0∞} {f : 𝓧 → 𝓨} {η : Kernel 𝓧
     (h : ∀ᵐ x ∂(κ ∘ₘ μ), ∫⁻ θ, ℓ θ (f x) ∂η x = ⨅ y, ∫⁻ θ, ℓ θ y ∂η x) :
     IsArgminEstimator ℓ κ μ f :=
   IsArgminEstimator.of_mem hf hη h
+
+-- The Bayes risk of a problem that admits an argmin estimator is computed from any Markov
+-- representative of the posterior, without choosing an argmin estimator.
+example {ℓ : Ω → 𝓨 → ℝ≥0∞} (hl : Measurable (Function.uncurry ℓ)) (h : HasArgminEstimator ℓ κ μ)
+    {η : Kernel 𝓧 Ω} [IsMarkovKernel η] (hη : η ∈ κ†μ) :
+    bayesRisk ℓ κ μ = ∫⁻ x, ⨅ y, ∫⁻ θ, ℓ θ y ∂(η x) ∂(κ ∘ₘ μ) :=
+  h.bayesRisk_eq hl hη
 
 end Posterior
 

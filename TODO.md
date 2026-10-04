@@ -951,13 +951,17 @@ operation.
   and of the conditionally sub-Gaussian property to one representative, and the sub-σ-algebra and
   finite-measure domains.
 
-- [ ] **Decide whether `HasArgminEstimator.argminEstimator` may name an arbitrary choice.**
-  `HasArgminEstimator.argminEstimator` in `Mathlib/Probability/Decision/BayesEstimator.lean:182`
-  takes `Classical.choose` of `HasArgminEstimator.exists_isArgminEstimator`.  The argmin estimators
-  of a problem need not agree almost everywhere, so they do not form an equivalence class, and the
-  definite name asserts a uniqueness that the specification does not provide.  Its only consumer,
-  `HasArgminEstimator.bayesRisk_eq`, holds for every argmin estimator.  Decide under the
-  witness-choice audit below whether to remove it in favor of the existence statement.
+- [x] **Stop choosing an argmin estimator from its existence.**
+  `HasArgminEstimator.argminEstimator` in `Mathlib/Probability/Decision/BayesEstimator.lean` took
+  `Classical.choose` of `HasArgminEstimator.exists_isArgminEstimator`.  The argmin estimators of a
+  problem need not agree almost everywhere, so they do not even form an equivalence class, and
+  `h.argminEstimator` presented one of them as data attached to the problem, a canonical choice
+  that the specification does not provide; `FORK_DESIGN.md` states that existence does not turn a
+  chosen witness into canonical data.  It and `isArgminEstimator_argminEstimator` are removed.
+  `HasArgminEstimator.bayesRisk_eq`, their only consumer, obtains an argmin estimator from the
+  existence statement, and constructions from an argmin estimator, such as
+  `IsArgminEstimator.kernel`, take it as an argument.  Tests pin the removed names and compute the
+  Bayes risk without a chosen estimator.
 
 - [ ] **Replace chosen almost-everywhere representatives elsewhere in measure theory by their
   classes.**

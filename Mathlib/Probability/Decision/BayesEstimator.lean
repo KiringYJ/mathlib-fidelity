@@ -176,24 +176,14 @@ structure HasArgminEstimator {𝓨 : Type*} [SigmaAlgebra 𝓨]
 
 namespace HasArgminEstimator
 
-/-- An estimator for an estimation problem that for every representative `η` of `P†π` and
-`(P ∘ₘ π)`-almost every `x` is of the form `x ↦ argmin_y η(x)[θ ↦ ℓ θ y]`. -/
-noncomputable
-def argminEstimator (h : HasArgminEstimator ℓ P π) : 𝓧 → 𝓨 :=
-  h.exists_isArgminEstimator.choose
-
-lemma isArgminEstimator_argminEstimator (h : HasArgminEstimator ℓ P π) :
-    IsArgminEstimator ℓ P π h.argminEstimator :=
-  h.exists_isArgminEstimator.choose_spec
-
 /-- If the estimation problem admits an argmin estimator, then the Bayesian risk attains the risk
 lower bound `∫⁻ x, ⨅ y, ∫⁻ θ, ℓ θ y ∂(η x) ∂(P ∘ₘ π)` for every Markov representative `η` of
 `P†π`. -/
 lemma bayesRisk_eq (hl : Measurable (Function.uncurry ℓ)) (h : HasArgminEstimator ℓ P π)
     {η : Kernel 𝓧 Θ} [IsMarkovKernel η] (hη : η ∈ P†π) :
     bayesRisk ℓ P π = ∫⁻ x, ⨅ y, ∫⁻ θ, ℓ θ y ∂(η x) ∂(P ∘ₘ π) := by
-  rw [← h.isArgminEstimator_argminEstimator.isBayesEstimator hl,
-    h.isArgminEstimator_argminEstimator.avgRisk_eq_lintegral_iInf hl hη]
+  obtain ⟨f, hf⟩ := h.exists_isArgminEstimator
+  rw [← hf.isBayesEstimator hl, hf.avgRisk_eq_lintegral_iInf hl hη]
 
 end HasArgminEstimator
 
