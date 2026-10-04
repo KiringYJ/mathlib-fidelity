@@ -398,6 +398,44 @@ operation.
   function, zero-map image, and `IsGaussian` instance, both Radon--Nikodym derivatives,
   measurability automation, proof independence, and rewriting.
 
+- [x] **Require a positive semidefinite covariance matrix for `multivariateGaussian`.**
+  `multivariateGaussian μ S hS` takes `hS : S.PosSemidef`, which includes symmetry.  It is the
+  Gaussian measure with mean `μ` and covariance matrix `S`: the `ν` with `IsGaussian ν`,
+  `ν[id] = μ`, and `covarianceBilin ν x y = x ⬝ᵥ S *ᵥ y`, unique by `IsGaussian.ext`.  This is the
+  exact domain, because `isPosSemidef_covarianceBilin` makes every covariance matrix symmetric and
+  positive semidefinite and `covarianceBilin_multivariateGaussian` attains each such `S`.  The
+  formula `exp (⟪t, μ⟫ * I - t ⬝ᵥ S *ᵥ t / 2)` for the characteristic function only sees the
+  symmetric part of `S`, so it cannot replace the covariance as the specification: for
+  `S = !![1, 1; -1, 1]` it is the characteristic function of `multivariateGaussian μ 1 _`, while no
+  measure has covariance matrix `S`.  The former definition applied `CFC.sqrt` to every matrix,
+  and its `cfcₙ` junk value zero made `multivariateGaussian μ S` the Dirac measure `dirac μ`, whose
+  covariance is zero, for every `S` that is not positive semidefinite, that one included.  Singular
+  `S` are retained: Siegrist, *Probability, Mathematical Statistics, and Stochastic Processes*,
+  §5.7, notes that for a singular `A` the covariance `A Aᵀ` of `μ + A Z` is "only positive
+  semi-definite" and the distribution degenerate, and its general definition ("A Further
+  Generalization") asks every `a · X` to be univariate normal, constants included, as `IsGaussian`
+  does.  The new simp lemma `multivariateGaussian_zero_cov` gives `dirac μ` for the zero matrix, as
+  `gaussianReal_zero_var` does in one dimension, and the covariance matrix of Brownian motion at
+  finitely many times is singular whenever they include zero.
+  `multivariateGaussian_of_not_posSemidef` is removed.  `isGaussian_multivariateGaussian` and
+  `integral_id_multivariateGaussian` with its primed form, which held for every `S` through the
+  Dirac branch, now take `hS` and are stated for `multivariateGaussian μ S hS`, as are the
+  covariance, variance, marginal, characteristic-function, and restriction theorems, which already
+  assumed `hS`; `multivariateGaussian_zero_one` uses `PosSemidef.one`.  The composition-style
+  `Measurable.multivariateGaussian` takes the proofs pointwise and replaces the uncurried
+  `measurable_multivariateGaussian`, which asserted joint measurability over all matrices;
+  `fun_prop` still proves it on the subtype of positive semidefinite matrices.  As for the
+  parametric distributions, the proof is explicit, without a default discharger, which would take
+  the set in `multivariateGaussian μ S s` as a proof.  The Brownian projective family supplies its
+  existing `posSemidef_covMatrix`.  The definition still applies `CFC.sqrt`, but only to positive
+  semidefinite matrices, where `CFC.sqrt_mul_sqrt_self` holds, and `Measurable.multivariateGaussian`
+  is proved through `CFC.measurable_sqrt`; the L item on continuous functional calculus records
+  both as consumers.  The module TODO on trace-class operators now asks for positivity.  Tests
+  cover missing and symmetric-only evidence; an indefinite and a nonsymmetric matrix, neither of
+  which is the covariance matrix of a measure, and the characteristic function of the latter;
+  uniqueness given the mean and the covariance matrix; the zero matrix; Brownian motion at time
+  zero; instances; measurability automation; proof independence; and rewriting.
+
 - [ ] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
   `ContinuousMap.mkD` in `Mathlib/Topology/ContinuousMap/Basic.lean:320` honestly takes an explicit
   fallback, so it is not a silent totalization; nevertheless it interprets every bare function as a
@@ -753,7 +791,11 @@ operation.
   `Mathlib/Analysis/CStarAlgebra/ContinuousFunctionalCalculus/NonUnital.lean:215` return zero when
   the element predicate or continuity conditions fail (and,
   nonunital, when `f 0 ≠ 0`).  Make `cfcHom`/`cfcₙHom` the strict substrate and automate the
-  real obligations at the primary interface.
+  real obligations at the primary interface.  `multivariateGaussian` applies `CFC.sqrt` only to
+  positive semidefinite matrices: once the square root takes `0 ≤ S`, it passes `hS.nonneg` and
+  drops `@[nolint unusedArguments]`, and `Measurable.multivariateGaussian`, now proved through
+  `CFC.measurable_sqrt`, needs measurability on the positive cone, where `CFC.continuousOn_sqrt`
+  applies.
 
 - [ ] **Remove fake zeros at Gamma poles.**
   `Complex.Gamma` and `Real.Gamma` in
