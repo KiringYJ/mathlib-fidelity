@@ -330,13 +330,63 @@ operation.
   conditioning on `toMeasurable μ s`; that public interpretation also requires matching literature.
   Otherwise expose conditioning only on the validated event domain.
 
-- [ ] **Require a finite measure for the conditional cdf.**
-  `ProbabilityTheory.condCDF` in `Mathlib/Probability/Kernel/Disintegration/CondCDF.lean:240`
-  accepts every `ρ : Measure (α × ℝ)`, but its specifying integral identities, such as
-  `setLIntegral_condCDF`, require `IsFiniteMeasure ρ`.  `condCDF_le_one` and
-  `tendsto_condCDF_atTop` hold for every `ρ` because `toRatCDF` replaces a function that is not a
-  rational cdf at a point by `defaultRatCDF`.  Retain the freedom to choose a version on
-  `ρ.fst`-null sets, as for `condDistrib`, and put finiteness at the construction boundary.
+- [x] **Give `condCDF` its exact domain.**
+  `condCDF ρ` requires `[HasUniqueCondCDF ρ]`: some `F` satisfies `IsCondCDF ρ F`, and any two such
+  families agree `ρ.fst`-a.e.  `IsCondCDF ρ F` says that every `F a` is the cdf of a probability
+  measure, that `a ↦ F a x` is measurable, and that `∫⁻ a in s, ENNReal.ofReal (F a x) ∂ρ.fst` is
+  `ρ (s ×ˢ Iic x)` for every measurable `s` and every real `x`.  `condCDF ρ` chooses one such
+  family, which `IsCondCDF.ae_eq_condCDF` determines up to `ρ.fst`-null sets, the version freedom of
+  `condDistrib`.  A finite measure is only a sufficient condition:
+  `hasUniqueCondCDF_of_sigmaFinite_fst` supplies the class whenever `ρ.fst` is σ-finite, for
+  instance for `volume.prod (gaussianReal 0 1)`, whose conditional cdf is a.e. the standard Gaussian
+  cdf; instance search does not find that this marginal is σ-finite, so a local instance supplies
+  it.  Chang and Pollard, *Conditioning as disintegration*, Statistica Neerlandica 51 (1997),
+  disintegrate a σ-finite measure with respect to a σ-finite mixing measure (Definition 1, p. 292);
+  for such a measure with a disintegration, the disintegrating measures can be taken to be
+  probabilities exactly when the image measure is σ-finite and serves as the mixing measure
+  (p. 292 and Theorem 2, p. 294).  On paper, the class consists exactly of the `ρ` whose first
+  marginal is semi-finite and whose ray measures `ρ.IicSnd x` all have densities with respect to
+  it.  A set of positive measure all of whose measurable subsets have measure 0 or ∞ exists exactly
+  when `ρ.fst` is not semi-finite; there the ray identity sees only where `F a x` is positive, so a
+  solution, if one exists, can be replaced on that set by `(F a t + F a (t - 1)) / 2` and is not
+  unique.  An s-finite measure is σ-finite exactly when it is semi-finite, and `ρ.fst` is s-finite
+  when `ρ` is, so for s-finite `ρ` the class holds exactly when `ρ.fst` is σ-finite.  These
+  characterizations are paper proofs; Lean proves the σ-finite instance and two examples in
+  `Counterexamples/CondCDF.lean`.  Planar Lebesgue measure is σ-finite, but its first marginal is
+  `∞ • volume`, and every probability cdf that is positive everywhere is, as a constant family, a
+  conditional cdf of it, so the class fails.  The image of counting measure on `ℝ` under
+  `a ↦ (a, 0)` lies in the class although its first marginal, counting measure, is not σ-finite;
+  it is not s-finite, and it is why the domain is a class rather than `[SigmaFinite ρ.fst]`.  The
+  former definition accepted every `ρ`.  It applied `stieltjesOfMeasurableRat` to the
+  Radon--Nikodym derivatives of the rational ray measures with respect to `ρ.fst`, which replaces
+  the family at every `a` where it is not a rational cdf by the cdf of `dirac 0`.  For planar
+  Lebesgue measure every ray measure equals the marginal, so it returned the cdf of `dirac 0` for
+  every `a` and violated the ray identity, while `condCDF_le_one`, both limits, and the instance
+  `IsProbabilityMeasure (condCDF ρ a).measure` held for every `ρ`.  The existence proof multiplies
+  `ρ` by a positive integrable function of the first coordinate, which makes it finite without
+  changing the ray derivatives, and applies the public finite-kernel construction of `CDFToKernel`.
+  The family `condCDFAux` built from the Radon--Nikodym derivatives and its lemmas are private to
+  `CondCDF.lean` and serve only the existence proof; `condCDF` is chosen from the existence
+  statement and does not unfold to them.  `IsCondCDF.integrable`, `setIntegral`, `integral`,
+  `isCondKernelCDF`, and `ofReal_ae_eq_rnDeriv` hold for every representative.  The Bochner-integral
+  and kernel statements keep `IsFiniteMeasure ρ` as a hypothesis, which the finite-kernel
+  disintegration in `StandardBorel` supplies.  Tests cover the rejected measures, routine evidence,
+  an infinite measure in the domain, the zero measure, null-set modifications, proof independence,
+  and rewriting.
+
+- [ ] **Identify the exact domain of `Measure.condKernel` and `condDistrib`.**
+  `Measure.condKernel` in `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:373` and
+  `condDistrib` in `Mathlib/Probability/Kernel/CondDistrib.lean:65` require a finite measure, which
+  is a sufficient condition.  The conditional-cdf result above does not transfer automatically,
+  because a Markov disintegration along `ρ.fst` and the ray identity diverge outside σ-finite
+  marginals, as two paper computations show.  On `Unit × ℝ`, `∞ • dirac ((), 0)` has the unique
+  Markov disintegration `dirac 0`, although every cdf that is positive exactly on `[0, ∞)`
+  satisfies the ray identity.  Conversely, on `ℝ × ℝ` the sum over `a : ℝ` of
+  `(dirac a).prod (gaussianReal 0 1)`, plus the image of Lebesgue measure on `[0, 1]` under
+  `(·, 0)`, has the unique conditional cdf of `gaussianReal 0 1` but no disintegration along its
+  first marginal, since it gives `univ ×ˢ {0}` mass one.  First fix the specification, including
+  whether a σ-finite measure equivalent to the marginal may serve as the mixing measure (Chang and
+  Pollard, Definition 1), then its exact domain; coordinate with the s-finite kernel product item.
 
 - [x] **Give parametric distributions their parameter domains.**
   `gammaMeasure a r ha hr`, `expMeasure r hr`, `paretoMeasure t r ht hr`, and
@@ -783,7 +833,9 @@ operation.
   `Measure.rnDeriv` and `Measure.singularPart` in
   `Mathlib/MeasureTheory/Measure/Decomposition/Lebesgue.lean:80` and `:73` return zero without
   `HaveLebesgueDecomposition μ ν`.  Require that evidence or return a bundled decomposition; apply
-  the same review to signed and complex vector-measure wrappers.
+  the same review to signed and complex vector-measure wrappers.  `IsCondCDF.ofReal_ae_eq_rnDeriv`
+  and the private existence proof for `condCDF` take `rnDeriv` only of ray measures with respect to
+  a σ-finite `ρ.fst`, where the decomposition exists, so they can supply the evidence.
 
 - [ ] **Move continuous functional calculus to its checked core.**
   `cfc` and `cfcₙ` in
