@@ -9,8 +9,12 @@ suspected problem; it does not authorize that particular repair.
 
 Mathematical fidelity is not the same as partiality or proof-carrying syntax.  A total operation may
 be a genuine extended invariant, an order-theoretic operation, or a choice operator whose input
-carries existence evidence and whose theorems prove the specifying property.  A no-witness branch
-is still a fallback governed by the transitional-only rule below.  Conversely, adding a proof
+carries existence evidence, whose theorems prove the specifying property, and whose specification
+determines a unique value.  When the specification determines its object only up to an
+equivalence, such as almost-everywhere equality, the public object is the equivalence class, not a
+chosen representative (`FORK_DESIGN.md`).  A no-witness branch is still a fallback governed by the
+transitional-only rule below, unless it occurs only in a private witness for a Prop-valued
+existence statement.  Conversely, adding a proof
 argument proves only that the chosen hypothesis is sufficient; it does not show that the hypothesis
 is the exact mathematical domain.
 Even a coherent total operation is not faithful under an ordinary name or notation when that surface
@@ -35,17 +39,18 @@ Before promoting an unchecked candidate to an implementation task:
 2. determine its exact domain and separate necessary conditions from convenient sufficient
    hypotheses supplied by typeclasses or automation;
 3. classify the current total behavior as a genuine total invariant, explicitly sourced convention,
-   choice/representative, checked projection, or semantically unsupported fallback; a fallback does
-   not remain as a permanent public extension; when identifiable mathematical literature uses the
-   same total convention for the same inputs and degenerate cases, audit it as an independent total
-   mathematical object with its own specifying properties; record the bibliographic citation and
-   exact definition, theorem, or page--a more explicit name, source-code docstring, or convenient
-   theorem is not enough;
+   choice of a unique value, chosen representative of an equivalence class, checked projection, or
+   semantically unsupported fallback; a chosen representative is replaced by its class, and a
+   fallback does not remain as a permanent public extension; when identifiable mathematical
+   literature uses the same total convention for the same inputs and degenerate cases, audit it as
+   an independent total mathematical object with its own specifying properties; record the
+   bibliographic citation and exact definition, theorem, or page--a more explicit name, source-code
+   docstring, or convenient theorem is not enough;
 4. test positive, negative, degenerate, characteristic-sensitive, and nonunique examples so that a
    strict facade does not exclude valid mathematics or manufacture canonicity;
 5. audit whether the proposed name and notation communicate that exact object without inviting a
    standard but different reading, then choose among a relation, extended-valued invariant,
-   canonical value, representative, subtype, proof argument, or explicit partiality type; and
+   canonical value, equivalence class, subtype, proof argument, or explicit partiality type; and
 6. prototype real consumers and record the candidate as accepted, reframed, rejected, or still
    unknown before scheduling a migration.
 
@@ -53,9 +58,11 @@ For an accepted strict-partiality migration, preserve a proved bridge on the val
 the fallback from the public surface rather than merely renaming it.  A total extension may remain
 only as a private transitional implementation helper when the public boundary proves that its
 fallback is unreachable or that the result is independent of it.  Record its consumers and removal
-condition, and remove it before declaring the migration complete.  Audit statements that exploit the
-branch, add negative tests for the actual boundary, and run the affected downstream checks at the
-final source state.
+condition, and remove it before declaring the migration complete.  A private construction used only
+as the witness of a Prop-valued existence statement, to which no public definition unfolds, is not
+such a helper and needs no removal condition.  Audit statements that exploit the branch, add
+negative tests for the actual boundary, and run the affected downstream checks at the final source
+state.
 
 This transitional-only rule is the canonical policy in `FORK_DESIGN.md`.  A literature-supported
 total object is reviewed on its own mathematics; it is not a permanent extension of the partial
@@ -236,6 +243,16 @@ operation.
   complements, dual extensions, Maschke's theorem, and continuous inverses supply their existing
   injectivity proofs. Tests cover missing and invalid evidence, zero-dimensional domains,
   nonsurjective inclusions, proof independence, rewriting, and nonuniqueness of left inverses.
+
+- [ ] **Replace the chosen left inverse of `LinearMap.leftInverse` by canonical data.**
+  Under the equivalence-class rule of `FORK_DESIGN.md`, the item above leaves a chosen
+  representative public: an injective `f` determines its left inverses only on `range f`, where
+  the canonical data is the inverse of `LinearEquiv.ofInjective f hf`
+  (`Mathlib/Algebra/Module/Submodule/Equiv.lean:165`), and extending it off the range needs a
+  complement.  Decide between exposing the left inverses as a relation with an existence
+  statement and an object whose specification determines them uniquely, such as a left inverse
+  together with a chosen complement supplied by the caller.  Migrate the subspace-complement, dual
+  extension, Maschke, and continuous-inverse consumers.
 
 - [ ] **Bundle admissible root pairs for root-chain data.**
   `RootPairing.chainTopCoeff`, `chainBotCoeff`, `chainTopIdx`, and `chainBotIdx` in
@@ -878,6 +895,34 @@ operation.
   totalized expectation.  Use `MemLp`/moment hypotheses for finite values and design extended values
   without a junk mean.
 
+- [ ] **Replace chosen conditional kernels and conditional cdfs by their almost-everywhere
+  classes.**
+  The specification of a conditional kernel, `ρ.fst ⊗ₘ η = ρ` or `fst κ ⊗ₖ η = κ`, determines `η`
+  only up to `ρ.fst`-null sets, respectively up to `fst κ a`-null sets for every `a`, and the same
+  holds for conditional cdfs.  `Measure.condKernel`, `Kernel.condKernel`, `condCDF`, and
+  `Kernel.condKernelCDF` are nevertheless chosen representatives, and `condDistrib`,
+  `condExpKernel`, and `posterior` are built from them, so the checked items above that choose them
+  from existence statements leave a choice public.  Expose each as its class: a germ along
+  `ae ρ.fst`, or along the filter of properties that hold `fst κ a`-almost everywhere for every
+  `a`, with membership of representatives, the relational specifications `IsCondKernel`,
+  `IsCondCDF`, `IsCondKernelCDF`, and `HasCondDistrib`, and theorems stated for every member.
+  `condExpKernel` also needs its exact domain, a sub-σ-algebra, for the trimmed measure along
+  which it is a class.  Migrate `Integral.lean`, `Unique.lean`, `CondDistrib.lean`,
+  `Condexp.lean`, conditional independence, `ZeroOne.lean`, the conditional sub-Gaussian moment
+  generating function, `Posterior.lean`, and `BayesEstimator.lean`, and make `condKernelReal` and
+  `condKernelUnitReal`, which serve only existence proofs, private.
+
+- [ ] **Replace chosen almost-everywhere representatives elsewhere in measure theory by their
+  classes.**
+  `Measure.rnDeriv` in `Mathlib/MeasureTheory/Measure/Decomposition/Lebesgue.lean:80` chooses a
+  representative from the Lebesgue decomposition, and `condExp` in
+  `Mathlib/MeasureTheory/Function/ConditionalExpectation/Basic.lean:102` takes
+  `AEStronglyMeasurable.mk` of `condExpL1`; both objects are determined only almost everywhere.
+  Audit them, their signed and vector-measure variants, and other public `Classical.choose` or
+  `AEStronglyMeasurable.mk` representatives under the equivalence-class rule of `FORK_DESIGN.md`,
+  coordinating with the domain items for conditional expectations and Radon--Nikodym data below.
+  `Kernel.density` is a `limsup` formula rather than a choice and is outside this item.
+
 - [ ] **Make conditional expectations carry their measure-theoretic hypotheses.**
   `condExp` in `Mathlib/MeasureTheory/Function/ConditionalExpectation/Basic.lean:102` and
   `condLExp` in `Mathlib/MeasureTheory/Function/ConditionalLExpectation.lean:73` return zero when the
@@ -1351,13 +1396,17 @@ was found, and none should inherit validation merely from the earlier scan:
   blanks, parser defaults, and noncanonical decoders belong to computational representation
   contracts.  Reopen a case only when it is exported as a checked mathematical inverse or primary
   mathematical workflow.
-- [x] **Witness choice alone is not a defect.**  `LinearIndependent.repr` in
-  `Mathlib/LinearAlgebra/LinearIndependent/Defs.lean:462` is the positive control: its input carries
-  both linear independence and span membership and the implementation is the inverse of a proved
-  linear equivalence.  Continue to flag reachable invalid branches or names asserting unsupported
-  uniqueness.  `Function.invFun`, `Function.extend`, and `LinearMap.leftInverse` remain separate
-  audit candidates: first distinguish a legitimate chosen preimage or representative from a name or
-  theorem that falsely asserts inverse laws.
+- [x] **Witness choice alone is not a defect when the chosen value is unique.**
+  `LinearIndependent.repr` in `Mathlib/LinearAlgebra/LinearIndependent/Defs.lean:462` is the
+  positive control: its input carries both linear independence and span membership and the
+  implementation is the inverse of a proved linear equivalence, so the specification determines
+  the value.  Continue to flag reachable invalid branches or names asserting unsupported
+  uniqueness.  A chosen representative of an object determined only up to an equivalence is not
+  covered: the 2026-10-05 equivalence-class rule of `FORK_DESIGN.md` replaces it by the class, so
+  the chosen left inverse of `LinearMap.leftInverse` and the chosen conditional kernels are open
+  items above.  `Function.invFun` and `Function.extend` remain separate audit candidates: first
+  distinguish a legitimate chosen preimage or representative from a name or theorem that falsely
+  asserts inverse laws.
 - [x] **An explicit default does not justify a public mathematical operation.**  A technical
   representative constructor may remain only privately behind a proved boundary that makes its
   fallback unreachable or proves representative independence.  The integration-facing
