@@ -29,17 +29,19 @@ The function `α → StieltjesFunction ℝ` obtained by extending `f` by continu
 then called `IsMeasurableRatCDF.stieltjesFunction`.
 
 In applications, we will often only have `IsRatStieltjesPoint f a` almost surely with respect to
-some measure. In order to turn that almost everywhere property into an everywhere property we define
-`toRatCDF (f : α → ℚ → ℝ) := fun a q ↦ if IsRatStieltjesPoint f a then f a q else defaultRatCDF q`,
-which satisfies the property `IsMeasurableRatCDF (toRatCDF f)`.
-
-Finally, we define `stieltjesOfMeasurableRat`, composition of `toRatCDF` and
-`IsMeasurableRatCDF.stieltjesFunction`.
+some measure. The file `Mathlib/Probability/Kernel/Disintegration/CDFToKernel.lean` treats that case
+for the conditional kernel CDFs of a finite kernel: from a function with the property
+`ProbabilityTheory.IsRatCondKernelCDF`, it proves that a conditional kernel CDF exists that agrees
+with it almost everywhere at every rational.
 
 ## Main definitions
 
-* `stieltjesOfMeasurableRat`: turn a measurable function `f : α → ℚ → ℝ` into a measurable
-  function `α → StieltjesFunction ℝ`.
+* `ProbabilityTheory.IsRatStieltjesPoint f a`: `f a` is monotone with limit 0 at -∞ and 1 at +∞
+  and satisfies a continuity property.
+* `ProbabilityTheory.IsMeasurableRatCDF f`: `f` is measurable and `IsRatStieltjesPoint f a` holds
+  for every `a`.
+* `ProbabilityTheory.IsMeasurableRatCDF.stieltjesFunction`: extend a function with the property
+  `IsMeasurableRatCDF` from `ℚ` to `ℝ`, giving a measurable function `α → StieltjesFunction ℝ`.
 
 -/
 
@@ -156,117 +158,6 @@ lemma IsMeasurableRatCDF.iInf_rat_gt_eq {f : α → ℚ → ℝ} (hf : IsMeasura
     ⨅ r : Ioi q, f a r = f a q := (hf.isRatStieltjesPoint a).iInf_rat_gt_eq q
 
 end IsMeasurableRatCDF
-
-section DefaultRatCDF
-
-/-- A function with the property `IsMeasurableRatCDF`.
-Used in a piecewise construction to convert a function which only satisfies the properties
-defining `IsMeasurableRatCDF` on some set into a true `IsMeasurableRatCDF`. -/
-def defaultRatCDF (q : ℚ) := if q < 0 then (0 : ℝ) else 1
-
-lemma monotone_defaultRatCDF : Monotone defaultRatCDF := by
-  unfold defaultRatCDF
-  intro x y hxy
-  dsimp only
-  split_ifs with h_1 h_2 h_2
-  exacts [le_rfl, zero_le_one, absurd (hxy.trans_lt h_2) h_1, le_rfl]
-
-lemma defaultRatCDF_nonneg (q : ℚ) : 0 ≤ defaultRatCDF q := by
-  unfold defaultRatCDF
-  split_ifs
-  exacts [le_rfl, zero_le_one]
-
-lemma defaultRatCDF_le_one (q : ℚ) : defaultRatCDF q ≤ 1 := by
-  unfold defaultRatCDF
-  split_ifs <;> simp
-
-lemma tendsto_defaultRatCDF_atTop : Tendsto defaultRatCDF atTop (𝓝 1) := by
-  refine (tendsto_congr' ?_).mp tendsto_const_nhds
-  rw [EventuallyEq, eventually_atTop]
-  exact ⟨0, fun q hq => (ite_eq_right (not_lt.mpr hq)).symm⟩
-
-lemma tendsto_defaultRatCDF_atBot : Tendsto defaultRatCDF atBot (𝓝 0) := by
-  refine (tendsto_congr' ?_).mp tendsto_const_nhds
-  rw [EventuallyEq, eventually_atBot]
-  refine ⟨-1, fun q hq => (ite_eq_left (hq.trans_lt ?_)).symm⟩
-  linarith
-
-lemma iInf_rat_gt_defaultRatCDF (t : ℚ) :
-    ⨅ r : Ioi t, defaultRatCDF r = defaultRatCDF t := by
-  simp only [defaultRatCDF]
-  have h_bdd : BddBelow (range fun r : ↥(Ioi t) ↦ ite ((r : ℚ) < 0) (0 : ℝ) 1) := by
-    refine ⟨0, fun x hx ↦ ?_⟩
-    obtain ⟨y, rfl⟩ := mem_range.mpr hx
-    dsimp only
-    split_ifs
-    exacts [le_rfl, zero_le_one]
-  split_ifs with h
-  · refine le_antisymm ?_ (le_ciInf fun x ↦ ?_)
-    · obtain ⟨q, htq, hq_neg⟩ : ∃ q, t < q ∧ q < 0 := ⟨t / 2, by linarith, by linarith⟩
-      refine (ciInf_le h_bdd ⟨q, htq⟩).trans ?_
-      exact (ite_eq_left hq_neg).le
-    · split_ifs
-      exacts [le_rfl, zero_le_one]
-  · refine le_antisymm ?_ ?_
-    · refine (ciInf_le h_bdd ⟨t + 1, lt_add_one t⟩).trans ?_
-      split_ifs
-      exacts [zero_le_one, le_rfl]
-    · refine le_ciInf fun x ↦ ?_
-      rw [ite_eq_right]
-      rw [not_lt] at h ⊢
-      exact h.trans (mem_Ioi.mp x.prop).le
-
-lemma isRatStieltjesPoint_defaultRatCDF (a : α) :
-    IsRatStieltjesPoint (fun (_ : α) ↦ defaultRatCDF) a where
-  mono := monotone_defaultRatCDF
-  tendsto_atTop_one := tendsto_defaultRatCDF_atTop
-  tendsto_atBot_zero := tendsto_defaultRatCDF_atBot
-  iInf_rat_gt_eq := iInf_rat_gt_defaultRatCDF
-
-lemma IsMeasurableRatCDF_defaultRatCDF (α : Type*) [SigmaAlgebra α] :
-    IsMeasurableRatCDF (fun (_ : α) (q : ℚ) ↦ defaultRatCDF q) where
-  isRatStieltjesPoint := isRatStieltjesPoint_defaultRatCDF
-  measurable := measurable_const
-
-end DefaultRatCDF
-
-section ToRatCDF
-
-variable {f : α → ℚ → ℝ}
-
-open scoped Classical in
-/-- Turn a function `f : α → ℚ → ℝ` into another with the property `IsRatStieltjesPoint f a`
-everywhere. At `a` that does not satisfy that property, `f a` is replaced by an arbitrary suitable
-function.
-Mainly useful when `f` satisfies the property `IsRatStieltjesPoint f a` almost everywhere with
-respect to some measure. -/
-noncomputable
-def toRatCDF (f : α → ℚ → ℝ) : α → ℚ → ℝ := fun a ↦
-  if IsRatStieltjesPoint f a then f a else defaultRatCDF
-
-lemma toRatCDF_of_isRatStieltjesPoint {a : α} (h : IsRatStieltjesPoint f a) (q : ℚ) :
-    toRatCDF f a q = f a q := by
-  rw [toRatCDF, ite_eq_left h]
-
-lemma toRatCDF_unit_prod (a : α) :
-    toRatCDF (fun (p : Unit × α) ↦ f p.2) ((), a) = toRatCDF f a := by
-  unfold toRatCDF
-  rw [isRatStieltjesPoint_unit_prod_iff]
-
-variable [SigmaAlgebra α]
-
-lemma measurable_toRatCDF (hf : Measurable f) : Measurable (toRatCDF f) :=
-  Measurable.ite (measurableSet_isRatStieltjesPoint hf) hf measurable_const
-
-lemma isMeasurableRatCDF_toRatCDF (hf : Measurable f) :
-    IsMeasurableRatCDF (toRatCDF f) where
-  isRatStieltjesPoint a := by
-    classical
-    exact IsRatStieltjesPoint.ite (IsRatStieltjesPoint f) id
-      (fun _ ↦ isRatStieltjesPoint_defaultRatCDF a)
-  measurable := measurable_toRatCDF hf
-
-end ToRatCDF
 
 section IsMeasurableRatCDF.stieltjesFunction
 
@@ -432,75 +323,5 @@ lemma IsMeasurableRatCDF.measurable_measure_stieltjesFunction :
 end Measure
 
 end IsMeasurableRatCDF.stieltjesFunction
-
-section stieltjesOfMeasurableRat
-
-variable {f : α → ℚ → ℝ} [SigmaAlgebra α]
-
-/-- Turn a measurable function `f : α → ℚ → ℝ` into a measurable function `α → StieltjesFunction ℝ`.
-Composition of `toRatCDF` and `IsMeasurableRatCDF.stieltjesFunction`. -/
-noncomputable
-def stieltjesOfMeasurableRat (f : α → ℚ → ℝ) (hf : Measurable f) : α → StieltjesFunction ℝ :=
-  (isMeasurableRatCDF_toRatCDF hf).stieltjesFunction
-
-lemma stieltjesOfMeasurableRat_eq (hf : Measurable f) (a : α) (r : ℚ) :
-    stieltjesOfMeasurableRat f hf a r = toRatCDF f a r :=
-  IsMeasurableRatCDF.stieltjesFunction_eq _ a r
-
-lemma stieltjesOfMeasurableRat_unit_prod (hf : Measurable f) (a : α) :
-    stieltjesOfMeasurableRat (fun (p : Unit × α) ↦ f p.2) (hf.comp measurable_snd) ((), a)
-      = stieltjesOfMeasurableRat f hf a := by
-  simp_rw [stieltjesOfMeasurableRat, IsMeasurableRatCDF.stieltjesFunction,
-    ← IsMeasurableRatCDF.stieltjesFunctionAux_unit_prod a]
-  congr 1 with x
-  congr 1 with p : 1
-  cases p with
-  | mk _ b => rw [← toRatCDF_unit_prod b]
-
-lemma stieltjesOfMeasurableRat_nonneg (hf : Measurable f) (a : α) (r : ℝ) :
-    0 ≤ stieltjesOfMeasurableRat f hf a r := IsMeasurableRatCDF.stieltjesFunction_nonneg _ a r
-
-lemma stieltjesOfMeasurableRat_le_one (hf : Measurable f) (a : α) (x : ℝ) :
-    stieltjesOfMeasurableRat f hf a x ≤ 1 := IsMeasurableRatCDF.stieltjesFunction_le_one _ a x
-
-lemma tendsto_stieltjesOfMeasurableRat_atBot (hf : Measurable f) (a : α) :
-    Tendsto (stieltjesOfMeasurableRat f hf a) atBot (𝓝 0) :=
-  IsMeasurableRatCDF.tendsto_stieltjesFunction_atBot _ a
-
-lemma tendsto_stieltjesOfMeasurableRat_atTop (hf : Measurable f) (a : α) :
-    Tendsto (stieltjesOfMeasurableRat f hf a) atTop (𝓝 1) :=
-  IsMeasurableRatCDF.tendsto_stieltjesFunction_atTop _ a
-
-lemma measurable_stieltjesOfMeasurableRat (hf : Measurable f) (x : ℝ) :
-    Measurable fun a ↦ stieltjesOfMeasurableRat f hf a x :=
-  IsMeasurableRatCDF.measurable_stieltjesFunction _ x
-
-lemma stronglyMeasurable_stieltjesOfMeasurableRat (hf : Measurable f) (x : ℝ) :
-    StronglyMeasurable fun a ↦ stieltjesOfMeasurableRat f hf a x :=
-  IsMeasurableRatCDF.stronglyMeasurable_stieltjesFunction _ x
-
-section Measure
-
-lemma measure_stieltjesOfMeasurableRat_Iic (hf : Measurable f) (a : α) (x : ℝ) :
-    (stieltjesOfMeasurableRat f hf a).measure (Iic x)
-      = ENNReal.ofReal (stieltjesOfMeasurableRat f hf a x) :=
-  IsMeasurableRatCDF.measure_stieltjesFunction_Iic _ _ _
-
-lemma measure_stieltjesOfMeasurableRat_univ (hf : Measurable f) (a : α) :
-    (stieltjesOfMeasurableRat f hf a).measure univ = 1 :=
-  IsMeasurableRatCDF.measure_stieltjesFunction_univ _ _
-
-instance instIsProbabilityMeasure_stieltjesOfMeasurableRat
-    (hf : Measurable f) (a : α) :
-    IsProbabilityMeasure (stieltjesOfMeasurableRat f hf a).measure :=
-  IsMeasurableRatCDF.instIsProbabilityMeasure_stieltjesFunction _ _
-
-lemma measurable_measure_stieltjesOfMeasurableRat (hf : Measurable f) :
-    Measurable fun a ↦ (stieltjesOfMeasurableRat f hf a).measure :=
-  IsMeasurableRatCDF.measurable_measure_stieltjesFunction _
-
-end Measure
-
-end stieltjesOfMeasurableRat
 
 end ProbabilityTheory

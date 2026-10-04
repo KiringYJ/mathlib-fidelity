@@ -365,8 +365,8 @@ operation.
   every `a` and violated the ray identity, while `condCDF_le_one`, both limits, and the instance
   `IsProbabilityMeasure (condCDF ρ a).measure` held for every `ρ`.  The existence proof multiplies
   `ρ` by a positive integrable function of the first coordinate, which makes it finite without
-  changing the ray derivatives, and applies the public finite-kernel construction of `CDFToKernel`.
-  The family `condCDFAux` built from the Radon--Nikodym derivatives and its lemmas are private to
+  changing the ray derivatives, and applies the finite-kernel existence statement of `CDFToKernel`
+  to its Radon--Nikodym derivatives.  That construction and its lemmas are private to
   `CondCDF.lean` and serve only the existence proof; `condCDF` is chosen from the existence
   statement and does not unfold to them.  `IsCondCDF.integrable`, `setIntegral`, `integral`,
   `isCondKernelCDF`, and `ofReal_ae_eq_rnDeriv` hold for every representative.  The Bochner-integral
@@ -376,7 +376,7 @@ operation.
   and rewriting.
 
 - [ ] **Identify the exact domain of `Measure.condKernel` and `condDistrib`.**
-  `Measure.condKernel` in `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:373` and
+  `Measure.condKernel` in `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:391` and
   `condDistrib` in `Mathlib/Probability/Kernel/CondDistrib.lean:65` require a finite measure, which
   is a sufficient condition.  The conditional-cdf result above does not transfer automatically,
   because a Markov disintegration along `ρ.fst` and the ray identity diverge outside σ-finite
@@ -486,6 +486,40 @@ operation.
   which is the covariance matrix of a measure, and the characteristic function of the latter;
   uniqueness given the mean and the covariance matrix; the zero matrix; Brownian motion at time
   zero; instances; measurability automation; proof independence; and rewriting.
+
+- [x] **Keep the `dirac 0` default of `stieltjesOfMeasurableRat` out of the public API.**
+  `IsRatCondKernelCDF.exists_isCondKernelCDF` in
+  `Mathlib/Probability/Kernel/Disintegration/CDFToKernel.lean` is the public boundary: for a finite
+  kernel `κ`, a rational conditional kernel CDF `f` gives a conditional kernel CDF that agrees with
+  `f` `ν a`-a.e. at every rational.  `IsCondKernelCDF.ae_eq` proves that two conditional kernel CDFs
+  agree `ν a`-a.e., `IsCondKernelCDF.congr` that a measurable modification by probability cdfs on
+  null sets is again one, and `IsCondKernelCDF.sigmaFinite` that one exists only when every `ν a` is
+  σ-finite.  `defaultRatCDF`, `toRatCDF`, and `stieltjesOfMeasurableRat` moved from
+  `MeasurableStieltjes.lean` into that file as private declarations, with the lemmas that the
+  existence proof uses; the other lemmas about them are removed.  They form a representative
+  constructor that serves only as the witness of the existence statement, so they stay private
+  without a removal condition.  `IsRatStieltjesPoint`, `IsMeasurableRatCDF`, and the checked
+  extension `IsMeasurableRatCDF.stieltjesFunction` stay public.  The construction replaced `f a` by
+  the rational cdf of `dirac 0` wherever `IsRatStieltjesPoint f a` failed and took no measure, so
+  for `f = 0` it returned the cdf of `dirac 0` at every `a`.  `stieltjesOfMeasurableRat_eq` exposed
+  that default, and the bound, limit, and probability lemmas, including the global instance
+  `instIsProbabilityMeasure_stieltjesOfMeasurableRat`, held for every measurable `f` only through
+  it.  Its statements in `CDFToKernel` all assumed `IsRatCondKernelCDF`, which confines the default
+  to null sets, so no downstream public object exposed it on a set of positive measure; but
+  `condKernelCDF` unfolded to it on null sets, and for the zero kernel `κ : Kernel Unit (ℝ × ℝ)` it
+  gave `condKernelCDF κ ((), 0) 0 = 1`.  `Kernel.condKernelCDF` is now chosen from the existence
+  statement, `IsCondKernelCDF.ae_eq_condKernelCDF` determines it up to `fst κ a`-null sets, and
+  `condKernelReal` and the uncountable branch of `Kernel.condKernel` are built from it as before.
+  The existence proof for `condCDF` takes its conditional kernel CDF from the same statement, so the
+  private `condCDFAux` is removed.  The next item records the arbitrary point of
+  `borelMarkovFromReal`, and the conditional-kernel item above the open domain question, which also
+  concerns `[IsFiniteKernel κ]`.  Tests cover the private names, existence, σ-finiteness,
+  uniqueness, the domain of `condKernelCDF`, its density version, its value at the atom of
+  `const Unit (dirac (0, 1))`, and a modification on the null set of that kernel; both conditional
+  kernel CDFs of the zero kernel; the zero rational family, which fails only
+  `isRatStieltjesPoint_ae` for the zero kernel with respect to `const Unit (dirac 0)`, where no
+  conditional kernel CDF exists; and the rejection of the zero rational family and of the cdf of
+  `dirac 0` for `const Unit (dirac (0, 1))`.
 
 - [ ] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
   `ContinuousMap.mkD` in `Mathlib/Topology/ContinuousMap/Basic.lean:320` honestly takes an explicit
