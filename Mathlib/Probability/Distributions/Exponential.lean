@@ -14,16 +14,28 @@ public import Mathlib.Tactic.CrossRefAttribute
 Define the Exponential measure over the reals.
 
 ## Main definitions
-* `exponentialPDFReal`: the function `r x ↦ r * exp (-(r * x)` for `0 ≤ x`
-  or `0` else, which is the probability density function of an exponential distribution with
-  rate `r` (when `hr : 0 < r`).
+* `exponentialPDFReal`: the function `x ↦ r * exp (-(r * x))` for `0 ≤ x`
+  or `0` else, which is the probability density function of the exponential distribution with
+  rate `r`.
 * `exponentialPDF`: `ℝ≥0∞`-valued pdf,
-  `exponentialPDF r = ENNReal.ofReal (exponentialPDFReal r)`.
-* `expMeasure`: an exponential measure on `ℝ`, parametrized by its rate `r`.
+  `exponentialPDF r hr = ENNReal.ofReal (exponentialPDFReal r hr)`.
+* `expMeasure`: the exponential distribution on `ℝ` with rate `r`.
 
 ## Main results
 * `cdf_expMeasure_eq`: Proof that the CDF of the exponential measure equals the
   known function given as `r x ↦ 1 - exp (- (r * x))` for `0 ≤ x` or `0` else.
+
+## Parameter domain
+
+All three definitions take a proof `hr : 0 < r`, and `expMeasure r hr` is a probability measure.
+This is the exact parameter domain of the exponential distribution ([siegrist_random], §14.2):
+`x ↦ exp (-(r * x))` is integrable on `[0, ∞)` exactly when `0 < r`. The exponential distribution
+is the gamma distribution with shape `1`. As for the gamma distribution, the proof is an explicit
+argument without a default value.
+
+## References
+
+* [K. Siegrist, *Probability, Mathematical Statistics, and Stochastic Processes*][siegrist_random]
 -/
 
 @[expose] public section
@@ -36,78 +48,80 @@ namespace ProbabilityTheory
 
 section ExponentialPDF
 
-/-- The pdf of the exponential distribution depending on its rate -/
+/-- The pdf of the exponential distribution with rate `r`, defined for `0 < r`. -/
 noncomputable
-def exponentialPDFReal (r x : ℝ) : ℝ :=
-  gammaPDFReal 1 r x
+def exponentialPDFReal (r : ℝ) (hr : 0 < r) (x : ℝ) : ℝ :=
+  gammaPDFReal 1 r zero_lt_one hr x
 
-/-- The pdf of the exponential distribution, as a function valued in `ℝ≥0∞` -/
+/-- The pdf of the exponential distribution, as a function valued in `ℝ≥0∞`, defined for
+`0 < r`. -/
 noncomputable
-def exponentialPDF (r x : ℝ) : ℝ≥0∞ :=
-  ENNReal.ofReal (exponentialPDFReal r x)
+def exponentialPDF (r : ℝ) (hr : 0 < r) (x : ℝ) : ℝ≥0∞ :=
+  ENNReal.ofReal (exponentialPDFReal r hr x)
 
-lemma exponentialPDF_eq (r x : ℝ) :
-    exponentialPDF r x = ENNReal.ofReal (if 0 ≤ x then r * exp (-(r * x)) else 0) := by
+lemma exponentialPDF_eq {r : ℝ} (hr : 0 < r) (x : ℝ) :
+    exponentialPDF r hr x = ENNReal.ofReal (if 0 ≤ x then r * exp (-(r * x)) else 0) := by
   rw [exponentialPDF, exponentialPDFReal, gammaPDFReal]
   simp only [rpow_one, Gamma_one, div_one, sub_self, rpow_zero, mul_one]
 
-lemma exponentialPDF_of_neg {r x : ℝ} (hx : x < 0) : exponentialPDF r x = 0 := gammaPDF_of_neg hx
+lemma exponentialPDF_of_neg {r x : ℝ} (hr : 0 < r) (hx : x < 0) : exponentialPDF r hr x = 0 :=
+  gammaPDF_of_neg zero_lt_one hr hx
 
-lemma exponentialPDF_of_nonneg {r x : ℝ} (hx : 0 ≤ x) :
-    exponentialPDF r x = ENNReal.ofReal (r * rexp (-(r * x))) := by
+lemma exponentialPDF_of_nonneg {r x : ℝ} (hr : 0 < r) (hx : 0 ≤ x) :
+    exponentialPDF r hr x = ENNReal.ofReal (r * rexp (-(r * x))) := by
   simp only [exponentialPDF_eq, ite_eq_left hx]
 
 /-- The Lebesgue integral of the exponential pdf over nonpositive reals equals 0 -/
-lemma lintegral_exponentialPDF_of_nonpos {x r : ℝ} (hx : x ≤ 0) :
-    ∫⁻ y in Iio x, exponentialPDF r y = 0 := lintegral_gammaPDF_of_nonpos hx
+lemma lintegral_exponentialPDF_of_nonpos {x r : ℝ} (hr : 0 < r) (hx : x ≤ 0) :
+    ∫⁻ y in Iio x, exponentialPDF r hr y = 0 := lintegral_gammaPDF_of_nonpos zero_lt_one hr hx
 
 /-- The exponential pdf is measurable. -/
 @[fun_prop]
-lemma measurable_exponentialPDFReal (r : ℝ) : Measurable (exponentialPDFReal r) :=
-  measurable_gammaPDFReal 1 r
+lemma measurable_exponentialPDFReal {r : ℝ} (hr : 0 < r) :
+    Measurable (exponentialPDFReal r hr) :=
+  measurable_gammaPDFReal zero_lt_one hr
 
--- The exponential pdf is strongly measurable -/
+/-- The exponential pdf is strongly measurable -/
 @[fun_prop]
-lemma stronglyMeasurable_exponentialPDFReal (r : ℝ) :
-    StronglyMeasurable (exponentialPDFReal r) := stronglyMeasurable_gammaPDFReal 1 r
+lemma stronglyMeasurable_exponentialPDFReal {r : ℝ} (hr : 0 < r) :
+    StronglyMeasurable (exponentialPDFReal r hr) := stronglyMeasurable_gammaPDFReal zero_lt_one hr
 
 /-- The exponential pdf is positive for all positive reals -/
 lemma exponentialPDFReal_pos {x r : ℝ} (hr : 0 < r) (hx : 0 < x) :
-    0 < exponentialPDFReal r x := gammaPDFReal_pos zero_lt_one hr hx
+    0 < exponentialPDFReal r hr x := gammaPDFReal_pos zero_lt_one hr hx
 
 /-- The exponential pdf is nonnegative -/
 lemma exponentialPDFReal_nonneg {r : ℝ} (hr : 0 < r) (x : ℝ) :
-    0 ≤ exponentialPDFReal r x := gammaPDFReal_nonneg zero_lt_one hr x
+    0 ≤ exponentialPDFReal r hr x := gammaPDFReal_nonneg zero_lt_one hr x
 
 open Measure
 
 /-- The pdf of the exponential distribution integrates to 1 -/
 @[simp]
-lemma lintegral_exponentialPDF_eq_one {r : ℝ} (hr : 0 < r) : ∫⁻ x, exponentialPDF r x = 1 :=
+lemma lintegral_exponentialPDF_eq_one {r : ℝ} (hr : 0 < r) : ∫⁻ x, exponentialPDF r hr x = 1 :=
   lintegral_gammaPDF_eq_one zero_lt_one hr
 
 end ExponentialPDF
 
 open MeasureTheory
 
-/-- Measure defined by the exponential distribution -/
+/-- The exponential distribution with rate `r`, defined for `0 < r`. -/
 @[wikidata Q237193]
 noncomputable
-def expMeasure (r : ℝ) : Measure ℝ := gammaMeasure 1 r
+def expMeasure (r : ℝ) (hr : 0 < r) : Measure ℝ := gammaMeasure 1 r zero_lt_one hr
 
-lemma isProbabilityMeasure_expMeasure {r : ℝ} (hr : 0 < r) :
-    IsProbabilityMeasure (expMeasure r) := isProbabilityMeasure_gammaMeasure zero_lt_one hr
+instance isProbabilityMeasure_expMeasure {r : ℝ} (hr : 0 < r) :
+    IsProbabilityMeasure (expMeasure r hr) :=
+  inferInstanceAs <| IsProbabilityMeasure (gammaMeasure 1 r zero_lt_one hr)
 
 section ExponentialCDF
 
 lemma cdf_expMeasure_eq_integral {r : ℝ} (hr : 0 < r) (x : ℝ) :
-    haveI := isProbabilityMeasure_expMeasure hr
-    cdf (expMeasure r) x = ∫ x in Iic x, exponentialPDFReal r x :=
+    cdf (expMeasure r hr) x = ∫ x in Iic x, exponentialPDFReal r hr x :=
   cdf_gammaMeasure_eq_integral zero_lt_one hr x
 
 lemma cdf_expMeasure_eq_lintegral {r : ℝ} (hr : 0 < r) (x : ℝ) :
-    haveI := isProbabilityMeasure_expMeasure hr
-    cdf (expMeasure r) x = ENNReal.toReal (∫⁻ x in Iic x, exponentialPDF r x) :=
+    cdf (expMeasure r hr) x = ENNReal.toReal (∫⁻ x in Iic x, exponentialPDF r hr x) :=
   cdf_gammaMeasure_eq_lintegral zero_lt_one hr x
 
 open Topology
@@ -125,7 +139,7 @@ lemma exp_neg_integrableOn_Ioc {b x : ℝ} (hb : 0 < b) :
   exact (exp_neg_integrableOn_Ioi _ hb).mono_set Ioc_subset_Ioi_self
 
 lemma lintegral_exponentialPDF_eq_antiDeriv {r : ℝ} (hr : 0 < r) (x : ℝ) :
-    ∫⁻ y in Iic x, exponentialPDF r y
+    ∫⁻ y in Iic x, exponentialPDF r hr y
     = ENNReal.ofReal (if 0 ≤ x then 1 - exp (-(r * x)) else 0) := by
   split_ifs with h
   case neg =>
@@ -133,8 +147,8 @@ lemma lintegral_exponentialPDF_eq_antiDeriv {r : ℝ} (hr : 0 < r) (x : ℝ) :
     rw [setLIntegral_congr_fun measurableSet_Iic, lintegral_zero, ENNReal.ofReal_zero]
     exact fun a (_ : a ≤ _) ↦ by rw [ite_eq_right (by linarith), ENNReal.ofReal_eq_zero]
   case pos =>
-    rw [lintegral_Iic_eq_lintegral_Iio_add_Icc _ h, lintegral_exponentialPDF_of_nonpos (le_refl 0),
-      zero_add]
+    rw [lintegral_Iic_eq_lintegral_Iio_add_Icc _ h,
+      lintegral_exponentialPDF_of_nonpos hr (le_refl 0), zero_add]
     simp only [exponentialPDF_eq]
     rw [setLIntegral_congr_fun measurableSet_Icc (g := fun x ↦ ENNReal.ofReal (r * rexp (-(r * x))))
       (by intro a ha; simp [ha.1])]
@@ -165,8 +179,7 @@ lemma lintegral_exponentialPDF_eq_antiDeriv {r : ℝ} (hr : 0 < r) (x : ℝ) :
 
 /-- The CDF of the exponential distribution equals ``1 - exp (-(r * x))`` -/
 lemma cdf_expMeasure_eq {r : ℝ} (hr : 0 < r) (x : ℝ) :
-    haveI := isProbabilityMeasure_expMeasure hr
-    cdf (expMeasure r) x = if 0 ≤ x then 1 - exp (-(r * x)) else 0 := by
+    cdf (expMeasure r hr) x = if 0 ≤ x then 1 - exp (-(r * x)) else 0 := by
   rw [cdf_expMeasure_eq_lintegral hr, lintegral_exponentialPDF_eq_antiDeriv hr x,
     ENNReal.toReal_ofReal_eq_iff]
   split_ifs with h
