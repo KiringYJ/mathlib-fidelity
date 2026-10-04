@@ -521,6 +521,21 @@ operation.
   conditional kernel CDF exists; and the rejection of the zero rational family and of the cdf of
   `dirac 0` for `const Unit (dirac (0, 1))`.
 
+- [ ] **Keep the arbitrary point of `borelMarkovFromReal` out of the public API.**
+  `Kernel.borelMarkovFromReal Ω η` in
+  `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:215` pulls `η a` back along
+  `embeddingReal Ω` where `η a` gives the complement of its range measure zero, and pulls back the
+  Dirac mass at the image of `Classical.ofNonempty : Ω` elsewhere; its docstring calls that kernel
+  arbitrary.  `borelMarkovFromReal_apply` and `borelMarkovFromReal_apply'` (lines 224 and 235)
+  expose the branch, and the instance `instIsMarkovKernelBorelMarkovFromReal` (line 258) holds for
+  every Markov `η` only through it.  In `condKernelBorel` (line 347) and `condKernelUnitBorel`
+  (line 370) the branch acts only on `fst κ a`-null sets (`h_ae` in
+  `compProd_fst_borelMarkovFromReal_eq_comapRight_compProd`, line 270), so `Kernel.condKernel` and
+  `Measure.condKernel` expose it only on null sets, as the former default of
+  `stieltjesOfMeasurableRat` was.  Classify the construction; if it is a representative constructor,
+  keep it private behind the disintegration statements, as in the item above, and choose the
+  standard Borel conditional kernels from them.  Coordinate with the conditional-kernel item above.
+
 - [ ] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
   `ContinuousMap.mkD` in `Mathlib/Topology/ContinuousMap/Basic.lean:320` honestly takes an explicit
   fallback, so it is not a silent totalization; nevertheless it interprets every bare function as a
