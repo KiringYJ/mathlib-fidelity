@@ -36,10 +36,13 @@ For `κ : Kernel α (β × ℝ)`, the construction of the conditional kernel pro
 
 The first step (building the measurable function on `ℚ`) is done differently depending on whether
 `α` is countable or not.
-* If `α` is countable, we can provide for each `a : α` a function `f : β → ℚ → ℝ` and proceed as
-  above to obtain a `Kernel β ℝ`. Since `α` is countable, measurability is not an issue and we can
-  put those together into a `Kernel (α × β) ℝ`. The construction of that `f` is done in
-  the `CondCDF.lean` file.
+* If `α` is countable, we can proceed separately for each `a : α`: the finite measure `κ a` has a
+  conditional kernel `(κ a).condKernel : Kernel β Ω`. Since `α` is countable, measurability is not
+  an issue and we can put those together into a `Kernel (α × β) Ω`. For a measure on `β × ℝ`, the
+  conditional kernel is built from `condKernelUnitReal`, the kernel of the conditional cdf
+  `ProbabilityTheory.condCDF`, which is chosen among the conditional cdfs whose existence is proved
+  in the `CondCDF.lean` file; for a general standard Borel space `Ω`, we go through the measurable
+  embedding of `Ω` into `ℝ`.
 * If `α` is not countable, we can't proceed separately for each `a : α` and have to build a function
   `f : α × β → ℚ → ℝ` which is measurable on the product. We are able to do so if `β` has a
   countably generated σ-algebra (this is the case in particular for standard Borel spaces).
