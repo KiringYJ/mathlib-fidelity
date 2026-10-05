@@ -341,13 +341,14 @@ lemma pairingIn_le_zero_of_ne [IsDomain R] [P.IsCrystallographic] [Finite ι]
 variable {b}
 variable [IsDomain R] [P.IsCrystallographic] [Finite ι] {i j : b.support}
 
-@[simp] lemma chainBotCoeff_eq_zero :
+@[simp] lemma chainBotCoeff_eq_zero (hij : i ≠ j) :
     P.chainBotCoeff i j = 0 :=
-  chainBotCoeff_eq_zero_iff.mpr <| Or.inr <| b.sub_notMem_range_root j.property i.property
+  (chainBotCoeff_eq_zero_iff (b.linearIndependent_pair_of_ne hij)).mpr <|
+    b.sub_notMem_range_root j.property i.property
 
 lemma chainTopCoeff_eq_of_ne (hij : i ≠ j) :
     P.chainTopCoeff i j = -P.pairingIn ℤ j i := by
-  rw [← chainTopCoeff_sub_chainBotCoeff (b.linearIndependent_pair_of_ne hij)]
+  rw [← chainTopCoeff_sub_chainBotCoeff, chainBotCoeff_eq_zero hij]
   simp
 
 end RootPairing

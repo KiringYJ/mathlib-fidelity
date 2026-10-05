@@ -41,6 +41,7 @@ variable {ι R M N : Type*} [Finite ι] [CommRing R] [IsDomain R] [CharZero R]
 
 attribute [local simp] Ring.lie_def Matrix.mul_apply Matrix.one_apply Matrix.diagonal_apply
 
+omit [Finite ι] in
 /-- Lemma 3.3 (a) from [Geck](Geck2017). -/
 lemma lie_h_e :
     ⁅h j, e i⁆ = b.cartanMatrix i j • e i := by
@@ -68,6 +69,7 @@ lemma lie_h_e :
     simp only [pairingIn_eq_add_of_root_eq_add hkil, Int.cast_add]
     ring
 
+omit [Finite ι] in
 /-- Lemma 3.3 (b) from [Geck](Geck2017). -/
 lemma lie_h_f :
     ⁅h j, f i⁆ = -b.cartanMatrix i j • f i := by
@@ -105,36 +107,30 @@ private lemma lie_e_f_same_aux (k : ι) (hki : k ≠ i) (hki' : k ≠ P.reflecti
       rw [eq_sub_iff_add_eq', eq_comm]
     have aux' (x : ι) : P.root x = P.root i + P.root k ↔ P.root k = P.root x - P.root i := by
       rw [eq_sub_iff_add_eq', eq_comm]
-    simpa [e, f, h, hki, hki', aux, aux', ← ite_and, ← P.chainBotCoeff_sub_chainTopCoeff h_lin_ind]
+    simpa [e, f, h, hki, hki', aux, aux', ← ite_and, ← P.chainBotCoeff_sub_chainTopCoeff]
   rcases exists_or_forall_not (fun x ↦ P.root k = P.root i + P.root x) with ⟨x, hx⟩ | h₁ <;>
   rcases exists_or_forall_not (fun x ↦ P.root k = P.root x - P.root i) with ⟨y, hy⟩ | h₂
-  · have h_lin_ind_x : LinearIndependent R ![P.root i, P.root x] := by simpa [hx] using h_lin_ind
-    have h_lin_ind_y : LinearIndependent R ![P.root i, P.root y] := by
-      rw [← add_eq_of_eq_sub hy, add_comm]; simpa
-    have hx' : P.chainBotCoeff i k = P.chainBotCoeff i x + 1 :=
-      chainBotCoeff_of_add h_lin_ind_x (add_comm (P.root i) _ ▸ hx)
-    have hy' : P.chainTopCoeff i k = P.chainTopCoeff i y + 1 := chainTopCoeff_of_sub h_lin_ind_y hy
+  · have hx' : P.chainBotCoeff i k = P.chainBotCoeff i x + 1 :=
+      chainBotCoeff_of_add (add_comm (P.root i) _ ▸ hx)
+    have hy' : P.chainTopCoeff i k = P.chainTopCoeff i y + 1 := chainTopCoeff_of_sub hy
     rw [Finset.sum_eq_single_of_mem x (Finset.mem_univ _) (by aesop),
       Finset.sum_eq_single_of_mem y (Finset.mem_univ _) (by aesop)]
     simp only [hx, hy.symm, hx', hy', reduceIte, Nat.cast_add]
     ring
   · simp_rw [ite_eq_right (h₂ _), Finset.sum_const_zero, sub_zero]
     replace h₂ : P.chainTopCoeff i k = 0 :=
-      P.chainTopCoeff_eq_zero_iff.mpr <| Or.inr fun ⟨x, hx⟩ ↦ h₂ x <| by simp [hx]
-    have h_lin_ind_x : LinearIndependent R ![P.root i, P.root x] := by simpa [hx] using h_lin_ind
+      (P.chainTopCoeff_eq_zero_iff h_lin_ind).mpr fun ⟨x, hx⟩ ↦ h₂ x <| by simp [hx]
     have hx' : P.chainBotCoeff i k = P.chainBotCoeff i x + 1 :=
-      chainBotCoeff_of_add h_lin_ind_x (add_comm (P.root i) _ ▸ hx)
+      chainBotCoeff_of_add (add_comm (P.root i) _ ▸ hx)
     simp [hx, hx', h₂]
   · simp_rw [ite_eq_right (h₁ _), Finset.sum_const_zero, zero_sub]
     replace h₁ : P.chainBotCoeff i k = 0 :=
-      P.chainBotCoeff_eq_zero_iff.mpr <| Or.inr fun ⟨x, hx⟩ ↦ h₁ x <| by simp [hx]
-    have h_lin_ind_y : LinearIndependent R ![P.root i, P.root y] := by
-      rw [← add_eq_of_eq_sub hy, add_comm]; simpa
-    have hy' : P.chainTopCoeff i k = P.chainTopCoeff i y + 1 := chainTopCoeff_of_sub h_lin_ind_y hy
+      (P.chainBotCoeff_eq_zero_iff h_lin_ind).mpr fun ⟨x, hx⟩ ↦ h₁ x <| by simp [hx]
+    have hy' : P.chainTopCoeff i k = P.chainTopCoeff i y + 1 := chainTopCoeff_of_sub hy
     simp [hy, hy', h₁]
   · suffices P.chainBotCoeff i k = 0 ∧ P.chainTopCoeff i k = 0 by simp [h₁, h₂, this]
-    exact ⟨P.chainBotCoeff_eq_zero_iff.mpr <| Or.inr fun ⟨x, hx⟩ ↦ h₁ x <| by simp [hx],
-           P.chainTopCoeff_eq_zero_iff.mpr <| Or.inr fun ⟨x, hx⟩ ↦ h₂ x <| by simp [hx]⟩
+    exact ⟨(P.chainBotCoeff_eq_zero_iff h_lin_ind).mpr fun ⟨x, hx⟩ ↦ h₁ x <| by simp [hx],
+           (P.chainTopCoeff_eq_zero_iff h_lin_ind).mpr fun ⟨x, hx⟩ ↦ h₂ x <| by simp [hx]⟩
 
 /-- Lemma 3.4 from [Geck](Geck2017). -/
 lemma lie_e_f_same :
@@ -201,6 +197,7 @@ variable {i j}
 variable (hij : i ≠ j)
 omit [P.IsReduced]
 
+omit [Finite ι] [IsDomain R] in
 /-- An auxiliary lemma en route to `RootPairing.Base.lie_e_f_ne`. -/
 private lemma lie_e_f_ne_aux₀ (k : b.support) (l : ι) :
     ⁅e i, f j⁆ (Sum.inl k) (Sum.inr l) = 0 := by
@@ -228,10 +225,10 @@ private lemma lie_e_f_ne_aux₁ :
   · suffices ((if k = i then ↑|b.cartanMatrix i j| else (0 : R)) -
         ∑ x, if P.root x = P.root i + P.root j ∧ P.root k = P.root x - P.root j then
           (P.chainTopCoeff j x : R) + 1 else 0) = 0 by
-      have hij : (j : ι) ≠ -i := by simpa using b.root_ne_neg_of_ne j.property i.property hij'.symm
+      have hji : (j : ι) ≠ -i := by simpa using b.root_ne_neg_of_ne j.property i.property hij'.symm
       have aux : ∀ x ∈ Finset.univ,
         x ≠ j → (if x = j ∧ k = i then ↑|b.cartanMatrix i x| else 0) = (0 : R) := by aesop
-      simpa [e, f, P.ne_zero, hij, -indexNeg_neg, -Finset.univ_eq_attach, ← ite_and,
+      simpa [e, f, P.ne_zero, hij, hji, -indexNeg_neg, -Finset.univ_eq_attach, ← ite_and,
         Finset.sum_eq_single_of_mem j (Finset.mem_univ _) aux]
     rcases eq_or_ne k i with rfl | hk; swap
     · rw [ite_eq_right (by tauto), Finset.sum_ite_of_false (by aesop)]; simp
@@ -240,7 +237,7 @@ private lemma lie_e_f_ne_aux₁ :
       rw [Finset.sum_eq_single_of_mem m (Finset.mem_univ _) (by rintro x - hx; simp [← hm, hx]),
         b.abs_cartanMatrix_apply, Base.cartanMatrix, Base.cartanMatrixIn_def]
       have aux₁ := b.chainTopCoeff_eq_of_ne hij.symm
-      have aux₂ := chainTopCoeff_of_add (b.linearIndependent_pair_of_ne hij.symm) hm
+      have aux₂ := chainTopCoeff_of_add hm
       norm_cast
       aesop
     · have aux : ∀ x ∈ Finset.univ,

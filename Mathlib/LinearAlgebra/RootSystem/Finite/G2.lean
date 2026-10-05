@@ -140,10 +140,8 @@ variable [Finite ι] [CharZero R] [IsDomain R] {i j : ι}
 variable (i j) in
 lemma chainBotCoeff_add_chainTopCoeff_le_two [P.IsNotG2] :
     P.chainBotCoeff i j + P.chainTopCoeff i j ≤ 2 := by
-  by_cases h : LinearIndependent R ![P.root i, P.root j]
-  swap; · simp [chainTopCoeff_of_not_linearIndependent, chainBotCoeff_of_not_linearIndependent, h]
   rw [← Int.ofNat_le, Nat.cast_add, Nat.cast_ofNat,
-    chainBotCoeff_add_chainTopCoeff_eq_pairingIn_chainTopIdx h]
+    chainBotCoeff_add_chainTopCoeff_eq_pairingIn_chainTopIdx]
   have := IsNotG2.pairingIn_mem_zero_one_two (P := P) (P.chainTopIdx i j) i
   aesop
 
@@ -160,11 +158,10 @@ example (P : RootPairing ι R M N) [P.EmbeddedG2] :
 -/
 lemma pairingIn_le_zero_of_root_add_mem [P.IsNotG2] (h : P.root i + P.root j ∈ range P.root) :
     P.pairingIn ℤ i j ≤ 0 := by
-  have aux₁ := P.linearIndependent_of_add_mem_range_root' <| add_comm (P.root i) (P.root j) ▸ h
   have aux₂ := P.chainBotCoeff_add_chainTopCoeff_le_two j i
-  have aux₃ : 1 ≤ P.chainTopCoeff j i := by
-    rwa [← root_add_nsmul_mem_range_iff_le_chainTopCoeff aux₁, one_smul]
-  rw [← P.chainBotCoeff_sub_chainTopCoeff aux₁]
+  have aux₃ : 1 ≤ P.chainTopCoeff j i :=
+    P.one_le_chainTopCoeff_of_root_add_mem <| add_comm (P.root i) (P.root j) ▸ h
+  rw [← P.chainBotCoeff_sub_chainTopCoeff]
   lia
 
 lemma zero_le_pairingIn_of_root_sub_mem [P.IsNotG2] (h : P.root i - P.root j ∈ range P.root) :
@@ -181,11 +178,10 @@ To see that this lemma fails for `𝔤₂`, let `α` (short) and `β` (long) be 
 lemma chainBotCoeff_if_one_zero [P.IsNotG2] (h : P.root i + P.root j ∈ range P.root) :
     P.chainBotCoeff i j = if P.pairingIn ℤ i j = 0 then 1 else 0 := by
   have : Module.IsReflexive R M := .of_isPerfPair P.toLinearMap
-  have aux₁ := P.linearIndependent_of_add_mem_range_root' h
   have aux₂ := P.chainBotCoeff_add_chainTopCoeff_le_two i j
   have aux₃ : 1 ≤ P.chainTopCoeff i j := P.one_le_chainTopCoeff_of_root_add_mem h
   rcases eq_or_ne (P.chainBotCoeff i j) (P.chainTopCoeff i j) with aux₄ | aux₄ <;>
-  simp_rw [P.pairingIn_eq_zero_iff (i := i) (j := j), ← P.chainBotCoeff_sub_chainTopCoeff aux₁,
+  simp_rw [P.pairingIn_eq_zero_iff (i := i) (j := j), ← P.chainBotCoeff_sub_chainTopCoeff,
     sub_eq_zero, Nat.cast_inj, aux₄, reduceIte] <;>
   lia
 

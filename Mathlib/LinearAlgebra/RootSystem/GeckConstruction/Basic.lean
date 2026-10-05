@@ -208,18 +208,22 @@ omit [Finite ι] [IsDomain R] [CharZero R] in
     h i ∈ cartanSubalgebra b :=
   Submodule.subset_span <| mem_range_self i
 
+omit [Finite ι] [IsDomain R] [CharZero R] in
 @[simp] lemma h_mem_cartanSubalgebra' [Fintype ι] [DecidableEq ι] (i : b.support) (hi) :
     ⟨h i, hi⟩ ∈ cartanSubalgebra' b := by
   simp [cartanSubalgebra']
 
+omit [Finite ι] [IsDomain R] [CharZero R] in
 lemma h_mem_lieAlgebra [Fintype ι] [DecidableEq ι] (i : b.support) :
     h i ∈ lieAlgebra b :=
   LieSubalgebra.subset_lieSpan <| by simp
 
+omit [Finite ι] [IsDomain R] [CharZero R] in
 lemma e_mem_lieAlgebra [Fintype ι] [DecidableEq ι] (i : b.support) :
     e i ∈ lieAlgebra b :=
   LieSubalgebra.subset_lieSpan <| by simp
 
+omit [Finite ι] [IsDomain R] [CharZero R] in
 lemma f_mem_lieAlgebra [Fintype ι] [DecidableEq ι] (i : b.support) :
     f i ∈ lieAlgebra b :=
   LieSubalgebra.subset_lieSpan <| by simp
@@ -228,6 +232,7 @@ lemma f_mem_lieAlgebra [Fintype ι] [DecidableEq ι] (i : b.support) :
 def h' [Fintype ι] [DecidableEq ι] (i : b.support) : cartanSubalgebra' b :=
   ⟨⟨h i, h_mem_lieAlgebra i⟩, h_mem_cartanSubalgebra' i (h_mem_lieAlgebra i)⟩
 
+omit [Finite ι] [IsDomain R] [CharZero R] in
 variable (b) in
 @[simp]
 lemma span_range_h'_eq_top [Fintype ι] [DecidableEq ι] :
@@ -258,6 +263,7 @@ lemma ω_mul_h [Fintype ι] (i : b.support) :
   · simp only [ω, h, Matrix.mul_apply, Fintype.sum_sum_type, Matrix.fromBlocks_apply₂₂]
     aesop
 
+omit [Finite ι] [IsDomain R] [CharZero R] in
 lemma ω_mul_e [Fintype ι] (i : b.support) :
     ω b * e i = f i * ω b := by
   let := P.indexNeg
@@ -274,6 +280,7 @@ lemma ω_mul_e [Fintype ι] (i : b.support) :
     rw [Finset.sum_eq_single_of_mem (-k) (Finset.mem_univ _) (by aesop)]
     simp [neg_eq_iff_eq_neg, sub_eq_add_neg]
 
+omit [Finite ι] [IsDomain R] [CharZero R] in
 lemma ω_mul_f [Fintype ι] (i : b.support) :
     ω b * f i = e i * ω b := by
   classical
@@ -281,6 +288,7 @@ lemma ω_mul_f [Fintype ι] (i : b.support) :
   simp only [← mul_assoc, ω_mul_ω] at this
   simpa [mul_assoc, ω_mul_ω] using this.symm
 
+omit [Finite ι] [IsDomain R] [CharZero R] in
 lemma lie_e_f_mul_ω [Fintype ι] (i j : b.support) :
     ⁅e i, f j⁆ * ω b = -ω b * ⁅e j, f i⁆ := by
   calc ⁅e i, f j⁆ * ω b = e i * f j * ω b - f j * e i * ω b := by rw [Ring.lie_def, sub_mul]
@@ -312,6 +320,7 @@ lemma apply_inr_eq_zero_of_mem_span_range_u (j : ι) {x : b.support ⊕ ι → R
   | add u v _ _ hu hv => simp [hu, hv]
   | smul t u _ hu => simp [hu]
 
+omit [Finite ι] [IsDomain R] in
 lemma lie_e_lie_f_apply [Fintype ι] (i j : b.support) :
     ⁅e i, ⁅f i, u j⁆⁆ = |b.cartanMatrix i j| • u i := by
   ext (k | k)
@@ -338,16 +347,19 @@ instance : LieModule.IsTriangularizable R (cartanSubalgebra' b) (b.support ⊕ �
     span_range_h_le_range_diagonal <| by simpa using! hx
   simp
 
+omit [Finite ι] [IsDomain R] [CharZero R] in
 lemma cartanSubalgebra_le_lieAlgebra :
     cartanSubalgebra b ≤ lieAlgebra b := by
   rw [cartanSubalgebra, lieAlgebra, ← LieSubalgebra.toSubmodule_le_toSubmodule, Submodule.span_le]
   rintro - ⟨i, rfl⟩
   exact LieSubalgebra.subset_lieSpan <| Or.inl <| Or.inl <| mem_range_self i
 
+omit [Finite ι] [IsDomain R] [CharZero R] in
 lemma e_lie_u (i j : b.support) :
     ⁅e i, u j⁆ = |b.cartanMatrix i j| • v b i := by
   ext (k | k) <;> simp [e, Pi.single_apply]
 
+omit [Finite ι] [IsDomain R] in
 lemma e_lie_v_ne {i j : ι} {k : b.support} (h : P.root j = P.root k + P.root i) :
     ⁅e k, v b i⁆ = (P.chainBotCoeff k i + 1 : R) • v b j := by
   let := P.indexNeg
@@ -356,12 +368,14 @@ lemma e_lie_v_ne {i j : ι} {k : b.support} (h : P.root j = P.root k + P.root i)
     simp [e, h, -indexNeg_neg]
   · simp [e, ← h, Pi.single_apply]
 
+omit [Finite ι] [IsDomain R] in
 lemma f_lie_v_same (i : b.support) :
     ⁅f i, v b i⁆ = u i := by
   ext (j | j)
   · simp [f, Pi.single_apply]
   · simp [f, P.ne_zero j]
 
+omit [Finite ι] [IsDomain R] in
 lemma f_lie_v_ne {i j : ι} {k : b.support} (h : P.root i = P.root j + P.root k) :
     ⁅f k, v b i⁆ = (P.chainTopCoeff k i + 1 : R) • v b j := by
   ext (l | l)
@@ -392,6 +406,7 @@ variable (b) in
     simp only [← mul_assoc, ω_mul_ω, one_mul]
     simp [mul_assoc]
 
+omit [Finite ι] [IsDomain R] in
 lemma ωConj_mem_of_mem
     {x : Matrix (b.support ⊕ ι) (b.support ⊕ ι) R} (hx : x ∈ lieAlgebra b) :
     ωConj b x ∈ lieAlgebra b := by
@@ -421,10 +436,12 @@ def ωConjLieSubmodule :
     suffices ⁅A', ω b *ᵥ x⁆ ∈ N by simpa [A', mul_assoc] using this
     exact LieSubmodule.lie_mem _ hx
 
+omit [Finite ι] [IsDomain R] in
 @[simp] lemma mem_ωConjLieSubmodule_iff {x : b.support ⊕ ι → R} :
     x ∈ ωConjLieSubmodule N ↔ (ω b) *ᵥ x ∈ N :=
   Iff.rfl
 
+omit [Finite ι] [IsDomain R] in
 @[simp] lemma ωConjLieSubmodule_eq_top_iff : ωConjLieSubmodule N = ⊤ ↔ N = ⊤ := by
   rw [← LieSubmodule.toSubmodule_eq_top]
   let e : Submodule R (b.support ⊕ ι → R) ≃o Submodule R (b.support ⊕ ι → R) :=

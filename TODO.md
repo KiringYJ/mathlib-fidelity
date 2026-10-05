@@ -262,11 +262,39 @@ operation.
   together with a chosen complement supplied by the caller.  Migrate the subspace-complement, dual
   extension, Maschke, and continuous-inverse consumers.
 
-- [ ] **Bundle admissible root pairs for root-chain data.**
-  `RootPairing.chainTopCoeff`, `chainBotCoeff`, `chainTopIdx`, and `chainBotIdx` in
-  `Mathlib/LinearAlgebra/RootSystem/Chain.lean:110`, `:120`, `:366`, and `:377` return zero or the
-  input index when the two roots are not linearly independent.  Take the independence proof once in
-  a bundled admissible pair.
+- [x] **Bundle admissible root pairs for root-chain data.**
+  `RootPairing.chainTopCoeff i j` and `chainBotCoeff i j` are the largest natural numbers `p` and
+  `q` such that `β + p • α` and `β - q • α` are roots, for `α = P.root i` and `β = P.root j`.  Only
+  finitely many roots lie on the line through `β` in the direction of `α`
+  (`finite_setOfPred_root_add_zsmul_mem`), so this extremal specification determines a value for
+  every pair of roots, and linear independence, which the item proposed to bundle, is not the
+  domain.  For linearly independent roots these are the ends of the unbroken `α`-chain through `β`
+  (`root_add_zsmul_mem_range_iff`), and independence remains a hypothesis only of the interval
+  statements.  The former definitions chose the ends of that chain under independence and returned
+  `0` otherwise, and `chainTopIdx` and `chainBotIdx` returned `j`: for every root, `α - 2 • α = -α`
+  is a root, but `chainBotCoeff i i` was `0`.  The lemmas stating these values,
+  `chainTopCoeff_of_not_linearIndependent` and `chainBotCoeff_of_not_linearIndependent`, are
+  removed.  `chainBotCoeff_sub_chainTopCoeff`, which gives `q - p = ⟨β, α^∨⟩` through the
+  reflection in `α`, `chainBotCoeff_of_add`, `chainTopCoeff_of_sub`, `chainTopCoeff_of_add`, the
+  integer characterizations `coe_chainTopCoeff_eq_sSup` and `coe_chainBotCoeff_eq_sSup`, and
+  `chainBotCoeff_add_chainTopCoeff_eq_pairingIn_chainTopIdx` no longer assume independence, and
+  `one_le_chainTopCoeff_of_root_add_mem` and `one_le_chainBotCoeff_of_root_add_mem` no longer assume
+  a reduced pairing.  `chainTopIdx` and `chainBotIdx` are the indices of the roots `β + p • α` and
+  `β - q • α`, unique since `P.root` is injective.  `chainBotCoeff_eq_zero_iff` and
+  `chainTopCoeff_eq_zero_iff` take the independence under which `q = 0` and `p = 0` mean that
+  `β - α` and `β + α` are not roots, and `Base.chainBotCoeff_eq_zero` takes `i ≠ j`.  Several Geck
+  construction lemmas lost hypotheses that only the former definitions used.  Tests cover the
+  removed names, a root and itself, the reflection identity, the unbroken chain, and the top of the
+  chain.
+
+- [ ] **Require a nonzero direction for Lie-algebra root chains.**
+  `LieModule.chainTopCoeff α β` and `chainBotCoeff` in `Mathlib/Algebra/Lie/Weights/Chain.lean:263`
+  are the largest `n` such that `i • α + β` is a weight for every `i ≤ n`, but return `0` for
+  `α = 0`, where every `n` qualifies.  `chainTop` and `chainBot` (`:340`, `:345`) and
+  `LieAlgebra.IsKilling.chainLength` (`Mathlib/Algebra/Lie/Weights/RootSystem.lean:70`) inherit the
+  value, and `chainTopCoeff_zero`, `chainBotCoeff_zero`, `chainTop_zero`, `chainBot_zero`, and
+  `chainLength_of_isZero` state it.  Take `α ≠ 0` (a nonzero root for `chainLength`) and migrate the
+  root-system construction, whose lemmas already split on `α = 0`.
 
 - [x] **Require `ExcenterExists` for excenter geometry.**
   `Affine.Simplex.exsphere`, `excenter`, `exradius`, and `touchpoint` take
