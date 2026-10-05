@@ -18,7 +18,8 @@ section integrals give the values that the former definitions replaced by zero, 
 almost-everywhere lemmas and `MeasureTheory.Measure.AbsolutelyContinuous.compProd_left` hold on the
 domains. The instances that make the products s-finite need s-finite inputs. A conditional kernel
 carries the domain of its composition-product, and statements that held only through the fallback,
-such as the s-finiteness of every conditional kernel of a nonzero measure, are removed.
+such as the s-finiteness of every conditional kernel of a nonzero measure, are removed. A
+deterministic kernel is s-finite, by a proof from its defining equation.
 -/
 
 open MeasureTheory Measure Set
@@ -169,16 +170,6 @@ Hint: Type class instance resolution failures can be inspected with the `set_opt
 #guard_msgs in
 example (μ : Measure α) (κ : Kernel α β) [IsSFiniteKernel κ] : SFinite (μ ⊗ₘ κ) := inferInstance
 
--- A deterministic kernel no longer gets s-finiteness from the former zero value.
-/--
-error: failed to synthesize instance of type class
-  IsSFiniteKernel κ
-
-Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
--/
-#guard_msgs in
-example (κ : Kernel α β) [IsDeterministic κ] : IsSFiniteKernel κ := inferInstance
-
 /-! ### Routine evidence is found -/
 
 example (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel (α × β) γ) [IsSFiniteKernel η] :
@@ -283,3 +274,12 @@ example (ρ : Measure (α × β)) (κ : Kernel α β) [ρ.IsCondKernel κ] : ρ.
   ρ.disintegrate κ
 
 example (κ : Kernel α β) [IsDeterministic κ] : κ.HasParallelComp κ := inferInstance
+
+-- A deterministic kernel is s-finite: each of its values is a zero-one measure, possibly zero, or
+-- `∞` times a zero-one probability measure.
+example (κ : Kernel α β) [IsDeterministic κ] : IsSFiniteKernel κ := inferInstance
+
+example (κ : Kernel α β) [IsDeterministic κ] (a : α) {s t : Set β} (hs : MeasurableSet s)
+    (ht : MeasurableSet t) :
+    κ a (s ∩ t) = κ a s * κ a t :=
+  Kernel.IsDeterministic.measure_inter_eq_mul κ a hs ht

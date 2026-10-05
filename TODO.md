@@ -1032,15 +1032,18 @@ operation.
   `IsCondKernel.isSFiniteKernel`, proved from the fallback, is removed because it is false: the
   kernel that is counting measure at `0` and `dirac 0` elsewhere is a conditional kernel of a
   nonzero measure and is not s-finite (`Counterexamples/KernelCompProd.lean`).  `IsDeterministic κ`
-  now carries `κ.HasParallelComp κ`, and the instance that derived `IsSFiniteKernel κ` from it
-  through the fallback is removed; its consumers assume Markov kernels.  `partialTraj κ` and
-  `lmarginalPartialTraj κ` take `∀ n, IsSFiniteKernel (κ n)`, a sufficient condition recorded below.
-  Lemmas that held for arbitrary inputs only through the zero value assume s-finite inputs or the
-  domain classes.  Lemmas that need only the section integrals hold on the domains, such as
-  `compProd_apply`, `compProd_apply_prod`, `compProd_congr`, `compProd_eq_zero_iff`,
-  `Kernel.fst_compProd`, `Measure.snd_compProd`, `parallelComp_comp_copy`, the almost-everywhere
-  lemmas, and `AbsolutelyContinuous.compProd_left` and `_right`, since a section integral vanishes
-  exactly when the measures of the sections vanish almost everywhere
+  now carries `κ.HasParallelComp κ`, and its s-finiteness, formerly derived through the fallback, is
+  proved from the defining equation: on rectangles it gives `κ a (s ∩ t) = κ a s * κ a t`
+  (`IsDeterministic.measure_inter_eq_mul`), so every value is a zero-one measure, possibly zero, or
+  `∞` times a zero-one probability measure, and the kernel is the sum of the finite kernel
+  `s ↦ min (κ a s) 1` and countably many copies of it restricted to the points of infinite total
+  mass.  `partialTraj κ` and `lmarginalPartialTraj κ` take `∀ n, IsSFiniteKernel (κ n)`, a
+  sufficient condition recorded below.  Lemmas that held for arbitrary inputs only through the zero
+  value assume s-finite inputs or the domain classes.  Lemmas that need only the section integrals
+  hold on the domains, such as `compProd_apply`, `compProd_apply_prod`, `compProd_congr`,
+  `compProd_eq_zero_iff`, `Kernel.fst_compProd`, `Measure.snd_compProd`, `parallelComp_comp_copy`,
+  the almost-everywhere lemmas, and `AbsolutelyContinuous.compProd_left` and `_right`, since a
+  section integral vanishes exactly when the measures of the sections vanish almost everywhere
   (`HasCompProd.lintegral_eq_zero_iff`).  `Measure.fst_compProd` and the absolute-continuity and
   mutual-singularity criteria for finite kernels no longer assume `SFinite μ`.  Staton, *Commutative
   semantics for probabilistic programming* (ESOP 2017), Lemma 3, composes s-finite kernels and
