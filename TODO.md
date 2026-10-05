@@ -672,10 +672,36 @@ operation.
   `Mathlib/Analysis/Distribution/ContDiffMapSupportedIn.lean:379` return zero when the requested
   regularity inequality fails.  Put the inequality in the constructor and automate its proof.
 
-- [ ] **Require a dense domain for `LinearPMap.adjoint`.**
-  `Mathlib/Analysis/InnerProductSpace/LinearPMap.lean:152` returns a partial operator, but its
-  `toFun` is zero when the original domain is not dense.  The output partiality does not encode this
-  missing construction hypothesis; use dense-domain evidence or the adjoint relation.
+- [x] **Require a dense domain for `LinearPMap.adjoint`.**
+  `LinearPMap.adjoint T hT` takes `hT : Dense (T.domain : Set E)`, the exact domain of a
+  single-valued adjoint: without density the values `⟪y, T x⟫` determine `T† y` only up to the
+  orthogonal complement of the domain, and the operator defined only at zero on `𝕜` has both the
+  identity and zero as formal adjoints on its adjoint domain.  The former definition returned the
+  zero map on `T.adjointDomain` for an operator whose domain is not dense
+  (`adjoint_apply_of_not_dense`, removed), and the instance `Star (E →ₗ.[𝕜] E)` took that adjoint of
+  every operator; `IsSelfAdjoint.dense_domain` derived density from the junk value.  The instance is
+  removed, and `LinearPMap.IsSelfAdjoint A` states that `A` has dense domain and is its own adjoint,
+  so `dense_domain`, `adjoint_eq`, and `isClosed` follow from it.  The scoped notation `T†` takes
+  the density proof from the local hypotheses and prints the adjoint.  The continuous extension
+  `adjointDomainMkCLMExtend` used in the construction also takes the density proof; it is built with
+  `ContinuousLinearMap.extend`, whose fallback is recorded below.  The adjoint domain is still
+  defined for every `T`, and `mem_adjointDomain_iff` and `mem_adjointDomain_of_exists` replace the
+  lemmas `mem_adjoint_domain_iff` and `mem_adjoint_domain_of_exists` stated through `T†.domain`.
+  Tests cover the removed names, the failure without density, the missing `Star` instance, the
+  notation, self-adjointness of the identity, and the operator defined only at zero.
+
+- [ ] **Require dense uniformly inducing embeddings for `ContinuousLinearMap.extend`.**
+  `ContinuousLinearMap.extend f e` in
+  `Mathlib/Topology/Algebra/Module/ContinuousLinearMap/Extend.lean:29` is the continuous extension
+  of `f` along `e` when `e` has dense range and is uniformly inducing, and the zero map otherwise.
+  Take that evidence at the boundary, as `LinearPMap.adjointDomainMkCLMExtend` does, migrate the
+  consumers, and remove the zero branch.
+
+- [ ] **Make the closure of a partial operator require closability.**
+  `LinearPMap.closure` in `Mathlib/Topology/Algebra/Module/LinearPMap.lean:94` is the closure of a
+  closable operator and the operator itself otherwise (`closure_def'`), although a nonclosable
+  operator has no closure: the closure of its graph is not a graph.  Take `IsClosable` evidence and
+  remove `closure_def'`.
 
 - [ ] **Give completion extension its full existence and uniqueness contract.**
   `Mathlib/Topology/UniformSpace/Completion.lean:224` evaluates at an arbitrarily selected point
