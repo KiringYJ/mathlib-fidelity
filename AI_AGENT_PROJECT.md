@@ -227,6 +227,21 @@ When a style tool traverses transitive imports, distinguish errors introduced
 by the current diff from pre-existing repository debt. Fix in-scope new errors
 and report inherited failures accurately without expanding the refactor.
 
+## Remaining Work
+
+`TODO.md` is the fork's backlog: it keeps completed migrations as records and
+unresolved items as candidates under its fidelity gate. Before reporting a task
+complete, resolve each remaining item within the task or record it in
+`TODO.md`; never leave one only in a final report or conversation. Remaining
+items include open mathematical questions, hypotheses stronger than necessary,
+deferred instances or API, unverified claims, and deferred reviewer
+suggestions. An entry names the affected files and declarations, states the
+obligation precisely, and records any known paper proof, counterexample, or
+source. Before recording a question as open, check whether a short argument
+settles it. A suggestion declined for a stated reason is a decision, not
+remaining work; give the reason in the report. The final report points each
+remaining item to the commit that resolved it or to its `TODO.md` entry.
+
 ## Architecture
 
 - `Mathlib/` contains library modules.
@@ -278,6 +293,9 @@ they remain applicable to the affected area.
 - `FORK_DESIGN.md`: authoritative design contract: purpose, design rules,
   contribution and intake policy, and deferred foundational migration plans.
 - `UPSTREAMS.md`: canonical source-repository and provenance registry.
+- `TODO.md`: backlog of fidelity and API-hygiene work, with completed
+  migrations kept as records and unresolved items as candidates under its
+  fidelity gate.
 - `.github/CONTRIBUTING.md`: contribution requirements for pull requests to
   this fork and the separate upstream boundary.
 - `.github/PULL_REQUEST_TEMPLATE.md`: fork-specific submission prompts,
