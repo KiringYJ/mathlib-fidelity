@@ -812,11 +812,16 @@ operation.
   Take that evidence at the boundary, as `LinearPMap.adjointDomainMkCLMExtend` does, migrate the
   consumers, and remove the zero branch.
 
-- [ ] **Make the closure of a partial operator require closability.**
-  `LinearPMap.closure` in `Mathlib/Topology/Algebra/Module/LinearPMap.lean:94` is the closure of a
-  closable operator and the operator itself otherwise (`closure_def'`), although a nonclosable
-  operator has no closure: the closure of its graph is not a graph.  Take `IsClosable` evidence and
-  remove `closure_def'`.
+- [x] **Make the closure of a partial operator require closability.**
+  `LinearPMap.closure f hf` takes `hf : f.IsClosable` and is the operator whose graph is the
+  closure of the graph of `f`, unique by `IsClosable.existsUnique`.  The former definition returned
+  `f` itself for an operator that is not closable (`closure_def'`, removed with `closure_def`,
+  which stated the chosen closure), although the closure of its graph is not a graph, and
+  `le_closure` and `closureHasCore` held for every operator through that value; both take the
+  closability.  `HasCore f S` states that the restriction of `f` to `S` is closable and that its
+  closure is `f`, and the inverse lemmas take the closability of `f` in their statements.  Tests
+  cover the removed name, the missing evidence, a closed extension, a closed operator, and the
+  core.
 
 - [ ] **Give completion extension its full existence and uniqueness contract.**
   `Mathlib/Topology/UniformSpace/Completion.lean:224` evaluates at an arbitrarily selected point
