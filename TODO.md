@@ -352,10 +352,25 @@ operation.
   input to a proof-carrying greatest-witness operation, migrate those consumers, and keep the
   defaulting recursion private unless literature supports this exact zero-sentinel convention.
 
-- [ ] **Require eventual constancy for monotone-sequence limits.**
-  `monotonicSequenceLimitIndex` and `monotonicSequenceLimit` in
-  `Mathlib/Order/OrderIsoNat.lean:273` and `:278` assign a junk index/value to a monotone sequence
-  that never stabilizes.  Take eventual constancy, with well-foundedness used only to synthesize it.
+- [x] **Require eventual constancy for monotone-sequence limits.**
+  `monotonicSequenceLimitIndex a h` and `monotonicSequenceLimit a h` take
+  `h : ∃ n, ∀ m, n ≤ m → a n = a m`, which is the exact domain: the index is the least `n` from
+  which `a` is constant (`Nat.find`), and a sequence that is not eventually constant has no such
+  `n`.  The former `sInf` of the empty set made the index `0` and the limit `a 0` for every sequence
+  that is not eventually constant, such as the identity of `ℕ`.  Well-foundedness now only supplies
+  the evidence (`WellFoundedGT.monotone_chain_condition`), so `le_monotonicSequenceLimit` and
+  `iSup_eq_monotonicSequenceLimit` and `ciSup_eq_monotonicSequenceLimit` (formerly prefixed by
+  `WellFoundedGT.`) hold for every eventually constant sequence, the last without a boundedness
+  hypothesis; `monotonicSequenceLimit_eq` and `monotonicSequenceLimitIndex_le` characterize the
+  index.  The only consumer, the index of a generalized eigenspace, had the same fallback,
+  documented as "not meaningful" off its domain: `Module.End.maxUnifEigenspaceIndex f μ h` and
+  `maxGenEigenspaceIndex f μ h` take `h : ∃ k : ℕ, f.genEigenspace μ k = f.genEigenspace μ ⊤` and
+  are the least such `k`, `exists_genEigenspace_eq_top` supplies `h` for a Noetherian module, and
+  `genEigenspace_top_eq_maxUnifEigenspaceIndex` and `maxGenEigenspace_eq` hold for every `h`.
+  `genEigenspace_finrank_eq_top` gives the finite-dimensional bound directly, and the Lie-algebra
+  consumers obtain their exponents from `exists_genEigenspace_eq_top` or use the maximal
+  generalized eigenspace itself.  Tests cover the removed names, the identity of `ℕ`, the limit and
+  index of an eventually constant sequence, the well-founded case, and the eigenspace index.
 
 - [ ] **Put fundamental circuits and cocircuits on their admissible data.**
   `Matroid.fundCircuit` and `Matroid.fundCocircuit` in

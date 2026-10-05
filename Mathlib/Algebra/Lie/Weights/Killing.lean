@@ -333,8 +333,6 @@ lemma isSemisimple_ad_of_mem_isCartanSubalgebra {x : L} (hx : x ∈ H) :
   have aux {α : H → K} {y : L} (hy : y ∈ rootSpace H α) : S y = α x' • y := by
     replace hy : y ∈ (ad K L x).maxGenEigenspace (α x') :=
       (genWeightSpace_le_genWeightSpaceOf L x' α) hy
-    rw [maxGenEigenspace_eq] at hy
-    set k := maxGenEigenspaceIndex (ad K L x) (α x')
     rw [apply_eq_of_mem_of_comm_of_isFinitelySemisimple_of_isNil hy hS₀ hS.isFinitelySemisimple hN]
   /- So `S` obeys the derivation axiom if we restrict to root spaces. -/
   have h_der (y z : L) (α β : H → K) (hy : y ∈ rootSpace H α) (hz : z ∈ rootSpace H β) :
