@@ -164,16 +164,13 @@ instance : MonoidalCategory SFinKer.{u} where
       exact measurable_measure_prodMk_left (by measurability)
   pentagon W X Y Z := by
     ext : 1; dsimp
-    simp only [Kernel.id]
-    repeat rw [Kernel.deterministic_parallelComp_deterministic (by fun_prop) (by fun_prop)]
-    simp [Kernel.deterministic_comp_deterministic]
+    simp only [Kernel.id, Kernel.deterministic_parallelComp_deterministic,
+      Kernel.deterministic_comp_deterministic]
     rfl
   triangle X Y := by
     ext : 1; dsimp
-    simp only [Kernel.id]
-    repeat rw [Kernel.deterministic_map (by fun_prop) (by fun_prop)]
-    repeat rw [Kernel.deterministic_parallelComp_deterministic (by fun_prop) (by fun_prop)]
-    simp [Kernel.deterministic_comp_deterministic]
+    simp only [Kernel.id, Kernel.deterministic_map, Kernel.deterministic_parallelComp_deterministic,
+      Kernel.deterministic_comp_deterministic]
     rfl
 
 @[simps (attr := scoped simp) -isSimp]
@@ -191,15 +188,13 @@ instance : SymmetricCategory SFinKer.{u} where
     exact Kernel.swap_parallelComp
   hexagon_forward X Y Z := by
     ext : 1; dsimp
-    simp only [Kernel.id, Kernel.swap]
-    repeat rw [Kernel.deterministic_parallelComp_deterministic]
-    repeat rw [Kernel.deterministic_comp_deterministic]
+    simp only [Kernel.id, Kernel.swap, Kernel.deterministic_parallelComp_deterministic,
+      Kernel.deterministic_comp_deterministic]
     rfl
   hexagon_reverse X Y Z := by
     ext : 1; dsimp
-    simp only [Kernel.id, Kernel.swap]
-    repeat rw [Kernel.deterministic_parallelComp_deterministic]
-    repeat rw [Kernel.deterministic_comp_deterministic]
+    simp only [Kernel.id, Kernel.swap, Kernel.deterministic_parallelComp_deterministic,
+      Kernel.deterministic_comp_deterministic]
     rfl
   symmetry X Y := by
     ext : 1; simp
@@ -210,15 +205,15 @@ instance {X : SFinKer} : ComonObj X where
   comul := ⟨Kernel.copy X, by rw [Kernel.copy]; infer_instance⟩
   counit_comul := by
     ext : 1; dsimp
-    simp only [Kernel.discard, Kernel.copy, Kernel.id]
-    rw [Kernel.deterministic_parallelComp_deterministic,
-      Kernel.deterministic_comp_deterministic, Kernel.deterministic_map measurable_id (by fun_prop)]
+    simp only [Kernel.discard, Kernel.copy, Kernel.id,
+      Kernel.deterministic_parallelComp_deterministic, Kernel.deterministic_comp_deterministic,
+      Kernel.deterministic_map]
     rfl
   comul_counit := by
     ext : 1; dsimp
-    simp only [Kernel.discard, Kernel.copy, Kernel.id]
-    rw [Kernel.deterministic_parallelComp_deterministic,
-      Kernel.deterministic_comp_deterministic, Kernel.deterministic_map measurable_id (by fun_prop)]
+    simp only [Kernel.discard, Kernel.copy, Kernel.id,
+      Kernel.deterministic_parallelComp_deterministic, Kernel.deterministic_comp_deterministic,
+      Kernel.deterministic_map]
     rfl
   comul_assoc := by
     ext : 1; dsimp
@@ -230,9 +225,8 @@ instance : CopyDiscardCategory SFinKer.{u} where
   isCommComonObj X := ⟨by ext : 1; dsimp; exact Kernel.swap_copy⟩
   copy_tensor X Y := by
     ext : 1; dsimp [MonoidalCategory.tensorμ]
-    simp only [Kernel.copy, Kernel.id, Kernel.swap]
-    repeat rw [Kernel.deterministic_parallelComp_deterministic]
-    repeat rw [Kernel.deterministic_comp_deterministic]
+    simp only [Kernel.copy, Kernel.id, Kernel.swap, Kernel.deterministic_parallelComp_deterministic,
+      Kernel.deterministic_comp_deterministic]
     rfl
   discard_tensor X Y := by
     ext : 1; dsimp

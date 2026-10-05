@@ -95,6 +95,7 @@ instance [Deterministic κ] : Deterministic κ.hom where
   hom_comul := WideSubcategory.hom_ext_iff.mp <| Deterministic.copy_natural κ
 
 instance [Deterministic κ] : IsDeterministic κ.hom.hom where
+  hasParallelComp_self := inferInstance
   parallelComp_self_comp_copy' := by
     have := Deterministic.copy_natural κ.hom
     rw [SFinKer.Hom.ext_iff] at this

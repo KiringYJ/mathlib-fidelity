@@ -114,7 +114,7 @@ lemma mem_condDistrib_of_measure_eq_compProd (hX : AEMeasurable X μ) (hY : AEMe
     [IsFiniteKernel η] (hη : μ.map (fun x => (X x, Y x)) = μ.map X ⊗ₘ η) :
     η ∈ condDistrib Y X μ := by
   have : (μ.map (fun x => (X x, Y x)) (hX.prodMk hY)).IsCondKernel η :=
-    ⟨by rw [Measure.fst_map_prodMk₀ hX hY, ← hη]⟩
+    ⟨inferInstance, by rw [Measure.fst_map_prodMk₀ hX hY, ← hη]⟩
   exact (mem_condDistrib_iff_mem_condKernel _).2 Measure.IsCondKernel.mem_condKernel
 
 /-- A finite kernel `η` represents `condDistrib Y X μ` if and only if

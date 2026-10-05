@@ -196,10 +196,15 @@ theorem partialTraj_const_restrict₂ {a b : ℕ} :
     · ext1 x₀
       have : (restrict₂ (Ioc_subset_Iic_self (a := a))) ∘ (IicProdIoc (X := X) n (n + 1)) =
           (IocProdIoc a n (n + 1)) ∘ (Prod.map (restrict₂ Ioc_subset_Iic_self) id) := rfl
-      rw [const_apply, partialTraj_succ_of_le (by lia), Kernel.map_const, prod_const_comp, id_comp,
-        ← map_comp_right, Kernel.map_congr _ this, map_comp_right, ← map_prod_map, hind,
-        Kernel.map_id, map_apply]
-      any_goals fun_prop
+      rw [const_apply, partialTraj_succ_of_le (by lia)]
+      simp only [Kernel.map_const]
+      rw [prod_const_comp]
+      simp only [id_comp]
+      rw [← map_comp_right _ (by fun_prop) (by fun_prop), Kernel.map_congr _ this (by fun_prop),
+        map_comp_right _ (by fun_prop) (by fun_prop),
+        ← map_prod_map _ _ (by fun_prop) (by fun_prop)]
+      simp only [hind, Kernel.map_id]
+      rw [map_apply _ _ measurable_IocProdIoc]
       have hp := congrArg
         (Measure.mapₗ (IocProdIoc a n (n + 1)) measurable_IocProdIoc)
         (Kernel.prod_apply
@@ -266,7 +271,8 @@ is constant equal to `μ i` for all `i`, then up to an equivalence
 theorem partialTraj_const {a b : ℕ} :
     partialTraj (fun n ↦ const _ (μ (n + 1))) a b =
       (Kernel.id ×ₖ (const _ (Measure.pi (fun i : Ioc a b ↦ μ i)))).map (IicProdIoc a b) := by
-  rw [partialTraj_eq_prod, partialTraj_const_restrict₂]
+  rw [partialTraj_eq_prod]
+  simp only [partialTraj_const_restrict₂]
 
 namespace Measure
 
@@ -298,12 +304,6 @@ theorem isProjectiveLimit_infinitePiNat :
     exact (Measure.compProd_eq_comp_prod
       (α := Π i : Iic 0, X i) (β := Π i : Ioc 0 n, X i)
       ν (const (Π i : Iic 0, X i) ρ)).symm
-  have hcompProdMap : (ξ ∘ₘ ν).map (IicProdIoc 0 n) =
-      (ν ⊗ₘ const (Π i : Iic 0, X i) ρ).map (IicProdIoc 0 n) := by
-    exact congrArg
-      (fun m : Measure ((Π i : Iic 0, X i) × (Π i : Ioc 0 n, X i)) ↦
-        m.map (IicProdIoc 0 n) measurable_IicProdIoc.aemeasurable)
-      hcompProd
   have hprod : ν ⊗ₘ const (Π i : Iic 0, X i) ρ = ν.prod ρ := by
     rw [Measure.compProd_const, Measure.prod_eq_productBySections ν ρ]
   have hprodMap : (ν ⊗ₘ const (Π i : Iic 0, X i) ρ).map (IicProdIoc 0 n) =
@@ -324,7 +324,7 @@ theorem isProjectiveLimit_infinitePiNat :
     _ = η ∘ₘ ν := hpartial
     _ = (ξ ∘ₘ ν).map (IicProdIoc 0 n) :=
       (Measure.map_comp ν ξ measurable_IicProdIoc).symm
-    _ = (ν ⊗ₘ const (Π i : Iic 0, X i) ρ).map (IicProdIoc 0 n) := hcompProdMap
+    _ = (ν ⊗ₘ const (Π i : Iic 0, X i) ρ).map (IicProdIoc 0 n) := by rw [hcompProd]
     _ = (ν.prod ρ).map (IicProdIoc 0 n) := hprodMap
     _ = Measure.pi (fun i : Iic n ↦ μ i) := hpi
 

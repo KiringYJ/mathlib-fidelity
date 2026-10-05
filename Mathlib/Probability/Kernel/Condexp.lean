@@ -85,7 +85,7 @@ with `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`. Since two finite k
 unique. -/
 lemma exists_aeClass_condExpKernel (μ : Measure Ω) [IsFiniteMeasure μ] (hm : m ≤ mΩ) :
     ∃ c : @Kernel.AEClass Ω (ae (μ.trim hm)) Ω m mΩ, ∃ η : @Kernel Ω Ω m mΩ,
-      IsMarkovKernel η ∧
+      ∃ _ : IsMarkovKernel η,
         (μ.trim hm) ⊗ₘ η = @Measure.map Ω (Ω × Ω) mΩ (m.prod mΩ) Function.diag μ
           (aemeasurable_diag_of_le μ hm) ∧ η ∈ c := by
   rcases isEmpty_or_nonempty Ω with h | h

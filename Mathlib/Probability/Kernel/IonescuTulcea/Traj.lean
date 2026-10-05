@@ -604,13 +604,18 @@ theorem traj_eq_prod (a : ℕ) :
   rw [← map_comp_right]
   conv_lhs => enter [2]; change (IicProdIoc a b) ∘
     (Prod.map id (fun x i ↦ x ⟨i.1, Set.mem_Ioi.2 (mem_Ioc.1 i.2).1⟩))
-  · rw [map_comp_right, ← map_prod_map, ← map_comp_right]
+  · rw [map_comp_right, ← map_prod_map]
     · have hr :
           (fun (x : ∀ i : Set.Ioi a, X i) (i : Ioc a b) =>
             x ⟨i.1, Set.mem_Ioi.2 (mem_Ioc.1 i.2).1⟩) ∘
             (Set.Ioi a).domRestrict = (Ioc a b).restrict := rfl
-      have hmap := Kernel.map_congr (traj κ a) hr (by fun_prop)
-      have hprod := congrArg₂ (fun ξ ζ => ξ ×ₖ ζ) (map_id Kernel.id) hmap
+      have hmap : ((traj κ a).map (Set.Ioi a).domRestrict).map
+          (fun (x : ∀ i : Set.Ioi a, X i) (i : Ioc a b) =>
+            x ⟨i.1, Set.mem_Ioi.2 (mem_Ioc.1 i.2).1⟩) (by fun_prop) =
+          (traj κ a).map (Ioc a b).restrict := by
+        rw [← map_comp_right _ (by fun_prop) (by fun_prop)]
+        exact Kernel.map_congr (traj κ a) hr (by fun_prop)
+      have hprod := prod_congr (map_id Kernel.id) hmap
       have hout' := congrArg
         (fun ξ => ξ.map (IicProdIoc a b) measurable_IicProdIoc) hprod
       have hcomp : (restrict₂ (π := X) Ioc_subset_Iic_self) ∘ frestrictLe (π := X) b =
@@ -626,13 +631,13 @@ theorem traj_eq_prod (a : ℕ) :
             map_comp_right _ (by fun_prop) (by fun_prop)
           _ = (partialTraj κ a b).map (restrict₂ Ioc_subset_Iic_self) := by
             rw [traj_map_frestrictLe]
-      have hprod' := congrArg₂ (fun ξ ζ => ξ ×ₖ ζ) (rfl : Kernel.id = Kernel.id) hsecond
+      have hprod' := prod_congr (rfl : (Kernel.id : Kernel (Π i : Iic a, X i) _) = Kernel.id)
+        hsecond
       have hout'' := congrArg
         (fun ξ => ξ.map (IicProdIoc a b) measurable_IicProdIoc) hprod'
       exact hout'.trans (hout''.trans (partialTraj_eq_prod (κ := κ) a b).symm)
     · have hm : Measurable (IicProdIoc (X := X) a b) := measurable_IicProdIoc
       fun_prop
-    · fun_prop
 
 theorem traj_map_updateFinset {n : ℕ} (x : Π i : Iic n, X i) :
     (traj κ n x).map (updateFinset · (Iic n) x) = traj κ n x := by
@@ -736,7 +741,8 @@ lemma partialTraj_compProd_eq_map_traj {a b : ℕ} (hab : a ≤ b) {x₀ : Π n 
       (Prod.map id (fun x ↦ x (b + 1))) ∘ (fun x ↦ (frestrictLe b x, x)) := rfl
   rw [Measure.map_congr (Eventually.of_forall fun x => congrFun hf x) (by fun_prop),
     ← Measure.map_map (by fun_prop) (by fun_prop), ← partialTraj_compProd_traj hab,
-    ← Measure.compProd_map (by fun_prop), map_traj_succ_self]
+    ← Measure.compProd_map (by fun_prop)]
+  simp only [map_traj_succ_self]
 
 theorem integral_traj_partialTraj' {a b : ℕ} (hab : a ≤ b) {x₀ : Π i : Iic a, X i}
     {f : (Π i : Iic b, X i) → (Π n : ℕ, X n) → E}

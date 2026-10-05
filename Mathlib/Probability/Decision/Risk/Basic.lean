@@ -254,7 +254,7 @@ lemma bayesRisk_compProd_le_bayesRisk (ℓ : Θ → 𝓨 → ℝ≥0∞) (P : Ke
     bayesRisk ℓ (P ⊗ₖ η) π ≤ bayesRisk ℓ P π := by
   have : P = (Kernel.deterministic Prod.fst (by fun_prop)) ∘ₖ (P ⊗ₖ η) := by
     rw [Kernel.deterministic_comp_eq_map, ← Kernel.fst_eq, Kernel.fst_compProd]
-  nth_rw 2 [this]
+  conv_rhs => rw [this]
   exact bayesRisk_le_bayesRisk_comp _ _ _ _
 
 end Compositions

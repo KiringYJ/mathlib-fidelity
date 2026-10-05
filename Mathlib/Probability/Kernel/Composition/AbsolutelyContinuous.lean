@@ -41,10 +41,6 @@ variable {α β : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β}
 
 lemma MutuallySingular.compProd_of_right (μ ν : Measure α) (hκη : ∀ᵐ a ∂μ, κ a ⟂ₘ η a) :
     μ ⊗ₘ κ ⟂ₘ ν ⊗ₘ η := by
-  by_cases hμ : SFinite μ
-  swap; · rw [compProd_of_not_sfinite _ _ hμ]; simp
-  by_cases hν : SFinite ν
-  swap; · rw [compProd_of_not_sfinite _ _ hν]; simp
   let s := κ.mutuallySingularSet η
   have hs : MeasurableSet s := Kernel.measurableSet_mutuallySingularSet κ η
   symm
@@ -63,27 +59,29 @@ lemma MutuallySingular.compProd_of_right' (μ ν : Measure α) (hκη : ∀ᵐ a
   refine (MutuallySingular.compProd_of_right _ _ ?_).symm
   simp_rw [MutuallySingular.comm, hκη]
 
-lemma mutuallySingular_compProd_right_iff [SFinite μ] :
+lemma mutuallySingular_compProd_right_iff :
     μ ⊗ₘ κ ⟂ₘ μ ⊗ₘ η ↔ ∀ᵐ a ∂μ, κ a ⟂ₘ η a :=
   ⟨fun h ↦ mutuallySingular_of_mutuallySingular_compProd h AbsolutelyContinuous.rfl
     AbsolutelyContinuous.rfl, MutuallySingular.compProd_of_right _ _⟩
 
-lemma AbsolutelyContinuous.kernel_of_compProd [SFinite μ] (h : μ ⊗ₘ κ ≪ ν ⊗ₘ η) :
+lemma AbsolutelyContinuous.kernel_of_compProd (h : μ ⊗ₘ κ ≪ ν ⊗ₘ η) :
     ∀ᵐ a ∂μ, κ a ≪ η a := by
   suffices ∀ᵐ a ∂μ, κ.singularPart η a = 0 by
     filter_upwards [this] with a ha
     rwa [Kernel.singularPart_eq_zero_iff_absolutelyContinuous] at ha
-  rw [← κ.rnDeriv_add_singularPart η, compProd_add_right, AbsolutelyContinuous.add_left_iff] at h
+  have h_eq : μ ⊗ₘ κ = μ ⊗ₘ (η.withDensity (κ.rnDeriv η) + κ.singularPart η) := by
+    simp only [Kernel.rnDeriv_add_singularPart]
+  rw [h_eq, compProd_add_right, AbsolutelyContinuous.add_left_iff] at h
   have : μ ⊗ₘ κ.singularPart η ⟂ₘ ν ⊗ₘ η :=
     MutuallySingular.compProd_of_right μ ν (.of_forall <| Kernel.mutuallySingular_singularPart _ _)
   refine compProd_eq_zero_iff.mp ?_
   exact eq_zero_of_absolutelyContinuous_of_mutuallySingular h.2 this
 
-lemma absolutelyContinuous_compProd_iff' [SFinite μ] [SFinite ν] [∀ a, NeZero (κ a)] :
+lemma absolutelyContinuous_compProd_iff' [∀ a, NeZero (κ a)] :
     μ ⊗ₘ κ ≪ ν ⊗ₘ η ↔ μ ≪ ν ∧ ∀ᵐ a ∂μ, κ a ≪ η a :=
   ⟨fun h ↦ ⟨absolutelyContinuous_of_compProd h, h.kernel_of_compProd⟩, fun h ↦ h.1.compProd h.2⟩
 
-lemma absolutelyContinuous_compProd_right_iff [SFinite μ] :
+lemma absolutelyContinuous_compProd_right_iff :
     μ ⊗ₘ κ ≪ μ ⊗ₘ η ↔ ∀ᵐ a ∂μ, κ a ≪ η a :=
   ⟨AbsolutelyContinuous.kernel_of_compProd, AbsolutelyContinuous.compProd_right⟩
 

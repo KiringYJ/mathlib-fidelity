@@ -54,10 +54,17 @@ variable {α β : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β}
 
 namespace ProbabilityTheory
 
-/-- A kernel is deterministic if copying then applying the kernel to the two copies is the same
-as first applying the kernel then copying. -/
+/-- A kernel is deterministic if the parallel composition of the kernel with itself exists and
+copying then applying the kernel to the two copies is the same as first applying the kernel then
+copying. -/
 class IsDeterministic (κ : Kernel α β) : Prop where
-  parallelComp_self_comp_copy' : (κ ∥ₖ κ) ∘ₖ Kernel.copy α = Kernel.copy β ∘ₖ κ
+  /-- The parallel composition of the kernel with itself exists. -/
+  hasParallelComp_self : κ.HasParallelComp κ
+  parallelComp_self_comp_copy' :
+    haveI := hasParallelComp_self
+    (κ ∥ₖ κ) ∘ₖ Kernel.copy α = Kernel.copy β ∘ₖ κ
+
+attribute [instance] IsDeterministic.hasParallelComp_self
 
 namespace Kernel
 
@@ -66,6 +73,7 @@ lemma parallelComp_self_comp_copy {κ : Kernel α β} [IsDeterministic κ] :
   IsDeterministic.parallelComp_self_comp_copy'
 
 instance {f : α → β} (hf : Measurable f) : IsDeterministic (deterministic f hf) where
+  hasParallelComp_self := inferInstance
   parallelComp_self_comp_copy' := by
     simp_rw [parallelComp_comp_copy, deterministic_prod_deterministic, copy,
       deterministic_comp_deterministic, Function.comp_def, Function.diag_def]
@@ -93,7 +101,7 @@ lemma isDeterministic_iff_isZeroOneMeasure (κ : Kernel α β) [IsFiniteKernel �
       · exact Or.inr <| (ENNReal.mul_eq_left hκ (by simp)).mp this
     all_goals exact hs
   · intro _
-    refine ⟨?_⟩
+    refine ⟨inferInstance, ?_⟩
     ext : 1
     rw [parallelComp_comp_copy, prod_apply]
     refine Measure.productBySections_eq fun s t hs ht ↦ ?_
@@ -176,16 +184,5 @@ lemma comp_parallelComp_comp_copy {γ : Type*} [SigmaAlgebra γ] {κ : Kernel α
         rw [η.comp_apply' _ _ hs.compl]
     _ = 0 := by
       rw [measure_compl hs (by simp), measure_univ h₁, h₁, tsub_self]
-
-instance (κ : Kernel α β) [IsDeterministic κ] : IsSFiniteKernel κ := by
-  by_contra hκ
-  obtain ⟨a, ha⟩ : ∃ a, 0 < (κ a) univ := by
-    by_contra! h
-    let : IsFiniteKernel κ := ⟨⟨0, by simp, h⟩⟩
-    exact hκ inferInstance
-  have h := DFunLike.congr_fun (DFunLike.congr_fun κ.parallelComp_self_comp_copy a) (univ ×ˢ univ)
-  simp only [parallelComp_of_not_isSFiniteKernel_left κ hκ, zero_comp, zero_apply,
-    copy_comp_apply_prod κ a .univ .univ, inter_self] at h
-  exact ha.ne h
 
 end ProbabilityTheory.Kernel

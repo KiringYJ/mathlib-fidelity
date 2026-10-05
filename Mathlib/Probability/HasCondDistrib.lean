@@ -43,15 +43,19 @@ variable {Ω 𝓧 𝓨 𝓩 : Type*} {mΩ : SigmaAlgebra Ω}
   {P : Measure Ω} {X : Ω → 𝓧} {Y : Ω → 𝓨} {κ : Kernel 𝓧 𝓨}
 
 /-- Predicate stating that the kernel `κ` is a version of the conditional distribution of `Y` given
-`X` under the measure `P`: the law of `(X, Y)` is `(P.map X) ⊗ₘ κ`. Versions are determined only up
-to `P.map X`-null sets; `ProbabilityTheory.mem_condDistrib_iff_hasCondDistrib` identifies the
-finite versions with the finite representatives of the class `condDistrib Y X P`. -/
+`X` under the measure `P`: the composition-product `(P.map X) ⊗ₘ κ` exists and is the law of
+`(X, Y)`. Versions are determined only up to `P.map X`-null sets;
+`ProbabilityTheory.mem_condDistrib_iff_hasCondDistrib` identifies the finite versions with the
+finite representatives of the class `condDistrib Y X P`. -/
 @[fun_prop]
 structure HasCondDistrib (Y : Ω → 𝓨) (X : Ω → 𝓧) (κ : Kernel 𝓧 𝓨)
     (P : Measure Ω) : Prop where
   protected aemeasurable : AEMeasurable (fun ω ↦ (X ω, Y ω)) P := by fun_prop
-  protected map_eq : P.map (fun ω ↦ (X ω, Y ω)) aemeasurable =
-    P.map X aemeasurable.fst ⊗ₘ κ
+  /-- The composition-product of the law of `X` with `κ` exists. -/
+  protected hasCompProd : (P.map X aemeasurable.fst).HasCompProd κ := by infer_instance
+  protected map_eq :
+    haveI := hasCompProd
+    P.map (fun ω ↦ (X ω, Y ω)) aemeasurable = P.map X aemeasurable.fst ⊗ₘ κ
 
 attribute [fun_prop] HasCondDistrib.aemeasurable
 
@@ -63,13 +67,13 @@ lemma HasCondDistrib.aemeasurable_fst (h : HasCondDistrib Y X κ P) :
 lemma HasCondDistrib.aemeasurable_snd (h : HasCondDistrib Y X κ P) :
     AEMeasurable Y P := h.aemeasurable.snd
 
-lemma HasLaw.prodMk_of_hasCondDistrib {Q : Measure 𝓧}
+lemma HasLaw.prodMk_of_hasCondDistrib {Q : Measure 𝓧} [Q.HasCompProd κ]
     (h1 : HasLaw X Q P) (h2 : HasCondDistrib Y X κ P) :
     HasLaw (fun ω ↦ (X ω, Y ω)) (Q ⊗ₘ κ) P where
   aemeasurable := h2.aemeasurable
   map_eq := by simpa only [h1.map_eq] using h2.map_eq
 
-lemma HasCondDistrib.hasLaw_of_const [IsProbabilityMeasure P] {Q : Measure 𝓨} [SFinite Q]
+lemma HasCondDistrib.hasLaw_of_const [IsProbabilityMeasure P] {Q : Measure 𝓨}
     (h : HasCondDistrib Y X (Kernel.const 𝓧 Q) P) :
     HasLaw Y Q P where
   aemeasurable := h.aemeasurable_snd
@@ -87,7 +91,7 @@ variable [StandardBorelSpace 𝓨] [Nonempty 𝓨] [IsFiniteMeasure P]
 `condDistrib Y X P`. -/
 lemma mem_condDistrib_iff_hasCondDistrib (hXY : AEMeasurable (fun ω ↦ (X ω, Y ω)) P)
     [IsFiniteKernel κ] : κ ∈ condDistrib Y X P hXY ↔ HasCondDistrib Y X κ P :=
-  ⟨fun h ↦ ⟨hXY, (compProd_map_condDistrib hXY.fst hXY.snd h).symm⟩,
+  ⟨fun h ↦ ⟨hXY, inferInstance, (compProd_map_condDistrib hXY.fst hXY.snd h).symm⟩,
     fun h ↦ mem_condDistrib_of_measure_eq_compProd hXY.fst hXY.snd h.map_eq⟩
 
 /-- A finite conditional distribution of `Y` given `X` represents `condDistrib Y X P`. -/
@@ -133,6 +137,7 @@ lemma HasCondDistrib.snd {Y : Ω → 𝓨 × 𝓩} {κ : Kernel 𝓧 (𝓨 × �
   rw [Kernel.snd_eq]
   exact h.comp_left measurable_snd
 
+omit [SFinite P] in
 lemma HasCondDistrib.comp_right {f : 𝓩 → 𝓧}
     {hf : Measurable f} {Z : Ω → 𝓩} (h : HasCondDistrib Y Z (κ.comap f hf) P) :
     HasCondDistrib Y (f ∘ Z) κ P := by
@@ -162,6 +167,7 @@ lemma HasCondDistrib.comp_right {f : 𝓩 → 𝓧}
       _ = P.map (f ∘ Z) (h.aemeasurable_fst.comp_aemeasurable hf.aemeasurable) ⊗ₘ κ := by
         rw [Measure.map_map h.aemeasurable_fst hf.aemeasurable] }
 
+omit [SFinite P] in
 lemma HasCondDistrib.measurableEquiv_comp_right (h : HasCondDistrib Y X κ P) (f : 𝓧 ≃ᵐ 𝓩) :
     HasCondDistrib Y (f ∘ X) (κ.comap f.symm f.symm.measurable) P := by
   apply HasCondDistrib.comp_right (hf := f.measurable)
@@ -180,7 +186,7 @@ lemma HasCondDistrib.of_compProd {Z : Ω → 𝓩} {η : Kernel (𝓧 × 𝓨) �
   have hcomp := h.aemeasurable.comp_aemeasurable hassoc
   have hfun : (fun a ↦ ((X a, Y a), Z a)) =ᵐ[P]
       MeasurableEquiv.prodAssoc.symm ∘ fun a ↦ (X a, (Y a, Z a)) := ae_of_all _ fun _ ↦ rfl
-  refine ⟨hout, ?_⟩
+  refine ⟨hout, inferInstance, ?_⟩
   calc
     P.map (fun a ↦ ((X a, Y a), Z a)) hout =
         (P.map (fun a ↦ (X a, (Y a, Z a))) h.aemeasurable).map

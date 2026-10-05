@@ -456,6 +456,7 @@ lemma _root_.MeasureTheory.AEStronglyMeasurable.ae_of_compProd [SFinite μ] [IsS
     {E : Type*} [NormedAddCommGroup E] {f : α → β → E}
     (hf : AEStronglyMeasurable f.uncurry (μ ⊗ₘ κ)) :
     ∀ᵐ x ∂μ, AEStronglyMeasurable (f x) (κ x) := by
+  rw [compProd_eq_compProd_const_apply] at hf
   simpa using hf.compProd_mk_left
 
 lemma integrable_compProd_iff [SFinite μ] [IsSFiniteKernel κ] {E : Type*} [NormedAddCommGroup E]
@@ -463,14 +464,16 @@ lemma integrable_compProd_iff [SFinite μ] [IsSFiniteKernel κ] {E : Type*} [Nor
     Integrable f (μ ⊗ₘ κ) ↔
       (∀ᵐ x ∂μ, Integrable (fun y => f (x, y)) (κ x)) ∧
         Integrable (fun x => ∫ y, ‖f (x, y)‖ ∂(κ x)) μ := by
-  simp_rw [Measure.compProd, ProbabilityTheory.integrable_compProd_iff hf, Kernel.prodMkLeft_apply,
+  rw [compProd_eq_compProd_const_apply] at hf ⊢
+  simp_rw [ProbabilityTheory.integrable_compProd_iff hf, Kernel.prodMkLeft_apply,
     Kernel.const_apply]
 
 lemma integral_compProd [SFinite μ] [IsSFiniteKernel κ] {E : Type*}
     [NormedAddCommGroup E] [NormedSpace ℝ E]
     {f : α × β → E} (hf : Integrable f (μ ⊗ₘ κ)) :
     ∫ x, f x ∂(μ ⊗ₘ κ) = ∫ a, ∫ b, f (a, b) ∂(κ a) ∂μ := by
-  rw [Measure.compProd, ProbabilityTheory.integral_compProd hf]
+  rw [compProd_eq_compProd_const_apply] at hf ⊢
+  rw [ProbabilityTheory.integral_compProd hf]
   simp
 
 lemma setIntegral_compProd [SFinite μ] [IsSFiniteKernel κ] {E : Type*}
@@ -478,14 +481,15 @@ lemma setIntegral_compProd [SFinite μ] [IsSFiniteKernel κ] {E : Type*}
     {s : Set α} (hs : MeasurableSet s) {t : Set β} (ht : MeasurableSet t)
     {f : α × β → E} (hf : IntegrableOn f (s ×ˢ t) (μ ⊗ₘ κ)) :
     ∫ x in s ×ˢ t, f x ∂(μ ⊗ₘ κ) = ∫ a in s, ∫ b in t, f (a, b) ∂(κ a) ∂μ := by
-  rw [Measure.compProd, ProbabilityTheory.setIntegral_compProd hs ht hf]
+  rw [compProd_eq_compProd_const_apply] at hf ⊢
+  rw [ProbabilityTheory.setIntegral_compProd hs ht hf]
   simp
 
 end Integral
 
 section Integrable
 
-lemma integrable_compProd_snd_iff [SFinite μ] [IsSFiniteKernel κ]
+lemma integrable_compProd_snd_iff [IsSFiniteKernel κ]
     (hf : AEStronglyMeasurable f (κ ∘ₘ μ)) :
     Integrable (fun p ↦ f p.2) (μ ⊗ₘ κ) ↔ Integrable f (κ ∘ₘ μ) := by
   have hf' : AEStronglyMeasurable f ((μ ⊗ₘ κ).map Prod.snd) := by

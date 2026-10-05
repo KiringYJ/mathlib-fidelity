@@ -110,10 +110,11 @@ lemma compProd_withDensity {η : Kernel (𝓧 × 𝓨) 𝓩} [IsSFiniteKernel η
     κ ⊗ₖ (η.withDensity g) = (κ ⊗ₖ η).withDensity (fun a bc ↦ g (a, bc.1) bc.2) := by
   ext a : 1
   rw [compProd_apply_eq_compProd_sectR, Kernel.withDensity_apply _ (by fun_prop),
-    Kernel.compProd_apply_eq_compProd_sectR, sectR_withDensity hg]
+    Kernel.compProd_apply_eq_compProd_sectR]
   have : IsSFiniteKernel ((η.sectR a).withDensity fun b c ↦ g (a, b) c) := by
     rw [← sectR_withDensity (by fun_prop)]
     infer_instance
+  simp only [sectR_withDensity hg]
   rw [Measure.compProd_withDensity (by fun_prop)]
 
 lemma withDensity_compProd {η : Kernel (𝓧 × 𝓨) 𝓩} [IsSFiniteKernel η]
@@ -122,7 +123,8 @@ lemma withDensity_compProd {η : Kernel (𝓧 × 𝓨) 𝓩} [IsSFiniteKernel η
   ext a : 1
   calc ((κ.withDensity g) ⊗ₖ η) a
   _ = (κ a).withDensity (g a) ⊗ₘ η.sectR a := by
-      rw [compProd_apply_eq_compProd_sectR, Kernel.withDensity_apply _ hg]
+      rw [compProd_apply_eq_compProd_sectR]
+      simp only [Kernel.withDensity_apply _ hg]
   _ = ((κ a) ⊗ₘ (η.sectR a)).withDensity (fun bc ↦ g a bc.1) :=
       Measure.withDensity_compProd (by fun_prop)
   _ = ((κ ⊗ₖ η).withDensity (fun a bc ↦ g a bc.1)) a := by

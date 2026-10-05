@@ -82,7 +82,7 @@ theorem isCondKernel_of_mem_condKernel {η : Kernel α Ω} [IsSFiniteKernel η]
     (hη : η ∈ ρ.condKernel) :
     ρ.IsCondKernel η := by
   obtain ⟨η₀, _, _, hη₀⟩ := ρ.exists_isMarkovKernel_mem_condKernel
-  constructor
+  refine ⟨inferInstance, ?_⟩
   rw [Measure.compProd_congr (Kernel.AEClass.eventuallyEq_of_mem hη hη₀), ρ.disintegrate η₀]
 
 /-- A finite kernel represents `ρ.condKernel` if and only if it disintegrates `ρ`. -/
@@ -94,7 +94,7 @@ theorem mem_condKernel_iff {η : Kernel α Ω} [IsFiniteKernel η] :
 lemma mem_condKernel_compProd (μ : Measure α) [IsFiniteMeasure μ] (κ : Kernel α Ω)
     [IsMarkovKernel κ] :
     κ ∈ (μ ⊗ₘ κ).condKernel :=
-  mem_condKernel_iff.2 ⟨by rw [Measure.fst_compProd]⟩
+  mem_condKernel_iff.2 ⟨inferInstance, by rw [Measure.fst_compProd]⟩
 
 end MeasureTheory.Measure
 
@@ -104,12 +104,13 @@ namespace ProbabilityTheory.Kernel
 
 variable {κ : Kernel α (β × Ω)} [IsFiniteKernel κ]
 
+omit [IsFiniteKernel κ] in
 /-- The restriction to the fiber over `a` of a conditional kernel of `κ` is a conditional kernel
 of the measure `κ a`. -/
 lemma IsCondKernel.isCondKernel_comap (η : Kernel (α × β) Ω) [IsSFiniteKernel η]
     [κ.IsCondKernel η] (a : α) :
     (κ a).IsCondKernel (comap η (fun b ↦ (a, b)) measurable_prodMk_left) := by
-  constructor
+  refine ⟨inferInstance, ?_⟩
   ext s hs
   conv_rhs => rw [← κ.disintegrate η]
   rw [Measure.compProd_apply hs, compProd_apply hs, fst_apply]
@@ -155,7 +156,7 @@ theorem isCondKernel_of_mem_condKernel {η : Kernel (α × β) Ω} [IsSFiniteKer
     (hη : η ∈ condKernel κ) :
     κ.IsCondKernel η := by
   obtain ⟨η₀, _, _, hη₀⟩ := exists_isMarkovKernel_mem_condKernel κ
-  constructor
+  refine ⟨inferInstance, ?_⟩
   rw [compProd_congr (eventuallyEq_fiberwiseAE_iff.1 (AEClass.eventuallyEq_of_mem hη hη₀)),
     κ.disintegrate η₀]
 

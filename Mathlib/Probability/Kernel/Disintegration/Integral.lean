@@ -43,11 +43,13 @@ section Lintegral
 variable {κ : Kernel α (β × Ω)} [IsFiniteKernel κ] {η : Kernel (α × β) Ω} [IsSFiniteKernel η]
   [κ.IsCondKernel η] {f : β × Ω → ℝ≥0∞}
 
+omit [IsFiniteKernel κ] [IsSFiniteKernel η] in
 lemma lintegral_condKernel_mem (a : α) {s : Set (β × Ω)} (hs : MeasurableSet s) :
     ∫⁻ x, η (a, x) (Prod.mk x ⁻¹' s) ∂(Kernel.fst κ a) = κ a s := by
   conv_rhs => rw [← κ.disintegrate η]
   simp_rw [Kernel.compProd_apply hs]
 
+omit [IsFiniteKernel κ] [IsSFiniteKernel η] in
 lemma setLIntegral_condKernel_eq_measure_prod (a : α) {s : Set β} (hs : MeasurableSet s)
     {t : Set Ω} (ht : MeasurableSet t) :
     ∫⁻ b in s, η (a, b) t ∂(Kernel.fst κ a) = κ a (s ×ˢ t) := by
@@ -134,12 +136,14 @@ section Lintegral
 variable {ρ : Measure (β × Ω)} [IsFiniteMeasure ρ] {η : Kernel β Ω} [IsSFiniteKernel η]
   [ρ.IsCondKernel η] {f : β × Ω → ℝ≥0∞}
 
+omit [IsFiniteMeasure ρ] [IsSFiniteKernel η] in
 lemma lintegral_condKernel_mem {s : Set (β × Ω)} (hs : MeasurableSet s) :
     ∫⁻ x, η x {y | (x, y) ∈ s} ∂ρ.fst = ρ s := by
   conv_rhs => rw [← ρ.disintegrate η]
   simp_rw [compProd_apply hs]
   rfl
 
+omit [IsFiniteMeasure ρ] [IsSFiniteKernel η] in
 lemma setLIntegral_condKernel_eq_measure_prod {s : Set β} (hs : MeasurableSet s) {t : Set Ω}
     (ht : MeasurableSet t) :
     ∫⁻ b in s, η b t ∂ρ.fst = ρ (s ×ˢ t) := by
@@ -181,7 +185,7 @@ variable {ρ : Measure (β × Ω)} [IsFiniteMeasure ρ] {η : Kernel β Ω} [IsS
 lemma _root_.MeasureTheory.AEStronglyMeasurable.integral_condKernel
     (hf : AEStronglyMeasurable f ρ) :
     AEStronglyMeasurable (fun x ↦ ∫ y, f (x, y) ∂η x) ρ.fst := by
-  rw [← ρ.disintegrate η] at hf
+  rw [← ρ.disintegrate η, Measure.compProd_eq_compProd_const_apply] at hf
   exact AEStronglyMeasurable.integral_kernel_compProd hf
 
 lemma integral_condKernel (hf : Integrable f ρ) :
