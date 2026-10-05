@@ -198,6 +198,12 @@ lemma setLIntegral_compProd [SFinite μ] [IsSFiniteKernel κ]
 
 end Integral
 
+/-- Against counting measure on a space with measurable singletons, the value of a
+composition-product on a measurable set is the sum of the measures of the sections. -/
+lemma count_compProd_apply [MeasurableSingletonClass α] {s : Set (α × β)} (hs : MeasurableSet s) :
+    (count ⊗ₘ κ) s = ∑' a, κ a (Prod.mk a ⁻¹' s) := by
+  rw [compProd_apply hs, lintegral_count]
+
 lemma dirac_compProd_apply [MeasurableSingletonClass α] {a : α}
     {s : Set (α × β)} (hs : MeasurableSet s) :
     (Measure.dirac a ⊗ₘ κ) s = κ a (Prod.mk a ⁻¹' s) := by

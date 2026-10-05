@@ -13,8 +13,8 @@ composition-product `κ ⊗ₖ η` and the parallel composition `κ ∥ₖ η` o
 `κ.HasCompProd (prodMkRight β η)`, and that the former fallback lemmas, which made each of them zero
 outside s-finite inputs, are gone. Instance search finds the domains for s-finite kernels; for the
 measure composition-product it needs no condition on the measure, and it also covers zero kernels
-and measures and Dirac measures on spaces with measurable singletons. Outside s-finite inputs, the
-section integrals give the values that the former definitions replaced by zero, and the
+and measures and Dirac and counting measures on spaces with measurable singletons. Outside s-finite
+inputs, the section integrals give the values that the former definitions replaced by zero, and the
 almost-everywhere lemmas and several absolute-continuity and mutual-singularity lemmas hold on the
 domains. The instances that make the products s-finite need s-finite inputs. A conditional kernel
 carries the domain of its composition-product, and statements that held only through the fallback,
@@ -199,6 +199,9 @@ example (κ : Kernel α β) : (0 : Measure α) ⊗ₘ κ = 0 := by simp
 example [MeasurableSingletonClass α] (x : α) (κ : Kernel α β) : Measure (α × β) :=
   Measure.dirac x ⊗ₘ κ
 
+-- Counting measure on a space with measurable singletons.
+example [MeasurableSingletonClass α] (κ : Kernel α β) : Measure (α × β) := Measure.count ⊗ₘ κ
+
 -- Almost everywhere measurable section measures.
 example (μ : Measure α) (κ : Kernel α β)
     (h : ∀ ⦃s : Set (α × β)⦄, MeasurableSet s → AEMeasurable (fun a ↦ κ a (Prod.mk a ⁻¹' s)) μ) :
@@ -227,6 +230,13 @@ example (κ : Kernel α β) (η : Kernel γ δ) [κ.HasParallelComp η] (x : α 
 example :
     ((Measure.count : Measure ℝ) ⊗ₘ Kernel.const ℝ (Measure.dirac (0 : ℝ))) ({1} ×ˢ univ) = 1 := by
   rw [compProd_apply_prod (measurableSet_singleton _) .univ]
+  simp
+
+-- Counting measure on `ℝ` composed with itself as a constant kernel, which is not s-finite.
+example :
+    ((Measure.count : Measure ℝ) ⊗ₘ Kernel.const ℝ (Measure.count : Measure ℝ))
+      ({0} ×ˢ {0}) = 1 := by
+  rw [compProd_apply_prod (measurableSet_singleton _) (measurableSet_singleton _)]
   simp
 
 -- A Dirac measure composed with counting measure as a constant kernel.
