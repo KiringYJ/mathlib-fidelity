@@ -309,10 +309,27 @@ operation.
   acyclic graph's infinite girth to zero.  Keep `edist`/`egirth` globally and require reachability or
   a cycle for natural-valued projections.
 
-- [ ] **Replace the unbounded fallback in `SimpleGraph.cliqueNum`.**
-  `Mathlib/Combinatorics/SimpleGraph/Clique.lean:726` takes a natural `sSup` without boundedness, so
-  graphs with arbitrarily large finite cliques inherit the conditional-supremum junk value.  Choose
-  and document an extended finite-clique invariant before exposing a checked natural projection.
+- [x] **Replace the unbounded fallback in `SimpleGraph.cliqueNum`.**
+  `SimpleGraph.cliqueNum G : ℕ∞` is the supremum of the sizes of the finite cliques of `G`, and
+  `indepNum G`, which had the same fallback, is the clique number of the complement.  This is the
+  order-theoretic supremum, as `chromaticNumber : ℕ∞` is the infimum of the admissible numbers of
+  colors, not a fallback: it is `⊤` exactly when `G` has arbitrarily large finite cliques
+  (`cliqueNum_eq_top_iff`), for instance an infinite clique, a finite value is the size of a
+  clique (`exists_isNClique_of_cliqueNum_eq`), and a graph with finitely many vertices has a
+  finite clique number (`cliqueNum_ne_top`).  The former definitions took `sSup` in `ℕ` without
+  boundedness, so a graph with arbitrarily large finite cliques had clique number `0`;
+  `exists_isNClique_cliqueNum` then produced the empty `0`-clique, and `cliqueNum_top` stated
+  `(⊤ : SimpleGraph α).cliqueNum = Nat.card α` for infinite `α` because both sides were `0`.  Now
+  `cliqueNum_top` gives `ENat.card α` for every `α`; `IsClique.card_le_cliqueNum`,
+  `IsIndepSet.card_le_indepNum`, `cliqueNum_bot`, `cliqueNum_ne_zero` (formerly
+  `cliqueNum_ne_zero_of_finite`), and `cliqueNum_induce_le` no longer assume finitely many
+  vertices; `exists_isNClique_cliqueNum` and `exists_isNIndepSet_indepNum` are replaced by
+  `exists_isNClique_of_cliqueNum_eq` and `exists_isNIndepSet_of_indepNum_eq`; and
+  `eq_top_of_enatCard_le_cliqueNum` assumes `Finite α`, without which it fails for the complete
+  graph on `ℕ` with one edge removed.  No natural-valued projection is exposed: statements about
+  finite graphs use `cliqueNum_ne_top` and equalities `G.cliqueNum = n`.  Tests cover the removed
+  names, the complete and empty graphs on `ℕ`, that counterexample, attainment of finite values,
+  and the comparison with the chromatic number.
 
 - [ ] **Require `n ≠ 1` for `Nat.minFac`.**
   `Mathlib/Data/Nat/Prime/Defs.lean:218` returns one at one, although one has no prime factor.  Do not
