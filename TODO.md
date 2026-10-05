@@ -748,16 +748,25 @@ operation.
   cokernel without finite-rank hypotheses.  State the appropriate finiteness assumptions and audit
   the intended general-ring scope.
 
-- [ ] **Define the intended module-level and vector-space Euler characteristics separately.**
-  `GradedObject.eulerChar` and its complex wrapper in
-  `Mathlib/Algebra/Homology/EulerCharacteristic.lean:118` inherit zero from `finsum` on infinite
-  support and from `finrank` on infinite-rank terms.  The construction assumes only `[Ring R]`, so
-  "finite-dimensional objects" is not its general domain: a module can have finite nonzero rank
-  without being finite, and torsion modules can have genuine rank zero.  For the existing invariant,
-  require finite support of the `finrank` summands rather than finite actual object support, and
-  audit whether finite rank or a cardinal/extended rank is intended.  Give the usual
-  finite-dimensional vector-space Euler characteristic its own precise interface.  Also correct the
-  module overview's claim that every module not free of finite rank receives zero.
+- [x] **Define the intended module-level and vector-space Euler characteristics separately.**
+  `GradedObject.eulerChar c X hX` takes `hX : GradedObject.HasFiniteRank X`: every object has finite
+  rank and only finitely many objects have nonzero rank.  This is the domain of the alternating sum
+  of ranks: finite support of the `finrank` summands rather than finite support of the objects,
+  since torsion modules have genuine rank `0`, and finite rank of every object, since an object of
+  infinite rank has no rank to add.  The ring is required to satisfy `HasRankNullity`, so that rank
+  is additive on short exact sequences, as over division rings and commutative domains; over `ℤ`
+  this is the alternating sum of ranks of abelian groups used for the Euler characteristic of a
+  space.  The homological wrappers take the same evidence for the terms or for the homology.  The
+  former definition took `finsum` of the signed `finrank`s over any ring, so a graded module with
+  infinite rank support had Euler characteristic `0` and an object of infinite rank contributed
+  `0`.  The value is now a finite sum over the finite rank support, and
+  `eulerChar_eq_sum_finSet_of_finrankSupport_subset` computes it over any finite set containing
+  that support.  Over a division ring `hasFiniteRank_iff_finiteDimensional` identifies the domain
+  with finite total dimension, so the Euler characteristic is the alternating sum of dimensions of
+  a graded vector space of finite total dimension.  The module overview's claim that every module
+  not free of finite rank received `0` was false (`ℚ` has `finrank` one over `ℤ`) and is replaced by
+  this description.  The file has no consumers.  Tests cover a graded vector space, an infinite
+  rank support, an object of infinite rank, and the vector-space characterization.
 
 - [x] **Require a finite residue field for elliptic local factors.**
   `WeierstrassCurve.localPolynomial`, `localPowerSeries`, and `localEulerFactor` require
