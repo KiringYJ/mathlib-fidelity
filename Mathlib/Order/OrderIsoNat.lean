@@ -266,33 +266,47 @@ theorem WellFoundedLT.antitone_chain_condition [PartialOrder α] [WellFoundedLT 
     {f : ℕ → α} (hf : Antitone f) : ∃ n, ∀ m, n ≤ m → f n = f m :=
   WellFoundedGT.monotone_chain_condition ⟨OrderDual.toDual ∘ f, hf⟩
 
+open Classical in
 /-- Given an eventually-constant monotone sequence `a₀ ≤ a₁ ≤ a₂ ≤ ...` in a partially-ordered
-type, `monotonicSequenceLimitIndex a` is the least natural number `n` for which `aₙ` reaches the
-constant value. For sequences that are not eventually constant, `monotonicSequenceLimitIndex a`
-is defined, but is a junk value. -/
-noncomputable def monotonicSequenceLimitIndex [Preorder α] (a : ℕ →o α) : ℕ :=
-  sInf { n | ∀ m, n ≤ m → a n = a m }
+type, `monotonicSequenceLimitIndex a h` is the least natural number `n` for which `aₙ` reaches the
+constant value. It is defined on the eventually-constant sequences: `h` states that `a` is
+eventually constant. When `>` is well-founded, `WellFoundedGT.monotone_chain_condition a` supplies
+`h`. -/
+noncomputable def monotonicSequenceLimitIndex [Preorder α] (a : ℕ →o α)
+    (h : ∃ n, ∀ m, n ≤ m → a n = a m) : ℕ :=
+  Nat.find h
 
 /-- The constant value of an eventually-constant monotone sequence `a₀ ≤ a₁ ≤ a₂ ≤ ...` in a
-partially-ordered type. -/
-noncomputable def monotonicSequenceLimit [Preorder α] (a : ℕ →o α) :=
-  a (monotonicSequenceLimitIndex a)
+partially-ordered type; `h` states that `a` is eventually constant. -/
+noncomputable def monotonicSequenceLimit [Preorder α] (a : ℕ →o α)
+    (h : ∃ n, ∀ m, n ≤ m → a n = a m) : α :=
+  a (monotonicSequenceLimitIndex a h)
 
-theorem le_monotonicSequenceLimit [PartialOrder α] [WellFoundedGT α] (a : ℕ →o α) (m : ℕ) :
-    a m ≤ monotonicSequenceLimit a := by
-  rcases le_or_gt m (monotonicSequenceLimitIndex a) with hm | hm
+theorem monotonicSequenceLimit_eq [Preorder α] (a : ℕ →o α) (h : ∃ n, ∀ m, n ≤ m → a n = a m)
+    {m : ℕ} (hm : monotonicSequenceLimitIndex a h ≤ m) : monotonicSequenceLimit a h = a m := by
+  classical
+  exact Nat.find_spec h m hm
+
+theorem monotonicSequenceLimitIndex_le [Preorder α] (a : ℕ →o α)
+    (h : ∃ n, ∀ m, n ≤ m → a n = a m) {n : ℕ} (hn : ∀ m, n ≤ m → a n = a m) :
+    monotonicSequenceLimitIndex a h ≤ n := by
+  classical
+  exact Nat.find_min' h hn
+
+theorem le_monotonicSequenceLimit [PartialOrder α] (a : ℕ →o α)
+    (h : ∃ n, ∀ m, n ≤ m → a n = a m) (m : ℕ) : a m ≤ monotonicSequenceLimit a h := by
+  rcases le_or_gt m (monotonicSequenceLimitIndex a h) with hm | hm
   · exact a.monotone hm
-  · obtain h := WellFoundedGT.monotone_chain_condition a
-    exact (Nat.sInf_mem (s := {n | ∀ m, n ≤ m → a n = a m}) h m hm.le).ge
+  · exact (monotonicSequenceLimit_eq a h hm.le).ge
 
-theorem WellFoundedGT.iSup_eq_monotonicSequenceLimit [CompleteLattice α]
-    [WellFoundedGT α] (a : ℕ →o α) : iSup a = monotonicSequenceLimit a :=
-  (iSup_le (le_monotonicSequenceLimit a)).antisymm (le_iSup a _)
+theorem iSup_eq_monotonicSequenceLimit [CompleteLattice α] (a : ℕ →o α)
+    (h : ∃ n, ∀ m, n ≤ m → a n = a m) : iSup a = monotonicSequenceLimit a h :=
+  (iSup_le (le_monotonicSequenceLimit a h)).antisymm (le_iSup a _)
 
-theorem WellFoundedGT.ciSup_eq_monotonicSequenceLimit [ConditionallyCompleteLattice α]
-    [WellFoundedGT α] (a : ℕ →o α) (ha : BddAbove (Set.range a)) :
-    iSup a = monotonicSequenceLimit a :=
-  (ciSup_le (le_monotonicSequenceLimit a)).antisymm (le_ciSup ha _)
+theorem ciSup_eq_monotonicSequenceLimit [ConditionallyCompleteLattice α] (a : ℕ →o α)
+    (h : ∃ n, ∀ m, n ≤ m → a n = a m) : iSup a = monotonicSequenceLimit a h :=
+  (ciSup_le (le_monotonicSequenceLimit a h)).antisymm
+    (le_ciSup ⟨_, Set.forall_mem_range.2 (le_monotonicSequenceLimit a h)⟩ _)
 
 theorem exists_covBy_seq_of_wellFoundedLT_wellFoundedGT (α) [Preorder α]
     [Nonempty α] [wfl : WellFoundedLT α] [wfg : WellFoundedGT α] :

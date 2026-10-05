@@ -289,38 +289,53 @@ lemma HasUnifEigenvalue.exp_ne_zero {f : End R M} {μ : R} {k : ℕ}
   rintro rfl
   simp [HasUnifEigenvalue, genEigenspace_zero] at h
 
-/-- If there exists a natural number `k` such that the kernel of `(f - μ • id) ^ k` is the
-maximal generalized eigenspace, then this value is the least such `k`. If not, this value is not
-meaningful. -/
-noncomputable def maxUnifEigenspaceIndex (f : End R M) (μ : R) :=
-  monotonicSequenceLimitIndex <| (f.genEigenspace μ).comp <| WithTop.coeOrderHom.toOrderHom
-
 set_option backward.isDefEq.respectTransparency false in
 /-- For an endomorphism of a Noetherian module, the maximal eigenspace is always of the form kernel
-`(f - μ • id) ^ k` for some `k`. -/
-lemma genEigenspace_top_eq_maxUnifEigenspaceIndex [IsNoetherian R M] (f : End R M) (μ : R) :
-    genEigenspace f μ ⊤ = f.genEigenspace μ (maxUnifEigenspaceIndex f μ) := by
-  have := WellFoundedGT.iSup_eq_monotonicSequenceLimit <|
+`(f - μ • id) ^ k` for some natural number `k`. -/
+lemma exists_genEigenspace_eq_top [IsNoetherian R M] (f : End R M) (μ : R) :
+    ∃ k : ℕ, f.genEigenspace μ k = f.genEigenspace μ ⊤ := by
+  obtain ⟨n, hn⟩ := WellFoundedGT.monotone_chain_condition <|
     (f.genEigenspace μ).comp <| WithTop.coeOrderHom.toOrderHom
-  convert! this using 1
-  simp only [genEigenspace, OrderHom.coe_mk, le_top, iSup_pos, OrderHom.comp_coe,
-    Function.comp_def]
-  rw [iSup_prod', iSup_subtype', ← sSup_range, ← sSup_range]
-  congr 1
-  aesop
+  refine ⟨n, le_antisymm ((f.genEigenspace μ).monotone le_top) ?_⟩
+  have : f.genEigenspace μ ⊤ = ⨆ k : ℕ, f.genEigenspace μ k := by
+    simp only [genEigenspace, OrderHom.coe_mk, le_top, iSup_pos]
+    rw [iSup_prod', iSup_subtype', ← sSup_range, ← sSup_range]
+    congr 1
+    aesop
+  rw [this]
+  refine iSup_le fun m ↦ ?_
+  rcases le_total m n with hmn | hnm
+  · exact (f.genEigenspace μ).monotone (by exact_mod_cast hmn)
+  · exact (hn m hnm).ge
 
-lemma genEigenspace_le_genEigenspace_maxUnifEigenspaceIndex [IsNoetherian R M] (f : End R M)
-    (μ : R) (k : ℕ∞) :
-    f.genEigenspace μ k ≤ f.genEigenspace μ (maxUnifEigenspaceIndex f μ) := by
+open Classical in
+/-- The least natural number `k` such that the kernel of `(f - μ • id) ^ k` is the maximal
+generalized eigenspace. It is defined when such a `k` exists; `exists_genEigenspace_eq_top`
+supplies one for a Noetherian module. -/
+noncomputable def maxUnifEigenspaceIndex (f : End R M) (μ : R)
+    (h : ∃ k : ℕ, f.genEigenspace μ k = f.genEigenspace μ ⊤) : ℕ :=
+  Nat.find h
+
+lemma genEigenspace_top_eq_maxUnifEigenspaceIndex (f : End R M) (μ : R)
+    (h : ∃ k : ℕ, f.genEigenspace μ k = f.genEigenspace μ ⊤) :
+    genEigenspace f μ ⊤ = f.genEigenspace μ (maxUnifEigenspaceIndex f μ h) := by
+  classical
+  exact (Nat.find_spec h).symm
+
+lemma genEigenspace_le_genEigenspace_maxUnifEigenspaceIndex (f : End R M) (μ : R)
+    (h : ∃ k : ℕ, f.genEigenspace μ k = f.genEigenspace μ ⊤) (k : ℕ∞) :
+    f.genEigenspace μ k ≤ f.genEigenspace μ (maxUnifEigenspaceIndex f μ h) := by
   rw [← genEigenspace_top_eq_maxUnifEigenspaceIndex]
   exact (f.genEigenspace μ).monotone le_top
 
-/-- Generalized eigenspaces for exponents at least `finrank K V` are equal to each other. -/
-theorem genEigenspace_eq_genEigenspace_maxUnifEigenspaceIndex_of_le [IsNoetherian R M]
-    (f : End R M) (μ : R) {k : ℕ} (hk : maxUnifEigenspaceIndex f μ ≤ k) :
-    f.genEigenspace μ k = f.genEigenspace μ (maxUnifEigenspaceIndex f μ) :=
+/-- Generalized eigenspaces for exponents at least `maxUnifEigenspaceIndex f μ h` are equal to each
+other. -/
+theorem genEigenspace_eq_genEigenspace_maxUnifEigenspaceIndex_of_le (f : End R M) (μ : R)
+    (h : ∃ k : ℕ, f.genEigenspace μ k = f.genEigenspace μ ⊤) {k : ℕ}
+    (hk : maxUnifEigenspaceIndex f μ h ≤ k) :
+    f.genEigenspace μ k = f.genEigenspace μ (maxUnifEigenspaceIndex f μ h) :=
   le_antisymm
-    (genEigenspace_le_genEigenspace_maxUnifEigenspaceIndex _ _ _)
+    (genEigenspace_le_genEigenspace_maxUnifEigenspaceIndex _ _ _ _)
     ((f.genEigenspace μ).monotone <| by simpa using hk)
 
 /-- A generalized eigenvalue for some exponent `k` is also
@@ -355,25 +370,28 @@ lemma hasUnifEigenvalue_iff_hasUnifEigenvalue_one {f : End R M} {μ : R} {k : �
     f.HasUnifEigenvalue μ k ↔ f.HasUnifEigenvalue μ 1 :=
   ⟨HasUnifEigenvalue.lt zero_lt_one, HasUnifEigenvalue.lt hk⟩
 
-lemma maxUnifEigenspaceIndex_le_finrank [FiniteDimensional K V] (f : End K V) (μ : K) :
-    maxUnifEigenspaceIndex f μ ≤ finrank K V := by
-  apply Nat.sInf_le
-  intro n hn
-  apply le_antisymm
-  · exact (f.genEigenspace μ).monotone <| WithTop.coeOrderHom.monotone hn
-  · change (f.genEigenspace μ) n ≤ (f.genEigenspace μ) (finrank K V)
-    rw [genEigenspace_nat, genEigenspace_nat]
-    apply ker_pow_le_ker_pow_finrank
+/-- The maximal generalized eigenspace of an endomorphism of a finite-dimensional vector space is
+the kernel of `(f - μ • id) ^ finrank K V`. -/
+lemma genEigenspace_finrank_eq_top [FiniteDimensional K V] (f : End K V) (μ : K) :
+    f.genEigenspace μ (finrank K V) = f.genEigenspace μ ⊤ := by
+  refine le_antisymm ((f.genEigenspace μ).monotone le_top) fun x hx ↦ ?_
+  rw [mem_genEigenspace_top] at hx
+  obtain ⟨k, hk⟩ := hx
+  rw [mem_genEigenspace_nat]
+  exact ker_pow_le_ker_pow_finrank _ k hk
+
+lemma maxUnifEigenspaceIndex_le_finrank [FiniteDimensional K V] (f : End K V) (μ : K)
+    (h : ∃ k : ℕ, f.genEigenspace μ k = f.genEigenspace μ ⊤) :
+    maxUnifEigenspaceIndex f μ h ≤ finrank K V := by
+  classical
+  exact Nat.find_min' h (genEigenspace_finrank_eq_top f μ)
 
 /-- Every generalized eigenvector is a generalized eigenvector for exponent `finrank K V`.
 (Lemma 8.20 of [axler2024]) -/
 lemma genEigenspace_le_genEigenspace_finrank [FiniteDimensional K V] (f : End K V)
     (μ : K) (k : ℕ∞) : f.genEigenspace μ k ≤ f.genEigenspace μ (finrank K V) := by
-  calc f.genEigenspace μ k
-      ≤ f.genEigenspace μ ⊤ := (f.genEigenspace _).monotone le_top
-    _ ≤ f.genEigenspace μ (finrank K V) := by
-      rw [genEigenspace_top_eq_maxUnifEigenspaceIndex]
-      exact (f.genEigenspace _).monotone <| by simpa using maxUnifEigenspaceIndex_le_finrank f μ
+  rw [genEigenspace_finrank_eq_top]
+  exact (f.genEigenspace _).monotone le_top
 
 /-- Generalized eigenspaces for exponents at least `finrank K V` are equal to each other. -/
 theorem genEigenspace_eq_genEigenspace_finrank_of_le [FiniteDimensional K V]
@@ -415,9 +433,10 @@ lemma isNilpotent_restrict_genEigenspace_top [IsNoetherian R M] (f : End R M) (�
       (f.genEigenspace μ ⊤) (f.genEigenspace μ ⊤) :=
       mapsTo_genEigenspace_of_comm (Algebra.mul_sub_algebraMap_commutes f μ) μ _) :
     IsNilpotent ((f - μ • 1).restrict h) := by
+  obtain ⟨k, hk⟩ := exists_genEigenspace_eq_top f μ
   apply isNilpotent_restrict_of_le
-  on_goal 2 => apply isNilpotent_restrict_genEigenspace_nat f μ (maxUnifEigenspaceIndex f μ)
-  rw [genEigenspace_top_eq_maxUnifEigenspaceIndex]
+  on_goal 2 => apply isNilpotent_restrict_genEigenspace_nat f μ k
+  rw [hk]
 
 /-- The submodule `eigenspace f μ` for a linear map `f` and a scalar `μ` consists of all vectors `x`
 such that `f x = μ • x`. (Def 5.52 of [axler2024]). -/
@@ -571,17 +590,18 @@ theorem mem_maxGenEigenspace (f : End R M) (μ : R) (m : M) :
     m ∈ f.maxGenEigenspace μ ↔ ∃ k : ℕ, ((f - μ • (1 : End R M)) ^ k) m = 0 :=
   mem_genEigenspace_top
 
-/-- If there exists a natural number `k` such that the kernel of `(f - μ • id) ^ k` is the
-maximal generalized eigenspace, then this value is the least such `k`. If not, this value is not
-meaningful. -/
-noncomputable abbrev maxGenEigenspaceIndex (f : End R M) (μ : R) :=
-  maxUnifEigenspaceIndex f μ
+/-- The least natural number `k` such that the kernel of `(f - μ • id) ^ k` is the maximal
+generalized eigenspace, defined when such a `k` exists. -/
+noncomputable abbrev maxGenEigenspaceIndex (f : End R M) (μ : R)
+    (h : ∃ k : ℕ, f.genEigenspace μ k = f.genEigenspace μ ⊤) : ℕ :=
+  maxUnifEigenspaceIndex f μ h
 
-/-- For an endomorphism of a Noetherian module, the maximal eigenspace is always of the form kernel
-`(f - μ • id) ^ k` for some `k`. -/
-theorem maxGenEigenspace_eq [IsNoetherian R M] (f : End R M) (μ : R) :
-    maxGenEigenspace f μ = f.genEigenspace μ (maxGenEigenspaceIndex f μ) :=
-  genEigenspace_top_eq_maxUnifEigenspaceIndex _ _
+/-- The maximal eigenspace is the kernel of `(f - μ • id) ^ k` for its index `k`; for an
+endomorphism of a Noetherian module, `exists_genEigenspace_eq_top` shows that the index exists. -/
+theorem maxGenEigenspace_eq (f : End R M) (μ : R)
+    (h : ∃ k : ℕ, f.genEigenspace μ k = f.genEigenspace μ ⊤) :
+    maxGenEigenspace f μ = f.genEigenspace μ (maxGenEigenspaceIndex f μ h) :=
+  genEigenspace_top_eq_maxUnifEigenspaceIndex _ _ _
 
 theorem maxGenEigenspace_eq_maxGenEigenspace_zero (f : End R M) (μ : R) :
     maxGenEigenspace f μ = maxGenEigenspace (f - μ • 1) 0 := by
@@ -620,10 +640,8 @@ theorem hasGenEigenvalue_iff_hasEigenvalue {f : End R M} {μ : R} {k : ℕ} (hk 
 
 theorem maxGenEigenspace_eq_genEigenspace_finrank
     [FiniteDimensional K V] (f : End K V) (μ : K) :
-    f.maxGenEigenspace μ = f.genEigenspace μ (finrank K V) := by
-  apply le_antisymm _ <| (f.genEigenspace μ).monotone le_top
-  rw [genEigenspace_top_eq_maxUnifEigenspaceIndex]
-  apply genEigenspace_le_genEigenspace_finrank f μ
+    f.maxGenEigenspace μ = f.genEigenspace μ (finrank K V) :=
+  (genEigenspace_finrank_eq_top f μ).symm
 
 lemma mapsTo_maxGenEigenspace_of_comm {f g : End R M} (h : Commute f g) (μ : R) :
     MapsTo g ↑(f.maxGenEigenspace μ) ↑(f.maxGenEigenspace μ) :=
@@ -643,9 +661,10 @@ lemma isNilpotent_restrict_maxGenEigenspace_sub_algebraMap [IsNoetherian R M] (f
       ↑(f.maxGenEigenspace μ) ↑(f.maxGenEigenspace μ) :=
       mapsTo_maxGenEigenspace_of_comm (Algebra.mul_sub_algebraMap_commutes f μ) μ) :
     IsNilpotent ((f - algebraMap R (End R M) μ).restrict h) := by
-  apply isNilpotent_restrict_of_le (q := f.genEigenspace μ (maxUnifEigenspaceIndex f μ))
-    _ (isNilpotent_restrict_genEigenspace_nat f μ (maxUnifEigenspaceIndex f μ))
-  rw [maxGenEigenspace_eq]
+  obtain ⟨k, hk⟩ := exists_genEigenspace_eq_top f μ
+  apply isNilpotent_restrict_of_le (q := f.genEigenspace μ k)
+    _ (isNilpotent_restrict_genEigenspace_nat f μ k)
+  rw [maxGenEigenspace, hk]
 
 set_option backward.isDefEq.respectTransparency false in
 lemma disjoint_genEigenspace [IsDomain R] [IsTorsionFree R M]
