@@ -34,12 +34,13 @@ theorem birthday :
 
 open MeasureTheory ProbabilityTheory
 
-variable {n m : ℕ}
+variable {n m : ℕ} [NeZero m]
 
 /- We then endow the space with a canonical measure, which is called ℙ.
-We define this to be the conditional counting measure. -/
+We define this to be the conditional counting measure, the uniform measure on the nonempty finite
+space. -/
 noncomputable instance measureSpace : MeasureSpace (Fin n → Fin m) :=
-  ⟨uniformOn Set.univ⟩
+  ⟨uniformOn Set.univ .univ⟩
 
 theorem Fin.measure_apply {s : Set <| Fin n → Fin m} :
     ℙ s = |s.toFinite.toFinset| / ‖Fin n → Fin m‖ := by

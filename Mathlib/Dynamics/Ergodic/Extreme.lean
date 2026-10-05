@@ -45,7 +45,7 @@ theorem of_mem_extremePoints_measure_univ_eq {c : ℝ≥0∞} (hc : c ≠ ∞)
       refine ⟨.smul_measure (.smul_measure ?_ _) c, ?_⟩
       · convert! hf.restrict_preimage hsm
         exact hfs.symm
-      · rw [Measure.smul_apply, (cond_isProbabilityMeasure hμs).1, smul_eq_mul, mul_one]
+      · rw [Measure.smul_apply, measure_univ, smul_eq_mul, mul_one]
     intro s hsm hfs
     by_contra H
     obtain ⟨hs, hs'⟩ : μ s ≠ 0 ∧ μ sᶜ ≠ 0 := by
@@ -57,7 +57,7 @@ theorem of_mem_extremePoints_measure_univ_eq {c : ℝ≥0∞} (hc : c ≠ ∞)
       · simp [ProbabilityTheory.cond, smul_smul, ← mul_assoc, ENNReal.div_mul_cancel,
           ENNReal.mul_inv_cancel, *]
     rw [← hcond] at hs'
-    simp [ProbabilityTheory.cond_apply, hsm] at hs'
+    simp [ProbabilityTheory.cond_apply (.of_isFiniteMeasure hsm hs)] at hs'
 
 /-- An extreme point of the set of invariant probability measures is an ergodic measure. -/
 theorem of_mem_extremePoints

@@ -312,11 +312,9 @@ variable {s t : Set Ω} [NormedAddCommGroup F] [NormedSpace ℝ F] [CompleteSpac
 
 omit [StandardBorelSpace Ω]
 
-lemma condExp_generateFrom_singleton (hs : MeasurableSet s) {f : Ω → F} (hf : Integrable f μ) :
+lemma condExp_generateFrom_singleton (hs : MeasurableSet s) (hμs : μ s ≠ 0) {f : Ω → F}
+    (hf : Integrable f μ) :
     μ[f | generateFrom {s}] =ᵐ[μ.restrict s] fun _ ↦ ∫ x, f x ∂μ[|s] := by
-  by_cases hμs : μ s = 0
-  · rw [Measure.restrict_eq_zero.2 hμs]
-    rfl
   refine ae_eq_trans (condExp_restrict_ae_eq_restrict
     (generateFrom_singleton_le hs)
     (SigmaAlgebra.mem_generateFrom rfl) hf).symm ?_
@@ -342,18 +340,20 @@ lemma condExp_generateFrom_singleton (hs : MeasurableSet s) {f : Ω → F} (hf :
         rw [smul_inv_smul₀]
         exact (measureReal_ne_zero_iff (by finiteness)).2 hμs
 
-lemma condExp_set_generateFrom_singleton (hs : MeasurableSet s) (ht : MeasurableSet t) :
+lemma condExp_set_generateFrom_singleton (hs : MeasurableSet s) (hμs : μ s ≠ 0)
+    (ht : MeasurableSet t) :
     μ⟦t | generateFrom {s}⟧ =ᵐ[μ.restrict s] fun _ ↦ μ[|s].real t := by
   rw [← integral_indicator_one ht]
-  exact condExp_generateFrom_singleton hs <| Integrable.indicator (integrable_const 1) ht
+  exact condExp_generateFrom_singleton hs hμs <| Integrable.indicator (integrable_const 1) ht
 
 lemma condExpKernel_singleton_ae_eq_cond [StandardBorelSpace Ω] (hs : MeasurableSet s)
-    (ht : MeasurableSet t) {ξ : @Kernel Ω Ω (generateFrom {s}) mΩ} [IsMarkovKernel ξ]
+    (hμs : μ s ≠ 0) (ht : MeasurableSet t) {ξ : @Kernel Ω Ω (generateFrom {s}) mΩ}
+    [IsMarkovKernel ξ]
     (hξ : ξ ∈ condExpKernel μ (generateFrom_singleton_le hs)) :
     ∀ᵐ ω ∂μ.restrict s, ξ ω t = μ[t | s] := by
   have : (fun ω ↦ (ξ ω).real t) =ᵐ[μ.restrict s] μ⟦t | generateFrom {s}⟧ :=
     ae_restrict_le <| condExpKernel_ae_eq_condExp hξ ht
-  filter_upwards [condExp_set_generateFrom_singleton hs ht, this] with ω hω₁ hω₂
+  filter_upwards [condExp_set_generateFrom_singleton hs hμs ht, this] with ω hω₁ hω₂
   rwa [hω₁, measureReal_def, measureReal_def,
     ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ t) (measure_ne_top _ t)] at hω₂
 
