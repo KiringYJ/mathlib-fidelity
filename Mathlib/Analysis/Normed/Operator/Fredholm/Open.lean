@@ -15,8 +15,8 @@ In this file, we show two closely related results about Fredholm operators betwe
 spaces:
 * `isOpen_setOfPred_isFredholm`: the set of Fredholm operators is open
   (for the operator norm) in the space of continuous linear maps;
-* `index_continuousOn_isFredholm`: the integer-valued map `T ↦ T.index` is continuous
-  (i.e locally constant) on this open subset.
+* `continuous_index`: the integer-valued map `T ↦ T.index` on the Fredholm operators is
+  continuous (i.e locally constant).
 
 ## TODO
 
@@ -55,8 +55,8 @@ theorem FredholmPackage.eventually_nhds_isInvertible
 
 private theorem FredholmPackage.eventually_nhds_isFredholm_and_index_eq [CompleteSpace 𝕜]
     {T₀ : E →L[𝕜] F} (pkg : T₀.FredholmPackage) :
-    ∀ᶠ T in 𝓝 T₀, T.IsFredholm ∧
-      T.index = (finrank 𝕜 pkg.decDom.X₀ : ℤ) - finrank 𝕜 pkg.decCodom.X₀ := by
+    ∀ᶠ T in 𝓝 T₀, ∃ hT : T.IsFredholm,
+      T.index hT = (finrank 𝕜 pkg.decDom.X₀ : ℤ) - finrank 𝕜 pkg.decCodom.X₀ := by
   filter_upwards [pkg.eventually_nhds_isInvertible] with T h_inv
   have A : IsFredholm pkg.decDom.X₁.subtypeL :=
     have := pkg.decDom.cofg_X₁
@@ -66,10 +66,15 @@ private theorem FredholmPackage.eventually_nhds_isFredholm_and_index_eq [Complet
     rw [← A.comp_iff_left, ← B.comp_iff_right]
     exact h_inv.isFredholm
   refine ⟨C, ?_⟩
-  have key := LinearMap.index_of_bijective h_inv.bijective
-  rw [B.index_comp (C.comp A), C.index_comp A, toLinearMap_projectionOntoL, index_projectionOnto,
-    toLinearMap_subtypeL, index_subtype,
-    (Submodule.quotientEquivOfIsCompl _ _ pkg.decDom.isTopCompl.isCompl).finrank_eq] at key
+  have key := LinearMap.index_of_bijective h_inv.bijective (B.comp (C.comp A)).toLinearMap
+  change (pkg.decCodom.proj ∘L (T ∘L pkg.decDom.X₁.subtypeL)).index (B.comp (C.comp A)) = 0
+    at key
+  rw [B.index_comp (C.comp A) (B.comp (C.comp A)), C.index_comp A (C.comp A),
+    ContinuousLinearMap.index, ContinuousLinearMap.index, ContinuousLinearMap.index] at key
+  simp only [toLinearMap_projectionOntoL, index_projectionOnto, toLinearMap_subtypeL,
+    index_subtype] at key
+  rw [(Submodule.quotientEquivOfIsCompl _ _ pkg.decDom.isTopCompl.isCompl).finrank_eq] at key
+  rw [ContinuousLinearMap.index]
   lia
 
 /-- If `T₀` is a Fredholm operator between two Banach spaces, then every operator `T` close
@@ -87,22 +92,20 @@ theorem isOpen_setOfPred_isFredholm [CompleteSpace 𝕜] : IsOpen {T : E →L[�
 /-- If `T₀` is a Fredholm operator between two Banach spaces, then every operator `T` close
 enough to `T₀` (in operator norm) has the same index as `T₀`. -/
 theorem IsFredholm.eventually_nhds_index_eq [CompleteSpace 𝕜]
-    {T₀ : E →L[𝕜] F} (hT₀ : T₀.IsFredholm) : ∀ᶠ T in 𝓝 T₀, T.index = T₀.index := by
-  obtain ⟨pkg⟩ := hT₀.nonempty_fredholmPackage
-  rw [pkg.eventually_nhds_isFredholm_and_index_eq.self_of_nhds.2]
-  exact pkg.eventually_nhds_isFredholm_and_index_eq.mono fun _ ⟨_, eq⟩ ↦ eq
-
-/-- If `T₀` is a Fredholm operator between two Banach spaces, then the integer-valued map
-`T ↦ T.index` is continuous at `T₀`. -/
-theorem IsFredholm.index_continuousAt [CompleteSpace 𝕜]
     {T₀ : E →L[𝕜] F} (hT₀ : T₀.IsFredholm) :
-    ContinuousAt (fun (T : E →L[𝕜] F) ↦ T.index) T₀ :=
-  tendsto_const_nhds.congr' <| .symm hT₀.eventually_nhds_index_eq
+    ∀ᶠ T in 𝓝 T₀, ∃ hT : T.IsFredholm, T.index hT = T₀.index hT₀ := by
+  obtain ⟨pkg⟩ := hT₀.nonempty_fredholmPackage
+  obtain ⟨_, h₀⟩ := pkg.eventually_nhds_isFredholm_and_index_eq.self_of_nhds
+  rw [h₀]
+  exact pkg.eventually_nhds_isFredholm_and_index_eq
 
-/-- The integer-valued map `T ↦ T.index` is continuous (i.e locally constant)
-on the set of Fredholm operators between two Banach spaces.. -/
-theorem index_continuousOn_isFredholm [CompleteSpace 𝕜] :
-    ContinuousOn (fun (T : E →L[𝕜] F) ↦ T.index) {T | T.IsFredholm} :=
-  continuousOn_of_forall_continuousAt fun _ ↦ IsFredholm.index_continuousAt
+/-- The integer-valued map `T ↦ T.index` on the Fredholm operators between two Banach spaces is
+continuous (i.e locally constant). -/
+theorem continuous_index [CompleteSpace 𝕜] :
+    Continuous (fun T : {T : E →L[𝕜] F // T.IsFredholm} ↦ T.1.index T.2) := by
+  refine continuous_iff_continuousAt.2 fun T₀ ↦ tendsto_const_nhds.congr' ?_
+  have := (continuous_subtype_val.tendsto T₀).eventually T₀.2.eventually_nhds_index_eq
+  filter_upwards [this] with T ⟨_, hT⟩
+  exact hT.symm
 
 end ContinuousLinearMap

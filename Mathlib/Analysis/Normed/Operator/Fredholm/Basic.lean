@@ -127,6 +127,20 @@ structure IsFredholm (u : E →L[𝕜] F) : Prop where
   finite_coker : u.range.CoFG
   closedComplemented_ker : u.ker.ClosedComplemented
 
+/-- A Fredholm operator is Fredholm as a linear map: its kernel and cokernel are
+finite-dimensional. -/
+lemma IsFredholm.toLinearMap {u : E →L[𝕜] F} (u_fred : IsFredholm u) :
+    (u : E →ₗ[𝕜] F).IsFredholm :=
+  ⟨u_fred.finite_ker, u_fred.finite_coker⟩
+
+/-- The index `dim ker - dim coker` of a Fredholm operator. -/
+noncomputable def index (u : E →L[𝕜] F) (u_fred : IsFredholm u) : ℤ :=
+  (u : E →ₗ[𝕜] F).index u_fred.toLinearMap
+
+lemma index_eq_finrank_sub {u : E →L[𝕜] F} (u_fred : IsFredholm u) :
+    u.index u_fred = Module.finrank 𝕜 u.ker - Module.finrank 𝕜 (F ⧸ u.range) :=
+  LinearMap.index_eq_finrank_sub u_fred.toLinearMap
+
 variable [CompleteSpace 𝕜] [IsTopologicalAddGroup F] [ContinuousSMul 𝕜 F] in
 /-- A Fredholm operator has (topologically) complemented range. -/
 lemma IsFredholm.closedComplemented_range {u : E →L[𝕜] F} (u_fred : IsFredholm u) :
@@ -601,23 +615,15 @@ section Index
 ## Specific index computations for Fredholm operators
 
 In this section, we restate for Fredholm operators some general algebraic results about
-`LinearMap.index`. Ideally we wouldn't need such a section at all, but as of August 2026
-it is easier to work with the API for `IsFredholm` than with the specific finiteness assumptions
-used, for example, in `LinearMap.index_comp`.
-
-This suggests that we may want an algebraic version of the `IsFredholm` predicate to express
-"this linear map has finite dimensional kernel and cokernel", or equivalently "this linear map
-admits a quasi-inverse". The API would then mimic that of `IsFredholm`.
+`LinearMap.index`, through the algebraic Fredholm predicate `LinearMap.IsFredholm`.
 -/
 
+/-- The index of a composition of Fredholm operators is the sum of their indices. The composition
+is Fredholm (`IsFredholm.comp`), which `hgf` states. -/
 lemma IsFredholm.index_comp {g : F →L[𝕜] G} {f : E →L[𝕜] F}
-    (hg : IsFredholm g) (hf : IsFredholm f) :
-    (g ∘L f).index = g.index + f.index :=
-  have := hf.finite_ker
-  have := hf.finite_coker
-  have := hg.finite_ker
-  have := hg.finite_coker
-  LinearMap.index_comp _ _
+    (hg : IsFredholm g) (hf : IsFredholm f) (hgf : IsFredholm (g ∘L f)) :
+    (g ∘L f).index hgf = g.index hg + f.index hf :=
+  LinearMap.index_comp hg.toLinearMap hf.toLinearMap
 
 end Index
 
