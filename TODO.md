@@ -224,10 +224,18 @@ operation.
   Audit actual theorem statements rather than treating every internal use as paper-facing degree
   notation.
 
-- [ ] **Make scheme order of vanishing carry its point and function domains.**
-  `AlgebraicGeometry.Scheme.ord` in `Mathlib/AlgebraicGeometry/OrderOfVanishing.lean:52` returns
-  zero for the zero rational function and for points not of codimension one.  Reuse `ordHom` for the
-  point condition and expose nonzeroness or an infinity-preserving codomain.
+- [x] **Make scheme order of vanishing carry its point and function domains.**
+  `AlgebraicGeometry.Scheme.ord f z hz` takes `hz : coheight z = 1`, the condition that `ordHom`
+  already required, and takes values in `WithTop ℤ`: as for a discrete valuation, the order of `0`
+  is `⊤`, and every nonzero rational function has an integer order (`ord_eq_top_iff`,
+  `ord_eq_iff`).  The former integer-valued definition returned `0` for the zero rational function
+  and at every point that is not of codimension one: `ord_zero` stated `ord 0 = 0` and now gives
+  `⊤`, and `ord_eq_zero_of_coheight_neq_one`, which exposed the point fallback, is removed with
+  `ord_eq_ordHom_of_coheight_eq_one`, which unfolded the former definition.  With `⊤` for zero,
+  `ord_mul`, `ord_add`, and `ord_le_smul` hold without nonvanishing hypotheses, while the
+  comparisons with `ordHom` keep them.  The module has no
+  consumers.  Tests cover the removed lemma, the missing point condition, the order of zero, and
+  multiplicativity.
 
 - [ ] **Unify strict nilpotency invariants.**
   `Mathlib/RingTheory/Nilpotent/Defs.lean:78`, `Mathlib/GroupTheory/Nilpotent.lean:530`, and
