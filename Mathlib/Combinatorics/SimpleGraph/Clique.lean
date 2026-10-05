@@ -8,6 +8,7 @@ module
 public import Mathlib.Combinatorics.SimpleGraph.Copy
 public import Mathlib.Combinatorics.SimpleGraph.Operations
 public import Mathlib.Combinatorics.SimpleGraph.Paths
+public import Mathlib.Data.ENat.Lattice
 public import Mathlib.Data.Finset.Pairwise
 public import Mathlib.Data.Fintype.Pigeonhole
 public import Mathlib.Data.Fintype.Powerset
@@ -722,87 +723,112 @@ section CliqueNumber
 
 variable {α : Type*} {G : SimpleGraph α}
 
-/-- The maximum number of vertices in a clique of a graph `G`. -/
-noncomputable def cliqueNum (G : SimpleGraph α) : ℕ := sSup {n | ∃ s, G.IsNClique n s}
+/-- The clique number of a graph `G`: the supremum in `ℕ∞` of the sizes of its finite cliques.
 
--- TODO: generalize from `Finite α` to `Finite G.edgeSet`
-private lemma finite_cliqueNum_bddAbove [Finite α] : BddAbove {n | ∃ s, G.IsNClique n s} := by
-  have := ofFinite α
-  use card α
-  rintro y ⟨s, syc⟩
-  rw [isNClique_iff] at syc
-  rw [← syc.right]
-  exact Finset.card_le_card (Finset.subset_univ s)
+It is `⊤` exactly when `G` has arbitrarily large finite cliques (`cliqueNum_eq_top_iff`), for
+instance when `G` has an infinite clique. A finite value is the size of some clique
+(`exists_isNClique_of_cliqueNum_eq`), and a graph with finitely many vertices has a finite clique
+number (`cliqueNum_ne_top`). -/
+noncomputable def cliqueNum (G : SimpleGraph α) : ℕ∞ :=
+  ⨆ s : {s : Finset α // G.IsClique (s : Set α)}, (#s.1 : ℕ∞)
 
--- TODO: generalize from `Finite α` to `Finite G.edgeSet`
-lemma IsClique.card_le_cliqueNum [Finite α] {t : Finset α} (tc : G.IsClique t) : #t ≤ G.cliqueNum :=
-  le_csSup G.finite_cliqueNum_bddAbove ⟨t, tc, rfl⟩
+lemma IsClique.card_le_cliqueNum {t : Finset α} (tc : G.IsClique t) : (#t : ℕ∞) ≤ G.cliqueNum :=
+  le_iSup (fun s : {s : Finset α // G.IsClique (s : Set α)} ↦ (#s.1 : ℕ∞)) ⟨t, tc⟩
 
--- TODO: generalize from `Finite α` to `Finite G.edgeSet`
+lemma IsNClique.le_cliqueNum {n : ℕ} {t : Finset α} (h : G.IsNClique n t) :
+    (n : ℕ∞) ≤ G.cliqueNum :=
+  h.card_eq ▸ h.isClique.card_le_cliqueNum
+
+lemma cliqueNum_le_iff {m : ℕ∞} :
+    G.cliqueNum ≤ m ↔ ∀ t : Finset α, G.IsClique (t : Set α) → (#t : ℕ∞) ≤ m := by
+  simp [cliqueNum]
+
+/-- A finite clique number is the size of a clique. -/
+lemma exists_isNClique_of_cliqueNum_eq {n : ℕ} (h : G.cliqueNum = n) : ∃ s, G.IsNClique n s := by
+  have : Nonempty {s : Finset α // G.IsClique (s : Set α)} := ⟨⟨∅, by simp⟩⟩
+  obtain ⟨⟨s, hs⟩, hs'⟩ := ENat.exists_eq_iSup_of_lt_top (h.trans_lt (ENat.natCast_lt_top n))
+  refine ⟨s, hs, ?_⟩
+  rw [cliqueNum] at h
+  exact_mod_cast hs'.trans h
+
+lemma cliqueNum_eq_top_iff : G.cliqueNum = ⊤ ↔ ∀ n, ¬G.CliqueFree n := by
+  refine ⟨fun h n hn ↦ ?_, fun h ↦ ?_⟩
+  · have := (cliqueNum_le_iff (G := G) (m := n)).2 fun t ht ↦ by
+      by_contra! hlt
+      obtain ⟨u, hu, hcard⟩ := Finset.exists_subset_card_eq (s := t) (n := n) (mod_cast hlt.le)
+      exact hn u ⟨ht.subset (by simpa using hu), hcard⟩
+    simp [h] at this
+  · refine ENat.eq_top_iff_forall_ge.2 fun n ↦ ?_
+    simp only [CliqueFree, not_forall, not_not] at h
+    obtain ⟨t, ht⟩ := h n
+    exact ht.le_cliqueNum
+
 variable (G) in
-theorem cliqueNum_ne_zero_of_finite [Nonempty α] [Finite α] : G.cliqueNum ≠ 0 := by
-  refine (Nat.not_succ_le_zero 0 <| le_of_le_of_eq ?_ ·)
-  exact IsClique.card_le_cliqueNum (t := {Classical.arbitrary α}) <| by simp
+theorem cliqueNum_le_enatCard : G.cliqueNum ≤ ENat.card α := by
+  rw [cliqueNum_le_iff]
+  intro t _
+  cases finite_or_infinite α
+  · have := Fintype.ofFinite α
+    simpa [ENat.card_eq_coe_fintype_card] using Finset.card_le_univ t
+  · simp
 
-lemma exists_isNClique_cliqueNum : ∃ s, G.IsNClique G.cliqueNum s := by
-  by_cases h : BddAbove {n | ∃ s, G.IsNClique n s}
-  · exact Nat.sSup_mem ⟨0, by simp⟩ h
-  · simp [cliqueNum, h]
+variable (G) in
+theorem cliqueNum_ne_top [Finite α] : G.cliqueNum ≠ ⊤ :=
+  ne_top_of_le_ne_top ENat.card_lt_top_of_finite.ne (cliqueNum_le_enatCard G)
+
+variable (G) in
+theorem cliqueNum_le_natCard [Finite α] : G.cliqueNum ≤ Nat.card α := by
+  simpa [ENat.card_eq_coe_natCard] using cliqueNum_le_enatCard G
+
+variable (G) in
+theorem cliqueNum_ne_zero [Nonempty α] : G.cliqueNum ≠ 0 := by
+  have := IsClique.card_le_cliqueNum (G := G) (t := {Classical.arbitrary α}) (by simp)
+  intro h
+  simp [h] at this
 
 variable (G) in
 @[simp]
 theorem cliqueNum_of_isEmpty [IsEmpty α] : G.cliqueNum = 0 :=
-  Nat.le_zero.mp <| csSup_le' fun n ⟨s, h⟩ ↦ by simp [s.eq_empty_of_isEmpty, ← h.card_eq]
-
-variable (G) in
-theorem cliqueNum_le_natCard [Finite α] : G.cliqueNum ≤ Nat.card α :=
-  csSup_le' fun _ ⟨s, h⟩ ↦ s.card_le_natCard |>.trans_eq' h.card_eq
-
-variable (G) in
-theorem cliqueNum_le_enatCard : G.cliqueNum ≤ ENat.card α := by
-  cases finite_or_infinite α
-  · grw [ENat.card_eq_coe_natCard, Nat.cast_le, cliqueNum_le_natCard]
-  · simp
+  nonpos_iff_eq_zero.1 <| (cliqueNum_le_enatCard G).trans_eq <|
+    (ENat.card_eq_zero_iff_empty α).2 ‹_›
 
 variable (α) in
 @[simp]
-theorem cliqueNum_top : (⊤ : SimpleGraph α).cliqueNum = Nat.card α := by
+theorem cliqueNum_top : (⊤ : SimpleGraph α).cliqueNum = ENat.card α := by
+  refine (cliqueNum_le_enatCard ⊤).antisymm ?_
   cases finite_or_infinite α
   · have := Fintype.ofFinite α
-    apply cliqueNum_le_natCard _ |>.antisymm
-    grw [Nat.card_eq_fintype_card, ← Finset.card_univ, IsClique.card_le_cliqueNum]
-    apply IsClique.top
-  · rw [Nat.card_eq_zero_of_infinite]
-    apply Set.Infinite.Nat.sSup_eq_zero
-    rw [Set.eq_univ_of_forall (Finset.exists_card_eq · |>.imp fun _ hn ↦ ⟨.top _, hn⟩)]
-    exact Set.infinite_univ
+    simpa [ENat.card_eq_coe_fintype_card] using
+      (IsClique.top (s := ((Finset.univ : Finset α) : Set α))).card_le_cliqueNum
+  · rw [ENat.card_eq_top_of_infinite, top_le_iff, cliqueNum_eq_top_iff]
+    intro n hn
+    obtain ⟨t, ht⟩ := Infinite.exists_subset_card_eq α n
+    exact hn t ⟨by simp, ht⟩
 
--- TODO: generalize from `Finite α` to `Finite G.edgeSet`
 variable (α) in
 @[simp]
-theorem cliqueNum_bot [Nonempty α] [Finite α] : (⊥ : SimpleGraph α).cliqueNum = 1 := by
-  refine le_antisymm (csSup_le' fun n ⟨s, h⟩ ↦ ?_) (cliqueNum_ne_zero_of_finite ⊥).pos
-  by_contra!
-  have ⟨a, ha, b, hb, hne⟩ := s.one_lt_card.mp <| this.trans_eq h.card_eq.symm
-  exact h.isClique ha hb hne
+theorem cliqueNum_bot [Nonempty α] : (⊥ : SimpleGraph α).cliqueNum = 1 := by
+  refine le_antisymm (cliqueNum_le_iff.2 fun t ht ↦ ?_) ?_
+  · by_contra! h
+    have ⟨a, ha, b, hb, hne⟩ := t.one_lt_card.mp (by exact_mod_cast h)
+    exact ht ha hb hne
+  · simpa using IsClique.card_le_cliqueNum (G := ⊥) (t := {Classical.arbitrary α}) (by simp)
 
--- TODO: generalize from `Finite α` to `Finite G.edgeSet`
 @[simp]
 theorem cliqueNum_eq_natCard [Finite α] : G.cliqueNum = Nat.card α ↔ G = ⊤ := by
-  refine ⟨fun h ↦ ?_, (· ▸ cliqueNum_top α)⟩
-  have ⟨s, hs⟩ := G.exists_isNClique_cliqueNum
+  refine ⟨fun h ↦ ?_, fun h ↦ by simp [h, ENat.card_eq_coe_natCard]⟩
+  have ⟨s, hs⟩ := exists_isNClique_of_cliqueNum_eq h
   suffices s = @Set.univ α from isClique_univ.mp <| this ▸ hs.isClique
-  simp [Set.eq_univ_iff_ncard, h, hs.card_eq]
+  simp [Set.eq_univ_iff_ncard, hs.card_eq]
 
-theorem eq_top_of_enatCard_le_cliqueNum (h : ENat.card α ≤ G.cliqueNum) : G = ⊤ := by
-  have := ENat.card_lt_top.mp <| h.trans_lt <| ENat.natCast_lt_top _
-  simpa [ENat.card_eq_coe_natCard] using cliqueNum_le_enatCard G |>.antisymm h
+theorem eq_top_of_enatCard_le_cliqueNum [Finite α] (h : ENat.card α ≤ G.cliqueNum) : G = ⊤ := by
+  rw [← cliqueNum_eq_natCard, ← ENat.card_eq_coe_natCard]
+  exact (cliqueNum_le_enatCard G).antisymm h
 
-theorem cliqueNum_induce_le [Finite α] (s : Set α) :
-    (G.induce s).cliqueNum ≤ G.cliqueNum := by
-  have ⟨t', tc⟩ := (G.induce s).exists_isNClique_cliqueNum
-  rw [isNClique_induce_iff] at tc
-  exact tc.card_eq ▸ tc.isClique.card_le_cliqueNum
+theorem cliqueNum_induce_le (s : Set α) : (G.induce s).cliqueNum ≤ G.cliqueNum := by
+  rw [cliqueNum_le_iff]
+  intro t ht
+  exact ((isNClique_induce_iff s t #t).1 ⟨ht, rfl⟩).le_cliqueNum
 
 /-- A maximum clique in a graph `G` is a clique with the largest possible size. -/
 -- TODO: replace with `MaximalFor (G.IsClique ∘ (↑)) card s`
@@ -832,14 +858,17 @@ lemma IsMaximumClique.isMaximalClique [Finite α] (s : Finset α) (M : G.IsMaxim
       exact lt_irrefl _ (lt_of_lt_of_le hlt hle) ⟩
 
 lemma maximumClique_card_eq_cliqueNum [Finite α] (s : Finset α) (sm : G.IsMaximumClique s) :
-    #s = G.cliqueNum := by
-  obtain ⟨sc, sm⟩ := sm
-  obtain ⟨t, tc, tcard⟩ := G.exists_isNClique_cliqueNum
-  exact eq_of_le_of_not_lt sc.card_le_cliqueNum (by simp [← tcard, sm t tc])
+    (#s : ℕ∞) = G.cliqueNum :=
+  le_antisymm sm.isClique.card_le_cliqueNum <|
+    cliqueNum_le_iff.2 fun t ht ↦ mod_cast sm.maximum t ht
 
 lemma maximumClique_exists [Finite α] : ∃ (s : Finset α), G.IsMaximumClique s := by
-  obtain ⟨s, snc⟩ := G.exists_isNClique_cliqueNum
-  exact ⟨s, ⟨snc.isClique, fun t ht => snc.card_eq.symm ▸ ht.card_le_cliqueNum⟩⟩
+  obtain ⟨n, hn⟩ := ENat.ne_top_iff_exists.1 (G.cliqueNum_ne_top)
+  obtain ⟨s, snc⟩ := exists_isNClique_of_cliqueNum_eq hn.symm
+  refine ⟨s, ⟨snc.isClique, fun t ht ↦ ?_⟩⟩
+  have := ht.card_le_cliqueNum
+  rw [← hn, ← snc.card_eq] at this
+  exact_mod_cast this
 
 end CliqueNumber
 
@@ -1044,24 +1073,28 @@ section IndepNumber
 
 variable {α : Type*} {G : SimpleGraph α}
 
-/-- The maximal number of vertices of an independent set in a graph `G`. -/
-noncomputable def indepNum (G : SimpleGraph α) : ℕ := sSup {n | ∃ s, G.IsNIndepSet n s}
+/-- The independence number of a graph `G`: the supremum in `ℕ∞` of the sizes of its finite
+independent sets, that is, the clique number of its complement. -/
+noncomputable def indepNum (G : SimpleGraph α) : ℕ∞ :=
+  Gᶜ.cliqueNum
 
-@[simp] lemma cliqueNum_compl : Gᶜ.cliqueNum = G.indepNum := by
-  simp [indepNum, cliqueNum]
+@[simp] lemma cliqueNum_compl : Gᶜ.cliqueNum = G.indepNum :=
+  rfl
 
 @[simp] lemma indepNum_compl : Gᶜ.indepNum = G.cliqueNum := by
-  simp [indepNum, cliqueNum]
+  rw [← cliqueNum_compl, compl_compl]
 
-theorem IsIndepSet.card_le_indepNum
-    [Finite α] {t : Finset α} (tc : G.IsIndepSet t) : #t ≤ G.indepNum := by
+theorem IsIndepSet.card_le_indepNum {t : Finset α} (tc : G.IsIndepSet t) :
+    (#t : ℕ∞) ≤ G.indepNum := by
   rw [← isClique_compl] at tc
-  simp_rw [indepNum, ← isNClique_compl]
+  rw [← cliqueNum_compl]
   exact tc.card_le_cliqueNum
 
-lemma exists_isNIndepSet_indepNum : ∃ s, G.IsNIndepSet G.indepNum s := by
-  simp_rw [indepNum, ← isNClique_compl]
-  exact exists_isNClique_cliqueNum
+/-- A finite independence number is the size of an independent set. -/
+lemma exists_isNIndepSet_of_indepNum_eq {n : ℕ} (h : G.indepNum = n) :
+    ∃ s, G.IsNIndepSet n s := by
+  simp_rw [← isNClique_compl]
+  exact exists_isNClique_of_cliqueNum_eq (by rwa [cliqueNum_compl])
 
 /-- An independent set in a graph `G` such that there is no independent set with more vertices. -/
 -- TODO: replace with `MaximalFor (G.IsIndepSet ∘ (↑)) card s`
@@ -1098,9 +1131,9 @@ lemma IsMaximumIndepSet.isMaximalIndepSet
   exact IsMaximumClique.isMaximalClique s M
 
 theorem maximumIndepSet_card_eq_indepNum
-    [Finite α] (t : Finset α) (tmc : G.IsMaximumIndepSet t) : #t = G.indepNum := by
+    [Finite α] (t : Finset α) (tmc : G.IsMaximumIndepSet t) : (#t : ℕ∞) = G.indepNum := by
   rw [← isMaximumClique_compl] at tmc
-  simp_rw [indepNum, ← isNClique_compl]
+  rw [← cliqueNum_compl]
   exact Gᶜ.maximumClique_card_eq_cliqueNum t tmc
 
 lemma maximumIndepSet_exists [Finite α] : ∃ (s : Finset α), G.IsMaximumIndepSet s := by
