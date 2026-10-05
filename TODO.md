@@ -286,11 +286,30 @@ operation.
   dimensions, the explicit proof for the weights, routine evidence, proof independence,
   complements, and the existence characterization.
 
-- [ ] **Make Newton iteration preserve derivative invertibility.**
-  `Polynomial.newtonMap` in `Mathlib/Dynamics/Newton.lean:44` returns its input when the derivative
-  value is not a unit, creating spurious fixed points.  Require unit evidence for a step and design
-  iteration around propagation or explicit failure.  Do not expose the identity fallback as a
-  Newton operation without matching literature.
+- [x] **Make Newton iteration preserve derivative invertibility.**
+  `Polynomial.newtonMap P x h` takes `h : IsUnit (aeval x (derivative P))` and is
+  `x - h.unit⁻¹ * aeval x P`.  Over a field this is exactly where the Newton step
+  `x ↦ x - P(x) / P'(x)` is defined.  In a ring with nonunits the quotient can also exist at a
+  nonunit, as for `P = 2 * X` over `ℤ` at `1`, but no consumer steps there, so the definition takes
+  the unit.  The former definition multiplied by `Ring.inverse`, which is zero at a non-unit, so it
+  returned `x` there: at `0` the derivative of `X ^ 2 + 1` over `ℚ` vanishes, and `0` was a fixed
+  point of Newton's map without being a root.  `newtonMap_apply_of_not_isUnit` is removed,
+  `newtonMap_apply_of_isUnit` became the definition, and the fixed-point lemmas
+  `newtonMap_eq_self_of_aeval_eq_zero` and `newtonMap_eq_self_iff` replace
+  `isFixedPt_newtonMap_of_aeval_eq_zero` and `isFixedPt_newtonMap_of_isUnit_iff`.  A unit
+  derivative need not survive a step: the step of `X ^ 2 + 1` over `ℚ` from `1` reaches `0`.  It
+  does when `P(x)` is nilpotent, since the step changes `x` by a nilpotent element
+  (`isNilpotent_newtonMap_sub`) and `P(x) ^ 2` divides the new value of `P`
+  (`aeval_sq_dvd_aeval_newtonMap`).  Newton iteration therefore runs on
+  `Polynomial.NewtonDomain P S`, the points where `P` is nilpotent and `P'` a unit, through the
+  self-map `NewtonDomain.step`; over a field these are the simple roots of `P`.  The iteration
+  lemmas, renamed `NewtonDomain.isNilpotent_iterate_step_sub` and
+  `NewtonDomain.aeval_pow_two_pow_dvd_aeval_iterate_step`, are stated there, and
+  `existsUnique_nilpotent_sub_and_aeval_eq_zero`, used by the Jordan-Chevalley decomposition, keeps
+  its statement.  Iteration with explicit failure outside such an invariant set has no consumer and
+  is not provided.  Tests cover the removed names, the spurious fixed point, computed steps,
+  including one that leaves the units, the fixed-point characterization, and iteration on the
+  domain.
 
 - [ ] **Give the zero return-time generator a literature-supported mathematical name.**
   `Function.minimalPeriod` in `Mathlib/Dynamics/PeriodicPts/Defs.lean:245` is zero at a nonperiodic
