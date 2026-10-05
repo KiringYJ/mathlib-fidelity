@@ -47,16 +47,13 @@ class HasProd (μ : VectorMeasure X E) (ν : VectorMeasure Y F) (B : E →L[ℝ]
   exists_prod : ∃ ρ : VectorMeasure (X × Y) G, ∀ (s : Set X) (t : Set Y),
     MeasurableSet s → MeasurableSet t → ρ (s ×ˢ t) = B (μ s) (ν t)
 
-/-- The product of two vector measures `μ` and `ν` with respect to a continuous bilinear map `B`,
-giving mass `B (μ s) (ν t)` to any measurable product set `s × t`.
-If such a measure does not exist, we use the junk value `0`. -/
-noncomputable def prod (μ : VectorMeasure X E) (ν : VectorMeasure Y F) (B : E →L[ℝ] F →L[ℝ] G) :
-    VectorMeasure (X × Y) G :=
-  open scoped Classical in if h : HasProd μ ν B then h.exists_prod.choose else 0
-
-lemma prod_eq_zero_of_not_hasProd (h : ¬HasProd μ ν B) :
-    μ.prod ν B = 0 := by
-  grind [HasProd, prod]
+/-- The product of two vector measures `μ` and `ν` with respect to a continuous bilinear map `B`:
+the vector measure giving mass `B (μ s) (ν t)` to any measurable product set `s × t`. It is defined
+when such a measure exists, which `HasProd μ ν B` states, and it is then unique
+(`prod_eq_of_forall_apply_prod`). -/
+noncomputable def prod (μ : VectorMeasure X E) (ν : VectorMeasure Y F) (B : E →L[ℝ] F →L[ℝ] G)
+    [h : HasProd μ ν B] : VectorMeasure (X × Y) G :=
+  h.exists_prod.choose
 
 @[simp] lemma prod_apply [h : HasProd μ ν B] {s : Set X} {t : Set Y} :
     μ.prod ν B (s ×ˢ t) = B (μ s) (ν t) := by
@@ -72,7 +69,7 @@ lemma prod_eq_zero_of_not_hasProd (h : ¬HasProd μ ν B) :
   · simp only [h't, not_false_eq_true, not_measurable, _root_.map_zero]
     rw [not_measurable]
     simp [measurableSet_prod, hs, ht, h't]
-  simpa [prod, h] using h.exists_prod.choose_spec s t h's h't
+  simpa [prod] using h.exists_prod.choose_spec s t h's h't
 
 lemma HasProd.flip [HasProd μ ν B] : HasProd ν μ B.flip where
   exists_prod := by
@@ -159,20 +156,19 @@ instance [CompleteSpace G] [IsFiniteMeasure μ.variation] : HasProd μ ν B wher
 instance [CompleteSpace G] [h : IsFiniteMeasure ν.variation] : HasProd μ ν B :=
   hasProd_flip_iff.1 inferInstance
 
-lemma prod_eq_of_forall_apply_prod {ρ : VectorMeasure (X × Y) G} (hρ : ∀ (s : Set X) (t : Set Y),
-    MeasurableSet s → MeasurableSet t → ρ (s ×ˢ t) = B (μ s) (ν t)) :
+lemma prod_eq_of_forall_apply_prod [HasProd μ ν B] {ρ : VectorMeasure (X × Y) G}
+    (hρ : ∀ (s : Set X) (t : Set Y),
+      MeasurableSet s → MeasurableSet t → ρ (s ×ˢ t) = B (μ s) (ν t)) :
     μ.prod ν B = ρ := by
-  have : HasProd μ ν B := ⟨ρ, hρ⟩
   apply ext_of_generateFrom _ _ generateFrom_prod.symm isPiSystem_prod
   · rw [← univ_prod_univ, hρ _ _ MeasurableSet.univ MeasurableSet.univ, prod_apply]
   · rintro - ⟨s, hs, t, ht, rfl⟩
     rw [prod_apply, hρ _ _ hs ht]
 
-@[simp] lemma map_prod_swap :
-    (μ.prod ν B).map Prod.swap = ν.prod μ B.flip := by
-  by_cases h : HasProd μ ν B; swap
-  · simp [prod_eq_zero_of_not_hasProd, h, hasProd_flip_iff]
-  have : HasProd ν μ B.flip := h.flip
+@[simp] lemma map_prod_swap [HasProd μ ν B] :
+    (μ.prod ν B).map Prod.swap =
+      haveI := HasProd.flip (μ := μ) (ν := ν) (B := B); ν.prod μ B.flip := by
+  have : HasProd ν μ B.flip := HasProd.flip
   apply (prod_eq_of_forall_apply_prod (fun s t hs ht ↦ ?_)).symm
   rw [map_apply _ measurable_swap (hs.prod ht)]
   simp
@@ -217,8 +213,11 @@ lemma _root_.MeasureTheory.Integrable.prod_vectorMeasure
   rw [Measure.prod_eq_productBySections μ.variation ν.variation] at hf
   exact Integrable.of_measure_le_smul (by simp) variation_prod_le hf
 
-theorem integral_prod_swap (f : X × Y → H) {A : E →L[ℝ] F →L[ℝ] G} {B : H →L[ℝ] G →L[ℝ] I} :
-    ∫ᵛ z, f z.swap ∂[B; ν.prod μ A.flip] = ∫ᵛ z, f z ∂[B; μ.prod ν A] := by
+theorem integral_prod_swap (f : X × Y → H) {A : E →L[ℝ] F →L[ℝ] G} {B : H →L[ℝ] G →L[ℝ] I}
+    [HasProd μ ν A] :
+    ∫ᵛ z, f z.swap ∂[B; haveI := HasProd.flip (μ := μ) (ν := ν) (B := A); ν.prod μ A.flip] =
+      ∫ᵛ z, f z ∂[B; μ.prod ν A] := by
+  have : HasProd ν μ A.flip := HasProd.flip
   have I (z : Y × X) : z.swap = MeasurableEquiv.prodComm z := rfl
   simp_rw [I, ← integral_map_equiv]
   congr
@@ -370,7 +369,7 @@ theorem integral_prod {B : G →L[ℝ] F →L[ℝ] J} {C : J →L[ℝ] E →L[�
 the vector measure integral of `f` for the product vector measure is equal to the iterated vector
 measure integral. Version where `f` is scalar. -/
 theorem integral_prod_smul [CompleteSpace F] {B : E →L[ℝ] F →L[ℝ] H}
-    [IsFiniteMeasure ν.variation] [IsFiniteMeasure μ.variation]
+    [IsFiniteMeasure ν.variation] [IsFiniteMeasure μ.variation] [HasProd μ ν B]
     {f : X × Y → ℝ} (hf : Integrable f (μ.variation.prod ν.variation)) :
     ∫ᵛ z, f z ∂•(μ.prod ν B) = ∫ᵛ x, (∫ᵛ y, f (x, y) ∂•ν) ∂[B.flip; μ] := by
   by_cases h : CompleteSpace H
@@ -400,7 +399,7 @@ the vector measure integral of `f` for the product vector measure is equal to th
 measure integral. Version where `f` is scalar.
 This version has the integrals on the right-hand side in the other order. -/
 theorem integral_prod_smul_symm [CompleteSpace E] {B : E →L[ℝ] F →L[ℝ] H}
-    [IsFiniteMeasure ν.variation] [IsFiniteMeasure μ.variation]
+    [IsFiniteMeasure ν.variation] [IsFiniteMeasure μ.variation] [HasProd μ ν B]
     {f : X × Y → ℝ} (hf : Integrable f (μ.variation.prod ν.variation)) :
     ∫ᵛ z, f z ∂•(μ.prod ν B) = ∫ᵛ y, (∫ᵛ x, f (x, y) ∂•μ) ∂[B; ν] := by
   by_cases h : CompleteSpace H
@@ -419,7 +418,7 @@ theorem integral_integral {B : G →L[ℝ] F →L[ℝ] J} {C : J →L[ℝ] E →
 
 /-- Reversed version of **Fubini's Theorem**, version with a scalar function. -/
 theorem integral_integral_smul [CompleteSpace F] {B : E →L[ℝ] F →L[ℝ] H}
-    [IsFiniteMeasure ν.variation] [IsFiniteMeasure μ.variation]
+    [IsFiniteMeasure ν.variation] [IsFiniteMeasure μ.variation] [HasProd μ ν B]
     {f : X → Y → ℝ} (hf : Integrable (uncurry f) (μ.variation.prod ν.variation)) :
     ∫ᵛ x, (∫ᵛ y, f x y ∂•ν) ∂[B.flip; μ] = ∫ᵛ z, f z.1 z.2 ∂•(μ.prod ν B) :=
   (integral_prod_smul hf).symm
@@ -436,7 +435,7 @@ theorem integral_integral_symm {B : G →L[ℝ] E →L[ℝ] J} {C : J →L[ℝ] 
 
 /-- Reversed version of **Fubini's Theorem** (symmetric version), version with a scalar function. -/
 theorem integral_integral_smul_symm [CompleteSpace E] {B : E →L[ℝ] F →L[ℝ] H}
-    [IsFiniteMeasure ν.variation] [IsFiniteMeasure μ.variation]
+    [IsFiniteMeasure ν.variation] [IsFiniteMeasure μ.variation] [HasProd μ ν B]
     {f : X → Y → ℝ} (hf : Integrable (uncurry f) (μ.variation.prod ν.variation)) :
     ∫ᵛ y, (∫ᵛ x, f x y ∂•μ) ∂[B; ν] = ∫ᵛ z, f z.1 z.2 ∂•(μ.prod ν B) :=
   (integral_prod_smul_symm hf).symm

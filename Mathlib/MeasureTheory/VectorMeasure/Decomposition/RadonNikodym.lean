@@ -27,7 +27,8 @@ open Measure VectorMeasure
 namespace SignedMeasure
 
 theorem withDensityᵥ_rnDeriv_eq (s : SignedMeasure α) (μ : Measure α) [SigmaFinite μ]
-    (h : s ≪ᵥ μ.toENNRealVectorMeasure) : μ.withDensityᵥ (s.rnDeriv μ) = s := by
+    (h : s ≪ᵥ μ.toENNRealVectorMeasure) :
+    μ.withDensityᵥ (s.rnDeriv μ) (s.integrable_rnDeriv μ) = s := by
   rw [absolutelyContinuous_ennreal_iff, (_ : μ.toENNRealVectorMeasure.ennrealToMeasure = μ),
     totalVariation_absolutelyContinuous_iff] at h
   · ext1 i hi
@@ -46,16 +47,20 @@ theorem withDensityᵥ_rnDeriv_eq (s : SignedMeasure α) (μ : Measure α) [Sigm
 
 /-- The Radon-Nikodym theorem for signed measures. -/
 theorem absolutelyContinuous_iff_withDensityᵥ_rnDeriv_eq (s : SignedMeasure α) (μ : Measure α)
-    [SigmaFinite μ] : s ≪ᵥ μ.toENNRealVectorMeasure ↔ μ.withDensityᵥ (s.rnDeriv μ) = s :=
-  ⟨withDensityᵥ_rnDeriv_eq s μ, fun h => h ▸ withDensityᵥ_absolutelyContinuous _ _⟩
+    [SigmaFinite μ] :
+    s ≪ᵥ μ.toENNRealVectorMeasure ↔ μ.withDensityᵥ (s.rnDeriv μ) (s.integrable_rnDeriv μ) = s :=
+  ⟨withDensityᵥ_rnDeriv_eq s μ, fun h => h ▸ withDensityᵥ_absolutelyContinuous μ _⟩
 
 end SignedMeasure
 
 theorem withDensityᵥ_rnDeriv_smul {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {μ ν : Measure α} [μ.HaveLebesgueDecomposition ν] [SigmaFinite μ] {f : α → E}
     (hμν : μ ≪ ν) (hf : Integrable f μ) :
-    ν.withDensityᵥ (fun x ↦ (μ.rnDeriv ν x).toReal • f x) = μ.withDensityᵥ f := by
+    ν.withDensityᵥ (fun x ↦ (μ.rnDeriv ν x).toReal • f x)
+      ((integrable_rnDeriv_smul_iff hμν).mpr hf) = μ.withDensityᵥ f hf := by
   rw [withDensityᵥ_smul_eq_withDensityᵥ_withDensity' (measurable_rnDeriv μ ν).aemeasurable
-    (rnDeriv_lt_top μ ν) ((integrable_rnDeriv_smul_iff hμν).mpr hf), withDensity_rnDeriv_eq μ ν hμν]
+    (rnDeriv_lt_top μ ν) ((integrable_rnDeriv_smul_iff hμν).mpr hf)]
+  congr 1
+  exact withDensity_rnDeriv_eq μ ν hμν
 
 end MeasureTheory
