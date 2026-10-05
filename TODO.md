@@ -1018,11 +1018,11 @@ operation.
   class contains every input whose section-measure functions are almost everywhere measurable
   (`HasCompProd.of_aemeasurable`), and instance search finds it for an s-finite kernel and every
   measure, for two s-finite kernels in the kernel products, for zero kernels and measures, and for
-  Dirac measures on spaces with measurable singletons.  One s-finite kernel is not enough (paper
-  proofs): with `ν = Σ_{t ∈ T} dirac t` for a non-Borel `T ⊆ ℝ`, the section integrals of
-  `const ℝ ν ⊗ₖ deterministic (fun p ↦ decide (p.1 = p.2))` and of `Kernel.id ⊗ₖ const (ℝ × ℝ) ν` on
-  the diagonal are the indicator of `T`, which is not measurable.  The fallback lemmas
-  `Kernel.compProd_of_not_isSFiniteKernel_left` and `_right`,
+  Dirac and counting measures on spaces with measurable singletons (`Measure.hasCompProd_count`).
+  One s-finite kernel is not enough (paper proofs): with `ν = Σ_{t ∈ T} dirac t` for a non-Borel
+  `T ⊆ ℝ`, the section integrals of `const ℝ ν ⊗ₖ deterministic (fun p ↦ decide (p.1 = p.2))` and of
+  `Kernel.id ⊗ₖ const (ℝ × ℝ) ν` on the diagonal are the indicator of `T`, which is not measurable.
+  The fallback lemmas `Kernel.compProd_of_not_isSFiniteKernel_left` and `_right`,
   `parallelComp_of_not_isSFiniteKernel_left` and `_right`, `prod_of_not_isSFiniteKernel_left` and
   `_right`, `Measure.compProd_of_not_sfinite`, and `Measure.compProd_of_not_isSFiniteKernel` are
   removed, and the instances `IsSFiniteKernel (κ ⊗ₖ η)`, `IsSFiniteKernel (κ ∥ₖ η)`,
@@ -1065,15 +1065,14 @@ operation.
   worth having, given that the Ionescu-Tulcea theorem uses Markov kernels.
 
 - [ ] **Give `Measure.productBySections` its exact domain or merge it into `⊗ₘ`.**
-  `productBySections μ ν h` takes `h : HasAEMeasurableSectionMeasures μ ν`, which is sufficient
-  but not necessary (paper proof): for counting measure `μ` on `ℝ` and `ν = Σ_{t ∈ T} dirac t` with
-  `T` not Borel, `∫⁻` against counting measure is a sum for every function, so the section
-  integrals are the values of `Measure.sum fun a ↦ ν.map (Prod.mk a)` and have measurable
-  majorants with the same integrals, while the section-measure function of the diagonal is the
-  indicator of `T`, which is not almost everywhere measurable for counting measure.  The section
-  integrals of `productBySections μ ν` are those of `μ ⊗ₘ Kernel.const α ν`, whose domain
-  `μ.HasCompProd (Kernel.const α ν)` is exact.  Decide whether to define `productBySections`
-  through `⊗ₘ` or to retire it, and migrate its Tonelli theory and consumers.
+  `productBySections μ ν h` takes `h : HasAEMeasurableSectionMeasures μ ν`, which is sufficient but
+  not necessary: for counting measure `μ` on `ℝ` and `ν = Σ_{t ∈ T} dirac t` with `T` not Borel,
+  `μ.HasCompProd (Kernel.const ℝ ν)` holds (`Measure.hasCompProd_count`), while the section-measure
+  function of the diagonal is the indicator of `T`, which is not almost everywhere measurable for
+  counting measure, whose only null set is empty.  The section integrals of `productBySections μ ν`
+  are those of `μ ⊗ₘ Kernel.const α ν`, whose domain `μ.HasCompProd (Kernel.const α ν)` is exact.
+  Decide whether to define `productBySections` through `⊗ₘ` or to retire it, and migrate its Tonelli
+  theory and consumers.
 
 - [ ] **Give `Kernel.withDensity` its exact domain.**
   `Kernel.withDensity κ f` in `Mathlib/Probability/Kernel/WithDensity.lean:48` takes

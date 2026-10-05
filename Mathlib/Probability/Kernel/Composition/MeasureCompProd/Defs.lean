@@ -22,7 +22,8 @@ section integrals are then countably additive, and a measure on `α × β` is de
 on measurable sets, so they are the values of a unique measure. This class is the domain of
 `μ ⊗ₘ κ`. It holds whenever the section-measure functions are almost everywhere measurable, in
 particular for every s-finite kernel `κ` and every measure `μ`, and instance search also supplies it
-when `μ` or `κ` is zero or when `μ` is a Dirac measure on a space with measurable singletons.
+when `μ` or `κ` is zero or when `μ` is a Dirac measure or counting measure on a space with
+measurable singletons (`MeasureTheory.Measure.hasCompProd_count`).
 Neither `μ` nor `κ` has to be s-finite: the composition-product of counting measure on `ℝ`, which
 is not s-finite, with the constant kernel `dirac 0` is the image of counting measure under
 `a ↦ (a, 0)`, and on a space with measurable singletons a Dirac measure has a composition-product
@@ -70,8 +71,8 @@ This is the exact domain of `MeasureTheory.Measure.compProd`. It holds whenever 
 section-measure functions are almost everywhere measurable
 (`MeasureTheory.Measure.HasCompProd.of_aemeasurable`), in particular for an s-finite kernel `κ`
 and every measure `μ` (`MeasureTheory.Measure.hasCompProd_of_isSFiniteKernel`), and instance search
-also supplies it when `μ` or `κ` is zero or when `μ` is a Dirac measure on a space with measurable
-singletons. -/
+also supplies it when `μ` or `κ` is zero or when `μ` is a Dirac measure or counting measure on a
+space with measurable singletons. -/
 class HasCompProd (μ : Measure α) (κ : Kernel α β) : Prop where
   /-- For every measurable set, the measures of its sections have a measurable majorant with the
   same integral. -/
@@ -171,5 +172,27 @@ instance hasCompProd_zero_right : μ.HasCompProd (0 : Kernel α β) :=
 everywhere constant. -/
 instance hasCompProd_dirac [MeasurableSingletonClass α] (x : α) : (dirac x).HasCompProd κ :=
   .of_aemeasurable fun _ _ ↦ ⟨_, measurable_const, ae_eq_dirac _⟩
+
+/-- Against counting measure on a space with measurable singletons, the composition-product
+with every kernel exists. A section integral is then a sum (`lintegral_count`): if it is infinite,
+the constant `∞` is a majorant with the same integral, and otherwise the function
+`a ↦ κ a (Prod.mk a ⁻¹' s)` has countable support, so it is measurable. -/
+instance hasCompProd_count [MeasurableSingletonClass α] : (count : Measure α).HasCompProd κ where
+  exists_measurable_ge_lintegral_eq s hs := by
+    set f := fun a ↦ κ a (Prod.mk a ⁻¹' s)
+    by_cases hf : ∑' a, f a = ∞
+    · have : Nonempty α := by
+        by_contra h
+        rw [not_nonempty_iff] at h
+        simp at hf
+      refine ⟨fun _ ↦ ∞, measurable_const, fun _ ↦ le_top, ?_⟩
+      rw [lintegral_count, hf, lintegral_const,
+        ENNReal.top_mul (measure_univ_ne_zero.mpr count_ne_zero'')]
+    · refine ⟨f, measurable_of_measurable_on_compl_countable _
+        (Summable.countable_support_ennreal hf) ?_, le_rfl, rfl⟩
+      have : (Function.support f)ᶜ.domRestrict f = fun _ ↦ 0 :=
+        funext fun x ↦ Function.notMem_support.mp x.2
+      rw [this]
+      exact measurable_const
 
 end MeasureTheory.Measure
