@@ -322,11 +322,29 @@ operation.
   total classifier publicly only with matching literature evidence; otherwise keep it private and
   expose only the actual orbit of a periodic point.
 
-- [ ] **Use extended graph distance and girth until finiteness is proved.**
-  `SimpleGraph.dist` in `Mathlib/Combinatorics/SimpleGraph/Metric.lean:206` maps unreachable pairs
-  to zero, while `SimpleGraph.girth` in `Mathlib/Combinatorics/SimpleGraph/Girth.lean:115` maps an
-  acyclic graph's infinite girth to zero.  Keep `edist`/`egirth` globally and require reachability or
-  a cycle for natural-valued projections.
+- [x] **Use extended graph distance and girth until finiteness is proved.**
+  `SimpleGraph.dist G u v h`, `SimpleGraph.girth G h`, and `SimpleGraph.diam G h` take
+  `h : G.Reachable u v`, `h : ¬G.IsAcyclic`, and `h : G.ediam ≠ ⊤`, which are their exact domains:
+  the extended distance of two vertices that are not reachable from each other, the extended girth
+  of an acyclic graph, and the extended diameter of a disconnected graph or of one with unbounded
+  distances are `⊤`, which has no value in `ℕ`.  `edist`, `egirth`, and `ediam` remain the total
+  invariants, and `Reachable.coe_dist_eq_edist`, `coe_girth`, and `coe_diam` identify the natural
+  values with them.  The former definitions truncated the extended invariants, so two vertices that
+  are not reachable from each other were at distance `0`, like equal vertices, an acyclic graph had
+  girth `0`, which no graph with a cycle has, and the empty graph on two vertices had diameter `0`,
+  like a single vertex.  The lemmas stating these values, `dist_eq_zero_iff_eq_or_not_reachable`,
+  `dist_eq_zero_of_not_reachable`, `nonempty_of_pos_dist`, `dist_ne_zero_iff_ne_and_reachable`,
+  `Reachable.of_dist_ne_zero`, `exists_walk_of_dist_ne_zero`, `dist_bot`, `girth_eq_zero`,
+  `IsAcyclic.girth_eq_zero`, `girth_bot`, `diam_eq_zero_of_not_connected`,
+  `diam_eq_zero_of_ediam_eq_top`, `ediam_ne_top_of_diam_ne_zero`, `diam_eq_zero_iff_ediam_eq_top`,
+  and `connected_iff_diam_ne_zero`, are removed.  `Reachable.dist_triangle_left` and
+  `Reachable.dist_triangle_right`, which needed only one of the two reachabilities because of the
+  fallback, are replaced by `dist_triangle`, `Reachable.dist_eq_zero_iff` by `dist_eq_zero_iff`,
+  `diam_ne_zero_of_ediam_ne_top` by `diam_ne_zero`, and `diam_anti_of_ediam_ne_top` by
+  `diam_anti`; `Adj.diff_dist_adj` takes the reachability it formerly omitted.  Trees and forests
+  are still two-colored by the parity of the distance to a vertex of each component.  Tests cover
+  the removed names, the missing evidence, the empty and complete graphs, the triangle inequality,
+  and the two-coloring of trees.
 
 - [x] **Replace the unbounded fallback in `SimpleGraph.cliqueNum`.**
   `SimpleGraph.cliqueNum G : ℕ∞` is the supremum of the sizes of the finite cliques of `G`, and
