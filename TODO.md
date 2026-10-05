@@ -802,12 +802,29 @@ operation.
   one-sided limits.  Tests cover the removed lemma, the missing product and integrability, a
   nonintegrable density, and the routine instances.
 
-- [ ] **Define the intended domain of generalized `InformationTheory.klDiv`.**
-  `Mathlib/InformationTheory/KullbackLeibler/Basic.lean:57` accepts arbitrary measures although its
-  mass correction is justified for finite measures; for example, zero against an infinite-mass
-  measure collapses to zero through `ν.real univ`.  Either restrict the public divergence to finite
-  measures or specify and verify a literature-supported infinite-measure definition before
-  migrating theorems.
+- [x] **Define the intended domain of generalized `InformationTheory.klDiv`.**
+  `klDiv μ ν` takes σ-finite measures `[SigmaFinite μ] [SigmaFinite ν]` and is the I-divergence
+  `∫⁻ x, ENNReal.ofReal (klFun (μ.rnDeriv ν x).toReal) ∂ν` if `μ ≪ ν`, with
+  `klFun t = t * log t + 1 - t`, and `∞` otherwise.  This is Csiszár's I-divergence of σ-finite
+  measures, the `φ`-divergence for `φ t = t * log t - t + 1` (I. Csiszár and F. Matúš, *Generalized
+  minimizers of convex integral functionals, Bregman distance, Pythagorean identities*, Kybernetika
+  48 (2012), Appendix C, eq. (44), whose standing measure is σ-finite, §1.A), and `∞` off absolute
+  continuity is the f-divergence convention, since `φ t / t → ∞`.  The literature measures the
+  divergence against a σ-finite reference measure; for σ-finite measures the Radon--Nikodym
+  derivative exists and is finite almost everywhere, and the nonnegative integrand needs no
+  integrability condition.  The former definition was
+  `ENNReal.ofReal (∫ x, llr μ ν x ∂μ + ν.real univ - μ.real univ)` for `μ ≪ ν` with integrable
+  log-likelihood ratio, for all measures.  The mass correction agrees with the I-divergence when `ν`
+  is finite, but for `ν` of infinite mass `ν.real univ` is `0`, so the divergence of `0` from
+  Lebesgue measure, or from counting measure on `ℕ`, was `0` instead of `∞`.  That formula is now
+  `klDiv_of_ac_of_integrable` for finite measures, with `klDiv_of_not_integrable`,
+  `klDiv_eq_top_iff`, `klDiv_ne_top_iff`, `klDiv_ne_top`, and `klDiv_eq_integral_klFun`, which
+  also assume finite measures; `klDiv_eq_lintegral_klFun`, `klDiv_eq_lintegral_klFun_of_ac`, and
+  `klDiv_of_not_ac` hold for σ-finite measures, and `klDiv_zero_left`, formerly for finite `ν`,
+  gives `ν univ` for every σ-finite `ν`.  The chain rule and data-processing inequalities keep their
+  finite-measure hypotheses.  Tests cover the missing σ-finiteness, the divergence of `0` from
+  Lebesgue and counting measure, the finite-measure formula, and the divergence of a measure from
+  itself.
 
 - [x] **Make `LinearMap.index` carry Fredholm-style finiteness.**
   `LinearMap.index f hf` is defined for linear maps between vector spaces over a division ring that

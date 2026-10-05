@@ -187,7 +187,7 @@ theorem klDiv_comp_right_le (κ : Kernel 𝓧 𝓨) [IsMarkovKernel κ] :
     klDiv (κ ∘ₘ μ) (κ ∘ₘ ν) ≤ klDiv μ ν :=
   calc klDiv (κ ∘ₘ μ) (κ ∘ₘ ν)
   _ ≤ klDiv (μ ⊗ₘ κ) (ν ⊗ₘ κ) := by
-    rw [← Measure.snd_compProd, ← Measure.snd_compProd]
+    simp only [← Measure.snd_compProd]
     exact klDiv_map_le _ _ measurable_snd
   _ = klDiv μ ν := klDiv_compProd_left μ ν κ
 
