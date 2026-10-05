@@ -1081,6 +1081,31 @@ operation.
   `(κ a).withDensity (f a)` form a kernel, separate it from the convenient sufficient conditions,
   and remove the fallback.
 
+- [ ] **Prove Tonelli's theorem on the exact domain of `μ ⊗ₘ κ` and drop surplus s-finiteness.**
+  Many lemmas in `Mathlib/Probability/Kernel/Composition/` still assume s-finite inputs, among them
+  `lintegral_compProd`, `setLIntegral_compProd`, `compProd_assoc`, `compProd_add_left`,
+  `compProd_sum_left`, `compProd_smul_left`, `parallelComp_apply_prod`, `lintegral_parallelComp`,
+  `prod_apply_prod`, `lintegral_prod`, `mutuallySingular_compProd_iff`, and
+  `absolutelyContinuous_compProd_iff`.  Tonelli's theorem
+  `∫⁻ p, f p ∂(μ ⊗ₘ κ) = ∫⁻ a, ∫⁻ b, f (a, b) ∂κ a ∂μ` for measurable `f` holds on `μ.HasCompProd κ`
+  (paper proof).  For a simple function, the weighted sum of measurable majorants of the
+  section-measure functions of its level sets majorizes its section integrals with the same
+  integral, because `∫⁻` is superadditive (`le_lintegral_add`) and `c * ∫⁻ h ≤ ∫⁻ c * h`
+  (`lintegral_const_mul_le`) for every function `h`.  For a measurable `f`, the approximations
+  `SimpleFunc.eapprox f n` increase to `f`, and their section integrals `H n` increase to the
+  section integral of `f` by monotone convergence in each `κ a`.  If `G n` are measurable majorants
+  of `H n` with the same integrals, the measurable functions `⨅ m ≥ n, G m` increase to a majorant
+  of `⨆ n, H n` and have integrals at most `∫⁻ a, H n a ∂μ`, so the limit again has a measurable
+  majorant with the same integral, and its integral is the limit of the integrals.  This step is
+  needed because monotone convergence fails for lower integrals of functions that are not
+  measurable.  Prove the theorem together with this majorant property of the section integrals,
+  restate on the domain classes the lemmas that need only section integrals or Tonelli's theorem,
+  and add closure instances for `μ + ν`, `Measure.sum`, and `c • μ`: the pointwise infimum of the
+  majorants, or for `c • μ` the majorant itself, is a majorant with the same integral, because `∫⁻`
+  is additive and homogeneous in the measure for every function (`lintegral_add_measure`,
+  `lintegral_sum_measure`, `lintegral_smul_measure`).  Keep s-finiteness only where an s-finite
+  decomposition is used, as in `compProd_eq_sum_compProd` and `IsSFiniteKernel.compProd`.
+
 - [ ] **Make Radon--Nikodym data conditional on decomposition existence.**
   `Measure.rnDeriv` and `Measure.singularPart` in
   `Mathlib/MeasureTheory/Measure/Decomposition/Lebesgue.lean:80` and `:73` return zero without
