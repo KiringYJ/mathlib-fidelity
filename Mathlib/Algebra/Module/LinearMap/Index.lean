@@ -13,12 +13,24 @@ public import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
 /-!
 # The index of a linear map
 
-In this file we define the index of a linear map and provide some basic API.
+In this file we define the index of a Fredholm linear map between vector spaces and provide some
+basic API.
+
+A linear map between vector spaces over a division ring is Fredholm if its kernel and cokernel are
+finite-dimensional, and its index is then `dim ker - dim coker`. The index is defined exactly for
+Fredholm maps: otherwise one of the dimensions is infinite.
 
 ## Main definitions / results:
 
-* `LinearMap.index`: the index of a linear map, with sign convention `index = dim ker - dim coker`.
+* `LinearMap.IsFredholm`: the kernel and cokernel are finite-dimensional.
+* `LinearMap.index`: the index of a Fredholm linear map, with sign convention
+  `index = dim ker - dim coker`.
 * `LinearMap.index_comp`: the index is additive under composition.
+
+## References
+
+* J. H. Shapiro, *Algebraic Fredholm theory*, lecture notes (2011), Definitions 4.1 and 4.11 and
+  Theorem 5.1.
 
 -/
 
@@ -28,80 +40,96 @@ namespace LinearMap
 
 open Function Module
 
-variable {M N : Type*} [AddCommGroup M] [AddCommGroup N]
+variable {M N P : Type*} [AddCommGroup M] [AddCommGroup N] [AddCommGroup P]
+variable {k : Type*} [DivisionRing k] [Module k M] [Module k N] [Module k P]
 
-section Ring
+/-- A linear map between vector spaces is Fredholm if its kernel and cokernel are
+finite-dimensional. -/
+@[mk_iff]
+public structure IsFredholm (f : M →ₗ[k] N) : Prop where
+  /-- The kernel is finite-dimensional. -/
+  finiteDimensional_ker : FiniteDimensional k f.ker
+  /-- The cokernel is finite-dimensional. -/
+  finiteDimensional_coker : FiniteDimensional k (N ⧸ f.range)
 
-variable {R : Type*} [Ring R] [Module R M] [Module R N] (f : M →ₗ[R] N)
+/-- The index of a Fredholm linear map with sign convention `index = dim ker - dim coker`. -/
+@[nolint unusedArguments]
+public def index (f : M →ₗ[k] N) (_hf : f.IsFredholm) : ℤ :=
+  finrank k f.ker - finrank k (N ⧸ f.range)
 
-/-- The index of a linear map with sign convention `index = dim ker - dim coker`.
+variable {f : M →ₗ[k] N}
 
-In the case that either the kernel or cokernel has infinite rank, the value is junk. -/
-public def index : ℤ := finrank R f.ker - finrank R (N ⧸ f.range)
-
-variable {f}
-
-public lemma index_eq_finrank_sub :
-    f.index = finrank R f.ker - finrank R (N ⧸ f.range) := by
+public lemma index_eq_finrank_sub (hf : f.IsFredholm) :
+    f.index hf = finrank k f.ker - finrank k (N ⧸ f.range) := by
   rfl
 
-@[nontriviality] public lemma index_of_subsingleton [Subsingleton R] :
-    f.index = 0 := by
-  simp [index_eq_finrank_sub]
+public lemma IsFredholm.of_finiteDimensional [FiniteDimensional k M] [FiniteDimensional k N]
+    (f : M →ₗ[k] N) : f.IsFredholm :=
+  ⟨inferInstance, inferInstance⟩
 
-@[simp] public lemma index_zero :
-    (0 : M →ₗ[R] N).index = finrank R M - finrank R N := by
+@[simp] public lemma index_zero (h : (0 : M →ₗ[k] N).IsFredholm) :
+    (0 : M →ₗ[k] N).index h = finrank k M - finrank k N := by
   rw [index_eq_finrank_sub, ker_zero, range_zero]
   simpa using (Submodule.quotEquivOfEqBot _ rfl).finrank_eq
 
-public lemma index_of_injective [Nontrivial R] (hf : Injective f) :
-    f.index = - finrank R (N ⧸ f.range) := by
+public lemma IsFredholm.of_injective (hf : Injective f) [FiniteDimensional k (N ⧸ f.range)] :
+    f.IsFredholm where
+  finiteDimensional_ker := by rw [ker_eq_bot.2 hf]; infer_instance
+  finiteDimensional_coker := inferInstance
+
+public lemma index_of_injective (hf : Injective f) (h : f.IsFredholm) :
+    f.index h = - finrank k (N ⧸ f.range) := by
   simpa [index_eq_finrank_sub] using ker_eq_bot.2 hf ▸ finrank_bot _ _
 
-@[simp] public lemma index_subtype [Nontrivial R] {S : Submodule R M} :
-    S.subtype.index = - finrank R (M ⧸ S) := by
+@[simp] public lemma index_subtype {S : Submodule k M} (h : S.subtype.IsFredholm) :
+    S.subtype.index h = - finrank k (M ⧸ S) := by
   rw [index_of_injective S.injective_subtype, S.range_subtype]
 
-variable [StrongRankCondition R]
+public lemma IsFredholm.of_surjective (hf : Surjective f) [FiniteDimensional k f.ker] :
+    f.IsFredholm where
+  finiteDimensional_ker := inferInstance
+  finiteDimensional_coker := by rw [range_eq_top.mpr hf]; infer_instance
 
-public lemma index_of_surjective (hf : Surjective f) :
-    f.index = finrank R f.ker := by
+public lemma index_of_surjective (hf : Surjective f) (h : f.IsFredholm) :
+    f.index h = finrank k f.ker := by
   rw [index_eq_finrank_sub, range_eq_top.mpr hf]
   simp [finrank_eq_zero_of_subsingleton]
 
-@[simp] public lemma index_mkQ {S : Submodule R M} :
-    S.mkQ.index = finrank R S := by
+@[simp] public lemma index_mkQ {S : Submodule k M} (h : S.mkQ.IsFredholm) :
+    S.mkQ.index h = finrank k S := by
   rw [index_of_surjective S.mkQ_surjective, S.ker_mkQ]
 
-@[simp] public lemma index_projectionOnto {S T : Submodule R M} (hST : IsCompl S T) :
-    (S.projectionOnto T hST).index = finrank R T := by
+@[simp] public lemma index_projectionOnto {S T : Submodule k M} (hST : IsCompl S T)
+    (h : (S.projectionOnto T hST).IsFredholm) :
+    (S.projectionOnto T hST).index h = finrank k T := by
   rw [index_of_surjective (Submodule.projectionOnto_surjective hST), Submodule.ker_projectionOnto]
 
-public lemma index_of_bijective (hf : Bijective f) :
-    f.index = 0 := by
-  nontriviality R
+public lemma IsFredholm.of_bijective (hf : Bijective f) : f.IsFredholm :=
+  have : FiniteDimensional k f.ker := by rw [ker_eq_bot.2 hf.injective]; infer_instance
+  .of_surjective hf.surjective
+
+public lemma index_of_bijective (hf : Bijective f) (h : f.IsFredholm) :
+    f.index h = 0 := by
   rw [index_of_surjective hf.surjective, ker_eq_bot.mpr hf.injective, finrank_bot, Nat.cast_zero]
 
-@[simp] public lemma index_id :
-    (id : M →ₗ[R] M).index = 0 :=
-  index_of_bijective bijective_id
+@[simp] public lemma index_id (h : (id : M →ₗ[k] M).IsFredholm) :
+    (id : M →ₗ[k] M).index h = 0 :=
+  index_of_bijective bijective_id h
 
-@[simp] public lemma _root_.LinearEquiv.index_eq_zero {e : M ≃ₗ[R] N} :
-    e.toLinearMap.index = 0 :=
-  index_of_bijective e.bijective
+@[simp] public lemma _root_.LinearEquiv.index_eq_zero {e : M ≃ₗ[k] N}
+    (h : e.toLinearMap.IsFredholm) : e.toLinearMap.index h = 0 :=
+  index_of_bijective e.bijective h
 
-end Ring
+public lemma IsFredholm.neg (hf : f.IsFredholm) : (-f).IsFredholm := by
+  obtain ⟨h₁, h₂⟩ := hf
+  exact ⟨by rwa [ker_neg], by rwa [range_neg]⟩
 
-section DivisionRing
-
-variable {k : Type*} [DivisionRing k] [Module k M] [Module k N] {f : M →ₗ[k] N}
-
-@[simp] public lemma index_neg :
-    (-f).index = f.index := by
+@[simp] public lemma index_neg (hf : f.IsFredholm) :
+    (-f).index hf.neg = f.index hf := by
   rw [index_eq_finrank_sub, index_eq_finrank_sub, ker_neg, range_neg]
 
-public lemma index_eq_of_finiteDimensional [FiniteDimensional k M] [FiniteDimensional k N] :
-    f.index = finrank k M - finrank k N := by
+public lemma index_eq_of_finiteDimensional [FiniteDimensional k M] [FiniteDimensional k N]
+    (h : f.IsFredholm) : f.index h = finrank k M - finrank k N := by
   -- `0 → f.ker → M → N → f.coker → 0`
   rw [index_eq_finrank_sub]
   have h₁ := f.range.finrank_quotient_add_finrank
@@ -109,14 +137,23 @@ public lemma index_eq_of_finiteDimensional [FiniteDimensional k M] [FiniteDimens
   have h₃ := f.ker.finrank_quotient_add_finrank
   lia
 
+open Submodule in
+/-- The composition of Fredholm maps is Fredholm. -/
+public lemma IsFredholm.comp {g : N →ₗ[k] P} (hg : g.IsFredholm) (hf : f.IsFredholm) :
+    (g ∘ₗ f).IsFredholm := by
+  obtain ⟨_, _⟩ := hf
+  obtain ⟨_, _⟩ := hg
+  exact ⟨by rw [ker_comp]; infer_instance, by rw [range_comp]; infer_instance⟩
+
 set_option backward.isDefEq.respectTransparency.types false in
 open Submodule in
-@[simp] public lemma index_comp {P : Type*} [AddCommGroup P] [Module k P]
-    (g : N →ₗ[k] P) (f : M →ₗ[k] N)
-    [FiniteDimensional k f.ker] [FiniteDimensional k g.ker]
-    [FiniteDimensional k (N ⧸ f.range)] [FiniteDimensional k (P ⧸ g.range)] :
-    (g ∘ₗ f).index = g.index + f.index := by
+@[simp] public lemma index_comp {g : N →ₗ[k] P} (hg : g.IsFredholm) (hf : f.IsFredholm) :
+    (g ∘ₗ f).index (hg.comp hf) = g.index hg + f.index hf := by
   -- `0 → f.ker → (g ∘ₗ f).ker → g.ker → f.coker → (g ∘ₗ f).coker → g.coker → 0`
+  have hgf := hg.comp hf
+  obtain ⟨_, _⟩ := hf
+  obtain ⟨_, _⟩ := hg
+  obtain ⟨_, _⟩ := hgf
   have aux : f.range ≤ comap g (g ∘ₗ f).range := by rw [← map_le_iff_le_comap, range_comp]
   let f₀ : f.ker →ₗ[k] (g ∘ₗ f).ker := inclusion <| ker_le_ker_comp f g
   let f₁ : (g ∘ₗ f).ker →ₗ[k] g.ker := f.restrict <| by simp
@@ -129,20 +166,27 @@ open Submodule in
   have h₃ : Exact f₂ f₃ := by rw [exact_iff]; simp [f₂, f₃, range_comp, ker_mapQ, comap_map_eq]
   have h₄ : Exact f₃ f₄ := by rw [exact_iff]; simp [f₃, f₄, factor, ker_mapQ, range_mapQ]
   have h₅ : Surjective f₄ := factor_surjective _
-  have : FiniteDimensional k (g ∘ₗ f).ker := by rw [ker_comp]; infer_instance
-  have : FiniteDimensional k (P ⧸ (g ∘ₗ f).range) := by rw [range_comp]; infer_instance
   grind [index, sum_neg_one_pow_finrank_eq_zero_of_exact_six f₀ f₁ f₂ f₃ f₄ h₀ h₁ h₂ h₃ h₄ h₅]
 
-end DivisionRing
+end LinearMap
 
 section Field
 
+namespace LinearMap
+
+open Module
+
+variable {M N : Type*} [AddCommGroup M] [AddCommGroup N]
 variable {k : Type*} [Field k] [Module k M] [Module k N] {f : M →ₗ[k] N}
 
-public lemma index_smul (t : k) (ht : t ≠ 0) :
-    (t • f).index = f.index := by
+public lemma IsFredholm.smul (hf : f.IsFredholm) {t : k} (ht : t ≠ 0) : (t • f).IsFredholm := by
+  obtain ⟨h₁, h₂⟩ := hf
+  exact ⟨by rwa [ker_smul _ _ ht], by rwa [range_smul _ _ ht]⟩
+
+public lemma index_smul (hf : f.IsFredholm) {t : k} (ht : t ≠ 0) :
+    (t • f).index (hf.smul ht) = f.index hf := by
   rw [index_eq_finrank_sub, index_eq_finrank_sub, ker_smul _ _ ht, range_smul _ _ ht]
 
-end Field
-
 end LinearMap
+
+end Field

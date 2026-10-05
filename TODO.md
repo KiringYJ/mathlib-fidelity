@@ -751,10 +751,25 @@ operation.
   measures or specify and verify a literature-supported infinite-measure definition before
   migrating theorems.
 
-- [ ] **Make `LinearMap.index` carry Fredholm-style finiteness.**
-  `Mathlib/Algebra/Module/LinearMap/Index.lean:40` subtracts natural `finrank`s of kernel and
-  cokernel without finite-rank hypotheses.  State the appropriate finiteness assumptions and audit
-  the intended general-ring scope.
+- [x] **Make `LinearMap.index` carry Fredholm-style finiteness.**
+  `LinearMap.index f hf` is defined for linear maps between vector spaces over a division ring that
+  are Fredholm, `hf : f.IsFredholm`: the kernel and cokernel are finite-dimensional, and the index
+  is `dim ker - dim coker` (J. H. Shapiro, *Algebraic Fredholm theory*, lecture notes, 2011,
+  Definitions 4.1 and 4.11; Theorem 5.1 is the composition rule).  The former definition subtracted
+  `finrank`s over any ring, so an infinite-dimensional kernel or cokernel counted as `0`: the zero
+  map from an infinite-dimensional space to `0` had index `0`.  Division rings are the intended
+  scope, since there dimension, rank, and length agree; over general rings they give different
+  indices for the same map (multiplication by `2` on `ℤ` has rank index `0` and length index `-1`),
+  so a rank- or length-based index would be a separate object, and the ring-level lemmas
+  `index_of_subsingleton` and those under `StrongRankCondition` are removed.  The lemmas take
+  `IsFredholm` evidence, and constructors supply it for finite-dimensional spaces, injective and
+  surjective maps with finite-dimensional cokernel and kernel, bijections, negation, nonzero
+  scalars, and compositions.  A topological Fredholm operator is Fredholm as a linear map
+  (`ContinuousLinearMap.IsFredholm.toLinearMap`), `ContinuousLinearMap.index T hT` is its index,
+  `IsFredholm.index_comp` keeps the composition rule, and the local constancy of the index is
+  stated on the subtype of Fredholm operators (`continuous_index`) instead of as continuity of a
+  total function.  Tests cover the zero map from an infinite-dimensional space, the removed names,
+  and composition.
 
 - [x] **Define the intended module-level and vector-space Euler characteristics separately.**
   `GradedObject.eulerChar c X hX` takes `hX : GradedObject.HasFiniteRank X`: every object has finite
