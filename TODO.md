@@ -780,11 +780,27 @@ operation.
   Use completeness as a convenient sufficient interface or carry exact pointwise limit
   existence/uniqueness; do not present uniform continuity alone as the mathematical domain.
 
-- [ ] **Make vector-measure products and densities conditional constructions.**
-  `VectorMeasure.prod` in `Mathlib/MeasureTheory/VectorMeasure/Prod.lean:52` chooses zero when no
-  product exists, and `VectorMeasure.withDensity` in
-  `Mathlib/MeasureTheory/VectorMeasure/WithDensityVec.lean:42` uses zero when integrability fails.
-  Require `HasProd`/integrability at the ordinary boundary.
+- [x] **Make vector-measure products and densities conditional constructions.**
+  `VectorMeasure.prod μ ν B` takes `[HasProd μ ν B]`: a vector measure with `B (μ s) (ν t)` on the
+  measurable rectangles exists, and it is then unique (`prod_eq_of_forall_apply_prod`), so the
+  definition chooses a unique value; finite variation of either factor and a complete target supply
+  the instance.  The former definition returned `0` when no product exists
+  (`prod_eq_zero_of_not_hasProd`, removed), and `map_prod_swap` and `integral_prod_swap` held for
+  every pair through that value; they now assume `HasProd`, as do the scalar Fubini theorems
+  `integral_prod_smul`, `integral_prod_smul_symm`, `integral_integral_smul`, and
+  `integral_integral_smul_symm`, which allowed an incomplete target.
+  `VectorMeasure.withDensity μ f B hf` and `Measure.withDensityᵥ μ f hf`, which returned `0` for a
+  nonintegrable `f`, take the integrability of `f`, which is the exact domain: the integral is
+  defined on every measurable set exactly when it is defined on the whole space.  Lemmas such as
+  `withDensityᵥ_neg`, `withDensityᵥ_smul`, `WithDensityᵥEq.congr_ae`,
+  `withDensityᵥ_absolutelyContinuous`, `withDensity_congr`, and `variation_WithDensity_le`, which
+  held for every `f` through that value, take the integrability.  The signed Lebesgue decomposition
+  states `s.singularPart μ + μ.withDensityᵥ (s.rnDeriv μ) _ = s` with the integrability of the
+  Radon--Nikodym derivative; `haveLebesgueDecomposition_mk`, `eq_singularPart`, and `eq_rnDeriv`
+  take an integrable density instead of admitting a nonintegrable one through the fallback; and the
+  integration-by-parts formula for functions of bounded variation passes the integrability of the
+  one-sided limits.  Tests cover the removed lemma, the missing product and integrability, a
+  nonintegrable density, and the routine instances.
 
 - [ ] **Define the intended domain of generalized `InformationTheory.klDiv`.**
   `Mathlib/InformationTheory/KullbackLeibler/Basic.lean:57` accepts arbitrary measures although its

@@ -42,16 +42,16 @@ variable {α : Type*} {m m0 : SigmaAlgebra α} {μ : Measure α}
 
 theorem rnDeriv_ae_eq_condExp {hm : m ≤ m0} [hμm : SigmaFinite (μ.trim hm)] {f : α → ℝ}
     (hf : Integrable f μ) :
-    SignedMeasure.rnDeriv ((μ.withDensityᵥ f).trim hm) (μ.trim hm) =ᵐ[μ] μ[f | m] := by
+    SignedMeasure.rnDeriv ((μ.withDensityᵥ f hf).trim hm) (μ.trim hm) =ᵐ[μ] μ[f | m] := by
   refine ae_eq_condExp_of_forall_setIntegral_eq hm hf ?_ ?_ ?_
   · exact fun _ _ _ => (integrable_of_integrable_trim hm
-      (SignedMeasure.integrable_rnDeriv ((μ.withDensityᵥ f).trim hm) (μ.trim hm))).integrableOn
+      (SignedMeasure.integrable_rnDeriv ((μ.withDensityᵥ f hf).trim hm) (μ.trim hm))).integrableOn
   · intro s hs _
     conv_rhs => rw [← hf.withDensityᵥ_trim_eq_integral hm hs,
-      ← SignedMeasure.withDensityᵥ_rnDeriv_eq ((μ.withDensityᵥ f).trim hm) (μ.trim hm)
+      ← SignedMeasure.withDensityᵥ_rnDeriv_eq ((μ.withDensityᵥ f hf).trim hm) (μ.trim hm)
         (hf.withDensityᵥ_trim_absolutelyContinuous hm)]
     rw [withDensityᵥ_apply
-      (SignedMeasure.integrable_rnDeriv ((μ.withDensityᵥ f).trim hm) (μ.trim hm)) hs,
+      (SignedMeasure.integrable_rnDeriv ((μ.withDensityᵥ f hf).trim hm) (μ.trim hm)) hs,
       ← setIntegral_trim hm _ hs]
     exact (SignedMeasure.measurable_rnDeriv _ _).stronglyMeasurable
   · exact (SignedMeasure.measurable_rnDeriv _ _).stronglyMeasurable.aestronglyMeasurable
