@@ -25,6 +25,8 @@ properties about them.
 
 * `isDeterministic_iff_isZeroOneMeasure`: a finite kernel is deterministic if and
   only if it is a zero-one measure for every input.
+* `IsDeterministic.isSFiniteKernel`: a deterministic kernel is s-finite, since each of its values
+  is a zero-one measure, possibly zero, or `∞` times a zero-one probability measure.
 * `IsDeterministic.exists_eq_deterministic`: in a standard Borel space, a deterministic Markov
   kernel is a Dirac kernel of some measurable function.
 * `comp_parallelComp_comp_copy`: if the composition of two Markov kernels `η ∘ₖ κ` is
@@ -49,6 +51,7 @@ composition is deterministic, the equation fails.
 public section
 
 open MeasureTheory ProbabilityTheory Set
+open scoped ENNReal
 
 variable {α β : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β}
 
@@ -88,18 +91,32 @@ instance : IsDeterministic (swap α β) := by unfold swap; infer_instance
 
 open IsZeroOneMeasure
 
+/-- A deterministic kernel is multiplicative on intersections: evaluating
+`(κ ∥ₖ κ) ∘ₖ copy α = copy β ∘ₖ κ` at `a` on `s ×ˢ t` gives `κ a s * κ a t = κ a (s ∩ t)`. -/
+lemma IsDeterministic.measure_inter_eq_mul (κ : Kernel α β) [IsDeterministic κ] (a : α)
+    {s t : Set β} (hs : MeasurableSet s) (ht : MeasurableSet t) :
+    κ a (s ∩ t) = κ a s * κ a t := by
+  have h := DFunLike.congr_fun (DFunLike.congr_fun κ.parallelComp_self_comp_copy a) (s ×ˢ t)
+  rw [copy_comp_apply_prod κ a hs ht, comp_apply' _ _ _ (hs.prod ht), copy_apply,
+    lintegral_dirac' _ ((κ ∥ₖ κ).measurable_coe (hs.prod ht)), parallelComp_apply' (hs.prod ht)]
+    at h
+  have h_eq (b : β) : κ a (Prod.mk b ⁻¹' s ×ˢ t) = s.indicator (fun _ ↦ κ a t) b := by
+    by_cases hb : b ∈ s
+    · simp [hb, mk_preimage_prod_right hb]
+    · simp [hb, mk_preimage_prod_right_eq_empty hb]
+  simp_rw [h_eq, lintegral_indicator_const hs] at h
+  rw [← h, mul_comm]
+
 lemma isDeterministic_iff_isZeroOneMeasure (κ : Kernel α β) [IsFiniteKernel κ] :
     IsDeterministic κ ↔ ∀ a, IsZeroOneMeasure (κ a) := by
   constructor
   · intro h a
     refine ⟨fun s hs ↦ ?_⟩
-    have := DFunLike.congr_fun κ.parallelComp_self_comp_copy a |> DFunLike.congr_fun
-      <| (s ×ˢ s)
-    rw [parallelComp_comp_copy, prod_apply_prod, copy_comp_apply_prod, inter_self] at this
-    · by_cases hκ : κ a s = 0
-      · simp [hκ]
-      · exact Or.inr <| (ENNReal.mul_eq_left hκ (by simp)).mp this
-    all_goals exact hs
+    have := IsDeterministic.measure_inter_eq_mul κ a hs hs
+    rw [inter_self] at this
+    by_cases hκ : κ a s = 0
+    · simp [hκ]
+    · exact Or.inr <| (ENNReal.mul_eq_left hκ (by simp)).mp this.symm
   · intro _
     refine ⟨inferInstance, ?_⟩
     ext : 1
@@ -110,6 +127,80 @@ lemma isDeterministic_iff_isZeroOneMeasure (κ : Kernel α β) [IsFiniteKernel �
 
 instance (κ : Kernel α β) [IsFiniteKernel κ] [IsDeterministic κ] : ∀ a, IsZeroOneMeasure (κ a) :=
   (isDeterministic_iff_isZeroOneMeasure κ).mp ‹_›
+
+/-- A deterministic kernel gives a measurable set either no mass or its full mass. -/
+lemma IsDeterministic.measure_eq_zero_or_eq_measure_univ (κ : Kernel α β) [IsDeterministic κ]
+    (a : α) {s : Set β} (hs : MeasurableSet s) :
+    κ a s = 0 ∨ κ a s = κ a univ := by
+  have h := IsDeterministic.measure_inter_eq_mul κ a hs hs.compl
+  rw [inter_compl_self, measure_empty] at h
+  refine (mul_eq_zero.mp h.symm).imp id fun h0 ↦ ?_
+  rw [← measure_add_measure_compl hs, h0, add_zero]
+
+/-- The total mass of a deterministic kernel at a point is `0`, `1`, or `∞`. -/
+lemma IsDeterministic.measure_univ_eq_zero_or_one_or_top (κ : Kernel α β) [IsDeterministic κ]
+    (a : α) :
+    κ a univ = 0 ∨ κ a univ = 1 ∨ κ a univ = ∞ := by
+  have h := IsDeterministic.measure_inter_eq_mul κ a .univ .univ
+  rw [inter_self] at h
+  by_cases h0 : κ a univ = 0
+  · exact .inl h0
+  by_cases htop : κ a univ = ∞
+  · exact .inr (.inr htop)
+  exact .inr (.inl ((ENNReal.mul_eq_left h0 htop).mp h.symm))
+
+/-- The measure `s ↦ min (κ a s) 1` of a deterministic kernel `κ`. It is countably additive
+because at most one of countably many disjoint measurable sets has positive mass. -/
+private noncomputable def capOne (κ : Kernel α β) [IsDeterministic κ] (a : α) : Measure β :=
+  Measure.ofMeasurable (fun s _ ↦ min (κ a s) 1) (by simp) fun f hf hd ↦ by
+    by_cases h : ∃ i, κ a (f i) ≠ 0
+    · obtain ⟨i, hi⟩ := h
+      have hj (j : ℕ) (hji : j ≠ i) : κ a (f j) = 0 := by
+        have := IsDeterministic.measure_inter_eq_mul κ a (hf i) (hf j)
+        rw [(hd hji.symm : Disjoint (f i) (f j)).inter_eq, measure_empty] at this
+        exact (mul_eq_zero.mp this.symm).resolve_left hi
+      rw [measure_iUnion hd hf, tsum_eq_single i hj,
+        tsum_eq_single i fun j hji ↦ by simp [hj j hji]]
+    · push Not at h
+      simp [measure_iUnion hd hf, h]
+
+private lemma capOne_apply (κ : Kernel α β) [IsDeterministic κ] (a : α) {s : Set β}
+    (hs : MeasurableSet s) : capOne κ a s = min (κ a s) 1 :=
+  Measure.ofMeasurable_apply s hs
+
+/-- The finite kernel `a ↦ capOne κ a`. -/
+private noncomputable def capOneKernel (κ : Kernel α β) [IsDeterministic κ] : Kernel α β where
+  toFun := capOne κ
+  measurable' := Measure.measurable_of_measurable_coe _ fun s hs ↦ by
+    simp_rw [capOne_apply κ _ hs]
+    exact (κ.measurable_coe hs).min measurable_const
+
+private lemma capOneKernel_apply (κ : Kernel α β) [IsDeterministic κ] (a : α) {s : Set β}
+    (hs : MeasurableSet s) : capOneKernel κ a s = min (κ a s) 1 :=
+  capOne_apply κ a hs
+
+private instance (κ : Kernel α β) [IsDeterministic κ] : IsFiniteKernel (capOneKernel κ) :=
+  ⟨⟨1, ENNReal.one_lt_top, fun a ↦ (capOneKernel_apply κ a .univ).trans_le (min_le_right _ _)⟩⟩
+
+/-- A deterministic kernel is s-finite. Each of its values is a zero-one measure, possibly zero, or
+`∞` times a zero-one probability measure (`IsDeterministic.measure_eq_zero_or_eq_measure_univ` and
+`IsDeterministic.measure_univ_eq_zero_or_one_or_top`), so the kernel is the sum of the finite
+kernel `s ↦ min (κ a s) 1` and countably many copies of it restricted to the points of infinite
+total mass. -/
+instance IsDeterministic.isSFiniteKernel (κ : Kernel α β) [IsDeterministic κ] :
+    IsSFiniteKernel κ := by
+  have hA : MeasurableSet {a | κ a univ = ∞} :=
+    κ.measurable_coe .univ (measurableSet_singleton ∞)
+  have h_eq : κ = capOneKernel κ + Kernel.sum fun _ : ℕ ↦ piecewise hA (capOneKernel κ) 0 := by
+    ext a s hs
+    simp only [FunLike.coe_add, Pi.add_apply, Measure.coe_add, sum_apply' _ _ hs, piecewise_apply',
+      capOneKernel_apply κ a hs]
+    rcases IsDeterministic.measure_eq_zero_or_eq_measure_univ κ a hs with h | h
+    · simp [h]
+    · rcases IsDeterministic.measure_univ_eq_zero_or_one_or_top κ a with h' | h' | h' <;>
+        simp [h, h']
+  rw [h_eq]
+  infer_instance
 
 /-- in a standard Borel space, a deterministic Markov kernel is a Dirac kernel of one measurable
 function. -/
