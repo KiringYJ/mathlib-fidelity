@@ -1042,16 +1042,19 @@ operation.
   value assume s-finite inputs or the domain classes.  Lemmas that need only the section integrals
   hold on the domains, such as `compProd_apply`, `compProd_apply_prod`, `compProd_congr`,
   `compProd_eq_zero_iff`, `Kernel.fst_compProd`, `Measure.snd_compProd`, `parallelComp_comp_copy`,
-  the almost-everywhere lemmas, and `AbsolutelyContinuous.compProd_left` and `_right`, since a
-  section integral vanishes exactly when the measures of the sections vanish almost everywhere
-  (`HasCompProd.lintegral_eq_zero_iff`).  `Measure.fst_compProd` and the absolute-continuity and
-  mutual-singularity criteria for finite kernels no longer assume `SFinite μ`.  Staton, *Commutative
-  semantics for probabilistic programming* (ESOP 2017), Lemma 3, composes s-finite kernels and
-  remarks that measurability in the parameter is the obstacle to dropping s-finiteness; Vákár and
-  Ong, *On S-finite measures and kernels* (arXiv:1810.01837), Theorem 1, credit the closure of
-  s-finite kernels under composition to Staton.  Tests cover the removed names, the enforced
-  domains, the instances that stay conditional, routine evidence, values outside s-finite inputs,
-  almost-everywhere statements on the domains, proof independence, and rewriting.
+  the almost-everywhere lemmas, `AbsolutelyContinuous.compProd` and its variants `_left`, `_right`,
+  and `_of_compProd`, `absolutelyContinuous_compProd_left_iff`, and
+  `mutuallySingular_of_mutuallySingular_compProd`, since a section integral vanishes exactly when
+  the measures of the sections vanish almost everywhere (`HasCompProd.lintegral_eq_zero_iff`), and
+  `mutuallySingular_compProd_left_iff` takes the domain classes in place of an s-finite kernel.
+  `Measure.fst_compProd` and the absolute-continuity and mutual-singularity criteria for finite
+  kernels no longer assume `SFinite μ`.  Staton, *Commutative semantics for probabilistic
+  programming* (ESOP 2017), Lemma 3, composes s-finite kernels and remarks that measurability in the
+  parameter is the obstacle to dropping s-finiteness; Vákár and Ong, *On S-finite measures and
+  kernels* (arXiv:1810.01837), Theorem 1, credit the closure of s-finite kernels under composition
+  to Staton.  Tests cover the removed names, the enforced domains, the instances that stay
+  conditional, routine evidence, values outside s-finite inputs, almost-everywhere statements on the
+  domains, proof independence, and rewriting.
 
 - [ ] **Give `partialTraj` its exact domain.**
   `ProbabilityTheory.Kernel.partialTraj κ a b` in

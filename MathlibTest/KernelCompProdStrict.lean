@@ -15,7 +15,7 @@ outside s-finite inputs, are gone. Instance search finds the domains for s-finit
 measure composition-product it needs no condition on the measure, and it also covers zero kernels
 and measures and Dirac measures on spaces with measurable singletons. Outside s-finite inputs, the
 section integrals give the values that the former definitions replaced by zero, and the
-almost-everywhere lemmas and `MeasureTheory.Measure.AbsolutelyContinuous.compProd_left` hold on the
+almost-everywhere lemmas and several absolute-continuity and mutual-singularity lemmas hold on the
 domains. The instances that make the products s-finite need s-finite inputs. A conditional kernel
 carries the domain of its composition-product, and statements that held only through the fallback,
 such as the s-finiteness of every conditional kernel of a nonzero measure, are removed. A
@@ -264,6 +264,31 @@ example (κ : Kernel α β) (η : Kernel (α × β) γ) [κ.HasCompProd η] (a :
 example (μ ν : Measure α) (κ : Kernel α β) [μ.HasCompProd κ] [ν.HasCompProd κ] (h : μ ≪ ν) :
     μ ⊗ₘ κ ≪ ν ⊗ₘ κ :=
   h.compProd_left κ
+
+example (μ ν : Measure α) (κ η : Kernel α β) [μ.HasCompProd κ] [ν.HasCompProd η] (h : μ ≪ ν)
+    (hκη : ∀ᵐ a ∂μ, κ a ≪ η a) :
+    μ ⊗ₘ κ ≪ ν ⊗ₘ η :=
+  h.compProd hκη
+
+example (μ ν ξ : Measure α) (κ η : Kernel α β) [μ.HasCompProd κ] [ν.HasCompProd η]
+    (h : μ ⊗ₘ κ ⟂ₘ ν ⊗ₘ η) (hμ : ξ ≪ μ) (hν : ξ ≪ ν) :
+    ∀ᵐ a ∂ξ, κ a ⟂ₘ η a :=
+  mutuallySingular_of_mutuallySingular_compProd h hμ hν
+
+example (μ ν : Measure α) (κ : Kernel α β) [μ.HasCompProd κ] [ν.HasCompProd κ]
+    [∀ a, NeZero (κ a)] :
+    μ ⊗ₘ κ ≪ ν ⊗ₘ κ ↔ μ ≪ ν :=
+  absolutelyContinuous_compProd_left_iff
+
+example (μ ν : Measure α) (κ η : Kernel α β) [μ.HasCompProd κ] [μ.HasCompProd η]
+    [ν.HasCompProd η] (hμν : μ ≪ ν) (hκη : μ ⊗ₘ κ ≪ μ ⊗ₘ η) :
+    μ ⊗ₘ κ ≪ ν ⊗ₘ η :=
+  hμν.compProd_of_compProd hκη
+
+example (μ ν : Measure α) [SFinite μ] [SigmaFinite ν] (κ : Kernel α β) [μ.HasCompProd κ]
+    [ν.HasCompProd κ] [∀ a, NeZero (κ a)] :
+    μ ⊗ₘ κ ⟂ₘ ν ⊗ₘ κ ↔ μ ⟂ₘ ν :=
+  mutuallySingular_compProd_left_iff
 
 /-! ### Conditional kernels and deterministic kernels carry the domain -/
 
