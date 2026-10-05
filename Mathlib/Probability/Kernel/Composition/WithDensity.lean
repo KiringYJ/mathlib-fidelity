@@ -45,7 +45,7 @@ lemma withDensity_comp (hf' : Measurable f') :
 
 /-- A composition-product of a measure with a kernel defined with `withDensity` is equal to the
 `withDensity` of the composition-product. -/
-lemma compProd_withDensity [SFinite μ] [IsSFiniteKernel (κ.withDensity g)]
+lemma compProd_withDensity [IsSFiniteKernel (κ.withDensity g)]
     (hg : Measurable (Function.uncurry g)) :
     μ ⊗ₘ (κ.withDensity g) = (μ ⊗ₘ κ).withDensity (fun p ↦ g p.1 p.2) := by
   ext s hs
@@ -55,7 +55,7 @@ lemma compProd_withDensity [SFinite μ] [IsSFiniteKernel (κ.withDensity g)]
     rfl
   · exact hg.indicator hs
 
-lemma withDensity_compProd [SFinite μ] (hf : Measurable f) :
+lemma withDensity_compProd (hf : Measurable f) :
     (μ.withDensity f) ⊗ₘ κ = (μ ⊗ₘ κ).withDensity (fun ab ↦ f ab.1) := by
   refine ext_of_lintegral _ fun g hg ↦ ?_
   calc ∫⁻ ab, g ab ∂((μ.withDensity f) ⊗ₘ κ)
@@ -69,7 +69,7 @@ lemma withDensity_compProd [SFinite μ] (hf : Measurable f) :
   _ = ∫⁻ ab, g ab ∂((μ ⊗ₘ κ).withDensity (fun ab ↦ f ab.1)) :=
       (lintegral_withDensity_eq_lintegral_mul _ (hf.comp measurable_fst) hg).symm
 
-lemma withDensity_compProd_withDensity [SFinite μ] [IsSFiniteKernel (κ.withDensity g)]
+lemma withDensity_compProd_withDensity [IsSFiniteKernel (κ.withDensity g)]
     (hf : Measurable f) (hg : Measurable (Function.uncurry g)) :
     (μ.withDensity f) ⊗ₘ (κ.withDensity g) =
       (μ ⊗ₘ κ).withDensity (fun ac ↦ f ac.1 * g ac.1 ac.2) := by

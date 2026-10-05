@@ -1081,30 +1081,138 @@ operation.
   `(κ a).withDensity (f a)` form a kernel, separate it from the convenient sufficient conditions,
   and remove the fallback.
 
-- [ ] **Prove Tonelli's theorem on the exact domain of `μ ⊗ₘ κ` and drop surplus s-finiteness.**
-  Many lemmas in `Mathlib/Probability/Kernel/Composition/` still assume s-finite inputs, among them
-  `lintegral_compProd`, `setLIntegral_compProd`, `compProd_assoc`, `compProd_add_left`,
-  `compProd_sum_left`, `compProd_smul_left`, `parallelComp_apply_prod`, `lintegral_parallelComp`,
-  `prod_apply_prod`, `lintegral_prod`, `mutuallySingular_compProd_iff`, and
-  `absolutelyContinuous_compProd_iff`.  Tonelli's theorem
-  `∫⁻ p, f p ∂(μ ⊗ₘ κ) = ∫⁻ a, ∫⁻ b, f (a, b) ∂κ a ∂μ` for measurable `f` holds on `μ.HasCompProd κ`
-  (paper proof).  For a simple function, the weighted sum of measurable majorants of the
-  section-measure functions of its level sets majorizes its section integrals with the same
-  integral, because `∫⁻` is superadditive (`le_lintegral_add`) and `c * ∫⁻ h ≤ ∫⁻ c * h`
-  (`lintegral_const_mul_le`) for every function `h`.  For a measurable `f`, the approximations
-  `SimpleFunc.eapprox f n` increase to `f`, and their section integrals `H n` increase to the
-  section integral of `f` by monotone convergence in each `κ a`.  If `G n` are measurable majorants
-  of `H n` with the same integrals, the measurable functions `⨅ m ≥ n, G m` increase to a majorant
-  of `⨆ n, H n` and have integrals at most `∫⁻ a, H n a ∂μ`, so the limit again has a measurable
-  majorant with the same integral, and its integral is the limit of the integrals.  This step is
-  needed because monotone convergence fails for lower integrals of functions that are not
-  measurable.  Prove the theorem together with this majorant property of the section integrals,
-  restate on the domain classes the lemmas that need only section integrals or Tonelli's theorem,
-  and add closure instances for `μ + ν`, `Measure.sum`, and `c • μ`: the pointwise infimum of the
-  majorants, or for `c • μ` the majorant itself, is a majorant with the same integral, because `∫⁻`
-  is additive and homogeneous in the measure for every function (`lintegral_add_measure`,
-  `lintegral_sum_measure`, `lintegral_smul_measure`).  Keep s-finiteness only where an s-finite
-  decomposition is used, as in `compProd_eq_sum_compProd` and `IsSFiniteKernel.compProd`.
+- [x] **Prove Tonelli's theorem on the exact domain of `μ ⊗ₘ κ` and drop surplus s-finiteness.**
+  `Measure.lintegral_compProd` proves `∫⁻ x, f x ∂(μ ⊗ₘ κ) = ∫⁻ a, ∫⁻ b, f (a, b) ∂κ a ∂μ` for
+  measurable `f` on `μ.HasCompProd κ`, and `HasCompProd.exists_measurable_ge_lintegral_lintegral_eq`
+  gives the section integrals `a ↦ ∫⁻ b, f (a, b) ∂κ a` a measurable majorant with the same
+  integral; both are in `Mathlib/Probability/Kernel/Composition/MeasureCompProd/Defs.lean`, with
+  `Measure.setLIntegral_compProd`.  For a simple function the weighted sum of the majorants of its
+  level sets is one, because `∫⁻` is superadditive (`le_lintegral_add`) and
+  `c * ∫⁻ h ≤ ∫⁻ c * h` (`lintegral_const_mul_le`) for every function `h`.  For the approximations
+  `SimpleFunc.eapprox f n` the infima `⨅ m ≥ n, G m` of the majorants `G m` of their section
+  integrals are increasing measurable majorants with the same integrals, to which monotone
+  convergence applies, although it fails for the lower integrals of functions that are not
+  measurable.  For a function that need not be measurable, `lintegral_compProd_le` bounds its
+  integral against `μ ⊗ₘ κ` by the iterated integral, with equality when it has a measurable
+  majorant with the same integral (`lintegral_compProd_of_exists_measurable_ge`).
+  `Kernel.lintegral_compProd`, `lintegral_compProd'`, `lintegral_compProd₀`,
+  `setLIntegral_compProd` and its `univ` variants, `lintegral_parallelComp`, and `lintegral_prod`
+  hold on `κ.HasCompProd η`, `κ.HasParallelComp η`, and `κ.HasCompProd (prodMkRight β η)`.
+  Instances close the domain of `μ ⊗ₘ κ` under `μ + ν` and `c • μ`, with the pointwise minimum of
+  the majorants or the majorant itself, because `∫⁻` is additive and homogeneous in the measure for
+  every function; under `Measure.sum` of a countable family, with the pointwise infimum of the
+  majorants; and under `κ + η` and `Kernel.sum` of a countable family, with the sum of the
+  majorants.  The domain is not closed under uncountable sums (paper proof): for a set `T ⊆ ℝ` that
+  is not Borel, every `dirac t` has a composition-product with the constant kernel of
+  `Σ_{u ∉ T} dirac u`, but against `Σ_{t ∈ T} dirac t` the measures of the sections of the diagonal
+  form the indicator of `Tᶜ`, whose integral is `0`, and a measurable majorant `g` with integral
+  `0` would make `T = {g < 1}` Borel.  So `Measure.compProd_sum_left` takes the domain of the sum
+  as an assumption.  The kernel domain `κ.HasCompProd η` is closed under sums of `κ`
+  (`Kernel.hasCompProd_add_left`, `Kernel.hasCompProd_sum_left`).  `μ.HasCompProd (κ ⊗ₖ η)`
+  follows from `μ.HasCompProd κ`, `κ.HasCompProd η`, and `(μ ⊗ₘ κ).HasCompProd η`, which an
+  s-finite `η` supplies (`Measure.hasCompProd_compProd`): the measures of the sections are the
+  section integrals of `F p = η p (Prod.mk p ⁻¹' s')`, the section integrals of a majorant of `F`
+  against `μ ⊗ₘ κ` have a measurable majorant, and `lintegral_compProd_le` closes the inequalities.
+  Without the domain of `(μ ⊗ₘ κ) ⊗ₘ η` the conclusion can fail (paper proof in the docstring of
+  the instance).  On the domains hold `Measure.compProd_add_left`, `compProd_smul_left`,
+  `compProd_add_right`, and `compProd_sum_right`, moved to `Defs.lean` beside their instances; the
+  kernel `compProd_add_left` and `compProd_sum_left`; `Measure.compProd_assoc` and
+  `compProd_assoc'`; and `Kernel.fst_prod` and `snd_prod`.  `Measure.compProd_const_apply_prod`,
+  `Kernel.prod_apply_prod`, and `Kernel.parallelComp_apply_prod` give a rectangle the product of the
+  measures of its sides on the domains, also for sides that are not measurable: a majorant of the
+  measures of the sections of a measurable superset of the rectangle is at least `ν t` on a
+  measurable superset of `s`.  The swaps `Kernel.lintegral_prod_symm` and
+  `lintegral_parallelComp_symm` keep s-finite kernels, a sufficient condition for changing the order
+  of integration that the domains do not replace: the constant kernels of counting measure on `ℝ`
+  and of Lebesgue measure on `[0, 1]` satisfy `κ.HasCompProd (prodMkRight β η)` and
+  `κ.HasParallelComp η`, and the indicator of the diagonal integrates to `0` against their product
+  and to `1` in the other order.  `compProd_eq_sum_compProd`, `IsSFiniteKernel.compProd`, and the
+  instances `SFinite (μ ⊗ₘ κ)` keep s-finiteness for their s-finite decompositions.  Consumers whose
+  s-finiteness only fed the former lemmas hold on more inputs: `Measure.comp_compProd_comm` on the
+  domain classes; `compProd_withDensity`, `withDensity_compProd`,
+  `withDensity_compProd_withDensity`, and the sub-Gaussian `Kernel.HasSubgaussianMGF.add_compProd`,
+  `add_comp`, and `integrable_exp_add_compProd` without an s-finite measure; and the Lebesgue
+  integrals against a conditional kernel in `Disintegration/Integral.lean` without a finite `κ` or
+  `ρ` or an s-finite `η`.  The items below record the lemmas that still assume more.  Tests in
+  `MathlibTest/CompProdTonelliStrict.lean` cover the theorems against counting measure and the
+  constant kernel of counting measure on `ℝ`, which are not s-finite, the closure instances, the
+  uncountable sum that instance search does not cover, associativity on the domains, and
+  rectangles.
+
+- [ ] **Characterize `HasCompProd` against a σ-finite measure by almost everywhere measurability.**
+  For σ-finite `μ`, `μ.HasCompProd κ` should hold exactly when the measures
+  `h a = κ a (Prod.mk a ⁻¹' s)` of the sections of every measurable set `s` are `μ`-almost
+  everywhere measurable, the sufficient condition of `HasCompProd.of_aemeasurable` (paper proof).
+  The measurable sets on which `h` agrees almost everywhere with a measurable function are closed
+  under countable unions, so they have a largest element `C` up to null sets, measured by a finite
+  measure equivalent to `μ`.  A measurable `D ⊆ Cᶜ` with `μ D > 0` and `∫⁻ a in D, h a ∂μ < ∞`
+  cannot exist: the majorant for `s ∩ D ×ˢ univ` and a measurable minorant of `D.indicator h` with
+  the same integral (`exists_measurable_le_lintegral_eq`) agree almost everywhere, which would
+  enlarge `C`.  The measurable minorants of `h` have an almost everywhere largest element `g`, again
+  by σ-finiteness, and `∫⁻ a in D, h a ∂μ = ∫⁻ a in D, g a ∂μ` for every measurable `D`.  Applied
+  to `D = Cᶜ ∩ A n ∩ {g ≤ n}` for sets `A n` of finite measure that exhaust the space, this gives
+  `g = ∞`, and so `h = ∞`, almost everywhere on `Cᶜ`; hence `h` agrees almost everywhere with the
+  measurable function that is its witness on `C` and `∞` on `Cᶜ`.  Then `ξ.HasCompProd κ` for every
+  `ξ ≪ μ`, which would let `AbsolutelyContinuous.mutuallySingular_compProd_iff`,
+  `mutuallySingular_compProd_iff`, `absolutelyContinuous_compProd_of_compProd`, and
+  `absolutelyContinuous_compProd_iff` in
+  `Mathlib/Probability/Kernel/Composition/MeasureCompProd.lean` replace their s-finite kernels by
+  domain classes: they apply `compProd_add_left` to Lebesgue decompositions of the σ-finite `μ` and
+  `ν`, whose parts are absolutely continuous with respect to `μ` or `ν`.  The last two also need
+  `μ.HasCompProd η`, since `μ ⊗ₘ η` occurs without `μ ≪ ν`, and `mutuallySingular_compProd_iff`
+  needs the domains for the `ξ` it quantifies over.  Without
+  σ-finiteness the domain does not pass to `ξ ≪ μ`, not even to `ξ ≤ μ`: counting measure on `ℝ`
+  has a composition-product with the constant kernel of `Σ_{t ∈ T} dirac t` for every `T`
+  (`hasCompProd_count`), but against Lebesgue measure, which is at most counting measure, the
+  measures of the sections of the diagonal form the indicator of `T`, whose lower and upper
+  integrals differ when `T ⊆ [0, 1]` is not Lebesgue measurable.  Nor does s-finiteness suffice for
+  the characterization (paper proof, using Lusin's theorem that analytic sets are Lebesgue
+  measurable): `∞ • volume.restrict (Icc 0 1)` has a composition-product with the constant kernel of
+  `Σ_{t ∈ T} dirac t + count`, whose measures of the sections of a measurable set are positive
+  exactly on its projection, while against the equivalent finite measure the measures of the
+  sections of the diagonal form `1 + T.indicator 1`, which is not almost everywhere measurable.
+
+- [ ] **Restate the remaining kernel composition lemmas on their domains.**
+  Several lemmas in `Mathlib/Probability/Kernel/Composition/` still assume s-finite kernels although
+  their proofs use only section integrals.  In `CompProd.lean`, `Kernel.compProd_add_right` and
+  `compProd_sum_right` need instances closing `κ.HasCompProd η` under sums of `η`: pointwise,
+  `sectR (η + η') a` is `sectR η a + sectR η' a`, whose composition-product with `κ a` exists by
+  `Measure.hasCompProd_add_right`, and `Measure.compProd_add_right` makes the section integrals of
+  the sum the sums of the section integrals, which are measurable in the point.
+  `compProd_restrict`, `compProd_restrict_left`, and `compProd_restrict_right` need the domain for
+  restrictions to a measurable set `D`, for which the majorant for `s ∩ D ×ˢ univ` on `D` and `∞`
+  off `D` is a majorant, and `comapRight_compProd_id_prod` the domain for `comapRight`, whose
+  sections are sections of the measurable image under `id × f`.  `Kernel.compProd_assoc` should
+  hold on `κ.HasCompProd η`, `η.HasCompProd (ξ.comap MeasurableEquiv.prodAssoc _)`, and
+  `(κ ⊗ₖ η).HasCompProd ξ`, by `Measure.compProd_assoc` at each point (sketch); without such
+  domains its section integrals need not be measurable in the point.  `Kernel.comap_prod` in
+  `Prod.lean` uses only `prod_apply'` and needs the domain for `comap`.  The other s-finite lemmas
+  of `Prod.lean`, `ParallelComp.lean`, `KernelLemmas.lean`, `Lemmas.lean`, `MeasureComp.lean`, and
+  `WithDensity.lean` in the same directory go through `productBySections`, a change of the order of
+  integration, or the measurability of integrals against s-finite kernels; audit them with the
+  `productBySections` item above.
+
+- [ ] **Prove Fubini's theorem for the Bochner integral on the domain of `μ ⊗ₘ κ`.**
+  `Measure.integral_compProd`, `setIntegral_compProd`, `integrable_compProd_iff`, and
+  `AEStronglyMeasurable.ae_of_compProd` in
+  `Mathlib/Probability/Kernel/Composition/IntegralCompProd.lean` assume `SFinite μ` and an s-finite
+  `κ`, and pass through the kernel composition-product of `Kernel.const Unit μ`, whose versions
+  assume s-finite kernels.  Their statements involve `a ↦ ∫ b, f (a, b) ∂κ a` and
+  `a ↦ ∫ b, ‖f (a, b)‖ ∂κ a`, which are almost everywhere strongly measurable for an s-finite `κ`;
+  on `μ.HasCompProd κ` only the lower integrals of the section integrals of measurable functions are
+  controlled, through their majorants.  Determine the statements that hold on the domain, and
+  whether `SFinite μ` is needed when `κ` is s-finite, before weakening the assumptions.
+
+- [ ] **Formalize the counterexamples recorded for the composition-product domain.**
+  The docstrings of `Measure.hasCompProd_sum_left` and `Measure.hasCompProd_compProd` in
+  `Mathlib/Probability/Kernel/Composition/` and the items above state as paper proofs that the
+  domain fails for an uncountable sum of Dirac measures; that `μ.HasCompProd (κ ⊗ₖ η)` can fail
+  without the domain of `(μ ⊗ₘ κ) ⊗ₘ η`; that the constant kernels of counting measure on `ℝ` and
+  of Lebesgue measure on `[0, 1]` have a product against which the order of integration cannot be
+  changed; and that the domain does not pass from counting measure to Lebesgue measure.  Each needs
+  a set that is not Borel, which exists by counting with
+  `SigmaAlgebra.cardinal_measurableSet_le_continuum`, or one that is not Lebesgue measurable;
+  `Counterexamples/KernelCompProd.lean` is the precedent.
 
 - [ ] **Make Radon--Nikodym data conditional on decomposition existence.**
   `Measure.rnDeriv` and `Measure.singularPart` in

@@ -15,8 +15,9 @@ public import Mathlib.Probability.Kernel.Composition.CompProd
 This file develops the composition-product `μ ⊗ₘ κ : Measure (α × β)` of `μ : Measure α` and
 `κ : Kernel α β`, defined in `Mathlib.Probability.Kernel.Composition.MeasureCompProd.Defs` on the
 domain `μ.HasCompProd κ`. Its value on a measurable set `s` is `∫⁻ a, κ a (Prod.mk a ⁻¹' s) ∂μ`, and
-for an s-finite measure `μ` and an s-finite kernel `κ` the integral of a function against it is
-`∫⁻ x, f x ∂(μ ⊗ₘ κ) = ∫⁻ a, ∫⁻ b, f (a, b) ∂(κ a) ∂μ`.
+on the whole domain the integral of a measurable function against it is
+`∫⁻ x, f x ∂(μ ⊗ₘ κ) = ∫⁻ a, ∫⁻ b, f (a, b) ∂(κ a) ∂μ`
+(`MeasureTheory.Measure.lintegral_compProd`).
 
 `μ ⊗ₘ κ` is the composition-product of kernels
 `((Kernel.const Unit μ) ⊗ₖ (Kernel.prodMkLeft Unit κ))` evaluated at the point of `Unit`
@@ -140,32 +141,6 @@ lemma compProd_const {ν : Measure β} [SFinite ν] :
   simp only [compProd_apply hs,
     productBySections_apply, hs, Kernel.const_apply]
 
-lemma compProd_add_left (μ ν : Measure α) (κ : Kernel α β) [IsSFiniteKernel κ] :
-    (μ + ν) ⊗ₘ κ = μ ⊗ₘ κ + ν ⊗ₘ κ := by
-  ext s hs
-  simp [compProd_apply hs]
-
-lemma compProd_add_right (μ : Measure α) (κ η : Kernel α β)
-    [IsSFiniteKernel κ] [IsSFiniteKernel η] :
-    μ ⊗ₘ (κ + η) = μ ⊗ₘ κ + μ ⊗ₘ η := by
-  ext s hs
-  simp only [compProd_apply hs, Measure.add_apply, FunLike.coe_add, Pi.add_apply]
-  exact lintegral_add_left (Kernel.measurable_kernel_prodMk_left hs) _
-
-lemma compProd_sum_left {ι : Type*} {μ : ι → Measure α} [IsSFiniteKernel κ] :
-    (sum μ) ⊗ₘ κ = sum (fun i ↦ (μ i) ⊗ₘ κ) := by
-  ext s hs
-  rw [compProd_apply hs, Measure.sum_apply _ hs, lintegral_sum_measure]
-  simp_rw [compProd_apply hs]
-
-lemma compProd_sum_right {ι : Type*} [Countable ι] {κ : ι → Kernel α β}
-    [∀ i, IsSFiniteKernel (κ i)] :
-    μ ⊗ₘ (Kernel.sum κ) = sum (fun i ↦ μ ⊗ₘ (κ i)) := by
-  ext s hs
-  rw [compProd_apply hs, Measure.sum_apply _ hs]
-  simp_rw [compProd_apply hs, Kernel.sum_apply' _ _ (measurable_prodMk_left hs)]
-  exact lintegral_tsum fun i ↦ (Kernel.measurable_kernel_prodMk_left hs).aemeasurable
-
 @[simp]
 lemma fst_compProd (μ : Measure α) (κ : Kernel α β) [IsMarkovKernel κ] :
     (μ ⊗ₘ κ).fst = μ := by
@@ -175,28 +150,6 @@ lemma fst_compProd (μ : Measure α) (κ : Kernel α β) [IsMarkovKernel κ] :
   have h_eq a : κ a {_b | a ∈ s} = s.indicator 1 a := by
     by_cases ha : a ∈ s <;> simp [ha]
   simp_rw [h_eq, lintegral_indicator_one hs]
-
-lemma compProd_smul_left (a : ℝ≥0∞) [IsSFiniteKernel κ] :
-    (a • μ) ⊗ₘ κ = a • (μ ⊗ₘ κ) := by
-  ext s hs
-  simp only [compProd_apply hs, lintegral_smul_measure, smul_apply, smul_eq_mul]
-
-section Integral
-
-lemma lintegral_compProd [SFinite μ] [IsSFiniteKernel κ]
-    {f : α × β → ℝ≥0∞} (hf : Measurable f) :
-    ∫⁻ x, f x ∂(μ ⊗ₘ κ) = ∫⁻ a, ∫⁻ b, f (a, b) ∂(κ a) ∂μ := by
-  rw [compProd_eq_compProd_const_apply, Kernel.lintegral_compProd _ _ _ hf]
-  simp
-
-lemma setLIntegral_compProd [SFinite μ] [IsSFiniteKernel κ]
-    {f : α × β → ℝ≥0∞} (hf : Measurable f)
-    {s : Set α} (hs : MeasurableSet s) {t : Set β} (ht : MeasurableSet t) :
-    ∫⁻ x in s ×ˢ t, f x ∂(μ ⊗ₘ κ) = ∫⁻ a in s, ∫⁻ b in t, f (a, b) ∂(κ a) ∂μ := by
-  rw [compProd_eq_compProd_const_apply, Kernel.setLIntegral_compProd _ _ _ hf hs ht]
-  simp
-
-end Integral
 
 /-- Against counting measure on a space with measurable singletons, the value of a
 composition-product on a measurable set is the sum of the measures of the sections. -/
@@ -239,16 +192,48 @@ instance [IsZeroOrProbabilityMeasure μ] [IsZeroOrMarkovKernel κ] :
   rw [compProd_eq_compProd_const_apply]
   exact IsZeroOrMarkovKernel.isZeroOrProbabilityMeasure ()
 
+/-- The composition-product of `μ` with `κ ⊗ₖ η` exists when the composition-products `μ ⊗ₘ κ`,
+`κ ⊗ₖ η`, and `(μ ⊗ₘ κ) ⊗ₘ η` exist; an s-finite `η` supplies the last one. For a measurable
+`s ⊆ α × β × γ` and `s' = MeasurableEquiv.prodAssoc ⁻¹' s`, the measures of the sections of `s` are
+the section integrals of the function `p ↦ η p (Prod.mk p ⁻¹' s')`, whose majorant against
+`μ ⊗ₘ κ` has section integrals with a measurable majorant, and Tonelli's theorem bounds the
+integrals.
+
+Without the domain of `(μ ⊗ₘ κ) ⊗ₘ η` the conclusion can fail (paper proof): for Lebesgue measure
+`μ` on `ℝ`, `κ = Kernel.const ℝ (dirac 0)`, and `η` the constant kernel of `Σ_{t ∈ T} dirac t` for
+a set `T ⊆ [0, 1]` that is not Lebesgue measurable, the measures of the sections of
+`{(a, b, c) | c = a}` against `κ ⊗ₖ η` form the indicator of `T`. -/
+instance hasCompProd_compProd {γ : Type*} {mγ : SigmaAlgebra γ} {η : Kernel (α × β) γ}
+    [μ.HasCompProd κ] [κ.HasCompProd η] [(μ ⊗ₘ κ).HasCompProd η] : μ.HasCompProd (κ ⊗ₖ η) where
+  exists_measurable_ge_lintegral_eq s hs := by
+    obtain ⟨G, hG, hFG, hG_eq⟩ := HasCompProd.exists_measurable_ge_lintegral_eq (μ := μ ⊗ₘ κ)
+      (κ := η) (MeasurableEquiv.prodAssoc.measurable hs)
+    obtain ⟨M, hM, hGM, hM_eq⟩ :=
+      HasCompProd.exists_measurable_ge_lintegral_lintegral_eq (μ := μ) (κ := κ) hG
+    have h_sec (a : α) : (κ ⊗ₖ η) a (Prod.mk a ⁻¹' s)
+        = ∫⁻ b, η (a, b) (Prod.mk (a, b) ⁻¹' (MeasurableEquiv.prodAssoc ⁻¹' s)) ∂κ a :=
+      Kernel.compProd_apply (measurable_prodMk_left hs) κ η a
+    simp_rw [h_sec]
+    have h_le (a : α) : ∫⁻ b, η (a, b) (Prod.mk (a, b) ⁻¹' (MeasurableEquiv.prodAssoc ⁻¹' s)) ∂κ a
+        ≤ M a :=
+      (lintegral_mono fun b ↦ hFG (a, b)).trans (hGM a)
+    refine ⟨M, hM, h_le, le_antisymm (lintegral_mono h_le) ?_⟩
+    rw [← hM_eq, ← lintegral_compProd hG, ← hG_eq]
+    exact lintegral_compProd_le _
+
 /-- `Measure.compProd` is associative. We have to insert `MeasurableEquiv.prodAssoc`
-because the products of types `α × β × γ` and `(α × β) × γ` are different. -/
+because the products of types `α × β × γ` and `(α × β) × γ` are different. The hypotheses are the
+domains of `μ ⊗ₘ κ`, `κ ⊗ₖ η`, and `(μ ⊗ₘ κ) ⊗ₘ η`, which give that of `μ ⊗ₘ (κ ⊗ₖ η)`
+(`MeasureTheory.Measure.hasCompProd_compProd`); an s-finite `η` supplies the last one. -/
 @[simp]
 lemma compProd_assoc {γ : Type*} {mγ : SigmaAlgebra γ} {η : Kernel (α × β) γ}
-    [SFinite μ] [IsSFiniteKernel κ] [IsSFiniteKernel η] :
+    [μ.HasCompProd κ] [κ.HasCompProd η] [(μ ⊗ₘ κ).HasCompProd η] :
     (μ ⊗ₘ (κ ⊗ₖ η)).map MeasurableEquiv.prodAssoc.symm = μ ⊗ₘ κ ⊗ₘ η := by
   ext s hs
   rw [Measure.compProd_apply hs, Measure.map_apply hs (by fun_prop),
-    Measure.compProd_apply (hs.preimage (by fun_prop)), Measure.lintegral_compProd]
-  swap; · exact Kernel.measurable_kernel_prodMk_left hs
+    Measure.compProd_apply (hs.preimage (by fun_prop)),
+    lintegral_compProd_of_exists_measurable_ge
+      (HasCompProd.exists_measurable_ge_lintegral_eq (μ := μ ⊗ₘ κ) (κ := η) hs)]
   congr with a
   rw [Kernel.compProd_apply]
   · congr
@@ -258,7 +243,7 @@ lemma compProd_assoc {γ : Type*} {mγ : SigmaAlgebra γ} {η : Kernel (α × β
 because the products of types `α × β × γ` and `(α × β) × γ` are different. -/
 @[simp]
 lemma compProd_assoc' {γ : Type*} {mγ : SigmaAlgebra γ} {η : Kernel (α × β) γ}
-    [SFinite μ] [IsSFiniteKernel κ] [IsSFiniteKernel η] :
+    [μ.HasCompProd κ] [κ.HasCompProd η] [(μ ⊗ₘ κ).HasCompProd η] :
     (μ ⊗ₘ κ ⊗ₘ η).map MeasurableEquiv.prodAssoc = μ ⊗ₘ (κ ⊗ₖ η) := by
   simp [← Measure.compProd_assoc]
 
