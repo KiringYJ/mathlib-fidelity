@@ -1051,20 +1051,32 @@ variable {ι Ω α β : Type*} {mΩ : SigmaAlgebra Ω} {mα : SigmaAlgebra α}
   {mβ : SigmaAlgebra β} {μ : Measure Ω} {X : ι → Ω → α} {Y : ι → Ω → β} {f : _ → Set Ω}
   {t : ι → Set β} {s : Finset ι}
 
+/-- If the pairs `(X i, Y i)` are independent and the measure can be conditioned on each event
+`Y i ⁻¹' t i`, then it can be conditioned on their intersection. -/
+lemma iIndepFun.isConditionable_iInter [Finite ι]
+    (hindep : iIndepFun (fun i ω ↦ (X i ω, Y i ω)) μ)
+    (hy : ∀ i, IsConditionable μ (Y i ⁻¹' t i)) (ht : ∀ i, MeasurableSet (t i)) :
+    IsConditionable μ (⋂ i, Y i ⁻¹' t i) := by
+  have : IsProbabilityMeasure (μ : Measure Ω) := hindep.isProbabilityMeasure
+  cases nonempty_fintype ι
+  refine ⟨.iInter fun i ↦ (hy i).nullMeasurableSet, ?_, measure_ne_top μ _⟩
+  rw [hindep.meas_iInter fun i ↦ ⟨.univ ×ˢ t i, MeasurableSet.univ.prod (ht _), by ext; simp⟩]
+  exact Finset.prod_ne_zero_iff.2 fun i _ ↦ (hy i).measure_ne_zero
+
 /-- The probability of an intersection of preimages conditioning on another intersection factors
 into a product. -/
-lemma cond_iInter [Finite ι] (hY : ∀ i, Measurable (Y i))
-    (hindep : iIndepFun (fun i ω ↦ (X i ω, Y i ω)) μ)
+lemma cond_iInter [Finite ι] (hindep : iIndepFun (fun i ω ↦ (X i ω, Y i ω)) μ)
     (hf : ∀ i ∈ s, f i ∈ mα.comap (X i))
-    (hy : ∀ i ∉ s, μ (Y i ⁻¹' t i) ≠ 0) (ht : ∀ i, MeasurableSet (t i)) :
-    μ[⋂ i ∈ s, f i | ⋂ i, Y i ⁻¹' t i] = ∏ i ∈ s, μ[f i | Y i in t i] := by
+    (hy : ∀ i, IsConditionable μ (Y i ⁻¹' t i)) (ht : ∀ i, MeasurableSet (t i)) :
+    cond μ (⋂ i, Y i ⁻¹' t i) (hindep.isConditionable_iInter hy ht) (⋂ i ∈ s, f i) =
+      ∏ i ∈ s, cond μ (Y i ⁻¹' t i) (hy i) (f i) := by
   have : IsProbabilityMeasure (μ : Measure Ω) := hindep.isProbabilityMeasure
   classical
   cases nonempty_fintype ι
   let g (i' : ι) := if i' ∈ s then Y i' ⁻¹' t i' ∩ f i' else Y i' ⁻¹' t i'
   calc
     _ = (μ (⋂ i, Y i ⁻¹' t i))⁻¹ * μ ((⋂ i, Y i ⁻¹' t i) ∩ ⋂ i ∈ s, f i) := by
-      rw [cond_apply]; exact .iInter fun i ↦ hY i (ht i)
+      rw [cond_apply]
     _ = (μ (⋂ i, Y i ⁻¹' t i))⁻¹ * μ (⋂ i, g i) := by
       congr
       calc
@@ -1090,22 +1102,22 @@ lemma cond_iInter [Finite ι] (hY : ∀ i, Measurable (Y i))
     _ = ∏ i, (μ (Y i ⁻¹' t i))⁻¹ * μ (g i) := by
       rw [Finset.prod_mul_distrib, ENNReal.prod_inv_distrib]
       exact fun _ _ i _ _ ↦ .inr <| measure_ne_top _ _
-    _ = ∏ i, if i ∈ s then μ[f i | Y i ⁻¹' t i] else 1 := by
+    _ = ∏ i, if i ∈ s then cond μ (Y i ⁻¹' t i) (hy i) (f i) else 1 := by
       refine Finset.prod_congr rfl fun i _ ↦ ?_
       by_cases hi : i ∈ s
-      · simp only [hi, ↓reduceIte, g, cond_apply (hY i (ht i))]
-      · simp only [hi, ↓reduceIte, g, ENNReal.inv_mul_cancel (hy i hi) (measure_ne_top μ _)]
+      · simp only [hi, ↓reduceIte, g, cond_apply (hy i)]
+      · simp only [hi, ↓reduceIte, g, ENNReal.inv_mul_cancel (hy i).measure_ne_zero
+          (measure_ne_top μ _)]
     _ = _ := by simp
 
-lemma iIndepFun.cond [Finite ι] (hY : ∀ i, Measurable (Y i))
-    (hindep : iIndepFun (fun i ω ↦ (X i ω, Y i ω)) μ)
-    (hy : ∀ i, μ (Y i ⁻¹' t i) ≠ 0) (ht : ∀ i, MeasurableSet (t i)) :
-    iIndepFun X μ[|⋂ i, Y i ⁻¹' t i] := by
+lemma iIndepFun.cond [Finite ι] (hindep : iIndepFun (fun i ω ↦ (X i ω, Y i ω)) μ)
+    (hy : ∀ i, IsConditionable μ (Y i ⁻¹' t i)) (ht : ∀ i, MeasurableSet (t i)) :
+    iIndepFun X (ProbabilityTheory.cond μ (⋂ i, Y i ⁻¹' t i)
+      (hindep.isConditionable_iInter hy ht)) := by
   rw [iIndepFun_iff]
   intro s f hf
-  convert! cond_iInter hY hindep hf (fun i _ ↦ hy _) ht using 2 with i hi
-  simpa using cond_iInter hY hindep (fun j hj ↦ hf _ <| Finset.mem_singleton.1 hj ▸ hi)
-    (fun i _ ↦ hy _) ht
+  convert! cond_iInter hindep hf hy ht using 2 with i hi
+  simpa using cond_iInter hindep (fun j hj ↦ hf _ <| Finset.mem_singleton.1 hj ▸ hi) hy ht
 
 section Monoid
 

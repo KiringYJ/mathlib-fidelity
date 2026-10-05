@@ -476,15 +476,34 @@ operation.
   overlap.  Keep ambient representatives private, including technical trivialization inverses, and
   only when every exported statement proves that values outside the base set are irrelevant.
 
-- [ ] **Identify the exact event contract for conditional probability.**
-  `ProbabilityTheory.cond` in `Mathlib/Probability/ConditionalProbability.lean:76` exposes
-  `(μ s)⁻¹ • μ.restrict s` as `μ[· | s]` for every set.  Positive finite mass alone makes the result
-  a probability measure (`cond_isProbabilityMeasure_of_finite` at line 154), while concentration on
-  the intended event is available under the weaker completion-stable condition
-  `NullMeasurableSet s μ` (`ae_cond_mem₀` at line 196).  Do not impose `MeasurableSet s` as the
-  exact domain.  Decide separately whether arbitrary non-null-measurable sets should mean
-  conditioning on `toMeasurable μ s`; that public interpretation also requires matching literature.
-  Otherwise expose conditioning only on the validated event domain.
+- [x] **Identify the exact event contract for conditional probability.**
+  `ProbabilityTheory.cond μ s hs` takes `hs : IsConditionable μ s`: `s` is null-measurable and has
+  positive finite measure.  This is the event contract of conditional probability given an event of
+  positive probability (A. N. Kolmogorov, *Foundations of the Theory of Probability*, Chapter I,
+  §4), with the same formula for any measure on a set of positive finite measure.  Null-measurable
+  sets are the events of the completion, and conditioning on one agrees with conditioning on its
+  measurable hull (`cond_toMeasurable_eq`).  Other sets are not conditioned through `toMeasurable`:
+  no literature defines that interpretation, and the formula is not concentrated on such a set (for
+  a Bernstein set `B ⊆ [0, 1]`, conditioning Lebesgue measure on `[0, 1] \ B` gives `B` probability
+  `1`).  The former definition returned `0` on null sets and sets of infinite measure
+  (`cond_empty`, `cond_eq_zero`, and `cond_eq_zero_of_meas_eq_zero`, removed) and was a probability
+  measure only under separate hypotheses (`cond_isProbabilityMeasure_of_finite` and
+  `cond_isProbabilityMeasure`, replaced by the instance `isProbabilityMeasure_cond`).  The notations
+  `μ[|s]` and `μ[t | s]` find the evidence with the bounded discharger `conditionable`, from a
+  hypothesis, from the measurability and the positive finite measure of `s`, or for a finite
+  measure.  `cond_apply'`, `cond_cond_eq_cond_inter'`, `cond_mul_eq_inter'`, and `ae_cond_mem₀`
+  merge into their unprimed forms, which hold for every event `t` once `s` is conditionable.
+  `uniformOn s hs` takes the conditionability of the counting measure on `s`, which
+  `isConditionable_count_iff` characterizes as a finite nonempty measurable set; the lemmas stating
+  its former value `0` (`uniformOn_empty_meas`, `uniformOn_eq_zero`, `uniformOn_eq_zero'`, and
+  `finite_of_uniformOn_ne_zero`) are removed, and the law of total probability, the disjoint union,
+  and the product formula take the conditionability of their parts.  `pdf.IsUniform X s P μ`
+  includes the conditionability of `μ` on `s`, so no random variable is uniform on a set of measure
+  `0` or `∞` (`pdf_eq_zero_of_measure_eq_zero_or_top`, removed).  `Measure.toFinite` normalizes its
+  finite measure directly, the conditional independence lemmas take the conditionability of the
+  conditioning events, and the singleton conditional expectation lemmas take a set of positive
+  measure.  Tests cover the removed names, the missing evidence, the empty set, an infinite
+  measure, the counting measure on an infinite set, and a uniform distribution on the real line.
 
 - [x] **Give `condCDF` its exact domain.**
   `condCDF ρ` requires `[HasUniqueCondCDF ρ]`: some `F` satisfies `IsCondCDF ρ F`, and any two such
@@ -1904,9 +1923,9 @@ was found, and none should inherit validation merely from the earlier scan:
   validated against real consumers.
 - [x] **Conditional expectation and probability brackets are conventional secondary surfaces.**
   `μ[f | 𝓐]`, `μ[|s]`, and `μ[t | s]` have stable named expansions, preserve nesting, and elaborate
-  correctly when both scopes are active.  Keep the notation; the construction contracts of `condExp`
-  and `ProbabilityTheory.cond` remain separate audit candidates.  In particular, do not assume that
-  ordinary measurability is the exact event domain when null measurability suffices.
+  correctly when both scopes are active.  Keep the notation; the construction contract of `condExp`
+  remains a separate audit candidate, and `ProbabilityTheory.cond` takes the null-measurable event
+  contract recorded above, which the notation finds with the `conditionable` discharger.
 - [x] **The audited Unicode and indexed shortcuts remain admissible.**  `πₓ`/`πₘ`, `⦋m⦌ₙ`,
   generated intermediate fields, and `Mᵐ⁰` expose stable operands and expand through documented
   named structures or functor operations; the truncated-simplex proof is routine and can also be

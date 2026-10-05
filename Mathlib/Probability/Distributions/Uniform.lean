@@ -16,11 +16,12 @@ This file defines two related notions of uniform distributions, which will be un
 
 ## Uniform distributions
 
-Defines the uniform distribution for any set with finite measure.
+Defines the uniform distribution on any null-measurable set of positive finite measure.
 
 ### Main definitions
-* `IsUniform X s P μ` : A random variable `X` has uniform distribution on `s` under `P` if the
-  push-forward measure agrees with the rescaled restricted measure `μ`.
+* `IsUniform X s P μ` : A random variable `X` has uniform distribution on `s` under `P` if `μ` can
+  be conditioned on `s` and the push-forward measure agrees with the rescaled restricted measure
+  `μ`.
 
 ## Uniform probability mass functions
 
@@ -59,74 +60,78 @@ namespace pdf
 variable {Ω : Type*}
 variable {_ : SigmaAlgebra Ω} {P : Measure Ω}
 
-/-- A random variable `X` has uniform distribution on `s` if its push-forward measure is
+/-- A random variable `X` has uniform distribution on `s` if `μ` can be conditioned on `s`, that is,
+`s` is null-measurable and has positive finite measure, and the push-forward measure of `X` is
 `(μ s)⁻¹ • μ.restrict s`. -/
-def IsUniform (X : Ω → E) (s : Set E) (P : Measure Ω) (μ : Measure E := by volume_tac) :=
-  HasLaw X μ[|s] P
+def IsUniform (X : Ω → E) (s : Set E) (P : Measure Ω) (μ : Measure E := by volume_tac) : Prop :=
+  ∃ hs : IsConditionable μ s, HasLaw X μ[|s] P
 
 namespace IsUniform
 
+/-- The measure can be conditioned on the support of a uniform distribution. -/
+theorem isConditionable {X : Ω → E} {s : Set E} (hu : IsUniform X s P μ) :
+    IsConditionable μ s :=
+  hu.1
+
+/-- A uniform random variable has the conditional measure on its support as its law. -/
+theorem hasLaw {X : Ω → E} {s : Set E} (hu : IsUniform X s P μ) :
+    HasLaw X (ProbabilityTheory.cond μ s hu.isConditionable) P :=
+  hu.2
+
 @[fun_prop] theorem aemeasurable {X : Ω → E} {s : Set E} (hu : IsUniform X s P μ) :
     AEMeasurable X P :=
-  ProbabilityTheory.HasLaw.aemeasurable hu
+  hu.hasLaw.aemeasurable
 
 theorem map_eq {X : Ω → E} {s : Set E} (hu : IsUniform X s P μ) :
-    P.map X hu.aemeasurable = ProbabilityTheory.cond μ s := HasLaw.map_eq hu
+    P.map X hu.aemeasurable = ProbabilityTheory.cond μ s hu.isConditionable :=
+  hu.hasLaw.map_eq
 
 theorem absolutelyContinuous {X : Ω → E} {s : Set E} (hu : IsUniform X s P μ) :
     map X P hu.aemeasurable ≪ μ := by
-  rw [hu.map_eq]; exact ProbabilityTheory.cond_absolutelyContinuous
+  rw [hu.map_eq]; exact ProbabilityTheory.cond_absolutelyContinuous hu.isConditionable
 
 theorem measure_preimage {X : Ω → E} {s : Set E} (hu : IsUniform X s P μ) {A : Set E}
     (hA : MeasurableSet A) :
     P (X ⁻¹' A) = μ (s ∩ A) / μ s := by
-  rwa [← map_apply hA hu.aemeasurable, hu.map_eq, ProbabilityTheory.cond_apply',
+  rw [← map_apply hA hu.aemeasurable, hu.map_eq, ProbabilityTheory.cond_apply hu.isConditionable,
     ENNReal.div_eq_inv_mul]
 
-theorem isProbabilityMeasure {X : Ω → E} {s : Set E} (hns : μ s ≠ 0) (hnt : μ s ≠ ∞)
-    (hu : IsUniform X s P μ) : IsProbabilityMeasure P :=
+theorem isProbabilityMeasure {X : Ω → E} {s : Set E} (hu : IsUniform X s P μ) :
+    IsProbabilityMeasure P :=
   ⟨by
     have : X ⁻¹' Set.univ = Set.univ := Set.preimage_univ
     rw [← this, hu.measure_preimage MeasurableSet.univ, Set.inter_univ,
-      ENNReal.div_self hns hnt]⟩
+      ENNReal.div_self hu.isConditionable.measure_ne_zero hu.isConditionable.measure_ne_top]⟩
 
-theorem toMeasurable_iff {X : Ω → E} {s : Set E} :
+/-- A uniform distribution on a null-measurable set is uniform on its measurable hull. A random
+variable that is uniform on the measurable hull of a set that is not null-measurable is not
+uniform on the set itself, since the conditional measure needs a null-measurable event. -/
+theorem toMeasurable_iff {X : Ω → E} {s : Set E} (hs : NullMeasurableSet s μ) :
     IsUniform X (toMeasurable μ s) P μ ↔ IsUniform X s P μ := by
-  unfold IsUniform
-  rw [ProbabilityTheory.cond_toMeasurable_eq]
+  refine ⟨fun ⟨h, hX⟩ ↦ ?_, fun ⟨h, hX⟩ ↦ ⟨h.toMeasurable, ?_⟩⟩
+  · have hs' : IsConditionable μ s := ⟨hs, measure_toMeasurable (μ := μ) s ▸ h.measure_ne_zero,
+      measure_toMeasurable (μ := μ) s ▸ h.measure_ne_top⟩
+    refine ⟨hs', ?_⟩
+    rwa [← ProbabilityTheory.cond_toMeasurable_eq μ hs']
+  · rwa [ProbabilityTheory.cond_toMeasurable_eq μ h]
 
 protected theorem toMeasurable {X : Ω → E} {s : Set E} (hu : IsUniform X s P μ) :
     IsUniform X (toMeasurable μ s) P μ :=
-  toMeasurable_iff.mpr hu
+  (toMeasurable_iff hu.isConditionable.nullMeasurableSet).mpr hu
 
-theorem hasPDF {X : Ω → E} {s : Set E} (hnt : μ s ≠ ∞) (hu : IsUniform X s P μ) :
-    HasPDF X P μ := by
+theorem hasPDF {X : Ω → E} {s : Set E} (hu : IsUniform X s P μ) : HasPDF X P μ := by
   let t := toMeasurable μ s
   apply hasPDF_of_map_eq_withDensity hu.aemeasurable (t.indicator ((μ t)⁻¹ • 1)) <|
     (measurable_one.aemeasurable.const_smul (μ t)⁻¹).indicator (measurableSet_toMeasurable μ s)
   rw [hu.map_eq, withDensity_indicator (measurableSet_toMeasurable μ s),
-    withDensity_smul _ measurable_one, withDensity_one, restrict_toMeasurable hnt,
-    measure_toMeasurable, ProbabilityTheory.cond]
-
-theorem pdf_eq_zero_of_measure_eq_zero_or_top {X : Ω → E} {s : Set E}
-    (hu : IsUniform X s P μ) (hμs : μ s = 0 ∨ μ s = ∞) : pdf X P μ =ᵐ[μ] 0 := by
-  rcases hμs with H | H
-  · simp only [IsUniform, ProbabilityTheory.cond, H, ENNReal.inv_zero, restrict_eq_zero.mpr H,
-    smul_zero] at hu
-    simp [pdf, hu.map_eq]
-  · simp only [IsUniform, ProbabilityTheory.cond, H, ENNReal.inv_top, zero_smul] at hu
-    simp [pdf, hu.map_eq]
+    withDensity_smul _ measurable_one, withDensity_one,
+    restrict_toMeasurable hu.isConditionable.measure_ne_top, measure_toMeasurable,
+    ProbabilityTheory.cond]
 
 theorem pdf_eq {X : Ω → E} {s : Set E} (hms : MeasurableSet s)
     (hu : IsUniform X s P μ) : pdf X P μ =ᵐ[μ] s.indicator ((μ s)⁻¹ • (1 : E → ℝ≥0∞)) := by
-  by_cases hnt : μ s = ∞
-  · simp [pdf_eq_zero_of_measure_eq_zero_or_top hu (Or.inr hnt), hnt]
-  by_cases hns : μ s = 0
-  · filter_upwards [measure_eq_zero_iff_ae_notMem.mp hns,
-      pdf_eq_zero_of_measure_eq_zero_or_top hu (Or.inl hns)] with x hx h'x
-    simp [hx, h'x, hns]
-  have : HasPDF X P μ := hasPDF hnt hu
-  have : IsProbabilityMeasure P := isProbabilityMeasure hns hnt hu
+  have : HasPDF X P μ := hasPDF hu
+  have : IsProbabilityMeasure P := isProbabilityMeasure hu
   apply (eq_of_map_eq_withDensity _ _).mp
   · rw [hu.map_eq, withDensity_indicator hms, withDensity_smul _ measurable_one, withDensity_one,
       ProbabilityTheory.cond]
@@ -142,13 +147,7 @@ variable {X : Ω → ℝ} {s : Set ℝ}
 
 theorem mul_pdf_integrable (hcs : IsCompact s) (huX : IsUniform X s P) :
     Integrable fun x : ℝ => x * ((pdf X P volume) x).toReal := by
-  by_cases hnt : volume s = 0 ∨ volume s = ∞
-  · have I : Integrable (fun x ↦ x * ENNReal.toReal (0)) := by simp
-    apply I.congr
-    filter_upwards [pdf_eq_zero_of_measure_eq_zero_or_top huX hnt] with x hx
-    simp [hx]
-  simp only [not_or] at hnt
-  have : IsProbabilityMeasure P := isProbabilityMeasure hnt.1 hnt.2 huX
+  have : IsProbabilityMeasure P := isProbabilityMeasure huX
   constructor
   · exact aestronglyMeasurable_id.mul
       (measurable_pdf X P).aemeasurable.ennreal_toReal.aestronglyMeasurable
@@ -159,25 +158,28 @@ theorem mul_pdf_integrable (hcs : IsCompact s) (huX : IsUniform X s P) :
   simp only [ind, this, lintegral_indicator hcs.measurableSet, mul_one, smul_eq_mul,
     Pi.one_apply, Pi.smul_apply]
   rw [lintegral_mul_const _ measurable_enorm]
-  exact ENNReal.mul_ne_top (setLIntegral_lt_top_of_isCompact hnt.2 hcs continuous_nnnorm).ne
-    (ENNReal.inv_lt_top.2 (pos_iff_ne_zero.mpr hnt.1)).ne
+  exact ENNReal.mul_ne_top
+    (setLIntegral_lt_top_of_isCompact huX.isConditionable.measure_ne_top hcs
+      continuous_nnnorm).ne
+    (ENNReal.inv_lt_top.2 (pos_iff_ne_zero.mpr huX.isConditionable.measure_ne_zero)).ne
 
 /-- A real uniform random variable `X` with support `s` has expectation
 `(λ s)⁻¹ * ∫ x in s, x ∂λ` where `λ` is the Lebesgue measure. -/
 theorem integral_eq (huX : IsUniform X s P) :
     ∫ x, X x ∂P = (volume s)⁻¹.toReal * ∫ x in s, x := by
   rw [← smul_eq_mul, ← integral_smul_measure]
-  dsimp only [IsUniform, ProbabilityTheory.cond] at huX
-  rw [← huX.map_eq]
+  have h := huX.hasLaw
+  dsimp only [ProbabilityTheory.cond] at h
+  rw [← h.map_eq]
   exact (integral_map huX.aemeasurable aestronglyMeasurable_id).symm
 
 end IsUniform
 
 variable {X : Ω → E}
 
-lemma IsUniform.cond {s : Set E} :
-    IsUniform (id : E → E) s (ProbabilityTheory.cond μ s) μ :=
-  .id
+lemma IsUniform.cond {s : Set E} (hs : IsConditionable μ s) :
+    IsUniform (id : E → E) s μ[|s] μ :=
+  ⟨hs, .id⟩
 
 /-- The density of the uniform measure on a set with respect to itself. This allows us to abstract
 away the choice of random variable and probability space. -/

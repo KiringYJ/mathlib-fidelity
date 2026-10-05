@@ -18,7 +18,7 @@ As a corollary, `μ` can be represented as `μ.toFinite.withDensity (μ.rnDeriv 
 
 Our definition of `MeasureTheory.Measure.toFinite` ensures some extra properties:
 
-- if `μ` is a finite measure, then `μ.toFinite = μ[|univ] = (μ univ)⁻¹ • μ`;
+- if `μ` is a finite measure, then `μ.toFinite = (μ univ)⁻¹ • μ`;
 - in particular, `μ.toFinite = μ` for a probability measure;
 - if `μ ≠ 0`, then `μ.toFinite` is a probability measure.
 
@@ -57,7 +57,7 @@ noncomputable def Measure.toFiniteAux (μ : Measure α) [SFinite μ] : Measure �
 `MeasureTheory.absolutelyContinuous_toFinite`). If `μ` is non-zero, then `μ.toFinite` is a
 probability measure. -/
 noncomputable def Measure.toFinite (μ : Measure α) [SFinite μ] : Measure α :=
-  μ.toFiniteAux[|univ]
+  (μ.toFiniteAux univ)⁻¹ • μ.toFiniteAux
 
 @[local simp]
 lemma ae_toFiniteAux [SFinite μ] : ae μ.toFiniteAux = ae μ := by
@@ -76,7 +76,7 @@ theorem isFiniteMeasure_toFiniteAux [SFinite μ] : IsFiniteMeasure μ.toFiniteAu
 
 @[simp]
 lemma ae_toFinite [SFinite μ] : ae μ.toFinite = ae μ := by
-  simp [Measure.toFinite, ProbabilityTheory.cond]
+  simp [Measure.toFinite]
 
 @[simp]
 lemma toFinite_apply_eq_zero_iff [SFinite μ] {s : Set α} : μ.toFinite s = 0 ↔ μ s = 0 := by
@@ -90,7 +90,7 @@ lemma toFinite_eq_zero_iff [SFinite μ] : μ.toFinite = 0 ↔ μ = 0 := by
 lemma toFinite_zero : Measure.toFinite (0 : Measure α) = 0 := by simp
 
 lemma toFinite_eq_self [IsProbabilityMeasure μ] : μ.toFinite = μ := by
-  rw [Measure.toFinite, Measure.toFiniteAux, ite_eq_left, ProbabilityTheory.cond_univ]
+  rw [Measure.toFinite, Measure.toFiniteAux, ite_eq_left, measure_univ, inv_one, one_smul]
   infer_instance
 
 instance [SFinite μ] : IsFiniteMeasure μ.toFinite := by
@@ -98,8 +98,10 @@ instance [SFinite μ] : IsFiniteMeasure μ.toFinite := by
   infer_instance
 
 instance [SFinite μ] [NeZero μ] : IsProbabilityMeasure μ.toFinite := by
-  apply ProbabilityTheory.cond_isProbabilityMeasure
-  simp [ne_eq, ← compl_mem_ae_iff, ae_toFiniteAux]
+  have : μ.toFiniteAux univ ≠ 0 := by simp [ne_eq, ← compl_mem_ae_iff, ae_toFiniteAux]
+  constructor
+  rw [Measure.toFinite, Measure.smul_apply, smul_eq_mul,
+    ENNReal.inv_mul_cancel this (measure_ne_top _ _)]
 
 lemma absolutelyContinuous_toFinite (μ : Measure α) [SFinite μ] : μ ≪ μ.toFinite :=
   Measure.ae_le_iff_absolutelyContinuous.mp ae_toFinite.ge

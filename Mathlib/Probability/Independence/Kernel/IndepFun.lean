@@ -708,12 +708,14 @@ variable {mβ : SigmaAlgebra β} {X : ι → Ω → α} {Y : ι → Ω → β}
   {f : _ → Set Ω} {t : ι → Set β} {s : Finset ι}
 
 /-- The probability of an intersection of preimages conditioning on another intersection factors
-into a product. -/
-lemma iIndepFun.cond_iInter [Finite ι] (hY : ∀ i, Measurable (Y i))
-    (hindep : iIndepFun (fun i ω ↦ (X i ω, Y i ω)) κ μ)
-    (hf : ∀ i ∈ s, f i ∈ mα.comap (X i))
-    (hy : ∀ᵐ a ∂μ, ∀ i ∉ s, κ a (Y i ⁻¹' t i) ≠ 0) (ht : ∀ i, MeasurableSet (t i)) :
-    ∀ᵐ a ∂μ, (κ a)[⋂ i ∈ s, f i | ⋂ i, Y i ⁻¹' t i] = ∏ i ∈ s, (κ a)[f i | Y i in t i] := by
+into a product, for almost every measure of the kernel that can be conditioned on these
+preimages. -/
+lemma iIndepFun.cond_iInter [Finite ι] (hindep : iIndepFun (fun i ω ↦ (X i ω, Y i ω)) κ μ)
+    (hf : ∀ i ∈ s, f i ∈ mα.comap (X i)) (ht : ∀ i, MeasurableSet (t i)) :
+    ∀ᵐ a ∂μ, ∀ (hc : IsConditionable (κ a) (⋂ i, Y i ⁻¹' t i))
+      (hy : ∀ i, IsConditionable (κ a) (Y i ⁻¹' t i)),
+      (κ a)[⋂ i ∈ s, f i | ⋂ i, Y i ⁻¹' t i] =
+        ∏ i ∈ s, ProbabilityTheory.cond (κ a) (Y i ⁻¹' t i) (hy i) (f i) := by
   classical
   cases nonempty_fintype ι
   let g (i' : ι) := if i' ∈ s then Y i' ⁻¹' t i' ∩ f i' else Y i' ⁻¹' t i'
@@ -730,11 +732,11 @@ lemma iIndepFun.cond_iInter [Finite ι] (hY : ∀ i, Measurable (Y i))
       exact ((mα.prod mβ).comap fun ω ↦ (X i ω, Y i ω)).inter_mem (hYt _)
         ⟨A ×ˢ .univ, hprod, by ext; simp [← hA']⟩
     · exact hYt _
-  filter_upwards [hy, hindep.ae_isProbabilityMeasure, hindep.meas_iInter hYt, hindep.meas_iInter hg]
-    with a hy _ hYt hg
+  filter_upwards [hindep.ae_isProbabilityMeasure, hindep.meas_iInter hYt, hindep.meas_iInter hg]
+    with a _ hYt hg hc hy
   calc
     _ = (κ a (⋂ i, Y i ⁻¹' t i))⁻¹ * κ a ((⋂ i, Y i ⁻¹' t i) ∩ ⋂ i ∈ s, f i) := by
-      rw [cond_apply]; exact .iInter fun i ↦ hY i (ht i)
+      rw [cond_apply hc]
     _ = (κ a (⋂ i, Y i ⁻¹' t i))⁻¹ * κ a (⋂ i, g i) := by
       congr 2
       calc
@@ -750,11 +752,12 @@ lemma iIndepFun.cond_iInter [Finite ι] (hY : ∀ i, Measurable (Y i))
     _ = ∏ i, (κ a (Y i ⁻¹' t i))⁻¹ * κ a (g i) := by
       rw [Finset.prod_mul_distrib, ENNReal.prod_inv_distrib]
       exact fun _ _ i _ _ ↦ .inr <| measure_ne_top _ _
-    _ = ∏ i, if i ∈ s then (κ a)[f i | Y i ⁻¹' t i] else 1 := by
+    _ = ∏ i, if i ∈ s then ProbabilityTheory.cond (κ a) (Y i ⁻¹' t i) (hy i) (f i) else 1 := by
       refine Finset.prod_congr rfl fun i _ ↦ ?_
       by_cases hi : i ∈ s
-      · simp only [hi, ↓reduceIte, g, cond_apply (hY i (ht i))]
-      · simp only [hi, ↓reduceIte, g, ENNReal.inv_mul_cancel (hy i hi) (measure_ne_top _ _)]
+      · simp only [hi, ↓reduceIte, g, cond_apply (hy i)]
+      · simp only [hi, ↓reduceIte, g,
+          ENNReal.inv_mul_cancel (hy i).measure_ne_zero (hy i).measure_ne_top]
     _ = _ := by simp
 
 -- TODO: We can't state `Kernel.iIndepFun.cond` (the `Kernel` analogue of

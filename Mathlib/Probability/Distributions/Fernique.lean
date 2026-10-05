@@ -606,9 +606,10 @@ theorem exists_integrable_exp_sq_of_map_rotation_eq_self [IsFiniteMeasure μ]
     ∃ C, 0 < C ∧ Integrable (fun x ↦ rexp (C * ‖x‖ ^ 2)) μ := by
   by_cases hμ_zero : μ = 0
   · exact ⟨1, by positivity, by simp [hμ_zero]⟩
-  let μ' := cond μ .univ
+  have : NeZero μ := ⟨hμ_zero⟩
+  let μ' := μ[|.univ]
   have hμ'_eq : μ' = (μ .univ)⁻¹ • μ := by simp [μ', cond]
-  have hμ' : IsProbabilityMeasure μ' := cond_isProbabilityMeasure <| by simp [hμ_zero]
+  have hμ' : IsProbabilityMeasure μ' := isProbabilityMeasure_cond _
   have h_rot : (μ'.prod μ').map (ContinuousLinearMap.rotation (-(π / 4))) = μ'.prod μ' := by
     calc (μ'.prod μ').map (ContinuousLinearMap.rotation (-(π / 4)))
     _ = ((μ Set.univ)⁻¹ * (μ Set.univ)⁻¹)
