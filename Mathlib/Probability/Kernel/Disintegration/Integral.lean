@@ -11,10 +11,13 @@ public import Mathlib.Probability.Kernel.Disintegration.StandardBorel
 /-!
 # Lebesgue and Bochner integrals of conditional kernels
 
-Integrals against a conditional kernel: an s-finite kernel `η` that disintegrates a kernel `κ`
-(`κ.IsCondKernel η`) or a measure `ρ` (`ρ.IsCondKernel η`). The statements hold for every such
-kernel, in particular for every s-finite representative of `ProbabilityTheory.Kernel.condKernel κ`
-or `MeasureTheory.Measure.condKernel ρ`, which are classes of kernels.
+Integrals against a conditional kernel: a kernel `η` that disintegrates a kernel `κ`
+(`κ.IsCondKernel η`) or a measure `ρ` (`ρ.IsCondKernel η`). The statements about Lebesgue
+integrals hold for every such kernel, in particular for every s-finite representative of
+`ProbabilityTheory.Kernel.condKernel κ` or `MeasureTheory.Measure.condKernel ρ`, which are classes
+of kernels (`ProbabilityTheory.Kernel.isCondKernel_of_mem_condKernel`,
+`MeasureTheory.Measure.isCondKernel_of_mem_condKernel`); those about Bochner integrals also assume
+that `κ` or `ρ` is finite and that `η` is s-finite.
 
 ## Main statements
 
@@ -40,16 +43,13 @@ variable {α β Ω : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β} [Sig
 
 section Lintegral
 
-variable {κ : Kernel α (β × Ω)} [IsFiniteKernel κ] {η : Kernel (α × β) Ω} [IsSFiniteKernel η]
-  [κ.IsCondKernel η] {f : β × Ω → ℝ≥0∞}
+variable {κ : Kernel α (β × Ω)} {η : Kernel (α × β) Ω} [κ.IsCondKernel η] {f : β × Ω → ℝ≥0∞}
 
-omit [IsFiniteKernel κ] [IsSFiniteKernel η] in
 lemma lintegral_condKernel_mem (a : α) {s : Set (β × Ω)} (hs : MeasurableSet s) :
     ∫⁻ x, η (a, x) (Prod.mk x ⁻¹' s) ∂(Kernel.fst κ a) = κ a s := by
   conv_rhs => rw [← κ.disintegrate η]
   simp_rw [Kernel.compProd_apply hs]
 
-omit [IsFiniteKernel κ] [IsSFiniteKernel η] in
 lemma setLIntegral_condKernel_eq_measure_prod (a : α) {s : Set β} (hs : MeasurableSet s)
     {t : Set Ω} (ht : MeasurableSet t) :
     ∫⁻ b in s, η (a, b) t ∂(Kernel.fst κ a) = κ a (s ×ˢ t) := by
@@ -133,17 +133,14 @@ variable {β Ω : Type*} {mβ : SigmaAlgebra β} [SigmaAlgebra Ω]
 
 section Lintegral
 
-variable {ρ : Measure (β × Ω)} [IsFiniteMeasure ρ] {η : Kernel β Ω} [IsSFiniteKernel η]
-  [ρ.IsCondKernel η] {f : β × Ω → ℝ≥0∞}
+variable {ρ : Measure (β × Ω)} {η : Kernel β Ω} [ρ.IsCondKernel η] {f : β × Ω → ℝ≥0∞}
 
-omit [IsFiniteMeasure ρ] [IsSFiniteKernel η] in
 lemma lintegral_condKernel_mem {s : Set (β × Ω)} (hs : MeasurableSet s) :
     ∫⁻ x, η x {y | (x, y) ∈ s} ∂ρ.fst = ρ s := by
   conv_rhs => rw [← ρ.disintegrate η]
   simp_rw [compProd_apply hs]
   rfl
 
-omit [IsFiniteMeasure ρ] [IsSFiniteKernel η] in
 lemma setLIntegral_condKernel_eq_measure_prod {s : Set β} (hs : MeasurableSet s) {t : Set Ω}
     (ht : MeasurableSet t) :
     ∫⁻ b in s, η b t ∂ρ.fst = ρ (s ×ˢ t) := by

@@ -27,7 +27,8 @@ of both kernels.
 
 * `HasParallelComp κ η`: the parallel composition of `κ` and `η` exists.
 * `parallelComp (κ : Kernel α β) (η : Kernel γ δ) : Kernel (α × γ) (β × δ)`: parallel composition
-  of two kernels. We define a notation `κ ∥ₖ η = parallelComp κ η`. For s-finite kernels,
+  of two kernels. We define a notation `κ ∥ₖ η = parallelComp κ η`. On its whole domain, for
+  measurable `g`,
   `∫⁻ bd, g bd ∂(κ ∥ₖ η) ac = ∫⁻ b, ∫⁻ d, g (b, d) ∂η ac.2 ∂κ ac.1`.
 
 ## Notation
@@ -78,6 +79,13 @@ irreducible_def parallelComp (κ : Kernel α β) (η : Kernel γ δ) [κ.HasPara
 @[inherit_doc]
 scoped[ProbabilityTheory] infixl:100 " ∥ₖ " => ProbabilityTheory.Kernel.parallelComp
 
+/-- The parallel composition at a point is the composition-product of `κ x.1` with the constant
+kernel `η x.2`. -/
+lemma parallelComp_apply_eq_compProd [κ.HasParallelComp η] (x : α × γ) :
+    (κ ∥ₖ η) x = κ x.1 ⊗ₘ const β (η x.2) := by
+  rw [parallelComp]
+  rfl
+
 lemma parallelComp_apply' [κ.HasParallelComp η] {s : Set (β × δ)} (hs : MeasurableSet s) :
     (κ ∥ₖ η) x s = ∫⁻ b, η x.2 (Prod.mk b ⁻¹' s) ∂κ x.1 := by
   rw [parallelComp]
@@ -108,15 +116,17 @@ lemma parallelComp_apply (κ : Kernel α β) [IsSFiniteKernel κ]
   ext s hs
   rw [parallelComp_apply' hs, Measure.productBySections_apply hs]
 
-lemma parallelComp_apply_prod [IsSFiniteKernel κ] [IsSFiniteKernel η] (s : Set β) (t : Set δ) :
+/-- The parallel composition gives a rectangle the product of the measures of its sides, also when
+they are not measurable. -/
+lemma parallelComp_apply_prod [κ.HasParallelComp η] (s : Set β) (t : Set δ) :
     (κ ∥ₖ η) x (s ×ˢ t) = (κ x.1 s) * (η x.2 t) := by
-  rw [parallelComp_apply, Measure.productBySections_prod]
+  rw [parallelComp_apply_eq_compProd]
+  exact Measure.compProd_const_apply_prod s t
 
 @[simp]
-lemma parallelComp_apply_univ [IsSFiniteKernel κ] [IsSFiniteKernel η] :
+lemma parallelComp_apply_univ [κ.HasParallelComp η] :
     (κ ∥ₖ η) x Set.univ = κ x.1 Set.univ * η x.2 Set.univ := by
-  rw [parallelComp_apply, Measure.productBySections_apply .univ, mul_comm]
-  simp
+  rw [← Set.univ_prod_univ, parallelComp_apply_prod]
 
 @[simp]
 lemma parallelComp_zero_left (η : Kernel γ δ) : (0 : Kernel α β) ∥ₖ η = 0 := by
@@ -141,10 +151,12 @@ lemma deterministic_parallelComp_deterministic
   ext x : 1
   simp_rw [parallelComp_apply, deterministic_apply, Prod.map, Measure.dirac_productBySections_dirac]
 
-lemma lintegral_parallelComp [IsSFiniteKernel κ] [IsSFiniteKernel η]
+/-- **Tonelli's theorem** for the parallel composition, on its whole domain. -/
+lemma lintegral_parallelComp [κ.HasParallelComp η]
     (ac : α × γ) {g : β × δ → ℝ≥0∞} (hg : Measurable g) :
     ∫⁻ bd, g bd ∂(κ ∥ₖ η) ac = ∫⁻ b, ∫⁻ d, g (b, d) ∂η ac.2 ∂κ ac.1 := by
-  rw [parallelComp_apply, MeasureTheory.lintegral_productBySections _ hg.aemeasurable]
+  rw [parallelComp_apply_eq_compProd]
+  exact Measure.lintegral_compProd hg
 
 lemma lintegral_parallelComp_symm [IsSFiniteKernel κ] [IsSFiniteKernel η]
     (ac : α × γ) {g : β × δ → ℝ≥0∞} (hg : Measurable g) :

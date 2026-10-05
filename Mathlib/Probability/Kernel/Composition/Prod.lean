@@ -18,8 +18,8 @@ ignores its second coordinate. Instance search supplies its domain for s-finite 
 
 ## Main definitions
 
-* `prod (κ : Kernel α β) (η : Kernel α γ) : Kernel α (β × γ)`: product of 2 kernels. For s-finite
-  kernels, `∫⁻ bc, f bc ∂((κ ×ₖ η) a) = ∫⁻ b, ∫⁻ c, f (b, c) ∂(η a) ∂(κ a)`
+* `prod (κ : Kernel α β) (η : Kernel α γ) : Kernel α (β × γ)`: product of 2 kernels. On its whole
+  domain, for measurable `f`, `∫⁻ bc, f bc ∂((κ ×ₖ η) a) = ∫⁻ b, ∫⁻ c, f (b, c) ∂(η a) ∂(κ a)`
 
 ## Main statements
 
@@ -96,10 +96,15 @@ lemma prod_apply (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel α γ) [I
   rw [prod_apply' _ _ _ hs,
     Measure.productBySections_apply (ν := η a) hs]
 
+/-- The product of kernels gives a rectangle the product of the measures of its sides, also when
+they are not measurable. -/
 lemma prod_apply_prod {κ : Kernel α β} {η : Kernel α γ}
-    [IsSFiniteKernel κ] [IsSFiniteKernel η] {s : Set β} {t : Set γ} {a : α} :
+    [κ.HasCompProd (prodMkRight β η)] {s : Set β} {t : Set γ} {a : α} :
     (κ ×ₖ η) a (s ×ˢ t) = (κ a s) * (η a t) := by
-  rw [prod_apply, Measure.productBySections_prod]
+  have : (κ a).HasCompProd (const β (η a)) :=
+    HasCompProd.hasCompProd_apply (κ := κ) (η := prodMkRight β η) a
+  rw [prod, compProd_apply_eq_compProd_sectR]
+  exact Measure.compProd_const_apply_prod (μ := κ a) (ν := η a) s t
 
 lemma prod_const (μ : Measure β) [SFinite μ] (ν : Measure γ) [SFinite ν] :
     const α μ ×ₖ const α ν = const α (μ.productBySections ν) := by
@@ -107,10 +112,12 @@ lemma prod_const (μ : Measure β) [SFinite μ] (ν : Measure γ) [SFinite ν] :
   rw [prod_apply' _ _ _ hs, const_apply, const_apply, const_apply,
     Measure.productBySections_apply hs]
 
-theorem lintegral_prod (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel α γ) [IsSFiniteKernel η]
+/-- **Tonelli's theorem** for the product of kernels, on its whole domain. -/
+theorem lintegral_prod (κ : Kernel α β) (η : Kernel α γ) [κ.HasCompProd (prodMkRight β η)]
     (a : α) {g : β × γ → ℝ≥0∞} (hg : Measurable g) :
     ∫⁻ c, g c ∂(κ ×ₖ η) a = ∫⁻ b, ∫⁻ c, g (b, c) ∂η a ∂κ a := by
-  rw [prod_apply, MeasureTheory.lintegral_productBySections _ hg.aemeasurable]
+  rw [prod]
+  exact lintegral_compProd κ (prodMkRight β η) a hg
 
 theorem lintegral_prod_symm (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel α γ)
     [IsSFiniteKernel η] (a : α) {g : β × γ → ℝ≥0∞} (hg : Measurable g) :
@@ -164,19 +171,18 @@ instance IsFiniteKernel.prod (κ : Kernel α β) [IsFiniteKernel κ] (η : Kerne
 instance IsSFiniteKernel.prod (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel α γ)
     [IsSFiniteKernel η] : IsSFiniteKernel (κ ×ₖ η) := by rw [Kernel.prod]; infer_instance
 
-@[simp] lemma fst_prod (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel α γ) [IsMarkovKernel η] :
+@[simp] lemma fst_prod (κ : Kernel α β) (η : Kernel α γ) [κ.HasCompProd (prodMkRight β η)]
+    [IsMarkovKernel η] :
     fst (κ ×ₖ η) = κ := by
   ext a s hs
-  rw [fst_apply' _ _ hs]
-  calc
-    (κ ×ₖ η) a (Prod.fst ⁻¹' s) = ((κ a).productBySections (η a)) (Prod.fst ⁻¹' s) :=
-      congrArg (fun ρ : Measure (β × γ) ↦ ρ (Prod.fst ⁻¹' s)) (prod_apply κ η a)
-    _ = ((κ a).productBySections (η a)).fst s := (Measure.fst_apply hs).symm
-    _ = κ a s := by rw [Measure.fst_productBySections]
+  rw [fst_apply' _ _ hs, show {p : β × γ | p.1 ∈ s} = s ×ˢ Set.univ by ext; simp, prod_apply_prod,
+    measure_univ, mul_one]
 
-@[simp] lemma snd_prod (κ : Kernel α β) [IsMarkovKernel κ] (η : Kernel α γ) [IsSFiniteKernel η] :
+@[simp] lemma snd_prod (κ : Kernel α β) (η : Kernel α γ) [κ.HasCompProd (prodMkRight β η)]
+    [IsMarkovKernel κ] :
     snd (κ ×ₖ η) = η := by
-  ext x; simp [snd_apply, prod_apply]
+  ext a t ht
+  rw [snd_apply' _ _ ht, ← Set.univ_prod, prod_apply_prod, measure_univ, one_mul]
 
 lemma comap_prod (κ : Kernel β γ) [IsSFiniteKernel κ] (η : Kernel β δ) [IsSFiniteKernel η]
     {f : α → β} (hf : Measurable f) :

@@ -113,8 +113,7 @@ lemma compProd_id_eq_copy_comp : μ ⊗ₘ Kernel.id = Kernel.copy α ∘ₘ μ 
   simpa only [Kernel.copy] using
     (compProd_id (μ := μ)).trans (deterministic_comp_eq_map measurable_diag).symm
 
-lemma comp_compProd_comm {η : Kernel (α × β) γ} [SFinite μ] [IsSFiniteKernel κ]
-    [IsSFiniteKernel η] :
+lemma comp_compProd_comm {η : Kernel (α × β) γ} [μ.HasCompProd κ] [κ.HasCompProd η] :
     η ∘ₘ (μ ⊗ₘ κ) = ((κ ⊗ₖ η) ∘ₘ μ).snd := by
   ext s hs
   rw [Measure.bind_apply hs η.aemeasurable, Measure.snd_apply hs,

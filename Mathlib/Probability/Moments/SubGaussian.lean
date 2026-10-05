@@ -469,7 +469,7 @@ lemma prodMkLeft_compProd [IsSFiniteKernel κ] {η : Kernel Ω Ω''}
     rw [← Measure.snd_compProd, Measure.snd] at h2
     exact ae_of_ae_map (by fun_prop) h2
 
-variable [SFinite ν] [IsSFiniteKernel κ]
+variable [IsSFiniteKernel κ]
 
 lemma integrable_exp_add_compProd {η : Kernel (Ω' × Ω) Ω''} [IsZeroOrMarkovKernel η]
     (hX : HasSubgaussianMGF X c κ ν) (hY : HasSubgaussianMGF Y cY η (ν ⊗ₘ κ)) (t : ℝ) :

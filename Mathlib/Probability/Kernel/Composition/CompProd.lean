@@ -28,7 +28,7 @@ that convention because it fits better with the use of the name `comp` elsewhere
 
 * `HasCompProd κ η`: the composition-product of `κ` and `η` exists.
 * `compProd (κ : Kernel α β) (η : Kernel (α × β) γ) : Kernel α (β × γ)`: composition-product of 2
-  kernels. We define a notation `κ ⊗ₖ η = compProd κ η`. For s-finite kernels,
+  kernels. We define a notation `κ ⊗ₖ η = compProd κ η`. On its whole domain, for measurable `f`,
   `∫⁻ bc, f bc ∂((κ ⊗ₖ η) a) = ∫⁻ b, ∫⁻ c, f (b, c) ∂(η (a, b)) ∂(κ a)`
 
 ## Main statements
@@ -73,7 +73,8 @@ measurable sets depend measurably on `a`. Then the section integrals
 `∫⁻ b, η (a, b) (Prod.mk b ⁻¹' s) ∂κ a` are the values of a unique kernel.
 
 This is the exact domain of `ProbabilityTheory.Kernel.compProd`. Instance search derives it from
-the s-finiteness of both kernels and supplies it when either kernel is zero. -/
+the s-finiteness of both kernels, supplies it when either kernel is zero, and passes it to finite
+and countable sums of `κ`. -/
 class HasCompProd (κ : Kernel α β) (η : Kernel (α × β) γ) : Prop where
   /-- At every point `a`, the composition-product of `κ a` with `sectR η a` exists. -/
   hasCompProd_apply (a : α) : (κ a).HasCompProd (sectR η a)
@@ -84,8 +85,8 @@ class HasCompProd (κ : Kernel α β) (η : Kernel (α × β) γ) : Prop where
 attribute [instance] HasCompProd.hasCompProd_apply
 
 /-- Composition-Product of kernels: `(κ ⊗ₖ η) a` integrates the measures `η (a, b)` of the sections
-against `κ a`, that is, `(κ ⊗ₖ η) a = κ a ⊗ₘ sectR η a`. Its domain is `HasCompProd κ η`. For
-s-finite kernels, it satisfies
+against `κ a`, that is, `(κ ⊗ₖ η) a = κ a ⊗ₘ sectR η a`. Its domain is `HasCompProd κ η`, on which
+it satisfies, for measurable `f`,
 `∫⁻ bc, f bc ∂(compProd κ η a) = ∫⁻ b, ∫⁻ c, f (b, c) ∂(η (a, b)) ∂(κ a)`
 (see `ProbabilityTheory.Kernel.lintegral_compProd`). -/
 noncomputable irreducible_def compProd (κ : Kernel α β) (η : Kernel (α × β) γ)
@@ -307,75 +308,23 @@ section Lintegral
 /-! ### Lebesgue integral -/
 
 
-/-- Lebesgue integral against the composition-product of two kernels. -/
-theorem lintegral_compProd' (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel (α × β) γ)
-    [IsSFiniteKernel η] (a : α) {f : β → γ → ℝ≥0∞} (hf : Measurable (Function.uncurry f)) :
-    ∫⁻ bc, f bc.1 bc.2 ∂(κ ⊗ₖ η) a = ∫⁻ b, ∫⁻ c, f b c ∂η (a, b) ∂κ a := by
-  let F : ℕ → SimpleFunc (β × γ) ℝ≥0∞ := SimpleFunc.eapprox (Function.uncurry f)
-  have h : ∀ a, ⨆ n, F n a = Function.uncurry f a := SimpleFunc.iSup_eapprox_apply hf
-  simp only [Prod.forall, Function.uncurry_apply_pair] at h
-  simp_rw [← h]
-  have h_mono : Monotone F := fun i j hij b =>
-    SimpleFunc.monotone_eapprox (Function.uncurry f) hij _
-  rw [lintegral_iSup (fun n => (F n).measurable) h_mono]
-  have : ∀ b, ∫⁻ c, ⨆ n, F n (b, c) ∂η (a, b) = ⨆ n, ∫⁻ c, F n (b, c) ∂η (a, b) := by
-    intro a
-    rw [lintegral_iSup]
-    · exact fun n => (F n).measurable.comp measurable_prodMk_left
-    · exact fun i j hij b => h_mono hij _
-  simp_rw [this]
-  have h_some_meas_integral :
-    ∀ f' : SimpleFunc (β × γ) ℝ≥0∞, Measurable fun b => ∫⁻ c, f' (b, c) ∂η (a, b) := by
-    intro f'
-    have :
-      (fun b => ∫⁻ c, f' (b, c) ∂η (a, b)) =
-        (fun ab => ∫⁻ c, f' (ab.2, c) ∂η ab) ∘ fun b => (a, b) := by
-      ext1 ab; rfl
-    rw [this]
-    fun_prop
-  rw [lintegral_iSup]
-  rotate_left
-  · exact fun n => h_some_meas_integral (F n)
-  · exact fun i j hij b => lintegral_mono fun c => h_mono hij _
-  congr
-  ext1 n
-  refine SimpleFunc.induction ?_ ?_ (F n)
-  · intro c s hs
-    simp +unfoldPartialApp only [SimpleFunc.const_zero,
-      SimpleFunc.coe_piecewise, SimpleFunc.coe_const, SimpleFunc.coe_zero,
-      Set.piecewise_eq_indicator, Function.const, lintegral_indicator_const hs]
-    rw [compProd_apply hs, ← lintegral_const_mul c _]
-    swap
-    · exact (measurable_kernel_prodMk_left ((measurable_fst.snd.prodMk measurable_snd) hs)).comp
-        measurable_prodMk_left
-    congr
-    ext1 b
-    rw [lintegral_indicator_const_comp measurable_prodMk_left hs]
-  · intro f f' _ hf_eq hf'_eq
-    simp_rw [SimpleFunc.coe_add, Pi.add_apply]
-    change
-      ∫⁻ x, (f : β × γ → ℝ≥0∞) x + f' x ∂(κ ⊗ₖ η) a =
-        ∫⁻ b, ∫⁻ c : γ, f (b, c) + f' (b, c) ∂η (a, b) ∂κ a
-    rw [lintegral_add_left (SimpleFunc.measurable _), hf_eq, hf'_eq, ← lintegral_add_left]
-    swap
-    · exact h_some_meas_integral f
-    congr with b
-    rw [lintegral_add_left]
-    exact (SimpleFunc.measurable _).comp measurable_prodMk_left
-
-/-- Lebesgue integral against the composition-product of two kernels. -/
-theorem lintegral_compProd (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel (α × β) γ)
-    [IsSFiniteKernel η] (a : α) {f : β × γ → ℝ≥0∞} (hf : Measurable f) :
+/-- **Tonelli's theorem** for the composition-product of two kernels, on its whole domain: this is
+`MeasureTheory.Measure.lintegral_compProd` for `κ a ⊗ₘ sectR η a`. -/
+theorem lintegral_compProd (κ : Kernel α β) (η : Kernel (α × β) γ) [κ.HasCompProd η] (a : α)
+    {f : β × γ → ℝ≥0∞} (hf : Measurable f) :
     ∫⁻ bc, f bc ∂(κ ⊗ₖ η) a = ∫⁻ b, ∫⁻ c, f (b, c) ∂η (a, b) ∂κ a := by
-  let g := Function.curry f
-  change ∫⁻ bc, f bc ∂(κ ⊗ₖ η) a = ∫⁻ b, ∫⁻ c, g b c ∂η (a, b) ∂κ a
-  rw [← lintegral_compProd']
-  · simp_rw [g, Function.curry_apply]
-  · simp_rw [g, Function.uncurry_curry]; exact hf
+  rw [compProd_apply_eq_compProd_sectR]
+  exact Measure.lintegral_compProd hf
 
 /-- Lebesgue integral against the composition-product of two kernels. -/
-theorem lintegral_compProd₀ (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel (α × β) γ)
-    [IsSFiniteKernel η] (a : α) {f : β × γ → ℝ≥0∞} (hf : AEMeasurable f ((κ ⊗ₖ η) a)) :
+theorem lintegral_compProd' (κ : Kernel α β) (η : Kernel (α × β) γ) [κ.HasCompProd η] (a : α)
+    {f : β → γ → ℝ≥0∞} (hf : Measurable (Function.uncurry f)) :
+    ∫⁻ bc, f bc.1 bc.2 ∂(κ ⊗ₖ η) a = ∫⁻ b, ∫⁻ c, f b c ∂η (a, b) ∂κ a :=
+  lintegral_compProd κ η a hf
+
+/-- Lebesgue integral against the composition-product of two kernels. -/
+theorem lintegral_compProd₀ (κ : Kernel α β) (η : Kernel (α × β) γ) [κ.HasCompProd η] (a : α)
+    {f : β × γ → ℝ≥0∞} (hf : AEMeasurable f ((κ ⊗ₖ η) a)) :
     ∫⁻ z, f z ∂(κ ⊗ₖ η) a = ∫⁻ x, ∫⁻ y, f (x, y) ∂η (a, x) ∂κ a := by
   have A : ∫⁻ z, f z ∂(κ ⊗ₖ η) a = ∫⁻ z, hf.mk f z ∂(κ ⊗ₖ η) a := lintegral_congr_ae hf.ae_eq_mk
   have B : ∫⁻ x, ∫⁻ y, f (x, y) ∂η (a, x) ∂κ a = ∫⁻ x, ∫⁻ y, hf.mk f (x, y) ∂η (a, x) ∂κ a := by
@@ -384,21 +333,21 @@ theorem lintegral_compProd₀ (κ : Kernel α β) [IsSFiniteKernel κ] (η : Ker
   rw [A, B, lintegral_compProd]
   exact hf.measurable_mk
 
-theorem setLIntegral_compProd (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel (α × β) γ)
-    [IsSFiniteKernel η] (a : α) {f : β × γ → ℝ≥0∞} (hf : Measurable f) {s : Set β} {t : Set γ}
+theorem setLIntegral_compProd (κ : Kernel α β) (η : Kernel (α × β) γ) [κ.HasCompProd η] (a : α)
+    {f : β × γ → ℝ≥0∞} (hf : Measurable f) {s : Set β} {t : Set γ}
     (hs : MeasurableSet s) (ht : MeasurableSet t) :
     ∫⁻ z in s ×ˢ t, f z ∂(κ ⊗ₖ η) a = ∫⁻ x in s, ∫⁻ y in t, f (x, y) ∂η (a, x) ∂κ a := by
-  simp_rw [← Kernel.restrict_apply (κ ⊗ₖ η) (hs.prod ht), ← compProd_restrict hs ht,
-    lintegral_compProd _ _ _ hf, Kernel.restrict_apply]
+  rw [compProd_apply_eq_compProd_sectR]
+  exact Measure.setLIntegral_compProd hf hs ht
 
-theorem setLIntegral_compProd_univ_right (κ : Kernel α β) [IsSFiniteKernel κ]
-    (η : Kernel (α × β) γ) [IsSFiniteKernel η] (a : α) {f : β × γ → ℝ≥0∞} (hf : Measurable f)
+theorem setLIntegral_compProd_univ_right (κ : Kernel α β) (η : Kernel (α × β) γ)
+    [κ.HasCompProd η] (a : α) {f : β × γ → ℝ≥0∞} (hf : Measurable f)
     {s : Set β} (hs : MeasurableSet s) :
     ∫⁻ z in s ×ˢ Set.univ, f z ∂(κ ⊗ₖ η) a = ∫⁻ x in s, ∫⁻ y, f (x, y) ∂η (a, x) ∂κ a := by
   simp_rw [setLIntegral_compProd κ η a hf hs MeasurableSet.univ, Measure.restrict_univ]
 
-theorem setLIntegral_compProd_univ_left (κ : Kernel α β) [IsSFiniteKernel κ] (η : Kernel (α × β) γ)
-    [IsSFiniteKernel η] (a : α) {f : β × γ → ℝ≥0∞} (hf : Measurable f) {t : Set γ}
+theorem setLIntegral_compProd_univ_left (κ : Kernel α β) (η : Kernel (α × β) γ)
+    [κ.HasCompProd η] (a : α) {f : β × γ → ℝ≥0∞} (hf : Measurable f) {t : Set γ}
     (ht : MeasurableSet t) :
     ∫⁻ z in Set.univ ×ˢ t, f z ∂(κ ⊗ₖ η) a = ∫⁻ x, ∫⁻ y in t, f (x, y) ∂η (a, x) ∂κ a := by
   simp_rw [setLIntegral_compProd κ η a hf MeasurableSet.univ ht, Measure.restrict_univ]
@@ -481,8 +430,26 @@ lemma compProd_assoc {δ : Type*} {mδ : SigmaAlgebra δ}
   · congr
   · exact hs.preimage (by fun_prop)
 
+/-- The composition-product of a sum of kernels with `η` exists when it exists for each of them. -/
+instance hasCompProd_add_left {κ κ' : Kernel α β} {η : Kernel (α × β) γ} [κ.HasCompProd η]
+    [κ'.HasCompProd η] : (κ + κ').HasCompProd η where
+  hasCompProd_apply a := by rw [add_apply]; infer_instance
+  measurable_lintegral s hs := by
+    simp_rw [add_apply, lintegral_add_measure]
+    exact (HasCompProd.measurable_lintegral (κ := κ) hs).add
+      (HasCompProd.measurable_lintegral (κ := κ') hs)
+
+/-- The composition-product of a countable sum of kernels with `η` exists when it exists for each of
+them. -/
+instance hasCompProd_sum_left {ι : Type*} [Countable ι] {κ : ι → Kernel α β}
+    {η : Kernel (α × β) γ} [∀ i, (κ i).HasCompProd η] : (Kernel.sum κ).HasCompProd η where
+  hasCompProd_apply a := by rw [sum_apply]; infer_instance
+  measurable_lintegral s hs := by
+    simp_rw [sum_apply, lintegral_sum_measure]
+    exact .tsum fun i ↦ HasCompProd.measurable_lintegral (κ := κ i) hs
+
 lemma compProd_add_left (μ κ : Kernel α β) (η : Kernel (α × β) γ)
-    [IsSFiniteKernel μ] [IsSFiniteKernel κ] [IsSFiniteKernel η] :
+    [μ.HasCompProd η] [κ.HasCompProd η] :
     (μ + κ) ⊗ₖ η = μ ⊗ₖ η + κ ⊗ₖ η := by
   ext _ _ hs
   simp [compProd_apply hs]
@@ -496,7 +463,7 @@ lemma compProd_add_right (μ : Kernel α β) (κ η : Kernel (α × β) γ)
   exact measurable_kernel_prodMk_left' hs a
 
 lemma compProd_sum_left {ι : Type*} [Countable ι]
-    {κ : ι → Kernel α β} {η : Kernel (α × β) γ} [∀ i, IsSFiniteKernel (κ i)] [IsSFiniteKernel η] :
+    {κ : ι → Kernel α β} {η : Kernel (α × β) γ} [∀ i, (κ i).HasCompProd η] :
     Kernel.sum κ ⊗ₖ η = Kernel.sum (fun i ↦ (κ i) ⊗ₖ η) := by
   ext a s hs
   simp_rw [sum_apply, compProd_apply hs, sum_apply, lintegral_sum_measure, Measure.sum_apply _ hs,
