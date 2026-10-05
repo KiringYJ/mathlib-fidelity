@@ -446,7 +446,8 @@ lemma uniqueBaseOn_isNonloop_iff {I E : Set α} :
 
 lemma IsNonloop.exists_mem_isCocircuit (he : M.IsNonloop e) : ∃ K, M.IsCocircuit K ∧ e ∈ K := by
   obtain ⟨B, hB, heB⟩ := he.exists_mem_isBase
-  exact ⟨_, fundCocircuit_isCocircuit heB hB, mem_fundCocircuit M e B⟩
+  exact ⟨_, fundCocircuit_isCocircuit (hB.fundCocircuitExists heB),
+    mem_fundCocircuit (hB.fundCocircuitExists heB)⟩
 
 @[simp]
 lemma closure_inter_setOfPred_isNonloop_eq (M : Matroid α) (X : Set α) :
@@ -619,17 +620,18 @@ lemma isColoop_iff_notMem_closure_compl (he : e ∈ M.E := by aesop_mat) :
   exact M.subset_closure (M.E \ {e}) sdiff_subset (show x ∈ M.E \ {e} from ⟨hx, hne⟩)
 
 lemma IsBase.isColoop_iff_forall_notMem_fundCircuit (hB : M.IsBase B) (he : e ∈ B) :
-    M.IsColoop e ↔ ∀ x ∈ M.E \ B, e ∉ M.fundCircuit x B := by
-  refine ⟨fun h x hx heC ↦ (h.notMem_isCircuit <| hB.fundCircuit_isCircuit hx.1 hx.2) heC,
+    M.IsColoop e ↔
+      ∀ x (hx : x ∈ M.E \ B), e ∉ M.fundCircuit x B (hB.fundCircuitExists hx.1 hx.2) := by
+  refine ⟨fun h x hx heC ↦ (h.notMem_isCircuit <| fundCircuit_isCircuit _) heC,
     fun h ↦ ?_⟩
   have h' : M.E \ {e} ⊆ M.closure (B \ {e}) := by
     rintro x ⟨hxE, hne : x ≠ e⟩
     obtain (hx | hx) := em (x ∈ B)
     · exact M.subset_closure (B \ {e}) (sdiff_subset.trans hB.subset_ground) ⟨hx, hne⟩
-    have h_cct := (hB.fundCircuit_isCircuit hxE hx).mem_closure_sdiff_singleton_of_mem
-      (M.mem_fundCircuit x B)
+    have h_cct := (fundCircuit_isCircuit (hB.fundCircuitExists hxE hx)
+      ).mem_closure_sdiff_singleton_of_mem (mem_fundCircuit (hB.fundCircuitExists hxE hx))
     refine (M.closure_subset_closure (subset_sdiff_singleton ?_ ?_)) h_cct
-    · simpa using fundCircuit_subset_insert ..
+    · simpa using fundCircuit_subset_insert (hB.fundCircuitExists hxE hx)
     simp [hne.symm, h x ⟨hxE, hx⟩]
   rw [isColoop_iff_notMem_closure_compl (hB.subset_ground he)]
   exact notMem_subset (M.closure_subset_closure_of_subset_closure h') <|
@@ -647,7 +649,8 @@ lemma exists_mem_isCircuit_of_not_isColoop (heE : e ∈ M.E) (he : ¬ M.IsColoop
     ∃ C, M.IsCircuit C ∧ e ∈ C := by
   simp only [isColoop_iff_forall_mem_isBase, not_forall, exists_prop] at he
   obtain ⟨B, hB, heB⟩ := he
-  exact ⟨M.fundCircuit e B, hB.fundCircuit_isCircuit heE heB, .inl rfl⟩
+  exact ⟨M.fundCircuit e B (hB.fundCircuitExists heE heB),
+    fundCircuit_isCircuit (hB.fundCircuitExists heE heB), .inl rfl⟩
 
 @[simp]
 lemma closure_inter_coloops_eq (M : Matroid α) (X : Set α) :

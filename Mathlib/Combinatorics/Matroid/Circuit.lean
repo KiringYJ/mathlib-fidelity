@@ -33,20 +33,19 @@ In matroids arising from graphs, circuits correspond to graphical cycles.
   circuits are all finite.
 * `Matroid.IsCocircuit M C` means that `C` is minimally dependent in `M✶`,
   or equivalently that `M.E \ C` is a hyperplane of `M`.
-* `Matroid.fundCocircuit M B e` is the unique cocircuit that intersects the base `B` precisely
-  in the element `e`.
+* `Matroid.fundCircuit M e I h` is the unique circuit contained in `insert e I`, for an independent
+  set `I` and `e ∈ M.closure I \ I`, which `h : M.FundCircuitExists e I` states.
+* `Matroid.fundCocircuit M e B h` is the unique cocircuit that intersects the spanning set `B`
+  precisely in the element `e`, for `e ∈ B` such that `B \ {e}` is not spanning, which
+  `h : M.FundCocircuitExists e B` states; for a base `B` this holds for every `e ∈ B`.
 * `Matroid.IsBase.mem_fundCocircuit_iff_mem_fundCircuit` : `e` is in the fundamental circuit
   for `B` and `f` iff `f` is in the fundamental cocircuit for `B` and `e`.
 
 ## Implementation Details
 
-Since `Matroid.fundCircuit M e I` is only sensible if `I` is independent and `e ∈ M.closure I \ I`,
-to avoid hypotheses being explicitly included in the definition,
-junk values need to be chosen if either hypothesis fails.
-The definition is chosen so that the junk values satisfy
-`M.fundCircuit e I = {e}` for `e ∈ I` or `e ∉ M.E` and
-`M.fundCircuit e I = insert e I` if `e ∈ M.E \ M.closure I`.
-These make the useful statement `e ∈ M.fundCircuit e I ⊆ insert e I` true unconditionally.
+`Matroid.fundCircuit M e I h` is defined exactly when `I` is independent and
+`e ∈ M.closure I \ I`: then `insert e I` is dependent and contains a unique circuit. Otherwise
+`insert e I` contains no circuit through `e`, or several, so the operation takes this evidence.
 -/
 
 @[expose] public section
@@ -203,113 +202,118 @@ lemma restrict_isCircuit_iff (hR : R ⊆ M.E := by aesop_mat) :
 
 /-! ### Fundamental IsCircuits -/
 
-/-- For an independent set `I` and some `e ∈ M.closure I \ I`,
-`M.fundCircuit e I` is the unique circuit contained in `insert e I`.
-For the fact that this is a circuit, see `Matroid.Indep.fundCircuit_isCircuit`,
-and the fact that it is unique, see `Matroid.IsCircuit.eq_fundCircuit_of_subset`.
-Has the junk value `{e}` if `e ∈ I` or `e ∉ M.E`, and `insert e I` if `e ∈ M.E \ M.closure I`. -/
-def fundCircuit (M : Matroid α) (e : α) (I : Set α) : Set α :=
-  insert e (I ∩ ⋂₀ {J | J ⊆ I ∧ M.closure {e} ⊆ M.closure J})
+/-- The data for the fundamental circuit of `e` and `I`: `I` is independent and `e` is in the
+closure of `I` but not in `I`. Then `insert e I` is dependent and contains a unique circuit,
+`M.fundCircuit e I`. -/
+structure FundCircuitExists (M : Matroid α) (e : α) (I : Set α) : Prop where
+  /-- The set is independent. -/
+  indep : M.Indep I
+  /-- The element is in the closure of the set. -/
+  mem_closure : e ∈ M.closure I
+  /-- The element is not in the set. -/
+  notMem : e ∉ I
 
-lemma fundCircuit_eq_sInter (he : e ∈ M.closure I) :
-    M.fundCircuit e I = insert e (⋂₀ {J | J ⊆ I ∧ e ∈ M.closure J}) := by
-  rw [fundCircuit]
-  simp_rw [closure_subset_closure_iff_subset_closure
-    (show {e} ⊆ M.E by simpa using mem_ground_of_mem_closure he), singleton_subset_iff]
-  rw [inter_eq_self_of_subset_right (sInter_subset_of_mem (by simpa))]
+lemma Indep.fundCircuitExists_iff (hI : M.Indep I) :
+    M.FundCircuitExists e I ↔ e ∈ M.closure I ∧ e ∉ I :=
+  ⟨fun h ↦ ⟨h.mem_closure, h.notMem⟩, fun h ↦ ⟨hI, h.1, h.2⟩⟩
 
-lemma fundCircuit_subset_insert (M : Matroid α) (e : α) (I : Set α) :
-    M.fundCircuit e I ⊆ insert e I :=
-  insert_subset_insert inter_subset_left
+lemma IsBase.fundCircuitExists {B : Set α} (hB : M.IsBase B) (heE : e ∈ M.E) (heB : e ∉ B) :
+    M.FundCircuitExists e B :=
+  ⟨hB.indep, by rwa [hB.closure_eq], heB⟩
 
-lemma fundCircuit_subset_ground (he : e ∈ M.E) (hI : I ⊆ M.E := by aesop_mat) :
-    M.fundCircuit e I ⊆ M.E :=
-  (M.fundCircuit_subset_insert e I).trans (insert_subset he hI)
+lemma FundCircuitExists.mem_ground (h : M.FundCircuitExists e I) : e ∈ M.E :=
+  mem_ground_of_mem_closure h.mem_closure
 
-lemma mem_fundCircuit (M : Matroid α) (e : α) (I : Set α) : e ∈ fundCircuit M e I :=
+/-- For an independent set `I` and some `e ∈ M.closure I \ I`, which `h` states,
+`M.fundCircuit e I h` is the unique circuit contained in `insert e I`.
+For the fact that this is a circuit, see `Matroid.fundCircuit_isCircuit`,
+and the fact that it is unique, see `Matroid.IsCircuit.eq_fundCircuit_of_subset`. -/
+@[nolint unusedArguments]
+def fundCircuit (M : Matroid α) (e : α) (I : Set α) (_h : M.FundCircuitExists e I) : Set α :=
+  insert e (⋂₀ {J | J ⊆ I ∧ e ∈ M.closure J})
+
+lemma fundCircuit_eq_sInter (h : M.FundCircuitExists e I) :
+    M.fundCircuit e I h = insert e (⋂₀ {J | J ⊆ I ∧ e ∈ M.closure J}) :=
+  rfl
+
+lemma fundCircuit_subset_insert (h : M.FundCircuitExists e I) :
+    M.fundCircuit e I h ⊆ insert e I :=
+  insert_subset_insert (sInter_subset_of_mem ⟨Subset.rfl, h.mem_closure⟩)
+
+lemma fundCircuit_subset_ground (h : M.FundCircuitExists e I) : M.fundCircuit e I h ⊆ M.E :=
+  (fundCircuit_subset_insert h).trans (insert_subset h.mem_ground h.indep.subset_ground)
+
+lemma mem_fundCircuit (h : M.FundCircuitExists e I) : e ∈ M.fundCircuit e I h :=
   mem_insert ..
 
-lemma fundCircuit_sdiff_eq_inter (M : Matroid α) (heI : e ∉ I) :
-    (M.fundCircuit e I) \ {e} = (M.fundCircuit e I) ∩ I :=
-  (subset_inter sdiff_subset (by simp [fundCircuit_subset_insert])).antisymm
-    (subset_sdiff_singleton inter_subset_left (by simp [heI]))
+lemma fundCircuit_sdiff_eq_inter (h : M.FundCircuitExists e I) :
+    (M.fundCircuit e I h) \ {e} = (M.fundCircuit e I h) ∩ I :=
+  (subset_inter sdiff_subset (by simp [fundCircuit_subset_insert h])).antisymm
+    (subset_sdiff_singleton inter_subset_left (by simp [h.notMem]))
 
 @[deprecated (since := "2026-06-03")] alias fundCircuit_diff_eq_inter := fundCircuit_sdiff_eq_inter
 
-/-- The fundamental isCircuit of `e` and `X` has the junk value `{e}` if `e ∈ X` -/
-lemma fundCircuit_eq_of_mem (heX : e ∈ X) : M.fundCircuit e X = {e} := by
-  suffices h : ∀ a ∈ X, (∀ t ⊆ X, M.closure {e} ⊆ M.closure t → a ∈ t) → a = e by
-    simpa [subset_antisymm_iff, fundCircuit]
-  exact fun b hbX h ↦ h _ (singleton_subset_iff.2 heX) Subset.rfl
-
-lemma fundCircuit_eq_of_notMem_ground (heX : e ∉ M.E) : M.fundCircuit e X = {e} := by
-  suffices h : ∀ a ∈ X, (∀ t ⊆ X, M.closure {e} ⊆ M.closure t → a ∈ t) → a = e by
-    simpa [subset_antisymm_iff, fundCircuit]
-  simp_rw [← M.closure_inter_ground {e}, singleton_inter_eq_empty.2 heX]
-  exact fun a haX h ↦ by simpa using h ∅ (empty_subset X) rfl.subset
-
-lemma Indep.fundCircuit_isCircuit (hI : M.Indep I) (hecl : e ∈ M.closure I) (heI : e ∉ I) :
-    M.IsCircuit (M.fundCircuit e I) := by
-  have aux : ⋂₀ {J | J ⊆ I ∧ e ∈ M.closure J} ⊆ I := sInter_subset_of_mem (by simpa)
-  rw [fundCircuit_eq_sInter hecl]
-  refine (hI.subset aux).insert_isCircuit_of_forall ?_ ?_ ?_
-  · simp [show ∃ x ⊆ I, e ∈ M.closure x ∧ e ∉ x from ⟨I, by simp [hecl, heI]⟩]
-  · rw [hI.closure_sInter_eq_biInter_closure_of_forall_subset ⟨I, by simpa⟩ (by simp +contextual)]
+lemma fundCircuit_isCircuit (h : M.FundCircuitExists e I) :
+    M.IsCircuit (M.fundCircuit e I h) := by
+  have aux : ⋂₀ {J | J ⊆ I ∧ e ∈ M.closure J} ⊆ I :=
+    sInter_subset_of_mem ⟨Subset.rfl, h.mem_closure⟩
+  rw [fundCircuit_eq_sInter h]
+  refine (h.indep.subset aux).insert_isCircuit_of_forall ?_ ?_ ?_
+  · simp [show ∃ x ⊆ I, e ∈ M.closure x ∧ e ∉ x from ⟨I, by simp [h.mem_closure, h.notMem]⟩]
+  · rw [h.indep.closure_sInter_eq_biInter_closure_of_forall_subset ⟨I, by simp [h.mem_closure]⟩
+      (by simp +contextual)]
     simp
   simp only [mem_sInter, mem_ofPred_eq, and_imp]
   exact fun f hf hecl ↦ (hf _ (sdiff_subset.trans aux) hecl).2 rfl
 
-lemma Indep.mem_fundCircuit_iff (hI : M.Indep I) (hecl : e ∈ M.closure I) (heI : e ∉ I) :
-    x ∈ M.fundCircuit e I ↔ M.Indep (insert e I \ {x}) := by
+lemma mem_fundCircuit_iff (h : M.FundCircuitExists e I) :
+    x ∈ M.fundCircuit e I h ↔ M.Indep (insert e I \ {x}) := by
   obtain rfl | hne := eq_or_ne x e
-  · simp [hI.sdiff, mem_fundCircuit]
+  · simp [h.indep.sdiff, mem_fundCircuit]
   suffices (∀ t ⊆ I, e ∈ M.closure t → x ∈ t) ↔ e ∉ M.closure (I \ {x}) by
-    simpa [fundCircuit_eq_sInter hecl, hne, ← insert_sdiff_singleton_comm hne.symm,
-      (hI.sdiff _).insert_indep_iff, mem_ground_of_mem_closure hecl, heI]
+    simpa [fundCircuit_eq_sInter h, hne, ← insert_sdiff_singleton_comm hne.symm,
+      (h.indep.sdiff _).insert_indep_iff, h.mem_ground, h.notMem]
   refine ⟨fun h hecl ↦ (h _ sdiff_subset hecl).2 rfl, fun h J hJ heJ ↦ by_contra fun hxJ ↦ h ?_⟩
   exact M.closure_subset_closure (subset_sdiff_singleton hJ hxJ) heJ
 
-lemma IsBase.fundCircuit_isCircuit {B : Set α} (hB : M.IsBase B) (hxE : x ∈ M.E) (hxB : x ∉ B) :
-    M.IsCircuit (M.fundCircuit x B) :=
-  hB.indep.fundCircuit_isCircuit (by rwa [hB.closure_eq]) hxB
+/-- A circuit contained in `insert e I` for an independent set `I` contains `e`, and `e` is then
+in the closure of `I` but not in `I`. -/
+lemma IsCircuit.fundCircuitExists_of_subset (hC : M.IsCircuit C) (hI : M.Indep I)
+    (hCs : C ⊆ insert e I) : M.FundCircuitExists e I := by
+  obtain hCI | ⟨heC, hCeI⟩ := subset_insert_iff.1 hCs
+  · exact (hC.not_indep (hI.subset hCI)).elim
+  refine ⟨hI, M.closure_subset_closure hCeI ((hC.sdiff_singleton_isBasis heC).subset_closure heC),
+    fun heI ↦ hC.not_indep (hI.subset (hCs.trans (by simp [heI])))⟩
 
 /-- For `I` independent, `M.fundCircuit e I` is the only circuit contained in `insert e I`. -/
 lemma IsCircuit.eq_fundCircuit_of_subset (hC : M.IsCircuit C) (hI : M.Indep I)
-    (hCs : C ⊆ insert e I) : C = M.fundCircuit e I := by
+    (hCs : C ⊆ insert e I) : C = M.fundCircuit e I (hC.fundCircuitExists_of_subset hI hCs) := by
+  have h := hC.fundCircuitExists_of_subset hI hCs
   obtain hCI | ⟨heC, hCeI⟩ := subset_insert_iff.1 hCs
   · exact (hC.not_indep (hI.subset hCI)).elim
-  suffices hss : M.fundCircuit e I ⊆ C by
-    refine hC.eq_of_superset_isCircuit (hI.fundCircuit_isCircuit ?_ fun heI ↦ ?_) hss
-    · rw [hI.mem_closure_iff]
-      exact .inl (hC.dep.superset hCs (insert_subset (hC.subset_ground heC) hI.subset_ground))
-    exact hC.not_indep (hI.subset (hCs.trans (by simp [heI])))
+  suffices hss : M.fundCircuit e I h ⊆ C from
+    hC.eq_of_superset_isCircuit (fundCircuit_isCircuit h) hss
   have heCcl := (hC.sdiff_singleton_isBasis heC).subset_closure heC
-  have heI : e ∈ M.closure I := M.closure_subset_closure hCeI heCcl
-  rw [fundCircuit_eq_sInter heI]
+  rw [fundCircuit_eq_sInter h]
   refine insert_subset heC <| (sInter_subset_of_mem (t := C \ {e}) ?_).trans sdiff_subset
   exact ⟨hCeI, heCcl⟩
 
-lemma fundCircuit_restrict {R : Set α} (hIR : I ⊆ R) (heR : e ∈ R) (hR : R ⊆ M.E) :
-    (M ↾ R).fundCircuit e I = M.fundCircuit e I := by
-  simp_rw [fundCircuit, M.restrict_closure_eq (R := R) (X := {e}) (by simpa)]
-  apply subset_antisymm
-  · gcongr 5 with J hJI; intro heJ
-    simp only [restrict_closure_eq']
-    refine (inter_subset_inter_left _ ?_).trans subset_union_left
-    rwa [inter_eq_self_of_subset_left (hJI.trans hIR)]
-  gcongr 5 with J hJI; intro heJ
-  refine closure_subset_closure_of_subset_closure ?_
-  rw [restrict_closure_eq _ (hJI.trans hIR) hR] at heJ
-  simp only [subset_inter_iff, inter_subset_right, and_true] at heJ
-  exact subset_trans (by simpa [M.mem_closure_of_mem' (mem_singleton e) (hR heR)]) heJ
+lemma FundCircuitExists.restrict {R : Set α} (h : M.FundCircuitExists e I) (hIR : I ⊆ R)
+    (heR : e ∈ R) : (M ↾ R).FundCircuitExists e I := by
+  refine ⟨(restrict_indep_iff).2 ⟨h.indep, hIR⟩, ?_, h.notMem⟩
+  rw [restrict_closure_eq', inter_eq_self_of_subset_left hIR]
+  exact .inl ⟨h.mem_closure, heR⟩
 
-@[simp] lemma fundCircuit_restrict_univ (M : Matroid α) :
-    (M ↾ univ).fundCircuit e I = M.fundCircuit e I := by
-  have aux (A B) : M.closure A ⊆ B ∪ univ \ M.E ↔ M.closure A ⊆ B := by
-    refine ⟨fun h ↦ ?_, fun h ↦ h.trans subset_union_left⟩
-    refine (subset_inter h (M.closure_subset_ground A)).trans ?_
-    simp [union_inter_distrib_right]
-  simp [fundCircuit, aux]
+lemma fundCircuit_restrict {R : Set α} (h : M.FundCircuitExists e I) (hIR : I ⊆ R)
+    (heR : e ∈ R) (hR : R ⊆ M.E) :
+    (M ↾ R).fundCircuit e I (h.restrict hIR heR) = M.fundCircuit e I h := by
+  simp_rw [fundCircuit_eq_sInter]
+  congr 2
+  ext J
+  simp only [mem_ofPred_eq, and_congr_right_iff]
+  intro hJI
+  rw [restrict_closure_eq _ (hJI.trans hIR) hR]
+  simp [heR]
 
 /-! ### Dependence -/
 
@@ -317,8 +321,9 @@ lemma Dep.exists_isCircuit_subset (hX : M.Dep X) : ∃ C, C ⊆ X ∧ M.IsCircui
   obtain ⟨I, hI⟩ := M.exists_isBasis X
   obtain ⟨e, heX, heI⟩ := exists_of_ssubset
     (hI.subset.ssubset_of_ne (by rintro rfl; exact hI.indep.not_dep hX))
-  exact ⟨M.fundCircuit e I, (M.fundCircuit_subset_insert e I).trans (insert_subset heX hI.subset),
-    hI.indep.fundCircuit_isCircuit (hI.subset_closure heX) heI⟩
+  have h : M.FundCircuitExists e I := ⟨hI.indep, hI.subset_closure heX, heI⟩
+  exact ⟨M.fundCircuit e I h, (fundCircuit_subset_insert h).trans (insert_subset heX hI.subset),
+    fundCircuit_isCircuit h⟩
 
 lemma dep_iff_superset_isCircuit (hX : X ⊆ M.E := by aesop_mat) :
     M.Dep X ↔ ∃ C, C ⊆ X ∧ M.IsCircuit C :=
@@ -370,9 +375,10 @@ alias IsCircuit.mem_closure_diff_singleton_of_mem := IsCircuit.mem_closure_sdiff
 lemma exists_isCircuit_of_mem_closure (he : e ∈ M.closure X) (heX : e ∉ X) :
     ∃ C ⊆ insert e X, M.IsCircuit C ∧ e ∈ C :=
   let ⟨I, hI⟩ := M.exists_isBasis' X
-  ⟨_, (fundCircuit_subset_insert ..).trans (insert_subset_insert hI.subset),
-    hI.indep.fundCircuit_isCircuit (by rwa [hI.closure_eq_closure]) (notMem_subset
-    hI.subset heX), M.mem_fundCircuit e I⟩
+  have h : M.FundCircuitExists e I :=
+    ⟨hI.indep, by rwa [hI.closure_eq_closure], notMem_subset hI.subset heX⟩
+  ⟨_, (fundCircuit_subset_insert h).trans (insert_subset_insert hI.subset),
+    fundCircuit_isCircuit h, mem_fundCircuit h⟩
 
 lemma mem_closure_iff_exists_isCircuit (he : e ∉ X) :
     e ∈ M.closure X ↔ ∃ C ⊆ insert e X, M.IsCircuit C ∧ e ∈ C :=
@@ -683,90 +689,107 @@ lemma exists_isCircuit [RankPos M✶] : ∃ C, M.IsCircuit C :=
 lemma rankPos_iff_exists_isCocircuit : M.RankPos ↔ ∃ K, M.IsCocircuit K := by
   rw [← dual_dual M, dual_rankPos_iff_exists_isCircuit, dual_dual M]
 
-/-- The fundamental cocircuit for `B` and `e`:
-that is, the unique cocircuit `K` of `M` for which `K ∩ B = {e}`.
-Should be used when `B` is a base and `e ∈ B`.
-Has the junk value `{e}` if `e ∉ B` or `e ∉ M.E`. -/
-def fundCocircuit (M : Matroid α) (e : α) (B : Set α) := M✶.fundCircuit e (M✶.E \ B)
+/-- The data for the fundamental cocircuit of `e` and `B`: `B` is spanning, `e ∈ B`, and `B \ {e}`
+is not spanning. For a base `B`, this holds for every `e ∈ B`. -/
+structure FundCocircuitExists (M : Matroid α) (e : α) (B : Set α) : Prop where
+  /-- The set is spanning. -/
+  spanning : M.Spanning B
+  /-- The element is in the set. -/
+  mem : e ∈ B
+  /-- The set without the element is not spanning. -/
+  not_spanning_sdiff : ¬ M.Spanning (B \ {e})
 
-lemma fundCocircuit_isCocircuit (he : e ∈ B) (hB : M.IsBase B) :
-    M.IsCocircuit <| M.fundCocircuit e B := by
-  apply hB.compl_isBase_dual.indep.fundCircuit_isCircuit _ (by simp [he])
-  rw [hB.compl_isBase_dual.closure_eq, dual_ground]
-  exact hB.subset_ground he
+lemma IsBase.fundCocircuitExists {B : Set α} (hB : M.IsBase B) (he : e ∈ B) :
+    M.FundCocircuitExists e B := by
+  refine ⟨hB.spanning, he, fun h ↦ ?_⟩
+  have hB' : M.IsBase (B \ {e}) := h.isBase_of_indep (hB.indep.subset sdiff_subset)
+  have : e ∈ B \ {e} := (hB'.eq_of_subset_isBase hB sdiff_subset).symm ▸ he
+  exact this.2 rfl
 
-lemma mem_fundCocircuit (M : Matroid α) (e : α) (B : Set α) : e ∈ M.fundCocircuit e B :=
+lemma FundCocircuitExists.dual {B : Set α} (h : M.FundCocircuitExists e B) :
+    M✶.FundCircuitExists e (M✶.E \ B) := by
+  have hBE : B ⊆ M.E := h.spanning.subset_ground
+  have heE : e ∈ M.E := hBE h.mem
+  have hcoind : M✶.Indep (M.E \ B) := by
+    rw [← coindep_def, coindep_iff_compl_spanning, sdiff_sdiff_cancel_left hBE]
+    exact h.spanning
+  have hsub : insert e (M.E \ B) ⊆ M.E := insert_subset heE sdiff_subset
+  refine ⟨by simpa using hcoind, ?_, by simp [h.mem]⟩
+  rw [dual_ground, hcoind.mem_closure_iff_of_notMem (by simp [h.mem])]
+  refine ⟨fun hi ↦ h.not_spanning_sdiff ?_, hsub⟩
+  rw [← coindep_def, coindep_iff_compl_spanning hsub] at hi
+  have hset : M.E \ insert e (M.E \ B) = B \ {e} := by
+    ext x
+    simp only [mem_sdiff, mem_insert_iff, mem_singleton_iff, not_or, not_and, not_not]
+    exact ⟨fun ⟨hxE, hxe, hxB⟩ ↦ ⟨hxB hxE, hxe⟩, fun ⟨hxB, hxe⟩ ↦ ⟨hBE hxB, hxe, fun _ ↦ hxB⟩⟩
+  rwa [hset] at hi
+
+/-- The fundamental cocircuit for `B` and `e`, which `h : M.FundCocircuitExists e B` states
+is defined: the unique cocircuit `K` of `M` for which `K ∩ B = {e}`. -/
+def fundCocircuit (M : Matroid α) (e : α) (B : Set α) (h : M.FundCocircuitExists e B) : Set α :=
+  M✶.fundCircuit e (M✶.E \ B) h.dual
+
+lemma fundCocircuit_isCocircuit {B : Set α} (h : M.FundCocircuitExists e B) :
+    M.IsCocircuit (M.fundCocircuit e B h) :=
+  fundCircuit_isCircuit h.dual
+
+lemma mem_fundCocircuit {B : Set α} (h : M.FundCocircuitExists e B) :
+    e ∈ M.fundCocircuit e B h :=
   mem_insert _ _
 
-lemma fundCocircuit_subset_insert_compl (M : Matroid α) (e : α) (B : Set α) :
-    M.fundCocircuit e B ⊆ insert e (M.E \ B) :=
-  fundCircuit_subset_insert ..
+lemma fundCocircuit_subset_insert_compl {B : Set α} (h : M.FundCocircuitExists e B) :
+    M.fundCocircuit e B h ⊆ insert e (M.E \ B) :=
+  fundCircuit_subset_insert h.dual
 
-lemma fundCocircuit_inter_eq (M : Matroid α) {B : Set α} (he : e ∈ B) :
-    (M.fundCocircuit e B) ∩ B = {e} := by
-  refine subset_antisymm ?_ (singleton_subset_iff.2 ⟨M.mem_fundCocircuit _ _, he⟩)
-  refine (inter_subset_inter_left _ (M.fundCocircuit_subset_insert_compl _ _)).trans ?_
+lemma fundCocircuit_inter_eq {B : Set α} (h : M.FundCocircuitExists e B) :
+    (M.fundCocircuit e B h) ∩ B = {e} := by
+  refine subset_antisymm ?_ (singleton_subset_iff.2 ⟨mem_fundCocircuit h, h.mem⟩)
+  refine (inter_subset_inter_left _ (fundCocircuit_subset_insert_compl h)).trans ?_
   simp +contextual
-
-/-- The fundamental cocircuit of `X` and `e` has the junk value `{e}` if `e ∉ M.E` -/
-lemma fundCocircuit_eq_of_notMem_ground (X : Set α) (he : e ∉ M.E) :
-    M.fundCocircuit e X = {e} := by
-  rwa [fundCocircuit, fundCircuit_eq_of_notMem_ground]
-
-/-- The fundamental cocircuit of `X` and `e` has the junk value `{e}` if `e ∉ X` -/
-lemma fundCocircuit_eq_of_notMem (M : Matroid α) (heX : e ∉ X) : M.fundCocircuit e X = {e} := by
-  by_cases he : e ∈ M.E
-  · rw [fundCocircuit, fundCircuit_eq_of_mem]
-    exact ⟨he, heX⟩
-  rw [fundCocircuit_eq_of_notMem_ground _ he]
 
 /-- For every element `e` of an independent set `I`,
 there is a cocircuit whose intersection with `I` is `{e}`. -/
 lemma Indep.exists_isCocircuit_inter_eq_mem (hI : M.Indep I) (heI : e ∈ I) :
     ∃ K, M.IsCocircuit K ∧ K ∩ I = {e} := by
   obtain ⟨B, hB, hIB⟩ := hI.exists_isBase_superset
-  refine ⟨M.fundCocircuit e B, fundCocircuit_isCocircuit (hIB heI) hB, ?_⟩
+  have h := hB.fundCocircuitExists (hIB heI)
+  refine ⟨M.fundCocircuit e B h, fundCocircuit_isCocircuit h, ?_⟩
   rw [subset_antisymm_iff, subset_inter_iff, singleton_subset_iff, and_iff_right
-    (mem_fundCocircuit _ _ _), singleton_subset_iff, and_iff_left heI,
-    ← M.fundCocircuit_inter_eq (hIB heI)]
+    (mem_fundCocircuit h), singleton_subset_iff, and_iff_left heI, ← fundCocircuit_inter_eq h]
   exact inter_subset_inter_right _ hIB
 
-/-- Fundamental circuits and cocircuits of a base `B` play dual roles;
+/-- Fundamental circuits and cocircuits of a base `B` play dual roles: for `e ∉ B` and `f ∈ B`,
 `e` belongs to the fundamental cocircuit for `B` and `f` if and only if
-`f` belongs to the fundamental circuit for `e` and `B`.
-This statement isn't so reasonable unless `f ∈ B` and `e ∉ B`,
-but holds due to junk values even without these assumptions. -/
-lemma IsBase.mem_fundCocircuit_iff_mem_fundCircuit {e f : α} (hB : M.IsBase B) :
-    e ∈ M.fundCocircuit f B ↔ f ∈ M.fundCircuit e B := by
-  -- By symmetry and duality, it suffices to show the implication in one direction.
-  suffices aux : ∀ {N : Matroid α} {B' : Set α} (hB' : N.IsBase B') {e f},
-      e ∈ N.fundCocircuit f B' → f ∈ N.fundCircuit e B' from
-    ⟨fun h ↦ aux hB h, fun h ↦ aux hB.compl_isBase_dual <| by
-      simpa [fundCocircuit, inter_eq_self_of_subset_right hB.subset_ground]⟩
-  clear! B M e f
-  intro M B hB e f he
-  -- discharge the various degenerate cases.
-  obtain rfl | hne := eq_or_ne e f
-  · simp [mem_fundCircuit]
+`f` belongs to the fundamental circuit for `e` and `B`. -/
+lemma IsBase.mem_fundCocircuit_iff_mem_fundCircuit {e f : α} (hB : M.IsBase B)
+    (he : e ∈ M.E \ B) (hf : f ∈ B) :
+    e ∈ M.fundCocircuit f B (hB.fundCocircuitExists hf) ↔
+      f ∈ M.fundCircuit e B (hB.fundCircuitExists he.1 he.2) := by
   have hB' : M✶.IsBase (M✶.E \ B) := hB.compl_isBase_dual
-  obtain hfE | hfE := em' <| f ∈ M.E
-  · rw [fundCocircuit, fundCircuit_eq_of_notMem_ground (by simpa)] at he
-    contradiction
-  obtain hfB | hfB := em' <| f ∈ B
-  · rw [fundCocircuit, fundCircuit_eq_of_mem (by simp [hfE, hfB])] at he
-    contradiction
-  obtain ⟨heE, heB⟩ : e ∈ M.E \ B := by
-    simpa [hne] using (M.fundCocircuit_subset_insert_compl f B) he
-  -- Use basis exchange to argue the equivalence.
-  rw [fundCocircuit, hB'.indep.mem_fundCircuit_iff (by rwa [hB'.closure_eq]) (by simp [hfB])] at he
-  rw [hB.indep.mem_fundCircuit_iff (by rwa [hB.closure_eq]) heB]
-  have hB' : M.IsBase (M.E \ (insert f (M✶.E \ B) \ {e})) :=
-    (hB'.exchange_isBase_of_indep' ⟨heE, heB⟩ (by simp [hfE, hfB]) he).compl_isBase_of_dual
-  refine hB'.indep.subset ?_
-  simp only [dual_ground, sdiff_singleton_subset_iff]
-  rw [sdiff_sdiff_right, inter_eq_self_of_subset_right (by simpa), union_singleton, insert_comm,
-    ← union_singleton (s := M.E \ B), ← sdiff_sdiff, sdiff_sdiff_cancel_left hB.subset_ground]
-  simp [hfB]
+  have hfE : f ∈ M.E := hB.subset_ground hf
+  obtain ⟨heE, heB⟩ := he
+  have hne : e ≠ f := by rintro rfl; exact heB hf
+  rw [fundCocircuit, mem_fundCircuit_iff, mem_fundCircuit_iff]
+  have hfeq : M✶.E \ (M✶.E \ B) = B := by
+    simp [sdiff_sdiff_cancel_left hB.subset_ground]
+  constructor
+  · intro h
+    have hB'' : M.IsBase (M.E \ (insert f (M✶.E \ B) \ {e})) :=
+      (hB'.exchange_isBase_of_indep' ⟨heE, heB⟩ (by simp [hfE, hf]) h).compl_isBase_of_dual
+    refine hB''.indep.subset ?_
+    simp only [dual_ground, sdiff_singleton_subset_iff]
+    rw [sdiff_sdiff_right, inter_eq_self_of_subset_right (by simpa), union_singleton, insert_comm,
+      ← union_singleton (s := M.E \ B), ← Set.sdiff_sdiff,
+      sdiff_sdiff_cancel_left hB.subset_ground]
+    simp [hf]
+  · intro h
+    have hB'' : M.IsBase (insert e B \ {f}) := hB.exchange_isBase_of_indep' hf heB h
+    have := hB''.compl_isBase_dual.indep
+    refine this.subset ?_
+    simp only [dual_ground]
+    intro x hx
+    simp only [mem_sdiff, mem_insert_iff, mem_singleton_iff] at hx ⊢
+    grind
 
 end IsCocircuit
 
