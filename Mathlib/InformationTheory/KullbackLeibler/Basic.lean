@@ -11,34 +11,44 @@ public import Mathlib.MeasureTheory.Measure.Decomposition.IntegralRNDeriv
 /-!
 # Kullback-Leibler divergence
 
-The Kullback-Leibler divergence is a measure of the difference between two measures.
+The Kullback-Leibler divergence, or I-divergence, is a measure of the difference between two
+measures.
 
 ## Main definitions
 
-* `klDiv μ ν`: Kullback-Leibler divergence between two measures, with value in `ℝ≥0∞`,
-  defined as `∞` if `μ` is not absolutely continuous with respect to `ν` or
-  if the log-likelihood ratio `llr μ ν` is not integrable with respect to `μ`, and by
-  `ENNReal.ofReal (∫ x, llr μ ν x ∂μ + ν.real - μ.real univ)` otherwise.
-
-Note that our Kullback-Leibler divergence is nonnegative by definition (it takes value in `ℝ≥0∞`).
-However `∫ x, llr μ ν x ∂μ + ν.real univ - μ.real univ` is nonnegative for all finite
-measures `μ ≪ ν`, as proved in the lemma `integral_llr_add_sub_measure_univ_nonneg`.
-That lemma is our version of Gibbs' inequality ("the Kullback-Leibler divergence is nonnegative").
+* `klDiv μ ν`: Kullback-Leibler divergence of a σ-finite measure `μ` from a σ-finite measure `ν`,
+  with value in `ℝ≥0∞`, defined as `∫⁻ x, ENNReal.ofReal (klFun (μ.rnDeriv ν x).toReal) ∂ν` if `μ`
+  is absolutely continuous with respect to `ν`, where `klFun x = x * log x + 1 - x`, and as `∞`
+  otherwise.
 
 ## Main statements
 
+* `klDiv_of_ac_of_integrable`: for finite measures `μ ≪ ν` such that the log-likelihood ratio
+  `llr μ ν` is integrable with respect to `μ`, the divergence is
+  `ENNReal.ofReal (∫ x, llr μ ν x ∂μ + ν.real univ - μ.real univ)`, and it is `∞` if `llr μ ν` is
+  not integrable (`klDiv_of_not_integrable`).
 * `klDiv_eq_zero_iff` : the Kullback-Leibler divergence between two finite measures is zero if and
   only if the two measures are equal.
 
 ## Implementation details
 
-The Kullback-Leibler divergence on probability measures is `∫ x, llr μ ν x ∂μ` if `μ ≪ ν`
-(and the log-likelihood ratio is integrable) and `∞` otherwise.
-The definition we use extends this to finite measures by introducing a correction term
-`ν.real univ - μ.real univ`. The definition of the divergence thus uses the formula
-`∫ x, llr μ ν x ∂μ + ν.real univ - μ.real univ`, which is nonnegative for all finite
-measures `μ ≪ ν`. This also makes `klDiv μ ν` equal to an f-divergence: it equals the integral
-`∫ x, klFun (μ.rnDeriv ν x).toReal ∂ν`, in which `klFun x = x * log x + 1 - x`.
+For σ-finite measures `μ ≪ ν`, the Radon-Nikodym derivative `μ.rnDeriv ν` is finite `ν`-almost
+everywhere and the integrand `klFun (μ.rnDeriv ν x).toReal` is nonnegative, so the integral is
+defined in `ℝ≥0∞` without an integrability condition. This is the I-divergence of σ-finite measures,
+the `φ`-divergence for `φ t = t * log t - t + 1` (I. Csiszár and F. Matúš, *Generalized
+minimizers of convex integral functionals, Bregman distance, Pythagorean identities*,
+Kybernetika 48 (2012), Appendix C, eq. (44)), and it makes `klDiv μ ν` an f-divergence.
+
+The Kullback-Leibler divergence of probability measures is `∫ x, llr μ ν x ∂μ` if `μ ≪ ν` and the
+log-likelihood ratio is integrable, and `∞` otherwise. For finite measures, the divergence is
+`∫ x, llr μ ν x ∂μ + ν.real univ - μ.real univ` if `μ ≪ ν` and `llr μ ν` is integrable: the
+probability formula is corrected by the difference of the total masses. That formula is not defined
+for a measure `ν` of infinite mass, for which the divergence of `0` from `ν` is `ν univ = ∞`.
+
+Note that our Kullback-Leibler divergence is nonnegative by definition (it takes value in `ℝ≥0∞`).
+For finite measures `μ ≪ ν`, `∫ x, llr μ ν x ∂μ + ν.real univ - μ.real univ` is nonnegative, as
+proved in the lemma `integral_llr_add_sub_measure_univ_nonneg`. That lemma is our version of Gibbs'
+inequality ("the Kullback-Leibler divergence is nonnegative").
 
 -/
 
@@ -53,57 +63,55 @@ namespace InformationTheory
 variable {α : Type*} {mα : SigmaAlgebra α} {μ ν : Measure α}
 
 open scoped Classical in
-/-- Kullback-Leibler divergence between two measures. -/
-noncomputable irreducible_def klDiv (μ ν : Measure α) : ℝ≥0∞ :=
-  if μ ≪ ν ∧ Integrable (llr μ ν) μ
-    then ENNReal.ofReal (∫ x, llr μ ν x ∂μ + ν.real univ - μ.real univ)
-    else ∞
+/-- The Kullback-Leibler divergence, or I-divergence, of a σ-finite measure `μ` from a σ-finite
+measure `ν`: `∫⁻ x, ENNReal.ofReal (klFun (μ.rnDeriv ν x).toReal) ∂ν` if `μ ≪ ν`, where
+`klFun x = x * log x + 1 - x`, and `∞` otherwise. -/
+noncomputable irreducible_def klDiv (μ ν : Measure α) [SigmaFinite μ] [SigmaFinite ν] : ℝ≥0∞ :=
+  if μ ≪ ν then ∫⁻ x, ENNReal.ofReal (klFun (μ.rnDeriv ν x).toReal) ∂ν else ∞
 
-lemma klDiv_of_ac_of_integrable (h1 : μ ≪ ν) (h2 : Integrable (llr μ ν) μ) :
-    klDiv μ ν = ENNReal.ofReal (∫ x, llr μ ν x ∂μ + ν.real univ - μ.real univ) := by
+section SigmaFinite
+
+variable [SigmaFinite μ] [SigmaFinite ν]
+
+open scoped Classical in
+lemma klDiv_eq_lintegral_klFun :
+    klDiv μ ν = if μ ≪ ν then ∫⁻ x, ENNReal.ofReal (klFun (μ.rnDeriv ν x).toReal) ∂ν else ∞ := by
   rw [klDiv_def]
-  exact ite_eq_left ⟨h1, h2⟩
+
+lemma klDiv_eq_lintegral_klFun_of_ac (h_ac : μ ≪ ν) :
+    klDiv μ ν = ∫⁻ x, ENNReal.ofReal (klFun (μ.rnDeriv ν x).toReal) ∂ν := by
+  rw [klDiv_def, ite_eq_left h_ac]
 
 @[simp]
 lemma klDiv_of_not_ac (h : ¬ μ ≪ ν) : klDiv μ ν = ∞ := by
-  rw [klDiv_def]
-  exact ite_eq_right (not_and_of_not_left _ h)
+  rw [klDiv_def, ite_eq_right h]
 
-@[simp]
-lemma klDiv_of_not_integrable (h : ¬ Integrable (llr μ ν) μ) : klDiv μ ν = ∞ := by
-  rw [klDiv_def]
-  exact ite_eq_right (not_and_of_not_right _ h)
+end SigmaFinite
 
 @[simp]
 lemma klDiv_self (μ : Measure α) [SigmaFinite μ] : klDiv μ μ = 0 := by
-  have h := llr_self μ
-  rw [klDiv_def, ite_eq_left]
-  · simp [integral_congr_ae h]
-  · rw [integrable_congr h]
-    exact ⟨Measure.AbsolutelyContinuous.rfl, integrable_zero _ _ μ⟩
+  rw [klDiv_eq_lintegral_klFun_of_ac Measure.AbsolutelyContinuous.rfl]
+  calc ∫⁻ x, ENNReal.ofReal (klFun (μ.rnDeriv μ x).toReal) ∂μ = ∫⁻ _, 0 ∂μ := by
+        refine lintegral_congr_ae ?_
+        filter_upwards [μ.rnDeriv_self] with x hx
+        simp [hx, klFun_one]
+    _ = 0 := lintegral_zero
+
+/-- The divergence of the zero measure from `ν` is the total mass of `ν`. -/
+@[simp]
+lemma klDiv_zero_left [SigmaFinite ν] : klDiv 0 ν = ν univ := by
+  rw [klDiv_eq_lintegral_klFun_of_ac (Measure.AbsolutelyContinuous.zero _)]
+  calc ∫⁻ x, ENNReal.ofReal (klFun ((0 : Measure α).rnDeriv ν x).toReal) ∂ν = ∫⁻ _, 1 ∂ν := by
+        refine lintegral_congr_ae ?_
+        filter_upwards [Measure.rnDeriv_zero ν] with x hx
+        simp [hx, klFun_zero]
+    _ = ν univ := lintegral_one
 
 @[simp]
-lemma klDiv_zero_left [IsFiniteMeasure ν] : klDiv 0 ν = ν univ := by
-  convert! klDiv_of_ac_of_integrable (Measure.AbsolutelyContinuous.zero _) integrable_zero_measure
-  simp
-
-@[simp]
-lemma klDiv_zero_right [NeZero μ] : klDiv μ 0 = ∞ :=
+lemma klDiv_zero_right [SigmaFinite μ] [NeZero μ] : klDiv μ 0 = ∞ :=
   klDiv_of_not_ac (Measure.absolutelyContinuous_zero_iff.mp.mt (NeZero.ne _))
 
-lemma klDiv_eq_top_iff : klDiv μ ν = ∞ ↔ μ ≪ ν → ¬ Integrable (llr μ ν) μ := by
-  constructor <;> intro h
-  · contrapose! h
-    simp [klDiv_of_ac_of_integrable h.1 h.2]
-  · rcases or_not_of_imp h with (h | h) <;> simp [h]
-
-lemma klDiv_ne_top_iff : klDiv μ ν ≠ ∞ ↔ μ ≪ ν ∧ Integrable (llr μ ν) μ := by
-  simp [ne_eq, klDiv_eq_top_iff]
-
-lemma klDiv_ne_top (hμν : μ ≪ ν) (h_int : Integrable (llr μ ν) μ) : klDiv μ ν ≠ ∞ :=
-  klDiv_ne_top_iff.mpr ⟨hμν, h_int⟩
-
-section AlternativeFormulas
+section Finite
 
 variable [IsFiniteMeasure μ] [IsFiniteMeasure ν]
 
@@ -112,13 +120,7 @@ lemma klDiv_eq_integral_klFun :
     klDiv μ ν = if μ ≪ ν ∧ Integrable (llr μ ν) μ
       then ENNReal.ofReal (∫ x, klFun (μ.rnDeriv ν x).toReal ∂ν)
       else ∞ := by
-  rw [klDiv_def]
-  exact if_ctx_congr Iff.rfl (fun h ↦ by rw [integral_klFun_rnDeriv h.1 h.2]) fun _ ↦ rfl
-
-open scoped Classical in
-lemma klDiv_eq_lintegral_klFun :
-    klDiv μ ν = if μ ≪ ν then ∫⁻ x, ENNReal.ofReal (klFun (μ.rnDeriv ν x).toReal) ∂ν else ∞ := by
-  rw [klDiv_eq_integral_klFun]
+  rw [klDiv_eq_lintegral_klFun]
   by_cases hμν : μ ≪ ν
   swap; · simp [hμν]
   have h_int_iff := lintegral_ofReal_ne_top_iff_integrable
@@ -132,14 +134,29 @@ lemma klDiv_eq_lintegral_klFun :
     · rwa [integrable_klFun_rnDeriv_iff hμν]
     · exact ae_of_all _ fun _ ↦ klFun_nonneg ENNReal.toReal_nonneg
   · rw [← not_iff_not, ne_eq, Decidable.not_not] at h_int_iff
-    symm
     simp [hμν, h_int, h_int_iff, integrable_klFun_rnDeriv_iff hμν]
 
-lemma klDiv_eq_lintegral_klFun_of_ac (h_ac : μ ≪ ν) :
-    klDiv μ ν = ∫⁻ x, ENNReal.ofReal (klFun (μ.rnDeriv ν x).toReal) ∂ν := by
-  simp [klDiv_eq_lintegral_klFun, h_ac]
+lemma klDiv_of_ac_of_integrable (h1 : μ ≪ ν) (h2 : Integrable (llr μ ν) μ) :
+    klDiv μ ν = ENNReal.ofReal (∫ x, llr μ ν x ∂μ + ν.real univ - μ.real univ) := by
+  rw [klDiv_eq_integral_klFun, ite_eq_left ⟨h1, h2⟩, integral_klFun_rnDeriv h1 h2]
 
-end AlternativeFormulas
+@[simp]
+lemma klDiv_of_not_integrable (h : ¬ Integrable (llr μ ν) μ) : klDiv μ ν = ∞ := by
+  rw [klDiv_eq_integral_klFun, ite_eq_right (not_and_of_not_right _ h)]
+
+lemma klDiv_eq_top_iff : klDiv μ ν = ∞ ↔ μ ≪ ν → ¬ Integrable (llr μ ν) μ := by
+  constructor <;> intro h
+  · contrapose! h
+    simp [klDiv_of_ac_of_integrable h.1 h.2]
+  · rcases or_not_of_imp h with (h | h) <;> simp [h]
+
+lemma klDiv_ne_top_iff : klDiv μ ν ≠ ∞ ↔ μ ≪ ν ∧ Integrable (llr μ ν) μ := by
+  simp [ne_eq, klDiv_eq_top_iff]
+
+lemma klDiv_ne_top (hμν : μ ≪ ν) (h_int : Integrable (llr μ ν) μ) : klDiv μ ν ≠ ∞ :=
+  klDiv_ne_top_iff.mpr ⟨hμν, h_int⟩
+
+end Finite
 
 section Real
 
@@ -229,7 +246,8 @@ lemma toReal_klDiv_smul_same (hμν : μ ≪ ν) (h_int : Integrable (llr μ ν)
     (klDiv (c • μ) (c • ν)).toReal = c * (klDiv μ ν).toReal := by
   by_cases hc : c = 0
   · simp [hc]
-  rw [toReal_klDiv_smul_right_eq_smul_left, smul_smul, inv_mul_cancel₀ hc, one_smul]
+  rw [toReal_klDiv_smul_right_eq_smul_left]
+  · simp only [smul_smul, inv_mul_cancel₀ hc, one_smul]
   · exact hμν.smul_left c
   · refine Integrable.smul_measure_nnreal ?_
     rw [integrable_congr (llr_smul_nnreal_left hμν c (by simpa))]
