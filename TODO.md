@@ -417,12 +417,26 @@ operation.
   generalized eigenspace itself.  Tests cover the removed names, the identity of `ℕ`, the limit and
   index of an eventually constant sequence, the well-founded case, and the eigenspace index.
 
-- [ ] **Put fundamental circuits and cocircuits on their admissible data.**
-  `Matroid.fundCircuit` and `Matroid.fundCocircuit` in
-  `Mathlib/Combinatorics/Matroid/Circuit.lean:211` and `:690` accept inadmissible data and then need
-  not return circuits/cocircuits; documented invalid cases return singleton or inserted sets.  Bundle
-  the independence, closure, base, and membership hypotheses already repeated by their valid-case
-  theorem families.
+- [x] **Put fundamental circuits and cocircuits on their admissible data.**
+  `Matroid.fundCircuit M e I h` takes `h : M.FundCircuitExists e I`: `I` is independent and `e` is
+  in the closure of `I` but not in `I`.  Then `insert e I` is dependent and contains a unique
+  circuit, which contains `e` (`fundCircuit_isCircuit`, `IsCircuit.eq_fundCircuit_of_subset`); for
+  `e ∈ I` or `e ∉ M.closure I` the set `insert e I` is independent and contains no circuit.
+  `Matroid.fundCocircuit M e B h` takes the dual data `h : M.FundCocircuitExists e B`: `B` is
+  spanning, `e ∈ B`, and `B \ {e}` is not spanning, so that a unique cocircuit meets `B` exactly in
+  `e` (`fundCocircuit_isCocircuit`, `fundCocircuit_inter_eq`); for a base `B` this holds for every
+  `e ∈ B` (`IsBase.fundCocircuitExists`), and `FundCocircuitExists.dual` gives the fundamental
+  circuit data in the dual matroid.  The former definitions returned `{e}` for `e ∈ I` or `e ∉ M.E`
+  and `insert e I` for `e ∈ M.E \ M.closure I`, which are not circuits
+  (`fundCircuit_eq_of_mem`, `fundCircuit_eq_of_notMem_ground`, `fundCocircuit_eq_of_notMem`, and
+  `fundCocircuit_eq_of_notMem_ground`, removed), and `IsBase.mem_fundCocircuit_iff_mem_fundCircuit`
+  held for all `e` and `f` through these values; it now takes `e ∈ M.E \ B` and `f ∈ B`.
+  `Indep.fundCircuit_isCircuit`, `Indep.mem_fundCircuit_iff`, and `IsBase.fundCircuit_isCircuit`
+  became `fundCircuit_isCircuit` and `mem_fundCircuit_iff` on the evidence, which
+  `IsBase.fundCircuitExists`, `IsCircuit.fundCircuitExists_of_subset`, and
+  `FundCircuitExists.restrict` supply; `fundCircuit_restrict_univ` is removed.  Tests cover the
+  removed names, the missing evidence, the two degenerate cases, and the fundamental circuits and
+  cocircuits of a base.
 
 - [ ] **Put bundle coordinate changes on chart overlaps.**
   `Bundle.Trivialization.coordChange` in
