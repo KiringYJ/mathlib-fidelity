@@ -20,7 +20,7 @@ This module defines the eccentricity of vertices, the diameter, and the radius o
 - `SimpleGraph.ediam`: the graph extended diameter, which is the maximum eccentricity.
   It is `ℕ∞`-valued.
 
-- `SimpleGraph.diam`: the graph diameter, an `ℕ`-valued version of `SimpleGraph.ediam`.
+- `SimpleGraph.diam`: the graph diameter in `ℕ` of a graph whose extended diameter is finite.
 
 - `SimpleGraph.radius`: the graph radius, which is the minimum eccentricity. It is `ℕ∞`-valued.
 
@@ -259,77 +259,62 @@ end ediam
 section diam
 
 /--
-The diameter is the greatest distance between any two vertices, with the value `0` in
-case the distances are not bounded above, or the graph is not connected.
+The diameter of a graph whose distances are bounded is the greatest distance between two of its
+vertices. It is defined when the extended diameter is finite, which `h` states, as for a connected
+graph on finitely many vertices; `SimpleGraph.ediam` is the diameter in `ℕ∞` of every graph, `⊤`
+when the graph is disconnected or its distances are unbounded.
 -/
-noncomputable def diam (G : SimpleGraph α) :=
+@[nolint unusedArguments]
+noncomputable def diam (G : SimpleGraph α) (_h : G.ediam ≠ ⊤) : ℕ :=
   G.ediam.toNat
 
-lemma diam_def : G.diam = (⨆ p : α × α, G.edist p.1 p.2).toNat := by
+lemma coe_diam (h : G.ediam ≠ ⊤) : (G.diam h : ℕ∞) = G.ediam :=
+  ENat.natCast_toNat h
+
+lemma diam_def (h : G.ediam ≠ ⊤) : G.diam h = (⨆ p : α × α, G.edist p.1 p.2).toNat := by
   rw [diam, ediam_def]
 
-lemma dist_le_diam (h : G.ediam ≠ ⊤) {u v : α} : G.dist u v ≤ G.diam :=
+lemma dist_le_diam (h : G.ediam ≠ ⊤) {u v : α} :
+    G.dist u v (preconnected_of_ediam_ne_top h u v) ≤ G.diam h :=
   ENat.toNat_le_toNat edist_le_ediam h
 
-lemma nontrivial_of_diam_ne_zero (h : G.diam ≠ 0) : Nontrivial α := by
-  contrapose! h
-  simp [diam, h]
+lemma nontrivial_of_diam_ne_zero {h : G.ediam ≠ ⊤} (h' : G.diam h ≠ 0) : Nontrivial α := by
+  contrapose! h'
+  simp [diam, h']
 
-lemma diam_eq_zero_of_not_connected (h : ¬ G.Connected) : G.diam = 0 := by
-  cases isEmpty_or_nonempty α
-  · rw [diam, ediam, ciSup_of_empty, bot_eq_zero']; rfl
-  · rw [diam, ediam_eq_top_of_not_connected h, ENat.toNat_top]
+lemma exists_dist_eq_diam [Nonempty α] (h : G.ediam ≠ ⊤) :
+    ∃ u v, G.dist u v (preconnected_of_ediam_ne_top h u v) = G.diam h := by
+  obtain ⟨u, v, huv⟩ := exists_edist_eq_ediam_of_ne_top h
+  exact ⟨u, v, by rw [diam, dist, huv]⟩
 
-lemma diam_eq_zero_of_ediam_eq_top (h : G.ediam = ⊤) : G.diam = 0 := by
-  rw [diam, h, ENat.toNat_top]
-
-lemma ediam_ne_top_of_diam_ne_zero (h : G.diam ≠ 0) : G.ediam ≠ ⊤ :=
-  mt diam_eq_zero_of_ediam_eq_top h
-
-lemma exists_dist_eq_diam [Nonempty α] :
-    ∃ u v, G.dist u v = G.diam := by
-  by_cases h : G.diam = 0
-  · simp [h]
-  · obtain ⟨u, v, huv⟩ := exists_edist_eq_ediam_of_ne_top <| ediam_ne_top_of_diam_ne_zero h
-    use u, v
-    rw [diam, dist, congrArg ENat.toNat huv]
-
-lemma diam_ne_zero_of_ediam_ne_top [Nontrivial α] (h : G.ediam ≠ ⊤) : G.diam ≠ 0 :=
-  have ⟨_, _, hne⟩ := exists_pair_ne ‹_›
+lemma diam_ne_zero [Nontrivial α] (h : G.ediam ≠ ⊤) : G.diam h ≠ 0 :=
+  have ⟨_, _, hne⟩ := exists_pair_ne α
   pos_iff_ne_zero.mp <|
-    lt_of_lt_of_le ((connected_of_ediam_ne_top h).pos_dist_of_ne hne) <| dist_le_diam h
+    lt_of_lt_of_le ((preconnected_of_ediam_ne_top h _ _).pos_dist_of_ne hne) <| dist_le_diam h
 
-@[gcongr]
-lemma diam_anti_of_ediam_ne_top (h : G ≤ G') (hn : G.ediam ≠ ⊤) : G'.diam ≤ G.diam :=
-  ENat.toNat_le_toNat (ediam_anti h) hn
+lemma diam_anti (hle : G ≤ G') (h : G.ediam ≠ ⊤) :
+    G'.diam (ne_top_of_le_ne_top h (ediam_anti hle)) ≤ G.diam h :=
+  ENat.toNat_le_toNat (ediam_anti hle) h
 
 @[simp]
-lemma diam_bot : (⊥ : SimpleGraph α).diam = 0 := by
+lemma diam_bot (h : (⊥ : SimpleGraph α).ediam ≠ ⊤) : (⊥ : SimpleGraph α).diam h = 0 := by
   rw [diam, ENat.toNat_eq_zero]
   cases subsingleton_or_nontrivial α
   · exact Or.inl ediam_eq_zero_of_subsingleton
-  · exact Or.inr ediam_bot
+  · exact absurd ediam_bot h
 
 @[simp]
-lemma diam_top [Nontrivial α] : (⊤ : SimpleGraph α).diam = 1 := by
+lemma diam_top [Nontrivial α] (h : (⊤ : SimpleGraph α).ediam ≠ ⊤) :
+    (⊤ : SimpleGraph α).diam h = 1 := by
   rw [diam, ediam_top, ENat.toNat_one]
 
 @[simp]
-lemma diam_eq_zero : G.diam = 0 ↔ G.ediam = ⊤ ∨ Subsingleton α := by
-  rw [diam, ENat.toNat_eq_zero, or_comm, ediam_eq_zero_iff_subsingleton]
+lemma diam_eq_zero (h : G.ediam ≠ ⊤) : G.diam h = 0 ↔ Subsingleton α := by
+  rw [diam, ENat.toNat_eq_zero, or_iff_left h, ediam_eq_zero_iff_subsingleton]
 
 @[simp]
-lemma diam_eq_one [Nontrivial α] : G.diam = 1 ↔ G = ⊤ := by
+lemma diam_eq_one [Nontrivial α] (h : G.ediam ≠ ⊤) : G.diam h = 1 ↔ G = ⊤ := by
   rw [diam, ENat.toNat_eq_iff one_ne_zero, Nat.cast_one, ediam_eq_one]
-
-lemma diam_eq_zero_iff_ediam_eq_top [Nontrivial α] : G.diam = 0 ↔ G.ediam = ⊤ := by
-  rw [← not_iff_not]
-  exact ⟨ediam_ne_top_of_diam_ne_zero, diam_ne_zero_of_ediam_ne_top⟩
-
-/-- A finite and nontrivial graph is connected if and only if its diameter is not zero.
-See also `connected_iff_ediam_ne_top` for the extended diameter version. -/
-lemma connected_iff_diam_ne_zero [Finite α] [Nontrivial α] : G.Connected ↔ G.diam ≠ 0 := by
-  rw [connected_iff_ediam_ne_top, not_iff_not, diam_eq_zero_iff_ediam_eq_top]
 
 end diam
 

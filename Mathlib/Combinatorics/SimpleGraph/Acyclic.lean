@@ -578,7 +578,7 @@ lemma Connected.exists_preconnected_induce_compl_singleton_of_finite [Finite V]
   exact ⟨v, hv.preconnected⟩
 
 lemma IsAcyclic.dist_ne_of_adj (hG : G.IsAcyclic) {u v w : V} (hadj : G.Adj v w)
-    (hreach : G.Reachable u v) : G.dist u v ≠ G.dist u w := by
+    (hreach : G.Reachable u v) : G.dist u v hreach ≠ G.dist u w (hreach.trans hadj.reachable) := by
   obtain ⟨p, hp, hp'⟩ := hreach.exists_path_of_dist
   obtain ⟨q, hq, hq'⟩ := hreach.trans hadj.reachable |>.exists_path_of_dist
   rw [← hp', ← hq']
@@ -591,22 +591,29 @@ lemma IsAcyclic.dist_ne_of_adj (hG : G.IsAcyclic) {u v w : V} (hadj : G.Adj v w)
     exact p.length.ne_add_one
 
 lemma IsTree.dist_ne_of_adj (hG : G.IsTree) (u : V) {v w : V} (hadj : G.Adj v w) :
-    G.dist u v ≠ G.dist u w :=
+    G.dist u v (hG.connected u v) ≠ G.dist u w (hG.connected u w) :=
   hG.isAcyclic.dist_ne_of_adj hadj <| hG.connected u v
 
 lemma IsAcyclic.dist_eq_dist_add_one_of_adj_of_reachable
     (hG : G.IsAcyclic) (u : V) {v w : V} (hadj : G.Adj v w) (hreach : G.Reachable u v) :
-    G.dist u v = G.dist u w + 1 ∨ G.dist u w = G.dist u v + 1 := by
-  grind [dist_ne_of_adj, Adj.diff_dist_adj]
+    G.dist u v hreach = G.dist u w (hreach.trans hadj.reachable) + 1 ∨
+      G.dist u w (hreach.trans hadj.reachable) = G.dist u v hreach + 1 := by
+  have := hG.dist_ne_of_adj hadj hreach
+  have := hadj.diff_dist_adj hreach
+  lia
 
 lemma IsTree.dist_eq_dist_add_one_of_adj (hG : G.IsTree) (u : V) {v w : V} (hadj : G.Adj v w) :
-    G.dist u v = G.dist u w + 1 ∨ G.dist u w = G.dist u v + 1 := by
-  grind [dist_ne_of_adj, Adj.diff_dist_adj]
+    G.dist u v (hG.connected u v) = G.dist u w (hG.connected u w) + 1 ∨
+      G.dist u w (hG.connected u w) = G.dist u v (hG.connected u v) + 1 :=
+  hG.isAcyclic.dist_eq_dist_add_one_of_adj_of_reachable u hadj (hG.connected u v)
 
 /-- The unique two-coloring of a tree that colors the given vertex with zero -/
 noncomputable def IsTree.coloringTwoOfVert (hG : G.IsTree) (u : V) : G.Coloring (Fin 2) :=
-  Coloring.mk (fun v ↦ ⟨G.dist u v % 2, Nat.mod_lt (G.dist u v) Nat.zero_lt_two⟩) <| by
-    grind [dist_eq_dist_add_one_of_adj]
+  Coloring.mk (fun v ↦ ⟨G.dist u v (hG.connected u v) % 2, Nat.mod_lt _ Nat.zero_lt_two⟩) <| by
+    intro v w hadj
+    have := hG.dist_eq_dist_add_one_of_adj u hadj
+    simp only [ne_eq, Fin.mk.injEq]
+    lia
 
 /-- Arbitrary coloring with two colors for a tree -/
 noncomputable def IsTree.coloringTwo (hG : G.IsTree) : G.Coloring (Fin 2) :=
@@ -619,13 +626,16 @@ lemma IsTree.isBipartite (hG : G.IsTree) : G.IsBipartite :=
 noncomputable def IsAcyclic.coloringTwoOfVerts (hG : G.IsAcyclic) (verts : G.ConnectedComponent → V)
     (h : ∀ C, verts C ∈ C) : G.Coloring (Fin 2) where
   toFun v :=
-    let u := verts <| G.connectedComponentMk v
-    ⟨G.dist u v % 2, Nat.mod_lt (G.dist u v) Nat.zero_lt_two⟩
+    ⟨G.dist _ v (ConnectedComponent.exact (h (G.connectedComponentMk v))) % 2,
+      Nat.mod_lt _ Nat.zero_lt_two⟩
   map_rel' := by
     intro u v hadj
-    have := ConnectedComponent.sound hadj.reachable
-    have := hG.dist_eq_dist_add_one_of_adj_of_reachable _ hadj <| ConnectedComponent.exact <| h _
-    grind [top_adj]
+    have hu := ConnectedComponent.exact (h (G.connectedComponentMk u))
+    have := hG.dist_eq_dist_add_one_of_adj_of_reachable _ hadj hu
+    have hc : G.connectedComponentMk v = G.connectedComponentMk u :=
+      (ConnectedComponent.sound hadj.reachable).symm
+    simp only [top_adj, ne_eq, Fin.mk.injEq, hc]
+    lia
 
 /-- Arbitrary coloring with two colors for a forest -/
 noncomputable def IsAcyclic.coloringTwo (hG : G.IsAcyclic) : G.Coloring (Fin 2) :=
