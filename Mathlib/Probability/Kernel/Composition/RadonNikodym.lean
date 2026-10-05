@@ -130,8 +130,8 @@ lemma rnDeriv_measure_compProd (μ ν : Measure α) (κ η : Kernel α β)
     [IsFiniteMeasure μ] [IsFiniteMeasure ν] [IsFiniteKernel κ] [IsFiniteKernel η] :
     (μ ⊗ₘ κ).rnDeriv (ν ⊗ₘ η) =ᵐ[ν ⊗ₘ η] fun p ↦ μ.rnDeriv ν p.1 * κ.rnDeriv η p.1 p.2 := by
   have h_add : μ ⊗ₘ κ = μ ⊗ₘ κ.singularPart η + μ ⊗ₘ η.withDensity (κ.rnDeriv η) := by
-    conv_lhs => rw [← Kernel.rnDeriv_add_singularPart κ η]
-    rw [Measure.compProd_add_right, add_comm]
+    rw [add_comm, ← Measure.compProd_add_right]
+    simp only [Kernel.rnDeriv_add_singularPart]
   have h_sing : (μ ⊗ₘ κ.singularPart η).rnDeriv (ν ⊗ₘ η) =ᵐ[ν ⊗ₘ η] 0 :=
     Measure.rnDeriv_eq_zero_of_mutuallySingular
       (Measure.MutuallySingular.compProd_of_right μ ν

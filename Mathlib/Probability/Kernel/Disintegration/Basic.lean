@@ -14,11 +14,11 @@ public import Mathlib.Probability.Kernel.Composition.MeasureCompProd
 This file defines predicates for a kernel to "disintegrate" a measure or a kernel. This kernel is
 also called the "conditional kernel" of the measure or kernel.
 
-A measure `ρ : Measure (α × Ω)` is disintegrated by a kernel `ρCond : Kernel α Ω` if
-`ρ.fst ⊗ₘ ρCond = ρ`.
+A measure `ρ : Measure (α × Ω)` is disintegrated by a kernel `ρCond : Kernel α Ω` if the
+composition-product `ρ.fst ⊗ₘ ρCond` exists and equals `ρ`.
 
-A kernel `ρ : Kernel α (β × Ω)` is disintegrated by a kernel `κCond : Kernel (α × β) Ω` if
-`κ.fst ⊗ₖ κCond = κ`.
+A kernel `κ : Kernel α (β × Ω)` is disintegrated by a kernel `κCond : Kernel (α × β) Ω` if the
+composition-product `κ.fst ⊗ₖ κCond` exists and equals `κ`.
 
 ## Main definitions
 
@@ -54,16 +54,21 @@ namespace MeasureTheory.Measure
 variable (ρ : Measure (α × Ω)) (ρCond : Kernel α Ω)
 
 /-- A kernel `ρCond` is a conditional kernel for a measure `ρ` if it disintegrates it in the sense
-that `ρ.fst ⊗ₘ ρCond = ρ`. -/
+that the composition-product of the first marginal `ρ.fst` with `ρCond` exists and equals `ρ`.
+A conditional kernel need not be s-finite, even for a nonzero `ρ`: see
+`Counterexamples/KernelCompProd.lean`. -/
 class IsCondKernel : Prop where
-  disintegrate : ρ.fst ⊗ₘ ρCond = ρ
+  /-- The composition-product of `ρ.fst` with `ρCond` exists. -/
+  hasCompProd_fst : ρ.fst.HasCompProd ρCond
+  disintegrate :
+    haveI := hasCompProd_fst
+    ρ.fst ⊗ₘ ρCond = ρ
+
+attribute [instance] IsCondKernel.hasCompProd_fst
 
 variable [ρ.IsCondKernel ρCond]
 
 lemma disintegrate : ρ.fst ⊗ₘ ρCond = ρ := IsCondKernel.disintegrate
-
-lemma IsCondKernel.isSFiniteKernel (hρ : ρ ≠ 0) : IsSFiniteKernel ρCond := by
-  contrapose hρ; rwa [← ρ.disintegrate ρCond, Measure.compProd_of_not_isSFiniteKernel]
 
 variable [IsFiniteMeasure ρ]
 
@@ -71,7 +76,6 @@ variable [IsFiniteMeasure ρ]
 private lemma IsCondKernel.apply_of_ne_zero_of_measurableSet [MeasurableSingletonClass α] {x : α}
     (hx : ρ.fst {x} ≠ 0) {s : Set Ω} (hs : MeasurableSet s) :
     ρCond x s = (ρ.fst {x})⁻¹ * ρ ({x} ×ˢ s) := by
-  have := isSFiniteKernel ρ ρCond (by rintro rfl; simp at hx)
   nth_rewrite 2 [← ρ.disintegrate ρCond]
   rw [Measure.compProd_apply (measurableSet_prod.mpr (Or.inl ⟨measurableSet_singleton x, hs⟩))]
   have (a : _) : ρCond a (Prod.mk a ⁻¹' {x} ×ˢ s) = ({x} : Set α).indicator (ρCond · s) a := by
@@ -123,11 +127,18 @@ variable (κ : Kernel α (β × Ω)) (κCond : Kernel (α × β) Ω)
 /-! #### Predicate for a kernel to disintegrate a kernel -/
 
 /-- A kernel `κCond` is a conditional kernel for a kernel `κ` if it disintegrates it in the sense
-that `κ.fst ⊗ₖ κCond = κ`. -/
+that the composition-product of `κ.fst` with `κCond` exists and equals `κ`. -/
 class IsCondKernel : Prop where
-  protected disintegrate : κ.fst ⊗ₖ κCond = κ
+  /-- The composition-product of `κ.fst` with `κCond` exists. -/
+  protected hasCompProd_fst : κ.fst.HasCompProd κCond
+  protected disintegrate :
+    haveI := hasCompProd_fst
+    κ.fst ⊗ₖ κCond = κ
+
+attribute [instance] IsCondKernel.hasCompProd_fst
 
 instance instIsCondKernel_zero (κCond : Kernel (α × β) Ω) : IsCondKernel 0 κCond where
+  hasCompProd_fst := by rw [fst_zero]; infer_instance
   disintegrate := by simp
 
 lemma disintegrate [κ.IsCondKernel κCond] : κ.fst ⊗ₖ κCond = κ := IsCondKernel.disintegrate
@@ -136,8 +147,6 @@ lemma disintegrate [κ.IsCondKernel κCond] : κ.fst ⊗ₖ κCond = κ := IsCon
 lemma IsCondKernel.isProbabilityMeasure_ae [IsFiniteKernel κ.fst] [κ.IsCondKernel κCond] (a : α) :
     ∀ᵐ b ∂(κ.fst a), IsProbabilityMeasure (κCond (a, b)) := by
   have h := disintegrate κ κCond
-  by_cases h_sfin : IsSFiniteKernel κCond
-  swap; · rw [Kernel.compProd_of_not_isSFiniteKernel_right _ _ h_sfin] at h; simp [h.symm]
   suffices ∀ᵐ b ∂(κ.fst a), κCond (a, b) Set.univ = 1 by
     convert! this with b
     exact ⟨fun _ ↦ measure_univ, fun h ↦ ⟨h⟩⟩
@@ -218,7 +227,7 @@ instance condKernelCountable.instIsCondKernel [∀ a, IsMarkovKernel (κCond a)]
       κCond x = κCond y) (κ : Kernel α (β × Ω))
     [IsSFiniteKernel κ] [∀ a, (κ a).IsCondKernel (κCond a)] :
     κ.IsCondKernel (condKernelCountable κCond h_class) := by
-  constructor
+  refine ⟨inferInstance, ?_⟩
   ext a s hs
   conv_rhs => rw [← (κ a).disintegrate (κCond a)]
   simp_rw [compProd_apply hs, condKernelCountable_apply, Measure.compProd_apply hs]

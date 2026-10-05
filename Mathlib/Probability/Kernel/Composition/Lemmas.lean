@@ -77,10 +77,8 @@ end ProbabilityTheory.Kernel
 
 namespace MeasureTheory.Measure
 
-lemma compProd_eq_parallelComp_comp_copy_comp [SFinite μ] :
+lemma compProd_eq_parallelComp_comp_copy_comp [SFinite μ] [IsSFiniteKernel κ] :
     μ ⊗ₘ κ = (Kernel.id ∥ₖ κ) ∘ₘ Kernel.copy α ∘ₘ μ := by
-  by_cases hκ : IsSFiniteKernel κ
-  swap; · simp [FunLike.coe_zero, hκ]
   simp only [compProd_eq_comp_prod, ← Kernel.parallelComp_comp_copy, Measure.comp_assoc]
 
 lemma productBySections_comp_right [SFinite ν] {κ : Kernel β γ} [IsSFiniteKernel κ] :
@@ -117,10 +115,9 @@ lemma productBySections_comp_left [SFinite μ] [SFinite ν] {κ : Kernel α γ} 
   rw [← Measure.productBySections_comp_right, ← h1] at h2
   exact h2.symm
 
-lemma parallelComp_comp_compProd [IsSFiniteKernel κ] {η : Kernel β γ} [IsSFiniteKernel η] :
+lemma parallelComp_comp_compProd [SFinite μ] [IsSFiniteKernel κ] {η : Kernel β γ}
+    [IsSFiniteKernel η] :
     (Kernel.id ∥ₖ η) ∘ₘ (μ ⊗ₘ κ) = μ ⊗ₘ (η ∘ₖ κ) := by
-  by_cases hμ : SFinite μ
-  swap; · simp [hμ]
   simp only [Measure.compProd_eq_comp_prod, Measure.compProd_eq_comp_prod, Measure.comp_assoc,
     Kernel.parallelComp_comp_prod, Kernel.id_comp]
 

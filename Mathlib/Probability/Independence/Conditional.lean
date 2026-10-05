@@ -1024,7 +1024,7 @@ theorem condIndepFun_iff_prodMkRight_mem_condDistrib
       rw [Measure.compProd_eq_comp_prod, Measure.comp_assoc]
       congr 2
       have h := Kernel.prod_prodMkRight_comp_deterministic_prod ζ η Kernel.id measurable_id
-      rw [← Kernel.id] at h
+      simp only [← Kernel.id.eq_1] at h
       simpa using h.symm
     _ = (Kernel.id ×ₖ η.prodMkRight _) ∘ₘ μ.map (fun a ↦ (k a, g a)) := by
       rw [compProd_map_condDistrib hk.aemeasurable hg.aemeasurable hζ]

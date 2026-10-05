@@ -16,6 +16,7 @@ public import Counterexamples.HeawoodUnitDistance
 public import Counterexamples.HomogeneousPrimeNotPrime
 public import Counterexamples.InvertibleModuleNotIdeal
 public import Counterexamples.IrrationalPowerOfIrrational
+public import Counterexamples.KernelCompProd
 public import Counterexamples.MapFloor
 public import Counterexamples.MonicNonRegular
 public import Counterexamples.Motzkin

@@ -71,8 +71,7 @@ variable [StandardBorelSpace Ω] [Nonempty Ω]
 omit [StandardBorelSpace Ω] [Nonempty Ω] in
 /-- The first marginal of the joint law with swapped coordinates is the law `κ ∘ₘ μ` of the
 data. -/
-lemma fst_map_swap_compProd (κ : Kernel Ω 𝓧) (μ : Measure Ω) [IsFiniteMeasure μ]
-    [IsFiniteKernel κ] :
+lemma fst_map_swap_compProd (κ : Kernel Ω 𝓧) (μ : Measure Ω) [IsFiniteKernel κ] :
     ((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).fst = κ ∘ₘ μ := by
   rw [Measure.fst_map_swap, Measure.snd_compProd]
 
@@ -118,7 +117,7 @@ lemma mem_posterior_of_compProd_eq [IsFiniteKernel η]
     (h : (κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap) :
     η ∈ κ†μ := by
   have : ((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).IsCondKernel η :=
-    ⟨by rw [fst_map_swap_compProd, h]⟩
+    ⟨inferInstance, by rw [fst_map_swap_compProd, h]⟩
   exact mem_posterior_iff_mem_condKernel.2 Measure.IsCondKernel.mem_condKernel
 
 /-- A finite kernel represents the posterior if and only if it has its main property. -/
@@ -219,7 +218,8 @@ lemma deterministic_comp_posterior [SigmaAlgebra.CountablyGenerated 𝓧]
         (Kernel.id ∥ₖ Kernel.deterministic f hf) ∘ₖ
             (Kernel.deterministic f hf ∥ₖ Kernel.id) =
           Kernel.deterministic f hf ∥ₖ Kernel.deterministic f hf := by
-      rw [Kernel.parallelComp_comp_parallelComp, Kernel.id_comp, Kernel.comp_id]
+      rw [Kernel.parallelComp_comp_parallelComp]
+      simp only [Kernel.id_comp, Kernel.comp_id]
     calc
       (Kernel.id ∥ₖ Kernel.deterministic f hf) ∘ₘ
           (Kernel.deterministic f hf ∥ₖ Kernel.id) ∘ₘ Kernel.copy Ω ∘ₘ μ =
@@ -304,12 +304,14 @@ lemma comp_mem_posterior_comp {η : Kernel 𝓧 𝓨} [IsFiniteKernel η] {ξ : 
         (η ∥ₖ (Kernel.id : Kernel Ω Ω)) ∘ₖ
             (κ ∥ₖ (Kernel.id : Kernel Ω Ω)) =
           (η ∘ₖ κ) ∥ₖ (Kernel.id : Kernel Ω Ω) := by
-      rw [Kernel.parallelComp_comp_parallelComp, Kernel.id_comp]
+      rw [Kernel.parallelComp_comp_parallelComp]
+      simp only [Kernel.id_comp]
     have hright :
         ((Kernel.id : Kernel Ω Ω) ∥ₖ η) ∘ₖ
             ((Kernel.id : Kernel Ω Ω) ∥ₖ κ) =
           (Kernel.id : Kernel Ω Ω) ∥ₖ (η ∘ₖ κ) := by
-      rw [Kernel.parallelComp_comp_parallelComp, Kernel.id_comp]
+      rw [Kernel.parallelComp_comp_parallelComp]
+      simp only [Kernel.id_comp]
     have hkernel :
         (η ∥ₖ Kernel.id) ∘ₖ ((κ ∥ₖ Kernel.id) ∘ₖ Kernel.copy Ω) =
           Kernel.swap Ω 𝓨 ∘ₖ ((Kernel.id ∥ₖ η) ∘ₖ

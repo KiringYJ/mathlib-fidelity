@@ -46,7 +46,7 @@ lemma comp_eq_sum_of_countable [Countable α] [MeasurableSingletonClass α] :
   simp [lintegral_countable', mul_comm]
 
 @[simp]
-lemma snd_compProd (μ : Measure α) [SFinite μ] (κ : Kernel α β) [IsSFiniteKernel κ] :
+lemma snd_compProd (μ : Measure α) (κ : Kernel α β) [μ.HasCompProd κ] :
     (μ ⊗ₘ κ).snd = κ ∘ₘ μ := by
   ext s hs
   rw [bind_apply hs κ.aemeasurable, snd_apply hs, compProd_apply]
@@ -106,18 +106,16 @@ section CompProd
 
 lemma compProd_eq_comp_prod (μ : Measure α) [SFinite μ] (κ : Kernel α β) [IsSFiniteKernel κ] :
     μ ⊗ₘ κ = (Kernel.id ×ₖ κ) ∘ₘ μ := by
-  rw [compProd, Kernel.compProd_prodMkLeft_eq_comp]
+  rw [compProd_eq_compProd_const_apply, Kernel.compProd_prodMkLeft_eq_comp]
   rfl
 
-lemma compProd_id_eq_copy_comp [SFinite μ] : μ ⊗ₘ Kernel.id = Kernel.copy α ∘ₘ μ := by
+lemma compProd_id_eq_copy_comp : μ ⊗ₘ Kernel.id = Kernel.copy α ∘ₘ μ := by
   simpa only [Kernel.copy] using
     (compProd_id (μ := μ)).trans (deterministic_comp_eq_map measurable_diag).symm
 
-lemma comp_compProd_comm {η : Kernel (α × β) γ} [SFinite μ] [IsSFiniteKernel η] :
+lemma comp_compProd_comm {η : Kernel (α × β) γ} [SFinite μ] [IsSFiniteKernel κ]
+    [IsSFiniteKernel η] :
     η ∘ₘ (μ ⊗ₘ κ) = ((κ ⊗ₖ η) ∘ₘ μ).snd := by
-  by_cases hκ : IsSFiniteKernel κ; swap
-  · simp [compProd_of_not_isSFiniteKernel _ _ hκ,
-      Kernel.compProd_of_not_isSFiniteKernel_left _ _ hκ, FunLike.coe_zero]
   ext s hs
   rw [Measure.bind_apply hs η.aemeasurable, Measure.snd_apply hs,
     Measure.bind_apply _ (Kernel.aemeasurable _), Measure.lintegral_compProd (η.measurable_coe hs)]
@@ -128,7 +126,7 @@ lemma comp_compProd_comm {η : Kernel (α × β) γ} [SFinite μ] [IsSFiniteKern
   · exact measurable_snd hs
 
 @[simp]
-lemma prodMkLeft_comp_compProd {η : Kernel β γ} [SFinite μ] [IsSFiniteKernel κ] :
+lemma prodMkLeft_comp_compProd {η : Kernel β γ} [IsSFiniteKernel κ] :
     (η.prodMkLeft α) ∘ₘ μ ⊗ₘ κ = η ∘ₘ κ ∘ₘ μ := by
   simp only [← snd_compProd μ κ, Kernel.prodMkLeft, snd,
     ← deterministic_comp_eq_map measurable_snd, comp_assoc,

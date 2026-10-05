@@ -215,9 +215,11 @@ private lemma isMarkovKernel_condKernelReal (κ : Kernel α (γ × ℝ)) [IsFini
   rw [condKernelReal]
   infer_instance
 
+attribute [local instance] isMarkovKernel_condKernelReal
+
 private lemma compProd_fst_condKernelReal (κ : Kernel α (γ × ℝ)) [IsFiniteKernel κ] :
-    fst κ ⊗ₖ condKernelReal κ = κ := by
-  rw [condKernelReal, compProd_toKernel]
+    fst κ ⊗ₖ condKernelReal κ = κ :=
+  compProd_toKernel (isRatCondKernelCDF_density_Iic κ).exists_isCondKernelCDF.choose_spec.1
 
 /-- A conditional kernel for `κ : Kernel Unit (α × ℝ)`, built from a conditional cdf of `κ ()`. It
 serves only to build the witness of `MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel`. -/
@@ -230,12 +232,13 @@ private lemma isMarkovKernel_condKernelUnitReal (κ : Kernel Unit (α × ℝ)) [
   rw [condKernelUnitReal]
   infer_instance
 
+attribute [local instance] isMarkovKernel_condKernelUnitReal
+
 private lemma isCondKernel_condKernelUnitReal (κ : Kernel Unit (α × ℝ)) [IsFiniteKernel κ] :
     κ.IsCondKernel (condKernelUnitReal κ) where
-  disintegrate := by
-    rw [condKernelUnitReal]
-    exact compProd_toKernel
-      (HasUniqueCondCDF.exists_isCondCDF (ρ := κ ())).choose_spec.isCondKernelCDF
+  hasCompProd_fst := inferInstance
+  disintegrate :=
+    compProd_toKernel (HasUniqueCondCDF.exists_isCondCDF (ρ := κ ())).choose_spec.isCondKernelCDF
 
 end Real
 
@@ -322,9 +325,9 @@ private lemma compProd_fst_borelMarkovFromReal_eq_comapRight_compProd
         change fst (map κ (fun x ↦ (x.1, e x.2))) = map κ Prod.fst
         exact fst_map_prod κ (he.measurable.comp measurable_snd)
       _ = fst κ := (fst_eq κ).symm
-  rw [h_fst]
   ext a t ht : 2
   simp_rw [compProd_apply ht]
+  rw [h_fst]
   refine lintegral_congr_ae ?_
   have h_ae : ∀ᵐ t ∂(fst κ a), (a, t) ∈ {p : α × β | η p (range e)ᶜ = 0} := by
     rw [← h_fst]
@@ -375,7 +378,7 @@ private lemma exists_isMarkovKernel_isCondKernel_of_countablyGenerated (κ : Ker
   ⟨borelMarkovFromReal Ω (condKernelReal (map κ (Prod.map (id : γ → γ) (embeddingReal Ω))
       (measurable_id.prodMap (measurable_embeddingReal Ω)))),
     isMarkovKernel_borelMarkovFromReal _,
-    ⟨compProd_fst_borelMarkovFromReal _ _ (compProd_fst_condKernelReal _)⟩⟩
+    ⟨inferInstance, compProd_fst_borelMarkovFromReal _ _ (compProd_fst_condKernelReal _)⟩⟩
 
 /-- A finite kernel `κ : Kernel Unit (α × Ω)` is disintegrated by a Markov kernel: the pullback
 along `embeddingReal Ω` of the conditional kernel `condKernelUnitReal` of the image of `κ` in
@@ -386,7 +389,7 @@ private lemma exists_isMarkovKernel_isCondKernel_unit (κ : Kernel Unit (α × �
   ⟨borelMarkovFromReal Ω (condKernelUnitReal (map κ (Prod.map (id : α → α) (embeddingReal Ω))
       (measurable_id.prodMap (measurable_embeddingReal Ω)))),
     isMarkovKernel_borelMarkovFromReal _,
-    ⟨compProd_fst_borelMarkovFromReal _ _ (disintegrate _ _)⟩⟩
+    ⟨inferInstance, compProd_fst_borelMarkovFromReal _ _ (disintegrate _ _)⟩⟩
 
 end BorelSnd
 
@@ -397,14 +400,16 @@ by a Markov kernel: there is a Markov kernel `η : Kernel α Ω` with `ρ.fst �
 theorem _root_.MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel (ρ : Measure (α × Ω))
     [IsFiniteMeasure ρ] : ∃ η : Kernel α Ω, IsMarkovKernel η ∧ ρ.IsCondKernel η := by
   obtain ⟨η, _, _⟩ := exists_isMarkovKernel_isCondKernel_unit (const Unit ρ)
-  refine ⟨comap η (fun a ↦ ((), a)) measurable_prodMk_left, inferInstance, ⟨?_⟩⟩
+  refine ⟨comap η (fun a ↦ ((), a)) measurable_prodMk_left, inferInstance, ⟨inferInstance, ?_⟩⟩
   have h1 : const Unit (Measure.fst ρ) = fst (const Unit ρ) := by
     ext
     simp only [fst_apply, Measure.fst, const_apply]
   have h2 : prodMkLeft Unit (comap η (fun a ↦ ((), a)) measurable_prodMk_left) = η := by
     ext
     simp only [prodMkLeft_apply, comap_apply]
-  rw [Measure.compProd, h1, h2, disintegrate]
+  rw [Measure.compProd_eq_compProd_const_apply]
+  simp only [h1, h2]
+  rw [disintegrate]
   simp
 
 /-- Some class of kernels along `ae ρ.fst` contains a Markov kernel that disintegrates `ρ`. Since

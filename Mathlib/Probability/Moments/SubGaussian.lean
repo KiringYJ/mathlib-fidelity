@@ -460,25 +460,20 @@ lemma add {Y : Ω → ℝ} {cX cY : ℝ≥0} (hX : HasSubgaussianMGF X cX κ ν)
 
 variable {Ω'' : Type*} {mΩ'' : SigmaAlgebra Ω''} {Y : Ω'' → ℝ} {cY : ℝ≥0}
 
-lemma prodMkLeft_compProd {η : Kernel Ω Ω''} (h : HasSubgaussianMGF Y cY η (κ ∘ₘ ν)) :
+lemma prodMkLeft_compProd [IsSFiniteKernel κ] {η : Kernel Ω Ω''}
+    (h : HasSubgaussianMGF Y cY η (κ ∘ₘ ν)) :
     HasSubgaussianMGF Y cY (prodMkLeft Ω' η) (ν ⊗ₘ κ) := by
-  by_cases hν : SFinite ν
-  swap; · simp [hν]
-  by_cases hκ : IsSFiniteKernel κ
-  swap; · simp [hκ]
   constructor
   · simpa using h.integrable_exp_mul
   · have h2 := h.mgf_le
     rw [← Measure.snd_compProd, Measure.snd] at h2
     exact ae_of_ae_map (by fun_prop) h2
 
-variable [SFinite ν]
+variable [SFinite ν] [IsSFiniteKernel κ]
 
 lemma integrable_exp_add_compProd {η : Kernel (Ω' × Ω) Ω''} [IsZeroOrMarkovKernel η]
     (hX : HasSubgaussianMGF X c κ ν) (hY : HasSubgaussianMGF Y cY η (ν ⊗ₘ κ)) (t : ℝ) :
     Integrable (fun ω ↦ exp (t * (X ω.1 + Y ω.2))) ((κ ⊗ₖ η) ∘ₘ ν) := by
-  by_cases hκ : IsSFiniteKernel κ
-  swap; · simp [FunLike.coe_zero, hκ]
   rcases eq_zero_or_isMarkovKernel η with rfl | hη
   · simp [FunLike.coe_zero]
   simp_rw [mul_add, exp_add]
@@ -507,8 +502,6 @@ variable on the measurable space `Ω × Ω''`) has a sub-Gaussian mgf with respe
 lemma add_compProd {η : Kernel (Ω' × Ω) Ω''} [IsZeroOrMarkovKernel η]
     (hX : HasSubgaussianMGF X c κ ν) (hY : HasSubgaussianMGF Y cY η (ν ⊗ₘ κ)) :
     HasSubgaussianMGF (fun p ↦ X p.1 + Y p.2) (c + cY) (κ ⊗ₖ η) ν := by
-  by_cases hκ : IsSFiniteKernel κ
-  swap; · simp [hκ]
   refine .of_rat (integrable_exp_add_compProd hX hY) fun q ↦ ?_
   filter_upwards [hX.mgf_le, hX.ae_integrable_exp_mul q, Measure.ae_ae_of_ae_compProd hY.mgf_le,
     Measure.ae_integrable_of_integrable_comp <| integrable_exp_add_compProd hX hY q]
@@ -928,8 +921,10 @@ lemma HasSubgaussianMGF.add_of_hasCondSubgaussianMGF [IsFiniteMeasure μ]
   have hY' : Kernel.HasSubgaussianMGF Y cY η
       (Kernel.const Unit (μ.trim hm) ∘ₘ Measure.dirac ()) := by simpa using hY η hη
   convert! hX.add_comp hY'
-  ext
-  rw [Kernel.const_apply, ← Measure.compProd, compProd_trim_condExpKernel hη]
+  ext x : 1
+  obtain ⟨⟩ := x
+  rw [Kernel.const_apply, ← Measure.compProd_eq_compProd_const_apply,
+    compProd_trim_condExpKernel hη]
 
 variable {Y : ℕ → Ω → ℝ} {cY : ℕ → ℝ≥0} {ℱ : Filtration ℕ mΩ}
 

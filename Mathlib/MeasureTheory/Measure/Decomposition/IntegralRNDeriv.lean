@@ -188,7 +188,8 @@ lemma _root_.ConvexOn.integrable_apply_rnDeriv_of_integrable_compProd (hf : Stro
   · exact StronglyMeasurable.aestronglyMeasurable (by fun_prop)
   · exact ae_of_all _ fun x ↦ h _ ENNReal.toReal_nonneg
   · exact hf_cvx.apply_rnDeriv_ae_le_integral hf hf_cont_at hf_int hκη
-  · exact hf_int.integral_compProd
+  · nth_rw 2 [Measure.compProd_eq_compProd_const_apply (μ := ν) (κ := η)] at hf_int
+    exact hf_int.integral_compProd
 
 end Integrable
 

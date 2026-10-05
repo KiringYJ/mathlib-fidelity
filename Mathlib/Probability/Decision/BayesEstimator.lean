@@ -75,7 +75,7 @@ lemma avgRisk_eq_lintegral_posterior_prod
     (hη : η ∈ P†π) :
     avgRisk ℓ P κ π = ∫⁻ θy, ℓ θy.1 θy.2 ∂((η ×ₖ κ) ∘ₘ (P ∘ₘ π)) := by
   rw [avgRisk, ← Measure.lintegral_compProd (f := fun θy ↦ ℓ θy.1 θy.2) (by fun_prop)]
-  congr
+  refine congrArg (fun ν : Measure (Θ × 𝓨) ↦ ∫⁻ θy, ℓ θy.1 θy.2 ∂ν) ?_
   calc π ⊗ₘ (κ ∘ₖ P) = (Kernel.id ∥ₖ κ) ∘ₘ (π ⊗ₘ P) := Measure.parallelComp_comp_compProd.symm
   _ = (Kernel.id ∥ₖ κ) ∘ₘ (η ×ₖ Kernel.id) ∘ₘ P ∘ₘ π := by rw [posterior_prod_id_comp hη]
   _ = (η ×ₖ κ) ∘ₘ P ∘ₘ π := by
@@ -84,7 +84,8 @@ lemma avgRisk_eq_lintegral_posterior_prod
     apply ae_of_all
     intro x
     apply DFunLike.congr_fun
-    rw [Kernel.parallelComp_comp_prod, Kernel.id_comp, Kernel.comp_id]
+    rw [Kernel.parallelComp_comp_prod]
+    simp only [Kernel.id_comp, Kernel.comp_id]
 
 lemma avgRisk_eq_lintegral_lintegral_lintegral
     (hl : Measurable (Function.uncurry ℓ)) (P : Kernel Θ 𝓧) [IsFiniteKernel P]

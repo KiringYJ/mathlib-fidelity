@@ -406,7 +406,9 @@ operation.
   `(·, 0)`, has the unique conditional cdf of `gaussianReal 0 1` but no disintegration along its
   first marginal, since it gives `univ ×ˢ {0}` mass one.  First fix the specification, including
   whether a σ-finite measure equivalent to the marginal may serve as the mixing measure (Chang and
-  Pollard, Definition 1), then its exact domain; coordinate with the s-finite kernel product item.
+  Pollard, Definition 1), then its exact domain.  The composition-product in `IsCondKernel` now has
+  its exact domain (item below), so a disintegration no longer fails merely because an input is not
+  s-finite, and a conditional kernel need not be s-finite.
 
 - [x] **Give parametric distributions their parameter domains.**
   `gammaMeasure a r ha hr`, `expMeasure r hr`, `paretoMeasure t r ht hr`, and
@@ -991,11 +993,88 @@ operation.
   `Kernel.map` now takes a measurability proof, normally synthesized by `fun_prop`; the zero fallback
   and the separate `mapOfMeasurable` constructor were removed.
 
-- [ ] **Require s-finiteness in kernel product constructors.**
-  `Kernel.compProd` in
-  `Mathlib/Probability/Kernel/Composition/CompProd.lean:69` returns zero when either kernel is not
-  s-finite.  Promote s-finiteness to the construction boundary for `Kernel.prod` and
-  `Kernel.compProd` and migrate their consumers.
+- [x] **Give the kernel products their exact domains.**
+  `μ ⊗ₘ κ`, `κ ⊗ₖ η`, `κ ∥ₖ η`, and `κ ×ₖ η` integrate the measures of sections:
+  `(μ ⊗ₘ κ) s = ∫⁻ a, κ a (Prod.mk a ⁻¹' s) ∂μ` on measurable `s`, `(κ ⊗ₖ η) a = κ a ⊗ₘ sectR η a`,
+  `(κ ∥ₖ η) x = κ x.1 ⊗ₘ const β (η x.2)`, and `κ ×ₖ η = κ ⊗ₖ prodMkRight β η`.  They were zero
+  unless both inputs were s-finite, a sufficient condition rather than the domain: on `ℝ`,
+  `count ⊗ₘ const ℝ (dirac 0)` is counting measure on the horizontal axis although counting measure
+  is not s-finite, and on a space with measurable singletons `dirac x ⊗ₘ κ` exists for every `κ`.  A
+  section-measure function need not be measurable, and for such a function `∫⁻` is the lower
+  integral, so the section integrals determine a value without a convention exactly when, for every
+  measurable set, the measures of its sections have a measurable majorant with the same integral,
+  that is, equal lower and upper integrals.  `Measure.HasCompProd μ κ` is that class; the section
+  integrals are then countably additive (`HasCompProd.lintegral_iUnion`), hence the values of a
+  unique measure, and `μ ⊗ₘ κ` is defined from them.  Countable additivity of the lower integrals
+  alone is not taken as the domain: outside the class the value depends on choosing the lower
+  integral, and Tonelli's theorem is not known there.  `Kernel.HasCompProd κ η` and
+  `Kernel.HasParallelComp κ η` ask for the pointwise class and measurability of the section
+  integrals in the point.  `κ ×ₖ η` takes the domain `κ.HasCompProd (prodMkRight β η)`, which can be
+  strictly larger than that of `(κ ∥ₖ η) ∘ₖ copy α` (paper proof): on `Bool`, let `κ true` be
+  Lebesgue measure, `η false = Σ_{t ∈ T} dirac t` for a set `T ⊆ [0, 1]` that is not Lebesgue
+  measurable, and the other values zero; then `κ ×ₖ η` exists, but `κ ∥ₖ η` does not, because
+  against `volume ⊗ₘ const ℝ (η false)` the section-measure function of the diagonal is the
+  indicator of `T`, whose lower and upper integrals are the inner and outer measures of `T`.  The
+  class contains every input whose section-measure functions are almost everywhere measurable
+  (`HasCompProd.of_aemeasurable`), and instance search finds it for an s-finite kernel and every
+  measure, for two s-finite kernels in the kernel products, for zero kernels and measures, and for
+  Dirac measures on spaces with measurable singletons.  One s-finite kernel is not enough (paper
+  proofs): with `ν = Σ_{t ∈ T} dirac t` for a non-Borel `T ⊆ ℝ`, the section integrals of
+  `const ℝ ν ⊗ₖ deterministic (fun p ↦ decide (p.1 = p.2))` and of `Kernel.id ⊗ₖ const (ℝ × ℝ) ν` on
+  the diagonal are the indicator of `T`, which is not measurable.  The fallback lemmas
+  `Kernel.compProd_of_not_isSFiniteKernel_left` and `_right`,
+  `parallelComp_of_not_isSFiniteKernel_left` and `_right`, `prod_of_not_isSFiniteKernel_left` and
+  `_right`, `Measure.compProd_of_not_sfinite`, and `Measure.compProd_of_not_isSFiniteKernel` are
+  removed, and the instances `IsSFiniteKernel (κ ⊗ₖ η)`, `IsSFiniteKernel (κ ∥ₖ η)`,
+  `IsSFiniteKernel (κ ×ₖ η)`, and `SFinite (μ ⊗ₘ κ)`, which held for every input only through the
+  zero value, now assume s-finite inputs: `count ⊗ₘ const ℝ (dirac 0)` is not s-finite.
+  `IsCondKernel` now carries the domain of its composition-product, and
+  `IsCondKernel.isSFiniteKernel`, proved from the fallback, is removed because it is false: the
+  kernel that is counting measure at `0` and `dirac 0` elsewhere is a conditional kernel of a
+  nonzero measure and is not s-finite (`Counterexamples/KernelCompProd.lean`).  `IsDeterministic κ`
+  now carries `κ.HasParallelComp κ`, and the instance that derived `IsSFiniteKernel κ` from it
+  through the fallback is removed; its consumers assume Markov kernels.  `partialTraj κ` and
+  `lmarginalPartialTraj κ` take `∀ n, IsSFiniteKernel (κ n)`, a sufficient condition recorded below.
+  Lemmas that held for arbitrary inputs only through the zero value assume s-finite inputs or the
+  domain classes.  Lemmas that need only the section integrals hold on the domains, such as
+  `compProd_apply`, `compProd_apply_prod`, `compProd_congr`, `compProd_eq_zero_iff`,
+  `Kernel.fst_compProd`, `Measure.snd_compProd`, `parallelComp_comp_copy`, the almost-everywhere
+  lemmas, and `AbsolutelyContinuous.compProd_left` and `_right`, since a section integral vanishes
+  exactly when the measures of the sections vanish almost everywhere
+  (`HasCompProd.lintegral_eq_zero_iff`).  `Measure.fst_compProd` and the absolute-continuity and
+  mutual-singularity criteria for finite kernels no longer assume `SFinite μ`.  Staton, *Commutative
+  semantics for probabilistic programming* (ESOP 2017), Lemma 3, composes s-finite kernels and
+  remarks that measurability in the parameter is the obstacle to dropping s-finiteness; Vákár and
+  Ong, *On S-finite measures and kernels* (arXiv:1810.01837), Theorem 1, credit the closure of
+  s-finite kernels under composition to Staton.  Tests cover the removed names, the enforced
+  domains, the instances that stay conditional, routine evidence, values outside s-finite inputs,
+  almost-everywhere statements on the domains, proof independence, and rewriting.
+
+- [ ] **Give `partialTraj` its exact domain.**
+  `ProbabilityTheory.Kernel.partialTraj κ a b` in
+  `Mathlib/Probability/Kernel/IonescuTulcea/PartialTraj.lean` iterates the products
+  `Kernel.id ×ₖ (κ k).map (piSingleton k)` for `a ≤ k < b` and takes `∀ n, IsSFiniteKernel (κ n)`,
+  which supplies every step but is only sufficient: only the steps with `a ≤ k < b` are used, and
+  each needs only the domain of its product.  Decide whether an interface for the exact domain is
+  worth having, given that the Ionescu-Tulcea theorem uses Markov kernels.
+
+- [ ] **Give `Measure.productBySections` its exact domain or merge it into `⊗ₘ`.**
+  `productBySections μ ν h` takes `h : HasAEMeasurableSectionMeasures μ ν`, which is sufficient
+  but not necessary (paper proof): for counting measure `μ` on `ℝ` and `ν = Σ_{t ∈ T} dirac t` with
+  `T` not Borel, `∫⁻` against counting measure is a sum for every function, so the section
+  integrals are the values of `Measure.sum fun a ↦ ν.map (Prod.mk a)` and have measurable
+  majorants with the same integrals, while the section-measure function of the diagonal is the
+  indicator of `T`, which is not almost everywhere measurable for counting measure.  The section
+  integrals of `productBySections μ ν` are those of `μ ⊗ₘ Kernel.const α ν`, whose domain
+  `μ.HasCompProd (Kernel.const α ν)` is exact.  Decide whether to define `productBySections`
+  through `⊗ₘ` or to retire it, and migrate its Tonelli theory and consumers.
+
+- [ ] **Give `Kernel.withDensity` its exact domain.**
+  `Kernel.withDensity κ f` in `Mathlib/Probability/Kernel/WithDensity.lean:48` takes
+  `[IsSFiniteKernel κ]` and is zero when `Function.uncurry f` is not measurable
+  (`withDensity_of_not_measurable`).  Determine the exact domain on which the measures
+  `(κ a).withDensity (f a)` form a kernel, separate it from the convenient sufficient conditions,
+  and remove the fallback.
 
 - [ ] **Make Radon--Nikodym data conditional on decomposition existence.**
   `Measure.rnDeriv` and `Measure.singularPart` in

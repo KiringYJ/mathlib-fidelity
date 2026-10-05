@@ -98,8 +98,11 @@ of the trajectory up to time `b`. In particular if `b ≤ a`, this is just a det
 (see `partialTraj_le`). The name `partialTraj` stands for "partial trajectory".
 
 This kernel can be extended into a kernel with codomain `Π n, X n` via the Ionescu-Tulcea theorem.
+Each step takes the product of the identity kernel with `κ k`, so the kernels `κ n` are asked to be
+s-finite.
 -/
-noncomputable def partialTraj (a b : ℕ) : Kernel (Π i : Iic a, X i) (Π i : Iic b, X i) :=
+noncomputable def partialTraj [∀ n, IsSFiniteKernel (κ n)] (a b : ℕ) :
+    Kernel (Π i : Iic a, X i) (Π i : Iic b, X i) :=
   if h : b ≤ a then deterministic (frestrictLe₂ h) (measurable_frestrictLe₂ h)
   else @Nat.leRec a (fun b _ ↦ Kernel (Π i : Iic a, X i) (Π i : Iic b, X i)) Kernel.id
     (fun k _ κ_k ↦ ((Kernel.id ×ₖ ((κ k).map (piSingleton k))) ∘ₖ κ_k).map (IicProdIoc k (k + 1)))
@@ -109,19 +112,20 @@ section Basic
 
 /-- If `b ≤ a`, given the trajectory up to time `a`, the trajectory up to time `b` is
 deterministic and is equal to the restriction of the trajectory up to time `a`. -/
-lemma partialTraj_le (hba : b ≤ a) :
+lemma partialTraj_le [∀ n, IsSFiniteKernel (κ n)] (hba : b ≤ a) :
     partialTraj κ a b = deterministic (frestrictLe₂ hba) (measurable_frestrictLe₂ _) := by
   rw [partialTraj, dite_eq_left hba]
 
 @[simp]
-lemma partialTraj_self (a : ℕ) : partialTraj κ a a = Kernel.id := by rw [partialTraj_le le_rfl]; rfl
+lemma partialTraj_self [∀ n, IsSFiniteKernel (κ n)] (a : ℕ) : partialTraj κ a a = Kernel.id := by
+  rw [partialTraj_le le_rfl]; rfl
 
 @[simp]
-lemma partialTraj_zero :
+lemma partialTraj_zero [∀ n, IsSFiniteKernel (κ n)] :
     partialTraj κ a 0 = deterministic (frestrictLe₂ zero_le) (measurable_frestrictLe₂ _) := by
   rw [partialTraj_le zero_le]
 
-lemma partialTraj_le_def (hab : a ≤ b) : partialTraj κ a b =
+lemma partialTraj_le_def [∀ n, IsSFiniteKernel (κ n)] (hab : a ≤ b) : partialTraj κ a b =
     @Nat.leRec a (fun b _ ↦ Kernel (Π i : Iic a, X i) (Π i : Iic b, X i)) Kernel.id
     (fun k _ κ_k ↦ ((Kernel.id ×ₖ ((κ k).map (piSingleton k))) ∘ₖ κ_k).map (IicProdIoc k (k + 1)))
     b hab := by
@@ -129,7 +133,8 @@ lemma partialTraj_le_def (hab : a ≤ b) : partialTraj κ a b =
   · simp
   · rw [partialTraj, dite_eq_right (not_le.2 hab)]
 
-lemma partialTraj_succ_of_le (hab : a ≤ b) : partialTraj κ a (b + 1) =
+lemma partialTraj_succ_of_le [∀ n, IsSFiniteKernel (κ n)] (hab : a ≤ b) :
+    partialTraj κ a (b + 1) =
     ((Kernel.id ×ₖ ((κ b).map (piSingleton b))) ∘ₖ partialTraj κ a b).map
     (IicProdIoc b (b + 1)) := by
   rw [partialTraj, dite_eq_right (by lia)]
@@ -137,7 +142,7 @@ lemma partialTraj_succ_of_le (hab : a ≤ b) : partialTraj κ a (b + 1) =
   | base => simp
   | succ k hak hk => rw [Nat.leRec_succ, ← partialTraj_le_def]; lia
 
-instance (a b : ℕ) : IsSFiniteKernel (partialTraj κ a b) := by
+instance [∀ n, IsSFiniteKernel (κ n)] (a b : ℕ) : IsSFiniteKernel (partialTraj κ a b) := by
   obtain hab | hba := le_total a b
   · induction b, hab using Nat.le_induction with
     | base => rw [partialTraj_self]; infer_instance
@@ -170,19 +175,19 @@ instance [∀ n, IsMarkovKernel (κ n)] (a b : ℕ) :
       exact IsMarkovKernel.map _ measurable_IicProdIoc
   · rw [partialTraj_le hba]; infer_instance
 
-lemma partialTraj_succ_self (a : ℕ) :
+lemma partialTraj_succ_self [∀ n, IsSFiniteKernel (κ n)] (a : ℕ) :
     partialTraj κ a (a + 1) =
     (Kernel.id ×ₖ ((κ a).map (piSingleton a))).map (IicProdIoc a (a + 1)) := by
   rw [partialTraj_succ_of_le le_rfl, partialTraj_self, comp_id]
 
-lemma partialTraj_succ_eq_comp (hab : a ≤ b) :
+lemma partialTraj_succ_eq_comp [∀ n, IsSFiniteKernel (κ n)] (hab : a ≤ b) :
     partialTraj κ a (b + 1) = partialTraj κ b (b + 1) ∘ₖ partialTraj κ a b := by
   rw [partialTraj_succ_self, ← map_comp _ _ _ (by fun_prop), partialTraj_succ_of_le hab]
 
 /-- Given the trajectory up to time `a`, `partialTraj κ a b` gives the distribution of
 the trajectory up to time `b`. Then plugging this into `partialTraj κ b c` gives
 the distribution of the trajectory up to time `c`. -/
-theorem partialTraj_comp_partialTraj (hab : a ≤ b) (hbc : b ≤ c) :
+theorem partialTraj_comp_partialTraj [∀ n, IsSFiniteKernel (κ n)] (hab : a ≤ b) (hbc : b ≤ c) :
     partialTraj κ b c ∘ₖ partialTraj κ a b = partialTraj κ a c := by
   induction c, hbc using Nat.le_induction with
   | base => simp
@@ -210,13 +215,16 @@ lemma partialTraj_eq_prod [∀ n, IsSFiniteKernel (κ n)] (a b : ℕ) :
     (Kernel.id ×ₖ (partialTraj κ a b).map (restrict₂ Ioc_subset_Iic_self)).map
     (IicProdIoc a b) := by
   obtain hba | hab := le_total b a
-  · rw [partialTraj_le hba, Kernel.map_congr _ (IicProdIoc_le hba), map_comp_right,
-      ← fst_eq, deterministic_map, fst_prod, id_map]
+  · simp only [partialTraj_le hba]
+    rw [Kernel.map_congr _ (IicProdIoc_le hba), map_comp_right, ← fst_eq]
+    · simp only [deterministic_map]
+      rw [fst_prod, id_map]
     all_goals fun_prop
   induction b, hab using Nat.le_induction with
   | base =>
     ext1 x
-    rw [partialTraj_self, id_map, Kernel.map_congr _ (IicProdIoc_self a), ← fst_eq, fst_prod]
+    simp only [partialTraj_self, id_map]
+    rw [Kernel.map_congr _ (IicProdIoc_self a), ← fst_eq, fst_prod]
   | succ k h hk =>
     have : (IicProdIoc (X := X) k (k + 1)) ∘ (Prod.map (IicProdIoc a k) id) =
         (IicProdIoc (h.trans k.le_succ) ∘ (Prod.map id (IocProdIoc a k (k + 1)))) ∘
@@ -233,28 +241,36 @@ lemma partialTraj_eq_prod [∀ n, IsSFiniteKernel (κ n)] (a b : ℕ) :
       rw [← coe_IicProdIoc (h.trans k.le_succ), MeasurableEquiv.symm_comp_self]
     nth_rw 1 [← partialTraj_comp_partialTraj h k.le_succ, hk, partialTraj_succ_self,
       comp_map _ _ (by fun_prop), comap_map_comm _ (by fun_prop) (by fun_prop),
-      comap_prod _ _ (by fun_prop), id_comap (by fun_prop), ← id_map, map_prod_eq _ _ (by fun_prop),
+      comap_prod _ _ (by fun_prop)]
+    simp only [id_comap, ← id_map]
+    nth_rw 1 [map_prod_eq _ _ (by fun_prop),
       ← map_comp_right _ (by fun_prop) (by fun_prop),
       Kernel.map_congr _ this,
-      map_comp_right _ (by fun_prop) (by fun_prop), id_prod_eq, prodAssoc_prod,
+      map_comp_right _ (by fun_prop) (by fun_prop)]
+    simp only [id_prod_eq]
+    nth_rw 1 [prodAssoc_prod,
       map_comp_right _ (measurable_id.prodMap measurable_IocProdIoc)
         (MeasurableEquiv.IicProdIoc (X := X) (h.trans k.le_succ)).measurable,
-      ← map_prod_map _ _ measurable_id measurable_IocProdIoc,
-      map_id, ← map_comp _ _ _ (by fun_prop), map_apply_eq_iff_map_symm_apply_eq,
+      ← map_prod_map _ _ measurable_id measurable_IocProdIoc]
+    simp only [map_id]
+    nth_rw 1 [← map_comp _ _ _ (by fun_prop), map_apply_eq_iff_map_symm_apply_eq,
       fst_prod_comp_id_prod, ← map_comp_right _ (by fun_prop) (by fun_prop),
       Kernel.map_congr _ hcancel
         ((MeasurableEquiv.IicProdIoc (X := X) (h.trans k.le_succ)).symm.measurable.comp
-          measurable_IicProdIoc), map_id,
-      deterministic_congr IicProdIoc_comp_restrict₂.symm, ← deterministic_comp_deterministic,
-      comp_deterministic_eq_comap, ← comap_prod _ _ (by fun_prop),
+          measurable_IicProdIoc)]
+    rw [map_id]
+    congr 1
+    simp only [deterministic_congr IicProdIoc_comp_restrict₂.symm,
+      ← deterministic_comp_deterministic measurable_IicProdIoc (measurable_restrict₂ _),
+      comp_deterministic_eq_comap]
+    nth_rw 1 [← comap_prod _ _ (by fun_prop),
       ← map_comp _ _ _ (by fun_prop), ← comp_map _ _ (by fun_prop), ← hk,
       ← partialTraj_comp_partialTraj h k.le_succ, partialTraj_succ_self,
       map_comp _ _ _ (by fun_prop), map_comp _ _ _ (by fun_prop),
-      ← map_comp_right _ (by fun_prop) (by fun_prop), ← id_map,
-      map_prod_eq _ _ (by fun_prop), ← map_comp_right _ (by fun_prop) (by fun_prop)]
-    · rfl
-    · exact measurable_IicProdIoc
-    · exact measurable_restrict₂ _
+      ← map_comp_right _ (by fun_prop) (by fun_prop)]
+    simp only [← id_map]
+    nth_rw 1 [map_prod_eq _ _ (by fun_prop), ← map_comp_right _ (by fun_prop) (by fun_prop)]
+    rfl
 
 variable [∀ n, IsMarkovKernel (κ n)]
 
@@ -321,11 +337,13 @@ and allows to view it as a function depending on all the variables.
 
 This is inspired by `MeasureTheory.lmarginal`, to be able to write
 `lmarginalPartialTraj κ b c (lmarginalPartialTraj κ a b f) = lmarginalPartialTraj κ a c`. -/
-noncomputable def lmarginalPartialTraj (a b : ℕ) (f : (Π n, X n) → ℝ≥0∞) (x₀ : Π n, X n) : ℝ≥0∞ :=
+noncomputable def lmarginalPartialTraj [∀ n, IsSFiniteKernel (κ n)] (a b : ℕ)
+    (f : (Π n, X n) → ℝ≥0∞) (x₀ : Π n, X n) : ℝ≥0∞ :=
   ∫⁻ z : (i : Iic b) → X i, f (updateFinset x₀ _ z) ∂(partialTraj κ a b (frestrictLe a x₀))
 
 /-- If `b ≤ a`, then integrating `f` against `partialTraj κ a b` does nothing. -/
-lemma lmarginalPartialTraj_le (hba : b ≤ a) {f : (Π n, X n) → ℝ≥0∞} (mf : Measurable f) :
+lemma lmarginalPartialTraj_le [∀ n, IsSFiniteKernel (κ n)] (hba : b ≤ a) {f : (Π n, X n) → ℝ≥0∞}
+    (mf : Measurable f) :
     lmarginalPartialTraj κ a b f = f := by
   ext x₀
   rw [lmarginalPartialTraj, partialTraj_le hba, Kernel.lintegral_deterministic']
@@ -335,7 +353,8 @@ lemma lmarginalPartialTraj_le (hba : b ≤ a) {f : (Π n, X n) → ℝ≥0∞} (
 
 variable {κ}
 
-lemma lmarginalPartialTraj_mono (a b : ℕ) {f g : (Π n, X n) → ℝ≥0∞} (hfg : f ≤ g) (x₀ : Π n, X n) :
+lemma lmarginalPartialTraj_mono [∀ n, IsSFiniteKernel (κ n)] (a b : ℕ) {f g : (Π n, X n) → ℝ≥0∞}
+    (hfg : f ≤ g) (x₀ : Π n, X n) :
     lmarginalPartialTraj κ a b f x₀ ≤ lmarginalPartialTraj κ a b g x₀ :=
   lintegral_mono fun _ ↦ hfg _
 
@@ -369,7 +388,8 @@ lemma lmarginalPartialTraj_succ [∀ n, IsSFiniteKernel (κ n)] (a : ℕ)
   all_goals fun_prop
 
 @[fun_prop]
-lemma measurable_lmarginalPartialTraj (a b : ℕ) {f : (Π n, X n) → ℝ≥0∞} (hf : Measurable f) :
+lemma measurable_lmarginalPartialTraj [∀ n, IsSFiniteKernel (κ n)] (a b : ℕ) {f : (Π n, X n) → ℝ≥0∞}
+    (hf : Measurable f) :
     Measurable (lmarginalPartialTraj κ a b f) := by
   unfold lmarginalPartialTraj
   let g : ((i : Iic b) → X i) × (Π n, X n) → ℝ≥0∞ := fun c ↦ f (updateFinset c.2 _ c.1)
@@ -380,7 +400,7 @@ lemma measurable_lmarginalPartialTraj (a b : ℕ) {f : (Π n, X n) → ℝ≥0�
 
 /-- Integrating `f` against `partialTraj κ a b` and then against `partialTraj κ b c` is the same
 as integrating `f` against `partialTraj κ a c`. -/
-theorem lmarginalPartialTraj_self (hab : a ≤ b) (hbc : b ≤ c)
+theorem lmarginalPartialTraj_self [∀ n, IsSFiniteKernel (κ n)] (hab : a ≤ b) (hbc : b ≤ c)
     {f : (Π n, X n) → ℝ≥0∞} (hf : Measurable f) :
     lmarginalPartialTraj κ a b (lmarginalPartialTraj κ b c f) = lmarginalPartialTraj κ a c f := by
   ext x₀
