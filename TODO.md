@@ -753,11 +753,39 @@ operation.
   prove them.  If implementation still needs `mkD`, keep it private behind that boundary so its
   fallback cannot appear in public theorem statements.
 
-- [ ] **Prevent impossible regularity requests from becoming zero operators.**
-  `TestFunction.fderivCLM`, `lineDerivCLM`, and supported-map derivatives in
-  `Mathlib/Analysis/Distribution/TestFunction.lean:510`, `:564` and
-  `Mathlib/Analysis/Distribution/ContDiffMapSupportedIn.lean:379` return zero when the requested
-  regularity inequality fails.  Put the inequality in the constructor and automate its proof.
+- [x] **Prevent impossible regularity requests from becoming zero operators.**
+  The operators on `𝓓^{n}_{K}(E, F)` and `𝓓^{n}(Ω, F)` take their regularity inequality, which
+  the discharger `regularity_le` finds from a hypothesis, for smooth maps (`le_top`), for equal
+  regularities, and for numerals: `ContDiffMapSupportedIn.fderivLM`, `fderivCLM`, and
+  `TestFunction.fderivCLM` take `k + 1 ≤ n`, `iteratedFDerivLM` takes `k + i ≤ n`, the structure
+  maps `structureMapLM` and `structureMapCLM` and the seminorms `N[𝕜]_{K, n, i}` take `i ≤ n`, the
+  inclusions `monoLM`, `monoCLM`, and `TestFunction.monoCLM` take `n₂ ≤ n₁` and the inclusion of
+  the compact or open sets, and `TestFunction.lineDerivCLM` and `Distribution.lineDerivCLM` take
+  `k + 1 ≤ n`.  The former operators were the zero map when the inequality failed
+  (`fderivLM_apply_of_gt`, `fderivCLM_apply_of_gt`, `iteratedFDerivLM_apply_of_gt`,
+  `monoLM_eq_zero`, `monoCLM_eq_zero`, `TestFunction.fderivCLM_apply_of_gt`,
+  `TestFunction.lineDerivCLM_apply_of_gt`, and `TestFunction.monoCLM_eq_zero`, removed), and the
+  seminorms of order `i > n` were `0` (`seminorm_eq_bot_of_gt`, removed).  The `_apply` lemmas
+  state the derivatives and inclusions without a case split, and the `_apply_of_le` and
+  `_top_apply` variants merge into them.  The topology of `𝓓^{n}_{K}(E, F)` is the infimum over
+  the structure maps of order `i ≤ n`, the seminorm family `seminormFamily` and the sup seminorms
+  are indexed by these orders, and `continuous_iff_comp_order_le` merges into
+  `continuous_iff_comp`.  An operator applied to a function takes its inequality explicitly or is
+  parenthesized, as in `(fderivCLM 𝕜 ⊤ ⊤) f`.  Tests cover the removed names, an impossible
+  derivative, line derivative, seminorm, and inclusion, and the inequalities found for smooth maps,
+  numerals, and hypotheses.
+
+- [ ] **Make integration against a kernel take its integrability.**
+  `ContDiffMapSupportedIn.integralAgainstBilinLM` and `integralAgainstBilinCLM` in
+  `Mathlib/Analysis/Distribution/ContDiffMapSupportedIn.lean` and
+  `TestFunction.integralAgainstBilinCLM` in `Mathlib/Analysis/Distribution/TestFunction.lean` are
+  `f ↦ ∫ x, B (f x) (φ x) ∂μ` when `φ` is integrable on `K` (locally integrable on `Ω`) and the
+  zero map otherwise, and `Distribution.ofFun` in `Mathlib/Analysis/Distribution/Distribution.lean`
+  inherits that value (`ofFun_eq_zero`, `ofFun_apply_eq_ite`).  The same pattern gives the zero map
+  in `SchwartzMap.smulLeftCLM` (`Mathlib/Analysis/Distribution/SchwartzSpace/Basic.lean`) for a
+  multiplier without temperate growth and `0` in `Measure.integrablePower`
+  (`Mathlib/Analysis/Distribution/TemperateGrowth.lean`) for a measure without temperate growth.
+  Take the integrability or temperate-growth evidence and migrate the consumers.
 
 - [x] **Require a dense domain for `LinearPMap.adjoint`.**
   `LinearPMap.adjoint T hT` takes `hT : Dense (T.domain : Set E)`, the exact domain of a

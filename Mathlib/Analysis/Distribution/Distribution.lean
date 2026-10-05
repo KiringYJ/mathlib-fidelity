@@ -225,29 +225,29 @@ section LineDerivCLM
 
 /-- `lineDerivCLM 𝕜 v` is the continuous `𝕜`-linear-map sending a distribution
 `T : 𝓓'^{k}_{K}(E, F)` to its derivative along the vector `v`, which is a
-distribution in `𝓓^{n}_{K}(E, F)`. Because differentiating increases the order, this only makes
-sense if `k + 1 ≤ n`, otherwise we define it as the zero map.
+distribution in `𝓓^{n}_{K}(E, F)`. Because differentiating increases the order, it is defined when
+`k + 1 ≤ n`; the proof `hk` can usually be omitted, see `regularity_le`.
 
 The parameters `n` and `k` are implicit as they can often be inferred from context, or
 specified by a type ascription. For `n = k = ⊤`, we also provide instances of the `LineDeriv`
 notation typeclass. -/
-noncomputable def lineDerivCLM (v : E) :
+noncomputable def lineDerivCLM (v : E) (hk : k + 1 ≤ n := by regularity_le) :
     𝓓'^{k}(Ω, F) →L[ℝ] 𝓓'^{n}(Ω, F) :=
-  - (TestFunction.lineDerivCLM ℝ v).precompCompactConvergenceCLM _
+  - (TestFunction.lineDerivCLM ℝ v hk).precompCompactConvergenceCLM _
 
-lemma lineDerivCLM_apply {v : E} {T : 𝓓'^{k}(Ω, F)} {f : 𝓓^{n}(Ω, ℝ)} :
-    lineDerivCLM v T f = - T (TestFunction.lineDerivCLM ℝ v f) :=
+lemma lineDerivCLM_apply {v : E} (hk : k + 1 ≤ n) {T : 𝓓'^{k}(Ω, F)} {f : 𝓓^{n}(Ω, ℝ)} :
+    lineDerivCLM v hk T f = - T (TestFunction.lineDerivCLM ℝ v hk f) :=
   rfl
 
-lemma lineDerivCLM_add {v₁ v₂ : E} :
-    (lineDerivCLM (v₁ + v₂) : 𝓓'^{k}(Ω, F) →L[ℝ] 𝓓'^{n}(Ω, F)) =
-      lineDerivCLM v₁ + lineDerivCLM v₂ := by
+lemma lineDerivCLM_add {v₁ v₂ : E} (hk : k + 1 ≤ n) :
+    (lineDerivCLM (v₁ + v₂) hk : 𝓓'^{k}(Ω, F) →L[ℝ] 𝓓'^{n}(Ω, F)) =
+      lineDerivCLM v₁ hk + lineDerivCLM v₂ hk := by
   ext T f
   simp [lineDerivCLM_apply, TestFunction.lineDerivCLM_add, neg_add, -neg_add_rev]
 
-lemma lineDerivCLM_smul {c : ℝ} {v : E} :
-    (lineDerivCLM (c • v) : 𝓓'^{k}(Ω, F) →L[ℝ] 𝓓'^{n}(Ω, F)) =
-      c • lineDerivCLM v := by
+lemma lineDerivCLM_smul {c : ℝ} {v : E} (hk : k + 1 ≤ n) :
+    (lineDerivCLM (c • v) hk : 𝓓'^{k}(Ω, F) →L[ℝ] 𝓓'^{n}(Ω, F)) =
+      c • lineDerivCLM v hk := by
   ext T f
   simp [lineDerivCLM_apply, TestFunction.lineDerivCLM_smul]
 
@@ -257,11 +257,11 @@ open LineDeriv
 because (by design) the target type `𝓓^{k}_{K}(E, F)` is not determined by the input type
 `𝓓^{n}_{K}(E, F)`. -/
 noncomputable instance : LineDeriv E 𝓓'(Ω, F) 𝓓'(Ω, F) where
-  lineDerivOp v := lineDerivCLM v
+  lineDerivOp v := lineDerivCLM v le_top
 
 variable (𝕜) in
 lemma lineDerivOp_eq_lineDerivCLM {v : E} {T : 𝓓'(Ω, F)} :
-    ∂_{v} T = lineDerivCLM v T :=
+    ∂_{v} T = lineDerivCLM v le_top T :=
   rfl
 
 @[simp]
@@ -270,20 +270,20 @@ theorem lineDerivOp_apply_apply (f : 𝓓'(Ω, F)) (g : 𝓓(Ω, ℝ)) (m : E) :
   rw [map_neg]; rfl
 
 noncomputable instance : LineDerivAdd E 𝓓'(Ω, F) 𝓓'(Ω, F) where
-  lineDerivOp_add v := map_add (lineDerivCLM v)
-  lineDerivOp_left_add _ _ T := congr($lineDerivCLM_add T)
+  lineDerivOp_add v := map_add (lineDerivCLM v le_top)
+  lineDerivOp_left_add _ _ T := congr($(lineDerivCLM_add le_top) T)
 
 noncomputable instance : LineDerivSMul ℝ E 𝓓'(Ω, F) 𝓓'(Ω, F) where
-  lineDerivOp_smul v := map_smul (lineDerivCLM v)
+  lineDerivOp_smul v := map_smul (lineDerivCLM v le_top)
 
 noncomputable instance : LineDerivLeftSMul ℝ E 𝓓'(Ω, F) 𝓓'(Ω, F) where
-  lineDerivOp_left_smul _ _ T := congr($lineDerivCLM_smul T)
+  lineDerivOp_left_smul _ _ T := congr($(lineDerivCLM_smul le_top) T)
 
 noncomputable instance : ContinuousLineDeriv E 𝓓'(Ω, F) 𝓓'(Ω, F) where
-  continuous_lineDerivOp v := (lineDerivCLM v).continuous
+  continuous_lineDerivOp v := (lineDerivCLM v le_top).continuous
 
 lemma lineDerivOpCLM_eq_lineDerivCLM {v : E} :
-    lineDerivOpCLM ℝ 𝓓'(Ω, F) v = lineDerivCLM v :=
+    lineDerivOpCLM ℝ 𝓓'(Ω, F) v = lineDerivCLM v le_top :=
   rfl
 
 end LineDerivCLM
