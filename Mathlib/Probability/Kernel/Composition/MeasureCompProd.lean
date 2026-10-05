@@ -258,24 +258,25 @@ lemma compProd_assoc' {γ : Type*} {mγ : SigmaAlgebra γ} {η : Kernel (α × �
 
 section AbsolutelyContinuous
 
-lemma AbsolutelyContinuous.compProd_left (hμν : μ ≪ ν) (κ : Kernel α β) [μ.HasCompProd κ]
-    [ν.HasCompProd κ] :
-    μ ⊗ₘ κ ≪ ν ⊗ₘ κ := by
+/-- If `μ ≪ ν` and `κ a ≪ η a` for `μ`-almost every `a`, then `μ ⊗ₘ κ ≪ ν ⊗ₘ η`: a set that is
+null for `ν ⊗ₘ η` has `η`-null sections for `ν`-almost every point, hence for `μ`-almost every
+point, where its sections are also `κ`-null. -/
+lemma AbsolutelyContinuous.compProd [μ.HasCompProd κ] [ν.HasCompProd η]
+    (hμν : μ ≪ ν) (hκη : ∀ᵐ a ∂μ, κ a ≪ η a) :
+    μ ⊗ₘ κ ≪ ν ⊗ₘ η := by
   refine Measure.AbsolutelyContinuous.mk fun s hs hs_zero ↦ ?_
   rw [Measure.compProd_apply hs, HasCompProd.lintegral_eq_zero_iff hs] at hs_zero ⊢
-  exact hμν.ae_eq hs_zero
+  filter_upwards [hμν.ae_eq hs_zero, hκη] with a ha_zero ha_ac using ha_ac ha_zero
+
+lemma AbsolutelyContinuous.compProd_left (hμν : μ ≪ ν) (κ : Kernel α β) [μ.HasCompProd κ]
+    [ν.HasCompProd κ] :
+    μ ⊗ₘ κ ≪ ν ⊗ₘ κ :=
+  hμν.compProd (.of_forall fun _ ↦ .rfl)
 
 lemma AbsolutelyContinuous.compProd_right [μ.HasCompProd κ] [μ.HasCompProd η]
     (hκη : ∀ᵐ a ∂μ, κ a ≪ η a) :
-    μ ⊗ₘ κ ≪ μ ⊗ₘ η := by
-  refine Measure.AbsolutelyContinuous.mk fun s hs hs_zero ↦ ?_
-  rw [Measure.compProd_apply hs, HasCompProd.lintegral_eq_zero_iff hs] at hs_zero ⊢
-  filter_upwards [hs_zero, hκη] with a ha_zero ha_ac using ha_ac ha_zero
-
-lemma AbsolutelyContinuous.compProd [IsSFiniteKernel κ] [IsSFiniteKernel η]
-    (hμν : μ ≪ ν) (hκη : ∀ᵐ a ∂μ, κ a ≪ η a) :
-    μ ⊗ₘ κ ≪ ν ⊗ₘ η :=
-  (Measure.AbsolutelyContinuous.compProd_right hκη).trans (hμν.compProd_left _)
+    μ ⊗ₘ κ ≪ μ ⊗ₘ η :=
+  AbsolutelyContinuous.rfl.compProd hκη
 
 lemma absolutelyContinuous_of_compProd [μ.HasCompProd κ] [ν.HasCompProd η]
     [h_zero : ∀ a, NeZero (κ a)] (h : μ ⊗ₘ κ ≪ ν ⊗ₘ η) :
@@ -294,11 +295,13 @@ lemma absolutelyContinuous_of_compProd [μ.HasCompProd κ] [ν.HasCompProd η]
   simp only [Measure.measure_univ_eq_zero]
   exact (h_zero a).out
 
-lemma absolutelyContinuous_compProd_left_iff [IsSFiniteKernel κ] [∀ a, NeZero (κ a)] :
+lemma absolutelyContinuous_compProd_left_iff [μ.HasCompProd κ] [ν.HasCompProd κ]
+    [∀ a, NeZero (κ a)] :
     μ ⊗ₘ κ ≪ ν ⊗ₘ κ ↔ μ ≪ ν :=
   ⟨absolutelyContinuous_of_compProd, fun h ↦ h.compProd_left κ⟩
 
-lemma AbsolutelyContinuous.compProd_of_compProd [μ.HasCompProd κ] [IsSFiniteKernel η]
+lemma AbsolutelyContinuous.compProd_of_compProd [μ.HasCompProd κ] [μ.HasCompProd η]
+    [ν.HasCompProd η]
     (hμν : μ ≪ ν) (hκη : μ ⊗ₘ κ ≪ μ ⊗ₘ η) :
     μ ⊗ₘ κ ≪ ν ⊗ₘ η := by
   refine AbsolutelyContinuous.mk fun s hs hs_zero ↦ ?_
@@ -321,22 +324,19 @@ lemma MutuallySingular.compProd_of_left (hμν : μ ⟂ₘ ν) (κ η : Kernel �
   simp
 
 lemma mutuallySingular_of_mutuallySingular_compProd {ξ : Measure α}
-    [IsSFiniteKernel κ] [IsSFiniteKernel η]
+    [μ.HasCompProd κ] [ν.HasCompProd η]
     (h : μ ⊗ₘ κ ⟂ₘ ν ⊗ₘ η) (hμ : ξ ≪ μ) (hν : ξ ≪ ν) :
     ∀ᵐ x ∂ξ, κ x ⟂ₘ η x := by
   have hs : MeasurableSet h.nullSet := h.measurableSet_nullSet
   have hμ_zero : (μ ⊗ₘ κ) h.nullSet = 0 := h.measure_nullSet
   have hν_zero : (ν ⊗ₘ η) h.nullSetᶜ = 0 := h.measure_compl_nullSet
-  rw [compProd_apply, lintegral_eq_zero_iff'] at hμ_zero hν_zero
-  · filter_upwards [hμ hμ_zero, hν hν_zero] with x hxμ hxν
-    exact ⟨Prod.mk x ⁻¹' h.nullSet, measurable_prodMk_left hs, ⟨hxμ, hxν⟩⟩
-  · exact (Kernel.measurable_kernel_prodMk_left hs.compl).aemeasurable
-  · exact (Kernel.measurable_kernel_prodMk_left hs).aemeasurable
-  · exact hs.compl
-  · exact hs
+  rw [compProd_apply hs, HasCompProd.lintegral_eq_zero_iff hs] at hμ_zero
+  rw [compProd_apply hs.compl, HasCompProd.lintegral_eq_zero_iff hs.compl] at hν_zero
+  filter_upwards [hμ hμ_zero, hν hν_zero] with x hxμ hxν
+  exact ⟨Prod.mk x ⁻¹' h.nullSet, measurable_prodMk_left hs, ⟨hxμ, hxν⟩⟩
 
 lemma mutuallySingular_compProd_left_iff [SFinite μ] [SigmaFinite ν]
-    [IsSFiniteKernel κ] [hκ : ∀ x, NeZero (κ x)] :
+    [μ.HasCompProd κ] [ν.HasCompProd κ] [hκ : ∀ x, NeZero (κ x)] :
     μ ⊗ₘ κ ⟂ₘ ν ⊗ₘ κ ↔ μ ⟂ₘ ν := by
   refine ⟨fun h ↦ ?_, fun h ↦ h.compProd_of_left _ _⟩
   rw [← withDensity_rnDeriv_eq_zero]
