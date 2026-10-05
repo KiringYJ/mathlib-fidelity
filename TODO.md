@@ -260,11 +260,31 @@ operation.
   input index when the two roots are not linearly independent.  Take the independence proof once in
   a bundled admissible pair.
 
-- [ ] **Require `ExcenterExists` for excenter geometry.**
-  `Affine.Simplex.exsphere`, `excenter`, and `exradius` in
-  `Mathlib/Geometry/Euclidean/Incenter.lean:346`, `:368`, and `:413` fabricate an arbitrary point
-  and a zero-radius sphere when the excenter does not exist.  Put the existing validity predicate in
-  the three public operations.
+- [x] **Require `ExcenterExists` for excenter geometry.**
+  `Affine.Simplex.exsphere`, `excenter`, `exradius`, and `touchpoint` take
+  `h : s.ExcenterExists signs`, as do the barycentric coordinates `excenterWeights` and
+  `touchpointWeights`.  This is the exact domain:
+  `exists_forall_signedInfDist_eq_iff_excenterExists_and_eq_excenter` shows that a point of the
+  affine span has signed distances to the faces with the signs `signs` and a common absolute value
+  exactly when the excenter exists and the point is the excenter, and the exsphere is the sphere
+  about it that is tangent to the faces.  The former definitions applied the normalized weights
+  `(∑ i, w i)⁻¹ • w` for every `signs`.  When the sum vanishes they are zero, the affine combination
+  with zero weights is the point `Classical.choice` that `Finset.affineCombination` uses as its
+  base, and the radius `|0⁻¹|` is zero, so a nonexistent excenter was an arbitrary point with an
+  exsphere of radius zero; `sum_excenterWeights` and `sum_excenterWeights_eq_one_iff`
+  characterized existence through the zero weights and are removed, while
+  `ExcenterExists.sum_excenterWeights_eq_one` remains.  The default discharger `excenter_exists`
+  supplies the proof from a local hypothesis, for the insphere, for triangles
+  (`Affine.Triangle.excenterExists`), and for the exsphere opposite a vertex in two or more
+  dimensions, also for complements, so most statements keep their form; it never assigns the
+  simplex or the indices.  `not_excenterExists_singleton` records that a segment has no excenter
+  opposite an endpoint, so that case genuinely needs two dimensions.  Lemmas that held for every
+  `signs` only through the fallback, such as `exradius_nonneg` and the membership of touchpoints in
+  the faces, take the hypothesis; the `_map`, `_restrict`, `_reindex`, and `_compl` lemmas transfer
+  it, and the existence characterizations conclude `∃ h, p = s.excenter signs h`.  Tests cover the
+  removed lemmas, the segment, the failure of the discharger for general indices in three
+  dimensions, the explicit proof for the weights, routine evidence, proof independence,
+  complements, and the existence characterization.
 
 - [ ] **Make Newton iteration preserve derivative invertibility.**
   `Polynomial.newtonMap` in `Mathlib/Dynamics/Newton.lean:44` returns its input when the derivative

@@ -61,7 +61,7 @@ lemma exists_excenterExists_and_eq_excenter_of_forall_angle_orthogonalProjection
       p' ∈ affineSpan ℝ (Set.range (s.faceOpposite i₂).points) ∧
       ∠ p p' ((s.faceOpposite i₁).orthogonalProjectionSpan p) =
         ∠ p p' ((s.faceOpposite i₂).orthogonalProjectionSpan p)) :
-    ∃ signs, s.ExcenterExists signs ∧ p = s.excenter signs := by
+    ∃ signs, ∃ h : s.ExcenterExists signs, p = s.excenter signs h := by
   rw [← s.exists_forall_dist_eq_iff_exists_excenterExists_and_eq_excenter hp]
   refine ⟨dist p ((s.faceOpposite i₁).orthogonalProjectionSpan p), ?_⟩
   intro i
@@ -176,9 +176,9 @@ lemma eq_excenter_of_two_zsmul_oangle_eq {p : P}
     intro i
     have h : i = i₁ ∨ i = i₂ ∨ i = i₃ := by clear! p t; decide +revert
     rcases h with rfl | rfl | rfl <;> grind
-  obtain ⟨signs, -, hp⟩ :=
+  obtain ⟨signs, _, he⟩ :=
     (t.exists_forall_dist_eq_iff_exists_excenterExists_and_eq_excenter hp).1 hr
-  exact ⟨signs, hp⟩
+  exact ⟨signs, he⟩
 
 variable {t} in
 /-- An excenter lying on the internal angle bisector from a vertex is either the incenter or the
