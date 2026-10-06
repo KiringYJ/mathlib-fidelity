@@ -101,23 +101,23 @@ theorem isPrimePow_nat_iff_bounded_log (n : ℕ) :
   · rintro ⟨k, hk, hk', ⟨p, hp, rfl, hp'⟩⟩
     exact ⟨p, k, hp', hk', rfl⟩
 
-theorem isPrimePow_nat_iff_bounded_log_minFac (n : ℕ) :
+theorem isPrimePow_nat_iff_bounded_log_minFac {n : ℕ} (hn : 1 < n) :
     IsPrimePow n
       ↔ ∃ k : ℕ, k ≤ Nat.log 2 n ∧ 0 < k ∧ n = n.minFac ^ k := by
   rw [isPrimePow_nat_iff_bounded_log]
-  obtain rfl | h := eq_or_ne n 1
-  · simp
   constructor
   · rintro ⟨k, hkle, hk_pos, p, hle, heq, hprime⟩
     refine ⟨k, hkle, hk_pos, ?_⟩
-    rw [heq, hprime.pow_minFac hk_pos.ne']
+    subst heq
+    rw [hprime.pow_minFac hk_pos.ne']
   · rintro ⟨k, hkle, hk_pos, heq⟩
-    refine ⟨k, hkle, hk_pos, n.minFac, Nat.minFac_le ?_, heq, ?_⟩
-    · grind [Nat.minFac_prime_iff, nonpos_iff_eq_zero, Nat.log_zero_right, lt_self_iff_false]
-    · grind [Nat.minFac_prime_iff]
+    exact ⟨k, hkle, hk_pos, n.minFac, Nat.minFac_le hn, heq, Nat.minFac_prime (by omega)⟩
 
 instance {n : ℕ} : Decidable (IsPrimePow n) :=
-  decidable_of_iff' _ (isPrimePow_nat_iff_bounded_log_minFac n)
+  if hn : 1 < n then decidable_of_iff' _ (isPrimePow_nat_iff_bounded_log_minFac hn) else
+    isFalse fun h => hn <| by
+      obtain ⟨p, k, hp, hk, rfl⟩ := (isPrimePow_nat_iff _).1 h
+      exact Nat.one_lt_pow hk.ne' hp.one_lt
 
 theorem IsPrimePow.dvd {n m : ℕ} (hn : IsPrimePow n) (hm : m ∣ n) (hm₁ : m ≠ 1) : IsPrimePow m := by
   grind [isPrimePow_nat_iff, Nat.dvd_prime_pow, Nat.pow_eq_one]

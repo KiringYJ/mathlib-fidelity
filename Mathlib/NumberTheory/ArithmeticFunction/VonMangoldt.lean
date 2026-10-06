@@ -63,35 +63,39 @@ This is also available in the `ArithmeticFunction.vonMangoldt` locale, allowing 
 access to the notation.
 -/
 noncomputable def vonMangoldt : ArithmeticFunction ℝ :=
-  ⟨fun n => if IsPrimePow n then Real.log (minFac n) else 0, ite_eq_right not_isPrimePow_zero⟩
+  ⟨fun n => if h : IsPrimePow n then Real.log (minFac n h.ne_one) else 0,
+    dite_eq_right not_isPrimePow_zero⟩
 
 @[inherit_doc] scoped[ArithmeticFunction] notation "Λ" => ArithmeticFunction.vonMangoldt
 
 @[inherit_doc] scoped[ArithmeticFunction.vonMangoldt] notation "Λ" =>
   ArithmeticFunction.vonMangoldt
 
-theorem vonMangoldt_apply {n : ℕ} : Λ n = if IsPrimePow n then Real.log (minFac n) else 0 :=
+theorem vonMangoldt_apply {n : ℕ} :
+    Λ n = if h : IsPrimePow n then Real.log (minFac n h.ne_one) else 0 :=
   rfl
 
 @[simp]
-theorem vonMangoldt_apply_one : Λ 1 = 0 := by simp [vonMangoldt_apply]
+theorem vonMangoldt_apply_one : Λ 1 = 0 := by simp [vonMangoldt_apply, not_isPrimePow_one]
 
 @[simp]
 theorem vonMangoldt_nonneg {n : ℕ} : 0 ≤ Λ n := by
   rw [vonMangoldt_apply]
-  split_ifs
-  · exact Real.log_nonneg (one_le_cast.2 (Nat.minFac_pos n))
+  split_ifs with h
+  · exact Real.log_nonneg (one_le_cast.2 (Nat.minFac_pos n h.ne_one))
   rfl
 
 theorem vonMangoldt_apply_pow {n k : ℕ} (hk : k ≠ 0) : Λ (n ^ k) = Λ n := by
   simp only [vonMangoldt_apply, isPrimePow_pow_iff hk, pow_minFac hk]
 
 theorem vonMangoldt_apply_prime {p : ℕ} (hp : p.Prime) : Λ p = Real.log p := by
-  rw [vonMangoldt_apply, Prime.minFac_eq hp, ite_eq_left hp.prime.isPrimePow]
+  rw [vonMangoldt_apply, dite_eq_left hp.prime.isPrimePow, Prime.minFac_eq hp]
 
 theorem vonMangoldt_ne_zero_iff {n : ℕ} : Λ n ≠ 0 ↔ IsPrimePow n := by
-  rcases eq_or_ne n 1 with (rfl | hn); · simp [not_isPrimePow_one]
-  exact (Real.log_pos (one_lt_cast.2 (minFac_prime hn).one_lt)).ne'.ite_ne_right_iff
+  rw [vonMangoldt_apply]
+  split_ifs with h
+  · simpa only [h, iff_true] using (Real.log_pos (one_lt_cast.2 (minFac_prime h.ne_one).one_lt)).ne'
+  · simp [h]
 
 theorem vonMangoldt_pos_iff {n : ℕ} : 0 < Λ n ↔ IsPrimePow n :=
   vonMangoldt_nonneg.lt_iff_ne.trans (ne_comm.trans vonMangoldt_ne_zero_iff)
@@ -107,7 +111,9 @@ theorem vonMangoldt_sum {n : ℕ} : ∑ i ∈ n.divisors, Λ i = Real.log n := b
       vonMangoldt_apply_one]
     simp [vonMangoldt_apply_pow (Nat.succ_ne_zero _), vonMangoldt_apply_prime hp]
   intro a b ha' hb' hab ha hb
-  simp only [vonMangoldt_apply, ← sum_filter] at ha hb ⊢
+  have key (m : ℕ) : ∑ i ∈ m.divisors, Λ i = ∑ i ∈ m.divisors with IsPrimePow i, Λ i :=
+    (sum_filter_of_ne fun _ _ h => vonMangoldt_ne_zero_iff.1 h).symm
+  rw [key] at ha hb ⊢
   rw [mul_divisors_filter_prime_pow hab, filter_union,
     sum_union (disjoint_divisors_filter_isPrimePow hab), ha, hb, Nat.cast_mul,
     Real.log_mul (cast_ne_zero.2 (pos_of_gt ha').ne') (cast_ne_zero.2 (pos_of_gt hb').ne')]

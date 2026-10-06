@@ -179,8 +179,8 @@ theorem minSqFacAux_has_prop {n : ℕ} (k) (n0 : 0 < n) (i) (e : k = 2 * i + 3)
     rw [e] at this
     exact absurd this (by lia)
   have pk : k ∣ n → Prime k := by
-    refine fun dk => prime_def_minFac.2 ⟨k2, le_antisymm (minFac_le k0) ?_⟩
-    exact ih _ (minFac_prime (ne_of_gt k2)) (dvd_trans (minFac_dvd _) dk)
+    refine fun dk => (prime_def_minFac (by lia)).2 ⟨k2, le_antisymm (minFac_le k2) ?_⟩
+    exact ih _ (minFac_prime (ne_of_gt k2)) (dvd_trans (minFac_dvd _ (by lia)) dk)
   split_ifs with dk dkk
   · exact ⟨pk dk, (Nat.dvd_div_iff_mul_dvd dk).1 dkk, fun p pp d => ih p pp (dvd_trans ⟨_, rfl⟩ d)⟩
   · specialize IH (n / k) (div_dvd_of_dvd dk) dkk
@@ -218,10 +218,10 @@ theorem minSqFac_dvd {n d : ℕ} (h : n.minSqFac = some d) : d * d ∣ n := by
 theorem minSqFac_le_of_dvd {n d : ℕ} (h : n.minSqFac = some d) {m} (m2 : 2 ≤ m) (md : m * m ∣ n) :
     d ≤ m := by
   have := minSqFac_has_prop n; rw [h] at this
-  have fd := minFac_dvd m
+  have fd := minFac_dvd m (by lia)
   exact
     le_trans (this.2.2 _ (minFac_prime <| ne_of_gt m2) (dvd_trans (mul_dvd_mul fd fd) md))
-      (minFac_le <| lt_of_lt_of_le (by decide) m2)
+      (minFac_le m2)
 
 theorem squarefree_iff_minSqFac {n : ℕ} : Squarefree n ↔ n.minSqFac = none := by
   have := minSqFac_has_prop n

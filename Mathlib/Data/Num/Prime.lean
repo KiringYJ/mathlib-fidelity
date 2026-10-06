@@ -55,15 +55,19 @@ theorem minFacAux_to_nat {fuel : ℕ} {n k : PosNum} (h : Nat.sqrt n < fuel + k.
         add_left_comm, ← one_add_one_eq_two]
 
 /-- Returns the smallest prime factor of `n ≠ 1`. -/
-def minFac : PosNum → PosNum
-  | 1 => 1
-  | bit0 _ => 2
-  | bit1 n => minFacAux (bit1 n) n 1
+def minFac : (n : PosNum) → n ≠ 1 → PosNum
+  | 1, h => absurd rfl h
+  | bit0 _, _ => 2
+  | bit1 n, _ => minFacAux (bit1 n) n 1
+
+theorem to_nat_ne_one {n : PosNum} (hn : n ≠ 1) : (n : ℕ) ≠ 1 := by
+  rwa [Ne, ← cast_one, to_nat_inj]
 
 @[simp]
-theorem minFac_to_nat (n : PosNum) : (minFac n : ℕ) = Nat.minFac n := by
+theorem minFac_to_nat (n : PosNum) (hn : n ≠ 1) :
+    (minFac n hn : ℕ) = Nat.minFac n (to_nat_ne_one hn) := by
   obtain - | n := n
-  · simp [minFac]
+  · exact absurd rfl hn
   · rw [minFac, Nat.minFac_eq, ite_eq_right]
     swap
     · simp [← two_mul]
@@ -87,33 +91,40 @@ def Prime (n : PosNum) : Prop :=
 instance decidablePrime : DecidablePred PosNum.Prime
   | 1 => Decidable.isFalse Nat.not_prime_one
   | bit0 n =>
+    have h : bit0 n ≠ 1 := by intro h; cases h
     decidable_of_iff' (n = 1)
       (by
-        refine Nat.prime_def_minFac.trans ((and_iff_right ?_).trans <| eq_comm.trans ?_)
+        refine (Nat.prime_def_minFac (to_nat_ne_one h)).trans
+          ((and_iff_right ?_).trans <| eq_comm.trans ?_)
         · exact add_le_add (Nat.succ_le_of_lt (to_nat_pos _)) (Nat.succ_le_of_lt (to_nat_pos _))
-        rw [← minFac_to_nat, to_nat_inj]
+        rw [← minFac_to_nat _ h, to_nat_inj]
         exact ⟨bit0.inj, congr_arg _⟩)
   | bit1 n =>
+    have h : bit1 n ≠ 1 := by intro h; cases h
     decidable_of_iff' (minFacAux (bit1 n) n 1 = bit1 n) <| by
-        refine Nat.prime_def_minFac.trans ((and_iff_right ?_).trans ?_)
+        refine (Nat.prime_def_minFac (to_nat_ne_one h)).trans ((and_iff_right ?_).trans ?_)
         · simp only [cast_bit1]
           have := to_nat_pos n
           lia
-        rw [← minFac_to_nat, to_nat_inj]; rfl
+        rw [← minFac_to_nat _ h, to_nat_inj]; rfl
 
 end PosNum
 
 namespace Num
 
 /-- Returns the smallest prime factor of `n ≠ 1`. -/
-def minFac : Num → PosNum
-  | 0 => 2
-  | pos n => n.minFac
+def minFac : (n : Num) → n ≠ 1 → PosNum
+  | 0, _ => 2
+  | pos n, h => n.minFac fun h' => h (congrArg pos h')
+
+theorem to_nat_ne_one {n : Num} (hn : n ≠ 1) : (n : ℕ) ≠ 1 := by
+  rwa [Ne, ← cast_one, to_nat_inj]
 
 @[simp]
-theorem minFac_to_nat : ∀ n : Num, (minFac n : ℕ) = Nat.minFac n
-  | 0 => rfl
-  | pos _ => PosNum.minFac_to_nat _
+theorem minFac_to_nat : ∀ (n : Num) (hn : n ≠ 1),
+    (minFac n hn : ℕ) = Nat.minFac n (to_nat_ne_one hn)
+  | 0, _ => rfl
+  | pos _, _ => PosNum.minFac_to_nat _ _
 
 /-- Primality predicate for a `Num`. -/
 @[simp]

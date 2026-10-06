@@ -107,11 +107,14 @@ lemma Squarefree.dvd_primorial {n : ℕ} (hn : Squarefree n) : n ∣ n# := by
 lemma lt_primorial_self {n : ℕ} (hn : 2 < n) : n < n# := by
   have : 3 ≤ n# := single_le_prod (f := id) (by grind [→ Prime.pos]) (by grind [prime_three])
   let q := (n# - 1).minFac
+  have hq : q.Prime := minFac_prime (by lia)
+  have hqd : q ∣ n# - 1 := minFac_dvd _ (by lia)
   have : n < q := by
     by_contra! h1
-    replace h1 : q ∣ n# := (minFac_prime (by lia)).dvd_primorial_iff.2 h1
-    grind [minFac_eq_one_iff, dvd_one, dvd_sub_iff_right, minFac_dvd]
-  grind [Nat.minFac_le]
+    replace h1 : q ∣ n# := hq.dvd_primorial_iff.2 h1
+    grind [hq.ne_one, dvd_one, dvd_sub_iff_right]
+  have : q ≤ n# - 1 := Nat.minFac_le (by lia)
+  lia
 
 lemma le_primorial_self {n : ℕ} : n ≤ n# := by
   obtain hn | hn := le_or_gt n 2

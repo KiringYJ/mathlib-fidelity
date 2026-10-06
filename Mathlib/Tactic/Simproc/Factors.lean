@@ -35,9 +35,9 @@ theorem FactorsHelper.nil {a : ℕ} : FactorsHelper 1 a [] := fun _ =>
   ⟨.singleton _, List.forall_mem_nil _, List.prod_nil⟩
 
 theorem FactorsHelper.cons_of_le
-    {n m : ℕ} (a : ℕ) {b : ℕ} {l : List ℕ} (h₁ : IsNat (b * m) n) (h₂ : a ≤ b)
-    (h₃ : minFac b = b) (H : FactorsHelper m b l) : FactorsHelper n a (b :: l) := fun pa =>
-  have pb : b.Prime := Nat.prime_def_minFac.2 ⟨le_trans pa.two_le h₂, h₃⟩
+    {n m : ℕ} (a : ℕ) {b : ℕ} {l : List ℕ} (h₁ : IsNat (b * m) n) (h₂ : a ≤ b) (hb : b ≠ 1)
+    (h₃ : minFac b hb = b) (H : FactorsHelper m b l) : FactorsHelper n a (b :: l) := fun pa =>
+  have pb : b.Prime := (Nat.prime_def_minFac hb).2 ⟨le_trans pa.two_le h₂, h₃⟩
   let ⟨f₁, f₂, f₃⟩ := H pb
   ⟨List.IsChain.cons_cons h₂ f₁,
     fun _ h => (List.eq_or_mem_of_mem_cons h).elim (fun e => e.symm ▸ pb) (f₂ _),
@@ -45,17 +45,18 @@ theorem FactorsHelper.cons_of_le
 
 theorem FactorsHelper.cons
     {n m : ℕ} {a : ℕ} (b : ℕ) {l : List ℕ} (h₁ : IsNat (b * m) n) (h₂ : Nat.blt a b)
-    (h₃ : IsNat (minFac b) b) (H : FactorsHelper m b l) : FactorsHelper n a (b :: l) :=
-  H.cons_of_le _ h₁ (Nat.blt_eq.mp h₂).le h₃.out
+    (hb : Nat.ble 2 b = true) (h₃ : IsNat (minFac b (ne_one_of_ble_two hb)) b)
+    (H : FactorsHelper m b l) : FactorsHelper n a (b :: l) :=
+  H.cons_of_le _ h₁ (Nat.blt_eq.mp h₂).le _ h₃.out
 
-theorem FactorsHelper.singleton (n : ℕ) {a : ℕ} (h₁ : Nat.blt a n) (h₂ : IsNat (minFac n) n) :
-    FactorsHelper n a [n] :=
-  FactorsHelper.nil.cons _ ⟨mul_one _⟩ h₁ h₂
+theorem FactorsHelper.singleton (n : ℕ) {a : ℕ} (h₁ : Nat.blt a n) (hn : Nat.ble 2 n = true)
+    (h₂ : IsNat (minFac n (ne_one_of_ble_two hn)) n) : FactorsHelper n a [n] :=
+  FactorsHelper.nil.cons _ ⟨mul_one _⟩ h₁ hn h₂
 
 theorem FactorsHelper.cons_self {n m : ℕ} (a : ℕ) {l : List ℕ}
     (h : IsNat (a * m) n) (H : FactorsHelper m a l) :
     FactorsHelper n a (a :: l) := fun pa =>
-  H.cons_of_le _ h le_rfl (Nat.prime_def_minFac.1 pa).2 pa
+  H.cons_of_le _ h le_rfl pa.ne_one pa.minFac_eq pa
 
 theorem FactorsHelper.singleton_self (a : ℕ) : FactorsHelper a a [a] :=
   FactorsHelper.nil.cons_self _ ⟨mul_one _⟩
@@ -83,10 +84,12 @@ private partial def evalPrimeFactorsListAux
   let n := enl.natLit!
   let ⟨hn0⟩ ← if h : 0 < n then pure <| PLift.up h else
     throwError m!"{enl} must be positive"
+  let ⟨hn1⟩ ← if h : n ≠ 1 then pure <| PLift.up h else
+    throwError m!"{enl} must not be 1"
   let a := eal.natLit!
-  let b := n.minFac
+  let b := n.minFac hn1
   let ⟨hab⟩ ← if h : a ≤ b then pure <| PLift.up h else
-    throwError m!"{q($eal < $(enl).minFac)} does not hold"
+    throwError m!"{eal} must be at most the least prime factor of {enl}"
   if h_bn : b < n then
     -- the factor is less than `n`, so we are not done; remove it to get `m`
     let m := n / b
@@ -95,7 +98,7 @@ private partial def evalPrimeFactorsListAux
     if h_ba_eq : b = a then
       -- if the factor is our minimum `a`, then recurse without changing the minimum
       have eh : Q($eal * $em = $en) :=
-        have : a * m = n := by simp [m, b, ← h_ba_eq, Nat.mul_div_cancel' (minFac_dvd _)]
+        have : a * m = n := by simp [m, b, ← h_ba_eq, Nat.mul_div_cancel' (minFac_dvd _ hn1)]
         (q(Eq.refl $en) : Expr)
       let ehp₁ := q(isNat_mul rfl $eha $ehm $eh)
       let ⟨el, ehp₂⟩ ← evalPrimeFactorsListAux ehm eha
@@ -106,20 +109,23 @@ private partial def evalPrimeFactorsListAux
       have eb : Q(ℕ) := mkRawNatLit b
       have ehb : Q(IsNat (OfNat.ofNat $eb) $eb) := q(⟨rfl⟩)
       have ehbm : Q($eb * $em = $en) :=
-        have : b * m = n := Nat.mul_div_cancel' (minFac_dvd _)
+        have : b * m = n := Nat.mul_div_cancel' (minFac_dvd _ hn1)
         (q(Eq.refl $en) : Expr)
       have ehp₁ := q(isNat_mul rfl $ehb $ehm $ehbm)
       have ehp₂ : Q(Nat.blt $ea $eb = true) :=
         have : a < b := lt_of_le_of_ne' hab h_ba_eq
         (q(Eq.refl (true)) : Expr)
-      let .isNat _ lit ehp₃ ← evalMinFac.core q($eb) q($eb) ehb b | failure
+      -- `b` is a prime factor, so `2 ≤ b`
+      have ehb2 : Q(Nat.ble 2 $eb = true) := (q(Eq.refl true) : Expr)
+      let .isNat _ lit ehp₃ ← evalMinFac.core q($eb) q(ne_one_of_ble_two $ehb2) q($eb) ehb b
+        | failure
       assertInstancesCommute
       have : $lit =Q $eb := ⟨⟩
       let ⟨l, p₄⟩ ← evalPrimeFactorsListAux ehm ehb
-      pure ⟨q($eb :: $l), q(($p₄).cons _ $ehp₁ $ehp₂ $ehp₃ )⟩
+      pure ⟨q($eb :: $l), q(($p₄).cons _ $ehp₁ $ehp₂ $ehb2 $ehp₃)⟩
   else
     -- the factor is our number itself, so we are done
-    have hbn_eq : b = n := (minFac_le hn0).eq_or_lt.resolve_right h_bn
+    have hbn_eq : b = n := (minFac_le (by lia)).eq_or_lt.resolve_right h_bn
     if hba : b = a then
       have eh : Q($en = $ea) :=
         have : n = a := hbn_eq.symm.trans hba
@@ -129,10 +135,13 @@ private partial def evalPrimeFactorsListAux
       let eh_a_lt_n : Q(Nat.blt $ea $en = true) :=
         have : a < n := by lia
         (q(Eq.refl true) : Expr)
-      let .isNat _ lit ehn_minFac ← evalMinFac.core q($en) q($enl) ehn n | failure
+      -- `n` is at least `2` here
+      have ehn2 : Q(Nat.ble 2 $en = true) := (q(Eq.refl true) : Expr)
+      let .isNat _ lit ehn_minFac ← evalMinFac.core q($en) q(ne_one_of_ble_two $ehn2) q($enl) ehn n
+        | failure
       have : $lit =Q $en := ⟨⟩
       assertInstancesCommute
-      pure ⟨q([$en]), q(FactorsHelper.singleton $en $eh_a_lt_n $ehn_minFac)⟩
+      pure ⟨q([$en]), q(FactorsHelper.singleton $en $eh_a_lt_n $ehn2 $ehn_minFac)⟩
 
 /-- Given a natural number `n`, returns `(l, ⊢ Nat.primeFactorsList n = l)`. -/
 def evalPrimeFactorsList

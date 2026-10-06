@@ -57,16 +57,15 @@ theorem imo2005_q4 {k : ℕ} (hk : 0 < k) : (∀ n : ℕ, 1 ≤ n → IsCoprime 
     rintro rfl n -
     exact isCoprime_one_right
   intro h
-  -- Conversely, suppose `k` is a number with the property, and let `p` be `k.minFac` (by
-  -- definition this is the minimal prime factor of `k` if `k ≠ 1`, and otherwise `1`.
-  let p := k.minFac
-  -- Suppose for the sake of contradiction that `k ≠ 1`.  Then `p` is genuinely a prime factor of
-  -- `k`. Hence, it divides none of `a n`, `1 ≤ n`
+  -- Conversely, suppose `k` is a number with the property, and suppose for the sake of
+  -- contradiction that `k ≠ 1`.  Let `p` be the least prime factor `k.minFac` of `k`.  Then `p`
+  -- divides none of `a n`, `1 ≤ n`
   by_contra hk'
+  let p := k.minFac
   have hp : Nat.Prime p := Nat.minFac_prime hk'
   replace h : ∀ n, 1 ≤ n → ¬(p : ℤ) ∣ a n := fun n hn ↦ by
     have : IsCoprime (a n) p :=
-      .of_isCoprime_of_dvd_right (h n hn) (Int.natCast_dvd_natCast.mpr k.minFac_dvd)
+      .of_isCoprime_of_dvd_right (h n hn) (Int.natCast_dvd_natCast.mpr (k.minFac_dvd hk'))
     rwa [isCoprime_comm, (Nat.prime_iff_prime_int.mp hp).coprime_iff_not_dvd] at this
   -- For `p = 2` and `p = 3`, take `n = 1` and `n = 2`, respectively
   by_cases hp2 : p = 2
