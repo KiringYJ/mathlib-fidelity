@@ -1795,17 +1795,20 @@ migrations: require names, types, documentation, and theorem statements to ident
 actually formalized, and provide a literature-supported facade when downstream mathematics uses
 another standard representation.
 
-- [ ] **[S] Distinguish finite product metric spaces from Euclidean space.**
-  The instance for `Fin n → ℝ` is the finite Pi metric with sup distance, as documented and defined
-  in `Mathlib/Topology/MetricSpace/Pseudo/Pi.lean:16` and `:30`.  Thus the distance between
-  `![1, 0]` and `![0, 1]` is one.  The usual Euclidean metric is carried by
-  `EuclideanSpace ℝ (Fin n)`, defined as `PiLp 2` in
-  `Mathlib/Analysis/InnerProductSpace/PiL2.lean:114`, where the same distance is `√2`.  In metric or
-  inner-product contexts, do not treat a bare Pi type as an unqualified Euclidean space, Euclidean
-  ball, or orthonormal geometry.  It remains a faithful coordinate-vector representation of `ℝⁿ`
-  when no norm or metric semantics are asserted.  Use `EuclideanSpace` for L2 geometry, or explicitly
-  say that the product/sup metric is intended.  A future lint should inspect suspicious declarations
-  and docstrings without rejecting genuine product-metric uses.
+- [x] **[S] Distinguish finite product metric spaces from Euclidean space.**
+  `Fin n → ℝ` carries the sup metric of `Mathlib/Topology/MetricSpace/Pseudo/Pi.lean`, and
+  `EuclideanSpace ℝ (Fin n)`, which is `PiLp 2`, the Euclidean one.  An audit of `Mathlib`,
+  `Archive`, and `Counterexamples` for declarations and docstrings that call a bare Pi type
+  `Fin n → ℝ` or `ι → ℝ` Euclidean while using its metric, norm, balls, or spheres found no such
+  statement.  The Euclidean balls, spheres, and disks of
+  `Mathlib/Topology/Category/TopCat/Sphere.lean`, `Archive/Hairer.lean`, and the Behrend
+  construction live in `EuclideanSpace` or `PiLp 2`;
+  `Mathlib/Geometry/Euclidean/Volume/Measure.lean`, `Mathlib/MeasureTheory/Order/UpperLower.lean`,
+  and `Archive/Wiedijk100Theorems/AreaOfACircle.lean` name the sup metric where they use it; and the
+  box integral, the order-connected sets of `Mathlib/Analysis/Normed/Order/UpperLower.lean`, and the
+  Gagliardo--Nirenberg--Sobolev inequality use `ι → ℝ` as coordinate vectors without a Euclidean
+  metric claim.  No lint is added: a lexical check cannot tell these product-metric and coordinate
+  uses from a misread, and the audit found no instance for it to catch.
 
 - [x] **[S--M] Identify the zero-padded singular-value sequence with the `s`-numbers.**
   `LinearMap.singularValues T` in `Mathlib/Analysis/InnerProductSpace/SingularValues.lean` is the
