@@ -1856,12 +1856,11 @@ parser and delaborator behavior.  A notation is not defective merely because it 
 Unicode: conventional mathematical operators and literals remain appropriate when their operands
 have stable roles and a searchable named declaration remains available.
 
-- [ ] **[S] Remove the unused `Integrable[𝓐]` explicit-instance escape hatch.**
-  `Mathlib/MeasureTheory/Function/L1Space/Integrable.lean:64` expands the identifier-shaped form
-  directly to `@Integrable _ _ _ _ 𝓐`, but the maintained Lean trees contain no consumer beyond the
-  declaration itself.  Give the anonymous σ-algebra binder a stable name if explicit application is
-  needed, use ordinary named-argument syntax, and add a negative syntax test before deleting the
-  notation.
+- [x] **[S] Remove the unused `Integrable[𝓐]` explicit-instance escape hatch.**
+  The σ-algebra binder of `MeasureTheory.Integrable` is named `mα`, so a σ-algebra other than the
+  one inferred from the measure is passed as the named argument `Integrable (mα := m) f μ`, and the
+  scoped notation `Integrable[m]`, which had no consumer, is removed.  A test checks the named
+  argument and that `Integrable[m] f μ` is no longer integrability syntax.
 
 - [ ] **[S--M] Remove the `P[X]` expectation macro that competes with element lookup.**
   `Mathlib/Probability/Notation.lean:48`--`:53` expands arbitrary adjacent terms `P[X]` to an
