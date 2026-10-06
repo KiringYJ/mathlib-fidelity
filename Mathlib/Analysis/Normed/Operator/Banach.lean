@@ -384,17 +384,6 @@ lemma antilipschitz_of_injective_of_isClosed_range (f : E →L[𝕜] F)
     (hf : Injective f) (hf' : IsClosed (Set.range f)) : ∃ K, AntilipschitzWith K f :=
   ⟨_, .comp (.subtype_coe (Set.range f)) (f.equivRange hf hf').antilipschitz⟩
 
-/-- A choice of anti-Lipschitz constant for `f : E →L[𝕜] F` injective with closed range
-(assuming `E` and `F` are Banach spaces). -/
-noncomputable def antilipschitzConstantOfInjectiveOfIsClosedRange (f : E →L[𝕜] F)
-    (hf : Injective f) (hf' : IsClosed (Set.range f)) : ℝ≥0 :=
-  Classical.choose (f.antilipschitz_of_injective_of_isClosed_range hf hf')
-
-lemma antilipschitz_antilipschitzConstantOfInjectiveOfIsClosedRange (f : E →L[𝕜] F)
-    (hf : Injective f) (hf' : IsClosed (Set.range f)) :
-    AntilipschitzWith (f.antilipschitzConstantOfInjectiveOfIsClosedRange hf hf') f :=
-  Classical.choose_spec (f.antilipschitz_of_injective_of_isClosed_range hf hf')
-
 /-- An injective bounded linear operator between Banach spaces has closed range
 iff it is anti-Lipschitz. -/
 lemma isClosed_range_iff_antilipschitz_of_injective (f : E →L[𝕜] F)
@@ -414,6 +403,29 @@ lemma leftInverseOfInjectiveOfIsClosedRange_apply (f : E →L[𝕜] F) (hf : Inj
     (hf' : IsClosed (range f)) (x : E) :
     f.leftInverseOfInjectiveOfIsClosedRange hf hf' (f.rangeRestrict x) = x :=
   (f.equivRange hf hf').symm_apply_apply x
+
+/-- An injective `f : E →L[𝕜] F` with closed range between Banach spaces is anti-Lipschitz with the
+norm of its inverse on the range as constant. -/
+lemma antilipschitz_leftInverseOfInjectiveOfIsClosedRange (f : E →L[𝕜] F) (hf : Injective f)
+    (hf' : IsClosed (range f)) :
+    AntilipschitzWith ‖f.leftInverseOfInjectiveOfIsClosedRange hf hf'‖₊ f :=
+  f.antilipschitz_of_bound fun x ↦ by
+    calc ‖x‖ = ‖f.leftInverseOfInjectiveOfIsClosedRange hf hf' (f.rangeRestrict x)‖ := by
+          rw [leftInverseOfInjectiveOfIsClosedRange_apply]
+      _ ≤ ‖f.leftInverseOfInjectiveOfIsClosedRange hf hf'‖ * ‖f.rangeRestrict x‖ := le_opNorm _ _
+      _ = _ := rfl
+
+/-- The norm of the inverse of `f` on its range is the least anti-Lipschitz constant of `f`. -/
+lemma nnnorm_leftInverseOfInjectiveOfIsClosedRange_le (f : E →L[𝕜] F) (hf : Injective f)
+    (hf' : IsClosed (range f)) {K : ℝ≥0} (hK : AntilipschitzWith K f) :
+    ‖f.leftInverseOfInjectiveOfIsClosedRange hf hf'‖₊ ≤ K := by
+  rw [← NNReal.coe_le_coe, coe_nnnorm]
+  refine opNorm_le_bound _ K.2 fun y ↦ ?_
+  obtain ⟨_, x, rfl⟩ := y
+  have hx : f.leftInverseOfInjectiveOfIsClosedRange hf hf' ⟨f x, x, rfl⟩ = x :=
+    leftInverseOfInjectiveOfIsClosedRange_apply f hf hf' x
+  calc _ = ‖x‖ := congrArg norm hx
+    _ ≤ _ := f.bound_of_antilipschitz hK x
 
 end
 

@@ -93,11 +93,13 @@ example (p : FormalMultilinearSeries ℝ ℝ ℝ) (r : ℝ →L[ℝ] ℝ)
     p.leftInv r hr x = p.leftInv r hr' x :=
   rfl
 
-/-- A chosen continuous linear left inverse supplies the evidence. -/
+/-- Any continuous linear left inverse supplies the evidence. -/
 example (p : FormalMultilinearSeries ℝ ℝ ℝ)
     (h : (continuousMultilinearCurryFin1 ℝ ℝ ℝ (p 1)).HasLeftInverse) (x : ℝ) :
-    (p.leftInv h.leftInverse h.leftInverse_leftInverse x).comp p = id ℝ ℝ x :=
-  leftInv_comp _ _ _ _
+    ∃ (r : ℝ →L[ℝ] ℝ) (hr : Function.LeftInverse r (continuousMultilinearCurryFin1 ℝ ℝ ℝ (p 1))),
+      (p.leftInv r hr x).comp p = id ℝ ℝ x := by
+  obtain ⟨r, hr⟩ := h
+  exact ⟨r, hr, leftInv_comp _ _ _ _⟩
 
 /-! ### Injective linear term that is not surjective -/
 

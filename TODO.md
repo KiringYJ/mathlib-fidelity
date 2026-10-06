@@ -311,15 +311,44 @@ operation.
   existence statement.  Tests cover the removed names, the existence and characterization of left
   inverses, two left inverses with distinct kernels, and the dual lift.
 
-- [ ] **Replace chosen continuous one-sided inverses and complements by canonical data.**
-  `ContinuousLinearMap.HasLeftInverse.leftInverse`, `HasRightInverse.rightInverse`, and
-  `HasLeftInverse.complement` in
-  `Mathlib/Topology/Algebra/Module/ContinuousLinearMap/OneSidedInverse.lean`,
-  `Submodule.ClosedComplemented.complement` in `Mathlib/Topology/Algebra/Module/Complement.lean`,
-  and `ContinuousLinearMap.antilipschitzConstantOfInjectiveOfIsClosedRange` in
-  `Mathlib/Analysis/Normed/Operator/Banach.lean` are `Classical.choose` representatives of
-  existence statements.  As for linear left inverses, expose the existence statements together with
-  canonical data determined by a supplied complement, and migrate the consumers.
+- [x] **Replace chosen continuous one-sided inverses and complements by canonical data.**
+  `ContinuousLinearMap.HasLeftInverse.leftInverse`, `HasRightInverse.rightInverse`,
+  `HasLeftInverse.complement`, `Submodule.ClosedComplemented.complement`, and
+  `ContinuousLinearMap.antilipschitzConstantOfInjectiveOfIsClosedRange` were `Classical.choose`
+  representatives of existence statements; they are removed with their specifications
+  (`leftInverse_leftInverse`, `rightInverse_rightInverse`,
+  `ContinuousLinearEquiv.leftInverse_hasLeftInverse`,
+  `ContinuousLinearEquiv.rightInverse_hasRightInverse`, `isClosed_complement`, `isCompl_complement`,
+  `isTopCompl_complement`, and `antilipschitz_antilipschitzConstantOfInjectiveOfIsClosedRange`).  A
+  continuous left inverse of `f` is determined only on the range of `f` and a continuous right
+  inverse only up to its kernel, so the canonical data take a topological complement.
+  `HasLeftInverse.leftInverseOfIsTopCompl` is the continuous left inverse vanishing on a topological
+  complement of the range: the left inverse `LinearMap.linearProjOfIsCompl` of the underlying linear
+  map, which is continuous because it factors through any continuous left inverse and the continuous
+  projection.  `HasRightInverse.rightInverseOfIsTopCompl` is the continuous right inverse with
+  values in a topological complement of the kernel: the inverse of the restriction of `f`, which is
+  the projection of any continuous right inverse along the kernel.  Each is the only one-sided
+  inverse with that property (`eq_leftInverseOfIsTopCompl`, `eq_rightInverseOfIsTopCompl`), and
+  every continuous left inverse is the one attached to its kernel and every continuous right inverse
+  the one attached to its range (`eq_leftInverseOfIsTopCompl_ker`,
+  `eq_rightInverseOfIsTopCompl_range`).  The anti-Lipschitz constant of an injective operator with
+  closed range between Banach spaces is the norm of its inverse on the range
+  (`antilipschitz_leftInverseOfInjectiveOfIsClosedRange`), which is the least such constant
+  (`nnnorm_leftInverseOfInjectiveOfIsClosedRange_le`).
+
+- [ ] **Replace chosen witnesses of local presentations and immersions by explicit data.**
+  `LiftSourceTargetPropertyAt.localPresentationAt` in
+  `Mathlib/Geometry/Manifold/LocalSourceTargetProperty.lean` chooses with `Classical.choice` a
+  `LocalPresentationAt` witnessing the existence statement `LiftSourceTargetPropertyAt`, and
+  `domChart` and `codChart` expose its charts.  Likewise `IsImmersionAtOfComplement.equiv` and
+  `IsSubmersionAtOfComplement.equiv` choose the linear equivalence of the local normal form, and
+  `IsImmersionAt.complement`, `IsImmersion.complement`, `IsSubmersionAt.complement`, and
+  `IsSubmersion.complement` in `Mathlib/Geometry/Manifold/Immersion.lean` and
+  `Mathlib/Geometry/Manifold/Submersion.lean` choose a complement type together with its
+  normed-space instances.  None of these is determined by `f`, and the bundled structure
+  `LocalPresentationAt` and the variants with an explicit complement already carry the data.  State
+  the consumers with explicit local presentations, or obtain them inside proofs, and remove the
+  public chosen witnesses.
 
 - [x] **Bundle admissible root pairs for root-chain data.**
   `RootPairing.chainTopCoeff i j` and `chainBotCoeff i j` are the largest natural numbers `p` and
