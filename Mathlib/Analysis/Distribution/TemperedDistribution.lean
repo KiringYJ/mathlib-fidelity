@@ -244,55 +244,60 @@ variable [AddCommGroup F] [Module ℂ F] [TopologicalSpace F] [IsTopologicalAddG
   [ContinuousConstSMul ℂ F]
 
 variable (F) in
-/-- Multiplication with a temperate growth function as a continuous linear map on `𝓢'(E, F)`. -/
-def smulLeftCLM (g : E → ℂ) : 𝓢'(E, F) →L[ℂ] 𝓢'(E, F) :=
-  PointwiseConvergenceCLM.precomp _ (SchwartzMap.smulLeftCLM ℂ g)
+/-- Multiplication with a temperate growth function as a continuous linear map on `𝓢'(E, F)`; the
+default discharger `fun_prop` finds the temperate growth. -/
+def smulLeftCLM (g : E → ℂ) (hg : g.HasTemperateGrowth := by fun_prop) :
+    𝓢'(E, F) →L[ℂ] 𝓢'(E, F) :=
+  PointwiseConvergenceCLM.precomp _ (SchwartzMap.smulLeftCLM ℂ g hg)
 
 @[simp]
-theorem smulLeftCLM_apply_apply (g : E → ℂ) (f : 𝓢'(E, F)) (f' : 𝓢(E, ℂ)) :
-    smulLeftCLM F g f f' = f (SchwartzMap.smulLeftCLM ℂ g f') := by
+theorem smulLeftCLM_apply_apply (g : E → ℂ) {hg : g.HasTemperateGrowth} (f : 𝓢'(E, F))
+    (f' : 𝓢(E, ℂ)) : smulLeftCLM F g hg f f' = f (SchwartzMap.smulLeftCLM ℂ g hg f') := by
   rfl
 
 @[simp]
-theorem smulLeftCLM_const (c : ℂ) (f : 𝓢'(E, F)) : smulLeftCLM F (fun _ : E ↦ c) f = c • f := by
+theorem smulLeftCLM_const (c : ℂ) {hc : (fun _ : E ↦ c).HasTemperateGrowth} (f : 𝓢'(E, F)) :
+    smulLeftCLM F (fun _ : E ↦ c) hc f = c • f := by
   ext1; simp
 
 @[simp]
-theorem smulLeftCLM_smulLeftCLM_apply {g₁ g₂ : E → ℂ} (hg₁ : g₁.HasTemperateGrowth)
-    (hg₂ : g₂.HasTemperateGrowth) (f : 𝓢'(E, F)) :
-    smulLeftCLM F g₂ (smulLeftCLM F g₁ f) = smulLeftCLM F (g₁ * g₂) f := by
-  ext; simp [hg₁, hg₂]
+theorem smulLeftCLM_smulLeftCLM_apply {g₁ g₂ : E → ℂ} {hg₁ : g₁.HasTemperateGrowth}
+    {hg₂ : g₂.HasTemperateGrowth} (f : 𝓢'(E, F)) :
+    smulLeftCLM F g₂ hg₂ (smulLeftCLM F g₁ hg₁ f) = smulLeftCLM F (g₁ * g₂) (hg₁.mul hg₂) f := by
+  ext; simp
 
-theorem smulLeftCLM_compL_smulLeftCLM {g₁ g₂ : E → ℂ} (hg₁ : g₁.HasTemperateGrowth)
-    (hg₂ : g₂.HasTemperateGrowth) :
-    smulLeftCLM F g₂ ∘L smulLeftCLM F g₁ = smulLeftCLM F (g₁ * g₂) := by
+theorem smulLeftCLM_compL_smulLeftCLM {g₁ g₂ : E → ℂ} {hg₁ : g₁.HasTemperateGrowth}
+    {hg₂ : g₂.HasTemperateGrowth} :
+    smulLeftCLM F g₂ hg₂ ∘L smulLeftCLM F g₁ hg₁ = smulLeftCLM F (g₁ * g₂) (hg₁.mul hg₂) := by
   ext1 f
-  simp [hg₁, hg₂]
+  simp
 
-theorem smulLeftCLM_smul {g : E → ℂ} (hg : g.HasTemperateGrowth) (c : ℂ) :
-    smulLeftCLM F (c • g) = c • smulLeftCLM F g := by
+theorem smulLeftCLM_smul {g : E → ℂ} (c : ℂ) {hcg : (c • g).HasTemperateGrowth}
+    (hg : g.HasTemperateGrowth) :
+    smulLeftCLM F (c • g) hcg = c • smulLeftCLM F g hg := by
   ext f u
-  simp [SchwartzMap.smulLeftCLM_smul hg]
+  simp [SchwartzMap.smulLeftCLM_smul c hg]
 
-theorem smulLeftCLM_add {g₁ g₂ : E → ℂ} (hg₁ : g₁.HasTemperateGrowth)
-    (hg₂ : g₂.HasTemperateGrowth) :
-    smulLeftCLM F (g₁ + g₂) = smulLeftCLM F g₁ + smulLeftCLM F g₂ := by
+theorem smulLeftCLM_add {g₁ g₂ : E → ℂ} {hg : (g₁ + g₂).HasTemperateGrowth}
+    (hg₁ : g₁.HasTemperateGrowth) (hg₂ : g₂.HasTemperateGrowth) :
+    smulLeftCLM F (g₁ + g₂) hg = smulLeftCLM F g₁ hg₁ + smulLeftCLM F g₂ hg₂ := by
   ext f u
   simp [SchwartzMap.smulLeftCLM_add hg₁ hg₂]
 
-theorem smulLeftCLM_sub {g₁ g₂ : E → ℂ} (hg₁ : g₁.HasTemperateGrowth)
-    (hg₂ : g₂.HasTemperateGrowth) :
-    smulLeftCLM F (g₁ - g₂) = smulLeftCLM F g₁ - smulLeftCLM F g₂ := by
+theorem smulLeftCLM_sub {g₁ g₂ : E → ℂ} {hg : (g₁ - g₂).HasTemperateGrowth}
+    (hg₁ : g₁.HasTemperateGrowth) (hg₂ : g₂.HasTemperateGrowth) :
+    smulLeftCLM F (g₁ - g₂) hg = smulLeftCLM F g₁ hg₁ - smulLeftCLM F g₂ hg₂ := by
   ext f u
   simp [SchwartzMap.smulLeftCLM_sub hg₁ hg₂]
 
-theorem smulLeftCLM_neg {g : E → ℂ} (hg : g.HasTemperateGrowth) :
-    smulLeftCLM F (-g) = -smulLeftCLM F g := by
+theorem smulLeftCLM_neg {g : E → ℂ} {hg' : (-g).HasTemperateGrowth} (hg : g.HasTemperateGrowth) :
+    smulLeftCLM F (-g) hg' = -smulLeftCLM F g hg := by
   ext f u
   simp [SchwartzMap.smulLeftCLM_neg hg]
 
-theorem smulLeftCLM_sum {g : ι → E → ℂ} {s : Finset ι} (hg : ∀ i ∈ s, (g i).HasTemperateGrowth) :
-    smulLeftCLM F (fun x ↦ ∑ i ∈ s, g i x) = ∑ i ∈ s, smulLeftCLM F (g i) := by
+theorem smulLeftCLM_sum {g : ι → E → ℂ} {s : Finset ι}
+    {hs : (fun x ↦ ∑ i ∈ s, g i x).HasTemperateGrowth} (hg : ∀ i, (g i).HasTemperateGrowth) :
+    smulLeftCLM F (fun x ↦ ∑ i ∈ s, g i x) hs = ∑ i ∈ s, smulLeftCLM F (g i) (hg i) := by
   ext f u
   simp [SchwartzMap.smulLeftCLM_sum hg]
 
@@ -308,12 +313,12 @@ multiplication if the left factor is a function of temperate growth. -/
 theorem _root_.MeasureTheory.Lp.toTemperedDistribution_smul_eq {p q r : ℝ≥0∞} [p.HolderTriple q r]
     [Fact (1 ≤ q)] [Fact (1 ≤ r)] {g : E → ℂ} (hg₁ : g.HasTemperateGrowth) (hg₂ : MemLp g p μ)
     (f : Lp F q μ) :
-    ((hg₂.toLp _) • f : Lp F r μ) = smulLeftCLM F g f := by
+    ((hg₂.toLp _) • f : Lp F r μ) = smulLeftCLM F g hg₁ f := by
   ext u
   simp only [Lp.toTemperedDistribution_apply, smulLeftCLM_apply_apply]
   apply integral_congr_ae
   filter_upwards [Lp.coeFn_lpSMul (r := r) (hg₂.toLp _) f, hg₂.coeFn_toLp] with x hg hg'
-  simp [hg, hg', hg₁, smul_smul, mul_comm]
+  simp [hg, hg', smul_smul, mul_comm]
 
 end Multiplication
 
@@ -534,34 +539,34 @@ variable [NormedAddCommGroup F] [NormedSpace ℂ F]
 /-- The line derivative in direction `m` of the Fourier transform is given by the Fourier transform
 of the multiplication with `-(2 * π * Complex.I) • (inner ℝ · m)`. -/
 theorem lineDerivOp_fourier_eq (f : 𝓢'(E, F)) (m : E) :
-    ∂_{m} (𝓕 f) = 𝓕 (- (2 * π * Complex.I) • smulLeftCLM F (inner ℝ · m) f) := by
+    ∂_{m} (𝓕 f) = 𝓕 (- (2 * π * Complex.I) • (smulLeftCLM F (inner ℝ · m)) f) := by
   ext u
   have : (inner ℝ · m).HasTemperateGrowth := by fun_prop
-  simp [SchwartzMap.fourier_lineDerivOp_eq, ← smulLeftCLM_ofReal ℂ this]
+  simp [SchwartzMap.fourier_lineDerivOp_eq, ← smulLeftCLM_ofReal ℂ (hg' := by fun_prop) this]
 
 /-- The Fourier transform of line derivative in direction `m` is given by multiplication of
 `(2 * π * Complex.I) • (inner ℝ · m)` with the Fourier transform. -/
 theorem fourier_lineDerivOp_eq (f : 𝓢'(E, F)) (m : E) :
-    𝓕 (∂_{m} f) = (2 * π * Complex.I) • smulLeftCLM F (inner ℝ · m) (𝓕 f) := by
+    𝓕 (∂_{m} f) = (2 * π * Complex.I) • (smulLeftCLM F (inner ℝ · m)) (𝓕 f) := by
   ext u
   have : (inner ℝ · m).HasTemperateGrowth := by fun_prop
-  simp [SchwartzMap.lineDerivOp_fourier_eq, ← smulLeftCLM_ofReal ℂ this]
+  simp [SchwartzMap.lineDerivOp_fourier_eq, ← smulLeftCLM_ofReal ℂ (hg' := by fun_prop) this]
 
 /-- The line derivative in direction `m` of the inverse Fourier transform is given by the inverse
 Fourier transform of the multiplication with `(2 * π * Complex.I) • (inner ℝ · m)`. -/
 theorem lineDerivOp_fourierInv_eq (f : 𝓢'(E, F)) (m : E) :
-    ∂_{m} (𝓕⁻ f) = 𝓕⁻ ((2 * π * Complex.I) • smulLeftCLM F (inner ℝ · m) f) := by
+    ∂_{m} (𝓕⁻ f) = 𝓕⁻ ((2 * π * Complex.I) • (smulLeftCLM F (inner ℝ · m)) f) := by
   ext u
   have : (inner ℝ · m).HasTemperateGrowth := by fun_prop
-  simp [SchwartzMap.fourierInv_lineDerivOp_eq, ← smulLeftCLM_ofReal ℂ this]
+  simp [SchwartzMap.fourierInv_lineDerivOp_eq, ← smulLeftCLM_ofReal ℂ (hg' := by fun_prop) this]
 
 /-- The inverse Fourier transform of line derivative in direction `m` is given by multiplication of
 `-(2 * π * Complex.I) • (inner ℝ · m)` with the inverse Fourier transform. -/
 theorem fourierInv_lineDerivOp_eq (f : 𝓢'(E, F)) (m : E) :
-    𝓕⁻ (∂_{m} f) = -(2 * π * Complex.I) • smulLeftCLM F (inner ℝ · m) (𝓕⁻ f) := by
+    𝓕⁻ (∂_{m} f) = -(2 * π * Complex.I) • (smulLeftCLM F (inner ℝ · m)) (𝓕⁻ f) := by
   ext u
   have : (inner ℝ · m).HasTemperateGrowth := by fun_prop
-  simp [SchwartzMap.lineDerivOp_fourierInv_eq, ← smulLeftCLM_ofReal ℂ this]
+  simp [SchwartzMap.lineDerivOp_fourierInv_eq, ← smulLeftCLM_ofReal ℂ (hg' := by fun_prop) this]
 
 end Fourier
 

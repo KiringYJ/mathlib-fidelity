@@ -83,7 +83,7 @@ theorem besselPotential_zero : besselPotential E F 0 = ContinuousLinearMap.id �
 theorem besselPotential_besselPotential_apply (s s' : ℝ) (f : 𝓢'(E, F)) :
     besselPotential E F s' (besselPotential E F s f) = besselPotential E F (s + s') f := by
   simp only [besselPotential]
-  rw [fourierMultiplierCLM_fourierMultiplierCLM_apply (by fun_prop) (by fun_prop)]
+  rw [fourierMultiplierCLM_fourierMultiplierCLM_apply]
   congr
   ext x
   simp only [Pi.mul_apply]
@@ -107,21 +107,20 @@ open scoped Real Laplacian LineDeriv
 
 theorem besselPotential_neg_one_lineDerivOp_eq {m : E} (f : 𝓢'(E, F)) :
     (besselPotential E F (-1)) (∂_{m} f) =
-      (2 * π * Complex.I) • fourierMultiplierCLM F (fun x ↦ Complex.ofReal <|
-      inner ℝ x m * (1 + ‖x‖ ^ 2) ^ (-1 / 2 : ℝ)) f := by
+      (2 * π * Complex.I) • (fourierMultiplierCLM F (fun x ↦ Complex.ofReal <|
+      inner ℝ x m * (1 + ‖x‖ ^ 2) ^ (-1 / 2 : ℝ))) f := by
   rw [lineDeriv_eq_fourierMultiplierCLM, besselPotential,
-    ContinuousLinearMap.map_smul_of_tower,
-    fourierMultiplierCLM_fourierMultiplierCLM_apply (by fun_prop) (by fun_prop)]
+    ContinuousLinearMap.map_smul_of_tower, fourierMultiplierCLM_fourierMultiplierCLM_apply]
   congr
   ext x
   simp
 
 theorem besselPotential_neg_two_laplacian_eq (f : 𝓢'(E, F)) :
     (besselPotential E F (-2)) (Δ f) = -(2 * π) ^ 2 •
-      fourierMultiplierCLM F (fun x ↦ Complex.ofReal <| ‖x‖ ^ 2 * (1 + ‖x‖ ^ 2) ^ (-1 : ℝ)) f := by
+      (fourierMultiplierCLM F
+        (fun x ↦ Complex.ofReal <| ‖x‖ ^ 2 * (1 + ‖x‖ ^ 2) ^ (-1 : ℝ))) f := by
   rw [laplacian_eq_fourierMultiplierCLM, besselPotential,
-    ContinuousLinearMap.map_smul_of_tower,
-    fourierMultiplierCLM_fourierMultiplierCLM_apply (by fun_prop) (by fun_prop)]
+    ContinuousLinearMap.map_smul_of_tower, fourierMultiplierCLM_fourierMultiplierCLM_apply]
   congr
   ext x
   simp
@@ -137,7 +136,7 @@ open FourierTransform
 @[simp]
 theorem fourier_besselPotential_eq_smulLeftCLM_fourier_apply (s : ℝ) (f : 𝓢'(E, F)) :
     𝓕 (besselPotential E F s f) =
-      smulLeftCLM F (fun x ↦ ((1 + ‖x‖ ^ 2) ^ (s / 2) : ℝ)) (𝓕 f) := by
+      (smulLeftCLM F (fun x ↦ ((1 + ‖x‖ ^ 2) ^ (s / 2) : ℝ))) (𝓕 f) := by
   simp [besselPotential, fourierMultiplierCLM]
 
 end inner
@@ -204,12 +203,10 @@ theorem memSobolev_besselPotential_iff {s r : ℝ} {p : ℝ≥0∞} [hp : Fact (
 /-- Schwartz functions are in every Sobolev space. -/
 theorem _root_.SchwartzMap.memSobolev {s : ℝ} {p : ℝ≥0∞} [hp : Fact (1 ≤ p)] (f : 𝓢(E, F)) :
     MemSobolev s p (f : 𝓢'(E, F)) := by
-  use (SchwartzMap.fourierMultiplierCLM F (fun x ↦ ((1 + ‖x‖ ^ 2) ^ (s / 2) : ℝ)) f).toLp p
+  use ((SchwartzMap.fourierMultiplierCLM F (fun x ↦ ((1 + ‖x‖ ^ 2) ^ (s / 2) : ℝ))) f).toLp p
   rw [besselPotential, Lp.toTemperedDistribution_toLp_eq,
     fourierMultiplierCLM_toTemperedDistributionCLM_eq (by fun_prop)]
   congr 1
-  apply SchwartzMap.fourierMultiplierCLM_ofReal ℂ
-    (Function.hasTemperateGrowth_one_add_norm_sq_rpow E (s / 2))
 
 end normed
 
@@ -221,7 +218,7 @@ variable [InnerProductSpace ℂ F] [CompleteSpace F]
 its Fourier transform multiplied by `(1 + ‖x‖ ^ 2) ^ (s / 2)` is in `Lp`. -/
 theorem memSobolev_iff_exists_smulLeftCLM_fourier {s : ℝ} {f : 𝓢'(E, F)} :
     MemSobolev s 2 f ↔ ∃ (f' : Lp F 2 (volume : Measure E)),
-    smulLeftCLM F (fun x ↦ ((1 + ‖x‖ ^ 2) ^ (s / 2) : ℝ)) (𝓕 f) = f' := by
+    (smulLeftCLM F (fun x ↦ ((1 + ‖x‖ ^ 2) ^ (s / 2) : ℝ))) (𝓕 f) = f' := by
   constructor
   · intro ⟨f', hf'⟩
     use 𝓕 f'
@@ -267,8 +264,8 @@ theorem MemSobolev.fourier_memL1 {s : ℝ} (hs : Module.finrank ℝ E < 2 * s) {
   have : MemLp (fun x : E ↦ Complex.ofReal ((1 + ‖x‖ ^ 2) ^ (-s / 2) : ℝ)) 2 := this.ofReal
   use this.toLp • u
   rw [MeasureTheory.Lp.toTemperedDistribution_smul_eq]
-  · rw [← hu, smulLeftCLM_smulLeftCLM_apply (by fun_prop) (by fun_prop)]
-    convert! (smulLeftCLM_const 1 (𝓕 f)).symm using 1
+  · rw [← hu, smulLeftCLM_smulLeftCLM_apply]
+    convert! (smulLeftCLM_const (hc := by fun_prop) 1 (𝓕 f)).symm using 1
     · simp
     · congr
       ext x
@@ -284,16 +281,16 @@ open scoped BoundedContinuousFunction
 /-- The Fourier multiplier with a bounded function maps `H ^ s` to `H ^ s`. -/
 theorem MemSobolev.fourierMultiplierCLM_of_bounded {s : ℝ} {f : 𝓢'(E, F)}
     (hf : MemSobolev s 2 f) {g : E → ℂ} (hg₁ : g.HasTemperateGrowth) (hg₂ : ∃ C, ∀ x, ‖g x‖ ≤ C) :
-    MemSobolev s 2 (fourierMultiplierCLM F g f) := by
+    MemSobolev s 2 (fourierMultiplierCLM F g hg₁ f) := by
   rw [memSobolev_iff_exists_smulLeftCLM_fourier] at hf ⊢
   obtain ⟨f', hf⟩ := hf
   obtain ⟨C, hC⟩ := hg₂
   set g' : E →ᵇ ℂ := BoundedContinuousFunction.ofNormedAddCommGroup g hg₁.1.continuous C hC
+  have hg' : (⇑g').HasTemperateGrowth := hg₁
   use (g'.memLp_top.toLp _ (μ := volume)) • f'
-  rw [MeasureTheory.Lp.toTemperedDistribution_smul_eq (by apply hg₁), ← hf,
-    fourierMultiplierCLM_apply, fourier_fourierInv_eq,
-    smulLeftCLM_smulLeftCLM_apply hg₁ (by fun_prop),
-    smulLeftCLM_smulLeftCLM_apply (by fun_prop) (by apply hg₁)]
+  rw [MeasureTheory.Lp.toTemperedDistribution_smul_eq hg', ← hf,
+    fourierMultiplierCLM_apply, fourier_fourierInv_eq, smulLeftCLM_smulLeftCLM_apply,
+    smulLeftCLM_smulLeftCLM_apply]
   congr 2
   ext x
   rw [mul_comm]

@@ -936,17 +936,26 @@ operation.
   derivative, line derivative, seminorm, and inclusion, and the inequalities found for smooth maps,
   numerals, and hypotheses.
 
-- [ ] **Make integration against a kernel take its integrability.**
-  `ContDiffMapSupportedIn.integralAgainstBilinLM` and `integralAgainstBilinCLM` in
-  `Mathlib/Analysis/Distribution/ContDiffMapSupportedIn.lean` and
-  `TestFunction.integralAgainstBilinCLM` in `Mathlib/Analysis/Distribution/TestFunction.lean` are
-  `f ↦ ∫ x, B (f x) (φ x) ∂μ` when `φ` is integrable on `K` (locally integrable on `Ω`) and the
-  zero map otherwise, and `Distribution.ofFun` in `Mathlib/Analysis/Distribution/Distribution.lean`
-  inherits that value (`ofFun_eq_zero`, `ofFun_apply_eq_ite`).  The same pattern gives the zero map
-  in `SchwartzMap.smulLeftCLM` (`Mathlib/Analysis/Distribution/SchwartzSpace/Basic.lean`) for a
-  multiplier without temperate growth and `0` in `Measure.integrablePower`
-  (`Mathlib/Analysis/Distribution/TemperateGrowth.lean`) for a measure without temperate growth.
-  Take the integrability or temperate-growth evidence and migrate the consumers.
+- [x] **Make integration against a kernel take its integrability.**
+  `ContDiffMapSupportedIn.integralAgainstBilinLM` and `integralAgainstBilinCLM` take
+  `hφ : IntegrableOn φ K μ`, `TestFunction.integralAgainstBilinCLM` takes
+  `hφ : LocallyIntegrableOn φ Ω μ`, and `Distribution.ofFun Ω f μ n hf` takes the local
+  integrability of `f`; without it they were the zero map
+  (`TestFunction.integralAgainstBilinCLM_eq_zero`, `Distribution.ofFun_eq_zero`, and
+  `Distribution.ofFun_apply_eq_ite`, removed).  The `_apply` lemmas state the integral without a
+  case split, the former `_eq_integral` lemmas merging into them, and `ofFun_add`, `ofFun_neg`, and
+  `ofFun_smul` take the local integrability of the summands.  `SchwartzMap.smulLeftCLM F g hg`,
+  `TemperedDistribution.smulLeftCLM F g hg`, and the Fourier multipliers
+  `SchwartzMap.fourierMultiplierCLM F g hg` and `TemperedDistribution.fourierMultiplierCLM F g hg`
+  take the temperate growth of the multiplier, found by `fun_prop` by default, and were the zero map
+  without it; an operator applied to a function takes its evidence explicitly or is parenthesized,
+  as in `(smulLeftCLM F g) f`.  The sum lemmas `smulLeftCLM_sum` and `fourierMultiplierCLM_sum`
+  assume the temperate growth of every member of the family rather than only of the summed ones: the
+  exact form needs a sum over `s.attach`, and every consumer sums over `Finset.univ`, where the two
+  agree.  `Measure.integrablePower μ` takes `[μ.HasTemperateGrowth]` and is the least natural
+  exponent `l` for which `(1 + ‖x‖) ^ (-l)` is integrable (`integrablePower_le`), instead of a
+  chosen exponent and `0` without temperate growth.  Tests cover the removed names, a multiplier
+  without temperate growth, multipliers found by `fun_prop`, and the least integrable exponent.
 
 - [x] **Require a dense domain for `LinearPMap.adjoint`.**
   `LinearPMap.adjoint T hT` takes `hT : Dense (T.domain : Set E)`, the exact domain of a

@@ -37,9 +37,8 @@ The theory will be expanded in future PRs.
 * `Distribution.mapCLM`: any continuous linear map `A : F →L[ℝ] G` induces a continuous linear
   map `𝓓'(Ω, F) →L[ℝ] 𝓓'(Ω, G)`. On locally integrable functions, this corresponds to applying `A`
   pointwise.
-* `Distribution.ofFun Ω f μ n`: the distribution induced by a function `f : E → F`,
-  sending a test function `φ` to `∫ x, φ x • f x ∂μ`. This is the zero map if
-  `f` is not locally integrable on `Ω`.
+* `Distribution.ofFun Ω f μ n hf`: the distribution induced by a function `f : E → F` that is
+  locally integrable on `Ω`, sending a test function `φ` to `∫ x, φ x • f x ∂μ`.
 
 ## Notation
 
@@ -296,78 +295,63 @@ variable [SigmaAlgebra E] [OpensSigmaAlgebra E]
 variable {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
 
 variable (Ω) in
-/-- The distribution induced by a function `f : E → F` and a measure `μ`,
-sending a test function `φ` to `∫ x, φ x • f x ∂μ`. This is the zero map if `f` is not locally
-integrable on `Ω`. -/
-noncomputable def ofFun (f : E → F) (μ : Measure E := by volume_tac) (n : ℕ∞) :
-    𝓓'^{n}(Ω, F) :=
-  TestFunction.integralAgainstBilinCLM (ContinuousLinearMap.lsmul ℝ ℝ) μ f
+/-- The distribution induced by a function `f : E → F` that is locally integrable on `Ω` with
+respect to a measure `μ`, sending a test function `φ` to `∫ x, φ x • f x ∂μ`. -/
+noncomputable def ofFun (f : E → F) (μ : Measure E := by volume_tac) (n : ℕ∞)
+    (hf : LocallyIntegrableOn f Ω μ) : 𝓓'^{n}(Ω, F) :=
+  TestFunction.integralAgainstBilinCLM (ContinuousLinearMap.lsmul ℝ ℝ) μ f hf
 
-theorem ofFun_apply {f : E → F} {μ : Measure E} (hf : LocallyIntegrableOn f Ω μ)
-    {φ : 𝓓^{n}(Ω, ℝ)} :
-    ofFun Ω f μ n φ = ∫ x, φ x • f x ∂μ :=
-  TestFunction.integralAgainstBilinCLM_eq_integral hf
-
-theorem ofFun_eq_zero {f : E → F} {μ : Measure E}
-    (hf : ¬ LocallyIntegrableOn f Ω μ) : ofFun Ω f μ n = 0 :=
-  TestFunction.integralAgainstBilinCLM_eq_zero hf
-
-open Classical in
 @[grind =]
-theorem ofFun_apply_eq_ite {f : E → F} {μ : Measure E} {φ : 𝓓^{n}(Ω, ℝ)} :
-    ofFun Ω f μ n φ = if LocallyIntegrableOn f Ω μ then ∫ x, φ x • f x ∂μ else 0 := by
-  grind [ofFun_eq_zero, ofFun_apply]
+theorem ofFun_apply {f : E → F} {μ : Measure E} {hf : LocallyIntegrableOn f Ω μ}
+    {φ : 𝓓^{n}(Ω, ℝ)} :
+    ofFun Ω f μ n hf φ = ∫ x, φ x • f x ∂μ :=
+  rfl
 
 @[simp, grind =]
-theorem ofFun_zero {μ : Measure E} : ofFun Ω (0 : E → F) μ n = 0 := by
-  have h0 : LocallyIntegrableOn (0 : E → F) Ω μ := locallyIntegrableOn_zero
-  ext; simp [ofFun_apply h0]
+theorem ofFun_zero {μ : Measure E} {h0 : LocallyIntegrableOn (0 : E → F) Ω μ} :
+    ofFun Ω (0 : E → F) μ n h0 = 0 := by
+  ext; simp [ofFun_apply]
 
-theorem ofFun_congr_ae {f f' : E → F} {μ : Measure E} (h : f =ᵐ[μ.restrict Ω] f') :
-    ofFun Ω f μ n = ofFun Ω f' μ n := by
+theorem ofFun_congr_ae {f f' : E → F} {μ : Measure E} {hf : LocallyIntegrableOn f Ω μ}
+    (h : f =ᵐ[μ.restrict Ω] f') :
+    ofFun Ω f μ n hf = ofFun Ω f' μ n (hf.congr h) := by
   ext φ
-  by_cases hf : LocallyIntegrableOn f Ω μ
-  · have hf' : LocallyIntegrableOn f' Ω μ := hf.congr h
-    rw [ofFun_apply hf, ofFun_apply hf']
-    have h' : ∀ x ∉ Ω, φ x • f x = 0 ∧ φ x • f' x = 0 := fun x hx ↦ by simp [φ.zero_on_compl hx]
-    obtain ⟨h₁, h₂⟩ := forall₂_and.mp h'
-    rw [← setIntegral_eq_integral_of_ae_compl_eq_zero (.of_forall h₁),
-      ← setIntegral_eq_integral_of_ae_compl_eq_zero (.of_forall h₂)]
-    refine integral_congr_ae <| ae_eq_rfl.smul h
-  · grind [locallyIntegrableOn_congr]
+  rw [ofFun_apply, ofFun_apply]
+  have h' : ∀ x ∉ Ω, φ x • f x = 0 ∧ φ x • f' x = 0 := fun x hx ↦ by simp [φ.zero_on_compl hx]
+  obtain ⟨h₁, h₂⟩ := forall₂_and.mp h'
+  rw [← setIntegral_eq_integral_of_ae_compl_eq_zero (.of_forall h₁),
+    ← setIntegral_eq_integral_of_ae_compl_eq_zero (.of_forall h₂)]
+  exact integral_congr_ae <| ae_eq_rfl.smul h
 
 @[simp]
-theorem ofFun_add {f g : E → F} {μ : Measure E}
+theorem ofFun_add {f g : E → F} {μ : Measure E} {hfg : LocallyIntegrableOn (f + g) Ω μ}
     (hf : LocallyIntegrableOn f Ω μ) (hg : LocallyIntegrableOn g Ω μ) :
-    ofFun Ω (f + g) μ n = ofFun Ω f μ n + ofFun Ω g μ n := by
+    ofFun Ω (f + g) μ n hfg = ofFun Ω f μ n hf + ofFun Ω g μ n hg := by
   ext φ
-  rw [add_apply, ofFun_apply hf, ofFun_apply hg,
-    ofFun_apply (hf.add hg),
+  rw [add_apply, ofFun_apply, ofFun_apply, ofFun_apply,
     ← integral_add (φ.integrable_smul hf) (φ.integrable_smul hg)]
   simp
 
 @[simp]
-theorem ofFun_neg {f : E → F} {μ : Measure E} :
-    ofFun Ω (-f) μ n = -ofFun Ω f μ n := by
-  by_cases hf : LocallyIntegrableOn f Ω μ
-  · ext; simp [ofFun_apply hf, ofFun_apply hf.neg, integral_neg]
-  · rw [ofFun_eq_zero hf, ofFun_eq_zero (by simpa), neg_zero]
+theorem ofFun_neg {f : E → F} {μ : Measure E} {hf' : LocallyIntegrableOn (-f) Ω μ}
+    (hf : LocallyIntegrableOn f Ω μ) :
+    ofFun Ω (-f) μ n hf' = -ofFun Ω f μ n hf := by
+  ext; simp [ofFun_apply, integral_neg]
 
 @[simp]
-theorem ofFun_smul {f : E → F} {μ : Measure E} (c : ℝ) :
-    ofFun Ω (c • f) μ n = c • ofFun Ω f μ n := by
+theorem ofFun_smul {f : E → F} {μ : Measure E} (c : ℝ) {hcf : LocallyIntegrableOn (c • f) Ω μ}
+    (hf : LocallyIntegrableOn f Ω μ) :
+    ofFun Ω (c • f) μ n hcf = c • ofFun Ω f μ n hf := by
   ext φ
-  by_cases hf : LocallyIntegrableOn f Ω μ
-  · rw [ofFun_apply (hf.smul c), smul_apply, ofFun_apply hf, ← integral_smul]
-    refine integral_congr_ae (ae_of_all _ fun x ↦ ?_)
-    simp [smul_comm c]
-  · grind [zero_smul, locallyIntegrableOn_smul_iff, smul_zero]
+  rw [ofFun_apply, smul_apply, ofFun_apply, ← integral_smul]
+  refine integral_congr_ae (ae_of_all _ fun x ↦ ?_)
+  simp [smul_comm c]
 
 variable [BorelSpace E] [FiniteDimensional ℝ E] [CompleteSpace F]
 
 theorem ofFun_injective {f f' : E → F} {μ : Measure E}
     (hf : LocallyIntegrableOn f Ω μ) (hf' : LocallyIntegrableOn f' Ω μ)
-    (h : ofFun Ω f μ n = ofFun Ω f' μ n) :
+    (h : ofFun Ω f μ n hf = ofFun Ω f' μ n hf') :
     f =ᵐ[μ.restrict Ω] f' := by
   suffices h' : ∀ᵐ x ∂μ, x ∈ Ω → (f - f') x = 0 by
     rw [← sub_ae_eq_zero]
@@ -378,7 +362,7 @@ theorem ofFun_injective {f f' : E → F} {μ : Measure E}
   have : ∫ x, φ x • (f - f') x ∂μ = 0:= by
     simp_rw [Pi.sub_apply, smul_sub]
     rw [integral_sub (φ.integrable_smul hf) (φ.integrable_smul hf'), sub_eq_zero]
-    rw [← ofFun_apply hf, ← ofFun_apply hf', h]
+    rw [← ofFun_apply (hf := hf), ← ofFun_apply (hf := hf'), h]
   congr
 
 end ofFun
