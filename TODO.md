@@ -1155,11 +1155,50 @@ operation.
   constructions.  Regression tests cover split and nonsplit nodes over both `ZMod 2` and `ZMod 3`,
   a translated node, and the failure of the criterion when `c₄ = 0`.
 
-- [ ] **Make analytic and meromorphic orders domain-bearing.**
-  `analyticOrderAt`/`analyticOrderNatAt` in `Mathlib/Analysis/Analytic/Order.lean:47` and `:61`, and
-  `meromorphicOrderAt` in `Mathlib/Analysis/Meromorphic/Order.lean:50`, return zero outside their
-  analytic/meromorphic domains; the natural analytic order also collapses genuine infinite order.
-  Require the germ hypothesis and retain infinity until finite order is proved.
+- [x] **Make analytic and meromorphic orders domain-bearing.**
+  `analyticOrderAt f z₀ hf` in `Mathlib/Analysis/Analytic/Order.lean` takes
+  `hf : AnalyticAt 𝕜 f z₀`, and `meromorphicOrderAt f x hf` in
+  `Mathlib/Analysis/Meromorphic/Order.lean` takes `hf : MeromorphicAt f x`; `fun_prop` supplies both
+  by default.  Neither has a value outside its domain, and a function that vanishes locally has
+  order `⊤`.  The natural-number order `analyticOrderNatAt`, which sent infinite order to `0`, is
+  removed with its lemmas; `AnalyticAt.analyticOrderAt_ne_top` states finite order with a natural
+  number `n` and the equation `analyticOrderAt f z₀ hf = n`.  The fallback lemmas
+  `analyticOrderAt_of_not_analyticAt`, `meromorphicOrderAt_of_not_meromorphicAt`, the
+  hypothesis-free `analyticOrderAt_eq_zero` and `analyticOrderAt_ne_zero`,
+  `meromorphicAt_of_meromorphicOrderAt_ne_zero`, and `analyticOrderAt_smul_eq_top_of_left`,
+  `analyticOrderAt_mul_eq_top_of_left`, and their right versions are removed, and the lemmas that
+  held only through the fallback take the analyticity or meromorphy hypothesis.  An order term
+  carries its proof, so a rewrite of the function or the point inside it goes through
+  `analyticOrderAt_congr`, `meromorphicOrderAt_congr`, or `congr`.  Statements quantified over a set
+  name the membership binder, as in `∀ u (hu : u ∈ U), meromorphicOrderAt f u (hf u hu) ≠ ⊤`: the
+  hypothesis of an anonymous `∀ u ∈ U` binder is not in scope for the default argument.  With
+  `MeromorphicOn.meromorphicAt`, `fun_prop` derives `MeromorphicAt f x` from `MeromorphicOn f U` and
+  `x ∈ U`.  Tests cover the removed names, the default argument, the failure without a hypothesis,
+  and infinite order.
+
+- [ ] **Make the divisor of a meromorphic function domain-bearing.**
+  `MeromorphicOn.divisor f U` in `Mathlib/Analysis/Meromorphic/Divisor.lean` is `0` when `f` is not
+  meromorphic on `U` (`divisor_eq_zero_of_not_meromorphicOn`) and, through `WithTop.untop₀`, at the
+  points where `f` vanishes locally, whose order is `⊤`.  The divisor is defined for a function that
+  is meromorphic on `U` and has finite order at every point of `U`.  Take these as arguments and
+  migrate the consumers: `divisor_const`, `divisor_inv`, and `divisor_const_smul` hold without
+  hypotheses only through these values, and the logarithmic counting function, the characteristic
+  function, Jensen's formula `MeromorphicOn.circleAverage_log_norm`, and the canonical
+  decompositions of `Mathlib/Analysis/Complex/CanonicalDecomposition.lean` use the divisor.
+
+- [ ] **Make the trailing coefficient and the normal-form conversions domain-bearing.**
+  `meromorphicTrailingCoeffAt f x` in `Mathlib/Analysis/Meromorphic/TrailingCoefficient.lean` is `0`
+  when `f` is not meromorphic at `x` (`meromorphicTrailingCoeffAt_of_not_MeromorphicAt`) and when
+  `f` vanishes locally at `x` (`MeromorphicAt.meromorphicTrailingCoeffAt_of_order_eq_top`), where no
+  coefficient is nonzero.  `toMeromorphicNFAt f x` and `toMeromorphicNFOn f U` in
+  `Mathlib/Analysis/Meromorphic/NormalForm.lean` are the zero function when `f` is not meromorphic
+  (`toMeromorphicNFAt_of_not_meromorphicAt`, `toMeromorphicNFOn_of_not_meromorphicOn`).  Lemmas such
+  as `meromorphicTrailingCoeffAt_inv`, `meromorphicTrailingCoeffAt_neg`, and the translation lemmas
+  hold without hypotheses only through these values.  Take meromorphy, and finite order for the
+  trailing coefficient, as arguments, and migrate the consumers, including
+  `circleIntegrable_log_meromorphicTrailingCoeffAt` in
+  `Mathlib/Analysis/Complex/ValueDistribution/Cartan.lean`, which covers non-meromorphic functions
+  through these values.
 
 ## L -- staged cross-module audit candidates
 

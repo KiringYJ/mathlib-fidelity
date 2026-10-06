@@ -312,10 +312,10 @@ theorem MeromorphicOn.circleAverage_log_norm {c : ℂ} {R : ℝ} {f : ℂ → �
         + divisor f (closedBall c |R|) c * log R + log ‖meromorphicTrailingCoeffAt f c‖ := by
   -- Shorthand notation to keep line size in check
   let CB := closedBall c |R|
-  by_cases h₂f : ∀ u ∈ CB, meromorphicOrderAt f u ≠ ⊤
+  by_cases h₂f : ∀ u (hu : u ∈ CB), meromorphicOrderAt f u (h₁f u hu) ≠ ⊤
   · have h₃f := (divisor f CB).finiteSupport (isCompact_closedBall c |R|)
     -- Extract zeros & poles and compute
-    obtain ⟨g, h₁g, h₂g, h₃g⟩ := h₁f.extract_zeros_poles (by simp_all) h₃f
+    obtain ⟨g, h₁g, h₂g, h₃g⟩ := h₁f.extract_zeros_poles (fun u ↦ h₂f u.1 u.2) h₃f
     calc circleAverage (log ‖f ·‖) c R
     _ = circleAverage ((∑ᶠ u, (divisor f CB u * log ‖· - u‖)) + (log ‖g ·‖)) c R := by
       have h₄g := extract_zeros_poles_log h₂g h₃g
@@ -350,7 +350,8 @@ theorem MeromorphicOn.circleAverage_log_norm {c : ℂ} {R : ℝ} {f : ℂ → �
       + log ‖meromorphicTrailingCoeffAt f c‖ := by
       rw [countingFunction_finsum_eq_finsum_add hR h₃f]
   · -- Trivial case: `f` vanishes on a codiscrete set
-    have h₂f : ¬∀ (u : ↑(closedBall c |R|)), meromorphicOrderAt f ↑u ≠ ⊤ := by aesop
+    have h₂f : ¬∀ u : closedBall c |R|, meromorphicOrderAt f u.1 (h₁f u.1 u.2) ≠ ⊤ :=
+      fun h ↦ h₂f fun u hu ↦ h ⟨u, hu⟩
     rw [← h₁f.exists_meromorphicOrderAt_ne_top_iff_forall
       ⟨nonempty_closedBall.mpr (abs_nonneg R), (convex_closedBall c |R|).isPreconnected⟩] at h₂f
     push Not at h₂f
@@ -360,7 +361,8 @@ theorem MeromorphicOn.circleAverage_log_norm {c : ℂ} {R : ℝ} {f : ℂ → �
       <;> simp_all [CB]
     simp only [CB, this, Function.locallyFinsuppWithin.coe_zero, Pi.zero_apply, Int.cast_zero,
       zero_mul, finsum_zero, add_zero, zero_add]
-    rw [MeromorphicAt.meromorphicTrailingCoeffAt_of_order_eq_top (by aesop), norm_zero, log_zero]
+    have t₀ : c ∈ CB := mem_closedBall_self (abs_nonneg R)
+    rw [(h₁f c t₀).meromorphicTrailingCoeffAt_of_order_eq_top (h₂f ⟨c, t₀⟩), norm_zero, log_zero]
     have : f =ᶠ[codiscreteWithin CB] 0 := by
       filter_upwards [h₁f.meromorphicNFAt_mem_codiscreteWithin, self_mem_codiscreteWithin CB]
         with z h₁z h₂z
@@ -425,7 +427,8 @@ theorem AnalyticOnNhd.sum_divisor_le {c : ℂ} {r R M : ℝ} {f : ℂ → ℂ} (
           simp only [(h₁f.mono (closedBall_subset_closedBall r_lt_R.le)), h2,
             AnalyticOnNhd.divisor_apply, h₁f, h1]
           by_cases! h3 : u = c --Need to use the divisor is 0 at c rather than comparing the logs
-          · rw [h3, (h₁f c (by simp)).analyticOrderAt_eq_zero.mpr h₂f]
+          · subst h3
+            rw [(h₁f _ h1).analyticOrderAt_eq_zero.mpr h₂f]
             simp
           simp +singlePass only [← log_abs]
           gcongr 2

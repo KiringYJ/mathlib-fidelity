@@ -40,26 +40,27 @@ zero if the order is infinite.
 -/
 noncomputable def divisor (f : 𝕜 → E) (U : Set 𝕜) :
     Function.locallyFinsuppWithin U ℤ where
-  toFun := fun z ↦ if MeromorphicOn f U ∧ z ∈ U then (meromorphicOrderAt f z).untop₀ else 0
+  toFun := fun z ↦ if h : MeromorphicOn f U ∧ z ∈ U then
+    (meromorphicOrderAt f z (h.1 z h.2)).untop₀ else 0
   supportWithinDomain' z hz := by
     by_contra h₂z
     simp [h₂z] at hz
   supportLocallyFiniteWithinDomain' := by
-    simp_all only [Function.support_subset_iff, ne_eq, ite_eq_right_iff, WithTop.untop₀_eq_zero,
-      and_imp, Classical.not_imp, not_or, implies_true,
-      ← supportDiscreteWithin_iff_locallyFiniteWithin]
+    rw [← supportDiscreteWithin_iff_locallyFiniteWithin fun z hz ↦ by
+      by_contra h₂z
+      simp [h₂z] at hz]
     by_cases hf : MeromorphicOn f U
-    · filter_upwards [mem_codiscrete_subtype_iff_mem_codiscreteWithin.1
-        hf.codiscrete_setOfPred_meromorphicOrderAt_eq_zero_or_top]
-      simp only [Set.mem_image, Set.mem_ofPred_eq, Subtype.exists, exists_and_left, exists_prop,
-        exists_eq_right_right, Pi.ofNat_apply, ite_eq_right_iff, WithTop.untop₀_eq_zero, and_imp]
-      tauto
-    · simp [hf, Pi.zero_def]
+    · filter_upwards [hf.codiscreteWithin_setOfPred_meromorphicOrderAt_eq_zero_or_top]
+        with z ⟨hz, h⟩
+      rcases h with h | h <;> simp [hf, hz, h]
+    · filter_upwards with z
+      simp [hf]
 
 open scoped Classical in
 /-- Definition of the divisor -/
 theorem divisor_def (f : 𝕜 → E) (U : Set 𝕜) :
-    divisor f U z = if MeromorphicOn f U ∧ z ∈ U then (meromorphicOrderAt f z).untop₀ else 0 :=
+    divisor f U z = if h : MeromorphicOn f U ∧ z ∈ U then
+      (meromorphicOrderAt f z (h.1 z h.2)).untop₀ else 0 :=
   rfl
 
 /--
@@ -68,16 +69,16 @@ Simplifier lemma: on `U`, the divisor of a function `f` that is meromorphic on `
 -/
 @[simp]
 lemma divisor_apply {f : 𝕜 → E} (hf : MeromorphicOn f U) (hz : z ∈ U) :
-    divisor f U z = (meromorphicOrderAt f z).untop₀ := by simp_all [MeromorphicOn.divisor_def]
+    divisor f U z = (meromorphicOrderAt f z (hf z hz)).untop₀ := by
+  simp [MeromorphicOn.divisor_def, hf, hz]
 
 /-- The divisor of a function `f` evaluates to zero if `f` is not meromorphic. -/
 @[simp] theorem divisor_eq_zero_of_not_meromorphicOn {f : 𝕜 → E} (hf : ¬ MeromorphicOn f U) :
     divisor f U z = 0 := by
-  unfold divisor
-  aesop
+  simp [MeromorphicOn.divisor_def, hf]
 
 lemma AnalyticOnNhd.divisor_apply {f : 𝕜 → E} (hf : AnalyticOnNhd 𝕜 f U) (hz : z ∈ U) :
-    divisor f U z = ((analyticOrderAt f z).map (↑)).untop₀ := by
+    divisor f U z = ((analyticOrderAt f z (hf z hz)).map (↑)).untop₀ := by
   rw [hf.meromorphicOn.divisor_apply hz, (hf z hz).meromorphicOrderAt_eq]
 
 /-!
@@ -129,7 +130,7 @@ theorem divisor_congr_codiscreteWithin_of_eqOn_compl {f₁ f₂ : 𝕜 → E} (h
   by_cases hx : x ∈ U
   · simp only [hf₁, hx, divisor_apply, hf₁.congr_codiscreteWithin_of_eqOn_compl h₁ h₂]
     congr 1
-    apply meromorphicOrderAt_congr
+    apply meromorphicOrderAt_congr (hf₁ x hx)
     simp_rw [EventuallyEq, Filter.Eventually, mem_codiscreteWithin, disjoint_principal_right] at h₁
     filter_upwards [h₁ x hx] with a ha
     simp at ha
@@ -150,7 +151,7 @@ theorem divisor_of_eventuallyEq_codiscreteWithin_preperfect {f₁ f₂ : 𝕜 �
   rw [not_not] at hz
   rw [divisor_apply hf₁ hz, divisor_apply hf₂ hz]
   congr 1
-  apply meromorphicOrderAt_congr
+  apply meromorphicOrderAt_congr (hf₁ z hz)
   apply (hf₁ z hz).eventuallyEq_nhdsNE_of_eventuallyEq_codiscreteWithin_preperfect
     (hf₂ z hz) hz hU h
 
@@ -165,7 +166,7 @@ theorem divisor_congr_codiscreteWithin {f₁ f₂ : 𝕜 → E} (h₁ : f₁ =�
     by_cases hx : x ∈ U
     · simp only [hf₁, hx, divisor_apply, hf₁.congr_codiscreteWithin h₁ h₂]
       congr 1
-      apply meromorphicOrderAt_congr
+      apply meromorphicOrderAt_congr (hf₁ x hx)
       simp_rw [EventuallyEq, Filter.Eventually, mem_codiscreteWithin,
         disjoint_principal_right] at h₁
       have : U ∈ 𝓝[≠] x := by
@@ -175,7 +176,8 @@ theorem divisor_congr_codiscreteWithin {f₁ f₂ : 𝕜 → E} (h₁ : f₁ =�
       simp only [Set.mem_compl_iff, Set.mem_sdiff, Set.mem_ofPred_eq, not_and] at h₂a
       tauto
     · simp [hx]
-  · simp [divisor, hf₁, (meromorphicOn_congr_codiscreteWithin h₁ h₂).not.1 hf₁]
+  · ext x
+    simp [hf₁, (meromorphicOn_congr_codiscreteWithin h₁ h₂).not.1 hf₁]
 
 /-!
 ## Divisors of Analytic Functions
@@ -197,11 +199,10 @@ theorem divisor_const (e : E) :
     divisor (fun _ ↦ e) U = 0 := by
   classical
   ext x
-  simp only [divisor_def, meromorphicOrderAt_const, Function.locallyFinsuppWithin.coe_zero,
-    Pi.zero_apply, ite_eq_right_iff, WithTop.untop₀_eq_zero,
-    LinearOrderedAddCommGroupWithTop.top_ne_zero, imp_false, ite_eq_left_iff, WithTop.zero_ne_top,
-    Decidable.not_not, and_imp]
-  tauto
+  by_cases hx : x ∈ U
+  · rw [divisor_apply (MeromorphicOn.const e) hx, meromorphicOrderAt_const]
+    split_ifs <;> simp
+  · simp [hx]
 
 /--
 The divisor of a constant function is `0`.
@@ -239,10 +240,12 @@ theorem min_divisor_le_divisor_add {f₁ f₂ : 𝕜 → E} {z : 𝕜} {U : Set 
   by_cases! hz : z ∉ U
   · simp_all
   rw [divisor_apply hf₁ hz, divisor_apply hf₂ hz, divisor_apply (hf₁.add hf₂) hz]
-  by_cases h₁ : meromorphicOrderAt f₁ z = ⊤
-  · simp_all
-  by_cases h₂ : meromorphicOrderAt f₂ z = ⊤
-  · simp_all
+  by_cases h₁ : meromorphicOrderAt f₁ z (hf₁ z hz) = ⊤
+  · rw [meromorphicOrderAt_add_of_top_left (hf₁ z hz) (hf₂ z hz) h₁]
+    exact min_le_right _ _
+  by_cases h₂ : meromorphicOrderAt f₂ z (hf₂ z hz) = ⊤
+  · rw [meromorphicOrderAt_add_of_top_right (hf₁ z hz) (hf₂ z hz) h₂]
+    exact min_le_left _ _
   rw [← WithTop.untop₀_min h₁ h₂]
   apply WithTop.untop₀_le_untop₀ h₃
   exact meromorphicOrderAt_add (hf₁ z hz) (hf₂ z hz)
@@ -258,7 +261,7 @@ theorem negPart_divisor_add_le_max {f₁ f₂ : 𝕜 → E} {U : Set 𝕜} (hf�
   by_cases! hz : z ∉ U
   · simp [hz]
   simp only [Function.locallyFinsuppWithin.negPart_apply, Function.locallyFinsuppWithin.max_apply]
-  by_cases hf₁₂ : meromorphicOrderAt (f₁ + f₂) z = ⊤
+  by_cases hf₁₂ : meromorphicOrderAt (f₁ + f₂) z ((hf₁ z hz).add (hf₂ z hz)) = ⊤
   · simp [divisor_apply (hf₁.add hf₂) hz, hf₁₂, negPart_nonneg]
   rw [← negPart_min]
   apply ((le_iff_posPart_negPart _ _).1 (min_divisor_le_divisor_add hf₁ hf₂ hz hf₁₂)).2
@@ -286,13 +289,13 @@ See `MeromorphicOn.exists_order_ne_top_iff_forall` and
 `h₂f₁` and `h₂f₂`.
 -/
 theorem divisor_smul {f₁ : 𝕜 → 𝕜} {f₂ : 𝕜 → E} (h₁f₁ : MeromorphicOn f₁ U)
-    (h₁f₂ : MeromorphicOn f₂ U) (h₂f₁ : ∀ z ∈ U, meromorphicOrderAt f₁ z ≠ ⊤)
-    (h₂f₂ : ∀ z ∈ U, meromorphicOrderAt f₂ z ≠ ⊤) :
+    (h₁f₂ : MeromorphicOn f₂ U) (h₂f₁ : ∀ z (hz : z ∈ U), meromorphicOrderAt f₁ z (h₁f₁ z hz) ≠ ⊤)
+    (h₂f₂ : ∀ z (hz : z ∈ U), meromorphicOrderAt f₂ z (h₁f₂ z hz) ≠ ⊤) :
     divisor (f₁ • f₂) U = divisor f₁ U + divisor f₂ U := by
   ext z
   by_cases hz : z ∈ U
-  · lift meromorphicOrderAt f₁ z to ℤ using (h₂f₁ z hz) with a₁ ha₁
-    lift meromorphicOrderAt f₂ z to ℤ using (h₂f₂ z hz) with a₂ ha₂
+  · lift meromorphicOrderAt f₁ z (h₁f₁ z hz) to ℤ using (h₂f₁ z hz) with a₁ ha₁
+    lift meromorphicOrderAt f₂ z (h₁f₂ z hz) to ℤ using (h₂f₂ z hz) with a₂ ha₂
     simp [h₁f₁, h₁f₂, h₁f₁.smul h₁f₂, hz, meromorphicOrderAt_smul (h₁f₁ z hz) (h₁f₂ z hz),
       ← ha₁, ← ha₂, ← WithTop.coe_add]
   · simp [hz]
@@ -302,8 +305,8 @@ If orders are finite, the divisor of the scalar product of two meromorphic funct
 the divisors.
 -/
 theorem divisor_fun_smul {f₁ : 𝕜 → 𝕜} {f₂ : 𝕜 → E} (h₁f₁ : MeromorphicOn f₁ U)
-    (h₁f₂ : MeromorphicOn f₂ U) (h₂f₁ : ∀ z ∈ U, meromorphicOrderAt f₁ z ≠ ⊤)
-    (h₂f₂ : ∀ z ∈ U, meromorphicOrderAt f₂ z ≠ ⊤) :
+    (h₁f₂ : MeromorphicOn f₂ U) (h₂f₁ : ∀ z (hz : z ∈ U), meromorphicOrderAt f₁ z (h₁f₁ z hz) ≠ ⊤)
+    (h₂f₂ : ∀ z (hz : z ∈ U), meromorphicOrderAt f₂ z (h₁f₂ z hz) ≠ ⊤) :
     divisor (fun z ↦ f₁ z • f₂ z) U = divisor f₁ U + divisor f₂ U :=
   divisor_smul h₁f₁ h₁f₂ h₂f₁ h₂f₂
 
@@ -328,8 +331,8 @@ See `MeromorphicOn.exists_order_ne_top_iff_forall` and
 `h₂f₁` and `h₂f₂`.
 -/
 theorem divisor_mul {f₁ f₂ : 𝕜 → 𝕜} (h₁f₁ : MeromorphicOn f₁ U)
-    (h₁f₂ : MeromorphicOn f₂ U) (h₂f₁ : ∀ z ∈ U, meromorphicOrderAt f₁ z ≠ ⊤)
-    (h₂f₂ : ∀ z ∈ U, meromorphicOrderAt f₂ z ≠ ⊤) :
+    (h₁f₂ : MeromorphicOn f₂ U) (h₂f₁ : ∀ z (hz : z ∈ U), meromorphicOrderAt f₁ z (h₁f₁ z hz) ≠ ⊤)
+    (h₂f₂ : ∀ z (hz : z ∈ U), meromorphicOrderAt f₂ z (h₁f₂ z hz) ≠ ⊤) :
     divisor (f₁ * f₂) U = divisor f₁ U + divisor f₂ U := divisor_smul h₁f₁ h₁f₂ h₂f₁ h₂f₂
 
 /--
@@ -337,8 +340,8 @@ If orders are finite, the divisor of the product of two meromorphic functions is
 divisors.
 -/
 theorem divisor_fun_mul {f₁ f₂ : 𝕜 → 𝕜} (h₁f₁ : MeromorphicOn f₁ U)
-    (h₁f₂ : MeromorphicOn f₂ U) (h₂f₁ : ∀ z ∈ U, meromorphicOrderAt f₁ z ≠ ⊤)
-    (h₂f₂ : ∀ z ∈ U, meromorphicOrderAt f₂ z ≠ ⊤) :
+    (h₁f₂ : MeromorphicOn f₂ U) (h₂f₁ : ∀ z (hz : z ∈ U), meromorphicOrderAt f₁ z (h₁f₁ z hz) ≠ ⊤)
+    (h₂f₂ : ∀ z (hz : z ∈ U), meromorphicOrderAt f₂ z (h₁f₂ z hz) ≠ ⊤) :
     divisor (fun z ↦ f₁ z * f₂ z) U = divisor f₁ U + divisor f₂ U :=
   divisor_smul h₁f₁ h₁f₂ h₂f₁ h₂f₂
 
@@ -348,7 +351,7 @@ If orders are finite, the divisor of a product of meromorphic functions is the s
 -/
 theorem divisor_prod {ι : Type*} {s : Finset ι} {f : ι → 𝕜 → 𝕜}
     (h₁f : ∀ i ∈ s, MeromorphicOn (f i) U)
-    (h₂f : ∀ i ∈ s, ∀ z ∈ U, meromorphicOrderAt (f i) z ≠ ⊤) :
+    (h₂f : ∀ i (hi : i ∈ s) z (hz : z ∈ U), meromorphicOrderAt (f i) z (h₁f i hi z hz) ≠ ⊤) :
     divisor (∏ i ∈ s, f i) U = ∑ i ∈ s, divisor (f i) U := by
   classical
   induction s using Finset.induction with
@@ -356,10 +359,11 @@ theorem divisor_prod {ι : Type*} {s : Finset ι} {f : ι → 𝕜 → 𝕜}
     rw [prod_empty, sum_empty]
     exact divisor_ofNat 1
   | insert a s ha hs =>
-    have (z) (hz : z ∈ U) : meromorphicOrderAt (∏ i ∈ s, f i) z ≠ ⊤ := by
-      simpa [meromorphicOrderAt_prod (fun i hi ↦ h₁f i (mem_insert_of_mem hi) z hz)]
-        using fun i hi ↦ h₂f i (mem_insert_of_mem hi) z hz
-    rw [prod_insert ha, sum_insert ha, divisor_mul (by aesop)
+    have (z) (hz : z ∈ U) : meromorphicOrderAt (∏ i ∈ s, f i) z
+        (prod (fun i hi ↦ h₁f i (mem_insert_of_mem hi)) z hz) ≠ ⊤ :=
+      meromorphicOrderAt_prod_ne_top (fun i hi ↦ h₁f i (mem_insert_of_mem hi) z hz)
+        fun i hi ↦ h₂f i (mem_insert_of_mem hi) z hz
+    rw [prod_insert ha, sum_insert ha, divisor_mul (h₁f a (mem_insert_self a s))
         (prod (fun i hi ↦ h₁f i (mem_insert_of_mem hi)))
         (h₂f a (mem_insert_self a s)) this,
       hs (fun i hi ↦ h₁f i (mem_insert_of_mem hi))
@@ -370,7 +374,7 @@ If orders are finite, the divisor of a product of meromorphic functions is the s
 -/
 theorem divisor_fun_prod {ι : Type*} {s : Finset ι} {f : ι → 𝕜 → 𝕜}
     (h₁f : ∀ i ∈ s, MeromorphicOn (f i) U)
-    (h₂f : ∀ i ∈ s, ∀ z ∈ U, meromorphicOrderAt (f i) z ≠ ⊤) :
+    (h₂f : ∀ i (hi : i ∈ s) z (hz : z ∈ U), meromorphicOrderAt (f i) z (h₁f i hi z hz) ≠ ⊤) :
     divisor (fun x ↦ ∏ i ∈ s, f i x) U = ∑ i ∈ s, divisor (f i) U := by
   convert! divisor_prod h₁f h₂f
   exact (Finset.prod_apply _ s f).symm
@@ -381,7 +385,7 @@ theorem divisor_inv {f : 𝕜 → 𝕜} :
     divisor f⁻¹ U = -divisor f U := by
   ext z
   by_cases h : MeromorphicOn f U ∧ z ∈ U
-  · simp [divisor_apply, h, meromorphicOrderAt_inv]
+  · simp [divisor_apply, h, meromorphicOrderAt_inv (h.1 z h.2)]
   · simp [divisor_def, h]
 
 /-- The divisor of the inverse is the negative of the divisor. -/
@@ -442,20 +446,23 @@ theorem negPart_divisor_add_of_analyticNhdOn_right {f₁ f₂ : 𝕜 → E} (hf�
     (divisor (f₁ + f₂) U)⁻ = (divisor f₁ U)⁻ := by
   ext x
   by_cases hx : x ∈ U
-  · suffices -(meromorphicOrderAt (f₁ + f₂) x).untop₀ ⊔ 0 = -(meromorphicOrderAt f₁ x).untop₀ ⊔ 0 by
+  · have h₁ := hf₁ x hx
+    have h₂ := (hf₂ x hx).meromorphicAt
+    suffices -(meromorphicOrderAt (f₁ + f₂) x (h₁.add h₂)).untop₀ ⊔ 0 =
+        -(meromorphicOrderAt f₁ x h₁).untop₀ ⊔ 0 by
       simpa [negPart_def, hx, hf₁, hf₁.add hf₂.meromorphicOn]
-    by_cases h : 0 ≤ meromorphicOrderAt f₁ x
-    · suffices 0 ≤ meromorphicOrderAt (f₁ + f₂) x by simp_all
+    by_cases h : 0 ≤ meromorphicOrderAt f₁ x h₁
+    · suffices 0 ≤ meromorphicOrderAt (f₁ + f₂) x (h₁.add h₂) by simp_all
       calc 0
-      _ ≤ min (meromorphicOrderAt f₁ x) (meromorphicOrderAt f₂ x) :=
+      _ ≤ min (meromorphicOrderAt f₁ x h₁) (meromorphicOrderAt f₂ x h₂) :=
         le_inf h (hf₂ x hx).meromorphicOrderAt_nonneg
-      _ ≤ meromorphicOrderAt (f₁ + f₂) x :=
-        meromorphicOrderAt_add (hf₁ x hx) (hf₂ x hx).meromorphicAt
-    · suffices meromorphicOrderAt f₁ x < meromorphicOrderAt f₂ x by
-        rwa [meromorphicOrderAt_add_eq_left_of_lt (hf₂.meromorphicOn x hx)]
-      calc meromorphicOrderAt f₁ x
+      _ ≤ meromorphicOrderAt (f₁ + f₂) x (h₁.add h₂) :=
+        meromorphicOrderAt_add h₁ h₂
+    · suffices meromorphicOrderAt f₁ x h₁ < meromorphicOrderAt f₂ x h₂ by
+        rw [meromorphicOrderAt_add_eq_left_of_lt h₁ h₂ this]
+      calc meromorphicOrderAt f₁ x h₁
       _ < 0 := by simpa using h
-      _ ≤ meromorphicOrderAt f₂ x := (hf₂ x hx).meromorphicOrderAt_nonneg
+      _ ≤ meromorphicOrderAt f₂ x h₂ := (hf₂ x hx).meromorphicOrderAt_nonneg
   simp [hx]
 
 /-- Adding an analytic function to a meromorphic one does not change the pole divisor. -/
@@ -498,8 +505,13 @@ theorem divisor_comp_add_const_eq_divisor {c x : 𝕜} {f : 𝕜 → E} :
   · rw [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem,
       Function.locallyFinsuppWithin.apply_eq_zero_of_notMem]
     <;> simp_all [← sub_eq_add_neg]
-  rw [divisor_apply, divisor_apply]
-  <;> simp_all [← sub_eq_add_neg, meromorphicOrderAt_comp_add_const_eq_meromorphicOrderAt]
+  rw [not_not] at h₁
+  have hU : x - c ∈ U := by simpa [← sub_eq_add_neg] using h₁
+  have hfx : MeromorphicAt f (x - c + c) := by simpa using h x h₁
+  rw [divisor_apply this hU, divisor_apply h h₁,
+    meromorphicOrderAt_comp_add_const_eq_meromorphicOrderAt hfx]
+  congr 2
+  exact sub_add_cancel x c
 
 /-- Divisors are invariant under translation. -/
 @[to_fun divisor_fun_comp_sub_const_eq_divisor]
