@@ -6,12 +6,12 @@ open Nat
 set_option maxHeartbeats 7000 in
 theorem euclid (n : ℕ) : ∃ N, n < N ∧ N.Prime := by
   let N := n.factorial + 1
-  let p := minFac N
-  use p
-  have prime : p.Prime := by
-    apply minFac_prime
+  have hN : N ≠ 1 := by
     observe : n.factorial > 0
     lia
+  let p := minFac N
+  use p
+  have prime : p.Prime := minFac_prime hN
   constructor
   · by_contra!
     observe : p ∣ n.factorial

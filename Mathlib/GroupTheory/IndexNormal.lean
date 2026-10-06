@@ -41,15 +41,14 @@ theorem normal_of_index_eq_two (hH : H.index = 2) : H.Normal where
 
 /-- A subgroup of a finite group whose index is the smallest prime factor is normal.
 
-Note : if `G` is infinite, then `Nat.card G = 0` and `(Nat.card G).minFac = 2` -/
-theorem normal_of_index_eq_minFac_card (hHp : H.index = (Nat.card G).minFac) :
-    H.Normal := by
+The trivial group, whose order has no prime factor, is excluded. If `G` is infinite, then
+`Nat.card G = 0` and `(Nat.card G).minFac = 2`, so the statement also covers subgroups of index
+`2`. -/
+theorem normal_of_index_eq_minFac_card (hG1 : Nat.card G ≠ 1)
+    (hHp : H.index = (Nat.card G).minFac) : H.Normal := by
   by_cases hG0 : Nat.card G = 0
-  · rw [hG0, minFac_zero] at hHp
+  · simp only [hG0, minFac_zero] at hHp
     exact normal_of_index_eq_two hHp
-  by_cases hG1 : Nat.card G = 1
-  · rw [hG1, minFac_one] at hHp
-    exact normal_of_index_eq_one hHp
   suffices H.normalCore.relIndex H = 1 by
     convert! H.normalCore_normal
     exact le_antisymm (relIndex_eq_one.mp this) (normalCore_le H)
@@ -67,6 +66,6 @@ theorem normal_of_index_eq_minFac_card (hHp : H.index = (Nat.card G).minFac) :
   rw [Nat.coprime_factorial_iff hr1]
   exact lt_of_lt_of_le (Nat.sub_one_lt hp.ne_zero) <|
     hHp ▸ minFac_le_of_dvd (Nat.minFac_prime hr1).two_le
-      (dvd_trans (minFac_dvd H.normalCore.index) (H.normalCore.index_dvd_card))
+      (dvd_trans (minFac_dvd H.normalCore.index hr1) (H.normalCore.index_dvd_card))
 
 end Subgroup

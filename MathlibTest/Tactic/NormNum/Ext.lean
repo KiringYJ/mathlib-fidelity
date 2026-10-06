@@ -143,7 +143,6 @@ example : ¬ Nat.Prime ((2 ^ 19 - 1) * (2 ^ 25 - 39)) := by norm_num1
 example : Nat.Prime 317 := by norm_num -decide
 
 example : Nat.minFac 0 = 2 := by norm_num1
-example : Nat.minFac 1 = 1 := by norm_num1
 example : Nat.minFac (9 - 7) = 2 := by norm_num1
 example : Nat.minFac 3 = 3 := by norm_num1
 example : Nat.minFac 4 = 2 := by norm_num1

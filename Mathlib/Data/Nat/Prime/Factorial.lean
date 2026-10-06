@@ -33,7 +33,7 @@ theorem coprime_factorial_iff {m n : ℕ} (hm : m ≠ 1) :
   rw [← not_le, iff_not_comm, Nat.Prime.not_coprime_iff_dvd]
   constructor
   · intro h
-    exact ⟨m.minFac, minFac_prime hm, minFac_dvd m, Nat.dvd_factorial (minFac_pos m) h⟩
+    exact ⟨m.minFac, minFac_prime hm, minFac_dvd m hm, Nat.dvd_factorial (minFac_pos m hm) h⟩
   · rintro ⟨p, hp, hdvd, hdvd'⟩
     exact le_trans (minFac_le_of_dvd hp.two_le hdvd) (hp.dvd_factorial.mp hdvd')
 

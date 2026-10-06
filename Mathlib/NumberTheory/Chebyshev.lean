@@ -379,10 +379,11 @@ theorem sum_PrimePow_eq_sum_sum {R : Type*} [AddCommMonoid R] (f : ℕ → R) {x
 
 theorem psi_eq_sum_theta' {x : ℝ} (hx : 0 ≤ x) {N : ℕ} (hN : ⌊log x / log 2⌋₊ ≤ N) :
     ψ x = ∑ n ∈ Icc 1 N, θ (x ^ ((1 : ℝ) / n)) := by
-  simp_rw [psi, vonMangoldt_apply, ← sum_filter, sum_PrimePow_eq_sum_sum' _ hx hN]
-  apply sum_congr rfl fun _ hk ↦ sum_congr rfl fun _ _ ↦ ?_
-  rw [Prime.pow_minFac _ (by linarith [mem_Icc.mp hk])]
-  simp_all
+  rw [psi, ← sum_filter_of_ne (p := IsPrimePow) fun _ _ h => vonMangoldt_ne_zero_iff.1 h,
+    sum_PrimePow_eq_sum_sum' _ hx hN]
+  apply sum_congr rfl fun _ hk ↦ sum_congr rfl fun _ hp ↦ ?_
+  rw [vonMangoldt_apply_pow (by have := (mem_Icc.mp hk).1; lia),
+    vonMangoldt_apply_prime (mem_filter.1 hp).2]
 
 theorem psi_eq_sum_theta {x : ℝ} (hx : 0 ≤ x) :
     ψ x = ∑ n ∈ Icc 1 ⌊log x / log 2⌋₊, θ (x ^ ((1 : ℝ) / n)) :=

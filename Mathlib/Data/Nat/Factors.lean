@@ -75,16 +75,17 @@ theorem prod_primeFactorsList : ∀ {n}, n ≠ 0 → List.prod (primeFactorsList
     have : (k + 2) / m < (k + 2) := factors_lemma
     show (primeFactorsList (k + 2)).prod = (k + 2) by
       have h₁ : (k + 2) / m ≠ 0 := fun h => by
-        have : (k + 2) = 0 * m := (Nat.div_eq_iff_eq_mul_left (minFac_pos _) (minFac_dvd _)).1 h
+        have : (k + 2) = 0 * m :=
+          (Nat.div_eq_iff_eq_mul_left (minFac_pos _ (by omega)) (minFac_dvd _ (by omega))).1 h
         rw [zero_mul] at this; exact (show k + 2 ≠ 0 by simp) this
       rw [primeFactorsList, List.prod_cons, prod_primeFactorsList h₁,
-        Nat.mul_div_cancel' (minFac_dvd _)]
+        Nat.mul_div_cancel' (minFac_dvd _ (by omega))]
 
 theorem primeFactorsList_prime {p : ℕ} (hp : Nat.Prime p) : p.primeFactorsList = [p] := by
   have : p = p - 2 + 2 := Nat.eq_add_of_sub_eq hp.two_le rfl
   rw [this, primeFactorsList]
   simp only [Eq.symm this]
-  have : Nat.minFac p = p := (Nat.prime_def_minFac.mp hp).2
+  have : Nat.minFac p = p := hp.minFac_eq
   simp only [this, primeFactorsList, Nat.div_self (Nat.Prime.pos hp)]
 
 theorem isChain_cons_primeFactorsList {n : ℕ} :
@@ -98,8 +99,9 @@ theorem isChain_cons_primeFactorsList {n : ℕ} :
       have : (k + 2) / m < (k + 2) := factors_lemma
       rw [primeFactorsList]
       refine List.IsChain.cons_cons
-        ((le_minFac.2 h).resolve_left (by simp)) (isChain_cons_primeFactorsList ?_)
-      exact fun p pp d => minFac_le_of_dvd pp.two_le (d.trans <| div_dvd_of_dvd <| minFac_dvd _)
+        ((le_minFac (by omega)).2 h) (isChain_cons_primeFactorsList ?_)
+      exact fun p pp d =>
+        minFac_le_of_dvd pp.two_le (d.trans <| div_dvd_of_dvd <| minFac_dvd (k + 2) (by omega))
 
 theorem isChain_two_cons_primeFactorsList (n) : List.IsChain (· ≤ ·) (2 :: primeFactorsList n) :=
   isChain_cons_primeFactorsList fun _ pp _ => pp.two_le

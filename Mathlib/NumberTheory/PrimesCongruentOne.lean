@@ -45,11 +45,11 @@ theorem exists_prime_gt_modEq_one {k : ℕ} (n : ℕ) (hk0 : k ≠ 0) :
     rw [IsRoot.def, ← map_cyclotomic_int k (ZMod p), eval_map, coe_castRingHom,
       ← Int.cast_natCast, this, eval₂_hom, Int.coe_castRingHom, ZMod.intCast_zmod_eq_zero_iff_dvd]
     apply Int.dvd_natAbs.1
-    exact mod_cast minFac_dvd (eval (↑b) (cyclotomic k ℤ)).natAbs
+    exact mod_cast minFac_dvd (eval (↑b) (cyclotomic k ℤ)).natAbs (ne_of_lt hgt).symm
   have hpb : ¬p ∣ b :=
     hprime.1.coprime_iff_not_dvd.1 (coprime_of_root_cyclotomic hk0.bot_lt hroot).symm
   refine ⟨p, hprime.1, not_le.1 fun habs => ?_, ?_⟩
-  · exact hpb (dvd_mul_of_dvd_right (dvd_factorial (minFac_pos _) habs) _)
+  · exact hpb (dvd_mul_of_dvd_right (dvd_factorial (minFac_pos _ (ne_of_lt hgt).symm) habs) _)
   · have hdiv : orderOf (b : ZMod p) ∣ p - 1 :=
       ZMod.orderOf_dvd_card_sub_one (mt (CharP.cast_eq_zero_iff _ _ _).1 hpb)
     have : NeZero (k : ZMod p) :=

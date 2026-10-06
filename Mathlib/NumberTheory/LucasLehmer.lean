@@ -95,6 +95,13 @@ end Mathlib.Meta.Positivity
 theorem one_lt_mersenne {p : ℕ} : 1 < mersenne p ↔ 1 < p :=
   mersenne_lt_mersenne (p := 1)
 
+theorem mersenne_eq_one_iff {p : ℕ} : mersenne p = 1 ↔ p = 1 := by
+  rcases Nat.lt_trichotomy p 1 with h | rfl | h
+  · obtain rfl : p = 0 := by lia
+    simp [mersenne]
+  · simp [mersenne]
+  · simp [(one_lt_mersenne.2 h).ne', h.ne']
+
 @[simp]
 theorem succ_mersenne (k : ℕ) : mersenne k + 1 = 2 ^ k := by
   rw [mersenne, tsub_add_cancel_of_le]
@@ -218,9 +225,11 @@ the Lucas-Lehmer residue `s p (p-2) % (2^p - 1)` is zero.
 def LucasLehmerTest (p : ℕ) : Prop :=
   lucasLehmerResidue p = 0
 
-/-- `q` is defined as the minimum factor of `mersenne p`, bundled as an `ℕ+`. -/
-def q (p : ℕ) : ℕ+ :=
-  ⟨Nat.minFac (mersenne p), Nat.minFac_pos (mersenne p)⟩
+/-- `q` is defined as the minimum factor of `mersenne p`, bundled as an `ℕ+`. It needs `p ≠ 1`,
+since `mersenne 1 = 1` has no prime factor. -/
+def q (p : ℕ) (hp : p ≠ 1 := by lia) : ℕ+ :=
+  ⟨Nat.minFac (mersenne p) (mersenne_eq_one_iff.not.mpr hp),
+    Nat.minFac_pos (mersenne p) (mersenne_eq_one_iff.not.mpr hp)⟩
 
 -- It would be nice to define this as (ℤ/qℤ)[x] / (x^2 - 3),
 -- obtaining the ring structure for free,
@@ -516,13 +525,14 @@ theorem ω_pow_formula (p' : ℕ) (h : lucasLehmerResidue (p' + 2) = 0) :
 
 set_option backward.isDefEq.respectTransparency false in
 /-- `q` is the minimum factor of `mersenne p`, so `M p = 0` in `X q`. -/
-theorem mersenne_coe_X (p : ℕ) : (mersenne p : X (q p)) = 0 := by
-  ext <;> simp [mersenne, q, ZMod.natCast_eq_zero_iff, Nat.minFac_dvd, -pow_pos]
+theorem mersenne_coe_X (p : ℕ) (hp : p ≠ 1) : (mersenne p : X (q p)) = 0 := by
+  ext <;> simp [mersenne, q, ZMod.natCast_eq_zero_iff,
+    Nat.minFac_dvd (2 ^ p - 1) (mersenne_eq_one_iff.not.mpr hp), -pow_pos]
 
 theorem ω_pow_eq_neg_one (p' : ℕ) (h : lucasLehmerResidue (p' + 2) = 0) :
     (ω : X (q (p' + 2))) ^ 2 ^ (p' + 1) = -1 := by
   obtain ⟨k, w⟩ := ω_pow_formula p' h
-  rw [mersenne_coe_X] at w
+  rw [mersenne_coe_X _ (by lia)] at w
   simpa using w
 
 theorem ω_pow_eq_one (p' : ℕ) (h : lucasLehmerResidue (p' + 2) = 0) :
@@ -534,14 +544,14 @@ theorem ω_pow_eq_one (p' : ℕ) (h : lucasLehmerResidue (p' + 2) = 0) :
     _ = 1 := by simp
 
 /-- `ω` as an element of the group of units. -/
-def ωUnit (p : ℕ) : Units (X (q p)) where
+def ωUnit (p : ℕ) (hp : p ≠ 1 := by lia) : Units (X (q p)) where
   val := ω
   inv := ωb
   val_inv := ω_mul_ωb
   inv_val := ωb_mul_ω
 
 @[simp]
-theorem ωUnit_coe (p : ℕ) : (ωUnit p : X (q p)) = ω :=
+theorem ωUnit_coe (p : ℕ) {hp : p ≠ 1} : (ωUnit p hp : X (q p)) = ω :=
   rfl
 
 /-- The order of `ω` in the unit group is exactly `2^p`. -/
@@ -586,7 +596,7 @@ theorem lucas_lehmer_sufficiency (p : ℕ) (w : 1 < p) : LucasLehmerTest p → (
   contrapose
   intro a t
   have h₁ := order_ineq p' t
-  have h₂ := Nat.minFac_sq_le_self (mersenne_pos.2 (Nat.lt_of_succ_lt w)) a
+  have h₂ := Nat.minFac_sq_le_self (one_lt_mersenne.2 w) a
   have h := lt_of_lt_of_le h₁ h₂
   exact not_lt_of_ge (Nat.sub_le _ _) h
 

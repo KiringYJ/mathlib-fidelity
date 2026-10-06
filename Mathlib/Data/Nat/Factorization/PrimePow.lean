@@ -20,13 +20,13 @@ This file deals with factorizations of prime powers.
 
 
 theorem IsPrimePow.minFac_pow_factorization_eq {n : ℕ} (hn : IsPrimePow n) :
-    n.minFac ^ n.factorization n.minFac = n := by
+    n.minFac hn.ne_one ^ n.factorization (n.minFac hn.ne_one) = n := by
   obtain ⟨p, k, hp, hk, rfl⟩ := hn
   rw [← Nat.prime_iff] at hp
   rw [hp.pow_minFac hk.ne', hp.factorization_pow, Finsupp.single_eq_same]
 
-theorem isPrimePow_of_minFac_pow_factorization_eq {n : ℕ}
-    (h : n.minFac ^ n.factorization n.minFac = n) (hn : n ≠ 1) : IsPrimePow n := by
+theorem isPrimePow_of_minFac_pow_factorization_eq {n : ℕ} (hn : n ≠ 1)
+    (h : n.minFac ^ n.factorization n.minFac = n) : IsPrimePow n := by
   rcases eq_or_ne n 0 with (rfl | hn')
   · simp_all
   refine ⟨_, _, (Nat.minFac_prime hn).prime, ?_, h⟩
@@ -35,7 +35,7 @@ theorem isPrimePow_of_minFac_pow_factorization_eq {n : ℕ}
 
 theorem isPrimePow_iff_minFac_pow_factorization_eq {n : ℕ} (hn : n ≠ 1) :
     IsPrimePow n ↔ n.minFac ^ n.factorization n.minFac = n :=
-  ⟨fun h => h.minFac_pow_factorization_eq, fun h => isPrimePow_of_minFac_pow_factorization_eq h hn⟩
+  ⟨fun h => h.minFac_pow_factorization_eq, fun h => isPrimePow_of_minFac_pow_factorization_eq hn h⟩
 
 theorem isPrimePow_iff_factorization_eq_single {n : ℕ} :
     IsPrimePow n ↔ ∃ p k : ℕ, 0 < k ∧ n.factorization = Finsupp.single p k := by
@@ -153,7 +153,8 @@ def Nat.Primes.prodNatEquiv : Nat.Primes × ℕ ≃ {n : ℕ // IsPrimePow n} wh
   toFun pk :=
     ⟨pk.1 ^ (pk.2 + 1), ⟨pk.1, pk.2 + 1, prime_iff.mp pk.1.prop, pk.2.add_one_pos, rfl⟩⟩
   invFun n :=
-    (⟨n.val.minFac, minFac_prime n.prop.ne_one⟩, n.val.factorization n.val.minFac - 1)
+    (⟨n.val.minFac n.prop.ne_one, minFac_prime n.prop.ne_one⟩,
+      n.val.factorization (n.val.minFac n.prop.ne_one) - 1)
   left_inv := fun (p, k) ↦ by
     simp only [p.prop.pow_minFac k.add_one_ne_zero, Subtype.coe_eta, factorization_pow, p.prop,
       Prime.factorization, Finsupp.smul_single, smul_eq_mul, mul_one, Finsupp.single_add,
@@ -177,7 +178,7 @@ lemma Nat.Primes.coe_prodNatEquiv_apply (p : Nat.Primes) (k : ℕ) :
 @[simp]
 lemma Nat.Primes.prodNatEquiv_symm_apply {n : ℕ} (hn : IsPrimePow n) :
     prodNatEquiv.symm ⟨n, hn⟩ =
-      (⟨n.minFac, minFac_prime hn.ne_one⟩, n.factorization n.minFac - 1) :=
+      (⟨n.minFac hn.ne_one, minFac_prime hn.ne_one⟩, n.factorization (n.minFac hn.ne_one) - 1) :=
   rfl
 
 namespace Nat

@@ -36,7 +36,8 @@ def recOnPrimePow {motive : ℕ → Sort*} (zero : motive 0) (one : motive 1)
       haveI hp : Prime p := minFac_prime (succ_succ_ne_one k)
       letI t := (k + 2).factorization p
       haveI hpt : p ^ t ∣ k + 2 := ordProj_dvd _ _
-      haveI htp : 0 < t := hp.factorization_pos_of_dvd (k + 1).succ_ne_zero (k + 2).minFac_dvd
+      haveI htp : 0 < t :=
+        hp.factorization_pos_of_dvd (k + 1).succ_ne_zero ((k + 2).minFac_dvd (succ_succ_ne_one k))
       convert! prime_pow_mul ((k + 2) / p ^ t) p t hp _ htp (hk _ (Nat.div_lt_of_lt_mul _)) using 1
       · rw [Nat.mul_div_cancel' hpt]
       · rw [Nat.dvd_div_iff_mul_dvd hpt, ← Nat.pow_succ]

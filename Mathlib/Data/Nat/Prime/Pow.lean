@@ -19,16 +19,16 @@ public section
 
 namespace Nat
 
-theorem pow_minFac {n k : ℕ} (hk : k ≠ 0) : (n ^ k).minFac = n.minFac := by
-  rcases eq_or_ne n 1 with (rfl | hn)
-  · simp
-  have hnk : n ^ k ≠ 1 := fun hk' => hn ((pow_eq_one_iff_left hk).1 hk')
-  apply (minFac_le_of_dvd (minFac_prime hn).two_le ((minFac_dvd n).pow hk)).antisymm
+theorem pow_minFac {n k : ℕ} {hnk : n ^ k ≠ 1} (hk : k ≠ 0) :
+    (n ^ k).minFac hnk = n.minFac (fun hn => hnk (by rw [hn, one_pow])) := by
+  have hn : n ≠ 1 := fun hn => hnk (by rw [hn, one_pow])
+  apply (minFac_le_of_dvd (minFac_prime hn).two_le ((minFac_dvd n hn).pow hk)).antisymm
   apply
     minFac_le_of_dvd (minFac_prime hnk).two_le
-      ((minFac_prime hnk).dvd_of_dvd_pow (minFac_dvd _))
+      ((minFac_prime hnk).dvd_of_dvd_pow (minFac_dvd _ hnk))
 
-theorem Prime.pow_minFac {p k : ℕ} (hp : p.Prime) (hk : k ≠ 0) : (p ^ k).minFac = p := by
+theorem Prime.pow_minFac {p k : ℕ} {hpk : p ^ k ≠ 1} (hp : p.Prime) (hk : k ≠ 0) :
+    (p ^ k).minFac hpk = p := by
   rw [Nat.pow_minFac hk, hp.minFac_eq]
 
 end Nat

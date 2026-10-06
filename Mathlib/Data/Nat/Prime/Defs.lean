@@ -214,8 +214,31 @@ def minFacAux (n : ℕ) : ℕ → ℕ
 termination_by k => sqrt n + 2 - k
 decreasing_by simp_wf; apply minFac_lemma n k; assumption
 
-/-- Returns the smallest prime factor of `n ≠ 1`. -/
-def minFac (n : ℕ) : ℕ :=
+open Lean Elab Tactic in
+/-- The default discharger for the hypothesis `n ≠ 1` of `Nat.minFac`.
+
+It closes the goal with a local hypothesis, by linear arithmetic from the local hypotheses, from a
+local hypothesis that `n` is prime, or by evaluating a closed term. Other evidence is passed
+explicitly. It never chooses `n`: if `n` is not determined when the tactic runs, it fails instead of
+assigning it from a hypothesis. -/
+elab (name := minFacTac) "minFac_tac" : tactic => do
+  if (← instantiateMVars (← getMainTarget)).hasExprMVar then
+    throwError "the argument of `Nat.minFac` is not determined; pass the proof that it is not `1` \
+      explicitly"
+  evalTactic (← `(tactic|
+    first
+      | assumption
+      | omega
+      | exact Nat.Prime.ne_one (by assumption)
+      | decide
+      | fail "`Nat.minFac n` needs a proof that `n ≠ 1`: the number `1` has no prime factor"))
+
+/-- The least prime factor of a natural number `n ≠ 1`. The least prime factor of `0` is `2`, since
+every prime divides `0`; the number `1` has no prime factor, so it is excluded.
+
+The proof `hn` can usually be omitted, see `minFac_tac`. -/
+@[nolint unusedArguments]
+def minFac (n : ℕ) (_hn : n ≠ 1 := by minFac_tac) : ℕ :=
   if 2 ∣ n then 2 else minFacAux n 3
 
 @[simp]
@@ -223,14 +246,10 @@ theorem minFac_zero : minFac 0 = 2 :=
   rfl
 
 @[simp]
-theorem minFac_one : minFac 1 = 1 := by
-  simp [minFac, minFacAux]
-
-@[simp]
 theorem minFac_two : minFac 2 = 2 := by
   simp [minFac]
 
-theorem minFac_eq (n : ℕ) : minFac n = if 2 ∣ n then 2 else minFacAux n 3 := rfl
+theorem minFac_eq (n : ℕ) (hn : n ≠ 1) : minFac n = if 2 ∣ n then 2 else minFacAux n 3 := rfl
 
 private def minFacProp (n k : ℕ) :=
   2 ≤ k ∧ k ∣ n ∧ ∀ m, 2 ≤ m → m ∣ n → k ≤ m
@@ -272,135 +291,108 @@ private theorem minFac_has_prop {n : ℕ} (n1 : n ≠ 1) : minFacProp n (minFac 
   have n2 : 2 ≤ n := by
     revert n0 n1
     rcases n with (_ | _ | _) <;> simp [succ_le_succ]
-  simp only [minFac_eq]
+  simp only [minFac_eq n n1]
   by_cases d2 : 2 ∣ n <;> simp only [d2, ↓reduceIte]
   · exact ⟨le_rfl, d2, fun k k2 _ => k2⟩
   · refine
       minFacAux_has_prop n2 3 0 rfl fun m m2 d => (Nat.eq_or_lt_of_le m2).resolve_left (mt ?_ d2)
     exact fun e => e.symm ▸ d
 
-theorem minFac_dvd (n : ℕ) : minFac n ∣ n :=
-  if n1 : n = 1 then by simp [n1] else (minFac_has_prop n1).2.1
+theorem minFac_dvd (n : ℕ) (hn : n ≠ 1) : minFac n ∣ n :=
+  (minFac_has_prop hn).2.1
 
 theorem minFac_prime {n : ℕ} (n1 : n ≠ 1) : Prime (minFac n) :=
   let ⟨f2, fd, a⟩ := minFac_has_prop n1
   prime_def_lt'.2 ⟨f2, fun m m2 l d => not_le_of_gt l (a m m2 (d.trans fd))⟩
 
-@[simp]
-theorem minFac_prime_iff {n : ℕ} : Prime (minFac n) ↔ n ≠ 1 := by
-  refine ⟨?_, minFac_prime⟩
-  rintro h rfl
-  simp only [minFac_one, not_prime_one] at h
+/-- A natural number with a divisor `m ≥ 2` is not `1`. -/
+theorem ne_one_of_two_le_of_dvd {m n : ℕ} (hm : 2 ≤ m) (hmn : m ∣ n) : n ≠ 1 := by
+  rintro rfl
+  have := Nat.eq_one_of_dvd_one hmn
+  omega
 
-theorem minFac_le_of_dvd {n : ℕ} : ∀ {m : ℕ}, 2 ≤ m → m ∣ n → minFac n ≤ m := by
-  by_cases n1 : n = 1
-  · exact fun m2 _ => n1.symm ▸ le_trans (by simp) m2
-  · apply (minFac_has_prop n1).2.2
+theorem minFac_le_of_dvd {n m : ℕ} (hm : 2 ≤ m) (hmn : m ∣ n) :
+    minFac n (ne_one_of_two_le_of_dvd hm hmn) ≤ m :=
+  (minFac_has_prop (ne_one_of_two_le_of_dvd hm hmn)).2.2 m hm hmn
 
-theorem minFac_pos (n : ℕ) : 0 < minFac n := by
-  by_cases n1 : n = 1
-  · simp [n1]
-  · exact (minFac_prime n1).pos
+theorem minFac_pos (n : ℕ) (hn : n ≠ 1) : 0 < minFac n :=
+  (minFac_prime hn).pos
 
-theorem minFac_le {n : ℕ} (H : 0 < n) : minFac n ≤ n :=
-  le_of_dvd H (minFac_dvd n)
+theorem minFac_le {n : ℕ} (hn : 1 < n) : minFac n ≤ n :=
+  le_of_dvd (by omega) (minFac_dvd n (by omega))
 
-theorem le_minFac {m n : ℕ} : n = 1 ∨ m ≤ minFac n ↔ ∀ p, Prime p → p ∣ n → m ≤ p :=
-  ⟨fun h p pp d =>
-    h.elim (by rintro rfl; cases pp.not_dvd_one d) fun h =>
-      le_trans h <| minFac_le_of_dvd pp.two_le d,
-    fun H => or_iff_not_imp_left.2 fun n1 => H _ (minFac_prime n1) (minFac_dvd _)⟩
+theorem le_minFac {m n : ℕ} (hn : n ≠ 1) : m ≤ minFac n ↔ ∀ p, Prime p → p ∣ n → m ≤ p :=
+  ⟨fun h _ pp d => le_trans h <| minFac_le_of_dvd pp.two_le d,
+    fun H => H _ (minFac_prime hn) (minFac_dvd n hn)⟩
 
-theorem le_minFac' {m n : ℕ} : n = 1 ∨ m ≤ minFac n ↔ ∀ p, 2 ≤ p → p ∣ n → m ≤ p :=
-  ⟨fun h p (pp : 1 < p) d =>
-    h.elim (by rintro rfl; cases not_le_of_gt pp (le_of_dvd (by decide) d)) fun h =>
-      le_trans h <| minFac_le_of_dvd pp d,
-    fun H => le_minFac.2 fun p pp d => H p pp.two_le d⟩
+theorem le_minFac' {m n : ℕ} (hn : n ≠ 1) : m ≤ minFac n ↔ ∀ p, 2 ≤ p → p ∣ n → m ≤ p :=
+  ⟨fun h p (pp : 1 < p) d => le_trans h <| minFac_le_of_dvd pp d,
+    fun H => (le_minFac hn).2 fun p pp d => H p pp.two_le d⟩
 
-theorem prime_def_minFac {p : ℕ} : Prime p ↔ 2 ≤ p ∧ minFac p = p :=
+theorem prime_def_minFac {p : ℕ} (hp : p ≠ 1) : Prime p ↔ 2 ≤ p ∧ minFac p = p :=
   ⟨fun pp =>
     ⟨pp.two_le,
-      let ⟨f2, fd, _⟩ := minFac_has_prop <| ne_of_gt pp.one_lt
+      let ⟨f2, fd, _⟩ := minFac_has_prop hp
       ((dvd_prime pp).1 fd).resolve_left (ne_of_gt f2)⟩,
-    fun ⟨p2, e⟩ => e ▸ minFac_prime (ne_of_gt p2)⟩
+    fun ⟨_, e⟩ => e ▸ minFac_prime hp⟩
 
 @[simp]
 theorem Prime.minFac_eq {p : ℕ} (hp : Prime p) : minFac p = p :=
-  (prime_def_minFac.1 hp).2
+  ((prime_def_minFac hp.ne_one).1 hp).2
 
 /--
 This definition is faster in the virtual machine than `decidablePrime`,
 but slower in the kernel.
 -/
 def decidablePrime' (p : ℕ) : Decidable (Prime p) :=
-  decidable_of_iff' _ prime_def_minFac
+  if hp : p = 1 then isFalse (hp ▸ not_prime_one) else decidable_of_iff' _ (prime_def_minFac hp)
 
 @[csimp] theorem decidablePrime_csimp :
     @decidablePrime = @decidablePrime' := by
   subsingleton
 
 theorem not_prime_iff_minFac_lt {n : ℕ} (n2 : 2 ≤ n) : ¬Prime n ↔ minFac n < n :=
-  (not_congr <| prime_def_minFac.trans <| and_iff_right n2).trans <|
-    (lt_iff_le_and_ne.trans <| and_iff_right <| minFac_le <| le_of_succ_le n2).symm
+  (not_congr <| (prime_def_minFac (by omega)).trans <| and_iff_right n2).trans <|
+    (lt_iff_le_and_ne.trans <| and_iff_right <| minFac_le n2).symm
 
-theorem minFac_le_div {n : ℕ} (pos : 0 < n) (np : ¬Prime n) : minFac n ≤ n / minFac n :=
-  match minFac_dvd n with
-  | ⟨0, h0⟩ => absurd pos <| by rw [h0, mul_zero]; decide
+theorem minFac_le_div {n : ℕ} (hn : 1 < n) (np : ¬Prime n) : minFac n ≤ n / minFac n :=
+  match minFac_dvd n (by omega) with
+  | ⟨0, h0⟩ => absurd hn <| by rw [h0, mul_zero]; decide
   | ⟨1, h1⟩ => by
     rw [mul_one] at h1
-    rw [prime_def_minFac, not_and_or, ← h1, eq_self_iff_true, _root_.not_true, _root_.or_false,
-      not_le] at np
-    rw [le_antisymm (le_of_lt_succ np) (succ_le_of_lt pos), minFac_one, Nat.div_one]
+    exact absurd (by rw [h1]; exact minFac_prime (by omega)) np
   | ⟨x + 2, hx⟩ => by
     conv_rhs =>
       congr
       rw [hx]
-    rw [Nat.mul_div_cancel_left _ (minFac_pos _)]
+    rw [Nat.mul_div_cancel_left _ (minFac_pos n (by omega))]
     exact minFac_le_of_dvd (le_add_left 2 x) ⟨minFac n, by rwa [mul_comm]⟩
 
 /-- The square of the smallest prime factor of a composite number `n` is at most `n`.
 -/
-theorem minFac_sq_le_self {n : ℕ} (w : 0 < n) (h : ¬Prime n) : minFac n ^ 2 ≤ n :=
-  have t : minFac n ≤ n / minFac n := minFac_le_div w h
+theorem minFac_sq_le_self {n : ℕ} (hn : 1 < n) (h : ¬Prime n) : minFac n ^ 2 ≤ n :=
+  have t : minFac n ≤ n / minFac n := minFac_le_div hn h
   calc
     minFac n ^ 2 = minFac n * minFac n := sq (minFac n)
     _ ≤ n / minFac n * minFac n := Nat.mul_le_mul_right (minFac n) t
     _ ≤ n := div_mul_le_self n (minFac n)
 
 @[simp]
-theorem minFac_eq_one_iff {n : ℕ} : minFac n = 1 ↔ n = 1 := by
-  constructor
-  · intro h
-    by_contra hn
-    have := minFac_prime hn
-    rw [h] at this
-    exact not_prime_one this
-  · rintro rfl
-    simp [minFac, minFacAux]
-
-@[simp]
-theorem minFac_eq_two_iff (n : ℕ) : minFac n = 2 ↔ 2 ∣ n := by
+theorem minFac_eq_two_iff {n : ℕ} {hn : n ≠ 1} : minFac n hn = 2 ↔ 2 ∣ n := by
   constructor
   · intro h
     rw [← h]
-    exact minFac_dvd n
+    exact minFac_dvd n hn
   · intro h
-    have ub := minFac_le_of_dvd (le_refl 2) h
-    have lb := minFac_pos n
-    refine ub.eq_or_lt.resolve_right fun h' => ?_
-    suffices n.minFac = 1 by simp_all
-    exact (le_antisymm (Nat.succ_le_of_lt lb) (Nat.lt_succ_iff.mp h')).symm
+    exact le_antisymm (minFac_le_of_dvd (le_refl 2) h) (minFac_prime hn).two_le
 
 theorem factors_lemma {k} : (k + 2) / minFac (k + 2) < k + 2 :=
-  div_lt_self (Nat.zero_lt_succ _) (minFac_prime (by
-      apply Nat.ne_of_gt
-      apply Nat.succ_lt_succ
-      apply Nat.zero_lt_succ)).one_lt
+  div_lt_self (Nat.zero_lt_succ _) (minFac_prime (by omega)).one_lt
 
 end MinFac
 
 theorem exists_prime_and_dvd {n : ℕ} (hn : n ≠ 1) : ∃ p, Prime p ∧ p ∣ n :=
-  ⟨minFac n, minFac_prime hn, minFac_dvd _⟩
+  ⟨minFac n, minFac_prime hn, minFac_dvd n hn⟩
 
 theorem coprime_of_dvd {m n : ℕ} (H : ∀ k, Prime k → k ∣ m → ¬k ∣ n) : Coprime m n := by
   rw [coprime_iff_gcd_eq_one]

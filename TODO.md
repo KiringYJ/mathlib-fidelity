@@ -435,9 +435,31 @@ operation.
   names, the complete and empty graphs on `ℕ`, that counterexample, attainment of finite values,
   and the comparison with the chromatic number.
 
-- [ ] **Require `n ≠ 1` for `Nat.minFac`.**
-  `Mathlib/Data/Nat/Prime/Defs.lean:218` returns one at one, although one has no prime factor.  Do not
-  exclude zero: `minFac_zero` correctly identifies its least prime divisor as two.
+- [x] **Require `n ≠ 1` for `Nat.minFac`.**
+  `Nat.minFac n hn` takes `hn : n ≠ 1`, the exact domain of the least prime factor: `1` has no prime
+  factor, while every prime divides `0`, so `minFac_zero` still gives `2`.  The literature has no
+  common value at `1` (OEIS A020639 uses `1`, G. Tenenbaum, *Introduction to Analytic and
+  Probabilistic Number Theory*, 3rd ed., Notation, p. xxiii, uses `+∞`), so no value is chosen.  The
+  default discharger `minFac_tac` finds the side condition as a local hypothesis, by linear
+  arithmetic, from the primality of `n`, or by evaluating a closed term, and it never chooses `n`.
+  The statements of the former value `minFac 1 = 1` are removed (`minFac_one`, `minFac_eq_one_iff`,
+  and `minFac_prime_iff`), and `le_minFac` and `le_minFac'` lose their disjunct `n = 1`.
+  `minFac_dvd`, `minFac_pos`, `minFac_eq`, `prime_def_minFac`, `coprime_of_lt_minFac`, and
+  `gcd_eq_one_of_lt_minFac` take `n ≠ 1`; `minFac_le`, `minFac_le_div`, and `minFac_sq_le_self` take
+  `1 < n` instead of `0 < n`; `minFac_le_of_dvd` obtains `n ≠ 1` from its divisor
+  (`ne_one_of_two_le_of_dvd`); and `minFac_eq_two_iff`, `pow_minFac`, and `Prime.pow_minFac` read
+  the side condition off their left-hand sides.  `PosNum.minFac` and `Num.minFac`, which also
+  returned `1` at `1`, take the same hypothesis.  The `norm_num` extension evaluates `minFac` only
+  off `1` (its helper `MinFacHelper` now records `1 < n` and a lower bound for the divisors), the
+  `primeFactorsList` simproc and the decision procedures for `Nat.Prime` and `IsPrimePow` treat `1`
+  separately, and `isPrimePow_nat_iff_bounded_log_minFac` takes `1 < n`.
+  `Subgroup.normal_of_index_eq_minFac_card` and the cyclic Sylow lemmas
+  `IsCyclic.normalizer_le_centralizer` and `IsCyclic.isComplement'` in
+  `Mathlib/GroupTheory/Transfer.lean` assume `Nat.card G ≠ 1`, which excludes only the trivial
+  group, the von Mangoldt function uses the least prime factor of a prime power, and the least prime
+  factor `LucasLehmer.q p` of a Mersenne number takes `p ≠ 1` (`mersenne_eq_one_iff`).  Tests cover
+  the removed names, the missing evidence, the least prime factor of `0`, evaluation, and the
+  discharger.
 
 - [ ] **Give `Nat.log` and `Nat.clog` their extremal domains.**
   `Mathlib/Data/Nat/Log.lean:62` and `:335` accept bases at most one and other inputs for which the

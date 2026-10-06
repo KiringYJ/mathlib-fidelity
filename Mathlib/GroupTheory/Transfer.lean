@@ -308,15 +308,13 @@ namespace IsCyclic
 open Subgroup
 
 -- we could suppress the variable `p`, but that might introduce `motive not type correct` issues.
-variable {G : Type*} [Group G] [Finite G] {p : ℕ} (hp : (Nat.card G).minFac = p) {P : Sylow p G}
+variable {G : Type*} [Group G] [Finite G] {p : ℕ} (hn : Nat.card G ≠ 1)
+  (hp : (Nat.card G).minFac = p) {P : Sylow p G}
 
-include hp in
+include hn hp in
 theorem normalizer_le_centralizer (hP : IsCyclic P) :
     normalizer P ≤ centralizer (P : Set G) := by
   subst hp
-  by_cases hn : Nat.card G = 1
-  · have := (Nat.card_eq_one_iff_unique.mp hn).1
-    rw [Subsingleton.elim (normalizer _) (centralizer P)]
   have := Fact.mk (Nat.minFac_prime hn)
   have key := card_dvd_of_injective _ (QuotientGroup.kerLift_injective P.normalizerMonoidHom)
   rw [normalizerMonoidHom_ker, ← index, ← relIndex] at key
@@ -337,20 +335,15 @@ theorem normalizer_le_centralizer (hP : IsCyclic P) :
     have h2 := Nat.gcd_le_right (n := (Nat.card G).minFac - 1) (Nat.card G)
       (tsub_pos_iff_lt.mpr (Nat.minFac_prime hn).one_lt)
     contrapose! h2
-    refine Nat.sub_one_lt_of_le (Nat.card G).minFac_pos (Nat.minFac_le_of_dvd ?_ h1)
+    refine Nat.sub_one_lt_of_le ((Nat.card G).minFac_pos hn) (Nat.minFac_le_of_dvd ?_ h1)
     exact (Nat.two_le_iff _).mpr ⟨ne_zero_of_dvd_ne_zero Nat.card_pos.ne' h1, h2⟩
 
-include hp in
+include hn hp in
 /-- A cyclic Sylow subgroup for the smallest prime has a normal complement. -/
 theorem isComplement' (hP : IsCyclic P) :
-    (MonoidHom.transferSylow P (hP.normalizer_le_centralizer hp)).ker.IsComplement' P := by
+    (MonoidHom.transferSylow P (hP.normalizer_le_centralizer hn hp)).ker.IsComplement' P := by
   subst hp
-  by_cases hn : Nat.card G = 1
-  · have := (Nat.card_eq_one_iff_unique.mp hn).1
-    rw [Subsingleton.elim (MonoidHom.transferSylow P (hP.normalizer_le_centralizer rfl)).ker ⊥,
-      Subsingleton.elim P.1 ⊤]
-    exact isComplement'_bot_top
   have := Fact.mk (Nat.minFac_prime hn)
-  exact MonoidHom.ker_transferSylow_isComplement' P (hP.normalizer_le_centralizer rfl)
+  exact MonoidHom.ker_transferSylow_isComplement' P (hP.normalizer_le_centralizer hn rfl)
 
 end IsCyclic

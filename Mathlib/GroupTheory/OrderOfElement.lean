@@ -350,14 +350,14 @@ theorem orderOf_eq_of_pow_and_pow_div_prime (hn : 0 < n) (hx : x ^ n = 1)
   -- Assume `a` is not one...
   by_contra h
   have a_min_fac_dvd_p_sub_one : a.minFac ∣ n := by
-    obtain ⟨b, hb⟩ : ∃ b : ℕ, a = b * a.minFac := exists_eq_mul_left_of_dvd a.minFac_dvd
+    obtain ⟨b, hb⟩ : ∃ b : ℕ, a = b * a.minFac := exists_eq_mul_left_of_dvd (a.minFac_dvd h)
     rw [hb, ← mul_assoc] at ha
     exact Dvd.intro_left (orderOf x * b) ha.symm
   -- Use the minimum prime factor of `a` as `p`.
   refine hd a.minFac (Nat.minFac_prime h) a_min_fac_dvd_p_sub_one ?_
   rw [← orderOf_dvd_iff_pow_eq_one, Nat.dvd_div_iff_mul_dvd a_min_fac_dvd_p_sub_one, ha, mul_comm,
     Nat.mul_dvd_mul_iff_left (IsOfFinOrder.orderOf_pos _)]
-  · exact Nat.minFac_dvd a
+  · exact Nat.minFac_dvd a h
   · rw [isOfFinOrder_iff_pow_eq_one]
     exact Exists.intro n (id ⟨hn, hx⟩)
 

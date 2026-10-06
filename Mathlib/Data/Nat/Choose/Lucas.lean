@@ -157,35 +157,38 @@ theorem eq_pow_multiplicity_of_choose_modEq_zero_nat (hn : 0 < n)
 /-- For a prime power `n`, the minimal prime factor divides the greatest common divisor of
 `choose n 1, ⋯, choose n (n - 1)`. -/
 theorem minFac_dvd_gcd_choose_of_isPrimePow (h : IsPrimePow n) :
-    n.minFac ∣ (Icc 1 (n - 1)).gcd n.choose := by
-  obtain ⟨k, _, _, hn₁⟩ := (isPrimePow_nat_iff_bounded_log_minFac _).mp h
+    n.minFac h.ne_one ∣ (Icc 1 (n - 1)).gcd n.choose := by
+  have hn1 : n ≠ 1 := h.ne_one
+  obtain ⟨k, _, _, hn₁⟩ := (isPrimePow_nat_iff_bounded_log_minFac h.one_lt).mp h
   exact dvd_gcd_iff.mpr fun i hi => by
-    nth_rw 2 [hn₁]
-    exact Prime.dvd_choose_pow (minFac_prime_iff.mpr h.ne_one) (by grind) (by grind)
+    nth_rw 3 [hn₁]
+    exact Prime.dvd_choose_pow (minFac_prime hn1) (by grind) (by grind)
 
 lemma minFac_sq_ndvd_gcd_choose_of_isPrimePow (h : IsPrimePow n) :
-    ¬ n.minFac ^ 2 ∣ (Icc 1 (n - 1)).gcd n.choose := by
-  obtain ⟨k, _, k_pos, hn₁⟩ := (isPrimePow_nat_iff_bounded_log_minFac _).mp h
-  have isPrime := minFac_prime_iff.mpr (IsPrimePow.ne_one h)
+    ¬ n.minFac h.ne_one ^ 2 ∣ (Icc 1 (n - 1)).gcd n.choose := by
+  have hn1 : n ≠ 1 := h.ne_one
+  obtain ⟨k, _, k_pos, hn₁⟩ := (isPrimePow_nat_iff_bounded_log_minFac h.one_lt).mp h
+  have isPrime := minFac_prime hn1
   refine mt Finset.dvd_gcd_iff.mp ?_
   simp only [mem_Icc, not_forall]
-  have : n.minFac ^ (k - 1) ≤ n.minFac ^ k := Nat.pow_le_pow_right (minFac_pos n) (sub_le k 1)
-  refine ⟨n.minFac ^ (k - 1), ⟨one_le_pow _ _ (minFac_pos n), ?_⟩, ?_⟩
+  have : n.minFac ^ (k - 1) ≤ n.minFac ^ k := Nat.pow_le_pow_right (minFac_pos n hn1) (sub_le k 1)
+  refine ⟨n.minFac ^ (k - 1), ⟨one_le_pow _ _ (minFac_pos n hn1), ?_⟩, ?_⟩
   · refine le_sub_one_of_lt ?_
     nth_rw 2 [hn₁]
     exact Nat.pow_lt_pow_of_lt (Prime.one_lt isPrime) (sub_one_lt_of_lt k_pos)
   · refine emultiplicity_lt_iff_not_dvd.mp ?_
-    nth_rw 2 [hn₁]
+    nth_rw 3 [hn₁]
     rw [Nat.Prime.emultiplicity_choose_prime_pow isPrime this (pow_ne_zero _
       (Nat.Prime.ne_zero isPrime)), multiplicity_pow_self_of_prime (prime_iff.mp isPrime)]
     norm_cast
     grind
 
 lemma primeFactors_gcd_choose_of_isPrimePow (h : IsPrimePow n) :
-    ((Icc 1 (n - 1)).gcd n.choose).primeFactors = {n.minFac} := by
+    ((Icc 1 (n - 1)).gcd n.choose).primeFactors = {n.minFac h.ne_one} := by
+  have hn1 : n ≠ 1 := h.ne_one
   have ne_zero : (Icc 1 (n - 1)).gcd n.choose ≠ 0 :=
     gcd_ne_zero_iff.mpr ⟨1, by simp; grind [IsPrimePow.two_le h]⟩
-  have isPrime := minFac_prime_iff.mpr (IsPrimePow.ne_one h)
+  have isPrime := minFac_prime hn1
   refine eq_singleton_iff_unique_mem.mpr ⟨isPrime.mem_primeFactors
     (minFac_dvd_gcd_choose_of_isPrimePow h) ne_zero, ?_⟩
   intro p hp
@@ -194,16 +197,17 @@ lemma primeFactors_gcd_choose_of_isPrimePow (h : IsPrimePow n) :
   have : Fact (Nat.Prime p) := ⟨hp₁⟩
   simp_rw [Finset.dvd_gcd_iff, ← modEq_zero_iff_dvd] at hp₂
   have := eq_pow_multiplicity_of_choose_modEq_zero_nat h.pos hp₂
-  have dvd_pow : n.minFac ∣  p ^ multiplicity p n := this ▸ minFac_dvd _
+  have dvd_pow : n.minFac ∣  p ^ multiplicity p n := this ▸ minFac_dvd _ hn1
   exact (Nat.prime_dvd_prime_iff_eq isPrime hp₁).mp (isPrime.dvd_of_dvd_pow dvd_pow)|>.symm
 
 /-- For a prime power `n`, the greatest common divisor of `choose n 1, ⋯, choose n (n - 1)`
 is actually the minimal prime factor of `n`. -/
 theorem gcd_choose_eq_minFac_of_isPrimePow (h : IsPrimePow n) :
-    (Icc 1 (n - 1)).gcd n.choose = n.minFac := by
+    (Icc 1 (n - 1)).gcd n.choose = n.minFac h.ne_one := by
+  have hn1 : n ≠ 1 := h.ne_one
   have ne_zero : (Icc 1 (n - 1)).gcd n.choose ≠ 0 :=
     gcd_ne_zero_iff.mpr ⟨1, by simp; grind [IsPrimePow.two_le h]⟩
-  have isPrime := minFac_prime_iff.mpr (IsPrimePow.ne_one h)
+  have isPrime := minFac_prime hn1
   have : multiplicity n.minFac ((Icc 1 (n - 1)).gcd n.choose) = 1 := by
     refine multiplicity_eq_of_dvd_of_not_dvd ?_ (minFac_sq_ndvd_gcd_choose_of_isPrimePow h)
     simpa using minFac_dvd_gcd_choose_of_isPrimePow h

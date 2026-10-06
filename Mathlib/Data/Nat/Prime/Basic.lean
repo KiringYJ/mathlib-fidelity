@@ -62,12 +62,12 @@ theorem succ_pred_prime {p : ℕ} (pp : Prime p) : succ (pred p) = p :=
   succ_pred_eq_of_pos pp.pos
 
 theorem exists_dvd_of_not_prime {n : ℕ} (n2 : 2 ≤ n) (np : ¬Prime n) : ∃ m, m ∣ n ∧ m ≠ 1 ∧ m ≠ n :=
-  ⟨minFac n, minFac_dvd _, ne_of_gt (minFac_prime (ne_of_gt n2)).one_lt,
+  ⟨minFac n, minFac_dvd n (by omega), ne_of_gt (minFac_prime (ne_of_gt n2)).one_lt,
     ne_of_lt <| (not_prime_iff_minFac_lt n2).1 np⟩
 
 theorem exists_dvd_of_not_prime2 {n : ℕ} (n2 : 2 ≤ n) (np : ¬Prime n) :
     ∃ m, m ∣ n ∧ 2 ≤ m ∧ m < n :=
-  ⟨minFac n, minFac_dvd _, (minFac_prime (ne_of_gt n2)).two_le,
+  ⟨minFac n, minFac_dvd n (by omega), (minFac_prime (ne_of_gt n2)).two_le,
     (not_prime_iff_minFac_lt n2).1 np⟩
 
 theorem not_prime_of_dvd_of_ne {m n : ℕ} (h1 : m ∣ n) (h2 : m ≠ 1) (h3 : m ≠ n) : ¬Prime n :=
@@ -133,22 +133,24 @@ theorem Prime.not_coprime_iff_dvd {m n : ℕ} : ¬Coprime m n ↔ ∃ p, Prime p
   apply Iff.intro
   · intro h
     exact
-      ⟨minFac (gcd m n), minFac_prime h, (minFac_dvd (gcd m n)).trans (gcd_dvd_left m n),
-        (minFac_dvd (gcd m n)).trans (gcd_dvd_right m n)⟩
+      ⟨minFac (gcd m n), minFac_prime h, (minFac_dvd (gcd m n) h).trans (gcd_dvd_left m n),
+        (minFac_dvd (gcd m n) h).trans (gcd_dvd_right m n)⟩
   · intro h
     obtain ⟨p, hp⟩ := h
     apply Nat.not_coprime_of_dvd_of_dvd (Prime.one_lt hp.1) hp.2.1 hp.2.2
 
 /-- If `0 < m < minFac n`, then `n` and `m` are coprime. -/
-lemma coprime_of_lt_minFac {n m : ℕ} (h₀ : m ≠ 0) (h : m < minFac n) : Coprime n m := by
+lemma coprime_of_lt_minFac {n m : ℕ} (hn : n ≠ 1) (h₀ : m ≠ 0) (h : m < minFac n) :
+    Coprime n m := by
   rw [← not_not (a := n.Coprime m), Prime.not_coprime_iff_dvd]
   push Not
-  exact fun p hp hn hm ↦
-    ((le_of_dvd (by lia) hm).trans_lt <| h.trans_le <| minFac_le_of_dvd hp.two_le hn).false
+  exact fun p hp hpn hm ↦
+    ((le_of_dvd (by lia) hm).trans_lt <| h.trans_le <| minFac_le_of_dvd hp.two_le hpn).false
 
 /-- If `0 < m < minFac n`, then `n` and `m` have gcd equal to `1`. -/
-lemma gcd_eq_one_of_lt_minFac {n m : ℕ} (h₀ : m ≠ 0) (h : m < minFac n) : n.gcd m = 1 :=
-  coprime_iff_gcd_eq_one.mp <| coprime_of_lt_minFac h₀ h
+lemma gcd_eq_one_of_lt_minFac {n m : ℕ} (hn : n ≠ 1) (h₀ : m ≠ 0) (h : m < minFac n) :
+    n.gcd m = 1 :=
+  coprime_iff_gcd_eq_one.mp <| coprime_of_lt_minFac hn h₀ h
 
 theorem Prime.not_dvd_mul {p m n : ℕ} (pp : Prime p) (Hm : ¬p ∣ m) (Hn : ¬p ∣ n) : ¬p ∣ m * n :=
   mt pp.dvd_mul.1 <| by simp [Hm, Hn]
@@ -251,7 +253,7 @@ theorem ne_one_iff_exists_prime_dvd : ∀ {n}, n ≠ 1 ↔ ∃ p : ℕ, p.Prime 
     let a := n + 2
     have ha : a ≠ 1 := Nat.succ_succ_ne_one n
     simp only [a, true_iff, Ne, not_false_iff, ha]
-    exact ⟨a.minFac, Nat.minFac_prime ha, a.minFac_dvd⟩
+    exact ⟨a.minFac, Nat.minFac_prime ha, a.minFac_dvd ha⟩
 
 theorem eq_one_iff_not_exists_prime_dvd {n : ℕ} : n = 1 ↔ ∀ p : ℕ, p.Prime → ¬p ∣ n := by
   simpa using not_iff_not.mpr ne_one_iff_exists_prime_dvd

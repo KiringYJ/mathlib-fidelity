@@ -358,16 +358,18 @@ theorem sub_one_norm_eq_eval_cyclotomic [IsCyclotomicExtension {n} K L] (h : 2 <
 /-- If `IsPrimePow n`, `n ≠ 2` and `Irreducible (cyclotomic n K)` (in particular for
 `K = ℚ`), then the norm of `ζ - 1` is `n.minFac`. -/
 theorem sub_one_norm_isPrimePow (hn : IsPrimePow n) [IsCyclotomicExtension {n} K L]
-    (hirr : Irreducible (cyclotomic n K)) (h : n ≠ 2) : norm K (ζ - 1) = n.minFac := by
+    (hirr : Irreducible (cyclotomic n K)) (h : n ≠ 2) :
+    norm K (ζ - 1) = n.minFac hn.ne_one := by
+  have hn1 : n ≠ 1 := hn.ne_one
   have := (lt_of_le_of_ne (succ_le_of_lt (IsPrimePow.one_lt hn)) h.symm)
-  let hprime : Fact n.minFac.Prime := ⟨minFac_prime (IsPrimePow.ne_one hn)⟩
+  let hprime : Fact n.minFac.Prime := ⟨minFac_prime hn1⟩
   rw [sub_one_norm_eq_eval_cyclotomic hζ this hirr]
   nth_rw 1 [← IsPrimePow.minFac_pow_factorization_eq hn]
   obtain ⟨k, hk⟩ : ∃ k, n.factorization n.minFac = k + 1 :=
     exists_eq_succ_of_ne_zero
       ((n.factorization.mem_support_toFun n.minFac).1 <|
         mem_primeFactors_iff_mem_primeFactorsList.2 <|
-          (mem_primeFactorsList (IsPrimePow.ne_zero hn)).2 ⟨hprime.out, minFac_dvd _⟩)
+          (mem_primeFactorsList (IsPrimePow.ne_zero hn)).2 ⟨hprime.out, minFac_dvd _ hn1⟩)
   simp [hk]
 
 end
@@ -538,7 +540,7 @@ theorem norm_zeta_eq_one [IsCyclotomicExtension {n} K L] (hn : n ≠ 2)
 then the norm of `zeta n K L - 1` is `n.minFac`. -/
 theorem norm_zeta_sub_one_of_isPrimePow (hn : IsPrimePow n) [IsCyclotomicExtension {n} K L]
     (hirr : Irreducible (cyclotomic n K)) (h : n ≠ 2) :
-    norm K (zeta n K L - 1) = n.minFac :=
+    norm K (zeta n K L - 1) = n.minFac hn.ne_one :=
   (zeta_spec n K L).sub_one_norm_isPrimePow hn hirr h
 
 /-- If `Irreducible (cyclotomic (p ^ (k + 1)) K)` (in particular for `K = ℚ`) and `p` is a prime,
