@@ -159,8 +159,12 @@ end Find
 
 section FindGreatest
 
-/-- `Nat.findGreatest P n` is the largest `i ≤ n` such that `P i` holds, or `0` if no such `i`
-exists -/
+/-- `Nat.findGreatest P n` is the supremum of `{i | i ≤ n ∧ P i}` in `ℕ`: the largest `i ≤ n` such
+that `P i` holds if there is one, and otherwise `0`. Every natural number bounds the empty set,
+so its least upper bound is the least element `0` of `ℕ` (`Nat.isLUB_findGreatest`; the supremum
+of the empty set in an ordered set is its least element, see B. A. Davey and H. A. Priestley,
+*Introduction to Lattices and Order*). The supremum is a greatest element exactly when some
+`i ≤ n` satisfies `P` (`Nat.isGreatest_findGreatest`). -/
 @[expose]
 def findGreatest (P : ℕ → Prop) [DecidablePred P] : ℕ → ℕ
   | 0 => 0

@@ -42,11 +42,12 @@ section ruzsaSzemerediNumber
 variable [DecidableEq α] [DecidableEq β] [Fintype α] [Fintype β] {G : SimpleGraph α}
 
 variable (α) in
-/-- The **Ruzsa-Szemerédi number** of a fintype is the maximum number of edges a locally linear
-graph on that type can have.
+/-- The **Ruzsa-Szemerédi number** of a fintype is the maximum number of triangles a locally
+linear graph on that type can have.
 
-In other words, `ruzsaSzemerediNumber α` is the maximum number of edges a graph on `α` can have such
-that each edge belongs to exactly one triangle. -/
+In other words, `ruzsaSzemerediNumber α` is the maximum number of triangles of a graph on `α` in
+which each edge belongs to exactly one triangle. Such a graph has three edges per triangle, so its
+maximum number of edges is `3 * ruzsaSzemerediNumber α`. -/
 noncomputable def ruzsaSzemerediNumber : ℕ := by
   classical
   exact Nat.findGreatest (fun m ↦ ∃ (G : SimpleGraph α) (_ : DecidableRel G.Adj),

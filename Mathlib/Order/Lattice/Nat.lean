@@ -146,6 +146,35 @@ theorem sSup_mem {s : Set ℕ} (h₁ : s.Nonempty) (h₂ : BddAbove s) : sSup s 
   let ⟨k, hk⟩ := h₂
   h₁.csSup_mem ((finite_le_nat k).subset hk)
 
+section FindGreatest
+
+variable {P : ℕ → Prop} [DecidablePred P] {n : ℕ}
+
+/-- When some `m ≤ n` satisfies `P`, `Nat.findGreatest P n` is the greatest such `m`. -/
+theorem isGreatest_findGreatest (h : ∃ m ≤ n, P m) :
+    IsGreatest {m | m ≤ n ∧ P m} (Nat.findGreatest P n) := by
+  obtain ⟨m, hmn, hm⟩ := h
+  exact ⟨⟨findGreatest_le n, findGreatest_spec hmn hm⟩, fun k hk ↦ le_findGreatest hk.1 hk.2⟩
+
+/-- `Nat.findGreatest P n` is the supremum of `{m | m ≤ n ∧ P m}`; for the empty set this is `0`,
+the least natural number. -/
+theorem isLUB_findGreatest (P : ℕ → Prop) [DecidablePred P] (n : ℕ) :
+    IsLUB {m | m ≤ n ∧ P m} (Nat.findGreatest P n) := by
+  by_cases h : ∃ m ≤ n, P m
+  · exact (isGreatest_findGreatest h).isLUB
+  · push Not at h
+    have hs : {m | m ≤ n ∧ P m} = ∅ := Set.eq_empty_of_forall_notMem fun m hm ↦ h m hm.1 hm.2
+    have h0 : Nat.findGreatest P n = 0 :=
+      findGreatest_eq_zero_iff.mpr fun k _ hk hPk ↦ h k hk hPk
+    rw [hs, h0, isLUB_empty_iff]
+    exact isBot_bot
+
+theorem findGreatest_eq_sSup (P : ℕ → Prop) [DecidablePred P] (n : ℕ) :
+    Nat.findGreatest P n = sSup {m | m ≤ n ∧ P m} :=
+  (isLUB_findGreatest P n).unique (isLUB_csSup' ⟨n, fun _ hm ↦ hm.1⟩)
+
+end FindGreatest
+
 theorem sInf_add {n : ℕ} {p : ℕ → Prop} (hn : n ≤ sInf { m | p m }) :
     sInf { m | p (m + n) } + n = sInf { m | p m } := by
   classical
