@@ -293,7 +293,7 @@ theorem monotonicSequenceLimitIndex_le [Preorder α] (a : ℕ →o α)
   classical
   exact Nat.find_min' h hn
 
-theorem le_monotonicSequenceLimit [PartialOrder α] (a : ℕ →o α)
+theorem le_monotonicSequenceLimit [Preorder α] (a : ℕ →o α)
     (h : ∃ n, ∀ m, n ≤ m → a n = a m) (m : ℕ) : a m ≤ monotonicSequenceLimit a h := by
   rcases le_or_gt m (monotonicSequenceLimitIndex a h) with hm | hm
   · exact a.monotone hm
