@@ -89,6 +89,10 @@ theorem cyclotomic'.monic (n : ℕ) (R : Type*) [CommRing R] [IsDomain R] :
     (cyclotomic' n R).Monic :=
   monic_prod_of_monic _ _ fun _ _ => monic_X_sub_C _
 
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    with_reducible_and_instances apply Polynomial.cyclotomic'.monic)
+
 /-- `cyclotomic' n R` is different from `0`. -/
 theorem cyclotomic'_ne_zero (n : ℕ) (R : Type*) [CommRing R] [IsDomain R] : cyclotomic' n R ≠ 0 :=
   (cyclotomic'.monic n R).ne_zero
@@ -207,7 +211,9 @@ theorem int_coeff_of_cyclotomic' {K : Type*} [CommRing K] [IsDomain K] {ζ : K} 
   replace huniq := div_modByMonic_unique (cyclotomic' k K) (0 : K[X]) Bmo huniq
   simp only [lifts, RingHom.mem_rangeS]
   use Q₁
-  rw [coe_mapRingHom, map_divByMonic (Int.castRingHom K) hB₁mo, hB₁, ← huniq.1]
+  rw [coe_mapRingHom, map_divByMonic (Int.castRingHom K) hB₁mo]
+  simp only [hB₁]
+  rw [← huniq.1]
   simp
 
 /-- If `K` is of characteristic `0` and there is a primitive `n`-th root of unity in `K`,
@@ -292,6 +298,10 @@ theorem cyclotomic_one (R : Type*) [Ring R] : cyclotomic 1 R = X - 1 := by
 theorem cyclotomic.monic (n : ℕ) (R : Type*) [Ring R] : (cyclotomic n R).Monic := by
   rw [← map_cyclotomic_int]
   exact (int_cyclotomic_spec n).2.2.map _
+
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    with_reducible_and_instances apply Polynomial.cyclotomic.monic)
 
 /-- `cyclotomic n` is primitive. -/
 theorem cyclotomic.isPrimitive (n : ℕ) (R : Type*) [CommRing R] : (cyclotomic n R).IsPrimitive :=
@@ -484,8 +494,9 @@ theorem cyclotomic_eq_prod_X_sub_primitiveRoots {K : Type*} [CommRing K] [IsDoma
     obtain ⟨d, hd⟩ := (Nat.mem_properDivisors.1 hi).1
     rw [mul_comm] at hd
     exact hk i (Nat.mem_properDivisors.1 hi).2 (IsPrimitiveRoot.pow hpos hz hd)
-  rw [@cyclotomic_eq_X_pow_sub_one_div _ _ _ hpos, cyclotomic'_eq_X_pow_sub_one_div hpos hz,
-    Finset.prod_congr (refl k.properDivisors) h]
+  rw [@cyclotomic_eq_X_pow_sub_one_div _ _ _ hpos, cyclotomic'_eq_X_pow_sub_one_div hpos hz]
+  congr 1
+  exact Finset.prod_congr rfl h
 
 theorem eq_cyclotomic_iff {R : Type*} [CommRing R] {n : ℕ} (hpos : 0 < n) (P : R[X]) :
     P = cyclotomic n R ↔

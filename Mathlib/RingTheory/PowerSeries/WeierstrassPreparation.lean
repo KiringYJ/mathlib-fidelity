@@ -474,9 +474,10 @@ noncomputable def _root_.Polynomial.IsDistinguishedAt.algEquivQuotient :
     have := Ideal.Quotient.nontrivial_iff.mpr hI
     obtain ⟨f, hfdeg, rfl⟩ : ∃ r : A[X], r.degree < g.degree ∧ Ideal.Quotient.mk _ r = f := by
       obtain ⟨f, rfl⟩ := Ideal.Quotient.mk_surjective f
-      refine ⟨f %ₘ g, Polynomial.degree_modByMonic_lt f H.monic, ?_⟩
+      have hg : g.Monic := H.monic
+      refine ⟨f %ₘ g, Polynomial.degree_modByMonic_lt f hg, ?_⟩
       rw [Eq.comm, Ideal.Quotient.mk_eq_mk_iff_sub_mem, Ideal.mem_span_singleton']
-      exact ⟨f /ₘ g, by rw [Polynomial.modByMonic_eq_sub_mul_div]; ring⟩
+      exact ⟨f /ₘ g, by rw [Polynomial.modByMonic_eq_sub_mul_div _ hg]; ring⟩
     have h1 : g.degree = ((g : A⟦X⟧).map (Ideal.Quotient.mk I)).order.toNat := by
       convert!
         H.degree_eq_coe_lift_order_map g 1 (by rwa [constantCoeff_one, ← Ideal.ne_top_iff_one])

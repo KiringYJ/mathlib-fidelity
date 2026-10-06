@@ -72,6 +72,10 @@ section Coeff
 theorem charpoly_monic : f.charpoly.Monic :=
   Matrix.charpoly_monic _
 
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    with_reducible_and_instances apply LinearMap.charpoly_monic)
+
 open Module in
 lemma charpoly_natDegree [StrongRankCondition R] :
     natDegree (charpoly f) = finrank R M := by

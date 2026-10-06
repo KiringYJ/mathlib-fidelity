@@ -168,20 +168,27 @@ theorem eq_quo_mul_prod_add_sum_rem_mul_prod [Nontrivial R] {ι : Type*} [Decida
       else
         ⟨0, 0, fun hj => (h ⟨hj, hjs hj⟩).elim⟩
     choose a b hab using hc
-    refine ⟨(q + ∑ j ∈ s, r j * b j %ₘ g i) /ₘ g i + ∑ j ∈ s, (r j * b j /ₘ g i + r j * a j /ₘ g j),
-      Function.update (fun j => r j * a j %ₘ g j) i ((q + ∑ j ∈ s, r j * b j %ₘ g i) %ₘ g i),
+    have hgi : (g i).Monic := hg.1
+    refine ⟨(q + ∑ j ∈ s, r j * b j %ₘ g i) /ₘ g i + ∑ j ∈ s,
+        (r j * b j /ₘ g i + if hj : j ∈ s then divByMonic (r j * a j) (g j) (hg.2 j hj) else 0),
+      Function.update
+        (fun j => if hj : j ∈ s then modByMonic (r j * a j) (g j) (hg.2 j hj) else 0) i
+        ((q + ∑ j ∈ s, r j * b j %ₘ g i) %ₘ g i),
       ?_, hf.trans ?_⟩
     · rw [Finset.forall_mem_cons, Function.update_self]
       refine ⟨degree_modByMonic_lt _ hg.1, fun j hj => ?_⟩
       rw [Function.update_of_ne (hjs hj).symm]
+      simp only [hj, ↓reduceDIte]
       exact degree_modByMonic_lt _ (hg.2 j hj)
     · rw [Finset.prod_cons, Finset.sum_cons, Function.update_self, Finset.erase_cons, add_mul,
         add_add_add_comm, ← mul_assoc, ← add_mul, add_comm (_ * g i), ← mul_comm (g i),
         modByMonic_add_div, add_mul, add_assoc, add_right_inj, Finset.sum_mul,
         Finset.sum_mul, ← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
       refine Finset.sum_congr rfl fun j hj => ?_
+      have hgj : (g j).Monic := hg.2 j hj
       rw [Function.update_of_ne (hjs hj).symm, Finset.erase_cons_of_ne _ (hjs hj),
         Finset.prod_cons, ← Finset.mul_prod_erase s g hj]
+      simp only [hj, ↓reduceDIte]
       simp_rw [← mul_assoc, ← add_mul]
       refine congrArg (· * _) ?_
       rw [add_mul, add_mul, ← add_assoc, ← add_assoc, ← add_mul, ← mul_comm (g i),

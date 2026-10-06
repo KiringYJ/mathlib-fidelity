@@ -56,6 +56,10 @@ theorem monic (hx : IsIntegral A x) : Monic (minpoly A x) := by
   rw [dite_eq_left hx]
   exact (degree_lt_wf.min_mem _ hx).1
 
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    with_reducible_and_instances (apply minpoly.monic; assumption))
+
 /-- A minimal polynomial is nonzero. -/
 theorem ne_zero [Nontrivial A] (hx : IsIntegral A x) : minpoly A x ≠ 0 :=
   (monic hx).ne_zero
@@ -203,7 +207,8 @@ theorem degree_pos [Nontrivial B] (hx : IsIntegral A x) : 0 < degree (minpoly A 
   natDegree_pos_iff_degree_pos.mp (natDegree_pos hx)
 
 @[simp]
-theorem aeval_modByMonic_minpoly (p : A[X]) (x : B) : (p %ₘ minpoly A x).aeval x = p.aeval x :=
+theorem aeval_modByMonic_minpoly (p : A[X]) (x : B) {hq : (minpoly A x).Monic} :
+    (p %ₘ minpoly A x).aeval x = p.aeval x :=
   aeval_modByMonic_eq_self_of_root (minpoly.aeval ..)
 
 section

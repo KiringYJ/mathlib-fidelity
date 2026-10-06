@@ -49,39 +49,45 @@ theorem degree_pos_of_aeval_root [Algebra R S] {p : R[X]} (hp : p ≠ 0) {z : S}
 
 end
 
-private theorem smul_divByMonic_modByMonic (c : R) (p : R[X]) :
+private theorem smul_divByMonic_modByMonic (hq : q.Monic) (c : R) (p : R[X]) :
     c • p /ₘ q = c • (p /ₘ q) ∧ c • p %ₘ q = c • (p %ₘ q) := by
-  by_cases hq : q.Monic
-  · rcases subsingleton_or_nontrivial R with hR | hR
-    · simp [eq_iff_true_of_subsingleton]
-    · exact div_modByMonic_unique (c • (p /ₘ q)) (c • (p %ₘ q)) hq
-        ⟨by rw [mul_smul_comm, ← smul_add, modByMonic_add_div],
-         (degree_smul_le _ _).trans_lt (degree_modByMonic_lt _ hq)⟩
-  · simp [divByMonic_eq_of_not_monic _ hq, modByMonic_eq_of_not_monic _ hq]
+  rcases subsingleton_or_nontrivial R with hR | hR
+  · simp [eq_iff_true_of_subsingleton]
+  · exact div_modByMonic_unique (c • (p /ₘ q)) (c • (p %ₘ q)) hq
+      ⟨by rw [mul_smul_comm, ← smul_add, modByMonic_add_div _ hq],
+       (degree_smul_le _ _).trans_lt (degree_modByMonic_lt _ hq)⟩
 
-theorem smul_divByMonic (c : R) (p : R[X]) : c • p /ₘ q = c • (p /ₘ q) :=
-  (smul_divByMonic_modByMonic c p).1
+theorem smul_divByMonic {hq : q.Monic} (c : R) (p : R[X]) : c • p /ₘ q = c • (p /ₘ q) :=
+  (smul_divByMonic_modByMonic hq c p).1
 
-theorem smul_modByMonic (c : R) (p : R[X]) : c • p %ₘ q = c • (p %ₘ q) :=
-  (smul_divByMonic_modByMonic c p).2
+theorem smul_modByMonic {hq : q.Monic} (c : R) (p : R[X]) : c • p %ₘ q = c • (p %ₘ q) :=
+  (smul_divByMonic_modByMonic hq c p).2
 
 /-- `_ /ₘ q` as an `R`-linear map. -/
-@[simps]
-def divByMonicHom (q : R[X]) : R[X] →ₗ[R] R[X] where
+def divByMonicHom (q : R[X]) (hq : q.Monic := by monic_tac) : R[X] →ₗ[R] R[X] where
   toFun p := p /ₘ q
   map_add' := add_divByMonic
   map_smul' := smul_divByMonic
+
+@[simp]
+theorem divByMonicHom_apply (q : R[X]) {hq : q.Monic} (p : R[X]) :
+    divByMonicHom q hq p = p /ₘ q :=
+  rfl
 
 theorem mem_ker_divByMonic [Nontrivial R] (hq : q.Monic) {p : R[X]} :
     p ∈ LinearMap.ker (divByMonicHom q) ↔ degree p < degree q :=
   LinearMap.mem_ker.trans (divByMonic_eq_zero_iff hq)
 
 /-- `_ %ₘ q` as an `R`-linear map. -/
-@[simps]
-def modByMonicHom (q : R[X]) : R[X] →ₗ[R] R[X] where
+def modByMonicHom (q : R[X]) (hq : q.Monic := by monic_tac) : R[X] →ₗ[R] R[X] where
   toFun p := p %ₘ q
   map_add' := add_modByMonic
   map_smul' := smul_modByMonic
+
+@[simp]
+theorem modByMonicHom_apply (q : R[X]) {hq : q.Monic} (p : R[X]) :
+    modByMonicHom q hq p = p %ₘ q :=
+  rfl
 
 theorem mem_ker_modByMonic (hq : q.Monic) {p : R[X]} :
     p ∈ LinearMap.ker (modByMonicHom q) ↔ q ∣ p :=
@@ -91,10 +97,10 @@ section
 
 variable [Ring S]
 
-theorem aeval_modByMonic_eq_self_of_root [Algebra R S] {p q : R[X]} {x : S}
+theorem aeval_modByMonic_eq_self_of_root [Algebra R S] {p q : R[X]} {hq : q.Monic} {x : S}
     (hx : aeval x q = 0) : aeval x (p %ₘ q) = aeval x p := by
   --`eval₂_modByMonic_eq_self_of_root` doesn't work here as it needs commutativity
-  simp [modByMonic_eq_sub_mul_div, hx]
+  simp [modByMonic_eq_sub_mul_div _ hq, hx]
 
 end
 
@@ -342,7 +348,7 @@ theorem exists_multiset_roots [DecidableEq R] :
       have hd0 : p /ₘ (X - C x) ≠ 0 := fun h => by
         rw [← mul_divByMonic_eq_iff_isRoot.2 hx, h, mul_zero] at hp; exact hp rfl
       have wf : degree (p /ₘ (X - C x)) < degree p :=
-        degree_divByMonic_lt _ _ hp ((degree_X_sub_C x).symm ▸ by decide)
+        degree_divByMonic_lt _ (monic_X_sub_C x) hp ((degree_X_sub_C x).symm ▸ by decide)
       let ⟨t, htd, htr⟩ := @exists_multiset_roots _ (p /ₘ (X - C x)) hd0
       have hdeg : degree (X - C x) ≤ degree p := by
         simpa using Nat.WithBot.one_le_iff_zero_lt.mpr hpd

@@ -96,6 +96,10 @@ structure IsAdjoinRootMonic {R : Type u} (S : Type v) [CommSemiring R] [Semiring
     (f : R[X]) extends IsAdjoinRoot S f where
   monic : Monic f
 
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    with_reducible_and_instances exact (‹IsAdjoinRootMonic _ _›).monic)
+
 section Ring
 
 variable {R : Type u} {S : Type v} [CommRing R] [Ring S] {f : R[X]} [Algebra R S]
