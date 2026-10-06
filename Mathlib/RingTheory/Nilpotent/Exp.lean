@@ -20,8 +20,8 @@ public import Mathlib.Tactic.FieldSimp
 # Exponential map on algebras
 
 This file defines the exponential map `IsNilpotent.exp` on `ℚ`-algebras. The definition of
-`IsNilpotent.exp a` applies to any element `a` in an algebra over `ℚ`, though it yields meaningful
-(non-junk) values only when `a` is nilpotent.
+`IsNilpotent.exp a ha` applies to a nilpotent element `a` in an algebra over `ℚ`, and takes the
+nilpotency `ha`; the exponential series of a nilpotent element is a finite sum.
 
 The main result is `IsNilpotent.exp_add_of_commute`, which establishes the expected connection
 between the additive and multiplicative structures of `A` for commuting nilpotent elements.
@@ -50,18 +50,18 @@ variable {A : Type*} [Ring A] [Module ℚ A]
 open Finset
 open scoped Nat
 
-/-- The exponential map on algebras, defined in analogy with the usual exponential series.
-It provides meaningful (non-junk) values for nilpotent elements. -/
-noncomputable def exp (a : A) : A :=
-  ∑ i ∈ range (nilpotencyClass a), (i.factorial : ℚ)⁻¹ • (a ^ i)
+/-- The exponential map on algebras, defined in analogy with the usual exponential series for a
+nilpotent element `a`, for which the series is a finite sum. -/
+noncomputable def exp (a : A) (ha : IsNilpotent a) : A :=
+  ∑ i ∈ range (nilpotencyClass a ha), (i.factorial : ℚ)⁻¹ • (a ^ i)
 
 theorem exp_eq_sum {a : A} {k : ℕ} (h : a ^ k = 0) :
-    exp a = ∑ i ∈ range k, (i.factorial : ℚ)⁻¹ • (a ^ i) := by
+    exp a ⟨k, h⟩ = ∑ i ∈ range k, (i.factorial : ℚ)⁻¹ • (a ^ i) := by
   have h₁ : ∑ i ∈ range k, (i.factorial : ℚ)⁻¹ • (a ^ i) =
-      ∑ i ∈ range (nilpotencyClass a), (i.factorial : ℚ)⁻¹ • (a ^ i) +
-        ∑ i ∈ Ico (nilpotencyClass a) k, (i.factorial : ℚ)⁻¹ • (a ^ i) :=
-    (sum_range_add_sum_Ico _ (csInf_le' h)).symm
-  suffices ∑ i ∈ Ico (nilpotencyClass a) k, (i.factorial : ℚ)⁻¹ • (a ^ i) = 0 by
+      ∑ i ∈ range (nilpotencyClass a ⟨k, h⟩), (i.factorial : ℚ)⁻¹ • (a ^ i) +
+        ∑ i ∈ Ico (nilpotencyClass a ⟨k, h⟩) k, (i.factorial : ℚ)⁻¹ • (a ^ i) :=
+    (sum_range_add_sum_Ico _ (nilpotencyClass_le_of_pow_eq_zero ⟨k, h⟩ h)).symm
+  suffices ∑ i ∈ Ico (nilpotencyClass a ⟨k, h⟩) k, (i.factorial : ℚ)⁻¹ • (a ^ i) = 0 by
     dsimp [exp]
     rw [h₁, this, add_zero]
   exact sum_eq_zero fun _ h₂ => by
@@ -69,17 +69,17 @@ theorem exp_eq_sum {a : A} {k : ℕ} (h : a ^ k = 0) :
 
 theorem exp_smul_eq_sum {M : Type*} [AddCommGroup M] [Module A M] [Module ℚ M] {a : A} {m : M}
     {k : ℕ} (h : (a ^ k) • m = 0) (hn : IsNilpotent a) :
-    exp a • m = ∑ i ∈ range k, (i.factorial : ℚ)⁻¹ • (a ^ i) • m := by
-  rcases le_or_gt (nilpotencyClass a) k with h₀ | h₀
+    exp a hn • m = ∑ i ∈ range k, (i.factorial : ℚ)⁻¹ • (a ^ i) • m := by
+  rcases le_or_gt (nilpotencyClass a hn) k with h₀ | h₀
   · simp_rw [exp_eq_sum (pow_eq_zero_of_le h₀ (pow_nilpotencyClass hn)), sum_smul, smul_assoc]
   rw [exp, sum_smul, ← sum_range_add_sum_Ico _ (Nat.le_of_succ_le h₀)]
-  suffices ∑ i ∈ Ico k (nilpotencyClass a), ((i.factorial : ℚ)⁻¹ • (a ^ i)) • m = 0 by
+  suffices ∑ i ∈ Ico k (nilpotencyClass a hn), ((i.factorial : ℚ)⁻¹ • (a ^ i)) • m = 0 by
     simp_rw [this, add_zero, smul_assoc]
   refine sum_eq_zero fun r h₂ ↦ ?_
   rw [smul_assoc, ← pow_sub_mul_pow a (mem_Ico.1 h₂).1, mul_smul, h, smul_zero, smul_zero]
 
 theorem exp_add_of_commute {a b : A} (h₁ : Commute a b) (h₂ : IsNilpotent a) (h₃ : IsNilpotent b) :
-    exp (a + b) = exp a * exp b := by
+    exp (a + b) (h₁.isNilpotent_add h₂ h₃) = exp a h₂ * exp b h₃ := by
   obtain ⟨n₁, hn₁⟩ := h₂
   obtain ⟨n₂, hn₂⟩ := h₃
   let N := n₁ ⊔ n₂
@@ -170,38 +170,42 @@ theorem exp_add_of_commute {a b : A} (h₁ : Commute a b) (h₂ : IsNilpotent a)
   rwa [s₂.symm] at s₁
 
 @[simp]
-theorem exp_zero :
-    exp (0 : A) = 1 := by
-  simp [exp_eq_sum (pow_one 0)]
+theorem exp_zero (h : IsNilpotent (0 : A)) :
+    exp (0 : A) h = 1 := by
+  simp [exp_eq_sum (pow_one (0 : A))]
 
 theorem exp_mul_exp_neg_self {a : A} (h : IsNilpotent a) :
-    exp a * exp (-a) = 1 := by
-  simp [← exp_add_of_commute (Commute.neg_right rfl) h h.neg]
+    exp a h * exp (-a) h.neg = 1 := by
+  have := exp_add_of_commute (Commute.neg_right rfl) h h.neg
+  simp only [add_neg_cancel] at this
+  rw [← this, exp_zero]
 
 theorem exp_neg_mul_exp_self {a : A} (h : IsNilpotent a) :
-    exp (-a) * exp a = 1 := by
-  simp [← exp_add_of_commute (Commute.neg_left rfl) h.neg h]
+    exp (-a) h.neg * exp a h = 1 := by
+  have := exp_add_of_commute (Commute.neg_left rfl) h.neg h
+  simp only [neg_add_cancel] at this
+  rw [← this, exp_zero]
 
-theorem isUnit_exp {a : A} (h : IsNilpotent a) : IsUnit (exp a) := by
+theorem isUnit_exp {a : A} (h : IsNilpotent a) : IsUnit (exp a h) := by
   apply isUnit_iff_exists.2
-  use exp (-a)
+  use exp (-a) h.neg
   exact ⟨exp_mul_exp_neg_self h, exp_neg_mul_exp_self h⟩
 
 theorem map_exp {B F : Type*} [Ring B] [FunLike F A B] [RingHomClass F A B] [Module ℚ B]
     {a : A} (ha : IsNilpotent a) (f : F) :
-    f (exp a) = exp (f a) := by
+    f (exp a ha) = exp (f a) (ha.map f) := by
   obtain ⟨k, hk⟩ := ha
   have hk' : (f a) ^ k = 0 := by simp [← map_pow, hk]
   simp [exp_eq_sum hk, exp_eq_sum hk', map_rat_smul]
 
 theorem exp_smul {G : Type*} [Monoid G] [MulSemiringAction G A]
     (g : G) {a : A} (ha : IsNilpotent a) :
-    exp (g • a) = g • exp a :=
+    exp (g • a) (ha.map (MulSemiringAction.toRingHom G A g)) = g • exp a ha :=
   (map_exp ha (MulSemiringAction.toRingHom G A g)).symm
 
-theorem isNilpotent_exp_sub_one {a : A} (ha : IsNilpotent a) : IsNilpotent (exp a - 1) := by
+theorem isNilpotent_exp_sub_one {a : A} (ha : IsNilpotent a) : IsNilpotent (exp a ha - 1) := by
   nontriviality A
-  rw [exp, ← Nat.sub_add_cancel (pos_nilpotencyClass_iff.2 ha), Finset.sum_range_succ']
+  rw [exp, ← Nat.sub_add_cancel (pos_nilpotencyClass ha), Finset.sum_range_succ']
   simp only [Nat.succ_eq_add_one, zero_add, Nat.factorial_zero, Nat.cast_one, inv_one, pow_zero,
     one_smul, add_sub_cancel_right]
   apply Commute.isNilpotent_sum fun _ _ ↦ smul (pow_of_pos ha <| by positivity) _
@@ -221,7 +225,7 @@ theorem commute_exp_left_of_commute
     (hfM : IsNilpotent fM)
     (hfN : IsNilpotent fN)
     (h : fN ∘ₗ g = g ∘ₗ fM) :
-    exp fN ∘ₗ g = g ∘ₗ exp fM := by
+    exp fN hfN ∘ₗ g = g ∘ₗ exp fM hfM := by
   ext m
   obtain ⟨k, hfM⟩ := hfM
   obtain ⟨l, hfN⟩ := hfN
@@ -236,20 +240,24 @@ theorem exp_mul_of_derivation (R B : Type*) [CommRing R] [NonUnitalNonAssocRing 
     [Module R B] [SMulCommClass R B B] [IsScalarTower R B B] [Module ℚ B]
     (D : B →ₗ[R] B) (h_der : ∀ x y, D (x * y) = x * D y + (D x) * y)
     (h_nil : IsNilpotent D) (x y : B) :
-    exp D (x * y) = (exp D x) * (exp D y) := by
+    exp D h_nil (x * y) = (exp D h_nil x) * (exp D h_nil y) := by
   let DL : Module.End R (B ⊗[R] B) := D.lTensor B
   let DR : Module.End R (B ⊗[R] B) := D.rTensor B
   have h_nilL : IsNilpotent DL := h_nil.map <| lTensorAlgHom R B B
   have h_nilR : IsNilpotent DR := h_nil.map <| rTensorAlgHom R B B
   have h_comm : Commute DL DR := by ext; simp [DL, DR]
   set m : B ⊗[R] B →ₗ[R] B := LinearMap.mul' R B with hm
-  have h₁ : exp D (x * y) = m (exp (DL + DR) (x ⊗ₜ[R] y)) := by
-    suffices exp D ∘ₗ m = m ∘ₗ exp (DL + DR) by simpa using! LinearMap.congr_fun this (x ⊗ₜ[R] y)
+  have h₁ : exp D h_nil (x * y) =
+      m (exp (DL + DR) (h_comm.isNilpotent_add h_nilL h_nilR) (x ⊗ₜ[R] y)) := by
+    suffices exp D h_nil ∘ₗ m = m ∘ₗ exp (DL + DR) (h_comm.isNilpotent_add h_nilL h_nilR) by
+      simpa using! LinearMap.congr_fun this (x ⊗ₜ[R] y)
     apply commute_exp_left_of_commute (h_comm.isNilpotent_add h_nilL h_nilR) h_nil
     ext
     simp [DL, DR, hm, h_der]
-  have h₂ : exp DL = (exp D).lTensor B := (h_nil.map_exp (lTensorAlgHom R B B)).symm
-  have h₃ : exp DR = (exp D).rTensor B := (h_nil.map_exp (rTensorAlgHom R B B)).symm
+  have h₂ : exp DL h_nilL = (exp D h_nil).lTensor B :=
+    (h_nil.map_exp (lTensorAlgHom R B B)).symm
+  have h₃ : exp DR h_nilR = (exp D h_nil).rTensor B :=
+    (h_nil.map_exp (rTensorAlgHom R B B)).symm
   simp [h₁, exp_add_of_commute h_comm h_nilL h_nilR, h₂, h₃, hm]
 
 end Module.End

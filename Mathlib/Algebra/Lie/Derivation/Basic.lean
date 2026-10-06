@@ -399,13 +399,13 @@ variable {R L : Type*} [CommRing R] [LieRing L] [LieAlgebra R L] [Module ℚ L]
 automorphism. -/
 noncomputable def exp (h : IsNilpotent D.toLinearMap) :
     L ≃ₗ⁅R⁆ L :=
-  { toLinearMap := IsNilpotent.exp D.toLinearMap
+  { toLinearMap := IsNilpotent.exp D.toLinearMap h
     map_lie' := by
       let _i := LieRing.toNonUnitalNonAssocRing L
       have : SMulCommClass R L L := LieAlgebra.smulCommClass R L
       have : IsScalarTower R L L := LieAlgebra.isScalarTower R L
       exact Module.End.exp_mul_of_derivation R L D.toLinearMap D.apply_lie_eq_add h
-    invFun x := IsNilpotent.exp (- D.toLinearMap) x
+    invFun x := IsNilpotent.exp (- D.toLinearMap) h.neg x
     left_inv x := by
       simp only [AddHom.toFun_eq_coe, LinearMap.coe_toAddHom, ← LinearMap.comp_apply,
         ← Module.End.mul_eq_comp, h.exp_neg_mul_exp_self, Module.End.one_apply]
@@ -414,11 +414,11 @@ noncomputable def exp (h : IsNilpotent D.toLinearMap) :
         ← Module.End.mul_eq_comp, h.exp_mul_exp_neg_self, Module.End.one_apply] }
 
 lemma exp_apply (h : IsNilpotent D.toLinearMap) :
-    exp D h = IsNilpotent.exp D.toLinearMap :=
+    exp D h = IsNilpotent.exp D.toLinearMap h :=
   rfl
 
 lemma exp_map_apply (h : IsNilpotent D.toLinearMap) (l : L) :
-    exp D h l = IsNilpotent.exp D.toLinearMap l :=
+    exp D h l = IsNilpotent.exp D.toLinearMap h l :=
   DFunLike.congr_fun (exp_apply D h) l
 
 end ExpNilpotent

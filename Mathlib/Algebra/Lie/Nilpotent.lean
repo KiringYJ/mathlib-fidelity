@@ -383,10 +383,10 @@ theorem iInf_lcs_le_of_isNilpotent_quot (h : IsNilpotent L (M ⧸ N)) :
 end
 
 /-- Given a nilpotent Lie module `M` with lower central series `M = C₀ ≥ C₁ ≥ ⋯ ≥ Cₖ = ⊥`, this is
-the natural number `k` (the number of inclusions).
-
-For a non-nilpotent module, we use the junk value 0. -/
-noncomputable def nilpotencyLength : ℕ :=
+the natural number `k` (the number of inclusions). It takes the nilpotency of `M`, without which
+the lower central series does not reach `⊥`. -/
+@[nolint unusedArguments]
+noncomputable def nilpotencyLength [IsNilpotent L M] : ℕ :=
   sInf {k | lowerCentralSeries ℤ L M k = ⊥}
 
 @[simp]
@@ -407,7 +407,7 @@ section
 
 variable [LieModule R L M]
 
-theorem nilpotencyLength_eq_succ_iff (k : ℕ) :
+theorem nilpotencyLength_eq_succ_iff [IsNilpotent L M] (k : ℕ) :
     nilpotencyLength L M = k + 1 ↔
       lowerCentralSeries R L M (k + 1) = ⊥ ∧ lowerCentralSeries R L M k ≠ ⊥ := by
   have aux (k : ℕ) : lowerCentralSeries R L M k = ⊥ ↔ lowerCentralSeries ℤ L M k = ⊥ := by
@@ -421,7 +421,7 @@ theorem nilpotencyLength_eq_succ_iff (k : ℕ) :
   exact Nat.sInf_upward_closed_eq_succ_iff hs k
 
 @[simp]
-theorem nilpotencyLength_eq_one_iff [Nontrivial M] :
+theorem nilpotencyLength_eq_one_iff [IsNilpotent L M] [Nontrivial M] :
     nilpotencyLength L M = 1 ↔ IsTrivial L M := by
   rw [nilpotencyLength_eq_succ_iff ℤ, ← trivial_iff_lower_central_eq_bot]
   simp
@@ -437,15 +437,15 @@ end
 
 /-- Given a non-trivial nilpotent Lie module `M` with lower central series
 `M = C₀ ≥ C₁ ≥ ⋯ ≥ Cₖ = ⊥`, this is the `k-1`th term in the lower central series (the last
-non-trivial term).
+non-trivial term). It takes the nilpotency of `M`.
 
-For a trivial or non-nilpotent module, this is the bottom submodule, `⊥`. -/
-noncomputable def lowerCentralSeriesLast : LieSubmodule R L M :=
+For a trivial module, this is the bottom submodule, `⊥`. -/
+noncomputable def lowerCentralSeriesLast [IsNilpotent L M] : LieSubmodule R L M :=
   match nilpotencyLength L M with
   | 0 => ⊥
   | k + 1 => lowerCentralSeries R L M k
 
-theorem lowerCentralSeriesLast_le_max_triv [LieModule R L M] :
+theorem lowerCentralSeriesLast_le_max_triv [LieModule R L M] [IsNilpotent L M] :
     lowerCentralSeriesLast R L M ≤ maxTrivSubmodule R L M := by
   rw [lowerCentralSeriesLast]
   rcases h : nilpotencyLength L M with - | k

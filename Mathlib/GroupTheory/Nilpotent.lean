@@ -522,18 +522,13 @@ section Classical
 variable (G) in
 open scoped Classical in
 /-- The nilpotency class of a nilpotent group is the smallest natural `n` such that
-the `n`-th term of the upper central series is `G`. If `G` is not nilpotent then the nilpotency
-class takes the junk value 0. -/
+the `n`-th term of the upper central series is `G`. It takes the nilpotency of `G`, without which
+there is no such `n`. -/
 @[to_additive /-- The nilpotency class of a nilpotent additive group is the smallest natural `n`
-such that the `n`-th term of the upper central series is `G`. If `G` is not nilpotent then the
-nilpotency class takes the junk value 0. -/]
-noncomputable def Group.nilpotencyClass : ℕ :=
-  if hG : IsNilpotent G then Nat.find hG.nilpotent else 0
-
-@[to_additive]
-theorem Group.nilpotencyClass_of_not_nilpotent (hG : ¬ IsNilpotent G) :
-    Group.nilpotencyClass G = 0 :=
-  dite_eq_right hG
+such that the `n`-th term of the upper central series is `G`. It takes the nilpotency of `G`,
+without which there is no such `n`. -/]
+noncomputable def Group.nilpotencyClass [hG : IsNilpotent G] : ℕ :=
+  Nat.find hG.nilpotent
 
 variable [hG : IsNilpotent G]
 
@@ -541,7 +536,7 @@ open scoped Classical in
 @[to_additive]
 theorem Group.nilpotencyClass_def :
     Group.nilpotencyClass G = Nat.find (IsNilpotent.nilpotent G) :=
-  dite_eq_left hG
+  rfl
 
 namespace Subgroup
 
@@ -760,6 +755,7 @@ namespace Group
 @[to_additive]
 theorem nilpotencyClass_le_of_ker_le_center {H : Type*} [Group H] (f : G →* H)
     (hf1 : f.ker ≤ center G) [IsNilpotent H] :
+    haveI := isNilpotent_of_ker_le_center f hf1
     Group.nilpotencyClass G ≤ Group.nilpotencyClass H + 1 := by
   have : IsNilpotent G := isNilpotent_of_ker_le_center f hf1
   rw [← lowerCentralSeries_length_eq_nilpotencyClass]
@@ -790,6 +786,7 @@ nilpotent group is less or equal the nilpotency class of the domain. -/
 nilpotent additive group is less or equal the nilpotency class of the domain. -/]
 theorem nilpotencyClass_le_of_surjective {G' : Type*} [Group G'] (f : G →* G')
     (hf : Function.Surjective f) [h : IsNilpotent G] :
+    haveI := nilpotent_of_surjective f hf
     Group.nilpotencyClass G' ≤ Group.nilpotencyClass G := by
   have := nilpotent_of_surjective _ hf
   rw [nilpotencyClass_def, nilpotencyClass_def]
@@ -872,11 +869,8 @@ theorem of_quotient_center_nilpotent (h : IsNilpotent (G ⧸ center G)) : IsNilp
 
 /-- Quotienting the `center G` reduces the nilpotency class by 1. -/
 @[to_additive /-- Quotienting the `center G` reduces the nilpotency class by 1. -/]
-theorem nilpotencyClass_quotient_center :
+theorem nilpotencyClass_quotient_center [IsNilpotent G] :
     Group.nilpotencyClass (G ⧸ center G) = Group.nilpotencyClass G - 1 := by
-  by_cases hH : IsNilpotent G; swap
-  · rw [nilpotencyClass_of_not_nilpotent hH, zero_tsub, nilpotencyClass_of_not_nilpotent]
-    exact mt of_quotient_center_nilpotent hH
   generalize hn : Group.nilpotencyClass G = n
   rcases n with (rfl | n)
   · simp only [nilpotencyClass_zero_iff_subsingleton, zero_tsub] at *
@@ -891,7 +885,7 @@ theorem nilpotencyClass_quotient_center :
       calc
         n + 1 = Group.nilpotencyClass G := hn.symm
         _ ≤ Group.nilpotencyClass (G ⧸ center G) + 1 :=
-          nilpotencyClass_le_of_ker_le_center _ (le_of_eq (ker_mk' _))
+          nilpotencyClass_le_of_ker_le_center (mk' (center G)) (le_of_eq (ker_mk' _))
 
 /-- The nilpotency class of a non-trivial group is one more than its quotient by the center -/
 @[to_additive /-- The nilpotency class of a non-trivial additive group is one more than its quotient
@@ -1006,31 +1000,25 @@ lemma upperCentralSeries.eq_top [IsNilpotent G] {a b : ℕ} (ab : a ≠ b)
     upperCentralSeries_eq_top_iff_nilpotencyClass_le, eq_ge_of_eq_gt]
 
 @[to_additive]
-lemma nilpotencyClass_le_of_upperCentralSeries_eq {a b : ℕ} (ab : a < b)
+lemma nilpotencyClass_le_of_upperCentralSeries_eq [IsNilpotent G] {a b : ℕ} (ab : a < b)
     (hn : upperCentralSeries G a = upperCentralSeries G b) :
     nilpotencyClass G ≤ a := by
-  by_cases hG : IsNilpotent G
-  · grind only [IsNilpotent.nilpotent', IsNilpotent.nilpotent, upperCentralSeries.eq_top,
-      upperCentralSeries_eq_top_iff_nilpotencyClass_le]
-  · rw [nilpotencyClass_of_not_nilpotent hG]
-    apply Nat.zero_le
+  grind only [IsNilpotent.nilpotent', IsNilpotent.nilpotent, upperCentralSeries.eq_top,
+    upperCentralSeries_eq_top_iff_nilpotencyClass_le]
 
 variable (G) in
 @[to_additive]
-lemma upperCentralSeries.StrictMonoOn :
+lemma upperCentralSeries.StrictMonoOn [IsNilpotent G] :
     StrictMonoOn (upperCentralSeries G) (Set.Iic (nilpotencyClass G)) := by
-  by_cases hG : IsNilpotent G
-  · intros a ha b hb ab
-    simp only [Set.mem_Iic] at ha hb
-    apply lt_of_le_of_ne
-    · exact upperCentralSeries_mono _ ab.le
-    · grind only [IsNilpotent.nilpotent', IsNilpotent.nilpotent, eq_top,
-        upperCentralSeries_eq_top_iff_nilpotencyClass_le]
-  · rw [nilpotencyClass_of_not_nilpotent hG, ← Nat.bot_eq_zero, Set.Iic_bot]
-    apply Set.strictMonoOn_singleton
+  intros a ha b hb ab
+  simp only [Set.mem_Iic] at ha hb
+  apply lt_of_le_of_ne
+  · exact upperCentralSeries_mono _ ab.le
+  · grind only [IsNilpotent.nilpotent', IsNilpotent.nilpotent, eq_top,
+      upperCentralSeries_eq_top_iff_nilpotencyClass_le]
 
 @[to_additive]
-lemma upperCentralSeries.card_image_eq_of_le_nilpotencyClass {a : ℕ}
+lemma upperCentralSeries.card_image_eq_of_le_nilpotencyClass [IsNilpotent G] {a : ℕ}
     (h2 : a ≤ nilpotencyClass G) :
     (upperCentralSeries G '' (Set.Iic a)).ncard = a + 1 := by
   refine Set.ncard_eq_of_bijective (fun _ => upperCentralSeries G ·) ?_ ?_ ?_

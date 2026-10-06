@@ -73,26 +73,23 @@ section ZeroPow
 variable [Zero R] [Pow R ℕ]
 
 variable (x) in
-/-- If `x` is nilpotent, the nilpotency class is the smallest natural number `k` such that
-`x ^ k = 0`. If `x` is not nilpotent, the nilpotency class takes the junk value `0`. -/
-noncomputable def nilpotencyClass : ℕ := sInf {k | x ^ k = 0}
+/-- The nilpotency class of a nilpotent element `x`: the smallest natural number `k` such that
+`x ^ k = 0`. It takes the nilpotency of `x`, without which there is no such `k`. -/
+@[nolint unusedArguments]
+noncomputable def nilpotencyClass (_hx : IsNilpotent x) : ℕ := sInf {k | x ^ k = 0}
 
-@[simp] lemma nilpotencyClass_eq_zero_of_subsingleton [Subsingleton R] :
-    nilpotencyClass x = 0 := by
+@[simp] lemma nilpotencyClass_eq_zero_of_subsingleton [Subsingleton R] (hx : IsNilpotent x) :
+    nilpotencyClass x hx = 0 := by
   let s : Set ℕ := {k | x ^ k = 0}
   suffices s = univ by change sInf _ = 0; simp [s] at this; simp [this]
   exact eq_univ_iff_forall.mpr fun k ↦ Subsingleton.elim _ _
 
-lemma isNilpotent_of_pos_nilpotencyClass (hx : 0 < nilpotencyClass x) :
-    IsNilpotent x := by
-  let s : Set ℕ := {k | x ^ k = 0}
-  change s.Nonempty
-  change 0 < sInf s at hx
-  by_contra contra
-  simp [not_nonempty_iff_eq_empty.mp contra] at hx
-
-lemma pow_nilpotencyClass (hx : IsNilpotent x) : x ^ (nilpotencyClass x) = 0 :=
+lemma pow_nilpotencyClass (hx : IsNilpotent x) : x ^ (nilpotencyClass x hx) = 0 :=
   Nat.sInf_mem hx
+
+lemma nilpotencyClass_le_of_pow_eq_zero (hx : IsNilpotent x) {k : ℕ} (hk : x ^ k = 0) :
+    nilpotencyClass x hx ≤ k :=
+  Nat.sInf_le hk
 
 end ZeroPow
 
@@ -100,35 +97,34 @@ section MonoidWithZero
 
 variable [MonoidWithZero R]
 
-lemma nilpotencyClass_eq_succ_iff {k : ℕ} :
-    nilpotencyClass x = k + 1 ↔ x ^ (k + 1) = 0 ∧ x ^ k ≠ 0 := by
+lemma nilpotencyClass_eq_succ_iff (hx : IsNilpotent x) {k : ℕ} :
+    nilpotencyClass x hx = k + 1 ↔ x ^ (k + 1) = 0 ∧ x ^ k ≠ 0 := by
   let s : Set ℕ := {k | x ^ k = 0}
   have : ∀ k₁ k₂ : ℕ, k₁ ≤ k₂ → k₁ ∈ s → k₂ ∈ s := fun k₁ k₂ h_le hk₁ ↦ pow_eq_zero_of_le h_le hk₁
   simp [s, nilpotencyClass, Nat.sInf_upward_closed_eq_succ_iff this]
 
-@[simp] lemma nilpotencyClass_zero [Nontrivial R] :
-    nilpotencyClass (0 : R) = 1 :=
-  nilpotencyClass_eq_succ_iff.mpr <| by constructor <;> simp
+@[simp] lemma nilpotencyClass_zero [Nontrivial R] (h : IsNilpotent (0 : R)) :
+    nilpotencyClass (0 : R) h = 1 :=
+  (nilpotencyClass_eq_succ_iff h).mpr <| by constructor <;> simp
 
-@[simp] lemma pos_nilpotencyClass_iff [Nontrivial R] :
-    0 < nilpotencyClass x ↔ IsNilpotent x := by
-  refine ⟨isNilpotent_of_pos_nilpotencyClass, fun hx ↦ Nat.pos_of_ne_zero fun hx' ↦ ?_⟩
-  replace hx := pow_nilpotencyClass hx
-  rw [hx', pow_zero] at hx
-  exact one_ne_zero hx
+lemma pos_nilpotencyClass [Nontrivial R] (hx : IsNilpotent x) : 0 < nilpotencyClass x hx := by
+  refine Nat.pos_of_ne_zero fun hx' ↦ ?_
+  have := pow_nilpotencyClass hx
+  rw [hx', pow_zero] at this
+  exact one_ne_zero this
 
 lemma pow_pred_nilpotencyClass [Nontrivial R] (hx : IsNilpotent x) :
-    x ^ (nilpotencyClass x - 1) ≠ 0 :=
-  (nilpotencyClass_eq_succ_iff.mp <| Nat.eq_add_of_sub_eq (pos_nilpotencyClass_iff.mpr hx) rfl).2
+    x ^ (nilpotencyClass x hx - 1) ≠ 0 :=
+  ((nilpotencyClass_eq_succ_iff hx).mp <|
+    Nat.eq_add_of_sub_eq (pos_nilpotencyClass hx) rfl).2
 
-lemma eq_zero_of_nilpotencyClass_eq_one (hx : nilpotencyClass x = 1) :
+lemma eq_zero_of_nilpotencyClass_eq_one (hx : IsNilpotent x) (h : nilpotencyClass x hx = 1) :
     x = 0 := by
-  have : IsNilpotent x := isNilpotent_of_pos_nilpotencyClass (hx ▸ Nat.one_pos)
-  rw [← pow_nilpotencyClass this, hx, pow_one]
+  rw [← pow_nilpotencyClass hx, h, pow_one]
 
-@[simp] lemma nilpotencyClass_eq_one [Nontrivial R] :
-    nilpotencyClass x = 1 ↔ x = 0 :=
-  ⟨eq_zero_of_nilpotencyClass_eq_one, fun hx ↦ hx ▸ nilpotencyClass_zero⟩
+@[simp] lemma nilpotencyClass_eq_one [Nontrivial R] (hx : IsNilpotent x) :
+    nilpotencyClass x hx = 1 ↔ x = 0 :=
+  ⟨eq_zero_of_nilpotencyClass_eq_one hx, fun h ↦ by subst h; exact nilpotencyClass_zero hx⟩
 
 end MonoidWithZero
 
