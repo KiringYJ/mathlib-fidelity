@@ -510,16 +510,20 @@ operation.
   `norm_num` extensions evaluate the logarithms on their domains.  Tests cover the removed names,
   the missing evidence for each side condition, evaluation, and the integer logarithm.
 
-- [ ] **Make `Nat.findGreatest` return evidence or explicit absence.**
-  `Mathlib/Data/Nat/Find.lean:162` defines it as the largest bounded witness, or zero when none
-  exists.  Thus zero can mean either an actual greatest witness when `P 0` holds or absence when it
-  does not; the result alone does not distinguish the cases.  This is a primary mathematical
-  workflow, not merely an internal search: `ruzsaSzemerediNumber` in
-  `Mathlib/Combinatorics/Extremal/RuzsaSzemeredi.lean:50` and `mulRothNumber` in
-  `Mathlib/Combinatorics/Additive/AP/Three/Defs.lean:262` are mathematical extrema defined through
-  it, and their specification proofs explicitly supply a witness.  Make that existence evidence an
-  input to a proof-carrying greatest-witness operation, migrate those consumers, and keep the
-  defaulting recursion private unless literature supports this exact zero-sentinel convention.
+- [x] **Identify `Nat.findGreatest` as a supremum in `ℕ`.**
+  `Nat.findGreatest P n` is the supremum in `ℕ` of `{m | m ≤ n ∧ P m}`, for every `P`
+  (`isLUB_findGreatest` and `findGreatest_eq_sSup` in `Mathlib/Order/Lattice/Nat.lean`), and the
+  supremum is the greatest element exactly when some `m ≤ n` satisfies `P`
+  (`isGreatest_findGreatest`).  Its value `0` when no `m ≤ n` satisfies `P` is therefore not a
+  sentinel but the least upper bound of the empty set, which in an ordered set is its least element
+  (B. A. Davey and H. A. Priestley, *Introduction to Lattices and Order*); the docstring of
+  `Nat.findGreatest` now says so.  No proof-carrying greatest-witness operation is added: the
+  supremum is the greatest witness whenever one exists, and the extrema defined through it,
+  `ruzsaSzemerediNumber` and `mulRothNumber`, are suprema over families that contain the empty graph
+  or set, so they are attained (`ruzsaSzemerediNumber_spec`, `mulRothNumber_spec`).  The docstring
+  of `ruzsaSzemerediNumber`, which described a maximal number of edges although the definition
+  counts triangles, now describes triangles; each edge of a locally linear graph lies in exactly one
+  triangle, so the maximal number of edges is three times the number.
 
 - [x] **Require eventual constancy for monotone-sequence limits.**
   `monotonicSequenceLimitIndex a h` and `monotonicSequenceLimit a h` take
