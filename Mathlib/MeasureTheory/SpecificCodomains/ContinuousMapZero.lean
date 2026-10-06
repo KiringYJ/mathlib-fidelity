@@ -17,7 +17,9 @@ and `E` is a normed group.
 
 The structure of this file is largely similar to that of
 `Mathlib.MeasureTheory.SpecificCodomains.ContinuousMap`, which contains a more detailed
-module docstring.
+module docstring. The difference is that a bundled representative `F : X → C(Y, E)₀` of a family
+of functions `f : X → Y → E` automatically satisfies `F x 0 = 0`, so that no assumption on the
+values `f x 0` is needed.
 
 -/
 
@@ -44,81 +46,79 @@ lemma hasFiniteIntegral_of_bound [CompactSpace Y] [Zero Y] (f : X → C(Y, E)₀
   filter_upwards [bound_ge, bound_nonneg] with x bound_ge_x bound_nonneg_x
   exact ContinuousMap.norm_le _ bound_nonneg_x |>.mpr bound_ge_x
 
-/-- A variant of `ContinuousMapZero.hasFiniteIntegral_of_bound` spelled in terms of
-`ContinuousMapZero.mkD`. -/
-lemma hasFiniteIntegral_mkD_of_bound [CompactSpace Y] [Zero Y] (f : X → Y → E) (g : C(Y, E)₀)
-    (f_ae_cont : ∀ᵐ x ∂μ, Continuous (f x))
-    (f_ae_zero : ∀ᵐ x ∂μ, f x 0 = 0)
-    (bound : X → ℝ)
+/-- A variant of `ContinuousMapZero.hasFiniteIntegral_of_bound` for a bundled representative `F` of
+a family of functions `f : X → Y → E`: the bound is only required for `f`. -/
+lemma hasFiniteIntegral_of_ae_coe_eq_of_bound [CompactSpace Y] [Zero Y] {f : X → Y → E}
+    {F : X → C(Y, E)₀} (hF : ∀ᵐ x ∂μ, ⇑(F x) = f x) (bound : X → ℝ)
     (bound_int : HasFiniteIntegral bound μ)
     (bound_ge : ∀ᵐ x ∂μ, ∀ y : Y, ‖f x y‖ ≤ bound x) :
-    HasFiniteIntegral (fun x ↦ mkD (f x) g) μ := by
-  refine hasFiniteIntegral_of_bound _ bound bound_int ?_
-  filter_upwards [bound_ge, f_ae_cont, f_ae_zero] with x bound_ge_x cont_x zero_x
-  simpa only [mkD_apply_of_continuous cont_x zero_x] using bound_ge_x
+    HasFiniteIntegral F μ := by
+  refine hasFiniteIntegral_of_bound F bound bound_int ?_
+  filter_upwards [hF, bound_ge] with x hFx bound_ge_x y
+  rw [hFx]
+  exact bound_ge_x y
 
-/-- A variant of `ContinuousMapZero.hasFiniteIntegral_mkD_of_bound` for a family of
+/-- A variant of `ContinuousMapZero.hasFiniteIntegral_of_ae_coe_eq_of_bound` for a family of
 functions which are continuous on a compact set. -/
-lemma hasFiniteIntegral_mkD_restrict_of_bound {s : Set Y} [CompactSpace s] [Zero s]
-    (f : X → Y → E) (g : C(s, E)₀)
-    (f_ae_contOn : ∀ᵐ x ∂μ, ContinuousOn (f x) s)
-    (f_ae_zero : ∀ᵐ x ∂μ, f x (0 : s) = 0)
-    (bound : X → ℝ)
-    (bound_int : HasFiniteIntegral bound μ)
+lemma hasFiniteIntegral_of_ae_coe_eq_domRestrict_of_bound {s : Set Y} [CompactSpace s] [Zero s]
+    {f : X → Y → E} {F : X → C(s, E)₀} (hF : ∀ᵐ x ∂μ, ⇑(F x) = s.domRestrict (f x))
+    (bound : X → ℝ) (bound_int : HasFiniteIntegral bound μ)
     (bound_ge : ∀ᵐ x ∂μ, ∀ y ∈ s, ‖f x y‖ ≤ bound x) :
-    HasFiniteIntegral (fun x ↦ mkD (s.domRestrict (f x)) g) μ := by
-  refine hasFiniteIntegral_mkD_of_bound _ _ ?_ f_ae_zero bound bound_int ?_
-  · simpa [← continuousOn_iff_continuous_domRestrict]
-  · simpa
+    HasFiniteIntegral F μ := by
+  refine hasFiniteIntegral_of_ae_coe_eq_of_bound hF bound bound_int ?_
+  filter_upwards [bound_ge] with x bound_ge_x y
+  exact bound_ge_x y.1 y.2
 
-lemma aeStronglyMeasurable_mkD_of_uncurry [CompactSpace Y] [Zero Y] [TopologicalSpace X]
+/-- A bundled representative `F` of a jointly continuous family of functions `f : X → Y → E` is
+almost everywhere strongly measurable. -/
+lemma aeStronglyMeasurable_of_uncurry [CompactSpace Y] [Zero Y] [TopologicalSpace X]
     [OpensSigmaAlgebra X] [SecondCountableTopologyEither X (C(Y, E))]
-    (f : X → Y → E) (g : C(Y, E)₀) (f_cont : Continuous (Function.uncurry f))
-    (f_zero : ∀ᵐ x ∂μ, f x 0 = 0) :
-    AEStronglyMeasurable (fun x ↦ mkD (f x) g) μ := by
+    {f : X → Y → E} {F : X → C(Y, E)₀} (hF : ∀ᵐ x ∂μ, ⇑(F x) = f x)
+    (f_cont : Continuous (Function.uncurry f)) :
+    AEStronglyMeasurable F μ := by
   rw [← ContinuousMapZero.isEmbedding_toContinuousMap.aestronglyMeasurable_comp_iff]
-  refine aestronglyMeasurable_congr ?_ |>.mp <|
-    ContinuousMap.aeStronglyMeasurable_mkD_of_uncurry f g f_cont
-  filter_upwards [f_zero] with x zero_x
-  rw [mkD_eq_mkD_of_map_zero _ _ zero_x]
+  exact ContinuousMap.aeStronglyMeasurable_of_uncurry
+    (hF.mono fun x hx ↦ (ContinuousMap.coe_coe (F x)).trans hx) f_cont
 
 open Set in
-lemma aeStronglyMeasurable_restrict_mkD_of_uncurry [CompactSpace Y] [Zero Y] {s : Set X}
+/-- A bundled representative `F` of a family of functions `f : X → Y → E`, which is jointly
+continuous on `s ×ˢ univ`, is almost everywhere strongly measurable with respect to `μ.restrict s`
+for a measurable set `s`. -/
+lemma aeStronglyMeasurable_restrict_of_uncurry [CompactSpace Y] [Zero Y] {s : Set X}
     [TopologicalSpace X] [OpensSigmaAlgebra X] [SecondCountableTopologyEither X (C(Y, E))]
-    (hs : MeasurableSet s) (f : X → Y → E) (g : C(Y, E)₀)
-    (f_cont : ContinuousOn (Function.uncurry f) (s ×ˢ univ))
-    (f_zero : ∀ᵐ x ∂(μ.restrict s), f x 0 = 0) :
-    AEStronglyMeasurable (fun x ↦ mkD (f x) g) (μ.restrict s) := by
+    (hs : MeasurableSet s) {f : X → Y → E} {F : X → C(Y, E)₀}
+    (hF : ∀ᵐ x ∂(μ.restrict s), ⇑(F x) = f x)
+    (f_cont : ContinuousOn (Function.uncurry f) (s ×ˢ univ)) :
+    AEStronglyMeasurable F (μ.restrict s) := by
   rw [← ContinuousMapZero.isEmbedding_toContinuousMap.aestronglyMeasurable_comp_iff]
-  refine aestronglyMeasurable_congr ?_ |>.mp <|
-    ContinuousMap.aeStronglyMeasurable_restrict_mkD_of_uncurry hs f g f_cont
-  filter_upwards [f_zero] with x zero_x
-  rw [mkD_eq_mkD_of_map_zero _ _ zero_x]
+  exact ContinuousMap.aeStronglyMeasurable_restrict_of_uncurry hs
+    (hF.mono fun x hx ↦ (ContinuousMap.coe_coe (F x)).trans hx) f_cont
 
 open Set in
-lemma aeStronglyMeasurable_mkD_restrict_of_uncurry {t : Set Y} [CompactSpace t] [Zero t]
+/-- A bundled representative `F` of a family of functions `f : X → Y → E`, which is jointly
+continuous on `univ ×ˢ t` for a compact set `t`, is almost everywhere strongly measurable. -/
+lemma aeStronglyMeasurable_domRestrict_of_uncurry {t : Set Y} [CompactSpace t] [Zero t]
     [TopologicalSpace X] [OpensSigmaAlgebra X] [SecondCountableTopologyEither X (C(t, E))]
-    (f : X → Y → E) (g : C(t, E)₀) (f_cont : ContinuousOn (Function.uncurry f) (univ ×ˢ t))
-    (f_zero : ∀ᵐ x ∂μ, f x (0 : t) = 0) :
-    AEStronglyMeasurable (fun x ↦ mkD (t.domRestrict (f x)) g) μ := by
+    {f : X → Y → E} {F : X → C(t, E)₀} (hF : ∀ᵐ x ∂μ, ⇑(F x) = t.domRestrict (f x))
+    (f_cont : ContinuousOn (Function.uncurry f) (univ ×ˢ t)) :
+    AEStronglyMeasurable F μ := by
   rw [← ContinuousMapZero.isEmbedding_toContinuousMap.aestronglyMeasurable_comp_iff]
-  refine aestronglyMeasurable_congr ?_ |>.mp <|
-    ContinuousMap.aeStronglyMeasurable_mkD_restrict_of_uncurry f g f_cont
-  filter_upwards [f_zero] with x zero_x
-  rw [mkD_eq_mkD_of_map_zero _ _ zero_x]
+  exact ContinuousMap.aeStronglyMeasurable_domRestrict_of_uncurry
+    (hF.mono fun x hx ↦ (ContinuousMap.coe_coe (F x)).trans hx) f_cont
 
 open Set in
-lemma aeStronglyMeasurable_restrict_mkD_restrict_of_uncurry {s : Set X} {t : Set Y}
+/-- A bundled representative `F` of a family of functions `f : X → Y → E`, which is jointly
+continuous on `s ×ˢ t` for a compact set `t`, is almost everywhere strongly measurable with respect
+to `μ.restrict s` for a measurable set `s`. -/
+lemma aeStronglyMeasurable_restrict_domRestrict_of_uncurry {s : Set X} {t : Set Y}
     [CompactSpace t] [Zero t] [TopologicalSpace X] [OpensSigmaAlgebra X]
     [SecondCountableTopologyEither X (C(t, E))]
-    (hs : MeasurableSet s) (f : X → Y → E) (g : C(t, E)₀)
-    (f_cont : ContinuousOn (Function.uncurry f) (s ×ˢ t))
-    (f_zero : ∀ᵐ x ∂(μ.restrict s), f x (0 : t) = 0) :
-    AEStronglyMeasurable (fun x ↦ mkD (t.domRestrict (f x)) g) (μ.restrict s) := by
+    (hs : MeasurableSet s) {f : X → Y → E} {F : X → C(t, E)₀}
+    (hF : ∀ᵐ x ∂(μ.restrict s), ⇑(F x) = t.domRestrict (f x))
+    (f_cont : ContinuousOn (Function.uncurry f) (s ×ˢ t)) :
+    AEStronglyMeasurable F (μ.restrict s) := by
   rw [← ContinuousMapZero.isEmbedding_toContinuousMap.aestronglyMeasurable_comp_iff]
-  refine aestronglyMeasurable_congr ?_ |>.mp <|
-    ContinuousMap.aeStronglyMeasurable_restrict_mkD_restrict_of_uncurry hs f g f_cont
-  filter_upwards [f_zero] with x zero_x
-  rw [mkD_eq_mkD_of_map_zero _ _ zero_x]
+  exact ContinuousMap.aeStronglyMeasurable_restrict_domRestrict_of_uncurry hs
+    (hF.mono fun x hx ↦ (ContinuousMap.coe_coe (F x)).trans hx) f_cont
 
 end ContinuousMapZero

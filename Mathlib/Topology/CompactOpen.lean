@@ -487,57 +487,31 @@ theorem coe_const' : (const' : Y → C(X, Y)) = const X :=
 theorem continuous_const' : Continuous (const X : Y → C(X, Y)) :=
   const'.continuous
 
-section mkD
+section Representatives
 
-/-- A variant of `ContinuousMap.continuous_of_continuous_uncurry` in terms of
-`ContinuousMap.mkD`.
-Of course, in this particular setting, `fun x ↦ mkD (f x) g` is just `f`,
-but the `mkD` spelling appears naturally in the context of `C(α, β)`-valued integration. -/
-lemma continuous_mkD_of_uncurry
-    (f : T → X → Y) (g : C(X, Y)) (f_cont : Continuous (Function.uncurry f)) :
-    Continuous (fun x ↦ mkD (f x) g) := by
-  have (x : _) : Continuous (f x) := f_cont.comp (Continuous.prodMk_right x)
-  refine continuous_of_continuous_uncurry _ ?_
-  conv in mkD _ _ => rw [mkD_of_continuous (this x)]
+/-- A variant of `ContinuousMap.continuous_of_continuous_uncurry` for a bundled representative
+`F : T → C(X, Y)` of a family of bare functions `f : T → X → Y`, that is `⇑(F x) = f x` for all `x`:
+if `f` is jointly continuous, then `F` is continuous. -/
+lemma continuous_of_coe_eq_of_continuous_uncurry {f : T → X → Y} (F : T → C(X, Y))
+    (hF : ∀ x, ⇑(F x) = f x) (f_cont : Continuous (Function.uncurry f)) : Continuous F := by
+  refine continuous_of_continuous_uncurry F ?_
+  have h : (Function.uncurry fun x y ↦ F x y) = Function.uncurry f := by
+    ext ⟨x, y⟩
+    exact congr_fun (hF x) y
+  rw [h]
   exact f_cont
 
-open Set in
-lemma continuousOn_mkD_of_uncurry {s : Set T}
-    (f : T → X → Y) (g : C(X, Y)) (f_cont : ContinuousOn (Function.uncurry f) (s ×ˢ univ)) :
-    ContinuousOn (fun x ↦ mkD (f x) g) s := by
-  have (x) (hx : x ∈ s) : Continuous (f x) := f_cont.comp_continuous
-    (Continuous.prodMk_right x) fun _ ↦ ⟨hx, trivial⟩
-  simp_rw [continuousOn_iff_continuous_domRestrict, s.domRestrict_def]
-  refine continuous_of_continuous_uncurry _ ?_
-  conv in mkD _ _ => rw [mkD_of_continuous (this x x.2)]
-  exact f_cont.comp_continuous (.prodMap continuous_subtype_val continuous_id)
-    fun xz ↦ ⟨xz.1.2, trivial⟩
+/-- A variant of `ContinuousMap.continuousOn_of_continuousOn_uncurry` for a bundled representative
+`F : T → C(X, Y)` of a family of bare functions `f : T → X → Y`, that is `⇑(F x) = f x` for all
+`x ∈ s`: if `f` is jointly continuous on `s ×ˢ univ`, then `F` is continuous on `s`. -/
+lemma continuousOn_of_coe_eq_of_continuousOn_uncurry {s : Set T} {f : T → X → Y}
+    (F : T → C(X, Y)) (hF : ∀ x ∈ s, ⇑(F x) = f x)
+    (f_cont : ContinuousOn (Function.uncurry f) (s ×ˢ univ)) : ContinuousOn F s := by
+  refine continuousOn_of_continuousOn_uncurry F (f_cont.congr ?_)
+  rintro ⟨x, y⟩ hxy
+  exact congr_fun (hF x hxy.1) y
 
-open Set in
-lemma continuous_mkD_restrict_of_uncurry {t : Set X}
-    (f : T → X → Y) (g : C(t, Y)) (f_cont : ContinuousOn (Function.uncurry f) (univ ×ˢ t)) :
-    Continuous (fun x ↦ mkD (t.domRestrict (f x)) g) := by
-  have (x : _) : ContinuousOn (f x) t :=
-    f_cont.comp (Continuous.prodMk_right x).continuousOn fun _ hz ↦ ⟨trivial, hz⟩
-  refine continuous_of_continuous_uncurry _ ?_
-  conv in mkD _ _ => rw [mkD_of_continuousOn (this x)]
-  exact f_cont.comp_continuous (.prodMap continuous_id continuous_subtype_val)
-    fun xz ↦ ⟨trivial, xz.2.2⟩
-
-open Set in
-lemma continuousOn_mkD_restrict_of_uncurry {s : Set T} {t : Set X}
-    (f : T → X → Y) (g : C(t, Y))
-    (f_cont : ContinuousOn (Function.uncurry f) (s ×ˢ t)) :
-    ContinuousOn (fun x ↦ mkD (t.domRestrict (f x)) g) s := by
-  have (x) (hx : x ∈ s) : ContinuousOn (f x) t :=
-    f_cont.comp (Continuous.prodMk_right x).continuousOn fun _ hz ↦ ⟨hx, hz⟩
-  simp_rw [continuousOn_iff_continuous_domRestrict, s.domRestrict_def]
-  refine continuous_of_continuous_uncurry _ ?_
-  conv in mkD _ _ => rw [mkD_of_continuousOn (this x x.2)]
-  exact f_cont.comp_continuous (.prodMap continuous_subtype_val continuous_subtype_val)
-    fun xz ↦ ⟨xz.1.2, xz.2.2⟩
-
-end mkD
+end Representatives
 
 end Curry
 

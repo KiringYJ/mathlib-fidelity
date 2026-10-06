@@ -348,20 +348,26 @@ lemma cfc_eq_cfcL {a : A} {f : R → R} (ha : p a) (hf : ContinuousOn f (spectru
     cfc f a = cfcL ha ⟨_, hf.domRestrict⟩ := by
   rw [cfc_def, dite_eq_left ⟨ha, hf⟩, cfcL_apply]
 
-set_option backward.privateInPublic true in
-/-- A version of `cfc_apply` in terms of `ContinuousMap.mkD` -/
-lemma cfc_apply_mkD :
-    cfc f a = cfcHom (a := a) ha (mkD ((spectrum R a).domRestrict f) 0) := by
-  by_cases hf : ContinuousOn f (spectrum R a)
-  · rw [cfc_apply f a, mkD_of_continuousOn hf]
-  · rw [cfc_apply_of_not_continuousOn a hf, mkD_of_not_continuousOn hf,
-      map_zero]
+/-- A version of `cfc_apply` for a bundled representative of the restriction of `f` to the spectrum
+of `a`, that is a continuous map `F : C(spectrum R a, R)` with
+`⇑F = (spectrum R a).domRestrict f`. Such an `F` exists if and only if `f` is continuous on the
+spectrum, so this is not an assumption. -/
+lemma cfc_apply_of_coe_eq (f : R → R) (a : A) {F : C(spectrum R a, R)}
+    (hF : ⇑F = (spectrum R a).domRestrict f) (ha : p a := by cfc_tac) :
+    cfc f a = cfcHom (a := a) ha F := by
+  have hf : ContinuousOn f (spectrum R a) := by
+    rw [continuousOn_iff_continuous_domRestrict, ← hF]
+    exact map_continuous F
+  have hFeq : (⟨(spectrum R a).domRestrict f, hf.domRestrict⟩ : C(spectrum R a, R)) = F :=
+    ContinuousMap.ext fun z ↦ (congr_fun hF z).symm
+  rw [cfc_apply f a ha hf, hFeq]
 
-set_option backward.privateInPublic true in
-/-- A version of `cfc_eq_cfcL` in terms of `ContinuousMapZero.mkD` -/
-lemma cfc_eq_cfcL_mkD :
-    cfc f a = cfcL (a := a) ha (mkD ((spectrum R a).domRestrict f) 0) :=
-  cfc_apply_mkD _ _
+/-- A version of `cfc_eq_cfcL` for a bundled representative of the restriction of `f` to the
+spectrum of `a`, see `cfc_apply_of_coe_eq`. -/
+lemma cfc_eq_cfcL_of_coe_eq (f : R → R) (a : A) {F : C(spectrum R a, R)}
+    (hF : ⇑F = (spectrum R a).domRestrict f) (ha : p a := by cfc_tac) :
+    cfc f a = cfcL (a := a) ha F :=
+  cfc_apply_of_coe_eq f a hF ha
 
 lemma cfc_cases (P : A → Prop) (a : A) (f : R → R) (h₀ : P 0)
     (haf : (hf : ContinuousOn f (spectrum R a)) → (ha : p a) → P (cfcHom ha ⟨_, hf.domRestrict⟩)) :
