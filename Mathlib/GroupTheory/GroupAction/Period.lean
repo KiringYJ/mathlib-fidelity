@@ -40,13 +40,15 @@ theorem le_period {m : M} {a : α} {n : ℕ} (period_pos : 0 < period m a)
 @[to_additive /-- If for some `n`, `(n • m) +ᵥ a = a`, then `period m a ≤ n`. -/]
 theorem period_le_of_fixed {m : M} {a : α} {n : ℕ} (n_pos : 0 < n) (fixed : m ^ n • a = a) :
     period m a ≤ n :=
-  (isPeriodicPt_smul_iff.mpr fixed).minimalPeriod_le n_pos
+  Nat.le_of_dvd n_pos (pow_smul_eq_iff_period_dvd.1 fixed)
 
 /-- If for some `n`, `m ^ n • a = a`, then `0 < period m a`. -/
 @[to_additive /-- If for some `n`, `(n • m) +ᵥ a = a`, then `0 < period m a`. -/]
 theorem period_pos_of_fixed {m : M} {a : α} {n : ℕ} (n_pos : 0 < n) (fixed : m ^ n • a = a) :
-    0 < period m a :=
-  (isPeriodicPt_smul_iff.mpr fixed).minimalPeriod_pos n_pos
+    0 < period m a := by
+  rw [period_eq_minimalPeriod
+    (Function.mk_mem_periodicPts n_pos (isPeriodicPt_smul_iff.mpr fixed))]
+  exact Function.minimalPeriod_pos _
 
 @[to_additive]
 theorem period_eq_one_iff {m : M} {a : α} : period m a = 1 ↔ m • a = a :=
@@ -72,11 +74,10 @@ variable (M) in
 theorem period_one (a : α) : period (1 : M) a = 1 := period_eq_one_iff.mpr (one_smul M a)
 
 @[to_additive (attr := simp)]
-theorem period_inv (g : G) (a : α) : period g⁻¹ a = period g a := by
-  simp only [period_eq_minimalPeriod, Function.minimalPeriod_eq_minimalPeriod_iff,
-    isPeriodicPt_smul_iff]
-  intro n
-  rw [smul_eq_iff_eq_inv_smul, eq_comm, ← zpow_natCast, inv_zpow, inv_inv, zpow_natCast]
+theorem period_inv (g : G) (a : α) : period g⁻¹ a = period g a :=
+  Nat.dvd_right_iff_eq.1 fun n => by
+    rw [← pow_smul_eq_iff_period_dvd, ← pow_smul_eq_iff_period_dvd, inv_pow, inv_smul_eq_iff,
+      eq_comm]
 
 end Identities
 

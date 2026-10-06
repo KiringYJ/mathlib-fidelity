@@ -174,17 +174,39 @@ noncomputable abbrev IsOfFinOrder.groupPowers (hx : IsOfFinOrder x) :
 
 end IsOfFinOrder
 
+/-- An element of finite order is a periodic point of left multiplication by it. -/
+@[to_additive /-- An element of finite additive order is a periodic point of left addition of
+it. -/]
+theorem IsOfFinOrder.one_mem_periodicPts (h : IsOfFinOrder x) : (1 : G) ∈ periodicPts (x * ·) :=
+  h
+
+open scoped Classical in
 /-- `orderOf x` is the order of the element `x`, i.e. the `n ≥ 1`, s.t. `x ^ n = 1` if it exists.
 Otherwise, i.e. if `x` is of infinite order, then `orderOf x` is `0` by convention. -/
 @[to_additive
   /-- `addOrderOf a` is the order of the element `a`, i.e. the `n ≥ 1`, s.t. `n • a = 0` if it
   exists. Otherwise, i.e. if `a` is of infinite order, then `addOrderOf a` is `0` by convention. -/]
 noncomputable def orderOf (x : G) : ℕ :=
-  minimalPeriod (x * ·) 1
+  if h : IsOfFinOrder x then minimalPeriod (x * ·) 1 h.one_mem_periodicPts else 0
+
+/-- The order of an element of finite order is the minimal period of `1` under left
+multiplication by it. -/
+@[to_additive /-- The additive order of an element of finite additive order is the minimal period
+of `0` under left addition of it. -/]
+theorem IsOfFinOrder.orderOf_eq_minimalPeriod (h : IsOfFinOrder x) :
+    orderOf x = minimalPeriod (x * ·) 1 h.one_mem_periodicPts := by
+  classical
+  exact dite_eq_left h
+
+@[to_additive]
+theorem orderOf_eq_zero (h : ¬IsOfFinOrder x) : orderOf x = 0 := by
+  classical
+  exact dite_eq_right h
 
 @[to_additive (attr := nontriviality)]
 theorem Subsingleton.orderOf_eq [Subsingleton G] (x : G) : orderOf x = 1 := by
-  simp [orderOf, nontriviality]
+  have h : IsOfFinOrder x := mk_mem_periodicPts Nat.one_pos (Subsingleton.elim _ _)
+  rw [h.orderOf_eq_minimalPeriod, minimalPeriod_eq_one_of_subsingleton]
 
 @[simp]
 theorem addOrderOf_ofMul_eq_orderOf (x : G) : addOrderOf (Additive.ofMul x) = orderOf x :=
@@ -195,17 +217,16 @@ lemma orderOf_ofAdd_eq_addOrderOf {α : Type*} [AddMonoid α] (a : α) :
     orderOf (Multiplicative.ofAdd a) = addOrderOf a := rfl
 
 @[to_additive]
-protected lemma IsOfFinOrder.orderOf_pos (h : IsOfFinOrder x) : 0 < orderOf x :=
-  minimalPeriod_pos_of_mem_periodicPts h
+protected lemma IsOfFinOrder.orderOf_pos (h : IsOfFinOrder x) : 0 < orderOf x := by
+  rw [h.orderOf_eq_minimalPeriod]
+  exact minimalPeriod_pos h
 
 @[to_additive (attr := simp) addOrderOf_nsmul_eq_zero]
 theorem pow_orderOf_eq_one (x : G) : x ^ orderOf x = 1 := by
-  convert! Eq.trans _ (isPeriodicPt_minimalPeriod (x * ·) 1)
-  rw [orderOf, mul_left_iterate_apply_one]
-
-@[to_additive]
-theorem orderOf_eq_zero (h : ¬IsOfFinOrder x) : orderOf x = 0 := by
-  rwa [orderOf, minimalPeriod, dite_eq_right]
+  by_cases h : IsOfFinOrder x
+  · rw [h.orderOf_eq_minimalPeriod, ← mul_left_iterate_apply_one]
+    exact isPeriodicPt_minimalPeriod (x * ·) 1 h
+  · rw [orderOf_eq_zero h, pow_zero]
 
 @[to_additive (attr := simp)]
 theorem orderOf_eq_zero_iff : orderOf x = 0 ↔ ¬IsOfFinOrder x :=
@@ -228,14 +249,12 @@ set_option backward.isDefEq.respectTransparency false in
 @[to_additive]
 theorem orderOf_eq_iff {n} (h : 0 < n) :
     orderOf x = n ↔ x ^ n = 1 ∧ ∀ m, m < n → 0 < m → x ^ m ≠ 1 := by
-  simp_rw [Ne, ← isPeriodicPt_mul_iff_pow_eq_one, orderOf, minimalPeriod]
-  split_ifs with h1
-  · classical
-    rw [find_eq_iff]
-    simp only [h, true_and, not_and]
-  · rw [iff_false_left h.ne]
+  by_cases h1 : IsOfFinOrder x
+  · rw [h1.orderOf_eq_minimalPeriod, minimalPeriod_eq_iff h1 h]
+    simp_rw [isPeriodicPt_mul_iff_pow_eq_one]
+  · rw [orderOf_eq_zero h1, iff_false_left h.ne]
     rintro ⟨h', -⟩
-    exact h1 ⟨n, h, h'⟩
+    exact h1 (isOfFinOrder_iff_pow_eq_one.2 ⟨n, h, h'⟩)
 
 /-- A group element has finite order iff its order is positive. -/
 @[to_additive (attr := simp)
@@ -248,19 +267,39 @@ theorem IsOfFinOrder.mono [Monoid β] {y : β} (hx : IsOfFinOrder x) (h : orderO
     IsOfFinOrder y := by rw [← orderOf_pos_iff] at hx ⊢; exact Nat.pos_of_dvd_of_pos h hx
 
 @[to_additive]
-theorem pow_ne_one_of_lt_orderOf (n0 : n ≠ 0) (h : n < orderOf x) : x ^ n ≠ 1 := fun j =>
-  not_isPeriodicPt_of_pos_of_lt_minimalPeriod n0 h ((isPeriodicPt_mul_iff_pow_eq_one x).mpr j)
-@[to_additive]
-theorem orderOf_le_of_pow_eq_one (hn : 0 < n) (h : x ^ n = 1) : orderOf x ≤ n :=
-  IsPeriodicPt.minimalPeriod_le hn (by rwa [isPeriodicPt_mul_iff_pow_eq_one])
+theorem pow_ne_one_of_lt_orderOf (n0 : n ≠ 0) (h : n < orderOf x) : x ^ n ≠ 1 := fun j => by
+  have hx : IsOfFinOrder x := isOfFinOrder_iff_pow_eq_one.2 ⟨n, Nat.pos_of_ne_zero n0, j⟩
+  rw [hx.orderOf_eq_minimalPeriod] at h
+  exact not_isPeriodicPt_of_pos_of_lt_minimalPeriod n0 h ((isPeriodicPt_mul_iff_pow_eq_one x).mpr j)
 
-@[to_additive (attr := simp)]
-theorem orderOf_one : orderOf (1 : G) = 1 := by
-  rw [orderOf, ← minimalPeriod_id (x := (1 : G)), ← one_mul_eq_id]
+@[to_additive]
+theorem orderOf_le_of_pow_eq_one (hn : 0 < n) (h : x ^ n = 1) : orderOf x ≤ n := by
+  rw [(isOfFinOrder_iff_pow_eq_one.2 ⟨n, hn, h⟩).orderOf_eq_minimalPeriod]
+  exact IsPeriodicPt.minimalPeriod_le hn (by rwa [isPeriodicPt_mul_iff_pow_eq_one])
+
+/-- The order of an element is the least positive `n` with `x ^ n = 1`, or the infimum `0` of the
+empty set of natural numbers if there is none. -/
+@[to_additive /-- The additive order of an element is the least positive `n` with `n • x = 0`, or
+the infimum `0` of the empty set of natural numbers if there is none. -/]
+theorem orderOf_eq_sInf (x : G) : orderOf x = sInf {n | 0 < n ∧ x ^ n = 1} := by
+  by_cases hx : IsOfFinOrder x
+  · exact (le_csInf (isOfFinOrder_iff_pow_eq_one.1 hx)
+      fun _ hn => orderOf_le_of_pow_eq_one hn.1 hn.2).antisymm
+        (Nat.sInf_le ⟨hx.orderOf_pos, pow_orderOf_eq_one x⟩)
+  · rw [orderOf_eq_zero hx, eq_comm, Nat.sInf_eq_zero]
+    exact Or.inr (Set.eq_empty_of_forall_notMem fun n hn =>
+      hx (isOfFinOrder_iff_pow_eq_one.2 ⟨n, hn⟩))
 
 @[to_additive (attr := simp) AddMonoid.addOrderOf_eq_one_iff]
 theorem orderOf_eq_one_iff : orderOf x = 1 ↔ x = 1 := by
-  rw [orderOf, minimalPeriod_eq_one_iff_isFixedPt, IsFixedPt, mul_one]
+  by_cases h : IsOfFinOrder x
+  · rw [h.orderOf_eq_minimalPeriod, minimalPeriod_eq_one_iff_isFixedPt, IsFixedPt, mul_one]
+  · rw [orderOf_eq_zero h]
+    exact ⟨fun h0 => absurd h0 zero_ne_one, fun hx => (h (hx ▸ IsOfFinOrder.one)).elim⟩
+
+@[to_additive (attr := simp)]
+theorem orderOf_one : orderOf (1 : G) = 1 :=
+  orderOf_eq_one_iff.2 rfl
 
 @[to_additive (attr := simp) mod_addOrderOf_nsmul]
 lemma pow_mod_orderOf (x : G) (n : ℕ) : x ^ (n % orderOf x) = x ^ n :=
@@ -270,8 +309,13 @@ lemma pow_mod_orderOf (x : G) (n : ℕ) : x ^ (n % orderOf x) = x ^ n :=
     _ = x ^ n := by rw [Nat.mod_add_div]
 
 @[to_additive]
-theorem orderOf_dvd_of_pow_eq_one (h : x ^ n = 1) : orderOf x ∣ n :=
-  IsPeriodicPt.minimalPeriod_dvd ((isPeriodicPt_mul_iff_pow_eq_one _).mpr h)
+theorem orderOf_dvd_of_pow_eq_one (h : x ^ n = 1) : orderOf x ∣ n := by
+  by_cases hx : IsOfFinOrder x
+  · rw [hx.orderOf_eq_minimalPeriod]
+    exact ((isPeriodicPt_mul_iff_pow_eq_one _).mpr h).minimalPeriod_dvd hx
+  · rw [orderOf_eq_zero hx, Nat.zero_dvd]
+    by_contra hn
+    exact hx (isOfFinOrder_iff_pow_eq_one.2 ⟨n, Nat.pos_of_ne_zero hn, h⟩)
 
 @[to_additive]
 theorem orderOf_dvd_iff_pow_eq_one {n : ℕ} : orderOf x ∣ n ↔ x ^ n = 1 :=
@@ -295,8 +339,11 @@ theorem orderOf_pow_dvd (n : ℕ) : orderOf (x ^ n) ∣ orderOf x := by
 
 @[to_additive]
 lemma pow_injOn_Iio_orderOf : (Set.Iio <| orderOf x).InjOn (x ^ ·) := by
-  simpa only [mul_left_iterate_apply_one]
-    using! iterate_injOn_Iio_minimalPeriod (f := (x * ·)) (x := 1)
+  by_cases hx : IsOfFinOrder x
+  · rw [hx.orderOf_eq_minimalPeriod]
+    simpa only [mul_left_iterate_apply_one]
+      using! iterate_injOn_Iio_minimalPeriod (f := (x * ·)) (x := 1) hx
+  · simp [orderOf_eq_zero hx]
 
 @[to_additive]
 protected lemma IsOfFinOrder.mem_powers_iff_mem_range_orderOf [DecidableEq G]
@@ -364,7 +411,8 @@ theorem orderOf_eq_of_pow_and_pow_div_prime (hn : 0 < n) (hx : x ^ n = 1)
 @[to_additive]
 theorem orderOf_eq_orderOf_iff {H : Type*} [Monoid H] {y : H} :
     orderOf x = orderOf y ↔ ∀ n : ℕ, x ^ n = 1 ↔ y ^ n = 1 := by
-  simp_rw [← isPeriodicPt_mul_iff_pow_eq_one, ← minimalPeriod_eq_minimalPeriod_iff, orderOf]
+  simp_rw [← orderOf_dvd_iff_pow_eq_one]
+  exact Nat.dvd_right_iff_eq.symm
 
 /-- An injective homomorphism of monoids preserves orders of elements. -/
 @[to_additive /-- An injective homomorphism of additive monoids preserves orders of elements. -/]
@@ -414,9 +462,17 @@ lemma IsOfFinOrder.isUnit {M} [Monoid M] {x : M} (hx : IsOfFinOrder x) : IsUnit 
 variable (x)
 
 @[to_additive]
+protected lemma IsOfFinOrder.orderOf_pow (n : ℕ) (h : IsOfFinOrder x) :
+    orderOf (x ^ n) = orderOf x / Nat.gcd (orderOf x) n := by
+  rw [h.orderOf_eq_minimalPeriod, (h.pow (n := n)).orderOf_eq_minimalPeriod,
+    ← minimalPeriod_iterate_eq_div_gcd h n]
+  simp only [mul_left_iterate]
+
+@[to_additive]
 theorem orderOf_pow' (h : n ≠ 0) : orderOf (x ^ n) = orderOf x / Nat.gcd (orderOf x) n := by
-  unfold orderOf
-  rw [← minimalPeriod_iterate_eq_div_gcd h, mul_left_iterate]
+  by_cases hx : IsOfFinOrder x
+  · exact hx.orderOf_pow x n
+  · rw [orderOf_eq_zero hx, orderOf_eq_zero fun hxn => hx (hxn.of_pow h), Nat.zero_div]
 
 @[to_additive]
 lemma orderOf_pow_of_dvd {x : G} {n : ℕ} (hn : n ≠ 0) (dvd : n ∣ orderOf x) :
@@ -429,12 +485,6 @@ lemma orderOf_pow_orderOf_div {x : G} {n : ℕ} (hx : orderOf x ≠ 0) (hn : n �
   rw [← Nat.div_mul_cancel hn] at hx; exact left_ne_zero_of_mul hx
 
 variable (n)
-
-@[to_additive]
-protected lemma IsOfFinOrder.orderOf_pow (h : IsOfFinOrder x) :
-    orderOf (x ^ n) = orderOf x / Nat.gcd (orderOf x) n := by
-  unfold orderOf
-  rw [← minimalPeriod_iterate_eq_div_gcd' h, mul_left_iterate]
 
 @[to_additive]
 lemma Nat.Coprime.orderOf_pow (h : (orderOf y).Coprime m) : orderOf (y ^ m) = orderOf y := by
@@ -460,8 +510,8 @@ variable {x}
 @[to_additive]
 theorem orderOf_mul_dvd_lcm (h : Commute x y) :
     orderOf (x * y) ∣ Nat.lcm (orderOf x) (orderOf y) := by
-  rw [orderOf, ← comp_mul_left]
-  exact Function.Commute.minimalPeriod_of_comp_dvd_lcm h.function_commute_mul_left
+  rw [orderOf_dvd_iff_pow_eq_one, h.mul_pow, orderOf_dvd_iff_pow_eq_one.1 (Nat.dvd_lcm_left _ _),
+    orderOf_dvd_iff_pow_eq_one.1 (Nat.dvd_lcm_right _ _), one_mul]
 
 @[to_additive]
 theorem orderOf_dvd_lcm_mul (h : Commute x y) :
@@ -484,8 +534,21 @@ theorem orderOf_mul_dvd_mul_orderOf (h : Commute x y) :
 @[to_additive addOrderOf_add_eq_mul_addOrderOf_of_coprime]
 theorem orderOf_mul_eq_mul_orderOf_of_coprime (h : Commute x y)
     (hco : (orderOf x).Coprime (orderOf y)) : orderOf (x * y) = orderOf x * orderOf y := by
-  rw [orderOf, ← comp_mul_left]
-  exact h.function_commute_mul_left.minimalPeriod_of_comp_eq_mul_of_coprime hco
+  refine h.orderOf_mul_dvd_mul_orderOf.antisymm (hco.mul_dvd_of_dvd_of_dvd ?_ ?_)
+  · refine hco.dvd_of_dvd_mul_right (orderOf_dvd_of_pow_eq_one ?_)
+    have hy : y ^ (orderOf (x * y) * orderOf y) = 1 := by
+      rw [mul_comm, pow_mul, pow_orderOf_eq_one, one_pow]
+    calc x ^ (orderOf (x * y) * orderOf y)
+        = x ^ (orderOf (x * y) * orderOf y) * y ^ (orderOf (x * y) * orderOf y) := by
+          rw [hy, mul_one]
+      _ = 1 := by rw [← h.mul_pow, pow_mul, pow_orderOf_eq_one, one_pow]
+  · refine hco.symm.dvd_of_dvd_mul_right (orderOf_dvd_of_pow_eq_one ?_)
+    have hx : x ^ (orderOf (x * y) * orderOf x) = 1 := by
+      rw [mul_comm, pow_mul, pow_orderOf_eq_one, one_pow]
+    calc y ^ (orderOf (x * y) * orderOf x)
+        = x ^ (orderOf (x * y) * orderOf x) * y ^ (orderOf (x * y) * orderOf x) := by
+          rw [hx, one_mul]
+      _ = 1 := by rw [← h.mul_pow, pow_mul, pow_orderOf_eq_one, one_pow]
 
 /-- Commuting elements of finite order are closed under multiplication. -/
 @[to_additive /-- Commuting elements of finite additive order are closed under addition. -/]
@@ -532,7 +595,13 @@ variable {x n} {p : ℕ} [hp : Fact p.Prime]
 
 @[to_additive]
 theorem orderOf_eq_prime_iff : orderOf x = p ↔ x ^ p = 1 ∧ x ≠ 1 := by
-  rw [orderOf, minimalPeriod_eq_prime_iff, isPeriodicPt_mul_iff_pow_eq_one, IsFixedPt, mul_one]
+  rw [← orderOf_dvd_iff_pow_eq_one, Ne, ← orderOf_eq_one_iff]
+  constructor
+  · intro h
+    rw [h]
+    exact ⟨dvd_rfl, hp.out.ne_one⟩
+  · rintro ⟨h1, h2⟩
+    exact ((Nat.dvd_prime hp.out).1 h1).resolve_left h2
 
 /-- The backward direction of `orderOf_eq_prime_iff`. -/
 @[to_additive /-- The backward direction of `addOrderOf_eq_prime_iff`. -/]
@@ -542,7 +611,7 @@ theorem orderOf_eq_prime (hg : x ^ p = 1) (hg1 : x ≠ 1) : orderOf x = p :=
 @[to_additive addOrderOf_eq_prime_pow]
 theorem orderOf_eq_prime_pow (hnot : ¬x ^ p ^ n = 1) (hfin : x ^ p ^ (n + 1) = 1) :
     orderOf x = p ^ (n + 1) := by
-  apply minimalPeriod_eq_prime_pow <;> rwa [isPeriodicPt_mul_iff_pow_eq_one]
+  apply Nat.eq_prime_pow_of_dvd_least_prime_pow hp.out <;> rwa [orderOf_dvd_iff_pow_eq_one]
 
 @[to_additive exists_addOrderOf_eq_prime_pow_iff]
 theorem exists_orderOf_eq_prime_pow_iff :
@@ -1391,15 +1460,17 @@ variable [Monoid α] [Monoid β] {x : α × β} {a : α} {b : β}
 
 @[to_additive]
 protected theorem Prod.orderOf (x : α × β) : orderOf x = (orderOf x.1).lcm (orderOf x.2) :=
-  minimalPeriod_prodMap _ _ _
+  Nat.dvd_right_iff_eq.1 fun n => by
+    simp only [orderOf_dvd_iff_pow_eq_one, Nat.lcm_dvd_iff, Prod.ext_iff, Prod.pow_fst,
+      Prod.pow_snd, Prod.fst_one, Prod.snd_one]
 
 @[to_additive]
-theorem orderOf_fst_dvd_orderOf : orderOf x.1 ∣ orderOf x :=
-  minimalPeriod_fst_dvd
+theorem orderOf_fst_dvd_orderOf : orderOf x.1 ∣ orderOf x := by
+  rw [Prod.orderOf]; exact Nat.dvd_lcm_left _ _
 
 @[to_additive]
-theorem orderOf_snd_dvd_orderOf : orderOf x.2 ∣ orderOf x :=
-  minimalPeriod_snd_dvd
+theorem orderOf_snd_dvd_orderOf : orderOf x.2 ∣ orderOf x := by
+  rw [Prod.orderOf]; exact Nat.dvd_lcm_right _ _
 
 @[to_additive]
 theorem IsOfFinOrder.fst (hx : IsOfFinOrder x) : IsOfFinOrder x.1 :=
@@ -1428,17 +1499,20 @@ section Pi
 variable {ι : Type*} {α : ι → Type*} [∀ i, Monoid (α i)] {x : ∀ i, α i}
 
 @[to_additive]
-lemma Pi.orderOf_eq_sInf (x : ∀ i, α i) : orderOf x = sInf { n > 0 | ∀ i, orderOf (x i) ∣ n } :=
-  minimalPeriod_piMap
+lemma Pi.orderOf_eq_sInf (x : ∀ i, α i) : orderOf x = sInf { n > 0 | ∀ i, orderOf (x i) ∣ n } := by
+  rw [_root_.orderOf_eq_sInf]
+  simp only [orderOf_dvd_iff_pow_eq_one, funext_iff, Pi.pow_apply, Pi.one_apply, gt_iff_lt]
 
 @[to_additive]
 protected lemma Pi.orderOf [Fintype ι] (x : ∀ i, α i) :
     orderOf x = Finset.univ.lcm (fun i => orderOf (x i)) :=
-  minimalPeriod_piMap_fintype
+  Nat.dvd_right_iff_eq.1 fun n => by
+    simp only [orderOf_dvd_iff_pow_eq_one, Finset.lcm_dvd_iff, Finset.mem_univ, true_imp_iff,
+      funext_iff, Pi.pow_apply, Pi.one_apply]
 
 @[to_additive]
-theorem orderOf_apply_dvd_orderOf : ∀ i, orderOf (x i) ∣ orderOf x :=
-  minimalPeriod_single_dvd_minimalPeriod_piMap
+theorem orderOf_apply_dvd_orderOf : ∀ i, orderOf (x i) ∣ orderOf x := fun i =>
+  orderOf_dvd_of_pow_eq_one (by rw [← Pi.pow_apply, pow_orderOf_eq_one, Pi.one_apply])
 
 @[to_additive]
 protected theorem IsOfFinOrder.pi [Finite ι] : (∀ i, IsOfFinOrder (x i)) → IsOfFinOrder x := by
