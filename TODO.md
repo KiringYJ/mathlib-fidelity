@@ -378,16 +378,35 @@ operation.
   including one that leaves the units, the fixed-point characterization, and iteration on the
   domain.
 
-- [ ] **Give the zero return-time generator a literature-supported mathematical name.**
-  `Function.minimalPeriod` in `Mathlib/Dynamics/PeriodicPts/Defs.lean:245` is zero at a nonperiodic
-  point, but this is not an arbitrary failure value: `isPeriodicPt_iff_minimalPeriod_dvd` at
-  line 359 identifies it as the generator of all return times, including the submonoid `{0}` for a
-  nonperiodic point.  The divisibility theorem shows that the total generator carries information,
-  but not that it belongs in the public API.  Find literature using zero with this object and
-  convention; otherwise keep the generator private and put `minimalPeriod` on periodic points.
-  Likewise, `periodicOrbit` at line 401 uses the empty cycle to detect nonperiodicity.  Retain that
-  total classifier publicly only with matching literature evidence; otherwise keep it private and
-  expose only the actual orbit of a periodic point.
+- [x] **Put `Function.minimalPeriod` and `Function.periodicOrbit` on periodic points.**
+  A point that never returns has no least positive period, so it has no minimal period, and its
+  orbit is not a cycle; the minimal period of a periodic point is its least positive period.
+  `Function.minimalPeriod f x hx` and `Function.periodicOrbit f x hx` take `hx : x ∈ periodicPts f`,
+  found by the default discharger `periodic_pt` from a local hypothesis or from a periodic point of
+  positive period, which never chooses the map or the point.  The periods of a periodic point are
+  the multiples of its minimal period (`isPeriodicPt_iff_minimalPeriod_dvd`), and
+  `minimalPeriod_eq_iff` characterizes it.  The statements of the former convention are removed:
+  `minimalPeriod_eq_zero_of_notMem_periodicPts`, `minimalPeriod_pos_iff_mem_periodicPts`,
+  `minimalPeriod_eq_zero_iff_notMem_periodicPts`, `periodicOrbit_eq_nil_iff_not_periodic_pt`, and
+  `periodicOrbit_eq_nil_of_not_periodic_pt`; `minimalPeriod_pos_of_mem_periodicPts` is now
+  `minimalPeriod_pos`, and `minimalPeriod_iterate_eq_div_gcd'` is merged into
+  `minimalPeriod_iterate_eq_div_gcd`.  The lemmas that held for every point because of the value
+  `0`, such as `iterate_minimalPeriod`, `isPeriodicPt_iff_minimalPeriod_dvd`,
+  `minimalPeriod_eq_minimalPeriod_iff`, `nodup_periodicOrbit`, `periodicOrbit_chain`,
+  `minimalPeriod_prodMap`, and `minimalPeriod_piMap`, take the periodicity they need;
+  `iterate_mem_periodicPts`, `mem_periodicPts_iterate`, `Commute.comp_mem_periodicPts`,
+  `mem_periodicPts_prodMap`, and `apply_mem_periodicPts_piMap` supply it.  `orderOf` and
+  `MulAction.period` keep the value `0` for an element of infinite order and for a point that does
+  not return, which is the open question of the `[L]` item on zero-encoded element order below:
+  `orderOf x` is the minimal period of `1` under `(x * ·)` when `x` has finite order and `0`
+  otherwise, and `MulAction.period m a` is the minimal period of `a` under `(m • ·)` when `a`
+  returns and `0` otherwise; for a group action it is the order of `m` relative to the stabilizer of
+  `a`, which Delgado, Ventura, and Zakharov also set to `0` when no positive power of `m` fixes `a`
+  (arXiv:2105.03798, Section 2).  Both remain the generators of the return times
+  (`orderOf_dvd_iff_pow_eq_one`, `pow_smul_eq_iff_period_dvd`), and the orbit and quotient
+  equivalences with `ZMod`, the transfer homomorphism, and the focal subgroup theorem use
+  `MulAction.period`.  Tests cover the removed names, a point of the successor map, which has no
+  periodic orbit, the discharger, and the retained zero of `MulAction.period` and `addOrderOf`.
 
 - [x] **Use extended graph distance and girth until finiteness is proved.**
   `SimpleGraph.dist G u v h`, `SimpleGraph.girth G h`, and `SimpleGraph.diam G h` take
@@ -1747,7 +1766,13 @@ another standard representation.
   exact convention before retaining the ordinary name; otherwise use an extended-valued invariant
   and require `IsOfFinOrder`/`IsOfFinAddOrder` for a natural-valued projection.  Keep the zero
   encoding private rather than exporting a second public order operation merely for implementation
-  convenience.
+  convenience.  Since `Function.minimalPeriod` takes a proof of periodicity, `orderOf x` is defined
+  by cases on `IsOfFinOrder x`, and `MulAction.period` and `AddAction.period` share the zero
+  encoding for a point that does not return.  J. Delgado, E. Ventura, and A. Zakharov, *Relative
+  order and spectrum in free and related groups*, arXiv:2105.03798, Section 2 and Remark 2.12, use
+  this convention: the order of an element of infinite order is `0`, and so is the order of `g`
+  relative to a subgroup `H` (for the stabilizer of a point, its period) when no positive power of
+  `g` lies in `H`.
 
 ## Deferred API hygiene -- subordinate to mathematical fidelity
 

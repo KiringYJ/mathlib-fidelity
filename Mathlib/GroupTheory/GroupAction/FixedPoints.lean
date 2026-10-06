@@ -78,15 +78,14 @@ theorem smul_inv_mem_fixedBy_iff_mem_fixedBy {a : α} {g : G} :
     g⁻¹ • a ∈ fixedBy α g ↔ a ∈ fixedBy α g := by
   rw [← fixedBy_inv, smul_mem_fixedBy_iff_mem_fixedBy, fixedBy_inv]
 
-@[to_additive minimalPeriod_eq_one_iff_fixedBy]
-theorem minimalPeriod_eq_one_iff_fixedBy {a : α} {g : G} :
-    Function.minimalPeriod (fun x => g • x) a = 1 ↔ a ∈ fixedBy α g :=
-  Function.minimalPeriod_eq_one_iff_isFixedPt
+@[to_additive period_eq_one_iff_fixedBy]
+theorem period_eq_one_iff_fixedBy {a : α} {g : G} : period g a = 1 ↔ a ∈ fixedBy α g := by
+  rw [← Nat.dvd_one, ← pow_smul_eq_iff_period_dvd, pow_one, mem_fixedBy]
 
 @[to_additive]
 theorem mem_fixedBy_zpow {g : G} {a : α} (h : a ∈ fixedBy α g) (j : ℤ) :
     a ∈ fixedBy α (g ^ j) := by
-  rw [mem_fixedBy, zpow_smul_eq_iff_minimalPeriod_dvd, minimalPeriod_eq_one_iff_fixedBy.mpr h,
+  rw [mem_fixedBy, zpow_smul_eq_iff_period_dvd, period_eq_one_iff_fixedBy.mpr h,
     Int.natCast_one]
   exact one_dvd j
 

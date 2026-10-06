@@ -107,10 +107,10 @@ theorem Quotient.mk_smul_out [QuotientAction X H] (b : X) (q : G ⧸ H) :
 theorem Quotient.coe_smul_out [QuotientAction X H] (b : X) (q : G ⧸ H) : ↑(b • q.out) = b • q := by
   simp
 
-theorem _root_.QuotientGroup.out_conj_pow_minimalPeriod_mem (g : G) (q : G ⧸ H) :
-    q.out⁻¹ * g ^ Function.minimalPeriod (g • ·) q * q.out ∈ H := by
+theorem _root_.QuotientGroup.out_conj_pow_period_mem (g : G) (q : G ⧸ H) :
+    q.out⁻¹ * g ^ MulAction.period g q * q.out ∈ H := by
   rw [mul_assoc, ← QuotientGroup.eq, QuotientGroup.out_eq', ← smul_eq_mul, Quotient.mk_smul_out,
-    eq_comm, pow_smul_eq_iff_minimalPeriod_dvd]
+    eq_comm, pow_smul_eq_iff_period_dvd]
 
 end QuotientAction
 

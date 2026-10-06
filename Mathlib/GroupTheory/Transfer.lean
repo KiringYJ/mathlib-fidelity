@@ -116,16 +116,16 @@ lemma transferTransversal_apply (q : G ⧸ H) :
   IsComplement.leftQuotientEquiv_apply (coe_transferFunction g) q
 
 lemma transferTransversal_apply' (q : orbitRel.Quotient (zpowers g) (G ⧸ H))
-    (k : ZMod (minimalPeriod (g • ·) q.out)) :
+    (k : ZMod (MulAction.period g q.out)) :
     ↑((transferTransversal H g).2.leftQuotientEquiv (g ^ (cast k : ℤ) • q.out)) =
       g ^ (cast k : ℤ) * q.out.out := by
   rw [transferTransversal_apply, transferFunction_apply, ← quotientEquivSigmaZMod_symm_apply,
     apply_symm_apply]
 
 lemma transferTransversal_apply'' (q : orbitRel.Quotient (zpowers g) (G ⧸ H))
-    (k : ZMod (minimalPeriod (g • ·) q.out)) :
+    (k : ZMod (MulAction.period g q.out)) :
     ↑((g • transferTransversal H g).2.leftQuotientEquiv (g ^ (cast k : ℤ) • q.out)) =
-      if k = 0 then g ^ minimalPeriod (g • ·) q.out * q.out.out
+      if k = 0 then g ^ MulAction.period g q.out * q.out.out
       else g ^ (cast k : ℤ) * q.out.out := by
   rw [smul_apply_eq_smul_apply_inv_smul, transferTransversal_apply, transferFunction_apply, ←
     mul_smul, ← zpow_neg_one, ← zpow_add, quotientEquivSigmaZMod_apply, smul_eq_mul, ← mul_assoc,
@@ -163,8 +163,8 @@ theorem transfer_eq_prod_quotient_orbitRel_zpowers_quot [FiniteIndex H] (g : G)
     transfer ϕ g =
       ∏ q : Quotient (orbitRel (zpowers g) (G ⧸ H)),
         ϕ
-          ⟨q.out.out⁻¹ * g ^ Function.minimalPeriod (g • ·) q.out * q.out.out,
-            QuotientGroup.out_conj_pow_minimalPeriod_mem H g q.out⟩ := by
+          ⟨q.out.out⁻¹ * g ^ MulAction.period g q.out * q.out.out,
+            QuotientGroup.out_conj_pow_period_mem H g q.out⟩ := by
   let := H.fintypeQuotientOfFiniteIndex
   calc
     transfer ϕ g = ∏ q : G ⧸ H, _ := transfer_def ϕ (transferTransversal H g) g
@@ -174,7 +174,7 @@ theorem transfer_eq_prod_quotient_orbitRel_zpowers_quot [FiniteIndex H] (g : G)
       refine Fintype.prod_congr _ _ (fun q => ?_)
       simp only [quotientEquivSigmaZMod_symm_apply, transferTransversal_apply',
         transferTransversal_apply'']
-      rw [Fintype.prod_eq_single (0 : ZMod (Function.minimalPeriod (g • ·) q.out)) _]
+      rw [Fintype.prod_eq_single (0 : ZMod (MulAction.period g q.out)) _]
       · simp only [ite_eq_left, ZMod.cast_zero, zpow_zero, one_mul, mul_assoc]
       · intro k hk
         simp only [ite_eq_right hk, inv_mul_cancel]
@@ -192,15 +192,15 @@ theorem transfer_eq_pow_aux (g : G)
   classical
     replace key : ∀ (k : ℕ) (g₀ : G), g₀⁻¹ * g ^ k * g₀ ∈ H → g ^ k ∈ H := fun k g₀ hk =>
       (congr_arg (· ∈ H) (key k g₀ hk)).mp hk
-    replace key : ∀ q : G ⧸ H, g ^ Function.minimalPeriod (g • ·) q ∈ H := fun q =>
-      key (Function.minimalPeriod (g • ·) q) q.out
-        (QuotientGroup.out_conj_pow_minimalPeriod_mem H g q)
+    replace key : ∀ q : G ⧸ H, g ^ MulAction.period g q ∈ H := fun q =>
+      key (MulAction.period g q) q.out
+        (QuotientGroup.out_conj_pow_period_mem H g q)
     let f : Quotient (orbitRel (zpowers g) (G ⧸ H)) → zpowers g := fun q =>
-      (⟨g, mem_zpowers g⟩ : zpowers g) ^ Function.minimalPeriod (g • ·) q.out
+      (⟨g, mem_zpowers g⟩ : zpowers g) ^ MulAction.period g q.out
     have hf : ∀ q, f q ∈ H.subgroupOf (zpowers g) := fun q => key q.out
     replace key :=
       Subgroup.prod_mem (H.subgroupOf (zpowers g)) fun q (_ : q ∈ Finset.univ) => hf q
-    simpa only [f, Finset.prod_pow_eq_pow_sum, index_eq_sum_minimalPeriod H g] using! key
+    simpa only [f, Finset.prod_pow_eq_pow_sum, index_eq_sum_period H g] using! key
 
 open scoped IsMulCommutative in
 theorem transfer_eq_pow [FiniteIndex H] (g : G)
@@ -214,7 +214,7 @@ theorem transfer_eq_pow [FiniteIndex H] (g : G)
     refine congrArg ϕ (Subtype.coe_injective ?_)
     dsimp only
     rw [H.coe_mk, ← (zpowers g).coe_mk g (mem_zpowers g), ← (zpowers g).coe_pow,
-      index_eq_sum_minimalPeriod H g, ← Finset.prod_pow_eq_pow_sum, ← Finset.prod_map_toList]
+      index_eq_sum_period H g, ← Finset.prod_pow_eq_pow_sum, ← Finset.prod_map_toList]
     simp only [Subgroup.val_list_prod, List.map_map]
     congr 2
     funext
