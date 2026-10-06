@@ -809,12 +809,18 @@ operation.
   Tests cover the removed names, the failure without density, the missing `Star` instance, the
   notation, self-adjointness of the identity, and the operator defined only at zero.
 
-- [ ] **Require dense uniformly inducing embeddings for `ContinuousLinearMap.extend`.**
-  `ContinuousLinearMap.extend f e` in
-  `Mathlib/Topology/Algebra/Module/ContinuousLinearMap/Extend.lean:29` is the continuous extension
-  of `f` along `e` when `e` has dense range and is uniformly inducing, and the zero map otherwise.
-  Take that evidence at the boundary, as `LinearPMap.adjointDomainMkCLMExtend` does, migrate the
-  consumers, and remove the zero branch.
+- [x] **Require dense uniformly inducing embeddings for `ContinuousLinearMap.extend`.**
+  `ContinuousLinearMap.extend f e h_dense h_e` takes the density of the range of `e` and its uniform
+  inducing property, under which the continuous extension of `f` along `e` exists and is unique
+  (`extend_eq`, `extend_unique`); the former definition returned the zero map without them.  The
+  consumers pass the evidence: `LinearPMap.adjointDomainMkCLMExtend` (the inclusion of the dense
+  domain), the extensions of integrals from simple functions to `L¹` (`setToL1'`, `setToL1`, and
+  `L1.integralCLM'`), the extension to a completion, and `opNorm_extend_le`.
+  `LinearMap.compLeftInverse` and `LinearMap.extendOfNorm`, which were the zero map without the
+  norm estimate `‖f x‖ ≤ C * ‖e x‖` and, for `extendOfNorm`, without the density of the range, take
+  the estimate and the density; `compLeftInverse_apply_of_bdd` is renamed `compLeftInverse_apply`,
+  and the isometric extensions pass the evidence.  Tests cover the renamed lemma, the missing
+  evidence, and the extension along the identity.
 
 - [x] **Make the closure of a partial operator require closability.**
   `LinearPMap.closure f hf` takes `hf : f.IsClosable` and is the operator whose graph is the

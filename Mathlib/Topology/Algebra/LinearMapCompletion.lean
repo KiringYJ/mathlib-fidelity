@@ -111,5 +111,6 @@ end UniformSpace.Completion
 
 open UniformSpace.Completion in
 @[simp] lemma ContinuousLinearMap.extend_completionToComplL [T0Space β] [CompleteSpace β]
-    (f : α →SL[σ] β) : f.extend toComplL = f.fromCompletion :=
+    (f : α →SL[σ] β) :
+    f.extend toComplL denseRange_coe (isUniformInducing_coe α) = f.fromCompletion :=
   extend_unique _ denseRange_coe (isUniformInducing_coe α) _ (by ext; simp)

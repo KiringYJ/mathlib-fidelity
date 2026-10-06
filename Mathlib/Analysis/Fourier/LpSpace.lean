@@ -100,21 +100,12 @@ end MeasureTheory.Lp
 @[simp]
 theorem SchwartzMap.toLp_fourier_eq (f : 𝓢(E, F)) : 𝓕 (f.toLp 2) = (𝓕 f).toLp 2 := by
   apply LinearMap.extendOfNorm_eq
-  · exact SchwartzMap.denseRange_toLpCLM ENNReal.ofNat_ne_top
-  use 1
-  intro f
-  rw [one_mul]
-  exact (norm_fourier_toL2_eq f).le
+  exact SchwartzMap.denseRange_toLpCLM ENNReal.ofNat_ne_top
 
 @[simp]
 theorem SchwartzMap.toLp_fourierInv_eq (f : 𝓢(E, F)) : 𝓕⁻ (f.toLp 2) = (𝓕⁻ f).toLp 2 := by
   apply LinearMap.extendOfNorm_eq
-  · exact SchwartzMap.denseRange_toLpCLM ENNReal.ofNat_ne_top
-  use 1
-  intro f
-  rw [one_mul]
-  convert! (norm_fourier_toL2_eq (𝓕⁻ f)).symm.le
-  simp
+  exact SchwartzMap.denseRange_toLpCLM ENNReal.ofNat_ne_top
 
 namespace MeasureTheory.Lp
 

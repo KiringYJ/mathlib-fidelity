@@ -125,10 +125,10 @@ theorem mem_adjointDomain_of_exists (y : F) (h : ∃ w : E, ∀ x : T.domain, �
 
 /-- The unique continuous extension of the operator `adjointDomainMkCLM` to `E`, which exists
 because the domain of `T` is dense, which `hT` states. -/
-@[nolint unusedArguments]
-def adjointDomainMkCLMExtend (_hT : Dense (T.domain : Set E)) (y : T.adjointDomain) :
+def adjointDomainMkCLMExtend (hT : Dense (T.domain : Set E)) (y : T.adjointDomain) :
     StrongDual 𝕜 E :=
-  (T.adjointDomainMkCLM y).extend (Submodule.subtypeL T.domain)
+  (T.adjointDomainMkCLM y).extend (Submodule.subtypeL T.domain) hT.denseRange_val
+    isUniformEmbedding_subtype_val.isUniformInducing
 
 variable {T}
 

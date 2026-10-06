@@ -49,13 +49,13 @@ variable (𝕜) [NormedRing 𝕜] [Module 𝕜 E] [Module 𝕜 F] [IsBoundedSMul
 /-- Extend `Set α → (E →L[ℝ] F)` to `(α →₁[μ] E) →L[𝕜] F`. -/
 def setToL1' (hT : DominatedFinMeasAdditive μ T C)
     (h_smul : ∀ c : 𝕜, ∀ s x, T s (c • x) = c • T s x) : (α →₁[μ] E) →L[𝕜] F :=
-  (setToL1SCLM' α E 𝕜 μ hT h_smul).extend (coeToLp α E 𝕜)
+  (setToL1SCLM' α E 𝕜 μ hT h_smul).extend (coeToLp α E 𝕜) (simpleFunc.denseRange one_ne_top)
+    simpleFunc.isUniformInducing
 
 theorem setToL1'_eq_setToL1SCLM (hT : DominatedFinMeasAdditive μ T C)
     (h_smul : ∀ c : 𝕜, ∀ s x, T s (c • x) = c • T s x) (f : α →₁ₛ[μ] E) :
     setToL1' 𝕜 hT h_smul f = setToL1SCLM α E μ hT f := by
-  apply ContinuousLinearMap.extend_eq _ _ simpleFunc.isUniformInducing
-  · exact simpleFunc.denseRange one_ne_top
+  apply ContinuousLinearMap.extend_eq
 
 @[simp]
 theorem setToL1'_apply_coeToLp (hT : DominatedFinMeasAdditive μ T C)
@@ -67,7 +67,8 @@ variable {𝕜}
 
 /-- Extend `Set α → E →L[ℝ] F` to `(α →₁[μ] E) →L[ℝ] F`. -/
 def setToL1 (hT : DominatedFinMeasAdditive μ T C) : (α →₁[μ] E) →L[ℝ] F :=
-  (setToL1SCLM α E μ hT).extend (coeToLp α E ℝ)
+  (setToL1SCLM α E μ hT).extend (coeToLp α E ℝ) (simpleFunc.denseRange one_ne_top)
+    simpleFunc.isUniformInducing
 
 theorem setToL1_eq_setToL1SCLM (hT : DominatedFinMeasAdditive μ T C) (f : α →₁ₛ[μ] E) :
     setToL1 hT f = setToL1SCLM α E μ hT f :=
@@ -83,8 +84,6 @@ theorem setToL1_unique (hT : DominatedFinMeasAdditive μ T C) {A : (α →₁[μ
     setToL1 hT f = A f := by
   suffices setToL1 hT = A by rw [this]
   apply ContinuousLinearMap.extend_unique
-  · exact (simpleFunc.denseRange one_ne_top)
-  · exact simpleFunc.isUniformInducing
   ext f
   rw [hA f]
   rfl
