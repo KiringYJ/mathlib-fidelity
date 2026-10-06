@@ -259,22 +259,6 @@ theorem LinearMap.exists_leftInverse_of_injective (f : V →ₗ[K] V') (hf_inj :
   rw [Basis.ofVectorSpace_apply_self, fb_eq, hC.constr_basis]
   exact leftInverse_invFun (LinearMap.ker_eq_bot.1 hf_inj) _
 
-/-- A choice of linear left inverse of an injective linear map `f : E →ₗ[𝕜] F`.
-
-This choice is generally nonunique away from the range of `f`. -/
-noncomputable
-def LinearMap.leftInverse (f : V →ₗ[K] V') (hf : Function.Injective f) : V' →ₗ[K] V :=
-  (f.exists_leftInverse_of_injective (LinearMap.ker_eq_bot.mpr hf)).choose
-
-theorem LinearMap.leftInverse_comp {f : V →ₗ[K] V'} (hf : Function.Injective f) :
-    f.leftInverse hf ∘ₗ f = LinearMap.id :=
-  (f.exists_leftInverse_of_injective (LinearMap.ker_eq_bot.mpr hf)).choose_spec
-
-/-- The chosen left inverse of an injective linear map sends `f x` to `x`. -/
-theorem LinearMap.leftInverse_apply {f : V →ₗ[K] V'} (hf : Function.Injective f) (x : V) :
-    f.leftInverse hf (f x) = x :=
-  LinearMap.ext_iff.mp (f.leftInverse_comp hf) x
-
 theorem LinearMap.exists_leftInverse_iff_injective (f : V →ₗ[K] V') :
     (∃ g : V' →ₗ[K] V, g.comp f = LinearMap.id) ↔ Function.Injective f := by
   constructor
@@ -282,9 +266,9 @@ theorem LinearMap.exists_leftInverse_iff_injective (f : V →ₗ[K] V') :
     exact (show Function.LeftInverse g f from fun x ↦ LinearMap.ext_iff.mp hg x).injective
   · exact fun hf ↦ f.exists_leftInverse_of_injective (LinearMap.ker_eq_bot.mpr hf)
 
-theorem Submodule.exists_isCompl (p : Submodule K V) : ∃ q : Submodule K V, IsCompl p q :=
-  ⟨LinearMap.ker (p.subtype.leftInverse p.injective_subtype),
-    LinearMap.isCompl_of_proj <| LinearMap.leftInverse_apply p.injective_subtype⟩
+theorem Submodule.exists_isCompl (p : Submodule K V) : ∃ q : Submodule K V, IsCompl p q := by
+  obtain ⟨f, hf⟩ := p.subtype.exists_leftInverse_of_injective p.ker_subtype
+  exact ⟨LinearMap.ker f, LinearMap.isCompl_of_proj <| DFunLike.congr_fun hf⟩
 
 instance Submodule.complementedLattice : ComplementedLattice (Submodule K V) :=
   ⟨Submodule.exists_isCompl⟩

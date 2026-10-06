@@ -262,15 +262,32 @@ operation.
   injectivity proofs. Tests cover missing and invalid evidence, zero-dimensional domains,
   nonsurjective inclusions, proof independence, rewriting, and nonuniqueness of left inverses.
 
-- [ ] **Replace the chosen left inverse of `LinearMap.leftInverse` by canonical data.**
-  Under the equivalence-class rule of `FORK_DESIGN.md`, the item above leaves a chosen
-  representative public: an injective `f` determines its left inverses only on `range f`, where
-  the canonical data is the inverse of `LinearEquiv.ofInjective f hf`
-  (`Mathlib/Algebra/Module/Submodule/Equiv.lean:165`), and extending it off the range needs a
-  complement.  Decide between exposing the left inverses as a relation with an existence
-  statement and an object whose specification determines them uniquely, such as a left inverse
-  together with a chosen complement supplied by the caller.  Migrate the subspace-complement, dual
-  extension, Maschke, and continuous-inverse consumers.
+- [x] **Replace the chosen left inverse of `LinearMap.leftInverse` by canonical data.**
+  The chosen left inverse `LinearMap.leftInverse` and its lemmas `leftInverse_comp` and
+  `leftInverse_apply` are removed.  The left inverses of an injective `f` are exposed as a relation
+  with an existence statement, `exists_leftInverse_of_injective`, and as the object determined by
+  its specification: `LinearMap.linearProjOfIsCompl q f hf h`, the projection along a complement
+  `q` of the range, is the unique left inverse vanishing on `q` (`eq_linearProjOfIsCompl`), and
+  every left inverse is the projection along its kernel (`isCompl_range_ker_of_comp_eq_id` and
+  `eq_linearProjOfIsCompl_ker`), so the left inverses correspond to the complements of the range.
+  `Subspace.dualLift W q h` extends a functional by zero on a complement `q` of `W`, and
+  `dualEquivDual`, `quotDualEquivAnnihilator`, and `dualQuotDistrib` take the complement;
+  `Subspace.quotEquivAnnihilator`, an isomorphism built from chosen bases, is removed, and
+  `finrank_add_finrank_dualAnnihilator_eq` follows from `dualQuotEquivDualAnnihilator`.
+  `leftInverseOfInjectiveOfIsClosedRange` is the inverse of `equivRange`, the unique left inverse
+  on the range, and Maschke's theorem and the subspace complements obtain a left inverse from the
+  existence statement.  Tests cover the removed names, the existence and characterization of left
+  inverses, two left inverses with distinct kernels, and the dual lift.
+
+- [ ] **Replace chosen continuous one-sided inverses and complements by canonical data.**
+  `ContinuousLinearMap.HasLeftInverse.leftInverse`, `HasRightInverse.rightInverse`, and
+  `HasLeftInverse.complement` in
+  `Mathlib/Topology/Algebra/Module/ContinuousLinearMap/OneSidedInverse.lean`,
+  `Submodule.ClosedComplemented.complement` in `Mathlib/Topology/Algebra/Module/Complement.lean`,
+  and `ContinuousLinearMap.antilipschitzConstantOfInjectiveOfIsClosedRange` in
+  `Mathlib/Analysis/Normed/Operator/Banach.lean` are `Classical.choose` representatives of
+  existence statements.  As for linear left inverses, expose the existence statements together with
+  canonical data determined by a supplied complement, and migrate the consumers.
 
 - [x] **Bundle admissible root pairs for root-chain data.**
   `RootPairing.chainTopCoeff i j` and `chainBotCoeff i j` are the largest natural numbers `p` and

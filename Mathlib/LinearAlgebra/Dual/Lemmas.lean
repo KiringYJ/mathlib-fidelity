@@ -33,7 +33,8 @@ This file contains basic results on dual vector spaces.
   * `Submodule.dualCopairing W` is the canonical pairing between `W.dualAnnihilator` and `M ⧸ W`.
     It is nondegenerate for vector spaces (`subspace.dualCopairing_nondegenerate`).
 * Vector spaces:
-  * `Subspace.dualLift W` is an arbitrary section (using choice) of `Submodule.dualRestrict W`.
+  * `Subspace.dualLift W q h` is the section of `Submodule.dualRestrict W` that extends a functional
+    by zero on a complement `q` of `W`.
 
 ## Main results
 
@@ -64,13 +65,11 @@ This file contains basic results on dual vector spaces.
     finite-codimensional subspaces of `V` and finite-dimensional subspaces of `Dual K V`.
   * `Subspace.orderIsoFiniteDimensional` is the antitone order isomorphism between
     subspaces of a finite-dimensional vector space `V` and subspaces of its dual.
-  * `Subspace.quotDualEquivAnnihilator W` is the equivalence
-    `(Dual K V ⧸ W.dualLift.range) ≃ₗ[K] W.dualAnnihilator`, where `W.dualLift.range` is a copy
-    of `Dual K W` inside `Dual K V`.
-  * `Subspace.quotEquivAnnihilator W` is the equivalence `(V ⧸ W) ≃ₗ[K] W.dualAnnihilator`
-  * `Subspace.dualQuotDistrib W` is an equivalence
-    `Dual K (V₁ ⧸ W) ≃ₗ[K] Dual K V₁ ⧸ W.dualLift.range` from an arbitrary choice of
-    splitting of `V₁`.
+  * `Subspace.quotDualEquivAnnihilator W q h` is the equivalence
+    `(Dual K V ⧸ (W.dualLift q h).range) ≃ₗ[K] W.dualAnnihilator`, where `(W.dualLift q h).range`
+    is a copy of `Dual K W` inside `Dual K V`.
+  * `Subspace.dualQuotDistrib W q h` is an equivalence
+    `Dual K (V₁ ⧸ W) ≃ₗ[K] Dual K V₁ ⧸ (W.dualLift q h).range` from a splitting of `V₁`.
 -/
 
 @[expose] public section
@@ -477,39 +476,49 @@ theorem dualAnnihilator_inj {W W' : Subspace K V} :
     W.dualAnnihilator = W'.dualAnnihilator ↔ W = W' :=
   ⟨fun h ↦ (dualAnnihilatorGci K V).l_injective h, congr_arg _⟩
 
-/-- Given a subspace `W` of `V` and an element of its dual `φ`, `dualLift W φ` is
-an arbitrary extension of `φ` to an element of the dual of `V`.
-That is, `dualLift W φ` sends `w ∈ W` to `φ x` and `x` in a chosen complement of `W` to `0`. -/
-noncomputable def dualLift (W : Subspace K V) : Module.Dual K W →ₗ[K] Module.Dual K V :=
-  (W.subtype.leftInverse W.injective_subtype).dualMap
+/-- Given a subspace `W` of `V` with a complement `q`, `dualLift W q h φ` is the extension of
+`φ : Module.Dual K W` to `V` that vanishes on `q`: it sends `w ∈ W` to `φ w` and `x ∈ q` to `0`.
+An extension of `φ` to `V` is determined by such a choice of values off `W`, so the complement is
+part of the data. -/
+noncomputable def dualLift (W q : Subspace K V) (h : IsCompl W q) :
+    Module.Dual K W →ₗ[K] Module.Dual K V :=
+  (W.projectionOnto q h).dualMap
 
-variable {W : Subspace K V}
-
-@[simp]
-theorem dualLift_of_subtype {φ : Module.Dual K W} (w : W) : W.dualLift φ (w : V) = φ w :=
-  congr_arg φ <| LinearMap.leftInverse_apply W.injective_subtype _
-
-theorem dualLift_of_mem {φ : Module.Dual K W} {w : V} (hw : w ∈ W) : W.dualLift φ w = φ ⟨w, hw⟩ :=
-  dualLift_of_subtype ⟨w, hw⟩
+variable {W q : Subspace K V}
 
 @[simp]
-theorem dualRestrict_comp_dualLift (W : Subspace K V) : W.dualRestrict.comp W.dualLift = 1 := by
+theorem dualLift_of_subtype (h : IsCompl W q) {φ : Module.Dual K W} (w : W) :
+    W.dualLift q h φ (w : V) = φ w := by
+  simp [dualLift]
+
+theorem dualLift_of_mem (h : IsCompl W q) {φ : Module.Dual K W} {w : V} (hw : w ∈ W) :
+    W.dualLift q h φ w = φ ⟨w, hw⟩ :=
+  dualLift_of_subtype h ⟨w, hw⟩
+
+theorem dualLift_of_mem_complement (h : IsCompl W q) {φ : Module.Dual K W} {x : V} (hx : x ∈ q) :
+    W.dualLift q h φ x = 0 := by
+  simp [dualLift, (projectionOnto_apply_eq_zero_iff h).mpr hx]
+
+@[simp]
+theorem dualRestrict_comp_dualLift (h : IsCompl W q) :
+    W.dualRestrict.comp (W.dualLift q h) = 1 := by
   ext φ x
-  simp
+  simp [dualLift_of_subtype h]
 
-theorem dualRestrict_leftInverse (W : Subspace K V) :
-    Function.LeftInverse W.dualRestrict W.dualLift := fun x ↦ by
+theorem dualRestrict_leftInverse (h : IsCompl W q) :
+    Function.LeftInverse W.dualRestrict (W.dualLift q h) := fun x ↦ by
   rw [← LinearMap.comp_apply, dualRestrict_comp_dualLift, End.one_apply]
 
-theorem dualLift_rightInverse (W : Subspace K V) :
-    Function.RightInverse W.dualLift W.dualRestrict :=
-  W.dualRestrict_leftInverse
+theorem dualLift_rightInverse (h : IsCompl W q) :
+    Function.RightInverse (W.dualLift q h) W.dualRestrict :=
+  dualRestrict_leftInverse h
 
-theorem dualRestrict_surjective : Function.Surjective W.dualRestrict :=
-  W.dualLift_rightInverse.surjective
+theorem dualRestrict_surjective : Function.Surjective W.dualRestrict := by
+  obtain ⟨q, h⟩ := W.exists_isCompl
+  exact (dualLift_rightInverse h).surjective
 
-theorem dualLift_injective : Function.Injective W.dualLift :=
-  W.dualRestrict_leftInverse.injective
+theorem dualLift_injective (h : IsCompl W q) : Function.Injective (W.dualLift q h) :=
+  (dualRestrict_leftInverse h).injective
 
 /-- The quotient by the `dualAnnihilator` of a subspace is isomorphic to the
   dual of that subspace. -/
@@ -524,18 +533,18 @@ theorem quotAnnihilatorEquiv_apply (W : Subspace K V) (φ : Module.Dual K V) :
   ext
   rfl
 
-/-- The natural isomorphism from the dual of a subspace `W` to `W.dualLift.range`. -/
-noncomputable def dualEquivDual (W : Subspace K V) :
-    Module.Dual K W ≃ₗ[K] LinearMap.range W.dualLift :=
-  LinearEquiv.ofInjective _ dualLift_injective
+/-- The natural isomorphism from the dual of a subspace `W` to `(W.dualLift q h).range`. -/
+noncomputable def dualEquivDual (W q : Subspace K V) (h : IsCompl W q) :
+    Module.Dual K W ≃ₗ[K] LinearMap.range (W.dualLift q h) :=
+  LinearEquiv.ofInjective _ (dualLift_injective h)
 
-theorem dualEquivDual_def (W : Subspace K V) :
-    W.dualEquivDual.toLinearMap = W.dualLift.rangeRestrict :=
+theorem dualEquivDual_def (h : IsCompl W q) :
+    (W.dualEquivDual q h).toLinearMap = (W.dualLift q h).rangeRestrict :=
   rfl
 
 @[simp]
-theorem dualEquivDual_apply (φ : Module.Dual K W) :
-    W.dualEquivDual φ = ⟨W.dualLift φ, mem_range.2 ⟨φ, rfl⟩⟩ :=
+theorem dualEquivDual_apply (h : IsCompl W q) (φ : Module.Dual K W) :
+    W.dualEquivDual q h φ = ⟨W.dualLift q h φ, mem_range.2 ⟨φ, rfl⟩⟩ :=
   rfl
 
 section
@@ -563,22 +572,17 @@ theorem dualAnnihilator_dualAnnihilator_eq (W : Subspace K V) :
   rwa [← OrderIso.symm_apply_eq]
 
 /-- The quotient by the dual is isomorphic to its dual annihilator. -/
-noncomputable def quotDualEquivAnnihilator (W : Subspace K V) :
-    (Module.Dual K V ⧸ LinearMap.range W.dualLift) ≃ₗ[K] W.dualAnnihilator :=
-  LinearEquiv.quotEquivOfQuotEquiv <| LinearEquiv.trans W.quotAnnihilatorEquiv W.dualEquivDual
-
-open scoped Classical in
-/-- The quotient by a subspace is isomorphic to its dual annihilator. -/
-noncomputable def quotEquivAnnihilator (W : Subspace K V) : (V ⧸ W) ≃ₗ[K] W.dualAnnihilator :=
-  let φ := (Basis.ofVectorSpace K W).toDualEquiv.trans W.dualEquivDual
-  let ψ := LinearEquiv.quotEquivOfEquiv φ (Basis.ofVectorSpace K V).toDualEquiv
-  ψ ≪≫ₗ W.quotDualEquivAnnihilator
+noncomputable def quotDualEquivAnnihilator (W q : Subspace K V) (h : IsCompl W q) :
+    (Module.Dual K V ⧸ LinearMap.range (W.dualLift q h)) ≃ₗ[K] W.dualAnnihilator :=
+  LinearEquiv.quotEquivOfQuotEquiv <|
+    LinearEquiv.trans W.quotAnnihilatorEquiv (W.dualEquivDual q h)
 
 open Module
 
 theorem finrank_add_finrank_dualAnnihilator_eq (W : Subspace K V) :
     finrank K W + finrank K W.dualAnnihilator = finrank K V := by
-  rw [← W.quotEquivAnnihilator.finrank_eq, add_comm, Submodule.finrank_quotient_add_finrank]
+  rw [← dual_finrank_eq (V := W), ← W.quotAnnihilatorEquiv.finrank_eq,
+    Submodule.finrank_quotient_add_finrank, dual_finrank_eq]
 
 @[simp]
 theorem finrank_dualCoannihilator_eq {Φ : Subspace K (Module.Dual K V)} :
@@ -862,8 +866,9 @@ theorem dualPairing_nondegenerate (W : Subspace K V₁) : W.dualPairing.Nondegen
   · intro x h
     rw [← forall_dual_apply_eq_zero_iff K x]
     intro φ
-    simpa only [Submodule.dualPairing_apply, dualLift_of_subtype] using
-      h (Submodule.Quotient.mk (W.dualLift φ))
+    obtain ⟨q, hq⟩ := W.exists_isCompl
+    simpa only [Submodule.dualPairing_apply, dualLift_of_subtype hq] using
+      h (Submodule.Quotient.mk (W.dualLift q hq φ))
 
 theorem dualCopairing_nondegenerate (W : Subspace K V₁) : W.dualCopairing.Nondegenerate := by
   constructor
@@ -920,10 +925,10 @@ theorem isCompl_dualAnnihilator {W W' : Subspace K V₁} (h : IsCompl W W') :
   exact ⟨rfl, rfl⟩
 
 /-- For finite-dimensional vector spaces, one can distribute duals over quotients by identifying
-`W.dualLift.range` with `W`. Note that this depends on a choice of splitting of `V₁`. -/
-def dualQuotDistrib [FiniteDimensional K V₁] (W : Subspace K V₁) :
-    Module.Dual K (V₁ ⧸ W) ≃ₗ[K] Module.Dual K V₁ ⧸ LinearMap.range W.dualLift :=
-  W.dualQuotEquivDualAnnihilator.trans W.quotDualEquivAnnihilator.symm
+`(W.dualLift q h).range` with `W`. This depends on the splitting `q` of `V₁`. -/
+def dualQuotDistrib [FiniteDimensional K V₁] (W q : Subspace K V₁) (h : IsCompl W q) :
+    Module.Dual K (V₁ ⧸ W) ≃ₗ[K] Module.Dual K V₁ ⧸ LinearMap.range (W.dualLift q h) :=
+  W.dualQuotEquivDualAnnihilator.trans (W.quotDualEquivAnnihilator q h).symm
 
 end Subspace
 
