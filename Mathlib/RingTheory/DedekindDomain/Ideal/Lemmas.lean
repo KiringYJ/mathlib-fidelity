@@ -437,14 +437,12 @@ theorem irreducible_pow_sup_of_le (hJ : Irreducible J) (n : ℕ) (hn : n ≤ emu
 alias _root_.irreducible_pow_sup_of_le := irreducible_pow_sup_of_le
 
 theorem irreducible_pow_sup_of_ge (hI : I ≠ ⊥) (hJ : Irreducible J) (n : ℕ)
-    (hn : emultiplicity J I ≤ n) : J ^ n ⊔ I = J ^ multiplicity J I := by
+    (hn : emultiplicity J I ≤ n) :
+    J ^ n ⊔ I = J ^ multiplicity J I (.of_not_isUnit hJ.not_isUnit hI) := by
   rw [irreducible_pow_sup hI hJ, min_eq_left]
   · congr
     rw [← Nat.cast_inj (R := ℕ∞), ← FiniteMultiplicity.emultiplicity_eq_multiplicity,
       emultiplicity_eq_count_normalizedFactors hJ hI, normalize_eq J]
-    rw [← emultiplicity_lt_top]
-    apply hn.trans_lt
-    simp
   · rw [emultiplicity_eq_count_normalizedFactors hJ hI, normalize_eq J] at hn
     exact_mod_cast hn
 
@@ -528,6 +526,10 @@ theorem ofPrime_prime : ofPrime v.prime = v := rfl
 
 theorem irreducible : Irreducible v.asIdeal :=
   UniqueFactorizationMonoid.irreducible_iff_prime.mpr v.prime
+
+/-- A nonzero ideal has finite multiplicity at every height-one prime. -/
+theorem finiteMultiplicity {I : Ideal R} (hI : I ≠ ⊥) : FiniteMultiplicity v.asIdeal I :=
+  .of_prime_left v.prime hI
 
 theorem associates_irreducible : Irreducible <| Associates.mk v.asIdeal :=
   Associates.irreducible_mk.mpr v.irreducible
@@ -998,8 +1000,10 @@ alias emultiplicity_eq_emultiplicity_span := emultiplicity_span_eq_emultiplicity
 alias _root_.emultiplicity_eq_emultiplicity_span := emultiplicity_span_eq_emultiplicity
 
 variable {R} in
-theorem multiplicity_span_eq_multiplicity {a b : R} :
-    multiplicity (span {a}) (span ({b} : Set R)) = multiplicity a b :=
+theorem multiplicity_span_eq_multiplicity {a b : R}
+    {h : FiniteMultiplicity (span {a}) (span ({b} : Set R))} :
+    multiplicity (span {a}) (span ({b} : Set R)) h =
+      multiplicity a b (h.of_emultiplicity_eq emultiplicity_span_eq_emultiplicity) :=
   multiplicity_eq_of_emultiplicity_eq emultiplicity_span_eq_emultiplicity
 
 end Ideal

@@ -49,17 +49,27 @@ variable {a b n p : ℕ}
 mapping each prime factor of `n` to its multiplicity in `n`. -/
 def factorization (n : ℕ) : ℕ →₀ ℕ where
   support := n.primeFactors
-  toFun p := if p.Prime then padicValNat p n else 0
-  mem_support_toFun := by simp [not_or]; aesop
+  toFun p := if h : p.Prime ∧ n ≠ 0 then padicValNat p n h.1.ne_one h.2 else 0
+  mem_support_toFun p := by
+    by_cases h : p.Prime ∧ n ≠ 0
+    · rw [dite_eq_left h, Ne, padicValNat.eq_zero_iff h.1.ne_one h.2, not_not,
+        Nat.mem_primeFactors]
+      exact ⟨fun h' ↦ h'.2.1, fun h' ↦ ⟨h.1, h', h.2⟩⟩
+    · rw [dite_eq_right h, Nat.mem_primeFactors]
+      exact ⟨fun h' ↦ absurd ⟨h'.1, h'.2.2⟩ h, fun h' ↦ absurd rfl h'⟩
 
 /-- The support of `n.factorization` is exactly `n.primeFactors`. -/
 @[simp] lemma support_factorization (n : ℕ) : (factorization n).support = n.primeFactors := rfl
 
-theorem factorization_def (n : ℕ) {p : ℕ} (pp : p.Prime) : n.factorization p = padicValNat p n := by
-  simpa [factorization] using absurd pp
+theorem factorization_def (n : ℕ) {p : ℕ} (pp : p.Prime) (hn : n ≠ 0) :
+    n.factorization p = padicValNat p n pp.ne_one hn := by
+  simp [factorization, pp, hn]
 
-theorem factorization_le_padicValNat {n p : ℕ} : n.factorization p ≤ padicValNat p n := by
-  grind [Nat.factorization]
+theorem factorization_le_padicValNat {n p : ℕ} (hp : p ≠ 1) (hn : n ≠ 0) :
+    n.factorization p ≤ padicValNat p n hp hn := by
+  by_cases pp : p.Prime
+  · rw [factorization_def n pp hn]
+  · simp [factorization, pp]
 
 /-- We can write both `n.factorization p` and `n.factors.count p` to represent the power
 of `p` in the factorization of `n`: we declare the former to be the simp-normal form. -/
@@ -70,7 +80,7 @@ theorem primeFactorsList_count_eq {n p : ℕ} : n.primeFactorsList.count p = n.f
   if pp : p.Prime then ?_ else
     rw [count_eq_zero_of_not_mem (mt prime_of_mem_primeFactorsList pp)]
     simp [factorization, pp]
-  simp only [factorization_def _ pp]
+  simp only [factorization_def _ pp hn0.ne']
   apply _root_.le_antisymm
   · rw [le_padicValNat_iff_replicate_subperm_primeFactorsList pp hn0.ne']
     exact List.replicate_sublist_iff.mpr le_rfl |>.subperm
@@ -89,9 +99,10 @@ theorem Prime.factorization_pos_of_dvd {n p : ℕ} (hp : p.Prime) (hn : n ≠ 0)
     0 < n.factorization p := by
   rwa [← primeFactorsList_count_eq, count_pos_iff, mem_primeFactorsList_iff_dvd hn hp]
 
-theorem multiplicity_eq_factorization {n p : ℕ} (pp : p.Prime) :
-    multiplicity p n = n.factorization p := by
-  simp [factorization, pp, padicValNat_def]
+theorem multiplicity_eq_factorization {n p : ℕ} (pp : p.Prime) (hn : n ≠ 0) :
+    multiplicity p n (Nat.finiteMultiplicity_iff.2 ⟨pp.ne_one, Nat.pos_of_ne_zero hn⟩) =
+      n.factorization p := by
+  rw [factorization_def n pp hn, padicValNat_def pp.ne_one hn]
 
 /-! ### Basic facts about factorization -/
 

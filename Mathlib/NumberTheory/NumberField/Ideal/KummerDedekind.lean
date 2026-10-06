@@ -110,6 +110,14 @@ The finite set of monic irreducible factors of `minpoly ℤ θ` modulo `p`.
 abbrev monicFactorsMod : Finset ((ZMod p)[X]) :=
   (normalizedFactors (map (Int.castRingHom (ZMod p)) (minpoly ℤ θ))).toFinset
 
+omit [NumberField K] in
+/-- A monic irreducible factor of `minpoly ℤ θ` modulo `p` has finite multiplicity in it. -/
+theorem finiteMultiplicity_of_mem_monicFactorsMod {Q : (ZMod p)[X]}
+    (hQ : Q ∈ monicFactorsMod θ p) :
+    FiniteMultiplicity Q (map (Int.castRingHom (ZMod p)) (minpoly ℤ θ)) :=
+  .of_prime_left (prime_of_normalized_factor Q (Multiset.mem_toFinset.mp hQ))
+    (map_monic_ne_zero (minpoly.monic θ.isIntegral))
+
 /--
 If `p` does not divide `exponent θ` and `Q` is a lift of a monic irreducible factor of
 `minpoly ℤ θ` modulo `p`, then `(ℤ / pℤ)[X] / Q ≃+* 𝓞 K / (p, Q(θ))`.
@@ -242,7 +250,8 @@ theorem ramificationIdx_primesOverSpanEquivMonicFactorsMod_symm_apply (hp : ¬ p
       ((primesOverSpanEquivMonicFactorsMod hp).symm
         ⟨Q.map (Int.castRingHom (ZMod p)), hQ⟩ : Ideal (𝓞 K)) ℤ =
           multiplicity (Q.map (Int.castRingHom (ZMod p)))
-            ((minpoly ℤ θ).map (Int.castRingHom (ZMod p))) := by
+            ((minpoly ℤ θ).map (Int.castRingHom (ZMod p)))
+            (finiteMultiplicity_of_mem_monicFactorsMod hQ) := by
   rw [ramificationIdx_eq_multiplicity (span {↑p}) _ (map_ne_bot_of_ne_bot (by simp [NeZero.ne p]))]
   · apply multiplicity_eq_of_emultiplicity_eq
     rw [← emultiplicity_map_eq (mapEquiv (Int.quotientSpanNatEquivZMod p).symm),
@@ -258,7 +267,8 @@ theorem ramificationIdx_primesOverSpanEquivMonicFactorsMod_symm_apply' (hp : ¬ 
     {Q : (ZMod p)[X]} (hQ : Q ∈ monicFactorsMod θ p) :
     ramificationIdx
       ((primesOverSpanEquivMonicFactorsMod hp).symm ⟨Q, hQ⟩ : Ideal (𝓞 K)) ℤ =
-        multiplicity Q ((minpoly ℤ θ).map (Int.castRingHom (ZMod p))) := by
+        multiplicity Q ((minpoly ℤ θ).map (Int.castRingHom (ZMod p)))
+          (finiteMultiplicity_of_mem_monicFactorsMod hQ) := by
   obtain ⟨S, rfl⟩ := (map_surjective _ (ZMod.ringHom_surjective (Int.castRingHom (ZMod p)))) Q
   rw [ramificationIdx_primesOverSpanEquivMonicFactorsMod_symm_apply]
 

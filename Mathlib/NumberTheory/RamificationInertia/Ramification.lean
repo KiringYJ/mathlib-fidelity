@@ -269,10 +269,12 @@ theorem ramificationIdx'_eq_normalizedFactors_count
   exact (Nat.lt_succ_self _).not_ge
 
 theorem ramificationIdx'_eq_multiplicity (hp : map f p ≠ ⊥) (hP : P.IsPrime) :
-    ramificationIdx' p P = multiplicity P (Ideal.map f p) := by
+    ramificationIdx' p P =
+      multiplicity P (Ideal.map f p) (.of_not_isUnit (isUnit_iff.not.2 hP.ne_top) hp) := by
   by_cases hP₂ : P = ⊥
-  · rw [hP₂, ← Ideal.zero_eq_bot, multiplicity_zero_eq_zero_of_ne_zero _ hp]
-    exact Ideal.ramificationIdx'_of_not_le (mt le_bot_iff.mp hp)
+  · subst hP₂
+    rw [Ideal.ramificationIdx'_of_not_le (mt le_bot_iff.mp hp)]
+    exact (multiplicity_zero_eq_zero_of_ne_zero _ hp).symm
   rw [multiplicity_eq_of_emultiplicity_eq_some]
   rw [ramificationIdx'_eq_normalizedFactors_count hp hP hP₂, ← normalize_eq P,
     ← UniqueFactorizationMonoid.emultiplicity_eq_count_normalizedFactors _ hp, normalize_eq]

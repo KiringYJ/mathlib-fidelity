@@ -58,7 +58,7 @@ theorem emultiplicity_eq_card_pow_dvd {m n b : ℕ} (hm : m ≠ 1) (hn : 0 < n) 
     emultiplicity m n = #{i ∈ Ico 1 b | m ^ i ∣ n} :=
   have fin := Nat.finiteMultiplicity_iff.2 ⟨hm, hn⟩
   calc
-    emultiplicity m n = #(Ico 1 <| multiplicity m n + 1) := by
+    emultiplicity m n = #(Ico 1 <| multiplicity m n fin + 1) := by
       simp [fin.emultiplicity_eq_multiplicity]
     _ = #{i ∈ Ico 1 b | m ^ i ∣ n} :=
       congr_arg _ <|
@@ -117,7 +117,7 @@ theorem emultiplicity_factorial {p : ℕ} (hp : p.Prime) :
 /-- For a prime number `p`, taking `(p - 1)` times the multiplicity of `p` in `n!` equals `n` minus
 the sum of base `p` digits of `n`. -/
 theorem sub_one_mul_multiplicity_factorial {n p : ℕ} (hp : p.Prime) :
-    (p - 1) * multiplicity p n ! =
+    (p - 1) * multiplicity p n ! (Nat.finiteMultiplicity_iff.2 ⟨hp.ne_one, n.factorial_pos⟩) =
     n - (p.digits n).sum := by
   rcases eq_or_ne n 0 with rfl | hn
   · simp [multiplicity_eq_zero_of_not_dvd hp.not_dvd_one]
@@ -166,7 +166,9 @@ theorem emultiplicity_factorial_mul {n p : ℕ} (hp : p.Prime) :
 /-- The multiplicity of a prime `p` in `p ^ n` is the sum of `p ^ i`, where `i` ranges between `0`
 and `n - 1`. -/
 theorem multiplicity_factorial_pow {n p : ℕ} (hp : p.Prime) :
-    multiplicity p (p ^ n).factorial = ∑ i ∈ Finset.range n, p ^ i := by
+    multiplicity p (p ^ n).factorial
+        (Nat.finiteMultiplicity_iff.2 ⟨hp.ne_one, (p ^ n).factorial_pos⟩) =
+      ∑ i ∈ Finset.range n, p ^ i := by
   rw [← ENat.natCast_inj, ← (Nat.finiteMultiplicity_iff.2
       ⟨hp.ne_one, (p ^ n).factorial_pos⟩).emultiplicity_eq_multiplicity]
   induction n with
@@ -249,7 +251,8 @@ theorem emultiplicity_choose_prime_pow_add_emultiplicity (hp : p.Prime) (hkn : k
     (by rw [← hp.emultiplicity_pow_self]; exact emultiplicity_le_emultiplicity_choose_add hp _ _)
 
 theorem emultiplicity_choose_prime_pow {p n k : ℕ} (hp : p.Prime) (hkn : k ≤ p ^ n) (hk0 : k ≠ 0) :
-    emultiplicity p (choose (p ^ n) k) = ↑(n - multiplicity p k) := by
+    emultiplicity p (choose (p ^ n) k) =
+      ↑(n - multiplicity p k (finiteMultiplicity_iff.2 ⟨hp.ne_one, Nat.pos_of_ne_zero hk0⟩)) := by
   push_cast
   rw [← emultiplicity_choose_prime_pow_add_emultiplicity hp hkn hk0,
     (finiteMultiplicity_iff.2 ⟨hp.ne_one, Nat.pos_of_ne_zero hk0⟩).emultiplicity_eq_multiplicity,

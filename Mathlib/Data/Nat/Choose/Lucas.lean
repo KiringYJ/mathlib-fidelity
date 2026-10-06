@@ -135,23 +135,24 @@ theorem choose_pow_mul_pow_mul_modEq_choose_nat :
 `choose n i` congruent to `0` module `p`, then `n = p ^ multiplicity p n`.
 Also see `eq_pow_multiplicity_of_choose_modEq_zero_nat` for the version with `MOD`. -/
 theorem eq_pow_multiplicity_of_choose_modEq_zero (hn : 0 < n)
-    (h : ∀ i ∈ Icc 1 (n - 1), n.choose i ≡ 0 [ZMOD p]) : n = p ^ multiplicity p n := by
-  rename_i hp
+    (h : ∀ i ∈ Icc 1 (n - 1), n.choose i ≡ 0 [ZMOD p]) :
+    n = p ^ multiplicity p n (finiteMultiplicity_iff.mpr ⟨(Fact.out : p.Prime).ne_one, hn⟩) := by
+  set hfin : FiniteMultiplicity p n := finiteMultiplicity_iff.mpr ⟨(Fact.out : p.Prime).ne_one, hn⟩
   by_contra! hn₀
-  obtain ⟨m, hm⟩ := pow_multiplicity_dvd p n
-  specialize h (p ^ multiplicity p n) (by grind [le_of_dvd hn (pow_multiplicity_dvd p n)])
+  obtain ⟨m, hm⟩ := pow_multiplicity_dvd hfin
+  specialize h (p ^ multiplicity p n hfin) (by grind [le_of_dvd hn (pow_multiplicity_dvd hfin)])
   nth_grw 1 [← mul_one (p ^ _), hm, choose_pow_mul_pow_mul_modEq_choose, choose_one_right] at h
-  suffices multiplicity p n + 1 ≤ multiplicity p n by lia
-  rw [← FiniteMultiplicity.pow_dvd_iff_le_multiplicity]
-  · nth_rw 2 [hm]
-    simpa [pow_add] using Nat.mul_dvd_mul_left _ (dvd_iff_mod_eq_zero.mpr (by exact_mod_cast h))
-  · exact finiteMultiplicity_iff.mpr ⟨hp.out.ne_one, hn⟩
+  suffices multiplicity p n hfin + 1 ≤ multiplicity p n hfin by lia
+  rw [← hfin.pow_dvd_iff_le_multiplicity]
+  nth_rw 2 [hm]
+  simpa [pow_add] using Nat.mul_dvd_mul_left _ (dvd_iff_mod_eq_zero.mpr (by exact_mod_cast h))
 
 /-- For primes `p` and positive integer `n`, assume that for all `i ∈ Icc 1 (n - 1)`,
 `choose n i` congruent to `0` module `p`, then `n = p ^ multiplicity p n`.
 Also see `eq_pow_multiplicity_of_choose_modEq_zero` for the version with `ZMOD`. -/
 theorem eq_pow_multiplicity_of_choose_modEq_zero_nat (hn : 0 < n)
-    (h : ∀ i ∈ Icc 1 (n - 1), n.choose i ≡ 0 [MOD p]) : n = p ^ multiplicity p n :=
+    (h : ∀ i ∈ Icc 1 (n - 1), n.choose i ≡ 0 [MOD p]) :
+    n = p ^ multiplicity p n (finiteMultiplicity_iff.mpr ⟨(Fact.out : p.Prime).ne_one, hn⟩) :=
   eq_pow_multiplicity_of_choose_modEq_zero hn (by exact_mod_cast h)
 
 /-- For a prime power `n`, the minimal prime factor divides the greatest common divisor of
@@ -197,7 +198,7 @@ lemma primeFactors_gcd_choose_of_isPrimePow (h : IsPrimePow n) :
   have : Fact (Nat.Prime p) := ⟨hp₁⟩
   simp_rw [Finset.dvd_gcd_iff, ← modEq_zero_iff_dvd] at hp₂
   have := eq_pow_multiplicity_of_choose_modEq_zero_nat h.pos hp₂
-  have dvd_pow : n.minFac ∣  p ^ multiplicity p n := this ▸ minFac_dvd _ hn1
+  have dvd_pow : n.minFac hn1 ∣ p ^ multiplicity p n _ := (minFac_dvd n hn1).trans (dvd_of_eq this)
   exact (Nat.prime_dvd_prime_iff_eq isPrime hp₁).mp (isPrime.dvd_of_dvd_pow dvd_pow)|>.symm
 
 /-- For a prime power `n`, the greatest common divisor of `choose n 1, ⋯, choose n (n - 1)`
@@ -208,11 +209,12 @@ theorem gcd_choose_eq_minFac_of_isPrimePow (h : IsPrimePow n) :
   have ne_zero : (Icc 1 (n - 1)).gcd n.choose ≠ 0 :=
     gcd_ne_zero_iff.mpr ⟨1, by simp; grind [IsPrimePow.two_le h]⟩
   have isPrime := minFac_prime hn1
-  have : multiplicity n.minFac ((Icc 1 (n - 1)).gcd n.choose) = 1 := by
+  have : multiplicity (n.minFac hn1) ((Icc 1 (n - 1)).gcd n.choose)
+      (finiteMultiplicity_iff.2 ⟨isPrime.ne_one, Nat.pos_of_ne_zero ne_zero⟩) = 1 := by
     refine multiplicity_eq_of_dvd_of_not_dvd ?_ (minFac_sq_ndvd_gcd_choose_of_isPrimePow h)
     simpa using minFac_dvd_gcd_choose_of_isPrimePow h
   rw [Nat.prod_primeFactors_coe_pow_factorization ne_zero, primeFactors_gcd_choose_of_isPrimePow h]
-  simp [← Nat.multiplicity_eq_factorization isPrime, this]
+  simp [← Nat.multiplicity_eq_factorization isPrime ne_zero, this]
 
 /-- For a natural number `n` greater than `1`, assume that `n` is not a prime power, then
 the greatest common divisor of  `choose n 1, ⋯, choose n (n - 1)` is `1`. -/
@@ -223,8 +225,8 @@ theorem gcd_choose_eq_one_of_not_isPrimePow (hn : 1 < n) (hpn : ¬ IsPrimePow n)
   simp_rw [Finset.dvd_gcd_iff, ← modEq_zero_iff_dvd] at h
   have : Fact (Nat.Prime q) := ⟨hq⟩
   have := eq_pow_multiplicity_of_choose_modEq_zero_nat (zero_lt_of_lt hn) h
-  refine (isPrimePow_nat_iff n).mpr ⟨q, _, hq, ?_, this.symm⟩
-  contrapose! hn
-  rw [this, le_zero.mp hn, pow_zero]
+  refine (isPrimePow_nat_iff n).mpr ⟨q, _, hq, Nat.pos_of_ne_zero fun h0 ↦ ?_, this.symm⟩
+  rw [h0, pow_zero] at this
+  omega
 
 end Choose

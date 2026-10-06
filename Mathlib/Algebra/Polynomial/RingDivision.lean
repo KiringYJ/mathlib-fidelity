@@ -123,10 +123,14 @@ variable [CommRing R]
 theorem rootMultiplicity_eq_rootMultiplicity {p : R[X]} {t : R} :
     p.rootMultiplicity t = (p.comp (X + C t)).rootMultiplicity 0 := by
   classical
-  simp_rw [rootMultiplicity_eq_multiplicity, comp_X_add_C_eq_zero_iff]
-  congr 1
-  rw [C_0, sub_zero]
-  convert! (multiplicity_map_eq <| algEquivAevalXAddC t).symm using 2
+  by_cases hp : p = 0
+  · simp [hp]
+  have hp' : p.comp (X + C t) ≠ 0 := by rwa [Ne, comp_X_add_C_eq_zero_iff]
+  rw [rootMultiplicity_eq_multiplicity, dite_eq_right hp, rootMultiplicity_eq_multiplicity,
+    dite_eq_right hp']
+  have hfin := finiteMultiplicity_X_sub_C t hp
+  convert! (multiplicity_map_eq (algEquivAevalXAddC t)
+    (h := hfin.of_emultiplicity_eq (emultiplicity_map_eq _).symm)).symm using 2
   simp [C_eq_algebraMap]
 
 /-- See `Polynomial.rootMultiplicity_eq_natTrailingDegree'` for the special case of `t = 0`. -/
@@ -308,9 +312,9 @@ theorem rootMultiplicity_mul {p q : R[X]} {x : R} (hpq : p * q ≠ 0) :
   classical
   have hp : p ≠ 0 := left_ne_zero_of_mul hpq
   have hq : q ≠ 0 := right_ne_zero_of_mul hpq
-  rw [rootMultiplicity_eq_multiplicity (p * q), ite_eq_right hpq,
-    rootMultiplicity_eq_multiplicity p, ite_eq_right hp, rootMultiplicity_eq_multiplicity q,
-    ite_eq_right hq, multiplicity_mul (prime_X_sub_C x) (finiteMultiplicity_X_sub_C _ hpq)]
+  rw [rootMultiplicity_eq_multiplicity (p * q), dite_eq_right hpq,
+    rootMultiplicity_eq_multiplicity p, dite_eq_right hp, rootMultiplicity_eq_multiplicity q,
+    dite_eq_right hq, multiplicity_mul (prime_X_sub_C x) (finiteMultiplicity_X_sub_C _ hpq)]
 
 open Multiset in
 theorem exists_multiset_roots [DecidableEq R] :

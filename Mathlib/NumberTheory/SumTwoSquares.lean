@@ -207,11 +207,13 @@ section Main
 /-- A (positive) natural number `n` is a sum of two squares if and only if the exponent of
 every prime `q` such that `q % 4 = 3` in the prime factorization of `n` is even.
 (The assumption `0 < n` is not present, since for `n = 0`, both sides are satisfied;
-the right-hand side holds, since `padicValNat q 0 = 0` by definition.) -/
+the right-hand side holds, since `0` has no prime factors.) -/
 theorem Nat.eq_sq_add_sq_iff {n : ℕ} :
-    (∃ x y, n = x ^ 2 + y ^ 2) ↔ ∀ q ∈ n.primeFactors, q % 4 = 3 → Even (padicValNat q n) := by
+    (∃ x y, n = x ^ 2 + y ^ 2) ↔ ∀ q (hq : q ∈ n.primeFactors), q % 4 = 3 →
+      Even (padicValNat q n (prime_of_mem_primeFactors hq).ne_one
+        (mem_primeFactors.1 hq).2.2) := by
   rcases n.eq_zero_or_pos with (rfl | hn₀)
-  · exact ⟨fun _ q _ _ ↦ (padicValNat_zero_right _).symm ▸ Even.zero, fun _ ↦ ⟨0, 0, rfl⟩⟩
+  · exact ⟨fun _ q hq _ ↦ by simp at hq, fun _ ↦ ⟨0, 0, rfl⟩⟩
   -- now `0 < n`
   refine eq_sq_add_sq_iff_eq_sq_mul.trans ⟨fun ⟨a, b, h₁, h₂⟩ q hq h ↦ ?_, fun H ↦ ?_⟩
   · have : Fact q.Prime := ⟨prime_of_mem_primeFactors hq⟩

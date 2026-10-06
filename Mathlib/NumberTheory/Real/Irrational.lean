@@ -79,11 +79,12 @@ theorem irrational_nrt_of_notint_nrt {x : ℝ} (n : ℕ) (m : ℤ) (hxr : x ^ n 
 is irrational. -/
 theorem irrational_nrt_of_n_not_dvd_multiplicity {x : ℝ} (n : ℕ) {m : ℤ} (hm : m ≠ 0) (p : ℕ)
     [hp : Fact p.Prime] (hxr : x ^ n = m)
-    (hv : multiplicity (p : ℤ) m % n ≠ 0) :
+    (hv : multiplicity (p : ℤ) m (Int.finiteMultiplicity_iff.2 ⟨hp.out.ne_one, hm⟩) % n ≠ 0) :
     Irrational x := by
   rcases Nat.eq_zero_or_pos n with (rfl | hnpos)
   · rw [eq_comm, pow_zero, ← Int.cast_one, Int.cast_inj] at hxr
-    simp [hxr, multiplicity_of_one_right (mt isUnit_iff_dvd_one.1
+    subst hxr
+    simp [multiplicity_of_one_right (mt isUnit_iff_dvd_one.1
       (mt Int.natCast_dvd_natCast.1 hp.1.not_dvd_one))] at hv
   refine irrational_nrt_of_notint_nrt _ _ hxr ?_ hnpos
   rintro ⟨y, rfl⟩
@@ -95,7 +96,7 @@ theorem irrational_nrt_of_n_not_dvd_multiplicity {x : ℝ} (n : ℕ) {m : ℤ} (
   exact hv rfl
 
 theorem irrational_sqrt_of_multiplicity_odd (m : ℤ) (hm : 0 < m) (p : ℕ) [hp : Fact p.Prime]
-    (Hpv : multiplicity (p : ℤ) m % 2 = 1) :
+    (Hpv : multiplicity (p : ℤ) m (Int.finiteMultiplicity_iff.2 ⟨hp.out.ne_one, hm.ne'⟩) % 2 = 1) :
     Irrational (√m) :=
   @irrational_nrt_of_n_not_dvd_multiplicity _ 2 _ (Ne.symm (ne_of_lt hm)) p hp
     (sq_sqrt (Int.cast_nonneg hm.le)) (by rw [Hpv]; exact one_ne_zero)

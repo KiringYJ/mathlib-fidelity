@@ -193,13 +193,39 @@ operation.
   `primeIdealZetaSum` remains explicitly tracked under the XL `tsum`/`tprod` item below; this
   analytic completion does not classify unrestricted evaluation as a strict operation.
 
-- [ ] **Make finite multiplicity a checked projection.**
-  `Mathlib/RingTheory/Multiplicity.lean:47` defines `multiplicity` as
-  `(emultiplicity a b).toNat`, so infinite multiplicity becomes zero.  Keep `emultiplicity` as the
-  faithful invariant and require `FiniteMultiplicity` for a natural-valued projection.  Migrate
-  derived natural-valued consumers such as `padicValNat`, identified with `multiplicity` in
-  `Mathlib/NumberTheory/Padics/PadicVal/Defs.lean:49`; in particular,
-  `padicValNat_zero_right` in `Mathlib/Data/Nat/MaxPowDiv.lean:106` is the same infinite-to-zero case.
+- [x] **Make finite multiplicity a checked projection.**
+  `multiplicity a b h` in `Mathlib/RingTheory/Multiplicity.lean` takes `h : FiniteMultiplicity a b`
+  and is the largest `n` with `a ^ n ∣ b`; `emultiplicity` remains the total invariant in `ℕ∞`.  The
+  lemmas that stated the value `0` at infinite multiplicity
+  (`multiplicity_eq_zero_of_not_finiteMultiplicity`, `multiplicity_zero`, and
+  `emultiplicity_eq_iff_multiplicity_eq_of_ne_zero`, with their aliases) are removed, and
+  `multiplicity_add_of_gt`, `multiplicity_sub_of_gt`, `multiplicity_add_eq_min`, and
+  `multiplicity_eq_zero_of_coprime` take the finiteness of every multiplicity they mention.  The
+  `p`-adic valuations take their domains: `padicValNat p n` and `padicValInt p z` need `p ≠ 1` and a
+  nonzero argument, and `padicValRat p q` needs `p ≠ 1` and `q ≠ 0`.  The default discharger
+  `padic_val_tac` finds these from hypotheses, linear arithmetic, primality, `NeZero`, and
+  `positivity`; other files extend it through `padic_val_core`.  `Nat.maxPowDvdDiv` takes
+  `1 < p ∧ n ≠ 0`, and `padicValNat_zero_right`, `padicValNat_one_left`, `padicValInt.zero`, and
+  `padicValRat.zero` are removed.  Statements that need a valuation at a possibly zero argument
+  quantify over its nonvanishing, as `padicValNat_dvd_iff` does with
+  `∀ ha : a ≠ 0, n ≤ padicValNat p a`, and the lemmas of `Mathlib/NumberTheory/Multiplicity.lean`
+  state the nonvanishing they derive with `haveI`.  Multiplicities at nonzero ideals of a Dedekind
+  domain carry `HeightOneSpectrum.finiteMultiplicity`, and the Frobenius polynomial of
+  `Mathlib/RingTheory/WittVector/Frobenius.lean` uses `padicValNat` and needs `p` prime.
+  `Nat.divMaxPow` and `padicNorm` stay total: for `p ≤ 1` or `n = 0` every power of `p` dividing `n`
+  gives the quotient `n`, the norm of `0` is `0`, and for `p = 1` every power of `p` is `1`.
+  `Nat.factorization` keeps its value `0` at `0` (entry "Put finite factorization data on nonzero
+  inputs") and no longer inherits it from the valuation.  Tests cover the removed names, the
+  discharger, and the failures at `0` and at `p = 1`.
+
+- [ ] **Make the additive `p`-adic valuations on `ℚ_[p]` and `ℤ_[p]` domain-bearing.**
+  `PadicSeq.valuation` and `Padic.valuation` in `Mathlib/NumberTheory/Padics/PadicNumbers.lean`, and
+  `PadicInt.valuation` in `Mathlib/NumberTheory/Padics/PadicIntegers.lean`, are `0` at `0`
+  (`Padic.valuation_zero`, `PadicInt.valuation_zero`), where the valuation is `⊤`;
+  `Padic.addValuation` and `Padic.mulValuation` already take values in `WithTop ℤ` and `ℤᵐ⁰`.
+  Require a nonzero argument for the integer-valued valuations, or replace them by the `WithTop ℤ`
+  one, and migrate their consumers, including `PadicInt.unitCoeff` and
+  `Mathlib/NumberTheory/Padics/MahlerBasis.lean`.
 
 - [ ] **Require monicity for polynomial division-by-monic notation.**
   `Polynomial.divByMonic` and `Polynomial.modByMonic` in
