@@ -18,6 +18,13 @@ left inverse, then its range is closed and admits a closed complement. This is u
 complement from immersions, for use in the regular value theorem. (For submersions, there is a
 natural choice of complement, and an analogous statement is not necessary.)
 
+A continuous left inverse of `f` is determined by `f` only on the range of `f`, and a continuous
+right inverse only up to the kernel of `f`, so none is chosen here. A topological complement of the
+range determines the continuous left inverse vanishing on it, and a topological complement of the
+kernel determines the continuous right inverse with values in it; every continuous left inverse
+vanishes on its kernel, a topological complement of the range, and every continuous right inverse
+takes values in its range, a topological complement of the kernel.
+
 This concept is used to give an equivalent definition of immersions and submersions of manifolds.
 Sufficient criteria in finite dimension and between Banach spaces are in
 `Mathlib/Analysis/Normed/Module/ContinuousInverse.lean`.
@@ -33,7 +40,12 @@ Sufficient criteria in finite dimension and between Banach spaces are in
   its range is closed
 * `ContinuousLinearMap.HasLeftInverse.closedComplemented_range`: if `f` has a continuous left
   inverse, its range admits a closed complement
-* `ContinuousLinearMap.HasLeftInverse.complement`: a choice of closed complement for `range f`
+* `ContinuousLinearMap.HasLeftInverse.leftInverseOfIsTopCompl`: the continuous left inverse of `f`
+  vanishing on a topological complement of its range; `eq_leftInverseOfIsTopCompl` shows that it is
+  the only left inverse vanishing there
+* `ContinuousLinearMap.HasRightInverse.rightInverseOfIsTopCompl`: the continuous right inverse of
+  `f` with values in a topological complement of its kernel; `eq_rightInverseOfIsTopCompl` shows
+  that it is the only right inverse with values there
 
 * `ContinuousLinearEquiv.hasLeftInverse` and `ContinuousLinearEquiv.hasRightInverse`:
   a continuous linear equivalence admits a continuous left (resp. right) inverse
@@ -78,17 +90,9 @@ namespace HasLeftInverse
 
 variable {f : E →L[R] F}
 
-/-- Choice of continuous left inverse for `f : F →L[R] E`, given that such an inverse exists. -/
-def leftInverse (h : f.HasLeftInverse) : F →L[R] E := Classical.choose h
-
-lemma leftInverse_leftInverse (h : f.HasLeftInverse) : LeftInverse h.leftInverse f :=
-  Classical.choose_spec h
-
-lemma injective (h : f.HasLeftInverse) : Injective f :=
-  h.leftInverse_leftInverse.injective
-
-example (h : f.HasLeftInverse) (x : E) : h.leftInverse (f x) = x :=
-  h.leftInverse_leftInverse x
+lemma injective (h : f.HasLeftInverse) : Injective f := by
+  obtain ⟨g, hg⟩ := h
+  exact hg.injective
 
 lemma congr {g : E →L[R] F} (hf : f.HasLeftInverse) (hfg : g = f) :
     g.HasLeftInverse :=
@@ -98,13 +102,6 @@ lemma congr {g : E →L[R] F} (hf : f.HasLeftInverse) (hfg : g = f) :
 lemma _root_.ContinuousLinearEquiv.hasLeftInverse (f : E ≃L[R] F) :
     f.toContinuousLinearMap.HasLeftInverse :=
   ⟨f.symm, rightInverse_of_comp (by simp)⟩
-
-@[simp] lemma _root_.ContinuousLinearEquiv.leftInverse_hasLeftInverse (f : E ≃L[R] F) :
-    f.hasLeftInverse.leftInverse = f.symm := by
-  ext y
-  calc f.hasLeftInverse.leftInverse y
-    _ = f.hasLeftInverse.leftInverse (f (f.symm y)) := by simp
-    _ = f.symm y := f.hasLeftInverse.leftInverse_leftInverse (f.symm y)
 
 /-- An invertible continuous linear map has a continuous left inverse. -/
 lemma of_isInvertible (hf : IsInvertible f) : f.HasLeftInverse := by
@@ -172,11 +169,12 @@ lemma closedComplemented_range (hf : f.HasLeftInverse) : Submodule.ClosedComplem
   -- Mathlib's definition of closed complement takes a continuous projection to f.range instead
   -- of a complementary subspace: consider `f.comp g` instead, which is continuous as both maps are,
   -- and idempotent as a continuous left inverse.
-  use (f.comp hf.leftInverse).codRestrict f.range (by intro y; simp)
+  obtain ⟨g, hg⟩ := hf
+  use (f.comp g).codRestrict f.range (by intro y; simp)
   rintro ⟨y, x, rfl⟩
   ext
   simp only [coe_coe, coe_codRestrict_apply, comp_apply]
-  rw [hf.leftInverse_leftInverse]
+  rw [hg]
 
 section
 
@@ -185,22 +183,60 @@ variable [T1Space F]
 lemma isClosed_range (hf : f.HasLeftInverse) [IsTopologicalAddGroup F] :
     IsClosed (range f) := by
   -- `range f = ker (f ∘ g - id)` is closed since `f ∘ g - id` is continuous.
-  rw [← f.range_toLinearMap, ← f.coe_range,
-    f.range_eq_ker_of_leftInverse (hf.leftInverse_leftInverse)]
-  exact ((f.comp hf.leftInverse) - (ContinuousLinearMap.id R F)).isClosed_ker
-
-/-- Choice of a closed complement of `range f` -/
-def complement (h : f.HasLeftInverse) : Submodule R F :=
-  h.closedComplemented_range.complement
-
-lemma isClosed_complement (h : f.HasLeftInverse) : IsClosed (X := F) h.complement :=
-  h.closedComplemented_range.isClosed_complement
-
-omit [T1Space F] in
-lemma isCompl_complement (h : f.HasLeftInverse) : IsCompl f.range h.complement :=
-  h.closedComplemented_range.isCompl_complement
+  obtain ⟨g, hg⟩ := hf
+  rw [← f.range_toLinearMap, ← f.coe_range, f.range_eq_ker_of_leftInverse hg]
+  exact ((f.comp g) - (ContinuousLinearMap.id R F)).isClosed_ker
 
 end
+
+/-- The continuous left inverse of `f` vanishing on a topological complement `C` of the range of
+`f`: the projection onto the range along `C`, followed by the inverse of `f` on its range. It is the
+left inverse `LinearMap.linearProjOfIsCompl` of the underlying linear map, which is continuous
+because it is the composition of any continuous left inverse with the continuous projection. -/
+def leftInverseOfIsTopCompl (hf : f.HasLeftInverse) {C : Submodule R F}
+    (hC : f.range.IsTopCompl C) : F →L[R] E where
+  toLinearMap := LinearMap.linearProjOfIsCompl C (f : E →ₗ[R] F) hf.injective hC.isCompl
+  cont := by
+    obtain ⟨g, hg⟩ := id hf
+    have : LinearMap.linearProjOfIsCompl C (f : E →ₗ[R] F) hf.injective hC.isCompl =
+        ((g ∘L f.range.subtypeL ∘L f.range.projectionOntoL C hC :
+          F →L[R] E) : F →ₗ[R] E) :=
+      (LinearMap.eq_linearProjOfIsCompl _ _ _ _
+        (fun x ↦ by
+          simp [Submodule.projection_apply_of_mem_left hC.isCompl (x := f x) ⟨x, rfl⟩, hg x])
+        fun x hx ↦ by simp [Submodule.projection_apply_of_mem_right hC.isCompl hx]).symm
+    rw [this]
+    exact (g ∘L f.range.subtypeL ∘L f.range.projectionOntoL C hC).continuous
+
+@[simp]
+lemma leftInverseOfIsTopCompl_apply (hf : f.HasLeftInverse) {C : Submodule R F}
+    (hC : f.range.IsTopCompl C) (x : E) :
+    hf.leftInverseOfIsTopCompl hC (f x) = x :=
+  LinearMap.linearProjOfIsCompl_apply_left C (f : E →ₗ[R] F) hf.injective hC.isCompl x
+
+lemma leftInverse_leftInverseOfIsTopCompl (hf : f.HasLeftInverse) {C : Submodule R F}
+    (hC : f.range.IsTopCompl C) : LeftInverse (hf.leftInverseOfIsTopCompl hC) f :=
+  hf.leftInverseOfIsTopCompl_apply hC
+
+lemma leftInverseOfIsTopCompl_apply_of_mem (hf : f.HasLeftInverse) {C : Submodule R F}
+    (hC : f.range.IsTopCompl C) {y : F} (hy : y ∈ C) :
+    hf.leftInverseOfIsTopCompl hC y = 0 :=
+  LinearMap.linearProjOfIsCompl_apply_right' C (f : E →ₗ[R] F) hf.injective hC.isCompl y hy
+
+/-- The continuous left inverse of `f` vanishing on a topological complement of its range is the
+only left inverse of `f` vanishing there. -/
+lemma eq_leftInverseOfIsTopCompl (hf : f.HasLeftInverse) {C : Submodule R F}
+    (hC : f.range.IsTopCompl C) {g : F →L[R] E} (hg : LeftInverse g f)
+    (hgC : ∀ y ∈ C, g y = 0) : g = hf.leftInverseOfIsTopCompl hC :=
+  ContinuousLinearMap.coe_injective <|
+    LinearMap.eq_linearProjOfIsCompl C (f : E →ₗ[R] F) hf.injective hC.isCompl hg hgC
+
+/-- Every continuous left inverse `g` of `f` is the left inverse vanishing on its kernel, which is a
+topological complement of the range of `f`. -/
+lemma eq_leftInverseOfIsTopCompl_ker {g : F →L[R] E} (hg : LeftInverse g f) :
+    g = HasLeftInverse.leftInverseOfIsTopCompl ⟨g, hg⟩
+      (f.isTopCompl_range_ker_of_leftInverse g hg) :=
+  eq_leftInverseOfIsTopCompl _ _ hg fun _ hy ↦ by simpa using hy
 
 end Ring
 
@@ -210,14 +246,9 @@ namespace HasRightInverse
 
 variable {f : E →L[R] F}
 
-/-- Choice of continuous right inverse for `f : F →L[R] E`, given that such an inverse exists. -/
-def rightInverse (h : f.HasRightInverse) : F →L[R] E := Classical.choose h
-
-lemma rightInverse_rightInverse (h : f.HasRightInverse) : RightInverse h.rightInverse f :=
-  Classical.choose_spec h
-
-lemma surjective (h : f.HasRightInverse) : Surjective f :=
-  h.rightInverse_rightInverse.surjective
+lemma surjective (h : f.HasRightInverse) : Surjective f := by
+  obtain ⟨g, hg⟩ := h
+  exact hg.surjective
 
 lemma congr {g : E →L[R] F} (hf : f.HasRightInverse) (hfg : g = f) :
     g.HasRightInverse :=
@@ -227,11 +258,6 @@ lemma congr {g : E →L[R] F} (hf : f.HasRightInverse) (hfg : g = f) :
 lemma _root_.ContinuousLinearEquiv.hasRightInverse (f : E ≃L[R] F) :
     f.toContinuousLinearMap.HasRightInverse :=
   ⟨f.symm, rightInverse_of_comp (by simp)⟩
-
-@[simp] lemma _root_.ContinuousLinearEquiv.rightInverse_hasRightInverse (f : E ≃L[R] F) :
-    f.hasRightInverse.rightInverse = f.symm := by
-  ext y
-  exact f.injective <| by simpa using f.hasRightInverse.rightInverse_rightInverse y
 
 /-- An invertible continuous linear map has a continuous right inverse. -/
 lemma of_isInvertible (hf : IsInvertible f) : f.HasRightInverse := by
@@ -280,6 +306,82 @@ protected lemma snd : (ContinuousLinearMap.snd R F G).HasRightInverse := by
   use ContinuousLinearMap.prod 0 (.id R G)
   intro x
   simp
+
+section Ring
+
+variable {R E F : Type*} [Ring R]
+  [TopologicalSpace E] [AddCommGroup E] [Module R E]
+  [TopologicalSpace F] [AddCommGroup F] [Module R F] {f : E →L[R] F}
+
+/-- The restriction of a surjective `f` to a complement `C` of its kernel is bijective. -/
+lemma bijective_domRestrict (hf : f.HasRightInverse) {C : Submodule R E}
+    (hC : IsCompl C f.ker) : Bijective ((f : E →ₗ[R] F).domRestrict C) := by
+  refine ⟨fun x y hxy ↦ ?_, fun y ↦ ?_⟩
+  · have hmem : (x : E) - y ∈ f.ker := by
+      simpa [LinearMap.mem_ker, sub_eq_zero] using hxy
+    have hC' : (x : E) - y ∈ C := C.sub_mem x.2 y.2
+    have := hC.disjoint.le_bot ⟨hC', hmem⟩
+    exact Subtype.ext (sub_eq_zero.mp this)
+  · obtain ⟨x, rfl⟩ := hf.surjective y
+    have hx : x ∈ C ⊔ f.ker := by rw [hC.sup_eq_top]; exact Submodule.mem_top
+    obtain ⟨c, hc, k, hk, rfl⟩ := Submodule.mem_sup.mp hx
+    exact ⟨⟨c, hc⟩, by simp [show f k = 0 by simpa using hk]⟩
+
+/-- The continuous right inverse of `f` with values in a topological complement `C` of the kernel
+of `f`: the inverse of the restriction of `f` to `C`. It is continuous because it is the projection
+onto `C` along the kernel of `f` of any continuous right inverse of `f`. -/
+def rightInverseOfIsTopCompl (hf : f.HasRightInverse) {C : Submodule R E}
+    (hC : C.IsTopCompl f.ker) : F →L[R] E where
+  toLinearMap := C.subtype ∘ₗ
+    (LinearEquiv.ofBijective _ (hf.bijective_domRestrict hC.isCompl)).symm.toLinearMap
+  cont := by
+    obtain ⟨g, hg⟩ := id hf
+    have key (y : F) : (LinearEquiv.ofBijective _ (hf.bijective_domRestrict hC.isCompl)).symm y =
+        C.projectionOntoL f.ker hC (g y) := by
+      rw [LinearEquiv.symm_apply_eq]
+      have h := Submodule.projection_add_projection_eq_self hC.isCompl (g y)
+      have hk : f (f.ker.projection C hC.isCompl.symm (g y)) = 0 :=
+        LinearMap.mem_ker.mp (Submodule.projection_apply_mem hC.isCompl.symm (g y))
+      simp only [LinearEquiv.ofBijective_apply, LinearMap.domRestrict_apply, coe_coe,
+        Submodule.coe_projectionOntoL, Submodule.coe_projectionOnto_apply]
+      conv_lhs => rw [← hg y, ← h, map_add, hk, add_zero]
+    have hcont : Continuous fun y ↦ (C.projectionOntoL f.ker hC (g y) : E) := by fun_prop
+    refine hcont.congr fun y ↦ ?_
+    simp [key]
+
+@[simp]
+lemma apply_rightInverseOfIsTopCompl (hf : f.HasRightInverse) {C : Submodule R E}
+    (hC : C.IsTopCompl f.ker) (y : F) : f (hf.rightInverseOfIsTopCompl hC y) = y :=
+  LinearEquiv.apply_ofBijective_symm_apply (f := (f : E →ₗ[R] F).domRestrict C)
+    (h := hf.bijective_domRestrict hC.isCompl) y
+
+lemma rightInverse_rightInverseOfIsTopCompl (hf : f.HasRightInverse) {C : Submodule R E}
+    (hC : C.IsTopCompl f.ker) : RightInverse (hf.rightInverseOfIsTopCompl hC) f :=
+  hf.apply_rightInverseOfIsTopCompl hC
+
+lemma rightInverseOfIsTopCompl_apply_mem (hf : f.HasRightInverse) {C : Submodule R E}
+    (hC : C.IsTopCompl f.ker) (y : F) : hf.rightInverseOfIsTopCompl hC y ∈ C :=
+  ((LinearEquiv.ofBijective _ (hf.bijective_domRestrict hC.isCompl)).symm y).2
+
+/-- The continuous right inverse of `f` with values in a topological complement of its kernel is
+the only right inverse of `f` with values there. -/
+lemma eq_rightInverseOfIsTopCompl (hf : f.HasRightInverse) {C : Submodule R E}
+    (hC : C.IsTopCompl f.ker) {g : F →L[R] E} (hg : RightInverse g f) (hgC : ∀ y, g y ∈ C) :
+    g = hf.rightInverseOfIsTopCompl hC := by
+  ext y
+  have := (hf.bijective_domRestrict hC.isCompl).1 (a₁ := ⟨g y, hgC y⟩)
+    (a₂ := (LinearEquiv.ofBijective _ (hf.bijective_domRestrict hC.isCompl)).symm y)
+    (by simp [hg y])
+  exact congrArg Subtype.val this
+
+/-- Every continuous right inverse `g` of `f` is the right inverse with values in its range, which
+is a topological complement of the kernel of `f`. -/
+lemma eq_rightInverseOfIsTopCompl_range {g : F →L[R] E} (hg : RightInverse g f) :
+    g = HasRightInverse.rightInverseOfIsTopCompl ⟨g, hg⟩
+      (g.isTopCompl_range_ker_of_leftInverse f hg) :=
+  eq_rightInverseOfIsTopCompl _ _ hg fun y ↦ ⟨y, rfl⟩
+
+end Ring
 
 end HasRightInverse
 

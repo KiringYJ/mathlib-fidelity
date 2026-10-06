@@ -36,8 +36,6 @@ change to something less misleading.
 * `Submodule.projectionL`: if `h : IsTopCompl p q`, `p.projectionL q h` is the continuous
   linear projection `M →L[R] M` onto `p` along `q`. This is the continuous version of
   `Submodule.IsCompl.projection`.
-* `Submodule.ClosedComplemented.complement`: an arbitrary topological complement of a topologically
-  complemented submodule.
 * `Submodule.prodEquivOfIsTopCompl`: the bundled continuous linear equivalence `p × q ≃L[R] M`
   arising from a topological complement pair.
 * `Submodule.quotientEquivOfIsTopCompl`: the bundled continuous linear equivalence `M ⧸ p ≃L[R] q`
@@ -352,24 +350,10 @@ theorem ClosedComplemented.exists_isClosed_isCompl [T1Space p] (h : ClosedComple
     ∃ q : Submodule R M, IsClosed (q : Set M) ∧ IsCompl p q :=
   Exists.elim h.exists_isTopCompl fun q hq => ⟨q, hq.isClosed', hq.isCompl⟩
 
-/-- An arbitrary choice of topological complement of a topologically complemented submodule. -/
-noncomputable def ClosedComplemented.complement (h : ClosedComplemented p) : Submodule R M :=
-  Classical.choose h.exists_isTopCompl
-
-theorem ClosedComplemented.isTopCompl_complement (h : ClosedComplemented p) :
-    IsTopCompl p h.complement :=
-  Classical.choose_spec h.exists_isTopCompl
-
-theorem ClosedComplemented.isCompl_complement (h : ClosedComplemented p) : IsCompl p h.complement :=
-  h.isTopCompl_complement.isCompl
-
-theorem ClosedComplemented.isClosed_complement [T1Space p] (h : ClosedComplemented p) :
-    IsClosed (h.complement : Set M) :=
-  h.isTopCompl_complement.isClosed'
-
 protected theorem ClosedComplemented.isClosed [ContinuousSub M] [T1Space M]
-    {p : Submodule R M} (h : ClosedComplemented p) : IsClosed (p : Set M) :=
-  h.isTopCompl_complement.isClosed
+    {p : Submodule R M} (h : ClosedComplemented p) : IsClosed (p : Set M) := by
+  obtain ⟨q, hq⟩ := h.exists_isTopCompl
+  exact hq.isClosed
 
 @[simp]
 theorem closedComplemented_bot : ClosedComplemented (⊥ : Submodule R M) :=
