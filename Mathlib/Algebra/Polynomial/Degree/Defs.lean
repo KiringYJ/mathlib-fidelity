@@ -18,7 +18,8 @@ public import Mathlib.Order.SuccPred.WithBot
 ## Main definitions
 
 * `Polynomial.degree`: the degree of a polynomial, where `0` has degree `⊥`
-* `Polynomial.natDegree`: the degree of a polynomial, where `0` has degree `0`
+* `Polynomial.natDegree`: the supremum in `ℕ` of the exponents with nonzero coefficient, which is
+  the degree of a nonzero polynomial and `0` for the polynomial `0`
 * `Polynomial.leadingCoeff`: the leading coefficient of a polynomial
 * `Polynomial.Monic`: a polynomial is monic if its leading coefficient is 1
 * `Polynomial.nextCoeff`: the next coefficient after the leading coefficient
@@ -48,7 +49,10 @@ variable [Semiring R] {p q r : R[X]}
 def degree (p : R[X]) : WithBot ℕ :=
   p.support.max
 
-/-- `natDegree p` forces `degree p` to ℕ, by defining `natDegree 0 = 0`. -/
+/-- `natDegree p` is the supremum in `ℕ` of the exponents `n` with `coeff p n ≠ 0`
+(`Polynomial.natDegree_eq_support_sup`). For `p ≠ 0` it is the degree of `p`
+(`Polynomial.degree_eq_natDegree`); for `p = 0` it is `0`, the supremum of the empty set, which in
+`ℕ` is its least element. The degree of `0` itself is `⊥` (`Polynomial.degree_zero`). -/
 def natDegree (p : R[X]) : ℕ :=
   (degree p).unbotD 0
 

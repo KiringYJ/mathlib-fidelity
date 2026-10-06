@@ -214,15 +214,47 @@ operation.
   not exist.  Require `p ≠ 0` for finite root multisets and finite multiplicities, retaining infinity
   where appropriate.  Ordinary set-valued root loci may remain defined for arbitrary polynomials.
 
-- [ ] **Audit the zero-polynomial convention in `Polynomial.natDegree`.**
-  `Polynomial.degree` and `Polynomial.natDegree` in
-  `Mathlib/Algebra/Polynomial/Degree/Defs.lean:48` and `:52` respectively retain `⊥` and project the
-  zero polynomial to zero.  The different name and documentation identify a natural-valued
-  projection, but they do not establish that the zero convention is standard mathematical usage.
-  Find literature using this convention before retaining it as a public invariant; otherwise
-  require nonzeroness at the natural-valued boundary and keep the projection fallback private.
-  Audit actual theorem statements rather than treating every internal use as paper-facing degree
-  notation.
+- [x] **Identify `Polynomial.natDegree` as the supremum of the support.**
+  `natDegree p` is the supremum in `ℕ` of the exponents with nonzero coefficient
+  (`natDegree_eq_support_sup`, from `supDegree_eq_natDegree`), for every `p`: the degree of a
+  nonzero polynomial, and `0`, the supremum of the empty set, which in `ℕ` is its least element, for
+  `p = 0`.  The degree of the zero polynomial is conventionally `-∞` or left undefined, and
+  `degree 0 = ⊥` keeps that convention; the zero value of `natDegree` is therefore justified as the
+  supremum, as for `Nat.findGreatest`, not as a degree.  The audit of the theorem statements
+  supports this reading: the lattice-type statements that hold at `0` without a hypothesis
+  (`natDegree_le_iff_coeff_eq_zero`, the bounds `natDegree_add_le`, `natDegree_mul_le`,
+  `natDegree_pow_le`, and `natDegree_comp_le`, the values `natDegree_C` and `natDegree_monomial`)
+  are statements about the supremum of the support, the statements that need `p ≠ 0` (strict upper
+  bounds, `natDegree_mul`, `natDegree_mul_X`, attainment, and `natDegree_lt_iff_degree_lt`) are
+  exactly those where a supremum of an empty set behaves differently, and
+  `MvPolynomial.totalDegree`, `MvPolynomial.degreeOf`, and `MonomialOrder.degree` are defined as
+  suprema of supports in the same way.  Requiring `p ≠ 0` would add hypotheses to about 500
+  statements without visible zero guards, including lattice statements that are true at `0`.  The
+  docstrings of `natDegree` and of `Mathlib/Algebra/Polynomial/Degree/Defs.lean` now describe the
+  supremum.  `natTrailingDegree`, whose value `0` at `0` is not an infimum, and the statements that
+  read `natDegree` as a degree at `0` are recorded below.
+
+- [ ] **Give `Polynomial.natTrailingDegree` its domain.**
+  `natTrailingDegree p` in `Mathlib/Algebra/Polynomial/Degree/TrailingDegree.lean:56` is
+  `ENat.toNat (trailingDegree p)`, so `natTrailingDegree 0 = 0` although `trailingDegree 0 = ⊤`.
+  Unlike the value of `natDegree` at `0`, this is not an order-theoretic value: `ℕ` has no top, the
+  empty set has no infimum in `ℕ`, and `Nat.sInf_empty` is a junk branch.  The API is already
+  asymmetric: `le_natTrailingDegree` needs `p ≠ 0`, and `natTrailingDegree_eq_zero` states the junk
+  disjunct `p = 0`.  Require `p ≠ 0` for the natural-valued trailing degree, keeping
+  `trailingDegree` in `ℕ∞` (like `PowerSeries.order`) as the total invariant, and migrate
+  `Polynomial.mirror`, `nextCoeffUp`, and the 12 consuming files.
+
+- [ ] **Audit constructions that feed `natDegree` of a possibly zero polynomial into a formula.**
+  `natDegree` is the supremum of the support, so its value at `0` is not a fallback, but several
+  definitions and statements use it as the degree of a polynomial that may be `0`:
+  `Polynomial.discr` with `discr_C : discr (C r) = 1`, so the discriminant of `0` is `1`, and the
+  default degree arguments of `Polynomial.resultant` with `resultant_self` (in
+  `Mathlib/RingTheory/Polynomial/Resultant/Basic.lean`, whose docstring already warns about constant
+  polynomials); `RatFunc.intDegree 0 = 0` (`Mathlib/FieldTheory/RatFunc/Degree.lean:40`);
+  `Polynomial.reverse`, `mirror`, `eraseLead`, `nextCoeff`, `scaleRoots`, `integralNormalization`,
+  and `homogenize`; and formulas with natural subtraction such as `natDegree_derivative`.  Decide
+  for each whether its value at `0` is mathematical, and otherwise restate it on nonzero
+  polynomials.
 
 - [x] **Make scheme order of vanishing carry its point and function domains.**
   `AlgebraicGeometry.Scheme.ord f z hz` takes `hz : coheight z = 1`, the condition that `ordHom`
