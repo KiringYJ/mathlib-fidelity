@@ -12,8 +12,8 @@ public import Mathlib.RingTheory.Ideal.Span
 /-!
 # Bounding the coefficients of the quotient and remainder of polynomials
 
-This file proves that, for polynomials `p q : R[X]`, the coefficients of `p /ₘ q` and `p %ₘ q` can
-be written as sums of products of coefficients of `p` and `q`.
+This file proves that, for polynomials `p q : R[X]` with `q` monic, the coefficients of `p /ₘ q`
+and `p %ₘ q` can be written as sums of products of coefficients of `p` and `q`.
 
 Precisely, we show that each summand needs at most one coefficient of `p` and `deg p` coefficients
 of `q`.
@@ -79,41 +79,34 @@ lemma coeff_divModByMonicAux_mem_span_pow_mul_span : ∀ (p q : S[X]) (hq : q.Mo
     · exact H'' (coeff_divModByMonicAux_mem_span_pow_mul_span _ _ hq i).2
   termination_by p => deg(p)
 
-/-- For polynomials `p q : R[X]`, the coefficients of `p %ₘ q` can be written as sums of products of
-coefficients of `p` and `q`.
+/-- For polynomials `p q : R[X]` with `q` monic, the coefficients of `p %ₘ q` can be written as sums
+of products of coefficients of `p` and `q`.
 
 Precisely, each summand needs at most one coefficient of `p` and `deg p` coefficients of `q`. -/
-lemma coeff_modByMonic_mem_pow_natDegree_mul (p q : S[X])
+lemma coeff_modByMonic_mem_pow_natDegree_mul (p q : S[X]) (hqm : q.Monic)
     (Mp : Submodule R S) (hp : ∀ i, p.coeff i ∈ Mp) (hp' : 1 ∈ Mp)
     (Mq : Submodule R S) (hq : ∀ i, q.coeff i ∈ Mq) (hq' : 1 ∈ Mq) (i : ℕ) :
     (p %ₘ q).coeff i ∈ Mq ^ p.natDegree * Mp := by
-  delta modByMonic
-  split_ifs with H
-  · refine SetLike.le_def.mp ?_ (coeff_divModByMonicAux_mem_span_pow_mul_span (R := R) p q H i).2
-    gcongr <;> exact sup_le (by simpa) (by simpa [Submodule.span_le, Set.range_subset_iff])
-  · rw [← one_mul (p.coeff i), ← one_pow p.natDegree]
-    exact Submodule.mul_mem_mul (Submodule.pow_mem_pow Mq hq' _) (hp i)
+  refine SetLike.le_def.mp ?_ (coeff_divModByMonicAux_mem_span_pow_mul_span (R := R) p q hqm i).2
+  gcongr <;> exact sup_le (by simpa) (by simpa [Submodule.span_le, Set.range_subset_iff])
 
-/-- For polynomials `p q : R[X]`, the coefficients of `p /ₘ q` can be written as sums of products of
-coefficients of `p` and `q`.
+/-- For polynomials `p q : R[X]` with `q` monic, the coefficients of `p /ₘ q` can be written as sums
+of products of coefficients of `p` and `q`.
 
 Precisely, each summand needs at most one coefficient of `p` and `deg p` coefficients of `q`. -/
-lemma coeff_divByMonic_mem_pow_natDegree_mul (p q : S[X])
+lemma coeff_divByMonic_mem_pow_natDegree_mul (p q : S[X]) (hqm : q.Monic)
     (Mp : Submodule R S) (hp : ∀ i, p.coeff i ∈ Mp) (hp' : 1 ∈ Mp)
     (Mq : Submodule R S) (hq : ∀ i, q.coeff i ∈ Mq) (hq' : 1 ∈ Mq) (i : ℕ) :
     (p /ₘ q).coeff i ∈ Mq ^ p.natDegree * Mp := by
-  delta divByMonic
-  split_ifs with H
-  · refine SetLike.le_def.mp ?_ (coeff_divModByMonicAux_mem_span_pow_mul_span (R := R) p q H i).1
-    gcongr <;> exact sup_le (by simpa) (by simpa [Submodule.span_le, Set.range_subset_iff])
-  · simp
+  refine SetLike.le_def.mp ?_ (coeff_divModByMonicAux_mem_span_pow_mul_span (R := R) p q hqm i).1
+  gcongr <;> exact sup_le (by simpa) (by simpa [Submodule.span_le, Set.range_subset_iff])
 
 variable [DecidableEq ι] {i j : ι}
 
 open Function Ideal in
-lemma idealSpan_range_update_divByMonic (hij : i ≠ j) (v : ι → R[X]) :
+lemma idealSpan_range_update_divByMonic (hij : i ≠ j) (v : ι → R[X]) (hv : (v i).Monic) :
     span (Set.range (Function.update v j (v j %ₘ v i))) = span (Set.range v) := by
-  rw [modByMonic_eq_sub_mul_div, mul_comm, ← smul_eq_mul, Ideal.span, Ideal.span,
+  rw [modByMonic_eq_sub_mul_div _ hv, mul_comm, ← smul_eq_mul, Ideal.span, Ideal.span,
     Submodule.span_range_update_sub_smul hij]
 
 end Polynomial

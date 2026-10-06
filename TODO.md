@@ -227,16 +227,33 @@ operation.
   one, and migrate their consumers, including `PadicInt.unitCoeff` and
   `Mathlib/NumberTheory/Padics/MahlerBasis.lean`.
 
-- [ ] **Require monicity for polynomial division-by-monic notation.**
-  `Polynomial.divByMonic` and `Polynomial.modByMonic` in
-  `Mathlib/Algebra/Polynomial/Div.lean:132` and `:137` accept a nonmonic divisor and return quotient
-  zero and the original dividend.  Thread `q.Monic` through `/ₘ` and `%ₘ`, reusing
-  `divModByMonicAux`.
+- [x] **Require monicity for polynomial division-by-monic notation.**
+  `Polynomial.divByMonic` and `Polynomial.modByMonic` in `Mathlib/Algebra/Polynomial/Div.lean` take
+  `hq : q.Monic`, reusing `divModByMonicAux`, so `p /ₘ q` and `p %ₘ q` have no value at a divisor
+  that is not monic; unexpanders keep printing them as notation without the proof.  The extensible
+  default discharger `monic_tac` finds the proof from a hypothesis, for `X`, `1`, `X - C a`, and
+  `X + C a`, and for products, powers, images under `Polynomial.map`, and finite products of
+  polynomials that it proves monic; its rules unify only at reducible and instance transparency, so
+  that it fails fast on concrete polynomials, and it never assigns an undetermined divisor.  Later
+  files add `monic_core` rules for the minimal polynomial of an integral element, characteristic
+  polynomials, cyclotomic polynomials, the polynomial of an `IsAdjoinRootMonic` presentation, and
+  `q * C (leadingCoeff q)⁻¹` for `q ≠ 0` over a field.  `divByMonic_eq_of_not_monic`,
+  `modByMonic_eq_of_not_monic`, `divByMonic_zero`, and `modByMonic_zero` are removed, and the lemmas
+  that held for every divisor through those values take its monicity, as explicit hypotheses
+  (`modByMonic_add_div`, `modByMonic_eq_sub_mul_div`, `degree_divByMonic_le`,
+  `degree_modByMonic_le_left`) or as implicit ones where it occurs on the left-hand side.
+  `minpoly.aeval_modByMonic_minpoly` takes the monicity of the minimal polynomial as such an
+  implicit hypothesis, so that it stays a simp lemma.  The polynomial division and remainder over a
+  field in `Mathlib/Algebra/Polynomial/FieldDivision.lean` state `p / 0 = 0` and `p % 0 = p`
+  explicitly, as the `EuclideanDomain` interface requires (see "Classify inverse and division
+  semantics"), and `div_def` and `mod_def` take `q ≠ 0`.  Tests cover the removed names, the
+  printing, every discharger rule, the field values at `0`, and the failures for a divisor that is
+  not monic, for a hypothesis about another concrete polynomial, and for an undetermined divisor.
 
 - [ ] **Exclude the zero polynomial from finite root multisets and multiplicities.**
   `Polynomial.roots` in `Mathlib/Algebra/Polynomial/Roots.lean:58` gives the empty multiset at zero
   (line 71), while `Polynomial.rootMultiplicity` in
-  `Mathlib/Algebra/Polynomial/Div.lean:498` returns zero even though a largest dividing power does
+  `Mathlib/Algebra/Polynomial/Div.lean:520` returns zero even though a largest dividing power does
   not exist.  Require `p ≠ 0` for finite root multisets and finite multiplicities, retaining infinity
   where appropriate.  Ordinary set-valued root loci may remain defined for arbitrary polynomials.
 

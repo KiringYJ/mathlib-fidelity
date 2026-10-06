@@ -150,7 +150,7 @@ theorem generalizedEisenstein {q f : R[X]} {p : ℕ}
     suffices f %ₘ q = (r * s) %ₘ q by
       -- Since the coefficients of `r` and `s` are in `P`, those of `r * s` are in `P ^ 2`
       suffices h : map (Ideal.Quotient.mk (P ^ 2)) (r * s) = 0 by
-        simp [this, h, map_modByMonic, hq_monic]
+        simp [this, h, map_modByMonic]
       ext n
       have h (x : ℕ × ℕ) : (Ideal.Quotient.mk (P ^ 2)) (r.coeff x.1 * s.coeff x.2) = 0 := by
         rw [eq_zero_iff_mem, pow_two]

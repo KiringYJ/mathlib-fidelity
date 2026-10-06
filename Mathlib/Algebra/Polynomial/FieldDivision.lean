@@ -72,8 +72,12 @@ open Finset in
 theorem eval_iterate_derivative_rootMultiplicity {p : R[X]} {t : R} :
     (derivative^[p.rootMultiplicity t] p).eval t =
       (p.rootMultiplicity t).factorial • (p /ₘ (X - C t) ^ p.rootMultiplicity t).eval t := by
-  set m := p.rootMultiplicity t with hm
-  conv_lhs => rw [← p.pow_mul_divByMonic_rootMultiplicity_eq t, ← hm]
+  obtain ⟨g, hg⟩ : ∃ g, g = p /ₘ (X - C t) ^ p.rootMultiplicity t := ⟨_, rfl⟩
+  have key : p = (X - C t) ^ p.rootMultiplicity t * g :=
+    hg ▸ (p.pow_mul_divByMonic_rootMultiplicity_eq t).symm
+  rw [← hg]
+  generalize p.rootMultiplicity t = m at key ⊢
+  conv_lhs => rw [key]
   rw [iterate_derivative_mul, eval_finsetSum, sum_eq_single_of_mem _ (mem_range.mpr m.succ_pos)]
   · rw [m.choose_zero_right, one_smul, eval_mul, m.sub_zero, iterate_derivative_X_sub_pow_self,
       eval_natCast, nsmul_eq_mul]; rfl
@@ -307,25 +311,41 @@ theorem isUnit_iff_degree_eq_zero : IsUnit p ↔ degree p = 0 :=
         conv in p => rw [eq_C_of_degree_le_zero this]
         rw [← C_mul, mul_inv_cancel₀ hc, C_1]⟩⟩
 
-/-- Division of polynomials. See `Polynomial.divByMonic` for more details. -/
-def div (p q : R[X]) :=
-  C (leadingCoeff q)⁻¹ * (p /ₘ (q * C (leadingCoeff q)⁻¹))
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    with_reducible_and_instances (apply Polynomial.monic_mul_leadingCoeff_inv; assumption))
 
-/-- Remainder of polynomial division. See `Polynomial.modByMonic` for more details. -/
+open scoped Classical in
+/-- Division of polynomials over a field: the quotient by the monic polynomial
+`q * C (leadingCoeff q)⁻¹`, times `C (leadingCoeff q)⁻¹`. The `EuclideanDomain` interface requires
+`p / 0 = 0`. See `Polynomial.divByMonic` for more details. -/
+def div (p q : R[X]) :=
+  if hq : q = 0 then 0 else C (leadingCoeff q)⁻¹ * (p /ₘ (q * C (leadingCoeff q)⁻¹))
+
+open scoped Classical in
+/-- Remainder of polynomial division over a field: the remainder by the monic polynomial
+`q * C (leadingCoeff q)⁻¹`. The `EuclideanDomain` interface requires `p % 0 = p`. See
+`Polynomial.modByMonic` for more details. -/
 def mod (p q : R[X]) :=
-  p %ₘ (q * C (leadingCoeff q)⁻¹)
+  if hq : q = 0 then p else p %ₘ (q * C (leadingCoeff q)⁻¹)
 
 private theorem quotient_mul_add_remainder_eq_aux (p q : R[X]) : q * div p q + mod p q = p := by
   by_cases h : q = 0
-  · simp only [h, zero_mul, mod, modByMonic_zero, zero_add]
+  · simp [div, mod, h]
   · conv =>
       rhs
-      rw [← modByMonic_add_div p (q * C q.leadingCoeff⁻¹)]
-    rw [div, mod, add_comm, mul_assoc]
+      rw [← modByMonic_add_div p (monic_mul_leadingCoeff_inv h)]
+    rw [div, mod, dite_eq_right h, dite_eq_right h, add_comm, mul_assoc]
 
 private theorem remainder_lt_aux (p : R[X]) (hq : q ≠ 0) : degree (mod p q) < degree q := by
-  rw [← degree_mul_leadingCoeff_inv q hq]
+  rw [mod, dite_eq_right hq, ← degree_mul_leadingCoeff_inv q hq]
   exact degree_modByMonic_lt p (monic_mul_leadingCoeff_inv hq)
+
+private theorem div_zero_aux (p : R[X]) : div p 0 = 0 :=
+  dite_eq_left rfl
+
+private theorem mod_zero_aux (p : R[X]) : mod p 0 = p :=
+  dite_eq_left rfl
 
 instance : Div R[X] :=
   ⟨div⟩
@@ -333,18 +353,19 @@ instance : Div R[X] :=
 instance : Mod R[X] :=
   ⟨mod⟩
 
-theorem div_def : p / q = C (leadingCoeff q)⁻¹ * (p /ₘ (q * C (leadingCoeff q)⁻¹)) :=
-  rfl
+theorem div_def (hq : q ≠ 0) : p / q = C (leadingCoeff q)⁻¹ * (p /ₘ (q * C (leadingCoeff q)⁻¹)) :=
+  dite_eq_right hq
 
-theorem mod_def : p % q = p %ₘ (q * C (leadingCoeff q)⁻¹) := rfl
+theorem mod_def (hq : q ≠ 0) : p % q = p %ₘ (q * C (leadingCoeff q)⁻¹) :=
+  dite_eq_right hq
 
-theorem modByMonic_eq_mod (p : R[X]) (hq : Monic q) : p %ₘ q = p % q :=
-  show p %ₘ q = p %ₘ (q * C (leadingCoeff q)⁻¹) by
-    simp only [Monic.def.1 hq, inv_one, mul_one, C_1]
+theorem modByMonic_eq_mod (p : R[X]) (hq : Monic q) : p %ₘ q = p % q := by
+  rw [mod_def hq.ne_zero]
+  simp only [Monic.def.1 hq, inv_one, mul_one, C_1]
 
-theorem divByMonic_eq_div (p : R[X]) (hq : Monic q) : p /ₘ q = p / q :=
-  show p /ₘ q = C (leadingCoeff q)⁻¹ * (p /ₘ (q * C (leadingCoeff q)⁻¹)) by
-    simp only [Monic.def.1 hq, inv_one, C_1, one_mul, mul_one]
+theorem divByMonic_eq_div (p : R[X]) (hq : Monic q) : p /ₘ q = p / q := by
+  rw [div_def hq.ne_zero]
+  simp only [Monic.def.1 hq, inv_one, C_1, one_mul, mul_one]
 
 theorem mod_X_sub_C_eq_C_eval (p : R[X]) (a : R) : p % (X - C a) = C (p.eval a) :=
   modByMonic_eq_mod p (monic_X_sub_C a) ▸ modByMonic_X_sub_C_eq_C_eval _ _
@@ -358,7 +379,7 @@ instance instEuclideanDomain : EuclideanDomain R[X] :=
   { Polynomial.commRing,
     Polynomial.nontrivial with
     quotient := (· / ·)
-    quotient_zero := by simp [div_def]
+    quotient_zero := private div_zero_aux
     remainder := (· % ·)
     r := _
     r_wellFounded := degree_lt_wf
@@ -370,7 +391,7 @@ theorem mod_eq_self_iff (hq0 : q ≠ 0) : p % q = p ↔ degree p < degree q :=
   ⟨fun h => h ▸ EuclideanDomain.mod_lt _ hq0, fun h => by
     have : ¬degree (q * C (leadingCoeff q)⁻¹) ≤ degree p :=
       not_le_of_gt <| by rwa [degree_mul_leadingCoeff_inv q hq0]
-    rw [mod_def, modByMonic, dite_eq_left (monic_mul_leadingCoeff_inv hq0)]
+    rw [mod_def hq0, modByMonic]
     unfold divModByMonicAux
     dsimp
     simp only [this, false_and, ite_false]⟩
@@ -383,7 +404,7 @@ protected theorem div_eq_zero_iff (hq0 : q ≠ 0) : p / q = 0 ↔ degree p < deg
     have hlt : degree p < degree (q * C (leadingCoeff q)⁻¹) := by
       rwa [degree_mul_leadingCoeff_inv q hq0]
     have hm : Monic (q * C (leadingCoeff q)⁻¹) := monic_mul_leadingCoeff_inv hq0
-    rw [div_def, (divByMonic_eq_zero_iff hm).2 hlt, mul_zero]⟩
+    rw [div_def hq0, (divByMonic_eq_zero_iff hm).2 hlt, mul_zero]⟩
 
 theorem degree_add_div (hq0 : q ≠ 0) (hpq : degree q ≤ degree p) :
     degree q + degree (p / q) = degree p := by
@@ -397,12 +418,13 @@ theorem degree_add_div (hq0 : q ≠ 0) (hpq : degree q ≤ degree p) :
 theorem degree_div_le (p q : R[X]) : degree (p / q) ≤ degree p := by
   by_cases hq : q = 0
   · simp [hq]
-  · rw [div_def, mul_comm, degree_mul_leadingCoeff_inv _ hq]; exact degree_divByMonic_le _ _
+  · rw [div_def hq, mul_comm, degree_mul_leadingCoeff_inv _ hq]
+    exact degree_divByMonic_le _ (monic_mul_leadingCoeff_inv hq)
 
 theorem degree_div_lt (hp : p ≠ 0) (hq : 0 < degree q) : degree (p / q) < degree p := by
   have hq0 : q ≠ 0 := fun hq0 => by simp [hq0] at hq
-  rw [div_def, mul_comm, degree_mul_leadingCoeff_inv _ hq0]
-  exact degree_divByMonic_lt _ (q * C q.leadingCoeff⁻¹) hp
+  rw [div_def hq0, mul_comm, degree_mul_leadingCoeff_inv _ hq0]
+  exact degree_divByMonic_lt _ (monic_mul_leadingCoeff_inv hq0) hp
     (by rw [degree_mul_leadingCoeff_inv _ hq0]; exact hq)
 
 theorem isUnit_map [Field k] (f : R →+* k) : IsUnit (p.map f) ↔ IsUnit p := by
@@ -411,43 +433,46 @@ theorem isUnit_map [Field k] (f : R →+* k) : IsUnit (p.map f) ↔ IsUnit p := 
 theorem map_div [Field k] (f : R →+* k) : (p / q).map f = p.map f / q.map f := by
   if hq0 : q = 0 then simp [hq0]
   else
-    rw [div_def, div_def, Polynomial.map_mul, map_divByMonic f (monic_mul_leadingCoeff_inv hq0),
-      Polynomial.map_mul, map_C, leadingCoeff_map, map_inv₀]
+    rw [div_def hq0, div_def (map_ne_zero hq0), Polynomial.map_mul,
+      map_divByMonic f (monic_mul_leadingCoeff_inv hq0)]
+    simp only [Polynomial.map_mul, map_C, leadingCoeff_map, map_inv₀]
 
 theorem map_mod [Field k] (f : R →+* k) : (p % q).map f = p.map f % q.map f := by
   by_cases hq0 : q = 0
   · simp [hq0]
-  · rw [mod_def, mod_def, leadingCoeff_map f, ← map_inv₀ f, ← map_C f, ← Polynomial.map_mul f,
-      map_modByMonic f (monic_mul_leadingCoeff_inv hq0)]
+  · rw [mod_def hq0, mod_def (map_ne_zero hq0), map_modByMonic f (monic_mul_leadingCoeff_inv hq0)]
+    simp only [Polynomial.map_mul, map_C, leadingCoeff_map, map_inv₀]
 
 lemma natDegree_mod_lt [Field k] (p : k[X]) {q : k[X]} (hq : q.natDegree ≠ 0) :
     (p % q).natDegree < q.natDegree := by
-  have hq' : q.leadingCoeff ≠ 0 := by
-    rw [leadingCoeff_ne_zero]
-    contrapose hq
-    simp [hq]
-  rw [mod_def]
-  refine (natDegree_modByMonic_lt p ?_ ?_).trans_le ?_
-  · refine monic_mul_C_of_leadingCoeff_mul_eq_one ?_
-    rw [mul_inv_eq_one₀ hq']
-  · contrapose hq
-    rw [← natDegree_mul_C_eq_of_mul_eq_one ((inv_mul_eq_one₀ hq').mpr rfl)]
-    simp [hq]
-  · exact natDegree_mul_C_le q q.leadingCoeff⁻¹
+  have hq0 : q ≠ 0 := by rintro rfl; simp at hq
+  have hq' : q.leadingCoeff ≠ 0 := leadingCoeff_ne_zero.2 hq0
+  rw [mod_def hq0]
+  refine (natDegree_modByMonic_lt p (monic_mul_leadingCoeff_inv hq0) ?_).trans_le
+    (natDegree_mul_C_le q q.leadingCoeff⁻¹)
+  contrapose hq
+  rw [← natDegree_mul_C_eq_of_mul_eq_one ((inv_mul_eq_one₀ hq').mpr rfl)]
+  simp [hq]
 
 theorem degree_mod_lt (p : R[X]) {q : R[X]} (hq : q ≠ 0) : (p % q).degree < q.degree := by
-  rw [Polynomial.mod_def]
-  refine (Polynomial.degree_modByMonic_lt p ?_).trans_eq (by simp)
-  simp [Polynomial.Monic.def, hq]
+  rw [Polynomial.mod_def hq, ← degree_mul_leadingCoeff_inv q hq]
+  exact degree_modByMonic_lt p (monic_mul_leadingCoeff_inv hq)
 
 theorem add_mod (p₁ p₂ q : R[X]) : (p₁ + p₂) % q = p₁ % q + p₂ % q := by
-  simp [Polynomial.mod_def, Polynomial.add_modByMonic]
+  rcases eq_or_ne q 0 with rfl | hq
+  · exact (mod_zero_aux _).trans (congrArg₂ (· + ·) (mod_zero_aux p₁) (mod_zero_aux p₂)).symm
+  simp [Polynomial.mod_def hq, Polynomial.add_modByMonic]
 
 theorem sub_mod (p₁ p₂ q : R[X]) : (p₁ - p₂) % q = p₁ % q - p₂ % q := by
-  simp [Polynomial.mod_def, Polynomial.sub_modByMonic]
+  rcases eq_or_ne q 0 with rfl | hq
+  · exact (mod_zero_aux _).trans (congrArg₂ (· - ·) (mod_zero_aux p₁) (mod_zero_aux p₂)).symm
+  simp [Polynomial.mod_def hq, Polynomial.sub_modByMonic]
 
 theorem mul_mod (p₁ p₂ q : R[X]) : (p₁ * p₂) % q = (p₁ % q) * (p₂ % q) % q := by
-  simp_rw [Polynomial.mod_def]
+  rcases eq_or_ne q 0 with rfl | hq
+  · change mod (p₁ * p₂) 0 = mod (mod p₁ 0 * mod p₂ 0) 0
+    rw [mod_zero_aux, mod_zero_aux, mod_zero_aux, mod_zero_aux]
+  simp_rw [Polynomial.mod_def hq]
   apply Polynomial.mul_modByMonic
 
 section
@@ -558,7 +583,7 @@ theorem leadingCoeff_div (hpq : q.degree ≤ p.degree) :
     (p / q).leadingCoeff = p.leadingCoeff / q.leadingCoeff := by
   by_cases hq : q = 0
   · simp [hq]
-  rw [div_def, leadingCoeff_mul, leadingCoeff_C,
+  rw [div_def hq, leadingCoeff_mul, leadingCoeff_C,
     leadingCoeff_divByMonic_of_monic (monic_mul_leadingCoeff_inv hq) _, mul_comm,
     div_eq_mul_inv]
   rwa [degree_mul_leadingCoeff_inv q hq]
@@ -566,7 +591,11 @@ theorem leadingCoeff_div (hpq : q.degree ≤ p.degree) :
 theorem div_C_mul : p / (C a * q) = C a⁻¹ * (p / q) := by
   by_cases ha : a = 0
   · simp [ha]
-  simp only [div_def, leadingCoeff_mul, mul_inv, leadingCoeff_C, C.map_mul, mul_assoc]
+  rcases eq_or_ne q 0 with rfl | hq
+  · simp
+  have haq : C a * q ≠ 0 := mul_ne_zero (C_ne_zero.2 ha) hq
+  rw [div_def haq, div_def hq]
+  simp only [leadingCoeff_mul, mul_inv, leadingCoeff_C, C.map_mul, mul_assoc]
   congr 3
   rw [mul_left_comm q, ← mul_assoc, ← C.map_mul, mul_inv_cancel₀ ha, C.map_one, one_mul]
 
@@ -634,7 +663,7 @@ theorem degree_pos_of_irreducible (hp : Irreducible p) : 0 < p.degree :=
 
 theorem X_sub_C_mul_divByMonic_eq_sub_modByMonic {K : Type*} [Ring K] (f : K[X]) (a : K) :
     (X - C a) * (f /ₘ (X - C a)) = f - f %ₘ (X - C a) := by
-  rw [eq_sub_iff_add_eq, ← eq_sub_iff_add_eq', modByMonic_eq_sub_mul_div]
+  rw [eq_sub_iff_add_eq, ← eq_sub_iff_add_eq', modByMonic_eq_sub_mul_div _ (monic_X_sub_C a)]
 
 theorem divByMonic_add_X_sub_C_mul_derivative_divByMonic_eq_derivative
     {K : Type*} [CommRing K] (f : K[X]) (a : K) :
@@ -727,7 +756,7 @@ theorem monic_mapAlg_iff [Semiring S] [Nontrivial S] [Algebra R S] {p : R[X]} :
 theorem mod_eq_of_dvd_sub {p₁ p₂ q : R[X]} (h : q ∣ p₁ - p₂) : p₁ % q = p₂ % q := by
   obtain rfl | hq := eq_or_ne q 0
   · simpa [sub_eq_zero] using h
-  simp_rw [Polynomial.mod_def]
+  simp_rw [Polynomial.mod_def hq]
   apply Polynomial.modByMonic_eq_of_dvd_sub (by simp [Polynomial.Monic.def, hq])
   rw [mul_comm]
   exact (Polynomial.C_mul_dvd (by simpa using hq)).mpr h

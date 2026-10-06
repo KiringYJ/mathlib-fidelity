@@ -37,13 +37,12 @@ example : Irreducible (X ^ 4 - 10 * X ^ 2 + 1 : ℤ[X]) := by
   have hq_monic : q.Monic := by unfold q; monicity!
   have hfq : f = q ^ 2 - 12 * q + 12 := by ring
   -- On the other hand, `f %ₘ q = 12`, which is not a multiple of `9`.
-  apply generalizedEisenstein (K := ZMod 3) (q := q) (p := 2)
+  apply generalizedEisenstein (K := ZMod 3) (q := q) (p := 2) (hq_monic := hq_monic)
   · set q₃ : (ZMod 3)[X] := X ^ 2 + 1
     have hdeg_q₃ : q₃.natDegree = 2 := by unfold q₃; compute_degree!
     suffices Irreducible q₃ by simpa [q] using this
     apply irreducible_of_degree_le_three_of_not_isRoot
       (by simp_all) (by simp_rw [q₃, IsRoot.def, eval_add, eval_pow, eval_X, eval_one]; decide)
-  · unfold q; monicity!
   · exact Monic.isPrimitive hf_lC
   · simp_all
   · suffices f.leadingCoeff = 1 by

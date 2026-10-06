@@ -186,8 +186,8 @@ private lemma induction_structure (n : ℕ)
     (hP₁ : ∀ (R) [CommRing R], P R ⟨0⟩)
     (hP₂ : ∀ (R) [CommRing R] (e : InductionObj R n) (i : Fin n),
       (e.1 i).Monic → (∀ j ≠ i, e.1 j = 0) → P R e)
-    (hP₃ : ∀ (R) [CommRing R] (e : InductionObj R n) (i j : Fin n),
-      (e.1 i).Monic → (e.1 i).degree ≤ (e.1 j).degree → i ≠ j →
+    (hP₃ : ∀ (R) [CommRing R] (e : InductionObj R n) (i j : Fin n) (hi : (e.1 i).Monic),
+      (e.1 i).degree ≤ (e.1 j).degree → i ≠ j →
       P R ⟨update e.1 j (e.1 j %ₘ e.1 i)⟩ → P R e)
     (hP₄ : ∀ (R) [CommRing R] (c : R) (i : Fin n) (e : InductionObj R n), c = (e.1 i).leadingCoeff →
       c ≠ 0 →
@@ -473,7 +473,7 @@ private lemma statement : ∀ S : InductionObj R n, Statement R₀ R n S := by
     obtain ⟨S, hS, hS'⟩ := H (R₀ := R₀) f
     refine ⟨S, Eq.trans ?_ hS, ?_⟩
     · rw [← zeroLocus_span (Set.range _), ← zeroLocus_span (Set.range _),
-        idealSpan_range_update_divByMonic hne]
+        idealSpan_range_update_divByMonic hne _ hi]
     · intro C hC
       let c' : InductionObj _ _ := ⟨update c.val j (c.val j %ₘ c.val i)⟩
       have deg_bound₁ : c'.degBound ≤ c.degBound := by
@@ -532,7 +532,7 @@ private lemma statement : ∀ S : InductionObj R n, Statement R₀ R n S := by
         rw [update_apply]
         split_ifs with hlj
         · convert!
-          coeff_modByMonic_mem_pow_natDegree_mul _ _ _ (fun _ ↦ coeff_mem_coeffSubmodule)
+          coeff_modByMonic_mem_pow_natDegree_mul _ _ hi _ (fun _ ↦ coeff_mem_coeffSubmodule)
             one_mem_coeffSubmodule _ (fun _ ↦ coeff_mem_coeffSubmodule) one_mem_coeffSubmodule _
           rw [← pow_succ, Polynomial.degree_eq_natDegree, WithBot.succ_natCast, Nat.cast_id]
           intro e

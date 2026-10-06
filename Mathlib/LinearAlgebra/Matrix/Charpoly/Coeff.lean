@@ -135,6 +135,10 @@ theorem charpoly_monic (M : Matrix n n R) : M.charpoly.Monic := by
   rw [Nat.cast_lt]
   lia
 
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    with_reducible_and_instances apply Matrix.charpoly_monic)
+
 /-- See also `Matrix.coeff_charpolyRev_eq_neg_trace`. -/
 theorem trace_eq_neg_charpoly_coeff [Nonempty n] (M : Matrix n n R) :
     trace M = -M.charpoly.coeff (Fintype.card n - 1) := by
@@ -362,7 +366,7 @@ lemma isNilpotent_charpoly_sub_pow_of_isNilpotent (hM : IsNilpotent M) :
   nontriviality R
   let p : R[X] := M.charpolyRev
   have hp : p - 1 = X * (p /ₘ X) := by
-    conv_lhs => rw [← modByMonic_add_div p X]
+    conv_lhs => rw [← modByMonic_add_div p monic_X]
     simp [p, modByMonic_X]
   have : IsNilpotent (p /ₘ X) :=
     (Polynomial.isUnit_iff'.mp (isUnit_charpolyRev_of_isNilpotent hM)).2
