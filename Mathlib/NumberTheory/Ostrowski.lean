@@ -309,7 +309,7 @@ lemma one_lt_of_not_bounded (notbdd : ¬ ∀ n : ℕ, f n ≤ 1) {n₀ : ℕ} (h
       simp +contextual
     _ ≤ n₀ * (logb n₀ m + 1) := by
       gcongr
-      exact natLog_le_logb ..
+      exact natLog_le_logb hn₀ (Nat.one_le_iff_ne_zero.mp hm)
   -- For h_ineq2 we need to exclude the case n = 0.
   rcases eq_or_ne n 0 with rfl | h₀
   · simp
@@ -364,7 +364,7 @@ private lemma param_upperbound {k : ℕ} (hk : k ≠ 0) :
     _ ≤ ↑m * f ↑m / (f ↑m - 1) * f ↑m ^ logb ↑m ↑n := by
       gcongr
       rw [← rpow_natCast, rpow_le_rpow_left_iff hfm]
-      exact natLog_le_logb n m
+      exact natLog_le_logb hm (Nat.ne_zero_of_lt hn)
   have he := expr_pos hm notbdd
   apply le_of_pow_le_pow_left₀ hk (by positivity)
   nth_rewrite 2 [← rpow_natCast]

@@ -329,13 +329,6 @@ example : @Squarefree ℕ Multiplicative.monoid 1 := by
 
 section NatLog
 
-example : Nat.log 0 0 = 0 := by norm_num1
-example : Nat.log 0 1 = 0 := by norm_num1
-example : Nat.log 0 100 = 0 := by norm_num1
-example : Nat.log 1 0 = 0 := by norm_num1
-example : Nat.log 1 1 = 0 := by norm_num1
-example : Nat.log 1 100 = 0 := by norm_num1
-example : Nat.log 10 0 = 0 := by norm_num1
 example : Nat.log 10 3 = 0 := by norm_num1
 example : Nat.log 2 2 = 1 := by norm_num1
 example : Nat.log 2 256 = 8 := by norm_num1
@@ -344,10 +337,8 @@ example : Nat.log 10 (10 ^ 7 + 2) + Nat.log 2 (2 ^ 30 + 3) = 7 + 30 := by norm_n
 
 example : Nat.clog 0 0 = 0 := by norm_num1
 example : Nat.clog 0 1 = 0 := by norm_num1
-example : Nat.clog 0 100 = 0 := by norm_num1
 example : Nat.clog 1 0 = 0 := by norm_num1
 example : Nat.clog 1 1 = 0 := by norm_num1
-example : Nat.clog 1 100 = 0 := by norm_num1
 example : Nat.clog 10 0 = 0 := by norm_num1
 example : Nat.clog 10 3 = 1 := by norm_num1
 example : Nat.clog 2 2 = 1 := by norm_num1

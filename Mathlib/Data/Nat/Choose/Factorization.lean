@@ -38,9 +38,10 @@ variable {a b c : ℕ}
 /-- **Legendre's Theorem**
 
 The multiplicity of a prime in `n!` is the sum of the quotients `n / p ^ i`. This sum is expressed
-over the finset `Ico 1 b` where `b` is any bound greater than `log p n`. -/
+over the finset `Ico 1 b` where `b` is any exponent with `n < p ^ b`, that is, any bound greater
+than `log p n` for `n ≠ 0`. -/
 theorem factorization_factorial {p : ℕ} (hp : p.Prime) :
-    ∀ {n b : ℕ}, log p n < b → (n)!.factorization p = ∑ i ∈ Ico 1 b, n / p ^ i
+    ∀ {n b : ℕ}, n < p ^ b → (n)!.factorization p = ∑ i ∈ Ico 1 b, n / p ^ i
   | 0, b, _ => by simp
   | n + 1, b, hb =>
     calc
@@ -48,9 +49,8 @@ theorem factorization_factorial {p : ℕ} (hp : p.Prime) :
         rw [factorial_succ, factorization_mul (zero_ne_add_one n).symm n.factorial_ne_zero,
           coe_add, Pi.add_apply]
       _ = #{i ∈ Ico 1 b | p ^ i ∣ n + 1} + ∑ i ∈ Ico 1 b, n / p ^ i := by
-        rw [factorization_factorial hp ((log_mono_right <| le_succ _).trans_lt hb), add_left_inj]
-        apply factorization_eq_card_pow_dvd_of_lt hp (zero_lt_succ n)
-          (lt_pow_of_log_lt hp.one_lt hb)
+        rw [factorization_factorial hp ((le_succ n).trans_lt hb), add_left_inj]
+        exact factorization_eq_card_pow_dvd_of_lt hp (zero_lt_succ n) hb
       _ = ∑ i ∈ Ico 1 b, (n / p ^ i + if p ^ i ∣ n + 1 then 1 else 0) := by
         simp [Nat.add_comm, sum_add_distrib, sum_boole]
       _ = ∑ i ∈ Ico 1 b, (n + 1) / p ^ i := Finset.sum_congr rfl fun _ _ => Nat.succ_div.symm
@@ -59,9 +59,12 @@ theorem factorization_factorial {p : ℕ} (hp : p.Prime) :
 the sum of base `p` digits of `n`. -/
 theorem sub_one_mul_factorization_factorial {n p : ℕ} (hp : p.Prime) :
     (p - 1) * (n)!.factorization p = n - (p.digits n).sum := by
-  simp only [factorization_factorial hp <| lt_succ_of_lt <| Nat.lt_add_one (log p n),
+  rcases eq_or_ne n 0 with rfl | hn
+  · simp
+  simp only [factorization_factorial hp <| (lt_pow_succ_log_self hp.one_lt hn).trans_le <|
+      Nat.pow_le_pow_right hp.pos (le_succ _),
     ← Finset.sum_Ico_add' _ 0 _ 1, Ico_zero_eq_range,
-    ← sub_one_mul_sum_log_div_pow_eq_sub_sum_digits]
+    ← sub_one_mul_sum_log_div_pow_eq_sub_sum_digits hp.one_lt hn]
 
 /-- The factorization of `p` in `(p * (n + 1))!` is one more than the sum of the factorizations of
 `p` in `(p * n)!` and `n + 1`. -/
@@ -93,7 +96,7 @@ theorem factorization_factorial_mul {n p : ℕ} (hp : p.Prime) :
 
 theorem factorization_factorial_le_div_pred {p : ℕ} (hp : p.Prime) (n : ℕ) :
     (n)!.factorization p ≤ (n / (p - 1) : ℕ) := by
-  rw [factorization_factorial hp (Nat.lt_add_one (log p n))]
+  rw [factorization_factorial hp (Nat.lt_pow_self hp.one_lt)]
   exact Nat.geom_sum_Ico_le hp.two_le _ _
 
 lemma multiplicity_choose_aux {p n b k : ℕ} (hp : p.Prime) (hkn : k ≤ n) :
@@ -109,9 +112,9 @@ lemma multiplicity_choose_aux {p n b k : ℕ} (hp : p.Prime) (hkn : k ≤ n) :
     _ = _ := by simp [sum_add_distrib, sum_boole]
 
 /-- The factorization of `p` in `choose (n + k) k` is the number of carries when `k` and `n` are
-added in base `p`. The set is expressed by filtering `Ico 1 b` where `b` is any bound greater
-than `log p (n + k)`. -/
-theorem factorization_choose' {p n k b : ℕ} (hp : p.Prime) (hnb : log p (n + k) < b) :
+added in base `p`. The set is expressed by filtering `Ico 1 b` where `b` is any exponent with
+`n + k < p ^ b`. -/
+theorem factorization_choose' {p n k b : ℕ} (hp : p.Prime) (hnb : n + k < p ^ b) :
     (choose (n + k) k).factorization p = #{i ∈ Ico 1 b | p ^ i ≤ k % p ^ i + n % p ^ i} := by
   have h₁ : (choose (n + k) k).factorization p + (k ! * n !).factorization p
     = #{i ∈ Ico 1 b | p ^ i ≤ k % p ^ i + n % p ^ i} + (k ! * n !).factorization p := by
@@ -119,16 +122,16 @@ theorem factorization_choose' {p n k b : ℕ} (hp : p.Prime) (hnb : log p (n + k
     rw [← Pi.add_apply, ← coe_add, ← factorization_mul (ne_of_gt <| choose_pos (le_add_left k n))
       (by positivity), ← mul_assoc, h2,
       factorization_factorial hp hnb, factorization_mul (factorial_ne_zero k) (factorial_ne_zero n),
-      coe_add, Pi.add_apply, factorization_factorial hp ((log_mono_right (le_add_left k n)).trans_lt
-      hnb), factorization_factorial hp ((log_mono_right (le_add_left n k)).trans_lt
-      (add_comm n k ▸ hnb)), multiplicity_choose_aux hp (le_add_left k n)]
+      coe_add, Pi.add_apply, factorization_factorial hp ((le_add_left k n).trans_lt hnb),
+      factorization_factorial hp ((le_add_right n k).trans_lt hnb),
+      multiplicity_choose_aux hp (le_add_left k n)]
     simp only [add_tsub_cancel_right, add_comm]
   exact Nat.add_right_cancel h₁
 
 /-- The factorization of `p` in `choose n k` is the number of carries when `k` and `n - k`
 are added in base `p`. The set is expressed by filtering `Ico 1 b` where `b`
-is any bound greater than `log p n`. -/
-theorem factorization_choose {p n k b : ℕ} (hp : p.Prime) (hkn : k ≤ n) (hnb : log p n < b) :
+is any exponent with `n < p ^ b`. -/
+theorem factorization_choose {p n k b : ℕ} (hp : p.Prime) (hkn : k ≤ n) (hnb : n < p ^ b) :
     (choose n k).factorization p = #{i ∈ Ico 1 b | p ^ i ≤ k % p ^ i + (n - k) % p ^ i} := by
   rw [← factorization_choose' hp ((Nat.sub_add_cancel hkn).symm ▸ hnb), Nat.sub_add_cancel hkn]
 
@@ -160,8 +163,9 @@ theorem factorization_choose_prime_pow_add_factorization (hp : p.Prime) (hkn : k
   · have hdisj : Disjoint {i ∈ Ico 1 n.succ | p ^ i ≤ k % p ^ i + (p ^ n - k) % p ^ i}
         {i ∈ Ico 1 n.succ | p ^ i ∣ k} := by
       simp +contextual [Finset.disjoint_right, dvd_iff_mod_eq_zero, Nat.mod_lt _ (pow_pos hp.pos _)]
-    rw [factorization_choose hp hkn (lt_succ_self _), factorization_eq_card_pow_dvd_of_lt hp
-      hk0.bot_lt (lt_of_le_of_lt hkn <| Nat.pow_lt_pow_succ hp.one_lt), log_pow hp.one_lt,
+    rw [factorization_choose hp hkn (Nat.pow_lt_pow_succ hp.one_lt),
+      factorization_eq_card_pow_dvd_of_lt hp hk0.bot_lt
+        (lt_of_le_of_lt hkn <| Nat.pow_lt_pow_succ hp.one_lt),
       ← card_union_of_disjoint hdisj, filter_union_right]
     have filter_le_Ico := (Ico 1 n.succ).card_filter_le
       fun x => p ^ x ≤ k % p ^ x + (p ^ n - k) % p ^ x ∨ p ^ x ∣ k
@@ -182,26 +186,33 @@ namespace Nat
 variable {p n k : ℕ}
 
 /-- A logarithmic upper bound on the multiplicity of a prime in a binomial coefficient. -/
-theorem factorization_choose_le_log : (choose n k).factorization p ≤ log p n := by
+theorem factorization_choose_le_log (hp : 1 < p) (hn : n ≠ 0) :
+    (choose n k).factorization p ≤ log p n := by
   by_cases h : (choose n k).factorization p = 0
   · simp [h]
-  have hp : p.Prime := Not.imp_symm (choose n k).factorization_eq_zero_of_not_prime h
+  have hp' : p.Prime := Not.imp_symm (choose n k).factorization_eq_zero_of_not_prime h
   have hkn : k ≤ n := by
     refine le_of_not_gt fun hnk => h ?_
     simp [choose_eq_zero_of_lt hnk]
-  rw [factorization_choose hp hkn (Nat.lt_add_one _)]
+  rw [factorization_choose hp' hkn (lt_pow_succ_log_self hp hn)]
   exact (card_filter_le ..).trans_eq (Nat.card_Ico _ _)
 
 /-- A `pow` form of `Nat.factorization_choose_le` -/
-theorem pow_factorization_choose_le (hn : 0 < n) : p ^ (choose n k).factorization p ≤ n :=
-  pow_le_of_le_log hn.ne' factorization_choose_le_log
+theorem pow_factorization_choose_le (hn : 0 < n) : p ^ (choose n k).factorization p ≤ n := by
+  rcases le_or_gt p 1 with hp | hp
+  · exact (pow_le_one₀ (Nat.zero_le _) hp).trans hn
+  · exact pow_le_of_le_log (factorization_choose_le_log hp hn.ne')
 
 /-- Primes greater than about `sqrt n` appear only to multiplicity 0 or 1
 in the binomial coefficient. -/
 theorem factorization_choose_le_one (p_large : n < p ^ 2) : (choose n k).factorization p ≤ 1 := by
-  apply factorization_choose_le_log.trans
-  rcases eq_or_ne n 0 with (rfl | hn0); · simp
-  exact Nat.lt_succ_iff.1 (log_lt_of_lt_pow hn0 p_large)
+  rcases eq_or_ne n 0 with (rfl | hn0)
+  · rcases k with _ | k <;> simp
+  rcases le_or_gt p 1 with hp | hp
+  · have : p ^ 2 ≤ 1 := pow_le_one₀ (Nat.zero_le _) hp
+    lia
+  exact (factorization_choose_le_log hp hn0).trans
+    (Nat.lt_succ_iff.1 (log_lt_of_lt_pow hp hn0 p_large))
 
 theorem factorization_choose_of_lt_three_mul (hp' : p ≠ 2) (hk : p ≤ k) (hk' : p ≤ n - k)
     (hn : n < 3 * p) : (choose n k).factorization p = 0 := by
@@ -209,8 +220,8 @@ theorem factorization_choose_of_lt_three_mul (hp' : p ≠ 2) (hk : p ≤ k) (hk'
   · exact factorization_eq_zero_of_not_prime (choose n k) hp
   rcases lt_or_ge n k with hnk | hkn
   · simp [choose_eq_zero_of_lt hnk]
-  simp only [factorization_choose hp hkn (Nat.lt_add_one _), card_eq_zero, filter_eq_empty_iff,
-    mem_Ico, not_le, and_imp]
+  simp only [factorization_choose hp hkn (lt_pow_succ_log_self hp.one_lt (by lia)), card_eq_zero,
+    filter_eq_empty_iff, mem_Ico, not_le, and_imp]
   intro i hi₁ hi
   rcases eq_or_lt_of_le hi₁ with (rfl | hi)
   · rw [pow_one, ← add_lt_add_iff_left (2 * p), ← succ_mul, two_mul, add_add_add_comm]
