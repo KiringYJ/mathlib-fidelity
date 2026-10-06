@@ -268,13 +268,16 @@ operation.
   `coeff_natTrailingDegree_eq_zero` are removed, and `natTrailingDegree_eq_zero` and
   `natTrailingDegree_ne_zero` no longer carry the disjunct `p = 0`.  `trailingCoeff`, `nextCoeffUp`,
   and `Polynomial.mirror` stay total with value `0` at `0`, where every coefficient is `0`;
-  `trailingCoeff_of_ne_zero` and `mirror_of_ne_zero` unfold them.  `LinearMap.nilRank`,
-  `LinearMap.IsNilRegular`, `LieModule.rank`, and `LieModule.IsRegular` require a nontrivial base
-  ring, as their docstrings already assumed, since the characteristic polynomial over the zero ring
-  is `0`.  `rootMultiplicity_eq_natTrailingDegree` takes `p ≠ 0` (see "Exclude the zero polynomial
-  from finite root multisets and multiplicities"), and `isUnitTrinomial_iff'` states that
-  `p * p.mirror` is nonzero.  Tests cover the removed name, the default proof, and the total
-  invariants at `0`.
+  `trailingCoeff_of_ne_zero`, `nextCoeffUp_of_ne_zero`, and `mirror_of_ne_zero` unfold them.
+  `nextCoeffUp p` is the coefficient of `X ^ (natTrailingDegree p + 1)` for every nonzero `p`: its
+  former guard `natTrailingDegree p = 0`, which mirrored the guard of `nextCoeff` for constants,
+  also gave `0` for nonconstant polynomials with a nonzero constant coefficient, such as `1 + X`.
+  `LinearMap.nilRank`, `LinearMap.IsNilRegular`, `LieModule.rank`, and `LieModule.IsRegular` require
+  a nontrivial base ring, as their docstrings already assumed, since the characteristic polynomial
+  over the zero ring is `0`.  `rootMultiplicity_eq_natTrailingDegree` takes `p ≠ 0` (see "Exclude
+  the zero polynomial from finite root multisets and multiplicities"), and `isUnitTrinomial_iff'`
+  states that `p * p.mirror` is nonzero.  Tests cover the removed name, the default proof, and the
+  total invariants at `0`.
 
 - [ ] **Audit constructions that feed `natDegree` of a possibly zero polynomial into a formula.**
   `natDegree` is the supremum of the support, so its value at `0` is not a fallback, but several

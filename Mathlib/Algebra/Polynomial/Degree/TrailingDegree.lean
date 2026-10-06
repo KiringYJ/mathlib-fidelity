@@ -408,22 +408,23 @@ section Semiring
 variable [Semiring R]
 
 open scoped Classical in
-/-- The coefficient of `X ^ (natTrailingDegree p + 1)`, or `0` if the constant coefficient of `p` is
-nonzero or `p = 0`. -/
+/-- The coefficient right above the trailing one, that is, of `X ^ (natTrailingDegree p + 1)`; it
+is `0` for constants and for `p = 0`. -/
 def nextCoeffUp (p : R[X]) : R :=
-  if hp : p = 0 then 0
-  else if p.natTrailingDegree hp = 0 then 0 else p.coeff (p.natTrailingDegree hp + 1)
+  if hp : p = 0 then 0 else p.coeff (p.natTrailingDegree hp + 1)
 
 @[simp] lemma nextCoeffUp_zero : nextCoeffUp (0 : R[X]) = 0 := by simp [nextCoeffUp]
 
+theorem nextCoeffUp_of_ne_zero {p : R[X]} (hp : p ≠ 0) :
+    nextCoeffUp p = p.coeff (p.natTrailingDegree + 1) := by
+  simp [nextCoeffUp, hp]
+
 @[simp]
 theorem nextCoeffUp_C_eq_zero (c : R) : nextCoeffUp (C c) = 0 := by
-  rw [nextCoeffUp]
+  rcases eq_or_ne (C c) 0 with h | h
+  · rw [h, nextCoeffUp_zero]
+  rw [nextCoeffUp_of_ne_zero h, natTrailingDegree_C, coeff_C]
   simp
-
-theorem nextCoeffUp_of_constantCoeff_eq_zero (p : R[X]) (hp₀ : p ≠ 0) (hp : coeff p 0 = 0) :
-    nextCoeffUp p = p.coeff (p.natTrailingDegree + 1) := by
-  rw [nextCoeffUp, dite_eq_right hp₀, ite_eq_right (natTrailingDegree_ne_zero.2 hp)]
 
 end Semiring
 
