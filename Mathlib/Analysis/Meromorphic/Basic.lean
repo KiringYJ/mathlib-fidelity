@@ -445,14 +445,15 @@ lemma MeromorphicAt.comp_analyticAt {f : 𝕜' → F} {g : 𝕜 → 𝕜'}
     (hf : MeromorphicAt f (g x)) (hg : AnalyticAt 𝕜 g x) :
     MeromorphicAt (f ∘ g) x := by
   obtain ⟨r, hr⟩ := hf
-  by_cases hg' : analyticOrderAt (g · - g x) x = ⊤
+  have hg₀ : AnalyticAt 𝕜 (g · - g x) x := hg.fun_sub analyticAt_const
+  by_cases hg' : analyticOrderAt (g · - g x) x hg₀ = ⊤
   · -- trivial case: `g` is locally constant near `x`
     refine .congr (.const (f (g x)) x) ?_
-    filter_upwards [nhdsWithin_le_nhds <| analyticOrderAt_eq_top.mp hg'] with z hz
+    filter_upwards [nhdsWithin_le_nhds <| (analyticOrderAt_eq_top hg₀).mp hg'] with z hz
     grind
   · -- interesting case: `g z - g x` looks like `(z - x) ^ n` times a non-vanishing function
     obtain ⟨n, hn⟩ := WithTop.ne_top_iff_exists.mp hg'
-    obtain ⟨h, han, hne, heq⟩ := (hg.fun_sub analyticAt_const).analyticOrderAt_eq_natCast.mp hn.symm
+    obtain ⟨h, han, hne, heq⟩ := hg₀.analyticOrderAt_eq_natCast.mp hn.symm
     set j := fun z ↦ (z - g x) ^ r • f z
     have : AnalyticAt 𝕜 (fun i ↦ (h i)⁻¹ ^ r • j (g i)) x :=
       ((han.inv hne).pow r).smul (hr.restrictScalars.comp hg)
@@ -499,6 +500,16 @@ def MeromorphicOn (f : 𝕜 → E) (U : Set 𝕜) : Prop := ∀ x ∈ U, Meromor
 lemma AnalyticOnNhd.meromorphicOn {f : 𝕜 → E} {U : Set 𝕜} (hf : AnalyticOnNhd 𝕜 f U) :
     MeromorphicOn f U :=
   fun x hx ↦ (hf x hx).meromorphicAt
+
+/-- A function that is meromorphic on `U` is meromorphic at each point of `U`.
+
+This is a transition lemma for `fun_prop`: from `MeromorphicOn f U` and `x ∈ U` in the local
+context, it lets `fun_prop` prove `MeromorphicAt f x`, which is the default argument of
+`meromorphicOrderAt f x`. -/
+@[fun_prop]
+lemma MeromorphicOn.meromorphicAt {f : 𝕜 → E} {U : Set 𝕜} {x : 𝕜} (hf : MeromorphicOn f U)
+    (hx : x ∈ U) : MeromorphicAt f x :=
+  hf x hx
 
 namespace MeromorphicOn
 

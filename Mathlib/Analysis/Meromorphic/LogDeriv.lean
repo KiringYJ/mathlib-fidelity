@@ -36,7 +36,8 @@ derivatives.
 -/
 @[to_fun MeromorphicOn.logDeriv_fun_mul_eventuallyEq]
 theorem MeromorphicOn.logDeriv_mul_eventuallyEq (hf : MeromorphicOn f U) (hg : MeromorphicOn g U)
-    (h'f : ∀ x ∈ U, meromorphicOrderAt f x ≠ ⊤) (h'g : ∀ x ∈ U, meromorphicOrderAt g x ≠ ⊤) :
+    (h'f : ∀ x (hx : x ∈ U), meromorphicOrderAt f x (hf x hx) ≠ ⊤)
+    (h'g : ∀ x (hx : x ∈ U), meromorphicOrderAt g x (hg x hx) ≠ ⊤) :
     logDeriv (f * g) =ᶠ[codiscreteWithin U] logDeriv f + logDeriv g := by
   filter_upwards [hf.analyticAt_mem_codiscreteWithin, hg.analyticAt_mem_codiscreteWithin,
     hf.eventually_codiscreteWithin_apply_ne_zero h'f,
@@ -65,7 +66,7 @@ derivatives.
 @[to_fun MeromorphicOn.logDeriv_fun_prod_eventuallyEq]
 theorem MeromorphicOn.logDeriv_prod_eventuallyEq {ι : Type*} {s : Finset ι} {F : ι → 𝕜 → 𝕜'}
     (h : ∀ i ∈ s, MeromorphicOn (F i) U)
-    (h' : ∀ i ∈ s, ∀ x ∈ U, meromorphicOrderAt (F i) x ≠ ⊤) :
+    (h' : ∀ i (hi : i ∈ s) x (hx : x ∈ U), meromorphicOrderAt (F i) x (h i hi x hx) ≠ ⊤) :
     logDeriv (∏ i ∈ s, F i) =ᶠ[codiscreteWithin U] ∑ i ∈ s, logDeriv (F i) := by
   have hA : ∀ᶠ y in codiscreteWithin U, ∀ i ∈ s, AnalyticAt 𝕜 (F i) y :=
     (eventually_all_finset s).2 fun i hi ↦ (h i hi).analyticAt_mem_codiscreteWithin
@@ -83,10 +84,11 @@ derivatives.
 -/
 @[to_fun Meromorphic.logDeriv_fun_prod_eventuallyEq]
 theorem Meromorphic.logDeriv_prod_eventuallyEq {ι : Type*} {s : Finset ι} {F : ι → 𝕜 → 𝕜'}
-    (h : ∀ i ∈ s, Meromorphic (F i)) (h' : ∀ i ∈ s, ∀ x, meromorphicOrderAt (F i) x ≠ ⊤) :
-    logDeriv (∏ i ∈ s, F i) =ᶠ[codiscrete 𝕜] ∑ i ∈ s, logDeriv (F i) := by
-  apply MeromorphicOn.logDeriv_prod_eventuallyEq (fun i hi ↦ meromorphicOn_univ.mpr (h i hi))
-  aesop
+    (h : ∀ i ∈ s, Meromorphic (F i))
+    (h' : ∀ i (hi : i ∈ s) x, meromorphicOrderAt (F i) x (h i hi x) ≠ ⊤) :
+    logDeriv (∏ i ∈ s, F i) =ᶠ[codiscrete 𝕜] ∑ i ∈ s, logDeriv (F i) :=
+  MeromorphicOn.logDeriv_prod_eventuallyEq (fun i hi ↦ meromorphicOn_univ.mpr (h i hi))
+    fun i hi x _ ↦ h' i hi x
 
 /--
 The logarithmic derivative converts products into sums: away from a codiscrete subset of `U`, the
@@ -95,7 +97,7 @@ derivatives.
 -/
 theorem MeromorphicOn.logDeriv_finprod_eventuallyEq {ι : Type*} {F : ι → 𝕜 → 𝕜'}
     (hF : (mulSupport F).Finite) (h : ∀ i, MeromorphicOn (F i) U)
-    (h' : ∀ i, ∀ x ∈ U, meromorphicOrderAt (F i) x ≠ ⊤) :
+    (h' : ∀ i x (hx : x ∈ U), meromorphicOrderAt (F i) x (h i x hx) ≠ ⊤) :
     logDeriv (∏ᶠ i, F i) =ᶠ[codiscreteWithin U] ∑ᶠ i, logDeriv (F i) := by
   have hsub : support (fun i ↦ logDeriv (F i)) ⊆ hF.toFinset := by
     simp +contextual [Set.subset_def, not_imp_not, Pi.one_def]
@@ -111,9 +113,9 @@ derivatives.
 theorem Meromorphic.logDeriv_finprod_eventuallyEq {ι : Type*} {F : ι → 𝕜 → 𝕜'}
     (hF : (mulSupport F).Finite) (h : ∀ i, Meromorphic (F i))
     (h' : ∀ i x, meromorphicOrderAt (F i) x ≠ ⊤) :
-    logDeriv (∏ᶠ i, F i) =ᶠ[codiscrete 𝕜] ∑ᶠ i, logDeriv (F i) := by
-  apply MeromorphicOn.logDeriv_finprod_eventuallyEq hF (fun i ↦ meromorphicOn_univ.mpr (h i))
-  aesop
+    logDeriv (∏ᶠ i, F i) =ᶠ[codiscrete 𝕜] ∑ᶠ i, logDeriv (F i) :=
+  MeromorphicOn.logDeriv_finprod_eventuallyEq hF (fun i ↦ meromorphicOn_univ.mpr (h i))
+    fun i x _ ↦ h' i x
 
 /--
 Away from a codiscrete subset of `U`, the logarithmic derivative of the `n`-th power of a
@@ -144,7 +146,7 @@ differentiated Poisson–Jensen formula, where the exponents are given by a divi
 -/
 theorem MeromorphicOn.logDeriv_finprod_zpow_eventuallyEq {ι : Type*} {F : ι → 𝕜 → 𝕜'} {d : ι → ℤ}
     (hd : (support d).Finite) (h : ∀ i, MeromorphicOn (F i) U)
-    (h' : ∀ i, ∀ x ∈ U, meromorphicOrderAt (F i) x ≠ ⊤) :
+    (h' : ∀ i x (hx : x ∈ U), meromorphicOrderAt (F i) x (h i x hx) ≠ ⊤) :
     logDeriv (∏ᶠ i, F i ^ d i)
       =ᶠ[codiscreteWithin U] fun z ↦ ∑ᶠ i, d i • logDeriv (F i) z := by
   have hA : ∀ᶠ y in codiscreteWithin U, ∀ i ∈ hd.toFinset, AnalyticAt 𝕜 (F i) y :=
@@ -178,6 +180,6 @@ theorem Meromorphic.logDeriv_finprod_zpow_eventuallyEq {ι : Type*} {F : ι → 
     (hd : (support d).Finite) (h : ∀ i, Meromorphic (F i))
     (h' : ∀ i x, meromorphicOrderAt (F i) x ≠ ⊤) :
     logDeriv (∏ᶠ i, F i ^ d i)
-      =ᶠ[codiscrete 𝕜] fun z ↦ ∑ᶠ i, d i • logDeriv (F i) z := by
-  apply MeromorphicOn.logDeriv_finprod_zpow_eventuallyEq hd (fun i ↦ meromorphicOn_univ.mpr (h i))
-  aesop
+      =ᶠ[codiscrete 𝕜] fun z ↦ ∑ᶠ i, d i • logDeriv (F i) z :=
+  MeromorphicOn.logDeriv_finprod_zpow_eventuallyEq hd (fun i ↦ meromorphicOn_univ.mpr (h i))
+    fun i x _ ↦ h' i x

@@ -58,14 +58,14 @@ at `x` and takes the default value `0`.
 -/
 theorem meromorphicNFAt_iff_analyticAt_or :
     MeromorphicNFAt f x ↔
-      AnalyticAt 𝕜 f x ∨ (MeromorphicAt f x ∧ meromorphicOrderAt f x < 0 ∧ f x = 0) := by
+      AnalyticAt 𝕜 f x ∨ ∃ hf : MeromorphicAt f x, meromorphicOrderAt f x hf < 0 ∧ f x = 0 := by
   constructor
   · rintro (h | ⟨n, g, h₁g, h₂g, h₃g⟩)
     · simp [(analyticAt_congr h).2 analyticAt_const]
     · have hf : MeromorphicAt f x := by
         apply MeromorphicAt.congr _ (h₃g.filter_mono nhdsWithin_le_nhds).symm
         fun_prop
-      have : meromorphicOrderAt f x = n := by
+      have : meromorphicOrderAt f x hf = n := by
         rw [meromorphicOrderAt_eq_int_iff hf]
         use g, h₁g, h₂g
         exact eventually_nhdsWithin_of_eventually_nhds h₃g
@@ -78,18 +78,16 @@ theorem meromorphicNFAt_iff_analyticAt_or :
         simp [this, WithTop.coe_lt_zero.2 hn, h₃g.eq_of_nhds,
           zero_zpow n hn.ne]
   · rintro (h | ⟨h₁, h₂, h₃⟩)
-    · by_cases h₂f : analyticOrderAt f x = ⊤
-      · rw [analyticOrderAt_eq_top] at h₂f
+    · by_cases h₂f : analyticOrderAt f x h = ⊤
+      · rw [analyticOrderAt_eq_top h] at h₂f
         tauto
       · right
-        use analyticOrderNatAt f x
-        have : analyticOrderAt f x ≠ ⊤ := h₂f
-        rw [← ENat.natCast_toNat_eq_self, eq_comm, h.analyticOrderAt_eq_natCast] at this
-        obtain ⟨g, h₁g, h₂g, h₃g⟩ := this
-        use g, h₁g, h₂g
-        simpa
+        obtain ⟨n, g, -, h₁g, h₂g, h₃g⟩ := h.analyticOrderAt_ne_top.1 h₂f
+        use n, g, h₁g, h₂g
+        filter_upwards [h₃g] with z hz
+        simp [hz]
     · right
-      lift meromorphicOrderAt f x to ℤ using LT.lt.ne_top h₂ with n hn
+      lift meromorphicOrderAt f x h₁ to ℤ using LT.lt.ne_top h₂ with n hn
       obtain ⟨g, h₁g, h₂g, h₃g⟩ := (meromorphicOrderAt_eq_int_iff h₁).1 hn.symm
       use n, g, h₁g, h₂g
       filter_upwards [eventually_nhdsWithin_iff.1 h₃g]
@@ -191,8 +189,8 @@ theorem MeromorphicNFAt.eventuallyEq_nhdsNE_iff_eventuallyEq_nhds {g : 𝕜 → 
     f =ᶠ[𝓝[≠] x] g ↔ f =ᶠ[𝓝 x] g := by
   constructor
   · intro h
-    have t₀ := meromorphicOrderAt_congr h
-    by_cases cs : meromorphicOrderAt f x = 0
+    have t₀ := meromorphicOrderAt_congr hf.meromorphicAt h
+    by_cases cs : meromorphicOrderAt f x hf.meromorphicAt = 0
     · rw [cs] at t₀
       have Z := (hf.meromorphicOrderAt_nonneg_iff_analyticAt.1 (le_of_eq cs.symm)).continuousAt
       have W := (hg.meromorphicOrderAt_nonneg_iff_analyticAt.1 (le_of_eq t₀)).continuousAt
@@ -433,9 +431,12 @@ composition with an analytic function of nonvanishing derivative, such as transl
 theorem meromorphicNFAt_comp_iff_of_deriv_ne_zero [CompleteSpace 𝕜] [CharZero 𝕜] {x : 𝕜}
     {g : 𝕜 → 𝕜} (hg : AnalyticAt 𝕜 g x) (hg' : deriv g x ≠ 0) :
     MeromorphicNFAt (f ∘ g) x ↔ MeromorphicNFAt f (g x) := by
-  simp [meromorphicNFAt_iff_analyticAt_or, analyticAt_comp_iff_of_deriv_ne_zero hg hg',
-    meromorphicAt_comp_iff_of_deriv_ne_zero hg hg',
-    meromorphicOrderAt_comp_of_deriv_ne_zero hg hg']
+  rw [meromorphicNFAt_iff_analyticAt_or, meromorphicNFAt_iff_analyticAt_or,
+    analyticAt_comp_iff_of_deriv_ne_zero hg hg']
+  refine or_congr_right ⟨fun ⟨hfg, h₁, h₂⟩ ↦ ?_, fun ⟨hf, h₁, h₂⟩ ↦ ?_⟩
+  · have hf := (meromorphicAt_comp_iff_of_deriv_ne_zero hg hg').1 hfg
+    exact ⟨hf, by rwa [← meromorphicOrderAt_comp_of_deriv_ne_zero hf hg hg'], h₂⟩
+  · exact ⟨hf.comp_analyticAt hg, by rwa [meromorphicOrderAt_comp_of_deriv_ne_zero hf hg hg'], h₂⟩
 
 /-- `MeromorphicNFAt` is invariant under translation. -/
 @[to_fun meromorphicNFAt_fun_comp_add_const_iff_meromorphicNFAt]
@@ -465,7 +466,7 @@ noncomputable def toMeromorphicNFAt :
   by_cases hf : MeromorphicAt f x
   · classical -- do not complain about decidability issues in Function.update
     apply Function.update f x
-    by_cases h₁f : meromorphicOrderAt f x = (0 : ℤ)
+    by_cases h₁f : meromorphicOrderAt f x hf = (0 : ℤ)
     · rw [meromorphicOrderAt_eq_int_iff hf] at h₁f
       exact (Classical.choose h₁f) x
     · exact 0
@@ -481,9 +482,9 @@ lemma MeromorphicAt.eqOn_compl_singleton_toMeromorphicNFAt (hf : MeromorphicAt f
     toMeromorphicNFAt f x = 0 := by
   simp [toMeromorphicNFAt, hf]
 
-@[simp] lemma toMeromorphicNFAt_of_meromorphicOrderAt_ne_zero
-    (horder : meromorphicOrderAt f x ≠ 0) : toMeromorphicNFAt f x x = 0 := by
-  simp [toMeromorphicNFAt, meromorphicAt_of_meromorphicOrderAt_ne_zero, horder]
+@[simp] lemma toMeromorphicNFAt_of_meromorphicOrderAt_ne_zero (hf : MeromorphicAt f x)
+    (horder : meromorphicOrderAt f x hf ≠ 0) : toMeromorphicNFAt f x x = 0 := by
+  simp [toMeromorphicNFAt, hf, horder]
 
 /-- Conversion to normal form at `x` changes the value only at x. -/
 lemma MeromorphicAt.eq_nhdsNE_toMeromorphicNFAt (hf : MeromorphicAt f x) :
@@ -494,15 +495,15 @@ lemma MeromorphicAt.eq_nhdsNE_toMeromorphicNFAt (hf : MeromorphicAt f x) :
 theorem meromorphicNFAt_toMeromorphicNFAt :
     MeromorphicNFAt (toMeromorphicNFAt f x) x := by
   by_cases hf : MeromorphicAt f x
-  · by_cases h₂f : meromorphicOrderAt f x = ⊤
+  · by_cases h₂f : meromorphicOrderAt f x hf = ⊤
     · have : toMeromorphicNFAt f x =ᶠ[𝓝 x] 0 := by
         apply eventuallyEq_nhds_of_eventuallyEq_nhdsNE
-        · exact hf.eq_nhdsNE_toMeromorphicNFAt.symm.trans (meromorphicOrderAt_eq_top_iff.1 h₂f)
+        · exact hf.eq_nhdsNE_toMeromorphicNFAt.symm.trans ((meromorphicOrderAt_eq_top_iff hf).1 h₂f)
         · simp [h₂f, toMeromorphicNFAt, hf]
       apply AnalyticAt.meromorphicNFAt
       rw [analyticAt_congr this]
       exact analyticAt_const
-    · lift meromorphicOrderAt f x to ℤ using h₂f with n hn
+    · lift meromorphicOrderAt f x hf to ℤ using h₂f with n hn
       obtain ⟨g, h₁g, h₂g, h₃g⟩ := (meromorphicOrderAt_eq_int_iff hf).1 hn.symm
       right
       use n, g, h₁g, h₂g
@@ -520,19 +521,24 @@ theorem meromorphicNFAt_toMeromorphicNFAt :
   · simp only [toMeromorphicNFAt, hf, ↓reduceDIte]
     exact analyticAt_const.meromorphicNFAt
 
+/-- After conversion to normal form at `x`, the function is meromorphic at `x`. -/
+@[fun_prop]
+lemma meromorphicAt_toMeromorphicNFAt : MeromorphicAt (toMeromorphicNFAt f x) x :=
+  meromorphicNFAt_toMeromorphicNFAt.meromorphicAt
+
 @[simp]
 lemma MeromorphicAt.meromorphicOrderAt_toMeromorphicNFAt (hf : MeromorphicAt f x) :
-    meromorphicOrderAt (toMeromorphicNFAt f x) x = meromorphicOrderAt f x :=
-  (meromorphicOrderAt_congr hf.eq_nhdsNE_toMeromorphicNFAt).symm
+    meromorphicOrderAt (toMeromorphicNFAt f x) x = meromorphicOrderAt f x hf :=
+  (meromorphicOrderAt_congr hf hf.eq_nhdsNE_toMeromorphicNFAt).symm
 
 lemma MeromorphicAt.meromorphicOrderAt_eq_zero_iff_toMeromorphicNFAt_ne_zero
     (hf : MeromorphicAt f x) :
-    meromorphicOrderAt f x = 0 ↔ toMeromorphicNFAt f x x ≠ 0 := by
+    meromorphicOrderAt f x hf = 0 ↔ toMeromorphicNFAt f x x ≠ 0 := by
   simp [← meromorphicNFAt_toMeromorphicNFAt.meromorphicOrderAt_eq_zero_iff, hf]
 
 lemma MeromorphicAt.meromorphicOrderAt_nonneg_iff_analyticAt_toMeromorphicNFAt
     (hf : MeromorphicAt f x) :
-    0 ≤ meromorphicOrderAt f x ↔ AnalyticAt 𝕜 (toMeromorphicNFAt f x) x := by
+    0 ≤ meromorphicOrderAt f x hf ↔ AnalyticAt 𝕜 (toMeromorphicNFAt f x) x := by
   simp [← meromorphicNFAt_toMeromorphicNFAt.meromorphicOrderAt_nonneg_iff_analyticAt, hf]
 
 @[gcongr]
@@ -566,15 +572,15 @@ lemma MeromorphicAt.toMeromorphicNFAt_eventuallyEq_nhds_iff {f g : 𝕜 → E} (
       simp only [toMeromorphicNFAt, hf.meromorphicAt, WithTop.coe_zero, ne_eq]
       have h₀f := hf
       rcases hf with h₁f | h₁f
-      · simpa [meromorphicOrderAt_eq_top_iff.2 (h₁f.filter_mono nhdsWithin_le_nhds)]
-          using h₁f.eq_of_nhds.symm
+      · simpa [(meromorphicOrderAt_eq_top_iff h₀f.meromorphicAt).2
+          (h₁f.filter_mono nhdsWithin_le_nhds)] using h₁f.eq_of_nhds.symm
       · obtain ⟨n, g, h₁g, h₂g, h₃g⟩ := h₁f
         rw [Filter.EventuallyEq.eq_of_nhds h₃g]
-        have : meromorphicOrderAt f x = n := by
+        have : meromorphicOrderAt f x h₀f.meromorphicAt = n := by
           rw [meromorphicOrderAt_eq_int_iff h₀f.meromorphicAt]
           use g, h₁g, h₂g
           exact eventually_nhdsWithin_of_eventually_nhds h₃g
-        by_cases h₃f : meromorphicOrderAt f x = 0
+        by_cases h₃f : meromorphicOrderAt f x h₀f.meromorphicAt = 0
         · simp only [Pi.smul_apply', Pi.pow_apply, sub_self, h₃f, ↓reduceDIte]
           have hn : n = (0 : ℤ) := by
             rw [h₃f] at this
@@ -651,7 +657,7 @@ If `f` is meromorphic in normal form on `U` and nowhere locally constant zero, t
 equals the support of the associated divisor.
 -/
 theorem MeromorphicNFOn.zero_set_eq_divisor_support (h₁f : MeromorphicNFOn f U)
-    (h₂f : ∀ u : U, meromorphicOrderAt f u ≠ ⊤) :
+    (h₂f : ∀ u : U, meromorphicOrderAt f u.1 (h₁f u.2).meromorphicAt ≠ ⊤) :
     U ∩ f ⁻¹' {0} = Function.support (MeromorphicOn.divisor f U) := by
   ext u
   constructor <;> intro hu
@@ -891,9 +897,10 @@ theorem meromorphicNFOn_toMeromorphicNFOn :
 
 /-- Conversion of normal form does not affect orders. -/
 @[simp] theorem meromorphicOrderAt_toMeromorphicNFOn (hf : MeromorphicOn f U) (hx : x ∈ U) :
-    meromorphicOrderAt (toMeromorphicNFOn f U) x = meromorphicOrderAt f x := by
-  apply meromorphicOrderAt_congr
-  exact hf.toMeromorphicNFOn_eq_self_on_nhdsNE hx
+    meromorphicOrderAt (toMeromorphicNFOn f U) x
+        ((meromorphicNFOn_toMeromorphicNFOn f U).meromorphicOn x hx) =
+      meromorphicOrderAt f x (hf x hx) :=
+  meromorphicOrderAt_congr _ (hf.toMeromorphicNFOn_eq_self_on_nhdsNE hx)
 
 /-- Conversion of normal form does not affect divisors. -/
 @[simp] theorem MeromorphicOn.divisor_of_toMeromorphicNFOn (hf : MeromorphicOn f U) :

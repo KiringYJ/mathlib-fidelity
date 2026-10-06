@@ -313,7 +313,7 @@ poles in the interior of the disk.
 -/
 theorem _root_.MeromorphicOn.exists_canonicalDecomp
     (h₁f : MeromorphicOn f (closedBall 0 R))
-    (h₂f : ∀ u : (closedBall (0 : ℂ) R), meromorphicOrderAt f u ≠ ⊤) :
+    (h₂f : ∀ u : (closedBall (0 : ℂ) R), meromorphicOrderAt f u.1 (h₁f u.1 u.2) ≠ ⊤) :
     ∃ g : ℂ → E, CanonicalDecomp f g R := by
   -- Trivial case: If `R` is non-positive, then the ball is empty.
   by_cases hR : R ≤ 0
@@ -342,13 +342,13 @@ theorem _root_.MeromorphicOn.exists_canonicalDecomp
         (fun z _ ↦ canonicalDecomposition_aux₃ hR)
         (fun z hz ↦ h₂f ⟨z, ball_subset_closedBall hz⟩),
       canonicalDecomposition_aux₂ h₁f, neg_add_cancel]
-    apply (canonicalDecomposition_aux₁ _).meromorphicOn
   have h₂g : MeromorphicNFOn g (closedBall 0 R) :=
     meromorphicNFOn_toMeromorphicNFOn φ (closedBall 0 R)
-  have h₄g {z : ℂ} (hz : z ∈ closedBall 0 R) : meromorphicOrderAt g z ≠ ⊤ := by
-    rw [meromorphicOrderAt_toMeromorphicNFOn hφ hz, meromorphicOrderAt_smul _ (h₁f z hz)]
-    · simpa [h₂f ⟨z, hz⟩] using canonicalDecomposition_aux₃ hR
-    · apply MeromorphicAt.finprod (fun x ↦ (meromorphic_canonicalFactor R x z).zpow _)
+  have h₄g {z : ℂ} (hz : z ∈ closedBall 0 R) :
+      meromorphicOrderAt g z (h₂g hz).meromorphicAt ≠ ⊤ := by
+    rw [meromorphicOrderAt_toMeromorphicNFOn hφ hz, meromorphicOrderAt_smul
+      (MeromorphicAt.finprod fun x ↦ (meromorphic_canonicalFactor R x z).zpow _) (h₁f z hz)]
+    simpa [h₂f ⟨z, hz⟩] using canonicalDecomposition_aux₃ hR
   -- Use the function `g` defined above and establish the required properties
   use g
   have η₀ : (-divisor f (ball 0 R)).support.Finite := by simp [h₁f.divisor_ball_support_finite]
@@ -421,9 +421,10 @@ theorem CanonicalDecomp.divisor_eq_divisor {x : ℂ} (D : CanonicalDecomp f g R)
       · exact zpow_ne_zero _ (canonicalFactor_ne_zero ha (by aesop) (by aesop))
       · simp_all
     rw [divisor_apply (D.meromorphicOn.mono_set sphere_subset_closedBall) (by aesop),
-      divisor_apply D.meromorphicNFOn.meromorphicOn (by aesop), meromorphicOrderAt_congr η₀,
-      meromorphicOrderAt_smul η₁.meromorphicAt (D.meromorphicNFOn (by aesop)).meromorphicAt]
-    simp_all
+      divisor_apply D.meromorphicNFOn.meromorphicOn (by aesop),
+      meromorphicOrderAt_congr (D.meromorphicOn x (by aesop)) η₀,
+      meromorphicOrderAt_smul η₁.meromorphicAt (D.meromorphicNFOn (by aesop)).meromorphicAt,
+      this, zero_add]
   · -- Trivial case: `x` is outside `closedBall 0 R`, so both divisors evaluate to zero.
     have : x ∉ sphere (0 : ℂ) R := by aesop
     simp_all
@@ -467,12 +468,12 @@ factors and meromorphic functions of the form `(x - const) ^ n` where `const` is
 circumference of the disk.
 -/
 theorem _root_.MeromorphicOn.exists_ecanonicalDecomp (h₁f : MeromorphicOn f (closedBall 0 R))
-    (h₂f : ∀ u : (closedBall (0 : ℂ) R), meromorphicOrderAt f u ≠ ⊤) :
+    (h₂f : ∀ u : (closedBall (0 : ℂ) R), meromorphicOrderAt f u.1 (h₁f u.1 u.2) ≠ ⊤) :
     ∃ h, ECanonicalDecomp f h R := by
   rcases gt_trichotomy 0 R with hR | hR | hR
   · use fun _ ↦ f 0
     exact {
-      meromorphicOn := by simp_all
+      meromorphicOn := h₁f
       analyticOnNhd := by simp_all
       ne_zero := by simp_all
       eventuallyEq := by
@@ -493,7 +494,8 @@ theorem _root_.MeromorphicOn.exists_ecanonicalDecomp (h₁f : MeromorphicOn f (c
         apply subsingleton_singleton.mem_codiscreteWithin
     }
   obtain ⟨g, D⟩ := h₁f.exists_canonicalDecomp h₂f
-  have h₄g : ∀ (u : closedBall (0 : ℂ) R), meromorphicOrderAt g u ≠ ⊤ := by
+  have h₄g : ∀ (u : closedBall (0 : ℂ) R),
+      meromorphicOrderAt g u.1 (D.meromorphicNFOn.meromorphicOn u.1 u.2) ≠ ⊤ := by
     rw [← D.meromorphicNFOn.meromorphicOn.exists_meromorphicOrderAt_ne_top_iff_forall
       (Metric.isConnected_closedBall hR.le)]
     have s₁ : (0 : ℂ) ∈ closedBall 0 R := by simp [hR.le]
@@ -594,7 +596,7 @@ order zero.
 -/
 lemma ECanonicalDecomp.eq_smul_meromorphicTrailingCoeffAt_of_meromorphicOrderAt
     {f h : ℂ → E} (D : ECanonicalDecomp f h R) (h₁w : w ∈ closedBall 0 R)
-    (h₂w : meromorphicOrderAt f w = 0) (hR : 0 < R) :
+    (h₂w : meromorphicOrderAt f w (D.meromorphicOn w h₁w) = 0) (hR : 0 < R) :
     h w = ((∏ᶠ i, (canonicalFactor R i w) ^ (divisor f (ball 0 R) i))
           * (∏ᶠ i, (w - i) ^ (-divisor f (sphere 0 R)) i))
           • meromorphicTrailingCoeffAt f w := by
@@ -620,7 +622,7 @@ has order zero.
 -/
 lemma ECanonicalDecomp.log_norm_eq
     {f h : ℂ → E} (D : ECanonicalDecomp f h R) (h₁w : w ∈ closedBall 0 R)
-    (h₂w : meromorphicOrderAt f w = 0)
+    (h₂w : meromorphicOrderAt f w (D.meromorphicOn w h₁w) = 0)
     (hR : 0 < R) :
     Real.log ‖h w‖ = ((∑ᶠ i, (divisor f (ball 0 R) i) * Real.log ‖canonicalFactor R i w‖)
           - (∑ᶠ i, (divisor f (sphere 0 R) i) * Real.log ‖w - i‖))

@@ -201,16 +201,28 @@ lemma analyticAt_smul {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det) (τ : ℍ) :
   simpa [mdifferentiableAt_iff] using!
     (mdifferentiable_coe.comp <| (mdifferentiable_smul hg)).mdifferentiableAt (x := ⟨z, hz⟩)
 
-lemma meromorphicOrderAt_comp_smul {f : ℍ → ℂ} {τ : ℍ} {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det) :
-    meromorphicOrderAt (fun z ↦ f (g • ofComplex z)) τ =
-      meromorphicOrderAt (fun z ↦ f (ofComplex z)) ↑(g • τ) := by
+/-- If `f` is meromorphic at `g • τ`, then `z ↦ f (g • z)` is meromorphic at `τ`. -/
+lemma meromorphicAt_comp_smul {f : ℍ → ℂ} {τ : ℍ} {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det)
+    (hf : MeromorphicAt (fun z ↦ f (ofComplex z)) ↑(g • τ)) :
+    MeromorphicAt (fun z ↦ f (g • ofComplex z)) τ := by
+  have : (fun z : ℂ ↦ f (g • ofComplex z)) =
+      (fun z ↦ f (ofComplex z)) ∘ (fun z ↦ ↑(g • ofComplex z) : ℂ → ℂ) := by
+    ext; simp
+  rw [this]
+  exact .comp_analyticAt (by simpa using hf) (τ.analyticAt_smul hg)
+
+lemma meromorphicOrderAt_comp_smul {f : ℍ → ℂ} {τ : ℍ} {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det)
+    (hf : MeromorphicAt (fun z ↦ f (ofComplex z)) ↑(g • τ)) :
+    meromorphicOrderAt (fun z ↦ f (g • ofComplex z)) τ (meromorphicAt_comp_smul hg hf) =
+      meromorphicOrderAt (fun z ↦ f (ofComplex z)) ↑(g • τ) hf := by
   let G z : ℂ := ↑(g • ofComplex z)
   let F z := f (ofComplex z)
+  have hF : MeromorphicAt F (G τ) := by simpa [F, G] using hf
   have : (fun z : ℂ ↦ f (g • ofComplex z)) = F ∘ G := by ext; simp [F, G]
-  rw [this, meromorphicOrderAt_comp_of_deriv_ne_zero]
-  · simp [F, G]
-  · exact τ.analyticAt_smul hg
-  · exact τ.deriv_smul_ne_zero hg
+  rw [meromorphicOrderAt_congr _ (.of_eq this),
+    meromorphicOrderAt_comp_of_deriv_ne_zero hF (τ.analyticAt_smul hg) (τ.deriv_smul_ne_zero hg)]
+  congr 1
+  simp [G]
 
 end Complex
 

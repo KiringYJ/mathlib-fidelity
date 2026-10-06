@@ -294,7 +294,8 @@ zeros such that `f` is equivalent, modulo equality on codiscrete sets, to the pr
 factorized rational function associated with the divisor of `f`.
 -/
 theorem MeromorphicOn.extract_zeros_poles {f : 𝕜 → E} (h₁f : MeromorphicOn f U)
-    (h₂f : ∀ u : U, meromorphicOrderAt f u ≠ ⊤) (h₃f : (divisor f U).support.Finite) :
+    (h₂f : ∀ u : U, meromorphicOrderAt f u.1 (h₁f u.1 u.2) ≠ ⊤)
+    (h₃f : (divisor f U).support.Finite) :
     ∃ g : 𝕜 → E, AnalyticOnNhd 𝕜 g U ∧ (∀ u : U, g u ≠ 0) ∧
       f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ divisor f U u) • g := by
   -- Take `g` as the inverse of the Laurent polynomial defined below, converted to a meromorphic
@@ -309,15 +310,16 @@ theorem MeromorphicOn.extract_zeros_poles {f : 𝕜 → E} (h₁f : MeromorphicO
       divisor_smul hφ.inv h₁f _ (fun z hz ↦ h₂f ⟨z, hz⟩), divisor_inv,
       Function.FactorizedRational.divisor h₃f, neg_add_cancel]
     intro z hz
-    simpa [meromorphicOrderAt_inv] using meromorphicOrderAt_ne_top (divisor f U)
+    rw [meromorphicOrderAt_inv (hφ z hz)]
+    simpa using meromorphicOrderAt_ne_top (divisor f U)
   · -- ∀ (u : ↑U), g ↑u ≠ 0
     intro ⟨u, hu⟩
-    rw [← (hg hu).meromorphicOrderAt_eq_zero_iff, ← meromorphicOrderAt_congr
-        (toMeromorphicNFOn_eq_self_on_nhdsNE (hφ.inv.smul h₁f) hu).symm,
-      meromorphicOrderAt_smul (hφ u hu).inv (h₁f u hu), meromorphicOrderAt_inv,
+    rw [← (hg hu).meromorphicOrderAt_eq_zero_iff,
+      meromorphicOrderAt_toMeromorphicNFOn (hφ.inv.smul h₁f) hu,
+      meromorphicOrderAt_smul (hφ u hu).inv (h₁f u hu), meromorphicOrderAt_inv (hφ u hu),
       meromorphicOrderAt_eq _ h₃f]
     simp only [h₁f, hu, divisor_apply]
-    lift meromorphicOrderAt f u to ℤ using (h₂f ⟨u, hu⟩) with n hn
+    lift meromorphicOrderAt f u (h₁f u hu) to ℤ using (h₂f ⟨u, hu⟩) with n hn
     rw [WithTop.untop₀_coe, ← WithTop.LinearOrderedAddCommGroup.coe_neg, ← WithTop.coe_add]
     simp
   · -- f =ᶠ[codiscreteWithin U] (∏ᶠ (u : 𝕜), fun z ↦ (z - u) ^ (divisor f U) u) * g

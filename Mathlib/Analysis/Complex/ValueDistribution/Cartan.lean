@@ -44,12 +44,11 @@ namespace ValueDistribution
 ## Terms in Cartan's formula
 -/
 
-private lemma log_trailingCoeff_eq_zero_on_unitSphere {a : ℂ} (h : 0 < meromorphicOrderAt f 0)
-    (ha : a ∈ sphere 0 |1|) :
+private lemma log_trailingCoeff_eq_zero_on_unitSphere {a : ℂ} (hf : MeromorphicAt f 0)
+    (h : 0 < meromorphicOrderAt f 0 hf) (ha : a ∈ sphere 0 |1|) :
     log ‖meromorphicTrailingCoeffAt (f · - a) 0‖ = 0 := by
   simp_rw [sub_eq_neg_add]
-  rw [(meromorphicAt_of_meromorphicOrderAt_ne_zero
-    h.ne').meromorphicTrailingCoeffAt_fun_add_eq_left_of_lt]
+  rw [MeromorphicAt.meromorphicTrailingCoeffAt_fun_add_eq_left_of_lt (.const (-a) 0) hf]
   · aesop
   · rw [meromorphicOrderAt_const]
     aesop
@@ -78,50 +77,47 @@ theorem circleIntegrable_log_meromorphicTrailingCoeffAt :
   · have {a : ℂ} : ¬MeromorphicAt (fun x ↦ f x - a) 0 := by
       rwa [MeromorphicAt.meromorphicAt_fun_sub_iff_meromorphicAt₂ (by fun_prop)]
     simp_all
-  rcases lt_trichotomy (meromorphicOrderAt f 0) 0 with hneg | hzero | hpos
+  have hf : MeromorphicAt f 0 := not_not.1 h
+  rcases lt_trichotomy (meromorphicOrderAt f 0 hf) 0 with hneg | hzero | hpos
   · refine (circleIntegrable_congr fun a ha ↦ ?_).2 (circleIntegrable_const
       (log ‖meromorphicTrailingCoeffAt f 0‖) 0 1)
-    rw [(MeromorphicAt.const a 0).meromorphicTrailingCoeffAt_fun_sub_eq_left_of_lt]
+    rw [MeromorphicAt.meromorphicTrailingCoeffAt_fun_sub_eq_left_of_lt hf (.const a 0)]
     rw [meromorphicOrderAt_const]
     aesop
   · apply CircleIntegrable.congr_codiscreteWithin
-     (eventuallyEq_log_trailingCoeff_of_meromorphicOrderAt_eq_zero (not_not.1 h) hzero)
+     (eventuallyEq_log_trailingCoeff_of_meromorphicOrderAt_eq_zero hf hzero)
     simpa [norm_sub_rev] using circleIntegrable_log_norm_sub_const 1
   · apply (circleIntegrable_congr _).2 (circleIntegrable_const 0 0 1)
-    exact fun _ ↦ log_trailingCoeff_eq_zero_on_unitSphere hpos
+    exact fun _ ↦ log_trailingCoeff_eq_zero_on_unitSphere hf hpos
 
 /--
 Circle average of the function `fun a ↦ log ‖meromorphicTrailingCoeffAt (f · - a) 0‖` that appears
 in Cartan's formula, in the case where `f` has a zero at the origin.
 -/
 theorem circleAverage_log_norm_meromorphicTrailingCoeffAt_of_meromorphicOrderAt_pos
-    (h : 0 < meromorphicOrderAt f 0) :
+    (hf : MeromorphicAt f 0) (h : 0 < meromorphicOrderAt f 0 hf) :
     circleAverage (fun a ↦ log ‖meromorphicTrailingCoeffAt (f · - a) 0‖) 0 1 = 0 :=
-  circleAverage_const_on_circle (fun _ hx ↦ log_trailingCoeff_eq_zero_on_unitSphere h hx)
+  circleAverage_const_on_circle (fun _ hx ↦ log_trailingCoeff_eq_zero_on_unitSphere hf h hx)
 
 /--
 Circle average of the function `fun a ↦ log ‖meromorphicTrailingCoeffAt (f · - a) 0‖` that appears
 in Cartan's formula, in the case where `f` has order zero at the origin.
 -/
 theorem circleAverage_log_norm_meromorphicTrailingCoeffAt_of_meromorphicOrderAt_eq_zero
-    (h : meromorphicOrderAt f 0 = 0) :
+    (hf : MeromorphicAt f 0) (h : meromorphicOrderAt f 0 hf = 0) :
     circleAverage (fun a ↦ log ‖meromorphicTrailingCoeffAt (f · - a) 0‖) 0 1
       = log⁺ ‖meromorphicTrailingCoeffAt f 0‖ := by
-  by_cases hf : MeromorphicAt f 0
-  · rw [← circleAverage_congr_codiscreteWithin
-      (eventuallyEq_log_trailingCoeff_of_meromorphicOrderAt_eq_zero hf h) zero_ne_one.symm]
-    simp_rw [norm_sub_rev]
-    rw [circleAverage_log_norm_sub_const_eq_posLog]
-  have {a : ℂ} : ¬ MeromorphicAt (fun x ↦ f x - a) 0 := by
-    rwa [MeromorphicAt.meromorphicAt_fun_sub_iff_meromorphicAt₂ (by fun_prop)]
-  simp_all [circleAverage_const]
+  rw [← circleAverage_congr_codiscreteWithin
+    (eventuallyEq_log_trailingCoeff_of_meromorphicOrderAt_eq_zero hf h) zero_ne_one.symm]
+  simp_rw [norm_sub_rev]
+  rw [circleAverage_log_norm_sub_const_eq_posLog]
 
 /--
 Circle average of the function `fun a ↦ log ‖meromorphicTrailingCoeffAt (f · - a) 0‖` that appears
 in Cartan's formula, in the case where `f` has a pole at the origin.
 -/
 theorem circleAverage_log_norm_meromorphicTrailingCoeffAt_of_meromorphicOrderAt_lt_zero
-    (h : meromorphicOrderAt f 0 < 0) :
+    (hf : MeromorphicAt f 0) (h : meromorphicOrderAt f 0 hf < 0) :
     circleAverage (fun a ↦ log ‖meromorphicTrailingCoeffAt (f · - a) 0‖) 0 1
       = log ‖meromorphicTrailingCoeffAt f 0‖ := by
   rw [circleAverage_congr_sphere (f₂ := fun _ ↦ log ‖meromorphicTrailingCoeffAt f 0‖),
@@ -129,7 +125,7 @@ theorem circleAverage_log_norm_meromorphicTrailingCoeffAt_of_meromorphicOrderAt_
   intro a ha
   simp only
   congr 2
-  rw [(MeromorphicAt.const a 0).meromorphicTrailingCoeffAt_fun_sub_eq_left_of_lt]
+  rw [MeromorphicAt.meromorphicTrailingCoeffAt_fun_sub_eq_left_of_lt hf (.const a 0)]
   rw [meromorphicOrderAt_const]
   aesop
 
@@ -191,7 +187,7 @@ theorem characteristic_top_eq_circleAverage_of_meromorphicOrderAt_pos
     (h₁f : Meromorphic f) (h₂f : 0 < meromorphicOrderAt f 0) (hR : R ≠ 0) :
     characteristic f ⊤ R = circleAverage (logCounting f · R) 0 1 := by
   rw [characteristic_top_eq_circleAverage_add_circleAverage h₁f hR]
-  simp [circleAverage_log_norm_meromorphicTrailingCoeffAt_of_meromorphicOrderAt_pos h₂f]
+  simp [circleAverage_log_norm_meromorphicTrailingCoeffAt_of_meromorphicOrderAt_pos (h₁f 0) h₂f]
 
 /--
 Qualitative version of **Cartan's formula**: Away from the point `0`, the difference between

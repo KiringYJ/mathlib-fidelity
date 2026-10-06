@@ -1011,7 +1011,7 @@ private lemma iteratedDeriv_six_relation_mul_id_pow_six :
 
 attribute [local fun_prop] AnalyticAt.contDiffAt in
 private lemma analyticAt_relation_zero : AnalyticAt ℂ L.relation 0 := by
-  refine .of_meromorphicOrderAt_pos (one_pos.trans_le ?_) (by simp [relation])
+  refine .of_meromorphicOrderAt_pos (by fun_prop) (one_pos.trans_le ?_) (by simp [relation])
   suffices 7 ≤ meromorphicOrderAt (L.relation * id ^ 6) 0 by
     rw [meromorphicOrderAt_mul (by fun_prop) (by fun_prop),
       meromorphicOrderAt_pow (by fun_prop)] at this
