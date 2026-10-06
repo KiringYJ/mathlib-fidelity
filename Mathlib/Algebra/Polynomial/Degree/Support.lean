@@ -43,6 +43,11 @@ theorem supDegree_eq_natDegree (p : R[X]) : p.toFinsupp.supDegree id = p.natDegr
     degree_eq_natDegree h, Nat.cast_withBot]
   rwa [support_toFinsupp, nonempty_iff_ne_empty, Ne, support_eq_empty]
 
+/-- `natDegree p` is the supremum in `ℕ` of the support of `p`; for `p = 0` this is `0`, the
+supremum of the empty set. -/
+theorem natDegree_eq_support_sup (p : R[X]) : p.natDegree = p.support.sup id := by
+  rw [← supDegree_eq_natDegree, AddMonoidAlgebra.supDegree, support_toFinsupp]
+
 theorem le_natDegree_of_mem_supp (a : ℕ) : a ∈ p.support → a ≤ natDegree p :=
   le_natDegree_of_ne_zero ∘ mem_support_iff.mp
 
