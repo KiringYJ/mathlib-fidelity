@@ -674,47 +674,28 @@ variable [Algebra ℝ 𝕜] [IsScalarTower ℝ 𝕜 F₁] [NormedSpace ℝ F₃]
 
 -- TODO: semilinearize
 /-- Given a continuous `𝕜`-bilinear map `B : F₁ →L[𝕜] F₂ →L[𝕜] F₃`, a measure `μ` on `E`,
-and a function `φ : E → F₂` which is locally `μ`-integrable, this is the *continuous* `𝕜`-linear map
-`f ↦ ∫ x, B (f x) (φ x) ∂μ` from `𝓓^{n}(E, F₁)` to `F₃`. Otherwise, this is the zero map. -/
-noncomputable def integralAgainstBilinCLM (B : F₁ →L[𝕜] F₂ →L[𝕜] F₃) (μ : Measure E) (φ : E → F₂) :
-    𝓓^{n}(Ω, F₁) →L[𝕜] F₃ := open scoped Classical in
-  TestFunction.limitCLM 𝕜
-    (fun f ↦ if LocallyIntegrableOn φ Ω μ then ∫ x, B (f x) (φ x) ∂μ else 0)
-    (fun K K_sub_Ω ↦
-      if LocallyIntegrableOn φ Ω μ
-      then ContDiffMapSupportedIn.integralAgainstBilinCLM B μ φ
-      else 0)
-    (fun K K_sub_Ω f ↦ by
-      split_ifs with h
-      · simp [h.integrableOn_compact_subset K_sub_Ω K.2]
-      · simp)
+and a function `φ : E → F₂` which is locally `μ`-integrable on `Ω`, this is the *continuous*
+`𝕜`-linear map `f ↦ ∫ x, B (f x) (φ x) ∂μ` from `𝓓^{n}(E, F₁)` to `F₃`. -/
+noncomputable def integralAgainstBilinCLM (B : F₁ →L[𝕜] F₂ →L[𝕜] F₃) (μ : Measure E) (φ : E → F₂)
+    (hφ : LocallyIntegrableOn φ Ω μ) : 𝓓^{n}(Ω, F₁) →L[𝕜] F₃ :=
+  TestFunction.limitCLM 𝕜 (fun f ↦ ∫ x, B (f x) (φ x) ∂μ)
+    (fun K K_sub_Ω ↦ ContDiffMapSupportedIn.integralAgainstBilinCLM B μ φ
+      (hφ.integrableOn_compact_subset K_sub_Ω K.2))
+    (fun K K_sub_Ω f ↦ by simp)
 
-open scoped Classical in
 @[simp]
 lemma integralAgainstBilinCLM_apply {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    {f : 𝓓^{n}(Ω, F₁)} :
-    integralAgainstBilinCLM B μ φ f =
-      if LocallyIntegrableOn φ Ω μ then ∫ x, B (f x) (φ x) ∂μ else 0 :=
+    {hφ : LocallyIntegrableOn φ Ω μ} {f : 𝓓^{n}(Ω, F₁)} :
+    integralAgainstBilinCLM B μ φ hφ f = ∫ x, B (f x) (φ x) ∂μ :=
   rfl
 
-lemma integralAgainstBilinCLM_eq_integral {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    (hφ : LocallyIntegrableOn φ Ω μ) {f : 𝓓^{n}(Ω, F₁)} :
-    integralAgainstBilinCLM B μ φ f = ∫ x, B (f x) (φ x) ∂μ := by
-  simp [hφ]
-
-lemma integralAgainstBilinCLM_eq_zero {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    (hφ : ¬ LocallyIntegrableOn φ Ω μ) :
-    (integralAgainstBilinCLM B μ φ : 𝓓^{n}(Ω, F₁) →L[𝕜] F₃) = 0 := by
-  ext
-  simp [hφ]
-
 lemma integralAgainstBilinCLM_ofSupportedIn {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    (hφ : LocallyIntegrableOn φ Ω μ) {K : Compacts E} (K_sub_Ω : (K : Set E) ⊆ Ω)
+    {hφ : LocallyIntegrableOn φ Ω μ} {K : Compacts E} (K_sub_Ω : (K : Set E) ⊆ Ω)
     {f : 𝓓^{n}_{K}(E, F₁)} :
-    integralAgainstBilinCLM B μ φ (ofSupportedIn K_sub_Ω f) =
-      ContDiffMapSupportedIn.integralAgainstBilinCLM B μ φ f := by
-  have hφ' := hφ.integrableOn_compact_subset K_sub_Ω K.isCompact
-  simp [hφ, hφ']
+    integralAgainstBilinCLM B μ φ hφ (ofSupportedIn K_sub_Ω f) =
+      ContDiffMapSupportedIn.integralAgainstBilinCLM B μ φ
+        (hφ.integrableOn_compact_subset K_sub_Ω K.isCompact) f := by
+  simp
 
 end Integral
 

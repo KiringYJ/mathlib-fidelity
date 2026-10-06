@@ -482,15 +482,21 @@ class HasTemperateGrowth (μ : Measure E) : Prop where
   exists_integrable : ∃ (n : ℕ), Integrable (fun x ↦ (1 + ‖x‖) ^ (- (n : ℝ))) μ
 
 open scoped Classical in
-/-- An integer exponent `l` such that `(1 + ‖x‖) ^ (-l)` is integrable if `μ` has
-temperate growth. -/
-def integrablePower (μ : Measure E) : ℕ :=
-  if h : μ.HasTemperateGrowth then h.exists_integrable.choose else 0
+/-- The least natural exponent `l` such that `(1 + ‖x‖) ^ (-l)` is `μ`-integrable, which exists
+when `μ` has temperate growth. -/
+def integrablePower (μ : Measure E) [h : μ.HasTemperateGrowth] : ℕ :=
+  Nat.find h.exists_integrable
 
 lemma integrable_pow_neg_integrablePower
     (μ : Measure E) [h : μ.HasTemperateGrowth] :
     Integrable (fun x ↦ (1 + ‖x‖) ^ (- (μ.integrablePower : ℝ))) μ := by
-  simpa [Measure.integrablePower, h] using h.exists_integrable.choose_spec
+  classical
+  exact Nat.find_spec h.exists_integrable
+
+lemma integrablePower_le {μ : Measure E} [μ.HasTemperateGrowth] {l : ℕ}
+    (hl : Integrable (fun x ↦ (1 + ‖x‖) ^ (-(l : ℝ))) μ) : μ.integrablePower ≤ l := by
+  classical
+  exact Nat.find_min' _ hl
 
 instance _root_.MeasureTheory.IsFiniteMeasure.instHasTemperateGrowth {μ : Measure E}
     [h : IsFiniteMeasure μ] : μ.HasTemperateGrowth := ⟨⟨0, by simp⟩⟩

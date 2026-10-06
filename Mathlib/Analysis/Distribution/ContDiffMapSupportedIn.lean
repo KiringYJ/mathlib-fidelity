@@ -912,84 +912,64 @@ variable [SMulCommClass ℝ 𝕜 F₁] [NormedSpace ℝ F₃] [SMulCommClass ℝ
 -- TODO: semilinearize
 /-- Given a continuous `𝕜`-bilinear map `B : F₁ →L[𝕜] F₂ →L[𝕜] F₃`, a measure `μ` on `E`,
 and a function `φ : E → F₂` which is `μ`-integrable on `K`, this is the `𝕜`-linear map
-`f ↦ ∫ x, B (f x) (φ x) ∂μ` from `𝓓^{n}_{K}(E, F₁)` to `F₃`. Otherwise, this is the zero map.
+`f ↦ ∫ x, B (f x) (φ x) ∂μ` from `𝓓^{n}_{K}(E, F₁)` to `F₃`.
 
 You should probably use `integralAgainstBilinCLM`, which bundles the continuity. -/
-noncomputable def integralAgainstBilinLM (B : F₁ →L[𝕜] F₂ →L[𝕜] F₃) (μ : Measure E) (φ : E → F₂) :
-    𝓓^{n}_{K}(E, F₁) →ₗ[𝕜] F₃ where
-  toFun f := open scoped Classical in
-    if IntegrableOn φ K μ then ∫ x, B (f x) (φ x) ∂μ else 0
+noncomputable def integralAgainstBilinLM (B : F₁ →L[𝕜] F₂ →L[𝕜] F₃) (μ : Measure E) (φ : E → F₂)
+    (hφ : IntegrableOn φ K μ) : 𝓓^{n}_{K}(E, F₁) →ₗ[𝕜] F₃ where
+  toFun f := ∫ x, B (f x) (φ x) ∂μ
   map_add' f g := by
-    split_ifs with hφ
-    · simp_rw [add_apply, map_add, add_apply,
-        integral_add (f.integrable_bilin B hφ) (g.integrable_bilin B hφ)]
-    · simp
+    simp_rw [add_apply, map_add, add_apply,
+      integral_add (f.integrable_bilin B hφ) (g.integrable_bilin B hφ)]
   map_smul' c f := by
-    split_ifs with hφ
-    · simp_rw [smul_apply, map_smul, smul_apply, integral_smul c, RingHom.id_apply]
-    · simp
+    simp_rw [smul_apply, map_smul, smul_apply, integral_smul c, RingHom.id_apply]
 
 @[simp]
 lemma integralAgainstBilinLM_apply {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    {f : 𝓓^{n}_{K}(E, F₁)} :
-    integralAgainstBilinLM B μ φ f = open scoped Classical in
-      if IntegrableOn φ K μ then ∫ x, B (f x) (φ x) ∂μ else 0 := by
+    {hφ : IntegrableOn φ K μ} {f : 𝓓^{n}_{K}(E, F₁)} :
+    integralAgainstBilinLM B μ φ hφ f = ∫ x, B (f x) (φ x) ∂μ :=
   rfl
 
-lemma integralAgainstBilinLM_eq_integral {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    (hφ : IntegrableOn φ K μ) {f : 𝓓^{n}_{K}(E, F₁)} :
-    integralAgainstBilinLM B μ φ f = ∫ x, B (f x) (φ x) ∂μ := by
-  simp [hφ]
-
 lemma integralAgainstBilinLM_eq_setIntegral {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    (hφ : IntegrableOn φ K μ) {f : 𝓓^{n}_{K}(E, F₁)} :
-    integralAgainstBilinLM B μ φ f = ∫ x in K, B (f x) (φ x) ∂μ := by
-  rw [integralAgainstBilinLM_eq_integral hφ, setIntegral_eq_integral_of_forall_compl_eq_zero]
+    {hφ : IntegrableOn φ K μ} {f : 𝓓^{n}_{K}(E, F₁)} :
+    integralAgainstBilinLM B μ φ hφ f = ∫ x in K, B (f x) (φ x) ∂μ := by
+  rw [integralAgainstBilinLM_apply, setIntegral_eq_integral_of_forall_compl_eq_zero]
   intro x hx
   rw [f.zero_on_compl hx, Pi.zero_apply, map_zero, zero_apply]
 
 lemma norm_integralAgainstBilinLM_le {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    {f : 𝓓^{n}_{K}(E, F₁)} :
-    ‖integralAgainstBilinLM B μ φ f‖ ≤
+    {hφ : IntegrableOn φ K μ} {f : 𝓓^{n}_{K}(E, F₁)} :
+    ‖integralAgainstBilinLM B μ φ hφ f‖ ≤
       (∫ x in K, ‖φ x‖ ∂μ) * ‖B‖ * N[𝕜]_{K, n, 0} f := by
-  by_cases hφ : IntegrableOn φ K μ
-  · have h : ∀ᵐ x ∂(μ.restrict K), ‖B (f x) (φ x)‖ ≤ ‖φ x‖ * ‖B‖ * N[𝕜]_{K, n, 0} f := by
-      filter_upwards [] with x
-      grw [ContinuousLinearMap.le_opNorm, ContinuousLinearMap.le_opNorm, norm_apply_le_seminorm 𝕜,
-        mul_comm, mul_assoc]
-    rw [integralAgainstBilinLM_eq_setIntegral hφ]
-    apply le_trans (norm_integral_le_of_norm_le ((hφ.norm.mul_const _).mul_const _) h)
-    rw [integral_mul_const, integral_mul_const]
-  · simp only [integralAgainstBilinLM, hφ, ↓reduceIte, LinearMap.coe_mk, AddHom.coe_mk, norm_zero]
-    positivity
+  have h : ∀ᵐ x ∂(μ.restrict K), ‖B (f x) (φ x)‖ ≤ ‖φ x‖ * ‖B‖ * N[𝕜]_{K, n, 0} f := by
+    filter_upwards [] with x
+    grw [ContinuousLinearMap.le_opNorm, ContinuousLinearMap.le_opNorm, norm_apply_le_seminorm 𝕜,
+      mul_comm, mul_assoc]
+  rw [integralAgainstBilinLM_eq_setIntegral]
+  apply le_trans (norm_integral_le_of_norm_le ((hφ.norm.mul_const _).mul_const _) h)
+  rw [integral_mul_const, integral_mul_const]
 
 -- TODO: semilinearize
 /-- Given a continuous `𝕜`-bilinear map `B : F₁ →L[𝕜] F₂ →L[𝕜] F₃`, a measure `μ` on `E`,
 and a function `φ : E → F₂` which is integrable on `K`, this is the *continuous* `𝕜`-linear map
-`f ↦ ∫ x, B (f x) (φ x) ∂μ` from `𝓓^{n}_{K}(E, F₁)` to `F₃`. Otherwise, this is the zero map. -/
-noncomputable def integralAgainstBilinCLM (B : F₁ →L[𝕜] F₂ →L[𝕜] F₃) (μ : Measure E) (φ : E → F₂) :
-    𝓓^{n}_{K}(E, F₁) →L[𝕜] F₃ :=
-  ContDiffMapSupportedIn.mkCLMtoNormedSpace 𝕜 (integralAgainstBilinLM B μ φ)
-    (integralAgainstBilinLM B μ φ).map_add (integralAgainstBilinLM B μ φ).map_smul
+`f ↦ ∫ x, B (f x) (φ x) ∂μ` from `𝓓^{n}_{K}(E, F₁)` to `F₃`. -/
+noncomputable def integralAgainstBilinCLM (B : F₁ →L[𝕜] F₂ →L[𝕜] F₃) (μ : Measure E) (φ : E → F₂)
+    (hφ : IntegrableOn φ K μ) : 𝓓^{n}_{K}(E, F₁) →L[𝕜] F₃ :=
+  ContDiffMapSupportedIn.mkCLMtoNormedSpace 𝕜 (integralAgainstBilinLM B μ φ hφ)
+    (integralAgainstBilinLM B μ φ hφ).map_add (integralAgainstBilinLM B μ φ hφ).map_smul
     ⟨{⟨0, by simp⟩}, (∫ x in K, ‖φ x‖ ∂μ) * ‖B‖, by positivity,
-      fun f ↦ by simpa using! norm_integralAgainstBilinLM_le⟩
+      fun f ↦ by simpa using! norm_integralAgainstBilinLM_le (hφ := hφ)⟩
 
 @[simp]
 lemma integralAgainstBilinCLM_apply {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    {f : 𝓓^{n}_{K}(E, F₁)} :
-    integralAgainstBilinCLM B μ φ f = open scoped Classical in
-      if IntegrableOn φ K μ then ∫ x, B (f x) (φ x) ∂μ else 0 :=
-  integralAgainstBilinLM_apply
-
-lemma integralAgainstBilinCLM_eq_integral {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    (hφ : IntegrableOn φ K μ) {f : 𝓓^{n}_{K}(E, F₁)} :
-    integralAgainstBilinCLM B μ φ f = ∫ x, B (f x) (φ x) ∂μ :=
-  integralAgainstBilinLM_eq_integral hφ
+    {hφ : IntegrableOn φ K μ} {f : 𝓓^{n}_{K}(E, F₁)} :
+    integralAgainstBilinCLM B μ φ hφ f = ∫ x, B (f x) (φ x) ∂μ :=
+  integralAgainstBilinLM_apply (hφ := hφ)
 
 lemma integralAgainstBilinCLM_eq_setIntegral {B : F₁ →L[𝕜] F₂ →L[𝕜] F₃} {μ : Measure E} {φ : E → F₂}
-    (hφ : IntegrableOn φ K μ) {f : 𝓓^{n}_{K}(E, F₁)} :
-    integralAgainstBilinCLM B μ φ f = ∫ x in K, B (f x) (φ x) ∂μ :=
-  integralAgainstBilinLM_eq_setIntegral hφ
+    {hφ : IntegrableOn φ K μ} {f : 𝓓^{n}_{K}(E, F₁)} :
+    integralAgainstBilinCLM B μ φ hφ f = ∫ x in K, B (f x) (φ x) ∂μ :=
+  integralAgainstBilinLM_eq_setIntegral (hφ := hφ)
 
 end Integral
 

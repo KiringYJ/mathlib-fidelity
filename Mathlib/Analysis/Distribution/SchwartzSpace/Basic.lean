@@ -732,95 +732,95 @@ end bilin
 section smul
 
 variable (F) in
-open scoped Classical in
-/-- The map `f ↦ (x ↦ g x • f x)` as a continuous `𝕜`-linear map on Schwartz space,
-where `g` is a function of temperate growth. -/
-def smulLeftCLM (g : E → 𝕜) : 𝓢(E, F) →L[𝕜] 𝓢(E, F) :=
-  if hg : g.HasTemperateGrowth then
-    SchwartzMap.bilinLeftCLM (ContinuousLinearMap.lsmul 𝕜 𝕜).flip hg
-  else 0
+/-- The map `f ↦ (x ↦ g x • f x)` as a continuous `𝕜`-linear map on Schwartz space, where `g` is
+a function of temperate growth; `fun_prop` finds the temperate growth by default.  An operator
+applied to a Schwartz function takes its evidence explicitly or is parenthesized, as in
+`(smulLeftCLM F g) f`. -/
+def smulLeftCLM (g : E → 𝕜) (hg : g.HasTemperateGrowth := by fun_prop) : 𝓢(E, F) →L[𝕜] 𝓢(E, F) :=
+  SchwartzMap.bilinLeftCLM (ContinuousLinearMap.lsmul 𝕜 𝕜).flip hg
 
-theorem smulLeftCLM_apply {g : E → 𝕜} (hg : g.HasTemperateGrowth) (f : 𝓢(E, F)) :
-    smulLeftCLM F g f = fun x ↦ g x • f x := by
-  simp [smulLeftCLM, hg]
-
-@[simp]
-theorem smulLeftCLM_apply_apply {g : E → 𝕜} (hg : g.HasTemperateGrowth) (f : 𝓢(E, F)) (x : E) :
-    smulLeftCLM F g f x = g x • f x := by
-  simp [smulLeftCLM_apply hg]
+theorem smulLeftCLM_apply {g : E → 𝕜} {hg : g.HasTemperateGrowth} (f : 𝓢(E, F)) :
+    smulLeftCLM F g hg f = fun x ↦ g x • f x :=
+  rfl
 
 @[simp]
-theorem smulLeftCLM_const (c : 𝕜) :
-    smulLeftCLM F (fun (_ : E) ↦ c) = c • ContinuousLinearMap.id 𝕜 _ := by
+theorem smulLeftCLM_apply_apply {g : E → 𝕜} {hg : g.HasTemperateGrowth} (f : 𝓢(E, F)) (x : E) :
+    smulLeftCLM F g hg f x = g x • f x :=
+  rfl
+
+@[simp]
+theorem smulLeftCLM_const (c : 𝕜) {hc : (fun (_ : E) ↦ c).HasTemperateGrowth} :
+    smulLeftCLM F (fun (_ : E) ↦ c) hc = c • ContinuousLinearMap.id 𝕜 _ := by
   ext f x
-  have : (fun (_ : E) ↦ c).HasTemperateGrowth := by fun_prop
-  simp [this]
-
-@[simp]
-theorem smulLeftCLM_smulLeftCLM_apply {g₁ g₂ : E → 𝕜} (hg₁ : g₁.HasTemperateGrowth)
-    (hg₂ : g₂.HasTemperateGrowth) (f : 𝓢(E, F)) :
-    smulLeftCLM F g₁ (smulLeftCLM F g₂ f) = smulLeftCLM F (g₁ * g₂) f := by
-  ext x
-  simp [smul_smul, hg₁, hg₂, hg₁.mul hg₂]
-
-theorem smulLeftCLM_compL_smulLeftCLM {g₁ g₂ : E → 𝕜} (hg₁ : g₁.HasTemperateGrowth)
-    (hg₂ : g₂.HasTemperateGrowth) :
-    smulLeftCLM F g₁ ∘L smulLeftCLM F g₂ = smulLeftCLM F (g₁ * g₂) := by
-  ext1 f
-  exact smulLeftCLM_smulLeftCLM_apply hg₁ hg₂ f
-
-theorem smulLeftCLM_smul {g : E → 𝕜} (hg : g.HasTemperateGrowth) (c : 𝕜) :
-    smulLeftCLM F (c • g) = c • smulLeftCLM F g := by
-  have : (fun (_ : E) ↦ c).HasTemperateGrowth := by fun_prop
-  convert! (smulLeftCLM_compL_smulLeftCLM this hg).symm using 1
   simp
 
-theorem smulLeftCLM_add {g₁ g₂ : E → 𝕜} (hg₁ : g₁.HasTemperateGrowth)
-    (hg₂ : g₂.HasTemperateGrowth) :
-    smulLeftCLM F (g₁ + g₂) = smulLeftCLM F g₁ + smulLeftCLM F g₂ := by
-  ext f x
-  simp [hg₁, hg₂, hg₁.add hg₂, add_smul]
+@[simp]
+theorem smulLeftCLM_smulLeftCLM_apply {g₁ g₂ : E → 𝕜} {hg₁ : g₁.HasTemperateGrowth}
+    {hg₂ : g₂.HasTemperateGrowth} (f : 𝓢(E, F)) :
+    smulLeftCLM F g₁ hg₁ (smulLeftCLM F g₂ hg₂ f) = smulLeftCLM F (g₁ * g₂) (hg₁.mul hg₂) f := by
+  ext x
+  simp [smul_smul]
 
-theorem smulLeftCLM_sub {g₁ g₂ : E → 𝕜} (hg₁ : g₁.HasTemperateGrowth)
-    (hg₂ : g₂.HasTemperateGrowth) :
-    smulLeftCLM F (g₁ - g₂) = smulLeftCLM F g₁ - smulLeftCLM F g₂ := by
-  ext f x
-  simp [hg₁, hg₂, hg₁.sub hg₂, sub_smul]
+theorem smulLeftCLM_compL_smulLeftCLM {g₁ g₂ : E → 𝕜} {hg₁ : g₁.HasTemperateGrowth}
+    {hg₂ : g₂.HasTemperateGrowth} :
+    smulLeftCLM F g₁ hg₁ ∘L smulLeftCLM F g₂ hg₂ = smulLeftCLM F (g₁ * g₂) (hg₁.mul hg₂) := by
+  ext1 f
+  exact smulLeftCLM_smulLeftCLM_apply (hg₁ := hg₁) (hg₂ := hg₂) f
 
-theorem smulLeftCLM_neg {g : E → 𝕜} (hg : g.HasTemperateGrowth) :
-    smulLeftCLM F (-g) = -smulLeftCLM F g := by
+theorem smulLeftCLM_smul {g : E → 𝕜} (c : 𝕜) {hcg : (c • g).HasTemperateGrowth}
+    (hg : g.HasTemperateGrowth) :
+    smulLeftCLM F (c • g) hcg = c • smulLeftCLM F g hg := by
   ext f x
-  simp [hg, hg.neg, neg_smul]
+  simp [smul_smul]
 
-theorem smulLeftCLM_fun_neg {g : E → 𝕜} (hg : g.HasTemperateGrowth) :
-    smulLeftCLM F (fun x ↦ -g x) = -smulLeftCLM F g :=
+theorem smulLeftCLM_add {g₁ g₂ : E → 𝕜} {hg : (g₁ + g₂).HasTemperateGrowth}
+    (hg₁ : g₁.HasTemperateGrowth) (hg₂ : g₂.HasTemperateGrowth) :
+    smulLeftCLM F (g₁ + g₂) hg = smulLeftCLM F g₁ hg₁ + smulLeftCLM F g₂ hg₂ := by
+  ext f x
+  simp [add_smul]
+
+theorem smulLeftCLM_sub {g₁ g₂ : E → 𝕜} {hg : (g₁ - g₂).HasTemperateGrowth}
+    (hg₁ : g₁.HasTemperateGrowth) (hg₂ : g₂.HasTemperateGrowth) :
+    smulLeftCLM F (g₁ - g₂) hg = smulLeftCLM F g₁ hg₁ - smulLeftCLM F g₂ hg₂ := by
+  ext f x
+  simp [sub_smul]
+
+theorem smulLeftCLM_neg {g : E → 𝕜} {hg' : (-g).HasTemperateGrowth} (hg : g.HasTemperateGrowth) :
+    smulLeftCLM F (-g) hg' = -smulLeftCLM F g hg := by
+  ext f x
+  simp [neg_smul]
+
+theorem smulLeftCLM_fun_neg {g : E → 𝕜} {hg' : (fun x ↦ -g x).HasTemperateGrowth}
+    (hg : g.HasTemperateGrowth) :
+    smulLeftCLM F (fun x ↦ -g x) hg' = -smulLeftCLM F g hg :=
   smulLeftCLM_neg hg
 
-theorem smulLeftCLM_sum {g : ι → E → 𝕜} {s : Finset ι} (hg : ∀ i ∈ s, (g i).HasTemperateGrowth) :
-    smulLeftCLM F (fun x ↦ ∑ i ∈ s, g i x) = ∑ i ∈ s, smulLeftCLM F (g i) := by
+theorem smulLeftCLM_sum {g : ι → E → 𝕜} {s : Finset ι}
+    {hs : (fun x ↦ ∑ i ∈ s, g i x).HasTemperateGrowth} (hg : ∀ i, (g i).HasTemperateGrowth) :
+    smulLeftCLM F (fun x ↦ ∑ i ∈ s, g i x) hs = ∑ i ∈ s, smulLeftCLM F (g i) (hg i) := by
   ext f x
-  simp +contextual [Function.HasTemperateGrowth.sum hg, Finset.sum_smul, hg]
+  simp [Finset.sum_smul]
 
 variable {𝕜' : Type*} [RCLike 𝕜'] [NormedSpace 𝕜' F]
 
 variable (𝕜') in
-theorem smulLeftCLM_ofReal {g : E → ℝ} (hg : g.HasTemperateGrowth) (f : 𝓢(E, F)) :
-    smulLeftCLM F (fun x ↦ RCLike.ofReal (K := 𝕜') (g x)) f = smulLeftCLM F g f := by
+theorem smulLeftCLM_ofReal {g : E → ℝ}
+    {hg' : (fun x ↦ RCLike.ofReal (K := 𝕜') (g x)).HasTemperateGrowth}
+    (hg : g.HasTemperateGrowth) (f : 𝓢(E, F)) :
+    smulLeftCLM F (fun x ↦ RCLike.ofReal (K := 𝕜') (g x)) hg' f = smulLeftCLM F g hg f := by
   ext x
-  rw [smulLeftCLM_apply_apply (by fun_prop), smulLeftCLM_apply_apply (by fun_prop),
-    algebraMap_smul]
+  rw [smulLeftCLM_apply_apply, smulLeftCLM_apply_apply, algebraMap_smul]
 
-theorem smulLeftCLM_real_smul {g : E → 𝕜'} (hg : g.HasTemperateGrowth) (c : ℝ) :
-    smulLeftCLM F (c • g) = c • smulLeftCLM F g := by
-  rw [RCLike.real_smul_eq_coe_smul (K := 𝕜') c, smulLeftCLM_smul hg,
-    ← RCLike.real_smul_eq_coe_smul c]
+theorem smulLeftCLM_real_smul {g : E → 𝕜'} (c : ℝ) {hcg : (c • g).HasTemperateGrowth}
+    (hg : g.HasTemperateGrowth) :
+    smulLeftCLM F (c • g) hcg = c • smulLeftCLM F g hg := by
+  ext f x
+  simp [smul_assoc]
 
-theorem tsupport_smulLeftCLM_subset (g : E → 𝕜) (f : 𝓢(E, F)) :
-    tsupport (smulLeftCLM F g f) ⊆ tsupport f ∩ tsupport g := by
-  by_cases hg : g.HasTemperateGrowth
-  · simpa [smulLeftCLM_apply hg] using
-      ⟨tsupport_smul_subset_right g f, tsupport_smul_subset_left g f⟩
-  · simp [smulLeftCLM, hg, FunLike.coe_zero]
+theorem tsupport_smulLeftCLM_subset (g : E → 𝕜) (hg : g.HasTemperateGrowth) (f : 𝓢(E, F)) :
+    tsupport (smulLeftCLM F g hg f) ⊆ tsupport f ∩ tsupport g := by
+  simpa [smulLeftCLM_apply] using
+    ⟨tsupport_smul_subset_right g f, tsupport_smul_subset_left g f⟩
 
 end smul
 
@@ -1013,11 +1013,10 @@ variable [NontriviallyNormedField 𝕜'] [NormedAlgebra ℝ 𝕜'] [NormedSpace 
 
 theorem smulLeftCLM_compCLMOfContinuousLinearEquiv {u : D → 𝕜'} (hu : u.HasTemperateGrowth)
     (g : D ≃L[ℝ] E) (f : 𝓢(E, F)) :
-    smulLeftCLM F u (compCLMOfContinuousLinearEquiv 𝕜 g f) =
-    compCLMOfContinuousLinearEquiv 𝕜 g (smulLeftCLM F (u ∘ g.symm) f) := by
+    smulLeftCLM F u hu (compCLMOfContinuousLinearEquiv 𝕜 g f) =
+    compCLMOfContinuousLinearEquiv 𝕜 g ((smulLeftCLM F (u ∘ g.symm)) f) := by
   ext x
-  have hu' : (u ∘ g.symm).HasTemperateGrowth := by fun_prop
-  simp [smulLeftCLM_apply_apply hu, smulLeftCLM_apply_apply hu']
+  simp
 
 end Comp
 
