@@ -151,70 +151,40 @@ lemma toContinuousMap_id {s : Set R} [Fact (0 ∈ s)] :
 
 end Basic
 
-section mkD
+section Representatives
 
 variable {X R : Type*} [Zero R]
 variable [TopologicalSpace X] [TopologicalSpace R]
 
-open scoped Classical in
-/--
-Interpret `f : α → β` as an element of `C(α, β)₀`, falling back to the default value
-`default : C(α, β)₀` if `f` is not continuous or does not map `0` to `0`.
-This is mainly intended to be used for `C(α, β)₀`-valued integration. For example, if a family of
-functions `f : ι → α → β` satisfies that `f i` is continuous and maps `0` to `0` for almost every
-`i`, you can write the `C(α, β)₀`-valued integral "`∫ i, f i`" as
-`∫ i, ContinuousMapZero.mkD (f i) 0`.
--/
-noncomputable def mkD [Zero X] (f : X → R) (default : C(X, R)₀) : C(X, R)₀ :=
-  if h : Continuous f ∧ f 0 = 0 then ⟨⟨_, h.1⟩, h.2⟩ else default
+/-- The analogue of `ContinuousMap.exists_eventually_coe_eq_iff` for `C(X, R)₀`: a family of
+functions `f i : X → R` has a bundled representative `F i : C(X, R)₀` along a filter `l`, namely a
+family with `⇑(F i) = f i` for `l`-almost every `i`, if and only if, for `l`-almost every `i`,
+`f i` is continuous and maps `0` to `0`. The values of a representative at the indices where `f i`
+is not such a function are arbitrary and appear in no statement. -/
+lemma exists_eventually_coe_eq_iff [Zero X] {ι : Type*} {l : Filter ι} {f : ι → X → R} :
+    (∃ F : ι → C(X, R)₀, ∀ᶠ i in l, ⇑(F i) = f i) ↔
+      ∀ᶠ i in l, Continuous (f i) ∧ f i 0 = 0 := by
+  constructor
+  · rintro ⟨F, hF⟩
+    refine hF.mono fun i hi ↦ ?_
+    rw [← hi]
+    exact ⟨map_continuous (F i), map_zero (F i)⟩
+  · intro h
+    have key : ∀ i, ∃ g : C(X, R)₀, (Continuous (f i) ∧ f i 0 = 0) → ⇑g = f i := fun i ↦ by
+      by_cases hi : Continuous (f i) ∧ f i 0 = 0
+      · exact ⟨⟨⟨f i, hi.1⟩, hi.2⟩, fun _ ↦ rfl⟩
+      · exact ⟨⟨ContinuousMap.const X 0, rfl⟩, fun h ↦ absurd h hi⟩
+    choose F hF using key
+    exact ⟨F, h.mono hF⟩
 
-lemma mkD_of_continuous [Zero X] {f : X → R} {g : C(X, R)₀} (hf : Continuous f) (hf₀ : f 0 = 0) :
-    mkD f g = ⟨⟨f, hf⟩, hf₀⟩ := by
-  simp only [mkD, And.intro hf hf₀, true_and, ↓reduceDIte]
+/-- Two bundled representatives in `C(X, R)₀` of the same family of functions agree along `l`. -/
+lemma eventuallyEq_of_eventually_coe_eq [Zero X] {ι : Type*} {l : Filter ι} {f : ι → X → R}
+    {F F' : ι → C(X, R)₀} (hF : ∀ᶠ i in l, ⇑(F i) = f i) (hF' : ∀ᶠ i in l, ⇑(F' i) = f i) :
+    F =ᶠ[l] F' := by
+  filter_upwards [hF, hF'] with i hi hi'
+  exact DFunLike.ext' (hi.trans hi'.symm)
 
-lemma mkD_of_not_continuous [Zero X] {f : X → R} {g : C(X, R)₀} (hf : ¬ Continuous f) :
-    mkD f g = g := by
-  simp only [mkD, not_and_of_not_left _ hf, ↓reduceDIte]
-
-lemma mkD_of_not_zero [Zero X] {f : X → R} {g : C(X, R)₀} (hf : f 0 ≠ 0) :
-    mkD f g = g := by
-  simp only [mkD, not_and_of_not_right _ hf, ↓reduceDIte]
-
-lemma mkD_apply_of_continuous [Zero X] {f : X → R} {g : C(X, R)₀} {x : X}
-    (hf : Continuous f) (hf₀ : f 0 = 0) :
-    mkD f g x = f x := by
-  rw [mkD_of_continuous hf hf₀, coe_mk, ContinuousMap.coe_mk]
-
-lemma mkD_of_continuousOn {s : Set X} [Zero s] {f : X → R} {g : C(s, R)₀}
-    (hf : ContinuousOn f s) (hf₀ : f (0 : s) = 0) :
-    mkD (s.domRestrict f) g = ⟨⟨s.domRestrict f, hf.domRestrict⟩, hf₀⟩ :=
-  mkD_of_continuous hf.domRestrict hf₀
-
-lemma mkD_of_not_continuousOn {s : Set X} [Zero s] {f : X → R} {g : C(s, R)₀}
-    (hf : ¬ ContinuousOn f s) :
-    mkD (s.domRestrict f) g = g := by
-  rw [continuousOn_iff_continuous_domRestrict] at hf
-  exact mkD_of_not_continuous hf
-
-set_option backward.isDefEq.respectTransparency false in
-lemma mkD_apply_of_continuousOn {s : Set X} [Zero s] {f : X → R} {g : C(s, R)₀} {x : s}
-    (hf : ContinuousOn f s) (hf₀ : f (0 : s) = 0) :
-    mkD (s.domRestrict f) g x = f x := by
-  rw [mkD_of_continuousOn hf hf₀, coe_mk, ContinuousMap.coe_mk, domRestrict_apply]
-
-open ContinuousMap in
-/-- Link between `ContinuousMapZero.mkD` and `ContinuousMap.mkD`. -/
-lemma mkD_eq_mkD_of_map_zero [Zero X] (f : X → R) (g : C(X, R)₀) (f_zero : f 0 = 0) :
-    mkD f g = ContinuousMap.mkD f g := by
-  ext
-  by_cases f_cont : Continuous f <;>
-    simp [*, ContinuousMap.mkD_of_continuous, mkD_of_continuous, mkD_of_not_continuous,
-      ContinuousMap.mkD_of_not_continuous]
-
-lemma mkD_eq_self [Zero X] {f g : C(X, R)₀} : mkD f g = f :=
-  mkD_of_continuous f.continuous (map_zero f)
-
-end mkD
+end Representatives
 
 section Algebra
 

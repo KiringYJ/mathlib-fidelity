@@ -308,49 +308,46 @@ def restrictPreimage (f : C(α, β)) (s : Set β) : C(f ⁻¹' s, s) :=
 
 end Restrict
 
-section mkD
+section Representatives
 
-/--
-Interpret `f : α → β` as an element of `C(α, β)`, falling back to the default value
-`default : C(α, β)` if `f` is not continuous.
-This is mainly intended to be used for `C(α, β)`-valued integration. For example, if a family of
-functions `f : ι → α → β` satisfies that `f i` is continuous for almost every `i`, you can write
-the `C(α, β)`-valued integral "`∫ i, f i`" as `∫ i, ContinuousMap.mkD (f i) 0`.
--/
-noncomputable def mkD (f : α → β) (default : C(α, β)) : C(α, β) :=
-  open scoped Classical in
-  if h : Continuous f then ⟨_, h⟩ else default
+/-- A family of functions `f i : α → β` has a bundled continuous representative along a filter `l`,
+namely a family `F i : C(α, β)` with `⇑(F i) = f i` for `l`-almost every `i`, if and only if `f i`
+is continuous for `l`-almost every `i`.
 
-lemma mkD_of_continuous {f : α → β} {g : C(α, β)} (hf : Continuous f) :
-    mkD f g = ⟨f, hf⟩ := by
-  simp only [mkD, hf, ↓reduceDIte]
+This is the boundary at which almost everywhere continuity of a family of bare functions is turned
+into a family of bundled continuous maps. For `l = MeasureTheory.ae μ`, the representatives of an
+almost everywhere continuous family form an almost everywhere class of `C(α, β)`-valued maps (see
+`ContinuousMap.eventuallyEq_of_eventually_coe_eq`). The values of a representative at the indices
+where `f i` is not continuous are arbitrary and appear in no statement. -/
+lemma exists_eventually_coe_eq_iff {ι : Type*} {l : Filter ι} {f : ι → α → β} :
+    (∃ F : ι → C(α, β), ∀ᶠ i in l, ⇑(F i) = f i) ↔ ∀ᶠ i in l, Continuous (f i) := by
+  constructor
+  · rintro ⟨F, hF⟩
+    refine hF.mono fun i hi ↦ ?_
+    rw [← hi]
+    exact map_continuous (F i)
+  · intro h
+    have key : ∀ i, ∃ g : C(α, β), Continuous (f i) → ⇑g = f i := fun i ↦ by
+      by_cases hi : Continuous (f i)
+      · exact ⟨⟨f i, hi⟩, fun _ ↦ rfl⟩
+      · by_cases hα : Nonempty α
+        · obtain ⟨a⟩ := hα
+          exact ⟨ContinuousMap.const α (f i a), fun h ↦ absurd h hi⟩
+        · have : IsEmpty α := not_nonempty_iff.mp hα
+          exact (hi continuous_of_discreteTopology).elim
+    choose F hF using key
+    exact ⟨F, h.mono hF⟩
 
-lemma mkD_of_not_continuous {f : α → β} {g : C(α, β)} (hf : ¬ Continuous f) :
-    mkD f g = g := by
-  simp only [mkD, hf, ↓reduceDIte]
+/-- Two bundled continuous representatives of the same family of functions agree along `l`.
+In particular, for `l = MeasureTheory.ae μ`, the almost everywhere class of a representative of an
+almost everywhere continuous family depends only on the family. -/
+lemma eventuallyEq_of_eventually_coe_eq {ι : Type*} {l : Filter ι} {f : ι → α → β}
+    {F F' : ι → C(α, β)} (hF : ∀ᶠ i in l, ⇑(F i) = f i) (hF' : ∀ᶠ i in l, ⇑(F' i) = f i) :
+    F =ᶠ[l] F' := by
+  filter_upwards [hF, hF'] with i hi hi'
+  exact DFunLike.ext' (hi.trans hi'.symm)
 
-lemma mkD_apply_of_continuous {f : α → β} {g : C(α, β)} {x : α} (hf : Continuous f) :
-    mkD f g x = f x := by
-  rw [mkD_of_continuous hf, coe_mk]
-
-lemma mkD_of_continuousOn {s : Set α} {f : α → β} {g : C(s, β)}
-    (hf : ContinuousOn f s) :
-    mkD (s.domRestrict f) g = ⟨s.domRestrict f, hf.domRestrict⟩ := mkD_of_continuous hf.domRestrict
-
-lemma mkD_of_not_continuousOn {s : Set α} {f : α → β} {g : C(s, β)}
-    (hf : ¬ ContinuousOn f s) :
-    mkD (s.domRestrict f) g = g := by
-  rw [continuousOn_iff_continuous_domRestrict] at hf
-  exact mkD_of_not_continuous hf
-
-lemma mkD_apply_of_continuousOn {s : Set α} {f : α → β} {g : C(s, β)} {x : s}
-    (hf : ContinuousOn f s) :
-    mkD (s.domRestrict f) g x = f x := by rw [mkD_of_continuousOn hf, coe_mk, Set.domRestrict_apply]
-
-lemma mkD_eq_self {f g : C(α, β)} : mkD f g = f :=
-  mkD_of_continuous f.continuous
-
-end mkD
+end Representatives
 
 section Gluing
 

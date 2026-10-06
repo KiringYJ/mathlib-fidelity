@@ -902,17 +902,23 @@ operation.
   atom of `dirac (0, 1)`; two representatives that differ off the atom; the rejection of the
   constant kernel `dirac 0`; and the finite-measure and finite-kernel domains.
 
-- [ ] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
-  `ContinuousMap.mkD` in `Mathlib/Topology/ContinuousMap/Basic.lean:320` honestly takes an explicit
-  fallback, so it is not a silent totalization; nevertheless it interprets every bare function as a
-  continuous map by replacing a noncontinuous function wholesale.  The integration guide in
-  `Mathlib/MeasureTheory/SpecificCodomains/ContinuousMap.lean:40` recommends this spelling even when
-  every family member is continuous, chiefly to avoid dependent types.  Model the paper-level claim
-  instead: an a.e.-continuous family determines an a.e.-class of `C(Y, E)`-valued maps, independent
-  of the representative on the null set.  Carry a.e. continuity at that boundary and separately
-  require the strong measurability and integrability used downstream; quotienting alone does not
-  prove them.  If implementation still needs `mkD`, keep it private behind that boundary so its
-  fallback cannot appear in public theorem statements.
+- [x] **Replace integration-facing `ContinuousMap.mkD` with an a.e.-continuous-family interface.**
+  `ContinuousMap.mkD` and `ContinuousMapZero.mkD`, which replaced a noncontinuous function by a
+  fallback, are removed together with their lemmas and the `mkD` lemmas of
+  `Mathlib/Topology/CompactOpen.lean`, of `Mathlib/MeasureTheory/SpecificCodomains/`, and of the
+  continuous functional calculus.  An almost everywhere continuous family `f : X → Y → E` is
+  represented by a bundled `F : X → C(Y, E)` with `∀ᵐ x ∂μ, ⇑(F x) = f x`:
+  `ContinuousMap.exists_eventually_coe_eq_iff` (and its `C(Y, E)₀` version, which adds `f x 0 = 0`)
+  shows that such representatives exist exactly for almost everywhere continuous families, and
+  `eventuallyEq_of_eventually_coe_eq` that any two agree almost everywhere, so the class does not
+  depend on the representative.  Strong measurability and integrability remain separate hypotheses
+  or follow from joint continuity (`aeStronglyMeasurable_of_uncurry` and its restricted variants)
+  and a bound (`hasFiniteIntegral_of_ae_coe_eq_of_bound`).  `cfc_apply_of_coe_eq` and
+  `cfcₙ_apply_of_coe_eq` replace `cfc_apply_mkD` and `cfcₙ_apply_mkD`; the primed integral lemmas of
+  `Mathlib/Analysis/CStarAlgebra/ContinuousFunctionalCalculus/Integral.lean` take the
+  representative, its specification, and its integrability, and the unprimed ones keep their
+  statements.  Tests cover the removed names, the existence and uniqueness of representatives, an
+  empty domain, measurability, and the functional calculus.
 
 - [x] **Prevent impossible regularity requests from becoming zero operators.**
   The operators on `𝓓^{n}_{K}(E, F)` and `𝓓^{n}(Ω, F)` take their regularity inequality, which
@@ -2142,8 +2148,8 @@ was found, and none should inherit validation merely from the earlier scan:
 - [x] **An explicit default does not justify a public mathematical operation.**  A technical
   representative constructor may remain only privately behind a proved boundary that makes its
   fallback unreachable or proves representative independence.  The integration-facing
-  `ContinuousMap.mkD` entry above remains a candidate until its proposed a.e.-class interface is
-  validated against real consumers.
+  `ContinuousMap.mkD` was removed in favour of bundled representatives with an almost everywhere
+  specification (entry above).
 - [x] **Conditional expectation and probability brackets are conventional secondary surfaces.**
   `μ[f | 𝓐]`, `μ[|s]`, and `μ[t | s]` have stable named expansions, preserve nesting, and elaborate
   correctly when both scopes are active.  Keep the notation; the construction contract of `condExp`

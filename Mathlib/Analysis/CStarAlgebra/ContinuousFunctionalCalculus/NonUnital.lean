@@ -268,22 +268,27 @@ lemma cfcₙ_eq_cfcₙL {a : A} {f : R → R} (ha : p a) (hf : ContinuousOn f (�
     cfcₙ f a = cfcₙL ha ⟨⟨_, hf.domRestrict⟩, hf0⟩ := by
   rw [cfcₙ_def, dite_eq_left ⟨ha, hf, hf0⟩, cfcₙL_apply]
 
-set_option backward.privateInPublic true in
-/-- A version of `cfcₙ_apply` in terms of `ContinuousMapZero.mkD` -/
-lemma cfcₙ_apply_mkD :
-    cfcₙ f a = cfcₙHom (a := a) ha (mkD ((quasispectrum R a).domRestrict f) 0) := by
-  by_cases f_cont : ContinuousOn f (quasispectrum R a)
-  · by_cases f_zero : f 0 = 0
-    · rw [cfcₙ_apply f a, mkD_of_continuousOn f_cont f_zero]
-    · rw [cfcₙ_apply_of_not_map_zero a f_zero, mkD_of_not_zero, map_zero]
-      exact f_zero
-  · rw [cfcₙ_apply_of_not_continuousOn a f_cont, mkD_of_not_continuousOn f_cont, map_zero]
+/-- A version of `cfcₙ_apply` for a bundled representative of the restriction of `f` to the
+quasispectrum of `a`, that is a continuous map `F : C(σₙ R a, R)₀` with
+`⇑F = (σₙ R a).domRestrict f`. Such an `F` exists if and only if `f` is continuous on the
+quasispectrum and `f 0 = 0`, so this is not an assumption. -/
+lemma cfcₙ_apply_of_coe_eq (f : R → R) (a : A) {F : C(σₙ R a, R)₀}
+    (hF : ⇑F = (σₙ R a).domRestrict f) (ha : p a := by cfc_tac) :
+    cfcₙ f a = cfcₙHom (a := a) ha F := by
+  have hf : ContinuousOn f (σₙ R a) := by
+    rw [continuousOn_iff_continuous_domRestrict, ← hF]
+    exact map_continuous F
+  have hf0 : f 0 = 0 := (congr_fun hF 0).symm.trans (map_zero F)
+  have hFeq : (⟨⟨(σₙ R a).domRestrict f, hf.domRestrict⟩, hf0⟩ : C(σₙ R a, R)₀) = F :=
+    ContinuousMapZero.ext fun z ↦ (congr_fun hF z).symm
+  rw [cfcₙ_apply f a hf hf0 ha, hFeq]
 
-set_option backward.privateInPublic true in
-/-- A version of `cfcₙ_eq_cfcₙL` in terms of `ContinuousMapZero.mkD` -/
-lemma cfcₙ_eq_cfcₙL_mkD :
-    cfcₙ f a = cfcₙL (a := a) ha (mkD ((quasispectrum R a).domRestrict f) 0) :=
-  cfcₙ_apply_mkD _ _
+/-- A version of `cfcₙ_eq_cfcₙL` for a bundled representative of the restriction of `f` to the
+quasispectrum of `a`, see `cfcₙ_apply_of_coe_eq`. -/
+lemma cfcₙ_eq_cfcₙL_of_coe_eq (f : R → R) (a : A) {F : C(σₙ R a, R)₀}
+    (hF : ⇑F = (σₙ R a).domRestrict f) (ha : p a := by cfc_tac) :
+    cfcₙ f a = cfcₙL (a := a) ha F :=
+  cfcₙ_apply_of_coe_eq f a hF ha
 
 lemma cfcₙ_cases (P : A → Prop) (a : A) (f : R → R) (h₀ : P 0)
     (haf : ∀ (hf : ContinuousOn f (σₙ R a)) h0 ha, P (cfcₙHom ha ⟨⟨_, hf.domRestrict⟩, h0⟩)) :
