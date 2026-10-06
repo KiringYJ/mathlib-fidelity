@@ -1807,16 +1807,19 @@ another standard representation.
   say that the product/sup metric is intended.  A future lint should inspect suspicious declarations
   and docstrings without rejecting genuine product-metric uses.
 
-- [ ] **[S--M] Distinguish the zero-padded singular-value sequence from a finite singular-value
-  family.**
-  `LinearMap.singularValues` in
-  `Mathlib/Analysis/InnerProductSpace/SingularValues.lean:94` is a countably infinite sequence whose
-  finite-dimensional tail is zero.  The module documentation at lines 18--19 and 36--51 explicitly
-  chooses this representation to avoid dependent indexing, but a source-code design choice does not
-  establish a mathematical convention.  Find literature using the same infinite zero-padded
-  sequence before retaining it publicly.  Otherwise keep it private and provide the
-  finite/domain-dimension/rank-indexed family used by the target literature.  Audit downstream
-  cardinality, positivity, product, and ordering statements for the intended index set.
+- [x] **[S--M] Identify the zero-padded singular-value sequence with the `s`-numbers.**
+  `LinearMap.singularValues T` in `Mathlib/Analysis/InnerProductSpace/SingularValues.lean` is the
+  sequence of `s`-numbers of `T`, indexed from `0`.  The axioms of A. Pietsch, *s-Numbers of
+  operators in Banach spaces*, Studia Math. 51 (1974), 201--223, assign to every operator a
+  nonincreasing sequence `s₁(T) ≥ s₂(T) ≥ ⋯ ≥ 0` indexed by all positive integers, with `sₙ(T) = 0`
+  whenever `rank T < n`, and on operators between Hilbert spaces all `s`-numbers coincide with the
+  singular values (A. Pietsch, *Eigenvalues and s-Numbers*, Cambridge University Press, 1987,
+  2.11.9).  The values after the rank are therefore `s`-numbers, not padding, and the module
+  documentation now cites this instead of calling them junk values.  The downstream statements
+  already name their index sets: `support_singularValues` and `card_support_singularValues` put the
+  positive values on `Finset.range (finrank 𝕜 T.range)`,
+  `injective_iff_forall_lt_finrank_singularValues_pos` quantifies over `i < finrank 𝕜 E`, and
+  `normDet_eq_prod_singularValues` multiplies over `Finset.range (finrank 𝕜 U)`.
 
 - [ ] **[L] Distinguish zero-encoded element order from an extended order.**
   `orderOf` and `addOrderOf` in `Mathlib/GroupTheory/OrderOfElement.lean:178` encode infinite order as

@@ -40,18 +40,15 @@ In mathematical literature, the number of singular values varies, with popular c
 - `n` singular values, some of which might be zero. This is the approach taken in [axler2024].
 - Countably infinitely many singular values, with all but finitely many of them being zero.
 
-We take the last approach for the following reasons:
-- It avoid unnecessary dependent typing.
-- You can easily convert this definition to the other three by composing with `Fin.val`, but
-  converting between any two of the other definitions is more inconvenient because it involves
-  multiple `Fin` types.
-- If you prefer a definition where there are `k` singular values, you can treat the singular values
-  after `k` as junk values.
-  Not having to prove that `i < k` when getting the `i`th singular value has similar advantages to
-  not having to prove that `y ≠ 0` when calculating `x / y`.
-- This API coincides with a potential future API for approximation numbers, which are a
-  generalization of singular values to continuous linear maps between possibly-infinite-dimensional
-  normed vector spaces.
+We take the last approach, which is the sequence of `s`-numbers of `T`. The theory of `s`-numbers
+([pietsch1974], [pietsch1987]) assigns to every operator `T` between Banach spaces a nonincreasing
+sequence `s₁(T) ≥ s₂(T) ≥ ⋯ ≥ 0`, indexed by all positive integers, with `sₙ(T) = 0` whenever
+`rank(T) < n`; on operators between Hilbert spaces all `s`-numbers coincide with the singular values
+([pietsch1987], 2.11.9). The values after `rank(T)` are therefore `s`-numbers of `T`, not padding,
+and `T.singularValues i` is `s_{i+1}(T)`. The other three conventions are restrictions of this
+sequence to `i < rank(T)`, `i < min(n, m)`, and `i < n`, obtained by composing with `Fin.val`. The
+sequence also matches the approximation numbers of `T`, which are defined for continuous linear
+maps between possibly-infinite-dimensional normed vector spaces.
 
 ## TODO
 
@@ -63,6 +60,8 @@ We take the last approach for the following reasons:
 ## References
 
 * [Sheldon Axler, *Linear Algebra Done Right*][axler2024]
+* [Albrecht Pietsch, *s-Numbers of operators in Banach spaces*][pietsch1974]
+* [Albrecht Pietsch, *Eigenvalues and s-Numbers*][pietsch1987]
 
 ## Tags
 
@@ -85,8 +84,9 @@ If `T : E →ₗ[𝕜] F` is a linear map between finite dimensional inner produ
 `T.singularValues` is the infinite sequence where the first dim(E) elements are the square roots of
 eigenvalues of `T.adjoint ∘ₗ T` (which are guaranteed to be nonnegative real numbers), arranged
 in descending order and repeated according to their multiplicity, and the rest of the elements in
-the infinite sequence are zero. Please see the module docstring of
-`Mathlib/Analysis/InnerProductSpace/SingularValues.lean` for an explanation of this design decision.
+the infinite sequence are zero. This is the sequence of `s`-numbers of `T`, indexed from `0`; please
+see the module docstring of `Mathlib/Analysis/InnerProductSpace/SingularValues.lean` for the
+literature and the other conventions.
 
 The singular values are zero-indexed, so `T.singularValues 0` refers to the first singular value.
 This means the positive singular values occur at `0 ≤ i < rank(T)` and not `1 ≤ i ≤ rank(T)`.
