@@ -260,15 +260,21 @@ operation.
   supremum.  `natTrailingDegree`, whose value `0` at `0` is not an infimum, and the statements that
   read `natDegree` as a degree at `0` are recorded below.
 
-- [ ] **Give `Polynomial.natTrailingDegree` its domain.**
-  `natTrailingDegree p` in `Mathlib/Algebra/Polynomial/Degree/TrailingDegree.lean:56` is
-  `ENat.toNat (trailingDegree p)`, so `natTrailingDegree 0 = 0` although `trailingDegree 0 = ⊤`.
-  Unlike the value of `natDegree` at `0`, this is not an order-theoretic value: `ℕ` has no top, the
-  empty set has no infimum in `ℕ`, and `Nat.sInf_empty` is a junk branch.  The API is already
-  asymmetric: `le_natTrailingDegree` needs `p ≠ 0`, and `natTrailingDegree_eq_zero` states the junk
-  disjunct `p = 0`.  Require `p ≠ 0` for the natural-valued trailing degree, keeping
-  `trailingDegree` in `ℕ∞` (like `PowerSeries.order`) as the total invariant, and migrate
-  `Polynomial.mirror`, `nextCoeffUp`, and the 12 consuming files.
+- [x] **Give `Polynomial.natTrailingDegree` its domain.**
+  `natTrailingDegree p hp` in `Mathlib/Algebra/Polynomial/Degree/TrailingDegree.lean` takes
+  `hp : p ≠ 0`, which `assumption` supplies by default, and `trailingDegree` stays the total
+  invariant in `ℕ∞`, with `trailingDegree 0 = ⊤`.  `natTrailingDegree_zero`,
+  `trailingDegree_eq_iff_natTrailingDegree_eq_of_pos`, and the equivalence
+  `coeff_natTrailingDegree_eq_zero` are removed, and `natTrailingDegree_eq_zero` and
+  `natTrailingDegree_ne_zero` no longer carry the disjunct `p = 0`.  `trailingCoeff`, `nextCoeffUp`,
+  and `Polynomial.mirror` stay total with value `0` at `0`, where every coefficient is `0`;
+  `trailingCoeff_of_ne_zero` and `mirror_of_ne_zero` unfold them.  `LinearMap.nilRank`,
+  `LinearMap.IsNilRegular`, `LieModule.rank`, and `LieModule.IsRegular` require a nontrivial base
+  ring, as their docstrings already assumed, since the characteristic polynomial over the zero ring
+  is `0`.  `rootMultiplicity_eq_natTrailingDegree` takes `p ≠ 0` (see "Exclude the zero polynomial
+  from finite root multisets and multiplicities"), and `isUnitTrinomial_iff'` states that
+  `p * p.mirror` is nonzero.  Tests cover the removed name, the default proof, and the total
+  invariants at `0`.
 
 - [ ] **Audit constructions that feed `natDegree` of a possibly zero polynomial into a formula.**
   `natDegree` is the supremum of the support, so its value at `0` is not a fallback, but several

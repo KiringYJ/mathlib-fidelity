@@ -433,13 +433,12 @@ at which `LinearMap.polyCharpoly φ b` has a non-zero coefficient.
 
 This number does not depend on the choice of `b`, see `nilRankAux_basis_indep`. -/
 noncomputable
-def nilRankAux (φ : L →ₗ[R] Module.End R M) (b : Basis ι R L) : ℕ :=
-  (polyCharpoly φ b).natTrailingDegree
+def nilRankAux [Nontrivial R] (φ : L →ₗ[R] Module.End R M) (b : Basis ι R L) : ℕ :=
+  (polyCharpoly φ b).natTrailingDegree (polyCharpoly_ne_zero φ b)
 
 lemma polyCharpoly_coeff_nilRankAux_ne_zero [Nontrivial R] :
-    (polyCharpoly φ b).coeff (nilRankAux φ b) ≠ 0 := by
-  apply Polynomial.trailingCoeff_nonzero_iff_nonzero.mpr
-  apply polyCharpoly_ne_zero
+    (polyCharpoly φ b).coeff (nilRankAux φ b) ≠ 0 :=
+  Polynomial.coeff_natTrailingDegree_ne_zero (polyCharpoly_ne_zero φ b)
 
 lemma nilRankAux_le [Nontrivial R] (b : Basis ι R L) (b' : Basis ι' R L) :
     nilRankAux φ b ≤ nilRankAux φ b' := by
@@ -448,7 +447,7 @@ lemma nilRankAux_le [Nontrivial R] (b : Basis ι R L) (b' : Basis ι' R L) :
   apply polyCharpoly_coeff_nilRankAux_ne_zero
 
 lemma nilRankAux_basis_indep [Nontrivial R] (b : Basis ι R L) (b' : Basis ι' R L) :
-    nilRankAux φ b = (polyCharpoly φ b').natTrailingDegree := by
+    nilRankAux φ b = (polyCharpoly φ b').natTrailingDegree (polyCharpoly_ne_zero φ b') := by
   apply le_antisymm <;> apply nilRankAux_le
 
 end aux
@@ -463,14 +462,14 @@ at which `LinearMap.polyCharpoly φ b` has a non-zero coefficient.
 This number does not depend on the choice of `b`,
 see `LinearMap.nilRank_eq_polyCharpoly_natTrailingDegree`. -/
 noncomputable
-def nilRank (φ : L →ₗ[R] Module.End R M) : ℕ :=
+def nilRank [Nontrivial R] (φ : L →ₗ[R] Module.End R M) : ℕ :=
   nilRankAux φ (Module.Free.chooseBasis R L)
 
 section
 variable [Nontrivial R]
 
 lemma nilRank_eq_polyCharpoly_natTrailingDegree (b : Basis ι R L) :
-    nilRank φ = (polyCharpoly φ b).natTrailingDegree := by
+    nilRank φ = (polyCharpoly φ b).natTrailingDegree (polyCharpoly_ne_zero φ b) := by
   apply nilRankAux_basis_indep
 
 lemma polyCharpoly_coeff_nilRank_ne_zero :
@@ -490,15 +489,12 @@ lemma nilRank_le_finrank : nilRank φ ≤ finrank R M := by
   simpa only [finrank_eq_card_chooseBasisIndex R M] using nilRank_le_card φ (chooseBasis R M)
 
 lemma nilRank_le_natTrailingDegree_charpoly (x : L) :
-    nilRank φ ≤ (φ x).charpoly.natTrailingDegree := by
+    nilRank φ ≤ (φ x).charpoly.natTrailingDegree (LinearMap.charpoly_monic _).ne_zero := by
   apply Polynomial.natTrailingDegree_le_of_ne_zero
   intro h
   apply_fun (MvPolynomial.eval ((chooseBasis R L).repr x)) at h
   rw [polyCharpoly_coeff_eval, map_zero] at h
-  apply Polynomial.trailingCoeff_nonzero_iff_nonzero.mpr _ h
-  apply (LinearMap.charpoly_monic _).ne_zero
-
-end
+  exact Polynomial.coeff_natTrailingDegree_ne_zero (LinearMap.charpoly_monic _).ne_zero h
 
 /-- Let `L` and `M` be finite free modules over `R`,
 and let `φ : L →ₗ[R] Module.End R M` be a linear family of endomorphisms,
@@ -520,8 +516,9 @@ lemma isNilRegular_iff_coeff_polyCharpoly_nilRank_ne_zero :
       ((polyCharpoly φ b).coeff (nilRank φ)) ≠ 0 := by
   rw [IsNilRegular, polyCharpoly_coeff_eval]
 
-lemma isNilRegular_iff_natTrailingDegree_charpoly_eq_nilRank [Nontrivial R] :
-    IsNilRegular φ x ↔ (φ x).charpoly.natTrailingDegree = nilRank φ := by
+lemma isNilRegular_iff_natTrailingDegree_charpoly_eq_nilRank :
+    IsNilRegular φ x ↔
+      (φ x).charpoly.natTrailingDegree (LinearMap.charpoly_monic _).ne_zero = nilRank φ := by
   rw [isNilRegular_def]
   constructor
   · intro h
@@ -530,8 +527,9 @@ lemma isNilRegular_iff_natTrailingDegree_charpoly_eq_nilRank [Nontrivial R] :
       (nilRank_le_natTrailingDegree_charpoly φ x)
   · intro h
     rw [← h]
-    apply Polynomial.trailingCoeff_nonzero_iff_nonzero.mpr
-    apply (LinearMap.charpoly_monic _).ne_zero
+    exact Polynomial.coeff_natTrailingDegree_ne_zero (LinearMap.charpoly_monic _).ne_zero
+
+end
 
 section IsDomain
 

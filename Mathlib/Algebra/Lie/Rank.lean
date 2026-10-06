@@ -54,6 +54,10 @@ variable (R L M)
 
 local notation "φ" => LieHom.toLinearMap (LieModule.toEnd R L M)
 
+section Nontrivial
+
+variable [Nontrivial R]
+
 /--
 Let `M` be a representation of a Lie algebra `L` over a nontrivial commutative ring `R`,
 and assume that `L` and `M` are finite free as `R`-module.
@@ -63,28 +67,28 @@ The *rank* of `M` is the smallest `n` for which the `n`-th coefficient is not th
 noncomputable
 def rank : ℕ := nilRank φ
 
-lemma polyCharpoly_coeff_rank_ne_zero [Nontrivial R] [DecidableEq ι] :
+lemma polyCharpoly_coeff_rank_ne_zero [DecidableEq ι] :
     (polyCharpoly φ b).coeff (rank R L M) ≠ 0 :=
   polyCharpoly_coeff_nilRank_ne_zero _ _
 
-lemma rank_eq_natTrailingDegree [Nontrivial R] [DecidableEq ι] :
-    rank R L M = (polyCharpoly φ b).natTrailingDegree := by
+lemma rank_eq_natTrailingDegree [DecidableEq ι] :
+    rank R L M = (polyCharpoly φ b).natTrailingDegree (polyCharpoly_ne_zero _ b) := by
   apply nilRank_eq_polyCharpoly_natTrailingDegree
 
 open Module
 
 include bₘ in
-lemma rank_le_card [Nontrivial R] : rank R L M ≤ Fintype.card ιₘ :=
+lemma rank_le_card : rank R L M ≤ Fintype.card ιₘ :=
   nilRank_le_card _ bₘ
 
 open Module
-lemma rank_le_finrank [Nontrivial R] : rank R L M ≤ finrank R M :=
+lemma rank_le_finrank : rank R L M ≤ finrank R M :=
   nilRank_le_finrank _
 
 variable {L}
 
-lemma rank_le_natTrailingDegree_charpoly_ad [Nontrivial R] :
-    rank R L M ≤ (toEnd R L M x).charpoly.natTrailingDegree :=
+lemma rank_le_natTrailingDegree_charpoly_ad :
+    rank R L M ≤ (toEnd R L M x).charpoly.natTrailingDegree (LinearMap.charpoly_monic _).ne_zero :=
   nilRank_le_natTrailingDegree_charpoly _ _
 
 /-- Let `x` be an element of a Lie algebra `L` over `R`, and write `n` for `rank R L`.
@@ -101,12 +105,16 @@ lemma isRegular_iff_coeff_polyCharpoly_rank_ne_zero [DecidableEq ι] :
       ((polyCharpoly φ b).coeff (rank R L M)) ≠ 0 :=
   LinearMap.isNilRegular_iff_coeff_polyCharpoly_nilRank_ne_zero _ _ _
 
-lemma isRegular_iff_natTrailingDegree_charpoly_eq_rank [Nontrivial R] :
-    IsRegular R M x ↔ (toEnd R L M x).charpoly.natTrailingDegree = rank R L M :=
+lemma isRegular_iff_natTrailingDegree_charpoly_eq_rank :
+    IsRegular R M x ↔
+      (toEnd R L M x).charpoly.natTrailingDegree (LinearMap.charpoly_monic _).ne_zero =
+        rank R L M :=
   LinearMap.isNilRegular_iff_natTrailingDegree_charpoly_eq_nilRank _ _
+
+end Nontrivial
+
 section IsDomain
 
-variable (L)
 variable [IsDomain R]
 
 open Cardinal Module MvPolynomial in
@@ -128,6 +136,10 @@ attribute [local instance 100] LieRing.ofAssociativeRing
 
 variable (R L)
 
+section Nontrivial
+
+variable [Nontrivial R]
+
 /--
 Let `L` be a Lie algebra over a nontrivial commutative ring `R`,
 and assume that `L` is finite free as `R`-module.
@@ -137,27 +149,28 @@ The *rank* of `L` is the smallest `n` for which the `n`-th coefficient is not th
 noncomputable
 abbrev rank : ℕ := LieModule.rank R L L
 
-lemma polyCharpoly_coeff_rank_ne_zero [Nontrivial R] [DecidableEq ι] :
+lemma polyCharpoly_coeff_rank_ne_zero [DecidableEq ι] :
     (polyCharpoly (ad R L).toLinearMap b).coeff (rank R L) ≠ 0 :=
   polyCharpoly_coeff_nilRank_ne_zero _ _
 
-lemma rank_eq_natTrailingDegree [Nontrivial R] [DecidableEq ι] :
-    rank R L = (polyCharpoly (ad R L).toLinearMap b).natTrailingDegree := by
+lemma rank_eq_natTrailingDegree [DecidableEq ι] :
+    rank R L = (polyCharpoly (ad R L).toLinearMap b).natTrailingDegree
+      (polyCharpoly_ne_zero _ b) := by
   apply nilRank_eq_polyCharpoly_natTrailingDegree
 
 open Module
 
 include b in
-lemma rank_le_card [Nontrivial R] : rank R L ≤ Fintype.card ι :=
+lemma rank_le_card : rank R L ≤ Fintype.card ι :=
   nilRank_le_card _ b
 
-lemma rank_le_finrank [Nontrivial R] : rank R L ≤ finrank R L :=
+lemma rank_le_finrank : rank R L ≤ finrank R L :=
   nilRank_le_finrank _
 
 variable {L}
 
-lemma rank_le_natTrailingDegree_charpoly_ad [Nontrivial R] :
-    rank R L ≤ (ad R L x).charpoly.natTrailingDegree :=
+lemma rank_le_natTrailingDegree_charpoly_ad :
+    rank R L ≤ (ad R L x).charpoly.natTrailingDegree (LinearMap.charpoly_monic _).ne_zero :=
   nilRank_le_natTrailingDegree_charpoly _ _
 
 /-- Let `x` be an element of a Lie algebra `L` over `R`, and write `n` for `rank R L`.
@@ -174,12 +187,15 @@ lemma isRegular_iff_coeff_polyCharpoly_rank_ne_zero [DecidableEq ι] :
       ((polyCharpoly (ad R L).toLinearMap b).coeff (rank R L)) ≠ 0 :=
   LinearMap.isNilRegular_iff_coeff_polyCharpoly_nilRank_ne_zero _ _ _
 
-lemma isRegular_iff_natTrailingDegree_charpoly_eq_rank [Nontrivial R] :
-    IsRegular R x ↔ (ad R L x).charpoly.natTrailingDegree = rank R L :=
+lemma isRegular_iff_natTrailingDegree_charpoly_eq_rank :
+    IsRegular R x ↔
+      (ad R L x).charpoly.natTrailingDegree (LinearMap.charpoly_monic _).ne_zero = rank R L :=
   LinearMap.isNilRegular_iff_natTrailingDegree_charpoly_eq_nilRank _ _
+
+end Nontrivial
+
 section IsDomain
 
-variable (L)
 variable [IsDomain R]
 
 open Cardinal Module MvPolynomial in
@@ -201,7 +217,8 @@ variable (K : Type*) {L : Type*} [Field K] [LieRing L] [LieAlgebra K L] [Module.
 open Module LieSubalgebra
 
 lemma finrank_engel (x : L) :
-    finrank K (engel K x) = (ad K L x).charpoly.natTrailingDegree :=
+    finrank K (engel K x) =
+      (ad K L x).charpoly.natTrailingDegree (LinearMap.charpoly_monic _).ne_zero :=
   (ad K L x).finrank_maxGenEigenspace_zero_eq
 
 lemma rank_le_finrank_engel (x : L) :

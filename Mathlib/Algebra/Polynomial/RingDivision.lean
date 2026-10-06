@@ -134,9 +134,10 @@ theorem rootMultiplicity_eq_rootMultiplicity {p : R[X]} {t : R} :
   simp [C_eq_algebraMap]
 
 /-- See `Polynomial.rootMultiplicity_eq_natTrailingDegree'` for the special case of `t = 0`. -/
-theorem rootMultiplicity_eq_natTrailingDegree {p : R[X]} {t : R} :
-    p.rootMultiplicity t = (p.comp (X + C t)).natTrailingDegree :=
-  rootMultiplicity_eq_rootMultiplicity.trans rootMultiplicity_eq_natTrailingDegree'
+theorem rootMultiplicity_eq_natTrailingDegree {p : R[X]} {t : R} (hp : p ≠ 0) :
+    p.rootMultiplicity t =
+      (p.comp (X + C t)).natTrailingDegree (comp_X_add_C_eq_zero_iff.not.2 hp) :=
+  rootMultiplicity_eq_rootMultiplicity.trans (rootMultiplicity_eq_natTrailingDegree' _)
 
 section nonZeroDivisors
 
@@ -148,8 +149,12 @@ theorem Monic.mem_nonZeroDivisors {p : R[X]} (h : p.Monic) : p ∈ R[X]⁰ :=
 theorem mem_nonZeroDivisors_of_leadingCoeff {p : R[X]} (h : p.leadingCoeff ∈ R⁰) : p ∈ R[X]⁰ :=
   mem_nonzeroDivisors_of_coeff_mem _ h
 
-theorem mem_nonZeroDivisors_of_trailingCoeff {p : R[X]} (h : p.trailingCoeff ∈ R⁰) : p ∈ R[X]⁰ :=
-  mem_nonzeroDivisors_of_coeff_mem _ h
+theorem mem_nonZeroDivisors_of_trailingCoeff {p : R[X]} (h : p.trailingCoeff ∈ R⁰) :
+    p ∈ R[X]⁰ := by
+  rcases eq_or_ne p 0 with rfl | hp
+  · exact mem_nonzeroDivisors_of_coeff_mem 0 (by simpa using h)
+  rw [trailingCoeff_of_ne_zero hp] at h
+  exact mem_nonzeroDivisors_of_coeff_mem _ h
 
 end nonZeroDivisors
 
@@ -217,7 +222,16 @@ theorem rootMultiplicity_mul' {p q : R[X]} {x : R}
       (q /ₘ (X - C x) ^ q.rootMultiplicity x).eval x ≠ 0) :
     rootMultiplicity x (p * q) = rootMultiplicity x p + rootMultiplicity x q := by
   simp_rw [eval_divByMonic_eq_trailingCoeff_comp] at hpq
-  simp_rw [rootMultiplicity_eq_natTrailingDegree, mul_comp, natTrailingDegree_mul' hpq]
+  have hp : p ≠ 0 := by rintro rfl; simp at hpq
+  have hq : q ≠ 0 := by rintro rfl; simp at hpq
+  have hpq₀ : p * q ≠ 0 := by
+    rintro h
+    apply mul_ne_zero_of_trailingCoeff_mul_ne_zero hpq
+    rw [← mul_comp, h, zero_comp]
+  rw [rootMultiplicity_eq_natTrailingDegree hpq₀, rootMultiplicity_eq_natTrailingDegree hp,
+    rootMultiplicity_eq_natTrailingDegree hq]
+  simp only [mul_comp]
+  exact natTrailingDegree_mul' hpq
 
 theorem Monic.neg_one_pow_natDegree_mul_comp_neg_X {p : R[X]} (hp : p.Monic) :
     ((-1) ^ p.natDegree * p.comp (-X)).Monic := by
