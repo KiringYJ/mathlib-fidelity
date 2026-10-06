@@ -369,6 +369,31 @@ lemma linearProjOfIsCompl_apply_right (x : q) : linearProjOfIsCompl q i hi h x =
 lemma ker_linearProjOfIsCompl : ker (linearProjOfIsCompl q i hi h) = q := by
   simp [LinearMap.linearProjOfIsCompl]
 
+/-- The projection along a complement `q` of the range of an injective map `i` is the unique left
+inverse of `i` that vanishes on `q`. -/
+theorem eq_linearProjOfIsCompl {g : E →ₗ[R] F} (hg : ∀ x, g (i x) = x) (hq : ∀ x ∈ q, g x = 0) :
+    g = linearProjOfIsCompl q i hi h := by
+  ext x
+  have hx : x ∈ LinearMap.range i ⊔ q := by rw [h.sup_eq_top]; exact Submodule.mem_top
+  obtain ⟨_, ⟨y, rfl⟩, w, hw, rfl⟩ := Submodule.mem_sup.mp hx
+  simp [hg, hq w hw, linearProjOfIsCompl_apply_right' q i hi h w hw]
+
+/-- The kernel of a left inverse of a map is a complement of its range. -/
+theorem isCompl_range_ker_of_comp_eq_id {g : E →ₗ[R] F} (hg : g ∘ₗ i = LinearMap.id) :
+    IsCompl (LinearMap.range i) (ker g) := by
+  refine ⟨disjoint_iff_inf_le.mpr ?_, codisjoint_iff_le_sup.mpr fun x _ ↦ ?_⟩
+  · rintro _ ⟨⟨y, rfl⟩, hy⟩
+    have : y = 0 := by simpa using (DFunLike.congr_fun hg y).symm.trans (mem_ker.mp hy)
+    simp [this]
+  · refine Submodule.mem_sup.mpr ⟨i (g x), ⟨g x, rfl⟩, x - i (g x), ?_, add_sub_cancel _ _⟩
+    simp [mem_ker, show g (i (g x)) = g x from DFunLike.congr_fun hg (g x)]
+
+/-- Every left inverse of an injective map `i` is the projection along its kernel, which is a
+complement of the range of `i`. -/
+theorem eq_linearProjOfIsCompl_ker {g : E →ₗ[R] F} (hg : g ∘ₗ i = LinearMap.id) :
+    g = linearProjOfIsCompl (ker g) i hi (isCompl_range_ker_of_comp_eq_id i hg) :=
+  eq_linearProjOfIsCompl _ i hi _ (fun x ↦ DFunLike.congr_fun hg x) fun _ hx ↦ mem_ker.mp hx
+
 end
 
 /-- Given linear maps `φ` and `ψ` from complement submodules, `LinearMap.ofIsCompl` is
