@@ -5,7 +5,8 @@ import Mathlib.Algebra.Polynomial.Mirror
 
 `Polynomial.natTrailingDegree p hp` is the trailing degree of a nonzero polynomial as a natural
 number. The zero polynomial has trailing degree `⊤` and no natural trailing degree; the proof `hp`
-is found by `assumption`. The trailing coefficient and the mirror stay total, with value `0` at `0`.
+is found by `assumption`. The trailing coefficient, `nextCoeffUp`, and the mirror stay total, with
+value `0` at `0`.
 -/
 
 open Polynomial
@@ -37,6 +38,17 @@ example : (0 : ℤ[X]).trailingDegree = ⊤ := trailingDegree_zero
 example : (0 : ℤ[X]).trailingCoeff = 0 := trailingCoeff_zero
 
 example : (0 : ℤ[X]).mirror = 0 := mirror_zero
+
+example : (0 : ℤ[X]).nextCoeffUp = 0 := nextCoeffUp_zero
+
+/-! `nextCoeffUp` is the coefficient right above the trailing one, also when the constant
+coefficient is nonzero. -/
+
+example : (1 + X : ℤ[X]).nextCoeffUp = 1 := by
+  have h : (1 + X : ℤ[X]) ≠ 0 := ne_zero_of_coeff_ne_zero (n := 1) (by simp [coeff_one])
+  have h0 : (1 + X : ℤ[X]).natTrailingDegree = 0 := natTrailingDegree_eq_zero.2 (by simp)
+  rw [nextCoeffUp_of_ne_zero h, h0]
+  simp [coeff_one]
 
 /-! Without a proof that the polynomial is nonzero, there is no natural trailing degree. -/
 
