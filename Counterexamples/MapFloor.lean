@@ -61,14 +61,16 @@ instance isOrderedAddMonoid : IsOrderedAddMonoid ℤ[ε] :=
     (fun x ↦ toLex ⇑x.coeff) (fun _ _ => funext fun _ => coeff_add _ _ _) .rfl
 
 theorem pos_iff {p : ℤ[ε]} : 0 < p ↔ 0 < p.trailingCoeff := by
-  rw [trailingCoeff]
+  rcases eq_or_ne p 0 with rfl | hp
+  · simp
+  rw [trailingCoeff_of_ne_zero hp]
   refine
     ⟨?_, fun h =>
       ⟨p.natTrailingDegree, fun m hm => (coeff_eq_zero_of_lt_natTrailingDegree hm).symm, h⟩⟩
   rintro ⟨n, hn⟩
   convert! hn.2
   exact (natTrailingDegree_le_of_ne_zero hn.2.ne').antisymm
-    (le_natTrailingDegree (by rintro rfl; cases hn.2.false) fun m hm => (hn.1 _ hm).symm)
+    (le_natTrailingDegree hp fun m hm => (hn.1 _ hm).symm)
 
 instance : ZeroLEOneClass ℤ[ε] :=
   { zero_le_one := Or.inr ⟨0, by simp⟩ }

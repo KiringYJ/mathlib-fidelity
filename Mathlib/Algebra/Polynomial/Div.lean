@@ -579,13 +579,12 @@ lemma pow_rootMultiplicity_not_dvd (p0 : p ≠ 0) (a : R) :
     ¬(X - C a) ^ (rootMultiplicity a p + 1) ∣ p := by rw [← rootMultiplicity_le_iff p0]
 
 /-- See `Polynomial.rootMultiplicity_eq_natTrailingDegree` for the general case. -/
-lemma rootMultiplicity_eq_natTrailingDegree' : p.rootMultiplicity 0 = p.natTrailingDegree := by
-  by_cases h : p = 0
-  · simp only [h, rootMultiplicity_zero, natTrailingDegree_zero]
+lemma rootMultiplicity_eq_natTrailingDegree' (h : p ≠ 0) :
+    p.rootMultiplicity 0 = p.natTrailingDegree := by
   refine le_antisymm ?_ ?_
   · rw [rootMultiplicity_le_iff h, map_zero, sub_zero, X_pow_dvd_iff, not_forall]
     exact ⟨p.natTrailingDegree,
-      fun h' ↦ trailingCoeff_nonzero_iff_nonzero.2 h <| h' <| Nat.lt_add_one _⟩
+      fun h' ↦ coeff_natTrailingDegree_ne_zero h <| h' <| Nat.lt_add_one _⟩
   · rw [le_rootMultiplicity_iff h, map_zero, sub_zero, X_pow_dvd_iff]
     exact fun _ ↦ coeff_eq_zero_of_lt_natTrailingDegree
 
@@ -753,8 +752,7 @@ lemma eval_divByMonic_eq_trailingCoeff_comp {p : R[X]} {t : R} :
     rw [coeff_zero_eq_eval_zero, eval_comp, eval_add, eval_X, eval_C, zero_add]
   rw [← congr_arg (comp · <| X + C t) mul_eq, mul_comp, pow_comp, sub_comp, X_comp, C_comp,
     add_sub_cancel_right, ← reverse_leadingCoeff, reverse_X_pow_mul, reverse_leadingCoeff,
-    trailingCoeff, Nat.le_zero.1 (natTrailingDegree_le_of_ne_zero <|
-      this ▸ eval_divByMonic_pow_rootMultiplicity_ne_zero t hp), this]
+    trailingCoeff_eq_coeff_zero (this ▸ eval_divByMonic_pow_rootMultiplicity_ne_zero t hp), this]
 
 lemma le_rootMultiplicity_mul {p q : R[X]} (x : R) (hpq : p * q ≠ 0) :
     rootMultiplicity x p + rootMultiplicity x q ≤ rootMultiplicity x (p * q) := by

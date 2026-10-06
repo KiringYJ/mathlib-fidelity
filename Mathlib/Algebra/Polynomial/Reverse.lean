@@ -239,33 +239,40 @@ theorem reverse_natDegree_le (f : R[X]) : f.reverse.natDegree ≤ f.natDegree :=
   rw [coeff_reverse, revAt, Function.Embedding.coeFn_mk, ite_eq_right (not_le_of_gt hn),
     coeff_eq_zero_of_natDegree_lt hn]
 
-theorem natDegree_eq_reverse_natDegree_add_natTrailingDegree (f : R[X]) :
+theorem natDegree_eq_reverse_natDegree_add_natTrailingDegree (f : R[X]) (hf : f ≠ 0) :
     f.natDegree = f.reverse.natDegree + f.natTrailingDegree := by
-  by_cases hf : f = 0
-  · rw [hf, reverse_zero, natDegree_zero, natTrailingDegree_zero]
   apply le_antisymm
   · refine tsub_le_iff_right.mp ?_
     apply le_natDegree_of_ne_zero
-    rw [reverse, coeff_reflect, ← revAt_le f.natTrailingDegree_le_natDegree, revAt_invol]
-    exact trailingCoeff_nonzero_iff_nonzero.mpr hf
+    rw [reverse, coeff_reflect, ← revAt_le (f.natTrailingDegree_le_natDegree (hp := hf)),
+      revAt_invol]
+    exact coeff_natTrailingDegree_ne_zero hf
   · rw [← le_tsub_iff_left f.reverse_natDegree_le]
     apply natTrailingDegree_le_of_ne_zero
     have key := mt leadingCoeff_eq_zero.mp (mt reverse_eq_zero.mp hf)
     rwa [leadingCoeff, coeff_reverse, revAt_le f.reverse_natDegree_le] at key
 
-theorem reverse_natDegree (f : R[X]) : f.reverse.natDegree = f.natDegree - f.natTrailingDegree := by
-  rw [f.natDegree_eq_reverse_natDegree_add_natTrailingDegree, add_tsub_cancel_right]
+theorem reverse_natDegree (f : R[X]) (hf : f ≠ 0) :
+    f.reverse.natDegree = f.natDegree - f.natTrailingDegree := by
+  rw [f.natDegree_eq_reverse_natDegree_add_natTrailingDegree hf, add_tsub_cancel_right]
 
 theorem reverse_leadingCoeff (f : R[X]) : f.reverse.leadingCoeff = f.trailingCoeff := by
-  rw [leadingCoeff, reverse_natDegree, ← revAt_le f.natTrailingDegree_le_natDegree,
-    coeff_reverse, revAt_invol, trailingCoeff]
+  by_cases hf : f = 0
+  · simp [hf]
+  rw [leadingCoeff, reverse_natDegree f hf,
+    ← revAt_le (f.natTrailingDegree_le_natDegree (hp := hf)), coeff_reverse, revAt_invol,
+    trailingCoeff_of_ne_zero hf]
 
-theorem natTrailingDegree_reverse (f : R[X]) : f.reverse.natTrailingDegree = 0 := by
-  rw [natTrailingDegree_eq_zero, reverse_eq_zero, coeff_zero_reverse, leadingCoeff_ne_zero]
-  exact eq_or_ne _ _
+theorem natTrailingDegree_reverse (f : R[X]) {h : f.reverse ≠ 0} :
+    f.reverse.natTrailingDegree h = 0 := by
+  rw [natTrailingDegree_eq_zero, coeff_zero_reverse, leadingCoeff_ne_zero]
+  exact reverse_eq_zero.not.1 h
 
 theorem reverse_trailingCoeff (f : R[X]) : f.reverse.trailingCoeff = f.leadingCoeff := by
-  rw [trailingCoeff, natTrailingDegree_reverse, coeff_zero_reverse]
+  by_cases hf : f = 0
+  · simp [hf]
+  have h : f.reverse ≠ 0 := reverse_eq_zero.not.2 hf
+  rw [trailingCoeff_of_ne_zero h, natTrailingDegree_reverse, coeff_zero_reverse]
 
 theorem reverse_mul {f g : R[X]} (fg : f.leadingCoeff * g.leadingCoeff ≠ 0) :
     reverse (f * g) = reverse f * reverse g := by

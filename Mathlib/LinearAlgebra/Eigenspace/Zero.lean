@@ -61,7 +61,7 @@ lemma charpoly_nilpotent_tfae [IsNoetherian R M] (φ : Module.End R M) :
       IsNilpotent φ,
       φ.charpoly = X ^ finrank R M,
       ∀ m : M, ∃ (n : ℕ), (φ ^ n) m = 0,
-      natTrailingDegree φ.charpoly = finrank R M ] := by
+      natTrailingDegree φ.charpoly φ.charpoly_monic.ne_zero = finrank R M ] := by
   tfae_have 1 → 2 := IsNilpotent.charpoly_eq_X_pow_finrank
   tfae_have 2 → 3
   | h, m => by
@@ -139,7 +139,7 @@ lemma not_hasEigenvalue_zero_tfae (φ : Module.End K M) :
 
 open Module.Free in
 lemma finrank_maxGenEigenspace_zero_eq (φ : Module.End K M) :
-    finrank K (φ.maxGenEigenspace 0) = natTrailingDegree (φ.charpoly) := by
+    finrank K (φ.maxGenEigenspace 0) = natTrailingDegree φ.charpoly φ.charpoly_monic.ne_zero := by
   set V := φ.maxGenEigenspace 0
   have hV : V = ⨆ (n : ℕ), ker (φ ^ n) := by
     simp [V, ← Module.End.iSup_genEigenspace_eq, Module.End.genEigenspace_nat]
@@ -174,9 +174,13 @@ lemma finrank_maxGenEigenspace_zero_eq (φ : Module.End K M) :
       map_zero, ZeroMemClass.coe_zero, add_zero, LinearEquiv.eq_symm_apply, and_self,
       Submodule.coe_prodEquivOfIsCompl', coe_restrict_apply, implies_true, Sum.elim_inr, zero_add,
       e, V, W, ψ, F, G, b]
-  rw [← e.symm.charpoly_conj φ, ← hψ, charpoly_prodMap,
+  have hχ : φ.charpoly = F.charpoly * G.charpoly := by
+    rw [← e.symm.charpoly_conj φ, ← hψ, charpoly_prodMap]
+  rw [natTrailingDegree_eq_of_trailingDegree_eq (q := F.charpoly * G.charpoly)
+      (hq := mul_ne_zero (charpoly_monic _).ne_zero (charpoly_monic _).ne_zero)
+      (congrArg trailingDegree hχ),
     natTrailingDegree_mul (charpoly_monic _).ne_zero (charpoly_monic _).ne_zero]
-  have hG : natTrailingDegree (charpoly G) = 0 := by
+  have hG : natTrailingDegree (charpoly G) (charpoly_monic _).ne_zero = 0 := by
     apply Polynomial.natTrailingDegree_eq_zero_of_constantCoeff_ne_zero
     apply ((not_hasEigenvalue_zero_tfae G).out 3 6).mpr
     intro x hx
@@ -202,7 +206,9 @@ lemma finrank_maxGenEigenspace_zero_eq (φ : Module.End K M) :
 lemma finrank_maxGenEigenspace_eq (φ : Module.End K M) (μ : K) :
     finrank K (φ.maxGenEigenspace μ) = φ.charpoly.rootMultiplicity μ := by
   rw [φ.maxGenEigenspace_eq_maxGenEigenspace_zero, finrank_maxGenEigenspace_zero_eq,
-    Polynomial.rootMultiplicity_eq_natTrailingDegree, LinearMap.charpoly_sub_smul]
+    Polynomial.rootMultiplicity_eq_natTrailingDegree φ.charpoly_monic.ne_zero]
+  exact natTrailingDegree_eq_of_trailingDegree_eq
+    (congrArg trailingDegree (LinearMap.charpoly_sub_smul φ μ))
 
 lemma finrank_genEigenspace_le (φ : Module.End K M) (μ : K) (k : ℕ) :
     finrank K (φ.genEigenspace μ k) ≤ φ.charpoly.rootMultiplicity μ := by

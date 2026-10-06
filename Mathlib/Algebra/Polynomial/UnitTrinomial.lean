@@ -76,9 +76,14 @@ theorem trinomial_natDegree (hkm : k < m) (hmn : m < n) (hw : w ≠ 0) :
   · exact WithBot.coe_le_coe.mpr hmn.le
   · exact le_rfl
 
+theorem trinomial_ne_zero (hkm : k < m) (hmn : m < n) (hu : u ≠ 0) :
+    trinomial k m n u v w ≠ 0 :=
+  fun h ↦ hu <| (trinomial_trailing_coeff' (u := u) (v := v) (w := w) hkm hmn).symm.trans <| by
+    rw [h, coeff_zero]
+
 set_option backward.isDefEq.respectTransparency false in
-theorem trinomial_natTrailingDegree (hkm : k < m) (hmn : m < n) (hu : u ≠ 0) :
-    (trinomial k m n u v w).natTrailingDegree = k := by
+theorem trinomial_natTrailingDegree (hkm : k < m) (hmn : m < n) (hu : u ≠ 0)
+    {h : trinomial k m n u v w ≠ 0} : (trinomial k m n u v w).natTrailingDegree h = k := by
   refine
     natTrailingDegree_eq_of_trailingDegree_eq_some
       ((Finset.le_inf fun i h => ?_).antisymm <|
@@ -96,7 +101,8 @@ theorem trinomial_leadingCoeff (hkm : k < m) (hmn : m < n) (hw : w ≠ 0) :
 
 theorem trinomial_trailingCoeff (hkm : k < m) (hmn : m < n) (hu : u ≠ 0) :
     (trinomial k m n u v w).trailingCoeff = u := by
-  rw [trailingCoeff, trinomial_natTrailingDegree hkm hmn hu, trinomial_trailing_coeff' hkm hmn]
+  rw [trailingCoeff_of_ne_zero (trinomial_ne_zero hkm hmn hu),
+    trinomial_natTrailingDegree hkm hmn hu, trinomial_trailing_coeff' hkm hmn]
 
 theorem trinomial_monic (hkm : k < m) (hmn : m < n) : (trinomial k m n u v 1).Monic := by
   nontriviality R
@@ -104,7 +110,8 @@ theorem trinomial_monic (hkm : k < m) (hmn : m < n) : (trinomial k m n u v 1).Mo
 
 theorem trinomial_mirror (hkm : k < m) (hmn : m < n) (hu : u ≠ 0) (hw : w ≠ 0) :
     (trinomial k m n u v w).mirror = trinomial k (n - m + k) n w v u := by
-  rw [mirror, trinomial_natTrailingDegree hkm hmn hu, reverse, trinomial_natDegree hkm hmn hw,
+  rw [mirror_of_ne_zero (trinomial_ne_zero hkm hmn hu), trinomial_natTrailingDegree hkm hmn hu,
+    reverse, trinomial_natDegree hkm hmn hw,
     trinomial_def, reflect_add, reflect_add, reflect_C_mul_X_pow, reflect_C_mul_X_pow,
     reflect_C_mul_X_pow, revAt_le (hkm.trans hmn).le, revAt_le hmn.le, revAt_le le_rfl, add_mul,
     add_mul, mul_assoc, mul_assoc, mul_assoc, ← pow_add, ← pow_add, ← pow_add,
@@ -155,8 +162,9 @@ theorem coeff_isUnit (hp : p.IsUnitTrinomial) {k : ℕ} (hk : k ∈ p.support) :
 theorem leadingCoeff_isUnit (hp : p.IsUnitTrinomial) : IsUnit p.leadingCoeff :=
   hp.coeff_isUnit (natDegree_mem_support_of_nonzero hp.ne_zero)
 
-theorem trailingCoeff_isUnit (hp : p.IsUnitTrinomial) : IsUnit p.trailingCoeff :=
-  hp.coeff_isUnit (natTrailingDegree_mem_support_of_nonzero hp.ne_zero)
+theorem trailingCoeff_isUnit (hp : p.IsUnitTrinomial) : IsUnit p.trailingCoeff := by
+  rw [trailingCoeff_of_ne_zero hp.ne_zero]
+  exact hp.coeff_isUnit (natTrailingDegree_mem_support_of_nonzero hp.ne_zero)
 
 end IsUnitTrinomial
 
@@ -176,11 +184,15 @@ theorem isUnitTrinomial_iff :
   exact ⟨k, m, n, hkm, hmn, hx.unit, hy.unit, hz.unit, rfl⟩
 
 theorem isUnitTrinomial_iff' :
-    p.IsUnitTrinomial ↔
-      (p * p.mirror).coeff (((p * p.mirror).natDegree + (p * p.mirror).natTrailingDegree) / 2) =
+    p.IsUnitTrinomial ↔ ∃ h : p * p.mirror ≠ 0,
+      (p * p.mirror).coeff (((p * p.mirror).natDegree + (p * p.mirror).natTrailingDegree h) / 2) =
         3 := by
-  rw [natDegree_mul_mirror, natTrailingDegree_mul_mirror, ← mul_add,
-    Nat.mul_div_right _ zero_lt_two, coeff_mul_mirror]
+  by_cases hp0 : p = 0
+  · subst hp0
+    exact iff_of_false (fun hp ↦ hp.ne_zero rfl) fun ⟨h, _⟩ ↦ h (zero_mul _)
+  rw [exists_prop_of_true (mul_ne_zero hp0 (mirror_ne_zero hp0)), natDegree_mul_mirror,
+    natTrailingDegree_mul_mirror p hp0, ← mul_add, Nat.mul_div_right _ zero_lt_two,
+    coeff_mul_mirror p hp0]
   refine ⟨?_, fun hp => ?_⟩
   · rintro ⟨k, m, n, hkm, hmn, u, v, w, rfl⟩
     rw [sum_def, trinomial_support hkm hmn u.ne_zero v.ne_zero w.ne_zero,
@@ -280,10 +292,20 @@ theorem irreducible_of_coprime (hp : p.IsUnitTrinomial)
   have hq : IsUnitTrinomial q := (isUnitTrinomial_iff'' hpq).mp hp
   obtain ⟨k, m, n, hkm, hmn, u, v, w, hp⟩ := hp
   obtain ⟨k', m', n', hkm', hmn', x, y, z, hq⟩ := hq
+  have hp0 : p ≠ 0 := hp ▸ trinomial_ne_zero hkm hmn u.ne_zero
+  have hq0 : q ≠ 0 := hq ▸ trinomial_ne_zero hkm' hmn' x.ne_zero
   have hk : k = k' := by
-    rw [← mul_right_inj' (show 2 ≠ 0 from two_ne_zero), ←
-      trinomial_natTrailingDegree hkm hmn u.ne_zero, ← hp, ← natTrailingDegree_mul_mirror, hpq,
-      natTrailingDegree_mul_mirror, hq, trinomial_natTrailingDegree hkm' hmn' x.ne_zero]
+    have e : (p * p.mirror).natTrailingDegree (mul_ne_zero hp0 (mirror_ne_zero hp0)) =
+        (q * q.mirror).natTrailingDegree (mul_ne_zero hq0 (mirror_ne_zero hq0)) :=
+      natTrailingDegree_eq_of_trailingDegree_eq (congrArg trailingDegree hpq)
+    rw [natTrailingDegree_mul_mirror p hp0, natTrailingDegree_mul_mirror q hq0] at e
+    have e₁ : p.natTrailingDegree = k := by
+      subst hp
+      exact trinomial_natTrailingDegree hkm hmn u.ne_zero
+    have e₂ : q.natTrailingDegree = k' := by
+      subst hq
+      exact trinomial_natTrailingDegree hkm' hmn' x.ne_zero
+    omega
   have hn : n = n' := by
     rw [← mul_right_inj' (show 2 ≠ 0 from two_ne_zero), ← trinomial_natDegree hkm hmn w.ne_zero, ←
       hp, ← natDegree_mul_mirror, hpq, natDegree_mul_mirror, hq,
