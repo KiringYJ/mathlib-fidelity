@@ -54,14 +54,12 @@ namespace MeasureTheory
 /-! ### The predicate `Integrable` -/
 
 /-- `Integrable f μ` means that `f` is measurable and that the integral `∫⁻ a, ‖f a‖ ∂μ` is finite.
-  `Integrable f` means `Integrable f volume`. -/
+  `Integrable f` means `Integrable f volume`. A σ-algebra other than the one inferred from `μ` is
+  passed as the named argument `mα`. -/
 @[fun_prop, wikidata Q3153745]
-def Integrable {α} {_ : SigmaAlgebra α} (f : α → ε)
+def Integrable {α} {mα : SigmaAlgebra α} (f : α → ε)
     (μ : Measure α := by volume_tac) : Prop :=
   AEStronglyMeasurable f μ ∧ HasFiniteIntegral f μ
-
-/-- Notation for `Integrable` with respect to a non-standard σ-algebra. -/
-scoped notation "Integrable[" mα "]" => @Integrable _ _ _ _ mα
 
 theorem memLp_one_iff_integrable {f : α → ε} : MemLp f 1 μ ↔ Integrable f μ := by
   simp_rw [Integrable, hasFiniteIntegral_iff_enorm, MemLp, eLpNorm_one_eq_lintegral_enorm]
