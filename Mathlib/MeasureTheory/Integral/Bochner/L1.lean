@@ -527,7 +527,8 @@ open ContinuousLinearMap
 variable (𝕜) in
 /-- The Bochner integral in L1 space as a continuous linear map. -/
 nonrec def integralCLM' : (α →₁[μ] E) →L[𝕜] E :=
-  (integralCLM' α E 𝕜 μ).extend (coeToLp α E 𝕜)
+  (integralCLM' α E 𝕜 μ).extend (coeToLp α E 𝕜) (simpleFunc.denseRange one_ne_top)
+    simpleFunc.isUniformInducing
 
 /-- The Bochner integral in L1 space as a continuous linear map over ℝ. -/
 def integralCLM : (α →₁[μ] E) →L[ℝ] E :=
@@ -553,8 +554,7 @@ theorem SimpleFunc.integral_L1_eq_integral (f : α →₁ₛ[μ] E) :
 @[norm_cast]
 theorem SimpleFunc.integralCLM'_L1_eq_integral (f : α →₁ₛ[μ] E) :
     L1.integralCLM' 𝕜 (f : α →₁[μ] E) = SimpleFunc.integral f := by
-  apply ContinuousLinearMap.extend_eq _ _ simpleFunc.isUniformInducing
-  exact simpleFunc.denseRange one_ne_top
+  apply ContinuousLinearMap.extend_eq
 
 variable (𝕜) in
 theorem integral_eq' (f : α →₁[μ] E) : integral f = integralCLM' 𝕜 f := by
