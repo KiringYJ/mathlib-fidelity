@@ -216,18 +216,19 @@ theorem lcmUpto_ne_zero (n : ℕ) : lcmUpto n ≠ 0 := by simp [lcmUpto]
 
 theorem lcmUpto_pos (n : ℕ) : 0 < lcmUpto n := pos_of_ne_zero <| lcmUpto_ne_zero n
 
-theorem factorization_lcmUpto (n : ℕ) {p : ℕ} (hp : p.Prime) :
-    (lcmUpto n).factorization p = p.log n := by
+theorem factorization_lcmUpto {n : ℕ} (hn : n ≠ 0) {p : ℕ} (hp : p.Prime) :
+    (lcmUpto n).factorization p = Nat.log p n hp.one_lt hn := by
   rw [lcmUpto, Finset.factorization_lcm (fun _ _ ↦ by grind)]
   have := hp.one_lt
   refine le_antisymm ?_ ?_
   · simp only [Finset.sup_le_iff, mem_Icc, and_imp]
-    exact fun m _ h ↦ le_log_of_pow_le this (le_of_dvd (by grind) (ordProj_dvd m p) |>.trans h)
+    exact fun m _ h ↦ Nat.le_log_of_pow_le this <|
+      le_of_dvd (by grind) (ordProj_dvd m p) |>.trans h
   rcases le_or_gt p n with _ | h
-  · have := pow_log_le_self p (x := n) (by linarith)
-    grw [← le_sup (b := p ^ p.log n) (by grind)]
+  · have := Nat.pow_log_le_self this hn
+    grw [← le_sup (b := p ^ Nat.log p n hp.one_lt hn) (by grind)]
     simp [hp]
-  simp [log_of_lt h]
+  simp [Nat.log_of_lt this hn h]
 
 theorem lcmUpto_dvd_factorial (n : ℕ) : lcmUpto n ∣ n ! := by
   simp +contextual [lcmUpto, dvd_factorial, Order.one_le_iff_pos]
@@ -235,9 +236,12 @@ theorem lcmUpto_dvd_factorial (n : ℕ) : lcmUpto n ∣ n ! := by
 theorem primeFactors_lcmUpto (n : ℕ) : primeFactors (lcmUpto n) = primesLE n := by
   ext p
   refine ⟨fun h ↦ ?_, fun h ↦ ?_⟩
-  · have := prime_of_mem_primeFactors h
-    rw [← support_factorization, Finsupp.mem_support_iff, factorization_lcmUpto _ this] at h
-    simp_all [mem_primesLE]
+  · have hp := prime_of_mem_primeFactors h
+    rcases eq_or_ne n 0 with rfl | hn
+    · simp [lcmUpto] at h
+    rw [← support_factorization, Finsupp.mem_support_iff, factorization_lcmUpto hn hp, Ne,
+      Nat.log_eq_zero_iff hp.one_lt hn, not_lt] at h
+    exact mem_primesLE.mpr ⟨h, hp⟩
   · refine Prime.mem_primeFactors (prime_of_mem_primesLE h) (dvd_lcm ?_) <| lcmUpto_ne_zero n
     exact mem_Icc.mpr ⟨(prime_of_mem_primesLE h).one_le, le_of_mem_primesLE h⟩
 
@@ -253,50 +257,74 @@ theorem lcmUpto_eq_prod (n : ℕ) :
   congr
   exact primeFactors_lcmUpto n
 
-theorem lcmUpto_eq_prod_pow_log (n : ℕ) : lcmUpto n = ∏ p ∈ primesLE n, p ^ p.log n := by
-  rw [lcmUpto_eq_prod]
-  exact Finset.prod_congr rfl fun p hp ↦ congrArg (p ^ ·) <|
-    factorization_lcmUpto n <| prime_of_mem_primesLE hp
+/-- `lcmUpto n` is the product of the largest powers `p ^ Nat.log p n ≤ n` of the primes
+`p ≤ n`. -/
+theorem lcmUpto_eq_prod_pow_log (n : ℕ) :
+    lcmUpto n = ∏ p ∈ (primesLE n).attach,
+      (p : ℕ) ^ Nat.log p n (one_lt_of_mem_primesLE p.2) (ne_zero_of_mem_primesLE p.2) := by
+  rw [lcmUpto_eq_prod, ← prod_attach (primesLE n)]
+  exact prod_congr rfl fun p _ ↦ congrArg (p.1 ^ ·) <|
+    factorization_lcmUpto (ne_zero_of_mem_primesLE p.2) (prime_of_mem_primesLE p.2)
 
 theorem lcmUpto_eq_prod_pow_floor (n : ℕ) :
     lcmUpto n = ∏ p ∈ primesLE n, p ^ ⌊Real.log n / Real.log p⌋₊ := by
-  simp_rw [lcmUpto_eq_prod_pow_log, ← natFloor_logb_natCast, ← log_div_log]
+  rw [lcmUpto_eq_prod]
+  refine prod_congr rfl fun p hp ↦ congrArg (p ^ ·) ?_
+  rw [factorization_lcmUpto (ne_zero_of_mem_primesLE hp) (prime_of_mem_primesLE hp),
+    ← natFloor_logb_natCast (one_lt_of_mem_primesLE hp) (ne_zero_of_mem_primesLE hp),
+    ← log_div_log]
 
 end Nat
 
 namespace Chebyshev
 
-theorem psi_eq_sum_mul_log_prime (n : ℕ) : ψ n = ∑ p ∈ primesLE n, p.log n * log p := calc
+/-- The exponents `1 ≤ k ≤ Nat.log p n` are the `k ∈ Icc 1 n` with `p ^ k ≤ n`. -/
+private theorem filter_pow_le_eq_Icc_log {n p : ℕ} (hp : 1 < p) (hn : n ≠ 0) :
+    {k ∈ Icc 1 n | p ^ k ≤ n} = Icc 1 (Nat.log p n hp hn) := by
+  ext k
+  simp only [mem_filter, mem_Icc, Nat.le_log_iff_pow_le hp hn]
+  exact ⟨fun h ↦ ⟨h.1.1, h.2⟩, fun h ↦ ⟨⟨h.1, (Nat.lt_pow_self hp).le.trans h.2⟩, h.2⟩⟩
+
+theorem psi_eq_sum_mul_log_prime (n : ℕ) :
+    ψ n = ∑ p ∈ (primesLE n).attach,
+      Nat.log p n (one_lt_of_mem_primesLE p.2) (ne_zero_of_mem_primesLE p.2) * log (p : ℕ) :=
+  calc
   _ = ∑ m ∈ Icc 1 n, Λ m := by simp [psi, ← Icc_add_one_left_eq_Ioc]
-  _ = ∑ m ∈ ((Icc 1 n).filter Prime).biUnion fun p ↦ image (p ^ ·) (Icc 1 (p.log n)), Λ m := by
+  _ = ∑ m ∈ ((Icc 1 n).filter Prime).biUnion
+        fun p ↦ image (p ^ ·) {k ∈ Icc 1 n | p ^ k ≤ n}, Λ m := by
     refine (sum_subset (fun q hq ↦ ?_) fun x hx ↦ ?_).symm
     · simp only [mem_biUnion, mem_filter, mem_Icc, mem_image] at hq ⊢
-      obtain ⟨p, _, k, ⟨_, hk⟩, rfl⟩ := hq
-      exact ⟨by grind, pow_le_of_le_log (by linarith) hk⟩
+      obtain ⟨p, ⟨_, hp⟩, k, ⟨_, hk⟩, rfl⟩ := hq
+      exact ⟨Nat.one_le_pow _ _ hp.pos, hk⟩
     · simp only [mem_biUnion, mem_filter, mem_Icc, mem_image, not_exists, not_and, and_imp,
         vonMangoldt_eq_zero_iff, isPrimePow_nat_iff]
       contrapose!
       rintro ⟨p, k, hp, hk, rfl⟩
       simp only [mem_Icc] at hx
       have hpn : p ≤ n := (le_of_dvd (by lia) (dvd_pow_self p hk.ne')).trans hx.2
-      exact ⟨p, ⟨hp.one_le, hpn, hp, ⟨k, ⟨by lia, le_log_of_pow_le hp.one_lt hx.2, rfl⟩⟩⟩⟩
-  _ = ∑ p ∈ Icc 1 n with p.Prime, ∑ q ∈ image (fun k ↦ p ^ k) (Icc 1 (p.log n)), Λ q := by
+      have hkn : k ≤ n := (Nat.lt_pow_self hp.one_lt).le.trans hx.2
+      exact ⟨p, ⟨hp.one_le, hpn, hp, ⟨k, ⟨by lia, hkn, hx.2, rfl⟩⟩⟩⟩
+  _ = ∑ p ∈ Icc 1 n with p.Prime, ∑ q ∈ image (fun k ↦ p ^ k) {k ∈ Icc 1 n | p ^ k ≤ n}, Λ q := by
       rw [sum_biUnion <| by rw [pairwiseDisjoint_iff]; grind [Prime.pow_inj']]
-  _ = ∑ p ∈ primesLE n, ∑ k ∈ Icc 1 (p.log n), Λ (p ^ k) := by
+  _ = ∑ p ∈ primesLE n, ∑ k ∈ Icc 1 n with p ^ k ≤ n, Λ (p ^ k) := by
       refine sum_congr (primesLE_eq_filter_Icc_one n).symm fun p hp ↦ ?_
       exact sum_image fun a _ b _ hab ↦ Nat.pow_right_injective (two_le_of_mem_primesLE hp) hab
-  _ = ∑ p ∈ primesLE n, ∑ k ∈ Icc 1 (p.log n), log p := by
+  _ = ∑ p ∈ primesLE n, ∑ k ∈ Icc 1 n with p ^ k ≤ n, log p := by
       refine sum_congr rfl fun p hp ↦ sum_congr rfl fun k hk ↦ ?_
       rw [vonMangoldt_apply_pow (by grind), vonMangoldt_apply_prime <| prime_of_mem_primesLE hp]
-  _ = _ := by simp
+  _ = ∑ p ∈ (primesLE n).attach, ∑ k ∈ Icc 1 n with (p : ℕ) ^ k ≤ n, log (p : ℕ) :=
+      (sum_attach (primesLE n) fun p ↦ ∑ k ∈ Icc 1 n with p ^ k ≤ n, log p).symm
+  _ = _ := by
+      refine sum_congr rfl fun p _ ↦ ?_
+      rw [filter_pow_le_eq_Icc_log (one_lt_of_mem_primesLE p.2) (ne_zero_of_mem_primesLE p.2)]
+      simp
 
 theorem psi_le_primeCounting_mul_log (n : ℕ) : ψ n ≤ (π n) * log n := by
-  rw [psi_eq_sum_mul_log_prime, ← primesLE_card_eq_primeCounting, ← nsmul_eq_mul, ← sum_const]
-  rcases eq_or_ne n 0 with rfl | hn
-  · simp
-  gcongr with p hp
-  refine le_log_of_pow_le (mod_cast (prime_of_mem_primesLE hp).pos) ?_
-  exact_mod_cast pow_log_le_self p hn
+  rw [psi_eq_sum_mul_log_prime, ← primesLE_card_eq_primeCounting, ← card_attach, ← nsmul_eq_mul,
+    ← sum_const]
+  gcongr with p
+  refine Real.le_log_of_pow_le (mod_cast (prime_of_mem_primesLE p.2).pos) ?_
+  exact_mod_cast Nat.pow_log_le_self (one_lt_of_mem_primesLE p.2) (ne_zero_of_mem_primesLE p.2)
 
 theorem psi_le_primeCounting_mul_log' (x : ℝ) : ψ x ≤ (π ⌊x⌋₊) * log x := by
   grw [psi_eq_psi_coe_floor, psi_le_primeCounting_mul_log]
@@ -308,15 +336,18 @@ theorem psi_le_primeCounting_mul_log' (x : ℝ) : ψ x ≤ (π ⌊x⌋₊) * log
 
 /-- `ψ n` is the logarithm of `lcmUpto n`. -/
 theorem psi_eq_log_lcmUpto (n : ℕ) : ψ n = log (lcmUpto n) := by
-  rw [lcmUpto_eq_prod_pow_log, cast_prod, log_prod (by simp +contextual)]
+  rw [lcmUpto_eq_prod_pow_log, cast_prod, log_prod fun p _ ↦ Nat.cast_ne_zero.mpr <|
+    pow_ne_zero _ (prime_of_mem_primesLE p.2).ne_zero]
   simp [psi_eq_sum_mul_log_prime]
 
 /-- `lcmUpto n` is divisible by `choose n k` for all `k ≤ n` -/
 theorem choose_dvd_lcmUpto {n k : ℕ} (hkn : k ≤ n) : choose n k ∣ lcmUpto n := by
   rw [← factorization_prime_le_iff_dvd (choose_ne_zero hkn) (lcmUpto_ne_zero n)]
   intro p hp
-  rw [factorization_lcmUpto n hp]
-  exact factorization_choose_le_log
+  rcases eq_or_ne n 0 with rfl | hn
+  · simp [Nat.le_zero.mp hkn]
+  rw [factorization_lcmUpto hn hp]
+  exact factorization_choose_le_log hp.one_lt hn
 
 theorem two_pow_le_mul_lcmUpto (n : ℕ) : 2 ^ n ≤ (n + 1) * lcmUpto n := calc
   _ = ∑ m ∈ range (n + 1), n.choose m := (sum_range_choose _).symm

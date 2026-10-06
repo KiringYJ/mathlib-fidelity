@@ -55,13 +55,16 @@ theorem length_digits (b n : ℕ) (hb : 1 < b) (hn : n ≠ 0) :
   induction n using Nat.strong_induction_on with | _ n IH
   rw [digits_eq_cons_digits_div hb hn, List.length]
   by_cases h : n / b = 0
-  · simp [h]
-    aesop
+  · have hnb : n < b := by
+      by_contra! h'
+      exact (Nat.div_pos h' (by omega)).ne' h
+    simp [h, Nat.log_of_lt hb hn hnb]
   · have : n / b < n := div_lt_self (Nat.pos_of_ne_zero hn) hb
-    rw [IH _ this h, log_div_base, tsub_add_cancel_of_le]
-    refine Nat.succ_le_of_lt (log_pos hb ?_)
-    contrapose! h
-    exact div_eq_of_lt h
+    have hbn : b ≤ n := by
+      by_contra! h'
+      exact h (div_eq_of_lt h')
+    rw [IH _ this h, log_div_base hb hbn, tsub_add_cancel_of_le]
+    exact Nat.succ_le_of_lt (log_pos hb hbn)
 
 @[deprecated (since := "2026-03-18")] alias digits_len := length_digits
 
@@ -195,20 +198,13 @@ theorem sub_one_mul_sum_div_pow_eq_sub_sum_digits {p : ℕ}
     · rfl
     · simp [ofDigits]
 
-theorem sub_one_mul_sum_log_div_pow_eq_sub_sum_digits {p : ℕ} (n : ℕ) :
+theorem sub_one_mul_sum_log_div_pow_eq_sub_sum_digits {p : ℕ} (h : 1 < p) {n : ℕ} (hn : n ≠ 0) :
     (p - 1) * ∑ i ∈ range (log p n).succ, n / p ^ i.succ = n - (p.digits n).sum := by
-  obtain h | rfl | h : 1 < p ∨ 1 = p ∨ p < 1 := trichotomous 1 p
-  · rcases eq_or_ne n 0 with rfl | hn
-    · simp
-    · convert!
-      sub_one_mul_sum_div_pow_eq_sub_sum_digits (p.digits n) (getLast_digit_ne_zero p hn) <|
-        (fun l a ↦ digits_lt_base h a)
-      · refine (length_digits p n h hn).symm
-      all_goals exact (ofDigits_digits p n).symm
-  · simp
-  · simp [lt_one_iff.mp h]
-    cases n
-    all_goals simp
+  convert!
+    sub_one_mul_sum_div_pow_eq_sub_sum_digits (p.digits n) (getLast_digit_ne_zero p hn) <|
+      (fun l a ↦ digits_lt_base h a)
+  · refine (length_digits p n h hn).symm
+  all_goals exact (ofDigits_digits p n).symm
 
 /-! ### Binary -/
 

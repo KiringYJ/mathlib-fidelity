@@ -480,11 +480,35 @@ operation.
   the removed names, the missing evidence, the least prime factor of `0`, evaluation, and the
   discharger.
 
-- [ ] **Give `Nat.log` and `Nat.clog` their extremal domains.**
-  `Mathlib/Data/Nat/Log.lean:62` and `:335` accept bases at most one and other inputs for which the
-  advertised largest/least exponent characterization fails.  Encode the precise base and argument
-  conditions.  Keep defaulting recursion private unless literature defines the same total arithmetic
-  functions on those degenerate inputs.
+- [x] **Give `Nat.log` and `Nat.clog` their extremal domains.**
+  `Nat.log b n` takes `1 < b` and `n ≠ 0`, exactly the inputs for which a largest `k` with
+  `b ^ k ≤ n` exists: for `b ≤ 1` every `k` satisfies the inequality when `n ≠ 0`, and for `n = 0`
+  none does.  `Nat.clog b n` takes `1 < b ∨ n ≤ 1`, exactly the inputs for which a least `k` with
+  `n ≤ b ^ k` exists; it is `0` for `n ≤ 1`.  Neither the floor logarithm of `0` nor a logarithm in
+  base `0` or `1` has a standard value, so none is chosen.  The default discharger `nat_log_tac`
+  finds the side conditions as local hypotheses, by linear arithmetic, or by evaluating a closed
+  term, and never chooses the base or the argument.  The statements of the former fallback values
+  are removed (`log_of_left_le_one`, `log_zero_left`, `log_zero_right`, `log_one_left`,
+  `clog_of_left_le_one`, `clog_zero_left`, and `clog_one_left`), together with `log_lt_of_lt_pow'`,
+  `pow_log_le_add_one`, `log_eq_one_iff'`, and the monotonicity statements `log_monotone`,
+  `log_antitone_left`, and `clog_antitone_left`, whose functions are not total; `clog_monotone` is
+  stated for `1 < b`.  `log_eq_zero_iff`, `log_pos_iff`, `log_eq_iff`, and the bounds take the
+  domain, `log_eq_zero_iff` and `log_eq_one_iff` lose their disjuncts for `b ≤ 1`, and the lemmas
+  whose left-hand sides carry the side conditions read them off the term.  `Int.log b r` and
+  `Int.clog b r`, defined from `Nat.log` and `Nat.clog`, take `1 < b` and `0 < r`: for `r ≤ 0` no
+  power of `b` is at most `r`, and every power of `b` is at least `r`.  Their fallback statements
+  (`log_of_left_le_one`, `log_of_right_le_zero`, `log_zero_left`, `log_zero_right`, `log_one_left`,
+  and their `clog` counterparts) are removed, `clog_inv` and `log_inv` hold on positive elements,
+  and `Real.floor_logb_natCast`, `Real.ceil_logb_natCast`, `Real.natFloor_logb_natCast`,
+  `Real.natCeil_logb_natCast`, and `Real.natLog_le_logb` take the same conditions.  Legendre's
+  formula and the carry formulas for binomial coefficients (`Nat.Prime.emultiplicity_factorial`,
+  `Nat.Prime.emultiplicity_choose`, `padicValNat_factorial`, `padicValNat_choose`, and their
+  variants) take a bound `n < p ^ b` instead of `log p n < b`; `padicValNat_le_nat_log` takes
+  `1 < p` and `n ≠ 0`, `padicValRat_two_harmonic`, `Nat.max_log_padicValNat_succ_eq_log_succ`, and
+  `factorization_lcmUpto` take `n ≠ 0`, and `lcmUpto_eq_prod_pow_log` and `psi_eq_sum_mul_log_prime`
+  range over `(primesLE n).attach`, whose membership proofs supply the side conditions.  The
+  `norm_num` extensions evaluate the logarithms on their domains.  Tests cover the removed names,
+  the missing evidence for each side condition, evaluation, and the integer logarithm.
 
 - [ ] **Make `Nat.findGreatest` return evidence or explicit absence.**
   `Mathlib/Data/Nat/Find.lean:162` defines it as the largest bounded witness, or zero when none

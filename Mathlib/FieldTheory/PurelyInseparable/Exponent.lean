@@ -217,11 +217,11 @@ instance hasExponent_of_finiteDimensional [FiniteDimensional K L] :
   let ⟨p, _⟩ := ExpChar.exists K
   rcases ‹ExpChar K p› with _ | ⟨hp⟩
   · exact ⟨0, fun a ↦ surjective_algebraMap_of_isSeparable K L _⟩
-  · let e := Nat.log (ringExpChar K) (Module.finrank K L)
+  · have hb : 1 < ringExpChar K := Nat.Prime.one_lt <| ringExpChar.eq K p ▸ hp
+    let e := Nat.log (ringExpChar K) (Module.finrank K L) hb Module.finrank_pos.ne'
     refine ⟨e, fun a ↦ ⟨elemReduct K a ^ ringExpChar K ^ (e - elemExponent K a), ?_⟩⟩
     have h_elemexp_bound (a : L) : elemExponent K a ≤ e :=
-      Nat.le_log_of_pow_le (Nat.Prime.one_lt <| ringExpChar.eq K p ▸ hp)
-        (minpoly_natDegree_eq K a ▸ minpoly.natDegree_le a)
+      Nat.le_log_of_pow_le hb (minpoly_natDegree_eq K a ▸ minpoly.natDegree_le a)
     rw [map_pow, algebraMap_elemReduct_eq, ← pow_mul, ← pow_add,
       Nat.add_sub_cancel' (h_elemexp_bound a)]
 

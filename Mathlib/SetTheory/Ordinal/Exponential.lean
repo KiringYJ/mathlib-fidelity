@@ -532,12 +532,8 @@ theorem iSup_pow_natCast {o : Ordinal} (ho : 0 < o) : ⨆ n : ℕ, o ^ n = o ^ �
   · simp
 
 @[simp, norm_cast]
-lemma natCast_log (m n : ℕ) : ↑(Nat.log m n) = Ordinal.log ↑m ↑n := by
-  obtain hm | hm := le_or_gt m 1
-  case inl => rw_mod_cast [Nat.log_of_left_le_one hm, log_of_left_le_one (mod_cast hm)]
-  obtain rfl | hn := eq_or_ne n 0
-  case inl => simp
-  rw_mod_cast [eq_comm, log_eq_iff (mod_cast hm) (mod_cast hn), ← Nat.log_eq_iff (.inr ⟨hm, hn⟩)]
+lemma natCast_log {m n : ℕ} (hm : 1 < m) (hn : n ≠ 0) : ↑(Nat.log m n) = Ordinal.log ↑m ↑n := by
+  rw_mod_cast [eq_comm, log_eq_iff (mod_cast hm) (mod_cast hn), ← Nat.log_eq_iff hm hn]
 
 end Ordinal
 

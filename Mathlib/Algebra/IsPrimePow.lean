@@ -87,24 +87,21 @@ theorem isPrimePow_nat_iff_bounded (n : ℕ) :
   conv => {lhs; rw [← (pow_one p)]}
   exact Nat.pow_le_pow_right hp.one_lt.le hk
 
-theorem isPrimePow_nat_iff_bounded_log (n : ℕ) :
+theorem isPrimePow_nat_iff_bounded_log {n : ℕ} (hn : n ≠ 0) :
     IsPrimePow n
       ↔ ∃ k : ℕ, k ≤ Nat.log 2 n ∧ 0 < k ∧ ∃ p : ℕ, p ≤ n ∧ n = p ^ k ∧ p.Prime := by
   rw [isPrimePow_nat_iff]
   constructor
   · rintro ⟨p, k, hp', hk', rfl⟩
     refine ⟨k, ?_, hk', ⟨p, Nat.le_pow hk', rfl, hp'⟩⟩
-    · calc
-        k = Nat.log 2 (2 ^ k) := by simp
-        _ ≤ Nat.log 2 (p ^ k) := Nat.log_mono Nat.one_lt_two Nat.AtLeastTwo.prop
-                                   (Nat.pow_le_pow_left (Nat.Prime.two_le hp') k)
+    exact Nat.le_log_of_pow_le Nat.one_lt_two (Nat.pow_le_pow_left hp'.two_le k)
   · rintro ⟨k, hk, hk', ⟨p, hp, rfl, hp'⟩⟩
     exact ⟨p, k, hp', hk', rfl⟩
 
 theorem isPrimePow_nat_iff_bounded_log_minFac {n : ℕ} (hn : 1 < n) :
     IsPrimePow n
       ↔ ∃ k : ℕ, k ≤ Nat.log 2 n ∧ 0 < k ∧ n = n.minFac ^ k := by
-  rw [isPrimePow_nat_iff_bounded_log]
+  rw [isPrimePow_nat_iff_bounded_log (by omega)]
   constructor
   · rintro ⟨k, hkle, hk_pos, p, hle, heq, hprime⟩
     refine ⟨k, hkle, hk_pos, ?_⟩

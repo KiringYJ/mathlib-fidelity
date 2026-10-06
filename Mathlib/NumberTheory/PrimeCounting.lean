@@ -179,6 +179,9 @@ lemma one_lt_of_mem_primesBelow (hp : p ∈ primesBelow n) : 1 < p :=
 lemma one_lt_of_mem_primesLE (hp : p ∈ primesLE n) : 1 < p :=
   one_lt_of_mem_primesBelow hp
 
+lemma ne_zero_of_mem_primesLE (hp : p ∈ primesLE n) : n ≠ 0 :=
+  Nat.ne_zero_of_lt ((one_lt_of_mem_primesLE hp).trans_le (le_of_mem_primesLE hp))
+
 lemma two_le_of_mem_primesBelow (hp : p ∈ primesBelow n) : 2 ≤ p :=
   (prime_of_mem_primesBelow hp).two_le
 

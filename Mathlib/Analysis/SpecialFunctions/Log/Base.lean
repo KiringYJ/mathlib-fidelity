@@ -361,70 +361,53 @@ theorem tendsto_logb_atTop_of_base_lt_one : Tendsto (logb b) atTop atBot := by
 end BPosAndBLtOne
 
 @[norm_cast]
-theorem floor_logb_natCast {b : ℕ} {r : ℝ} (hr : 0 ≤ r) :
+theorem floor_logb_natCast {b : ℕ} (hb : 1 < b) {r : ℝ} (hr : 0 < r) :
     ⌊logb b r⌋ = Int.log b r := by
-  obtain rfl | hr := hr.eq_or_lt
-  · rw [logb_zero, Int.log_zero_right, Int.floor_zero]
-  by_cases hb : 1 < b
-  · have hb1' : 1 < (b : ℝ) := Nat.one_lt_cast.mpr hb
-    apply le_antisymm
-    · rw [← Int.zpow_le_iff_le_log hb hr, ← rpow_intCast b]
-      refine le_of_le_of_eq ?_ (rpow_logb (zero_lt_one.trans hb1') hb1'.ne' hr)
-      exact rpow_le_rpow_of_exponent_le hb1'.le (Int.floor_le _)
-    · rw [Int.le_floor, le_logb_iff_rpow_le hb1' hr, rpow_intCast]
-      exact Int.zpow_log_le_self hb hr
-  · rw [Nat.one_lt_iff_ne_zero_and_ne_one, ← or_iff_not_and_not] at hb
-    cases hb
-    · simp_all only [CharP.cast_eq_zero, logb_zero_left, Int.floor_zero, Int.log_zero_left]
-    · simp_all only [Nat.cast_one, logb_one_left, Int.floor_zero, Int.log_one_left]
+  have hb1' : 1 < (b : ℝ) := Nat.one_lt_cast.mpr hb
+  apply le_antisymm
+  · rw [← Int.zpow_le_iff_le_log hb hr, ← rpow_intCast b]
+    refine le_of_le_of_eq ?_ (rpow_logb (zero_lt_one.trans hb1') hb1'.ne' hr)
+    exact rpow_le_rpow_of_exponent_le hb1'.le (Int.floor_le _)
+  · rw [Int.le_floor, le_logb_iff_rpow_le hb1' hr, rpow_intCast]
+    exact Int.zpow_log_le_self hb hr
 
 @[norm_cast]
-theorem ceil_logb_natCast {b : ℕ} {r : ℝ} (hr : 0 ≤ r) :
+theorem ceil_logb_natCast {b : ℕ} (hb : 1 < b) {r : ℝ} (hr : 0 < r) :
     ⌈logb b r⌉ = Int.clog b r := by
-  obtain rfl | hr := hr.eq_or_lt
-  · rw [logb_zero, Int.clog_zero_right, Int.ceil_zero]
-  by_cases hb : 1 < b
-  · have hb1' : 1 < (b : ℝ) := Nat.one_lt_cast.mpr hb
-    apply le_antisymm
-    · rw [Int.ceil_le, logb_le_iff_le_rpow hb1' hr, rpow_intCast]
-      exact Int.self_le_zpow_clog hb r
-    · rw [← Int.le_zpow_iff_clog_le hb hr, ← rpow_intCast b]
-      refine (rpow_logb (zero_lt_one.trans hb1') hb1'.ne' hr).symm.trans_le ?_
-      exact rpow_le_rpow_of_exponent_le hb1'.le (Int.le_ceil _)
-  · rw [Nat.one_lt_iff_ne_zero_and_ne_one, ← or_iff_not_and_not] at hb
-    cases hb
-    · simp_all only [CharP.cast_eq_zero, logb_zero_left, Int.ceil_zero, Int.clog_zero_left]
-    · simp_all only [Nat.cast_one, logb_one_left, Int.ceil_zero, Int.clog_one_left]
+  have hb1' : 1 < (b : ℝ) := Nat.one_lt_cast.mpr hb
+  apply le_antisymm
+  · rw [Int.ceil_le, logb_le_iff_le_rpow hb1' hr, rpow_intCast]
+    exact Int.self_le_zpow_clog hb hr
+  · rw [← Int.le_zpow_iff_clog_le hb hr, ← rpow_intCast b]
+    refine (rpow_logb (zero_lt_one.trans hb1') hb1'.ne' hr).symm.trans_le ?_
+    exact rpow_le_rpow_of_exponent_le hb1'.le (Int.le_ceil _)
 
 @[norm_cast]
-theorem natFloor_logb_natCast (b : ℕ) (n : ℕ) : ⌊logb b n⌋₊ = Nat.log b n := by
-  obtain _ | _ | b := b
-  · simp [Real.logb]
-  · simp [Real.logb]
-  obtain rfl | hn := eq_or_ne n 0
-  · simp
-  rw [← Nat.cast_inj (R := ℤ), Int.natCast_floor_eq_floor, floor_logb_natCast (by simp),
-    Int.log_natCast]
-  exact logb_nonneg (by simp [Nat.cast_add_one_pos]) (Nat.one_le_cast.2 (by lia))
+theorem natFloor_logb_natCast {b : ℕ} (hb : 1 < b) {n : ℕ} (hn : n ≠ 0) :
+    ⌊logb b n⌋₊ = Nat.log b n := by
+  have hn' : (0 : ℝ) < n := Nat.cast_pos.2 (Nat.pos_of_ne_zero hn)
+  rw [← Nat.cast_inj (R := ℤ), Int.natCast_floor_eq_floor, floor_logb_natCast hb hn',
+    Int.log_natCast hb hn]
+  exact logb_nonneg (Nat.one_lt_cast.2 hb) (Nat.one_le_cast.2 (Nat.pos_of_ne_zero hn))
 
 @[norm_cast]
-theorem natCeil_logb_natCast (b : ℕ) (n : ℕ) : ⌈logb b n⌉₊ = Nat.clog b n := by
-  obtain _ | _ | b := b
-  · simp [Real.logb]
-  · simp [Real.logb]
-  obtain rfl | hn := eq_or_ne n 0
-  · simp
-  rw [← Nat.cast_inj (R := ℤ), Int.natCast_ceil_eq_ceil, ceil_logb_natCast (by simp),
-    Int.clog_natCast]
-  exact logb_nonneg (by simp [Nat.cast_add_one_pos]) (Nat.one_le_cast.2 (by lia))
+theorem natCeil_logb_natCast {b : ℕ} (hb : 1 < b) {n : ℕ} (hn : n ≠ 0) :
+    ⌈logb b n⌉₊ = Nat.clog b n := by
+  have hn' : (0 : ℝ) < n := Nat.cast_pos.2 (Nat.pos_of_ne_zero hn)
+  rw [← Nat.cast_inj (R := ℤ), Int.natCast_ceil_eq_ceil, ceil_logb_natCast hb hn',
+    Int.clog_natCast hb hn]
+  exact logb_nonneg (Nat.one_lt_cast.2 hb) (Nat.one_le_cast.2 (Nat.pos_of_ne_zero hn))
 
-lemma natLog_le_logb (a b : ℕ) : Nat.log b a ≤ Real.logb b a := by
+lemma natLog_le_logb {a b : ℕ} (hb : 1 < b) (ha : a ≠ 0) : Nat.log b a ≤ Real.logb b a := by
   apply le_trans _ (Int.floor_le ((b : ℝ).logb a))
-  rw [Real.floor_logb_natCast (Nat.cast_nonneg a), Int.log_natCast, Int.cast_natCast]
+  rw [Real.floor_logb_natCast hb (Nat.cast_pos.2 (Nat.pos_of_ne_zero ha)), Int.log_natCast hb ha,
+    Int.cast_natCast]
 
 lemma log2_le_logb (n : ℕ) : Nat.log2 n ≤ Real.logb 2 n := by
-  calc (Nat.log2 n : ℝ) = Nat.log 2 n := mod_cast Nat.log2_eq_log_two
-  _ ≤ Real.logb 2 n := natLog_le_logb _ _
+  rcases eq_or_ne n 0 with rfl | hn
+  · simp
+  calc (Nat.log2 n : ℝ) = Nat.log 2 n := mod_cast Nat.log2_eq_log_two hn
+  _ ≤ Real.logb 2 n := natLog_le_logb Nat.one_lt_two hn
 
 @[simp]
 theorem logb_eq_zero : logb b x = 0 ↔ b = 0 ∨ b = 1 ∨ b = -1 ∨ x = 0 ∨ x = 1 ∨ x = -1 := by
