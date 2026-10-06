@@ -74,7 +74,7 @@ theorem bind₁_frobeniusPolyRat_wittPolynomial (n : ℕ) :
   delta frobeniusPolyRat
   rw [← bind₁_bind₁, bind₁_xInTermsOfW_wittPolynomial, bind₁_X_right, Function.comp_apply]
 
-local notation "v" => multiplicity
+local notation "v" p:max j:max => padicValNat p j
 
 /-- An auxiliary polynomial over the integers, that satisfies
 `p * (frobeniusPolyAux p n) + X n ^ p = frobeniusPoly p n`.
@@ -88,7 +88,6 @@ noncomputable def frobeniusPolyAux : ℕ → MvPolynomial ℕ ℤ
         C (((p ^ (n - i)).choose (j + 1) / (p ^ (n - i - v p (j + 1)))
           * ↑p ^ (j - v p (j + 1)) : ℕ) : ℤ)
 
-omit hp in
 theorem frobeniusPolyAux_eq (n : ℕ) :
     frobeniusPolyAux p n =
       X (n + 1) - ∑ i ∈ range n,
@@ -116,7 +115,7 @@ and then using the following two key facts at the right point.
 theorem map_frobeniusPoly.key₁ (n j : ℕ) (hj : j < p ^ n) :
     p ^ (n - v p (j + 1)) ∣ (p ^ n).choose (j + 1) := by
   apply pow_dvd_of_le_emultiplicity
-  rw [hp.out.emultiplicity_choose_prime_pow hj j.succ_ne_zero]
+  rw [hp.out.emultiplicity_choose_prime_pow hj j.succ_ne_zero, padicValNat_def]
 
 /-- A key numerical identity needed for the proof of `WittVector.map_frobeniusPoly`. -/
 theorem map_frobeniusPoly.key₂ {n i j : ℕ} (hi : i ≤ n) (hj : j < p ^ (n - i)) :
@@ -126,7 +125,7 @@ theorem map_frobeniusPoly.key₂ {n i j : ℕ} (hi : i ≤ n) (hj : j < p ^ (n -
   · rw [tsub_add_eq_add_tsub h₂, add_comm i j, add_tsub_assoc_of_le (h₁.trans (Nat.sub_le n i)),
       add_assoc, tsub_right_comm, add_comm i,
       tsub_add_cancel_of_le (le_tsub_of_add_le_right ((le_tsub_iff_left hi).mp h₁))]
-  have hle : p ^ m ≤ j + 1 := h ▸ Nat.le_of_dvd j.succ_pos (pow_multiplicity_dvd _ _)
+  have hle : p ^ m ≤ j + 1 := h ▸ Nat.le_of_dvd j.succ_pos pow_padicValNat_dvd
   exact ⟨(Nat.pow_le_pow_iff_right hp.1.one_lt).1 (hle.trans hj),
      Nat.le_of_lt_succ ((m.lt_pow_self hp.1.one_lt).trans_le hle)⟩
 
@@ -193,7 +192,6 @@ variable {p}
 def frobeniusFun (x : 𝕎 R) : 𝕎 R :=
   mk p fun n => MvPolynomial.aeval x.coeff (frobeniusPoly p n)
 
-omit hp in
 theorem coeff_frobeniusFun (x : 𝕎 R) (n : ℕ) :
     coeff (frobeniusFun x) n = MvPolynomial.aeval x.coeff (frobeniusPoly p n) := by
   rw [frobeniusFun, coeff_mk]
@@ -202,7 +200,7 @@ variable (p) in
 /-- `frobeniusFun` is tautologically a polynomial function.
 
 See also `frobenius_isPoly`. -/
-instance frobeniusFun_isPoly : IsPoly p fun R _ Rcr => @frobeniusFun p R _ Rcr :=
+instance frobeniusFun_isPoly : IsPoly p fun R _ Rcr => @frobeniusFun p R _ _ Rcr :=
   ⟨⟨frobeniusPoly p, by intros; funext n; apply coeff_frobeniusFun⟩⟩
 
 @[ghost_simps]

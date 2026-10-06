@@ -180,7 +180,8 @@ private lemma bojanic_mahler_step2 {f : C(ℤ_[p], E)} {s t : ℕ}
     rw [← zpow_neg_one, ← coe_le_coe, coe_nnnorm, PadicInt.norm_eq_zpow_neg_valuation
       (mod_cast this.ne'), coe_zpow, NNReal.coe_natCast,
       zpow_le_zpow_iff_right₀ (mod_cast hp.out.one_lt), neg_le_neg_iff,
-      ← PadicInt.valuation_coe, PadicInt.coe_natCast, Padic.valuation_natCast, Nat.one_le_cast]
+      ← PadicInt.valuation_coe, PadicInt.coe_natCast, Padic.valuation_natCast this.ne',
+      Nat.one_le_cast]
     exact one_le_padicValNat_of_dvd this.ne' <| hp.out.dvd_choose_pow (by lia) (by omega)
   · -- Bounding the sum over `range (n + 1)`: every term is small by the choice of `t`
     refine norm_sum_le_of_forall_le_of_nonempty nonempty_range_add_one (fun i _ ↦ ?_)

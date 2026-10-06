@@ -136,7 +136,11 @@ theorem factorization_lt {n : ℕ} (p : ℕ) (hn : n ≠ 0) : n.factorization p 
 
 /-- A weak upper bound on `n.factorization p` -/
 theorem mul_factorization_le {n p : ℕ} : p * n.factorization p ≤ n := by
-  grw [factorization_le_padicValNat, mul_padicValNat_le]
+  rcases eq_or_ne n 0 with rfl | hn
+  · simp
+  by_cases pp : p.Prime
+  · grw [factorization_le_padicValNat pp.ne_one hn, mul_padicValNat_le pp.ne_one hn]
+  · simp [factorization_eq_zero_of_not_prime n pp]
 
 /-- An upper bound on `n.factorization p` -/
 theorem factorization_le_of_le_pow {n p b : ℕ} (hb : n ≤ p ^ b) : n.factorization p ≤ b := by
@@ -460,29 +464,36 @@ theorem factorization_eq_of_coprime_right {p a b : ℕ} (hab : Coprime a b)
 
 /-- Two positive naturals are equal if their prime padic valuations are equal -/
 theorem eq_iff_prime_padicValNat_eq (a b : ℕ) (ha : a ≠ 0) (hb : b ≠ 0) :
-    a = b ↔ ∀ p : ℕ, p.Prime → padicValNat p a = padicValNat p b := by
+    a = b ↔ ∀ (p : ℕ) (pp : p.Prime), padicValNat p a = padicValNat p b := by
   constructor
   · rintro rfl
     simp
   · intro h
     refine eq_of_factorization_eq ha hb fun p => ?_
     by_cases pp : p.Prime
-    · simp [factorization_def, pp, h p pp]
+    · rw [factorization_def a pp ha, factorization_def b pp hb, h p pp]
     · simp [factorization_eq_zero_of_not_prime, pp]
 
 theorem prod_pow_prime_padicValNat (n : Nat) (hn : n ≠ 0) (m : Nat) (pr : n < m) :
-    ∏ p ∈ range m with p.Prime, p ^ padicValNat p n = n := by
-  nth_rw 2 [← prod_factorization_pow_eq_self hn]
-  rw [eq_comm]
-  apply Finset.prod_subset_one_on_sdiff
-  · exact fun p hp => Finset.mem_filter.mpr ⟨Finset.mem_range.2 <| pr.trans_le' <|
-      le_of_mem_primeFactors hp, prime_of_mem_primeFactors hp⟩
-  · intro p hp
-    obtain ⟨hp1, hp2⟩ := Finset.mem_sdiff.mp hp
-    rw [← factorization_def n (Finset.mem_filter.mp hp1).2]
-    simp [Finsupp.notMem_support_iff.mp hp2]
-  · intro p hp
-    simp [factorization_def n (prime_of_mem_primeFactors hp)]
+    ∏ p ∈ ((Finset.range m).filter Nat.Prime).attach,
+      (p : ℕ) ^ padicValNat p n (Finset.mem_filter.1 p.2).2.ne_one hn = n := by
+  calc ∏ p ∈ ((Finset.range m).filter Nat.Prime).attach,
+        (p : ℕ) ^ padicValNat p n (Finset.mem_filter.1 p.2).2.ne_one hn
+      = ∏ p ∈ ((Finset.range m).filter Nat.Prime).attach, (p : ℕ) ^ n.factorization p :=
+        Finset.prod_congr rfl fun p _ ↦ by rw [factorization_def n (Finset.mem_filter.1 p.2).2 hn]
+    _ = ∏ p ∈ (Finset.range m).filter Nat.Prime, p ^ n.factorization p :=
+        Finset.prod_attach _ (fun p ↦ p ^ n.factorization p)
+    _ = n := by
+      nth_rw 2 [← prod_factorization_pow_eq_self hn]
+      rw [eq_comm]
+      apply Finset.prod_subset_one_on_sdiff
+      · exact fun p hp => Finset.mem_filter.mpr ⟨Finset.mem_range.2 <| pr.trans_le' <|
+          le_of_mem_primeFactors hp, prime_of_mem_primeFactors hp⟩
+      · intro p hp
+        obtain ⟨hp1, hp2⟩ := Finset.mem_sdiff.mp hp
+        simp [Finsupp.notMem_support_iff.mp hp2]
+      · intro p hp
+        rfl
 
 theorem prod_primeFactors_pow_factorization (hn : n ≠ 0) :
     n = ∏ p ∈ n.primeFactors, p ^ n.factorization p :=
@@ -507,7 +518,8 @@ theorem dvd_prod_primeFactors_pow_self {n : ℕ} (hn : n ≠ 0) :
     n ∣ (∏ p ∈ n.primeFactors, p) ^ n := by
   nth_rw 1 [← Finset.prod_pow, prod_primeFactors_pow_factorization hn]
   refine prod_dvd_prod_of_dvd _ _ fun i hi ↦ pow_dvd_pow i ?_
-  grw [n.factorization_def <| prime_of_mem_primeFactors hi, padicValNat_le_self]
+  grw [n.factorization_def (prime_of_mem_primeFactors hi) hn,
+    padicValNat_le_self (prime_of_mem_primeFactors hi).ne_one hn]
 
 theorem dvd_pow_self_iff {n k : ℕ} (hn : n ≠ 0) (hk : k ≠ 0) :
     n ∣ k ^ n ↔ n.primeFactors ⊆ k.primeFactors := by

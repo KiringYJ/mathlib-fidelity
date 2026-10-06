@@ -185,7 +185,8 @@ theorem ramificationIdx_eq_normalizedFactors_count [IsDedekindDomain S]
 open UniqueFactorizationMonoid in
 theorem ramificationIdx_eq_multiplicity [IsDedekindDomain S]
     [q.IsPrime] [q.LiesOver p] (hp : p.map (algebraMap R S) ≠ ⊥) :
-    q.ramificationIdx R = multiplicity q (p.map (algebraMap R S)) := by
+    q.ramificationIdx R = multiplicity q (p.map (algebraMap R S))
+      (.of_not_isUnit (isUnit_iff.not.2 IsPrime.ne_top') hp) := by
   have hq : q ≠ ⊥ := ne_bot_of_le_ne_bot hp (map_le_of_le_comap (q.over_def p).le)
   rw [ramificationIdx_eq_normalizedFactors_count p q hp,
     multiplicity_eq_of_emultiplicity_eq_some (emultiplicity_eq_count_normalizedFactors

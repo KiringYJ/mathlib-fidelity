@@ -685,12 +685,18 @@ theorem padicValuation_bernoulli (hk : 0 < k) (hpk : p - 1 ∣ 2 * k) :
   simpa using (Rat.padicValuation p).map_sub_eq_of_lt_right
     (lt_of_le_of_lt (Rat.padicValuation_le_one_iff.mpr hkey) h1)
 
+/-- If `0 < k`, then the Bernoulli number `B₂ₖ` is nonzero: its `2`-adic valuation is
+`WithZero.exp 1`. -/
+theorem bernoulli_two_mul_ne_zero (hk : 0 < k) : bernoulli (2 * k) ≠ 0 := fun h ↦ by
+  simpa [h] using (padicValuation_bernoulli (p := 2) hk (by simp)).symm
+
 /-- If `p` is prime, `0 < k`, and `p - 1 ∣ 2 * k`, then the `p`-adic valuation of the Bernoulli
 number `B₂ₖ` is `-1`. -/
 theorem padicValRat_bernoulli (hk : 0 < k) (hpk : p - 1 ∣ 2 * k) :
-    padicValRat p (bernoulli (2 * k)) = -1 := by
-  grind [Rat.padicValuation, Valuation.coe_mk, MonoidWithZeroHom.coe_mk, ZeroHom.coe_mk,
-    WithZero.exp_inj, WithZero.exp_ne_zero, padicValuation_bernoulli hk hpk]
+    padicValRat p (bernoulli (2 * k)) (hq := bernoulli_two_mul_ne_zero hk) = -1 := by
+  have h := padicValuation_bernoulli hk hpk
+  rw [Rat.padicValuation_of_ne_zero (bernoulli_two_mul_ne_zero hk), WithZero.exp_inj] at h
+  omega
 
 /-- If `p` is prime, `0 < k`, and `p - 1 ∣ 2 * k`, then `p` divides the denominator of the
 Bernoulli number `B₂ₖ`. -/

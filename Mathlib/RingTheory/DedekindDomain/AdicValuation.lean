@@ -186,12 +186,11 @@ theorem intValuation_if_neg {r : R} (hr : r ≠ 0) :
   intValuationDef_if_neg _ hr
 
 theorem intValuation_eq_exp_neg_multiplicity {r : R} (hr : r ≠ 0) :
-    v.intValuation r = exp (-multiplicity v.asIdeal (Ideal.span {r}) : ℤ) := by
+    v.intValuation r = exp (-multiplicity v.asIdeal (Ideal.span {r})
+      (v.finiteMultiplicity (Ideal.span_singleton_eq_bot.not.2 hr)) : ℤ) := by
   have hsr : Ideal.span {r} ≠ 0 := Submodule.span_singleton_eq_bot.mp.mt hr
-  have hfm : FiniteMultiplicity v.asIdeal (Ideal.span {r}) :=
-    FiniteMultiplicity.of_prime_left v.prime hsr
   rw [v.intValuation_if_neg hr, exp_inj, neg_inj, Int.natCast_inj, ← ENat.natCast_inj,
-    ← FiniteMultiplicity.emultiplicity_eq_multiplicity hfm,
+    ← FiniteMultiplicity.emultiplicity_eq_multiplicity,
     UniqueFactorizationMonoid.emultiplicity_eq_count_normalizedFactors (irreducible v) hsr,
     normalize_eq, Ideal.count_associates_factors_eq hsr v.isPrime v.ne_bot]
 
@@ -559,9 +558,10 @@ theorem exists_intValuation_mul_sub_lt {a b : R} (hv : v.intValuation b ≤ v.in
     -- `b - y * a = z` and `v z ≤ exp (-n)`, as required.
     have hvn : emultiplicity v.asIdeal (Ideal.span {a}) ≤ n := by
       grw [← exp_le_intValuation_iff_emultiplicity_le, hna]
-    have hb : b ∈ v.asIdeal ^ multiplicity v.asIdeal (Ideal.span {a}) := by
-      rwa [← intValuation_le_pow_iff_mem, ← v.intValuation_eq_exp_neg_multiplicity ha]
     have hnz : Ideal.span {a} ≠ ⊥ := by rwa [ne_eq, Ideal.span_singleton_eq_bot]
+    have hb : b ∈ v.asIdeal ^ multiplicity v.asIdeal (Ideal.span {a})
+        (v.finiteMultiplicity hnz) := by
+      rwa [← intValuation_le_pow_iff_mem, ← v.intValuation_eq_exp_neg_multiplicity ha]
     simpa [← Ideal.irreducible_pow_sup_of_ge hnz v.irreducible n hvn, Submodule.mem_sup,
       ← eq_sub_iff_add_eq, ← intValuation_le_pow_iff_mem, Ideal.mem_span_singleton'] using hb
 

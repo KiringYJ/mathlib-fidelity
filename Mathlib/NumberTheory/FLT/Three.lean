@@ -217,7 +217,7 @@ lemma Solution'.multiplicity_lambda_c_finite :
 /-- Given `S' : Solution'`, `S'.multiplicity` is the multiplicity of `λ` in `S'.c`, as a natural
 number. -/
 noncomputable def Solution'.multiplicity :=
-  _root_.multiplicity (hζ.toInteger - 1) S'.c
+  _root_.multiplicity (hζ.toInteger - 1) S'.c S'.multiplicity_lambda_c_finite
 
 /-- Given `S : Solution`, `S.multiplicity` is the multiplicity of `λ` in `S.c`, as a natural
 number. -/
@@ -227,7 +227,6 @@ noncomputable def Solution.multiplicity := S.toSolution'.multiplicity
 `S.c` is less or equal than the multiplicity in `S₁.c`. -/
 def Solution.isMinimal : Prop := ∀ (S₁ : Solution hζ), S.multiplicity ≤ S₁.multiplicity
 
-omit [NumberField K] [IsCyclotomicExtension {3} ℚ K] in
 include S in
 /-- If there is a solution then there is a minimal one. -/
 lemma Solution.exists_minimal : ∃ (S₁ : Solution hζ), S₁.isMinimal := by
@@ -479,7 +478,7 @@ lemma lambda_not_dvd_z : ¬ λ ∣ S.z := fun h ↦ by
 
 /-- We have that `λ ^ (3*S.multiplicity-2)` divides `S.a + S.b`. -/
 lemma lambda_pow_dvd_a_add_b : λ ^ (3 * S.multiplicity - 2) ∣ S.a + S.b := by
-  have h : λ ^ S.multiplicity ∣ S.c := pow_multiplicity_dvd _ _
+  have h : λ ^ S.multiplicity ∣ S.c := pow_multiplicity_dvd _
   replace h : (λ ^ multiplicity S) ^ 3 ∣ S.u * S.c ^ 3 := by simp [h]
   rw [← S.H, a_cube_add_b_cube_eq_mul, ← pow_mul, mul_comm, y_spec, z_spec] at h
   apply hζ.zeta_sub_one_prime'.pow_dvd_of_dvd_mul_left _ S.lambda_not_dvd_z
@@ -498,11 +497,10 @@ lemma x_spec : S.a + S.b = λ ^ (3 * S.multiplicity - 2) * S.x :=
 
 /-- Given `S : Solution`, we let `S.w` be any element such that `S.c = λ ^ S.multiplicity * S.w` -/
 noncomputable def w :=
-  (pow_multiplicity_dvd (hζ.toInteger - 1) S.c).choose
+  (pow_multiplicity_dvd S.toSolution'.multiplicity_lambda_c_finite).choose
 
-omit [NumberField K] [IsCyclotomicExtension {3} ℚ K] in
 lemma w_spec : S.c = λ ^ S.multiplicity * S.w :=
-  (pow_multiplicity_dvd (hζ.toInteger - 1) S.c).choose_spec
+  (pow_multiplicity_dvd S.toSolution'.multiplicity_lambda_c_finite).choose_spec
 
 lemma lambda_not_dvd_w : ¬ λ ∣ S.w := fun h ↦ by
   refine S.toSolution'.multiplicity_lambda_c_finite.not_pow_dvd_of_multiplicity_lt

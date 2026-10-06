@@ -28,19 +28,21 @@ lemma harmonic_pos {n : ℕ} (Hn : n ≠ 0) : 0 < harmonic n := by
 
 /-- The 2-adic valuation of the n-th harmonic number is the negative of the logarithm of n. -/
 theorem padicValRat_two_harmonic {n : ℕ} (hn : n ≠ 0) :
-    padicValRat 2 (harmonic n) = -Nat.log 2 n := by
+    padicValRat 2 (harmonic n) (hq := (harmonic_pos hn).ne') = -Nat.log 2 n := by
   induction n with
   | zero => exact absurd rfl hn
   | succ n ih =>
     rcases eq_or_ne n 0 with rfl | hn
     · simp
-    rw [harmonic_succ]
-    have key : padicValRat 2 (harmonic n) ≠ padicValRat 2 (↑(n + 1))⁻¹ := by
-      rw [ih hn, padicValRat.inv, padicValRat.of_nat, Ne, neg_inj, Nat.cast_inj]
+    have hn1 : ((n + 1 : ℕ) : ℚ) ≠ 0 := Nat.cast_ne_zero.mpr n.succ_ne_zero
+    have key : padicValRat 2 (harmonic n) (hq := (harmonic_pos hn).ne') ≠
+        padicValRat 2 (↑(n + 1))⁻¹ (hq := inv_ne_zero hn1) := by
+      rw [ih hn, padicValRat.inv hn1, padicValRat.of_nat, Ne, neg_inj, Nat.cast_inj]
       exact Nat.log_ne_padicValNat_succ hn
+    simp only [harmonic_succ]
     rw [padicValRat.add_eq_min (harmonic_succ n ▸ (harmonic_pos n.succ_ne_zero).ne')
-        (harmonic_pos hn).ne' (inv_ne_zero (Nat.cast_ne_zero.mpr n.succ_ne_zero)) key, ih hn,
-        padicValRat.inv, padicValRat.of_nat, min_neg_neg, neg_inj, ← Nat.cast_max, Nat.cast_inj]
+        (harmonic_pos hn).ne' (inv_ne_zero hn1) key, ih hn, padicValRat.inv hn1,
+        padicValRat.of_nat, min_neg_neg, neg_inj, ← Nat.cast_max, Nat.cast_inj]
     exact Nat.max_log_padicValNat_succ_eq_log_succ hn
 
 /-- The 2-adic norm of the n-th harmonic number is 2 raised to the logarithm of n in base 2. -/

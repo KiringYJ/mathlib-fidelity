@@ -133,6 +133,7 @@ end IsBonza
 def fExample : ℕ → ℕ := fun x ↦
   if ¬ 2 ∣ x then 1
   else if x = 2 then 4
+  else if hx : x = 0 then 4
   else 2 ^ (padicValNat 2 x + 2)
 
 namespace fExample
@@ -159,25 +160,31 @@ lemma isBonza : IsBonza fExample := by
     by_cases ch2 : a = 2
     · simp only [fExample, ch2, dvd_refl, not_true_eq_false, ↓reduceIte, Nat.cast_ofNat,
         Nat.two_dvd_ne_zero]
-      push_cast
-      split_ifs with hb1 hb2
+      push_cast [apply_dite (Nat.cast : ℕ → ℤ)]
+      split_ifs with hb1 hb2 hb3
       · grind [sq_emod_four_eq_one_of_odd]
       · simp [hb2]
+      · exact absurd hb3 hb.ne'
       · refine dvd_sub ?_ ?_
         · have : 2 ∣ (b : ℤ) := by grind
           simpa using pow_dvd_pow_of_dvd this 2
         · exact Dvd.dvd.pow ⟨2 ^ padicValNat 2 b, by ring⟩ (zero_ne_add_one 3).symm
-    · simp only [fExample, ch1, ↓reduceIte, ch2, Nat.cast_pow, Nat.cast_ofNat, Nat.two_dvd_ne_zero,
-        Nat.cast_ite, Nat.cast_one, ite_pow, one_pow]
-      split_ifs with hb1 hb2
+    · simp only [fExample, ch1, ↓reduceIte, ch2, ha.ne', ↓reduceDIte, Nat.cast_pow,
+        Nat.cast_ofNat, Nat.two_dvd_ne_zero, Nat.cast_ite, Nat.cast_one, ite_pow, one_pow,
+        apply_dite (Nat.cast : ℕ → ℤ), dite_pow]
+      split_ifs with hb1 hb2 hb3
       · by_cases lt : b = 1
         · simp [lt]
-        have : (padicValNat 2 a + 2) ≤ padicValInt 2 (b ^ a - 1) := by
+        have hba : (b : ℤ) ^ a - 1 ≠ 0 := by
           rw [← Int.natCast_pow_pred b a hb]
-          exact padicValNat.pow_two_sub_one_ge (by lia) (two_dvd_ne_zero.mpr hb1) (by lia)
-            (even_iff.mpr (by simpa using ch1))
-        exact Int.dvd_trans (pow_dvd_pow 2 this) (padicValInt_dvd ((b : ℤ) ^ a - 1))
+          exact_mod_cast Nat.sub_ne_zero_of_lt (Nat.one_lt_pow ha.ne' (by lia))
+        have : (padicValNat 2 a + 2) ≤ padicValInt 2 (b ^ a - 1) := by
+          convert padicValNat.pow_two_sub_one_ge (x := b) (n := a) (by lia)
+            (two_dvd_ne_zero.mpr hb1) (by lia) (even_iff.mpr (by simpa using ch1)) using 1
+          simp only [← Int.natCast_pow_pred b a hb, padicValInt.of_nat]
+        exact Int.dvd_trans (pow_dvd_pow 2 this) (padicValInt_dvd (by decide) hba)
       · grind [dvd_pow_sub]
+      · exact absurd hb3 hb.ne'
       · grind [dvd_pow_sub]
   · grind [fExample, Nat.two_pow_pos]
 
@@ -194,10 +201,10 @@ theorem apply_le {f : ℕ → ℕ} (hf : IsBonza f) {n : ℕ} (hn : 0 < n) : f n
         have := hf.1 n 3 hn (by norm_num)
         rwa [Nat.cast_ofNat, eq1, Nat.cast_one, one_pow, eq2, ofNat_dvd] at this
       rw [hk] at apply_dvd_three_pow_sub_one
+      have h3 : 3 ^ n - 1 ≠ 0 := by grind [one_lt_pow]
       calc
         _ ≤ 2 ^ padicValNat 2 (3 ^ n - 1) := by
-          rwa [hk, Nat.pow_le_pow_iff_right le.refl, ← padicValNat_dvd_iff_le
-            (by grind [one_lt_pow])]
+          rwa [hk, Nat.pow_le_pow_iff_right le.refl, ← padicValNat_dvd_iff_le h3]
         _ = 4 * 2 ^ padicValNat 2 n := by
           have : padicValNat 2 (3 ^ n - 1) + 1 = 3 + padicValNat 2 n := by
             simpa [← factorization_def _ prime_two, ← primeFactorsList_count_eq] using

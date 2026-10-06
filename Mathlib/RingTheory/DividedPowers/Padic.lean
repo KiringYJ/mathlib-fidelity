@@ -103,7 +103,7 @@ private lemma dpow'_norm_le_of_ne_zero {n : ℕ} (hn : n ≠ 0) {x : ℤ_[p]}
       (cast_ne_zero.mpr n.factorial_ne_zero), ← zpow_natCast, ← zpow_mul]
     gcongr
     · exact_mod_cast Nat.Prime.one_lt hp.elim
-    · simp only [neg_mul, Padic.valuation_natCast, neg_lt_neg_iff]
+    · simp only [neg_mul, Padic.valuation_natCast (factorial_ne_zero n), neg_lt_neg_iff]
       apply lt_of_lt_of_le hlt
       conv_lhs => rw [← one_mul (n : ℤ)]
       gcongr

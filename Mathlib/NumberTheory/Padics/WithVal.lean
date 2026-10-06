@@ -64,13 +64,13 @@ lemma isUniformInducing_cast_withVal : IsUniformInducing ((Rat.castHom ℚ_[p]).
     change Rat.padicValuation p (x' - y') < exp _ at h
     rw [← Nat.cast_pow, ← Rat.cast_natCast, ← Rat.cast_inv_of_ne_zero, Rat.cast_le]
     · rw [map_sub, ← hx, ← hy]
-      simp only [Rat.padicValuation, Valuation.coe_mk, MonoidWithZeroHom.coe_mk, ZeroHom.coe_mk,
-        padicNorm, zpow_neg, Nat.cast_pow] at h ⊢
-      split_ifs with H
-      · simp
-      · simp only [H, ↓reduceIte, exp_lt_exp, neg_lt_neg_iff] at h
-        simpa [hp0', zpow_pos, pow_pos, inv_le_inv₀] using
-          zpow_right_mono₀ (by exact_mod_cast (Nat.Prime.one_le Fact.out)) h.le
+      by_cases H : x' - y' = 0
+      · simp [H]
+      rw [Rat.padicValuation_of_ne_zero H, exp_lt_exp, neg_lt_neg_iff] at h
+      rw [padicNorm.eq_zpow_of_nonzero H]
+      simp only [zpow_neg, Nat.cast_pow]
+      simpa [hp0', zpow_pos, pow_pos, inv_le_inv₀] using
+        zpow_right_mono₀ (by exact_mod_cast (Nat.Prime.one_le Fact.out)) h.le
     · simp [Nat.Prime.ne_zero Fact.out]
   · intro γ
     use (log ((embedding γ.val) * exp (-1))).natAbs
@@ -81,14 +81,15 @@ lemma isUniformInducing_cast_withVal : IsUniformInducing ((Rat.castHom ℚ_[p]).
     change Rat.padicValuation p (x' - y') < embedding γ.1
     rw [← Nat.cast_pow, ← Rat.cast_natCast, ← Rat.cast_inv_of_ne_zero, Rat.cast_le] at h
     · change padicNorm p (x' - y') ≤ _ at h
-      simp only [Rat.padicValuation, Valuation.coe_mk, MonoidWithZeroHom.coe_mk, ZeroHom.coe_mk,
-        padicNorm, zpow_neg, Nat.cast_pow] at h ⊢
-      split_ifs with H
-      · simp only [exp_neg]
+      by_cases H : x' - y' = 0
+      · rw [H, map_zero]
         exact embedding_unit_pos _
-      · rw [← lt_log_iff_exp_lt (embedding_unit_ne_zero _)]
-        simp_all [← zpow_natCast, zpow_pos, inv_le_inv₀, zpow_le_zpow_iff_right₀ hp1', abs_le,
-          Int.lt_iff_add_one_le]
+      rw [Rat.padicValuation_of_ne_zero H]
+      rw [padicNorm.eq_zpow_of_nonzero H] at h
+      simp only [zpow_neg, Nat.cast_pow] at h
+      rw [← lt_log_iff_exp_lt (embedding_unit_ne_zero _)]
+      simp_all [← zpow_natCast, zpow_pos, inv_le_inv₀, zpow_le_zpow_iff_right₀ hp1', abs_le,
+        Int.lt_iff_add_one_le]
     · simp [Nat.Prime.ne_zero Fact.out]
 
 lemma isDenseInducing_cast_withVal : IsDenseInducing ((Rat.castHom ℚ_[p]).comp
