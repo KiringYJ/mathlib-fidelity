@@ -237,11 +237,21 @@ operation.
   consumers.  Tests cover the removed lemma, the missing point condition, the order of zero, and
   multiplicativity.
 
-- [ ] **Unify strict nilpotency invariants.**
-  `Mathlib/RingTheory/Nilpotent/Defs.lean:78`, `Mathlib/GroupTheory/Nilpotent.lean:530`, and
-  `Mathlib/Algebra/Lie/Nilpotent.lean:389` assign zero to nonnilpotent objects; `IsNilpotent.exp` and
-  `LieModule.lowerCentralSeriesLast` inherit misleading values.  Require nilpotency evidence or use
-  an extended natural invariant, then migrate the element, group, and Lie families coherently.
+- [x] **Unify strict nilpotency invariants.**
+  The nilpotency invariants take nilpotency evidence: `nilpotencyClass x hx` takes
+  `hx : IsNilpotent x`, `Group.nilpotencyClass G` takes `[Group.IsNilpotent G]`, and
+  `LieModule.nilpotencyLength L M` and `lowerCentralSeriesLast R L M` take
+  `[LieModule.IsNilpotent L M]`.  Each is the least index at which the powers, the upper central
+  series, or the lower central series reach their limit, which exists exactly for a nilpotent
+  object; an extended natural invariant with value `⊤` for a nonnilpotent object is not adopted,
+  since every consumer works with nilpotent objects.  The former definitions returned `0` for a
+  nonnilpotent object (`isNilpotent_of_pos_nilpotencyClass`, `pos_nilpotencyClass_iff`, and
+  `Group.nilpotencyClass_of_not_nilpotent`, removed; `pos_nilpotencyClass` gives the positivity),
+  so that `IsNilpotent.exp (1 : ℚ)` was `0`.  `IsNilpotent.exp a ha` takes the nilpotency of `a`,
+  and its lemmas, the exponential of a nilpotent Lie derivation, and the group lemmas that split on
+  nilpotency (`nilpotencyClass_quotient_center`, `nilpotencyClass_le_of_upperCentralSeries_eq`,
+  and `upperCentralSeries.StrictMonoOn`) take it.  Tests cover the removed names, the
+  exponential of a nonnilpotent element, the class of a nonnilpotent group, and the zero element.
 
 - [x] **Require injectivity for `LinearMap.leftInverse`.**
   `LinearMap.leftInverse f hf` chooses a linear left inverse using `hf : Function.Injective f`,
