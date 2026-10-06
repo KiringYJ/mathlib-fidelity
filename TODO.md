@@ -1871,13 +1871,16 @@ have stable roles and a searchable named declaration remains available.
   only when `P` is that selected measure.  Add a regression test that an invalid list lookup is
   diagnosed as a lookup error rather than reconsidered as expectation syntax.
 
-- [ ] **[S] Remove the exported Diophantine proof-DSL surface.**
-  `Mathlib/NumberTheory/Dioph.lean:489`--`:631` exports `D∧`, `D∨`, `D∃`, `D+`, and related notation
-  for named `Dioph` closure theorems, but every maintained use is confined to that file and `D≠` and
-  `D/` have no consumer.  Prefer the named lemmas where they are at least as readable; if a compact
-  spelling materially helps the long internal constructions, keep it file-local rather than as a
-  public parser dialect.  Remove the unused forms and verify the elaborated logical grouping of the
-  subtraction, remainder, division, and Pell constructions.
+- [x] **[S] Remove the exported Diophantine proof-DSL surface.**
+  The symbolic forms `D∧`, `D∨`, `D∃`, `D&`, `D.`, `D=`, `D+`, `D*`, `D≤`, `D<`, `D-`, `D∣`, `D%`,
+  and `D≡` of the closure lemmas in `Mathlib/NumberTheory/Dioph.lean` are file-local notation
+  instead of scoped notation, since the long subtraction, remainder, division, Pell, and power
+  constructions of that file read better with them than with nested named lemmas; the unused `D≠`
+  and `D/` are removed.  The logical grouping of each construction is checked by elaboration: every
+  compact expression is ascribed the set-builder statement it denotes, or is transported to one by
+  `Dioph.ext` with an explicit `show`.  The scoped prefix `&` for `Fin2.ofNat'` stays, because the
+  statements of public theorems such as `pell_dioph` use it.  A test checks that the forms are not
+  exported and that the named lemmas remain the interface.
 
 - [ ] **[M] Give `ordProj` and `ordCompl` searchable declaration heads.**
   `Mathlib/Data/Nat/Factorization/Defs.lean:326`--`:334` introduces only the notations
