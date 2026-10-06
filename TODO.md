@@ -287,14 +287,18 @@ operation.
   removed names, a root and itself, the reflection identity, the unbroken chain, and the top of the
   chain.
 
-- [ ] **Require a nonzero direction for Lie-algebra root chains.**
-  `LieModule.chainTopCoeff α β` and `chainBotCoeff` in `Mathlib/Algebra/Lie/Weights/Chain.lean:263`
-  are the largest `n` such that `i • α + β` is a weight for every `i ≤ n`, but return `0` for
-  `α = 0`, where every `n` qualifies.  `chainTop` and `chainBot` (`:340`, `:345`) and
-  `LieAlgebra.IsKilling.chainLength` (`Mathlib/Algebra/Lie/Weights/RootSystem.lean:70`) inherit the
-  value, and `chainTopCoeff_zero`, `chainBotCoeff_zero`, `chainTop_zero`, `chainBot_zero`, and
-  `chainLength_of_isZero` state it.  Take `α ≠ 0` (a nonzero root for `chainLength`) and migrate the
-  root-system construction, whose lemmas already split on `α = 0`.
+- [x] **Require a nonzero direction for Lie-algebra root chains.**
+  `LieModule.chainTopCoeff α β hα` and `chainBotCoeff` take `hα : α ≠ 0`: the largest `n` such that
+  `i • α + β` is a weight for every `i ≤ n` exists only in a nonzero direction, since for `α = 0`
+  every `n` has this property.  `chainTop` and `chainBot` take the same hypothesis, and
+  `LieAlgebra.IsKilling.chainLength α β hα` takes a nonzero root `hα : α.IsNonZero`, which
+  `Weight.IsNonZero.coe_ne_zero` states as a nonzero function for the chain functions.  The former
+  definitions returned `0` for `α = 0` (`chainTopCoeff_zero`, `chainBotCoeff_zero`,
+  `chainTop_zero`, `chainBot_zero`, `chainLength_of_isZero`, and `chainLength_zero`, removed), and
+  the lemmas of the root-system construction that split on `α.IsZero`, such as
+  `chainLength_nsmul`, `apply_coroot_eq_cast`, and `chainBotCoeff_add_chainTopCoeff`, take a nonzero
+  root.  Tests cover the removed names, the missing hypothesis, the end of a chain, and the chain
+  length and coroot pairing.
 
 - [x] **Require `ExcenterExists` for excenter geometry.**
   `Affine.Simplex.exsphere`, `excenter`, `exradius`, and `touchpoint` take

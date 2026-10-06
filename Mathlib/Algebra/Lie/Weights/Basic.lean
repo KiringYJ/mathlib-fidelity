@@ -266,6 +266,9 @@ abbrev IsNonZero (χ : Weight R L M) := ¬ IsZero (χ : Weight R L M)
 lemma isNonZero_iff_ne_zero [Nontrivial (genWeightSpace M (0 : L → R))] {χ : Weight R L M} :
     χ.IsNonZero ↔ χ ≠ 0 := isZero_iff_eq_zero.not
 
+/-- A nonzero weight is a nonzero function. -/
+lemma IsNonZero.coe_ne_zero {χ : Weight R L M} (hχ : χ.IsNonZero) : (χ : L → R) ≠ 0 := hχ
+
 noncomputable instance : DecidablePred (IsNonZero (R := R) (L := L) (M := M)) := Classical.decPred _
 
 variable (R L M) in

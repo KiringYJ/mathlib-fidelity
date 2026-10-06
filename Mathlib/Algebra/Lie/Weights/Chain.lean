@@ -258,24 +258,24 @@ variable [LieRing.IsNilpotent L]
 variable [IsAddTorsionFree R] [IsDomain R] [IsTorsionFree R M] [IsNoetherian R M]
 variable (α : L → R) (β : Weight R L M)
 
-/-- This is the largest `n : ℕ` such that `i • α + β` is a weight for all `0 ≤ i ≤ n`. -/
+/-- This is the largest `n : ℕ` such that `i • α + β` is a weight for all `0 ≤ i ≤ n`. It is
+defined for `α ≠ 0`; for `α = 0`, every `n` has this property. -/
 noncomputable
-def chainTopCoeff : ℕ :=
+def chainTopCoeff (hα : α ≠ 0) : ℕ :=
   letI := Classical.propDecidable
-  if hα : α = 0 then 0 else
   Nat.pred <| Nat.find (show ∃ n, genWeightSpace M (n • α + β : L → R) = ⊥ from
     (eventually_genWeightSpace_smul_add_eq_bot M α β hα).exists)
 
-/-- This is the largest `n : ℕ` such that `-i • α + β` is a weight for all `0 ≤ i ≤ n`. -/
+/-- This is the largest `n : ℕ` such that `-i • α + β` is a weight for all `0 ≤ i ≤ n`. It is
+defined for `α ≠ 0`. -/
 noncomputable
-def chainBotCoeff : ℕ := chainTopCoeff (-α) β
+def chainBotCoeff (hα : α ≠ 0) : ℕ := chainTopCoeff (-α) β (neg_ne_zero.mpr hα)
 
-@[simp] lemma chainTopCoeff_neg : chainTopCoeff (-α) β = chainBotCoeff α β := rfl
-@[simp] lemma chainBotCoeff_neg : chainBotCoeff (-α) β = chainTopCoeff α β := by
-  rw [← chainTopCoeff_neg, neg_neg]
-
-@[simp] lemma chainTopCoeff_zero : chainTopCoeff 0 β = 0 := dite_eq_left rfl
-@[simp] lemma chainBotCoeff_zero : chainBotCoeff 0 β = 0 := dite_eq_left neg_zero
+@[simp] lemma chainTopCoeff_neg (hα : -α ≠ 0) :
+    chainTopCoeff (-α) β hα = chainBotCoeff α β (neg_ne_zero.mp hα) := rfl
+@[simp] lemma chainBotCoeff_neg (hα : -α ≠ 0) :
+    chainBotCoeff (-α) β hα = chainTopCoeff α β (neg_ne_zero.mp hα) := by
+  simp only [chainBotCoeff, neg_neg]
 
 section
 variable (hα : α ≠ 0)
@@ -283,10 +283,10 @@ include hα
 
 lemma chainTopCoeff_add_one :
     letI := Classical.propDecidable
-    chainTopCoeff α β + 1 =
+    chainTopCoeff α β hα + 1 =
       Nat.find (eventually_genWeightSpace_smul_add_eq_bot M α β hα).exists := by
   classical
-  rw [chainTopCoeff, dite_eq_right hα]
+  rw [chainTopCoeff]
   apply Nat.succ_pred_eq_of_pos
   rw [zero_lt_iff]
   intro e
@@ -296,82 +296,87 @@ lemma chainTopCoeff_add_one :
   exact β.genWeightSpace_ne_bot _ (by simpa only [zero_smul, zero_add] using this)
 
 lemma genWeightSpace_chainTopCoeff_add_one_nsmul_add :
-    genWeightSpace M ((chainTopCoeff α β + 1) • α + β : L → R) = ⊥ := by
+    genWeightSpace M ((chainTopCoeff α β hα + 1) • α + β : L → R) = ⊥ := by
   classical
   rw [chainTopCoeff_add_one _ _ hα]
   exact Nat.find_spec (eventually_genWeightSpace_smul_add_eq_bot M α β hα).exists
 
 lemma genWeightSpace_chainTopCoeff_add_one_zsmul_add :
-    genWeightSpace M ((chainTopCoeff α β + 1 : ℤ) • α + β : L → R) = ⊥ := by
+    genWeightSpace M ((chainTopCoeff α β hα + 1 : ℤ) • α + β : L → R) = ⊥ := by
   rw [← genWeightSpace_chainTopCoeff_add_one_nsmul_add α β hα, ← Nat.cast_smul_eq_nsmul ℤ,
     Nat.cast_add, Nat.cast_one]
 
 lemma genWeightSpace_chainBotCoeff_sub_one_zsmul_sub :
-    genWeightSpace M ((-chainBotCoeff α β - 1 : ℤ) • α + β : L → R) = ⊥ := by
+    genWeightSpace M ((-chainBotCoeff α β hα - 1 : ℤ) • α + β : L → R) = ⊥ := by
   rw [sub_eq_add_neg, ← neg_add, neg_smul, ← smul_neg, chainBotCoeff,
-    genWeightSpace_chainTopCoeff_add_one_zsmul_add _ _ (by simpa using hα)]
+    genWeightSpace_chainTopCoeff_add_one_zsmul_add _ _ (neg_ne_zero.mpr hα)]
 
-end
-
-lemma genWeightSpace_nsmul_add_ne_bot_of_le {n} (hn : n ≤ chainTopCoeff α β) :
+lemma genWeightSpace_nsmul_add_ne_bot_of_le {n} (hn : n ≤ chainTopCoeff α β hα) :
     genWeightSpace M (n • α + β : L → R) ≠ ⊥ := by
-  by_cases hα : α = 0
-  · rw [hα, smul_zero, zero_add]; exact β.genWeightSpace_ne_bot
   classical
   rw [← Nat.lt_succ_iff, Nat.succ_eq_add_one, chainTopCoeff_add_one _ _ hα] at hn
   exact Nat.find_min (eventually_genWeightSpace_smul_add_eq_bot M α β hα).exists hn
 
 lemma genWeightSpace_zsmul_add_ne_bot {n : ℤ}
-    (hn : -chainBotCoeff α β ≤ n) (hn' : n ≤ chainTopCoeff α β) :
+    (hn : -chainBotCoeff α β hα ≤ n) (hn' : n ≤ chainTopCoeff α β hα) :
       genWeightSpace M (n • α + β : L → R) ≠ ⊥ := by
   rcases n with (n | n)
   · simp only [Int.ofNat_eq_natCast, Nat.cast_le, Nat.cast_smul_eq_nsmul] at hn' ⊢
-    exact genWeightSpace_nsmul_add_ne_bot_of_le α β hn'
+    exact genWeightSpace_nsmul_add_ne_bot_of_le α β hα hn'
   · simp only [Int.negSucc_eq, ← Nat.cast_succ, neg_le_neg_iff, Nat.cast_le] at hn ⊢
     rw [neg_smul, ← smul_neg, Nat.cast_smul_eq_nsmul]
-    exact genWeightSpace_nsmul_add_ne_bot_of_le (-α) β hn
+    exact genWeightSpace_nsmul_add_ne_bot_of_le (-α) β (neg_ne_zero.mpr hα) hn
 
-lemma genWeightSpace_neg_zsmul_add_ne_bot {n : ℕ} (hn : n ≤ chainBotCoeff α β) :
+lemma genWeightSpace_neg_zsmul_add_ne_bot {n : ℕ} (hn : n ≤ chainBotCoeff α β hα) :
     genWeightSpace M ((-n : ℤ) • α + β : L → R) ≠ ⊥ := by
-  apply genWeightSpace_zsmul_add_ne_bot α β <;> lia
+  apply genWeightSpace_zsmul_add_ne_bot α β hα <;> lia
 
-/-- The last weight in an `α`-chain through `β`. -/
+end
+
+/-- The last weight in an `α`-chain through `β`, for `α ≠ 0`. -/
 noncomputable
-def chainTop (α : L → R) (β : Weight R L M) : Weight R L M :=
-  ⟨chainTopCoeff α β • α + β, genWeightSpace_nsmul_add_ne_bot_of_le α β le_rfl⟩
+def chainTop (α : L → R) (β : Weight R L M) (hα : α ≠ 0) : Weight R L M :=
+  ⟨chainTopCoeff α β hα • α + β, genWeightSpace_nsmul_add_ne_bot_of_le α β hα le_rfl⟩
 
-/-- The first weight in an `α`-chain through `β`. -/
+/-- The first weight in an `α`-chain through `β`, for `α ≠ 0`. -/
 noncomputable
-def chainBot (α : L → R) (β : Weight R L M) : Weight R L M :=
-  ⟨(- chainBotCoeff α β : ℤ) • α + β, genWeightSpace_neg_zsmul_add_ne_bot α β le_rfl⟩
+def chainBot (α : L → R) (β : Weight R L M) (hα : α ≠ 0) : Weight R L M :=
+  ⟨(- chainBotCoeff α β hα : ℤ) • α + β, genWeightSpace_neg_zsmul_add_ne_bot α β hα le_rfl⟩
 
-lemma coe_chainTop' : (chainTop α β : L → R) = chainTopCoeff α β • α + β := rfl
+section
+variable (hα : α ≠ 0)
 
-@[simp] lemma coe_chainTop : (chainTop α β : L → R) = (chainTopCoeff α β : ℤ) • α + β := by
+lemma coe_chainTop' : (chainTop α β hα : L → R) = chainTopCoeff α β hα • α + β := rfl
+
+@[simp] lemma coe_chainTop :
+    (chainTop α β hα : L → R) = (chainTopCoeff α β hα : ℤ) • α + β := by
   rw [Nat.cast_smul_eq_nsmul ℤ]; rfl
-@[simp] lemma coe_chainBot : (chainBot α β : L → R) = (-chainBotCoeff α β : ℤ) • α + β := rfl
+@[simp] lemma coe_chainBot :
+    (chainBot α β hα : L → R) = (-chainBotCoeff α β hα : ℤ) • α + β := rfl
 
-@[simp] lemma chainTop_neg : chainTop (-α) β = chainBot α β := by ext; simp
-@[simp] lemma chainBot_neg : chainBot (-α) β = chainTop α β := by ext; simp
+end
 
-@[simp] lemma chainTop_zero : chainTop 0 β = β := by ext; simp
-@[simp] lemma chainBot_zero : chainBot 0 β = β := by ext; simp
+@[simp] lemma chainTop_neg (hα : -α ≠ 0) :
+    chainTop (-α) β hα = chainBot α β (neg_ne_zero.mp hα) := by ext; simp
+@[simp] lemma chainBot_neg (hα : -α ≠ 0) :
+    chainBot (-α) β hα = chainTop α β (neg_ne_zero.mp hα) := by ext; simp
 
 section
 variable (hα : α ≠ 0)
 include hα
 
 lemma genWeightSpace_add_chainTop :
-    genWeightSpace M (α + chainTop α β : L → R) = ⊥ := by
+    genWeightSpace M (α + chainTop α β hα : L → R) = ⊥ := by
   rw [coe_chainTop', ← add_assoc, ← succ_nsmul',
     genWeightSpace_chainTopCoeff_add_one_nsmul_add _ _ hα]
 
 lemma genWeightSpace_neg_add_chainBot :
-    genWeightSpace M (-α + chainBot α β : L → R) = ⊥ := by
-  rw [← chainTop_neg, genWeightSpace_add_chainTop _ _ (by simpa using hα)]
+    genWeightSpace M (-α + chainBot α β hα : L → R) = ⊥ := by
+  rw [← chainTop_neg _ _ (neg_ne_zero.mpr hα),
+    genWeightSpace_add_chainTop _ _ (neg_ne_zero.mpr hα)]
 
 lemma chainTop_isNonZero' (hα' : genWeightSpace M α ≠ ⊥) :
-    (chainTop α β).IsNonZero := by
+    (chainTop α β hα).IsNonZero := by
   by_contra e
   apply hα'
   rw [← add_zero (α : L → R), ← e, genWeightSpace_add_chainTop _ _ hα]
@@ -379,8 +384,8 @@ lemma chainTop_isNonZero' (hα' : genWeightSpace M α ≠ ⊥) :
 end
 
 lemma chainTop_isNonZero (α β : Weight R L M) (hα : α.IsNonZero) :
-    (chainTop α β).IsNonZero :=
-  chainTop_isNonZero' α β hα α.2
+    (chainTop α β hα.coe_ne_zero).IsNonZero :=
+  chainTop_isNonZero' α β hα.coe_ne_zero α.2
 
 end
 
