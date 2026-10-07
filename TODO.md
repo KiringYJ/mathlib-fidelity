@@ -2217,23 +2217,19 @@ linearity, or another invariant adds hypotheses or preservation content.
   nonexistent `Finset` name.  `prod_sigma` and `prod_sigma'` keep both statements: the `Sigma` type
   is the dependent indexing domain of the double product, not a presentation of a pair.
 
-- [ ] **[M] Audit bare bridge families for generated proofs and useful orientations.**
-  `Set.image_prod`, `Set.image_uncurry_prod`, and `Set.image2_curry` in
-  `Mathlib/Data/Set/NAry.lean:73`--`:85` state one image computation through three spellings.
-  `Mathlib/Data/Finset/NAry.lean:276`--`:281` gives both directions definitionally, and
-  `Mathlib/Order/Filter/NAry.lean:53`--`:59` and `:159`--`:166` chains four manually named views of
-  the same `map`/`map₂` bridge.  Audit the similarly mechanical
-  `uniformContinuous₂_curry` bridge in `Mathlib/Topology/UniformSpace/Basic.lean:923`--`:936`,
-  `Primrec₂.uncurry`/`Primrec₂.curry` in
-  `Mathlib/Computability/Primrec/Basic.lean:325`--`:388`, and the paired pointwise-algebra
-  simplification lemmas in `Mathlib/Algebra/Group/Pi/Lemmas.lean:480`--`:518` and
-  `Mathlib/Algebra/Notation/Pi/Basic.lean:121`--`:129`.  Select an implementation normal form where
-  these are ordinary multiargument functions, but determine public names, rewrite directions, and
-  `[simp]` attributes from real consumers rather than theorem equivalence alone.  Generate
-  mechanical proofs when they reduce maintenance without degrading discovery.  Do not
-  remove `Primrec₂` itself merely because its implementation encodes two arguments by a product,
-  and do not merge `Option.map₂_curry` with `Option.map_uncurry`: independent optional arguments
-  and one optional pair are different semantic inputs.
+- [x] **[M] Audit bare bridge families for generated proofs and useful orientations.**
+  Each family keeps the views that have distinct consumers or rewrite targets.  `Set.image_prod`,
+  `Set.image_uncurry_prod`, and `Set.image2_curry` rewrite three different input forms, and
+  `Set.image2_curry` is now the symmetric of `Set.image_prod` instead of a `simp` proof under a
+  transparency option.  `Finset.image₂_curry` and `Finset.image_uncurry_product` are definitional
+  `simp` lemmas for the inputs `curry f` and `uncurry f`.  `Filter.map_prod_eq_map₂'` had no
+  consumer and restated `Filter.map₂_curry` in the other orientation, so it is removed and
+  `Filter.map₂_curry` follows from `Filter.map_prod_eq_map₂`.  `uniformContinuous₂_curry` and
+  `Primrec₂.uncurry`/`Primrec₂.curry` are the only bridges between the two-argument predicates and
+  the predicates on pairs, and the `Pi` and `Sigma` `curry`/`uncurry` lemmas in
+  `Mathlib/Algebra/Group/Pi/Lemmas.lean` and `Mathlib/Algebra/Notation/Pi/Basic.lean` are
+  definitional `simp` lemmas for the two directions, which a generator would not shorten; these are
+  kept.
 
 - [ ] **[L] Prototype one product-measure and iterated-integral theorem layer, then collapse
   duplicate presentations.**
