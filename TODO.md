@@ -370,17 +370,30 @@ operation.
   `Polynomial.rootMultiplicity` its domain"), and `isUnitTrinomial_iff'` states that `p * p.mirror`
   is nonzero.  Tests cover the removed name, the default proof, and the total invariants at `0`.
 
-- [ ] **Audit constructions that feed `natDegree` of a possibly zero polynomial into a formula.**
-  `natDegree` is the supremum of the support, so its value at `0` is not a fallback, but several
-  definitions and statements use it as the degree of a polynomial that may be `0`:
-  `Polynomial.discr` with `discr_C : discr (C r) = 1`, so the discriminant of `0` is `1`, and the
-  default degree arguments of `Polynomial.resultant` with `resultant_self` (in
-  `Mathlib/RingTheory/Polynomial/Resultant/Basic.lean`, whose docstring already warns about constant
-  polynomials); `RatFunc.intDegree 0 = 0` (`Mathlib/FieldTheory/RatFunc/Degree.lean:40`);
-  `Polynomial.reverse`, `mirror`, `eraseLead`, `nextCoeff`, `scaleRoots`, `integralNormalization`,
-  and `homogenize`; and formulas with natural subtraction such as `natDegree_derivative`.  Decide
-  for each whether its value at `0` is mathematical, and otherwise restate it on nonzero
-  polynomials.
+- [x] **Audit constructions that feed `natDegree` of a possibly zero polynomial into a formula.**
+  `Polynomial.discr f hf` in `Mathlib/RingTheory/Polynomial/Resultant/Basic.lean` takes
+  `hf : 0 < f.natDegree`.  For `f` of degree `n` with leading coefficient `a`, the discriminant is
+  `a ^ (2 * n - 2)` times the product of the squared differences of the roots, which for `n = 0`
+  would be `a⁻¹ ^ 2`; the Wikipedia article "Discriminant" (section "Low degrees") records no common
+  convention for a constant polynomial, while the discriminant of a linear polynomial is commonly
+  `1` (`discr_of_degree_eq_one`).  `discr_C`, which gave `1` for every constant including `0`, is
+  removed.  `Matrix.discr` is `1` when the characteristic polynomial is constant: for a `0 × 0`
+  matrix this is the empty product of the squared differences of the eigenvalues, the discriminant
+  of the monic polynomial `1`, and over the zero ring `1 = 0`.  `RatFunc.intDegree x hx` in
+  `Mathlib/FieldTheory/RatFunc/Degree.lean` takes `hx : x ≠ 0`: the zero rational function has
+  degree `⊥`, as the zero polynomial does, not `0`.  `intDegree_zero` is removed, `intDegree_C` and
+  `intDegree_polynomial` take the nonvanishing of the constant and of the polynomial, the lemmas
+  that held at `0` through the value `0` (`intDegree_inv`, `intDegree_neg`, and `intDegree_add_le`)
+  take nonzero arguments, and the valuation at infinity passes its case `r ≠ 0` to `intDegree`.  The
+  other constructions keep their values at `0`, which do not depend on the degree they use:
+  `reverse`, `eraseLead`, `scaleRoots`, `integralNormalization`, and `homogenize p n` are `0` at
+  `0`, since every coefficient of `0` vanishes, and `mirror` is `0` by an explicit case.
+  `nextCoeff p` is the coefficient one below the leading one, `0` for a constant, where that index
+  would be negative.  The default degrees of `Polynomial.resultant` are formal degrees, with which
+  the resultant of the constant `0` and `g` is `0 ^ n` (`resultant_zero_left_deg`), as for any
+  constant, and `resultant_self` is stated with them.  `natDegree_derivative_le` and the other
+  statements with natural subtraction are statements about the supremum of the support, which hold
+  at `0`.  Tests are in `MathlibTest/IntDegreeDiscrStrict.lean`.
 
 - [x] **Make scheme order of vanishing carry its point and function domains.**
   `AlgebraicGeometry.Scheme.ord f z hz` takes `hz : coheight z = 1`, the condition that `ordHom`

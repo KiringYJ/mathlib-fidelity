@@ -34,37 +34,36 @@ open Polynomial
 
 variable [Field K]
 
-/-- `intDegree x` is the degree of the rational function `x`, defined as the difference between
-the `natDegree` of its numerator and the `natDegree` of its denominator. In particular,
-`intDegree 0 = 0`. -/
-def intDegree (x : K⟮X⟯) : ℤ :=
+set_option linter.unusedVariables false in
+/-- `intDegree x hx` is the degree of a nonzero rational function `x`, the difference between the
+`natDegree` of its numerator and the `natDegree` of its denominator. The zero rational function has
+no integer degree, as the zero polynomial has degree `⊥`. The proof `hx` can be omitted when it is
+a hypothesis. -/
+@[nolint unusedArguments]
+def intDegree (x : K⟮X⟯) (hx : x ≠ 0 := by assumption) : ℤ :=
   natDegree x.num - natDegree x.denom
 
 @[simp]
-theorem intDegree_zero : intDegree (0 : K⟮X⟯) = 0 := by
-  rw [intDegree, num_zero, natDegree_zero, denom_zero, natDegree_one, sub_self]
-
-@[simp]
-theorem intDegree_one : intDegree (1 : K⟮X⟯) = 0 := by
+theorem intDegree_one : intDegree (1 : K⟮X⟯) one_ne_zero = 0 := by
   rw [intDegree, num_one, denom_one, sub_self]
 
 @[simp]
-theorem intDegree_C (k : K) : intDegree (C k) = 0 := by
+theorem intDegree_C {k : K} (hk : k ≠ 0) : intDegree (C k) ((_root_.map_ne_zero C).2 hk) = 0 := by
   rw [intDegree, num_C, natDegree_C, denom_C, natDegree_one, sub_self]
 
 @[simp]
-theorem intDegree_X : intDegree (X : K⟮X⟯) = 1 := by
+theorem intDegree_X : intDegree (X : K⟮X⟯) X_ne_zero = 1 := by
   rw [intDegree, num_X, Polynomial.natDegree_X, denom_X, Polynomial.natDegree_one,
     Int.ofNat_one, Int.ofNat_zero, sub_zero]
 
 @[simp]
-theorem intDegree_polynomial {p : K[X]} :
-    intDegree (algebraMap K[X] K⟮X⟯ p) = natDegree p := by
+theorem intDegree_polynomial {p : K[X]} (hp : p ≠ 0) :
+    intDegree (algebraMap K[X] K⟮X⟯ p) (algebraMap_ne_zero hp) = natDegree p := by
   rw [intDegree, RatFunc.num_algebraMap, RatFunc.denom_algebraMap, Polynomial.natDegree_one,
     Int.ofNat_zero, sub_zero]
 
 theorem intDegree_mul {x y : K⟮X⟯} (hx : x ≠ 0) (hy : y ≠ 0) :
-    intDegree (x * y) = intDegree x + intDegree y := by
+    intDegree (x * y) (mul_ne_zero hx hy) = intDegree x + intDegree y := by
   simp only [intDegree, add_sub, sub_add, sub_sub_eq_add_sub, sub_sub, sub_eq_sub_iff_add_eq_add]
   norm_cast
   rw [← Polynomial.natDegree_mul x.denom_ne_zero y.denom_ne_zero, ←
@@ -76,21 +75,25 @@ theorem intDegree_mul {x y : K⟮X⟯} (hx : x ≠ 0) (hy : y ≠ 0) :
     RatFunc.num_denom_mul]
 
 @[simp]
-theorem intDegree_inv (x : K⟮X⟯) : intDegree (x⁻¹) = - intDegree x := by
-  by_cases hx : x = 0 <;> simp [hx, eq_neg_iff_add_eq_zero, ← intDegree_mul (inv_ne_zero hx) hx]
+theorem intDegree_inv {x : K⟮X⟯} (hx : x ≠ 0) :
+    intDegree x⁻¹ (inv_ne_zero hx) = - intDegree x := by
+  have := intDegree_mul (inv_ne_zero hx) hx
+  simp only [inv_mul_cancel₀ hx, intDegree_one] at this
+  lia
 
 lemma intDegree_div {x y : RatFunc K} (hx : x ≠ 0) (hy : y ≠ 0) :
-    (x / y).intDegree = x.intDegree - y.intDegree := by
-  rw [div_eq_mul_inv, intDegree_mul, intDegree_inv, ← sub_eq_add_neg] <;> grind
+    (x / y).intDegree (div_ne_zero hx hy) = x.intDegree - y.intDegree := by
+  have := intDegree_mul hx (inv_ne_zero hy)
+  simp only [← div_eq_mul_inv, intDegree_inv hy] at this
+  rw [this, sub_eq_add_neg]
 
 @[simp]
-theorem intDegree_neg (x : K⟮X⟯) : intDegree (-x) = intDegree x := by
-  by_cases hx : x = 0
-  · rw [hx, neg_zero]
-  · rw [intDegree, intDegree, ← natDegree_neg x.num]
-    exact
-      natDegree_sub_eq_of_prod_eq (num_ne_zero (neg_ne_zero.mpr hx)) (denom_ne_zero (-x))
-        (neg_ne_zero.mpr (num_ne_zero hx)) (denom_ne_zero x) (num_denom_neg x)
+theorem intDegree_neg {x : K⟮X⟯} (hx : x ≠ 0) :
+    intDegree (-x) (neg_ne_zero.2 hx) = intDegree x := by
+  rw [intDegree, intDegree, ← natDegree_neg x.num]
+  exact
+    natDegree_sub_eq_of_prod_eq (num_ne_zero (neg_ne_zero.mpr hx)) (denom_ne_zero (-x))
+      (neg_ne_zero.mpr (num_ne_zero hx)) (denom_ne_zero x) (num_denom_neg x)
 
 theorem intDegree_add {x y : K⟮X⟯} (hxy : x + y ≠ 0) :
     (x + y).intDegree =
@@ -106,10 +109,8 @@ theorem natDegree_num_mul_right_sub_natDegree_denom_mul_left_eq_intDegree {x : K
     (mul_ne_zero hs x.denom_ne_zero) (num_ne_zero hx) x.denom_ne_zero
   rw [mul_assoc]
 
-theorem intDegree_add_le {x y : K⟮X⟯} (hy : y ≠ 0) (hxy : x + y ≠ 0) :
+theorem intDegree_add_le {x y : K⟮X⟯} (hx : x ≠ 0) (hy : y ≠ 0) (hxy : x + y ≠ 0) :
     intDegree (x + y) ≤ max (intDegree x) (intDegree y) := by
-  by_cases hx : x = 0
-  · simp [hx]
   rw [intDegree_add hxy, ←
     natDegree_num_mul_right_sub_natDegree_denom_mul_left_eq_intDegree hx y.denom_ne_zero,
     mul_comm y.denom, ←

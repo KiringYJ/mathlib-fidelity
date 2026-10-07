@@ -936,19 +936,22 @@ section disc
 
 variable {R : Type*} [CommRing R]
 
-/-- The discriminant of a polynomial, defined as the determinant of `f.sylvesterDeriv` modified
-by a sign. The sign is chosen so polynomials over `ℝ` with all roots real have non-negative
-discriminant. -/
-noncomputable def discr (f : R[X]) : R :=
+set_option linter.unusedVariables false in
+/-- The discriminant of a polynomial `f` of positive degree, defined as the determinant of
+`f.sylvesterDeriv` modified by a sign. The sign is chosen so polynomials over `ℝ` with all roots
+real have non-negative discriminant. For `f` of degree `n` with leading coefficient `a`, the
+discriminant is `a ^ (2 * n - 2)` times the product of the squared differences of the roots of `f`;
+the discriminant of a linear polynomial is `1`. A constant polynomial has no discriminant: the
+roots formula would give `a⁻¹ ^ 2`, and there is no common convention. The proof `hf` can be
+omitted when it is a hypothesis. -/
+@[nolint unusedArguments]
+noncomputable def discr (f : R[X]) (hf : 0 < f.natDegree := by assumption) : R :=
   f.sylvesterDeriv.det * (-1) ^ (f.natDegree * (f.natDegree - 1) / 2)
 
-/-- The discriminant of a constant polynomial is `1`. -/
-@[simp] lemma discr_C (r : R) : discr (C r) = 1 := by
-  let e : Fin ((C r).natDegree - 1 + (C r).natDegree) ≃ Fin 0 := finCongr (by simp)
-  simp [discr, ← Matrix.det_reindex_self e]
-
 /-- The discriminant of a linear polynomial is `1`. -/
-lemma discr_of_degree_eq_one {f : R[X]} (hf : f.degree = 1) : discr f = 1 := by
+lemma discr_of_degree_eq_one {f : R[X]} (hf : f.degree = 1) :
+    haveI : 0 < f.natDegree := by rw [natDegree_eq_of_degree_eq_some hf]; exact one_pos
+    discr f = 1 := by
   rw [← Nat.cast_one, degree_eq_iff_natDegree_eq_of_pos one_pos] at hf
   let e : Fin (f.natDegree - 1 + f.natDegree) ≃ Fin 1 := finCongr (by lia)
   have : f.sylvesterDeriv.reindex e e = !![1] := by
@@ -962,6 +965,7 @@ lemma discr_of_degree_eq_one {f : R[X]} (hf : f.degree = 1) : discr f = 1 := by
 set_option linter.style.whitespace false in -- manual alignment is not recognised
 /-- Standard formula for the discriminant of a quadratic polynomial. -/
 lemma discr_of_degree_eq_two {f : R[X]} (hf : f.degree = 2) :
+    haveI : 0 < f.natDegree := by rw [natDegree_eq_of_degree_eq_some hf]; exact two_pos
     discr f = f.coeff 1 ^ 2 - 4 * f.coeff 0 * f.coeff 2 := by
   rw [← Nat.cast_two, degree_eq_iff_natDegree_eq_of_pos two_pos] at hf
   let e : Fin (f.natDegree - 1 + f.natDegree) ≃ Fin 3 := finCongr (by lia)
@@ -983,6 +987,7 @@ lemma discr_of_degree_eq_two {f : R[X]} (hf : f.degree = 2) :
 (Note this is actually false when `f` is a constant polynomial not equal to 1, so the assumption on
 the degree is genuinely needed.) -/
 lemma resultant_deriv {f : R[X]} (hf : 0 < f.degree) :
+    haveI := natDegree_pos_iff_degree_pos.mpr hf
     resultant f f.derivative f.natDegree (f.natDegree - 1) =
       (-1) ^ (f.natDegree * (f.natDegree - 1) / 2) * f.leadingCoeff * f.discr := by
   rw [← natDegree_pos_iff_degree_pos] at hf
@@ -1020,6 +1025,7 @@ private lemma sylvesterDeriv_of_natDegree_eq_three {f : R[X]} (hf : f.natDegree 
 
 /-- Standard formula for the discriminant of a cubic polynomial. -/
 lemma discr_of_degree_eq_three {f : R[X]} (hf : f.degree = 3) :
+    haveI : 0 < f.natDegree := by rw [natDegree_eq_of_degree_eq_some hf]; exact three_pos
     discr f = f.coeff 2 ^ 2 * f.coeff 1 ^ 2
               - 4 * f.coeff 3 * f.coeff 1 ^ 3
               - 4 * f.coeff 2 ^ 3 * f.coeff 0
