@@ -24,8 +24,8 @@ namespace Polynomial
 `derivRootWeight P z w` gives the weight of a root `w` of `P` in a convex combination
 that is equal to `z`. -/
 noncomputable def derivRootWeight (P : ℂ[X]) (z w : ℂ) : ℝ :=
-  if P.eval z = 0 then (Pi.single z 1 : ℂ → ℝ) w
-  else P.rootMultiplicity w / ‖z - w‖ ^ 2
+  if h : P.eval z = 0 then (Pi.single z 1 : ℂ → ℝ) w
+  else P.rootMultiplicity w (ne_zero_of_eval_ne_zero h) / ‖z - w‖ ^ 2
 
 theorem derivRootWeight_nonneg (P : ℂ[X]) (z w : ℂ) : 0 ≤ derivRootWeight P z w := by
   simp only [derivRootWeight, Pi.single, Function.update_apply]
@@ -40,7 +40,7 @@ theorem sum_derivRootWeight_pos (hP : 0 < degree P) (z : ℂ) :
   have hP₀ : P ≠ 0 := by rintro rfl; simp at hP
   by_cases hPz : P.eval z = 0
   · simp [derivRootWeight, hPz, hP₀]
-  · simp only [derivRootWeight, ite_eq_right hPz]
+  · simp only [derivRootWeight, dite_eq_right hPz]
     apply Finset.sum_pos
     · intro w hw
       apply div_pos (by simp_all)
@@ -60,6 +60,7 @@ See also `rootSet_derivative_subset_convexHull_rootSet` below.
 theorem eq_centerMass_of_eval_derivative_eq_zero (hP : 0 < P.degree)
     (hz : P.derivative.eval z = 0) :
     z = P.roots.toFinset.centerMass (P.derivRootWeight z) id := by
+  have hP₀ : P ≠ 0 := ne_zero_of_degree_gt hP
   set weight : ℂ → ℝ := P.derivRootWeight z
   set s := P.roots.toFinset
   suffices ∑ x ∈ s, weight x • (z - x) = 0 by calc
@@ -71,11 +72,11 @@ theorem eq_centerMass_of_eval_derivative_eq_zero (hP : 0 < P.degree)
     _ = s.centerMass weight id := by
       simp only [add_eq_right, Finset.centerMass, this, smul_zero]
   by_cases hzP : P.eval z = 0
-  · simp only [weight, derivRootWeight, ite_eq_left hzP]
+  · simp only [weight, derivRootWeight, dite_eq_left hzP]
     rw [Finset.sum_eq_single z] <;> simp_all
   calc
     ∑ x ∈ s, weight x • (z - x) = conj (∑ x ∈ s, P.rootMultiplicity x • (1 / (z - x))) := by
-      simp only [map_sum, weight, derivRootWeight, ite_eq_right hzP]
+      simp only [map_sum, weight, derivRootWeight, dite_eq_right hzP]
       refine Finset.sum_congr rfl fun x hx ↦ ?_
       have : z - x ≠ 0 := by
         rw [sub_ne_zero]
@@ -83,7 +84,7 @@ theorem eq_centerMass_of_eval_derivative_eq_zero (hP : 0 < P.degree)
         simp_all [s]
       simp [← Complex.conj_mul', field]
     _ = conj (P.roots.map fun x ↦ 1 / (z - x)).sum := by
-      simp only [Finset.sum_multiset_map_count, P.count_roots, s]
+      simp only [Finset.sum_multiset_map_count, P.count_roots hP₀, s]
     _ = 0 := by
       rw [← (IsAlgClosed.splits _).eval_derivative_div_eval_of_ne_zero hzP]
       simp [hz]

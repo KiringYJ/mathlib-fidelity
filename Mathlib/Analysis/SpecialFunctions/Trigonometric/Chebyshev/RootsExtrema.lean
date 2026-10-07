@@ -175,8 +175,8 @@ theorem roots_T_real (n : ℕ) :
     exact (Finset.range n).nodup_map_iff_injOn.mp (roots_T_real_nodup n)
 
 theorem rootMultiplicity_T_real {n k : ℕ} (hk : k < n) :
-    (T ℝ n).rootMultiplicity (cos ((2 * k + 1) * π / (2 * n))) = 1 := by
-  rw [← count_roots, roots_T_real, Multiset.count_eq_one_of_mem (by simp)]
+    (T ℝ n).rootMultiplicity (cos ((2 * k + 1) * π / (2 * n))) (T_ne_zero ℝ n) = 1 := by
+  rw [← count_roots _ (T_ne_zero ℝ n), roots_T_real, Multiset.count_eq_one_of_mem (by simp)]
   grind
 
 theorem roots_U_real_nodup (n : ℕ) :
@@ -212,8 +212,9 @@ theorem roots_U_real (n : ℕ) :
     exact (Finset.range n).nodup_map_iff_injOn.mp (roots_U_real_nodup n)
 
 theorem rootMultiplicity_U_real {n k : ℕ} (hk : k < n) :
-    (U ℝ n).rootMultiplicity (cos ((k + 1) * π / (n + 1))) = 1 := by
-  rw [← count_roots, roots_U_real, Multiset.count_eq_one_of_mem (by simp)]
+    (U ℝ n).rootMultiplicity (cos ((k + 1) * π / (n + 1))) (U_ne_zero ℝ n (by omega)) = 1 := by
+  rw [← count_roots _ (U_ne_zero ℝ n (by omega)), roots_U_real,
+    Multiset.count_eq_one_of_mem (by simp)]
   grind
 
 theorem isLocalMax_T_real {n k : ℕ} (hn : n ≠ 0) (hk₀ : 0 < k) (hk₁ : k < n) (hk₂ : Even k) :

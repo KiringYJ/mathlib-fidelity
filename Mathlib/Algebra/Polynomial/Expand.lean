@@ -285,18 +285,25 @@ section rootMultiplicity
 
 variable {R : Type u} [CommRing R] {p n : ℕ} [ExpChar R p] {f : R[X]} {r : R}
 
-theorem rootMultiplicity_expand_pow :
-    (expand R (p ^ n) f).rootMultiplicity r = p ^ n * f.rootMultiplicity (r ^ p ^ n) := by
-  obtain rfl | h0 := eq_or_ne f 0; · simp
+theorem rootMultiplicity_expand_pow (h0 : f ≠ 0) :
+    (expand R (p ^ n) f).rootMultiplicity r ((expand_ne_zero (expChar_pow_pos R p n)).2 h0) =
+      p ^ n * f.rootMultiplicity (r ^ p ^ n) := by
   obtain ⟨g, hg, ndvd⟩ := f.exists_eq_pow_rootMultiplicity_mul_and_not_dvd h0 (r ^ p ^ n)
   rw [dvd_iff_isRoot, ← eval_X (x := r), ← eval_pow, ← isRoot_comp, ← expand_eq_comp_X_pow] at ndvd
-  conv_lhs => rw [hg, map_mul, map_pow, map_sub, expand_X, expand_C, map_pow, ← sub_pow_expChar_pow,
-    ← pow_mul, mul_comm, rootMultiplicity_mul_X_sub_C_pow (expand_ne_zero (expChar_pow_pos R p n)
-      |>.mpr <| right_ne_zero_of_mul <| hg ▸ h0), rootMultiplicity_eq_zero ndvd, zero_add]
+  have hg0 : expand R (p ^ n) g ≠ 0 :=
+    (expand_ne_zero (expChar_pow_pos R p n)).mpr <| right_ne_zero_of_mul <| hg ▸ h0
+  have key : expand R (p ^ n) f =
+      expand R (p ^ n) g * (X - C r) ^ (p ^ n * f.rootMultiplicity (r ^ p ^ n)) := by
+    conv_lhs => rw [hg]
+    rw [map_mul, map_pow, map_sub, expand_X, expand_C, map_pow, ← sub_pow_expChar_pow, ← pow_mul,
+      mul_comm]
+  simp only [key]
+  rw [rootMultiplicity_mul_X_sub_C_pow hg0, rootMultiplicity_eq_zero ndvd, zero_add]
 
-theorem rootMultiplicity_expand :
-    (expand R p f).rootMultiplicity r = p * f.rootMultiplicity (r ^ p) := by
-  rw [← pow_one p, rootMultiplicity_expand_pow]
+theorem rootMultiplicity_expand (h0 : f ≠ 0) :
+    (expand R p f).rootMultiplicity r ((expand_ne_zero (expChar_pos R p)).2 h0) =
+      p * f.rootMultiplicity (r ^ p) := by
+  simpa using rootMultiplicity_expand_pow (n := 1) (r := r) h0
 
 end rootMultiplicity
 

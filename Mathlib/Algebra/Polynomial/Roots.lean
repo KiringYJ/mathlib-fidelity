@@ -96,16 +96,17 @@ theorem card_roots_sub_C' {p : R[X]} {a : R} (hp0 : 0 < degree p) :
       (le_of_eq <| degree_eq_natDegree fun h => by simp_all))
 
 @[simp]
-theorem count_roots [DecidableEq R] (p : R[X]) : p.roots.count a = rootMultiplicity a p := by
-  by_cases hp : p = 0
-  · simp [hp]
+theorem count_roots [DecidableEq R] (p : R[X]) (hp : p ≠ 0) :
+    p.roots.count a = rootMultiplicity a p := by
   rw [roots_def, dite_eq_right hp]
   exact (Classical.choose_spec (exists_multiset_roots hp)).2 a
 
 @[simp]
 theorem mem_roots' : a ∈ p.roots ↔ p ≠ 0 ∧ IsRoot p a := by
   classical
-  rw [← count_pos, count_roots p, rootMultiplicity_pos']
+  rcases eq_or_ne p 0 with rfl | hp
+  · simp
+  rw [← count_pos, count_roots p hp, rootMultiplicity_pos hp, and_iff_right hp]
 
 theorem mem_roots (hp : p ≠ 0) : a ∈ p.roots ↔ IsRoot p a :=
   mem_roots'.trans <| and_iff_right hp
@@ -181,7 +182,8 @@ lemma tendstoCofinite_of_natDegree_ne_zero {R : Type} [CommRing R] [IsDomain R] 
 theorem roots_mul {p q : R[X]} (hpq : p * q ≠ 0) : (p * q).roots = p.roots + q.roots := by
   classical
   exact Multiset.ext.mpr fun r => by
-    rw [count_add, count_roots, count_roots, count_roots, rootMultiplicity_mul hpq]
+    rw [count_add, count_roots _ hpq, count_roots _ (left_ne_zero_of_mul hpq),
+      count_roots _ (right_ne_zero_of_mul hpq), rootMultiplicity_mul hpq]
 
 theorem roots.le_of_dvd (h : q ≠ 0) : p ∣ q → roots p ≤ roots q := by
   rintro ⟨k, rfl⟩
@@ -198,7 +200,7 @@ theorem mem_roots_sub_C {p : R[X]} {a x : R} (hp0 : 0 < degree p) :
 theorem roots_X_sub_C (r : R) : roots (X - C r) = {r} := by
   classical
   ext s
-  rw [count_roots, rootMultiplicity_X_sub_C, count_singleton]
+  rw [count_roots _ (X_sub_C_ne_zero r), rootMultiplicity_X_sub_C, count_singleton]
 
 @[simp]
 theorem roots_X_add_C (r : R) : roots (X + C r) = {-r} := by simpa using roots_X_sub_C (-r)
@@ -212,7 +214,7 @@ theorem roots_C (x : R) : (C x).roots = 0 := by
   if H : x = 0 then by rw [H, C_0, roots_zero]
   else
     Multiset.ext.mpr fun r => (by
-      rw [count_roots, count_zero, rootMultiplicity_eq_zero (not_isRoot_C _ _ H)])
+      rw [count_roots _ (C_ne_zero.2 H), count_zero, rootMultiplicity_eq_zero (not_isRoot_C _ _ H)])
 
 @[simp]
 theorem roots_one : (1 : R[X]).roots = ∅ :=
@@ -241,13 +243,16 @@ lemma roots_neg (p : R[X]) : (-p).roots = p.roots := by
 theorem map_roots_comp_C_mul_X_add_C (p : R[X]) (a b : R) (ha : IsUnit a) :
     (p.comp (C a * X + C b)).roots.map (fun x ↦ a * x + b) = p.roots := by
   classical
+  rcases eq_or_ne p 0 with rfl | hp
+  · simp
   set f := fun x ↦ a * x + b
   have hf : Function.Bijective f :=
     (AddGroup.addRight_bijective b).comp (IsUnit.isUnit_iff_mulLeft_bijective.mp ha)
   rw [Multiset.ext]
   intro x
   obtain ⟨x, rfl⟩ := hf.surjective x
-  rw [count_roots, count_map_eq_count' f _ hf.injective, count_roots,
+  rw [count_roots _ hp, count_map_eq_count' f _ hf.injective,
+    count_roots _ (comp_C_mul_X_add_C_ne_zero hp ha b),
     rootMultiplicity_comp_C_mul_X_add_C p a b x ha]
 
 open scoped Ring in
@@ -807,21 +812,23 @@ theorem monic_finprod_X_sub_C {α : Type*} (b : α → R) : Monic (∏ᶠ k, (X 
 
 end
 
-theorem prod_multiset_root_eq_finset_root [DecidableEq R] :
+theorem prod_multiset_root_eq_finset_root [DecidableEq R] (hp : p ≠ 0) :
     (p.roots.map fun a => X - C a).prod =
       p.roots.toFinset.prod fun a => (X - C a) ^ rootMultiplicity a p := by
-  simp only [count_roots, Finset.prod_multiset_map_count]
+  simp only [count_roots p hp, Finset.prod_multiset_map_count]
 
 /-- The product `∏ (X - a)` for `a` inside the multiset `p.roots` divides `p`. -/
 theorem prod_multiset_X_sub_C_dvd (p : R[X]) : (p.roots.map fun a => X - C a).prod ∣ p := by
   classical
+  rcases eq_or_ne p 0 with rfl | hp
+  · simp
   rw [← map_dvd_map _ (IsFractionRing.injective R <| FractionRing R)
     (monic_multisetProd_X_sub_C p.roots)]
-  rw [prod_multiset_root_eq_finset_root, Polynomial.map_prod]
+  rw [prod_multiset_root_eq_finset_root hp, Polynomial.map_prod]
   refine Finset.prod_dvd_of_coprime (fun a _ b _ h => ?_) fun a _ => ?_
   · simp_rw [Polynomial.map_pow, Polynomial.map_sub, map_C, map_X]
     exact (pairwise_coprime_X_sub_C (IsFractionRing.injective R <| FractionRing R) h).pow
-  · exact Polynomial.map_dvd _ (pow_rootMultiplicity_dvd p a)
+  · exact Polynomial.map_dvd _ (pow_rootMultiplicity_dvd p a hp)
 
 /-- A Galois connection. -/
 theorem _root_.Multiset.prod_X_sub_C_dvd_iff_le_roots {p : R[X]} (hp : p ≠ 0) (s : Multiset R) :
@@ -829,7 +836,7 @@ theorem _root_.Multiset.prod_X_sub_C_dvd_iff_le_roots {p : R[X]} (hp : p ≠ 0) 
   classical exact
   ⟨fun h =>
     Multiset.le_iff_count.2 fun r => by
-      rw [count_roots, le_rootMultiplicity_iff hp, ← Multiset.prod_replicate, ←
+      rw [count_roots p hp, le_rootMultiplicity_iff hp, ← Multiset.prod_replicate, ←
         Multiset.map_replicate fun a => X - C a, ← Multiset.filter_eq]
       exact (Multiset.prod_dvd_prod_of_le <| Multiset.map_le_map <| s.filter_le _).trans h,
     fun h =>
@@ -914,16 +921,18 @@ section
 variable {A B : Type*} [CommRing A] [CommRing B]
 
 theorem le_rootMultiplicity_map {p : A[X]} {f : A →+* B} (hmap : map f p ≠ 0) (a : A) :
-    rootMultiplicity a p ≤ rootMultiplicity (f a) (p.map f) := by
+    rootMultiplicity a p (ne_zero_of_map_ne_zero hmap) ≤ rootMultiplicity (f a) (p.map f) := by
   rw [le_rootMultiplicity_iff hmap]
-  refine _root_.trans ?_ (_root_.map_dvd (mapRingHom f) (pow_rootMultiplicity_dvd p a))
+  refine _root_.trans ?_ (_root_.map_dvd (mapRingHom f)
+    (pow_rootMultiplicity_dvd p a (ne_zero_of_map_ne_zero hmap)))
   rw [map_pow, map_sub, coe_mapRingHom, map_X, map_C]
 
-theorem eq_rootMultiplicity_map {p : A[X]} {f : A →+* B} (hf : Function.Injective f) (a : A) :
-    rootMultiplicity a p = rootMultiplicity (f a) (p.map f) := by
-  by_cases hp0 : p = 0; · simp only [hp0, rootMultiplicity_zero, Polynomial.map_zero]
-  apply le_antisymm (le_rootMultiplicity_map ((Polynomial.map_ne_zero_iff hf).mpr hp0) a)
-  rw [le_rootMultiplicity_iff hp0, ← map_dvd_map f hf ((monic_X_sub_C a).pow _),
+theorem eq_rootMultiplicity_map {p : A[X]} {f : A →+* B} (hf : Function.Injective f)
+    {hp : p ≠ 0} (a : A) :
+    rootMultiplicity a p =
+      rootMultiplicity (f a) (p.map f) ((Polynomial.map_ne_zero_iff hf).2 hp) := by
+  apply le_antisymm (le_rootMultiplicity_map ((Polynomial.map_ne_zero_iff hf).mpr hp) a)
+  rw [le_rootMultiplicity_iff hp, ← map_dvd_map f hf ((monic_X_sub_C a).pow _),
     Polynomial.map_pow, Polynomial.map_sub, map_X, map_C]
   apply pow_rootMultiplicity_dvd
 
@@ -940,18 +949,15 @@ theorem count_map_roots [IsDomain A] [DecidableEq B] {p : A[X]} {f : A →+* B} 
     Polynomial.map_sub, map_X, map_C]
 
 theorem count_map_roots_of_injective [IsDomain A] [DecidableEq B] (p : A[X]) {f : A →+* B}
-    (hf : Function.Injective f) (b : B) :
-    (p.roots.map f).count b ≤ rootMultiplicity b (p.map f) := by
-  by_cases hp0 : p = 0
-  · simp only [hp0, roots_zero, Multiset.map_zero, Multiset.count_zero, Polynomial.map_zero,
-      rootMultiplicity_zero, le_refl]
-  · exact count_map_roots ((Polynomial.map_ne_zero_iff hf).mpr hp0) b
+    (hf : Function.Injective f) (hp : p ≠ 0) (b : B) :
+    (p.roots.map f).count b ≤ rootMultiplicity b (p.map f) ((Polynomial.map_ne_zero_iff hf).2 hp) :=
+  count_map_roots ((Polynomial.map_ne_zero_iff hf).mpr hp) b
 
 theorem map_roots_le [IsDomain A] [IsDomain B] {p : A[X]} {f : A →+* B} (h : p.map f ≠ 0) :
     p.roots.map f ≤ (p.map f).roots := by
   classical
   exact Multiset.le_iff_count.2 fun b => by
-    rw [count_roots]
+    rw [count_roots _ h]
     apply count_map_roots h
 
 theorem map_roots_le_of_injective [IsDomain A] [IsDomain B] (p : A[X]) {f : A →+* B}
@@ -980,11 +986,15 @@ theorem filter_roots_map_range_eq_map_roots [IsDomain A] [IsDomain B] {f : A →
     [DecidablePred (· ∈ f.range)] (hf : Function.Injective f)
     (p : A[X]) : (p.map f).roots.filter (· ∈ f.range) = p.roots.map f := by
   classical
+  rcases eq_or_ne p 0 with rfl | hp
+  · simp
+  have hpm : p.map f ≠ 0 := (Polynomial.map_ne_zero_iff hf).2 hp
   ext b
   rw [Multiset.count_filter]
   split_ifs with h
   · obtain ⟨a, rfl⟩ := h
-    simp [hf, Multiset.count_map_eq_count', eq_rootMultiplicity_map hf]
+    rw [count_roots _ hpm, Multiset.count_map_eq_count' _ _ hf, count_roots _ hp,
+      eq_rootMultiplicity_map hf]
   · refine (Multiset.count_eq_zero.mpr fun h' ↦ h ?_).symm
     exact Exists.imp (fun _ ↦ And.right) <| Multiset.mem_map.mp h'
 

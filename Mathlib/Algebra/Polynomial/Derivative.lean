@@ -73,6 +73,9 @@ theorem coeff_derivative (p : R[X]) (n : ℕ) :
 theorem derivative_zero : derivative (0 : R[X]) = 0 :=
   derivative.map_zero
 
+lemma ne_zero_of_derivative_ne_zero (h : p.derivative ≠ 0) : p ≠ 0 :=
+  ne_zero_of_map h
+
 theorem iterate_derivative_zero {k : ℕ} : derivative^[k] (0 : R[X]) = 0 :=
   iterate_map_zero derivative k
 

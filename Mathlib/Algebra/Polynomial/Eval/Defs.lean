@@ -303,6 +303,10 @@ theorem eval_monomial {n a} : (monomial n a).eval x = a * x ^ n :=
 theorem eval_zero : (0 : R[X]).eval x = 0 :=
   eval₂_zero _ _
 
+theorem ne_zero_of_eval_ne_zero (h : p.eval x ≠ 0) : p ≠ 0 := by
+  rintro rfl
+  exact h eval_zero
+
 @[simp]
 theorem eval_add : (p + q).eval x = p.eval x + q.eval x :=
   eval₂_add _ _
@@ -411,6 +415,10 @@ theorem comp_zero : p.comp (0 : R[X]) = C (p.eval 0) := by rw [← C_0, comp_C]
 
 @[simp]
 theorem zero_comp : comp (0 : R[X]) p = 0 := by rw [← C_0, C_comp]
+
+theorem ne_zero_of_comp_ne_zero (h : q.comp p ≠ 0) : q ≠ 0 := by
+  rintro rfl
+  exact h zero_comp
 
 @[simp]
 theorem comp_one : p.comp 1 = C (p.eval 1) := by rw [← C_1, comp_C]

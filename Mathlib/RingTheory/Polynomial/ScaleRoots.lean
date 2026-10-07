@@ -328,33 +328,39 @@ section CommRing
 
 variable [CommRing R]
 
-lemma rootMultiplicity_scaleRoots (p : R[X]) {r a : R} (hr : IsLeftRegular r) :
-    rootMultiplicity (r * a) (p.scaleRoots r) = rootMultiplicity a p := by
+lemma rootMultiplicity_scaleRoots (p : R[X]) {r a : R} (hr : IsLeftRegular r) (hp : p ≠ 0) :
+    rootMultiplicity (r * a) (p.scaleRoots r) (scaleRoots_ne_zero hp r) =
+      rootMultiplicity a p := by
   cases subsingleton_or_nontrivial R
-  · simp [Subsingleton.elim p 0]
-  obtain rfl | hp := eq_or_ne p 0
-  · simp
+  · exact absurd (Subsingleton.elim p 0) hp
   obtain ⟨q, e, hq⟩ := exists_eq_pow_rootMultiplicity_mul_and_not_dvd p hp a
-  have hq0 : q ≠ 0 := by contrapose hp; simp_all
-  conv_lhs => rw [e]
-  rw [mul_scaleRoots', pow_scaleRoots', X_sub_C_scaleRoots, mul_comm, mul_comm _ (q.scaleRoots r),
-    rootMultiplicity_mul_X_sub_C_pow (q.scaleRoots_ne_zero hq0 _)]
-  · rw [dvd_iff_isRoot, IsRoot.def] at hq
-    simp only [Nat.add_eq_right, rootMultiplicity_eq_zero_iff, IsRoot.def]
-    rw [mul_comm, scaleRoots_eval_mul, (hr.pow q.natDegree).mul_left_eq_zero_iff]
-    tauto
-  · simp
-  · rwa [leadingCoeff_pow' (by simp), leadingCoeff_X_sub_C,
-      one_pow, one_mul, ne_eq, leadingCoeff_eq_zero]
+  have hq0 : q ≠ 0 := by
+    rintro rfl
+    exact hp (by simpa using e)
+  have h1 : ((X - C a) ^ rootMultiplicity a p).leadingCoeff * q.leadingCoeff ≠ 0 := by
+    rwa [((monic_X_sub_C a).pow _).leadingCoeff, one_mul, ne_eq, leadingCoeff_eq_zero]
+  have h2 : (X - C a).leadingCoeff ^ rootMultiplicity a p ≠ 0 := by simp
+  have key : p.scaleRoots r = q.scaleRoots r * (X - C (a * r)) ^ rootMultiplicity a p := by
+    conv_lhs => rw [e]
+    rw [mul_scaleRoots' _ _ _ h1, pow_scaleRoots' _ _ _ h2, X_sub_C_scaleRoots]
+    exact mul_comm _ _
+  simp only [key, mul_comm r a]
+  rw [rootMultiplicity_mul_X_sub_C_pow (q.scaleRoots_ne_zero hq0 _)]
+  rw [dvd_iff_isRoot, IsRoot.def] at hq
+  simp only [Nat.add_eq_right, rootMultiplicity_eq_zero_iff, IsRoot.def]
+  rw [mul_comm, scaleRoots_eval_mul, (hr.pow q.natDegree).mul_left_eq_zero_iff]
+  tauto
 
 lemma roots_scaleRoots [IsDomain R] (p : R[X]) {r : R} (hr : IsUnit r) :
     (p.scaleRoots r).roots = p.roots.map (r * ·) := by
   classical
+  rcases eq_or_ne p 0 with rfl | hp
+  · simp
   ext a
   have : Function.Bijective (α := R) (r * ·) := IsUnit.isUnit_iff_mulLeft_bijective.mp hr
   obtain ⟨a, rfl⟩ := this.2 a
-  simp [Multiset.count_map_eq_count' _ p.roots this.1 a,
-    rootMultiplicity_scaleRoots _ hr.isRegular.left]
+  rw [count_roots _ (scaleRoots_ne_zero hp r), Multiset.count_map_eq_count' _ p.roots this.1 a,
+    count_roots _ hp, rootMultiplicity_scaleRoots _ hr.isRegular.left hp]
 
 end CommRing
 

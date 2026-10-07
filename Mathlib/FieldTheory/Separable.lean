@@ -267,12 +267,9 @@ theorem separable_C_mul_X_pow_add_C_mul_X_add_C'
   separable_C_mul_X_pow_add_C_mul_X_add_C a b c ((CharP.cast_eq_zero_iff R p n).2 hn) hb
 
 theorem rootMultiplicity_le_one_of_separable [Nontrivial R] {p : R[X]} (hsep : Separable p)
-    (x : R) : rootMultiplicity x p ≤ 1 := by
-  classical
-  by_cases hp : p = 0
-  · simp [hp]
-  rw [rootMultiplicity_eq_multiplicity, dite_eq_right hp, ← Nat.cast_le (α := ℕ∞),
-    Nat.cast_one, ← (finiteMultiplicity_X_sub_C x hp).emultiplicity_eq_multiplicity]
+    (x : R) : rootMultiplicity x p hsep.ne_zero ≤ 1 := by
+  rw [← Nat.cast_le (α := ℕ∞), Nat.cast_one,
+    ← emultiplicity_X_sub_C_eq_rootMultiplicity x hsep.ne_zero]
   apply emultiplicity_le_one_of_separable (not_isUnit_X_sub_C _) hsep
 
 end CommRing
@@ -283,7 +280,7 @@ variable {R : Type u} [CommRing R] [IsDomain R]
 
 theorem count_roots_le_one [DecidableEq R] {p : R[X]} (hsep : Separable p) (x : R) :
     p.roots.count x ≤ 1 := by
-  rw [count_roots p]
+  rw [count_roots p hsep.ne_zero]
   exact rootMultiplicity_le_one_of_separable hsep x
 
 theorem nodup_roots {p : R[X]} (hsep : Separable p) : p.roots.Nodup := by
@@ -455,7 +452,7 @@ theorem nodup_roots_iff_of_splits {f : F[X]} (hf : f ≠ 0) (h : f.Splits) :
   rw [Separable, ← gcd_isUnit_iff, isUnit_iff_degree_eq_zero] at hnsep
   obtain ⟨x, hx⟩ := Splits.exists_eval_eq_zero (Splits.of_dvd h hf (gcd_dvd_left f _)) hnsep
   simp_rw [Multiset.nodup_iff_count_le_one, not_forall, not_le]
-  exact ⟨x, ((one_lt_rootMultiplicity_iff_isRoot_gcd hf).2 hx).trans_eq f.count_roots.symm⟩
+  exact ⟨x, ((one_lt_rootMultiplicity_iff_isRoot_gcd hf).2 hx).trans_eq (f.count_roots hf).symm⟩
 
 /-- If a non-zero polynomial over `F` splits in `K`, then it has no repeated roots on `K`
 if and only if it is separable. -/

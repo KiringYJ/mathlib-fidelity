@@ -126,14 +126,12 @@ section CommRing
 
 variable [CommRing R]
 
-theorem rootMultiplicity_eq_rootMultiplicity {p : R[X]} {t : R} :
-    p.rootMultiplicity t = (p.comp (X + C t)).rootMultiplicity 0 := by
+theorem rootMultiplicity_eq_rootMultiplicity {p : R[X]} {t : R} (hp : p ≠ 0) :
+    p.rootMultiplicity t =
+      (p.comp (X + C t)).rootMultiplicity 0 (comp_X_add_C_ne_zero_iff.2 hp) := by
   classical
-  by_cases hp : p = 0
-  · simp [hp]
-  have hp' : p.comp (X + C t) ≠ 0 := by rwa [Ne, comp_X_add_C_eq_zero_iff]
-  rw [rootMultiplicity_eq_multiplicity, dite_eq_right hp, rootMultiplicity_eq_multiplicity,
-    dite_eq_right hp']
+  have hp' : p.comp (X + C t) ≠ 0 := comp_X_add_C_ne_zero_iff.2 hp
+  rw [rootMultiplicity_eq_multiplicity _ _ hp, rootMultiplicity_eq_multiplicity _ _ hp']
   have hfin := finiteMultiplicity_X_sub_C t hp
   convert! (multiplicity_map_eq (algEquivAevalXAddC t)
     (h := hfin.of_emultiplicity_eq (emultiplicity_map_eq _).symm)).symm using 2
@@ -143,7 +141,7 @@ theorem rootMultiplicity_eq_rootMultiplicity {p : R[X]} {t : R} :
 theorem rootMultiplicity_eq_natTrailingDegree {p : R[X]} {t : R} (hp : p ≠ 0) :
     p.rootMultiplicity t =
       (p.comp (X + C t)).natTrailingDegree (comp_X_add_C_eq_zero_iff.not.2 hp) :=
-  rootMultiplicity_eq_rootMultiplicity.trans (rootMultiplicity_eq_natTrailingDegree' _)
+  (rootMultiplicity_eq_rootMultiplicity hp).trans (rootMultiplicity_eq_natTrailingDegree' _)
 
 section nonZeroDivisors
 
@@ -179,24 +177,26 @@ theorem natDegree_pos_of_monic_of_aeval_eq_zero [Nontrivial R] [Semiring S] [Alg
     ((injective_iff_map_eq_zero (algebraMap R S)).mp (FaithfulSMul.algebraMap_injective R S))
 
 theorem rootMultiplicity_mul_X_sub_C_pow {p : R[X]} {a : R} {n : ℕ} (h : p ≠ 0) :
-    (p * (X - C a) ^ n).rootMultiplicity a = p.rootMultiplicity a + n := by
+    (p * (X - C a) ^ n).rootMultiplicity a (monic_X_sub_C a |>.pow n |>.mul_left_ne_zero h) =
+      p.rootMultiplicity a + n := by
   have h2 := monic_X_sub_C a |>.pow n |>.mul_left_ne_zero h
   refine le_antisymm ?_ ?_
   · rw [rootMultiplicity_le_iff h2, add_assoc, add_comm n, ← add_assoc, pow_add,
       dvd_cancel_right_mem_nonZeroDivisors (monic_X_sub_C a |>.pow n |>.mem_nonZeroDivisors)]
     exact pow_rootMultiplicity_not_dvd h a
   · rw [le_rootMultiplicity_iff h2, pow_add]
-    exact mul_dvd_mul_right (pow_rootMultiplicity_dvd p a) _
+    exact mul_dvd_mul_right (pow_rootMultiplicity_dvd p a h) _
 
 /-- The multiplicity of `a` as root of `(X - a) ^ n` is `n`. -/
 theorem rootMultiplicity_X_sub_C_pow [Nontrivial R] (a : R) (n : ℕ) :
     rootMultiplicity a ((X - C a) ^ n) = n := by
   have := rootMultiplicity_mul_X_sub_C_pow (a := a) (n := n) C.map_one_ne_zero
-  rwa [rootMultiplicity_C, map_one, one_mul, zero_add] at this
+  rw [rootMultiplicity_C, zero_add] at this
+  simpa using this
 
 theorem rootMultiplicity_X_sub_C_self [Nontrivial R] {x : R} :
-    rootMultiplicity x (X - C x) = 1 :=
-  pow_one (X - C x) ▸ rootMultiplicity_X_sub_C_pow x 1
+    rootMultiplicity x (X - C x) = 1 := by
+  simpa using rootMultiplicity_X_sub_C_pow x 1
 
 theorem rootMultiplicity_X_sub_C [Nontrivial R] [DecidableEq R] {x y : R} :
     rootMultiplicity x (X - C y) = if x = y then 1 else 0 := by
@@ -205,35 +205,39 @@ theorem rootMultiplicity_X_sub_C [Nontrivial R] [DecidableEq R] {x y : R} :
     exact rootMultiplicity_X_sub_C_self
   exact rootMultiplicity_eq_zero (mt root_X_sub_C.mp (Ne.symm hxy))
 
-private theorem rootMultiplicity_comp_C_mul_X_add_C_le (p : R[X]) (a b c : R) (ha : IsUnit a) :
-    (p.comp (C a * X + C b)).rootMultiplicity c ≤ p.rootMultiplicity (a * c + b) := by
+theorem comp_C_mul_X_add_C_ne_zero {p : R[X]} (hp : p ≠ 0) {a : R} (ha : IsUnit a) (b : R) :
+    p.comp (C a * X + C b) ≠ 0 := by
+  have h : C a * X + C b = (X + C b).comp (C a * X) := by simp
+  rwa [h, ← comp_assoc, Ne, comp_C_mul_X_eq_zero_iff ha.mem_nonZeroDivisors,
+    comp_X_add_C_eq_zero_iff]
+
+private theorem rootMultiplicity_comp_C_mul_X_add_C_le (p : R[X]) (a b c : R) (ha : IsUnit a)
+    (hpc : p.comp (C a * X + C b) ≠ 0) :
+    (p.comp (C a * X + C b)).rootMultiplicity c ≤
+      p.rootMultiplicity (a * c + b) (ne_zero_of_comp_ne_zero hpc) := by
   let : Invertible a := ha.invertible
-  rcases eq_or_ne p 0 with rfl | hp; · simp
-  rw [le_rootMultiplicity_iff hp]
-  have h := pow_rootMultiplicity_dvd (p.comp (C a * X + C b)) c
+  rw [le_rootMultiplicity_iff (ne_zero_of_comp_ne_zero hpc)]
+  have h := pow_rootMultiplicity_dvd (p.comp (C a * X + C b)) c hpc
   rw [dvd_comp_C_mul_X_add_C_iff, pow_comp] at h
   refine (pow_dvd_pow_of_dvd ((isUnit_C.mpr ha).dvd_mul_left.mp (dvd_of_eq ?_)) _).trans h
   simp [← map_mul, mul_sub, ← mul_assoc, sub_sub, add_comm, mul_add]
 
-theorem rootMultiplicity_comp_C_mul_X_add_C (p : R[X]) (a b c : R) (ha : IsUnit a) :
-    (p.comp (C a * X + C b)).rootMultiplicity c = p.rootMultiplicity (a * c + b) := by
+theorem rootMultiplicity_comp_C_mul_X_add_C (p : R[X]) (a b c : R) (ha : IsUnit a)
+    {hpc : p.comp (C a * X + C b) ≠ 0} :
+    (p.comp (C a * X + C b)).rootMultiplicity c =
+      p.rootMultiplicity (a * c + b) (ne_zero_of_comp_ne_zero hpc) := by
   let : Invertible a := ha.invertible
-  apply le_antisymm (rootMultiplicity_comp_C_mul_X_add_C_le p a b c ha)
+  apply le_antisymm (rootMultiplicity_comp_C_mul_X_add_C_le p a b c ha hpc)
+  have hpc' := comp_C_mul_X_add_C_ne_zero hpc (isUnit_of_invertible ⅟a) (- ⅟a * b)
   have := rootMultiplicity_comp_C_mul_X_add_C_le
-    (p.comp (C a * X + C b)) ⅟a (- ⅟a * b) (a * c + b) (isUnit_of_invertible ⅟a)
+    (p.comp (C a * X + C b)) ⅟a (- ⅟a * b) (a * c + b) (isUnit_of_invertible ⅟a) hpc'
   simpa [comp_assoc, mul_add, ← mul_assoc, ← map_mul] using this
 
-theorem rootMultiplicity_mul' {p q : R[X]} {x : R}
+theorem rootMultiplicity_mul' {p q : R[X]} {x : R} (hp : p ≠ 0) (hq : q ≠ 0)
     (hpq : (p /ₘ (X - C x) ^ p.rootMultiplicity x).eval x *
-      (q /ₘ (X - C x) ^ q.rootMultiplicity x).eval x ≠ 0) :
+      (q /ₘ (X - C x) ^ q.rootMultiplicity x).eval x ≠ 0) {hpq₀ : p * q ≠ 0} :
     rootMultiplicity x (p * q) = rootMultiplicity x p + rootMultiplicity x q := by
-  simp_rw [eval_divByMonic_eq_trailingCoeff_comp] at hpq
-  have hp : p ≠ 0 := by rintro rfl; simp at hpq
-  have hq : q ≠ 0 := by rintro rfl; simp at hpq
-  have hpq₀ : p * q ≠ 0 := by
-    rintro h
-    apply mul_ne_zero_of_trailingCoeff_mul_ne_zero hpq
-    rw [← mul_comp, h, zero_comp]
+  rw [eval_divByMonic_eq_trailingCoeff_comp hp, eval_divByMonic_eq_trailingCoeff_comp hq] at hpq
   rw [rootMultiplicity_eq_natTrailingDegree hpq₀, rootMultiplicity_eq_natTrailingDegree hp,
     rootMultiplicity_eq_natTrailingDegree hq]
   simp only [mul_comp]
@@ -328,13 +332,9 @@ theorem pairwise_coprime_X_sub_C {K} [Field K] {I : Type v} {s : I → K} (H : F
   isCoprime_X_sub_C_of_isUnit_sub (sub_ne_zero_of_ne <| H.ne hij).isUnit
 
 theorem rootMultiplicity_mul {p q : R[X]} {x : R} (hpq : p * q ≠ 0) :
-    rootMultiplicity x (p * q) = rootMultiplicity x p + rootMultiplicity x q := by
-  classical
-  have hp : p ≠ 0 := left_ne_zero_of_mul hpq
-  have hq : q ≠ 0 := right_ne_zero_of_mul hpq
-  rw [rootMultiplicity_eq_multiplicity (p * q), dite_eq_right hpq,
-    rootMultiplicity_eq_multiplicity p, dite_eq_right hp, rootMultiplicity_eq_multiplicity q,
-    dite_eq_right hq, multiplicity_mul (prime_X_sub_C x) (finiteMultiplicity_X_sub_C _ hpq)]
+    rootMultiplicity x (p * q) = rootMultiplicity x p (left_ne_zero_of_mul hpq) +
+      rootMultiplicity x q (right_ne_zero_of_mul hpq) :=
+  multiplicity_mul (prime_X_sub_C x) (finiteMultiplicity_X_sub_C _ hpq)
 
 open Multiset in
 theorem exists_multiset_roots [DecidableEq R] :
@@ -364,9 +364,10 @@ theorem exists_multiset_roots [DecidableEq R] :
             exact add_le_add (le_refl (1 : WithBot ℕ)) htd,
         by
           intro a
-          conv_rhs => rw [← mul_divByMonic_eq_iff_isRoot.mpr hx]
-          rw [rootMultiplicity_mul (mul_ne_zero (X_sub_C_ne_zero x) hdiv0),
-            rootMultiplicity_X_sub_C, ← htr a]
+          have hq : (X - C x) * (p /ₘ (X - C x)) ≠ 0 := mul_ne_zero (X_sub_C_ne_zero x) hdiv0
+          have key : rootMultiplicity a p = rootMultiplicity a ((X - C x) * (p /ₘ (X - C x))) := by
+            simp only [mul_divByMonic_eq_iff_isRoot.mpr hx]
+          rw [key, rootMultiplicity_mul hq, rootMultiplicity_X_sub_C, ← htr a]
           split_ifs with ha
           · rw [ha, count_cons_self, add_comm]
           · rw [count_cons_of_ne ha, zero_add]⟩

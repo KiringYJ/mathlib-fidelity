@@ -360,11 +360,14 @@ open Multiset
 theorem roots_expand_pow_map_iterateFrobenius_le :
     (expand R (p ^ n) f).roots.map (iterateFrobenius R p n) ≤ p ^ n • f.roots := by
   classical
+  rcases eq_or_ne f 0 with rfl | hf
+  · simp
+  have hef : expand R (p ^ n) f ≠ 0 := (expand_ne_zero (expChar_pow_pos R p n)).2 hf
   refine le_iff_count.2 fun r ↦ ?_
   by_cases h : ∃ s, r = s ^ p ^ n
   · obtain ⟨s, rfl⟩ := h
-    simp_rw [count_nsmul, count_roots, ← rootMultiplicity_expand_pow, ← count_roots, count_map,
-      count_eq_card_filter_eq]
+    simp_rw [count_nsmul, count_roots _ hf, ← rootMultiplicity_expand_pow hf, ← count_roots _ hef,
+      count_map, count_eq_card_filter_eq]
     exact card_le_card (monotone_filter_right _ fun _ h ↦ iterateFrobenius_inj R p n h)
   convert! Nat.zero_le _
   simp_rw [count_map, card_eq_zero]
@@ -394,8 +397,11 @@ variable [PerfectRing R p]
 theorem roots_expand_pow :
     (expand R (p ^ n) f).roots = p ^ n • f.roots.map (iterateFrobeniusEquiv R p n).symm := by
   classical
+  rcases eq_or_ne f 0 with rfl | hf
+  · simp
+  have hef : expand R (p ^ n) f ≠ 0 := (expand_ne_zero (expChar_pow_pos R p n)).2 hf
   refine ext' fun r ↦ ?_
-  rw [count_roots, rootMultiplicity_expand_pow, ← count_roots, count_nsmul, count_map,
+  rw [count_roots _ hef, rootMultiplicity_expand_pow hf, ← count_roots _ hf, count_nsmul, count_map,
     count_eq_card_filter_eq]; congr; ext
   exact (iterateFrobeniusEquiv R p n).eq_symm_apply.symm
 
