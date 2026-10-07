@@ -316,20 +316,18 @@ variable {p : ℕ} [Fact p.Prime]
 
 /-! ### Valuation on `PadicSeq` -/
 
-open scoped Classical in
-/-- The `p`-adic valuation on `ℚ` lifts to `PadicSeq p`.
-`Valuation f` is defined to be the valuation of the (`ℚ`-valued) stationary point of `f`. -/
-def valuation (f : PadicSeq p) : ℤ :=
-  if hf : f ≈ 0 then 0
-  else padicValRat p (f (stationaryPoint hf)) (hq := apply_stationaryPoint_ne_zero hf)
+/-- The `p`-adic valuation on `ℚ` lifts to the sequences in `PadicSeq p` that are not equivalent
+to `0`: `f.valuation hf` is the valuation of the (`ℚ`-valued) stationary point of `f`. -/
+def valuation (f : PadicSeq p) (hf : ¬f ≈ 0) : ℤ :=
+  padicValRat p (f (stationaryPoint hf)) (hq := apply_stationaryPoint_ne_zero hf)
 
 theorem norm_eq_zpow_neg_valuation {f : PadicSeq p} (hf : ¬f ≈ 0) :
-    f.norm = (p : ℚ) ^ (-f.valuation : ℤ) := by
-  rw [norm, valuation, dite_eq_right hf, dite_eq_right hf,
+    f.norm = (p : ℚ) ^ (-f.valuation hf : ℤ) := by
+  rw [norm, valuation, dite_eq_right hf,
     padicNorm.eq_zpow_of_nonzero (apply_stationaryPoint_ne_zero hf)]
 
 theorem val_eq_iff_norm_eq {f g : PadicSeq p} (hf : ¬f ≈ 0) (hg : ¬g ≈ 0) :
-    f.valuation = g.valuation ↔ f.norm = g.norm := by
+    f.valuation hf = g.valuation hg ↔ f.norm = g.norm := by
   rw [norm_eq_zpow_neg_valuation hf, norm_eq_zpow_neg_valuation hg, ← neg_inj, zpow_right_inj₀]
   · exact mod_cast (Fact.out : p.Prime).pos
   · exact mod_cast (Fact.out : p.Prime).ne_one
@@ -1051,31 +1049,77 @@ instance : CompleteSpace ℚ_[p] := by
 
 /-! ### Valuation on `ℚ_[p]` -/
 
+open scoped Classical in
+/-- The additive `p`-adic valuation on `ℚ_[p]`, with values in `WithTop ℤ`: the valuation of the
+class of a Cauchy sequence that is not equivalent to `0` is the valuation of the sequence, and the
+valuation of `0` is `⊤`. `Padic.addValuation` bundles it as an additive valuation, and
+`Padic.valuation` is its integer value at a nonzero element. -/
+def addValuationDef : ℚ_[p] → WithTop ℤ :=
+  Quotient.lift (fun f : PadicSeq p ↦ if hf : f ≈ 0 then ⊤ else (f.valuation hf : WithTop ℤ))
+    fun f g h ↦ by
+      by_cases hf : f ≈ 0
+      · have hg : g ≈ 0 := Setoid.trans (Setoid.symm h) hf
+        simp [hf, hg]
+      · have hg : ¬g ≈ 0 := fun hg ↦ hf (Setoid.trans h hg)
+        simp only [hf, hg, dite_false, WithTop.coe_inj]
+        rw [PadicSeq.val_eq_iff_norm_eq hf hg]
+        exact PadicSeq.norm_equiv h
 
-/-- `Padic.valuation` lifts the `p`-adic valuation on rationals to `ℚ_[p]`. -/
-def valuation : ℚ_[p] → ℤ :=
-  Quotient.lift (@PadicSeq.valuation p _) fun f g h ↦ by
-    by_cases hf : f ≈ 0
-    · have hg : g ≈ 0 := Setoid.trans (Setoid.symm h) hf
-      simp [hf, hg, PadicSeq.valuation]
-    · have hg : ¬g ≈ 0 := fun hg ↦ hf (Setoid.trans h hg)
-      rw [PadicSeq.val_eq_iff_norm_eq hf hg]
-      exact PadicSeq.norm_equiv h
+theorem addValuationDef_mk {f : PadicSeq p} (hf : ¬f ≈ 0) :
+    addValuationDef (mk f) = f.valuation hf :=
+  dite_eq_right hf
 
-@[simp]
-theorem valuation_zero : valuation (0 : ℚ_[p]) = 0 :=
-  dite_eq_left ((const_equiv p).2 rfl)
+theorem addValuationDef_eq_top_iff {x : ℚ_[p]} : addValuationDef x = ⊤ ↔ x = 0 := by
+  obtain ⟨f, rfl⟩ : ∃ f, mk f = x := Quotient.exists_rep x
+  change _ ↔ mk f = mk 0
+  rw [mk_eq]
+  by_cases hf : f ≈ 0
+  · exact iff_of_true (dite_eq_left hf) hf
+  · simp [addValuationDef_mk hf, hf]
 
-theorem norm_eq_zpow_neg_valuation {x : ℚ_[p]} : x ≠ 0 → ‖x‖ = (p : ℝ) ^ (-x.valuation) := by
-  induction x using Quotient.inductionOn with | _ f
-  intro hf
-  change (PadicSeq.norm _ : ℝ) = (p : ℝ) ^ (-PadicSeq.valuation _)
-  rw [PadicSeq.norm_eq_zpow_neg_valuation]
-  · rw [Rat.cast_zpow, Rat.cast_natCast]
-  · apply CauSeq.not_limZero_of_not_congr_zero
-    contrapose hf
-    apply Quotient.sound
-    simpa using hf
+/-- `padic_val_tac` closes `↑x ≠ 0` from a hypothesis `x ≠ 0` about the element before the cast. -/
+macro_rules | `(tactic| padic_val_core) => `(tactic| assumption_mod_cast)
+
+/-- `padic_val_tac` closes `x * y ≠ 0` in a ring without zero divisors from `x ≠ 0` and `y ≠ 0`. -/
+macro_rules
+  | `(tactic| padic_val_core) => `(tactic|
+    ((with_reducible_and_instances apply mul_ne_zero) <;> padic_val_core))
+
+/-- `padic_val_tac` closes `x ^ n ≠ 0` in a ring without zero divisors from `x ≠ 0`. -/
+macro_rules
+  | `(tactic| padic_val_core) => `(tactic|
+    ((with_reducible_and_instances apply pow_ne_zero); padic_val_core))
+
+/-- `padic_val_tac` closes `x ^ n ≠ 0` for an integer power in a group with zero from `x ≠ 0`. -/
+macro_rules
+  | `(tactic| padic_val_core) => `(tactic|
+    ((with_reducible_and_instances apply zpow_ne_zero); padic_val_core))
+
+/-- `padic_val_tac` closes `x⁻¹ ≠ 0` in a group with zero from `x ≠ 0`. -/
+macro_rules
+  | `(tactic| padic_val_core) => `(tactic|
+    ((with_reducible_and_instances apply inv_ne_zero); padic_val_core))
+
+/-- The `p`-adic valuation of a nonzero `x : ℚ_[p]`, which lifts the `p`-adic valuation on
+rationals. The valuation of `0` is `⊤`, which `Padic.addValuation` records; there is no integer
+valuation at `0`. The proof `hx` can usually be omitted, see `padic_val_tac`. -/
+def valuation (x : ℚ_[p]) (hx : x ≠ 0 := by padic_val_tac) : ℤ :=
+  (addValuationDef x).untop (addValuationDef_eq_top_iff.not.mpr hx)
+
+theorem addValuationDef_of_ne_zero {x : ℚ_[p]} (hx : x ≠ 0) :
+    addValuationDef x = x.valuation hx :=
+  (WithTop.coe_untop _ _).symm
+
+theorem valuation_mk {f : PadicSeq p} (hf : ¬f ≈ 0) {hx : mk f ≠ 0} :
+    valuation (mk f) hx = f.valuation hf := by
+  rw [← WithTop.coe_inj, ← addValuationDef_of_ne_zero, addValuationDef_mk hf]
+
+theorem norm_eq_zpow_neg_valuation {x : ℚ_[p]} (hx : x ≠ 0) :
+    ‖x‖ = (p : ℝ) ^ (-x.valuation) := by
+  obtain ⟨f, rfl⟩ : ∃ f, mk f = x := Quotient.exists_rep x
+  have hf : ¬f ≈ 0 := fun hf ↦ hx ((mk_eq (p := p)).2 hf)
+  change (PadicSeq.norm f : ℝ) = (p : ℝ) ^ (-valuation (mk f) hx)
+  rw [valuation_mk hf, PadicSeq.norm_eq_zpow_neg_valuation hf, Rat.cast_zpow, Rat.cast_natCast]
 
 @[simp]
 lemma valuation_ratCast {q : ℚ} (hq : q ≠ 0) : valuation (q : ℚ_[p]) = padicValRat p q := by
@@ -1086,11 +1130,15 @@ lemma valuation_ratCast {q : ℚ} (hq : q ≠ 0) : valuation (q : ℚ_[p]) = pad
 
 @[simp]
 lemma valuation_intCast {n : ℤ} (hn : n ≠ 0) : valuation (n : ℚ_[p]) = padicValInt p n := by
-  rw [← Rat.cast_intCast, valuation_ratCast (mod_cast hn), padicValRat.of_int]
+  have := valuation_ratCast (p := p) (q := n) (mod_cast hn)
+  simp only [Rat.cast_intCast, padicValRat.of_int] at this
+  exact this
 
 @[simp]
 lemma valuation_natCast {n : ℕ} (hn : n ≠ 0) : valuation (n : ℚ_[p]) = padicValNat p n := by
-  rw [← Rat.cast_natCast, valuation_ratCast (mod_cast hn), padicValRat.of_nat]
+  have := valuation_ratCast (p := p) (q := n) (mod_cast hn)
+  simp only [Rat.cast_natCast, padicValRat.of_nat] at this
+  exact this
 
 @[simp]
 lemma valuation_ofNat (n : ℕ) [n.AtLeastTwo] :
@@ -1099,18 +1147,14 @@ lemma valuation_ofNat (n : ℕ) [n.AtLeastTwo] :
 
 @[simp]
 lemma valuation_one : valuation (1 : ℚ_[p]) = 0 := by
-  rw [← Nat.cast_one, valuation_natCast one_ne_zero, padicValNat_one_right, cast_zero]
+  simpa using valuation_natCast (p := p) one_ne_zero
 
 @[simp]
 lemma valuation_p : valuation (p : ℚ_[p]) = 1 := by
   rw [valuation_natCast hp.out.ne_zero, padicValNat_self, cast_one]
 
-theorem le_valuation_add {x y : ℚ_[p]} (hxy : x + y ≠ 0) :
+theorem le_valuation_add {x y : ℚ_[p]} (hx : x ≠ 0) (hy : y ≠ 0) (hxy : x + y ≠ 0) :
     min x.valuation y.valuation ≤ (x + y).valuation := by
-  by_cases hx : x = 0
-  · simpa only [hx, zero_add] using min_le_right _ _
-  by_cases hy : y = 0
-  · simpa only [hy, add_zero] using min_le_left _ _
   have : ‖x + y‖ ≤ max ‖x‖ ‖y‖ := nonarchimedean x y
   simpa only [norm_eq_zpow_neg_valuation hxy, norm_eq_zpow_neg_valuation hx,
     norm_eq_zpow_neg_valuation hy, le_max_iff,
@@ -1127,9 +1171,7 @@ lemma valuation_mul {x y : ℚ_[p]} (hx : x ≠ 0) (hy : y ≠ 0) :
     zpow_right_inj₀ hp_pos hp_ne_one, ← neg_add, neg_inj] at h_norm
 
 @[simp]
-lemma valuation_inv (x : ℚ_[p]) : x⁻¹.valuation = -x.valuation := by
-  obtain rfl | hx := eq_or_ne x 0
-  · simp
+lemma valuation_inv {x : ℚ_[p]} (hx : x ≠ 0) : x⁻¹.valuation = -x.valuation := by
   have h_norm : ‖x⁻¹‖ = ‖x‖⁻¹ := norm_inv x
   have hp_ne_one : (p : ℝ) ≠ 1 := mod_cast (Fact.out : p.Prime).ne_one
   have hp_pos : (0 : ℝ) < p := mod_cast NeZero.pos _
@@ -1137,56 +1179,46 @@ lemma valuation_inv (x : ℚ_[p]) : x⁻¹.valuation = -x.valuation := by
     ← zpow_neg, zpow_right_inj₀ hp_pos hp_ne_one, neg_inj] at h_norm
 
 @[simp]
-lemma valuation_pow (x : ℚ_[p]) : ∀ n : ℕ, (x ^ n).valuation = n * x.valuation
+lemma valuation_pow {x : ℚ_[p]} (hx : x ≠ 0) : ∀ n : ℕ, (x ^ n).valuation = n * x.valuation
   | 0 => by simp
-  | n + 1 => by
-    obtain rfl | hx := eq_or_ne x 0
-    · simp
-    · simp [pow_succ, hx, valuation_mul, valuation_pow, _root_.add_one_mul]
+  | n + 1 => by simp [pow_succ, hx, valuation_mul, valuation_pow hx, _root_.add_one_mul]
 
 @[simp]
-lemma valuation_zpow (x : ℚ_[p]) : ∀ n : ℤ, (x ^ n).valuation = n * x.valuation
-  | (n : ℕ) => by simp
-  | .negSucc n => by simp [← neg_mul]; simp [Int.negSucc_eq]
-
-open scoped Classical in
-/-- The additive `p`-adic valuation on `ℚ_[p]`, with values in `WithTop ℤ`. -/
-def addValuationDef : ℚ_[p] → WithTop ℤ :=
-  fun x ↦ if x = 0 then ⊤ else x.valuation
+lemma valuation_zpow {x : ℚ_[p]} (hx : x ≠ 0) : ∀ n : ℤ, (x ^ n).valuation = n * x.valuation
+  | (n : ℕ) => by simp [hx]
+  | .negSucc n => by simp [← neg_mul, hx]; simp [Int.negSucc_eq]
 
 @[simp]
-theorem AddValuation.map_zero : addValuationDef (0 : ℚ_[p]) = ⊤ := by
-  rw [addValuationDef, ite_eq_left rfl]
+theorem AddValuation.map_zero : addValuationDef (0 : ℚ_[p]) = ⊤ :=
+  addValuationDef_eq_top_iff.mpr rfl
 
 @[simp]
 theorem AddValuation.map_one : addValuationDef (1 : ℚ_[p]) = 0 := by
-  rw [addValuationDef, ite_eq_right one_ne_zero, valuation_one, WithTop.coe_zero]
+  rw [addValuationDef_of_ne_zero one_ne_zero, valuation_one, WithTop.coe_zero]
 
 theorem AddValuation.map_mul (x y : ℚ_[p]) :
     addValuationDef (x * y : ℚ_[p]) = addValuationDef x + addValuationDef y := by
-  simp only [addValuationDef]
-  by_cases hx : x = 0
-  · rw [hx, ite_eq_left rfl, zero_mul, ite_eq_left rfl, WithTop.top_add]
-  · by_cases hy : y = 0
-    · rw [hy, ite_eq_left rfl, mul_zero, ite_eq_left rfl, WithTop.add_top]
-    · rw [ite_eq_right hx, ite_eq_right hy, ite_eq_right (mul_ne_zero hx hy), ← WithTop.coe_add,
-        WithTop.coe_eq_coe, valuation_mul hx hy]
+  rcases eq_or_ne x 0 with rfl | hx
+  · rw [zero_mul, AddValuation.map_zero, WithTop.top_add]
+  rcases eq_or_ne y 0 with rfl | hy
+  · rw [mul_zero, AddValuation.map_zero, WithTop.add_top]
+  rw [addValuationDef_of_ne_zero hx, addValuationDef_of_ne_zero hy,
+    addValuationDef_of_ne_zero (mul_ne_zero hx hy), valuation_mul hx hy, WithTop.coe_add]
 
 theorem AddValuation.map_add (x y : ℚ_[p]) :
     min (addValuationDef x) (addValuationDef y) ≤ addValuationDef (x + y : ℚ_[p]) := by
-  simp only [addValuationDef]
-  by_cases hxy : x + y = 0
-  · rw [hxy, ite_eq_left rfl]
+  rcases eq_or_ne (x + y) 0 with hxy | hxy
+  · rw [hxy, AddValuation.map_zero]
     exact le_top
-  · by_cases hx : x = 0
-    · rw [hx, ite_eq_left rfl, min_eq_right, zero_add]
-      exact le_top
-    · by_cases hy : y = 0
-      · rw [hy, ite_eq_left rfl, min_eq_left, add_zero]
-        exact le_top
-      · rw [ite_eq_right hx, ite_eq_right hy, ite_eq_right hxy, ← WithTop.coe_min,
-          WithTop.coe_le_coe]
-        exact le_valuation_add hxy
+  rcases eq_or_ne x 0 with rfl | hx
+  · rw [AddValuation.map_zero, zero_add]
+    exact min_le_right _ _
+  rcases eq_or_ne y 0 with rfl | hy
+  · rw [AddValuation.map_zero, add_zero]
+    exact min_le_left _ _
+  rw [addValuationDef_of_ne_zero hx, addValuationDef_of_ne_zero hy, addValuationDef_of_ne_zero hxy,
+    ← WithTop.coe_min, WithTop.coe_le_coe]
+  exact le_valuation_add hx hy hxy
 
 open WithZero
 
@@ -1194,14 +1226,23 @@ open scoped Classical in
 /-- The `p`-adic valuation on `ℚ_[p]`, as a `Valuation`, bundled `Padic.valuation`. -/
 @[simps]
 noncomputable def mulValuation : Valuation ℚ_[p] ℤᵐ⁰ where
-  toFun x := if x = 0 then 0 else exp (-x.valuation)
+  toFun x := if hx : x = 0 then 0 else exp (-x.valuation hx)
   map_zero' := by simp
   map_one' := by simp
-  map_mul' _ _ := by split_ifs <;> simp_all [add_comm]
-  map_add_le_max' _ _ := by
-    split_ifs
-    any_goals simp_all
-    simpa using le_valuation_add ‹_›
+  map_mul' x y := by
+    rcases eq_or_ne x 0 with rfl | hx
+    · simp
+    rcases eq_or_ne y 0 with rfl | hy
+    · simp
+    simp [hx, hy, valuation_mul hx hy, add_comm]
+  map_add_le_max' x y := by
+    rcases eq_or_ne (x + y) 0 with hxy | hxy
+    · simp [hxy]
+    rcases eq_or_ne x 0 with rfl | hx
+    · simp
+    rcases eq_or_ne y 0 with rfl | hy
+    · simp
+    simpa [hx, hy, hxy] using le_valuation_add hx hy hxy
 
 lemma comap_mulValuation_eq_padicValuation :
     (mulValuation (p := p)).comap (Rat.castHom _) = Rat.padicValuation p := by
@@ -1225,7 +1266,7 @@ lemma norm_lt_zpow_iff_mulValuation_lt_exp {x : ℚ_[p]} {m : ℤ} :
   by_cases hx : x = 0
   · simpa [hx] using zpow_pos (by positivity) m
   · rw [norm_eq_zpow_neg_valuation hx, zpow_lt_zpow_iff_right₀ h1p, mulValuation_toFun,
-      ite_eq_right hx, exp_lt_exp]
+      dite_eq_right hx, exp_lt_exp]
 
 lemma norm_lt_norm_iff_mulValuation_lt {x y : ℚ_[p]} :
     ‖x‖ < ‖y‖ ↔ mulValuation x < mulValuation y := by
@@ -1242,7 +1283,7 @@ def addValuation : AddValuation ℚ_[p] (WithTop ℤ) :=
 @[simp]
 theorem addValuation.apply {x : ℚ_[p]} (hx : x ≠ 0) :
     Padic.addValuation x = (x.valuation : WithTop ℤ) := by
-  simp only [Padic.addValuation, AddValuation.of_apply, addValuationDef, ite_eq_right hx]
+  simp only [Padic.addValuation, AddValuation.of_apply, addValuationDef_of_ne_zero hx]
 
 section NormLEIff
 
@@ -1263,11 +1304,9 @@ theorem norm_lt_pow_iff_norm_le_pow_sub_one (x : ℚ_[p]) (n : ℤ) :
     ‖x‖ < (p : ℝ) ^ n ↔ ‖x‖ ≤ (p : ℝ) ^ (n - 1) := by
   rw [norm_le_pow_iff_norm_lt_pow_add_one, sub_add_cancel]
 
-theorem norm_le_one_iff_val_nonneg (x : ℚ_[p]) : ‖x‖ ≤ 1 ↔ 0 ≤ x.valuation := by
-  by_cases hx : x = 0
-  · simp only [hx, norm_zero, valuation_zero, zero_le_one, le_refl]
-  · rw [norm_eq_zpow_neg_valuation hx, ← zpow_zero (p : ℝ), zpow_le_zpow_iff_right₀, neg_nonpos]
-    exact Nat.one_lt_cast.2 (Nat.Prime.one_lt' p).1
+theorem norm_le_one_iff_val_nonneg {x : ℚ_[p]} (hx : x ≠ 0) : ‖x‖ ≤ 1 ↔ 0 ≤ x.valuation := by
+  rw [norm_eq_zpow_neg_valuation hx, ← zpow_zero (p : ℝ), zpow_le_zpow_iff_right₀, neg_nonpos]
+  exact Nat.one_lt_cast.2 (Nat.Prime.one_lt' p).1
 
 end NormLEIff
 
