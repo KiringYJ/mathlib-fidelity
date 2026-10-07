@@ -383,43 +383,43 @@ theorem mem_vectorSpan_pair_rev {p₁ p₂ : P} {v : V} :
 
 /-- A combination of two points expressed with `lineMap` lies in their affine span. -/
 theorem AffineMap.lineMap_mem_affineSpan_pair (r : k) (p₁ p₂ : P) :
-    AffineMap.lineMap p₁ p₂ r ∈ line[k, p₁, p₂] :=
+    AffineMap.lineMap p₁ p₂ r ∈ affineSpan k {p₁, p₂} :=
   AffineMap.lineMap_mem _ (left_mem_affineSpan_pair _ _ _) (right_mem_affineSpan_pair _ _ _)
 
 /-- A combination of two points expressed with `lineMap` (with the two points reversed) lies in
 their affine span. -/
 theorem AffineMap.lineMap_rev_mem_affineSpan_pair (r : k) (p₁ p₂ : P) :
-    AffineMap.lineMap p₂ p₁ r ∈ line[k, p₁, p₂] :=
+    AffineMap.lineMap p₂ p₁ r ∈ affineSpan k {p₁, p₂} :=
   AffineMap.lineMap_mem _ (right_mem_affineSpan_pair _ _ _) (left_mem_affineSpan_pair _ _ _)
 
 /-- A multiple of the difference of two points added to the first point lies in their affine
 span. -/
 theorem smul_vsub_vadd_mem_affineSpan_pair (r : k) (p₁ p₂ : P) :
-    r • (p₂ -ᵥ p₁) +ᵥ p₁ ∈ line[k, p₁, p₂] :=
+    r • (p₂ -ᵥ p₁) +ᵥ p₁ ∈ affineSpan k {p₁, p₂} :=
   AffineMap.lineMap_mem_affineSpan_pair _ _ _
 
 /-- A multiple of the difference of two points added to the second point lies in their affine
 span. -/
 theorem smul_vsub_rev_vadd_mem_affineSpan_pair (r : k) (p₁ p₂ : P) :
-    r • (p₁ -ᵥ p₂) +ᵥ p₂ ∈ line[k, p₁, p₂] :=
+    r • (p₁ -ᵥ p₂) +ᵥ p₂ ∈ affineSpan k {p₁, p₂} :=
   AffineMap.lineMap_rev_mem_affineSpan_pair _ _ _
 
 /-- A vector added to the first point lies in the affine span of two points if and only if it is
 a multiple of their difference. -/
 theorem vadd_left_mem_affineSpan_pair {p₁ p₂ : P} {v : V} :
-    v +ᵥ p₁ ∈ line[k, p₁, p₂] ↔ ∃ r : k, r • (p₂ -ᵥ p₁) = v := by
+    v +ᵥ p₁ ∈ affineSpan k {p₁, p₂} ↔ ∃ r : k, r • (p₂ -ᵥ p₁) = v := by
   rw [vadd_mem_iff_mem_direction _ (left_mem_affineSpan_pair _ _ _), direction_affineSpan,
     mem_vectorSpan_pair_rev]
 
 /-- A vector added to the second point lies in the affine span of two points if and only if it is
 a multiple of their difference. -/
 theorem vadd_right_mem_affineSpan_pair {p₁ p₂ : P} {v : V} :
-    v +ᵥ p₂ ∈ line[k, p₁, p₂] ↔ ∃ r : k, r • (p₁ -ᵥ p₂) = v := by
+    v +ᵥ p₂ ∈ affineSpan k {p₁, p₂} ↔ ∃ r : k, r • (p₁ -ᵥ p₂) = v := by
   rw [vadd_mem_iff_mem_direction _ (right_mem_affineSpan_pair _ _ _), direction_affineSpan,
     mem_vectorSpan_pair]
 
 lemma mem_affineSpan_pair_iff_exists_lineMap_eq {p p₁ p₂ : P} :
-    p ∈ line[k, p₁, p₂] ↔ ∃ r : k, AffineMap.lineMap p₁ p₂ r = p := by
+    p ∈ affineSpan k {p₁, p₂} ↔ ∃ r : k, AffineMap.lineMap p₁ p₂ r = p := by
   constructor
   · intro h
     rw [← vsub_vadd p p₁, vadd_left_mem_affineSpan_pair] at h
@@ -430,7 +430,7 @@ lemma mem_affineSpan_pair_iff_exists_lineMap_eq {p p₁ p₂ : P} :
     exact AffineMap.lineMap_mem_affineSpan_pair _ _ _
 
 lemma mem_affineSpan_pair_iff_exists_lineMap_rev_eq {p p₁ p₂ : P} :
-    p ∈ line[k, p₁, p₂] ↔ ∃ r : k, AffineMap.lineMap p₂ p₁ r = p := by
+    p ∈ affineSpan k {p₁, p₂} ↔ ∃ r : k, AffineMap.lineMap p₂ p₁ r = p := by
   rw [Set.pair_comm, mem_affineSpan_pair_iff_exists_lineMap_eq]
 
 end AffineSpace'
@@ -985,30 +985,31 @@ theorem affineSpan_parallel_iff_vectorSpan_eq_and_eq_empty_iff_eq_empty {s₁ s�
   exact parallel_iff_direction_eq_and_eq_bot_iff_eq_bot
 
 theorem affineSpan_pair_parallel_iff_vectorSpan_eq {p₁ p₂ p₃ p₄ : P} :
-    line[k, p₁, p₂] ∥ line[k, p₃, p₄] ↔
+    affineSpan k {p₁, p₂} ∥ affineSpan k {p₃, p₄} ↔
       vectorSpan k ({p₁, p₂} : Set P) = vectorSpan k ({p₃, p₄} : Set P) := by
   simp [affineSpan_parallel_iff_vectorSpan_eq_and_eq_empty_iff_eq_empty, ←
     not_nonempty_iff_eq_empty]
 
 lemma affineSpan_pair_parallel_iff_exists_unit_smul' [IsDomain k] [Module.IsTorsionFree k V]
     {p₁ q₁ p₂ q₂ : P} :
-    line[k, p₁, q₁] ∥ line[k, p₂, q₂] ↔ ∃ z : kˣ, z • (q₁ -ᵥ p₁) = q₂ -ᵥ p₂ := by
+    affineSpan k {p₁, q₁} ∥ affineSpan k {p₂, q₂} ↔ ∃ z : kˣ, z • (q₁ -ᵥ p₁) = q₂ -ᵥ p₂ := by
   rw [AffineSubspace.affineSpan_pair_parallel_iff_vectorSpan_eq, vectorSpan_pair_rev,
     vectorSpan_pair_rev, Submodule.span_singleton_eq_span_singleton]
 
 lemma affineSpan_pair_parallel_iff_exists_unit_smul [IsDomain k] [Module.IsTorsionFree k V]
     {p₁ q₁ p₂ q₂ : P} :
-    line[k, p₁, q₁] ∥ line[k, p₂, q₂] ↔ ∃ z : kˣ, z • (q₂ -ᵥ p₂) = q₁ -ᵥ p₁ := by
+    affineSpan k {p₁, q₁} ∥ affineSpan k {p₂, q₂} ↔ ∃ z : kˣ, z • (q₂ -ᵥ p₂) = q₁ -ᵥ p₁ := by
   rw [affineSpan_pair_parallel_iff_exists_unit_smul']
   exact ⟨fun ⟨z, hz⟩ ↦ ⟨z⁻¹, by simp [← hz]⟩, fun ⟨z, hz⟩ ↦ ⟨z⁻¹, by simp [← hz]⟩⟩
 
 lemma direction_affineSpan_pair_le_iff_exists_smul {p₁ q₁ p₂ q₂ : P} :
-    line[k, p₁, q₁].direction ≤ line[k, p₂, q₂].direction ↔ ∃ z : k, z • (q₂ -ᵥ p₂) = q₁ -ᵥ p₁ := by
+    (affineSpan k {p₁, q₁}).direction ≤ (affineSpan k {p₂, q₂}).direction ↔
+      ∃ z : k, z • (q₂ -ᵥ p₂) = q₁ -ᵥ p₁ := by
   rw [direction_affineSpan, direction_affineSpan, vectorSpan_pair_rev, vectorSpan_pair_rev,
     Submodule.span_singleton_le_iff_mem, Submodule.mem_span_singleton]
 
 theorem affineSpan_pair_comm {p₁ p₂ : P} :
-    line[k, p₁, p₂] = line[k, p₂, p₁] := by
+    affineSpan k {p₁, p₂} = affineSpan k {p₂, p₁} := by
   rw [Set.pair_comm]
 
 end AffineSubspace
@@ -1019,9 +1020,11 @@ open AffineSubspace
 
 variable {k V P : Type*} [DivisionRing k] [AddCommGroup V] [Module k V] [AffineSpace V P]
 
-/-- The span of two different points that lie in a line through two points equals that line. -/
-lemma affineSpan_pair_eq_of_mem_of_mem_of_ne {p₁ p₂ p₃ p₄ : P} (hp₁ : p₁ ∈ line[k, p₃, p₄])
-    (hp₂ : p₂ ∈ line[k, p₃, p₄]) (hp₁₂ : p₁ ≠ p₂) : line[k, p₁, p₂] = line[k, p₃, p₄] := by
+/-- The affine span of two distinct points of the affine span of `p₃` and `p₄` equals the
+latter. -/
+lemma affineSpan_pair_eq_of_mem_of_mem_of_ne {p₁ p₂ p₃ p₄ : P} (hp₁ : p₁ ∈ affineSpan k {p₃, p₄})
+    (hp₂ : p₂ ∈ affineSpan k {p₃, p₄}) (hp₁₂ : p₁ ≠ p₂) :
+    affineSpan k {p₁, p₂} = affineSpan k {p₃, p₄} := by
   refine le_antisymm (affineSpan_pair_le_of_mem_of_mem hp₁ hp₂) ?_
   rw [← vsub_vadd p₁ p₃, vadd_left_mem_affineSpan_pair] at hp₁
   rcases hp₁ with ⟨r₁, hp₁⟩
@@ -1040,26 +1043,26 @@ lemma affineSpan_pair_eq_of_mem_of_mem_of_ne {p₁ p₂ p₃ p₄ : P} (hp₁ : 
   · convert! smul_vsub_vadd_mem_affineSpan_pair ((1 - r₁) * (r₂ - r₁)⁻¹) p₁ p₂
     simp [mul_smul, ← hr, sub_smul, hp₁]
 
-/-- One line equals another differing in the first point if the first point of the first line is
-contained in the second line and does not equal the second point. -/
-lemma affineSpan_pair_eq_of_left_mem_of_ne {p₁ p₂ p₃ : P} (h : p₁ ∈ line[k, p₂, p₃])
-    (hne : p₁ ≠ p₃) : line[k, p₁, p₃] = line[k, p₂, p₃] :=
+/-- The affine span of `p₁` and `p₃` equals that of `p₂` and `p₃` if `p₁ ≠ p₃` lies in the
+latter. -/
+lemma affineSpan_pair_eq_of_left_mem_of_ne {p₁ p₂ p₃ : P} (h : p₁ ∈ affineSpan k {p₂, p₃})
+    (hne : p₁ ≠ p₃) : affineSpan k {p₁, p₃} = affineSpan k {p₂, p₃} :=
   affineSpan_pair_eq_of_mem_of_mem_of_ne h (right_mem_affineSpan_pair _ _ _) hne
 
-/-- One line equals another differing in the second point if the second point of the first line is
-contained in the second line and does not equal the first point. -/
-lemma affineSpan_pair_eq_of_right_mem_of_ne {p₁ p₂ p₃ : P} (h : p₁ ∈ line[k, p₂, p₃])
+/-- The affine span of `p₂` and `p₁` equals that of `p₂` and `p₃` if `p₁ ≠ p₂` lies in the
+latter. -/
+lemma affineSpan_pair_eq_of_right_mem_of_ne {p₁ p₂ p₃ : P} (h : p₁ ∈ affineSpan k {p₂, p₃})
     (hne : p₁ ≠ p₂) :
-    line[k, p₂, p₁] = line[k, p₂, p₃] :=
+    affineSpan k {p₂, p₁} = affineSpan k {p₂, p₃} :=
   affineSpan_pair_eq_of_mem_of_mem_of_ne (left_mem_affineSpan_pair _ _ _) h hne.symm
 
 /-- Given two triples of non-collinear points, if the lines determined by corresponding pairs of
 points are parallel, then the vectors between corresponding pairs of points are all related by the
 same nonzero scale factor. (The formal statement is slightly more general.) -/
-theorem exists_eq_smul_of_parallel {p₁ p₂ p₃ p₄ p₅ p₆ : P} (h₂ : p₂ ∉ line[k, p₁, p₃])
-    (h₁₂₄₅ : line[k, p₁, p₂] ∥ line[k, p₄, p₅])
-    (h₂₃₅₆ : line[k, p₅, p₆].direction ≤ line[k, p₂, p₃].direction)
-    (h₃₁₆₄ : line[k, p₆, p₄].direction ≤ line[k, p₃, p₁].direction) :
+theorem exists_eq_smul_of_parallel {p₁ p₂ p₃ p₄ p₅ p₆ : P} (h₂ : p₂ ∉ affineSpan k {p₁, p₃})
+    (h₁₂₄₅ : affineSpan k {p₁, p₂} ∥ affineSpan k {p₄, p₅})
+    (h₂₃₅₆ : (affineSpan k {p₅, p₆}).direction ≤ (affineSpan k {p₂, p₃}).direction)
+    (h₃₁₆₄ : (affineSpan k {p₆, p₄}).direction ≤ (affineSpan k {p₃, p₁}).direction) :
     ∃ r : k, r ≠ 0 ∧ p₅ -ᵥ p₄ = r • (p₂ -ᵥ p₁) ∧ p₆ -ᵥ p₅ = r • (p₃ -ᵥ p₂) ∧
       p₄ -ᵥ p₆ = r • (p₁ -ᵥ p₃) := by
   rw [affineSpan_pair_parallel_iff_exists_unit_smul'] at h₁₂₄₅

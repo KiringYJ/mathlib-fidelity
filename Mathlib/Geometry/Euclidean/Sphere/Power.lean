@@ -83,7 +83,7 @@ variable {P : Type*} [MetricSpace P] [NormedAddTorsor V P]
 
 /-- If `P` is a point on the line `AB` and `Q` is equidistant from `A` and `B`, then
 `AP * BP = abs (BQ ^ 2 - PQ ^ 2)`. -/
-theorem mul_dist_eq_abs_sub_sq_dist {a b p q : P} (hp : p ∈ line[ℝ, a, b])
+theorem mul_dist_eq_abs_sub_sq_dist {a b p q : P} (hp : p ∈ affineSpan ℝ {a, b})
     (hq : dist a q = dist b q) : dist a p * dist b p = |dist b q ^ 2 - dist p q ^ 2| := by
   let m : P := midpoint ℝ a b
   have h1 := vsub_sub_vsub_cancel_left a p m
@@ -108,7 +108,7 @@ theorem mul_dist_eq_abs_sub_sq_dist {a b p q : P} (hp : p ∈ line[ℝ, a, b])
 /-- If `A`, `B`, `C`, `D` are cospherical and `P` is on both lines `AB` and `CD`, then
 `AP * BP = CP * DP`. -/
 theorem mul_dist_eq_mul_dist_of_cospherical {a b c d p : P} (h : Cospherical ({a, b, c, d} : Set P))
-    (hapb : p ∈ line[ℝ, a, b]) (hcpd : p ∈ line[ℝ, c, d]) :
+    (hapb : p ∈ affineSpan ℝ {a, b}) (hcpd : p ∈ affineSpan ℝ {c, d}) :
     dist a p * dist b p = dist c p * dist d p := by
   obtain ⟨q, r, h'⟩ := (cospherical_def {a, b, c, d}).mp h
   obtain ⟨ha, hb, hc, hd⟩ := h' a (by simp), h' b (by simp), h' c (by simp), h' d (by simp)
@@ -254,7 +254,7 @@ theorem power_nonpos_iff_dist_center_le_radius {s : Sphere P} {p : P} (hr : 0 �
 /-- For any point, the product of distances to two intersection
 points on a line through the point equals the absolute value of the power of the point. -/
 theorem mul_dist_eq_abs_power {s : Sphere P} {p a b : P}
-    (hp : p ∈ line[ℝ, a, b])
+    (hp : p ∈ affineSpan ℝ {a, b})
     (ha : a ∈ s) (hb : b ∈ s) :
     dist p a * dist p b = |s.power p| := by
   have hq : dist a s.center = dist b s.center := by
@@ -265,7 +265,7 @@ theorem mul_dist_eq_abs_power {s : Sphere P} {p a b : P}
 /-- For a point on the sphere, the product of distances to two other intersection
 points on a line through the point is zero. -/
 theorem mul_dist_eq_zero_of_mem_sphere {s : Sphere P} {p a b : P}
-    (hp : p ∈ line[ℝ, a, b])
+    (hp : p ∈ affineSpan ℝ {a, b})
     (ha : a ∈ s) (hb : b ∈ s)
     (hp_on : p ∈ s) :
     dist p a * dist p b = 0 := by
@@ -278,7 +278,7 @@ theorem mul_dist_eq_zero_of_mem_sphere {s : Sphere P} {p a b : P}
 points on a line through the point equals the power of the point. -/
 theorem mul_dist_eq_power_of_radius_le_dist_center {s : Sphere P} {p a b : P}
     (hr : 0 ≤ s.radius)
-    (hp : p ∈ line[ℝ, a, b])
+    (hp : p ∈ affineSpan ℝ {a, b})
     (ha : a ∈ s) (hb : b ∈ s)
     (hle : s.radius ≤ dist p s.center) :
     dist p a * dist p b = s.power p := by
@@ -289,7 +289,7 @@ theorem mul_dist_eq_power_of_radius_le_dist_center {s : Sphere P} {p a b : P}
 points on a line through the point equals the negative of the power of the point. -/
 theorem mul_dist_eq_neg_power_of_dist_center_le_radius {s : Sphere P} {p a b : P}
     (hr : 0 ≤ s.radius)
-    (hp : p ∈ line[ℝ, a, b])
+    (hp : p ∈ affineSpan ℝ {a, b})
     (ha : a ∈ s) (hb : b ∈ s)
     (hle : dist p s.center ≤ s.radius) :
     dist p a * dist p b = -s.power p := by
@@ -300,8 +300,8 @@ theorem mul_dist_eq_neg_power_of_dist_center_le_radius {s : Sphere P} {p a b : P
     the product of secant segment lengths. -/
 theorem dist_sq_eq_mul_dist_of_tangent_and_secant {a b t p : P} {s : Sphere P}
     (ha : a ∈ s) (hb : b ∈ s)
-    (hp : p ∈ line[ℝ, a, b])
-    (h_tangent : s.IsTangentAt t (line[ℝ, p, t])) :
+    (hp : p ∈ affineSpan ℝ {a, b})
+    (h_tangent : s.IsTangentAt t (affineSpan ℝ {p, t})) :
     dist p t ^ 2 = dist p a * dist p b := by
   have hr := radius_nonneg_of_mem ha
   have radius_le_dist := h_tangent.isTangent.radius_le_dist_center (left_mem_affineSpan_pair ℝ p t)
@@ -311,7 +311,7 @@ theorem dist_sq_eq_mul_dist_of_tangent_and_secant {a b t p : P} {s : Sphere P}
 
 /-- The power of a point with respect to a sphere equals the square of its tangent length. -/
 theorem IsTangentAt.power_eq_dist_sq {s : Sphere P} {t p : P}
-    (h_tangent : s.IsTangentAt t (line[ℝ, p, t])) :
+    (h_tangent : s.IsTangentAt t (affineSpan ℝ {p, t})) :
     s.power p = dist p t ^ 2 := by
   rw [Sphere.power, h_tangent.dist_sq_eq_of_mem (left_mem_affineSpan_pair ℝ p t)]
   ring_nf
@@ -319,7 +319,7 @@ theorem IsTangentAt.power_eq_dist_sq {s : Sphere P} {t p : P}
 /-- A line through a point on a sphere is tangent if and only if the squared distance
 from the external point to the tangent point equals the power of the point. -/
 theorem isTangentAt_iff_dist_sq_eq_power {t p : P} {s : Sphere P} (ht : t ∈ s) :
-    s.IsTangentAt t (line[ℝ, p, t]) ↔ dist p t ^ 2 = s.power p :=
+    s.IsTangentAt t (affineSpan ℝ {p, t}) ↔ dist p t ^ 2 = s.power p :=
   ⟨fun h ↦ h.power_eq_dist_sq.symm, fun h_dist_eq ↦ by
     have h_orth : ⟪p -ᵥ t, t -ᵥ s.center⟫ = 0 := by
       simp only [Sphere.power, ← mem_sphere.mp ht, dist_eq_norm_vsub V, sq,

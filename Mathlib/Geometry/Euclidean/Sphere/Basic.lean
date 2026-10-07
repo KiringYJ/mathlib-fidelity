@@ -607,7 +607,7 @@ lemma isDiameter_iff_mem_and_mem_and_wbtw :
 /-- The center lies on the line through two points of a sphere if and only if those
 points are the endpoints of a diameter. -/
 theorem center_mem_affineSpan_pair_iff_isDiameter (hp₁ : p₁ ∈ s) (hp₂ : p₂ ∈ s) :
-    s.center ∈ line[ℝ, p₁, p₂] ↔ s.IsDiameter p₁ p₂ := by
+    s.center ∈ affineSpan ℝ {p₁, p₂} ↔ s.IsDiameter p₁ p₂ := by
   rcases eq_or_ne p₁ p₂ with rfl | hp₁p₂
   · simp [isDiameter_iff_left_mem_and_midpoint_eq_center, hp₁, eq_comm]
   · rw [isDiameter_iff_mem_and_mem_and_wbtw]

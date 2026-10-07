@@ -140,7 +140,7 @@ theorem finrank_direction_altitude {n : ℕ} [NeZero n] (s : Simplex ℝ P n) (i
 only if it is orthogonal to the opposite face. -/
 theorem affineSpan_pair_eq_altitude_iff {n : ℕ} [NeZero n] (s : Simplex ℝ P n) (i : Fin (n + 1))
     (p : P) :
-    line[ℝ, p, s.points i] = s.altitude i ↔
+    affineSpan ℝ {p, s.points i} = s.altitude i ↔
       p ≠ s.points i ∧
         p ∈ affineSpan ℝ (Set.range s.points) ∧
           p -ᵥ s.points i ∈ (affineSpan ℝ (s.points '' {i}ᶜ)).directionᗮ := by
@@ -216,7 +216,7 @@ lemma altitudeFoot_mem_affineSpan {n : ℕ} [NeZero n] (s : Simplex ℝ P n)
 
 lemma affineSpan_pair_altitudeFoot_eq_altitude
     {n : ℕ} [NeZero n] (s : Simplex ℝ P n) (i : Fin (n + 1)) :
-    line[ℝ, s.altitudeFoot i, s.points i] = s.altitude i := by
+    affineSpan ℝ {s.altitudeFoot i, s.points i} = s.altitude i := by
   rw [affineSpan_pair_eq_altitude_iff]
   refine ⟨(s.ne_altitudeFoot i).symm, s.altitudeFoot_mem_affineSpan _, ?_⟩
   rw [altitudeFoot, orthogonalProjectionSpan]

@@ -83,7 +83,7 @@ structure Imo2019q2Cfg where
   wbtw_A_B₁_C : Wbtw ℝ A B₁ C
   wbtw_A_P_A₁ : Wbtw ℝ A P A₁
   wbtw_B_Q_B₁ : Wbtw ℝ B Q B₁
-  PQ_parallel_AB : line[ℝ, P, Q] ∥ line[ℝ, A, B]
+  PQ_parallel_AB : affineSpan ℝ {P, Q} ∥ affineSpan ℝ {A, B}
   -- A hypothesis implicit in the named line.
   P_ne_Q : P ≠ Q
   sbtw_P_B₁_P₁ : Sbtw ℝ P B₁ P₁
@@ -181,7 +181,7 @@ theorem B₂_mem_circumsphere : cfg.B₂ ∈ cfg.triangleABC.circumsphere :=
 
 theorem symm_A₂ : cfg.symm.A₂ = cfg.B₂ := by simp_rw [A₂, B₂, symm_triangleABC_circumsphere]; rfl
 
-theorem QP_parallel_BA : line[ℝ, cfg.Q, cfg.P] ∥ line[ℝ, cfg.B, cfg.A] := by
+theorem QP_parallel_BA : affineSpan ℝ {cfg.Q, cfg.P} ∥ affineSpan ℝ {cfg.B, cfg.A} := by
   rw [Set.pair_comm cfg.Q, Set.pair_comm cfg.B]; exact cfg.PQ_parallel_AB
 
 theorem A_ne_A₁ : cfg.A ≠ cfg.A₁ := by
@@ -208,11 +208,11 @@ theorem A₁_ne_C : cfg.A₁ ≠ cfg.C := by
 theorem B₁_ne_C : cfg.B₁ ≠ cfg.C :=
   cfg.symm.A₁_ne_C
 
-theorem Q_notMem_CB : cfg.Q ∉ line[ℝ, cfg.C, cfg.B] := by
+theorem Q_notMem_CB : cfg.Q ∉ affineSpan ℝ {cfg.C, cfg.B} := by
   intro hQ
-  have hQA₁ : line[ℝ, cfg.Q, cfg.A₁] ≤ line[ℝ, cfg.C, cfg.B] :=
+  have hQA₁ : affineSpan ℝ {cfg.Q, cfg.A₁} ≤ affineSpan ℝ {cfg.C, cfg.B} :=
     affineSpan_pair_le_of_mem_of_mem hQ cfg.wbtw_B_A₁_C.symm.mem_affineSpan
-  have hQ₁ : cfg.Q₁ ∈ line[ℝ, cfg.C, cfg.B] := by
+  have hQ₁ : cfg.Q₁ ∈ affineSpan ℝ {cfg.C, cfg.B} := by
     rw [AffineSubspace.le_def'] at hQA₁
     exact hQA₁ _ cfg.sbtw_Q_A₁_Q₁.right_mem_affineSpan
   have hc : Collinear ℝ ({cfg.C, cfg.Q₁, cfg.Q} : Set Pt) :=
@@ -231,7 +231,7 @@ theorem Q_ne_B : cfg.Q ≠ cfg.B := by
   rw [h] at h'
   exact h' (right_mem_affineSpan_pair _ _ _)
 
-theorem sOppSide_CB_Q_Q₁ : line[ℝ, cfg.C, cfg.B].SOppSide cfg.Q cfg.Q₁ :=
+theorem sOppSide_CB_Q_Q₁ : (affineSpan ℝ {cfg.C, cfg.B}).SOppSide cfg.Q cfg.Q₁ :=
   cfg.sbtw_Q_A₁_Q₁.sOppSide_of_notMem_of_mem cfg.Q_notMem_CB cfg.wbtw_B_A₁_C.symm.mem_affineSpan
 
 /-! ### Relate the orientations of different angles in the configuration -/
@@ -270,7 +270,7 @@ theorem A₁_ne_B : cfg.A₁ ≠ cfg.B := by
   intro h
   have hwbtw := cfg.wbtw_A_P_A₁
   rw [h] at hwbtw
-  have hPQ : line[ℝ, cfg.P, cfg.Q] = line[ℝ, cfg.A, cfg.B] := by
+  have hPQ : affineSpan ℝ {cfg.P, cfg.Q} = affineSpan ℝ {cfg.A, cfg.B} := by
     rw [AffineSubspace.eq_iff_direction_eq_of_mem (left_mem_affineSpan_pair _ _ _)
       hwbtw.mem_affineSpan]
     exact cfg.PQ_parallel_AB.direction_eq
@@ -353,9 +353,9 @@ theorem B₂_ne_A₂ : cfg.B₂ ≠ cfg.A₂ := by
   intro h
   have hA : Sbtw ℝ (cfg.triangleABC.points 1) cfg.A₁ (cfg.triangleABC.points 2) := cfg.sbtw_B_A₁_C
   have hB : Sbtw ℝ (cfg.triangleABC.points 0) cfg.B₁ (cfg.triangleABC.points 2) := cfg.sbtw_A_B₁_C
-  have hA' : cfg.A₂ ∈ line[ℝ, cfg.triangleABC.points 0, cfg.A₁] :=
+  have hA' : cfg.A₂ ∈ affineSpan ℝ {cfg.triangleABC.points 0, cfg.A₁} :=
     Sphere.secondInter_vsub_mem_affineSpan _ _ _
-  have hB' : cfg.A₂ ∈ line[ℝ, cfg.triangleABC.points 1, cfg.B₁] := by
+  have hB' : cfg.A₂ ∈ affineSpan ℝ {cfg.triangleABC.points 1, cfg.B₁} := by
     rw [← h]; exact Sphere.secondInter_vsub_mem_affineSpan _ _ _
   exact (sbtw_of_sbtw_of_sbtw_of_mem_affineSpan_pair (by decide) hA hB hA' hB').symm.not_rotate
     cfg.sbtw_A_A₁_A₂.wbtw
@@ -401,9 +401,9 @@ theorem Q₁_ne_A₂ : cfg.Q₁ ≠ cfg.A₂ := by
   rw [h] at h₁
   refine cfg.not_collinear_QPA₂ ?_
   have hA₂ := cfg.sbtw_A_A₁_A₂.right_mem_affineSpan
-  have hA₂A₁ : line[ℝ, cfg.A₂, cfg.A₁] ≤ line[ℝ, cfg.A, cfg.A₁] :=
+  have hA₂A₁ : affineSpan ℝ {cfg.A₂, cfg.A₁} ≤ affineSpan ℝ {cfg.A, cfg.A₁} :=
     affineSpan_pair_le_of_left_mem hA₂
-  have hQ : cfg.Q ∈ line[ℝ, cfg.A, cfg.A₁] := by
+  have hQ : cfg.Q ∈ affineSpan ℝ {cfg.A, cfg.A₁} := by
     rw [AffineSubspace.le_def'] at hA₂A₁
     exact hA₂A₁ _ h₁.left_mem_affineSpan
   exact collinear_triple_of_mem_affineSpan_pair hQ cfg.wbtw_A_P_A₁.mem_affineSpan hA₂
@@ -574,7 +574,7 @@ open Imo2019Q2
 theorem imo2019_q2 [Fact (finrank ℝ V = 2)] (A B C A₁ B₁ P Q P₁ Q₁ : Pt)
     (affine_independent_ABC : AffineIndependent ℝ ![A, B, C]) (wbtw_B_A₁_C : Wbtw ℝ B A₁ C)
     (wbtw_A_B₁_C : Wbtw ℝ A B₁ C) (wbtw_A_P_A₁ : Wbtw ℝ A P A₁) (wbtw_B_Q_B₁ : Wbtw ℝ B Q B₁)
-    (PQ_parallel_AB : line[ℝ, P, Q] ∥ line[ℝ, A, B]) (P_ne_Q : P ≠ Q)
+    (PQ_parallel_AB : affineSpan ℝ {P, Q} ∥ affineSpan ℝ {A, B}) (P_ne_Q : P ≠ Q)
     (sbtw_P_B₁_P₁ : Sbtw ℝ P B₁ P₁) (angle_PP₁C_eq_angle_BAC : ∠ P P₁ C = ∠ B A C)
     (C_ne_P₁ : C ≠ P₁) (sbtw_Q_A₁_Q₁ : Sbtw ℝ Q A₁ Q₁)
     (angle_CQ₁Q_eq_angle_CBA : ∠ C Q₁ Q = ∠ C B A) (C_ne_Q₁ : C ≠ Q₁) :

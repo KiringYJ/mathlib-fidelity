@@ -47,7 +47,7 @@ def affineSegment [Ring R] [PartialOrder R] [AddCommGroup V] [Module R V]
 variable [Ring R] [PartialOrder R] [AddCommGroup V] [Module R V] [AddTorsor V P]
 variable [AddCommGroup V'] [Module R V'] [AddTorsor V' P']
 
-lemma affineSegment_subset_affineSpan (x y : P) : affineSegment R x y ⊆ line[R, x, y] := by
+lemma affineSegment_subset_affineSpan (x y : P) : affineSegment R x y ⊆ affineSpan R {x, y} := by
   rw [affineSegment, Set.subset_def]
   rintro p ⟨r, -, rfl⟩
   exact lineMap_mem_affineSpan_pair _ _ _
@@ -362,7 +362,7 @@ theorem Sbtw.mem_image_Ioo {x y z : P} (h : Sbtw R x y z) :
     exact hyz (lineMap_apply_one _ _)
   · exact ⟨t, ho, rfl⟩
 
-theorem Wbtw.mem_affineSpan {x y z : P} (h : Wbtw R x y z) : y ∈ line[R, x, z] := by
+theorem Wbtw.mem_affineSpan {x y z : P} (h : Wbtw R x y z) : y ∈ affineSpan R {x, z} := by
   rcases h with ⟨r, ⟨-, rfl⟩⟩
   exact lineMap_mem_affineSpan_pair _ _ _
 
@@ -600,7 +600,7 @@ theorem Sbtw.affineCombination_of_mem_affineSpan_pair [IsDomain R] [IsTorsionFre
     {ι : Type*} {p : ι → P} (ha : AffineIndependent R p) {w w₁ w₂ : ι → R} {s : Finset ι}
     (hw : ∑ i ∈ s, w i = 1) (hw₁ : ∑ i ∈ s, w₁ i = 1) (hw₂ : ∑ i ∈ s, w₂ i = 1)
     (h : s.affineCombination R p w ∈
-      line[R, s.affineCombination R p w₁, s.affineCombination R p w₂])
+      affineSpan R {s.affineCombination R p w₁, s.affineCombination R p w₂})
     {i : ι} (his : i ∈ s) (hs : Sbtw R (w₁ i) (w i) (w₂ i)) :
     Sbtw R (s.affineCombination R p w₁) (s.affineCombination R p w)
       (s.affineCombination R p w₂) := by
@@ -759,7 +759,7 @@ vertex to the point on the opposite side. -/
 theorem sbtw_of_sbtw_of_sbtw_of_mem_affineSpan_pair [IsTorsionFree R V]
     {t : Affine.Triangle R P} {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) {p₁ p₂ p : P}
     (h₁ : Sbtw R (t.points i₂) p₁ (t.points i₃)) (h₂ : Sbtw R (t.points i₁) p₂ (t.points i₃))
-    (h₁' : p ∈ line[R, t.points i₁, p₁]) (h₂' : p ∈ line[R, t.points i₂, p₂]) :
+    (h₁' : p ∈ affineSpan R {t.points i₁, p₁}) (h₂' : p ∈ affineSpan R {t.points i₂, p₂}) :
     Sbtw R (t.points i₁) p p₁ := by
   have h₁₃ : i₁ ≠ i₃ := by
     rintro rfl
@@ -772,9 +772,9 @@ theorem sbtw_of_sbtw_of_sbtw_of_mem_affineSpan_pair [IsTorsionFree R V]
     clear h₁ h₂ h₁' h₂'
     decide +revert
   have hp : p ∈ affineSpan R (Set.range t.points) := by
-    have hle : line[R, t.points i₁, p₁] ≤ affineSpan R (Set.range t.points) := by
+    have hle : affineSpan R {t.points i₁, p₁} ≤ affineSpan R (Set.range t.points) := by
       refine affineSpan_pair_le_of_mem_of_mem (mem_affineSpan R (Set.mem_range_self _)) ?_
-      have hle : line[R, t.points i₂, t.points i₃] ≤ affineSpan R (Set.range t.points) := by
+      have hle : affineSpan R {t.points i₂, t.points i₃} ≤ affineSpan R (Set.range t.points) := by
         refine affineSpan_mono R ?_
         simp [Set.insert_subset_iff]
       rw [AffineSubspace.le_def'] at hle
@@ -870,7 +870,7 @@ theorem Wbtw.right_mem_image_Ici_of_left_ne {x y z : P} (h : Wbtw R x y z) (hne 
   (wbtw_iff_left_eq_or_right_mem_image_Ici.1 h).resolve_left hne
 
 theorem Wbtw.right_mem_affineSpan_of_left_ne {x y z : P} (h : Wbtw R x y z) (hne : x ≠ y) :
-    z ∈ line[R, x, y] := by
+    z ∈ affineSpan R {x, y} := by
   rcases h.right_mem_image_Ici_of_left_ne hne with ⟨r, ⟨-, rfl⟩⟩
   exact lineMap_mem_affineSpan_pair _ _ _
 
@@ -897,7 +897,7 @@ theorem Sbtw.right_mem_image_Ioi {x y z : P} (h : Sbtw R x y z) :
     z ∈ lineMap x y '' Set.Ioi (1 : R) :=
   (sbtw_iff_left_ne_and_right_mem_image_Ioi.1 h).2
 
-theorem Sbtw.right_mem_affineSpan {x y z : P} (h : Sbtw R x y z) : z ∈ line[R, x, y] :=
+theorem Sbtw.right_mem_affineSpan {x y z : P} (h : Sbtw R x y z) : z ∈ affineSpan R {x, y} :=
   h.wbtw.right_mem_affineSpan_of_left_ne h.left_ne
 
 theorem wbtw_iff_right_eq_or_left_mem_image_Ici {x y z : P} :
@@ -909,7 +909,7 @@ theorem Wbtw.left_mem_image_Ici_of_right_ne {x y z : P} (h : Wbtw R x y z) (hne 
   h.symm.right_mem_image_Ici_of_left_ne hne
 
 theorem Wbtw.left_mem_affineSpan_of_right_ne {x y z : P} (h : Wbtw R x y z) (hne : z ≠ y) :
-    x ∈ line[R, z, y] :=
+    x ∈ affineSpan R {z, y} :=
   h.symm.right_mem_affineSpan_of_left_ne hne
 
 theorem sbtw_iff_right_ne_and_left_mem_image_Ioi {x y z : P} :
@@ -920,7 +920,7 @@ theorem Sbtw.left_mem_image_Ioi {x y z : P} (h : Sbtw R x y z) :
     x ∈ lineMap z y '' Set.Ioi (1 : R) :=
   h.symm.right_mem_image_Ioi
 
-theorem Sbtw.left_mem_affineSpan {x y z : P} (h : Sbtw R x y z) : x ∈ line[R, z, y] :=
+theorem Sbtw.left_mem_affineSpan {x y z : P} (h : Sbtw R x y z) : x ∈ affineSpan R {z, y} :=
   h.symm.right_mem_affineSpan
 
 omit [IsStrictOrderedRing R] in

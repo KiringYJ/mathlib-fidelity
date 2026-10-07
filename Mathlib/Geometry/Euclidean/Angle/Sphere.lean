@@ -160,7 +160,7 @@ theorem IsTangentAt.angle_eq_pi_div_two {s : Sphere P} {p q : P} {as : AffineSub
 tangent to the sphere at `p`. -/
 theorem IsTangentAt_of_angle_eq_pi_div_two {s : Sphere P} {p q : P} (h : ∠ q p s.center = π / 2)
     (hp : p ∈ s) :
-    s.IsTangentAt p line[ℝ, p, q] := by
+    s.IsTangentAt p (affineSpan ℝ {p, q}) := by
   have hp_mem := left_mem_affineSpan_pair ℝ p q
   refine ⟨hp, hp_mem, ?_⟩
   have h_ortho : ⟪q -ᵥ p, p -ᵥ s.center⟫ = 0 := by
@@ -177,7 +177,7 @@ theorem IsTangentAt_of_angle_eq_pi_div_two {s : Sphere P} {p q : P} (h : ∠ q p
 /-- A line through `p` is tangent to the sphere at `p` if and only if the angle between the line and
 the radius at `p` equals `π / 2`. -/
 theorem IsTangentAt_iff_angle_eq_pi_div_two {s : Sphere P} {p q : P} (hp : p ∈ s) :
-    s.IsTangentAt p line[ℝ, p, q] ↔ ∠ q p s.center = π / 2 := by
+    s.IsTangentAt p (affineSpan ℝ {p, q}) ↔ ∠ q p s.center = π / 2 := by
   exact ⟨fun h ↦ IsTangentAt.angle_eq_pi_div_two h (right_mem_affineSpan_pair ℝ p q),
     fun h ↦ IsTangentAt_of_angle_eq_pi_div_two h hp⟩
 
@@ -307,8 +307,8 @@ theorem IsTangentAt.two_zsmul_oangle_eq_pi {s : Sphere P} {p q : P} {as : Affine
 a chord equals the inscribed angle subtending that chord", for oriented angles mod π,
 represented here as equality of twice the angles. -/
 theorem two_zsmul_oangle_tangent_eq {s : Sphere P} {p₁ p₂ p₃ p₄ : P} (hp₁ : p₁ ∈ s) (hp₂ : p₂ ∈ s)
-    (hp₃ : p₃ ∈ s) (htan : s.IsTangentAt p₁ line[ℝ, p₁, p₄]) (hp₄p₁ : p₄ ≠ p₁) (hp₃p₁ : p₃ ≠ p₁)
-    (hp₃p₂ : p₃ ≠ p₂) (hp₂p₁ : p₂ ≠ p₁) :
+    (hp₃ : p₃ ∈ s) (htan : s.IsTangentAt p₁ (affineSpan ℝ {p₁, p₄})) (hp₄p₁ : p₄ ≠ p₁)
+    (hp₃p₁ : p₃ ≠ p₁) (hp₃p₂ : p₃ ≠ p₂) (hp₂p₁ : p₂ ≠ p₁) :
     (2 : ℤ) • ∡ p₄ p₁ p₂ = (2 : ℤ) • ∡ p₁ p₃ p₂ := by
   have hcenter : s.center ≠ p₁ := (ne_center_of_mem_of_mem_of_ne hp₁ hp₃ hp₃p₁.symm).symm
   have hr : s.radius ≠ 0 := by rw [← mem_sphere.mp hp₁]; exact dist_ne_zero.mpr hcenter.symm

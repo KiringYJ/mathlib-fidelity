@@ -422,7 +422,7 @@ section median
 `faceOppositeCentroid`.
 -/
 def median (s : Simplex k P n) (i : Fin (n + 1)) : AffineSubspace k P :=
-  line[k, s.points i, s.faceOppositeCentroid i]
+  affineSpan k {s.points i, s.faceOppositeCentroid i}
 
 @[simp] theorem median_reindex {m n : ℕ} [NeZero m] [NeZero n] (s : Simplex k P n)
     (e : Fin (n + 1) ≃ Fin (m + 1)) :
@@ -467,8 +467,8 @@ theorem centroid_mem_median [CharZero k] (s : Simplex k P n) (i : Fin (n + 1)) :
 
 /-- The median of a simplex is the line through the vertex and the centroid. -/
 theorem median_eq_line_point_centroid [CharZero k] (s : Simplex k P n) (i : Fin (n + 1)) :
-    s.median i = line[k, s.points i, s.centroid] := by
-  have h1 : s.median i ≤ line[k, s.points i, s.centroid] := by
+    s.median i = affineSpan k {s.points i, s.centroid} := by
+  have h1 : s.median i ≤ affineSpan k {s.points i, s.centroid} := by
     unfold median
     apply affineSpan_pair_le_of_right_mem
     rw [faceOppositeCentroid_eq_smul_vsub_vadd_point]
@@ -481,7 +481,7 @@ theorem median_eq_line_point_centroid [CharZero k] (s : Simplex k P n) (i : Fin 
       rw [mul_neg_one, inv_eq_one_div, neg_div]
     rw [h]
     exact smul_vsub_rev_vadd_mem_affineSpan_pair _ _ _
-  have h2 : line[k, s.points i, s.centroid] ≤ s.median i := by
+  have h2 : affineSpan k {s.points i, s.centroid} ≤ s.median i := by
     rw [median]
     apply affineSpan_pair_le_of_right_mem
     exact centroid_mem_median s i

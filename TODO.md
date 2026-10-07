@@ -2131,15 +2131,15 @@ have stable roles and a searchable named declaration remains available.
   zero factorization of `0` and is recorded with the factorization entry.  A test checks the
   declarations and that the bracket forms no longer parse.
 
-- [ ] **[M] Give pair affine span a searchable head without asserting nondegeneracy.**
-  `Mathlib/LinearAlgebra/AffineSpace/AffineSubspace/Defs.lean:1075`--`:1077` defines
-  `line[k, p₁, p₂]` only as notation for the affine span of a generated pair.  The 154 textual uses
-  across 18 maintained files cannot search for or apply a declaration named by the apparent head.
-  When `p₁ = p₂`, this affine span is a singleton, not a one-dimensional line.  Introduce a named
-  pair-span operation whose contract preserves that degenerate case, and reserve an unqualified
-  affine-line declaration for an interface carrying whatever nondegeneracy and scalar hypotheses
-  its dimensional claim needs.  Make any retained notation expand through the accurately named
-  operation; remove the bracket form only if downstream comparison supports that API decision.
+- [x] **[M] Give pair affine span a searchable head without asserting nondegeneracy.**
+  The notation `line[k, p₁, p₂]` is removed, and its 191 occurrences in 18 files are the affine span
+  `affineSpan k {p₁, p₂}`, whose head is searchable, whose pair lemmas are already named
+  `…_affineSpan_pair`, and which is the point `{p₁}` when `p₁ = p₂`.  A separate pair-span
+  declaration would duplicate the `affineSpan` API without adding content, so none is introduced,
+  and no unqualified affine-line declaration is added.  The downstream comparison favors removal:
+  the replacement costs only parentheses in application arguments, mainly in Euclidean geometry, and
+  the docstrings of the pair lemmas that called these spans lines now describe affine spans.  A test
+  checks that the affine span of a pair is displayed as such.
 
 - [ ] **[M] Make `RatFunc K` canonical over the colliding `K⟮X⟯` notation.**
   `Mathlib/FieldTheory/RatFunc/Defs.lean:71` uses the same `⟮...⟯` delimiters as the generated-field

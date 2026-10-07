@@ -709,7 +709,7 @@ lemma incenter_ne_point (i : Fin (n + 1)) :
 variable {s} in
 lemma ExcenterExists.excenter_notMem_affineSpan_pair [Nat.AtLeastTwo n]
     {signs : Finset (Fin (n + 1))} (h : s.ExcenterExists signs) (i j : Fin (n + 1)) :
-    s.excenter signs ∉ line[ℝ, s.points i, s.points j] := by
+    s.excenter signs ∉ affineSpan ℝ {s.points i, s.points j} := by
   by_cases hij : i = j
   · simp only [hij, Set.mem_singleton_iff, Set.insert_eq_of_mem,
       AffineSubspace.mem_affineSpan_singleton]
@@ -720,7 +720,7 @@ lemma ExcenterExists.excenter_notMem_affineSpan_pair [Nat.AtLeastTwo n]
     simp
 
 lemma incenter_notMem_affineSpan_pair [Nat.AtLeastTwo n] (i j : Fin (n + 1)) :
-    s.incenter ∉ line[ℝ, s.points i, s.points j] :=
+    s.incenter ∉ affineSpan ℝ {s.points i, s.points j} :=
   s.excenterExists_empty.excenter_notMem_affineSpan_pair i j
 
 variable {s} in
@@ -1367,49 +1367,49 @@ lemma excenter_eq_incenter_or_excenter_singleton_of_ne (signs : Finset (Fin 3)) 
 
 lemma sSameSide_affineSpan_pair_incenter_point {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃)
     (h₂₃ : i₂ ≠ i₃) :
-    line[ℝ, t.points i₂, t.points i₃].SSameSide t.incenter (t.points i₁) := by
+    (affineSpan ℝ {t.points i₂, t.points i₃}).SSameSide t.incenter (t.points i₁) := by
   convert! t.sSameSide_incenter_point i₁
   simp
   grind
 
 lemma sSameSide_affineSpan_pair_point_incenter {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃)
     (h₂₃ : i₂ ≠ i₃) :
-    line[ℝ, t.points i₂, t.points i₃].SSameSide (t.points i₁) t.incenter := by
+    (affineSpan ℝ {t.points i₂, t.points i₃}).SSameSide (t.points i₁) t.incenter := by
   convert! t.sSameSide_point_incenter i₁
   simp
   grind
 
 lemma sOppSide_affineSpan_pair_excenter_singleton_point {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂)
     (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    line[ℝ, t.points i₂, t.points i₃].SOppSide (t.excenter {i₁}) (t.points i₁) := by
+    (affineSpan ℝ {t.points i₂, t.points i₃}).SOppSide (t.excenter {i₁}) (t.points i₁) := by
   convert! t.sOppSide_excenter_singleton_point i₁
   simp
   grind
 
 lemma sOppSide_affineSpan_pair_point_excenter_singleton {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂)
     (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    line[ℝ, t.points i₂, t.points i₃].SOppSide (t.points i₁) (t.excenter {i₁}) := by
+    (affineSpan ℝ {t.points i₂, t.points i₃}).SOppSide (t.points i₁) (t.excenter {i₁}) := by
   convert! t.sOppSide_point_excenter_singleton i₁
   simp
   grind
 
 lemma sSameSide_affineSpan_pair_excenter_singleton_point {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂)
     (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    line[ℝ, t.points i₂, t.points i₃].SSameSide (t.excenter {i₂}) (t.points i₁) := by
+    (affineSpan ℝ {t.points i₂, t.points i₃}).SSameSide (t.excenter {i₂}) (t.points i₁) := by
   convert! t.sSameSide_excenter_singleton_point h₁₂
   simp
   grind
 
 lemma sSameSide_affineSpan_pair_point_excenter_singleton {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂)
     (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    line[ℝ, t.points i₂, t.points i₃].SSameSide (t.points i₁) (t.excenter {i₂}) := by
+    (affineSpan ℝ {t.points i₂, t.points i₃}).SSameSide (t.points i₁) (t.excenter {i₂}) := by
   convert! t.sSameSide_point_excenter_singleton h₁₂
   simp
   grind
 
 lemma affineSpan_pair_eq_orthRadius [Fact (Module.finrank ℝ V = 2)] (signs : Finset (Fin 3))
     {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    line[ℝ, t.points i₂, t.points i₃] =
+    affineSpan ℝ {t.points i₂, t.points i₃} =
       (t.exsphere signs).orthRadius (t.touchpoint signs i₁) := by
   convert! (t.excenterExists signs).affineSpan_faceOpposite_eq_orthRadius i₁
   have hc : {i₁}ᶜ = ({i₂, i₃} : Set (Fin 3)) := by grind
@@ -1417,7 +1417,7 @@ lemma affineSpan_pair_eq_orthRadius [Fact (Module.finrank ℝ V = 2)] (signs : F
 
 lemma affineSpan_pair_eq_orthRadius_insphere [Fact (Module.finrank ℝ V = 2)]
     {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    line[ℝ, t.points i₂, t.points i₃] = t.insphere.orthRadius (t.touchpoint ∅ i₁) :=
+    affineSpan ℝ {t.points i₂, t.points i₃} = t.insphere.orthRadius (t.touchpoint ∅ i₁) :=
   t.affineSpan_pair_eq_orthRadius ∅ h₁₂ h₁₃ h₂₃
 
 lemma sbtw_touchpoint_empty {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :

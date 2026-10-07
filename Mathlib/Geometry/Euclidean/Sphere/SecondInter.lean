@@ -108,7 +108,7 @@ theorem Sphere.eq_or_eq_secondInter_of_mem_mk'_span_singleton_iff_mem {s : Spher
 /-- A point on a line through a point on a sphere and a second point equals that point or
 `secondInter`. -/
 lemma Sphere.eq_or_eq_secondInter_iff_mem_of_mem_affineSpan_pair {s : Sphere P} {p q : P}
-    (hp : p ∈ s) {p' : P} (hp' : p' ∈ line[ℝ, p, q]) :
+    (hp : p ∈ s) {p' : P} (hp' : p' ∈ affineSpan ℝ {p, q}) :
     p' = p ∨ p' = s.secondInter p (q -ᵥ p) ↔ p' ∈ s := by
   convert! s.eq_or_eq_secondInter_of_mem_mk'_span_singleton_iff_mem hp ?_
   convert! hp'
@@ -185,7 +185,7 @@ theorem Sphere.secondInter_eq_lineMap (s : Sphere P) (p p' : P) :
 /-- If the vector passed to `secondInter` is given by a subtraction involving the point in
 `secondInter`, the result lies in the span of the two points. -/
 theorem Sphere.secondInter_vsub_mem_affineSpan (s : Sphere P) (p₁ p₂ : P) :
-    s.secondInter p₁ (p₂ -ᵥ p₁) ∈ line[ℝ, p₁, p₂] :=
+    s.secondInter p₁ (p₂ -ᵥ p₁) ∈ affineSpan ℝ {p₁, p₂} :=
   smul_vsub_vadd_mem_affineSpan_pair _ _ _
 
 /-- If the vector passed to `secondInter` is given by a subtraction involving the point in
