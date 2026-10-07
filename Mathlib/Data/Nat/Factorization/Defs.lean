@@ -334,17 +334,25 @@ theorem factorization_mul_of_coprime {a b : ℕ} (hab : Coprime a b) :
 
 /-! ### Generalisation of the "even part" and "odd part" of a natural number -/
 
-/-- We introduce the notations `ordProj[p] n` for the largest power of the prime `p` that
-divides `n` and `ordCompl[p] n` for the complementary part. The `ord` naming comes from
-the $p$-adic order/valuation of a number, and `proj` and `compl` are for the projection and
-complementary projection. The term `n.factorization p` is the $p$-adic order itself.
-For example, `ordProj[2] n` is the even part of `n` and `ordCompl[2] n` is the odd part. -/
-notation "ordProj[" p "] " n:arg => p ^ Nat.factorization n p
+/-- `n.ordProj p` is `p ^ n.factorization p`, the factor at `p` of the prime factorization of `n`.
+For a prime `p` and `n ≠ 0` it is the largest power of `p` that divides `n`, the `p`-part of `n`;
+for example, `n.ordProj 2` is the even part of `n`. If `p` is not prime, it is not a factor and the
+value is `1`; as `Nat.factorization 0 = 0`, also `ordProj 0 p = 1`. The `ord` naming comes from the
+`p`-adic order `n.factorization p`, and `proj` and `compl` are for the projection and the
+complementary projection. -/
+def ordProj (n p : ℕ) : ℕ := p ^ n.factorization p
 
-@[inherit_doc «termOrdProj[_]_»]
-notation "ordCompl[" p "] " n:arg => n / ordProj[p] n
+/-- `n.ordCompl p` is `n / n.ordProj p`, the part of `n` complementary to `n.ordProj p`: for
+`n ≠ 0`, the product of the factors of its prime factorization at the primes other than `p`. For
+example, `n.ordCompl 2` is the odd part of `n`. -/
+def ordCompl (n p : ℕ) : ℕ := n / n.ordProj p
 
-theorem ordProj_dvd (n p : ℕ) : ordProj[p] n ∣ n := by
+theorem ordProj_def (n p : ℕ) : n.ordProj p = p ^ n.factorization p := rfl
+
+theorem ordCompl_def (n p : ℕ) : n.ordCompl p = n / n.ordProj p := rfl
+
+theorem ordProj_dvd (n p : ℕ) : n.ordProj p ∣ n := by
+  rw [ordProj]
   if hp : p.Prime then ?_ else simp [hp]
   rw [← primeFactorsList_count_eq]
   apply dvd_of_primeFactorsList_subperm (pow_ne_zero _ hp.ne_zero)
@@ -353,10 +361,10 @@ theorem ordProj_dvd (n p : ℕ) : ordProj[p] n ∣ n := by
   simp [List.eq_of_mem_replicate hq]
 
 lemma ordProj_dvd_ordProj_iff_dvd (ha : a ≠ 0) (hb : b ≠ 0) :
-    (∀ p : ℕ, ordProj[p] a ∣ ordProj[p] b) ↔ a ∣ b := by
+    (∀ p : ℕ, a.ordProj p ∣ b.ordProj p) ↔ a ∣ b := by
   rw [← factorization_le_iff_dvd ha hb, Finsupp.le_def]
   congr! 1 with p
-  obtain _ | _ | p := p <;> simp [Nat.pow_dvd_pow_iff_le_right]
+  obtain _ | _ | p := p <;> simp [ordProj, Nat.pow_dvd_pow_iff_le_right]
 
 /-! ### Factorization LCM definitions -/
 

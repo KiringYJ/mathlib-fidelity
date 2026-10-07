@@ -489,18 +489,18 @@ variable (R n) in
 to `1`. See `mem_subgroupOfPrimitiveMapToOne_iff` for this characterization.
 
 TODO: Generalize to an arbitrary nonzero integer `d`, replacing the hypothesis `p.Prime` with
-a coprimality condition and `n / p ^ n.factorization p` with the largest factor of `n` coprime
+a coprimality condition and `n.ordCompl p` with the largest factor of `n` coprime
 to `d`. This would require additional Mathlib API for that construction. -/
 noncomputable def subgroupOfPrimitiveMapToOne [NeZero n] (p : ℕ) [hp : Fact p.Prime] :
     Subgroup (DirichletCharacter R n) :=
-  (annihilator R (n := n / p ^ n.factorization p)
+  (annihilator R (n := n.ordCompl p)
     {ZMod.unitOfCoprime p (Nat.coprime_ordCompl hp.out (NeZero.ne n))}).map
       (changeLevel (Nat.ordCompl_dvd n p))
 
 @[simp]
 theorem mem_subgroupOfPrimitiveMapToOne_iff [NeZero n] [Nontrivial R] (p : ℕ) [hp : Fact p.Prime] :
     χ ∈ subgroupOfPrimitiveMapToOne R n p ↔ χ.primitiveCharacter p = 1 := by
-  have : NeZero (n / p ^ n.factorization p) := ⟨(Nat.ordCompl_pos p (NeZero.ne n)).ne'⟩
+  have : NeZero (n.ordCompl p) := ⟨(Nat.ordCompl_pos p (NeZero.ne n)).ne'⟩
   have hcop := Nat.coprime_ordCompl hp.out (NeZero.ne n)
   simp only [subgroupOfPrimitiveMapToOne, Subgroup.mem_map, mem_annihilator_iff,
     Set.mem_singleton_iff, forall_eq, ZMod.coe_unitOfCoprime]
@@ -509,13 +509,13 @@ theorem mem_subgroupOfPrimitiveMapToOne_iff [NeZero n] [Nontrivial R] (p : ℕ) 
     rw [← Int.cast_natCast] at hψ ⊢
     rw [primitiveCharacter_changeLevel_apply, primitiveCharacter_apply_of_isCoprime, hψ]
     exact Nat.isCoprime_iff_coprime.mpr hcop
-  · have hdvd : χ.conductor ∣ n / p ^ n.factorization p := by
+  · have hdvd : χ.conductor ∣ n.ordCompl p := by
       apply Nat.dvd_ordCompl_of_dvd_not_dvd χ.conductor_dvd_level
       simp [← hp.out.coprime_iff_not_dvd, ← Nat.isCoprime_iff_coprime,
         ← apply_ne_zero_iff (χ := χ.primitiveCharacter), h]
     refine ⟨changeLevel hdvd χ.primitiveCharacter, ?_, ?_⟩
-    · rw [show (p : ZMod (n / p ^ n.factorization p))
-          = ((p : ℤ) : ZMod (n / p ^ n.factorization p)) from (Int.cast_natCast p).symm,
+    · rw [show (p : ZMod (n.ordCompl p)) = ((p : ℤ) : ZMod (n.ordCompl p)) from
+          (Int.cast_natCast p).symm,
         changeLevel_eq_cast_of_dvd' χ.primitiveCharacter hdvd (Nat.isCoprime_iff_coprime.mpr hcop),
         Int.cast_natCast]
       exact h

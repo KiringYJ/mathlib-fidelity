@@ -63,7 +63,7 @@ theorem Nat.not_isPrimePow_iff_nontrivial_of_two_le {n : ℕ} (hn : 2 ≤ n) :
   grind [primeFactors_eq_empty]
 
 theorem IsPrimePow.exists_ordCompl_eq_one {n : ℕ} (h : IsPrimePow n) :
-    ∃ p : ℕ, p.Prime ∧ ordCompl[p] n = 1 := by
+    ∃ p : ℕ, p.Prime ∧ n.ordCompl p = 1 := by
   rcases eq_or_ne n 0 with (rfl | hn0); · cases not_isPrimePow_zero h
   rcases isPrimePow_iff_factorization_eq_single.mp h with ⟨p, k, hk0, h1⟩
   rcases em' p.Prime with (pp | pp)
@@ -75,14 +75,14 @@ theorem IsPrimePow.exists_ordCompl_eq_one {n : ℕ} (h : IsPrimePow n) :
   simp
 
 theorem exists_ordCompl_eq_one_iff_isPrimePow {n : ℕ} (hn : n ≠ 1) :
-    IsPrimePow n ↔ ∃ p : ℕ, p.Prime ∧ ordCompl[p] n = 1 := by
+    IsPrimePow n ↔ ∃ p : ℕ, p.Prime ∧ n.ordCompl p = 1 := by
   refine ⟨fun h => IsPrimePow.exists_ordCompl_eq_one h, fun h => ?_⟩
   rcases h with ⟨p, pp, h⟩
   rw [isPrimePow_nat_iff]
   rw [← Nat.eq_of_dvd_of_div_eq_one (Nat.ordProj_dvd n p) h] at hn ⊢
-  refine ⟨p, n.factorization p, pp, ?_, by simp⟩
+  refine ⟨p, n.factorization p, pp, ?_, rfl⟩
   contrapose! hn
-  simp [Nat.le_zero.1 hn]
+  simp [Nat.ordProj, Nat.le_zero.1 hn]
 
 /-- An equivalent definition for prime powers: `n` is a prime power iff there is a unique prime
 dividing it. -/
@@ -101,7 +101,7 @@ theorem isPrimePow_iff_unique_prime_dvd {n : ℕ} : IsPrimePow n ↔ ∃! p : �
   apply Nat.dvd_antisymm (Nat.ordProj_dvd _ _)
   -- We need to show n ∣ p ^ n.factorization p
   apply Nat.dvd_of_primeFactorsList_subperm hn₀
-  rw [hp.primeFactorsList_pow, List.subperm_ext_iff]
+  rw [Nat.ordProj, hp.primeFactorsList_pow, List.subperm_ext_iff]
   intro q hq'
   rw [Nat.mem_primeFactorsList hn₀] at hq'
   cases hq _ hq'.1 hq'.2

@@ -1385,11 +1385,15 @@ operation.
   zero, and `Nat.primeFactors` in `Mathlib/Data/Nat/PrimeFin.lean:37` gives the empty set although
   every prime divides zero.  The generic `factorization` and `normalizedFactors` in
   `Mathlib/RingTheory/UniqueFactorizationDomain/Finsupp.lean:32` and
-  `Mathlib/RingTheory/UniqueFactorizationDomain/NormalizedFactors.lean:35` likewise return empty data
-  at zero.  Use a nonzero carrier or explicit failure for finite lists/counts; keep units admissible
-  with empty factorization.  `Associates.factors` returns `⊤` at zero
+  `Mathlib/RingTheory/UniqueFactorizationDomain/NormalizedFactors.lean:35` likewise return empty
+  data at zero.  Use a nonzero carrier or explicit failure for finite lists/counts; keep units
+  admissible with empty factorization.  `Associates.factors` returns `⊤` at zero
   (`Mathlib/RingTheory/UniqueFactorizationDomain/FactorSet.lean:223`), which is a useful internal
-  extended-value precedent but not literature evidence for a public convention.
+  extended-value precedent but not literature evidence for a public convention.  `Nat.ordProj` and
+  `Nat.ordCompl` in `Mathlib/Data/Nat/Factorization/Defs.lean` inherit the convention, with
+  `ordProj 0 p = 1` and `ordCompl 0 p = 0`; their lemmas without a nonzero hypothesis, such as
+  `Nat.ordProj_pos` and `Nat.factorization_ordCompl`, hold at `0` through it and move with this
+  migration.
 
 - [ ] **Migrate natural cardinalities away from infinity-to-zero.**
   `Nat.card` in `Mathlib/SetTheory/Cardinal/Finite.lean:41` and `Set.ncard` in
@@ -2117,14 +2121,15 @@ have stable roles and a searchable named declaration remains available.
   statements of public theorems such as `pell_dioph` use it.  A test checks that the forms are not
   exported and that the named lemmas remain the interface.
 
-- [ ] **[M] Give `ordProj` and `ordCompl` searchable declaration heads.**
-  `Mathlib/Data/Nat/Factorization/Defs.lean:326`--`:334` introduces only the notations
-  `ordProj[p] n` and `ordCompl[p] n`, expanding to `p ^ n.factorization p` and
-  `n / ordProj[p] n`; there is no declaration with either apparent identifier.  Introduce named
-  `Nat` operations, migrate the roughly 37 notation occurrences across three maintained files, and
-  coordinate their mathematical domains with the separate factorization backlog.  Delete the
-  identifier-shaped bracket forms after migration; any genuinely conventional symbolic surface
-  should be proposed and justified separately.
+- [x] **[M] Give `ordProj` and `ordCompl` searchable declaration heads.**
+  `Nat.ordProj n p` is `p ^ n.factorization p`, the factor at `p` of the prime factorization of `n`,
+  and `Nat.ordCompl n p` is `n / n.ordProj p`; they are declarations in
+  `Mathlib/Data/Nat/Factorization/Defs.lean` with the defining lemmas `Nat.ordProj_def` and
+  `Nat.ordCompl_def`, and the bracket notations `ordProj[p] n` and `ordCompl[p] n` are removed.  The
+  argument order follows `n.factorization p`.  For a nonprime `p` the value `1` is the empty factor
+  of the factorization, which `Nat.ordProj_of_not_prime` states; the value at `n = 0` follows the
+  zero factorization of `0` and is recorded with the factorization entry.  A test checks the
+  declarations and that the bracket forms no longer parse.
 
 - [ ] **[M] Give pair affine span a searchable head without asserting nondegeneracy.**
   `Mathlib/LinearAlgebra/AffineSpace/AffineSubspace/Defs.lean:1075`--`:1077` defines
