@@ -63,7 +63,7 @@ open IntermediateField
 theorem Normal.of_isSplittingField (p : F[X]) [hFEp : IsSplittingField F E p] : Normal F E := by
   rcases eq_or_ne p 0 with (rfl | hp)
   · exact Normal.of_algEquiv (AlgEquiv.ofBijective (Algebra.ofId F E)
-      (Algebra.bijective_algebraMap_iff.2 (hFEp.top_eq_bot_of_eq_zero' rfl)))
+      (Algebra.bijective_algebraMap_iff.2 (IsSplittingField.top_eq_bot_of_eq_zero E 0 rfl)))
   refine normal_iff.mpr fun x ↦ ?_
   have : FiniteDimensional F E := IsSplittingField.finiteDimensional E p
   have hx := IsIntegral.of_finite F x

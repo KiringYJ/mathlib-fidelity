@@ -63,6 +63,10 @@ theorem adjoin_rootSet (f : K[X]) [IsSplittingField K L f] (hf : f ≠ 0) :
     Algebra.adjoin K (f.rootSet L : Set L) = ⊤ :=
   adjoin_rootSet' hf
 
+theorem top_eq_bot_of_eq_zero (f : K[X]) [IsSplittingField K L f] (hf : f = 0) :
+    (⊤ : Subalgebra K L) = ⊥ :=
+  top_eq_bot_of_eq_zero' hf
+
 section ScalarTower
 
 variable [Algebra F K] [Algebra F L] [IsScalarTower F K L]
@@ -91,7 +95,7 @@ theorem splits_iff (f : K[X]) [IsSplittingField K L f] :
     Splits f ↔ (⊤ : Subalgebra K L) = ⊥ where
   mp h := by
     rcases eq_or_ne f 0 with hf0 | hf0
-    · exact top_eq_bot_of_eq_zero' hf0
+    · exact top_eq_bot_of_eq_zero L f hf0
     rw [eq_bot_iff, ← adjoin_rootSet L f hf0, Algebra.adjoin_le_iff]
     intro y hy
     rw [mem_rootSet, aeval_def, eval₂_eq_eval_map] at hy
@@ -148,7 +152,7 @@ theorem finiteDimensional (f : K[X]) [IsSplittingField K L f] : FiniteDimensiona
   classical
   rcases eq_or_ne f 0 with hf | hf
   · refine ⟨?_⟩
-    rw [← Algebra.top_toSubmodule, top_eq_bot_of_eq_zero' (L := L) hf, Algebra.toSubmodule_bot,
+    rw [← Algebra.top_toSubmodule, top_eq_bot_of_eq_zero L f hf, Algebra.toSubmodule_bot,
       Submodule.one_eq_span]
     exact Submodule.fg_span_singleton 1
   exact ⟨@Algebra.top_toSubmodule K L _ _ _ ▸
@@ -171,7 +175,7 @@ theorem of_algEquiv [Algebra K F] (p : K[X]) (f : F ≃ₐ[K] L) [IsSplittingFie
       (splits F p).adjoin_rootSet_eq_range (map_ne_zero hp), adjoin_rootSet F p hp]
   top_eq_bot_of_eq_zero' hp := by
     rw [← (AlgHom.range_eq_top f.toAlgHom).mpr f.surjective, ← Algebra.map_top,
-      top_eq_bot_of_eq_zero' (L := F) hp, Algebra.map_bot]
+      top_eq_bot_of_eq_zero F p hp, Algebra.map_bot]
 
 theorem adjoin_rootSet_eq_range [Algebra K F] (f : K[X]) [IsSplittingField K L f] (hf : f ≠ 0)
     (i : L →ₐ[K] F) : Algebra.adjoin K (rootSet f F) = i.range :=

@@ -316,19 +316,21 @@ operation.
   `Polynomial.natSepDegree` in `Mathlib/FieldTheory/SeparableDegree.lean` counts the distinct roots
   of a nonzero polynomial in its splitting field and is `0` at `0` by an explicit convention
   (`natSepDegree_of_ne_zero` unfolds the count), which keeps `natSepDegree_le_natDegree`,
-  `natSepDegree_eq_zero_iff`, and `natSepDegree_mul` total.  The zero polynomial has no finite set
-  of roots and no separable contraction, so the value is not a count of roots.  Either justify it
-  as an independent invariant or give `natSepDegree` the domain `f ≠ 0`.
+  `natSepDegree_eq_zero_iff`, and `natSepDegree_mul` total, and gives `natSepDegree_mul_eq_iff` its
+  disjunct `f = 0 ∧ g = 0`.  The zero polynomial has no finite set of roots and no separable
+  contraction, so the value is not a count of roots.  Either justify it as an independent invariant
+  or give `natSepDegree` the domain `f ≠ 0`.
 
 - [ ] **Give `primitiveRoots` and the modified cyclotomic polynomial the domain `n ≠ 0`.**
   `primitiveRoots k R` in `Mathlib/RingTheory/RootsOfUnity/PrimitiveRoots.lean` is `∅` at `k = 0`
   (`primitiveRoots_zero`), now by an explicit case of the definition rather than through the empty
-  root multiset of the zero polynomial.  `IsPrimitiveRoot ζ 0` holds exactly for the `ζ` none of
-  whose positive powers is `1`, which form no finite set in general (in `ℚ`, every element except
-  `1` and `-1`), so `∅` is not the set of primitive `0`-th roots of unity.  Require `NeZero k` and
-  propagate the domain to `Polynomial.cyclotomic'`, the product of `X - C μ` over
-  `primitiveRoots n R`, which is `1` at `n = 0` (`cyclotomic'_zero`), and decide whether
-  `Polynomial.cyclotomic 0 R = 1` (`cyclotomic_zero`) is justified independently.
+  root multiset of the zero polynomial, and `IsPrimitiveRoot.card_primitiveRoots` holds there as
+  `#∅ = φ 0`.  `IsPrimitiveRoot ζ 0` holds exactly for the `ζ` none of whose positive powers is `1`,
+  which form no finite set in general (in `ℚ`, every element except `1` and `-1`), so `∅` is not the
+  set of primitive `0`-th roots of unity.  Require `NeZero k` and propagate the domain to
+  `Polynomial.cyclotomic'`, the product of `X - C μ` over `primitiveRoots n R`, which is `1` at
+  `n = 0` (`cyclotomic'_zero`), and decide whether `Polynomial.cyclotomic 0 R = 1`
+  (`cyclotomic_zero`) is justified independently.
 
 - [x] **Identify `Polynomial.natDegree` as the supremum of the support.**
   `natDegree p` is the supremum in `ℕ` of the exponents with nonzero coefficient
