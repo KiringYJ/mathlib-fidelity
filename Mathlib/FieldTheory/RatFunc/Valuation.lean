@@ -49,33 +49,39 @@ variable [DecidableEq (RatFunc F)]
 Explicitly, if `f/g ∈ F(t)` is a nonzero quotient of polynomials, its valuation at infinity is
 `exp (degree(f) - degree(g))`. -/
 def inftyValuationDef (r : RatFunc F) : ℤᵐ⁰ :=
-  if r = 0 then 0 else exp r.intDegree
+  if hr : r = 0 then 0 else exp (r.intDegree hr)
 
 theorem InftyValuation.map_zero' : inftyValuationDef F 0 = 0 :=
-  ite_eq_left rfl
+  dite_eq_left rfl
 
 theorem InftyValuation.map_one' : inftyValuationDef F 1 = 1 :=
-  (ite_eq_right one_ne_zero).trans <| by simp
-
-theorem InftyValuation.map_mul' (x y : RatFunc F) :
-    inftyValuationDef F (x * y) = inftyValuationDef F x * inftyValuationDef F y := by
-  rw [inftyValuationDef, inftyValuationDef, inftyValuationDef]
-  by_cases hx : x = 0
-  · rw [hx, zero_mul, ite_eq_left (Eq.refl _), zero_mul]
-  · by_cases hy : y = 0
-    · rw [hy, mul_zero, ite_eq_left (Eq.refl _), mul_zero]
-    · simp_all [RatFunc.intDegree_mul]
-
-theorem InftyValuation.map_add_le_max' (x y : RatFunc F) :
-    inftyValuationDef F (x + y) ≤ max (inftyValuationDef F x) (inftyValuationDef F y) := by
-  unfold inftyValuationDef
-  have := @RatFunc.intDegree_add_le F
-  aesop
+  (dite_eq_right one_ne_zero).trans <| by simp
 
 @[simp]
 theorem inftyValuation_of_nonzero {x : RatFunc F} (hx : x ≠ 0) :
-    inftyValuationDef F x = exp x.intDegree := by
-  rw [inftyValuationDef, ite_eq_right hx]
+    inftyValuationDef F x = exp (x.intDegree hx) := by
+  rw [inftyValuationDef, dite_eq_right hx]
+
+theorem InftyValuation.map_mul' (x y : RatFunc F) :
+    inftyValuationDef F (x * y) = inftyValuationDef F x * inftyValuationDef F y := by
+  rcases eq_or_ne x 0 with rfl | hx
+  · simp [inftyValuationDef]
+  rcases eq_or_ne y 0 with rfl | hy
+  · simp [inftyValuationDef]
+  rw [inftyValuation_of_nonzero F hx, inftyValuation_of_nonzero F hy,
+    inftyValuation_of_nonzero F (mul_ne_zero hx hy), RatFunc.intDegree_mul hx hy, exp_add]
+
+theorem InftyValuation.map_add_le_max' (x y : RatFunc F) :
+    inftyValuationDef F (x + y) ≤ max (inftyValuationDef F x) (inftyValuationDef F y) := by
+  rcases eq_or_ne (x + y) 0 with hxy | hxy
+  · simp [inftyValuationDef, hxy]
+  rcases eq_or_ne x 0 with rfl | hx
+  · simp
+  rcases eq_or_ne y 0 with rfl | hy
+  · simp
+  rw [inftyValuation_of_nonzero F hx, inftyValuation_of_nonzero F hy,
+    inftyValuation_of_nonzero F hxy, le_max_iff, exp_le_exp, exp_le_exp, ← le_max_iff]
+  exact RatFunc.intDegree_add_le hx hy hxy
 
 /-- The valuation at infinity on `F(t)`. -/
 def inftyValuation : Valuation (RatFunc F) ℤᵐ⁰ where
@@ -95,8 +101,7 @@ theorem inftyValuation.C {k : F} (hk : k ≠ 0) :
 
 @[simp]
 theorem inftyValuation.X : inftyValuation F RatFunc.X = exp 1 := by
-  simp [inftyValuation_apply, inftyValuationDef, ite_eq_right RatFunc.X_ne_zero,
-    RatFunc.intDegree_X]
+  rw [inftyValuation_apply, inftyValuation_of_nonzero F RatFunc.X_ne_zero, RatFunc.intDegree_X]
 
 lemma inftyValuation.X_zpow (m : ℤ) : inftyValuation F (RatFunc.X ^ m) = exp m := by simp
 
@@ -107,7 +112,8 @@ theorem inftyValuation.X_inv : inftyValuation F (1 / RatFunc.X) = exp (-1) := by
 -- https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/.60synthInstance.2EmaxHeartbeats.60.20error.20but.20only.20in.20.60simpNF.60
 theorem inftyValuation.polynomial {p : F[X]} (hp : p ≠ 0) :
     inftyValuationDef F (algebraMap F[X] (RatFunc F) p) = exp (p.natDegree : ℤ) := by
-  rw [inftyValuationDef, ite_eq_right (by simpa), RatFunc.intDegree_polynomial]
+  rw [inftyValuation_of_nonzero F (RatFunc.algebraMap_ne_zero hp),
+    RatFunc.intDegree_polynomial hp]
 
 instance : Valuation.IsNontrivial (inftyValuation F) := ⟨RatFunc.X, by simp⟩
 
