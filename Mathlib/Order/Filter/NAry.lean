@@ -54,10 +54,6 @@ theorem map_prod_eq_map₂ (m : α → β → γ) (f : Filter α) (g : Filter β
     Filter.map (fun p : α × β => m p.1 p.2) (f ×ˢ g) = map₂ m f g := by
   rw [map₂, copy_eq, uncurry_def]
 
-theorem map_prod_eq_map₂' (m : α × β → γ) (f : Filter α) (g : Filter β) :
-    Filter.map m (f ×ˢ g) = map₂ (fun a b => m (a, b)) f g :=
-  map_prod_eq_map₂ m.curry f g
-
 @[simp]
 theorem map₂_mk_eq_prod (f : Filter α) (g : Filter β) : map₂ Prod.mk f g = f ×ˢ g := by
   simp only [← map_prod_eq_map₂, map_id']
@@ -158,7 +154,7 @@ theorem map₂_map_right (m : α → γ → δ) (n : β → γ) :
 @[simp]
 theorem map₂_curry (m : α × β → γ) (f : Filter α) (g : Filter β) :
     map₂ m.curry f g = (f ×ˢ g).map m :=
-  (map_prod_eq_map₂' _ _ _).symm
+  (map_prod_eq_map₂ m.curry f g).symm
 
 @[simp]
 theorem map_uncurry_prod (m : α → β → γ) (f : Filter α) (g : Filter β) :
