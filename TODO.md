@@ -1360,19 +1360,31 @@ operation.
   function, Jensen's formula `MeromorphicOn.circleAverage_log_norm`, and the canonical
   decompositions of `Mathlib/Analysis/Complex/CanonicalDecomposition.lean` use the divisor.
 
-- [ ] **Make the trailing coefficient and the normal-form conversions domain-bearing.**
-  `meromorphicTrailingCoeffAt f x` in `Mathlib/Analysis/Meromorphic/TrailingCoefficient.lean` is `0`
-  when `f` is not meromorphic at `x` (`meromorphicTrailingCoeffAt_of_not_MeromorphicAt`) and when
-  `f` vanishes locally at `x` (`MeromorphicAt.meromorphicTrailingCoeffAt_of_order_eq_top`), where no
-  coefficient is nonzero.  `toMeromorphicNFAt f x` and `toMeromorphicNFOn f U` in
+- [x] **Make the trailing coefficient domain-bearing.**
+  `meromorphicTrailingCoeffAt f x h` in `Mathlib/Analysis/Meromorphic/TrailingCoefficient.lean`
+  takes a proof `h` that the order of `f` at `x` is finite; the meromorphy proof is the implicit
+  argument of that order.  The values `0` for non-meromorphic functions
+  (`meromorphicTrailingCoeffAt_of_not_MeromorphicAt`) and for functions that vanish locally
+  (`MeromorphicAt.meromorphicTrailingCoeffAt_of_order_eq_top`) are removed.  A lemma takes the
+  finite orders of its sources as arguments and that of the function on its left side as an
+  implicit argument; `AnalyticAt.meromorphicOrderAt_ne_top_of_ne_zero`,
+  `meromorphicOrderAt_id_sub_const_ne_top`, `AnalyticAt.meromorphicOrderAt_sub_ne_top`, and the
+  order formulas supply them.  Jensen's formula `MeromorphicOn.circleAverage_log_norm`, its
+  counting-function forms, and the first part of the first main theorem take finite order at the
+  center.  Cartan's formula and its circle averages take finite order of `f - a` at the origin for
+  every `a`, so that `f` agrees with no constant on a punctured neighborhood of the origin.  The
+  statements that do not mention the coefficient, such as
+  `ValueDistribution.characteristic_monotoneOn` and
+  `ValueDistribution.isBigO_characteristic_sub_characteristic_inv`, keep their hypotheses: a
+  meromorphic function on `ℝ` or `ℂ` of infinite order at a point vanishes on a codiscrete set
+  (`Meromorphic.eventuallyEq_zero_of_meromorphicOrderAt_eq_top`), which settles the constant case.
+  Tests are in `MathlibTest/TrailingCoefficientStrict.lean`.
+
+- [ ] **Make the normal-form conversions domain-bearing.**
+  `toMeromorphicNFAt f x` and `toMeromorphicNFOn f U` in
   `Mathlib/Analysis/Meromorphic/NormalForm.lean` are the zero function when `f` is not meromorphic
-  (`toMeromorphicNFAt_of_not_meromorphicAt`, `toMeromorphicNFOn_of_not_meromorphicOn`).  Lemmas such
-  as `meromorphicTrailingCoeffAt_inv`, `meromorphicTrailingCoeffAt_neg`, and the translation lemmas
-  hold without hypotheses only through these values.  Take meromorphy, and finite order for the
-  trailing coefficient, as arguments, and migrate the consumers, including
-  `circleIntegrable_log_meromorphicTrailingCoeffAt` in
-  `Mathlib/Analysis/Complex/ValueDistribution/Cartan.lean`, which covers non-meromorphic functions
-  through these values.
+  (`toMeromorphicNFAt_of_not_meromorphicAt`, `toMeromorphicNFOn_of_not_meromorphicOn`).  Take
+  meromorphy as an argument and migrate the consumers.
 
 ## L -- staged cross-module audit candidates
 

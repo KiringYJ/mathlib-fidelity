@@ -652,17 +652,17 @@ averages.
 
 /--
 Over the complex numbers, present the logarithmic counting function attached to the divisor of a
-meromorphic function `f` as a circle average over `log ‖f ·‖`.
+meromorphic function `f` of finite order at the origin as a circle average over `log ‖f ·‖`.
 
 This is a reformulation of Jensen's formula of complex analysis. See
 `MeromorphicOn.circleAverage_log_norm` for Jensen's formula in the original context.
 -/
 theorem Function.locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const {R : ℝ}
-    {f : ℂ → ℂ} (h : Meromorphic f) (hR : R ≠ 0) :
+    {f : ℂ → ℂ} (h : Meromorphic f) (h₀ : meromorphicOrderAt f 0 ≠ ⊤) (hR : R ≠ 0) :
     logCounting (divisor f univ) R =
-      circleAverage (log ‖f ·‖) 0 R - log ‖meromorphicTrailingCoeffAt f 0‖ := by
+      circleAverage (log ‖f ·‖) 0 R - log ‖meromorphicTrailingCoeffAt f 0 h₀‖ := by
   have h₁f : MeromorphicOn f (closedBall 0 |R|) := by tauto
-  simp only [MeromorphicOn.circleAverage_log_norm hR h₁f, logCounting, AddMonoidHom.coe_mk,
+  simp only [MeromorphicOn.circleAverage_log_norm hR h₁f h₀, logCounting, AddMonoidHom.coe_mk,
     ZeroHom.coe_mk, zero_sub, norm_neg, add_sub_cancel_right]
   congr 1
   · simp_all
@@ -674,8 +674,8 @@ Variant of `locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const`
 `ValueDistribution.logCounting` instead of `locallyFinsuppWithin.logCounting`.
 -/
 theorem ValueDistribution.logCounting_zero_sub_logCounting_top_eq_circleAverage_sub_const {R : ℝ}
-    {f : ℂ → ℂ} (h : Meromorphic f) (hR : R ≠ 0) :
+    {f : ℂ → ℂ} (h : Meromorphic f) (h₀ : meromorphicOrderAt f 0 ≠ ⊤) (hR : R ≠ 0) :
     (logCounting f 0 - logCounting f ⊤) R =
-      circleAverage (log ‖f ·‖) 0 R - log ‖meromorphicTrailingCoeffAt f 0‖ := by
+      circleAverage (log ‖f ·‖) 0 R - log ‖meromorphicTrailingCoeffAt f 0 h₀‖ := by
   rw [← locallyFinsuppWithin.logCounting_divisor]
-  exact locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const h hR
+  exact locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const h h₀ hR

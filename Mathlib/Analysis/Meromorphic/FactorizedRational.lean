@@ -193,6 +193,13 @@ private lemma mulSupport_update {d : 𝕜 → ℤ} {x : 𝕜}
     simp
   · simp_all
 
+/-- Each factor `(· - u) ^ n` of a factorized rational function has finite order at every
+point. -/
+private lemma meromorphicOrderAt_sub_zpow_ne_top {x u : 𝕜} (n : ℤ) :
+    meromorphicOrderAt ((· - u) ^ n) x ≠ ⊤ := by
+  rw [meromorphicOrderAt_zpow (x := x) (f := (· - u)) (by fun_prop)]
+  exact WithTop.mul_ne_top WithTop.coe_ne_top meromorphicOrderAt_id_sub_const_ne_top
+
 set_option backward.isDefEq.respectTransparency false in
 open scoped Classical in
 /--
@@ -203,19 +210,27 @@ Low-priority TODO: Using that non-trivially normed fields contain infinitely man
 no roots of unity, it might be possible to drop assumption `h` here and in some of the theorems
 below.
 -/
-theorem meromorphicTrailingCoeffAt_factorizedRational {d : 𝕜 → ℤ} {x : 𝕜} (h : d.HasFiniteSupport) :
-    meromorphicTrailingCoeffAt (∏ᶠ u, (· - u) ^ d u) x = ∏ᶠ u, (x - u) ^ update d x 0 u := by
+theorem meromorphicTrailingCoeffAt_factorizedRational {d : 𝕜 → ℤ} {x : 𝕜} (h : d.HasFiniteSupport)
+    {hf : MeromorphicAt (∏ᶠ u, (· - u) ^ d u) x}
+    {h' : meromorphicOrderAt (∏ᶠ u, (· - u) ^ d u) x hf ≠ ⊤} :
+    meromorphicTrailingCoeffAt (∏ᶠ u, (· - u) ^ d u) x h' = ∏ᶠ u, (x - u) ^ update d x 0 u := by
   have : (fun u ↦ (· - u) ^ d u).mulSupport ⊆ h.toFinset := by
     simp [Function.FactorizedRational.mulSupport]
-  rw [finprod_eq_prod_of_mulSupport_subset _ this, meromorphicTrailingCoeffAt_prod
-      (fun _ ↦ by fun_prop), finprod_eq_prod_of_mulSupport_subset _ (mulSupport_update h)]
+  have hfin : meromorphicOrderAt (∏ u ∈ h.toFinset, (· - u) ^ d u) x
+      (MeromorphicAt.prod fun _ _ ↦ by fun_prop) ≠ ⊤ :=
+    meromorphicOrderAt_prod_ne_top _ fun u _ ↦ meromorphicOrderAt_sub_zpow_ne_top (d u)
+  rw [meromorphicTrailingCoeffAt_congr_nhdsNE
+      (.of_eq (finprod_eq_prod_of_mulSupport_subset _ this)) (h₂ := hfin),
+    meromorphicTrailingCoeffAt_prod (fun _ ↦ by fun_prop)
+      (fun u ↦ meromorphicOrderAt_sub_zpow_ne_top (d u)),
+    finprod_eq_prod_of_mulSupport_subset _ (mulSupport_update h)]
   apply Finset.prod_congr rfl
   intro y hy
-  rw [MeromorphicAt.meromorphicTrailingCoeffAt_zpow (by fun_prop)]
+  rw [MeromorphicAt.meromorphicTrailingCoeffAt_zpow (f := (· - y)) (x := x) (by fun_prop)
+    meromorphicOrderAt_id_sub_const_ne_top, meromorphicTrailingCoeffAt_id_sub_const]
   by_cases hxy : x = y
-  · rw [hxy, meromorphicTrailingCoeffAt_id_sub_const]
-    simp_all
-  · grind [meromorphicTrailingCoeffAt_id_sub_const]
+  · simp_all
+  · simp [hxy, Function.update_of_ne (Ne.symm hxy)]
 
 set_option backward.isDefEq.respectTransparency false in
 /--
@@ -223,8 +238,9 @@ Variant of `meromorphicTrailingCoeffAt_factorizedRational`: Compute the trailing
 factorized rational function associated with `d : 𝕜 → ℤ` at points outside the support of `d`.
 -/
 theorem meromorphicTrailingCoeffAt_factorizedRational_off_support {d : 𝕜 → ℤ} {x : 𝕜}
-    (h₁ : d.HasFiniteSupport) (h₂ : x ∉ d.support) :
-    meromorphicTrailingCoeffAt (∏ᶠ u, (· - u) ^ d u) x = ∏ᶠ u, (x - u) ^ d u := by
+    (h₁ : d.HasFiniteSupport) (h₂ : x ∉ d.support) {hf : MeromorphicAt (∏ᶠ u, (· - u) ^ d u) x}
+    {h' : meromorphicOrderAt (∏ᶠ u, (· - u) ^ d u) x hf ≠ ⊤} :
+    meromorphicTrailingCoeffAt (∏ᶠ u, (· - u) ^ d u) x h' = ∏ᶠ u, (x - u) ^ d u := by
   classical
   rw [meromorphicTrailingCoeffAt_factorizedRational h₁,
     finprod_eq_prod_of_mulSupport_subset _ (mulSupport_update h₁)]
@@ -245,8 +261,10 @@ Variant of `meromorphicTrailingCoeffAt_factorizedRational`: Compute log of the n
 coefficient.  The convention that `log 0 = 0` gives a closed formula easier than the one in
 `meromorphicTrailingCoeffAt_factorizedRational`.
 -/
-theorem log_norm_meromorphicTrailingCoeffAt {d : 𝕜 → ℤ} {x : 𝕜} (h : d.HasFiniteSupport) :
-    log ‖meromorphicTrailingCoeffAt (∏ᶠ u, (· - u) ^ d u) x‖ = ∑ᶠ u, (d u) * log ‖x - u‖ := by
+theorem log_norm_meromorphicTrailingCoeffAt {d : 𝕜 → ℤ} {x : 𝕜} (h : d.HasFiniteSupport)
+    {hf : MeromorphicAt (∏ᶠ u, (· - u) ^ d u) x}
+    {h' : meromorphicOrderAt (∏ᶠ u, (· - u) ^ d u) x hf ≠ ⊤} :
+    log ‖meromorphicTrailingCoeffAt (∏ᶠ u, (· - u) ^ d u) x h'‖ = ∑ᶠ u, (d u) * log ‖x - u‖ := by
   classical
   rw [meromorphicTrailingCoeffAt_factorizedRational h,
     finprod_eq_prod_of_mulSupport_subset _ (mulSupport_update h)]
@@ -389,13 +407,20 @@ coefficient of `f` in terms of `divisor f U` and `g x`.
 theorem MeromorphicOn.meromorphicTrailingCoeffAt_extract_zeros_poles
     {x : 𝕜} {f g : 𝕜 → E} {D : 𝕜 → ℤ} (hD : D.HasFiniteSupport) (h₁x : x ∈ U) (h₂x : AccPt x (𝓟 U))
     (hf : MeromorphicAt f x) (h₁g : AnalyticAt 𝕜 g x) (h₂g : g x ≠ 0)
-    (h : f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ D u) • g) :
-    meromorphicTrailingCoeffAt f x = (∏ᶠ u, (x - u) ^ Function.update D x 0 u) • g x := by
+    (h : f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ D u) • g)
+    {h' : meromorphicOrderAt f x hf ≠ ⊤} :
+    meromorphicTrailingCoeffAt f x h' = (∏ᶠ u, (x - u) ^ Function.update D x 0 u) • g x := by
   have t₀ : MeromorphicAt (∏ᶠ u, (· - u) ^ D u) x :=
     (FactorizedRational.meromorphicNFOn D U).meromorphicOn x h₁x
-  rw [meromorphicTrailingCoeffAt_congr_nhdsNE
-      (hf.eventuallyEq_nhdsNE_of_eventuallyEq_codiscreteWithin (by fun_prop) h₁x h₂x h),
-    t₀.meromorphicTrailingCoeffAt_smul h₁g.meromorphicAt,
+  have t₁ := FactorizedRational.meromorphicOrderAt_ne_top D (z := x)
+  have t₂ := h₁g.meromorphicOrderAt_ne_top_of_ne_zero h₂g
+  have t₃ : meromorphicOrderAt ((∏ᶠ u, (· - u) ^ D u) • g) x (t₀.smul h₁g.meromorphicAt) ≠ ⊤ := by
+    rw [meromorphicOrderAt_smul t₀ h₁g.meromorphicAt]
+    exact WithTop.add_ne_top.2 ⟨t₁, t₂⟩
+  rw [meromorphicTrailingCoeffAt_congr_nhdsNE (h₂ := t₃)
+      (hf.eventuallyEq_nhdsNE_of_eventuallyEq_codiscreteWithin (t₀.smul h₁g.meromorphicAt) h₁x h₂x
+        h),
+    t₀.meromorphicTrailingCoeffAt_smul h₁g.meromorphicAt t₁ t₂,
     h₁g.meromorphicTrailingCoeffAt_of_ne_zero h₂g]
   simp [meromorphicTrailingCoeffAt_factorizedRational hD]
 
@@ -406,17 +431,12 @@ norm of the trailing coefficient of `f` in terms of `divisor f U` and `g x`.
 theorem MeromorphicOn.log_norm_meromorphicTrailingCoeffAt_extract_zeros_poles
     {x : 𝕜} {f g : 𝕜 → E} {D : 𝕜 → ℤ} (hD : D.HasFiniteSupport) (h₁x : x ∈ U) (h₂x : AccPt x (𝓟 U))
     (hf : MeromorphicAt f x) (h₁g : AnalyticAt 𝕜 g x) (h₂g : g x ≠ 0)
-    (h : f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ D u) • g) :
-    log ‖meromorphicTrailingCoeffAt f x‖ = ∑ᶠ u, (D u) * log ‖x - u‖ + log ‖g x‖ := by
-  rw [meromorphicTrailingCoeffAt_congr_nhdsNE
-      (hf.eventuallyEq_nhdsNE_of_eventuallyEq_codiscreteWithin
-        (((FactorizedRational.meromorphicNFOn D U).meromorphicOn x h₁x).smul h₁g.meromorphicAt)
-          h₁x h₂x h),
-    ((FactorizedRational.meromorphicNFOn D U).meromorphicOn x h₁x).meromorphicTrailingCoeffAt_smul
-      h₁g.meromorphicAt, h₁g.meromorphicTrailingCoeffAt_of_ne_zero h₂g,
+    (h : f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ D u) • g)
+    {h' : meromorphicOrderAt f x hf ≠ ⊤} :
+    log ‖meromorphicTrailingCoeffAt f x h'‖ = ∑ᶠ u, (D u) * log ‖x - u‖ + log ‖g x‖ := by
+  rw [MeromorphicOn.meromorphicTrailingCoeffAt_extract_zeros_poles hD h₁x h₂x hf h₁g h₂g h,
+    ← meromorphicTrailingCoeffAt_factorizedRational hD
+      (h' := FactorizedRational.meromorphicOrderAt_ne_top D),
     norm_smul, log_mul, log_norm_meromorphicTrailingCoeffAt hD]
-  · simp only [ne_eq, norm_eq_zero]
-    apply MeromorphicAt.meromorphicTrailingCoeffAt_ne_zero
-      ((FactorizedRational.meromorphicNFOn D U).meromorphicOn x h₁x)
-    apply FactorizedRational.meromorphicOrderAt_ne_top
+  · exact norm_ne_zero_iff.2 (MeromorphicAt.meromorphicTrailingCoeffAt_ne_zero _ _)
   · simp_all

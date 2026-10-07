@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Analysis.Complex.JensenFormula
 public import Mathlib.Analysis.Complex.ValueDistribution.CharacteristicFunction
+public import Mathlib.Analysis.Meromorphic.RCLike
 
 /-!
 # The First Main Theorem of Value Distribution Theory
@@ -59,18 +60,19 @@ lemma characteristic_sub_characteristic_inv (h : Meromorphic f) :
     rw [← ValueDistribution.log_counting_zero_sub_logCounting_top]
 
 /--
-Helper lemma for the first part of the First Main Theorem: Away from zero, the difference between
-the characteristic functions of `f` and `f⁻¹` equals `log ‖meromorphicTrailingCoeffAt f 0‖`.
+Helper lemma for the first part of the First Main Theorem: If `f` has finite order at the origin,
+then away from zero, the difference between the characteristic functions of `f` and `f⁻¹` equals
+the logarithm of the norm of the trailing coefficient `meromorphicTrailingCoeffAt f 0`.
 -/
 lemma characteristic_sub_characteristic_inv_of_ne_zero
-    (hf : Meromorphic f) (hR : R ≠ 0) :
-    characteristic f ⊤ R - characteristic f⁻¹ ⊤ R = log ‖meromorphicTrailingCoeffAt f 0‖ := by
+    (hf : Meromorphic f) (h₀ : meromorphicOrderAt f 0 ≠ ⊤) (hR : R ≠ 0) :
+    characteristic f ⊤ R - characteristic f⁻¹ ⊤ R = log ‖meromorphicTrailingCoeffAt f 0 h₀‖ := by
   calc characteristic f ⊤ R - characteristic f⁻¹ ⊤ R
   _ = (characteristic f ⊤ - characteristic f⁻¹ ⊤) R := by simp
   _ = circleAverage (log ‖f ·‖) 0 R - (divisor f Set.univ).logCounting R := by
     rw [characteristic_sub_characteristic_inv hf, Pi.sub_apply]
-  _ = log ‖meromorphicTrailingCoeffAt f 0‖ := by
-    rw [MeromorphicOn.circleAverage_log_norm hR hf.meromorphicOn]
+  _ = log ‖meromorphicTrailingCoeffAt f 0 h₀‖ := by
+    rw [MeromorphicOn.circleAverage_log_norm hR hf.meromorphicOn h₀]
     unfold Function.locallyFinsuppWithin.logCounting
     have : (divisor f (closedBall 0 |R|)) = (divisor f Set.univ).toClosedBall R :=
       (divisor_restrict hf.meromorphicOn (by tauto)).symm
@@ -91,15 +93,16 @@ lemma characteristic_sub_characteristic_inv_at_zero (h : Meromorphic f) :
 
 /--
 First part of the First Main Theorem, quantitative version: If `f` is meromorphic on the complex
-plane, then the difference between the characteristic functions of `f` and `f⁻¹` is bounded by an
-explicit constant.
+plane and has finite order at the origin, then the difference between the characteristic functions
+of `f` and `f⁻¹` is bounded by an explicit constant.
 -/
-theorem characteristic_sub_characteristic_inv_le (hf : Meromorphic f) :
+theorem characteristic_sub_characteristic_inv_le (hf : Meromorphic f)
+    (h₀ : meromorphicOrderAt f 0 ≠ ⊤) :
     |characteristic f ⊤ R - characteristic f⁻¹ ⊤ R|
-      ≤ max |log ‖f 0‖| |log ‖meromorphicTrailingCoeffAt f 0‖| := by
+      ≤ max |log ‖f 0‖| |log ‖meromorphicTrailingCoeffAt f 0 h₀‖| := by
   by_cases h : R = 0
   · simp [h, characteristic_sub_characteristic_inv_at_zero hf]
-  · simp [characteristic_sub_characteristic_inv_of_ne_zero hf h]
+  · simp [characteristic_sub_characteristic_inv_of_ne_zero hf h₀ h]
 
 /--
 First part of the First Main Theorem, qualitative version: If `f` is meromorphic on the complex
@@ -107,9 +110,21 @@ plane, then the characteristic functions of `f` and `f⁻¹` agree asymptoticall
 function.
 -/
 theorem isBigO_characteristic_sub_characteristic_inv (h : Meromorphic f) :
-    (characteristic f ⊤ - characteristic f⁻¹ ⊤) =O[atTop] (1 : ℝ → ℝ) :=
-  isBigO_of_le' (c := max |log ‖f 0‖| |log ‖meromorphicTrailingCoeffAt f 0‖|) _
-    (fun R ↦ by simpa using characteristic_sub_characteristic_inv_le h (R := R))
+    (characteristic f ⊤ - characteristic f⁻¹ ⊤) =O[atTop] (1 : ℝ → ℝ) := by
+  by_cases h₀ : meromorphicOrderAt f 0 = ⊤
+  · -- Trivial case: `f` vanishes on a codiscrete set, and so does `f⁻¹`
+    have h₁ : f =ᶠ[codiscrete ℂ] fun _ ↦ 0 := by
+      filter_upwards [h.eventuallyEq_zero_of_meromorphicOrderAt_eq_top h₀] with z hz
+      simpa using hz
+    have h₂ : f⁻¹ =ᶠ[codiscrete ℂ] fun _ ↦ 0 := by
+      filter_upwards [h₁] with z hz
+      simp [hz]
+    refine (isBigO_zero (1 : ℝ → ℝ) atTop).congr' ?_ EventuallyEq.rfl
+    filter_upwards [eventually_ne_atTop 0] with R hR
+    rw [Pi.sub_apply, characteristic_congr_codiscrete h₁ hR, characteristic_congr_codiscrete h₂ hR,
+      sub_self]
+  · exact isBigO_of_le' (c := max |log ‖f 0‖| |log ‖meromorphicTrailingCoeffAt f 0 h₀‖|) _
+      (fun R ↦ by simpa using characteristic_sub_characteristic_inv_le h h₀ (R := R))
 
 end FirstPart
 
