@@ -615,20 +615,32 @@ If a function is meromorphic in normal form on `U`, then its divisor is non-nega
 analytic.
 -/
 theorem MeromorphicNFOn.divisor_nonneg_iff_analyticOnNhd
-    (h₁f : MeromorphicNFOn f U) :
-    0 ≤ MeromorphicOn.divisor f U ↔ AnalyticOnNhd 𝕜 f U := by
-  constructor <;> intro h x
+    (h₁f : MeromorphicNFOn f U)
+    {h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (h₁f.meromorphicOn z hz) ≠ ⊤} :
+    0 ≤ MeromorphicOn.divisor f U h ↔ AnalyticOnNhd 𝕜 f U := by
+  constructor <;> intro h' x
   · intro hx
     rw [← (h₁f hx).meromorphicOrderAt_nonneg_iff_analyticAt]
-    have := h x
-    simp only [Function.locallyFinsuppWithin.coe_zero, Pi.zero_apply, h₁f.meromorphicOn, hx,
-      MeromorphicOn.divisor_apply, untop₀_nonneg] at this
-    assumption
+    have : (0 : WithTop ℤ) ≤ (MeromorphicOn.divisor f U h x : WithTop ℤ) := by exact_mod_cast h' x
+    rwa [MeromorphicOn.coe_divisor_apply h₁f.meromorphicOn hx] at this
   · by_cases hx : x ∈ U
-    · simp only [Function.locallyFinsuppWithin.coe_zero, Pi.zero_apply, h₁f.meromorphicOn, hx,
-        MeromorphicOn.divisor_apply, untop₀_nonneg]
-      exact (h₁f hx).meromorphicOrderAt_nonneg_iff_analyticAt.2 (h x hx)
-    · simp [hx]
+    · have := (h₁f hx).meromorphicOrderAt_nonneg_iff_analyticAt.2 (h' x hx)
+      rw [← MeromorphicOn.coe_divisor_apply h₁f.meromorphicOn hx (h := h)] at this
+      simp only [Function.locallyFinsuppWithin.coe_zero, Pi.zero_apply]
+      exact_mod_cast this
+    · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hx]
+
+/--
+If a function is meromorphic in normal form on `U`, then its pole divisor vanishes iff it is
+analytic.
+-/
+theorem MeromorphicNFOn.poleDivisor_eq_zero_iff_analyticOnNhd (h₁f : MeromorphicNFOn f U) :
+    MeromorphicOn.poleDivisor f U h₁f.meromorphicOn = 0 ↔ AnalyticOnNhd 𝕜 f U := by
+  refine ⟨fun h x hx ↦ ?_, fun h ↦ MeromorphicOn.AnalyticOnNhd.poleDivisor_eq_zero h⟩
+  rw [← (h₁f hx).meromorphicOrderAt_nonneg_iff_analyticAt]
+  have h₂ : (MeromorphicOn.poleDivisor f U h₁f.meromorphicOn x : WithTop ℤ) = 0 := by simp [h]
+  rwa [MeromorphicOn.coe_poleDivisor_apply h₁f.meromorphicOn hx, neg_eq_zero,
+    min_eq_right_iff] at h₂
 
 /-- Analytic functions are meromorphic in normal form. -/
 theorem AnalyticOnNhd.meromorphicNFOn (h₁f : AnalyticOnNhd 𝕜 f U) :
@@ -643,23 +655,17 @@ If `f` is meromorphic in normal form on `U` and nowhere locally constant zero, t
 equals the support of the associated divisor.
 -/
 theorem MeromorphicNFOn.zero_set_eq_divisor_support (h₁f : MeromorphicNFOn f U)
-    (h₂f : ∀ u : U, meromorphicOrderAt f u.1 (h₁f u.2).meromorphicAt ≠ ⊤) :
-    U ∩ f ⁻¹' {0} = Function.support (MeromorphicOn.divisor f U) := by
+    (h₂f : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (h₁f.meromorphicOn z hz) ≠ ⊤) :
+    U ∩ f ⁻¹' {0} = Function.support (MeromorphicOn.divisor f U h₂f) := by
   ext u
-  constructor <;> intro hu
-  · simp_all only [ne_eq, Subtype.forall, Set.mem_inter_iff, Set.mem_preimage,
-      Set.mem_singleton_iff, Function.mem_support, h₁f.meromorphicOn, MeromorphicOn.divisor_apply,
-      WithTop.untop₀_eq_zero, (h₁f hu.1).meromorphicOrderAt_eq_zero_iff, not_true_eq_false, or_self,
-      not_false_eq_true]
-  · simp only [Function.mem_support, ne_eq] at hu
-    constructor
-    · exact (MeromorphicOn.divisor f U).supportWithinDomain hu
-    · rw [Set.mem_preimage, Set.mem_singleton_iff]
-      have := h₁f ((MeromorphicOn.divisor f U).supportWithinDomain hu)
-        |>.meromorphicOrderAt_eq_zero_iff.not
-      simp only [h₁f.meromorphicOn, (MeromorphicOn.divisor f U).supportWithinDomain hu,
-        MeromorphicOn.divisor_apply, WithTop.untop₀_eq_zero, not_or] at hu
-      simp_all [hu.1]
+  by_cases hu : u ∈ U
+  · have h₂ := MeromorphicOn.coe_divisor_apply h₁f.meromorphicOn hu (h := h₂f)
+    have h₃ := (h₁f hu).meromorphicOrderAt_eq_zero_iff
+    simp only [Set.mem_inter_iff, hu, Set.mem_preimage, Set.mem_singleton_iff, true_and,
+      Function.mem_support, ne_eq]
+    rw [← not_iff_not, not_not, ← ne_eq, ← h₃, ← h₂]
+    exact_mod_cast Iff.rfl
+  · simp [hu, Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hu]
 
 /-!
 ### Criteria to guarantee normal form
@@ -878,8 +884,15 @@ theorem meromorphicNFOn_toMeromorphicNFOn {hf : MeromorphicOn f U} :
   meromorphicOrderAt_congr _ (hf.toMeromorphicNFOn_eq_self_on_nhdsNE hx)
 
 /-- Conversion of normal form does not affect divisors. -/
-@[simp] theorem MeromorphicOn.divisor_of_toMeromorphicNFOn (hf : MeromorphicOn f U) :
-    divisor (toMeromorphicNFOn f U hf) U = divisor f U := by
-  ext z
-  by_cases hz : z ∈ U <;>
-    simp [hf, (meromorphicNFOn_toMeromorphicNFOn f U (hf := hf)).meromorphicOn, hz]
+theorem MeromorphicOn.divisor_of_toMeromorphicNFOn (hf : MeromorphicOn f U)
+    (h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤)
+    {h' : ∀ z (hz : z ∈ U), meromorphicOrderAt (toMeromorphicNFOn f U hf) z
+      ((meromorphicNFOn_toMeromorphicNFOn f U).meromorphicOn z hz) ≠ ⊤} :
+    divisor (toMeromorphicNFOn f U hf) U h' = divisor f U h :=
+  divisor_congr fun _ hz ↦ meromorphicOrderAt_toMeromorphicNFOn hf hz
+
+/-- Conversion of normal form does not affect pole divisors. -/
+@[simp] theorem MeromorphicOn.poleDivisor_of_toMeromorphicNFOn (hf : MeromorphicOn f U) :
+    poleDivisor (toMeromorphicNFOn f U hf) U (meromorphicNFOn_toMeromorphicNFOn f U).meromorphicOn =
+      poleDivisor f U hf :=
+  poleDivisor_congr fun _ hz ↦ meromorphicOrderAt_toMeromorphicNFOn hf hz

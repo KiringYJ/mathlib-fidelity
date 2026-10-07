@@ -26,7 +26,10 @@ Approximation*][MR3156076] for a detailed discussion.
 
 - This file defines the logarithmic counting function first for functions with locally finite
   support on `𝕜` and then specializes to the setting where the function with locally finite support
-  is the pole or zero-divisor of a meromorphic function.
+  is the pole divisor of a meromorphic function `f` or the positive part of the divisor of `f - a`.
+  The counting function for the poles exists for every meromorphic function.  The one for a finite
+  value `a` requires that `f` takes `a` on no punctured neighborhood, so that the divisor of `f - a`
+  is defined.
 
 - Even though value distribution theory is best developed for meromorphic functions on the complex
   plane (and therefore placed in the complex analysis section of Mathlib), we introduce the
@@ -41,6 +44,7 @@ Approximation*][MR3156076] for a detailed discussion.
 @[expose] public section
 
 open Filter Function MeromorphicOn Metric Real Set
+open scoped Topology
 
 /-!
 ## Supporting Notation
@@ -67,10 +71,12 @@ lemma toClosedBall_eval_within {r : ℝ} {z : E} (f : locallyFinsupp E ℤ)
     toClosedBall r f z = f z := by
   simp_all [toClosedBall_apply, restrict_apply]
 
-@[simp]
-lemma toClosedBall_divisor {r : ℝ} {f : ℂ → ℂ} (h : Meromorphic f) :
-    (divisor f (closedBall 0 |r|)) = (locallyFinsuppWithin.toClosedBall r) (divisor f univ) := by
-  simp_all [toClosedBall_apply]
+/-- Restricting the divisor on `univ` to a closed ball yields the divisor on the closed ball. -/
+lemma toClosedBall_divisor {r : ℝ} {f : ℂ → ℂ} {hf : MeromorphicOn f univ}
+    (h : ∀ z (hz : z ∈ univ), meromorphicOrderAt f z (hf z hz) ≠ ⊤) :
+    divisor f (closedBall 0 |r|) (hf := hf.mono_set (subset_univ _))
+      (fun z hz ↦ h z (subset_univ _ hz)) = toClosedBall r (divisor f univ h) := by
+  rw [toClosedBall_apply, divisor_restrict]
 
 lemma toClosedBall_support_subset_closedBall {E : Type*} [NormedAddCommGroup E] {r : ℝ}
     (f : locallyFinsupp E ℤ) :
@@ -338,6 +344,57 @@ end Function.locallyFinsuppWithin
 
 namespace ValueDistribution
 
+section Frequently
+
+variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] {E : Type*} {f g : 𝕜 → E} {a : WithTop E}
+
+/-- No function takes the value `⊤` on a punctured neighborhood. -/
+lemma frequently_coe_ne_top (f : 𝕜 → E) (z : 𝕜) : ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ ⊤ :=
+  .of_forall fun _ ↦ WithTop.coe_ne_top
+
+/--
+If two functions agree on a codiscrete set and the first one takes a value `a` on no punctured
+neighborhood, then neither does the second one.
+-/
+lemma frequently_coe_ne_of_eventuallyEq_codiscrete (hfg : f =ᶠ[codiscrete 𝕜] g)
+    (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a) (z : 𝕜) :
+    ∃ᶠ w in 𝓝[≠] z, (g w : WithTop E) ≠ a :=
+  (ha z).mp ((hfg.filter_mono (nhdsNE_le_codiscrete z)).mono fun _ hw h ↦ hw ▸ h)
+
+variable [NormedAddCommGroup E] [NormedSpace 𝕜 E] {a₀ : E}
+
+/--
+A function that is meromorphic at `z` takes a finite value `a₀` on no punctured neighborhood of `z`
+if and only if `f - a₀` has finite order at `z`.
+-/
+lemma frequently_coe_ne_coe_iff {z : 𝕜} (hf : MeromorphicAt f z) :
+    (∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a₀) ↔ meromorphicOrderAt (f · - a₀) z ≠ ⊤ := by
+  rw [Ne, meromorphicOrderAt_eq_top_iff, not_eventually]
+  simp [sub_eq_zero]
+
+/--
+A function that is meromorphic at `z` takes the value `0` on no punctured neighborhood of `z` if and
+only if it has finite order at `z`.
+-/
+lemma frequently_coe_ne_zero_iff {z : 𝕜} (hf : MeromorphicAt f z) :
+    (∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ 0) ↔ meromorphicOrderAt f z hf ≠ ⊤ := by
+  rw [Ne, meromorphicOrderAt_eq_top_iff, not_eventually]
+  simp
+
+/--
+If two meromorphic functions vanish on no punctured neighborhood, then neither does their product.
+-/
+lemma frequently_coe_mul_ne_zero {f₁ f₂ : 𝕜 → 𝕜} (h₁f₁ : Meromorphic f₁)
+    (h₂f₁ : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f₁ w : WithTop 𝕜) ≠ 0) (h₁f₂ : Meromorphic f₂)
+    (h₂f₂ : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f₂ w : WithTop 𝕜) ≠ 0) (z : 𝕜) :
+    ∃ᶠ w in 𝓝[≠] z, ((f₁ * f₂) w : WithTop 𝕜) ≠ 0 := by
+  rw [frequently_coe_ne_zero_iff ((h₁f₁.mul h₁f₂) z),
+    meromorphicOrderAt_mul (h₁f₁ z) (h₁f₂ z)]
+  exact WithTop.add_ne_top.2 ⟨(frequently_coe_ne_zero_iff (h₁f₁ z)).1 (h₂f₁ z),
+    (frequently_coe_ne_zero_iff (h₁f₂ z)).1 (h₂f₂ z)⟩
+
+end Frequently
+
 variable
   {𝕜 : Type*} [NontriviallyNormedField 𝕜] [ProperSpace 𝕜]
   {E : Type*} [NormedAddCommGroup E] [NormedSpace 𝕜 E]
@@ -347,114 +404,145 @@ variable (f a) in
 /--
 The logarithmic counting function of a meromorphic function.
 
-If `f : 𝕜 → E` is meromorphic and `a : WithTop E` is any value, this is a logarithmically weighted
-measure of the number of times the function `f` takes a given value `a` within the disk `∣z∣ ≤ r`,
-taking multiplicities into account.  In the special case where `a = ⊤`, it counts the poles of `f`.
+If `f : 𝕜 → E` is meromorphic and `a : WithTop E` is a value that `f` takes on no punctured
+neighborhood (`ha`), this is a logarithmically weighted measure of the number of times the function
+`f` takes the value `a` within the disk `∣z∣ ≤ r`, taking multiplicities into account.  In the
+special case where `a = ⊤`, it counts the poles of `f`; there `ha` holds for every function and is
+supplied by default.  For a finite value `a`, the condition `ha` states that `f - a` has finite
+order everywhere (`ValueDistribution.frequently_coe_ne_coe_iff`): a point near which `f` equals `a`
+identically has no finite multiplicity.
+
+Both proofs precede the radius, so the counting function for the poles is evaluated as
+`(logCounting f ⊤) r`.
 -/
-noncomputable def logCounting : ℝ → ℝ := by
-  by_cases h : a = ⊤
-  · exact (divisor f univ)⁻.logCounting
-  · exact (divisor (f · - a.untop₀) univ)⁺.logCounting
+noncomputable def logCounting (hf : Meromorphic f := by fun_prop)
+    (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a := by
+      first
+      | exact ValueDistribution.frequently_coe_ne_top _
+      | fail "the function must take the value on no punctured neighborhood; only for ⊤ is \
+          this supplied by default") :
+    ℝ → ℝ :=
+  match a, ha with
+  | none, _ => (poleDivisor f univ hf.meromorphicOn).logCounting
+  | some a₀, ha => (divisor (f · - a₀) univ (hf := (hf.fun_sub (.const a₀)).meromorphicOn)
+      fun z _ ↦ (frequently_coe_ne_coe_iff (hf z)).1 (ha z))⁺.logCounting
 
 /--
-Relation between `ValueDistribution.logCounting` and `locallyFinsuppWithin.logCounting`.
+The logarithmic counting function `logCounting f ⊤` is the logarithmic counting function associated
+with the pole divisor of `f`.
 -/
-lemma _root_.locallyFinsuppWithin.logCounting_divisor {f : ℂ → ℂ} :
-    locallyFinsuppWithin.logCounting (divisor f univ) = logCounting f 0 - logCounting f ⊤ := by
-  simp [logCounting, ← locallyFinsuppWithin.logCounting.map_sub]
+lemma logCounting_top (hf : Meromorphic f) :
+    logCounting f ⊤ hf = (poleDivisor f univ hf.meromorphicOn).logCounting :=
+  rfl
 
 /--
 For finite values `a₀`, the logarithmic counting function `logCounting f a₀` is the logarithmic
 counting function for the zeros of `f - a₀`.
 -/
-lemma logCounting_coe :
-    logCounting f a₀ = (divisor (f · - a₀) univ)⁺.logCounting := by
-  simp [logCounting]
+lemma logCounting_coe (hf : Meromorphic f) (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a₀) :
+    logCounting f a₀ hf ha = (divisor (f · - a₀) univ
+      (hf := (hf.fun_sub (.const a₀)).meromorphicOn)
+      fun z _ ↦ (frequently_coe_ne_coe_iff (hf z)).1 (ha z))⁺.logCounting :=
+  rfl
+
+/--
+The logarithmic counting function `logCounting f 0` is the logarithmic counting function associated
+with the zero divisor of `f`.
+-/
+lemma logCounting_zero (hf : Meromorphic f) (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ 0) :
+    logCounting f 0 hf ha = (divisor f univ (hf := hf.meromorphicOn)
+      fun z _ ↦ (frequently_coe_ne_zero_iff (hf z)).1 (ha z))⁺.logCounting := by
+  change (divisor (f · - 0) univ (hf := (hf.fun_sub (.const 0)).meromorphicOn) _)⁺.logCounting =
+    _
+  congr 2
+  exact divisor_congr fun z _ ↦ meromorphicOrderAt_congr _ (.of_eq (by simp))
 
 /--
 For finite values `a₀`, the logarithmic counting function `logCounting f a₀` equals the logarithmic
 counting function for the zeros of `f - a₀`.
 -/
-lemma logCounting_coe_eq_logCounting_sub_const_zero :
-    logCounting f a₀ = logCounting (f - fun _ ↦ a₀) 0 := by
-  simp [logCounting]
-
-/--
-The logarithmic counting function `logCounting f 0` is the logarithmic counting function associated
-with the zero-divisor of `f`.
--/
-lemma logCounting_zero :
-    logCounting f 0 = (divisor f univ)⁺.logCounting := by
-  simp [logCounting]
-
-/--
-The logarithmic counting function `logCounting f ⊤` is the logarithmic counting function associated
-with the pole-divisor of `f`.
--/
-lemma logCounting_top :
-    logCounting f ⊤ = (divisor f univ)⁻.logCounting := by
-  simp [logCounting]
+lemma logCounting_coe_eq_logCounting_sub_const_zero {hf : Meromorphic f}
+    {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a₀} :
+    logCounting f a₀ hf ha = logCounting (f - fun _ ↦ a₀) 0 (hf.sub (.const a₀)) fun z ↦
+      (ha z).mono fun _ hw h ↦ hw (congrArg _ (sub_eq_zero.1 (WithTop.coe_eq_zero.1 h))) := by
+  rw [logCounting_coe, logCounting_zero]
+  rfl
 
 /--
 Evaluation of the logarithmic counting function at zero yields zero.
 -/
-@[simp] lemma logCounting_eval_zero :
-    logCounting f a 0 = 0 := by
-  by_cases h : a = ⊤ <;> simp [logCounting, h]
+@[simp] lemma logCounting_eval_zero {hf : Meromorphic f}
+    {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a} :
+    logCounting f a hf ha 0 = 0 := by
+  cases a with
+  | top => simp [logCounting_top]
+  | coe a₀ => simp [logCounting_coe]
 
 /--
 The logarithmic counting function associated with the divisor of `f` is the difference between
 `logCounting f 0` and `logCounting f ⊤`.
 -/
-theorem log_counting_zero_sub_logCounting_top {f : 𝕜 → E} :
-    (divisor f univ).logCounting = logCounting f 0 - logCounting f ⊤ := by
-  rw [← posPart_sub_negPart (divisor f univ), logCounting_zero, logCounting_top, map_sub]
+theorem log_counting_zero_sub_logCounting_top (hf : Meromorphic f)
+    (h : ∀ z (hz : z ∈ univ), meromorphicOrderAt f z (hf.meromorphicOn z hz) ≠ ⊤) :
+    (divisor f univ h).logCounting =
+      logCounting f 0 hf (fun z ↦ (frequently_coe_ne_zero_iff (hf z)).2 (h z (mem_univ z))) -
+        logCounting f ⊤ hf := by
+  rw [logCounting_zero, logCounting_top, poleDivisor_eq_negPart_divisor h, ← map_sub,
+    posPart_sub_negPart]
 
 /--
 The logarithmic counting function of a constant function is zero.
 -/
-@[simp] theorem logCounting_const {c : E} {e : WithTop E} :
-    logCounting (fun _ ↦ c : 𝕜 → E) e = 0 := by
-  simp [logCounting]
+@[simp] theorem logCounting_const {c : E} {e : WithTop E} {hf : Meromorphic fun _ : 𝕜 ↦ c}
+    {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, ((fun _ : 𝕜 ↦ c) w : WithTop E) ≠ e} :
+    logCounting (fun _ ↦ c) e hf ha = 0 := by
+  cases e with
+  | top => rw [logCounting_top, AnalyticOnNhd.poleDivisor_eq_zero analyticOnNhd_const, map_zero]
+  | coe e => rw [logCounting_coe, divisor_const, posPart_zero, map_zero]
 
 /--
 The logarithmic counting function of the constant function zero is zero.
 -/
-@[simp] theorem logCounting_const_zero {e : WithTop E} :
-    logCounting (0 : 𝕜 → E) e = 0 := logCounting_const
+@[simp] theorem logCounting_const_zero {e : WithTop E} {hf : Meromorphic (0 : 𝕜 → E)}
+    {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, ((0 : 𝕜 → E) w : WithTop E) ≠ e} :
+    logCounting (0 : 𝕜 → E) e hf ha = 0 := logCounting_const
 
 /--
 The logarithmic counting function is even.
 -/
-theorem logCounting_even {f : 𝕜 → E} {e : WithTop E} :
-    (logCounting f e).Even := by
-  intro r
-  by_cases h : e = ⊤ <;> simp [logCounting, h, locallyFinsuppWithin.logCounting_even _ r]
+theorem logCounting_even {e : WithTop E} {hf : Meromorphic f}
+    {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ e} :
+    (logCounting f e hf ha).Even := by
+  cases e with
+  | top => exact locallyFinsuppWithin.logCounting_even _
+  | coe e => exact locallyFinsuppWithin.logCounting_even _
 
 /--
 The logarithmic counting function is monotonous.
 -/
-theorem logCounting_monotoneOn {f : 𝕜 → E} {e : WithTop E} :
-    MonotoneOn (logCounting f e) (Ioi 0) := by
-  by_cases h : e = ⊤ <;>
-    simpa [logCounting, h] using locallyFinsuppWithin.logCounting_mono (by positivity)
+theorem logCounting_monotoneOn {e : WithTop E} {hf : Meromorphic f}
+    {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ e} :
+    MonotoneOn (logCounting f e hf ha) (Ioi 0) := by
+  cases e with
+  | top => exact locallyFinsuppWithin.logCounting_mono (poleDivisor_nonneg _)
+  | coe e => exact locallyFinsuppWithin.logCounting_mono (posPart_nonneg _)
 
 /--
 For `1 ≤ r`, the logarithmic counting function is non-negative.
 -/
-theorem logCounting_nonneg {r : ℝ} {f : 𝕜 → E} {e : WithTop E} (hr : 1 ≤ r) :
-    0 ≤ logCounting f e r := by
-  by_cases h : e = ⊤
-  · simp [logCounting, h, locallyFinsuppWithin.logCounting_nonneg
-      (negPart_nonneg (divisor f univ)) hr]
-  · simp [logCounting, h, locallyFinsuppWithin.logCounting_nonneg
-      (posPart_nonneg (divisor (f · - e.untop₀) univ)) hr]
+theorem logCounting_nonneg {r : ℝ} {e : WithTop E} {hf : Meromorphic f}
+    {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ e} (hr : 1 ≤ r) :
+    0 ≤ logCounting f e hf ha r := by
+  cases e with
+  | top => exact locallyFinsuppWithin.logCounting_nonneg (poleDivisor_nonneg _) hr
+  | coe e => exact locallyFinsuppWithin.logCounting_nonneg (posPart_nonneg _) hr
 
 /--
 The logarithmic counting function is asymptotically non-negative.
 -/
-theorem logCounting_eventually_nonneg {f : 𝕜 → E} {e : WithTop E} :
-    0 ≤ᶠ[atTop] logCounting f e := by
+theorem logCounting_eventually_nonneg {e : WithTop E} {hf : Meromorphic f}
+    {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ e} :
+    0 ≤ᶠ[atTop] logCounting f e hf ha := by
   filter_upwards [eventually_ge_atTop 1] using fun _ hr ↦ by simp [logCounting_nonneg hr]
 
 /-!
@@ -465,14 +553,15 @@ theorem logCounting_eventually_nonneg {f : 𝕜 → E} {e : WithTop E} :
 If two functions differ only on a discrete set, then their logarithmic counting
 functions agree.
 -/
-theorem logCounting_congr_codiscrete [NormedSpace ℂ E] {f g : ℂ → E} (hfg : f =ᶠ[codiscrete ℂ] g) :
-    logCounting f = logCounting g := by
-  ext a : 1
-  by_cases h : a = ⊤
-  · simp only [logCounting, h, ↓reduceDIte]
-    congr 2
-    exact divisor_congr_codiscreteWithin hfg isOpen_univ
-  · simp only [logCounting, h, ↓reduceDIte]
+theorem logCounting_congr_codiscrete [NormedSpace ℂ E] {f g : ℂ → E} (hfg : f =ᶠ[codiscrete ℂ] g)
+    {e : WithTop E} {hf : Meromorphic f} {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ e} :
+    logCounting f e hf ha = logCounting g e (hf.congr_codiscrete hfg)
+      (frequently_coe_ne_of_eventuallyEq_codiscrete hfg ha) := by
+  cases e with
+  | top =>
+    rw [logCounting_top, logCounting_top, poleDivisor_congr_codiscreteWithin hfg isOpen_univ]
+  | coe e =>
+    rw [logCounting_coe, logCounting_coe]
     congr 2
     apply divisor_congr_codiscreteWithin _ isOpen_univ
     filter_upwards [hfg] using by simp
@@ -480,34 +569,44 @@ theorem logCounting_congr_codiscrete [NormedSpace ℂ E] {f g : ℂ → E} (hfg 
 /--
 Relation between the logarithmic counting functions of `f` and of `f⁻¹`.
 -/
-@[simp] theorem logCounting_inv {f : 𝕜 → 𝕜} :
-     logCounting f⁻¹ ⊤ = logCounting f 0 := by
-  simp [logCounting_zero, logCounting_top]
+theorem logCounting_inv {f : 𝕜 → 𝕜} (hf : Meromorphic f)
+    (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop 𝕜) ≠ 0) {hf' : Meromorphic f⁻¹} :
+    logCounting f⁻¹ ⊤ hf' = logCounting f 0 hf ha := by
+  have h z (hz : z ∈ univ) : meromorphicOrderAt f z (hf.meromorphicOn z hz) ≠ ⊤ :=
+    (frequently_coe_ne_zero_iff (hf z)).1 (ha z)
+  have h' z (hz : z ∈ univ) : meromorphicOrderAt f⁻¹ z (hf'.meromorphicOn z hz) ≠ ⊤ :=
+    (meromorphicOrderAt_inv (hf z)).trans_ne (by simpa using h z hz)
+  rw [logCounting_top, logCounting_zero, poleDivisor_eq_negPart_divisor h', divisor_inv h,
+    negPart_neg]
 
 /--
 Adding an analytic function does not change the logarithmic counting function for the poles.
 -/
-theorem logCounting_add_analyticOn (hf : Meromorphic f) (hg : AnalyticOn 𝕜 g univ) :
-    logCounting (f + g) ⊤ = logCounting f ⊤ := by
-  simp only [logCounting, ↓reduceDIte]
-  rw [hf.meromorphicOn.negPart_divisor_add_of_analyticNhdOn_right
+theorem logCounting_add_analyticOn (hf : Meromorphic f) (hg : AnalyticOn 𝕜 g univ)
+    {hfg : Meromorphic (f + g)} :
+    logCounting (f + g) ⊤ hfg = logCounting f ⊤ hf := by
+  rw [logCounting_top, logCounting_top, poleDivisor_add_of_analyticOnNhd_right hf.meromorphicOn
     (isOpen_univ.analyticOn_iff_analyticOnNhd.1 hg)]
 
 /--
 Special case of `logCounting_add_analyticOn`: Adding a constant does not change the logarithmic
 counting function for the poles.
 -/
-@[simp] theorem logCounting_add_const (hf : Meromorphic f) :
-    logCounting (f + fun _ ↦ a₀) ⊤ = logCounting f ⊤ := by
-  apply logCounting_add_analyticOn hf analyticOn_const
+@[simp] theorem logCounting_add_const (hf : Meromorphic f) {hf' : Meromorphic (f + fun _ ↦ a₀)} :
+    logCounting (f + fun _ ↦ a₀) ⊤ hf' = logCounting f ⊤ hf :=
+  logCounting_add_analyticOn hf analyticOn_const
 
 /--
 Special case of `logCounting_add_analyticOn`: Subtracting a constant does not change the logarithmic
 counting function for the poles.
 -/
-@[simp] theorem logCounting_sub_const (hf : Meromorphic f) :
-    logCounting (f - fun _ ↦ a₀) ⊤ = logCounting f ⊤ := by
-  simpa [sub_eq_add_neg] using! logCounting_add_const hf
+@[simp] theorem logCounting_sub_const (hf : Meromorphic f) {hf' : Meromorphic (f - fun _ ↦ a₀)} :
+    logCounting (f - fun _ ↦ a₀) ⊤ hf' = logCounting f ⊤ hf := by
+  rw [logCounting_top, logCounting_top, ← poleDivisor_add_of_analyticOnNhd_right hf.meromorphicOn
+    (analyticOnNhd_const (v := -a₀))]
+  congr 1
+  exact poleDivisor_congr fun z _ ↦
+    meromorphicOrderAt_congr _ (.of_eq (by ext; simp [sub_eq_add_neg]))
 
 /-!
 ## Behaviour under Arithmetic Operations
@@ -519,11 +618,12 @@ sum of the logarithmic counting functions for the poles of `f` and `g`, respecti
 -/
 theorem logCounting_add_top_le {f₁ f₂ : 𝕜 → E} {r : ℝ} (h₁f₁ : Meromorphic f₁)
     (h₁f₂ : Meromorphic f₂) (hr : 1 ≤ r) :
-    logCounting (f₁ + f₂) ⊤ r ≤ (logCounting f₁ ⊤ + logCounting f₂ ⊤) r := by
-  simp only [logCounting, ↓reduceDIte]
-  rw [← locallyFinsuppWithin.logCounting.map_add]
+    (logCounting (f₁ + f₂) ⊤ (h₁f₁.add h₁f₂)) r ≤
+      (logCounting f₁ ⊤ h₁f₁ + logCounting f₂ ⊤ h₁f₂) r := by
+  rw [logCounting_top, logCounting_top, logCounting_top,
+    ← locallyFinsuppWithin.logCounting.map_add]
   exact locallyFinsuppWithin.logCounting_le
-    (negPart_divisor_add_le_add h₁f₁.meromorphicOn h₁f₂.meromorphicOn) hr
+    (poleDivisor_add_le_add h₁f₁.meromorphicOn h₁f₂.meromorphicOn) hr
 
 /--
 Asymptotically, the logarithmic counting function for the poles of `f + g` is less than or equal to
@@ -531,8 +631,28 @@ the sum of the logarithmic counting functions for the poles of `f` and `g`, resp
 -/
 theorem logCounting_add_top_eventuallyLE {f₁ f₂ : 𝕜 → E} (h₁f₁ : Meromorphic f₁)
     (h₁f₂ : Meromorphic f₂) :
-    logCounting (f₁ + f₂) ⊤ ≤ᶠ[atTop] logCounting f₁ ⊤ + logCounting f₂ ⊤ := by
+    logCounting (f₁ + f₂) ⊤ (h₁f₁.add h₁f₂) ≤ᶠ[atTop]
+      logCounting f₁ ⊤ h₁f₁ + logCounting f₂ ⊤ h₁f₂ := by
   filter_upwards [eventually_ge_atTop 1] using fun _ hr ↦ logCounting_add_top_le h₁f₁ h₁f₂ hr
+
+/-- The case of `logCounting_sum_top_le` where every function of the family is meromorphic. -/
+private theorem logCounting_sum_top_le_of_forall {α : Type*} (s : Finset α) (f : α → 𝕜 → E)
+    {r : ℝ} (h₁f : ∀ a, Meromorphic (f a)) (hr : 1 ≤ r) :
+    (logCounting (∑ a ∈ s, f a) ⊤ (Meromorphic.sum fun a _ ↦ h₁f a)) r ≤
+      ∑ a ∈ s, (logCounting (f a) ⊤ (h₁f a)) r := by
+  classical
+  induction s using Finset.induction with
+  | empty => simp
+  | insert a s ha hs =>
+    calc (logCounting (∑ x ∈ insert a s, f x) ⊤ (Meromorphic.sum fun a _ ↦ h₁f a)) r
+      _ = (logCounting (f a + ∑ x ∈ s, f x) ⊤ ((h₁f a).add (Meromorphic.sum fun a _ ↦ h₁f a))) r :=
+        by simp only [Finset.sum_insert ha]
+      _ ≤ (logCounting (f a) ⊤ (h₁f a) +
+            logCounting (∑ x ∈ s, f x) ⊤ (Meromorphic.sum fun a _ ↦ h₁f a)) r :=
+        logCounting_add_top_le (h₁f a) (Meromorphic.sum fun a _ ↦ h₁f a) hr
+      _ ≤ (logCounting (f a) ⊤ (h₁f a)) r + ∑ x ∈ s, (logCounting (f x) ⊤ (h₁f x)) r :=
+        add_le_add le_rfl hs
+      _ = ∑ x ∈ insert a s, (logCounting (f x) ⊤ (h₁f x)) r := by rw [Finset.sum_insert ha]
 
 /--
 For `1 ≤ r`, the logarithmic counting function for the poles of a sum `∑ a ∈ s, f a` is less than or
@@ -540,19 +660,10 @@ equal to the sum of the logarithmic counting functions for the poles of the `f �
 -/
 theorem logCounting_sum_top_le {α : Type*} (s : Finset α) (f : α → 𝕜 → E) {r : ℝ}
     (h₁f : ∀ a ∈ s, Meromorphic (f a)) (hr : 1 ≤ r) :
-    logCounting (∑ a ∈ s, f a) ⊤ r ≤ (∑ a ∈ s, (logCounting (f a) ⊤)) r := by
-  classical
-  induction s using Finset.induction with
-  | empty =>
-    simp
-  | insert a s ha hs =>
-    rw [Finset.sum_insert ha, Finset.sum_insert ha]
-    calc logCounting (f a + ∑ x ∈ s, f x) ⊤ r
-      _ ≤ (logCounting (f a) ⊤ + logCounting (∑ x ∈ s, f x) ⊤) r :=
-        logCounting_add_top_le (h₁f a (Finset.mem_insert_self a s))
-          (Meromorphic.sum (fun σ hσ ↦ h₁f σ (Finset.mem_insert_of_mem hσ))) hr
-      _ ≤ (logCounting (f a) ⊤ + ∑ x ∈ s, logCounting (f x) ⊤) r :=
-        add_le_add (by trivial) (hs (fun a ha ↦ h₁f a (Finset.mem_insert_of_mem ha)))
+    (logCounting (∑ a ∈ s, f a) ⊤ (Meromorphic.sum h₁f)) r ≤
+      ∑ a ∈ s.attach, (logCounting (f a) ⊤ (h₁f a a.2)) r := by
+  have := logCounting_sum_top_le_of_forall s.attach (fun a : s ↦ f a) (fun a ↦ h₁f a a.2) hr
+  simpa [Finset.sum_attach] using! this
 
 /--
 Asymptotically, the logarithmic counting function for the poles of a sum `∑ a ∈ s, f a` is less than
@@ -560,8 +671,10 @@ or equal to the sum of the logarithmic counting functions for the poles of the `
 -/
 theorem logCounting_sum_top_eventuallyLE {α : Type*} (s : Finset α) (f : α → 𝕜 → E)
     (h₁f : ∀ a ∈ s, Meromorphic (f a)) :
-    logCounting (∑ a ∈ s, f a) ⊤ ≤ᶠ[atTop] ∑ a ∈ s, (logCounting (f a) ⊤) := by
-  filter_upwards [eventually_ge_atTop 1] using fun _ hr ↦ logCounting_sum_top_le s f h₁f hr
+    logCounting (∑ a ∈ s, f a) ⊤ (Meromorphic.sum h₁f) ≤ᶠ[atTop]
+      ∑ a ∈ s.attach, logCounting (f a) ⊤ (h₁f a a.2) := by
+  filter_upwards [eventually_ge_atTop 1] with r hr
+  simpa using logCounting_sum_top_le s f h₁f hr
 
 /--
 For `1 ≤ r`, the logarithmic counting function for the zeros of `f * g` is less than or equal to the
@@ -580,23 +693,28 @@ Then,
 But `log r` is negative for small `r`.
 -/
 theorem logCounting_mul_zero_le {f₁ f₂ : 𝕜 → 𝕜} {r : ℝ} (hr : 1 ≤ r)
-    (h₁f₁ : Meromorphic f₁) (h₂f₁ : ∀ z, meromorphicOrderAt f₁ z ≠ ⊤)
-    (h₁f₂ : Meromorphic f₂) (h₂f₂ : ∀ z, meromorphicOrderAt f₂ z ≠ ⊤) :
-    logCounting (f₁ * f₂) 0 r ≤ (logCounting f₁ 0 + logCounting f₂ 0) r := by
-  simp only [logCounting, WithTop.zero_ne_top, reduceDIte, WithTop.untop₀_zero, sub_zero]
-  rw [divisor_mul h₁f₁.meromorphicOn h₁f₂.meromorphicOn (fun z _ ↦ h₂f₁ z) (fun z _ ↦ h₂f₂ z),
+    (h₁f₁ : Meromorphic f₁) (h₂f₁ : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f₁ w : WithTop 𝕜) ≠ 0)
+    (h₁f₂ : Meromorphic f₂) (h₂f₂ : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f₂ w : WithTop 𝕜) ≠ 0)
+    {h : ∀ z, ∃ᶠ w in 𝓝[≠] z, ((f₁ * f₂) w : WithTop 𝕜) ≠ 0} :
+    logCounting (f₁ * f₂) 0 (h₁f₁.mul h₁f₂) h r ≤
+      (logCounting f₁ 0 h₁f₁ h₂f₁ + logCounting f₂ 0 h₁f₂ h₂f₂) r := by
+  rw [logCounting_zero, logCounting_zero, logCounting_zero,
+    divisor_mul h₁f₁.meromorphicOn h₁f₂.meromorphicOn
+      (fun z _ ↦ (frequently_coe_ne_zero_iff (h₁f₁ z)).1 (h₂f₁ z))
+      (fun z _ ↦ (frequently_coe_ne_zero_iff (h₁f₂ z)).1 (h₂f₂ z)),
     ← locallyFinsuppWithin.logCounting.map_add]
-  apply locallyFinsuppWithin.logCounting_le _ hr
-  apply locallyFinsuppWithin.posPart_add
+  exact locallyFinsuppWithin.logCounting_le (locallyFinsuppWithin.posPart_add _ _) hr
 
 /--
 Asymptotically, the logarithmic counting function for the zeros of `f * g` is less than or equal to
 the sum of the logarithmic counting functions for the zeros of `f` and `g`, respectively.
 -/
 theorem logCounting_mul_zero_eventuallyLE {f₁ f₂ : 𝕜 → 𝕜}
-    (h₁f₁ : Meromorphic f₁) (h₂f₁ : ∀ z, meromorphicOrderAt f₁ z ≠ ⊤)
-    (h₁f₂ : Meromorphic f₂) (h₂f₂ : ∀ z, meromorphicOrderAt f₂ z ≠ ⊤) :
-    logCounting (f₁ * f₂) 0 ≤ᶠ[atTop] logCounting f₁ 0 + logCounting f₂ 0 := by
+    (h₁f₁ : Meromorphic f₁) (h₂f₁ : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f₁ w : WithTop 𝕜) ≠ 0)
+    (h₁f₂ : Meromorphic f₂) (h₂f₂ : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f₂ w : WithTop 𝕜) ≠ 0)
+    {h : ∀ z, ∃ᶠ w in 𝓝[≠] z, ((f₁ * f₂) w : WithTop 𝕜) ≠ 0} :
+    logCounting (f₁ * f₂) 0 (h₁f₁.mul h₁f₂) h ≤ᶠ[atTop]
+      logCounting f₁ 0 h₁f₁ h₂f₁ + logCounting f₂ 0 h₁f₂ h₂f₂ := by
   filter_upwards [eventually_ge_atTop 1] using
     fun _ hr ↦ logCounting_mul_zero_le hr h₁f₁ h₂f₁ h₁f₂ h₂f₂
 
@@ -605,41 +723,45 @@ For `1 ≤ r`, the logarithmic counting function for the poles of `f * g` is les
 sum of the logarithmic counting functions for the poles of `f` and `g`, respectively.
 -/
 theorem logCounting_mul_top_le {f₁ f₂ : 𝕜 → 𝕜} {r : ℝ} (hr : 1 ≤ r)
-    (h₁f₁ : Meromorphic f₁) (h₂f₁ : ∀ z, meromorphicOrderAt f₁ z ≠ ⊤)
-    (h₁f₂ : Meromorphic f₂) (h₂f₂ : ∀ z, meromorphicOrderAt f₂ z ≠ ⊤) :
-    logCounting (f₁ * f₂) ⊤ r ≤ (logCounting f₁ ⊤ + logCounting f₂ ⊤) r := by
-  simp only [logCounting, reduceDIte]
-  rw [divisor_mul h₁f₁.meromorphicOn h₁f₂.meromorphicOn (fun z _ ↦ h₂f₁ z) (fun z _ ↦ h₂f₂ z),
+    (h₁f₁ : Meromorphic f₁) (h₁f₂ : Meromorphic f₂) :
+    (logCounting (f₁ * f₂) ⊤ (h₁f₁.mul h₁f₂)) r ≤
+      (logCounting f₁ ⊤ h₁f₁ + logCounting f₂ ⊤ h₁f₂) r := by
+  rw [logCounting_top, logCounting_top, logCounting_top,
     ← locallyFinsuppWithin.logCounting.map_add]
-  apply locallyFinsuppWithin.logCounting_le _ hr
-  apply locallyFinsuppWithin.negPart_add
+  exact locallyFinsuppWithin.logCounting_le
+    (poleDivisor_mul_le_add h₁f₁.meromorphicOn h₁f₂.meromorphicOn) hr
 
 /--
-Asymptotically, the logarithmic counting function for the zeros of `f * g` is less than or equal to
-the sum of the logarithmic counting functions for the zeros of `f` and `g`, respectively.
+Asymptotically, the logarithmic counting function for the poles of `f * g` is less than or equal to
+the sum of the logarithmic counting functions for the poles of `f` and `g`, respectively.
 -/
 theorem logCounting_mul_top_eventuallyLE {f₁ f₂ : 𝕜 → 𝕜}
-    (h₁f₁ : Meromorphic f₁) (h₂f₁ : ∀ z, meromorphicOrderAt f₁ z ≠ ⊤)
-    (h₁f₂ : Meromorphic f₂) (h₂f₂ : ∀ z, meromorphicOrderAt f₂ z ≠ ⊤) :
-    logCounting (f₁ * f₂) ⊤ ≤ᶠ[atTop] logCounting f₁ ⊤ + logCounting f₂ ⊤ := by
+    (h₁f₁ : Meromorphic f₁) (h₁f₂ : Meromorphic f₂) :
+    logCounting (f₁ * f₂) ⊤ (h₁f₁.mul h₁f₂) ≤ᶠ[atTop]
+      logCounting f₁ ⊤ h₁f₁ + logCounting f₂ ⊤ h₁f₂ := by
   filter_upwards [eventually_ge_atTop 1] using
-    fun _ hr ↦ logCounting_mul_top_le hr h₁f₁ h₂f₁ h₁f₂ h₂f₂
+    fun _ hr ↦ logCounting_mul_top_le hr h₁f₁ h₁f₂
 
 /--
 For natural numbers `n`, the logarithmic counting function for the zeros of `f ^ n` equals `n`
 times the logarithmic counting function for the zeros of `f`.
 -/
-@[simp] theorem logCounting_pow_zero {f : 𝕜 → 𝕜} {n : ℕ} (hf : Meromorphic f) :
-    logCounting (f ^ n) 0 = n • logCounting f 0 := by
-  simp [logCounting, divisor_fun_pow hf.meromorphicOn n]
+theorem logCounting_pow_zero {f : 𝕜 → 𝕜} {n : ℕ} (hf : Meromorphic f)
+    (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop 𝕜) ≠ 0) {hf' : Meromorphic (f ^ n)}
+    {ha' : ∀ z, ∃ᶠ w in 𝓝[≠] z, ((f ^ n) w : WithTop 𝕜) ≠ 0} :
+    logCounting (f ^ n) 0 hf' ha' = n • logCounting f 0 hf ha := by
+  rw [logCounting_zero, logCounting_zero,
+    divisor_pow (fun z _ ↦ (frequently_coe_ne_zero_iff (hf z)).1 (ha z)) n]
+  simp
 
 /--
 For natural numbers `n`, the logarithmic counting function for the poles of `f ^ n` equals `n` times
 the logarithmic counting function for the poles of `f`.
 -/
-@[simp] theorem logCounting_pow_top {f : 𝕜 → 𝕜} {n : ℕ} (hf : Meromorphic f) :
-    logCounting (f ^ n) ⊤ = n • logCounting f ⊤ := by
-  simp [logCounting, divisor_pow hf.meromorphicOn n]
+@[simp] theorem logCounting_pow_top {f : 𝕜 → 𝕜} {n : ℕ} (hf : Meromorphic f)
+    {hf' : Meromorphic (f ^ n)} :
+    logCounting (f ^ n) ⊤ hf' = n • logCounting f ⊤ hf := by
+  rw [logCounting_top, logCounting_top, poleDivisor_pow hf.meromorphicOn n, map_nsmul]
 
 end ValueDistribution
 
@@ -652,30 +774,32 @@ averages.
 
 /--
 Over the complex numbers, present the logarithmic counting function attached to the divisor of a
-meromorphic function `f` of finite order at the origin as a circle average over `log ‖f ·‖`.
+meromorphic function `f` of finite order everywhere as a circle average over `log ‖f ·‖`.
 
 This is a reformulation of Jensen's formula of complex analysis. See
 `MeromorphicOn.circleAverage_log_norm` for Jensen's formula in the original context.
 -/
 theorem Function.locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const {R : ℝ}
-    {f : ℂ → ℂ} (h : Meromorphic f) (h₀ : meromorphicOrderAt f 0 ≠ ⊤) (hR : R ≠ 0) :
-    logCounting (divisor f univ) R =
-      circleAverage (log ‖f ·‖) 0 R - log ‖meromorphicTrailingCoeffAt f 0 h₀‖ := by
-  have h₁f : MeromorphicOn f (closedBall 0 |R|) := by tauto
-  simp only [MeromorphicOn.circleAverage_log_norm hR h₁f h₀, logCounting, AddMonoidHom.coe_mk,
-    ZeroHom.coe_mk, zero_sub, norm_neg, add_sub_cancel_right]
+    {f : ℂ → ℂ} (h : Meromorphic f)
+    (h₀ : ∀ z (hz : z ∈ univ), meromorphicOrderAt f z (h.meromorphicOn z hz) ≠ ⊤) (hR : R ≠ 0) :
+    logCounting (divisor f univ h₀) R =
+      circleAverage (log ‖f ·‖) 0 R - log ‖meromorphicTrailingCoeffAt f 0 (h₀ 0 (mem_univ 0))‖ := by
+  rw [MeromorphicOn.circleAverage_log_norm hR h.meromorphicOn fun z _ ↦ h₀ z (mem_univ z)]
+  simp only [logCounting, AddMonoidHom.coe_mk, ZeroHom.coe_mk, zero_sub, norm_neg,
+    add_sub_cancel_right]
   congr 1
-  · simp_all
-  · rw [divisor_apply, divisor_apply]
-    all_goals aesop
+  · simp [toClosedBall_apply]
+  · rw [divisor_apply _ (mem_univ 0), divisor_apply _ (mem_closedBall_self (abs_nonneg R))]
 
 /--
 Variant of `locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const`, using
 `ValueDistribution.logCounting` instead of `locallyFinsuppWithin.logCounting`.
 -/
 theorem ValueDistribution.logCounting_zero_sub_logCounting_top_eq_circleAverage_sub_const {R : ℝ}
-    {f : ℂ → ℂ} (h : Meromorphic f) (h₀ : meromorphicOrderAt f 0 ≠ ⊤) (hR : R ≠ 0) :
-    (logCounting f 0 - logCounting f ⊤) R =
-      circleAverage (log ‖f ·‖) 0 R - log ‖meromorphicTrailingCoeffAt f 0 h₀‖ := by
-  rw [← locallyFinsuppWithin.logCounting_divisor]
-  exact locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const h h₀ hR
+    {f : ℂ → ℂ} (h : Meromorphic f) (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop ℂ) ≠ 0)
+    (hR : R ≠ 0) :
+    (logCounting f 0 h ha - logCounting f ⊤ h) R = circleAverage (log ‖f ·‖) 0 R -
+      log ‖meromorphicTrailingCoeffAt f 0 ((frequently_coe_ne_zero_iff (h 0)).1 (ha 0))‖ := by
+  rw [← log_counting_zero_sub_logCounting_top h
+    fun z _ ↦ (frequently_coe_ne_zero_iff (h z)).1 (ha z)]
+  exact locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const h _ hR

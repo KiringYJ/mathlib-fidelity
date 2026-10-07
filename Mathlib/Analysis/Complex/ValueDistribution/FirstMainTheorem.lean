@@ -32,6 +32,7 @@ public section
 namespace ValueDistribution
 
 open Asymptotics Filter Function.locallyFinsuppWithin MeromorphicOn Metric Real
+open scoped Topology
 
 section FirstPart
 
@@ -42,22 +43,26 @@ variable {f : ℂ → ℂ} {R : ℝ}
 -/
 
 /--
-Helper lemma for the first part of the First Main Theorem: Given a meromorphic function `f`, compute
-difference between the characteristic functions of `f` and of its inverse.
+Helper lemma for the first part of the First Main Theorem: Given a meromorphic function `f` of
+finite order everywhere, compute difference between the characteristic functions of `f` and of its
+inverse.
 -/
-lemma characteristic_sub_characteristic_inv (h : Meromorphic f) :
-    characteristic f ⊤ - characteristic f⁻¹ ⊤ =
-      circleAverage (log ‖f ·‖) 0 - (divisor f Set.univ).logCounting := by
-  calc characteristic f ⊤ - characteristic f⁻¹ ⊤
-  _ = proximity f ⊤ - proximity f⁻¹ ⊤ - (logCounting f⁻¹ ⊤ - logCounting f ⊤) := by
+lemma characteristic_sub_characteristic_inv (h : Meromorphic f)
+    (h₀ : ∀ z (hz : z ∈ Set.univ), meromorphicOrderAt f z (h.meromorphicOn z hz) ≠ ⊤) :
+    characteristic f ⊤ h - characteristic f⁻¹ ⊤ h.inv =
+      circleAverage (log ‖f ·‖) 0 - (divisor f Set.univ h₀).logCounting := by
+  have ha z : ∃ᶠ w in 𝓝[≠] z, (f w : WithTop ℂ) ≠ 0 :=
+    (frequently_coe_ne_zero_iff (h z)).2 (h₀ z (Set.mem_univ z))
+  calc characteristic f ⊤ h - characteristic f⁻¹ ⊤ h.inv
+  _ = proximity f ⊤ - proximity f⁻¹ ⊤ - (logCounting f⁻¹ ⊤ h.inv - logCounting f ⊤ h) := by
     unfold characteristic
     ring
-  _ = circleAverage (log ‖f ·‖) 0 - (logCounting f⁻¹ ⊤ - logCounting f ⊤) := by
+  _ = circleAverage (log ‖f ·‖) 0 - (logCounting f⁻¹ ⊤ h.inv - logCounting f ⊤ h) := by
     rw [proximity_sub_proximity_inv_eq_circleAverage h]
-  _ = circleAverage (log ‖f ·‖) 0 - (logCounting f 0 - logCounting f ⊤) := by
-    rw [logCounting_inv]
-  _ = circleAverage (log ‖f ·‖) 0 - (divisor f Set.univ).logCounting := by
-    rw [← ValueDistribution.log_counting_zero_sub_logCounting_top]
+  _ = circleAverage (log ‖f ·‖) 0 - (logCounting f 0 h ha - logCounting f ⊤ h) := by
+    rw [logCounting_inv h ha]
+  _ = circleAverage (log ‖f ·‖) 0 - (divisor f Set.univ h₀).logCounting := by
+    rw [log_counting_zero_sub_logCounting_top h h₀]
 
 /--
 Helper lemma for the first part of the First Main Theorem: If `f` has finite order at the origin,
@@ -66,30 +71,26 @@ the logarithm of the norm of the trailing coefficient `meromorphicTrailingCoeffA
 -/
 lemma characteristic_sub_characteristic_inv_of_ne_zero
     (hf : Meromorphic f) (h₀ : meromorphicOrderAt f 0 ≠ ⊤) (hR : R ≠ 0) :
-    characteristic f ⊤ R - characteristic f⁻¹ ⊤ R = log ‖meromorphicTrailingCoeffAt f 0 h₀‖ := by
-  calc characteristic f ⊤ R - characteristic f⁻¹ ⊤ R
-  _ = (characteristic f ⊤ - characteristic f⁻¹ ⊤) R := by simp
-  _ = circleAverage (log ‖f ·‖) 0 R - (divisor f Set.univ).logCounting R := by
-    rw [characteristic_sub_characteristic_inv hf, Pi.sub_apply]
+    (characteristic f ⊤ hf) R - (characteristic f⁻¹ ⊤ hf.inv) R =
+      log ‖meromorphicTrailingCoeffAt f 0 h₀‖ := by
+  have h₀' : ∀ z (hz : z ∈ Set.univ), meromorphicOrderAt f z (hf.meromorphicOn z hz) ≠ ⊤ :=
+    fun z _ ↦ hf.exists_meromorphicOrderAt_ne_top_iff_forall.1 ⟨0, h₀⟩ z
+  calc (characteristic f ⊤ hf) R - (characteristic f⁻¹ ⊤ hf.inv) R
+  _ = (characteristic f ⊤ hf - characteristic f⁻¹ ⊤ hf.inv) R := rfl
+  _ = circleAverage (log ‖f ·‖) 0 R - (divisor f Set.univ h₀').logCounting R := by
+    rw [characteristic_sub_characteristic_inv hf h₀', Pi.sub_apply]
   _ = log ‖meromorphicTrailingCoeffAt f 0 h₀‖ := by
-    rw [MeromorphicOn.circleAverage_log_norm hR hf.meromorphicOn h₀]
-    unfold Function.locallyFinsuppWithin.logCounting
-    have : (divisor f (closedBall 0 |R|)) = (divisor f Set.univ).toClosedBall R :=
-      (divisor_restrict hf.meromorphicOn (by tauto)).symm
-    simp [this, toClosedBall_apply, restrict_apply]
+    rw [logCounting_divisor_eq_circleAverage_sub_const hf h₀' hR, sub_sub_cancel]
 
 /--
 Helper lemma for the first part of the First Main Theorem: At 0, the difference between the
 characteristic functions of `f` and `f⁻¹` equals `log ‖f 0‖`.
 -/
 lemma characteristic_sub_characteristic_inv_at_zero (h : Meromorphic f) :
-    characteristic f ⊤ 0 - characteristic f⁻¹ ⊤ 0 = log ‖f 0‖ := by
-  calc characteristic f ⊤ 0 - characteristic f⁻¹ ⊤ 0
-  _ = (characteristic f ⊤ - characteristic f⁻¹ ⊤) 0 := by simp
-  _ = circleAverage (log ‖f ·‖) 0 0 - (divisor f Set.univ).logCounting 0 := by
-    rw [ValueDistribution.characteristic_sub_characteristic_inv h, Pi.sub_apply]
-  _ = log ‖f 0‖ := by
-    simp
+    (characteristic f ⊤ h) 0 - (characteristic f⁻¹ ⊤ h.inv) 0 = log ‖f 0‖ := by
+  have e := congrFun (proximity_sub_proximity_inv_eq_circleAverage h) 0
+  simp only [Pi.sub_apply, circleAverage_zero] at e
+  simpa only [characteristic, Pi.add_apply, logCounting_eval_zero, add_zero] using e
 
 /--
 First part of the First Main Theorem, quantitative version: If `f` is meromorphic on the complex
@@ -98,7 +99,7 @@ of `f` and `f⁻¹` is bounded by an explicit constant.
 -/
 theorem characteristic_sub_characteristic_inv_le (hf : Meromorphic f)
     (h₀ : meromorphicOrderAt f 0 ≠ ⊤) :
-    |characteristic f ⊤ R - characteristic f⁻¹ ⊤ R|
+    |(characteristic f ⊤ hf) R - (characteristic f⁻¹ ⊤ hf.inv) R|
       ≤ max |log ‖f 0‖| |log ‖meromorphicTrailingCoeffAt f 0 h₀‖| := by
   by_cases h : R = 0
   · simp [h, characteristic_sub_characteristic_inv_at_zero hf]
@@ -110,7 +111,7 @@ plane, then the characteristic functions of `f` and `f⁻¹` agree asymptoticall
 function.
 -/
 theorem isBigO_characteristic_sub_characteristic_inv (h : Meromorphic f) :
-    (characteristic f ⊤ - characteristic f⁻¹ ⊤) =O[atTop] (1 : ℝ → ℝ) := by
+    (characteristic f ⊤ h - characteristic f⁻¹ ⊤ h.inv) =O[atTop] (1 : ℝ → ℝ) := by
   by_cases h₀ : meromorphicOrderAt f 0 = ⊤
   · -- Trivial case: `f` vanishes on a codiscrete set, and so does `f⁻¹`
     have h₁ : f =ᶠ[codiscrete ℂ] fun _ ↦ 0 := by
@@ -144,7 +145,7 @@ meromorphic on the complex plane, then the characteristic functions (for value `
 `f - a₀` differ at most by `log⁺ ‖a₀‖ + log 2`.
 -/
 theorem abs_characteristic_sub_characteristic_shift_le {r : ℝ} (h : Meromorphic f) :
-    |characteristic f ⊤ r - characteristic (f · - a₀) ⊤ r| ≤ log⁺ ‖a₀‖ + log 2 := by
+    |(characteristic f ⊤) r - (characteristic (f · - a₀) ⊤) r| ≤ log⁺ ‖a₀‖ + log 2 := by
   have h₁f : CircleIntegrable (fun x ↦ log⁺ ‖f x‖) 0 r :=
     h.meromorphicOn.circleIntegrable_posLog_norm
   have h₂f : CircleIntegrable (fun x ↦ log⁺ ‖f x - a₀‖) 0 r := by

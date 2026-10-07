@@ -175,11 +175,16 @@ theorem meromorphicOrderAt_ne_top {z : 𝕜} (d : 𝕜 → ℤ) :
 /--
 If `D` is a divisor, then the divisor of the factorized rational function equals `D`.
 -/
-theorem divisor {U : Set 𝕜} {D : locallyFinsuppWithin U ℤ} (hD : D.support.Finite) :
-    MeromorphicOn.divisor (∏ᶠ u, (· - u) ^ D u) U = D := by
+theorem divisor {U : Set 𝕜} {D : locallyFinsuppWithin U ℤ} (hD : D.support.Finite)
+    {hf : MeromorphicOn (∏ᶠ u, (· - u) ^ D u) U}
+    {h : ∀ z (hz : z ∈ U), meromorphicOrderAt (∏ᶠ u, (· - u) ^ D u) z (hf z hz) ≠ ⊤} :
+    MeromorphicOn.divisor (∏ᶠ u, (· - u) ^ D u) U h = D := by
   ext z
   by_cases hz : z ∈ U
-  <;> simp [(meromorphicNFOn D U).meromorphicOn, hz, meromorphicOrderAt_eq D hD]
+  · have := MeromorphicOn.coe_divisor_apply hf hz (h := h)
+    rw [meromorphicOrderAt_eq D hD] at this
+    exact_mod_cast this
+  · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
 
 open scoped Classical in
 private lemma mulSupport_update {d : 𝕜 → ℤ} {x : 𝕜}
@@ -312,43 +317,48 @@ zeros such that `f` is equivalent, modulo equality on codiscrete sets, to the pr
 factorized rational function associated with the divisor of `f`.
 -/
 theorem MeromorphicOn.extract_zeros_poles {f : 𝕜 → E} (h₁f : MeromorphicOn f U)
-    (h₂f : ∀ u : U, meromorphicOrderAt f u.1 (h₁f u.1 u.2) ≠ ⊤)
-    (h₃f : (divisor f U).support.Finite) :
+    (h₂f : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (h₁f z hz) ≠ ⊤)
+    (h₃f : (divisor f U h₂f).support.Finite) :
     ∃ g : 𝕜 → E, AnalyticOnNhd 𝕜 g U ∧ (∀ u : U, g u ≠ 0) ∧
-      f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ divisor f U u) • g := by
+      f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ divisor f U h₂f u) • g := by
   -- Take `g` as the inverse of the Laurent polynomial defined below, converted to a meromorphic
   -- function in normal form. Then check all the properties.
-  let φ := ∏ᶠ u, (· - u) ^ (divisor f U u)
-  have hφ : MeromorphicOn φ U := (meromorphicNFOn (divisor f U) U).meromorphicOn
+  let φ := ∏ᶠ u, (· - u) ^ (divisor f U h₂f u)
+  have hφ : MeromorphicOn φ U := (meromorphicNFOn (divisor f U h₂f) U).meromorphicOn
+  have hφ' (z) (hz : z ∈ U) : meromorphicOrderAt φ z (hφ z hz) ≠ ⊤ :=
+    meromorphicOrderAt_ne_top (divisor f U h₂f)
+  have hφ'' (z) (hz : z ∈ U) : meromorphicOrderAt φ⁻¹ z (hφ.inv z hz) ≠ ⊤ := by
+    rw [meromorphicOrderAt_inv (hφ z hz)]
+    simpa using hφ' z hz
+  have hφf (z) (hz : z ∈ U) : meromorphicOrderAt (φ⁻¹ • f) z ((hφ.inv.smul h₁f) z hz) ≠ ⊤ := by
+    rw [meromorphicOrderAt_smul (hφ.inv z hz) (h₁f z hz)]
+    exact WithTop.add_ne_top.2 ⟨hφ'' z hz, h₂f z hz⟩
   let g := toMeromorphicNFOn (φ⁻¹ • f) U (hφ.inv.smul h₁f)
   have hg : MeromorphicNFOn g U := by apply meromorphicNFOn_toMeromorphicNFOn
+  have hg' (z) (hz : z ∈ U) : meromorphicOrderAt g z (hg.meromorphicOn z hz) ≠ ⊤ :=
+    (meromorphicOrderAt_toMeromorphicNFOn (hφ.inv.smul h₁f) hz).trans_ne (hφf z hz)
   refine ⟨g, ?_, ?_, ?_⟩
   · -- AnalyticOnNhd 𝕜 g U
-    rw [← hg.divisor_nonneg_iff_analyticOnNhd, divisor_of_toMeromorphicNFOn (hφ.inv.smul h₁f),
-      divisor_smul hφ.inv h₁f _ (fun z hz ↦ h₂f ⟨z, hz⟩), divisor_inv,
-      Function.FactorizedRational.divisor h₃f, neg_add_cancel]
-    intro z hz
-    rw [meromorphicOrderAt_inv (hφ z hz)]
-    simpa using meromorphicOrderAt_ne_top (divisor f U)
+    rw [← hg.divisor_nonneg_iff_analyticOnNhd (h := hg'),
+      divisor_of_toMeromorphicNFOn (hφ.inv.smul h₁f) hφf, divisor_smul hφ.inv h₁f hφ'' h₂f,
+      divisor_inv hφ', Function.FactorizedRational.divisor h₃f, neg_add_cancel]
   · -- ∀ (u : ↑U), g ↑u ≠ 0
     intro ⟨u, hu⟩
     rw [← (hg hu).meromorphicOrderAt_eq_zero_iff,
       meromorphicOrderAt_toMeromorphicNFOn (hφ.inv.smul h₁f) hu,
       meromorphicOrderAt_smul (hφ u hu).inv (h₁f u hu), meromorphicOrderAt_inv (hφ u hu),
-      meromorphicOrderAt_eq _ h₃f]
-    simp only [h₁f, hu, divisor_apply]
-    lift meromorphicOrderAt f u (h₁f u hu) to ℤ using (h₂f ⟨u, hu⟩) with n hn
-    rw [WithTop.untop₀_coe, ← WithTop.LinearOrderedAddCommGroup.coe_neg, ← WithTop.coe_add]
+      meromorphicOrderAt_eq _ h₃f, ← coe_divisor_apply h₁f hu (h := h₂f),
+      ← WithTop.LinearOrderedAddCommGroup.coe_neg, ← WithTop.coe_add]
     simp
   · -- f =ᶠ[codiscreteWithin U] (∏ᶠ (u : 𝕜), fun z ↦ (z - u) ^ (divisor f U) u) * g
-    filter_upwards [(divisor f U).eq_zero_codiscreteWithin,
+    filter_upwards [(divisor f U h₂f).eq_zero_codiscreteWithin,
       (hφ.inv.smul h₁f).meromorphicNFAt_mem_codiscreteWithin,
       self_mem_codiscreteWithin U] with a h₂a h₃a h₄a
     unfold g
     simp only [Pi.smul_apply', toMeromorphicNFOn_eq_toMeromorphicNFAt (hφ.inv.smul h₁f) h₄a,
       toMeromorphicNFAt_eq_self.2 h₃a, Pi.inv_apply]
     rw [← smul_assoc, smul_eq_mul, mul_inv_cancel₀ _, one_smul]
-    rwa [← ((meromorphicNFOn_univ (divisor f U)) trivial).meromorphicOrderAt_eq_zero_iff,
+    rwa [← ((meromorphicNFOn_univ (divisor f U h₂f)) trivial).meromorphicOrderAt_eq_zero_iff,
       meromorphicOrderAt_eq, h₂a, Pi.zero_apply, WithTop.coe_zero]
 
 /--
