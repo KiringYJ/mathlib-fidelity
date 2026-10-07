@@ -123,6 +123,9 @@ protected theorem map_eq_zero_iff (hf : Function.Injective f) : p.map f = 0 ↔ 
 protected theorem map_ne_zero_iff (hf : Function.Injective f) : p.map f ≠ 0 ↔ p ≠ 0 :=
   (Polynomial.map_eq_zero_iff hf).not
 
+theorem ne_zero_of_map_ne_zero (h : p.map f ≠ 0) : p ≠ 0 :=
+  ne_zero_of_map (f := mapRingHom f) h
+
 variable (f)
 
 @[simp]

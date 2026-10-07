@@ -207,6 +207,7 @@ private theorem fixed_of_fixed1_aux1 :
       (Polynomial.map_monic_ne_zero (MulSemiringAction.monic_charpoly G b)) 0
   rw [map_zero, sub_zero] at hq hq0
   let j := (f.map (algebraMap B (B ⧸ Q))).rootMultiplicity 0
+    (Polynomial.map_monic_ne_zero (MulSemiringAction.monic_charpoly G b))
   let k := q.natDegree
   let r := ∑ i ∈ Finset.range (k + 1), Polynomial.monomial i (f.coeff (i + j))
   have hr : r.map (algebraMap B (B ⧸ Q)) = q := by

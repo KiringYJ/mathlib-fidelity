@@ -123,6 +123,10 @@ lemma hilbertPoly_zero_left (d : ℕ) : hilbertPoly (0 : F[X]) d = 0 := by
   | zero => simp only
   | succ d _ => simp only [coeff_zero, zero_smul, Finset.sum_const_zero]
 
+lemma ne_zero_of_hilbertPoly_ne_zero {p : F[X]} {d : ℕ} (hh : hilbertPoly p d ≠ 0) : p ≠ 0 := by
+  rintro rfl
+  exact hh (hilbertPoly_zero_left d)
+
 lemma hilbertPoly_zero_right (p : F[X]) : hilbertPoly p 0 = 0 := rfl
 
 lemma hilbertPoly_succ (p : F[X]) (d : ℕ) :
@@ -240,16 +244,14 @@ lemma hilbertPoly_mul_one_sub_pow_add (p : F[X]) (d e : ℕ) :
   | succ e he => rw [pow_add, pow_one, ← mul_assoc, ← add_assoc, hilbertPoly_mul_one_sub_succ, he]
 
 lemma hilbertPoly_eq_zero_of_le_rootMultiplicity_one
-    {p : F[X]} {d : ℕ} (hdp : d ≤ p.rootMultiplicity 1) :
+    {p : F[X]} {d : ℕ} (hp : p ≠ 0) (hdp : d ≤ p.rootMultiplicity 1) :
     hilbertPoly p d = 0 := by
-  by_cases hp : p = 0
-  · rw [hp, hilbertPoly_zero_left]
-  · rcases exists_eq_pow_rootMultiplicity_mul_and_not_dvd p hp 1 with ⟨q, hq1, hq2⟩
-    have heq : p = q * (-1) ^ p.rootMultiplicity 1 * (1 - X) ^ p.rootMultiplicity 1 := by
-      simp only [mul_assoc, ← mul_pow, neg_mul, one_mul, neg_sub]
-      exact hq1.trans (mul_comm _ _)
-    rw [heq, ← zero_add d, ← Nat.sub_add_cancel hdp, pow_add (1 - X), ← mul_assoc,
-      hilbertPoly_mul_one_sub_pow_add, hilbertPoly]
+  rcases exists_eq_pow_rootMultiplicity_mul_and_not_dvd p hp 1 with ⟨q, hq1, hq2⟩
+  have heq : p = q * (-1) ^ p.rootMultiplicity 1 * (1 - X) ^ p.rootMultiplicity 1 := by
+    simp only [mul_assoc, ← mul_pow, neg_mul, one_mul, neg_sub]
+    exact hq1.trans (mul_comm _ _)
+  rw [heq, ← zero_add d, ← Nat.sub_add_cancel hdp, pow_add (1 - X), ← mul_assoc,
+    hilbertPoly_mul_one_sub_pow_add, hilbertPoly]
 
 theorem natDegree_hilbertPoly_of_ne_zero_of_rootMultiplicity_lt
     {p : F[X]} {d : ℕ} (hp : p ≠ 0) (hpd : p.rootMultiplicity 1 < d) :
@@ -274,14 +276,12 @@ theorem natDegree_hilbertPoly_of_ne_zero_of_rootMultiplicity_lt
 
 theorem natDegree_hilbertPoly_of_ne_zero
     {p : F[X]} {d : ℕ} (hh : hilbertPoly p d ≠ 0) :
-    (hilbertPoly p d).natDegree = d - p.rootMultiplicity 1 - 1 := by
-  have hp : p ≠ 0 := by
-    intro h
-    rw [h] at hh
-    exact hh (hilbertPoly_zero_left d)
+    (hilbertPoly p d).natDegree =
+      d - p.rootMultiplicity 1 (ne_zero_of_hilbertPoly_ne_zero hh) - 1 := by
+  have hp : p ≠ 0 := ne_zero_of_hilbertPoly_ne_zero hh
   have hpd : p.rootMultiplicity 1 < d := by
     by_contra h
-    exact hh (hilbertPoly_eq_zero_of_le_rootMultiplicity_one <| not_lt.1 h)
+    exact hh (hilbertPoly_eq_zero_of_le_rootMultiplicity_one hp <| not_lt.1 h)
   exact natDegree_hilbertPoly_of_ne_zero_of_rootMultiplicity_lt hp hpd
 
 end Polynomial

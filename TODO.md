@@ -250,12 +250,39 @@ operation.
   printing, every discharger rule, the field values at `0`, and the failures for a divisor that is
   not monic, for a hypothesis about another concrete polynomial, and for an undetermined divisor.
 
-- [ ] **Exclude the zero polynomial from finite root multisets and multiplicities.**
+- [x] **Give `Polynomial.rootMultiplicity` its domain.**
+  `rootMultiplicity a p hp` in `Mathlib/Algebra/Polynomial/Div.lean` takes `hp : p ≠ 0` and is
+  `multiplicity (X - C a) p` for the finiteness given by `finiteMultiplicity_X_sub_C`.  Every power
+  of `X - C a` divides `0`, so the zero polynomial has no largest one; `emultiplicity (X - C a) p`
+  is the total invariant, `⊤` at `0` and `rootMultiplicity a p` otherwise
+  (`emultiplicity_X_sub_C_eq_rootMultiplicity`).  The extensible default discharger `nonzero_tac`
+  finds the proof from a hypothesis, through `monic_core` for polynomials over a nontrivial ring,
+  and for products and powers over a ring without zero divisors; its rules unify only at reducible
+  and instance transparency, and it never assigns an undetermined polynomial.
+  `rootMultiplicity_zero` and `rootMultiplicity_pos'` are removed, `rootMultiplicity_eq_zero_iff`
+  states `rootMultiplicity x p = 0 ↔ ¬IsRoot p x`, and `rootMultiplicity_pos` is a simp lemma.  The
+  lemmas that held through the value at `0` take `p ≠ 0` or the nonvanishing of a derivative, an
+  evaluation, a composition, an image, or a Hilbert polynomial, from which
+  `ne_zero_of_derivative_ne_zero`, `ne_zero_of_eval_ne_zero`, `ne_zero_of_comp_ne_zero`,
+  `ne_zero_of_map_ne_zero`, and `ne_zero_of_hilbertPoly_ne_zero` recover `p ≠ 0`.  The derivative of
+  a nonzero polynomial with a root whose multiplicity is a non-zero-divisor is nonzero
+  (`derivative_ne_zero_of_root_of_mem_nonZeroDivisors`, `derivative_ne_zero_of_root`), and the
+  formulas for its multiplicity there use that proof.
+  `rootMultiplicity_sub_one_le_derivative_rootMultiplicity` is removed in favor of its `_of_ne_zero`
+  form, which needs only a nonzero derivative, and the stale `docPrime` exception for
+  `rootMultiplicity_pos'` is removed.  `count_roots` takes `p ≠ 0` (see "Exclude the zero polynomial
+  from finite root multisets"), and `Polynomial.derivRootWeight` uses the multiplicity only where
+  `P` does not vanish at `z`, hence `P ≠ 0`.  Tests cover the removed names, the discharger with its
+  transparency and its failure over a ring with zero divisors, the simp lemma, the infinite
+  multiplicity at `0`, and the failures.
+
+- [ ] **Exclude the zero polynomial from finite root multisets.**
   `Polynomial.roots` in `Mathlib/Algebra/Polynomial/Roots.lean:58` gives the empty multiset at zero
-  (line 71), while `Polynomial.rootMultiplicity` in
-  `Mathlib/Algebra/Polynomial/Div.lean:520` returns zero even though a largest dividing power does
-  not exist.  Require `p ≠ 0` for finite root multisets and finite multiplicities, retaining infinity
-  where appropriate.  Ordinary set-valued root loci may remain defined for arbitrary polynomials.
+  (line 71), and `aroots`, `rootSet`, `nthRoots`, `nthRootsFinset`, and `primitiveRoots` inherit
+  that value.  Require `p ≠ 0` for finite root multisets, as `rootMultiplicity` does (see "Give
+  `Polynomial.rootMultiplicity` its domain"), so that `count_roots` no longer needs an explicit
+  hypothesis; `rootSet`, the finite set of distinct roots in `(p.aroots S).toFinset`, takes the same
+  domain.  The ordinary zero locus `{x | p.IsRoot x}` is already total and correct at `0`.
 
 - [x] **Identify `Polynomial.natDegree` as the supremum of the support.**
   `natDegree p` is the supremum in `ℕ` of the exponents with nonzero coefficient
@@ -291,10 +318,9 @@ operation.
   also gave `0` for nonconstant polynomials with a nonzero constant coefficient, such as `1 + X`.
   `LinearMap.nilRank`, `LinearMap.IsNilRegular`, `LieModule.rank`, and `LieModule.IsRegular` require
   a nontrivial base ring, as their docstrings already assumed, since the characteristic polynomial
-  over the zero ring is `0`.  `rootMultiplicity_eq_natTrailingDegree` takes `p ≠ 0` (see "Exclude
-  the zero polynomial from finite root multisets and multiplicities"), and `isUnitTrinomial_iff'`
-  states that `p * p.mirror` is nonzero.  Tests cover the removed name, the default proof, and the
-  total invariants at `0`.
+  over the zero ring is `0`.  `rootMultiplicity_eq_natTrailingDegree` takes `p ≠ 0` (see "Give
+  `Polynomial.rootMultiplicity` its domain"), and `isUnitTrinomial_iff'` states that `p * p.mirror`
+  is nonzero.  Tests cover the removed name, the default proof, and the total invariants at `0`.
 
 - [ ] **Audit constructions that feed `natDegree` of a possibly zero polynomial into a formula.**
   `natDegree` is the supremum of the support, so its value at `0` is not a fallback, but several

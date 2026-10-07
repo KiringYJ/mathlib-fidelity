@@ -18,7 +18,8 @@ The main defs are `divByMonic` and `modByMonic`, the quotient `p /ₘ q` and the
 of the division by a monic polynomial `q`. They take a proof that `q` is monic, which the tactic
 `monic_tac` supplies by default.
 The compatibility between these is given by `modByMonic_add_div`.
-We also define `rootMultiplicity`.
+We also define `rootMultiplicity a p`, the multiplicity of `a` as a root of a nonzero polynomial
+`p`. It takes a proof that `p` is nonzero, which the tactic `nonzero_tac` supplies by default.
 -/
 
 @[expose] public section
@@ -514,74 +515,87 @@ theorem finiteMultiplicity_X_sub_C (a : R) (h0 : p ≠ 0) : FiniteMultiplicity (
   rw [degree_X_sub_C]
   decide
 
-/- TODO: stripping out classical for decidability instance parameter might
-make for better ergonomics -/
-/-- The largest power of `X - C a` which divides `p`. -/
-def rootMultiplicity (a : R) (p : R[X]) : ℕ :=
-  letI := Classical.decEq R
-  if h0 : p = 0 then 0
-  else
-    let _ : DecidablePred fun n : ℕ => ¬(X - C a) ^ (n + 1) ∣ p := Classical.decPred _
-    Nat.find (finiteMultiplicity_X_sub_C a h0)
+/-- The extensible part of `nonzero_tac`: each `macro_rules` alternative for `nonzero_core` tries
+one way to prove that a polynomial is nonzero. An alternative should unify only at reducible and
+instance transparency, so that it fails fast on concrete polynomials. -/
+syntax (name := nonzeroCore) "nonzero_core" : tactic
+
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic| with_reducible_and_instances assumption)
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Polynomial.Monic.ne_zero); monic_core))
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply mul_ne_zero) <;> nonzero_core))
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply pow_ne_zero); nonzero_core))
+
+open Lean Elab Tactic in
+/-- The default discharger for the nonvanishing of a polynomial `p`, as in `rootMultiplicity a p`.
+
+It closes the goal with `nonzero_core`: with a local hypothesis, for a polynomial over a nontrivial
+ring that `monic_core` proves monic, for products and powers of polynomials that it proves nonzero
+over a ring without zero divisors, or by the extensions of later files. Its rules unify only at
+reducible and instance transparency. Other evidence is passed explicitly. It never chooses the
+polynomial: if the polynomial is not determined when the tactic runs, it fails instead of assigning
+it from a hypothesis. -/
+elab (name := nonzeroTac) "nonzero_tac" : tactic => do
+  if (← instantiateMVars (← getMainTarget)).hasExprMVar then
+    throwError "the polynomial is not determined; pass its nonvanishing explicitly"
+  evalTactic (← `(tactic| first | nonzero_core | fail "the polynomial must be nonzero"))
+
+/-- The multiplicity of `a` as a root of the nonzero polynomial `p`: the largest `n` such that
+`(X - C a) ^ n` divides `p`. Every power of `X - C a` divides `0`, so the zero polynomial has no
+largest one, and `emultiplicity (X - C a) 0 = ⊤`; see `emultiplicity_X_sub_C_eq_rootMultiplicity`.
+The proof `hp` that `p` is nonzero can usually be omitted, see `nonzero_tac`. -/
+def rootMultiplicity (a : R) (p : R[X]) (hp : p ≠ 0 := by nonzero_tac) : ℕ :=
+  multiplicity (X - C a) p (finiteMultiplicity_X_sub_C a hp)
 
 theorem rootMultiplicity_eq_natFind_of_ne_zero {p : R[X]} (p0 : p ≠ 0) {a : R}
     [DecidablePred fun n : ℕ => ¬(X - C a) ^ (n + 1) ∣ p] :
     rootMultiplicity a p = Nat.find (finiteMultiplicity_X_sub_C a p0) := by
-  dsimp [rootMultiplicity]
-  rw [dite_eq_right p0]
+  rw [rootMultiplicity, multiplicity]
   congr
 
-theorem rootMultiplicity_eq_multiplicity [DecidableEq R]
-    (p : R[X]) (a : R) :
-    rootMultiplicity a p =
-      if h : p = 0 then 0 else multiplicity (X - C a) p (finiteMultiplicity_X_sub_C a h) := by
-  by_cases h : p = 0
-  · subst h
-    rw [dite_eq_left rfl]
-    exact dite_eq_left rfl
-  · simp only [rootMultiplicity, multiplicity, h, ↓reduceDIte]
-    congr
+theorem rootMultiplicity_eq_multiplicity (p : R[X]) (a : R) (hp : p ≠ 0) :
+    rootMultiplicity a p = multiplicity (X - C a) p (finiteMultiplicity_X_sub_C a hp) :=
+  rfl
+
+/-- The multiplicity of a root as an extended natural number: it is `rootMultiplicity a p` for a
+nonzero polynomial `p`, and `⊤` for `p = 0` (`emultiplicity_zero`). -/
+theorem emultiplicity_X_sub_C_eq_rootMultiplicity (a : R) (hp : p ≠ 0) :
+    emultiplicity (X - C a) p = rootMultiplicity a p :=
+  (finiteMultiplicity_X_sub_C a hp).emultiplicity_eq_multiplicity
 
 @[simp]
-theorem rootMultiplicity_zero {x : R} : rootMultiplicity x 0 = 0 :=
-  dite_eq_left rfl
-
-@[simp]
-theorem rootMultiplicity_C (r a : R) : rootMultiplicity a (C r) = 0 := by
-  cases subsingleton_or_nontrivial R
-  · rw [Subsingleton.elim (C r) 0, rootMultiplicity_zero]
-  classical
-  rw [rootMultiplicity_eq_multiplicity]
-  split_ifs with hr
-  · rfl
+theorem rootMultiplicity_C (r a : R) {hr : C r ≠ 0} : rootMultiplicity a (C r) hr = 0 := by
+  have : Nontrivial R := Nontrivial.of_polynomial_ne hr
   have h : natDegree (C r) < natDegree (X - C a) := by simp
-  simp_rw [multiplicity_eq_zero_of_not_dvd ((monic_X_sub_C a).not_dvd_of_natDegree_lt hr h)]
+  exact multiplicity_eq_zero_of_not_dvd ((monic_X_sub_C a).not_dvd_of_natDegree_lt hr h)
 
-theorem pow_rootMultiplicity_dvd (p : R[X]) (a : R) : (X - C a) ^ rootMultiplicity a p ∣ p :=
-  letI := Classical.decEq R
-  if h : p = 0 then by simp [h]
-  else by
-    rw [rootMultiplicity_eq_multiplicity, dite_eq_right h]; apply pow_multiplicity_dvd
+theorem pow_rootMultiplicity_dvd (p : R[X]) (a : R) (hp : p ≠ 0) :
+    (X - C a) ^ rootMultiplicity a p ∣ p :=
+  pow_multiplicity_dvd _
 
-theorem pow_mul_divByMonic_rootMultiplicity_eq (p : R[X]) (a : R) :
+theorem pow_mul_divByMonic_rootMultiplicity_eq (p : R[X]) (a : R) (hp : p ≠ 0) :
     (X - C a) ^ rootMultiplicity a p * (p /ₘ (X - C a) ^ rootMultiplicity a p) = p := by
   have : Monic ((X - C a) ^ rootMultiplicity a p) := (monic_X_sub_C _).pow _
   conv_rhs =>
     rw [← modByMonic_add_div p this,
-      (modByMonic_eq_zero_iff_dvd this).2 (pow_rootMultiplicity_dvd _ _)]
+      (modByMonic_eq_zero_iff_dvd this).2 (pow_rootMultiplicity_dvd _ _ hp)]
   simp
 
 theorem exists_eq_pow_rootMultiplicity_mul_and_not_dvd (p : R[X]) (hp : p ≠ 0) (a : R) :
-    ∃ q : R[X], p = (X - C a) ^ p.rootMultiplicity a * q ∧ ¬ (X - C a) ∣ q := by
-  classical
-  rw [rootMultiplicity_eq_multiplicity, dite_eq_right hp]
-  apply (finiteMultiplicity_X_sub_C a hp).exists_eq_pow_mul_and_not_dvd
+    ∃ q : R[X], p = (X - C a) ^ p.rootMultiplicity a * q ∧ ¬ (X - C a) ∣ q :=
+  (finiteMultiplicity_X_sub_C a hp).exists_eq_pow_mul_and_not_dvd
 
 /-- The multiplicity of `a` as root of a nonzero polynomial `p` is at least `n` iff
 `(X - a) ^ n` divides `p`. -/
 lemma le_rootMultiplicity_iff (p0 : p ≠ 0) {a : R} {n : ℕ} :
     n ≤ rootMultiplicity a p ↔ (X - C a) ^ n ∣ p := by
-  simp_rw [rootMultiplicity, dite_eq_right p0, Nat.le_find_iff, not_not]
+  simp_rw [rootMultiplicity, multiplicity, Nat.le_find_iff, not_not]
   refine ⟨fun h => ?_, fun h m hm => (pow_dvd_pow _ hm).trans h⟩
   rcases n with - | n
   · rw [pow_zero]
@@ -593,10 +607,10 @@ lemma rootMultiplicity_le_iff (p0 : p ≠ 0) (a : R) (n : ℕ) :
   rw [← (le_rootMultiplicity_iff p0).not, not_le, Nat.lt_add_one_iff]
 
 /-- The multiplicity of `p + q` is at least the minimum of the multiplicities. -/
-lemma rootMultiplicity_add {p q : R[X]} (a : R) (hzero : p + q ≠ 0) :
+lemma rootMultiplicity_add {p q : R[X]} (a : R) (hp : p ≠ 0) (hq : q ≠ 0) (hzero : p + q ≠ 0) :
     min (rootMultiplicity a p) (rootMultiplicity a q) ≤ rootMultiplicity a (p + q) := by
   rw [le_rootMultiplicity_iff hzero]
-  exact min_pow_dvd_add (pow_rootMultiplicity_dvd p a) (pow_rootMultiplicity_dvd q a)
+  exact min_pow_dvd_add (pow_rootMultiplicity_dvd p a hp) (pow_rootMultiplicity_dvd q a hq)
 
 lemma pow_rootMultiplicity_not_dvd (p0 : p ≠ 0) (a : R) :
     ¬(X - C a) ^ (rootMultiplicity a p + 1) ∣ p := by rw [← rootMultiplicity_le_iff p0]
@@ -671,25 +685,18 @@ lemma IsRoot.dvd_coeff_zero {p : R[X]} {x : R} (h : p.IsRoot x) : x ∣ p.coeff 
   simpa [h.eq_zero, coeff_zero_eq_eval_zero] using sub_dvd_eval_sub 0 x p
 
 @[simp]
-theorem rootMultiplicity_eq_zero_iff {p : R[X]} {x : R} :
-    rootMultiplicity x p = 0 ↔ IsRoot p x → p = 0 := by
-  by_cases hp : p = 0
-  · simp [hp]
-  classical
-  rw [rootMultiplicity_eq_multiplicity, dite_eq_right hp, multiplicity_eq_zero]
-  simp [dvd_iff_isRoot, hp]
+theorem rootMultiplicity_eq_zero_iff {p : R[X]} {x : R} {hp : p ≠ 0} :
+    rootMultiplicity x p hp = 0 ↔ ¬IsRoot p x := by
+  rw [rootMultiplicity_eq_multiplicity _ _ hp, multiplicity_eq_zero, dvd_iff_isRoot]
 
-theorem rootMultiplicity_eq_zero {p : R[X]} {x : R} (h : ¬IsRoot p x) : rootMultiplicity x p = 0 :=
-  rootMultiplicity_eq_zero_iff.2 fun h' => (h h').elim
+theorem rootMultiplicity_eq_zero {p : R[X]} {x : R} {hp : p ≠ 0} (h : ¬IsRoot p x) :
+    rootMultiplicity x p hp = 0 :=
+  rootMultiplicity_eq_zero_iff.2 h
 
 @[simp]
-theorem rootMultiplicity_pos' {p : R[X]} {x : R} :
-    0 < rootMultiplicity x p ↔ p ≠ 0 ∧ IsRoot p x := by
-  rw [pos_iff_ne_zero, Ne, rootMultiplicity_eq_zero_iff, Classical.not_imp, and_comm]
-
 theorem rootMultiplicity_pos {p : R[X]} (hp : p ≠ 0) {x : R} :
-    0 < rootMultiplicity x p ↔ IsRoot p x :=
-  rootMultiplicity_pos'.trans (and_iff_right hp)
+    0 < rootMultiplicity x p ↔ IsRoot p x := by
+  rw [pos_iff_ne_zero, Ne, rootMultiplicity_eq_zero_iff, not_not]
 
 theorem eval_divByMonic_pow_rootMultiplicity_ne_zero {p : R[X]} (a : R) (hp : p ≠ 0) :
     eval a (p /ₘ (X - C a) ^ rootMultiplicity a p) ≠ 0 := by
@@ -697,8 +704,8 @@ theorem eval_divByMonic_pow_rootMultiplicity_ne_zero {p : R[X]} (a : R) (hp : p 
   have : Nontrivial R := Nontrivial.of_polynomial_ne hp
   rw [Ne, ← IsRoot, ← dvd_iff_isRoot]
   rintro ⟨q, hq⟩
-  have := pow_mul_divByMonic_rootMultiplicity_eq p a
-  rw [hq, ← mul_assoc, ← pow_succ, rootMultiplicity_eq_multiplicity, dite_eq_right hp] at this
+  have := pow_mul_divByMonic_rootMultiplicity_eq p a hp
+  rw [hq, ← mul_assoc, ← pow_succ, rootMultiplicity_eq_multiplicity _ _ hp] at this
   exact
     (finiteMultiplicity_X_sub_C a hp).not_pow_dvd_of_multiplicity_lt
       (Nat.lt_succ_self _) (dvd_of_mul_right_eq _ this)
@@ -761,11 +768,9 @@ lemma mul_modByMonic (p₁ p₂ q : R[X]) {hq : q.Monic} :
   · apply dvd_mul_of_dvd_right
     simp [Polynomial.modByMonic_eq_sub_mul_div _ hq]
 
-lemma eval_divByMonic_eq_trailingCoeff_comp {p : R[X]} {t : R} :
+lemma eval_divByMonic_eq_trailingCoeff_comp {p : R[X]} {t : R} (hp : p ≠ 0) :
     (p /ₘ (X - C t) ^ p.rootMultiplicity t).eval t = (p.comp (X + C t)).trailingCoeff := by
-  obtain rfl | hp := eq_or_ne p 0
-  · rw [zero_divByMonic, eval_zero, zero_comp, trailingCoeff_zero]
-  have mul_eq := p.pow_mul_divByMonic_rootMultiplicity_eq t
+  have mul_eq := p.pow_mul_divByMonic_rootMultiplicity_eq t hp
   set m := p.rootMultiplicity t
   set g := p /ₘ (X - C t) ^ m
   have : (g.comp (X + C t)).coeff 0 = g.eval t := by
@@ -775,12 +780,13 @@ lemma eval_divByMonic_eq_trailingCoeff_comp {p : R[X]} {t : R} :
     trailingCoeff_eq_coeff_zero (this ▸ eval_divByMonic_pow_rootMultiplicity_ne_zero t hp), this]
 
 lemma le_rootMultiplicity_mul {p q : R[X]} (x : R) (hpq : p * q ≠ 0) :
-    rootMultiplicity x p + rootMultiplicity x q ≤ rootMultiplicity x (p * q) := by
+    rootMultiplicity x p (left_ne_zero_of_mul hpq) + rootMultiplicity x q (right_ne_zero_of_mul hpq)
+      ≤ rootMultiplicity x (p * q) := by
   rw [le_rootMultiplicity_iff hpq, pow_add]
   gcongr <;> apply pow_rootMultiplicity_dvd
 
 lemma rootMultiplicity_le_rootMultiplicity_of_dvd {p q : R[X]} (hq : q ≠ 0) (hpq : p ∣ q) (x : R) :
-    p.rootMultiplicity x ≤ q.rootMultiplicity x := by
+    p.rootMultiplicity x (ne_zero_of_dvd_ne_zero hq hpq) ≤ q.rootMultiplicity x := by
   obtain ⟨_, rfl⟩ := hpq
   exact Nat.le_of_add_right_le <| le_rootMultiplicity_mul x hq
 
