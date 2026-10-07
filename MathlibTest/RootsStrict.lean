@@ -61,7 +61,7 @@ open Polynomial
 #guard_msgs in
 #check_failure roots_multiset_prod
 
-/-! The default discharger handles hypotheses, positive degree, irreducibility, `Fact (p ≠ 0)`,
+/-! The default discharger handles hypotheses, positive degree, irreducibility, `NeZero p`,
 monic polynomials, products, powers, maps along ring homomorphisms out of a field, `X ^ n - C a`
 for `n ≠ 0`, quadratics and cubics with a nonzero leading coefficient, and minimal polynomials of
 integral elements. -/
@@ -77,7 +77,7 @@ example (p : ℚ[X]) (hp : 0 < p.degree) (a : ℚ) : a ∈ p.roots ↔ p.IsRoot 
 
 example (p : ℚ[X]) (hp : Irreducible p) : (p.roots).card ≤ p.natDegree := card_roots' p
 
-example (p : ℚ[X]) [Fact (p ≠ 0)] : (p.rootSet ℚ).Finite := rootSet_finite p ℚ _
+example (p : ℚ[X]) [NeZero p] : (p.rootSet ℚ).Finite := rootSet_finite p ℚ _
 
 example (p : ℚ[X]) (hp : p ≠ 0) (x : ℚ) : x ∈ p.rootSet ℚ ↔ aeval x p = 0 := mem_rootSet
 

@@ -71,7 +71,7 @@ attribute [local ext] Complex.ext
 
 /-- The number of complex roots equals the number of real roots plus
 the number of roots not fixed by complex conjugation (i.e. with some imaginary component). -/
-theorem card_complex_roots_eq_card_real_add_card_not_gal_inv (p : ℚ[X]) [Fact (p ≠ 0)] :
+theorem card_complex_roots_eq_card_real_add_card_not_gal_inv (p : ℚ[X]) [NeZero p] :
     (p.rootSet ℂ).toFinset.card =
       (p.rootSet ℝ).toFinset.card +
         (galActionHom p ℂ (restrict p ℂ
@@ -121,10 +121,12 @@ theorem card_complex_roots_eq_card_real_add_card_not_gal_inv (p : ℚ[X]) [Fact 
     tauto
 
 /-- An irreducible polynomial of prime degree with two non-real roots has full Galois group. -/
-theorem galActionHom_bijective_of_prime_degree {p : ℚ[X]} [Fact (p ≠ 0)] (p_irr : Irreducible p)
+theorem galActionHom_bijective_of_prime_degree {p : ℚ[X]} (p_irr : Irreducible p)
     (p_deg : p.natDegree.Prime)
     (p_roots : Fintype.card (p.rootSet ℂ) = Fintype.card (p.rootSet ℝ) + 2) :
+    haveI : NeZero p := ⟨p_irr.ne_zero⟩
     Function.Bijective (galActionHom p ℂ) := by
+  have : NeZero p := ⟨p_irr.ne_zero⟩
   have h1 : Fintype.card (p.rootSet ℂ) = p.natDegree := by
     simp_rw [rootSet_def, Finset.coe_sort_coe, Fintype.card_coe]
     rw [Multiset.toFinset_card_of_nodup, ← Splits.natDegree_eq_card_roots, natDegree_map]
@@ -150,11 +152,13 @@ theorem galActionHom_bijective_of_prime_degree {p : ℚ[X]} [Fact (p ≠ 0)] (p_
     exact (card_complex_roots_eq_card_real_add_card_not_gal_inv p).symm
 
 /-- An irreducible polynomial of prime degree with 1-3 non-real roots has full Galois group. -/
-theorem galActionHom_bijective_of_prime_degree' {p : ℚ[X]} [Fact (p ≠ 0)] (p_irr : Irreducible p)
+theorem galActionHom_bijective_of_prime_degree' {p : ℚ[X]} (p_irr : Irreducible p)
     (p_deg : p.natDegree.Prime)
     (p_roots1 : Fintype.card (p.rootSet ℝ) + 1 ≤ Fintype.card (p.rootSet ℂ))
     (p_roots2 : Fintype.card (p.rootSet ℂ) ≤ Fintype.card (p.rootSet ℝ) + 3) :
+    haveI : NeZero p := ⟨p_irr.ne_zero⟩
     Function.Bijective (galActionHom p ℂ) := by
+  have : NeZero p := ⟨p_irr.ne_zero⟩
   apply galActionHom_bijective_of_prime_degree p_irr p_deg
   let n := (galActionHom p ℂ (restrict p ℂ (Complex.conjAe.restrictScalars ℚ))).support.card
   have hn : 2 ∣ n :=
@@ -166,6 +170,9 @@ theorem galActionHom_bijective_of_prime_degree' {p : ℚ[X]} [Fact (p ≠ 0)] (p
           map_one, map_one])
   have key := card_complex_roots_eq_card_real_add_card_not_gal_inv p
   simp_rw [Set.toFinset_card] at key
+  -- The root sets of the hypotheses and of `key` carry different proofs of their domain.
+  generalize Fintype.card (p.rootSet ℂ) = c at *
+  generalize Fintype.card (p.rootSet ℝ) = r at *
   lia
 
 end Rationals

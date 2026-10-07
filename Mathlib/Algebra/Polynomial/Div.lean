@@ -549,13 +549,13 @@ macro_rules
     ((with_reducible_and_instances apply Irreducible.ne_zero);
       with_reducible_and_instances assumption))
 macro_rules
-  | `(tactic| nonzero_core) => `(tactic| with_reducible_and_instances exact Fact.out)
+  | `(tactic| nonzero_core) => `(tactic| with_reducible_and_instances exact NeZero.ne _)
 
 open Lean Elab Tactic in
 /-- The default discharger for the nonvanishing of a polynomial `p`, as in `rootMultiplicity a p`.
 
 It closes the goal with `nonzero_core`: with a local hypothesis, a hypothesis that the polynomial
-has positive degree or is irreducible, or a `Fact (p ≠ 0)` instance, for a polynomial over a
+has positive degree or is irreducible, or a `NeZero p` instance, for a polynomial over a
 nontrivial ring that `monic_core` proves monic, for products and powers of polynomials that it
 proves nonzero over a ring without zero divisors, or by the extensions of later files. Its rules
 unify only at reducible and instance transparency. Other evidence is passed explicitly. It never
