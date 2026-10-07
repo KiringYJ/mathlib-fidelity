@@ -73,7 +73,7 @@ theorem monic_Phi : (Φ R a b).Monic :=
   leadingCoeff_Phi a b
 
 /-- The domain `Φ ℚ a b ≠ 0` of the root sets and the Galois action of `Φ ℚ a b`. -/
-local instance fact_Phi_ne_zero : Fact (Φ ℚ a b ≠ 0) :=
+local instance neZero_Phi : NeZero (Φ ℚ a b) :=
   ⟨(monic_Phi a b).ne_zero⟩
 
 theorem irreducible_Phi (p : ℕ) (hp : p.Prime) (hpa : p ∣ a) (hpb : p ∣ b) (hp2b : ¬p ^ 2 ∣ b) :

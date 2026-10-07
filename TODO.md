@@ -295,7 +295,7 @@ operation.
   `roots_eq_zero_iff_eq_zero_or_isRoot_eq_bot`, and `rightInverse_ofMultiset_roots` are removed;
   `mem_roots` (a simp lemma again), `mem_aroots`, and `mem_rootSet` state the root condition alone,
   and `roots_prod` sums over the nonzero factors.  `nonzero_tac` gains rules for a hypothesis of
-  positive degree or irreducibility, a `Fact (p ≠ 0)` instance, images under maps out of a field,
+  positive degree or irreducibility, a `NeZero p` instance, images under maps out of a field,
   `X ^ n - C a` with `n ≠ 0`, `p - C a` with `0 < degree p`, separable, expanded, quadratic, and
   cubic polynomials, and minimal polynomials in integral extensions, of power-basis generators, and
   of conjugacy classes.  Statements that read the empty value at `0` take the domain or a hypothesis
@@ -307,10 +307,10 @@ operation.
   splits: its generation field takes `f ≠ 0`, and a new field states that the splitting field of `0`
   is the base field, as minimality gives; `IsNormalClosure` adjoins the roots of the minimal
   polynomials of the integral elements, which is what the empty root set of `minpoly F x = 0`
-  expressed.  The action of `Polynomial.Gal p` on roots takes `[Fact (p ≠ 0)]`, as it already takes
-  the splitting hypothesis, and `Gal.ext` quantifies over `p ≠ 0`, so that it still covers the
-  trivial group `Gal 0`.  `natSepDegree` and `primitiveRoots` keep their values at `0` by explicit
-  conventions, recorded below.  Tests are in `MathlibTest/RootsStrict.lean`.
+  expressed.  The action of `Polynomial.Gal p` on roots takes `[NeZero p]`, alongside its splitting
+  hypothesis, and `Gal.ext` quantifies over `p ≠ 0`, so that it still covers the trivial group
+  `Gal 0`.  `natSepDegree` and `primitiveRoots` keep their values at `0` by explicit conventions,
+  recorded below.  Tests are in `MathlibTest/RootsStrict.lean`.
 
 - [ ] **Decide the separable degree of the zero polynomial.**
   `Polynomial.natSepDegree` in `Mathlib/FieldTheory/SeparableDegree.lean` counts the distinct roots
