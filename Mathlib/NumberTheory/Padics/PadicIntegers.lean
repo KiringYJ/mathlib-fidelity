@@ -315,34 +315,51 @@ lemma norm_intCast_lt_one_iff {z : ℤ} :
 
 /-! ### Valuation on `ℤ_[p]` -/
 
-lemma valuation_coe_nonneg : 0 ≤ (x : ℚ_[p]).valuation := by
-  obtain rfl | hx := eq_or_ne x 0
-  · simp
+/-- `padic_val_tac` closes `(x : ℚ_[p]) ≠ 0` for `x : ℤ_[p]` from `x ≠ 0`. -/
+macro_rules
+  | `(tactic| padic_val_core) => `(tactic|
+    ((with_reducible_and_instances apply PadicInt.coe_ne_zero.2); padic_val_core))
+
+lemma valuation_coe_nonneg (hx : x ≠ 0) : 0 ≤ (x : ℚ_[p]).valuation := by
   have := x.2
   rwa [Padic.norm_eq_zpow_neg_valuation <| coe_ne_zero.2 hx, zpow_le_one_iff_right₀, neg_nonpos]
     at this
   exact mod_cast hp.out.one_lt
 
-/-- `PadicInt.valuation` lifts the `p`-adic valuation on `ℚ` to `ℤ_[p]`. -/
-def valuation (x : ℤ_[p]) : ℕ := (x : ℚ_[p]).valuation.toNat
+/-- The `p`-adic valuation of a nonzero `x : ℤ_[p]`, its valuation in `ℚ_[p]`, which is
+nonnegative. There is no valuation in `ℕ` at `0`. The proof `hx` can usually be omitted, see
+`padic_val_tac`. -/
+def valuation (x : ℤ_[p]) (hx : x ≠ 0 := by padic_val_tac) : ℕ :=
+  ((x : ℚ_[p]).valuation (coe_ne_zero.2 hx)).toNat
 
-@[simp, norm_cast] lemma valuation_coe (x : ℤ_[p]) : (x : ℚ_[p]).valuation = x.valuation := by
-  simp [valuation, valuation_coe_nonneg]
+@[simp, norm_cast] lemma valuation_coe (x : ℤ_[p]) {hx : (x : ℚ_[p]) ≠ 0} :
+    (x : ℚ_[p]).valuation hx = x.valuation (coe_ne_zero.1 hx) := by
+  simp [valuation, valuation_coe_nonneg (coe_ne_zero.1 hx)]
 
-@[simp] lemma valuation_zero : valuation (0 : ℤ_[p]) = 0 := by simp [valuation]
 @[simp] lemma valuation_one : valuation (1 : ℤ_[p]) = 0 := by simp [valuation]
 @[simp] lemma valuation_p : valuation (p : ℤ_[p]) = 1 := by simp [valuation]
 
-lemma le_valuation_add (hxy : x + y ≠ 0) : min x.valuation y.valuation ≤ (x + y).valuation := by
-  zify; simpa [← valuation_coe] using Padic.le_valuation_add <| coe_ne_zero.2 hxy
+@[simp]
+lemma valuation_natCast {n : ℕ} (hn : n ≠ 0) : valuation (n : ℤ_[p]) = padicValNat p n := by
+  simp [valuation, hn]
+
+lemma le_valuation_add (hx : x ≠ 0) (hy : y ≠ 0) (hxy : x + y ≠ 0) :
+    min x.valuation y.valuation ≤ (x + y).valuation := by
+  have := Padic.le_valuation_add (coe_ne_zero.2 hx) (coe_ne_zero.2 hy) (coe_ne_zero.2 hxy)
+  simp only [← coe_add, valuation_coe] at this
+  exact_mod_cast this
 
 @[simp] lemma valuation_mul (hx : x ≠ 0) (hy : y ≠ 0) :
     (x * y).valuation = x.valuation + y.valuation := by
-  zify; simp [← valuation_coe, Padic.valuation_mul (coe_ne_zero.2 hx) (coe_ne_zero.2 hy)]
+  have := Padic.valuation_mul (coe_ne_zero.2 hx) (coe_ne_zero.2 hy)
+  simp only [← coe_mul, valuation_coe] at this
+  exact_mod_cast this
 
 @[simp]
-lemma valuation_pow (x : ℤ_[p]) (n : ℕ) : (x ^ n).valuation = n * x.valuation := by
-  zify; simp [← valuation_coe]
+lemma valuation_pow (hx : x ≠ 0) (n : ℕ) : (x ^ n).valuation = n * x.valuation := by
+  have := Padic.valuation_pow (coe_ne_zero.2 hx) n
+  simp only [← coe_pow, valuation_coe] at this
+  exact_mod_cast this
 
 lemma norm_eq_zpow_neg_valuation {x : ℤ_[p]} (hx : x ≠ 0) : ‖x‖ = p ^ (-x.valuation : ℤ) := by
   simp [norm_def, Padic.norm_eq_zpow_neg_valuation <| coe_ne_zero.2 hx]
@@ -351,7 +368,7 @@ lemma norm_eq_zpow_neg_valuation {x : ℤ_[p]} (hx : x ≠ 0) : ‖x‖ = p ^ (-
 @[simp]
 theorem valuation_p_pow_mul (n : ℕ) (c : ℤ_[p]) (hc : c ≠ 0) :
     ((p : ℤ_[p]) ^ n * c).valuation = n + c.valuation := by
-  rw [valuation_mul (NeZero.ne _) hc, valuation_pow, valuation_p, mul_one]
+  rw [valuation_mul (NeZero.ne _) hc, valuation_pow (NeZero.ne _), valuation_p, mul_one]
 
 section Units
 
@@ -467,8 +484,7 @@ theorem mem_span_pow_iff_le_valuation (x : ℤ_[p]) (hx : x ≠ 0) (n : ℕ) :
       exact le_self_add
     contrapose hx
     rw [hx, mul_zero]
-  · nth_rewrite 2 [unitCoeff_spec hx]
-    simpa [Units.isUnit, IsUnit.dvd_mul_left] using pow_dvd_pow _
+  · exact fun h ↦ (pow_dvd_pow _ h).trans (Dvd.intro_left _ (unitCoeff_spec hx).symm)
 
 theorem norm_le_pow_iff_mem_span_pow (x : ℤ_[p]) (n : ℕ) :
     ‖x‖ ≤ (p : ℝ) ^ (-n : ℤ) ↔ x ∈ (Ideal.span {(p : ℤ_[p]) ^ n} : Ideal ℤ_[p]) := by
@@ -577,19 +593,18 @@ instance isFractionRing : IsFractionRing ℤ_[p] ℚ_[p] where
     by_cases hx : ‖x‖ ≤ 1
     · use (⟨x, hx⟩, 1)
       rw [Submonoid.coe_one, map_one, mul_one, PadicInt.algebraMap_apply, Subtype.coe_mk]
-    · set n := Int.toNat (-x.valuation) with hn
+    · have hx0 : x ≠ 0 := by
+        rintro rfl
+        exact hx (by simp)
+      set n := Int.toNat (-x.valuation) with hn
       have hn_coe : (n : ℤ) = -x.valuation := by
         rw [hn, Int.toNat_of_nonneg]
         rw [Right.nonneg_neg_iff]
-        rw [Padic.norm_le_one_iff_val_nonneg, not_le] at hx
+        rw [Padic.norm_le_one_iff_val_nonneg hx0, not_le] at hx
         exact hx.le
       set a := x * (p : ℚ_[p]) ^ n with ha
       have ha_norm : ‖a‖ = 1 := by
-        have hx : x ≠ 0 := by
-          intro h0
-          rw [h0, norm_zero] at hx
-          exact hx zero_le_one
-        rw [ha, padicNormE.mul, Padic.norm_p_pow, Padic.norm_eq_zpow_neg_valuation hx,
+        rw [ha, padicNormE.mul, Padic.norm_p_pow, Padic.norm_eq_zpow_neg_valuation hx0,
           ← zpow_add', hn_coe, neg_neg, neg_add_cancel, zpow_zero]
         exact Or.inl (Nat.cast_ne_zero.mpr (NeZero.ne p))
       use

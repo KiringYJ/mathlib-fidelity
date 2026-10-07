@@ -218,14 +218,21 @@ operation.
   inputs") and no longer inherits it from the valuation.  Tests cover the removed names, the
   discharger, and the failures at `0` and at `p = 1`.
 
-- [ ] **Make the additive `p`-adic valuations on `ℚ_[p]` and `ℤ_[p]` domain-bearing.**
-  `PadicSeq.valuation` and `Padic.valuation` in `Mathlib/NumberTheory/Padics/PadicNumbers.lean`, and
-  `PadicInt.valuation` in `Mathlib/NumberTheory/Padics/PadicIntegers.lean`, are `0` at `0`
-  (`Padic.valuation_zero`, `PadicInt.valuation_zero`), where the valuation is `⊤`;
-  `Padic.addValuation` and `Padic.mulValuation` already take values in `WithTop ℤ` and `ℤᵐ⁰`.
-  Require a nonzero argument for the integer-valued valuations, or replace them by the `WithTop ℤ`
-  one, and migrate their consumers, including `PadicInt.unitCoeff` and
-  `Mathlib/NumberTheory/Padics/MahlerBasis.lean`.
+- [x] **Make the additive `p`-adic valuations on `ℚ_[p]` and `ℤ_[p]` domain-bearing.**
+  `Padic.valuation x hx` in `Mathlib/NumberTheory/Padics/PadicNumbers.lean` and
+  `PadicInt.valuation x hx` in `Mathlib/NumberTheory/Padics/PadicIntegers.lean` take `hx : x ≠ 0`,
+  which `padic_val_tac` supplies by default, and `PadicSeq.valuation f hf` takes `hf : ¬f ≈ 0`.  The
+  valuation of `0` is `⊤`: `Padic.addValuationDef`, with values in `WithTop ℤ`, is now defined on
+  the quotient itself, `Padic.addValuation` bundles it, and `Padic.valuation` is its integer value
+  at a nonzero element.  `Padic.valuation_zero` and `PadicInt.valuation_zero` are removed;
+  `le_valuation_add`, `valuation_inv`, `valuation_pow`, `valuation_zpow`,
+  `norm_le_one_iff_val_nonneg`, and `PadicInt.valuation_coe_nonneg`, which held at `0` only through
+  the value `0`, take nonzero arguments, and `PadicInt.valuation_natCast` is new.  `padic_val_tac`
+  gains rules for casts of nonzero elements, products, powers, integer powers, and inverses.
+  `Padic.mulValuation` keeps its value `0` at `0`, the zero of `ℤᵐ⁰`, as every valuation does.  The
+  consumers are `PadicInt.unitCoeff`, the discrete valuation ring and fraction field structures of
+  `ℤ_[p]`, `PadicInt.appr`, the Mahler basis, and the divided powers of `ℤ_[p]`.  Tests are in
+  `MathlibTest/PadicValuationStrict.lean`.
 
 - [x] **Require monicity for polynomial division-by-monic notation.**
   `Polynomial.divByMonic` and `Polynomial.modByMonic` in `Mathlib/Algebra/Polynomial/Div.lean` take
