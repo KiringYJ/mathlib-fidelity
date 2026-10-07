@@ -312,14 +312,22 @@ operation.
   `Gal 0`.  `natSepDegree` and `primitiveRoots` keep their values at `0` by explicit conventions,
   recorded below.  Tests are in `MathlibTest/RootsStrict.lean`.
 
-- [ ] **Decide the separable degree of the zero polynomial.**
-  `Polynomial.natSepDegree` in `Mathlib/FieldTheory/SeparableDegree.lean` counts the distinct roots
-  of a nonzero polynomial in its splitting field and is `0` at `0` by an explicit convention
-  (`natSepDegree_of_ne_zero` unfolds the count), which keeps `natSepDegree_le_natDegree`,
-  `natSepDegree_eq_zero_iff`, and `natSepDegree_mul` total, and gives `natSepDegree_mul_eq_iff` its
-  disjunct `f = 0 ∧ g = 0`.  The zero polynomial has no finite set of roots and no separable
-  contraction, so the value is not a count of roots.  Either justify it as an independent invariant
-  or give `natSepDegree` the domain `f ≠ 0`.
+- [x] **Decide the separable degree of the zero polynomial.**
+  `Polynomial.natSepDegree f hf` in `Mathlib/FieldTheory/SeparableDegree.lean` takes `hf : f ≠ 0`,
+  which `nonzero_tac` supplies by default.  It counts the distinct roots of `f` in its splitting
+  field, and the zero polynomial has no finite set of roots and no separable contraction, so its
+  former value `0` was a convention, not a count.  `natSepDegree_zero` and `natSepDegree_of_ne_zero`
+  are removed: `natSepDegree_def` unfolds the count, and `natSepDegree_congr` rewrites the
+  polynomial together with its proof.  `natSepDegree_le_natDegree`, `natSepDegree_eq_zero_iff`,
+  `natSepDegree_mul`, `natSepDegree_pow`, `natSepDegree_expand`, `natSepDegree_map`, and
+  `natSepDegree_C` take nonzero polynomials, `natSepDegree_mul_eq_iff` loses its disjunct
+  `f = 0 ∧ g = 0`, and the separable contraction lemmas derive the nonvanishing
+  (`IsSeparableContraction.ne_zero`).  The characterizations through minimal polynomials, such as
+  `minpoly.natSepDegree_eq_one_iff_pow_mem`, `isPurelyInseparable_iff_natSepDegree_eq_one`, and
+  `mem_perfectClosure_iff_natSepDegree_eq_one`, state
+  `∃ hx : IsIntegral F x, (minpoly F x).natSepDegree (minpoly.ne_zero hx) = 1`, which the former
+  value `0` at a nonintegral element expressed, and `perfectField_iff_splits_of_natSepDegree_eq_one`
+  quantifies over nonzero polynomials.  Tests are in `MathlibTest/NatSepDegreeStrict.lean`.
 
 - [ ] **Give `primitiveRoots` and the modified cyclotomic polynomial the domain `n ≠ 0`.**
   `primitiveRoots k R` in `Mathlib/RingTheory/RootsOfUnity/PrimitiveRoots.lean` is `∅` at `k = 0`

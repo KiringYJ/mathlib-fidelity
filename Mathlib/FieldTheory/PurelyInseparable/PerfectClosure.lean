@@ -77,7 +77,8 @@ theorem mem_perfectClosure_iff_pow_mem (q : ℕ) [ExpChar F q] {x : E} :
 /-- An element is contained in the relative perfect closure if and only if its minimal polynomial
 has separable degree one. -/
 theorem mem_perfectClosure_iff_natSepDegree_eq_one {x : E} :
-    x ∈ perfectClosure F E ↔ (minpoly F x).natSepDegree = 1 := by
+    x ∈ perfectClosure F E ↔
+      ∃ hx : IsIntegral F x, (minpoly F x).natSepDegree (minpoly.ne_zero hx) = 1 := by
   rw [mem_perfectClosure_iff, minpoly.natSepDegree_eq_one_iff_pow_mem (ringExpChar F)]
 
 /-- A field extension `E / F` is purely inseparable if and only if the relative perfect closure of
@@ -197,7 +198,8 @@ namespace IntermediateField
 /-- `F⟮x⟯ / F` is a purely inseparable extension if and only if the minimal polynomial of `x`
 has separable degree one. -/
 theorem isPurelyInseparable_adjoin_simple_iff_natSepDegree_eq_one {x : E} :
-    IsPurelyInseparable F F⟮x⟯ ↔ (minpoly F x).natSepDegree = 1 := by
+    IsPurelyInseparable F F⟮x⟯ ↔
+      ∃ hx : IsIntegral F x, (minpoly F x).natSepDegree (minpoly.ne_zero hx) = 1 := by
   rw [← le_perfectClosure_iff, adjoin_simple_le_iff, mem_perfectClosure_iff_natSepDegree_eq_one]
 
 /-- If `F` is of exponential characteristic `q`, then `F⟮x⟯ / F` is a purely inseparable extension

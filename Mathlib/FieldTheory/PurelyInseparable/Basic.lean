@@ -36,8 +36,8 @@ This file contains basic definitions and results about purely inseparable extens
 - `IsPurelyInseparable.trans`: if `E / F` and `K / E` are both purely inseparable extensions, then
   `K / F` is also purely inseparable.
 
-- `isPurelyInseparable_iff_natSepDegree_eq_one`: `E / F` is purely inseparable if and only if for
-  every element `x` of `E`, its minimal polynomial has separable degree one.
+- `isPurelyInseparable_iff_natSepDegree_eq_one`: `E / F` is purely inseparable if and only if every
+  element `x` of `E` is integral and its minimal polynomial has separable degree one.
 
 - `isPurelyInseparable_iff_minpoly_eq_X_pow_sub_C`: a field extension `E / F` of exponential
   characteristic `q` is purely inseparable if and only if for every element `x` of `E`, the minimal
@@ -215,9 +215,7 @@ theorem isPurelyInseparable_iff_pow_mem :
   · obtain ⟨g, h1, n, h2⟩ := (minpoly.irreducible (h x).1).hasSeparableContraction q
     exact ⟨n, (h _).2 <| h1.of_dvd <| minpoly.dvd F _ <| by
       simpa only [expand_aeval, minpoly.aeval] using congr_arg (aeval x) h2⟩
-  have hdeg := (minpoly.natSepDegree_eq_one_iff_pow_mem q).2 (h x)
-  have halg : IsIntegral F x := by_contra fun h' ↦ by
-    simp only [minpoly.eq_zero h', natSepDegree_zero, zero_ne_one] at hdeg
+  obtain ⟨halg, hdeg⟩ := (minpoly.natSepDegree_eq_one_iff_pow_mem q).2 (h x)
   refine ⟨halg, fun hsep ↦ ?_⟩
   rwa [hsep.natSepDegree_eq_natDegree, minpoly.natDegree_eq_one_iff] at hdeg
 
@@ -282,16 +280,17 @@ end IntermediateField
 
 variable {E}
 
-/-- A field extension `E / F` is purely inseparable if and only if for every element `x` of `E`,
-its minimal polynomial has separable degree one. -/
+/-- A field extension `E / F` is purely inseparable if and only if every element `x` of `E` is
+integral and its minimal polynomial has separable degree one. -/
 theorem isPurelyInseparable_iff_natSepDegree_eq_one :
-    IsPurelyInseparable F E ↔ ∀ x : E, (minpoly F x).natSepDegree = 1 := by
+    IsPurelyInseparable F E ↔
+      ∀ x : E, ∃ hx : IsIntegral F x, (minpoly F x).natSepDegree (minpoly.ne_zero hx) = 1 := by
   obtain ⟨q, _⟩ := ExpChar.exists F
   simp_rw [isPurelyInseparable_iff_pow_mem F q, minpoly.natSepDegree_eq_one_iff_pow_mem q]
 
 theorem IsPurelyInseparable.natSepDegree_eq_one [IsPurelyInseparable F E] (x : E) :
     (minpoly F x).natSepDegree = 1 :=
-  (isPurelyInseparable_iff_natSepDegree_eq_one F).1 ‹_› x
+  ((isPurelyInseparable_iff_natSepDegree_eq_one F).1 ‹_› x).2
 
 /-- A field extension `E / F` of exponential characteristic `q` is purely inseparable
 if and only if for every element `x` of `E`, the minimal polynomial of `x` over `F` is of form
@@ -386,8 +385,9 @@ instance [Field L] [PerfectField L] [Algebra F L] : Nonempty (E →ₐ[F] L) :=
   nonempty_algHom_of_splits fun x ↦ ⟨IsPurelyInseparable.isIntegral' _ _,
     have ⟨q, _⟩ := ExpChar.exists F
     PerfectField.splits_of_natSepDegree_eq_one (algebraMap F L)
+      (minpoly.ne_zero (IsPurelyInseparable.isIntegral' _ _))
       ((minpoly.natSepDegree_eq_one_iff_eq_X_pow_sub_C q).mpr <|
-        IsPurelyInseparable.minpoly_eq_X_pow_sub_C F q x)⟩
+        IsPurelyInseparable.minpoly_eq_X_pow_sub_C F q x).2⟩
 
 theorem bijective_comp_algebraMap [Field L] [PerfectField L] :
     Function.Bijective fun f : E →+* L ↦ f.comp (algebraMap F E) :=
