@@ -40,8 +40,9 @@ This file contains basics about the separable degree of a field extension.
   is in bijection with $\operatorname{Gal}(E/F)$, which is isomorphic to
   $\mathbb{Z}_p^\times$, which is uncountable, whereas $ [E:F] $ is countable.
 
-- `Polynomial.natSepDegree`: the separable degree of a polynomial is a natural number,
-  defined to be the number of distinct roots of it over its splitting field.
+- `Polynomial.natSepDegree`: the separable degree of a nonzero polynomial is a natural number,
+  defined to be the number of distinct roots of it over its splitting field; the separable degree
+  of the zero polynomial is `0` by convention.
 
 ## Main results
 
@@ -74,11 +75,11 @@ This file contains basics about the separable degree of a field extension.
 - `Polynomial.natSepDegree_eq_natDegree_iff`: the separable degree of a non-zero polynomial is
   equal to its degree if and only if it is separable.
 
-- `Polynomial.natSepDegree_eq_of_splits`: if a polynomial splits over `E`, then its separable degree
-  is equal to the number of distinct roots of it over `E`.
+- `Polynomial.natSepDegree_eq_of_splits`: if a nonzero polynomial splits over `E`, then its
+  separable degree is equal to the number of distinct roots of it over `E`.
 
-- `Polynomial.natSepDegree_eq_of_isAlgClosed`: the separable degree of a polynomial is equal to
-  the number of distinct roots of it over any algebraically closed field.
+- `Polynomial.natSepDegree_eq_of_isAlgClosed`: the separable degree of a nonzero polynomial is
+  equal to the number of distinct roots of it over any algebraically closed field.
 
 - `Polynomial.natSepDegree_expand`: if a field `F` is of exponential characteristic
   `q`, then `Polynomial.expand F (q ^ n) f` and `f` have the same separable degree.
@@ -421,7 +422,7 @@ theorem natSepDegree_C_mul {x : F} (hx : x ≠ 0) :
   rcases eq_or_ne f 0 with rfl | hf
   · simp
   rw [natSepDegree_eq_of_isAlgClosed (AlgebraicClosure F) _ (mul_ne_zero (C_ne_zero.2 hx) hf),
-    natSepDegree_eq_of_isAlgClosed (AlgebraicClosure F) _ hf, aroots_C_mul _ hx hf]
+    natSepDegree_eq_of_isAlgClosed (AlgebraicClosure F) _ hf, aroots_C_mul]
 
 @[simp]
 theorem natSepDegree_smul_nonzero {x : F} (hx : x ≠ 0) :
@@ -430,7 +431,7 @@ theorem natSepDegree_smul_nonzero {x : F} (hx : x ≠ 0) :
   rcases eq_or_ne f 0 with rfl | hf
   · simp
   rw [natSepDegree_eq_of_isAlgClosed (AlgebraicClosure F) _ (smul_ne_zero hx hf),
-    natSepDegree_eq_of_isAlgClosed (AlgebraicClosure F) _ hf, aroots_smul_nonzero _ hx hf]
+    natSepDegree_eq_of_isAlgClosed (AlgebraicClosure F) _ hf, aroots_smul_nonzero]
 
 @[simp]
 theorem natSepDegree_pow {n : ℕ} : (f ^ n).natSepDegree = if n = 0 then 0 else f.natSepDegree := by

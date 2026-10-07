@@ -14,13 +14,14 @@ public import Mathlib.Topology.Algebra.Polynomial
 
 In this file we use Rolle's Theorem
 to relate the number of real roots of a real polynomial and its derivative.
+The polynomials are nonconstant, so that the derivative is nonzero and has a finite set of roots.
 Namely, we prove the following facts.
 
 * `Polynomial.card_roots_toFinset_le_card_roots_derivative_sdiff_roots_succ`:
-  the number of roots of a real polynomial `p` is at most the number of roots of its derivative
-  that are not roots of `p` plus one.
+  the number of roots of a nonconstant real polynomial `p` is at most the number of roots of its
+  derivative that are not roots of `p` plus one.
 * `Polynomial.card_roots_toFinset_le_derivative`, `Polynomial.card_rootSet_le_derivative`:
-  the number of roots of a real polynomial
+  the number of roots of a nonconstant real polynomial
   is at most the number of roots of its derivative plus one.
 * `Polynomial.card_roots_le_derivative`: same, but the roots are counted with multiplicities.
 
@@ -33,8 +34,8 @@ public section
 
 namespace Polynomial
 
-/-- The number of roots of a real polynomial `p` is at most the number of roots of its derivative
-that are not roots of `p` plus one. -/
+/-- The number of roots of a real polynomial `p` with nonzero derivative is at most the number of
+roots of its derivative that are not roots of `p` plus one. -/
 theorem card_roots_toFinset_le_card_roots_derivative_sdiff_roots_succ (p : ℝ[X])
     (hp' : derivative p ≠ 0) :
     haveI := ne_zero_of_derivative_ne_zero hp'
@@ -50,16 +51,16 @@ theorem card_roots_toFinset_le_card_roots_derivative_sdiff_roots_succ (p : ℝ[X
 alias card_roots_toFinset_le_card_roots_derivative_diff_roots_succ :=
   card_roots_toFinset_le_card_roots_derivative_sdiff_roots_succ
 
-/-- The number of roots of a real polynomial is at most the number of roots of its derivative plus
-one. -/
+/-- The number of roots of a real polynomial with nonzero derivative is at most the number of roots
+of its derivative plus one. -/
 theorem card_roots_toFinset_le_derivative (p : ℝ[X]) (hp' : derivative p ≠ 0) :
     haveI := ne_zero_of_derivative_ne_zero hp'
     p.roots.toFinset.card ≤ p.derivative.roots.toFinset.card + 1 :=
   (p.card_roots_toFinset_le_card_roots_derivative_sdiff_roots_succ hp').trans <| by
     grw [Finset.sdiff_subset]
 
-/-- The number of roots of a real polynomial (counted with multiplicities) is at most the number of
-roots of its derivative (counted with multiplicities) plus one. -/
+/-- The number of roots of a real polynomial with nonzero derivative (counted with multiplicities)
+is at most the number of roots of its derivative (counted with multiplicities) plus one. -/
 theorem card_roots_le_derivative (p : ℝ[X]) (hp' : derivative p ≠ 0) :
     haveI := ne_zero_of_derivative_ne_zero hp'
     Multiset.card p.roots ≤ Multiset.card (derivative p).roots + 1 := by
@@ -91,8 +92,8 @@ theorem card_roots_le_derivative (p : ℝ[X]) (hp' : derivative p ≠ 0) :
       intro x _ hx₂
       simpa only [Multiset.mem_toFinset, Multiset.count_eq_zero] using hx₂
 
-/-- The number of real roots of a polynomial is at most the number of roots of its derivative plus
-one. -/
+/-- The number of real roots of a polynomial whose derivative does not vanish in `ℝ[X]` is at most
+the number of real roots of its derivative plus one. -/
 theorem card_rootSet_le_derivative {F : Type*} [CommRing F] [Algebra F ℝ] (p : F[X])
     (hp' : p.derivative.map (algebraMap F ℝ) ≠ 0) :
     haveI : p.map (algebraMap F ℝ) ≠ 0 := ne_zero_of_derivative_ne_zero (by rwa [derivative_map])

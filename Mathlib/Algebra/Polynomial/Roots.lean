@@ -389,6 +389,8 @@ the roots of `X ^ n - C a`. It takes a proof that `X ^ n - C a` is nonzero, that
 def nthRoots (n : ℕ) (a : R) (h : (X : R[X]) ^ n - C a ≠ 0 := by nonzero_tac) : Multiset R :=
   roots ((X : R[X]) ^ n - C a) h
 
+/-- Membership in `nthRoots n a` for any proof of its domain; `mem_nthRoots` takes `0 < n`, from
+which `nonzero_tac` finds the domain. -/
 @[simp]
 theorem mem_nthRoots' {n : ℕ} {a x : R} {h : (X : R[X]) ^ n - C a ≠ 0} :
     x ∈ nthRoots n a h ↔ x ^ n = a := by
@@ -433,6 +435,8 @@ lemma nthRootsFinset_def (n : ℕ) {R : Type*} (a : R) [CommRing R] [IsDomain R]
   unfold nthRootsFinset
   convert! rfl
 
+/-- Membership in `nthRootsFinset n a` for any proof of its domain; `mem_nthRootsFinset` takes
+`0 < n`, from which `nonzero_tac` finds the domain. -/
 @[simp]
 theorem mem_nthRootsFinset' {n : ℕ} {a x : R} {h : (X : R[X]) ^ n - C a ≠ 0} :
     x ∈ nthRootsFinset n a h ↔ x ^ (n : ℕ) = a := by
@@ -567,22 +571,22 @@ theorem aroots_neg [CommRing S] [IsDomain S] [Algebra T S] (p : T[X])
   simp only [aroots_def, Polynomial.map_neg, roots_neg]
 
 @[simp]
-theorem aroots_C_mul [IsDomain T] [CommRing S] [IsDomain S] [Algebra T S]
-    [Module.IsTorsionFree T S] {a : T} (p : T[X]) (ha : a ≠ 0) (hp : p ≠ 0) :
-    haveI hinj := FaithfulSMul.algebraMap_injective T S
-    haveI := (Polynomial.map_ne_zero_iff hinj).2 (mul_ne_zero (C_ne_zero.2 ha) hp)
-    haveI := (Polynomial.map_ne_zero_iff hinj).2 hp
-    (C a * p).aroots S = p.aroots S := by
+theorem aroots_C_mul [CommRing S] [IsDomain S] [Algebra T S] {a : T} (p : T[X])
+    {h : (C a * p).map (algebraMap T S) ≠ 0} :
+    haveI : p.map (algebraMap T S) ≠ 0 := by
+      rw [Polynomial.map_mul] at h
+      exact right_ne_zero_of_mul h
+    (C a * p).aroots S h = p.aroots S := by
   simp only [aroots_def, Polynomial.map_mul, map_C, roots_C_mul]
 
 @[simp]
-theorem aroots_smul_nonzero [IsDomain T] [CommRing S] [IsDomain S] [Algebra T S]
-    [Module.IsTorsionFree T S] {a : T} (p : T[X]) (ha : a ≠ 0) (hp : p ≠ 0) :
-    haveI hinj := FaithfulSMul.algebraMap_injective T S
-    haveI := (Polynomial.map_ne_zero_iff hinj).2 (smul_ne_zero ha hp)
-    haveI := (Polynomial.map_ne_zero_iff hinj).2 hp
-    (a • p).aroots S = p.aroots S := by
-  simp only [smul_eq_C_mul, aroots_C_mul _ ha hp]
+theorem aroots_smul_nonzero [CommRing S] [IsDomain S] [Algebra T S] {a : T} (p : T[X])
+    {h : (a • p).map (algebraMap T S) ≠ 0} :
+    haveI : p.map (algebraMap T S) ≠ 0 := by
+      rw [smul_eq_C_mul, Polynomial.map_mul] at h
+      exact right_ne_zero_of_mul h
+    (a • p).aroots S h = p.aroots S := by
+  simp only [smul_eq_C_mul, aroots_C_mul]
 
 @[simp]
 theorem aroots_pow [CommRing S] [IsDomain S] [Algebra T S] (p : T[X])
@@ -599,21 +603,17 @@ theorem aroots_X_pow [CommRing S] [IsDomain S] [Algebra T S] (n : ℕ) :
   simp only [aroots_def, Polynomial.map_pow, map_X]
   exact roots_X_pow n
 
-theorem aroots_C_mul_X_pow [IsDomain T] [CommRing S] [IsDomain S] [Algebra T S]
-    [Module.IsTorsionFree T S] {a : T} (ha : a ≠ 0) (n : ℕ) :
-    haveI := (Polynomial.map_ne_zero_iff (FaithfulSMul.algebraMap_injective T S)).2
-      (mul_ne_zero (C_ne_zero.2 ha) (pow_ne_zero n X_ne_zero))
-    (C a * X ^ n : T[X]).aroots S = n • ({0} : Multiset S) := by
-  rw [aroots_C_mul _ ha (pow_ne_zero n X_ne_zero), aroots_X_pow]
+theorem aroots_C_mul_X_pow [CommRing S] [IsDomain S] [Algebra T S] {a : T} (n : ℕ)
+    {h : (C a * X ^ n : T[X]).map (algebraMap T S) ≠ 0} :
+    (C a * X ^ n : T[X]).aroots S h = n • ({0} : Multiset S) := by
+  rw [aroots_C_mul, aroots_X_pow]
 
 @[simp]
-theorem aroots_monomial [IsDomain T] [CommRing S] [IsDomain S] [Algebra T S]
-    [Module.IsTorsionFree T S] {a : T} (ha : a ≠ 0) (n : ℕ) :
-    haveI := (Polynomial.map_ne_zero_iff (FaithfulSMul.algebraMap_injective T S)).2
-      ((monomial_eq_zero_iff a n).not.2 ha)
-    (monomial n a).aroots S = n • ({0} : Multiset S) := by
+theorem aroots_monomial [CommRing S] [IsDomain S] [Algebra T S] {a : T} (n : ℕ)
+    {h : (monomial n a).map (algebraMap T S) ≠ 0} :
+    (monomial n a).aroots S h = n • ({0} : Multiset S) := by
   simp only [← C_mul_X_pow_eq_monomial]
-  exact aroots_C_mul_X_pow ha n
+  exact aroots_C_mul_X_pow n
 
 variable (R S) in
 @[simp]
@@ -676,8 +676,8 @@ theorem rootSet_map [CommRing S] (p : S[X]) [Algebra S T] [Algebra T R] [Algebra
   classical
   rw [rootSet_def, rootSet_def, aroots_map]
 
-/-- The set of roots of all polynomials of bounded degree and having coefficients in a finite set
-is finite. -/
+/-- The set of roots of all polynomials of bounded degree, with coefficients in a finite set and
+nonzero image under `m`, is finite. -/
 theorem bUnion_roots_finite {R S : Type*} [Semiring R] [CommRing S] [IsDomain S] [DecidableEq S]
     (m : R →+* S) (d : ℕ) {U : Set R} (h : U.Finite) :
     (⋃ (f : R[X]) (hf : f.natDegree ≤ d ∧ (∀ i, f.coeff i ∈ U) ∧ f.map m ≠ 0),
