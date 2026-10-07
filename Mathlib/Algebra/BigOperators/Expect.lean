@@ -266,8 +266,8 @@ lemma expect_product (s : Finset ι) (t : Finset κ) (f : ι × κ → M) :
 
 For rewriting in the reverse direction, use `Finset.expect_product`. -/
 lemma expect_product' (s : Finset ι) (t : Finset κ) (f : ι → κ → M) :
-    𝔼 i ∈ s ×ˢ t, f i.1 i.2 = 𝔼 i ∈ s, 𝔼 j ∈ t, f i j := by
-  simp only [expect, card_product, sum_product', smul_sum, mul_inv, mul_smul, Nat.cast_mul]
+    𝔼 i ∈ s ×ˢ t, f i.1 i.2 = 𝔼 i ∈ s, 𝔼 j ∈ t, f i j :=
+  expect_product ..
 
 @[simp]
 lemma expect_image [DecidableEq ι] {m : κ → ι} (hm : (t : Set κ).InjOn m) :

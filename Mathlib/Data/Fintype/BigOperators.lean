@@ -285,9 +285,9 @@ theorem Fintype.prod_prod_type_right [CommMonoid γ] (f : α₁ × α₂ → γ)
     ∏ x, f x = ∏ y, ∏ x, f (x, y) :=
   Finset.prod_product_right ..
 
-/-- An uncurried version of `Finset.prod_prod_type_right`. -/
+/-- A curried version of `Fintype.prod_prod_type_right`. -/
 @[to_additive Fintype.sum_prod_type_right'
-/-- An uncurried version of `Finset.sum_prod_type_right` -/]
+/-- A curried version of `Fintype.sum_prod_type_right` -/]
 theorem Fintype.prod_prod_type_right' [CommMonoid γ] (f : α₁ → α₂ → γ) :
     ∏ x : α₁ × α₂, f x.1 x.2 = ∏ y, ∏ x, f x y :=
   Finset.prod_product_right' ..

@@ -169,7 +169,7 @@ protected theorem Multipliable.tprod_prod' {f : β × γ → α} (h : Multipliab
 protected theorem Multipliable.tprod_prod_uncurry {f : β → γ → α}
     (h : Multipliable (Function.uncurry f)) (h₁ : ∀ b, Multipliable fun c ↦ f b c) :
     ∏' p : β × γ, uncurry f p = ∏' (b) (c), f b c :=
-  (h.hasProd.prod_fiberwise fun b ↦ (h₁ b).hasProd).tprod_eq.symm
+  h.tprod_prod' h₁
 
 @[to_additive]
 protected theorem Multipliable.tprod_comm' {f : β → γ → α} (h : Multipliable (Function.uncurry f))
