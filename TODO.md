@@ -2206,20 +2206,16 @@ mathematical facts.  Keep a product or dependent-sum argument when it is the act
 domain, and keep structured curry/uncurry results when topology, measurability, boundedness,
 linearity, or another invariant adds hypotheses or preservation content.
 
-- [ ] **[M] Share tuple/curried implementations without presuming one public theorem name.**
-  `Mathlib/Algebra/BigOperators/Group/Finset/Sigma.lean:51`--`:101` maintains four adjacent
-  `prod_*`/`prod_*'` pairs whose primed proofs are direct applications of the tuple-function
-  versions; `@[to_additive]` generates the corresponding sum families.  The pattern continues in
-  `Mathlib/Data/Fintype/BigOperators.lean:267`--`:293`, while
-  `Mathlib/Algebra/BigOperators/Expect.lean:258`--`:270` proves `expect_product` and
-  `expect_product'` separately, and
-  `Mathlib/Topology/Algebra/InfiniteSum/Constructions.lean:162`--`:172` gives both
-  `Multipliable.tprod_prod'` and `Multipliable.tprod_prod_uncurry` together with their additive
-  versions.  Reuse one proof or generate exact transports where possible, but retain multiple public
-  views when they materially improve theorem search, rewrite orientation, elaboration, or
-  automation.  Correct docstrings that currently call a curried argument "uncurried."  Classify
-  `prod_sigma`/`prod_sigma'` separately because the `Sigma` value may be the genuine dependent
-  indexing domain rather than a presentation tuple.
+- [x] **[M] Share tuple/curried implementations without presuming one public theorem name.**
+  The curried views keep their own names, since their left-hand sides `f x.1 x.2` and `f x` are
+  different rewrite targets, and each is a direct application of its tuple-function version: the
+  `prod_*'` pairs in `Mathlib/Algebra/BigOperators/Group/Finset/Sigma.lean` and
+  `Mathlib/Data/Fintype/BigOperators.lean` already were, and `Finset.expect_product'` and
+  `Multipliable.tprod_prod_uncurry` (with `Summable.tsum_prod_uncurry`) now are.  The docstrings of
+  `Finset.prod_product_right'` and `Fintype.prod_prod_type_right'` and their additive versions,
+  which called the curried view uncurried, are corrected, and the latter no longer cites a
+  nonexistent `Finset` name.  `prod_sigma` and `prod_sigma'` keep both statements: the `Sigma` type
+  is the dependent indexing domain of the double product, not a presentation of a pair.
 
 - [ ] **[M] Audit bare bridge families for generated proofs and useful orientations.**
   `Set.image_prod`, `Set.image_uncurry_prod`, and `Set.image2_curry` in

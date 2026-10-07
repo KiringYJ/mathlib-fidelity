@@ -94,8 +94,8 @@ theorem prod_product_right (s : Finset γ) (t : Finset α) (f : γ × α → β)
     ∏ x ∈ s ×ˢ t, f x = ∏ y ∈ t, ∏ x ∈ s, f (x, y) :=
   prod_finset_product_right (s ×ˢ t) t (fun _a => s) fun _p => mem_product.trans and_comm
 
-/-- An uncurried version of `Finset.prod_product_right`. -/
-@[to_additive /-- An uncurried version of `Finset.sum_product_right` -/]
+/-- A curried version of `Finset.prod_product_right`. -/
+@[to_additive /-- A curried version of `Finset.sum_product_right` -/]
 theorem prod_product_right' (s : Finset γ) (t : Finset α) (f : γ → α → β) :
     ∏ x ∈ s ×ˢ t, f x.1 x.2 = ∏ y ∈ t, ∏ x ∈ s, f x y :=
   prod_product_right ..
