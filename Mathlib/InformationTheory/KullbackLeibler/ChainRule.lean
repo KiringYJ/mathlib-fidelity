@@ -20,7 +20,7 @@ Suppose that we have two finite joint measures on a product `𝓧 × 𝓨`, whic
 from `𝓧` to `𝓨`. Then we can express the Kullback-Leibler divergence between these two joint
 measures as a sum of `klDiv μ ν` and the conditional Kullback-Leibler divergence between the kernels
 `κ` and `η`, averaged over `μ`. The resulting equality is most often written as
-`klDiv (μ ⊗ₘ κ) (ν ⊗ₘ η) = klDiv μ ν + μ[fun x ↦ klDiv (κ x) (η x)]`.
+`klDiv (μ ⊗ₘ κ) (ν ⊗ₘ η) = klDiv μ ν + ∫ x, klDiv (κ x) (η x) ∂μ`.
 
 Here we first prove the following version:
 `klDiv (μ ⊗ₘ κ) (ν ⊗ₘ η) = klDiv μ ν + klDiv (μ ⊗ₘ κ) (μ ⊗ₘ η)`.
@@ -74,7 +74,7 @@ _ = ∫ a, llr μ ν a ∂μ + ∫ p, llr (μ ⊗ₘ κ) (μ ⊗ₘ η) p ∂(μ
 ## TODO
 
 Add a version of the chain rule for the integral form of the contional KL divergence, i.e.
-`μ[fun x ↦ klDiv (κ x) (η x)]`.
+`∫ x, klDiv (κ x) (η x) ∂μ`.
 
 -/
 

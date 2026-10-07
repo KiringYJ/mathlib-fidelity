@@ -2095,13 +2095,16 @@ have stable roles and a searchable named declaration remains available.
   scoped notation `Integrable[m]`, which had no consumer, is removed.  A test checks the named
   argument and that `Integrable[m] f μ` is no longer integrability syntax.
 
-- [ ] **[S--M] Remove the `P[X]` expectation macro that competes with element lookup.**
-  `Mathlib/Probability/Notation.lean:48`--`:53` expands arbitrary adjacent terms `P[X]` to an
-  integral against the explicit measure `P` and warns that the grammar conflicts with Lean's
-  `GetElem` notation.  Prefer the named integral API while retaining `P` explicitly.  Do not replace
-  it mechanically with `𝔼[X]`: that notation uses the ambient `volume` measure and is equivalent
-  only when `P` is that selected measure.  Add a regression test that an invalid list lookup is
-  diagnosed as a lookup error rather than reconsidered as expectation syntax.
+- [x] **[S--M] Remove the `P[X]` expectation macro that competes with element lookup.**
+  The scoped macro of `Mathlib/Probability/Notation.lean`, which read any term followed by `[` as an
+  integral against that term, is removed.  Its uses are the named integral `∫ ω, X ω ∂P`, which
+  keeps the measure `P` explicit; `𝔼[X]` integrates against `volume` and is not a replacement.  A
+  mean is the real integral, coerced where a complex value is needed, and `P[id]` is `∫ x, x ∂P`, so
+  the lemmas that differed from another only by `id` are removed:
+  `ContinuousLinearMap.integral_comp_id_comm'`, `ContinuousLinearEquiv.integral_comp_id_comm'`,
+  `integral_id_multivariateGaussian'`, and `BrownianReal.integral_id_projectiveFamily'`.  A test
+  checks that an invalid list lookup is reported as a lookup error and that a measure followed by a
+  bracket is an element lookup rather than an expectation.
 
 - [x] **[S] Remove the exported Diophantine proof-DSL surface.**
   The symbolic forms `D∧`, `D∨`, `D∃`, `D&`, `D.`, `D=`, `D+`, `D*`, `D≤`, `D<`, `D-`, `D∣`, `D%`,

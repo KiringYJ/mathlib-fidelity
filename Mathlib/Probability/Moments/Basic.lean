@@ -14,11 +14,11 @@ import Mathlib.Probability.Independence.Integration
 ## Main definitions
 
 * `ProbabilityTheory.moment X p μ`: `p`th moment of a real random variable `X` with respect to
-  measure `μ`, `μ[X^p]`
+  measure `μ`, `∫ ω, X ω ^ p ∂μ`
 * `ProbabilityTheory.centralMoment X p μ`:`p`th central moment of `X` with respect to measure `μ`,
-  `μ[(X - μ[X])^p]`
+  `∫ ω, (X ω - ∫ x, X x ∂μ) ^ p ∂μ`
 * `ProbabilityTheory.mgf X μ t`: moment-generating function of `X` with respect to measure `μ`,
-  `μ[exp(t*X)]`
+  `∫ ω, exp (t * X ω) ∂μ`
 * `ProbabilityTheory.cgf X μ t`: cumulant-generating function, logarithm of the moment-generating
   function
 
@@ -51,16 +51,16 @@ namespace ProbabilityTheory
 
 variable {Ω ι : Type*} {m : SigmaAlgebra Ω} {X : Ω → ℝ} {p : ℕ} {μ : Measure Ω}
 
-/-- Moment of a real random variable, `μ[X ^ p]`. -/
+/-- Moment of a real random variable, `∫ ω, X ω ^ p ∂μ`. -/
 def moment (X : Ω → ℝ) (p : ℕ) (μ : Measure Ω) : ℝ :=
-  μ[X ^ p]
+  ∫ x, (X ^ p) x ∂μ
 
 lemma moment_def (X : Ω → ℝ) (p : ℕ) (μ : Measure Ω) :
-    moment X p μ = μ[X ^ p] := rfl
+    moment X p μ = ∫ x, (X ^ p) x ∂μ := rfl
 
-/-- Central moment of a real random variable, `μ[(X - μ[X]) ^ p]`. -/
+/-- Central moment of a real random variable, `∫ ω, (X ω - ∫ x, X x ∂μ) ^ p ∂μ`. -/
 def centralMoment (X : Ω → ℝ) (p : ℕ) (μ : Measure Ω) : ℝ :=
-  μ[(X - fun (_ : Ω) => μ[X]) ^ p]
+  ∫ x, ((X - fun (_ : Ω) => ∫ ω, X ω ∂μ) ^ p) x ∂μ
 
 @[simp]
 theorem moment_zero (hp : p ≠ 0) : moment 0 p μ = 0 := by
@@ -76,14 +76,14 @@ theorem centralMoment_zero (hp : p ≠ 0) : centralMoment 0 p μ = 0 := by
     mul_zero, zero_sub, Pi.pow_apply, Pi.neg_apply, neg_zero, zero_pow, Ne, not_false_iff]
 
 lemma moment_one (X : Ω → ℝ) (μ : Measure Ω) :
-    moment X 1 μ = μ[X] := by simp [moment]
+    moment X 1 μ = ∫ x, X x ∂μ := by simp [moment]
 
 @[simp]
 lemma centralMoment_zero_measure : centralMoment X p (0 : Measure Ω) = 0 := by
   simp [centralMoment]
 
 theorem centralMoment_one' [IsFiniteMeasure μ] (h_int : Integrable X μ) :
-    centralMoment X 1 μ = (1 - μ.real Set.univ) * μ[X] := by
+    centralMoment X 1 μ = (1 - μ.real Set.univ) * ∫ x, X x ∂μ := by
   simp only [centralMoment, Pi.sub_apply, pow_one]
   rw [integral_sub h_int (integrable_const _)]
   simp only [sub_mul, integral_const, smul_eq_mul, one_mul]
@@ -117,11 +117,13 @@ section MomentGeneratingFunction
 
 variable {t : ℝ}
 
-/-- Moment-generating function of a real random variable `X`: `fun t => μ[exp(t*X)]`. -/
+/-- Moment-generating function of a real random variable `X`:
+`fun t => ∫ ω, exp (t * X ω) ∂μ`. -/
 def mgf (X : Ω → ℝ) (μ : Measure Ω) (t : ℝ) : ℝ :=
-  μ[fun ω => exp (t * X ω)]
+  ∫ ω, exp (t * X ω) ∂μ
 
-/-- Cumulant-generating function of a real random variable `X`: `fun t => log μ[exp(t*X)]`. -/
+/-- Cumulant-generating function of a real random variable `X`:
+`fun t => log (∫ ω, exp (t * X ω) ∂μ)`. -/
 def cgf (X : Ω → ℝ) (μ : Measure Ω) (t : ℝ) : ℝ :=
   log (mgf X μ t)
 
@@ -241,7 +243,6 @@ theorem mgf_const_mul (α : ℝ) : mgf (fun ω ↦ α * X ω) μ t = mgf X μ (�
 theorem mgf_const_add (α : ℝ) : mgf (fun ω => α + X ω) μ t = exp (t * α) * mgf X μ t := by
   rw [mgf, mgf, ← integral_const_mul]
   congr with x
-  dsimp
   rw [mul_add, exp_add]
 
 theorem mgf_add_const (α : ℝ) : mgf (fun ω => X ω + α) μ t = mgf X μ t * exp (t * α) := by
@@ -440,9 +441,9 @@ theorem measure_ge_le_exp_mul_mgf [IsFiniteMeasure μ] (ε : ℝ) (ht : 0 ≤ t)
       simp only [Set.mem_ofPred_eq, exp_le_exp]
       exact ⟨fun h => mul_le_mul_of_nonneg_left h ht_pos.le,
         fun h => le_of_mul_le_mul_left h ht_pos⟩
-    _ ≤ (exp (t * ε))⁻¹ * μ[fun ω => exp (t * X ω)] := by
+    _ ≤ (exp (t * ε))⁻¹ * ∫ ω, exp (t * X ω) ∂μ := by
       have : exp (t * ε) * μ.real {ω | exp (t * ε) ≤ exp (t * X ω)} ≤
-          μ[fun ω => exp (t * X ω)] :=
+          ∫ ω, exp (t * X ω) ∂μ :=
         mul_meas_ge_le_integral_of_nonneg (ae_of_all _ fun x => (exp_pos _).le) h_int _
       rwa [mul_comm (exp (t * ε))⁻¹, ← div_eq_mul_inv, le_div_iff₀' (exp_pos _)]
     _ = exp (-t * ε) * mgf X μ t := by rw [neg_mul, exp_neg]; rfl
@@ -515,14 +516,9 @@ variable {𝕜 E F : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [NormedAddCommG
     [NormedSpace 𝕜 E] [NormedSpace ℝ E] [NormedSpace 𝕜 F] [NormedSpace ℝ F] [CompleteSpace E]
     [CompleteSpace F] [SigmaAlgebra E] {μ : Measure E}
 
-lemma integral_comp_id_comm' (h : Integrable id μ) (L : E →L[𝕜] F) :
-    μ[L] = L μ[id] := by
-  change ∫ x, L (id x) ∂μ = _
-  rw [L.integral_comp_comm h]
-
 lemma integral_comp_id_comm (h : Integrable id μ) (L : E →L[𝕜] F) :
-    μ[L] = L (∫ x, x ∂μ) :=
-  L.integral_comp_id_comm' h
+    ∫ x, L x ∂μ = L (∫ x, x ∂μ) :=
+  L.integral_comp_comm h
 
 variable [OpensSigmaAlgebra E] [SigmaAlgebra F] [BorelSpace F] [SecondCountableTopology F]
 
@@ -539,15 +535,12 @@ variable {𝕜 E F : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [NormedAddCommG
     [NormedSpace 𝕜 E] [NormedSpace ℝ E] [NormedSpace 𝕜 F] [NormedSpace ℝ F] [CompleteSpace E]
     [CompleteSpace F] [SigmaAlgebra E] {μ : Measure E}
 
-lemma integral_comp_id_comm' (L : E ≃L[𝕜] F) :
-    μ[L] = L μ[id] := by
+lemma integral_comp_id_comm (L : E ≃L[𝕜] F) :
+    ∫ x, L x ∂μ = L (∫ x, x ∂μ) := by
   by_cases h : Integrable (fun x ↦ x) μ
-  · exact ContinuousLinearMap.integral_comp_id_comm' h L.toContinuousLinearMap
+  · exact ContinuousLinearMap.integral_comp_id_comm h L.toContinuousLinearMap
   have : ¬ Integrable L μ := mt L.integrable_comp_iff.1 h
   simp_all [integral_undef]
-
-lemma integral_comp_id_comm (L : E ≃L[𝕜] F) :
-    μ[L] = L (∫ x, x ∂μ) := L.integral_comp_id_comm'
 
 variable [BorelSpace E] [SigmaAlgebra F] [BorelSpace F]
 

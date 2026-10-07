@@ -101,7 +101,8 @@ variable [IsFiniteMeasure P]
 lemma pi_indepFun_pi_of_prod_bcf (mX : ∀ s, AEMeasurable (X s) P)
     (mY : ∀ t, AEMeasurable (Y t) P)
     (h : ∀ (f : (s : S) → E s →ᵇ ℝ) (g : (t : T) → F t →ᵇ ℝ),
-      P[(∏ s, f s ∘ (X s)) * (∏ t, g t ∘ (Y t))] = P[∏ s, f s ∘ (X s)] * P[∏ t, g t ∘ (Y t)]) :
+      ∫ ω, ((∏ s, f s ∘ (X s)) * (∏ t, g t ∘ (Y t))) ω ∂P =
+        (∫ ω, (∏ s, f s ∘ (X s)) ω ∂P) * ∫ ω, (∏ t, g t ∘ (Y t)) ω ∂P) :
     IndepFun (fun ω s ↦ X s ω) (fun ω t ↦ Y t ω) P := by
   have mX' : AEMeasurable (fun ω s ↦ X s ω) P := .of_eval mX
   have mY' : AEMeasurable (fun ω t ↦ Y t ω) P := .of_eval mY
@@ -118,7 +119,7 @@ $$P[f(X_1, ..., X_p) g(Y_1, ..., Y_q)] = P[f(X_1, ..., X_p)] * P[g(Y_1, ..., Y_q
 lemma pi_indepFun_pi_of_bcf (mX : ∀ s, AEMeasurable (X s) P)
     (mY : ∀ t, AEMeasurable (Y t) P)
     (h : ∀ (f : (Π s, E s) →ᵇ ℝ) (g : (Π t, F t) →ᵇ ℝ),
-      P[fun ω ↦ f (X · ω) * g (Y · ω)] = P[fun ω ↦ f (X · ω)] * P[fun ω ↦ g (Y · ω)]) :
+      ∫ ω, f (X · ω) * g (Y · ω) ∂P = (∫ ω, f (X · ω) ∂P) * ∫ ω, g (Y · ω) ∂P) :
     IndepFun (fun ω s ↦ X s ω) (fun ω t ↦ Y t ω) P := by
   have := Fintype.ofFinite S; have := Fintype.ofFinite T
   refine pi_indepFun_pi_of_prod_bcf mX mY fun f g ↦ ?_
@@ -129,7 +130,7 @@ lemma pi_indepFun_pi_of_bcf (mX : ∀ s, AEMeasurable (X s) P)
 lemma indepFun_pi_of_prod_bcf (mZ : AEMeasurable Z P)
     (mY : ∀ t, AEMeasurable (Y t) P)
     (h : ∀ (f : G →ᵇ ℝ) (g : (t : T) → F t →ᵇ ℝ),
-      P[f ∘ Z * (∏ t, g t ∘ (Y t))] = P[f ∘ Z] * P[∏ t, g t ∘ (Y t)]) :
+      ∫ ω, (f ∘ Z * (∏ t, g t ∘ (Y t))) ω ∂P = (∫ ω, (f ∘ Z) ω ∂P) * ∫ ω, (∏ t, g t ∘ (Y t)) ω ∂P) :
     IndepFun Z (fun ω t ↦ Y t ω) P := by
   have mY' : AEMeasurable (fun ω t ↦ Y t ω) P := .of_eval mY
   rw [indepFun_iff_map_prod_eq_prod_map_map mZ mY']
@@ -142,7 +143,7 @@ omit [Fintype T] in variable [Finite T] in
 lemma indepFun_pi_of_bcf (mZ : AEMeasurable Z P)
     (mY : ∀ t, AEMeasurable (Y t) P)
     (h : ∀ (f : G →ᵇ ℝ) (g : (Π t, F t) →ᵇ ℝ),
-      P[fun ω ↦ f (Z ω) * g (Y · ω)] = P[f ∘ Z] * P[fun ω ↦ g (Y · ω)]) :
+      ∫ ω, f (Z ω) * g (Y · ω) ∂P = (∫ ω, (f ∘ Z) ω ∂P) * ∫ ω, g (Y · ω) ∂P) :
     IndepFun Z (fun ω t ↦ Y t ω) P := by
   have := Fintype.ofFinite T
   refine indepFun_pi_of_prod_bcf mZ mY fun f g ↦ ?_
@@ -151,7 +152,7 @@ lemma indepFun_pi_of_bcf (mZ : AEMeasurable Z P)
 lemma pi_indepFun_of_prod_bcf (mX : ∀ s, AEMeasurable (X s) P)
     (mU : AEMeasurable U P)
     (h : ∀ (f : (s : S) → E s →ᵇ ℝ) (g : H →ᵇ ℝ),
-      P[(∏ s, f s ∘ (X s)) * g ∘ U] = P[∏ s, f s ∘ (X s)] * P[g ∘ U]) :
+      ∫ ω, ((∏ s, f s ∘ (X s)) * g ∘ U) ω ∂P = (∫ ω, (∏ s, f s ∘ (X s)) ω ∂P) * ∫ ω, (g ∘ U) ω ∂P) :
     IndepFun (fun ω s ↦ X s ω) U P := by
   have mX' : AEMeasurable (fun ω s ↦ X s ω) P := .of_eval mX
   rw [indepFun_iff_map_prod_eq_prod_map_map mX' mU]
@@ -164,7 +165,7 @@ omit [Fintype S] in variable [Finite S] in
 lemma pi_indepFun_of_bcf (mX : ∀ s, AEMeasurable (X s) P)
     (mU : AEMeasurable U P)
     (h : ∀ (f : (Π s, E s) →ᵇ ℝ) (g : H →ᵇ ℝ),
-      P[fun ω ↦ f (X · ω) * g (U ω)] = P[fun ω ↦ f (X · ω)] * P[g ∘ U]) :
+      ∫ ω, f (X · ω) * g (U ω) ∂P = (∫ ω, f (X · ω) ∂P) * ∫ ω, (g ∘ U) ω ∂P) :
     IndepFun (fun ω s ↦ X s ω) U P := by
   have := Fintype.ofFinite S
   refine pi_indepFun_of_prod_bcf mX mU fun f g ↦ ?_
@@ -174,7 +175,8 @@ lemma pi_indepFun_of_bcf (mX : ∀ s, AEMeasurable (X s) P)
 for all real bounded continuous functions $f$ and $g$,
 $$P[f(X) g(Y)] = P[f(X)] * P[g(Y)].$$ -/
 lemma indepFun_of_bcf (mZ : AEMeasurable Z P) (mU : AEMeasurable U P)
-    (h : ∀ (f : G →ᵇ ℝ) (g : H →ᵇ ℝ), P[f ∘ Z * g ∘ U] = P[f ∘ Z] * P[g ∘ U]) :
+    (h : ∀ (f : G →ᵇ ℝ) (g : H →ᵇ ℝ),
+      ∫ ω, (f ∘ Z * g ∘ U) ω ∂P = (∫ ω, (f ∘ Z) ω ∂P) * ∫ ω, (g ∘ U) ω ∂P) :
     IndepFun Z U P := by
   rw [indepFun_iff_map_prod_eq_prod_map_map mZ mU]
   refine eq_prod_of_integral_mul_boundedContinuousFunction fun f g ↦ ?_
@@ -325,7 +327,8 @@ variable [IsZeroOrProbabilityMeasure P]
 lemma process_indepFun_process_of_prod_bcf
     (mX : ∀ s, AEMeasurable (X s) P) (mY : ∀ t, AEMeasurable (Y t) P)
     (h : ∀ (I : Finset S) (J : Finset T) (f : (s : I) → E s →ᵇ ℝ) (g : (t : J) → F t →ᵇ ℝ),
-      P[(∏ s, f s ∘ (X s)) * (∏ t, g t ∘ (Y t))] = P[∏ s, f s ∘ (X s)] * P[∏ t, g t ∘ (Y t)]) :
+      ∫ ω, ((∏ s, f s ∘ (X s)) * (∏ t, g t ∘ (Y t))) ω ∂P =
+        (∫ ω, (∏ s, f s ∘ (X s)) ω ∂P) * ∫ ω, (∏ t, g t ∘ (Y t)) ω ∂P) :
     IndepFun (fun ω s ↦ X s ω) (fun ω t ↦ Y t ω) P :=
   IndepFun.process_indepFun_process₀ mX mY
     fun I J ↦ pi_indepFun_pi_of_prod_bcf (by fun_prop) (by fun_prop) (h I J)
@@ -338,7 +341,7 @@ P[f(X_{s_1}, ..., X_{s_p})] * P[g(Y_{t_1}, ..., Y_{t_q})].$$ -/
 lemma process_indepFun_process_of_bcf
     (mX : ∀ s, AEMeasurable (X s) P) (mY : ∀ t, AEMeasurable (Y t) P)
     (h : ∀ (I : Finset S) (J : Finset T) (f : (Π s : I, E s) →ᵇ ℝ) (g : (Π t : J, F t) →ᵇ ℝ),
-      P[fun ω ↦ f (X · ω) * g (Y · ω)] = P[fun ω ↦ f (X · ω)] * P[fun ω ↦ g (Y · ω)]) :
+      ∫ ω, f (X · ω) * g (Y · ω) ∂P = (∫ ω, f (X · ω) ∂P) * ∫ ω, g (Y · ω) ∂P) :
     IndepFun (fun ω s ↦ X s ω) (fun ω t ↦ Y t ω) P :=
   IndepFun.process_indepFun_process₀ mX mY
     fun I J ↦ pi_indepFun_pi_of_bcf (by fun_prop) (by fun_prop) (h I J)
@@ -346,7 +349,7 @@ lemma process_indepFun_process_of_bcf
 lemma indepFun_process_of_prod_bcf
     (mZ : AEMeasurable Z P) (mY : ∀ t, AEMeasurable (Y t) P)
     (h : ∀ (f : G →ᵇ ℝ) (J : Finset T) (g : (t : J) → F t →ᵇ ℝ),
-      P[f ∘ Z * (∏ t, g t ∘ (Y t))] = P[f ∘ Z] * P[∏ t, g t ∘ (Y t)]) :
+      ∫ ω, (f ∘ Z * (∏ t, g t ∘ (Y t))) ω ∂P = (∫ ω, (f ∘ Z) ω ∂P) * ∫ ω, (∏ t, g t ∘ (Y t)) ω ∂P) :
     IndepFun Z (fun ω t ↦ Y t ω) P :=
   IndepFun.indepFun_process₀ mZ mY fun J ↦
     indepFun_pi_of_prod_bcf (by fun_prop) (by fun_prop) (h · J)
@@ -354,21 +357,21 @@ lemma indepFun_process_of_prod_bcf
 lemma indepFun_process_of_bcf
     (mZ : AEMeasurable Z P) (mY : ∀ t, AEMeasurable (Y t) P)
     (h : ∀ (f : G →ᵇ ℝ) (J : Finset T) (g : (Π t : J, F t) →ᵇ ℝ),
-      P[fun ω ↦ f (Z ω) * g (Y · ω)] = P[f ∘ Z] * P[fun ω ↦ g (Y · ω)]) :
+      ∫ ω, f (Z ω) * g (Y · ω) ∂P = (∫ ω, (f ∘ Z) ω ∂P) * ∫ ω, g (Y · ω) ∂P) :
     IndepFun Z (fun ω t ↦ Y t ω) P :=
   IndepFun.indepFun_process₀ mZ mY fun J ↦ indepFun_pi_of_bcf (by fun_prop) (by fun_prop) (h · J)
 
 lemma process_indepFun_of_prod_bcf
     (mX : ∀ s, AEMeasurable (X s) P) (mU : AEMeasurable U P)
     (h : ∀ (I : Finset S) (f : (s : I) → E s →ᵇ ℝ) (g : H →ᵇ ℝ),
-      P[(∏ s, f s ∘ (X s)) * g ∘ U] = P[∏ s, f s ∘ (X s)] * P[g ∘ U]) :
+      ∫ ω, ((∏ s, f s ∘ (X s)) * g ∘ U) ω ∂P = (∫ ω, (∏ s, f s ∘ (X s)) ω ∂P) * ∫ ω, (g ∘ U) ω ∂P) :
     IndepFun (fun ω s ↦ X s ω) U P :=
   IndepFun.process_indepFun₀ mX mU fun I ↦ pi_indepFun_of_prod_bcf (by fun_prop) (by fun_prop) (h I)
 
 lemma process_indepFun_of_bcf
     (mX : ∀ s, AEMeasurable (X s) P) (mU : AEMeasurable U P)
     (h : ∀ (I : Finset S) (f : (Π s : I, E s) →ᵇ ℝ) (g : H →ᵇ ℝ),
-      P[fun ω ↦ f (X · ω) * g (U ω)] = P[fun ω ↦ f (X · ω)] * P[g ∘ U]) :
+      ∫ ω, f (X · ω) * g (U ω) ∂P = (∫ ω, f (X · ω) ∂P) * ∫ ω, (g ∘ U) ω ∂P) :
     IndepFun (fun ω s ↦ X s ω) U P :=
   IndepFun.process_indepFun₀ mX mU fun I ↦ pi_indepFun_of_bcf (by fun_prop) (by fun_prop) (h I)
 

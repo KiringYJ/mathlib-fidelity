@@ -133,14 +133,16 @@ lemma condVar_ae_le_condExp_sq (hm : m ≤ m₀) [IsFiniteMeasure μ] (hX : MemL
 
 /-- **Law of total variance** -/
 lemma integral_condVar_add_variance_condExp (hm : m ≤ m₀) [IsProbabilityMeasure μ]
-    (hX : MemLp X 2 μ) : μ[Var[X; μ | m]] + Var[μ[X | m]; μ] = Var[X; μ] := by
+    (hX : MemLp X 2 μ) : ∫ ω, (Var[X; μ | m]) ω ∂μ + Var[μ[X | m]; μ] = Var[X; μ] := by
   calc
-    μ[Var[X; μ | m]] + Var[μ[X | m]; μ]
-    _ = μ[(μ[X ^ 2 | m] - μ[X | m] ^ 2 : Ω → ℝ)] + (μ[μ[X | m] ^ 2] - μ[μ[X | m]] ^ 2) := by
+    ∫ ω, (Var[X; μ | m]) ω ∂μ + Var[μ[X | m]; μ]
+    _ = ∫ ω, (μ[X ^ 2 | m] - μ[X | m] ^ 2 : Ω → ℝ) ω ∂μ +
+        (∫ ω, (μ[X | m] ^ 2) ω ∂μ - (∫ ω, (μ[X | m]) ω ∂μ) ^ 2) := by
       congr 1
       · exact integral_congr_ae <| condVar_ae_eq_condExp_sq_sub_sq_condExp hm hX
       · exact variance_eq_sub (hX.condExp one_le_two)
-    _ = μ[X ^ 2] - μ[μ[X | m] ^ 2] + (μ[μ[X | m] ^ 2] - μ[X] ^ 2) := by
+    _ = ∫ ω, (X ^ 2) ω ∂μ - ∫ ω, (μ[X | m] ^ 2) ω ∂μ +
+        (∫ ω, (μ[X | m] ^ 2) ω ∂μ - (∫ ω, X ω ∂μ) ^ 2) := by
       rw [integral_sub' integrable_condExp, integral_condExp hm, integral_condExp hm]
       exact (hX.condExp one_le_two).integrable_sq
     _ = Var[X; μ] := by rw [variance_eq_sub hX]; ring

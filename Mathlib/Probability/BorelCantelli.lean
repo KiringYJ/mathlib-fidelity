@@ -49,7 +49,7 @@ theorem iIndepFun.indep_comap_natural_of_lt (hf : ∀ i, StronglyMeasurable (f i
 
 theorem iIndepFun.condExp_natural_ae_eq_of_lt [SecondCountableTopology β] [CompleteSpace β]
     [NormedSpace ℝ β] (hf : ∀ i, StronglyMeasurable (f i)) (hfi : iIndepFun f μ)
-    (hij : i < j) : μ[f j | Filtration.natural f hf i] =ᵐ[μ] fun _ => μ[f j] := by
+    (hij : i < j) : μ[f j | Filtration.natural f hf i] =ᵐ[μ] fun _ => ∫ ω, f j ω ∂μ := by
   have : IsProbabilityMeasure μ := hfi.isProbabilityMeasure
   exact condExp_indep_eq (hf j).measurable.comap_le (Filtration.le _ _)
     (comap_measurable <| f j).stronglyMeasurable (hfi.indep_comap_natural_of_lt hf hij)

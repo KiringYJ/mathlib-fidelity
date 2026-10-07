@@ -18,7 +18,7 @@ We define the covariance of two real-valued random variables.
 ## Main definitions
 
 * `covariance`: covariance of two real-valued random variables, with notation `cov[X, Y; μ]`.
-  `cov[X, Y; μ] = ∫ ω, (X ω - μ[X]) * (Y ω - μ[Y]) ∂μ`.
+  `cov[X, Y; μ] = ∫ ω, (X ω - ∫ x, X x ∂μ) * (Y ω - ∫ x, Y x ∂μ) ∂μ`.
 
 ## Main statements
 
@@ -42,7 +42,7 @@ variable {Ω : Type*} {mΩ : SigmaAlgebra Ω} {X Y Z T : Ω → ℝ} {μ : Measu
 /-- The covariance of two real-valued random variables defined as
 the integral of `(X - 𝔼[X])(Y - 𝔼[Y])`. -/
 noncomputable def covariance (X Y : Ω → ℝ) (μ : Measure Ω) : ℝ :=
-  ∫ ω, (X ω - μ[X]) * (Y ω - μ[Y]) ∂μ
+  ∫ ω, (X ω - ∫ x, X x ∂μ) * (Y ω - ∫ x, Y x ∂μ) ∂μ
 
 @[inherit_doc]
 scoped notation "cov[" X ", " Y "; " μ "]" => ProbabilityTheory.covariance X Y μ
@@ -52,7 +52,7 @@ according to the volume measure. -/
 scoped notation "cov[" X ", " Y "]" => cov[X, Y; MeasureTheory.MeasureSpace.volume]
 
 lemma covariance_eq_sub [IsProbabilityMeasure μ] (hX : MemLp X 2 μ) (hY : MemLp Y 2 μ) :
-     cov[X, Y; μ] = μ[X * Y] - μ[X] * μ[Y] := by
+     cov[X, Y; μ] = ∫ ω, (X * Y) ω ∂μ - (∫ ω, X ω ∂μ) * ∫ ω, Y ω ∂μ := by
    simp_rw [covariance, sub_mul, mul_sub]
    repeat rw [integral_sub]
    · simp_rw [integral_mul_const, integral_const_mul, integral_const, probReal_univ,

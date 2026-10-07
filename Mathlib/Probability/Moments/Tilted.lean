@@ -19,7 +19,7 @@ of `X`.
 
 * `integral_tilted_mul_self`: the integral of `X` against the tilted measure `μ.tilted (t * X ·)`
   is the first derivative of the cumulant-generating function of `X` at `t`.
-  `(μ.tilted (t * X ·))[X] = deriv (cgf X μ) t`
+  `∫ ω, X ω ∂(μ.tilted (t * X ·)) = deriv (cgf X μ) t`
 * `variance_tilted_mul`: the variance of `X` under the tilted measure `μ.tilted (t * X ·)`
   is the second derivative of the cumulant-generating function of `X` at `t`.
   `Var[X; μ.tilted (t * X ·)] = iteratedDeriv 2 (cgf X μ) t`
@@ -130,7 +130,7 @@ lemma integral_tilted_mul_eq_cgf (g : Ω → E) (ht : Integrable (fun ω ↦ exp
 /-- The integral of `X` against the tilted measure `μ.tilted (t * X ·)` is the first derivative of
 the cumulant-generating function of `X` at `t`. -/
 lemma integral_tilted_mul_self (ht : t ∈ interior (integrableExpSet X μ)) :
-    (μ.tilted (t * X ·))[X] = deriv (cgf X μ) t := by
+    ∫ ω, X ω ∂(μ.tilted (t * X ·)) = deriv (cgf X μ) t := by
   simp_rw [integral_tilted_mul_eq_mgf, deriv_cgf ht, ← integral_div, smul_eq_mul]
   congr with ω
   ring

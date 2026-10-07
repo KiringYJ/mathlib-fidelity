@@ -26,7 +26,7 @@ variable {Ω : Type*} {m : SigmaAlgebra Ω} {X : Ω → ℝ} {μ : Measure Ω}
 /-- If an `AEMeasurable` function is ae equal to `0` or `1`, then its integral is equal to the
 measure of the set where it equals `1`. -/
 lemma integral_of_ae_eq_zero_or_one (hXmeas : AEMeasurable X μ) (hX : ∀ᵐ ω ∂μ, X ω = 0 ∨ X ω = 1) :
-    μ[X] = μ.real {ω | X ω = 1} := by
+    ∫ ω, X ω ∂μ = μ.real {ω | X ω = 1} := by
   refine (integral_map (f := id) hXmeas <| by fun_prop).symm.trans ?_
   rw [(Measure.ae_eq_or_eq_iff_map_eq_dirac_add_dirac hXmeas zero_ne_one).1 hX]
   by_cases h : μ {ω | X ω = 1} = ⊤

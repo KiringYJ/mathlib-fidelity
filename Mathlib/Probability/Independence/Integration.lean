@@ -310,7 +310,7 @@ theorem IndepFun.integral_bilin_comp_comp'
     all_goals simp [integral_undef h]
 
 /-- If `X` and `Y` are independent and integrable random variables and `B`
-is a continuous bilinear map, then `∫ ω, B (X ω) (Y ω) ∂μ = B μ[X] μ[Y].` -/
+is a continuous bilinear map, then `∫ ω, B (X ω) (Y ω) ∂μ = B (∫ ω, X ω ∂μ) (∫ ω, Y ω ∂μ)`. -/
 theorem IndepFun.integral_bilin
     [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
     [SigmaAlgebra E] [BorelSpace E]
@@ -319,7 +319,7 @@ theorem IndepFun.integral_bilin
     [NormedAddCommGroup G] [NormedSpace ℝ G] [CompleteSpace G]
     {X : Ω → E} {Y : Ω → F} (hXY : X ⟂ᵢ[μ] Y) (hX : Integrable X μ) (hY : Integrable Y μ)
     (B : E →L[ℝ] F →L[ℝ] G) :
-    ∫ ω, B (X ω) (Y ω) ∂μ = B μ[X] μ[Y] :=
+    ∫ ω, B (X ω) (Y ω) ∂μ = B (∫ ω, X ω ∂μ) (∫ ω, Y ω ∂μ) :=
   hXY.integral_bilin_comp_comp hX.aemeasurable hY.aemeasurable
     ((integrable_map_measure hX.aemeasurable
       hX.aestronglyMeasurable.aestronglyMeasurable_id_map).2
@@ -329,7 +329,8 @@ theorem IndepFun.integral_bilin
       hY) B
 
 /-- If `X` and `Y` are random variables and `B` is a continuous bilinear map
-such that `∀ x y, c * ‖x‖ * ‖y‖ ≤ ‖B x y‖`, then `∫ ω, B (X ω) (Y ω) ∂μ = B μ[X] μ[Y].`
+such that `∀ x y, c * ‖x‖ * ‖y‖ ≤ ‖B x y‖`, then
+`∫ ω, B (X ω) (Y ω) ∂μ = B (∫ ω, X ω ∂μ) (∫ ω, Y ω ∂μ)`.
 
 The assumption on `B` allows to drop the integrability condition in
 `IndepFun.integral_bilin'`, which is useful for the versions where `B` is the scalar
@@ -343,7 +344,7 @@ theorem IndepFun.integral_bilin'
     {X : Ω → E} {Y : Ω → F} (hXY : X ⟂ᵢ[μ] Y) (hX : AEStronglyMeasurable X μ)
     (hY : AEStronglyMeasurable Y μ)
     (B : E →L[ℝ] F →L[ℝ] G) (c : ℝ≥0) (hc : c ≠ 0) (hB : ∀ x y, c * ‖x‖ * ‖y‖ ≤ ‖B x y‖) :
-    ∫ ω, B (X ω) (Y ω) ∂μ = B μ[X] μ[Y] :=
+    ∫ ω, B (X ω) (Y ω) ∂μ = B (∫ ω, X ω ∂μ) (∫ ω, Y ω ∂μ) :=
   hXY.integral_bilin_comp_comp' hX.aemeasurable hY.aemeasurable
     hX.aestronglyMeasurable_id_map hY.aestronglyMeasurable_id_map B c hc hB
 
@@ -391,28 +392,28 @@ lemma IndepFun.integral_comp_smul_comp
     {X : Ω → 𝓧} {Y : Ω → 𝓨} {f : 𝓧 → 𝕜} {g : 𝓨 → E}
     (hXY : X ⟂ᵢ[μ] Y) (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ)
     (hf : AEStronglyMeasurable f (μ.map X)) (hg : AEStronglyMeasurable g (μ.map Y)) :
-    μ[(f ∘ X) • (g ∘ Y)] = μ[f ∘ X] • μ[g ∘ Y] :=
+    ∫ ω, ((f ∘ X) • (g ∘ Y)) ω ∂μ = (∫ ω, (f ∘ X) ω ∂μ) • ∫ ω, (g ∘ Y) ω ∂μ :=
   hXY.integral_fun_comp_smul_comp hX hY hf hg
 
 lemma IndepFun.integral_comp_mul_comp
     {X : Ω → 𝓧} {Y : Ω → 𝓨} {f : 𝓧 → 𝕜} {g : 𝓨 → 𝕜}
     (hXY : X ⟂ᵢ[μ] Y) (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ)
     (hf : AEStronglyMeasurable f (μ.map X)) (hg : AEStronglyMeasurable g (μ.map Y)) :
-    μ[(f ∘ X) * (g ∘ Y)] = μ[f ∘ X] * μ[g ∘ Y] :=
+    ∫ ω, ((f ∘ X) * (g ∘ Y)) ω ∂μ = (∫ ω, (f ∘ X) ω ∂μ) * ∫ ω, (g ∘ Y) ω ∂μ :=
   hXY.integral_fun_comp_mul_comp hX hY hf hg
 
 lemma IndepFun.integral_smul_eq_smul_integral
     [NormedAddCommGroup E] [NormedSpace ℝ E] [NormedSpace 𝕜 E] [SigmaAlgebra E] [BorelSpace E]
     {X : Ω → 𝕜} {Y : Ω → E} (hXY : X ⟂ᵢ[μ] Y)
     (hX : AEStronglyMeasurable X μ) (hY : AEStronglyMeasurable Y μ) :
-    μ[X • Y] = μ[X] • μ[Y] := by
+    ∫ ω, (X • Y) ω ∂μ = (∫ ω, X ω ∂μ) • ∫ ω, Y ω ∂μ := by
   by_cases hE : CompleteSpace E
   · exact hXY.integral_bilin' hX hY (.lsmul ℝ 𝕜) 1 (by simp) (by simp [norm_smul])
   · simp [integral, hE]
 
 lemma IndepFun.integral_mul_eq_mul_integral
     (hXY : X ⟂ᵢ[μ] Y) (hX : AEStronglyMeasurable X μ) (hY : AEStronglyMeasurable Y μ) :
-    μ[X * Y] = μ[X] * μ[Y] :=
+    ∫ ω, (X * Y) ω ∂μ = (∫ ω, X ω ∂μ) * ∫ ω, Y ω ∂μ :=
   hXY.integral_smul_eq_smul_integral hX hY
 
 lemma IndepFun.integral_fun_smul_eq_smul_integral
@@ -424,7 +425,7 @@ lemma IndepFun.integral_fun_smul_eq_smul_integral
 
 lemma IndepFun.integral_fun_mul_eq_mul_integral
     (hXY : X ⟂ᵢ[μ] Y) (hX : AEStronglyMeasurable X μ) (hY : AEStronglyMeasurable Y μ) :
-    ∫ ω, X ω * Y ω ∂μ = μ[X] * μ[Y] :=
+    ∫ ω, X ω * Y ω ∂μ = (∫ ω, X ω ∂μ) * ∫ ω, Y ω ∂μ :=
   hXY.integral_fun_smul_eq_smul_integral hX hY
 
 end Integral
@@ -470,7 +471,7 @@ lemma iIndepFun.integral_fun_prod_comp (hX : iIndepFun X μ)
 
 lemma iIndepFun.integral_prod_comp (hX : iIndepFun X μ)
     (mX : ∀ i, AEMeasurable (X i) μ) (hf : ∀ i, AEStronglyMeasurable (f i) (μ.map (X i))) :
-    μ[∏ i, (f i) ∘ (X i)] = ∏ i, μ[(f i) ∘ (X i)] := by
+    ∫ ω, (∏ i, (f i) ∘ (X i)) ω ∂μ = ∏ i, ∫ ω, ((f i) ∘ (X i)) ω ∂μ := by
   convert! hX.integral_fun_prod_comp mX hf
   simp
 
@@ -478,12 +479,12 @@ variable {X : (i : ι) → Ω → 𝕜}
 
 lemma iIndepFun.integral_prod_eq_prod_integral
     (hX : iIndepFun X μ) (mX : ∀ i, AEStronglyMeasurable (X i) μ) :
-    μ[∏ i, X i] = ∏ i, μ[X i] :=
+    ∫ ω, (∏ i, X i) ω ∂μ = ∏ i, ∫ ω, X i ω ∂μ :=
   hX.integral_prod_comp (fun i ↦ (mX i).aemeasurable) (fun _ ↦ aestronglyMeasurable_id)
 
 lemma iIndepFun.integral_fun_prod_eq_prod_integral
     (hX : iIndepFun X μ) (mX : ∀ i, AEStronglyMeasurable (X i) μ) :
-    ∫ ω, ∏ i, X i ω ∂μ = ∏ i, μ[X i] :=
+    ∫ ω, ∏ i, X i ω ∂μ = ∏ i, ∫ ω, X i ω ∂μ :=
   hX.integral_fun_prod_comp (fun i ↦ (mX i).aemeasurable) (fun _ ↦ aestronglyMeasurable_id)
 
 section SetIntegral

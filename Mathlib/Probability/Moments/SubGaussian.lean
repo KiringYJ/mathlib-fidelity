@@ -435,9 +435,9 @@ lemma add {Y : Ω → ℝ} {cX cY : ℝ≥0} (hX : HasSubgaussianMGF X cX κ ν)
       let q := (cX.sqrt + cY.sqrt) / cY.sqrt
       filter_upwards [hX.mgf_le, hY.mgf_le, hX.ae_forall_memLp_exp_mul p,
         hY.ae_forall_memLp_exp_mul q] with ω' hmX hmY hlX hlY t
-      calc (κ ω')[fun ω ↦ exp (t * (X ω + Y ω))]
-      _ ≤ (κ ω')[fun ω ↦ exp (t * X ω) ^ (p : ℝ)] ^ (1 / (p : ℝ)) *
-          (κ ω')[fun ω ↦ exp (t * Y ω) ^ (q : ℝ)] ^ (1 / (q : ℝ)) := by
+      calc ∫ ω, exp (t * (X ω + Y ω)) ∂(κ ω')
+      _ ≤ (∫ ω, exp (t * X ω) ^ (p : ℝ) ∂(κ ω')) ^ (1 / (p : ℝ)) *
+          (∫ ω, exp (t * Y ω) ^ (q : ℝ) ∂(κ ω')) ^ (1 / (q : ℝ)) := by
         simp_rw [mul_add, exp_add]
         apply integral_mul_le_Lp_mul_Lq_of_nonneg
         · exact ⟨by simp [field, p, q], by positivity, by positivity⟩
@@ -817,23 +817,23 @@ lemma measure_sum_range_ge_le_of_iIndepFun {X : ℕ → Ω → ℝ} (h_indep : i
     (s := Finset.range n) (by simpa)).measure_ge_le hε
   simpa [← mul_assoc] using h
 
-/-- For `X, Y` two independent sub-Gaussian random variables such that `μ[X] ≥ μ[Y]`,
+/-- For `X, Y` two independent sub-Gaussian random variables such that `∫ ω, X ω ∂μ ≥ ∫ ω, Y ω ∂μ`,
 the probability that `X ≤ Y` is bounded by an exponential decay term. -/
 lemma measureReal_le_le_exp {Y : Ω → ℝ} {cX cY : ℝ≥0}
-    (hX : HasSubgaussianMGF (fun ω ↦ X ω - μ[X]) cX μ)
-    (hY : HasSubgaussianMGF (fun ω ↦ Y ω - μ[Y]) cY μ)
-    (hindep : IndepFun X Y μ) (h_le : μ[Y] ≤ μ[X]) :
-    μ.real {ω | X ω ≤ Y ω} ≤ Real.exp (- (μ[Y] - μ[X]) ^ 2 / (2 * (cX + cY))) := by
+    (hX : HasSubgaussianMGF (fun ω ↦ X ω - ∫ x, X x ∂μ) cX μ)
+    (hY : HasSubgaussianMGF (fun ω ↦ Y ω - ∫ x, Y x ∂μ) cY μ)
+    (hindep : IndepFun X Y μ) (h_le : ∫ x, Y x ∂μ ≤ ∫ x, X x ∂μ) :
+    μ.real {ω | X ω ≤ Y ω} ≤ Real.exp (- (∫ x, Y x ∂μ - ∫ x, X x ∂μ) ^ 2 / (2 * (cX + cY))) := by
   calc μ.real {ω | X ω ≤ Y ω}
-  _ = μ.real {ω | (μ[X] - μ[Y]) ≤ (Y ω - μ[Y]) - (X ω - μ[X])} := by
+  _ = μ.real {ω | (∫ x, X x ∂μ - ∫ x, Y x ∂μ) ≤ (Y ω - ∫ x, Y x ∂μ) - (X ω - ∫ x, X x ∂μ)} := by
     congr with ω
     grind
-  _ ≤ Real.exp (- (μ[Y] - μ[X]) ^ 2 / (2 * (cX + cY))) := by
-    refine (measure_ge_le (X := fun ω ↦ (Y ω - μ[Y]) - (X ω - μ[X])) (c := cX + cY) ?_ ?_).trans_eq
-      ?_
+  _ ≤ Real.exp (- (∫ x, Y x ∂μ - ∫ x, X x ∂μ) ^ 2 / (2 * (cX + cY))) := by
+    refine (measure_ge_le (X := fun ω ↦ (Y ω - ∫ x, Y x ∂μ) - (X ω - ∫ x, X x ∂μ))
+      (c := cX + cY) ?_ ?_).trans_eq ?_
     · rw [add_comm cX]
       refine sub_of_indepFun hY hX ?_
-      exact hindep.symm.comp (φ := fun x ↦ x - μ[Y]) (ψ := fun x ↦ x - μ[X])
+      exact hindep.symm.comp (φ := fun x ↦ x - ∫ ω, Y ω ∂μ) (ψ := fun x ↦ x - ∫ ω, X ω ∂μ)
         (by fun_prop) (by fun_prop)
     · grind
     · congr 2
@@ -846,7 +846,7 @@ end HasSubgaussianMGF
 section HoeffdingLemma
 
 protected lemma mgf_le_of_mem_Icc_of_integral_eq_zero [IsProbabilityMeasure μ] {a b t : ℝ}
-    (hm : AEMeasurable X μ) (hb : ∀ᵐ ω ∂μ, X ω ∈ Set.Icc a b) (hc : μ[X] = 0) (ht : 0 < t) :
+    (hm : AEMeasurable X μ) (hb : ∀ᵐ ω ∂μ, X ω ∈ Set.Icc a b) (hc : ∫ x, X x ∂μ = 0) (ht : 0 < t) :
     mgf X μ t ≤ exp ((‖b - a‖₊ / 2) ^ 2 * t ^ 2 / 2) := by
   have hi (u : ℝ) : Integrable (fun ω ↦ exp (u * X ω)) μ := integrable_exp_mul_of_mem_Icc hm hb
   have hs : Set.Icc 0 t ⊆ interior (integrableExpSet X μ) := by simp [hi, integrableExpSet]
@@ -866,7 +866,7 @@ protected lemma mgf_le_of_mem_Icc_of_integral_eq_zero [IsProbabilityMeasure μ] 
 that has expectation zero and is almost surely in `Set.Icc a b` for some `a ≤ b`, then `X` has a
 sub-Gaussian moment-generating function with parameter `((b - a) / 2) ^ 2`. -/
 lemma hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero [IsProbabilityMeasure μ] {a b : ℝ}
-    (hm : AEMeasurable X μ) (hb : ∀ᵐ ω ∂μ, X ω ∈ Set.Icc a b) (hc : μ[X] = 0) :
+    (hm : AEMeasurable X μ) (hb : ∀ᵐ ω ∂μ, X ω ∈ Set.Icc a b) (hc : ∫ x, X x ∂μ = 0) :
     HasSubgaussianMGF X ((‖b - a‖₊ / 2) ^ 2) μ where
   integrable_exp_mul t := integrable_exp_mul_of_mem_Icc hm hb
   mgf_le t := by
@@ -885,8 +885,8 @@ lemma hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero [IsProbabilityMeasure μ]
 /-- A corollary of Hoeffding's lemma for bounded random variables. -/
 lemma hasSubgaussianMGF_of_mem_Icc [IsProbabilityMeasure μ] {a b : ℝ} (hm : AEMeasurable X μ)
     (hb : ∀ᵐ ω ∂μ, X ω ∈ Set.Icc a b) :
-    HasSubgaussianMGF (fun ω ↦ X ω - μ[X]) ((‖b - a‖₊ / 2) ^ 2) μ := by
-  rw [← sub_sub_sub_cancel_right b a μ[X]]
+    HasSubgaussianMGF (fun ω ↦ X ω - ∫ x, X x ∂μ) ((‖b - a‖₊ / 2) ^ 2) μ := by
+  rw [← sub_sub_sub_cancel_right b a (∫ x, X x ∂μ)]
   apply hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero (hm.sub_const _)
   · filter_upwards [hb] with ω hab using by simpa using hab
   · simp [integral_sub (Integrable.of_mem_Icc a b hm hb) (integrable_const _)]

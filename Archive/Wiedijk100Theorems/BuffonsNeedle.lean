@@ -35,7 +35,7 @@ f
 As in many references, the problem is split into two cases, `l ≤ d` (`buffon_short`), and `d ≤ l`
 (`buffon_long`). For both cases, we show that
 ```lean
-ℙ[N] = (d * π) ⁻¹ *
+∫ ω, N ω ∂ℙ = (d * π) ⁻¹ *
     ∫ θ in 0..π,
       ∫ x in Set.Icc (-d / 2) (d / 2) ∩ Set.Icc (-θ.sin * l / 2) (θ.sin * l / 2), 1
 ```
@@ -44,7 +44,7 @@ In the short case `l ≤ d`, we show that `[-l * θ.sin/2, l * θ.sin/2] ⊆ [-d
 ```lean
 ∫ x in (-θ.sin * l / 2)..(θ.sin * l / 2), 1 = θ.sin * l
 ```
-Which then concludes in the short case being `ℙ[N] = (2 * l) / (d * π)`.
+Which then concludes in the short case being `∫ ω, N ω ∂ℙ = (2 * l) / (d * π)`.
 
 In the long case, `l ≤ d` (`buffon_long`), we show the outer integral simplifies to
 ```lean
@@ -60,7 +60,7 @@ which can be expanded to
 We then show the two integrals equal their respective values `l - √(l^2 - d^2)` and
 `(π / 2 - (d / l).arcsin) * d`. Then with some algebra we conclude
 ```lean
-ℙ[N] = (2 * l) / (d * π) - 2 / (d * π) * (√(l^2 - d^2) + d * (d / l).arcsin) + 1
+∫ ω, N ω ∂ℙ = (2 * l) / (d * π) - 2 / (d * π) * (√(l^2 - d^2) + d * (d / l).arcsin) + 1
 ```
 
 ## References
@@ -263,7 +263,7 @@ include hd hBₘ hB hl in
 Buffon's Needle, the short case (`l ≤ d`). The probability of the needle crossing a line
 equals `(2 * l) / (d * π)`.
 -/
-theorem buffon_short (h : l ≤ d) : ℙ[N l B] = (2 * l) * (d * π)⁻¹ := by
+theorem buffon_short (h : l ≤ d) : ∫ ω, N l B ω ∂ℙ = (2 * l) * (d * π)⁻¹ := by
   simp_rw [buffon_integral d l hd B hBₘ hB, short_needle_inter_eq d l hl h _,
     MeasureTheory.setIntegral_const, MeasureTheory.measureReal_def,
     Real.volume_Icc, smul_eq_mul, mul_one, mul_comm (d * π)⁻¹ _,
@@ -342,7 +342,8 @@ set_option linter.style.whitespace false in
 include hd hBₘ hB hl in
 /-- Buffon's Needle, the long case (`d ≤ l`) -/
 theorem buffon_long (h : d ≤ l) :
-    ℙ[N l B] = (2 * l) / (d * π) - 2 / (d * π) * (√(l ^ 2 - d ^ 2) + d * (d / l).arcsin) + 1 := by
+    ∫ ω, N l B ω ∂ℙ =
+      (2 * l) / (d * π) - 2 / (d * π) * (√(l ^ 2 - d ^ 2) + d * (d / l).arcsin) + 1 := by
   simp only [
     buffon_integral d l hd B hBₘ hB, MeasureTheory.integral_const, smul_eq_mul, mul_one,
     MeasurableSet.univ, Measure.restrict_apply, Set.univ_inter, Set.Icc_inter_Icc, Real.volume_Icc,

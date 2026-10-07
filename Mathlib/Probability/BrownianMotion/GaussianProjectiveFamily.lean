@@ -142,9 +142,6 @@ lemma integral_id_projectiveFamily (I : Finset ℝ≥0) :
   rw [integral_projectiveFamily, ← PiLp.coe_continuousLinearEquiv 2 ℝ,
     ContinuousLinearEquiv.integral_comp_id_comm, integral_id_multivariateGaussian, map_zero]
 
-lemma integral_id_projectiveFamily' (I : Finset ℝ≥0) :
-    (projectiveFamily I)[id] = 0 := integral_id_projectiveFamily I
-
 @[simp]
 lemma integral_eval_projectiveFamily (I : Finset ℝ≥0) (s : I) :
     ∫ x, x s ∂(projectiveFamily I) = 0 := by

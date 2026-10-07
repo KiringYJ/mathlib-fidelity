@@ -55,9 +55,8 @@ section NormedSpace
 variable [NormedSpace ℝ E]
 
 lemma IsGaussian.charFunDual_eq' [IsGaussian μ] (L : StrongDual ℝ E) :
-    charFunDual μ L = exp ((L μ[id]) * I - covarianceBilinDual μ L L / 2) := by
-  rw [IsGaussian.charFunDual_eq, covarianceBilinDual_self_eq_variance, integral_complex_ofReal,
-    L.integral_comp_id_comm']
+    charFunDual μ L = exp ((L (∫ x, x ∂μ)) * I - covarianceBilinDual μ L L / 2) := by
+  rw [IsGaussian.charFunDual_eq, covarianceBilinDual_self_eq_variance, L.integral_comp_id_comm]
   · exact IsGaussian.integrable_id
   · exact IsGaussian.memLp_two_id
 
@@ -68,7 +67,7 @@ lemma isGaussian_iff_gaussian_charFunDual [IsFiniteMeasure μ] :
     IsGaussian μ ↔
     ∃ (m : E) (f : StrongDual ℝ E →L[ℝ] StrongDual ℝ E →L[ℝ] ℝ),
       f.toBilinForm.IsPosSemidef ∧ ∀ L, charFunDual μ L = exp (L m * I - f L L / 2) := by
-  refine ⟨fun h ↦ ⟨μ[id], covarianceBilinDual μ, isPosSemidef_covarianceBilinDual,
+  refine ⟨fun h ↦ ⟨∫ x, x ∂μ, covarianceBilinDual μ, isPosSemidef_covarianceBilinDual,
     h.charFunDual_eq'⟩,
     fun ⟨m, f, hf, h⟩ ↦ isGaussian_of_map_eq_gaussianReal fun L ↦ ⟨L m, (f L L).toNNReal, ?_⟩⟩
   apply Measure.ext_of_charFun
@@ -88,7 +87,7 @@ lemma gaussian_charFunDual_congr [IsFiniteMeasure μ] {m : E}
   have h' := isGaussian_iff_gaussian_charFunDual.2 ⟨m, f, hf, h⟩
   simp_rw [h'.charFunDual_eq', Complex.exp_eq_exp_iff_exists_int] at h
   choose n hn using h
-  have h L : (n L : ℂ) = (L (∫ x, id x ∂μ) * I - covarianceBilinDual μ L L / 2 -
+  have h L : (n L : ℂ) = (L (∫ x, x ∂μ) * I - covarianceBilinDual μ L L / 2 -
       L m * I + f L L / 2) / (2 * π * I) := by
     rw [hn L]
     field_simp
@@ -102,10 +101,10 @@ lemma gaussian_charFunDual_congr [IsFiniteMeasure μ] {m : E}
   have this L : n L = 0 := by
     rw [this 0, ← Int.cast_inj (α := ℂ)]
     simp [h]
-  simp only [id_eq, this, Int.cast_zero, zero_mul, add_zero, Complex.ext_iff, sub_re, mul_re,
-    ofReal_re, I_re, mul_zero, ofReal_im, I_im, mul_one, sub_self, div_ofNat_re, zero_sub, neg_inj,
-    ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, div_left_inj', sub_im, mul_im, div_ofNat_im,
-    zero_div, sub_zero] at hn
+  simp only [this, Int.cast_zero, zero_mul, add_zero, Complex.ext_iff, sub_re, mul_re, ofReal_re,
+    I_re, mul_zero, ofReal_im, I_im, mul_one, sub_self, div_ofNat_re, zero_sub, neg_inj, ne_eq,
+    OfNat.ofNat_ne_zero, not_false_eq_true, div_left_inj', sub_im, mul_im, div_ofNat_im, zero_div,
+    sub_zero] at hn
   constructor
   · rw [SeparatingDual.eq_iff_forall_dual_eq (R := ℝ)]
     simp [hn]
@@ -116,7 +115,7 @@ lemma gaussian_charFunDual_congr [IsFiniteMeasure μ] {m : E}
 
 /-- Two Gaussian measures are equal if they have same mean and same covariance. -/
 protected lemma IsGaussian.ext_covarianceBilinDual {ν : Measure E} [IsGaussian μ] [IsGaussian ν]
-    (hm : μ[id] = ν[id]) (hv : covarianceBilinDual μ = covarianceBilinDual ν) : μ = ν := by
+    (hm : ∫ x, x ∂μ = ∫ x, x ∂ν) (hv : covarianceBilinDual μ = covarianceBilinDual ν) : μ = ν := by
   apply Measure.ext_of_charFunDual
   ext L
   simp_rw [IsGaussian.charFunDual_eq', hm, hv]
@@ -124,7 +123,7 @@ protected lemma IsGaussian.ext_covarianceBilinDual {ν : Measure E} [IsGaussian 
 /-- Two Gaussian measures are equal if and only if they have same mean and same covariance. -/
 protected lemma IsGaussian.ext_iff_covarianceBilinDual {ν : Measure E} [IsGaussian μ]
     [IsGaussian ν] :
-    μ = ν ↔ μ[id] = ν[id] ∧ covarianceBilinDual μ = covarianceBilinDual ν where
+    μ = ν ↔ ∫ x, x ∂μ = ∫ x, x ∂ν ∧ covarianceBilinDual μ = covarianceBilinDual ν where
   mp h := by simp [h]
   mpr h := IsGaussian.ext_covarianceBilinDual h.1 h.2
 
@@ -135,10 +134,8 @@ section InnerProductSpace
 variable [InnerProductSpace ℝ E]
 
 lemma IsGaussian.charFun_eq' [IsGaussian μ] (t : E) :
-    charFun μ t = exp (⟪t, μ[id]⟫ * I - covarianceBilin μ t t / 2) := by
-  rw [IsGaussian.charFun_eq, covarianceBilin_self, integral_complex_ofReal,
-    integral_inner]
-  · rfl
+    charFun μ t = exp (⟪t, ∫ x, x ∂μ⟫ * I - covarianceBilin μ t t / 2) := by
+  rw [IsGaussian.charFun_eq, covarianceBilin_self, integral_inner]
   · exact IsGaussian.integrable_id
   · exact IsGaussian.memLp_two_id
 
@@ -184,7 +181,7 @@ lemma gaussian_charFun_congr [IsFiniteMeasure μ] (m : E) (f : E →L[ℝ] E →
 /-- Two Gaussian measures are equal if they have same mean and same covariance. This is
 `IsGaussian.ext_covarianceBilinDual` specialized to Hilbert spaces. -/
 protected lemma IsGaussian.ext {ν : Measure E} [IsGaussian μ] [IsGaussian ν]
-    (hm : μ[id] = ν[id]) (hv : covarianceBilin μ = covarianceBilin ν) : μ = ν := by
+    (hm : ∫ x, x ∂μ = ∫ x, x ∂ν) (hv : covarianceBilin μ = covarianceBilin ν) : μ = ν := by
   apply Measure.ext_of_charFun
   ext t
   simp_rw [IsGaussian.charFun_eq', hm, hv]
@@ -192,7 +189,7 @@ protected lemma IsGaussian.ext {ν : Measure E} [IsGaussian μ] [IsGaussian ν]
 /-- Two Gaussian measures are equal if and only if they have same mean and same covariance. This is
 `IsGaussian.ext_iff_covarianceBilinDual` specialized to Hilbert spaces. -/
 protected lemma IsGaussian.ext_iff {ν : Measure E} [IsGaussian μ] [IsGaussian ν] :
-    μ = ν ↔ μ[id] = ν[id] ∧ covarianceBilin μ = covarianceBilin ν where
+    μ = ν ↔ ∫ x, x ∂μ = ∫ x, x ∂ν ∧ covarianceBilin μ = covarianceBilin ν where
   mp h := by simp [h]
   mpr h := IsGaussian.ext h.1 h.2
 

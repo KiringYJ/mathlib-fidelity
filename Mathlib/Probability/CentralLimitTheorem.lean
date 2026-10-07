@@ -54,7 +54,7 @@ lemma charFun_inv_sqrt_mul_sum (hindep : iIndepFun X P)
 variable [IsProbabilityMeasure P]
 
 lemma tendsto_charFun_inv_sqrt_mul_pow {X : Ω → ℝ}
-    (hX : AEMeasurable X P) (h0 : P[X] = 0) (h1 : P[X ^ 2] = 1) (t : ℝ) :
+    (hX : AEMeasurable X P) (h0 : ∫ ω, X ω ∂P = 0) (h1 : ∫ ω, (X ^ 2) ω ∂P = 1) (t : ℝ) :
     Tendsto (fun (n : ℕ) ↦ (charFun (P.map X hX) ((√n)⁻¹ * t)) ^ n) atTop
       (𝓝 (exp (- t ^ 2 / 2))) := by
   apply tendsto_pow_exp_of_isLittleO_sub_add_div
@@ -79,7 +79,7 @@ independent, identically distributed, centered and with variance `1` and a rando
 `Y : Ω' → ℝ` following `gaussianReal 0 1`, the sequence
 `n ↦ (√n)⁻¹ * ∑ k ∈ Finset.range n, X k` converges to `Y` in distribution. -/
 theorem tendstoInDistribution_inv_sqrt_mul_sum (hY : HasLaw Y (gaussianReal 0 1) P')
-    (h0 : P[X 0] = 0) (h1 : P[X 0 ^ 2] = 1) (hindep : iIndepFun X P)
+    (h0 : ∫ ω, X 0 ω ∂P = 0) (h1 : ∫ ω, (X 0 ^ 2) ω ∂P = 1) (hindep : iIndepFun X P)
     (hident : ∀ (i : ℕ), IdentDistrib (X i) (X 0) P P) :
     TendstoInDistribution (fun (n : ℕ) ω ↦ (√n)⁻¹ * ∑ k ∈ Finset.range n, X k ω) atTop Y
       (fun _ ↦ P) P' where
@@ -100,13 +100,13 @@ private theorem tendstoInDistribution_inv_sqrt_mul_var_mul_sum_sub
     (hX : Var[X 0; P] ≠ 0) (hindep : iIndepFun X P)
     (hident : ∀ (i : ℕ), IdentDistrib (X i) (X 0) P P) :
     TendstoInDistribution
-      (fun (n : ℕ) ω ↦ (√(n * Var[X 0; P]))⁻¹ * (∑ k ∈ Finset.range n, X k ω - n * P[X 0]))
+      (fun (n : ℕ) ω ↦ (√(n * Var[X 0; P]))⁻¹ * (∑ k ∈ Finset.range n, X k ω - n * ∫ x, X 0 x ∂P))
       atTop Y (fun _ ↦ P) P' := by
   have mX0 := (hident 0).aemeasurable_fst
   have intX0 : Integrable (X 0) P := memLp_one_iff_integrable.1 <|
     (memLp_two_of_variance_ne_zero mX0.aestronglyMeasurable hX).mono_exponent (by simp)
-  have (n : ℕ) ω : (√(n * Var[X 0; P]))⁻¹ * (∑ k ∈ Finset.range n, X k ω - n * P[X 0]) =
-      (√n)⁻¹ * ∑ k ∈ Finset.range n, (X k ω - P[X 0]) / √Var[X 0; P] := by
+  have (n : ℕ) ω : (√(n * Var[X 0; P]))⁻¹ * (∑ k ∈ Finset.range n, X k ω - n * ∫ x, X 0 x ∂P) =
+      (√n)⁻¹ * ∑ k ∈ Finset.range n, (X k ω - ∫ x, X 0 x ∂P) / √Var[X 0; P] := by
     rw [← Finset.sum_div, Finset.sum_sub_distrib]
     simp [field]
   simp_rw [this]
@@ -115,8 +115,8 @@ private theorem tendstoInDistribution_inv_sqrt_mul_var_mul_sum_sub
     simp
   · simp only [Pi.pow_apply, div_pow]
     rw [integral_div, ← variance_eq_integral mX0, Real.sq_sqrt (variance_nonneg _ _), div_self hX]
-  · exact hindep.comp (fun _ x ↦ (x - P[X 0]) / √Var[X 0; P]) (by fun_prop)
-  · convert! fun n ↦ (hident n).comp (u := fun x ↦ (x - P[X 0]) / √Var[X 0; P]) (by fun_prop)
+  · exact hindep.comp (fun _ x ↦ (x - ∫ ω, X 0 ω ∂P) / √Var[X 0; P]) (by fun_prop)
+  · convert! fun n ↦ (hident n).comp (u := fun x ↦ (x - ∫ ω, X 0 ω ∂P) / √Var[X 0; P]) (by fun_prop)
 
 /-- **Central Limit Theorem:** Given a sequence of random variables `X : ℕ → Ω → ℝ` that are
 independent, identically distributed with mean `μ` and variance `v`, and a random variable
@@ -128,10 +128,10 @@ theorem tendstoInDistribution_inv_sqrt_mul_sum_sub
     (hX : MemLp (X 0) 2 P) (hindep : iIndepFun X P)
     (hident : ∀ (i : ℕ), IdentDistrib (X i) (X 0) P P) :
     TendstoInDistribution
-      (fun (n : ℕ) ω ↦ (√n)⁻¹ * (∑ k ∈ Finset.range n, X k ω - n * P[X 0]))
+      (fun (n : ℕ) ω ↦ (√n)⁻¹ * (∑ k ∈ Finset.range n, X k ω - n * ∫ x, X 0 x ∂P))
       atTop Y (fun _ ↦ P) P' := by
   obtain h | h := eq_or_ne Var[X 0; P] 0
-  · have : ∀ᵐ ω ∂P, ∀ n, X n ω = P[X 0] := by
+  · have : ∀ᵐ ω ∂P, ∀ n, X n ω = ∫ x, X 0 x ∂P := by
       refine ae_all_iff.2 fun n ↦ ?_
       convert! (ae_eq_integral_of_variance_eq_zero ((hident n).memLp_iff.2 hX)) ?_ using 3
       · rw [(hident n).integral_eq]

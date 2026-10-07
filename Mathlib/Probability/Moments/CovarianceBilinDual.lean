@@ -30,7 +30,7 @@ Let `μ` be a finite measure on a normed space `E` with the Borel σ-algebra. We
 ## Main statements
 
 * `covarianceBilinDual_apply` : the covariance of `μ` on `L₁, L₂ : Dual ℝ E` is equal to
-  `∫ x, (L₁ x - μ[L₁]) * (L₂ x - μ[L₂]) ∂μ`.
+  `∫ x, (L₁ x - ∫ y, L₁ y ∂μ) * (L₂ x - ∫ y, L₂ y ∂μ) ∂μ`.
 * `covarianceBilinDual_same_eq_variance`: `covarianceBilinDual μ L L = Var[L; μ]`.
 
 ## Implementation notes
@@ -224,8 +224,8 @@ section Covariance
 
 variable [NormedSpace ℝ E] [BorelSpace E]
 
-/-- Continuous bilinear form with value `∫ x, (L₁ x - μ[L₁]) * (L₂ x - μ[L₂]) ∂μ` on `(L₁, L₂)`
-if `MemLp id 2 μ`. If not, we set it to zero. -/
+/-- Continuous bilinear form with value `∫ x, (L₁ x - ∫ y, L₁ y ∂μ) * (L₂ x - ∫ y, L₂ y ∂μ) ∂μ`
+on `(L₁, L₂)` if `MemLp id 2 μ`. If not, we set it to zero. -/
 noncomputable
 def covarianceBilinDual (μ : Measure E) : StrongDual ℝ E →L[ℝ] StrongDual ℝ E →L[ℝ] ℝ :=
   uncenteredCovarianceBilinDual (μ.map (fun x ↦ x - ∫ x, x ∂μ))
@@ -321,18 +321,18 @@ lemma isPosSemidef_covarianceBilinDual : (covarianceBilinDual μ).toBilinForm.Is
 variable [CompleteSpace E] [IsFiniteMeasure μ]
 
 lemma covarianceBilinDual_apply (h : MemLp id 2 μ) (L₁ L₂ : StrongDual ℝ E) :
-    covarianceBilinDual μ L₁ L₂ = ∫ x, (L₁ x - μ[L₁]) * (L₂ x - μ[L₂]) ∂μ := by
+    covarianceBilinDual μ L₁ L₂ = ∫ x, (L₁ x - ∫ ω, L₁ ω ∂μ) * (L₂ x - ∫ ω, L₂ ω ∂μ) ∂μ := by
   rw [covarianceBilinDual, uncenteredCovarianceBilinDual_apply,
     integral_map (by fun_prop) (by fun_prop)]
-  · have hL (L : StrongDual ℝ E) : μ[L] = L (∫ x, x ∂μ) :=
+  · have hL (L : StrongDual ℝ E) : ∫ x, L x ∂μ = L (∫ x, x ∂μ) :=
       L.integral_comp_comm (h.integrable (by simp))
     simp [← hL]
   · exact (measurableEmbedding_subRight _).memLp_map_measure_iff.mpr <| h.sub (memLp_const _)
 
 lemma covarianceBilinDual_apply' (h : MemLp id 2 μ) (L₁ L₂ : StrongDual ℝ E) :
-    covarianceBilinDual μ L₁ L₂ = ∫ x, L₁ (x - μ[id]) * L₂ (x - μ[id]) ∂μ := by
+    covarianceBilinDual μ L₁ L₂ = ∫ x, L₁ (x - ∫ y, y ∂μ) * L₂ (x - ∫ y, y ∂μ) ∂μ := by
   rw [covarianceBilinDual_apply h]
-  have hL (L : StrongDual ℝ E) : μ[L] = L (∫ x, x ∂μ) :=
+  have hL (L : StrongDual ℝ E) : ∫ x, L x ∂μ = L (∫ x, x ∂μ) :=
     L.integral_comp_comm (h.integrable (by simp))
   simp [← hL]
 
