@@ -82,11 +82,10 @@ theorem gal_X_pow_sub_one_isSolvable (n : ℕ) : Group.IsSolvable (X ^ n - 1 : F
   · rw [hn, pow_zero, sub_self]
     exact gal_zero_isSolvable
   have hn' : 0 < n := pos_iff_ne_zero.mpr hn
-  have hn'' : (X ^ n - 1 : F[X]) ≠ 0 := X_pow_sub_C_ne_zero hn' 1
   apply Group.isSolvable_of_comm
   intro σ τ
-  ext a ha
-  simp only [mem_rootSet_of_ne hn'', map_sub, aeval_X_pow, aeval_one, sub_eq_zero] at ha
+  ext - a ha
+  simp only [mem_rootSet, map_sub, aeval_X_pow, aeval_one, sub_eq_zero] at ha
   have key : ∀ σ : (X ^ n - 1 : F[X]).Gal, ∃ m : ℕ, σ a = a ^ m := by
     intro σ
     lift n to ℕ+ using hn'
@@ -107,7 +106,6 @@ theorem gal_X_pow_sub_C_isSolvable_aux (n : ℕ) (a : F)
   · rw [hn, pow_zero, ← C_1, ← C_sub]
     exact gal_C_isSolvable (1 - a)
   have hn' : 0 < n := pos_iff_ne_zero.mpr hn
-  have hn'' : X ^ n - C a ≠ 0 := X_pow_sub_C_ne_zero hn' a
   have hn''' : (X ^ n - 1 : F[X]) ≠ 0 := X_pow_sub_C_ne_zero hn' 1
   have mem_range : ∀ {c : (X ^ n - C a).SplittingField},
       (c ^ n = 1 → (∃ d, algebraMap F (X ^ n - C a).SplittingField d = c)) := fun {c} hc =>
@@ -117,8 +115,8 @@ theorem gal_X_pow_sub_C_isSolvable_aux (n : ℕ) (a : F)
           (minpoly.irreducible ((SplittingField.instNormal (X ^ n - C a)).isIntegral c))))
   apply Group.isSolvable_of_comm
   intro σ τ
-  ext b hb
-  rw [mem_rootSet_of_ne hn'', map_sub, aeval_X_pow, aeval_C, sub_eq_zero] at hb
+  ext - b hb
+  rw [mem_rootSet, map_sub, aeval_X_pow, aeval_C, sub_eq_zero] at hb
   have hb' : b ≠ 0 := by
     intro hb'
     rw [hb', zero_pow hn] at hb
@@ -150,10 +148,11 @@ theorem splits_X_pow_sub_one_of_X_pow_sub_C {F : Type*} [Field F] {E : Type*} [F
     rw [hb', zero_pow hn] at hb
     exact ha' hb.symm
   let s := ((X ^ n - C a).map i).roots
-  have hs : _ = _ * (s.map _).prod := h.eq_prod_roots
+  have hs : _ = _ * (s.map _).prod := h.eq_prod_roots (map_ne_zero (X_pow_sub_C_ne_zero hn' a))
   rw [leadingCoeff_map, leadingCoeff_X_pow_sub_C hn', RingHom.map_one, C_1, one_mul] at hs
   have hs' : Multiset.card s = n := by
-    rw [← h.natDegree_eq_card_roots, natDegree_map, natDegree_X_pow_sub_C]
+    rw [← h.natDegree_eq_card_roots (map_ne_zero (X_pow_sub_C_ne_zero hn' a)), natDegree_map,
+      natDegree_X_pow_sub_C]
   rw [splits_iff_exists_multiset, leadingCoeff_map]
   use (s.map fun c ↦ c / b)
   rw [leadingCoeff_X_pow_sub_one hn', map_one, C_1, one_mul, Multiset.map_map]

@@ -72,9 +72,10 @@ theorem card_image_polynomial_eval [DecidableEq R] [Fintype R] {p : R[X]} (hp : 
     Fintype.card R ≤ natDegree p * #(univ.image fun x => eval x p) :=
   Finset.card_le_mul_card_image _ _ (fun a _ =>
     calc
-      _ = #(p - C a).roots.toFinset :=
+      _ = #((p - C a).roots (sub_C_ne_zero_of_degree_pos hp a)).toFinset :=
         congr_arg card (by simp [Finset.ext_iff, ← mem_roots_sub_C hp])
-      _ ≤ Multiset.card (p - C a).roots := Multiset.toFinset_card_le _
+      _ ≤ Multiset.card ((p - C a).roots (sub_C_ne_zero_of_degree_pos hp a)) :=
+        Multiset.toFinset_card_le _
       _ ≤ _ := card_roots_sub_C' hp)
 
 /-- If `f` and `g` are quadratic polynomials, then the `f.eval a + g.eval b = 0` has a solution. -/
@@ -379,12 +380,14 @@ theorem orderOf_frobeniusAlgHom : orderOf (frobeniusAlgHom K L) = Module.finrank
     refine ⟨DFunLike.ext _ _ fun x ↦ ?_, fun m lt pos eq ↦ ?_⟩
     · simp_rw [AlgHom.coe_pow, coe_frobeniusAlgHom, pow_iterate, AlgHom.one_apply,
         ← Module.card_eq_pow_finrank, pow_card]
-    have := card_le_degree_of_subset_roots (R := L) (p := X ^ q ^ m - X) (Z := univ) fun x _ ↦ by
-      simp_rw [mem_roots', IsRoot, eval_sub, eval_pow, eval_X]
-      have := DFunLike.congr_fun eq x
-      rw [AlgHom.coe_pow, coe_frobeniusAlgHom, pow_iterate, AlgHom.one_apply, ← sub_eq_zero] at this
-      refine ⟨fun h ↦ ?_, this⟩
+    have hX : (X ^ q ^ m - X : L[X]) ≠ 0 := fun h ↦ by
       simpa [Fintype.one_lt_card.ne, pos.ne, eqComm] using congr_arg (coeff · 1) h
+    have := card_le_degree_of_subset_roots (R := L) (p := X ^ q ^ m - X) (Z := univ) (hp := hX)
+      fun x _ ↦ by
+        simp_rw [mem_roots hX, IsRoot, eval_sub, eval_pow, eval_X]
+        have := DFunLike.congr_fun eq x
+        rwa [AlgHom.coe_pow, coe_frobeniusAlgHom, pow_iterate, AlgHom.one_apply,
+          ← sub_eq_zero] at this
     refine this.not_gt (((natDegree_sub_le ..).trans_eq ?_).trans_lt <|
       (Nat.pow_lt_pow_right Fintype.one_lt_card lt).trans_eq Module.card_eq_pow_finrank.symm)
     simp [Nat.one_le_pow _ _ Fintype.card_pos]
@@ -452,7 +455,9 @@ theorem X_pow_card_pow_sub_X_ne_zero (hn : n ≠ 0) (hp : 1 < p) : (X ^ p ^ n - 
 
 end
 
-theorem roots_X_pow_card_sub_X : roots (X ^ q - X : K[X]) = Finset.univ.val := by
+theorem roots_X_pow_card_sub_X :
+    roots (X ^ q - X : K[X]) (X_pow_card_sub_X_ne_zero K Fintype.one_lt_card) =
+      Finset.univ.val := by
   classical
     have aux : (X ^ q - X : K[X]) ≠ 0 := X_pow_card_sub_X_ne_zero K Fintype.one_lt_card
     have : (roots (X ^ q - X : K[X])).toFinset = Finset.univ := by
@@ -738,22 +743,30 @@ open Polynomial
 
 theorem Subfield.roots_X_pow_char_sub_X_bot :
     letI := Subfield.fintypeBot F p
-    (X ^ p - X : (⊥ : Subfield F)[X]).roots = Finset.univ.val := by
+    (X ^ p - X : (⊥ : Subfield F)[X]).roots
+        (FiniteField.X_pow_card_sub_X_ne_zero _ (Fact.out : p.Prime).one_lt) =
+      Finset.univ.val := by
   let _ := Subfield.fintypeBot F p
-  conv_lhs => rw [← card_bot F p, ← Fintype.card_eq_nat_card]
-  exact FiniteField.roots_X_pow_card_sub_X _
+  have h : Fintype.card (⊥ : Subfield F) = p := by rw [Fintype.card_eq_nat_card, card_bot F p]
+  have := FiniteField.roots_X_pow_card_sub_X (⊥ : Subfield F)
+  simp only [h] at this
+  exact this
 
 theorem Subfield.splits_bot :
     Splits (X ^ p - X : (⊥ : Subfield F)[X]) := by
   let _ := Subfield.fintypeBot F p
-  rw [splits_iff_card_roots, roots_X_pow_char_sub_X_bot, ← Finset.card_def, Finset.card_univ,
+  rw [splits_iff_card_roots (FiniteField.X_pow_card_sub_X_ne_zero _ (Fact.out : p.Prime).one_lt),
+    roots_X_pow_char_sub_X_bot, ← Finset.card_def, Finset.card_univ,
     FiniteField.X_pow_card_sub_X_natDegree_eq _ (Fact.out (p := p.Prime)).one_lt,
     Fintype.card_eq_nat_card, card_bot F p]
 
 theorem Subfield.mem_bot_iff_pow_eq_self {x : F} : x ∈ (⊥ : Subfield F) ↔ x ^ p = x := by
+  have h1 := FiniteField.X_pow_card_sub_X_ne_zero F (Fact.out : p.Prime).one_lt
   have := roots_X_pow_char_sub_X_bot F p ▸
-      (splits_bot F p).roots_map (Subfield.subtype _) ▸ Multiset.mem_map (b := x)
-  simpa [sub_eq_zero, iff_comm, FiniteField.X_pow_card_sub_X_ne_zero F (Fact.out : p.Prime).one_lt]
+      (splits_bot F p).roots_map
+        (FiniteField.X_pow_card_sub_X_ne_zero _ (Fact.out : p.Prime).one_lt)
+        (Subfield.subtype _) ▸ Multiset.mem_map (b := x)
+  simpa [sub_eq_zero, iff_comm, mem_roots h1]
 
 end prime_subfield
 

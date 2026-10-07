@@ -225,11 +225,11 @@ theorem isIntegral_norm [Algebra R L] [Algebra R K] [IsScalarTower R K L] {x : L
     norm_algebraMap_of_basis (Module.Free.chooseBasis F L) (gen K x), map_pow]
   apply IsIntegral.pow
   rw [← isIntegral_algebraMap_iff (B := AlgebraicClosure K),
-    norm_gen_eq_prod_roots _ (IsAlgClosed.splits _)]
+    norm_gen_eq_prod_roots _ hx.tower_top (IsAlgClosed.splits _)]
   refine IsIntegral.multiset_prod (fun y hy ↦ ⟨minpoly R x, minpoly.monic hx, ?_⟩)
   suffices (aeval y) ((minpoly R x).map (algebraMap R K)) = 0 by simpa
   obtain ⟨P, hP⟩ := minpoly.dvd K x (show aeval x ((minpoly R x).map (algebraMap R K)) = 0 by simp)
-  simp [hP, aeval_mul, (mem_aroots'.mp hy).2]
+  simp [hP, aeval_mul, mem_aroots.mp hy]
 
 theorem norm_eq_norm_adjoin (x : L) :
     norm K x = norm K (AdjoinSimple.gen K x) ^ finrank K⟮x⟯ L := by
@@ -255,10 +255,12 @@ theorem norm_eq_norm_adjoin (x : L) :
 variable (F E : Type*) [Field F] [Algebra K F] [Field E] [Algebra K E]
 
 variable {K} in
-theorem norm_eq_prod_roots {x : L} (hF : ((minpoly K x).map (algebraMap K F)).Splits) :
+theorem norm_eq_prod_roots {x : L} (hx : IsIntegral K x)
+    (hF : ((minpoly K x).map (algebraMap K F)).Splits) :
     algebraMap K F (norm K x) =
       ((minpoly K x).aroots F).prod ^ finrank K⟮x⟯ L := by
-  rw [norm_eq_norm_adjoin K x, map_pow, IntermediateField.AdjoinSimple.norm_gen_eq_prod_roots _ hF]
+  rw [norm_eq_norm_adjoin K x, map_pow,
+    IntermediateField.AdjoinSimple.norm_gen_eq_prod_roots _ hx hF]
 
 variable [FiniteDimensional K L]
 

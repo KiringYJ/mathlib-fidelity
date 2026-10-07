@@ -188,28 +188,29 @@ theorem pow_isRoot_minpoly {m : ℕ} (hcop : Nat.Coprime m n) :
 
 /-- `primitiveRoots n K` is a subset of the roots of the minimal polynomial of a primitive
 `n`-th root of unity `μ`. -/
-theorem is_roots_of_minpoly [DecidableEq K] :
+theorem is_roots_of_minpoly [DecidableEq K] (hpos : 0 < n) :
+    haveI := (minpoly.monic (isIntegral h hpos)).map (Int.castRingHom K)
     primitiveRoots n K ⊆ (map (Int.castRingHom K) (minpoly ℤ μ)).roots.toFinset := by
-  by_cases hn : n = 0; · simp_all
-  have : NeZero n := ⟨hn⟩
-  have hpos := Nat.pos_of_ne_zero hn
+  have : NeZero n := ⟨hpos.ne'⟩
   intro x hx
   obtain ⟨m, _, hcop, rfl⟩ := (isPrimitiveRoot_iff h).1 ((mem_primitiveRoots hpos).1 hx)
-  simp only [Multiset.mem_toFinset]
-  convert! pow_isRoot_minpoly h hcop using 0
-  rw [← mem_roots]
-  exact map_monic_ne_zero <| minpoly.monic <| isIntegral h hpos
+  rw [Multiset.mem_toFinset]
+  exact (mem_roots (map_monic_ne_zero (minpoly.monic (isIntegral h hpos)))).mpr
+    (pow_isRoot_minpoly h hcop)
 
 /-- The degree of the minimal polynomial of `μ` is at least `totient n`. -/
 theorem totient_le_degree_minpoly : Nat.totient n ≤ (minpoly ℤ μ).natDegree := by
   classical
+  rcases n.eq_zero_or_pos with rfl | hpos
+  · simp
   let P : ℤ[X] := minpoly ℤ μ
   -- minimal polynomial of `μ`
   let P_K : K[X] := map (Int.castRingHom K) P
   -- minimal polynomial of `μ` sent to `K[X]`
+  have hP_K : P_K ≠ 0 := map_monic_ne_zero (minpoly.monic (isIntegral h hpos))
   calc
     n.totient = (primitiveRoots n K).card := h.card_primitiveRoots.symm
-    _ ≤ P_K.roots.toFinset.card := Finset.card_le_card (is_roots_of_minpoly h)
+    _ ≤ P_K.roots.toFinset.card := Finset.card_le_card (is_roots_of_minpoly h hpos)
     _ ≤ Multiset.card P_K.roots := Multiset.toFinset_card_le _
     _ ≤ P_K.natDegree := card_roots' _
     _ ≤ P.natDegree := natDegree_map_le

@@ -156,16 +156,14 @@ theorem _root_.IntermediateField.AdjoinSimple.norm_gen_eq_one {x : L} (hx : ¬Is
   · exact (Submodule.fg_iff_finiteDimensional _).mpr (b.finiteDimensional_of_finite)
   · exact IntermediateField.subset_adjoin K _ (Set.mem_singleton x)
 
-theorem _root_.IntermediateField.AdjoinSimple.norm_gen_eq_prod_roots (x : L)
+theorem _root_.IntermediateField.AdjoinSimple.norm_gen_eq_prod_roots (x : L) (hx : IsIntegral K x)
     (hf : ((minpoly K x).map (algebraMap K F)).Splits) :
     (algebraMap K F) (norm K (AdjoinSimple.gen K x)) =
       ((minpoly K x).aroots F).prod := by
   have injKxL := (algebraMap K⟮x⟯ L).injective
-  by_cases hx : IsIntegral K x; swap
-  · simp [minpoly.eq_zero hx, IntermediateField.AdjoinSimple.norm_gen_eq_one hx, aroots_def]
   rw [← adjoin.powerBasis_gen hx, PowerBasis.norm_gen_eq_prod_roots] <;>
-    rw [adjoin.powerBasis_gen hx, ← minpoly.algebraMap_eq injKxL] <;>
-    simp only [AdjoinSimple.algebraMap_gen _ _, hf]
+    simp only [adjoin.powerBasis_gen hx, ← minpoly.algebraMap_eq injKxL,
+      AdjoinSimple.algebraMap_gen _ _, hf]
 
 end IntermediateField
 

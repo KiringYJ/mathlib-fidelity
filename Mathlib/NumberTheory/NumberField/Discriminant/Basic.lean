@@ -414,7 +414,8 @@ theorem finite_of_discr_bdd_of_isReal :
   suffices minkowskiBound K ↑1 < (convexBodyLTFactor K) * B by
     obtain ⟨x, hx₁, hx₂⟩ := exists_primitive_element_lt_of_isReal K hw₀ this
     have hx := x.isIntegral_coe
-    refine ⟨x, ⟨⟨minpoly ℤ (x : K), ⟨?_, fun i ↦ ?_⟩, ?_⟩, ?_⟩⟩
+    refine ⟨x, ⟨⟨minpoly ℤ (x : K), ⟨?_, fun i ↦ ?_, ((minpoly.monic hx).map _).ne_zero⟩, ?_⟩,
+      ?_⟩⟩
     · exact natDegree_le_rankOfDiscrBdd hK₂ x hx₁
     · rw [Set.mem_Icc, ← abs_le, ← @Int.cast_le ℝ]
       refine (Eq.trans_le ?_ <| Embeddings.coeff_bdd_of_norm_le
@@ -429,7 +430,7 @@ theorem finite_of_discr_bdd_of_isReal :
         · exact rank_le_rankOfDiscrBdd hK₂
         · exact (Nat.choose_le_choose _ (rank_le_rankOfDiscrBdd hK₂)).trans
             (Nat.choose_le_middle _ _)
-    · refine mem_rootSet.mpr ⟨minpoly.ne_zero hx, ?_⟩
+    · refine mem_rootSet.mpr ?_
       exact (aeval_algebraMap_eq_zero_iff A (x : K) _).mpr (minpoly.aeval ℤ (x : K))
     · rw [← (IntermediateField.lift_injective _).eq_iff, eq_comm] at hx₁
       convert! hx₁
@@ -462,7 +463,8 @@ theorem finite_of_discr_bdd_of_isComplex :
   suffices minkowskiBound K ↑1 < (convexBodyLT'Factor K) * boundOfDiscBdd N by
     obtain ⟨x, hx₁, hx₂⟩ := exists_primitive_element_lt_of_isComplex K hw₀ this
     have hx := x.isIntegral_coe
-    refine ⟨x, ⟨⟨minpoly ℤ (x : K), ⟨?_, fun i ↦ ?_⟩, ?_⟩, ?_⟩⟩
+    refine ⟨x, ⟨⟨minpoly ℤ (x : K), ⟨?_, fun i ↦ ?_, ((minpoly.monic hx).map _).ne_zero⟩, ?_⟩,
+      ?_⟩⟩
     · exact natDegree_le_rankOfDiscrBdd hK₂ x hx₁
     · rw [Set.mem_Icc, ← abs_le, ← @Int.cast_le ℝ]
       refine (Eq.trans_le ?_ <| Embeddings.coeff_bdd_of_norm_le
@@ -478,7 +480,7 @@ theorem finite_of_discr_bdd_of_isComplex :
         · rw [NNReal.coe_natCast, Nat.cast_le]
           exact (Nat.choose_le_choose _ (rank_le_rankOfDiscrBdd hK₂)).trans
             (Nat.choose_le_middle _ _)
-    · refine mem_rootSet.mpr ⟨minpoly.ne_zero hx, ?_⟩
+    · refine mem_rootSet.mpr ?_
       exact (aeval_algebraMap_eq_zero_iff A (x : K) _).mpr (minpoly.aeval ℤ (x : K))
     · rw [← (IntermediateField.lift_injective _).eq_iff, eq_comm] at hx₁
       convert! hx₁

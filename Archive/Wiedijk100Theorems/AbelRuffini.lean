@@ -72,6 +72,10 @@ theorem leadingCoeff_Phi : (Φ R a b).leadingCoeff = 1 := by
 theorem monic_Phi : (Φ R a b).Monic :=
   leadingCoeff_Phi a b
 
+/-- The domain `Φ ℚ a b ≠ 0` of the root sets and the Galois action of `Φ ℚ a b`. -/
+local instance fact_Phi_ne_zero : Fact (Φ ℚ a b ≠ 0) :=
+  ⟨(monic_Phi a b).ne_zero⟩
+
 theorem irreducible_Phi (p : ℕ) (hp : p.Prime) (hpa : p ∣ a) (hpb : p ∣ b) (hp2b : ¬p ^ 2 ∣ b) :
     Irreducible (Φ ℚ a b) := by
   rw [← map_Phi a b (Int.castRingHom ℚ), ← IsPrimitive.Int.irreducible_iff_irreducible_map_cast]
@@ -95,14 +99,21 @@ theorem irreducible_Phi (p : ℕ) (hp : p.Prime) (hpa : p ∣ a) (hpb : p ∣ b)
 
 attribute [local simp] map_ofNat in -- use `ofNat` simp theorem with bad keys
 theorem real_roots_Phi_le : Fintype.card ((Φ ℚ a b).rootSet ℝ) ≤ 3 := by
-  rw [← map_Phi a b (algebraMap ℤ ℚ), Φ, ← one_mul (X ^ 5), ← C_1]
-  apply (card_rootSet_le_derivative _).trans
-    (Nat.succ_le_succ ((card_rootSet_le_derivative _).trans (Nat.succ_le_succ _)))
-  suffices (Polynomial.rootSet (C (20 : ℚ) * X ^ 3) ℝ).Subsingleton by
-    norm_num [Fintype.card_le_one_iff_subsingleton, ← mul_assoc] at *
-    exact this
-  rw [rootSet_C_mul_X_pow] <;>
-  norm_num
+  have h2 : derivative (derivative (Φ ℚ a b)) = C 20 * X ^ 3 := by
+    simp only [Φ, derivative_add, derivative_sub, derivative_X_pow, derivative_C_mul_X,
+      derivative_C, derivative_C_mul_X_pow]
+    norm_num
+  have h2' : (derivative (derivative (Φ ℚ a b))).map (algebraMap ℚ ℝ) ≠ 0 := by
+    rw [h2]
+    norm_num
+  refine (card_rootSet_le_derivative (Φ ℚ a b)
+    (ne_zero_of_derivative_ne_zero (by rwa [derivative_map]))).trans
+    (Nat.succ_le_succ ((card_rootSet_le_derivative _ h2').trans (Nat.succ_le_succ ?_)))
+  rw [Fintype.card_le_one_iff_subsingleton, Set.subsingleton_coe]
+  intro x hx y hy
+  rw [mem_rootSet, h2] at hx hy
+  norm_num at hx hy
+  rw [hx, hy]
 
 theorem real_roots_Phi_ge_aux (hab : b < a) :
     ∃ x y : ℝ, x ≠ y ∧ aeval x (Φ ℚ a b) = 0 ∧ aeval y (Φ ℚ a b) = 0 := by
@@ -134,10 +145,9 @@ theorem real_roots_Phi_ge_aux (hab : b < a) :
     exact ⟨x, 1, (hx1.trans_lt zero_lt_one).ne, hx2, hf1⟩
 
 theorem real_roots_Phi_ge (hab : b < a) : 2 ≤ Fintype.card ((Φ ℚ a b).rootSet ℝ) := by
-  have q_ne_zero : Φ ℚ a b ≠ 0 := (monic_Phi a b).ne_zero
   obtain ⟨x, y, hxy, hx, hy⟩ := real_roots_Phi_ge_aux a b hab
   have key : ↑({x, y} : Finset ℝ) ⊆ (Φ ℚ a b).rootSet ℝ := by
-    simp [Set.insert_subset, mem_rootSet_of_ne q_ne_zero, hx, hy]
+    simp [Set.insert_subset_iff, mem_rootSet, hx, hy]
   convert! Fintype.card_le_of_embedding (Set.embeddingOfSubset _ _ key)
   simp only [Finset.coe_sort_coe, Fintype.card_coe, Finset.card_singleton,
     Finset.card_insert_of_notMem (mt Finset.mem_singleton.mp hxy)]

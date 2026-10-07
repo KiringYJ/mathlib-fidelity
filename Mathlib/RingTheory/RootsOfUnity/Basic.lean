@@ -244,19 +244,21 @@ variable (k R)
 
 instance : Finite (rootsOfUnity k R) := by
   classical
-  exact .of_equiv { x // x ∈ nthRoots k (1 : R) } (rootsOfUnityEquivNthRoots R k).symm
+  exact .of_equiv _ (rootsOfUnityEquivNthRoots R k).symm
 
 instance rootsOfUnity.isCyclic : IsCyclic (rootsOfUnity k R) :=
   isCyclic_of_injective_ringHom ((Units.coeHom R).comp (rootsOfUnity k R).subtype) coe_injective
 
 theorem card_rootsOfUnity : Nat.card (rootsOfUnity k R) ≤ k := by
   classical
+  have h : (X : R[X]) ^ k - C 1 ≠ 0 := X_pow_sub_C_ne_zero (NeZero.pos k) 1
   calc
-    Nat.card (rootsOfUnity k R) = Nat.card { x // x ∈ nthRoots k (1 : R) } :=
+    Nat.card (rootsOfUnity k R) = Nat.card { x // x ∈ nthRoots k (1 : R) h } :=
       Nat.card_congr (rootsOfUnityEquivNthRoots R k)
-    _ = Fintype.card { x // x ∈ nthRoots k (1 : R) } := Nat.card_eq_fintype_card
-    _ ≤ Multiset.card (nthRoots k (1 : R)).attach := Multiset.card_le_card (Multiset.dedup_le _)
-    _ = Multiset.card (nthRoots k (1 : R)) := Multiset.card_attach
+    _ = Fintype.card { x // x ∈ nthRoots k (1 : R) h } := Nat.card_eq_fintype_card
+    _ ≤ Multiset.card (nthRoots k (1 : R) h).attach :=
+      Multiset.card_le_card (Multiset.dedup_le _)
+    _ = Multiset.card (nthRoots k (1 : R) h) := Multiset.card_attach
     _ ≤ k := card_nthRoots k 1
 
 variable {k R}

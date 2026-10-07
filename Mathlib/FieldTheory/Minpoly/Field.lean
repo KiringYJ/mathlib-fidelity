@@ -24,6 +24,10 @@ open Polynomial Set Function minpoly
 
 namespace minpoly
 
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    with_reducible_and_instances (apply minpoly.monic; exact Algebra.IsIntegral.isIntegral _))
+
 variable {A B : Type*}
 variable (A) [Field A]
 

@@ -62,8 +62,9 @@ theorem _root_.isRoot_of_unity_iff (h : 0 < n) (R : Type*) [CommRing R] [IsDomai
 /-- Any `n`-th primitive root of unity is a root of `cyclotomic n R`. -/
 theorem _root_.IsPrimitiveRoot.isRoot_cyclotomic (hpos : 0 < n) {μ : R} (h : IsPrimitiveRoot μ n) :
     IsRoot (cyclotomic n R) μ := by
-  rw [← mem_roots (cyclotomic_ne_zero n R), cyclotomic_eq_prod_X_sub_primitiveRoots h,
-    roots_prod_X_sub_C, ← Finset.mem_def]
+  rw [cyclotomic_eq_prod_X_sub_primitiveRoots h,
+    ← mem_roots (Finset.prod_ne_zero_iff.mpr fun _ _ ↦ X_sub_C_ne_zero _), roots_prod_X_sub_C,
+    ← Finset.mem_def]
   rwa [← mem_primitiveRoots hpos] at h
 
 private theorem isRoot_cyclotomic_iff' {n : ℕ} {K : Type*} [Field K] {μ : K} [NeZero (n : K)] :
@@ -106,6 +107,7 @@ theorem roots_cyclotomic_nodup [NeZero (n : R)] : (cyclotomic n R).roots.Nodup :
   obtain h | ⟨ζ, hζ⟩ := (cyclotomic n R).roots.empty_or_exists_mem
   · exact h.symm ▸ Multiset.nodup_zero
   rw [mem_roots <| cyclotomic_ne_zero n R, isRoot_cyclotomic_iff] at hζ
+  have : NeZero n := ⟨(NeZero.pos_of_neZero_natCast R).ne'⟩
   refine Multiset.nodup_of_le
     (roots.le_of_dvd (X_pow_sub_C_ne_zero (NeZero.pos_of_neZero_natCast R) 1) <|
       cyclotomic.dvd_X_pow_sub_one n R) hζ.nthRoots_one_nodup
@@ -113,8 +115,7 @@ theorem roots_cyclotomic_nodup [NeZero (n : R)] : (cyclotomic n R).roots.Nodup :
 theorem cyclotomic.roots_to_finset_eq_primitiveRoots [NeZero (n : R)] :
     (⟨(cyclotomic n R).roots, roots_cyclotomic_nodup⟩ : Finset _) = primitiveRoots n R := by
   ext a
-  simp [cyclotomic_ne_zero n R, ← isRoot_cyclotomic_iff, mem_primitiveRoots,
-    NeZero.pos_of_neZero_natCast R]
+  simp [← isRoot_cyclotomic_iff, mem_primitiveRoots, NeZero.pos_of_neZero_natCast R]
 
 theorem cyclotomic.roots_eq_primitiveRoots_val [NeZero (n : R)] :
     (cyclotomic n R).roots = (primitiveRoots n R).val := by

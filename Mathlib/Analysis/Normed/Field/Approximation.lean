@@ -59,7 +59,8 @@ theorem exists_roots_norm_sub_lt_of_norm_coeff_sub_lt (hε : 0 < ε) {a : K} (ha
     by_contra! h
     have := Multiset.prod_map_le_prod_map₀ (fun b ↦ ((f.natDegree + 1) * ε) ^ (f.natDegree : ℝ)⁻¹ *
         (‖a‖ ⊔ 1)) (fun b ↦ ‖a - b‖) (by intros; positivity) h
-    simp only [Multiset.map_const', hg.natDegree_eq_card_roots.symm ▸ hdeg, Multiset.prod_replicate,
+    simp only [Multiset.map_const', (hg.natDegree_eq_card_roots hgm.ne_zero).symm ▸ hdeg,
+      Multiset.prod_replicate,
       mul_pow, ← Real.rpow_natCast,
       ← Real.rpow_mul (by positivity : ((f.natDegree + 1) * ε) > 0).le] at this
     rw [inv_mul_cancel₀, Real.rpow_one] at this

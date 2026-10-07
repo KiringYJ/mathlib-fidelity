@@ -127,9 +127,15 @@ theorem Polynomial.iterate_comp_sub_X_ne {P : Polynomial ℤ} (hP : 1 < P.natDeg
   apply_fun natDegree
   simpa using (one_lt_pow₀ hP hk.ne').ne'
 
+theorem Polynomial.comp_self_sub_X_ne {P : Polynomial ℤ} (hP : 1 < P.natDegree) :
+    P.comp P - X ≠ 0 := by
+  simpa [Nat.iterate] using Polynomial.iterate_comp_sub_X_ne hP zero_lt_two
+
 /-- We solve the problem for the specific case k = 2 first. -/
 theorem imo2006_q5' {P : Polynomial ℤ} (hP : 1 < P.natDegree) :
+    haveI := Polynomial.comp_self_sub_X_ne hP
     (P.comp P - X).roots.toFinset.card ≤ P.natDegree := by
+  have hPP := Polynomial.comp_self_sub_X_ne hP
   -- Auxiliary lemmas on degrees.
   have hPX : (P - X).natDegree = P.natDegree := by
     rw [natDegree_sub_eq_left_of_natDegree_lt]
@@ -191,10 +197,10 @@ open Imo2006Q5
 
 /-- The general problem follows easily from the k = 2 case. -/
 theorem imo2006_q5 {P : Polynomial ℤ} (hP : 1 < P.natDegree) {k : ℕ} (hk : 0 < k) :
+    haveI := Polynomial.iterate_comp_sub_X_ne hP hk
     (P.comp^[k] X - X).roots.toFinset.card ≤ P.natDegree := by
   refine (Finset.card_le_card fun t ht => ?_).trans (imo2006_q5' hP)
-  have hP' : P.comp P - X ≠ 0 := by
-    simpa [Nat.iterate] using Polynomial.iterate_comp_sub_X_ne hP zero_lt_two
+  have hP' := Polynomial.comp_self_sub_X_ne hP
   replace ht := isRoot_of_mem_roots (Multiset.mem_toFinset.1 ht)
   rw [IsRoot.def, eval_sub, iterate_comp_eval, eval_X, sub_eq_zero] at ht
   rw [Multiset.mem_toFinset, mem_roots hP', IsRoot.def, eval_sub, eval_comp, eval_X,

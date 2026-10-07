@@ -151,7 +151,7 @@ lemma schwartz_zippel_sup_sum :
         calc
           #{x₀ ∈ S 0 | eval (cons x₀ xₜ) p = 0} ≤ #pₓ.roots.toFinset := by
             gcongr
-            simp +contextual [subset_iff, eval_eq_eval_mv_eval', pₓ, hpₓ₀, p']
+            simp +contextual [subset_iff, eval_eq_eval_mv_eval', pₓ, p', Polynomial.mem_roots hpₓ₀]
           _ ≤ Multiset.card pₓ.roots := pₓ.roots.toFinset_card_le
           _ ≤ pₓ.natDegree := pₓ.card_roots'
           _ = k := hpₓdeg

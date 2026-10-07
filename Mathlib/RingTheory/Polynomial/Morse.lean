@@ -50,16 +50,13 @@ the roots in `S` must be the identity permutation or a transposition.
 
 Such polynomials are called *Morse functions* in Section 4.4 of [serre-galois]. -/
 theorem Splits.toPermHom_apply_eq_one_or_isSwap_of_ncard_le_of_mem_inertia
-    [DecidableEq (f.rootSet S)] (hf : (f.map (algebraMap R S)).Splits)
-    (p : Ideal S) [p.IsPrime] (hp : (f.rootSet S).ncard ≤ (f.rootSet (S ⧸ p)).ncard + 1)
+    (hf : (f.map (algebraMap R S)).Splits) (hf0 : f.map (algebraMap R S) ≠ 0)
+    [DecidableEq (f.rootSet S)] (p : Ideal S) [p.IsPrime]
+    (hfp : f.map (algebraMap R (S ⧸ p)) ≠ 0)
+    (hp : (f.rootSet S).ncard ≤ (f.rootSet (S ⧸ p)).ncard + 1)
     (g : G) (hg : g ∈ p.inertia G) :
     MulAction.toPermHom G (f.rootSet S) g = 1 ∨ (MulAction.toPermHom G (f.rootSet S) g).IsSwap := by
   classical
-  by_cases hfp : f.map (algebraMap R (S ⧸ p)) = 0
-  · rw [rootSet_def f (S ⧸ p), aroots_def, hfp, roots_zero, Multiset.toFinset_zero,
-      Finset.coe_empty, Set.ncard_empty, zero_add, Set.ncard_le_one_iff_subsingleton,
-      ← Set.subsingleton_coe] at hp
-    exact Or.inl (Subsingleton.elim _ _)
   let π : S →ₐ[R] S ⧸ p := Ideal.Quotient.mkₐ R p
   rw [← hf.image_rootSet_of_map_ne_zero π hfp, Set.ncard_le_ncard_image_add_one_iff] at hp
   have hπ (x : S) : π (g • x) = π x := (Ideal.Quotient.mk_eq_mk_iff_sub_mem (g • x) x).mpr (hg x)
@@ -82,8 +79,11 @@ surjects onto the symmetric group `S_n`.
 
 Such polynomials are called *Morse functions* in Section 4.4 of [serre-galois]. -/
 theorem Splits.surjective_toPermHom_of_iSup_inertia_eq_top
-    (hf : (f.map (algebraMap R S)).Splits) [MulAction.IsPretransitive G (f.rootSet S)]
-    (h : ∀ m : MaximalSpectrum S, (f.rootSet S).ncard ≤ (f.rootSet (S ⧸ m.asIdeal)).ncard + 1)
+    (hf : (f.map (algebraMap R S)).Splits) (hf0 : f.map (algebraMap R S) ≠ 0)
+    [MulAction.IsPretransitive G (f.rootSet S)]
+    (hfm : ∀ m : MaximalSpectrum S, f.map (algebraMap R (S ⧸ m.asIdeal)) ≠ 0)
+    (h : ∀ m : MaximalSpectrum S,
+      (f.rootSet S).ncard ≤ (f.rootSet (S ⧸ m.asIdeal) (hfm m)).ncard + 1)
     (hG : ⨆ m : MaximalSpectrum S, m.asIdeal.inertia G = ⊤) :
     Function.Surjective (MulAction.toPermHom G (f.rootSet S)) := by
   classical
@@ -91,7 +91,8 @@ theorem Splits.surjective_toPermHom_of_iSup_inertia_eq_top
       (⋃ m : MaximalSpectrum S, m.asIdeal.inertia G)
   · intro σ hσ
     obtain ⟨m, hm⟩ := Set.mem_iUnion.mp hσ
-    exact hf.toPermHom_apply_eq_one_or_isSwap_of_ncard_le_of_mem_inertia m.asIdeal (h m) σ hm
+    exact hf.toPermHom_apply_eq_one_or_isSwap_of_ncard_le_of_mem_inertia hf0 m.asIdeal (hfm m)
+      (h m) σ hm
   · simpa [Subgroup.closure_iUnion]
 
 end Polynomial

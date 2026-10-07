@@ -71,15 +71,11 @@ attribute [local ext] Complex.ext
 
 /-- The number of complex roots equals the number of real roots plus
 the number of roots not fixed by complex conjugation (i.e. with some imaginary component). -/
-theorem card_complex_roots_eq_card_real_add_card_not_gal_inv (p : ℚ[X]) :
+theorem card_complex_roots_eq_card_real_add_card_not_gal_inv (p : ℚ[X]) [Fact (p ≠ 0)] :
     (p.rootSet ℂ).toFinset.card =
       (p.rootSet ℝ).toFinset.card +
         (galActionHom p ℂ (restrict p ℂ
         (AlgEquiv.restrictScalars ℚ Complex.conjAe))).support.card := by
-  by_cases hp : p = 0
-  · have : IsEmpty (p.rootSet ℂ) := by rw [hp, rootSet_zero]; infer_instance
-    simp_rw [(galActionHom p ℂ _).support.eq_empty_of_isEmpty, hp, rootSet_zero,
-      Set.toFinset_empty, Finset.card_empty]
   have inj : Function.Injective (IsScalarTower.toAlgHom ℚ ℝ ℂ) := (algebraMap ℝ ℂ).injective
   rw [← Finset.card_image_of_injective _ Subtype.coe_injective, ←
     Finset.card_image_of_injective _ inj]
@@ -88,10 +84,10 @@ theorem card_complex_roots_eq_card_real_add_card_not_gal_inv (p : ℚ[X]) :
   on_goal 1 => let c : Finset ℂ := ?_
   change a.card = b.card + c.card
   have ha : ∀ z : ℂ, z ∈ a ↔ aeval z p = 0 := by
-    intro z; rw [Set.mem_toFinset, mem_rootSet_of_ne hp]
+    intro z; rw [Set.mem_toFinset, mem_rootSet]
   have hb : ∀ z : ℂ, z ∈ b ↔ aeval z p = 0 ∧ z.im = 0 := by
     intro z
-    simp_rw [b, Finset.mem_image, Set.mem_toFinset, mem_rootSet_of_ne hp]
+    simp_rw [b, Finset.mem_image, Set.mem_toFinset, mem_rootSet]
     constructor
     · rintro ⟨w, hw, rfl⟩
       exact ⟨by rw [aeval_algHom_apply, hw, map_zero], rfl⟩
@@ -112,9 +108,9 @@ theorem card_complex_roots_eq_card_real_add_card_not_gal_inv (p : ℚ[X]) :
     simp_rw [c, Finset.mem_image]
     constructor
     · rintro ⟨w, hw, rfl⟩
-      exact ⟨(mem_rootSet.mp w.2).2, mt (hc0 w).mpr (Equiv.Perm.mem_support.mp hw)⟩
+      exact ⟨mem_rootSet.mp w.2, mt (hc0 w).mpr (Equiv.Perm.mem_support.mp hw)⟩
     · rintro ⟨hz1, hz2⟩
-      exact ⟨⟨z, mem_rootSet.mpr ⟨hp, hz1⟩⟩, Equiv.Perm.mem_support.mpr (mt (hc0 _).mp hz2), rfl⟩
+      exact ⟨⟨z, mem_rootSet.mpr hz1⟩, Equiv.Perm.mem_support.mpr (mt (hc0 _).mp hz2), rfl⟩
   rw [← Finset.card_union_of_disjoint]
   · apply congr_arg Finset.card
     simp_rw [Finset.ext_iff, Finset.mem_union, ha, hb, hc]
@@ -125,15 +121,17 @@ theorem card_complex_roots_eq_card_real_add_card_not_gal_inv (p : ℚ[X]) :
     tauto
 
 /-- An irreducible polynomial of prime degree with two non-real roots has full Galois group. -/
-theorem galActionHom_bijective_of_prime_degree {p : ℚ[X]} (p_irr : Irreducible p)
+theorem galActionHom_bijective_of_prime_degree {p : ℚ[X]} [Fact (p ≠ 0)] (p_irr : Irreducible p)
     (p_deg : p.natDegree.Prime)
     (p_roots : Fintype.card (p.rootSet ℂ) = Fintype.card (p.rootSet ℝ) + 2) :
     Function.Bijective (galActionHom p ℂ) := by
   have h1 : Fintype.card (p.rootSet ℂ) = p.natDegree := by
     simp_rw [rootSet_def, Finset.coe_sort_coe, Fintype.card_coe]
     rw [Multiset.toFinset_card_of_nodup, ← Splits.natDegree_eq_card_roots, natDegree_map]
-    · exact IsAlgClosed.splits _
-    · exact nodup_roots ((separable_map (algebraMap ℚ ℂ)).mpr p_irr.separable)
+    all_goals first
+      | exact IsAlgClosed.splits _
+      | exact map_ne_zero p_irr.ne_zero
+      | exact nodup_roots ((separable_map (algebraMap ℚ ℂ)).mpr p_irr.separable)
   let conj' := restrict p ℂ (Complex.conjAe.restrictScalars ℚ)
   refine
     ⟨galActionHom_injective p ℂ, fun x =>
@@ -152,7 +150,7 @@ theorem galActionHom_bijective_of_prime_degree {p : ℚ[X]} (p_irr : Irreducible
     exact (card_complex_roots_eq_card_real_add_card_not_gal_inv p).symm
 
 /-- An irreducible polynomial of prime degree with 1-3 non-real roots has full Galois group. -/
-theorem galActionHom_bijective_of_prime_degree' {p : ℚ[X]} (p_irr : Irreducible p)
+theorem galActionHom_bijective_of_prime_degree' {p : ℚ[X]} [Fact (p ≠ 0)] (p_irr : Irreducible p)
     (p_deg : p.natDegree.Prime)
     (p_roots1 : Fintype.card (p.rootSet ℝ) + 1 ≤ Fintype.card (p.rootSet ℂ))
     (p_roots2 : Fintype.card (p.rootSet ℂ) ≤ Fintype.card (p.rootSet ℝ) + 3) :

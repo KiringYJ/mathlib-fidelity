@@ -410,7 +410,7 @@ lemma resultant_eq_prod_roots_sub
   · trans ((f.roots ×ˢ g.roots).map fun ij ↦ (-1) * (ij.2 - ij.1)).prod
     · rw [resultant_comm, this g f hg hf hg' hf' (le_of_not_ge hfg), ← Multiset.map_swap_product,
         Multiset.map_map, Multiset.prod_map_mul]
-      simp [hf'.natDegree_eq_card_roots, hg'.natDegree_eq_card_roots]
+      simp [hf'.natDegree_eq_card_roots hf.ne_zero, hg'.natDegree_eq_card_roots hg.ne_zero]
     · simp
   generalize hN : f.natDegree + g.natDegree = N
   induction N using Nat.strong_induction_on generalizing K with | h n IH =>
@@ -423,12 +423,13 @@ lemma resultant_eq_prod_roots_sub
       · obtain rfl := hg.natDegree_eq_zero.mp H
         simp
       · simp only [zero_pow H]
-        rw [hg'.natDegree_eq_card_roots, Multiset.card_eq_zero,
+        rw [hg'.natDegree_eq_card_roots hg.ne_zero, Multiset.card_eq_zero,
           Multiset.eq_zero_iff_forall_notMem, not_forall_not] at H
         obtain ⟨x, hx⟩ := H
         rw [Multiset.prod_eq_zero, zero_mul]
         simp only [Multiset.mem_map, Prod.exists]
-        exact ⟨x, x, Multiset.mem_product.mpr (by simp_all [hg.ne_zero]), by simp⟩
+        refine ⟨x, x, Multiset.mem_product.mpr ⟨(mem_roots hf.ne_zero).mpr ?_, hx⟩, by simp⟩
+        rw [IsRoot.def, eval_mul, ((mem_roots hg.ne_zero).mp hx).eq_zero, zero_mul]
     · rw [natDegree_mul hg.ne_zero (by simpa [hg.ne_zero] using hf.ne_zero),
         natDegree_neg, add_comm]
   let r := C (f %ₘ g).leadingCoeff⁻¹ * (f %ₘ g)
@@ -445,25 +446,28 @@ lemma resultant_eq_prod_roots_sub
     (hg'.map _) (SplittingField.splits _) (by simpa [r, natDegree_C_mul, hr₀] using hrd.le) rfl
   rw [resultant_map_map, natDegree_map, natDegree_map, resultant_C_mul_right,
     map_mul, inv_pow, map_inv₀, inv_mul_eq_iff_eq_mul₀ (by simp [hr₀])] at this
+  generalize hRHS : ((f.roots ×ˢ g.roots).map fun ij ↦ ij.1 - ij.2).prod = RHS
   rw [← f.modByMonic_add_div hg, resultant_add_mul_left, f.modByMonic_add_div hg,
     ← Nat.sub_add_cancel (hrd.le.trans hfg), add_comm, resultant_add_left_deg, resultant_comm]
-  · apply (algebraMap K L).injective
+  · subst hRHS
+    apply (algebraMap K L).injective
     rw [map_mul, map_mul, map_mul, this, map_sub_roots_sprod_eq_prod_map_eval _ _ hf hf',
       map_sub_sprod_roots_eq_prod_map_eval _ _ (hr.map _) (SplittingField.splits _), map_mul,
-      hg'.roots_map]
+      hg'.roots_map hg.ne_zero]
     have : (g.roots.map (eval · f)).prod =
         (f %ₘ g).leadingCoeff ^ g.natDegree * (g.roots.map (eval · r)).prod := by
       trans (g.roots.map ((f %ₘ g).leadingCoeff * eval · r)).prod
       · congr 1
         refine Multiset.map_congr rfl ?_
-        simp only [mem_roots', ne_eq, IsRoot.def, eval_mul, eval_C, leadingCoeff_eq_zero, hr₀,
-          not_false_eq_true, mul_inv_cancel_left₀, and_imp, r]
-        intro x hx hxg
+        simp only [mem_roots hg.ne_zero, ne_eq, IsRoot.def, eval_mul, eval_C, leadingCoeff_eq_zero,
+          hr₀, not_false_eq_true, mul_inv_cancel_left₀, r]
+        intro x hxg
         conv_lhs => rw [← f.modByMonic_add_div hg, eval_add, eval_mul, hxg, zero_mul, add_zero]
-      · simp [hg'.natDegree_eq_card_roots]
+      · simp [hg'.natDegree_eq_card_roots hg.ne_zero]
     simp only [coeff_natDegree, hg.leadingCoeff, one_pow, map_one, map_multiset_prod,
-      ← hf'.natDegree_eq_card_roots, ← hg'.natDegree_eq_card_roots, this, map_mul, Multiset.map_map,
-      map_pow, map_neg, mul_one, eval_map_algebraMap, Function.comp_apply]
+      ← hf'.natDegree_eq_card_roots hf.ne_zero, ← hg'.natDegree_eq_card_roots hg.ne_zero, this,
+      map_mul, Multiset.map_map, map_pow, map_neg, mul_one, eval_map_algebraMap,
+      Function.comp_apply]
     simp only [← mul_assoc, ← pow_add, ← add_mul, Nat.sub_add_cancel (hrd.le.trans hfg),
       mul_comm g.natDegree]
     congr 3 with x
@@ -476,39 +480,41 @@ set_option backward.isDefEq.respectTransparency.types false in
 /-- If `f` splits with leading coeff `a` and degree `n`,
 then `Res(f, g) = aⁿ * ∏ g(α)` where `α` runs through the roots of `f`. -/
 nonrec lemma resultant_eq_prod_eval [IsDomain R]
-    (f g : R[X]) (n : ℕ) (hg : g.natDegree ≤ n) (hf : f.Splits) :
+    (f g : R[X]) (n : ℕ) (hg : g.natDegree ≤ n) (hf : f.Splits) (hf0 : f ≠ 0) :
     resultant f g f.natDegree n = f.leadingCoeff ^ n * (f.roots.map g.eval).prod := by
   wlog hR : IsField R
   · let K := FractionRing R
     apply FaithfulSMul.algebraMap_injective R K
+    have hK : f.map (algebraMap R K) ≠ 0 :=
+      (Polynomial.map_ne_zero_iff (FaithfulSMul.algebraMap_injective R K)).mpr hf0
     have := this (f.map (algebraMap R K)) (g.map (algebraMap R K)) n (natDegree_map_le.trans hg)
-      (hf.map _) (Field.toIsField _)
+      (hf.map _) hK (Field.toIsField _)
     simp only [resultant_map_map, natDegree_map_eq_of_injective, leadingCoeff_map_of_injective,
-      FaithfulSMul.algebraMap_injective R K, ← hf.natDegree_eq_card_roots,
-      ← roots_map_of_injective_of_card_eq_natDegree] at this
+      FaithfulSMul.algebraMap_injective R K] at this
+    rw [← roots_map_of_injective_of_card_eq_natDegree (FaithfulSMul.algebraMap_injective R K)
+      (hf.natDegree_eq_card_roots hf0).symm] at this
     simpa [map_multiset_prod, aeval_algebraMap_apply, Multiset.map_map] using this
-  by_cases hf0 : f = 0
-  · simp [hf0]
   wlog hfm : f.Monic
   · let inst := hR.toField
     have H : (C f.leadingCoeff⁻¹ * f).Monic := by
       rw [Monic, ← coeff_natDegree, natDegree_C_mul (by simp [hf0]), coeff_C_mul]; simp [hf0]
-    have := this (C f.leadingCoeff⁻¹ * f) g n hg (.mul (.C _) hf) hR (by simpa) H
+    have := this (C f.leadingCoeff⁻¹ * f) g n hg (.mul (.C _) hf) H.ne_zero hR H
     simpa [hf0, natDegree_C_mul, resultant_C_mul_left, inv_mul_eq_iff_eq_mul₀, roots_C_mul,
       H.leadingCoeff] using this
   simp only [hfm.leadingCoeff, one_pow, one_mul]
-  clear hf0
   by_cases hg0 : g = 0
   · subst hg0
     by_cases hf' : f.natDegree = 0
     · obtain ⟨r, rfl⟩ := hfm.natDegree_eq_zero.mp hf'; simp
-    simp [← hf.natDegree_eq_card_roots, hf']
+    simp [← hf.natDegree_eq_card_roots hf0, hf']
   wlog hgm : g.Monic
   · let inst := hR.toField
-    have := this f (C g.leadingCoeff⁻¹ * g) n (by simpa [hg0, natDegree_C_mul]) hf hR hfm (by simpa)
+    have := this f (C g.leadingCoeff⁻¹ * g) n (by simpa [hg0, natDegree_C_mul]) hf hf0 hR hfm
+      (by simpa)
       (by rw [Monic, ← coeff_natDegree, natDegree_C_mul (by simp [hg0]), coeff_C_mul]; simp [hg0])
     rw [resultant_C_mul_right, inv_pow, inv_mul_eq_iff_eq_mul₀ (by simp [hg0])] at this
-    simpa [← hf.natDegree_eq_card_roots, inv_pow, mul_left_comm (_ ^ g.natDegree), hg0] using this
+    simpa [← hf.natDegree_eq_card_roots hf0, inv_pow, mul_left_comm (_ ^ g.natDegree), hg0]
+      using this
   let inst := hR.toField
   let L := g.SplittingField
   apply (algebraMap R L).injective
@@ -518,7 +524,7 @@ nonrec lemma resultant_eq_prod_eval [IsDomain R]
   rw [← resultant_map_map, ← Nat.add_sub_cancel' hg, resultant_add_right_deg _ _ _ _ _ (by simp),
     this, coeff_map, coeff_natDegree, hfm.leadingCoeff, map_one, one_pow, one_mul,
     map_sub_sprod_roots_eq_prod_map_eval _ _ (hgm.map _) (SplittingField.splits _),
-    hf.roots_map, map_multiset_prod, Multiset.map_map]
+    hf.roots_map hf0, map_multiset_prod, Multiset.map_map]
   simp only [eval_map_algebraMap, Function.comp_apply, Multiset.map_map, L]
   congr; ext; simp [aeval_algebraMap_apply]
 
@@ -562,7 +568,10 @@ nonrec lemma resultant_mul_right (f g₁ g₂ : R[X]) (m : ℕ) (hm : f.natDegre
   subst hgn; clear hm
   induction f using induction_of_Splits_of_injective_of_surjective with
   | Splits R f hff =>
-    simp [resultant_eq_prod_eval, natDegree_mul_le, hff]
+    by_cases hf0 : f = 0
+    · subst hf0
+      simp [pow_add]
+    simp [resultant_eq_prod_eval, natDegree_mul_le, hff, hf0]
     ring_nf
   | injective R SatisfiesM φ hφ f IH =>
     apply hφ
@@ -591,8 +600,11 @@ lemma resultant_mul_left (f₁ f₂ g : R[X]) (n : ℕ) (hn : g.natDegree ≤ n)
   | Splits R f hf =>
     by_cases h : f.natDegree = 0
     · obtain ⟨r, rfl⟩ := natDegree_eq_zero.mp h; simp
-    rw [resultant_eq_prod_eval _ _ _ le_rfl hf]
-    simp [zero_pow h, h, hf.exists_eval_eq_zero (degree_ne_of_natDegree_ne h), eq_or_ne f]
+    have hf0 : f ≠ 0 := fun h0 ↦ h (by simp [h0])
+    rw [resultant_eq_prod_eval _ _ _ le_rfl hf hf0]
+    obtain ⟨a, ha⟩ := hf.exists_eval_eq_zero (degree_ne_of_natDegree_ne h)
+    rw [zero_pow h, Multiset.prod_eq_zero (Multiset.mem_map.mpr ⟨a, (mem_roots hf0).mpr ha, ha⟩),
+      mul_zero]
   | injective R S φ hφ f IH =>
     apply hφ
     simpa only [resultant_map_map, natDegree_map_eq_of_injective hφ, map_zero, map_pow] using IH
@@ -701,12 +713,12 @@ nonrec lemma resultant_scaleRoots (f g : R[X]) (r : R) :
     · rw [scaleRoots_zero, scaleRoots_zero, Algebra.smul_def, Algebra.smul_def]
       simp [resultant_C_mul_right, resultant_X_pow_right, *, (Ne.symm hf0)]
     conv_lhs => rw [← natDegree_scaleRoots f r, ← natDegree_scaleRoots g r]
-    rw [resultant_eq_prod_eval _ _ _ le_rfl hf',
-      resultant_eq_prod_eval _ _ _ le_rfl (hf'.scaleRoots _),
-      roots_scaleRoots _ (isUnit_iff_ne_zero.mpr hr)]
+    rw [resultant_eq_prod_eval _ _ _ le_rfl hf' hf,
+      resultant_eq_prod_eval _ _ _ le_rfl (hf'.scaleRoots _) (scaleRoots_ne_zero hf r),
+      roots_scaleRoots _ (isUnit_iff_ne_zero.mpr hr) hf]
     simp only [Multiset.map_map, Function.comp_def, scaleRoots_eval_mul]
     simp only [leadingCoeff_scaleRoots, natDegree_scaleRoots, Multiset.prod_map_mul,
-      Multiset.map_const', Multiset.prod_replicate, ← hf'.natDegree_eq_card_roots]
+      Multiset.map_const', Multiset.prod_replicate, ← hf'.natDegree_eq_card_roots hf]
     ring
   | injective R S φ hφ f IH =>
     have := IH (g.map φ) (φ r) (by simpa using (map_injective _ hφ).ne hf)

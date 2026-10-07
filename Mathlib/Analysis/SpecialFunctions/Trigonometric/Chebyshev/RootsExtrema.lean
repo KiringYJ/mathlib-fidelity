@@ -161,7 +161,7 @@ theorem roots_T_real_nodup (n : ℕ) :
   grind
 
 theorem roots_T_real (n : ℕ) :
-    (T ℝ n).roots =
+    (T ℝ n).roots (T_ne_zero ℝ n) =
     ((Finset.range n).image (fun (k : ℕ) => cos ((2 * k + 1) * π / (2 * n)))).val := by
   wlog! hn : n ≠ 0
   · simp [hn]
@@ -192,7 +192,7 @@ theorem roots_U_real_nodup (n : ℕ) :
     grind
 
 theorem roots_U_real (n : ℕ) :
-    (U ℝ n).roots =
+    (U ℝ n).roots (U_ne_zero ℝ n (by omega)) =
     ((Finset.range n).image (fun (k : ℕ) => cos ((k + 1) * π / (n + 1)))).val := by
   wlog! hn : n ≠ 0
   · simp [hn]
@@ -263,10 +263,9 @@ theorem isLocalExtr_T_real_iff {n : ℕ} (hn : 2 ≤ n) (x : ℝ) :
     replace hx := hx.deriv_eq_zero
     rw [Polynomial.deriv, T_derivative_eq_U, eval_mul, Int.cast_natCast, eval_natCast,
       mul_eq_zero_iff_left (by aesop)] at hx
-    replace hx : x ∈ (U ℝ (n - 1)).roots :=
-      (mem_roots (degree_ne_bot.mp (ne_of_eq_of_ne (by grind [degree_U_natCast])
-        (WithBot.natCast_ne_bot (n - 1))))).mpr hx
-    rw [show (n - 1 : ℤ) = (n - 1 : ℕ) by grind, roots_U_real, Finset.mem_val] at hx
+    rw [show (n - 1 : ℤ) = (n - 1 : ℕ) by grind] at hx
+    replace hx : x ∈ (U ℝ (n - 1 : ℕ)).roots (U_ne_zero ℝ _ (by omega)) := (mem_roots _).mpr hx
+    rw [roots_U_real, Finset.mem_val] at hx
     obtain ⟨k, hk₁, hx⟩ := Finset.mem_image.mp hx
     refine ⟨k + 1, Finset.mem_Ioo.mpr ⟨k.zero_lt_succ, by grind⟩, ?_⟩
     rw [← hx]

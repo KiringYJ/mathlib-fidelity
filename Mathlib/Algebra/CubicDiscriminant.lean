@@ -385,23 +385,28 @@ section Extension
 
 variable {P : Cubic R} [CommRing R] [CommRing S] {φ : R →+* S}
 
-/-- The roots of a cubic polynomial. -/
-def roots [IsDomain R] (P : Cubic R) : Multiset R :=
-  P.toPoly.roots
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Cubic.ne_zero_of_a_ne_zero);
+      with_reducible_and_instances assumption))
 
-theorem map_roots [IsDomain S] : (map φ P).roots = (Polynomial.map φ P.toPoly).roots := by
-  rw [roots, map_toPoly]
+/-- The roots of a nonzero cubic polynomial. -/
+def roots [IsDomain R] (P : Cubic R) (hP : P.toPoly ≠ 0 := by nonzero_tac) : Multiset R :=
+  P.toPoly.roots hP
+
+theorem map_roots [IsDomain S] {h : (map φ P).toPoly ≠ 0} :
+    (map φ P).roots h = (Polynomial.map φ P.toPoly).roots (by rwa [← map_toPoly]) := by
+  simp only [roots, map_toPoly]
 
 theorem mem_roots_iff [IsDomain R] (h0 : P.toPoly ≠ 0) (x : R) :
     x ∈ P.roots ↔ P.a * x ^ 3 + P.b * x ^ 2 + P.c * x + P.d = 0 := by
   rw [roots, mem_roots h0, IsRoot, toPoly]
   simp only [eval_C, eval_X, eval_add, eval_mul, eval_pow]
 
-theorem card_roots_le [IsDomain R] [DecidableEq R] : P.roots.toFinset.card ≤ 3 := by
+theorem card_roots_le [IsDomain R] [DecidableEq R] {hP : P.toPoly ≠ 0} :
+    (P.roots hP).toFinset.card ≤ 3 := by
   apply (toFinset_card_le P.toPoly.roots).trans
-  by_cases hP : P.toPoly = 0
-  · simp [hP]
-  · exact WithBot.coe_le_coe.1 ((card_roots hP).trans degree_cubic_le)
+  exact WithBot.coe_le_coe.1 ((card_roots hP).trans degree_cubic_le)
 
 end Extension
 
@@ -412,10 +417,18 @@ variable {P : Cubic F} [Field F] [Field K] {φ : F →+* K} {x y z : K}
 
 section Split
 
+theorem map_toPoly_ne_zero_of_a_ne_zero (ha : P.a ≠ 0) : (map φ P).toPoly ≠ 0 :=
+  ne_zero_of_a_ne_zero <| (map_ne_zero φ).mpr ha
+
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Cubic.map_toPoly_ne_zero_of_a_ne_zero);
+      with_reducible_and_instances assumption))
+
 theorem splits_iff_card_roots (ha : P.a ≠ 0) :
     Splits (P.toPoly.map φ) ↔ (map φ P).roots.card = 3 := by
   replace ha : (map φ P).a ≠ 0 := (map_ne_zero φ).mpr ha
-  rw [roots, ← map_toPoly, Polynomial.splits_iff_card_roots,
+  rw [roots, ← map_toPoly, Polynomial.splits_iff_card_roots (ne_zero_of_a_ne_zero ha),
     ← ((degree_eq_iff_natDegree_eq <| ne_zero_of_a_ne_zero ha).1 <| degree_of_a_ne_zero ha : _ = 3)]
 
 theorem splits_iff_roots_eq_three (ha : P.a ≠ 0) :
@@ -424,10 +437,12 @@ theorem splits_iff_roots_eq_three (ha : P.a ≠ 0) :
 
 theorem eq_prod_three_roots (ha : P.a ≠ 0) (h3 : (map φ P).roots = {x, y, z}) :
     (map φ P).toPoly = C (φ P.a) * (X - C x) * (X - C y) * (X - C z) := by
-  rw [map_toPoly,
-    Splits.eq_prod_roots <|
-      (splits_iff_roots_eq_three ha).mpr <| Exists.intro x <| Exists.intro y <| Exists.intro z h3,
-    leadingCoeff_map, leadingCoeff_of_a_ne_zero ha, ← map_roots, h3]
+  have hs : Splits (map φ P).toPoly := by
+    rw [map_toPoly]
+    exact (splits_iff_roots_eq_three ha).mpr ⟨x, y, z, h3⟩
+  rw [roots] at h3
+  rw [hs.eq_prod_roots (map_toPoly_ne_zero_of_a_ne_zero ha), h3,
+    leadingCoeff_of_a_ne_zero ((map_ne_zero φ).mpr ha)]
   change C (φ P.a) * ((X - C x) ::ₘ (X - C y) ::ₘ {X - C z}).prod = _
   rw [prod_cons, prod_cons, prod_singleton, mul_assoc, mul_assoc]
 

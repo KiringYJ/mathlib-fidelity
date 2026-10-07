@@ -180,31 +180,53 @@ protected theorem splits (n : ℕ) :
 set_option backward.isDefEq.respectTransparency false in
 theorem adjoin_rootSet (n : ℕ) :
     ∀ {K : Type u} [Field K],
-      ∀ (f : K[X]) (_hfn : f.natDegree = n),
+      ∀ (f : K[X]) (_hfn : f.natDegree = n) (_hf : f ≠ 0),
         Algebra.adjoin K (f.rootSet (SplittingFieldAux n f)) = ⊤ :=
   Nat.recOn (motive := fun n =>
     ∀ {K : Type u} [Field K],
-      ∀ (f : K[X]) (_hfn : f.natDegree = n),
+      ∀ (f : K[X]) (_hfn : f.natDegree = n) (_hf : f ≠ 0),
         Algebra.adjoin K (f.rootSet (SplittingFieldAux n f)) = ⊤)
-    n (fun {_} _ _ _hf => Algebra.eq_top_iff.2 fun x => Subalgebra.range_le _ ⟨x, rfl⟩)
-    fun n ih {K} _ f hfn => by
+    n (fun {_} _ _ _ _ => Algebra.eq_top_iff.2 fun x => Subalgebra.range_le _ ⟨x, rfl⟩)
+    fun n ih {K} _ f hfn hfn0 => by
     have hndf : f.natDegree ≠ 0 := by intro h; rw [h] at hfn; cases hfn
-    have hfn0 : f ≠ 0 := by intro h; rw [h] at hndf; exact hndf rfl
+    have hrf0 : f.removeFactor ≠ 0 := fun h ↦ hfn0 <| by
+      have := X_sub_C_mul_removeFactor f hndf
+      rwa [h, mul_zero, eq_comm, Polynomial.map_eq_zero_iff (AdjoinRoot.of f.factor).injective]
+        at this
+    have hpoly : map (algebraMap K (SplittingFieldAux n.succ f)) f =
+        map (algebraMap (AdjoinRoot f.factor) (SplittingFieldAux n f.removeFactor))
+            (X - C (AdjoinRoot.root f.factor)) *
+          map (algebraMap (AdjoinRoot f.factor) (SplittingFieldAux n f.removeFactor))
+            f.removeFactor := by
+      rw [algebraMap_succ, ← map_map, ← X_sub_C_mul_removeFactor _ hndf, Polynomial.map_mul]
     have hmf0 : map (algebraMap K (SplittingFieldAux n.succ f)) f ≠ 0 := map_ne_zero hfn0
+    rw [hpoly] at hmf0
     classical
     rw [rootSet_def, aroots_def]
-    rw [algebraMap_succ, ← map_map, ← X_sub_C_mul_removeFactor _ hndf, Polynomial.map_mul] at hmf0 ⊢
-    rw [roots_mul hmf0, Polynomial.map_sub, map_X, map_C, roots_X_sub_C, Multiset.toFinset_add,
-      Finset.coe_union, Multiset.toFinset_singleton, Finset.coe_singleton, ← Set.image_singleton]
+    simp only [hpoly]
+    rw [roots_mul hmf0]
+    simp only [Polynomial.map_sub, map_X, map_C, roots_X_sub_C]
+    rw [Multiset.toFinset_add, Finset.coe_union, Multiset.toFinset_singleton, Finset.coe_singleton,
+      ← Set.image_singleton]
     simp only [SplittingFieldAux.succ]
     rw [← Algebra.adjoin_eq_adjoin_union K {AdjoinRoot.root f.factor}
       ((map (algebraMap (AdjoinRoot f.factor) (SplittingFieldAux n f.removeFactor))
         f.removeFactor).roots.toFinset : Set (SplittingFieldAux n f.removeFactor))
-      AdjoinRoot.adjoinRoot_eq_top, ← rootSet_def, ih _ (natDegree_removeFactor' hfn),
+      AdjoinRoot.adjoinRoot_eq_top, ← rootSet_def, ih _ (natDegree_removeFactor' hfn) hrf0,
       Subalgebra.restrictScalars_top]
 
+set_option backward.isDefEq.respectTransparency false in
+theorem top_eq_bot_of_eq_zero (n : ℕ) {K : Type u} [Field K] (f : K[X]) (hfn : f.natDegree = n)
+    (hf : f = 0) : (⊤ : Subalgebra K (SplittingFieldAux n f)) = ⊥ := by
+  subst hf
+  rw [natDegree_zero] at hfn
+  subst hfn
+  exact (Algebra.eq_top_iff.2 fun x ↦ Subalgebra.range_le _ ⟨x, rfl⟩ :
+    (⊥ : Subalgebra K (SplittingFieldAux 0 (0 : K[X]))) = ⊤).symm
+
 instance (f : K[X]) : IsSplittingField K (SplittingFieldAux f.natDegree f) f :=
-  ⟨SplittingFieldAux.splits _ _ rfl, SplittingFieldAux.adjoin_rootSet _ _ rfl⟩
+  ⟨SplittingFieldAux.splits _ _ rfl, SplittingFieldAux.adjoin_rootSet _ _ rfl,
+    SplittingFieldAux.top_eq_bot_of_eq_zero _ _ rfl⟩
 
 end SplittingFieldAux
 
@@ -279,8 +301,8 @@ variable [Algebra K L] (hb : Splits (f.map (algebraMap K L)))
 def lift : SplittingField f →ₐ[K] L :=
   IsSplittingField.lift f.SplittingField f hb
 
-theorem adjoin_rootSet : Algebra.adjoin K (f.rootSet (SplittingField f)) = ⊤ :=
-  Polynomial.IsSplittingField.adjoin_rootSet _ f
+theorem adjoin_rootSet (hf : f ≠ 0) : Algebra.adjoin K (f.rootSet (SplittingField f)) = ⊤ :=
+  Polynomial.IsSplittingField.adjoin_rootSet _ f hf
 
 end SplittingField
 

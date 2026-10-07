@@ -146,6 +146,10 @@ theorem monic_minpoly (c : ConjRootClass K L) : c.minpoly.Monic := by
   rw [minpoly_mk]
   exact minpoly.monic (Algebra.IsIntegral.isIntegral _)
 
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    with_reducible_and_instances apply ConjRootClass.monic_minpoly)
+
 theorem minpoly_ne_zero (c : ConjRootClass K L) : c.minpoly ≠ 0 :=
   c.monic_minpoly.ne_zero
 
@@ -163,7 +167,6 @@ theorem rootSet_minpoly_eq_carrier (c : ConjRootClass K L) :
     c.minpoly.rootSet L = c.carrier := by
   ext x
   rw [mem_carrier, mem_rootSet, aeval_minpoly_iff x c]
-  simp [c.minpoly_ne_zero]
 
 end IsAlgebraic
 
@@ -195,7 +198,7 @@ theorem minpoly.map_eq_prod [Normal K L] (c : ConjRootClass K L) [Fintype c.carr
     Finset.toFinset_coe, Multiset.toFinset_val]
   rw [Multiset.dedup_eq_self.mpr (nodup_roots c.separable_minpoly.map),
     prod_multiset_X_sub_C_of_monic_of_roots_card_eq (c.monic_minpoly.map _)]
-  rw [← splits_iff_card_roots]
+  rw [← splits_iff_card_roots (c.monic_minpoly.map _).ne_zero]
   exact c.splits_minpoly
 
 end IsSeparable

@@ -158,11 +158,14 @@ lemma charpoly_eq : A.charpoly = ∏ i, (X - C (hA.eigenvalues i : 𝕜)) := by
   conv_lhs => rw [hA.spectral_theorem, conjStarAlgAut_apply, charpoly_mul_comm, ← mul_assoc]
   simp [charpoly_diagonal]
 
+open Polynomial in
 lemma roots_charpoly_eq_eigenvalues :
     A.charpoly.roots = Multiset.map (RCLike.ofReal ∘ hA.eigenvalues) Finset.univ.val := by
-  rw [hA.charpoly_eq, Polynomial.roots_prod]
-  · simp
-  · simp [Finset.prod_ne_zero_iff, Polynomial.X_sub_C_ne_zero]
+  have key : A.charpoly =
+      ((Finset.univ.val.map (RCLike.ofReal ∘ hA.eigenvalues)).map fun a ↦ X - C a).prod := by
+    rw [hA.charpoly_eq, Finset.prod_eq_multiset_prod, Multiset.map_map]
+    rfl
+  simp only [key, roots_multiset_prod_X_sub_C]
 
 set_option backward.isDefEq.respectTransparency.types false in
 lemma roots_charpoly_eq_eigenvalues₀ :
@@ -187,7 +190,8 @@ lemma eigenvalues_eq_eigenvalues_iff :
     simp_rw [← List.ofFn_inj, ← sort_roots_charpoly_eq_eigenvalues₀, h]
 
 theorem splits_charpoly (hA : A.IsHermitian) : A.charpoly.Splits :=
-  Polynomial.splits_iff_card_roots.mpr (by simp [hA.roots_charpoly_eq_eigenvalues])
+  (Polynomial.splits_iff_card_roots (Matrix.charpoly_monic A).ne_zero).mpr
+    (by simp [hA.roots_charpoly_eq_eigenvalues])
 
 /-- The determinant of a Hermitian matrix is the product of its eigenvalues. -/
 theorem det_eq_prod_eigenvalues : det A = ∏ i, (hA.eigenvalues i : 𝕜) := by

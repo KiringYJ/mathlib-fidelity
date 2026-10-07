@@ -125,8 +125,8 @@ theorem cyclotomic_mahlerMeasure_eq_one {R : Type*} [CommRing R] [Algebra R ℂ]
   · simp [hn]
   have : NeZero n := ⟨hn⟩
   suffices ∏ x ∈ primitiveRoots n ℂ, max 1 ‖x‖ = 1 by
-    simpa [mahlerMeasure_eq_leadingCoeff_mul_prod_roots, cyclotomic.monic n ℂ,
-      Polynomial.cyclotomic.roots_eq_primitiveRoots_val]
+    rw [map_cyclotomic, mahlerMeasure_eq_leadingCoeff_mul_prod_roots _ (cyclotomic_ne_zero n ℂ)]
+    simpa [cyclotomic.monic n ℂ, Polynomial.cyclotomic.roots_eq_primitiveRoots_val]
   suffices ∀ x ∈ primitiveRoots n ℂ, ‖x‖ ≤ 1 from Multiset.prod_eq_one (by simpa)
   intro _ hz
   exact (IsPrimitiveRoot.norm'_eq_one (isPrimitiveRoot_of_mem_primitiveRoots hz) hn).le
@@ -149,7 +149,7 @@ lemma abs_leadingCoeff_eq_one_of_mahlerMeasure_eq_one : |p.leadingCoeff| = 1 := 
   rw [leadingCoeff_map_of_injective (castRingHom ℂ).injective_int, eq_intCast] at this
   norm_cast at this
 
-variable {z : ℂ} (hz₀ : z ≠ 0) (hz : z ∈ p.aroots ℂ)
+variable {z : ℂ} (hz₀ : z ≠ 0) {hpz : p.map (algebraMap ℤ ℂ) ≠ 0} (hz : z ∈ p.aroots ℂ)
 
 include hz h in
 /-- If an integer polynomial has Mahler measure equal to 1, then all its complex roots are integral
@@ -158,7 +158,8 @@ theorem isIntegral_of_mahlerMeasure_eq_one : IsIntegral ℤ z := by
   have : p.leadingCoeff = 1 ∨ p.leadingCoeff = -1 := abs_eq_abs.mp <|
     abs_leadingCoeff_eq_one_of_mahlerMeasure_eq_one h
   have : (C (1 / p.leadingCoeff) * p).Monic := by aesop (add safe (by simp [Monic.def]))
-  grind [IsIntegral, RingHom.IsIntegralElem, mem_roots', IsRoot.def, eval₂_mul, eval_map]
+  have hz' : (p.map (algebraMap ℤ ℂ)).IsRoot z := (mem_roots hpz).mp hz
+  grind [IsIntegral, RingHom.IsIntegralElem, IsRoot.def, eval₂_mul, eval_map]
 
 set_option linter.style.whitespace false in -- manual alignment is not recognised
 open Multiset in
@@ -168,7 +169,7 @@ most 1. -/
 lemma norm_root_le_one_of_mahlerMeasure_eq_one : ‖z‖ ≤ 1 := by
   calc
   ‖z‖ ≤ max 1 ‖z‖ := le_max_right 1 ‖z‖
-  _   ≤ ((p.map (castRingHom ℂ)).roots.map (fun a ↦ max 1 ‖a‖)).prod :=
+  _   ≤ (((p.map (castRingHom ℂ)).roots hpz).map (fun a ↦ max 1 ‖a‖)).prod :=
         mem_le_prod_of_one_le (fun a ↦ le_max_left 1 ‖a‖) hz
   _   ≤ 1 := by grind [prod_max_one_norm_roots_le_mahlerMeasure_of_one_le_leadingCoeff,
         norm_leadingCoeff_eq_one_of_mahlerMeasure_eq_one]
@@ -194,15 +195,14 @@ to `ℚ`.
     exact ⟨n, hn₀, congrArg (algebraMap K ℂ) hn₁⟩
   refine NumberField.Embeddings.pow_eq_one_of_norm_le_one (x := y) K ℂ (Subtype.coe_ne_coe.mp hz₀)
     (coe_isIntegral_iff.mp <| isIntegral_of_mahlerMeasure_eq_one h hz)
-    fun φ ↦ norm_root_le_one_of_mahlerMeasure_eq_one h ?_
+    fun φ ↦ norm_root_le_one_of_mahlerMeasure_eq_one h (hpz := hpz) ?_
   rw [mem_aroots] at hz ⊢
-  refine ⟨hz.1, ?_⟩
   have H (ψ : K →+* ℂ) : ψ ((aeval y) p) = (aeval (ψ y)) p := by
     conv_rhs => rw [← map_id (p := p)]
     exact p.map_aeval_eq_aeval_map (by ext; simp) y
   rw [← H, map_eq_zero_iff _ φ.injective,
     ← map_eq_zero_iff _ (FaithfulSMul.algebraMap_injective ↥K ℂ), H]
-  exact hz.2
+  exact hz
 
 include h hz₀ hz in
 /-- If an integer polynomial has Mahler measure equal to 1, then all its complex nonzero roots are
@@ -218,17 +218,20 @@ theorem cyclotomic_dvd_of_mahlerMeasure_eq_one (hX : ¬ X ∣ p) (hpdeg : p.degr
     ∃ n, 0 < n ∧ cyclotomic n ℤ ∣ p := by
   have hpdegC : (p.map (castRingHom ℂ)).degree ≠ 0 := by
     rwa [p.degree_map_eq_of_injective (castRingHom ℂ).injective_int]
-  obtain ⟨z, _⟩ := Splits.exists_eval_eq_zero (IsAlgClosed.splits <| p.map (castRingHom ℂ))
+  obtain ⟨z, hz⟩ := Splits.exists_eval_eq_zero (IsAlgClosed.splits <| p.map (castRingHom ℂ))
     hpdegC
   have hz₀ : z ≠ 0 := by
     contrapose hX
     simp_all [X_dvd_iff, coeff_zero_eq_aeval_zero]
-  have h_z_root : z ∈ p.aroots ℂ := by aesop
+  have hpz : p.map (algebraMap ℤ ℂ) ≠ 0 := by
+    intro h0
+    simp [show p.map (castRingHom ℂ) = 0 from h0] at h
+  have h_z_root : z ∈ p.aroots ℂ := (mem_roots hpz).mpr hz
   obtain ⟨m, h_m_pos, h_prim⟩ := isPrimitiveRoot_of_mahlerMeasure_eq_one h hz₀ h_z_root
   use m, h_m_pos
   rw [cyclotomic_eq_minpoly h_prim h_m_pos]
   apply minpoly.isIntegrallyClosed_dvd <| isIntegral_of_mahlerMeasure_eq_one h h_z_root
-  exact (mem_aroots.mp h_z_root).2
+  exact mem_aroots.mp h_z_root
 
 end Cyclotomic
 

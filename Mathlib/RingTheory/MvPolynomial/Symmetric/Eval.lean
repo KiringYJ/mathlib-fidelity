@@ -106,7 +106,7 @@ variable [Fintype σ] [CommRing R] [CommRing S] [Algebra R S]
   [CommRing A] [Algebra S A] [Algebra R A] [IsScalarTower R S A]
 
 theorem esymm_map_smul_aroots_mem_range_algebraMap [IsDomain A] {q : S[X]} {r : ℕ}
-    (hsplit : (q.map (algebraMap S A)).Splits) :
+    (hsplit : (q.map (algebraMap S A)).Splits) (hq : q.map (algebraMap S A) ≠ 0) :
     ((q.aroots A).map (q.leadingCoeff • ·)).esymm r ∈ Set.range (algebraMap S A) := by
   rw [← Algebra.mem_bot, ← Multiset.pow_smul_esymm]
   obtain rfl | hr0 := eq_or_ne r 0
@@ -119,7 +119,7 @@ theorem esymm_map_smul_aroots_mem_range_algebraMap [IsDomain A] {q : S[X]} {r : 
       q.leadingCoeff ^ (r - 1) • ((-1) ^ r * (q.map (algebraMap S A)).coeff (q.natDegree - r)) := by
     have : (-1) ^ r * (q.map (algebraMap S A)).coeff (q.natDegree - r) =
         (q.map (algebraMap S A)).leadingCoeff * (q.aroots A).esymm r := by
-      rw [Polynomial.coeff_eq_esymm_roots_of_card hsplit.natDegree_eq_card_roots.symm,
+      rw [Polynomial.coeff_eq_esymm_roots_of_card (hsplit.natDegree_eq_card_roots hq).symm,
         Polynomial.natDegree_map_of_leadingCoeff_ne_zero _ hlc,
         Polynomial.leadingCoeff_map_of_leadingCoeff_ne_zero _ hlc,
         tsub_tsub_cancel_of_le hr,
@@ -133,10 +133,10 @@ theorem esymm_map_smul_aroots_mem_range_algebraMap [IsDomain A] {q : S[X]} {r : 
 
 theorem aevalMultiset_map_aroots_mem_range_algebraMap [IsDomain A]
     {q : S[X]} {p : symmetricSubalgebra σ R}
-    (hsplit : (q.map (algebraMap S A)).Splits) :
+    (hsplit : (q.map (algebraMap S A)).Splits) (hq : q.map (algebraMap S A) ≠ 0) :
     aevalMultiset σ R ((q.aroots A).map (q.leadingCoeff • ·)) p ∈ Set.range (algebraMap S A) :=
   aevalMultiset_mem (IsScalarTower.toAlgHom R S A).range
-    fun _ _ ↦ esymm_map_smul_aroots_mem_range_algebraMap hsplit
+    fun _ _ ↦ esymm_map_smul_aroots_mem_range_algebraMap hsplit hq
 
 end CommRing
 
@@ -150,7 +150,7 @@ variable {R A : Type*} [CommRing R] [CommRing A] [IsDomain A] [Algebra R A] (p :
 
 /-- `p.leadingCoeff ^ q.natDegree • ∑ i ∈ p.aroots A, q.aeval i` lies in the base ring. -/
 theorem leadingCoeff_pow_natDegree_smul_sum_map_aroots_aeval_mem_range_algebraMap
-    (hsplit : (p.map (algebraMap R A)).Splits) :
+    (hsplit : (p.map (algebraMap R A)).Splits) (hp : p.map (algebraMap R A) ≠ 0) :
     p.leadingCoeff ^ q.natDegree • ((p.aroots A).map (q.aeval ·)).sum ∈
       Set.range (algebraMap R A) := by
   have : (fun x : A ↦ p.leadingCoeff ^ q.natDegree • q.aeval x) =
@@ -159,13 +159,13 @@ theorem leadingCoeff_pow_natDegree_smul_sum_map_aroots_aeval_mem_range_algebraMa
   rw [Multiset.smul_sum, Multiset.map_map, Function.comp_def, this,
     ← Multiset.map_map _ fun x => p.leadingCoeff • x]
   rw [← aevalMultiset_sumPolynomial (σ := Fin (p.aroots A).card) (by simp)]
-  exact aevalMultiset_map_aroots_mem_range_algebraMap hsplit
+  exact aevalMultiset_map_aroots_mem_range_algebraMap hsplit hp
 
 /-- Given `k` a multiple of `p.leadingCoeff` and `e ≥ q.natDegree`,
 `k ^ e • ∑ i ∈ p.aroots A, q.aeval i` lies in the base ring. -/
 theorem pow_smul_sum_map_aroots_aeval_mem_range_algebraMap
     (k : R) (e : ℕ) (hk : p.leadingCoeff ∣ k) (he : q.natDegree ≤ e)
-    (hsplit : (p.map (algebraMap R A)).Splits) :
+    (hsplit : (p.map (algebraMap R A)).Splits) (hp : p.map (algebraMap R A) ≠ 0) :
     k ^ e • ((p.aroots A).map (q.aeval ·)).sum ∈ Set.range (algebraMap R A) := by
   obtain ⟨k, rfl⟩ := hk; obtain ⟨e, rfl⟩ := le_iff_exists_add.mp he
   have : (p.leadingCoeff * k) ^ (q.natDegree + e) =
@@ -174,6 +174,6 @@ theorem pow_smul_sum_map_aroots_aeval_mem_range_algebraMap
   rw [this, mul_smul, ← Algebra.mem_bot]
   apply SMulMemClass.smul_mem
   rw [Algebra.mem_bot]
-  exact leadingCoeff_pow_natDegree_smul_sum_map_aroots_aeval_mem_range_algebraMap _ _ hsplit
+  exact leadingCoeff_pow_natDegree_smul_sum_map_aroots_aeval_mem_range_algebraMap _ _ hsplit hp
 
 end Polynomial

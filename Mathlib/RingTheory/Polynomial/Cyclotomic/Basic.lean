@@ -115,14 +115,15 @@ theorem degree_cyclotomic' {ζ : R} {n : ℕ} (h : IsPrimitiveRoot ζ n) :
 
 /-- The roots of `cyclotomic' n R` are the primitive `n`-th roots of unity. -/
 theorem roots_of_cyclotomic (n : ℕ) (R : Type*) [CommRing R] [IsDomain R] :
-    (cyclotomic' n R).roots = (primitiveRoots n R).val := by
-  rw [cyclotomic']; exact roots_prod_X_sub_C (primitiveRoots n R)
+    (cyclotomic' n R).roots = (primitiveRoots n R).val :=
+  roots_prod_X_sub_C (primitiveRoots n R)
 
 /-- If there is a primitive `n`th root of unity in `K`, then `X ^ n - 1 = ∏ (X - μ)`, where `μ`
 varies over the `n`-th roots of unity. -/
 theorem X_pow_sub_one_eq_prod {ζ : R} {n : ℕ} (hpos : 0 < n) (h : IsPrimitiveRoot ζ n) :
     X ^ n - 1 = ∏ ζ ∈ nthRootsFinset n (1 : R), (X - C ζ) := by
   classical
+  have : NeZero n := ⟨hpos.ne'⟩
   rw [nthRootsFinset, ← Multiset.toFinset_eq (IsPrimitiveRoot.nthRoots_one_nodup h)]
   simp only [Finset.prod_mk]
   rw [nthRoots]
@@ -147,7 +148,11 @@ theorem cyclotomic'_splits (n : ℕ) : Splits (cyclotomic' n K) := by
 /-- If there is a primitive `n`-th root of unity in `K`, then `X ^ n - 1` splits. -/
 theorem X_pow_sub_one_splits {ζ : K} {n : ℕ} (h : IsPrimitiveRoot ζ n) :
     Splits (X ^ n - C (1 : K)) := by
-  rw [splits_iff_card_roots, ← nthRoots, IsPrimitiveRoot.card_nthRoots_one h, natDegree_X_pow_sub_C]
+  rcases n.eq_zero_or_pos with rfl | hpos
+  · simp
+  have : NeZero n := ⟨hpos.ne'⟩
+  rw [splits_iff_card_roots (X_pow_sub_C_ne_zero hpos 1), ← nthRoots,
+    IsPrimitiveRoot.card_nthRoots_one h, natDegree_X_pow_sub_C]
 
 /-- If there is a primitive `n`-th root of unity in `K`, then
 `∏ i ∈ Nat.divisors n, cyclotomic' i K = X ^ n - 1`. -/
@@ -157,6 +162,7 @@ theorem prod_cyclotomic'_eq_X_pow_sub_one {K : Type*} [CommRing K] [IsDomain K] 
   classical
   have hd : (n.divisors : Set ℕ).PairwiseDisjoint fun k => primitiveRoots k K :=
     fun x _ y _ hne => IsPrimitiveRoot.disjoint hne
+  have : NeZero n := ⟨hpos.ne'⟩
   simp only [X_pow_sub_one_eq_prod hpos h, cyclotomic', ← Finset.prod_biUnion hd,
     IsPrimitiveRoot.nthRoots_one_eq_biUnion_primitiveRoots]
 
@@ -623,6 +629,7 @@ lemma dvd_C_mul_X_sub_one_pow_add_one {p : ℕ} (hpri : p.Prime)
 private theorem _root_.IsPrimitiveRoot.pow_sub_pow_eq_prod_sub_mul_field {K : Type*}
     [Field K] {ζ : K} (x y : K) (hpos : 0 < n) (h : IsPrimitiveRoot ζ n) :
     x ^ n - y ^ n = ∏ ζ ∈ nthRootsFinset n (1 : K), (x - ζ * y) := by
+  have : NeZero n := ⟨hpos.ne'⟩
   by_cases hy : y = 0
   · simp only [hy, zero_pow (Nat.ne_zero_of_lt hpos), sub_zero, mul_zero, prod_const]
     congr
@@ -639,6 +646,7 @@ variable [IsDomain R]
 where `μ` varies over the `n`-th roots of unity. -/
 theorem _root_.IsPrimitiveRoot.pow_sub_pow_eq_prod_sub_mul (hpos : 0 < n)
     (h : IsPrimitiveRoot ζ n) : x ^ n - y ^ n = ∏ ζ ∈ nthRootsFinset n (1 : R), (x - ζ * y) := by
+  have : NeZero n := ⟨hpos.ne'⟩
   let K := FractionRing R
   apply FaithfulSMul.algebraMap_injective R K
   rw [map_sub, map_pow, map_pow, map_prod]
@@ -658,7 +666,9 @@ theorem _root_.IsPrimitiveRoot.pow_sub_pow_eq_prod_sub_mul (hpos : 0 < n)
 /-- If there is a primitive `n`th root of unity in `R` and `n` is odd, then
 `X ^ n + Y ^ n = ∏ (X + μ Y)`, where `μ` varies over the `n`-th roots of unity. -/
 theorem _root_.IsPrimitiveRoot.pow_add_pow_eq_prod_add_mul (hodd : Odd n)
-    (h : IsPrimitiveRoot ζ n) : x ^ n + y ^ n = ∏ ζ ∈ nthRootsFinset n (1 : R), (x + ζ * y) := by
+    (h : IsPrimitiveRoot ζ n) :
+    haveI : NeZero n := ⟨hodd.pos.ne'⟩
+    x ^ n + y ^ n = ∏ ζ ∈ nthRootsFinset n (1 : R), (x + ζ * y) := by
   simpa [hodd.neg_pow] using h.pow_sub_pow_eq_prod_sub_mul x (-y) hodd.pos
 
 theorem separable_cyclotomic (n : ℕ) (K : Type*) [Field K] [NeZero (n : K)] :

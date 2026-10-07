@@ -359,12 +359,14 @@ theorem charpoly_eq (hT : T.IsSymmetric) (hn : Module.finrank 𝕜 E = n) :
   simp [← T.charpoly_toMatrix (hT.eigenvectorBasis hn).toBasis, toMatrix_eigenvectorBasis,
     Matrix.charpoly_diagonal]
 
+open Polynomial in
 theorem roots_charpoly_eq_eigenvalues (hT : T.IsSymmetric) (hn : Module.finrank 𝕜 E = n) :
     T.charpoly.roots = Multiset.map (RCLike.ofReal ∘ hT.eigenvalues hn) Finset.univ.val := by
-  rw [← charpoly_toMatrix _ (hT.eigenvectorBasis hn).toBasis, toMatrix_eigenvectorBasis,
-    Matrix.charpoly_diagonal, Polynomial.roots_prod _ _ (by
-      simp [Finset.prod_ne_zero_iff, Polynomial.X_sub_C_ne_zero])]
-  simp
+  have key : T.charpoly =
+      ((Finset.univ.val.map (RCLike.ofReal ∘ hT.eigenvalues hn)).map fun a ↦ X - C a).prod := by
+    rw [hT.charpoly_eq hn, Finset.prod_eq_multiset_prod, Multiset.map_map]
+    rfl
+  simp only [key, roots_multiset_prod_X_sub_C]
 
 theorem sort_roots_charpoly_eq_eigenvalues (hT : T.IsSymmetric) (hn : Module.finrank 𝕜 E = n) :
     (T.charpoly.roots.map RCLike.re).sort (· ≥ ·) = List.ofFn (hT.eigenvalues hn) := by
@@ -381,11 +383,11 @@ theorem eigenvalues_eq_eigenvalues_iff {E' : Type*} [NormedAddCommGroup E'] [Inn
     hT.eigenvalues hn = hT'.eigenvalues hn' ↔ T.charpoly = T'.charpoly where
   mp h := by rw [hT.charpoly_eq hn, hT'.charpoly_eq hn', h]
   mpr h := by
-    rw [← List.ofFn_inj, ← sort_roots_charpoly_eq_eigenvalues, ← sort_roots_charpoly_eq_eigenvalues,
-      h]
+    rw [← List.ofFn_inj, ← sort_roots_charpoly_eq_eigenvalues, ← sort_roots_charpoly_eq_eigenvalues]
+    simp only [h]
 
 theorem splits_charpoly (hT : T.IsSymmetric) : T.charpoly.Splits := by
-  refine Polynomial.splits_iff_card_roots.mpr ?_
+  refine (Polynomial.splits_iff_card_roots (LinearMap.charpoly_monic T).ne_zero).mpr ?_
   simp [hT.roots_charpoly_eq_eigenvalues rfl, LinearMap.charpoly_natDegree]
 
 theorem det_eq_prod_eigenvalues (hT : T.IsSymmetric) (hn : Module.finrank 𝕜 E = n) :

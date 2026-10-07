@@ -81,7 +81,7 @@ section PrimitiveElementInf
 variable {F : Type*} [Field F] [Infinite F] {E : Type*} [Field E] (ϕ : F →+* E) (α β : E)
 
 set_option backward.isDefEq.respectTransparency.types false in
-theorem primitive_element_inf_aux_exists_c (f g : F[X]) :
+theorem primitive_element_inf_aux_exists_c (f g : F[X]) (hf : f ≠ 0) (hg : g ≠ 0) :
     ∃ c : F, ∀ α' ∈ (f.map ϕ).roots, ∀ β' ∈ (g.map ϕ).roots, -(α' - α) / (β' - β) ≠ ϕ c := by
   let sf := (f.map ϕ).roots
   let sg := (g.map ϕ).roots
@@ -107,6 +107,7 @@ theorem primitive_element_inf_aux [Algebra.IsSeparable F E] : ∃ γ : E, F⟮α
   let ιFE := algebraMap F E
   let ιEE' := algebraMap E (SplittingField (g.map ιFE))
   obtain ⟨c, hc⟩ := primitive_element_inf_aux_exists_c (ιEE'.comp ιFE) (ιEE' α) (ιEE' β) f g
+    (minpoly.ne_zero hα) (minpoly.ne_zero hβ)
   let γ := α + c • β
   suffices β_in_Fγ : β ∈ F⟮γ⟯ by
     use γ

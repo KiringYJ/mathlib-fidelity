@@ -164,8 +164,9 @@ theorem isAlgebraic_ratCast (R : Type u) {A : Type v} [DivisionRing A] [Field R]
 @[deprecated (since := "2026-07-14")] alias isAlgebraic_rat := isAlgebraic_ratCast
 
 theorem isAlgebraic_of_mem_rootSet {R : Type u} {A : Type v} [CommRing R] [Field A] [Algebra R A]
-    {p : R[X]} {x : A} (hx : x ∈ p.rootSet A) : IsAlgebraic R x :=
-  ⟨p, ne_zero_of_mem_rootSet hx, aeval_eq_zero_of_mem_rootSet hx⟩
+    {p : R[X]} {x : A} {hp : p.map (algebraMap R A) ≠ 0} (hx : x ∈ p.rootSet A hp) :
+    IsAlgebraic R x :=
+  ⟨p, ne_zero_of_map_ne_zero hp, aeval_eq_zero_of_mem_rootSet hx⟩
 
 variable (S) in
 theorem IsLocalization.isAlgebraic [Nontrivial R] (M : Submonoid R) [IsLocalization M S] :
@@ -496,10 +497,12 @@ theorem algHom_bijective [IsTorsionFree K L] [Algebra.IsAlgebraic K L] (f : L �
     Function.Bijective f := by
   refine ⟨f.injective, fun b ↦ ?_⟩
   obtain ⟨p, hp, he⟩ := Algebra.IsAlgebraic.isAlgebraic (R := K) b
-  let f' : p.rootSet L → p.rootSet L := (rootSet_maps_to' (fun x ↦ x) f).restrict f _ _
+  have hpL : p.map (algebraMap K L) ≠ 0 :=
+    (Polynomial.map_ne_zero_iff (FaithfulSMul.algebraMap_injective K L)).2 hp
+  let f' : p.rootSet L hpL → p.rootSet L hpL := (rootSet_maps_to' hpL f).restrict f _ _
   have : f'.Surjective := Finite.injective_iff_surjective.1
     fun _ _ h ↦ Subtype.ext <| f.injective <| Subtype.ext_iff.1 h
-  obtain ⟨a, ha⟩ := this ⟨b, mem_rootSet.2 ⟨hp, he⟩⟩
+  obtain ⟨a, ha⟩ := this ⟨b, mem_rootSet.2 he⟩
   exact ⟨a, Subtype.ext_iff.1 ha⟩
 
 theorem algHom_bijective₂ [IsTorsionFree K L] [DivisionRing R] [Algebra K R]

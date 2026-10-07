@@ -25,26 +25,51 @@ lemma eq_quadratic_of_degree_le_two [Semiring R] {p : R[X]} (hp : p.degree ≤ 2
   simp [Finset.sum_range_succ]
   abel
 
+theorem map_quadratic [Semiring R] [Semiring S] (f : R →+* S) (a b c : R) :
+    (C a * X ^ 2 + C b * X + C c).map f = C (f a) * X ^ 2 + C (f b) * X + C (f c) := by
+  simp
+
+theorem quadratic_ne_zero [Semiring R] {a b c : R} (ha : a ≠ 0) :
+    C a * X ^ 2 + C b * X + C c ≠ 0 := by
+  rw [← leadingCoeff_ne_zero, leadingCoeff_quadratic ha]
+  exact ha
+
+theorem map_quadratic_ne_zero [Semiring R] [Semiring S] {f : R →+* S} {a b c : R}
+    (ha : f a ≠ 0) : (C a * X ^ 2 + C b * X + C c).map f ≠ 0 := by
+  rw [map_quadratic]
+  exact quadratic_ne_zero ha
+
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Polynomial.quadratic_ne_zero);
+      with_reducible_and_instances assumption))
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Polynomial.map_quadratic_ne_zero);
+      with_reducible_and_instances assumption))
+
 /-- **Vieta's formula** for quadratics. -/
 lemma eq_neg_mul_add_of_roots_quadratic_eq_pair [CommRing R] [IsDomain R] {a b c x1 x2 : R}
-    (hroots : (C a * X ^ 2 + C b * X + C c).roots = {x1, x2}) :
+    {h : C a * X ^ 2 + C b * X + C c ≠ 0}
+    (hroots : (C a * X ^ 2 + C b * X + C c).roots h = {x1, x2}) :
     b = -a * (x1 + x2) := by
   let p : R[X] := C a * X ^ 2 + C b * X + C c
   have hp_natDegree : p.natDegree = 2 := le_antisymm natDegree_quadratic_le
-    (by convert! p.card_roots'; rw [hroots, Multiset.card_pair])
-  have hp_roots_card : p.roots.card = p.natDegree := by
+    (by convert! p.card_roots' (hp := h); rw [hroots, Multiset.card_pair])
+  have hp_roots_card : (p.roots h).card = p.natDegree := by
     rw [hp_natDegree, hroots, Multiset.card_pair]
   simpa [leadingCoeff, hp_natDegree, p, hroots, mul_assoc, add_comm x1] using
     coeff_eq_esymm_roots_of_card hp_roots_card (k := 1) (by simp [hp_natDegree])
 
 /-- **Vieta's formula** for quadratics. -/
 lemma eq_mul_mul_of_roots_quadratic_eq_pair [CommRing R] [IsDomain R] {a b c x1 x2 : R}
-    (hroots : (C a * X ^ 2 + C b * X + C c).roots = {x1, x2}) :
+    {h : C a * X ^ 2 + C b * X + C c ≠ 0}
+    (hroots : (C a * X ^ 2 + C b * X + C c).roots h = {x1, x2}) :
     c = a * x1 * x2 := by
   let p : R[X] := C a * X ^ 2 + C b * X + C c
   have hp_natDegree : p.natDegree = 2 := le_antisymm natDegree_quadratic_le
-    (by convert! p.card_roots'; rw [hroots, Multiset.card_pair])
-  have hp_roots_card : p.roots.card = p.natDegree := by
+    (by convert! p.card_roots' (hp := h); rw [hroots, Multiset.card_pair])
+  have hp_roots_card : (p.roots h).card = p.natDegree := by
     rw [hp_natDegree, hroots, Multiset.card_pair]
   simpa [leadingCoeff, hp_natDegree, p, hroots, mul_assoc, add_comm x1] using
     coeff_eq_esymm_roots_of_card hp_roots_card (k := 0) (by simp [hp_natDegree])
@@ -52,18 +77,18 @@ lemma eq_mul_mul_of_roots_quadratic_eq_pair [CommRing R] [IsDomain R] {a b c x1 
 /-- **Vieta's formula** for quadratics (`aroots` version). -/
 lemma eq_neg_mul_add_of_aroots_quadratic_eq_pair
     [CommRing T] [CommRing S] [IsDomain S] [Algebra T S] {a b c : T} {x1 x2 : S}
-    (haroots : (C a * X ^ 2 + C b * X + C c).aroots S = {x1, x2}) :
+    {h : (C a * X ^ 2 + C b * X + C c).map (algebraMap T S) ≠ 0}
+    (haroots : (C a * X ^ 2 + C b * X + C c).aroots S h = {x1, x2}) :
     algebraMap T S b = -algebraMap T S a * (x1 + x2) := by
-  rw [aroots_def, show map (algebraMap T S) (C a * X ^ 2 + C b * X + C c) = C ((algebraMap T S) a) *
-    X ^ 2 + C ((algebraMap T S) b) * X + C ((algebraMap T S) c) by simp] at haroots
+  simp only [aroots_def, map_quadratic] at haroots
   exact eq_neg_mul_add_of_roots_quadratic_eq_pair haroots
 
 /-- **Vieta's formula** for quadratics (`aroots` version). -/
 lemma eq_mul_mul_of_aroots_quadratic_eq_pair [CommRing T] [CommRing S] [IsDomain S] [Algebra T S]
-    {a b c : T} {x1 x2 : S} (haroots : (C a * X ^ 2 + C b * X + C c).aroots S = {x1, x2}) :
+    {a b c : T} {x1 x2 : S} {h : (C a * X ^ 2 + C b * X + C c).map (algebraMap T S) ≠ 0}
+    (haroots : (C a * X ^ 2 + C b * X + C c).aroots S h = {x1, x2}) :
     algebraMap T S c = algebraMap T S a * x1 * x2 := by
-  rw [aroots_def, show map (algebraMap T S) (C a * X ^ 2 + C b * X + C c) = C ((algebraMap T S) a) *
-    X ^ 2 + C ((algebraMap T S) b) * X + C ((algebraMap T S) c) by simp] at haroots
+  simp only [aroots_def, map_quadratic] at haroots
   exact eq_mul_mul_of_roots_quadratic_eq_pair haroots
 
 /-- **Vieta's formula** for quadratics as an iff. -/
@@ -88,8 +113,7 @@ lemma aroots_quadratic_eq_pair_iff_of_ne_zero [CommRing T] [CommRing S] [IsDomai
     (C a * X ^ 2 + C b * X + C c).aroots S = {x1, x2} ↔
       algebraMap T S b = -algebraMap T S a * (x1 + x2) ∧
       algebraMap T S c = algebraMap T S a * x1 * x2 := by
-  rw [aroots_def, show map (algebraMap T S) (C a * X ^ 2 + C b * X + C c) = C ((algebraMap T S) a) *
-    X ^ 2 + C ((algebraMap T S) b) * X + C ((algebraMap T S) c) by simp]
+  simp only [aroots_def, map_quadratic]
   exact roots_quadratic_eq_pair_iff_of_ne_zero ha
 
 /-- **Vieta's formula** for quadratics as an iff (`Field` version). -/
@@ -105,8 +129,7 @@ lemma aroots_quadratic_eq_pair_iff_of_ne_zero' [CommRing T] [Field S] [Algebra T
     (C a * X ^ 2 + C b * X + C c).aroots S = {x1, x2} ↔
       x1 + x2 = -algebraMap T S b / algebraMap T S a ∧
       x1 * x2 = algebraMap T S c / algebraMap T S a := by
-  rw [aroots_def, show map (algebraMap T S) (C a * X ^ 2 + C b * X + C c) = C ((algebraMap T S) a) *
-    X ^ 2 + C ((algebraMap T S) b) * X + C ((algebraMap T S) c) by simp]
+  simp only [aroots_def, map_quadratic]
   exact roots_quadratic_eq_pair_iff_of_ne_zero' ha
 
 end Polynomial
