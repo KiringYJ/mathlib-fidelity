@@ -320,7 +320,7 @@ theorem MeromorphicOn.extract_zeros_poles {f : 𝕜 → E} (h₁f : MeromorphicO
   -- function in normal form. Then check all the properties.
   let φ := ∏ᶠ u, (· - u) ^ (divisor f U u)
   have hφ : MeromorphicOn φ U := (meromorphicNFOn (divisor f U) U).meromorphicOn
-  let g := toMeromorphicNFOn (φ⁻¹ • f) U
+  let g := toMeromorphicNFOn (φ⁻¹ • f) U (hφ.inv.smul h₁f)
   have hg : MeromorphicNFOn g U := by apply meromorphicNFOn_toMeromorphicNFOn
   refine ⟨g, ?_, ?_, ?_⟩
   · -- AnalyticOnNhd 𝕜 g U

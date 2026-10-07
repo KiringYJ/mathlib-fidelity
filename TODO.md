@@ -1380,11 +1380,13 @@ operation.
   (`Meromorphic.eventuallyEq_zero_of_meromorphicOrderAt_eq_top`), which settles the constant case.
   Tests are in `MathlibTest/TrailingCoefficientStrict.lean`.
 
-- [ ] **Make the normal-form conversions domain-bearing.**
-  `toMeromorphicNFAt f x` and `toMeromorphicNFOn f U` in
-  `Mathlib/Analysis/Meromorphic/NormalForm.lean` are the zero function when `f` is not meromorphic
-  (`toMeromorphicNFAt_of_not_meromorphicAt`, `toMeromorphicNFOn_of_not_meromorphicOn`).  Take
-  meromorphy as an argument and migrate the consumers.
+- [x] **Make the normal-form conversions domain-bearing.**
+  `toMeromorphicNFAt f x hf` and `toMeromorphicNFOn f U hf` in
+  `Mathlib/Analysis/Meromorphic/NormalForm.lean` take the meromorphy of `f` at `x`, respectively on
+  `U`, and `fun_prop` supplies it by default.  The zero function for a function that is not
+  meromorphic (`toMeromorphicNFAt_of_not_meromorphicAt`, `toMeromorphicNFOn_of_not_meromorphicOn`)
+  is removed, and the lemmas about a conversion take its meromorphy proof.  Tests are in
+  `MathlibTest/MeromorphicNormalFormStrict.lean`.
 
 ## L -- staged cross-module audit candidates
 
