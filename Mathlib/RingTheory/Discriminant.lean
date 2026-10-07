@@ -209,8 +209,7 @@ theorem discr_powerBasis_eq_norm [Algebra.IsSeparable K L] :
     nodup_roots (Separable.map (Algebra.IsSeparable.isSeparable K pb.gen))
   have hroots : ∀ σ : L →ₐ[K] E, σ pb.gen ∈ (minpoly K pb.gen).aroots E := by
     intro σ
-    rw [mem_roots, IsRoot.def, eval_map_algebraMap, aeval_algHom_apply]
-    repeat' simp [minpoly.ne_zero pb.isIntegral_gen]
+    rw [mem_aroots, aeval_algHom_apply, minpoly.aeval, map_zero]
   apply (algebraMap K E).injective
   rw [map_mul, map_pow, map_neg, map_one, discr_powerBasis_eq_prod'' _ _ _ e]
   congr
@@ -226,10 +225,11 @@ theorem discr_powerBasis_eq_norm [Algebra.IsSeparable K L] :
   refine prod_bij' (fun i _ ↦ ⟨e i.2, e i.1 pb.gen⟩)
     (fun σ hσ ↦ ⟨e.symm (PowerBasis.lift pb σ.2 ?_), e.symm σ.1⟩) ?_ ?_ ?_ ?_ (fun i _ ↦ by simp)
     <;> simp only [mem_sigma, mem_univ, Finset.mem_mk, hnodup.mem_erase_iff, IsRoot.def,
-      mem_roots', mem_singleton, true_and, mem_compl, Sigma.forall, Equiv.apply_symm_apply,
+      mem_roots (map_ne_zero (minpoly.ne_zero pb.isIntegral_gen)), mem_singleton, true_and,
+      mem_compl, Sigma.forall, Equiv.apply_symm_apply,
       PowerBasis.lift_gen, implies_true, Equiv.symm_apply_apply,
       Sigma.ext_iff, Equiv.symm_apply_eq, heq_eq_eq, and_true] at *
-  · simpa only [aeval_def, eval₂_eq_eval_map] using hσ.2.2
+  · simpa only [aeval_def, eval₂_eq_eval_map] using hσ.2
   · exact fun a b hba ↦ ⟨fun h ↦ hba <| e.injective <| pb.algHom_ext h.symm, hroots _⟩
   · rintro a b hba ha
     rw [ha, PowerBasis.lift_gen] at hba

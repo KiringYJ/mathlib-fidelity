@@ -49,10 +49,17 @@ theorem cardinalMk_lift_le_mul :
   choose g hg₁ hg₂ using fun x : { x : A | IsAlgebraic R x } => x.coe_prop
   refine lift_mk_le_lift_mk_mul_of_lift_mk_preimage_le g fun f => ?_
   rw [lift_le_aleph0, le_aleph0_iff_set_countable]
-  suffices MapsTo (↑) (g ⁻¹' {f}) (f.rootSet A) from
-    this.countable_of_injOn Subtype.coe_injective.injOn (f.rootSet_finite A).countable
+  rcases eq_or_ne f 0 with rfl | hf
+  · convert Set.countable_empty
+    ext x
+    simp only [Set.mem_preimage, Set.mem_singleton_iff, Set.mem_empty_iff_false, iff_false]
+    exact hg₁ x
+  have hfA : f.map (algebraMap R A) ≠ 0 :=
+    (Polynomial.map_ne_zero_iff (FaithfulSMul.algebraMap_injective R A)).2 hf
+  suffices MapsTo (↑) (g ⁻¹' {f}) (f.rootSet A hfA) from
+    this.countable_of_injOn Subtype.coe_injective.injOn (f.rootSet_finite A hfA).countable
   rintro x (rfl : g x = f)
-  exact mem_rootSet.2 ⟨hg₁ x, hg₂ x⟩
+  exact mem_rootSet.2 (hg₂ x)
 
 theorem cardinalMk_lift_le_max :
     Cardinal.lift.{u} #{ x : A // IsAlgebraic R x } ≤ max (Cardinal.lift.{v} #R) ℵ₀ :=

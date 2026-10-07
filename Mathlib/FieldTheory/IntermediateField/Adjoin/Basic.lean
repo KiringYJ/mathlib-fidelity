@@ -157,7 +157,11 @@ theorem isSplittingField_iSup {p : ι → K[X]}
     (∏ i ∈ s, p i).IsSplittingField K (⨆ i ∈ s, t i : IntermediateField K L) := by
   let F : IntermediateField K L := ⨆ i ∈ s, t i
   have hF : ∀ i ∈ s, t i ≤ F := fun i hi ↦ le_iSup_of_le i (le_iSup (fun _ ↦ t i) hi)
-  simp only [isSplittingField_iff, Polynomial.map_prod] at h ⊢
+  have hp : ∀ i ∈ s, p i ≠ 0 := Finset.prod_ne_zero_iff.mp h0
+  replace h : ∀ i (hi : i ∈ s), ((p i).map (algebraMap K (t i))).Splits ∧
+      t i = adjoin K ((p i).rootSet L (map_ne_zero (hp i hi))) :=
+    fun i hi ↦ (isSplittingField_iff (hp i hi)).mp (h i hi)
+  rw [isSplittingField_iff h0, Polynomial.map_prod]
   refine ⟨Splits.prod fun i hi ↦ by
     simpa [Polynomial.map_map] using (h i hi).1.map (inclusion (hF i hi)).toRingHom, ?_⟩
   simp only [rootSet_prod p s h0, ← Set.iSup_eq_iUnion, (@gc K _ L _ _).l_iSup₂]
@@ -238,11 +242,14 @@ theorem exists_finset_of_mem_supr'' {ι : Type*} {f : ι → IntermediateField F
     (h : ∀ i, Algebra.IsAlgebraic F (f i)) {x : E} (hx : x ∈ ⨆ i, f i) :
     ∃ s : Finset (Σ i, f i), x ∈ ⨆ i ∈ s, adjoin F ((minpoly F (i.2 :)).rootSet E) := by
   refine exists_finset_of_mem_iSup (SetLike.le_def.mp (iSup_le (fun i x1 hx1 => ?_)) hx)
+  have hint : IsIntegral F x1 :=
+    isIntegral_iff.mp (Algebra.IsIntegral.isIntegral (⟨x1, hx1⟩ : f i))
   refine SetLike.le_def.mp (le_iSup_of_le ⟨i, x1, hx1⟩ ?_)
     (subset_adjoin F (rootSet (minpoly F x1) E) ?_)
-  · rw [IntermediateField.minpoly_eq, Subtype.coe_mk]
-  · rw [mem_rootSet_of_ne, minpoly.aeval]
-    exact minpoly.ne_zero (isIntegral_iff.mp (Algebra.IsIntegral.isIntegral (⟨x1, hx1⟩ : f i)))
+  · refine le_of_eq ?_
+    congr 2
+    exact (IntermediateField.minpoly_eq (⟨x1, hx1⟩ : f i)).symm
+  · rw [mem_rootSet, minpoly.aeval]
 
 theorem exists_finset_of_mem_adjoin {S : Set E} {x : E} (hx : x ∈ adjoin F S) :
     ∃ T : Finset E, (T : Set E) ⊆ S ∧ x ∈ adjoin F (T : Set E) := by
@@ -640,13 +647,13 @@ noncomputable def algHomAdjoinIntegralEquiv (h : IsIntegral F α) :
     (F⟮α⟯ →ₐ[F] K) ≃ { x // x ∈ (minpoly F α).aroots K } :=
   (adjoin.powerBasis h).liftEquiv'.trans
     ((Equiv.refl _).subtypeEquiv fun x => by
-      rw [adjoin.powerBasis_gen, minpoly_gen, Equiv.refl_apply])
+      rw [mem_aroots, mem_aroots, Equiv.refl_apply, adjoin.powerBasis_gen, minpoly_gen])
 
 lemma algHomAdjoinIntegralEquiv_symm_apply_gen (h : IsIntegral F α)
     (x : { x // x ∈ (minpoly F α).aroots K }) :
     (algHomAdjoinIntegralEquiv F h).symm x (AdjoinSimple.gen F α) = x :=
   (adjoin.powerBasis h).lift_gen x.val <| by
-    rw [adjoin.powerBasis_gen, minpoly_gen]; exact (mem_aroots.mp x.2).2
+    rw [adjoin.powerBasis_gen, minpoly_gen]; exact mem_aroots.mp x.2
 
 /-- Fintype of algebra homomorphism `F⟮α⟯ →ₐ[F] K` -/
 @[instance_reducible]

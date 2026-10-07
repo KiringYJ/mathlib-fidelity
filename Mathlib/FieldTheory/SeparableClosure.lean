@@ -191,7 +191,7 @@ theorem IntermediateField.isSeparable_adjoin_iff_isSeparable {S : Set E} :
 separable extension. -/
 theorem Algebra.isSeparable_of_separable_splitting_field {p : F[X]}
     [sp : p.IsSplittingField F E] (hp : p.Separable) : Algebra.IsSeparable F E := by
-  rw [← isSeparable_top, ← (isSplittingField_iff_intermediateField.mp sp).2,
+  rw [← isSeparable_top, ← ((isSplittingField_iff_intermediateField hp.ne_zero).mp sp).2,
     isSeparable_adjoin_iff_isSeparable]
   exact fun x hx ↦ hp.of_dvd (minpoly.dvd F x (aeval_eq_zero_of_mem_rootSet hx))
 

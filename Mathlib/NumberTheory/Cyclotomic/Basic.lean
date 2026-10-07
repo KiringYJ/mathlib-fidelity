@@ -431,17 +431,17 @@ theorem adjoin_roots_cyclotomic_eq_adjoin_nth_roots [IsDomain B] {ζ : B} {n : �
       adjoin A {b : B | ∃ a : ℕ, a ∈ ({n} : Set ℕ) ∧ a ≠ 0 ∧ b ^ a = 1} := by
   simp only [mem_singleton_iff, exists_eq_left]
   refine le_antisymm (adjoin_mono fun x hx => ?_) (adjoin_le fun x hx => ?_)
-  · rw [mem_rootSet'] at hx
+  · rw [mem_rootSet] at hx
     simp only [mem_ofPred_eq]
     rw [isRoot_of_unity_iff (NeZero.pos n)]
     refine ⟨NeZero.ne n, n, Nat.mem_divisors_self n (NeZero.ne n), ?_⟩
     rw [IsRoot.def, ← map_cyclotomic n (algebraMap A B), eval_map_algebraMap]
-    exact hx.2
+    exact hx
   · simp only [mem_ofPred_eq] at hx
     obtain ⟨i, _, rfl⟩ := hζ.eq_pow_of_pow_eq_one hx.2
     refine SetLike.mem_coe.2 (Subalgebra.pow_mem _ (subset_adjoin ?_) _)
-    rw [mem_rootSet', map_cyclotomic, ← eval_map_algebraMap, map_cyclotomic, ← IsRoot]
-    exact ⟨cyclotomic_ne_zero n B, hζ.isRoot_cyclotomic (NeZero.pos n)⟩
+    rw [mem_rootSet, ← eval_map_algebraMap, map_cyclotomic, ← IsRoot]
+    exact hζ.isRoot_cyclotomic (NeZero.pos n)
 
 theorem adjoin_roots_cyclotomic_eq_adjoin_root_cyclotomic {n : ℕ} [NeZero n] [IsDomain B] {ζ : B}
     (hζ : IsPrimitiveRoot ζ n) : adjoin A ((cyclotomic n A).rootSet B) = adjoin A {ζ} := by
@@ -451,11 +451,11 @@ theorem adjoin_roots_cyclotomic_eq_adjoin_root_cyclotomic {n : ℕ} [NeZero n] [
       exact SetLike.mem_coe.2 (Subalgebra.pow_mem _ (subset_adjoin <| mem_singleton ζ) _)
     refine (isRoot_of_unity_iff (NeZero.pos n) B).2 ?_
     refine ⟨n, Nat.mem_divisors_self n (NeZero.ne n), ?_⟩
-    rw [mem_rootSet', ← eval_map_algebraMap, map_cyclotomic, ← IsRoot] at hx
-    exact hx.2
+    rw [mem_rootSet, ← eval_map_algebraMap, map_cyclotomic, ← IsRoot] at hx
+    exact hx
   · simp only [mem_singleton_iff] at hx
-    simpa only [hx, mem_rootSet', map_cyclotomic, ← eval_map_algebraMap, IsRoot] using
-      And.intro (cyclotomic_ne_zero n B) (hζ.isRoot_cyclotomic (NeZero.pos n))
+    simpa only [hx, mem_rootSet, ← eval_map_algebraMap, map_cyclotomic, IsRoot] using
+      hζ.isRoot_cyclotomic (NeZero.pos n)
 
 theorem adjoin_primitive_root_eq_top {n : ℕ} [NeZero n] [IsDomain B]
     [h : IsCyclotomicExtension {n} A B]
@@ -616,22 +616,23 @@ variable [IsCyclotomicExtension {n} K L]
 /-- If `IsCyclotomicExtension {n} K L`, then `L` is the splitting field of `X ^ n - 1`. -/
 theorem isSplittingField_X_pow_sub_one : IsSplittingField K L (X ^ n - 1) :=
   { splits' := splits_X_pow_sub_one K L (mem_singleton n)
-    adjoin_rootSet' := by
+    adjoin_rootSet' := fun _ ↦ by
       rw [← ((iff_adjoin_eq_top {n} K L).1 inferInstance).2]
       congr
       refine Set.ext fun x => ?_
       simp only [mem_singleton_iff, ne_eq, exists_eq_left, NeZero.ne, not_false_eq_true, true_and,
         mem_ofPred_eq]
-      simp only [mem_rootSet', map_sub, map_pow, aeval_one, aeval_X, sub_eq_zero, map_X,
-        and_iff_right_iff_imp, Polynomial.map_sub, Polynomial.map_pow, Polynomial.map_one]
-      exact fun _ => X_pow_sub_C_ne_zero (NeZero.pos n) (1 : L) }
+      simp only [mem_rootSet, map_sub, map_pow, aeval_one, aeval_X, sub_eq_zero]
+    top_eq_bot_of_eq_zero' := fun h ↦
+      absurd h (by simpa using X_pow_sub_C_ne_zero (NeZero.pos n) (1 : K)) }
 
 scoped[Cyclotomic] attribute [instance] IsCyclotomicExtension.isSplittingField_X_pow_sub_one
 
 /-- If `IsCyclotomicExtension {n} K L`, then `L` is the splitting field of `cyclotomic n K`. -/
 theorem splitting_field_cyclotomic : IsSplittingField K L (cyclotomic n K) :=
   { splits' := splits_cyclotomic K L (mem_singleton n)
-    adjoin_rootSet' := by
+    top_eq_bot_of_eq_zero' := fun h ↦ absurd h (cyclotomic_ne_zero n K)
+    adjoin_rootSet' := fun _ ↦ by
       rw [← ((iff_adjoin_eq_top {n} K L).1 inferInstance).2]
       let := Classical.decEq L
       obtain ⟨ζ : L, hζ⟩ :=
@@ -683,7 +684,7 @@ instance isCyclotomicExtension [NeZero (n : K)] :
   refine ⟨?_, ?_⟩
   · simp only [mem_singleton_iff, forall_eq]
     exact fun _ ↦ ⟨ζ, hζ⟩
-  · rw [← Algebra.eq_top_iff, ← SplittingField.adjoin_rootSet, eq_comm]
+  · rw [← Algebra.eq_top_iff, ← SplittingField.adjoin_rootSet _ (cyclotomic_ne_zero n K), eq_comm]
     exact IsCyclotomicExtension.adjoin_roots_cyclotomic_eq_adjoin_nth_roots hζ
 
 instance : IsCyclotomicExtension {0} K (CyclotomicField 0 K) where

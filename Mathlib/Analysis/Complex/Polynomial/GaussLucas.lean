@@ -39,7 +39,7 @@ theorem sum_derivRootWeight_pos (hP : 0 < degree P) (z : ℂ) :
     0 < ∑ w ∈ P.roots.toFinset, derivRootWeight P z w := by
   have hP₀ : P ≠ 0 := by rintro rfl; simp at hP
   by_cases hPz : P.eval z = 0
-  · simp [derivRootWeight, hPz, hP₀]
+  · simp [derivRootWeight, hPz]
   · simp only [derivRootWeight, dite_eq_right hPz]
     apply Finset.sum_pos
     · intro w hw
@@ -96,10 +96,12 @@ See also `eq_centerMass_of_eval_derivative_eq_zero`
 for a version that provides explicit coefficients of the convex combination.
 -/
 theorem rootSet_derivative_subset_convexHull_rootSet (h₀ : 0 < P.degree) :
+    haveI : P.derivative ≠ 0 := fun h ↦
+      (natDegree_pos_iff_degree_pos.mpr h₀).ne' (derivative_eq_zero.mp h)
     P.derivative.rootSet ℂ ⊆ convexHull ℝ (P.rootSet ℂ) := by
   intro z hz
   rw [mem_rootSet, coe_aeval_eq_eval] at hz
-  rw [eq_centerMass_of_eval_derivative_eq_zero h₀ hz.2]
+  rw [eq_centerMass_of_eval_derivative_eq_zero h₀ hz]
   apply Finset.centerMass_mem_convexHull
   · simp [derivRootWeight_nonneg]
   · apply sum_derivRootWeight_pos h₀

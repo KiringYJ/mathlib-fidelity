@@ -135,9 +135,11 @@ instance of_completeSpace [Algebra.IsAlgebraic K L] : IsKrasner K L where
         (Polynomial.map_dvd _ (by simpa using! minpoly.dvd_map_of_isScalarTower' K K C x))
     · intros xC' hx' hne
       have : xC' ∈ (minpoly K x).rootSet C := by
-        rwa [isConjRoot_iff_mem_minpoly_rootSet (xsep.isIntegral.map _),
+        rw [isConjRoot_iff_mem_minpoly_rootSet (xsep.isIntegral.map _), Polynomial.mem_rootSet,
           minpoly.algHom_eq iL iL.injective x] at hx'
-      simp only [← sp.image_rootSet iL, Set.mem_image] at this
+        exact Polynomial.mem_rootSet.mpr hx'
+      simp only [← sp.image_rootSet (Polynomial.map_ne_zero (minpoly.ne_zero xsep.isIntegral)) iL,
+        Set.mem_image] at this
       obtain ⟨c, hc, rfl⟩ := this
       rw [← isConjRoot_iff_mem_minpoly_rootSet xsep.isIntegral] at hc
       simpa [norm_iL, ← map_sub] using! kr c hc (fun h ↦ (iff_false_intro hne).mp (congrArg iL h))

@@ -276,13 +276,52 @@ operation.
   transparency and its failure over a ring with zero divisors, the simp lemma, the infinite
   multiplicity at `0`, and the failures.
 
-- [ ] **Exclude the zero polynomial from finite root multisets.**
-  `Polynomial.roots` in `Mathlib/Algebra/Polynomial/Roots.lean:58` gives the empty multiset at zero
-  (line 71), and `aroots`, `rootSet`, `nthRoots`, `nthRootsFinset`, and `primitiveRoots` inherit
-  that value.  Require `p ≠ 0` for finite root multisets, as `rootMultiplicity` does (see "Give
-  `Polynomial.rootMultiplicity` its domain"), so that `count_roots` no longer needs an explicit
-  hypothesis; `rootSet`, the finite set of distinct roots in `(p.aroots S).toFinset`, takes the same
-  domain.  The ordinary zero locus `{x | p.IsRoot x}` is already total and correct at `0`.
+- [x] **Exclude the zero polynomial from finite root multisets.**
+  `Polynomial.roots p hp` in `Mathlib/Algebra/Polynomial/Roots.lean` takes `hp : p ≠ 0`, which
+  `nonzero_tac` supplies by default.  `aroots p S hp` and `rootSet p S hp` take
+  `hp : p.map (algebraMap T S) ≠ 0`, `nthRoots n a h` and `nthRootsFinset n a h` take
+  `h : X ^ n - C a ≠ 0`, and `Cubic.roots` takes `P.toPoly ≠ 0`.  Every element is a root of the
+  zero polynomial, whose zero locus `{x | IsRoot 0 x}` is the whole ring, so it has no finite root
+  multiset.  `roots_zero`, `aroots_zero`, `rootSet_zero`, `mem_roots'`, `mem_aroots'`,
+  `mem_rootSet'`, `mem_rootSet_of_ne`, `mem_roots_sub_C'`, `ne_zero_of_mem_roots`,
+  `ne_zero_of_mem_rootSet`, `roots_list_prod`, `roots_multiset_prod`,
+  `roots_eq_zero_iff_eq_zero_or_isRoot_eq_bot`, and `rightInverse_ofMultiset_roots` are removed;
+  `mem_roots` (a simp lemma again), `mem_aroots`, and `mem_rootSet` state the root condition alone,
+  and `roots_prod` sums over the nonzero factors.  `nonzero_tac` gains rules for a hypothesis of
+  positive degree or irreducibility, a `Fact (p ≠ 0)` instance, images under maps out of a field,
+  `X ^ n - C a` with `n ≠ 0`, `p - C a` with `0 < degree p`, separable, expanded, quadratic, and
+  cubic polynomials, and minimal polynomials in integral extensions, of power-basis generators, and
+  of conjugacy classes.  Statements that read the empty value at `0` take the domain or a hypothesis
+  that implies it, among them Vieta's formulas, `Splits.eq_prod_roots` and its relatives, the
+  resultant as a product over roots, the Rolle bounds on the roots of a derivative (which need
+  `derivative p ≠ 0`), the Mahler measure as a product over roots, the norm and trace of a generator
+  as a product and a sum over roots (which need integrality), and the Morse permutation results.
+  `Polynomial.IsSplittingField` keeps its semantics, the smallest field extension over which `f`
+  splits: its generation field takes `f ≠ 0`, and a new field states that the splitting field of `0`
+  is the base field, as minimality gives; `IsNormalClosure` adjoins the roots of the minimal
+  polynomials of the integral elements, which is what the empty root set of `minpoly F x = 0`
+  expressed.  The action of `Polynomial.Gal p` on roots takes `[Fact (p ≠ 0)]`, as it already takes
+  the splitting hypothesis, and `Gal.ext` quantifies over `p ≠ 0`, so that it still covers the
+  trivial group `Gal 0`.  `natSepDegree` and `primitiveRoots` keep their values at `0` by explicit
+  conventions, recorded below.  Tests are in `MathlibTest/RootsStrict.lean`.
+
+- [ ] **Decide the separable degree of the zero polynomial.**
+  `Polynomial.natSepDegree` in `Mathlib/FieldTheory/SeparableDegree.lean` counts the distinct roots
+  of a nonzero polynomial in its splitting field and is `0` at `0` by an explicit convention
+  (`natSepDegree_of_ne_zero` unfolds the count), which keeps `natSepDegree_le_natDegree`,
+  `natSepDegree_eq_zero_iff`, and `natSepDegree_mul` total.  The zero polynomial has no finite set
+  of roots and no separable contraction, so the value is not a count of roots.  Either justify it
+  as an independent invariant or give `natSepDegree` the domain `f ≠ 0`.
+
+- [ ] **Give `primitiveRoots` and the modified cyclotomic polynomial the domain `n ≠ 0`.**
+  `primitiveRoots k R` in `Mathlib/RingTheory/RootsOfUnity/PrimitiveRoots.lean` is `∅` at `k = 0`
+  (`primitiveRoots_zero`), now by an explicit case of the definition rather than through the empty
+  root multiset of the zero polynomial.  `IsPrimitiveRoot ζ 0` holds exactly for the `ζ` none of
+  whose positive powers is `1`, which form no finite set in general (in `ℚ`, every element except
+  `1` and `-1`), so `∅` is not the set of primitive `0`-th roots of unity.  Require `NeZero k` and
+  propagate the domain to `Polynomial.cyclotomic'`, the product of `X - C μ` over
+  `primitiveRoots n R`, which is `1` at `n = 0` (`cyclotomic'_zero`), and decide whether
+  `Polynomial.cyclotomic 0 R = 1` (`cyclotomic_zero`) is justified independently.
 
 - [x] **Identify `Polynomial.natDegree` as the supremum of the support.**
   `natDegree p` is the supremum in `ℕ` of the exponents with nonzero coefficient

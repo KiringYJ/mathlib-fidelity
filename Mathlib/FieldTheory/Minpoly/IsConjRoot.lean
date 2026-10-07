@@ -223,8 +223,6 @@ theorem IsConjRoot.of_isScalarTower [IsScalarTower K L S] {x y : S} (hx : IsInte
 theorem isConjRoot_iff_mem_minpoly_aroots {x y : S} (h : IsIntegral K x) :
     IsConjRoot K x y ↔ y ∈ (minpoly K x).aroots S := by
   rw [Polynomial.mem_aroots, isConjRoot_iff_aeval_eq_zero h]
-  simp only [iff_and_self]
-  exact fun _ => minpoly.ne_zero h
 
 /--
 `y` is a conjugate root of `x` over `K` if and only if `y` is a root of the minimal polynomial of
@@ -256,18 +254,17 @@ theorem isIntegral_iff {x y : A} (h : IsConjRoot R x y) : IsIntegral R x ↔ IsI
   ⟨fun hx ↦ isIntegral hx h, fun hy ↦ isIntegral hy h.symm⟩
 
 /--
-A variant of `IsConjRoot.eq_of_isConjRoot_algebraMap`, only assuming `IsDomain R`,
-`IsTorsionFree R A` and `Function.Injective (algebraMap R A)` instead of `Field R`. If `x` is a
-conjugate root of some element `algebraMap R S r` in the image of the base ring, then
-`x = algebraMap R S r`.
+A variant of `IsConjRoot.eq_of_isConjRoot_algebraMap`, only assuming
+`Function.Injective (algebraMap R S)` instead of `Field R`. If `x` is a conjugate root of some
+element `algebraMap R S r` in the image of the base ring, then `x = algebraMap R S r`.
 -/
-theorem eq_algebraMap_of_injective [IsDomain R] [IsTorsionFree R S] {r : R} {x : S}
+theorem eq_algebraMap_of_injective {r : R} {x : S}
     (h : IsConjRoot R (algebraMap R S r) x) (hf : Function.Injective (algebraMap R S)) :
     x = algebraMap R S r := by
   rw [IsConjRoot, minpoly.eq_X_sub_C_of_algebraMap_inj _ hf] at h
   have : x ∈ (X - C r).aroots S := by
     rw [mem_aroots]
-    simp [X_sub_C_ne_zero, h ▸ minpoly.aeval R x]
+    simp [h ▸ minpoly.aeval R x]
   simpa [aroots_X_sub_C] using this
 
 /--
@@ -279,11 +276,10 @@ theorem eq_algebraMap {r : K} {x : S} (h : IsConjRoot K (algebraMap K S r) x) :
   eq_algebraMap_of_injective h (algebraMap K S).injective
 
 /--
-A variant of `IsConjRoot.eq_zero`, only assuming `IsDomain R`,
-`IsTorsionFree R A` and `Function.Injective (algebraMap R A)` instead of `Field R`. If `x` is a
-conjugate root of `0`, then `x = 0`.
+A variant of `IsConjRoot.eq_zero`, only assuming `Function.Injective (algebraMap R S)` instead of
+`Field R`. If `x` is a conjugate root of `0`, then `x = 0`.
 -/
-theorem eq_zero_of_injective [IsDomain R] [IsTorsionFree R S] {x : S} (h : IsConjRoot R 0 x)
+theorem eq_zero_of_injective {x : S} (h : IsConjRoot R 0 x)
     (hf : Function.Injective (algebraMap R S)) : x = 0 :=
   (algebraMap R S).map_zero ▸ (eq_algebraMap_of_injective ((algebraMap R S).map_zero ▸ h) hf)
 
@@ -296,13 +292,12 @@ theorem eq_zero {x : S} (h : IsConjRoot K 0 x) : x = 0 :=
 end IsConjRoot
 
 /--
-A variant of `IsConjRoot.eq_of_isConjRoot_algebraMap`, only assuming `IsDomain R`,
-`IsTorsionFree R A` and `Function.Injective (algebraMap R A)` instead of `Field R`. If `x` is a
-conjugate root of some element `algebraMap R S r` in the image of the base ring, then
-`x = algebraMap R S r`.
+A variant of `IsConjRoot.eq_of_isConjRoot_algebraMap`, only assuming
+`Function.Injective (algebraMap R S)` instead of `Field R`. If `x` is a conjugate root of some
+element `algebraMap R S r` in the image of the base ring, then `x = algebraMap R S r`.
 -/
-theorem isConjRoot_iff_eq_algebraMap_of_injective [IsDomain R] [IsTorsionFree R S] {r : R}
-    {x : S} (hf : Function.Injective (algebraMap R S)) :
+theorem isConjRoot_iff_eq_algebraMap_of_injective {r : R} {x : S}
+    (hf : Function.Injective (algebraMap R S)) :
     IsConjRoot R (algebraMap R S r) x ↔ x = algebraMap R S r :=
   ⟨fun h => eq_algebraMap_of_injective h hf, fun h => h.symm ▸ rfl⟩
 
@@ -326,11 +321,10 @@ theorem isConjRoot_iff_eq_algebraMap' {r : K} {x : S} :
   eq_comm.trans <| isConjRoot_iff_eq_algebraMap_of_injective (algebraMap K S).injective
 
 /--
-A variant of `IsConjRoot.iff_eq_zero`, only assuming `IsDomain R`,
-`IsTorsionFree R A` and `Function.Injective (algebraMap R A)` instead of `Field R`. `x` is a
-conjugate root of `0` if and only if `x = 0`.
+A variant of `IsConjRoot.iff_eq_zero`, only assuming `Function.Injective (algebraMap R S)` instead
+of `Field R`. `x` is a conjugate root of `0` if and only if `x = 0`.
 -/
-theorem isConjRoot_zero_iff_eq_zero_of_injective [IsDomain R] {x : S} [IsTorsionFree R S]
+theorem isConjRoot_zero_iff_eq_zero_of_injective {x : S}
     (hf : Function.Injective (algebraMap R S)) : IsConjRoot R 0 x ↔ x = 0 :=
   ⟨fun h => eq_zero_of_injective h hf, fun h => h.symm ▸ rfl⟩
 
@@ -351,11 +345,10 @@ theorem isConjRoot_zero_iff_eq_zero' {x : S} : IsConjRoot K x 0 ↔ x = 0 :=
 namespace IsConjRoot
 
 /--
-A variant of `IsConjRoot.ne_zero`, only assuming `IsDomain R`,
-`IsTorsionFree R A` and `Function.Injective (algebraMap R A)` instead of `Field R`. If `y` is
-a conjugate root of a nonzero element `x`, then `y` is not zero.
+A variant of `IsConjRoot.ne_zero`, only assuming `Function.Injective (algebraMap R S)` instead of
+`Field R`. If `y` is a conjugate root of a nonzero element `x`, then `y` is not zero.
 -/
-theorem ne_zero_of_injective [IsDomain R] [IsTorsionFree R S] {x y : S} (hx : x ≠ 0)
+theorem ne_zero_of_injective {x y : S} (hx : x ≠ 0)
     (h : IsConjRoot R x y) (hf : Function.Injective (algebraMap R S)) : y ≠ 0 :=
   fun g => hx (eq_zero_of_injective (g ▸ h.symm) hf)
 
@@ -375,14 +368,15 @@ root of `x` over `K` in `L` which is not equal to `x` itself.
 theorem notMem_iff_exists_ne_and_isConjRoot {x : L} (h : IsSeparable K x)
     (sp : ((minpoly K x).map (algebraMap K L)).Splits) :
     x ∉ (⊥ : Subalgebra K L) ↔ ∃ y : L, x ≠ y ∧ IsConjRoot K x y := by
+  have hint : IsIntegral K x := h.isIntegral
   calc
     _ ↔ 2 ≤ (minpoly K x).natDegree := (minpoly.two_le_natDegree_iff h.isIntegral).symm
-    _ ↔ 2 ≤ Fintype.card ((minpoly K x).rootSet L) :=
-      (Polynomial.card_rootSet_eq_natDegree h sp) ▸ Iff.rfl
+    _ ↔ 2 ≤ Fintype.card ((minpoly K x).rootSet L) := by
+      rw [Polynomial.card_rootSet_eq_natDegree h sp]
     _ ↔ Nontrivial ((minpoly K x).rootSet L) := Fintype.one_lt_card_iff_nontrivial
     _ ↔ ∃ y : ((minpoly K x).rootSet L), ↑y ≠ x :=
-      (nontrivial_iff_exists_ne ⟨x, mem_rootSet.mpr ⟨minpoly.ne_zero h.isIntegral,
-          minpoly.aeval K x⟩⟩).trans ⟨fun ⟨y, hy⟩ => ⟨y, Subtype.coe_ne_coe.mpr hy⟩,
+      (nontrivial_iff_exists_ne ⟨x, mem_rootSet.mpr (minpoly.aeval K x)⟩).trans
+          ⟨fun ⟨y, hy⟩ => ⟨y, Subtype.coe_ne_coe.mpr hy⟩,
           fun ⟨y, hy⟩ => ⟨y, Subtype.coe_ne_coe.mp hy⟩⟩
     _ ↔ _ :=
       ⟨fun ⟨⟨y, hy⟩, hne⟩ => ⟨y, ⟨hne.symm,

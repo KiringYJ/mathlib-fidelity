@@ -46,12 +46,14 @@ variable {K : Type*} [Field K] {p : K[X]}
 /-- A polynomial of degree 2 or 3 is irreducible iff it doesn't have roots. -/
 theorem irreducible_iff_roots_eq_zero_of_degree_le_three
     (hp2 : 2 ≤ p.natDegree) (hp3 : p.natDegree ≤ 3) :
+    haveI : p ≠ 0 := by rintro rfl; rw [natDegree_zero] at hp2; cases hp2
     Irreducible p ↔ p.roots = 0 := by
   have hp0 : p ≠ 0 := by rintro rfl; rw [natDegree_zero] at hp2; cases hp2
-  rw [← irreducible_mul_leadingCoeff_inv,
-      (monic_mul_leadingCoeff_inv hp0).irreducible_iff_roots_eq_zero_of_degree_le_three,
-      mul_comm, roots_C_mul]
-  · exact inv_ne_zero (leadingCoeff_ne_zero.mpr hp0)
+  have hm := monic_mul_leadingCoeff_inv hp0
+  have key : (p * C (leadingCoeff p)⁻¹).roots hm.ne_zero = p.roots hp0 := by
+    simp only [mul_comm p, roots_C_mul]
+  rw [← irreducible_mul_leadingCoeff_inv, hm.irreducible_iff_roots_eq_zero_of_degree_le_three,
+    key]
   · rwa [natDegree_mul_leadingCoeff_inv _ hp0]
   · rwa [natDegree_mul_leadingCoeff_inv _ hp0]
 
@@ -60,9 +62,10 @@ lemma irreducible_of_degree_le_three_of_not_isRoot
     Irreducible p := by
   rw [Finset.mem_Icc] at hdeg
   by_cases hdeg2 : 2 ≤ p.natDegree
-  · rw [Polynomial.irreducible_iff_roots_eq_zero_of_degree_le_three hdeg2 hdeg.2]
+  · have hp0 : p ≠ 0 := by rintro rfl; simp at hdeg2
+    rw [Polynomial.irreducible_iff_roots_eq_zero_of_degree_le_three hdeg2 hdeg.2]
     apply Multiset.eq_zero_of_forall_notMem
-    simp_all
+    simp_all [mem_roots hp0]
   · apply Polynomial.irreducible_of_degree_eq_one
     rw [← Nat.cast_one, Polynomial.degree_eq_iff_natDegree_eq_of_pos (by simp)]
     exact le_antisymm (by rwa [not_le, Nat.lt_succ_iff] at hdeg2) hdeg.1

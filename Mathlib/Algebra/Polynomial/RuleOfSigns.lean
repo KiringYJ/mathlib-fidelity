@@ -374,20 +374,21 @@ variable {R : Type*} [CommRing R] [LinearOrder R] [IsStrictOrderedRing R] (P : P
 
 /-- **Descartes' Rule of Signs**: the number of positive roots is at most the number of sign
 variations. -/
-theorem roots_countP_pos_le_signVariations : P.roots.countP (0 < ·) ≤ signVariations P := by
+theorem roots_countP_pos_le_signVariations (hp : P ≠ 0) :
+    P.roots.countP (0 < ·) ≤ signVariations P := by
   generalize h : P.roots.countP (0 < ·) = num_pos_roots
   induction num_pos_roots generalizing P -- Induct on number of roots.
   · exact zero_le
   rename_i ih
-  have hp : P ≠ 0 := by grind [roots_zero, Multiset.countP_zero]
   -- we can take a positive root, η, because the number of roots is positive
   obtain ⟨η, η_root, η_pos⟩ : ∃ x, x ∈ P.roots ∧ 0 < x := by grind [Multiset.countP_pos]
   -- (X - η) divides P(X), so write P(X) = (X - η) * Q(X)
   obtain ⟨Q, rfl⟩ := dvd_iff_isRoot.mpr (isRoot_of_mem_roots η_root)
+  have hQ : Q ≠ 0 := right_ne_zero_of_mul hp
   -- P has at least num_roots sign variations
-  grw [ih Q, succ_signVariations_le_X_sub_C_mul η_pos]
-  · exact right_ne_zero_of_mul hp
-  · simp [← h, roots_mul (ne_zero_of_mem_roots η_root), η_pos, ← Nat.succ.injEq]
+  grw [ih Q hQ, succ_signVariations_le_X_sub_C_mul η_pos]
+  · exact hQ
+  · simp [← h, roots_mul hp, η_pos, ← Nat.succ.injEq]
 
 end CommStrictOrderedRing
 end Polynomial

@@ -851,8 +851,8 @@ def equiv (f : F[X]) (hf : f ≠ 0) :
     (AdjoinRoot f →ₐ[F] L) ≃ { x // x ∈ f.aroots L } :=
   (powerBasis hf).liftEquiv'.trans
     ((Equiv.refl _).subtypeEquiv fun x => by
-      rw [powerBasis_gen, minpoly_root hf, aroots_mul, aroots_C, add_zero, Equiv.refl_apply]
-      exact (monic_mul_leadingCoeff_inv hf).ne_zero)
+      rw [mem_aroots, mem_aroots, Equiv.refl_apply, powerBasis_gen, minpoly_root hf]
+      simp [hf])
 
 end Field
 

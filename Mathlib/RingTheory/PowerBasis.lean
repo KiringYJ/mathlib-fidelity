@@ -213,6 +213,10 @@ theorem minpolyGen_eq (pb : PowerBasis A S) : pb.minpolyGen = minpoly A pb.gen :
 theorem isIntegral_gen (pb : PowerBasis A S) : IsIntegral A pb.gen :=
   ⟨minpolyGen pb, minpolyGen_monic pb, aeval_minpolyGen pb⟩
 
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    with_reducible_and_instances (apply minpoly.monic; exact PowerBasis.isIntegral_gen _))
+
 @[simp]
 theorem degree_minpoly [Nontrivial A] (pb : PowerBasis A S) :
     degree (minpoly A pb.gen) = pb.dim := by rw [← minpolyGen_eq, degree_minpolyGen]
@@ -329,9 +333,7 @@ polynomial of `pb.gen` correspond to maps sending `pb.gen` to that root. -/
 noncomputable def liftEquiv' [IsDomain B] (pb : PowerBasis A S) :
     (S →ₐ[A] B) ≃ { y : B // y ∈ (minpoly A pb.gen).aroots B } :=
   pb.liftEquiv.trans ((Equiv.refl _).subtypeEquiv fun x => by
-    rw [Equiv.refl_apply, mem_roots_iff_aeval_eq_zero]
-    · simp
-    · exact map_monic_ne_zero (minpoly.monic pb.isIntegral_gen))
+    rw [Equiv.refl_apply, mem_aroots])
 
 /-- There are finitely many algebra homomorphisms `S →ₐ[A] B` if `S` is of the form `A[x]`
 and `B` is an integral domain. -/

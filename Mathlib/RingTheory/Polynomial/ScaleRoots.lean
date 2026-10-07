@@ -351,15 +351,13 @@ lemma rootMultiplicity_scaleRoots (p : R[X]) {r a : R} (hr : IsLeftRegular r) (h
   rw [mul_comm, scaleRoots_eval_mul, (hr.pow q.natDegree).mul_left_eq_zero_iff]
   tauto
 
-lemma roots_scaleRoots [IsDomain R] (p : R[X]) {r : R} (hr : IsUnit r) :
-    (p.scaleRoots r).roots = p.roots.map (r * ·) := by
+lemma roots_scaleRoots [IsDomain R] (p : R[X]) {r : R} (hr : IsUnit r) (hp : p ≠ 0) :
+    (p.scaleRoots r).roots (scaleRoots_ne_zero hp r) = (p.roots hp).map (r * ·) := by
   classical
-  rcases eq_or_ne p 0 with rfl | hp
-  · simp
   ext a
   have : Function.Bijective (α := R) (r * ·) := IsUnit.isUnit_iff_mulLeft_bijective.mp hr
   obtain ⟨a, rfl⟩ := this.2 a
-  rw [count_roots _ (scaleRoots_ne_zero hp r), Multiset.count_map_eq_count' _ p.roots this.1 a,
+  rw [count_roots _ (scaleRoots_ne_zero hp r), Multiset.count_map_eq_count' _ _ this.1 a,
     count_roots _ hp, rootMultiplicity_scaleRoots _ hr.isRegular.left hp]
 
 end CommRing

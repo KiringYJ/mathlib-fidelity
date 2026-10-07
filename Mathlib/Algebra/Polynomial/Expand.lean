@@ -285,6 +285,19 @@ section rootMultiplicity
 
 variable {R : Type u} [CommRing R] {p n : ℕ} [ExpChar R p] {f : R[X]} {r : R}
 
+theorem expand_pow_ne_zero (h0 : f ≠ 0) : expand R (p ^ n) f ≠ 0 :=
+  (expand_ne_zero (expChar_pow_pos R p n)).2 h0
+
+theorem expand_ne_zero_of_ne_zero (h0 : f ≠ 0) : expand R p f ≠ 0 :=
+  (expand_ne_zero (expChar_pos R p)).2 h0
+
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Polynomial.expand_pow_ne_zero); nonzero_core))
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Polynomial.expand_ne_zero_of_ne_zero); nonzero_core))
+
 theorem rootMultiplicity_expand_pow (h0 : f ≠ 0) :
     (expand R (p ^ n) f).rootMultiplicity r ((expand_ne_zero (expChar_pow_pos R p n)).2 h0) =
       p ^ n * f.rootMultiplicity (r ^ p ^ n) := by

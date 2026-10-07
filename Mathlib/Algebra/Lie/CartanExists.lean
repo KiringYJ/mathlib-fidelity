@@ -283,8 +283,8 @@ lemma engel_isBot_of_isMin (hLK : finrank K L ≤ #K) (U : LieSubalgebra K L)
     · refine le_trans ?_ (Finset.le_card_sdiff _ _)
       omega
     · intro α hα
-      simp only [Finset.mem_sdiff, Multiset.mem_toFinset, mem_roots', IsRoot.def, not_and, t] at hα
-      exact hα.2 hψ
+      simp only [Finset.mem_sdiff, Multiset.mem_toFinset, mem_roots hψ, IsRoot.def, t] at hα
+      exact hα.2
   -- So finally we can continue our proof strategy by showing that `coeff χ i` vanishes on `s`.
   apply eq_zero_of_natDegree_lt_card_of_eval_eq_zero' _ s _ ?hcard
   case hcard =>

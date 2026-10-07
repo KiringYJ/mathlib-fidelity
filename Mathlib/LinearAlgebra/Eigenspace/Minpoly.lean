@@ -99,8 +99,8 @@ variable (f)
 
 lemma finite_hasEigenvalue : Set.Finite {μ | f.HasEigenvalue μ} := by
   have h : minpoly R f ≠ 0 := minpoly.ne_zero (Algebra.IsIntegral.isIntegral (R := R) f)
-  refine ((minpoly R f).rootSet_finite R).subset ?_
-  simp [Set.subset_def, hasEigenvalue_iff_isRoot, mem_rootSet, h]
+  refine ((minpoly R f).rootSet_finite R (by simpa using h)).subset ?_
+  simp [Set.subset_def, hasEigenvalue_iff_isRoot, mem_rootSet]
 
 /-- An endomorphism of a finite-dimensional vector space has finitely many eigenvalues. -/
 noncomputable instance : Fintype f.Eigenvalues :=

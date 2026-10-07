@@ -213,7 +213,7 @@ theorem exists_lift_of_splits' (x : Lifts F E K) {s : E} (h1 : IsIntegral x.carr
   letI : Algebra x.carrier carrier := x.carrier⟮s⟯.toSubalgebra.algebra
   let φ : carrier →ₐ[x.carrier] K := ((algHomAdjoinIntegralEquiv x.carrier h1).symm
     ⟨rootOfSplits h2 (by rwa [degree_map]), by
-      rw [mem_aroots, and_iff_right (minpoly.ne_zero h1)]
+      rw [mem_aroots]
       exact (eval_map _ _).symm.trans (eval_rootOfSplits _ _)⟩)
   ⟨⟨carrier, (@algHomEquivSigma F x.carrier carrier K _ _ _ _ _ _ _ _
       (IsScalarTower.of_algebraMap_eq fun _ ↦ rfl)).symm ⟨x.emb, φ⟩⟩,
@@ -324,7 +324,7 @@ theorem exists_algHom_adjoin_of_splits_of_aeval : ∃ φ : adjoin F S →ₐ[F] 
   have ix : IsAlgebraic F _ := Algebra.IsAlgebraic.isAlgebraic (⟨x, hx⟩ : adjoin F S)
   rw [isAlgebraic_iff_isIntegral, isIntegral_iff] at ix
   obtain ⟨φ, hφ⟩ := exists_algHom_adjoin_of_splits hK ((algHomAdjoinIntegralEquiv F ix).symm
-    ⟨y, mem_aroots.mpr ⟨minpoly.ne_zero ix, hy⟩⟩) (adjoin_simple_le_iff.mpr hx)
+    ⟨y, mem_aroots.mpr hy⟩) (adjoin_simple_le_iff.mpr hx)
   exact ⟨φ, (DFunLike.congr_fun hφ <| AdjoinSimple.gen F x).trans <|
     algHomAdjoinIntegralEquiv_symm_apply_gen F ix _⟩
 
@@ -367,7 +367,7 @@ theorem Algebra.IsAlgebraic.range_eval_eq_rootSet_minpoly_of_splits {F K : Type*
     [Algebra.IsAlgebraic F K] (x : K) :
     (Set.range fun (ψ : K →ₐ[F] L) => ψ x) = (minpoly F x).rootSet L := by
   ext a
-  rw [mem_rootSet_of_ne (minpoly.ne_zero (Algebra.IsIntegral.isIntegral x))]
+  rw [mem_rootSet]
   refine ⟨fun ⟨ψ, hψ⟩ ↦ ?_, fun ha ↦ IntermediateField.exists_algHom_of_splits_of_aeval
     (fun x ↦ ⟨Algebra.IsIntegral.isIntegral x, hA x⟩) ha⟩
   rw [← hψ, Polynomial.aeval_algHom_apply ψ x, minpoly.aeval, map_zero]

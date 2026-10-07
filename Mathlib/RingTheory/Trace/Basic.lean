@@ -107,16 +107,14 @@ theorem trace_gen_eq_zero {x : L} (hx : ¬IsIntegral K x) :
   · exact (Submodule.fg_iff_finiteDimensional _).mpr (b.finiteDimensional_of_finite)
   · exact subset_adjoin K _ (Set.mem_singleton x)
 
-theorem trace_gen_eq_sum_roots (x : L) (hf : ((minpoly K x).map (algebraMap K F)).Splits) :
+theorem trace_gen_eq_sum_roots (x : L) (hx : IsIntegral K x)
+    (hf : ((minpoly K x).map (algebraMap K F)).Splits) :
     algebraMap K F (trace K K⟮x⟯ (AdjoinSimple.gen K x)) =
       ((minpoly K x).aroots F).sum := by
   have injKxL := (algebraMap K⟮x⟯ L).injective
-  by_cases hx : IsIntegral K x; swap
-  · simp [minpoly.eq_zero hx, trace_gen_eq_zero hx, aroots_def]
   rw [← adjoin.powerBasis_gen hx, (adjoin.powerBasis hx).trace_gen_eq_sum_roots] <;>
-    rw [adjoin.powerBasis_gen hx, ← minpoly.algebraMap_eq injKxL] <;>
-    try simp only [AdjoinSimple.algebraMap_gen _ _]
-  exact hf
+    simp only [adjoin.powerBasis_gen hx, ← minpoly.algebraMap_eq injKxL,
+      AdjoinSimple.algebraMap_gen _ _, hf]
 
 end IntermediateField.AdjoinSimple
 
@@ -148,7 +146,8 @@ theorem trace_eq_sum_roots [FiniteDimensional K L] {x : L}
     algebraMap K F (Algebra.trace K L x) =
       finrank K⟮x⟯ L • ((minpoly K x).aroots F).sum := by
   rw [trace_eq_trace_adjoin K x, Algebra.smul_def, map_mul, ← Algebra.smul_def,
-    IntermediateField.AdjoinSimple.trace_gen_eq_sum_roots _ hF, IsScalarTower.algebraMap_smul]
+    IntermediateField.AdjoinSimple.trace_gen_eq_sum_roots _ (.of_finite K x) hF,
+    IsScalarTower.algebraMap_smul]
 
 end EqSumRoots
 

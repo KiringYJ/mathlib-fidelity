@@ -546,7 +546,8 @@ theorem Algebra.dvd_algebraMap_intNorm_self (x : B) : x ∣ algebraMap A B (intN
   rw [← isIntegral_algHom_iff (toAlgHom A L E)
     (FaithfulSMul.algebraMap_injective L E), coe_toAlgHom', map_mul, map_inv₀,
     algebraMap_apply A K L, algebraMap_intNorm (L := L), ← algebraMap_apply, ← algebraMap_apply,
-    norm_eq_prod_roots _ (IsAlgClosed.splits _), ← Multiset.prod_erase
+    norm_eq_prod_roots _ (Algebra.IsIntegral.isIntegral _) (IsAlgClosed.splits _),
+    ← Multiset.prod_erase
     (a := algebraMap B E x)]
   · have := IsTorsionFree.trans_faithfulSMul B L E
     rw [mul_pow, ← mul_pow_sub_one (Nat.pos_iff_ne_zero.1 Module.finrank_pos) (algebraMap B E x),
@@ -558,9 +559,7 @@ theorem Algebra.dvd_algebraMap_intNorm_self (x : B) : x ∣ algebraMap A B (intN
       · replace ha := Multiset.erase_subset _ _ ha
         suffices (aeval a) ((minpoly A x).map (algebraMap A K)) = 0 by simpa
         rw [← minpoly.isIntegrallyClosed_eq_field_fractions K L (IsIntegral.isIntegral x)]
-        simp only [mem_roots', ne_eq, Polynomial.map_eq_zero, IsRoot.def, eval_map_algebraMap] at ha
-        exact ha.2
+        exact mem_aroots.mp ha
     · exact (map_ne_zero_iff _ (FaithfulSMul.algebraMap_injective B E)).mpr hx
-  · simp only [mem_roots', ne_eq, Polynomial.map_eq_zero, IsRoot.def, eval_map_algebraMap]
-    refine ⟨minpoly.ne_zero (IsIntegral.isIntegral _), ?_⟩
+  · rw [mem_aroots]
     simp [algebraMap_apply B L E, aeval_algebraMap_apply]

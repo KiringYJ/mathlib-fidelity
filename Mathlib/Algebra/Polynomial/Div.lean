@@ -160,13 +160,18 @@ macro_rules
 macro_rules
   | `(tactic| monic_core) => `(tactic|
     ((with_reducible_and_instances apply Polynomial.monic_prod_of_monic); intro _ _; monic_core))
+macro_rules
+  | `(tactic| monic_core) => `(tactic|
+    ((with_reducible_and_instances apply Polynomial.monic_X_pow_sub_C);
+      first | with_reducible_and_instances assumption | exact NeZero.ne _ | omega))
 
 open Lean Elab Tactic in
 /-- The default discharger for the monicity of the divisor `q` of `p /ₘ q` and `p %ₘ q`.
 
-It closes the goal with `monic_core`: with a local hypothesis, for `X`, `1`, `X - C a`, and
-`X + C a`, for products, powers, images under `Polynomial.map`, and finite products of polynomials
-that it proves monic, or by the extensions of later files. Its rules unify only at reducible and
+It closes the goal with `monic_core`: with a local hypothesis, for `X`, `1`, `X - C a`, `X + C a`,
+and `X ^ n - C a` with `n ≠ 0` from a hypothesis, `NeZero`, or `omega`, for products, powers,
+images under `Polynomial.map`, and finite products of polynomials that it proves monic, or by the
+extensions of later files. Its rules unify only at reducible and
 instance transparency, so that it fails fast on concrete polynomials. Other evidence is passed
 explicitly. It never chooses the divisor: if the divisor is not determined when the tactic runs, it
 fails instead of assigning it from a hypothesis. -/
@@ -531,16 +536,31 @@ macro_rules
 macro_rules
   | `(tactic| nonzero_core) => `(tactic|
     ((with_reducible_and_instances apply pow_ne_zero); nonzero_core))
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Polynomial.ne_zero_of_degree_gt);
+      with_reducible_and_instances assumption))
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Polynomial.ne_zero_of_natDegree_gt);
+      with_reducible_and_instances assumption))
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Irreducible.ne_zero);
+      with_reducible_and_instances assumption))
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic| with_reducible_and_instances exact Fact.out)
 
 open Lean Elab Tactic in
 /-- The default discharger for the nonvanishing of a polynomial `p`, as in `rootMultiplicity a p`.
 
-It closes the goal with `nonzero_core`: with a local hypothesis, for a polynomial over a nontrivial
-ring that `monic_core` proves monic, for products and powers of polynomials that it proves nonzero
-over a ring without zero divisors, or by the extensions of later files. Its rules unify only at
-reducible and instance transparency. Other evidence is passed explicitly. It never chooses the
-polynomial: if the polynomial is not determined when the tactic runs, it fails instead of assigning
-it from a hypothesis. -/
+It closes the goal with `nonzero_core`: with a local hypothesis, a hypothesis that the polynomial
+has positive degree or is irreducible, or a `Fact (p ≠ 0)` instance, for a polynomial over a
+nontrivial ring that `monic_core` proves monic, for products and powers of polynomials that it
+proves nonzero over a ring without zero divisors, or by the extensions of later files. Its rules
+unify only at reducible and instance transparency. Other evidence is passed explicitly. It never
+chooses the polynomial: if the polynomial is not determined when the tactic runs, it fails instead
+of assigning it from a hypothesis. -/
 elab (name := nonzeroTac) "nonzero_tac" : tactic => do
   if (← instantiateMVars (← getMainTarget)).hasExprMVar then
     throwError "the polynomial is not determined; pass its nonvanishing explicitly"

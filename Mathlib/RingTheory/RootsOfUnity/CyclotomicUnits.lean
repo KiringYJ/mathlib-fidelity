@@ -134,6 +134,7 @@ theorem associated_pow_add_sub_sub_one (hζ : IsPrimitiveRoot ζ n) (hn : 2 ≤ 
   associated for all distinct `p`-th roots of unity `η₁` and `η₂`. -/
 lemma nthRootsFinset_pairwise_associated_sub_one_sub_of_prime (hζ : IsPrimitiveRoot ζ p)
     (hp : p.Prime) :
+    haveI : NeZero p := ⟨hp.ne_zero⟩
     Set.Pairwise (nthRootsFinset p (1 : A)) fun η₁ η₂ ↦ Associated (ζ - 1) (η₁ - η₂) := by
   intro η₁ hη₁ η₂ hη₂ e
   have : NeZero p := ⟨hp.ne_zero⟩
@@ -153,8 +154,9 @@ alias ntRootsFinset_pairwise_associated_sub_one_sub_of_prime :=
 /-- If `p` is prime and `ζ` is a `p`-th primitive root of unity, then `ζ - 1` divides `η₁ - η₂`
 for all `p`-th roots of unity `η₁` and `η₂`. -/
 lemma sub_one_dvd_sub (hζ : IsPrimitiveRoot ζ p) (hp : p.Prime)
-    {η₁ : A} (hη₁ : η₁ ∈ nthRootsFinset p (1 : A))
-    {η₂ : A} (hη₂ : η₂ ∈ nthRootsFinset p (1 : A)) :
+    {h : (Polynomial.X : A[X]) ^ p - Polynomial.C 1 ≠ 0}
+    {η₁ : A} (hη₁ : η₁ ∈ nthRootsFinset p (1 : A) h)
+    {η₂ : A} (hη₂ : η₂ ∈ nthRootsFinset p (1 : A) h) :
     ζ - 1 ∣ η₁ - η₂ := by
   rcases eq_or_ne η₁ η₂ with rfl | h
   · simp

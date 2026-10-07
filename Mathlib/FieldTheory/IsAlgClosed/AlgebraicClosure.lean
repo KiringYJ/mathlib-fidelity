@@ -62,9 +62,10 @@ variable {k}
 /-- If a monic polynomial `f : k[X]` splits in `K`,
 then it has as many roots (counting multiplicity) as its degree. -/
 def finEquivRoots {K} [Field K] [DecidableEq K] {i : k →+* K} {f : Monics k}
-    (hf : (f.1.map i).Splits) : Fin f.1.natDegree ≃ (f.1.map i).roots.toEnumFinset :=
+    (hf : (f.1.map i).Splits) :
+    Fin f.1.natDegree ≃ ((f.1.map i).roots (f.2.map i).ne_zero).toEnumFinset :=
   .symm <| Finset.equivFinOfCardEq <| by
-    rwa [splits_iff_card_roots,
+    rwa [splits_iff_card_roots (f.2.map i).ne_zero,
       ← Multiset.card_toEnumFinset, f.2.natDegree_map] at hf
 
 lemma Monics.splits_finsetProd {s : Finset (Monics k)} {f : Monics k} (hf : f ∈ s) :
@@ -92,7 +93,7 @@ theorem toSplittingField_coeff {s : Finset (Monics k)} {f} (h : f ∈ s) (n) :
   rw [Finset.prod_coe_sort (f := fun x : _ × ℕ ↦ X - C x.1), (Multiset.toEnumFinset _)
     |>.prod_eq_multiset_prod, ← Function.comp_def (X - C ·) Prod.fst, ← Multiset.map_map,
     Multiset.map_toEnumFinset_fst, map_map, AlgHom.comp_algebraMap]
-  conv in map _ _ => rw [Splits.eq_prod_roots (Monics.splits_finsetProd h)]
+  conv in map _ _ => rw [Splits.eq_prod_roots (Monics.splits_finsetProd h) (f.2.map _).ne_zero]
   rw [leadingCoeff_map, f.2, map_one, C_1, one_mul, sub_self, coeff_zero]
 
 variable (k)

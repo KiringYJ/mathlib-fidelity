@@ -139,7 +139,7 @@ theorem mahlerMeasure_mul (p q : ℂ[X]) :
   simp only [Classical.not_imp]
   apply Set.Finite.of_finite_image (f := circleMap 0 1) _ <|
     (injOn_circleMap_of_abs_sub_le one_ne_zero (by simp [le_of_eq, pi_nonneg])).mono (fun _ h ↦ h.1)
-  apply (p * q).roots.finite_toSet.subset
+  apply ((p * q).roots (mul_ne_zero hpq.1 hpq.2)).finite_toSet.subset
   rintro _ ⟨_, ⟨_, h⟩, _⟩
   contrapose h
   simp_all [log_mul]
@@ -209,23 +209,19 @@ theorem mahlerMeasure_of_degree_eq_one {p : ℂ[X]} (h : p.degree = 1) :
 /-- The logarithmic Mahler measure of a polynomial is the `log` of the absolute value of its leading
   coefficient plus the sum of the `log`s of the absolute values of its roots lying outside the unit
   disk. -/
-theorem logMahlerMeasure_eq_log_leadingCoeff_add_sum_log_roots (p : ℂ[X]) : p.logMahlerMeasure =
-    log ‖p.leadingCoeff‖ + (p.roots.map (fun a ↦ log⁺ ‖a‖)).sum := by
-  by_cases hp : p = 0
-  · simp [hp]
+theorem logMahlerMeasure_eq_log_leadingCoeff_add_sum_log_roots (p : ℂ[X]) (hp : p ≠ 0) :
+    p.logMahlerMeasure = log ‖p.leadingCoeff‖ + (p.roots.map (fun a ↦ log⁺ ‖a‖)).sum := by
   have : ∀ x ∈ Multiset.map (fun x ↦ max 1 ‖x‖) p.roots, x ≠ 0 := by grind [Multiset.mem_map]
-  nth_rw 1 [(IsAlgClosed.splits p).eq_prod_roots]
+  nth_rw 1 [(IsAlgClosed.splits p).eq_prod_roots hp]
   rw [logMahlerMeasure_mul_eq_add_logMahlerMeasure (by simp [hp, X_sub_C_ne_zero])]
   simp [posLog_eq_log_max_one, logMahlerMeasure_eq_log_MahlerMeasure,
     prod_mahlerMeasure_eq_mahlerMeasure_prod, log_multiset_prod this]
 
 /-- The Mahler measure of a polynomial is the absolute value of its leading coefficient times
   the product of the absolute values of its roots lying outside the unit disk. -/
-theorem mahlerMeasure_eq_leadingCoeff_mul_prod_roots (p : ℂ[X]) : p.mahlerMeasure =
+theorem mahlerMeasure_eq_leadingCoeff_mul_prod_roots (p : ℂ[X]) (hp : p ≠ 0) : p.mahlerMeasure =
     ‖p.leadingCoeff‖ * (p.roots.map (fun a ↦ max 1 ‖a‖)).prod := by
-  by_cases hp : p = 0
-  · simp [hp]
-  have := logMahlerMeasure_eq_log_leadingCoeff_add_sum_log_roots p
+  have := logMahlerMeasure_eq_log_leadingCoeff_add_sum_log_roots p hp
   rw [logMahlerMeasure_eq_log_MahlerMeasure] at this
   apply_fun exp at this
   rw [exp_add, exp_log <| mahlerMeasure_pos_of_ne_zero hp,
@@ -236,17 +232,23 @@ theorem mahlerMeasure_eq_leadingCoeff_mul_prod_roots (p : ℂ[X]) : p.mahlerMeas
 ### Estimates for the Mahler measure
 -/
 
-lemma one_le_prod_max_one_norm_roots (p : ℂ[X]) : 1 ≤ (p.roots.map (fun a ↦ max 1 ‖a‖)).prod := by
+lemma one_le_prod_max_one_norm_roots (p : ℂ[X]) {hp : p ≠ 0} :
+    1 ≤ (p.roots.map (fun a ↦ max 1 ‖a‖)).prod := by
   grind [Multiset.one_le_prod, Multiset.mem_map]
 
 lemma leadingCoeff_le_mahlerMeasure (p : ℂ[X]) : ‖p.leadingCoeff‖ ≤ p.mahlerMeasure := by
-  rw [← mul_one ‖_‖, mahlerMeasure_eq_leadingCoeff_mul_prod_roots]
+  rcases eq_or_ne p 0 with rfl | hp
+  · simp
+  rw [← mul_one ‖_‖, mahlerMeasure_eq_leadingCoeff_mul_prod_roots p hp]
   gcongr
   exact one_le_prod_max_one_norm_roots p
 
 lemma prod_max_one_norm_roots_le_mahlerMeasure_of_one_le_leadingCoeff {p : ℂ[X]}
-    (hlc : 1 ≤ ‖p.leadingCoeff‖) : (p.roots.map (fun a ↦ max 1 ‖a‖)).prod ≤ p.mahlerMeasure := by
-  rw [← one_mul (Multiset.prod _), mahlerMeasure_eq_leadingCoeff_mul_prod_roots]
+    (hlc : 1 ≤ ‖p.leadingCoeff‖) :
+    haveI : p ≠ 0 := by rintro rfl; norm_num at hlc
+    (p.roots.map (fun a ↦ max 1 ‖a‖)).prod ≤ p.mahlerMeasure := by
+  have hp : p ≠ 0 := by rintro rfl; norm_num at hlc
+  rw [← one_mul (Multiset.prod _), mahlerMeasure_eq_leadingCoeff_mul_prod_roots p hp]
   gcongr
   exact zero_le_one.trans <| one_le_prod_max_one_norm_roots p
 
@@ -280,7 +282,7 @@ theorem mahlerMeasure_le_sum_norm_coeff (p : ℂ[X]) : p.mahlerMeasure ≤ p.sum
     rw [ofPred_inter_eq_sep]
     apply Finite.of_finite_image (f := circleMap 0 1) ((Multiset.finite_toSet p.roots).subset _)
       <| fun _ h _ k l ↦ injOn_circleMap_of_abs_sub_le' one_ne_zero (by linarith) h.1 k.1 l
-    simp [hp]
+    simp
   · intro _ _
     gcongr
     rw [eval_eq_sum]
@@ -362,8 +364,9 @@ theorem norm_coeff_le_choose_mul_mahlerMeasure (n : ℕ) (p : ℂ[X]) :
   · simp [hp]
   rcases lt_or_ge p.natDegree n with hlt | hn
   · simp [coeff_eq_zero_of_natDegree_lt hlt, Nat.choose_eq_zero_of_lt hlt]
-  rw [mahlerMeasure_eq_leadingCoeff_mul_prod_roots, mul_left_comm,
-    coeff_eq_esymm_roots_of_card (splits_iff_card_roots.mp (IsAlgClosed.splits p)) hn, mul_assoc,
+  rw [mahlerMeasure_eq_leadingCoeff_mul_prod_roots p hp, mul_left_comm,
+    coeff_eq_esymm_roots_of_card ((splits_iff_card_roots hp).mp (IsAlgClosed.splits p)) hn,
+    mul_assoc,
     norm_mul, norm_mul, norm_pow, norm_neg, norm_one, one_pow, one_mul,
     mul_le_mul_iff_right₀ (by simp [leadingCoeff_ne_zero.mpr hp]), esymm,
     Finset.sum_multiset_map_count]
@@ -402,7 +405,7 @@ theorem norm_coeff_le_choose_mul_mahlerMeasure (n : ℕ) (p : ℂ[X]) :
       simp only [mem_powersetCard, mem_toFinset, imp_self, implies_true, sum_count_eq_card,
         card_powersetCard, S, ← Nat.choose_symm hn]
       congr
-      exact splits_iff_card_roots.mp <| IsAlgClosed.splits p
+      exact (splits_iff_card_roots hp).mp <| IsAlgClosed.splits p
 
 theorem supNorm_le_choose_natDegree_div_two_mul_mahlerMeasure (p : Polynomial ℂ) :
     p.supNorm ≤ p.natDegree.choose (p.natDegree / 2) * p.mahlerMeasure := by

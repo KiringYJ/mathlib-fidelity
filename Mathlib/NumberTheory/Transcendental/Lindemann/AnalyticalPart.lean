@@ -167,11 +167,15 @@ Note: Jacobson (equation (68) / lemma 3, page 285) writes `Nₚ` for our `nₚ` 
 (modulo a constant factor).
 -/
 public theorem exp_polynomial_approx (f : ℤ[X]) (hf : f.eval 0 ≠ 0) :
+    haveI : f.map (algebraMap ℤ ℂ) ≠ 0 :=
+      (Polynomial.map_ne_zero_iff (algebraMap ℤ ℂ).injective_int).mpr fun h ↦ hf (by simp [h])
     ∃ c,
       ∀ p > (eval 0 f).natAbs, p.Prime →
         ∃ nₚ : ℤ, ¬ ↑p ∣ nₚ ∧ ∃ gₚ : ℤ[X], gₚ.natDegree ≤ p * f.natDegree - 1 ∧
           ∀ {r : ℂ}, r ∈ f.aroots ℂ →
             ‖nₚ • exp r - p • aeval r gₚ‖ ≤ c ^ p / (p - 1)! := by
+  have hf' : f.map (algebraMap ℤ ℂ) ≠ 0 :=
+    (Polynomial.map_ne_zero_iff (algebraMap ℤ ℂ).injective_int).mpr fun h ↦ hf (by simp [h])
   simp_rw [nsmul_eq_mul, zsmul_eq_mul]
   choose c' c'0 abs_P_le using exp_polynomial_approx_aux f
   by_cases h : f.aroots ℂ = 0
@@ -202,9 +206,9 @@ public theorem exp_polynomial_approx (f : ℤ[X]) (hf : f.eval 0 ≠ 0) :
     push_cast
     ring_nf
   · specialize gₚ_eq r _
-    · rw [mem_roots'] at hr
+    · rw [mem_roots hf'] at hr
       rw [Polynomial.map_mul, f.map_pow]
-      exact dvd_mul_of_dvd_right (pow_dvd_pow_of_dvd (dvd_iff_isRoot.mpr hr.2) _) _
+      exact dvd_mul_of_dvd_right (pow_dvd_pow_of_dvd (dvd_iff_isRoot.mpr hr) _) _
     specialize gₚ'_eq 0 (by rw [C_0, sub_zero])
     simp_rw [nsmul_eq_mul] at gₚ_eq gₚ'_eq
     rw [P_algebraMap, gₚ_eq, gₚ'_eq, eval_pow]

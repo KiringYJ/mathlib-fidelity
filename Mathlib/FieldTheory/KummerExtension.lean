@@ -71,7 +71,8 @@ theorem X_pow_sub_C_splits_of_isPrimitiveRoot
   | inl hn =>
     simp only [hn, pow_zero, ← C.map_one, ← map_sub, Splits.C]
   | inr hn =>
-    rw [splits_iff_card_roots, ← nthRoots, hζ.card_nthRoots, natDegree_X_pow_sub_C,
+    rw [splits_iff_card_roots (X_pow_sub_C_ne_zero hn a), ← nthRoots, hζ.card_nthRoots,
+      natDegree_X_pow_sub_C,
       ite_eq_left ⟨α, e⟩]
 
 -- make this private, as we only use it to prove a strictly more general version
@@ -328,11 +329,12 @@ lemma isSplittingField_AdjoinRoot_X_pow_sub_C :
     rw [mem_primitiveRoots (Nat.pos_of_ne_zero <| ne_zero_of_irreducible_X_pow_sub_C H)] at hζ
     exact X_pow_sub_C_splits_of_isPrimitiveRoot (hζ.map_of_injective (algebraMap K _).injective)
       (root_X_pow_sub_C_pow n a)
-  · rw [eq_top_iff, ← AdjoinRoot.adjoinRoot_eq_top]
+  · intro _
+    rw [eq_top_iff, ← AdjoinRoot.adjoinRoot_eq_top]
     apply Algebra.adjoin_mono
-    have := ne_zero_of_irreducible_X_pow_sub_C H
-    rw [Set.singleton_subset_iff, mem_rootSet_of_ne (X_pow_sub_C_ne_zero
-      (Nat.pos_of_ne_zero this) a), aeval_def, AdjoinRoot.algebraMap_eq, AdjoinRoot.eval₂_root]
+    rw [Set.singleton_subset_iff, mem_rootSet, aeval_def, AdjoinRoot.algebraMap_eq,
+      AdjoinRoot.eval₂_root]
+  · exact fun h0 ↦ absurd h0 H.ne_zero
 
 variable {α : L} (hα : α ^ n = algebraMap K L a)
 
@@ -345,9 +347,10 @@ def adjoinRootXPowSubCEquiv (hζ : (primitiveRoots n K).Nonempty) (H : Irreducib
     have := Fact.mk H
     let := isSplittingField_AdjoinRoot_X_pow_sub_C hζ H
     refine ⟨(liftAlgHom (X ^ n - C a) _ α _).injective, ?_⟩
-    rw [← AlgHom.range_eq_top, ← IsSplittingField.adjoin_rootSet _ (X ^ n - C a),
-      eq_comm, Splits.adjoin_rootSet_eq_range, IsSplittingField.adjoin_rootSet]
-    exact IsSplittingField.splits _ _
+    rw [← AlgHom.range_eq_top, ← IsSplittingField.adjoin_rootSet _ (X ^ n - C a) H.ne_zero,
+      eq_comm, Splits.adjoin_rootSet_eq_range, IsSplittingField.adjoin_rootSet _ _ H.ne_zero]
+    · exact IsSplittingField.splits _ _
+    · exact map_ne_zero H.ne_zero
 
 lemma adjoinRootXPowSubCEquiv_root :
     adjoinRootXPowSubCEquiv hζ H hα (root _) = α := by
@@ -544,11 +547,13 @@ lemma isSplittingField_X_pow_sub_C_of_root_adjoin_eq_top
     have ⟨_, hζ⟩ := hK
     rw [mem_primitiveRoots finrank_pos] at hζ
     exact X_pow_sub_C_splits_of_isPrimitiveRoot (hζ.map_of_injective (algebraMap K _).injective) ha
-  · rw [eq_top_iff, ← IntermediateField.top_toSubalgebra, ← hα,
+  · intro _
+    rw [eq_top_iff, ← IntermediateField.top_toSubalgebra, ← hα,
       IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic (IsAlgebraic.of_finite K α)]
     apply Algebra.adjoin_mono
-    rw [Set.singleton_subset_iff, mem_rootSet_of_ne (X_pow_sub_C_ne_zero finrank_pos a),
-      aeval_def, eval₂_sub, eval₂_X_pow, eval₂_C, ha, sub_self]
+    rw [Set.singleton_subset_iff, mem_rootSet, aeval_def, eval₂_sub, eval₂_X_pow, eval₂_C, ha,
+      sub_self]
+  · exact fun h0 ↦ absurd h0 (X_pow_sub_C_ne_zero finrank_pos a)
 
 end IsCyclic
 

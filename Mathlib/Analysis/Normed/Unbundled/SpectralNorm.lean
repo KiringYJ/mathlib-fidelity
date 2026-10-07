@@ -919,12 +919,12 @@ instance (priority := 100) completeSpace [h_fin : FiniteDimensional K L] :
 omit [Algebra.IsAlgebraic K L] in
 lemma spectralMulAlgNorm_eq_of_mem_roots (x : L) {E : Type*} [Field E] [Algebra K E] [Algebra L E]
     [IsScalarTower K L E] [Algebra.IsAlgebraic K E] {a : E}
-    (ha : a ∈ ((mapAlg K E) (minpoly K x)).roots) :
+    {h : (mapAlg K E) (minpoly K x) ≠ 0} (ha : a ∈ ((mapAlg K E) (minpoly K x)).roots h) :
     (spectralMulAlgNorm K E) a = (spectralMulAlgNorm K E) ((algebraMap L E) x) := by
   simp only [spectralMulAlgNorm_def, spectralNorm]
   have : (aeval a) (minpoly K ((algebraMap L E) x)) = 0 := by
-    simp only [mem_roots', IsRoot.def] at ha
-    rw [← ha.2, mapAlg_eq_map, minpoly.algebraMap_eq (algebraMap L E).injective, aeval_def,
+    rw [mem_roots h, IsRoot.def] at ha
+    rw [← ha, mapAlg_eq_map, minpoly.algebraMap_eq (algebraMap L E).injective, aeval_def,
       eval_map]
   rw [← minpoly.eq_of_root (Algebra.IsAlgebraic.isAlgebraic ((algebraMap L E) x)) this]
 
@@ -933,15 +933,21 @@ omit [Algebra.IsAlgebraic K L] in
   over `K` splits into linear factors over `E`, the `degree(f)`th power of the spectral norm of `x`,
   considered as an element of `E`, is equal to the spectral norm of the product of the `E`-valued
   roots of `f`. -/
-theorem spectralNorm_pow_natDegree_eq_prod_roots (x : L) {E : Type*} [Field E] [Algebra K E]
-    [Algebra L E] [IsScalarTower K L E] [IsSplittingField L E (mapAlg K L (minpoly K x))]
-    [Algebra.IsAlgebraic K E] :
+theorem spectralNorm_pow_natDegree_eq_prod_roots (x : L) (hx : IsIntegral K x) {E : Type*}
+    [Field E] [Algebra K E] [Algebra L E] [IsScalarTower K L E]
+    [IsSplittingField L E (mapAlg K L (minpoly K x))] [Algebra.IsAlgebraic K E] :
+    haveI : (mapAlg K E) (minpoly K x) ≠ 0 := by
+      rw [mapAlg_eq_map]
+      exact ((minpoly.monic hx).map _).ne_zero
     (spectralMulAlgNorm K E) ((algebraMap L E) x) ^ (minpoly K x).natDegree =
       (spectralMulAlgNorm K E) ((mapAlg K E) (minpoly K x)).roots.prod := by
+  have hne : (mapAlg K E) (minpoly K x) ≠ 0 := by
+    rw [mapAlg_eq_map]
+    exact ((minpoly.monic hx).map _).ne_zero
   have h_deg : (minpoly K x).natDegree = Multiset.card ((mapAlg K E) (minpoly K x)).roots := by
     trans (mapAlg K E (minpoly K x)).natDegree
     · rw [mapAlg_eq_map, natDegree_map]
-    · rw [eq_comm, ← splits_iff_card_roots]
+    · rw [eq_comm, ← splits_iff_card_roots hne]
       exact IsSplittingField.IsScalarTower.splits (K := L) E (minpoly K x)
   rw [map_multiset_prod, ← Multiset.prod_replicate]
   apply congr_arg
@@ -976,7 +982,8 @@ theorem spectralNorm_eq_norm_coeff_zero_rpow (x : L) :
     @spectralNorm.eq_of_tower K _ E _ _ L, ← spectralMulAlgNorm_def,
     ← spectralMulAlgNorm_def, Polynomial.coeff_zero_of_isScalarTower,
     hspl.coeff_zero_eq_prod_roots_of_monic _, map_mul, map_pow,
-    map_neg_eq_map, map_one, one_pow, one_mul, spectralNorm_pow_natDegree_eq_prod_roots _ _ x]
+    map_neg_eq_map, map_one, one_pow, one_mul,
+    spectralNorm_pow_natDegree_eq_prod_roots _ _ x (Algebra.IsAlgebraic.isAlgebraic x).isIntegral]
   · simp [monic_mapAlg_iff, minpoly.monic (Algebra.IsAlgebraic.isAlgebraic x).isIntegral]
   · exact_mod_cast (minpoly.natDegree_pos (Algebra.IsIntegral.isIntegral x)).ne'
 

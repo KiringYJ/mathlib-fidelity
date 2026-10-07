@@ -253,9 +253,9 @@ theorem Monic.normalize_eq_self {p : R[X]} (hp : p.Monic) : normalize p = p := b
   simp only [Polynomial.coe_normUnit, normalize_apply, hp.leadingCoeff, normUnit_one,
     Units.val_one, Polynomial.C.map_one, mul_one]
 
-theorem roots_normalize {R} [CommRing R] [IsDomain R] [NormalizationMonoid R] {p : R[X]} :
-    (normalize p).roots = p.roots := by
-  rw [normalize_apply, mul_comm, coe_normUnit, roots_C_mul _ (normUnit (leadingCoeff p)).ne_zero]
+theorem roots_normalize {R} [CommRing R] [IsDomain R] [NormalizationMonoid R] {p : R[X]}
+    {h : normalize p ≠ 0} : (normalize p).roots h = p.roots (normalize_eq_zero.not.1 h) := by
+  simp only [normalize_apply, mul_comm p, coe_normUnit, roots_C_mul]
 
 theorem normUnit_X : normUnit (X : R[X]) = 1 := by
   have := coe_normUnit (R := R) (p := X)
@@ -289,6 +289,10 @@ protected theorem map_eq_zero (f : R →+* S) : p.map f = 0 ↔ p = 0 :=
 
 theorem map_ne_zero {f : R →+* S} (hp : p ≠ 0) : p.map f ≠ 0 :=
   mt (Polynomial.map_eq_zero f).1 hp
+
+macro_rules
+  | `(tactic| nonzero_core) => `(tactic|
+    ((with_reducible_and_instances apply Polynomial.map_ne_zero); nonzero_core))
 
 @[simp]
 theorem degree_map (p : R[X]) (f : R →+* S) : (p.map f).degree = p.degree :=
@@ -537,41 +541,52 @@ theorem mem_roots_map [CommRing k] [IsDomain k] {f : R →+* k} {x : k} (hp : p 
   rw [mem_roots (map_ne_zero hp), IsRoot, Polynomial.eval_map]
 
 theorem rootSet_monomial [CommRing S] [IsDomain S] [Algebra R S] {n : ℕ} (hn : n ≠ 0) {a : R}
-    (ha : a ≠ 0) : (monomial n a).rootSet S = {0} := by
-  classical
-  rw [rootSet, aroots_monomial ha,
-    Multiset.toFinset_nsmul _ _ hn, Multiset.toFinset_singleton, Finset.coe_singleton]
+    (ha : a ≠ 0) :
+    haveI : monomial n a ≠ 0 := (monomial_eq_zero_iff a n).not.2 ha
+    (monomial n a).rootSet S = {0} := by
+  ext x
+  simp [mem_rootSet, ha, hn]
 
 theorem rootSet_C_mul_X_pow [CommRing S] [IsDomain S] [Algebra R S] {n : ℕ} (hn : n ≠ 0) {a : R}
-    (ha : a ≠ 0) : rootSet (C a * X ^ n) S = {0} := by
-  rw [C_mul_X_pow_eq_monomial, rootSet_monomial hn ha]
+    (ha : a ≠ 0) :
+    haveI : C a * X ^ n ≠ 0 := mul_ne_zero (C_ne_zero.2 ha) (pow_ne_zero n X_ne_zero)
+    rootSet (C a * X ^ n) S = {0} := by
+  ext x
+  simp [mem_rootSet, ha, hn]
 
 theorem rootSet_X_pow [CommRing S] [IsDomain S] [Algebra R S] {n : ℕ} (hn : n ≠ 0) :
     (X ^ n : R[X]).rootSet S = {0} := by
-  rw [← one_mul (X ^ n : R[X]), ← C_1, rootSet_C_mul_X_pow hn]
-  exact one_ne_zero
+  ext x
+  simp [mem_rootSet, hn]
 
 theorem rootSet_prod [CommRing S] [IsDomain S] [Algebra R S] {ι : Type*} (f : ι → R[X])
-    (s : Finset ι) (h : s.prod f ≠ 0) : (s.prod f).rootSet S = ⋃ i ∈ s, (f i).rootSet S := by
-  classical
-  simp only [rootSet, aroots, ← Finset.mem_coe]
-  rw [Polynomial.map_prod, roots_prod, Finset.bind_toFinset, s.val_toFinset, Finset.coe_biUnion]
-  rwa [← Polynomial.map_prod, Ne, Polynomial.map_eq_zero]
+    (s : Finset ι) (h : s.prod f ≠ 0) :
+    (s.prod f).rootSet S =
+      ⋃ (i) (hi : i ∈ s), (f i).rootSet S (map_ne_zero (Finset.prod_ne_zero_iff.mp h i hi)) := by
+  ext x
+  simp only [mem_rootSet, Set.mem_iUnion, map_prod, Finset.prod_eq_zero_iff, exists_prop]
 
-theorem roots_C_mul_X_sub_C (b : R) (ha : a ≠ 0) : (C a * X - C b).roots = {a⁻¹ * b} := by
+theorem roots_C_mul_X_sub_C (b : R) (ha : a ≠ 0) {h : C a * X - C b ≠ 0} :
+    (C a * X - C b).roots h = {a⁻¹ * b} := by
   simp [roots_C_mul_X_sub_C_of_IsUnit b ⟨a, a⁻¹, mul_inv_cancel₀ ha, inv_mul_cancel₀ ha⟩]
 
-theorem roots_C_mul_X_add_C (b : R) (ha : a ≠ 0) : (C a * X + C b).roots = {-(a⁻¹ * b)} := by
+theorem roots_C_mul_X_add_C (b : R) (ha : a ≠ 0) {h : C a * X + C b ≠ 0} :
+    (C a * X + C b).roots h = {-(a⁻¹ * b)} := by
   simp [roots_C_mul_X_add_C_of_IsUnit b ⟨a, a⁻¹, mul_inv_cancel₀ ha, inv_mul_cancel₀ ha⟩]
 
-theorem roots_degree_eq_one (h : degree p = 1) : p.roots = {-((p.coeff 1)⁻¹ * p.coeff 0)} := by
-  rw [eq_X_add_C_of_degree_le_one (show degree p ≤ 1 by rw [h])]
-  have : p.coeff 1 ≠ 0 := coeff_ne_zero_of_eq_degree h
-  simp [roots_C_mul_X_add_C _ this]
+theorem roots_degree_eq_one (h : degree p = 1) :
+    haveI : p ≠ 0 := ne_zero_of_coeff_ne_zero (coeff_ne_zero_of_eq_degree h)
+    p.roots = {-((p.coeff 1)⁻¹ * p.coeff 0)} := by
+  have hc : p.coeff 1 ≠ 0 := coeff_ne_zero_of_eq_degree h
+  obtain ⟨a, b, e⟩ : ∃ a b, p = C a * X + C b :=
+    ⟨_, _, eq_X_add_C_of_degree_le_one (show degree p ≤ 1 by rw [h])⟩
+  subst e
+  have ha : a ≠ 0 := by simpa using hc
+  simp [roots_C_mul_X_add_C _ ha]
 
 theorem exists_root_of_degree_eq_one (h : degree p = 1) : ∃ x, IsRoot p x :=
   ⟨-((p.coeff 1)⁻¹ * p.coeff 0), by
-    rw [← mem_roots (by simp [← zero_le_degree_iff, h])]
+    rw [← mem_roots (ne_zero_of_coeff_ne_zero (coeff_ne_zero_of_eq_degree h))]
     simp [roots_degree_eq_one h]⟩
 
 theorem coeff_inv_units (u : R[X]ˣ) (n : ℕ) : ((↑u : R[X]).coeff n)⁻¹ = (↑u⁻¹ : R[X]).coeff n := by

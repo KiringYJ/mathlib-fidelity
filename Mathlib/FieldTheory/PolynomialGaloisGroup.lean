@@ -59,13 +59,21 @@ deriving Group, Fintype, EquivLike, AlgEquivClass, MulSemiringAction _ p.Splitti
 
 namespace Gal
 
+set_option backward.isDefEq.respectTransparency.types false in
 @[ext]
-theorem ext {σ τ : p.Gal} (h : ∀ x ∈ p.rootSet p.SplittingField, σ x = τ x) : σ = τ := by
+theorem ext {σ τ : p.Gal} (h : ∀ (hp : p ≠ 0), ∀ x ∈ p.rootSet p.SplittingField, σ x = τ x) :
+    σ = τ := by
+  rcases eq_or_ne p 0 with rfl | hp
+  · refine AlgEquiv.ext fun x => ?_
+    obtain ⟨y, rfl⟩ := Algebra.mem_bot.mp ((SetLike.ext_iff.mp
+      ((IsSplittingField.splits_iff _ (0 : F[X])).mp (by simp)) x).mp Algebra.mem_top)
+    exact (AlgEquiv.commutes σ y).trans (AlgEquiv.commutes τ y).symm
   refine
     AlgEquiv.ext fun x =>
       (AlgHom.mem_equalizer σ.toAlgHom τ.toAlgHom x).mp
         ((SetLike.ext_iff.mp ?_ x).mpr Algebra.mem_top)
-  rwa [eq_top_iff, ← SplittingField.adjoin_rootSet, Algebra.adjoin_le_iff]
+  rw [eq_top_iff, ← SplittingField.adjoin_rootSet p hp, Algebra.adjoin_le_iff]
+  exact h hp
 
 set_option backward.isDefEq.respectTransparency.types false in
 /-- If `p` splits in `F` then the `p.gal` is trivial. -/
@@ -125,18 +133,19 @@ section RootsAction
 
 /-- The function taking `rootSet p p.SplittingField` to `rootSet p E`. This is actually a bijection,
 see `Polynomial.Gal.mapRoots_bijective`. -/
-def mapRoots [Fact ((p.map (algebraMap F E)).Splits)] : rootSet p p.SplittingField → rootSet p E :=
+def mapRoots [Fact ((p.map (algebraMap F E)).Splits)] [Fact (p ≠ 0)] :
+    rootSet p p.SplittingField → rootSet p E :=
   Set.MapsTo.restrict (IsScalarTower.toAlgHom F p.SplittingField E) _ _ <| rootSet_mapsTo _
 
-theorem mapRoots_bijective [h : Fact ((p.map (algebraMap F E)).Splits)] :
+theorem mapRoots_bijective [h : Fact ((p.map (algebraMap F E)).Splits)] [Fact (p ≠ 0)] :
     Function.Bijective (mapRoots p E) := by
   constructor
   · exact fun _ _ h => Subtype.ext (RingHom.injective _ (Subtype.ext_iff.mp h))
   · intro y
     -- this is just an equality of two different ways to write the roots of `p` as an `E`-polynomial
-    have key := (IsSplittingField.splits p.SplittingField p).roots_map
+    have key := (IsSplittingField.splits p.SplittingField p).roots_map (map_ne_zero Fact.out)
       (IsScalarTower.toAlgHom F p.SplittingField E : p.SplittingField →+* E)
-    rw [map_map, AlgHom.comp_algebraMap] at key
+    simp only [map_map, AlgHom.comp_algebraMap] at key
     have hy := Subtype.mem y
     simp only [rootSet, Finset.mem_coe, Multiset.mem_toFinset, key, Multiset.mem_map] at hy
     rcases hy with ⟨x, hx1, hx2⟩
@@ -145,44 +154,49 @@ theorem mapRoots_bijective [h : Fact ((p.map (algebraMap F E)).Splits)] :
 /-- A bijection between `rootSet p p.SplittingField` and `rootSet p E`. This is an auxilliary
 definition used to define the Galois-equivariant `Polynomial.Gal.rootsEquivRoots`, but we keep
 this definition public to help prove facts about `galAction`. -/
-def rootsEquivRootsAux [Fact ((p.map (algebraMap F E)).Splits)] :
+def rootsEquivRootsAux [Fact ((p.map (algebraMap F E)).Splits)] [Fact (p ≠ 0)] :
     rootSet p p.SplittingField ≃ rootSet p E :=
   Equiv.ofBijective (mapRoots p E) (mapRoots_bijective p E)
 
 /-- A bijection between `rootSet p E` and `rootSet p E'` when `p` splits in both `E` and `E'`.
 This bijection is Galois-equivariant, see `smul_rootsEquivRoots`. -/
 noncomputable def rootsEquivRoots [Fact (map (algebraMap F E) p).Splits]
-    [Fact (map (algebraMap F E') p).Splits] : p.rootSet E ≃ p.rootSet E' :=
+    [Fact (map (algebraMap F E') p).Splits] [Fact (p ≠ 0)] : p.rootSet E ≃ p.rootSet E' :=
   (rootsEquivRootsAux p E).symm.trans (rootsEquivRootsAux p E')
 
-instance galActionAux : MulAction p.Gal (rootSet p p.SplittingField) where
+instance galActionAux [Fact (p ≠ 0)] : MulAction p.Gal (rootSet p p.SplittingField) where
   smul ϕ := Set.MapsTo.restrict ϕ _ _ <| rootSet_mapsTo ϕ.toAlgHom
   one_smul _ := by ext; rfl
   mul_smul _ _ _ := by ext; rfl
 
-instance smul [Fact ((p.map (algebraMap F E)).Splits)] : SMul p.Gal (rootSet p E) where
+instance smul [Fact ((p.map (algebraMap F E)).Splits)] [Fact (p ≠ 0)] :
+    SMul p.Gal (rootSet p E) where
   smul ϕ x := rootsEquivRootsAux p E (ϕ • (rootsEquivRootsAux p E).symm x)
 
-theorem smul_def [Fact ((p.map (algebraMap F E)).Splits)] (ϕ : p.Gal) (x : rootSet p E) :
+theorem smul_def [Fact ((p.map (algebraMap F E)).Splits)] [Fact (p ≠ 0)] (ϕ : p.Gal)
+    (x : rootSet p E) :
     ϕ • x = rootsEquivRootsAux p E (ϕ • (rootsEquivRootsAux p E).symm x) :=
   rfl
 
 theorem smul_rootsEquivRoots [Fact (map (algebraMap F E) p).Splits]
-    [Fact (map (algebraMap F E') p).Splits] (g : p.Gal) (x : p.rootSet E) :
+    [Fact (map (algebraMap F E') p).Splits] [Fact (p ≠ 0)] (g : p.Gal) (x : p.rootSet E) :
     g • rootsEquivRoots p E E' x = rootsEquivRoots p E E' (g • x) := by
   simp [rootsEquivRoots, smul_def]
 
 /-- The action of `gal p` on the roots of `p` in `E`. -/
-instance galAction [Fact ((p.map (algebraMap F E)).Splits)] : MulAction p.Gal (rootSet p E) where
+instance galAction [Fact ((p.map (algebraMap F E)).Splits)] [Fact (p ≠ 0)] :
+    MulAction p.Gal (rootSet p E) where
   one_smul _ := by simp only [smul_def, Equiv.apply_symm_apply, one_smul]
   mul_smul _ _ _ := by
     simp only [smul_def, Equiv.symm_apply_apply, mul_smul]
 
 lemma galAction_isPretransitive [Fact ((p.map (algebraMap F E)).Splits)] (hp : Irreducible p) :
+    haveI := Fact.mk hp.ne_zero
     MulAction.IsPretransitive p.Gal (p.rootSet E) := by
+  have := Fact.mk hp.ne_zero
   refine ⟨fun x y ↦ ?_⟩
-  have hx := minpoly.eq_of_irreducible hp (mem_rootSet.mp ((rootsEquivRootsAux p E).symm x).2).2
-  have hy := minpoly.eq_of_irreducible hp (mem_rootSet.mp ((rootsEquivRootsAux p E).symm y).2).2
+  have hx := minpoly.eq_of_irreducible hp (mem_rootSet.mp ((rootsEquivRootsAux p E).symm x).2)
+  have hy := minpoly.eq_of_irreducible hp (mem_rootSet.mp ((rootsEquivRootsAux p E).symm y).2)
   obtain ⟨g, hg⟩ := (Normal.minpoly_eq_iff_mem_orbit p.SplittingField).mp (hy.symm.trans hx)
   exact ⟨g, (rootsEquivRootsAux p E).eq_symm_apply.mp (Subtype.ext hg)⟩
 
@@ -190,7 +204,8 @@ variable {p E}
 
 /-- `Polynomial.Gal.restrict p E` is compatible with `Polynomial.Gal.galAction p E`. -/
 @[simp]
-theorem restrict_smul [Fact ((p.map (algebraMap F E)).Splits)] (ϕ : Gal(E/F)) (x : rootSet p E) :
+theorem restrict_smul [Fact ((p.map (algebraMap F E)).Splits)] [Fact (p ≠ 0)] (ϕ : Gal(E/F))
+    (x : rootSet p E) :
     ↑(restrict p E ϕ • x) = ϕ x := by
   let ψ := AlgEquiv.ofInjectiveField (IsScalarTower.toAlgHom F p.SplittingField E)
   change ↑(ψ (ψ.symm _)) = ϕ x
@@ -201,19 +216,21 @@ theorem restrict_smul [Fact ((p.map (algebraMap F E)).Splits)] (ϕ : Gal(E/F)) (
 variable (p E)
 
 /-- `Polynomial.Gal.galAction` as a permutation representation -/
-def galActionHom [Fact ((p.map (algebraMap F E)).Splits)] : p.Gal →* Equiv.Perm (rootSet p E) :=
+def galActionHom [Fact ((p.map (algebraMap F E)).Splits)] [Fact (p ≠ 0)] :
+    p.Gal →* Equiv.Perm (rootSet p E) :=
   MulAction.toPermHom _ _
 
-theorem galActionHom_restrict [Fact ((p.map (algebraMap F E)).Splits)] (ϕ : Gal(E/F))
+theorem galActionHom_restrict [Fact ((p.map (algebraMap F E)).Splits)] [Fact (p ≠ 0)]
+    (ϕ : Gal(E/F))
     (x : rootSet p E) : ↑(galActionHom p E (restrict p E ϕ) x) = ϕ x :=
   restrict_smul ϕ x
 
 /-- `gal p` embeds as a subgroup of permutations of the roots of `p` in `E`. -/
-theorem galActionHom_injective [Fact ((p.map (algebraMap F E)).Splits)] :
+theorem galActionHom_injective [Fact ((p.map (algebraMap F E)).Splits)] [Fact (p ≠ 0)] :
     Function.Injective (galActionHom p E) := by
   rw [injective_iff_map_eq_one]
   intro ϕ hϕ
-  ext (x hx)
+  ext - x hx
   have key := Equiv.Perm.ext_iff.mp hϕ (rootsEquivRootsAux p E ⟨x, hx⟩)
   change
     rootsEquivRootsAux p E (ϕ • (rootsEquivRootsAux p E).symm (rootsEquivRootsAux p E ⟨x, hx⟩)) =
@@ -265,7 +282,9 @@ theorem restrictProd_injective : Function.Injective (restrictProd p q) := by
   classical
   simp only [restrictProd, restrictDvd_def] at hfg
   simp only [dite_eq_right hpq, MonoidHom.prod_apply, Prod.mk_inj] at hfg
-  ext (x hx)
+  ext - x hx
+  have : Fact (p ≠ 0) := ⟨left_ne_zero_of_mul hpq⟩
+  have : Fact (q ≠ 0) := ⟨right_ne_zero_of_mul hpq⟩
   rw [rootSet_def, aroots_mul hpq] at hx
   rcases Multiset.mem_add.mp (Multiset.mem_toFinset.mp hx) with h | h
   · have : Fact ((p.map (algebraMap F (p * q).SplittingField)).Splits) :=

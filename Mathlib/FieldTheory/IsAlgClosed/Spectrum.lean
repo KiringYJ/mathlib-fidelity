@@ -53,15 +53,15 @@ variable [CommRing R] [Ring A] [Algebra R A]
 local notation "σ" => spectrum R
 local notation "↑ₐ" => algebraMap R A
 
-theorem exists_mem_of_not_isUnit_aeval_prod [IsDomain R] {p : R[X]} {a : A}
-    (h : ¬IsUnit (aeval a (Multiset.map (fun x : R => X - C x) p.roots).prod)) :
+theorem exists_mem_of_not_isUnit_aeval_prod [IsDomain R] {p : R[X]} {hp : p ≠ 0} {a : A}
+    (h : ¬IsUnit (aeval a (Multiset.map (fun x : R => X - C x) (p.roots hp)).prod)) :
     ∃ k : R, k ∈ σ a ∧ eval k p = 0 := by
   rw [← Multiset.prod_toList, map_list_prod] at h
   replace h := mt List.prod_isUnit h
   simp only [not_forall, exists_prop, aeval_C, Multiset.mem_toList, List.mem_map, aeval_X,
     exists_exists_and_eq_and, Multiset.mem_map, map_sub] at h
   rcases h with ⟨r, r_mem, r_nu⟩
-  exact ⟨r, by rwa [mem_iff, ← IsUnit.sub_iff], (mem_roots'.1 r_mem).2⟩
+  exact ⟨r, by rwa [mem_iff, ← IsUnit.sub_iff], (mem_roots hp).1 r_mem⟩
 
 end ScalarRing
 
@@ -98,9 +98,9 @@ theorem map_polynomial_aeval_of_degree_pos [IsAlgClosed 𝕜] (a : A) (p : 𝕜[
   -- handle the easy direction via `spectrum.subset_polynomial_aeval`
   refine Set.eq_of_subset_of_subset (fun k hk => ?_) (subset_polynomial_aeval a p)
   -- write `C k - p` product of linear factors and a constant; show `C k - p ≠ 0`.
-  have hprod := (IsAlgClosed.splits (C k - p)).eq_prod_roots
   have h_ne : C k - p ≠ 0 := ne_zero_of_degree_gt <| by
     rwa [degree_sub_eq_right_of_degree_lt (lt_of_le_of_lt degree_C_le hdeg)]
+  have hprod := (IsAlgClosed.splits (C k - p)).eq_prod_roots h_ne
   have lead_ne := leadingCoeff_ne_zero.mpr h_ne
   have lead_unit := (Units.map ↑ₐ.toMonoidHom (Units.mk0 _ lead_ne)).isUnit
   /- leading coefficient is a unit so product of linear factors is not a unit;

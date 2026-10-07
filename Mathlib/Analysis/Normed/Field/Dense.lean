@@ -70,15 +70,18 @@ theorem IsAlgClosed.of_denseRange {K L : Type*} [Field K] [NontriviallyNormedFie
     by_cases hS : S.Nonempty <;> simp only [hS, ↓reduceDIte, δ]
     · apply Finset.min'_le (S.image fun x => ‖a - x‖) (‖a - a'‖)
       apply Finset.mem_image_of_mem
-      simp only [minpoly.eq_of_irreducible_of_monic firr fa0 fmon, Finset.mem_filter,
-        Set.mem_toFinset, S]
-      rw [← (isConjRoot_iff_mem_minpoly_rootSet ⟨f, fmon, fa0⟩)]
-      exact ⟨conj, ne.symm⟩
+      simp only [Finset.mem_filter, Set.mem_toFinset, S]
+      refine ⟨?_, ne.symm⟩
+      have h := conj.aeval_eq_zero
+      rw [← minpoly.eq_of_irreducible_of_monic firr fa0 fmon] at h
+      exact mem_rootSet.mpr h
     · simp only [ne_eq, Finset.not_nonempty_iff_eq_empty, Finset.filter_eq_empty_iff,
       Set.mem_toFinset, not_not, S] at hS
-      rw [isConjRoot_iff_mem_minpoly_rootSet ⟨f, fmon, fa0⟩,
-          ← minpoly.eq_of_irreducible_of_monic firr fa0 fmon] at conj
-      exact (ne (hS conj).symm).elim
+      have conj' : a' ∈ f.rootSet F := by
+        have h := conj.aeval_eq_zero
+        rw [← minpoly.eq_of_irreducible_of_monic firr fa0 fmon] at h
+        exact mem_rootSet.mpr h
+      exact (ne (hS conj').symm).elim
   have δpos : δ > 0 := by
     by_cases hS : S.Nonempty <;> simp only [hS, ↓reduceDIte, δ]
     · simp only [gt_iff_lt, Finset.lt_min'_iff, Finset.mem_image, forall_exists_index, and_imp,
@@ -103,13 +106,12 @@ theorem IsAlgClosed.of_denseRange {K L : Type*} [Field K] [NontriviallyNormedFie
     · simp [fnatdeg0]
     · positivity
   have bbot : b ∈ (⊥ : IntermediateField L F) := by
-    rw [Polynomial.aroots_def, Splits.roots_map ((IsAlgClosed.splits g).map _),
-        Multiset.mem_map] at hb
+    rw [Polynomial.aroots_def, Splits.roots_map ((IsAlgClosed.splits g).map _)
+        (gmon.map _).ne_zero, Multiset.mem_map] at hb
     obtain ⟨bCp, _, hbCp⟩ := hb
     rw [IntermediateField.mem_bot]
     exact ⟨bCp, hbCp⟩
-  simp only [Polynomial.mem_roots', ne_eq, Polynomial.map_eq_zero, Polynomial.IsRoot.def,
-    Polynomial.eval_map_algebraMap] at hb
+  rw [Polynomial.mem_aroots] at hb
   -- By Krasner's lemma, `a ∈ L(b) = L`. Thus `f` has a root in `L`.
   have abot : a ∈ (⊥ : IntermediateField L F) := by
     have masp : ((minpoly L a).map (algebraMap L F)).Splits := by
@@ -117,7 +119,7 @@ theorem IsAlgClosed.of_denseRange {K L : Type*} [Field K] [NontriviallyNormedFie
         (Polynomial.SplittingField.splits f)
     simpa [IntermediateField.adjoin_simple_eq_bot_iff.mpr bbot] using
       IsKrasner.krasner (minpoly.irreducible ⟨f, fmon, fa0⟩).separable
-        masp ⟨(g.map _), gmon.map _, hb.2⟩ fun a' h1 h2 ↦ lt_of_lt_of_le hab (norm_sub_le a' h1 h2)
+        masp ⟨(g.map _), gmon.map _, hb⟩ fun a' h1 h2 ↦ lt_of_lt_of_le hab (norm_sub_le a' h1 h2)
   obtain ⟨aCp, haCp⟩ := IntermediateField.mem_bot.mp abot
   use aCp
   apply_fun algebraMap L F

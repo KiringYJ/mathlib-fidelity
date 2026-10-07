@@ -472,12 +472,13 @@ namespace IsGalois
 theorem is_separable_splitting_field [FiniteDimensional F E] [IsGalois F E] :
     ∃ p : F[X], p.Separable ∧ p.IsSplittingField F E := by
   obtain ⟨α, h1⟩ := Field.exists_primitive_element F E
-  use minpoly F α, separable F α, IsGalois.splits F α
+  refine ⟨minpoly F α, separable F α, IsGalois.splits F α, fun _ ↦ ?_,
+    fun h ↦ absurd h (minpoly.ne_zero (integral F α))⟩
   rw [eq_top_iff, ← IntermediateField.top_toSubalgebra, ← h1]
   rw [IntermediateField.adjoin_simple_toSubalgebra_of_isAlgebraic (integral F α).isAlgebraic]
   apply Algebra.adjoin_mono
   rw [Set.singleton_subset_iff, Polynomial.mem_rootSet]
-  exact ⟨minpoly.ne_zero (integral F α), minpoly.aeval _ _⟩
+  exact minpoly.aeval _ _
 
 theorem of_fixedField_eq_bot [FiniteDimensional F E]
     (h : IntermediateField.fixedField (⊤ : Subgroup Gal(E/F)) = ⊥) : IsGalois F E := by
@@ -506,9 +507,7 @@ theorem of_separable_splitting_field_aux [hFE : FiniteDimensional F E] [sp : p.I
     {x : E} (hx : x ∈ p.aroots E) :
     Nat.card (K⟮x⟯.restrictScalars F →ₐ[F] E) = Nat.card (K →ₐ[F] E) * finrank K K⟮x⟯ := by
   have h : IsIntegral K x := (isIntegral_of_noetherian (IsNoetherian.iff_fg.2 hFE) x).tower_top
-  have h1 : p ≠ 0 := fun hp => by
-    rw [hp, Polynomial.aroots_zero] at hx
-    exact Multiset.notMem_zero x hx
+  have h1 : p ≠ 0 := hp.ne_zero
   have h2 : minpoly K x ∣ p.map (algebraMap F K) := by
     apply minpoly.dvd
     rw [Polynomial.aeval_def, Polynomial.eval₂_map, ← Polynomial.eval_map, ←
@@ -559,12 +558,16 @@ theorem sup_right (K L : IntermediateField F E) [IsGalois F K] [FiniteDimensiona
   obtain ⟨T, hT₁, hT₂⟩ := IsGalois.is_separable_splitting_field F K
   let T' := T.map (algebraMap F L)
   suffices T'.IsSplittingField L E from IsGalois.of_separable_splitting_field (p := T') hT₁.map
-  rw [isSplittingField_iff_intermediateField] at hT₂ ⊢
+  rw [isSplittingField_iff_intermediateField hT₁.ne_zero] at hT₂
+  rw [isSplittingField_iff_intermediateField (Polynomial.map_ne_zero hT₁.ne_zero)]
   constructor
   · rw [Polynomial.map_map, ← IsScalarTower.algebraMap_eq]
     exact Polynomial.Splits.of_algHom hT₂.1 (IsScalarTower.toAlgHom _ _ _)
-  · have h' : T'.rootSet E = T.rootSet E := by simp [T']
-    rw [← lift_inj, lift_adjoin, ← coe_val, hT₂.1.image_rootSet] at hT₂
+  · have h' : T'.rootSet E = T.rootSet E := by
+      ext x
+      simp [T', Polynomial.mem_rootSet]
+    rw [← lift_inj, lift_adjoin, ← coe_val,
+      hT₂.1.image_rootSet (Polynomial.map_ne_zero hT₁.ne_zero)] at hT₂
     rw [← restrictScalars_eq_top_iff (K := F), restrictScalars_adjoin, adjoin_union, adjoin_self,
       h', hT₂.2, lift_top, sup_comm, h]
 
