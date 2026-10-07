@@ -75,30 +75,36 @@ equality `μ[(fun a => f (X a, Y a)) | mβ.comap X] =ᵐ[μ] fun a => ∫ y, f (
 integrable functions `f`. The joint map `fun a => (X a, Y a)` must be almost everywhere
 measurable; this proof is normally discharged by `fun_prop`. -/
 noncomputable def condDistrib {_ : SigmaAlgebra α} [SigmaAlgebra β] (Y : α → Ω)
-    (X : α → β) (μ : Measure α) [IsFiniteMeasure μ]
-    (hXY : AEMeasurable (fun a => (X a, Y a)) μ := by fun_prop) :
+    (X : α → β) (μ : Measure α) (hXY : AEMeasurable (fun a => (X a, Y a)) μ := by fun_prop)
+    [(μ.map (fun a => (X a, Y a)) hXY).HasUniqueCondKernel] :
     Kernel.AEClass (ae (μ.map X hXY.fst)) Ω :=
   ((μ.map (fun a => (X a, Y a)) hXY).condKernel).copy
     (congrArg ae (Measure.fst_map_prodMk₀ hXY.fst hXY.snd)).symm
 
 variable {mβ : SigmaAlgebra β} {s : Set Ω} {t : Set β} {f : β × Ω → F} {η : Kernel β Ω}
 
+omit [StandardBorelSpace Ω] [Nonempty Ω] [IsFiniteMeasure μ] in
 /-- The representatives of `condDistrib Y X μ` are those of the conditional kernel of the joint law
 of `(X, Y)`. -/
-lemma mem_condDistrib_iff_mem_condKernel (hXY : AEMeasurable (fun a => (X a, Y a)) μ) :
+lemma mem_condDistrib_iff_mem_condKernel (hXY : AEMeasurable (fun a => (X a, Y a)) μ)
+    [(μ.map (fun a => (X a, Y a)) hXY).HasUniqueCondKernel] :
     η ∈ condDistrib Y X μ hXY ↔ η ∈ (μ.map (fun a => (X a, Y a)) hXY).condKernel :=
   Kernel.AEClass.mem_copy _
 
+omit [StandardBorelSpace Ω] [Nonempty Ω] [IsFiniteMeasure μ] in
 /-- `condDistrib Y X μ` is represented by a Markov kernel. -/
 lemma exists_isMarkovKernel_mem_condDistrib
-    (hXY : AEMeasurable (fun a => (X a, Y a)) μ := by fun_prop) :
+    (hXY : AEMeasurable (fun a => (X a, Y a)) μ := by fun_prop)
+    [(μ.map (fun a => (X a, Y a)) hXY).HasUniqueCondKernel] :
     ∃ η : Kernel β Ω, IsMarkovKernel η ∧ η ∈ condDistrib Y X μ hXY :=
   let ⟨η, hη, _, hη_mem⟩ := (μ.map (fun a => (X a, Y a)) hXY).exists_isMarkovKernel_mem_condKernel
   ⟨η, hη, (mem_condDistrib_iff_mem_condKernel hXY).2 hη_mem⟩
 
+omit [StandardBorelSpace Ω] [Nonempty Ω] [IsFiniteMeasure μ] in
 /-- An s-finite representative of `condDistrib Y X μ` disintegrates the joint law of `(X, Y)`. -/
 lemma isCondKernel_of_mem_condDistrib [IsSFiniteKernel η]
-    {hXY : AEMeasurable (fun a => (X a, Y a)) μ} (hη : η ∈ condDistrib Y X μ hXY) :
+    {hXY : AEMeasurable (fun a => (X a, Y a)) μ}
+    [(μ.map (fun a => (X a, Y a)) hXY).HasUniqueCondKernel] (hη : η ∈ condDistrib Y X μ hXY) :
     (μ.map (fun a => (X a, Y a)) hXY).IsCondKernel η :=
   Measure.isCondKernel_of_mem_condKernel ((mem_condDistrib_iff_mem_condKernel hXY).1 hη)
 

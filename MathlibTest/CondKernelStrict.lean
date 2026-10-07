@@ -11,7 +11,9 @@ that finite measures and finite kernels are disintegrated by Markov kernels, tha
 represents the conditional kernel exactly when it disintegrates, and that a Markov representative
 exists; that every representative is determined at atoms, while two representatives may differ on a
 null set and the classes reject a kernel that is wrong on a set of positive measure; and that the
-conditional kernels still require a finite measure or a finite kernel.
+conditional kernel of a measure requires a unique conditional kernel
+(`MeasureTheory.Measure.HasUniqueCondKernel`), which finite measures have, while the conditional
+kernel of a kernel requires a finite kernel.
 -/
 
 open MeasureTheory ProbabilityTheory SigmaAlgebra
@@ -284,11 +286,13 @@ example :
     Kernel.const (Unit × ℝ) (Measure.dirac 0) ∉ Kernel.condKernel (Kernel.const Unit ρ₀₁) :=
   fun h ↦ const_dirac_zero_not_mem_condKernel (Kernel.comap_mem_condKernel_of_mem h ())
 
-/-! ### The conditional kernels require a finite measure or a finite kernel -/
+/-! ### The domains of the conditional kernels -/
+
+example (ρ : Measure (ℝ × ℝ)) [IsFiniteMeasure ρ] : ρ.HasUniqueCondKernel := inferInstance
 
 /--
 error: failed to synthesize instance of type class
-  IsFiniteMeasure Measure.count
+  Measure.count.HasUniqueCondKernel
 
 Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 -/
