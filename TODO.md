@@ -865,22 +865,43 @@ operation.
   routine evidence, an infinite measure in the domain, the zero measure, null-set modifications,
   proof independence, and rewriting.
 
-- [ ] **Identify the exact domain of `Measure.condKernel` and `condDistrib`.**
-  `Measure.condKernel` in `Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean:429` and
-  `condDistrib` in `Mathlib/Probability/Kernel/CondDistrib.lean:77` require a finite measure, which
-  is a sufficient condition; `condExpKernel` and `posterior` have the same finite-measure domain.
-  The conditional-cdf result above does not transfer automatically, because a Markov
-  disintegration along `ρ.fst` and the ray identity diverge outside σ-finite marginals, as two
-  paper computations show.  On `Unit × ℝ`, `∞ • dirac ((), 0)` has the unique Markov
-  disintegration `dirac 0`, although every cdf that is positive exactly on `[0, ∞)` satisfies the
-  ray identity.  Conversely, on `ℝ × ℝ` the sum over `a : ℝ` of
-  `(dirac a).prod (gaussianReal 0 1)`, plus the image of Lebesgue measure on `[0, 1]` under
-  `(·, 0)`, has the unique conditional cdf of `gaussianReal 0 1` but no disintegration along its
-  first marginal, since it gives `univ ×ˢ {0}` mass one.  First fix the specification, including
-  whether a σ-finite measure equivalent to the marginal may serve as the mixing measure (Chang and
-  Pollard, Definition 1), then its exact domain.  The composition-product in `IsCondKernel` now has
-  its exact domain (item below), so a disintegration no longer fails merely because an input is not
-  s-finite, and a conditional kernel need not be s-finite.
+- [x] **Identify the exact domain of `Measure.condKernel` and `condDistrib`.**
+  The specification is the Markov disintegration along the first marginal: a Markov kernel `η` with
+  `ρ.fst ⊗ₘ η = ρ`, taken modulo `ρ.fst`-null sets.  A disintegration with a σ-finite mixing measure
+  `ν` other than the marginal (Chang and Pollard, Definition 1) has total mass `dρ.fst/dν`, so it
+  depends on `ν`; it would be a separate operation with `ν` explicit.  The exact domain is the class
+  `MeasureTheory.Measure.HasUniqueCondKernel ρ`: some Markov kernel disintegrates `ρ`, and any two
+  agree `ρ.fst`-almost everywhere.  `Measure.condKernel`, `condDistrib` (for the joint law of
+  `(X, Y)`), and `posterior` (for the joint law with swapped coordinates, given `μ.HasCompProd κ`)
+  take it, and a finite measure, for a nonempty standard Borel space, has it
+  (`Measure.hasUniqueCondKernel_of_isFiniteMeasure`).  The representative lemmas that hold on the
+  class (`Measure.isCondKernel_of_mem_condKernel`, `Measure.mem_condKernel_iff_of_isMarkovKernel`,
+  and their `condDistrib` versions) take it, and the others keep finite measures, which remain
+  sufficient; `condExpKernel` keeps its finite-measure domain.  Both are recorded in the next entry.
+  Tests are in `MathlibTest/CondKernelStrict.lean`.
+
+- [ ] **Extend the conditional-kernel domain beyond finite measures.**
+  `MeasureTheory.Measure.HasUniqueCondKernel` has an instance only for finite measures.  A measure
+  with a σ-finite first marginal has a unique conditional kernel: weighting `ρ` by `w ∘ Prod.fst`
+  for a positive `w` with finite integral reduces existence to the finite case, and uniqueness
+  follows from `ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite`.  Within σ-finite measures the
+  condition is necessary: if `κ` disintegrates `ρ` and `f > 0` has a finite integral, then
+  `a ↦ ∫⁻ ω, f (a, ω) ∂(κ a)` is positive with a finite integral against the marginal.  Prove the
+  instance and the analogous ones for `condDistrib` (`SigmaFinite (μ.map X)`) and `posterior`
+  (`SigmaFinite (κ ∘ₘ μ)`, which admits improper priors), and weaken the finite-measure hypotheses
+  of the representative lemmas in `Mathlib/Probability/Kernel/Disintegration/Unique.lean`,
+  `Mathlib/Probability/Kernel/CondDistrib.lean`, and `Mathlib/Probability/Kernel/Posterior.lean`.
+  Give `condExpKernel` the class of its diagonal law along the sub-σ-algebra, which needs an
+  interface for that law; instance search does not find finiteness of a map into the σ-algebra
+  `m.prod mΩ` (`ProbabilityTheory.hasUniqueCondKernel_map_diag` supplies it by hand).  The marginal
+  condition is not necessary in general: `∞ • dirac ((), 0)` on `Unit × ℝ` has the unique Markov
+  disintegration `dirac 0`; `∞ • (dirac () ⊗ (½δ₀ + ½δ₁))` has disintegrations that differ on a set
+  of positive marginal measure; and planar Lebesgue measure has none, since it gives `[0, 1]²` mass
+  `1` while its marginal takes only the values `0` and `∞`.  Conversely, on `ℝ × ℝ` the sum over
+  `a : ℝ` of `(dirac a).prod (gaussianReal 0 1)`, plus the image of Lebesgue measure on `[0, 1]`
+  under `(·, 0)`, has a unique conditional cdf but no disintegration, since it gives `univ ×ˢ {0}`
+  mass one, so the conditional-cdf and conditional-kernel domains are incomparable.  Formalize these
+  as counterexamples.
 
 - [x] **Give parametric distributions their parameter domains.**
   `gammaMeasure a r ha hr`, `expMeasure r hr`, `paretoMeasure t r ht hr`, and

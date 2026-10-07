@@ -67,7 +67,30 @@ theorem IsCondKernel.ae_eq [SigmaAlgebra.CountablyGenerated Ω] (η η' : Kernel
     ∀ᵐ x ∂ρ.fst, η x = η' x :=
   Kernel.ae_eq_of_compProd_eq ((ρ.disintegrate η).trans (ρ.disintegrate η').symm)
 
+/-- A finite measure on `α × Ω`, for a nonempty standard Borel space `Ω`, has a unique conditional
+kernel. -/
+instance hasUniqueCondKernel_of_isFiniteMeasure [StandardBorelSpace Ω] [Nonempty Ω] :
+    ρ.HasUniqueCondKernel :=
+  ⟨ρ.exists_isMarkovKernel_isCondKernel, fun η η' _ _ _ _ ↦ IsCondKernel.ae_eq η η'⟩
+
 /-! ### Representatives of the conditional kernel of a measure -/
+
+/-- An s-finite representative of `ρ.condKernel` disintegrates `ρ`. -/
+theorem isCondKernel_of_mem_condKernel {ρ : Measure (α × Ω)} [ρ.HasUniqueCondKernel]
+    {η : Kernel α Ω} [IsSFiniteKernel η] (hη : η ∈ ρ.condKernel) :
+    ρ.IsCondKernel η := by
+  obtain ⟨η₀, _, _, hη₀⟩ := ρ.exists_isMarkovKernel_mem_condKernel
+  refine ⟨inferInstance, ?_⟩
+  rw [Measure.compProd_congr (Kernel.AEClass.eventuallyEq_of_mem hη hη₀), ρ.disintegrate η₀]
+
+/-- A Markov kernel represents the conditional kernel of a measure with a unique conditional kernel
+if and only if it disintegrates the measure. -/
+theorem mem_condKernel_iff_of_isMarkovKernel {ρ : Measure (α × Ω)} [ρ.HasUniqueCondKernel]
+    {η : Kernel α Ω} [IsMarkovKernel η] :
+    η ∈ ρ.condKernel ↔ ρ.IsCondKernel η := by
+  obtain ⟨η₀, _, _, hη₀⟩ := ρ.exists_isMarkovKernel_mem_condKernel
+  refine ⟨fun hη ↦ isCondKernel_of_mem_condKernel hη, fun _ ↦ ?_⟩
+  exact Kernel.AEClass.mem_of_eventuallyEq hη₀ (HasUniqueCondKernel.ae_eq_of_isCondKernel η₀ η)
 
 variable [StandardBorelSpace Ω] [Nonempty Ω]
 
@@ -76,14 +99,6 @@ theorem IsCondKernel.mem_condKernel {η : Kernel α Ω} [IsFiniteKernel η] [ρ.
     η ∈ ρ.condKernel := by
   obtain ⟨η₀, _, _, hη₀⟩ := ρ.exists_isMarkovKernel_mem_condKernel
   exact Kernel.AEClass.mem_of_eventuallyEq hη₀ (IsCondKernel.ae_eq η₀ η)
-
-/-- An s-finite representative of `ρ.condKernel` disintegrates `ρ`. -/
-theorem isCondKernel_of_mem_condKernel {η : Kernel α Ω} [IsSFiniteKernel η]
-    (hη : η ∈ ρ.condKernel) :
-    ρ.IsCondKernel η := by
-  obtain ⟨η₀, _, _, hη₀⟩ := ρ.exists_isMarkovKernel_mem_condKernel
-  refine ⟨inferInstance, ?_⟩
-  rw [Measure.compProd_congr (Kernel.AEClass.eventuallyEq_of_mem hη hη₀), ρ.disintegrate η₀]
 
 /-- A finite kernel represents `ρ.condKernel` if and only if it disintegrates `ρ`. -/
 theorem mem_condKernel_iff {η : Kernel α Ω} [IsFiniteKernel η] :

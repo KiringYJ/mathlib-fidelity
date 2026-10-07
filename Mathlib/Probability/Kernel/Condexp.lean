@@ -79,6 +79,17 @@ end AuxLemmas
 variable {Ω F : Type*} {m : SigmaAlgebra Ω} [mΩ : SigmaAlgebra Ω]
   [StandardBorelSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
 
+/-- For a finite measure `μ` on a nonempty standard Borel space, the joint law of the identity
+and the identity, the first one viewed as a map to `Ω` with the σ-algebra `m`, has a unique
+conditional kernel. -/
+lemma hasUniqueCondKernel_map_diag [Nonempty Ω] (μ : Measure Ω) [IsFiniteMeasure μ]
+    (hm : m ≤ mΩ) :
+    (@Measure.map Ω (Ω × Ω) mΩ (@Prod.instSigmaAlgebra Ω Ω m mΩ) (fun a ↦ (id a, id a)) μ
+      (aemeasurable_diag_of_le μ hm)).HasUniqueCondKernel :=
+  haveI := Measure.isFiniteMeasure_map (mβ := @Prod.instSigmaAlgebra Ω Ω m mΩ) μ
+    (fun a ↦ (id a, id a)) (aemeasurable_diag_of_le μ hm)
+  inferInstance
+
 /-- Some class of kernels from `(Ω, m)` to `Ω` along `ae (μ.trim hm)` contains a Markov kernel `η`
 with `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`. Since two finite kernels with this property agree
 `μ.trim hm`-almost everywhere (`ProbabilityTheory.Kernel.ae_eq_of_compProd_eq`), such a class is
@@ -92,7 +103,8 @@ lemma exists_aeClass_condExpKernel (μ : Measure Ω) [IsFiniteMeasure μ] (hm : 
   · refine ⟨Kernel.AEClass.mk _ 0, 0, ⟨fun a ↦ (IsEmpty.false a).elim⟩, ?_,
       Kernel.AEClass.mem_mk _ _⟩
     simp [Measure.eq_zero_of_isEmpty μ]
-  · obtain ⟨η, hη, hη_mem⟩ := exists_isMarkovKernel_mem_condDistrib (mβ := m) (X := id) (Y := id)
+  · have := hasUniqueCondKernel_map_diag μ hm
+    obtain ⟨η, hη, hη_mem⟩ := exists_isMarkovKernel_mem_condDistrib (mβ := m) (X := id) (Y := id)
       (μ := μ) (aemeasurable_diag_of_le μ hm)
     refine ⟨Kernel.AEClass.mk _ η, η, hη, ?_, Kernel.AEClass.mem_mk _ η⟩
     rw [trim_eq_map hm]
@@ -151,8 +163,9 @@ lemma mem_condExpKernel_iff [IsFiniteKernel η] :
 conditional distribution of the identity given the identity, the second identity being viewed as a
 map from `Ω` with the σ-algebra `mΩ` to `Ω` with the σ-algebra `m`. -/
 lemma mem_condExpKernel_iff_mem_condDistrib [Nonempty Ω] [IsFiniteKernel η] :
+    haveI := hasUniqueCondKernel_map_diag μ hm
     η ∈ condExpKernel μ hm ↔
-      η ∈ @condDistrib Ω Ω Ω mΩ _ _ mΩ m id id μ _ (aemeasurable_diag_of_le μ hm) := by
+      η ∈ @condDistrib Ω Ω Ω mΩ mΩ m id id μ (aemeasurable_diag_of_le μ hm) _ := by
   rw [mem_condExpKernel_iff, mem_condDistrib_iff (@Measurable.aemeasurable Ω Ω mΩ m id μ
     (measurable_id'' hm)) aemeasurable_id, ← trim_eq_map hm]
   exact eq_comm

@@ -24,6 +24,8 @@ composition-product `κ.fst ⊗ₖ κCond` exists and equals `κ`.
 
 * `MeasureTheory.Measure.IsCondKernel ρ ρCond`: Predicate for the kernel `ρCond` to disintegrate the
   measure `ρ`.
+* `MeasureTheory.Measure.HasUniqueCondKernel ρ`: some Markov kernel disintegrates `ρ`, and any two
+  agree `ρ.fst`-almost everywhere.
 * `ProbabilityTheory.Kernel.IsCondKernel κ κCond`: Predicate for the kernel `κ Cond` to disintegrate
   the kernel `κ`.
 
@@ -65,6 +67,18 @@ class IsCondKernel : Prop where
     ρ.fst ⊗ₘ ρCond = ρ
 
 attribute [instance] IsCondKernel.hasCompProd_fst
+
+/-- A measure `ρ` on `α × Ω` has a unique conditional kernel if some Markov kernel disintegrates
+it and any two Markov kernels that disintegrate it agree `ρ.fst`-almost everywhere. These are the
+measures whose conditional kernel `MeasureTheory.Measure.condKernel`, the almost-everywhere class of
+these Markov kernels, is determined. A finite measure has a unique conditional kernel when `Ω` is a
+nonempty standard Borel space (`MeasureTheory.Measure.hasUniqueCondKernel_of_isFiniteMeasure`). -/
+class HasUniqueCondKernel : Prop where
+  /-- Some Markov kernel disintegrates `ρ`. -/
+  exists_isMarkovKernel_isCondKernel : ∃ η : Kernel α Ω, IsMarkovKernel η ∧ ρ.IsCondKernel η
+  /-- Two Markov kernels that disintegrate `ρ` agree `ρ.fst`-almost everywhere. -/
+  ae_eq_of_isCondKernel (η η' : Kernel α Ω) [IsMarkovKernel η] [IsMarkovKernel η']
+    [ρ.IsCondKernel η] [ρ.IsCondKernel η'] : ∀ᵐ a ∂ρ.fst, η a = η' a
 
 variable [ρ.IsCondKernel ρCond]
 

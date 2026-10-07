@@ -71,7 +71,7 @@ variable [StandardBorelSpace Ω] [Nonempty Ω]
 omit [StandardBorelSpace Ω] [Nonempty Ω] in
 /-- The first marginal of the joint law with swapped coordinates is the law `κ ∘ₘ μ` of the
 data. -/
-lemma fst_map_swap_compProd (κ : Kernel Ω 𝓧) (μ : Measure Ω) [IsFiniteKernel κ] :
+lemma fst_map_swap_compProd (κ : Kernel Ω 𝓧) (μ : Measure Ω) [μ.HasCompProd κ] :
     ((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).fst = κ ∘ₘ μ := by
   rw [Measure.fst_map_swap, Measure.snd_compProd]
 
@@ -83,7 +83,8 @@ the conditional kernel of the joint law with swapped coordinates
 A finite kernel represents it if and only if it has this property (`mem_posterior_iff`), and a
 Markov representative exists (`exists_isMarkovKernel_mem_posterior`). -/
 noncomputable
-def posterior (κ : Kernel Ω 𝓧) (μ : Measure Ω) [IsFiniteMeasure μ] [IsFiniteKernel κ] :
+def posterior (κ : Kernel Ω 𝓧) (μ : Measure Ω) [μ.HasCompProd κ]
+    [((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel] :
     Kernel.AEClass (ae (κ ∘ₘ μ)) Ω :=
   (((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).condKernel).copy
     (congrArg ae (fst_map_swap_compProd κ μ)).symm

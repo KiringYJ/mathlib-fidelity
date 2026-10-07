@@ -22,9 +22,10 @@ if `α` is countable or `β` has a countably generated σ-algebra (for example i
 Borel), then there exists a Markov kernel `η : Kernel (α × β) Ω` such that `κ = fst κ ⊗ₖ η`. The
 conditional kernel `condKernel κ` is the class of these kernels up to `fst κ a`-null sets for every
 `a`.
-We also define the conditional kernel of a finite measure `ρ : Measure (β × Ω)`, where `Ω` is a
-nonempty standard Borel space: the `ρ.fst`-almost-everywhere class `ρ.condKernel` of the Markov
-kernels `η : Kernel β Ω` with `ρ = ρ.fst ⊗ₘ η`.
+We also define the conditional kernel of a measure `ρ : Measure (β × Ω)` with a unique conditional
+kernel (`MeasureTheory.Measure.HasUniqueCondKernel`): the `ρ.fst`-almost-everywhere class
+`ρ.condKernel` of the Markov kernels `η : Kernel β Ω` with `ρ = ρ.fst ⊗ₘ η`. A finite measure, for a
+nonempty standard Borel space `Ω`, has a unique conditional kernel (see the file `Unique.lean`).
 A conditional kernel is determined almost everywhere (see the file `Unique.lean`), and only almost
 everywhere: every Markov kernel that agrees with a conditional kernel almost everywhere is one too
 (`MeasureTheory.Measure.compProd_congr`, `ProbabilityTheory.Kernel.compProd_congr`). So `κ` and `ρ`
@@ -412,39 +413,43 @@ theorem _root_.MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel (ρ : Me
   rw [disintegrate]
   simp
 
+omit [StandardBorelSpace Ω] [Nonempty Ω] in
 /-- Some class of kernels along `ae ρ.fst` contains a Markov kernel that disintegrates `ρ`. Since
-two finite conditional kernels of `ρ` agree `ρ.fst`-almost everywhere
-(`MeasureTheory.Measure.IsCondKernel.ae_eq`), such a class is unique. -/
+`ρ` has a unique conditional kernel, such a class is unique. -/
 lemma _root_.MeasureTheory.Measure.exists_aeClass_isCondKernel (ρ : Measure (α × Ω))
-    [IsFiniteMeasure ρ] :
+    [ρ.HasUniqueCondKernel] :
     ∃ c : AEClass (ae ρ.fst) Ω, ∃ η : Kernel α Ω, IsMarkovKernel η ∧ ρ.IsCondKernel η ∧ η ∈ c :=
-  let ⟨η, h₁, h₂⟩ := ρ.exists_isMarkovKernel_isCondKernel
+  let ⟨η, h₁, h₂⟩ := Measure.HasUniqueCondKernel.exists_isMarkovKernel_isCondKernel (ρ := ρ)
   ⟨AEClass.mk _ η, η, h₁, h₂, AEClass.mem_mk _ η⟩
 
-/-- The conditional kernel of a finite measure `ρ` on a product space `α × Ω`, where `Ω` is a
-nonempty standard Borel space: the `ρ.fst`-almost-everywhere class of the Markov kernels `η` with
-`ρ.fst ⊗ₘ η = ρ`.
+omit [StandardBorelSpace Ω] [Nonempty Ω] in
+/-- The conditional kernel of a measure `ρ` on a product space `α × Ω` with a unique conditional
+kernel: the `ρ.fst`-almost-everywhere class of the Markov kernels `η` with `ρ.fst ⊗ₘ η = ρ`. A
+finite measure has one when `Ω` is a nonempty standard Borel space
+(`MeasureTheory.Measure.hasUniqueCondKernel_of_isFiniteMeasure`).
 
 A kernel represents it, written `η ∈ ρ.condKernel`, when it agrees `ρ.fst`-almost everywhere with
-such a kernel. A finite kernel represents it if and only if it disintegrates `ρ`
-(`MeasureTheory.Measure.mem_condKernel_iff`), and a Markov representative exists
+such a kernel. A Markov kernel represents it if and only if it disintegrates `ρ`
+(`MeasureTheory.Measure.mem_condKernel_iff_of_isMarkovKernel`), and a Markov representative exists
 (`MeasureTheory.Measure.exists_isMarkovKernel_mem_condKernel`). The class is determined by `ρ`,
 while the values of a conditional kernel on a `ρ.fst`-null set are not. -/
 noncomputable
-def _root_.MeasureTheory.Measure.condKernel (ρ : Measure (α × Ω)) [IsFiniteMeasure ρ] :
+def _root_.MeasureTheory.Measure.condKernel (ρ : Measure (α × Ω)) [ρ.HasUniqueCondKernel] :
     AEClass (ae ρ.fst) Ω :=
   ρ.exists_aeClass_isCondKernel.choose
 
+omit [StandardBorelSpace Ω] [Nonempty Ω] in
 /-- `ρ.condKernel` is represented by a Markov kernel that disintegrates `ρ`. -/
 lemma _root_.MeasureTheory.Measure.exists_isMarkovKernel_mem_condKernel (ρ : Measure (α × Ω))
-    [IsFiniteMeasure ρ] :
+    [ρ.HasUniqueCondKernel] :
     ∃ η : Kernel α Ω, IsMarkovKernel η ∧ ρ.IsCondKernel η ∧ η ∈ ρ.condKernel :=
   ρ.exists_aeClass_isCondKernel.choose_spec
 
+omit [StandardBorelSpace Ω] [Nonempty Ω] in
 /-- Equal measures have the same representatives of their conditional kernels. Since the type of
 `ρ.condKernel` depends on `ρ`, this transports membership along an equation `ρ = ρ'`. -/
 lemma _root_.MeasureTheory.Measure.mem_condKernel_congr {ρ ρ' : Measure (α × Ω)}
-    [IsFiniteMeasure ρ] [IsFiniteMeasure ρ'] (h : ρ = ρ') {η : Kernel α Ω} :
+    [ρ.HasUniqueCondKernel] [ρ'.HasUniqueCondKernel] (h : ρ = ρ') {η : Kernel α Ω} :
     η ∈ ρ.condKernel ↔ η ∈ ρ'.condKernel := by
   subst h
   rfl
