@@ -62,10 +62,11 @@ theorem _root_.isRoot_of_unity_iff (h : 0 < n) (R : Type*) [CommRing R] [IsDomai
 /-- Any `n`-th primitive root of unity is a root of `cyclotomic n R`. -/
 theorem _root_.IsPrimitiveRoot.isRoot_cyclotomic (hpos : 0 < n) {μ : R} (h : IsPrimitiveRoot μ n) :
     IsRoot (cyclotomic n R) μ := by
+  have : NeZero n := ⟨hpos.ne'⟩
   rw [cyclotomic_eq_prod_X_sub_primitiveRoots h,
     ← mem_roots (Finset.prod_ne_zero_iff.mpr fun _ _ ↦ X_sub_C_ne_zero _), roots_prod_X_sub_C,
     ← Finset.mem_def]
-  rwa [← mem_primitiveRoots hpos] at h
+  rwa [← mem_primitiveRoots] at h
 
 private theorem isRoot_cyclotomic_iff' {n : ℕ} {K : Type*} [Field K] {μ : K} [NeZero (n : K)] :
     IsRoot (cyclotomic n K) μ ↔ IsPrimitiveRoot μ n := by
@@ -113,11 +114,14 @@ theorem roots_cyclotomic_nodup [NeZero (n : R)] : (cyclotomic n R).roots.Nodup :
       cyclotomic.dvd_X_pow_sub_one n R) hζ.nthRoots_one_nodup
 
 theorem cyclotomic.roots_to_finset_eq_primitiveRoots [NeZero (n : R)] :
+    haveI : NeZero n := ⟨(NeZero.pos_of_neZero_natCast R).ne'⟩
     (⟨(cyclotomic n R).roots, roots_cyclotomic_nodup⟩ : Finset _) = primitiveRoots n R := by
+  have : NeZero n := ⟨(NeZero.pos_of_neZero_natCast R).ne'⟩
   ext a
-  simp [← isRoot_cyclotomic_iff, mem_primitiveRoots, NeZero.pos_of_neZero_natCast R]
+  simp [← isRoot_cyclotomic_iff, mem_primitiveRoots]
 
 theorem cyclotomic.roots_eq_primitiveRoots_val [NeZero (n : R)] :
+    haveI : NeZero n := ⟨(NeZero.pos_of_neZero_natCast R).ne'⟩
     (cyclotomic n R).roots = (primitiveRoots n R).val := by
   rw [← cyclotomic.roots_to_finset_eq_primitiveRoots]
 
