@@ -483,19 +483,22 @@ operation.
   (`antilipschitz_leftInverseOfInjectiveOfIsClosedRange`), which is the least such constant
   (`nnnorm_leftInverseOfInjectiveOfIsClosedRange_le`).
 
-- [ ] **Replace chosen witnesses of local presentations and immersions by explicit data.**
-  `LiftSourceTargetPropertyAt.localPresentationAt` in
-  `Mathlib/Geometry/Manifold/LocalSourceTargetProperty.lean` chooses with `Classical.choice` a
-  `LocalPresentationAt` witnessing the existence statement `LiftSourceTargetPropertyAt`, and
-  `domChart` and `codChart` expose its charts.  Likewise `IsImmersionAtOfComplement.equiv` and
-  `IsSubmersionAtOfComplement.equiv` choose the linear equivalence of the local normal form, and
-  `IsImmersionAt.complement`, `IsImmersion.complement`, `IsSubmersionAt.complement`, and
-  `IsSubmersion.complement` in `Mathlib/Geometry/Manifold/Immersion.lean` and
-  `Mathlib/Geometry/Manifold/Submersion.lean` choose a complement type together with its
-  normed-space instances.  None of these is determined by `f`, and the bundled structure
-  `LocalPresentationAt` and the variants with an explicit complement already carry the data.  State
-  the consumers with explicit local presentations, or obtain them inside proofs, and remove the
-  public chosen witnesses.
+- [x] **Replace chosen witnesses of local presentations and immersions by explicit data.**
+  `LiftSourceTargetPropertyAt.localPresentationAt`, `domChart`, `codChart`, and their lemmas in
+  `Mathlib/Geometry/Manifold/LocalSourceTargetProperty.lean` are removed: a proof obtains a
+  `LocalPresentationAt`, whose charts are data, from the existence statement
+  `LiftSourceTargetPropertyAt`.  Likewise the chosen charts and equivalences of
+  `IsImmersionAtOfComplement` and `IsSubmersionAtOfComplement` (`domChart`, `codChart`, `equiv`, and
+  `writtenInCharts`) and the chosen complements `IsImmersionAt.complement`,
+  `IsImmersion.complement`, `IsSubmersionAt.complement`, and `IsSubmersion.complement`, with their
+  instances and charts, are removed from `Mathlib/Geometry/Manifold/Immersion.lean` and
+  `Mathlib/Geometry/Manifold/Submersion.lean`; the proofs obtain the complement, the charts, and the
+  equivalence.  The statements about the charts of a presentation take the charts and the
+  equivalence explicitly: `map_target_subset_target`, `target_subset_preimage_target`,
+  `image_target_subset_target`, `continuousOn_of_eqOn`, and `contMDiffOn_of_eqOn` replace the
+  versions stated with the chosen charts, among them `continuousOn` and `contMDiffOn`.
+  `smallComplement`, which shrinks a given complement `F` into the universe of the model space,
+  stays, since it depends only on `F`.  Tests are in `MathlibTest/ManifoldPresentationStrict.lean`.
 
 - [x] **Bundle admissible root pairs for root-chain data.**
   `RootPairing.chainTopCoeff i j` and `chainBotCoeff i j` are the largest natural numbers `p` and

@@ -202,80 +202,40 @@ lemma mk_of_continuousAt {f : M → N} {x : M} (hf : ContinuousAt f x) (equiv : 
     isLocalSourceTargetProperty_submmersionAtProp
     _ _ hx hfx hdomChart hcodChart ⟨equiv, hwrittenInExtend⟩
 
-/-- A choice of chart on the domain `M` of a submersion `f` at `x`:
-w.r.t. this chart and the data `h.codChart` and `h.equiv`,
-`f` will look like a projection `(u,v) ↦ u` in these extended charts.
-The particular chart is arbitrary, but this choice matches the witnesses given by
-`h.codChart` and `h.codChart`. -/
-def domChart (h : IsSubmersionAtOfComplement F I J n f x) :
-    OpenPartialHomeomorph M H :=
-  LiftSourceTargetPropertyAt.domChart h
-
-/-- A choice of chart on the codomain `N` of a submersion `f` at `x`:
-w.r.t. this chart and the data `h.domChart` and `h.equiv`,
-`f` will look like a projection `(u, v) ↦ u` in these extended charts.
-The particular chart is arbitrary, but this choice matches the witnesses given by
-`h.equiv` and `h.domChart`. -/
-def codChart (h : IsSubmersionAtOfComplement F I J n f x) :
-    OpenPartialHomeomorph N G :=
-  LiftSourceTargetPropertyAt.codChart h
-
-lemma mem_domChart_source (h : IsSubmersionAtOfComplement F I J n f x) : x ∈ h.domChart.source :=
-  LiftSourceTargetPropertyAt.mem_domChart_source h
-
-lemma mem_codChart_source (h : IsSubmersionAtOfComplement F I J n f x) : f x ∈ h.codChart.source :=
-  LiftSourceTargetPropertyAt.mem_codChart_source h
-
-lemma domChart_mem_maximalAtlas (h : IsSubmersionAtOfComplement F I J n f x) :
-    h.domChart ∈ IsManifold.maximalAtlas I n M :=
-  LiftSourceTargetPropertyAt.domChart_mem_maximalAtlas h
-
-lemma codChart_mem_maximalAtlas (h : IsSubmersionAtOfComplement F I J n f x) :
-    h.codChart ∈ IsManifold.maximalAtlas J n N :=
-  LiftSourceTargetPropertyAt.codChart_mem_maximalAtlas h
-
-lemma source_subset_preimage_source (h : IsSubmersionAtOfComplement F I J n f x) :
-    h.domChart.source ⊆ f ⁻¹' h.codChart.source :=
-  LiftSourceTargetPropertyAt.source_subset_preimage_source h
-
-lemma mapsto_domChart_source_codChart_source (h : IsSubmersionAtOfComplement F I J n f x) :
-    MapsTo f h.domChart.source h.codChart.source :=
-  h.source_subset_preimage_source
-
-/-- A linear equivalence `E ≃L[𝕜] E'' × F` which belongs to the data of a submersion `f` at `x`:
-the particular equivalence is arbitrary, but this choice matches the witnesses given by
-`h.domChart` and `h.codChart`. -/
-def equiv (h : IsSubmersionAtOfComplement F I J n f x) : E ≃L[𝕜] (E'' × F) :=
-  Classical.choose <| LiftSourceTargetPropertyAt.property h
-
-lemma writtenInCharts (h : IsSubmersionAtOfComplement F I J n f x) :
-    EqOn ((h.codChart.extend J) ∘ f ∘ (h.domChart.extend I).symm) (Prod.fst ∘ h.equiv)
-      (h.domChart.extend I).target :=
-  Classical.choose_spec <| LiftSourceTargetPropertyAt.property h
-
 lemma property (h : IsSubmersionAtOfComplement F I J n f x) :
     LiftSourceTargetPropertyAt I J n f x (SubmersionAtProp F I J M N) := h
 
-/-- If `f` is a submersion at `x`, it maps its domain chart's target to its codomain chart's target:
-`(h.domChart.extend I).target` to `(h.domChart.extend J).target`.
+omit [ChartedSpace H M] [ChartedSpace G N] in
+/-- If `f` maps the source of a chart `φ` into the source of a chart `ψ` and reads as
+`u ↦ (equiv u).1` in these charts, as for the charts of a submersion, then `Prod.fst ∘ equiv`
+maps the target of `φ.extend I` into the target of `ψ.extend J`.
 
 See `target_subset_preimage_target` for a version stated using preimages instead of images.
 -/
-lemma image_target_subset_target (h : IsSubmersionAtOfComplement F I J n f x) :
-    (Prod.fst ∘ h.equiv) '' (h.domChart.extend I).target ⊆ (h.codChart.extend J).target := by
-  rw [← h.writtenInCharts.image_eq, Set.image_comp, Set.image_comp,
+lemma image_target_subset_target {φ : OpenPartialHomeomorph M H}
+    {ψ : OpenPartialHomeomorph N G} {equiv : E ≃L[𝕜] (E'' × F)}
+    (hsource : φ.source ⊆ f ⁻¹' ψ.source)
+    (hwritten : EqOn ((ψ.extend J) ∘ f ∘ (φ.extend I).symm) (Prod.fst ∘ equiv)
+      (φ.extend I).target) :
+    (Prod.fst ∘ equiv) '' (φ.extend I).target ⊆ (ψ.extend J).target := by
+  rw [← hwritten.image_eq, Set.image_comp, Set.image_comp,
     PartialEquiv.symm_image_target_eq_source, OpenPartialHomeomorph.extend_source,
     ← PartialEquiv.image_source_eq_target]
-  have : f '' h.domChart.source ⊆ h.codChart.source := by
-    simp [h.source_subset_preimage_source]
+  have : f '' φ.source ⊆ ψ.source := by
+    simp [hsource]
   grw [this, OpenPartialHomeomorph.extend_source]
 
-/-- If `f` is a submersion at `x`, its domain chart's target `(h.domChart.extend I).target`
-is mapped to its codomain chart's target `(h.domChart.extend J).target`:
-see `image_target_subset_target` for a version stated using images. -/
-lemma target_subset_preimage_target (h : IsSubmersionAtOfComplement F I J n f x) :
-    (h.domChart.extend I).target ⊆ (Prod.fst ∘ h.equiv) ⁻¹' (h.codChart.extend J).target :=
-  fun _x hx ↦ h.image_target_subset_target (mem_image_of_mem _ hx)
+omit [ChartedSpace H M] [ChartedSpace G N] in
+/-- If `f` maps the source of a chart `φ` into the source of a chart `ψ` and reads as
+`u ↦ (equiv u).1` in these charts, then the target of `φ.extend I` is mapped into the target of
+`ψ.extend J`: see `image_target_subset_target` for a version stated using images. -/
+lemma target_subset_preimage_target {φ : OpenPartialHomeomorph M H}
+    {ψ : OpenPartialHomeomorph N G} {equiv : E ≃L[𝕜] (E'' × F)}
+    (hsource : φ.source ⊆ f ⁻¹' ψ.source)
+    (hwritten : EqOn ((ψ.extend J) ∘ f ∘ (φ.extend I).symm) (Prod.fst ∘ equiv)
+      (φ.extend I).target) :
+    (φ.extend I).target ⊆ (Prod.fst ∘ equiv) ⁻¹' (ψ.extend J).target :=
+  fun _x hx ↦ image_target_subset_target hsource hwritten (mem_image_of_mem _ hx)
 
 /-- If `f` is a submersion at `x` and `g = f` on some neighbourhood of `x`,
 then `g` is a submersion at `x`. -/
@@ -291,8 +251,10 @@ lemma congr_iff_of_eventuallyEq (hfg : f =ᶠ[𝓝 x] g) :
   LiftSourceTargetPropertyAt.congr_iff_of_eventuallyEq
     isLocalSourceTargetProperty_submmersionAtProp hfg
 
-lemma small (hf : IsSubmersionAtOfComplement F I J n f x) : Small.{u} F :=
-  small_of_injective <| hf.equiv.symm.injective.comp (Prod.mk_right_injective 0)
+lemma small (hf : IsSubmersionAtOfComplement F I J n f x) : Small.{u} F := by
+  obtain ⟨p⟩ := hf
+  obtain ⟨equiv, -⟩ := p.property
+  exact small_of_injective <| equiv.symm.injective.comp (Prod.mk_right_injective 0)
 
 /-- Given a submersion `f` at `x`, this is a choice of complement which lives in the same universe
 as the model space for the domain of `f`: this is useful to avoid universe restrictions. -/
@@ -318,10 +280,12 @@ def smallEquiv (hf : IsSubmersionAtOfComplement F I J n f x) : F ≃L[𝕜] hf.s
 
 lemma trans_F (h : IsSubmersionAtOfComplement F I J n f x) (e : F ≃L[𝕜] F') :
     IsSubmersionAtOfComplement F' I J n f x := by
-  refine ⟨h.domChart, h.codChart, h.mem_domChart_source, h.mem_codChart_source,
-    h.domChart_mem_maximalAtlas, h.codChart_mem_maximalAtlas, h.source_subset_preimage_source, ?_⟩
-  use h.equiv.trans ((ContinuousLinearEquiv.refl 𝕜 E'').prodCongr e)
-  apply Set.EqOn.trans h.writtenInCharts
+  obtain ⟨p⟩ := h
+  obtain ⟨equiv, hwritten⟩ := p.property
+  refine ⟨p.domChart, p.codChart, p.mem_domChart_source, p.mem_codChart_source,
+    p.domChart_mem_maximalAtlas, p.codChart_mem_maximalAtlas, p.source_subset_preimage_source, ?_⟩
+  use equiv.trans ((ContinuousLinearEquiv.refl 𝕜 E'').prodCongr e)
+  apply Set.EqOn.trans hwritten
   intro x hx
   simp
 
@@ -358,21 +322,27 @@ lemma isSubmersionAt (h : IsSubmersionAtOfComplement F I J n f x) :
   use h.smallComplement, by infer_instance, by infer_instance
   exact (IsSubmersionAtOfComplement.congr_F h.smallEquiv).mp h
 
-/-- If `f` is a `C^n` submersion at `x`, then `f` is `C^n` on its domain chart's source,
-in particular on an open neighbourhood of `x`.
-
-Prefer using `IsSubmersionAtOfComplement.contMDiffAt` instead. -/
-theorem contMDiffOn (h : IsSubmersionAtOfComplement F I J n f x) :
-    ContMDiffOn I J n f h.domChart.source := by
-  rw [← contMDiffOn_writtenInExtend_iff h.domChart_mem_maximalAtlas
-    h.codChart_mem_maximalAtlas le_rfl h.mapsto_domChart_source_codChart_source,
-    ← h.domChart.extend_target_eq_image_source]
-  have : CMDiff n (Prod.fst ∘ h.equiv) := by rw [contMDiff_iff_contDiff]; fun_prop
-  exact this.contMDiffOn.congr h.writtenInCharts
+/-- If `f` maps the source of a chart `φ` into the source of a chart `ψ` of the maximal atlases and
+reads as `u ↦ (equiv u).1` in these charts, as for the charts of a submersion, then `f` is `C^n`
+on the source of `φ`. -/
+theorem contMDiffOn_of_eqOn {φ : OpenPartialHomeomorph M H} {ψ : OpenPartialHomeomorph N G}
+    {equiv : E ≃L[𝕜] (E'' × F)} (hφ : φ ∈ IsManifold.maximalAtlas I n M)
+    (hψ : ψ ∈ IsManifold.maximalAtlas J n N) (hsource : φ.source ⊆ f ⁻¹' ψ.source)
+    (hwritten : EqOn ((ψ.extend J) ∘ f ∘ (φ.extend I).symm) (Prod.fst ∘ equiv)
+      (φ.extend I).target) :
+    ContMDiffOn I J n f φ.source := by
+  rw [← contMDiffOn_writtenInExtend_iff hφ hψ le_rfl hsource,
+    ← φ.extend_target_eq_image_source]
+  have : CMDiff n (Prod.fst ∘ equiv) := by rw [contMDiff_iff_contDiff]; fun_prop
+  exact this.contMDiffOn.congr hwritten
 
 /-- A `C^n` submersion at `x` is `C^n` at `x`. -/
-theorem contMDiffAt (h : IsSubmersionAtOfComplement F I J n f x) : CMDiffAt n f x :=
-  h.contMDiffOn.contMDiffAt (h.domChart.open_source.mem_nhds (mem_domChart_source h))
+theorem contMDiffAt (h : IsSubmersionAtOfComplement F I J n f x) : CMDiffAt n f x := by
+  obtain ⟨p⟩ := h
+  obtain ⟨equiv, hwritten⟩ := p.property
+  exact (contMDiffOn_of_eqOn p.domChart_mem_maximalAtlas p.codChart_mem_maximalAtlas
+    p.source_subset_preimage_source hwritten).contMDiffAt
+    (p.domChart.open_source.mem_nhds p.mem_domChart_source)
 
 end IsSubmersionAtOfComplement
 
@@ -407,88 +377,12 @@ lemma mk_of_continuousAt {f : M → N} {x : M} (hf : ContinuousAt f x) (equiv : 
   use aux.smallComplement, by infer_instance, by infer_instance
   rwa [← IsSubmersionAtOfComplement.congr_F aux.smallEquiv]
 
-/-- A choice of complement of the model normed space `E` of `M` in the model normed space
-`E'` of `N` -/
-def complement (h : IsSubmersionAt I J n f x) : Type u := Classical.choose h
-
-@[no_expose] instance (h : IsSubmersionAt I J n f x) : NormedAddCommGroup h.complement :=
-  Classical.choose (Classical.choose_spec h)
-
-@[no_expose] instance (h : IsSubmersionAt I J n f x) : NormedSpace 𝕜 h.complement :=
-  Classical.choose <| Classical.choose_spec <| Classical.choose_spec h
-
-lemma isSubmersionAtOfComplement_complement (h : IsSubmersionAt I J n f x) :
-    IsSubmersionAtOfComplement h.complement I J n f x :=
-  Classical.choose_spec <| Classical.choose_spec <| Classical.choose_spec h
-
-/-- A choice of chart on the domain `M` of a submersion `f` at `x`:
-w.r.t. this chart and the data `h.codChart` and `h.equiv`,
-`f` will look like a projection `(u, v) ↦ u` in these extended charts.
-The particular chart is arbitrary, but this choice matches the witnesses given by
-`h.codChart` and `h.codChart`. -/
-def domChart (h : IsSubmersionAt I J n f x) : OpenPartialHomeomorph M H :=
-  h.isSubmersionAtOfComplement_complement.domChart
-
-/-- A choice of chart on the co-domain `N` of a submersion `f` at `x`:
-w.r.t. this chart and the data `h.domChart` and `h.equiv`,
-`f` will look like a projection `(u, v) ↦ u` in these extended charts.
-The particular chart is arbitrary, but this choice matches the witnesses given by
-`h.equiv` and `h.domChart`. -/
-def codChart (h : IsSubmersionAt I J n f x) : OpenPartialHomeomorph N G :=
-  h.isSubmersionAtOfComplement_complement.codChart
-
-lemma mem_domChart_source (h : IsSubmersionAt I J n f x) : x ∈ h.domChart.source :=
-  h.isSubmersionAtOfComplement_complement.mem_domChart_source
-
-lemma mem_codChart_source (h : IsSubmersionAt I J n f x) : f x ∈ h.codChart.source :=
-  h.isSubmersionAtOfComplement_complement.mem_codChart_source
-
-lemma domChart_mem_maximalAtlas (h : IsSubmersionAt I J n f x) :
-    h.domChart ∈ IsManifold.maximalAtlas I n M :=
-  h.isSubmersionAtOfComplement_complement.domChart_mem_maximalAtlas
-
-lemma codChart_mem_maximalAtlas (h : IsSubmersionAt I J n f x) :
-    h.codChart ∈ IsManifold.maximalAtlas J n N :=
-  h.isSubmersionAtOfComplement_complement.codChart_mem_maximalAtlas
-
-lemma source_subset_preimage_source (h : IsSubmersionAt I J n f x) :
-    h.domChart.source ⊆ f ⁻¹' h.codChart.source :=
-  h.isSubmersionAtOfComplement_complement.source_subset_preimage_source
-
-/-- A linear equivalence `E ≃L[𝕜] (E'' × F)` which belongs to the data of a submersion `f` at `x`:
-the particular equivalence is arbitrary, but this choice matches the witnesses given by
-`h.domChart` and `h.codChart`. -/
-def equiv (h : IsSubmersionAt I J n f x) : E ≃L[𝕜] (E'' × h.complement) :=
-  h.isSubmersionAtOfComplement_complement.equiv
-
-lemma writtenInCharts (h : IsSubmersionAt I J n f x) :
-    EqOn ((h.codChart.extend J) ∘ f ∘ (h.domChart.extend I).symm) (Prod.fst ∘ h.equiv)
-      (h.domChart.extend I).target :=
-  h.isSubmersionAtOfComplement_complement.writtenInCharts
-
-lemma property (h : IsSubmersionAt I J n f x) :
-    LiftSourceTargetPropertyAt I J n f x (SubmersionAtProp h.complement I J M N) :=
-  h.isSubmersionAtOfComplement_complement.property
-
-/-- If `f` is a submersion at `x`, it maps its domain chart's target to its codomain chart's target:
-`(h.domChart.extend I).target` to `(h.domChart.extend J).target`. -/
-lemma image_target_subset_target (h : IsSubmersionAt I J n f x) :
-    (Prod.fst ∘ h.equiv) '' (h.domChart.extend I).target ⊆ (h.codChart.extend J).target :=
-  h.isSubmersionAtOfComplement_complement.image_target_subset_target
-
-/-- If `f` is a submersion at `x`, its domain chart's target `(h.domChart.extend I).target`
-is mapped to it codomain chart's target `(h.domChart.extend J).target`:
-see `image_target_subset_target` for a version stated using images. -/
-lemma target_subset_preimage_target (h : IsSubmersionAt I J n f x) :
-    (h.domChart.extend I).target ⊆ (Prod.fst ∘ h.equiv) ⁻¹' (h.codChart.extend J).target :=
-  fun _x hx ↦ h.image_target_subset_target (mem_image_of_mem _ hx)
-
 /-- If `f` is a submersion at `x` and `g = f` on some neighbourhood of `x`,
 then `g` is a submersion at `x`. -/
 lemma congr_of_eventuallyEq (hf : IsSubmersionAt I J n f x) (hfg : f =ᶠ[𝓝 x] g) :
     IsSubmersionAt I J n g x := by
-  use hf.complement, by infer_instance, by infer_instance
-  exact hf.isSubmersionAtOfComplement_complement.congr_of_eventuallyEq hfg
+  obtain ⟨F, _, _, hf⟩ := hf
+  exact ⟨F, _, _, hf.congr_of_eventuallyEq hfg⟩
 
 /-- If `f = g` on some neighbourhood of `x`,
 then `f` is a submersion at `x` if and only if `g` is a submersion at `x`. -/
@@ -500,29 +394,24 @@ lemma congr_iff (hfg : f =ᶠ[𝓝 x] g) :
 lemma _root_.isOpen_isSubmersionAt :
     IsOpen {x | IsSubmersionAt I J n f x} := by
   rw [isOpen_iff_forall_mem_open]
-  exact fun x hx ↦ ⟨{x | IsSubmersionAtOfComplement hx.complement I J n f x },
-    fun y hy ↦ hy.isSubmersionAt,
-    isOpen_isSubmersionAtOfComplement, by simp [hx.isSubmersionAtOfComplement_complement]⟩
+  rintro x ⟨F, _, _, hx⟩
+  exact ⟨{x | IsSubmersionAtOfComplement F I J n f x }, fun y hy ↦ hy.isSubmersionAt,
+    isOpen_isSubmersionAtOfComplement, hx⟩
 
 /-- If `f: M → N` and `g: M' → N'` are submersions at `x` and `x'`, respectively,
 then `f × g: M × M' → N × N'` is a submersion at `(x, x')`. -/
 theorem prodMap {f : M → N} {g : M' → N'} {x' : M'}
     [IsManifold I n M] [IsManifold I' n M'] [IsManifold J n N] [IsManifold J' n N']
     (hf : IsSubmersionAt I J n f x) (hg : IsSubmersionAt I' J' n g x') :
-    IsSubmersionAt (I.prod I') (J.prod J') n (Prod.map f g) (x, x') :=
-  hf.isSubmersionAtOfComplement_complement.prodMap hg.isSubmersionAtOfComplement_complement
-    |>.isSubmersionAt
-
-/-- If `f` is a submersion at `x`, then `f` is `C^n` on its domain chart's source,
-in particular on an open neighbourhood of `x`.`
-
-Prefer using `IsSubmersionAt.contMDiffAt` instead -/
-theorem contMDiffOn (h : IsSubmersionAt I J n f x) : CMDiff[h.domChart.source] n f :=
-  h.isSubmersionAtOfComplement_complement.contMDiffOn
+    IsSubmersionAt (I.prod I') (J.prod J') n (Prod.map f g) (x, x') := by
+  obtain ⟨F, _, _, hf⟩ := hf
+  obtain ⟨F', _, _, hg⟩ := hg
+  exact (hf.prodMap hg).isSubmersionAt
 
 /-- A `C^n` submersion at `x` is `C^n` at `x`. -/
-theorem contMDiffAt (h : IsSubmersionAt I J n f x) : CMDiffAt n f x :=
-  h.isSubmersionAtOfComplement_complement.contMDiffAt
+theorem contMDiffAt (h : IsSubmersionAt I J n f x) : CMDiffAt n f x := by
+  obtain ⟨F, _, _, h⟩ := h
+  exact h.contMDiffAt
 
 end IsSubmersionAt
 
@@ -618,34 +507,20 @@ namespace IsSubmersion
 
 variable {f g : M → N}
 
-/-- A choice of complement of the model normed space `E` of `M` in the model normed space
-`E'` of `N` -/
-def complement (h : IsSubmersion I J n f) : Type u := Classical.choose h
-
-@[no_expose] instance (h : IsSubmersion I J n f) : NormedAddCommGroup h.complement :=
-  Classical.choose <| Classical.choose_spec h
-
-@[no_expose] instance (h : IsSubmersion I J n f) : NormedSpace 𝕜 h.complement :=
-  Classical.choose <| Classical.choose_spec <| Classical.choose_spec h
-
-lemma isSubmersionOfComplement_complement (h : IsSubmersion I J n f) :
-    IsSubmersionOfComplement h.complement I J n f :=
-  Classical.choose_spec <| Classical.choose_spec <| Classical.choose_spec h
-
 /-- If `f` is a submersion, it is a submersion at each point. -/
 lemma isSubmersionAt (h : IsSubmersion I J n f) (x : M) : IsSubmersionAt I J n f x := by
-  rw [IsSubmersionAt]
-  use h.complement, by infer_instance, by infer_instance
-  exact h.isSubmersionOfComplement_complement x
+  obtain ⟨F, _, _, h⟩ := h
+  exact ⟨F, _, _, h x⟩
 
 /-- If `f: M → N` and `g: M' → N'` are submersions at `x` and `x'`, respectively,
 then `f × g: M × M' → N × N'` is a submersion at `(x, x')`. -/
 theorem prodMap {f : M → N} {g : M' → N'}
     [IsManifold I n M] [IsManifold I' n M'] [IsManifold J n N] [IsManifold J' n N']
     (hf : IsSubmersion I J n f) (hg : IsSubmersion I' J' n g) :
-    IsSubmersion (I.prod I') (J.prod J') n (Prod.map f g) :=
-  (hf.isSubmersionOfComplement_complement.prodMap
-    hg.isSubmersionOfComplement_complement ).isSubmersion
+    IsSubmersion (I.prod I') (J.prod J') n (Prod.map f g) := by
+  obtain ⟨F, _, _, hf⟩ := hf
+  obtain ⟨F', _, _, hg⟩ := hg
+  exact (hf.prodMap hg).isSubmersion
 
 /-- The identity map is an submersion. -/
 protected lemma id [IsManifold I n M] : IsSubmersion I I n (@id M) := by
@@ -654,7 +529,7 @@ protected lemma id [IsManifold I n M] : IsSubmersion I I n (@id M) := by
 
 /-- A `C^n` submersion is `C^n` -/
 theorem contMDiff (h : IsSubmersion I J n f) : CMDiff n f :=
-  h.isSubmersionOfComplement_complement.contMDiff
+  fun x ↦ (h.isSubmersionAt x).contMDiffAt
 
 end IsSubmersion
 
