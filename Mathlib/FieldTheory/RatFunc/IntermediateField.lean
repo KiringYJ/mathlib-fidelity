@@ -22,20 +22,20 @@ open IntermediateField algebraAdjoinAdjoin Polynomial Algebra
 
 @[expose] public section
 
-variable (f : K⟮X⟯)
+variable (f : RatFunc K)
 
-theorem adjoin_X : K⟮(X : K⟮X⟯)⟯ = ⊤ :=
+theorem adjoin_X : K⟮(X : RatFunc K)⟯ = ⊤ :=
   eq_top_iff.mpr fun g _ ↦ (mem_adjoin_simple_iff _ _).mpr ⟨g.num, g.denom, by simp⟩
 
-theorem IntermediateField.adjoin_X (E : IntermediateField K K⟮X⟯) :
-    E⟮(X : K⟮X⟯)⟯ = ⊤ := by
+theorem IntermediateField.adjoin_X (E : IntermediateField K (RatFunc K)) :
+    E⟮(X : RatFunc K)⟯ = ⊤ := by
   rw [← restrictScalars_eq_top_iff (K := K), IntermediateField.restrictScalars_adjoin,
     _root_.eq_top_iff]
   exact le_trans (le_of_eq RatFunc.adjoin_X.symm) (adjoin.mono _ _ _ (by simp))
 
-/-- The equivalence between `E⟮X⟯` and `K⟮X⟯` as `E`-algebras. -/
-noncomputable def IntermediateField.adjoinXEquiv (E : IntermediateField K K⟮X⟯) :
-    E⟮(X : K⟮X⟯)⟯ ≃ₐ[E] K⟮X⟯ :=
+/-- The equivalence between `E⟮(X : RatFunc K)⟯` and `RatFunc K` as `E`-algebras. -/
+noncomputable def IntermediateField.adjoinXEquiv (E : IntermediateField K (RatFunc K)) :
+    E⟮(X : RatFunc K)⟯ ≃ₐ[E] RatFunc K :=
   (equivOfEq (adjoin_X E)).trans topEquiv
 
 /-- The minimal polynomial of `X` over `K⟮f⟯`. It is defined as `f.num - f * f.denom`, viewed
@@ -55,7 +55,7 @@ theorem minpolyX_map (A : Type*) [CommRing A] [Algebra K A] [Algebra (Algebra.ad
 theorem C_minpolyX (x : K) : (C x).minpolyX K⟮C x⟯ = 0 := by
   simp [minpolyX, sub_eq_zero, Subtype.ext_iff]
 
-theorem minpolyX_aeval_X : (f.minpolyX K⟮f⟯).aeval (X : K⟮X⟯) = 0 := by
+theorem minpolyX_aeval_X : (f.minpolyX K⟮f⟯).aeval (X : RatFunc K) = 0 := by
   simp only [aeval_sub, aeval_map_algebraMap, aeval_X_left_eq_algebraMap, map_mul, aeval_C,
     IntermediateField.algebraMap_apply, coe_algebraMap]
   nth_rw 2 [← num_div_denom f]
@@ -63,7 +63,7 @@ theorem minpolyX_aeval_X : (f.minpolyX K⟮f⟯).aeval (X : K⟮X⟯) = 0 := by
   exact sub_self _
 
 theorem eq_C_of_minpolyX_coeff_eq_zero
-  (hf : (f.minpolyX K⟮f⟯).coeff f.denom.natDegree = (0 : K⟮X⟯)) : ∃ c, f = C c := by
+  (hf : (f.minpolyX K⟮f⟯).coeff f.denom.natDegree = (0 : RatFunc K)) : ∃ c, f = C c := by
   use f.num.coeff f.denom.natDegree / f.denom.leadingCoeff
   rw [map_div₀, eq_div_iff ((_root_.map_ne_zero C).mpr
     (leadingCoeff_ne_zero.mpr f.denom_ne_zero)), eq_comm]
@@ -72,12 +72,12 @@ theorem eq_C_of_minpolyX_coeff_eq_zero
 theorem minpolyX_eq_zero_iff : (f.minpolyX K⟮f⟯) = 0 ↔ ∃ c, f = C c :=
   ⟨fun h ↦ f.eq_C_of_minpolyX_coeff_eq_zero (by simp [h]), by rintro ⟨c, rfl⟩; simp⟩
 
-theorem isAlgebraic_adjoin_simple_X (hf : ¬∃ c, f = C c) : IsAlgebraic K⟮f⟯ (X : K⟮X⟯) :=
+theorem isAlgebraic_adjoin_simple_X (hf : ¬∃ c, f = C c) : IsAlgebraic K⟮f⟯ (X : RatFunc K) :=
   ⟨f.minpolyX K⟮f⟯, fun H ↦ hf (f.minpolyX_eq_zero_iff.mp H), f.minpolyX_aeval_X⟩
 
 theorem isAlgebraic_adjoin_simple_X' (hf : ¬∃ c, f = C c) :
-    Algebra.IsAlgebraic K⟮f⟯ K⟮X⟯ := by
-  have : Algebra.IsAlgebraic K⟮f⟯ K⟮f⟯⟮(X : K⟮X⟯)⟯ :=
+    Algebra.IsAlgebraic K⟮f⟯ (RatFunc K) := by
+  have : Algebra.IsAlgebraic K⟮f⟯ K⟮f⟯⟮(X : RatFunc K)⟯ :=
     isAlgebraic_adjoin_simple <| isAlgebraic_iff_isIntegral.mp <| f.isAlgebraic_adjoin_simple_X hf
   exact (IntermediateField.adjoinXEquiv K⟮f⟯).isAlgebraic
 
@@ -117,7 +117,7 @@ theorem natDegree_minpolyX :
 theorem transcendental_of_ne_C (hf : ¬∃ c, f = C c) : Transcendental K f := by
   intro H
   have := isAlgebraic_adjoin_simple H.isIntegral
-  have tr : Algebra.Transcendental K K⟮X⟯ := by infer_instance
+  have tr : Algebra.Transcendental K (RatFunc K) := by infer_instance
   rw [Algebra.transcendental_iff_not_isAlgebraic] at tr
   exact tr <| Algebra.IsAlgebraic.trans _ _ _ (alg := f.isAlgebraic_adjoin_simple_X' hf)
 
@@ -160,12 +160,12 @@ theorem irreducible_minpolyX (hf : ¬∃ c, f = C c) : Irreducible (f.minpolyX K
     exact hf this
 
 theorem finrank_eq_max_natDegree :
-    Module.finrank K⟮f⟯ K⟮X⟯ = max f.num.natDegree f.denom.natDegree := by
+    Module.finrank K⟮f⟯ (RatFunc K) = max f.num.natDegree f.denom.natDegree := by
   by_cases hf : ∃ c, f = C c
   · obtain ⟨c, rfl⟩ := hf
     rw [adjoin_simple_eq_bot_iff.mpr (show C c ∈ ⊥ from ⟨c, rfl⟩), finrank_bot',
       Module.finrank_of_not_finite fun H ↦ Algebra.transcendental_iff_not_isAlgebraic.mp
-      transcendental <| Algebra.IsAlgebraic.of_finite K K⟮X⟯]
+      transcendental <| Algebra.IsAlgebraic.of_finite K (RatFunc K)]
     simp
   rw [← (IntermediateField.adjoinXEquiv K⟮f⟯).toLinearEquiv.finrank_eq,
     adjoin.finrank (f.isAlgebraic_adjoin_simple_X hf).isIntegral,
@@ -173,8 +173,8 @@ theorem finrank_eq_max_natDegree :
     natDegree_C_mul <| inv_ne_zero <| leadingCoeff_ne_zero.mpr fun H ↦
     hf ((minpolyX_eq_zero_iff f).mp H), natDegree_minpolyX]
 
-theorem IntermediateField.isAlgebraic_X {E : IntermediateField K K⟮X⟯} (hE : E ≠ ⊥) :
-    IsAlgebraic E (X : K⟮X⟯) := by
+theorem IntermediateField.isAlgebraic_X {E : IntermediateField K (RatFunc K)} (hE : E ≠ ⊥) :
+    IsAlgebraic E (X : RatFunc K) := by
   rw [ne_eq, ← le_bot_iff, SetLike.not_le_iff_exists] at hE
   obtain ⟨f, hf₁, hf₂⟩ := hE
   exact IsAlgebraic.tower_top_of_subalgebra_le (adjoin_simple_le_iff.mpr hf₁) <|
