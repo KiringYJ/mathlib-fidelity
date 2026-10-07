@@ -483,7 +483,7 @@ theorem dist_circumcenter_reflection_orthocenter_finset (t : Triangle ℝ P) {i�
 /-- The affine span of the orthocenter and a vertex is contained in
 the altitude. -/
 theorem affineSpan_orthocenter_point_le_altitude (t : Triangle ℝ P) (i : Fin 3) :
-    line[ℝ, t.orthocenter, t.points i] ≤ t.altitude i := by
+    affineSpan ℝ {t.orthocenter, t.points i} ≤ t.altitude i := by
   refine affineSpan_le_of_subset_coe ?_
   rw [Set.insert_subset_iff, Set.singleton_subset_iff]
   exact ⟨t.orthocenter_mem_altitude, t.mem_altitude i⟩
@@ -496,7 +496,7 @@ theorem altitude_replace_orthocenter_eq_affineSpan {t₁ t₂ : Triangle ℝ P}
     {i₁ i₂ i₃ j₁ j₂ j₃ : Fin 3} (hi₁₂ : i₁ ≠ i₂) (hi₁₃ : i₁ ≠ i₃) (hi₂₃ : i₂ ≠ i₃) (hj₁₂ : j₁ ≠ j₂)
     (hj₁₃ : j₁ ≠ j₃) (hj₂₃ : j₂ ≠ j₃) (h₁ : t₂.points j₁ = t₁.orthocenter)
     (h₂ : t₂.points j₂ = t₁.points i₂) (h₃ : t₂.points j₃ = t₁.points i₃) :
-    t₂.altitude j₂ = line[ℝ, t₁.points i₁, t₁.points i₂] := by
+    t₂.altitude j₂ = affineSpan ℝ {t₁.points i₁, t₁.points i₂} := by
   symm
   rw [← h₂, t₂.affineSpan_pair_eq_altitude_iff]
   rw [h₂]
@@ -519,7 +519,8 @@ theorem altitude_replace_orthocenter_eq_affineSpan {t₁ t₂ : Triangle ℝ P}
   use mem_affineSpan ℝ (Set.mem_range_self _)
   have hu : ({j₂}ᶜ : Set _) = {j₁, j₃} := by grind
   rw [hu, Set.image_insert_eq, Set.image_singleton, h₁, h₃]
-  have hle : (t₁.altitude i₃).directionᗮ ≤ line[ℝ, t₁.orthocenter, t₁.points i₃].directionᗮ :=
+  have hle :
+      (t₁.altitude i₃).directionᗮ ≤ (affineSpan ℝ {t₁.orthocenter, t₁.points i₃}).directionᗮ :=
     Submodule.orthogonal_le (direction_le (affineSpan_orthocenter_point_le_altitude _ _))
   refine hle ((t₁.vectorSpan_isOrtho_altitude_direction i₃) ?_)
   have hui : ({i₃}ᶜ : Set _) = {i₁, i₂} := by grind

@@ -602,7 +602,8 @@ theorem ne₂₃_of_not_collinear {p₁ p₂ p₃ : P} (h : ¬Collinear k ({p₁
 /-- A point in a collinear set of points lies in the affine span of any two distinct points of
 that set. -/
 theorem Collinear.mem_affineSpan_of_mem_of_ne {s : Set P} (h : Collinear k s) {p₁ p₂ p₃ : P}
-    (hp₁ : p₁ ∈ s) (hp₂ : p₂ ∈ s) (hp₃ : p₃ ∈ s) (hp₁p₂ : p₁ ≠ p₂) : p₃ ∈ line[k, p₁, p₂] := by
+    (hp₁ : p₁ ∈ s) (hp₂ : p₂ ∈ s) (hp₃ : p₃ ∈ s) (hp₁p₂ : p₁ ≠ p₂) :
+    p₃ ∈ affineSpan k {p₁, p₂} := by
   rw [collinear_iff_of_mem hp₁] at h
   rcases h with ⟨v, h⟩
   rcases h p₂ hp₂ with ⟨r₂, rfl⟩
@@ -617,7 +618,7 @@ theorem Collinear.mem_affineSpan_of_mem_of_ne {s : Set P} (h : Collinear k s) {p
 /-- The affine span of any two distinct points of a collinear set of points equals the affine
 span of the whole set. -/
 theorem Collinear.affineSpan_eq_of_ne {s : Set P} (h : Collinear k s) {p₁ p₂ : P} (hp₁ : p₁ ∈ s)
-    (hp₂ : p₂ ∈ s) (hp₁p₂ : p₁ ≠ p₂) : line[k, p₁, p₂] = affineSpan k s :=
+    (hp₂ : p₂ ∈ s) (hp₁p₂ : p₁ ≠ p₂) : affineSpan k {p₁, p₂} = affineSpan k s :=
   le_antisymm (affineSpan_mono _ (Set.insert_subset_iff.2 ⟨hp₁, Set.singleton_subset_iff.2 hp₂⟩))
     (affineSpan_le.2 fun _ hp => h.mem_affineSpan_of_mem_of_ne hp₁ hp₂ hp hp₁p₂)
 
@@ -637,14 +638,15 @@ theorem collinear_insert_iff_of_mem_affineSpan {s : Set P} {p : P} (h : p ∈ af
   rw [Collinear, Collinear, vectorSpan_insert_eq_vectorSpan h]
 
 /-- If a point lies in the affine span of two points, those three points are collinear. -/
-theorem collinear_insert_of_mem_affineSpan_pair {p₁ p₂ p₃ : P} (h : p₁ ∈ line[k, p₂, p₃]) :
+theorem collinear_insert_of_mem_affineSpan_pair {p₁ p₂ p₃ : P} (h : p₁ ∈ affineSpan k {p₂, p₃}) :
     Collinear k ({p₁, p₂, p₃} : Set P) := by
   rw [collinear_insert_iff_of_mem_affineSpan h]
   exact collinear_pair _ _ _
 
 /-- If two points lie in the affine span of two points, those four points are collinear. -/
-theorem collinear_insert_insert_of_mem_affineSpan_pair {p₁ p₂ p₃ p₄ : P} (h₁ : p₁ ∈ line[k, p₃, p₄])
-    (h₂ : p₂ ∈ line[k, p₃, p₄]) : Collinear k ({p₁, p₂, p₃, p₄} : Set P) := by
+theorem collinear_insert_insert_of_mem_affineSpan_pair {p₁ p₂ p₃ p₄ : P}
+    (h₁ : p₁ ∈ affineSpan k {p₃, p₄}) (h₂ : p₂ ∈ affineSpan k {p₃, p₄}) :
+    Collinear k ({p₁, p₂, p₃, p₄} : Set P) := by
   rw [collinear_insert_iff_of_mem_affineSpan
       ((AffineSubspace.le_def' _ _).1 (affineSpan_mono k (Set.subset_insert _ _)) _ h₁),
     collinear_insert_iff_of_mem_affineSpan h₂]
@@ -652,7 +654,8 @@ theorem collinear_insert_insert_of_mem_affineSpan_pair {p₁ p₂ p₃ p₄ : P}
 
 /-- If three points lie in the affine span of two points, those five points are collinear. -/
 theorem collinear_insert_insert_insert_of_mem_affineSpan_pair {p₁ p₂ p₃ p₄ p₅ : P}
-    (h₁ : p₁ ∈ line[k, p₄, p₅]) (h₂ : p₂ ∈ line[k, p₄, p₅]) (h₃ : p₃ ∈ line[k, p₄, p₅]) :
+    (h₁ : p₁ ∈ affineSpan k {p₄, p₅}) (h₂ : p₂ ∈ affineSpan k {p₄, p₅})
+    (h₃ : p₃ ∈ affineSpan k {p₄, p₅}) :
     Collinear k ({p₁, p₂, p₃, p₄, p₅} : Set P) := by
   rw [collinear_insert_iff_of_mem_affineSpan
       ((AffineSubspace.le_def' _ _).1
@@ -664,14 +667,16 @@ theorem collinear_insert_insert_insert_of_mem_affineSpan_pair {p₁ p₂ p₃ p�
 
 /-- If three points lie in the affine span of two points, the first four points are collinear. -/
 theorem collinear_insert_insert_insert_left_of_mem_affineSpan_pair {p₁ p₂ p₃ p₄ p₅ : P}
-    (h₁ : p₁ ∈ line[k, p₄, p₅]) (h₂ : p₂ ∈ line[k, p₄, p₅]) (h₃ : p₃ ∈ line[k, p₄, p₅]) :
+    (h₁ : p₁ ∈ affineSpan k {p₄, p₅}) (h₂ : p₂ ∈ affineSpan k {p₄, p₅})
+    (h₃ : p₃ ∈ affineSpan k {p₄, p₅}) :
     Collinear k ({p₁, p₂, p₃, p₄} : Set P) := by
   refine (collinear_insert_insert_insert_of_mem_affineSpan_pair h₁ h₂ h₃).subset ?_
   gcongr; simp
 
 /-- If three points lie in the affine span of two points, the first three points are collinear. -/
-theorem collinear_triple_of_mem_affineSpan_pair {p₁ p₂ p₃ p₄ p₅ : P} (h₁ : p₁ ∈ line[k, p₄, p₅])
-    (h₂ : p₂ ∈ line[k, p₄, p₅]) (h₃ : p₃ ∈ line[k, p₄, p₅]) :
+theorem collinear_triple_of_mem_affineSpan_pair {p₁ p₂ p₃ p₄ p₅ : P}
+    (h₁ : p₁ ∈ affineSpan k {p₄, p₅}) (h₂ : p₂ ∈ affineSpan k {p₄, p₅})
+    (h₃ : p₃ ∈ affineSpan k {p₄, p₅}) :
     Collinear k ({p₁, p₂, p₃} : Set P) := by
   refine (collinear_insert_insert_insert_left_of_mem_affineSpan_pair h₁ h₂ h₃).subset ?_
   gcongr; simp

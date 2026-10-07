@@ -243,7 +243,8 @@ theorem two_zsmul_oangle_of_vectorSpan_eq {p₁ p₂ p₃ p₄ p₅ p₆ : P}
 /-- If the lines determined by corresponding pairs of points in two angles are parallel, twice
 those angles are equal. -/
 theorem two_zsmul_oangle_of_parallel {p₁ p₂ p₃ p₄ p₅ p₆ : P}
-    (h₁₂₄₅ : line[ℝ, p₁, p₂] ∥ line[ℝ, p₄, p₅]) (h₃₂₆₅ : line[ℝ, p₃, p₂] ∥ line[ℝ, p₆, p₅]) :
+    (h₁₂₄₅ : affineSpan ℝ {p₁, p₂} ∥ affineSpan ℝ {p₄, p₅})
+    (h₃₂₆₅ : affineSpan ℝ {p₃, p₂} ∥ affineSpan ℝ {p₆, p₅}) :
     (2 : ℤ) • ∡ p₁ p₂ p₃ = (2 : ℤ) • ∡ p₄ p₅ p₆ := by
   rw [AffineSubspace.affineSpan_pair_parallel_iff_vectorSpan_eq] at h₁₂₄₅ h₃₂₆₅
   exact two_zsmul_oangle_of_vectorSpan_eq h₁₂₄₅ h₃₂₆₅
@@ -254,12 +255,13 @@ also the pair `p₃ p₂` and `p₆ p₅` of corresponding lines is parallel, an
 pair of lines `p₁ p₃` and `p₄ p₆` are the same line, then the two angles are equal.  This is a
 stronger version of `two_zsmul_oangle_of_parallel`, which shows that the two angles are equal mod
 `π` in the absence of the condition on the third pair of lines. -/
-theorem oangle_eq_of_parallel {p₁ p₂ p₃ p₄ p₅ p₆ : P} (h₂ : p₂ ∉ line[ℝ, p₁, p₃])
-    (h₄ : p₄ ∈ line[ℝ, p₁, p₃]) (h₆ : p₆ ∈ line[ℝ, p₁, p₃])
-    (h₁₂₄₅ : line[ℝ, p₁, p₂] ∥ line[ℝ, p₄, p₅]) (h₃₂₆₅ : line[ℝ, p₃, p₂] ∥ line[ℝ, p₆, p₅]) :
+theorem oangle_eq_of_parallel {p₁ p₂ p₃ p₄ p₅ p₆ : P} (h₂ : p₂ ∉ affineSpan ℝ {p₁, p₃})
+    (h₄ : p₄ ∈ affineSpan ℝ {p₁, p₃}) (h₆ : p₆ ∈ affineSpan ℝ {p₁, p₃})
+    (h₁₂₄₅ : affineSpan ℝ {p₁, p₂} ∥ affineSpan ℝ {p₄, p₅})
+    (h₃₂₆₅ : affineSpan ℝ {p₃, p₂} ∥ affineSpan ℝ {p₆, p₅}) :
     ∡ p₁ p₂ p₃ = ∡ p₄ p₅ p₆ := by
   rw [oangle, oangle]
-  have hd : line[ℝ, p₆, p₄].direction ≤ line[ℝ, p₃, p₁].direction := by
+  have hd : (affineSpan ℝ {p₆, p₄}).direction ≤ (affineSpan ℝ {p₃, p₁}).direction := by
     rw [Set.pair_comm p₃]
     exact AffineSubspace.direction_le (affineSpan_pair_le_of_mem_of_mem h₆ h₄)
   obtain ⟨r, hr, h₅₄, h₆₅, -⟩ := exists_eq_smul_of_parallel h₂ h₁₂₄₅
@@ -706,10 +708,10 @@ theorem _root_.Collinear.oangle_sign_of_sameRay_vsub {p₁ p₂ p₃ p₄ : P} (
     rw [← Real.Angle.sign_eq_zero_iff] at hs₁₅₂ hs₃₅₄
     rw [hs₁₅₂, hs₃₅₄]
   · let s : Set (P × P × P) :=
-      (fun x : line[ℝ, p₁, p₂] × V => (x.1, p₅, x.2 +ᵥ (x.1 : P))) ''
+      (fun x : affineSpan ℝ {p₁, p₂} × V => (x.1, p₅, x.2 +ᵥ (x.1 : P))) ''
         Set.univ ×ˢ {v | SameRay ℝ (p₂ -ᵥ p₁) v ∧ v ≠ 0}
     have hco : IsConnected s :=
-      haveI : ConnectedSpace line[ℝ, p₁, p₂] := AddTorsor.connectedSpace _ _
+      haveI : ConnectedSpace (affineSpan ℝ {p₁, p₂}) := AddTorsor.connectedSpace _ _
       (isConnected_univ.prod (isConnected_setOfPred_sameRay_and_ne_zero
         (vsub_ne_zero.2 hp₁p₂.symm))).image _ (by fun_prop)
     have hf : ContinuousOn (fun p : P × P × P => ∡ p.1 p.2.1 p.2.2) s := by
@@ -740,7 +742,7 @@ theorem _root_.Collinear.oangle_sign_of_sameRay_vsub {p₁ p₂ p₃ p₄ : P} (
       obtain ⟨hvr, hv0⟩ := hv
       rw [← exists_nonneg_left_iff_sameRay (vsub_ne_zero.2 hp₁p₂.symm)] at hvr
       obtain ⟨r, -, rfl⟩ := hvr
-      change q ∈ line[ℝ, p₁, p₂] at hq
+      change q ∈ affineSpan ℝ {p₁, p₂} at hq
       rw [oangle_ne_zero_and_ne_pi_iff_affineIndependent]
       refine affineIndependent_of_ne_of_mem_of_notMem_of_mem ?_ hq
           (fun h => hc₅₁₂ ((collinear_insert_iff_of_mem_affineSpan h).2 (collinear_pair _ _ _))) ?_
@@ -877,7 +879,7 @@ lemma angle_eq_iff_oangle_eq_or_wbtw {p₁ p₂ p₃ p₄ : P} (hp₁ : p₁ ≠
 /-- If `p₃` bisects the angle `∡ p₁ p₂ p₄`, and `p₃` and `p₄` lie on the same side of the line
 `p₁ p₂`, then the unoriented angle `∠ p₁ p₂ p₃` is half `∠ p₁ p₂ p₄`. -/
 lemma angle_eq_angle_div_two_of_oangle_eq_of_sSameSide {p₁ p₂ p₃ p₄ : P} (h₁₂ : p₁ ≠ p₂)
-    (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄) (hs : line[ℝ, p₁, p₂].SSameSide p₃ p₄) :
+    (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄) (hs : (affineSpan ℝ {p₁, p₂}).SSameSide p₃ p₄) :
     ∠ p₁ p₂ p₃ = ∠ p₁ p₂ p₄ / 2 := by
   have h₃₂ : p₃ ≠ p₂ := by
     rintro rfl
@@ -900,7 +902,7 @@ lemma angle_eq_angle_div_two_of_oangle_eq_of_sSameSide {p₁ p₂ p₃ p₄ : P}
 /-- If `p₃` bisects the angle `∡ p₁ p₂ p₄`, and `p₃` and `p₄` lie on opposite sides of the line
 `p₁ p₂`, then the unoriented angle `∠ p₁ p₂ p₃` is `π` minus half `∠ p₁ p₂ p₄`. -/
 lemma angle_eq_pi_sub_angle_div_two_of_oangle_eq_of_sOppSide {p₁ p₂ p₃ p₄ : P} (h₁₂ : p₁ ≠ p₂)
-    (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄) (hs : line[ℝ, p₁, p₂].SOppSide p₃ p₄) :
+    (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄) (hs : (affineSpan ℝ {p₁, p₂}).SOppSide p₃ p₄) :
     ∠ p₁ p₂ p₃ = π - ∠ p₁ p₂ p₄ / 2 := by
   have h₃₂ : p₃ ≠ p₂ := by
     rintro rfl
@@ -912,7 +914,7 @@ lemma angle_eq_pi_sub_angle_div_two_of_oangle_eq_of_sOppSide {p₁ p₂ p₃ p�
       ∡ (AffineEquiv.pointReflection ℝ p₂ p₃) p₂ p₄ := by
     rw [oangle_pointReflection_left h₃₂ h₄₂, oangle_pointReflection_right h₁₂ h₃₂]
     simpa using ha
-  have hs' : line[ℝ, p₁, p₂].SOppSide p₃ (AffineEquiv.pointReflection ℝ p₂ p₃) :=
+  have hs' : (affineSpan ℝ {p₁, p₂}).SOppSide p₃ (AffineEquiv.pointReflection ℝ p₂ p₃) :=
     AffineSubspace.sOppSide_pointReflection (right_mem_affineSpan_pair _ _ _) (hs.left_notMem)
   obtain h := angle_eq_angle_div_two_of_oangle_eq_of_sSameSide h₁₂ ha' (hs'.symm.trans hs)
   rw [angle_pointReflection_right] at h
@@ -921,7 +923,8 @@ lemma angle_eq_pi_sub_angle_div_two_of_oangle_eq_of_sOppSide {p₁ p₂ p₃ p�
 /-- If `p₃` bisects the angle `∡ p₁ p₂ p₄` externally, and `p₃` and `p₄` lie on the same side of
 the line `p₁ p₂`, then the unoriented angle `∠ p₁ p₂ p₃` is half `∠ p₁ p₂ p₄` plus `π / 2`. -/
 lemma angle_eq_angle_add_pi_div_two_of_oangle_eq_add_pi_of_sSameSide {p₁ p₂ p₃ p₄ : P}
-    (h₁₂ : p₁ ≠ p₂) (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄ + π) (hs : line[ℝ, p₁, p₂].SSameSide p₃ p₄) :
+    (h₁₂ : p₁ ≠ p₂) (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄ + π)
+    (hs : (affineSpan ℝ {p₁, p₂}).SSameSide p₃ p₄) :
     ∠ p₁ p₂ p₃ = (∠ p₁ p₂ p₄ + π) / 2 := by
   have h₃₂ : p₃ ≠ p₂ := by
     rintro rfl
@@ -932,7 +935,7 @@ lemma angle_eq_angle_add_pi_div_two_of_oangle_eq_add_pi_of_sSameSide {p₁ p₂ 
   have ha' : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ (AffineEquiv.pointReflection ℝ p₂ p₄) := by
     rw [oangle_pointReflection_right h₃₂ h₄₂]
     exact ha
-  have hs' : line[ℝ, p₁, p₂].SOppSide p₄ (AffineEquiv.pointReflection ℝ p₂ p₄) :=
+  have hs' : (affineSpan ℝ {p₁, p₂}).SOppSide p₄ (AffineEquiv.pointReflection ℝ p₂ p₄) :=
     AffineSubspace.sOppSide_pointReflection (right_mem_affineSpan_pair _ _ _) (hs.right_notMem)
   obtain h := angle_eq_pi_sub_angle_div_two_of_oangle_eq_of_sOppSide h₁₂ ha' (hs.trans_sOppSide hs')
   rw [angle_pointReflection_right] at h
@@ -941,7 +944,8 @@ lemma angle_eq_angle_add_pi_div_two_of_oangle_eq_add_pi_of_sSameSide {p₁ p₂ 
 /-- If `p₃` bisects the angle `∡ p₁ p₂ p₄` externally, and `p₃` and `p₄` lie on opposite sides of
 the line `p₁ p₂`, then the unoriented angle `∠ p₁ p₂ p₃` is `π / 2` minus half `∠ p₁ p₂ p₄`. -/
 lemma angle_eq_pi_sub_angle_div_two_of_oangle_eq_add_pi_of_sOppSide {p₁ p₂ p₃ p₄ : P}
-    (h₁₂ : p₁ ≠ p₂) (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄ + π) (hs : line[ℝ, p₁, p₂].SOppSide p₃ p₄) :
+    (h₁₂ : p₁ ≠ p₂) (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄ + π)
+    (hs : (affineSpan ℝ {p₁, p₂}).SOppSide p₃ p₄) :
     ∠ p₁ p₂ p₃ = (π - ∠ p₁ p₂ p₄) / 2 := by
   have h₃₂ : p₃ ≠ p₂ := by
     rintro rfl
@@ -952,7 +956,7 @@ lemma angle_eq_pi_sub_angle_div_two_of_oangle_eq_add_pi_of_sOppSide {p₁ p₂ p
   have ha' : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ (AffineEquiv.pointReflection ℝ p₂ p₄) := by
     rw [oangle_pointReflection_right h₃₂ h₄₂]
     exact ha
-  have hs' : line[ℝ, p₁, p₂].SOppSide p₄ (AffineEquiv.pointReflection ℝ p₂ p₄) :=
+  have hs' : (affineSpan ℝ {p₁, p₂}).SOppSide p₄ (AffineEquiv.pointReflection ℝ p₂ p₄) :=
     AffineSubspace.sOppSide_pointReflection (right_mem_affineSpan_pair _ _ _) (hs.right_notMem)
   obtain h := angle_eq_angle_div_two_of_oangle_eq_of_sSameSide h₁₂ ha' (hs.trans hs')
   rw [angle_pointReflection_right] at h

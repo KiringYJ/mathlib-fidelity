@@ -156,7 +156,8 @@ lemma oangle_eq_of_dist_orthogonalProjection_eq {p p' : P} {s₁ s₂ : AffineSu
   have hc : ¬ Collinear ℝ {p', (orthogonalProjection s₁ p : P),
       (orthogonalProjection s₂ p : P)} := by
     intro hc
-    have h₁ : (orthogonalProjection s₁ p : P) ∈ line[ℝ, p', (orthogonalProjection s₂ p : P)] :=
+    have h₁ :
+        (orthogonalProjection s₁ p : P) ∈ affineSpan ℝ {p', (orthogonalProjection s₂ p : P)} :=
       hc.mem_affineSpan_of_mem_of_ne (by grind) (by grind) (by grind) (by grind)
     have h₁' : (orthogonalProjection s₁ p : P) ∈ s₁ ⊓ s₂ :=
       ⟨orthogonalProjection_mem _,
@@ -165,7 +166,8 @@ lemma oangle_eq_of_dist_orthogonalProjection_eq {p p' : P} {s₁ s₂ : AffineSu
       rw [← orthogonalProjection_orthogonalProjection_of_le inf_le_left, eq_comm,
         orthogonalProjection_eq_self_iff]
       grind
-    have h₂ : (orthogonalProjection s₂ p : P) ∈ line[ℝ, p', (orthogonalProjection s₁ p : P)] :=
+    have h₂ :
+        (orthogonalProjection s₂ p : P) ∈ affineSpan ℝ {p', (orthogonalProjection s₁ p : P)} :=
       hc.mem_affineSpan_of_mem_of_ne (by grind) (by grind) (by grind) (by grind)
     have h₂' : (orthogonalProjection s₂ p : P) ∈ s₁ ⊓ s₂ :=
       ⟨SetLike.le_def.1 (affineSpan_pair_le_of_mem_of_mem hp'₁ (orthogonalProjection_mem _)) h₂,
@@ -229,14 +231,14 @@ lemma dist_orthogonalProjection_eq_of_two_zsmul_oangle_eq {p p' : P}
 to the line `p₁ p₂` is `p₁`. -/
 private lemma dist_orthogonalProjection_line_eq_of_two_zsmul_oangle_eq_aux₁ {p p₁ p₂ p₃ : P}
     (h₂ : p₁ ≠ p₂) (h : (2 : ℤ) • ∡ p₂ p₁ p = (2 : ℤ) • ∡ p p₁ p₃)
-    (h' : orthogonalProjection line[ℝ, p₁, p₂] p = p₁) :
-    dist p (orthogonalProjection line[ℝ, p₁, p₂] p) =
-      dist p (orthogonalProjection line[ℝ, p₁, p₃] p) := by
+    (h' : orthogonalProjection (affineSpan ℝ {p₁, p₂}) p = p₁) :
+    dist p (orthogonalProjection (affineSpan ℝ {p₁, p₂}) p) =
+      dist p (orthogonalProjection (affineSpan ℝ {p₁, p₃}) p) := by
   obtain rfl | hp := eq_or_ne p p₁
   · rw [h', dist_self, zero_eq_dist, eq_comm, orthogonalProjection_eq_self_iff]
     exact left_mem_affineSpan_pair _ _ _
   · rw [← h'] at h hp
-    have hpm : p ∉ line[ℝ, p₁, p₂] := orthogonalProjection_eq_self_iff.not.1 (Ne.symm hp)
+    have hpm : p ∉ affineSpan ℝ {p₁, p₂} := orthogonalProjection_eq_self_iff.not.1 (Ne.symm hp)
     rw [two_zsmul_oangle_orthogonalProjection_self _ hpm (right_mem_affineSpan_pair _ _ _)
           (h'.symm ▸ h₂.symm), eq_comm, oangle, Real.Angle.two_zsmul_eq_pi_iff, h'] at h
     replace h := (Orientation.eq_zero_or_oangle_eq_iff_inner_eq_zero _).1 (.inr (.inr h))
@@ -255,10 +257,10 @@ private lemma dist_orthogonalProjection_line_eq_of_two_zsmul_oangle_eq_aux₁ {p
 to the line `p₁ p₂` or `p₁ p₃` is `p₁`. -/
 private lemma dist_orthogonalProjection_line_eq_of_two_zsmul_oangle_eq_aux₂ {p p₁ p₂ p₃ : P}
     (h₂ : p₁ ≠ p₂) (h₃ : p₁ ≠ p₃) (h : (2 : ℤ) • ∡ p₂ p₁ p = (2 : ℤ) • ∡ p p₁ p₃)
-    (h' : orthogonalProjection line[ℝ, p₁, p₂] p = p₁ ∨
-      orthogonalProjection line[ℝ, p₁, p₃] p = p₁) :
-    dist p (orthogonalProjection line[ℝ, p₁, p₂] p) =
-      dist p (orthogonalProjection line[ℝ, p₁, p₃] p) := by
+    (h' : orthogonalProjection (affineSpan ℝ {p₁, p₂}) p = p₁ ∨
+      orthogonalProjection (affineSpan ℝ {p₁, p₃}) p = p₁) :
+    dist p (orthogonalProjection (affineSpan ℝ {p₁, p₂}) p) =
+      dist p (orthogonalProjection (affineSpan ℝ {p₁, p₃}) p) := by
   rcases h' with h' | h'
   · exact dist_orthogonalProjection_line_eq_of_two_zsmul_oangle_eq_aux₁ h₂ h h'
   · refine (dist_orthogonalProjection_line_eq_of_two_zsmul_oangle_eq_aux₁ h₃ ?_ h').symm
@@ -268,10 +270,10 @@ private lemma dist_orthogonalProjection_line_eq_of_two_zsmul_oangle_eq_aux₂ {p
 are equal modulo `π`. -/
 lemma dist_orthogonalProjection_line_eq_of_two_zsmul_oangle_eq {p p₁ p₂ p₃ : P} (h₂ : p₁ ≠ p₂)
     (h₃ : p₁ ≠ p₃) (h : (2 : ℤ) • ∡ p₂ p₁ p = (2 : ℤ) • ∡ p p₁ p₃) :
-    dist p (orthogonalProjection line[ℝ, p₁, p₂] p) =
-      dist p (orthogonalProjection line[ℝ, p₁, p₃] p) := by
-  by_cases h' : orthogonalProjection line[ℝ, p₁, p₂] p = p₁ ∨
-      orthogonalProjection line[ℝ, p₁, p₃] p = p₁
+    dist p (orthogonalProjection (affineSpan ℝ {p₁, p₂}) p) =
+      dist p (orthogonalProjection (affineSpan ℝ {p₁, p₃}) p) := by
+  by_cases h' : orthogonalProjection (affineSpan ℝ {p₁, p₂}) p = p₁ ∨
+      orthogonalProjection (affineSpan ℝ {p₁, p₃}) p = p₁
   · exact dist_orthogonalProjection_line_eq_of_two_zsmul_oangle_eq_aux₂ h₂ h₃ h h'
   · rw [not_or] at h'
     refine dist_orthogonalProjection_eq_of_two_zsmul_oangle_eq
@@ -285,30 +287,30 @@ lemma dist_orthogonalProjection_line_eq_of_two_zsmul_oangle_eq {p p₁ p₂ p₃
 at `p₁` are equal modulo `π`. -/
 lemma two_zsmul_oangle_eq_of_dist_orthogonalProjection_line_eq {p p₁ p₂ p₃ : P}
     (ha : AffineIndependent ℝ ![p₁, p₂, p₃])
-    (h : dist p (orthogonalProjection line[ℝ, p₁, p₂] p) =
-      dist p (orthogonalProjection line[ℝ, p₁, p₃] p)) :
+    (h : dist p (orthogonalProjection (affineSpan ℝ {p₁, p₂}) p) =
+      dist p (orthogonalProjection (affineSpan ℝ {p₁, p₃}) p)) :
     (2 : ℤ) • ∡ p₂ p₁ p = (2 : ℤ) • ∡ p p₁ p₃ := by
-  by_cases ho : (orthogonalProjection line[ℝ, p₁, p₂] p : P) =
-      orthogonalProjection line[ℝ, p₁, p₃] p
+  by_cases ho : (orthogonalProjection (affineSpan ℝ {p₁, p₂}) p : P) =
+      orthogonalProjection (affineSpan ℝ {p₁, p₃}) p
   · suffices p = p₁ by simp [this]
     have hs := orthogonalProjection_sup_of_orthogonalProjection_eq ho
-    have hinf : line[ℝ, p₁, p₂] ⊓ line[ℝ, p₁, p₃] = affineSpan ℝ {p₁} := by
+    have hinf : affineSpan ℝ {p₁, p₂} ⊓ affineSpan ℝ {p₁, p₃} = affineSpan ℝ {p₁} := by
       convert! (ha.inf_affineSpan_eq_affineSpan_inter {0, 1} {0, 2})
       · simp
       · simp
       · suffices {p₁} = ![p₁, p₂, p₃] '' {0} by grind
         simp
-    have hsup : line[ℝ, p₁, p₂] ⊔ line[ℝ, p₁, p₃] = ⊤ := by
+    have hsup : affineSpan ℝ {p₁, p₂} ⊔ affineSpan ℝ {p₁, p₃} = ⊤ := by
       rw [← AffineSubspace.span_union]
       convert! ha.affineSpan_eq_top_iff_card_eq_finrank_add_one.2 ?_
       · simp
         grind
       · simpa using Fact.out
-    have hp : orthogonalProjection (line[ℝ, p₁, p₂]) p = p₁ := by
-      suffices (orthogonalProjection (line[ℝ, p₁, p₂]) p : P) ∈ affineSpan ℝ {p₁} by
+    have hp : orthogonalProjection (affineSpan ℝ {p₁, p₂}) p = p₁ := by
+      suffices (orthogonalProjection (affineSpan ℝ {p₁, p₂}) p : P) ∈ affineSpan ℝ {p₁} by
         simpa using this
-      have hi : (orthogonalProjection (line[ℝ, p₁, p₂]) p : P) ∈
-          line[ℝ, p₁, p₂] ⊓ line[ℝ, p₁, p₃] :=
+      have hi : (orthogonalProjection (affineSpan ℝ {p₁, p₂}) p : P) ∈
+          affineSpan ℝ {p₁, p₂} ⊓ affineSpan ℝ {p₁, p₃} :=
         ⟨orthogonalProjection_mem _, ho ▸ orthogonalProjection_mem _⟩
       rwa [hinf] at hi
     rw [← orthogonalProjection_sup_of_orthogonalProjection_eq ho] at hp
@@ -318,12 +320,12 @@ lemma two_zsmul_oangle_eq_of_dist_orthogonalProjection_line_eq {p p₁ p₂ p₃
       (left_mem_affineSpan_pair _ _ _) (left_mem_affineSpan_pair _ _ _) ho h
     have h₂₁ : p₂ ≠ p₁ := ha.injective.ne (by decide : (1 : Fin 3) ≠ 0)
     have h₃₁ : p₃ ≠ p₁ := ha.injective.ne (by decide : (2 : Fin 3) ≠ 0)
-    have hp₁ : orthogonalProjection line[ℝ, p₁, p₂] p ≠ p₁ := by
+    have hp₁ : orthogonalProjection (affineSpan ℝ {p₁, p₂}) p ≠ p₁ := by
       intro hp
       rw [hp, eq_comm, dist_orthogonalProjection_eq_dist_iff_eq_of_mem
         (left_mem_affineSpan_pair ℝ _ p₃)] at h
       grind
-    have hp₂ : orthogonalProjection line[ℝ, p₁, p₃] p ≠ p₁ := by
+    have hp₂ : orthogonalProjection (affineSpan ℝ {p₁, p₃}) p ≠ p₁ := by
       intro hp
       rw [hp, dist_orthogonalProjection_eq_dist_iff_eq_of_mem
           (left_mem_affineSpan_pair ℝ _ p₂)] at h
@@ -337,8 +339,8 @@ lemma two_zsmul_oangle_eq_of_dist_orthogonalProjection_line_eq {p p₁ p₂ p₃
 oriented angles at `p₁` are equal modulo `π`. -/
 lemma dist_orthogonalProjection_line_eq_iff_two_zsmul_oangle_eq {p p₁ p₂ p₃ : P}
     (ha : AffineIndependent ℝ ![p₁, p₂, p₃]) :
-    dist p (orthogonalProjection line[ℝ, p₁, p₂] p) =
-      dist p (orthogonalProjection line[ℝ, p₁, p₃] p) ↔
+    dist p (orthogonalProjection (affineSpan ℝ {p₁, p₂}) p) =
+      dist p (orthogonalProjection (affineSpan ℝ {p₁, p₃}) p) ↔
         (2 : ℤ) • ∡ p₂ p₁ p = (2 : ℤ) • ∡ p p₁ p₃ :=
   ⟨two_zsmul_oangle_eq_of_dist_orthogonalProjection_line_eq ha,
     dist_orthogonalProjection_line_eq_of_two_zsmul_oangle_eq

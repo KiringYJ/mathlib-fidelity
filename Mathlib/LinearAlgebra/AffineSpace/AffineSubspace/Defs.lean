@@ -1072,36 +1072,32 @@ theorem smul_vsub_rev_mem_vectorSpan_pair (r : k) (p₁ p₂ : P) :
 
 variable (k)
 
-/-- The line between two points, as an affine subspace. -/
-notation3 "line[" k ", " p₁ ", " p₂ "]" =>
-  affineSpan k (insert p₁ (@singleton _ _ Set.instSingletonSet p₂))
-
 /-- The first of two points lies in their affine span. -/
-theorem left_mem_affineSpan_pair (p₁ p₂ : P) : p₁ ∈ line[k, p₁, p₂] :=
+theorem left_mem_affineSpan_pair (p₁ p₂ : P) : p₁ ∈ affineSpan k {p₁, p₂} :=
   mem_affineSpan _ (Set.mem_insert _ _)
 
 /-- The second of two points lies in their affine span. -/
-theorem right_mem_affineSpan_pair (p₁ p₂ : P) : p₂ ∈ line[k, p₁, p₂] :=
+theorem right_mem_affineSpan_pair (p₁ p₂ : P) : p₂ ∈ affineSpan k {p₁, p₂} :=
   mem_affineSpan _ (Set.mem_insert_of_mem _ (Set.mem_singleton _))
 
 variable {k}
 
 /-- The span of two points that lie in an affine subspace is contained in that subspace. -/
 theorem affineSpan_pair_le_of_mem_of_mem {p₁ p₂ : P} {s : AffineSubspace k P} (hp₁ : p₁ ∈ s)
-    (hp₂ : p₂ ∈ s) : line[k, p₁, p₂] ≤ s := by
+    (hp₂ : p₂ ∈ s) : affineSpan k {p₁, p₂} ≤ s := by
   rw [affineSpan_le, Set.insert_subset_iff, Set.singleton_subset_iff]
   exact ⟨hp₁, hp₂⟩
 
-/-- One line is contained in another differing in the first point if the first point of the first
-line is contained in the second line. -/
-theorem affineSpan_pair_le_of_left_mem {p₁ p₂ p₃ : P} (h : p₁ ∈ line[k, p₂, p₃]) :
-    line[k, p₁, p₃] ≤ line[k, p₂, p₃] :=
+/-- The affine span of `p₁` and `p₃` is contained in that of `p₂` and `p₃` if `p₁` lies in the
+latter. -/
+theorem affineSpan_pair_le_of_left_mem {p₁ p₂ p₃ : P} (h : p₁ ∈ affineSpan k {p₂, p₃}) :
+    affineSpan k {p₁, p₃} ≤ affineSpan k {p₂, p₃} :=
   affineSpan_pair_le_of_mem_of_mem h (right_mem_affineSpan_pair _ _ _)
 
-/-- One line is contained in another differing in the second point if the second point of the
-first line is contained in the second line. -/
-theorem affineSpan_pair_le_of_right_mem {p₁ p₂ p₃ : P} (h : p₁ ∈ line[k, p₂, p₃]) :
-    line[k, p₂, p₁] ≤ line[k, p₂, p₃] :=
+/-- The affine span of `p₂` and `p₁` is contained in that of `p₂` and `p₃` if `p₁` lies in the
+latter. -/
+theorem affineSpan_pair_le_of_right_mem {p₁ p₂ p₃ : P} (h : p₁ ∈ affineSpan k {p₂, p₃}) :
+    affineSpan k {p₂, p₁} ≤ affineSpan k {p₂, p₃} :=
   affineSpan_pair_le_of_mem_of_mem (left_mem_affineSpan_pair _ _ _) h
 
 variable (k)
