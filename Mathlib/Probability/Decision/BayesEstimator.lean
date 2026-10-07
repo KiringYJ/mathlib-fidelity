@@ -18,7 +18,7 @@ data generating kernel, `π` a prior on the parameter space, and `ℓ : Θ → �
 
 An estimator (a `Kernel 𝓧 𝓨`) is said to be a Bayes estimator if it attains the Bayes risk for
 the estimation problem.
-It can be written as a measurable function `x ↦ argmin_y η(x)[θ ↦ ℓ θ y]`
+It can be written as a measurable function `x ↦ argmin_y ∫⁻ θ, ℓ θ y ∂(η x)`
 for `(P ∘ₘ π)`-almost every `x`, where `η` is a representative of the posterior `P†π`, whenever we
 can select the argmin in a measurable way. Since two representatives of the posterior agree
 `(P ∘ₘ π)`-almost everywhere, this does not depend on the representative.
@@ -28,7 +28,7 @@ can select the argmin in a measurable way. Since two representatives of the post
 * `IsBayesEstimator`: an estimator is a Bayes estimator if it attains the Bayes risk for the prior.
 * `IsArgminEstimator`: a measurable function `f : 𝓧 → 𝓨` is an argmin estimator
   if for every representative `η` of `P†π` and `(P ∘ₘ π)`-almost every `x` the value `f x` belongs
-  to `argmin_y η(x)[θ ↦ ℓ θ y]`.
+  to `argmin_y ∫⁻ θ, ℓ θ y ∂(η x)`.
 * `HasArgminEstimator`: the estimation problem admits an argmin estimator.
   That is, we can choose the argmin of the posterior expected loss in a measurable way.
 
@@ -67,8 +67,8 @@ section Posterior
 variable [StandardBorelSpace Θ] [Nonempty Θ] {η : Kernel 𝓧 Θ}
 
 /-- The average risk of an estimator `κ` with respect to a prior `π` can be expressed as
-an integral in the following way: `R_π(κ) = ((η × κ) ∘ P ∘ π)[(θ, y) ↦ ℓ θ y]` for every Markov
-representative `η` of the posterior `P†π`. -/
+an integral in the following way: `R_π(κ) = ∫⁻ θy, ℓ θy.1 θy.2 ∂((η ×ₖ κ) ∘ₘ (P ∘ₘ π))` for every
+Markov representative `η` of the posterior `P†π`. -/
 lemma avgRisk_eq_lintegral_posterior_prod
     (hl : Measurable (Function.uncurry ℓ)) (P : Kernel Θ 𝓧) [IsFiniteKernel P]
     (κ : Kernel 𝓧 𝓨) [IsSFiniteKernel κ] (π : Measure Θ) [IsFiniteMeasure π] [IsMarkovKernel η]
@@ -122,7 +122,7 @@ variable [StandardBorelSpace Θ] [Nonempty Θ] {f : 𝓧 → 𝓨} [IsFiniteKern
 
 /-- We say that a measurable function `f : 𝓧 → 𝓨` is an argmin estimator
 with respect to the prior `π` if for every representative `η` of the posterior `P†π` and
-`(P ∘ₘ π)`-almost every `x` it is of the form `x ↦ argmin_y η(x)[θ ↦ ℓ θ y]`. Since two
+`(P ∘ₘ π)`-almost every `x` it is of the form `x ↦ argmin_y ∫⁻ θ, ℓ θ y ∂(η x)`. Since two
 representatives agree `(P ∘ₘ π)`-almost everywhere, it suffices to check one of them
 (`ProbabilityTheory.IsArgminEstimator.of_mem`). -/
 structure IsArgminEstimator {𝓨 : Type*} [SigmaAlgebra 𝓨]

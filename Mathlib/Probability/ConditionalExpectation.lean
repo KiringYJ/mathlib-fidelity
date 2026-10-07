@@ -40,7 +40,8 @@ variable {Ω E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpac
 /-- If `m₁, m₂` are independent σ-algebras and `f` is `m₁`-measurable, then `𝔼[f | m₂] = 𝔼[f]`
 almost everywhere. -/
 theorem condExp_indep_eq (hle₁ : m₁ ≤ m) (hle₂ : m₂ ≤ m) [SigmaFinite (μ.trim hle₂)]
-    (hf : StronglyMeasurable[m₁] f) (hindp : Indep m₁ m₂ μ) : μ[f | m₂] =ᵐ[μ] fun _ => μ[f] := by
+    (hf : StronglyMeasurable[m₁] f) (hindp : Indep m₁ m₂ μ) :
+    μ[f | m₂] =ᵐ[μ] fun _ => ∫ x, f x ∂μ := by
   by_cases hfint : Integrable f μ
   swap; · rw [condExp_of_not_integrable hfint, integral_undef hfint]; rfl
   refine (ae_eq_condExp_of_forall_setIntegral_eq hle₂ hfint

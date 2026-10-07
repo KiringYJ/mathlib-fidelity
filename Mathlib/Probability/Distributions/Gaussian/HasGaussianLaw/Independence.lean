@@ -182,7 +182,7 @@ lemma iIndepFun.hasGaussianLaw (hX1 : ∀ i, HasGaussianLaw (X i) P) (hX2 : iInd
     simp only [← LinearMap.sum_single_apply E (fun i ↦ ∫ x, x ∂P.map (X i)), map_sum, ofReal_sum,
       sum_mul, diagonalStrongDualPi_apply, sum_div, ← sum_sub_distrib, exp_sum]
     congr with i
-    rw [(hX1 i).isGaussian_map.charFunDual_eq, integral_complex_ofReal, integral_comp_id_comm,
+    rw [(hX1 i).isGaussian_map.charFunDual_eq, integral_comp_id_comm,
       covarianceBilinDual_self_eq_variance]
     · simp
     · exact (hX1 i).isGaussian_map.memLp_two_id
@@ -295,12 +295,12 @@ lemma IndepFun.hasGaussianLaw [NormedSpace ℝ E] [NormedSpace ℝ F] {X : Ω �
     simp only [this, map_add, ofReal_add, add_mul, diagonalStrongDualProd_apply, add_div,
       add_sub_add_comm, exp_add]
     congr
-    · rw [hX.isGaussian_map.charFunDual_eq, integral_complex_ofReal, integral_comp_id_comm,
+    · rw [hX.isGaussian_map.charFunDual_eq, integral_comp_id_comm,
         covarianceBilinDual_self_eq_variance]
       · simp
       · exact hX.isGaussian_map.memLp_two_id
       · exact hX.isGaussian_map.integrable_id
-    · rw [hY.isGaussian_map.charFunDual_eq, integral_complex_ofReal, integral_comp_id_comm,
+    · rw [hY.isGaussian_map.charFunDual_eq, integral_comp_id_comm,
         covarianceBilinDual_self_eq_variance]
       · simp
       · exact hY.isGaussian_map.memLp_two_id

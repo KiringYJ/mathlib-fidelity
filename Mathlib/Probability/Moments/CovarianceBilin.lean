@@ -66,7 +66,7 @@ lemma covarianceBilin_of_not_memLp (h : ¬MemLp id 2 μ) :
   simp [covarianceBilin_eq_covarianceBilinDual, h]
 
 lemma covarianceBilin_apply [CompleteSpace E] [IsFiniteMeasure μ] (h : MemLp id 2 μ) (x y : E) :
-    covarianceBilin μ x y = ∫ z, ⟪x, z - μ[id]⟫ * ⟪y, z - μ[id]⟫ ∂μ := by
+    covarianceBilin μ x y = ∫ z, ⟪x, z - ∫ u, u ∂μ⟫ * ⟪y, z - ∫ u, u ∂μ⟫ ∂μ := by
   simp [covarianceBilin, covarianceBilinDual_apply' h]
 
 lemma covarianceBilin_comm (x y : E) :
@@ -112,7 +112,7 @@ lemma covarianceBilin_map {F : Type*} [NormedAddCommGroup F] [InnerProductSpace 
     [CompleteSpace E] [IsFiniteMeasure μ] (h : MemLp id 2 μ) (L : E →L[ℝ] F) (u v : F) :
     covarianceBilin (μ.map L) u v = covarianceBilin μ (L.adjoint u) (L.adjoint v) := by
   rw [covarianceBilin_apply, covarianceBilin_apply h]
-  · simp_rw [id, L.integral_id_map (h.integrable (by simp))]
+  · simp_rw [L.integral_id_map (h.integrable (by simp))]
     rw [integral_map]
     · simp_rw [← map_sub, ← L.adjoint_inner_left]
     all_goals fun_prop
@@ -127,9 +127,7 @@ lemma covarianceBilin_map_const_add [CompleteSpace E] [IsProbabilityMeasure μ] 
     rw [covarianceBilin_apply h_Lp,
       covarianceBilin_apply h, integral_map (by fun_prop) (by fun_prop)]
     congr with z
-    rw [integral_map (by fun_prop) h_Lp.1]
-    simp only [id_eq]
-    rw [integral_add (integrable_const _)]
+    rw [integral_map (f := fun u ↦ u) (by fun_prop) h_Lp.1, integral_add (integrable_const _)]
     · simp
     · exact h.integrable (by simp)
   · ext

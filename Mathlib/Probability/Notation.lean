@@ -12,8 +12,8 @@ public import Mathlib.MeasureTheory.Measure.Decomposition.Lebesgue
 
 This file defines the following notations, for functions `X,Y`, measures `P, Q` defined on a
 measurable space `m0`, and another measurable space structure `m` with `hm : m ≤ m0`,
-- `P[X] = ∫ a, X a ∂P`
-- `𝔼[X] = ∫ a, X a`
+- `𝔼[X] = ∫ a, X a`, the expectation of `X` under the measure `volume`; the expectation of `X`
+  under a measure `P` is written as the integral `∫ a, X a ∂P`, which names `P`
 - `𝔼[X | m]`: conditional expectation of `X` with respect to the measure `volume` and the
   measurable space `m`. The similar `P[X|m]` for a measure `P` is defined in
   `MeasureTheory.Function.ConditionalExpectation.Basic`.
@@ -42,16 +42,6 @@ open scoped MeasureTheory
 /-- `𝔼[f | m]` is the conditional expectation of `f` with respect to `m`. -/
 scoped[ProbabilityTheory] notation "𝔼[" X " | " m "]" =>
   MeasureTheory.condExp m MeasureTheory.MeasureSpace.volume X
-
--- `scoped[ProbabilityTheory]` isn't legal for `macro`s.
-namespace ProbabilityTheory
-/-- `P[X]` is the expectation of `X` under the measure `P`.
-
-Note that this notation can conflict with the `GetElem` notation for lists. Usually if you see an
-error about ambiguous notation when trying to write `l[i]` for a list, it means that Lean could
-not find `i < l.length`, and so fell back to trying this notation as well. -/
-scoped macro:max P:term noWs "[" X:term "]" : term => `(∫ x, ↑($X x) ∂$P)
-end ProbabilityTheory
 
 /-- `𝔼[X]` is the expectation of `X`, defined as its Lebesgue integral. -/
 scoped[ProbabilityTheory] notation "𝔼[" X "]" => ∫ a, (X : _ → _) a

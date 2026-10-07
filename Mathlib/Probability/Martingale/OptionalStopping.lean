@@ -44,7 +44,7 @@ theorem Submartingale.expected_stoppedValue_mono {E : Type*} [NormedAddCommGroup
     [NormedSpace ℝ E] [CompleteSpace E] [PartialOrder E] [IsOrderedAddMonoid E]
     [IsOrderedModule ℝ E] [ClosedIciTopology E] [SigmaFiniteFiltration μ 𝒢] {f : ℕ → Ω → E}
     (hf : Submartingale f 𝒢 μ) (hτ : IsStoppingTime 𝒢 τ) (hπ : IsStoppingTime 𝒢 π) (hle : τ ≤ π)
-    {N : ℕ} (hbdd : ∀ ω, π ω ≤ N) : μ[stoppedValue f τ] ≤ μ[stoppedValue f π] := by
+    {N : ℕ} (hbdd : ∀ ω, π ω ≤ N) : ∫ ω, stoppedValue f τ ω ∂μ ≤ ∫ ω, stoppedValue f π ω ∂μ := by
   rw [← sub_nonneg, ← integral_sub', stoppedValue_sub_eq_sum' hle hbdd]
   · simp only [Finset.sum_apply]
     have this i : {ω : Ω | τ ω ≤ i ∧ i < π ω} ∈ 𝒢 i := by
@@ -69,7 +69,7 @@ theorem submartingale_of_expected_stoppedValue_mono [SigmaFiniteFiltration μ �
     (hadp : StronglyAdapted 𝒢 f)
     (hint : ∀ i, Integrable (f i) μ)
     (hf : ∀ τ π : Ω → WithTop ℕ, IsStoppingTime 𝒢 τ → IsStoppingTime 𝒢 π →
-      τ ≤ π → (∃ N : ℕ, ∀ ω, π ω ≤ N) → μ[stoppedValue f τ] ≤ μ[stoppedValue f π]) :
+      τ ≤ π → (∃ N : ℕ, ∀ ω, π ω ≤ N) → ∫ ω, stoppedValue f τ ω ∂μ ≤ ∫ ω, stoppedValue f π ω ∂μ) :
     Submartingale f 𝒢 μ := by
   refine submartingale_of_setIntegral_le hadp hint fun i j hij s hs => ?_
   classical
@@ -87,7 +87,7 @@ stopped value of `f` at `τ` has expectation smaller than its stopped value at `
 theorem submartingale_iff_expected_stoppedValue_mono [SigmaFiniteFiltration μ 𝒢]
     (hadp : StronglyAdapted 𝒢 f) (hint : ∀ i, Integrable (f i) μ) :
     Submartingale f 𝒢 μ ↔ ∀ τ π : Ω → WithTop ℕ, IsStoppingTime 𝒢 τ → IsStoppingTime 𝒢 π →
-      τ ≤ π → (∃ N : ℕ, ∀ x, π x ≤ N) → μ[stoppedValue f τ] ≤ μ[stoppedValue f π] :=
+      τ ≤ π → (∃ N : ℕ, ∀ x, π x ≤ N) → ∫ ω, stoppedValue f τ ω ∂μ ≤ ∫ ω, stoppedValue f π ω ∂μ :=
   ⟨fun hf _ _ hτ hπ hle ⟨_, hN⟩ => hf.expected_stoppedValue_mono hτ hπ hle hN,
     submartingale_of_expected_stoppedValue_mono hadp hint⟩
 
@@ -150,7 +150,7 @@ theorem maximal_ineq [IsFiniteMeasure μ] (hsub : Submartingale f 𝒢 μ) (hnon
       ENNReal.ofReal
         (∫ ω in {ω | ((range (n + 1)).sup' nonempty_range_add_one fun k => f k ω) < ε},
           f n ω ∂μ) ≤
-      ENNReal.ofReal (μ[f n]) by
+      ENNReal.ofReal (∫ ω, f n ω ∂μ) by
     have hadd : ENNReal.ofReal (∫ ω, f n ω ∂μ) =
       ENNReal.ofReal
         (∫ ω in {ω | ε ≤ (range (n + 1)).sup' nonempty_range_add_one fun k => f k ω}, f n ω ∂μ) +
@@ -211,7 +211,7 @@ theorem maximal_ineq [IsFiniteMeasure μ] (hsub : Submartingale f 𝒢 μ) (hnon
           (hsub.stronglyAdapted.adapted.isStoppingTime_hittingBtwn measurableSet_Ici)
           (mod_cast hittingBtwn_le))
       exacts [integral_nonneg fun x => hnonneg _ _, integral_nonneg fun x => hnonneg _ _]
-    _ ≤ ENNReal.ofReal (μ[f n]) := by
+    _ ≤ ENNReal.ofReal (∫ ω, f n ω ∂μ) := by
       refine ENNReal.ofReal_le_ofReal ?_
       rw [← stoppedValue_const f n]
       refine hsub.expected_stoppedValue_mono

@@ -192,7 +192,7 @@ lemma HasLaw.integrable [TopologicalSpace 𝓧] [ContinuousENorm 𝓧] (hX : Has
 
 lemma HasLaw.integral_comp {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {X : Ω → 𝓧} (hX : HasLaw X μ P) {f : 𝓧 → E} (hf : AEStronglyMeasurable f μ) :
-    P[f ∘ X] = ∫ x, f x ∂μ := by
+    ∫ x, (f ∘ X) x ∂P = ∫ x, f x ∂μ := by
   rw [← hX.map_eq, integral_map hX.aemeasurable, Function.comp_def]
   rwa [hX.map_eq]
 
@@ -203,7 +203,7 @@ lemma HasLaw.lintegral_comp {X : Ω → 𝓧} (hX : HasLaw X μ P) {f : 𝓧 →
 
 lemma HasLaw.integral_eq {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [SecondCountableTopology E] {mE : SigmaAlgebra E} [OpensSigmaAlgebra E] {μ : Measure E}
-    {X : Ω → E} (hX : HasLaw X μ P) : P[X] = ∫ x, x ∂μ := by
+    {X : Ω → E} (hX : HasLaw X μ P) : ∫ x, X x ∂P = ∫ x, x ∂μ := by
   rw [← Function.id_comp X, hX.integral_comp aestronglyMeasurable_id]
   simp
 

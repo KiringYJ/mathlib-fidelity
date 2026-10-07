@@ -43,21 +43,22 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [SigmaAlgebra E]
 section Rotation
 
 /-- Characteristic function of a centered Gaussian measure.
-For a Gaussian measure, the hypothesis `∀ L : StrongDual ℝ E, μ[L] = 0` is equivalent to the simpler
-`μ[id] = 0`, but at this point we don't know yet that `μ` has a first moment so we can't use it.
+For a Gaussian measure, the hypothesis `∀ L : StrongDual ℝ E, ∫ x, L x ∂μ = 0` is equivalent to the
+simpler `∫ x, x ∂μ = 0`, but at this point we don't know yet that `μ` has a first moment so we can't
+use it.
 See `charFunDual_eq_of_integral_eq_zero` -/
-lemma charFunDual_eq_of_forall_strongDual_eq_zero (hμ : ∀ L : StrongDual ℝ E, μ[L] = 0)
+lemma charFunDual_eq_of_forall_strongDual_eq_zero (hμ : ∀ L : StrongDual ℝ E, ∫ x, L x ∂μ = 0)
     (L : StrongDual ℝ E) :
     charFunDual μ L = exp (- Var[L; μ] / 2) := by
-  simp [charFunDual_eq L, integral_complex_ofReal, hμ L, neg_div]
+  simp [charFunDual_eq L, hμ L, neg_div]
 
 /-- For a centered Gaussian measure `μ`, the product measure `μ.prod μ` is invariant under rotation.
-The hypothesis `∀ L : StrongDual ℝ E, μ[L] = 0` is equivalent to the simpler
-`μ[id] = 0`, but at this point we don't know yet that `μ` has a first moment so we can't use it.
+The hypothesis `∀ L : StrongDual ℝ E, ∫ x, L x ∂μ = 0` is equivalent to the simpler
+`∫ x, x ∂μ = 0`, but at this point we don't know yet that `μ` has a first moment so we can't use it.
 See `map_rotation_eq_self`. -/
 lemma map_rotation_eq_self_of_forall_strongDual_eq_zero
     [SecondCountableTopology E] [CompleteSpace E]
-    (hμ : ∀ L : StrongDual ℝ E, μ[L] = 0) (θ : ℝ) :
+    (hμ : ∀ L : StrongDual ℝ E, ∫ x, L x ∂μ = 0) (θ : ℝ) :
     (μ.prod μ).map (ContinuousLinearMap.rotation θ) = μ.prod μ := by
   simp only [Measure.prod_eq_productBySections μ μ]
   refine Measure.ext_of_charFunDual ?_
@@ -99,7 +100,7 @@ variable [SecondCountableTopology E]
 
 /-- The convolution of a Gaussian measure `μ` and its map by `x ↦ -x` is centered. -/
 lemma integral_dual_conv_map_neg_eq_zero (L : StrongDual ℝ E) :
-    (μ ∗ (μ.map (ContinuousLinearEquiv.neg ℝ)))[L] = 0 := by
+    ∫ x, L x ∂(μ ∗ (μ.map (ContinuousLinearEquiv.neg ℝ))) = 0 := by
   rw [integral_conv (by fun_prop)]
   simp only [map_add]
   calc ∫ x, ∫ y, L x + L y ∂μ.map (ContinuousLinearEquiv.neg ℝ) ∂μ
@@ -210,7 +211,7 @@ lemma integrable_id : Integrable id μ :=
 @[to_fun memLp_two_fun_id]
 lemma memLp_two_id : MemLp id 2 μ := memLp_id μ 2 (by norm_num)
 
-lemma integral_dual (L : StrongDual ℝ E) : μ[L] = L (∫ x, x ∂μ) :=
+lemma integral_dual (L : StrongDual ℝ E) : ∫ x, L x ∂μ = L (∫ x, x ∂μ) :=
   L.integral_comp_comm ((memLp_id μ 1 (by simp)).integrable le_rfl)
 
 /-- A Gaussian measure with variance zero is a Dirac. -/
@@ -218,7 +219,7 @@ lemma eq_dirac_of_variance_eq_zero (h : ∀ L : StrongDual ℝ E, Var[L; μ] = 0
     μ = Measure.dirac (∫ x, x ∂μ) := by
   refine Measure.ext_of_charFunDual ?_
   ext L
-  rw [charFunDual_dirac, charFunDual_eq L, h L, integral_complex_ofReal, integral_dual L]
+  rw [charFunDual_dirac, charFunDual_eq L, h L, integral_dual L]
   simp
 
 /-- If a Gaussian measure is not a Dirac, then it has value zero on singletons. -/
@@ -242,18 +243,16 @@ lemma nullSingletonClass (h : ∀ x, μ ≠ Measure.dirac x) : NullSingletonClas
 alias noAtoms := nullSingletonClass
 
 /-- Characteristic function of a centered Gaussian measure. -/
-lemma charFunDual_eq_of_integral_eq_zero (hμ : μ[id] = 0) (L : StrongDual ℝ E) :
+lemma charFunDual_eq_of_integral_eq_zero (hμ : ∫ x, x ∂μ = 0) (L : StrongDual ℝ E) :
     charFunDual μ L = exp (- Var[L; μ] / 2) := by
   refine charFunDual_eq_of_forall_strongDual_eq_zero (fun L ↦ ?_) L
-  simp only [id_eq] at hμ
   simp [integral_dual, hμ]
 
 /-- For a centered Gaussian measure `μ`, the product measure `μ.prod μ` is invariant under
 rotation. -/
-lemma map_rotation_eq_self (hμ : μ[id] = 0) (θ : ℝ) :
+lemma map_rotation_eq_self (hμ : ∫ x, x ∂μ = 0) (θ : ℝ) :
     (μ.prod μ).map (ContinuousLinearMap.rotation θ) = μ.prod μ := by
   refine map_rotation_eq_self_of_forall_strongDual_eq_zero (fun L ↦ ?_) θ
-  simp only [id_eq] at hμ
   simp [integral_dual, hμ]
 
 end FiniteMoments

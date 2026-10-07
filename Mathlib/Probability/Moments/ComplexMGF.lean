@@ -14,8 +14,8 @@ public import Mathlib.Probability.Moments.IntegrableExpMul
 /-!
 # The complex-valued moment-generating function
 
-The moment-generating function (mgf) is `t : ℝ ↦ μ[fun ω ↦ rexp (t * X ω)]`. It can be extended to
-a complex function `z : ℂ ↦ μ[fun ω ↦ cexp (z * X ω)]`, which we call `complexMGF X μ`.
+The moment-generating function (mgf) is `t : ℝ ↦ ∫ ω, rexp (t * X ω) ∂μ`. It can be extended to
+a complex function `z : ℂ ↦ ∫ ω, cexp (z * X ω) ∂μ`, which we call `complexMGF X μ`.
 That function is holomorphic on the vertical strip with base the interior of the interval
 of definition of the mgf.
 On the vertical line that goes through 0, `complexMGF X μ` is equal to the characteristic function.
@@ -24,7 +24,7 @@ properties of the mgf from those of the characteristic function).
 
 ## Main definitions
 
-* `complexMGF X μ`: the function `z : ℂ ↦ μ[fun ω ↦ cexp (z * X ω)]`.
+* `complexMGF X μ`: the function `z : ℂ ↦ ∫ ω, cexp (z * X ω) ∂μ`.
 
 ## Main results
 
@@ -32,7 +32,7 @@ properties of the mgf from those of the characteristic function).
 
 * `hasDerivAt_complexMGF`: for all `z : ℂ` such that the real part `z.re` belongs to the interior
   of the interval of definition of the mgf, `complexMGF X μ` is differentiable at `z`
-  with derivative `μ[X * exp (z * X)]`.
+  with derivative `∫ ω, X ω * cexp (z * X ω) ∂μ`.
 * `differentiableOn_complexMGF`: `complexMGF X μ` is holomorphic on the vertical strip
   `{z | z.re ∈ interior (integrableExpSet X μ)}`.
 * `analyticOn_complexMGF`: `complexMGF X μ` is analytic on the vertical strip
@@ -119,10 +119,11 @@ lemma complexMGF_mul_I (hX : AEMeasurable X μ) (t : ℝ) :
 section Analytic
 
 /-- For `z : ℂ` with `z.re ∈ interior (integrableExpSet X μ)`, the derivative of the function
-`z' ↦ μ[X ^ n * cexp (z' * X)]` at `z` is `μ[X ^ (n + 1) * cexp (z * X)]`. -/
+`z' ↦ ∫ ω, X ω ^ n * cexp (z' * X ω) ∂μ` at `z` is
+`∫ ω, X ω ^ (n + 1) * cexp (z * X ω) ∂μ`. -/
 lemma hasDerivAt_integral_pow_mul_exp (hz : z.re ∈ interior (integrableExpSet X μ)) (n : ℕ) :
-    HasDerivAt (fun z ↦ μ[fun ω ↦ X ω ^ n * cexp (z * X ω)])
-        μ[fun ω ↦ X ω ^ (n + 1) * cexp (z * X ω)] z := by
+    HasDerivAt (fun z ↦ ∫ ω, X ω ^ n * cexp (z * X ω) ∂μ)
+        (∫ ω, X ω ^ (n + 1) * cexp (z * X ω) ∂μ) z := by
   have hX : AEMeasurable X μ := aemeasurable_of_mem_interior_integrableExpSet hz
   have hz' := hz
   rw [mem_interior_iff_mem_nhds, mem_nhds_iff_exists_Ioo_subset] at hz'
@@ -165,9 +166,9 @@ lemma hasDerivAt_integral_pow_mul_exp (hz : z.re ∈ interior (integrableExpSet 
     rw [smul_eq_mul, mul_comm]
 
 /-- For all `z : ℂ` with `z.re ∈ interior (integrableExpSet X μ)`,
-`complexMGF X μ` is differentiable at `z` with derivative `μ[X * exp (z * X)]`. -/
+`complexMGF X μ` is differentiable at `z` with derivative `∫ ω, X ω * cexp (z * X ω) ∂μ`. -/
 theorem hasDerivAt_complexMGF (hz : z.re ∈ interior (integrableExpSet X μ)) :
-    HasDerivAt (complexMGF X μ) μ[fun ω ↦ X ω * cexp (z * X ω)] z := by
+    HasDerivAt (complexMGF X μ) (∫ ω, X ω * cexp (z * X ω) ∂μ) z := by
   convert! hasDerivAt_integral_pow_mul_exp hz 0
   · simp [complexMGF]
   · simp
@@ -203,13 +204,13 @@ section Deriv
 /-! ### Iterated derivatives of `complexMGF` -/
 
 lemma hasDerivAt_iteratedDeriv_complexMGF (hz : z.re ∈ interior (integrableExpSet X μ)) (n : ℕ) :
-    HasDerivAt (iteratedDeriv n (complexMGF X μ)) μ[fun ω ↦ X ω ^ (n + 1) * cexp (z * X ω)] z := by
+    HasDerivAt (iteratedDeriv n (complexMGF X μ)) (∫ ω, X ω ^ (n + 1) * cexp (z * X ω) ∂μ) z := by
   induction n generalizing z with
   | zero => simp [hasDerivAt_complexMGF hz]
   | succ n hn =>
     rw [iteratedDeriv_succ]
     have : deriv (iteratedDeriv n (complexMGF X μ))
-        =ᶠ[𝓝 z] fun z ↦ μ[fun ω ↦ X ω ^ (n + 1) * cexp (z * X ω)] := by
+        =ᶠ[𝓝 z] fun z ↦ ∫ ω, X ω ^ (n + 1) * cexp (z * X ω) ∂μ := by
       have h_mem : ∀ᶠ y in 𝓝 z, y.re ∈ interior (integrableExpSet X μ) := by
         refine IsOpen.eventually_mem ?_ hz
         exact isOpen_interior.preimage Complex.continuous_re
@@ -218,9 +219,9 @@ lemma hasDerivAt_iteratedDeriv_complexMGF (hz : z.re ∈ interior (integrableExp
     exact hasDerivAt_integral_pow_mul_exp hz (n + 1)
 
 /-- For `z : ℂ` with `z.re ∈ interior (integrableExpSet X μ)`, the n-th derivative of the function
-`complexMGF X μ` at `z` is `μ[X ^ n * cexp (z * X)]`. -/
+`complexMGF X μ` at `z` is `∫ ω, X ω ^ n * cexp (z * X ω) ∂μ`. -/
 lemma iteratedDeriv_complexMGF (hz : z.re ∈ interior (integrableExpSet X μ)) (n : ℕ) :
-    iteratedDeriv n (complexMGF X μ) z = μ[fun ω ↦ X ω ^ n * cexp (z * X ω)] := by
+    iteratedDeriv n (complexMGF X μ) z = ∫ ω, X ω ^ n * cexp (z * X ω) ∂μ := by
   induction n generalizing z with
   | zero => simp [complexMGF]
   | succ n hn =>

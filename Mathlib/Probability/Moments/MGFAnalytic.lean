@@ -19,7 +19,8 @@ is analytic on the interior of `integrableExpSet X μ`, the interval on which it
 
 * `analyticOn_mgf`: the moment-generating function is analytic on the interior of the interval
   on which it is defined.
-* `iteratedDeriv_mgf`: the n-th derivative of the mgf at `t` is `μ[X ^ n * exp (t * X)]`.
+* `iteratedDeriv_mgf`: the n-th derivative of the mgf at `t` is
+  `∫ ω, X ω ^ n * exp (t * X ω) ∂μ`.
 
 * `analyticOn_cgf`: the cumulant-generating function is analytic on the interior of the interval
   `integrableExpSet X μ`.
@@ -38,10 +39,10 @@ namespace ProbabilityTheory
 variable {Ω : Type*} {m : SigmaAlgebra Ω} {X : Ω → ℝ} {μ : Measure Ω} {t u v : ℝ}
 
 /-- For `t : ℝ` with `t ∈ interior (integrableExpSet X μ)`, the derivative of the function
-`x ↦ μ[X ^ n * exp (x * X)]` at `t` is `μ[X ^ (n + 1) * exp (t * X)]`. -/
+`x ↦ ∫ ω, X ω ^ n * exp (x * X ω) ∂μ` at `t` is `∫ ω, X ω ^ (n + 1) * exp (t * X ω) ∂μ`. -/
 lemma hasDerivAt_integral_pow_mul_exp_real (ht : t ∈ interior (integrableExpSet X μ)) (n : ℕ) :
-    HasDerivAt (fun t ↦ μ[fun ω ↦ X ω ^ n * exp (t * X ω)])
-      μ[fun ω ↦ X ω ^ (n + 1) * exp (t * X ω)] t := by
+    HasDerivAt (fun t ↦ ∫ ω, X ω ^ n * exp (t * X ω) ∂μ)
+      (∫ ω, X ω ^ (n + 1) * exp (t * X ω) ∂μ) t := by
   have h_re_of_mem n t (ht' : t ∈ interior (integrableExpSet X μ)) :
       (∫ ω, X ω ^ n * Complex.exp (t * X ω) ∂μ).re = ∫ ω, X ω ^ n * exp (t * X ω) ∂μ := by
     rw [← RCLike.re_eq_complex_re, ← integral_re]
@@ -57,21 +58,21 @@ lemma hasDerivAt_integral_pow_mul_exp_real (ht : t ∈ interior (integrableExpSe
 section DerivMGF
 
 /-- For `t ∈ interior (integrableExpSet X μ)`, the derivative of `mgf X μ` at `t` is
-`μ[X * exp (t * X)]`. -/
+`∫ ω, X ω * exp (t * X ω) ∂μ`. -/
 lemma hasDerivAt_mgf (h : t ∈ interior (integrableExpSet X μ)) :
-    HasDerivAt (mgf X μ) (μ[fun ω ↦ X ω * exp (t * X ω)]) t := by
+    HasDerivAt (mgf X μ) (∫ ω, X ω * exp (t * X ω) ∂μ) t := by
   convert! hasDerivAt_integral_pow_mul_exp_real h 0
   · simp [mgf]
   · simp
 
 lemma hasDerivAt_iteratedDeriv_mgf (ht : t ∈ interior (integrableExpSet X μ)) (n : ℕ) :
-    HasDerivAt (iteratedDeriv n (mgf X μ)) μ[fun ω ↦ X ω ^ (n + 1) * exp (t * X ω)] t := by
+    HasDerivAt (iteratedDeriv n (mgf X μ)) (∫ ω, X ω ^ (n + 1) * exp (t * X ω) ∂μ) t := by
   induction n generalizing t with
   | zero => simp [hasDerivAt_mgf ht]
   | succ n hn =>
     rw [iteratedDeriv_succ]
     have : deriv (iteratedDeriv n (mgf X μ))
-        =ᶠ[𝓝 t] fun t ↦ μ[fun ω ↦ X ω ^ (n + 1) * exp (t * X ω)] := by
+        =ᶠ[𝓝 t] fun t ↦ ∫ ω, X ω ^ (n + 1) * exp (t * X ω) ∂μ := by
       have h_mem : ∀ᶠ y in 𝓝 t, y ∈ interior (integrableExpSet X μ) :=
         isOpen_interior.eventually_mem ht
       filter_upwards [h_mem] with y hy using HasDerivAt.deriv (hn hy)
@@ -79,9 +80,9 @@ lemma hasDerivAt_iteratedDeriv_mgf (ht : t ∈ interior (integrableExpSet X μ))
     exact hasDerivAt_integral_pow_mul_exp_real ht (n + 1)
 
 /-- For `t ∈ interior (integrableExpSet X μ)`, the n-th derivative of `mgf X μ` at `t` is
-`μ[X ^ n * exp (t * X)]`. -/
+`∫ ω, X ω ^ n * exp (t * X ω) ∂μ`. -/
 lemma iteratedDeriv_mgf (ht : t ∈ interior (integrableExpSet X μ)) (n : ℕ) :
-    iteratedDeriv n (mgf X μ) t = μ[fun ω ↦ X ω ^ n * exp (t * X ω)] := by
+    iteratedDeriv n (mgf X μ) t = ∫ ω, X ω ^ n * exp (t * X ω) ∂μ := by
   induction n generalizing t with
   | zero => simp [mgf]
   | succ n hn =>
@@ -90,16 +91,17 @@ lemma iteratedDeriv_mgf (ht : t ∈ interior (integrableExpSet X μ)) (n : ℕ) 
 
 /-- The derivatives of the moment-generating function at zero are the moments. -/
 lemma iteratedDeriv_mgf_zero (h : 0 ∈ interior (integrableExpSet X μ)) (n : ℕ) :
-    iteratedDeriv n (mgf X μ) 0 = μ[X ^ n] := by
+    iteratedDeriv n (mgf X μ) 0 = ∫ ω, (X ^ n) ω ∂μ := by
   simp [iteratedDeriv_mgf h n]
 
 /-- For `t ∈ interior (integrableExpSet X μ)`, the derivative of `mgf X μ` at `t` is
-`μ[X * exp (t * X)]`. -/
+`∫ ω, X ω * exp (t * X ω) ∂μ`. -/
 lemma deriv_mgf (h : t ∈ interior (integrableExpSet X μ)) :
-    deriv (mgf X μ) t = μ[fun ω ↦ X ω * exp (t * X ω)] :=
+    deriv (mgf X μ) t = ∫ ω, X ω * exp (t * X ω) ∂μ :=
   (hasDerivAt_mgf h).deriv
 
-lemma deriv_mgf_zero (h : 0 ∈ interior (integrableExpSet X μ)) : deriv (mgf X μ) 0 = μ[X] := by
+lemma deriv_mgf_zero (h : 0 ∈ interior (integrableExpSet X μ)) :
+    deriv (mgf X μ) 0 = ∫ ω, X ω ∂μ := by
   simp [deriv_mgf h]
 
 end DerivMGF
@@ -123,7 +125,7 @@ lemma analyticOn_mgf : AnalyticOn ℝ (mgf X μ) (interior (integrableExpSet X �
 lemma hasFPowerSeriesAt_mgf (hv : v ∈ interior (integrableExpSet X μ)) :
     HasFPowerSeriesAt (mgf X μ)
       (FormalMultilinearSeries.ofScalars ℝ
-        (fun n ↦ (μ[fun ω ↦ X ω ^ n * exp (v * X ω)] : ℝ) / n !)) v := by
+        (fun n ↦ (∫ ω, X ω ^ n * exp (v * X ω) ∂μ : ℝ) / n !)) v := by
   convert! (analyticAt_mgf hv).hasFPowerSeriesAt
   rw [iteratedDeriv_mgf hv]
 
@@ -186,7 +188,7 @@ end AnalyticCGF
 section DerivCGF
 
 lemma deriv_cgf (h : v ∈ interior (integrableExpSet X μ)) :
-    deriv (cgf X μ) v = μ[fun ω ↦ X ω * exp (v * X ω)] / mgf X μ v := by
+    deriv (cgf X μ) v = (∫ ω, X ω * exp (v * X ω) ∂μ) / mgf X μ v := by
   by_cases hμ : μ = 0
   · simp only [hμ, cgf_zero_measure, integral_zero_measure, mgf_zero_measure, div_zero,
       Pi.zero_apply]
@@ -195,22 +197,22 @@ lemma deriv_cgf (h : v ∈ interior (integrableExpSet X μ)) :
   calc deriv (fun x ↦ log (mgf X μ x)) v
   _ = deriv (mgf X μ) v / mgf X μ v := by
     rw [deriv.log (differentiableAt_mgf h) ((mgf_pos' hμ hv).ne')]
-  _ = μ[fun ω ↦ X ω * exp (v * X ω)] / mgf X μ v := by rw [deriv_mgf h]
+  _ = (∫ ω, X ω * exp (v * X ω) ∂μ) / mgf X μ v := by rw [deriv_mgf h]
 
 lemma deriv_cgf_zero (h : 0 ∈ interior (integrableExpSet X μ)) :
-    deriv (cgf X μ) 0 = μ[X] / μ.real Set.univ := by simp [deriv_cgf h]
+    deriv (cgf X μ) 0 = (∫ ω, X ω ∂μ) / μ.real Set.univ := by simp [deriv_cgf h]
 
 lemma iteratedDeriv_two_cgf (h : v ∈ interior (integrableExpSet X μ)) :
     iteratedDeriv 2 (cgf X μ) v
-      = μ[fun ω ↦ (X ω) ^ 2 * exp (v * X ω)] / mgf X μ v - deriv (cgf X μ) v ^ 2 := by
+      = (∫ ω, (X ω) ^ 2 * exp (v * X ω) ∂μ) / mgf X μ v - deriv (cgf X μ) v ^ 2 := by
   rw [iteratedDeriv_succ, iteratedDeriv_one]
   by_cases hμ : μ = 0
   · simp [hμ]
   have h_mem : ∀ᶠ y in 𝓝 v, y ∈ interior (integrableExpSet X μ) :=
     isOpen_interior.eventually_mem h
-  have h_d_cgf : deriv (cgf X μ) =ᶠ[𝓝 v] fun u ↦ μ[fun ω ↦ X ω * exp (u * X ω)] / mgf X μ u := by
+  have h_d_cgf : deriv (cgf X μ) =ᶠ[𝓝 v] fun u ↦ (∫ ω, X ω * exp (u * X ω) ∂μ) / mgf X μ u := by
     filter_upwards [h_mem] with u hu using deriv_cgf hu
-  have h_d_mgf : deriv (mgf X μ) =ᶠ[𝓝 v] fun u ↦ μ[fun ω ↦ X ω * exp (u * X ω)] := by
+  have h_d_mgf : deriv (mgf X μ) =ᶠ[𝓝 v] fun u ↦ ∫ ω, X ω * exp (u * X ω) ∂μ := by
     filter_upwards [h_mem] with u hu using deriv_mgf hu
   rw [h_d_cgf.deriv_eq]
   calc deriv (fun u ↦ (∫ ω, X ω * exp (u * X ω) ∂μ) / mgf X μ u) v
@@ -238,7 +240,7 @@ lemma iteratedDeriv_two_cgf (h : v ∈ interior (integrableExpSet X μ)) :
 
 lemma iteratedDeriv_two_cgf_eq_integral (h : v ∈ interior (integrableExpSet X μ)) :
     iteratedDeriv 2 (cgf X μ) v
-      = μ[fun ω ↦ (X ω - deriv (cgf X μ) v) ^ 2 * exp (v * X ω)] / mgf X μ v := by
+      = (∫ ω, (X ω - deriv (cgf X μ) v) ^ 2 * exp (v * X ω) ∂μ) / mgf X μ v := by
   by_cases hμ : μ = 0
   · simp [hμ]
   rw [iteratedDeriv_two_cgf h]
@@ -276,7 +278,7 @@ lemma iteratedDeriv_two_cgf_eq_integral (h : v ∈ interior (integrableExpSet X 
     ring
 
 lemma exists_cgf_eq_iteratedDeriv_two_cgf_mul [IsZeroOrProbabilityMeasure μ] (ht : 0 < t)
-    (hc : μ[X] = 0) (hs : Set.Icc 0 t ⊆ interior (integrableExpSet X μ)) :
+    (hc : ∫ ω, X ω ∂μ = 0) (hs : Set.Icc 0 t ⊆ interior (integrableExpSet X μ)) :
     ∃ u ∈ Set.Ioo 0 t, cgf X μ t = (iteratedDeriv 2 (cgf X μ) u) * t ^ 2 / 2 := by
   have hu : UniqueDiffOn ℝ (Set.Icc 0 t) := uniqueDiffOn_Icc ht
   rw [← sub_zero (cgf X μ t)]

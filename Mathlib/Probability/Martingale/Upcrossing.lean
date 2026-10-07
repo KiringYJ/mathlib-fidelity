@@ -400,18 +400,19 @@ theorem Submartingale.sum_sub_upcrossingStrat_mul [IsFiniteMeasure μ] (hf : Sub
     simp [upcrossingStrat_le_one]
 
 theorem Submartingale.sum_mul_upcrossingStrat_le [IsFiniteMeasure μ] (hf : Submartingale f ℱ μ) :
-    μ[∑ k ∈ Finset.range n, upcrossingStrat a b f N k * (f (k + 1) - f k)] ≤ μ[f n] - μ[f 0] := by
+    ∫ ω, (∑ k ∈ Finset.range n, upcrossingStrat a b f N k * (f (k + 1) - f k)) ω ∂μ ≤
+      ∫ ω, f n ω ∂μ - ∫ ω, f 0 ω ∂μ := by
   have h₁ : (0 : ℝ) ≤
-      μ[∑ k ∈ Finset.range n, (1 - upcrossingStrat a b f N k) * (f (k + 1) - f k)] := by
+      ∫ ω, (∑ k ∈ Finset.range n, (1 - upcrossingStrat a b f N k) * (f (k + 1) - f k)) ω ∂μ := by
     have :=
       (hf.sum_sub_upcrossingStrat_mul a b N).setIntegral_le (zero_le (a := n))
         (ℱ 0).univ_mem
     rw [setIntegral_univ, setIntegral_univ] at this
     refine le_trans ?_ this
     simp only [Finset.range_zero, Finset.sum_empty, integral_zero', le_refl]
-  have h₂ : μ[∑ k ∈ Finset.range n, (1 - upcrossingStrat a b f N k) * (f (k + 1) - f k)] =
-    μ[∑ k ∈ Finset.range n, (f (k + 1) - f k)] -
-      μ[∑ k ∈ Finset.range n, upcrossingStrat a b f N k * (f (k + 1) - f k)] := by
+  have h₂ : ∫ ω, (∑ k ∈ Finset.range n, (1 - upcrossingStrat a b f N k) * (f (k + 1) - f k)) ω ∂μ =
+    ∫ ω, (∑ k ∈ Finset.range n, (f (k + 1) - f k)) ω ∂μ -
+      ∫ ω, (∑ k ∈ Finset.range n, upcrossingStrat a b f N k * (f (k + 1) - f k)) ω ∂μ := by
     simp only [sub_mul, one_mul, Finset.sum_sub_distrib, Pi.sub_apply, Finset.sum_apply,
       Pi.mul_apply]
     refine integral_sub (Integrable.sub (integrable_finsetSum _ fun i _ => hf.integrable _)
@@ -617,17 +618,17 @@ theorem mul_upcrossingsBefore_le (hf : a ≤ f N ω) (hab : a < b) :
 
 theorem integral_mul_upcrossingsBefore_le_integral [IsFiniteMeasure μ] (hf : Submartingale f ℱ μ)
     (hfN : ∀ ω, a ≤ f N ω) (hfzero : 0 ≤ f 0) (hab : a < b) :
-    (b - a) * μ[upcrossingsBefore a b f N] ≤ μ[f N] :=
+    (b - a) * ∫ ω, (upcrossingsBefore a b f N ω : ℝ) ∂μ ≤ ∫ ω, f N ω ∂μ :=
   calc
-    (b - a) * μ[upcrossingsBefore a b f N] ≤
-        μ[∑ k ∈ Finset.range N, upcrossingStrat a b f N k * (f (k + 1) - f k)] := by
+    (b - a) * ∫ ω, (upcrossingsBefore a b f N ω : ℝ) ∂μ ≤
+        ∫ ω, (∑ k ∈ Finset.range N, upcrossingStrat a b f N k * (f (k + 1) - f k)) ω ∂μ := by
       rw [← integral_const_mul]
       refine integral_mono_of_nonneg ?_ ((hf.sum_upcrossingStrat_mul a b N).integrable N) ?_
       · exact Eventually.of_forall fun ω => mul_nonneg (sub_nonneg.2 hab.le) (Nat.cast_nonneg _)
       · filter_upwards with ω
         simpa using mul_upcrossingsBefore_le (hfN ω) hab
-    _ ≤ μ[f N] - μ[f 0] := hf.sum_mul_upcrossingStrat_le
-    _ ≤ μ[f N] := (sub_le_self_iff _).2 (integral_nonneg hfzero)
+    _ ≤ ∫ ω, f N ω ∂μ - ∫ ω, f 0 ω ∂μ := hf.sum_mul_upcrossingStrat_le
+    _ ≤ ∫ ω, f N ω ∂μ := (sub_le_self_iff _).2 (integral_nonneg hfzero)
 
 theorem crossing_pos_eq (hab : a < b) :
     upperCrossingTime 0 (b - a) (fun n ω => (f n ω - a)⁺) N n = upperCrossingTime a b f N n ∧
@@ -676,7 +677,7 @@ theorem upcrossingsBefore_pos_eq (hab : a < b) :
 
 theorem mul_integral_upcrossingsBefore_le_integral_pos_part_aux [IsFiniteMeasure μ]
     (hf : Submartingale f ℱ μ) (hab : a < b) :
-    (b - a) * μ[upcrossingsBefore a b f N] ≤ μ[fun ω => (f N ω - a)⁺] := by
+    (b - a) * ∫ ω, (upcrossingsBefore a b f N ω : ℝ) ∂μ ≤ ∫ ω, (f N ω - a)⁺ ∂μ := by
   refine le_trans (le_of_eq ?_)
     (integral_mul_upcrossingsBefore_le_integral (hf.sub_martingale (martingale_const _ _ _)).pos
       (fun ω => posPart_nonneg _)
@@ -690,7 +691,7 @@ values `a` and `b`, we have `(b - a) * 𝔼[upcrossingsBefore a b f N] ≤ 𝔼[
 `b` before the time `N`. -/
 theorem Submartingale.mul_integral_upcrossingsBefore_le_integral_pos_part [IsFiniteMeasure μ]
     (a b : ℝ) (hf : Submartingale f ℱ μ) (N : ℕ) :
-    (b - a) * μ[upcrossingsBefore a b f N] ≤ μ[fun ω => (f N ω - a)⁺] := by
+    (b - a) * ∫ ω, (upcrossingsBefore a b f N ω : ℝ) ∂μ ≤ ∫ ω, (f N ω - a)⁺ ∂μ := by
   by_cases! hab : a < b
   · exact mul_integral_upcrossingsBefore_le_integral_pos_part_aux hf hab
   · rw [← sub_nonpos] at hab

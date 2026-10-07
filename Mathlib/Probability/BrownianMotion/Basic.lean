@@ -108,7 +108,7 @@ lemma IsPreBrownianReal.hasLaw_sub (hB : IsPreBrownianReal B P) (s t : ℝ≥0) 
     {s, t} ⟨s, by simp⟩ ⟨t, by simp⟩).hasLaw.comp (hB.hasLaw _)
 
 lemma IsPreBrownianReal.integral_eval (hB : IsPreBrownianReal B P) (t : ℝ≥0) :
-    P[B t] = 0 := by
+    ∫ ω, B t ω ∂P = 0 := by
   rw [(hB.hasLaw_eval t).integral_eq, integral_id_gaussianReal]
 
 lemma IsPreBrownianReal.integrable_eval (hB : IsPreBrownianReal B P) (t : ℝ≥0) :
@@ -129,7 +129,7 @@ lemma IsPreBrownianReal.covariance_fun_eval (hB : IsPreBrownianReal B P) (s t : 
 
 /-- A centered Gaussian process with the right covariance is a pre-Brownian motion. -/
 theorem IsGaussianProcess.isPreBrownianReal_of_covariance (h1 : IsGaussianProcess X P)
-    (h2 : ∀ t, P[X t] = 0) (h3 : ∀ s t, s ≤ t → cov[X s, X t; P] = s) :
+    (h2 : ∀ t, ∫ ω, X t ω ∂P = 0) (h3 : ∀ s t, s ≤ t → cov[X s, X t; P] = s) :
     IsPreBrownianReal X P where
   hasLaw I := by
     refine ⟨.of_eval fun _ ↦ h1.aemeasurable _, ?_⟩
@@ -148,8 +148,7 @@ theorem IsGaussianProcess.isPreBrownianReal_of_covariance (h1 : IsGaussianProces
         have := (h1.hasGaussianLaw I).isGaussian_map
         apply IsGaussian.ext
         · rw [integral_map, integral_map, integral_map]
-          · simp only [id_eq]
-            rw [ContinuousLinearEquiv.integral_comp_id_comm,
+          · rw [ContinuousLinearEquiv.integral_comp_id_comm,
               ContinuousLinearEquiv.integral_comp_comm]
             simp only [PiLp.continuousLinearEquiv_symm_apply, integral_id_projectiveFamily,
               WithLp.toLp_zero, WithLp.toLp_eq_zero]

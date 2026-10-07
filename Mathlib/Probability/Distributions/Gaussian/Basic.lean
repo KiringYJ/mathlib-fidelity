@@ -20,12 +20,12 @@ For Gaussian distributions in `ℝ`, see the file
 
 * `IsGaussian`: a measure `μ` is Gaussian if its map by every continuous linear form
   `L : Dual ℝ E` is a real Gaussian measure.
-  That is, `μ.map L = gaussianReal (μ[L]) (Var[L; μ]).toNNReal`.
+  That is, `μ.map L = gaussianReal (∫ x, L x ∂μ) (Var[L; μ]).toNNReal`.
 
 ## Main statements
 
 * `isGaussian_iff_charFunDual_eq`: a finite measure `μ` is Gaussian if and only if
-  its characteristic function has value `exp (μ[L] * I - Var[L; μ] / 2)` for every
+  its characteristic function has value `exp ((∫ x, L x ∂μ) * I - Var[L; μ] / 2)` for every
   continuous linear form `L : Dual ℝ E`.
 
 ## References
@@ -46,7 +46,7 @@ class IsGaussian {E : Type*} [TopologicalSpace E] [AddCommMonoid E] [Module ℝ 
     {mE : SigmaAlgebra E} (μ : Measure E) : Prop where
   protected aemeasurable (L : StrongDual ℝ E) : AEMeasurable L μ := by fun_prop
   map_eq_gaussianReal (L : StrongDual ℝ E) :
-    μ.map L (aemeasurable L) = gaussianReal (μ[L]) (Var[L; μ]).toNNReal
+    μ.map L (aemeasurable L) = gaussianReal (∫ x, L x ∂μ) (Var[L; μ]).toNNReal
 
 attribute [fun_prop] IsGaussian.aemeasurable
 
@@ -74,9 +74,9 @@ instance isGaussian_gaussianReal (m : ℝ) (v : ℝ≥0) : IsGaussian (gaussianR
 
 /-- A Gaussian measure over `ℝ` is some `gaussianReal`. -/
 lemma IsGaussian.eq_gaussianReal (μ : Measure ℝ) (h : IsGaussian μ) :
-    μ = gaussianReal μ[id] Var[id; μ].toNNReal := calc
+    μ = gaussianReal (∫ x, x ∂μ) Var[id; μ].toNNReal := calc
   μ = μ.map (ContinuousLinearMap.id ℝ ℝ) := by simp
-  _ = gaussianReal μ[id] Var[id; μ].toNNReal := by rw [h.map_eq_gaussianReal]; simp
+  _ = gaussianReal (∫ x, x ∂μ) Var[id; μ].toNNReal := by rw [h.map_eq_gaussianReal]; simp
 
 lemma isGaussian_of_isGaussian_map {E : Type*} [TopologicalSpace E] [AddCommMonoid E]
     [Module ℝ E] {mE : SigmaAlgebra E} [OpensSigmaAlgebra E] {μ : Measure E}
@@ -104,7 +104,8 @@ lemma isGaussian_map_of_measurable {E F : Type*} [TopologicalSpace E] [AddCommMo
     [Module ℝ E] {mE : SigmaAlgebra E} [TopologicalSpace F] [AddCommMonoid F]
     [Module ℝ F] {mF : SigmaAlgebra F} [OpensSigmaAlgebra F] {μ : Measure E}
     {L : E →L[ℝ] F} [IsGaussian μ] (hL : Measurable L) : IsGaussian (μ.map L) := by
-  refine isGaussian_of_map_eq_gaussianReal fun L' ↦ ⟨μ[L' ∘L L], Var[L' ∘L L; μ].toNNReal, ?_⟩
+  refine isGaussian_of_map_eq_gaussianReal fun L' ↦
+    ⟨∫ x, (L' ∘L L) x ∂μ, Var[L' ∘L L; μ].toNNReal, ?_⟩
   have hcomp : AEMeasurable (⇑L' ∘ ⇑L) μ :=
     hL.aemeasurable.comp_aemeasurable L'.continuous.aemeasurable
   calc
@@ -162,33 +163,33 @@ lemma isGaussian_map_equiv_iff {μ : Measure E} (L : E ≃L[ℝ] F) :
 section charFunDual
 
 /-- The characteristic function of a Gaussian measure `μ` has value
-`exp (μ[L] * I - Var[L; μ] / 2)` at `L : Dual ℝ E`. -/
+`exp ((∫ x, L x ∂μ) * I - Var[L; μ] / 2)` at `L : Dual ℝ E`. -/
 lemma IsGaussian.charFunDual_eq (L : StrongDual ℝ E) :
-    charFunDual μ L = exp (μ[L] * I - Var[L; μ] / 2) := by
+    charFunDual μ L = exp ((∫ x, L x ∂μ) * I - Var[L; μ] / 2) := by
   calc charFunDual μ L
   _ = charFun (μ.map L) 1 := by rw [charFunDual_eq_charFun_map_one]
-  _ = charFun (gaussianReal (μ[L]) (Var[L; μ]).toNNReal) 1 := by
+  _ = charFun (gaussianReal (∫ x, L x ∂μ) (Var[L; μ]).toNNReal) 1 := by
     rw [IsGaussian.map_eq_gaussianReal L]
-  _ = exp (μ[L] * I - Var[L; μ] / 2) := by
+  _ = exp ((∫ x, L x ∂μ) * I - Var[L; μ] / 2) := by
     rw [charFun_gaussianReal]
     simp only [ofReal_one, one_mul, Real.coe_toNNReal', one_pow, mul_one]
     congr
-    · rw [integral_complex_ofReal]
-    · simp only [sup_eq_left]
-      exact variance_nonneg _ _
+    simp only [sup_eq_left]
+    exact variance_nonneg _ _
 
 /-- A finite measure is Gaussian iff its characteristic function has value
-`exp (μ[L] * I - Var[L; μ] / 2)` for every `L : Dual ℝ E`. -/
+`exp ((∫ x, L x ∂μ) * I - Var[L; μ] / 2)` for every `L : Dual ℝ E`. -/
 theorem isGaussian_iff_charFunDual_eq {μ : Measure E} [IsFiniteMeasure μ] :
-    IsGaussian μ ↔ ∀ L : StrongDual ℝ E, charFunDual μ L = exp (μ[L] * I - Var[L; μ] / 2) := by
+    IsGaussian μ ↔
+    ∀ L : StrongDual ℝ E, charFunDual μ L = exp ((∫ x, L x ∂μ) * I - Var[L; μ] / 2) := by
   refine ⟨fun h ↦ h.charFunDual_eq, fun h ↦
     { aemeasurable := fun _ ↦ by fun_prop
       map_eq_gaussianReal := fun L ↦ Measure.ext_of_charFun ?_ }⟩
   ext u
   rw [charFun_map_eq_charFunDual_smul L u, h (u • L), charFun_gaussianReal]
-  simp only [smul_apply, smul_eq_mul, ofReal_mul, Real.coe_toNNReal']
+  simp only [smul_apply, smul_eq_mul, Real.coe_toNNReal']
   congr
-  · rw [integral_const_mul, integral_complex_ofReal]
+  · rw [integral_const_mul, ofReal_mul]
   · rw [max_eq_left (variance_nonneg _ _), mul_comm, ← ofReal_pow, ← ofReal_mul,
       ← variance_const_mul]
     congr
@@ -206,7 +207,7 @@ variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [SigmaAlge
     [BorelSpace E] {μ : Measure E}
 
 lemma IsGaussian.charFun_eq [IsGaussian μ] (t : E) :
-    charFun μ t = exp (μ[fun x ↦ ⟪t, x⟫] * I - Var[fun x ↦ ⟪t, x⟫; μ] / 2) := by
+    charFun μ t = exp ((∫ x, ⟪t, x⟫ ∂μ) * I - Var[fun x ↦ ⟪t, x⟫; μ] / 2) := by
   rw [charFun_eq_charFunDual_toDualMap, IsGaussian.charFunDual_eq]
   simp [toDualMap]
 
@@ -214,7 +215,7 @@ lemma IsGaussian.charFun_eq [IsGaussian μ] (t : E) :
 -- in mathlib.
 lemma isGaussian_iff_charFun_eq [CompleteSpace E] [IsFiniteMeasure μ] :
     IsGaussian μ ↔
-    ∀ t, charFun μ t = exp (μ[fun x ↦ ⟪t, x⟫] * I - Var[fun x ↦ ⟪t, x⟫; μ] / 2) := by
+    ∀ t, charFun μ t = exp ((∫ x, ⟪t, x⟫ ∂μ) * I - Var[fun x ↦ ⟪t, x⟫; μ] / 2) := by
   simp_rw [isGaussian_iff_charFunDual_eq, (toDual ℝ E).surjective.forall,
     charFun_eq_charFunDual_toDualMap]
   simp [toDualMap, toDual]
@@ -225,7 +226,7 @@ instance isGaussian_conv [SecondCountableTopology E]
     {μ ν : Measure E} [IsGaussian μ] [IsGaussian ν] :
     IsGaussian (μ ∗ ν) where
   map_eq_gaussianReal L := by
-    have : (μ ∗ ν)[L] = ∫ x, x ∂((μ.map L).conv (ν.map L)) := by
+    have : ∫ x, L x ∂(μ ∗ ν) = ∫ x, x ∂((μ.map L).conv (ν.map L)) := by
       rw [← Measure.map_conv_continuousLinearMap L,
         integral_map (φ := L) (by fun_prop) (by fun_prop)]
     rw [Measure.map_conv_continuousLinearMap L, this, ← variance_id_map (by fun_prop),
@@ -238,7 +239,7 @@ instance (c : E) : IsGaussian (μ.map (fun x ↦ x + c)) := by
   rw [charFunDual_map_add_const, IsGaussian.charFunDual_eq, ← exp_add]
   have hL_comp : L ∘ (fun x ↦ x + c) = fun x ↦ L x + L c := by ext; simp
   rw [variance_map (by fun_prop) (by fun_prop), integral_map (by fun_prop) (by fun_prop),
-    hL_comp, variance_add_const (by fun_prop), integral_complex_ofReal, integral_complex_ofReal]
+    hL_comp, variance_add_const (by fun_prop)]
   simp only [map_add]
   rw [integral_add (by fun_prop) (by fun_prop)]
   congr
@@ -275,8 +276,7 @@ instance [SecondCountableTopologyEither E F] {ν : Measure F} [IsGaussian ν] :
   let (eq := hL₂) L₂ := L.comp (.inr ℝ E F)
   rw [← hL₁, ← hL₂, sub_add_sub_comm, ← add_mul]
   congr
-  · simp_rw [integral_complex_ofReal]
-    rw [← Measure.prod_eq_productBySections μ ν,
+  · rw [← Measure.prod_eq_productBySections μ ν,
       integral_continuousLinearMap_prod' (IsGaussian.integrable_dual μ (L.comp (.inl ℝ E F)))
       (IsGaussian.integrable_dual ν (L.comp (.inr ℝ E F)))]
     norm_cast

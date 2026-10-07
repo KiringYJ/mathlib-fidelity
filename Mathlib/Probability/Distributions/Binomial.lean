@@ -206,7 +206,7 @@ variable {X : Ω → ℝ}
 /-- **Expectation of a binomial random variable**.
 
 The expectation of a binomial random variable with parameters `n` and `p` is `pn`. -/
-theorem integral_of_hasLaw_binomial (hX : HasLaw X Bin(ℝ, n, p) P) : P[X] = p.val * n := by
+theorem integral_of_hasLaw_binomial (hX : HasLaw X Bin(ℝ, n, p) P) : ∫ x, X x ∂P = p.val * n := by
   rw [hX.integral_eq, integral_map_cast_binomial, ← n.range_succ_eq_Iic, Finset.sum_range_succ']
   cases n with norm_num | succ n
   calc

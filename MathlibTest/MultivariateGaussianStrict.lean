@@ -98,9 +98,9 @@ example (ν : Measure (EuclideanSpace ℝ (Fin 2))) :
 /-! ### The mean and the covariance matrix determine the distribution -/
 
 example (μ : EuclideanSpace ℝ ι) {S : Matrix ι ι ℝ} (hS : S.PosSemidef)
-    (ν : Measure (EuclideanSpace ℝ ι)) [IsGaussian ν] (hm : ν[id] = μ)
+    (ν : Measure (EuclideanSpace ℝ ι)) [IsGaussian ν] (hm : ∫ x, x ∂ν = μ)
     (hc : ∀ x y, covarianceBilin ν x y = x ⬝ᵥ S *ᵥ y) : ν = multivariateGaussian μ S hS :=
-  IsGaussian.ext (by rw [hm, integral_id_multivariateGaussian' hS])
+  IsGaussian.ext (by rw [hm, integral_id_multivariateGaussian hS])
     (by ext x y; rw [hc, covarianceBilin_multivariateGaussian hS])
 
 /-! ### Singular covariance matrices are retained -/

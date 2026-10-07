@@ -135,12 +135,12 @@ instance isGaussian_stdGaussian : IsGaussian (stdGaussian E) := by
   simp [charFun_stdGaussian, neg_div, innerSL_apply_apply ℝ]
 
 @[simp]
-lemma integral_strongDual_stdGaussian (L : StrongDual ℝ E) : (stdGaussian E)[L] = 0 := by
+lemma integral_strongDual_stdGaussian (L : StrongDual ℝ E) : ∫ x, L x ∂(stdGaussian E) = 0 := by
   rw [L.integral_comp_id_comm IsGaussian.integrable_id, integral_id_stdGaussian, map_zero]
 
 lemma charFunDual_stdGaussian (L : StrongDual ℝ E) :
     charFunDual (stdGaussian E) L = exp (- ‖L‖ ^ 2 / 2) := by
-  simp [IsGaussian.charFunDual_eq, integral_complex_ofReal, variance_dual_stdGaussian, neg_div]
+  simp [IsGaussian.charFunDual_eq, variance_dual_stdGaussian, neg_div]
 
 lemma covarianceBilin_stdGaussian :
     covarianceBilin (stdGaussian E) = innerSL ℝ := by
@@ -239,10 +239,6 @@ lemma integral_id_multivariateGaussian (hS : S.PosSemidef) :
   · exact (toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt S)).integrable_comp
       (IsGaussian.integrable_id (μ := stdGaussian (EuclideanSpace ℝ ι)))
 
-lemma integral_id_multivariateGaussian' (hS : S.PosSemidef) :
-    (multivariateGaussian μ S hS)[id] = μ := by
-  simp
-
 lemma covarianceBilin_multivariateGaussian (hS : S.PosSemidef) (x y : EuclideanSpace ℝ ι) :
     covarianceBilin (multivariateGaussian μ S hS) x y = x ⬝ᵥ S *ᵥ y := by
   have h : (fun x ↦ μ + x) ∘ ((toEuclideanCLM (𝕜 := ℝ) (CFC.sqrt S))) =
@@ -301,7 +297,7 @@ lemma measurePreserving_restrict₂_multivariateGaussian {ι : Type*} [Decidable
   measurable := by fun_prop
   map_eq := by
     apply IsGaussian.ext
-    · simp only [id_eq, integral_id_multivariateGaussian]
+    · simp only [integral_id_multivariateGaussian]
       rw [ContinuousLinearMap.integral_id_map, integral_id_multivariateGaussian]
       exact IsGaussian.integrable_id
     rw [← ContinuousLinearMap.toBilinForm_inj]
