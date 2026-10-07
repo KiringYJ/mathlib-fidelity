@@ -278,6 +278,12 @@ theorem pos_of_mem_divisors {m : ℕ} (h : m ∈ n.divisors) : 0 < m := by
 theorem pos_of_mem_properDivisors {m : ℕ} (h : m ∈ n.properDivisors) : 0 < m :=
   pos_of_mem_divisors (properDivisors_subset_divisors h)
 
+/-- A divisor of `n`, as an element of `n.divisors`, is nonzero. -/
+instance (d : n.divisors) : NeZero (d : ℕ) := ⟨(pos_of_mem_divisors d.2).ne'⟩
+
+/-- A proper divisor of `n`, as an element of `n.properDivisors`, is nonzero. -/
+instance (d : n.properDivisors) : NeZero (d : ℕ) := ⟨(pos_of_mem_properDivisors d.2).ne'⟩
+
 theorem one_mem_properDivisors_iff_one_lt : 1 ∈ n.properDivisors ↔ 1 < n := by
   rw [mem_properDivisors, and_iff_right (one_dvd _)]
 

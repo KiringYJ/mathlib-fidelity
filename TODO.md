@@ -329,16 +329,19 @@ operation.
   value `0` at a nonintegral element expressed, and `perfectField_iff_splits_of_natSepDegree_eq_one`
   quantifies over nonzero polynomials.  Tests are in `MathlibTest/NatSepDegreeStrict.lean`.
 
-- [ ] **Give `primitiveRoots` and the modified cyclotomic polynomial the domain `n ≠ 0`.**
-  `primitiveRoots k R` in `Mathlib/RingTheory/RootsOfUnity/PrimitiveRoots.lean` is `∅` at `k = 0`
-  (`primitiveRoots_zero`), now by an explicit case of the definition rather than through the empty
-  root multiset of the zero polynomial, and `IsPrimitiveRoot.card_primitiveRoots` holds there as
-  `#∅ = φ 0`.  `IsPrimitiveRoot ζ 0` holds exactly for the `ζ` none of whose positive powers is `1`,
-  which form no finite set in general (in `ℚ`, every element except `1` and `-1`), so `∅` is not the
-  set of primitive `0`-th roots of unity.  Require `NeZero k` and propagate the domain to
-  `Polynomial.cyclotomic'`, the product of `X - C μ` over `primitiveRoots n R`, which is `1` at
-  `n = 0` (`cyclotomic'_zero`), and decide whether `Polynomial.cyclotomic 0 R = 1`
-  (`cyclotomic_zero`) is justified independently.
+- [x] **Give `primitiveRoots` and the modified cyclotomic polynomial the domain `n ≠ 0`.**
+  `primitiveRoots k R` and `Polynomial.cyclotomic' n R` take `[NeZero k]` and `[NeZero n]`, and
+  `primitiveRoots_zero` and `cyclotomic'_zero` are removed: the primitive `0`-th roots of unity are
+  the elements none of whose positive powers is `1`, which form no finite set in general (in `ℚ`,
+  every element except `1` and `-1`), so `∅` was not their set.  `mem_primitiveRoots` needs no
+  positivity argument.  Products over divisors range over `n.divisors.attach`, whose elements carry
+  `NeZero` instances (`prod_cyclotomic'_eq_X_pow_sub_one`, `prod_divisors_attach_cyclotomic'`), and
+  `IsPrimitiveRoot.pow_eq_one_iff_exists_dvd` gives the membership form of
+  `IsPrimitiveRoot.nthRoots_one_eq_biUnion_primitiveRoots`.  Kummer theory and
+  `rootsOfUnityEquivOfPrimitiveRoots` state the existence of a primitive root as
+  `∃ ζ, IsPrimitiveRoot ζ n` instead of `(primitiveRoots n K).Nonempty`.  The value
+  `Polynomial.cyclotomic 0 R = 1` is a separate entry.  Tests are in
+  `MathlibTest/PrimitiveRootsStrict.lean`.
 
 - [x] **Identify `Polynomial.natDegree` as the supremum of the support.**
   `natDegree p` is the supremum in `ℕ` of the exponents with nonzero coefficient
@@ -1379,6 +1382,15 @@ operation.
   `RatFunc.eval` in `Mathlib/FieldTheory/RatFunc/AsPolynomial.lean:143` evaluates a pole to zero and
   consequently fails ring laws there.  Require regularity/denominator nonzeroness at the point, while
   respecting reduced-rational-function rather than source-expression semantics.
+
+- [ ] **Give `Polynomial.cyclotomic` the domain `n ≠ 0`.**
+  `Polynomial.cyclotomic 0 R` is `1` by an explicit case of the definition in
+  `Mathlib/RingTheory/Polynomial/Cyclotomic/Basic.lean` (`cyclotomic_zero`).  The defining relations
+  do not determine it: `X ^ 0 - 1 = 0`, while the product over `Nat.divisors 0 = ∅` is `1`, and the
+  roots of `1` are not the primitive `0`-th roots of unity.  The polynomial is used in 28 files,
+  where lemmas such as `cyclotomic.monic` and `degree_cyclotomic` hold at `0` only through this
+  value.  Give it `[NeZero n]` and restate those families, as for `cyclotomic'`, unless a source
+  specifying a zeroth cyclotomic polynomial is found.
 
 - [ ] **Put finite factorization data on nonzero inputs.**
   `Nat.factorization` in `Mathlib/Data/Nat/Factorization/Defs.lean:50` gives zero multiplicities at

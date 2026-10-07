@@ -129,10 +129,8 @@ nonrec theorem mem_rootsOfUnity (n : ℕ) [NeZero n] (x : Units ℂ) :
 theorem card_rootsOfUnity (n : ℕ) [NeZero n] : Nat.card (rootsOfUnity n ℂ) = n :=
   (isPrimitiveRoot_exp n NeZero.out).card_rootsOfUnity
 
-theorem card_primitiveRoots (k : ℕ) : (primitiveRoots k ℂ).card = φ k := by
-  by_cases h : k = 0
-  · simp [h]
-  exact (isPrimitiveRoot_exp k h).card_primitiveRoots
+theorem card_primitiveRoots (k : ℕ) [NeZero k] : (primitiveRoots k ℂ).card = φ k :=
+  (isPrimitiveRoot_exp k NeZero.out).card_primitiveRoots
 
 end Complex
 

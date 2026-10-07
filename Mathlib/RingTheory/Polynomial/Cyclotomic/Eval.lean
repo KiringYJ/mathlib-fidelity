@@ -172,17 +172,18 @@ theorem eval_one_cyclotomic_not_prime_pow {R : Type*} [Ring R] {n : ℕ}
 theorem sub_one_pow_totient_lt_cyclotomic_eval {n : ℕ} {q : ℝ} (hn' : 2 ≤ n) (hq' : 1 < q) :
     (q - 1) ^ totient n < (cyclotomic n ℝ).eval q := by
   have hn : 0 < n := pos_of_gt hn'
+  have : NeZero n := ⟨hn.ne'⟩
   have hq := zero_lt_one.trans hq'
   have hfor : ∀ ζ' ∈ primitiveRoots n ℂ, q - 1 ≤ ‖↑q - ζ'‖ := by
     intro ζ' hζ'
-    rw [mem_primitiveRoots hn] at hζ'
+    rw [mem_primitiveRoots] at hζ'
     convert! norm_sub_norm_le (↑q) ζ'
     · rw [Complex.norm_real, Real.norm_of_nonneg hq.le]
     · rw [hζ'.norm'_eq_one hn.ne']
   let ζ := Complex.exp (2 * ↑Real.pi * Complex.I / ↑n)
   have hζ : IsPrimitiveRoot ζ n := Complex.isPrimitiveRoot_exp n hn.ne'
   have hex : ∃ ζ' ∈ primitiveRoots n ℂ, q - 1 < ‖↑q - ζ'‖ := by
-    refine ⟨ζ, (mem_primitiveRoots hn).mpr hζ, ?_⟩
+    refine ⟨ζ, mem_primitiveRoots.mpr hζ, ?_⟩
     suffices ¬SameRay ℝ (q : ℂ) ζ by
       convert! lt_norm_sub_of_not_sameRay this <;>
         simp only [hζ.norm'_eq_one hn.ne', Real.norm_of_nonneg hq.le, Complex.norm_real]
@@ -224,17 +225,18 @@ theorem sub_one_pow_totient_le_cyclotomic_eval {q : ℝ} (hq' : 1 < q) :
 theorem cyclotomic_eval_lt_add_one_pow_totient {n : ℕ} {q : ℝ} (hn' : 3 ≤ n) (hq' : 1 < q) :
     (cyclotomic n ℝ).eval q < (q + 1) ^ totient n := by
   have hn : 0 < n := pos_of_gt hn'
+  have : NeZero n := ⟨hn.ne'⟩
   have hq := zero_lt_one.trans hq'
   have hfor : ∀ ζ' ∈ primitiveRoots n ℂ, ‖↑q - ζ'‖ ≤ q + 1 := by
     intro ζ' hζ'
-    rw [mem_primitiveRoots hn] at hζ'
+    rw [mem_primitiveRoots] at hζ'
     convert! norm_sub_le (↑q) ζ'
     · rw [Complex.norm_real, Real.norm_of_nonneg (zero_le_one.trans_lt hq').le]
     · rw [hζ'.norm'_eq_one hn.ne']
   let ζ := Complex.exp (2 * ↑Real.pi * Complex.I / ↑n)
   have hζ : IsPrimitiveRoot ζ n := Complex.isPrimitiveRoot_exp n hn.ne'
   have hex : ∃ ζ' ∈ primitiveRoots n ℂ, ‖↑q - ζ'‖ < q + 1 := by
-    refine ⟨ζ, (mem_primitiveRoots hn).mpr hζ, ?_⟩
+    refine ⟨ζ, mem_primitiveRoots.mpr hζ, ?_⟩
     suffices ¬SameRay ℝ (q : ℂ) (-ζ) by
       convert! norm_add_lt_of_not_sameRay this using 2
       · rw [Complex.norm_real]

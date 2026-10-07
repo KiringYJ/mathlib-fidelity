@@ -173,7 +173,7 @@ We first develop the theory for a specific `K[n√a] := AdjoinRoot (X ^ n - C a)
 The main result is the description of the Galois group: `autAdjoinRootXPowSubCEquiv`.
 -/
 
-variable {n : ℕ} (hζ : (primitiveRoots n K).Nonempty)
+variable {n : ℕ} (hζ : ∃ ζ : K, IsPrimitiveRoot ζ n)
 variable (a : K) (H : Irreducible (X ^ n - C a))
 
 set_option quotPrecheck false in
@@ -194,7 +194,6 @@ theorem Polynomial.separable_X_pow_sub_C_of_irreducible : (X ^ n - C a).Separabl
   by_cases hn' : n = 1
   · rw [hn', pow_one]; exact separable_X_sub_C
   have ⟨ζ, hζ⟩ := hζ
-  rw [mem_primitiveRoots (Nat.pos_of_ne_zero <| ne_zero_of_irreducible_X_pow_sub_C H)] at hζ
   rw [← separable_map (algebraMap K K[n√a]), Polynomial.map_sub, Polynomial.map_pow, map_C, map_X,
     AdjoinRoot.algebraMap_eq,
     X_pow_sub_C_eq_prod (hζ.map_of_injective (algebraMap K _).injective) hn
@@ -326,7 +325,6 @@ lemma isSplittingField_AdjoinRoot_X_pow_sub_C :
   · rw [Polynomial.map_sub, Polynomial.map_pow, Polynomial.map_C,
       Polynomial.map_X]
     have ⟨_, hζ⟩ := hζ
-    rw [mem_primitiveRoots (Nat.pos_of_ne_zero <| ne_zero_of_irreducible_X_pow_sub_C H)] at hζ
     exact X_pow_sub_C_splits_of_isPrimitiveRoot (hζ.map_of_injective (algebraMap K _).injective)
       (root_X_pow_sub_C_pow n a)
   · intro _
@@ -341,7 +339,7 @@ variable {α : L} (hα : α ^ n = algebraMap K L a)
 /-- Suppose `L/K` is the splitting field of `Xⁿ - a`, then a choice of `ⁿ√a` gives an equivalence of
 `L` with `K[n√a]`. -/
 noncomputable
-def adjoinRootXPowSubCEquiv (hζ : (primitiveRoots n K).Nonempty) (H : Irreducible (X ^ n - C a))
+def adjoinRootXPowSubCEquiv (hζ : ∃ ζ : K, IsPrimitiveRoot ζ n) (H : Irreducible (X ^ n - C a))
     (hα : α ^ n = algebraMap K L a) : K[n√a] ≃ₐ[K] L :=
   .ofBijective (AdjoinRoot.liftAlgHom (X ^ n - C a) (Algebra.ofId _ _) α (by simp [hα])) <| by
     have := Fact.mk H
@@ -419,7 +417,6 @@ lemma autEquivRootsOfUnity_smul [NeZero n] (σ : Gal(L/K)) :
     autEquivRootsOfUnity hζ H L σ • α = σ α := by
   have ⟨ζ, hζ'⟩ := hζ
   have hn := NeZero.pos n
-  rw [mem_primitiveRoots hn] at hζ'
   rw [← mem_nthRoots hn, (hζ'.map_of_injective (algebraMap K L).injective).nthRoots_eq
     (rootOfSplitsXPowSubC_pow a L)] at hα
   simp only [Multiset.mem_map, Multiset.mem_range] at hα
@@ -434,15 +431,14 @@ noncomputable
 def autEquivZmod [NeZero n] {ζ : K} (hζ : IsPrimitiveRoot ζ n) :
     Gal(L/K) ≃* Multiplicative (ZMod n) :=
   haveI hn := ne_zero_of_irreducible_X_pow_sub_C H
-  (autEquivRootsOfUnity ⟨ζ, (mem_primitiveRoots <| Nat.pos_of_ne_zero hn).mpr hζ⟩ H L).trans
+  (autEquivRootsOfUnity ⟨ζ, hζ⟩ H L).trans
     ((MulEquiv.subgroupCongr (IsPrimitiveRoot.zpowers_eq (hζ.isUnit_unit' hn)).symm).trans
         (hζ.isUnit_unit' hn).zmodEquivZPowers.symm.toMultiplicativeRight)
 
 include hα in
 lemma autEquivZmod_symm_apply_intCast [NeZero n] {ζ : K} (hζ : IsPrimitiveRoot ζ n) (m : ℤ) :
     (autEquivZmod H L hζ).symm (Multiplicative.ofAdd (m : ZMod n)) α = ζ ^ m • α := by
-  have hn := Nat.pos_iff_ne_zero.mpr (ne_zero_of_irreducible_X_pow_sub_C H)
-  rw [← autEquivRootsOfUnity_smul ⟨ζ, (mem_primitiveRoots hn).mpr hζ⟩ H L hα]
+  rw [← autEquivRootsOfUnity_smul ⟨ζ, hζ⟩ H L hα]
   simp [MulEquiv.subgroupCongr_symm_apply, Subgroup.smul_def, Units.smul_def, autEquivZmod]
 
 include hα in
@@ -452,9 +448,7 @@ lemma autEquivZmod_symm_apply_natCast [NeZero n] {ζ : K} (hζ : IsPrimitiveRoot
 
 include hζ H in
 lemma isCyclic_of_isSplittingField_X_pow_sub_C [NeZero n] : IsCyclic Gal(L/K) :=
-  have hn := Nat.pos_iff_ne_zero.mpr (ne_zero_of_irreducible_X_pow_sub_C H)
-  isCyclic_of_surjective _
-    (autEquivZmod H _ <| (mem_primitiveRoots hn).mp hζ.choose_spec).symm.surjective
+  isCyclic_of_surjective _ (autEquivZmod H _ hζ.choose_spec).symm.surjective
 
 include hζ H in
 lemma isGalois_of_isSplittingField_X_pow_sub_C : IsGalois K L :=
@@ -464,10 +458,9 @@ include hζ H in
 lemma finrank_of_isSplittingField_X_pow_sub_C : Module.finrank K L = n := by
   have := Polynomial.IsSplittingField.finiteDimensional L (X ^ n - C a)
   have := isGalois_of_isSplittingField_X_pow_sub_C hζ H L
-  have hn := Nat.pos_iff_ne_zero.mpr (ne_zero_of_irreducible_X_pow_sub_C H)
   have : NeZero n := ⟨ne_zero_of_irreducible_X_pow_sub_C H⟩
-  rw [← IsGalois.card_aut_eq_finrank, Nat.card_congr ((autEquivZmod H L <|
-    (mem_primitiveRoots hn).mp hζ.choose_spec).toEquiv.trans Multiplicative.toAdd), Nat.card_zmod]
+  rw [← IsGalois.card_aut_eq_finrank, Nat.card_congr ((autEquivZmod H L
+    hζ.choose_spec).toEquiv.trans Multiplicative.toAdd), Nat.card_zmod]
 
 end IsSplittingField
 
@@ -476,7 +469,7 @@ end IsSplittingField
 section IsCyclic
 
 variable {L} [Field L] [Algebra K L] [FiniteDimensional K L]
-variable (hK : (primitiveRoots (Module.finrank K L) K).Nonempty)
+variable (hK : ∃ ζ : K, IsPrimitiveRoot ζ (Module.finrank K L))
 
 open Module
 variable (K L)
@@ -488,7 +481,6 @@ lemma exists_root_adjoin_eq_top_of_isCyclic [IsGalois K L] [IsCyclic Gal(L/K)] :
     ∃ (α : L), α ^ (finrank K L) ∈ Set.range (algebraMap K L) ∧ K⟮α⟯ = ⊤ := by
   -- Let `ζ` be an `n`-th root of unity, and `σ` be a generator of `Gal(L/K)`.
   have ⟨ζ, hζ⟩ := hK
-  rw [mem_primitiveRoots finrank_pos] at hζ
   obtain ⟨σ, hσ⟩ := ‹IsCyclic Gal(L/K)›
   have hσ' := orderOf_eq_card_of_forall_mem_zpowers hσ
   -- Since the minimal polynomial of `σ` over `K` is `Xⁿ - 1`,
@@ -545,7 +537,6 @@ lemma isSplittingField_X_pow_sub_C_of_root_adjoin_eq_top
   · rw [Polynomial.map_sub, Polynomial.map_pow, Polynomial.map_C,
       Polynomial.map_X]
     have ⟨_, hζ⟩ := hK
-    rw [mem_primitiveRoots finrank_pos] at hζ
     exact X_pow_sub_C_splits_of_isPrimitiveRoot (hζ.map_of_injective (algebraMap K _).injective) ha
   · intro _
     rw [eq_top_iff, ← IntermediateField.top_toSubalgebra, ← hα,
@@ -566,7 +557,7 @@ Then `L/K` is cyclic iff
 `L = K[α]` for some `αⁿ ∈ K`.
 -/
 lemma isCyclic_tfae (K L) [Field K] [Field L] [Algebra K L] [FiniteDimensional K L]
-    (hK : (primitiveRoots (Module.finrank K L) K).Nonempty) :
+    (hK : ∃ ζ : K, IsPrimitiveRoot ζ (Module.finrank K L)) :
     List.TFAE [
       IsGalois K L ∧ IsCyclic Gal(L/K),
       ∃ a : K, Irreducible (X ^ (finrank K L) - C a) ∧
