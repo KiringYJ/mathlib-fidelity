@@ -183,7 +183,8 @@ A meromorphic function has only removable singularities if and only if the logar
 function for its pole divisor is asymptotically bounded.
 -/
 theorem logCounting_isBigO_one_iff_analyticOnNhd {f : 𝕜 → E} (h : Meromorphic f) :
-    logCounting f ⊤ =O[atTop] (1 : ℝ → ℝ) ↔ AnalyticOnNhd 𝕜 (toMeromorphicNFOn f univ) univ := by
+    logCounting f ⊤ =O[atTop] (1 : ℝ → ℝ) ↔
+      AnalyticOnNhd 𝕜 (toMeromorphicNFOn f univ h.meromorphicOn) univ := by
   simp only [logCounting, reduceDIte]
   rw [← locallyFinsuppWithin.zero_iff_logCounting_bounded (negPart_nonneg _), negPart_eq_zero,
     ← h.meromorphicOn.divisor_of_toMeromorphicNFOn,

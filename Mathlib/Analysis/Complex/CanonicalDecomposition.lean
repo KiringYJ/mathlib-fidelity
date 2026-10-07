@@ -333,7 +333,7 @@ theorem _root_.MeromorphicOn.exists_canonicalDecomp
   -- `g` in this way and establish basic properties.
   let φ := (∏ᶠ c, canonicalFactor R c ^ (divisor f (ball 0 R)) c) • f
   have hφ : MeromorphicOn φ (closedBall 0 R) := by fun_prop
-  let g := toMeromorphicNFOn φ (closedBall 0 R)
+  let g := toMeromorphicNFOn φ (closedBall 0 R) hφ
   have h₃g : divisor g (ball 0 R) = 0 := by
     rw [divisor_congr_codiscreteWithin
         ((toMeromorphicNFOn_eqOn_codiscrete hφ).symm.filter_mono
