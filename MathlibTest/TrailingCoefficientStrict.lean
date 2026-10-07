@@ -7,8 +7,9 @@ import Mathlib.Analysis.Complex.ValueDistribution.FirstMainTheorem
 `meromorphicTrailingCoeffAt f x h` is the trailing coefficient of a function `f` that is
 meromorphic at `x`, where `h` proves that the order of `f` at `x` is finite. A function that
 vanishes on a punctured neighborhood of `x` has order `⊤` there and no nonzero coefficient, so it
-has no trailing coefficient. Jensen's formula and the first main theorem take finite order at the
-center, and Cartan's formula takes it for `f - a` for every `a`.
+has no trailing coefficient. The first main theorem takes finite order at the center, Jensen's
+formula takes it at every point of the disk, and Cartan's formula takes it at the center for
+`f - a` for every `a`.
 -/
 
 open Real ValueDistribution
@@ -72,7 +73,7 @@ example {f : ℂ → ℂ} {x : ℂ} (hf : MeromorphicAt f x) (h : meromorphicOrd
 /-! The first main theorem takes finite order at the origin. -/
 
 example {f : ℂ → ℂ} {R : ℝ} (hf : Meromorphic f) (h₀ : meromorphicOrderAt f 0 ≠ ⊤) (hR : R ≠ 0) :
-    characteristic f ⊤ R - characteristic f⁻¹ ⊤ R =
+    (characteristic f ⊤ hf) R - (characteristic f⁻¹ ⊤ hf.inv) R =
       Real.log ‖meromorphicTrailingCoeffAt f 0 h₀‖ :=
   characteristic_sub_characteristic_inv_of_ne_zero hf h₀ hR
 
@@ -90,6 +91,7 @@ example : MonotoneOn (characteristic (fun _ : ℂ ↦ (1 : ℂ)) ⊤) (Set.Ioi 0
 
 example {f : ℂ → ℂ} {R : ℝ} (h : Meromorphic f) (hfin : ∀ a, meromorphicOrderAt (f · - a) 0 ≠ ⊤)
     (hR : R ≠ 0) :
-    characteristic f ⊤ R = circleAverage (logCounting f · R) 0 1
+    (characteristic f ⊤ h) R = circleAverage (fun a ↦ logCounting f a h
+        (frequently_coe_ne_of_meromorphicOrderAt_sub_ne_top h (hfin a)) R) 0 1
       + circleAverage (fun a ↦ Real.log ‖meromorphicTrailingCoeffAt (f · - a) 0 (hfin a)‖) 0 1 :=
   characteristic_top_eq_circleAverage_add_circleAverage h hfin hR

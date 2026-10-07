@@ -52,6 +52,14 @@ lemma AnalyticAt.meromorphicOrderAt_ne_top_of_ne_zero (h₁ : AnalyticAt 𝕜 f 
   rw [h₁.meromorphicOrderAt_eq, h₁.analyticOrderAt_eq_zero.2 h₂]
   simp
 
+/-- An analytic function on a neighborhood of a preconnected set `U` that does not vanish at a point
+of `U` has finite order at every point of `U`. -/
+lemma AnalyticOnNhd.meromorphicOrderAt_ne_top_of_ne_zero {U : Set 𝕜} (h₁ : AnalyticOnNhd 𝕜 f U)
+    (hU : IsPreconnected U) (hx : x ∈ U) (h₂ : f x ≠ 0) :
+    ∀ z (hz : z ∈ U), meromorphicOrderAt f z (h₁.meromorphicOn z hz) ≠ ⊤ :=
+  fun _ hz ↦ h₁.meromorphicOn.meromorphicOrderAt_ne_top_of_isPreconnected hU hx hz
+    ((h₁ x hx).meromorphicOrderAt_ne_top_of_ne_zero h₂)
+
 /-- The function `z ↦ z - y` has finite order at every point. -/
 lemma meromorphicOrderAt_id_sub_const_ne_top {x y : 𝕜} :
     meromorphicOrderAt (· - y) x ≠ ⊤ := by

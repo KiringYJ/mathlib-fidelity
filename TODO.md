@@ -1350,15 +1350,51 @@ operation.
   `x ∈ U`.  Tests cover the removed names, the default argument, the failure without a hypothesis,
   and infinite order.
 
-- [ ] **Make the divisor of a meromorphic function domain-bearing.**
-  `MeromorphicOn.divisor f U` in `Mathlib/Analysis/Meromorphic/Divisor.lean` is `0` when `f` is not
-  meromorphic on `U` (`divisor_eq_zero_of_not_meromorphicOn`) and, through `WithTop.untop₀`, at the
-  points where `f` vanishes locally, whose order is `⊤`.  The divisor is defined for a function that
-  is meromorphic on `U` and has finite order at every point of `U`.  Take these as arguments and
-  migrate the consumers: `divisor_const`, `divisor_inv`, and `divisor_const_smul` hold without
-  hypotheses only through these values, and the logarithmic counting function, the characteristic
-  function, Jensen's formula `MeromorphicOn.circleAverage_log_norm`, and the canonical
-  decompositions of `Mathlib/Analysis/Complex/CanonicalDecomposition.lean` use the divisor.
+- [x] **Make the divisor of a meromorphic function domain-bearing.**
+  `MeromorphicOn.divisor f U h` in `Mathlib/Analysis/Meromorphic/Divisor.lean` takes a proof `h`
+  that the order of `f` is finite at every point of `U`, stated as
+  `∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤`; the meromorphy proof `hf` is the
+  implicit argument of these orders.  The value `0` for a function that is not meromorphic
+  (`divisor_eq_zero_of_not_meromorphicOn`) and the value of `WithTop.untop₀` at order `⊤` are
+  removed.  The new pole divisor `MeromorphicOn.poleDivisor f U hf` exists for every function that
+  is meromorphic on `U`, maps a point to `-min (order) 0`, and is the negative part of the divisor
+  where that is defined (`poleDivisor_eq_negPart_divisor`); the `negPart_divisor` lemmas became
+  `poleDivisor` lemmas, and the bounds for the pole divisor of a product and the formula for a power
+  hold without finite orders.  A lemma takes the finite orders of its sources as arguments and that
+  of the divisor on its left side as an implicit argument, so `divisor_const`, `divisor_inv`, and
+  `divisor_const_smul` take finite orders.  Jensen's formula `MeromorphicOn.circleAverage_log_norm`
+  and `MeromorphicOn.extract_zeros_poles` take finite order on their domains, and the canonical
+  decompositions record it as a structure field.  `ValueDistribution.logCounting f a hf ha` and
+  `ValueDistribution.characteristic f a hf ha` take meromorphy and, for a finite value `a`, the
+  condition `ha` that `f` takes `a` on no punctured neighborhood, which means that `f - a` has
+  finite order everywhere (`ValueDistribution.frequently_coe_ne_coe_iff`).  For `a = ⊤` the
+  condition holds for every function and is supplied by default, so the counting function for the
+  poles is evaluated as `(logCounting f ⊤) r`; a missing condition for another value fails with a
+  message naming it.  Statements about poles alone, such as `logCounting_mul_top_le`,
+  `logCounting_pow_top`, `characteristic_monotoneOn`, and
+  `isBigO_characteristic_sub_characteristic_inv`, hold for every meromorphic function.  Cartan's
+  formula keeps its hypothesis that `f - a` has finite order at the origin for every `a` and derives
+  the condition for `logCounting f a` from it
+  (`ValueDistribution.frequently_coe_ne_of_meromorphicOrderAt_sub_ne_top`).  A sum over a finite set
+  `s` of indices with meromorphy hypotheses for `a ∈ s` ranges over `s.attach`.  Tests cover the
+  removed names, the missing finiteness proof, the missing value condition, the pole divisor of the
+  zero function, and the pole count of a product with a factor that vanishes identically.
+
+- [ ] **Give the proximity function the domain of the counting function.**
+  `ValueDistribution.proximity f a` in
+  `Mathlib/Analysis/Complex/ValueDistribution/Proximity/Basic.lean` is defined for every function.
+  For a finite value `a` it is the circle average of `log⁺ ‖f · - a‖⁻¹`, where `(0 : ℝ)⁻¹ = 0`, and
+  the circle average of a function that is not circle integrable is `0`.  For a meromorphic
+  function that does not equal `a` identically, `log ‖f · - a‖` is circle integrable
+  (`MeromorphicOn.circleIntegrable_log_norm`), so the average is finite; for a meromorphic function
+  on `ℂ` that equals `a` outside a discrete set, the integrand `log⁺ (1 / ‖f - a‖)` is infinite on
+  every circle.  The values for a function that is not meromorphic or that equals `a` identically
+  are therefore fallbacks.
+  `ValueDistribution.characteristic f a hf ha` already takes the domain of `logCounting`: give
+  `proximity` the same arguments and migrate `Proximity/Basic.lean`,
+  `Proximity/IntegralPresentation.lean`, `CharacteristicFunction.lean`, `FirstMainTheorem.lean`, and
+  `Cartan.lean`.  For a meromorphic `f` that does not equal `a` identically, the points of a circle
+  where `f = a` form a finite set, so the value of the integrand there does not affect the average.
 
 - [x] **Make the trailing coefficient domain-bearing.**
   `meromorphicTrailingCoeffAt f x h` in `Mathlib/Analysis/Meromorphic/TrailingCoefficient.lean`

@@ -22,7 +22,7 @@ logarithmic counting function is big-O of `log`.
 
 We establish the result first for the logarithmic counting function for functions with locally
 finite support on `𝕜` and then specialize to the setting where the function with locally finite
-support is the pole or zero-divisor of a meromorphic function.
+support is the pole divisor of a meromorphic function.
 -/
 
 public section
@@ -183,20 +183,21 @@ A meromorphic function has only removable singularities if and only if the logar
 function for its pole divisor is asymptotically bounded.
 -/
 theorem logCounting_isBigO_one_iff_analyticOnNhd {f : 𝕜 → E} (h : Meromorphic f) :
-    logCounting f ⊤ =O[atTop] (1 : ℝ → ℝ) ↔
+    logCounting f ⊤ h =O[atTop] (1 : ℝ → ℝ) ↔
       AnalyticOnNhd 𝕜 (toMeromorphicNFOn f univ h.meromorphicOn) univ := by
-  simp only [logCounting, reduceDIte]
-  rw [← locallyFinsuppWithin.zero_iff_logCounting_bounded (negPart_nonneg _), negPart_eq_zero,
-    ← h.meromorphicOn.divisor_of_toMeromorphicNFOn,
-    (meromorphicNFOn_toMeromorphicNFOn _ _).divisor_nonneg_iff_analyticOnNhd]
+  rw [logCounting_top, ← locallyFinsuppWithin.zero_iff_logCounting_bounded
+      (MeromorphicOn.poleDivisor_nonneg _), ← h.meromorphicOn.poleDivisor_of_toMeromorphicNFOn,
+    (meromorphicNFOn_toMeromorphicNFOn _ _).poleDivisor_eq_zero_iff_analyticOnNhd]
 
 /--
 A meromorphic function has a finite set of poles if and only if the logarithmic counting function
-for its pole-divisor is big-O of `log`.
+for its pole divisor is big-O of `log`.
 -/
-theorem logCounting_isBigO_log_iff_finite_support {f : 𝕜 → E} :
-    logCounting f ⊤ =O[atTop] Real.log ↔ (MeromorphicOn.divisor f univ)⁻.support.Finite := by
+theorem logCounting_isBigO_log_iff_finite_support {f : 𝕜 → E} (h : Meromorphic f) :
+    logCounting f ⊤ h =O[atTop] Real.log ↔
+      (MeromorphicOn.poleDivisor f univ h.meromorphicOn).support.Finite := by
   rw [logCounting_top]
-  exact (locallyFinsuppWithin.finite_support_iff_logCounting_isBigO_log (negPart_nonneg _)).symm
+  exact (locallyFinsuppWithin.finite_support_iff_logCounting_isBigO_log
+    (MeromorphicOn.poleDivisor_nonneg _)).symm
 
 end ValueDistribution
