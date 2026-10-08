@@ -129,7 +129,7 @@ def extensionHom [CompleteSpace β] [T0Space β] : Completion α →+* β :=
   have hf' : Continuous (f : α →+ β) := hf
   -- helping the elaborator
   have hf : UniformContinuous f := uniformContinuous_addMonoidHom_of_continuous hf'
-  { toFun := Completion.extension f
+  { toFun := Completion.extension f hf
     map_zero' := by simp_rw [← coe_zero, extension_coe hf, f.map_zero]
     map_add' a b :=
       Completion.induction_on₂ a b
@@ -154,8 +154,10 @@ instance topologicalRing : IsTopologicalRing (Completion α) where
 def mapRingHom (hf : Continuous f) : Completion α →+* Completion β :=
   extensionHom (coeRingHom.comp f) (continuous_coeRingHom.comp hf)
 
-@[simp] theorem mapRingHom_apply {x : Completion α} : mapRingHom f hf x = .map f x := rfl
-theorem coe_mapRingHom : mapRingHom f hf = Completion.map f := rfl
+@[simp] theorem mapRingHom_apply {x : Completion α} :
+    mapRingHom f hf x = .map f (uniformContinuous_addMonoidHom_of_continuous hf) x := rfl
+theorem coe_mapRingHom :
+    mapRingHom f hf = Completion.map f (uniformContinuous_addMonoidHom_of_continuous hf) := rfl
 
 variable {f}
 
@@ -191,10 +193,11 @@ variable (A : Type*) [Ring A] [UniformSpace A] [IsUniformAddGroup A] [IsTopologi
 
 @[simp]
 theorem map_smul_eq_mul_coe (r : R) :
-    Completion.map (r • ·) = ((algebraMap R A r : Completion A) * ·) := by
+    Completion.map (r • ·) (uniformContinuous_const_smul r) =
+      ((algebraMap R A r : Completion A) * ·) := by
   ext x
   refine Completion.induction_on x ?_ fun a => ?_
-  · exact isClosed_eq Completion.continuous_map (continuous_const_mul _)
+  · exact isClosed_eq (Completion.continuous_map _) (continuous_const_mul _)
   · simp_rw [map_coe (uniformContinuous_const_smul r) a, Algebra.smul_def, coe_mul]
 
 instance algebra : Algebra R (Completion A) where

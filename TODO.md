@@ -1179,14 +1179,40 @@ operation.
   cover the removed name, the missing evidence, a closed extension, a closed operator, and the
   core.
 
-- [ ] **Give completion extension its full existence and uniqueness contract.**
-  `Mathlib/Topology/UniformSpace/Completion.lean:224` evaluates at an arbitrarily selected point
-  when the function is not uniformly continuous.  Uniform continuity removes that branch but does
-  not by itself make a continuous extension into the original codomain exist: the continuity
-  theorem at line 242 also assumes `CompleteSpace β`, and uniqueness needs the relevant separation
-  hypothesis.
-  Use completeness as a convenient sufficient interface or carry exact pointwise limit
-  existence/uniqueness; do not present uniform continuity alone as the mathematical domain.
+- [x] **Give completion extension its full existence and uniqueness contract.**
+  `UniformSpace.Completion.extension f hf` in `Mathlib/Topology/UniformSpace/Completion.lean` takes
+  a proof `hf` that `f : α → β` is uniformly continuous, which `fun_prop` supplies for routine maps,
+  and requires `[CompleteSpace β]` and `[T0Space β]`: completeness is the convenient sufficient
+  condition for the limits that define the extension, and separation makes it the unique uniformly
+  continuous map that agrees with `f` on `α` (`extension_coe`, `extension_unique`).  The value at an
+  arbitrarily selected point for a map that is not uniformly continuous is removed, and so are the
+  same fallbacks of `CauchyFilter.extend` and `AbstractCompletion.extend`, which take the same
+  arguments.  `Completion.map f hf`, `extension₂`, `map₂`, and their `AbstractCompletion`
+  counterparts take uniform continuity, and `Completion.map_congr` replaces the function under `map`
+  by an equal one.  `inseparable_extension_coe` and `AbstractCompletion.inseparable_extend_coe`,
+  which served a target that is not separated, are removed; such a target is handled through its
+  separation quotient.  `AbstractCompletion.extend_def`, which exposed the implementation, is
+  removed.  The negation, addition, and subtraction on `Completion α` exist for a uniform additive
+  group, the scalar action for a `UniformContinuousConstSMul` action, and the norm for a seminormed
+  additive group; previously they existed for every `Neg`, `Add`, `Sub`, `SMul`, and `Norm` and took
+  the fallback value when the operation was not uniformly continuous.  The extension is implemented
+  by `IsDenseInducing.extend`, whose limit choice is audited separately with `Filter.lim`; within
+  this domain the limit exists and is unique.  Tests cover the removed names, a missing uniform
+  continuity proof and the failing `fun_prop` default, a target that is not complete or not
+  separated, the extension and its uniqueness, `map_congr`, and the absence of negation, addition,
+  subtraction, scalar action, and norm without their structures.
+
+- [ ] **Give the completion multiplication its domain.**
+  `UniformSpace.Completion.mul` in `Mathlib/Topology/Algebra/UniformRing.lean` is an instance for
+  every `[Ring α] [UniformSpace α]`.  It is defined through `IsDenseInducing.extend`, whose limit
+  choice gives fallback values where multiplication does not extend continuously; `coe_mul` needs
+  `[IsTopologicalRing α]`, and the continuity of the extended multiplication and the ring structure
+  on the completion need `[IsUniformAddGroup α]` as well.  Restrict the instance to a topological
+  ring with a uniform additive group, where it is the continuous extension of multiplication, and
+  migrate the consumers.  Conversely, negation, addition, and subtraction on `Completion α` need
+  `[IsUniformAddGroup α]` although uniform continuity of the operation suffices; no class expresses
+  uniformly continuous addition on a uniform additive monoid, and no consumer needs one.  If one is
+  introduced, give these operations the weaker hypothesis.
 
 - [x] **Make vector-measure products and densities conditional constructions.**
   `VectorMeasure.prod μ ν B` takes `[HasProd μ ν B]`: a vector measure with `B (μ s) (ν t)` on the

@@ -30,18 +30,19 @@ namespace Completion
 
 variable (E : Type*)
 
-instance [UniformSpace E] [Norm E] : Norm (Completion E) where
+instance [SeminormedAddGroup E] : Norm (Completion E) where
   norm := Completion.extension Norm.norm
 
 @[simp]
-theorem norm_coe {E} [SeminormedAddCommGroup E] (x : E) : ‖(x : Completion E)‖ = ‖x‖ :=
+theorem norm_coe {E} [SeminormedAddGroup E] (x : E) : ‖(x : Completion E)‖ = ‖x‖ :=
   Completion.extension_coe uniformContinuous_norm x
 
 instance [SeminormedAddCommGroup E] : NormedAddCommGroup (Completion E) where
   dist_eq x y := by
     induction x, y using Completion.induction_on₂
     · refine isClosed_eq (Completion.uniformContinuous_extension₂ _).continuous ?_
-      exact Continuous.comp Completion.continuous_extension (continuous_neg.fst.add continuous_snd)
+      exact Continuous.comp (Completion.continuous_extension uniformContinuous_norm)
+        (continuous_neg.fst.add continuous_snd)
     · rw [← Completion.coe_neg, ← Completion.coe_add, norm_coe, Completion.dist_eq,
         dist_eq_norm_neg_add]
 

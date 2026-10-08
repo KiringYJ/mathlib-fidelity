@@ -30,8 +30,9 @@ subspace to the entire Banach space.
 * `LinearEquiv.extendOfIsometry`: Extend `f : E ≃ₗ[𝕜] F` to a linear isometry equivalence
   `Eₗ →ₗᵢ[𝕜] Fₗ`, where `e₁ : E →ₗ[𝕜] Eₗ` and `e₂ : F →ₗ[𝕜] Fₗ` are dense maps into Banach spaces
   and `f` preserves the norm.
-* `LinearIsometry.completion`: The linear isometric version of `UniformSpace.Completion.extension`.
-* `LinearIsometry.fromCompletion`: The linear isometric version of `UniformSpace.Completion.map`.
+* `LinearIsometry.completion`: The linear isometric version of `UniformSpace.Completion.map`.
+* `LinearIsometry.fromCompletion`: The linear isometric version of
+  `UniformSpace.Completion.extension`.
 -/
 
 @[expose] public section
@@ -374,8 +375,10 @@ theorem fromCompletion_apply_coe (x : E) : f.fromCompletion x = f x :=
   ContinuousLinearMap.fromCompletion_apply_coe f.toContinuousLinearMap x
 
 @[simp low]
-theorem coe_fromCompletion : f.fromCompletion = Completion.extension f := by
-  refine Completion.ext f.fromCompletion.continuous Completion.continuous_extension fun a => ?_
+theorem coe_fromCompletion :
+    ⇑f.fromCompletion = Completion.extension f f.isometry.uniformContinuous := by
+  refine Completion.ext f.fromCompletion.continuous (Completion.continuous_extension _)
+    fun a => ?_
   rw [fromCompletion_apply_coe, Completion.extension_coe f.isometry.uniformContinuous]
 
 @[simp]
@@ -406,8 +409,8 @@ theorem completion_apply_coe (x : E) : f.completion x = f x :=
   ContinuousLinearMap.completion_apply_coe f.toContinuousLinearMap x
 
 @[simp low]
-theorem coe_completion : f.completion = Completion.map f := by
-  refine Completion.ext f.completion.continuous Completion.continuous_map fun a => ?_
+theorem coe_completion : ⇑f.completion = Completion.map f f.isometry.uniformContinuous := by
+  refine Completion.ext f.completion.continuous (Completion.continuous_map _) fun a => ?_
   rw [completion_apply_coe, Completion.map_coe f.isometry.uniformContinuous]
 
 @[simp]
