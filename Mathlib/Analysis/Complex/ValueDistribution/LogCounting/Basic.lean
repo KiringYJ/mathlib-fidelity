@@ -352,6 +352,17 @@ variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] {E : Type*} {f g : 𝕜 �
 lemma frequently_coe_ne_top (f : 𝕜 → E) (z : 𝕜) : ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ ⊤ :=
   .of_forall fun _ ↦ WithTop.coe_ne_top
 
+/-- The default discharger for the argument `∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a` of
+`ValueDistribution.logCounting`, `ValueDistribution.proximity`, and
+`ValueDistribution.characteristic`: no function takes the value `⊤` on a punctured neighborhood
+(`ValueDistribution.frequently_coe_ne_top`), and for a finite value it fails with an explanation.
+It accepts a proof that unification has already supplied. -/
+macro (name := frequentlyNe) &"value_distribution_frequently_ne" : tactic => `(tactic| first
+  | done
+  | exact ValueDistribution.frequently_coe_ne_top _
+  | fail "the function must take the value on no punctured neighborhood; only for ⊤ is \
+      this supplied by default")
+
 /--
 If two functions agree on a codiscrete set and the first one takes a value `a` on no punctured
 neighborhood, then neither does the second one.
@@ -437,10 +448,7 @@ Both proofs precede the radius, so the counting function for the poles is evalua
 -/
 noncomputable def logCounting (hf : Meromorphic f := by fun_prop_default)
     (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a := by
-      first
-      | exact ValueDistribution.frequently_coe_ne_top _
-      | fail "the function must take the value on no punctured neighborhood; only for ⊤ is \
-          this supplied by default") :
+      value_distribution_frequently_ne) :
     ℝ → ℝ :=
   match a, ha with
   | none, _ => (poleDivisor f univ hf.meromorphicOn).logCounting

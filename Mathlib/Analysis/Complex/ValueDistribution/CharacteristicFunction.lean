@@ -56,10 +56,7 @@ characteristic function for the poles is evaluated as `(characteristic f ⊤) r`
 -/
 noncomputable def characteristic (hf : Meromorphic f := by fun_prop_default)
     (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a := by
-      first
-      | exact ValueDistribution.frequently_coe_ne_top _
-      | fail "the function must take the value on no punctured neighborhood; only for ⊤ is \
-          this supplied by default") :
+      value_distribution_frequently_ne) :
     ℝ → ℝ :=
   proximity f a hf ha + logCounting f a hf ha
 

@@ -70,6 +70,46 @@ example {f : ℂ → ℂ} (hf : Meromorphic f) {a : ℂ}
     proximity f a hf ha = circleAverage (log⁺ ‖f · - a‖⁻¹) 0 :=
   proximity_coe
 
+-- The two cases of the value are definitional.
+example {f : ℂ → ℂ} (hf : Meromorphic f) :
+    proximity f ⊤ = circleAverage (log⁺ ‖f ·‖) 0 :=
+  rfl
+
+example {f : ℂ → ℂ} (hf : Meromorphic f) {a : ℂ}
+    (ha : ∀ z, ∃ᶠ w in nhdsWithin z {z}ᶜ, (f w : WithTop ℂ) ≠ a) :
+    proximity f a hf ha = circleAverage (log⁺ ‖f · - a‖⁻¹) 0 :=
+  rfl
+
+/-! The logarithmic counting function and the characteristic function share the default argument
+for the value. -/
+
+/--
+error: could not synthesize default value for parameter 'ha' using tactics
+---
+error: the function must take the value on no punctured neighborhood; only for ⊤ is this supplied by default
+f : ℂ → ℂ
+hf : Meromorphic f
+a : ℂ
+⊢ ∀ (z : ℂ), ∃ᶠ (w : ℂ) in nhdsWithin z {z}ᶜ, ↑(f w) ≠ ↑a
+-/
+#guard_msgs in
+noncomputable example {f : ℂ → ℂ} (hf : Meromorphic f) (a : ℂ) : ℝ → ℝ := logCounting f a
+
+/--
+error: could not synthesize default value for parameter 'ha' using tactics
+---
+error: the function must take the value on no punctured neighborhood; only for ⊤ is this supplied by default
+f : ℂ → ℂ
+hf : Meromorphic f
+a : ℂ
+⊢ ∀ (z : ℂ), ∃ᶠ (w : ℂ) in nhdsWithin z {z}ᶜ, ↑(f w) ≠ ↑a
+-/
+#guard_msgs in
+noncomputable example {f : ℂ → ℂ} (hf : Meromorphic f) (a : ℂ) : ℝ → ℝ := characteristic f a
+
+noncomputable example {f : ℂ → ℂ} (hf : Meromorphic f) : ℝ → ℝ :=
+  logCounting f ⊤ + characteristic f ⊤
+
 /-! On the domain, the value is taken at finitely many points of each circle and the integrand is
 circle integrable, so the conventions of the integrand do not matter. -/
 
