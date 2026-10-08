@@ -128,7 +128,7 @@ end HasPDF
 /-- If `X` is a random variable, then `pdf X ℙ μ`
 is the Radon–Nikodym derivative of the push-forward measure of `ℙ` along `X` with respect to `μ`. -/
 def pdf {_ : SigmaAlgebra Ω} (X : Ω → E) (ℙ : Measure Ω) (μ : Measure E := by volume_tac)
-    (hX : AEMeasurable X ℙ := by fun_prop) : E → ℝ≥0∞ :=
+    (hX : AEMeasurable X ℙ := by fun_prop_default) : E → ℝ≥0∞ :=
   (map X ℙ hX).rnDeriv μ
 
 theorem pdf_def {_ : SigmaAlgebra Ω} {ℙ : Measure Ω} {μ : Measure E} {X : Ω → E}

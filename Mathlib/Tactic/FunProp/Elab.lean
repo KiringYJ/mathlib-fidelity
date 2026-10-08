@@ -179,6 +179,12 @@ elab "#print_fun_prop_theorems " funIdent:ident funProp:(ident)? : command => do
     logTheorems funProp (theorems.getD funProp #[])
 
 
+/-- The default discharger `fun_prop` for a proof argument of a definition, which accepts a proof
+that unification has already supplied. When a class argument that depends on the proof is
+synthesized before the default runs, the instance check assigns the proof, and `fun_prop` alone
+would then fail with `No goals to be solved`. -/
+macro (name := funPropDefault) &"fun_prop_default" : tactic => `(tactic| first | done | fun_prop)
+
 end Meta.FunProp
 
 end Mathlib

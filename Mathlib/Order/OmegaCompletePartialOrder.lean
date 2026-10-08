@@ -530,7 +530,7 @@ initialize_simps_projections ContinuousHom (toFun → apply)
 By default, the proof is inferred by `fun_prop`, which makes it ideal for simple cases.
 -/
 @[simps!]
-def ofFun (f : α → β) (hf : ωScottContinuous f := by fun_prop) : α →𝒄 β where
+def ofFun (f : α → β) (hf : ωScottContinuous f := by fun_prop_default) : α →𝒄 β where
   toFun := f
   monotone' := hf.monotone
   map_ωSup' := hf.map_ωSup

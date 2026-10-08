@@ -48,8 +48,8 @@ and does not vanish at `z₀`. See `meromorphicOrderAt_eq_top_iff` and
 The order is only defined for a function that is meromorphic at `x`: the proof `hf` of meromorphy
 is an argument of the definition, which `fun_prop` supplies by default. There is no value for a
 function that is not meromorphic at `x`. -/
-noncomputable def meromorphicOrderAt (f : 𝕜 → E) (x : 𝕜) (hf : MeromorphicAt f x := by fun_prop) :
-    WithTop ℤ :=
+noncomputable def meromorphicOrderAt (f : 𝕜 → E) (x : 𝕜)
+    (hf : MeromorphicAt f x := by fun_prop_default) : WithTop ℤ :=
   ((analyticOrderAt (fun z ↦ (z - x) ^ hf.choose • f z) x hf.choose_spec).map (↑· : ℕ → ℤ)) -
     hf.choose
 

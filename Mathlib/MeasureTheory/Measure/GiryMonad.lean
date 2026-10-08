@@ -227,7 +227,7 @@ theorem lintegral_join_le (f : α → ℝ≥0∞) (m : Measure (Measure α)) :
 /-- Monadic bind on `Measure`, defined for an almost everywhere measurable measure-valued
 function. -/
 def bind (m : Measure α) (f : α → Measure β)
-    (hf : AEMeasurable f m := by fun_prop) : Measure β :=
+    (hf : AEMeasurable f m := by fun_prop_default) : Measure β :=
   join (map f m hf)
 
 @[simp]

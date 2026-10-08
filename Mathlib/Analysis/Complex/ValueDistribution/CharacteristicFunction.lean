@@ -54,7 +54,7 @@ counting function, which counts the number times that `f` attains the value `a` 
 `a = ⊤`, the condition `ha` holds for every function and is supplied by default, so that the
 characteristic function for the poles is evaluated as `(characteristic f ⊤) r`.
 -/
-noncomputable def characteristic (hf : Meromorphic f := by fun_prop)
+noncomputable def characteristic (hf : Meromorphic f := by fun_prop_default)
     (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a := by
       first
       | exact ValueDistribution.frequently_coe_ne_top _

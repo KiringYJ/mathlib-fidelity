@@ -87,7 +87,7 @@ open scoped Classical in
 /-- The pushforward of measures along a measurable function, as a linear map. -/
 noncomputable
 def mapₗ [SigmaAlgebra α] [SigmaAlgebra β] (f : α → β)
-    (hf : Measurable f := by fun_prop) : Measure α →ₗ[ℝ≥0∞] Measure β :=
+    (hf : Measurable f := by fun_prop_default) : Measure α →ₗ[ℝ≥0∞] Measure β :=
   liftLinear (OuterMeasure.map f) fun μ _s hs t =>
     le_toOuterMeasure_caratheodory μ (hf hs) (f ⁻¹' t)
 
@@ -102,7 +102,7 @@ open scoped Classical in
 /-- The pushforward of a measure along an almost everywhere measurable function. -/
 noncomputable
 irreducible_def map [SigmaAlgebra α] [SigmaAlgebra β] (f : α → β) (μ : Measure α)
-    (hf : AEMeasurable f μ := by fun_prop) : Measure β :=
+    (hf : AEMeasurable f μ := by fun_prop_default) : Measure β :=
   mapₗ (hf.mk f) hf.measurable_mk μ
 
 theorem mapₗ_mk_apply_of_aemeasurable {f : α → β} (hf : AEMeasurable f μ) :

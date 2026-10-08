@@ -435,7 +435,7 @@ identically has no finite multiplicity.
 Both proofs precede the radius, so the counting function for the poles is evaluated as
 `(logCounting f ⊤) r`.
 -/
-noncomputable def logCounting (hf : Meromorphic f := by fun_prop)
+noncomputable def logCounting (hf : Meromorphic f := by fun_prop_default)
     (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a := by
       first
       | exact ValueDistribution.frequently_coe_ne_top _

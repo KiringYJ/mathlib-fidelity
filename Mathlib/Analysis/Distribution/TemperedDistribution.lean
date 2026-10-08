@@ -246,7 +246,7 @@ variable [AddCommGroup F] [Module ℂ F] [TopologicalSpace F] [IsTopologicalAddG
 variable (F) in
 /-- Multiplication with a temperate growth function as a continuous linear map on `𝓢'(E, F)`; the
 default discharger `fun_prop` finds the temperate growth. -/
-def smulLeftCLM (g : E → ℂ) (hg : g.HasTemperateGrowth := by fun_prop) :
+def smulLeftCLM (g : E → ℂ) (hg : g.HasTemperateGrowth := by fun_prop_default) :
     𝓢'(E, F) →L[ℂ] 𝓢'(E, F) :=
   PointwiseConvergenceCLM.precomp _ (SchwartzMap.smulLeftCLM ℂ g hg)
 

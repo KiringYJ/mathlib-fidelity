@@ -51,7 +51,7 @@ variable {γ δ : Type*} {mγ : SigmaAlgebra γ} {mδ : SigmaAlgebra δ} {f : β
 /-- The pushforward of a kernel along a measurable function.
 The measurability proof is normally discharged by `fun_prop`. -/
 noncomputable def map (κ : Kernel α β) (f : β → γ)
-    (hf : Measurable f := by fun_prop) : Kernel α γ where
+    (hf : Measurable f := by fun_prop_default) : Kernel α γ where
   toFun a := (κ a).map f hf.aemeasurable
   measurable' := (Measure.measurable_map f hf).comp κ.measurable
 
