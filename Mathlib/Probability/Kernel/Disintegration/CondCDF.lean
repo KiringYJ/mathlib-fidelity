@@ -10,8 +10,6 @@ public import Mathlib.MeasureTheory.Measure.Prod
 public import Mathlib.Order.Filter.Germ.Representative
 public import Mathlib.Probability.Kernel.Disintegration.CDFToKernel
 
-import Mathlib.Probability.Kernel.Composition.WithDensity
-
 /-!
 # Conditional cumulative distribution function
 
@@ -386,7 +384,8 @@ private lemma IicSnd_withDensity_fst (hw : Measurable w) (x : ℝ) :
 private lemma eq_of_withDensity_weight {μ ν : Measure α} {g : α → ℝ≥0∞} (hw : Measurable w)
     (hg : Measurable g) (hw₀ : ∀ a, w a ≠ 0) (hw_top : ∀ a, w a ≠ ∞)
     (h : (μ.withDensity w).withDensity g = ν.withDensity w) : μ.withDensity g = ν := by
-  refine Measure.eq_of_withDensity_eq hw hw₀ hw_top ?_
+  refine Measure.eq_of_withDensity_eq hw.aemeasurable (ae_of_all _ hw₀) (ae_of_all _ hw₀)
+    (ae_of_all _ hw_top) ?_
   rw [← h, ← withDensity_mul _ hg hw, ← withDensity_mul _ hw hg, mul_comm]
 
 /-- A conditional cdf of `ρ` exists if `ρ.fst` is σ-finite and `w` is a positive finite measurable

@@ -433,8 +433,9 @@ private lemma isCondKernel_of_withDensity_fst {ρ : Measure (α × Ω)} {η : Ke
     ext s hs
     rw [Measure.compProd_apply hs, ← Measure.fst_withDensity_fst hw, ← Measure.compProd_apply hs,
       h.disintegrate]
-  exact ⟨inferInstance, Measure.eq_of_withDensity_eq (hw.comp measurable_fst) (fun p ↦ hw₀ p.1)
-    (fun p ↦ hw_top p.1) h_eq⟩
+  exact ⟨inferInstance, Measure.eq_of_withDensity_eq (hw.comp measurable_fst).aemeasurable
+    (ae_of_all _ fun p ↦ hw₀ p.1) (ae_of_all _ fun p ↦ hw₀ p.1) (ae_of_all _ fun p ↦ hw_top p.1)
+    h_eq⟩
 
 /-- A measure `ρ` on `α × Ω` whose first marginal is σ-finite, where `Ω` is a nonempty standard
 Borel space, is disintegrated by a Markov kernel: there is a Markov kernel `η : Kernel α Ω` with
