@@ -66,12 +66,12 @@ def NormedAddGroupHom.completion (f : NormedAddGroupHom G H) :
   .ofLipschitz (f.toAddMonoidHom.completion f.continuous) f.lipschitz.completion_map
 
 theorem NormedAddGroupHom.completion_def (f : NormedAddGroupHom G H) (x : Completion G) :
-    f.completion x = Completion.map f x :=
+    f.completion x = Completion.map f f.uniformContinuous x :=
   rfl
 
 @[simp]
 theorem NormedAddGroupHom.completion_coe_to_fun (f : NormedAddGroupHom G H) :
-    (f.completion : Completion G → Completion H) = Completion.map f := rfl
+    (f.completion : Completion G → Completion H) = Completion.map f f.uniformContinuous := rfl
 
 theorem NormedAddGroupHom.completion_coe (f : NormedAddGroupHom G H) (g : G) :
     f.completion g = f g :=
@@ -79,7 +79,7 @@ theorem NormedAddGroupHom.completion_coe (f : NormedAddGroupHom G H) (g : G) :
 
 @[simp]
 theorem NormedAddGroupHom.completion_coe' (f : NormedAddGroupHom G H) (g : G) :
-    Completion.map f g = f g :=
+    Completion.map f f.uniformContinuous g = f g :=
   f.completion_coe g
 
 /-- Completion of normed group homs as a normed group hom. -/
@@ -95,7 +95,9 @@ def normedAddGroupHomCompletionHom :
 theorem NormedAddGroupHom.completion_id :
     (NormedAddGroupHom.id G).completion = NormedAddGroupHom.id (Completion G) := by
   ext x
-  rw [NormedAddGroupHom.completion_def, NormedAddGroupHom.coe_id, Completion.map_id]
+  rw [NormedAddGroupHom.completion_def,
+    Completion.map_congr (NormedAddGroupHom.coe_id G) (hg := uniformContinuous_id),
+    Completion.map_id]
   rfl
 
 theorem NormedAddGroupHom.completion_comp (f : NormedAddGroupHom G H) (g : NormedAddGroupHom H K) :
@@ -191,7 +193,7 @@ def NormedAddGroupHom.extension (f : NormedAddGroupHom G H) : NormedAddGroupHom 
     f.lipschitz.completion_extension
 
 theorem NormedAddGroupHom.extension_def (f : NormedAddGroupHom G H) (v : G) :
-    f.extension v = Completion.extension f v :=
+    f.extension v = Completion.extension f f.uniformContinuous v :=
   rfl
 
 @[simp]
@@ -199,7 +201,7 @@ theorem NormedAddGroupHom.extension_coe (f : NormedAddGroupHom G H) (v : G) : f.
   AddMonoidHom.extension_coe _ f.continuous _
 
 theorem NormedAddGroupHom.extension_coe_to_fun (f : NormedAddGroupHom G H) :
-    (f.extension : Completion G → H) = Completion.extension f :=
+    (f.extension : Completion G → H) = Completion.extension f f.uniformContinuous :=
   rfl
 
 theorem NormedAddGroupHom.extension_unique (f : NormedAddGroupHom G H)

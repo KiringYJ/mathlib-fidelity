@@ -190,45 +190,46 @@ namespace Completion
 
 section SMul
 
-variable [SMul M X]
+variable [SMul M X] [UniformContinuousConstSMul M X]
 
 @[to_additive]
 noncomputable instance : SMul M (Completion X) :=
-  ⟨fun c => Completion.map (c • ·)⟩
+  ⟨fun c => Completion.map (c • ·) (uniformContinuous_const_smul c)⟩
 
 @[to_additive]
-theorem smul_def (c : M) (x : Completion X) : c • x = Completion.map (c • ·) x :=
+theorem smul_def (c : M) (x : Completion X) :
+    c • x = Completion.map (c • ·) (uniformContinuous_const_smul c) x :=
   rfl
 
 @[to_additive]
 instance : UniformContinuousConstSMul M (Completion X) :=
-  ⟨fun _ => uniformContinuous_map⟩
+  ⟨fun _ => uniformContinuous_map _⟩
 
 @[to_additive]
-instance instIsScalarTower [SMul N X] [SMul M N] [UniformContinuousConstSMul M X]
-    [UniformContinuousConstSMul N X] [IsScalarTower M N X] : IsScalarTower M N (Completion X) :=
+instance instIsScalarTower [SMul N X] [SMul M N] [UniformContinuousConstSMul N X]
+    [IsScalarTower M N X] : IsScalarTower M N (Completion X) :=
   ⟨fun m n x => by
     have : _ = (_ : Completion X → Completion X) :=
       map_comp (uniformContinuous_const_smul m) (uniformContinuous_const_smul n)
     refine Eq.trans ?_ (congr_fun this.symm x)
-    exact congr_arg (fun f => Completion.map f x) (funext (smul_assoc _ _))⟩
+    exact congr_fun (map_congr (funext (smul_assoc m n))) x⟩
 
 @[to_additive]
-instance [SMul N X] [SMulCommClass M N X] [UniformContinuousConstSMul M X]
-    [UniformContinuousConstSMul N X] : SMulCommClass M N (Completion X) :=
+instance [SMul N X] [SMulCommClass M N X] [UniformContinuousConstSMul N X] :
+    SMulCommClass M N (Completion X) :=
   ⟨fun m n x => by
-    have hmn : m • n • x = (Completion.map (SMul.smul m) ∘ Completion.map (SMul.smul n)) x := rfl
-    have hnm : n • m • x = (Completion.map (SMul.smul n) ∘ Completion.map (SMul.smul m)) x := rfl
+    have hmn : m • n • x = (Completion.map (m • ·) (uniformContinuous_const_smul m) ∘
+      Completion.map (n • ·) (uniformContinuous_const_smul n)) x := rfl
+    have hnm : n • m • x = (Completion.map (n • ·) (uniformContinuous_const_smul n) ∘
+      Completion.map (m • ·) (uniformContinuous_const_smul m)) x := rfl
     rw [hmn, hnm, map_comp, map_comp]
-    · exact congr_arg (fun f => Completion.map f x) (funext (smul_comm _ _))
-    repeat' exact uniformContinuous_const_smul _⟩
+    exact congr_fun (map_congr (funext (smul_comm m n))) x⟩
 
 @[to_additive]
 instance [SMul Mᵐᵒᵖ X] [IsCentralScalar M X] : IsCentralScalar M (Completion X) :=
-  ⟨fun c a => (congr_arg fun f => Completion.map f a) <| funext (op_smul_eq_smul c)⟩
+  ⟨fun c a => congr_fun (map_congr (funext (op_smul_eq_smul c))) a⟩
 
 variable {M X}
-variable [UniformContinuousConstSMul M X]
 
 @[to_additive (attr := simp, norm_cast)]
 theorem coe_smul (c : M) (x : X) : (↑(c • x) : Completion X) = c • (x : Completion X) :=

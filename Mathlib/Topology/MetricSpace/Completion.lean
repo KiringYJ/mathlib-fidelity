@@ -38,12 +38,12 @@ namespace UniformSpace.Completion
 /-- The distance on the completion is obtained by extending the distance on the original space,
 by uniform continuity. -/
 instance : Dist (Completion α) :=
-  ⟨Completion.extension₂ dist⟩
+  ⟨Completion.extension₂ dist uniformContinuous_dist⟩
 
 /-- The new distance is uniformly continuous. -/
 protected theorem uniformContinuous_dist :
     UniformContinuous fun p : Completion α × Completion α ↦ dist p.1 p.2 :=
-  uniformContinuous_extension₂ dist
+  uniformContinuous_extension₂ uniformContinuous_dist
 
 /-- The new distance is continuous. -/
 protected theorem continuous_dist [TopologicalSpace β] {f g : β → Completion α} (hf : Continuous f)
@@ -183,23 +183,26 @@ end UniformSpace.Completion
 open UniformSpace Completion NNReal
 
 theorem LipschitzWith.completion_extension [MetricSpace β] [CompleteSpace β] {f : α → β}
-    {K : ℝ≥0} (h : LipschitzWith K f) : LipschitzWith K (Completion.extension f) :=
+    {K : ℝ≥0} (h : LipschitzWith K f) :
+    LipschitzWith K (Completion.extension f h.uniformContinuous) :=
   LipschitzWith.of_dist_le_mul fun x y => induction_on₂ x y
     (isClosed_le (by fun_prop) (by fun_prop)) <| by
       simpa only [extension_coe h.uniformContinuous, Completion.dist_eq] using h.dist_le_mul
 
 theorem LipschitzWith.completion_map [PseudoMetricSpace β] {f : α → β} {K : ℝ≥0}
-    (h : LipschitzWith K f) : LipschitzWith K (Completion.map f) :=
-  one_mul K ▸ (coe_isometry.lipschitzWith.comp h).completion_extension
+    (h : LipschitzWith K f) : LipschitzWith K (Completion.map f h.uniformContinuous) := by
+  have h' : LipschitzWith K ((↑) ∘ f : α → Completion β) := by
+    simpa using coe_isometry.lipschitzWith.comp h
+  exact h'.completion_extension
 
 theorem Isometry.completion_extension [PseudoMetricSpace β] [CompleteSpace β] [T0Space β]
-    {f : α → β} (h : Isometry f) : Isometry (Completion.extension f) :=
+    {f : α → β} (h : Isometry f) : Isometry (Completion.extension f h.uniformContinuous) :=
   Isometry.of_dist_eq fun x y => induction_on₂ x y
     (isClosed_eq (by fun_prop) (by fun_prop)) fun _ _ ↦ by
       simp only [extension_coe h.uniformContinuous, Completion.dist_eq, h.dist_eq]
 
 theorem Isometry.completion_map [PseudoMetricSpace β] {f : α → β}
-    (h : Isometry f) : Isometry (Completion.map f) :=
+    (h : Isometry f) : Isometry (Completion.map f h.uniformContinuous) :=
   (coe_isometry.comp h).completion_extension
 
 section extension_maps

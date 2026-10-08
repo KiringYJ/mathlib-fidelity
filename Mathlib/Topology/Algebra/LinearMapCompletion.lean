@@ -47,8 +47,8 @@ noncomputable def completion (f : α →SL[σ] β) : Completion α →SL[σ] Com
   map_smul' r x := by
     induction x using induction_on with
     | hp =>
-      exact isClosed_eq (continuous_map.comp <| continuous_const_smul r)
-        (continuous_map.fun_const_smul _)
+      exact isClosed_eq ((continuous_map f.uniformContinuous).comp <| continuous_const_smul r)
+        ((continuous_map f.uniformContinuous).fun_const_smul _)
     | ih x => simp [← Completion.coe_smul]
 
 @[simp]
@@ -56,11 +56,11 @@ lemma toAddMonoidHom_completion (f : α →SL[σ] β) :
     f.completion.toAddMonoidHom = f.toAddMonoidHom.completion f.continuous := rfl
 
 lemma coe_completion (f : α →SL[σ] β) :
-    f.completion = Completion.map f := rfl
+    ⇑f.completion = Completion.map f f.uniformContinuous := rfl
 
 @[simp]
 theorem completion_apply_coe (f : α →SL[σ] β) (a : α) :
-    f.completion a = f a := by simp [coe_completion, map_coe]
+    f.completion a = f a := by simp [coe_completion, map_coe f.uniformContinuous]
 
 end completion
 
@@ -74,7 +74,8 @@ noncomputable def fromCompletion (f : α →SL[σ] β) :
     Completion α →SL[σ] β where
   __ := f.toAddMonoidHom.extension f.continuous
   map_smul' c a := induction_on a
-      (isClosed_eq (continuous_extension.comp (continuous_const_smul c)) (by dsimp; fun_prop)) <| by
+      (isClosed_eq ((continuous_extension f.uniformContinuous).comp (continuous_const_smul c))
+        (by dsimp; fun_prop)) <| by
     simp [← Completion.coe_smul, AddMonoidHom.extension_coe f.toAddMonoidHom f.continuous]
 
 @[simp]
@@ -82,11 +83,11 @@ lemma toAddMonoidHom_fromCompletion (f : α →SL[σ] β) :
     f.fromCompletion.toAddMonoidHom = f.toAddMonoidHom.extension f.continuous := rfl
 
 lemma coe_fromCompletion (f : α →SL[σ] β) :
-    f.fromCompletion = Completion.extension f := rfl
+    ⇑f.fromCompletion = Completion.extension f f.uniformContinuous := rfl
 
 @[simp]
 lemma fromCompletion_apply_coe (f : α →SL[σ] β) (e : α) :
-    f.fromCompletion e = f e := by simp [coe_fromCompletion, extension_coe]
+    f.fromCompletion e = f e := by simp [coe_fromCompletion, extension_coe f.uniformContinuous]
 
 lemma fromCompletion_unique (f : α →SL[σ] β) (g : Completion α →SL[σ] β)
     (h : ∀ (e : α), f e = g e) : f.fromCompletion = g := by

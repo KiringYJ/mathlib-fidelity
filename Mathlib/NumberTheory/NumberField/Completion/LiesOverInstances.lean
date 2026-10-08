@@ -35,7 +35,8 @@ noncomputable def completionMap : v.Completion →+* w.Completion :=
 
 theorem continuous_completionMap : Continuous (completionMap (v := v) (w := w)) :=
   (continuous_ofCompletion w).comp <|
-    UniformSpace.Completion.continuous_map.comp (continuous_toCompletion v)
+    (UniformSpace.Completion.continuous_map
+      (LiesOver.isometry_algebraMap w v).uniformContinuous).comp (continuous_toCompletion v)
 
 theorem completionMap_coe (x : WithAbs v.1) :
     completionMap (x : v.Completion) = ((algebraMap (WithAbs v.1) (WithAbs w.1) x : WithAbs w.1) :

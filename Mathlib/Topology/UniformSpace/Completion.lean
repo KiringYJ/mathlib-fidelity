@@ -15,17 +15,16 @@ into all uniform spaces. Any uniform space `α` gets a completion `Completion α
 (i.e. uniformly continuous map) `(↑) : α → Completion α` which solves the universal
 mapping problem of factorizing morphisms from `α` to any complete Hausdorff uniform space `β`.
 It means any uniformly continuous `f : α → β` gives rise to a unique morphism
-`Completion.extension f : Completion α → β` such that `f = Completion.extension f ∘ (↑)`.
-Actually `Completion.extension f` is defined for all maps from `α` to `β` but it has the desired
-properties only if `f` is uniformly continuous.
+`Completion.extension f hf : Completion α → β` such that `f = Completion.extension f hf ∘ (↑)`,
+where `hf` proves that `f` is uniformly continuous.
 
 Beware that `(↑)` is not injective if `α` is not Hausdorff. But its image is always
 dense. The adjoint functor acting on morphisms is then constructed by the usual abstract nonsense.
-For every uniform spaces `α` and `β`, it turns `f : α → β` into a morphism
-  `Completion.map f : Completion α → Completion β`
+For every uniform spaces `α` and `β`, it turns a uniformly continuous `f : α → β` into a morphism
+  `Completion.map f hf : Completion α → Completion β`
 such that
-  `(↑) ∘ f = (Completion.map f) ∘ (↑)`
-provided `f` is uniformly continuous. This construction is compatible with composition.
+  `(↑) ∘ f = (Completion.map f hf) ∘ (↑)`.
+This construction is compatible with composition.
 
 In this file we introduce the following concepts:
 
@@ -218,33 +217,26 @@ instance [h : Nonempty α] : Nonempty (CauchyFilter α) :=
 
 section Extend
 
-open scoped Classical in
-/-- Extend a uniformly continuous function `α → β` to a function `CauchyFilter α → β`.
-Outputs junk when `f` is not uniformly continuous. -/
-def extend (f : α → β) : CauchyFilter α → β :=
-  if UniformContinuous f then isDenseInducing_pureCauchy.extend f
-  else fun x => f (nonempty_cauchyFilter_iff.1 ⟨x⟩).some
+/--
+Extend a uniformly continuous function `f : α → β` into a complete separated uniform space to a
+uniformly continuous function `CauchyFilter α → β` that agrees with `f` on `α`
+(`CauchyFilter.extend_pureCauchy`).
+-/
+@[nolint unusedArguments]
+def extend [CompleteSpace β] [T0Space β] (f : α → β) (_hf : UniformContinuous f) :
+    CauchyFilter α → β :=
+  isDenseInducing_pureCauchy.extend f
 
-section T0Space
-
-variable [T0Space β]
+variable [CompleteSpace β] [T0Space β]
 
 theorem extend_pureCauchy {f : α → β} (hf : UniformContinuous f) (a : α) :
-    extend f (pureCauchy a) = f a := by
-  rw [extend, ite_eq_left hf]
-  exact uniformly_extend_of_ind isUniformInducing_pureCauchy denseRange_pureCauchy hf _
-
-end T0Space
-
-variable [CompleteSpace β]
+    extend f hf (pureCauchy a) = f a :=
+  uniformly_extend_of_ind isUniformInducing_pureCauchy denseRange_pureCauchy hf _
 
 @[fun_prop]
-theorem uniformContinuous_extend {f : α → β} : UniformContinuous (extend f) := by
-  by_cases hf : UniformContinuous f
-  · rw [extend, ite_eq_left hf]
-    exact uniformContinuous_uniformly_extend isUniformInducing_pureCauchy denseRange_pureCauchy hf
-  · rw [extend, ite_eq_right hf]
-    exact uniformContinuous_of_const fun a _b => by congr
+theorem uniformContinuous_extend {f : α → β} (hf : UniformContinuous f) :
+    UniformContinuous (extend f hf) :=
+  uniformContinuous_uniformly_extend isUniformInducing_pureCauchy denseRange_pureCauchy hf
 
 end Extend
 
@@ -424,47 +416,45 @@ section Extension
 
 variable {f : α → β}
 
-/-- "Extension" to the completion. It is defined for any map `f` but
-returns an arbitrary constant value if `f` is not uniformly continuous -/
-protected def extension (f : α → β) : Completion α → β :=
-  cPkg.extend f
+/--
+The extension of a uniformly continuous map `f : α → β` into a complete separated uniform space to
+the completion of `α`: the unique uniformly continuous map that agrees with `f` on `α`
+(`UniformSpace.Completion.extension_coe`, `UniformSpace.Completion.extension_unique`).
+Completeness of `β` is a sufficient condition for the limits that define it.  When `β` is not
+separated, `Completion.extension (SeparationQuotient.mk ∘ f)` extends `f` into the separation
+quotient of `β`, which is complete when `β` is.
+-/
+protected def extension [CompleteSpace β] [T0Space β] (f : α → β)
+    (hf : UniformContinuous f := by fun_prop) : Completion α → β :=
+  cPkg.extend f hf
 
-section CompleteSpace
-
-variable [CompleteSpace β]
+variable [CompleteSpace β] [T0Space β]
 
 @[fun_prop]
-theorem uniformContinuous_extension : UniformContinuous (Completion.extension f) :=
-  cPkg.uniformContinuous_extend
+theorem uniformContinuous_extension (hf : UniformContinuous f) :
+    UniformContinuous (Completion.extension f hf) :=
+  cPkg.uniformContinuous_extend hf
 
 @[continuity, fun_prop]
-theorem continuous_extension : Continuous (Completion.extension f) :=
-  cPkg.continuous_extend
+theorem continuous_extension (hf : UniformContinuous f) :
+    Continuous (Completion.extension f hf) :=
+  cPkg.continuous_extend hf
 
-end CompleteSpace
-
-theorem extension_coe [T0Space β] (hf : UniformContinuous f) (a : α) :
-    (Completion.extension f) a = f a :=
+theorem extension_coe (hf : UniformContinuous f) (a : α) : (Completion.extension f hf) a = f a :=
   cPkg.extend_coe hf a
 
-theorem inseparable_extension_coe (hf : UniformContinuous f) (x : α) :
-    Inseparable (Completion.extension f x) (f x) :=
-  cPkg.inseparable_extend_coe hf x
-
-lemma isUniformInducing_extension [CompleteSpace β] (h : IsUniformInducing f) :
-    IsUniformInducing (Completion.extension f) :=
+lemma isUniformInducing_extension (h : IsUniformInducing f) :
+    IsUniformInducing (Completion.extension f h.uniformContinuous) :=
   cPkg.isUniformInducing_extend h
-
-variable [T0Space β] [CompleteSpace β]
 
 theorem extension_unique (hf : UniformContinuous f) {g : Completion α → β}
     (hg : UniformContinuous g) (h : ∀ a : α, f a = g (a : Completion α)) :
-    Completion.extension f = g :=
+    Completion.extension f hf = g :=
   cPkg.extend_unique hf hg h
 
 @[simp]
 theorem extension_comp_coe {f : Completion α → β} (hf : UniformContinuous f) :
-    Completion.extension (f ∘ (↑)) = f :=
+    Completion.extension (f ∘ (↑)) (hf.comp (uniformContinuous_coe α)) = f :=
   cPkg.extend_comp_coe hf
 
 end Extension
@@ -473,38 +463,48 @@ section Map
 
 variable {f : α → β}
 
-/-- Completion functor acting on morphisms -/
-protected def map (f : α → β) : Completion α → Completion β :=
-  cPkg.map cPkg f
+/-- Completion functor acting on uniformly continuous maps -/
+protected def map (f : α → β) (hf : UniformContinuous f := by fun_prop) :
+    Completion α → Completion β :=
+  cPkg.map cPkg f hf
 
 @[fun_prop]
-theorem uniformContinuous_map : UniformContinuous (Completion.map f) :=
-  cPkg.uniformContinuous_map cPkg f
+theorem uniformContinuous_map (hf : UniformContinuous f) :
+    UniformContinuous (Completion.map f hf) :=
+  cPkg.uniformContinuous_map cPkg hf
 
 @[continuity, fun_prop]
-theorem continuous_map : Continuous (Completion.map f) :=
-  cPkg.continuous_map cPkg f
+theorem continuous_map (hf : UniformContinuous f) : Continuous (Completion.map f hf) :=
+  cPkg.continuous_map cPkg hf
 
-theorem map_coe (hf : UniformContinuous f) (a : α) : (Completion.map f) a = f a :=
+theorem map_coe (hf : UniformContinuous f) (a : α) : (Completion.map f hf) a = f a :=
   cPkg.map_coe cPkg hf a
 
-theorem map_unique {f : α → β} {g : Completion α → Completion β} (hg : UniformContinuous g)
-    (h : ∀ a : α, ↑(f a) = g a) : Completion.map f = g :=
-  cPkg.map_unique cPkg hg h
+theorem map_unique (hf : UniformContinuous f) {g : Completion α → Completion β}
+    (hg : UniformContinuous g) (h : ∀ a : α, ↑(f a) = g a) : Completion.map f hf = g :=
+  cPkg.map_unique cPkg hf hg h
+
+/-- The map induced on completions depends only on the function, not on the proof of its uniform
+continuity. -/
+theorem map_congr {f g : α → β} (h : f = g) {hf : UniformContinuous f}
+    {hg : UniformContinuous g} : Completion.map f hf = Completion.map g hg := by
+  subst h
+  rfl
 
 @[simp]
-theorem map_id : Completion.map (@id α) = id :=
+theorem map_id : Completion.map (@id α) uniformContinuous_id = id :=
   cPkg.map_id
 
 theorem extension_map [CompleteSpace γ] [T0Space γ] {f : β → γ} {g : α → β}
     (hf : UniformContinuous f) (hg : UniformContinuous g) :
-    Completion.extension f ∘ Completion.map g = Completion.extension (f ∘ g) :=
-  Completion.ext (continuous_extension.comp continuous_map) continuous_extension <| by
-    simp [hf, hg, hf.comp hg, map_coe, extension_coe]
+    Completion.extension f hf ∘ Completion.map g hg = Completion.extension (f ∘ g) (hf.comp hg) :=
+  Completion.ext ((continuous_extension hf).comp (continuous_map hg))
+    (continuous_extension _) <| by
+    simp [map_coe, extension_coe]
 
 set_option backward.isDefEq.respectTransparency false in
 theorem map_comp {g : β → γ} {f : α → β} (hg : UniformContinuous g) (hf : UniformContinuous f) :
-    Completion.map g ∘ Completion.map f = Completion.map (g ∘ f) :=
+    Completion.map g hg ∘ Completion.map f hf = Completion.map (g ∘ f) (hg.comp hf) :=
   extension_map ((uniformContinuous_coe _).comp hg) hf
 
 /-- The uniform isomorphism between two completions of isomorphic uniform spaces. -/
@@ -528,72 +528,69 @@ open SeparationQuotient in
 quotient. -/
 def completionSeparationQuotientEquiv (α : Type u) [UniformSpace α] :
     Completion (SeparationQuotient α) ≃ Completion α := by
-  refine ⟨Completion.extension (lift' ((↑) : α → Completion α)),
+  refine ⟨Completion.extension (lift' ((↑) : α → Completion α)) (uniformContinuous_lift' _),
     Completion.map SeparationQuotient.mk, fun a ↦ ?_, fun a ↦ ?_⟩
-  · refine induction_on a (isClosed_eq (continuous_map.comp continuous_extension) continuous_id) ?_
+  · refine induction_on a (isClosed_eq ((continuous_map uniformContinuous_mk).comp
+      (continuous_extension (uniformContinuous_lift' _))) continuous_id) ?_
     refine SeparationQuotient.surjective_mk.forall.2 fun a ↦ ?_
     rw [extension_coe (uniformContinuous_lift' _), lift'_mk (uniformContinuous_coe α),
       map_coe uniformContinuous_mk]
-  · refine induction_on a
-      (isClosed_eq (continuous_extension.comp continuous_map) continuous_id) fun a ↦ ?_
+  · refine induction_on a (isClosed_eq ((continuous_extension (uniformContinuous_lift' _)).comp
+      (continuous_map uniformContinuous_mk)) continuous_id) fun a ↦ ?_
     rw [map_coe uniformContinuous_mk, extension_coe (uniformContinuous_lift' _),
       lift'_mk (uniformContinuous_coe _)]
 
 @[fun_prop]
 theorem uniformContinuous_completionSeparationQuotientEquiv :
     UniformContinuous (completionSeparationQuotientEquiv α) :=
-  uniformContinuous_extension
+  uniformContinuous_extension (SeparationQuotient.uniformContinuous_lift' _)
 
 @[fun_prop]
 theorem uniformContinuous_completionSeparationQuotientEquiv_symm :
     UniformContinuous (completionSeparationQuotientEquiv α).symm :=
-  uniformContinuous_map
+  uniformContinuous_map SeparationQuotient.uniformContinuous_mk
 
 end SeparationQuotientCompletion
 
 section Extension₂
 
-variable (f : α → β → γ)
+/-- Extend a uniformly continuous two variable map to the Hausdorff completions. -/
+protected def extension₂ [CompleteSpace γ] [T0Space γ] (f : α → β → γ)
+    (hf : UniformContinuous₂ f) : Completion α → Completion β → γ :=
+  cPkg.extend₂ cPkg f hf
 
-/-- Extend a two variable map to the Hausdorff completions. -/
-protected def extension₂ (f : α → β → γ) : Completion α → Completion β → γ :=
-  cPkg.extend₂ cPkg f
-
-section T0Space
-
-variable [T0Space γ] {f}
+variable [CompleteSpace γ] [T0Space γ] {f : α → β → γ}
 
 theorem extension₂_coe_coe (hf : UniformContinuous₂ f) (a : α) (b : β) :
-    Completion.extension₂ f a b = f a b :=
+    Completion.extension₂ f hf a b = f a b :=
   cPkg.extension₂_coe_coe cPkg hf a b
 
-end T0Space
-
-variable [CompleteSpace γ]
-
 @[fun_prop]
-theorem uniformContinuous_extension₂ : UniformContinuous₂ (Completion.extension₂ f) :=
-  cPkg.uniformContinuous_extension₂ cPkg f
+theorem uniformContinuous_extension₂ (hf : UniformContinuous₂ f) :
+    UniformContinuous₂ (Completion.extension₂ f hf) :=
+  cPkg.uniformContinuous_extension₂ cPkg hf
 
 end Extension₂
 
 section Map₂
 
-/-- Lift a two variable map to the Hausdorff completions. -/
-protected def map₂ (f : α → β → γ) : Completion α → Completion β → Completion γ :=
-  cPkg.map₂ cPkg cPkg f
+/-- Lift a uniformly continuous two variable map to the Hausdorff completions. -/
+protected def map₂ (f : α → β → γ) (hf : UniformContinuous₂ f) :
+    Completion α → Completion β → Completion γ :=
+  cPkg.map₂ cPkg cPkg f hf
 
 @[fun_prop]
-theorem uniformContinuous_map₂ (f : α → β → γ) : UniformContinuous₂ (Completion.map₂ f) :=
-  cPkg.uniformContinuous_map₂ cPkg cPkg f
+theorem uniformContinuous_map₂ {f : α → β → γ} (hf : UniformContinuous₂ f) :
+    UniformContinuous₂ (Completion.map₂ f hf) :=
+  cPkg.uniformContinuous_map₂ cPkg cPkg hf
 
-theorem continuous_map₂ {δ} [TopologicalSpace δ] {f : α → β → γ} {a : δ → Completion α}
-    {b : δ → Completion β} (ha : Continuous a) (hb : Continuous b) :
-    Continuous fun d : δ => Completion.map₂ f (a d) (b d) :=
-  cPkg.continuous_map₂ cPkg cPkg ha hb
+theorem continuous_map₂ {δ} [TopologicalSpace δ] {f : α → β → γ} (hf : UniformContinuous₂ f)
+    {a : δ → Completion α} {b : δ → Completion β} (ha : Continuous a) (hb : Continuous b) :
+    Continuous fun d : δ => Completion.map₂ f hf (a d) (b d) :=
+  cPkg.continuous_map₂ cPkg cPkg hf ha hb
 
 theorem map₂_coe_coe (a : α) (b : β) (f : α → β → γ) (hf : UniformContinuous₂ f) :
-    Completion.map₂ f (a : Completion α) (b : Completion β) = f a b :=
+    Completion.map₂ f hf (a : Completion α) (b : Completion β) = f a b :=
   cPkg.map₂_coe_coe cPkg cPkg a b f hf
 
 end Map₂
