@@ -13,11 +13,12 @@ public import Mathlib.Probability.Kernel.Disintegration.StandardBorel
 
 Integrals against a conditional kernel: a kernel `η` that disintegrates a kernel `κ`
 (`κ.IsCondKernel η`) or a measure `ρ` (`ρ.IsCondKernel η`). The statements about Lebesgue
-integrals hold for every such kernel, in particular for every s-finite representative of
+integrals hold for every such kernel, in particular for every representative of
 `ProbabilityTheory.Kernel.condKernel κ` or `MeasureTheory.Measure.condKernel ρ`, which are classes
 of kernels (`ProbabilityTheory.Kernel.isCondKernel_of_mem_condKernel`,
 `MeasureTheory.Measure.isCondKernel_of_mem_condKernel`); those about Bochner integrals also assume
-that `κ` or `ρ` is finite and that `η` is s-finite.
+that `ρ.fst` and `η` are s-finite, respectively that `Kernel.fst κ a` and the section
+`Kernel.sectR η a` are s-finite at the point `a`.
 
 ## Main statements
 
@@ -85,46 +86,6 @@ lemma setLIntegral_condKernel_univ_left (hf : Measurable f) (a : α) {t : Set Ω
 
 end Lintegral
 
-section Integral
-
-variable {κ : Kernel α (β × Ω)} [IsFiniteKernel κ] {η : Kernel (α × β) Ω} [IsSFiniteKernel η]
-  [κ.IsCondKernel η] {E : Type*} {f : β × Ω → E} [NormedAddCommGroup E] [NormedSpace ℝ E]
-
-lemma _root_.MeasureTheory.AEStronglyMeasurable.integral_kernel_condKernel (a : α)
-    (hf : AEStronglyMeasurable f (κ a)) :
-    AEStronglyMeasurable (fun x ↦ ∫ y, f (x, y) ∂(η (a, x)))
-      (Kernel.fst κ a) := by
-  rw [← κ.disintegrate η] at hf
-  exact AEStronglyMeasurable.integral_kernel_compProd hf
-
-lemma integral_condKernel (a : α) (hf : Integrable f (κ a)) :
-    ∫ b, ∫ ω, f (b, ω) ∂(η (a, b)) ∂(Kernel.fst κ a) = ∫ x, f x ∂(κ a) := by
-  conv_rhs => rw [← κ.disintegrate η]
-  rw [← κ.disintegrate η] at hf
-  rw [integral_compProd hf]
-
-lemma setIntegral_condKernel (a : α) {s : Set β} (hs : MeasurableSet s)
-    {t : Set Ω} (ht : MeasurableSet t) (hf : IntegrableOn f (s ×ˢ t) (κ a)) :
-    ∫ b in s, ∫ ω in t, f (b, ω) ∂(η (a, b)) ∂(Kernel.fst κ a)
-      = ∫ x in s ×ˢ t, f x ∂(κ a) := by
-  conv_rhs => rw [← κ.disintegrate η]
-  rw [← κ.disintegrate η] at hf
-  rw [setIntegral_compProd hs ht hf]
-
-lemma setIntegral_condKernel_univ_right (a : α) {s : Set β} (hs : MeasurableSet s)
-    (hf : IntegrableOn f (s ×ˢ Set.univ) (κ a)) :
-    ∫ b in s, ∫ ω, f (b, ω) ∂(η (a, b)) ∂(Kernel.fst κ a)
-      = ∫ x in s ×ˢ Set.univ, f x ∂(κ a) := by
-  rw [← setIntegral_condKernel (η := η) a hs MeasurableSet.univ hf]; simp_rw [Measure.restrict_univ]
-
-lemma setIntegral_condKernel_univ_left (a : α) {t : Set Ω} (ht : MeasurableSet t)
-    (hf : IntegrableOn f (Set.univ ×ˢ t) (κ a)) :
-    ∫ b, ∫ ω in t, f (b, ω) ∂(η (a, b)) ∂(Kernel.fst κ a)
-      = ∫ x in Set.univ ×ˢ t, f x ∂(κ a) := by
-  rw [← setIntegral_condKernel (η := η) a MeasurableSet.univ ht hf]; simp_rw [Measure.restrict_univ]
-
-end Integral
-
 end ProbabilityTheory
 
 namespace MeasureTheory.Measure
@@ -176,7 +137,7 @@ end Lintegral
 
 section Integral
 
-variable {ρ : Measure (β × Ω)} [IsFiniteMeasure ρ] {η : Kernel β Ω} [IsSFiniteKernel η]
+variable {ρ : Measure (β × Ω)} [SFinite ρ.fst] {η : Kernel β Ω} [IsSFiniteKernel η]
   [ρ.IsCondKernel η] {E : Type*} {f : β × Ω → E} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
 lemma _root_.MeasureTheory.AEStronglyMeasurable.integral_condKernel
@@ -212,6 +173,57 @@ end Integral
 
 end MeasureTheory.Measure
 
+namespace ProbabilityTheory
+
+variable {α β Ω : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β} [SigmaAlgebra Ω]
+  {κ : Kernel α (β × Ω)} {η : Kernel (α × β) Ω} [κ.IsCondKernel η]
+  {E : Type*} {f : β × Ω → E} [NormedAddCommGroup E] [NormedSpace ℝ E]
+
+/-! The Bochner integrals against a conditional kernel of a kernel `κ` on the fiber over a point `a`
+at which `Kernel.fst κ a` and the section `Kernel.sectR η a` are s-finite are those against the
+conditional kernel `sectR η a` of the measure `κ a`
+(`ProbabilityTheory.Kernel.IsCondKernel.isCondKernel_sectR`). -/
+
+lemma _root_.MeasureTheory.AEStronglyMeasurable.integral_kernel_condKernel (a : α)
+    [SFinite (Kernel.fst κ a)] [IsSFiniteKernel (Kernel.sectR η a)]
+    (hf : AEStronglyMeasurable f (κ a)) :
+    AEStronglyMeasurable (fun x ↦ ∫ y, f (x, y) ∂(η (a, x))) (Kernel.fst κ a) := by
+  have := Kernel.IsCondKernel.isCondKernel_sectR κ η a
+  rw [Kernel.fst_apply_eq_fst]
+  exact hf.integral_condKernel (η := Kernel.sectR η a)
+
+lemma integral_condKernel (a : α) [SFinite (Kernel.fst κ a)] [IsSFiniteKernel (Kernel.sectR η a)]
+    (hf : Integrable f (κ a)) :
+    ∫ b, ∫ ω, f (b, ω) ∂(η (a, b)) ∂(Kernel.fst κ a) = ∫ x, f x ∂(κ a) := by
+  have := Kernel.IsCondKernel.isCondKernel_sectR κ η a
+  rw [Kernel.fst_apply_eq_fst]
+  exact Measure.integral_condKernel (η := Kernel.sectR η a) hf
+
+lemma setIntegral_condKernel (a : α) [SFinite (Kernel.fst κ a)]
+    [IsSFiniteKernel (Kernel.sectR η a)] {s : Set β} (hs : MeasurableSet s) {t : Set Ω}
+    (ht : MeasurableSet t) (hf : IntegrableOn f (s ×ˢ t) (κ a)) :
+    ∫ b in s, ∫ ω in t, f (b, ω) ∂(η (a, b)) ∂(Kernel.fst κ a)
+      = ∫ x in s ×ˢ t, f x ∂(κ a) := by
+  have := Kernel.IsCondKernel.isCondKernel_sectR κ η a
+  rw [Kernel.fst_apply_eq_fst]
+  exact Measure.setIntegral_condKernel (η := Kernel.sectR η a) hs ht hf
+
+lemma setIntegral_condKernel_univ_right (a : α) [SFinite (Kernel.fst κ a)]
+    [IsSFiniteKernel (Kernel.sectR η a)] {s : Set β}
+    (hs : MeasurableSet s) (hf : IntegrableOn f (s ×ˢ Set.univ) (κ a)) :
+    ∫ b in s, ∫ ω, f (b, ω) ∂(η (a, b)) ∂(Kernel.fst κ a)
+      = ∫ x in s ×ˢ Set.univ, f x ∂(κ a) := by
+  rw [← setIntegral_condKernel (η := η) a hs MeasurableSet.univ hf]; simp_rw [Measure.restrict_univ]
+
+lemma setIntegral_condKernel_univ_left (a : α) [SFinite (Kernel.fst κ a)]
+    [IsSFiniteKernel (Kernel.sectR η a)] {t : Set Ω}
+    (ht : MeasurableSet t) (hf : IntegrableOn f (Set.univ ×ˢ t) (κ a)) :
+    ∫ b, ∫ ω in t, f (b, ω) ∂(η (a, b)) ∂(Kernel.fst κ a)
+      = ∫ x in Set.univ ×ˢ t, f x ∂(κ a) := by
+  rw [← setIntegral_condKernel (η := η) a MeasurableSet.univ ht hf]; simp_rw [Measure.restrict_univ]
+
+end ProbabilityTheory
+
 namespace MeasureTheory
 
 /-! ### Integrability
@@ -222,7 +234,7 @@ open ProbabilityTheory
 
 variable {α Ω E F : Type*} {mα : SigmaAlgebra α} [SigmaAlgebra Ω]
   [NormedAddCommGroup E] [NormedSpace ℝ E]
-  [NormedAddCommGroup F] {ρ : Measure (α × Ω)} [IsFiniteMeasure ρ] {η : Kernel α Ω}
+  [NormedAddCommGroup F] {ρ : Measure (α × Ω)} [SFinite ρ.fst] {η : Kernel α Ω}
   [IsSFiniteKernel η] [ρ.IsCondKernel η]
 
 theorem AEStronglyMeasurable.ae_integrable_condKernel_iff {f : α × Ω → F}

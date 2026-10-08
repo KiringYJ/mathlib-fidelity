@@ -84,6 +84,31 @@ integrals agree. -/
 private def HasLIntegralMajorant (μ : Measure α) (F : α → ℝ≥0∞) : Prop :=
   ∃ g : α → ℝ≥0∞, Measurable g ∧ F ≤ g ∧ ∫⁻ a, F a ∂μ = ∫⁻ a, g a ∂μ
 
+/-- A measurable function is its own majorant. -/
+private lemma HasLIntegralMajorant.of_measurable {F : α → ℝ≥0∞} (hF : Measurable F) :
+    HasLIntegralMajorant μ F :=
+  ⟨F, hF, le_rfl, rfl⟩
+
+/-- A function that agrees almost everywhere with one with a measurable majorant with the same
+integral has one: the majorant, raised to `∞` on a measurable null set off which the functions
+agree. -/
+private lemma HasLIntegralMajorant.congr_ae {F G : α → ℝ≥0∞} (hF : HasLIntegralMajorant μ F)
+    (h : F =ᵐ[μ] G) : HasLIntegralMajorant μ G := by
+  obtain ⟨g, hg, hFg, hF_eq⟩ := hF
+  set N := toMeasurable μ {a | F a ≠ G a}
+  have hN : μ N = 0 := by rw [measure_toMeasurable]; exact h
+  classical
+  refine ⟨N.piecewise (fun _ ↦ ∞) g,
+    measurable_const.piecewise (measurableSet_toMeasurable _ _) hg, fun a ↦ ?_, ?_⟩
+  · by_cases ha : a ∈ N
+    · simp [ha]
+    · have : F a = G a := not_not.mp fun h' ↦ ha (subset_toMeasurable _ _ h')
+      simpa [ha, ← this] using hFg a
+  · rw [← lintegral_congr_ae h, hF_eq]
+    refine lintegral_congr_ae ?_
+    filter_upwards [measure_eq_zero_iff_ae_notMem.mp hN] with a ha
+    simp [ha]
+
 /-- The integral is additive on a function with a measurable majorant with the same integral: the
 majorant bounds the integral of a sum from above, and the integral is superadditive. -/
 private lemma HasLIntegralMajorant.lintegral_add {F : α → ℝ≥0∞} (hF : HasLIntegralMajorant μ F)
@@ -189,10 +214,13 @@ measure.
 This is the exact domain of `MeasureTheory.Measure.compProd`. It holds whenever the
 section-measure functions are almost everywhere measurable
 (`MeasureTheory.Measure.HasCompProd.of_aemeasurable`), in particular for an s-finite kernel `κ`
-and every measure `μ` (`MeasureTheory.Measure.hasCompProd_of_isSFiniteKernel`), and instance search
-also supplies it when `μ` or `κ` is zero or when `μ` is a Dirac measure or counting measure on a
-space with measurable singletons. Instance search passes it to finite and countable sums and to
-multiples of measures, and to finite and countable sums of kernels. -/
+and every measure `μ` (`MeasureTheory.Measure.hasCompProd_of_isSFiniteKernel`), and it passes to
+every kernel that agrees with `κ` almost everywhere (`MeasureTheory.Measure.HasCompProd.congr`),
+and more generally to every kernel whose measures of the sections of each measurable set agree
+almost everywhere with those of `κ` (`MeasureTheory.Measure.HasCompProd.congr_sections`).
+Instance search also supplies it when `μ` or `κ` is zero or when `μ` is a Dirac measure or
+counting measure on a space with measurable singletons. Instance search passes it to finite and
+countable sums and to multiples of measures, and to finite and countable sums of kernels. -/
 class HasCompProd (μ : Measure α) (κ : Kernel α β) : Prop where
   /-- For every measurable set, the measures of its sections have a measurable majorant with the
   same integral. -/
@@ -256,21 +284,27 @@ almost everywhere, raised to `∞` on a measurable null set, is a majorant with 
 lemma HasCompProd.of_aemeasurable
     (h : ∀ ⦃s : Set (α × β)⦄, MeasurableSet s → AEMeasurable (fun a ↦ κ a (Prod.mk a ⁻¹' s)) μ) :
     μ.HasCompProd κ where
-  exists_measurable_ge_lintegral_eq s hs := by
-    obtain ⟨G, hG, hFG⟩ := h hs
-    set N := toMeasurable μ {a | κ a (Prod.mk a ⁻¹' s) ≠ G a}
-    have hN : μ N = 0 := by rw [measure_toMeasurable]; exact hFG
-    classical
-    refine ⟨N.piecewise (fun _ ↦ ∞) G,
-      measurable_const.piecewise (measurableSet_toMeasurable _ _) hG, fun a ↦ ?_, ?_⟩
-    · by_cases ha : a ∈ N
-      · simp [ha]
-      · have : κ a (Prod.mk a ⁻¹' s) = G a :=
-          not_not.mp fun h' ↦ ha (subset_toMeasurable _ _ h')
-        simp [ha, this]
-    · refine lintegral_congr_ae (hFG.trans ?_)
-      filter_upwards [measure_eq_zero_iff_ae_notMem.mp hN] with a ha
-      simp [ha]
+  exists_measurable_ge_lintegral_eq _ hs :=
+    (HasLIntegralMajorant.of_measurable (h hs).measurable_mk).congr_ae (h hs).ae_eq_mk.symm
+
+/-- The composition-product exists for a kernel whose measures of the sections of each measurable
+set agree almost everywhere with those of a kernel for which it exists, since a measurable majorant
+with the same integral passes to an almost everywhere equal function. This is strictly weaker than
+almost everywhere equality of the kernels: with the countable-cocountable σ-algebra on an
+uncountable type and a nonzero measure that vanishes on countable sets, the Dirac kernel and the
+constant kernel of the measure that is one on cocountable sets have almost everywhere equal
+measures of the sections of each measurable set, but differ at every point. -/
+lemma HasCompProd.congr_sections [μ.HasCompProd κ]
+    (h : ∀ ⦃s : Set (α × β)⦄, MeasurableSet s →
+      (fun a ↦ κ a (Prod.mk a ⁻¹' s)) =ᵐ[μ] fun a ↦ η a (Prod.mk a ⁻¹' s)) :
+    μ.HasCompProd η where
+  exists_measurable_ge_lintegral_eq _ hs :=
+    (HasCompProd.hasLIntegralMajorant (μ := μ) (κ := κ) hs).congr_ae (h hs)
+
+/-- The composition-product exists for a kernel that agrees almost everywhere with one for which it
+exists. -/
+lemma HasCompProd.congr [μ.HasCompProd κ] (h : κ =ᵐ[μ] η) : μ.HasCompProd η :=
+  .congr_sections (κ := κ) fun _ _ ↦ h.mono fun _ ha ↦ by simp only [ha]
 
 /-- The composition-product of an s-finite kernel with any measure exists, since the measures of
 the sections of a measurable set depend measurably on the point. -/

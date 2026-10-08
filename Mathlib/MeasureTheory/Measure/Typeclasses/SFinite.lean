@@ -185,6 +185,15 @@ lemma measure_singleton_lt_top [SigmaFinite μ] : μ {a} < ∞ :=
   measure_lt_top_mono (singleton_subset_iff.2 <| mem_spanningSetsIndex ..)
     (measure_spanningSets_lt_top _ _)
 
+/-- The default discharger for the finiteness `μ {a} ≠ ∞` of the mass of a singleton, or of every
+singleton, under a σ-finite measure `μ`, which includes every finite measure. It accepts a proof
+that unification has already supplied. -/
+macro (name := measureSingletonNeTop) &"measure_singleton_ne_top" : tactic => `(tactic| first
+  | done
+  | exact MeasureTheory.measure_singleton_lt_top.ne
+  | exact fun _ ↦ MeasureTheory.measure_singleton_lt_top.ne
+  | fail "the mass of a singleton is supplied by default only for a σ-finite measure")
+
 theorem sum_restrict_disjointed_spanningSets (μ ν : Measure α) [SigmaFinite ν] :
     sum (fun n ↦ μ.restrict (disjointed (spanningSets ν) n)) = μ := by
   rw [← restrict_iUnion (disjoint_disjointed _)

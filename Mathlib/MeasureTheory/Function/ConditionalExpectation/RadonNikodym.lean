@@ -53,11 +53,7 @@ lemma toReal_rnDeriv_map [IsFiniteMeasure μ] (hμν : μ ≪ ν)
     {g : 𝓧 → 𝓨} (hg : Measurable g) [hσ : SigmaFinite (ν.map g hg.aemeasurable)] :
     (fun a ↦ ((μ.map g hg.aemeasurable).rnDeriv (ν.map g hg.aemeasurable) (g a)).toReal) =ᵐ[ν]
       ν[(fun a ↦ (μ.rnDeriv ν a).toReal) | m𝓨.comap g] := by
-  have : SigmaFinite (ν.trim hg.comap_le) := by
-    rw [← map_trim_comap hg] at hσ
-    refine SigmaFinite.of_map (ν.trim hg.comap_le) ?_ hσ
-    refine Measurable.aemeasurable ?_
-    exact measurable_iff_comap_le.mpr le_rfl
+  have : SigmaFinite (ν.trim hg.comap_le) := sigmaFinite_trim_comap hg
   have : SigmaFinite ν := SigmaFinite.of_map _ hg.aemeasurable hσ
   refine ae_eq_condExp_of_forall_setIntegral_eq _ (by fun_prop) ?_ ?_ ?_
   · rintro _ ⟨t, _, rfl⟩ _

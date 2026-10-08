@@ -77,7 +77,7 @@ end ProbabilityTheory.Kernel
 
 namespace MeasureTheory.Measure
 
-lemma compProd_eq_parallelComp_comp_copy_comp [SFinite μ] [IsSFiniteKernel κ] :
+lemma compProd_eq_parallelComp_comp_copy_comp [IsSFiniteKernel κ] :
     μ ⊗ₘ κ = (Kernel.id ∥ₖ κ) ∘ₘ Kernel.copy α ∘ₘ μ := by
   simp only [compProd_eq_comp_prod, ← Kernel.parallelComp_comp_copy, Measure.comp_assoc]
 
@@ -115,21 +115,10 @@ lemma productBySections_comp_left [SFinite μ] [SFinite ν] {κ : Kernel α γ} 
   rw [← Measure.productBySections_comp_right, ← h1] at h2
   exact h2.symm
 
-lemma parallelComp_comp_compProd [SFinite μ] [IsSFiniteKernel κ] {η : Kernel β γ}
+lemma parallelComp_comp_compProd [IsSFiniteKernel κ] {η : Kernel β γ}
     [IsSFiniteKernel η] :
     (Kernel.id ∥ₖ η) ∘ₘ (μ ⊗ₘ κ) = μ ⊗ₘ (η ∘ₖ κ) := by
   simp only [Measure.compProd_eq_comp_prod, Measure.compProd_eq_comp_prod, Measure.comp_assoc,
     Kernel.parallelComp_comp_prod, Kernel.id_comp]
-
-lemma compProd_map [SFinite μ] [IsSFiniteKernel κ] {f : β → γ} (hf : Measurable f) :
-    μ ⊗ₘ (κ.map f) = (μ ⊗ₘ κ).map (Prod.map id f) := by
-  calc μ ⊗ₘ (κ.map f)
-  _ = (Kernel.id ∥ₖ Kernel.deterministic f hf) ∘ₘ (Kernel.id ×ₖ κ) ∘ₘ μ := by
-    simp only [comp_assoc, Kernel.parallelComp_comp_prod, compProd_eq_comp_prod,
-      Kernel.id_comp, Kernel.deterministic_comp_eq_map]
-  _ = (Kernel.id ∥ₖ Kernel.deterministic f hf) ∘ₘ (μ ⊗ₘ κ) := by rw [compProd_eq_comp_prod]
-  _ = (μ ⊗ₘ κ).map (Prod.map id f) := by
-    simp only [Kernel.id, Kernel.deterministic_parallelComp_deterministic,
-      deterministic_comp_eq_map]
 
 end MeasureTheory.Measure

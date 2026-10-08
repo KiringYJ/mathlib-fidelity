@@ -85,14 +85,8 @@ example (κ : Kernel ℝ ℝ) [IsMarkovKernel κ] [SigmaFinite (κ ∘ₘ volume
 
 -- A concrete infinite prior: the identity kernel and Lebesgue measure.
 example :
-    haveI : SigmaFinite ((Kernel.id : Kernel ℝ ℝ) ∘ₘ (volume : Measure ℝ)) := by
-      rw [Measure.id_comp]
-      infer_instance
-    ∃ η : Kernel ℝ ℝ, IsMarkovKernel η ∧ η ∈ (Kernel.id : Kernel ℝ ℝ)†(volume : Measure ℝ) := by
-  have : SigmaFinite ((Kernel.id : Kernel ℝ ℝ) ∘ₘ (volume : Measure ℝ)) := by
-    rw [Measure.id_comp]
-    infer_instance
-  exact exists_isMarkovKernel_mem_posterior
+    ∃ η : Kernel ℝ ℝ, IsMarkovKernel η ∧ η ∈ (Kernel.id : Kernel ℝ ℝ)†(volume : Measure ℝ) :=
+  exists_isMarkovKernel_mem_posterior
 
 /-! ### Planar Lebesgue measure has no conditional kernel -/
 

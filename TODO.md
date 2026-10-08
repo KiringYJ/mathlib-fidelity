@@ -956,31 +956,134 @@ operation.
   lemmas are recorded in the next entry, and `condExpKernel` in the one after it.  Tests are in
   `MathlibTest/CondKernelSigmaFinite.lean`.
 
-- [ ] **Weaken the remaining finite-measure hypotheses around conditional kernels.**
-  Some lemmas in the files of the previous entry still take finite measures or stronger hypotheses
-  than they need.  `condDistrib_congr`, `condDistrib_congr_right`, `condDistrib_congr_left`,
-  `condDistrib_congr_measure`, `condDistrib_map`, `condDistrib_fst_prod`, and `condDistrib_snd_prod`
-  in `Mathlib/Probability/Kernel/CondDistrib.lean` transport membership between two joint laws; they
-  can take the class of both laws as instance arguments, as `Measure.mem_condKernel_congr` does.
-  `setLIntegral_preimage_condDistrib` and `setLIntegral_condDistrib_of_measurableSet` hold on the
-  class of the joint law alone.  The Markov-kernel lemmas `map_mem_condDistrib_comp`,
+- [x] **Weaken the remaining finite-measure hypotheses around conditional kernels.**
+  The lemmas of the previous entry that kept finite measures, a standard Borel space, or stronger
+  hypotheses now take the class of the joint law, a σ-finite or s-finite law, or a finiteness
+  condition at a point.  Every representative of a conditional kernel disintegrates the measure or
+  kernel (`Measure.isCondKernel_of_mem_condKernel`, `Kernel.isCondKernel_of_mem_condKernel`), since
+  the composition-product exists for every kernel that agrees almost everywhere with one for which
+  it exists (`Measure.HasCompProd.congr`, and `Kernel.HasCompProd.congr` on every fiber), and more
+  generally for every kernel whose measures of the sections of each measurable set agree almost
+  everywhere with those of such a kernel (`Measure.HasCompProd.congr_sections`,
+  `Kernel.HasCompProd.congr_sections`, with `Measure.compProd_congr_sections` and
+  `Kernel.compProd_congr_sections`).  A kernel
+  represents `ρ.condKernel` exactly when it disintegrates `ρ` and is a probability measure almost
+  everywhere (`Measure.mem_condKernel_iff_isCondKernel_and_ae_isProbabilityMeasure`), and every
+  disintegration of a measure with a σ-finite first marginal is one
+  (`Measure.IsCondKernel.ae_isProbabilityMeasure`, now in `Disintegration/Basic.lean`), so that two
+  conditional kernels of such a measure, finite or not, agree almost everywhere
+  (`Measure.IsCondKernel.ae_eq`, `Measure.IsCondKernel.ae_eq_apply`), and
+  `Measure.mem_condKernel_iff`, `Measure.IsCondKernel.mem_condKernel`,
+  `mem_condDistrib_of_measure_eq_compProd`, `mem_condDistrib_iff`,
+  `mem_condDistrib_iff_hasCondDistrib`, `HasCondDistrib.mem_condDistrib`,
+  `mem_posterior_of_compProd_eq`, `mem_posterior_iff`, and `mem_posterior_of_compProd_eq_swap_comp`
+  take the class and a σ-finite first marginal or law, with no standard Borel space, for every
+  kernel for which the composition-product in the statement exists; a Markov kernel needs only the
+  class (`mem_condKernel_iff_of_isMarkovKernel`,
+  `mem_condDistrib_of_measure_eq_compProd_of_isMarkovKernel`,
+  `mem_posterior_iff_of_isMarkovKernel`).  The section over a point of a conditional kernel of a
+  kernel is a conditional kernel of the measure at that point
+  (`Kernel.IsCondKernel.isCondKernel_sectR`), so on every fiber where the first marginal is σ-finite
+  a conditional kernel of a kernel is almost everywhere a probability measure
+  (`Kernel.IsCondKernel.ae_isProbabilityMeasure`, formerly `isProbabilityMeasure_ae` for a finite
+  first marginal), and every conditional kernel of a finite kernel represents its conditional kernel
+  (`Kernel.mem_condKernel_iff` and `Kernel.IsCondKernel.mem_condKernel`, formerly for finite
+  kernels); two conditional kernels of a kernel agree almost everywhere on every fiber where the
+  first marginal is σ-finite (`Kernel.IsCondKernel.ae_eq`, formerly for finite kernels), and
+  `Kernel.IsCondKernel.sectR_mem_condKernel`, which takes the class at the point, and
+  `Kernel.sectR_mem_condKernel_of_mem` replace the `comap` statements.  `Kernel.fst_apply_eq_fst`,
+  now in `MeasureCompProd.lean` with `Kernel.snd_apply_eq_snd`, identifies the marginals of a
+  kernel at a point with those of the measure there, and instances pass σ-finiteness and
+  s-finiteness from `Kernel.fst κ a` to `(κ a).fst`.  The composition-product of
+  the law of `X`, respectively of `κ ∘ₘ μ`, with a representative exists
+  (`hasCompProd_map_of_mem_condDistrib`, `hasCompProd_of_mem_posterior`), so `condDistrib_comp_map`
+  and `posterior_comp_self` hold for every representative, and `compProd_map_condDistrib`,
+  `compProd_posterior_eq_map_swap`, `compProd_posterior_eq_swap_comp`, and
+  `swap_compProd_posterior`, which state the composition-product, take its domain.
+  `Measure.IsCondKernel.of_compProd_eq` builds a disintegration from the composition-product with a
+  measure equal to the first marginal.  In `Mathlib/Probability/Kernel/CondDistrib.lean`, the
+  membership statements `mem_condDistrib_congr`, `mem_condDistrib_congr_right`,
+  `mem_condDistrib_congr_left`, `mem_condDistrib_congr_measure`, and `mem_condDistrib_map_iff`,
+  formerly `condDistrib_congr`, `condDistrib_congr_right`, `condDistrib_congr_left`,
+  `condDistrib_congr_measure`, and `condDistrib_map`, take the classes of both joint laws, a nonzero
+  factor of the measure keeps the conditional distribution (`mem_condDistrib_smul_iff`), since
+  scaling a measure by a nonzero constant keeps its conditional kernel
+  (`Measure.mem_condKernel_smul_iff`), so `mem_condDistrib_fst_prod_iff` and
+  `mem_condDistrib_snd_prod_iff`, formerly `condDistrib_fst_prod` and `condDistrib_snd_prod`, hold
+  for every nonzero factor.  Scaling by a finite constant keeps a unique conditional kernel
+  (`Measure.HasUniqueCondKernel.smul`, with an instance for a nonnegative real factor), and scaling
+  by `∞` does not.  `setLIntegral_preimage_condDistrib` and
+  `setLIntegral_condDistrib_of_measurableSet` take the class and hold for every representative.
+  `Measure.compProd_deterministic` holds for every measure and `Measure.compProd_map`, now in
+  `MeasureCompProd.lean`, on the domain of the composition-product, which passes to the image of the
+  kernel (`Measure.hasCompProd_map`), so `map_mem_condDistrib_comp`,
   `deterministic_mem_condDistrib_comp_self`, `id_mem_condDistrib_self`, and
-  `deterministic_mem_condDistrib_const` need only the class of the joint law, with
-  `SFinite (μ.map X)` for `Measure.compProd_deterministic`, through
-  `Measure.mem_condKernel_iff_of_isMarkovKernel`; they now take a σ-finite law of `X`.
+  `deterministic_mem_condDistrib_const` take the classes of their joint laws alone.
   `Measure.IsCondKernel.apply_of_ne_zero`, `Measure.IsCondKernel.isProbabilityMeasure`, and
-  `condDistrib_apply_of_ne_zero` need only `ρ.fst {x} ≠ ∞` at the point, and
-  `Measure.IsCondKernel.isMarkovKernel` the same at every point; they now take a σ-finite first
-  marginal, which excludes `countOnAxis` in `Counterexamples/CondCDF.lean`, whose singletons have
-  marginal mass `1`.  `id_mem_posterior_id` in
-  `Mathlib/Probability/Kernel/Posterior.lean` needs `SigmaFinite (Kernel.id ∘ₘ μ)`, which instance
-  search does not derive from `SigmaFinite μ`.  The remaining posterior lemmas, from
-  `swap_compProd_posterior` and `parallelProd_posterior_comp_copy_comp` to the Radon-Nikodym
-  statements, keep a finite measure and a finite kernel, and so do the integrability and
-  Bochner-integral statements of `CondDistrib.lean` and the `Integral` section of the
-  `MeasureTheory.Measure` namespace and the final section of
-  `Mathlib/Probability/Kernel/Disintegration/Integral.lean`; determine for each whether the class,
-  a σ-finite law, or a finite measure is its exact hypothesis.
+  `condDistrib_apply_of_ne_zero`, the last for almost everywhere measurable maps, take
+  `ρ.fst {x} ≠ ∞` at the point, and `Measure.IsCondKernel.isMarkovKernel` at every point, with the
+  default `measure_singleton_ne_top` for a σ-finite first marginal; at a point of infinite mass the
+  formula fails for `s = univ`.  The integrability and Bochner-integral statements of
+  `CondDistrib.lean` and of `Mathlib/Probability/Kernel/Disintegration/Integral.lean` take an
+  s-finite first marginal and an s-finite representative, or for a kernel an s-finite
+  `Kernel.fst κ a` and an s-finite section `Kernel.sectR η a` at the point, through which they
+  reduce to the measure `κ a`, the hypotheses of `Measure.integral_compProd`, whose exact domain is
+  the Fubini entry below.  The conditional-expectation statements take the class and a σ-finite
+  law of `X`, which is equivalent to the σ-finite trim that the conditional expectation needs
+  (`sigmaFinite_trim_comap_iff`), and `condDistrib_ae_eq_condExp` takes `μ (Y ⁻¹' s) ≠ ∞`.
+  `HasCondDistrib.comp_left`, `fst`, `snd`, and `of_compProd` need no s-finite measure.  The first
+  three and `HasCondDistrib.measurableEquiv_comp_right` hold for every kernel, the domain passing
+  along a measurable equivalence (`Measure.HasCompProd.map_measurableEquiv`); `of_compProd` takes
+  the domain `κ.HasCompProd η`, and `HasCondDistrib.comp_right` the domain of the
+  composition-product of the law of `f ∘ Z` with `κ`, which does not follow from that for `κ.comap
+  f`: for the identity from the discrete σ-algebra to the Borel σ-algebra on `ℝ`, a set that is not
+  Borel separates the lower and upper integrals.  With that domain, the lower integral of the
+  section measures against the image measure is the integral of their composition
+  (`MeasureTheory.lintegral_map_of_exists_measurable_ge`, which takes an almost everywhere
+  majorant).
+  `HasCondDistrib.mem_condDistrib_of_isMarkovKernel` needs only the class, and
+  `Kernel.mem_condDistrib_trajMeasure` takes the class.  In
+  `Mathlib/Probability/Kernel/Posterior.lean`, `swap_compProd_posterior`, `posterior_prod_id_comp`,
+  `id_mem_posterior_id`, `deterministic_comp_posterior`, `mem_posterior_posterior`, and
+  `comp_mem_posterior_comp` take the classes of their posteriors, with s-finite kernels where a
+  product or parallel composition needs them, and `parallelProd_posterior_comp_copy_comp` takes an
+  s-finite `κ`.  Instances supply `SigmaFinite (Kernel.id ∘ₘ μ)` and `SigmaFinite
+  (Kernel.deterministic f hf ∘ₘ μ)` from σ-finite `μ` and `μ.map f`.  `deterministic_comp_posterior`
+  needs no finiteness of `μ.map f`: a Markov kernel into a countably generated space is almost
+  everywhere deterministic exactly when almost every point gives no mass to the measurable sets that
+  its image avoids, for every measure (`Kernel.ae_eq_deterministic_iff`).  The joint law of `X` and
+  `f ∘ X` has a unique conditional kernel for every measure when `f` is measurable into a countably
+  generated space (`Measure.hasUniqueCondKernel_map_prodMk_comp`), and instances supply it for `(Y,
+  Y)`, for `(X, c)`, and for the joint law of the identity kernel with swapped coordinates; for a
+  general `f` instance search cannot supply the measurability of `f`.
+  `absolutelyContinuous_posterior` holds for every prior and every representative: `κ ∘ₘ μ`, being
+  `≪ ν`, is s-finite, the first marginal `η ∘ₘ κ ∘ₘ μ` of the joint law is `μ` weighted by
+  `κ · univ`, and the joint law is absolutely continuous with respect to the product of that
+  marginal with `ν`.
+  `absolutelyContinuous_of_posterior` and `absolutelyContinuous_posterior_iff` take an s-finite law
+  `κ ∘ₘ μ` of the data (entry below), which an s-finite prior and a finite kernel give, and
+  countable or countably generated spaces instead of a standard Borel space.
+  `Measure.absolutelyContinuous_comp_of_absolutelyContinuous` in
+  `Mathlib/Probability/Kernel/Composition/MeasureComp.lean`, formerly
+  `Kernel.absolutelyContinuous_comp_of_absolutelyContinuous` in `Posterior.lean`, holds for every
+  measure and kernel with no structure on the spaces: `κ ∘ₘ μ`, being `≪ ν`, is s-finite, its
+  density with
+  respect to `ν.toFinite` vanishes on a `κ ∘ₘ μ`-null set, which almost every `κ ω` misses, and
+  outside it every `κ ∘ₘ μ`-null set is `ν`-null.  The Radon--Nikodym statements
+  `rnDeriv_posterior_ae_prod`, `rnDeriv_posterior`, `rnDeriv_posterior_symm`, and
+  `posterior_eq_withDensity` take the class and countable or countably generated spaces and keep a
+  finite prior and a finite kernel, as do `posterior_eq_withDensity_of_countable`, which takes the
+  class instead of a standard Borel space, and the `Bool` statements, because the kernel
+  Radon--Nikodym derivative is developed for finite kernels (entry below).  The composition
+  identities `Measure.compProd_eq_comp_prod`, `Measure.compProd_eq_parallelComp_comp_copy_comp`, and
+  `Measure.parallelComp_comp_compProd` need no s-finite measure.  With a local instance of the class
+  of the joint law, the default `fun_prop` of `condDistrib` failed with `No goals to be solved`,
+  because the instance check had already assigned the proof of measurability; the shared default
+  discharger `fun_prop_default` accepts that proof.  `Measure.map_congr_measure` and
+  `Measure.compProd_congr_measure` transport a pushforward and a composition-product along an
+  equation of measures.  In a countable space, `Measure.absolutelyContinuous_comp_of_countable`
+  needs no measurable singletons, since almost everywhere means at every point of positive mass.
+  Tests are in `MathlibTest/CondKernelClassDomain.lean`.
 
 - [ ] **Give `condExpKernel` the class of its diagonal law.**
   `ProbabilityTheory.condExpKernel μ hm` in `Mathlib/Probability/Kernel/Condexp.lean` takes
@@ -1902,9 +2005,10 @@ operation.
   proof `hm : m ≤ mΩ` that `m` is a sub-σ-algebra and is the class along `ae (μ.trim hm)` of the
   kernels that disintegrate the diagonal law.  The Markov instances of the former chosen kernels,
   their measurability lemmas, their `_apply` and `_eq` equations, and the lemmas comparing a kernel
-  with a chosen one are removed; `Kernel.comap_mem_condKernel_of_mem` replaces
-  `Kernel.condKernel_apply_eq_condKernel`.  In `Integral.lean`, `Unique.lean`, `CondDistrib.lean`,
-  `Condexp.lean`, `Posterior.lean`, `BayesEstimator.lean`, and `IonescuTulcea/Traj.lean`, statements
+  with a chosen one are removed; `Kernel.comap_mem_condKernel_of_mem` (now
+  `Kernel.sectR_mem_condKernel_of_mem`) replaces `Kernel.condKernel_apply_eq_condKernel`.  In
+  `Integral.lean`, `Unique.lean`, `CondDistrib.lean`, `Condexp.lean`, `Posterior.lean`,
+  `BayesEstimator.lean`, and `IonescuTulcea/Traj.lean`, statements
   about the classes hold for every representative, statements about the values of a representative
   hold for every Markov representative or, where the proof allows, for every finite or s-finite one,
   and the integrals of `Integral.lean` hold for every s-finite kernel that satisfies
@@ -2181,7 +2285,94 @@ operation.
   `a ↦ ∫ b, ‖f (a, b)‖ ∂κ a`, which are almost everywhere strongly measurable for an s-finite `κ`;
   on `μ.HasCompProd κ` only the lower integrals of the section integrals of measurable functions are
   controlled, through their majorants.  Determine the statements that hold on the domain, and
-  whether `SFinite μ` is needed when `κ` is s-finite, before weakening the assumptions.
+  whether `SFinite μ` is needed when `κ` is s-finite, before weakening the assumptions.  The
+  Bochner-integral lemmas of `Mathlib/Probability/Kernel/Disintegration/Integral.lean` and the
+  integrability statements of `Mathlib/Probability/Kernel/CondDistrib.lean` take an s-finite first
+  marginal or law for this reason.
+
+- [ ] **Extend the kernel Radon--Nikodym derivative beyond finite kernels.**
+  `Kernel.rnDeriv`, `Kernel.singularPart`, and their lemmas in
+  `Mathlib/Probability/Kernel/RadonNikodym.lean` assume finite kernels.  The posterior statements
+  `rnDeriv_posterior_ae_prod`, `rnDeriv_posterior`, `rnDeriv_posterior_symm`,
+  `posterior_eq_withDensity`, `posterior_eq_withDensity_of_countable`,
+  `posterior_boolKernel_apply_false`, and `posterior_boolKernel_apply_true` in
+  `Mathlib/Probability/Kernel/Posterior.lean` take the derivatives of a representative with respect
+  to `Kernel.const _ μ` and of `κ` with respect to `Kernel.const _ (κ ∘ₘ μ)`, so they keep a finite
+  prior and a finite kernel, and `Measure.AbsolutelyContinuous.kernel_of_compProd` in
+  `Mathlib/Probability/Kernel/Composition/AbsolutelyContinuous.lean` assumes finite kernels for the
+  same reason.  Determine the domain on which the derivative is defined, the statements that hold
+  for s-finite or σ-finite kernels, and whether the posterior density formula holds for a σ-finite
+  prior with a σ-finite law of the data.
+
+- [ ] **State the almost-everywhere-invariant lemmas about conditional kernels for every
+  representative.**
+  The disintegration, the composition-products, and the measures and Lebesgue integrals of a
+  representative of `Measure.condKernel`, `Kernel.condKernel`, `condDistrib`, and `posterior` are
+  stated for every representative, through `Measure.HasCompProd.congr` and
+  `Kernel.HasCompProd.congr`.  Each representative agrees almost everywhere with a Markov one, and
+  the following statements do not change under almost-everywhere modification of the
+  representative but still take a Markov, finite, or s-finite one.  In
+  `Mathlib/Probability/Kernel/CondDistrib.lean`:
+  `AEStronglyMeasurable.ae_integrable_condDistrib_map_iff`,
+  `AEStronglyMeasurable.integral_condDistrib_map`, `AEStronglyMeasurable.integral_condDistrib`,
+  `aestronglyMeasurable_integral_condDistrib`, `map_mem_condDistrib_comp`,
+  `Integrable.condDistrib_ae_map`, `Integrable.condDistrib_ae`,
+  `Integrable.integral_norm_condDistrib_map`, `Integrable.integral_norm_condDistrib`,
+  `Integrable.norm_integral_condDistrib_map`, `Integrable.norm_integral_condDistrib`,
+  `Integrable.integral_condDistrib_map`, `Integrable.integral_condDistrib`,
+  `condDistrib_ae_eq_condExp`, `condExp_prod_ae_eq_integral_condDistrib'`,
+  `condExp_prod_ae_eq_integral_condDistrib₀`, `condExp_prod_ae_eq_integral_condDistrib`,
+  `condExp_ae_eq_integral_condDistrib`, `condExp_ae_eq_integral_condDistrib'`, and
+  `condExp_ae_eq_integral_condDistrib_id`.  In `Posterior.lean`: `posterior_prod_id_comp`,
+  `parallelProd_posterior_comp_copy_comp`, `deterministic_comp_posterior`,
+  `mem_posterior_posterior`, and `comp_mem_posterior_comp`, and the Radon--Nikodym statements of
+  the entry above.  In `Mathlib/Probability/Decision/BayesEstimator.lean`:
+  `avgRisk_eq_lintegral_posterior_prod`, `avgRisk_eq_lintegral_lintegral_lintegral`,
+  `lintegral_iInf_posterior_le_avgRisk`, `lintegral_iInf_posterior_le_bayesRisk`,
+  `IsArgminEstimator.avgRisk_eq_lintegral_iInf`, and `HasArgminEstimator.bayesRisk_eq`.  In
+  `Mathlib/Probability/Independence/Conditional.lean`:
+  `condIndepFun_iff_compProd_map_prod_eq_compProd_prod_map_map`,
+  `condIndepFun_iff_map_prod_eq_prod_map_map`, `condIndepFun_iff_map_prod_eq_prod_comp_trim`,
+  `condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib`, and
+  `condIndepFun_iff_prodMkRight_mem_condDistrib`.  The Bochner integrals of
+  `Disintegration/Integral.lean` take an s-finite conditional kernel; for a measure with a σ-finite
+  first marginal, every disintegration agrees almost everywhere with a Markov one.  State these
+  lemmas for every representative, or, where a statement needs an s-finite representative, such as
+  a product with it, on the domain of that construction; for the Bochner integrals, the outer
+  integrand changes only on a null set when the representative does.
+
+- [ ] **Determine whether the converse absolute-continuity lemma of the posterior needs an s-finite
+  law of the data.**
+  `absolutelyContinuous_of_posterior` and `absolutelyContinuous_posterior_iff` in
+  `Mathlib/Probability/Kernel/Posterior.lean` take `[SFinite (κ ∘ₘ μ)]` for a finite kernel `κ`: the
+  prior restricted to the set where `κ ω ≠ 0` then has the same joint law and posterior and is
+  s-finite, and for an s-finite prior the proof compares the joint law with the product of the
+  prior and `(κ ∘ₘ μ).toFinite`.  For a Markov kernel whose posterior exists the condition is that
+  the prior is s-finite (`posterior_comp_self`).  `absolutelyContinuous_posterior` holds for every
+  prior.  For every prior and every measurable `B` with `(κ ∘ₘ μ) B = 0`, `κ ω B = 0` for
+  `μ`-almost every `ω`; the conclusion `∀ᵐ ω ∂μ, κ ω ≪ κ ∘ₘ μ` exchanges these quantifiers.
+  Counting measure does not decide the question: with measurable singletons, the hypothesis `h_ac`
+  holds for every kernel, and so does the conclusion, since `κ ω ≤ κ ∘ₘ count`.  The test case is a
+  prior for which `κ ∘ₘ μ` is not s-finite, which depends on `κ`: for `κ = Kernel.id`, the measure
+  on `ℝ` that vanishes on countable sets and is infinite on the other Borel sets is one, since it is
+  not s-finite.  For that prior and every kernel, `(κ ∘ₘ μ) B` is `0` or `∞` according as countably
+  or uncountably many `κ ω` charge `B`.  No proof or counterexample is known.
+
+- [ ] **Replace the σ-finite first marginal by a semifinite one in the uniqueness of conditional
+  kernels.**
+  `Measure.IsCondKernel.ae_isProbabilityMeasure`, `Measure.IsCondKernel.ae_eq_apply`,
+  `Measure.IsCondKernel.ae_eq`, `Measure.mem_condKernel_iff`, `Measure.IsCondKernel.mem_condKernel`,
+  `Kernel.IsCondKernel.ae_isProbabilityMeasure`, `Kernel.IsCondKernel.ae_eq`, and
+  `Kernel.IsCondKernel.sectR_mem_condKernel` in `Mathlib/Probability/Kernel/Disintegration/` take a
+  σ-finite first marginal, respectively a σ-finite `Kernel.fst κ a`.  Among conditions on the first
+  marginal, semifiniteness, that every set of positive measure contains one of finite positive
+  measure, is exact for them.  It suffices: if a disintegration gave a set of positive measure mass
+  above `1 + 1/n`, or below `1 - 1/n`, a subset of finite positive measure would contradict the
+  disintegration identity on it, and the same comparison of set integrals over sets of finite
+  measure gives the almost everywhere uniqueness.  It is necessary: if `B` has positive measure and
+  every measurable subset has measure `0` or `∞`, then every integral over `B` is `0` or `∞`, so
+  multiplying a Markov disintegration by `2` on `B` gives another one.  The library has no class of
+  semifinite measures; add one and restate these lemmas, and their consumers, on it.
 
 - [ ] **Formalize the counterexamples recorded for the composition-product domain.**
   The docstrings of `Measure.hasCompProd_sum_left` and `Measure.hasCompProd_compProd` in
@@ -2192,7 +2383,20 @@ operation.
   changed; and that the domain does not pass from counting measure to Lebesgue measure.  Each needs
   a set that is not Borel, which exists by counting with
   `SigmaAlgebra.cardinal_measurableSet_le_continuum`, or one that is not Lebesgue measurable;
-  `Counterexamples/KernelCompProd.lean` is the precedent.
+  `Counterexamples/KernelCompProd.lean` is the precedent.  The docstring of
+  `HasCondDistrib.comp_right` in `Mathlib/Probability/HasCondDistrib.lean` states that its domain
+  hypothesis does not follow from `h`: for the identity `f` from the discrete σ-algebra to the
+  Borel σ-algebra on `ℝ`, a set `T` that is not Borel, the composition-product `P` of the sum of
+  `∞ • dirac t` over `t ∈ T` with `κ.comap f`, and `κ` constant at the sum of `dirac u` over
+  `u ∉ T`, the measures of the sections of the diagonal have lower integral `0` and upper integral
+  `∞` against the law of `f ∘ Z`.  The docstring of `Measure.HasCompProd.congr_sections` in
+  `Mathlib/Probability/Kernel/Composition/MeasureCompProd/Defs.lean` states that agreement of the
+  measures of the sections is strictly weaker than almost everywhere equality of the kernels: with
+  the countable-cocountable σ-algebra on an uncountable type and a nonzero measure that vanishes on
+  countable sets, every product-measurable set lies in the σ-algebra generated by countably many
+  rectangles, so off a
+  countable set the Dirac kernel and the constant kernel of the measure that is one on cocountable
+  sets give its sections the same measure, while they differ at every point.
 
 - [ ] **Make Radon--Nikodym data conditional on decomposition existence.**
   `Measure.rnDeriv` and `Measure.singularPart` in

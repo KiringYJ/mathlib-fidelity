@@ -10,6 +10,8 @@ public import Mathlib.Probability.Kernel.Composition.Lemmas
 public import Mathlib.Probability.Kernel.Disintegration.Unique
 public import Mathlib.Probability.Kernel.Deterministic
 
+import Mathlib.MeasureTheory.Measure.WithDensityFinite
+
 /-!
 
 # Posterior kernel
@@ -23,7 +25,13 @@ A posterior distribution of the parameter given the data is a Markov kernel `η 
 that `(κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap`. That is, the joint distribution of parameter and data
 can be recovered from the distribution of the data and the posterior. Such a kernel is determined
 only up to `κ ∘ₘ μ`-null sets, so the posterior `κ†μ` is the `κ ∘ₘ μ`-almost-everywhere class of
-these kernels, and the statements below hold for every Markov representative `η ∈ κ†μ`.
+these kernels. The statements below hold for every representative `η ∈ κ†μ` where the proof
+allows, and otherwise for every finite, s-finite, or Markov one; the composition-product
+`(κ ∘ₘ μ) ⊗ₘ η` exists for every representative (`hasCompProd_of_mem_posterior`). The posterior
+exists when the joint law with swapped coordinates has a unique conditional kernel, which the
+statements take as an instance argument; instance search supplies it when `Ω` is a nonempty
+standard Borel space and `κ ∘ₘ μ` is σ-finite, which admits an infinite prior, and for the identity
+kernel and every prior in a countably generated space.
 
 ## Main definitions
 
@@ -31,9 +39,12 @@ these kernels, and the statements below hold for every Markov representative `η
 
 ## Main statements
 
-* `mem_posterior_iff`: if `κ ∘ₘ μ` is σ-finite, a finite kernel `η` represents `κ†μ` if and only if
+* `mem_posterior_iff_of_isMarkovKernel`: a Markov kernel `η` represents `κ†μ` if and only if
   `(κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap`.
-* `posterior_comp_self`: `η ∘ₘ κ ∘ₘ μ = μ` for every Markov representative `η` of `κ†μ`.
+* `mem_posterior_iff`: if `κ ∘ₘ μ` is σ-finite, a kernel `η` for which `(κ ∘ₘ μ) ⊗ₘ η` exists
+  represents `κ†μ` if and only if `(κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap`.
+* `posterior_comp_self`: `η ∘ₘ κ ∘ₘ μ = μ` for a Markov kernel `κ` and every representative `η` of
+  `κ†μ`.
 * `mem_posterior_posterior`: `κ` represents the posterior of every Markov representative of `κ†μ`
   for the prior `κ ∘ₘ μ`.
 * `comp_mem_posterior_comp`: the composition of Markov representatives of `κ†μ` and `η†(κ ∘ₘ μ)`
@@ -42,7 +53,9 @@ these kernels, and the statements below hold for every Markov representative `η
 * `posterior_eq_withDensity`: If `κ ω ≪ κ ∘ₘ μ` for `μ`-almost every `ω`, then for every Markov
   representative `η` of `κ†μ` and `κ ∘ₘ μ`-almost every `x`,
   `η x = μ.withDensity (fun ω ↦ κ.rnDeriv (Kernel.const _ (κ ∘ₘ μ)) ω x)`.
-  The condition is true for countable `Ω`: see `absolutelyContinuous_comp_of_countable`.
+  The condition is true for countable `Ω`, and whenever `κ ω ≪ ν` for an s-finite `ν` and
+  `μ`-almost every `ω`: see `Measure.absolutelyContinuous_comp_of_countable` and
+  `Measure.absolutelyContinuous_comp_of_absolutelyContinuous`.
 
 ## Notation
 
@@ -84,10 +97,12 @@ class of the Markov kernels `η : Kernel 𝓧 Ω` with `(κ ∘ₘ μ) ⊗ₘ η
 the conditional kernel of the joint law with swapped coordinates
 (`MeasureTheory.Measure.condKernel`).
 
-It exists when this joint law has a unique conditional kernel, in particular when `κ ∘ₘ μ` is
-σ-finite (`ProbabilityTheory.sigmaFinite_fst_map_swap_compProd`). A finite kernel represents it
-if and only if it has this property, when `κ ∘ₘ μ` is σ-finite (`mem_posterior_iff`), and a Markov
-representative exists (`exists_isMarkovKernel_mem_posterior`). -/
+It exists when this joint law has a unique conditional kernel, in particular when `Ω` is a
+nonempty standard Borel space and `κ ∘ₘ μ` is σ-finite
+(`ProbabilityTheory.sigmaFinite_fst_map_swap_compProd`). A kernel for which
+`(κ ∘ₘ μ) ⊗ₘ η` exists represents it if and only if it has this property, when `κ ∘ₘ μ` is σ-finite
+(`mem_posterior_iff`), and a Markov representative exists
+(`exists_isMarkovKernel_mem_posterior`). -/
 noncomputable
 def posterior (κ : Kernel Ω 𝓧) (μ : Measure Ω) [μ.HasCompProd κ]
     [((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel] :
@@ -115,58 +130,80 @@ lemma exists_isMarkovKernel_mem_posterior : ∃ η : Kernel 𝓧 Ω, IsMarkovKer
     ((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).exists_isMarkovKernel_mem_condKernel
   ⟨η, hη, mem_posterior_iff_mem_condKernel.2 hη_mem⟩
 
-/-- The main property of the posterior, for every s-finite representative. -/
-lemma compProd_posterior_eq_map_swap [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
-    (κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap := by
+/-- The composition-product of `κ ∘ₘ μ` with a representative of `κ†μ` exists, since the
+representative disintegrates the joint law with swapped coordinates, whose first marginal is
+`κ ∘ₘ μ`. -/
+lemma hasCompProd_of_mem_posterior (hη : η ∈ κ†μ) : (κ ∘ₘ μ).HasCompProd η := by
   have := Measure.isCondKernel_of_mem_condKernel (mem_posterior_iff_mem_condKernel.1 hη)
   rw [← fst_map_swap_compProd κ μ]
+  infer_instance
+
+/-- The main property of the posterior, for every representative; the composition-product exists
+by `hasCompProd_of_mem_posterior`. -/
+lemma compProd_posterior_eq_map_swap [(κ ∘ₘ μ).HasCompProd η] (hη : η ∈ κ†μ) :
+    (κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap := by
+  have := Measure.isCondKernel_of_mem_condKernel (mem_posterior_iff_mem_condKernel.1 hη)
+  rw [Measure.compProd_congr_measure (fst_map_swap_compProd κ μ).symm]
   exact Measure.disintegrate _ η
 
-lemma compProd_posterior_eq_swap_comp [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
+lemma compProd_posterior_eq_swap_comp [(κ ∘ₘ μ).HasCompProd η] (hη : η ∈ κ†μ) :
     (κ ∘ₘ μ) ⊗ₘ η = Kernel.swap Ω 𝓧 ∘ₘ μ ⊗ₘ κ := by
   rw [compProd_posterior_eq_map_swap hη, Measure.swap_comp]
 
-lemma posterior_comp_self [IsMarkovKernel κ] [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
+lemma posterior_comp_self [IsMarkovKernel κ] (hη : η ∈ κ†μ) :
     η ∘ₘ κ ∘ₘ μ = μ := by
+  have := hasCompProd_of_mem_posterior hη
   rw [← Measure.snd_compProd, compProd_posterior_eq_map_swap hη, Measure.snd_map_swap,
     Measure.fst_compProd]
 
-end HasUniqueCondKernel
-
-variable [StandardBorelSpace Ω] [Nonempty Ω]
-
-section SigmaFinite
-
-variable [μ.HasCompProd κ] [SigmaFinite (κ ∘ₘ μ)] {η : Kernel 𝓧 Ω}
-
-/-- A finite kernel with the main property of the posterior represents it. -/
-lemma mem_posterior_of_compProd_eq [IsFiniteKernel η]
+/-- A Markov kernel with the main property of the posterior represents it. Unlike for a kernel that
+is not Markov (`mem_posterior_of_compProd_eq`), the class of the joint law with swapped coordinates
+suffices. -/
+lemma mem_posterior_of_compProd_eq_of_isMarkovKernel [IsMarkovKernel η]
     (h : (κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap) :
-    η ∈ κ†μ := by
-  have : ((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).IsCondKernel η :=
-    ⟨inferInstance, by rw [fst_map_swap_compProd, h]⟩
-  exact mem_posterior_iff_mem_condKernel.2 Measure.IsCondKernel.mem_condKernel
+    η ∈ κ†μ :=
+  mem_posterior_iff_mem_condKernel.2 <| Measure.mem_condKernel_iff_of_isMarkovKernel.2
+    (.of_compProd_eq (fst_map_swap_compProd κ μ) h)
 
-/-- A finite kernel represents the posterior if and only if it has its main property. -/
-lemma mem_posterior_iff [IsFiniteKernel η] :
+/-- A Markov kernel represents the posterior if and only if it has its main property. -/
+lemma mem_posterior_iff_of_isMarkovKernel [IsMarkovKernel η] :
     η ∈ κ†μ ↔ (κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap :=
-  ⟨compProd_posterior_eq_map_swap, mem_posterior_of_compProd_eq⟩
+  ⟨compProd_posterior_eq_map_swap, mem_posterior_of_compProd_eq_of_isMarkovKernel⟩
 
-/-- A finite kernel `η` with `(κ ∘ₘ μ) ⊗ₘ η = Kernel.swap Ω 𝓧 ∘ₘ μ ⊗ₘ κ` represents the
+/-- A Markov kernel `η` with `(κ ∘ₘ μ) ⊗ₘ η = Kernel.swap Ω 𝓧 ∘ₘ μ ⊗ₘ κ` represents the
 posterior. -/
-lemma mem_posterior_of_compProd_eq_swap_comp [IsFiniteKernel η]
+lemma mem_posterior_of_compProd_eq_swap_comp_of_isMarkovKernel [IsMarkovKernel η]
     (h : ((κ ∘ₘ μ) ⊗ₘ η) = Kernel.swap Ω 𝓧 ∘ₘ μ ⊗ₘ κ) :
     η ∈ κ†μ :=
-  mem_posterior_of_compProd_eq <| by rw [h, Measure.swap_comp]
+  mem_posterior_of_compProd_eq_of_isMarkovKernel <| by rw [h, Measure.swap_comp]
 
-end SigmaFinite
-
-variable [IsFiniteMeasure μ] [IsFiniteKernel κ] {η : Kernel 𝓧 Ω}
-
-lemma swap_compProd_posterior [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
+lemma swap_compProd_posterior [(κ ∘ₘ μ).HasCompProd η] (hη : η ∈ κ†μ) :
     Kernel.swap 𝓧 Ω ∘ₘ (κ ∘ₘ μ) ⊗ₘ η = μ ⊗ₘ κ := by
   simp only [compProd_posterior_eq_swap_comp hη, Measure.comp_assoc, Kernel.swap_swap,
     Measure.id_comp]
+
+lemma posterior_prod_id_comp [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
+    (η ×ₖ Kernel.id) ∘ₘ κ ∘ₘ μ = μ ⊗ₘ κ := by
+  calc
+    (η ×ₖ Kernel.id) ∘ₘ κ ∘ₘ μ =
+        Kernel.swap 𝓧 Ω ∘ₘ (Kernel.id ×ₖ η) ∘ₘ κ ∘ₘ μ := by
+      simp only [Measure.comp_assoc]
+      apply Measure.comp_congr
+      filter_upwards [] with a
+      rw [← Kernel.comp_assoc, Kernel.swap_prod]
+    _ = Kernel.swap 𝓧 Ω ∘ₘ ((κ ∘ₘ μ) ⊗ₘ η) := by
+      simp only [Measure.compProd_eq_comp_prod]
+    _ = Kernel.swap 𝓧 Ω ∘ₘ Kernel.swap Ω 𝓧 ∘ₘ (μ ⊗ₘ κ) := by
+      simp only [compProd_posterior_eq_swap_comp hη]
+    _ = μ ⊗ₘ κ := by
+      simp only [Measure.comp_assoc, Kernel.swap_swap, Measure.id_comp]
+
+end HasUniqueCondKernel
+
+section SFiniteKernel
+
+variable [IsSFiniteKernel κ]
+  [((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel] {η : Kernel 𝓧 Ω}
 
 /-- The main property of the posterior, as equality of the following diagrams:
 ```
@@ -174,8 +211,8 @@ lemma swap_compProd_posterior [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
 μ -- κ -|        =  μ -|
          -- η           -- id
 ```
-for every Markov representative `η` of `κ†μ`. -/
-lemma parallelProd_posterior_comp_copy_comp [IsMarkovKernel η] (hη : η ∈ κ†μ) :
+for every s-finite representative `η` of `κ†μ`. -/
+lemma parallelProd_posterior_comp_copy_comp [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
     (Kernel.id ∥ₖ η) ∘ₘ Kernel.copy 𝓧 ∘ₘ κ ∘ₘ μ
       = (κ ∥ₖ Kernel.id) ∘ₘ Kernel.copy Ω ∘ₘ μ := by
   calc (Kernel.id ∥ₖ η) ∘ₘ Kernel.copy 𝓧 ∘ₘ κ ∘ₘ μ
@@ -196,113 +233,87 @@ lemma parallelProd_posterior_comp_copy_comp [IsMarkovKernel η] (hη : η ∈ κ
         Measure.comp_congr <| ae_of_all _ fun a ↦ DFunLike.congr_fun hkernel a
       _ = (κ ∥ₖ Kernel.id) ∘ₘ Kernel.copy Ω ∘ₘ μ := Measure.comp_assoc.symm
 
-lemma posterior_prod_id_comp [IsMarkovKernel η] (hη : η ∈ κ†μ) :
-    (η ×ₖ Kernel.id) ∘ₘ κ ∘ₘ μ = μ ⊗ₘ κ := by
-  calc
-    (η ×ₖ Kernel.id) ∘ₘ κ ∘ₘ μ =
-        Kernel.swap 𝓧 Ω ∘ₘ (Kernel.id ×ₖ η) ∘ₘ κ ∘ₘ μ := by
-      simp only [Measure.comp_assoc]
-      apply Measure.comp_congr
-      filter_upwards [] with a
-      rw [← Kernel.comp_assoc, Kernel.swap_prod]
-    _ = Kernel.swap 𝓧 Ω ∘ₘ ((κ ∘ₘ μ) ⊗ₘ η) := by
-      simp only [Measure.compProd_eq_comp_prod]
-    _ = Kernel.swap 𝓧 Ω ∘ₘ Kernel.swap Ω 𝓧 ∘ₘ (μ ⊗ₘ κ) := by
-      simp only [compProd_posterior_eq_swap_comp hη]
-    _ = μ ⊗ₘ κ := by
-      simp only [Measure.comp_assoc, Kernel.swap_swap, Measure.id_comp]
+end SFiniteKernel
+
+/-- The joint law with swapped coordinates of a measure and the identity kernel, the law of
+`(ω, ω)`, has a unique conditional kernel, for every measure, in a countably generated space
+(`MeasureTheory.Measure.hasUniqueCondKernel_map_prodMk_comp`). -/
+instance hasUniqueCondKernel_map_swap_compProd_id [SigmaAlgebra.CountablyGenerated Ω]
+    (μ : Measure Ω) :
+    ((μ ⊗ₘ (Kernel.id : Kernel Ω Ω)).map Prod.swap
+      measurable_swap.aemeasurable).HasUniqueCondKernel := by
+  have h : (μ ⊗ₘ (Kernel.id : Kernel Ω Ω)).map Prod.swap measurable_swap.aemeasurable =
+      μ.map (fun ω ↦ (id ω, (id ∘ id) ω)) (aemeasurable_id.prodMk
+        (measurable_id.comp_aemeasurable aemeasurable_id)) := by
+    rw [Measure.compProd_id, Measure.map_map measurable_diag.aemeasurable
+      measurable_swap.aemeasurable]
+    rfl
+  rw [h]
+  exact Measure.hasUniqueCondKernel_map_prodMk_comp aemeasurable_id measurable_id
 
 /-- The identity kernel represents the posterior of the identity kernel. -/
-lemma id_mem_posterior_id (μ : Measure Ω) [IsFiniteMeasure μ] :
+lemma id_mem_posterior_id (μ : Measure Ω)
+    [((μ ⊗ₘ (Kernel.id : Kernel Ω Ω)).map Prod.swap
+      measurable_swap.aemeasurable).HasUniqueCondKernel] :
     Kernel.id ∈ (Kernel.id : Kernel Ω Ω)†μ := by
-  refine mem_posterior_of_compProd_eq_swap_comp ?_
+  refine mem_posterior_of_compProd_eq_swap_comp_of_isMarkovKernel ?_
   simp only [Measure.id_comp, Measure.compProd_id_eq_copy_comp, Measure.comp_assoc,
     Kernel.swap_copy]
 
 /-- For a deterministic kernel `κ` and a Markov representative `η` of `κ†μ`, `κ ∘ₖ η` is
-`μ.map f`-a.e. equal to the identity kernel. -/
+`μ.map f`-a.e. equal to the identity kernel. The class of the joint law suffices, with no
+finiteness of `μ.map f`: by the main property of the posterior, `η x (f ⁻¹' s) = 0` for almost
+every `x ∉ s` (`ProbabilityTheory.Kernel.ae_eq_deterministic_iff`). -/
 lemma deterministic_comp_posterior [SigmaAlgebra.CountablyGenerated 𝓧]
-    {f : Ω → 𝓧} (hf : Measurable f) [IsMarkovKernel η]
-    (hη : η ∈ (Kernel.deterministic f hf)†μ) :
+    {f : Ω → 𝓧} (hf : Measurable f)
+    [((μ ⊗ₘ Kernel.deterministic f hf).map Prod.swap
+      measurable_swap.aemeasurable).HasUniqueCondKernel]
+    {η : Kernel 𝓧 Ω} [IsMarkovKernel η] (hη : η ∈ (Kernel.deterministic f hf)†μ) :
     Kernel.deterministic f hf ∘ₖ η =ᵐ[μ.map f] Kernel.id := by
-  refine Kernel.ae_eq_of_compProd_eq ?_
-  calc μ.map f ⊗ₘ (Kernel.deterministic f hf ∘ₖ η)
-  _ = (Kernel.deterministic f hf ∘ₘ μ) ⊗ₘ (Kernel.deterministic f hf ∘ₖ η) := by
-    rw [Measure.deterministic_comp_eq_map]
-  _ = (Kernel.id ∥ₖ Kernel.deterministic f hf) ∘ₘ (Kernel.id ∥ₖ η) ∘ₘ
-      Kernel.copy 𝓧 ∘ₘ Kernel.deterministic f hf ∘ₘ μ := by
-    simp only [Measure.compProd_eq_parallelComp_comp_copy_comp,
-      ← Kernel.parallelComp_id_left_comp_parallelComp, ← Measure.comp_assoc]
-  _ = (Kernel.id ∥ₖ Kernel.deterministic f hf) ∘ₘ (Kernel.deterministic f hf ∥ₖ Kernel.id) ∘ₘ
-      Kernel.copy Ω ∘ₘ μ := by rw [parallelProd_posterior_comp_copy_comp hη]
-  _ = (Kernel.deterministic f hf ∥ₖ Kernel.deterministic f hf) ∘ₘ Kernel.copy Ω ∘ₘ μ := by
-    have hkernel :
-        (Kernel.id ∥ₖ Kernel.deterministic f hf) ∘ₖ
-            (Kernel.deterministic f hf ∥ₖ Kernel.id) =
-          Kernel.deterministic f hf ∥ₖ Kernel.deterministic f hf := by
-      rw [Kernel.parallelComp_comp_parallelComp]
-      simp only [Kernel.id_comp, Kernel.comp_id]
-    calc
-      (Kernel.id ∥ₖ Kernel.deterministic f hf) ∘ₘ
-          (Kernel.deterministic f hf ∥ₖ Kernel.id) ∘ₘ Kernel.copy Ω ∘ₘ μ =
-          (((Kernel.id ∥ₖ Kernel.deterministic f hf) ∘ₖ
-            (Kernel.deterministic f hf ∥ₖ Kernel.id)) ∘ₖ Kernel.copy Ω) ∘ₘ μ :=
-        Measure.comp_assoc.trans Measure.comp_assoc
-      _ = ((Kernel.deterministic f hf ∥ₖ Kernel.deterministic f hf) ∘ₖ
-          Kernel.copy Ω) ∘ₘ μ :=
-        Measure.comp_congr <| ae_of_all _ fun a ↦ DFunLike.congr_fun
-          (congrArg (fun k ↦ k ∘ₖ Kernel.copy Ω) hkernel) a
-      _ = (Kernel.deterministic f hf ∥ₖ Kernel.deterministic f hf) ∘ₘ
-          Kernel.copy Ω ∘ₘ μ := Measure.comp_assoc.symm
-  _ = (Kernel.copy 𝓧 ∘ₖ Kernel.deterministic f hf) ∘ₘ μ := by -- `deterministic` is used here
-    calc
-      (Kernel.deterministic f hf ∥ₖ Kernel.deterministic f hf) ∘ₘ Kernel.copy Ω ∘ₘ μ =
-          ((Kernel.deterministic f hf ∥ₖ Kernel.deterministic f hf) ∘ₖ
-            Kernel.copy Ω) ∘ₘ μ := Measure.comp_assoc
-      _ = (Kernel.copy 𝓧 ∘ₖ Kernel.deterministic f hf) ∘ₘ μ :=
-        Measure.comp_congr <| ae_of_all _ fun a ↦ DFunLike.congr_fun
-          Kernel.parallelComp_self_comp_copy a
-  _ = μ.map f ⊗ₘ Kernel.id := by
-    calc
-      (Kernel.copy 𝓧 ∘ₖ Kernel.deterministic f hf) ∘ₘ μ =
-          Kernel.copy 𝓧 ∘ₘ Kernel.deterministic f hf ∘ₘ μ := Measure.comp_assoc.symm
-      _ = Kernel.copy 𝓧 ∘ₘ μ.map f := by
-        simp only [Measure.deterministic_comp_eq_map]
-      _ = μ.map f ⊗ₘ Kernel.id := Measure.compProd_id_eq_copy_comp.symm
-
-lemma absolutelyContinuous_posterior {ν : Measure 𝓧} [SFinite ν] (h_ac : ∀ᵐ ω ∂μ, κ ω ≪ ν)
-    [IsFiniteKernel η] (hη : η ∈ κ†μ) :
-    ∀ᵐ b ∂(κ ∘ₘ μ), η b ≪ μ := by
-  suffices (κ ∘ₘ μ) ⊗ₘ η ≪ ν.productBySections μ by
-    rw [← Measure.compProd_const] at this
-    simpa using this.kernel_of_compProd
-  suffices μ ⊗ₘ κ ≪ μ.productBySections ν by
-    rw [compProd_posterior_eq_map_swap hη, ← Measure.productBySections_swap]
-    exact this.map measurable_swap
-  rw [← Measure.compProd_const]
-  refine Measure.AbsolutelyContinuous.compProd_right ?_
-  simpa
-
-section StandardBorelSpace
-
-variable [StandardBorelSpace 𝓧] [Nonempty 𝓧]
+  have := Kernel.IsMarkovKernel.map η hf
+  rw [Kernel.deterministic_comp_eq_map]
+  refine (Kernel.ae_eq_deterministic_iff (g := id) measurable_id).2 fun s hs ↦ ?_
+  have hfs : MeasurableSet (f ⁻¹' s) := hf hs
+  have h0 : ((Kernel.deterministic f hf ∘ₘ μ) ⊗ₘ η) (sᶜ ×ˢ (f ⁻¹' s)) = 0 := by
+    rw [compProd_posterior_eq_map_swap hη,
+      Measure.map_apply (hs.compl.prod hfs) measurable_swap.aemeasurable,
+      Set.preimage_swap_prod, Measure.compProd_deterministic,
+      Measure.map_apply (hfs.prod hs.compl) (measurable_id'.prodMk hf).aemeasurable]
+    convert measure_empty (μ := μ)
+    ext a
+    simp
+  rw [Measure.compProd_apply_prod hs.compl hfs, Measure.deterministic_comp_eq_map,
+    setLIntegral_eq_zero_iff hs.compl (η.measurable_coe hfs)] at h0
+  filter_upwards [h0] with x hx hxs
+  rw [Kernel.map_apply' η x hs hf]
+  exact hx hxs
 
 /-- The posterior is involutive: `κ` represents the posterior, for the prior `κ ∘ₘ μ`, of every
 Markov representative of `κ†μ`. -/
-lemma mem_posterior_posterior [IsMarkovKernel κ] [IsMarkovKernel η] (hη : η ∈ κ†μ) :
+lemma mem_posterior_posterior [IsMarkovKernel κ]
+    [((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel]
+    {η : Kernel 𝓧 Ω} [IsMarkovKernel η]
+    [((Measure.bind μ κ κ.aemeasurable ⊗ₘ η).map Prod.swap
+      measurable_swap.aemeasurable).HasUniqueCondKernel]
+    (hη : η ∈ κ†μ) :
     κ ∈ η†(Measure.bind μ κ κ.aemeasurable) := by
-  refine mem_posterior_of_compProd_eq_swap_comp ?_
+  refine mem_posterior_of_compProd_eq_swap_comp_of_isMarkovKernel ?_
   rw [posterior_comp_self hη]
   simp only [compProd_posterior_eq_swap_comp hη, Measure.comp_assoc, Kernel.swap_swap,
     Measure.id_comp]
 
 /-- The posterior is contravariant: for Markov representatives `ξ` of `κ†μ` and `ζ` of
 `η†(κ ∘ₘ μ)`, the kernel `ξ ∘ₖ ζ` represents `(η ∘ₖ κ)†μ`. -/
-lemma comp_mem_posterior_comp {η : Kernel 𝓧 𝓨} [IsFiniteKernel η] {ξ : Kernel 𝓧 Ω}
-    [IsMarkovKernel ξ] (hξ : ξ ∈ κ†μ) {ζ : Kernel 𝓨 𝓧} [IsMarkovKernel ζ]
+lemma comp_mem_posterior_comp [IsSFiniteKernel κ]
+    [((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel]
+    {η : Kernel 𝓧 𝓨} [IsSFiniteKernel η]
+    [((Measure.bind μ κ κ.aemeasurable ⊗ₘ η).map Prod.swap
+      measurable_swap.aemeasurable).HasUniqueCondKernel]
+    [((μ ⊗ₘ (η ∘ₖ κ)).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel]
+    {ξ : Kernel 𝓧 Ω} [IsMarkovKernel ξ] (hξ : ξ ∈ κ†μ) {ζ : Kernel 𝓨 𝓧} [IsMarkovKernel ζ]
     (hζ : ζ ∈ η†(Measure.bind μ κ κ.aemeasurable)) :
     ξ ∘ₖ ζ ∈ (η ∘ₖ κ)†μ := by
-  refine mem_posterior_of_compProd_eq_swap_comp ?_
+  refine mem_posterior_of_compProd_eq_swap_comp_of_isMarkovKernel ?_
   simp_rw [Measure.compProd_eq_comp_prod, ← Kernel.parallelComp_comp_copy,
     ← Kernel.parallelComp_id_left_comp_parallelComp, ← Measure.comp_assoc]
   calc (Kernel.id ∥ₖ ξ) ∘ₘ (Kernel.id ∥ₖ ζ) ∘ₘ (Kernel.copy 𝓨) ∘ₘ η ∘ₘ κ ∘ₘ μ
@@ -363,19 +374,78 @@ lemma comp_mem_posterior_comp {η : Kernel 𝓧 𝓨} [IsFiniteKernel η] {ξ : 
     simp only [Measure.comp_assoc]
     exact Measure.comp_congr <| ae_of_all _ fun a ↦ DFunLike.congr_fun hkernel a
 
-end StandardBorelSpace
+section AbsolutelyContinuous
 
+variable [μ.HasCompProd κ]
+  [((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel] {η : Kernel 𝓧 Ω}
 
-section CountableOrCountablyGenerated
+/-- The case of a finite representative of `absolutelyContinuous_posterior`. -/
+private lemma absolutelyContinuous_posterior_of_isFiniteKernel
+    [SigmaAlgebra.CountableOrCountablyGenerated 𝓧 Ω] {ν : Measure 𝓧} [SFinite ν]
+    (h_ac : ∀ᵐ ω ∂μ, κ ω ≪ ν) [IsFiniteKernel η] (hη : η ∈ κ†μ) :
+    ∀ᵐ b ∂(κ ∘ₘ μ), η b ≪ μ := by
+  have : SFinite (κ ∘ₘ μ) := sFinite_of_absolutelyContinuous (ν := ν) <|
+    Measure.AbsolutelyContinuous.mk fun s hs hs0 ↦ by
+      rw [Measure.bind_apply hs κ.aemeasurable, lintegral_eq_zero_iff (κ.measurable_coe hs)]
+      filter_upwards [h_ac] with ω hω using hω hs0
+  have h_fst : η ∘ₘ (κ ∘ₘ μ) = μ.withDensity fun ω ↦ κ ω Set.univ := by
+    rw [← Measure.snd_compProd, compProd_posterior_eq_map_swap hη, Measure.snd_map_swap]
+    ext s hs
+    rw [Measure.fst_apply hs, ← Set.prod_univ, Measure.compProd_apply_prod hs .univ,
+      withDensity_apply _ hs]
+  have h_marginal : η ∘ₘ (κ ∘ₘ μ) ≪ μ := by
+    rw [h_fst]
+    exact withDensity_absolutelyContinuous _ _
+  have h_joint : μ ⊗ₘ κ ≪ (η ∘ₘ (κ ∘ₘ μ)) ⊗ₘ Kernel.const Ω ν := by
+    refine Measure.AbsolutelyContinuous.mk fun E hE hE0 ↦ ?_
+    rw [Measure.compProd_apply hE, h_fst] at hE0
+    simp only [Kernel.const_apply] at hE0
+    rw [lintegral_eq_zero_iff (measurable_measure_prodMk_left hE), Filter.EventuallyEq,
+      ae_withDensity_iff (κ.measurable_coe .univ)] at hE0
+    rw [Measure.compProd_apply hE]
+    refine (lintegral_congr_ae ?_).trans lintegral_zero
+    filter_upwards [hE0, h_ac] with ω h₁ h₂
+    by_cases hω : κ ω Set.univ = 0
+    · exact measure_mono_null (Set.subset_univ _) hω
+    · exact h₂ (h₁ hω)
+  have h_swap : (κ ∘ₘ μ) ⊗ₘ η ≪ ν ⊗ₘ Kernel.const 𝓧
+      (Measure.bind (Measure.bind μ κ κ.aemeasurable) η η.aemeasurable).toFinite := by
+    have h := (h_joint.trans
+      ((absolutelyContinuous_toFinite _).compProd_left (Kernel.const Ω ν))).map measurable_swap
+    rwa [Measure.compProd_const, Measure.productBySections_swap, ← Measure.compProd_const,
+      ← compProd_posterior_eq_map_swap hη] at h
+  filter_upwards [h_swap.kernel_of_compProd] with b hb
+  exact (hb.trans (toFinite_absolutelyContinuous _)).trans h_marginal
 
-variable [SigmaAlgebra.CountableOrCountablyGenerated Ω 𝓧]
+/-- If `κ ω ≪ ν` for `μ`-almost every `ω`, then `η x ≪ μ` for `κ ∘ₘ μ`-almost every `x` and every
+representative `η` of `κ†μ`, for every prior `μ`. Then `κ ∘ₘ μ`, being `≪ ν`, is s-finite, and
+so is the first marginal `η ∘ₘ κ ∘ₘ μ` of the joint law for a Markov representative `η`, which is
+`μ` weighted by `κ · univ`. The joint law is absolutely continuous with respect to the product of
+that marginal with `ν`, and the finite measure with the null sets of the marginal reduces the
+statement to finite kernels. The statement does not depend on the representative. -/
+lemma absolutelyContinuous_posterior [SigmaAlgebra.CountableOrCountablyGenerated 𝓧 Ω]
+    {ν : Measure 𝓧} [SFinite ν] (h_ac : ∀ᵐ ω ∂μ, κ ω ≪ ν) (hη : η ∈ κ†μ) :
+    ∀ᵐ b ∂(κ ∘ₘ μ), η b ≪ μ := by
+  obtain ⟨η₀, _, hη₀⟩ := exists_isMarkovKernel_mem_posterior (κ := κ) (μ := μ)
+  filter_upwards [absolutelyContinuous_posterior_of_isFiniteKernel h_ac hη₀,
+    Kernel.AEClass.eventuallyEq_of_mem hη₀ hη] with b hb hb_eq
+  rwa [← hb_eq]
 
-lemma absolutelyContinuous_of_posterior [IsSFiniteKernel η] (hη : η ∈ κ†μ)
-    (h_ac : ∀ᵐ b ∂(κ ∘ₘ μ), η b ≪ μ) :
+/-- The case of an s-finite prior of `absolutelyContinuous_of_posterior`: the joint law is
+absolutely continuous with respect to the product of the prior with `(κ ∘ₘ μ).toFinite`. -/
+private lemma absolutelyContinuous_of_posterior_of_sFinite
+    [SigmaAlgebra.CountableOrCountablyGenerated Ω 𝓧] [SFinite μ] [IsFiniteKernel κ]
+    (hη : η ∈ κ†μ) (h_ac : ∀ᵐ b ∂(κ ∘ₘ μ), η b ≪ μ) :
     ∀ᵐ ω ∂μ, κ ω ≪ κ ∘ₘ μ := by
-  suffices μ ⊗ₘ κ ≪ μ.productBySections (Measure.bind μ κ κ.aemeasurable) by
-    rw [← Measure.compProd_const] at this
-    simpa using this.kernel_of_compProd
+  have := hasCompProd_of_mem_posterior hη
+  have h_toFinite : μ ⊗ₘ Kernel.const Ω (Measure.bind μ κ κ.aemeasurable) ≪
+      μ ⊗ₘ Kernel.const Ω (Measure.bind μ κ κ.aemeasurable).toFinite :=
+    Measure.AbsolutelyContinuous.compProd_right
+      (ae_of_all _ fun _ ↦ absolutelyContinuous_toFinite _)
+  suffices μ ⊗ₘ κ ≪ μ ⊗ₘ Kernel.const Ω (κ ∘ₘ μ) by
+    filter_upwards [(this.trans h_toFinite).kernel_of_compProd] with ω hω
+    exact hω.trans (toFinite_absolutelyContinuous _)
+  rw [Measure.compProd_const]
   suffices (κ ∘ₘ μ) ⊗ₘ η ≪ (κ ∘ₘ μ).productBySections μ by
     rw [← swap_compProd_posterior hη, ← Measure.productBySections_swap, Measure.swap_comp]
     exact this.map measurable_swap
@@ -383,16 +453,88 @@ lemma absolutelyContinuous_of_posterior [IsSFiniteKernel η] (hη : η ∈ κ†
   refine Measure.AbsolutelyContinuous.compProd_right ?_
   simpa
 
-lemma absolutelyContinuous_posterior_iff [IsFiniteKernel η] (hη : η ∈ κ†μ) :
+/-- If `η x ≪ μ` for `κ ∘ₘ μ`-almost every `x`, for a representative `η` of `κ†μ`, then
+`κ ω ≪ κ ∘ₘ μ` for `μ`-almost every `ω`, if `κ ∘ₘ μ` is s-finite. Off the set `A` of the points
+`ω` with `κ ω ≠ 0` this holds trivially. The prior restricted to `A` has the same joint law and
+posterior, its posterior gives no mass to the complement of `A`, and it is s-finite, being
+absolutely continuous with respect to the first marginal of the joint law, which is `η₀ ∘ₘ κ ∘ₘ μ`
+for a Markov representative `η₀`; an s-finite prior reduces to the comparison of the joint law with
+the product of the prior with `(κ ∘ₘ μ).toFinite`. -/
+lemma absolutelyContinuous_of_posterior [SigmaAlgebra.CountableOrCountablyGenerated Ω 𝓧]
+    [SFinite (κ ∘ₘ μ)] [IsFiniteKernel κ] (hη : η ∈ κ†μ)
+    (h_ac : ∀ᵐ b ∂(κ ∘ₘ μ), η b ≪ μ) :
+    ∀ᵐ ω ∂μ, κ ω ≪ κ ∘ₘ μ := by
+  set A : Set Ω := {ω | κ ω Set.univ ≠ 0}
+  have hA : MeasurableSet A := (κ.measurable_coe .univ) (measurableSet_singleton 0).compl
+  have h_zero (ω : Ω) (hω : ω ∉ A) : κ ω = 0 := Measure.measure_univ_eq_zero.1 (not_not.1 hω)
+  have h_joint : μ.restrict A ⊗ₘ κ = μ ⊗ₘ κ := by
+    ext s hs
+    rw [Measure.compProd_apply hs, Measure.compProd_apply hs, ← lintegral_indicator hA]
+    congr 1 with ω
+    by_cases hω : ω ∈ A
+    · simp [hω]
+    · simp [hω, h_zero ω hω]
+  have h_comp : κ ∘ₘ μ.restrict A = κ ∘ₘ μ := by
+    rw [← Measure.snd_compProd, h_joint, Measure.snd_compProd]
+  obtain ⟨η₀, _, hη₀⟩ := exists_isMarkovKernel_mem_posterior (κ := κ) (μ := μ)
+  have h_fst : η₀ ∘ₘ (κ ∘ₘ μ) = μ.withDensity fun ω ↦ κ ω Set.univ := by
+    rw [← Measure.snd_compProd, compProd_posterior_eq_map_swap hη₀, Measure.snd_map_swap]
+    ext s hs
+    rw [Measure.fst_apply hs, ← Set.prod_univ, Measure.compProd_apply_prod hs .univ,
+      withDensity_apply _ hs]
+  have : SFinite (μ.restrict A) := by
+    refine sFinite_of_absolutelyContinuous (ν := η₀ ∘ₘ (κ ∘ₘ μ))
+      (Measure.AbsolutelyContinuous.mk fun s hs hs0 ↦ ?_)
+    rw [h_fst, withDensity_apply _ hs, lintegral_eq_zero_iff (κ.measurable_coe .univ)] at hs0
+    have h0 : ∀ᵐ ω ∂μ.restrict s, ω ∉ A := hs0.mono fun ω hω hωA ↦ hωA hω
+    have h1 : μ (A ∩ s) = 0 := by
+      rw [ae_iff, Measure.restrict_apply' hs] at h0
+      simpa using h0
+    rwa [Measure.restrict_apply hs, Set.inter_comm]
+  have : ((μ.restrict A ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel :=
+    h_joint ▸ inferInstance
+  have hη' : η ∈ κ†(μ.restrict A) := by
+    rw [mem_posterior_iff_mem_condKernel,
+      Measure.mem_condKernel_congr (ρ' := (μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable)
+        (by rw [h_joint])]
+    exact mem_posterior_iff_mem_condKernel.1 hη
+  have h_null : ∀ᵐ b ∂(κ ∘ₘ μ), η b Aᶜ = 0 := by
+    have := hasCompProd_of_mem_posterior hη
+    have h0 : ((κ ∘ₘ μ) ⊗ₘ η) (Set.univ ×ˢ Aᶜ) = 0 := by
+      rw [compProd_posterior_eq_map_swap hη,
+        Measure.map_apply (MeasurableSet.univ.prod hA.compl) measurable_swap.aemeasurable,
+        Set.preimage_swap_prod, Measure.compProd_apply_prod hA.compl .univ]
+      refine (lintegral_congr_ae ?_).trans lintegral_zero
+      filter_upwards [ae_restrict_mem hA.compl] with ω hω
+      simp [h_zero ω hω]
+    rw [Measure.compProd_apply_prod .univ hA.compl, Measure.restrict_univ,
+      lintegral_eq_zero_iff (η.measurable_coe hA.compl)] at h0
+    exact h0
+  have h_ac' : ∀ᵐ b ∂(κ ∘ₘ μ.restrict A), η b ≪ μ.restrict A := by
+    rw [h_comp]
+    filter_upwards [h_ac, h_null] with b hb hb0
+    refine Measure.AbsolutelyContinuous.mk fun s hs hs0 ↦ le_antisymm ?_ zero_le
+    rw [Measure.restrict_apply hs] at hs0
+    calc η b s ≤ η b (s ∩ A) + η b (s \ A) := measure_le_inter_add_sdiff _ _ _
+      _ = 0 := by rw [hb hs0, measure_mono_null (fun x hx ↦ hx.2) hb0, add_zero]
+  have h := absolutelyContinuous_of_posterior_of_sFinite (μ := μ.restrict A) hη' h_ac'
+  rw [h_comp, ae_restrict_iff' hA] at h
+  filter_upwards [h] with ω hω
+  by_cases hωA : ω ∈ A
+  · exact hω hωA
+  · rw [h_zero ω hωA]
+    exact Measure.AbsolutelyContinuous.zero _
+
+lemma absolutelyContinuous_posterior_iff [SigmaAlgebra.CountableOrCountablyGenerated Ω 𝓧]
+    [SigmaAlgebra.CountableOrCountablyGenerated 𝓧 Ω] [SFinite (κ ∘ₘ μ)] [IsFiniteKernel κ]
+    (hη : η ∈ κ†μ) :
     (∀ᵐ b ∂(κ ∘ₘ μ), η b ≪ μ) ↔ ∀ᵐ ω ∂μ, κ ω ≪ κ ∘ₘ μ :=
   ⟨absolutelyContinuous_of_posterior hη, fun h ↦ absolutelyContinuous_posterior h hη⟩
 
-lemma Kernel.absolutelyContinuous_comp_of_absolutelyContinuous {ν : Measure 𝓧} [SFinite ν]
-    (h_ac : ∀ᵐ ω ∂μ, κ ω ≪ ν) :
-    ∀ᵐ ω ∂μ, κ ω ≪ κ ∘ₘ μ := by
-  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_posterior (κ := κ) (μ := μ)
-  rw [← absolutelyContinuous_posterior_iff hη]
-  exact absolutelyContinuous_posterior h_ac hη
+section RadonNikodym
+
+variable [SigmaAlgebra.CountableOrCountablyGenerated Ω 𝓧]
+  [SigmaAlgebra.CountableOrCountablyGenerated 𝓧 Ω] [IsFiniteMeasure μ] [IsFiniteKernel κ]
 
 lemma rnDeriv_posterior_ae_prod [IsMarkovKernel η] (hη : η ∈ κ†μ)
     (h_ac : ∀ᵐ ω ∂μ, κ ω ≪ κ ∘ₘ μ) :
@@ -466,9 +608,48 @@ lemma posterior_eq_withDensity [IsMarkovKernel η] (hη : η ∈ κ†μ)
     with ω h h_eq hωs
   rw [← h, h_eq, Kernel.const_apply]
 
+end RadonNikodym
+
+end AbsolutelyContinuous
+
+section SigmaFinite
+
+variable [μ.HasCompProd κ]
+  [((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel]
+  [SigmaFinite (κ ∘ₘ μ)] {η : Kernel 𝓧 Ω}
+
+/-- A kernel with the main property of the posterior represents it, if `κ ∘ₘ μ` is σ-finite. -/
+lemma mem_posterior_of_compProd_eq [(κ ∘ₘ μ).HasCompProd η]
+    (h : (κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap) :
+    η ∈ κ†μ := by
+  have : ((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).IsCondKernel η :=
+    .of_compProd_eq (fst_map_swap_compProd κ μ) h
+  exact mem_posterior_iff_mem_condKernel.2 Measure.IsCondKernel.mem_condKernel
+
+/-- A kernel for which `(κ ∘ₘ μ) ⊗ₘ η` exists represents the posterior if and only if it has its
+main property, if `κ ∘ₘ μ` is σ-finite. -/
+lemma mem_posterior_iff [(κ ∘ₘ μ).HasCompProd η] :
+    η ∈ κ†μ ↔ (κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap :=
+  ⟨compProd_posterior_eq_map_swap, mem_posterior_of_compProd_eq⟩
+
+/-- A kernel `η` with `(κ ∘ₘ μ) ⊗ₘ η = Kernel.swap Ω 𝓧 ∘ₘ μ ⊗ₘ κ` represents the posterior, if
+`κ ∘ₘ μ` is σ-finite. -/
+lemma mem_posterior_of_compProd_eq_swap_comp [(κ ∘ₘ μ).HasCompProd η]
+    (h : ((κ ∘ₘ μ) ⊗ₘ η) = Kernel.swap Ω 𝓧 ∘ₘ μ ⊗ₘ κ) :
+    η ∈ κ†μ :=
+  mem_posterior_of_compProd_eq <| by rw [h, Measure.swap_comp]
+
+end SigmaFinite
+
+/-- **Bayes' theorem** for a countable parameter space: for every Markov representative `η` of
+`κ†μ` and `κ ∘ₘ μ`-almost every `x`, `η x` is `μ` weighted by the densities of the measures `κ ω`
+with respect to `κ ∘ₘ μ`, which dominates `κ ω` for `μ`-almost every `ω`
+(`Measure.absolutelyContinuous_comp_of_countable`). -/
 lemma posterior_eq_withDensity_of_countable {Ω : Type*} [Countable Ω] [SigmaAlgebra Ω]
-    [Nonempty Ω] [StandardBorelSpace Ω] (κ : Kernel Ω 𝓧) [IsFiniteKernel κ]
-    (μ : Measure Ω) [IsFiniteMeasure μ] {η : Kernel 𝓧 Ω} [IsMarkovKernel η] (hη : η ∈ κ†μ) :
+    (κ : Kernel Ω 𝓧) [IsFiniteKernel κ]
+    (μ : Measure Ω) [IsFiniteMeasure μ]
+    [((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel]
+    {η : Kernel 𝓧 Ω} [IsMarkovKernel η] (hη : η ∈ κ†μ) :
     ∀ᵐ x ∂(κ ∘ₘ μ), η x = μ.withDensity (fun ω ↦ (κ ω).rnDeriv (κ ∘ₘ μ) x) := by
   have h_rnDeriv ω := Kernel.rnDeriv_eq_rnDeriv_measure (κ := κ) (η := Kernel.const Ω (κ ∘ₘ μ))
     (a := ω)
@@ -477,8 +658,6 @@ lemma posterior_eq_withDensity_of_countable {Ω : Type*} [Countable Ω] [SigmaAl
   filter_upwards [posterior_eq_withDensity hη Measure.absolutelyContinuous_comp_of_countable,
     h_rnDeriv] with x hx hx_all
   simp_rw [hx, hx_all]
-
-end CountableOrCountablyGenerated
 
 section Bool
 

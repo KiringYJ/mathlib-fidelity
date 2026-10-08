@@ -146,6 +146,40 @@ lemma SigmaFinite.of_trim {m m0 : SigmaAlgebra α} {μ : Measure α} (hm : m ≤
   rw [← trim_eq_self (μ := μ)]
   exact sigmaFiniteTrim_mono le_rfl hm
 
+/-- The trim of `μ` to the σ-algebra pulled back along a measurable map `X` is σ-finite if the
+law `μ.map X` of `X` is, since that law is the image of the trim (`MeasureTheory.map_trim_comap`).
+The converse also holds (`MeasureTheory.sigmaFinite_trim_comap_iff`). -/
+theorem sigmaFinite_trim_comap {mβ : SigmaAlgebra β} {X : α → β} (hX : Measurable X)
+    [hσ : SigmaFinite (μ.map X hX.aemeasurable)] : SigmaFinite (μ.trim hX.comap_le) := by
+  rw [← map_trim_comap hX] at hσ
+  exact SigmaFinite.of_map _ (Measurable.of_comap_le le_rfl).aemeasurable hσ
+
+/-- The trim of `μ` to the σ-algebra pulled back along a measurable map `X` is σ-finite exactly
+when the law `μ.map X` of `X` is. Conversely to `MeasureTheory.sigmaFinite_trim_comap`, the sets
+`B n` whose preimages are the spanning sets of the trim have finite mass for the law, and the
+complement of their union, whose preimage is empty, has none. -/
+theorem sigmaFinite_trim_comap_iff {mβ : SigmaAlgebra β} {X : α → β} (hX : Measurable X) :
+    SigmaFinite (μ.trim hX.comap_le) ↔ SigmaFinite (μ.map X hX.aemeasurable) := by
+  refine ⟨fun h ↦ ?_, fun _ ↦ sigmaFinite_trim_comap hX⟩
+  choose B hB hB_eq using fun n ↦ measurableSet_spanningSets (μ.trim hX.comap_le) n
+  have hB_union : X ⁻¹' (⋃ n, B n) = Set.univ := by
+    rw [Set.preimage_iUnion]
+    simp_rw [hB_eq]
+    exact iUnion_spanningSets _
+  have hfin n : μ.map X hX.aemeasurable (B n) < ∞ := by
+    rw [Measure.map_apply (hB n) hX.aemeasurable, hB_eq,
+      ← trim_measurableSet_eq hX.comap_le (measurableSet_spanningSets _ n)]
+    exact measure_spanningSets_lt_top _ n
+  refine ⟨⟨{ set := fun n ↦ B n ∪ (⋃ m, B m)ᶜ
+             set_mem := fun _ ↦ Set.mem_univ _
+             finite := fun n ↦ ?_
+             spanning := ?_ }⟩⟩
+  · refine (measure_union_le _ _).trans_lt (ENNReal.add_lt_top.2 ⟨hfin n, ?_⟩)
+    rw [Measure.map_apply (MeasurableSet.iUnion hB).compl hX.aemeasurable, Set.preimage_compl,
+      hB_union, Set.compl_univ, measure_empty]
+    exact ENNReal.zero_lt_top
+  · rw [← Set.iUnion_union, Set.union_compl_self]
+
 theorem sigmaFinite_trim_bot_iff : SigmaFinite (μ.trim bot_le) ↔ IsFiniteMeasure μ := by
   rw [sigmaFinite_bot_iff]
   refine ⟨fun h => ⟨?_⟩, fun h => ⟨?_⟩⟩ <;> have h_univ := h.measure_univ_lt_top

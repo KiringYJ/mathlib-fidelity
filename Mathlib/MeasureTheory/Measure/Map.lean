@@ -128,6 +128,13 @@ theorem map_congr {f g : α → β} (h : f =ᵐ[μ] g)
   exact mapₗ_congr (hf.ae_eq_mk.symm.trans (h.trans (hf.congr h).ae_eq_mk))
     hf.measurable_mk (hf.congr h).measurable_mk
 
+/-- Pushforwards of equal measures along the same map are equal, whichever proofs of almost
+everywhere measurability they carry. -/
+theorem map_congr_measure {g : α → β} {ν₁ ν₂ : Measure α} (h : ν₁ = ν₂)
+    (h₁ : AEMeasurable g ν₁) (h₂ : AEMeasurable g ν₂) : ν₁.map g h₁ = ν₂.map g h₂ := by
+  subst h
+  rfl
+
 @[simp]
 protected theorem map_smul {R : Type*} [SMul R ℝ≥0∞] [IsScalarTower R ℝ≥0∞ ℝ≥0∞]
     (c : R) {μ : Measure α} {f : α → β} (hf : AEMeasurable f μ) :
