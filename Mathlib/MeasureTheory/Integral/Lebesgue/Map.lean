@@ -54,6 +54,20 @@ theorem lintegral_map_le (f : β → ℝ≥0∞) {g : α → β} (hg : AEMeasura
   rw [lintegral_map' hg hi.aemeasurable]
   exact lintegral_mono fun _ ↦ h'i _
 
+/-- The lower integral of a function against an image measure is the integral of its composition
+if the function has a measurable almost everywhere majorant with the same integral against the
+image measure: the composition is bounded almost everywhere by that of the majorant, whose integral
+is computed by `lintegral_map'`. In general only `MeasureTheory.lintegral_map_le` holds. -/
+theorem lintegral_map_of_exists_measurable_ge {f : β → ℝ≥0∞} {g : α → β} (hg : AEMeasurable g μ)
+    (hf : ∃ F : β → ℝ≥0∞, Measurable F ∧ f ≤ᵐ[Measure.map g μ hg] F ∧
+      ∫⁻ b, f b ∂Measure.map g μ hg = ∫⁻ b, F b ∂Measure.map g μ hg) :
+    ∫⁻ b, f b ∂Measure.map g μ hg = ∫⁻ a, f (g a) ∂μ := by
+  obtain ⟨F, hF, hfF, h_eq⟩ := hf
+  refine le_antisymm (lintegral_map_le f hg) ?_
+  calc ∫⁻ a, f (g a) ∂μ ≤ ∫⁻ a, F (g a) ∂μ := lintegral_mono_ae (ae_of_ae_map hg hfF)
+    _ = ∫⁻ b, F b ∂Measure.map g μ hg := (lintegral_map' hg hF.aemeasurable).symm
+    _ = ∫⁻ b, f b ∂Measure.map g μ hg := h_eq.symm
+
 theorem lintegral_comp {f : β → ℝ≥0∞} {g : α → β} (hf : Measurable f)
     (hg : Measurable g) : lintegral μ (f ∘ g) = ∫⁻ a, f a ∂map g μ hg.aemeasurable :=
   (lintegral_map hf hg).symm

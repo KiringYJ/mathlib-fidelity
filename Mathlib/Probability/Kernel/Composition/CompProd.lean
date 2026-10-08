@@ -72,9 +72,13 @@ the measure `κ a` with the kernel `sectR η a = fun b ↦ η (a, b)` exists, an
 measurable sets depend measurably on `a`. Then the section integrals
 `∫⁻ b, η (a, b) (Prod.mk b ⁻¹' s) ∂κ a` are the values of a unique kernel.
 
-This is the exact domain of `ProbabilityTheory.Kernel.compProd`. Instance search derives it from
-the s-finiteness of both kernels, supplies it when either kernel is zero, and passes it to finite
-and countable sums of `κ`. -/
+This is the exact domain of `ProbabilityTheory.Kernel.compProd`. It passes to every kernel that
+agrees with `η` almost everywhere on every fiber (`ProbabilityTheory.Kernel.HasCompProd.congr`),
+and more generally to every kernel whose measures of the sections of each measurable set agree
+almost everywhere on every fiber with those of `η`
+(`ProbabilityTheory.Kernel.HasCompProd.congr_sections`).
+Instance search derives it from the s-finiteness of both kernels, supplies it when either kernel is
+zero, and passes it to finite and countable sums of `κ`. -/
 class HasCompProd (κ : Kernel α β) (η : Kernel (α × β) γ) : Prop where
   /-- At every point `a`, the composition-product of `κ a` with `sectR η a` exists. -/
   hasCompProd_apply (a : α) : (κ a).HasCompProd (sectR η a)
@@ -152,13 +156,42 @@ lemma compProd_apply_prod {κ : Kernel α β} {η : Kernel (α × β) γ} [κ.Ha
   congr with a
   by_cases ha : a ∈ s <;> simp [ha]
 
-lemma compProd_congr {κ : Kernel α β} {η η' : Kernel (α × β) γ}
-    [κ.HasCompProd η] [κ.HasCompProd η'] (h : ∀ a, ∀ᵐ b ∂(κ a), η (a, b) = η' (a, b)) :
+/-- Two kernels whose measures of the sections of each measurable set agree almost everywhere on
+every fiber have the same composition-product with `κ`. -/
+lemma compProd_congr_sections {κ : Kernel α β} {η η' : Kernel (α × β) γ}
+    [κ.HasCompProd η] [κ.HasCompProd η']
+    (h : ∀ a ⦃s : Set (β × γ)⦄, MeasurableSet s →
+      (fun b ↦ η (a, b) (Prod.mk b ⁻¹' s)) =ᵐ[κ a] fun b ↦ η' (a, b) (Prod.mk b ⁻¹' s)) :
     κ ⊗ₖ η = κ ⊗ₖ η' := by
   ext a s hs
   rw [compProd_apply hs, compProd_apply hs]
-  refine lintegral_congr_ae ?_
-  filter_upwards [h a] with b hb using by rw [hb]
+  exact lintegral_congr_ae (h a hs)
+
+lemma compProd_congr {κ : Kernel α β} {η η' : Kernel (α × β) γ}
+    [κ.HasCompProd η] [κ.HasCompProd η'] (h : ∀ a, ∀ᵐ b ∂(κ a), η (a, b) = η' (a, b)) :
+    κ ⊗ₖ η = κ ⊗ₖ η' :=
+  compProd_congr_sections fun a _ _ ↦ (h a).mono fun _ hb ↦ by simp only [hb]
+
+/-- The composition-product exists for a kernel whose measures of the sections of each measurable
+set agree almost everywhere on every fiber with those of a kernel for which it exists, since the
+section integrals of the two kernels coincide. -/
+lemma HasCompProd.congr_sections {κ : Kernel α β} {η η' : Kernel (α × β) γ} [κ.HasCompProd η]
+    (h : ∀ a ⦃s : Set (β × γ)⦄, MeasurableSet s →
+      (fun b ↦ η (a, b) (Prod.mk b ⁻¹' s)) =ᵐ[κ a] fun b ↦ η' (a, b) (Prod.mk b ⁻¹' s)) :
+    κ.HasCompProd η' where
+  hasCompProd_apply a := Measure.HasCompProd.congr_sections (κ := sectR η a) (h a)
+  measurable_lintegral s hs := by
+    have h_eq : (fun a ↦ ∫⁻ b, η' (a, b) (Prod.mk b ⁻¹' s) ∂κ a) =
+        fun a ↦ ∫⁻ b, η (a, b) (Prod.mk b ⁻¹' s) ∂κ a :=
+      funext fun a ↦ (lintegral_congr_ae (h a hs)).symm
+    rw [h_eq]
+    exact HasCompProd.measurable_lintegral hs
+
+/-- The composition-product exists for a kernel that agrees, on every fiber, almost everywhere with
+one for which it exists. -/
+lemma HasCompProd.congr {κ : Kernel α β} {η η' : Kernel (α × β) γ} [κ.HasCompProd η]
+    (h : ∀ a, ∀ᵐ b ∂(κ a), η (a, b) = η' (a, b)) : κ.HasCompProd η' :=
+  .congr_sections (η := η) fun a _ _ ↦ (h a).mono fun _ hb ↦ by simp only [hb]
 
 @[simp]
 lemma compProd_zero_left (κ : Kernel (α × β) γ) :

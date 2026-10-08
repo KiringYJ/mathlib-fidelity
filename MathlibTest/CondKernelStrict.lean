@@ -159,19 +159,19 @@ example (ρ : Measure (α × Ω)) [IsFiniteMeasure ρ] :
     ∃ η : Kernel α Ω, IsMarkovKernel η ∧ ρ.IsCondKernel η ∧ η ∈ ρ.condKernel :=
   ρ.exists_isMarkovKernel_mem_condKernel
 
--- A finite kernel represents `ρ.condKernel` exactly when it disintegrates `ρ`.
-example {ρ : Measure (α × Ω)} [IsFiniteMeasure ρ] (η : Kernel α Ω) [IsFiniteKernel η] :
+-- A kernel represents `ρ.condKernel` exactly when it disintegrates `ρ`.
+example {ρ : Measure (α × Ω)} [IsFiniteMeasure ρ] (η : Kernel α Ω) :
     η ∈ ρ.condKernel ↔ ρ.IsCondKernel η :=
   Measure.mem_condKernel_iff
 
--- Two representatives agree `ρ.fst`-almost everywhere, and so do two finite kernels that
--- disintegrate `ρ`.
+-- Two representatives agree `ρ.fst`-almost everywhere, and so do two kernels that disintegrate
+-- `ρ`.
 example {ρ : Measure (α × Ω)} [IsFiniteMeasure ρ] {η η' : Kernel α Ω} (hη : η ∈ ρ.condKernel)
     (hη' : η' ∈ ρ.condKernel) : ∀ᵐ a ∂ρ.fst, η a = η' a :=
   Kernel.AEClass.eventuallyEq_of_mem hη hη'
 
-example {ρ : Measure (α × Ω)} [IsFiniteMeasure ρ] (η η' : Kernel α Ω) [IsFiniteKernel η]
-    [IsFiniteKernel η'] [ρ.IsCondKernel η] [ρ.IsCondKernel η'] : ∀ᵐ a ∂ρ.fst, η a = η' a :=
+example {ρ : Measure (α × Ω)} [IsFiniteMeasure ρ] (η η' : Kernel α Ω) [ρ.IsCondKernel η]
+    [ρ.IsCondKernel η'] : ∀ᵐ a ∂ρ.fst, η a = η' a :=
   Measure.IsCondKernel.ae_eq η η'
 
 -- Uniqueness needs only a countably generated space of values, not a standard Borel one.
@@ -195,16 +195,17 @@ example [CountableOrCountablyGenerated α β] (κ : Kernel α (β × Ω)) [IsFin
     ∃ η : Kernel (α × β) Ω, IsMarkovKernel η ∧ κ.IsCondKernel η ∧ η ∈ Kernel.condKernel κ :=
   Kernel.exists_isMarkovKernel_mem_condKernel κ
 
+-- A kernel represents `Kernel.condKernel κ` exactly when it disintegrates `κ`.
 example [CountableOrCountablyGenerated α β] {κ : Kernel α (β × Ω)} [IsFiniteKernel κ]
-    (η : Kernel (α × β) Ω) [IsFiniteKernel η] : η ∈ Kernel.condKernel κ ↔ κ.IsCondKernel η :=
+    (η : Kernel (α × β) Ω) : η ∈ Kernel.condKernel κ ↔ κ.IsCondKernel η :=
   Kernel.mem_condKernel_iff
 
--- The restriction of a representative of `Kernel.condKernel κ` to the fiber over `a` represents
--- the conditional kernel of the measure `κ a`.
+-- The section over `a` of a representative of `Kernel.condKernel κ` represents the conditional
+-- kernel of the measure `κ a`.
 example [CountableOrCountablyGenerated α β] {κ : Kernel α (β × Ω)} [IsFiniteKernel κ]
     {η : Kernel (α × β) Ω} (hη : η ∈ Kernel.condKernel κ) (a : α) :
-    Kernel.comap η (fun b ↦ (a, b)) measurable_prodMk_left ∈ (κ a).condKernel :=
-  Kernel.comap_mem_condKernel_of_mem hη a
+    Kernel.sectR η a ∈ (κ a).condKernel :=
+  Kernel.sectR_mem_condKernel_of_mem hη a
 
 -- Two representatives of `Kernel.condKernel κ` agree at `(a, b)` for `fst κ a`-almost every `b`,
 -- for every `a`.
@@ -284,7 +285,7 @@ example : ∃ η η' : Kernel ℝ ℝ, IsMarkovKernel η ∧ IsMarkovKernel η' 
 -- `dirac 0` does not represent the conditional kernel of `Kernel.const Unit ρ₀₁`.
 example :
     Kernel.const (Unit × ℝ) (Measure.dirac 0) ∉ Kernel.condKernel (Kernel.const Unit ρ₀₁) :=
-  fun h ↦ const_dirac_zero_not_mem_condKernel (Kernel.comap_mem_condKernel_of_mem h ())
+  fun h ↦ const_dirac_zero_not_mem_condKernel (Kernel.sectR_mem_condKernel_of_mem h ())
 
 /-! ### The domains of the conditional kernels -/
 

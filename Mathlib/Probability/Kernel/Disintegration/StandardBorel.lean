@@ -32,9 +32,10 @@ the file `Unique.lean`): such a measure becomes finite when it is reweighted by 
 of the first coordinate with a finite integral, and a disintegration of the reweighted measure
 disintegrates the measure.
 A conditional kernel is determined almost everywhere (see the file `Unique.lean`), and only almost
-everywhere: every Markov kernel that agrees with a conditional kernel almost everywhere is one too
-(`MeasureTheory.Measure.compProd_congr`, `ProbabilityTheory.Kernel.compProd_congr`). So `κ` and `ρ`
-determine these classes, but not the values of a conditional kernel on null sets.
+everywhere: every kernel that agrees with a conditional kernel almost everywhere is one too
+(`MeasureTheory.Measure.HasCompProd.congr` with `MeasureTheory.Measure.compProd_congr`, and
+`ProbabilityTheory.Kernel.HasCompProd.congr` with `ProbabilityTheory.Kernel.compProd_congr`). So
+`κ` and `ρ` determine these classes, but not the values of a conditional kernel on null sets.
 
 In order to obtain a disintegration for any standard Borel space `Ω`, we use that these spaces embed
 measurably into `ℝ`: it then suffices to define a suitable kernel for `Ω = ℝ`. The private
@@ -75,8 +76,10 @@ The conditional kernel is defined under the typeclass assumption
 `Countable α ∨ CountablyGenerated β`.
 
 Properties of integrals against conditional kernels are collated in the file `Integral.lean`.
-Conditional kernels are unique almost everywhere, so that the finite representatives of the classes
-are exactly the finite conditional kernels: this is proved in the file `Unique.lean`.
+Conditional kernels are unique almost everywhere, so that the representatives of `condKernel κ`
+are exactly the conditional kernels of `κ`, and those of `ρ.condKernel` are the conditional kernels
+of `ρ` that are probability measures almost everywhere, which all are when `ρ.fst` is σ-finite:
+this is proved in the file `Unique.lean`.
 
 ## Main definitions
 
@@ -513,7 +516,7 @@ theorem exists_isMarkovKernel_isCondKernel :
     exact exists_isMarkovKernel_isCondKernel_of_countablyGenerated κ
 
 /-- Some class of kernels along `(fst κ).fiberwiseAE` contains a Markov kernel that disintegrates
-`κ`. Since two finite conditional kernels of `κ` agree `fst κ a`-almost everywhere for every `a`
+`κ`. Since two conditional kernels of `κ` agree `fst κ a`-almost everywhere for every `a`
 (`ProbabilityTheory.Kernel.IsCondKernel.ae_eq`), such a class is unique. -/
 lemma exists_aeClass_isCondKernel :
     ∃ c : AEClass (fst κ).fiberwiseAE Ω, ∃ η : Kernel (α × β) Ω,
@@ -526,7 +529,7 @@ standard Borel space and either `α` is countable or `β` is countably generated
 `(fst κ).fiberwiseAE` of the Markov kernels `η` with `fst κ ⊗ₖ η = κ`, that is, of these kernels up
 to `fst κ a`-null sets for every `a`.
 
-A finite kernel represents it if and only if it disintegrates `κ`
+A kernel represents it if and only if it disintegrates `κ`
 (`ProbabilityTheory.Kernel.mem_condKernel_iff`), and a Markov representative exists
 (`ProbabilityTheory.Kernel.exists_isMarkovKernel_mem_condKernel`). The class is determined by `κ`,
 while the values of a conditional kernel on such null sets are not. -/

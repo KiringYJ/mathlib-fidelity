@@ -9,6 +9,8 @@ public import Mathlib.Probability.Kernel.Composition.CompNotation
 public import Mathlib.Probability.Kernel.Composition.KernelLemmas
 public import Mathlib.Probability.Kernel.Composition.MeasureCompProd
 
+import Mathlib.MeasureTheory.Measure.WithDensityFinite
+
 /-!
 # Lemmas about the composition of a measure and a kernel
 
@@ -104,10 +106,16 @@ lemma copy_comp_map {f : α → β} (hf : AEMeasurable f μ) :
 
 section CompProd
 
-lemma compProd_eq_comp_prod (μ : Measure α) [SFinite μ] (κ : Kernel α β) [IsSFiniteKernel κ] :
+/-- The composition-product of a measure with an s-finite kernel is the composition of the measure
+with the product of the identity kernel and the kernel. The measure can be arbitrary: at each
+point, the product evaluates the measure of the section. -/
+lemma compProd_eq_comp_prod (μ : Measure α) (κ : Kernel α β) [IsSFiniteKernel κ] :
     μ ⊗ₘ κ = (Kernel.id ×ₖ κ) ∘ₘ μ := by
-  rw [compProd_eq_compProd_const_apply, Kernel.compProd_prodMkLeft_eq_comp]
-  rfl
+  ext s hs
+  rw [compProd_apply hs, Measure.bind_apply hs (Kernel.aemeasurable _)]
+  refine lintegral_congr fun a ↦ ?_
+  rw [Kernel.prod_apply' _ _ _ hs, Kernel.id_apply,
+    lintegral_dirac' _ (measurable_measure_prodMk_left hs)]
 
 lemma compProd_id_eq_copy_comp : μ ⊗ₘ Kernel.id = Kernel.copy α ∘ₘ μ := by
   simpa only [Kernel.copy] using
@@ -130,13 +138,6 @@ lemma prodMkLeft_comp_compProd {η : Kernel β γ} [IsSFiniteKernel κ] :
   simp only [← snd_compProd μ κ, Kernel.prodMkLeft, snd,
     ← deterministic_comp_eq_map measurable_snd, comp_assoc,
     Kernel.comp_deterministic_eq_comap]
-
-lemma compProd_deterministic [SFinite μ] {f : α → β} (hf : Measurable f) :
-    μ ⊗ₘ Kernel.deterministic f hf = μ.map (fun a ↦ (a, f a)) := by
-  rw [compProd_eq_comp_prod]
-  change (Kernel.deterministic id measurable_id ×ₖ Kernel.deterministic f hf) ∘ₘ μ = _
-  rw [Kernel.deterministic_prod_deterministic, deterministic_comp_eq_map]
-  rfl
 
 end CompProd
 
@@ -182,10 +183,51 @@ lemma AbsolutelyContinuous.comp (hμν : μ ≪ ν) (hκη : ∀ᵐ a ∂μ, κ 
     κ ∘ₘ μ ≪ η ∘ₘ ν :=
   (AbsolutelyContinuous.comp_left μ hκη).trans (hμν.comp_right η)
 
-lemma absolutelyContinuous_comp_of_countable [Countable α] [MeasurableSingletonClass α] :
+/-- If `κ ω ≪ ξ` for `μ`-almost every `ω`, for an s-finite measure `ξ`, then `κ ω ≪ κ ∘ₘ μ` for
+`μ`-almost every `ω`, for every measure `μ` and kernel `κ`. Then `κ ∘ₘ μ ≪ ξ`, so `κ ∘ₘ μ` is
+s-finite, and its density with respect to the finite measure `ξ.toFinite`, which has the null sets
+of `ξ`, vanishes on a `κ ∘ₘ μ`-null set `Z`. Almost every `κ ω` gives `Z` no mass, and outside `Z`
+every `κ ∘ₘ μ`-null set is `ξ`-null. -/
+lemma absolutelyContinuous_comp_of_absolutelyContinuous {ξ : Measure β} [SFinite ξ]
+    (h_ac : ∀ᵐ ω ∂μ, κ ω ≪ ξ) :
     ∀ᵐ ω ∂μ, κ ω ≪ κ ∘ₘ μ := by
-  rw [Measure.comp_eq_sum_of_countable, ae_iff_of_countable]
-  exact fun ω hμω ↦ Measure.absolutelyContinuous_sum_right ω (Measure.absolutelyContinuous_smul hμω)
+  have hρξ : κ ∘ₘ μ ≪ ξ.toFinite := by
+    refine AbsolutelyContinuous.mk fun s hs hs0 ↦ ?_
+    rw [toFinite_apply_eq_zero_iff] at hs0
+    rw [Measure.bind_apply hs κ.aemeasurable, lintegral_eq_zero_iff (κ.measurable_coe hs)]
+    filter_upwards [h_ac] with ω hω using hω hs0
+  have : SFinite (κ ∘ₘ μ) := sFinite_of_absolutelyContinuous hρξ
+  have hρ : ξ.toFinite.withDensity ((κ ∘ₘ μ).rnDeriv ξ.toFinite) = κ ∘ₘ μ := by
+    conv_rhs => rw [haveLebesgueDecomposition_add (κ ∘ₘ μ) ξ.toFinite,
+      singularPart_eq_zero_of_ac hρξ, zero_add]
+  set Z := {x | (κ ∘ₘ μ).rnDeriv ξ.toFinite x = 0}
+  have hZ : MeasurableSet Z := measurable_rnDeriv _ _ (measurableSet_singleton 0)
+  have hκZ : ∀ᵐ ω ∂μ, κ ω Z = 0 := by
+    have h : (κ ∘ₘ μ) Z = 0 := by
+      rw [← hρ, withDensity_apply _ hZ]
+      exact setLIntegral_eq_zero hZ fun x hx ↦ hx
+    rwa [Measure.bind_apply hZ κ.aemeasurable, lintegral_eq_zero_iff (κ.measurable_coe hZ)] at h
+  filter_upwards [h_ac, hκZ] with ω hω hωZ
+  refine AbsolutelyContinuous.mk fun s hs hs0 ↦ ?_
+  rw [← hρ, withDensity_apply _ hs, setLIntegral_eq_zero_iff hs (measurable_rnDeriv _ _)] at hs0
+  have hsZ : ξ (s \ Z) = 0 := by
+    rw [← toFinite_apply_eq_zero_iff, measure_eq_zero_iff_ae_notMem]
+    filter_upwards [hs0] with x hx hxsZ
+    exact hxsZ.2 (hx hxsZ.1)
+  refine measure_mono_null (fun x hxs ↦ ?_) (measure_union_null hωZ (hω hsZ))
+  by_cases hxZ : x ∈ Z
+  · exact Or.inl hxZ
+  · exact Or.inr ⟨hxs, hxZ⟩
+
+/-- In a countable space, `κ ω ≪ κ ∘ₘ μ` for `μ`-almost every `ω`: almost everywhere means at
+every point of positive mass, and a set of measure zero for `κ ∘ₘ μ` has measure zero for `κ ω` at
+almost every point. -/
+lemma absolutelyContinuous_comp_of_countable [Countable α] :
+    ∀ᵐ ω ∂μ, κ ω ≪ κ ∘ₘ μ := by
+  rw [ae_iff_of_countable]
+  refine fun ω hω ↦ Measure.AbsolutelyContinuous.mk fun s hs hs0 ↦ ?_
+  rw [Measure.bind_apply hs κ.aemeasurable, lintegral_eq_zero_iff (κ.measurable_coe hs)] at hs0
+  exact ae_iff_of_countable.1 hs0 ω hω
 
 end AbsolutelyContinuous
 

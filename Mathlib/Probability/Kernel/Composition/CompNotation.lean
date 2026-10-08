@@ -52,6 +52,16 @@ lemma id_comp : Kernel.id ∘ₘ μ = μ := by
   change Kernel.deterministic id measurable_id ∘ₘ μ = μ
   rw [deterministic_comp_eq_map, Measure.map_id]
 
+/-- The composition of `μ` with a deterministic kernel is σ-finite if the image of `μ` is, since
+it is that image (`MeasureTheory.Measure.deterministic_comp_eq_map`). -/
+instance sigmaFinite_deterministic_comp {f : α → β} {hf : Measurable f}
+    [SigmaFinite (μ.map f hf.aemeasurable)] : SigmaFinite (Kernel.deterministic f hf ∘ₘ μ) := by
+  rwa [deterministic_comp_eq_map]
+
+/-- The composition of `μ` with the identity kernel is σ-finite if `μ` is, since it is `μ`. -/
+instance sigmaFinite_id_comp [SigmaFinite μ] : SigmaFinite (Kernel.id ∘ₘ μ) := by
+  rwa [id_comp]
+
 lemma swap_comp {μ : Measure (α × β)} : (Kernel.swap α β) ∘ₘ μ = μ.map Prod.swap :=
   deterministic_comp_eq_map measurable_swap
 

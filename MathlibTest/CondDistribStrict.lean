@@ -113,7 +113,7 @@ example (hY : AEMeasurable Y μ) : Kernel.id ∈ condDistrib Y Y μ :=
 example {X' : α → β} {Y' : α → Ω} (hY : Y =ᵐ[μ] Y') (hX : X =ᵐ[μ] X')
     (hXY : AEMeasurable (fun a ↦ (X a, Y a)) μ) (η : Kernel β Ω) :
     η ∈ condDistrib Y X μ hXY ↔ η ∈ condDistrib Y' X' μ (hXY.congr (hX.prodMk hY)) :=
-  condDistrib_congr hY hX hXY
+  mem_condDistrib_congr hY hX hXY
 
 end CondDistrib
 

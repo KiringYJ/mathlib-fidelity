@@ -32,8 +32,10 @@ is null. So the measure has a unique conditional kernel
 (`Counterexample.CondKernel.hasUniqueCondKernel_infDirac`). The finite kernel `2 • dirac 0`, which
 is not Markov, also disintegrates it, since infinity times a measure depends only on its null sets,
 but it does not represent the conditional kernel
-(`Counterexample.CondKernel.const_two_smul_dirac_not_mem_condKernel_infDirac`): for finite kernels,
-`MeasureTheory.Measure.mem_condKernel_iff` needs more than the class. It has no unique conditional
+(`Counterexample.CondKernel.const_two_smul_dirac_not_mem_condKernel_infDirac`): a representative
+must be a probability measure almost everywhere
+(`MeasureTheory.Measure.mem_condKernel_iff_isCondKernel_and_ae_isProbabilityMeasure`), and
+`2 • dirac 0` has mass `2` at the only point, which has infinite mass. It has no unique conditional
 cdf: the constant cdfs of `dirac 0` and of `2⁻¹ • (dirac 0 + dirac 1)` are both conditional cdfs,
 since infinity times a probability vanishes or not with the probability
 (`Counterexample.CondKernel.not_hasUniqueCondCDF_infDirac`).

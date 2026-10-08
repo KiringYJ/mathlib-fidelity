@@ -64,12 +64,26 @@ lemma compProd_apply_prod [μ.HasCompProd κ]
   congr with a
   by_cases ha : a ∈ s <;> simp [ha]
 
-lemma compProd_congr [μ.HasCompProd κ] [μ.HasCompProd η] (h : κ =ᵐ[μ] η) :
+/-- Two kernels whose measures of the sections of each measurable set agree almost everywhere have
+the same composition-product. -/
+lemma compProd_congr_sections [μ.HasCompProd κ] [μ.HasCompProd η]
+    (h : ∀ ⦃s : Set (α × β)⦄, MeasurableSet s →
+      (fun a ↦ κ a (Prod.mk a ⁻¹' s)) =ᵐ[μ] fun a ↦ η a (Prod.mk a ⁻¹' s)) :
     μ ⊗ₘ κ = μ ⊗ₘ η := by
   ext s hs
   rw [compProd_apply hs, compProd_apply hs]
-  refine lintegral_congr_ae ?_
-  filter_upwards [h] with a ha using by rw [ha]
+  exact lintegral_congr_ae (h hs)
+
+lemma compProd_congr [μ.HasCompProd κ] [μ.HasCompProd η] (h : κ =ᵐ[μ] η) :
+    μ ⊗ₘ κ = μ ⊗ₘ η :=
+  compProd_congr_sections fun _ _ ↦ h.mono fun _ ha ↦ by simp only [ha]
+
+/-- Equal measures have the same composition-product with a kernel. Since the domain of the
+composition-product depends on the measure, this transports it along an equation `μ = ν`. -/
+lemma compProd_congr_measure (h : μ = ν) [μ.HasCompProd κ] [ν.HasCompProd κ] :
+    μ ⊗ₘ κ = ν ⊗ₘ κ := by
+  subst h
+  rfl
 
 @[simp] lemma compProd_zero_left (κ : Kernel α β) : (0 : Measure α) ⊗ₘ κ = 0 := by
   ext s hs
@@ -89,17 +103,64 @@ lemma compProd_eq_zero_iff [μ.HasCompProd κ] :
   · rw [← compProd_zero_right μ]
     exact compProd_congr h
 
-lemma compProd_id : μ ⊗ₘ Kernel.id = μ.map Function.diag := by
+/-- The composition-product of a measure with a deterministic kernel is the law of the graph of
+the function, for every measure. -/
+lemma compProd_deterministic {f : α → β} (hf : Measurable f) :
+    μ ⊗ₘ Kernel.deterministic f hf = μ.map (fun a ↦ (a, f a)) := by
   ext s hs
-  rw [compProd_apply hs,
-    Measure.map_apply hs (measurable_id.prod measurable_id).aemeasurable]
+  rw [compProd_apply hs, Measure.map_apply hs (measurable_id'.prodMk hf).aemeasurable]
   have h_meas a : MeasurableSet (Prod.mk a ⁻¹' s) := measurable_prodMk_left hs
-  simp_rw [Kernel.id_apply, dirac_apply' _ (h_meas _)]
-  calc ∫⁻ a, (Prod.mk a ⁻¹' s).indicator 1 a ∂μ
-  _ = ∫⁻ a, (Function.diag ⁻¹' s).indicator 1 a ∂μ := rfl
-  _ = μ (Function.diag ⁻¹' s) := by
+  simp_rw [Kernel.deterministic_apply, dirac_apply' _ (h_meas _)]
+  calc ∫⁻ a, (Prod.mk a ⁻¹' s).indicator 1 (f a) ∂μ
+  _ = ∫⁻ a, ((fun a ↦ (a, f a)) ⁻¹' s).indicator 1 a ∂μ := rfl
+  _ = μ ((fun a ↦ (a, f a)) ⁻¹' s) := by
     rw [lintegral_indicator_one]
-    exact (measurable_id.prod measurable_id) hs
+    exact (measurable_id'.prodMk hf) hs
+
+lemma compProd_id : μ ⊗ₘ Kernel.id = μ.map Function.diag :=
+  compProd_deterministic measurable_id
+
+/-- The composition-product of a measure with the image of a kernel under a measurable map exists
+when the one with the kernel does: the sections of a measurable set for the image are the sections
+of its preimage under `Prod.map id f`. -/
+instance hasCompProd_map {γ : Type*} {mγ : SigmaAlgebra γ} [μ.HasCompProd κ] {f : β → γ}
+    {hf : Measurable f} : μ.HasCompProd (κ.map f hf) where
+  exists_measurable_ge_lintegral_eq s hs := by
+    have h_eq (a : α) :
+        κ.map f hf a (Prod.mk a ⁻¹' s) = κ a (Prod.mk a ⁻¹' (Prod.map id f ⁻¹' s)) := by
+      rw [Kernel.map_apply' _ _ (measurable_prodMk_left hs) hf]
+      rfl
+    simp_rw [h_eq]
+    exact HasCompProd.exists_measurable_ge_lintegral_eq ((measurable_id.prodMap hf) hs)
+
+/-- The composition-product passes along a measurable equivalence `e` of the first factor: the
+sections of a measurable set for the image of `μ` under `e` are those of its preimage under
+`Prod.map e id` for `μ`. -/
+lemma HasCompProd.map_measurableEquiv {γ : Type*} {mγ : SigmaAlgebra γ} (e : α ≃ᵐ γ)
+    [μ.HasCompProd κ] :
+    (μ.map e e.measurable.aemeasurable).HasCompProd (κ.comap e.symm e.symm.measurable) where
+  exists_measurable_ge_lintegral_eq s hs := by
+    obtain ⟨g, hg, hle, heq⟩ := HasCompProd.exists_measurable_ge_lintegral_eq (μ := μ) (κ := κ)
+      ((e.measurable.prodMap measurable_id) hs)
+    refine ⟨g ∘ e.symm, hg.comp e.symm.measurable, fun x ↦ ?_, ?_⟩
+    · obtain ⟨a, rfl⟩ := e.surjective x
+      simp only [Kernel.comap_apply, Function.comp_apply, MeasurableEquiv.symm_apply_apply]
+      exact hle a
+    · rw [lintegral_map_equiv, lintegral_map_equiv]
+      simp only [Kernel.comap_apply, Function.comp_apply, MeasurableEquiv.symm_apply_apply]
+      exact heq
+
+/-- The composition-product of a measure with the image of a kernel under a measurable map is the
+image of the composition-product. -/
+lemma compProd_map {γ : Type*} {mγ : SigmaAlgebra γ} [μ.HasCompProd κ] {f : β → γ}
+    (hf : Measurable f) :
+    μ ⊗ₘ (κ.map f) = (μ ⊗ₘ κ).map (Prod.map id f) := by
+  ext s hs
+  rw [compProd_apply hs, Measure.map_apply hs (measurable_id.prodMap hf).aemeasurable,
+    compProd_apply ((measurable_id.prodMap hf) hs)]
+  refine lintegral_congr fun a ↦ ?_
+  rw [Kernel.map_apply' _ _ (measurable_prodMk_left hs) hf]
+  rfl
 
 lemma ae_compProd_of_ae_ae [μ.HasCompProd κ] {p : α × β → Prop}
     (hp : MeasurableSet {x | p x}) (h : ∀ᵐ a ∂μ, ∀ᵐ b ∂(κ a), p (a, b)) :
@@ -388,3 +449,37 @@ lemma absolutelyContinuous_compProd_iff
     fun h ↦ h.1.compProd_of_compProd h.2⟩
 
 end MeasureTheory.Measure
+
+namespace ProbabilityTheory.Kernel
+
+open MeasureTheory
+
+variable {α β γ : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β} {mγ : SigmaAlgebra γ}
+
+/-- The value at `a` of the first marginal of a kernel `κ` is the first marginal of the measure
+`κ a`. -/
+lemma fst_apply_eq_fst (κ : Kernel α (β × γ)) (a : α) : fst κ a = (κ a).fst := by
+  rw [fst_apply]
+  rfl
+
+/-- The value at `a` of the second marginal of a kernel `κ` is the second marginal of the measure
+`κ a`. -/
+lemma snd_apply_eq_snd (κ : Kernel α (β × γ)) (a : α) : snd κ a = (κ a).snd := by
+  rw [snd_apply]
+  rfl
+
+/-- The first marginal of the measure `κ a` is σ-finite when the first marginal of `κ` is σ-finite
+at `a`. -/
+instance sigmaFinite_fst_apply (κ : Kernel α (β × γ)) (a : α) [SigmaFinite (fst κ a)] :
+    SigmaFinite (κ a).fst := by
+  rw [← fst_apply_eq_fst]
+  infer_instance
+
+/-- The first marginal of the measure `κ a` is s-finite when the first marginal of `κ` is s-finite
+at `a`. -/
+instance sFinite_fst_apply (κ : Kernel α (β × γ)) (a : α) [SFinite (fst κ a)] :
+    SFinite (κ a).fst := by
+  rw [← fst_apply_eq_fst]
+  infer_instance
+
+end ProbabilityTheory.Kernel

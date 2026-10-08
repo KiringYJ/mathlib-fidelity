@@ -26,9 +26,10 @@ equal to `(P.map X) ⊗ₘ κ`, the product of the law of `X` under `P` and the 
 
 ## Main statements
 
-* `ProbabilityTheory.mem_condDistrib_iff_hasCondDistrib`: if `Y` takes values in a nonempty standard
-  Borel space and the law of `X` is σ-finite, a finite kernel `κ` satisfies `HasCondDistrib Y X κ P`
-  exactly when it represents the almost-everywhere class `condDistrib Y X P`.
+* `ProbabilityTheory.mem_condDistrib_iff_hasCondDistrib`: if the joint law of `(X, Y)` has a
+  unique conditional kernel and the law of `X` is σ-finite, a kernel `κ` satisfies
+  `HasCondDistrib Y X κ P` exactly when it represents the almost-everywhere class
+  `condDistrib Y X P`.
 
 -/
 
@@ -45,8 +46,8 @@ variable {Ω 𝓧 𝓨 𝓩 : Type*} {mΩ : SigmaAlgebra Ω}
 /-- Predicate stating that the kernel `κ` is a version of the conditional distribution of `Y` given
 `X` under the measure `P`: the composition-product `(P.map X) ⊗ₘ κ` exists and is the law of
 `(X, Y)`. Versions are determined only up to `P.map X`-null sets;
-`ProbabilityTheory.mem_condDistrib_iff_hasCondDistrib` identifies the finite versions with the
-finite representatives of the class `condDistrib Y X P`. -/
+`ProbabilityTheory.mem_condDistrib_iff_hasCondDistrib` identifies the versions with the
+representatives of the class `condDistrib Y X P` when the law of `X` is σ-finite. -/
 @[fun_prop]
 structure HasCondDistrib (Y : Ω → 𝓨) (X : Ω → 𝓧) (κ : Kernel 𝓧 𝓨)
     (P : Measure Ω) : Prop where
@@ -85,29 +86,38 @@ lemma HasCondDistrib.hasLaw_of_const [IsProbabilityMeasure P] {Q : Measure 𝓨}
 
 section CondDistrib
 
-variable [StandardBorelSpace 𝓨] [Nonempty 𝓨]
-
-/-- A finite kernel `κ` is a conditional distribution of `Y` given `X` exactly when it represents
+/-- A kernel `κ` is a conditional distribution of `Y` given `X` exactly when it represents
 `condDistrib Y X P`, if the law of `X` is σ-finite. -/
 lemma mem_condDistrib_iff_hasCondDistrib (hXY : AEMeasurable (fun ω ↦ (X ω, Y ω)) P)
-    [SigmaFinite (P.map X hXY.fst)] [IsFiniteKernel κ] :
-    κ ∈ condDistrib Y X P hXY ↔ HasCondDistrib Y X κ P :=
-  ⟨fun h ↦ ⟨hXY, inferInstance, (compProd_map_condDistrib hXY.fst hXY.snd h).symm⟩,
-    fun h ↦ mem_condDistrib_of_measure_eq_compProd hXY.fst hXY.snd h.map_eq⟩
+    [(P.map (fun ω ↦ (X ω, Y ω)) hXY).HasUniqueCondKernel] [SigmaFinite (P.map X hXY.fst)] :
+    κ ∈ condDistrib Y X P hXY ↔ HasCondDistrib Y X κ P := by
+  refine ⟨fun h ↦ ?_, fun h ↦ ?_⟩
+  · have := hasCompProd_map_of_mem_condDistrib hXY.fst hXY.snd h
+    exact ⟨hXY, this, (compProd_map_condDistrib hXY.fst hXY.snd h).symm⟩
+  · have := h.hasCompProd
+    exact mem_condDistrib_of_measure_eq_compProd hXY.fst hXY.snd h.map_eq
 
-/-- A finite conditional distribution of `Y` given `X` represents `condDistrib Y X P`, if the law
-of `X` is σ-finite. -/
-lemma HasCondDistrib.mem_condDistrib [IsFiniteKernel κ] (h : HasCondDistrib Y X κ P)
+/-- A conditional distribution of `Y` given `X` represents `condDistrib Y X P`, if the law of `X`
+is σ-finite. -/
+lemma HasCondDistrib.mem_condDistrib (h : HasCondDistrib Y X κ P)
+    [(P.map (fun ω ↦ (X ω, Y ω)) h.aemeasurable).HasUniqueCondKernel]
     [SigmaFinite (P.map X h.aemeasurable.fst)] :
     κ ∈ condDistrib Y X P h.aemeasurable :=
   (mem_condDistrib_iff_hasCondDistrib h.aemeasurable).2 h
 
-end CondDistrib
+/-- A Markov conditional distribution of `Y` given `X` represents `condDistrib Y X P`. Unlike for a
+kernel that is not Markov, the class of the joint law suffices. -/
+lemma HasCondDistrib.mem_condDistrib_of_isMarkovKernel [IsMarkovKernel κ]
+    (h : HasCondDistrib Y X κ P) [(P.map (fun ω ↦ (X ω, Y ω)) h.aemeasurable).HasUniqueCondKernel] :
+    κ ∈ condDistrib Y X P h.aemeasurable :=
+  mem_condDistrib_of_measure_eq_compProd_of_isMarkovKernel h.aemeasurable_fst h.aemeasurable_snd
+    h.map_eq
 
-variable [SFinite P] [IsSFiniteKernel κ]
+end CondDistrib
 
 lemma HasCondDistrib.comp_left (h : HasCondDistrib Y X κ P) {f : 𝓨 → 𝓩} (hf : Measurable f) :
     HasCondDistrib (f ∘ Y) X (κ.map f) P := by
+  have := h.hasCompProd
   have hpair := h.aemeasurable
   have hout := h.aemeasurable_fst.prodMk
     (h.aemeasurable_snd.comp_aemeasurable hf.aemeasurable)
@@ -128,22 +138,30 @@ lemma HasCondDistrib.comp_left (h : HasCondDistrib Y X κ P) {f : 𝓨 → 𝓩}
         simp only [h.map_eq]
       _ = P.map X h.aemeasurable_fst ⊗ₘ κ.map f hf := (Measure.compProd_map hf).symm }
 
-lemma HasCondDistrib.fst {Y : Ω → 𝓨 × 𝓩} {κ : Kernel 𝓧 (𝓨 × 𝓩)} [IsSFiniteKernel κ]
+lemma HasCondDistrib.fst {Y : Ω → 𝓨 × 𝓩} {κ : Kernel 𝓧 (𝓨 × 𝓩)}
     (h : HasCondDistrib Y X κ P) :
     HasCondDistrib (fun ω ↦ (Y ω).1) X κ.fst P := by
   rw [Kernel.fst_eq]
   exact h.comp_left measurable_fst
 
-lemma HasCondDistrib.snd {Y : Ω → 𝓨 × 𝓩} {κ : Kernel 𝓧 (𝓨 × 𝓩)} [IsSFiniteKernel κ]
+lemma HasCondDistrib.snd {Y : Ω → 𝓨 × 𝓩} {κ : Kernel 𝓧 (𝓨 × 𝓩)}
     (h : HasCondDistrib Y X κ P) :
     HasCondDistrib (fun ω ↦ (Y ω).2) X κ.snd P := by
   rw [Kernel.snd_eq]
   exact h.comp_left measurable_snd
 
-omit [SFinite P] in
+/-- A conditional distribution of `Y` given `Z` of the form `κ.comap f` gives one of `Y` given
+`f ∘ Z`, on the domain of the composition-product of the law of `f ∘ Z` with `κ`, which instance
+search supplies for an s-finite `κ`. It does not follow from `h`: let `f` be the identity from the
+discrete σ-algebra to the Borel σ-algebra on `ℝ`, `T` a set that is not Borel, `Z` and `Y` the
+coordinates, `P` the composition-product of the sum of `∞ • dirac t` over `t ∈ T` with `κ.comap f`,
+and `κ` constant at the sum of `dirac u` over `u ∉ T`. Then the measures of the sections of the
+diagonal have lower integral `0` and upper integral `∞` against the law of `f ∘ Z`. -/
 lemma HasCondDistrib.comp_right {f : 𝓩 → 𝓧}
-    {hf : Measurable f} {Z : Ω → 𝓩} (h : HasCondDistrib Y Z (κ.comap f hf) P) :
+    {hf : Measurable f} {Z : Ω → 𝓩} (h : HasCondDistrib Y Z (κ.comap f hf) P)
+    [(P.map (f ∘ Z) (hf.comp_aemeasurable h.aemeasurable_fst)).HasCompProd κ] :
     HasCondDistrib Y (f ∘ Z) κ P := by
+  have := h.hasCompProd
   have hout := (h.aemeasurable_fst.comp_aemeasurable hf.aemeasurable).prodMk
     h.aemeasurable_snd
   have hpmap : Measurable (Prod.map f (id : 𝓨 → 𝓨)) := hf.prodMap measurable_id
@@ -162,23 +180,38 @@ lemma HasCondDistrib.comp_right {f : 𝓩 → 𝓧}
           _ = _ := (Measure.map_map h.aemeasurable hpmap.aemeasurable).symm
       _ = (P.map Z h.aemeasurable_fst ⊗ₘ κ.comap f hf).map
           (Prod.map f id) hpmap.aemeasurable := by simp only [h.map_eq]
-      _ = (P.map Z h.aemeasurable_fst).map f hf.aemeasurable ⊗ₘ κ := by
+      _ = P.map (f ∘ Z) (hf.comp_aemeasurable h.aemeasurable_fst) ⊗ₘ κ := by
         ext s hs
-        rw [Measure.map_apply hs hpmap.aemeasurable, Measure.compProd_apply (by measurability),
-          Measure.compProd_apply hs, lintegral_map (Kernel.measurable_kernel_prodMk_left hs) hf]
-        rfl
-      _ = P.map (f ∘ Z) (h.aemeasurable_fst.comp_aemeasurable hf.aemeasurable) ⊗ₘ κ := by
-        rw [Measure.map_map h.aemeasurable_fst hf.aemeasurable] }
+        obtain ⟨g, hg, hle, heq⟩ := Measure.HasCompProd.exists_measurable_ge_lintegral_eq
+          (μ := P.map (f ∘ Z) (hf.comp_aemeasurable h.aemeasurable_fst)) (κ := κ) hs
+        rw [Measure.map_apply hs hpmap.aemeasurable, Measure.compProd_apply (hpmap hs),
+          Measure.compProd_apply hs]
+        rw [← Measure.map_map h.aemeasurable_fst hf.aemeasurable] at heq ⊢
+        rw [lintegral_map_of_exists_measurable_ge hf.aemeasurable
+          ⟨g, hg, .of_forall hle, heq⟩]
+        rfl }
 
-omit [SFinite P] in
+/-- A conditional distribution of `Y` given `X` gives one of `Y` given `f ∘ X` for a measurable
+equivalence `f`, along which the domain of the composition-product passes
+(`MeasureTheory.Measure.HasCompProd.map_measurableEquiv`). -/
 lemma HasCondDistrib.measurableEquiv_comp_right (h : HasCondDistrib Y X κ P) (f : 𝓧 ≃ᵐ 𝓩) :
     HasCondDistrib Y (f ∘ X) (κ.comap f.symm f.symm.measurable) P := by
+  have := h.hasCompProd
+  have : (P.map (f ∘ X) (f.measurable.comp_aemeasurable h.aemeasurable_fst)).HasCompProd
+      (κ.comap f.symm f.symm.measurable) := by
+    rw [← Measure.map_map h.aemeasurable_fst f.measurable.aemeasurable]
+    exact Measure.HasCompProd.map_measurableEquiv f
   apply HasCondDistrib.comp_right (hf := f.measurable)
   simpa [← Kernel.comap_comp_right]
 
-lemma HasCondDistrib.of_compProd {Z : Ω → 𝓩} {η : Kernel (𝓧 × 𝓨) 𝓩} [IsMarkovKernel η]
-    (h : HasCondDistrib (fun a ↦ (Y a, Z a)) X (κ ⊗ₖ η) P) :
+/-- A conditional distribution of `(Y, Z)` given `X` of the form `κ ⊗ₖ η`, for a Markov kernel
+`η`, gives the conditional distribution `η` of `Z` given `(X, Y)`. -/
+lemma HasCondDistrib.of_compProd {Z : Ω → 𝓩} {η : Kernel (𝓧 × 𝓨) 𝓩} [κ.HasCompProd η]
+    [IsMarkovKernel η] (h : HasCondDistrib (fun a ↦ (Y a, Z a)) X (κ ⊗ₖ η) P) :
     HasCondDistrib Z (fun a ↦ (X a, Y a)) η P := by
+  have : (P.map X h.aemeasurable_fst).HasCompProd κ := by
+    have h' : (P.map X h.aemeasurable_fst).HasCompProd (κ ⊗ₖ η).fst := h.fst.hasCompProd
+    rwa [Kernel.fst_compProd] at h'
   have hZ : AEMeasurable Z P := h.aemeasurable_snd.snd
   have hY : AEMeasurable Y P := h.aemeasurable_snd.fst
   have hX : AEMeasurable X P := h.aemeasurable_fst

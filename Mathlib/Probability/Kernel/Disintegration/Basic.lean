@@ -68,6 +68,14 @@ class IsCondKernel : Prop where
 
 attribute [instance] IsCondKernel.hasCompProd_fst
 
+variable {ρ ρCond} in
+/-- A kernel disintegrates a measure `ρ` if its composition-product with a measure equal to the
+first marginal of `ρ` exists and is `ρ`. -/
+lemma IsCondKernel.of_compProd_eq {ν : Measure α} (h_fst : ρ.fst = ν) [ν.HasCompProd ρCond]
+    (h : ν ⊗ₘ ρCond = ρ) : ρ.IsCondKernel ρCond := by
+  subst h_fst
+  exact ⟨inferInstance, h⟩
+
 /-- A measure `ρ` on `α × Ω` has a unique conditional kernel if some Markov kernel disintegrates
 it and any two Markov kernels that disintegrate it agree `ρ.fst`-almost everywhere. These are the
 measures whose conditional kernel `MeasureTheory.Measure.condKernel`, the almost-everywhere class of
@@ -87,11 +95,9 @@ variable [ρ.IsCondKernel ρCond]
 
 lemma disintegrate : ρ.fst ⊗ₘ ρCond = ρ := IsCondKernel.disintegrate
 
-variable [SigmaFinite ρ.fst]
-
 /-- Auxiliary lemma for `IsCondKernel.apply_of_ne_zero`. -/
 private lemma IsCondKernel.apply_of_ne_zero_of_measurableSet [MeasurableSingletonClass α] {x : α}
-    (hx : ρ.fst {x} ≠ 0) {s : Set Ω} (hs : MeasurableSet s) :
+    (hx : ρ.fst {x} ≠ 0) (hx_top : ρ.fst {x} ≠ ∞) {s : Set Ω} (hs : MeasurableSet s) :
     ρCond x s = (ρ.fst {x})⁻¹ * ρ ({x} ×ˢ s) := by
   nth_rewrite 2 [← ρ.disintegrate ρCond]
   rw [Measure.compProd_apply (measurableSet_prod.mpr (Or.inl ⟨measurableSet_singleton x, hs⟩))]
@@ -106,26 +112,45 @@ private lemma IsCondKernel.apply_of_ne_zero_of_measurableSet [MeasurableSingleto
   simp_rw [this]
   rw [MeasureTheory.lintegral_indicator (measurableSet_singleton x)]
   simp only [Measure.restrict_singleton, lintegral_smul_measure, lintegral_dirac, smul_eq_mul]
-  rw [← mul_assoc, ENNReal.inv_mul_cancel hx measure_singleton_lt_top.ne, one_mul]
+  rw [← mul_assoc, ENNReal.inv_mul_cancel hx hx_top, one_mul]
 
-/-- If the singleton `{x}` has non-zero mass for `ρ.fst`, then for all `s : Set Ω`,
-`ρCond x s = (ρ.fst {x})⁻¹ * ρ ({x} ×ˢ s)` . -/
+/-- If the singleton `{x}` has non-zero finite mass for `ρ.fst`, then for all `s : Set Ω`,
+`ρCond x s = (ρ.fst {x})⁻¹ * ρ ({x} ×ˢ s)`. The finiteness is supplied by default for a finite
+or σ-finite first marginal. At a point of infinite mass the formula fails for `s = univ`: its
+right side vanishes, while `ρ.fst {x} = ρCond x univ * ρ.fst {x}` forces `ρCond x univ ≠ 0`. -/
 lemma IsCondKernel.apply_of_ne_zero [MeasurableSingletonClass α] {x : α}
-    (hx : ρ.fst {x} ≠ 0) (s : Set Ω) : ρCond x s = (ρ.fst {x})⁻¹ * ρ ({x} ×ˢ s) := by
+    (hx : ρ.fst {x} ≠ 0) (s : Set Ω)
+    (hx_top : ρ.fst {x} ≠ ∞ := by measure_singleton_ne_top) :
+    ρCond x s = (ρ.fst {x})⁻¹ * ρ ({x} ×ˢ s) := by
   have : ρCond x s = ((ρ.fst {x})⁻¹ • ρ).comap (fun (y : Ω) ↦ (x, y)) s := by
     congr 2 with s hs
-    simp [IsCondKernel.apply_of_ne_zero_of_measurableSet _ _ hx hs,
+    simp [IsCondKernel.apply_of_ne_zero_of_measurableSet _ _ hx hx_top hs,
       (measurableEmbedding_prodMk_left x).comap_apply, Set.singleton_prod]
   simp [this, (measurableEmbedding_prodMk_left x).comap_apply, Set.singleton_prod]
 
-lemma IsCondKernel.isProbabilityMeasure [MeasurableSingletonClass α] {a : α} (ha : ρ.fst {a} ≠ 0) :
+/-- A disintegration is a probability measure at a point of non-zero finite mass for `ρ.fst`. -/
+lemma IsCondKernel.isProbabilityMeasure [MeasurableSingletonClass α] {a : α} (ha : ρ.fst {a} ≠ 0)
+    (ha_top : ρ.fst {a} ≠ ∞ := by measure_singleton_ne_top) :
     IsProbabilityMeasure (ρCond a) := by
   constructor
-  rw [IsCondKernel.apply_of_ne_zero _ _ ha, prod_univ, ← Measure.fst_apply
-    (measurableSet_singleton _), ENNReal.inv_mul_cancel ha measure_singleton_lt_top.ne]
+  rw [IsCondKernel.apply_of_ne_zero _ _ ha _ ha_top, prod_univ, ← Measure.fst_apply
+    (measurableSet_singleton _), ENNReal.inv_mul_cancel ha ha_top]
 
-lemma IsCondKernel.isMarkovKernel [MeasurableSingletonClass α] (hρ : ∀ a, ρ.fst {a} ≠ 0) :
-    IsMarkovKernel ρCond := ⟨fun _ ↦ isProbabilityMeasure _ _ (hρ _)⟩
+/-- A disintegration is a Markov kernel if every point has non-zero finite mass for `ρ.fst`. -/
+lemma IsCondKernel.isMarkovKernel [MeasurableSingletonClass α] (hρ : ∀ a, ρ.fst {a} ≠ 0)
+    (hρ_top : ∀ a, ρ.fst {a} ≠ ∞ := by measure_singleton_ne_top) :
+    IsMarkovKernel ρCond := ⟨fun a ↦ isProbabilityMeasure _ _ (hρ a) (hρ_top a)⟩
+
+/-- A disintegration of a measure whose first marginal is σ-finite is a probability measure almost
+everywhere, since `ρ.fst t = ∫⁻ a in t, ρCond a univ ∂ρ.fst` for every measurable `t`. -/
+lemma IsCondKernel.ae_isProbabilityMeasure [SigmaFinite ρ.fst] :
+    ∀ᵐ a ∂ρ.fst, IsProbabilityMeasure (ρCond a) := by
+  have h : ∀ᵐ a ∂ρ.fst, ρCond a univ = 1 := by
+    refine ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite (f := fun a ↦ ρCond a univ)
+      (g := fun _ ↦ 1) (ρCond.measurable_coe .univ) measurable_const fun t ht _ ↦ ?_
+    rw [← compProd_apply_prod ht .univ, ρ.disintegrate ρCond, setLIntegral_const, one_mul,
+      fst_apply ht, prod_univ]
+  filter_upwards [h] with a ha using ⟨ha⟩
 
 end MeasureTheory.Measure
 
@@ -160,55 +185,26 @@ instance instIsCondKernel_zero (κCond : Kernel (α × β) Ω) : IsCondKernel 0 
 
 lemma disintegrate [κ.IsCondKernel κCond] : κ.fst ⊗ₖ κCond = κ := IsCondKernel.disintegrate
 
-/-- A conditional kernel is almost everywhere a probability measure. -/
-lemma IsCondKernel.isProbabilityMeasure_ae [IsFiniteKernel κ.fst] [κ.IsCondKernel κCond] (a : α) :
+/-- The section over `a` of a conditional kernel of `κ` is a conditional kernel of the measure
+`κ a`. -/
+lemma IsCondKernel.isCondKernel_sectR [κ.IsCondKernel κCond] (a : α) :
+    (κ a).IsCondKernel (sectR κCond a) := by
+  have : (κ a).fst.HasCompProd (sectR κCond a) := by rw [← fst_apply_eq_fst]; infer_instance
+  refine ⟨this, ?_⟩
+  ext s hs
+  conv_rhs => rw [← κ.disintegrate κCond]
+  rw [Measure.compProd_apply hs, compProd_apply hs, ← fst_apply_eq_fst]
+  rfl
+
+/-- On the fiber over a point `a` at which `κ.fst a` is σ-finite, a conditional kernel of `κ` is
+almost everywhere a probability measure, as are the disintegrations of a measure with a σ-finite
+first marginal (`MeasureTheory.Measure.IsCondKernel.ae_isProbabilityMeasure`). -/
+lemma IsCondKernel.ae_isProbabilityMeasure [κ.IsCondKernel κCond] (a : α)
+    [SigmaFinite (κ.fst a)] :
     ∀ᵐ b ∂(κ.fst a), IsProbabilityMeasure (κCond (a, b)) := by
-  have h := disintegrate κ κCond
-  suffices ∀ᵐ b ∂(κ.fst a), κCond (a, b) Set.univ = 1 by
-    convert! this with b
-    exact ⟨fun _ ↦ measure_univ, fun h ↦ ⟨h⟩⟩
-  suffices (∀ᵐ b ∂(κ.fst a), κCond (a, b) Set.univ ≤ 1)
-      ∧ (∀ᵐ b ∂(κ.fst a), 1 ≤ κCond (a, b) Set.univ) by
-    filter_upwards [this.1, this.2] with b h1 h2 using le_antisymm h1 h2
-  have h_eq s (hs : MeasurableSet s) :
-      ∫⁻ b, s.indicator (fun b ↦ κCond (a, b) Set.univ) b ∂κ.fst a = κ.fst a s := by
-    conv_rhs => rw [← h]
-    rw [fst_compProd_apply _ _ _ hs]
-  have h_meas : Measurable fun b ↦ κCond (a, b) Set.univ :=
-    (κCond.measurable_coe MeasurableSet.univ).comp measurable_prodMk_left
-  constructor
-  · rw [ae_le_const_iff_forall_gt_measure_zero]
-    intro r hr
-    let s := {b | r ≤ κCond (a, b) Set.univ}
-    have hs : MeasurableSet s := h_meas measurableSet_Ici
-    have h_2_le : s.indicator (fun _ ↦ r) ≤ s.indicator (fun b ↦ (κCond (a, b)) Set.univ) := by
-      intro b
-      by_cases hbs : b ∈ s
-      · simpa [hbs]
-      · simp [hbs]
-    have : ∫⁻ b, s.indicator (fun _ ↦ r) b ∂(κ.fst a) ≤ κ.fst a s :=
-      (lintegral_mono h_2_le).trans_eq (h_eq s hs)
-    rw [lintegral_indicator_const hs] at this
-    contrapose! this with h_ne_zero
-    conv_lhs => rw [← one_mul (κ.fst a s)]
-    gcongr
-    finiteness
-  · rw [ae_const_le_iff_forall_lt_measure_zero]
-    intro r hr
-    let s := {b | κCond (a, b) Set.univ ≤ r}
-    have hs : MeasurableSet s := h_meas measurableSet_Iic
-    have h_2_le : s.indicator (fun b ↦ (κCond (a, b)) Set.univ) ≤ s.indicator (fun _ ↦ r) := by
-      intro b
-      by_cases hbs : b ∈ s
-      · simpa [hbs]
-      · simp [hbs]
-    have : κ.fst a s ≤ ∫⁻ b, s.indicator (fun _ ↦ r) b ∂(κ.fst a) :=
-      (h_eq s hs).symm.trans_le (lintegral_mono h_2_le)
-    rw [lintegral_indicator_const hs] at this
-    contrapose! this with h_ne_zero
-    conv_rhs => rw [← one_mul (κ.fst a s)]
-    gcongr
-    finiteness
+  have := IsCondKernel.isCondKernel_sectR κ κCond a
+  rw [fst_apply_eq_fst]
+  exact Measure.IsCondKernel.ae_isProbabilityMeasure (κ a) (sectR κCond a)
 
 
 /-! #### Existence of a disintegrating kernel in a countable space -/

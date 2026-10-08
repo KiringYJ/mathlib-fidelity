@@ -89,6 +89,41 @@ instance : IsDeterministic (discard α) := by unfold discard; infer_instance
 
 instance : IsDeterministic (swap α β) := by unfold swap; infer_instance
 
+/-- A Markov kernel `κ` into a countably generated space is almost everywhere equal to the Dirac
+kernel of a measurable function `g` if and only if, for every measurable set `s`, almost every `a`
+with `g a ∉ s` gives `s` no mass. The measure `μ` is arbitrary: almost every `κ a` gives no mass
+to the sets of a countable generating sequence that separate `g a` from other points, so it is
+concentrated on the indistinguishability class of `g a`. -/
+lemma ae_eq_deterministic_iff [SigmaAlgebra.CountablyGenerated β] {μ : Measure α}
+    {κ : Kernel α β} [IsMarkovKernel κ] {g : α → β} (hg : Measurable g) :
+    κ =ᵐ[μ] deterministic g hg ↔ ∀ s, MeasurableSet s → ∀ᵐ a ∂μ, g a ∉ s → κ a s = 0 := by
+  refine ⟨fun h s hs ↦ ?_, fun h ↦ ?_⟩
+  · filter_upwards [h] with a ha hgs
+    rw [ha, deterministic_apply' hg a hs, indicator_of_notMem hgs]
+  have ht n : MeasurableSet (SigmaAlgebra.natGeneratingSequence β n) :=
+    SigmaAlgebra.measurableSet_natGeneratingSequence n
+  filter_upwards [ae_all_iff.2 fun n ↦ h _ (ht n), ae_all_iff.2 fun n ↦ h _ (ht n).compl]
+    with a h₁ h₂
+  have hD : κ a (mβ.indistinguishabilityClass (g a))ᶜ = 0 := by
+    rw [SigmaAlgebra.indistinguishabilityClass_eq_generatorMembershipClass_natGeneratingSequence,
+      SigmaAlgebra.generatorMembershipClass, compl_iInter]
+    refine measure_iUnion_null fun n ↦ ?_
+    by_cases hn : g a ∈ SigmaAlgebra.natGeneratingSequence β n
+    · simp only [hn, ↓reduceIte]
+      exact h₂ n fun h ↦ h hn
+    · simp only [hn, ↓reduceIte, compl_compl]
+      exact h₁ n hn
+  ext s hs
+  rw [deterministic_apply' hg a hs]
+  by_cases hgs : g a ∈ s
+  · rw [indicator_of_mem hgs, ← prob_compl_eq_zero_iff hs]
+    exact measure_mono_null (compl_subset_compl.2
+      (SigmaAlgebra.indistinguishabilityClass_subset hs hgs)) hD
+  · rw [indicator_of_notMem hgs]
+    refine measure_mono_null ?_ hD
+    intro y hys hy
+    exact hgs ((hy s hs).2 hys)
+
 open IsZeroOneMeasure
 
 /-- A deterministic kernel is multiplicative on intersections: evaluating

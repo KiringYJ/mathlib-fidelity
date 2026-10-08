@@ -840,6 +840,7 @@ instance : IsProbabilityMeasure (trajMeasure μ₀ κ) := by
   rw [trajMeasure]
   infer_instance
 
+omit [IsProbabilityMeasure μ₀] in
 lemma map_frestrictLe_trajMeasure_compProd_eq_map_trajMeasure {a : ℕ} :
     (trajMeasure μ₀ κ).map (frestrictLe a) ⊗ₘ κ a =
       (trajMeasure μ₀ κ).map (fun x ↦ (frestrictLe a x, x (a + 1))) := by
@@ -875,13 +876,16 @@ lemma map_frestrictLe_trajMeasure_compProd_eq_map_trajMeasure {a : ℕ} :
           ((Π i : Iic a, X i) × X (a + 1)) ↦ η x) hk
     _ = ((traj κ 0) ∘ₘ ν).map (fun x ↦ (frestrictLe a x, x (a + 1))) := hright.symm
 
+omit [IsProbabilityMeasure μ₀] in
 /-- The kernel `κ a` represents the regular conditional probability distribution of the point at
-time `a + 1` given the trajectory up to time `a`. -/
-lemma mem_condDistrib_trajMeasure {a : ℕ} [StandardBorelSpace (X (a + 1))]
-    [Nonempty (X (a + 1))] :
+time `a + 1` given the trajectory up to time `a`, since `κ a` is a Markov kernel, whenever that
+distribution is unique, for example for a probability measure `μ₀` and a nonempty standard Borel
+space `X (a + 1)`. -/
+lemma mem_condDistrib_trajMeasure {a : ℕ}
+    [((trajMeasure μ₀ κ).map (fun x ↦ (frestrictLe a x, x (a + 1)))).HasUniqueCondKernel] :
     κ a ∈ condDistrib (fun x ↦ x (a + 1)) (frestrictLe a) (trajMeasure μ₀ κ) :=
-  mem_condDistrib_of_measure_eq_compProd (Measurable.aemeasurable (by fun_prop))
-    (Measurable.aemeasurable (by fun_prop))
+  mem_condDistrib_of_measure_eq_compProd_of_isMarkovKernel
+    (Measurable.aemeasurable (by fun_prop)) (Measurable.aemeasurable (by fun_prop))
     map_frestrictLe_trajMeasure_compProd_eq_map_trajMeasure.symm
 
 end trajMeasure
