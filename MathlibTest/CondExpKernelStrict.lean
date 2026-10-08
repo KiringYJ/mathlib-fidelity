@@ -11,7 +11,9 @@ it exactly when it disintegrates the diagonal law, that a Markov representative 
 every Markov representative computes conditional probabilities; that conditional independence and
 the conditionally sub-Gaussian property are decided by any single representative; that, given the
 full σ-algebra, the identity kernel represents the class while a kernel that is wrong at an atom
-does not; and that the class requires the proof that `m` is a sub-σ-algebra and a finite measure.
+does not; that the class requires the proof that `m` is a sub-σ-algebra and the class of the joint
+law of `(ω, ω)`, which instance search supplies for a standard Borel space and a σ-finite trim,
+such as Lebesgue measure, and for the empty type.
 -/
 
 open MeasureTheory ProbabilityTheory SigmaAlgebra
@@ -60,6 +62,14 @@ noncomputable section
 #guard_msgs in
 #check MeasureTheory.StronglyMeasurable.integral_condExpKernel'
 
+/-- error: Unknown identifier `ProbabilityTheory.hasUniqueCondKernel_map_diag` -/
+#guard_msgs in
+#check ProbabilityTheory.hasUniqueCondKernel_map_diag
+
+/-- error: Unknown identifier `ProbabilityTheory.exists_aeClass_condExpKernel` -/
+#guard_msgs in
+#check ProbabilityTheory.exists_aeClass_condExpKernel
+
 /--
 error: Unknown identifier `ProbabilityTheory.condIndepFun_iff_condDistrib_prod_ae_eq_prodMkRight`
 -/
@@ -92,9 +102,19 @@ example (hm : m ≤ mΩ) {η : @Kernel Ω Ω m mΩ} [IsMarkovKernel η] (hη : �
     (fun ω ↦ (η ω).real s) =ᵐ[μ] μ⟦s | m⟧ :=
   condExpKernel_ae_eq_condExp hη hs
 
-example (hm : m ≤ mΩ) {η : @Kernel Ω Ω m mΩ} [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm) :
+-- Every representative integrates back to `μ`.
+example (hm : m ≤ mΩ) {η : @Kernel Ω Ω m mΩ} (hη : η ∈ condExpKernel μ hm) :
     η ∘ₘ μ.trim hm = μ :=
   condExpKernel_comp_trim hη
+
+example (hm : m ≤ mΩ) {η : @Kernel Ω Ω m mΩ} (hη : η ∈ condExpKernel μ hm) :
+    (μ.trim hm).HasCompProd η :=
+  hasCompProd_trim_of_mem_condExpKernel hη
+
+-- A Markov kernel represents the class exactly when it disintegrates the diagonal law.
+example (hm : m ≤ mΩ) (η : @Kernel Ω Ω m mΩ) [IsMarkovKernel η] :
+    η ∈ condExpKernel μ hm ↔ (μ.trim hm) ⊗ₘ η = condExpJointLaw μ hm :=
+  mem_condExpKernel_iff_of_isMarkovKernel
 
 -- Conditional independence and the conditionally sub-Gaussian property are decided by any single
 -- representative.
@@ -148,7 +168,7 @@ example : Kernel.const ℝ (Measure.dirac 1) ∉ condExpKernel (Measure.dirac (0
   have h1 := congrArg (fun ν : Measure ℝ ↦ ν {0}) h'
   simp [Kernel.const_apply, Kernel.id_apply, Measure.dirac_apply'] at h1
 
-/-! ### The class requires a sub-σ-algebra and a finite measure -/
+/-! ### The class requires a sub-σ-algebra and the class of the joint law -/
 
 -- The sub-σ-algebra is given by the proof that it is one: the former call with the σ-algebra
 -- itself is rejected.
@@ -161,21 +181,120 @@ has type
 of sort `Type` but is expected to have type
   ?_ ≤ Real.sigmaAlgebra
 of sort `Prop` in the application
-  condExpKernel (Measure.dirac 0) ⊥
+  @condExpKernel ℝ ?_ Real.sigmaAlgebra (Measure.dirac 0) ⊥
 -/
 #guard_msgs in
 example : True :=
   let _c := condExpKernel (Measure.dirac (0 : ℝ)) (⊥ : SigmaAlgebra ℝ)
   trivial
 
+-- Lebesgue measure on `ℝ` has no conditional expectation kernel given the trivial σ-algebra: a
+-- kernel from `(ℝ, ⊥)` is constant, and infinity times the mass that it gives `[0, 1]` is never
+-- `1`.
 /--
 error: failed to synthesize instance of type class
-  IsFiniteMeasure Measure.count
+  (condExpJointLaw ℙ ⋯).HasUniqueCondKernel
 
 Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 -/
 #guard_msgs in
-example : Kernel.AEClass (ae ((Measure.count : Measure ℝ).trim le_rfl)) ℝ :=
-  condExpKernel Measure.count le_rfl
+example : True :=
+  let _c := condExpKernel (volume : Measure ℝ) bot_le
+  trivial
+
+-- Given the whole σ-algebra, every measure on a countably generated space has a conditional
+-- expectation kernel, which the identity kernel represents: counting measure on `ℝ`, whose trim is
+-- not σ-finite.
+theorem id_mem_condExpKernel_count :
+    (Kernel.id : Kernel ℝ ℝ) ∈ condExpKernel (Measure.count : Measure ℝ) le_rfl := by
+  rw [mem_condExpKernel_iff_of_isMarkovKernel, trim_eq_self, Measure.compProd_id_eq_copy_comp]
+  exact Measure.deterministic_comp_eq_map _
+
+-- The measurability and integrability statements hold for every measure and representative.
+example {f : ℝ → ℝ} (hf : Integrable f (Measure.count : Measure ℝ)) :
+    Integrable (fun ω ↦ ∫ y, f y ∂(Kernel.id : Kernel ℝ ℝ) ω) Measure.count :=
+  hf.integral_condExpKernel id_mem_condExpKernel_count
+
+example {f : ℝ → ℝ} (hf : AEStronglyMeasurable f (Measure.count : Measure ℝ)) :
+    AEStronglyMeasurable (fun ω ↦ ∫ y, f y ∂(Kernel.id : Kernel ℝ ℝ) ω) Measure.count :=
+  hf.integral_condExpKernel id_mem_condExpKernel_count
+
+/-! ### Measures that are not finite -/
+
+-- The class of the joint law of `(ω, ω)` needs only a σ-finite trim: Lebesgue measure on `ℝ`.
+example : Kernel.AEClass (ae ((volume : Measure ℝ).trim le_rfl)) ℝ :=
+  condExpKernel volume le_rfl
+
+example {Ω : Type*} {m : SigmaAlgebra Ω} [mΩ : SigmaAlgebra Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} (hm : m ≤ mΩ) [SigmaFinite (μ.trim hm)] :
+    (condExpJointLaw μ hm).HasUniqueCondKernel :=
+  inferInstance
+
+-- The identity kernel represents the class for Lebesgue measure and the full σ-algebra, and every
+-- Markov representative computes conditional expectations of integrable functions.
+example : Kernel.id ∈ condExpKernel (volume : Measure ℝ) le_rfl := by
+  rw [mem_condExpKernel_iff, trim_eq_self, Measure.compProd_id_eq_copy_comp]
+  exact Measure.deterministic_comp_eq_map _
+
+example {Ω : Type*} {m : SigmaAlgebra Ω} [mΩ : SigmaAlgebra Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} (hm : m ≤ mΩ) [SigmaFinite (μ.trim hm)] {η : @Kernel Ω Ω m mΩ}
+    [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm) {f : Ω → ℝ} (hf : Integrable f μ) :
+    μ[f | m] =ᵐ[μ] fun ω ↦ ∫ y, f y ∂η ω :=
+  condExp_ae_eq_integral_condExpKernel hη hf
+
+-- A measurable set of infinite measure needs its finiteness as a hypothesis.
+example {Ω : Type*} {m : SigmaAlgebra Ω} [mΩ : SigmaAlgebra Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} (hm : m ≤ mΩ) [SigmaFinite (μ.trim hm)] {η : @Kernel Ω Ω m mΩ}
+    [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm) {s : Set Ω} (hs : MeasurableSet s)
+    (hμs : μ s ≠ ⊤) :
+    (fun ω ↦ (η ω).real s) =ᵐ[μ] μ⟦s | m⟧ :=
+  condExpKernel_ae_eq_condExp hη hs hμs
+
+-- The representatives are those of the conditional distribution of the identity given the
+-- identity, for every kernel.
+example {Ω : Type*} {m : SigmaAlgebra Ω} [mΩ : SigmaAlgebra Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} (hm : m ≤ mΩ) [SigmaFinite (μ.trim hm)] (η : @Kernel Ω Ω m mΩ) :
+    η ∈ condExpKernel μ hm ↔
+      η ∈ @condDistrib Ω Ω Ω mΩ mΩ m id id μ (aemeasurable_diag_of_le μ hm)
+        (inferInstance : (condExpJointLaw μ hm).HasUniqueCondKernel) :=
+  mem_condExpKernel_iff_mem_condDistrib
+
+-- The empty type.
+example (μ : Measure Empty) : (condExpJointLaw μ le_rfl).HasUniqueCondKernel :=
+  inferInstance
+
+-- Conditioning on a set of positive finite measure needs only the class of the joint law, and every
+-- representative is the conditional measure at every point of the set.
+example {Ω : Type*} [mΩ : SigmaAlgebra Ω] {μ : Measure Ω} {s : Set Ω} (hs : MeasurableSet s)
+    [(condExpJointLaw μ (generateFrom_singleton_le hs)).HasUniqueCondKernel] (hμs₀ : μ s ≠ 0)
+    (hμs : μ s ≠ ⊤) {ξ : @Kernel Ω Ω (generateFrom {s}) mΩ}
+    (hξ : ξ ∈ condExpKernel μ (generateFrom_singleton_le hs)) :
+    ∀ ω ∈ s, ξ ω = μ[|s] :=
+  condExpKernel_singleton_eq_cond hs hμs₀ hξ hμs
+
+-- The finiteness is supplied for a finite measure.
+example {Ω : Type*} [mΩ : SigmaAlgebra Ω] {μ : Measure Ω} [IsFiniteMeasure μ] {s : Set Ω}
+    (hs : MeasurableSet s)
+    [(condExpJointLaw μ (generateFrom_singleton_le hs)).HasUniqueCondKernel] (hμs₀ : μ s ≠ 0)
+    {ξ : @Kernel Ω Ω (generateFrom {s}) mΩ}
+    (hξ : ξ ∈ condExpKernel μ (generateFrom_singleton_le hs)) :
+    ∀ ω ∈ s, ξ ω = μ[|s] :=
+  condExpKernel_singleton_eq_cond hs hμs₀ hξ
+
+/-- error: Unknown identifier `ProbabilityTheory.condExpKernel_singleton_ae_eq_cond` -/
+#guard_msgs in
+#check ProbabilityTheory.condExpKernel_singleton_ae_eq_cond
+
+-- A representative of the conditional distribution given `Y` and one of the conditional
+-- expectation kernel given `mγ.comap Y` agree on every measurable set, for a σ-finite law of `Y`.
+example {Ω β γ : Type*} [mΩ : SigmaAlgebra Ω] {mβ : SigmaAlgebra β} {mγ : SigmaAlgebra γ}
+    {μ : Measure Ω} {X : Ω → β} {Y : Ω → γ} (hX : Measurable X) (hY : Measurable Y)
+    [SigmaFinite (μ.map Y hY.aemeasurable)] {s : Set β} (hs : MeasurableSet s)
+    [(μ.map (fun a ↦ (Y a, X a)) (hY.aemeasurable.prodMk hX.aemeasurable)).HasUniqueCondKernel]
+    {η₁ : Kernel γ β} (hη₁ : η₁ ∈ condDistrib X Y μ (hY.aemeasurable.prodMk hX.aemeasurable))
+    [(condExpJointLaw μ hY.comap_le).HasUniqueCondKernel]
+    {η₂ : @Kernel Ω Ω (mγ.comap Y) mΩ} (hη₂ : η₂ ∈ condExpKernel μ hY.comap_le) :
+    (fun a ↦ η₁ (Y a) s) =ᵐ[μ] fun a ↦ η₂.map X hX a s :=
+  condDistrib_apply_ae_eq_condExpKernel_map hX hY hs hη₁ hη₂
 
 end

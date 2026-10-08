@@ -907,15 +907,10 @@ lemma HasSubgaussianMGF.add_of_hasCondSubgaussianMGF [IsFiniteMeasure μ]
     {Y : Ω → ℝ} {cX cY : ℝ≥0} (hm : m ≤ mΩ)
     (hX : HasSubgaussianMGF X cX (μ.trim hm)) (hY : HasCondSubgaussianMGF m hm Y cY μ) :
     HasSubgaussianMGF (X + Y) (cX + cY) μ := by
-  suffices HasSubgaussianMGF (fun p ↦ X p.1 + Y p.2) (cX + cY)
-      (@Measure.map Ω (Ω × Ω) mΩ (m.prod mΩ) Function.diag μ
-        (@Measurable.aemeasurable _ _ _ (m.prod mΩ) _ _
-          ((measurable_id'' hm).prodMk measurable_id))) by
+  suffices HasSubgaussianMGF (fun p ↦ X p.1 + Y p.2) (cX + cY) (condExpJointLaw μ hm) by
     have h_eq : X + Y = (fun p ↦ X p.1 + Y p.2) ∘ Function.diag := rfl
     rw [h_eq]
-    refine HasSubgaussianMGF.of_map ?_ this
-    exact @Measurable.aemeasurable _ _ _ (m.prod mΩ) _ _
-      ((measurable_id'' hm).prodMk measurable_id)
+    exact HasSubgaussianMGF.of_map (aemeasurable_diag_of_le μ hm) this
   rw [HasSubgaussianMGF_iff_kernel] at hX ⊢
   obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
   have hY' : Kernel.HasSubgaussianMGF Y cY η

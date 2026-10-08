@@ -132,6 +132,21 @@ instance isFiniteMeasure_trim (hm : m ≤ m0) [IsFiniteMeasure μ] : IsFiniteMea
     rw [trim_measurableSet_eq hm (@MeasurableSet.univ _ m)]
     exact measure_lt_top _ _
 
+/-- The trim of an s-finite measure is s-finite: it is the sum of the trims of finite measures. -/
+instance sFinite_trim (hm : m ≤ m0) [SFinite μ] : SFinite (μ.trim hm) := by
+  refine ⟨⟨fun n ↦ (sfiniteSeq μ n).trim hm, fun n ↦ isFiniteMeasure_trim hm, ?_⟩⟩
+  refine @Measure.ext α m _ _ fun s hs ↦ ?_
+  rw [@Measure.sum_apply α ℕ m _ _ hs, trim_measurableSet_eq hm hs]
+  simp_rw [trim_measurableSet_eq hm hs]
+  conv_lhs => rw [← sum_sfiniteSeq μ]
+  rw [Measure.sum_apply _ (hm hs)]
+
+/-- The trim of a σ-finite measure to its own σ-algebra is σ-finite, since it is the measure
+(`MeasureTheory.trim_eq_self`). -/
+instance sigmaFinite_trim_self [SigmaFinite μ] {h : m0 ≤ m0} : SigmaFinite (μ.trim h) := by
+  rw [trim_eq_self]
+  infer_instance
+
 theorem sigmaFiniteTrim_mono {m m₂ m0 : SigmaAlgebra α} {μ : Measure α} (hm : m ≤ m0)
     (hm₂ : m₂ ≤ m) [SigmaFinite (μ.trim (hm₂.trans hm))] : SigmaFinite (μ.trim hm) := by
   have : SigmaFinite ((μ.trim hm).trim hm₂) := by simpa [trim_trim]

@@ -91,6 +91,14 @@ class HasUniqueCondKernel : Prop where
   ae_eq_of_isCondKernel (η η' : Kernel α Ω) [IsMarkovKernel η] [IsMarkovKernel η']
     [ρ.IsCondKernel η] [ρ.IsCondKernel η'] : ∀ᵐ a ∂ρ.fst, η a = η' a
 
+/-- A measure on `α × Ω` for an empty type `α` has a unique conditional kernel: it is zero, and the
+zero kernel is Markov on the empty type and disintegrates it. -/
+instance hasUniqueCondKernel_of_isEmpty [IsEmpty α] : ρ.HasUniqueCondKernel where
+  exists_isMarkovKernel_isCondKernel := by
+    refine ⟨0, ⟨fun a ↦ isEmptyElim a⟩, ⟨inferInstance, ?_⟩⟩
+    rw [compProd_zero_right, Measure.eq_zero_of_isEmpty ρ]
+  ae_eq_of_isCondKernel _ _ _ _ _ _ := .of_forall fun a ↦ isEmptyElim a
+
 variable [ρ.IsCondKernel ρCond]
 
 lemma disintegrate : ρ.fst ⊗ₘ ρCond = ρ := IsCondKernel.disintegrate
