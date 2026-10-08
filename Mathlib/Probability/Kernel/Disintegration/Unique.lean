@@ -12,15 +12,22 @@ public import Mathlib.Probability.Kernel.Disintegration.Integral
 # Uniqueness of conditional kernels
 
 We prove that conditional kernels with values in a countably generated space are unique almost
-everywhere: two finite kernels that disintegrate a finite measure `ρ` agree `ρ.fst`-almost
-everywhere, and two finite kernels that disintegrate a finite kernel `κ` agree `fst κ a`-almost
-everywhere for every `a`. Consequently the finite representatives of the classes
-`MeasureTheory.Measure.condKernel ρ` and `ProbabilityTheory.Kernel.condKernel κ` are exactly the
-finite conditional kernels.
+everywhere: two finite kernels that disintegrate a measure `ρ` whose first marginal is σ-finite
+agree `ρ.fst`-almost everywhere, and two finite kernels that disintegrate a finite kernel `κ` agree
+`fst κ a`-almost everywhere for every `a`. With the existence of a Markov disintegration
+(`Mathlib/Probability/Kernel/Disintegration/StandardBorel.lean`), such a measure has a unique
+conditional kernel when the space is a nonempty standard Borel space, and the finite representatives
+of the classes `MeasureTheory.Measure.condKernel ρ` and `ProbabilityTheory.Kernel.condKernel κ` are
+exactly the finite conditional kernels. Within σ-finite measures, a σ-finite first marginal is
+also necessary for a Markov disintegration (`MeasureTheory.Measure.IsCondKernel.sigmaFinite_fst`).
 
 ## Main statements
 
 * `MeasureTheory.Measure.IsCondKernel.ae_eq`: a.e. uniqueness of conditional kernels of a measure.
+* `MeasureTheory.Measure.hasUniqueCondKernel_of_sigmaFinite_fst`: a measure whose first marginal is
+  σ-finite has a unique conditional kernel, for a nonempty standard Borel space.
+* `MeasureTheory.Measure.hasUniqueCondKernel_iff_sigmaFinite_fst`: a σ-finite measure has a unique
+  conditional kernel if and only if its first marginal is σ-finite.
 * `ProbabilityTheory.Kernel.IsCondKernel.ae_eq`: a.e. uniqueness of conditional kernels of a kernel.
 * `MeasureTheory.Measure.mem_condKernel_iff`: a finite kernel represents `ρ.condKernel` if and only
   if it disintegrates `ρ`.
@@ -40,11 +47,12 @@ variable {α β Ω : Type*} {mα : SigmaAlgebra α} {mβ : SigmaAlgebra β} [Sig
 
 namespace MeasureTheory.Measure
 
-variable {ρ : Measure (α × Ω)} [IsFiniteMeasure ρ]
+variable {ρ : Measure (α × Ω)} [SigmaFinite ρ.fst]
 
 /-! ### Uniqueness of conditional kernels of a measure -/
 
-/-- Two s-finite conditional kernels of `ρ` agree `ρ.fst`-almost everywhere on a measurable set.
+/-- Two s-finite conditional kernels of a measure `ρ` whose first marginal is σ-finite agree
+`ρ.fst`-almost everywhere on a measurable set.
 
 For finite kernels with values in a countably generated space,
 `MeasureTheory.Measure.IsCondKernel.ae_eq` gives the stronger statement that the kernels agree
@@ -60,18 +68,57 @@ theorem IsCondKernel.ae_eq_apply (η η' : Kernel α Ω) [IsSFiniteKernel η] [I
     exact (compProd_apply_prod ht hs).symm
   rw [h η, h η']
 
-/-- Two finite conditional kernels of a finite measure `ρ` with values in a countably generated
-space agree `ρ.fst`-almost everywhere. -/
+/-- Two finite conditional kernels of a measure `ρ` whose first marginal is σ-finite, with values in
+a countably generated space, agree `ρ.fst`-almost everywhere. -/
 theorem IsCondKernel.ae_eq [SigmaAlgebra.CountablyGenerated Ω] (η η' : Kernel α Ω)
     [IsFiniteKernel η] [IsFiniteKernel η'] [ρ.IsCondKernel η] [ρ.IsCondKernel η'] :
     ∀ᵐ x ∂ρ.fst, η x = η' x :=
   Kernel.ae_eq_of_compProd_eq ((ρ.disintegrate η).trans (ρ.disintegrate η').symm)
 
-/-- A finite measure on `α × Ω`, for a nonempty standard Borel space `Ω`, has a unique conditional
-kernel. -/
-instance hasUniqueCondKernel_of_isFiniteMeasure [StandardBorelSpace Ω] [Nonempty Ω] :
-    ρ.HasUniqueCondKernel :=
+/-- A measure on `α × Ω` whose first marginal is σ-finite, for a nonempty standard Borel space `Ω`,
+has a unique conditional kernel. This includes every finite measure; instances supply the
+σ-finiteness of the first marginal of a composition-product
+(`MeasureTheory.Measure.sigmaFinite_fst_compProd`) and of a joint law
+(`MeasureTheory.Measure.sigmaFinite_fst_map_prodMk`). -/
+-- see Note [lower instance priority]
+instance (priority := 100) hasUniqueCondKernel_of_sigmaFinite_fst [StandardBorelSpace Ω]
+    [Nonempty Ω] : ρ.HasUniqueCondKernel :=
   ⟨ρ.exists_isMarkovKernel_isCondKernel, fun η η' _ _ _ _ ↦ IsCondKernel.ae_eq η η'⟩
+
+/-- Within σ-finite measures, a Markov disintegration forces a σ-finite first marginal: for a
+positive `f` with a finite `ρ`-integral, `a ↦ ∫⁻ ω, f (a, ω) ∂(η a)` is positive with a finite
+`ρ.fst`-integral. -/
+theorem IsCondKernel.sigmaFinite_fst {ρ : Measure (α × Ω)} [SigmaFinite ρ] (η : Kernel α Ω)
+    [IsMarkovKernel η] [ρ.IsCondKernel η] : SigmaFinite ρ.fst := by
+  obtain ⟨f, hf_pos, hf_meas, hf_int⟩ := exists_pos_lintegral_lt_of_sigmaFinite ρ one_ne_zero
+  have hf : Measurable fun p ↦ (f p : ℝ≥0∞) := hf_meas.coe_nnreal_ennreal
+  set g : α → ℝ≥0∞ := fun a ↦ ∫⁻ ω, f (a, ω) ∂(η a)
+  have hg : Measurable g := hf.lintegral_kernel_prod_right'
+  have hg_pos (a : α) : g a ≠ 0 := by
+    intro h
+    have hm : Measurable fun ω ↦ (f (a, ω) : ℝ≥0∞) :=
+      (hf_meas.comp measurable_prodMk_left).coe_nnreal_ennreal
+    have h0 : ∫⁻ ω, (f (a, ω) : ℝ≥0∞) ∂η a = 0 := h
+    rw [lintegral_eq_zero_iff hm] at h0
+    have h' : ∀ᵐ ω ∂(η a), False := h0.mono fun ω hω ↦ by simp [(hf_pos _).ne'] at hω
+    rw [Filter.eventually_false_iff_eq_bot, ae_eq_bot] at h'
+    exact IsProbabilityMeasure.ne_zero (η a) h'
+  have hg_int : ∫⁻ a, g a ∂ρ.fst ≠ ∞ := by
+    rw [← Measure.lintegral_compProd hf, ρ.disintegrate η]
+    exact (hf_int.trans ENNReal.one_lt_top).ne
+  have : IsFiniteMeasure (ρ.fst.withDensity g) := isFiniteMeasure_withDensity hg_int
+  have h_inv : (ρ.fst.withDensity g).withDensity (fun a ↦ (g a)⁻¹) = ρ.fst :=
+    withDensity_inv_same hg (ae_of_all _ hg_pos) ((ae_lt_top hg hg_int).mono fun _ h ↦ h.ne)
+  rw [← h_inv]
+  exact SigmaFinite.withDensity_of_ne_top' fun a ↦ ENNReal.inv_ne_top.2 (hg_pos a)
+
+/-- A σ-finite measure on `α × Ω`, for a nonempty standard Borel space `Ω`, has a unique conditional
+kernel if and only if its first marginal is σ-finite. Without the σ-finiteness of the measure, the
+first marginal need not be σ-finite: see `Counterexamples/CondKernel.lean`. -/
+theorem hasUniqueCondKernel_iff_sigmaFinite_fst {ρ : Measure (α × Ω)} [SigmaFinite ρ]
+    [StandardBorelSpace Ω] [Nonempty Ω] : ρ.HasUniqueCondKernel ↔ SigmaFinite ρ.fst :=
+  ⟨fun h ↦ let ⟨η, _, _⟩ := h.exists_isMarkovKernel_isCondKernel
+    IsCondKernel.sigmaFinite_fst η, fun _ ↦ inferInstance⟩
 
 /-! ### Representatives of the conditional kernel of a measure -/
 
@@ -92,24 +139,27 @@ theorem mem_condKernel_iff_of_isMarkovKernel {ρ : Measure (α × Ω)} [ρ.HasUn
   refine ⟨fun hη ↦ isCondKernel_of_mem_condKernel hη, fun _ ↦ ?_⟩
   exact Kernel.AEClass.mem_of_eventuallyEq hη₀ (HasUniqueCondKernel.ae_eq_of_isCondKernel η₀ η)
 
+/-- A Markov kernel `κ` represents the conditional kernel of `μ ⊗ₘ κ`, when `μ ⊗ₘ κ` has a unique
+conditional kernel, for example when `μ` is σ-finite. -/
+lemma mem_condKernel_compProd (μ : Measure α) (κ : Kernel α Ω) [IsMarkovKernel κ]
+    [(μ ⊗ₘ κ).HasUniqueCondKernel] : κ ∈ (μ ⊗ₘ κ).condKernel :=
+  mem_condKernel_iff_of_isMarkovKernel.2 ⟨inferInstance, by rw [Measure.fst_compProd]⟩
+
 variable [StandardBorelSpace Ω] [Nonempty Ω]
 
-/-- Every finite conditional kernel of `ρ` represents `ρ.condKernel`. -/
+/-- Every finite conditional kernel of a measure `ρ` whose first marginal is σ-finite represents
+`ρ.condKernel`. A unique conditional kernel alone does not suffice for a finite kernel that is not
+Markov: see `Counterexamples/CondKernel.lean`. -/
 theorem IsCondKernel.mem_condKernel {η : Kernel α Ω} [IsFiniteKernel η] [ρ.IsCondKernel η] :
     η ∈ ρ.condKernel := by
   obtain ⟨η₀, _, _, hη₀⟩ := ρ.exists_isMarkovKernel_mem_condKernel
   exact Kernel.AEClass.mem_of_eventuallyEq hη₀ (IsCondKernel.ae_eq η₀ η)
 
-/-- A finite kernel represents `ρ.condKernel` if and only if it disintegrates `ρ`. -/
+/-- A finite kernel represents `ρ.condKernel`, for a measure `ρ` whose first marginal is σ-finite,
+if and only if it disintegrates `ρ`. -/
 theorem mem_condKernel_iff {η : Kernel α Ω} [IsFiniteKernel η] :
     η ∈ ρ.condKernel ↔ ρ.IsCondKernel η :=
   ⟨isCondKernel_of_mem_condKernel, fun _ ↦ IsCondKernel.mem_condKernel⟩
-
-/-- A Markov kernel `κ` represents the conditional kernel of `μ ⊗ₘ κ`. -/
-lemma mem_condKernel_compProd (μ : Measure α) [IsFiniteMeasure μ] (κ : Kernel α Ω)
-    [IsMarkovKernel κ] :
-    κ ∈ (μ ⊗ₘ κ).condKernel :=
-  mem_condKernel_iff.2 ⟨inferInstance, by rw [Measure.fst_compProd]⟩
 
 end MeasureTheory.Measure
 

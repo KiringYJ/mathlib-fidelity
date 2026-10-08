@@ -27,8 +27,8 @@ equal to `(P.map X) ⊗ₘ κ`, the product of the law of `X` under `P` and the 
 ## Main statements
 
 * `ProbabilityTheory.mem_condDistrib_iff_hasCondDistrib`: if `Y` takes values in a nonempty standard
-  Borel space and `P` is finite, a finite kernel `κ` satisfies `HasCondDistrib Y X κ P` exactly when
-  it represents the almost-everywhere class `condDistrib Y X P`.
+  Borel space and the law of `X` is σ-finite, a finite kernel `κ` satisfies `HasCondDistrib Y X κ P`
+  exactly when it represents the almost-everywhere class `condDistrib Y X P`.
 
 -/
 
@@ -85,17 +85,20 @@ lemma HasCondDistrib.hasLaw_of_const [IsProbabilityMeasure P] {Q : Measure 𝓨}
 
 section CondDistrib
 
-variable [StandardBorelSpace 𝓨] [Nonempty 𝓨] [IsFiniteMeasure P]
+variable [StandardBorelSpace 𝓨] [Nonempty 𝓨]
 
 /-- A finite kernel `κ` is a conditional distribution of `Y` given `X` exactly when it represents
-`condDistrib Y X P`. -/
+`condDistrib Y X P`, if the law of `X` is σ-finite. -/
 lemma mem_condDistrib_iff_hasCondDistrib (hXY : AEMeasurable (fun ω ↦ (X ω, Y ω)) P)
-    [IsFiniteKernel κ] : κ ∈ condDistrib Y X P hXY ↔ HasCondDistrib Y X κ P :=
+    [SigmaFinite (P.map X hXY.fst)] [IsFiniteKernel κ] :
+    κ ∈ condDistrib Y X P hXY ↔ HasCondDistrib Y X κ P :=
   ⟨fun h ↦ ⟨hXY, inferInstance, (compProd_map_condDistrib hXY.fst hXY.snd h).symm⟩,
     fun h ↦ mem_condDistrib_of_measure_eq_compProd hXY.fst hXY.snd h.map_eq⟩
 
-/-- A finite conditional distribution of `Y` given `X` represents `condDistrib Y X P`. -/
-lemma HasCondDistrib.mem_condDistrib [IsFiniteKernel κ] (h : HasCondDistrib Y X κ P) :
+/-- A finite conditional distribution of `Y` given `X` represents `condDistrib Y X P`, if the law
+of `X` is σ-finite. -/
+lemma HasCondDistrib.mem_condDistrib [IsFiniteKernel κ] (h : HasCondDistrib Y X κ P)
+    [SigmaFinite (P.map X h.aemeasurable.fst)] :
     κ ∈ condDistrib Y X P h.aemeasurable :=
   (mem_condDistrib_iff_hasCondDistrib h.aemeasurable).2 h
 

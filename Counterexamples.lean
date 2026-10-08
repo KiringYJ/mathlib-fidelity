@@ -5,6 +5,7 @@ public import Counterexamples.CanonicallyOrderedCommSemiringTwoMul
 public import Counterexamples.CharPZeroNeCharZero
 public import Counterexamples.CliffordAlgebraNotInjective
 public import Counterexamples.CondCDF
+public import Counterexamples.CondKernel
 public import Counterexamples.Cyclotomic105
 public import Counterexamples.DimensionPolynomial
 public import Counterexamples.DirectSumIsInternal

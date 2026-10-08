@@ -12,8 +12,8 @@ import Mathlib.Probability.Kernel.Composition.WithDensity
 /-!
 # Condition for two kernels to be equal almost everywhere
 
-We prove that two finite kernels `κ, η : Kernel α β` are `μ`-a.e. equal for a finite measure `μ` iff
-the composition-products `μ ⊗ₘ κ` and `μ ⊗ₘ η` are equal.
+We prove that two finite kernels `κ, η : Kernel α β` are `μ`-a.e. equal for a σ-finite measure `μ`
+iff the composition-products `μ ⊗ₘ κ` and `μ ⊗ₘ η` are equal.
 The result requires `α` to be countable or `β` to be a countably generated measurable space.
 
 ## Main statements
@@ -36,8 +36,9 @@ namespace ProbabilityTheory.Kernel
 
 variable {η : Kernel α β} [SigmaAlgebra.CountableOrCountablyGenerated α β]
 
-lemma ae_eq_of_compProd_eq [IsFiniteMeasure μ] [IsFiniteKernel κ] [IsFiniteKernel η]
-    (h : μ ⊗ₘ κ = μ ⊗ₘ η) :
+/-- The case of `ae_eq_of_compProd_eq` for a finite measure. -/
+private lemma ae_eq_of_compProd_eq_of_isFiniteMeasure [IsFiniteMeasure μ] [IsFiniteKernel κ]
+    [IsFiniteKernel η] (h : μ ⊗ₘ κ = μ ⊗ₘ η) :
     κ =ᵐ[μ] η := by
   have h_ac : ∀ᵐ a ∂μ, κ a ≪ η a := (Measure.absolutelyContinuous_of_eq h).kernel_of_compProd
   have hκ_eq : ∀ᵐ a ∂μ, κ a = η.withDensity (κ.rnDeriv η) a := by
@@ -54,9 +55,25 @@ lemma ae_eq_of_compProd_eq [IsFiniteMeasure μ] [IsFiniteKernel κ] [IsFiniteKer
     fun_prop
   _ = (μ ⊗ₘ η) s := by rw [h]
 
-/-- Two finite kernels `κ` and `η` are `μ`-a.e. equal iff the composition-products `μ ⊗ₘ κ`
-and `μ ⊗ₘ η` are equal. -/
-lemma compProd_eq_iff [IsFiniteMeasure μ] [IsFiniteKernel κ] [IsFiniteKernel η] :
+/-- Two finite kernels whose composition-products with a σ-finite measure `μ` agree are `μ`-a.e.
+equal. Reweighting `μ` by a positive function with a finite integral reduces this to a finite
+measure, since the weight changes neither the null sets nor the equality of the
+composition-products. -/
+lemma ae_eq_of_compProd_eq [SigmaFinite μ] [IsFiniteKernel κ] [IsFiniteKernel η]
+    (h : μ ⊗ₘ κ = μ ⊗ₘ η) :
+    κ =ᵐ[μ] η := by
+  obtain ⟨w, hw_pos, hw, hw_int⟩ := exists_pos_lintegral_lt_of_sigmaFinite μ one_ne_zero
+  have hw' : Measurable fun a ↦ (w a : ℝ≥0∞) := hw.coe_nnreal_ennreal
+  have : IsFiniteMeasure (μ.withDensity fun a ↦ (w a : ℝ≥0∞)) :=
+    isFiniteMeasure_withDensity (hw_int.trans ENNReal.one_lt_top).ne
+  refine (withDensity_absolutelyContinuous' hw'.aemeasurable
+    (ae_of_all _ fun a ↦ ENNReal.coe_ne_zero.2 (hw_pos a).ne')).ae_le
+    (ae_eq_of_compProd_eq_of_isFiniteMeasure ?_)
+  rw [Measure.withDensity_compProd hw', Measure.withDensity_compProd hw', h]
+
+/-- Two finite kernels `κ` and `η` are `μ`-a.e. equal for a σ-finite measure `μ` iff the
+composition-products `μ ⊗ₘ κ` and `μ ⊗ₘ η` are equal. -/
+lemma compProd_eq_iff [SigmaFinite μ] [IsFiniteKernel κ] [IsFiniteKernel η] :
     μ ⊗ₘ κ = μ ⊗ₘ η ↔ κ =ᵐ[μ] η :=
   ⟨Kernel.ae_eq_of_compProd_eq, Measure.compProd_congr⟩
 

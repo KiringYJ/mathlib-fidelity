@@ -897,35 +897,105 @@ operation.
   `MeasureTheory.Measure.HasUniqueCondKernel ρ`: some Markov kernel disintegrates `ρ`, and any two
   agree `ρ.fst`-almost everywhere.  `Measure.condKernel`, `condDistrib` (for the joint law of
   `(X, Y)`), and `posterior` (for the joint law with swapped coordinates, given `μ.HasCompProd κ`)
-  take it, and a finite measure, for a nonempty standard Borel space, has it
-  (`Measure.hasUniqueCondKernel_of_isFiniteMeasure`).  The representative lemmas that hold on the
-  class (`Measure.isCondKernel_of_mem_condKernel`, `Measure.mem_condKernel_iff_of_isMarkovKernel`,
-  and their `condDistrib` versions) take it, and the others keep finite measures, which remain
-  sufficient; `condExpKernel` keeps its finite-measure domain.  Both are recorded in the next entry.
-  Tests are in `MathlibTest/CondKernelStrict.lean`.
+  take it, and a finite measure, for a nonempty standard Borel space, has it; the next entry
+  extends this to a σ-finite first marginal (`Measure.hasUniqueCondKernel_of_sigmaFinite_fst`).  The
+  representative lemmas that hold on the class (`Measure.isCondKernel_of_mem_condKernel`,
+  `Measure.mem_condKernel_iff_of_isMarkovKernel`, and their `condDistrib` versions) take it, and the
+  others kept finite measures, which remain sufficient; the next entry weakens them, and
+  `condExpKernel`, which keeps its finite-measure domain, is recorded after it.  Tests are in
+  `MathlibTest/CondKernelStrict.lean`.
 
-- [ ] **Extend the conditional-kernel domain beyond finite measures.**
-  `MeasureTheory.Measure.HasUniqueCondKernel` has an instance only for finite measures.  A measure
-  with a σ-finite first marginal has a unique conditional kernel: weighting `ρ` by `w ∘ Prod.fst`
-  for a positive `w` with finite integral reduces existence to the finite case, and uniqueness
-  follows from `ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite`.  Within σ-finite measures the
-  condition is necessary: if `κ` disintegrates `ρ` and `f > 0` has a finite integral, then
-  `a ↦ ∫⁻ ω, f (a, ω) ∂(κ a)` is positive with a finite integral against the marginal.  Prove the
-  instance and the analogous ones for `condDistrib` (`SigmaFinite (μ.map X)`) and `posterior`
-  (`SigmaFinite (κ ∘ₘ μ)`, which admits improper priors), and weaken the finite-measure hypotheses
-  of the representative lemmas in `Mathlib/Probability/Kernel/Disintegration/Unique.lean`,
-  `Mathlib/Probability/Kernel/CondDistrib.lean`, and `Mathlib/Probability/Kernel/Posterior.lean`.
-  Give `condExpKernel` the class of its diagonal law along the sub-σ-algebra, which needs an
-  interface for that law; instance search does not find finiteness of a map into the σ-algebra
-  `m.prod mΩ` (`ProbabilityTheory.hasUniqueCondKernel_map_diag` supplies it by hand).  The marginal
-  condition is not necessary in general: `∞ • dirac ((), 0)` on `Unit × ℝ` has the unique Markov
-  disintegration `dirac 0`; `∞ • (dirac () ⊗ (½δ₀ + ½δ₁))` has disintegrations that differ on a set
-  of positive marginal measure; and planar Lebesgue measure has none, since it gives `[0, 1]²` mass
-  `1` while its marginal takes only the values `0` and `∞`.  Conversely, on `ℝ × ℝ` the sum over
-  `a : ℝ` of `(dirac a).prod (gaussianReal 0 1)`, plus the image of Lebesgue measure on `[0, 1]`
-  under `(·, 0)`, has a unique conditional cdf but no disintegration, since it gives `univ ×ˢ {0}`
-  mass one, so the conditional-cdf and conditional-kernel domains are incomparable.  Formalize these
-  as counterexamples.
+- [x] **Extend the conditional-kernel domain beyond finite measures.**
+  `MeasureTheory.Measure.HasUniqueCondKernel ρ` has the instance
+  `Measure.hasUniqueCondKernel_of_sigmaFinite_fst` for a measure whose first marginal is σ-finite,
+  for a nonempty standard Borel space; it replaces the instance for finite measures.  Weighting `ρ`
+  by `w ∘ Prod.fst` for a positive `w` with a finite `ρ.fst`-integral gives a finite measure
+  (`Measure.fst_withDensity_fst`, `Measure.isFiniteMeasure_withDensity_fst`), a Markov kernel that
+  disintegrates it disintegrates `ρ` once the weight is divided out
+  (`Measure.eq_of_withDensity_eq`, `Measure.exists_isMarkovKernel_isCondKernel`), and the same
+  weighting shows that two finite kernels whose composition-products with a σ-finite measure agree
+  are equal almost everywhere (`ProbabilityTheory.Kernel.ae_eq_of_compProd_eq`,
+  `Kernel.compProd_eq_iff`).  Instances supply the σ-finiteness of the first marginal of a
+  composition-product of a σ-finite measure with a Markov kernel
+  (`Measure.sigmaFinite_fst_compProd`), of the joint law of `(X, Y)` when the law of `X` is σ-finite
+  (`Measure.sigmaFinite_fst_map_prodMk`), and of the joint law with swapped coordinates when the law
+  `κ ∘ₘ μ` of the data is σ-finite (`ProbabilityTheory.sigmaFinite_fst_map_swap_compProd`, which
+  admits infinite priors), so that these laws have unique conditional kernels and, for real values,
+  unique conditional cdfs.  Within σ-finite measures the condition is necessary
+  (`Measure.IsCondKernel.sigmaFinite_fst`, `Measure.hasUniqueCondKernel_iff_sigmaFinite_fst`).  The
+  representative lemmas that hold on the class take it: `Measure.mem_condKernel_compProd`,
+  `compProd_map_condDistrib`, `condDistrib_comp_map`, and the posterior lemmas
+  `mem_posterior_iff_mem_condKernel`, `exists_isMarkovKernel_mem_posterior`,
+  `compProd_posterior_eq_map_swap`, `compProd_posterior_eq_swap_comp`, and `posterior_comp_self`.
+  The lemmas about a finite representative need more than the class, since a finite kernel that is
+  not Markov can disintegrate a measure with a unique conditional kernel without representing it;
+  they take the σ-finite laws instead of finite measures: `Measure.IsCondKernel.ae_eq_apply`,
+  `Measure.IsCondKernel.ae_eq`, `Measure.IsCondKernel.mem_condKernel`, `Measure.mem_condKernel_iff`,
+  `mem_condDistrib_of_measure_eq_compProd`, `mem_condDistrib_iff`,
+  `mem_condDistrib_iff_hasCondDistrib`, `HasCondDistrib.mem_condDistrib`,
+  `mem_posterior_of_compProd_eq`, `mem_posterior_iff`, and `mem_posterior_of_compProd_eq_swap_comp`.
+  The following also take a σ-finite law instead of a finite measure, although they need less (next
+  entry): `Measure.IsCondKernel.apply_of_ne_zero`, `Measure.IsCondKernel.isProbabilityMeasure`,
+  `Measure.IsCondKernel.isMarkovKernel`, `condDistrib_apply_of_ne_zero`, and the Markov-kernel
+  lemmas `map_mem_condDistrib_comp`, `deterministic_mem_condDistrib_comp_self`,
+  `id_mem_condDistrib_self`, and `deterministic_mem_condDistrib_const`.  The condition is not
+  necessary in general, and without it a disintegration need not be unique or exist;
+  `Counterexamples/CondKernel.lean` formalizes the examples, with Gaussian fibers in place of
+  `½δ₀ + ½δ₁` in the second, and with counting measure composed with a constant kernel for the
+  uncountable sum of Dirac products, which is the same measure, in the fourth.
+  `∞ • dirac ((), 0)` on `Unit × ℝ` has the unique Markov disintegration
+  `dirac 0` but no unique conditional cdf, and the finite kernel `2 • dirac 0` disintegrates it
+  without representing its conditional kernel.  The constant kernels of `gaussianReal 0 1` and
+  `gaussianReal 1 1` both disintegrate `(∞ • dirac ()) ⊗ₘ Kernel.const Unit (gaussianReal 0 1)` and
+  differ at the only point, which has infinite mass.  No kernel disintegrates planar Lebesgue
+  measure, which gives `[0, 1]²` mass `1` while every integral against its marginal is `0` or `∞`.
+  The composition-product of counting measure on `ℝ` with `Kernel.const ℝ (gaussianReal 0 1)`, plus
+  the image of Lebesgue measure on `[0, 1]` under `(·, 0)`, has a unique conditional cdf but no
+  disintegration, since it gives `univ ×ˢ {0}` mass one; with the first example, the domains of the
+  conditional cdf and of the conditional kernel are incomparable.  The remaining finite-measure
+  lemmas are recorded in the next entry, and `condExpKernel` in the one after it.  Tests are in
+  `MathlibTest/CondKernelSigmaFinite.lean`.
+
+- [ ] **Weaken the remaining finite-measure hypotheses around conditional kernels.**
+  Some lemmas in the files of the previous entry still take finite measures or stronger hypotheses
+  than they need.  `condDistrib_congr`, `condDistrib_congr_right`, `condDistrib_congr_left`,
+  `condDistrib_congr_measure`, `condDistrib_map`, `condDistrib_fst_prod`, and `condDistrib_snd_prod`
+  in `Mathlib/Probability/Kernel/CondDistrib.lean` transport membership between two joint laws; they
+  can take the class of both laws as instance arguments, as `Measure.mem_condKernel_congr` does.
+  `setLIntegral_preimage_condDistrib` and `setLIntegral_condDistrib_of_measurableSet` hold on the
+  class of the joint law alone.  The Markov-kernel lemmas `map_mem_condDistrib_comp`,
+  `deterministic_mem_condDistrib_comp_self`, `id_mem_condDistrib_self`, and
+  `deterministic_mem_condDistrib_const` need only the class of the joint law, with
+  `SFinite (μ.map X)` for `Measure.compProd_deterministic`, through
+  `Measure.mem_condKernel_iff_of_isMarkovKernel`; they now take a σ-finite law of `X`.
+  `Measure.IsCondKernel.apply_of_ne_zero`, `Measure.IsCondKernel.isProbabilityMeasure`, and
+  `condDistrib_apply_of_ne_zero` need only `ρ.fst {x} ≠ ∞` at the point, and
+  `Measure.IsCondKernel.isMarkovKernel` the same at every point; they now take a σ-finite first
+  marginal, which excludes `countOnAxis` in `Counterexamples/CondCDF.lean`, whose singletons have
+  marginal mass `1`.  `id_mem_posterior_id` in
+  `Mathlib/Probability/Kernel/Posterior.lean` needs `SigmaFinite (Kernel.id ∘ₘ μ)`, which instance
+  search does not derive from `SigmaFinite μ`.  The remaining posterior lemmas, from
+  `swap_compProd_posterior` and `parallelProd_posterior_comp_copy_comp` to the Radon-Nikodym
+  statements, keep a finite measure and a finite kernel, and so do the integrability and
+  Bochner-integral statements of `CondDistrib.lean` and the `Integral` section of the
+  `MeasureTheory.Measure` namespace and the final section of
+  `Mathlib/Probability/Kernel/Disintegration/Integral.lean`; determine for each whether the class,
+  a σ-finite law, or a finite measure is its exact hypothesis.
+
+- [ ] **Give `condExpKernel` the class of its diagonal law.**
+  `ProbabilityTheory.condExpKernel μ hm` in `Mathlib/Probability/Kernel/Condexp.lean` takes
+  `[IsFiniteMeasure μ]`.  Its specification needs only that the diagonal law
+  `μ.map (fun ω ↦ (ω, ω))`, into `Ω × Ω` with the σ-algebra `m.prod mΩ`, has a unique conditional
+  kernel; the first marginal of this law is `μ.trim hm`, so this holds when `μ.trim hm` is σ-finite
+  and `Ω` is a nonempty standard Borel space.  Instance search does not find this:
+  `Measure.isFiniteMeasure_map` takes the σ-algebra of the codomain as an instance argument, so it
+  synthesizes `mΩ.prod mΩ` instead of `m.prod mΩ`, and `Measure.sigmaFinite_fst_map_prodMk` does not
+  fire on the diagonal law either, while an explicit application works
+  (`ProbabilityTheory.hasUniqueCondKernel_map_diag` supplies the class by hand).  So the class needs
+  a named diagonal law or an instance stated for it.  The empty type needs a decision: the σ-finite
+  instance requires `[Nonempty Ω]`, while `condExpKernel` is defined for every `Ω`.  The consumers
+  in `Mathlib/Probability/Independence/` and `Mathlib/Probability/Moments/SubGaussian.lean` use
+  finite measures.
 
 - [x] **Give parametric distributions their parameter domains.**
   `gammaMeasure a r ha hr`, `expMeasure r hr`, `paretoMeasure t r ht hr`, and

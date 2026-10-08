@@ -151,6 +151,12 @@ lemma fst_compProd (μ : Measure α) (κ : Kernel α β) [IsMarkovKernel κ] :
     by_cases ha : a ∈ s <;> simp [ha]
   simp_rw [h_eq, lintegral_indicator_one hs]
 
+/-- The first marginal of the composition-product of a σ-finite measure with a Markov kernel is
+σ-finite, since it is the measure (`MeasureTheory.Measure.fst_compProd`). -/
+instance sigmaFinite_fst_compProd (μ : Measure α) [SigmaFinite μ] (κ : Kernel α β)
+    [IsMarkovKernel κ] : SigmaFinite (μ ⊗ₘ κ).fst := by
+  rwa [fst_compProd]
+
 /-- Against counting measure on a space with measurable singletons, the value of a
 composition-product on a measurable set is the sum of the measures of the sections. -/
 lemma count_compProd_apply [MeasurableSingletonClass α] {s : Set (α × β)} (hs : MeasurableSet s) :
