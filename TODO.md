@@ -1202,17 +1202,22 @@ operation.
   separated, the extension and its uniqueness, `map_congr`, and the absence of negation, addition,
   subtraction, scalar action, and norm without their structures.
 
-- [ ] **Give the completion multiplication its domain.**
+- [ ] **Give the completion multiplication and inverse their domains.**
   `UniformSpace.Completion.mul` in `Mathlib/Topology/Algebra/UniformRing.lean` is an instance for
   every `[Ring α] [UniformSpace α]`.  It is defined through `IsDenseInducing.extend`, whose limit
   choice gives fallback values where multiplication does not extend continuously; `coe_mul` needs
   `[IsTopologicalRing α]`, and the continuity of the extended multiplication and the ring structure
-  on the completion need `[IsUniformAddGroup α]` as well.  Restrict the instance to a topological
-  ring with a uniform additive group, where it is the continuous extension of multiplication, and
-  migrate the consumers.  Conversely, negation, addition, and subtraction on `Completion α` need
-  `[IsUniformAddGroup α]` although uniform continuity of the operation suffices; no class expresses
-  uniformly continuous addition on a uniform additive monoid, and no consumer needs one.  If one is
-  introduced, give these operations the weaker hypothesis.
+  on the completion need `[IsUniformAddGroup α]` as well.  Likewise
+  `UniformSpace.Completion.instInvCompletion` in `Mathlib/Topology/Algebra/UniformField.lean` is an
+  instance for every `[Field K] [UniformSpace K]`, through `hatInv`, the `IsDenseInducing.extend` of
+  inversion; it is the continuous extension of inversion away from zero only for a completable
+  topological field (`coe_inv`, `continuous_hatInv`).  Restrict the multiplication to a
+  topological ring with a uniform additive group and the inverse to a completable topological field,
+  where they are the continuous extensions, and migrate the consumers.  Conversely, negation,
+  addition, and subtraction on `Completion α` need `[IsUniformAddGroup α]` although uniform
+  continuity of the operation suffices; no class expresses uniformly continuous addition on a
+  uniform additive monoid, and no consumer needs one.  If one is introduced, give these operations
+  the weaker hypothesis.
 
 - [x] **Make vector-measure products and densities conditional constructions.**
   `VectorMeasure.prod μ ν B` takes `[HasProd μ ν B]`: a vector measure with `B (μ s) (ν t)` on the
