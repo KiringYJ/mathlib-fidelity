@@ -50,6 +50,10 @@ disintegration (`MeasureTheory.Measure.IsCondKernel.sigmaFinite_fst`).
   conditional kernel.
 * `MeasureTheory.Measure.HasUniqueCondKernel.smul`: scaling a measure by a finite constant keeps a
   unique conditional kernel.
+* `MeasureTheory.Measure.ae_apply_eq_zero_or_one_of_mem_condKernel`: for a measure with a unique
+  conditional kernel, a representative of the conditional kernel gives each measurable set mass `0`
+  or `1` almost everywhere on a measurable set on whose measurable subsets the first marginal is `0`
+  or `∞`.
 -/
 
 public section
@@ -346,6 +350,109 @@ instance HasUniqueCondKernel.smul_nnreal {ρ : Measure (α × Ω)} [ρ.HasUnique
     (c • ρ).HasUniqueCondKernel := by
   rw [← coe_nnreal_smul]
   exact HasUniqueCondKernel.smul ENNReal.coe_ne_top
+
+/-- The statement of `MeasureTheory.Measure.ae_apply_eq_zero_or_one_of_mem_condKernel` for a
+Markov disintegration. -/
+private lemma ae_apply_eq_zero_or_one_of_isCondKernel {ρ : Measure (α × Ω)}
+    [ρ.HasUniqueCondKernel] {η : Kernel α Ω} [IsMarkovKernel η] [ρ.IsCondKernel η] {B : Set α}
+    (hB : MeasurableSet B) (hρB : ∀ t ⊆ B, MeasurableSet t → ρ.fst t = 0 ∨ ρ.fst t = ∞)
+    {s : Set Ω} (hs : MeasurableSet s) :
+    ∀ᵐ a ∂ρ.fst, a ∈ B → η a s = 0 ∨ η a s = 1 := by
+  classical
+  have hp : Measurable fun a ↦ η a s := η.measurable_coe hs
+  set C : Set α := B ∩ {a | 0 < η a s ∧ η a s < 1}
+  have hC : MeasurableSet C :=
+    hB.inter ((measurableSet_lt measurable_const hp).inter (measurableSet_lt hp measurable_const))
+  have hρC (t : Set α) (ht : MeasurableSet t) :
+      ρ.fst.restrict C t = 0 ∨ ρ.fst.restrict C t = ∞ := by
+    rw [restrict_apply ht]
+    exact hρB _ (inter_subset_right.trans inter_subset_left) (ht.inter hC)
+  set g : α → Ω → ℝ≥0∞ := fun a ω ↦
+    if a ∈ C then (if ω ∈ s then 2⁻¹ else (1 - η a s / 2) / (1 - η a s)) else 1 with hg_def
+  have hg : Measurable (Function.uncurry g) := by
+    refine Measurable.ite (hC.preimage measurable_fst)
+      (Measurable.ite (hs.preimage measurable_snd) measurable_const ?_) measurable_const
+    exact ((measurable_const.sub (hp.div_const 2)).div (measurable_const.sub hp)).comp
+      measurable_fst
+  have hg_ne (a : α) (ω : Ω) : g a ω ≠ 0 := by
+    simp only [hg_def]
+    split_ifs with ha hω
+    · simp
+    · refine ENNReal.div_ne_zero.2 ⟨(tsub_pos_of_lt ?_).ne', ENNReal.sub_ne_top ENNReal.one_ne_top⟩
+      exact ENNReal.half_le_self.trans_lt ha.2.2
+    · simp
+  set η' : Kernel α Ω := η.withDensity g
+  have hη' (a : α) : η' a = (η a).withDensity (g a) := Kernel.withDensity_apply η hg a
+  have hg_a (a : α) : Measurable (g a) := hg.comp measurable_prodMk_left
+  have h_mass (a : α) (ha : a ∈ C) : η' a s = 2⁻¹ * η a s := by
+    rw [hη', withDensity_apply _ hs,
+      setLIntegral_congr_fun (g := fun _ ↦ 2⁻¹) hs (fun ω hω ↦ by simp [hg_def, ha, hω]),
+      setLIntegral_const]
+  have : IsMarkovKernel η' := ⟨fun a ↦ ⟨by
+    rw [hη', withDensity_apply _ MeasurableSet.univ, Measure.restrict_univ]
+    by_cases ha : a ∈ C
+    · have h1 : η a s < 1 := ha.2.2
+      rw [← lintegral_add_compl _ hs,
+        setLIntegral_congr_fun (g := fun _ ↦ 2⁻¹) hs (fun ω hω ↦ by simp [hg_def, ha, hω]),
+        setLIntegral_congr_fun (g := fun _ ↦ (1 - η a s / 2) / (1 - η a s)) hs.compl
+          (fun ω hω ↦ by simp [hg_def, ha, notMem_of_mem_compl hω]),
+        setLIntegral_const, setLIntegral_const, prob_compl_eq_one_sub hs,
+        ENNReal.div_mul_cancel (tsub_pos_of_lt h1).ne' (ENNReal.sub_ne_top ENNReal.one_ne_top),
+        ← ENNReal.div_eq_inv_mul, add_tsub_cancel_of_le (ENNReal.half_le_self.trans h1.le)]
+    · simp [hg_def, ha]⟩⟩
+  have h_null (a : α) {t : Set Ω} : η' a t = 0 ↔ η a t = 0 := by
+    rw [hη', withDensity_apply_eq_zero' (hg_a a).aemeasurable]
+    simp [hg_ne]
+  have h_off (a : α) (ha : a ∉ C) : η' a = η a := by
+    rw [hη']
+    simp [hg_def, ha]
+  -- The integrals over `C` are the measures of the supports, so the reweighting is a
+  -- disintegration.
+  have h_cp : ρ.fst ⊗ₘ η' = ρ.fst ⊗ₘ η := by
+    ext S hS
+    have h_supp : Function.support (fun a ↦ η' a (Prod.mk a ⁻¹' S)) =
+        Function.support (fun a ↦ η a (Prod.mk a ⁻¹' S)) := by
+      ext a
+      simp only [Function.mem_support, ne_eq, h_null]
+    rw [compProd_apply hS, compProd_apply hS,
+      ← lintegral_add_compl (fun a ↦ η' a (Prod.mk a ⁻¹' S)) hC,
+      ← lintegral_add_compl (fun a ↦ η a (Prod.mk a ⁻¹' S)) hC,
+      lintegral_eq_measure_support_of_zero_or_top
+        (Kernel.measurable_kernel_prodMk_left (κ := η') hS).aemeasurable hρC,
+      lintegral_eq_measure_support_of_zero_or_top
+        (Kernel.measurable_kernel_prodMk_left (κ := η) hS).aemeasurable hρC, h_supp]
+    congr 1
+    exact setLIntegral_congr_fun hC.compl (fun a ha ↦ by rw [h_off a ha])
+  have : ρ.IsCondKernel η' := ⟨inferInstance, by rw [h_cp]; exact ρ.disintegrate η⟩
+  filter_upwards [HasUniqueCondKernel.ae_eq_of_isCondKernel η η'] with a ha haB
+  by_contra h
+  have h1 : η a s ≤ 1 := prob_le_one
+  have haC : a ∈ C := ⟨haB, pos_iff_ne_zero.2 fun h0 ↦ h (Or.inl h0),
+    lt_of_le_of_ne h1 fun h1' ↦ h (Or.inr h1')⟩
+  have h_eq := congrArg (fun ν : Measure Ω ↦ ν s) ha
+  rw [h_mass a haC, ← ENNReal.div_eq_inv_mul] at h_eq
+  exact (ENNReal.half_lt_self haC.2.1.ne' (ne_top_of_le_ne_top ENNReal.one_ne_top h1)).ne h_eq.symm
+
+/-- For a measure with a unique conditional kernel, every representative of the conditional kernel
+gives each measurable set mass `0` or `1` at almost every point of a measurable set `B` on whose
+measurable subsets the first marginal takes only the values `0` and `∞`. There the integral of a
+measurable function against the first marginal is the measure of its support
+(`MeasureTheory.lintegral_eq_measure_support_of_zero_or_top`), so reweighting a Markov
+disintegration at the points of `B` where the mass of the set lies strictly between `0` and `1`
+keeps its null sets, hence the disintegration, and changes the mass, which the uniqueness of the
+conditional kernel forbids on a set of positive measure. A disintegration that is not a
+probability measure almost everywhere can take other values: the constant kernel of
+`2 • dirac true` disintegrates `(∞ • dirac ()) ⊗ₘ Kernel.const Unit (dirac true)`. -/
+lemma ae_apply_eq_zero_or_one_of_mem_condKernel {ρ : Measure (α × Ω)} [ρ.HasUniqueCondKernel]
+    {η : Kernel α Ω} (hη : η ∈ ρ.condKernel) {B : Set α} (hB : MeasurableSet B)
+    (hρB : ∀ t ⊆ B, MeasurableSet t → ρ.fst t = 0 ∨ ρ.fst t = ∞) {s : Set Ω}
+    (hs : MeasurableSet s) :
+    ∀ᵐ a ∂ρ.fst, a ∈ B → η a s = 0 ∨ η a s = 1 := by
+  obtain ⟨η₀, _, _, hη₀⟩ := ρ.exists_isMarkovKernel_mem_condKernel
+  filter_upwards [ae_apply_eq_zero_or_one_of_isCondKernel (η := η₀) hB hρB hs,
+    Kernel.AEClass.eventuallyEq_of_mem hη hη₀] with a ha h_eq haB
+  rw [h_eq]
+  exact ha haB
 
 end MeasureTheory.Measure
 

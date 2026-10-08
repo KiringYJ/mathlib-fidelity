@@ -328,32 +328,140 @@ lemma condExpKernel_ae_eq_trim_condExp [SigmaFinite (μ.trim hm)] [IsMarkovKerne
     stronglyMeasurable_condExp]
   exact condExpKernel_ae_eq_condExp hη hs hμs
 
-/-- If the law of `Y` is σ-finite, a representative of the conditional distribution of `X` given
-`Y`, composed with `Y`, agrees almost everywhere with the image under `X` of a representative of
-`condExpKernel μ hY.comap_le` on every measurable set: both are measurable with respect to
-`mγ.comap Y`, with the integral `μ (t ∩ X ⁻¹' s)` over each of its sets `t`. -/
+/-- A representative of the conditional distribution of `X` given `Y`, composed with `Y`, and the
+image under `X` of a representative of `condExpKernel μ hY.comap_le` have the same integral
+`μ (t ∩ X ⁻¹' s)` over each set `t` of `mγ.comap Y`. -/
+private lemma setLIntegral_condDistrib_eq_setLIntegral_condExpKernel {β γ : Type*}
+    {mβ : SigmaAlgebra β} {mγ : SigmaAlgebra γ} {X : Ω → β} {Y : Ω → γ} (hX : Measurable X)
+    (hY : Measurable Y)
+    [(μ.map (fun a => (Y a, X a)) (hY.aemeasurable.prodMk hX.aemeasurable)).HasUniqueCondKernel]
+    {η₁ : Kernel γ β} (hη₁ : η₁ ∈ condDistrib X Y μ (hY.aemeasurable.prodMk hX.aemeasurable))
+    [(condExpJointLaw μ hY.comap_le).HasUniqueCondKernel]
+    {η₂ : @Kernel Ω Ω (mγ.comap Y) mΩ} (hη₂ : η₂ ∈ condExpKernel μ hY.comap_le) {t : Set Ω}
+    (ht : t ∈ mγ.comap Y) {s : Set β} (hs : MeasurableSet s) :
+    ∫⁻ a in t, η₁ (Y a) s ∂μ = ∫⁻ a in t, η₂ a (X ⁻¹' s) ∂μ := by
+  have := hasUniqueCondKernel_map_id_id (μ := μ) (hm := hY.comap_le)
+  rw [setLIntegral_condDistrib_of_measurableSet hY hX.aemeasurable hη₁ hs ht]
+  have h := setLIntegral_condDistrib_of_measurableSet (μ := μ) (mβ := mγ.comap Y) (X := id)
+    (Y := id) (measurable_id'' hY.comap_le) aemeasurable_id
+    (mem_condExpKernel_iff_mem_condDistrib.1 hη₂) (hX hs) (t := t) ⟨t, ht, rfl⟩
+  simpa using h.symm
+
+/-- For Markov representatives, the set where the image under `X` of a representative of
+`condExpKernel μ hY.comap_le` falls short of the conditional distribution of `X` given `Y`,
+composed with `Y`, by more than `ε ≠ 0` is null. The integrals of the two over the sets of
+`mγ.comap Y` inside it agree, so these sets have measure `0` or `∞`; the class of the joint law of
+`Y` and `X` then makes the conditional distribution `0` or `1` there almost everywhere, hence `1`,
+and the integrals of the complements make the other `1` too. -/
+private lemma measure_condExpKernel_add_lt_condDistrib_eq_zero {β γ : Type*}
+    {mβ : SigmaAlgebra β} {mγ : SigmaAlgebra γ} {X : Ω → β} {Y : Ω → γ} (hX : Measurable X)
+    (hY : Measurable Y)
+    [(μ.map (fun a => (Y a, X a)) (hY.aemeasurable.prodMk hX.aemeasurable)).HasUniqueCondKernel]
+    {η₁ : Kernel γ β} [IsMarkovKernel η₁]
+    (hη₁ : η₁ ∈ condDistrib X Y μ (hY.aemeasurable.prodMk hX.aemeasurable))
+    [(condExpJointLaw μ hY.comap_le).HasUniqueCondKernel]
+    {η₂ : @Kernel Ω Ω (mγ.comap Y) mΩ} [IsMarkovKernel η₂] (hη₂ : η₂ ∈ condExpKernel μ hY.comap_le)
+    {s : Set β} (hs : MeasurableSet s) {ε : ℝ≥0∞} (hε : ε ≠ 0) :
+    μ {a | η₂ a (X ⁻¹' s) + ε < η₁ (Y a) s} = 0 := by
+  set E : Set Ω := {a | η₂ a (X ⁻¹' s) + ε < η₁ (Y a) s}
+  have hE' : E ∈ mγ.comap Y := measurableSet_lt ((η₂.measurable_coe (hX hs)).add_const ε)
+    ((η₁.measurable_coe hs).comp (comap_measurable Y))
+  have hEm : MeasurableSet E := hY.comap_le hE'
+  obtain ⟨B, hB, hBE⟩ := hE'
+  have hη₁' := (mem_condDistrib_iff_mem_condKernel (hY.aemeasurable.prodMk hX.aemeasurable)).1 hη₁
+  set ρ := μ.map (fun a ↦ (Y a, X a)) (hY.aemeasurable.prodMk hX.aemeasurable)
+  have hρ : ρ.fst = μ.map Y hY.aemeasurable :=
+    Measure.fst_map_prodMk₀ hY.aemeasurable hX.aemeasurable
+  -- Every measurable subset of `B` has measure `0` or `∞` for the law of `Y`.
+  have h_zt : ∀ B' ⊆ B, MeasurableSet B' → ρ.fst B' = 0 ∨ ρ.fst B' = ∞ := by
+    intro B' hB'B hB'
+    rw [hρ, Measure.map_apply hB' hY.aemeasurable]
+    by_contra h
+    rw [not_or] at h
+    have hAE : Y ⁻¹' B' ⊆ E := hBE ▸ preimage_mono hB'B
+    have h_ge : ∫⁻ a in Y ⁻¹' B', η₂ a (X ⁻¹' s) ∂μ + ε * μ (Y ⁻¹' B') ≤
+        ∫⁻ a in Y ⁻¹' B', η₁ (Y a) s ∂μ := by
+      rw [← setLIntegral_const, ← lintegral_add_right _ measurable_const]
+      exact setLIntegral_mono ((η₁.measurable_coe hs).comp hY) fun a ha ↦ (hAE ha).le
+    have h_fin : ∫⁻ a in Y ⁻¹' B', η₂ a (X ⁻¹' s) ∂μ ≠ ∞ := by
+      refine ne_top_of_le_ne_top h.2 ?_
+      calc ∫⁻ a in Y ⁻¹' B', η₂ a (X ⁻¹' s) ∂μ ≤ ∫⁻ _ in Y ⁻¹' B', 1 ∂μ :=
+            lintegral_mono fun a ↦ prob_le_one
+        _ = μ (Y ⁻¹' B') := setLIntegral_one _
+    rw [setLIntegral_condDistrib_eq_setLIntegral_condExpKernel hX hY hη₁ hη₂ ⟨B', hB', rfl⟩
+      hs] at h_ge
+    exact absurd h_ge (not_le.2 (ENNReal.lt_add_right h_fin (mul_ne_zero hε h.1)))
+  -- So the conditional distribution is `1` almost everywhere on `E`.
+  have h01 := Measure.ae_apply_eq_zero_or_one_of_mem_condKernel hη₁' hB h_zt hs
+  rw [hρ] at h01
+  have hu : ∀ᵐ a ∂μ, a ∈ E → η₁ (Y a) sᶜ = 0 := by
+    filter_upwards [ae_of_ae_map hY.aemeasurable h01] with a ha haE
+    have haB : Y a ∈ B := by rw [← hBE] at haE; exact haE
+    rcases ha haB with h0 | h1
+    · have : η₂ a (X ⁻¹' s) + ε < 0 := h0 ▸ haE
+      exact absurd this (not_lt.2 zero_le)
+    · rw [prob_compl_eq_one_sub hs, h1, tsub_self]
+  -- The integral over `E` of the mass of `X ⁻¹' sᶜ` vanishes, so the other is `1` there too.
+  have hv : ∀ᵐ a ∂μ, a ∈ E → η₂ a (X ⁻¹' sᶜ) = 0 := by
+    have h := setLIntegral_condDistrib_eq_setLIntegral_condExpKernel hX hY hη₁ hη₂
+      ⟨B, hB, hBE⟩ hs.compl
+    rw [setLIntegral_congr_fun_ae (g := fun _ ↦ 0) hEm hu, lintegral_zero] at h
+    exact (setLIntegral_eq_zero_iff hEm
+      ((η₂.measurable_coe (hX hs.compl)).mono hY.comap_le le_rfl)).1 h.symm
+  refine measure_eq_zero_iff_ae_notMem.2 ?_
+  filter_upwards [hv] with a ha haE
+  have hv1 : η₂ a (X ⁻¹' s) = 1 := by
+    have ha' := ha haE
+    rw [preimage_compl, prob_compl_eq_one_sub (hX hs)] at ha'
+    exact le_antisymm prob_le_one (tsub_eq_zero_iff_le.1 ha')
+  have h_lt : η₂ a (X ⁻¹' s) + ε < η₁ (Y a) s := haE
+  rw [hv1] at h_lt
+  exact absurd (h_lt.trans_le prob_le_one) (not_lt.2 le_self_add)
+
+/-- A representative of the conditional distribution of `X` given `Y`, composed with `Y`, agrees
+almost everywhere with the image under `X` of a representative of `condExpKernel μ hY.comap_le` on
+every measurable set, for every measure for which the two joint laws have unique conditional
+kernels. Both functions are measurable with respect to `mγ.comap Y`, with the integral
+`μ (t ∩ X ⁻¹' s)` over each of its sets `t`. These integrals determine them almost everywhere for a
+σ-finite law of `Y`; in general, the sets where one exceeds the other by more than `ε ≠ 0` are
+null, since the class of the joint law of `Y` and `X` makes the conditional distribution `0` or `1`
+almost everywhere on a set on whose measurable subsets the law of `Y` is `0` or `∞`
+(`MeasureTheory.Measure.ae_apply_eq_zero_or_one_of_mem_condKernel`). -/
 lemma condDistrib_apply_ae_eq_condExpKernel_map {β γ : Type*} {mβ : SigmaAlgebra β}
     {mγ : SigmaAlgebra γ} {X : Ω → β} {Y : Ω → γ} (hX : Measurable X) (hY : Measurable Y)
-    [SigmaFinite (μ.map Y hY.aemeasurable)] {s : Set β} (hs : MeasurableSet s)
+    {s : Set β} (hs : MeasurableSet s)
     [(μ.map (fun a => (Y a, X a)) (hY.aemeasurable.prodMk hX.aemeasurable)).HasUniqueCondKernel]
     {η₁ : Kernel γ β} (hη₁ : η₁ ∈ condDistrib X Y μ (hY.aemeasurable.prodMk hX.aemeasurable))
     [(condExpJointLaw μ hY.comap_le).HasUniqueCondKernel]
     {η₂ : @Kernel Ω Ω (mγ.comap Y) mΩ} (hη₂ : η₂ ∈ condExpKernel μ hY.comap_le) :
     (fun a ↦ η₁ (Y a) s) =ᵐ[μ] fun a ↦ η₂.map X hX a s := by
-  have := sigmaFinite_trim_comap (μ := μ) hY
-  have := hasUniqueCondKernel_map_id_id (μ := μ) (hm := hY.comap_le)
-  simp_rw [Kernel.map_apply' _ _ hs hX]
-  have h₁ : Measurable[mγ.comap Y] fun a ↦ η₁ (Y a) s :=
-    (η₁.measurable_coe hs).comp (comap_measurable Y)
-  have h₂ : Measurable[mγ.comap Y] fun a ↦ η₂ a (X ⁻¹' s) := η₂.measurable_coe (hX hs)
-  refine ae_of_ae_trim hY.comap_le (ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite h₁ h₂
-    fun t ht _ ↦ ?_)
-  rw [setLIntegral_trim hY.comap_le h₁ ht, setLIntegral_trim hY.comap_le h₂ ht,
-    setLIntegral_condDistrib_of_measurableSet hY hX.aemeasurable hη₁ hs ht]
-  have h := setLIntegral_condDistrib_of_measurableSet (μ := μ) (mβ := mγ.comap Y) (X := id)
-    (Y := id) (measurable_id'' hY.comap_le) aemeasurable_id
-    (mem_condExpKernel_iff_mem_condDistrib.1 hη₂) (hX hs) (t := t) ⟨t, ht, rfl⟩
-  simpa using h.symm
+  obtain ⟨η₁₀, _, hη₁₀⟩ := exists_isMarkovKernel_mem_condDistrib (μ := μ) (X := Y) (Y := X)
+    (hY.aemeasurable.prodMk hX.aemeasurable)
+  obtain ⟨η₂₀, _, hη₂₀⟩ := exists_isMarkovKernel_mem_condExpKernel μ hY.comap_le
+  have h₁ : (fun a ↦ η₁ (Y a) s) =ᵐ[μ] fun a ↦ η₁₀ (Y a) s := by
+    filter_upwards [ae_of_ae_map hY.aemeasurable
+      (Kernel.AEClass.eventuallyEq_of_mem hη₁ hη₁₀)] with a ha
+    rw [ha]
+  have h₂ : (fun a ↦ η₂.map X hX a s) =ᵐ[μ] fun a ↦ η₂₀ a (X ⁻¹' s) := by
+    filter_upwards [ae_of_ae_trim hY.comap_le
+      (Kernel.AEClass.eventuallyEq_of_mem hη₂ hη₂₀)] with a ha
+    rw [Kernel.map_apply' _ _ hs hX, ha]
+  refine h₁.trans (Filter.EventuallyEq.trans ?_ h₂.symm)
+  have h_le (s' : Set β) (hs' : MeasurableSet s') :
+      ∀ᵐ a ∂μ, η₁₀ (Y a) s' ≤ η₂₀ a (X ⁻¹' s') := by
+    have h := ae_all_iff.2 fun n : ℕ ↦ measure_eq_zero_iff_ae_notMem.1
+      (measure_condExpKernel_add_lt_condDistrib_eq_zero hX hY hη₁₀ hη₂₀ hs'
+        (ε := (n : ℝ≥0∞)⁻¹) (ENNReal.inv_ne_zero.2 (ENNReal.natCast_ne_top n)))
+    filter_upwards [h] with a ha
+    refine ENNReal.le_of_forall_pos_le_add fun ε hε _ ↦ ?_
+    obtain ⟨n, hn⟩ := ENNReal.exists_inv_nat_lt (a := ε) (ENNReal.coe_ne_zero.2 hε.ne')
+    have h' := ha n
+    simp only [not_lt] at h'
+    exact h'.trans (add_le_add le_rfl hn.le)
+  filter_upwards [h_le s hs, h_le sᶜ hs.compl] with a h h'
+  refine le_antisymm h ?_
+  rw [prob_compl_eq_one_sub hs, preimage_compl, prob_compl_eq_one_sub (hX hs)] at h'
+  exact (ENNReal.sub_le_sub_iff_left prob_le_one ENNReal.one_ne_top).1 h'
 
 /-- The conditional expectation of `f` with respect to a σ-algebra `m` is almost everywhere equal to
 the integral `∫ y, f y ∂(η ω)` for every Markov representative `η` of `condExpKernel μ hm`, if
