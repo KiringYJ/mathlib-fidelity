@@ -1500,25 +1500,53 @@ operation.
   removed names, the missing finiteness proof, the missing value condition, the pole divisor of the
   zero function, and the pole count of a product with a factor that vanishes identically.
 
-- [ ] **Give the proximity function the domain of the counting function.**
-  `ValueDistribution.proximity f a` in
-  `Mathlib/Analysis/Complex/ValueDistribution/Proximity/Basic.lean` is defined for every function.
-  For a finite value `a` it is the circle average of `log⁺ ‖f · - a‖⁻¹`, where `(0 : ℝ)⁻¹ = 0`
-  replaces the infinite value of the integrand where `f = a`, and the circle average of a function
-  that is not circle integrable is `0`.  These two conventions give fallback values exactly when, on
-  the circle of radius `r`, `f = a` on a set of positive measure or the integrand is not integrable;
-  for a meromorphic function on `ℂ` that equals `a` outside a discrete set, the true integrand is
-  infinite on every circle.  Elsewhere the value is a genuine circle average, also for functions
-  that are not meromorphic, such as a continuous function at `⊤` (`continuous_proximity_top`).  The
-  exact domain depends on the radius, so a function of `r` needs a sufficient interface: the
-  proximity function of Nevanlinna theory is defined for meromorphic functions that do not equal `a`
-  identically, where `log ‖f · - a‖` is circle integrable
-  (`MeromorphicOn.circleIntegrable_log_norm`) and the points of a circle where `f = a` form a finite
-  set.  `ValueDistribution.characteristic f a hf ha` already takes that domain from `logCounting`.
-  Decide whether `proximity` takes the same arguments, which would exclude the continuous case, or
-  exposes the radius-dependent integrability condition, and migrate `Proximity/Basic.lean`,
-  `Proximity/IntegralPresentation.lean`, `CharacteristicFunction.lean`, `FirstMainTheorem.lean`, and
-  `Cartan.lean` accordingly.
+- [x] **Give the proximity function the domain of the counting function.**
+  `ValueDistribution.proximity f a hf ha` in
+  `Mathlib/Analysis/Complex/ValueDistribution/Proximity/Basic.lean` takes a proof `hf` that `f` is
+  meromorphic, which `fun_prop` supplies, and a proof `ha` that `f` takes `a` on no punctured
+  neighborhood, which is supplied by default for `a = ⊤`: the arguments of `logCounting`, so that
+  `characteristic f a hf ha` is `proximity f a hf ha + logCounting f a hf ha`.  It requires
+  `[NormedSpace ℂ E]`, which meromorphy needs.  It was defined for every function.  For a finite
+  value `a` it is the circle average of `log⁺ ‖f · - a‖⁻¹`, where `(0 : ℝ)⁻¹ = 0` replaces the
+  infinite value of the integrand where `f = a`, and the circle average of a function that is not
+  circle integrable is `0`; these conventions gave fallback values exactly when, on the circle of
+  radius `r`, `f = a` on a set of positive measure or the integrand is not integrable.  On the new
+  domain neither convention affects a value at a radius `r ≠ 0`: `f` takes `a` at only finitely many
+  points of each circle (`finite_sphere_inter_setOf_eq`), and the integrand is circle integrable
+  (`circleIntegrable_posLog_norm_sub_inv`).  Integrability alone is not the exact domain: for `f`
+  equal to `a` the integrand is `0` by `(0 : ℝ)⁻¹ = 0`, hence integrable, while the proximity
+  function is infinite.  For meromorphic `f` and a radius `r ≠ 0`, the exact condition at `r`,
+  integrability with `f ≠ a` almost everywhere on the circle, is equivalent to `ha` by the identity
+  theorem, so `(hf, ha)` is the exact domain among meromorphic functions.  The alternative, the
+  radius-dependent condition for every function, is rejected: the condition depends on the radius
+  only for functions that are not meromorphic, which have no counting function in this setting, and
+  such a function keeps its circle average `circleAverage (log⁺ ‖f ·‖) 0`.
+  `continuous_proximity_top` takes a function that is continuous and meromorphic, that is, entire
+  (`MeromorphicAt.analyticAt`).  `proximity_congr_codiscreteWithin` takes both functions with their
+  arguments, `proximity_sum_top_le` ranges over `s.attach`, `proximity_mul_zero_le` and
+  `proximity_pow_zero` take the value conditions of the factors, and `proximity_pow_zero` is no
+  longer a simp lemma, like `logCounting_pow_zero`.  `proximity_coe_eval_zero` and
+  `proximity_top_eval_zero` give the values at radius `0` (next entry), and
+  `frequently_coe_sub_const_ne_zero` and `eventually_ne_of_frequently_coe_ne` in
+  `LogCounting/Basic.lean` state the value condition for `f - a` and its consequence for `f`.  Tests
+  in `MathlibTest/ProximityStrict.lean` cover the missing meromorphy, complex conjugation, the
+  missing value condition, the radius after the proofs, the finite value set and the integrability
+  on the domain, the values at radius `0`, the characteristic function, `proximity_inv`, and the
+  continuity for an entire function, also through `fun_prop`.
+
+- [ ] **Classify the radius conventions of the value-distribution functions.**
+  `ValueDistribution.proximity`, `logCounting`, and `characteristic` in
+  `Mathlib/Analysis/Complex/ValueDistribution/` are functions of every real radius: they are even
+  (`proximity_even`, `logCounting_even`, `characteristic_even`), and at radius `0` the proximity
+  function is the integrand at the center (`proximity_coe_eval_zero`, `proximity_top_eval_zero`),
+  which is `0` for a finite value `a = f 0` although the integrand is infinite there, while
+  `logCounting_eval_zero` gives `0`.  Classify these values at radii `r ≤ 0` as conventions with a
+  source, or restrict the functions to positive radii, and migrate the consumers that evaluate at
+  `0`, such as `characteristic_sub_characteristic_inv_at_zero` in `FirstMainTheorem.lean`.
+  Separately, `continuous_proximity_top` takes a continuous meromorphic function, that is, an entire
+  function; the proximity function for the poles of every meromorphic function is plausibly
+  continuous on `r ≠ 0`, by dominated convergence at the logarithmic singularities of the integrand,
+  but this is not proved.
 
 - [x] **Make the trailing coefficient domain-bearing.**
   `meromorphicTrailingCoeffAt f x h` in `Mathlib/Analysis/Meromorphic/TrailingCoefficient.lean`

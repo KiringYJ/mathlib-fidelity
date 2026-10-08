@@ -381,6 +381,26 @@ lemma frequently_coe_ne_zero_iff {z : 𝕜} (hf : MeromorphicAt f z) :
   rw [Ne, meromorphicOrderAt_eq_top_iff, not_eventually]
   simp
 
+omit [NormedSpace 𝕜 E] in
+/--
+If `f` takes a finite value `a₀` on no punctured neighborhood of `z`, then `f - a₀` takes the value
+`0` on no punctured neighborhood of `z`.
+-/
+lemma frequently_coe_sub_const_ne_zero {z : 𝕜} (ha : ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a₀) :
+    ∃ᶠ w in 𝓝[≠] z, (((f - fun _ ↦ a₀ : 𝕜 → E) w : E) : WithTop E) ≠ 0 :=
+  ha.mono fun _ hw h ↦ hw (congrArg _ (sub_eq_zero.1 (WithTop.coe_eq_zero.1 h)))
+
+/--
+A function that is meromorphic at `z` and takes a finite value `a₀` on no punctured neighborhood of
+`z` differs from `a₀` on a punctured neighborhood of `z`.
+-/
+lemma eventually_ne_of_frequently_coe_ne {z : 𝕜} (hf : MeromorphicAt f z)
+    (ha : ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a₀) : ∀ᶠ w in 𝓝[≠] z, f w ≠ a₀ := by
+  have h : MeromorphicAt (f · - a₀) z := hf.sub (.const a₀ z)
+  rcases h.eventually_eq_zero_or_eventually_ne_zero with h₀ | h₀
+  · exact absurd ((meromorphicOrderAt_eq_top_iff h).2 h₀) ((frequently_coe_ne_coe_iff hf).1 ha)
+  · filter_upwards [h₀] with w hw using sub_ne_zero.1 hw
+
 /--
 If two meromorphic functions vanish on no punctured neighborhood, then neither does their product.
 -/
@@ -463,8 +483,8 @@ counting function for the zeros of `f - a₀`.
 -/
 lemma logCounting_coe_eq_logCounting_sub_const_zero {hf : Meromorphic f}
     {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a₀} :
-    logCounting f a₀ hf ha = logCounting (f - fun _ ↦ a₀) 0 (hf.sub (.const a₀)) fun z ↦
-      (ha z).mono fun _ hw h ↦ hw (congrArg _ (sub_eq_zero.1 (WithTop.coe_eq_zero.1 h))) := by
+    logCounting f a₀ hf ha = logCounting (f - fun _ ↦ a₀) 0 (hf.sub (.const a₀))
+      fun z ↦ frequently_coe_sub_const_ne_zero (ha z) := by
   rw [logCounting_coe, logCounting_zero]
   rfl
 

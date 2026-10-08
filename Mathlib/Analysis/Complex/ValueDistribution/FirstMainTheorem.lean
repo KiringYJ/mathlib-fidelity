@@ -54,7 +54,8 @@ lemma characteristic_sub_characteristic_inv (h : Meromorphic f)
   have ha z : ∃ᶠ w in 𝓝[≠] z, (f w : WithTop ℂ) ≠ 0 :=
     (frequently_coe_ne_zero_iff (h z)).2 (h₀ z (Set.mem_univ z))
   calc characteristic f ⊤ h - characteristic f⁻¹ ⊤ h.inv
-  _ = proximity f ⊤ - proximity f⁻¹ ⊤ - (logCounting f⁻¹ ⊤ h.inv - logCounting f ⊤ h) := by
+  _ = proximity f ⊤ h - proximity f⁻¹ ⊤ h.inv -
+      (logCounting f⁻¹ ⊤ h.inv - logCounting f ⊤ h) := by
     unfold characteristic
     ring
   _ = circleAverage (log ‖f ·‖) 0 - (logCounting f⁻¹ ⊤ h.inv - logCounting f ⊤ h) := by

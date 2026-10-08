@@ -61,7 +61,7 @@ noncomputable def characteristic (hf : Meromorphic f := by fun_prop)
       | fail "the function must take the value on no punctured neighborhood; only for ⊤ is \
           this supplied by default") :
     ℝ → ℝ :=
-  proximity f a + logCounting f a hf ha
+  proximity f a hf ha + logCounting f a hf ha
 
 /-!
 ## Elementary Properties
@@ -86,7 +86,7 @@ to the difference between the proximity functions.
 lemma characteristic_sub_characteristic_eq_proximity_sub_proximity (h : Meromorphic f) (a₀ : E)
     {h' : Meromorphic (f · - a₀)} :
     characteristic f ⊤ h - characteristic (f · - a₀) ⊤ h' =
-      proximity f ⊤ - proximity (f · - a₀) ⊤ := by
+      proximity f ⊤ h - proximity (f · - a₀) ⊤ h' := by
   have e : logCounting (f · - a₀) ⊤ h' = logCounting f ⊤ h := logCounting_sub_const h
   rw [characteristic, characteristic, e, add_sub_add_right_eq_sub]
 
@@ -127,10 +127,8 @@ theorem characteristic_sum_top_le {α : Type*} (s : Finset α) (f : α → ℂ �
       ∑ a ∈ s.attach, (characteristic (f a) ⊤ (hf a a.2)) r + log s.card := by
   have h₁ := proximity_sum_top_le s f hf r
   have h₂ := logCounting_sum_top_le s f hf hr
-  have e : ∑ a ∈ s.attach, proximity (f a) ⊤ r = ∑ a ∈ s, proximity (f a) ⊤ r :=
-    Finset.sum_attach s fun a ↦ proximity (f a) ⊤ r
   simp only [Pi.add_apply, Finset.sum_apply] at h₁
-  simp only [characteristic, Pi.add_apply, Finset.sum_add_distrib, e]
+  simp only [characteristic, Pi.add_apply, Finset.sum_add_distrib]
   linarith
 
 /--
@@ -182,7 +180,7 @@ theorem characteristic_mul_zero_le {f₁ f₂ : ℂ → ℂ} {r : ℝ} (hr : 1 �
       (characteristic f₁ 0 h₁f₁ h₂f₁ + characteristic f₂ 0 h₁f₂ h₂f₂) r := by
   simp only [characteristic, Pi.add_apply]
   rw [add_add_add_comm]
-  exact add_le_add (proximity_mul_zero_le h₁f₁ h₁f₂ r)
+  exact add_le_add (proximity_mul_zero_le h₁f₁ h₂f₁ h₁f₂ h₂f₂ r)
     (logCounting_mul_zero_le hr h₁f₁ h₂f₁ h₁f₂ h₂f₂)
 
 /--
@@ -229,7 +227,8 @@ theorem characteristic_pow_zero {f : ℂ → ℂ} {n : ℕ} (hf : Meromorphic f)
     (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop ℂ) ≠ 0) {hf' : Meromorphic (f ^ n)}
     {ha' : ∀ z, ∃ᶠ w in 𝓝[≠] z, ((f ^ n) w : WithTop ℂ) ≠ 0} :
     characteristic (f ^ n) 0 hf' ha' = n • characteristic f 0 hf ha := by
-  rw [characteristic, characteristic, logCounting_pow_zero hf ha, proximity_pow_zero, smul_add]
+  rw [characteristic, characteristic, logCounting_pow_zero hf ha, proximity_pow_zero hf ha,
+    smul_add]
 
 /--
 For natural numbers `n`, the characteristic function for the poles of `f ^ n` equals `n` times the
@@ -239,6 +238,6 @@ characteristic function for the poles of `f`.
 theorem characteristic_pow_top {f : ℂ → ℂ} {n : ℕ} (hf : Meromorphic f)
     {hf' : Meromorphic (f ^ n)} :
     characteristic (f ^ n) ⊤ hf' = n • characteristic f ⊤ hf := by
-  rw [characteristic, characteristic, logCounting_pow_top hf, proximity_pow_top, smul_add]
+  rw [characteristic, characteristic, logCounting_pow_top hf, proximity_pow_top hf, smul_add]
 
 end ValueDistribution
