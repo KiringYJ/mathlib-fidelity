@@ -22,9 +22,10 @@ following properties:
 
 * The bundle trivializations in the trivialization atlas should be continuous linear equivs in the
   fibers;
-* For any two trivializations `e`, `e'` in the atlas the transition function considered as a map
-  from `B` into `F →L[R] F` is continuous on `e.baseSet ∩ e'.baseSet` with respect to the operator
-  norm topology on `F →L[R] F`.
+* For any two trivializations `e`, `e'` in the atlas the transition function, defined on
+  `e.baseSet ∩ e'.baseSet` with values in `F →L[R] F`, is continuous with respect to the operator
+  norm topology on `F →L[R] F`: it agrees on `e.baseSet ∩ e'.baseSet` with a map from `B` that is
+  continuous there.
 
 If these conditions are satisfied, we register the typeclass `VectorBundle R F E`.
 
@@ -40,9 +41,8 @@ We define constructions on vector bundles like pullbacks and direct sums in othe
   `Bundle.Trivialization.continuousLinearMapAt` and inverses `Bundle.Trivialization.symmₗ` /
   `Bundle.Trivialization.symmL`. Note that these are all defined
   everywhere, since they are extended using the zero function.
-* `Bundle.Trivialization.coordChangeL` is the coordinate change induced by two trivializations.
-  It only makes sense on the intersection of their base sets,
-  but is extended outside it using the identity.
+* `Bundle.Trivialization.coordChangeL` is the coordinate change induced by two trivializations
+  at a point of the intersection of their base sets.
 * Given a continuous (semi)linear map between `E x` and `E' y` where `E` and `E'` are bundles over
   possibly different base sets, `ContinuousLinearMap.inCoordinates` turns this into a continuous
   (semi)linear map between the chosen fibers of those bundles.
@@ -264,58 +264,52 @@ theorem linearMapAt_symmₗ (e : Trivialization F (π F E)) [e.IsLinear R] {b : 
   e.toPretrivialization.linearMapAt_symmₗ hb y
 
 variable (R) in
-open scoped Classical in
-/-- A coordinate change function between two trivializations, as a continuous linear equivalence.
-  Defined to be the identity when `b` does not lie in the base set of both trivializations. -/
-def coordChangeL (e e' : Trivialization F (π F E)) [e.IsLinear R] [e'.IsLinear R] (b : B) :
-    F ≃L[R] F :=
-  { toLinearEquiv := if hb : b ∈ e.baseSet ∩ e'.baseSet
-      then (e.linearEquivAt R b (hb.1 :)).symm.trans (e'.linearEquivAt R b hb.2)
-      else LinearEquiv.refl R F
+/-- The coordinate change between two trivializations at a point of the intersection of their base
+sets, as a continuous linear equivalence.
+
+The two memberships are `hb.1` and `hb.2`.  A statement that builds `hb` should use
+`Set.mem_inter`: an anonymous constructor has the type of a conjunction, which rewriting does not
+unify with `b ∈ e.baseSet ∩ e'.baseSet`. -/
+def coordChangeL (e e' : Trivialization F (π F E)) [e.IsLinear R] [e'.IsLinear R] {b : B}
+    (hb : b ∈ e.baseSet ∩ e'.baseSet) : F ≃L[R] F :=
+  { toLinearEquiv := (e.linearEquivAt R b hb.1).symm.trans (e'.linearEquivAt R b hb.2)
     continuous_toFun := by
-      by_cases hb : b ∈ e.baseSet ∩ e'.baseSet
-      · rw [dite_eq_left hb]
-        refine (e'.continuousOn.comp_continuous ?_ ?_).snd
-        · exact e.continuousOn_symm.comp_continuous (Continuous.prodMk_right b) fun y =>
-            mk_mem_prod hb.1 (mem_univ y)
-        · exact fun y => e'.mem_source.mpr hb.2
-      · rw [dite_eq_right hb]
-        exact continuous_id
+      refine (e'.continuousOn.comp_continuous ?_ ?_).snd
+      · exact e.continuousOn_symm.comp_continuous (Continuous.prodMk_right b) fun y =>
+          mk_mem_prod hb.1 (mem_univ y)
+      · exact fun y => e'.mem_source.mpr hb.2
     continuous_invFun := by
-      by_cases hb : b ∈ e.baseSet ∩ e'.baseSet
-      · rw [dite_eq_left hb]
-        refine (e.continuousOn.comp_continuous ?_ ?_).snd
-        · exact e'.continuousOn_symm.comp_continuous (Continuous.prodMk_right b) fun y =>
-            mk_mem_prod hb.2 (mem_univ y)
-        exact fun y => e.mem_source.mpr hb.1
-      · rw [dite_eq_right hb]
-        exact continuous_id }
+      refine (e.continuousOn.comp_continuous ?_ ?_).snd
+      · exact e'.continuousOn_symm.comp_continuous (Continuous.prodMk_right b) fun y =>
+          mk_mem_prod hb.2 (mem_univ y)
+      exact fun y => e.mem_source.mpr hb.1 }
 
 theorem coe_coordChangeL (e e' : Trivialization F (π F E)) [e.IsLinear R] [e'.IsLinear R] {b : B}
     (hb : b ∈ e.baseSet ∩ e'.baseSet) :
-    ⇑(coordChangeL R e e' b) = (e.linearEquivAt R b hb.1).symm.trans (e'.linearEquivAt R b hb.2) :=
-  congr_arg (fun f : F ≃ₗ[R] F ↦ ⇑f) (dite_eq_left hb)
+    ⇑(coordChangeL R e e' hb) = (e.linearEquivAt R b hb.1).symm.trans (e'.linearEquivAt R b hb.2) :=
+  rfl
 
 theorem coe_coordChangeL' (e e' : Trivialization F (π F E)) [e.IsLinear R] [e'.IsLinear R] {b : B}
     (hb : b ∈ e.baseSet ∩ e'.baseSet) :
-    (coordChangeL R e e' b).toLinearEquiv =
+    (coordChangeL R e e' hb).toLinearEquiv =
       (e.linearEquivAt R b hb.1).symm.trans (e'.linearEquivAt R b hb.2) :=
-  LinearEquiv.coe_injective (coe_coordChangeL _ _ hb)
+  rfl
 
 theorem symm_coordChangeL (e e' : Trivialization F (π F E)) [e.IsLinear R] [e'.IsLinear R] {b : B}
-    (hb : b ∈ e'.baseSet ∩ e.baseSet) : (e.coordChangeL R e' b).symm = e'.coordChangeL R e b := by
+    (hb : b ∈ e.baseSet ∩ e'.baseSet) :
+    (e.coordChangeL R e' hb).symm = e'.coordChangeL R e (Set.mem_inter hb.2 hb.1) := by
   apply ContinuousLinearEquiv.toLinearEquiv_injective
-  rw [coe_coordChangeL' e' e hb, (coordChangeL R e e' b).toLinearEquiv_symm,
-    coe_coordChangeL' e e' hb.symm, LinearEquiv.trans_symm, LinearEquiv.symm_symm]
+  rw [coe_coordChangeL' e' e, (coordChangeL R e e' hb).toLinearEquiv_symm,
+    coe_coordChangeL' e e' hb, LinearEquiv.trans_symm, LinearEquiv.symm_symm]
 
 theorem coordChangeL_apply (e e' : Trivialization F (π F E)) [e.IsLinear R] [e'.IsLinear R] {b : B}
     (hb : b ∈ e.baseSet ∩ e'.baseSet) (y : F) :
-    coordChangeL R e e' b y = (e' ⟨b, e.symm b y⟩).2 :=
+    coordChangeL R e e' hb y = (e' ⟨b, e.symm b y⟩).2 :=
   congr_fun (coe_coordChangeL e e' hb) y
 
 theorem mk_coordChangeL (e e' : Trivialization F (π F E)) [e.IsLinear R] [e'.IsLinear R] {b : B}
     (hb : b ∈ e.baseSet ∩ e'.baseSet) (y : F) :
-    (b, coordChangeL R e e' b y) = e' ⟨b, e.symm b y⟩ := by
+    (b, coordChangeL R e e' hb y) = e' ⟨b, e.symm b y⟩ := by
   ext
   · rw [e.mk_symm hb.1 y, e'.coe_fst', e.proj_symm_apply' hb.1]
     rw [e.proj_symm_apply' hb.1]
@@ -324,7 +318,7 @@ theorem mk_coordChangeL (e e' : Trivialization F (π F E)) [e.IsLinear R] [e'.Is
 
 theorem apply_symm_apply_eq_coordChangeL (e e' : Trivialization F (π F E)) [e.IsLinear R]
     [e'.IsLinear R] {b : B} (hb : b ∈ e.baseSet ∩ e'.baseSet) (v : F) :
-    e' (e.toOpenPartialHomeomorph.symm (b, v)) = (b, e.coordChangeL R e' b v) := by
+    e' (e.toOpenPartialHomeomorph.symm (b, v)) = (b, e.coordChangeL R e' hb v) := by
   rw [e.mk_coordChangeL e' hb, e.mk_symm hb.1]
 
 /-- A version of `Bundle.Trivialization.coordChangeL_apply` that fully unfolds `coordChange`. The
@@ -332,14 +326,20 @@ right-hand side is ugly, but has good definitional properties for specifically d
 trivializations. -/
 theorem coordChangeL_apply' (e e' : Trivialization F (π F E)) [e.IsLinear R] [e'.IsLinear R] {b : B}
     (hb : b ∈ e.baseSet ∩ e'.baseSet) (y : F) :
-    coordChangeL R e e' b y = (e' (e.toOpenPartialHomeomorph.symm (b, y))).2 := by
+    coordChangeL R e e' hb y = (e' (e.toOpenPartialHomeomorph.symm (b, y))).2 := by
   rw [e.coordChangeL_apply e' hb, e.mk_symm hb.1]
+
+/-- The linear coordinate change is the coordinate change of the underlying trivializations. -/
+theorem coe_coordChangeL_eq_coordChange (e e' : Trivialization F (π F E)) [e.IsLinear R]
+    [e'.IsLinear R] {b : B} (hb : b ∈ e.baseSet ∩ e'.baseSet) :
+    ⇑(coordChangeL R e e' hb) = e.coordChange e' hb.1 hb.2 :=
+  funext <| e.coordChangeL_apply' e' hb
 
 theorem coordChangeL_symm_apply (e e' : Trivialization F (π F E)) [e.IsLinear R] [e'.IsLinear R]
     {b : B} (hb : b ∈ e.baseSet ∩ e'.baseSet) :
-    ⇑(coordChangeL R e e' b).symm =
+    ⇑(coordChangeL R e e' hb).symm =
       (e'.linearEquivAt R b hb.2).symm.trans (e.linearEquivAt R b hb.1) :=
-  congr_arg LinearEquiv.invFun (dite_eq_left hb)
+  rfl
 
 end Bundle.Trivialization
 
@@ -371,13 +371,15 @@ variable [NontriviallyNormedField R] [∀ x, AddCommMonoid (E x)] [∀ x, Module
 /-- The space `Bundle.TotalSpace F E` (for `E : B → Type*` such that each `E x` is a topological
 vector space) has a topological vector space structure with fiber `F` (denoted with
 `VectorBundle R F E`) if around every point there is a fiber bundle trivialization which is linear
-in the fibers. -/
+in the fibers, and the coordinate change between two trivializations in the atlas is continuous on
+the intersection of their base sets: it agrees there with a map from `B` to `F →L[R] F` that is
+continuous there.  The consumer-facing form is `continuousOn_coordChangeL`. -/
 class VectorBundle : Prop where
   trivialization_linear' : ∀ (e : Trivialization F (π F E)) [MemTrivializationAtlas e], e.IsLinear R
-  continuousOn_coordChange' :
+  exists_continuousOn_coordChangeL :
     ∀ (e e' : Trivialization F (π F E)) [MemTrivializationAtlas e] [MemTrivializationAtlas e'],
-      ContinuousOn (fun b => Trivialization.coordChangeL R e e' b : B → F →L[R] F)
-        (e.baseSet ∩ e'.baseSet)
+      ∃ φ : B → F →L[R] F, ContinuousOn φ (e.baseSet ∩ e'.baseSet) ∧
+        ∀ b (hb : b ∈ e.baseSet ∩ e'.baseSet), φ b = e.coordChangeL R e' hb
 
 variable {F E}
 
@@ -385,11 +387,15 @@ instance (priority := 100) trivialization_linear [VectorBundle R F E] (e : Trivi
     [MemTrivializationAtlas e] : e.IsLinear R :=
   VectorBundle.trivialization_linear' e
 
-theorem continuousOn_coordChange [VectorBundle R F E] (e e' : Trivialization F (π F E))
-    [MemTrivializationAtlas e] [MemTrivializationAtlas e'] :
-    ContinuousOn (fun b => Trivialization.coordChangeL R e e' b : B → F →L[R] F)
-      (e.baseSet ∩ e'.baseSet) :=
-  VectorBundle.continuousOn_coordChange' e e'
+/-- The coordinate change between two trivializations in the atlas of a vector bundle is
+continuous on the intersection of their base sets: every map that agrees with it there is
+continuous there. -/
+theorem continuousOn_coordChangeL [VectorBundle R F E] (e e' : Trivialization F (π F E))
+    [MemTrivializationAtlas e] [MemTrivializationAtlas e'] {φ : B → F →L[R] F}
+    (hφ : ∀ b (hb : b ∈ e.baseSet ∩ e'.baseSet), φ b = e.coordChangeL R e' hb) :
+    ContinuousOn φ (e.baseSet ∩ e'.baseSet) := by
+  obtain ⟨ψ, hψ, hψφ⟩ := VectorBundle.exists_continuousOn_coordChangeL (R := R) e e'
+  exact hψ.congr fun b hb ↦ (hφ b hb).trans (hψφ b hb).symm
 
 namespace Bundle.Trivialization
 
@@ -524,7 +530,7 @@ theorem symm_apply_eq_mk_continuousLinearEquivAt_symm (e : Trivialization F (π 
 theorem comp_continuousLinearEquivAt_eq_coord_change (e e' : Trivialization F (π F E))
     [e.IsLinear R] [e'.IsLinear R] {b : B} (hb : b ∈ e.baseSet ∩ e'.baseSet) :
     (e.continuousLinearEquivAt R b hb.1).symm.trans (e'.continuousLinearEquivAt R b hb.2) =
-      coordChangeL R e e' b := by
+      coordChangeL R e e' hb := by
   ext v
   rw [coordChangeL_apply e e' hb]
   rfl
@@ -707,10 +713,10 @@ theorem localTriv_symm_apply {b : B} (hb : b ∈ (Z.localTriv i).baseSet) (v : F
 
 @[simp, mfld_simps]
 theorem localTriv_coordChange_eq {b : B}
-    (hb : b ∈ (Z.localTriv i).baseSet ∧ b ∈ (Z.localTriv j).baseSet) (v : F) :
-    (Z.localTriv i).coordChangeL R (Z.localTriv j) b v = Z.coordChange i j b v := by
+    (hb : b ∈ (Z.localTriv i).baseSet ∩ (Z.localTriv j).baseSet) (v : F) :
+    (Z.localTriv i).coordChangeL R (Z.localTriv j) hb v = Z.coordChange i j b v := by
   rw [Trivialization.coordChangeL_apply', localTriv_symm_fst, localTriv_apply, coordChange_comp]
-  exacts [⟨⟨hb.1, Z.mem_baseSet_at b⟩, hb.2⟩, hb]
+  exact ⟨⟨hb.1, Z.mem_baseSet_at b⟩, hb.2⟩
 
 /-- Preferred local trivialization of a vector bundle constructed from core, at a given point, as
 a bundle trivialization -/
@@ -747,11 +753,11 @@ instance vectorBundle : VectorBundle R F Z.Fiber where
   trivialization_linear' := by
     rintro _ ⟨i, rfl⟩
     apply localTriv.isLinear
-  continuousOn_coordChange' := by
+  exists_continuousOn_coordChangeL := by
     rintro _ _ ⟨i, rfl⟩ ⟨i', rfl⟩
-    refine (Z.continuousOn_coordChange i i').congr fun b hb => ?_
+    refine ⟨Z.coordChange i i', Z.continuousOn_coordChange i i', fun b hb => ?_⟩
     ext v
-    exact Z.localTriv_coordChange_eq i i' hb v
+    exact (Z.localTriv_coordChange_eq i i' hb v).symm
 
 /-- The projection on the base of a vector bundle created from core is continuous -/
 @[continuity]
@@ -794,7 +800,7 @@ theorem trivializationAt_symmL {b₀ b : B} (hb : b ∈ (trivializationAt F Z.Fi
 theorem trivializationAt_coordChange_eq {b₀ b₁ b : B}
     (hb : b ∈ (trivializationAt F Z.Fiber b₀).baseSet ∩ (trivializationAt F Z.Fiber b₁).baseSet)
     (v : F) :
-    (trivializationAt F Z.Fiber b₀).coordChangeL R (trivializationAt F Z.Fiber b₁) b v =
+    (trivializationAt F Z.Fiber b₀).coordChangeL R (trivializationAt F Z.Fiber b₁) hb v =
       Z.coordChange (Z.indexAt b₀) (Z.indexAt b₁) b v :=
   Z.localTriv_coordChange_eq _ _ hb v
 
@@ -838,24 +844,25 @@ namespace VectorPrebundle
 
 variable {R E F}
 
-/-- A randomly chosen coordinate change on a `VectorPrebundle`, given by
-  the field `exists_coordChange`. -/
-def coordChange (a : VectorPrebundle R F E) {e e' : Pretrivialization F (π F E)}
+/-- A coordinate change on a `VectorPrebundle`, chosen from the field `exists_coordChange`.  Its
+values outside the intersection of the base sets are arbitrary, so it is used only inside proofs. -/
+private def coordChange (a : VectorPrebundle R F E) {e e' : Pretrivialization F (π F E)}
     (he : e ∈ a.pretrivializationAtlas) (he' : e' ∈ a.pretrivializationAtlas) (b : B) : F →L[R] F :=
   Classical.choose (a.exists_coordChange e he e' he') b
 
-theorem continuousOn_coordChange (a : VectorPrebundle R F E) {e e' : Pretrivialization F (π F E)}
+private theorem continuousOn_coordChange (a : VectorPrebundle R F E)
+    {e e' : Pretrivialization F (π F E)}
     (he : e ∈ a.pretrivializationAtlas) (he' : e' ∈ a.pretrivializationAtlas) :
     ContinuousOn (a.coordChange he he') (e.baseSet ∩ e'.baseSet) :=
   (Classical.choose_spec (a.exists_coordChange e he e' he')).1
 
-theorem coordChange_apply (a : VectorPrebundle R F E) {e e' : Pretrivialization F (π F E)}
+private theorem coordChange_apply (a : VectorPrebundle R F E) {e e' : Pretrivialization F (π F E)}
     (he : e ∈ a.pretrivializationAtlas) (he' : e' ∈ a.pretrivializationAtlas) {b : B}
     (hb : b ∈ e.baseSet ∩ e'.baseSet) (v : F) :
     a.coordChange he he' b v = (e' ⟨b, e.symm b v⟩).2 :=
   (Classical.choose_spec (a.exists_coordChange e he e' he')).2 b hb v
 
-theorem mk_coordChange (a : VectorPrebundle R F E) {e e' : Pretrivialization F (π F E)}
+private theorem mk_coordChange (a : VectorPrebundle R F E) {e e' : Pretrivialization F (π F E)}
     (he : e ∈ a.pretrivializationAtlas) (he' : e' ∈ a.pretrivializationAtlas) {b : B}
     (hb : b ∈ e.baseSet ∩ e'.baseSet) (v : F) :
     (b, a.coordChange he he' b v) = e' ⟨b, e.symm b v⟩ := by
@@ -932,16 +939,16 @@ theorem toVectorBundle : @VectorBundle R _ F E _ _ _ _ _ _ a.totalSpaceTopology 
   { trivialization_linear' := by
       rintro _ ⟨e, he, rfl⟩
       apply linear_trivializationOfMemPretrivializationAtlas
-    continuousOn_coordChange' := by
+    exists_continuousOn_coordChangeL := by
       rintro _ _ ⟨e, he, rfl⟩ ⟨e', he', rfl⟩
-      refine (a.continuousOn_coordChange he he').congr fun b hb ↦ ?_
+      refine ⟨a.coordChange he he', a.continuousOn_coordChange he he', fun b hb ↦ ?_⟩
       ext v
       have h₁ := a.linear_trivializationOfMemPretrivializationAtlas he
       have h₂ := a.linear_trivializationOfMemPretrivializationAtlas he'
       rw [trivializationOfMemPretrivializationAtlas] at h₁ h₂
       rw [a.coordChange_apply he he' hb v, ContinuousLinearEquiv.coe_coe,
         Trivialization.coordChangeL_apply]
-      exacts [rfl, hb] }
+      rfl }
 
 end VectorPrebundle
 

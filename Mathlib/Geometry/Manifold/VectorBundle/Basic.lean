@@ -301,17 +301,21 @@ variable (n IB) in
 /-- When `B` is a manifold with respect to a model `IB` and `E` is a
 topological vector bundle over `B` with fibers isomorphic to `F`,
 then `ContMDiffVectorBundle n F E IB` registers that the bundle is `C^n`, in the sense of having
-`C^n` transition functions. This is a mixin, not carrying any new data. -/
+`C^n` transition functions: the coordinate change between two trivializations in the atlas agrees
+on the intersection of their base sets with a map from `B` to `F →L[𝕜] F` that is `C^n` there.
+This is a mixin, not carrying any new data. -/
 class ContMDiffVectorBundle : Prop where
-  protected contMDiffOn_coordChangeL :
+  protected exists_contMDiffOn_coordChangeL :
     ∀ (e e' : Trivialization F (π F E)) [MemTrivializationAtlas e] [MemTrivializationAtlas e'],
-      ContMDiffOn IB 𝓘(𝕜, F →L[𝕜] F) n (fun b : B => (e.coordChangeL 𝕜 e' b : F →L[𝕜] F))
-        (e.baseSet ∩ e'.baseSet)
+      ∃ φ : B → F →L[𝕜] F, ContMDiffOn IB 𝓘(𝕜, F →L[𝕜] F) n φ (e.baseSet ∩ e'.baseSet) ∧
+        ∀ b (hb : b ∈ e.baseSet ∩ e'.baseSet), φ b = e.coordChangeL 𝕜 e' hb
 
 variable {F E} in
 protected theorem ContMDiffVectorBundle.of_le {m n : ℕ∞ω} (hmn : m ≤ n)
     [h : ContMDiffVectorBundle n F E IB] : ContMDiffVectorBundle m F E IB :=
-  ⟨fun e e' _ _ ↦ (h.contMDiffOn_coordChangeL e e').of_le hmn⟩
+  ⟨fun e e' _ _ ↦ by
+    obtain ⟨φ, hφ, hφe⟩ := h.exists_contMDiffOn_coordChangeL e e'
+    exact ⟨φ, hφ.of_le hmn, hφe⟩⟩
 
 instance {a : ℕ∞ω} [ContMDiffVectorBundle ∞ F E IB] [h : ENat.LEInfty a] :
     ContMDiffVectorBundle a F E IB :=
@@ -326,8 +330,8 @@ instance [ContMDiffVectorBundle 2 F E IB] : ContMDiffVectorBundle 1 F E IB :=
 instance : ContMDiffVectorBundle 0 F E IB := by
   constructor
   intro e e' he he'
-  rw [contMDiffOn_zero_iff]
-  exact VectorBundle.continuousOn_coordChange' e e'
+  obtain ⟨φ, hφ, hφe⟩ := VectorBundle.exists_continuousOn_coordChangeL (R := 𝕜) e e'
+  exact ⟨φ, contMDiffOn_zero_iff.2 hφ, hφe⟩
 
 variable [ContMDiffVectorBundle n F E IB]
 
@@ -336,73 +340,116 @@ section ContMDiffCoordChange
 variable {F E}
 variable (e e' : Trivialization F (π F E)) [MemTrivializationAtlas e] [MemTrivializationAtlas e']
 
-theorem contMDiffOn_coordChangeL :
-    ContMDiffOn IB 𝓘(𝕜, F →L[𝕜] F) n (fun b : B => (e.coordChangeL 𝕜 e' b : F →L[𝕜] F))
-      (e.baseSet ∩ e'.baseSet) :=
-  ContMDiffVectorBundle.contMDiffOn_coordChangeL e e'
+/-- The coordinate change between two trivializations in the atlas of a `C^n` vector bundle is
+`C^n` on the intersection of their base sets: every map that agrees with it there is `C^n` there. -/
+theorem contMDiffOn_coordChangeL {φ : B → F →L[𝕜] F}
+    (hφ : ∀ b (hb : b ∈ e.baseSet ∩ e'.baseSet), φ b = e.coordChangeL 𝕜 e' hb) :
+    ContMDiffOn IB 𝓘(𝕜, F →L[𝕜] F) n φ (e.baseSet ∩ e'.baseSet) := by
+  obtain ⟨ψ, hψ, hψe⟩ :=
+    ContMDiffVectorBundle.exists_contMDiffOn_coordChangeL (n := n) (IB := IB) e e'
+  exact hψ.congr fun b hb ↦ (hφ b hb).trans (hψe b hb).symm
 
-theorem contMDiffOn_symm_coordChangeL :
-    ContMDiffOn IB 𝓘(𝕜, F →L[𝕜] F) n (fun b : B => ((e.coordChangeL 𝕜 e' b).symm : F →L[𝕜] F))
-      (e.baseSet ∩ e'.baseSet) := by
+/-- The inverse of the coordinate change between two trivializations in the atlas of a `C^n` vector
+bundle is `C^n` on the intersection of their base sets: every map that agrees with it there is
+`C^n` there. -/
+theorem contMDiffOn_symm_coordChangeL {φ : B → F →L[𝕜] F}
+    (hφ : ∀ b (hb : b ∈ e.baseSet ∩ e'.baseSet), φ b = (e.coordChangeL 𝕜 e' hb).symm) :
+    ContMDiffOn IB 𝓘(𝕜, F →L[𝕜] F) n φ (e.baseSet ∩ e'.baseSet) := by
   rw [inter_comm]
-  refine (ContMDiffVectorBundle.contMDiffOn_coordChangeL e' e).congr fun b hb ↦ ?_
-  rw [e.symm_coordChangeL e' hb]
+  exact contMDiffOn_coordChangeL e' e fun b hb ↦ by
+    rw [hφ b ⟨hb.2, hb.1⟩, e.symm_coordChangeL e' ⟨hb.2, hb.1⟩]
 
 variable {e e'}
 
-theorem contMDiffAt_coordChangeL {x : B} (h : x ∈ e.baseSet) (h' : x ∈ e'.baseSet) :
-    ContMDiffAt IB 𝓘(𝕜, F →L[𝕜] F) n (fun b : B => (e.coordChangeL 𝕜 e' b : F →L[𝕜] F)) x :=
-  (contMDiffOn_coordChangeL e e').contMDiffAt <|
+/-- The coordinate change between two trivializations in the atlas of a `C^n` vector bundle is
+`C^n` at every point of the intersection of their base sets: every map that agrees with it on the
+intersection is `C^n` there. -/
+theorem contMDiffAt_coordChangeL {x : B} (h : x ∈ e.baseSet) (h' : x ∈ e'.baseSet)
+    {φ : B → F →L[𝕜] F}
+    (hφ : ∀ b (hb : b ∈ e.baseSet ∩ e'.baseSet), φ b = e.coordChangeL 𝕜 e' hb) :
+    ContMDiffAt IB 𝓘(𝕜, F →L[𝕜] F) n φ x :=
+  (contMDiffOn_coordChangeL e e' hφ).contMDiffAt <|
     (e.open_baseSet.inter e'.open_baseSet).mem_nhds ⟨h, h'⟩
 
 variable {s : Set M} {f : M → B} {g : M → F} {x : M}
 
+/-- The coordinate change between two trivializations in the atlas of a `C^n` vector bundle, along
+a map `f` that is `C^n` within `s` at `x` with `f x` in both base sets, is `C^n` within `s` at `x`:
+this holds for every map `φ` that agrees with the coordinate change at `f y` wherever `f y` lies in
+both base sets.  When `f` takes all its values there, `ContMDiff.coordChangeL` states the
+smoothness of the coordinate change along `f` itself. -/
 protected theorem ContMDiffWithinAt.coordChangeL
-    (hf : ContMDiffWithinAt IM IB n f s x) (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) :
-    ContMDiffWithinAt IM 𝓘(𝕜, F →L[𝕜] F) n (fun y ↦ (e.coordChangeL 𝕜 e' (f y) : F →L[𝕜] F)) s x :=
-  (contMDiffAt_coordChangeL he he').comp_contMDiffWithinAt _ hf
+    (hf : ContMDiffWithinAt IM IB n f s x) (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet)
+    {φ : M → F →L[𝕜] F}
+    (hφ : ∀ y (hy : f y ∈ e.baseSet ∩ e'.baseSet), φ y = e.coordChangeL 𝕜 e' hy) :
+    ContMDiffWithinAt IM 𝓘(𝕜, F →L[𝕜] F) n φ s x := by
+  obtain ⟨ψ, -, hψ⟩ :=
+    ContMDiffVectorBundle.exists_contMDiffOn_coordChangeL (n := n) (IB := IB) e e'
+  refine ((contMDiffAt_coordChangeL he he' hψ).comp_contMDiffWithinAt x hf).congr_of_eventuallyEq
+    ?_ ((hφ x ⟨he, he'⟩).trans (hψ _ ⟨he, he'⟩).symm)
+  filter_upwards [hf.continuousWithinAt <|
+    (e.open_baseSet.inter e'.open_baseSet).mem_nhds ⟨he, he'⟩] with y hy
+  exact (hφ y hy).trans (hψ _ hy).symm
 
 protected nonrec theorem ContMDiffAt.coordChangeL
-    (hf : ContMDiffAt IM IB n f x) (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) :
-    ContMDiffAt IM 𝓘(𝕜, F →L[𝕜] F) n (fun y ↦ (e.coordChangeL 𝕜 e' (f y) : F →L[𝕜] F)) x :=
-  hf.coordChangeL he he'
+    (hf : ContMDiffAt IM IB n f x) (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet)
+    {φ : M → F →L[𝕜] F}
+    (hφ : ∀ y (hy : f y ∈ e.baseSet ∩ e'.baseSet), φ y = e.coordChangeL 𝕜 e' hy) :
+    ContMDiffAt IM 𝓘(𝕜, F →L[𝕜] F) n φ x :=
+  hf.coordChangeL he he' hφ
 
 protected theorem ContMDiffOn.coordChangeL
-    (hf : ContMDiffOn IM IB n f s) (he : MapsTo f s e.baseSet) (he' : MapsTo f s e'.baseSet) :
-    ContMDiffOn IM 𝓘(𝕜, F →L[𝕜] F) n (fun y ↦ (e.coordChangeL 𝕜 e' (f y) : F →L[𝕜] F)) s :=
-  fun x hx ↦ (hf x hx).coordChangeL (he hx) (he' hx)
+    (hf : ContMDiffOn IM IB n f s) (he : MapsTo f s e.baseSet) (he' : MapsTo f s e'.baseSet)
+    {φ : M → F →L[𝕜] F}
+    (hφ : ∀ y (hy : f y ∈ e.baseSet ∩ e'.baseSet), φ y = e.coordChangeL 𝕜 e' hy) :
+    ContMDiffOn IM 𝓘(𝕜, F →L[𝕜] F) n φ s :=
+  fun x hx ↦ (hf x hx).coordChangeL (he hx) (he' hx) hφ
 
 protected theorem ContMDiff.coordChangeL
     (hf : ContMDiff IM IB n f) (he : ∀ x, f x ∈ e.baseSet) (he' : ∀ x, f x ∈ e'.baseSet) :
-    ContMDiff IM 𝓘(𝕜, F →L[𝕜] F) n (fun y ↦ (e.coordChangeL 𝕜 e' (f y) : F →L[𝕜] F)) := fun x ↦
-  (hf x).coordChangeL (he x) (he' x)
+    ContMDiff IM 𝓘(𝕜, F →L[𝕜] F) n
+      (fun y ↦ (e.coordChangeL 𝕜 e' (Set.mem_inter (he y) (he' y)) : F →L[𝕜] F)) := fun x ↦
+  (hf x).coordChangeL (he x) (he' x) fun _ _ ↦ rfl
 
+/-- The coordinate change between two trivializations in the atlas of a `C^n` vector bundle,
+applied along `C^n` maps `f` and `g` with `f x` in both base sets, is `C^n` within `s` at `x`: this
+holds for every map `φ` that agrees with `e.coordChange e' h h' (g y)` wherever `f y` lies in both
+base sets.  When `f` takes all its values there, `ContMDiff.coordChange` states the smoothness of
+the coordinate change along `f` and `g` itself. -/
 protected theorem ContMDiffWithinAt.coordChange
     (hf : ContMDiffWithinAt IM IB n f s x) (hg : ContMDiffWithinAt IM 𝓘(𝕜, F) n g s x)
-    (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) :
-    ContMDiffWithinAt IM 𝓘(𝕜, F) n (fun y ↦ e.coordChange e' (f y) (g y)) s x := by
-  refine ((hf.coordChangeL he he').clm_apply hg).congr_of_eventuallyEq ?_ ?_
-  · have : e.baseSet ∩ e'.baseSet ∈ 𝓝 (f x) :=
-     (e.open_baseSet.inter e'.open_baseSet).mem_nhds ⟨he, he'⟩
-    filter_upwards [hf.continuousWithinAt this] with y hy
-    exact (Trivialization.coordChangeL_apply' e e' hy (g y)).symm
-  · exact (Trivialization.coordChangeL_apply' e e' ⟨he, he'⟩ (g x)).symm
+    (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) {φ : M → F}
+    (hφ : ∀ y (h : f y ∈ e.baseSet) (h' : f y ∈ e'.baseSet), φ y = e.coordChange e' h h' (g y)) :
+    ContMDiffWithinAt IM 𝓘(𝕜, F) n φ s x := by
+  obtain ⟨ψ, -, hψ⟩ :=
+    ContMDiffVectorBundle.exists_contMDiffOn_coordChangeL (n := n) (IB := IB) e e'
+  have hφψ : ∀ y (hy : f y ∈ e.baseSet ∩ e'.baseSet), φ y = ψ (f y) (g y) := fun y hy ↦ by
+    rw [hφ y hy.1 hy.2, hψ (f y) hy, ContinuousLinearEquiv.coe_coe,
+      Trivialization.coe_coordChangeL_eq_coordChange]
+  refine ((hf.coordChangeL he he' (φ := fun y ↦ ψ (f y)) fun y hy ↦ hψ (f y) hy).clm_apply
+    hg).congr_of_eventuallyEq ?_ (hφψ x ⟨he, he'⟩)
+  filter_upwards [hf.continuousWithinAt <|
+    (e.open_baseSet.inter e'.open_baseSet).mem_nhds ⟨he, he'⟩] with y hy
+  exact hφψ y hy
 
 protected nonrec theorem ContMDiffAt.coordChange
     (hf : ContMDiffAt IM IB n f x) (hg : ContMDiffAt IM 𝓘(𝕜, F) n g x) (he : f x ∈ e.baseSet)
-    (he' : f x ∈ e'.baseSet) :
-    ContMDiffAt IM 𝓘(𝕜, F) n (fun y ↦ e.coordChange e' (f y) (g y)) x :=
-  hf.coordChange hg he he'
+    (he' : f x ∈ e'.baseSet) {φ : M → F}
+    (hφ : ∀ y (h : f y ∈ e.baseSet) (h' : f y ∈ e'.baseSet), φ y = e.coordChange e' h h' (g y)) :
+    ContMDiffAt IM 𝓘(𝕜, F) n φ x :=
+  hf.coordChange hg he he' hφ
 
 protected theorem ContMDiffOn.coordChange (hf : ContMDiffOn IM IB n f s)
-    (hg : ContMDiffOn IM 𝓘(𝕜, F) n g s) (he : MapsTo f s e.baseSet) (he' : MapsTo f s e'.baseSet) :
-    ContMDiffOn IM 𝓘(𝕜, F) n (fun y ↦ e.coordChange e' (f y) (g y)) s := fun x hx ↦
-  (hf x hx).coordChange (hg x hx) (he hx) (he' hx)
+    (hg : ContMDiffOn IM 𝓘(𝕜, F) n g s) (he : MapsTo f s e.baseSet) (he' : MapsTo f s e'.baseSet)
+    {φ : M → F}
+    (hφ : ∀ y (h : f y ∈ e.baseSet) (h' : f y ∈ e'.baseSet), φ y = e.coordChange e' h h' (g y)) :
+    ContMDiffOn IM 𝓘(𝕜, F) n φ s := fun x hx ↦
+  (hf x hx).coordChange (hg x hx) (he hx) (he' hx) hφ
 
 protected theorem ContMDiff.coordChange (hf : ContMDiff IM IB n f)
     (hg : ContMDiff IM 𝓘(𝕜, F) n g) (he : ∀ x, f x ∈ e.baseSet) (he' : ∀ x, f x ∈ e'.baseSet) :
-    ContMDiff IM 𝓘(𝕜, F) n (fun y ↦ e.coordChange e' (f y) (g y)) := fun x ↦
-  (hf x).coordChange (hg x) (he x) (he' x)
+    ContMDiff IM 𝓘(𝕜, F) n (fun y ↦ e.coordChange e' (he y) (he' y) (g y)) := fun x ↦
+  (hf x).coordChange (hg x) (he x) (he' x) fun _ _ _ ↦ rfl
 
 variable (e e')
 
@@ -415,7 +462,8 @@ theorem Bundle.Trivialization.contMDiffOn_symm_trans :
   rw [mapsTo_inter] at Hmaps
   -- TODO: drop `congr` https://github.com/leanprover-community/mathlib4/issues/5473
   refine (contMDiffOn_fst.prodMk
-    (contMDiffOn_fst.coordChange contMDiffOn_snd Hmaps.1 Hmaps.2)).congr ?_
+    (contMDiffOn_fst.coordChange contMDiffOn_snd Hmaps.1 Hmaps.2
+      (φ := fun p ↦ (e' (e.toOpenPartialHomeomorph.symm p)).2) fun _ _ _ ↦ rfl)).congr ?_
   rintro ⟨b, x⟩ hb
   refine Prod.ext ?_ rfl
   have : (e.toOpenPartialHomeomorph.symm (b, x)).1 ∈ e'.baseSet := by
@@ -430,9 +478,7 @@ theorem ContMDiffWithinAt.change_section_trivialization {f : M → TotalSpace F 
     (he : f x ∈ e.source) (he' : f x ∈ e'.source) :
     ContMDiffWithinAt IM 𝓘(𝕜, F) n (fun y ↦ (e' (f y)).2) s x := by
   rw [Trivialization.mem_source] at he he'
-  refine (hp.coordChange hf he he').congr_of_eventuallyEq ?_ (by simp [he])
-  filter_upwards [hp.continuousWithinAt (e.open_baseSet.mem_nhds he)] with y hy
-  simp_all
+  exact hp.coordChange hf he he' fun y h h' ↦ (e.coordChange_apply_snd e' h h').symm
 
 theorem Bundle.Trivialization.contMDiffWithinAt_snd_comp_iff₂ {f : M → TotalSpace F E}
     (hp : ContMDiffWithinAt IM IB n (π F E ∘ f) s x)
@@ -454,13 +500,20 @@ instance ContMDiffFiberwiseLinear.hasGroupoid :
     have : MemTrivializationAtlas e := ⟨he⟩
     have : MemTrivializationAtlas e' := ⟨he'⟩
     rw [mem_contMDiffFiberwiseLinear_iff]
-    refine ⟨_, _, e.open_baseSet.inter e'.open_baseSet, contMDiffOn_coordChangeL e e',
-      contMDiffOn_symm_coordChangeL e e', ?_⟩
+    classical
+    let φ : B → F ≃L[𝕜] F := fun b ↦
+      if hb : b ∈ e.baseSet ∩ e'.baseSet then e.coordChangeL 𝕜 e' hb else .refl 𝕜 F
+    have hφ : ∀ b (hb : b ∈ e.baseSet ∩ e'.baseSet), φ b = e.coordChangeL 𝕜 e' hb :=
+      fun b hb ↦ dite_eq_left hb
+    refine ⟨φ, _, e.open_baseSet.inter e'.open_baseSet,
+      contMDiffOn_coordChangeL e e' fun b hb ↦ by rw [hφ b hb],
+      contMDiffOn_symm_coordChangeL e e' fun b hb ↦ by rw [hφ b hb], ?_⟩
     refine OpenPartialHomeomorph.eqOnSourceSetoid.symm ⟨?_, ?_⟩
     · simp only [FiberwiseLinear.openPartialHomeomorph, trans_toPartialEquiv, symm_toPartialEquiv,
         e.symm_trans_source_eq e']
     · rintro ⟨b, v⟩ hb
-      exact (e.apply_symm_apply_eq_coordChangeL e' hb.1 v).symm
+      change (b, φ b v) = e' (e.toOpenPartialHomeomorph.symm (b, v))
+      rw [hφ b hb.1, e.apply_symm_apply_eq_coordChangeL (R := 𝕜) e' hb.1 v]
 
 variable [IsManifold IB n B] in
 /-- A `C^n` vector bundle `E` is naturally a `C^n` manifold. -/
@@ -596,11 +649,11 @@ variable [Z.IsContMDiff IB n]
 /-- If a `VectorBundleCore` has the `IsContMDiff` mixin, then the vector bundle constructed from it
 is a `C^n` vector bundle. -/
 instance instContMDiffVectorBundle : ContMDiffVectorBundle n F Z.Fiber IB where
-  contMDiffOn_coordChangeL := by
+  exists_contMDiffOn_coordChangeL := by
     rintro - - ⟨i, rfl⟩ ⟨i', rfl⟩
-    refine (Z.contMDiffOn_coordChange IB i i').congr fun b hb ↦ ?_
+    refine ⟨Z.coordChange i i', Z.contMDiffOn_coordChange IB i i', fun b hb ↦ ?_⟩
     ext v
-    exact Z.localTriv_coordChange_eq i i' hb v
+    exact (Z.localTriv_coordChange_eq i i' hb v).symm
 
 end VectorBundleCore
 
@@ -609,12 +662,13 @@ end VectorBundleCore
 /-- A trivial vector bundle over a manifold is a `C^n` vector bundle. -/
 instance Bundle.Trivial.contMDiffVectorBundle :
     ContMDiffVectorBundle n F (Bundle.Trivial B F) IB where
-  contMDiffOn_coordChangeL := by
+  exists_contMDiffOn_coordChangeL := by
     intro e e' he he'
     obtain rfl := Bundle.Trivial.eq_trivialization B F e
     obtain rfl := Bundle.Trivial.eq_trivialization B F e'
-    simp_rw [Bundle.Trivial.trivialization.coordChangeL]
-    exact contMDiff_const.contMDiffOn
+    refine ⟨fun _ ↦ ContinuousLinearMap.id 𝕜 F, contMDiff_const.contMDiffOn, fun b hb ↦ ?_⟩
+    rw [Bundle.Trivial.trivialization.coordChangeL]
+    rfl
 
 /-! ### Direct sums of `C^n` vector bundles -/
 
@@ -635,16 +689,22 @@ variable [IsManifold IB n B]
 
 /-- The direct sum of two `C^n` vector bundles over the same base is a `C^n` vector bundle. -/
 instance Bundle.Prod.contMDiffVectorBundle : ContMDiffVectorBundle n (F₁ × F₂) (E₁ ×ᵇ E₂) IB where
-  contMDiffOn_coordChangeL := by
+  exists_contMDiffOn_coordChangeL := by
     rintro _ _ ⟨e₁, e₂, i₁, i₂, rfl⟩ ⟨e₁', e₂', i₁', i₂', rfl⟩
-    refine ContMDiffOn.congr ?_ (e₁.coordChangeL_prod 𝕜 e₁' e₂ e₂')
-    refine ContMDiffOn.clm_prodMap ?_ ?_
-    · refine (contMDiffOn_coordChangeL e₁ e₁').mono ?_
+    obtain ⟨φ₁, hφ₁, hφ₁e⟩ :=
+      ContMDiffVectorBundle.exists_contMDiffOn_coordChangeL (n := n) (IB := IB) e₁ e₁'
+    obtain ⟨φ₂, hφ₂, hφ₂e⟩ :=
+      ContMDiffVectorBundle.exists_contMDiffOn_coordChangeL (n := n) (IB := IB) e₂ e₂'
+    refine ⟨fun b ↦ (φ₁ b).prodMap (φ₂ b), ContMDiffOn.clm_prodMap ?_ ?_, fun b hb ↦ ?_⟩
+    · refine hφ₁.mono ?_
       simp only [Trivialization.prod_baseSet, mfld_simps]
       mfld_set_tac
-    · refine (contMDiffOn_coordChangeL e₂ e₂').mono ?_
+    · refine hφ₂.mono ?_
       simp only [Trivialization.prod_baseSet, mfld_simps]
       mfld_set_tac
+    · beta_reduce
+      rw [e₁.coordChangeL_prod 𝕜 e₁' e₂ e₂' hb, hφ₁e b ⟨hb.1.1, hb.2.1⟩,
+        hφ₂e b ⟨hb.1.2, hb.2.2⟩]
 
 end Prod
 
@@ -669,25 +729,25 @@ class IsContMDiff (a : VectorPrebundle 𝕜 F E) (n : ℕ∞ω) : Prop where
 variable (a : VectorPrebundle 𝕜 F E) [ha : a.IsContMDiff IB n] {e e' : Pretrivialization F (π F E)}
 
 variable (IB n) in
-/-- A randomly chosen coordinate change on a `VectorPrebundle` satisfying `IsContMDiff`, given by
-  the field `exists_coordChange`. Note that `a.contMDiffCoordChange` need not be the same as
-  `a.coordChange`. -/
-@[no_expose] noncomputable def contMDiffCoordChange (he : e ∈ a.pretrivializationAtlas)
+/-- A coordinate change on a `VectorPrebundle` satisfying `IsContMDiff`, chosen from the field
+`exists_contMDiffCoordChange`.  Its values outside the intersection of the base sets are arbitrary,
+so it is used only inside proofs. -/
+@[no_expose] private noncomputable def contMDiffCoordChange (he : e ∈ a.pretrivializationAtlas)
     (he' : e' ∈ a.pretrivializationAtlas) (b : B) : F →L[𝕜] F :=
   Classical.choose (ha.exists_contMDiffCoordChange e he e' he') b
 
-theorem contMDiffOn_contMDiffCoordChange (he : e ∈ a.pretrivializationAtlas)
+private theorem contMDiffOn_contMDiffCoordChange (he : e ∈ a.pretrivializationAtlas)
     (he' : e' ∈ a.pretrivializationAtlas) :
     ContMDiffOn IB 𝓘(𝕜, F →L[𝕜] F) n (a.contMDiffCoordChange n IB he he')
       (e.baseSet ∩ e'.baseSet) :=
   (Classical.choose_spec (ha.exists_contMDiffCoordChange e he e' he')).1
 
-theorem contMDiffCoordChange_apply (he : e ∈ a.pretrivializationAtlas)
+private theorem contMDiffCoordChange_apply (he : e ∈ a.pretrivializationAtlas)
     (he' : e' ∈ a.pretrivializationAtlas) {b : B} (hb : b ∈ e.baseSet ∩ e'.baseSet) (v : F) :
     a.contMDiffCoordChange n IB he he' b v = (e' ⟨b, e.symm b v⟩).2 :=
   (Classical.choose_spec (ha.exists_contMDiffCoordChange e he e' he')).2 b hb v
 
-theorem mk_contMDiffCoordChange (he : e ∈ a.pretrivializationAtlas)
+private theorem mk_contMDiffCoordChange (he : e ∈ a.pretrivializationAtlas)
     (he' : e' ∈ a.pretrivializationAtlas) {b : B} (hb : b ∈ e.baseSet ∩ e'.baseSet) (v : F) :
     (b, a.contMDiffCoordChange n IB he he' b v) = e' ⟨b, e.symm b v⟩ := by
   ext
@@ -700,13 +760,13 @@ variable (IB) in
 theorem contMDiffVectorBundle : @ContMDiffVectorBundle n
     _ _ F E _ _ _ _ _ _ IB _ _ _ _ _ _ a.totalSpaceTopology _ a.toFiberBundle a.toVectorBundle :=
   letI := a.totalSpaceTopology; letI := a.toFiberBundle; letI := a.toVectorBundle
-  { contMDiffOn_coordChangeL := by
+  { exists_contMDiffOn_coordChangeL := by
       rintro _ _ ⟨e, he, rfl⟩ ⟨e', he', rfl⟩
-      refine (a.contMDiffOn_contMDiffCoordChange he he').congr ?_
-      intro b hb
+      refine ⟨a.contMDiffCoordChange n IB he he', a.contMDiffOn_contMDiffCoordChange he he',
+        fun b hb ↦ ?_⟩
       ext v
       rw [a.contMDiffCoordChange_apply he he' hb v, ContinuousLinearEquiv.coe_coe,
         Trivialization.coordChangeL_apply]
-      exacts [rfl, hb] }
+      rfl }
 
 end VectorPrebundle

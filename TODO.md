@@ -780,15 +780,39 @@ operation.
   removed names, the missing evidence, the two degenerate cases, and the fundamental circuits and
   cocircuits of a base.
 
-- [ ] **Put bundle coordinate changes on chart overlaps.**
-  `Bundle.Trivialization.coordChange` in
-  `Mathlib/Topology/FiberBundle/Trivialization.lean:754` accepts every base point even though its
-  identity, composition, and continuity theorems require membership in the relevant base sets; the
-  proof-carrying `coordChangeHomeomorph` at line 795 is the existing strict substrate.  The analogous
-  `coordChangeL` in `Mathlib/Topology/VectorBundle/Basic.lean:266` returns the identity outside the
-  overlap.  Make the ordinary coordinate-change operations take overlap evidence or a point in the
-  overlap.  Keep ambient representatives private, including technical trivialization inverses, and
-  only when every exported statement proves that values outside the base set are irrelevant.
+- [x] **Put bundle coordinate changes on chart overlaps.**
+  `Bundle.Trivialization.coordChange e₁ e₂ h₁ h₂` in
+  `Mathlib/Topology/FiberBundle/Trivialization.lean` takes the proofs that the point lies in both
+  base sets, and `Bundle.Trivialization.coordChangeL R e e' hb` in
+  `Mathlib/Topology/VectorBundle/Basic.lean` takes `hb : b ∈ e.baseSet ∩ e'.baseSet`; the identity
+  value of `coordChangeL` and the partial-inverse value of `coordChange` outside the overlap are
+  removed.  `VectorBundle` and `ContMDiffVectorBundle` require that the coordinate change agree on
+  the overlap with a map from the base that is continuous or `C^n` there
+  (`VectorBundle.exists_continuousOn_coordChangeL`,
+  `ContMDiffVectorBundle.exists_contMDiffOn_coordChangeL`), and the exported theorems
+  `continuousOn_coordChangeL` (renamed from `continuousOn_coordChange`), `contMDiffOn_coordChangeL`,
+  `contMDiffOn_symm_coordChangeL`, `contMDiffAt_coordChangeL`, the `ContMDiff*.coordChangeL` and
+  `ContMDiff*.coordChange` families, and their differentiable counterparts hold for every map that
+  agrees with the coordinate change wherever it is defined, so the values outside the overlap are
+  irrelevant; the global versions state the smoothness of the coordinate change itself.  These
+  hypotheses quantify over every point where the coordinate change is defined, not only near the
+  base point: a map that agrees only near the point is reached by applying the theorem to a global
+  representative and `congr_of_eventuallyEq`.  The coordinate changes of the bundles of continuous
+  linear and alternating maps, `Pretrivialization.continuousLinearMapCoordChange` and
+  `Pretrivialization.continuousAlternatingMapCoordChange`, take the four-fold overlap.
+  `VectorPrebundle.coordChange` and `VectorPrebundle.contMDiffCoordChange`, representatives chosen
+  from the existential fields, and their lemmas are private.  Representatives extended by zero or
+  the identity remain only inside proofs.  The `coordChange` fields of `FiberBundleCore` and
+  `VectorBundleCore` are construction data: the core documents them as total encodings of maps on
+  `baseSet i ∩ baseSet j`, and every law about them carries the membership; the evaluation formulas
+  of the local trivializations state the total value and are audited, with the rest of this total
+  surface, in the entry on bundle cores and the tangent bundle.  The technical inverses and
+  `inCoordinates` remain under the local-frame/trivialization evaluation entry.  Tests cover a bare
+  point and insufficient or misordered memberships for `coordChange`, `coordChangeL`, and the
+  four-fold coordinate changes, the removed and privatized names, the relation between
+  `coordChange`, `coordChangeL`, and `coordChangeHomeomorph`, the continuity and smoothness of an
+  arbitrary map that agrees with the coordinate change on the overlap, and the global smoothness
+  along a map into both base sets.
 
 - [x] **Identify the exact event contract for conditional probability.**
   `ProbabilityTheory.cond μ s hs` takes `hs : IsConditionable μ s`: `s` is null-measurable and has
@@ -1569,12 +1593,38 @@ operation.
   regularity in the theorem or bundled object that actually uses it.
 
 - [ ] **Audit and strictify local-frame/trivialization evaluation at its public boundary.**
-  `IsLocalFrameOn.coeff` in
-  `Mathlib/Geometry/Manifold/VectorBundle/LocalFrame.lean:186` returns zero outside the frame's set;
-  pretrivializations/trivializations in `Mathlib/Topology/FiberBundle/Trivialization.lean:69` also
-  expose chosen ambient values.  Require base-set membership for ordinary coordinate/evaluation
-  names.  Keep globally defined implementation representatives private and only behind proofs that
-  their off-domain values cannot affect public results.
+  `IsLocalFrameOn.coeff` in `Mathlib/Geometry/Manifold/VectorBundle/LocalFrame.lean:186` returns
+  zero outside the frame's set; pretrivializations/trivializations in
+  `Mathlib/Topology/FiberBundle/Trivialization.lean:69` also expose chosen ambient values, and
+  `Pretrivialization.symm` and `Trivialization.symm` in the same file take an arbitrarily chosen
+  value outside the base set.  In `Mathlib/Topology/VectorBundle/Basic.lean` the fiberwise maps
+  `Pretrivialization.linearMapAt` and `Pretrivialization.symmₗ`, `Trivialization.linearMapAt`,
+  `Trivialization.symmₗ`, `Trivialization.continuousLinearMapAt`, and `Trivialization.symmL` are
+  zero outside the base set; `ContinuousLinearMap.inCoordinates` in the same file and
+  `ContinuousAlternatingMap.inCoordinates` in
+  `Mathlib/Topology/VectorBundle/ContinuousAlternatingMap.lean` are built from them for points in
+  different base sets.  Consumers such as `Bundle.Trivialization.contMDiffAt_symmL` in
+  `Mathlib/Geometry/Manifold/VectorBundle/Hom.lean` state properties of these total maps.  Require
+  base-set membership for ordinary coordinate/evaluation names.  Keep globally defined
+  implementation representatives private and only behind proofs that their off-domain values cannot
+  affect public results.
+
+- [ ] **Audit the total coordinate-change surface of bundle cores and the tangent bundle.**
+  `FiberBundleCore.coordChange` in `Mathlib/Topology/FiberBundle/Basic.lean` and
+  `VectorBundleCore.coordChange` in `Mathlib/Topology/VectorBundle/Basic.lean` are total fields
+  `ι → ι → B → …` whose laws hold on `baseSet i ∩ baseSet j`; the core documents them as encodings
+  of maps on the overlap, and the evaluation formulas
+  `FiberBundleCore.localTrivAsPartialEquiv_apply`, `FiberBundleCore.localTrivAt_snd`,
+  `FiberBundleCore.localTriv_apply`, `FiberBundleCore.localTriv_symm_apply`,
+  `VectorBundleCore.localTriv_apply`, and `VectorBundleCore.localTriv_symm_fst` state the
+  unconditional formula, including values outside the source.  `tangentCoordChange` in
+  `Mathlib/Geometry/Manifold/VectorBundle/Tangent.lean` is a public, named coordinate change defined
+  as `(tangentBundleCore I M).coordChange` whose docstring says that it takes junk values outside
+  the intersection of the chart sources; it is used in
+  `Mathlib/Geometry/Manifold/MFDeriv/Tangent.lean` and the integral curve files.  Decide between a
+  dependent field `∀ b ∈ baseSet i ∩ baseSet j, F →L[R] F` with a documented construction contract
+  and a strict exported operation on the overlap, give `tangentCoordChange` the overlap evidence,
+  and keep any total representative private.
 
 - [ ] **Audit the choice-based `Filter.lim` projection and its theorem boundaries.**
   `Filter.lim` and `Filter.limUnder` in `Mathlib/Topology/Defs/Filter.lean:255` and `:260` use
@@ -2431,9 +2481,9 @@ was found, and none should inherit validation merely from the earlier scan:
   canonical migration.
 - [x] **Local bundle representatives split at the exported coordinate API.**  Globally defined
   trivialization representatives may exist privately when every semantic statement proves
-  independence from their values outside the base sets.  Ordinary `coordChange` operations expose
-  those values under a mathematical name, so the M task above moves their overlap into the public
-  domain and keeps the ambient representatives out of the public API.
+  independence from their values outside the base sets.  Ordinary `coordChange` operations exposed
+  those values under a mathematical name, so the M entry above moved their overlap into the public
+  domain and kept the ambient representatives out of the public API.
 - [x] **Computational decoders and searches are excluded by default.**  Explicit `getD`, `headI`, tape
   blanks, parser defaults, and noncanonical decoders belong to computational representation
   contracts.  Reopen a case only when it is exported as a checked mathematical inverse or primary

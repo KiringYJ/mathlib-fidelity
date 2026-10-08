@@ -111,37 +111,50 @@ variable {F₂ : Type*} [NormedAddCommGroup F₂] [NormedSpace 𝕜 F₂] {E₂ 
 
 variable (𝕜 ι) in
 /-- Assume `eᵢ` and `eᵢ'` are trivializations of the bundles `Eᵢ` over base `B` with fiber `Fᵢ`
-(`i ∈ {1,2}`), then `Pretrivialization.continuousAlternatingMapCoordChange 𝕜 ι e₁ e₁' e₂ e₂'`
-is the coordinate change function between the two induced (pre)trivializations
+(`i ∈ {1,2}`), then `Pretrivialization.continuousAlternatingMapCoordChange 𝕜 ι e₁ e₁' e₂ e₂' hb`
+is the coordinate change between the two induced (pre)trivializations
 `Pretrivialization.continuousAlternatingMap 𝕜 ι e₁ e₂`
 and `Pretrivialization.continuousAlternatingMap 𝕜 ι e₁' e₂'`
-of the bundle of continuous alternating maps. -/
+of the bundle of continuous alternating maps, at a point `b` of the intersection of their base
+sets. -/
 def continuousAlternatingMapCoordChange (e₁ e₁' : Trivialization F₁ (π F₁ E₁))
     (e₂ e₂' : Trivialization F₂ (π F₂ E₂))
-    [e₁.IsLinear 𝕜] [e₁'.IsLinear 𝕜] [e₂.IsLinear 𝕜] [e₂'.IsLinear 𝕜] (b : B) :
+    [e₁.IsLinear 𝕜] [e₁'.IsLinear 𝕜] [e₂.IsLinear 𝕜] [e₂'.IsLinear 𝕜] {b : B}
+    (hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)) :
     (F₁ [⋀^ι]→L[𝕜] F₂) →L[𝕜] (F₁ [⋀^ι]→L[𝕜] F₂) :=
-  (e₁'.coordChangeL 𝕜 e₁ b).symm.continuousAlternatingMapCongr (e₂.coordChangeL 𝕜 e₂' b) (ι := ι)
+  (e₁'.coordChangeL 𝕜 e₁ (Set.mem_inter hb.2.1 hb.1.1)).symm.continuousAlternatingMapCongr
+    (e₂.coordChangeL 𝕜 e₂' (Set.mem_inter hb.1.2 hb.2.2)) (ι := ι)
 
 variable [∀ x, TopologicalSpace (E₁ x)] [FiberBundle F₁ E₁]
 variable [∀ x, TopologicalSpace (E₂ x)] [FiberBundle F₂ E₂]
 variable {e₁ e₁' : Trivialization F₁ (π F₁ E₁)} {e₂ e₂' : Trivialization F₂ (π F₂ E₂)}
 
+/-- The coordinate change of the bundle of continuous alternating maps is continuous on the
+intersection of the base sets: every map that agrees with it there is continuous there. -/
 theorem continuousOn_continuousAlternatingMapCoordChange
     [Finite ι]
     [VectorBundle 𝕜 F₁ E₁] [VectorBundle 𝕜 F₂ E₂]
     [MemTrivializationAtlas e₁] [MemTrivializationAtlas e₁'] [MemTrivializationAtlas e₂]
-    [MemTrivializationAtlas e₂'] :
-    ContinuousOn (continuousAlternatingMapCoordChange 𝕜 ι e₁ e₁' e₂ e₂')
-      (e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)) := by
+    [MemTrivializationAtlas e₂'] {φ : B → (F₁ [⋀^ι]→L[𝕜] F₂) →L[𝕜] (F₁ [⋀^ι]→L[𝕜] F₂)}
+    (hφ : ∀ b (hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)),
+      φ b = continuousAlternatingMapCoordChange 𝕜 ι e₁ e₁' e₂ e₂' hb) :
+    ContinuousOn φ (e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)) := by
   cases nonempty_fintype ι
-  simp +unfoldPartialApp only [continuousAlternatingMapCoordChange,
-    ContinuousLinearEquiv.coe_continuousAlternatingMapCongr, ContinuousLinearEquiv.symm_symm]
-  refine .clm_comp ?_ ?_
+  obtain ⟨ψ₁, hψ₁, hψ₁e⟩ := VectorBundle.exists_continuousOn_coordChangeL (R := 𝕜) e₁' e₁
+  obtain ⟨ψ₂, hψ₂, hψ₂e⟩ := VectorBundle.exists_continuousOn_coordChangeL (R := 𝕜) e₂ e₂'
+  refine ContinuousOn.congr (f := fun b ↦
+    (ContinuousLinearMap.compContinuousAlternatingMapCLM (ι := ι) 𝕜 F₁ F₂ F₂ (ψ₂ b)).comp
+      (ContinuousAlternatingMap.compContinuousLinearMapCLM (ψ₁ b))) (.clm_comp ?_ ?_) ?_
   · refine map_continuous (ContinuousLinearMap.compContinuousAlternatingMapCLM (ι := ι) 𝕜 F₁ F₂ F₂)
-      |>.comp_continuousOn ((continuousOn_coordChange 𝕜 e₂ e₂').mono ?_)
+      |>.comp_continuousOn (hψ₂.mono ?_)
     mfld_set_tac
   · refine ContinuousAlternatingMap.continuous_compContinuousLinearMapCLM.comp_continuousOn ?_
-    exact continuousOn_coordChange 𝕜 e₁' e₁ |>.mono (by mfld_set_tac)
+    exact hψ₁.mono (by mfld_set_tac)
+  · intro b hb
+    beta_reduce
+    rw [hφ b hb, hψ₁e b ⟨hb.2.1, hb.1.1⟩, hψ₂e b ⟨hb.1.2, hb.2.2⟩]
+    simp only [continuousAlternatingMapCoordChange,
+      ContinuousLinearEquiv.coe_continuousAlternatingMapCongr, ContinuousLinearEquiv.symm_symm]
 
 variable [e₁.IsLinear 𝕜] [e₁'.IsLinear 𝕜] [e₂.IsLinear 𝕜] [e₂'.IsLinear 𝕜]
 
@@ -207,9 +220,9 @@ theorem continuousAlternatingMap_symm_apply' {b : B} (hb : b ∈ e₁.baseSet �
   · rfl
   · exact hb
 
-theorem continuousAlternatingMapCoordChange_apply (b : B)
+theorem continuousAlternatingMapCoordChange_apply {b : B}
     (hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)) (L : F₁ [⋀^ι]→L[𝕜] F₂) :
-    continuousAlternatingMapCoordChange 𝕜 ι e₁ e₁' e₂ e₂' b L =
+    continuousAlternatingMapCoordChange 𝕜 ι e₁ e₁' e₂ e₂' hb L =
       (continuousAlternatingMap 𝕜 ι e₁' e₂'
         ⟨b, (continuousAlternatingMap 𝕜 ι e₁ e₂).symm b L⟩).2 := by
   ext v
@@ -264,9 +277,14 @@ def vectorPrebundle :
     ⟨trivializationAt F₁ E₁ x, trivializationAt F₂ E₂ x, inferInstance, inferInstance, rfl⟩
   exists_coordChange := by
     rintro _ ⟨e₁, e₂, he₁, he₂, rfl⟩ _ ⟨e₁', e₂', he₁', he₂', rfl⟩
-    exact ⟨continuousAlternatingMapCoordChange 𝕜 ι e₁ e₁' e₂ e₂',
-      continuousOn_continuousAlternatingMapCoordChange,
-      continuousAlternatingMapCoordChange_apply⟩
+    classical
+    refine ⟨fun b ↦ if hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet) then
+      continuousAlternatingMapCoordChange 𝕜 ι e₁ e₁' e₂ e₂' hb else 0,
+      continuousOn_continuousAlternatingMapCoordChange fun b hb ↦ dite_eq_left hb,
+      fun b hb L ↦ ?_⟩
+    have hb' : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet) := hb
+    simp only [dite_eq_left hb']
+    exact continuousAlternatingMapCoordChange_apply hb' L
   totalSpaceMk_isInducing b := by
     simp only [Function.comp_def, continuousAlternatingMap_apply, isInducing_const_prod]
     let L₁ : E₁ b ≃L[𝕜] F₁ :=

@@ -50,15 +50,34 @@ local notation "LE₁E₂" => TotalSpace (F₁ →L[𝕜] F₂) (fun (b : B) ↦
 
 section
 
+/-- The coordinate change of the bundle of continuous linear maps between two `C^n` vector bundles
+is `C^n` on the intersection of the base sets: every map that agrees with it there is `C^n`
+there. -/
 theorem contMDiffOn_continuousLinearMapCoordChange
     [ContMDiffVectorBundle n F₁ E₁ IB] [ContMDiffVectorBundle n F₂ E₂ IB]
     [MemTrivializationAtlas e₁] [MemTrivializationAtlas e₁']
-    [MemTrivializationAtlas e₂] [MemTrivializationAtlas e₂'] :
-    CMDiff[e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)] n
-      (continuousLinearMapCoordChange (RingHom.id 𝕜) e₁ e₁' e₂ e₂') := by
-  have h₁ := contMDiffOn_coordChangeL (IB := IB) e₁' e₁ (n := n)
-  have h₂ := contMDiffOn_coordChangeL (IB := IB) e₂ e₂' (n := n)
-  refine (h₁.mono ?_).cle_arrowCongr (h₂.mono ?_) <;> mfld_set_tac
+    [MemTrivializationAtlas e₂] [MemTrivializationAtlas e₂']
+    {φ : B → (F₁ →L[𝕜] F₂) →L[𝕜] F₁ →L[𝕜] F₂}
+    (hφ : ∀ b (hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)),
+      φ b = continuousLinearMapCoordChange (RingHom.id 𝕜) e₁ e₁' e₂ e₂' hb) :
+    CMDiff[e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)] n φ := by
+  classical
+  let f₁ : B → F₁ ≃L[𝕜] F₁ := fun b ↦
+    if hb : b ∈ e₁'.baseSet ∩ e₁.baseSet then (e₁'.coordChangeL 𝕜 e₁ hb).symm else .refl 𝕜 F₁
+  let f₂ : B → F₂ ≃L[𝕜] F₂ := fun b ↦
+    if hb : b ∈ e₂.baseSet ∩ e₂'.baseSet then e₂.coordChangeL 𝕜 e₂' hb else .refl 𝕜 F₂
+  have h₁ : CMDiff[e₁'.baseSet ∩ e₁.baseSet] n (fun b ↦ ((f₁ b).symm : F₁ →L[𝕜] F₁)) :=
+    contMDiffOn_coordChangeL (IB := IB) e₁' e₁ fun b hb ↦ by simp only [f₁, dite_eq_left hb,
+      ContinuousLinearEquiv.symm_symm]
+  have h₂ : CMDiff[e₂.baseSet ∩ e₂'.baseSet] n (fun b ↦ (f₂ b : F₂ →L[𝕜] F₂)) :=
+    contMDiffOn_coordChangeL (IB := IB) e₂ e₂' fun b hb ↦ by simp only [f₂, dite_eq_left hb]
+  refine ((h₁.mono ?_).cle_arrowCongr (h₂.mono ?_)).congr fun b hb ↦ ?_
+  · mfld_set_tac
+  · mfld_set_tac
+  · rw [hφ b hb]
+    simp only [f₁, f₂, dite_eq_left (show b ∈ e₁'.baseSet ∩ e₁.baseSet from ⟨hb.2.1, hb.1.1⟩),
+      dite_eq_left (show b ∈ e₂.baseSet ∩ e₂'.baseSet from ⟨hb.1.2, hb.2.2⟩)]
+    rfl
 
 variable [∀ x, IsTopologicalAddGroup (E₂ x)] [∀ x, ContinuousSMul 𝕜 (E₂ x)]
 
@@ -86,15 +105,18 @@ end
 
 section
 
+/-- The coordinate change of the bundle of continuous linear maps between two `C^1` vector bundles
+is differentiable on the intersection of the base sets: every map that agrees with it there is
+differentiable there. -/
 theorem mdifferentiableOn_continuousLinearMapCoordChange
     [ContMDiffVectorBundle 1 F₁ E₁ IB] [ContMDiffVectorBundle 1 F₂ E₂ IB]
     [MemTrivializationAtlas e₁] [MemTrivializationAtlas e₁']
-    [MemTrivializationAtlas e₂] [MemTrivializationAtlas e₂'] :
-    MDiff[e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)]
-      (continuousLinearMapCoordChange (RingHom.id 𝕜) e₁ e₁' e₂ e₂') := by
-  have h₁ := contMDiffOn_coordChangeL (IB := IB) e₁' e₁ (n := 1) |>.mdifferentiableOn one_ne_zero
-  have h₂ := contMDiffOn_coordChangeL (IB := IB) e₂ e₂' (n := 1) |>.mdifferentiableOn one_ne_zero
-  refine (h₁.mono ?_).cle_arrowCongr (h₂.mono ?_) <;> mfld_set_tac
+    [MemTrivializationAtlas e₂] [MemTrivializationAtlas e₂']
+    {φ : B → (F₁ →L[𝕜] F₂) →L[𝕜] F₁ →L[𝕜] F₂}
+    (hφ : ∀ b (hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)),
+      φ b = continuousLinearMapCoordChange (RingHom.id 𝕜) e₁ e₁' e₂ e₂' hb) :
+    MDiff[e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)] φ :=
+  (contMDiffOn_continuousLinearMapCoordChange (n := 1) hφ).mdifferentiableOn one_ne_zero
 
 variable [∀ x, IsTopologicalAddGroup (E₂ x)] [∀ x, ContinuousSMul 𝕜 (E₂ x)]
 
@@ -120,9 +142,13 @@ instance Bundle.ContinuousLinearMap.vectorPrebundle.isContMDiff :
     (Bundle.ContinuousLinearMap.vectorPrebundle (RingHom.id 𝕜) F₁ E₁ F₂ E₂).IsContMDiff IB n where
   exists_contMDiffCoordChange := by
     rintro _ ⟨e₁, e₂, he₁, he₂, rfl⟩ _ ⟨e₁', e₂', he₁', he₂', rfl⟩
-    exact ⟨continuousLinearMapCoordChange (RingHom.id 𝕜) e₁ e₁' e₂ e₂',
-      contMDiffOn_continuousLinearMapCoordChange,
-      continuousLinearMapCoordChange_apply (RingHom.id 𝕜) e₁ e₁' e₂ e₂'⟩
+    classical
+    refine ⟨fun b ↦ if hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet) then
+      continuousLinearMapCoordChange (RingHom.id 𝕜) e₁ e₁' e₂ e₂' hb else 0,
+      contMDiffOn_continuousLinearMapCoordChange fun b hb ↦ dite_eq_left hb, fun b hb L ↦ ?_⟩
+    have hb' : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet) := hb
+    simp only [dite_eq_left hb']
+    exact continuousLinearMapCoordChange_apply (RingHom.id 𝕜) e₁ e₁' e₂ e₂' hb' L
 
 instance ContMDiffVectorBundle.continuousLinearMap :
     ContMDiffVectorBundle n (F₁ →L[𝕜] F₂) ((fun (b : B) ↦ E₁ b →L[𝕜] E₂ b)) IB :=
@@ -150,10 +176,8 @@ lemma Bundle.Trivialization.contMDiffAt_symmL [ContMDiffVectorBundle n F₁ E₁
     ContMDiffAt IB (IB.prod 𝓘(𝕜, F₁ →L[𝕜] F₁)) n
       (fun m ↦ TotalSpace.mk' (F₁ →L[𝕜] F₁) m (e.symmL 𝕜 m)) x := by
   have hx' : x ∈ (trivializationAt F₁ E₁ x).baseSet := mem_baseSet_trivializationAt F₁ E₁ x
-  refine contMDiffAt_totalSpace.mpr ⟨contMDiffAt_id, ?_⟩
-  apply (contMDiffAt_coordChangeL hx hx').congr_of_eventuallyEq
-  filter_upwards [e.open_baseSet.mem_nhds hx,
-    (trivializationAt F₁ E₁ x).open_baseSet.mem_nhds hx'] with b hb hb'
+  refine contMDiffAt_totalSpace.mpr ⟨contMDiffAt_id, contMDiffAt_coordChangeL hx hx' ?_⟩
+  rintro b ⟨hb, hb'⟩
   ext v
   simp [hom_trivializationAt_apply, ContinuousLinearMap.inCoordinates,
     coordChangeL_apply' e _ ⟨hb, hb'⟩, coe_linearMapAt_of_mem _ hb',

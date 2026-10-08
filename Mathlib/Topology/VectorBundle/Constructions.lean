@@ -45,22 +45,24 @@ instance trivialization.isLinear : (trivialization B F).IsLinear 𝕜 where
   linear _ _ := ⟨fun _ _ => rfl, fun _ _ => rfl⟩
 
 variable {𝕜} in
-theorem trivialization.coordChangeL (b : B) :
-    (trivialization B F).coordChangeL 𝕜 (trivialization B F) b =
+theorem trivialization.coordChangeL {b : B}
+    (hb : b ∈ (trivialization B F).baseSet ∩ (trivialization B F).baseSet) :
+    (trivialization B F).coordChangeL 𝕜 (trivialization B F) hb =
       ContinuousLinearEquiv.refl 𝕜 F := by
   ext v
   rw [Trivialization.coordChangeL_apply']
-  exacts [rfl, ⟨mem_univ _, mem_univ _⟩]
+  rfl
 
 instance vectorBundle : VectorBundle 𝕜 F (Bundle.Trivial B F) where
   trivialization_linear' e he := by
     rw [eq_trivialization B F e]
     infer_instance
-  continuousOn_coordChange' e e' he he' := by
+  exists_continuousOn_coordChangeL e e' he he' := by
     obtain rfl := eq_trivialization B F e
     obtain rfl := eq_trivialization B F e'
-    simp only [trivialization.coordChangeL]
-    exact continuous_const.continuousOn
+    refine ⟨fun _ ↦ ContinuousLinearMap.id 𝕜 F, continuousOn_const, fun b hb ↦ ?_⟩
+    rw [trivialization.coordChangeL]
+    rfl
 
 @[simp] lemma linearMapAt_trivialization (x : B) :
     (trivialization B F).linearMapAt 𝕜 x = LinearMap.id := by
@@ -110,16 +112,18 @@ instance prod.isLinear [e₁.IsLinear 𝕜] [e₂.IsLinear 𝕜] : (e₁.prod e�
 
 @[simp]
 theorem coordChangeL_prod [e₁.IsLinear 𝕜] [e₁'.IsLinear 𝕜] [e₂.IsLinear 𝕜] [e₂'.IsLinear 𝕜] ⦃b⦄
-    (hb : (b ∈ e₁.baseSet ∧ b ∈ e₂.baseSet) ∧ b ∈ e₁'.baseSet ∧ b ∈ e₂'.baseSet) :
-    ((e₁.prod e₂).coordChangeL 𝕜 (e₁'.prod e₂') b : F₁ × F₂ →L[𝕜] F₁ × F₂) =
-      (e₁.coordChangeL 𝕜 e₁' b : F₁ →L[𝕜] F₁).prodMap (e₂.coordChangeL 𝕜 e₂' b) := by
+    (hb : b ∈ (e₁.prod e₂).baseSet ∩ (e₁'.prod e₂').baseSet) :
+    ((e₁.prod e₂).coordChangeL 𝕜 (e₁'.prod e₂') hb : F₁ × F₂ →L[𝕜] F₁ × F₂) =
+      (e₁.coordChangeL 𝕜 e₁' (Set.mem_inter hb.1.1 hb.2.1) : F₁ →L[𝕜] F₁).prodMap
+        (e₂.coordChangeL 𝕜 e₂' (Set.mem_inter hb.1.2 hb.2.2)) := by
   rw [ContinuousLinearMap.ext_iff, ContinuousLinearMap.coe_prodMap']
   rintro ⟨v₁, v₂⟩
   change
-    (e₁.prod e₂).coordChangeL 𝕜 (e₁'.prod e₂') b (v₁, v₂) =
-      (e₁.coordChangeL 𝕜 e₁' b v₁, e₂.coordChangeL 𝕜 e₂' b v₂)
+    (e₁.prod e₂).coordChangeL 𝕜 (e₁'.prod e₂') hb (v₁, v₂) =
+      (e₁.coordChangeL 𝕜 e₁' (Set.mem_inter hb.1.1 hb.2.1) v₁,
+        e₂.coordChangeL 𝕜 e₂' (Set.mem_inter hb.1.2 hb.2.2) v₂)
   rw [e₁.coordChangeL_apply e₁', e₂.coordChangeL_apply e₂', (e₁.prod e₂).coordChangeL_apply']
-  exacts [rfl, hb, ⟨hb.1.2, hb.2.2⟩, ⟨hb.1.1, hb.2.1⟩]
+  rfl
 
 variable {e₁ e₂} [∀ x : B, TopologicalSpace (E₁ x)] [∀ x : B, TopologicalSpace (E₂ x)]
   [FiberBundle F₁ E₁] [FiberBundle F₂ E₂]
@@ -145,20 +149,19 @@ instance VectorBundle.prod [VectorBundle 𝕜 F₁ E₁] [VectorBundle 𝕜 F₂
   trivialization_linear' := by
     rintro _ ⟨e₁, e₂, he₁, he₂, rfl⟩
     infer_instance
-  continuousOn_coordChange' := by
+  exists_continuousOn_coordChangeL := by
     rintro _ _ ⟨e₁, e₂, he₁, he₂, rfl⟩ ⟨e₁', e₂', he₁', he₂', rfl⟩
-    refine (((continuousOn_coordChange 𝕜 e₁ e₁').mono ?_).prod_mapL 𝕜
-      ((continuousOn_coordChange 𝕜 e₂ e₂').mono ?_)).congr ?_ <;>
-      dsimp only [prod_baseSet, mfld_simps]
-    · mfld_set_tac
-    · mfld_set_tac
-    · rintro b hb
-      rw [ContinuousLinearMap.ext_iff]
-      rintro ⟨v₁, v₂⟩
-      change (e₁.prod e₂).coordChangeL 𝕜 (e₁'.prod e₂') b (v₁, v₂) =
-        (e₁.coordChangeL 𝕜 e₁' b v₁, e₂.coordChangeL 𝕜 e₂' b v₂)
-      rw [e₁.coordChangeL_apply e₁', e₂.coordChangeL_apply e₂', (e₁.prod e₂).coordChangeL_apply']
-      exacts [rfl, hb, ⟨hb.1.2, hb.2.2⟩, ⟨hb.1.1, hb.2.1⟩]
+    obtain ⟨φ₁, hφ₁, hφ₁e⟩ := VectorBundle.exists_continuousOn_coordChangeL (R := 𝕜) e₁ e₁'
+    obtain ⟨φ₂, hφ₂, hφ₂e⟩ := VectorBundle.exists_continuousOn_coordChangeL (R := 𝕜) e₂ e₂'
+    refine ⟨fun b ↦ (φ₁ b).prodMap (φ₂ b), (hφ₁.mono ?_).prod_mapL 𝕜 (hφ₂.mono ?_),
+      fun b hb ↦ ?_⟩
+    · dsimp only [prod_baseSet, mfld_simps]
+      mfld_set_tac
+    · dsimp only [prod_baseSet, mfld_simps]
+      mfld_set_tac
+    · beta_reduce
+      rw [coordChangeL_prod 𝕜 e₁ e₁' e₂ e₂' hb, hφ₁e b ⟨hb.1.1, hb.2.1⟩,
+        hφ₂e b ⟨hb.1.2, hb.2.2⟩]
 
 variable {𝕜 F₁ E₁ F₂ E₂}
 
@@ -206,13 +209,16 @@ instance VectorBundle.pullback [∀ x, TopologicalSpace (E x)] [FiberBundle F E]
   trivialization_linear' := by
     rintro _ ⟨e, he, rfl⟩
     infer_instance
-  continuousOn_coordChange' := by
+  exists_continuousOn_coordChangeL := by
     rintro _ _ ⟨e, he, rfl⟩ ⟨e', he', rfl⟩
-    refine ((continuousOn_coordChange 𝕜 e e').comp
-      (map_continuous f).continuousOn fun b hb => hb).congr ?_
-    rintro b (hb : f b ∈ e.baseSet ∩ e'.baseSet); ext v
-    change ((e.pullback f).coordChangeL 𝕜 (e'.pullback f) b) v = (e.coordChangeL 𝕜 e' (f b)) v
-    rw [e.coordChangeL_apply e' hb, (e.pullback f).coordChangeL_apply' _]
-    exacts [rfl, hb]
+    obtain ⟨φ, hφ, hφe⟩ := VectorBundle.exists_continuousOn_coordChangeL (R := 𝕜) e e'
+    refine ⟨φ ∘ f, hφ.comp (map_continuous f).continuousOn fun b hb => hb, ?_⟩
+    intro b hb
+    have hb' : f b ∈ e.baseSet ∩ e'.baseSet := hb
+    ext v
+    change φ (f b) v = ((e.pullback f).coordChangeL 𝕜 (e'.pullback f) hb) v
+    rw [hφe (f b) hb', ContinuousLinearEquiv.coe_coe, e.coordChangeL_apply e' hb',
+      (e.pullback f).coordChangeL_apply' _]
+    rfl
 
 end

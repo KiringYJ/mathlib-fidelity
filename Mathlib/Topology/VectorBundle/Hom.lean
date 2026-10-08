@@ -54,35 +54,43 @@ variable [TopologicalSpace B] (e₁ e₁' : Trivialization F₁ (π F₁ E₁))
 namespace Bundle.Pretrivialization
 
 /-- Assume `eᵢ` and `eᵢ'` are trivializations of the bundles `Eᵢ` over base `B` with fiber `Fᵢ`
-(`i ∈ {1,2}`), then `Pretrivialization.continuousLinearMapCoordChange σ e₁ e₁' e₂ e₂'` is the
-coordinate change function between the two induced (pre)trivializations
+(`i ∈ {1,2}`), then `Pretrivialization.continuousLinearMapCoordChange σ e₁ e₁' e₂ e₂' hb` is the
+coordinate change between the two induced (pre)trivializations
 `Pretrivialization.continuousLinearMap σ e₁ e₂` and
-`Pretrivialization.continuousLinearMap σ e₁' e₂'` of the bundle of continuous linear maps. -/
+`Pretrivialization.continuousLinearMap σ e₁' e₂'` of the bundle of continuous linear maps, at a
+point `b` of the intersection of their base sets. -/
 def continuousLinearMapCoordChange [e₁.IsLinear 𝕜₁] [e₁'.IsLinear 𝕜₁] [e₂.IsLinear 𝕜₂]
-    [e₂'.IsLinear 𝕜₂] (b : B) : (F₁ →SL[σ] F₂) →L[𝕜₂] F₁ →SL[σ] F₂ :=
-  ((e₁'.coordChangeL 𝕜₁ e₁ b).symm.arrowCongrSL (e₂.coordChangeL 𝕜₂ e₂' b) :
-    (F₁ →SL[σ] F₂) ≃L[𝕜₂] F₁ →SL[σ] F₂)
+    [e₂'.IsLinear 𝕜₂] {b : B} (hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)) :
+    (F₁ →SL[σ] F₂) →L[𝕜₂] F₁ →SL[σ] F₂ :=
+  ((e₁'.coordChangeL 𝕜₁ e₁ (Set.mem_inter hb.2.1 hb.1.1)).symm.arrowCongrSL
+    (e₂.coordChangeL 𝕜₂ e₂' (Set.mem_inter hb.1.2 hb.2.2)) : (F₁ →SL[σ] F₂) ≃L[𝕜₂] F₁ →SL[σ] F₂)
 
 variable {σ e₁ e₁' e₂ e₂'}
 variable [∀ x, TopologicalSpace (E₁ x)] [FiberBundle F₁ E₁]
 variable [∀ x, TopologicalSpace (E₂ x)] [FiberBundle F₂ E₂]
 
 set_option backward.defeqAttrib.useBackward true in
+/-- The coordinate change of the bundle of continuous linear maps is continuous on the intersection
+of the base sets: every map that agrees with it there is continuous there. -/
 theorem continuousOn_continuousLinearMapCoordChange [RingHomIsometric σ]
     [VectorBundle 𝕜₁ F₁ E₁] [VectorBundle 𝕜₂ F₂ E₂]
     [MemTrivializationAtlas e₁] [MemTrivializationAtlas e₁'] [MemTrivializationAtlas e₂]
-    [MemTrivializationAtlas e₂'] :
-    ContinuousOn (continuousLinearMapCoordChange σ e₁ e₁' e₂ e₂')
-      (e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)) := by
+    [MemTrivializationAtlas e₂'] {φ : B → (F₁ →SL[σ] F₂) →L[𝕜₂] F₁ →SL[σ] F₂}
+    (hφ : ∀ b (hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)),
+      φ b = continuousLinearMapCoordChange σ e₁ e₁' e₂ e₂' hb) :
+    ContinuousOn φ (e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)) := by
+  obtain ⟨ψ₁, h₃, hψ₁⟩ := VectorBundle.exists_continuousOn_coordChangeL (R := 𝕜₁) e₁' e₁
+  obtain ⟨ψ₂, h₄, hψ₂⟩ := VectorBundle.exists_continuousOn_coordChangeL (R := 𝕜₂) e₂ e₂'
   have h₁ := (compSL F₁ F₂ F₂ σ (RingHom.id 𝕜₂)).continuous
   have h₂ := (ContinuousLinearMap.flip (compSL F₁ F₁ F₂ (RingHom.id 𝕜₁) σ)).continuous
-  have h₃ := continuousOn_coordChange 𝕜₁ e₁' e₁
-  have h₄ := continuousOn_coordChange 𝕜₂ e₂ e₂'
   refine ((h₁.comp_continuousOn (h₄.mono ?_)).clm_comp (h₂.comp_continuousOn (h₃.mono ?_))).congr ?_
   · mfld_set_tac
   · mfld_set_tac
-  · intro b _
+  · intro b hb
+    rw [hφ b hb]
     ext L v
+    dsimp only [Function.comp_apply]
+    rw [hψ₁ b ⟨hb.2.1, hb.1.1⟩, hψ₂ b ⟨hb.1.2, hb.2.2⟩]
     dsimp [continuousLinearMapCoordChange]
 
 variable (σ e₁ e₁' e₂ e₂')
@@ -146,9 +154,9 @@ theorem continuousLinearMap_symm_apply' {b : B} (hb : b ∈ e₁.baseSet ∩ e�
   · rfl
   · exact hb
 
-theorem continuousLinearMapCoordChange_apply (b : B)
+theorem continuousLinearMapCoordChange_apply {b : B}
     (hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet)) (L : F₁ →SL[σ] F₂) :
-    continuousLinearMapCoordChange σ e₁ e₁' e₂ e₂' b L =
+    continuousLinearMapCoordChange σ e₁ e₁' e₂ e₂' hb L =
       (continuousLinearMap σ e₁' e₂' ⟨b, (continuousLinearMap σ e₁ e₂).symm b L⟩).2 := by
   ext v
   simp_rw [continuousLinearMapCoordChange, ContinuousLinearEquiv.coe_coe,
@@ -157,7 +165,6 @@ theorem continuousLinearMapCoordChange_apply (b : B)
     ContinuousLinearEquiv.symm_symm, Trivialization.continuousLinearMapAt_apply]
   rw [e₂.symmL_apply hb.1.2, e₁'.symmL_apply hb.2.1, e₂.coordChangeL_apply e₂',
     e₁'.coordChangeL_apply e₁, e₁.coe_linearMapAt_of_mem hb.1.1, e₂'.coe_linearMapAt_of_mem hb.2.2]
-  exacts [⟨hb.2.1, hb.1.1⟩, ⟨hb.1.2, hb.2.2⟩]
 
 end Bundle.Pretrivialization
 
@@ -191,9 +198,13 @@ def Bundle.ContinuousLinearMap.vectorPrebundle :
     ⟨trivializationAt F₁ E₁ x, trivializationAt F₂ E₂ x, inferInstance, inferInstance, rfl⟩
   exists_coordChange := by
     rintro _ ⟨e₁, e₂, he₁, he₂, rfl⟩ _ ⟨e₁', e₂', he₁', he₂', rfl⟩
-    exact ⟨continuousLinearMapCoordChange σ e₁ e₁' e₂ e₂',
-      continuousOn_continuousLinearMapCoordChange,
-      continuousLinearMapCoordChange_apply σ e₁ e₁' e₂ e₂'⟩
+    classical
+    refine ⟨fun b ↦ if hb : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet) then
+      continuousLinearMapCoordChange σ e₁ e₁' e₂ e₂' hb else 0,
+      continuousOn_continuousLinearMapCoordChange fun b hb ↦ dite_eq_left hb, fun b hb L ↦ ?_⟩
+    have hb' : b ∈ e₁.baseSet ∩ e₂.baseSet ∩ (e₁'.baseSet ∩ e₂'.baseSet) := hb
+    simp only [dite_eq_left hb']
+    exact continuousLinearMapCoordChange_apply σ e₁ e₁' e₂ e₂' hb' L
   totalSpaceMk_isInducing := by
     intro b
     let L₁ : E₁ b ≃L[𝕜₁] F₁ :=
