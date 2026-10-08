@@ -26,6 +26,14 @@ open UniformSpace
 #guard_msgs in
 #check_failure AbstractCompletion.inseparable_extend_coe
 
+/-! The full name `AbstractCompletion.extend_def` would elaborate as `Function.extend_def`
+applied to `AbstractCompletion`, so the removed lemma is looked up inside its namespace. -/
+
+/-- info: Unknown identifier `extend_def` -/
+#guard_msgs in
+open AbstractCompletion in
+#check_failure extend_def
+
 /-! The extension needs a proof of uniform continuity; `fun_prop` fails for an arbitrary map. -/
 
 /--
