@@ -1705,7 +1705,10 @@ operation.
   in `MathlibTest/ProximityStrict.lean` cover the missing meromorphy, complex conjugation, the
   missing value condition, the radius after the proofs, the finite value set and the integrability
   on the domain, the values at radius `0`, the characteristic function, `proximity_inv`, and the
-  continuity for an entire function, also through `fun_prop`.
+  continuity for an entire function, also through `fun_prop`.  The definition matches on the
+  value, so `proximity_top` and `proximity_coe` hold by definition, instead of choosing a branch by
+  `a = ⊤` and evaluating `WithTop.untop₀`; `logCounting`, `proximity`, and `characteristic` share
+  the default argument `value_distribution_frequently_ne` for the value condition.
 
 - [ ] **Classify the radius conventions of the value-distribution functions.**
   `ValueDistribution.proximity`, `logCounting`, and `characteristic` in
