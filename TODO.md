@@ -1226,22 +1226,39 @@ operation.
   separated, the extension and its uniqueness, `map_congr`, and the absence of negation, addition,
   subtraction, scalar action, and norm without their structures.
 
-- [ ] **Give the completion multiplication and inverse their domains.**
-  `UniformSpace.Completion.mul` in `Mathlib/Topology/Algebra/UniformRing.lean` is an instance for
-  every `[Ring α] [UniformSpace α]`.  It is defined through `IsDenseInducing.extend`, whose limit
-  choice gives fallback values where multiplication does not extend continuously; `coe_mul` needs
-  `[IsTopologicalRing α]`, and the continuity of the extended multiplication and the ring structure
-  on the completion need `[IsUniformAddGroup α]` as well.  Likewise
-  `UniformSpace.Completion.instInvCompletion` in `Mathlib/Topology/Algebra/UniformField.lean` is an
-  instance for every `[Field K] [UniformSpace K]`, through `hatInv`, the `IsDenseInducing.extend` of
-  inversion; it is the continuous extension of inversion away from zero only for a completable
-  topological field (`coe_inv`, `continuous_hatInv`).  Restrict the multiplication to a
-  topological ring with a uniform additive group and the inverse to a completable topological field,
-  where they are the continuous extensions, and migrate the consumers.  Conversely, negation,
-  addition, and subtraction on `Completion α` need `[IsUniformAddGroup α]` although uniform
+- [x] **Give the completion multiplication and inverse their domains.**
+  `UniformSpace.Completion.mul` in `Mathlib/Topology/Algebra/UniformRing.lean` is an instance for a
+  topological ring with a uniform additive group, `[IsTopologicalRing α] [IsUniformAddGroup α]`,
+  where it is the unique continuous extension of multiplication (`coe_mul` and the `ContinuousMul`
+  instance); it was an instance for every `[Ring α] [UniformSpace α]`, defined through the limit
+  choice of `IsDenseInducing.extend`, which gave fallback values where multiplication does not
+  extend continuously.  `UniformSpace.Completion.instInvCompletion` in
+  `Mathlib/Topology/Algebra/UniformField.lean` is an instance for a completable field whose
+  inversion is continuous away from zero, `[ContinuousInv₀ K] [CompletableTopField K]`, where it is
+  the unique continuous extension of inversion away from zero (`coe_inv` and the new
+  `ContinuousInv₀ (Completion K)` instance at the same hypotheses); it was an instance for every
+  `[Field K] [UniformSpace K]`.  Both instances list their hypotheses in their signatures, since
+  section variables that a body does not use are not part of it.  The value `0⁻¹ = 0` is the
+  `inv_zero` convention of `Field`, which the field structure on the completion needs, and belongs
+  to the entry that classifies inverse and division semantics.  The instances are still implemented
+  by `IsDenseInducing.extend`, whose limit choice is audited under the `Filter.lim` entry; within
+  these domains the limit exists and is unique, away from zero for the inverse.  `hatInv`, the
+  extension of inversion whose value at zero is not specified in general, and its lemmas
+  `continuous_hatInv`, `hatInv_extends`, and `mul_hatInv_cancel` are private, and the inverse
+  instance spells out the extension.  Tests cover `coe_mul`, `coe_inv`, a seminormed ring and a
+  normed field as routine sufficient conditions, the absence of multiplication and inverse when
+  either hypothesis is missing, and the privatized names.
+
+- [ ] **Weaken the uniform group hypothesis of the completion operations.**
+  Negation, addition, and subtraction on `Completion α` in
+  `Mathlib/Topology/Algebra/GroupCompletion.lean` need `[IsUniformAddGroup α]` although uniform
   continuity of the operation suffices; no class expresses uniformly continuous addition on a
   uniform additive monoid, and no consumer needs one.  If one is introduced, give these operations
-  the weaker hypothesis.
+  the weaker hypothesis.  The multiplication `UniformSpace.Completion.mul` in
+  `Mathlib/Topology/Algebra/UniformRing.lean` likewise takes the textbook sufficient condition
+  `[IsTopologicalRing α] [IsUniformAddGroup α]` (equivalently `ContinuousMul` with a uniform
+  additive group); the exact condition for a continuous extension of multiplication, that the
+  product sends Cauchy filters on `α × α` to Cauchy filters, is not expressed by a class.
 
 - [x] **Make vector-measure products and densities conditional constructions.**
   `VectorMeasure.prod μ ν B` takes `[HasProd μ ν B]`: a vector measure with `B (μ s) (ν t)` on the

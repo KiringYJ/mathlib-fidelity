@@ -1,8 +1,11 @@
+import Mathlib.Analysis.Normed.Field.Instances
+import Mathlib.Analysis.Normed.Field.Lemmas
 import Mathlib.Analysis.Normed.Group.Completion
+import Mathlib.Topology.Algebra.UniformField
 import Mathlib.Topology.Algebra.UniformRing
 
 /-!
-# The completion extension takes uniform continuity
+# The completion extension and the operations on a completion take their domains
 
 `UniformSpace.Completion.extension f hf` extends a map `f : α → β` to the completion of `α`,
 where `hf` proves that `f` is uniformly continuous and `β` is complete and separated: completeness
@@ -11,7 +14,8 @@ continuous map that agrees with `f` on `α`.  `UniformSpace.Completion.map f hf`
 continuous map to the completions; `fun_prop` supplies `hf` for routine maps.  The former value of
 the extension of a map that is not uniformly continuous, a constant, is removed, and the operations
 on a completion exist for a uniform additive group, a uniformly continuous scalar action, and a
-seminormed group.
+seminormed group; the multiplication exists for a topological ring with a uniform additive group,
+and the inverse for a completable field whose inversion is continuous away from zero.
 -/
 
 open UniformSpace
@@ -33,6 +37,24 @@ applied to `AbstractCompletion`, so the removed lemma is looked up inside its na
 #guard_msgs in
 open AbstractCompletion in
 #check_failure extend_def
+
+/-! The extension of inversion to the completion of a field and its lemmas are private. -/
+
+/-- info: Unknown constant `UniformSpace.Completion.hatInv` -/
+#guard_msgs in
+#check_failure UniformSpace.Completion.hatInv
+
+/-- info: Unknown constant `UniformSpace.Completion.continuous_hatInv` -/
+#guard_msgs in
+#check_failure UniformSpace.Completion.continuous_hatInv
+
+/-- info: Unknown constant `UniformSpace.Completion.hatInv_extends` -/
+#guard_msgs in
+#check_failure UniformSpace.Completion.hatInv_extends
+
+/-- info: Unknown constant `UniformSpace.Completion.mul_hatInv_cancel` -/
+#guard_msgs in
+#check_failure UniformSpace.Completion.mul_hatInv_cancel
 
 /-! The extension needs a proof of uniform continuity; `fun_prop` fails for an arbitrary map. -/
 
@@ -177,3 +199,95 @@ Hint: Type class instance resolution failures can be inspected with the `set_opt
 -/
 #guard_msgs in
 example {E : Type*} [UniformSpace E] [Norm E] (x : Completion E) : ℝ := ‖x‖
+
+/-! The completion of a topological ring with a uniform additive group carries the extended
+multiplication; without them, the completion has no multiplication. -/
+
+example {α : Type*} [Ring α] [UniformSpace α] [IsTopologicalRing α] [IsUniformAddGroup α]
+    (a b : α) : ((a * b : α) : Completion α) = a * b :=
+  Completion.coe_mul a b
+
+/--
+error: failed to synthesize instance of type class
+  HMul (Completion α) (Completion α) ?_
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example {α : Type*} [Ring α] [UniformSpace α] (x y : Completion α) : Completion α := x * y
+
+/-! Each of the two hypotheses is needed. -/
+
+/--
+error: failed to synthesize instance of type class
+  HMul (Completion α) (Completion α) ?_
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example {α : Type*} [Ring α] [UniformSpace α] [IsTopologicalRing α] (x y : Completion α) :
+    Completion α :=
+  x * y
+
+/--
+error: failed to synthesize instance of type class
+  HMul (Completion α) (Completion α) ?_
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example {α : Type*} [Ring α] [UniformSpace α] [IsUniformAddGroup α] (x y : Completion α) :
+    Completion α :=
+  x * y
+
+/-! A seminormed ring is a routine sufficient condition. -/
+
+noncomputable example {A : Type*} [SeminormedRing A] (x y : Completion A) : Completion A := x * y
+
+/-! The completion of a completable field whose inversion is continuous away from zero carries the
+extended inverse; without these hypotheses, the completion has no inverse. -/
+
+example {K : Type*} [Field K] [UniformSpace K] [ContinuousInv₀ K] [CompletableTopField K]
+    (x : K) : (x : Completion K)⁻¹ = ((x⁻¹ : K) : Completion K) :=
+  Completion.coe_inv x
+
+example {K : Type*} [Field K] [UniformSpace K] [ContinuousInv₀ K] [CompletableTopField K]
+    {x : Completion K} (hx : x ≠ 0) : ContinuousAt (fun y : Completion K ↦ y⁻¹) x :=
+  continuousAt_inv₀ hx
+
+/--
+error: failed to synthesize instance of type class
+  Inv (Completion K)
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example {K : Type*} [Field K] [UniformSpace K] (x : Completion K) : Completion K := x⁻¹
+
+/-! Each of the two hypotheses is needed. -/
+
+/--
+error: failed to synthesize instance of type class
+  Inv (Completion K)
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example {K : Type*} [Field K] [UniformSpace K] [IsTopologicalDivisionRing K] (x : Completion K) :
+    Completion K :=
+  x⁻¹
+
+/--
+error: failed to synthesize instance of type class
+  Inv (Completion K)
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example {K : Type*} [Field K] [UniformSpace K] [CompletableTopField K] (x : Completion K) :
+    Completion K :=
+  x⁻¹
+
+/-! A normed field is a routine sufficient condition. -/
+
+noncomputable example {K : Type*} [NormedField K] (x : Completion K) : Completion K := x⁻¹

@@ -17,8 +17,9 @@ public import Mathlib.Topology.Algebra.SeparationQuotient.Basic
 
 This file endows the completion of a topological ring with a ring structure.
 More precisely, the instance `UniformSpace.Completion.ring` builds a ring structure
-on the completion of a ring endowed with a compatible uniform structure in the sense of
-`IsUniformAddGroup`. There is also a commutative version when the original ring is commutative.
+on the completion of a topological ring endowed with a compatible uniform structure in the sense of
+`IsUniformAddGroup`; the multiplication `UniformSpace.Completion.mul` exists under the same
+hypotheses. There is also a commutative version when the original ring is commutative.
 Moreover, if a topological ring is an algebra over a commutative semiring, then so is its
 `UniformSpace.Completion`.
 
@@ -46,14 +47,11 @@ namespace UniformSpace.Completion
 
 open IsDenseInducing UniformSpace Function
 
-section one_and_mul
+section one
 variable (α : Type*) [Ring α] [UniformSpace α]
 
 instance one : One (Completion α) :=
   ⟨(1 : α)⟩
-
-instance mul : Mul (Completion α) :=
-  ⟨curry <| (isDenseInducing_coe.prodMap isDenseInducing_coe).extend ((↑) ∘ uncurry (· * ·))⟩
 
 @[norm_cast]
 theorem coe_one : ((1 : α) : Completion α) = 1 :=
@@ -62,16 +60,23 @@ theorem coe_one : ((1 : α) : Completion α) = 1 :=
 @[simp] lemma coe_eq_one_iff [T0Space α] {x : α} : (x : Completion α) = 1 ↔ x = 1 :=
   Completion.coe_inj
 
-end one_and_mul
+end one
 
-variable {α : Type*} [Ring α] [UniformSpace α] [IsTopologicalRing α]
+variable {α : Type*} [Ring α] [UniformSpace α]
+
+/-- The multiplication of the completion of a topological ring whose uniform structure is that of
+its additive group: the unique continuous extension of the multiplication of `α`
+(`UniformSpace.Completion.coe_mul` and the `ContinuousMul` instance below). -/
+@[nolint unusedArguments]
+instance mul [IsTopologicalRing α] [IsUniformAddGroup α] : Mul (Completion α) :=
+  ⟨curry <| (isDenseInducing_coe.prodMap isDenseInducing_coe).extend ((↑) ∘ uncurry (· * ·))⟩
+
+variable [IsTopologicalRing α] [IsUniformAddGroup α]
 
 @[norm_cast]
 theorem coe_mul (a b : α) : ((a * b : α) : Completion α) = a * b :=
   ((isDenseInducing_coe.prodMap isDenseInducing_coe).extend_eq
       ((continuous_coe α).comp (@continuous_mul α _ _ _)) (a, b)).symm
-
-variable [IsUniformAddGroup α]
 
 instance : ContinuousMul (Completion α) where
   continuous_mul := by
