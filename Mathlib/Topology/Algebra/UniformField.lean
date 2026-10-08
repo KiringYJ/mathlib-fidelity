@@ -28,8 +28,11 @@ zero which is an ideal. Hence it's either zero (and the field is separated) or t
 which implies one is sent to zero and the completion ring is trivial.
 
 The main definition is `CompletableTopField` which packages the assumptions as a Prop-valued
-type class and the main results are the instances `UniformSpace.Completion.Field` and
-`UniformSpace.Completion.IsTopologicalDivisionRing`.
+type class and the main results are the instances `UniformSpace.Completion.instField` and
+`IsTopologicalDivisionRing (UniformSpace.Completion K)`.  The inverse of the completion,
+`UniformSpace.Completion.instInvCompletion`, exists for a completable field whose inversion is
+continuous away from zero: it is the unique continuous extension of inversion away from zero, with
+`0⁻¹ = 0` as in every field.
 -/
 
 @[expose] public section
@@ -62,12 +65,16 @@ instance (priority := 100) [T0Space K] : Nontrivial (hat K) :=
 
 variable {K}
 
-/-- extension of inversion to the completion of a field. -/
-def hatInv : hat K → hat K :=
+/-- The extension of inversion to the completion of a field by continuity, which defines the inverse
+of the completion away from zero.  Its value at zero is not specified in general, so it is used
+only in proofs about `Inv (hat K)`.  It is an abbreviation so that the body of
+`instInvCompletion`, which cannot mention a private declaration, agrees with it at reducible
+transparency.  Since it is reducible, a lemma about it must not carry `@[fun_prop]` or `@[simp]`,
+which would index the lemma under `IsDenseInducing.extend`. -/
+private abbrev hatInv : hat K → hat K :=
   isDenseInducing_coe.extend fun x : K => (↑x⁻¹ : hat K)
 
-@[fun_prop]
-theorem continuous_hatInv [CompletableTopField K] {x : hat K} (h : x ≠ 0) :
+private theorem continuous_hatInv [CompletableTopField K] {x : hat K} (h : x ≠ 0) :
     ContinuousAt hatInv x := by
   refine isDenseInducing_coe.continuousAt_extend ?_
   apply mem_of_superset (compl_singleton_mem_nhds h)
@@ -92,16 +99,19 @@ theorem continuous_hatInv [CompletableTopField K] {x : hat K} (h : x ≠ 0) :
     exact comap_bot
 
 open scoped Classical in
-/--
-The value of `hat_inv` at zero is not really specified, although it's probably zero.
-Here we explicitly enforce the `inv_zero` axiom.
--/
-instance instInvCompletion : Inv (hat K) :=
-  ⟨fun x => if x = 0 then 0 else hatInv x⟩
+/-- The inverse on the completion of a completable field whose inversion is continuous away from
+zero: the unique continuous extension of the inverse of `K` away from zero
+(`UniformSpace.Completion.coe_inv` and the `ContinuousInv₀` instance), with `0⁻¹ = 0` as in every
+field. -/
+@[nolint unusedArguments]
+instance instInvCompletion [ContinuousInv₀ K] [CompletableTopField K] : Inv (hat K) :=
+  ⟨fun x => if x = 0 then 0 else isDenseInducing_coe.extend (fun y : K => (↑y⁻¹ : hat K)) x⟩
 
-variable [IsTopologicalDivisionRing K]
+section ContinuousInv₀
 
-theorem hatInv_extends {x : K} (h : x ≠ 0) : hatInv (x : hat K) = ↑(x⁻¹ : K) :=
+variable [ContinuousInv₀ K]
+
+private theorem hatInv_extends {x : K} (h : x ≠ 0) : hatInv (x : hat K) = ↑(x⁻¹ : K) :=
   isDenseInducing_coe.extend_eq_at ((continuous_coe K).continuousAt.comp (continuousAt_inv₀ h))
 
 variable [CompletableTopField K]
@@ -118,14 +128,28 @@ theorem coe_inv (x : K) : (x : hat K)⁻¹ = ((x⁻¹ : K) : hat K) := by
     · exact hatInv_extends h
     · exact fun H => h (isDenseEmbedding_coe.injective H)
 
-variable [IsUniformAddGroup K]
+/-- The inverse of the completion is continuous away from zero. -/
+instance : ContinuousInv₀ (hat K) where
+  continuousAt_inv₀ x x_ne := by
+    have : { y | hatInv y = y⁻¹ } ∈ 𝓝 x :=
+      haveI : {(0 : hat K)}ᶜ ⊆ { y : hat K | hatInv y = y⁻¹ } := by
+        intro y y_ne
+        rw [mem_compl_singleton_iff] at y_ne
+        dsimp [Inv.inv]
+        rw [ite_eq_right y_ne]
+      mem_of_superset (compl_singleton_mem_nhds x_ne) this
+    exact ContinuousAt.congr (continuous_hatInv x_ne) this
 
-theorem mul_hatInv_cancel {x : hat K} (x_ne : x ≠ 0) : x * hatInv x = 1 := by
+end ContinuousInv₀
+
+variable [IsTopologicalDivisionRing K] [CompletableTopField K] [IsUniformAddGroup K]
+
+private theorem mul_hatInv_cancel {x : hat K} (x_ne : x ≠ 0) : x * hatInv x = 1 := by
   have : T1Space (hat K) := T2Space.t1Space
   let f := fun x : hat K => x * hatInv x
   let c := (fun (x : K) => (x : hat K))
   change f x = 1
-  have cont : ContinuousAt f x := by fun_prop
+  have cont : ContinuousAt f x := continuousAt_id.mul (continuous_hatInv x_ne)
   have clo : x ∈ closure (c '' {0}ᶜ) := by
     have := isDenseInducing_coe.dense x
     rw [← image_univ, show (univ : Set K) = {0} ∪ {0}ᶜ from (union_compl_self _).symm,
@@ -155,17 +179,7 @@ instance instField : Field (hat K) where
   qsmul_def := fun _ _ => rfl
 
 instance : IsTopologicalDivisionRing (hat K) :=
-  { Completion.topologicalRing with
-    continuousAt_inv₀ := by
-      intro x x_ne
-      have : { y | hatInv y = y⁻¹ } ∈ 𝓝 x :=
-        haveI : {(0 : hat K)}ᶜ ⊆ { y : hat K | hatInv y = y⁻¹ } := by
-          intro y y_ne
-          rw [mem_compl_singleton_iff] at y_ne
-          dsimp [Inv.inv]
-          rw [ite_eq_right y_ne]
-        mem_of_superset (compl_singleton_mem_nhds x_ne) this
-      exact ContinuousAt.congr (continuous_hatInv x_ne) this }
+  { Completion.topologicalRing with }
 
 end Completion
 
