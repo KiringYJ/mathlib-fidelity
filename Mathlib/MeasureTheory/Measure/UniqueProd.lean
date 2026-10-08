@@ -63,106 +63,63 @@ theorem hasUniqueProduct_of_subsingleton_right (μ : Measure α) (ν : Measure �
     [Subsingleton β] : HasUniqueProduct μ ν :=
   (hasUniqueProduct_of_subsingleton_left ν μ).swap
 
+/-- The default discharger for the uniqueness of the product of two measures: a hypothesis, a zero
+or subsingleton factor, or two σ-finite factors. It accepts a proof that unification has already
+supplied. -/
+macro (name := hasUniqueProductTac) &"has_unique_product" : tactic => `(tactic| first
+  | done
+  | assumption
+  | exact MeasureTheory.hasUniqueProduct_zero_left _
+  | exact MeasureTheory.hasUniqueProduct_zero_right _
+  | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
+  | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
+  | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _
+  | fail "the product of the measures is unique by default for a zero or subsingleton factor \
+      and for two σ-finite factors; otherwise supply a proof of `HasUniqueProduct`")
+
 namespace Measure
 
 /-- The product of two measures on its exact uniqueness domain. Its rectangle formula determines
 the result independently of the primitive construction used in this definition. -/
 protected def prod (μ : Measure α) (ν : Measure β)
-    (_h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) : Measure (α × β) :=
+    (_h : HasUniqueProduct μ ν := by has_unique_product) : Measure (α × β) :=
   μ.primitiveProd ν
 
 /-- The unique product is the primitive rectangle-cover product. -/
 theorem prod_eq_primitiveProd (μ : Measure α) (ν : Measure β)
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     μ.prod ν h = μ.primitiveProd ν := rfl
 
 /-- The unique product satisfies the product formula on measurable rectangles. -/
 theorem prod_isProductMeasure (μ : Measure α) (ν : Measure β)
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     IsProductMeasure μ ν (μ.prod ν h) :=
   primitiveProd_isProductMeasure μ ν
 
 /-- The product formula for measurable rectangles on the exact uniqueness domain. -/
 @[simp]
 theorem prod_prod (s : Set α) (t : Set β) (hs : MeasurableSet s) (ht : MeasurableSet t)
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     (μ.prod ν h) (s ×ˢ t) = μ s * ν t :=
   prod_isProductMeasure μ ν h hs ht
 
 /-- A measure satisfying the rectangle formula is the unique product. -/
 theorem prod_eq (hρ : ∀ s t, MeasurableSet s → MeasurableSet t →
     ρ (s ×ˢ t) = μ s * ν t)
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) : μ.prod ν h = ρ :=
+    (h : HasUniqueProduct μ ν := by has_unique_product) : μ.prod ν h = ρ :=
   h.eq (prod_isProductMeasure μ ν h) (fun _ _ hs ht => hρ _ _ hs ht)
 
 /-- On the common domain, the unique product agrees with integration of vertical sections. -/
 theorem prod_eq_productBySections (μ : Measure α) (ν : Measure β)
-    (hsections : HasAEMeasurableSectionMeasures μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_zero_left _
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_of_sfinite _ _)
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (hsections : HasAEMeasurableSectionMeasures μ ν := by has_ae_measurable_section_measures)
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     μ.prod ν h = μ.productBySections ν hsections :=
   h.eq (prod_isProductMeasure μ ν h) (productBySections_isProductMeasure μ ν hsections)
 
 /-- The section-integral formula for the unique product, with its measurability obligation. -/
 theorem prod_apply {s : Set (α × β)} (hs : MeasurableSet s)
-    (hsections : HasAEMeasurableSectionMeasures μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_zero_left _
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_of_sfinite _ _)
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (hsections : HasAEMeasurableSectionMeasures μ ν := by has_ae_measurable_section_measures)
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     (μ.prod ν h) s = ∫⁻ x, ν (Prod.mk x ⁻¹' s) ∂μ := by
   rw [prod_eq_productBySections μ ν hsections h, productBySections_apply hs hsections]
 
@@ -182,13 +139,7 @@ theorem prod_zero (μ : Measure α) : μ.prod (0 : Measure β) = 0 :=
 
 /-- A product with a Dirac measure fixes the second coordinate. -/
 theorem prod_dirac (y : β)
-    (h : HasUniqueProduct μ (dirac y) := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ (dirac y) := by has_unique_product) :
     μ.prod (dirac y) h = μ.map (fun x => (x, y)) measurable_prodMk_right.aemeasurable := by
   classical
   refine prod_eq (h := h) fun s t hs ht => ?_
@@ -198,13 +149,7 @@ theorem prod_dirac (y : β)
 
 /-- A product with a Dirac measure fixes the first coordinate. -/
 theorem dirac_prod (x : α)
-    (h : HasUniqueProduct (dirac x) ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct (dirac x) ν := by has_unique_product) :
     (dirac x).prod ν h = ν.map (Prod.mk x) measurable_prodMk_left.aemeasurable := by
   classical
   refine prod_eq (h := h) fun s t hs ht => ?_
@@ -218,44 +163,19 @@ theorem dirac_prod_dirac {x : α} {y : β} :
 
 /-- Swapping the coordinates of the unique product gives the product in the opposite order. -/
 theorem prod_swap
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     (μ.prod ν h).map Prod.swap measurable_swap.aemeasurable = ν.prod μ h.swap :=
   h.swap.eq (prod_isProductMeasure μ ν h).swap (prod_isProductMeasure ν μ h.swap)
 
 theorem measurePreserving_swap
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     MeasurePreserving Prod.swap (μ.prod ν h) (ν.prod μ h.swap) :=
   ⟨measurable_swap, prod_swap h⟩
 
 /-- The symmetric section-integral formula for the unique product. -/
 theorem prod_apply_symm {s : Set (α × β)} (hs : MeasurableSet s)
-    (hsections : HasAEMeasurableSectionMeasures ν μ := by
-      first
-      | assumption
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_zero_left _
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_of_sfinite _ _)
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (hsections : HasAEMeasurableSectionMeasures ν μ := by has_ae_measurable_section_measures)
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     (μ.prod ν h) s = ∫⁻ y, μ ((fun x => (x, y)) ⁻¹' s) ∂ν := by
   rw [← prod_swap h.swap, map_apply hs measurable_swap.aemeasurable,
     prod_apply (measurable_swap hs) hsections h.swap]
@@ -263,14 +183,7 @@ theorem prod_apply_symm {s : Set (α × β)} (hs : MeasurableSet s)
 
 @[simp]
 theorem map_fst_prod
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     (μ.prod ν h).map Prod.fst measurable_fst.aemeasurable = (ν univ) • μ := by
   ext s hs
   rw [map_apply hs measurable_fst.aemeasurable, ← prod_univ,
@@ -278,14 +191,7 @@ theorem map_fst_prod
 
 @[simp]
 theorem map_snd_prod
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     (μ.prod ν h).map Prod.snd measurable_snd.aemeasurable = (μ univ) • ν := by
   ext t ht
   rw [map_apply ht measurable_snd.aemeasurable, ← univ_prod,
@@ -294,14 +200,7 @@ theorem map_snd_prod
 /-- The first marginal of a unique product is the first factor scaled by the mass of the second. -/
 @[simp]
 theorem fst_prod
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     (μ.prod ν h).fst = (ν univ) • μ :=
   map_fst_prod h
 
@@ -309,28 +208,14 @@ theorem fst_prod
 first. -/
 @[simp]
 theorem snd_prod
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     (μ.prod ν h).snd = (μ univ) • ν :=
   map_snd_prod h
 
 /-- The first projection pulls null sets back to null sets for a unique product. -/
 @[fun_prop]
 theorem quasiMeasurePreserving_fst_prod
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     QuasiMeasurePreserving Prod.fst (μ.prod ν h) μ := by
   refine ⟨measurable_fst, AbsolutelyContinuous.mk fun s _ hs => ?_⟩
   simp only [map_fst_prod h, smul_apply, smul_eq_mul, hs, mul_zero]
@@ -338,14 +223,7 @@ theorem quasiMeasurePreserving_fst_prod
 /-- The second projection pulls null sets back to null sets for a unique product. -/
 @[fun_prop]
 theorem quasiMeasurePreserving_snd_prod
-    (h : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+    (h : HasUniqueProduct μ ν := by has_unique_product) :
     QuasiMeasurePreserving Prod.snd (μ.prod ν h) ν := by
   refine ⟨measurable_snd, AbsolutelyContinuous.mk fun s _ hs => ?_⟩
   simp only [map_snd_prod h, smul_apply, smul_eq_mul, hs, mul_zero]
@@ -381,18 +259,9 @@ instance prod.instSigmaFiniteSnd [IsFiniteMeasure μ] [SigmaFinite ν] :
 /-- Coordinatewise pushforwards commute with the unique product when both product domains hold. -/
 theorem map_prod_map {f : α → γ} {g : β → δ} (μ : Measure α) (ν : Measure β)
     (hf : Measurable f) (hg : Measurable g)
-    (hsource : HasUniqueProduct μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _)
+    (hsource : HasUniqueProduct μ ν := by has_unique_product)
     (htarget : HasUniqueProduct (μ.map f hf.aemeasurable) (ν.map g hg.aemeasurable) := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) :
+      has_unique_product) :
     (μ.map f hf.aemeasurable).prod (ν.map g hg.aemeasurable) htarget =
       (μ.prod ν hsource).map (Prod.map f g) (hf.prodMap hg).aemeasurable :=
   htarget.eq (prod_isProductMeasure _ _ htarget)
@@ -405,14 +274,8 @@ also covers uniqueness domains beyond sigma-finiteness, such as a zero measure o
 carrier. It is not a global instance. -/
 @[instance_reducible]
 def _root_.MeasureTheory.MeasureSpace.prod (α β) [MeasureSpace α] [MeasureSpace β]
-    (h : HasUniqueProduct (volume : Measure α) (volume : Measure β) := by
-      first
-      | assumption
-      | exact MeasureTheory.hasUniqueProduct_zero_left _
-      | exact MeasureTheory.hasUniqueProduct_zero_right _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_left _ _
-      | exact MeasureTheory.hasUniqueProduct_of_subsingleton_right _ _
-      | exact MeasureTheory.hasUniqueProduct_of_sigmaFinite _ _) : MeasureSpace (α × β) where
+    (h : HasUniqueProduct (volume : Measure α) (volume : Measure β) := by has_unique_product) :
+    MeasureSpace (α × β) where
   volume := volume.prod volume h
 
 /-- The ambient product of sigma-finite measure spaces uses their unique product measure. -/
