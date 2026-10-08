@@ -474,6 +474,26 @@ not delay instances and closure lemmas that only propagate routine evidence
 along standard implications, such as finiteness on rays implying local
 finiteness; supply those together with the structure they serve.
 
+### The existing design has no priority
+
+Decide every design question by the rules of this document alone. The existing
+implementation, whether inherited from upstream or written earlier in this
+fork, has no priority over the design that these rules select, and the work
+that changing it requires is never a reason to keep it. The number of proofs to
+adapt, the files and consumers to migrate, the declarations to move or rename,
+and the rebuild and verification time are scheduling concerns, not design
+criteria. Compare the candidates as if none of them existed yet: by
+mathematical fidelity, type-theoretic naturalness, quality of life, and the
+architectural criteria of the preceding section, including placement in the
+module whose subject a declaration belongs to and a single shared mechanism
+instead of copies. Decline a reviewer's suggestion only for a reason grounded
+in these rules; that a change would touch many proofs or rebuild the library is
+not such a reason.
+
+Rules that limit which declarations a task must change, such as the treatment
+of existing names above, limit the scope of the task. They do not make the
+existing form of a declaration preferable when a task decides its design.
+
 ## Contributions, Curated Intake, and Canonicalization
 
 This is a maintainer-curated library that accepts external pull requests which
@@ -603,13 +623,16 @@ migration.
   decisions reviewed; this discipline serves the fork itself, not upstream pull
   requests. The branch model and reconciliation procedure are in
   `AI_AGENT_PROJECT.md`.
-- Reuse upstream definitions and theorems when they are mathematically and
-  technically sound. The fork should differ for a reason, such as semantic or
-  ergonomic friction exposed by actual formalization, not merely for novelty.
+- Reuse upstream definitions and theorems when they are the design that the
+  rules of this document select. The fork differs for a reason grounded in
+  those rules, such as semantic or ergonomic friction exposed by actual
+  formalization, not for novelty.
 - Fork changes may deliberately break upstream API compatibility when a
-  coherent migration establishes a materially better mathematical interface.
-  The cost must still be justified by downstream use, maintenance, performance,
-  and verification evidence.
+  coherent migration establishes the interface that these rules select.
+  Neither upstream compatibility nor the size of the migration is a reason to
+  keep the inherited interface; evidence from downstream use, maintenance,
+  performance, and verification bears on which interface the rules select, not
+  on whether the inherited one is protected.
 - Additional source repositories do not become alternate design authorities.
   Material becomes part of this library only through the same faithful,
   canonicalizing integration process.
