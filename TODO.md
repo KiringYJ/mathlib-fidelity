@@ -1409,18 +1409,22 @@ operation.
 - [ ] **Give the proximity function the domain of the counting function.**
   `ValueDistribution.proximity f a` in
   `Mathlib/Analysis/Complex/ValueDistribution/Proximity/Basic.lean` is defined for every function.
-  For a finite value `a` it is the circle average of `log⁺ ‖f · - a‖⁻¹`, where `(0 : ℝ)⁻¹ = 0`, and
-  the circle average of a function that is not circle integrable is `0`.  For a meromorphic
-  function that does not equal `a` identically, `log ‖f · - a‖` is circle integrable
-  (`MeromorphicOn.circleIntegrable_log_norm`), so the average is finite; for a meromorphic function
-  on `ℂ` that equals `a` outside a discrete set, the integrand `log⁺ (1 / ‖f - a‖)` is infinite on
-  every circle.  The values for a function that is not meromorphic or that equals `a` identically
-  are therefore fallbacks.
-  `ValueDistribution.characteristic f a hf ha` already takes the domain of `logCounting`: give
-  `proximity` the same arguments and migrate `Proximity/Basic.lean`,
+  For a finite value `a` it is the circle average of `log⁺ ‖f · - a‖⁻¹`, where `(0 : ℝ)⁻¹ = 0`
+  replaces the infinite value of the integrand where `f = a`, and the circle average of a function
+  that is not circle integrable is `0`.  These two conventions give fallback values exactly when, on
+  the circle of radius `r`, `f = a` on a set of positive measure or the integrand is not integrable;
+  for a meromorphic function on `ℂ` that equals `a` outside a discrete set, the true integrand is
+  infinite on every circle.  Elsewhere the value is a genuine circle average, also for functions
+  that are not meromorphic, such as a continuous function at `⊤` (`continuous_proximity_top`).  The
+  exact domain depends on the radius, so a function of `r` needs a sufficient interface: the
+  proximity function of Nevanlinna theory is defined for meromorphic functions that do not equal `a`
+  identically, where `log ‖f · - a‖` is circle integrable
+  (`MeromorphicOn.circleIntegrable_log_norm`) and the points of a circle where `f = a` form a finite
+  set.  `ValueDistribution.characteristic f a hf ha` already takes that domain from `logCounting`.
+  Decide whether `proximity` takes the same arguments, which would exclude the continuous case, or
+  exposes the radius-dependent integrability condition, and migrate `Proximity/Basic.lean`,
   `Proximity/IntegralPresentation.lean`, `CharacteristicFunction.lean`, `FirstMainTheorem.lean`, and
-  `Cartan.lean`.  For a meromorphic `f` that does not equal `a` identically, the points of a circle
-  where `f = a` form a finite set, so the value of the integrand there does not affect the average.
+  `Cartan.lean` accordingly.
 
 - [x] **Make the trailing coefficient domain-bearing.**
   `meromorphicTrailingCoeffAt f x h` in `Mathlib/Analysis/Meromorphic/TrailingCoefficient.lean`
