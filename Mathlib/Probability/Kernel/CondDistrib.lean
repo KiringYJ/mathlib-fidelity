@@ -79,7 +79,8 @@ equality `μ[(fun a => f (X a, Y a)) | mβ.comap X] =ᵐ[μ] fun a => ∫ y, f (
 integrable functions `f`. The joint map `fun a => (X a, Y a)` must be almost everywhere
 measurable; this proof is normally discharged by `fun_prop`. -/
 noncomputable def condDistrib {_ : SigmaAlgebra α} [SigmaAlgebra β] (Y : α → Ω)
-    (X : α → β) (μ : Measure α) (hXY : AEMeasurable (fun a => (X a, Y a)) μ := by fun_prop)
+    (X : α → β) (μ : Measure α)
+    (hXY : AEMeasurable (fun a => (X a, Y a)) μ := by fun_prop_default)
     [(μ.map (fun a => (X a, Y a)) hXY).HasUniqueCondKernel] :
     Kernel.AEClass (ae (μ.map X hXY.fst)) Ω :=
   ((μ.map (fun a => (X a, Y a)) hXY).condKernel).copy

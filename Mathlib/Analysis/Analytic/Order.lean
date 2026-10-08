@@ -46,8 +46,8 @@ and does not vanish at `z₀`. See `analyticOrderAt_eq_top` and
 The order is only defined for a function that is analytic at `z₀`: the proof `hf` of analyticity is
 an argument of the definition, which `fun_prop` supplies by default. There is no value for a
 function that is not analytic at `z₀`. -/
-noncomputable def analyticOrderAt (f : 𝕜 → E) (z₀ : 𝕜) (hf : AnalyticAt 𝕜 f z₀ := by fun_prop) :
-    ℕ∞ :=
+noncomputable def analyticOrderAt (f : 𝕜 → E) (z₀ : 𝕜)
+    (hf : AnalyticAt 𝕜 f z₀ := by fun_prop_default) : ℕ∞ :=
   if h : ∀ᶠ z in 𝓝 z₀, f z = 0 then ⊤
   else ↑(hf.exists_eventuallyEq_pow_smul_nonzero_iff.mpr h).choose
 

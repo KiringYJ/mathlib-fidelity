@@ -275,8 +275,8 @@ every function that is meromorphic on `U`: a function that vanishes on a punctur
 point has no pole there. It is the negative part of the divisor where that is defined
 (`MeromorphicOn.poleDivisor_eq_negPart_divisor`).
 -/
-noncomputable def poleDivisor (f : 𝕜 → E) (U : Set 𝕜) (hf : MeromorphicOn f U := by fun_prop) :
-    Function.locallyFinsuppWithin U ℤ where
+noncomputable def poleDivisor (f : 𝕜 → E) (U : Set 𝕜)
+    (hf : MeromorphicOn f U := by fun_prop_default) : Function.locallyFinsuppWithin U ℤ where
   toFun z := if hz : z ∈ U then
     -(min (meromorphicOrderAt f z (hf z hz)) 0).untop
       (ne_top_of_le_ne_top WithTop.coe_ne_top (min_le_right _ 0)) else 0

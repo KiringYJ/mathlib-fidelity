@@ -461,7 +461,7 @@ theorem meromorphicNFAt_comp_sub_const_iff_meromorphicNFAt {c : 𝕜} {f : 𝕜 
 variable (f x) in
 /-- Convert a function `f` that is meromorphic at `x` to normal form at `x` by changing its value at
 `x`. -/
-noncomputable def toMeromorphicNFAt (hf : MeromorphicAt f x := by fun_prop) : 𝕜 → E := by
+noncomputable def toMeromorphicNFAt (hf : MeromorphicAt f x := by fun_prop_default) : 𝕜 → E := by
   classical -- do not complain about decidability issues in Function.update
   apply Function.update f x
   by_cases h₁f : meromorphicOrderAt f x hf = (0 : ℤ)
@@ -804,7 +804,7 @@ variable (f U) in
 Convert a function `f` that is meromorphic on `U` to normal form on `U` by changing its values along
 a discrete subset within `U`.
 -/
-noncomputable def toMeromorphicNFOn (hf : MeromorphicOn f U := by fun_prop) : 𝕜 → E := by
+noncomputable def toMeromorphicNFOn (hf : MeromorphicOn f U := by fun_prop_default) : 𝕜 → E := by
   intro z
   by_cases hz : z ∈ U
   · exact toMeromorphicNFAt f z (hf z hz) z

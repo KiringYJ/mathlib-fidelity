@@ -74,7 +74,7 @@ there `_ha` holds for every function and is supplied by default.  These are the 
 Both proofs precede the radius, so the proximity function for the poles is evaluated as
 `(proximity f ⊤) r`.
 -/
-noncomputable def proximity (_hf : Meromorphic f := by fun_prop)
+noncomputable def proximity (_hf : Meromorphic f := by fun_prop_default)
     (_ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a := by
       first
       | exact ValueDistribution.frequently_coe_ne_top _

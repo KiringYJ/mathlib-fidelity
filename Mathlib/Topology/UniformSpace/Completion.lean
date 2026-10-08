@@ -426,7 +426,7 @@ separated, `Completion.extension (SeparationQuotient.mk ∘ f)` extends `f` into
 quotient of `β`, which is complete when `β` is.
 -/
 protected def extension [CompleteSpace β] [T0Space β] (f : α → β)
-    (hf : UniformContinuous f := by fun_prop) : Completion α → β :=
+    (hf : UniformContinuous f := by fun_prop_default) : Completion α → β :=
   cPkg.extend f hf
 
 variable [CompleteSpace β] [T0Space β]
@@ -479,7 +479,7 @@ section Map
 variable {f : α → β}
 
 /-- Completion functor acting on uniformly continuous maps -/
-protected def map (f : α → β) (hf : UniformContinuous f := by fun_prop) :
+protected def map (f : α → β) (hf : UniformContinuous f := by fun_prop_default) :
     Completion α → Completion β :=
   cPkg.map cPkg f hf
 

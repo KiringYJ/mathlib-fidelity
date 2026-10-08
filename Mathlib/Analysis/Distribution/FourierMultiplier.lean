@@ -48,7 +48,7 @@ open FourierTransform
 variable (F) in
 /-- Fourier multiplier on Schwartz functions, for a multiplier of temperate growth; the default
 discharger `fun_prop` finds the temperate growth. -/
-def fourierMultiplierCLM (g : E → 𝕜) (hg : g.HasTemperateGrowth := by fun_prop) :
+def fourierMultiplierCLM (g : E → 𝕜) (hg : g.HasTemperateGrowth := by fun_prop_default) :
     𝓢(E, F) →L[𝕜] 𝓢(E, F) :=
   fourierInvCLM 𝕜 𝓢(E, F) ∘L (smulLeftCLM F g hg) ∘L fourierCLM 𝕜 𝓢(E, F)
 
@@ -146,7 +146,7 @@ open FourierTransform
 variable (F) in
 /-- Fourier multiplier on tempered distributions, for a multiplier of temperate growth; the
 default discharger `fun_prop` finds the temperate growth. -/
-def fourierMultiplierCLM (g : E → ℂ) (hg : g.HasTemperateGrowth := by fun_prop) :
+def fourierMultiplierCLM (g : E → ℂ) (hg : g.HasTemperateGrowth := by fun_prop_default) :
     𝓢'(E, F) →L[ℂ] 𝓢'(E, F) :=
   fourierInvCLM ℂ 𝓢'(E, F) ∘L (smulLeftCLM F g hg) ∘L fourierCLM ℂ 𝓢'(E, F)
 

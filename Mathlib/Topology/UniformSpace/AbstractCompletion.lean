@@ -124,7 +124,7 @@ sufficient condition for the limits that define it, and separation makes it uniq
 -/
 @[nolint unusedArguments]
 protected def extend [CompleteSpace β] [T0Space β] (f : α → β)
-    (_hf : UniformContinuous f := by fun_prop) : hatα → β :=
+    (_hf : UniformContinuous f := by fun_prop_default) : hatα → β :=
   pkg.isDenseInducing.extend f
 
 variable [CompleteSpace β] [T0Space β] {f : α → β}

@@ -904,7 +904,7 @@ variable {Ω Ω' : Type*} [SigmaAlgebra Ω] [SigmaAlgebra Ω']
 
 /-- The push-forward of a finite measure by an almost everywhere measurable function. -/
 noncomputable def map (ν : FiniteMeasure Ω) (f : Ω → Ω')
-    (hf : AEMeasurable f ν := by fun_prop) : FiniteMeasure Ω' :=
+    (hf : AEMeasurable f ν := by fun_prop_default) : FiniteMeasure Ω' :=
   ⟨(ν : Measure Ω).map f hf, (ν : Measure Ω).isFiniteMeasure_map f hf⟩
 
 @[simp] lemma toMeasure_map (ν : FiniteMeasure Ω) (f : Ω → Ω')

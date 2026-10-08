@@ -736,7 +736,8 @@ variable (F) in
 a function of temperate growth; `fun_prop` finds the temperate growth by default.  An operator
 applied to a Schwartz function takes its evidence explicitly or is parenthesized, as in
 `(smulLeftCLM F g) f`. -/
-def smulLeftCLM (g : E → 𝕜) (hg : g.HasTemperateGrowth := by fun_prop) : 𝓢(E, F) →L[𝕜] 𝓢(E, F) :=
+def smulLeftCLM (g : E → 𝕜) (hg : g.HasTemperateGrowth := by fun_prop_default) :
+    𝓢(E, F) →L[𝕜] 𝓢(E, F) :=
   SchwartzMap.bilinLeftCLM (ContinuousLinearMap.lsmul 𝕜 𝕜).flip hg
 
 theorem smulLeftCLM_apply {g : E → 𝕜} {hg : g.HasTemperateGrowth} (f : 𝓢(E, F)) :
