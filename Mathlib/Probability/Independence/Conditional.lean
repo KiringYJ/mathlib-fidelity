@@ -918,7 +918,7 @@ lemma condIndepFun_iff_map_prod_eq_prod_comp_trim
         F := @Measurable.prodMap Ω Ω Ω (β × β') m' m' mΩ (mβ.prod mβ') id
           (fun ω ↦ (f ω, g ω)) measurable_id hfg
     have hdiag := compProd_trim_condExpKernel hη
-    simp only [hdiag]
+    simp only [hdiag, condExpJointLaw]
     have hdiagAe := aemeasurable_diag_of_le μ hm'
     have hFae : @AEMeasurable (Ω × Ω) (Ω × (β × β'))
         (m'.prod (mβ.prod mβ')) (m'.prod mΩ) F

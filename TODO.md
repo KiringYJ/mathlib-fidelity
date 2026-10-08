@@ -1085,20 +1085,43 @@ operation.
   needs no measurable singletons, since almost everywhere means at every point of positive mass.
   Tests are in `MathlibTest/CondKernelClassDomain.lean`.
 
-- [ ] **Give `condExpKernel` the class of its diagonal law.**
-  `ProbabilityTheory.condExpKernel μ hm` in `Mathlib/Probability/Kernel/Condexp.lean` takes
-  `[IsFiniteMeasure μ]`.  Its specification needs only that the diagonal law
-  `μ.map (fun ω ↦ (ω, ω))`, into `Ω × Ω` with the σ-algebra `m.prod mΩ`, has a unique conditional
-  kernel; the first marginal of this law is `μ.trim hm`, so this holds when `μ.trim hm` is σ-finite
-  and `Ω` is a nonempty standard Borel space.  Instance search does not find this:
-  `Measure.isFiniteMeasure_map` takes the σ-algebra of the codomain as an instance argument, so it
-  synthesizes `mΩ.prod mΩ` instead of `m.prod mΩ`, and `Measure.sigmaFinite_fst_map_prodMk` does not
-  fire on the diagonal law either, while an explicit application works
-  (`ProbabilityTheory.hasUniqueCondKernel_map_diag` supplies the class by hand).  So the class needs
-  a named diagonal law or an instance stated for it.  The empty type needs a decision: the σ-finite
-  instance requires `[Nonempty Ω]`, while `condExpKernel` is defined for every `Ω`.  The consumers
-  in `Mathlib/Probability/Independence/` and `Mathlib/Probability/Moments/SubGaussian.lean` use
-  finite measures.
+- [x] **Give `condExpKernel` the class of its diagonal law.**
+  `ProbabilityTheory.condExpKernel μ hm` in `Mathlib/Probability/Kernel/Condexp.lean` is the
+  conditional kernel of the named joint law `condExpJointLaw μ hm` of `(ω, ω)`, whose first
+  coordinate is in `(Ω, m)`, and takes its class `[(condExpJointLaw μ hm).HasUniqueCondKernel]`
+  instead of `[StandardBorelSpace Ω] [IsFiniteMeasure μ]`; it was the class chosen by an existence
+  statement for finite measures.  Instance search supplies the class for a standard Borel space and
+  a σ-finite `μ.trim hm` (`hasUniqueCondKernel_condExpJointLaw`, through `fst_condExpJointLaw` and
+  `sigmaFinite_fst_condExpJointLaw`): for a nonempty space by
+  `Measure.hasUniqueCondKernel_of_sigmaFinite_fst`, and for the empty space by the new
+  `Measure.hasUniqueCondKernel_of_isEmpty`.  For the whole σ-algebra it supplies the class for every
+  measure on a countably generated space (`hasUniqueCondKernel_condExpJointLaw_self`), since the
+  second coordinate is then a measurable function of the first.  The name carries `hm` as an
+  argument, which the instance needs: in the unnamed law `hm` occurs only inside a proof, which
+  unification does not assign.  The composition-product of `μ.trim hm` with every representative
+  exists (`hasCompProd_trim_of_mem_condExpKernel`), so `compProd_trim_condExpKernel`,
+  `condExpKernel_comp_trim`, and `aestronglyMeasurable_trim_condExpKernel` hold for every
+  representative; `mem_condExpKernel_of_compProd_eq` and `mem_condExpKernel_iff` take a σ-finite
+  trim and the domain of the composition-product instead of a finite measure and a finite kernel, a
+  Markov kernel needs only the class (`mem_condExpKernel_iff_of_isMarkovKernel`), and
+  `mem_condExpKernel_iff_mem_condDistrib` holds for every kernel and every `Ω`.  The measurability
+  and integrability statements hold for every measure and every representative: a function on `Ω`
+  integrates against `μ = η ∘ₘ μ.trim hm` through its integrals against the measures `η ω`.  The
+  conditional-expectation statements take a σ-finite trim, and `condExpKernel_ae_eq_condExp` and
+  `condExpKernel_ae_eq_trim_condExp` also `μ s ≠ ∞`, supplied by `finiteness` for a finite measure;
+  without them `condExp` is the value `0`.  `condDistrib_apply_ae_eq_condExpKernel_map` takes the
+  classes of its two joint laws and a σ-finite law of `Y` instead of a finite measure and a standard
+  Borel space, and holds for every two representatives and every measurable set: both functions are
+  measurable with respect to `mγ.comap Y`, with the same integrals over its sets.
+  `condExpKernel_singleton_eq_cond`, formerly `condExpKernel_singleton_ae_eq_cond`, takes the class
+  and a set of positive finite measure instead of a standard Borel space and a finite measure, and
+  states that every representative is `μ[|s]` at every point of the set, being constant there as a
+  function measurable for the σ-algebra the set generates.  New instances state that the trim of an
+  s-finite measure is s-finite (`sFinite_trim`) and that the trim of a σ-finite measure to its own
+  σ-algebra is σ-finite (`sigmaFinite_trim_self`).  The consumers in
+  `Mathlib/Probability/Independence/` and `Mathlib/Probability/Moments/SubGaussian.lean` still take
+  a standard Borel space and a finite measure, which supply the class (entry below).  Tests are in
+  `MathlibTest/CondExpKernelStrict.lean`.
 
 - [x] **Give the Bayes estimator statements the domain of the posterior.**
   The statements of `Mathlib/Probability/Decision/BayesEstimator.lean` took a nonempty standard
@@ -2327,8 +2350,8 @@ operation.
 - [ ] **State the almost-everywhere-invariant lemmas about conditional kernels for every
   representative.**
   The disintegration, the composition-products, and the measures and Lebesgue integrals of a
-  representative of `Measure.condKernel`, `Kernel.condKernel`, `condDistrib`, and `posterior` are
-  stated for every representative, through `Measure.HasCompProd.congr` and
+  representative of `Measure.condKernel`, `Kernel.condKernel`, `condDistrib`, `posterior`, and
+  `condExpKernel` are stated for every representative, through `Measure.HasCompProd.congr` and
   `Kernel.HasCompProd.congr`.  Each representative agrees almost everywhere with a Markov one, and
   the following statements do not change under almost-everywhere modification of the
   representative but still take a Markov, finite, or s-finite one.  In
@@ -2346,7 +2369,11 @@ operation.
   `condExp_ae_eq_integral_condDistrib_id`.  In `Posterior.lean`: `posterior_prod_id_comp`,
   `parallelProd_posterior_comp_copy_comp`, `deterministic_comp_posterior`,
   `mem_posterior_posterior`, and `comp_mem_posterior_comp`, and the Radon--Nikodym statements of
-  the entry above.  In `Mathlib/Probability/Independence/Conditional.lean`:
+  the entry above.  In `Condexp.lean`: `condExpKernel_ae_eq_condExp`,
+  `condExpKernel_ae_eq_trim_condExp`, `condExp_ae_eq_integral_condExpKernel`,
+  `condExp_ae_eq_trim_integral_condExpKernel_of_stronglyMeasurable`, and
+  `condExp_ae_eq_trim_integral_condExpKernel`.  In
+  `Mathlib/Probability/Independence/Conditional.lean`:
   `condIndepFun_iff_compProd_map_prod_eq_compProd_prod_map_map`,
   `condIndepFun_iff_map_prod_eq_prod_map_map`, `condIndepFun_iff_map_prod_eq_prod_comp_trim`,
   `condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib`, and
@@ -2356,6 +2383,49 @@ operation.
   lemmas for every representative, or, where a statement needs an s-finite representative, such as
   a product with it, on the domain of that construction; for the Bochner integrals, the outer
   integrand changes only on a null set when the representative does.
+
+- [ ] **Give the conditional-independence and conditionally sub-Gaussian definitions the class of
+  the diagonal law.**
+  `iCondIndepSets`, `CondIndepSets`, `iCondIndep`, `CondIndep`, `iCondIndepSet`, `CondIndepSet`,
+  `iCondIndepFun`, and `CondIndepFun` in `Mathlib/Probability/Independence/Conditional.lean`, the
+  lemmas of that file and of `Mathlib/Probability/Independence/ZeroOne.lean` about them, and
+  `HasCondSubgaussianMGF` and its section in `Mathlib/Probability/Moments/SubGaussian.lean` take
+  `[StandardBorelSpace Ω] [IsFiniteMeasure μ]`, which now only supply the class
+  `[(condExpJointLaw μ hm).HasUniqueCondKernel]` that `condExpKernel μ hm` needs.  Take the class
+  instead in the definitions, and determine for each lemma the hypotheses that its proof needs: the
+  characterizations through conditional expectations, such as `condIndepSets_iff` and
+  `condIndep_iff`, use `condExpKernel_ae_eq_condExp`, which needs a σ-finite trim and sets of finite
+  measure, and `HasCondSubgaussianMGF.ae_trim_condExp_le` uses
+  `condExp_ae_eq_trim_integral_condExpKernel`.
+
+- [ ] **Drop the σ-finite law of `Y` from `condDistrib_apply_ae_eq_condExpKernel_map`.**
+  The lemma in `Mathlib/Probability/Kernel/Condexp.lean` takes
+  `[SigmaFinite (μ.map Y hY.aemeasurable)]` besides the classes of its two joint laws: the proof
+  compares the integrals of the two functions over the sets of `mγ.comap Y`, which determine them
+  almost everywhere for a σ-finite `μ.trim hY.comap_le`.  The classes of the two joint laws
+  suffice, by a paper proof.  Each representative agrees almost everywhere with a Markov one, and
+  for Markov representatives `η₁` and `η₂`, the functions `u = η₁ (Y ·) s` and
+  `v = η₂ · (X ⁻¹' s)` take values in `[0, 1]` and have the same integrals over the sets of
+  `mγ.comap Y`, so every such set inside `{u > v + ε}` has measure `0` or `∞`, and so does every
+  measurable subset of the set `B` with `{u > v + ε} = Y ⁻¹' B` for the law `ν` of `Y`.  Every
+  `ν`-integral over `B` is then `0` or `∞`, so reweighting `η₁ y` at the points `y` of `B` where
+  `p = η₁ y s` lies strictly between `0` and `1`, by `1/2` on `s` and `(1 - p/2) / (1 - p)` on
+  `sᶜ`, keeps its null sets and hence the disintegration; the class forces `η₁ y s ∈ {0, 1}` for
+  `ν`-almost every `y` in `B`.  So `u = 1` almost everywhere on `{u > v + ε}`, the integrals of
+  the complements give `v = 1` there, and the set is null; `{v > u + ε}` is null in the same way.
+  Formalize this and drop the hypothesis.
+
+- [ ] **Supply the class of the joint law of `(ω, ω)` for the σ-algebra generated by one set.**
+  For a finite measure `μ` and a measurable set `s`, `condExpJointLaw μ (generateFrom_singleton_le
+  hs)` in `Mathlib/Probability/Kernel/Condexp.lean` has a unique conditional kernel for every `Ω`:
+  the kernel equal to `μ[|s]` on `s` and to `μ[|sᶜ]` on `sᶜ`, with a Dirac measure on a part of
+  mass `0`, is a Markov disintegration, and a kernel measurable for the σ-algebra generated by `s`
+  is constant on `s` and on `sᶜ`, so the disintegration identity determines it on the parts of
+  positive mass; the empty type is covered by `Measure.hasUniqueCondKernel_of_isEmpty`.  Instance
+  search supplies the class only through a standard Borel space
+  (`hasUniqueCondKernel_condExpJointLaw`), so callers of `condExpKernel_singleton_eq_cond` must
+  supply it otherwise.  Add an instance for a finite measure, stated for every proof of
+  `generateFrom {s} ≤ mΩ`.
 
 - [ ] **Determine whether the converse absolute-continuity lemma of the posterior needs an s-finite
   law of the data.**

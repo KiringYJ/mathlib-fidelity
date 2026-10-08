@@ -15,29 +15,40 @@ public import Mathlib.Probability.ConditionalProbability
 
 For a sub-σ-algebra `m ≤ mΩ`, we define `condExpKernel μ hm`, the `μ.trim hm`-almost-everywhere
 class of the Markov kernels `η` from `(Ω, m)` to `Ω` with `(μ.trim hm) ⊗ₘ η = μ.map (ω ↦ (ω, ω))`.
-Every such kernel satisfies, for all integrable functions `f`,
-`μ[f | m] =ᵐ[μ] fun ω => ∫ y, f y ∂(η ω)`. These kernels are determined only up to
-`μ.trim hm`-null sets, so the kernel associated with the conditional expectation is their class,
-not a chosen kernel.
+If `μ.trim hm` is σ-finite, every such kernel satisfies, for all integrable functions `f`,
+`μ[f | m] =ᵐ[μ] fun ω => ∫ y, f y ∂(η ω)`. When the joint law below has a unique conditional
+kernel, two such kernels agree `μ.trim hm`-almost everywhere, and every Markov kernel that agrees
+with one of them `μ.trim hm`-almost everywhere is another, so the kernel associated with the
+conditional expectation is their class, not a chosen kernel.
 
-This class is defined if `Ω` is a standard Borel space. In general, `μ⟦s | m⟧` maps a measurable
-set `s` to a function `Ω → ℝ≥0∞`, and for all `s` that map is unique up to a `μ`-null set. For all
-`a`, the map from sets to `ℝ≥0∞` that we obtain that way verifies some of the properties of a
-measure, but the fact that the `μ`-null set depends on `s` can prevent us from finding versions of
-the conditional expectation that combine into a true measure. The standard Borel space assumption
-on `Ω` allows us to do so.
+This class is the conditional kernel of the joint law of `(ω, ω)`, the first coordinate being
+viewed in `Ω` with the σ-algebra `m` (`ProbabilityTheory.condExpJointLaw`), so it is defined when
+that joint law has a unique conditional kernel, which the statements take as an instance argument.
+Instance search supplies it when `Ω` is a standard Borel space and `μ.trim hm` is σ-finite, for
+example when `μ` is finite, and for every measure on a countably generated space when `m` is the
+whole σ-algebra. When `μ.trim hm` is σ-finite, the conditional probability `μ⟦s | m⟧` of a
+measurable set `s` of finite measure is a function `Ω → ℝ` determined up to a `μ`-null set. For all
+`a`, the map from sets to `ℝ` that we obtain that way verifies some of the properties of a measure,
+but the fact that the `μ`-null set depends on `s` can prevent us from finding versions of the
+conditional expectation that combine into a true measure. The standard Borel space assumption on
+`Ω` allows us to do so.
 
 ## Main definitions
 
+* `condExpJointLaw μ hm`: the law of `(ω, ω)` under `μ`, the first coordinate being viewed in
+  `Ω` with the σ-algebra `m`.
 * `condExpKernel μ hm`: the `μ.trim hm`-almost-everywhere class of the Markov kernels `η` from
   `(Ω, m)` to `Ω` with `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`.
 
 ## Main statements
 
-* `mem_condExpKernel_iff`: a finite kernel `η` represents `condExpKernel μ hm` if and only if
-  `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`.
-* `condExp_ae_eq_integral_condExpKernel`: `μ[f | m] =ᵐ[μ] fun ω => ∫ y, f y ∂(η ω)` for every
-  Markov representative `η` of `condExpKernel μ hm`.
+* `mem_condExpKernel_iff_of_isMarkovKernel`: a Markov kernel `η` represents `condExpKernel μ hm`
+  if and only if `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`.
+* `mem_condExpKernel_iff`: if `μ.trim hm` is σ-finite, a kernel `η` for which `(μ.trim hm) ⊗ₘ η`
+  exists represents `condExpKernel μ hm` if and only if `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`.
+* `condExp_ae_eq_integral_condExpKernel`: if `μ.trim hm` is σ-finite,
+  `μ[f | m] =ᵐ[μ] fun ω => ∫ y, f y ∂(η ω)` for every Markov representative `η` of
+  `condExpKernel μ hm`.
 
 -/
 
@@ -76,133 +87,186 @@ theorem _root_.MeasureTheory.Integrable.comp_snd_map_prod_id (hm : m ≤ mΩ) [N
 
 end AuxLemmas
 
-variable {Ω F : Type*} {m : SigmaAlgebra Ω} [mΩ : SigmaAlgebra Ω]
-  [StandardBorelSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+variable {Ω F : Type*} {m : SigmaAlgebra Ω} [mΩ : SigmaAlgebra Ω] {μ : Measure Ω}
 
-/-- For a finite measure `μ` on a nonempty standard Borel space, the joint law of the identity
-and the identity, the first one viewed as a map to `Ω` with the σ-algebra `m`, has a unique
-conditional kernel. -/
-lemma hasUniqueCondKernel_map_diag [Nonempty Ω] (μ : Measure Ω) [IsFiniteMeasure μ]
-    (hm : m ≤ mΩ) :
-    (@Measure.map Ω (Ω × Ω) mΩ (@Prod.instSigmaAlgebra Ω Ω m mΩ) (fun a ↦ (id a, id a)) μ
-      (aemeasurable_diag_of_le μ hm)).HasUniqueCondKernel :=
-  haveI := Measure.isFiniteMeasure_map (mβ := @Prod.instSigmaAlgebra Ω Ω m mΩ) μ
-    (fun a ↦ (id a, id a)) (aemeasurable_diag_of_le μ hm)
-  inferInstance
+/-- The law of `(ω, ω)` under `μ` when the first coordinate is viewed in `Ω` with the sub-σ-algebra
+`m`: the joint law of the identity from `(Ω, mΩ)` to `(Ω, m)` and the identity. Its first marginal
+is `μ.trim hm` (`ProbabilityTheory.fst_condExpJointLaw`), and its conditional kernel is
+`ProbabilityTheory.condExpKernel μ hm`. -/
+noncomputable def condExpJointLaw (μ : Measure Ω) (hm : m ≤ mΩ) : @Measure (Ω × Ω) (m.prod mΩ) :=
+  @Measure.map Ω (Ω × Ω) mΩ (m.prod mΩ) Function.diag μ (aemeasurable_diag_of_le μ hm)
 
-/-- Some class of kernels from `(Ω, m)` to `Ω` along `ae (μ.trim hm)` contains a Markov kernel `η`
-with `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`. Since two finite kernels with this property agree
-`μ.trim hm`-almost everywhere (`ProbabilityTheory.Kernel.ae_eq_of_compProd_eq`), such a class is
-unique. -/
-lemma exists_aeClass_condExpKernel (μ : Measure Ω) [IsFiniteMeasure μ] (hm : m ≤ mΩ) :
-    ∃ c : @Kernel.AEClass Ω (ae (μ.trim hm)) Ω m mΩ, ∃ η : @Kernel Ω Ω m mΩ,
-      ∃ _ : IsMarkovKernel η,
-        (μ.trim hm) ⊗ₘ η = @Measure.map Ω (Ω × Ω) mΩ (m.prod mΩ) Function.diag μ
-          (aemeasurable_diag_of_le μ hm) ∧ η ∈ c := by
-  rcases isEmpty_or_nonempty Ω with h | h
-  · refine ⟨Kernel.AEClass.mk _ 0, 0, ⟨fun a ↦ (IsEmpty.false a).elim⟩, ?_,
-      Kernel.AEClass.mem_mk _ _⟩
-    simp [Measure.eq_zero_of_isEmpty μ]
-  · have := hasUniqueCondKernel_map_diag μ hm
-    obtain ⟨η, hη, hη_mem⟩ := exists_isMarkovKernel_mem_condDistrib (mβ := m) (X := id) (Y := id)
-      (μ := μ) (aemeasurable_diag_of_le μ hm)
-    refine ⟨Kernel.AEClass.mk _ η, η, hη, ?_, Kernel.AEClass.mem_mk _ η⟩
-    rw [trim_eq_map hm]
-    exact compProd_map_condDistrib (@Measurable.aemeasurable Ω Ω mΩ m id μ (measurable_id'' hm))
-      aemeasurable_id hη_mem
+/-- The first marginal of the joint law of `(ω, ω)` is the trim of `μ`. -/
+lemma fst_condExpJointLaw (μ : Measure Ω) (hm : m ≤ mΩ) :
+    @Measure.fst Ω Ω m mΩ (condExpJointLaw μ hm) = μ.trim hm := by
+  rw [trim_eq_map hm]
+  exact @Measure.fst_map_prodMk Ω Ω Ω mΩ m mΩ id id μ (measurable_id'' hm) measurable_id
+
+/-- The second marginal of the joint law of `(ω, ω)` is `μ`. -/
+lemma snd_condExpJointLaw (μ : Measure Ω) (hm : m ≤ mΩ) :
+    @Measure.snd Ω Ω m mΩ (condExpJointLaw μ hm) = μ :=
+  (@Measure.snd_map_prodMk Ω Ω Ω mΩ m mΩ id id μ (measurable_id'' hm) measurable_id).trans
+    Measure.map_id
+
+/-- The first marginal of the joint law of `(ω, ω)` is σ-finite when `μ.trim hm` is. -/
+instance sigmaFinite_fst_condExpJointLaw {hm : m ≤ mΩ} [SigmaFinite (μ.trim hm)] :
+    SigmaFinite (@Measure.fst Ω Ω m mΩ (condExpJointLaw μ hm)) := by
+  rw [fst_condExpJointLaw]
+  infer_instance
+
+/-- The joint law of `(ω, ω)` has a unique conditional kernel when `Ω` is a standard Borel space
+and `μ.trim hm` is σ-finite, for example when `μ` is finite: for a nonempty space by
+`MeasureTheory.Measure.hasUniqueCondKernel_of_sigmaFinite_fst`, and for the empty space by
+`MeasureTheory.Measure.hasUniqueCondKernel_of_isEmpty`. -/
+instance hasUniqueCondKernel_condExpJointLaw [StandardBorelSpace Ω] {hm : m ≤ mΩ}
+    [SigmaFinite (μ.trim hm)] : (condExpJointLaw μ hm).HasUniqueCondKernel := by
+  rcases isEmpty_or_nonempty Ω with h | h <;> infer_instance
+
+/-- For the whole σ-algebra, the joint law of `(ω, ω)` has a unique conditional kernel for every
+measure on a countably generated space, since its second coordinate is a measurable function of the
+first (`MeasureTheory.Measure.hasUniqueCondKernel_map_prodMk_comp`). -/
+instance hasUniqueCondKernel_condExpJointLaw_self [SigmaAlgebra.CountablyGenerated Ω]
+    {hm : mΩ ≤ mΩ} : (condExpJointLaw μ hm).HasUniqueCondKernel :=
+  Measure.hasUniqueCondKernel_map_prodMk_comp aemeasurable_id measurable_id
 
 /-- The kernel associated with the conditional expectation with respect to a sub-σ-algebra
-`m ≤ mΩ`: the `μ.trim hm`-almost-everywhere class of the Markov kernels `η` from `(Ω, m)` to
-`(Ω, mΩ)` with `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`.
+`m ≤ mΩ`: the conditional kernel of the joint law of `(ω, ω)` (`ProbabilityTheory.condExpJointLaw`),
+that is, the `μ.trim hm`-almost-everywhere class of the Markov kernels `η` from `(Ω, m)` to
+`(Ω, mΩ)` with `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`. It exists when that joint law has a
+unique conditional kernel, for example when `Ω` is a standard Borel space and `μ.trim hm` is
+σ-finite (`ProbabilityTheory.hasUniqueCondKernel_condExpJointLaw`).
 
-Every Markov representative `η` satisfies `μ[f | m] =ᵐ[μ] fun ω => ∫ y, f y ∂(η ω)` for integrable
-`f` (`ProbabilityTheory.condExp_ae_eq_integral_condExpKernel`). If `Ω` is nonempty, the Markov
-representatives are those of the conditional distribution of the identity given the identity, where
-the second identity is viewed as a map from `Ω` with the σ-algebra `mΩ` to `Ω` with the σ-algebra
-`m` (`ProbabilityTheory.mem_condExpKernel_iff_mem_condDistrib`). -/
-noncomputable def condExpKernel (μ : Measure Ω) [IsFiniteMeasure μ] (hm : m ≤ mΩ) :
-    @Kernel.AEClass Ω (ae (μ.trim hm)) Ω m mΩ :=
-  (exists_aeClass_condExpKernel μ hm).choose
+If `μ.trim hm` is σ-finite, every Markov representative `η` satisfies
+`μ[f | m] =ᵐ[μ] fun ω => ∫ y, f y ∂(η ω)` for integrable `f`
+(`ProbabilityTheory.condExp_ae_eq_integral_condExpKernel`). The representatives are those of the
+conditional distribution of the identity given the identity, where the second identity is viewed as
+a map from `Ω` with the σ-algebra `mΩ` to `Ω` with the σ-algebra `m`
+(`ProbabilityTheory.mem_condExpKernel_iff_mem_condDistrib`). -/
+noncomputable def condExpKernel (μ : Measure Ω) (hm : m ≤ mΩ)
+    [(condExpJointLaw μ hm).HasUniqueCondKernel] : @Kernel.AEClass Ω (ae (μ.trim hm)) Ω m mΩ :=
+  (condExpJointLaw μ hm).condKernel.copy (congrArg ae (fst_condExpJointLaw μ hm)).symm
 
 /-- `condExpKernel μ hm` is represented by a Markov kernel. -/
-lemma exists_isMarkovKernel_mem_condExpKernel (μ : Measure Ω) [IsFiniteMeasure μ]
-    (hm : m ≤ mΩ) :
+lemma exists_isMarkovKernel_mem_condExpKernel (μ : Measure Ω) (hm : m ≤ mΩ)
+    [(condExpJointLaw μ hm).HasUniqueCondKernel] :
     ∃ η : @Kernel Ω Ω m mΩ, IsMarkovKernel η ∧ η ∈ condExpKernel μ hm :=
-  let ⟨η, h₁, _, h₂⟩ := (exists_aeClass_condExpKernel μ hm).choose_spec
-  ⟨η, h₁, h₂⟩
+  let ⟨η, h₁, _, h₂⟩ := (condExpJointLaw μ hm).exists_isMarkovKernel_mem_condKernel
+  ⟨η, h₁, (Kernel.AEClass.mem_copy _).2 h₂⟩
 
-variable {hm : m ≤ mΩ} {η : @Kernel Ω Ω m mΩ}
+/-- The law of the identity from `(Ω, mΩ)` to `(Ω, m)` is the trim of `μ`, so it is σ-finite when
+the trim is. -/
+private lemma sigmaFinite_map_id {hm : m ≤ mΩ} [SigmaFinite (μ.trim hm)] :
+    SigmaFinite (@Measure.map Ω Ω mΩ m id μ
+      (@Measurable.aemeasurable Ω Ω mΩ m id μ (measurable_id'' hm))) := by
+  rw [← trim_eq_map hm]
+  infer_instance
 
-/-- Every s-finite representative `η` of `condExpKernel μ hm` satisfies
-`(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`. -/
-lemma compProd_trim_condExpKernel [IsSFiniteKernel η] (hη : η ∈ condExpKernel μ hm) :
-    (μ.trim hm) ⊗ₘ η
-      = @Measure.map Ω (Ω × Ω) mΩ (m.prod mΩ) Function.diag μ
-        (aemeasurable_diag_of_le μ hm) := by
-  obtain ⟨η₀, _, h₀, hη₀⟩ := (exists_aeClass_condExpKernel μ hm).choose_spec
-  rw [Measure.compProd_congr (Kernel.AEClass.eventuallyEq_of_mem hη hη₀), h₀]
+variable {hm : m ≤ mΩ} [(condExpJointLaw μ hm).HasUniqueCondKernel] {η : @Kernel Ω Ω m mΩ}
 
-/-- A finite kernel `η` with `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))` represents
-`condExpKernel μ hm`. -/
-lemma mem_condExpKernel_of_compProd_eq [IsFiniteKernel η]
-    (h : (μ.trim hm) ⊗ₘ η
-      = @Measure.map Ω (Ω × Ω) mΩ (m.prod mΩ) Function.diag μ (aemeasurable_diag_of_le μ hm)) :
+/-- The class of `condExpJointLaw μ hm` is that of the joint law of the identity from `(Ω, mΩ)` to
+`(Ω, m)` and the identity, which defines the conditional distribution of the identity given the
+identity: the two measures are definitionally equal. -/
+private lemma hasUniqueCondKernel_map_id_id :
+    (@Measure.map Ω (Ω × Ω) mΩ (m.prod mΩ) (fun a ↦ (id a, id a)) μ
+      (aemeasurable_diag_of_le μ hm)).HasUniqueCondKernel :=
+  ‹(condExpJointLaw μ hm).HasUniqueCondKernel›
+
+/-- The representatives of `condExpKernel μ hm` are those of the conditional kernel of the joint
+law of `(ω, ω)`. -/
+lemma mem_condExpKernel_iff_mem_condKernel :
+    η ∈ condExpKernel μ hm ↔ η ∈ (condExpJointLaw μ hm).condKernel :=
+  Kernel.AEClass.mem_copy _
+
+/-- A representative of `condExpKernel μ hm` disintegrates the joint law of `(ω, ω)`. -/
+lemma isCondKernel_of_mem_condExpKernel (hη : η ∈ condExpKernel μ hm) :
+    (condExpJointLaw μ hm).IsCondKernel η :=
+  Measure.isCondKernel_of_mem_condKernel (mem_condExpKernel_iff_mem_condKernel.1 hη)
+
+/-- The composition-product of `μ.trim hm` with a representative of `condExpKernel μ hm` exists,
+since the representative disintegrates the joint law of `(ω, ω)`, whose first marginal is
+`μ.trim hm`. -/
+lemma hasCompProd_trim_of_mem_condExpKernel (hη : η ∈ condExpKernel μ hm) :
+    (μ.trim hm).HasCompProd η := by
+  have := isCondKernel_of_mem_condExpKernel hη
+  rw [← fst_condExpJointLaw μ hm]
+  infer_instance
+
+/-- Every representative `η` of `condExpKernel μ hm` satisfies
+`(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`; the composition-product exists by
+`ProbabilityTheory.hasCompProd_trim_of_mem_condExpKernel`. -/
+lemma compProd_trim_condExpKernel [(μ.trim hm).HasCompProd η] (hη : η ∈ condExpKernel μ hm) :
+    (μ.trim hm) ⊗ₘ η = condExpJointLaw μ hm := by
+  have := isCondKernel_of_mem_condExpKernel hη
+  rw [Measure.compProd_congr_measure (fst_condExpJointLaw μ hm).symm]
+  exact Measure.disintegrate _ η
+
+/-- A kernel `η` with `(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))` represents `condExpKernel μ hm`
+if `μ.trim hm` is σ-finite. -/
+lemma mem_condExpKernel_of_compProd_eq [SigmaFinite (μ.trim hm)] [(μ.trim hm).HasCompProd η]
+    (h : (μ.trim hm) ⊗ₘ η = condExpJointLaw μ hm) :
     η ∈ condExpKernel μ hm := by
-  obtain ⟨η₀, _, h₀, hη₀⟩ := (exists_aeClass_condExpKernel μ hm).choose_spec
-  exact Kernel.AEClass.mem_of_eventuallyEq hη₀ (Kernel.ae_eq_of_compProd_eq (h₀.trans h.symm))
+  have : (condExpJointLaw μ hm).IsCondKernel η := .of_compProd_eq (fst_condExpJointLaw μ hm) h
+  exact mem_condExpKernel_iff_mem_condKernel.2 Measure.IsCondKernel.mem_condKernel
 
-/-- A finite kernel `η` represents `condExpKernel μ hm` if and only if
-`(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`. -/
-lemma mem_condExpKernel_iff [IsFiniteKernel η] :
-    η ∈ condExpKernel μ hm ↔
-      (μ.trim hm) ⊗ₘ η
-        = @Measure.map Ω (Ω × Ω) mΩ (m.prod mΩ) Function.diag μ (aemeasurable_diag_of_le μ hm) :=
+/-- A kernel `η` for which `(μ.trim hm) ⊗ₘ η` exists represents `condExpKernel μ hm` if and only if
+`(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`, if `μ.trim hm` is σ-finite. -/
+lemma mem_condExpKernel_iff [SigmaFinite (μ.trim hm)] [(μ.trim hm).HasCompProd η] :
+    η ∈ condExpKernel μ hm ↔ (μ.trim hm) ⊗ₘ η = condExpJointLaw μ hm :=
   ⟨compProd_trim_condExpKernel, mem_condExpKernel_of_compProd_eq⟩
 
-/-- If `Ω` is nonempty, the finite representatives of `condExpKernel μ hm` are those of the
-conditional distribution of the identity given the identity, the second identity being viewed as a
-map from `Ω` with the σ-algebra `mΩ` to `Ω` with the σ-algebra `m`. -/
-lemma mem_condExpKernel_iff_mem_condDistrib [Nonempty Ω] [IsFiniteKernel η] :
-    haveI := hasUniqueCondKernel_map_diag μ hm
-    η ∈ condExpKernel μ hm ↔
-      η ∈ @condDistrib Ω Ω Ω mΩ mΩ m id id μ (aemeasurable_diag_of_le μ hm) _ := by
-  rw [mem_condExpKernel_iff, mem_condDistrib_iff (@Measurable.aemeasurable Ω Ω mΩ m id μ
-    (measurable_id'' hm)) aemeasurable_id, ← trim_eq_map hm]
-  exact eq_comm
+/-- A Markov kernel `η` represents `condExpKernel μ hm` if and only if
+`(μ.trim hm) ⊗ₘ η = μ.map (fun ω ↦ (ω, ω))`. Unlike for a kernel that is not Markov, the class of
+the joint law suffices. -/
+lemma mem_condExpKernel_iff_of_isMarkovKernel [IsMarkovKernel η] :
+    η ∈ condExpKernel μ hm ↔ (μ.trim hm) ⊗ₘ η = condExpJointLaw μ hm :=
+  ⟨compProd_trim_condExpKernel, fun h ↦ mem_condExpKernel_iff_mem_condKernel.2
+    (Measure.mem_condKernel_iff_of_isMarkovKernel.2 (.of_compProd_eq (fst_condExpJointLaw μ hm) h))⟩
 
-lemma condExpKernel_comp_trim [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm) :
-    η ∘ₘ μ.trim hm = μ := by
-  rw [← Measure.snd_compProd, compProd_trim_condExpKernel hη]
-  exact (@Measure.snd_map_prodMk Ω Ω Ω mΩ m mΩ id id μ (measurable_id'' hm) measurable_id).trans
-    Measure.map_id
+/-- The representatives of `condExpKernel μ hm` are those of the conditional distribution of the
+identity given the identity, the second identity being viewed as a map from `Ω` with the σ-algebra
+`mΩ` to `Ω` with the σ-algebra `m`: both are the conditional kernel of the joint law of
+`(ω, ω)`. -/
+lemma mem_condExpKernel_iff_mem_condDistrib :
+    η ∈ condExpKernel μ hm ↔
+      η ∈ @condDistrib Ω Ω Ω mΩ mΩ m id id μ (aemeasurable_diag_of_le μ hm) ‹_› := by
+  have := hasUniqueCondKernel_map_id_id (μ := μ) (hm := hm)
+  exact mem_condExpKernel_iff_mem_condKernel.trans
+    (mem_condDistrib_iff_mem_condKernel (mβ := m) (X := id) (Y := id)
+      (aemeasurable_diag_of_le μ hm)).symm
+
+/-- Every representative `η` of `condExpKernel μ hm` satisfies `η ∘ₘ μ.trim hm = μ`. -/
+lemma condExpKernel_comp_trim (hη : η ∈ condExpKernel μ hm) : η ∘ₘ μ.trim hm = μ := by
+  have := hasCompProd_trim_of_mem_condExpKernel hη
+  rw [← Measure.snd_compProd, compProd_trim_condExpKernel hη, snd_condExpJointLaw]
+
+/-! The measurability and integrability statements below hold for every representative and every
+measure: a function on `Ω` integrates against `μ = η ∘ₘ μ.trim hm`
+(`ProbabilityTheory.condExpKernel_comp_trim`) through its integrals against the measures `η ω`. -/
 
 section Measurability
 
 variable [NormedAddCommGroup F] {f : Ω → F}
 
-theorem _root_.MeasureTheory.AEStronglyMeasurable.integral_condExpKernel [NormedSpace ℝ F]
-    [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm) (hf : AEStronglyMeasurable f μ) :
-    AEStronglyMeasurable (fun ω => ∫ y, f y ∂η ω) μ := by
-  nontriviality Ω
-  exact AEStronglyMeasurable.integral_condDistrib
-    (@Measurable.aemeasurable Ω Ω mΩ m id μ (measurable_id'' hm)) aemeasurable_id
-    (mem_condExpKernel_iff_mem_condDistrib.1 hη) (hf.comp_snd_map_prod_id hm)
-
-theorem aestronglyMeasurable_integral_condExpKernel [NormedSpace ℝ F] [IsMarkovKernel η]
-    (hη : η ∈ condExpKernel μ hm) (hf : AEStronglyMeasurable f μ) :
-    AEStronglyMeasurable[m] (fun ω => ∫ y, f y ∂η ω) μ := by
-  nontriviality Ω
-  have h := aestronglyMeasurable_integral_condDistrib
-    (@Measurable.aemeasurable Ω Ω mΩ m id μ (measurable_id'' hm)) aemeasurable_id
-    (mem_condExpKernel_iff_mem_condDistrib.1 hη) (hf.comp_snd_map_prod_id hm)
-  rwa [SigmaAlgebra.comap_id] at h
-
-lemma aestronglyMeasurable_trim_condExpKernel [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm)
+/-- An almost everywhere strongly measurable function agrees with its strongly measurable version
+almost everywhere for `η ω`, for `μ.trim hm`-almost every `ω`. -/
+lemma aestronglyMeasurable_trim_condExpKernel (hη : η ∈ condExpKernel μ hm)
     (hf : AEStronglyMeasurable f μ) :
     ∀ᵐ ω ∂(μ.trim hm), f =ᵐ[η ω] hf.mk f := by
   refine Measure.ae_ae_of_ae_comp ?_
   rw [condExpKernel_comp_trim hη]
   exact hf.ae_eq_mk
+
+theorem aestronglyMeasurable_integral_condExpKernel [NormedSpace ℝ F]
+    (hη : η ∈ condExpKernel μ hm) (hf : AEStronglyMeasurable f μ) :
+    AEStronglyMeasurable[m] (fun ω => ∫ y, f y ∂η ω) μ :=
+  ⟨fun ω ↦ ∫ y, hf.mk f y ∂η ω, hf.stronglyMeasurable_mk.integral_kernel,
+    ae_of_ae_trim hm ((aestronglyMeasurable_trim_condExpKernel hη hf).mono fun _ hω ↦
+      integral_congr_ae hω)⟩
+
+theorem _root_.MeasureTheory.AEStronglyMeasurable.integral_condExpKernel [NormedSpace ℝ F]
+    (hη : η ∈ condExpKernel μ hm) (hf : AEStronglyMeasurable f μ) :
+    AEStronglyMeasurable (fun ω => ∫ y, f y ∂η ω) μ :=
+  (aestronglyMeasurable_integral_condExpKernel hη hf).mono hm
 
 end Measurability
 
@@ -210,81 +274,90 @@ section Integrability
 
 variable [NormedAddCommGroup F] {f : Ω → F}
 
-theorem _root_.MeasureTheory.Integrable.condExpKernel_ae [IsMarkovKernel η]
-    (hη : η ∈ condExpKernel μ hm) (hf_int : Integrable f μ) :
+theorem _root_.MeasureTheory.Integrable.condExpKernel_ae (hη : η ∈ condExpKernel μ hm)
+    (hf_int : Integrable f μ) :
     ∀ᵐ ω ∂μ, Integrable f (η ω) := by
-  nontriviality Ω
-  convert! Integrable.condDistrib_ae
-    (@Measurable.aemeasurable Ω Ω mΩ m id μ (measurable_id'' hm)) aemeasurable_id
-    (mem_condExpKernel_iff_mem_condDistrib.1 hη) (hf_int.comp_snd_map_prod_id hm) using 1
+  have h : Integrable f (η ∘ₘ μ.trim hm) := by rwa [condExpKernel_comp_trim hη]
+  exact ae_of_ae_trim hm (Measure.ae_integrable_of_integrable_comp h)
 
-theorem _root_.MeasureTheory.Integrable.integral_norm_condExpKernel [IsMarkovKernel η]
-    (hη : η ∈ condExpKernel μ hm) (hf_int : Integrable f μ) :
+theorem _root_.MeasureTheory.Integrable.integral_norm_condExpKernel (hη : η ∈ condExpKernel μ hm)
+    (hf_int : Integrable f μ) :
     Integrable (fun ω => ∫ y, ‖f y‖ ∂η ω) μ := by
-  nontriviality Ω
-  convert! Integrable.integral_norm_condDistrib
-    (@Measurable.aemeasurable Ω Ω mΩ m id μ (measurable_id'' hm)) aemeasurable_id
-    (mem_condExpKernel_iff_mem_condDistrib.1 hη) (hf_int.comp_snd_map_prod_id hm) using 1
-
-theorem _root_.MeasureTheory.Integrable.norm_integral_condExpKernel [NormedSpace ℝ F]
-    [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm) (hf_int : Integrable f μ) :
-    Integrable (fun ω => ‖∫ y, f y ∂η ω‖) μ := by
-  nontriviality Ω
-  convert! Integrable.norm_integral_condDistrib
-    (@Measurable.aemeasurable Ω Ω mΩ m id μ (measurable_id'' hm)) aemeasurable_id
-    (mem_condExpKernel_iff_mem_condDistrib.1 hη) (hf_int.comp_snd_map_prod_id hm) using 1
+  have h : Integrable f (η ∘ₘ μ.trim hm) := by rwa [condExpKernel_comp_trim hη]
+  exact integrable_of_integrable_trim hm (Measure.integrable_integral_norm_of_integrable_comp h)
 
 theorem _root_.MeasureTheory.Integrable.integral_condExpKernel [NormedSpace ℝ F]
-    [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm) (hf_int : Integrable f μ) :
-    Integrable (fun ω => ∫ y, f y ∂η ω) μ := by
-  nontriviality Ω
-  convert! Integrable.integral_condDistrib
-    (@Measurable.aemeasurable Ω Ω mΩ m id μ (measurable_id'' hm)) aemeasurable_id
-    (mem_condExpKernel_iff_mem_condDistrib.1 hη) (hf_int.comp_snd_map_prod_id hm) using 1
+    (hη : η ∈ condExpKernel μ hm) (hf_int : Integrable f μ) :
+    Integrable (fun ω => ∫ y, f y ∂η ω) μ :=
+  (hf_int.integral_norm_condExpKernel hη).mono (hf_int.1.integral_condExpKernel hη)
+    (ae_of_all _ fun _ ↦ (norm_integral_le_integral_norm _).trans (Real.le_norm_self _))
+
+theorem _root_.MeasureTheory.Integrable.norm_integral_condExpKernel [NormedSpace ℝ F]
+    (hη : η ∈ condExpKernel μ hm) (hf_int : Integrable f μ) :
+    Integrable (fun ω => ‖∫ y, f y ∂η ω‖) μ :=
+  (hf_int.integral_condExpKernel hη).norm
 
 end Integrability
 
-lemma condExpKernel_ae_eq_condExp [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm) {s : Set Ω}
-    (hs : MeasurableSet s) :
+/-- If `μ.trim hm` is σ-finite, then for every Markov representative `η` of `condExpKernel μ hm`,
+every measurable set `s` with `μ s ≠ ∞`, and almost every `ω`, `η ω s` is the conditional
+probability `μ⟦s | m⟧ ω`. -/
+lemma condExpKernel_ae_eq_condExp [SigmaFinite (μ.trim hm)] [IsMarkovKernel η]
+    (hη : η ∈ condExpKernel μ hm) {s : Set Ω} (hs : MeasurableSet s)
+    (hμs : μ s ≠ ∞ := by finiteness) :
     (fun ω ↦ (η ω).real s) =ᵐ[μ] μ⟦s | m⟧ := by
-  rcases isEmpty_or_nonempty Ω with h | h
-  · have : μ = 0 := Measure.eq_zero_of_isEmpty μ
-    simpa [this] using! trivial
+  have := sigmaFinite_map_id (μ := μ) (hm := hm)
+  have := hasUniqueCondKernel_map_id_id (μ := μ) (hm := hm)
   have h := condDistrib_ae_eq_condExp (μ := μ) (measurable_id'' hm) measurable_id
-    (mem_condExpKernel_iff_mem_condDistrib.1 hη) hs
+    (mem_condExpKernel_iff_mem_condDistrib.1 hη) hs hμs
   simp only [id_eq, SigmaAlgebra.comap_id, preimage_id_eq] at h
   exact h
 
-lemma condExpKernel_ae_eq_trim_condExp [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm)
-    {s : Set Ω} (hs : MeasurableSet s) :
+lemma condExpKernel_ae_eq_trim_condExp [SigmaFinite (μ.trim hm)] [IsMarkovKernel η]
+    (hη : η ∈ condExpKernel μ hm) {s : Set Ω} (hs : MeasurableSet s)
+    (hμs : μ s ≠ ∞ := by finiteness) :
     (fun ω ↦ (η ω).real s) =ᵐ[μ.trim hm] μ⟦s | m⟧ := by
   simp_rw [measureReal_def]
   rw [(η.measurable_coe hs).ennreal_toReal.stronglyMeasurable.ae_eq_trim_iff hm
     stronglyMeasurable_condExp]
-  exact condExpKernel_ae_eq_condExp hη hs
+  exact condExpKernel_ae_eq_condExp hη hs hμs
 
+/-- If the law of `Y` is σ-finite, a representative of the conditional distribution of `X` given
+`Y`, composed with `Y`, agrees almost everywhere with the image under `X` of a representative of
+`condExpKernel μ hY.comap_le` on every measurable set: both are measurable with respect to
+`mγ.comap Y`, with the integral `μ (t ∩ X ⁻¹' s)` over each of its sets `t`. -/
 lemma condDistrib_apply_ae_eq_condExpKernel_map {β γ : Type*} {mβ : SigmaAlgebra β}
-    {mγ : SigmaAlgebra γ} [StandardBorelSpace β] [Nonempty β] {X : Ω → β} {Y : Ω → γ}
-    (hX : Measurable X) (hY : Measurable Y) {s : Set β} (hs : MeasurableSet s)
-    {η₁ : Kernel γ β} [IsMarkovKernel η₁]
-    (hη₁ : η₁ ∈ condDistrib X Y μ (hY.aemeasurable.prodMk hX.aemeasurable))
-    {η₂ : @Kernel Ω Ω (mγ.comap Y) mΩ} [IsMarkovKernel η₂]
-    (hη₂ : η₂ ∈ condExpKernel μ hY.comap_le) :
+    {mγ : SigmaAlgebra γ} {X : Ω → β} {Y : Ω → γ} (hX : Measurable X) (hY : Measurable Y)
+    [SigmaFinite (μ.map Y hY.aemeasurable)] {s : Set β} (hs : MeasurableSet s)
+    [(μ.map (fun a => (Y a, X a)) (hY.aemeasurable.prodMk hX.aemeasurable)).HasUniqueCondKernel]
+    {η₁ : Kernel γ β} (hη₁ : η₁ ∈ condDistrib X Y μ (hY.aemeasurable.prodMk hX.aemeasurable))
+    [(condExpJointLaw μ hY.comap_le).HasUniqueCondKernel]
+    {η₂ : @Kernel Ω Ω (mγ.comap Y) mΩ} (hη₂ : η₂ ∈ condExpKernel μ hY.comap_le) :
     (fun a ↦ η₁ (Y a) s) =ᵐ[μ] fun a ↦ η₂.map X hX a s := by
+  have := sigmaFinite_trim_comap (μ := μ) hY
+  have := hasUniqueCondKernel_map_id_id (μ := μ) (hm := hY.comap_le)
   simp_rw [Kernel.map_apply' _ _ hs hX]
-  filter_upwards [condDistrib_ae_eq_condExp hY hX hη₁ (μ := μ) hs,
-    condExpKernel_ae_eq_condExp hη₂ (hX hs)] with a ha₁ ha₂
-  rw [← measureReal_eq_measureReal_iff, ha₁, ha₂]
+  have h₁ : Measurable[mγ.comap Y] fun a ↦ η₁ (Y a) s :=
+    (η₁.measurable_coe hs).comp (comap_measurable Y)
+  have h₂ : Measurable[mγ.comap Y] fun a ↦ η₂ a (X ⁻¹' s) := η₂.measurable_coe (hX hs)
+  refine ae_of_ae_trim hY.comap_le (ae_eq_of_forall_setLIntegral_eq_of_sigmaFinite h₁ h₂
+    fun t ht _ ↦ ?_)
+  rw [setLIntegral_trim hY.comap_le h₁ ht, setLIntegral_trim hY.comap_le h₂ ht,
+    setLIntegral_condDistrib_of_measurableSet hY hX.aemeasurable hη₁ hs ht]
+  have h := setLIntegral_condDistrib_of_measurableSet (μ := μ) (mβ := mγ.comap Y) (X := id)
+    (Y := id) (measurable_id'' hY.comap_le) aemeasurable_id
+    (mem_condExpKernel_iff_mem_condDistrib.1 hη₂) (hX hs) (t := t) ⟨t, ht, rfl⟩
+  simpa using h.symm
 
 /-- The conditional expectation of `f` with respect to a σ-algebra `m` is almost everywhere equal to
-the integral `∫ y, f y ∂(η ω)` for every Markov representative `η` of `condExpKernel μ hm`. -/
+the integral `∫ y, f y ∂(η ω)` for every Markov representative `η` of `condExpKernel μ hm`, if
+`μ.trim hm` is σ-finite. -/
 theorem condExp_ae_eq_integral_condExpKernel [NormedAddCommGroup F] {f : Ω → F}
-    [NormedSpace ℝ F] [CompleteSpace F] [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm)
-    (hf_int : Integrable f μ) :
+    [NormedSpace ℝ F] [CompleteSpace F] [SigmaFinite (μ.trim hm)] [IsMarkovKernel η]
+    (hη : η ∈ condExpKernel μ hm) (hf_int : Integrable f μ) :
     μ[f | m] =ᵐ[μ] fun ω => ∫ y, f y ∂η ω := by
-  rcases isEmpty_or_nonempty Ω with h | h
-  · have : μ = 0 := Measure.eq_zero_of_isEmpty μ
-    simpa [this] using! trivial
+  have := sigmaFinite_map_id (μ := μ) (hm := hm)
+  have := hasUniqueCondKernel_map_id_id (μ := μ) (hm := hm)
   have hX : @Measurable Ω Ω mΩ m id := measurable_id'' hm
   have h := condExp_ae_eq_integral_condDistrib_id hX hf_int
     (mem_condExpKernel_iff_mem_condDistrib.1 hη)
@@ -292,7 +365,7 @@ theorem condExp_ae_eq_integral_condExpKernel [NormedAddCommGroup F] {f : Ω → 
 
 /-- Auxiliary lemma for `condExp_ae_eq_trim_integral_condExpKernel`. -/
 theorem condExp_ae_eq_trim_integral_condExpKernel_of_stronglyMeasurable
-    [NormedAddCommGroup F] {f : Ω → F} [NormedSpace ℝ F] [CompleteSpace F]
+    [NormedAddCommGroup F] {f : Ω → F} [NormedSpace ℝ F] [CompleteSpace F] [SigmaFinite (μ.trim hm)]
     [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm) (hf : StronglyMeasurable f)
     (hf_int : Integrable f μ) :
     μ[f | m] =ᵐ[μ.trim hm] fun ω ↦ ∫ y, f y ∂η ω := by
@@ -303,10 +376,10 @@ theorem condExp_ae_eq_trim_integral_condExpKernel_of_stronglyMeasurable
 
 /-- The conditional expectation of `f` with respect to a σ-algebra `m` is
 (`μ.trim hm`)-almost everywhere equal to the integral `∫ y, f y ∂(η ω)` for every Markov
-representative `η` of `condExpKernel μ hm`. -/
+representative `η` of `condExpKernel μ hm`, if `μ.trim hm` is σ-finite. -/
 theorem condExp_ae_eq_trim_integral_condExpKernel [NormedAddCommGroup F] {f : Ω → F}
-    [NormedSpace ℝ F] [CompleteSpace F] [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm)
-    (hf_int : Integrable f μ) :
+    [NormedSpace ℝ F] [CompleteSpace F] [SigmaFinite (μ.trim hm)] [IsMarkovKernel η]
+    (hη : η ∈ condExpKernel μ hm) (hf_int : Integrable f μ) :
     μ[f | m] =ᵐ[μ.trim hm] fun ω ↦ ∫ y, f y ∂η ω := by
   refine (condExp_congr_ae_trim hm hf_int.1.ae_eq_mk).trans ?_
   refine (condExp_ae_eq_trim_integral_condExpKernel_of_stronglyMeasurable hη
@@ -322,8 +395,7 @@ section Cond
 open SigmaAlgebra
 
 variable {s t : Set Ω} [NormedAddCommGroup F] [NormedSpace ℝ F] [CompleteSpace F]
-
-omit [StandardBorelSpace Ω]
+  [IsFiniteMeasure μ]
 
 lemma condExp_generateFrom_singleton (hs : MeasurableSet s) (hμs : μ s ≠ 0) {f : Ω → F}
     (hf : Integrable f μ) :
@@ -359,16 +431,40 @@ lemma condExp_set_generateFrom_singleton (hs : MeasurableSet s) (hμs : μ s ≠
   rw [← integral_indicator_one ht]
   exact condExp_generateFrom_singleton hs hμs <| Integrable.indicator (integrable_const 1) ht
 
-lemma condExpKernel_singleton_ae_eq_cond [StandardBorelSpace Ω] (hs : MeasurableSet s)
-    (hμs : μ s ≠ 0) (ht : MeasurableSet t) {ξ : @Kernel Ω Ω (generateFrom {s}) mΩ}
-    [IsMarkovKernel ξ]
-    (hξ : ξ ∈ condExpKernel μ (generateFrom_singleton_le hs)) :
-    ∀ᵐ ω ∂μ.restrict s, ξ ω t = μ[t | s] := by
-  have : (fun ω ↦ (ξ ω).real t) =ᵐ[μ.restrict s] μ⟦t | generateFrom {s}⟧ :=
-    ae_restrict_le <| condExpKernel_ae_eq_condExp hξ ht
-  filter_upwards [condExp_set_generateFrom_singleton hs hμs ht, this] with ω hω₁ hω₂
-  rwa [hω₁, measureReal_def, measureReal_def,
-    ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ t) (measure_ne_top _ t)] at hω₂
+omit [IsFiniteMeasure μ] in
+/-- On a measurable set `s` of positive finite measure, every representative of the conditional
+expectation kernel given the σ-algebra generated by `s` is the conditional measure `μ[|s]` at
+every point of `s`: being measurable for that σ-algebra, it is constant on `s`, and its integral
+over `s` of the mass of a measurable set `t` is `μ (s ∩ t)`. -/
+lemma condExpKernel_singleton_eq_cond (hs : MeasurableSet s)
+    [(condExpJointLaw μ (generateFrom_singleton_le hs)).HasUniqueCondKernel] (hμs₀ : μ s ≠ 0)
+    {ξ : @Kernel Ω Ω (generateFrom {s}) mΩ}
+    (hξ : ξ ∈ condExpKernel μ (generateFrom_singleton_le hs)) (hμs : μ s ≠ ∞ := by finiteness) :
+    ∀ ω ∈ s, ξ ω = μ[|s] := by
+  have := hasUniqueCondKernel_map_id_id (μ := μ) (hm := generateFrom_singleton_le hs)
+  have h_const (ω : Ω) (hω : ω ∈ s) (ω' : Ω) (hω' : ω' ∈ s) : ξ ω' = ξ ω := by
+    ext B hB
+    change ω' ∈ {x | ξ x B = ξ ω B}
+    have hP : {x | ξ x B = ξ ω B} ∈ SigmaAlgebra.generateFrom {s} :=
+      ξ.measurable_coe hB (measurableSet_singleton (ξ ω B))
+    have hωP : ω ∈ {x | ξ x B = ξ ω B} := rfl
+    rcases mem_generateFrom_singleton_iff.1 hP with h | h | h | h <;> rw [h] at hωP ⊢
+    · exact absurd hωP (notMem_empty ω)
+    · exact hω'
+    · exact absurd hω hωP
+    · exact mem_univ ω'
+  obtain ⟨ω₀, hω₀⟩ := nonempty_of_measure_ne_zero hμs₀
+  have h_eq : ξ ω₀ = μ[|s] := by
+    ext B hB
+    have h : ∫⁻ a in s, ξ a B ∂μ = μ (s ∩ B) := by
+      simpa using setLIntegral_condDistrib_of_measurableSet (μ := μ) (mβ := generateFrom {s})
+        (X := id) (Y := id) (measurable_id'' (generateFrom_singleton_le hs)) aemeasurable_id
+        (mem_condExpKernel_iff_mem_condDistrib.1 hξ) hB (t := s)
+        ⟨s, SigmaAlgebra.mem_generateFrom rfl, rfl⟩
+    rw [setLIntegral_congr_fun (g := fun _ ↦ ξ ω₀ B) hs
+      (fun ω hω ↦ by rw [h_const ω₀ hω₀ ω hω]), setLIntegral_const] at h
+    rw [cond_apply _ B, ← h, mul_comm, mul_assoc, ENNReal.mul_inv_cancel hμs₀ hμs, mul_one]
+  exact fun ω hω ↦ (h_const ω₀ hω₀ ω hω).trans h_eq
 
 end Cond
 

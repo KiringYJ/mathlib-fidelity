@@ -41,7 +41,7 @@ representative with conditional expectations for every Markov one.
 
 The case `Y = X = id` is developed in more detail in `Mathlib/Probability/Kernel/Condexp.lean`:
 there `X` is the identity from `Ω` with its default σ-algebra to `Ω` with a sub-σ-algebra `m`, and
-the finite representatives of this conditional distribution are those of `condExpKernel μ hm`, the
+the representatives of this conditional distribution are those of `condExpKernel μ hm`, the
 class of kernels associated with the conditional expectation with respect to `m`.
 
 ## Main definitions
