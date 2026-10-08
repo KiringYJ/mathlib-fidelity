@@ -152,70 +152,110 @@ variable (e e' : Trivialization F (π F E)) [MemTrivializationAtlas e] [MemTrivi
   [VectorBundle 𝕜 F E] [ContMDiffVectorBundle 1 F E IB]
 variable {IB}
 
-theorem mdifferentiableOn_coordChangeL :
-    MDiff[e.baseSet ∩ e'.baseSet] (fun b : B ↦ (e.coordChangeL 𝕜 e' b : F →L[𝕜] F)) :=
-  (contMDiffOn_coordChangeL e e').mdifferentiableOn one_ne_zero
+/-- The coordinate change between two trivializations in the atlas of a `C^1` vector bundle is
+differentiable on the intersection of their base sets: every map that agrees with it there is
+differentiable there. -/
+theorem mdifferentiableOn_coordChangeL {φ : B → F →L[𝕜] F}
+    (hφ : ∀ b (hb : b ∈ e.baseSet ∩ e'.baseSet), φ b = e.coordChangeL 𝕜 e' hb) :
+    MDiff[e.baseSet ∩ e'.baseSet] φ :=
+  (contMDiffOn_coordChangeL e e' hφ).mdifferentiableOn one_ne_zero
 
-theorem mdifferentiableOn_symm_coordChangeL :
-    MDiff[e.baseSet ∩ e'.baseSet] (fun b : B ↦ ((e.coordChangeL 𝕜 e' b).symm : F →L[𝕜] F)) :=
-  (contMDiffOn_symm_coordChangeL e e').mdifferentiableOn one_ne_zero
+/-- The inverse of the coordinate change between two trivializations in the atlas of a `C^1` vector
+bundle is differentiable on the intersection of their base sets: every map that agrees with it
+there is differentiable there. -/
+theorem mdifferentiableOn_symm_coordChangeL {φ : B → F →L[𝕜] F}
+    (hφ : ∀ b (hb : b ∈ e.baseSet ∩ e'.baseSet), φ b = (e.coordChangeL 𝕜 e' hb).symm) :
+    MDiff[e.baseSet ∩ e'.baseSet] φ :=
+  (contMDiffOn_symm_coordChangeL e e' hφ).mdifferentiableOn one_ne_zero
 
 variable {e e'}
 
+/-- The coordinate change between two trivializations in the atlas of a `C^1` vector bundle is
+differentiable at every point of the intersection of their base sets: every map that agrees with it
+on the intersection is differentiable there. -/
 theorem mdifferentiableAt_coordChangeL {x : B}
-    (h : x ∈ e.baseSet) (h' : x ∈ e'.baseSet) :
-    MDiffAt (fun b : B ↦ (e.coordChangeL 𝕜 e' b : F →L[𝕜] F)) x :=
-  (contMDiffAt_coordChangeL h h').mdifferentiableAt one_ne_zero
+    (h : x ∈ e.baseSet) (h' : x ∈ e'.baseSet) {φ : B → F →L[𝕜] F}
+    (hφ : ∀ b (hb : b ∈ e.baseSet ∩ e'.baseSet), φ b = e.coordChangeL 𝕜 e' hb) :
+    MDiffAt φ x :=
+  (contMDiffAt_coordChangeL h h' hφ).mdifferentiableAt one_ne_zero
 
 variable {s : Set M} {f : M → B} {g : M → F} {x : M}
 
+/-- The coordinate change between two trivializations in the atlas of a `C^1` vector bundle, along
+a map `f` that is differentiable within `s` at `x` with `f x` in both base sets, is differentiable
+within `s` at `x`: this holds for every map `φ` that agrees with the coordinate change at `f y`
+wherever `f y` lies in both base sets.  When `f` takes all its values there,
+`MDifferentiable.coordChangeL` states the differentiability of the coordinate change along `f`
+itself. -/
 protected theorem MDifferentiableWithinAt.coordChangeL (hf : MDiffAt[s] f x)
-    (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) :
-    MDiffAt[s] (fun y ↦ (e.coordChangeL 𝕜 e' (f y) : F →L[𝕜] F)) x :=
-  (mdifferentiableAt_coordChangeL he he').comp_mdifferentiableWithinAt _ hf
+    (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) {φ : M → F →L[𝕜] F}
+    (hφ : ∀ y (hy : f y ∈ e.baseSet ∩ e'.baseSet), φ y = e.coordChangeL 𝕜 e' hy) :
+    MDiffAt[s] φ x := by
+  obtain ⟨ψ, -, hψ⟩ :=
+    ContMDiffVectorBundle.exists_contMDiffOn_coordChangeL (n := 1) (IB := IB) e e'
+  refine ((mdifferentiableAt_coordChangeL he he' hψ).comp_mdifferentiableWithinAt x
+    hf).congr_of_eventuallyEq ?_ ((hφ x ⟨he, he'⟩).trans (hψ _ ⟨he, he'⟩).symm)
+  filter_upwards [hf.continuousWithinAt <|
+    (e.open_baseSet.inter e'.open_baseSet).mem_nhds ⟨he, he'⟩] with y hy
+  exact (hφ y hy).trans (hψ _ hy).symm
 
 protected theorem MDifferentiableAt.coordChangeL
-    (hf : MDiffAt f x) (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) :
-    MDiffAt (fun y ↦ (e.coordChangeL 𝕜 e' (f y) : F →L[𝕜] F)) x :=
-  MDifferentiableWithinAt.coordChangeL hf he he'
+    (hf : MDiffAt f x) (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) {φ : M → F →L[𝕜] F}
+    (hφ : ∀ y (hy : f y ∈ e.baseSet ∩ e'.baseSet), φ y = e.coordChangeL 𝕜 e' hy) :
+    MDiffAt φ x :=
+  MDifferentiableWithinAt.coordChangeL hf he he' hφ
 
 protected theorem MDifferentiableOn.coordChangeL
-    (hf : MDiff[s] f) (he : MapsTo f s e.baseSet) (he' : MapsTo f s e'.baseSet) :
-    MDiff[s] (fun y ↦ (e.coordChangeL 𝕜 e' (f y) : F →L[𝕜] F)) :=
-  fun x hx ↦ (hf x hx).coordChangeL (he hx) (he' hx)
+    (hf : MDiff[s] f) (he : MapsTo f s e.baseSet) (he' : MapsTo f s e'.baseSet)
+    {φ : M → F →L[𝕜] F}
+    (hφ : ∀ y (hy : f y ∈ e.baseSet ∩ e'.baseSet), φ y = e.coordChangeL 𝕜 e' hy) :
+    MDiff[s] φ :=
+  fun x hx ↦ (hf x hx).coordChangeL (he hx) (he' hx) hφ
 
 protected theorem MDifferentiable.coordChangeL
     (hf : MDiff f) (he : ∀ x, f x ∈ e.baseSet) (he' : ∀ x, f x ∈ e'.baseSet) :
-    MDiff (fun y ↦ (e.coordChangeL 𝕜 e' (f y) : F →L[𝕜] F)) :=
-  fun x ↦ (hf x).coordChangeL (he x) (he' x)
+    MDiff (fun y ↦ (e.coordChangeL 𝕜 e' (Set.mem_inter (he y) (he' y)) : F →L[𝕜] F)) :=
+  fun x ↦ (hf x).coordChangeL (he x) (he' x) fun _ _ ↦ rfl
 
+/-- The coordinate change between two trivializations in the atlas of a `C^1` vector bundle,
+applied along differentiable maps `f` and `g` with `f x` in both base sets, is differentiable within
+`s` at `x`: this holds for every map `φ` that agrees with `e.coordChange e' h h' (g y)` wherever
+`f y` lies in both base sets.  When `f` takes all its values there, `MDifferentiable.coordChange`
+states the differentiability of the coordinate change along `f` and `g` itself. -/
 protected theorem MDifferentiableWithinAt.coordChange
     (hf : MDiffAt[s] f x) (hg : MDiffAt[s] g x)
-    (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) :
-    MDiffAt[s] (fun y ↦ e.coordChange e' (f y) (g y)) x := by
-  refine ((hf.coordChangeL he he').clm_apply hg).congr_of_eventuallyEq ?_ ?_
-  · have : e.baseSet ∩ e'.baseSet ∈ 𝓝 (f x) :=
-     (e.open_baseSet.inter e'.open_baseSet).mem_nhds ⟨he, he'⟩
-    filter_upwards [hf.continuousWithinAt this] with y hy
-    exact (Trivialization.coordChangeL_apply' e e' hy (g y)).symm
-  · exact (Trivialization.coordChangeL_apply' e e' ⟨he, he'⟩ (g x)).symm
+    (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) {φ : M → F}
+    (hφ : ∀ y (h : f y ∈ e.baseSet) (h' : f y ∈ e'.baseSet), φ y = e.coordChange e' h h' (g y)) :
+    MDiffAt[s] φ x := by
+  obtain ⟨ψ, -, hψ⟩ :=
+    ContMDiffVectorBundle.exists_contMDiffOn_coordChangeL (n := 1) (IB := IB) e e'
+  have hφψ : ∀ y (hy : f y ∈ e.baseSet ∩ e'.baseSet), φ y = ψ (f y) (g y) := fun y hy ↦ by
+    rw [hφ y hy.1 hy.2, hψ (f y) hy, ContinuousLinearEquiv.coe_coe,
+      Trivialization.coe_coordChangeL_eq_coordChange]
+  refine ((hf.coordChangeL he he' (φ := fun y ↦ ψ (f y)) fun y hy ↦ hψ (f y) hy).clm_apply
+    hg).congr_of_eventuallyEq ?_ (hφψ x ⟨he, he'⟩)
+  filter_upwards [hf.continuousWithinAt <|
+    (e.open_baseSet.inter e'.open_baseSet).mem_nhds ⟨he, he'⟩] with y hy
+  exact hφψ y hy
 
 protected theorem MDifferentiableAt.coordChange
     (hf : MDiffAt f x) (hg : MDiffAt g x)
-    (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) :
-    MDiffAt (fun y ↦ e.coordChange e' (f y) (g y)) x :=
-  MDifferentiableWithinAt.coordChange hf hg he he'
+    (he : f x ∈ e.baseSet) (he' : f x ∈ e'.baseSet) {φ : M → F}
+    (hφ : ∀ y (h : f y ∈ e.baseSet) (h' : f y ∈ e'.baseSet), φ y = e.coordChange e' h h' (g y)) :
+    MDiffAt φ x :=
+  MDifferentiableWithinAt.coordChange hf hg he he' hφ
 
 protected theorem MDifferentiableOn.coordChange
     (hf : MDiff[s] f) (hg : MDiff[s] g)
-    (he : MapsTo f s e.baseSet) (he' : MapsTo f s e'.baseSet) :
-    MDiff[s] (fun y ↦ e.coordChange e' (f y) (g y)) := fun x hx ↦
-  (hf x hx).coordChange (hg x hx) (he hx) (he' hx)
+    (he : MapsTo f s e.baseSet) (he' : MapsTo f s e'.baseSet) {φ : M → F}
+    (hφ : ∀ y (h : f y ∈ e.baseSet) (h' : f y ∈ e'.baseSet), φ y = e.coordChange e' h h' (g y)) :
+    MDiff[s] φ := fun x hx ↦
+  (hf x hx).coordChange (hg x hx) (he hx) (he' hx) hφ
 
 protected theorem MDifferentiable.coordChange
     (hf : MDiff f) (hg : MDiff g) (he : ∀ x, f x ∈ e.baseSet) (he' : ∀ x, f x ∈ e'.baseSet) :
-    MDiff (fun y ↦ e.coordChange e' (f y) (g y)) := fun x ↦
-  (hf x).coordChange (hg x) (he x) (he' x)
+    MDiff (fun y ↦ e.coordChange e' (he y) (he' y) (g y)) := fun x ↦
+  (hf x).coordChange (hg x) (he x) (he' x) fun _ _ _ ↦ rfl
 
 end coordChange
 
@@ -230,9 +270,7 @@ lemma MDifferentiableWithinAt.change_section_trivialization
     (he : f x₀ ∈ e.source) (he' : f x₀ ∈ e'.source) :
     MDiffAt[s] (fun x ↦ (e' (f x)).2) x₀ := by
   rw [Trivialization.mem_source] at he he'
-  refine (hf.coordChange he'f he he').congr_of_eventuallyEq ?_ (by simp [he])
-  filter_upwards [hf.continuousWithinAt (e.open_baseSet.mem_nhds he)] with y hy
-  simp_all
+  exact hf.coordChange he'f he he' fun y h h' ↦ (e.coordChange_apply_snd e' h h').symm
 
 namespace Bundle.Trivialization
 

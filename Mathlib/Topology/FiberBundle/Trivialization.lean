@@ -749,40 +749,43 @@ theorem transFiberHomeomorph_apply {F' : Type*} [TopologicalSpace F'] (e : Trivi
     (h : F ≃ₜ F') (x : Z) : e.transFiberHomeomorph h x = ((e x).1, h (e x).2) :=
   rfl
 
-/-- Coordinate transformation in the fiber induced by a pair of bundle trivializations. See also
-`Bundle.Trivialization.coordChangeHomeomorph` for a version bundled as `F ≃ₜ F`. -/
-def coordChange (e₁ e₂ : Trivialization F proj) (b : B) (x : F) : F :=
+/-- Coordinate transformation in the fiber induced by a pair of bundle trivializations, at a point
+of the intersection of their base sets. See also `Bundle.Trivialization.coordChangeHomeomorph` for
+a version bundled as `F ≃ₜ F`. -/
+@[nolint unusedArguments]
+def coordChange (e₁ e₂ : Trivialization F proj) {b : B} (_h₁ : b ∈ e₁.baseSet)
+    (_h₂ : b ∈ e₂.baseSet) (x : F) : F :=
   (e₂ <| e₁.toOpenPartialHomeomorph.symm (b, x)).2
 
 theorem mk_coordChange (e₁ e₂ : Trivialization F proj) {b : B} (h₁ : b ∈ e₁.baseSet)
     (h₂ : b ∈ e₂.baseSet) (x : F) :
-    (b, e₁.coordChange e₂ b x) = e₂ (e₁.toOpenPartialHomeomorph.symm (b, x)) := by
+    (b, e₁.coordChange e₂ h₁ h₂ x) = e₂ (e₁.toOpenPartialHomeomorph.symm (b, x)) := by
   refine Prod.ext ?_ rfl
   rw [e₂.coe_fst', ← e₁.coe_fst', e₁.apply_symm_apply' h₁]
   · rwa [e₁.proj_symm_apply' h₁]
   · rwa [e₁.proj_symm_apply' h₁]
 
 @[simp]
-theorem coordChange_apply_snd (e₁ e₂ : Trivialization F proj) {p : Z} (h : proj p ∈ e₁.baseSet) :
-    e₁.coordChange e₂ (proj p) (e₁ p).snd = (e₂ p).snd := by
-  rw [coordChange, e₁.symm_apply_mk_proj (e₁.mem_source.2 h)]
+theorem coordChange_apply_snd (e₁ e₂ : Trivialization F proj) {p : Z} (h₁ : proj p ∈ e₁.baseSet)
+    (h₂ : proj p ∈ e₂.baseSet) : e₁.coordChange e₂ h₁ h₂ (e₁ p).snd = (e₂ p).snd := by
+  rw [coordChange, e₁.symm_apply_mk_proj (e₁.mem_source.2 h₁)]
 
 @[simp, mfld_simps]
 theorem coordChange_same_apply (e : Trivialization F proj) {b : B} (h : b ∈ e.baseSet) (x : F) :
-    e.coordChange e b x = x := by rw [coordChange, e.apply_symm_apply' h]
+    e.coordChange e h h x = x := by rw [coordChange, e.apply_symm_apply' h]
 
 theorem coordChange_same (e : Trivialization F proj) {b : B} (h : b ∈ e.baseSet) :
-    e.coordChange e b = id :=
+    e.coordChange e h h = id :=
   funext <| e.coordChange_same_apply h
 
 theorem coordChange_coordChange (e₁ e₂ e₃ : Trivialization F proj) {b : B} (h₁ : b ∈ e₁.baseSet)
-    (h₂ : b ∈ e₂.baseSet) (x : F) :
-    e₂.coordChange e₃ b (e₁.coordChange e₂ b x) = e₁.coordChange e₃ b x := by
+    (h₂ : b ∈ e₂.baseSet) (h₃ : b ∈ e₃.baseSet) (x : F) :
+    e₂.coordChange e₃ h₂ h₃ (e₁.coordChange e₂ h₁ h₂ x) = e₁.coordChange e₃ h₁ h₃ x := by
   rw [coordChange, e₁.mk_coordChange _ h₁ h₂, ← e₂.coe_coe, e₂.left_inv, coordChange]
   rwa [e₂.mem_source, e₁.proj_symm_apply' h₁]
 
 theorem continuous_coordChange (e₁ e₂ : Trivialization F proj) {b : B} (h₁ : b ∈ e₁.baseSet)
-    (h₂ : b ∈ e₂.baseSet) : Continuous (e₁.coordChange e₂ b) := by
+    (h₂ : b ∈ e₂.baseSet) : Continuous (e₁.coordChange e₂ h₁ h₂) := by
   refine continuous_snd.comp (e₂.toOpenPartialHomeomorph.continuousOn.comp_continuous
     (e₁.toOpenPartialHomeomorph.continuousOn_symm.comp_continuous ?_ ?_) ?_)
   · fun_prop
@@ -794,8 +797,8 @@ theorem continuous_coordChange (e₁ e₂ : Trivialization F proj) {b : B} (h₁
 as a homeomorphism. -/
 protected def coordChangeHomeomorph (e₁ e₂ : Trivialization F proj) {b : B} (h₁ : b ∈ e₁.baseSet)
     (h₂ : b ∈ e₂.baseSet) : F ≃ₜ F where
-  toFun := e₁.coordChange e₂ b
-  invFun := e₂.coordChange e₁ b
+  toFun := e₁.coordChange e₂ h₁ h₂
+  invFun := e₂.coordChange e₁ h₂ h₁
   left_inv x := by simp only [*, coordChange_coordChange, coordChange_same_apply]
   right_inv x := by simp only [*, coordChange_coordChange, coordChange_same_apply]
   continuous_toFun := e₁.continuous_coordChange e₂ h₁ h₂
@@ -803,7 +806,7 @@ protected def coordChangeHomeomorph (e₁ e₂ : Trivialization F proj) {b : B} 
 
 @[simp]
 theorem coordChangeHomeomorph_coe (e₁ e₂ : Trivialization F proj) {b : B} (h₁ : b ∈ e₁.baseSet)
-    (h₂ : b ∈ e₂.baseSet) : ⇑(e₁.coordChangeHomeomorph e₂ h₁ h₂) = e₁.coordChange e₂ b :=
+    (h₂ : b ∈ e₂.baseSet) : ⇑(e₁.coordChangeHomeomorph e₂ h₁ h₂) = e₁.coordChange e₂ h₁ h₂ :=
   rfl
 
 theorem isImage_preimage_prod (e : Trivialization F proj) (s : Set B) :

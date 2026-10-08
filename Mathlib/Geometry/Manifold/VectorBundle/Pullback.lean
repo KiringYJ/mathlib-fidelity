@@ -37,10 +37,15 @@ variable [NontriviallyNormedField 𝕜] [∀ x, AddCommMonoid (E x)] [∀ x, Mod
 /-- For a `C^n` vector bundle `E` over a manifold `B` and a `C^n` map `f : B' → B`, the pullback
 vector bundle `f *ᵖ E` is a `C^n` vector bundle. -/
 instance ContMDiffVectorBundle.pullback : ContMDiffVectorBundle n F (f *ᵖ E) IB' where
-  contMDiffOn_coordChangeL := by
+  exists_contMDiffOn_coordChangeL := by
     rintro _ _ ⟨e, he, rfl⟩ ⟨e', he', rfl⟩
-    refine ((contMDiffOn_coordChangeL e e').comp f.contMDiff.contMDiffOn fun b hb => hb).congr ?_
-    rintro b (hb : f b ∈ e.baseSet ∩ e'.baseSet); ext v
-    change ((e.pullback f).coordChangeL 𝕜 (e'.pullback f) b) v = (e.coordChangeL 𝕜 e' (f b)) v
-    rw [e.coordChangeL_apply e' hb, (e.pullback f).coordChangeL_apply' _]
-    exacts [rfl, hb]
+    obtain ⟨φ, hφ, hφe⟩ :=
+      ContMDiffVectorBundle.exists_contMDiffOn_coordChangeL (n := n) (IB := IB) e e'
+    refine ⟨φ ∘ f, hφ.comp f.contMDiff.contMDiffOn fun b hb => hb, ?_⟩
+    intro b hb
+    have hb' : f b ∈ e.baseSet ∩ e'.baseSet := hb
+    ext v
+    change φ (f b) v = ((e.pullback f).coordChangeL 𝕜 (e'.pullback f) hb) v
+    rw [hφe (f b) hb', ContinuousLinearEquiv.coe_coe, e.coordChangeL_apply e' hb',
+      (e.pullback f).coordChangeL_apply' _]
+    rfl
