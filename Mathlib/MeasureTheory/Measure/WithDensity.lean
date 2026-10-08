@@ -572,6 +572,35 @@ lemma withDensity_inv_same {μ : Measure α} {f : α → ℝ≥0∞}
     (μ.withDensity f).withDensity (fun x ↦ (f x)⁻¹) = μ :=
   withDensity_inv_same₀ hf.aemeasurable hf_ne_zero hf_ne_top
 
+/-- A density that is positive almost everywhere for two measures and finite almost everywhere for
+the first of them can be divided out of an equation between the measures that it reweights. It is
+then finite almost everywhere for the second measure as well, since it reweights the set where it
+is infinite by infinity. Both positivity hypotheses are needed: for `f = 0`, the zero measure and a
+Dirac measure have the same reweighted measure. Some measurability is needed too: for the trivial
+σ-algebra on `ℕ` and `f n = 1 / (n + 1)`, every reweighted measure is zero. -/
+lemma Measure.eq_of_withDensity_eq {ν ν' : Measure α} {f : α → ℝ≥0∞}
+    (hf : AEMeasurable f (ν + ν')) (hf₀ : ∀ᵐ a ∂ν, f a ≠ 0) (hf₀' : ∀ᵐ a ∂ν', f a ≠ 0)
+    (hf_top : ∀ᵐ a ∂ν, f a ≠ ∞) (h : ν.withDensity f = ν'.withDensity f) : ν = ν' := by
+  obtain ⟨g, hg, hfg⟩ := hf
+  have hfgν : f =ᵐ[ν] g := ae_mono (Measure.le_add_right le_rfl) hfg
+  have hfgν' : f =ᵐ[ν'] g := ae_mono (Measure.le_add_left le_rfl) hfg
+  rw [withDensity_congr_ae hfgν, withDensity_congr_ae hfgν'] at h
+  replace hf₀ : ∀ᵐ a ∂ν, g a ≠ 0 := by filter_upwards [hf₀, hfgν] with a ha ha' using ha' ▸ ha
+  replace hf₀' : ∀ᵐ a ∂ν', g a ≠ 0 := by
+    filter_upwards [hf₀', hfgν'] with a ha ha' using ha' ▸ ha
+  replace hf_top : ∀ᵐ a ∂ν, g a ≠ ∞ := by
+    filter_upwards [hf_top, hfgν] with a ha ha' using ha' ▸ ha
+  clear hfg hfgν hfgν'
+  have hT : MeasurableSet {a | g a = ∞} := hg (measurableSet_singleton ∞)
+  have h_top (μ : Measure α) : μ.withDensity g {a | g a = ∞} = ∞ * μ {a | g a = ∞} := by
+    rw [withDensity_apply _ hT, setLIntegral_congr_fun (f := g) (g := fun _ ↦ ∞) hT fun _ ha ↦ ha,
+      setLIntegral_const]
+  have hν : ν {a | g a = ∞} = 0 := by simpa [ae_iff] using hf_top
+  have hf_top' : ∀ᵐ a ∂ν', g a ≠ ∞ := by
+    have h0 : ∞ * ν' {a | g a = ∞} = 0 := by rw [← h_top, ← h, h_top, hν, mul_zero]
+    simpa [ae_iff] using (mul_eq_zero.1 h0).resolve_left ENNReal.top_ne_zero
+  rw [← withDensity_inv_same hg hf₀ hf_top, h, withDensity_inv_same hg hf₀' hf_top']
+
 /-- If `f` is almost everywhere positive, then `μ ≪ μ.withDensity f`. See also
 `withDensity_absolutelyContinuous` for the reverse direction, which always holds. -/
 lemma withDensity_absolutelyContinuous' {μ : Measure α} {f : α → ℝ≥0∞}
@@ -736,6 +765,23 @@ theorem prod_withDensity {f : α → ℝ≥0∞} {g : β → ℝ≥0∞} (hf : M
       (μ.productBySections ν (hasAEMeasurableSectionMeasures_of_sfinite _ _)).withDensity
         (fun z ↦ f z.1 * g z.2) := by
   simpa using prod_withDensity₀ (μ := μ) (ν := ν) hf.aemeasurable hg.aemeasurable
+
+/-- Reweighting a measure on a product by a function of the first coordinate reweights its first
+marginal by the same function. -/
+lemma Measure.fst_withDensity_fst {ρ : Measure (α × β)} {f : α → ℝ≥0∞} (hf : Measurable f) :
+    (ρ.withDensity fun p ↦ f p.1).fst = ρ.fst.withDensity f := by
+  ext s hs
+  rw [fst_apply hs, withDensity_apply _ (measurable_fst hs), withDensity_apply _ hs, Measure.fst,
+    setLIntegral_map hs hf measurable_fst]
+
+/-- Reweighting a measure on a product by a function of the first coordinate with a finite integral
+against the first marginal gives a finite measure. -/
+lemma Measure.isFiniteMeasure_withDensity_fst {ρ : Measure (α × β)} {f : α → ℝ≥0∞}
+    (hf : Measurable f) (hf_int : ∫⁻ a, f a ∂ρ.fst ≠ ∞) :
+    IsFiniteMeasure (ρ.withDensity fun p ↦ f p.1) :=
+  ⟨by
+    rw [← fst_univ, fst_withDensity_fst hf, withDensity_apply _ MeasurableSet.univ, restrict_univ]
+    exact hf_int.lt_top⟩
 
 -- `productBySections_smul_left` is in `ProductBySections`. This lemma is here because
 -- this file proves
