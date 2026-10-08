@@ -98,17 +98,13 @@ constructor, not a global instance; use `letI` when selecting this ambient measu
 @[instance_reducible]
 def _root_.MeasureTheory.MeasureSpace.productBySections (α β) [MeasureSpace α] [MeasureSpace β]
     (h : HasAEMeasurableSectionMeasures (volume : Measure α) (volume : Measure β) := by
-      first
-      | assumption
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_zero_left _
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_of_sfinite _ _) :
+      has_ae_measurable_section_measures) :
     MeasureSpace (α × β) where
   volume := volume.productBySections volume h
 
 /-- The iterated measure is bounded by its section integral on measurable sets. -/
 theorem productBySections_apply_le {s : Set (α × β)} (hs : MeasurableSet s)
-    (h : HasAEMeasurableSectionMeasures μ ν := by
-      first | assumption | exact MeasureTheory.hasAEMeasurableSectionMeasures_of_sfinite _ _) :
+    (h : HasAEMeasurableSectionMeasures μ ν := by has_ae_measurable_section_measures) :
     (μ.productBySections ν h) s ≤ ∫⁻ x, ν (Prod.mk x ⁻¹' s) ∂μ :=
   (productBySections_apply hs h).le
 
@@ -285,8 +281,7 @@ This implication requires `s` to be measurable but does not require `ν` to be s
 See also `measure_prod_null` and `measure_ae_null_of_prod_null` below. -/
 theorem measure_prod_null_of_ae_null {s : Set (α × β)} (hsm : MeasurableSet s)
     (hs : (fun x => ν (Prod.mk x ⁻¹' s)) =ᵐ[μ] 0)
-    (hprod : HasAEMeasurableSectionMeasures μ ν := by
-      first | assumption | exact MeasureTheory.hasAEMeasurableSectionMeasures_of_sfinite _ _) :
+    (hprod : HasAEMeasurableSectionMeasures μ ν := by has_ae_measurable_section_measures) :
     (μ.productBySections ν hprod) s = 0 := by
   rw [← nonpos_iff_eq_zero]
   calc

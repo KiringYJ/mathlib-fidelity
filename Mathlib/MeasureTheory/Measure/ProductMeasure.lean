@@ -205,6 +205,19 @@ theorem hasAEMeasurableSectionMeasures_zero_left (ν : Measure β) :
     HasAEMeasurableSectionMeasures (0 : Measure α) ν :=
   fun _ _ => aemeasurable_zero_measure
 
+/-- The default discharger for the almost everywhere measurability of the section measures of
+two measures: a hypothesis, a zero first factor, or an s-finite second factor. It accepts a proof
+that unification has already supplied. -/
+macro (name := hasAEMeasurableSectionMeasuresTac) &"has_ae_measurable_section_measures" : tactic =>
+  `(tactic| first
+  | done
+  | assumption
+  | exact MeasureTheory.hasAEMeasurableSectionMeasures_zero_left _
+  | exact MeasureTheory.hasAEMeasurableSectionMeasures_of_sfinite _ _
+  | fail "the section measures are almost everywhere measurable by default for a zero first \
+      factor and an s-finite second factor; otherwise supply a proof of \
+      `HasAEMeasurableSectionMeasures`")
+
 /-- The zero measure satisfies the product formula when the first factor is zero. -/
 theorem IsProductMeasure.zero_left (ν : Measure β) :
     IsProductMeasure (0 : Measure α) ν 0 := by
@@ -239,11 +252,8 @@ namespace Measure
 Scalar almost-everywhere measurability of every measurable section is sufficient for this
 construction; in particular, it is defined whenever the second measure is s-finite. -/
 protected def productBySections (μ : Measure α) (ν : Measure β)
-    (h : HasAEMeasurableSectionMeasures μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_zero_left _
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_of_sfinite _ _) : Measure (α × β) :=
+    (h : HasAEMeasurableSectionMeasures μ ν := by has_ae_measurable_section_measures) :
+    Measure (α × β) :=
   Measure.ofMeasurable (fun s _ => ∫⁻ x, ν (Prod.mk x ⁻¹' s) ∂μ)
     (by simp)
     (by
@@ -258,22 +268,14 @@ protected def productBySections (μ : Measure α) (ν : Measure β)
 /-- On a measurable set, the measure constructed by section integrals is the integral of its
 section measures. -/
 theorem productBySections_apply {s : Set (α × β)} (hs : MeasurableSet s)
-    (h : HasAEMeasurableSectionMeasures μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_zero_left _
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_of_sfinite _ _) :
+    (h : HasAEMeasurableSectionMeasures μ ν := by has_ae_measurable_section_measures) :
     (μ.productBySections ν h) s = ∫⁻ x, ν (Prod.mk x ⁻¹' s) ∂μ :=
   Measure.ofMeasurable_apply s hs
 
 /-- A measure constructed by section integrals satisfies the product formula on measurable
 rectangles. -/
 theorem productBySections_isProductMeasure (μ : Measure α) (ν : Measure β)
-    (h : HasAEMeasurableSectionMeasures μ ν := by
-      first
-      | assumption
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_zero_left _
-      | exact MeasureTheory.hasAEMeasurableSectionMeasures_of_sfinite _ _) :
+    (h : HasAEMeasurableSectionMeasures μ ν := by has_ae_measurable_section_measures) :
     IsProductMeasure μ ν (μ.productBySections ν h) := by
   intro s t hs ht
   rw [productBySections_apply (hs.prod ht) h]
