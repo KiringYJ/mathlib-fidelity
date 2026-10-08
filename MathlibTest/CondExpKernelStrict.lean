@@ -311,10 +311,11 @@ example {Ω : Type*} {m : SigmaAlgebra Ω} [mΩ : SigmaAlgebra Ω] {μ : Measure
 #check ProbabilityTheory.condExpKernel_singleton_ae_eq_cond
 
 -- A representative of the conditional distribution given `Y` and one of the conditional
--- expectation kernel given `mγ.comap Y` agree on every measurable set, for a σ-finite law of `Y`.
+-- expectation kernel given `mγ.comap Y` agree on every measurable set, for every measure with the
+-- classes of the two joint laws, without a σ-finite law of `Y`.
 example {Ω β γ : Type*} [mΩ : SigmaAlgebra Ω] {mβ : SigmaAlgebra β} {mγ : SigmaAlgebra γ}
     {μ : Measure Ω} {X : Ω → β} {Y : Ω → γ} (hX : Measurable X) (hY : Measurable Y)
-    [SigmaFinite (μ.map Y hY.aemeasurable)] {s : Set β} (hs : MeasurableSet s)
+    {s : Set β} (hs : MeasurableSet s)
     [(μ.map (fun a ↦ (Y a, X a)) (hY.aemeasurable.prodMk hX.aemeasurable)).HasUniqueCondKernel]
     {η₁ : Kernel γ β} (hη₁ : η₁ ∈ condDistrib X Y μ (hY.aemeasurable.prodMk hX.aemeasurable))
     [(condExpJointLaw μ hY.comap_le).HasUniqueCondKernel]

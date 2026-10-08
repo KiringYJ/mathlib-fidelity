@@ -411,6 +411,27 @@ lemma setLIntegral_smul_measure {R : Type*} [SMul R ℝ≥0∞] [IsScalarTower R
     ∫⁻ a in s, f a ∂(c • μ) = c • ∫⁻ a in s, f a ∂μ := by
   rw [Measure.restrict_smul, lintegral_smul_measure]
 
+/-- If a measure gives every measurable set measure `0` or `∞`, the integral of an almost
+everywhere measurable function is the measure of its support: it is `0` if the function vanishes
+almost everywhere and `∞` otherwise, since the measure is then its own multiple by `∞` and gives
+every set, as its measurable hull, measure `0` or `∞`. -/
+theorem lintegral_eq_measure_support_of_zero_or_top {f : α → ℝ≥0∞} (hf : AEMeasurable f μ)
+    (hμ : ∀ s, MeasurableSet s → μ s = 0 ∨ μ s = ∞) :
+    ∫⁻ a, f a ∂μ = μ (Function.support f) := by
+  have h_smul : (∞ : ℝ≥0∞) • μ = μ := Measure.ext fun s hs ↦ by
+    rcases hμ s hs with h | h <;> simp [h]
+  have h_supp : ∫⁻ a, f a ∂μ = 0 ↔ μ (Function.support f) = 0 := by
+    simp [lintegral_eq_zero_iff' hf, Filter.EventuallyEq, ae_iff, Function.support]
+  have h_top (h : μ (Function.support f) ≠ 0) : μ (Function.support f) = ∞ := by
+    have h' := hμ _ (measurableSet_toMeasurable μ (Function.support f))
+    rw [measure_toMeasurable] at h'
+    exact h'.resolve_left h
+  conv_lhs => rw [← h_smul]
+  rw [lintegral_smul_measure, smul_eq_mul]
+  by_cases h : μ (Function.support f) = 0
+  · rw [h, h_supp.2 h, mul_zero]
+  · rw [h_top h, ENNReal.top_mul (mt h_supp.1 h)]
+
 @[simp]
 theorem lintegral_zero_measure {m : SigmaAlgebra α} (f : α → ℝ≥0∞) :
     ∫⁻ a, f a ∂(0 : Measure α) = 0 := by

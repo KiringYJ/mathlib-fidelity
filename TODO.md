@@ -1110,9 +1110,10 @@ operation.
   conditional-expectation statements take a σ-finite trim, and `condExpKernel_ae_eq_condExp` and
   `condExpKernel_ae_eq_trim_condExp` also `μ s ≠ ∞`, supplied by `finiteness` for a finite measure;
   without them `condExp` is the value `0`.  `condDistrib_apply_ae_eq_condExpKernel_map` takes the
-  classes of its two joint laws and a σ-finite law of `Y` instead of a finite measure and a standard
-  Borel space, and holds for every two representatives and every measurable set: both functions are
-  measurable with respect to `mγ.comap Y`, with the same integrals over its sets.
+  classes of its two joint laws instead of a finite measure and a standard Borel space, and holds
+  for every two representatives and every measurable set: both functions are measurable with
+  respect to `mγ.comap Y`, with the same integrals over its sets.  It also took a σ-finite law of
+  `Y` until a later change (entry on the σ-finite law of `Y` below).
   `condExpKernel_singleton_eq_cond`, formerly `condExpKernel_singleton_ae_eq_cond`, takes the class
   and a set of positive finite measure instead of a standard Borel space and a finite measure, and
   states that every representative is `μ[|s]` at every point of the set, being constant there as a
@@ -2398,22 +2399,30 @@ operation.
   measure, and `HasCondSubgaussianMGF.ae_trim_condExp_le` uses
   `condExp_ae_eq_trim_integral_condExpKernel`.
 
-- [ ] **Drop the σ-finite law of `Y` from `condDistrib_apply_ae_eq_condExpKernel_map`.**
-  The lemma in `Mathlib/Probability/Kernel/Condexp.lean` takes
-  `[SigmaFinite (μ.map Y hY.aemeasurable)]` besides the classes of its two joint laws: the proof
-  compares the integrals of the two functions over the sets of `mγ.comap Y`, which determine them
-  almost everywhere for a σ-finite `μ.trim hY.comap_le`.  The classes of the two joint laws
-  suffice, by a paper proof.  Each representative agrees almost everywhere with a Markov one, and
-  for Markov representatives `η₁` and `η₂`, the functions `u = η₁ (Y ·) s` and
-  `v = η₂ · (X ⁻¹' s)` take values in `[0, 1]` and have the same integrals over the sets of
-  `mγ.comap Y`, so every such set inside `{u > v + ε}` has measure `0` or `∞`, and so does every
-  measurable subset of the set `B` with `{u > v + ε} = Y ⁻¹' B` for the law `ν` of `Y`.  Every
-  `ν`-integral over `B` is then `0` or `∞`, so reweighting `η₁ y` at the points `y` of `B` where
-  `p = η₁ y s` lies strictly between `0` and `1`, by `1/2` on `s` and `(1 - p/2) / (1 - p)` on
-  `sᶜ`, keeps its null sets and hence the disintegration; the class forces `η₁ y s ∈ {0, 1}` for
-  `ν`-almost every `y` in `B`.  So `u = 1` almost everywhere on `{u > v + ε}`, the integrals of
-  the complements give `v = 1` there, and the set is null; `{v > u + ε}` is null in the same way.
-  Formalize this and drop the hypothesis.
+- [x] **Drop the σ-finite law of `Y` from `condDistrib_apply_ae_eq_condExpKernel_map`.**
+  The lemma in `Mathlib/Probability/Kernel/Condexp.lean` takes only the classes of its two joint
+  laws, for every measure; before, it also took `[SigmaFinite (μ.map Y hY.aemeasurable)]`, under
+  which the integrals of the two functions over the sets of `mγ.comap Y` determine them almost
+  everywhere.  Each representative agrees almost everywhere with a Markov one, and for Markov
+  representatives `η₁` and `η₂` the set `{u > v + ε}`, for `u = η₁ (Y ·) s`, `v = η₂ · (X ⁻¹' s)`,
+  and `ε ≠ 0`, is null.  It is `Y ⁻¹' B` for a measurable `B`, and since `u` and `v` take values in
+  `[0, 1]` and have the same integrals over the sets of `mγ.comap Y`, the law of `Y` is `0` or `∞`
+  on the measurable subsets of `B`.  There every representative of the conditional kernel of the
+  joint law of `Y` and `X` gives `s` mass `0` or `1` almost everywhere
+  (`Measure.ae_apply_eq_zero_or_one_of_mem_condKernel` in
+  `Mathlib/Probability/Kernel/Disintegration/Unique.lean`): reweighting a Markov disintegration
+  where the mass of `s` lies strictly between `0` and `1` keeps its null sets, hence the
+  disintegration, since the integral of an almost everywhere measurable function against a measure
+  that is `0` or `∞` on measurable sets is the measure of its support
+  (`lintegral_eq_measure_support_of_zero_or_top` in
+  `Mathlib/MeasureTheory/Integral/Lebesgue/Basic.lean`).  So `u = 1` almost everywhere on the set,
+  the integrals of the complements give `v = 1` there, and `u > v + ε` fails.  Letting `ε` tend to
+  `0` gives `u ≤ v` almost everywhere, and `sᶜ` gives the converse.  A disintegration that is not a
+  probability measure almost everywhere can take other values: the constant kernel of
+  `2 • dirac true` disintegrates `(∞ • dirac ()) ⊗ₘ Kernel.const Unit (dirac true)`, which has a
+  unique conditional kernel, and gives `{true}` mass `2`.  Tests are in
+  `MathlibTest/CondExpKernelStrict.lean` and `MathlibTest/CondKernelClassDomain.lean`, including
+  this counterexample.
 
 - [x] **Supply the class of the joint law of `(ω, ω)` for the σ-algebra generated by one set.**
   `hasUniqueCondKernel_condExpJointLaw_generateFrom_singleton` in

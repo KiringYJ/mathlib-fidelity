@@ -8,11 +8,13 @@ import Mathlib.Probability.Kernel.Posterior
 These tests check the lemmas about conditional kernels, conditional distributions, and posteriors
 that hold on the class of a unique conditional kernel, or for σ-finite or s-finite laws, rather than
 for finite measures: the pointwise formula at a point of finite mass of the first marginal, the
-representatives of the class, the Bochner integrals against a conditional kernel of a measure with
-an s-finite first marginal, the transport of conditional distributions between joint laws, the
-conditional distribution of a function of the conditioning variable under a measure that is not
-σ-finite, the conditional expectation given an infinite measure with a σ-finite law, the posterior
-of an infinite prior, and the composition identities for measures that are not s-finite.
+representatives of the class, the values `0` and `1` that the class forces on its representatives
+where the first marginal takes only the values `0` and `∞`, the Bochner integrals against a
+conditional kernel of a measure with an s-finite first marginal, the transport of conditional
+distributions between joint laws, the conditional distribution of a function of the conditioning
+variable under a measure that is not σ-finite, the conditional expectation given an infinite
+measure with a σ-finite law, the posterior of an infinite prior, and the composition identities
+for measures that are not s-finite.
 -/
 
 open MeasureTheory ProbabilityTheory
@@ -190,6 +192,42 @@ example (ρ : Measure (ℝ × ℝ)) [ρ.HasUniqueCondKernel] [((∞ : ℝ≥0∞
     (η : Kernel ℝ ℝ) :
     η ∈ ((∞ : ℝ≥0∞) • ρ).condKernel ↔ η ∈ ρ.condKernel :=
   Measure.mem_condKernel_smul_iff ENNReal.top_ne_zero
+
+-- The first marginal of an infinite multiple takes only the values `0` and `∞`, so when the
+-- multiple has a unique conditional kernel, every representative of it gives each measurable set
+-- mass `0` or `1` almost everywhere.
+example (ρ : Measure (ℝ × ℝ)) [((∞ : ℝ≥0∞) • ρ).HasUniqueCondKernel] (η : Kernel ℝ ℝ)
+    (hη : η ∈ ((∞ : ℝ≥0∞) • ρ).condKernel) {s : Set ℝ} (hs : MeasurableSet s) :
+    ∀ᵐ a ∂((∞ : ℝ≥0∞) • ρ).fst, η a s = 0 ∨ η a s = 1 := by
+  have h : ∀ t ⊆ Set.univ, MeasurableSet t →
+      ((∞ : ℝ≥0∞) • ρ).fst t = 0 ∨ ((∞ : ℝ≥0∞) • ρ).fst t = ∞ := fun t _ ht ↦ by
+    rw [Measure.fst_apply ht, Measure.smul_apply, smul_eq_mul]
+    rcases eq_or_ne (ρ (Prod.fst ⁻¹' t)) 0 with h | h <;> simp [h]
+  filter_upwards [Measure.ae_apply_eq_zero_or_one_of_mem_condKernel hη MeasurableSet.univ h hs]
+    with a ha using ha (Set.mem_univ a)
+
+-- A disintegration that is not a probability measure almost everywhere can take other values
+-- where the first marginal takes only the values `0` and `∞`: the infinite multiple of
+-- `dirac ((), true)` has a unique conditional kernel, and the constant kernel of
+-- `2 • dirac true` disintegrates it and gives `{true}` mass `2`.
+example :
+    (((∞ : ℝ≥0∞) • Measure.dirac ()).map (fun b ↦ (b, true)) (by fun_prop) :
+      Measure (Unit × Bool)).HasUniqueCondKernel ∧
+    (((∞ : ℝ≥0∞) • Measure.dirac ()).map (fun b ↦ (b, true)) (by fun_prop) :
+      Measure (Unit × Bool)).IsCondKernel (Kernel.const Unit ((2 : ℝ≥0∞) • Measure.dirac true)) ∧
+    Kernel.const Unit ((2 : ℝ≥0∞) • Measure.dirac true) () {true} = 2 := by
+  have hρ : (((∞ : ℝ≥0∞) • Measure.dirac ()).map (fun b ↦ (b, true)) (by fun_prop) :
+      Measure (Unit × Bool)) = (∞ : ℝ≥0∞) • Measure.dirac ((), true) := by
+    rw [Measure.map_smul _ (by fun_prop), Measure.map_dirac' (by fun_prop)]
+  have h_fst : ((∞ : ℝ≥0∞) • Measure.dirac ((), true)).fst = ∞ • Measure.dirac () := by
+    rw [Measure.fst, Measure.map_smul _ measurable_fst.aemeasurable,
+      Measure.map_dirac' measurable_fst]
+  refine ⟨inferInstance, ?_, by simp⟩
+  rw [hρ]
+  refine ⟨inferInstance, ?_⟩
+  rw [h_fst, Measure.compProd_smul_left, Measure.dirac_unit_compProd_const,
+    Measure.map_smul _ measurable_prodMk_left.aemeasurable,
+    Measure.map_dirac' measurable_prodMk_left, smul_smul, ENNReal.top_mul two_ne_zero]
 
 -- A finite scaling keeps a unique conditional kernel, which instance search supplies for a
 -- nonnegative real factor.
