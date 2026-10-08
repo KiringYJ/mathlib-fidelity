@@ -25,6 +25,10 @@ verifies some of the properties of a measure, but in general the fact that the `
 on `s` can prevent us from finding versions of the conditional expectation that combine into a true
 measure. The standard Borel space assumption on `Ω` allows us to do so.
 
+The conditional distribution exists when the joint law of `(X, Y)` has a unique conditional kernel,
+in particular when the law `μ.map X` of `X`, the first marginal of the joint law, is σ-finite
+(`MeasureTheory.Measure.sigmaFinite_fst_map_prodMk`), for example when `μ` is finite.
+
 The conditional distribution is determined only up to `μ.map X`-null sets, so it is a class of
 kernels rather than a chosen kernel: a kernel `η` represents it, written
 `η ∈ condDistrib Y X μ`, when it agrees `μ.map X`-almost everywhere with a Markov kernel that has
@@ -108,32 +112,40 @@ lemma isCondKernel_of_mem_condDistrib [IsSFiniteKernel η]
     (μ.map (fun a => (X a, Y a)) hXY).IsCondKernel η :=
   Measure.isCondKernel_of_mem_condKernel ((mem_condDistrib_iff_mem_condKernel hXY).1 hη)
 
-lemma compProd_map_condDistrib (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ) [IsSFiniteKernel η]
+omit [StandardBorelSpace Ω] [Nonempty Ω] [IsFiniteMeasure μ] in
+lemma compProd_map_condDistrib (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ)
+    [(μ.map (fun a => (X a, Y a)) (hX.prodMk hY)).HasUniqueCondKernel] [IsSFiniteKernel η]
     (hη : η ∈ condDistrib Y X μ) :
     (μ.map X) ⊗ₘ η = μ.map fun a ↦ (X a, Y a) := by
   have := isCondKernel_of_mem_condDistrib hη
   rw [← Measure.fst_map_prodMk₀ hX hY, Measure.disintegrate]
 
+omit [IsFiniteMeasure μ] in
 /-- A finite kernel `η` with `μ.map (fun x => (X x, Y x)) = μ.map X ⊗ₘ η` represents
-`condDistrib Y X μ`. -/
+`condDistrib Y X μ` if the law of `X` is σ-finite. -/
 lemma mem_condDistrib_of_measure_eq_compProd (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ)
-    [IsFiniteKernel η] (hη : μ.map (fun x => (X x, Y x)) = μ.map X ⊗ₘ η) :
+    [SigmaFinite (μ.map X hX)] [IsFiniteKernel η]
+    (hη : μ.map (fun x => (X x, Y x)) = μ.map X ⊗ₘ η) :
     η ∈ condDistrib Y X μ := by
   have : (μ.map (fun x => (X x, Y x)) (hX.prodMk hY)).IsCondKernel η :=
     ⟨inferInstance, by rw [Measure.fst_map_prodMk₀ hX hY, ← hη]⟩
   exact (mem_condDistrib_iff_mem_condKernel _).2 Measure.IsCondKernel.mem_condKernel
 
+omit [IsFiniteMeasure μ] in
 /-- A finite kernel `η` represents `condDistrib Y X μ` if and only if
-`μ.map (fun x => (X x, Y x)) = μ.map X ⊗ₘ η`. -/
-lemma mem_condDistrib_iff (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ) [IsFiniteKernel η] :
+`μ.map (fun x => (X x, Y x)) = μ.map X ⊗ₘ η`, if the law of `X` is σ-finite. -/
+lemma mem_condDistrib_iff (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ)
+    [SigmaFinite (μ.map X hX)] [IsFiniteKernel η] :
     η ∈ condDistrib Y X μ ↔ μ.map (fun x => (X x, Y x)) = μ.map X ⊗ₘ η :=
   ⟨fun h ↦ (compProd_map_condDistrib hX hY h).symm, mem_condDistrib_of_measure_eq_compProd hX hY⟩
 
+omit [IsFiniteMeasure μ] in
 /-- If the singleton `{x}` has non-zero mass for `μ.map X`, then for every s-finite representative
 `η` of `condDistrib Y X μ` and all `s : Set Ω`,
 `η x s = (μ.map X {x})⁻¹ * μ.map (fun a => (X a, Y a)) ({x} ×ˢ s)` . -/
 lemma condDistrib_apply_of_ne_zero [MeasurableSingletonClass β] (hX : Measurable X)
-    (hY : Measurable Y) [IsSFiniteKernel η] (hη : η ∈ condDistrib Y X μ) (x : β)
+    (hY : Measurable Y) [SigmaFinite (μ.map X hX.aemeasurable)] [IsSFiniteKernel η]
+    (hη : η ∈ condDistrib Y X μ) (x : β)
     (hX' : μ.map X hX.aemeasurable {x} ≠ 0) (s : Set Ω) :
     η x s =
       (μ.map X hX.aemeasurable {x})⁻¹ *
@@ -144,7 +156,9 @@ lemma condDistrib_apply_of_ne_zero [MeasurableSingletonClass β] (hX : Measurabl
   · rw [Measure.fst_map_prodMk hX hY]
   · rwa [Measure.fst_map_prodMk hX hY]
 
-lemma condDistrib_comp_map (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ) [IsSFiniteKernel η]
+omit [StandardBorelSpace Ω] [Nonempty Ω] [IsFiniteMeasure μ] in
+lemma condDistrib_comp_map (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ)
+    [(μ.map (fun a => (X a, Y a)) (hX.prodMk hY)).HasUniqueCondKernel] [IsSFiniteKernel η]
     (hη : η ∈ condDistrib Y X μ) :
     η ∘ₘ (μ.map X) = μ.map Y := by
   rw [← Measure.snd_compProd, compProd_map_condDistrib hX hY hη, Measure.snd_map_prodMk₀ hX hY]
@@ -200,8 +214,10 @@ theorem aestronglyMeasurable_integral_condDistrib (hX : AEMeasurable X μ) (hY :
 
 end Measurability
 
+omit [IsFiniteMeasure μ] in
 lemma map_mem_condDistrib_comp {Ω' : Type*} {mΩ' : SigmaAlgebra Ω'} [StandardBorelSpace Ω']
-    [Nonempty Ω'] (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ) [IsMarkovKernel η]
+    [Nonempty Ω'] (hX : AEMeasurable X μ) (hY : AEMeasurable Y μ) [SigmaFinite (μ.map X hX)]
+    [IsMarkovKernel η]
     (hη : η ∈ condDistrib Y X μ) {f : Ω → Ω'} (hf : Measurable f) :
     η.map f ∈ condDistrib (f ∘ Y) X μ := by
   refine mem_condDistrib_of_measure_eq_compProd hX (by fun_prop) ?_
@@ -212,17 +228,22 @@ lemma map_mem_condDistrib_comp {Ω' : Type*} {mΩ' : SigmaAlgebra Ω'} [Standard
   _ = (μ.map X ⊗ₘ η).map (Prod.map id f) := by rw [compProd_map_condDistrib hX hY hη]
   _ = μ.map X ⊗ₘ η.map f := by rw [Measure.compProd_map hf]
 
-lemma deterministic_mem_condDistrib_comp_self (hX : AEMeasurable X μ) {f : β → Ω}
-    (hf : Measurable f) :
+omit [IsFiniteMeasure μ] in
+lemma deterministic_mem_condDistrib_comp_self (hX : AEMeasurable X μ) [SigmaFinite (μ.map X hX)]
+    {f : β → Ω} (hf : Measurable f) :
     Kernel.deterministic f hf ∈ condDistrib (f ∘ X) X μ := by
   refine mem_condDistrib_of_measure_eq_compProd hX (by fun_prop) ?_
   rw [Measure.compProd_deterministic, Measure.map_map]
   simp [Function.comp_def]
 
-lemma id_mem_condDistrib_self (hY : AEMeasurable Y μ) : Kernel.id ∈ condDistrib Y Y μ := by
+omit [IsFiniteMeasure μ] in
+lemma id_mem_condDistrib_self (hY : AEMeasurable Y μ) [SigmaFinite (μ.map Y hY)] :
+    Kernel.id ∈ condDistrib Y Y μ := by
   simpa using! deterministic_mem_condDistrib_comp_self hY measurable_id
 
-lemma deterministic_mem_condDistrib_const (hX : AEMeasurable X μ) (c : Ω) :
+omit [IsFiniteMeasure μ] in
+lemma deterministic_mem_condDistrib_const (hX : AEMeasurable X μ) [SigmaFinite (μ.map X hX)]
+    (c : Ω) :
     Kernel.deterministic (mα := mβ) (fun _ ↦ c) (by fun_prop) ∈
       condDistrib (fun _ ↦ c) X μ := by
   exact deterministic_mem_condDistrib_comp_self hX (measurable_const (a := c))

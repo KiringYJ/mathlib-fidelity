@@ -10,6 +10,8 @@ public import Mathlib.MeasureTheory.Measure.Prod
 public import Mathlib.Order.Filter.Germ.Representative
 public import Mathlib.Probability.Kernel.Disintegration.CDFToKernel
 
+import Mathlib.Probability.Kernel.Composition.WithDensity
+
 /-!
 # Conditional cumulative distribution function
 
@@ -374,28 +376,18 @@ section Reweight
 
 variable {ρ : Measure (α × ℝ)} {w : α → ℝ≥0∞}
 
-private lemma fst_withDensity_fst (hw : Measurable w) :
-    (ρ.withDensity fun p ↦ w p.1).fst = ρ.fst.withDensity w := by
-  ext s hs
-  rw [Measure.fst_apply hs, withDensity_apply _ (measurable_fst hs), withDensity_apply _ hs,
-    Measure.fst, setLIntegral_map hs hw measurable_fst]
-
 private lemma IicSnd_withDensity_fst (hw : Measurable w) (x : ℝ) :
     (ρ.withDensity fun p ↦ w p.1).IicSnd x = (ρ.IicSnd x).withDensity w := by
   rw [Measure.IicSnd, Measure.IicSnd,
-    restrict_withDensity (MeasurableSet.univ.prod measurableSet_Iic), fst_withDensity_fst hw]
+    restrict_withDensity (MeasurableSet.univ.prod measurableSet_Iic),
+    Measure.fst_withDensity_fst hw]
 
 /-- A positive finite weight can be divided out of an identity between weighted measures. -/
 private lemma eq_of_withDensity_weight {μ ν : Measure α} {g : α → ℝ≥0∞} (hw : Measurable w)
     (hg : Measurable g) (hw₀ : ∀ a, w a ≠ 0) (hw_top : ∀ a, w a ≠ ∞)
     (h : (μ.withDensity w).withDensity g = ν.withDensity w) : μ.withDensity g = ν := by
-  have h_inv : (ν.withDensity w).withDensity (fun a ↦ (w a)⁻¹) = ν :=
-    withDensity_inv_same hw (ae_of_all _ hw₀) (ae_of_all _ hw_top)
-  rw [← h_inv, ← h, ← withDensity_mul _ hw hg, ← withDensity_mul _ (hw.mul hg) hw.fun_inv]
-  congr 1
-  ext a
-  simp only [Pi.mul_apply]
-  rw [mul_comm (w a) (g a), mul_assoc, ENNReal.mul_inv_cancel (hw₀ a) (hw_top a), mul_one]
+  refine Measure.eq_of_withDensity_eq hw hw₀ hw_top ?_
+  rw [← h, ← withDensity_mul _ hg hw, ← withDensity_mul _ hw hg, mul_comm]
 
 /-- A conditional cdf of `ρ` exists if `ρ.fst` is σ-finite and `w` is a positive finite measurable
 function that is `ρ.fst`-integrable. The proof applies the construction for finite kernels to the
@@ -405,13 +397,10 @@ private lemma exists_isCondCDF_of_weight [SigmaFinite ρ.fst] (hw : Measurable w
     (hw₀ : ∀ a, w a ≠ 0) (hw_top : ∀ a, w a ≠ ∞) (hw_int : ∫⁻ a, w a ∂ρ.fst ≠ ∞) :
     ∃ F, IsCondCDF ρ F := by
   set ρ' : Measure (α × ℝ) := ρ.withDensity fun p ↦ w p.1
-  have h_fst : ρ'.fst = ρ.fst.withDensity w := fst_withDensity_fst hw
+  have h_fst : ρ'.fst = ρ.fst.withDensity w := Measure.fst_withDensity_fst hw
   have h_Iic (x : ℝ) : ρ'.IicSnd x = (ρ.IicSnd x).withDensity w := IicSnd_withDensity_fst hw x
   have h_ac : ρ'.fst ≪ ρ.fst := h_fst ▸ withDensity_absolutelyContinuous _ _
-  have : IsFiniteMeasure ρ' := by
-    refine ⟨?_⟩
-    rw [← Measure.fst_univ, h_fst, withDensity_apply _ MeasurableSet.univ, Measure.restrict_univ]
-    exact hw_int.lt_top
+  have : IsFiniteMeasure ρ' := Measure.isFiniteMeasure_withDensity_fst hw hw_int
   -- `preCDF ρ q` is also a density of `ρ'.IicSnd q` with respect to `ρ'.fst`.
   have h_pre (q : ℚ) : ρ'.fst.withDensity (preCDF ρ q) = ρ'.IicSnd q := by
     rw [h_fst, h_Iic, ← withDensity_mul _ hw measurable_preCDF, mul_comm,

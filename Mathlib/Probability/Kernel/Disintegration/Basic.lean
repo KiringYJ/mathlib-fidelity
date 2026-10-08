@@ -71,8 +71,11 @@ attribute [instance] IsCondKernel.hasCompProd_fst
 /-- A measure `ρ` on `α × Ω` has a unique conditional kernel if some Markov kernel disintegrates
 it and any two Markov kernels that disintegrate it agree `ρ.fst`-almost everywhere. These are the
 measures whose conditional kernel `MeasureTheory.Measure.condKernel`, the almost-everywhere class of
-these Markov kernels, is determined. A finite measure has a unique conditional kernel when `Ω` is a
-nonempty standard Borel space (`MeasureTheory.Measure.hasUniqueCondKernel_of_isFiniteMeasure`). -/
+these Markov kernels, is determined. A measure whose first marginal is σ-finite, in particular a
+finite measure, has a unique conditional kernel when `Ω` is a nonempty standard Borel space
+(`MeasureTheory.Measure.hasUniqueCondKernel_of_sigmaFinite_fst`). The condition is not necessary,
+and without it a conditional kernel need not be unique or exist: see
+`Counterexamples/CondKernel.lean`. -/
 class HasUniqueCondKernel : Prop where
   /-- Some Markov kernel disintegrates `ρ`. -/
   exists_isMarkovKernel_isCondKernel : ∃ η : Kernel α Ω, IsMarkovKernel η ∧ ρ.IsCondKernel η
@@ -84,7 +87,7 @@ variable [ρ.IsCondKernel ρCond]
 
 lemma disintegrate : ρ.fst ⊗ₘ ρCond = ρ := IsCondKernel.disintegrate
 
-variable [IsFiniteMeasure ρ]
+variable [SigmaFinite ρ.fst]
 
 /-- Auxiliary lemma for `IsCondKernel.apply_of_ne_zero`. -/
 private lemma IsCondKernel.apply_of_ne_zero_of_measurableSet [MeasurableSingletonClass α] {x : α}
@@ -103,7 +106,7 @@ private lemma IsCondKernel.apply_of_ne_zero_of_measurableSet [MeasurableSingleto
   simp_rw [this]
   rw [MeasureTheory.lintegral_indicator (measurableSet_singleton x)]
   simp only [Measure.restrict_singleton, lintegral_smul_measure, lintegral_dirac, smul_eq_mul]
-  rw [← mul_assoc, ENNReal.inv_mul_cancel hx (measure_ne_top _ _), one_mul]
+  rw [← mul_assoc, ENNReal.inv_mul_cancel hx measure_singleton_lt_top.ne, one_mul]
 
 /-- If the singleton `{x}` has non-zero mass for `ρ.fst`, then for all `s : Set Ω`,
 `ρCond x s = (ρ.fst {x})⁻¹ * ρ ({x} ×ˢ s)` . -/
@@ -119,7 +122,7 @@ lemma IsCondKernel.isProbabilityMeasure [MeasurableSingletonClass α] {a : α} (
     IsProbabilityMeasure (ρCond a) := by
   constructor
   rw [IsCondKernel.apply_of_ne_zero _ _ ha, prod_univ, ← Measure.fst_apply
-    (measurableSet_singleton _), ENNReal.inv_mul_cancel ha (measure_ne_top _ _)]
+    (measurableSet_singleton _), ENNReal.inv_mul_cancel ha measure_singleton_lt_top.ne]
 
 lemma IsCondKernel.isMarkovKernel [MeasurableSingletonClass α] (hρ : ∀ a, ρ.fst {a} ≠ 0) :
     IsMarkovKernel ρCond := ⟨fun _ ↦ isProbabilityMeasure _ _ (hρ _)⟩

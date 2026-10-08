@@ -14,6 +14,8 @@ public import Mathlib.Probability.Kernel.Disintegration.Density
 public import Mathlib.Probability.Kernel.Disintegration.CDFToKernel
 public import Mathlib.MeasureTheory.Constructions.Polish.EmbeddingReal
 
+import Mathlib.Probability.Kernel.Composition.WithDensity
+
 /-!
 # Existence of disintegration of measures and kernels for standard Borel spaces
 
@@ -24,8 +26,11 @@ conditional kernel `condKernel κ` is the class of these kernels up to `fst κ a
 `a`.
 We also define the conditional kernel of a measure `ρ : Measure (β × Ω)` with a unique conditional
 kernel (`MeasureTheory.Measure.HasUniqueCondKernel`): the `ρ.fst`-almost-everywhere class
-`ρ.condKernel` of the Markov kernels `η : Kernel β Ω` with `ρ = ρ.fst ⊗ₘ η`. A finite measure, for a
-nonempty standard Borel space `Ω`, has a unique conditional kernel (see the file `Unique.lean`).
+`ρ.condKernel` of the Markov kernels `η : Kernel β Ω` with `ρ = ρ.fst ⊗ₘ η`. A measure whose first
+marginal is σ-finite, for a nonempty standard Borel space `Ω`, has a unique conditional kernel (see
+the file `Unique.lean`): such a measure becomes finite when it is reweighted by a positive function
+of the first coordinate with a finite integral, and a disintegration of the reweighted measure
+disintegrates the measure.
 A conditional kernel is determined almost everywhere (see the file `Unique.lean`), and only almost
 everywhere: every Markov kernel that agrees with a conditional kernel almost everywhere is one too
 (`MeasureTheory.Measure.compProd_congr`, `ProbabilityTheory.Kernel.compProd_congr`). So `κ` and `ρ`
@@ -85,7 +90,7 @@ are exactly the finite conditional kernels: this is proved in the file `Unique.l
 * `ProbabilityTheory.Kernel.exists_isMarkovKernel_isCondKernel`: a Markov kernel `η` with
   `fst κ ⊗ₖ η = κ` exists.
 * `MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel`: a Markov kernel `η` with
-  `ρ.fst ⊗ₘ η = ρ` exists.
+  `ρ.fst ⊗ₘ η = ρ` exists if `ρ.fst` is σ-finite.
 * `ProbabilityTheory.Kernel.exists_isMarkovKernel_mem_condKernel` and
   `MeasureTheory.Measure.exists_isMarkovKernel_mem_condKernel`: the conditional kernels are
   represented by Markov kernels that disintegrate `κ`, respectively `ρ`. The file `Unique.lean`
@@ -396,9 +401,9 @@ end BorelSnd
 
 section Measure
 
-/-- A finite measure `ρ` on `α × Ω`, where `Ω` is a nonempty standard Borel space, is disintegrated
-by a Markov kernel: there is a Markov kernel `η : Kernel α Ω` with `ρ.fst ⊗ₘ η = ρ`. -/
-theorem _root_.MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel (ρ : Measure (α × Ω))
+/-- The case of `MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel` for a finite
+measure. -/
+private theorem exists_isMarkovKernel_isCondKernel_of_isFiniteMeasure (ρ : Measure (α × Ω))
     [IsFiniteMeasure ρ] : ∃ η : Kernel α Ω, IsMarkovKernel η ∧ ρ.IsCondKernel η := by
   obtain ⟨η, _, _⟩ := exists_isMarkovKernel_isCondKernel_unit (const Unit ρ)
   refine ⟨comap η (fun a ↦ ((), a)) measurable_prodMk_left, inferInstance, ⟨inferInstance, ?_⟩⟩
@@ -414,6 +419,37 @@ theorem _root_.MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel (ρ : Me
   simp
 
 omit [StandardBorelSpace Ω] [Nonempty Ω] in
+/-- An s-finite kernel that disintegrates `ρ` reweighted by a positive finite function `w` of the
+first coordinate disintegrates `ρ`: the weight can be divided out. -/
+private lemma isCondKernel_of_withDensity_fst {ρ : Measure (α × Ω)} {η : Kernel α Ω}
+    [IsSFiniteKernel η] {w : α → ℝ≥0∞} (hw : Measurable w) (hw₀ : ∀ a, w a ≠ 0)
+    (hw_top : ∀ a, w a ≠ ∞) (h : (ρ.withDensity fun p ↦ w p.1).IsCondKernel η) :
+    ρ.IsCondKernel η := by
+  have h_eq : (ρ.fst ⊗ₘ η).withDensity (fun p ↦ w p.1) = ρ.withDensity fun p ↦ w p.1 := by
+    rw [← Measure.withDensity_compProd hw]
+    ext s hs
+    rw [Measure.compProd_apply hs, ← Measure.fst_withDensity_fst hw, ← Measure.compProd_apply hs,
+      h.disintegrate]
+  exact ⟨inferInstance, Measure.eq_of_withDensity_eq (hw.comp measurable_fst) (fun p ↦ hw₀ p.1)
+    (fun p ↦ hw_top p.1) h_eq⟩
+
+/-- A measure `ρ` on `α × Ω` whose first marginal is σ-finite, where `Ω` is a nonempty standard
+Borel space, is disintegrated by a Markov kernel: there is a Markov kernel `η : Kernel α Ω` with
+`ρ.fst ⊗ₘ η = ρ`. For a positive weight `w` with a finite integral against `ρ.fst`, a Markov kernel
+that disintegrates the finite measure `ρ.withDensity fun p ↦ w p.1` disintegrates `ρ`. -/
+theorem _root_.MeasureTheory.Measure.exists_isMarkovKernel_isCondKernel (ρ : Measure (α × Ω))
+    [SigmaFinite ρ.fst] : ∃ η : Kernel α Ω, IsMarkovKernel η ∧ ρ.IsCondKernel η := by
+  obtain ⟨w, hw_pos, hw, hw_int⟩ := exists_pos_lintegral_lt_of_sigmaFinite ρ.fst one_ne_zero
+  have hw' : Measurable fun a ↦ (w a : ℝ≥0∞) := hw.coe_nnreal_ennreal
+  have : IsFiniteMeasure (ρ.withDensity fun p ↦ (w p.1 : ℝ≥0∞)) :=
+    Measure.isFiniteMeasure_withDensity_fst (f := fun a ↦ (w a : ℝ≥0∞)) hw'
+      (hw_int.trans ENNReal.one_lt_top).ne
+  obtain ⟨η, hη, h⟩ :=
+    exists_isMarkovKernel_isCondKernel_of_isFiniteMeasure (ρ.withDensity fun p ↦ (w p.1 : ℝ≥0∞))
+  exact ⟨η, hη, isCondKernel_of_withDensity_fst hw'
+    (fun a ↦ ENNReal.coe_ne_zero.2 (hw_pos a).ne') (fun _ ↦ ENNReal.coe_ne_top) h⟩
+
+omit [StandardBorelSpace Ω] [Nonempty Ω] in
 /-- Some class of kernels along `ae ρ.fst` contains a Markov kernel that disintegrates `ρ`. Since
 `ρ` has a unique conditional kernel, such a class is unique. -/
 lemma _root_.MeasureTheory.Measure.exists_aeClass_isCondKernel (ρ : Measure (α × Ω))
@@ -425,8 +461,8 @@ lemma _root_.MeasureTheory.Measure.exists_aeClass_isCondKernel (ρ : Measure (α
 omit [StandardBorelSpace Ω] [Nonempty Ω] in
 /-- The conditional kernel of a measure `ρ` on a product space `α × Ω` with a unique conditional
 kernel: the `ρ.fst`-almost-everywhere class of the Markov kernels `η` with `ρ.fst ⊗ₘ η = ρ`. A
-finite measure has one when `Ω` is a nonempty standard Borel space
-(`MeasureTheory.Measure.hasUniqueCondKernel_of_isFiniteMeasure`).
+measure whose first marginal is σ-finite has one when `Ω` is a nonempty standard Borel space
+(`MeasureTheory.Measure.hasUniqueCondKernel_of_sigmaFinite_fst`).
 
 A kernel represents it, written `η ∈ ρ.condKernel`, when it agrees `ρ.fst`-almost everywhere with
 such a kernel. A Markov kernel represents it if and only if it disintegrates `ρ`

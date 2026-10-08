@@ -16,6 +16,13 @@ public import Mathlib.Probability.Kernel.Composition.CompNotation
 We prove lemmas about `Kernel.withDensity` and `Measure.withDensity` in relation with the
 composition of kernels and measures.
 
+We also prove the lemmas that reweight a measure `ρ` on a product by a function `w` of the first
+coordinate: this reweights the first marginal (`MeasureTheory.Measure.fst_withDensity_fst`), the
+result is finite when `w` has a finite integral against the first marginal
+(`MeasureTheory.Measure.isFiniteMeasure_withDensity_fst`), and a weight that is positive and finite
+everywhere can be divided out (`MeasureTheory.Measure.eq_of_withDensity_eq`). A measure whose first
+marginal is σ-finite has such a weight, so that statements about it reduce to finite measures.
+
 -/
 
 public section
@@ -75,6 +82,31 @@ lemma withDensity_compProd_withDensity [IsSFiniteKernel (κ.withDensity g)]
       (μ ⊗ₘ κ).withDensity (fun ac ↦ f ac.1 * g ac.1 ac.2) := by
   rw [compProd_withDensity hg, withDensity_compProd hf]
   exact (withDensity_mul _ (hf.comp measurable_fst) hg).symm
+
+/-- Reweighting a measure on a product by a function of the first coordinate reweights its first
+marginal by the same function. -/
+lemma fst_withDensity_fst {ρ : Measure (𝓧 × 𝓨)} (hf : Measurable f) :
+    (ρ.withDensity fun p ↦ f p.1).fst = ρ.fst.withDensity f := by
+  ext s hs
+  rw [fst_apply hs, withDensity_apply _ (measurable_fst hs), withDensity_apply _ hs, Measure.fst,
+    setLIntegral_map hs hf measurable_fst]
+
+/-- Reweighting a measure on a product by a function of the first coordinate with a finite integral
+against the first marginal gives a finite measure. -/
+lemma isFiniteMeasure_withDensity_fst {ρ : Measure (𝓧 × 𝓨)} (hf : Measurable f)
+    (hf_int : ∫⁻ a, f a ∂ρ.fst ≠ ∞) : IsFiniteMeasure (ρ.withDensity fun p ↦ f p.1) :=
+  ⟨by
+    rw [← fst_univ, fst_withDensity_fst hf, withDensity_apply _ MeasurableSet.univ, restrict_univ]
+    exact hf_int.lt_top⟩
+
+/-- A weight that is positive and finite everywhere can be divided out of an equation between
+reweighted measures. -/
+lemma eq_of_withDensity_eq {ν ν' : Measure 𝓧} (hf : Measurable f) (hf₀ : ∀ a, f a ≠ 0)
+    (hf_top : ∀ a, f a ≠ ∞) (h : ν.withDensity f = ν'.withDensity f) : ν = ν' :=
+  calc ν = (ν.withDensity f).withDensity fun a ↦ (f a)⁻¹ :=
+        (withDensity_inv_same hf (ae_of_all _ hf₀) (ae_of_all _ hf_top)).symm
+    _ = (ν'.withDensity f).withDensity fun a ↦ (f a)⁻¹ := by rw [h]
+    _ = ν' := withDensity_inv_same hf (ae_of_all _ hf₀) (ae_of_all _ hf_top)
 
 end MeasureTheory.Measure
 

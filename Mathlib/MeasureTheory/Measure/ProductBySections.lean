@@ -1176,6 +1176,13 @@ theorem fst_map_prodMk {X : α → β} {Y : α → γ} {μ : Measure α} (hX : M
       μ.map X hX.aemeasurable :=
   fst_map_prodMk₀ hX.aemeasurable hY.aemeasurable
 
+/-- The first marginal of the joint law of `(X, Y)` is σ-finite if the law of `X` is, since it is
+the law of `X` (`MeasureTheory.Measure.fst_map_prodMk₀`). -/
+instance sigmaFinite_fst_map_prodMk {X : α → β} {Y : α → γ} {μ : Measure α}
+    {hXY : AEMeasurable (fun a => (X a, Y a)) μ} [SigmaFinite (μ.map X hXY.fst)] :
+    SigmaFinite (μ.map (fun a => (X a, Y a)) hXY).fst := by
+  rwa [fst_map_prodMk₀ hXY.fst hXY.snd]
+
 @[simp]
 lemma fst_add {μ ν : Measure (α × β)} : (μ + ν).fst = μ.fst + ν.fst :=
   Measure.map_add _ _ measurable_fst

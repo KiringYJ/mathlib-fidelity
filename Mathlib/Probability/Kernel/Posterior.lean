@@ -31,7 +31,7 @@ these kernels, and the statements below hold for every Markov representative `η
 
 ## Main statements
 
-* `mem_posterior_iff`: a finite kernel `η` represents `κ†μ` if and only if
+* `mem_posterior_iff`: if `κ ∘ₘ μ` is σ-finite, a finite kernel `η` represents `κ†μ` if and only if
   `(κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap`.
 * `posterior_comp_self`: `η ∘ₘ κ ∘ₘ μ = μ` for every Markov representative `η` of `κ†μ`.
 * `mem_posterior_posterior`: `κ` represents the posterior of every Markov representative of `κ†μ`
@@ -64,24 +64,30 @@ namespace ProbabilityTheory
 
 variable {Ω 𝓧 𝓨 : Type*}
   {mΩ : SigmaAlgebra Ω} {m𝓧 : SigmaAlgebra 𝓧} {m𝓨 : SigmaAlgebra 𝓨}
-  {κ : Kernel Ω 𝓧} {μ : Measure Ω} [IsFiniteMeasure μ] [IsFiniteKernel κ]
+  {κ : Kernel Ω 𝓧} {μ : Measure Ω}
 
-variable [StandardBorelSpace Ω] [Nonempty Ω]
-
-omit [StandardBorelSpace Ω] [Nonempty Ω] in
 /-- The first marginal of the joint law with swapped coordinates is the law `κ ∘ₘ μ` of the
 data. -/
 lemma fst_map_swap_compProd (κ : Kernel Ω 𝓧) (μ : Measure Ω) [μ.HasCompProd κ] :
     ((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).fst = κ ∘ₘ μ := by
   rw [Measure.fst_map_swap, Measure.snd_compProd]
 
+/-- The first marginal of the joint law with swapped coordinates is σ-finite if the law `κ ∘ₘ μ`
+of the data is, since it is that law. For a nonempty standard Borel space `Ω`, the joint law then
+has a unique conditional kernel, so that the posterior exists; this admits an infinite prior `μ`. -/
+instance sigmaFinite_fst_map_swap_compProd [μ.HasCompProd κ] [SigmaFinite (κ ∘ₘ μ)] :
+    SigmaFinite ((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).fst := by
+  rwa [fst_map_swap_compProd]
+
 /-- Posterior of the kernel `κ` with respect to the measure `μ`: the `κ ∘ₘ μ`-almost-everywhere
 class of the Markov kernels `η : Kernel 𝓧 Ω` with `(κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap`, which is
 the conditional kernel of the joint law with swapped coordinates
 (`MeasureTheory.Measure.condKernel`).
 
-A finite kernel represents it if and only if it has this property (`mem_posterior_iff`), and a
-Markov representative exists (`exists_isMarkovKernel_mem_posterior`). -/
+It exists when this joint law has a unique conditional kernel, in particular when `κ ∘ₘ μ` is
+σ-finite (`ProbabilityTheory.sigmaFinite_fst_map_swap_compProd`). A finite kernel represents it
+if and only if it has this property, when `κ ∘ₘ μ` is σ-finite (`mem_posterior_iff`), and a Markov
+representative exists (`exists_isMarkovKernel_mem_posterior`). -/
 noncomputable
 def posterior (κ : Kernel Ω 𝓧) (μ : Measure Ω) [μ.HasCompProd κ]
     [((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel] :
@@ -92,7 +98,10 @@ def posterior (κ : Kernel Ω 𝓧) (μ : Measure Ω) [μ.HasCompProd κ]
 /-- Posterior of the kernel `κ` with respect to the measure `μ`. -/
 scoped[ProbabilityTheory] infix:arg "†" => ProbabilityTheory.posterior
 
-variable {η : Kernel 𝓧 Ω}
+section HasUniqueCondKernel
+
+variable [μ.HasCompProd κ]
+  [((μ ⊗ₘ κ).map Prod.swap measurable_swap.aemeasurable).HasUniqueCondKernel] {η : Kernel 𝓧 Ω}
 
 /-- The representatives of `κ†μ` are those of the conditional kernel of the joint law with swapped
 coordinates. -/
@@ -113,6 +122,23 @@ lemma compProd_posterior_eq_map_swap [IsSFiniteKernel η] (hη : η ∈ κ†μ)
   rw [← fst_map_swap_compProd κ μ]
   exact Measure.disintegrate _ η
 
+lemma compProd_posterior_eq_swap_comp [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
+    (κ ∘ₘ μ) ⊗ₘ η = Kernel.swap Ω 𝓧 ∘ₘ μ ⊗ₘ κ := by
+  rw [compProd_posterior_eq_map_swap hη, Measure.swap_comp]
+
+lemma posterior_comp_self [IsMarkovKernel κ] [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
+    η ∘ₘ κ ∘ₘ μ = μ := by
+  rw [← Measure.snd_compProd, compProd_posterior_eq_map_swap hη, Measure.snd_map_swap,
+    Measure.fst_compProd]
+
+end HasUniqueCondKernel
+
+variable [StandardBorelSpace Ω] [Nonempty Ω]
+
+section SigmaFinite
+
+variable [μ.HasCompProd κ] [SigmaFinite (κ ∘ₘ μ)] {η : Kernel 𝓧 Ω}
+
 /-- A finite kernel with the main property of the posterior represents it. -/
 lemma mem_posterior_of_compProd_eq [IsFiniteKernel η]
     (h : (κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap) :
@@ -126,16 +152,16 @@ lemma mem_posterior_iff [IsFiniteKernel η] :
     η ∈ κ†μ ↔ (κ ∘ₘ μ) ⊗ₘ η = (μ ⊗ₘ κ).map Prod.swap :=
   ⟨compProd_posterior_eq_map_swap, mem_posterior_of_compProd_eq⟩
 
-lemma compProd_posterior_eq_swap_comp [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
-    (κ ∘ₘ μ) ⊗ₘ η = Kernel.swap Ω 𝓧 ∘ₘ μ ⊗ₘ κ := by
-  rw [compProd_posterior_eq_map_swap hη, Measure.swap_comp]
-
 /-- A finite kernel `η` with `(κ ∘ₘ μ) ⊗ₘ η = Kernel.swap Ω 𝓧 ∘ₘ μ ⊗ₘ κ` represents the
 posterior. -/
 lemma mem_posterior_of_compProd_eq_swap_comp [IsFiniteKernel η]
     (h : ((κ ∘ₘ μ) ⊗ₘ η) = Kernel.swap Ω 𝓧 ∘ₘ μ ⊗ₘ κ) :
     η ∈ κ†μ :=
   mem_posterior_of_compProd_eq <| by rw [h, Measure.swap_comp]
+
+end SigmaFinite
+
+variable [IsFiniteMeasure μ] [IsFiniteKernel κ] {η : Kernel 𝓧 Ω}
 
 lemma swap_compProd_posterior [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
     Kernel.swap 𝓧 Ω ∘ₘ (κ ∘ₘ μ) ⊗ₘ η = μ ⊗ₘ κ := by
@@ -185,11 +211,6 @@ lemma posterior_prod_id_comp [IsMarkovKernel η] (hη : η ∈ κ†μ) :
       simp only [compProd_posterior_eq_swap_comp hη]
     _ = μ ⊗ₘ κ := by
       simp only [Measure.comp_assoc, Kernel.swap_swap, Measure.id_comp]
-
-lemma posterior_comp_self [IsMarkovKernel κ] [IsSFiniteKernel η] (hη : η ∈ κ†μ) :
-    η ∘ₘ κ ∘ₘ μ = μ := by
-  rw [← Measure.snd_compProd, compProd_posterior_eq_map_swap hη, Measure.snd_map_swap,
-    Measure.fst_compProd]
 
 /-- The identity kernel represents the posterior of the identity kernel. -/
 lemma id_mem_posterior_id (μ : Measure Ω) [IsFiniteMeasure μ] :
