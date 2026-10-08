@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Algebra.Algebra.Defs
 public import Mathlib.Algebra.Module.Submodule.Lattice
+public import Mathlib.Topology.Algebra.CauchyContinuousMul
 public import Mathlib.Topology.Algebra.GroupCompletion
 public import Mathlib.Topology.Algebra.Ring.Ideal
 public import Mathlib.Topology.Algebra.IsUniformGroup.Basic
@@ -18,8 +19,10 @@ public import Mathlib.Topology.Algebra.SeparationQuotient.Basic
 This file endows the completion of a topological ring with a ring structure.
 More precisely, the instance `UniformSpace.Completion.ring` builds a ring structure
 on the completion of a topological ring endowed with a compatible uniform structure in the sense of
-`IsUniformAddGroup`; the multiplication `UniformSpace.Completion.mul` exists under the same
-hypotheses. There is also a commutative version when the original ring is commutative.
+`IsUniformAddGroup`. The multiplication `UniformSpace.Completion.mul` is the continuous extension of
+the multiplication of `α`; it exists exactly when multiplication is Cauchy continuous
+(`CauchyContinuousMul`), in particular under the same hypotheses. There is also a commutative
+version when the original ring is commutative.
 Moreover, if a topological ring is an algebra over a commutative semiring, then so is its
 `UniformSpace.Completion`.
 
@@ -62,28 +65,58 @@ theorem coe_one : ((1 : α) : Completion α) = 1 :=
 
 end one
 
-variable {α : Type*} [Ring α] [UniformSpace α]
+section Mul
 
-/-- The multiplication of the completion of a topological ring whose uniform structure is that of
-its additive group: the unique continuous extension of the multiplication of `α`
-(`UniformSpace.Completion.coe_mul` and the `ContinuousMul` instance below). -/
+variable {α : Type*} [UniformSpace α]
+
+/-- The multiplication on the completion: the unique continuous extension of the multiplication of
+`α` (`UniformSpace.Completion.coe_mul` and the `ContinuousMul` instance below), which exists
+exactly when multiplication is Cauchy continuous.  This holds in a topological ring whose uniform
+structure is that of its additive group (`IsTopologicalRing.cauchyContinuousMul`). -/
 @[nolint unusedArguments]
-instance mul [IsTopologicalRing α] [IsUniformAddGroup α] : Mul (Completion α) :=
+instance mul [Mul α] [CauchyContinuousMul α] : Mul (Completion α) :=
   ⟨curry <| (isDenseInducing_coe.prodMap isDenseInducing_coe).extend ((↑) ∘ uncurry (· * ·))⟩
 
-variable [IsTopologicalRing α] [IsUniformAddGroup α]
+variable [Mul α] [CauchyContinuousMul α]
 
 @[norm_cast]
 theorem coe_mul (a b : α) : ((a * b : α) : Completion α) = a * b :=
-  ((isDenseInducing_coe.prodMap isDenseInducing_coe).extend_eq
-      ((continuous_coe α).comp (@continuous_mul α _ _ _)) (a, b)).symm
+  (((uniformContinuous_coe α).cauchyContinuous.comp cauchyContinuous_mul).extend_eq
+    ((isUniformInducing_coe α).prod (isUniformInducing_coe α))
+    (denseRange_coe.prodMap denseRange_coe) (a, b)).symm
 
+/-- The multiplication on the completion is continuous. -/
 instance : ContinuousMul (Completion α) where
-  continuous_mul := by
+  continuous_mul := ((uniformContinuous_coe α).cauchyContinuous.comp
+    cauchyContinuous_mul).continuous_extend ((isUniformInducing_coe α).prod
+    (isUniformInducing_coe α)) (denseRange_coe.prodMap denseRange_coe)
+
+end Mul
+
+section IsTopologicalRing
+
+variable {α : Type*} [NonUnitalNonAssocRing α] [UniformSpace α] [IsTopologicalRing α]
+  [IsUniformAddGroup α]
+
+/-- Multiplication on a topological ring, possibly non-unital, whose uniform structure is that of
+its additive group is Cauchy continuous: by Bourbaki GT III.6.5 Theorem I
+(`IsDenseInducing.extend_Z_bilin`), it extends continuously to the completion. -/
+instance (priority := 100) _root_.IsTopologicalRing.cauchyContinuousMul :
+    CauchyContinuousMul α where
+  cauchyContinuous_mul := by
     let m := (AddMonoidHom.mul : α →+ α →+ α).compr₂ toCompl
-    have : Continuous fun p : α × α => m p.1 p.2 := (continuous_coe α).comp continuous_mul
+    have hm : Continuous fun p : α × α => m p.1 p.2 := (continuous_coe α).comp continuous_mul
     have di : IsDenseInducing (toCompl : α → Completion α) := isDenseInducing_coe
-    exact (di.extend_Z_bilin di this :)
+    have hcomp : ((↑) : α → Completion α) ∘ (fun p : α × α ↦ p.1 * p.2) =
+        (di.prodMap di).extend (fun p : α × α ↦ m p.1 p.2) ∘ Prod.map (↑) (↑) :=
+      funext fun p ↦ ((di.prodMap di).extend_eq hm p).symm
+    rw [(isUniformInducing_coe α).cauchyContinuous_iff, hcomp]
+    exact (di.extend_Z_bilin di hm).cauchyContinuous_comp
+      ((uniformContinuous_coe α).prodMap (uniformContinuous_coe α)).cauchyContinuous
+
+end IsTopologicalRing
+
+variable {α : Type*} [Ring α] [UniformSpace α] [IsTopologicalRing α] [IsUniformAddGroup α]
 
 instance ring : Ring (Completion α) :=
   { AddMonoidWithOne.unary, ((inferInstance : AddCommGroup (Completion α))),

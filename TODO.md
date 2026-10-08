@@ -1216,23 +1216,25 @@ operation.
   by an equal one.  `inseparable_extension_coe` and `AbstractCompletion.inseparable_extend_coe`,
   which served a target that is not separated, are removed; such a target is handled through its
   separation quotient.  `AbstractCompletion.extend_def`, which exposed the implementation, is
-  removed.  The negation, addition, and subtraction on `Completion α` exist for a uniform additive
-  group, the scalar action for a `UniformContinuousConstSMul` action, and the norm for a seminormed
-  additive group; previously they existed for every `Neg`, `Add`, `Sub`, `SMul`, and `Norm` and took
-  the fallback value when the operation was not uniformly continuous.  The extension is implemented
-  by `IsDenseInducing.extend`, whose limit choice is audited separately with `Filter.lim`; within
-  this domain the limit exists and is unique.  Tests cover the removed names, a missing uniform
-  continuity proof and the failing `fun_prop` default, a target that is not complete or not
-  separated, the extension and its uniqueness, `map_congr`, and the absence of negation, addition,
-  subtraction, scalar action, and norm without their structures.
+  removed.  The negation, addition, and subtraction on `Completion α` were restricted to a uniform
+  additive group and then extended to Cauchy continuous operations (the entry on the uniform group
+  hypothesis below), the scalar action exists for a `UniformContinuousConstSMul` action, and the
+  norm for a seminormed additive group; previously they existed for every `Neg`, `Add`, `Sub`,
+  `SMul`, and `Norm` and took the fallback value when the operation was not uniformly continuous.
+  The extension is implemented by `IsDenseInducing.extend`, whose limit choice is audited
+  separately with `Filter.lim`; within this domain the limit exists and is unique.  Tests cover the
+  removed names, a missing uniform continuity proof and the failing `fun_prop` default, a target
+  that is not complete or not separated, the extension and its uniqueness, `map_congr`, and the
+  absence of negation, addition, subtraction, scalar action, and norm without their structures.
 
 - [x] **Give the completion multiplication and inverse their domains.**
-  `UniformSpace.Completion.mul` in `Mathlib/Topology/Algebra/UniformRing.lean` is an instance for a
+  `UniformSpace.Completion.mul` in `Mathlib/Topology/Algebra/UniformRing.lean` was restricted to a
   topological ring with a uniform additive group, `[IsTopologicalRing α] [IsUniformAddGroup α]`,
   where it is the unique continuous extension of multiplication (`coe_mul` and the `ContinuousMul`
-  instance); it was an instance for every `[Ring α] [UniformSpace α]`, defined through the limit
-  choice of `IsDenseInducing.extend`, which gave fallback values where multiplication does not
-  extend continuously.  `UniformSpace.Completion.instInvCompletion` in
+  instance), and then extended to the exact domain of Cauchy continuous multiplication (next entry);
+  it was an instance for every `[Ring α] [UniformSpace α]`, defined through the limit choice of
+  `IsDenseInducing.extend`, which gave fallback values where multiplication does not extend
+  continuously.  `UniformSpace.Completion.instInvCompletion` in
   `Mathlib/Topology/Algebra/UniformField.lean` is an instance for a completable field whose
   inversion is continuous away from zero, `[ContinuousInv₀ K] [CompletableTopField K]`, where it is
   the unique continuous extension of inversion away from zero (`coe_inv` and the new
@@ -1249,16 +1251,62 @@ operation.
   normed field as routine sufficient conditions, the absence of multiplication and inverse when
   either hypothesis is missing, and the privatized names.
 
-- [ ] **Weaken the uniform group hypothesis of the completion operations.**
-  Negation, addition, and subtraction on `Completion α` in
-  `Mathlib/Topology/Algebra/GroupCompletion.lean` need `[IsUniformAddGroup α]` although uniform
-  continuity of the operation suffices; no class expresses uniformly continuous addition on a
-  uniform additive monoid, and no consumer needs one.  If one is introduced, give these operations
-  the weaker hypothesis.  The multiplication `UniformSpace.Completion.mul` in
-  `Mathlib/Topology/Algebra/UniformRing.lean` likewise takes the textbook sufficient condition
-  `[IsTopologicalRing α] [IsUniformAddGroup α]` (equivalently `ContinuousMul` with a uniform
-  additive group); the exact condition for a continuous extension of multiplication, that the
-  product sends Cauchy filters on `α × α` to Cauchy filters, is not expressed by a class.
+- [x] **Weaken the uniform group hypothesis of the completion operations.**
+  The negation, addition, subtraction, and multiplication of `UniformSpace.Completion α` in
+  `Mathlib/Topology/Algebra/GroupCompletion.lean` and `Mathlib/Topology/Algebra/UniformRing.lean`
+  are instances for `[CauchyContinuousNeg α]`, `[CauchyContinuousAdd α]`, `[CauchyContinuousSub α]`,
+  and `[CauchyContinuousMul α]`: the operation maps Cauchy filters to Cauchy filters.  This is
+  exactly the condition for the operation to extend continuously to the completion: a Cauchy
+  continuous map has a continuous extension along a dense uniform inducing map into a complete
+  separated space (`CauchyContinuous.continuous_extend`), and a continuous map after a Cauchy
+  continuous map into a complete space is Cauchy continuous (`Continuous.cauchyContinuous_comp`);
+  for maps on `α`, `Completion.cauchyContinuous_iff_exists_continuous_extension` states the
+  equivalence.  The definition `CauchyContinuous` in
+  `Mathlib/Topology/UniformSpace/CauchyContinuous.lean` and the classes in
+  `Mathlib/Topology/Algebra/CauchyContinuousMul.lean` are new.  Uniform groups have the classes
+  (`IsUniformGroup.cauchyContinuousMul` and its siblings), and a topological ring, possibly
+  non-unital, with a uniform additive group has `CauchyContinuousMul`
+  (`IsTopologicalRing.cauchyContinuousMul`, through `IsDenseInducing.extend_Z_bilin`), although its
+  multiplication need not be uniformly continuous, as on `ℝ`; uniform continuity, which the entry
+  first proposed, is therefore only a sufficient condition.  A Cauchy continuous operation is
+  continuous, and on a complete space a continuous operation is Cauchy continuous
+  (`CauchyContinuousMul.continuousMul`, `CauchyContinuousMul.of_continuousMul`, and their
+  siblings); these are theorems, since as instances they would form a cycle.  The operations were
+  instances for a uniform additive group, respectively a topological ring with a uniform additive
+  group.  Every completion that had these operations keeps them, and the completions of a
+  multiplicative uniform group and of a non-unital topological ring with a uniform additive group
+  gain a multiplication, with `coe_mul` and `ContinuousMul`, but no further structure; otherwise
+  the change makes the interface state the exact domain.  The instances are implemented by
+  `IsDenseInducing.extend`, whose limit choice is audited under the `Filter.lim` entry; on the
+  Cauchy continuous domain the limit exists (`CauchyContinuous.exists_tendsto_comap_nhds`) and is
+  unique.  `coe_neg`, `coe_add`, `coe_sub`, `coe_mul`, and the `ContinuousNeg`, `ContinuousAdd`,
+  `ContinuousSub`, and `ContinuousMul` instances on the completion hold under the same classes; the
+  group, ring, and field structures keep their hypotheses (next entry).  Tests cover the
+  operations, their values on `α`, and their continuity under the classes, the instances for uniform
+  groups and non-unital rings, the extension criterion in both directions and its equivalence for
+  the completion, the instance for `ℝ` with a proof that multiplication on `ℝ` is not uniformly
+  continuous, and the absence of each operation without its class.
+
+- [ ] **Give the completion scalar action and algebraic structures their exact domains.**
+  Four questions remain after the previous entry.  The scalar action on `UniformSpace.Completion X`
+  in `Mathlib/Topology/Algebra/UniformMulAction.lean` is an instance for
+  `[UniformContinuousConstSMul M X]`; by the same criterion, `c • ·` extends continuously exactly
+  when it is Cauchy continuous, so uniform continuity is only sufficient.  The `AddMonoid`,
+  `SubNegMonoid`, `AddGroup`, and `AddCommGroup` instances on the completion in
+  `Mathlib/Topology/Algebra/GroupCompletion.lean` keep `[IsUniformAddGroup α]`, and
+  `UniformSpace.Completion.ring` in `Mathlib/Topology/Algebra/UniformRing.lean` and the field
+  structure built on it keep their hypotheses.  The axioms are closed conditions in continuous
+  operations on a separated space, so they plausibly hold under Cauchy continuity of the operations
+  alone; this is not verified in Lean.  `IsUniformAddGroup (Completion α)` needs uniform continuity,
+  and the `nsmul` and `zsmul` fields, which come from the scalar actions of `ℕ` and `ℤ` and so from
+  `UniformContinuousConstSMul`, need a decision.  The completion of a multiplicative uniform group
+  has a multiplication but no `One`, `Inv`, `Div`, or group structure, since
+  `Mathlib/Topology/Algebra/GroupCompletion.lean` builds only the additive structure, so
+  `CauchyContinuousInv` and `CauchyContinuousDiv` have no consumer yet; the multiplicative
+  counterpart of that structure is not built.  Finally, the four operation instances spell out
+  `IsDenseInducing.extend` and carry `@[nolint unusedArguments]`, since only the theorems about
+  them use their class argument; a named extension of a Cauchy continuous map, parallel to
+  `Completion.extension`, would take the evidence as an argument and remove both.
 
 - [x] **Make vector-measure products and densities conditional constructions.**
   `VectorMeasure.prod μ ν B` takes `[HasProd μ ν B]`: a vector measure with `B (μ s) (ν t)` on the

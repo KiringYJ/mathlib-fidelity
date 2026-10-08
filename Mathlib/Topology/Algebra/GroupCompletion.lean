@@ -5,6 +5,7 @@ Authors: Patrick Massot, Johannes Hölzl
 -/
 module
 
+public import Mathlib.Topology.Algebra.CauchyContinuousMul
 public import Mathlib.Topology.Algebra.UniformMulAction
 
 /-!
@@ -15,6 +16,11 @@ More precisely the instance `UniformSpace.Completion.addGroup` builds an abelian
 on the completion of an abelian group endowed with a compatible uniform structure.
 Then the instance `UniformSpace.Completion.isUniformAddGroup` proves this group structure is
 compatible with the completed uniform structure. The compatibility condition is `IsUniformAddGroup`.
+
+The negation, addition, and subtraction of `UniformSpace.Completion α` are the continuous
+extensions of those of `α`; each exists exactly when the operation is Cauchy continuous
+(`CauchyContinuousNeg`, `CauchyContinuousAdd`, `CauchyContinuousSub`), which holds in a uniform
+additive group.
 
 ## Main declarations
 
@@ -44,14 +50,25 @@ variable [UniformSpace α]
 instance [Zero α] : Zero (Completion α) :=
   ⟨(0 : α)⟩
 
-instance [AddGroup α] [IsUniformAddGroup α] : Neg (Completion α) :=
-  ⟨Completion.map (fun a ↦ -a : α → α)⟩
+/-- The negation on the completion: the continuous extension of the negation of `α`
+(`UniformSpace.Completion.coe_neg`), which exists exactly when negation is Cauchy continuous. -/
+@[nolint unusedArguments]
+instance [Neg α] [CauchyContinuousNeg α] : Neg (Completion α) :=
+  ⟨Completion.isDenseInducing_coe.extend ((↑) ∘ fun a : α ↦ -a)⟩
 
-instance [AddGroup α] [IsUniformAddGroup α] : Add (Completion α) :=
-  ⟨Completion.map₂ (· + ·) uniformContinuous_add⟩
+/-- The addition on the completion: the continuous extension of the addition of `α`
+(`UniformSpace.Completion.coe_add`), which exists exactly when addition is Cauchy continuous. -/
+@[nolint unusedArguments]
+instance [Add α] [CauchyContinuousAdd α] : Add (Completion α) :=
+  ⟨Function.curry <| (Completion.isDenseInducing_coe.prodMap Completion.isDenseInducing_coe).extend
+    ((↑) ∘ Function.uncurry fun a b : α ↦ a + b)⟩
 
-instance [AddGroup α] [IsUniformAddGroup α] : Sub (Completion α) :=
-  ⟨Completion.map₂ Sub.sub uniformContinuous_sub⟩
+/-- The subtraction on the completion: the continuous extension of the subtraction of `α`
+(`UniformSpace.Completion.coe_sub`), which exists exactly when subtraction is Cauchy continuous. -/
+@[nolint unusedArguments]
+instance [Sub α] [CauchyContinuousSub α] : Sub (Completion α) :=
+  ⟨Function.curry <| (Completion.isDenseInducing_coe.prodMap Completion.isDenseInducing_coe).extend
+    ((↑) ∘ Function.uncurry fun a b : α ↦ a - b)⟩
 
 @[norm_cast]
 theorem UniformSpace.Completion.coe_zero [Zero α] : ((0 : α) : Completion α) = 0 :=
@@ -78,40 +95,68 @@ instance [UniformSpace α] [MonoidWithZero M] [Zero α] [MulActionWithZero M α]
 
 end Zero
 
+section Operations
+
+variable [UniformSpace α]
+
+@[norm_cast]
+theorem coe_neg [Neg α] [CauchyContinuousNeg α] (a : α) : ((-a : α) : Completion α) = -a :=
+  (((uniformContinuous_coe α).cauchyContinuous.comp cauchyContinuous_neg).extend_eq
+    (isUniformInducing_coe α) denseRange_coe a).symm
+
+@[norm_cast]
+theorem coe_add [Add α] [CauchyContinuousAdd α] (a b : α) :
+    ((a + b : α) : Completion α) = a + b :=
+  (((uniformContinuous_coe α).cauchyContinuous.comp cauchyContinuous_add).extend_eq
+    ((isUniformInducing_coe α).prod (isUniformInducing_coe α))
+    (denseRange_coe.prodMap denseRange_coe) (a, b)).symm
+
+@[norm_cast]
+theorem coe_sub [Sub α] [CauchyContinuousSub α] (a b : α) :
+    ((a - b : α) : Completion α) = a - b :=
+  (((uniformContinuous_coe α).cauchyContinuous.comp cauchyContinuous_sub).extend_eq
+    ((isUniformInducing_coe α).prod (isUniformInducing_coe α))
+    (denseRange_coe.prodMap denseRange_coe) (a, b)).symm
+
+/-- The negation on the completion is continuous. -/
+instance [Neg α] [CauchyContinuousNeg α] : ContinuousNeg (Completion α) where
+  continuous_neg := ((uniformContinuous_coe α).cauchyContinuous.comp
+    cauchyContinuous_neg).continuous_extend (isUniformInducing_coe α) denseRange_coe
+
+/-- The addition on the completion is continuous. -/
+instance [Add α] [CauchyContinuousAdd α] : ContinuousAdd (Completion α) where
+  continuous_add := ((uniformContinuous_coe α).cauchyContinuous.comp
+    cauchyContinuous_add).continuous_extend ((isUniformInducing_coe α).prod
+    (isUniformInducing_coe α)) (denseRange_coe.prodMap denseRange_coe)
+
+/-- The subtraction on the completion is continuous. -/
+instance [Sub α] [CauchyContinuousSub α] : ContinuousSub (Completion α) where
+  continuous_sub := ((uniformContinuous_coe α).cauchyContinuous.comp
+    cauchyContinuous_sub).continuous_extend ((isUniformInducing_coe α).prod
+    (isUniformInducing_coe α)) (denseRange_coe.prodMap denseRange_coe)
+
+end Operations
+
 section IsUniformAddGroup
 
 variable [UniformSpace α] [AddGroup α] [IsUniformAddGroup α]
 
-@[norm_cast]
-theorem coe_neg (a : α) : ((-a : α) : Completion α) = -a :=
-  (map_coe uniformContinuous_neg a).symm
-
-@[norm_cast]
-theorem coe_sub (a b : α) : ((a - b : α) : Completion α) = a - b :=
-  (map₂_coe_coe a b Sub.sub uniformContinuous_sub).symm
-
-@[norm_cast]
-theorem coe_add (a b : α) : ((a + b : α) : Completion α) = a + b :=
-  (map₂_coe_coe a b (· + ·) uniformContinuous_add).symm
-
 instance : AddMonoid (Completion α) where
   zero_add a :=
     Completion.induction_on a
-      (isClosed_eq (continuous_map₂ uniformContinuous_add continuous_const continuous_id)
-        continuous_id) fun a ↦
+      (isClosed_eq (continuous_const.add continuous_id) continuous_id) fun a ↦
       show 0 + (a : Completion α) = a by rw [← coe_zero, ← coe_add, zero_add]
   add_zero a :=
     Completion.induction_on a
-      (isClosed_eq (continuous_map₂ uniformContinuous_add continuous_id continuous_const)
-        continuous_id) fun a ↦
+      (isClosed_eq (continuous_id.add continuous_const) continuous_id) fun a ↦
       show (a : Completion α) + 0 = a by rw [← coe_zero, ← coe_add, add_zero]
   add_assoc := fun a b c ↦
     Completion.induction_on₃ a b c
       (isClosed_eq
-        (continuous_map₂ uniformContinuous_add
-          (continuous_map₂ uniformContinuous_add continuous_fst (by fun_prop)) (by fun_prop))
-        (continuous_map₂ uniformContinuous_add continuous_fst
-          (continuous_map₂ uniformContinuous_add (by fun_prop) (by fun_prop))))
+        ((continuous_fst.add (continuous_fst.comp continuous_snd)).add
+          (continuous_snd.comp continuous_snd))
+        (continuous_fst.add
+          ((continuous_fst.comp continuous_snd).add (continuous_snd.comp continuous_snd))))
       fun a b c ↦
       show (a : Completion α) + b + c = a + (b + c) by repeat' rw_mod_cast [add_assoc]
   nsmul_zero a :=
@@ -119,32 +164,29 @@ instance : AddMonoid (Completion α) where
       show 0 • (a : Completion α) = 0 by rw [← coe_smul, ← coe_zero, zero_smul]
   nsmul_succ n a :=
     Completion.induction_on a
-      (isClosed_eq (continuous_const_smul _) <|
-        continuous_map₂ uniformContinuous_add (continuous_const_smul _) continuous_id) fun a ↦
+      (isClosed_eq (continuous_const_smul _) <| (continuous_const_smul _).add continuous_id)
+      fun a ↦
       show (n + 1) • (a : Completion α) = n • (a : Completion α) + (a : Completion α) by
         rw [← coe_smul, succ_nsmul, coe_add, coe_smul]
 
 instance : SubNegMonoid (Completion α) where
   sub_eq_add_neg a b :=
     Completion.induction_on₂ a b
-      (isClosed_eq (continuous_map₂ uniformContinuous_sub continuous_fst continuous_snd)
-        (continuous_map₂ uniformContinuous_add continuous_fst
-          ((Completion.continuous_map uniformContinuous_neg).comp continuous_snd)))
+      (isClosed_eq (continuous_fst.sub continuous_snd) (continuous_fst.add continuous_snd.neg))
       fun a b ↦ mod_cast congr_arg ((↑) : α → Completion α) (sub_eq_add_neg a b)
   zsmul_zero' a :=
     Completion.induction_on a (isClosed_eq (continuous_const_smul _) continuous_const) fun a ↦
       show (0 : ℤ) • (a : Completion α) = 0 by rw [← coe_smul, ← coe_zero, zero_smul]
   zsmul_succ' n a :=
     Completion.induction_on a
-      (isClosed_eq (continuous_const_smul _) <|
-        continuous_map₂ uniformContinuous_add (continuous_const_smul _) continuous_id) fun a ↦
+      (isClosed_eq (continuous_const_smul _) <| (continuous_const_smul _).add continuous_id)
+      fun a ↦
         show (n.succ : ℤ) • (a : Completion α) = _ by
           rw [← coe_smul, show (n.succ : ℤ) • a = (n : ℤ) • a + a from
             SubNegMonoid.zsmul_succ' n a, coe_add, coe_smul]
   zsmul_neg' n a :=
     Completion.induction_on a
-      (isClosed_eq (continuous_const_smul _) <|
-        (Completion.continuous_map uniformContinuous_neg).comp (continuous_const_smul _)) fun a ↦
+      (isClosed_eq (continuous_const_smul _) <| (continuous_const_smul _).neg) fun a ↦
         show (Int.negSucc n) • (a : Completion α) = _ by
           rw [← coe_smul, show (Int.negSucc n) • a = -((n.succ : ℤ) • a) from
             SubNegMonoid.zsmul_neg' n a, coe_neg, coe_smul]
@@ -152,14 +194,14 @@ instance : SubNegMonoid (Completion α) where
 instance addGroup : AddGroup (Completion α) where
   neg_add_cancel a :=
     Completion.induction_on a
-      (isClosed_eq (continuous_map₂ uniformContinuous_add
-        (Completion.continuous_map uniformContinuous_neg) continuous_id) continuous_const)
+      (isClosed_eq (continuous_neg.add continuous_id) continuous_const)
       fun a ↦
       show -(a : Completion α) + a = 0 by
         rw_mod_cast [neg_add_cancel]
         rfl
 
 instance isUniformAddGroup : IsUniformAddGroup (Completion α) :=
+  -- The subtraction of the completion is definitionally `Completion.map₂ Sub.sub _`.
   ⟨uniformContinuous_map₂ uniformContinuous_sub⟩
 
 instance {M} [Monoid M] [DistribMulAction M α] [UniformContinuousConstSMul M α] :

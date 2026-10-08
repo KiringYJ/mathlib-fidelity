@@ -7825,6 +7825,7 @@ public import Mathlib.Topology.Algebra.AsymptoticCone
 public import Mathlib.Topology.Algebra.Category.ProfiniteGrp.Basic
 public import Mathlib.Topology.Algebra.Category.ProfiniteGrp.Completion
 public import Mathlib.Topology.Algebra.Category.ProfiniteGrp.Limits
+public import Mathlib.Topology.Algebra.CauchyContinuousMul
 public import Mathlib.Topology.Algebra.ClopenNhdofOne
 public import Mathlib.Topology.Algebra.ConstMulAction
 public import Mathlib.Topology.Algebra.Constructions
@@ -8471,6 +8472,7 @@ public import Mathlib.Topology.UniformSpace.AbstractCompletion
 public import Mathlib.Topology.UniformSpace.Ascoli
 public import Mathlib.Topology.UniformSpace.Basic
 public import Mathlib.Topology.UniformSpace.Cauchy
+public import Mathlib.Topology.UniformSpace.CauchyContinuous
 public import Mathlib.Topology.UniformSpace.Closeds
 public import Mathlib.Topology.UniformSpace.Compact
 public import Mathlib.Topology.UniformSpace.CompactConvergence
