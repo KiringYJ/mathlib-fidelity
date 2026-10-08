@@ -155,6 +155,30 @@ example {ℓ : Ω → 𝓨 → ℝ≥0∞} (hl : Measurable (Function.uncurry �
 
 end Posterior
 
+-- An improper prior: the Bayes risk for Lebesgue measure, with a σ-finite law of the data, is
+-- computed from any representative of the posterior.
+example (κ : Kernel ℝ ℝ) [IsMarkovKernel κ] [SigmaFinite (κ ∘ₘ (volume : Measure ℝ))]
+    {ℓ : ℝ → ℝ → ℝ≥0∞} (hl : Measurable (Function.uncurry ℓ))
+    (h : HasArgminEstimator ℓ κ (volume : Measure ℝ)) {η : Kernel ℝ ℝ}
+    (hη : η ∈ κ†(volume : Measure ℝ)) :
+    bayesRisk ℓ κ volume = ∫⁻ x, ⨅ y, ∫⁻ θ, ℓ θ y ∂(η x) ∂(κ ∘ₘ volume) :=
+  h.bayesRisk_eq hl hη
+
+-- The average risk through the product of a representative of the posterior with an estimator,
+-- on the domain of that product.
+example (π : Measure ℝ) (P : Kernel ℝ ℝ) [π.HasCompProd P] [SigmaFinite (P ∘ₘ π)]
+    {ℓ : ℝ → ℝ → ℝ≥0∞} (hl : Measurable (Function.uncurry ℓ)) (κ : Kernel ℝ ℝ) [IsSFiniteKernel κ]
+    {η : Kernel ℝ ℝ} [η.HasCompProd (Kernel.prodMkRight ℝ κ)] (hη : η ∈ P†π) :
+    avgRisk ℓ P κ π = ∫⁻ θy, ℓ θy.1 θy.2 ∂((η ×ₖ κ) ∘ₘ (P ∘ₘ π)) :=
+  avgRisk_eq_lintegral_posterior_prod hl P κ π hη
+
+-- The data kernel need not be s-finite: the statements take the domain of the joint law.
+example (π : Measure ℝ) (P : Kernel ℝ ℝ) [π.HasCompProd P] [SigmaFinite (P ∘ₘ π)]
+    {ℓ : ℝ → ℝ → ℝ≥0∞} (hl : Measurable (Function.uncurry ℓ)) (h : HasArgminEstimator ℓ P π)
+    {η : Kernel ℝ ℝ} (hη : η ∈ P†π) :
+    bayesRisk ℓ P π = ∫⁻ x, ⨅ y, ∫⁻ θ, ℓ θ y ∂(η x) ∂(P ∘ₘ π) :=
+  h.bayesRisk_eq hl hη
+
 /-! ### Rejection of kernels that are wrong on a set of positive measure -/
 
 -- The conditional distribution of a random variable given itself under `dirac 0` is `dirac 0` at

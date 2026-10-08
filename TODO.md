@@ -1100,6 +1100,23 @@ operation.
   in `Mathlib/Probability/Independence/` and `Mathlib/Probability/Moments/SubGaussian.lean` use
   finite measures.
 
+- [x] **Give the Bayes estimator statements the domain of the posterior.**
+  The statements of `Mathlib/Probability/Decision/BayesEstimator.lean` took a nonempty standard
+  Borel `Θ`, a finite prior, and a finite kernel, which make the posterior exist, and a Markov
+  representative of the posterior.  They now take the class of the joint law with swapped
+  coordinates and the domain `π.HasCompProd P` of the joint law, and hold for every representative
+  of the posterior: the average risk of an s-finite estimator is the integral against the law
+  `P ∘ₘ π` of the data of its expected loss under a representative
+  (`avgRisk_eq_lintegral_lintegral_lintegral`), since `π ⊗ₘ P` is the image under `Prod.swap` of
+  the composition-product of `P ∘ₘ π` with the representative, and the order of the inner
+  integrals changes on the set of full measure where the representative is a probability measure.
+  The lower bounds compare with Markov estimators, as `bayesRisk` does.
+  `avgRisk_eq_lintegral_posterior_prod` takes the domain of `η ×ₖ κ`.  `IsArgminEstimator` and
+  `HasArgminEstimator` take the class and the domain as parameters: with the class as a field, the
+  predicates would be silently false outside it.  Instance search supplies the class for a nonempty
+  standard Borel `Θ` and a σ-finite law `P ∘ₘ π` of the data, which admits improper priors such as
+  Lebesgue measure.  Tests are in `MathlibTest/CondDistribStrict.lean`.
+
 - [x] **Give parametric distributions their parameter domains.**
   `gammaMeasure a r ha hr`, `expMeasure r hr`, `paretoMeasure t r ht hr`, and
   `betaMeasure α β hα hβ` take proofs that their parameters are positive, and
@@ -2329,11 +2346,7 @@ operation.
   `condExp_ae_eq_integral_condDistrib_id`.  In `Posterior.lean`: `posterior_prod_id_comp`,
   `parallelProd_posterior_comp_copy_comp`, `deterministic_comp_posterior`,
   `mem_posterior_posterior`, and `comp_mem_posterior_comp`, and the Radon--Nikodym statements of
-  the entry above.  In `Mathlib/Probability/Decision/BayesEstimator.lean`:
-  `avgRisk_eq_lintegral_posterior_prod`, `avgRisk_eq_lintegral_lintegral_lintegral`,
-  `lintegral_iInf_posterior_le_avgRisk`, `lintegral_iInf_posterior_le_bayesRisk`,
-  `IsArgminEstimator.avgRisk_eq_lintegral_iInf`, and `HasArgminEstimator.bayesRisk_eq`.  In
-  `Mathlib/Probability/Independence/Conditional.lean`:
+  the entry above.  In `Mathlib/Probability/Independence/Conditional.lean`:
   `condIndepFun_iff_compProd_map_prod_eq_compProd_prod_map_map`,
   `condIndepFun_iff_map_prod_eq_prod_map_map`, `condIndepFun_iff_map_prod_eq_prod_comp_trim`,
   `condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib`, and
