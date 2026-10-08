@@ -12,10 +12,12 @@ where `hf` proves that `f` is uniformly continuous and `β` is complete and sepa
 supplies the limits that define the extension, and separation makes it the unique uniformly
 continuous map that agrees with `f` on `α`.  `UniformSpace.Completion.map f hf` lifts a uniformly
 continuous map to the completions; `fun_prop` supplies `hf` for routine maps.  The former value of
-the extension of a map that is not uniformly continuous, a constant, is removed, and the operations
-on a completion exist for a uniform additive group, a uniformly continuous scalar action, and a
-seminormed group; the multiplication exists for a topological ring with a uniform additive group,
-and the inverse for a completable field whose inversion is continuous away from zero.
+the extension of a map that is not uniformly continuous, a constant, is removed.  The negation,
+addition, subtraction, and multiplication of a completion exist exactly for Cauchy continuous
+operations, in particular for a uniform additive group and a topological ring, possibly
+non-unital, with a uniform additive group; the scalar action exists for a uniformly continuous
+action, the norm for a seminormed group, and the inverse for a completable field whose inversion is
+continuous away from zero.
 -/
 
 open UniformSpace
@@ -143,7 +145,132 @@ example {α : Type*} [UniformSpace α] [AddCommGroup α] [IsUniformAddGroup α] 
     ((a + b : α) : Completion α) = a + b :=
   Completion.coe_add a b
 
-/-! Without a uniform group structure, the completion has no addition. -/
+/-! The operations exist for Cauchy continuous operations, also outside groups, and they are the
+continuous extensions of the operations of `α`. -/
+
+noncomputable example {α : Type*} [UniformSpace α] [Add α] [CauchyContinuousAdd α]
+    (x y : Completion α) : Completion α :=
+  x + y
+
+example {α : Type*} [UniformSpace α] [Add α] [CauchyContinuousAdd α] (a b : α) :
+    ((a + b : α) : Completion α) = a + b :=
+  Completion.coe_add a b
+
+example {α : Type*} [UniformSpace α] [Add α] [CauchyContinuousAdd α] :
+    Continuous fun p : Completion α × Completion α ↦ p.1 + p.2 :=
+  continuous_add
+
+example {α : Type*} [UniformSpace α] [Neg α] [CauchyContinuousNeg α] (a : α) :
+    ((-a : α) : Completion α) = -a :=
+  Completion.coe_neg a
+
+example {α : Type*} [UniformSpace α] [Neg α] [CauchyContinuousNeg α] :
+    Continuous fun x : Completion α ↦ -x :=
+  continuous_neg
+
+example {α : Type*} [UniformSpace α] [Sub α] [CauchyContinuousSub α] (a b : α) :
+    ((a - b : α) : Completion α) = a - b :=
+  Completion.coe_sub a b
+
+example {α : Type*} [UniformSpace α] [Sub α] [CauchyContinuousSub α] :
+    Continuous fun p : Completion α × Completion α ↦ p.1 - p.2 :=
+  continuous_sub
+
+/-! The operations of a uniform group are Cauchy continuous. -/
+
+example {G : Type*} [UniformSpace G] [Group G] [IsUniformGroup G] : CauchyContinuousMul G :=
+  inferInstance
+
+example {G : Type*} [UniformSpace G] [Group G] [IsUniformGroup G] : CauchyContinuousInv G :=
+  inferInstance
+
+example {G : Type*} [UniformSpace G] [Group G] [IsUniformGroup G] : CauchyContinuousDiv G :=
+  inferInstance
+
+example {G : Type*} [UniformSpace G] [AddGroup G] [IsUniformAddGroup G] : CauchyContinuousAdd G :=
+  inferInstance
+
+example {G : Type*} [UniformSpace G] [AddGroup G] [IsUniformAddGroup G] : CauchyContinuousNeg G :=
+  inferInstance
+
+example {G : Type*} [UniformSpace G] [AddGroup G] [IsUniformAddGroup G] : CauchyContinuousSub G :=
+  inferInstance
+
+/-! The completion of a multiplicative uniform group has a multiplication. -/
+
+noncomputable example {G : Type*} [UniformSpace G] [Group G] [IsUniformGroup G]
+    (x y : Completion G) : Completion G :=
+  x * y
+
+/-! A Cauchy continuous operation is continuous, and on a complete space a continuous operation is
+Cauchy continuous. -/
+
+example {M : Type*} [UniformSpace M] [Mul M] [CauchyContinuousMul M] : ContinuousMul M :=
+  CauchyContinuousMul.continuousMul
+
+example {M : Type*} [UniformSpace M] [Neg M] [CauchyContinuousNeg M] : ContinuousNeg M :=
+  CauchyContinuousNeg.continuousNeg
+
+example {M : Type*} [UniformSpace M] [Div M] [CauchyContinuousDiv M] : ContinuousDiv M :=
+  CauchyContinuousDiv.continuousDiv
+
+example {M : Type*} [UniformSpace M] [Add M] [ContinuousAdd M] [CompleteSpace M] :
+    CauchyContinuousAdd M :=
+  CauchyContinuousAdd.of_continuousAdd
+
+example {M : Type*} [UniformSpace M] [Inv M] [ContinuousInv M] [CompleteSpace M] :
+    CauchyContinuousInv M :=
+  CauchyContinuousInv.of_continuousInv
+
+example {M : Type*} [UniformSpace M] [Sub M] [ContinuousSub M] [CompleteSpace M] :
+    CauchyContinuousSub M :=
+  CauchyContinuousSub.of_continuousSub
+
+/-! A uniformly continuous map is Cauchy continuous, and a Cauchy continuous map is continuous.
+Cauchy continuity is preserved by composition, and composing with a uniform inducing map neither
+creates nor destroys it. -/
+
+example {α β : Type*} [UniformSpace α] [UniformSpace β] {f : α → β} (hf : UniformContinuous f) :
+    Continuous f :=
+  hf.cauchyContinuous.continuous
+
+example {α β γ : Type*} [UniformSpace α] [UniformSpace β] [UniformSpace γ] {f : α → β}
+    {g : β → γ} (hg : CauchyContinuous g) (hf : CauchyContinuous f) : CauchyContinuous (g ∘ f) :=
+  hg.comp hf
+
+example {α β γ : Type*} [UniformSpace α] [UniformSpace β] [UniformSpace γ] {g : β → γ}
+    (hg : IsUniformInducing g) {f : α → β} : CauchyContinuous f ↔ CauchyContinuous (g ∘ f) :=
+  hg.cauchyContinuous_iff
+
+/-! Along a dense uniform inducing map, a Cauchy continuous map into a complete separated space
+extends continuously. -/
+
+example {α β γ : Type*} [UniformSpace α] [UniformSpace β] [UniformSpace γ] [CompleteSpace γ]
+    [T0Space γ] {e : α → β} {f : α → γ} (hf : CauchyContinuous f) (he : IsUniformInducing e)
+    (hd : DenseRange e) : Continuous ((he.isDenseInducing hd).extend f) :=
+  hf.continuous_extend he hd
+
+example {α β γ : Type*} [UniformSpace α] [UniformSpace β] [UniformSpace γ] [CompleteSpace γ]
+    [T0Space γ] {e : α → β} {f : α → γ} (hf : CauchyContinuous f) (he : IsUniformInducing e)
+    (hd : DenseRange e) (a : α) : (he.isDenseInducing hd).extend f (e a) = f a :=
+  hf.extend_eq he hd a
+
+/-! Conversely, a continuous map after a Cauchy continuous map into a complete space is Cauchy
+continuous, so for the completion, Cauchy continuity is equivalent to the existence of a continuous
+extension. -/
+
+example {α β γ : Type*} [UniformSpace α] [UniformSpace β] [UniformSpace γ] [CompleteSpace β]
+    {e : α → β} {g : β → γ} (hg : Continuous g) (he : CauchyContinuous e) :
+    CauchyContinuous (g ∘ e) :=
+  hg.cauchyContinuous_comp he
+
+example {α γ : Type*} [UniformSpace α] [UniformSpace γ] [CompleteSpace γ] [T0Space γ]
+    {f : α → γ} :
+    CauchyContinuous f ↔ ∃ g : Completion α → γ, Continuous g ∧ ∀ a : α, g a = f a :=
+  Completion.cauchyContinuous_iff_exists_continuous_extension
+
+/-! Without Cauchy continuous operations, the completion has no addition, negation, or
+subtraction. -/
 
 /--
 error: failed to synthesize instance of type class
@@ -200,8 +327,48 @@ Hint: Type class instance resolution failures can be inspected with the `set_opt
 #guard_msgs in
 example {E : Type*} [UniformSpace E] [Norm E] (x : Completion E) : ℝ := ‖x‖
 
-/-! The completion of a topological ring with a uniform additive group carries the extended
-multiplication; without them, the completion has no multiplication. -/
+/-! The multiplication exists for a Cauchy continuous multiplication, in particular for a
+topological ring with a uniform additive group, whose multiplication need not be uniformly
+continuous, as on `ℝ`; without these hypotheses, the completion has no multiplication. -/
+
+example {α : Type*} [UniformSpace α] [Mul α] [CauchyContinuousMul α] (a b : α) :
+    ((a * b : α) : Completion α) = a * b :=
+  Completion.coe_mul a b
+
+example {α : Type*} [UniformSpace α] [Mul α] [CauchyContinuousMul α] :
+    Continuous fun p : Completion α × Completion α ↦ p.1 * p.2 :=
+  continuous_mul
+
+example : CauchyContinuousMul ℝ := inferInstance
+
+/-! Multiplication on `ℝ` is not uniformly continuous: points of `ℝ × ℝ` at distance `δ / 2` near
+`(2 / δ, 2 / δ)` have products at distance `1`. -/
+
+example : ¬ UniformContinuous fun p : ℝ × ℝ ↦ p.1 * p.2 := by
+  intro h
+  obtain ⟨δ, hδ, hd⟩ := Metric.uniformContinuous_iff.1 h 1 one_pos
+  have hdist : dist ((2 / δ, 2 / δ) : ℝ × ℝ) (2 / δ + δ / 2, 2 / δ) < δ := by
+    rw [Prod.dist_eq, Real.dist_eq, Real.dist_eq]
+    have h1 : 2 / δ - (2 / δ + δ / 2) = -(δ / 2) := by ring
+    rw [h1, sub_self, abs_neg, abs_zero, abs_of_pos (show (0 : ℝ) < δ / 2 by positivity)]
+    exact max_lt (by linarith) hδ
+  have key : dist ((2 / δ) * (2 / δ)) ((2 / δ + δ / 2) * (2 / δ)) < 1 := hd hdist
+  have h2 : (2 / δ) * (2 / δ) - (2 / δ + δ / 2) * (2 / δ) = -1 := by
+    field_simp
+    ring
+  rw [Real.dist_eq, h2] at key
+  norm_num at key
+
+/-! A non-unital topological ring with a uniform additive group has a Cauchy continuous
+multiplication. -/
+
+example {α : Type*} [NonUnitalNonAssocRing α] [UniformSpace α] [IsTopologicalRing α]
+    [IsUniformAddGroup α] : CauchyContinuousMul α :=
+  inferInstance
+
+noncomputable example {α : Type*} [NonUnitalNonAssocRing α] [UniformSpace α] [IsTopologicalRing α]
+    [IsUniformAddGroup α] (x y : Completion α) : Completion α :=
+  x * y
 
 example {α : Type*} [Ring α] [UniformSpace α] [IsTopologicalRing α] [IsUniformAddGroup α]
     (a b : α) : ((a * b : α) : Completion α) = a * b :=

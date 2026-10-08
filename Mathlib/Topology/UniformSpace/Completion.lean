@@ -6,6 +6,7 @@ Authors: Patrick Massot, Johannes Hölzl
 module
 
 public import Mathlib.Topology.UniformSpace.AbstractCompletion
+public import Mathlib.Topology.UniformSpace.CauchyContinuous
 
 /-!
 # Hausdorff completions of uniform spaces
@@ -458,6 +459,20 @@ theorem extension_comp_coe {f : Completion α → β} (hf : UniformContinuous f)
   cPkg.extend_comp_coe hf
 
 end Extension
+
+/-- A map into a complete separated space extends continuously to the completion exactly when it is
+Cauchy continuous.  This is the domain of the operations of `Completion α`
+(`Mathlib/Topology/Algebra/GroupCompletion.lean`, `Mathlib/Topology/Algebra/UniformRing.lean`). -/
+theorem cauchyContinuous_iff_exists_continuous_extension [CompleteSpace β] [T0Space β]
+    {f : α → β} :
+    CauchyContinuous f ↔ ∃ g : Completion α → β, Continuous g ∧ ∀ a : α, g a = f a := by
+  refine ⟨fun hf ↦ ⟨isDenseInducing_coe.extend f, ?_, fun a ↦ ?_⟩, ?_⟩
+  · exact hf.continuous_extend (isUniformInducing_coe α) denseRange_coe
+  · exact hf.extend_eq (isUniformInducing_coe α) denseRange_coe a
+  · rintro ⟨g, hg, hgf⟩
+    have : f = g ∘ ((↑) : α → Completion α) := funext fun a ↦ (hgf a).symm
+    rw [this]
+    exact hg.cauchyContinuous_comp (uniformContinuous_coe α).cauchyContinuous
 
 section Map
 
