@@ -13,6 +13,11 @@ does not authorize code changes. Begin that work only in a task that explicitly
 requests it, after inspecting the then-current dependency graph and
 establishing a small prototype.
 
+The conjecture and proof-status policy is also adopted, with two epistemic
+kinds sharing one Lean mechanism. Its registry, admission gate, dependency
+index, and migrations are pending work in `TODO.md`; recording them here does
+not implement or authorize those changes.
+
 ## Purpose
 
 This fork is an independent downstream mathematical library built from
@@ -494,6 +499,147 @@ Rules that limit which declarations a task must change, such as the treatment
 of existing names above, limit the scope of the task. They do not make the
 existing form of a declaration preferable when a task decides its design.
 
+## Conjectures and Proof Status
+
+The fork adopts theorem-with-sorry roots and proof-dependency status.
+This is the accepted design; the registry, analyzer, CI gate, and user
+interfaces remain implementation work in
+[`TODO.md`](TODO.md#conjectures-and-proof-status----accepted-design-pending-implementation).
+
+### Epistemic kinds and a shared Lean interface
+
+Each unresolved registered root has one of two epistemic kinds:
+
+| Epistemic kind | Mathematical evidence |
+| --- | --- |
+| Genuine conjecture | The source presents the exact statement as a mathematical conjecture. |
+| Awaiting formalization | The result has a mathematical proof or is established in the source, but its proof has not yet been formalized here. |
+
+Both kinds have exactly the same Lean behavior: one ordinary theorem
+declaration with the mathematical statement written directly in its type,
+the same conjecture registry (provisionally `@[conjecture]`), and `by sorry`
+as the placeholder for the entire proof. They use the same dependency
+collector, placeholder-ownership checks, trusted axiom base, CI gate, and
+proof-status computation. The kind is descriptive metadata, not a different
+axiom, theorem type, proof mechanism, or exemption.
+
+Record the source and statement correspondence supporting the epistemic
+classification. An informal proof is evidence for Awaiting formalization; it
+is not a Lean proof and does not remove the unresolved root. Changing only
+the epistemic kind leaves the declaration, proof dependencies, and computed
+formal status unchanged. In particular, an established mathematical theorem
+may still be a dependency of a formally Conditional proof while its own
+formal proof remains a registered placeholder.
+
+Once a formal proof is supplied, replace the placeholder in the same
+declaration, preserving its name and mathematical statement. Do not introduce
+a separate `Prop` definition, a second proof declaration, or a named `axiom`
+for either kind. A statement refuted by an existing theorem must not be
+registered as an affirmative root of either kind; retain the refutation and
+its historical source at their actual claim strength.
+
+### Declaration and result interface
+
+A result that uses a registered root states its ordinary mathematical
+conclusion and uses the root's proof constant in its proof, directly or
+through other declarations. Do not admit conjecture-antecedent metastatements
+such as `RH → P`, or an `hRH` binder for the same antecedent, as the public
+interface for these results. Ordinary mathematical hypotheses, parameters,
+and implications remain part of their statements; they do not by themselves
+make a result conditional. Conditionality is derived from proof dependencies,
+not from an index of statement-level hypotheses.
+
+Keep roots and dependent results in their mathematical subject modules.
+Do not encode temporary proof status in a `Conditional/` directory or an
+`_assuming_RH` name suffix. Authors maintain root identity, epistemic kind,
+and source evidence; downstream conditional/unconditional labels are derived.
+
+### Derived status and admission
+
+Let `C_open` be all registered roots of either epistemic kind whose own
+entire-proof placeholder remains unresolved. For a theorem `T`, let `D(T)`
+be the members of `C_open` reachable through its transitive declaration
+dependencies. Traverse the elaborated types and values of supporting
+declarations as well as theorem proofs, so definitions, private helpers, and
+opaque declarations cannot hide a dependency. An import alone is not a proof
+dependency.
+
+After admission checks pass, the formal proof statuses are exactly:
+
+| Status | Meaning |
+| --- | --- |
+| Conjecture | A registered unresolved root of either epistemic kind with its permitted placeholder. Display the epistemic kind separately. |
+| Conditional | A complete ordinary proof with `D(T)` nonempty. Show the actual root set and its epistemic kinds. |
+| Unconditional | A complete ordinary proof with `D(T)` empty. |
+
+Conjecture in this status vocabulary identifies the unresolved registry role;
+only the epistemic metadata distinguishes a genuine mathematical conjecture
+from an established result awaiting formalization. Unconditional is relative
+to an explicitly reviewed trusted axiom base. Distinguish the standard Lean
+logical axioms, any separately approved evaluation trust, registered root
+placeholders, and unapproved axioms. A status describes the currently stored
+formal proof; it does not establish an unresolved mathematical claim or
+assert that its dependencies are logically necessary.
+
+Incomplete/untrusted developments are rejected, not a fourth admitted status.
+The CI gate must establish all of the following in the final elaborated
+environment before producing an admitted status index:
+
+- Every reachable `sorry` belongs to the designated entire-proof placeholder
+  of a registered root of either epistemic kind. Registration does not excuse
+  a partial proof containing additional holes.
+- Declaration types contain no direct `sorry`/`admit` or synthetic holes.
+  Traverse their dependencies under the same placeholder-ownership and
+  trusted-axiom checks; legitimate uses of registered root constants
+  contribute to `D(T)`.
+- Ordinary theorem proofs and supporting definitions contain no local
+  `sorry` or `admit`; indirect use of a valid root placeholder is allowed.
+- Synthetic sorries, elaboration errors, unregistered placeholders, and
+  unapproved axiom dependencies fail admission, including when reached through
+  imported or private helpers.
+
+Awaiting formalization admits a deliberately registered whole-statement
+root; it does not turn arbitrary local proof gaps into acceptable results.
+Audit placeholder ownership per declaration and occurrence; a shared
+`sorryAx` dependency or deduplicated diagnostic output is insufficient.
+Registry tagging or an epistemic label alone does not certify a proof.
+Perform validation after theorem elaboration has completed, including
+asynchronous theorem bodies.
+
+When a root receives a complete formal proof, it leaves `C_open`; recompute
+its status and every affected downstream status from that proof. If the new
+proof still uses another unresolved root of either kind, it is Conditional on
+the remaining roots. Only an empty unresolved dependency set makes it
+Unconditional. The theorem names, statements, and subject placement stay
+stable.
+
+### User-visible evidence and migration
+
+Provide a Lean/editor query, provisionally `#status T`, and generated
+documentation and search labels. Expose formal status, root epistemic kinds
+and source evidence, named unresolved dependencies, source links, and witness
+paths. Support an unconditional-only filter and reverse queries for results
+depending on a given root. Generate this information from the same validated
+environment and reviewed trust base, for example as a build-generated JSON
+index. Do not make readers inspect a proof DAG themselves or maintain a
+second manual formal-status ledger.
+
+The inherited `def RiemannHypothesis : Prop` in
+`Mathlib/NumberTheory/LSeries/RiemannZeta.lean` is a migration target, not an
+exemption from this design. Preserve its exact quantified zeta-zero statement
+and exclusions while moving to the single registered theorem interface.
+The same migration mechanism applies to inherited whole-statement aliases
+for results awaiting formalization, including `FermatLastTheorem` and
+`Nat.GrahamConjecture`; their mathematical status is recorded separately.
+
+Migrate actual whole-root antecedent interfaces to ordinary conclusions and
+proof dependencies, and remove obsolete whole-statement proposition aliases
+rather than keeping them as parallel public APIs. Preserve ordinary
+parameterized properties and their valid transport, equivalence, and
+refutation lemmas. Apply the existing naming policy during the deliberate
+migration. Recording this design does not implement the migration or the
+proof-status infrastructure.
+
 ## Contributions, Curated Intake, and Canonicalization
 
 This is a maintainer-curated library that accepts external pull requests which
@@ -528,8 +674,10 @@ tree.
 Evaluate candidate content separately from its current presentation. Admission
 requires evidence for:
 
-- a correct and faithful mathematical statement and proof, with assumptions,
-  axioms, `sorry`s, generated material, and conditional status made explicit;
+- a faithful, audited mathematical statement and either a complete proof under
+  the conjecture and proof-status policy above or an explicitly registered
+  unresolved root of either epistemic kind, with assumptions, axioms, generated
+  material, and status explicit;
 - a sufficiently identified source revision and provenance trail;
 - permission to copy, modify, and redistribute every imported part;
 - the absence of a materially equivalent canonical development, or a clear
@@ -549,10 +697,10 @@ the right mathematical abstraction. Compare the source literature and other
 formalizations, and obtain domain-appropriate review before canonicalizing the
 interface. The policy is:
 
-> Mathematical validity, provenance, and legal ingestibility determine
-> eligibility for admission; repository consistency determines migration, not
-> rejection. Actual admission remains a discretionary, evidence-based
-> curatorial decision.
+> Faithful mathematical content with an admissible proof status, provenance,
+> and legal ingestibility determines eligibility for admission; repository
+> consistency determines migration, not rejection. Actual admission remains a
+> discretionary, evidence-based curatorial decision.
 
 ### Recovery modes for older formalizations
 

@@ -1,11 +1,12 @@
 # Mathematical fidelity and API hygiene backlog
 
-This file records completed migrations and unresolved audit candidates under the strict-domain,
-representation, public-notation, and function-presentation policies in `FORK_DESIGN.md`.  A checked
-item records a completed migration or an explicit classification decision.  An unchecked item is
-only a hypothesis to investigate: neither its diagnosis nor its proposed replacement is approved
-until it passes the fidelity gate below.  Imperative wording in a candidate heading names the
-suspected problem; it does not authorize that particular repair.
+This file records completed migrations, unresolved audit candidates, and the accepted conjecture
+and proof-status implementation backlog under the policies in `FORK_DESIGN.md`. A checked item
+records a completed migration or an explicit classification decision. An unchecked audit candidate
+is only a hypothesis to investigate: neither its diagnosis nor its proposed replacement is approved
+until it passes the fidelity gate below. The separate accepted-design section uses unchecked boxes
+to track implementation only. Imperative wording in a candidate heading names the suspected problem;
+it does not authorize that particular repair.
 
 Mathematical fidelity is not the same as partiality or proof-carrying syntax.  A total operation may
 be a genuine extended invariant, an order-theoretic operation, or a choice operator whose input
@@ -67,6 +68,239 @@ state.
 This transitional-only rule is the canonical policy in `FORK_DESIGN.md`.  A literature-supported
 total object is reviewed on its own mathematics; it is not a permanent extension of the partial
 operation.
+
+## Conjectures and proof status -- accepted design, pending implementation
+
+The [conjecture and proof-status contract](FORK_DESIGN.md#conjectures-and-proof-status) is adopted.
+These unchecked items track implementation of that decision; they are not hypotheses about whether
+the inherited `def`-based whole-statement design should be retained. Genuine conjectures and results
+awaiting formalization share one Lean mechanism and differ only in epistemic metadata. Implement
+and validate the registry, dependency collector, and admission gate before migrating library roots
+or publishing status labels. The interface spellings below are proposed, and recording this backlog
+does not authorize their implementation in a documentation task.
+
+- [ ] **Register both epistemic kinds as single theorem declarations with an entire-proof placeholder.**
+  Add the proposed `@[conjecture]` registry using the existing Lean environment/attribute substrate.
+  Record Genuine conjecture versus Awaiting formalization with source/statement evidence as root
+  metadata. Use exactly the same theorem type, entire-proof placeholder, dependency/axiom checks,
+  and CI behavior for both kinds; an informal proof does not discharge a Lean placeholder.
+  Validate that registration identifies a theorem with a complete mathematical type with no direct
+  holes, whose dependencies satisfy the admission gate, and that each open root owns only its
+  designated whole-proof `by sorry` placeholder.
+  Reject registered `def`/`axiom` substitutes and partial proofs with nested holes. Check bodies
+  after elaboration finishes, including asynchronous values. A completed proof keeps the same
+  declaration and statement; derive its status from remaining dependencies rather than keeping a
+  permanent Conjecture label. Acceptance fixtures must cover valid quantified roots, malformed
+  registration, holes in types, synthetic holes, and completion using either no unresolved roots or
+  another unresolved root of either epistemic kind. Test that changing only the kind leaves the
+  proof term, dependency set, and formal status unchanged.
+
+- [ ] **Collect declaration dependencies and placeholder ownership as structured data.**
+  Reuse or factor the traversal in `Mathlib/Util/PrintSorries.lean`, with
+  `MathlibTest/Util/PrintSorries.lean` as existing traversal evidence. Its `collectSorries` returns
+  rendered `MessageData` and shares declaration/sorry deduplication state across roots; do not parse
+  that output or treat `#print axioms` reporting `sorryAx` as named conjecture attribution.
+  Retain per-root edges, owning declarations and occurrences, named conjecture sets, and witness
+  paths through types and values of theorem/definition/opaque helpers. Preserve ownership even for
+  identical sorry expressions, and audit reachable private/generated declarations rather than
+  inheriting the diagnostic blacklist. Capture source locations for queries; `PrintSorries.lean`
+  currently records source positions as unimplemented. Define and test the admitted module scope:
+  an imported environment includes its imports but cannot cover modules absent from that root.
+  Acceptance covers direct/transitive and multi-root dependencies, shared helpers, imported/private
+  helpers, type dependencies, repeated placeholders, and a proof that has ordinary hypotheses but
+  uses no unresolved root. Replacing a root proof must invalidate affected cached classifications and
+  recompute the whole dependent chain.
+
+- [ ] **Enforce the three-status admission gate and an explicit trusted axiom base.**
+  Run the ownership/axiom audit on the final environments for all admitted library targets.
+  Admit only Conjecture, Conditional, and Unconditional; every other local or reachable proof gap,
+  synthetic sorry, elaboration failure, or unapproved axiom is a CI error. A theorem that uses RH
+  and also contains its own `sorry` must fail rather than receive a Conditional label.
+  Review the axiom allowlist, including standard logical axioms and any evaluation trust, and
+  make unapproved dependencies a hard failure. The current `assert_no_sorry` in
+  `Mathlib/Util/AssertNoSorry.lean` rejects transitive `sorryAx`; it is not a named-root gate.
+  Reconcile warning handling in `scripts/lake-build-with-retry.sh` and
+  `.github/workflows/build_template.yml` (`lake build --wfail`) with the narrow registered-root
+  exception without suppressing unrelated diagnostics. The nanoda axiom audit in
+  `.github/workflows/daily.yml` currently has `unpermitted_axiom_hard_error: false`; it does not
+  establish this contract. Audit `Wanted/` `proof_wanted` goal metadata separately from proved
+  results: its private `ProofWanted P` wrappers are neither proofs of `P` nor `sorryAx` roots.
+  Guarded `MathlibTest/` negative fixtures are not admitted results; unowned proof placeholders
+  reached through private library helpers still fail the gate. Acceptance requires positive
+  three-status fixtures and negative tests for unregistered, hidden/imported, nested, type-level, synthetic,
+  and extra-local placeholders plus unapproved axioms. Do not publish an admitted index after a
+  failed or incomplete audit.
+
+- [ ] **Migrate the inherited Riemann hypothesis and audit other conjecture interfaces.**
+  `RiemannHypothesis` in `Mathlib/NumberTheory/LSeries/RiemannZeta.lean` is currently a
+  `@[wikidata Q205966] def ... : Prop`. Its exact statement is
+  `∀ (s : ℂ) (_ : riemannZeta s = 0) (_ : ¬∃ n : ℕ, s = -2 * (n + 1)) (_ : s ≠ 1), s.re = 1 / 2`.
+  Once the registry and gate are ready, replace the proposition definition with one registered
+  theorem of Genuine conjecture kind using that same quantified statement and entire-proof
+  placeholder; preserve the mathematical exclusions and Wikidata attribution, and apply the
+  deliberate naming policy.
+  Remove the old public proposition alias rather than retaining it beside a second proof theorem.
+  The 2026-10-11 tracked-source scan found only this declaration and no direct consumers in
+  `Mathlib/`, `MathlibTest/`, `Archive/`, `Counterexamples/`, or `Wanted/`; recheck at migration.
+  The codebase-wide inventory below covers both epistemic kinds and actual consumers. Migrate
+  actual `RH → P` or `hRH` interfaces to ordinary conclusions whose proofs use the registered
+  conjecture constant. Do not invent such consumers or rewrite ordinary mathematical hypotheses.
+  Acceptance requires exact statement correspondence, an open-root status, direct/transitive
+  downstream status fixtures, absence of the obsolete public alias and conjecture-antecedent
+  interfaces in the migrated family, relevant builds/linters, and final-state downstream checks.
+  Completing this API migration does not prove RH.
+
+- [ ] **Expose proof status in Lean, the editor, generated documentation, and search.**
+  Add a query provisionally spelled `#status T` and a build-generated status index, for example
+  JSON, from the same admitted environment and reviewed trust base. Display the three statuses,
+  named unresolved roots with their epistemic kinds/source evidence, dependency paths, and source
+  links. Provide an unconditional-only filter, root-based search, and reverse lookup of dependent
+  results; author-maintained metadata belongs only on registered roots. Keep declarations in subject
+  modules with stable
+  mathematical names. Acceptance requires agreement among query/editor/docs/search output and the
+  CI classifier, plus regeneration after a root is proved: descendants become Unconditional only
+  when no unresolved root of either epistemic kind remains. An epistemic-only metadata change must
+  not change formal status. Labels describe the current formal proof, not logically minimal
+  hypotheses. Multiple proof records for one statement are a possible later extension, not a
+  reason to duplicate public theorem APIs in this migration.
+
+### Codebase-wide migration inventory (2026-10-11)
+
+The scan covered all 9,432 tracked files: 9,203 Lean files and 229 other text files, with no
+nonignored untracked source files. The Lean scope includes `Mathlib/`, `MathlibTest/`, `Archive/`,
+`Counterexamples/`, `Wanted/`, tooling, documentation examples, and generated import roots.
+Keyword/status hits were supplemented by declaration and explicit/inferred Prop-return inventories,
+then checked against their source context and actual consumers in three disjoint review lanes.
+Dependency checkouts and build artifacts are not intake targets. This is a source census and a
+reviewed lexical candidate inventory, not an elaborated-environment proof of semantic exhaustiveness.
+Recheck source correspondence and current epistemic evidence at migration; the scan does not prove
+every source statement or admit it merely because it appears in this list.
+
+All eligible unresolved roots below use the same theorem-with-sorry/registry/DAG/CI mechanism.
+Genuine conjecture versus Awaiting formalization is epistemic metadata only. Existing complete
+proofs stay complete; do not introduce a placeholder dependency into a proved special case merely
+to simplify the interface migration.
+
+- [ ] **Migrate the FLT whole-statement alias and its actual public interfaces.**
+  `FermatLastTheorem` in `Mathlib/NumberTheory/FLT/Basic.lean:64` is the global proposition
+  `∀ n ≥ 3, FermatLastTheoremFor n`. The module identifies it as the established Wiles/Taylor-Wiles
+  theorem, while this checkout has no complete proof of that global statement. Register the
+  direct theorem statement with epistemic kind Awaiting formalization until its formal proof is
+  supplied. Preserve the exponent bound, the nonzero natural-number operands, and source evidence.
+  Retain `FermatLastTheoremWith`, `FermatLastTheoremFor`, `FermatLastTheoremWith'`, and
+  `FermatLastTheoremForThreeGen` as reusable parameterized properties/descent auxiliaries; some
+  parameter choices are false. Keep the existing exponent-three and exponent-four proofs
+  (`Mathlib/NumberTheory/FLT/Three.lean:749`, `Mathlib/NumberTheory/FLT/Four.lean:267`)
+  independent of the unresolved global root.
+  Audit `FermatLastTheorem.of_odd_primes` in `Mathlib/NumberTheory/FLT/Four.lean:276`: it is a proved reduction from
+  an explicit odd-prime-family premise, not a complete proof of FLT. Reconcile its public interface
+  under the new whole-root policy while preserving the valid reduction and ordinary predicate
+  transport/equivalence lemmas. The other global consumer is the Euler implication below.
+  Check catalogue references in `docs/100.yaml:141` and `docs/1000.yaml:53`.
+  Acceptance: one direct registered theorem, source-exact statement and epistemic provenance,
+  deliberate consumer/catalogue migration, removal of the old whole-statement alias, and unchanged
+  unconditional status of already proved subcases.
+
+- [ ] **Migrate Graham's distinguished theorem family without changing its formula.**
+  `Nat.GrahamConjecture` in `Mathlib/NumberTheory/MaricaSchoenheim.lean:34` is a `def : Prop`
+  with parameters `n : ℕ`, `f : ℕ → ℕ` and statement
+  `n ≠ 0 → StrictMonoOn f (Set.Iio n) → ∃ i < n, ∃ j < n, (f i).gcd (f j) * n ≤ f i`.
+  Its docstring explicitly says the conjecture is now a theorem in the literature. Use Awaiting
+  formalization for the full registered theorem family; ordinary parameters do not make this
+  distinguished named statement a generic property to retain as a separate whole-statement alias.
+  Migrate the actual consumer `Nat.grahamConjecture_of_squarefree` at line 38 to its directly
+  stated squarefree result and keep its existing complete proof independent of the unresolved
+  general root. No other source consumer was found. Preserve the exact quantifiers and inequality;
+  do not add a positivity hypothesis mechanically when the definition does not have one.
+  Acceptance: source correspondence, one registered family, removal of the distinguished alias,
+  and the squarefree theorem still checked without an unresolved-root dependency.
+
+- [ ] **Separate the refuted Euler alias from the LPS statement-domain audit.**
+  `Counterexamples/EulerSumOfPowers.lean:37-45` has the `abbrev` family
+  `Counterexample.SumOfPowersConjectureWith`, `SumOfPowersConjectureFor`, and the universal
+  `SumOfPowersConjecture`. The theorems `sumOfPowersConjectureFor_five_false` (line 97) and
+  `sumOfPowersConjectureFor_four_false` (line 113) refute instances of that universal claim.
+  A scratch Lean check derives `¬ Counterexample.SumOfPowersConjecture` from the latter.
+  Never turn the refuted universal into an affirmative registered placeholder of either kind.
+  Replace its whole-statement alias interface with a directly stated refutation; retain useful
+  exponent/semiring predicates, the proved small-exponent cases, and their refutation/transport
+  lemmas. Reconcile `fermatLastTheorem_of_sumOfPowersConjecture` (line 55), whose antecedent is
+  the refuted universal statement, rather than using it as a conditional proof route to FLT.
+  Keep generic parameterized implications at lines 48, 59, 79, 86, 130, and 150 as genuine
+  predicate comparisons where justified, with their assumptions explicit.
+  `Counterexample.LanderParkinSelfridgeConjecture` (line 145) is currently the parameterized
+  implication `ExistsEqualSumsOfLikePowersFor R k m n → k ≤ m + n` over an arbitrary semiring.
+  A second scratch Lean check proves `¬ LanderParkinSelfridgeConjecture ℕ 1 0 0`, witnessed by
+  two empty lists. Do not universalize this family unchanged. Audit the cited primary statement,
+  arithmetic domain, exponent/length restrictions, positivity, disjointness, and any primitive
+  conditions before selecting an exact genuine-conjecture root; keep ordinary existence predicates
+  separate. Acceptance: exact source/domain correspondence, no affirmative refuted root, preserved
+  existing checked refutations, and a regression for the empty-sum boundary.
+
+- [ ] **Migrate all 34 Wanted goals through reviewed statement and epistemic-kind correspondence.**
+  The 18 `Wanted/` source modules contain 34 `proof_wanted` entries. Batteries currently emits a
+  private `def ... : ProofWanted P := ⟨⟩` for each bodyless entry: these are goal metadata, not
+  proofs of `P`, axioms, or `sorryAx` roots. They do not contaminate surrounding proved theorems.
+  The evidence lives in `Batteries/Util/ProofWanted.lean` in the configured dependency; inspect
+  the pinned implementation during migration rather than changing or importing that dependency.
+  Replace selected goal wrappers with actual registered theorem declarations in their subject
+  modules, each with a complete audited type and a whole-proof placeholder of the appropriate
+  epistemic kind. Do not merely tag a `ProofWanted P` wrapper as a proved or conditional result.
+  The inventory below is complete for this source snapshot; declaration spellings retain their
+  source namespace context, which must be preserved during migration.
+
+  | Source under `Wanted/` | Goal declarations | Epistemic evidence / required review |
+  | --- | --- | --- |
+  | `Analysis/Convex/Cone/Basic.lean` | `ConvexCone.isOpen_hull` | Ordinary formalization goal; audit the API/domain limitation in its TODO. |
+  | `Analysis/Real/Pi/Chudnovsky.lean` | `chudnovskySum_eq_pi_inv` | Source presents Chudnovsky's formula; Awaiting formalization candidate. |
+  | `CategoryTheory/Limits/Shapes/Countable.lean` | `CategoryTheory.Limits.IsCofiltered.preorder_of_cofiltered`; `CategoryTheory.Limits.IsCofiltered.preorder_of_cofiltered_countable`; `CategoryTheory.Limits.IsCofiltered.hasCofilteredCountableLimits_of_hasSequentialLimits`; `CategoryTheory.Limits.IsCofiltered.hasCountableLimits_of_hasFiniteLimits_and_hasSequentialLimits`; `CategoryTheory.Limits.IsCofiltered.hasCountableColimits_of_hasFiniteColimits_and_hasSequentialColimits` | Five ordinary formalization goals; audit quantifiers, size and category assumptions. |
+  | `Combinatorics/SimpleGraph/StronglyRegular.lean` | `SimpleGraph.conway_99` | Source marks Conway's 99-graph existence problem open: Genuine conjecture candidate; verify current source/status before admission. |
+  | `Computability/TuringMachine/Computable.lean` | `Turing.TM2ComputableInPolyTime.comp` | Ordinary composition/formalization goal; audit complexity assumptions. |
+  | `Data/EReal/Operations.lean` | `EReal.recENNReal_neg_coe_ennreal` | Ordinary formalization goal. |
+  | `Geometry/Euclidean/Volume/Measure.lean` | `MeasureTheory.Measure.addHaarScalarFactor_hausdorffMeasure_eq` | Ordinary formalization goal; preserve normalization and dimension. |
+  | `Geometry/Manifold/PoincareConjecture.lean` | `ContinuousMap.HomotopyEquiv.nonempty_homeomorph_sphere`; `SimplyConnectedSpace.nonempty_homeomorph_sphere_three`; `SimplyConnectedSpace.nonempty_sdiffeomorph_sphere_three`; `exists_homeomorph_isEmpty_diffeomorph_sphere_seven`; `exists_open_nonempty_homeomorph_isEmpty_diffeomorph_euclideanSpace_four` | Five source-attributed established statements: Awaiting formalization candidates; preserve topological/smooth distinctions and all manifold hypotheses. |
+  | `Geometry/Manifold/SmoothEmbedding.lean` | `Manifold.IsSmoothEmbedding.comp`; `Manifold.Diffeomorph.isSmoothEmbedding` | Two ordinary formalization goals. |
+  | `GroupTheory/GroupAction/Jordan.lean` | `IsPreprimitive.is_two_pretransitive'`; `is_two_preprimitive_strong_jordan`; `Equiv.Perm.alternatingGroup_le_of_isPreprimitive_of_isCycle_mem` | Three formalization goals; check the attributed Jordan statements and exact action hypotheses. |
+  | `Order/KrullDimension.lean` | `Order.height_of_linearOrder`; `Order.coheight_of_linearOrder` | Two ordinary formalization goals. |
+  | `Probability/Combinatorics/BinomialRandomGraph/Defs.lean` | `SimpleGraph.binomialRandom_map_ncard_edgeSet_singleton` | Source requests a restatement; validate it before assigning an epistemic kind. |
+  | `Probability/Distributions/Binomial.lean` | `ProbabilityTheory.variance_of_hasLaw_binomial`; `ProbabilityTheory.condVar_of_hasLaw_binomial` | Two ordinary formalization goals; preserve distribution and parameter assumptions. |
+  | `RingTheory/Congruence/Basic.lean` | `RingCon.comap_ringConGen_equiv` | Ordinary formalization goal with a missing-API note. |
+  | `RingTheory/Etale/Descent.lean` | `Algebra.FormallySmooth.of_formallySmooth_tensorProduct_of_faithfullyFlat` | Source cites Raynaud-Gruson/Stacks; audit exact descent hypotheses. |
+  | `RingTheory/KrullDimension/Basic.lean` | `MvPolynomial.fin_ringKrullDim_eq_add_of_isNoetherianRing` | Ordinary formalization goal. |
+  | `RingTheory/SimpleModule/Basic.lean` | `LinearMap.isSemisimpleModule_of_injective`; `LinearMap.isSemisimpleModule_of_surjective` | Two ordinary formalization goals with API-generalization notes. |
+  | `RingTheory/SimpleModule/WedderburnArtin.lean` | `IsSemiprimaryRing.mulOpposite`; `isSemiprimaryRing_mulOpposite_iff`; `IsArtinianRing.isNoetherianRing_iff_isArtinianRing_mulOpposite` | Three ordinary symmetry/formalization goals. |
+
+  The six named/source-established candidates and 27 ordinary formalization goals are not
+  automatically assigned Genuine conjecture because their Lean proof is missing. Assign Awaiting
+  formalization only with the reviewed mathematical evidence; diagnose malformed or unsupported
+  source statements before admission. Complete statement correspondence and ownership checks apply
+  equally to both kinds. Reconcile `Wanted.lean`, goal-module imports, `Mathlib/Init.lean`'s
+  proof-wanted tooling import, and the CI/index scope deliberately; preserve
+  `MathlibTest/BasicFiles/Init.lean`'s `please_prove_this : True` smoke fixture as a test.
+  Acceptance: all 34 goals have an explicit reviewed disposition and declaration/source mapping,
+  every admitted root uses the common mechanism, no goal wrapper is counted as a proof of its
+  statement, no unowned local holes are admitted, and both epistemic kinds pass identical Lean,
+  dependency, and CI behavior tests. A metadata-only kind change must not change `D(T)` or status.
+
+- [ ] **Reconcile the smooth Poincare property with exact scoped root statements.**
+  `ContinuousMap.HomotopyEquiv.NonemptyDiffeomorphSphere` in
+  `Mathlib/Geometry/Manifold/PoincareConjecture.lean:41` is a manifold/dimension-indexed property.
+  The source explicitly describes different truth/status by dimension. Retain the genuine
+  parameterized property; do not assert it for every dimension. Review only exact distinguished
+  statements with their dimensions, signs, and quantifiers before registering either epistemic
+  kind. The five existing goal statements to migrate are listed in the Wanted table; they are
+  not interchangeable with this smooth property. No other Lean consumer of the property was found.
+  Acceptance: precise predicate-versus-statement correspondence, existing topological/smooth
+  hypotheses preserved, and no fabricated universal root or duplicate whole-statement alias.
+
+Reviewed exclusions: `Matroid.InvariantCardinalRank` is an ordinary object property with a proved
+finitary instance, and `Matrix.IsHadamard` is a matrix predicate; keep their generic assumptions.
+Robbins and `Counterexample.aharoni_korman_false` are already proved results. CH/GCH, Kaplansky,
+Weinstein, Duffin-Schaeffer and other reference-only hits create no additional declaration migration
+in this checkout. External-only catalogue entries (such as Catalan/modularity statements in
+`docs/1000.yaml` and reference repositories in `UPSTREAMS.md`) are discovery evidence, not new
+local code or an authorized intake task. Deliberate `MathlibTest/` axiom/opaque/sorry fixtures are
+not production conjecture roots; distinguish goal metadata and test scaffolding from result proofs.
 
 ## S -- bounded candidates and completed corrections
 
