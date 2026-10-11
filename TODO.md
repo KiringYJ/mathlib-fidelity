@@ -1,9 +1,9 @@
 # Mathematical fidelity and API hygiene backlog
 
-This file records completed migrations, unresolved audit candidates, planned paper formalizations,
-and the accepted conjecture and proof-status implementation backlog under the policies in
-`FORK_DESIGN.md`. A checked item
-records a completed migration or an explicit classification decision. An unchecked audit candidate
+This file records completed migrations, unresolved audit candidates, planned paper formalizations
+and Palomar submissions, and the accepted conjecture and proof-status implementation backlog under
+the policies in `FORK_DESIGN.md`. A checked item records a completed migration or an explicit
+classification decision. An unchecked audit candidate
 is only a hypothesis to investigate: neither its diagnosis nor its proposed replacement is approved
 until it passes the fidelity gate below. The separate accepted-design section uses unchecked boxes
 to track implementation only. Imperative wording in a candidate heading names the suspected problem;
@@ -70,21 +70,23 @@ This transitional-only rule is the canonical policy in `FORK_DESIGN.md`.  A lite
 total object is reviewed on its own mathematics; it is not a permanent extension of the partial
 operation.
 
-## Planned paper formalizations
+## Paper formalizations and Palomar submissions
 
-These unchecked items record intended Lean formalization projects. Before implementation, audit
-the source statements and hypotheses, prerequisite APIs, and overlap with existing declarations;
-the exact theorem coverage and destination modules are still to be selected.
+These unchecked items record intended Lean formalization and Palomar submission projects.
+For papers awaiting formalization, audit the source statements and hypotheses, prerequisite APIs,
+and overlap with existing declarations before selecting exact theorem coverage and destination modules.
 
 - [ ] **Formalize Walter Rudin, *Injective Polynomial Maps Are Automorphisms*.**
   *The American Mathematical Monthly* **102**(6) (1995), 540-543.
   [DOI: 10.1080/00029890.1995.12004615](https://doi.org/10.1080/00029890.1995.12004615).
   The publisher's online publication date, 18 April 2018, is distinct from the original journal year.
+  Palomar submission: planned after the formalization is complete.
 
 - [ ] **Formalize Walter Schachermayer, *On some classical measure-theoretic theorems for
   non-sigma-complete Boolean algebras*.**
   *Dissertationes Mathematicae (Rozprawy Matematyczne)* **214** (1982).
   [Bibliographic record and full text](https://pldml.icm.edu.pl/pldml/element/bwmeta1.element.zamlynska-46047466-7a42-41f0-b7cf-c4e008ff3e05).
+  Palomar submission: planned after the formalization is complete.
 
 - [ ] **Formalize Paolo Aniello, Sonia L'Innocente, Stefano Mancini, Vincenzo Parisi, Ilaria Svampa,
   and Andreas Winter, *Characterising the Haar measure on the p-adic rotation groups via inverse
@@ -92,6 +94,16 @@ the exact theorem coverage and destination modules are still to be selected.
   *Expositiones Mathematicae* **43**(2) (2025), article 125592.
   [DOI: 10.1016/j.exmath.2024.125592](https://doi.org/10.1016/j.exmath.2024.125592);
   [arXiv:2401.14298](https://arxiv.org/abs/2401.14298).
+  Palomar submission: planned after the formalization is complete.
+
+- [ ] **Submit D. A. Overdijk, F. H. Simons, and J. G. F. Thiemann, *A comment on unions of rings*,
+  to Palomar.**
+  *Indagationes Mathematicae (Proceedings)* **82**(4) (1979), 439-441.
+  [DOI: 10.1016/1385-7258(79)90045-3](https://doi.org/10.1016/1385-7258(79)90045-3).
+  Formalization is complete; Palomar submission is pending. The existing development is in
+  [Mathlib/MeasureTheory/SetRing.lean](Mathlib/MeasureTheory/SetRing.lean), including
+  `MeasureTheory.IsSetSigmaRing.exists_eq_iUnion` and
+  `MeasureTheory.IsSetSigmaRing.eventually_constant_of_monotone`.
 
 ## Conjectures and proof status -- accepted design, pending implementation
 
