@@ -1,7 +1,8 @@
 # Mathematical fidelity and API hygiene backlog
 
-This file records completed migrations, unresolved audit candidates, and the accepted conjecture
-and proof-status implementation backlog under the policies in `FORK_DESIGN.md`. A checked item
+This file records completed migrations, unresolved audit candidates, planned paper formalizations,
+and the accepted conjecture and proof-status implementation backlog under the policies in
+`FORK_DESIGN.md`. A checked item
 records a completed migration or an explicit classification decision. An unchecked audit candidate
 is only a hypothesis to investigate: neither its diagnosis nor its proposed replacement is approved
 until it passes the fidelity gate below. The separate accepted-design section uses unchecked boxes
@@ -68,6 +69,29 @@ state.
 This transitional-only rule is the canonical policy in `FORK_DESIGN.md`.  A literature-supported
 total object is reviewed on its own mathematics; it is not a permanent extension of the partial
 operation.
+
+## Planned paper formalizations
+
+These unchecked items record intended Lean formalization projects. Before implementation, audit
+the source statements and hypotheses, prerequisite APIs, and overlap with existing declarations;
+the exact theorem coverage and destination modules are still to be selected.
+
+- [ ] **Formalize Walter Rudin, *Injective Polynomial Maps Are Automorphisms*.**
+  *The American Mathematical Monthly* **102**(6) (1995), 540-543.
+  [DOI: 10.1080/00029890.1995.12004615](https://doi.org/10.1080/00029890.1995.12004615).
+  The publisher's online publication date, 18 April 2018, is distinct from the original journal year.
+
+- [ ] **Formalize Walter Schachermayer, *On some classical measure-theoretic theorems for
+  non-sigma-complete Boolean algebras*.**
+  *Dissertationes Mathematicae (Rozprawy Matematyczne)* **214** (1982).
+  [Bibliographic record and full text](https://pldml.icm.edu.pl/pldml/element/bwmeta1.element.zamlynska-46047466-7a42-41f0-b7cf-c4e008ff3e05).
+
+- [ ] **Formalize Paolo Aniello, Sonia L'Innocente, Stefano Mancini, Vincenzo Parisi, Ilaria Svampa,
+  and Andreas Winter, *Characterising the Haar measure on the p-adic rotation groups via inverse
+  limits of measure spaces*.**
+  *Expositiones Mathematicae* **43**(2) (2025), article 125592.
+  [DOI: 10.1016/j.exmath.2024.125592](https://doi.org/10.1016/j.exmath.2024.125592);
+  [arXiv:2401.14298](https://arxiv.org/abs/2401.14298).
 
 ## Conjectures and proof status -- accepted design, pending implementation
 
