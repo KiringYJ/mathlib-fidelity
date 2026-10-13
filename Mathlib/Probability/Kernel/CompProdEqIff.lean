@@ -41,7 +41,7 @@ private lemma ae_eq_of_compProd_eq_of_isFiniteMeasure [IsFiniteMeasure μ] [IsFi
     [IsFiniteKernel η] (h : μ ⊗ₘ κ = μ ⊗ₘ η) :
     κ =ᵐ[μ] η := by
   have h_ac : ∀ᵐ a ∂μ, κ a ≪ η a := (Measure.absolutelyContinuous_of_eq h).kernel_of_compProd
-  have hκ_eq : ∀ᵐ a ∂μ, κ a = η.withDensity (κ.rnDeriv η) a := by
+  have hκ_eq : ∀ᵐ a ∂μ, κ a = (η.withDensity (κ.rnDeriv η)) a := by
     filter_upwards [h_ac] with a ha using (Kernel.withDensity_rnDeriv_eq ha).symm
   suffices ∀ᵐ a ∂μ, ∀ᵐ b ∂(η a), κ.rnDeriv η a b = 1 by
     filter_upwards [h_ac, this] with a h_ac h using (rnDeriv_eq_one_iff_eq h_ac).mp h

@@ -285,8 +285,11 @@ example (κ : Kernel ℝ β) [IsSFiniteKernel κ] {f : ℝ → ℝ≥0∞} (hf :
   withDensity_compProd hf
 
 example (κ : Kernel ℝ β) [IsSFiniteKernel κ] {g : ℝ → β → ℝ≥0∞}
-    [IsSFiniteKernel (κ.withDensity g)] (hg : Measurable (Function.uncurry g)) :
-    (count : Measure ℝ) ⊗ₘ (κ.withDensity g) = (count ⊗ₘ κ).withDensity (fun p ↦ g p.1 p.2) :=
+    (hg : Measurable (Function.uncurry g)) :
+    let h := Kernel.measurable_withDensity hg
+    letI : IsSFiniteKernel (κ.withDensity g h) := Kernel.IsSFiniteKernel.withDensity κ hg
+    (count : Measure ℝ) ⊗ₘ (κ.withDensity g h) =
+      (count ⊗ₘ κ).withDensity (fun p ↦ g p.1 p.2) :=
   compProd_withDensity hg
 
 -- No s-finiteness of the measure `ν`.

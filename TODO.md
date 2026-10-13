@@ -2472,12 +2472,43 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   Decide whether to define `productBySections` through `⊗ₘ` or to retire it, and migrate its Tonelli
   theory and consumers.
 
-- [ ] **Give `Kernel.withDensity` its exact domain.**
-  `Kernel.withDensity κ f` in `Mathlib/Probability/Kernel/WithDensity.lean:48` takes
-  `[IsSFiniteKernel κ]` and is zero when `Function.uncurry f` is not measurable
-  (`withDensity_of_not_measurable`).  Determine the exact domain on which the measures
-  `(κ a).withDensity (f a)` form a kernel, separate it from the convenient sufficient conditions,
-  and remove the fallback.
+- [x] **Give `Kernel.withDensity` its exact domain.**
+  `Kernel.withDensity κ f h` in `Mathlib/Probability/Kernel/WithDensity.lean` takes the
+  measurability of `a ↦ (κ a).withDensity (f a)`, with no finiteness assumption.  This is exactly
+  the existence of a kernel with those fibers (`exists_withDensity_iff`), and its values determine
+  it uniquely (`withDensity_eq_of_apply_eq`).  `measurable_withDensity_iff` characterizes the domain
+  by the measurability of the weighted section integrals on measurable sets.  The default tactic
+  `kernel_withDensity_measurable` accepts a supplied witness, handles zero kernels and densities
+  zero and one, and supplies the domain for an s-finite kernel and jointly measurable density or
+  for a measurable weight depending only on the parameter.  The zero fallback and
+  `withDensity_of_not_measurable` are removed.  Almost everywhere equal densities have the same
+  domain and weighted kernel, and the domain passes to finite and countable sums of base kernels.
+  The algebra lemmas derive the domains of density sums, products, and almost everywhere
+  cancellations from the input domains and section-measurability hypotheses, rather than requiring
+  duplicate witnesses from callers.  The default discharger bounds each `fun_prop` search.
+  Evaluation, absolute continuity, and the formula on measurable sets require only the domain;
+  `withDensity_apply'` on arbitrary sets requires `SFinite (κ a)`.  Density addition,
+  multiplication, and summation, and the integral formulas, retain section-measurability
+  hypotheses; the existence of a weighted kernel alone does not imply those identities.
+  A uniformly bounded density preserves finite kernels on its domain.
+  `IsSFiniteKernel.withDensity` takes joint measurability and now allows infinite density values:
+  the bounded increments `min f (n + 1) - min f n` sum to `f` also at infinity.  The former
+  automatic s-finiteness instance for every nonnegative-real-valued density is removed; consumers
+  in composition and Radon--Nikodym theory supply the joint measurability used in that proof.
+  Tests in `MathlibTest/KernelWithDensityStrict.lean` cover the exact domain, routine evidence,
+  invalid inputs, proof independence, counting kernels, zero kernels with arbitrary densities,
+  the generalized algebra and finiteness lemmas, and infinite-valued densities.
+
+- [ ] **Determine whether the exact weighting domain alone preserves s-finite kernels.**
+  `Kernel.IsSFiniteKernel.withDensity` in `Mathlib/Probability/Kernel/WithDensity.lean` proves
+  s-finiteness for jointly measurable densities, including infinite values.  Determine whether
+  `[IsSFiniteKernel κ]` and `Measurable (fun a ↦ (κ a).withDensity (f a))` suffice without joint
+  measurability of `f`, on arbitrary measurable spaces, or give a counterexample.  The existing
+  proof uses joint measurability to weight each finite component and truncate each density.
+  `Measure.withDensity.instSFinite` supplies s-finiteness of every fiber for arbitrary densities,
+  but does not supply a measurable sequence of uniformly finite kernels.  The bounded audit
+  established neither the general implication nor a counterexample; do not treat the sufficient
+  joint-measurability hypothesis as necessary.
 
 - [x] **Prove Tonelli's theorem on the exact domain of `μ ⊗ₘ κ` and drop surplus s-finiteness.**
   `Measure.lintegral_compProd` proves `∫⁻ x, f x ∂(μ ⊗ₘ κ) = ∫⁻ a, ∫⁻ b, f (a, b) ∂κ a ∂μ` for

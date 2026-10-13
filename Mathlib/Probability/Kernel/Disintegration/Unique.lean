@@ -382,7 +382,8 @@ private lemma ae_apply_eq_zero_or_one_of_isCondKernel {ρ : Measure (α × Ω)}
       exact ENNReal.half_le_self.trans_lt ha.2.2
     · simp
   set η' : Kernel α Ω := η.withDensity g
-  have hη' (a : α) : η' a = (η a).withDensity (g a) := Kernel.withDensity_apply η hg a
+  have hη' (a : α) : η' a = (η a).withDensity (g a) := by
+    rw [Kernel.withDensity_apply]
   have hg_a (a : α) : Measurable (g a) := hg.comp measurable_prodMk_left
   have h_mass (a : α) (ha : a ∈ C) : η' a s = 2⁻¹ * η a s := by
     rw [hη', withDensity_apply _ hs,
