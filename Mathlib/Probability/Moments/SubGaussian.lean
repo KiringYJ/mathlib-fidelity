@@ -43,12 +43,14 @@ such that (iv) is true is an Orlicz norm. Prove relations between those properti
 A related notion to sub-Gaussian random variables is that of conditionally sub-Gaussian random
 variables. A random variable `X` is conditionally sub-Gaussian in the sense of (v) with respect to
 a sigma-algebra `m` and a measure `μ` if for all `t : ℝ`, `exp (t * X)` is `μ`-integrable and
-the conditional mgf of `X` conditioned on `m` is almost surely bounded by `exp (c * t^2 / 2)`
-for some constant `c`.
+the conditional expectation of `exp (t * X)` given `m` is almost surely bounded by
+`exp (c * t^2 / 2)` for some constant `c`.
 
-As in other parts of Mathlib's probability library (notably the independence and conditional
-independence definitions), we express both sub-Gaussian and conditionally sub-Gaussian properties
-as special cases of a notion of sub-Gaussianity with respect to a kernel and a measure.
+The sub-Gaussian property is a special case of a notion of sub-Gaussianity with respect to a kernel
+and a measure, with a constant kernel. The conditionally sub-Gaussian property is stated with
+conditional expectations, which exist on every measurable space; when the joint law of `(ω, ω)` has
+a unique conditional kernel, for example on a standard Borel space, it is sub-Gaussianity with
+respect to any representative of the conditional expectation kernel.
 
 ## Main definitions
 
@@ -58,11 +60,11 @@ as special cases of a notion of sub-Gaussianity with respect to a kernel and a m
   `exp (c * t ^ 2 / 2)`.
 * `HasCondSubgaussianMGF`: a random variable `X` has a conditionally sub-Gaussian moment-generating
   function with parameter `c` with respect to a sigma-algebra `m` and a measure `μ` if for all
-  `t : ℝ`, `exp (t * X)` is `μ`-integrable and the moment-generating function of `X` conditioned
-  on `m` is almost surely bounded by `exp (c * t ^ 2 / 2)` for all `t : ℝ`.
-  The actual definition uses `Kernel.HasSubgaussianMGF`: `HasCondSubgaussianMGF` is defined as
-  sub-Gaussian with respect to every representative of the conditional expectation kernel
-  `condExpKernel μ hm` for `m` and the restriction of `μ` to the sigma-algebra `m`.
+  `t : ℝ`, `exp (t * X)` is `μ`-integrable and the conditional expectation of `exp (t * X)` given
+  `m` is almost surely bounded by `exp (c * t ^ 2 / 2)`. When the joint law of `(ω, ω)` has a
+  unique conditional kernel, this is `Kernel.HasSubgaussianMGF` with respect to any representative
+  of the conditional expectation kernel `condExpKernel μ hm` and the restriction of `μ` to the
+  sigma-algebra `m` (`hasCondSubgaussianMGF_iff_of_mem`).
 * `HasSubgaussianMGF`: a random variable `X` has a sub-Gaussian moment-generating function
   with parameter `c` with respect to a measure `μ` if for all `t : ℝ`, `exp (t * X)`
   is `μ`-integrable and the moment-generating function of `X` is bounded by `exp (c * t ^ 2 / 2)`
@@ -76,7 +78,7 @@ as special cases of a notion of sub-Gaussianity with respect to a kernel and a m
   random variables.
 * `hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero`: Hoeffding's lemma for random variables with
   expectation zero.
-* `measure_sum_ge_le_of_HasCondSubgaussianMGF`: the Azuma-Hoeffding inequality for sub-Gaussian
+* `measure_sum_ge_le_of_hasCondSubgaussianMGF`: the Azuma-Hoeffding inequality for sub-Gaussian
   random variables.
 
 ## Implementation notes
@@ -95,25 +97,24 @@ with respect to `κ ω'` for `ν`-almost all `ω'`, but integrability with respe
 This is a stronger condition, as the weaker one did not allow to prove interesting results about
 the sum of two sub-Gaussian random variables.
 
-For the conditional case, that integrability condition reduces to integrability of `exp (t * X)`
-with respect to `μ`.
+For a representative of the conditional expectation kernel, that integrability condition is
+integrability of `exp (t * X)` with respect to `μ`.
 
 ### Definition of `HasCondSubgaussianMGF`
 
-We define `HasCondSubgaussianMGF` as a special case of `Kernel.HasSubgaussianMGF` with the
-representatives of the conditional expectation kernel for `m`, the almost-everywhere class
-`condExpKernel μ hm`, and the restriction of `μ` to `m`, `μ.trim hm` (where `hm` states that `m` is
-a sub-sigma-algebra). Since `Kernel.HasSubgaussianMGF` only depends on the almost-everywhere class
-of the kernel, it holds for every representative as soon as it holds for one.
-Note that `η ∘ₘ μ.trim hm = μ` for every Markov representative `η`. The definition is equivalent to
-the two conditions
-* for all `t`, `exp (t * X)` is `μ`-integrable,
-* for `μ.trim hm`-almost all `ω`, for all `t`, the mgf with respect to the conditional
-  distribution `η ω` is bounded by `exp (c * t ^ 2 / 2)`.
+`HasCondSubgaussianMGF` asks, for all `t`, that `exp (t * X)` be `μ`-integrable and that
+`μ[fun ω' ↦ exp (t * X ω') | m] ≤ exp (c * t ^ 2 / 2)` hold `μ`-almost everywhere, where `hm`
+states that `m` is a sub-sigma-algebra. The integrability at `t = 0` makes `μ` finite, so these
+conditional expectations exist on every measurable space.
 
-For any `t`, we can write the mgf of `X` with respect to a Markov representative `η` of the
-conditional expectation kernel as a conditional expectation, `(μ.trim hm)`-almost surely:
-`mgf X (η ·) t =ᵐ[μ.trim hm] μ[fun ω' ↦ exp (t * X ω') | m]`.
+When the joint law of `(ω, ω)` has a unique conditional kernel, for example on a standard Borel
+space, the mgf of `X` with respect to a Markov representative `η` of the conditional expectation
+kernel `condExpKernel μ hm` is a version of the conditional expectation, `(μ.trim hm)`-almost
+surely: `mgf X (η ·) t =ᵐ[μ.trim hm] μ[fun ω' ↦ exp (t * X ω') | m]`, and `η ∘ₘ μ.trim hm = μ`.
+The bounds for rational `t` then hold for `μ.trim hm`-almost all `ω` at once and extend to all `t`
+by continuity of the mgf, so the property is `Kernel.HasSubgaussianMGF X c η (μ.trim hm)`
+(`hasCondSubgaussianMGF_iff_of_mem`). Since `Kernel.HasSubgaussianMGF` only depends on the
+almost-everywhere class of the kernel, this holds for every representative.
 
 ## References
 
@@ -140,7 +141,8 @@ variable {Ω Ω' : Type*} {mΩ : SigmaAlgebra Ω} {mΩ' : SigmaAlgebra Ω'}
 /-- A random variable `X` has a sub-Gaussian moment-generating function with parameter `c`
 with respect to a kernel `κ` and a measure `ν` if for `ν`-almost all `ω'`, for all `t : ℝ`,
 the moment-generating function of `X` with respect to `κ ω'` is bounded by `exp (c * t ^ 2 / 2)`.
-This implies in particular that `X` has expectation 0. -/
+If `κ` is a Markov kernel, this implies in particular that `X` has expectation 0 with respect to
+`κ ω'` for `ν`-almost all `ω'`. -/
 structure Kernel.HasSubgaussianMGF (X : Ω → ℝ) (c : ℝ≥0)
     (κ : Kernel Ω' Ω) (ν : Measure Ω' := by volume_tac) : Prop where
   integrable_exp_mul : ∀ t, Integrable (fun ω ↦ exp (t * X ω)) (κ ∘ₘ ν)
@@ -542,74 +544,117 @@ section Conditional
 
 /-! ### Conditionally sub-Gaussian moment-generating function -/
 
-variable {Ω : Type*} {m mΩ : SigmaAlgebra Ω} {hm : m ≤ mΩ} [StandardBorelSpace Ω]
-  {μ : Measure Ω} [IsFiniteMeasure μ] {X : Ω → ℝ} {c : ℝ≥0}
-
-variable (m) (hm) in
 /-- A random variable `X` has a conditionally sub-Gaussian moment-generating function
 with parameter `c` with respect to a sigma-algebra `m` and a measure `μ` if for all `t : ℝ`,
-`exp (t * X)` is `μ`-integrable and the moment-generating function of `X` conditioned on `m` is
-almost surely bounded by `exp (c * t ^ 2 / 2)` for all `t : ℝ`.
+`exp (t * X)` is `μ`-integrable and the conditional expectation of `exp (t * X)` given `m` is
+almost surely bounded by `exp (c * t ^ 2 / 2)`.
 This implies in particular that `X` has expectation 0.
 
-The actual definition uses `Kernel.HasSubgaussianMGF`: `HasCondSubgaussianMGF` is defined as
-sub-Gaussian with respect to every representative of the conditional expectation kernel
-`condExpKernel μ hm` for `m` and the restriction of `μ` to the sigma-algebra `m`. Since that
-property only depends on the almost-everywhere class of the kernel, it suffices to check it for one
-representative (`ProbabilityTheory.hasCondSubgaussianMGF_iff_of_mem`). -/
-def HasCondSubgaussianMGF (X : Ω → ℝ) (c : ℝ≥0)
-    (μ : Measure Ω := by volume_tac) [IsFiniteMeasure μ] : Prop :=
-  ∀ η ∈ condExpKernel μ hm, Kernel.HasSubgaussianMGF X c η (μ.trim hm)
+The integrability of `exp (0 * X) = 1` makes `μ` finite, so the conditional expectations exist on
+every measurable space. When the joint law of `(ω, ω)` has a unique conditional kernel, for
+example on a standard Borel space, the property is sub-Gaussianity with respect to any
+representative of the conditional expectation kernel `condExpKernel μ hm` and the restriction of
+`μ` to `m` (`ProbabilityTheory.hasCondSubgaussianMGF_iff_of_mem`), whose bound then holds almost
+surely for all `t` at once. -/
+structure HasCondSubgaussianMGF {Ω : Type*} (m : SigmaAlgebra Ω) {mΩ : SigmaAlgebra Ω}
+    (hm : m ≤ mΩ) (X : Ω → ℝ) (c : ℝ≥0) (μ : Measure Ω := by volume_tac) : Prop where
+  /-- The exponential moments are integrable. -/
+  integrable_exp_mul : ∀ t : ℝ, Integrable (fun ω ↦ exp (t * X ω)) μ
+  /-- The conditional moment-generating function is bounded by `exp (c * t ^ 2 / 2)`. -/
+  ae_condExp_le : ∀ t : ℝ, ∀ᵐ ω' ∂μ, (μ[fun ω ↦ exp (t * X ω) | m]) ω' ≤ exp (c * t ^ 2 / 2)
 
-/-- The conditionally sub-Gaussian property can be checked on any representative of
-`condExpKernel μ hm`. -/
-lemma hasCondSubgaussianMGF_iff_of_mem {η : @Kernel Ω Ω m mΩ} (hη : η ∈ condExpKernel μ hm) :
-    HasCondSubgaussianMGF m hm X c μ ↔ Kernel.HasSubgaussianMGF X c η (μ.trim hm) :=
-  ⟨fun h ↦ h η hη, fun h _ hη' ↦ h.congr_kernel (Kernel.AEClass.eventuallyEq_of_mem hη hη')⟩
+variable {Ω : Type*} {m mΩ : SigmaAlgebra Ω} {hm : m ≤ mΩ} {μ : Measure Ω} {X : Ω → ℝ} {c : ℝ≥0}
+
+/-- The integrability of `exp (0 * X) = 1` makes the measure finite. -/
+private lemma isFiniteMeasure_of_integrable_exp_mul
+    (h : ∀ t : ℝ, Integrable (fun ω ↦ exp (t * X ω)) μ) : IsFiniteMeasure μ := by
+  have h0 := h 0
+  simp only [zero_mul, exp_zero] at h0
+  exact (integrable_const_iff.1 h0).resolve_left one_ne_zero
 
 namespace HasCondSubgaussianMGF
+
+/-- The integrability of `exp (0 * X) = 1` makes the measure finite. -/
+lemma isFiniteMeasure (h : HasCondSubgaussianMGF m hm X c μ) : IsFiniteMeasure μ :=
+  isFiniteMeasure_of_integrable_exp_mul h.integrable_exp_mul
+
+lemma ae_trim_condExp_le (h : HasCondSubgaussianMGF m hm X c μ) (t : ℝ) :
+    ∀ᵐ ω' ∂(μ.trim hm), (μ[fun ω ↦ exp (t * X ω) | m]) ω' ≤ exp (c * t ^ 2 / 2) :=
+  StronglyMeasurable.ae_le_trim_of_stronglyMeasurable hm stronglyMeasurable_condExp
+    stronglyMeasurable_const (h.ae_condExp_le t)
+
+@[simp]
+lemma fun_zero [IsFiniteMeasure μ] : HasCondSubgaussianMGF m hm (fun _ ↦ 0) 0 μ where
+  integrable_exp_mul t := by simp
+  ae_condExp_le t := by
+    simp only [mul_zero, exp_zero]
+    rw [condExp_const hm (1 : ℝ)]
+    simp
+
+@[simp]
+lemma zero [IsFiniteMeasure μ] : HasCondSubgaussianMGF m hm 0 0 μ := fun_zero
+
+lemma memLp_exp_mul (h : HasCondSubgaussianMGF m hm X c μ) (t : ℝ) (p : ℝ≥0) :
+    MemLp (fun ω ↦ exp (t * X ω)) p μ := by
+  by_cases hp0 : p = 0
+  · simpa [hp0] using (h.integrable_exp_mul t).1
+  constructor
+  · exact (h.integrable_exp_mul t).1
+  · rw [eLpNorm_lt_top_iff_lintegral_rpow_enorm_lt_top (mod_cast hp0) (by simp)]
+    simp only [ENNReal.coe_toReal]
+    have h' := (h.integrable_exp_mul (p * t)).2
+    rw [hasFiniteIntegral_def] at h'
+    convert! h' using 3 with ω
+    rw [enorm_eq_ofReal (by positivity), enorm_eq_ofReal (by positivity),
+      ENNReal.ofReal_rpow_of_nonneg (by positivity), ← exp_mul, mul_comm, ← mul_assoc]
+    positivity
+
+end HasCondSubgaussianMGF
+
+/-- When the joint law of `(ω, ω)` has a unique conditional kernel, the conditionally sub-Gaussian
+property is sub-Gaussianity with respect to any representative of `condExpKernel μ hm`: for a
+Markov representative, the integrals of `exp (t * X)` are versions of its conditional
+expectations, and the bound for rational `t` extends to every `t` by continuity of the
+moment-generating function. -/
+lemma hasCondSubgaussianMGF_iff_of_mem [(condExpJointLaw μ hm).HasUniqueCondKernel]
+    {η : @Kernel Ω Ω m mΩ} (hη : η ∈ condExpKernel μ hm) :
+    HasCondSubgaussianMGF m hm X c μ ↔ Kernel.HasSubgaussianMGF X c η (μ.trim hm) := by
+  obtain ⟨η₀, _, hη₀⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
+  have h_eq : η =ᵐ[μ.trim hm] η₀ := Kernel.AEClass.eventuallyEq_of_mem hη hη₀
+  suffices HasCondSubgaussianMGF m hm X c μ ↔ Kernel.HasSubgaussianMGF X c η₀ (μ.trim hm) from
+    this.trans ⟨fun h ↦ h.congr_kernel h_eq.symm, fun h ↦ h.congr_kernel h_eq⟩
+  constructor
+  · intro h
+    have := h.isFiniteMeasure
+    refine .of_rat (by rw [condExpKernel_comp_trim hη₀]; exact h.integrable_exp_mul) fun q ↦ ?_
+    filter_upwards [h.ae_trim_condExp_le q,
+      condExp_ae_eq_trim_integral_condExpKernel hη₀ (h.integrable_exp_mul q)] with ω' h₁ h₂
+    rw [h₂] at h₁
+    exact h₁
+  · intro h
+    have h_int : ∀ t, Integrable (fun ω ↦ exp (t * X ω)) μ := by
+      rw [← condExpKernel_comp_trim hη₀]
+      exact h.integrable_exp_mul
+    have := isFiniteMeasure_of_integrable_exp_mul h_int
+    refine ⟨h_int, fun t ↦ ae_of_ae_trim hm ?_⟩
+    filter_upwards [h.mgf_le, condExp_ae_eq_trim_integral_condExpKernel hη₀ (h_int t)]
+      with ω' h_mgf h_eq
+    rw [h_eq]
+    exact h_mgf t
+
+namespace HasCondSubgaussianMGF
+
+variable [(condExpJointLaw μ hm).HasUniqueCondKernel]
 
 lemma mgf_le (h : HasCondSubgaussianMGF m hm X c μ) {η : @Kernel Ω Ω m mΩ}
     (hη : η ∈ condExpKernel μ hm) :
     ∀ᵐ ω' ∂(μ.trim hm), ∀ t, mgf X (η ω') t ≤ exp (c * t ^ 2 / 2) :=
-  (h η hη).mgf_le
+  ((hasCondSubgaussianMGF_iff_of_mem hη).1 h).mgf_le
 
 lemma cgf_le (h : HasCondSubgaussianMGF m hm X c μ) {η : @Kernel Ω Ω m mΩ}
     (hη : η ∈ condExpKernel μ hm) :
     ∀ᵐ ω' ∂(μ.trim hm), ∀ t, cgf X (η ω') t ≤ c * t ^ 2 / 2 :=
-  (h η hη).cgf_le
-
-lemma ae_trim_condExp_le (h : HasCondSubgaussianMGF m hm X c μ) (t : ℝ) :
-    ∀ᵐ ω' ∂(μ.trim hm), (μ[fun ω ↦ exp (t * X ω) | m]) ω' ≤ exp (c * t ^ 2 / 2) := by
-  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
-  have h_int := (h η hη).integrable_exp_mul t
-  rw [condExpKernel_comp_trim hη] at h_int
-  filter_upwards [h.mgf_le hη, condExp_ae_eq_trim_integral_condExpKernel hη h_int]
-    with ω' h_mgf h_eq
-  rw [h_eq]
-  exact h_mgf t
-
-lemma ae_condExp_le (h : HasCondSubgaussianMGF m hm X c μ) (t : ℝ) :
-    ∀ᵐ ω' ∂μ, (μ[fun ω ↦ exp (t * X ω) | m]) ω' ≤ exp (c * t ^ 2 / 2) :=
-  ae_of_ae_trim hm (h.ae_trim_condExp_le t)
-
-@[simp]
-lemma fun_zero : HasCondSubgaussianMGF m hm (fun _ ↦ 0) 0 μ := by
-  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
-  exact (hasCondSubgaussianMGF_iff_of_mem hη).2 Kernel.HasSubgaussianMGF.fun_zero
-
-@[simp]
-lemma zero : HasCondSubgaussianMGF m hm 0 0 μ := fun_zero
-
-lemma memLp_exp_mul (h : HasCondSubgaussianMGF m hm X c μ) (t : ℝ) (p : ℝ≥0) :
-    MemLp (fun ω ↦ exp (t * X ω)) p μ := by
-  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
-  exact condExpKernel_comp_trim hη ▸ (h η hη).memLp_exp_mul t p
-
-lemma integrable_exp_mul (h : HasCondSubgaussianMGF m hm X c μ) (t : ℝ) :
-    Integrable (fun ω ↦ exp (t * X ω)) μ := by
-  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
-  exact condExpKernel_comp_trim hη ▸ (h η hη).integrable_exp_mul t
+  ((hasCondSubgaussianMGF_iff_of_mem hη).1 h).cgf_le
 
 end HasCondSubgaussianMGF
 
@@ -622,7 +667,7 @@ variable {Ω : Type*} {m mΩ : SigmaAlgebra Ω} {μ : Measure Ω} {X : Ω → �
 /-- A random variable `X` has a sub-Gaussian moment-generating function with parameter `c`
 with respect to a measure `μ` if for all `t : ℝ`, `exp (t * X)` is `μ`-integrable and
 the moment-generating function of `X` is bounded by `exp (c * t ^ 2 / 2)` for all `t : ℝ`.
-This implies in particular that `X` has expectation 0.
+For a probability measure, this implies in particular that `X` has expectation 0.
 
 This is equivalent to `Kernel.HasSubgaussianMGF X c (Kernel.const Unit μ) (Measure.dirac ())`,
 as proved in `HasSubgaussianMGF_iff_kernel`.
@@ -894,31 +939,71 @@ end HoeffdingLemma
 
 section Martingale
 
-variable [StandardBorelSpace Ω]
-
 /-- If `X` is sub-Gaussian with parameter `cX` with respect to the restriction of `μ` to
 a sub-sigma-algebra `m` and `Y` is conditionally sub-Gaussian with parameter `cY` with respect to
 `m` and `μ` then `X + Y` is sub-Gaussian with parameter `cX + cY` with respect to `μ`.
 
+The proof pulls the `m`-measurable factor `exp (t * X)` out of the conditional expectation of
+`exp (t * (X + Y))`, whose integrability follows from `exp (t * X) * exp (t * Y) ≤
+(exp (2 * t * X) + exp (2 * t * Y)) / 2`.
+
 `HasSubgaussianMGF X cX (μ.trim hm)` can be obtained from `HasSubgaussianMGF X cX μ` if `X` is
 `m`-measurable. See `HasSubgaussianMGF.trim`. -/
-lemma HasSubgaussianMGF.add_of_hasCondSubgaussianMGF [IsFiniteMeasure μ]
+lemma HasSubgaussianMGF.add_of_hasCondSubgaussianMGF
     {Y : Ω → ℝ} {cX cY : ℝ≥0} (hm : m ≤ mΩ)
     (hX : HasSubgaussianMGF X cX (μ.trim hm)) (hY : HasCondSubgaussianMGF m hm Y cY μ) :
     HasSubgaussianMGF (X + Y) (cX + cY) μ := by
-  suffices HasSubgaussianMGF (fun p ↦ X p.1 + Y p.2) (cX + cY) (condExpJointLaw μ hm) by
-    have h_eq : X + Y = (fun p ↦ X p.1 + Y p.2) ∘ Function.diag := rfl
+  have := hY.isFiniteMeasure
+  -- `exp (s * X)` is integrable and almost everywhere equal to an `m`-strongly measurable function
+  have hX_int (s : ℝ) : Integrable (fun ω ↦ exp (s * X ω)) μ :=
+    integrable_of_integrable_trim hm (hX.integrable_exp_mul s)
+  have hX_meas (s : ℝ) : AEStronglyMeasurable[m] (fun ω ↦ exp (s * X ω)) μ :=
+    let h := (hX.integrable_exp_mul s).aestronglyMeasurable
+    ⟨h.mk _, h.stronglyMeasurable_mk, ae_eq_of_ae_eq_trim h.ae_eq_mk⟩
+  have h_eq (t : ℝ) : (fun ω ↦ exp (t * (X + Y) ω))
+      = (fun ω ↦ exp (t * X ω)) * fun ω ↦ exp (t * Y ω) := by
+    ext ω
+    simp [mul_add, exp_add]
+  have h_int (t : ℝ) : Integrable (fun ω ↦ exp (t * (X + Y) ω)) μ := by
+    refine (((hX_int (2 * t)).add (hY.integrable_exp_mul (2 * t))).div_const 2).mono'
+      ?_ (ae_of_all _ fun ω ↦ ?_)
+    · rw [h_eq]
+      exact (hX_int t).1.mul (hY.integrable_exp_mul t).1
+    · rw [Real.norm_of_nonneg (exp_nonneg _)]
+      have h1 : exp (t * (X ω + Y ω)) = exp (t * X ω) * exp (t * Y ω) := by
+        rw [mul_add, exp_add]
+      have h2 : exp (2 * t * X ω) = exp (t * X ω) ^ 2 := by
+        rw [sq, ← exp_add]
+        ring_nf
+      have h3 : exp (2 * t * Y ω) = exp (t * Y ω) ^ 2 := by
+        rw [sq, ← exp_add]
+        ring_nf
+      simp only [Pi.add_apply]
+      rw [h1, h2, h3]
+      nlinarith [sq_nonneg (exp (t * X ω) - exp (t * Y ω))]
+  refine ⟨h_int, fun t ↦ ?_⟩
+  have h_pull : μ[fun ω ↦ exp (t * (X + Y) ω) | m]
+      =ᵐ[μ] (fun ω ↦ exp (t * X ω)) * μ[fun ω ↦ exp (t * Y ω) | m] := by
     rw [h_eq]
-    exact HasSubgaussianMGF.of_map (aemeasurable_diag_of_le μ hm) this
-  rw [HasSubgaussianMGF_iff_kernel] at hX ⊢
-  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
-  have hY' : Kernel.HasSubgaussianMGF Y cY η
-      (Kernel.const Unit (μ.trim hm) ∘ₘ Measure.dirac ()) := by simpa using hY η hη
-  convert! hX.add_comp hY'
-  ext x : 1
-  obtain ⟨⟩ := x
-  rw [Kernel.const_apply, ← Measure.compProd_eq_compProd_const_apply,
-    compProd_trim_condExpKernel hη]
+    exact condExp_mul_of_aestronglyMeasurable_left (hX_meas t) (by rw [← h_eq]; exact h_int t)
+      (hY.integrable_exp_mul t)
+  calc mgf (X + Y) μ t
+  _ = ∫ ω, (μ[fun ω ↦ exp (t * (X + Y) ω) | m]) ω ∂μ := (integral_condExp hm).symm
+  _ = ∫ ω, exp (t * X ω) * (μ[fun ω ↦ exp (t * Y ω) | m]) ω ∂μ := integral_congr_ae h_pull
+  _ ≤ ∫ ω, exp (t * X ω) * exp (cY * t ^ 2 / 2) ∂μ := by
+    refine integral_mono_ae ?_ ((hX_int t).mul_const _) ?_
+    · exact (integrable_condExp.congr h_pull)
+    · filter_upwards [hY.ae_condExp_le t] with ω hω
+      exact mul_le_mul_of_nonneg_left hω (exp_nonneg _)
+  _ = mgf X (μ.trim hm) t * exp (cY * t ^ 2 / 2) := by
+    rw [integral_mul_const, mgf, integral_trim_ae hm (hX.integrable_exp_mul t).1]
+  _ ≤ exp (cX * t ^ 2 / 2) * exp (cY * t ^ 2 / 2) :=
+    mul_le_mul_of_nonneg_right (hX.mgf_le t) (exp_nonneg _)
+  _ = exp ((cX + cY : ℝ≥0) * t ^ 2 / 2) := by
+    rw [← exp_add]
+    congr 1
+    push_cast
+    ring
 
 variable {Y : ℕ → Ω → ℝ} {cY : ℕ → ℝ≥0} {ℱ : Filtration ℕ mΩ}
 
@@ -926,12 +1011,15 @@ variable {Y : ℕ → Ω → ℝ} {cY : ℕ → ℝ≥0} {ℱ : Filtration ℕ m
 `Y i` is conditionally sub-Gaussian with parameter `cY i` with respect to `ℱ (i - 1)`.
 In particular, `n ↦ ∑ i ∈ range n, Y i` is a martingale.
 Then the sum `∑ i ∈ range n, Y i` is sub-Gaussian with parameter `∑ i ∈ range n, cY i`. -/
-lemma HasSubgaussianMGF.sum_of_hasCondSubgaussianMGF [IsZeroOrProbabilityMeasure μ]
+lemma HasSubgaussianMGF.sum_of_hasCondSubgaussianMGF
     (h_adapted : StronglyAdapted ℱ Y) (h0 : HasSubgaussianMGF (Y 0) (cY 0) μ) (n : ℕ)
     (h_subG : ∀ i < n - 1, HasCondSubgaussianMGF (ℱ i) (ℱ.le i) (Y (i + 1)) (cY (i + 1)) μ) :
     HasSubgaussianMGF (fun ω ↦ ∑ i ∈ Finset.range n, Y i ω) (∑ i ∈ Finset.range n, cY i) μ := by
   induction n with
-  | zero => simp
+  | zero =>
+    -- `h0` at `t = 0` gives a finite measure of total mass at most `1`.
+    have h_univ : μ.real Set.univ ≤ 1 := by simpa [mgf_zero'] using h0.mgf_le 0
+    exact ⟨fun t ↦ by simpa using h0.integrable_exp_mul 0, fun t ↦ by simpa [mgf] using h_univ⟩
   | succ n hn =>
     induction n with
     | zero => simp [h0]
@@ -946,7 +1034,7 @@ lemma HasSubgaussianMGF.sum_of_hasCondSubgaussianMGF [IsZeroOrProbabilityMeasure
       lia
 
 /-- **Azuma-Hoeffding inequality** for sub-Gaussian random variables. -/
-lemma measure_sum_ge_le_of_hasCondSubgaussianMGF [IsZeroOrProbabilityMeasure μ]
+lemma measure_sum_ge_le_of_hasCondSubgaussianMGF
     (h_adapted : StronglyAdapted ℱ Y) (h0 : HasSubgaussianMGF (Y 0) (cY 0) μ) (n : ℕ)
     (h_subG : ∀ i < n - 1, HasCondSubgaussianMGF (ℱ i) (ℱ.le i) (Y (i + 1)) (cY (i + 1)) μ)
     {ε : ℝ} (hε : 0 ≤ ε) :

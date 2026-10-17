@@ -77,17 +77,20 @@ lemma measure_eq_zero_or_one_of_indep_self [IsFiniteMeasure μ] (hm : Indep m m 
     μ t = 0 ∨ μ t = 1 := by
   simpa using Kernel.measure_eq_zero_or_one_of_indep_self hm ht
 
+/-- A set that is conditionally independent of itself given `m` has conditional probability `0` or
+`1` almost everywhere: the conditional probability `x` satisfies `x = x * x`. -/
 theorem condExp_eq_zero_or_one_of_condIndepSet_self
-    [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [hμ : IsFiniteMeasure μ] {t : Set Ω} (ht : MeasurableSet t)
+    (hm : m ≤ m0) [hμ : IsFiniteMeasure μ] {t : Set Ω}
     (h_indep : CondIndepSet m hm t t μ) :
     ∀ᵐ ω ∂μ, (μ⟦t | m⟧) ω = 0 ∨ (μ⟦t | m⟧) ω = 1 := by
-  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
-  -- TODO: Why is not inferred?
-  have (a : _) : IsFiniteMeasure (η a) := inferInstance
-  have h := ae_of_ae_trim hm (Kernel.measure_eq_zero_or_one_of_indepSet_self (h_indep η hη))
-  filter_upwards [condExpKernel_ae_eq_condExp hη ht, h] with ω hω_eq hω
-  rwa [← hω_eq, measureReal_eq_zero_iff, measureReal_def, ENNReal.toReal_eq_one_iff]
+  have ht := h_indep.nullMeasurableSet_left
+  filter_upwards [(condIndepSet_iff m hm t t μ ht ht).1 h_indep] with ω hω
+  rw [Set.inter_self, Pi.mul_apply] at hω
+  have h0 : (μ⟦t | m⟧) ω * ((μ⟦t | m⟧) ω - 1) = 0 := by
+    rw [mul_sub, mul_one, ← hω, sub_self]
+  rcases mul_eq_zero.1 h0 with h | h
+  · exact Or.inl h
+  · exact Or.inr (sub_eq_zero.1 h)
 
 open Filter
 
@@ -99,11 +102,10 @@ theorem indep_biSup_compl (h_le : ∀ n, s n ≤ m0) (h_indep : iIndep s μ) (t 
     Indep (⨆ n ∈ t, s n) (⨆ n ∈ tᶜ, s n) μ :=
   Kernel.indep_biSup_compl h_le h_indep t
 
-theorem condIndep_biSup_compl [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [IsFiniteMeasure μ]
-    (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) (t : Set ι) :
+theorem condIndep_biSup_compl (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (h_indep : iCondIndep m hm s μ) (t : Set ι) :
     CondIndep m (⨆ n ∈ t, s n) (⨆ n ∈ tᶜ, s n) hm μ :=
-  fun η hη ↦ Kernel.indep_biSup_compl h_le (h_indep η hη) t
+  condIndep_iSup_of_disjoint h_indep disjoint_compl_right
 
 section Abstract
 
@@ -133,12 +135,13 @@ theorem indep_biSup_limsup
     Indep (⨆ n ∈ t, s n) (limsup s f) μ :=
   Kernel.indep_biSup_limsup h_le h_indep hf ht
 
-theorem condIndep_biSup_limsup [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [IsFiniteMeasure μ]
-    (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) (hf : ∀ t, p t → tᶜ ∈ f)
-    {t : Set ι} (ht : p t) :
-    CondIndep m (⨆ n ∈ t, s n) (limsup s f) hm μ :=
-  fun η hη ↦ Kernel.indep_biSup_limsup h_le (h_indep η hη) hf ht
+theorem condIndep_biSup_limsup (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (h_indep : iCondIndep m hm s μ) (hf : ∀ t, p t → tᶜ ∈ f) {t : Set ι} (ht : p t) :
+    CondIndep m (⨆ n ∈ t, s n) (limsup s f) hm μ := by
+  refine condIndep_of_condIndep_of_le_right (condIndep_biSup_compl hm h_indep t) ?_
+  refine limsSup_le_of_le (by isBoundedDefault) ?_
+  simp only [Set.mem_compl_iff, eventually_map]
+  exact eventually_of_mem (hf t ht) le_iSup₂
 
 theorem Kernel.indep_iSup_directed_limsup (h_le : ∀ n, s n ≤ m0) (h_indep : iIndep s κ μα)
     (hf : ∀ t, p t → tᶜ ∈ f) (hns : Directed (· ≤ ·) ns) (hnsp : ∀ a, p (ns a)) :
@@ -165,12 +168,17 @@ theorem indep_iSup_directed_limsup
     Indep (⨆ a, ⨆ n ∈ ns a, s n) (limsup s f) μ :=
   Kernel.indep_iSup_directed_limsup h_le h_indep hf hns hnsp
 
-theorem condIndep_iSup_directed_limsup [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [IsFiniteMeasure μ]
-    (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ)
-    (hf : ∀ t, p t → tᶜ ∈ f) (hns : Directed (· ≤ ·) ns) (hnsp : ∀ a, p (ns a)) :
-    CondIndep m (⨆ a, ⨆ n ∈ ns a, s n) (limsup s f) hm μ :=
-  fun η hη ↦ Kernel.indep_iSup_directed_limsup h_le (h_indep η hη) hf hns hnsp
+theorem condIndep_iSup_directed_limsup (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (h_indep : iCondIndep m hm s μ) (hf : ∀ t, p t → tᶜ ∈ f) (hns : Directed (· ≤ ·) ns)
+    (hnsp : ∀ a, p (ns a)) :
+    CondIndep m (⨆ a, ⨆ n ∈ ns a, s n) (limsup s f) hm μ := by
+  refine condIndep_iSup_of_directed_le (fun a ↦ condIndep_biSup_limsup hm h_indep hf (hnsp a))
+    (fun t ht ↦ h_indep.nullMeasurableSet_iSup ((limsup_le_iSup : limsup s f ≤ ⨆ n, s n) ht)) ?_
+  intro a b
+  obtain ⟨c, hc⟩ := hns a b
+  refine ⟨c, ?_, ?_⟩ <;> refine iSup_mono fun n ↦ iSup_mono' fun hn ↦ ⟨?_, le_rfl⟩
+  · exact hc.1 hn
+  · exact hc.2 hn
 
 theorem Kernel.indep_iSup_limsup (h_le : ∀ n, s n ≤ m0) (h_indep : iIndep s κ μα)
     (hf : ∀ t, p t → tᶜ ∈ f)
@@ -191,12 +199,18 @@ theorem indep_iSup_limsup
     Indep (⨆ n, s n) (limsup s f) μ :=
   Kernel.indep_iSup_limsup h_le h_indep hf hns hnsp hns_univ
 
-theorem condIndep_iSup_limsup [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [IsFiniteMeasure μ]
-    (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) (hf : ∀ t, p t → tᶜ ∈ f)
+theorem condIndep_iSup_limsup (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (h_indep : iCondIndep m hm s μ) (hf : ∀ t, p t → tᶜ ∈ f)
     (hns : Directed (· ≤ ·) ns) (hnsp : ∀ a, p (ns a)) (hns_univ : ∀ n, ∃ a, n ∈ ns a) :
-    CondIndep m (⨆ n, s n) (limsup s f) hm μ :=
-  fun η hη ↦ Kernel.indep_iSup_limsup h_le (h_indep η hη) hf hns hnsp hns_univ
+    CondIndep m (⨆ n, s n) (limsup s f) hm μ := by
+  suffices (⨆ a, ⨆ n ∈ ns a, s n) = ⨆ n, s n by
+    rw [← this]
+    exact condIndep_iSup_directed_limsup hm h_indep hf hns hnsp
+  rw [iSup_comm]
+  refine iSup_congr fun n ↦ ?_
+  have h : ⨆ (i : β) (_ : n ∈ ns i), s n = ⨆ _ : ∃ i, n ∈ ns i, s n := by rw [iSup_exists]
+  have : Nonempty (∃ i : β, n ∈ ns i) := ⟨hns_univ n⟩
+  rw [h, iSup_const]
 
 theorem Kernel.indep_limsup_self (h_le : ∀ n, s n ≤ m0) (h_indep : iIndep s κ μα)
     (hf : ∀ t, p t → tᶜ ∈ f)
@@ -210,12 +224,12 @@ theorem indep_limsup_self
     Indep (limsup s f) (limsup s f) μ :=
   Kernel.indep_limsup_self h_le h_indep hf hns hnsp hns_univ
 
-theorem condIndep_limsup_self [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [IsFiniteMeasure μ]
-    (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) (hf : ∀ t, p t → tᶜ ∈ f)
+theorem condIndep_limsup_self (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (h_indep : iCondIndep m hm s μ) (hf : ∀ t, p t → tᶜ ∈ f)
     (hns : Directed (· ≤ ·) ns) (hnsp : ∀ a, p (ns a)) (hns_univ : ∀ n, ∃ a, n ∈ ns a) :
     CondIndep m (limsup s f) (limsup s f) hm μ :=
-  fun η hη ↦ Kernel.indep_limsup_self h_le (h_indep η hη) hf hns hnsp hns_univ
+  condIndep_of_condIndep_of_le_left (condIndep_iSup_limsup hm h_indep hf hns hnsp hns_univ)
+    limsup_le_iSup
 
 theorem Kernel.measure_zero_or_one_of_measurableSet_limsup (h_le : ∀ n, s n ≤ m0)
     (h_indep : iIndep s κ μα)
@@ -236,18 +250,14 @@ theorem measure_zero_or_one_of_measurableSet_limsup
     using! Kernel.measure_zero_or_one_of_measurableSet_limsup h_le h_indep hf hns hnsp hns_univ
       ht_tail
 
-theorem condExp_zero_or_one_of_measurableSet_limsup [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [IsFiniteMeasure μ]
-    (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ)
+theorem condExp_zero_or_one_of_measurableSet_limsup (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (h_indep : iCondIndep m hm s μ)
     (hf : ∀ t, p t → tᶜ ∈ f) (hns : Directed (· ≤ ·) ns) (hnsp : ∀ a, p (ns a))
     (hns_univ : ∀ n, ∃ a, n ∈ ns a) {t : Set Ω} (ht_tail : t ∈ limsup s f) :
-    ∀ᵐ ω ∂μ, (μ⟦t | m⟧) ω = 0 ∨ (μ⟦t | m⟧) ω = 1 := by
-  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hm
-  have h := ae_of_ae_trim hm (Kernel.measure_zero_or_one_of_measurableSet_limsup h_le
-    (h_indep η hη) hf hns hnsp hns_univ ht_tail)
-  have ht : MeasurableSet t := (limsup_le_iSup.trans (iSup_le h_le)) ht_tail
-  filter_upwards [condExpKernel_ae_eq_condExp hη ht, h] with ω hω_eq hω
-  rwa [← hω_eq, measureReal_eq_zero_iff, measureReal_def, ENNReal.toReal_eq_one_iff]
+    ∀ᵐ ω ∂μ, (μ⟦t | m⟧) ω = 0 ∨ (μ⟦t | m⟧) ω = 1 :=
+  condExp_eq_zero_or_one_of_condIndepSet_self hm
+    ((condIndep_limsup_self hm h_indep hf hns hnsp hns_univ).condIndepSet_of_measurableSet
+      ht_tail ht_tail)
 
 end Abstract
 
@@ -273,11 +283,20 @@ theorem indep_limsup_atTop_self (h_le : ∀ n, s n ≤ m0) (h_indep : iIndep s �
     Indep (limsup s atTop) (limsup s atTop) μ :=
   Kernel.indep_limsup_atTop_self h_le h_indep
 
-theorem condIndep_limsup_atTop_self [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [IsFiniteMeasure μ]
-    (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) :
-    CondIndep m (limsup s atTop) (limsup s atTop) hm μ :=
-  fun η hη ↦ Kernel.indep_limsup_atTop_self h_le (h_indep η hη)
+theorem condIndep_limsup_atTop_self (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (h_indep : iCondIndep m hm s μ) :
+    CondIndep m (limsup s atTop) (limsup s atTop) hm μ := by
+  let ns : ι → Set ι := Set.Iic
+  have hnsp : ∀ i, BddAbove (ns i) := fun i ↦ bddAbove_Iic
+  refine condIndep_limsup_self hm h_indep ?_ ?_ hnsp ?_
+  · simp only [mem_atTop_sets, Set.mem_compl_iff, BddAbove, upperBounds, Set.Nonempty]
+    rintro t ⟨a, ha⟩
+    obtain ⟨b, hb⟩ : ∃ b, a < b := exists_gt a
+    refine ⟨b, fun c hc hct ↦ ?_⟩
+    suffices ∀ i ∈ t, i < c from lt_irrefl c (this c hct)
+    exact fun i hi ↦ (ha hi).trans_lt (hb.trans_le hc)
+  · exact Monotone.directed_le fun i j hij k hki ↦ le_trans hki hij
+  · exact fun n ↦ ⟨n, le_rfl⟩
 
 theorem Kernel.measure_zero_or_one_of_measurableSet_limsup_atTop (h_le : ∀ n, s n ≤ m0)
     (h_indep : iIndep s κ μα) {t : Set Ω} (ht_tail : t ∈ limsup s atTop) :
@@ -296,12 +315,11 @@ theorem measure_zero_or_one_of_measurableSet_limsup_atTop
   simpa only [ae_dirac_eq, Filter.eventually_pure]
     using! Kernel.measure_zero_or_one_of_measurableSet_limsup_atTop h_le h_indep ht_tail
 
-theorem condExp_zero_or_one_of_measurableSet_limsup_atTop [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [IsFiniteMeasure μ] (h_le : ∀ n, s n ≤ m0)
+theorem condExp_zero_or_one_of_measurableSet_limsup_atTop (hm : m ≤ m0) [IsFiniteMeasure μ]
     (h_indep : iCondIndep m hm s μ) {t : Set Ω} (ht_tail : t ∈ limsup s atTop) :
     ∀ᵐ ω ∂μ, (μ⟦t | m⟧) ω = 0 ∨ (μ⟦t | m⟧) ω = 1 :=
-  condExp_eq_zero_or_one_of_condIndepSet_self hm ((limsup_le_iSup.trans (iSup_le h_le)) ht_tail)
-    ((condIndep_limsup_atTop_self hm h_le h_indep).condIndepSet_of_measurableSet ht_tail ht_tail)
+  condExp_eq_zero_or_one_of_condIndepSet_self hm
+    ((condIndep_limsup_atTop_self hm h_indep).condIndepSet_of_measurableSet ht_tail ht_tail)
 
 end AtTop
 
@@ -328,11 +346,20 @@ theorem indep_limsup_atBot_self
     Indep (limsup s atBot) (limsup s atBot) μ :=
   Kernel.indep_limsup_atBot_self h_le h_indep
 
-theorem condIndep_limsup_atBot_self [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [IsFiniteMeasure μ]
-    (h_le : ∀ n, s n ≤ m0) (h_indep : iCondIndep m hm s μ) :
-    CondIndep m (limsup s atBot) (limsup s atBot) hm μ :=
-  fun η hη ↦ Kernel.indep_limsup_atBot_self h_le (h_indep η hη)
+theorem condIndep_limsup_atBot_self (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (h_indep : iCondIndep m hm s μ) :
+    CondIndep m (limsup s atBot) (limsup s atBot) hm μ := by
+  let ns : ι → Set ι := Set.Ici
+  have hnsp : ∀ i, BddBelow (ns i) := fun i ↦ bddBelow_Ici
+  refine condIndep_limsup_self hm h_indep ?_ ?_ hnsp ?_
+  · simp only [mem_atBot_sets, Set.mem_compl_iff, BddBelow, lowerBounds, Set.Nonempty]
+    rintro t ⟨a, ha⟩
+    obtain ⟨b, hb⟩ : ∃ b, b < a := exists_lt a
+    refine ⟨b, fun c hc hct ↦ ?_⟩
+    suffices ∀ i ∈ t, c < i from lt_irrefl c (this c hct)
+    exact fun i hi ↦ hc.trans_lt (hb.trans_le (ha hi))
+  · exact Antitone.directed_le fun _ _ ↦ Set.Ici_subset_Ici.2
+  · exact fun n ↦ ⟨n, le_rfl⟩
 
 /-- **Kolmogorov's 0-1 law**, kernel version: any event in the tail σ-algebra of an independent
 sequence of sub-σ-algebras has probability 0 or 1 almost surely. -/
@@ -354,12 +381,11 @@ theorem measure_zero_or_one_of_measurableSet_limsup_atBot
 
 /-- **Kolmogorov's 0-1 law**, conditional version: any event in the tail σ-algebra of a
 conditionally independent sequence of sub-σ-algebras has conditional probability 0 or 1. -/
-theorem condExp_zero_or_one_of_measurableSet_limsup_atBot [StandardBorelSpace Ω]
-    (hm : m ≤ m0) [IsFiniteMeasure μ] (h_le : ∀ n, s n ≤ m0)
+theorem condExp_zero_or_one_of_measurableSet_limsup_atBot (hm : m ≤ m0) [IsFiniteMeasure μ]
     (h_indep : iCondIndep m hm s μ) {t : Set Ω} (ht_tail : t ∈ limsup s atBot) :
     ∀ᵐ ω ∂μ, (μ⟦t | m⟧) ω = 0 ∨ (μ⟦t | m⟧) ω = 1 :=
-  condExp_eq_zero_or_one_of_condIndepSet_self hm ((limsup_le_iSup.trans (iSup_le h_le)) ht_tail)
-    ((condIndep_limsup_atBot_self hm h_le h_indep).condIndepSet_of_measurableSet ht_tail ht_tail)
+  condExp_eq_zero_or_one_of_condIndepSet_self hm
+    ((condIndep_limsup_atBot_self hm h_indep).condIndepSet_of_measurableSet ht_tail ht_tail)
 
 end AtBot
 

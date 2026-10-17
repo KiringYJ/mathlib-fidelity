@@ -1390,9 +1390,9 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   function measurable for the σ-algebra the set generates.  New instances state that the trim of an
   s-finite measure is s-finite (`sFinite_trim`) and that the trim of a σ-finite measure to its own
   σ-algebra is σ-finite (`sigmaFinite_trim_self`).  The consumers in
-  `Mathlib/Probability/Independence/` and `Mathlib/Probability/Moments/SubGaussian.lean` still take
-  a standard Borel space and a finite measure, which supply the class (entry below).  Tests are in
-  `MathlibTest/CondExpKernelStrict.lean`.
+  `Mathlib/Probability/Independence/` and `Mathlib/Probability/Moments/SubGaussian.lean` took a
+  standard Borel space and a finite measure, which supply the class, until a later change (entry on
+  conditional independence below).  Tests are in `MathlibTest/CondExpKernelStrict.lean`.
 
 - [x] **Give the Bayes estimator statements the domain of the posterior.**
   The statements of `Mathlib/Probability/Decision/BayesEstimator.lean` took a nonempty standard
@@ -2329,9 +2329,10 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `IsCondKernel`.  Lemmas whose conclusion became a membership are named accordingly, for example
   `id_mem_condDistrib_self` and `id_mem_posterior_id`.  Conditional independence, the conditionally
   sub-Gaussian moment generating function, and `ZeroOne.lean` quantify over the representatives of
-  `condExpKernel μ hm`; since kernel independence and `Kernel.HasSubgaussianMGF` are invariant under
-  almost-everywhere equality, `condIndep_iff_of_mem` and its variants and
-  `hasCondSubgaussianMGF_iff_of_mem` reduce them to any single representative.
+  `condExpKernel μ hm`, until a later change (entry on conditional independence below); since kernel
+  independence and `Kernel.HasSubgaussianMGF` are invariant under almost-everywhere equality,
+  `condIndep_iff_of_mem` and its variants and `hasCondSubgaussianMGF_iff_of_mem` reduce them to any
+  single representative.
   `condIndepFun_iff_condDistrib_prod_ae_eq_prodMkRight`, which compared two chosen kernels, became
   the membership statement `condIndepFun_iff_prodMkRight_mem_condDistrib`, and
   `IsArgminEstimator.of_mem` checks an argmin estimator on one representative of the posterior.
@@ -2380,7 +2381,10 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   sigma algebra is not subordinate or the restricted measure is not sigma-finite; `condExp`
   additionally returns zero when integrability fails.  Preserve `condLExp`'s genuine extended
   nonnegative values, bundle the sigma-algebra/measure evidence, and require integrability only for
-  the finite Bochner-valued construction.
+  the finite Bochner-valued construction.  Conditional independence in
+  `Mathlib/Probability/Independence/Conditional.lean` and `HasCondSubgaussianMGF` evaluate `condExp`
+  only on its valid inputs, the indicators of null-measurable sets and integrable exponentials,
+  given a sub-σ-algebra, for a finite measure; they will supply that evidence.
 
 - [x] **Require measurable random variables for conditional distributions.**
   `ProbabilityTheory.condDistrib` now requires joint a.e. measurability of `fun a ↦ (X a, Y a)`,
@@ -2675,7 +2679,7 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `condExpKernel_ae_eq_trim_condExp`, `condExp_ae_eq_integral_condExpKernel`,
   `condExp_ae_eq_trim_integral_condExpKernel_of_stronglyMeasurable`, and
   `condExp_ae_eq_trim_integral_condExpKernel`.  In
-  `Mathlib/Probability/Independence/Conditional.lean`:
+  `Mathlib/Probability/Independence/ConditionalKernel.lean`:
   `condIndepFun_iff_compProd_map_prod_eq_compProd_prod_map_map`,
   `condIndepFun_iff_map_prod_eq_prod_map_map`, `condIndepFun_iff_map_prod_eq_prod_comp_trim`,
   `condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib`, and
@@ -2686,19 +2690,145 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   a product with it, on the domain of that construction; for the Bochner integrals, the outer
   integrand changes only on a null set when the representative does.
 
-- [ ] **Give the conditional-independence and conditionally sub-Gaussian definitions the class of
-  the diagonal law.**
+- [x] **Define conditional independence and the conditionally sub-Gaussian property through
+  conditional expectations.**
   `iCondIndepSets`, `CondIndepSets`, `iCondIndep`, `CondIndep`, `iCondIndepSet`, `CondIndepSet`,
-  `iCondIndepFun`, and `CondIndepFun` in `Mathlib/Probability/Independence/Conditional.lean`, the
-  lemmas of that file and of `Mathlib/Probability/Independence/ZeroOne.lean` about them, and
-  `HasCondSubgaussianMGF` and its section in `Mathlib/Probability/Moments/SubGaussian.lean` take
-  `[StandardBorelSpace Ω] [IsFiniteMeasure μ]`, which now only supply the class
-  `[(condExpJointLaw μ hm).HasUniqueCondKernel]` that `condExpKernel μ hm` needs.  Take the class
-  instead in the definitions, and determine for each lemma the hypotheses that its proof needs: the
-  characterizations through conditional expectations, such as `condIndepSets_iff` and
-  `condIndep_iff`, use `condExpKernel_ae_eq_condExp`, which needs a σ-finite trim and sets of finite
-  measure, and `HasCondSubgaussianMGF.ae_trim_condExp_le` uses
-  `condExp_ae_eq_trim_integral_condExpKernel`.
+  `iCondIndepFun`, and `CondIndepFun` in `Mathlib/Probability/Independence/Conditional.lean` are
+  stated with conditional probabilities: given a sub-σ-algebra `m'` and for a finite measure `μ`,
+  two σ-algebras are conditionally independent when their sets are null-measurable and
+  `μ⟦t₁ ∩ t₂ | m'⟧ =ᵐ[μ] μ⟦t₁ | m'⟧ * μ⟦t₂ | m'⟧` for all their sets, and a family when the
+  conditional probability of every finite intersection is the product.  `iCondIndepSets` and
+  `CondIndepSets` are structures with these fields; the other notions unfold to them as before.
+  They were `∀ η ∈ condExpKernel μ hm', Kernel.… η (μ.trim hm')` and took
+  `[StandardBorelSpace Ω] [IsFiniteMeasure μ]`, which only supplied the class
+  `[(condExpJointLaw μ hm').HasUniqueCondKernel]`.  Taking that class instead, the repair this entry
+  proposed, was rejected at the fidelity gate: it is the domain of the kernel formulation, not of
+  conditional independence, and it fails for some probability measures.  On `ℝ` with the
+  countable-cocountable σ-algebra and the measure that is one on cocountable sets, given the whole
+  σ-algebra, the Dirac kernel and the constant kernel of the measure both disintegrate the joint law
+  of `(ω, ω)`, since both give a rectangle `A ×ˢ B` the mass `μ (A ∩ B) = μ A * μ B`, and they
+  differ at every point; conditional independence is defined there, and the whole σ-algebra is
+  conditionally independent of itself (`Counterexamples/CondExpKernelCocountable.lean`).  The
+  conditional probability of a null-measurable set exists for every finite measure on every space;
+  for a set that is not null-measurable it is the fallback `0` of `condExp`, hence the
+  null-measurability fields, and the empty intersection `Set.univ` has conditional probability `1`
+  because the measure is finite.  The kernel version admitted non-measurable sets through outer
+  measures, like the unconditional independence API (entry below); the conditional notions no
+  longer do.
+  The π-system lemmas `CondIndepSets.condIndep` and `iCondIndepSets.iCondIndep` are proved with the
+  conditional probabilities themselves: a Dynkin argument from their almost everywhere additivity
+  on complements and countable disjoint unions (`condExp_tsum`).  They and their consumers need no
+  measurability hypothesis beyond the domain of the premise, so `condIndep_iSup_of_disjoint`, the
+  `iCondIndepSet.condIndep_generateFrom_*` lemmas, `iCondIndepSet_iff_iCondIndepSets_singleton`,
+  `condIndepSet_iff_condIndepSets_singleton`, `CondIndepSets.condIndepSet_of_mem`,
+  `condIndepFun_iff_condIndepSet_preimage`, `iCondIndepFun.condIndepFun_finset`, and its product,
+  sum, and quotient corollaries lose their `m i ≤ mΩ`, `MeasurableSet`, or `Measurable (f i)`
+  arguments; `condIndep_iSup_of_directed_le` and its monotone and antitone versions take the
+  null-measurability of `m₁` instead of `h_le` and `h_le'`, and `CondIndepSets.iUnion` and
+  `biUnion` that of `s'`, which an empty family needs.
+  Lemmas concluding conditional independence of data that need not be null-measurable take its
+  null-measurability: `condIndep_bot_right`, `condIndepSet_empty_right`, `condIndepFun_const_left`,
+  and `iCondIndepFun.of_subsingleton`, which is no longer a `nontriviality` lemma.  Function
+  measurability hypotheses are null-measurability.  New are `condIndep_of_le_left`, of which
+  `condIndepFun_of_measurable_left` is now a corollary, `iCondIndep_of_iCondIndep_of_le`, and the
+  domain accessors such as `CondIndep.nullMeasurableSet_left`, `CondIndepFun.nullMeasurable_left`,
+  and `iCondIndep.nullMeasurableSet_iSup`.  `Conditional.lean` no longer imports the kernel files.
+  The characterizations through the kernel moved to the new
+  `Mathlib/Probability/Independence/ConditionalKernel.lean` and take the class:
+  `condIndep_iff_of_mem` and its variants for families, sets, and functions take the
+  null-measurability of the sets, whose measures under a Markov representative are versions of
+  their conditional probabilities; `condIndepFun_iff_compProd_map_prod_eq_compProd_prod_map_map`,
+  `condIndepFun_iff_map_prod_eq_prod_map_map`, and `condIndepFun_iff_map_prod_eq_prod_comp_trim`
+  take the class in place of `[StandardBorelSpace Ω]`;
+  `condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib` and
+  `condIndepFun_iff_prodMkRight_mem_condDistrib` keep `[StandardBorelSpace Ω]` (entry below).
+  The conditional zero-one laws of `Mathlib/Probability/Independence/ZeroOne.lean` lose
+  `[StandardBorelSpace Ω]` and `h_le`: a set conditionally independent of itself has conditional
+  probability `x` with `x = x * x`, and the tail σ-algebra arguments are those of the kernel
+  versions.
+  `HasCondSubgaussianMGF` in `Mathlib/Probability/Moments/SubGaussian.lean` is the structure of the
+  integrability of `exp (t * X)` for every `t` and of `∀ t, ∀ᵐ ω ∂μ,
+  μ[fun ω ↦ exp (t * X ω) | m] ω ≤ exp (c * t ^ 2 / 2)`, for every measure: the integrability at
+  `t = 0` makes the measure finite (`HasCondSubgaussianMGF.isFiniteMeasure`).  It was
+  sub-Gaussianity with respect to every representative of `condExpKernel μ hm`, a bound almost
+  surely for all `t` at once; under the class the two agree (`hasCondSubgaussianMGF_iff_of_mem`, by
+  `Kernel.HasSubgaussianMGF.of_rat` and the continuity of the moment-generating function), and
+  `mgf_le` and `cgf_le` take the class.  `HasSubgaussianMGF.add_of_hasCondSubgaussianMGF`, and with
+  it the sum lemma and the Azuma-Hoeffding inequality, hold on every space.  It drops
+  `[IsFiniteMeasure μ]`: the `m`-measurable factor `exp (t * X)` pulls out of the conditional
+  expectation of `exp (t * (X + Y))`, which is integrable since
+  `exp (t * X) * exp (t * Y) ≤ (exp (2 * t * X) + exp (2 * t * Y)) / 2`.  The sum lemma and the
+  Azuma-Hoeffding inequality drop `[IsZeroOrProbabilityMeasure μ]`, used only for the empty sum,
+  since the sub-Gaussian first summand already makes the measure finite with total mass at most `1`.
+  The module documentation, which described the conditional property as a kernel property, and the
+  claims that the kernel and unconditional properties force expectation `0`, which hold only for
+  Markov kernels and probability measures, are corrected.
+  Tests in `MathlibTest/CondIndepStrict.lean` cover the definitions on a space without a standard
+  Borel structure, the domain accessors, the π-system lemmas, the zero-one law, the sum of
+  conditionally sub-Gaussian variables, the finiteness from integrability, the rejection of
+  Lebesgue measure, and the kernel characterizations under the class, also for the σ-algebra
+  generated by one set on every space; `MathlibTest/CondExpKernelStrict.lean` is updated.
+
+- [ ] **Drop the standard Borel space from the conditional-distribution characterizations of
+  conditional independence.**
+  `condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib` and
+  `condIndepFun_iff_prodMkRight_mem_condDistrib` in
+  `Mathlib/Probability/Independence/ConditionalKernel.lean` take `[StandardBorelSpace Ω]` only to
+  obtain a Markov representative of `condExpKernel μ hk.comap_le`.  Their statements involve only
+  the conditional distributions of `f` and `g` given `k`, with values in standard Borel spaces
+  (paper proof): the joint conditional distribution `η₁₂` of `(f, g)` given `k` exists, and by
+  `condDistrib_ae_eq_condExp` the conditional probabilities of `f ⁻¹' s`, `g ⁻¹' t`, and
+  `(fun ω ↦ (f ω, g ω)) ⁻¹' (s ×ˢ t)` given `mγ.comap k` are the masses that `η₁ (k ·)`,
+  `η₂ (k ·)`, and `η₁₂ (k ·)` give `s`, `t`, and `s ×ˢ t`, almost everywhere.  Conditional
+  independence is the factorization of the third on rectangles, equivalent, since the rectangles
+  of `β × β'` contain a countable generating π-system, to `η₁₂ =ᵐ[μ.map k] η₁ ×ₖ η₂`, that is, to
+  the stated factorization of the law of `(k, f, g)`.  Prove the two statements this way for every
+  `Ω`.
+
+- [ ] **Determine whether conditional independence should extend beyond finite measures.**
+  The notions of `Mathlib/Probability/Independence/Conditional.lean` require a finite measure, the
+  domain of probability theory on which the conditional probabilities `μ⟦t | m'⟧` of all
+  null-measurable sets exist.  For a σ-finite `μ.trim hm'`, every measurable set `t` still has a
+  conditional probability, the Radon-Nikodym derivative of `μ (t ∩ ·)` on `m'`, which is `condLExp`
+  of the indicator and is unique almost everywhere, so the specification extends canonically there.
+  The class-only formulation that this entry's predecessor proposed would also have covered some
+  measures whose trim is not σ-finite, such as counting measure on `ℝ` given the whole σ-algebra
+  (`id_mem_condExpKernel_count` in `MathlibTest/CondExpKernelStrict.lean`).  For `CondIndepSets` of
+  families that do not contain `Set.univ`, sets of finite measure under a σ-finite trim would
+  suffice; without a σ-finite trim a set of finite measure need not have a conditional probability:
+  on `[0, 1] × Bool` with Lebesgue measure on the `false` copy and counting measure on the `true`
+  copy, given the sets `A ×ˢ univ`, a density `h` of the `false` copy satisfies
+  `h x * (0 + 1) = 0` on each `{x} ×ˢ univ`, so `h = 0` against the total mass `1`.  Decide the
+  domain of each notion against these cases before generalizing.
+
+- [ ] **Decide the domain of unconditional and kernel independence for sets that are not
+  measurable.**
+  `Kernel.IndepSets`, `Kernel.Indep`, `Kernel.IndepFun`, their families in
+  `Mathlib/Probability/Independence/Kernel/`, and the unconditional notions built from them evaluate
+  the measures of arbitrary sets, outer measures on sets that are not measurable, and admit
+  σ-algebras that are not sub-σ-algebras and functions that are not measurable.  Conditional
+  independence in `Mathlib/Probability/Independence/Conditional.lean` requires the
+  null-measurability of the sets it compares, since their conditional probabilities exist only
+  there, so given the trivial σ-algebra it no longer agrees with independence on data that is not
+  null-measurable.  Decide whether outer-measure independence of such data is a legitimate total
+  extension with a literature source, or whether the unconditional and kernel notions should carry
+  null-measurability too, and migrate accordingly.
+
+- [ ] **State `condIndep_of_le_left` on its exact domain.**
+  `condIndep_of_le_left` in `Mathlib/Probability/Independence/Conditional.lean` assumes `m₁ ≤ m'`.
+  It holds when every set of `m₁` is almost everywhere equal to a set of `m'`, by the same pull-out
+  argument after replacing each set of `m₁` by such a set, and this condition is exact: if `m₁` is
+  conditionally independent of itself given `m'`, the conditional probability of `t ∈ m₁` is the
+  indicator of a set `A ∈ m'` almost everywhere, and `μ (t ∩ B) = μ (A ∩ B)` for every `B ∈ m'`
+  gives `t =ᵐ[μ] A` for a finite measure.  `condIndepFun_of_measurable_left` generalizes likewise
+  to a function almost everywhere equal to an `m'`-measurable one.
+
+- [ ] **Give `HasSubgaussianMGF.fun_zero` its exact condition.**
+  `HasSubgaussianMGF.fun_zero` and `HasSubgaussianMGF.zero` in
+  `Mathlib/Probability/Moments/SubGaussian.lean` take `[IsZeroOrProbabilityMeasure μ]`, while the
+  zero function is sub-Gaussian with parameter `0` exactly for a finite measure of total mass at
+  most `1`, by the integrability and the moment-generating function at `t = 0`.  Decide between a
+  class of sub-probability measures and an explicit hypothesis, keeping the `simp` use.
 
 - [x] **Drop the σ-finite law of `Y` from `condDistrib_apply_ae_eq_condExpKernel_map`.**
   The lemma in `Mathlib/Probability/Kernel/Condexp.lean` takes only the classes of its two joint
