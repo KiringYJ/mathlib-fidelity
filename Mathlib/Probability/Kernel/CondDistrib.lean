@@ -463,30 +463,18 @@ theorem setLIntegral_condDistrib_of_measurableSet (hX : Measurable X) (hY : AEMe
 /-- For every Markov representative `η` of `condDistrib Y X μ` and almost every `a : α`, `η (X a)`
 evaluated at a measurable set `s` is equal to the conditional expectation of the indicator of
 `Y ⁻¹' s`. -/
-theorem condDistrib_ae_eq_condExp (hX : Measurable X) (hY : Measurable Y)
-    [(μ.map (fun a => (X a, Y a)) (hX.aemeasurable.prodMk hY.aemeasurable)).HasUniqueCondKernel]
+theorem condDistrib_ae_eq_condExp (hX : Measurable X) (hY : AEMeasurable Y μ)
+    [(μ.map (fun a => (X a, Y a)) (hX.aemeasurable.prodMk hY)).HasUniqueCondKernel]
     [SigmaFinite (μ.map X hX.aemeasurable)] [IsMarkovKernel η]
     (hη : η ∈ condDistrib Y X μ) (hs : MeasurableSet s)
     (hμs : μ (Y ⁻¹' s) ≠ ∞ := by finiteness) :
     (fun a => (η (X a)).real s) =ᵐ[μ] μ⟦Y ⁻¹' s | mβ.comap X⟧ := by
   have := sigmaFinite_trim_comap (μ := μ) hX
-  have h_meas : Measurable[mβ.comap X] fun a => η (X a) s :=
-    (Kernel.measurable_coe _ hs).comp (Measurable.of_comap_le le_rfl)
-  refine ae_eq_condExp_of_forall_setIntegral_eq hX.comap_le ?_ ?_ ?_ ?_
-  · exact (integrableOn_const hμs).integrable_indicator (hY hs)
-  · refine fun t _ ht ↦ Measure.integrableOn_of_bounded ht.ne
-      (h_meas.mono hX.comap_le le_rfl).ennreal_toReal.aestronglyMeasurable (M := 1) ?_
-    refine ae_of_all _ fun a ↦ ?_
-    rw [Real.norm_eq_abs, abs_of_nonneg measureReal_nonneg]
-    exact measureReal_le_one
-  · intro t ht _
-    simp_rw [measureReal_def]
-    rw [integral_toReal (h_meas.mono hX.comap_le le_rfl).aemeasurable
-      (Eventually.of_forall fun ω => measure_lt_top (η (X ω)) _),
-      integral_indicator_const _ (hY hs), measureReal_restrict_apply (hY hs), smul_eq_mul, mul_one,
-      inter_comm, setLIntegral_condDistrib_of_measurableSet hX hY.aemeasurable hη hs ht,
-      measureReal_def]
-  · exact h_meas.ennreal_toReal.aestronglyMeasurable
+  refine (toReal_ae_eq_condExp_indicator_iff_forall_setLIntegral_eq hX.comap_le
+    (hY.nullMeasurable hs) hμs
+    ((Kernel.measurable_coe _ hs).comp (Measurable.of_comap_le le_rfl)).aestronglyMeasurable
+    (ae_of_all _ fun a ↦ measure_ne_top _ _)).2 fun t ht ↦ ?_
+  exact setLIntegral_condDistrib_of_measurableSet hX hY hη hs ht
 
 /-- The conditional expectation of a function `f` of the product `(X, Y)` is almost everywhere equal
 to the integral of `y ↦ f(X, y)` against every s-finite representative of `condDistrib Y X μ`. -/

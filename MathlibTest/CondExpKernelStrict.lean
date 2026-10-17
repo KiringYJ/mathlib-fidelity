@@ -136,24 +136,6 @@ example (hm : m ≤ mΩ) {X : Ω → ℝ} {c : NNReal} {η : @Kernel Ω Ω m mΩ
 
 end Class
 
-/-! ### Conditional independence and conditional distributions -/
-
-section CondDistrib
-
-variable {Ω β β' γ : Type*} [SigmaAlgebra Ω] [StandardBorelSpace Ω] [SigmaAlgebra β]
-  [StandardBorelSpace β] [Nonempty β] [SigmaAlgebra β'] [StandardBorelSpace β'] [Nonempty β']
-  [SigmaAlgebra γ] {μ : Measure Ω} [IsFiniteMeasure μ] {f : Ω → β} {g : Ω → β'} {k : Ω → γ}
-
--- `g` is conditionally independent of `f` given `k` exactly when a Markov representative of the
--- conditional distribution of `f` given `k`, viewed as a kernel that ignores `g`, represents the
--- conditional distribution of `f` given `(k, g)`.
-example (hf : Measurable f) (hg : Measurable g) (hk : Measurable k) {η : Kernel γ β}
-    [IsMarkovKernel η] (hη : η ∈ condDistrib f k μ) :
-    g ⟂ᵢ[k, hk; μ] f ↔ η.prodMkRight β' ∈ condDistrib f (fun ω ↦ (k ω, g ω)) μ :=
-  condIndepFun_iff_prodMkRight_mem_condDistrib hf hg hk hη
-
-end CondDistrib
-
 /-! ### Conditioning on the full σ-algebra -/
 
 -- Given the full σ-algebra, the identity kernel represents the class, and the constant kernel

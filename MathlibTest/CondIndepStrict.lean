@@ -10,8 +10,11 @@ stated with conditional expectations, for every finite measure on every measurab
 standard Borel space or a conditional expectation kernel; that conditional independence carries the
 null-measurability of the sets whose conditional probabilities it compares and needs a finite
 measure; that the π-system lemmas, Kolmogorov's zero-one law, and the sum of conditionally
-sub-Gaussian variables hold on every space; and that the characterizations through the conditional
-expectation kernel hold under the class of the joint law of `(ω, ω)`.
+sub-Gaussian variables hold on every space; that the characterizations through the conditional
+expectation kernel hold under the class of the joint law of `(ω, ω)`; and that those through the
+conditional distributions given a random variable hold on every space for almost everywhere
+measurable random variables under the classes of the joint laws they involve, which instance search
+supplies for nonempty standard Borel value spaces.
 -/
 
 open MeasureTheory ProbabilityTheory SigmaAlgebra
@@ -141,5 +144,56 @@ example {Ω : Type*} [mΩ : SigmaAlgebra Ω] {μ : Measure Ω} [IsFiniteMeasure 
     CondIndepSet (generateFrom {s}) (generateFrom_singleton_le hs) t u μ ↔
       Kernel.IndepSet t u η (μ.trim (generateFrom_singleton_le hs)) :=
   condIndepSet_iff_of_mem ht hu hη
+
+/-! ### Characterizations through conditional distributions -/
+
+section CondDistrib
+
+variable {Ω β β' γ : Type*} [SigmaAlgebra Ω] [SigmaAlgebra β] [SigmaAlgebra β'] [SigmaAlgebra γ]
+  {μ : Measure Ω} [IsFiniteMeasure μ] {f : Ω → β} {g : Ω → β'} {k : Ω → γ}
+
+-- On every space, almost everywhere measurable `f` and `g` are conditionally independent given `k`
+-- exactly when the joint law of `(k, f, g)` factors through their conditional distributions given
+-- `k`, which need only the classes of the joint laws of `(k, f)` and `(k, g)`.
+example (hf : AEMeasurable f μ) (hg : AEMeasurable g μ) (hk : Measurable k)
+    [(μ.map (fun ω ↦ (k ω, f ω)) (hk.aemeasurable.prodMk hf)).HasUniqueCondKernel]
+    [(μ.map (fun ω ↦ (k ω, g ω)) (hk.aemeasurable.prodMk hg)).HasUniqueCondKernel]
+    {η₁ : Kernel γ β} [IsMarkovKernel η₁] (hη₁ : η₁ ∈ condDistrib f k μ) {η₂ : Kernel γ β'}
+    [IsMarkovKernel η₂] (hη₂ : η₂ ∈ condDistrib g k μ) :
+    f ⟂ᵢ[k, hk; μ] g ↔
+      μ.map (fun ω ↦ (k ω, f ω, g ω)) (hk.aemeasurable.prodMk (hf.prodMk hg)) =
+        (Kernel.id ×ₖ (η₁ ×ₖ η₂)) ∘ₘ μ.map k hk.aemeasurable :=
+  condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib hf hg hk hη₁ hη₂
+
+-- `g` is conditionally independent of `f` given `k` exactly when a Markov representative of the
+-- conditional distribution of `f` given `k`, viewed as a kernel that ignores `g`, represents the
+-- conditional distribution of `f` given `(k, g)`; only the classes of the joint laws of `(k, f)`
+-- and `((k, g), f)` are needed.
+example (hf : AEMeasurable f μ) (hg : AEMeasurable g μ) (hk : Measurable k)
+    [(μ.map (fun ω ↦ (k ω, f ω)) (hk.aemeasurable.prodMk hf)).HasUniqueCondKernel]
+    [(μ.map (fun ω ↦ ((k ω, g ω), f ω))
+      ((hk.aemeasurable.prodMk hg).prodMk hf)).HasUniqueCondKernel]
+    {η : Kernel γ β} [IsMarkovKernel η] (hη : η ∈ condDistrib f k μ) :
+    g ⟂ᵢ[k, hk; μ] f ↔ η.prodMkRight β' ∈ condDistrib f (fun ω ↦ (k ω, g ω)) μ :=
+  condIndepFun_iff_prodMkRight_mem_condDistrib hf hg hk hη
+
+-- For nonempty standard Borel value spaces, instance search supplies the classes, and measurable
+-- random variables apply through `Measurable.aemeasurable`.
+example [StandardBorelSpace β] [Nonempty β] [StandardBorelSpace β'] [Nonempty β']
+    (hf : Measurable f) (hg : Measurable g) (hk : Measurable k) {η₁ : Kernel γ β}
+    [IsMarkovKernel η₁] (hη₁ : η₁ ∈ condDistrib f k μ) {η₂ : Kernel γ β'} [IsMarkovKernel η₂]
+    (hη₂ : η₂ ∈ condDistrib g k μ) :
+    f ⟂ᵢ[k, hk; μ] g ↔
+      μ.map (fun ω ↦ (k ω, f ω, g ω)) (hk.prodMk (hf.prodMk hg)).aemeasurable =
+        (Kernel.id ×ₖ (η₁ ×ₖ η₂)) ∘ₘ μ.map k hk.aemeasurable :=
+  condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib hf.aemeasurable hg.aemeasurable
+    hk hη₁ hη₂
+
+example [StandardBorelSpace β] [Nonempty β] (hf : Measurable f) (hg : Measurable g)
+    (hk : Measurable k) {η : Kernel γ β} [IsMarkovKernel η] (hη : η ∈ condDistrib f k μ) :
+    g ⟂ᵢ[k, hk; μ] f ↔ η.prodMkRight β' ∈ condDistrib f (fun ω ↦ (k ω, g ω)) μ :=
+  condIndepFun_iff_prodMkRight_mem_condDistrib hf.aemeasurable hg.aemeasurable hk hη
+
+end CondDistrib
 
 end

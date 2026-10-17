@@ -425,7 +425,7 @@ example (μ : Measure α) {X Y : α → ℝ} (hX : Measurable X) (hY : Measurabl
     [SigmaFinite (μ.map X hX.aemeasurable)] (η : Kernel ℝ ℝ) [IsMarkovKernel η]
     (hη : η ∈ condDistrib Y X μ) {s : Set ℝ} (hs : MeasurableSet s) (hμs : μ (Y ⁻¹' s) ≠ ∞) :
     (fun a ↦ (η (X a)).real s) =ᵐ[μ] μ⟦Y ⁻¹' s | (inferInstance : SigmaAlgebra ℝ).comap X⟧ :=
-  condDistrib_ae_eq_condExp hX hY hη hs hμs
+  condDistrib_ae_eq_condExp hX hY.aemeasurable hη hs hμs
 
 example (μ : Measure α) (X : α → ℝ) (hX : Measurable X) :
     SigmaFinite (μ.trim hX.comap_le) ↔ SigmaFinite (μ.map X hX.aemeasurable) :=

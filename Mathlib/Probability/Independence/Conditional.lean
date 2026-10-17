@@ -64,7 +64,9 @@ joint law, since both give a rectangle `A ×ˢ B` the mass `μ (A ∩ B) = μ A 
 every point (`Counterexamples/CondExpKernelCocountable.lean`). The π-system lemmas are therefore
 proved with the conditional probabilities themselves, which are countably additive almost
 everywhere (`MeasureTheory.condExp_tsum`). The characterizations through the kernel, which hold
-under the class of the joint law, are in `Mathlib.Probability.Independence.ConditionalKernel`.
+under the class of the joint law, and those through the conditional distributions given a random
+variable, which need only the classes of the joint laws they involve, are in
+`Mathlib.Probability.Independence.ConditionalKernel`.
 
 -/
 

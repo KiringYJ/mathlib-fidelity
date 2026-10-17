@@ -99,8 +99,9 @@ example (hXY : AEMeasurable (fun a ↦ (X a, Y a)) μ) (η : Kernel β Ω) [IsFi
     η ∈ condDistrib Y X μ hXY ↔ HasCondDistrib Y X η μ :=
   mem_condDistrib_iff_hasCondDistrib hXY
 
--- Every Markov representative computes conditional probabilities.
-example (hX : Measurable X) (hY : Measurable Y) {η : Kernel β Ω} [IsMarkovKernel η]
+-- Every Markov representative computes conditional probabilities, also of an almost everywhere
+-- measurable `Y`.
+example (hX : Measurable X) (hY : AEMeasurable Y μ) {η : Kernel β Ω} [IsMarkovKernel η]
     (hη : η ∈ condDistrib Y X μ) {s : Set Ω} (hs : MeasurableSet s) :
     (fun a ↦ (η (X a)).real s) =ᵐ[μ] μ⟦Y ⁻¹' s | SigmaAlgebra.comap X ‹_›⟧ :=
   condDistrib_ae_eq_condExp hX hY hη hs
@@ -116,6 +117,15 @@ example {X' : α → β} {Y' : α → Ω} (hY : Y =ᵐ[μ] Y') (hX : X =ᵐ[μ] 
   mem_condDistrib_congr hY hX hXY
 
 end CondDistrib
+
+-- For an almost everywhere finite, almost everywhere `m`-measurable `G`, `fun x ↦ (G x).toReal`
+-- is a version of the conditional probability of a null-measurable set of finite measure exactly
+-- when the integrals of `G` over the sets of `m` are the masses that these sets share with it.
+example {α : Type*} {m : SigmaAlgebra α} [mα : SigmaAlgebra α] (hm : m ≤ mα) {μ : Measure α}
+    [IsFiniteMeasure μ] {t : Set α} (ht : NullMeasurableSet t μ) {G : α → ENNReal}
+    (hG : AEStronglyMeasurable[m] G μ) (hG_fin : ∀ᵐ x ∂μ, G x ≠ ⊤) :
+    (fun x ↦ (G x).toReal) =ᵐ[μ] μ⟦t | m⟧ ↔ ∀ s ∈ m, ∫⁻ x in s, G x ∂μ = μ (s ∩ t) :=
+  toReal_ae_eq_condExp_indicator_iff_forall_setLIntegral_eq hm ht (measure_ne_top _ _) hG hG_fin
 
 /-! ### Posteriors -/
 

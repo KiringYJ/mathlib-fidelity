@@ -314,7 +314,7 @@ lemma condExpKernel_ae_eq_condExp [SigmaFinite (μ.trim hm)] [IsMarkovKernel η]
     (fun ω ↦ (η ω).real s) =ᵐ[μ] μ⟦s | m⟧ := by
   have := sigmaFinite_map_id (μ := μ) (hm := hm)
   have := hasUniqueCondKernel_map_id_id (μ := μ) (hm := hm)
-  have h := condDistrib_ae_eq_condExp (μ := μ) (measurable_id'' hm) measurable_id
+  have h := condDistrib_ae_eq_condExp (μ := μ) (measurable_id'' hm) aemeasurable_id
     (mem_condExpKernel_iff_mem_condDistrib.1 hη) hs hμs
   simp only [id_eq, SigmaAlgebra.comap_id, preimage_id_eq] at h
   exact h

@@ -8,11 +8,10 @@ module
 public import Mathlib.Probability.Independence.Conditional
 public import Mathlib.Probability.Independence.Kernel.IndepFun
 public import Mathlib.Probability.Kernel.CompProdEqIff
-public import Mathlib.Probability.Kernel.Composition.Lemmas
 public import Mathlib.Probability.Kernel.Condexp
 
 /-!
-# Conditional independence and the conditional expectation kernel
+# Conditional independence through conditional kernels
 
 When the joint law of `(ω, ω)` has a unique conditional kernel, for example on a standard Borel
 space, the conditional probabilities given a sub-σ-algebra `m'` have a regular version: the
@@ -20,6 +19,12 @@ measures that a Markov representative of `ProbabilityTheory.condExpKernel μ hm'
 Conditional independence of null-measurable sets is then independence with respect to any
 representative of that class and `μ.trim hm'`, and conditional independence of random variables is
 a factorization of joint laws.
+
+Given a random variable `k`, conditional independence of random variables `f` and `g` is, for every
+finite measure on every measurable space, a factorization of their joint law with `k` through their
+conditional distributions given `k`. These need only the classes of the joint laws of `(k, f)` and
+`(k, g)`, which instance search supplies for nonempty standard Borel value spaces, and no class of
+the joint law of `(ω, ω)`.
 
 ## Main statements
 
@@ -30,7 +35,10 @@ a factorization of joint laws.
   conditionally independent exactly when the image under them of a representative factors.
 * `ProbabilityTheory.condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib`: two random
   variables are conditionally independent given a third exactly when their joint law with it
-  factors through their conditional distributions.
+  factors through their conditional distributions; no structure on `Ω` is needed.
+* `ProbabilityTheory.condIndepFun_iff_prodMkRight_mem_condDistrib`: `g` is conditionally
+  independent of `f` given `k` exactly when the conditional distribution of `f` given `k`, ignoring
+  `g`, is its conditional distribution given `(k, g)`.
 -/
 
 @[expose] public section
@@ -310,120 +318,156 @@ lemma condIndepFun_iff_map_prod_eq_prod_comp_trim
 
 /-- Two random variables `f, g` are conditionally independent given a third `k` iff the
 joint distribution of `k, f, g` factors into a product of their conditional distributions
-given `k`, as expressed by Markov representatives of these conditional distributions. The proof
-uses the conditional expectation kernel given `k`, which the standard Borel space supplies. -/
-theorem condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib [StandardBorelSpace Ω]
+given `k`, as expressed by Markov representatives of these conditional distributions.
+
+No structure on `Ω` or on the value spaces is needed beyond the classes of the joint laws of
+`(k, f)` and `(k, g)` that the conditional distributions require: by `condDistrib_ae_eq_condExp`,
+`ω ↦ (η₁ (k ω)).real t` and `ω ↦ (η₂ (k ω)).real u` are versions of the conditional probabilities
+of `f ⁻¹' t` and `g ⁻¹' u` given `k`, and the two measures give a box `s ×ˢ t ×ˢ u` the integrals
+over `k ⁻¹' s` of the conditional probability of `f ⁻¹' t ∩ g ⁻¹' u` and of the product of these
+versions. -/
+theorem condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib
     {γ : Type*} {mγ : SigmaAlgebra γ} {mβ : SigmaAlgebra β} {mβ' : SigmaAlgebra β'}
-    [StandardBorelSpace β] [Nonempty β] [StandardBorelSpace β'] [Nonempty β']
-    (hf : Measurable f) (hg : Measurable g) {k : Ω → γ} (hk : Measurable k)
+    (hf : AEMeasurable f μ) (hg : AEMeasurable g μ) {k : Ω → γ} (hk : Measurable k)
+    [(μ.map (fun ω ↦ (k ω, f ω)) (hk.aemeasurable.prodMk hf)).HasUniqueCondKernel]
+    [(μ.map (fun ω ↦ (k ω, g ω)) (hk.aemeasurable.prodMk hg)).HasUniqueCondKernel]
     {η₁ : Kernel γ β} [IsMarkovKernel η₁] (hη₁ : η₁ ∈ condDistrib f k μ)
     {η₂ : Kernel γ β'} [IsMarkovKernel η₂] (hη₂ : η₂ ∈ condDistrib g k μ) :
     f ⟂ᵢ[k, hk; μ] g ↔
-      μ.map (fun ω ↦ (k ω, f ω, g ω)) (hk.prodMk (hf.prodMk hg)).aemeasurable =
+      μ.map (fun ω ↦ (k ω, f ω, g ω)) (hk.aemeasurable.prodMk (hf.prodMk hg)) =
         (Kernel.id ×ₖ (η₁ ×ₖ η₂)) ∘ₘ μ.map k hk.aemeasurable := by
-  obtain ⟨η, _, hη⟩ := exists_isMarkovKernel_mem_condExpKernel μ hk.comap_le
-  rw [condIndepFun_iff_map_prod_eq_prod_comp_trim hf hg hη]
-  simp_rw [Measure.ext_prod₃_iff]
-  have hk_meas {s : Set γ} (hs : MeasurableSet s) : k ⁻¹' s ∈ mγ.comap k :=
-    ⟨s, hs, rfl⟩
-  have hjoint_comap : @AEMeasurable Ω (Ω × β × β')
-      ((mγ.comap k).prod (mβ.prod mβ')) mΩ
-      (fun ω ↦ (ω, f ω, g ω)) μ := by
-    have hfg : @Measurable Ω (β × β') mΩ (mβ.prod mβ')
-        (fun ω ↦ (f ω, g ω)) := @Measurable.prodMk Ω mΩ β β' mβ mβ' f g hf hg
-    have hjoint : @Measurable Ω (Ω × β × β') mΩ (mΩ.prod (mβ.prod mβ'))
-        (fun ω ↦ (ω, f ω, g ω)) :=
-      @Measurable.prodMk Ω mΩ Ω (β × β') mΩ (mβ.prod mβ') id
-        (fun ω ↦ (f ω, g ω)) measurable_id hfg
-    have htarget : (mγ.comap k).prod (mβ.prod mβ') ≤ mΩ.prod (mβ.prod mβ') := by
-      unfold SigmaAlgebra.prod
-      gcongr
-      exact hk.comap_le
-    exact @Measurable.aemeasurable Ω (Ω × β × β') mΩ
-      ((mγ.comap k).prod (mβ.prod mβ')) (fun ω ↦ (ω, f ω, g ω)) μ
-      (hjoint.mono (mb' := (mγ.comap k).prod (mβ.prod mβ')) le_rfl htarget)
+  rw [condIndepFun_iff_condExp_inter_preimage_eq_mul hf.nullMeasurable hg.nullMeasurable,
+    Measure.ext_prod₃_iff]
   have h_left {s : Set γ} {t : Set β} {u : Set β'} (hs : MeasurableSet s) (ht : MeasurableSet t)
       (hu : MeasurableSet u) :
-      (μ.map (fun ω ↦ (k ω, f ω, g ω)) (hk.prodMk (hf.prodMk hg)).aemeasurable)
-          (s ×ˢ t ×ˢ u) =
-        (@Measure.map _ _ _ ((mγ.comap k).prod inferInstance)
-          (fun ω ↦ (ω, f ω, g ω)) μ hjoint_comap)
-          ((k ⁻¹' s) ×ˢ t ×ˢ u) := by
-    rw [Measure.map_apply (hs.prod (ht.prod hu)) (hk.prodMk (hf.prodMk hg)).aemeasurable,
-      Measure.map_apply ((measurableSet_iff_mem.mpr (hk_meas hs)).prod (ht.prod hu))
-        hjoint_comap]
-    · simp [Set.mk_preimage_prod]
+      μ.map (fun ω ↦ (k ω, f ω, g ω)) (hk.aemeasurable.prodMk (hf.prodMk hg)) (s ×ˢ t ×ˢ u) =
+        μ (k ⁻¹' s ∩ (f ⁻¹' t ∩ g ⁻¹' u)) :=
+    Measure.map_apply (hs.prod (ht.prod hu)) (hk.aemeasurable.prodMk (hf.prodMk hg))
   have h_right {s : Set γ} {t : Set β} {u : Set β'} (hs : MeasurableSet s) (ht : MeasurableSet t)
       (hu : MeasurableSet u) :
       ((Kernel.id ×ₖ (η₁ ×ₖ η₂)) ∘ₘ μ.map k hk.aemeasurable) (s ×ˢ t ×ˢ u) =
-        ((Kernel.id ×ₖ (η.map f ×ₖ η.map g)) ∘ₘ μ.trim hk.comap_le) ((k ⁻¹' s) ×ˢ t ×ˢ u) := by
-    rw [Measure.bind_apply
-        ((measurableSet_iff_mem.mpr (hk_meas hs)).prod (ht.prod hu)) (by fun_prop),
-      Measure.bind_apply (hs.prod (ht.prod hu)) (by fun_prop), lintegral_map ?_ (by fun_prop),
-      lintegral_trim]
-    rotate_left
-    · exact Kernel.measurable_coe _
-        ((measurableSet_iff_mem.mpr (hk_meas hs)).prod (ht.prod hu))
-    · exact Kernel.measurable_coe _ (hs.prod (ht.prod hu))
-    refine lintegral_congr_ae ?_
-    filter_upwards [condDistrib_apply_ae_eq_condExpKernel_map hf hk ht hη₁ hη,
-      condDistrib_apply_ae_eq_condExpKernel_map hg hk hu hη₂ hη] with a haX haT
-    simp only [Kernel.prod_apply_prod, Kernel.id_apply, Measure.dirac_apply' _ hs]
-    rw [@Measure.dirac_apply' _ (mγ.comap k) _ _ (hk_meas hs)]
-    congr
-  refine ⟨fun h s t u hs ht hu ↦ ?_, fun h ↦ ?_⟩
-  · convert! h (hk_meas hs) ht hu
-    · exact h_left hs ht hu
-    · exact h_right hs ht hu
-  · rintro - t u ⟨s, hs, rfl⟩ ht hu
-    convert! h hs ht hu
-    · exact (h_left hs ht hu).symm
-    · exact (h_right hs ht hu).symm
+        ∫⁻ ω in k ⁻¹' s, η₁ (k ω) t * η₂ (k ω) u ∂μ := by
+    rw [← Measure.compProd_eq_comp_prod, Measure.compProd_apply_prod hs (ht.prod hu),
+      setLIntegral_map hs ((η₁ ×ₖ η₂).measurable_coe (ht.prod hu)) hk]
+    simp only [Kernel.prod_apply_prod]
+  -- the masses that the representatives give are versions of the conditional probabilities
+  have h_version {t : Set β} {u : Set β'} (ht : MeasurableSet t) (hu : MeasurableSet u) :
+      (fun ω ↦ (η₁ (k ω) t * η₂ (k ω) u).toReal) =ᵐ[μ]
+        fun ω ↦ (μ⟦f ⁻¹' t | mγ.comap k⟧) ω * (μ⟦g ⁻¹' u | mγ.comap k⟧) ω := by
+    filter_upwards [condDistrib_ae_eq_condExp hk hf hη₁ ht,
+      condDistrib_ae_eq_condExp hk hg hη₂ hu] with ω h₁ h₂
+    rw [← h₁, ← h₂, ENNReal.toReal_mul, measureReal_def, measureReal_def]
+  have h_key {t : Set β} {u : Set β'} (ht : MeasurableSet t) (hu : MeasurableSet u) :
+      (fun ω ↦ (η₁ (k ω) t * η₂ (k ω) u).toReal) =ᵐ[μ] μ⟦f ⁻¹' t ∩ g ⁻¹' u | mγ.comap k⟧ ↔
+        ∀ s ∈ mγ.comap k, ∫⁻ ω in s, η₁ (k ω) t * η₂ (k ω) u ∂μ = μ (s ∩ (f ⁻¹' t ∩ g ⁻¹' u)) :=
+    toReal_ae_eq_condExp_indicator_iff_forall_setLIntegral_eq hk.comap_le
+      ((hf.nullMeasurable ht).inter (hg.nullMeasurable hu)) (measure_ne_top _ _)
+      (((η₁.measurable_coe ht).mul (η₂.measurable_coe hu)).comp
+        (Measurable.of_comap_le le_rfl)).aestronglyMeasurable
+      (ae_of_all _ fun ω ↦ ENNReal.mul_ne_top (measure_ne_top _ _) (measure_ne_top _ _))
+  constructor
+  · intro h s t u hs ht hu
+    rw [h_left hs ht hu, h_right hs ht hu]
+    exact ((h_key ht hu).1 ((h_version ht hu).trans (h t u ht hu).symm) _ ⟨s, hs, rfl⟩).symm
+  · intro h t u ht hu
+    refine ((h_key ht hu).2 ?_).symm.trans (h_version ht hu)
+    rintro _ ⟨s, hs, rfl⟩
+    rw [← h_left hs ht hu, ← h_right hs ht hu]
+    exact (h hs ht hu).symm
 
 /-- Two random variables `f, g` are conditionally independent given a third `k` iff for a Markov
 representative `η` of the conditional distribution of `f` given `k`, the kernel `η.prodMkRight β'`,
-which ignores the value of `g`, represents the conditional distribution of `f` given `k` and `g`. -/
-theorem condIndepFun_iff_prodMkRight_mem_condDistrib [StandardBorelSpace Ω]
+which ignores the value of `g`, represents the conditional distribution of `f` given `k` and `g`.
+
+Only the classes of the joint laws of `(k, f)` and `((k, g), f)` that these conditional
+distributions require are needed: the representation is the identity
+`μ (k ⁻¹' s ∩ g ⁻¹' u ∩ f ⁻¹' t) = ∫⁻ ω in k ⁻¹' s ∩ g ⁻¹' u, η (k ω) t ∂μ` on boxes, and since
+`ω ↦ (η (k ω)).real t` is a version of the conditional probability of `f ⁻¹' t` given `k`, the
+right side is the integral over `k ⁻¹' s` of the product of the conditional probabilities of
+`g ⁻¹' u` and `f ⁻¹' t`, while the left side is the integral over `k ⁻¹' s` of the conditional
+probability of `g ⁻¹' u ∩ f ⁻¹' t`. -/
+theorem condIndepFun_iff_prodMkRight_mem_condDistrib
     {γ : Type*} {mγ : SigmaAlgebra γ} {mβ : SigmaAlgebra β} {mβ' : SigmaAlgebra β'}
-    [StandardBorelSpace β] [Nonempty β] [StandardBorelSpace β'] [Nonempty β']
-    (hf : Measurable f) (hg : Measurable g) {k : Ω → γ} (hk : Measurable k)
+    (hf : AEMeasurable f μ) (hg : AEMeasurable g μ) {k : Ω → γ} (hk : Measurable k)
+    [(μ.map (fun ω ↦ (k ω, f ω)) (hk.aemeasurable.prodMk hf)).HasUniqueCondKernel]
+    [(μ.map (fun ω ↦ ((k ω, g ω), f ω))
+      ((hk.aemeasurable.prodMk hg).prodMk hf)).HasUniqueCondKernel]
     {η : Kernel γ β} [IsMarkovKernel η] (hη : η ∈ condDistrib f k μ) :
     g ⟂ᵢ[k, hk; μ] f ↔ η.prodMkRight β' ∈ condDistrib f (fun ω ↦ (k ω, g ω)) μ := by
-  obtain ⟨ζ, _, hζ⟩ := exists_isMarkovKernel_mem_condDistrib (Y := g) (X := k) (μ := μ)
-    (hk.aemeasurable.prodMk hg.aemeasurable)
-  rw [mem_condDistrib_iff (μ := μ) (by fun_prop) hf.aemeasurable,
-    condIndepFun_iff_map_prod_eq_prod_condDistrib_prod_condDistrib hg hf hk hζ hη,
-    Measure.compProd_eq_comp_prod]
-  let e : γ × β' × β ≃ᵐ (γ × β') × β := MeasurableEquiv.prodAssoc.symm
-  have h_eq : ((Kernel.id ×ₖ ζ) ×ₖ η) ∘ₘ μ.map k =
-      (Kernel.id ×ₖ η.prodMkRight _) ∘ₘ μ.map (fun a ↦ (k a, g a)) := by
-    calc ((Kernel.id ×ₖ ζ) ×ₖ η) ∘ₘ μ.map k
-    _ = (Kernel.id ×ₖ η.prodMkRight _) ∘ₘ (μ.map k ⊗ₘ ζ) := by
-      rw [Measure.compProd_eq_comp_prod, Measure.comp_assoc]
-      congr 2
-      have h := Kernel.prod_prodMkRight_comp_deterministic_prod ζ η Kernel.id measurable_id
-      simp only [← Kernel.id.eq_1] at h
-      simpa using h.symm
-    _ = (Kernel.id ×ₖ η.prodMkRight _) ∘ₘ μ.map (fun a ↦ (k a, g a)) := by
-      rw [compProd_map_condDistrib hk.aemeasurable hg.aemeasurable hζ]
-  rw [← h_eq]
-  have h1 : μ.map (fun x ↦ ((k x, g x), f x)) = (μ.map (fun a ↦ (k a, g a, f a))).map e := by
-    rw [Measure.map_map (by fun_prop) (by fun_prop)]
+  have hm : mγ.comap k ≤ mΩ := hk.comap_le
+  -- membership is an identity on boxes
+  have h_mem : η.prodMkRight β' ∈ condDistrib f (fun ω ↦ (k ω, g ω)) μ ↔
+      ∀ {s : Set γ} {u : Set β'} {t : Set β}, MeasurableSet s → MeasurableSet u →
+        MeasurableSet t →
+          μ (k ⁻¹' s ∩ g ⁻¹' u ∩ f ⁻¹' t) = ∫⁻ ω in k ⁻¹' s ∩ g ⁻¹' u, η (k ω) t ∂μ := by
+    rw [mem_condDistrib_iff (hk.aemeasurable.prodMk hg) hf, Measure.ext_prod₃_iff']
+    refine forall_congr' fun s ↦ forall_congr' fun u ↦ forall_congr' fun t ↦ ?_
+    refine forall_congr' fun hs ↦ forall_congr' fun hu ↦ forall_congr' fun ht ↦ ?_
+    rw [Measure.map_apply ((hs.prod hu).prod ht) ((hk.aemeasurable.prodMk hg).prodMk hf),
+      Measure.compProd_apply_prod (hs.prod hu) ht,
+      Measure.restrict_map_of_aemeasurable (hk.aemeasurable.prodMk hg) (hs.prod hu),
+      lintegral_map' _ ((η.prodMkRight β').measurable_coe ht).aemeasurable]
     rfl
-  have h1_symm : μ.map (fun a ↦ (k a, g a, f a)) =
-      (μ.map (fun x ↦ ((k x, g x), f x))).map e.symm := by
-    exact (MeasurableEquiv.map_apply_eq_iff_map_symm_apply_eq e).mp h1.symm
-  have h2 : ((Kernel.id ×ₖ ζ) ×ₖ η) ∘ₘ μ.map k =
-      ((Kernel.id ×ₖ (ζ ×ₖ η)) ∘ₘ μ.map k).map e := by
-    rw [← Measure.deterministic_comp_eq_map e.measurable, Measure.comp_assoc]
-    congr 2
-    unfold e
-    rw [Kernel.deterministic_comp_eq_map, Kernel.prodAssoc_symm_prod]
-  have h2_symm : (Kernel.id ×ₖ (ζ ×ₖ η)) ∘ₘ μ.map k =
-      (((Kernel.id ×ₖ ζ) ×ₖ η) ∘ₘ μ.map k).map e.symm := by
-    exact (MeasurableEquiv.map_apply_eq_iff_map_symm_apply_eq e).mp h2.symm
-  rw [h1, h2]
-  exact ⟨fun h ↦ by rw [h], fun h ↦ by rw [h1_symm, h1, h2_symm, h2, h]⟩
+  -- conditional independence of `g ⁻¹' u` and `f ⁻¹' t` is the identity on the boxes over them
+  have h_key {u : Set β'} {t : Set β} (hu : MeasurableSet u) (ht : MeasurableSet t) :
+      (μ⟦g ⁻¹' u ∩ f ⁻¹' t | mγ.comap k⟧ =ᵐ[μ]
+        fun ω ↦ (μ⟦g ⁻¹' u | mγ.comap k⟧) ω * (μ⟦f ⁻¹' t | mγ.comap k⟧) ω) ↔
+      ∀ {s : Set γ}, MeasurableSet s →
+        μ (k ⁻¹' s ∩ g ⁻¹' u ∩ f ⁻¹' t) = ∫⁻ ω in k ⁻¹' s ∩ g ⁻¹' u, η (k ω) t ∂μ := by
+    have hB : NullMeasurableSet (g ⁻¹' u) μ := hg.nullMeasurable hu
+    have hA : NullMeasurableSet (g ⁻¹' u ∩ f ⁻¹' t) μ := hB.inter (hf.nullMeasurable ht)
+    have hH : StronglyMeasurable[mγ.comap k] fun ω ↦ (η (k ω)).real t :=
+      ((η.measurable_coe ht).comp (Measurable.of_comap_le le_rfl)).ennreal_toReal.stronglyMeasurable
+    have hH_le (ω : Ω) : ‖(η (k ω)).real t‖ ≤ 1 := by
+      rw [Real.norm_eq_abs, abs_of_nonneg measureReal_nonneg]
+      exact measureReal_le_one
+    have hB_int : Integrable ((g ⁻¹' u).indicator fun _ ↦ (1 : ℝ)) μ :=
+      (integrable_const 1).indicator₀ hB
+    have hA_int : Integrable ((g ⁻¹' u ∩ f ⁻¹' t).indicator fun _ ↦ (1 : ℝ)) μ :=
+      (integrable_const 1).indicator₀ hA
+    have h_eq : ((fun ω ↦ (η (k ω)).real t) * (g ⁻¹' u).indicator fun _ ↦ (1 : ℝ)) =
+        (g ⁻¹' u).indicator fun ω ↦ (η (k ω)).real t := by
+      ext ω
+      by_cases hω : ω ∈ g ⁻¹' u <;> simp [hω]
+    have hHB_int : Integrable ((g ⁻¹' u).indicator fun ω ↦ (η (k ω)).real t) μ := by
+      rw [← h_eq]
+      exact hB_int.bdd_mul (c := 1) (hH.mono hm).aestronglyMeasurable (ae_of_all _ hH_le)
+    -- the product is the conditional expectation of `η (k ·) t` on `g ⁻¹' u`
+    have h_prod : (fun ω ↦ (μ⟦g ⁻¹' u | mγ.comap k⟧) ω * (μ⟦f ⁻¹' t | mγ.comap k⟧) ω) =ᵐ[μ]
+        μ[(g ⁻¹' u).indicator fun ω ↦ (η (k ω)).real t | mγ.comap k] := by
+      rw [← h_eq]
+      filter_upwards [condDistrib_ae_eq_condExp hk hf hη ht,
+        condExp_stronglyMeasurable_mul_of_bound hm hH hB_int 1 (ae_of_all _ hH_le)] with ω h₁ h₂
+      rw [h₂, Pi.mul_apply, ← h₁, mul_comm]
+    have h_int_A {s : Set γ} (hs : MeasurableSet s) :
+        ∫ ω in k ⁻¹' s, (μ⟦g ⁻¹' u ∩ f ⁻¹' t | mγ.comap k⟧) ω ∂μ =
+          μ.real (k ⁻¹' s ∩ g ⁻¹' u ∩ f ⁻¹' t) := by
+      rw [setIntegral_condExp hm hA_int ⟨s, hs, rfl⟩,
+        integral_indicator₀ (hA.mono Measure.restrict_le_self), setIntegral_const, smul_eq_mul,
+        mul_one, measureReal_restrict_apply' (hk hs), Set.inter_comm, Set.inter_assoc]
+    have h_int_H {s : Set γ} (hs : MeasurableSet s) :
+        ∫ ω in k ⁻¹' s, (μ[(g ⁻¹' u).indicator fun ω ↦ (η (k ω)).real t | mγ.comap k]) ω ∂μ =
+          (∫⁻ ω in k ⁻¹' s ∩ g ⁻¹' u, η (k ω) t ∂μ).toReal := by
+      rw [setIntegral_condExp hm hHB_int ⟨s, hs, rfl⟩,
+        integral_indicator₀ (hB.mono Measure.restrict_le_self),
+        Measure.restrict_restrict₀ (hB.mono Measure.restrict_le_self), Set.inter_comm]
+      exact integral_toReal ((η.measurable_coe ht).comp hk).aemeasurable
+        (ae_of_all _ fun ω ↦ measure_lt_top _ _)
+    have h_fin {s : Set γ} : ∫⁻ ω in k ⁻¹' s ∩ g ⁻¹' u, η (k ω) t ∂μ ≠ ∞ :=
+      ((setLIntegral_mono measurable_const fun ω _ ↦ prob_le_one).trans_lt (by simp)).ne
+    refine ⟨fun h s hs ↦ ?_, fun h ↦ ?_⟩
+    · have h₁ := setIntegral_congr_ae (hk hs) ((h.trans h_prod).mono fun _ hx _ ↦ hx)
+      rw [h_int_A hs, h_int_H hs, measureReal_def] at h₁
+      exact (ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ _) h_fin).1 h₁
+    · refine (ae_eq_condExp_of_forall_setIntegral_eq hm hHB_int
+        (fun _ _ _ ↦ integrable_condExp.integrableOn) ?_
+        stronglyMeasurable_condExp.aestronglyMeasurable).trans h_prod.symm
+      rintro _ ⟨s, hs, rfl⟩ _
+      rw [h_int_A hs, ← setIntegral_condExp hm hHB_int ⟨s, hs, rfl⟩, h_int_H hs, ← h hs,
+        measureReal_def]
+  rw [h_mem, condIndepFun_iff_condExp_inter_preimage_eq_mul hg.nullMeasurable hf.nullMeasurable]
+  exact ⟨fun h s u t hs hu ht ↦ (h_key hu ht).1 (h u t hu ht) hs,
+    fun h u t hu ht ↦ (h_key hu ht).2 fun hs ↦ h hs hu ht⟩
 
 end CondIndepFun
 

@@ -261,6 +261,52 @@ theorem ae_eq_condExp_of_forall_setIntegral_eq (hm : m ≤ m₀) [SigmaFinite (�
     (StronglyMeasurable.aestronglyMeasurable stronglyMeasurable_condExp)
   rw [hg_eq s hs hμs, setIntegral_condExp hm hf hs]
 
+/-- For an almost everywhere `m`-measurable function `G` that is finite almost everywhere and a
+null-measurable set `t` of finite measure, `fun x ↦ (G x).toReal` is a version of the conditional
+expectation of the indicator of `t` given `m`, the conditional probability of `t`, exactly when `G`
+integrates over each set of `m` to the measure of its intersection with `t`. -/
+theorem toReal_ae_eq_condExp_indicator_iff_forall_setLIntegral_eq (hm : m ≤ m₀)
+    [SigmaFinite (μ.trim hm)] {t : Set α} (ht : NullMeasurableSet t μ) (hμt : μ t ≠ ∞)
+    {G : α → ℝ≥0∞} (hG : AEStronglyMeasurable[m] G μ) (hG_fin : ∀ᵐ x ∂μ, G x ≠ ∞) :
+    (fun x ↦ (G x).toReal) =ᵐ[μ] μ[t.indicator fun _ ↦ (1 : ℝ) | m] ↔
+      ∀ s ∈ m, ∫⁻ x in s, G x ∂μ = μ (s ∩ t) := by
+  -- it suffices to treat an `m`-measurable modification of `G`
+  wlog hGm : Measurable[m] G generalizing G with h_meas
+  · obtain ⟨G', hG'm, hGG'⟩ := hG
+    have h_toReal : (fun x ↦ (G x).toReal) =ᵐ[μ] fun x ↦ (G' x).toReal :=
+      hGG'.fun_comp ENNReal.toReal
+    have h_lint (s : Set α) : ∫⁻ x in s, G x ∂μ = ∫⁻ x in s, G' x ∂μ :=
+      lintegral_congr_ae (ae_restrict_of_ae hGG')
+    have hG'_fin : ∀ᵐ x ∂μ, G' x ≠ ∞ := by
+      filter_upwards [hG_fin, hGG'] with x hx hx' using hx' ▸ hx
+    simp_rw [h_toReal.congr_left, h_lint]
+    exact h_meas hG'm.aestronglyMeasurable hG'_fin hG'm.measurable
+  have hG' : Measurable G := hGm.mono hm le_rfl
+  have h_indic : Integrable (t.indicator fun _ ↦ (1 : ℝ)) μ :=
+    (integrableOn_const hμt).integrable_indicator₀ ht
+  have h_ind {s : Set α} (hs : s ∈ m) :
+      ∫ x in s, t.indicator (fun _ ↦ (1 : ℝ)) x ∂μ = μ.real (s ∩ t) := by
+    rw [integral_indicator₀ (ht.mono Measure.restrict_le_self), setIntegral_const, smul_eq_mul,
+      mul_one, measureReal_restrict_apply' (measurableSet_iff_mem.mpr (hm hs)), Set.inter_comm]
+  have h_fin {s : Set α} : μ (s ∩ t) ≠ ∞ :=
+    ne_top_of_le_ne_top hμt (measure_mono Set.inter_subset_right)
+  constructor
+  · intro h s hs
+    have h_int : Integrable (fun x ↦ (G x).toReal) (μ.restrict s) :=
+      (integrable_condExp.congr h.symm).restrict
+    rw [← ENNReal.ofReal_toReal h_fin, ← measureReal_def, ← h_ind hs,
+      ← setIntegral_condExp hm h_indic hs, ← setIntegral_congr_ae
+        (measurableSet_iff_mem.mpr (hm hs)) (h.mono fun x hx _ ↦ hx),
+      ofReal_integral_eq_lintegral_ofReal h_int (ae_of_all _ fun x ↦ ENNReal.toReal_nonneg)]
+    exact setLIntegral_congr_fun_ae (measurableSet_iff_mem.mpr (hm hs))
+      (hG_fin.mono fun x hx _ ↦ (ENNReal.ofReal_toReal hx).symm)
+  · intro h
+    refine ae_eq_condExp_of_forall_setIntegral_eq hm h_indic (fun s hs _ ↦ ?_) (fun s hs _ ↦ ?_)
+      hGm.ennreal_toReal.aestronglyMeasurable
+    · exact integrable_toReal_of_lintegral_ne_top hG'.aemeasurable (by rw [h s hs]; exact h_fin)
+    · rw [integral_toReal hG'.aemeasurable (ae_restrict_of_ae (hG_fin.mono fun x hx ↦ hx.lt_top)),
+        h s hs, h_ind hs, measureReal_def]
+
 theorem condExp_bot' [hμ : NeZero μ] (f : α → E) :
     μ[f | ⊥] = fun _ => (μ.real Set.univ)⁻¹ • ∫ x, f x ∂μ := by
   by_cases hμ_finite : IsFiniteMeasure μ
