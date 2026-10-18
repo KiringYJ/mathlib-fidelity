@@ -92,6 +92,62 @@ theorem condExp_eq_zero_or_one_of_condIndepSet_self
   · exact Or.inl h
   · exact Or.inr (sub_eq_zero.1 h)
 
+/-- A null-measurable set `t` has conditional probability `0` or `1` almost everywhere given `m`
+exactly when it is almost everywhere equal to a set of `m`. If the conditional probability is `0`
+or `1` almost everywhere, it is almost everywhere the indicator of the set `s ∈ m` on which it is
+`1`; then `μ (t ∩ B) = μ (s ∩ B)` for every `B ∈ m`, and `B = sᶜ` and `B = s` give `t =ᵐ[μ] s`. -/
+theorem ae_condExp_eq_zero_or_one_iff (hm : m ≤ m0) [IsFiniteMeasure μ] {t : Set Ω}
+    (ht : NullMeasurableSet t μ) :
+    (∀ᵐ ω ∂μ, (μ⟦t | m⟧) ω = 0 ∨ (μ⟦t | m⟧) ω = 1) ↔ t ∈ eventuallySigmaAlgebra m (ae μ) := by
+  constructor
+  · intro h01
+    let s : Set Ω := {ω | (μ⟦t | m⟧) ω = 1}
+    have hs : s ∈ m := stronglyMeasurable_condExp.measurable (measurableSet_singleton 1)
+    have hs' : MeasurableSet s := measurableSet_iff_mem.2 (hm hs)
+    have hc : μ⟦t | m⟧ =ᵐ[μ] s.indicator fun _ ↦ (1 : ℝ) := by
+      filter_upwards [h01] with ω hω
+      rcases hω with h0 | h1 <;> simp [s, *]
+    have h_meas {B : Set Ω} (hB : B ∈ m) : μ.real (t ∩ B) = μ.real (s ∩ B) := by
+      have hB' : MeasurableSet B := measurableSet_iff_mem.2 (hm hB)
+      have h := setIntegral_condExp hm ((integrable_const (1 : ℝ)).indicator₀ ht) hB
+      rw [setIntegral_congr_ae hB' (hc.mono fun ω hω _ ↦ hω), setIntegral_indicator hs',
+        integral_indicator₀ (ht.mono Measure.restrict_le_self), setIntegral_const,
+        setIntegral_const, measureReal_restrict_apply' hB'] at h
+      simpa [Set.inter_comm] using h.symm
+    change ∃ s ∈ m, t =ᵐ[μ] s
+    refine ⟨s, hs, ae_eq_set.2 ⟨?_, ?_⟩⟩
+    · have h := h_meas (m.compl_mem hs)
+      rw [Set.inter_compl_self, measureReal_empty, measureReal_eq_zero_iff] at h
+      exact h
+    · have h := h_meas hs
+      rw [Set.inter_self, measureReal_def, measureReal_def,
+        ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ _) (measure_ne_top _ _)] at h
+      rw [← Set.sdiff_inter_self_eq_sdiff, measure_sdiff Set.inter_subset_right
+        (ht.inter hs'.nullMeasurableSet) (measure_ne_top _ _), h, tsub_self]
+  · rintro ⟨s, hs, hts⟩
+    have hs' : MeasurableSet s := measurableSet_iff_mem.2 (hm hs)
+    have e : μ⟦t | m⟧ =ᵐ[μ] s.indicator fun _ ↦ (1 : ℝ) :=
+      (condExp_congr_ae (indicator_ae_eq_of_ae_eq_set hts)).trans
+        (condExp_of_stronglyMeasurable hm (stronglyMeasurable_const.indicator hs)
+          ((integrable_const (1 : ℝ)).indicator hs')).eventuallyEq
+    filter_upwards [e] with ω hω
+    by_cases hω' : ω ∈ s <;> simp [hω, hω']
+
+/-- A σ-algebra is conditionally independent of itself given `m'` exactly when each of its sets is
+almost everywhere equal to a set of `m'`, that is, when it is contained in
+`eventuallySigmaAlgebra m' (ae μ)`; sufficiency is `condIndep_of_le_eventuallySigmaAlgebra_left`.
+Conversely, if it is conditionally independent of itself, each of its sets has conditional
+probability `0` or `1` almost everywhere (`condExp_eq_zero_or_one_of_condIndepSet_self`), hence is
+almost everywhere equal to a set of `m'` (`ae_condExp_eq_zero_or_one_iff`). -/
+theorem condIndep_self_iff {m' m₁ : SigmaAlgebra Ω} {mΩ : SigmaAlgebra Ω} {hm' : m' ≤ mΩ}
+    {μ : Measure Ω} [IsFiniteMeasure μ] :
+    CondIndep m' m₁ m₁ hm' μ ↔ m₁ ≤ eventuallySigmaAlgebra m' (ae μ) := by
+  refine ⟨fun h t ht ↦ (ae_condExp_eq_zero_or_one_iff hm' (h.nullMeasurableSet_left t ht)).1
+      (condExp_eq_zero_or_one_of_condIndepSet_self hm' (h.condIndepSet_of_measurableSet ht ht)),
+    fun h ↦ condIndep_of_le_eventuallySigmaAlgebra_left h fun t ht ↦ ?_⟩
+  obtain ⟨s, hs, hts⟩ := h ht
+  exact (measurableSet_iff_mem.2 (hm' hs)).nullMeasurableSet.congr hts.symm
+
 open Filter
 
 theorem Kernel.indep_biSup_compl (h_le : ∀ n, s n ≤ m0) (h_indep : iIndep s κ μα) (t : Set ι) :
@@ -321,6 +377,13 @@ theorem condExp_zero_or_one_of_measurableSet_limsup_atTop (hm : m ≤ m0) [IsFin
   condExp_eq_zero_or_one_of_condIndepSet_self hm
     ((condIndep_limsup_atTop_self hm h_indep).condIndepSet_of_measurableSet ht_tail ht_tail)
 
+/-- **Kolmogorov's 0-1 law**, conditional version for the tail σ-algebra itself: the tail σ-algebra
+of a sequence of sub-σ-algebras that are conditionally independent given `m` is contained in `m` up
+to null sets, that is, each of its sets is almost everywhere equal to a set of `m`. -/
+theorem limsup_atTop_le_eventuallySigmaAlgebra_of_iCondIndep (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (h_indep : iCondIndep m hm s μ) : limsup s atTop ≤ eventuallySigmaAlgebra m (ae μ) :=
+  condIndep_self_iff.1 (condIndep_limsup_atTop_self hm h_indep)
+
 end AtTop
 
 section AtBot
@@ -386,6 +449,12 @@ theorem condExp_zero_or_one_of_measurableSet_limsup_atBot (hm : m ≤ m0) [IsFin
     ∀ᵐ ω ∂μ, (μ⟦t | m⟧) ω = 0 ∨ (μ⟦t | m⟧) ω = 1 :=
   condExp_eq_zero_or_one_of_condIndepSet_self hm
     ((condIndep_limsup_atBot_self hm h_indep).condIndepSet_of_measurableSet ht_tail ht_tail)
+
+/-- **Kolmogorov's 0-1 law**, conditional version for the tail σ-algebra at `atBot` itself: each of
+its sets is almost everywhere equal to a set of `m`. -/
+theorem limsup_atBot_le_eventuallySigmaAlgebra_of_iCondIndep (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (h_indep : iCondIndep m hm s μ) : limsup s atBot ≤ eventuallySigmaAlgebra m (ae μ) :=
+  condIndep_self_iff.1 (condIndep_limsup_atBot_self hm h_indep)
 
 end AtBot
 
