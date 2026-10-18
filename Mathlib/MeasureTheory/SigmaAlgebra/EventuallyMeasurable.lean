@@ -68,6 +68,12 @@ theorem le_eventuallySigmaAlgebra : m ≤ eventuallySigmaAlgebra m l :=
     change ∃ t ∈ m, s =ᶠ[l] t
     exact ⟨s, hs, EventuallyEq.refl _ _⟩
 
+/-- Enlarging a σ-algebra enlarges its σ-algebra modulo `l`. -/
+@[gcongr]
+theorem eventuallySigmaAlgebra_mono {m₁ m₂ : SigmaAlgebra α} (h : m₁ ≤ m₂) :
+    eventuallySigmaAlgebra m₁ l ≤ eventuallySigmaAlgebra m₂ l :=
+  fun _ ⟨t, ht, hst⟩ ↦ ⟨t, h ht, hst⟩
+
 theorem eventuallyMeasurableSet_of_mem_filter (hs : s ∈ l) : EventuallyMeasurableSet m l s :=
   ⟨univ, MeasurableSet.univ, eventuallyEqSet_univ.mpr hs⟩
 

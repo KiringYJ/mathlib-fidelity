@@ -141,12 +141,11 @@ probability `0` or `1` almost everywhere (`condExp_eq_zero_or_one_of_condIndepSe
 almost everywhere equal to a set of `m'` (`ae_condExp_eq_zero_or_one_iff`). -/
 theorem condIndep_self_iff {m' m₁ : SigmaAlgebra Ω} {mΩ : SigmaAlgebra Ω} {hm' : m' ≤ mΩ}
     {μ : Measure Ω} [IsFiniteMeasure μ] :
-    CondIndep m' m₁ m₁ hm' μ ↔ m₁ ≤ eventuallySigmaAlgebra m' (ae μ) := by
-  refine ⟨fun h t ht ↦ (ae_condExp_eq_zero_or_one_iff hm' (h.nullMeasurableSet_left t ht)).1
+    CondIndep m' m₁ m₁ hm' μ ↔ m₁ ≤ eventuallySigmaAlgebra m' (ae μ) :=
+  ⟨fun h t ht ↦ (ae_condExp_eq_zero_or_one_iff hm' (h.nullMeasurableSet_left t ht)).1
       (condExp_eq_zero_or_one_of_condIndepSet_self hm' (h.condIndepSet_of_measurableSet ht ht)),
-    fun h ↦ condIndep_of_le_eventuallySigmaAlgebra_left h fun t ht ↦ ?_⟩
-  obtain ⟨s, hs, hts⟩ := h ht
-  exact (measurableSet_iff_mem.2 (hm' hs)).nullMeasurableSet.congr hts.symm
+    fun h ↦ condIndep_of_le_eventuallySigmaAlgebra_left h
+      (h.trans (eventuallySigmaAlgebra_mono hm'))⟩
 
 open Filter
 

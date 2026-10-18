@@ -2864,14 +2864,13 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   that is not contained in the trivial σ-algebra but is conditionally independent given it of every
   σ-algebra.
 
-- [ ] **Add the monotonicity of `eventuallySigmaAlgebra`.**
-  `Mathlib/MeasureTheory/SigmaAlgebra/EventuallyMeasurable.lean` lacks
-  `eventuallySigmaAlgebra_mono`, that `m₁ ≤ m₂` implies
-  `eventuallySigmaAlgebra m₁ l ≤ eventuallySigmaAlgebra m₂ l`, a closure lemma for the structure
-  (proof: `fun _ ⟨t, ht, hst⟩ ↦ ⟨t, h ht, hst⟩`).  Its first consumer is `condIndep_self_iff` in
-  `Mathlib/Probability/Independence/ZeroOne.lean`, whose null-measurability step is then
-  `h.trans (eventuallySigmaAlgebra_mono hm')`.  It was scheduled apart from the change that
-  introduced that consumer because the file is imported by nearly the whole library.
+- [x] **Add the monotonicity of `eventuallySigmaAlgebra`.**
+  `eventuallySigmaAlgebra_mono` in `Mathlib/MeasureTheory/SigmaAlgebra/EventuallyMeasurable.lean`,
+  tagged `@[gcongr]`, states that `m₁ ≤ m₂` implies
+  `eventuallySigmaAlgebra m₁ l ≤ eventuallySigmaAlgebra m₂ l`.  `condIndep_self_iff` in
+  `Mathlib/Probability/Independence/ZeroOne.lean` now obtains the null-measurability of the sets of
+  `m₁` from it, as `h.trans (eventuallySigmaAlgebra_mono hm')`: `NullMeasurableSet` is membership in
+  `eventuallySigmaAlgebra mΩ (ae μ)` by definition.
 
 - [ ] **Add the almost everywhere congruence for families of conditionally independent random
   variables.**
