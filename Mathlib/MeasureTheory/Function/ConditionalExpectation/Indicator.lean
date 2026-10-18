@@ -15,11 +15,18 @@ This file proves some results about the conditional expectation of an indicator 
 as a corollary, also proves several results about the behaviour of the conditional expectation on
 a restricted measure.
 
-## Main result
+## Main results
 
 * `MeasureTheory.condExp_indicator`: If `s` is an `m`-measurable set, then the conditional
   expectation of the indicator function of `s` is almost everywhere equal to the indicator
   of `s` of the conditional expectation. Namely, `𝔼[s.indicator f | m] = s.indicator 𝔼[f | m]` a.e.
+* `MeasureTheory.condExp_indicator_iUnion`: for a function integrable on the union, the conditional
+  expectation of the indicator of a countable union of pairwise disjoint null-measurable sets,
+  which need not be `m`-measurable, is almost everywhere the sum of the conditional expectations of
+  the indicators. `MeasureTheory.condExp_indicator_sdiff`, `MeasureTheory.condExp_indicator_compl`,
+  and `MeasureTheory.condExp_indicator_ae_eq_of_ae_eq_set` are the companions for differences,
+  complements, and almost everywhere equal sets; for the constant `1` they are the elementary
+  properties of the conditional probabilities `μ⟦s | m⟧`.
 
 -/
 
@@ -110,6 +117,54 @@ theorem condExp_indicator (hf_int : Integrable f μ) (hs : s ∈ m) :
       refine (condExp_indicator_aux hs ?_).symm.trans ?_
       · exact indicator_ae_eq_restrict_compl (hm hs)
       · rw [Set.indicator_indicator, Set.inter_self]
+
+/-! ### Indicators of null-measurable sets
+
+For a fixed function, the conditional expectation of its indicator depends on the set only up to
+null sets and is additive on differences, complements, and countable disjoint unions of
+null-measurable sets, which need not be `m`-measurable. -/
+
+/-- Almost everywhere equal sets give almost everywhere equal conditional expectations of
+indicators. -/
+theorem condExp_indicator_ae_eq_of_ae_eq_set {t : Set α} (h : s =ᵐ[μ] t) :
+    μ[s.indicator f | m] =ᵐ[μ] μ[t.indicator f | m] :=
+  condExp_congr_ae (indicator_ae_eq_of_ae_eq_set h)
+
+/-- The conditional expectation of the indicator of `s \ t`, for null-measurable sets `t ⊆ s` and a
+function integrable on `s`, is almost everywhere the difference of the conditional expectations of
+the indicators of `s` and `t`. -/
+theorem condExp_indicator_sdiff {t : Set α} (hs : NullMeasurableSet s μ)
+    (ht : NullMeasurableSet t μ) (hts : t ⊆ s) (hf : IntegrableOn f s μ) :
+    μ[(s \ t).indicator f | m] =ᵐ[μ] μ[s.indicator f | m] - μ[t.indicator f | m] := by
+  rw [Set.indicator_sdiff hts]
+  exact condExp_sub (hf.integrable_indicator₀ hs) ((hf.mono_set hts).integrable_indicator₀ ht) m
+
+/-- The conditional expectation of the indicator of the complement of a null-measurable set `s` is
+almost everywhere `μ[f | m] - μ[s.indicator f | m]`. -/
+theorem condExp_indicator_compl (hs : NullMeasurableSet s μ) (hf : Integrable f μ) :
+    μ[sᶜ.indicator f | m] =ᵐ[μ] μ[f | m] - μ[s.indicator f | m] := by
+  rw [Set.indicator_compl]
+  exact condExp_sub hf (hf.integrableOn.integrable_indicator₀ hs) m
+
+open Function in
+/-- The conditional expectation of the indicator of a countable union of pairwise disjoint
+null-measurable sets is almost everywhere the sum of the conditional expectations of the
+indicators, for a function integrable on the union. -/
+theorem condExp_indicator_iUnion {ι : Type*} [Countable ι] {s : ι → Set α}
+    (hs : ∀ i, NullMeasurableSet (s i) μ) (hd : Pairwise (Disjoint on s))
+    (hf : IntegrableOn f (⋃ i, s i) μ) :
+    μ[(⋃ i, s i).indicator f | m] =ᵐ[μ] fun a ↦ ∑' i, μ[(s i).indicator f | m] a := by
+  rw [indicator_iUnion_of_pairwise_disjoint s hd f]
+  refine condExp_tsum (fun i ↦ ((hf.mono_set (Set.subset_iUnion s i)).integrable_indicator₀
+    (hs i)).aestronglyMeasurable) ?_
+  have h_int (i : ι) : ∫⁻ a, ‖(s i).indicator f a‖ₑ ∂μ = ∫⁻ a in s i, ‖f a‖ₑ ∂μ := by
+    simp_rw [enorm_indicator_eq_indicator_enorm]
+    exact lintegral_indicator₀ (hs i) _
+  simp_rw [h_int]
+  rw [← lintegral_iUnion₀ hs (hd.mono fun i j h ↦ h.aedisjoint)]
+  exact hf.2.ne
+
+/-! ### Restriction of the measure to an `m`-measurable set -/
 
 theorem condExp_restrict_ae_eq_restrict (hm : m ≤ m0) [SigmaFinite (μ.trim hm)]
     (hs_m : s ∈ m) (hf_int : Integrable f μ) :

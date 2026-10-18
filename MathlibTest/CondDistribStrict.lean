@@ -127,6 +127,39 @@ example {α : Type*} {m : SigmaAlgebra α} [mα : SigmaAlgebra α] (hm : m ≤ m
     (fun x ↦ (G x).toReal) =ᵐ[μ] μ⟦t | m⟧ ↔ ∀ s ∈ m, ∫⁻ x in s, G x ∂μ = μ (s ∩ t) :=
   toReal_ae_eq_condExp_indicator_iff_forall_setLIntegral_eq hm ht (measure_ne_top _ _) hG hG_fin
 
+/-! ### Conditional probabilities of null-measurable sets -/
+
+section CondProb
+
+variable {α E : Type*} {m : SigmaAlgebra α} [mα : SigmaAlgebra α] {μ : Measure α}
+  [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+
+-- For a fixed integrand, the conditional expectation of its indicator is additive on differences
+-- of null-measurable sets that need not be `m`-measurable.
+example {f : α → E} {s t : Set α} (hs : NullMeasurableSet s μ) (ht : NullMeasurableSet t μ)
+    (hts : t ⊆ s) (hf : IntegrableOn f s μ) :
+    μ[(s \ t).indicator f | m] =ᵐ[μ] μ[s.indicator f | m] - μ[t.indicator f | m] :=
+  condExp_indicator_sdiff hs ht hts hf
+
+-- The conditional probability of a complement is one minus that of the set.
+example [IsFiniteMeasure μ] (hm : m ≤ mα) {s : Set α} (hs : NullMeasurableSet s μ) :
+    μ⟦sᶜ | m⟧ =ᵐ[μ] 1 - μ⟦s | m⟧ := by
+  have h := condExp_indicator_compl (m := m) hs (integrable_const (1 : ℝ))
+  rwa [condExp_const hm, ← Pi.one_def] at h
+
+-- Conditional probabilities are countably additive on pairwise disjoint null-measurable sets.
+example [IsFiniteMeasure μ] {ι : Type*} [Countable ι] {s : ι → Set α}
+    (hs : ∀ i, NullMeasurableSet (s i) μ) (hd : Pairwise (Function.onFun Disjoint s)) :
+    μ⟦⋃ i, s i | m⟧ =ᵐ[μ] fun a ↦ ∑' i, (μ⟦s i | m⟧) a :=
+  condExp_indicator_iUnion hs hd (integrable_const (1 : ℝ)).integrableOn
+
+-- Almost everywhere equal sets have almost everywhere equal conditional probabilities, for every
+-- measure.
+example {s t : Set α} (h : s =ᵐ[μ] t) : μ⟦s | m⟧ =ᵐ[μ] μ⟦t | m⟧ :=
+  condExp_indicator_ae_eq_of_ae_eq_set h
+
+end CondProb
+
 /-! ### Posteriors -/
 
 section Posterior

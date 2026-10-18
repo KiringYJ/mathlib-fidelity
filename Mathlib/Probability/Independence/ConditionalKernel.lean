@@ -55,15 +55,6 @@ section Helpers
 
 variable {m' : SigmaAlgebra Ω} {mΩ : SigmaAlgebra Ω} {μ : Measure Ω}
 
-private lemma condExp_indicator_congr {s t : Set Ω} (h : s =ᵐ[μ] t) :
-    μ⟦s | m'⟧ =ᵐ[μ] μ⟦t | m'⟧ :=
-  condExp_congr_ae (indicator_ae_eq_of_ae_eq_set h)
-
-private lemma nullMeasurableSet_of_mem_comap {β : Type*} {mβ : SigmaAlgebra β} {f : Ω → β}
-    (hf : NullMeasurable f μ) {s : Set Ω} (hs : s ∈ mβ.comap f) : NullMeasurableSet s μ := by
-  obtain ⟨t, ht, rfl⟩ := hs
-  exact hf ht
-
 private lemma nullMeasurableSet_of_mem_generateFrom_singleton {s t : Set Ω}
     (hs : NullMeasurableSet s μ) (ht : t ∈ generateFrom {s}) : NullMeasurableSet t μ := by
   rcases mem_generateFrom_singleton_iff.1 ht with rfl | rfl | rfl | rfl
@@ -99,7 +90,8 @@ conditional probability of a null-measurable set `s`. -/
 private lemma condExp_ae_eq_measureReal [IsMarkovKernel η] (hη : η ∈ condExpKernel μ hm')
     {s : Set Ω} (hs : NullMeasurableSet s μ) :
     μ⟦s | m'⟧ =ᵐ[μ] fun ω ↦ (η ω).real s := by
-  filter_upwards [condExp_indicator_congr (m' := m') hs.toMeasurable_ae_eq.symm,
+  filter_upwards [condExp_indicator_ae_eq_of_ae_eq_set (m := m') (f := fun _ ↦ (1 : ℝ))
+      hs.toMeasurable_ae_eq.symm,
     condExpKernel_ae_eq_condExp hη (measurableSet_toMeasurable μ s),
     ae_of_ae_trim hm' (ae_trim_apply_eq_of_ae_eq hη hs.toMeasurable_ae_eq)] with ω h₁ h₂ h₃
   rw [h₁, ← h₂]
@@ -207,14 +199,14 @@ lemma condIndepSet_iff_of_mem {s t : Set Ω} (hs : NullMeasurableSet s μ)
 lemma iCondIndepFun_iff_of_mem {β : ι → Type*} {m : ∀ i, SigmaAlgebra (β i)} {f : ∀ i, Ω → β i}
     (hf : ∀ i, NullMeasurable (f i) μ) (hη : η ∈ condExpKernel μ hm') :
     iCondIndepFun m' hm' f μ ↔ Kernel.iIndepFun f η (μ.trim hm') :=
-  iCondIndep_iff_of_mem (fun i _ hs ↦ nullMeasurableSet_of_mem_comap (hf i) hs) hη
+  iCondIndep_iff_of_mem (fun i _ hs ↦ (hf i).measurable'.comap_le hs) hη
 
 lemma condIndepFun_iff_of_mem {β γ : Type*} [SigmaAlgebra β] [SigmaAlgebra γ] {f : Ω → β}
     {g : Ω → γ} (hf : NullMeasurable f μ) (hg : NullMeasurable g μ)
     (hη : η ∈ condExpKernel μ hm') :
     CondIndepFun m' hm' f g μ ↔ Kernel.IndepFun f g η (μ.trim hm') :=
-  condIndep_iff_of_mem (fun _ hs ↦ nullMeasurableSet_of_mem_comap hf hs)
-    (fun _ hs ↦ nullMeasurableSet_of_mem_comap hg hs) hη
+  condIndep_iff_of_mem (fun _ hs ↦ hf.measurable'.comap_le hs)
+    (fun _ hs ↦ hg.measurable'.comap_le hs) hη
 
 end Representatives
 

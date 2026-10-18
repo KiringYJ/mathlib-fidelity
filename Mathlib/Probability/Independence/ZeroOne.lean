@@ -127,7 +127,7 @@ theorem ae_condExp_eq_zero_or_one_iff (hm : m ≤ m0) [IsFiniteMeasure μ] {t : 
   · rintro ⟨s, hs, hts⟩
     have hs' : MeasurableSet s := measurableSet_iff_mem.2 (hm hs)
     have e : μ⟦t | m⟧ =ᵐ[μ] s.indicator fun _ ↦ (1 : ℝ) :=
-      (condExp_congr_ae (indicator_ae_eq_of_ae_eq_set hts)).trans
+      (condExp_indicator_ae_eq_of_ae_eq_set hts).trans
         (condExp_of_stronglyMeasurable hm (stronglyMeasurable_const.indicator hs)
           ((integrable_const (1 : ℝ)).indicator hs')).eventuallyEq
     filter_upwards [e] with ω hω

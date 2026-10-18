@@ -3410,19 +3410,38 @@ These entries track elementary facts that several modules need but that exist on
 helpers, so that each consumer keeps its own copy.  Making them public needs a naming and placement
 decision; it changes no statement.
 
-- [ ] **[S] Give conditional probabilities a public API.**
-  The conditional probability `μ⟦t | m⟧` has its elementary facts only as private lemmas: the
-  `CondProb` section of `Mathlib/Probability/Independence/Conditional.lean`
-  (`integrable_indicator_one`, `condExp_indicator_empty`, `condExp_indicator_univ`,
-  `condExp_indicator_sdiff`, `condExp_indicator_compl`, `condExp_indicator_iUnion`, and the almost
-  everywhere congruence `condExp_indicator_congr`), a second private `condExp_indicator_congr` in
-  `Mathlib/Probability/Independence/ConditionalKernel.lean`, and the same congruence inline in
-  `ae_condExp_eq_zero_or_one_iff` in `Mathlib/Probability/Independence/ZeroOne.lean`.  The
-  null-measurability helper `nullMeasurableSet_of_mem_comap` is likewise private in both
-  `Conditional.lean` and `ConditionalKernel.lean`.  Decide their public names and their home,
-  perhaps a module on conditional probabilities given a σ-algebra, and replace the private copies;
-  the π-system step `condExp_inter_of_mem_generateFrom` is specific to conditional independence and
-  can stay private.
+- [x] **[S] Give conditional probabilities a public API.**
+  The elementary facts about the conditional probabilities `μ⟦t | m⟧` are public in
+  `Mathlib/MeasureTheory/Function/ConditionalExpectation/Indicator.lean`, the module on conditional
+  expectations of indicators, for every integrable function in place of the constant `1`:
+  `condExp_indicator_ae_eq_of_ae_eq_set` for almost everywhere equal sets, and
+  `condExp_indicator_sdiff`, `condExp_indicator_compl`, and `condExp_indicator_iUnion` for
+  differences, complements, and countable disjoint unions of null-measurable sets, which need not be
+  `m`-measurable.  The union lemma reuses `indicator_iUnion_of_pairwise_disjoint`.  The private
+  copies in `Mathlib/Probability/Independence/Conditional.lean` and
+  `Mathlib/Probability/Independence/ConditionalKernel.lean` and the inline use in
+  `Mathlib/Probability/Independence/ZeroOne.lean` are replaced by them, and the private
+  `integrable_indicator_one` by `(integrable_const 1).indicator₀`.  The empty set and the whole
+  space are rewritten by hand, with `Set.indicator_empty'` and `condExp_zero` (`Set.indicator_empty`
+  leaves `fun _ ↦ 0`, which `condExp_zero` does not match) and with `Set.indicator_univ` and
+  `condExp_const`; the open entry below states them.  The private `nullMeasurableSet_of_mem_comap`
+  of both files is `hf.measurable'.comap_le hs` (`NullMeasurable.measurable'` and
+  `Measurable.comap_le`).  `nullMeasurableSet_of_mem_generateFrom` and the π-system step
+  `condExp_inter_of_mem_generateFrom` stay private in `Conditional.lean`, their only user.  Tests
+  are in `MathlibTest/CondDistribStrict.lean`.
+
+- [ ] **[S] State the normalization of conditional probabilities with `μ⟦s | m⟧`.**
+  `μ⟦∅ | m⟧ = 0` and `μ⟦Set.univ | m⟧ = 1` have no statement of their own: `simp` stops at
+  `(fun x ↦ 0) = 0` and `(fun ω ↦ 1) = 1`, so `Mathlib/Probability/Independence/Conditional.lean`
+  rewrites them by hand in `condExp_inter_of_mem_generateFrom`, `condIndep_bot_right` (with
+  `← Pi.one_def`), `iCondIndepSets.iCondIndep`, and `iCondIndepFun.of_subsingleton`.  They need the
+  constant `1`, a finite measure, and `m ≤ mΩ`, so they cannot be stated for a general integrand in
+  `Indicator.lean`.  Decide names and a home in `Mathlib/Probability/`, for example
+  `Mathlib/Probability/ConditionalExpectation.lean`, for thin statements with `μ⟦s | m⟧`: `∅`,
+  `Set.univ`, and the complement `μ⟦sᶜ | m⟧ =ᵐ[μ] 1 - μ⟦s | m⟧`, without colliding with the
+  `MeasureTheory.condExp_indicator_*` lemmas.  The order facts `0 ≤ᵐ[μ] μ⟦s | m⟧`,
+  `μ⟦s | m⟧ ≤ᵐ[μ] 1`, and monotonicity in `s` follow from `condExp_nonneg` and `condExp_mono` in a
+  few lines but have no consumer yet.
 
 ### Proof and API-boundary hygiene -- rewrites that depend on extra transparency
 
