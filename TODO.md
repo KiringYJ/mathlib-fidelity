@@ -2872,14 +2872,16 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `m₁` from it, as `h.trans (eventuallySigmaAlgebra_mono hm')`: `NullMeasurableSet` is membership in
   `eventuallySigmaAlgebra mΩ (ae μ)` by definition.
 
-- [ ] **Add the almost everywhere congruence for families of conditionally independent random
+- [x] **Add the almost everywhere congruence for families of conditionally independent random
   variables.**
-  `Mathlib/Probability/Independence/Conditional.lean` has `CondIndep.of_le_eventuallySigmaAlgebra`
-  and `CondIndepFun.congr` for pairs but no family versions, while `iIndepFun.congr` and
-  `iIndepFun_congr` exist for unconditional independence
-  (`Mathlib/Probability/Independence/Basic.lean`).  Add `iCondIndep.of_le_eventuallySigmaAlgebra`,
-  by the same argument for finite intersections, whose conditional probabilities change only on null
-  sets, and `iCondIndepFun.congr`.
+  `iCondIndep.of_le_eventuallySigmaAlgebra` in `Mathlib/Probability/Independence/Conditional.lean`
+  passes conditional independence of a family to families of σ-algebras whose sets are almost
+  everywhere equal to sets of the original ones: almost everywhere equal finite intersections have
+  almost everywhere equal conditional probabilities (`Finset.eventuallyEqSet_iInter`,
+  `eventuallyEq_prod`).  `iCondIndepFun_congr` and its alias `iCondIndepFun.congr`, mirroring
+  `iIndepFun_congr` and `iIndepFun.congr`, follow through
+  `Measurable.eventuallyMeasurable_of_eventuallyEq`.  Tests are in
+  `MathlibTest/CondIndepStrict.lean`.
 
 - [ ] **Give `HasSubgaussianMGF.fun_zero` its exact condition.**
   `HasSubgaussianMGF.fun_zero` and `HasSubgaussianMGF.zero` in
@@ -3401,6 +3403,26 @@ linearity, or another invariant adds hypotheses or preservation content.
   normalization lemmas for an admitted structured construction inherit that construction's
   exclusion.  Run the lint in audit mode over the inherited tree; consider a diff-scoped warning
   only after all positive and negative controls are classified without false equivalences.
+
+### Visibility hygiene -- reusable facts kept as private helpers
+
+These entries track elementary facts that several modules need but that exist only as private
+helpers, so that each consumer keeps its own copy.  Making them public needs a naming and placement
+decision; it changes no statement.
+
+- [ ] **[S] Give conditional probabilities a public API.**
+  The conditional probability `μ⟦t | m⟧` has its elementary facts only as private lemmas: the
+  `CondProb` section of `Mathlib/Probability/Independence/Conditional.lean`
+  (`integrable_indicator_one`, `condExp_indicator_empty`, `condExp_indicator_univ`,
+  `condExp_indicator_sdiff`, `condExp_indicator_compl`, `condExp_indicator_iUnion`, and the almost
+  everywhere congruence `condExp_indicator_congr`), a second private `condExp_indicator_congr` in
+  `Mathlib/Probability/Independence/ConditionalKernel.lean`, and the same congruence inline in
+  `ae_condExp_eq_zero_or_one_iff` in `Mathlib/Probability/Independence/ZeroOne.lean`.  The
+  null-measurability helper `nullMeasurableSet_of_mem_comap` is likewise private in both
+  `Conditional.lean` and `ConditionalKernel.lean`.  Decide their public names and their home,
+  perhaps a module on conditional probabilities given a σ-algebra, and replace the private copies;
+  the π-system step `condExp_inter_of_mem_generateFrom` is specific to conditional independence and
+  can stay private.
 
 ### Proof and API-boundary hygiene -- rewrites that depend on extra transparency
 

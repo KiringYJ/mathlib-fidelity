@@ -84,7 +84,8 @@ variable {Ω ι : Type*}
 
 For a finite measure, the conditional probabilities `μ⟦s | m'⟧` of null-measurable sets vanish on
 the empty set, are `1` on the whole space, and are additive on differences and on countable
-disjoint unions, almost everywhere. -/
+disjoint unions, almost everywhere. For every measure, almost everywhere equal sets have almost
+everywhere equal conditional probabilities. -/
 
 section CondProb
 
@@ -113,6 +114,12 @@ private lemma condExp_indicator_compl (hm' : m' ≤ mΩ) {t : Set Ω} (ht : Null
     μ⟦tᶜ | m'⟧ =ᵐ[μ] 1 - μ⟦t | m'⟧ := by
   rw [← condExp_indicator_univ (μ := μ) hm', Set.compl_eq_univ_sdiff]
   exact condExp_indicator_sdiff nullMeasurableSet_univ ht (Set.subset_univ t)
+
+omit [IsFiniteMeasure μ] in
+/-- Almost everywhere equal sets have almost everywhere equal conditional probabilities. -/
+private lemma condExp_indicator_congr {s t : Set Ω} (h : s =ᵐ[μ] t) :
+    μ⟦s | m'⟧ =ᵐ[μ] μ⟦t | m'⟧ :=
+  condExp_congr_ae (indicator_ae_eq_of_ae_eq_set h)
 
 open Function in
 private lemma indicator_iUnion_eq_tsum {f : ℕ → Set Ω} (hd : Pairwise (Disjoint on f)) (ω : Ω) :
@@ -607,10 +614,9 @@ theorem CondIndep.of_le_eventuallySigmaAlgebra (h : CondIndep m' m₁ m₂ hm' �
     exact (h.nullMeasurableSet_right s hs).congr hts.symm
   obtain ⟨s₁, hs₁, h₁⟩ := h₃ ht₁
   obtain ⟨s₂, hs₂, h₂⟩ := h₄ ht₂
-  have e {t s : Set Ω} (hts : t =ᵐ[μ] s) : μ⟦t | m'⟧ =ᵐ[μ] μ⟦s | m'⟧ :=
-    condExp_congr_ae (indicator_ae_eq_of_ae_eq_set hts)
-  exact (e (h₁.inter h₂)).trans
-    ((CondIndepSets.condExp_inter h s₁ s₂ hs₁ hs₂).trans ((e h₁).mul (e h₂)).symm)
+  exact (condExp_indicator_congr (h₁.inter h₂)).trans
+    ((CondIndepSets.condExp_inter h s₁ s₂ hs₁ hs₂).trans
+      ((condExp_indicator_congr h₁).mul (condExp_indicator_congr h₂)).symm)
 
 /-- A σ-algebra contained in `m'` is conditionally independent given `m'` of every σ-algebra of
 null-measurable sets: the conditional probability of a set of `m'` is its indicator, which pulls out
@@ -658,6 +664,22 @@ theorem iCondIndep_of_iCondIndep_of_le {m₁ m₂ : ι → SigmaAlgebra Ω}
     iCondIndep m' hm' m₁ μ :=
   ⟨fun i s hs ↦ h_indep.nullMeasurableSet i s (h_le i hs), fun s _f hf ↦
     iCondIndepSets.condExp_biInter h_indep s fun i hi ↦ h_le i (hf i hi)⟩
+
+/-- Conditional independence of a family passes to σ-algebras whose sets are almost everywhere
+equal to sets of the original ones: if the family `m₁` is conditionally independent given `m'`, so
+is every family `m₂` with `m₂ i ≤ eventuallySigmaAlgebra (m₁ i) (ae μ)` for all `i`, since almost
+everywhere equal finite intersections have almost everywhere equal conditional probabilities. -/
+theorem iCondIndep.of_le_eventuallySigmaAlgebra {m₁ m₂ : ι → SigmaAlgebra Ω}
+    (h : iCondIndep m' hm' m₁ μ) (h_le : ∀ i, m₂ i ≤ eventuallySigmaAlgebra (m₁ i) (ae μ)) :
+    iCondIndep m' hm' m₂ μ := by
+  refine ⟨fun i t ht ↦ ?_, fun S f hf ↦ ?_⟩
+  · obtain ⟨s, hs, hts⟩ := h_le i ht
+    exact (h.nullMeasurableSet i s hs).congr hts.symm
+  have hex : ∀ i ∈ S, ∃ s ∈ m₁ i, f i =ᵐ[μ] s := fun i hi ↦ h_le i (hf i hi)
+  choose! g hg hfg using hex
+  exact (condExp_indicator_congr (S.eventuallyEqSet_iInter hfg)).trans
+    ((h.condExp_biInter S hg).trans
+      (eventuallyEq_prod fun i hi ↦ condExp_indicator_congr (hfg i hi)).symm)
 
 end CondIndep
 
@@ -1176,6 +1198,17 @@ lemma condIndepFun_self_right {mβ : SigmaAlgebra β} {mβ' : SigmaAlgebra β'}
 
 section iCondIndepFun
 variable {β : ι → Type*} {m : ∀ i, SigmaAlgebra (β i)} {f : ∀ i, Ω → β i}
+
+/-- Conditional independence of a family of random variables is invariant under almost everywhere
+equality. -/
+theorem iCondIndepFun_congr {g : ∀ i, Ω → β i} (h : ∀ i, f i =ᵐ[μ] g i) :
+    iCondIndepFun m' hm' f μ ↔ iCondIndepFun m' hm' g μ :=
+  ⟨fun hf ↦ iCondIndep.of_le_eventuallySigmaAlgebra hf fun i ↦
+      ((comap_measurable (f i)).eventuallyMeasurable_of_eventuallyEq (h i).symm).comap_le,
+    fun hg ↦ iCondIndep.of_le_eventuallySigmaAlgebra hg fun i ↦
+      ((comap_measurable (g i)).eventuallyMeasurable_of_eventuallyEq (h i)).comap_le⟩
+
+alias ⟨iCondIndepFun.congr, _⟩ := iCondIndepFun_congr
 
 /-- The null-measurability of the functions is the domain of conditional independence. -/
 lemma iCondIndepFun.of_subsingleton [Subsingleton ι] (hf : ∀ i, NullMeasurable (f i) μ) :

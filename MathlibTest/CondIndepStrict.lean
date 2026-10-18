@@ -90,6 +90,21 @@ example (h : CondIndep m' m₁ m₂ hm' μ) (h₃ : m₃ ≤ eventuallySigmaAlge
     (h₄ : m₄ ≤ eventuallySigmaAlgebra m₂ (ae μ)) : CondIndep m' m₃ m₄ hm' μ :=
   h.of_le_eventuallySigmaAlgebra h₃ h₄
 
+-- So does conditional independence of a family.
+example {ι : Type*} {M₁ M₂ : ι → SigmaAlgebra Ω} (h : iCondIndep m' hm' M₁ μ)
+    (h_le : ∀ i, M₂ i ≤ eventuallySigmaAlgebra (M₁ i) (ae μ)) : iCondIndep m' hm' M₂ μ :=
+  h.of_le_eventuallySigmaAlgebra h_le
+
+-- Conditional independence of a family of random variables, with values in a family of spaces, is
+-- invariant under almost everywhere equality.
+example {ι : Type*} {B : ι → Type*} [∀ i, SigmaAlgebra (B i)] {f g : ∀ i, Ω → B i}
+    (h : ∀ i, f i =ᵐ[μ] g i) : iCondIndepFun m' hm' f μ ↔ iCondIndepFun m' hm' g μ :=
+  iCondIndepFun_congr h
+
+example {ι : Type*} {f g : ι → Ω → β} (h : ∀ i, f i =ᵐ[μ] g i) (hf : iCondIndepFun m' hm' f μ) :
+    iCondIndepFun m' hm' g μ :=
+  hf.congr h
+
 -- A null-measurable set has conditional probability `0` or `1` almost everywhere exactly when it is
 -- almost everywhere equal to a set of `m'`.
 example {t : Set Ω} (ht : NullMeasurableSet t μ) :
