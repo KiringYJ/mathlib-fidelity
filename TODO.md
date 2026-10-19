@@ -3422,26 +3422,38 @@ decision; it changes no statement.
   `Mathlib/Probability/Independence/ConditionalKernel.lean` and the inline use in
   `Mathlib/Probability/Independence/ZeroOne.lean` are replaced by them, and the private
   `integrable_indicator_one` by `(integrable_const 1).indicator₀`.  The empty set and the whole
-  space are rewritten by hand, with `Set.indicator_empty'` and `condExp_zero` (`Set.indicator_empty`
-  leaves `fun _ ↦ 0`, which `condExp_zero` does not match) and with `Set.indicator_univ` and
-  `condExp_const`; the open entry below states them.  The private `nullMeasurableSet_of_mem_comap`
-  of both files is `hf.measurable'.comap_le hs` (`NullMeasurable.measurable'` and
-  `Measurable.comap_le`).  `nullMeasurableSet_of_mem_generateFrom` and the π-system step
-  `condExp_inter_of_mem_generateFrom` stay private in `Conditional.lean`, their only user.  Tests
-  are in `MathlibTest/CondDistribStrict.lean`.
+  space were rewritten by hand, with `Set.indicator_empty'` and `condExp_zero`
+  (`Set.indicator_empty` leaves `fun _ ↦ 0`, which `condExp_zero` does not match) and with
+  `Set.indicator_univ` and `condExp_const`, until the entry below stated them.  The private
+  `nullMeasurableSet_of_mem_comap` of both files is `hf.measurable'.comap_le hs`
+  (`NullMeasurable.measurable'` and `Measurable.comap_le`).  `nullMeasurableSet_of_mem_generateFrom`
+  and the π-system step `condExp_inter_of_mem_generateFrom` stay private in `Conditional.lean`,
+  their only user.  Tests are in `MathlibTest/CondDistribStrict.lean`.
 
-- [ ] **[S] State the normalization of conditional probabilities with `μ⟦s | m⟧`.**
-  `μ⟦∅ | m⟧ = 0` and `μ⟦Set.univ | m⟧ = 1` have no statement of their own: `simp` stops at
-  `(fun x ↦ 0) = 0` and `(fun ω ↦ 1) = 1`, so `Mathlib/Probability/Independence/Conditional.lean`
-  rewrites them by hand in `condExp_inter_of_mem_generateFrom`, `condIndep_bot_right` (with
-  `← Pi.one_def`), `iCondIndepSets.iCondIndep`, and `iCondIndepFun.of_subsingleton`.  They need the
-  constant `1`, a finite measure, and `m ≤ mΩ`, so they cannot be stated for a general integrand in
-  `Indicator.lean`.  Decide names and a home in `Mathlib/Probability/`, for example
-  `Mathlib/Probability/ConditionalExpectation.lean`, for thin statements with `μ⟦s | m⟧`: `∅`,
-  `Set.univ`, and the complement `μ⟦sᶜ | m⟧ =ᵐ[μ] 1 - μ⟦s | m⟧`, without colliding with the
-  `MeasureTheory.condExp_indicator_*` lemmas.  The order facts `0 ≤ᵐ[μ] μ⟦s | m⟧`,
-  `μ⟦s | m⟧ ≤ᵐ[μ] 1`, and monotonicity in `s` follow from `condExp_nonneg` and `condExp_mono` in a
-  few lines but have no consumer yet.
+- [x] **[S] State the normalization of conditional probabilities with `μ⟦s | m⟧`.**
+  `Mathlib/MeasureTheory/Function/ConditionalExpectation/Indicator.lean` states
+  `condExp_indicator_empty` for every integrand and every measure, and `condExp_indicator_univ_one`
+  and `condExp_indicator_compl_one` for the constant `1`, a finite measure, and `m ≤ m0`:
+  `μ⟦∅ | m⟧ = 0`, `μ⟦Set.univ | m⟧ = 1`, and `μ⟦sᶜ | m⟧ =ᵐ[μ] 1 - μ⟦s | m⟧` for a null-measurable
+  `s`.  Each hypothesis is necessary, since without it a conditional expectation in the statement is
+  the fallback `0` of `condExp`.  The notation unfolds to these `condExp` terms, so they join the
+  conditional-probability family of that module, as `integral_indicator_one` sits with the set
+  integrals in `Mathlib/MeasureTheory/Integral/Bochner/Set.lean`; the `_one` suffix marks the
+  constant `1` and keeps them apart from the general `condExp_indicator_*` lemmas.  A home in
+  `Mathlib/Probability/ConditionalExpectation.lean` would also add
+  `Mathlib.Probability.Independence.Basic` to the imports of
+  `Mathlib/Probability/Independence/Conditional.lean`.  The first two are not `@[simp]`: `simp`
+  first rewrites the inner indicator with `Set.indicator_empty` or `Set.indicator_univ`, so the
+  simpNF linter rejects them.  `condExp_indicator_empty` holds on every branch of `condExp`,
+  including the fallbacks, like `condExp_zero`; the open entry "Make conditional expectations carry
+  their measure-theoretic hypotheses" owns the sub-σ-algebra evidence for both.  `Conditional.lean`
+  uses the three lemmas in place of the hand rewrites in `condExp_inter_of_mem_generateFrom`,
+  `condIndep_bot_right`, `iCondIndepSets.iCondIndep`, and `iCondIndepFun.of_subsingleton`.  The
+  order facts are not stated, since no lemma uses them: `0 ≤ᵐ[μ] μ⟦s | m⟧` and `μ⟦s | m⟧ ≤ᵐ[μ] 1`
+  hold for every measure by `condExp_nonneg` and `condExp_le_nonneg_const`, and monotonicity in `s`
+  holds when the indicator of the larger set is integrable, by `condExp_mono`, or by
+  `condExp_nonneg` if the smaller indicator is not integrable.  Tests are in
+  `MathlibTest/CondDistribStrict.lean`.
 
 ### Proof and API-boundary hygiene -- rewrites that depend on extra transparency
 

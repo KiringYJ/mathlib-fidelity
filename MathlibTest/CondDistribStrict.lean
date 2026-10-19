@@ -141,11 +141,18 @@ example {f : α → E} {s t : Set α} (hs : NullMeasurableSet s μ) (ht : NullMe
     μ[(s \ t).indicator f | m] =ᵐ[μ] μ[s.indicator f | m] - μ[t.indicator f | m] :=
   condExp_indicator_sdiff hs ht hts hf
 
--- The conditional probability of a complement is one minus that of the set.
+-- The conditional probability of `∅` is `0` for every measure; for a finite measure and a
+-- sub-σ-algebra, that of `Set.univ` is `1` and that of a complement is almost everywhere `1` minus
+-- that of the set. Rewriting checks that the lemmas match the notation syntactically.
+example : μ⟦∅ | m⟧ = 0 := by
+  rw [condExp_indicator_empty]
+
+example [IsFiniteMeasure μ] (hm : m ≤ mα) : μ⟦Set.univ | m⟧ = 1 := by
+  rw [condExp_indicator_univ_one hm]
+
 example [IsFiniteMeasure μ] (hm : m ≤ mα) {s : Set α} (hs : NullMeasurableSet s μ) :
-    μ⟦sᶜ | m⟧ =ᵐ[μ] 1 - μ⟦s | m⟧ := by
-  have h := condExp_indicator_compl (m := m) hs (integrable_const (1 : ℝ))
-  rwa [condExp_const hm, ← Pi.one_def] at h
+    μ⟦sᶜ | m⟧ =ᵐ[μ] 1 - μ⟦s | m⟧ :=
+  condExp_indicator_compl_one hm hs
 
 -- Conditional probabilities are countably additive on pairwise disjoint null-measurable sets.
 example [IsFiniteMeasure μ] {ι : Type*} [Countable ι] {s : ι → Set α}

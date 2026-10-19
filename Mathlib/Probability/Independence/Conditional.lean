@@ -83,9 +83,10 @@ variable {Ω ι : Type*}
 
 /-! ### From a π-system to the σ-algebra it generates
 
-The conditional probabilities `μ⟦s | m'⟧` are additive on differences, complements, and countable
+The conditional probability of `∅` is `0` (`MeasureTheory.condExp_indicator_empty`), and the
+conditional probabilities `μ⟦s | m'⟧` are additive on differences, complements, and countable
 disjoint unions of null-measurable sets (`MeasureTheory.condExp_indicator_sdiff`,
-`MeasureTheory.condExp_indicator_compl`, `MeasureTheory.condExp_indicator_iUnion`). For a fixed
+`MeasureTheory.condExp_indicator_compl_one`, `MeasureTheory.condExp_indicator_iUnion`). For a fixed
 null-measurable set `t`, the sets `u` with `μ⟦t ∩ u | m'⟧ =ᵐ[μ] μ⟦t | m'⟧ * μ⟦u | m'⟧` therefore
 contain `∅` and are closed under complements and countable disjoint unions, so the identity extends
 from a π-system to the σ-algebra it generates. -/
@@ -116,15 +117,15 @@ private lemma condExp_inter_of_mem_generateFrom (hm' : m' ≤ mΩ) {p : Set (Set
   have hgen : ∀ v ∈ generateFrom p, NullMeasurableSet v μ := fun v hv ↦
     nullMeasurableSet_of_mem_generateFrom hpμ hv
   induction u, hu using induction_on_inter rfl hp with
-  | empty => rw [Set.inter_empty, Set.indicator_empty', condExp_zero, mul_zero]
+  | empty => rw [Set.inter_empty, condExp_indicator_empty, mul_zero]
   | basic v hv => exact h v hv
   | compl v hv ihv =>
     have hv' := hgen v hv
     rw [show t ∩ vᶜ = t \ (t ∩ v) by rw [Set.sdiff_self_inter, Set.sdiff_eq]]
     filter_upwards [condExp_indicator_sdiff (m := m') ht (ht.inter hv') Set.inter_subset_left
         (integrable_const (1 : ℝ)).integrableOn,
-      ihv, condExp_indicator_compl (m := m') hv' (integrable_const (1 : ℝ))] with ω h₁ h₂ h₃
-    simp only [Pi.sub_apply, Pi.mul_apply, condExp_const hm'] at h₁ h₂ h₃ ⊢
+      ihv, condExp_indicator_compl_one hm' hv'] with ω h₁ h₂ h₃
+    simp only [Pi.sub_apply, Pi.mul_apply, Pi.one_apply] at h₁ h₂ h₃ ⊢
     rw [h₁, h₂, h₃]
     ring
   | iUnion f hfd hfm ihf =>
@@ -519,8 +520,8 @@ theorem condIndep_bot_right (m₁ : SigmaAlgebra Ω) {m' : SigmaAlgebra Ω} {mΩ
   · rcases h_bot t ht with rfl | rfl
     exacts [nullMeasurableSet_empty, nullMeasurableSet_univ]
   · rcases h_bot t₂ ht₂ with rfl | rfl
-    · rw [Set.inter_empty, Set.indicator_empty', condExp_zero, mul_zero]
-    · rw [Set.inter_univ, Set.indicator_univ, condExp_const hm', ← Pi.one_def, mul_one]
+    · rw [Set.inter_empty, condExp_indicator_empty, mul_zero]
+    · rw [Set.inter_univ, condExp_indicator_univ_one hm', mul_one]
 
 theorem condIndep_bot_left (m₁ : SigmaAlgebra Ω) {m' : SigmaAlgebra Ω} {mΩ : SigmaAlgebra Ω}
     {hm' : m' ≤ mΩ} {μ : Measure Ω} [IsFiniteMeasure μ] (hm₁ : ∀ s ∈ m₁, NullMeasurableSet s μ) :
@@ -904,7 +905,7 @@ theorem iCondIndepSets.iCondIndep (m : ι → SigmaAlgebra Ω) (π : ι → Set 
   refine Finset.induction ?_ ?_ s
   · intro _
     simp only [Finset.notMem_empty, Set.iInter_of_empty, Set.iInter_univ, Finset.prod_empty,
-      Set.indicator_univ, condExp_const hm']
+      condExp_indicator_univ_one hm']
     rfl
   · intro a S ha_notin_S h_rec hf_m
     have hf_m_S : ∀ x ∈ S, f x ∈ m x := fun x hx ↦ hf_m x (by simp [hx])
@@ -1157,7 +1158,7 @@ lemma iCondIndepFun.of_subsingleton [Subsingleton ι] (hf : ∀ i, NullMeasurabl
   refine ⟨fun i _ hs ↦ (hf i).measurable'.comap_le hs, fun s g _ ↦ ?_⟩
   rcases Finset.eq_empty_or_nonempty s with rfl | ⟨i, hi⟩
   · simp only [Finset.notMem_empty, Set.iInter_of_empty, Set.iInter_univ, Finset.prod_empty,
-      Set.indicator_univ, condExp_const hm']
+      condExp_indicator_univ_one hm']
     rfl
   · obtain rfl : s = {i} :=
       Finset.eq_singleton_iff_unique_mem.2 ⟨hi, fun j _ ↦ Subsingleton.elim j i⟩

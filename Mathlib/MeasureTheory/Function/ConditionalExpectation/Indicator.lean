@@ -27,6 +27,11 @@ a restricted measure.
   and `MeasureTheory.condExp_indicator_ae_eq_of_ae_eq_set` are the companions for differences,
   complements, and almost everywhere equal sets; for the constant `1` they are the elementary
   properties of the conditional probabilities `μ⟦s | m⟧`.
+* `MeasureTheory.condExp_indicator_empty`, `MeasureTheory.condExp_indicator_univ_one`, and
+  `MeasureTheory.condExp_indicator_compl_one`: the conditional expectation of the indicator of `∅`
+  is `0`, and for a finite measure and a sub-σ-algebra `m`, the conditional probability of
+  `Set.univ` is `1` and that of the complement of a null-measurable set `s` is almost everywhere
+  `1 - μ⟦s | m⟧`.
 
 -/
 
@@ -120,15 +125,29 @@ theorem condExp_indicator (hf_int : Integrable f μ) (hs : s ∈ m) :
 
 /-! ### Indicators of null-measurable sets
 
-For a fixed function, the conditional expectation of its indicator depends on the set only up to
-null sets and is additive on differences, complements, and countable disjoint unions of
-null-measurable sets, which need not be `m`-measurable. -/
+For a fixed function, the conditional expectation of its indicator is `0` for the empty set,
+depends on the set only up to null sets, and is additive on differences, complements, and countable
+disjoint unions of null-measurable sets, which need not be `m`-measurable. For the constant `1`,
+these are the conditional probabilities `μ⟦s | m⟧`; for a finite measure and a sub-σ-algebra `m`,
+that of `Set.univ` is `1`. -/
 
 /-- Almost everywhere equal sets give almost everywhere equal conditional expectations of
 indicators. -/
 theorem condExp_indicator_ae_eq_of_ae_eq_set {t : Set α} (h : s =ᵐ[μ] t) :
     μ[s.indicator f | m] =ᵐ[μ] μ[t.indicator f | m] :=
   condExp_congr_ae (indicator_ae_eq_of_ae_eq_set h)
+
+omit [CompleteSpace E] in
+/-- The conditional expectation of the indicator of the empty set is `0`; in particular, the
+conditional probability of `∅` vanishes. -/
+theorem condExp_indicator_empty : μ[(∅ : Set α).indicator f | m] = 0 := by
+  rw [Set.indicator_empty', condExp_zero]
+
+/-- For a finite measure, the conditional probability of the whole space given a sub-σ-algebra
+is `1`. -/
+theorem condExp_indicator_univ_one (hm : m ≤ m0) [IsFiniteMeasure μ] :
+    μ[Set.univ.indicator (fun _ ↦ (1 : ℝ)) | m] = 1 := by
+  rw [Set.indicator_univ, condExp_const hm, Pi.one_def]
 
 /-- The conditional expectation of the indicator of `s \ t`, for null-measurable sets `t ⊆ s` and a
 function integrable on `s`, is almost everywhere the difference of the conditional expectations of
@@ -145,6 +164,14 @@ theorem condExp_indicator_compl (hs : NullMeasurableSet s μ) (hf : Integrable f
     μ[sᶜ.indicator f | m] =ᵐ[μ] μ[f | m] - μ[s.indicator f | m] := by
   rw [Set.indicator_compl]
   exact condExp_sub hf (hf.integrableOn.integrable_indicator₀ hs) m
+
+/-- For a finite measure, the conditional probability of the complement of a null-measurable set
+`s` given a sub-σ-algebra is almost everywhere `1` minus that of `s`. -/
+theorem condExp_indicator_compl_one (hm : m ≤ m0) [IsFiniteMeasure μ]
+    (hs : NullMeasurableSet s μ) :
+    μ[sᶜ.indicator (fun _ ↦ (1 : ℝ)) | m] =ᵐ[μ] 1 - μ[s.indicator (fun _ ↦ (1 : ℝ)) | m] := by
+  have h := condExp_indicator_compl (m := m) hs (integrable_const (1 : ℝ))
+  rwa [condExp_const hm, ← Pi.one_def] at h
 
 open Function in
 /-- The conditional expectation of the indicator of a countable union of pairwise disjoint
