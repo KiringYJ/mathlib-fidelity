@@ -17,15 +17,20 @@ description of the full process.
 The conditional expectation of an `L²` function is defined in
 `MeasureTheory.Function.ConditionalExpectation.CondexpL2`. In this file, we perform two steps.
 * Show that the conditional expectation of the indicator of a measurable set with finite measure
-  is integrable and define a map `Set α → (E →L[ℝ] (α →₁[μ] E))` which to a set associates a linear
-  map. That linear map sends `x ∈ E` to the conditional expectation of the indicator of the set
-  with value `x`.
-* Extend that map to `condExpL1CLM : (α →₁[μ] E) →L[ℝ] (α →₁[μ] E)`. This is done using the same
-  construction as the Bochner integral (see the file `MeasureTheory/Integral/SetToL1`).
+  is integrable and define, for each such set, a continuous linear map `condExpInd` from `E` to
+  `α →₁[μ] E`, which sends `x ∈ E` to the conditional expectation of the indicator of the set with
+  value `x`.
+* Extend these maps to `condExpL1CLM : (α →₁[μ] E) →L[ℝ] (α →₁[μ] E)`. This is done using the same
+  construction as the Bochner integral (see the file `MeasureTheory/Integral/SetToL1`). That
+  construction takes a set function defined on every set, so `dominatedFinMeasAdditive_condExpInd`
+  extends `condExpInd` by `0` to the other sets at its single construction site; the result does
+  not depend on the extension.
 
 ## Main definitions
 
-* `condExpL1`: Conditional expectation of a function as a linear map from `L1` to itself.
+* `condExpInd`: conditional expectation of the indicator of a measurable set of finite measure, as
+  a continuous linear map from the values to `L1`.
+* `condExpL1CLM`: conditional expectation as a continuous linear map from `L1` to itself.
 
 -/
 
@@ -58,10 +63,9 @@ section CondexpInd
 
 /-! ## Conditional expectation of an indicator as a continuous linear map.
 
-The goal of this section is to build
-`condExpInd (hm : m ≤ m0) (μ : Measure α) (s : Set s) : G →L[ℝ] α →₁[μ] G`, which
-takes `x : G` to the conditional expectation of the indicator of the set `s` with value `x`,
-seen as an element of `α →₁[μ] G`.
+The goal of this section is to build `condExpInd G hm hs hμs : G →L[ℝ] α →₁[μ] G` for a
+measurable set `s` of finite measure, which takes `x : G` to the conditional expectation of the
+indicator of the set `s` with value `x`, seen as an element of `α →₁[μ] G`.
 -/
 
 
@@ -141,168 +145,113 @@ theorem condExpIndL1Fin_disjoint_union (hs : MeasurableSet s) (ht : MeasurableSe
   grw [Lp.coeFn_add]
   rfl
 
+theorem continuous_condExpIndL1Fin (hs : MeasurableSet s) (hμs : μ s ≠ ∞) :
+    Continuous fun x : G => condExpIndL1Fin hm hs hμs x :=
+  continuous_of_linear_of_bound (condExpIndL1Fin_add hs hμs) (condExpIndL1Fin_smul hs hμs)
+    (norm_condExpIndL1Fin_le hs hμs)
+
 end CondexpIndL1Fin
-
-section CondexpIndL1
-
-
-open scoped Classical in
-/-- Conditional expectation of the indicator of a set, as a function in L1. Its value for sets
-which are not both measurable and of finite measure is not used: we set it to 0. -/
-def condExpIndL1 {m m0 : SigmaAlgebra α} (hm : m ≤ m0) (μ : Measure α) (s : Set α)
-    [SigmaFinite (μ.trim hm)] (x : G) : α →₁[μ] G :=
-  if hs : MeasurableSet s ∧ μ s ≠ ∞ then condExpIndL1Fin hm hs.1 hs.2 x else 0
-
-variable {hm : m ≤ m0} [SigmaFinite (μ.trim hm)]
-
-theorem condExpIndL1_of_measurableSet_of_measure_ne_top (hs : MeasurableSet s) (hμs : μ s ≠ ∞)
-    (x : G) : condExpIndL1 hm μ s x = condExpIndL1Fin hm hs hμs x := by
-  simp only [condExpIndL1, And.intro hs hμs, dite_eq_left, Ne, not_false_iff, and_self_iff]
-
-theorem condExpIndL1_of_measure_eq_top (hμs : μ s = ∞) (x : G) : condExpIndL1 hm μ s x = 0 := by
-  simp only [condExpIndL1, hμs, not_true, Ne, dite_eq_right, not_false_iff,
-    and_false]
-
-theorem condExpIndL1_of_not_measurableSet (hs : ¬MeasurableSet s) (x : G) :
-    condExpIndL1 hm μ s x = 0 := by
-  simp only [condExpIndL1, hs, dite_eq_right, not_false_iff, false_and]
-
-theorem condExpIndL1_add (x y : G) :
-    condExpIndL1 hm μ s (x + y) = condExpIndL1 hm μ s x + condExpIndL1 hm μ s y := by
-  by_cases hs : MeasurableSet s
-  swap; · simp_rw [condExpIndL1_of_not_measurableSet hs]; rw [zero_add]
-  by_cases hμs : μ s = ∞
-  · simp_rw [condExpIndL1_of_measure_eq_top hμs]; rw [zero_add]
-  · simp_rw [condExpIndL1_of_measurableSet_of_measure_ne_top hs hμs]
-    exact condExpIndL1Fin_add hs hμs x y
-
-theorem condExpIndL1_smul (c : ℝ) (x : G) :
-    condExpIndL1 hm μ s (c • x) = c • condExpIndL1 hm μ s x := by
-  by_cases hs : MeasurableSet s
-  swap; · simp_rw [condExpIndL1_of_not_measurableSet hs]; rw [smul_zero]
-  by_cases hμs : μ s = ∞
-  · simp_rw [condExpIndL1_of_measure_eq_top hμs]; rw [smul_zero]
-  · simp_rw [condExpIndL1_of_measurableSet_of_measure_ne_top hs hμs]
-    exact condExpIndL1Fin_smul hs hμs c x
-
-theorem condExpIndL1_smul' [NormedSpace ℝ F] [SMulCommClass ℝ 𝕜 F] (c : 𝕜) (x : F) :
-    condExpIndL1 hm μ s (c • x) = c • condExpIndL1 hm μ s x := by
-  by_cases hs : MeasurableSet s
-  swap; · simp_rw [condExpIndL1_of_not_measurableSet hs]; rw [smul_zero]
-  by_cases hμs : μ s = ∞
-  · simp_rw [condExpIndL1_of_measure_eq_top hμs]; rw [smul_zero]
-  · simp_rw [condExpIndL1_of_measurableSet_of_measure_ne_top hs hμs]
-    exact condExpIndL1Fin_smul' hs hμs c x
-
-theorem norm_condExpIndL1_le (x : G) : ‖condExpIndL1 hm μ s x‖ ≤ μ.real s * ‖x‖ := by
-  by_cases hs : MeasurableSet s
-  swap
-  · simp_rw [condExpIndL1_of_not_measurableSet hs]; rw [Lp.norm_zero]
-    exact mul_nonneg ENNReal.toReal_nonneg (norm_nonneg _)
-  by_cases hμs : μ s = ∞
-  · rw [condExpIndL1_of_measure_eq_top hμs x, Lp.norm_zero]
-    exact mul_nonneg ENNReal.toReal_nonneg (norm_nonneg _)
-  · rw [condExpIndL1_of_measurableSet_of_measure_ne_top hs hμs x]
-    exact norm_condExpIndL1Fin_le hs hμs x
-
-theorem continuous_condExpIndL1 : Continuous fun x : G => condExpIndL1 hm μ s x :=
-  continuous_of_linear_of_bound condExpIndL1_add condExpIndL1_smul norm_condExpIndL1_le
-
-theorem condExpIndL1_disjoint_union (hs : MeasurableSet s) (ht : MeasurableSet t) (hμs : μ s ≠ ∞)
-    (hμt : μ t ≠ ∞) (hst : Disjoint s t) (x : G) :
-    condExpIndL1 hm μ (s ∪ t) x = condExpIndL1 hm μ s x + condExpIndL1 hm μ t x := by
-  have hμst : μ (s ∪ t) ≠ ∞ :=
-    ((measure_union_le s t).trans_lt (lt_top_iff_ne_top.mpr (ENNReal.add_ne_top.mpr ⟨hμs, hμt⟩))).ne
-  rw [condExpIndL1_of_measurableSet_of_measure_ne_top hs hμs x,
-    condExpIndL1_of_measurableSet_of_measure_ne_top ht hμt x,
-    condExpIndL1_of_measurableSet_of_measure_ne_top (hs.union ht) hμst x]
-  exact condExpIndL1Fin_disjoint_union hs ht hμs hμt hst x
-
-end CondexpIndL1
 
 variable (G)
 
-/-- Conditional expectation of the indicator of a set, as a linear map from `G` to L1. -/
-def condExpInd {m m0 : SigmaAlgebra α} (hm : m ≤ m0) (μ : Measure α) [SigmaFinite (μ.trim hm)]
-    (s : Set α) : G →L[ℝ] α →₁[μ] G where
-  toFun := condExpIndL1 hm μ s
-  map_add' := condExpIndL1_add
-  map_smul' := condExpIndL1_smul
-  cont := continuous_condExpIndL1
+/-- Conditional expectation of the indicator of a measurable set of finite measure, as a
+continuous linear map from `G` to L1: it sends `x` to the conditional expectation of the indicator
+of the set with value `x`. -/
+def condExpInd {m m0 : SigmaAlgebra α} (hm : m ≤ m0) {μ : Measure α} [SigmaFinite (μ.trim hm)]
+    {s : Set α} (hs : MeasurableSet s) (hμs : μ s ≠ ∞) : G →L[ℝ] α →₁[μ] G where
+  toFun := condExpIndL1Fin hm hs hμs
+  map_add' := condExpIndL1Fin_add hs hμs
+  map_smul' := condExpIndL1Fin_smul hs hμs
+  cont := continuous_condExpIndL1Fin hs hμs
 
 variable {G}
 
 theorem condExpInd_ae_eq_condExpIndSMul (hm : m ≤ m0) [SigmaFinite (μ.trim hm)]
     (hs : MeasurableSet s) (hμs : μ s ≠ ∞) (x : G) :
-    condExpInd G hm μ s x =ᵐ[μ] condExpIndSMul hm hs hμs x := by
-  grw [← condExpIndL1Fin_ae_eq_condExpIndSMul]
-  simp [condExpInd, condExpIndL1, hs, hμs]
+    condExpInd G hm hs hμs x =ᵐ[μ] condExpIndSMul hm hs hμs x :=
+  condExpIndL1Fin_ae_eq_condExpIndSMul hm hs hμs x
 
 variable {hm : m ≤ m0} [SigmaFinite (μ.trim hm)]
 
 theorem aestronglyMeasurable_condExpInd (hs : MeasurableSet s) (hμs : μ s ≠ ∞) (x : G) :
-    AEStronglyMeasurable[m] (condExpInd G hm μ s x) μ :=
+    AEStronglyMeasurable[m] (condExpInd G hm hs hμs x) μ :=
   (aestronglyMeasurable_condExpIndSMul hm hs hμs x).congr
     (condExpInd_ae_eq_condExpIndSMul hm hs hμs x).symm
 
 @[simp]
-theorem condExpInd_empty : condExpInd G hm μ ∅ = (0 : G →L[ℝ] α →₁[μ] G) := by
+theorem condExpInd_empty :
+    condExpInd G hm MeasurableSet.empty (by simp : μ ∅ ≠ ∞) = (0 : G →L[ℝ] α →₁[μ] G) := by
   ext x
   grw [condExpInd_ae_eq_condExpIndSMul hm MeasurableSet.empty (by simp), condExpIndSMul_empty,
     zero_apply, Lp.coeFn_zero, Lp.coeFn_zero]
 
-theorem condExpInd_smul' [NormedSpace ℝ F] [SMulCommClass ℝ 𝕜 F] (c : 𝕜) (x : F) :
-    condExpInd F hm μ s (c • x) = c • condExpInd F hm μ s x :=
-  condExpIndL1_smul' c x
+theorem condExpInd_smul' [NormedSpace ℝ F] [SMulCommClass ℝ 𝕜 F] (hs : MeasurableSet s)
+    (hμs : μ s ≠ ∞) (c : 𝕜) (x : F) :
+    condExpInd F hm hs hμs (c • x) = c • condExpInd F hm hs hμs x :=
+  condExpIndL1Fin_smul' hs hμs c x
 
-theorem norm_condExpInd_apply_le (x : G) : ‖condExpInd G hm μ s x‖ ≤ μ.real s * ‖x‖ :=
-  norm_condExpIndL1_le x
+theorem norm_condExpInd_apply_le (hs : MeasurableSet s) (hμs : μ s ≠ ∞) (x : G) :
+    ‖condExpInd G hm hs hμs x‖ ≤ μ.real s * ‖x‖ :=
+  norm_condExpIndL1Fin_le hs hμs x
 
-theorem norm_condExpInd_le : ‖(condExpInd G hm μ s : G →L[ℝ] α →₁[μ] G)‖ ≤ μ.real s :=
-  ContinuousLinearMap.opNorm_le_bound _ ENNReal.toReal_nonneg norm_condExpInd_apply_le
+theorem norm_condExpInd_le (hs : MeasurableSet s) (hμs : μ s ≠ ∞) :
+    ‖(condExpInd G hm hs hμs : G →L[ℝ] α →₁[μ] G)‖ ≤ μ.real s :=
+  ContinuousLinearMap.opNorm_le_bound _ ENNReal.toReal_nonneg (norm_condExpInd_apply_le hs hμs)
 
 theorem condExpInd_disjoint_union_apply (hs : MeasurableSet s) (ht : MeasurableSet t)
     (hμs : μ s ≠ ∞) (hμt : μ t ≠ ∞) (hst : Disjoint s t) (x : G) :
-    condExpInd G hm μ (s ∪ t) x = condExpInd G hm μ s x + condExpInd G hm μ t x :=
-  condExpIndL1_disjoint_union hs ht hμs hμt hst x
+    condExpInd G hm (hs.union ht) (measure_union_ne_top hμs hμt) x =
+      condExpInd G hm hs hμs x + condExpInd G hm ht hμt x :=
+  condExpIndL1Fin_disjoint_union hs ht hμs hμt hst x
 
 theorem condExpInd_disjoint_union (hs : MeasurableSet s) (ht : MeasurableSet t) (hμs : μ s ≠ ∞)
-    (hμt : μ t ≠ ∞) (hst : Disjoint s t) : (condExpInd G hm μ (s ∪ t) : G →L[ℝ] α →₁[μ] G) =
-    condExpInd G hm μ s + condExpInd G hm μ t := by
+    (hμt : μ t ≠ ∞) (hst : Disjoint s t) :
+    (condExpInd G hm (hs.union ht) (measure_union_ne_top hμs hμt) : G →L[ℝ] α →₁[μ] G) =
+      condExpInd G hm hs hμs + condExpInd G hm ht hμt := by
   ext1 x; push_cast; exact condExpInd_disjoint_union_apply hs ht hμs hμt hst x
 
-variable (G)
-
+variable (G) in
+open scoped Classical in
+/-- The conditional expectations of the indicators of measurable sets of finite measure, extended
+by `0` to the other sets, form a dominated finitely measure-additive set function, which
+`L1.setToL1` extends to `condExpL1CLM`. That extension uses only the values on measurable sets of
+finite measure (`L1.setToL1_congr_left'`), so the value `0` on the other sets does not affect it. -/
 theorem dominatedFinMeasAdditive_condExpInd (hm : m ≤ m0) (μ : Measure α)
     [SigmaFinite (μ.trim hm)] :
-    DominatedFinMeasAdditive μ (condExpInd G hm μ : Set α → G →L[ℝ] α →₁[μ] G) 1 :=
-  ⟨fun _ _ => condExpInd_disjoint_union, fun _ _ _ => norm_condExpInd_le.trans (one_mul _).symm.le⟩
-
-variable {G}
+    DominatedFinMeasAdditive μ (fun s ↦ if h : MeasurableSet s ∧ μ s ≠ ∞ then
+      condExpInd G hm h.1 h.2 else 0 : Set α → G →L[ℝ] α →₁[μ] G) 1 := by
+  refine ⟨fun s t hs ht hμs hμt hst ↦ ?_, fun s hs hμs ↦ ?_⟩
+  · simp only [dite_eq_left (show MeasurableSet (s ∪ t) ∧ μ (s ∪ t) ≠ ∞ from
+      ⟨hs.union ht, measure_union_ne_top hμs hμt⟩),
+      dite_eq_left (show MeasurableSet s ∧ μ s ≠ ∞ from ⟨hs, hμs⟩),
+      dite_eq_left (show MeasurableSet t ∧ μ t ≠ ∞ from ⟨ht, hμt⟩)]
+    exact condExpInd_disjoint_union hs ht hμs hμt hst
+  · simp only [dite_eq_left (show MeasurableSet s ∧ μ s ≠ ∞ from ⟨hs, hμs.ne⟩), one_mul]
+    exact norm_condExpInd_le hs hμs.ne
 
 theorem setIntegral_condExpInd (hs : s ∈ m) (ht : MeasurableSet t) (hμs : μ s ≠ ∞)
-    (hμt : μ t ≠ ∞) (x : G') : ∫ a in s, condExpInd G' hm μ t x a ∂μ = μ.real (t ∩ s) • x :=
+    (hμt : μ t ≠ ∞) (x : G') : ∫ a in s, condExpInd G' hm ht hμt x a ∂μ = μ.real (t ∩ s) • x :=
   calc
-    ∫ a in s, condExpInd G' hm μ t x a ∂μ = ∫ a in s, condExpIndSMul hm ht hμt x a ∂μ :=
+    ∫ a in s, condExpInd G' hm ht hμt x a ∂μ = ∫ a in s, condExpIndSMul hm ht hμt x a ∂μ :=
       setIntegral_congr_ae (hm hs)
         ((condExpInd_ae_eq_condExpIndSMul hm ht hμt x).mono fun _ hx _ => hx)
     _ = μ.real (t ∩ s) • x := setIntegral_condExpIndSMul hs ht hμs hμt x
 
 theorem condExpInd_of_measurable (hs : s ∈ m) (hμs : μ s ≠ ∞) (c : G) :
-    condExpInd G hm μ s c = indicatorConstLp 1 (hm hs) hμs c := by
-  let hs0 : MeasurableSet s := measurableSet_iff_mem.mpr (hm hs)
-  change condExpInd G hm μ s c = indicatorConstLp 1 hs0 hμs c
+    condExpInd G hm (measurableSet_iff_mem.mpr (hm hs)) hμs c =
+      indicatorConstLp 1 (measurableSet_iff_mem.mpr (hm hs)) hμs c := by
   ext1
-  grw [indicatorConstLp_coeFn, condExpInd_ae_eq_condExpIndSMul hm hs0 hμs,
+  grw [indicatorConstLp_coeFn, condExpInd_ae_eq_condExpIndSMul hm _ hμs,
     condExpIndSMul_ae_eq_smul]
   rw [condExpL2_indicator_of_measurable hm hs hμs (1 : ℝ)]
-  filter_upwards [@indicatorConstLp_coeFn α _ _ 2 μ _ s hs0 hμs (1 : ℝ)] with x hx
+  filter_upwards [@indicatorConstLp_coeFn α _ _ 2 μ _ s (measurableSet_iff_mem.mpr (hm hs)) hμs
+    (1 : ℝ)] with x hx
   rw [hx]
   by_cases hx_mem : x ∈ s <;> simp [hx_mem]
 
 theorem condExpInd_nonneg {E} [NormedAddCommGroup E] [PartialOrder E] [NormedSpace ℝ E]
     [IsOrderedModule ℝ E] (hs : MeasurableSet s) (hμs : μ s ≠ ∞) (x : E) (hx : 0 ≤ x) :
-    0 ≤ condExpInd E hm μ s x := by
+    0 ≤ condExpInd E hm hs hμs x := by
   rw [← coeFn_le]
   refine EventuallyLE.trans_eq ?_ (condExpInd_ae_eq_condExpIndSMul hm hs hμs x).symm
   exact (coeFn_zero E 1 μ).trans_le (condExpIndSMul_nonneg hs hμs x hx)
@@ -330,15 +279,19 @@ variable [CompleteSpace F']
 
 theorem condExpL1CLM_smul (c : 𝕜) (f : α →₁[μ] F') :
     condExpL1CLM F' hm μ (c • f) = c • condExpL1CLM F' hm μ f := by
-  refine L1.setToL1_smul (dominatedFinMeasAdditive_condExpInd F' hm μ) ?_ c f
-  exact fun c s x => condExpInd_smul' c x
+  refine L1.setToL1_smul (dominatedFinMeasAdditive_condExpInd F' hm μ) (fun c s x ↦ ?_) c f
+  split_ifs with h
+  · exact condExpInd_smul' h.1 h.2 c x
+  · simp
 
 theorem condExpL1CLM_indicatorConstLp (hs : MeasurableSet s) (hμs : μ s ≠ ∞) (x : F') :
-    (condExpL1CLM F' hm μ) (indicatorConstLp 1 hs hμs x) = condExpInd F' hm μ s x :=
-  L1.setToL1_indicatorConstLp (dominatedFinMeasAdditive_condExpInd F' hm μ) hs hμs x
+    (condExpL1CLM F' hm μ) (indicatorConstLp 1 hs hμs x) = condExpInd F' hm hs hμs x := by
+  rw [condExpL1CLM, L1.setToL1_indicatorConstLp (dominatedFinMeasAdditive_condExpInd F' hm μ) hs
+    hμs x, dite_eq_left (show MeasurableSet s ∧ μ s ≠ ∞ from ⟨hs, hμs⟩)]
 
 theorem condExpL1CLM_indicatorConst (hs : MeasurableSet s) (hμs : μ s ≠ ∞) (x : F') :
-    (condExpL1CLM F' hm μ) ↑(simpleFunc.indicatorConst 1 hs hμs x) = condExpInd F' hm μ s x := by
+    (condExpL1CLM F' hm μ) ↑(simpleFunc.indicatorConst 1 hs hμs x) =
+      condExpInd F' hm hs hμs x := by
   rw [Lp.simpleFunc.coe_indicatorConst]; exact condExpL1CLM_indicatorConstLp hs hμs x
 
 /-- Auxiliary lemma used in the proof of `setIntegral_condExpL1CLM`. -/
@@ -365,8 +318,8 @@ theorem setIntegral_condExpL1CLM_of_measure_ne_top (f : α →₁[μ] F') (hs : 
   · exact continuous_setIntegral s
 
 /-- The integral of the conditional expectation `condExpL1CLM` over an `m`-measurable set is equal
-to the integral of `f` on that set. See also `setIntegral_condExp`, the similar statement for
-`condExp`. -/
+to the integral of `f` on that set. See also `MeasureTheory.IsCondExp.setIntegral_eq`, the defining
+property of a conditional expectation. -/
 theorem setIntegral_condExpL1CLM (f : α →₁[μ] F') (hs : s ∈ m) :
     ∫ x in s, condExpL1CLM F' hm μ f x ∂μ = ∫ x in s, f x ∂μ := by
   let S := spanningSets (μ.trim hm)
@@ -444,99 +397,14 @@ theorem condExpL1CLM_of_aestronglyMeasurable' (f : α →₁[μ] F') (hfm : AESt
     condExpL1CLM F' hm μ f = f :=
   condExpL1CLM_lpMeas (⟨f, hfm⟩ : lpMeas F' ℝ m 1 μ)
 
+theorem condExpL1CLM_mono {E} [NormedAddCommGroup E] [PartialOrder E] [ClosedIciTopology E]
+    [IsOrderedAddMonoid E] [NormedSpace ℝ E] [IsOrderedModule ℝ E] [CompleteSpace E]
+    {f g : α →₁[μ] E} (hfg : f ≤ g) : condExpL1CLM E hm μ f ≤ condExpL1CLM E hm μ g :=
+  L1.setToL1_mono (dominatedFinMeasAdditive_condExpInd E hm μ) (fun s hs hμs x hx ↦ by
+    simp only [dite_eq_left (show MeasurableSet s ∧ μ s ≠ ∞ from ⟨hs, hμs.ne⟩)]
+    exact condExpInd_nonneg hs hμs.ne x hx) hfg
+
 end CondExpL1CLM
-
-set_option linter.overlappingInstances false in
-/-- Conditional expectation of a function, in L1. Its value is 0 if the function is not
-integrable. The function-valued `condExp` should be used instead in most cases. -/
-def condExpL1 (hm : m ≤ m0) (μ : Measure α) [SigmaFinite (μ.trim hm)]
-    (f : α → F') : α →₁[μ] F' :=
-  setToFun μ (condExpInd F' hm μ) (dominatedFinMeasAdditive_condExpInd F' hm μ) f
-
-theorem condExpL1_undef (hf : ¬Integrable f μ) : condExpL1 hm μ f = 0 :=
-  setToFun_undef (dominatedFinMeasAdditive_condExpInd F' hm μ) hf
-
-theorem condExpL1_eq [CompleteSpace F']
-    (hf : Integrable f μ) : condExpL1 hm μ f = condExpL1CLM F' hm μ (hf.toL1 f) :=
-  setToFun_eq (dominatedFinMeasAdditive_condExpInd F' hm μ) hf
-
-@[simp]
-theorem condExpL1_zero : condExpL1 hm μ (0 : α → F') = 0 :=
-  setToFun_zero _
-
-@[simp]
-theorem condExpL1_measure_zero (hm : m ≤ m0) : condExpL1 hm (0 : Measure α) f = 0 :=
-  setToFun_measure_zero _ rfl
-
-theorem condExpL1_congr_ae (hm : m ≤ m0) (h : f =ᵐ[μ] g) :
-    condExpL1 hm μ f = condExpL1 hm μ g :=
-  setToFun_congr_ae _ h
-
-theorem aestronglyMeasurable_condExpL1 {f : α → F'} :
-    AEStronglyMeasurable[m] (condExpL1 hm μ f) μ := by
-  by_cases hF' : CompleteSpace (Lp F' 1 μ); swap
-  · simp only [condExpL1, setToFun, hF', ↓reduceDIte, ZeroMemClass.coe_zero]
-    apply stronglyMeasurable_zero.aestronglyMeasurable.congr
-    exact (coeFn_zero _ 1 _).symm
-  by_cases hf : Integrable f μ; swap
-  · rw [condExpL1_undef hf]
-    exact stronglyMeasurable_zero.aestronglyMeasurable.congr (coeFn_zero ..).symm
-  by_cases hf' : f =ᵐ[μ] 0
-  · apply stronglyMeasurable_zero.aestronglyMeasurable.congr
-    simp only [condExpL1_congr_ae hm hf', condExpL1_zero, ZeroMemClass.coe_zero]
-    exact (coeFn_zero _ 1 _).symm
-  have : CompleteSpace F' := by
-    have : Nontrivial (Lp F' 1 μ) := by
-      apply nontrivial_of_ne (hf.toL1 f) 0
-      grw [ne_eq, Lp.ext_iff, Integrable.coeFn_toL1, coeFn_zero]
-      exact hf'
-    exact completeSpace_of_completeSpace_Lp F' 1 μ
-  rw [condExpL1_eq hf]
-  exact aestronglyMeasurable_condExpL1CLM _
-
-theorem integrable_condExpL1 (f : α → F') : Integrable (condExpL1 hm μ f) μ :=
-  L1.integrable_coeFn _
-
-/-- The integral of the conditional expectation `condExpL1` over an `m`-measurable set is equal to
-the integral of `f` on that set. See also `setIntegral_condExp`, the similar statement for
-`condExp`. -/
-theorem setIntegral_condExpL1 [CompleteSpace F'] (hf : Integrable f μ) (hs : s ∈ m) :
-    ∫ x in s, condExpL1 hm μ f x ∂μ = ∫ x in s, f x ∂μ := by
-  simp_rw [condExpL1_eq hf]
-  rw [setIntegral_condExpL1CLM (hf.toL1 f) hs]
-  exact setIntegral_congr_ae (hm hs) (hf.coeFn_toL1.mono fun x hx _ => hx)
-
-theorem condExpL1_add (hf : Integrable f μ) (hg : Integrable g μ) :
-    condExpL1 hm μ (f + g) = condExpL1 hm μ f + condExpL1 hm μ g :=
-  setToFun_add _ hf hg
-
-theorem condExpL1_neg (f : α → F') : condExpL1 hm μ (-f) = -condExpL1 hm μ f :=
-  setToFun_neg _ f
-
-theorem condExpL1_smul (c : 𝕜) (f : α → F') : condExpL1 hm μ (c • f) = c • condExpL1 hm μ f := by
-  refine setToFun_smul _ ?_ c f
-  exact fun c _ x => condExpInd_smul' c x
-
-theorem condExpL1_sub (hf : Integrable f μ) (hg : Integrable g μ) :
-    condExpL1 hm μ (f - g) = condExpL1 hm μ f - condExpL1 hm μ g :=
-  setToFun_sub _ hf hg
-
-theorem condExpL1_of_aestronglyMeasurable' [CompleteSpace F'] (hfm : AEStronglyMeasurable[m] f μ)
-    (hfi : Integrable f μ) : condExpL1 hm μ f =ᵐ[μ] f := by
-  rw [condExpL1_eq hfi]
-  refine EventuallyEq.trans ?_ (Integrable.coeFn_toL1 hfi)
-  rw [condExpL1CLM_of_aestronglyMeasurable']
-  exact hfm.congr hfi.coeFn_toL1.symm
-
-theorem condExpL1_mono {E}
-    [NormedAddCommGroup E] [PartialOrder E] [ClosedIciTopology E] [IsOrderedAddMonoid E]
-    [NormedSpace ℝ E] [IsOrderedModule ℝ E] {f g : α → E} (hf : Integrable f μ)
-    (hg : Integrable g μ) (hfg : f ≤ᵐ[μ] g) :
-    condExpL1 hm μ f ≤ᵐ[μ] condExpL1 hm μ g := by
-  rw [coeFn_le]
-  have h_nonneg : ∀ s, MeasurableSet s → μ s < ∞ → ∀ x : E, 0 ≤ x → 0 ≤ condExpInd E hm μ s x :=
-    fun s hs hμs x hx => condExpInd_nonneg hs hμs.ne x hx
-  exact setToFun_mono (dominatedFinMeasAdditive_condExpInd E hm μ) h_nonneg hf hg hfg
 
 end CondexpL1
 

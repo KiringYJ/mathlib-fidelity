@@ -45,24 +45,30 @@ namespace ConvexOn
 variable {𝓧 𝓨 : Type*} {m m𝓧 : SigmaAlgebra 𝓧} {m𝓨 : SigmaAlgebra 𝓨}
   {μ ν : Measure 𝓧} [IsFiniteMeasure μ] [IsFiniteMeasure ν] {f : ℝ → ℝ} {g : 𝓧 → 𝓨}
 
-lemma map_condExp_rnDeriv_le (hm : m ≤ m𝓧) (hf : StronglyMeasurable f)
-    (hf_cvx : ConvexOn ℝ (Ici 0) f) (hf_cont_at : ContinuousWithinAt f (Ici 0) 0)
-    (h_int : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) :
-    (fun x ↦ f ((ν[fun x ↦ (μ.rnDeriv ν x).toReal | m]) x)) ≤ᵐ[ν.trim hm]
-      ν[fun x ↦ f (μ.rnDeriv ν x).toReal | m] :=
-  hf_cvx.map_condExp_le_trim hm (hf_cvx.continuousOn_Ici hf_cont_at).lowerSemicontinuousOn hf
+omit [IsFiniteMeasure ν] in
+/-- **Conditional Jensen inequality** for the Radon-Nikodym derivative: for a function `f` convex on
+`[0, ∞)` and continuous at `0`, `f` of a conditional expectation of `(∂μ/∂ν).toReal` given `m` is
+almost everywhere at most a conditional expectation of `f ∘ (∂μ/∂ν).toReal`. -/
+lemma map_isCondExp_rnDeriv_le (hm : m ≤ m𝓧) (hf_cvx : ConvexOn ℝ (Ici 0) f)
+    (hf_cont_at : ContinuousWithinAt f (Ici 0) 0)
+    (h_int : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) {G k : 𝓧 → ℝ}
+    (hG : IsCondExp m ν (fun x ↦ (μ.rnDeriv ν x).toReal) G)
+    (hk : IsCondExp m ν (fun x ↦ f (μ.rnDeriv ν x).toReal) k) :
+    (fun x ↦ f (G x)) ≤ᵐ[ν] k :=
+  hf_cvx.map_condExp_le hm (hf_cvx.continuousOn_Ici hf_cont_at).lowerSemicontinuousOn
     (ae_of_all _ fun _ ↦ ENNReal.toReal_nonneg) isClosed_Ici Measure.integrable_toReal_rnDeriv h_int
+    hG hk
 
-lemma comp_rnDeriv_map_le (hμν : μ ≪ ν) (hg : Measurable g) (hf : StronglyMeasurable f)
-    (hf_cvx : ConvexOn ℝ (Ici 0) f) (hf_cont_at : ContinuousWithinAt f (Ici 0) 0)
-    (h_int : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) :
-    (fun x ↦ f ((μ.map g).rnDeriv (ν.map g) (g x)).toReal) ≤ᵐ[ν]
-      ν[fun x ↦ f (μ.rnDeriv ν x).toReal | m𝓨.comap g] := by
-  filter_upwards [toReal_rnDeriv_map hμν hg,
-    ae_of_ae_trim _ <| hf_cvx.map_condExp_rnDeriv_le hg.comap_le hf hf_cont_at h_int] with a ha1 ha2
-  calc f ((μ.map g).rnDeriv (ν.map g) (g a)).toReal
-      = f ((ν[fun x ↦ (μ.rnDeriv ν x).toReal | m𝓨.comap g]) a) := by rw [ha1]
-    _ ≤ (ν[fun x ↦ f (μ.rnDeriv ν x).toReal | m𝓨.comap g]) a := ha2
+/-- For a function `f` convex on `[0, ∞)` and continuous at `0`, `f` of the Radon-Nikodym derivative
+of the pushforward measures by `g`, evaluated at `g x`, is almost everywhere at most a conditional
+expectation of `f ∘ (∂μ/∂ν).toReal` given `g`. -/
+lemma comp_rnDeriv_map_le (hμν : μ ≪ ν) (hg : Measurable g) (hf_cvx : ConvexOn ℝ (Ici 0) f)
+    (hf_cont_at : ContinuousWithinAt f (Ici 0) 0)
+    (h_int : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) {k : 𝓧 → ℝ}
+    (hk : IsCondExp (m𝓨.comap g) ν (fun x ↦ f (μ.rnDeriv ν x).toReal) k) :
+    (fun x ↦ f ((μ.map g).rnDeriv (ν.map g) (g x)).toReal) ≤ᵐ[ν] k :=
+  hf_cvx.map_isCondExp_rnDeriv_le hg.comap_le hf_cont_at h_int
+    (isCondExp_toReal_rnDeriv_map hμν hg) hk
 
 lemma integrable_comp_rnDeriv_map (hμν : μ ≪ ν) (hg : Measurable g) (hf : StronglyMeasurable f)
     (hf_cvx : ConvexOn ℝ (Ici 0) f) (hf_cont_at : ContinuousWithinAt f (Ici 0) 0)
@@ -71,54 +77,47 @@ lemma integrable_comp_rnDeriv_map (hμν : μ ≪ ν) (hg : Measurable g) (hf : 
   have hf_cont : ContinuousOn f (Ici 0) := hf_cvx.continuousOn_Ici hf_cont_at
   obtain ⟨c, c', h⟩ : ∃ c c', ∀ x, 0 ≤ x → c * x + c' ≤ f x :=
     hf_cvx.exists_affine_le_real isClosed_Ici hf_cont.lowerSemicontinuousOn
+  obtain ⟨k, -, hk⟩ := exists_stronglyMeasurable_isCondExp hg.comap_le h_int
   rw [integrable_map_measure hg.aemeasurable
     (StronglyMeasurable.aestronglyMeasurable (by fun_prop))]
   refine integrable_of_le_of_le (f := fun x ↦ f ((∂μ.map g/∂ν.map g) (g x)).toReal)
-    (g₁ := fun x ↦ c * ((∂μ.map g/∂ν.map g) (g x)).toReal + c')
-    (g₂ := fun x ↦ (ν[fun x ↦ f (μ.rnDeriv ν x).toReal | m𝓨.comap g]) x)
-    ?_ ?_ ?_ ?_ integrable_condExp
+    (g₁ := fun x ↦ c * ((∂μ.map g/∂ν.map g) (g x)).toReal + c') (g₂ := k)
+    ?_ ?_ ?_ ?_ (hk.integrable h_int)
   · exact StronglyMeasurable.aestronglyMeasurable (by fun_prop)
   · exact ae_of_all _ (fun x ↦ h _ ENNReal.toReal_nonneg)
-  · exact hf_cvx.comp_rnDeriv_map_le hμν hg hf hf_cont_at h_int
-  · refine (Integrable.const_mul ?_ _).add (integrable_const _)
-    rw [integrable_congr (toReal_rnDeriv_map hμν hg)]
-    fun_prop
+  · exact hf_cvx.comp_rnDeriv_map_le hμν hg hf_cont_at h_int hk
+  · exact (Integrable.const_mul ((isCondExp_toReal_rnDeriv_map hμν hg).integrable
+      Measure.integrable_toReal_rnDeriv) _).add (integrable_const _)
 
-lemma comp_rnDeriv_trim_le (hm : m ≤ m𝓧) (hμν : μ ≪ ν) (hf : StronglyMeasurable f)
-    (hf_cvx : ConvexOn ℝ (Ici 0) f) (hf_cont_at : ContinuousWithinAt f (Ici 0) 0)
-    (h_int : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) :
-    (fun x ↦ f ((∂μ.trim hm/∂ν.trim hm) x).toReal) ≤ᵐ[ν.trim hm]
-      ν[fun x ↦ f (μ.rnDeriv ν x).toReal | m] := by
-  filter_upwards [toReal_rnDeriv_trim hm hμν,
-    hf_cvx.map_condExp_rnDeriv_le hm hf hf_cont_at h_int] with a ha1 ha2
-  calc f ((∂μ.trim hm/∂ν.trim hm) a).toReal
-      = f ((ν[fun x ↦ (μ.rnDeriv ν x).toReal | m]) a) := by rw [ha1]
-    _ ≤ (ν[fun x ↦ f (μ.rnDeriv ν x).toReal | m]) a := ha2
+/-- For a function `f` convex on `[0, ∞)` and continuous at `0`, `f` of the Radon-Nikodym derivative
+of the trimmed measures is almost everywhere at most a conditional expectation of
+`f ∘ (∂μ/∂ν).toReal` given `m`. -/
+lemma comp_rnDeriv_trim_le (hm : m ≤ m𝓧) (hμν : μ ≪ ν) (hf_cvx : ConvexOn ℝ (Ici 0) f)
+    (hf_cont_at : ContinuousWithinAt f (Ici 0) 0)
+    (h_int : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) {k : 𝓧 → ℝ}
+    (hk : IsCondExp m ν (fun x ↦ f (μ.rnDeriv ν x).toReal) k) :
+    (fun x ↦ f ((∂μ.trim hm/∂ν.trim hm) x).toReal) ≤ᵐ[ν] k :=
+  hf_cvx.map_isCondExp_rnDeriv_le hm hf_cont_at h_int (isCondExp_toReal_rnDeriv_trim hm hμν) hk
 
 lemma integrable_comp_rnDeriv_trim (hm : m ≤ m𝓧) (hμν : μ ≪ ν) (hf : StronglyMeasurable f)
     (hf_cvx : ConvexOn ℝ (Ici 0) f) (hf_cont_at : ContinuousWithinAt f (Ici 0) 0)
     (h_int : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) :
     Integrable (fun x ↦ f ((μ.trim hm).rnDeriv (ν.trim hm) x).toReal) (ν.trim hm) := by
-  have hf_cont : ContinuousOn f (Ici 0) := hf_cvx.continuousOn_Ici hf_cont_at
-  obtain ⟨c, c', h⟩ : ∃ c c', ∀ x, 0 ≤ x → c * x + c' ≤ f x :=
-    hf_cvx.exists_affine_le_real isClosed_Ici hf_cont.lowerSemicontinuousOn
-  refine integrable_of_le_of_le (f := fun x ↦ f ((∂μ.trim hm/∂ν.trim hm) x).toReal)
-    (g₁ := fun x ↦ c * ((∂μ.trim hm/∂ν.trim hm) x).toReal + c')
-    (g₂ := fun x ↦ (ν[fun x ↦ f (μ.rnDeriv ν x).toReal | m]) x)
-    ?_ ?_ ?_ ?_ ?_
-  · exact StronglyMeasurable.aestronglyMeasurable (by fun_prop)
-  · exact ae_of_all _ (fun x ↦ h _ ENNReal.toReal_nonneg)
-  · exact hf_cvx.comp_rnDeriv_trim_le hm hμν hf hf_cont_at h_int
-  · exact (Integrable.const_mul (by fun_prop) _).add (integrable_const _)
-  · exact integrable_condExp.trim hm stronglyMeasurable_condExp
+  simpa only [trim_eq_map hm] using
+    hf_cvx.integrable_comp_rnDeriv_map hμν (measurable_id'' hm) hf hf_cont_at h_int
 
-lemma integrable_comp_condExp_rnDeriv (hm : m ≤ m𝓧) (hμν : μ ≪ ν) (hf : StronglyMeasurable f)
+/-- For a function `f` convex on `[0, ∞)` and continuous at `0`, `f` of a conditional expectation of
+`(∂μ/∂ν).toReal` given `m` is integrable. -/
+lemma integrable_comp_isCondExp_rnDeriv (hm : m ≤ m𝓧) (hμν : μ ≪ ν) (hf : StronglyMeasurable f)
     (hf_cvx : ConvexOn ℝ (Ici 0) f) (hf_cont_at : ContinuousWithinAt f (Ici 0) 0)
-    (h_int : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) :
-    Integrable (fun x ↦ f ((ν[fun x ↦ (μ.rnDeriv ν x).toReal | m]) x)) ν := by
-  have h := integrable_comp_rnDeriv_trim hm hμν hf hf_cvx hf_cont_at h_int
-  refine integrable_of_integrable_trim hm ((integrable_congr ?_).mp h)
-  filter_upwards [toReal_rnDeriv_trim hm hμν] with a ha
+    (h_int : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) {G : 𝓧 → ℝ}
+    (hG : IsCondExp m ν (fun x ↦ (μ.rnDeriv ν x).toReal) G) :
+    Integrable (fun x ↦ f (G x)) ν := by
+  have h := integrable_of_integrable_trim hm
+    (integrable_comp_rnDeriv_trim hm hμν hf hf_cvx hf_cont_at h_int)
+  refine (integrable_congr ?_).mp h
+  filter_upwards [(isCondExp_toReal_rnDeriv_trim hm hμν).ae_eq hm
+    Measure.integrable_toReal_rnDeriv hG] with a ha
   rw [ha]
 
 end ConvexOn
@@ -137,22 +136,20 @@ lemma integrable_llr_map (hμν : μ ≪ ν) (hg : Measurable g)
 
 lemma toReal_klDiv_map_of_ac (hμν : μ ≪ ν) (hg : Measurable g) :
     (klDiv (μ.map g) (ν.map g)).toReal =
-      ∫ x, klFun ((ν[fun x ↦ (μ.rnDeriv ν x).toReal | m𝓨.comap g]) x) ∂ν := by
+      ∫ x, klFun ((μ.map g).rnDeriv (ν.map g) (g x)).toReal ∂ν := by
   rw [toReal_klDiv_eq_integral_klFun (hμν.map hg), integral_map hg.aemeasurable
       (StronglyMeasurable.aestronglyMeasurable (by fun_prop))]
-  refine integral_congr_ae ?_
-  filter_upwards [toReal_rnDeriv_map hμν hg] with a ha using by rw [ha]
 
 lemma klDiv_map_of_ac (hμν : μ ≪ ν) (hg : Measurable g) (h_int : Integrable (llr μ ν) μ) :
     klDiv (μ.map g) (ν.map g) =
-      ENNReal.ofReal (∫ x, klFun ((ν[fun x ↦ (μ.rnDeriv ν x).toReal | m𝓨.comap g]) x) ∂ν) := by
+      ENNReal.ofReal (∫ x, klFun ((μ.map g).rnDeriv (ν.map g) (g x)).toReal ∂ν) := by
   rw [klDiv_eq_integral_klFun, ite_eq_left ⟨hμν.map hg, integrable_llr_map hμν hg h_int⟩]
   congr
   rw [← toReal_klDiv_eq_integral_klFun (hμν.map hg), toReal_klDiv_map_of_ac hμν hg]
 
 lemma toReal_klDiv_trim_of_ac (hm : m ≤ m𝓧) (hμν : μ ≪ ν) :
     (klDiv (μ.trim hm) (ν.trim hm)).toReal =
-      ∫ x, klFun ((ν[fun x ↦ (μ.rnDeriv ν x).toReal | m]) x) ∂ν := by
+      ∫ x, klFun ((μ.trim hm).rnDeriv (ν.trim hm) x).toReal ∂ν := by
   simp [trim_eq_map, toReal_klDiv_map_of_ac hμν (measurable_id'' hm)]
 
 variable (μ ν) in
@@ -164,16 +161,17 @@ theorem klDiv_map_le (hg : Measurable g) : klDiv (μ.map g) (ν.map g) ≤ klDiv
   swap; · simp [klDiv_of_not_integrable h_int]
   rw [klDiv_map_of_ac hμν hg h_int, klDiv_eq_integral_klFun]
   simp only [hμν, h_int, and_self, ↓reduceIte]
-  conv_rhs => rw [← integral_condExp hg.comap_le]
-  gcongr 1
   have hf : StronglyMeasurable klFun := by fun_prop
   have hf_cont : ContinuousWithinAt klFun (Ici 0) 0 := by fun_prop
   have h_int' : Integrable (fun x ↦ klFun (μ.rnDeriv ν x).toReal) ν := by
     rwa [integrable_klFun_rnDeriv_iff hμν]
-  refine integral_mono_ae ?_ integrable_condExp ?_
-  · exact convexOn_klFun.integrable_comp_condExp_rnDeriv hg.comap_le hμν hf hf_cont h_int'
-  · refine ae_of_ae_trim hg.comap_le ?_
-    exact convexOn_klFun.map_condExp_rnDeriv_le hg.comap_le hf hf_cont h_int'
+  -- a conditional expectation of `klFun ∘ (∂μ/∂ν).toReal` given `g` has its integral
+  obtain ⟨k, -, hk⟩ := exists_stronglyMeasurable_isCondExp hg.comap_le h_int'
+  conv_rhs => rw [← hk.integral_eq h_int']
+  gcongr 1
+  refine integral_mono_ae ?_ (hk.integrable h_int') ?_
+  · exact (convexOn_klFun.integrable_comp_rnDeriv_map hμν hg hf hf_cont h_int').comp_measurable hg
+  · exact convexOn_klFun.comp_rnDeriv_map_le hμν hg hf_cont h_int' hk
 
 variable (μ ν) in
 /-- **Data processing inequality** for the Kullback-Leibler divergence and sub-sigma-algebras. -/

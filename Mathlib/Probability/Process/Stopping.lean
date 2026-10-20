@@ -487,6 +487,11 @@ theorem sigmaAlgebra_le' (hτ : IsStoppingTime f τ) :
 theorem sigmaAlgebra_le (hτ : IsStoppingTime f τ) : hτ.sigmaAlgebra ≤ m :=
   hτ.sigmaAlgebra_le'.trans (iSup_le f.le)
 
+/- `sub_sigma_algebra` proves that the σ-algebra of a stopping time is a sub-σ-algebra of the
+ambient one. -/
+macro_rules
+  | `(tactic| sub_sigma_algebra) => `(tactic| exact MeasureTheory.IsStoppingTime.sigmaAlgebra_le _)
+
 @[simp]
 theorem sigmaAlgebra_const (f : Filtration ι m) (i : ι) :
     (isStoppingTime_const f i).sigmaAlgebra = f i := by
@@ -1425,54 +1430,54 @@ section Condexp
 variable [LinearOrder ι] {μ : Measure Ω} {ℱ : Filtration ι m} {τ σ : Ω → WithTop ι} {E : Type*}
   [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E] {f : Ω → E}
 
-theorem condExp_stopping_time_ae_eq_restrict_eq_of_countable_range [SigmaFiniteFiltration μ ℱ]
-    (hτ : IsStoppingTime ℱ τ) (h_countable : (Set.range τ).Countable)
-    [SigmaFinite (μ.trim (hτ.sigmaAlgebra_le))] (i : ι) :
-    μ[f | hτ.sigmaAlgebra] =ᵐ[μ.restrict {x | τ x = i}] μ[f | ℱ i] := by
-  refine condExp_ae_eq_restrict_of_sigmaAlgebra_eq_on
-    (hτ.sigmaAlgebra_le) (ℱ.le i)
-    (hτ.measurableSet_eq_of_countable_range' h_countable i) fun t => ?_
-  rw [Set.inter_comm _ t, IsStoppingTime.measurableSet_inter_eq_iff]
+/-- Conditional expectations of an integrable function given the σ-algebra of a stopping time `τ`
+with countable range and given `ℱ i` agree almost everywhere on `{τ = i}`. -/
+theorem IsStoppingTime.ae_eq_restrict_eq_of_isCondExp_of_countable_range
+    (hτ : IsStoppingTime ℱ τ) (h_countable : (Set.range τ).Countable) (i : ι)
+    (hf : Integrable f μ) {g g' : Ω → E} (hg : IsCondExp hτ.sigmaAlgebra μ f g)
+    (hg' : IsCondExp (ℱ i) μ f g') : g =ᵐ[μ.restrict {x | τ x = i}] g' :=
+  IsCondExp.ae_eq_restrict_of_sigmaAlgebra_eq_on hτ.sigmaAlgebra_le (ℱ.le i)
+    (hτ.measurableSet_eq_of_countable_range' h_countable i)
+    (fun t ↦ by rw [Set.inter_comm _ t, IsStoppingTime.measurableSet_inter_eq_iff]) hf hg hg'
 
-theorem condExp_stopping_time_ae_eq_restrict_eq_of_countable [Countable ι]
-    [SigmaFiniteFiltration μ ℱ] (hτ : IsStoppingTime ℱ τ)
-    [SigmaFinite (μ.trim hτ.sigmaAlgebra_le)] (i : ι) :
-    μ[f | hτ.sigmaAlgebra] =ᵐ[μ.restrict {x | τ x = i}] μ[f | ℱ i] :=
-  condExp_stopping_time_ae_eq_restrict_eq_of_countable_range hτ (Set.to_countable _) i
+/-- Conditional expectations of an integrable function given the σ-algebra of a stopping time `τ`
+and given `ℱ i` agree almost everywhere on `{τ = i}`, for a countable index type. -/
+theorem IsStoppingTime.ae_eq_restrict_eq_of_isCondExp_of_countable [Countable ι]
+    (hτ : IsStoppingTime ℱ τ) (i : ι) (hf : Integrable f μ) {g g' : Ω → E}
+    (hg : IsCondExp hτ.sigmaAlgebra μ f g) (hg' : IsCondExp (ℱ i) μ f g') :
+    g =ᵐ[μ.restrict {x | τ x = i}] g' :=
+  hτ.ae_eq_restrict_eq_of_isCondExp_of_countable_range (Set.to_countable _) i hf hg hg'
 
-theorem condExp_min_stopping_time_ae_eq_restrict_le_const (hτ : IsStoppingTime ℱ τ) (i : ι)
-    [SigmaFinite (μ.trim (hτ.min_const i).sigmaAlgebra_le)] :
-    μ[f | (hτ.min_const i).sigmaAlgebra] =ᵐ[μ.restrict {x | τ x ≤ i}]
-      μ[f | hτ.sigmaAlgebra] := by
-  have : SigmaFinite (μ.trim hτ.sigmaAlgebra_le) :=
-    haveI h_le : (hτ.min_const i).sigmaAlgebra ≤ hτ.sigmaAlgebra := by
-      rw [IsStoppingTime.sigmaAlgebra_min_const]
-      exact inf_le_left
-    sigmaFiniteTrim_mono _ h_le
-  refine (condExp_ae_eq_restrict_of_sigmaAlgebra_eq_on hτ.sigmaAlgebra_le
-    (hτ.min_const i).sigmaAlgebra_le (hτ.measurableSet_le' i) fun t => ?_).symm
-  rw [Set.inter_comm _ t, hτ.measurableSet_inter_le_const_iff]
+/-- Conditional expectations of an integrable function given the σ-algebras of the stopping times
+`min τ i` and `τ` agree almost everywhere on `{τ ≤ i}`. -/
+theorem IsStoppingTime.ae_eq_restrict_le_const_of_isCondExp (hτ : IsStoppingTime ℱ τ) (i : ι)
+    (hf : Integrable f μ) {g g' : Ω → E} (hg : IsCondExp (hτ.min_const i).sigmaAlgebra μ f g)
+    (hg' : IsCondExp hτ.sigmaAlgebra μ f g') : g =ᵐ[μ.restrict {x | τ x ≤ i}] g' :=
+  (IsCondExp.ae_eq_restrict_of_sigmaAlgebra_eq_on hτ.sigmaAlgebra_le
+    (hτ.min_const i).sigmaAlgebra_le (hτ.measurableSet_le' i)
+    (fun t ↦ by rw [Set.inter_comm _ t, hτ.measurableSet_inter_le_const_iff]) hf hg' hg).symm
 
 variable [TopologicalSpace ι] [OrderTopology ι]
 
-theorem condExp_stopping_time_ae_eq_restrict_eq [FirstCountableTopology ι]
-    [SigmaFiniteFiltration μ ℱ] (hτ : IsStoppingTime ℱ τ)
-    [SigmaFinite (μ.trim hτ.sigmaAlgebra_le)] (i : ι) :
-    μ[f | hτ.sigmaAlgebra] =ᵐ[μ.restrict {x | τ x = i}] μ[f | ℱ i] := by
-  refine condExp_ae_eq_restrict_of_sigmaAlgebra_eq_on hτ.sigmaAlgebra_le (ℱ.le i)
-    (hτ.measurableSet_eq' i) fun t => ?_
-  rw [Set.inter_comm _ t, IsStoppingTime.measurableSet_inter_eq_iff]
+/-- Conditional expectations of an integrable function given the σ-algebra of a stopping time `τ`
+and given `ℱ i` agree almost everywhere on `{τ = i}`. -/
+theorem IsStoppingTime.ae_eq_restrict_eq_of_isCondExp [FirstCountableTopology ι]
+    (hτ : IsStoppingTime ℱ τ) (i : ι) (hf : Integrable f μ) {g g' : Ω → E}
+    (hg : IsCondExp hτ.sigmaAlgebra μ f g) (hg' : IsCondExp (ℱ i) μ f g') :
+    g =ᵐ[μ.restrict {x | τ x = i}] g' :=
+  IsCondExp.ae_eq_restrict_of_sigmaAlgebra_eq_on hτ.sigmaAlgebra_le (ℱ.le i)
+    (hτ.measurableSet_eq' i)
+    (fun t ↦ by rw [Set.inter_comm _ t, IsStoppingTime.measurableSet_inter_eq_iff]) hf hg hg'
 
-theorem condExp_min_stopping_time_ae_eq_restrict_le [SecondCountableTopology ι]
-    (hτ : IsStoppingTime ℱ τ) (hσ : IsStoppingTime ℱ σ)
-    [SigmaFinite (μ.trim (hτ.min hσ).sigmaAlgebra_le)] :
-    μ[f | (hτ.min hσ).sigmaAlgebra] =ᵐ[μ.restrict {x | τ x ≤ σ x}]
-      μ[f | hτ.sigmaAlgebra] := by
-  have : SigmaFinite (μ.trim hτ.sigmaAlgebra_le) :=
-    sigmaFiniteTrim_mono _ (hτ.sigmaAlgebra_min hσ ▸ inf_le_left)
-  refine (condExp_ae_eq_restrict_of_sigmaAlgebra_eq_on hτ.sigmaAlgebra_le
-    (hτ.min hσ).sigmaAlgebra_le (hτ.measurableSet_le_stopping_time hσ) fun t => ?_).symm
-  rw [Set.inter_comm _ t, hτ.measurableSet_inter_le_iff hσ]
+/-- Conditional expectations of an integrable function given the σ-algebras of the stopping times
+`min τ σ` and `τ` agree almost everywhere on `{τ ≤ σ}`. -/
+theorem IsStoppingTime.ae_eq_restrict_le_of_isCondExp [SecondCountableTopology ι]
+    (hτ : IsStoppingTime ℱ τ) (hσ : IsStoppingTime ℱ σ) (hf : Integrable f μ) {g g' : Ω → E}
+    (hg : IsCondExp (hτ.min hσ).sigmaAlgebra μ f g) (hg' : IsCondExp hτ.sigmaAlgebra μ f g') :
+    g =ᵐ[μ.restrict {x | τ x ≤ σ x}] g' :=
+  (IsCondExp.ae_eq_restrict_of_sigmaAlgebra_eq_on hτ.sigmaAlgebra_le
+    (hτ.min hσ).sigmaAlgebra_le (hτ.measurableSet_le_stopping_time hσ)
+    (fun t ↦ by rw [Set.inter_comm _ t, hτ.measurableSet_inter_le_iff hσ]) hf hg' hg).symm
 
 end Condexp
 

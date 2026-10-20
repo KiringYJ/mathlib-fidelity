@@ -102,15 +102,15 @@ integrability of `exp (t * X)` with respect to `μ`.
 
 ### Definition of `HasCondSubgaussianMGF`
 
-`HasCondSubgaussianMGF` asks, for all `t`, that `exp (t * X)` be `μ`-integrable and that
-`μ[fun ω' ↦ exp (t * X ω') | m] ≤ exp (c * t ^ 2 / 2)` hold `μ`-almost everywhere, where `hm`
-states that `m` is a sub-sigma-algebra. The integrability at `t = 0` makes `μ` finite, so these
-conditional expectations exist on every measurable space.
+`HasCondSubgaussianMGF` asks, for all `t`, that `exp (t * X)` be `μ`-integrable and that its
+conditional expectation given `m` be at most `exp (c * t ^ 2 / 2)` `μ`-almost everywhere, where
+`hm` states that `m` is a sub-sigma-algebra. The integrability at `t = 0` makes `μ` finite, so these
+conditional expectations exist and are unique almost everywhere on every measurable space.
 
 When the joint law of `(ω, ω)` has a unique conditional kernel, for example on a standard Borel
-space, the mgf of `X` with respect to a Markov representative `η` of the conditional expectation
-kernel `condExpKernel μ hm` is a version of the conditional expectation, `(μ.trim hm)`-almost
-surely: `mgf X (η ·) t =ᵐ[μ.trim hm] μ[fun ω' ↦ exp (t * X ω') | m]`, and `η ∘ₘ μ.trim hm = μ`.
+space, the mgf `mgf X (η ·) t` of `X` with respect to an s-finite representative `η` of the
+conditional expectation kernel `condExpKernel μ hm` is a conditional expectation of `exp (t * X)`,
+and `η ∘ₘ μ.trim hm = μ`.
 The bounds for rational `t` then hold for `μ.trim hm`-almost all `ω` at once and extend to all `t`
 by continuity of the mgf, so the property is `Kernel.HasSubgaussianMGF X c η (μ.trim hm)`
 (`hasCondSubgaussianMGF_iff_of_mem`). Since `Kernel.HasSubgaussianMGF` only depends on the
@@ -560,8 +560,9 @@ structure HasCondSubgaussianMGF {Ω : Type*} (m : SigmaAlgebra Ω) {mΩ : SigmaA
     (hm : m ≤ mΩ) (X : Ω → ℝ) (c : ℝ≥0) (μ : Measure Ω := by volume_tac) : Prop where
   /-- The exponential moments are integrable. -/
   integrable_exp_mul : ∀ t : ℝ, Integrable (fun ω ↦ exp (t * X ω)) μ
-  /-- The conditional moment-generating function is bounded by `exp (c * t ^ 2 / 2)`. -/
-  ae_condExp_le : ∀ t : ℝ, ∀ᵐ ω' ∂μ, (μ[fun ω ↦ exp (t * X ω) | m]) ω' ≤ exp (c * t ^ 2 / 2)
+  /-- A conditional moment-generating function is bounded by `exp (c * t ^ 2 / 2)`. -/
+  exists_isCondExp_le : ∀ t : ℝ, ∃ g, IsCondExp m μ (fun ω ↦ exp (t * X ω)) g ∧
+    ∀ᵐ ω' ∂μ, g ω' ≤ exp (c * t ^ 2 / 2)
 
 variable {Ω : Type*} {m mΩ : SigmaAlgebra Ω} {hm : m ≤ mΩ} {μ : Measure Ω} {X : Ω → ℝ} {c : ℝ≥0}
 
@@ -578,18 +579,26 @@ namespace HasCondSubgaussianMGF
 lemma isFiniteMeasure (h : HasCondSubgaussianMGF m hm X c μ) : IsFiniteMeasure μ :=
   isFiniteMeasure_of_integrable_exp_mul h.integrable_exp_mul
 
-lemma ae_trim_condExp_le (h : HasCondSubgaussianMGF m hm X c μ) (t : ℝ) :
-    ∀ᵐ ω' ∂(μ.trim hm), (μ[fun ω ↦ exp (t * X ω) | m]) ω' ≤ exp (c * t ^ 2 / 2) :=
-  StronglyMeasurable.ae_le_trim_of_stronglyMeasurable hm stronglyMeasurable_condExp
-    stronglyMeasurable_const (h.ae_condExp_le t)
+/-- Every conditional expectation of `exp (t * X)` given `m` is bounded by `exp (c * t ^ 2 / 2)`
+almost everywhere. -/
+lemma ae_le_of_isCondExp (h : HasCondSubgaussianMGF m hm X c μ) (t : ℝ) {g : Ω → ℝ}
+    (hg : IsCondExp m μ (fun ω ↦ exp (t * X ω)) g) : ∀ᵐ ω' ∂μ, g ω' ≤ exp (c * t ^ 2 / 2) := by
+  obtain ⟨g', hg', hle⟩ := h.exists_isCondExp_le t
+  filter_upwards [hg.ae_eq hm (h.integrable_exp_mul t) hg', hle] with ω' h₁ h₂
+  rw [h₁]
+  exact h₂
+
+lemma ae_trim_le_of_isCondExp (h : HasCondSubgaussianMGF m hm X c μ) (t : ℝ) {g : Ω → ℝ}
+    (hg : IsCondExp m μ (fun ω ↦ exp (t * X ω)) g) (hgm : StronglyMeasurable[m] g) :
+    ∀ᵐ ω' ∂(μ.trim hm), g ω' ≤ exp (c * t ^ 2 / 2) :=
+  StronglyMeasurable.ae_le_trim_of_stronglyMeasurable hm hgm stronglyMeasurable_const
+    (h.ae_le_of_isCondExp t hg)
 
 @[simp]
 lemma fun_zero [IsFiniteMeasure μ] : HasCondSubgaussianMGF m hm (fun _ ↦ 0) 0 μ where
   integrable_exp_mul t := by simp
-  ae_condExp_le t := by
-    simp only [mul_zero, exp_zero]
-    rw [condExp_const hm (1 : ℝ)]
-    simp
+  exists_isCondExp_le t := ⟨fun _ ↦ 1, by simpa using isCondExp_const (m := m) (μ := μ) (1 : ℝ),
+    by simp⟩
 
 @[simp]
 lemma zero [IsFiniteMeasure μ] : HasCondSubgaussianMGF m hm 0 0 μ := fun_zero
@@ -627,8 +636,9 @@ lemma hasCondSubgaussianMGF_iff_of_mem [(condExpJointLaw μ hm).HasUniqueCondKer
   · intro h
     have := h.isFiniteMeasure
     refine .of_rat (by rw [condExpKernel_comp_trim hη₀]; exact h.integrable_exp_mul) fun q ↦ ?_
-    filter_upwards [h.ae_trim_condExp_le q,
-      condExp_ae_eq_trim_integral_condExpKernel hη₀ (h.integrable_exp_mul q)] with ω' h₁ h₂
+    obtain ⟨g, hgm, hg⟩ := exists_stronglyMeasurable_isCondExp hm (h.integrable_exp_mul q)
+    filter_upwards [h.ae_trim_le_of_isCondExp q hg hgm,
+      hg.ae_eq_trim_integral_condExpKernel hgm hη₀ (h.integrable_exp_mul q)] with ω' h₁ h₂
     rw [h₂] at h₁
     exact h₁
   · intro h
@@ -636,10 +646,9 @@ lemma hasCondSubgaussianMGF_iff_of_mem [(condExpJointLaw μ hm).HasUniqueCondKer
       rw [← condExpKernel_comp_trim hη₀]
       exact h.integrable_exp_mul
     have := isFiniteMeasure_of_integrable_exp_mul h_int
-    refine ⟨h_int, fun t ↦ ae_of_ae_trim hm ?_⟩
-    filter_upwards [h.mgf_le, condExp_ae_eq_trim_integral_condExpKernel hη₀ (h_int t)]
-      with ω' h_mgf h_eq
-    rw [h_eq]
+    refine ⟨h_int, fun t ↦ ⟨fun ω ↦ ∫ y, exp (t * X y) ∂η₀ ω,
+      isCondExp_integral_condExpKernel hη₀ (h_int t), ae_of_ae_trim hm ?_⟩⟩
+    filter_upwards [h.mgf_le] with ω' h_mgf
     exact h_mgf t
 
 namespace HasCondSubgaussianMGF
@@ -982,19 +991,17 @@ lemma HasSubgaussianMGF.add_of_hasCondSubgaussianMGF
       rw [h1, h2, h3]
       nlinarith [sq_nonneg (exp (t * X ω) - exp (t * Y ω))]
   refine ⟨h_int, fun t ↦ ?_⟩
-  have h_pull : μ[fun ω ↦ exp (t * (X + Y) ω) | m]
-      =ᵐ[μ] (fun ω ↦ exp (t * X ω)) * μ[fun ω ↦ exp (t * Y ω) | m] := by
+  obtain ⟨gY, hgY, hgY_le⟩ := hY.exists_isCondExp_le t
+  -- pull the `m`-measurable factor `exp (t * X)` out of the conditional expectation
+  have h_pull : IsCondExp m μ (fun ω ↦ exp (t * (X + Y) ω)) ((fun ω ↦ exp (t * X ω)) * gY) := by
     rw [h_eq]
-    exact condExp_mul_of_aestronglyMeasurable_left (hX_meas t) (by rw [← h_eq]; exact h_int t)
-      (hY.integrable_exp_mul t)
+    exact hgY.mul_left hm (hX_meas t) (by rw [← h_eq]; exact h_int t) (hY.integrable_exp_mul t)
   calc mgf (X + Y) μ t
-  _ = ∫ ω, (μ[fun ω ↦ exp (t * (X + Y) ω) | m]) ω ∂μ := (integral_condExp hm).symm
-  _ = ∫ ω, exp (t * X ω) * (μ[fun ω ↦ exp (t * Y ω) | m]) ω ∂μ := integral_congr_ae h_pull
+  _ = ∫ ω, ((fun ω ↦ exp (t * X ω)) * gY) ω ∂μ := (h_pull.integral_eq (h_int t)).symm
   _ ≤ ∫ ω, exp (t * X ω) * exp (cY * t ^ 2 / 2) ∂μ := by
-    refine integral_mono_ae ?_ ((hX_int t).mul_const _) ?_
-    · exact (integrable_condExp.congr h_pull)
-    · filter_upwards [hY.ae_condExp_le t] with ω hω
-      exact mul_le_mul_of_nonneg_left hω (exp_nonneg _)
+    refine integral_mono_ae (h_pull.integrable (h_int t)) ((hX_int t).mul_const _) ?_
+    filter_upwards [hgY_le] with ω hω
+    exact mul_le_mul_of_nonneg_left hω (exp_nonneg _)
   _ = mgf X (μ.trim hm) t * exp (cY * t ^ 2 / 2) := by
     rw [integral_mul_const, mgf, integral_trim_ae hm (hX.integrable_exp_mul t).1]
   _ ≤ exp (cX * t ^ 2 / 2) * exp (cY * t ^ 2 / 2) :=

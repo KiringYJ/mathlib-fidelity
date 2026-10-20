@@ -15,16 +15,15 @@ import Mathlib.Probability.Kernel.Integral
 
 We define the regular conditional probability distribution of `Y : α → Ω` given `X : α → β`: the
 `μ.map X`-almost-everywhere class of the Markov kernels `η : Kernel β Ω` with
-`μ.map X ⊗ₘ η = μ.map (fun a ↦ (X a, Y a))`. If the law of `X` is σ-finite, then for every such
-kernel, every measurable set `s` with `μ (Y ⁻¹' s) ≠ ∞`, and almost all `a`, `η (X a) s` is equal to
-the conditional expectation `μ⟦Y ⁻¹' s | mβ.comap X⟧` evaluated at `a`.
+`μ.map X ⊗ₘ η = μ.map (fun a ↦ (X a, Y a))`. For every such kernel and every measurable set `s` with
+`μ (Y ⁻¹' s) ≠ ∞`, `a ↦ (η (X a)).real s` is a conditional expectation of the indicator of
+`Y ⁻¹' s` given `X`, that is, a version of the conditional probability `μ⟦Y ⁻¹' s | mβ.comap X⟧`.
 
-When the law of `X` is σ-finite, `μ⟦Y ⁻¹' s | mβ.comap X⟧` is, for a measurable set `s` with
-`μ (Y ⁻¹' s) ≠ ∞`, a function `α → ℝ` determined up to a `μ`-null set. For all `a`, the map from
-sets to `ℝ` that we obtain that way verifies some of the properties of a measure, but in general
-the fact that the `μ`-null set depends on `s` can prevent us from finding versions of the
-conditional expectation that combine into a true measure. A standard Borel space `Ω` allows us to
-do so.
+The conditional probability `μ⟦Y ⁻¹' s | mβ.comap X⟧` of a measurable set `s` with
+`μ (Y ⁻¹' s) ≠ ∞` is determined only up to a `μ`-null set. For all `a`, the map from sets to `ℝ`
+that we obtain by choosing versions verifies some of the properties of a measure, but in general the
+fact that the `μ`-null set depends on `s` can prevent us from finding versions of the conditional
+expectation that combine into a true measure. A standard Borel space `Ω` allows us to do so.
 
 The conditional distribution exists when the joint law of `(X, Y)` has a unique conditional kernel,
 which the statements take as an instance argument. Instance search supplies it when `Ω` is a
@@ -37,7 +36,7 @@ kernels rather than a chosen kernel: a kernel `η` represents it, written
 the defining property. Statements about the class, the defining property, and the measures and
 Lebesgue integrals of a representative hold for every representative; those about Bochner integrals
 are stated for every s-finite representative, and the identification of the values of a
-representative with conditional expectations for every Markov one.
+representative with conditional expectations for every finite one.
 
 The case `Y = X = id` is developed in more detail in `Mathlib/Probability/Kernel/Condexp.lean`:
 there `X` is the identity from `Ω` with its default σ-algebra to `Ω` with a sub-σ-algebra `m`, and
@@ -53,12 +52,12 @@ class of kernels associated with the conditional expectation with respect to `m`
 
 * `mem_condDistrib_iff`: if the law of `X` is σ-finite, a kernel `η` for which `μ.map X ⊗ₘ η`
   exists represents `condDistrib Y X μ` if and only if `μ.map (fun a ↦ (X a, Y a)) = μ.map X ⊗ₘ η`.
-* `condDistrib_ae_eq_condExp`: if the law of `X` is σ-finite, then for every Markov representative
-  `η`, every measurable set `s` with `μ (Y ⁻¹' s) ≠ ∞`, and almost all `a`, `η (X a) s` is equal to
-  the conditional expectation `μ⟦Y ⁻¹' s | mβ.comap X⟧ a`.
-* `condExp_prod_ae_eq_integral_condDistrib`: if the law of `X` is σ-finite, the conditional
-  expectation `μ[(fun a => f (X a, Y a)) | X; mβ]` is almost everywhere equal to the integral
-  `∫ y, f (X a, y) ∂(η (X a))` for every s-finite representative `η`.
+* `isCondExp_condDistrib_real`: for every finite representative `η`, every measurable set `s` with
+  `μ (Y ⁻¹' s) ≠ ∞`, `a ↦ (η (X a)).real s` is a conditional expectation of the indicator of
+  `Y ⁻¹' s` given `X`.
+* `isCondExp_prod_integral_condDistrib`: if the law of `X` is s-finite, then for every s-finite
+  representative `η`, the integral `a ↦ ∫ y, f (X a, y) ∂(η (X a))` is a conditional expectation of
+  `a ↦ f (X a, Y a)` given `X`.
 -/
 
 @[expose] public section
@@ -77,13 +76,14 @@ variable {α β Ω F : Type*} [SigmaAlgebra Ω] [NormedAddCommGroup F] {mα : Si
 everywhere class of the Markov kernels `η` with `μ.map X ⊗ₘ η = μ.map (fun a => (X a, Y a))`, which
 is the conditional kernel of the joint law of `(X, Y)` (`MeasureTheory.Measure.condKernel`).
 
-If the law of `X` is σ-finite, then for every Markov representative `η`, every measurable set `s`
-with `μ (Y ⁻¹' s) ≠ ∞`, and almost all `a`, `η (X a) s` is equal to the conditional expectation
-`μ⟦Y ⁻¹' s | mβ.comap X⟧ a`, and for every s-finite representative `η` and every integrable function
-`f`, `μ[(fun a => f (X a, Y a)) | mβ.comap X] =ᵐ[μ] fun a => ∫ y, f (X a, y) ∂(η (X a))`. The joint
-map `fun a => (X a, Y a)` must be almost everywhere measurable; this proof is normally discharged
-by `fun_prop` through the default tactic `fun_prop_default`, and an instance of the class of the
-joint law found in the local context determines it before default arguments are synthesized. -/
+For every finite representative `η` and every measurable set `s` with `μ (Y ⁻¹' s) ≠ ∞`,
+`a ↦ (η (X a)).real s` is a conditional expectation of the indicator of `Y ⁻¹' s` given `X`, and if
+the law of `X` is s-finite, then for every s-finite representative `η` and every integrable function
+`f`, `a ↦ ∫ y, f (X a, y) ∂(η (X a))` is a conditional expectation of `a ↦ f (X a, Y a)` given `X`.
+The joint map `fun a => (X a, Y a)` must be almost everywhere measurable; this proof is normally
+discharged by `fun_prop` through the default tactic `fun_prop_default`, and an instance of the class
+of the joint law found in the local context determines it before default arguments are
+synthesized. -/
 noncomputable def condDistrib {_ : SigmaAlgebra α} [SigmaAlgebra β] (Y : α → Ω)
     (X : α → β) (μ : Measure α)
     (hXY : AEMeasurable (fun a => (X a, Y a)) μ := by fun_prop_default)
@@ -460,100 +460,97 @@ theorem setLIntegral_condDistrib_of_measurableSet (hX : Measurable X) (hY : AEMe
   obtain ⟨t', ht', rfl⟩ := ht
   rw [setLIntegral_preimage_condDistrib hX hY hη hs ht']
 
-/-- For every Markov representative `η` of `condDistrib Y X μ` and almost every `a : α`, `η (X a)`
-evaluated at a measurable set `s` is equal to the conditional expectation of the indicator of
-`Y ⁻¹' s`. -/
-theorem condDistrib_ae_eq_condExp (hX : Measurable X) (hY : AEMeasurable Y μ)
+/-- For every finite representative `η` of `condDistrib Y X μ` and every measurable set `s` with
+`μ (Y ⁻¹' s) ≠ ∞`, `a ↦ (η (X a)).real s` is a conditional expectation of the indicator of
+`Y ⁻¹' s` given `X`, that is, a conditional probability of `Y ⁻¹' s` given `X`. -/
+theorem isCondExp_condDistrib_real (hX : Measurable X) (hY : AEMeasurable Y μ)
     [(μ.map (fun a => (X a, Y a)) (hX.aemeasurable.prodMk hY)).HasUniqueCondKernel]
-    [SigmaFinite (μ.map X hX.aemeasurable)] [IsMarkovKernel η]
-    (hη : η ∈ condDistrib Y X μ) (hs : MeasurableSet s)
+    [IsFiniteKernel η] (hη : η ∈ condDistrib Y X μ) (hs : MeasurableSet s)
     (hμs : μ (Y ⁻¹' s) ≠ ∞ := by finiteness) :
-    (fun a => (η (X a)).real s) =ᵐ[μ] μ⟦Y ⁻¹' s | mβ.comap X⟧ := by
-  have := sigmaFinite_trim_comap (μ := μ) hX
-  refine (toReal_ae_eq_condExp_indicator_iff_forall_setLIntegral_eq hX.comap_le
-    (hY.nullMeasurable hs) hμs
+    IsCondExp (mβ.comap X) μ ((Y ⁻¹' s).indicator fun _ ↦ (1 : ℝ))
+      fun a => (η (X a)).real s := by
+  refine (isCondExp_indicator_toReal_iff hX.comap_le (hY.nullMeasurable hs) hμs
     ((Kernel.measurable_coe _ hs).comp (Measurable.of_comap_le le_rfl)).aestronglyMeasurable
     (ae_of_all _ fun a ↦ measure_ne_top _ _)).2 fun t ht ↦ ?_
   exact setLIntegral_condDistrib_of_measurableSet hX hY hη hs ht
 
-/-- The conditional expectation of a function `f` of the product `(X, Y)` is almost everywhere equal
-to the integral of `y ↦ f(X, y)` against every s-finite representative of `condDistrib Y X μ`. -/
-theorem condExp_prod_ae_eq_integral_condDistrib' [NormedSpace ℝ F] [CompleteSpace F]
+/-- If the law of `X` is s-finite, then for every s-finite representative `η` of
+`condDistrib Y X μ`, the integral of `y ↦ f (X a, y)` against `η (X a)` is a conditional expectation
+of `a ↦ f (X a, Y a)` given `X`. -/
+theorem isCondExp_prod_integral_condDistrib' [NormedSpace ℝ F] [CompleteSpace F]
     (hX : Measurable X) (hY : AEMeasurable Y μ)
     [(μ.map (fun a => (X a, Y a)) (hX.aemeasurable.prodMk hY)).HasUniqueCondKernel]
-    [SigmaFinite (μ.map X hX.aemeasurable)]
-    [IsSFiniteKernel η]
+    [SFinite (μ.map X hX.aemeasurable)] [IsSFiniteKernel η]
     (hη : η ∈ condDistrib Y X μ) (hf_int : Integrable f (μ.map fun a => (X a, Y a))) :
-    μ[fun a => f (X a, Y a) | mβ.comap X] =ᵐ[μ] fun a => ∫ y, f (X a, y) ∂(η (X a)) := by
-  have := sigmaFinite_trim_comap (μ := μ) hX
+    IsCondExp (mβ.comap X) μ (fun a => f (X a, Y a)) fun a => ∫ y, f (X a, y) ∂(η (X a)) := by
   have := isCondKernel_of_mem_condDistrib hη
-  have hf_int' : Integrable (fun a => f (X a, Y a)) μ :=
-    (integrable_map_measure (hX.aemeasurable.prodMk hY) hf_int.1).mp hf_int
-  refine (ae_eq_condExp_of_forall_setIntegral_eq hX.comap_le hf_int' (fun s _ _ => ?_) ?_ ?_).symm
-  · exact (hf_int.integral_condDistrib hX.aemeasurable hY hη).integrableOn
-  · rintro s ⟨t, ht, rfl⟩ _
-    change ∫ a in X ⁻¹' t, ((fun x' => ∫ y, f (x', y) ∂(η x')) ∘ X) a ∂μ =
-      ∫ a in X ⁻¹' t, f (X a, Y a) ∂μ
-    simp only [Function.comp_apply]
-    rw [← integral_map hX.aemeasurable (f := fun x' => ∫ y, f (x', y) ∂(η x'))]
-    swap
-    · rw [← Measure.restrict_map hX ht]
-      exact (hf_int.1.integral_condDistrib_map hX.aemeasurable hY hη).restrict
-    rw [← Measure.restrict_map hX ht, ← Measure.fst_map_prodMk₀ hX.aemeasurable hY,
-      Measure.setIntegral_condKernel_univ_right ht hf_int.integrableOn,
-      setIntegral_map (MeasurableSet.prod ht MeasurableSet.univ)
-        (hX.aemeasurable.prodMk hY) hf_int.1,
-      mk_preimage_prod, preimage_univ, inter_univ]
-  · exact aestronglyMeasurable_integral_condDistrib hX.aemeasurable hY hη hf_int.1
+  refine ⟨aestronglyMeasurable_integral_condDistrib hX.aemeasurable hY hη hf_int.1,
+    fun _ _ _ ↦ (hf_int.integral_condDistrib hX.aemeasurable hY hη).integrableOn, ?_⟩
+  rintro s ⟨t, ht, rfl⟩ _
+  change ∫ a in X ⁻¹' t, ((fun x' => ∫ y, f (x', y) ∂(η x')) ∘ X) a ∂μ =
+    ∫ a in X ⁻¹' t, f (X a, Y a) ∂μ
+  simp only [Function.comp_apply]
+  rw [← integral_map hX.aemeasurable (f := fun x' => ∫ y, f (x', y) ∂(η x'))]
+  swap
+  · rw [← Measure.restrict_map hX ht]
+    exact (hf_int.1.integral_condDistrib_map hX.aemeasurable hY hη).restrict
+  rw [← Measure.restrict_map hX ht, ← Measure.fst_map_prodMk₀ hX.aemeasurable hY,
+    Measure.setIntegral_condKernel_univ_right ht hf_int.integrableOn,
+    setIntegral_map (MeasurableSet.prod ht MeasurableSet.univ)
+      (hX.aemeasurable.prodMk hY) hf_int.1,
+    mk_preimage_prod, preimage_univ, inter_univ]
 
-/-- The conditional expectation of a function `f` of the product `(X, Y)` is almost everywhere equal
-to the integral of `y ↦ f(X, y)` against every s-finite representative of `condDistrib Y X μ`. -/
-theorem condExp_prod_ae_eq_integral_condDistrib₀ [NormedSpace ℝ F] [CompleteSpace F]
+/-- If the law of `X` is s-finite, then for every s-finite representative `η` of
+`condDistrib Y X μ`, the integral of `y ↦ f (X a, y)` against `η (X a)` is a conditional expectation
+of `a ↦ f (X a, Y a)` given `X`. -/
+theorem isCondExp_prod_integral_condDistrib₀ [NormedSpace ℝ F] [CompleteSpace F]
     (hX : Measurable X) (hY : AEMeasurable Y μ)
     [(μ.map (fun a => (X a, Y a)) (hX.aemeasurable.prodMk hY)).HasUniqueCondKernel]
-    [SigmaFinite (μ.map X hX.aemeasurable)]
-    [IsSFiniteKernel η]
+    [SFinite (μ.map X hX.aemeasurable)] [IsSFiniteKernel η]
     (hη : η ∈ condDistrib Y X μ) (hf : AEStronglyMeasurable f (μ.map fun a => (X a, Y a)))
     (hf_int : Integrable (fun a => f (X a, Y a)) μ) :
-    μ[fun a => f (X a, Y a) | mβ.comap X] =ᵐ[μ] fun a => ∫ y, f (X a, y) ∂(η (X a)) :=
+    IsCondExp (mβ.comap X) μ (fun a => f (X a, Y a)) fun a => ∫ y, f (X a, y) ∂(η (X a)) :=
   have hf_int' : Integrable f (μ.map fun a => (X a, Y a)) := by
     rwa [integrable_map_measure (hX.aemeasurable.prodMk hY) hf]
-  condExp_prod_ae_eq_integral_condDistrib' hX hY hη hf_int'
+  isCondExp_prod_integral_condDistrib' hX hY hη hf_int'
 
-/-- The conditional expectation of a function `f` of the product `(X, Y)` is almost everywhere equal
-to the integral of `y ↦ f(X, y)` against every s-finite representative of `condDistrib Y X μ`. -/
-theorem condExp_prod_ae_eq_integral_condDistrib [NormedSpace ℝ F] [CompleteSpace F]
+/-- If the law of `X` is s-finite, then for every s-finite representative `η` of
+`condDistrib Y X μ`, the integral of `y ↦ f (X a, y)` against `η (X a)` is a conditional expectation
+of `a ↦ f (X a, Y a)` given `X`. -/
+theorem isCondExp_prod_integral_condDistrib [NormedSpace ℝ F] [CompleteSpace F]
     (hX : Measurable X) (hY : AEMeasurable Y μ)
     [(μ.map (fun a => (X a, Y a)) (hX.aemeasurable.prodMk hY)).HasUniqueCondKernel]
-    [SigmaFinite (μ.map X hX.aemeasurable)]
-    [IsSFiniteKernel η]
+    [SFinite (μ.map X hX.aemeasurable)] [IsSFiniteKernel η]
     (hη : η ∈ condDistrib Y X μ) (hf : StronglyMeasurable f)
     (hf_int : Integrable (fun a => f (X a, Y a)) μ) :
-    μ[fun a => f (X a, Y a) | mβ.comap X] =ᵐ[μ] fun a => ∫ y, f (X a, y) ∂(η (X a)) :=
+    IsCondExp (mβ.comap X) μ (fun a => f (X a, Y a)) fun a => ∫ y, f (X a, y) ∂(η (X a)) :=
   have hf_int' : Integrable f (μ.map fun a => (X a, Y a)) := by
     rwa [integrable_map_measure (hX.aemeasurable.prodMk hY) hf.aestronglyMeasurable]
-  condExp_prod_ae_eq_integral_condDistrib' hX hY hη hf_int'
+  isCondExp_prod_integral_condDistrib' hX hY hη hf_int'
 
-theorem condExp_ae_eq_integral_condDistrib [NormedSpace ℝ F] [CompleteSpace F] (hX : Measurable X)
+/-- If the law of `X` is s-finite, then for every s-finite representative `η` of
+`condDistrib Y X μ`, the integral of `f` against `η (X a)` is a conditional expectation of
+`a ↦ f (Y a)` given `X`. -/
+theorem isCondExp_integral_condDistrib [NormedSpace ℝ F] [CompleteSpace F] (hX : Measurable X)
     (hY : AEMeasurable Y μ)
     [(μ.map (fun a => (X a, Y a)) (hX.aemeasurable.prodMk hY)).HasUniqueCondKernel]
-    [SigmaFinite (μ.map X hX.aemeasurable)]
-    [IsSFiniteKernel η] (hη : η ∈ condDistrib Y X μ) {f : Ω → F}
+    [SFinite (μ.map X hX.aemeasurable)] [IsSFiniteKernel η] (hη : η ∈ condDistrib Y X μ)
+    {f : Ω → F}
     (hf : StronglyMeasurable f) (hf_int : Integrable (fun a => f (Y a)) μ) :
-    μ[fun a => f (Y a) | mβ.comap X] =ᵐ[μ] fun a => ∫ y, f y ∂(η (X a)) :=
-  condExp_prod_ae_eq_integral_condDistrib hX hY hη (hf.comp_measurable measurable_snd) hf_int
+    IsCondExp (mβ.comap X) μ (fun a => f (Y a)) fun a => ∫ y, f y ∂(η (X a)) :=
+  isCondExp_prod_integral_condDistrib hX hY hη (hf.comp_measurable measurable_snd) hf_int
 
-/-- The conditional expectation of `Y` given `X` is almost everywhere equal to the integral
-`∫ y, y ∂(η (X a))` for every s-finite representative `η` of `condDistrib Y X μ`. -/
-theorem condExp_ae_eq_integral_condDistrib' {Ω : Type*} [NormedAddCommGroup Ω] [NormedSpace ℝ Ω]
+/-- If the law of `X` is s-finite, then for every s-finite representative `η` of
+`condDistrib Y X μ`, the mean `∫ y, y ∂(η (X a))` is a conditional expectation of `Y` given `X`. -/
+theorem isCondExp_integral_condDistrib' {Ω : Type*} [NormedAddCommGroup Ω] [NormedSpace ℝ Ω]
     [CompleteSpace Ω] [SigmaAlgebra Ω] [BorelSpace Ω] [SecondCountableTopology Ω] {Y : α → Ω}
-    {η : Kernel β Ω} [IsSFiniteKernel η] (hX : Measurable X) [SigmaFinite (μ.map X hX.aemeasurable)]
+    {η : Kernel β Ω} [IsSFiniteKernel η] (hX : Measurable X) [SFinite (μ.map X hX.aemeasurable)]
     (hY_int : Integrable Y μ)
     [(μ.map (fun a => (X a, Y a))
       (hX.aemeasurable.prodMk hY_int.1.aemeasurable)).HasUniqueCondKernel]
     (hη : η ∈ condDistrib Y X μ) :
-    μ[Y | mβ.comap X] =ᵐ[μ] fun a => ∫ y, y ∂(η (X a)) :=
-  condExp_ae_eq_integral_condDistrib hX hY_int.1.aemeasurable hη stronglyMeasurable_id hY_int
+    IsCondExp (mβ.comap X) μ Y fun a => ∫ y, y ∂(η (X a)) :=
+  isCondExp_integral_condDistrib hX hY_int.1.aemeasurable hη stronglyMeasurable_id hY_int
 
 open MeasureTheory
 
@@ -598,13 +595,16 @@ theorem integrable_comp_snd_map_prodMk_iff {Ω} {_ : SigmaAlgebra Ω} {X : Ω �
       (hX.prodMk measurable_id) h,
     fun h => h.comp_snd_map_prodMk hX.aemeasurable⟩
 
-theorem condExp_ae_eq_integral_condDistrib_id [NormedSpace ℝ F] [CompleteSpace F] {X : Ω → β}
-    {μ : Measure Ω} (hX : Measurable X) [SigmaFinite (μ.map X hX.aemeasurable)] {f : Ω → F}
+/-- If the law of `X` is s-finite, then for every s-finite representative `η` of
+`condDistrib id X μ`, the integral of `f` against `η (X a)` is a conditional expectation of `f`
+given `X`. -/
+theorem isCondExp_integral_condDistrib_id [NormedSpace ℝ F] [CompleteSpace F] {X : Ω → β}
+    {μ : Measure Ω} (hX : Measurable X) [SFinite (μ.map X hX.aemeasurable)] {f : Ω → F}
     (hf_int : Integrable f μ)
     [(μ.map (fun a => (X a, id a)) (hX.aemeasurable.prodMk aemeasurable_id)).HasUniqueCondKernel]
     {η : Kernel β Ω} [IsSFiniteKernel η] (hη : η ∈ condDistrib id X μ) :
-    μ[f | mβ.comap X] =ᵐ[μ] fun a => ∫ y, f y ∂(η (X a)) :=
-  condExp_prod_ae_eq_integral_condDistrib' hX aemeasurable_id hη
+    IsCondExp (mβ.comap X) μ f fun a => ∫ y, f y ∂(η (X a)) :=
+  isCondExp_prod_integral_condDistrib' hX aemeasurable_id hη
     (hf_int.comp_snd_map_prodMk hX.aemeasurable)
 
 end ProbabilityTheory

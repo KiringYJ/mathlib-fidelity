@@ -420,12 +420,14 @@ example (μ : Measure α) {X Y : α → ℝ} (hX : AEMeasurable X μ) (hY : AEMe
     Integrable (fun a ↦ ∫ y, f (X a, y) ∂η (X a)) μ :=
   hf.integral_condDistrib hX hY hη
 
--- The conditional expectation given `X` under an infinite measure whose law of `X` is σ-finite.
+-- A conditional probability given `X` under an infinite measure whose law of `X` is σ-finite,
+-- which supplies the class of the joint law.
 example (μ : Measure α) {X Y : α → ℝ} (hX : Measurable X) (hY : Measurable Y)
     [SigmaFinite (μ.map X hX.aemeasurable)] (η : Kernel ℝ ℝ) [IsMarkovKernel η]
     (hη : η ∈ condDistrib Y X μ) {s : Set ℝ} (hs : MeasurableSet s) (hμs : μ (Y ⁻¹' s) ≠ ∞) :
-    (fun a ↦ (η (X a)).real s) =ᵐ[μ] μ⟦Y ⁻¹' s | (inferInstance : SigmaAlgebra ℝ).comap X⟧ :=
-  condDistrib_ae_eq_condExp hX hY.aemeasurable hη hs hμs
+    IsCondExp ((inferInstance : SigmaAlgebra ℝ).comap X) μ ((Y ⁻¹' s).indicator fun _ ↦ 1)
+      fun a ↦ (η (X a)).real s :=
+  isCondExp_condDistrib_real hX hY.aemeasurable hη hs hμs
 
 example (μ : Measure α) (X : α → ℝ) (hX : Measurable X) :
     SigmaFinite (μ.trim hX.comap_le) ↔ SigmaFinite (μ.map X hX.aemeasurable) :=

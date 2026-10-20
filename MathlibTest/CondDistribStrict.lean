@@ -8,8 +8,8 @@ These tests check that `ProbabilityTheory.condDistrib` and `ProbabilityTheory.po
 of kernels modulo null sets, so that no chosen kernel, with its Markov instance and lemmas, is
 public; that a finite kernel represents them exactly when it disintegrates the corresponding joint
 law, which for `condDistrib` is the relation `HasCondDistrib`, that Markov representatives exist,
-and that every Markov representative of a conditional distribution computes conditional
-probabilities; that argmin estimators are checked on a single representative of the posterior and
+and that every finite representative of a conditional distribution computes versions of
+conditional probabilities; that argmin estimators are checked on a single representative of the posterior and
 that no argmin estimator is chosen from their existence; that a kernel that agrees with a
 representative except on a null set is again a representative; and that a kernel that is wrong on
 a set of positive measure is not.
@@ -99,12 +99,13 @@ example (hXY : AEMeasurable (fun a ↦ (X a, Y a)) μ) (η : Kernel β Ω) [IsFi
     η ∈ condDistrib Y X μ hXY ↔ HasCondDistrib Y X η μ :=
   mem_condDistrib_iff_hasCondDistrib hXY
 
--- Every Markov representative computes conditional probabilities, also of an almost everywhere
--- measurable `Y`.
-example (hX : Measurable X) (hY : AEMeasurable Y μ) {η : Kernel β Ω} [IsMarkovKernel η]
+-- Every finite representative computes versions of conditional probabilities, also of an almost
+-- everywhere measurable `Y`.
+example (hX : Measurable X) (hY : AEMeasurable Y μ) {η : Kernel β Ω} [IsFiniteKernel η]
     (hη : η ∈ condDistrib Y X μ) {s : Set Ω} (hs : MeasurableSet s) :
-    (fun a ↦ (η (X a)).real s) =ᵐ[μ] μ⟦Y ⁻¹' s | SigmaAlgebra.comap X ‹_›⟧ :=
-  condDistrib_ae_eq_condExp hX hY hη hs
+    IsCondExp (SigmaAlgebra.comap X ‹_›) μ ((Y ⁻¹' s).indicator fun _ ↦ 1)
+      fun a ↦ (η (X a)).real s :=
+  isCondExp_condDistrib_real hX hY hη hs
 
 -- The identity kernel represents the conditional distribution of a random variable given itself.
 example (hY : AEMeasurable Y μ) : Kernel.id ∈ condDistrib Y Y μ :=
@@ -124,8 +125,9 @@ end CondDistrib
 example {α : Type*} {m : SigmaAlgebra α} [mα : SigmaAlgebra α] (hm : m ≤ mα) {μ : Measure α}
     [IsFiniteMeasure μ] {t : Set α} (ht : NullMeasurableSet t μ) {G : α → ENNReal}
     (hG : AEStronglyMeasurable[m] G μ) (hG_fin : ∀ᵐ x ∂μ, G x ≠ ⊤) :
-    (fun x ↦ (G x).toReal) =ᵐ[μ] μ⟦t | m⟧ ↔ ∀ s ∈ m, ∫⁻ x in s, G x ∂μ = μ (s ∩ t) :=
-  toReal_ae_eq_condExp_indicator_iff_forall_setLIntegral_eq hm ht (measure_ne_top _ _) hG hG_fin
+    IsCondExp m μ (t.indicator fun _ ↦ (1 : ℝ)) (fun x ↦ (G x).toReal) ↔
+      ∀ s ∈ m, ∫⁻ x in s, G x ∂μ = μ (s ∩ t) :=
+  isCondExp_indicator_toReal_iff hm ht (measure_ne_top _ _) hG hG_fin
 
 /-! ### Conditional probabilities of null-measurable sets -/
 
@@ -134,36 +136,39 @@ section CondProb
 variable {α E : Type*} {m : SigmaAlgebra α} [mα : SigmaAlgebra α] {μ : Measure α}
   [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
 
--- For a fixed integrand, the conditional expectation of its indicator is additive on differences
--- of null-measurable sets that need not be `m`-measurable.
-example {f : α → E} {s t : Set α} (hs : NullMeasurableSet s μ) (ht : NullMeasurableSet t μ)
-    (hts : t ⊆ s) (hf : IntegrableOn f s μ) :
-    μ[(s \ t).indicator f | m] =ᵐ[μ] μ[s.indicator f | m] - μ[t.indicator f | m] :=
-  condExp_indicator_sdiff hs ht hts hf
+-- For a fixed integrand, versions of the conditional expectations of its indicators are additive
+-- on differences of null-measurable sets that need not be `m`-measurable.
+example {f g g' : α → E} {s t : Set α} (hs : NullMeasurableSet s μ) (ht : NullMeasurableSet t μ)
+    (hts : t ⊆ s) (hf : IntegrableOn f s μ) (hg : IsCondExp m μ (s.indicator f) g)
+    (hg' : IsCondExp m μ (t.indicator f) g') : IsCondExp m μ ((s \ t).indicator f) (g - g') :=
+  hg.indicator_sdiff hg' hs ht hts hf
 
--- The conditional probability of `∅` is `0` for every measure; for a finite measure and a
--- sub-σ-algebra, that of `Set.univ` is `1` and that of a complement is almost everywhere `1` minus
--- that of the set. Rewriting checks that the lemmas match the notation syntactically.
-example : μ⟦∅ | m⟧ = 0 := by
+-- The conditional probability of `∅` is `0` and that of `Set.univ` is `1` wherever they are
+-- defined; for a finite measure and a sub-σ-algebra, that of a complement is `1` minus that of the
+-- set. Rewriting checks that the lemmas match the notation syntactically.
+example (h : HasUniqueCondExp m μ ((∅ : Set α).indicator fun _ ↦ (1 : ℝ))) : μ⟦∅ | m⟧ = 0 := by
   rw [condExp_indicator_empty]
 
-example [IsFiniteMeasure μ] (hm : m ≤ mα) : μ⟦Set.univ | m⟧ = 1 := by
-  rw [condExp_indicator_univ_one hm]
+example (h : HasUniqueCondExp m μ (Set.univ.indicator fun _ ↦ (1 : ℝ))) :
+    μ⟦Set.univ | m⟧ = 1 := by
+  rw [condExp_indicator_univ_one]
 
 example [IsFiniteMeasure μ] (hm : m ≤ mα) {s : Set α} (hs : NullMeasurableSet s μ) :
-    μ⟦sᶜ | m⟧ =ᵐ[μ] 1 - μ⟦s | m⟧ :=
-  condExp_indicator_compl_one hm hs
+    μ⟦sᶜ | m⟧ = 1 - μ⟦s | m⟧ := by
+  rw [condExp_indicator_compl_one hs]
 
--- Conditional probabilities are countably additive on pairwise disjoint null-measurable sets.
-example [IsFiniteMeasure μ] {ι : Type*} [Countable ι] {s : ι → Set α}
+-- Versions of the conditional probabilities are countably additive on pairwise disjoint
+-- null-measurable sets.
+example [IsFiniteMeasure μ] (hm : m ≤ mα) {ι : Type*} [Countable ι] {s : ι → Set α}
+    {g : ι → α → ℝ} (hg : ∀ i, IsCondExp m μ ((s i).indicator fun _ ↦ 1) (g i))
     (hs : ∀ i, NullMeasurableSet (s i) μ) (hd : Pairwise (Function.onFun Disjoint s)) :
-    μ⟦⋃ i, s i | m⟧ =ᵐ[μ] fun a ↦ ∑' i, (μ⟦s i | m⟧) a :=
-  condExp_indicator_iUnion hs hd (integrable_const (1 : ℝ)).integrableOn
+    IsCondExp m μ ((⋃ i, s i).indicator fun _ ↦ 1) fun a ↦ ∑' i, g i a :=
+  IsCondExp.indicator_iUnion hm hg hs hd (integrable_const (1 : ℝ)).integrableOn
 
--- Almost everywhere equal sets have almost everywhere equal conditional probabilities, for every
--- measure.
-example {s t : Set α} (h : s =ᵐ[μ] t) : μ⟦s | m⟧ =ᵐ[μ] μ⟦t | m⟧ :=
-  condExp_indicator_ae_eq_of_ae_eq_set h
+-- Almost everywhere equal sets have the same conditional probability, for every measure.
+example {s t : Set α} (h : s =ᵐ[μ] t) (hs : HasUniqueCondExp m μ (s.indicator fun _ ↦ (1 : ℝ)))
+    (ht : HasUniqueCondExp m μ (t.indicator fun _ ↦ (1 : ℝ))) : μ⟦s | m⟧ = μ⟦t | m⟧ :=
+  condExp_indicator_congr_ae_set h hs ht
 
 end CondProb
 

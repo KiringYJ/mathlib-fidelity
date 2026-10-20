@@ -55,8 +55,8 @@ expectation.
 * `traj_comp_partialTraj`: Given the distribution up to time `a`, `partialTraj κ a b`
   gives the distribution of the trajectory up to time `b`, and composing this with
   `traj κ b` gives the distribution of the whole trajectory.
-* `condExp_traj`: If `a ≤ b`, the conditional expectation of `f` with respect to `traj κ a`
-  given the information up to time `b` is obtained by integrating `f` against `traj κ b`.
+* `isCondExp_traj`: If `a ≤ b`, integrating `f` against `traj κ b` gives a conditional expectation
+  of `f` with respect to `traj κ a` given the information up to time `b`.
 * `mem_condDistrib_trajMeasure`: the kernel `κ a` represents the regular conditional probability
   distribution of the point at time `a + 1` given the trajectory up to time `a`.
 
@@ -787,38 +787,39 @@ variable [CompleteSpace E]
 
 open Filtration
 
-theorem condExp_traj {a b : ℕ} (hab : a ≤ b) {x₀ : Π i : Iic a, X i}
+/-- If `a ≤ b`, integrating `f` against `traj κ b` gives a conditional expectation of `f` with
+respect to `traj κ a` given the information up to time `b`. -/
+theorem isCondExp_traj {a b : ℕ} (hab : a ≤ b) {x₀ : Π i : Iic a, X i}
     {f : (Π n, X n) → E} (i_f : Integrable f (traj κ a x₀)) :
-    (traj κ a x₀)[f | piLE b] =ᵐ[traj κ a x₀]
-      fun x ↦ ∫ y, f y ∂traj κ b (frestrictLe b x) := by
+    IsCondExp (piLE b) (traj κ a x₀) f fun x ↦ ∫ y, f y ∂traj κ b (frestrictLe b x) := by
   have i_f' : Integrable (fun x ↦ ∫ y, f y ∂(traj κ b) x)
       (((traj κ a) x₀).map (frestrictLe b)) := by
     rw [← map_apply _ _ (measurable_frestrictLe _), traj_map_frestrictLe _ _]
     rw [← traj_comp_partialTraj hab] at i_f
     exact i_f.integral_comp
-  refine ae_eq_condExp_of_forall_setIntegral_eq (piLE.le _) i_f
-    (fun s _ _ ↦ i_f'.comp_aemeasurable (measurable_frestrictLe b).aemeasurable |>.integrableOn)
-    ?_ ?_ |>.symm <;> rw [piLE_eq_comap_frestrictLe]
-  · rintro - ⟨t, mt, rfl⟩ -
-    simp_rw [Function.comp_apply]
-    rw [← setIntegral_map mt (measurable_frestrictLe b).aemeasurable i_f'.1,
-      ← map_apply, traj_map_frestrictLe,
-      setIntegral_traj_partialTraj hab i_f mt]
-  · exact (i_f'.1.comp_ae_measurable' (measurable_frestrictLe b).aemeasurable)
+  rw [piLE_eq_comap_frestrictLe]
+  refine ⟨i_f'.1.comp_ae_measurable' (measurable_frestrictLe b).aemeasurable,
+    fun _ _ _ ↦ i_f'.comp_aemeasurable (measurable_frestrictLe b).aemeasurable |>.integrableOn, ?_⟩
+  rintro - ⟨t, mt, rfl⟩ -
+  rw [← setIntegral_map mt (measurable_frestrictLe b).aemeasurable i_f'.1,
+    ← map_apply, traj_map_frestrictLe,
+    setIntegral_traj_partialTraj hab i_f mt]
 
-theorem condExp_traj' {a b c : ℕ} (hab : a ≤ b) (hbc : b ≤ c)
-    (x₀ : Π i : Iic a, X i) (f : (Π n, X n) → E) :
-    (traj κ a x₀)[f | piLE b] =ᵐ[traj κ a x₀]
-      fun x ↦ ∫ y, ((traj κ a x₀)[f | piLE c]) (updateFinset x (Iic c) y)
-        ∂partialTraj κ b c (frestrictLe b x) := by
-  have i_cf : Integrable ((traj κ a x₀)[f | piLE c]) (traj κ a x₀) :=
-    integrable_condExp
-  have mcf : StronglyMeasurable ((traj κ a x₀)[f | piLE c]) :=
-    stronglyMeasurable_condExp.mono (piLE.le c)
-  filter_upwards [piLE.condExp_condExp f hbc, condExp_traj hab i_cf] with x h1 h2
-  rw [← h1, h2, ← traj_map_frestrictLe, Kernel.map_apply, integral_map]
+/-- If `a ≤ b ≤ c` and `g` is a `piLE c`-strongly measurable conditional expectation of `f` with
+respect to `traj κ a` given the information up to time `c`, then integrating `g` against
+`partialTraj κ b c` gives a conditional expectation of `f` given the information up to time `b`. -/
+theorem isCondExp_traj' {a b c : ℕ} (hab : a ≤ b) (hbc : b ≤ c) {x₀ : Π i : Iic a, X i}
+    {f g : (Π n, X n) → E} (i_f : Integrable f (traj κ a x₀))
+    (hg : IsCondExp (piLE c) (traj κ a x₀) f g) (hgm : StronglyMeasurable[piLE c] g) :
+    IsCondExp (piLE b) (traj κ a x₀) f fun x ↦ ∫ y, g (updateFinset x (Iic c) y)
+      ∂partialTraj κ b c (frestrictLe b x) := by
+  have mcf : StronglyMeasurable g := hgm.mono (piLE.le c)
+  refine (hg.trans (isCondExp_traj hab (hg.integrable i_f)) (piLE.mono hbc)).congr_right
+    (ae_of_all _ fun x ↦ ?_)
+  dsimp only
+  rw [← traj_map_frestrictLe, Kernel.map_apply, integral_map]
   · congr with y
-    apply stronglyMeasurable_condExp.dependsOn_of_piLE
+    apply hgm.dependsOn_of_piLE
     simp only [Set.mem_Iic, updateFinset, mem_Iic, frestrictLe_apply, dite_eq_ite]
     exact fun i hi ↦ (ite_eq_left hi).symm
   exact (mcf.comp_measurable measurable_updateFinset).aestronglyMeasurable

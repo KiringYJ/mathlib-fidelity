@@ -12,10 +12,12 @@ public import Mathlib.Probability.Kernel.Condexp
 /-!
 # A probability measure whose conditional kernels are not unique
 
-Conditional independence given a sub-σ-algebra `m'` is stated with the conditional probabilities
-`μ⟦t | m'⟧`, which exist for every finite measure on every measurable space. The conditional
-expectation kernel `ProbabilityTheory.condExpKernel μ hm'` is defined only when the joint law of
-`(ω, ω)` has a unique conditional kernel, and the uniqueness can fail for a probability measure.
+Conditional independence given a sub-σ-algebra `m'` is stated with versions of the conditional
+probabilities of null-measurable sets, the conditional expectations of their indicators, which
+exist and agree almost everywhere for every finite measure on every measurable space. The
+conditional expectation kernel `ProbabilityTheory.condExpKernel μ hm'` is defined only when the
+joint law of `(ω, ω)` has a unique conditional kernel, and the uniqueness can fail for a
+probability measure.
 
 Let `CountableCocountable` be `ℝ` with the countable-cocountable σ-algebra, whose measurable sets
 are the countable sets and their complements, and let `oneOnCocountable` be the probability measure
@@ -155,7 +157,8 @@ theorem not_hasUniqueCondKernel : ¬ jointLaw.HasUniqueCondKernel := by
 
 /-- Conditional independence given the whole σ-algebra is defined for `oneOnCocountable`, although
 the conditional expectation kernel is not: the whole σ-algebra is conditionally independent of
-itself, since the conditional probabilities of its sets are their indicators. -/
+itself, since the indicator of each of its sets is a version of the conditional probability of the
+set. -/
 theorem condIndep_self :
     CondIndep instSigmaAlgebra instSigmaAlgebra instSigmaAlgebra le_rfl oneOnCocountable :=
   condIndep_of_le_left le_rfl fun _ hs ↦ (measurableSet_iff_mem.2 hs).nullMeasurableSet

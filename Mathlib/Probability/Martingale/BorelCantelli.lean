@@ -30,7 +30,9 @@ the results here), and `ProbabilityTheory.measure_limsup_eq_one` for the second 
   everywhere equal to the set for which it is bounded.
 - `MeasureTheory.ae_mem_limsup_atTop_iff`: Lévy's generalized Borel-Cantelli:
   given a filtration `ℱ` and a sequence of sets `s` such that `s n ∈ ℱ n` for all `n`,
-  `limsup atTop s` is almost everywhere equal to the set for which `∑ ℙ[s (n + 1)∣ℱ n] = ∞`.
+  `limsup atTop s` is almost everywhere equal to the set for which `∑ n, g n = ∞`, for any
+  conditional probabilities `g n` of `s (n + 1)` given `ℱ n`, that is, any versions of
+  `μ⟦s (n + 1) | ℱ n⟧`.
 
 -/
 
@@ -173,12 +175,17 @@ theorem Submartingale.bddAbove_iff_exists_tendsto [IsFiniteMeasure μ] (hf : Sub
 Lévy's generalization of the Borel-Cantelli lemma states that: given a natural number indexed
 filtration $(\mathcal{F}_n)$, and a sequence of sets $(s_n)$ such that for all
 $n$, $s_n \in \mathcal{F}_n$, $limsup_n s_n$ is almost everywhere equal to the set for which
-$\sum_n \mathbb{P}[s_n \mid \mathcal{F}_n] = \infty$.
+$\sum_n \mathbb{P}[s_{n + 1} \mid \mathcal{F}_n] = \infty$.
+
+A conditional probability is determined only up to almost everywhere equality, while the sum
+above is evaluated at each point. The statements therefore take conditional probabilities
+$g_n$ of $s_{n + 1}$ given $\mathcal{F}_n$, versions of $\mathbb{P}[s_{n + 1} \mid \mathcal{F}_n]$,
+as functions, and they hold for any such choice.
 
 The proof strategy follows by constructing a martingale satisfying the one-sided martingale bound.
 In particular, we define
 $$
-  f_n := \sum_{k < n} \big(\mathbf{1}_{s_{k + 1}} - \mathbb{P}[s_{k + 1} \mid \mathcal{F}_k]\big).
+  f_n := \sum_{k < n} \big(\mathbf{1}_{s_{k + 1}} - g_k\big).
 $$
 Then, as a martingale is both a sub- and a super-martingale, the set for which it is unbounded from
 above must agree with the set for which it is unbounded from below almost everywhere. Thus, it
@@ -245,19 +252,21 @@ theorem stronglyAdapted_process (hs : ∀ n, (s n) ∈ ℱ n) :
   fun _ => Finset.stronglyMeasurable_sum _ fun _ hk =>
     stronglyMeasurable_one.indicator <| ℱ.mono (Finset.mem_range.1 hk) <| hs _
 
-theorem martingalePart_process_ae_eq (ℱ : Filtration ℕ m0) (μ : Measure Ω) (s : ℕ → Set Ω) (n : ℕ) :
-    martingalePart (process s) ℱ μ n =
-      ∑ k ∈ Finset.range n, ((s (k + 1)).indicator 1 - μ[(s (k + 1)).indicator 1 | ℱ k]) := by
+/-- The martingale part of `process s` built from functions `g k` is the sum of the differences of
+the indicators of the sets `s (k + 1)` and the functions `g k`. -/
+theorem martingalePart_process_eq (s : ℕ → Set Ω) (g : ℕ → Ω → ℝ) (n : ℕ) :
+    martingalePart (process s) g n = ∑ k ∈ Finset.range n, ((s (k + 1)).indicator 1 - g k) := by
   simp only [martingalePart_eq_sum, process_zero, zero_add]
   refine Finset.sum_congr rfl fun k _ => ?_
   simp only [process, Finset.sum_range_succ_sub_sum]
 
-theorem predictablePart_process_ae_eq (ℱ : Filtration ℕ m0) (μ : Measure Ω) (s : ℕ → Set Ω)
-    (n : ℕ) : predictablePart (process s) ℱ μ n =
-    ∑ k ∈ Finset.range n, μ[(s (k + 1)).indicator (1 : Ω → ℝ) | ℱ k] := by
-  have := martingalePart_process_ae_eq ℱ μ s n
-  simp_rw [martingalePart, process, Finset.sum_sub_distrib] at this
-  exact sub_right_injective this
+/-- Conditional probabilities `g k` of the sets `s (k + 1)` given `ℱ k` are conditional
+expectations of the increments of `process s`. The predictable part of `process s` built from them
+is `predictablePart g n = ∑ k ∈ Finset.range n, g k`. -/
+theorem isCondExp_process_increment {g : ℕ → Ω → ℝ}
+    (hg : ∀ k, IsCondExp (ℱ k) μ ((s (k + 1)).indicator fun _ ↦ (1 : ℝ)) (g k)) (k : ℕ) :
+    IsCondExp (ℱ k) μ (process s (k + 1) - process s k) (g k) := by
+  simpa only [process, Finset.sum_range_succ_sub_sum, Pi.one_def] using hg k
 
 theorem process_difference_le (s : ℕ → Set Ω) (ω : Ω) (n : ℕ) :
     |process s (n + 1) ω - process s n ω| ≤ (1 : ℝ≥0) := by
@@ -277,21 +286,34 @@ end BorelCantelli
 open BorelCantelli
 
 /-- An a.e. monotone strongly adapted process `f` with uniformly bounded differences converges to
-`+∞` if and only if its predictable part also converges to `+∞`. -/
-theorem tendsto_sum_indicator_atTop_iff [IsFiniteMeasure μ]
+`+∞` if and only if its predictable part also converges to `+∞`, almost everywhere. The predictable
+part `predictablePart g` may be built from any conditional expectations `g n` of the increments
+`f (n + 1) - f n` given `ℱ n`: they need not be strongly adapted. -/
+theorem tendsto_sum_indicator_atTop_iff [IsFiniteMeasure μ] {g : ℕ → Ω → ℝ}
     (hfmono : ∀ᵐ ω ∂μ, ∀ n, f n ω ≤ f (n + 1) ω) (hf : StronglyAdapted ℱ f)
-    (hint : ∀ n, Integrable (f n) μ) (hbdd : ∀ᵐ ω ∂μ, ∀ n, |f (n + 1) ω - f n ω| ≤ R) :
+    (hint : ∀ n, Integrable (f n) μ) (hbdd : ∀ᵐ ω ∂μ, ∀ n, |f (n + 1) ω - f n ω| ≤ R)
+    (hg : ∀ n, IsCondExp (ℱ n) μ (f (n + 1) - f n) (g n)) :
     ∀ᵐ ω ∂μ, Tendsto (fun n => f n ω) atTop atTop ↔
-      Tendsto (fun n => predictablePart f ℱ μ n ω) atTop atTop := by
+      Tendsto (fun n => predictablePart g n ω) atTop atTop := by
+  -- the martingale part is built from strongly adapted versions `g'` of the `g n`
+  obtain ⟨g', hg'm, hgg'⟩ : ∃ g' : ℕ → Ω → ℝ, StronglyAdapted ℱ g' ∧ ∀ n, g n =ᵐ[μ] g' n :=
+    ⟨fun n ↦ (hg n).aestronglyMeasurable.mk (g n),
+      fun n ↦ (hg n).aestronglyMeasurable.stronglyMeasurable_mk,
+      fun n ↦ (hg n).aestronglyMeasurable.ae_eq_mk⟩
+  have hg' (n : ℕ) : IsCondExp (ℱ n) μ (f (n + 1) - f n) (g' n) := (hg n).congr_right (hgg' n)
   simp only [← Real.norm_eq_abs] at hbdd
-  have h₀ := martingalePart_bdd_difference ℱ hbdd
+  have h₀ := martingalePart_bdd_difference hint hg' hbdd
   simp only [Real.norm_eq_abs, ← NNReal.coe_ofNat, ← NNReal.coe_mul 2 R] at h₀
-  have h₁ := (martingale_martingalePart hf hint).ae_not_tendsto_atTop_atTop h₀
-  have h₂ := (martingale_martingalePart hf hint).ae_not_tendsto_atTop_atBot h₀
-  have h₃ : ∀ᵐ ω ∂μ, ∀ n, 0 ≤ (μ[f (n + 1) - f n | ℱ n]) ω := by
-    refine ae_all_iff.2 fun n => condExp_nonneg ?_
+  have h₁ := (martingale_martingalePart hf hint hg'm hg').ae_not_tendsto_atTop_atTop h₀
+  have h₂ := (martingale_martingalePart hf hint hg'm hg').ae_not_tendsto_atTop_atBot h₀
+  have h₃ : ∀ᵐ ω ∂μ, ∀ n, 0 ≤ g' n ω := by
+    refine ae_all_iff.2 fun n => (hg' n).nonneg (ℱ.le n) ((hint _).sub (hint _)) ?_
     filter_upwards [ae_all_iff.1 hfmono n] with ω hω using sub_nonneg.2 hω
-  filter_upwards [h₁, h₂, h₃, hfmono] with ω hω₁ hω₂ hω₃ hω₄
+  have h₄ : ∀ᵐ ω ∂μ, ∀ n, predictablePart g n ω = predictablePart g' n ω := by
+    filter_upwards [ae_all_iff.2 hgg'] with ω hω n
+    simp only [predictablePart, Finset.sum_apply, hω]
+  filter_upwards [h₁, h₂, h₃, h₄, hfmono] with ω hω₁ hω₂ hω₃ hω₄ hω₅
+  simp only [hω₄]
   constructor <;> intro ht
   · refine tendsto_atTop_atTop_of_monotone' ?_ ?_
     · intro n m hnm
@@ -302,38 +324,40 @@ theorem tendsto_sum_indicator_atTop_iff [IsFiniteMeasure μ]
     simp only [martingalePart, sub_eq_add_neg] at hω₁
     exact hω₁ (tendsto_atTop_add_right_of_le _ (-b) (tendsto_neg_atBot_iff.1 ht) fun n =>
       neg_le_neg (hbdd ⟨n, rfl⟩))
-  · refine tendsto_atTop_atTop_of_monotone' (monotone_nat_of_le_succ hω₄) ?_
+  · refine tendsto_atTop_atTop_of_monotone' (monotone_nat_of_le_succ hω₅) ?_
     rintro ⟨b, hbdd⟩
     exact hω₂ ((tendsto_atBot_add_left_of_ge _ b fun n =>
       hbdd ⟨n, rfl⟩) <| tendsto_neg_atBot_iff.2 ht)
 
 open BorelCantelli
 
+/-- Given sets `s n ∈ ℱ n` and any conditional probabilities `g k` of `s (k + 1)` given `ℱ k`, that
+is, any versions of `μ⟦s (k + 1) | ℱ k⟧`, almost everywhere the sums of the indicators of the
+sets `s (k + 1)` diverge if and only if the sums of the `g k` diverge. -/
 theorem tendsto_sum_indicator_atTop_iff' [IsFiniteMeasure μ] {s : ℕ → Set Ω}
-    (hs : ∀ n, (s n) ∈ ℱ n) : ∀ᵐ ω ∂μ,
+    (hs : ∀ n, (s n) ∈ ℱ n) {g : ℕ → Ω → ℝ}
+    (hg : ∀ n, IsCondExp (ℱ n) μ ((s (n + 1)).indicator fun _ ↦ (1 : ℝ)) (g n)) : ∀ᵐ ω ∂μ,
     Tendsto (fun n => ∑ k ∈ Finset.range n,
       (s (k + 1)).indicator (1 : Ω → ℝ) ω) atTop atTop ↔
-    Tendsto (fun n => ∑ k ∈ Finset.range n,
-      (μ[(s (k + 1)).indicator (1 : Ω → ℝ) | ℱ k]) ω) atTop atTop := by
+    Tendsto (fun n => ∑ k ∈ Finset.range n, g k ω) atTop atTop := by
   have := tendsto_sum_indicator_atTop_iff (Eventually.of_forall fun ω n => ?_)
     (stronglyAdapted_process hs) (integrable_process μ hs)
-    (Eventually.of_forall <| process_difference_le s)
+    (Eventually.of_forall <| process_difference_le s) (isCondExp_process_increment hg)
   swap
   · rw [process, process, ← sub_nonneg, Finset.sum_apply, Finset.sum_apply,
       Finset.sum_range_succ_sub_sum]
     exact Set.indicator_nonneg (fun _ _ => zero_le_one) _
-  simp_rw [process, predictablePart_process_ae_eq] at this
-  simpa using this
+  simpa only [process, predictablePart, Finset.sum_apply] using this
 
 /-- **Lévy's generalization of the Borel-Cantelli lemma**: given a sequence of sets `s` and a
-filtration `ℱ` such that for all `n`, `s n` is `ℱ n`-measurable, `limsup s atTop` is almost
-everywhere equal to the set for which `∑ k, ℙ(s (k + 1) | ℱ k) = ∞`. -/
-theorem ae_mem_limsup_atTop_iff (μ : Measure Ω) [IsFiniteMeasure μ] {s : ℕ → Set Ω}
-    (hs : ∀ n, (s n) ∈ ℱ n) : ∀ᵐ ω ∂μ, ω ∈ limsup s atTop ↔
-    Tendsto (fun n => ∑ k ∈ Finset.range n,
-      (μ[(s (k + 1)).indicator (1 : Ω → ℝ) | ℱ k]) ω) atTop atTop := by
+filtration `ℱ` such that for all `n`, `s n` is `ℱ n`-measurable, and any conditional probabilities
+`g k` of `s (k + 1)` given `ℱ k`, that is, any versions of `μ⟦s (k + 1) | ℱ k⟧`, `limsup s atTop`
+is almost everywhere equal to the set for which `∑ k, g k = ∞`. -/
+theorem ae_mem_limsup_atTop_iff [IsFiniteMeasure μ] {s : ℕ → Set Ω} (hs : ∀ n, (s n) ∈ ℱ n)
+    {g : ℕ → Ω → ℝ} (hg : ∀ n, IsCondExp (ℱ n) μ ((s (n + 1)).indicator fun _ ↦ (1 : ℝ)) (g n)) :
+    ∀ᵐ ω ∂μ, ω ∈ limsup s atTop ↔ Tendsto (fun n => ∑ k ∈ Finset.range n, g k ω) atTop atTop := by
   rw [← limsup_nat_add s 1,
     Set.limsup_eq_tendsto_sum_indicator_atTop (zero_lt_one (α := ℝ)) (fun n ↦ s (n + 1))]
-  exact tendsto_sum_indicator_atTop_iff' hs
+  exact tendsto_sum_indicator_atTop_iff' hs hg
 
 end MeasureTheory

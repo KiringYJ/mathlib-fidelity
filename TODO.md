@@ -302,7 +302,7 @@ to simplify the interface migration.
   | `GroupTheory/GroupAction/Jordan.lean` | `IsPreprimitive.is_two_pretransitive'`; `is_two_preprimitive_strong_jordan`; `Equiv.Perm.alternatingGroup_le_of_isPreprimitive_of_isCycle_mem` | Three formalization goals; check the attributed Jordan statements and exact action hypotheses. |
   | `Order/KrullDimension.lean` | `Order.height_of_linearOrder`; `Order.coheight_of_linearOrder` | Two ordinary formalization goals. |
   | `Probability/Combinatorics/BinomialRandomGraph/Defs.lean` | `SimpleGraph.binomialRandom_map_ncard_edgeSet_singleton` | Source requests a restatement; validate it before assigning an epistemic kind. |
-  | `Probability/Distributions/Binomial.lean` | `ProbabilityTheory.variance_of_hasLaw_binomial`; `ProbabilityTheory.condVar_of_hasLaw_binomial` | Two ordinary formalization goals; preserve distribution and parameter assumptions. |
+  | `Probability/Distributions/Binomial.lean` | `ProbabilityTheory.variance_of_hasLaw_binomial` | Ordinary formalization goal; preserve distribution and parameter assumptions. The former `condVar_of_hasLaw_binomial`, `Var[X; P | m] = P[X | m] * P[1 - X | m]`, was removed as false for `n ≥ 2`: for `m = ⊥` and `Bin(2, 1/2)` the left side is `1/2` and the right side is `1 * 0`; for `n = 1` it is `condVar_of_ae_eq_zero_or_one` in `Mathlib/Probability/Distributions/TwoValued.lean`. |
   | `RingTheory/Congruence/Basic.lean` | `RingCon.comap_ringConGen_equiv` | Ordinary formalization goal with a missing-API note. |
   | `RingTheory/Etale/Descent.lean` | `Algebra.FormallySmooth.of_formallySmooth_tensorProduct_of_faithfullyFlat` | Source cites Raynaud-Gruson/Stacks; audit exact descent hypotheses. |
   | `RingTheory/KrullDimension/Basic.lean` | `MvPolynomial.fin_ringKrullDim_eq_add_of_isNoetherianRing` | Ordinary formalization goal. |
@@ -2399,14 +2399,14 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   representative of it together with a no-witness fallback; the definition itself assumes only
   `[Zero E] [TopologicalSpace E]`.  The consumers are
   `Mathlib/Probability/Martingale/Convergence.lean` (`Submartingale.ae_tendsto_limitProcess`,
-  `memLp_limitProcess`, `tendsto_eLpNorm_one_limitProcess`, and
-  `Martingale.ae_eq_condExp_limitProcess`) and
-  `Mathlib/Probability/Kernel/Disintegration/Density.lean` (`density_ae_eq_limitProcess` and the
-  `densityProcess` convergence lemmas); the proof of `ae_tendsto_limitProcess` splits on the `dite`
-  (Convergence.lean, line 215).  Decide whether the limit is the class of its versions, with the
-  convergence theorems stated for any version as for conditional kernels, or an existence statement,
-  which is what the martingale convergence theorem asserts, and whether the target needs a `T2Space`
-  hypothesis for the uniqueness.
+  `memLp_limitProcess`, `tendsto_eLpNorm_one_limitProcess`,
+  `ae_tendsto_limitProcess_of_uniformIntegrable`, `Martingale.isCondExp_limitProcess`, and the proof
+  of `Integrable.tendsto_ae_condExp`) and `Mathlib/Probability/Kernel/Disintegration/Density.lean`
+  (`density_ae_eq_limitProcess` and the `densityProcess` convergence lemmas); the proof of
+  `ae_tendsto_limitProcess` splits on the `dite`.  Decide whether the limit is the class of its
+  versions, with the convergence theorems stated for any version as for conditional kernels, or an
+  existence statement, which is what the martingale convergence theorem asserts, and whether the
+  target needs a `T2Space` hypothesis for the uniqueness.
 
 - [ ] **Give `stoppedValue` its finite stopping times.**
   `stoppedValue u τ` in `Mathlib/Probability/Process/Stopping.lean:818` is
@@ -2810,24 +2810,157 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
 - [ ] **Replace chosen almost-everywhere representatives elsewhere in measure theory by their
   classes.**
   `Measure.rnDeriv` in `Mathlib/MeasureTheory/Measure/Decomposition/Lebesgue.lean:80` chooses a
-  representative from the Lebesgue decomposition, and `condExp` in
-  `Mathlib/MeasureTheory/Function/ConditionalExpectation/Basic.lean:102` takes
-  `AEStronglyMeasurable.mk` of `condExpL1`; both objects are determined only almost everywhere.
-  Audit them, their signed and vector-measure variants, and other public `Classical.choose` or
-  `AEStronglyMeasurable.mk` representatives under the equivalence-class rule of `FORK_DESIGN.md`,
-  coordinating with the domain items for conditional expectations and Radon--Nikodym data below.
-  `Kernel.density` is a `limsup` formula rather than a choice and is outside this item.
+  representative from the Lebesgue decomposition, although it is determined only almost
+  everywhere.  Audit it, its signed and vector-measure variants, and other public `Classical.choose`
+  or `AEStronglyMeasurable.mk` representatives under the equivalence-class rule of
+  `FORK_DESIGN.md`, coordinating with the Radon--Nikodym domain item below.  The conditional
+  expectations `condExp` and `condLExp` are now the classes of their versions (completed entry
+  below).  `Kernel.density` is a `limsup` formula rather than a choice and is outside this item.
 
-- [ ] **Make conditional expectations carry their measure-theoretic hypotheses.**
-  `condExp` in `Mathlib/MeasureTheory/Function/ConditionalExpectation/Basic.lean:102` and
-  `condLExp` in `Mathlib/MeasureTheory/Function/ConditionalLExpectation.lean:73` return zero when the
-  sigma algebra is not subordinate or the restricted measure is not sigma-finite; `condExp`
-  additionally returns zero when integrability fails.  Preserve `condLExp`'s genuine extended
-  nonnegative values, bundle the sigma-algebra/measure evidence, and require integrability only for
-  the finite Bochner-valued construction.  Conditional independence in
-  `Mathlib/Probability/Independence/Conditional.lean` and `HasCondSubgaussianMGF` evaluate `condExp`
-  only on its valid inputs, the indicators of null-measurable sets and integrable exponentials,
-  given a sub-σ-algebra, for a finite measure; they will supply that evidence.
+- [x] **Make conditional expectations carry their measure-theoretic hypotheses.**
+  `MeasureTheory.condExp` and `MeasureTheory.condLExp` are the almost-everywhere classes of their
+  versions, germs along `ae μ` defined exactly on their domains, and no longer functions with the
+  fallback `0`.  The specifying relation `IsCondExp m μ f g` in
+  `Mathlib/MeasureTheory/Function/ConditionalExpectation/Basic.lean` says that `g` is almost
+  everywhere `m`-strongly measurable and, on each set of `m` on which `f` is integrable, integrable
+  with the integral of `f`; for integrable `f` this is Kolmogorov's definition.  The exact domain
+  `HasUniqueCondExp m μ f` asks that the sets of `m` be null-measurable and that a version exist and
+  be unique almost everywhere; `condExp m μ f h` is the unique germ, `g ∈ μ[f | m]` exactly when
+  `IsCondExp m μ f g` (`mem_condExp_iff`, `condExp_eq_coe_iff`), and the default tactic
+  `has_unique_cond_exp` derives the domain from the sufficient condition
+  `HasUniqueCondExp.of_integrable` (an integrable function and a sub-σ-algebra on which the measure
+  is σ-finite) with the extensible tactics `sub_sigma_algebra`, extended for filtrations and
+  stopping times, and `integrability`.  The domain is strictly larger: uniqueness for an integrable
+  function needs no σ-finiteness (`IsCondExp.ae_eq`), so any version gives it
+  (`HasUniqueCondExp.of_isCondExp`), as for counting measure on `ℝ` given the whole σ-algebra.
+  `IsCondLExp`, `HasUniqueCondLExp`, which also asks the lower and upper set integrals to agree,
+  and the germ `condLExp` with notation `P⁻[X | m]` are the Lebesgue analogues.  Versions are built
+  from `condExpL2` and the `L¹` extension `condExpL1CLM` of the strict `condExpInd` of sets of
+  finite measure; `condExpIndL1`, `condExpL1`, and every fallback lemma (`condExp_of_not_le`,
+  `condExp_of_not_integrable`, `condExp_of_not_sigmaFinite`, `integrable_condExp`,
+  `stronglyMeasurable_condExp`, and the function-valued lemmas about `μ[f | m]`) are deleted.
+  Statements are about versions, with germ corollaries where those are the textbook form, and the
+  properties of `Basic`, `Indicator`, `Real` (bounds and `Lᵖ` contraction), `CondJensen`, and
+  `PullOut` need no σ-finiteness, through the support reduction
+  `exists_mem_sigmaFinite_trim_restrict`.  The consumers state versions: a martingale is its own
+  conditional expectation, and some conditional expectation of a supermartingale or submartingale
+  is at most or at least it; the Doob decomposition takes versions of the conditional increments;
+  optional sampling, martingale convergence, Lévy's theorem, and the Borel--Cantelli lemmas hold
+  for any versions; conditional independence says that products of versions of conditional
+  probabilities are versions; the conditional variance is the relation `IsCondVar` with domain
+  `HasCondVar` and germ `condVar`; `HasCondSubgaussianMGF` has a bounded version; and the kernel
+  integrals of conditional distributions, `condExpKernel`, `Traj`, and `Kernel.densityProcess` are
+  versions, which removes the σ-finiteness of several of their statements.  The false goal
+  `condVar_of_hasLaw_binomial` was removed from `Wanted/` (inventory above).  Completed records
+  elsewhere in this file that name the function-valued lemmas describe the API before this
+  migration.  Tests are in `MathlibTest/CondExpStrict.lean` and the existing strictness tests.
+
+- [ ] **Construct conditional expectations on their whole domains.**
+  `HasUniqueCondExp m μ f` in `Mathlib/MeasureTheory/Function/ConditionalExpectation/Basic.lean` is
+  the exact domain of `condExp`, but its constructors cover only an integrable function with a
+  version (`HasUniqueCondExp.of_isCondExp`) or with a σ-finite trim
+  (`HasUniqueCondExp.of_integrable`).  `IsCondExp` also specifies the generalized conditional
+  expectation of a function integrable on each set of a sequence in `m` exhausting the space, whose
+  existence and uniqueness for a σ-finite `μ.trim hm` should follow by gluing versions on the sets
+  of the sequence with `IsCondExp.restrict` and `IsCondExp.ae_eq`; record a primary source for that
+  specification before relying on it.  The same extension decides `IsCondExp.memLp` and the `Lᵖ`
+  bounds of `Real.lean` and `CondJensen.lean` for a function in `Lᵖ` but not in `L¹` on an infinite
+  measure, where they fail without σ-finiteness (given `⊥` and an infinite measure, every constant
+  is a version for a function in `L² \ L¹`), the conditional variance of
+  `Mathlib/Probability/CondVar.lean` beyond `L¹ ∩ L²`, where `IsCondVar` holds for every constant
+  given `⊥` for an `X` in `L¹` but not in `L²` and a faithful extension would take the Lebesgue
+  conditional expectation `IsCondLExp` of the nonnegative `(X - g) ^ 2`, and the pull-out property
+  of `PullOut.lean` with the global integrability of `g` replaced by integrability on the sets of
+  `m`.  `HasUniqueCondExp.le_eventuallySigmaAlgebra` allows a sub-σ-algebra that is only
+  null-measurable, but `IsCondExp.ae_eq` and the constructors take `m ≤ m₀`; extend them through the
+  completion.  The constructors `HasUniqueCondLExp.of_sigmaFinite` and `of_aemeasurable` of
+  `condLExp` in `Mathlib/MeasureTheory/Function/ConditionalLExpectation.lean` likewise need a
+  σ-finite trim.
+
+- [ ] **Remove σ-finiteness from countable additivity of conditional expectations.**
+  `IsCondExp.tsum` in `Mathlib/MeasureTheory/Function/ConditionalExpectation/Basic.lean` and
+  `IsCondExp.indicator_iUnion` in `Indicator.lean` take `[SigmaFinite (μ.trim hm)]`, which their
+  conclusions do not need: each version of an integrable function vanishes outside a set of `m` on
+  which `μ` is σ-finite (`exists_mem_sigmaFinite_trim_restrict`), the union of countably many such
+  sets is another, and outside the union the sum of the versions vanishes, as do the integrals of
+  the sum over the sets of `m`, by the summability of their norms.  The consumers in
+  `Mathlib/Probability/Independence/Conditional.lean` and
+  `Mathlib/MeasureTheory/VectorMeasure/AddContent.lean` have finite measures.
+
+- [ ] **Remove the residual branch of the `L¹` conditional expectation construction.**
+  `dominatedFinMeasAdditive_condExpInd` and `condExpL1CLM` in
+  `Mathlib/MeasureTheory/Function/ConditionalExpectation/CondexpL1.lean` extend the strict
+  `condExpInd`, defined on measurable sets of finite measure, by an anonymous `0` branch at their
+  single construction site, because `L1.setToL1` takes a set function defined on every set; the
+  result is independent of the branch (`L1.setToL1_congr_left'`).  A `setToL1` interface for set
+  functions on measurable sets of finite measure would remove it.  It belongs with the `setToFun`
+  totalization of the entry "Separate integrability from existence of a target-valued Bochner
+  integral", on which the versions built through `condExpL1CLM` and `setToFun` also depend, as
+  `condLExp` depends on `Measure.rnDeriv` (entry "Make Radon--Nikodym data conditional on
+  decomposition existence").  `IsCondExp` takes `[CompleteSpace E]` as a sufficient condition for
+  its Bochner integrals; an incomplete codomain is decided with the same Bochner entry.
+
+- [ ] **Decide the definitions of supermartingales and submartingales without σ-finiteness.**
+  `Supermartingale` and `Submartingale` in `Mathlib/Probability/Martingale/Basic.lean` require, for
+  `i ≤ j`, a conditional expectation of `f j` given `ℱ i` at most, or at least, `f i`, which exists
+  for a σ-finite filtration.  Without σ-finiteness the submartingales are not closed under `⊔`: for
+  Lebesgue measure on `ℝ`, `ℱ 0 = ⊥` and `ℱ n` the Borel sets for `n ≥ 1`, `f = 0` and `g` with
+  `g 0 = 0` and `g n = (Icc 0 1).indicator 1 - (Ioc 1 2).indicator 1` for `n ≥ 1` are martingales,
+  but `(f ⊔ g) 1 = (Icc 0 1).indicator 1` has no conditional expectation given `⊥`, whose versions
+  are integrable constants, that is `0`, of integral `0 ≠ 1`.  So `Submartingale.sup` and
+  `Submartingale.pos` take `[SigmaFiniteFiltration μ ℱ]`, as do the constructors from one-step
+  versions or set integrals, `submartingale_nat` and `submartingale_of_setIntegral_le`, for which it
+  is necessary: for Lebesgue measure on `ℝ`, `ℱ 0 = ⊥`, and `ℱ n` generated by `Icc 0 1` for
+  `n ≥ 1`, the process with `f 0 = f 1 = 0` and `f n = (Icc 0 1).indicator 1` for `n ≥ 2` has
+  nonnegative one-step versions, but `f 2` has no conditional expectation given `⊥`.  The
+  set-integral definition `∀ s ∈ ℱ i, ∫ x in s, f i x ∂μ ≤ ∫ x in s, f j x ∂μ` is equivalent under
+  σ-finiteness (`submartingale_of_setIntegral_le`, `Submartingale.setIntegral_le`) and closed under
+  `⊔` without it; decide which object is intended, against the literature on martingales for
+  infinite measures.
+
+- [ ] **Weaken the remaining hypotheses of the conditional expectation consumers.**
+  These hypotheses are stronger than the statements need, by the paper arguments given.
+  `IsCondExp.add` and `IsCondExp.sub` in `ConditionalExpectation/Basic.lean` take both summands
+  integrable, while one integrable summand suffices, since the other summand is then integrable on
+  each set where the sum is, and `IsCondExp.finsetSum` needs all summands but one; then
+  `condVar_of_ae_eq_zero_or_one` in `Mathlib/Probability/Distributions/TwoValued.lean` would hold
+  for every measure with `Integrable X μ` in place of `[IsFiniteMeasure μ]`.
+  `Integrable.tendsto_ae_condExp`, `Integrable.tendsto_eLpNorm_condExp`, `tendsto_ae_condExp`, and
+  `tendsto_eLpNorm_condExp` in `Mathlib/Probability/Martingale/Convergence.lean`, and
+  `tendsto_sum_indicator_atTop_iff'` and `ae_mem_limsup_atTop_iff` in
+  `Mathlib/Probability/Martingale/BorelCantelli.lean`, take a finite measure where σ-finiteness on
+  `ℱ 0` should suffice: cover the space by sets of `ℱ 0` of finite measure, restrict the versions
+  with `IsCondExp.restrict`, and combine the finite cases, with the tail bound
+  `IsCondExp.setIntegral_norm_le` for the `L¹` statements.  Some σ-finiteness is needed: for
+  `ℱ n = ⊥`, an infinite measure, and `s n = univ`, every constant is a version, the limsup is the
+  whole space, and the sums of the versions `0` stay at `0`.  The three `SubsetOfNat` theorems of
+  `Mathlib/Probability/Martingale/OptionalSampling.lean` take
+  `[LocallyFiniteOrder ι] [OrderBot ι] [TopologicalSpace ι] [DiscreteTopology ι]` where countable
+  ranges of the stopping times should suffice, through countable-range versions of
+  `IsStoppingTime.measurableSet_le_stopping_time` and `measurableSet_inter_le` in
+  `Mathlib/Probability/Process/Stopping.lean`; its `CountableRange` theorems need only
+  `[PartialOrder ι]`.  `IsCondExp.of_tendsto` in `ConditionalExpectation/Basic.lean` takes the
+  `m`-measurability `hgm` of the limit `g` and an integrable bound `bG` of the versions `G n`, which
+  follow from its other hypotheses: `m`-strongly measurable versions of the `G n` converge on a set
+  of `m` whose complement is null, so `exists_stronglyMeasurable_limit_of_tendsto_ae` for
+  `μ.trim hm` gives an `m`-strongly measurable function almost everywhere equal to `g` (the
+  library's `aestronglyMeasurable_of_tendsto_ae` is stated only for the ambient σ-algebra), and the
+  `G n` vanish outside a set `t ∈ m` on which `μ` is σ-finite, a countable union of the sets of
+  `exists_mem_sigmaFinite_trim_restrict`, and are bounded on `t` by a version of the conditional
+  expectation of `bF` for `μ.restrict t`, by conditional Jensen for the norm and monotonicity.
+  `Submartingale.sum_smul_sub`, `sum_smul_sub'`, `sum_mul_sub`, and `sum_mul_sub'` in
+  `Mathlib/Probability/Martingale/Basic.lean` and `Submartingale.stoppedProcess` in
+  `Mathlib/Probability/Martingale/OptionalStopping.lean` take `[SigmaFiniteFiltration μ 𝒢]`, which
+  they do not need: unlike the one-step hypotheses of `submartingale_nat`, a submartingale gives
+  versions given every `𝒢 i`.  For `i ≤ k`, let `u` be a version of `E[f (k + 1) | 𝒢 k]` at least
+  `f k` and `d = u - f k`; versions `a` and `b` of `E[f (k + 1) | 𝒢 i]` and `E[f k | 𝒢 i]` make
+  `a - b` a version of `E[d | 𝒢 i]` (`IsCondExp.of_trans`), which vanishes outside a set `t ∈ 𝒢 i`
+  on which `μ` is σ-finite (`exists_mem_sigmaFinite_trim_restrict`); so `ξ k • d`, between `0` and
+  `R • d`, has integral `0` over the sets of `𝒢 i` in `tᶜ`, and the indicator of `t` times a version
+  of `E[ξ k • d | 𝒢 i]` for `μ.restrict t` is a nonnegative version of
+  `E[ξ k • (f (k + 1) - f k) | 𝒢 i]`, by the pull-out and tower properties.  Summing over `k` gives
+  versions of the transform at least its value at `i`, and the stopped process is `f 0` plus the
+  transform by `ξ k = {ω | k < τ ω}.indicator 1`.
 
 - [x] **Require measurable random variables for conditional distributions.**
   `ProbabilityTheory.condDistrib` now requires joint a.e. measurability of `fun a ↦ (X a, Y a)`,
@@ -3102,8 +3235,8 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   representative of `Measure.condKernel`, `Kernel.condKernel`, `condDistrib`, `posterior`, and
   `condExpKernel` are stated for every representative, through `Measure.HasCompProd.congr` and
   `Kernel.HasCompProd.congr`.  Each representative agrees almost everywhere with a Markov one, and
-  the following statements do not change under almost-everywhere modification of the
-  representative but still take a Markov, finite, or s-finite one.  In
+  the following statements do not change under almost-everywhere modification of the representative
+  but still take a Markov, finite, or s-finite one.  In
   `Mathlib/Probability/Kernel/CondDistrib.lean`:
   `AEStronglyMeasurable.ae_integrable_condDistrib_map_iff`,
   `AEStronglyMeasurable.integral_condDistrib_map`, `AEStronglyMeasurable.integral_condDistrib`,
@@ -3112,16 +3245,14 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `Integrable.integral_norm_condDistrib_map`, `Integrable.integral_norm_condDistrib`,
   `Integrable.norm_integral_condDistrib_map`, `Integrable.norm_integral_condDistrib`,
   `Integrable.integral_condDistrib_map`, `Integrable.integral_condDistrib`,
-  `condDistrib_ae_eq_condExp`, `condExp_prod_ae_eq_integral_condDistrib'`,
-  `condExp_prod_ae_eq_integral_condDistrib₀`, `condExp_prod_ae_eq_integral_condDistrib`,
-  `condExp_ae_eq_integral_condDistrib`, `condExp_ae_eq_integral_condDistrib'`, and
-  `condExp_ae_eq_integral_condDistrib_id`.  In `Posterior.lean`: `posterior_prod_id_comp`,
-  `parallelProd_posterior_comp_copy_comp`, `deterministic_comp_posterior`,
-  `mem_posterior_posterior`, and `comp_mem_posterior_comp`, and the Radon--Nikodym statements of
-  the entry above.  In `Condexp.lean`: `condExpKernel_ae_eq_condExp`,
-  `condExpKernel_ae_eq_trim_condExp`, `condExp_ae_eq_integral_condExpKernel`,
-  `condExp_ae_eq_trim_integral_condExpKernel_of_stronglyMeasurable`, and
-  `condExp_ae_eq_trim_integral_condExpKernel`.  In
+  `isCondExp_condDistrib_real` (finite representatives), `isCondExp_prod_integral_condDistrib'`,
+  `isCondExp_prod_integral_condDistrib₀`, `isCondExp_prod_integral_condDistrib`,
+  `isCondExp_integral_condDistrib`, `isCondExp_integral_condDistrib'`, and
+  `isCondExp_integral_condDistrib_id` (s-finite representatives).  In `Posterior.lean`:
+  `posterior_prod_id_comp`, `parallelProd_posterior_comp_copy_comp`, `deterministic_comp_posterior`,
+  `mem_posterior_posterior`, and `comp_mem_posterior_comp`, and the Radon--Nikodym statements of the
+  entry above.  In `Condexp.lean`: `isCondExp_condExpKernel_real`,
+  `isCondExp_integral_condExpKernel`, and `IsCondExp.ae_eq_trim_integral_condExpKernel`.  In
   `Mathlib/Probability/Independence/ConditionalKernel.lean`:
   `condIndepFun_iff_compProd_map_prod_eq_compProd_prod_map_map`,
   `condIndepFun_iff_map_prod_eq_prod_map_map`, `condIndepFun_iff_map_prod_eq_prod_comp_trim`,
@@ -3129,8 +3260,8 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `condIndepFun_iff_prodMkRight_mem_condDistrib`.  The Bochner integrals of
   `Disintegration/Integral.lean` take an s-finite conditional kernel; for a measure with a σ-finite
   first marginal, every disintegration agrees almost everywhere with a Markov one.  State these
-  lemmas for every representative, or, where a statement needs an s-finite representative, such as
-  a product with it, on the domain of that construction; for the Bochner integrals, the outer
+  lemmas for every representative, or, where a statement needs an s-finite representative, such as a
+  product with it, on the domain of that construction; for the Bochner integrals, the outer
   integrand changes only on a null set when the representative does.
 
 - [x] **Define conditional independence and the conditionally sub-Gaussian property through
@@ -3954,6 +4085,26 @@ decision; it changes no statement.
   holds when the indicator of the larger set is integrable, by `condExp_mono`, or by
   `condExp_nonneg` if the smaller indicator is not integrable.  Tests are in
   `MathlibTest/CondDistribStrict.lean`.
+
+- [ ] **[S] Expose the private helpers of the conditional expectation consumers.**
+  The bridges between versions and classes of conditional probabilities are private in
+  `Mathlib/Probability/Independence/Conditional.lean` (`exists_isCondExp_indicator`,
+  `isCondExp_of_condExp_eq`, `forall_isCondExp_mul_iff`, `forall_isCondExp_prod_iff`), and the
+  σ-free comparison of two integrable functions through a common version is private in
+  `Mathlib/Probability/Independence/ConditionalKernel.lean`
+  (`isCondExp_iff_setIntegral_eq_of_isCondExp`); the conditional increments of a martingale are
+  private in `Mathlib/Probability/Martingale/Centering.lean` (`Martingale.isCondExp_increment`, the
+  converse of `martingale_of_isCondExp_sub_eq_zero_nat`); the strong measurability of
+  `stoppedValue f τ` for the σ-algebra of a stopping time with countable range is inline in
+  `Mathlib/Probability/Martingale/OptionalSampling.lean`; and the convexity of `‖·‖ ^ p` is inline
+  in `IsCondExp.norm_rpow_le`.  Decide names and homes, together with the domain closures
+  `HasCondVar.neg` and `HasCondVar.smul` in `Mathlib/Probability/CondVar.lean`, which would let
+  `condVar_neg` and `condVar_smul` take one domain proof.  `Conditional.lean` has 1762 lines under
+  `set_option linter.style.longFile 1900`; its germ characterizations could move to a new module.
+  General measure theory also sits in the conditional expectation files and could move to its own
+  homes: the `integrability` tactic and `exists_mem_sigmaFinite_trim_restrict` in
+  `Mathlib/MeasureTheory/Function/ConditionalExpectation/Basic.lean`, and the private
+  `ae_of_forall_mem_measure_lt_top_ae_restrict` in `CondJensen.lean`.
 
 ### Proof and API-boundary hygiene -- rewrites that depend on extra transparency
 

@@ -20,6 +20,10 @@ an L¹ bounded submartingale. It also contains the L¹ martingale convergence th
 an L¹ limit to a uniformly integrable submartingale. Finally, it also contains the Lévy upwards
 theorems.
 
+A conditional expectation is determined only up to almost everywhere equality, so the statements
+about conditional expectations take arbitrary versions: functions `G n` with
+`IsCondExp (ℱ n) μ g (G n)`.
+
 ## Main results
 
 * `MeasureTheory.Submartingale.ae_tendsto_limitProcess`: the almost everywhere martingale
@@ -31,15 +35,19 @@ theorems.
   convergence theorem: a uniformly integrable submartingale strongly adapted to the filtration `ℱ`
   converges almost everywhere and in L¹ to an integrable function which is measurable with respect
   to the σ-algebra `⨆ n, ℱ n`.
-* `MeasureTheory.Martingale.ae_eq_condExp_limitProcess`: part b the L¹ martingale convergence
+* `MeasureTheory.Martingale.isCondExp_of_tendsto_eLpNorm`: if a martingale `f` converges in L¹ to
+  `g`, then every `f n` is a conditional expectation of `g` given `ℱ n`, for any measure.
+* `MeasureTheory.Martingale.isCondExp_limitProcess`: part b of the L¹ martingale convergence
   theorem: if `f` is a uniformly integrable martingale strongly adapted to the filtration `ℱ`, then
-  `f n` equals `𝔼[g | ℱ n]` almost everywhere where `g` is the limiting process of `f`.
-* `MeasureTheory.Integrable.tendsto_ae_condExp`: part c the L¹ martingale convergence theorem:
-  given a `⨆ n, ℱ n`-measurable function `g` where `ℱ` is a filtration, `𝔼[g | ℱ n]` converges
-  almost everywhere to `g`.
-* `MeasureTheory.Integrable.tendsto_eLpNorm_condExp`: part c the L¹ martingale convergence theorem:
-  given a `⨆ n, ℱ n`-measurable function `g` where `ℱ` is a filtration, `𝔼[g | ℱ n]` converges in
-  L¹ to `g`.
+  every `f n` is a conditional expectation given `ℱ n` of the limiting process of `f`.
+* `MeasureTheory.Integrable.tendsto_ae_condExp`: part c of the L¹ martingale convergence theorem:
+  given an integrable, almost everywhere `⨆ n, ℱ n`-measurable function `g` where `ℱ` is a
+  filtration, conditional expectations of `g` given `ℱ n` converge almost everywhere to `g`.
+* `MeasureTheory.Integrable.tendsto_eLpNorm_condExp`: part c of the L¹ martingale convergence
+  theorem: under the same hypotheses, they converge to `g` in L¹.
+* `MeasureTheory.tendsto_ae_condExp` and `MeasureTheory.tendsto_eLpNorm_condExp`: **Lévy's upward
+  theorem**: given an integrable function `g`, conditional expectations of `g` given `ℱ n`
+  converge almost everywhere and in L¹ to a conditional expectation of `g` given `⨆ n, ℱ n`.
 
 -/
 
@@ -240,7 +248,7 @@ end AeConvergence
 
 section L1Convergence
 
-variable [IsFiniteMeasure μ] {g : Ω → ℝ}
+variable {g : Ω → ℝ}
 
 /-!
 
@@ -252,9 +260,9 @@ The L¹ martingale convergence theorem states that:
 (a) if `f` is a uniformly integrable (in the probability sense) submartingale strongly adapted to
   the filtration `ℱ`, it converges in L¹ to an integrable function `g` which is measurable with
   respect to `ℱ∞ := ⨆ n, ℱ n` and
-(b) if `f` is actually a martingale, `f n = 𝔼[g | ℱ n]` almost everywhere.
-(c) Finally, if `h` is integrable and measurable with respect to `ℱ∞`, `(𝔼[h | ℱ n])ₙ` is a
-  uniformly integrable martingale which converges to `h` almost everywhere and in L¹.
+(b) if `f` is actually a martingale, every `f n` is a conditional expectation of `g` given `ℱ n`.
+(c) Finally, if `h` is integrable and almost everywhere measurable with respect to `ℱ∞`, then
+  conditional expectations of `h` given the `ℱ n` converge to `h` almost everywhere and in L¹.
 
 The proof is quite simple. (a) follows directly from the a.e. martingale convergence theorem
 and the Vitali convergence theorem as our definition of uniform integrability (in the probability
@@ -262,15 +270,16 @@ sense) directly implies L¹-uniform boundedness. We note that our definition of 
 integrability is slightly non-standard but is equivalent to the usual literary definition. This
 equivalence is provided by `MeasureTheory.uniformIntegrable_iff`.
 
-(b) follows since given $n$, we have for all $m \ge n$,
+(b) follows since given $n$ and $s \in \mathcal{F}_n$, we have for all $m \ge n$,
 $$
-  \|f_n - \mathbb{E}[g \mid \mathcal{F}_n]\|_1 =
-    \|\mathbb{E}[f_m - g \mid \mathcal{F}_n]\|_1 \le \|f_m - g\|_1.
+  \mathbb{E}f_n\mathbf{1}_s = \mathbb{E}f_m\mathbf{1}_s,
 $$
-Thus, taking $m \to \infty$ provides the almost everywhere equality.
+and the right-hand side converges to $\mathbb{E}g\mathbf{1}_s$ as $m \to \infty$ since $f_m$
+converges to $g$ in L¹. This holds for any measure.
 
-Finally, to prove (c), we define $f_n := \mathbb{E}[h \mid \mathcal{F}_n]$. It is clear that
-$(f_n)_n$ is a martingale by the tower property for conditional expectations. Furthermore,
+Finally, to prove (c), we take conditional expectations $f_n$ of $h$ given $\mathcal{F}_n$. Up to
+almost everywhere equality, every $f_n$ is $\mathcal{F}_n$-measurable, and then $(f_n)_n$ is a
+martingale as its terms are conditional expectations of the same function. Furthermore,
 $(f_n)_n$ is uniformly integrable in the probability sense. Indeed, as a single function is
 uniformly integrable in the measure theory sense, for all $\epsilon > 0$, there exists some
 $\delta > 0$ such that for all measurable set $A$ with $\mu(A) < δ$, we have
@@ -286,16 +295,14 @@ $$
 $$
 implying $(f_n)_n$ is uniformly integrable. Now, to prove $f_n \to h$ almost everywhere and in
 L¹, it suffices to show that $h = g$ almost everywhere where $g$ is the almost everywhere and L¹
-limit of $(f_n)_n$ from part (b) of the theorem. By noting that, for all $s \in \mathcal{F}_n$,
+limit of $(f_n)_n$ from part (a) of the theorem. By noting that, for all $s \in \mathcal{F}_n$,
 we have
 $$
-  \mathbb{E}g\mathbf{1}_s = \mathbb{E}[\mathbb{E}[g \mid \mathcal{F}_n]\mathbf{1}_s] =
-    \mathbb{E}[\mathbb{E}[h \mid \mathcal{F}_n]\mathbf{1}_s] = \mathbb{E}h\mathbf{1}_s
+  \mathbb{E}g\mathbf{1}_s = \mathbb{E}f_n\mathbf{1}_s = \mathbb{E}h\mathbf{1}_s
 $$
-where $\mathbb{E}[g \mid \mathcal{F}_n] = \mathbb{E}[h \mid \mathcal{F}_n]$ almost everywhere
-by part (b); the equality also holds for all $s \in \mathcal{F}_\infty$ by Dynkin's theorem.
-Thus, as both $h$ and $g$ are $\mathcal{F}_\infty$-measurable, $h = g$ almost everywhere as
-required.
+by part (b) and since $f_n$ is a conditional expectation of $h$; the equality also holds for all
+$s \in \mathcal{F}_\infty$ by Dynkin's theorem. Thus, as both $h$ and $g$ are almost everywhere
+$\mathcal{F}_\infty$-measurable, $h = g$ almost everywhere as required.
 
 Similar to the a.e. martingale convergence theorem, rather than showing the existence of the
 limiting process, we phrase the L¹-martingale convergence theorem by proving that a submartingale
@@ -305,6 +312,23 @@ and the a.e. limit of a submartingale coincide.
 
 -/
 
+/-- If a martingale `f` strongly adapted to `ℱ` converges in L¹ to `g`, then for all `n`, `f n` is a
+conditional expectation of `g` given `ℱ n`. The measure `μ` need not be finite. -/
+theorem Martingale.isCondExp_of_tendsto_eLpNorm (hf : Martingale f ℱ μ)
+    (hgtends : Tendsto (fun n ↦ eLpNorm (f n - g) 1 μ) atTop (𝓝 0)) (n : ℕ) :
+    IsCondExp (ℱ n) μ g (f n) where
+  aestronglyMeasurable := (hf.stronglyMeasurable n).aestronglyMeasurable
+  integrableOn _ _ _ := (hf.integrable n).integrableOn
+  setIntegral_eq s hs hgs := by
+    have ht : Tendsto (fun m ↦ ∫ ω in s, f m ω ∂μ) atTop (𝓝 (∫ ω in s, g ω ∂μ)) :=
+      tendsto_integral_of_L1' g hgs.aestronglyMeasurable
+        (.of_forall fun m ↦ (hf.integrable m).restrict)
+        (tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hgtends (fun _ ↦ zero_le)
+          fun _ ↦ eLpNorm_mono_measure _ Measure.restrict_le_self)
+    exact tendsto_nhds_unique
+      (tendsto_atTop_of_eventually_const fun m hm ↦ (hf.setIntegral_eq hm hs).symm) ht
+
+variable [IsFiniteMeasure μ]
 
 /-- Part a of the **L¹ martingale convergence theorem**: a uniformly integrable submartingale
 strongly adapted to the filtration `ℱ` converges a.e. and in L¹ to an integrable function which is
@@ -325,126 +349,105 @@ theorem Submartingale.ae_tendsto_limitProcess_of_uniformIntegrable (hf : Submart
   let ⟨_, hR⟩ := hunif.2.2
   hf.ae_tendsto_limitProcess hR
 
-/-- If a martingale `f` strongly adapted to `ℱ` converges in L¹ to `g`, then for all `n`, `f n` is
-almost everywhere equal to `𝔼[g | ℱ n]`. -/
-theorem Martingale.eq_condExp_of_tendsto_eLpNorm {μ : Measure Ω} (hf : Martingale f ℱ μ)
-    (hg : Integrable g μ) (hgtends : Tendsto (fun n => eLpNorm (f n - g) 1 μ) atTop (𝓝 0)) (n : ℕ) :
-    f n =ᵐ[μ] μ[g | ℱ n] := by
-  rw [← sub_ae_eq_zero, ← eLpNorm_eq_zero_iff (((hf.stronglyMeasurable n).mono (ℱ.le _)).sub
-    (stronglyMeasurable_condExp.mono (ℱ.le _))).aestronglyMeasurable one_ne_zero]
-  have ht : Tendsto (fun m => eLpNorm (μ[f m - g | ℱ n]) 1 μ) atTop (𝓝 0) :=
-    haveI hint : ∀ m, Integrable (f m - g) μ := fun m => (hf.integrable m).sub hg
-    tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hgtends (fun m => zero_le)
-      fun m => eLpNorm_condExp_le_eLpNorm _ le_rfl
-  have hev : ∀ m ≥ n, eLpNorm (μ[f m - g | ℱ n]) 1 μ = eLpNorm (f n - μ[g | ℱ n]) 1 μ := by
-    refine fun m hm => eLpNorm_congr_ae ((condExp_sub (hf.integrable m) hg _).trans ?_)
-    filter_upwards [hf.2 n m hm] with x hx
-    simp only [hx, Pi.sub_apply]
-  exact tendsto_nhds_unique (tendsto_atTop_of_eventually_const hev) ht
-
 /-- Part b of the **L¹ martingale convergence theorem**: if `f` is a uniformly integrable martingale
-strongly adapted to the filtration `ℱ`, then for all `n`, `f n` is almost everywhere equal to the
-conditional expectation of its limiting process w.r.t. `ℱ n`. -/
-theorem Martingale.ae_eq_condExp_limitProcess (hf : Martingale f ℱ μ)
-    (hbdd : UniformIntegrable f 1 μ) (n : ℕ) : f n =ᵐ[μ] μ[ℱ.limitProcess f μ | ℱ n] :=
-  let ⟨_, hR⟩ := hbdd.2.2
-  hf.eq_condExp_of_tendsto_eLpNorm ((memLp_limitProcess_of_eLpNorm_bdd hbdd.1 hR).integrable le_rfl)
-    (hf.submartingale.tendsto_eLpNorm_one_limitProcess hbdd) n
+strongly adapted to the filtration `ℱ`, then for all `n`, `f n` is a conditional expectation of its
+limiting process given `ℱ n`. -/
+theorem Martingale.isCondExp_limitProcess (hf : Martingale f ℱ μ)
+    (hbdd : UniformIntegrable f 1 μ) (n : ℕ) : IsCondExp (ℱ n) μ (ℱ.limitProcess f μ) (f n) :=
+  hf.isCondExp_of_tendsto_eLpNorm (hf.submartingale.tendsto_eLpNorm_one_limitProcess hbdd) n
 
-/-- Part c of the **L¹ martingale convergence theorem**: Given an integrable function `g` which
-is measurable with respect to `⨆ n, ℱ n` where `ℱ` is a filtration, the martingale defined by
-`𝔼[g | ℱ n]` converges almost everywhere to `g`.
+/-- Part c of the **L¹ martingale convergence theorem**: given an integrable function `g` which is
+almost everywhere measurable with respect to `⨆ n, ℱ n` where `ℱ` is a filtration, conditional
+expectations `G n` of `g` given `ℱ n` converge almost everywhere to `g`.
 
-This martingale also converges to `g` in L¹ and this result is provided by
-`MeasureTheory.Integrable.tendsto_eLpNorm_condExp` -/
+They also converge to `g` in L¹, see `MeasureTheory.Integrable.tendsto_eLpNorm_condExp`. -/
 theorem Integrable.tendsto_ae_condExp (hg : Integrable g μ)
-    (hgmeas : StronglyMeasurable[⨆ n, ℱ n] g) :
-    ∀ᵐ x ∂μ, Tendsto (fun n => (μ[g | ℱ n]) x) atTop (𝓝 (g x)) := by
-  have hle : ⨆ n, ℱ n ≤ m0 := sSup_le fun m ⟨n, hn⟩ => hn ▸ ℱ.le _
-  have hunif : UniformIntegrable (fun n => μ[g | ℱ n]) 1 μ :=
-    hg.uniformIntegrable_condExp_filtration
+    (hgmeas : AEStronglyMeasurable[⨆ n, ℱ n] g μ) {G : ℕ → Ω → ℝ}
+    (hG : ∀ n, IsCondExp (ℱ n) μ g (G n)) :
+    ∀ᵐ ω ∂μ, Tendsto (fun n ↦ G n ω) atTop (𝓝 (g ω)) := by
+  have hle : ⨆ n, ℱ n ≤ m0 := iSup_le ℱ.le
+  -- `ℱ n`-strongly measurable versions of the conditional expectations form a martingale
+  choose G' hG'm hGG' using fun n ↦ (hG n).aestronglyMeasurable
+  have hG' (n : ℕ) : IsCondExp (ℱ n) μ g (G' n) := (hG n).congr_right (hGG' n)
+  have hmart : Martingale G' ℱ μ := martingale_of_isCondExp hg hG'm hG'
+  have hunif : UniformIntegrable G' 1 μ := hg.uniformIntegrable_condExp_filtration hG'
   obtain ⟨R, hR⟩ := hunif.2.2
-  have hlimint : Integrable (ℱ.limitProcess (fun n => μ[g | ℱ n]) μ) μ :=
+  have hlimint : Integrable (ℱ.limitProcess G' μ) μ :=
     (memLp_limitProcess_of_eLpNorm_bdd hunif.1 hR).integrable le_rfl
-  suffices g =ᵐ[μ] ℱ.limitProcess (fun n x => (μ[g | ℱ n]) x) μ by
-    filter_upwards [this, (martingale_condExp g ℱ μ).submartingale.ae_tendsto_limitProcess hR] with
-      x heq ht
-    rwa [heq]
-  have : ∀ n s, s ∈ ℱ n →
-      ∫ x in s, g x ∂μ = ∫ x in s, ℱ.limitProcess (fun n x => (μ[g | ℱ n]) x) μ x ∂μ := by
-    intro n s hs
-    rw [← setIntegral_condExp (ℱ.le n) hg hs, ← setIntegral_condExp (ℱ.le n) hlimint hs]
-    refine setIntegral_congr_ae (ℱ.le _ hs) ?_
-    filter_upwards [(martingale_condExp g ℱ μ).ae_eq_condExp_limitProcess hunif n] with x hx _
-    rw [hx]
-  refine ae_eq_of_forall_setIntegral_eq_of_sigmaFinite' hle (fun s _ _ => hg.integrableOn)
-    (fun s _ _ => hlimint.integrableOn) (fun s hs _ => ?_) hgmeas.aestronglyMeasurable
-    stronglyMeasurable_limitProcess.aestronglyMeasurable
+  -- the limit process has the integrals of `g` over the sets of every `ℱ n`
+  have hint (n : ℕ) (s : Set Ω) (hs : s ∈ ℱ n) :
+      ∫ ω in s, g ω ∂μ = ∫ ω in s, ℱ.limitProcess G' μ ω ∂μ := by
+    rw [← (hG' n).setIntegral_eq s hs hg.integrableOn,
+      (hmart.isCondExp_limitProcess hunif n).setIntegral_eq s hs hlimint.integrableOn]
+  -- hence over the sets of `⨆ n, ℱ n`, by Dynkin's π-λ theorem
   have hpi : IsPiSystem (⋃ n, ((ℱ n : SigmaAlgebra Ω) : Set (Set Ω))) :=
     isPiSystem_iUnion_of_monotone _ (fun n ↦ (ℱ n).isPiSystem) fun _ _ ↦ ℱ.mono
-  induction s, hs
-    using SigmaAlgebra.induction_on_inter (SigmaAlgebra.iSup_eq_generateFrom ℱ) hpi with
-  | empty =>
-    simp only [Measure.restrict_empty, integral_zero_measure]
-  | basic s hs =>
-    rcases Set.mem_iUnion.mp hs with ⟨n, hn⟩
-    exact this n _ hn
-  | compl t htmeas ht =>
-    have hgeq := @setIntegral_compl _ _ (⨆ n, ℱ n) _ _ _ _ _ htmeas (hg.trim hle hgmeas)
-    have hheq := @setIntegral_compl _ _ (⨆ n, ℱ n) _ _ _ _ _ htmeas
-      (hlimint.trim hle stronglyMeasurable_limitProcess)
-    rw [setIntegral_trim hle hgmeas htmeas.compl,
-      setIntegral_trim hle stronglyMeasurable_limitProcess htmeas.compl, hgeq, hheq, ←
-      setIntegral_trim hle hgmeas htmeas, ←
-      setIntegral_trim hle stronglyMeasurable_limitProcess htmeas, ← integral_trim hle hgmeas, ←
-      integral_trim hle stronglyMeasurable_limitProcess, ← setIntegral_univ,
-      this 0 _ MeasurableSet.univ, setIntegral_univ, ht (measure_lt_top _ _)]
-  | iUnion f hf hfmeas heq =>
-    rw [integral_iUnion (fun n => hle (hfmeas n)) hf hg.integrableOn,
-      integral_iUnion (fun n => hle (hfmeas n)) hf hlimint.integrableOn]
-    exact tsum_congr fun n => heq _ (measure_lt_top _ _)
+  have hsup (s : Set Ω) (hs : s ∈ ⨆ n, ℱ n) :
+      ∫ ω in s, g ω ∂μ = ∫ ω in s, ℱ.limitProcess G' μ ω ∂μ := by
+    induction s, hs
+      using SigmaAlgebra.induction_on_inter (SigmaAlgebra.iSup_eq_generateFrom ℱ) hpi with
+    | empty => simp only [Measure.restrict_empty, integral_zero_measure]
+    | basic s hs =>
+      obtain ⟨n, hn⟩ := Set.mem_iUnion.mp hs
+      exact hint n s hn
+    | compl t ht ih =>
+      rw [setIntegral_compl (hle ht) hg, setIntegral_compl (hle ht) hlimint, ih]
+      congr 1
+      simpa only [setIntegral_univ] using hint 0 _ (ℱ 0).univ_mem
+    | iUnion t ht_disj ht ih =>
+      rw [integral_iUnion (fun n ↦ hle (ht n)) ht_disj hg.integrableOn,
+        integral_iUnion (fun n ↦ hle (ht n)) ht_disj hlimint.integrableOn]
+      exact tsum_congr ih
+  -- so the limit process is `g` almost everywhere
+  have heq : g =ᵐ[μ] ℱ.limitProcess G' μ :=
+    ae_eq_of_forall_setIntegral_eq_of_sigmaFinite' hle (fun _ _ _ ↦ hg.integrableOn)
+      (fun _ _ _ ↦ hlimint.integrableOn) (fun s hs _ ↦ hsup s hs) hgmeas
+      stronglyMeasurable_limitProcess.aestronglyMeasurable
+  filter_upwards [heq, hmart.submartingale.ae_tendsto_limitProcess hR, ae_all_iff.2 hGG'] with
+    ω hω hlim hGω
+  rw [hω]
+  exact hlim.congr fun n ↦ (hGω n).symm
 
-/-- Part c of the **L¹ martingale convergence theorem**: Given an integrable function `g` which
-is measurable with respect to `⨆ n, ℱ n` where `ℱ` is a filtration, the martingale defined by
-`𝔼[g | ℱ n]` converges in L¹ to `g`.
+/-- Part c of the **L¹ martingale convergence theorem**: given an integrable function `g` which is
+almost everywhere measurable with respect to `⨆ n, ℱ n` where `ℱ` is a filtration, conditional
+expectations `G n` of `g` given `ℱ n` converge in L¹ to `g`.
 
-This martingale also converges to `g` almost everywhere and this result is provided by
-`MeasureTheory.Integrable.tendsto_ae_condExp` -/
+They also converge to `g` almost everywhere, see `MeasureTheory.Integrable.tendsto_ae_condExp`. -/
 theorem Integrable.tendsto_eLpNorm_condExp (hg : Integrable g μ)
-    (hgmeas : StronglyMeasurable[⨆ n, ℱ n] g) :
-    Tendsto (fun n => eLpNorm (μ[g | ℱ n] - g) 1 μ) atTop (𝓝 0) :=
+    (hgmeas : AEStronglyMeasurable[⨆ n, ℱ n] g μ) {G : ℕ → Ω → ℝ}
+    (hG : ∀ n, IsCondExp (ℱ n) μ g (G n)) :
+    Tendsto (fun n ↦ eLpNorm (G n - g) 1 μ) atTop (𝓝 0) :=
   tendsto_Lp_finite_of_tendstoInMeasure le_rfl ENNReal.one_ne_top
-    (fun n => (stronglyMeasurable_condExp.mono (ℱ.le n)).aestronglyMeasurable)
-    (memLp_one_iff_integrable.2 hg) hg.uniformIntegrable_condExp_filtration.2.1
-    (tendstoInMeasure_of_tendsto_ae
-      (fun n => (stronglyMeasurable_condExp.mono (ℱ.le n)).aestronglyMeasurable)
-      (hg.tendsto_ae_condExp hgmeas))
+    (fun n ↦ (hG n).aestronglyMeasurable' (ℱ.le n)) (memLp_one_iff_integrable.2 hg)
+    (hg.uniformIntegrable_condExp_filtration hG).2.1
+    (tendstoInMeasure_of_tendsto_ae (fun n ↦ (hG n).aestronglyMeasurable' (ℱ.le n))
+      (hg.tendsto_ae_condExp hgmeas hG))
 
-/-- **Lévy's upward theorem**, almost everywhere version: given a function `g` and a filtration
-`ℱ`, the sequence defined by `𝔼[g | ℱ n]` converges almost everywhere to `𝔼[g | ⨆ n, ℱ n]`. -/
-theorem tendsto_ae_condExp (g : Ω → ℝ) :
-    ∀ᵐ x ∂μ, Tendsto (fun n => (μ[g | ℱ n]) x) atTop (𝓝 ((μ[g | ⨆ n, ℱ n]) x)) := by
-  have ht : ∀ᵐ x ∂μ, Tendsto (fun n => (μ[μ[g | ⨆ n, ℱ n] | ℱ n]) x)
-      atTop (𝓝 ((μ[g | ⨆ n, ℱ n]) x)) :=
-    integrable_condExp.tendsto_ae_condExp stronglyMeasurable_condExp
-  have heq : ∀ n, ∀ᵐ x ∂μ, (μ[μ[g | ⨆ n, ℱ n] | ℱ n]) x = (μ[g | ℱ n]) x := fun n =>
-    condExp_condExp_of_le (le_iSup _ n) (iSup_le fun n => ℱ.le n)
-  rw [← ae_all_iff] at heq
-  filter_upwards [heq, ht] with x hxeq hxt
-  exact hxt.congr hxeq
+/-- **Lévy's upward theorem**, almost everywhere version: given an integrable function `g` and a
+filtration `ℱ`, conditional expectations `G n` of `g` given `ℱ n` converge almost everywhere to a
+conditional expectation `G'` of `g` given `⨆ n, ℱ n`. -/
+theorem tendsto_ae_condExp (hg : Integrable g μ) {G : ℕ → Ω → ℝ}
+    (hG : ∀ n, IsCondExp (ℱ n) μ g (G n)) {G' : Ω → ℝ} (hG' : IsCondExp (⨆ n, ℱ n) μ g G') :
+    ∀ᵐ ω ∂μ, Tendsto (fun n ↦ G n ω) atTop (𝓝 (G' ω)) := by
+  -- every `G n` is also a conditional expectation of `G'` given `ℱ n`
+  refine (hG'.integrable hg).tendsto_ae_condExp hG'.aestronglyMeasurable fun n ↦ ?_
+  refine ⟨(hG n).aestronglyMeasurable, fun _ _ _ ↦ ((hG n).integrable hg).integrableOn,
+    fun s hs _ ↦ ?_⟩
+  rw [(hG n).setIntegral_eq s hs hg.integrableOn,
+    hG'.setIntegral_eq s (le_iSup (fun n ↦ (ℱ n : SigmaAlgebra Ω)) n hs) hg.integrableOn]
 
-/-- **Lévy's upward theorem**, L¹ version: given a function `g` and a filtration `ℱ`, the
-sequence defined by `𝔼[g | ℱ n]` converges in L¹ to `𝔼[g | ⨆ n, ℱ n]`. -/
-theorem tendsto_eLpNorm_condExp (g : Ω → ℝ) :
-    Tendsto (fun n => eLpNorm (μ[g | ℱ n] - μ[g | ⨆ n, ℱ n]) 1 μ) atTop (𝓝 0) := by
-  have ht : Tendsto (fun n => eLpNorm (μ[μ[g | ⨆ n, ℱ n] | ℱ n] - μ[g | ⨆ n, ℱ n]) 1 μ)
-      atTop (𝓝 0) :=
-    integrable_condExp.tendsto_eLpNorm_condExp stronglyMeasurable_condExp
-  have heq : ∀ n, ∀ᵐ x ∂μ, (μ[μ[g | ⨆ n, ℱ n] | ℱ n]) x = (μ[g | ℱ n]) x := fun n =>
-    condExp_condExp_of_le (le_iSup _ n) (iSup_le fun n => ℱ.le n)
-  refine ht.congr fun n => eLpNorm_congr_ae ?_
-  filter_upwards [heq n] with x hxeq
-  simp only [hxeq, Pi.sub_apply]
+/-- **Lévy's upward theorem**, L¹ version: given an integrable function `g` and a filtration `ℱ`,
+conditional expectations `G n` of `g` given `ℱ n` converge in L¹ to a conditional expectation `G'`
+of `g` given `⨆ n, ℱ n`. -/
+theorem tendsto_eLpNorm_condExp (hg : Integrable g μ) {G : ℕ → Ω → ℝ}
+    (hG : ∀ n, IsCondExp (ℱ n) μ g (G n)) {G' : Ω → ℝ} (hG' : IsCondExp (⨆ n, ℱ n) μ g G') :
+    Tendsto (fun n ↦ eLpNorm (G n - G') 1 μ) atTop (𝓝 0) :=
+  tendsto_Lp_finite_of_tendstoInMeasure le_rfl ENNReal.one_ne_top
+    (fun n ↦ (hG n).aestronglyMeasurable' (ℱ.le n))
+    (memLp_one_iff_integrable.2 (hG'.integrable hg))
+    (hg.uniformIntegrable_condExp_filtration hG).2.1
+    (tendstoInMeasure_of_tendsto_ae (fun n ↦ (hG n).aestronglyMeasurable' (ℱ.le n))
+      (tendsto_ae_condExp hg hG hG'))
 
 end L1Convergence
 

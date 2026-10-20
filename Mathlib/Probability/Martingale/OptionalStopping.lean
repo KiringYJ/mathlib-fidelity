@@ -42,7 +42,7 @@ expectation of `stoppedValue f τ` is less than or equal to the expectation of `
 This is the forward direction of the optional stopping theorem. -/
 theorem Submartingale.expected_stoppedValue_mono {E : Type*} [NormedAddCommGroup E]
     [NormedSpace ℝ E] [CompleteSpace E] [PartialOrder E] [IsOrderedAddMonoid E]
-    [IsOrderedModule ℝ E] [ClosedIciTopology E] [SigmaFiniteFiltration μ 𝒢] {f : ℕ → Ω → E}
+    [IsOrderedModule ℝ E] [ClosedIciTopology E] {f : ℕ → Ω → E}
     (hf : Submartingale f 𝒢 μ) (hτ : IsStoppingTime 𝒢 τ) (hπ : IsStoppingTime 𝒢 π) (hle : τ ≤ π)
     {N : ℕ} (hbdd : ∀ ω, π ω ≤ N) : ∫ ω, stoppedValue f τ ω ∂μ ≤ ∫ ω, stoppedValue f π ω ∂μ := by
   rw [← sub_nonneg, ← integral_sub', stoppedValue_sub_eq_sum' hle hbdd]

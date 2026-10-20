@@ -277,23 +277,23 @@ lemma setIntegral_densityProcess_of_le (hκν : fst κ ≤ ν)
     ∫ x in A, densityProcess κ ν m a x s ∂(ν a) = (κ a).real (A ×ˢ s) :=
   setIntegral_densityProcess hκν m a hs ((countableFiltration γ).mono hnm hA)
 
-lemma condExp_densityProcess (hκν : fst κ ≤ ν) [IsFiniteKernel ν]
+/-- For `i ≤ j`, `densityProcess κ ν i a · s` is a conditional expectation of
+`densityProcess κ ν j a · s` given `countableFiltration γ i`. -/
+lemma isCondExp_densityProcess (hκν : fst κ ≤ ν) [IsFiniteKernel ν]
     {i j : ℕ} (hij : i ≤ j) (a : α) {s : Set β} (hs : MeasurableSet s) :
-    (ν a)[fun x ↦ densityProcess κ ν j a x s | countableFiltration γ i]
-      =ᵐ[ν a] fun x ↦ densityProcess κ ν i a x s := by
-  refine (ae_eq_condExp_of_forall_setIntegral_eq ?_ ?_ ?_ ?_ ?_).symm
-  · exact integrable_densityProcess hκν j a hs
-  · exact fun _ _ _ ↦ (integrable_densityProcess hκν _ _ hs).integrableOn
-  · intro x hx _
-    rw [setIntegral_densityProcess hκν i a hs hx,
-      setIntegral_densityProcess_of_le hκν hij a hs hx]
-  · exact StronglyMeasurable.aestronglyMeasurable
-      (stronglyMeasurable_countableFiltration_densityProcess κ ν i a hs)
+    IsCondExp (countableFiltration γ i) (ν a) (fun x ↦ densityProcess κ ν j a x s)
+      fun x ↦ densityProcess κ ν i a x s where
+  aestronglyMeasurable := (stronglyMeasurable_countableFiltration_densityProcess κ ν i a
+    hs).aestronglyMeasurable
+  integrableOn _ _ _ := (integrable_densityProcess hκν _ _ hs).integrableOn
+  setIntegral_eq _ hx _ := by
+    rw [setIntegral_densityProcess hκν i a hs hx, setIntegral_densityProcess_of_le hκν hij a hs hx]
 
 lemma martingale_densityProcess (hκν : fst κ ≤ ν) [IsFiniteKernel ν]
     (a : α) {s : Set β} (hs : MeasurableSet s) :
     Martingale (fun n x ↦ densityProcess κ ν n a x s) (countableFiltration γ) (ν a) :=
-  ⟨stronglyAdapted_densityProcess κ ν a hs, fun _ _ h ↦ condExp_densityProcess hκν h a hs⟩
+  ⟨stronglyAdapted_densityProcess κ ν a hs, fun _ _ h ↦ isCondExp_densityProcess hκν h a hs,
+    fun n ↦ integrable_densityProcess hκν n a hs⟩
 
 lemma densityProcess_mono_set (hκν : fst κ ≤ ν) (n : ℕ) (a : α) (x : γ)
     {s s' : Set β} (h : s ⊆ s') :

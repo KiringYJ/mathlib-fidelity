@@ -70,6 +70,15 @@ protected theorem mono {i j : ι} (f : Filtration ι m) (hij : i ≤ j) : f i �
 protected theorem le (f : Filtration ι m) (i : ι) : f i ≤ m :=
   f.le' i
 
+/- `sub_sigma_algebra` proves that the σ-algebras of a filtration, and their suprema, are
+sub-σ-algebras of the ambient one. -/
+macro_rules
+  | `(tactic| sub_sigma_algebra) => `(tactic| exact MeasureTheory.Filtration.le _ _)
+
+macro_rules
+  | `(tactic| sub_sigma_algebra) =>
+    `(tactic| exact iSup_le fun _ ↦ MeasureTheory.Filtration.le _ _)
+
 @[ext]
 protected theorem ext {f g : Filtration ι m} (h : (f : ι → SigmaAlgebra Ω) = g) : f = g := by
   cases f; cases g; congr
@@ -210,16 +219,11 @@ instance (priority := 100) IsFiniteMeasure.sigmaFiniteFiltration [Preorder ι] (
   ⟨fun n => by infer_instance⟩
 
 /-- Given an integrable function `g`, the conditional expectations of `g` with respect to a
-filtration is uniformly integrable. -/
+filtration form a uniformly integrable family. -/
 theorem Integrable.uniformIntegrable_condExp_filtration [Preorder ι] {μ : Measure Ω}
-    [IsFiniteMeasure μ] {f : Filtration ι m} {g : Ω → ℝ} (hg : Integrable g μ) :
-    UniformIntegrable (fun i => μ[g | f i]) 1 μ :=
-  hg.uniformIntegrable_condExp f.le
-
-theorem Filtration.condExp_condExp [Preorder ι] {E : Type*} [NormedAddCommGroup E]
-    [NormedSpace ℝ E] [CompleteSpace E] (f : Ω → E) {μ : Measure Ω} (ℱ : Filtration ι m)
-    {i j : ι} (hij : i ≤ j) [SigmaFinite (μ.trim (ℱ.le j))] :
-    μ[μ[f | ℱ j] | ℱ i] =ᵐ[μ] μ[f | ℱ i] := condExp_condExp_of_le (ℱ.mono hij) (ℱ.le j)
+    [IsFiniteMeasure μ] {f : Filtration ι m} {g : Ω → ℝ} (hg : Integrable g μ) {G : ι → Ω → ℝ}
+    (hG : ∀ i, IsCondExp (f i) μ g (G i)) : UniformIntegrable G 1 μ :=
+  hg.uniformIntegrable_condExp f.le hG
 
 section OfSet
 
