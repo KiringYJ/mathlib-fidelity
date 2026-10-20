@@ -368,6 +368,19 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   the logarithmic operation and boundary inputs. Tests cover number-field elements, nonintegral
   rationals, proof independence, and the exclusion of a transcendental rational-function generator.
 
+- [ ] **Put `Height.mulHeight` on nonzero tuples.**
+  `Height.mulHeight x` in `Mathlib/NumberTheory/Height/Basic.lean:233` is the product of the maxima
+  of the absolute values over the tuple `x` for `x ≠ 0` and `1` for the zero tuple, which the module
+  overview calls a convenient junk value that 'allows to avoid the condition `x ≠ 0` in most of the
+  results' (`mulHeight_zero`, line 244); `logHeight` (line 272) is its logarithm.  The height is a
+  function of a point of projective space, and `Projectivization.mulHeight` in
+  `Mathlib/NumberTheory/Height/Projectivization.lean` already takes nonzero representatives.  The
+  tuple heights are used in `Height/Basic.lean`, `EllipticCurve.lean`, `MvPolynomial.lean`,
+  `Northcott.lean`, `NumberField.lean`, and `Projectivization.lean`.  Decide whether the tuple
+  height takes `x ≠ 0`, with the projective version as the public surface, and which results lose
+  their hypothesis-free form.  The height `mulHeight₁ x` of a field element is defined at `x = 0`
+  without a branch and is not affected.
+
 - [x] **Remove the pole-only branch from `riemannZeta_ne_zero_of_one_le_re`.**
   The theorem now requires `s ≠ 1` and directly specializes Dirichlet L-function nonvanishing
   away from the pole. The zero-set consumer supplies this evidence, and a regression test rejects
@@ -381,6 +394,21 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `sInf`/`sSup` equalities derived using nonempty witnesses. Hyperreal convergence supplies finite
   inputs, and the infinite-value theorem `stdPart_omega` is removed. Tests cover closure, real
   embeddings, infinitesimals, units, excluded infinite inputs, and cut endpoint behavior.
+
+- [ ] **Audit the junk subgroup for the empty upper set of Archimedean classes.**
+  `MulArchimedeanClass.subgroup s` in `Mathlib/Algebra/Order/Archimedean/Class.lean:610` (additively
+  `ArchimedeanClass.addSubgroup`) turns an upper set `s` of classes into the subgroup of elements
+  whose class lies in `s`; for the empty upper set `s = ⊤` that carrier is empty, and the docstring
+  assigns the junk value `⊥` (`subgroup_eq_bot`, line 631).  `ballSubgroup c`, the subgroup of
+  `UpperSet.Ioi c`, inherits it at the class `⊤` of the identity (line 663, `ballSubgroup_top` at
+  line 682), where the open ball is empty.  The strict form already exists on the finite classes:
+  `FiniteMulArchimedeanClass.subgroup` (line 865) adds `⊤` to the upper set and needs no branch.
+  `FiniteArchimedeanClass.ball` in `Mathlib/Algebra/Order/Module/Archimedean.lean:67` repeats the
+  sentence about `c = ⊤` although its argument is a finite class, so that docstring may be stale.
+  The only other consumer is `Mathlib/Algebra/Order/Module/HahnEmbedding.lean`, which uses the
+  finite-class `ball` and `closedBall`.  Decide whether the unrestricted `subgroup` and
+  `ballSubgroup` are needed beyond the finite-class forms, whether `⊥` for the empty ball has a
+  source, or whether the definitions should take `s ≠ ⊤` and `c ≠ ⊤`.
 
 - [x] **Require `1 < q` for `ArithmeticFunction.ofPowerSeries`.**
   `ofPowerSeries q hq` requires `hq : 1 < q` and is the formal Dirichlet series `f(q⁻ˢ)`: its value
@@ -411,6 +439,22 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `continuous_normalize` on the nonzero finite measures and continuity of scalar multiplication.
   Tests cover rejected and misleading evidence, ambient instances, proof independence, and a
   portmanteau transfer from probability measures to finite measures.
+
+- [ ] **Give `Measure.tilted` its exact domain.**
+  `Measure.tilted μ f` in `Mathlib/MeasureTheory/Measure/Tilted.lean:42` is `μ.withDensity` of
+  `x ↦ ENNReal.ofReal (exp (f x) / ∫ x, exp (f x) ∂μ)`.  When `exp ∘ f` is not integrable the
+  Bochner integral is `0`, the real quotient by `0` is `0`, and the result is the zero measure
+  (`tilted_of_not_integrable`, line 46; `tilted_of_not_aemeasurable`, line 51), as it is for `μ = 0`
+  (`tilted_zero_measure`, line 57); the docstring states the fallback ('Otherwise it is 0').  The
+  intended object is the probability measure with density proportional to `exp (f x)`, whose exact
+  domain is `Integrable (fun x ↦ exp (f x)) μ` with `μ ≠ 0` (`isProbabilityMeasure_tilted`, line
+  126), but the instance `isZeroOrProbabilityMeasure_tilted` (line 138) and
+  `tilted_apply_eq_ofReal_integral` (line 118) hold for every `f` through the fallback.  The other
+  consumers are `Mathlib/MeasureTheory/Measure/LogLikelihoodRatio.lean`,
+  `Mathlib/Probability/Moments/Tilted.lean`, and `Mathlib/Probability/Moments/SubGaussian.lean`.
+  Decide whether the ordinary operation takes integrability and `NeZero μ` as proof arguments, or
+  whether the unnormalized `withDensity` measure is the primary object and normalization takes the
+  positivity and finiteness of the mass, as for `FiniteMeasure.normalize`.
 
 - [x] **Give `ProbabilityTheory.cdf` its exact domain.**
   `cdf μ` requires `[IsFiniteMeasureOnIic μ]`, finiteness of every ray `Iic x`, and is the
@@ -446,6 +490,189 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   number remains one. No unrestricted root-number wrapper is retained. Tests distinguish missing
   primitivity, a nonprimitive character at positive modulus, and primitive modulus zero;
   the operation continues to use the original character and modulus, not an induced character.
+
+- [ ] **Require measurability in `SimpleFunc.restrict`.**
+  `SimpleFunc.restrict f s` in `Mathlib/MeasureTheory/Function/SimpleFunc.lean:751` is
+  `piecewise s hs f 0` for a measurable set `s` and the zero function otherwise
+  (`restrict_of_not_measurable`, line 754), although a simple function is restricted to a set only
+  through its indicator (`coe_restrict`, line 759).  The strict substrate
+  `SimpleFunc.piecewise s hs f 0` already exists.  The consumers supply measurable sets: the file
+  itself (`restrict_lintegral`, `restrict_const_lintegral`),
+  `Mathlib/MeasureTheory/Function/StronglyMeasurable/Basic.lean` (lines 259 to 291 and 426),
+  `Mathlib/MeasureTheory/Integral/Lebesgue/Basic.lean`, and
+  `Mathlib/MeasureTheory/Integral/Lebesgue/Add.lean`.  Decide between taking `hs` as an argument of
+  `restrict`, as `Measure.map` takes its measurability, and retiring `restrict` in favour of
+  `piecewise`; `map_restrict_of_zero`, `mem_image_of_mem_range_restrict`, and `restrict_mono` then
+  lose a case split.
+
+- [ ] **Replace the exported σ-finite exhaustion sets by existence statements.**
+  `Measure.sigmaFiniteSetWRT μ ν` in
+  `Mathlib/MeasureTheory/Measure/Decomposition/Exhaustion.lean:67` chooses a measurable `s` with
+  `μ.restrict s` σ-finite and `μ t = ∞` for every `t ⊆ sᶜ` with `ν t ≠ 0`, and is `∅` when no such
+  set exists, which the module overview says happens only if `ν` is not s-finite.  Two sets with the
+  property differ by a `ν`-null set (paper argument: the part of one outside the other is a
+  countable union of sets of finite `μ`-measure inside the complement of the other), so the
+  specification determines an almost-everywhere class of sets and the value is a `Classical.choose`
+  representative of it.  `Measure.sigmaFiniteSet` (line 315) is its diagonal case, and
+  `AEFinStronglyMeasurable.sigmaFiniteSet`
+  (`Mathlib/MeasureTheory/Function/StronglyMeasurable/AEStronglyMeasurable.lean:977`) chooses a set
+  from an existence proof in the same way.  The exhaustion lemmas are stated under `SFinite ν` or
+  `IsFiniteMeasure ν`.  The consumers use the sets as witnesses:
+  `Mathlib/MeasureTheory/Function/AEEqOfIntegral.lean` and `AEEqOfLIntegral.lean` for the second,
+  and `Mathlib/MeasureTheory/Measure/SeparableMeasure.lean`, `WithDensity.lean`, and
+  `WithDensityFinite.lean` for the first.  Decide whether the exhaustion lemmas can be stated as
+  existence statements with the sets as private witnesses, as the equivalence-class rule of
+  `FORK_DESIGN.md` asks, and coordinate with the item on chosen almost-everywhere representatives in
+  the L bucket.
+
+- [ ] **Require probability factors in `Measure.infinitePi`.**
+  `Measure.infinitePi μ` in `Mathlib/Probability/ProductMeasure.lean:469` is defined for every
+  family of measures by an `if` and is `0` unless every `μ i` is a probability measure; the
+  docstring says that the `if` lets it 'be manipulated without carrying a proof that the measures
+  are probability measures'.  The intended object is the unique measure that gives cylinders the
+  finite product measures (`isProjectiveLimit_infinitePi`, `eq_infinitePi`), and the lemmas about it
+  assume `[∀ i, IsProbabilityMeasure (μ i)]`, so no theorem uses the `0` branch.  `infinitePiNat` in
+  the same file (line 114) already takes the instance.  The consumers are
+  `Mathlib/Probability/Independence/InfinitePi.lean`, `Mathlib/Probability/HasLawExists.lean`,
+  `Mathlib/Probability/Distributions/SetBernoulli.lean`, and
+  `Mathlib/Probability/Combinatorics/BinomialRandomGraph/Defs.lean`.  Decide whether the ordinary
+  operation takes the instance as an argument, which removes the `if`, and whether the exact domain
+  is wider than probability factors, for example finitely many σ-finite factors, before choosing the
+  typeclass.
+
+- [ ] **Keep construction devices of the covering and Haar theorems out of the public API.**
+  Several public definitions are scaffolding whose values off the intended inputs are garbage by
+  their own documentation or are chosen elements.  `VitaliFamily.limRatio` and `limRatioMeas` in
+  `Mathlib/MeasureTheory/Covering/Differentiation.lean:92` and `:416` carry the docstring 'Do *not*
+  use this definition: it is only a temporary device' (`limRatio` is `limUnder` of the ratio,
+  `limRatioMeas` an `AEMeasurable.mk` representative of it).  `Besicovitch.TauPackage.index` and
+  `lastStep` in `Mathlib/MeasureTheory/Covering/Besicovitch.lean:239` and `:278` choose by
+  `Classical.epsilon` and return garbage once no point is left.  `haar.index` and `haar.chaar` in
+  `Mathlib/MeasureTheory/Measure/Haar/Basic.lean:94` and `:351` are the covering number, which is
+  `0` when no finite family covers, and an arbitrary element of an intersection of closures that can
+  differ from the Haar measure of the compact set.  `toSphereBallBound` in
+  `Mathlib/MeasureTheory/Constructions/HaarToSphere.lean:203` is `1` outside `n ≠ 0 ∧ 0 < ε`, which
+  makes `toSphereBallBound_pos` unconditional.  Each is used only in its own file.  The public
+  results are existence statements (`exist_disjoint_covering_families`, `ae_tendsto_rnDeriv`, the
+  Haar measure and its uniqueness, the two `toSphere` bounds), so the devices could be private
+  witnesses; `haarContent` and `haarMeasure` unfold to `chaar`, whose independence of the choice
+  rests on Haar uniqueness.  Decide per device whether it becomes private, is replaced by an
+  existence statement, or is kept as a documented object with its specifying property.
+
+- [ ] **Restate theorems that hold only because two fallback values coincide.**
+  Each statement below is unconditional because both sides are fallback values at the exceptional
+  inputs; they are instances of the `deriv`, Bochner `integral`, and `tsum` fallbacks audited in the
+  XL bucket.  `deriv_klFun`, `rightDeriv_klFun`, and `leftDeriv_klFun`
+  (`Mathlib/InformationTheory/KullbackLeibler/KLFun.lean:99`, `:119`, `:128`; all `@[simp]`) equate
+  the derivatives of `klFun` with `log x` also at `x = 0`, where `klFun` is not differentiable, so
+  the left side is the default `0`, and `log 0 = 0`; `hasDerivAt_klFun` (line 89) needs `x ≠ 0`, and
+  no other file uses the three lemmas.  The `integral_comp_smul` family
+  (`Mathlib/MeasureTheory/Measure/Haar/NormedSpace.lean:93`, `:116`, `:123`, `:130`) holds for every
+  `f` and `R`: for `R ≠ 0` the Bochner zero of a nonintegrable `f` is transported through the
+  equivalence `x ↦ R • x`, and at `R = 0` in positive dimension both sides vanish because `0⁻¹ = 0`
+  and `ENNReal.toReal ∞ = 0` on the infinite Haar measure; `setIntegral_comp_smul` (line 134)
+  requires `R ≠ 0`, and the one consumer is
+  `Mathlib/Analysis/Calculus/BumpFunction/FiniteDimension.lean:306`.  `integral_sum_dirac`
+  (`Mathlib/MeasureTheory/Integral/Bochner/SumMeasure.lean:149`) equates the integral against a sum
+  of weighted Dirac masses with the `tsum` of the weighted values for every `f`, through the zero of
+  the Bochner integral and the zero of `tsum` on nonsummable families, and `integral_poissonMeasure`
+  and `integral_map_cast_poissonMeasure`
+  (`Mathlib/Probability/Distributions/Poisson/Basic.lean:123`, `:129`) and
+  `integral_geometricMeasure` (`Mathlib/Probability/Distributions/Geometric.lean:135`) repeat it;
+  their docstrings say that the integral and the sum are 'both defined to be zero' otherwise.  The
+  strict forms are `integral_sum_dirac_eq_tsum` (line 168), `integral_poissonMeasure'`,
+  `integral_map_cast_poissonMeasure'`, and `integral_geometricMeasure'`, which take summability or
+  integrability.  Decide theorem by theorem whether the unconditional form is a sourced convention,
+  whether the strict companion serves the consumers (`charFun_map_cast_poissonMeasure`,
+  `Poisson/Basic.lean:142`, and the corollaries inside `Poisson/Basic.lean` and `Geometric.lean`),
+  and whether the unconditional form can be dropped.
+
+- [ ] **Decide the domain of `Matrix.ToLieAlgebra`.**
+  `Matrix.ToLieAlgebra R CM` in `Mathlib/Algebra/Lie/SerreConstruction.lean:145` is the quotient of
+  the free Lie algebra by the Serre relations of an arbitrary integer matrix, and its docstring says
+  that its value for non-Cartan matrices should be regarded as junk.  The construction presents a
+  Lie algebra for every matrix, so the question is the intended object: the Serre presentation of
+  any integer matrix, which needs a name and a docstring that say so, or the algebra attached to a
+  Cartan or generalized Cartan matrix, which needs evidence as an argument.  The consumers are the
+  abbreviations `LieAlgebra.e₆`, `e₇`, `e₈`, `f₄`, and `g₂` and the classical series
+  `CartanMatrix.aₙ`, `bₙ`, `cₙ`, and `dₙ` in the same file; no other file uses it.
+
+- [ ] **Classify the ratio of a dilation with no pair at positive finite distance.**
+  `Dilation.ratio f` in `Mathlib/Topology/MetricSpace/Dilation.lean:135` is the `r` with
+  `edist (f x) (f y) = r * edist x y` when some pair of points is at nonzero finite distance, where
+  `r` is unique (`ratio_unique`), and `1` when every distance is `0` or `⊤` (`ratio_of_trivial`,
+  `ratio_of_subsingleton`), where every positive `r` satisfies the identity and the docstring says
+  that 'we choose one'.  Besides making `ratio` total, the value `1` is what makes
+  `Dilation.ratioHom` (line 357) and `DilationEquiv.ratioHom` monoid homomorphisms.  The consumers
+  are `Mathlib/Topology/MetricSpace/DilationEquiv.lean`, `Congruence.lean`, `Similarity.lean`, and
+  `Mathlib/Analysis/Normed/Affine/AddTorsor.lean`.  Decide whether this is a normalized convention
+  to document by its specifying property, whether the ratio should be a relation `HasRatio f r` or a
+  value only on spaces with a pair at positive finite distance, and how `ratioHom` is stated then.
+
+- [ ] **Classify the junk values of `simplicialEvalσ`.**
+  `simplicialEvalσ L` in
+  `Mathlib/AlgebraicTopology/SimplexCategory/GeneratorsRelations/NormalForms.lean:218` is the
+  `ℕ`-valued lift of the order map of a composite of degeneracies; its docstring says that it is
+  correct only for an admissible list `L` and in-bounds arguments, and that other values 'are junk
+  values'.  `simplicialEvalσ_of_isAdmissible` (line 235) proves the correct values on the valid
+  domain, and the definition has no use outside the file.  This is probably an internal
+  computational lift of the kind that the resolved audit below excludes by default; decide whether
+  to keep it as an internal helper, private or documented only on the admissible domain, or to
+  record the exclusion.
+
+- [ ] **Classify the large-`ε` values of `triangleRemovalBound`.**
+  `SimpleGraph.triangleRemovalBound ε` in
+  `Mathlib/Combinatorics/SimpleGraph/Triangle/Removal.lean:41` is an explicit constant meant for
+  `0 < ε ≤ 1`; its docstring calls its values for `ε ≥ 1` junk, chosen positive so that
+  `triangleRemovalBound_pos` holds for every `ε > 0`, and the `positivity` extension at line 178
+  exploits this.  `triangleRemovalBound_le` (line 59) states the `ε ≤ 1` hypothesis it needs, while
+  `FarFromTriangleFree.le_card_cliqueFinset` (line 137) and `triangle_removal` (line 161) are stated
+  for every `ε`.  `cornersTheoremBound` in `Mathlib/Combinatorics/Additive/Corner/Roth.lean:74` is
+  the only consumer outside the file.  Decide whether the value for `ε ≥ 1` is a legitimate explicit
+  constant for those statements, which would be recorded by a proof that they hold there, or whether
+  `ε` should be bounded in the definition.
+
+- [ ] **Classify the zero value of generator-valued invariants.**
+  `Monoid.exponent G` and `AddMonoid.exponent G` in `Mathlib/GroupTheory/Exponent.lean:74` are the
+  least positive `n` with `g ^ n = 1` for all `g`, and `0` 'by convention' when there is none
+  (`exponent_eq_zero_iff`, line 125).  `annIdealGenerator 𝕜 a` in
+  `Mathlib/LinearAlgebra/AnnihilatingPolynomial.lean:78` is the monic generator of the annihilating
+  ideal of `a` and `0` when that ideal is zero (`annIdealGenerator_eq_zero_iff`).
+  `RingOfIntegers.exponent θ` in `Mathlib/NumberTheory/NumberField/Ideal/KummerDedekind.lean:65` is
+  the `absNorm` of the contraction to `ℤ` of the conductor of `ℤ[θ]`, its nonnegative generator, and
+  `0` when the contraction is zero, in which case every prime divides it, so the hypothesis
+  `¬ p ∣ exponent θ` of `not_dvd_exponent_iff` and `ZModXQuotSpanEquivQuotSpan` excludes `θ`.  Each
+  may be a genuine total invariant, the normalized generator of an ideal of `ℤ` or `𝕜[X]`, uniquely
+  determined in every case including the zero ideal.  Record the specifying property and a source
+  for each, as the fidelity gate requires, or restate it on the domain where the ideal is nonzero.
+  `Monoid.exponent` has about twenty consumer files in `GroupTheory/`, `RingTheory/RootsOfUnity/`,
+  and `NumberTheory/`; `annIdealGenerator` has none outside its file, and `RingOfIntegers.exponent`
+  only that file's theorems.
+
+- [ ] **Replace `FractionalIdeal.divMod` by the existence statement it chooses from.**
+  `FractionalIdeal.divMod c b a` in `Mathlib/RingTheory/DedekindDomain/Factorization.lean:705`
+  chooses an `x` with `a + spanSingleton x * b = c` when `a ≤ c`, `a ≠ 0`, and `b ≠ 0`, and is `0`
+  otherwise (`divMod_zero_left`, `divMod_zero_right`, `zero_divMod`, and `divMod_zero_of_not_le`,
+  lines 718 to 730); the docstring says 'an arbitrary `x`'.  Such an `x` is not unique in general,
+  and the existence is already the public lemma `IsDedekindDomain.exists_add_spanSingleton_mul_eq`
+  (line 670).  The only consumer is `FractionalIdeal.quotientEquiv` in the same file (line 738),
+  through `divMod_spec`.  Decide whether to restate `quotientEquiv` with an obtained witness, or to
+  give `divMod` the three hypotheses as arguments.
+
+- [ ] **Require positive order in `HahnSeries.SummableFamily.powers`.**
+  `powers x` in `Mathlib/RingTheory/HahnSeries/Summable.lean:720` is the family `n ↦ x ^ n` when
+  `0 < x.orderTop` and the family of powers of `0` otherwise, which its docstring calls a junk value
+  given by pretending `x = 0` (`powers_of_not_orderTop_pos`, line 740; `powers_of_orderTop_pos`,
+  line 736).  The hypothesis `0 < x.orderTop` is sufficient for the powers to be summable but is not
+  shown to be necessary: over a ring with nilpotents, such as `ℤ/4`, the constant `2` has
+  `orderTop 0` and a finite family of powers (paper argument), so the exact domain is the
+  summability of the powers.  The junk reaches `powerSeriesFamily`
+  (`Mathlib/RingTheory/HahnSeries/HEval.lean:51`) and `PowerSeries.heval x` (line 167), which is an
+  algebra homomorphism for every `x` and equals `f ↦ f.constantCoeff • 1` when `x` has nonpositive
+  order (`powerSeriesFamily_of_not_orderTop_pos`, line 54), whereas `heval_X` (line 199) needs
+  positive order and the docstring of `heval` speaks of a positive order element `x`.
+  `Mathlib/RingTheory/HahnSeries/Cardinal.lean` is the other consumer.  Decide whether `powers` and
+  `heval` take summability, or the positive order that implies it, as an argument.
 
 ## M -- subsystem audit candidates
 
@@ -1087,6 +1314,21 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   arbitrary map that agrees with the coordinate change on the overlap, and the global smoothness
   along a map into both base sets.
 
+- [ ] **Give covariant derivatives their domain of differentiable sections.**
+  `IsCovariantDerivativeOn` in
+  `Mathlib/Geometry/Manifold/VectorBundle/CovariantDerivative/Basic.lean:92` constrains a function
+  on all sections only at sections that are differentiable at the point, and the bundled
+  `CovariantDerivative` (line 366) stores that total function, so its extensionality compares values
+  at sections that are not differentiable.  `leviCivitaAux` in
+  `Mathlib/Geometry/Manifold/VectorBundle/CovariantDerivative/LeviCivita.lean:326` is `0` unless `Y`
+  is `MDiffAt` at `x`; its strict core `leviCivitaAuxOfMDiffAt` (line 309) takes the
+  differentiability proof, and the module overview records that `leviCivitaConnection` is unique
+  only up to its value on nondifferentiable fields.  The four files of the directory (`Basic`,
+  `Metric`, `Torsion`, `LeviCivita`) are the only consumers.  Decide whether a covariant derivative
+  is a function on differentiable sections, a germ-level or tensorial object, or the current total
+  function with a documented equivalence, and keep the zero branch out of the public interface of
+  the Levi-Civita connection.
+
 - [x] **Identify the exact event contract for conditional probability.**
   `ProbabilityTheory.cond μ s hs` takes `hs : IsConditionable μ s`: `s` is null-measurable and has
   positive finite measure.  This is the event contract of conditional probability given an event of
@@ -1512,6 +1754,27 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   uniqueness given the mean and the covariance matrix; the zero matrix; Brownian motion at time
   zero; instances; measurability automation; proof independence; and rewriting.
 
+- [ ] **Give the covariance operators of a measure their second-moment domain.**
+  `StrongDual.toLpₗ` and `StrongDual.toLp`
+  (`Mathlib/Probability/Moments/CovarianceBilinDual.lean:59`, `:134`),
+  `uncenteredCovarianceBilinDual` and `covarianceBilinDual` (`:170`, `:230`), `covarianceBilin`
+  (`Mathlib/Probability/Moments/CovarianceBilin.lean:50`), and `covarianceOperator` (`:203`) are
+  defined for every measure and are `0` unless `MemLp id p μ` holds (`toLpₗ`, `toLp`) or
+  `MemLp id 2 μ` holds (the covariance forms).  The zero lemmas are `toLpₗ_of_not_memLp`,
+  `toLp_of_not_memLp`, `uncenteredCovarianceBilinDual_of_not_memLp`, and
+  `covarianceBilinDual_of_not_memLp'` and `covarianceBilinDual_of_not_memLp` (lines 73, 153, 184,
+  283, and 291 of `CovarianceBilinDual.lean`), `covarianceBilin_of_not_memLp` (line 63 of
+  `CovarianceBilin.lean`), and `covarianceOperator_of_not_memLp` (line 212).  The centered forms
+  subtract the totalized mean `∫ x, x ∂μ`, which is `0` when `id` is not integrable, and
+  `memLp_id_of_self_sub_integral` (line 234) identifies the centered and uncentered conditions
+  through that convention, as a comment in its proof says.  The consumers are
+  `Mathlib/Probability/Distributions/Gaussian/CharFun.lean`, `Gaussian/Multivariate.lean`,
+  `Gaussian/HasGaussianLaw/Independence.lean`, `Mathlib/Probability/BrownianMotion/Basic.lean`, and
+  `MathlibTest/MultivariateGaussianStrict.lean`, which supply `IsGaussian.memLp_two_id` or an
+  equivalent.  Decide whether the covariance takes `MemLp id 2 μ` as an argument or class, how the
+  mean enters the centered form without the totalized integral, and whether `StrongDual.toLp` is
+  stated only on measures with `MemLp id p μ`.
+
 - [x] **Keep the `dirac 0` default of `stieltjesOfMeasurableRat` out of the public API.**
   `IsRatCondKernelCDF.exists_isCondKernelCDF` in
   `Mathlib/Probability/Kernel/Disintegration/CDFToKernel.lean` is the public boundary: for a finite
@@ -1817,6 +2080,25 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   one-sided limits.  Tests cover the removed lemma, the missing product and integrability, a
   nonintegrable density, and the routine instances.
 
+- [ ] **Require measurability in `VectorMeasure.map` and `VectorMeasure.restrict`.**
+  `VectorMeasure.map v f` in `Mathlib/MeasureTheory/VectorMeasure/Operations.lean:187` is `0` unless
+  `f` is measurable (`map_not_measurable`, line 199), and `VectorMeasure.restrict v i` (line 295) is
+  `0` unless `i` is measurable (`restrict_not_measurable`, line 309).  A vector measure is
+  determined by its values on measurable sets and is `0` on the rest by its structure, so unlike
+  `Measure.restrict` there is no outer measure to supply a value, and the exact domains are
+  `Measurable f` and `MeasurableSet i`.  The fallback reaches the order `v ≤[i] w` of
+  `Mathlib/MeasureTheory/VectorMeasure/Order.lean`, which is notation for
+  `v.restrict i ≤ w.restrict i` and therefore holds for every nonmeasurable `i`
+  (`zero_le_restrict_not_measurable` and `restrict_le_zero_of_not_measurable`, lines 194 and 197),
+  so that `measurable_of_not_zero_le_restrict` (line 200) and
+  `exists_pos_measure_of_not_restrict_le_zero` (line 221) must recover measurability from the
+  failure of the relation.  The consumers of `restrict` are about ten files under
+  `Mathlib/MeasureTheory/VectorMeasure/`: the order, integral, set-integral, variation,
+  `WithDensityVec`, Hahn, and Jordan files; `map` is used in `Integral.lean`,
+  `Variation/Basic.lean`, and `Relations.lean`.  Decide whether both operations take the proof as an
+  argument, with a `fun_prop` discharger as for `Measure.map`, and whether `v ≤[i] w` is stated for
+  measurable `i` only.
+
 - [x] **Define the intended domain of generalized `InformationTheory.klDiv`.**
   `klDiv μ ν` takes σ-finite measures `[SigmaFinite μ] [SigmaFinite ν]` and is the I-divergence
   `∫⁻ x, ENNReal.ofReal (klFun (μ.rnDeriv ν x).toReal) ∂ν` if `μ ≪ ν`, with
@@ -2066,6 +2348,83 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   is removed, and the lemmas about a conversion take its meromorphy proof.  Tests are in
   `MathlibTest/MeromorphicNormalFormStrict.lean`.
 
+- [ ] **Give `covolume` its domain and independence hypotheses.**
+  `covolume G α ν` and `addCovolume` in `Mathlib/MeasureTheory/Group/FundamentalDomain.lean:685` are
+  `ν s` for a fundamental domain `s` chosen by `Classical.choose` when `HasFundamentalDomain G α ν`
+  holds and `0` otherwise (the docstring: 'or `0` if none exists').  Independence of the chosen
+  domain is proved under further hypotheses, those of `IsFundamentalDomain.covolume_eq_volume` (line
+  701): `[Countable G] [MeasurableConstSMul G α] [SMulInvariantMeasure G α ν]`; no independence
+  statement is recorded for other actions.  `ZLattice.covolume`
+  (`Mathlib/Algebra/Module/ZLattice/Covolume.lean:72`) composes `addCovolume` with `ENNReal.toReal`,
+  so an infinite covolume also becomes `0`.  The Haar quotient theory uses `covolume Γ.op G ν`
+  (`Mathlib/MeasureTheory/Measure/Haar/Quotient.lean`, lines 190 and 231),
+  `Mathlib/MeasureTheory/Integral/IntervalIntegral/Periodic.lean:85` uses `covolume_eq_volume`, and
+  the regulator, discriminant, and ideal-counting files of `NumberTheory/NumberField/` reach it
+  through `ZLattice.covolume`.  Decide whether the covolume is an extended invariant defined through
+  the quotient measure, or takes a fundamental domain and the independence hypotheses as arguments,
+  and what `ZLattice.covolume` becomes for a lattice, where finiteness is a theorem.
+
+- [ ] **Decide the off-domain values of additive contents and their construction helpers.**
+  `AddContent G C` in `Mathlib/MeasureTheory/Measure/AddContent.lean:76` stores a function on every
+  `Set α` that is additive only on `C`, and `AddContent.ext` (line 99) compares all sets, so two
+  contents that agree on `C` are different.  Its constructors assign the values outside `C` by
+  branches.  `AddContent.onIocAux f` (line 370, behind `AddContent.onIoc`, line 394) is `f v - f u`
+  for a chosen `(u, v)` with `u ≤ v` and `s = Ioc u v`, and `0` for every other set.  The private
+  `AddContent.supClosureFun` (line 222, the function of `AddContent.supClosure`) is the sum of `m`
+  over a chosen finite disjoint decomposition into members of `C`, and `0` for other sets.
+  `projectiveFamilyFun P` (`Mathlib/MeasureTheory/Constructions/ProjectiveFamilyContent.lean:71`) is
+  `P I S` for the chosen cylinder representation `(I, S)` and `0` off the measurable cylinders; the
+  representation comes from the exported `Classical.choose` projections `measurableCylinders.finset`
+  and `measurableCylinders.set` (`Mathlib/MeasureTheory/Constructions/Cylinders.lean:294`, `:300`),
+  and the closed-compact analogues
+  (`Mathlib/MeasureTheory/Constructions/ClosedCompactCylinders.lean:53`, `:60`) have no use outside
+  their file.  The values on the domain are shown independent of the choice under hypotheses
+  (`sum_addContent_eq_of_sUnion_eq` for a semiring, line 189; `projectiveFamilyFun_congr` for an
+  `IsProjectiveMeasureFamily`, line 76).  Carathéodory's construction already treats values off `C`
+  explicitly (`AddContent.extend`, line 465, and the hypothesis `m_top` of `ofFunction_eq`).  The
+  consumers are `Mathlib/MeasureTheory/OuterMeasure/OfAddContent.lean`,
+  `Mathlib/MeasureTheory/VectorMeasure/AddContent.lean`, `VectorMeasure/BoundedVariation.lean`,
+  `Mathlib/Probability/Kernel/IonescuTulcea/Traj.lean`, and
+  `Mathlib/Probability/ProductMeasure.lean`.  For a generic interface that needs a total set
+  function, `FORK_DESIGN.md` asks that each branch stay anonymous at its construction site with a
+  proof of independence, and that `TODO.md` record the interface change that would remove it.
+  Decide whether that change is a content defined on the subtype `C`, and whether the chosen
+  cylinder representations become private witnesses.
+
+- [ ] **Replace the chosen limit process of a filtered process by its class.**
+  `Filtration.limitProcess f ℱ μ` in `Mathlib/Probability/Process/Filtration.lean:459` is a
+  `Classical.choose` of a `⨆ n, ℱ n`-strongly measurable `g` to which `f n` converges `μ`-almost
+  everywhere, and `0` when there is none.  For a Hausdorff target two such `g` agree almost
+  everywhere, so the specification determines an almost-everywhere class and the value is a chosen
+  representative of it together with a no-witness fallback; the definition itself assumes only
+  `[Zero E] [TopologicalSpace E]`.  The consumers are
+  `Mathlib/Probability/Martingale/Convergence.lean` (`Submartingale.ae_tendsto_limitProcess`,
+  `memLp_limitProcess`, `tendsto_eLpNorm_one_limitProcess`, and
+  `Martingale.ae_eq_condExp_limitProcess`) and
+  `Mathlib/Probability/Kernel/Disintegration/Density.lean` (`density_ae_eq_limitProcess` and the
+  `densityProcess` convergence lemmas); the proof of `ae_tendsto_limitProcess` splits on the `dite`
+  (Convergence.lean, line 215).  Decide whether the limit is the class of its versions, with the
+  convergence theorems stated for any version as for conditional kernels, or an existence statement,
+  which is what the martingale convergence theorem asserts, and whether the target needs a `T2Space`
+  hypothesis for the uniqueness.
+
+- [ ] **Give `stoppedValue` its finite stopping times.**
+  `stoppedValue u τ` in `Mathlib/Probability/Process/Stopping.lean:818` is
+  `fun ω ↦ u (τ ω).untopA ω` for a stopping time `τ : Ω → WithTop ι`, where `WithTop.untopA`
+  (`Mathlib/Order/WithBot.lean:270`) is `untopD (Classical.arbitrary ι)`, so on `{τ = ⊤}` the value
+  is `u (Classical.arbitrary ι) ω`, an arbitrary index.  `stoppedValue_stoppedProcess` (line 893)
+  states the branch with `Classical.arbitrary ι`, whereas `stoppedValue_stoppedProcess_apply` and
+  `stoppedValue_stoppedProcess_ae_eq` (lines 901 and 905) assume `σ ω ≠ ⊤` pointwise or almost
+  everywhere.  `stoppedProcess` (line 854) is not affected at a finite index, because `min i (τ ω)`
+  is never `⊤`.  The consumers of `stoppedValue` are `Mathlib/Probability/Martingale/Basic.lean`,
+  `OptionalSampling.lean`, `OptionalStopping.lean`, `Upcrossing.lean`, and
+  `Mathlib/Probability/Process/HittingTime.lean`; `untopA` is also used in `HittingTime.lean`,
+  `Martingale/BorelCantelli.lean`, `Mathlib/Topology/Order/WithTop.lean`, and
+  `Mathlib/MeasureTheory/Constructions/BorelSpace/WithTop.lean`.  Decide whether the stopped value
+  is defined on `{τ < ⊤}`, as a dependent function or through a stopping time with finiteness
+  evidence, whether `{τ = ⊤}` is handled by a separately specified limit value (compare the
+  limit-process item above), and which theorems then need `τ ≠ ⊤` almost everywhere.
+
 ## L -- staged cross-module audit candidates
 
 - [ ] **Put matroid closure on subsets of the ground set.**
@@ -2131,6 +2490,10 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   (`Mathlib/Basic/ENNReal/Basic.lean:225`) send infinity to zero.  Provide proof-bearing finite
   conversions and keep infinity-to-zero maps private; a more explicit public name does not prevent
   their accidental use as genuine conversions.
+  `Measure.real` (`Mathlib/MeasureTheory/Measure/MeasureSpaceDef.lean:102`) is `(μ s).toReal`, and
+  its docstring says that it maps infinite measure sets to zero; the projection `μ.real s` occurs in
+  over a hundred files, so the finite-measure and finite-set cases (`IsFiniteMeasure`, `μ s ≠ ∞`)
+  must be separated from the conversion before the zero fallback leaves the public API.
 
 - [ ] **Separate chosen preimages from true inverses and true extensions.**
   `Function.invFun` in `Mathlib/Logic/Function/Basic.lean:526` picks an arbitrary element outside
@@ -2143,6 +2506,14 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   fiber.  Require `FactorsThrough` for
   the ordinary extension name.  Keep an unrestricted chosen-representative construction private
   unless literature treats that choice operation itself as the intended public object.
+  `MeasurableEmbedding.invFun` (`Mathlib/MeasureTheory/SigmaAlgebra/Embedding.lean:793`) is a
+  measurable left inverse of a measurable embedding: it inverts `equivRange` on the range and takes
+  `Nonempty.some` off it.  Its one consumer, `exists_measurable_map_eq_unitInterval` in
+  `Mathlib/Probability/Kernel/Representation.lean` (line 114), needs only a measurable left inverse
+  of `sigmoid ∘ embeddingReal Y`, so an existence statement for measurable embeddings of nonempty
+  types would replace the exported choice; `embeddingReal`
+  (`Mathlib/MeasureTheory/Constructions/Polish/EmbeddingReal.lean:58`) is itself a
+  `Classical.choose` projection with the same question.
 
 - [ ] **Make subgroup indices finite only with evidence.**
   `Subgroup.index` and `Subgroup.relIndex` in `Mathlib/GroupTheory/Index.lean:57` and `:64` return
@@ -2155,6 +2526,13 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `Mathlib/RingTheory/RamificationInertia/Inertia.lean:44` return zero for nonprime ideals and also
   collapse infinite length/rank.  Carry primality plus the appropriate finiteness evidence, or keep
   an extended-valued invariant.
+  The primed predecessors remain beside them: `Ideal.ramificationIdx'`
+  (`Mathlib/NumberTheory/RamificationInertia/Ramification.lean:71`) is `sSup {n | map f p ≤ P ^ n}`
+  and is `0` when that set is unbounded, and `Ideal.inertiaDeg'`
+  (`Mathlib/NumberTheory/RamificationInertia/Inertia.lean:69`, deprecated since 2026-08-14) is
+  `finrank (R ⧸ p) (S ⧸ P)` when `comap f P = p` and `0` otherwise, so it carries the
+  infinite-to-zero `finrank` convention in addition to its off-domain zero.  Retire them with their
+  replacements instead of migrating their lemmas.
 
 - [ ] **Put affine combinations on affine weights.**
   `Finset.affineCombination` in `Mathlib/LinearAlgebra/AffineSpace/Combination.lean:348` accepts
@@ -2174,6 +2552,13 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   vector, and a local diffeomorphism is a still stronger convenient facade.  Keep these pointwise,
   operator-level, local-regularity, and globally differentiable interfaces distinct, and put bracket
   regularity in the theorem or bundled object that actually uses it.
+  The vector-space predecessors `VectorField.pullback` and `VectorField.pullbackWithin`
+  (`Mathlib/Analysis/Calculus/VectorField.lean:476` and `:483`) apply `ContinuousLinearMap.inverse`
+  to the derivative and return the junk value `0` when it is not invertible
+  (`pullback_eq_of_not_isInvertible`, line 494; `pullbackWithin_eq_of_not_isInvertible`, line 499);
+  `mpullback_eq_pullback` and `mpullbackWithin_eq_pullbackWithin`
+  (`Mathlib/Geometry/Manifold/VectorField/Pullback.lean:213` and `:206`) identify the manifold
+  versions with them on vector spaces, so the two pairs should move together.
 
 - [ ] **Audit and strictify local-frame/trivialization evaluation at its public boundary.**
   `IsLocalFrameOn.coeff` in `Mathlib/Geometry/Manifold/VectorBundle/LocalFrame.lean:186` returns
@@ -2218,6 +2603,14 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   total convention; otherwise expose the choice only behind existence evidence and keep any
   fallback private.  Audit `IsDenseInducing.extend`/`extendFrom` under the same distinction between
   a chosen representative and a claimed canonical extension.
+  Documented consumers of `limUnder` are `UpperHalfPlane.valueAtInfty`
+  (`Mathlib/NumberTheory/ModularForms/QExpansion.lean:64`), whose docstring says 'an arbitrary
+  choice of value if this limit is not well-defined', with `IsZeroAtImInfty.valueAtInfty_eq_zero`
+  (line 66) as the existence-backed case and its modular-form consumers in `CuspFormSubmodule.lean`
+  and `LFunction.lean`, and `Function.Periodic.cuspFunction`
+  (`Mathlib/Analysis/Complex/Periodic.lean:119`), which is 'extended by a non-canonical choice of
+  limit at 0' and underlies `UpperHalfPlane.cuspFunction` (`QExpansion.lean:79`) and `qExpansion`
+  (line 162).
 
 - [x] **Make measure pushforward require a.e. measurability.**
   `Measure.map` now takes a proof of a.e. measurability, normally synthesized by `fun_prop`, and
@@ -2227,6 +2620,33 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `ProbabilityMeasure.map`, conditional-law APIs, and kernel map wrappers.  Negative tests ensure
   arbitrary functions cannot recover the former behavior, while proof-indexed congruence,
   measurable-set-first `map_apply`, and a.e.-measurable `map_map` preserve routine ergonomics.
+
+- [ ] **Give the measure pullback `Measure.comap` its exact domain.**
+  `Measure.comapₗ` in `Mathlib/MeasureTheory/Measure/Comap.lean:44` is `0` unless `f` is injective
+  and sends measurable sets to measurable sets, and `Measure.comap` at line 64 is `0` unless `f` is
+  injective and sends measurable sets to `μ`-null-measurable sets (`comap_undef`, line 81);
+  `FiniteMeasure.comap` in `Mathlib/MeasureTheory/Measure/FiniteMeasure.lean:857` inherits the
+  fallback.  The module overview records that the zero value is a placeholder and that covering maps
+  such as `ℝ → AddCircle 1` might later receive a meaningful pullback.  The intended object has
+  `comap f μ s = μ (f '' s)` on measurable `s`; the stated conditions are sufficient for that set
+  function to be countably additive, and no argument that they are necessary is recorded.  About two
+  dozen files use the API by a textual count.  `Subtype.measureSpace`
+  (`Mathlib/MeasureTheory/Measure/Restrict.lean:843`) takes
+  `volume := Measure.comap Subtype.val volume`, which is the zero measure as soon as the subset is
+  not null-measurable, and the volume of the unit interval
+  (`Mathlib/MeasureTheory/Constructions/UnitInterval.lean:28`) and the invariant measure of `ℍ`
+  (`Mathlib/Analysis/Complex/UpperHalfPlane/Measure.lean:45`) are built from pullbacks of ambient
+  volumes.  `Measure.comap` and `MeasurableEmbedding.comap_apply` also serve `Kernel.comapRight`
+  (`Mathlib/Probability/Kernel/Basic.lean`), `Mathlib/Probability/ConditionalProbability.lean`,
+  `Mathlib/MeasureTheory/Measure/Regular.lean`,
+  `Mathlib/MeasureTheory/Constructions/HaarToSphere.lean`,
+  `Mathlib/Probability/Combinatorics/BinomialRandomGraph/Defs.lean`, and
+  `Mathlib/Probability/Distributions/SetBernoulli.lean`.  Decide whether the ordinary operation
+  takes injectivity and null-measurability of images as proof arguments supplied by a discharger, as
+  `Measure.map` takes a.e. measurability, or is restricted to measurable embeddings with a separate
+  null-measurable form; what `Subtype.measureSpace` becomes on subsets that are not null-measurable;
+  whether a fiber-summing pullback for covering maps is a different operation; and how
+  `FiniteMeasure.comap` and `comapₗ` follow.
 
 - [x] **Separate unique product measures from iterated and primitive constructions.**
   `IsProductMeasure` records the measurable rectangle law; ordinary `Measure.prod` requires
@@ -2302,6 +2722,26 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `Mathlib/Probability/Moments/Variance.lean:64` maps infinite variance to zero and centers through
   totalized expectation.  Use `MemLp`/moment hypotheses for finite values and design extended values
   without a junk mean.
+
+- [ ] **Give `average` and `laverage` their exact domain.**
+  `MeasureTheory.laverage` and `MeasureTheory.average` in
+  `Mathlib/MeasureTheory/Integral/Average.lean:71` and `:279` are `∫⁻ x, f x ∂(μ univ)⁻¹ • μ` and
+  `∫ x, f x ∂(μ univ)⁻¹ • μ`, with the notations `⨍⁻` and `⨍`.  The value is `0` for an infinite
+  measure, because the scalar `(μ univ)⁻¹` is `0`, for the zero measure, and, for `average`, for a
+  nonintegrable `f` or an incomplete target; the docstrings name the infinite-measure and
+  nonintegrable cases.  The intended mean is `(μ.real univ)⁻¹ • ∫ f ∂μ` for a finite nonzero measure
+  and an integrable `f`; for an infinite measure a limit of averages over exhausting sets is a
+  different object, and the value `0` would need its own source.  About forty files use the notation
+  or the API by a textual count, among them `Mathlib/Analysis/Convex/Integral.lean`,
+  `Mathlib/Analysis/Polynomial/MahlerMeasure.lean`,
+  `Mathlib/MeasureTheory/Function/Intersectivity.lean`,
+  `Mathlib/MeasureTheory/Integral/IntervalAverage.lean`,
+  `Mathlib/MeasureTheory/Integral/CircleAverage.lean`, and
+  `Mathlib/MeasureTheory/Covering/Differentiation.lean`.  Decide whether the ordinary operation
+  requires `0 < μ univ < ∞` and integrability, with a discharger for probability measures and for
+  finite measures on intervals and circles; whether the `ℝ≥0∞`-valued `laverage` has a source for
+  the value `0` at infinite mass; and how the interval average, which is an `average`, and
+  `circleAverage`, which equals one (`circleAverage_eq_intervalAverage`), inherit the domain.
 
 - [x] **Replace chosen conditional kernels and conditional cdfs by their almost-everywhere
   classes.**
@@ -3006,6 +3446,18 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   the same review to signed and complex vector-measure wrappers.  `IsCondCDF.ofReal_ae_eq_rnDeriv`
   and the private existence proof for `condCDF` take `rnDeriv` only of ray measures with respect to
   a σ-finite `ρ.fst`, where the decomposition exists, so they can supply the evidence.
+  `ProbabilityTheory.pdf` (`Mathlib/Probability/Density.lean:130`) is `(map X ℙ hX).rnDeriv μ`, so
+  it is `0` without a Lebesgue decomposition (`pdf_of_not_haveLebesgueDecomposition`, line 138),
+  although `HasPDF` already carries the decomposition and the absolute continuity; its consumers are
+  `Probability/Density.lean`, the `Probability/Distributions/` files for the beta, Cauchy,
+  exponential, gamma, Gaussian, Pareto, and uniform laws, and `Probability/HasLaw.lean`.
+  `SignedMeasure.rnDeriv` (`Mathlib/MeasureTheory/VectorMeasure/Decomposition/Lebesgue.lean:156`) is
+  built from `Measure.rnDeriv` of the Jordan parts through `ENNReal.toReal`, and
+  `ComplexMeasure.rnDeriv` (line 423) from `SignedMeasure.rnDeriv` of the real and imaginary parts,
+  so they inherit both the missing-decomposition zero and the infinity-to-zero conversion.  For a
+  countable parameter space, `Kernel.rnDerivAux` (`Mathlib/Probability/Kernel/RadonNikodym.lean:91`)
+  is `((κ a).rnDeriv (η a) x).toReal`, and `Kernel.rnDeriv` and `Kernel.singularPart` (lines 227 and
+  258) are built from it.
 
 - [ ] **Move continuous functional calculus to its checked core.**
   `cfc` and `cfcₙ` in
@@ -3047,6 +3499,18 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   depending on junk values are already deprecated.  Put normality/continuity evidence in the named
   interface and retain generic transfinite iteration under a distinct name.
 
+- [ ] **Classify the no-successor branch of `ComplexShape.next` and `prev`.**
+  `ComplexShape.next c i` in `Mathlib/Algebra/Homology/ComplexShape.lean:141`, with `prev` as its
+  dual, is the index `j` with `c.Rel i j` when one exists, which is unique because the relation is
+  functional (`next_eq`), and `i` itself otherwise (`next_eq_self'`); the docstring calls the first
+  case an arbitrary choice and states the `i` branch.  The total projection supplies `xNext`,
+  `xPrev`, `dFrom`, and `dTo` for every index of a homological complex, whose differential is zero
+  at an index without a successor.  About thirty files use `c.next`, `c.prev`, or their lemmas by a
+  textual count.  The value is determined where it exists, so the question is the no-successor
+  branch: decide whether it is a checked technical device that can stay behind the `dFrom` and `dTo`
+  API, or whether `next` and `prev` should take the relation as evidence or return an `Option`, and
+  which theorems depend on `xNext` at an index with no successor.
+
 ## XL -- foundational audit candidates; no migration is authorized
 
 - [ ] **Classify inverse and division semantics before prototyping any hierarchy split.**
@@ -3085,6 +3549,13 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   core evidence is `IsLUB s a` or `IsGLB s a`, with constructors for the applicable bounded,
   nonempty, bottom, and top cases.  Audit only genuinely unsupported cases; complete-lattice extrema
   and canonical empty extrema are not defects.
+  The `sSup` of `Seminorm 𝕜 E` is such a case: `Seminorm.instSupSet`
+  (`Mathlib/Analysis/Normed/Module/Seminorm/Basic.lean:488`), on which the
+  `ConditionallyCompleteLattice` instance at line 583 is built, is the pointwise supremum when the
+  set is pointwise bounded above and `⊥` otherwise, and `Seminorm.bddAbove_iff` (line 529)
+  identifies pointwise boundedness with boundedness as seminorms.  The same pattern, with
+  `sSup_of_not_bddAbove` stating the value `0`, holds for `GroupSeminorm`
+  (`Mathlib/Analysis/Normed/Group/Seminorm.lean:268`) and `NonarchAddGroupSeminorm` (line 544).
 
 - [ ] **Replace `Module.finrank`'s infinite-to-zero convention.**
   `Module.finrank` in `Mathlib/LinearAlgebra/Dimension/Finrank.lean:62` is
@@ -3092,6 +3563,14 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   Natural-valued rank needs finite-rank evidence; keep cardinal rank globally.  Migrate
   `AffineSubspace.finDim` (`Mathlib/LinearAlgebra/AffineSpace/Dimension.lean:51`) and other derived
   invariants without conflating finite rank with finite generation over general semirings.
+  Two derived invariants state the zero case in their docstrings:
+  `AlgebraicGeometry.Scheme.Hom.residueDegree` (`Mathlib/AlgebraicGeometry/ResidueField.lean:147`),
+  the `finrank` of the residue field extension with 'a default value of zero when this degree is
+  infinite', whose only consumer is `mapCoeff` in
+  `Mathlib/AlgebraicGeometry/AlgebraicCycle/Basic.lean:56`, applied when the two weights agree; and
+  `QuadraticForm.sigPos` and `sigNeg` (`Mathlib/LinearAlgebra/QuadraticForm/Signature.lean:65` and
+  `:98`), which the docstrings define as `0` if `M` is infinite-dimensional, with no consumer
+  outside the file.
 
 - [ ] **Keep derivative relations primary and audit value projections separately.**
   `fderivWithin`/`fderiv` (`Mathlib/Analysis/Calculus/FDeriv/Defs.lean:151`, `:160`),
@@ -3114,6 +3593,24 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `Integrable` and target-valued existence distinct, audit theorems that use the fallback, and
   prototype an existence-certified integral before deciding whether notation or expectation APIs
   should change.  The lower Lebesgue integral is not part of this candidate.
+  The fallback propagates to every integral derived from `MeasureTheory.integral`:
+  `intervalIntegral` (`Mathlib/MeasureTheory/Integral/IntervalIntegral/Basic.lean:659`,
+  `integral_undef` at line 711), `circleIntegral`
+  (`Mathlib/MeasureTheory/Integral/CircleIntegral.lean:425`, `integral_undef` at line 486),
+  `circleAverage` (`Mathlib/MeasureTheory/Integral/CircleAverage.lean:55`,
+  `circleAverage.integral_undef` at line 64), `curveIntegral`
+  (`Mathlib/MeasureTheory/Integral/CurveIntegral/Basic.lean:123`,
+  `curveIntegral_of_not_completeSpace` at line 133), and `VectorMeasure.integral`
+  (`Mathlib/MeasureTheory/VectorMeasure/Integral.lean:250`), which is `0` for a nonintegrable
+  function or an incomplete target through `setToFun`
+  (`Mathlib/MeasureTheory/Integral/SetToL1/Function.lean:42`).  The moment family inherits it too:
+  `moment` and `centralMoment` (`Mathlib/Probability/Moments/Basic.lean:55`, `:62`), `mgf` and `cgf`
+  (`:122`, `:127`; `mgf_undef` and `cgf_undef` at lines 176 and 179, with `cgf` adding `log 0 = 0`),
+  and `complexMGF` (`Mathlib/Probability/Moments/ComplexMGF.lean:72`; `complexMGF_undef`, line 74).
+  Decide for each whether the public operation takes the integrability, interval integrability, or
+  circle integrability as evidence, or may keep the zero value as a consequence of the base
+  operation.  Theorems that hold only because both sides are fallback values are listed in the S
+  candidate on coinciding fallbacks.
 
 - [ ] **Audit `tsum`/`tprod` choice projections against `HasSum`/`HasProd`.**
   `tsum` and `tprod` in `Mathlib/Topology/Algebra/InfiniteSum/Defs.lean:132` and `:142` return zero
@@ -3582,3 +4079,23 @@ the absence of arbitrarily named equivalent theorems with no presentation marker
 elaborated-statement lint remains an audit experiment: it must first handle typed binder transport,
 equality orientation, attributes, and theorem-search value without identifying merely equivalent
 presentations as redundant APIs.
+
+A 2026-10-20 fallback inventory looked for documented fallback values rather than for lexical zero
+branches.  It parsed all 8,543 `Mathlib/**/*.lean` files into declaration chunks and recorded, for
+each chunk, docstring signals (wording such as junk, fallback, convention, arbitrary, defined as
+`0`, otherwise `0`, and we set), name signals (`_undef`, `_of_not_`, `eq_zero_of_not`), and code
+signals (an `else` or default branch returning `0`, `1`, `⊥`, `∅`, or `default`, and uses of `getD`,
+`toReal`, `untop`, `Classical.choose`, `Classical.epsilon`, `Classical.arbitrary`,
+`Function.invFun`, and `Function.extend`).  It also reviewed all 446 private definition-like
+declarations outside `Mathlib/Tactic`, `Lean`, `Util`, `Testing`, and `Meta` (190 contain a branch
+or choice token and 256 do not), and swept module overviews for statements of junk values.  The
+inventory is complete for `MeasureTheory`, `Probability`, and `InformationTheory`, where every
+flagged declaration was reviewed; elsewhere it records only public fallbacks that a docstring or
+module overview documents, so an undocumented fallback outside those directories is not excluded.
+The classes kept as separate deferred audits, namely `x / 0`, `Real.log 0`, `deriv`, `tsum`,
+`toReal` and similar conversions, and `Nat.nth`, were not inventoried again.  The scan is lexical
+and was not validated against the elaborated environment, and a lemma that holds only because two
+fallback values coincide, without a textual marker, cannot be enumerated from source text; the
+candidates above that name such lemmas come from docstrings and from proofs that unfold a fallback,
+and the pass does not show that no others exist.  Each candidate it produced remains a hypothesis
+under the fidelity gate.

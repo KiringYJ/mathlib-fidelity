@@ -929,5 +929,8 @@ local-function, or chart interfaces before porting analysis code.
 - Starting the total-inverse migration.
 - Renaming `Field`, `DivisionRing`, `GroupWithZero`, or their consumers now.
 - Introducing the provisional `NZ`, checked-division, or tactic APIs now.
-- Auditing every existing totalization in the repository now.
+- Repairing every documented fallback now. The 2026-10-20 inventory of
+  documented fallbacks is recorded as candidates in `TODO.md`; an audit of every
+  totalization in the repository, declaration by declaration, remains out of
+  scope.
 - Preserving fork-only changes in a form suitable for an upstream pull request.
