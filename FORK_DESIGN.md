@@ -62,10 +62,31 @@ the interface.
   an arbitrary choice, such as normalizing a locally finite measure at `0`.
 - Do not silently extend a partial mathematical operation with a junk or
   arbitrary value while continuing to present it as the same operation.
-- A total fallback is not a second permanent public API. It may exist only as
-  a private transitional implementation bridge during a migration, with a
-  stated removal condition. The public boundary must prove that its fallback
-  is unreachable or that the result is independent of the chosen value.
+- A total fallback is not a second permanent public API. Delete fallback
+  machinery rather than making it private. A private transitional bridge is
+  permitted only when a staged migration cannot otherwise keep the library
+  compiling, as in the deferred total-inverse roadmap, and then it carries a
+  recorded list of consumers and a removal condition. When a generic interface
+  outside the migration requires a total value, such as a set function defined
+  on every set, keep the residual branch anonymous at its single construction
+  site, prove the result independent of it, and record in `TODO.md` the change
+  to that interface that would remove it. The public boundary must prove that
+  any remaining fallback is unreachable or that the result is independent of
+  the chosen value.
+- When the exact domain depends on the input and has no closed form, state it
+  as the existence and uniqueness of the specified object, as a proposition or
+  class such as `HasUniqueCondExp m μ f` or `HasUniqueCondCDF ρ`, together
+  with any condition that keeps the specification independent of a library
+  convention, such as the null-measurability of the sets of `m` in
+  `HasUniqueCondExp`, without which the restricted measures follow the
+  outer-measure convention of `Measure.restrict`. Supply the convenient
+  sufficient conditions, such as integrability with the σ-finiteness of a
+  trimmed measure, as constructors, instances, and default tactics; they are
+  theorem hypotheses, not the domain. State the specifying relation
+  separately, such as `IsCondExp m μ f g` for a version `g` of the conditional
+  expectation of `f`, so that definitions and theorems that only need a
+  version, such as martingales, use the relation and do not inherit the
+  operation's domain.
 - When the defining specification determines an object only up to an
   equivalence, such as almost-everywhere equality, the canonical object is the
   equivalence class, not a chosen representative. Expose the class, for

@@ -56,15 +56,18 @@ Before promoting an unchecked candidate to an implementation task:
 6. prototype real consumers and record the candidate as accepted, reframed, rejected, or still
    unknown before scheduling a migration.
 
-For an accepted strict-partiality migration, preserve a proved bridge on the valid domain and remove
-the fallback from the public surface rather than merely renaming it.  A total extension may remain
-only as a private transitional implementation helper when the public boundary proves that its
-fallback is unreachable or that the result is independent of it.  Record its consumers and removal
-condition, and remove it before declaring the migration complete.  A private construction used only
-as the witness of a Prop-valued existence statement, to which no public definition unfolds, is not
-such a helper and needs no removal condition.  Audit statements that exploit the branch, add
-negative tests for the actual boundary, and run the affected downstream checks at the final source
-state.
+For an accepted strict-partiality migration, preserve a proved bridge on the valid domain and delete
+the fallback rather than merely renaming it or making it private.  A total extension may remain only
+as a private transitional helper when a staged migration cannot otherwise keep the library
+compiling, and only when the public boundary proves that its fallback is unreachable or that the
+result is independent of it.  Record its consumers and removal condition, and remove it before
+declaring the migration complete.  When a generic interface outside the migration requires a total
+value, such as a set function defined on every set, keep the residual branch anonymous at its single
+construction site, prove the result independent of it, and record here the change to that interface
+that would remove it.  A private construction used only as the witness of a Prop-valued existence
+statement, to which no public definition unfolds, is not such a helper and needs no removal
+condition.  Audit statements that exploit the branch, add negative tests for the actual boundary,
+and run the affected downstream checks at the final source state.
 
 This transitional-only rule is the canonical policy in `FORK_DESIGN.md`.  A literature-supported
 total object is reviewed on its own mathematics; it is not a permanent extension of the partial
