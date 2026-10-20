@@ -2948,19 +2948,6 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `G n` vanish outside a set `t ∈ m` on which `μ` is σ-finite, a countable union of the sets of
   `exists_mem_sigmaFinite_trim_restrict`, and are bounded on `t` by a version of the conditional
   expectation of `bF` for `μ.restrict t`, by conditional Jensen for the norm and monotonicity.
-  `Submartingale.sum_smul_sub`, `sum_smul_sub'`, `sum_mul_sub`, and `sum_mul_sub'` in
-  `Mathlib/Probability/Martingale/Basic.lean` and `Submartingale.stoppedProcess` in
-  `Mathlib/Probability/Martingale/OptionalStopping.lean` take `[SigmaFiniteFiltration μ 𝒢]`, which
-  they do not need: unlike the one-step hypotheses of `submartingale_nat`, a submartingale gives
-  versions given every `𝒢 i`.  For `i ≤ k`, let `u` be a version of `E[f (k + 1) | 𝒢 k]` at least
-  `f k` and `d = u - f k`; versions `a` and `b` of `E[f (k + 1) | 𝒢 i]` and `E[f k | 𝒢 i]` make
-  `a - b` a version of `E[d | 𝒢 i]` (`IsCondExp.of_trans`), which vanishes outside a set `t ∈ 𝒢 i`
-  on which `μ` is σ-finite (`exists_mem_sigmaFinite_trim_restrict`); so `ξ k • d`, between `0` and
-  `R • d`, has integral `0` over the sets of `𝒢 i` in `tᶜ`, and the indicator of `t` times a version
-  of `E[ξ k • d | 𝒢 i]` for `μ.restrict t` is a nonnegative version of
-  `E[ξ k • (f (k + 1) - f k) | 𝒢 i]`, by the pull-out and tower properties.  Summing over `k` gives
-  versions of the transform at least its value at `i`, and the stopped process is `f 0` plus the
-  transform by `ξ k = {ω | k < τ ω}.indicator 1`.
 
 - [x] **Require measurable random variables for conditional distributions.**
   `ProbabilityTheory.condDistrib` now requires joint a.e. measurability of `fun a ↦ (X a, Y a)`,

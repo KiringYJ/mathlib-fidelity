@@ -1,6 +1,7 @@
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 import Mathlib.Probability.Martingale.Basic
+import Mathlib.Probability.Martingale.OptionalStopping
 
 /-!
 # Strict conditional expectation
@@ -158,3 +159,13 @@ example (hF : Martingale F ℱ μ) {i j : ι} (hij : i ≤ j) {s : Set α} (hs :
 example (hF : Submartingale F ℱ μ) {i j : ι} (hij : i ≤ j) (hg : IsCondExp (ℱ i) μ (F j) g) :
     F i ≤ᵐ[μ] g :=
   hF.ae_le_isCondExp hij hg
+
+/-- The martingale transforms and the stopped processes of submartingales need no σ-finiteness. -/
+example {𝒢 : Filtration ℕ m0} {f ξ : ℕ → α → ℝ} (hf : Submartingale f 𝒢 μ)
+    (hξ : StronglyAdapted 𝒢 ξ) (hbdd : ∀ n x, ξ n x ≤ 1) (hnonneg : ∀ n x, 0 ≤ ξ n x) :
+    Submartingale (fun n ↦ ∑ k ∈ Finset.range n, ξ k * (f (k + 1) - f k)) 𝒢 μ :=
+  hf.sum_mul_sub hξ hbdd hnonneg
+
+example {𝒢 : Filtration ℕ m0} {f : ℕ → α → ℝ} {τ : α → WithTop ℕ} (hf : Submartingale f 𝒢 μ)
+    (hτ : IsStoppingTime 𝒢 τ) : Submartingale (stoppedProcess f τ) 𝒢 μ :=
+  hf.stoppedProcess hτ

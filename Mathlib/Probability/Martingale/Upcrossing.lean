@@ -383,13 +383,13 @@ theorem StronglyAdapted.upcrossingStrat (hf : StronglyAdapted ℱ f) :
   simp_rw [← not_le]
   exact (ℱ n).inter_mem hl ((ℱ n).compl_mem hu)
 
-theorem Submartingale.sum_upcrossingStrat_mul [IsFiniteMeasure μ] (hf : Submartingale f ℱ μ)
+theorem Submartingale.sum_upcrossingStrat_mul (hf : Submartingale f ℱ μ)
     (a b : ℝ) (N : ℕ) : Submartingale (fun n : ℕ =>
       ∑ k ∈ Finset.range n, upcrossingStrat a b f N k * (f (k + 1) - f k)) ℱ μ :=
   hf.sum_mul_sub hf.stronglyAdapted.upcrossingStrat (fun _ _ => upcrossingStrat_le_one) fun _ _ =>
     upcrossingStrat_nonneg
 
-theorem Submartingale.sum_sub_upcrossingStrat_mul [IsFiniteMeasure μ] (hf : Submartingale f ℱ μ)
+theorem Submartingale.sum_sub_upcrossingStrat_mul (hf : Submartingale f ℱ μ)
     (a b : ℝ) (N : ℕ) : Submartingale (fun n : ℕ =>
       ∑ k ∈ Finset.range n, (1 - upcrossingStrat a b f N k) * (f (k + 1) - f k)) ℱ μ := by
   refine hf.sum_mul_sub
@@ -399,7 +399,7 @@ theorem Submartingale.sum_sub_upcrossingStrat_mul [IsFiniteMeasure μ] (hf : Sub
   · intro n ω
     simp [upcrossingStrat_le_one]
 
-theorem Submartingale.sum_mul_upcrossingStrat_le [IsFiniteMeasure μ] (hf : Submartingale f ℱ μ) :
+theorem Submartingale.sum_mul_upcrossingStrat_le (hf : Submartingale f ℱ μ) :
     ∫ ω, (∑ k ∈ Finset.range n, upcrossingStrat a b f N k * (f (k + 1) - f k)) ω ∂μ ≤
       ∫ ω, f n ω ∂μ - ∫ ω, f 0 ω ∂μ := by
   have h₁ : (0 : ℝ) ≤
@@ -616,7 +616,7 @@ theorem mul_upcrossingsBefore_le (hf : a ≤ f N ω) (hab : a < b) :
   refine le_trans ?_ h₂
   rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul, mul_comm]
 
-theorem integral_mul_upcrossingsBefore_le_integral [IsFiniteMeasure μ] (hf : Submartingale f ℱ μ)
+theorem integral_mul_upcrossingsBefore_le_integral (hf : Submartingale f ℱ μ)
     (hfN : ∀ ω, a ≤ f N ω) (hfzero : 0 ≤ f 0) (hab : a < b) :
     (b - a) * ∫ ω, (upcrossingsBefore a b f N ω : ℝ) ∂μ ≤ ∫ ω, f N ω ∂μ :=
   calc

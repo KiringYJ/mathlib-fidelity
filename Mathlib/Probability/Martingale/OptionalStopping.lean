@@ -91,22 +91,53 @@ theorem submartingale_iff_expected_stoppedValue_mono [SigmaFiniteFiltration μ �
   ⟨fun hf _ _ hτ hπ hle ⟨_, hN⟩ => hf.expected_stoppedValue_mono hτ hπ hle hN,
     submartingale_of_expected_stoppedValue_mono hadp hint⟩
 
-/-- The stopped process of a submartingale with respect to a stopping time is a submartingale. -/
-protected theorem Submartingale.stoppedProcess [SigmaFiniteFiltration μ 𝒢]
-    (h : Submartingale f 𝒢 μ) (hτ : IsStoppingTime 𝒢 τ) :
-    Submartingale (stoppedProcess f τ) 𝒢 μ := by
-  rw [submartingale_iff_expected_stoppedValue_mono]
-  · intro σ π hσ hπ hσ_le_π hπ_bdd
-    simp_rw [stoppedValue_stoppedProcess]
-    obtain ⟨n, hπ_le_n⟩ := hπ_bdd
-    have hπ_top ω : π ω ≠ ⊤ := ne_top_of_le_ne_top (by simp) (hπ_le_n ω)
-    have hσ_top ω : σ ω ≠ ⊤ := ne_top_of_le_ne_top (hπ_top ω) (hσ_le_π ω)
-    simp only [ne_eq, hσ_top, not_false_eq_true, ↓reduceIte, hπ_top, ge_iff_le]
-    exact h.expected_stoppedValue_mono (hσ.min hτ) (hπ.min hτ)
-      (fun ω => min_le_min (hσ_le_π ω) le_rfl) fun ω => (min_le_left _ _).trans (hπ_le_n ω)
-  · exact StronglyAdapted.stoppedProcess_of_discrete h.stronglyAdapted hτ
-  · exact fun i =>
-      h.integrable_stoppedValue ((isStoppingTime_const _ i).min hτ) fun ω => min_le_left _ _
+/-- The stopped process at time `n`, minus the initial value, is the sum of the increments of `u`
+before the stopping time. -/
+theorem stoppedProcess_sub_eq_sum {β : Type*} [AddCommGroup β] (u : ℕ → Ω → β) (n : ℕ) :
+    stoppedProcess u τ n - u 0 =
+      ∑ i ∈ Finset.range n, {ω | (i : WithTop ℕ) < τ ω}.indicator (u (i + 1) - u i) := by
+  induction n with
+  | zero => ext ω; simp [stoppedProcess]
+  | succ n ih =>
+    rw [Finset.sum_range_succ, ← ih]
+    ext ω
+    simp only [Pi.add_apply, Pi.sub_apply, Set.indicator_apply, Set.mem_ofPred_eq]
+    split_ifs with h
+    · have h' : WithTop.some (n + 1) ≤ τ ω := by
+        induction hx : τ ω using WithTop.recTopCoe with
+        | top => exact le_top
+        | coe t =>
+          rw [hx] at h
+          simp only [Nat.cast_withTop, WithTop.coe_lt_coe] at h
+          exact WithTop.coe_le_coe.2 h
+      rw [stoppedProcess_eq_of_le (i := n + 1) h', stoppedProcess_eq_of_le (i := n) h.le]
+      abel
+    · have h' : τ ω ≤ n := not_lt.1 h
+      rw [stoppedProcess_eq_of_ge (i := n + 1) (h'.trans (WithTop.coe_le_coe.2 n.le_succ)),
+        stoppedProcess_eq_of_ge (i := n) h', add_zero]
+
+/-- The stopped process of a submartingale with respect to a stopping time is a submartingale. It is
+the initial value plus the transform of the submartingale by the indicators of the events before
+the stopping time (`MeasureTheory.stoppedProcess_sub_eq_sum`), so no σ-finiteness is needed. -/
+protected theorem Submartingale.stoppedProcess {E : Type*} [NormedAddCommGroup E]
+    [NormedSpace ℝ E] [CompleteSpace E] [PartialOrder E] [IsOrderedAddMonoid E]
+    [IsOrderedModule ℝ E] [ClosedIciTopology E] {f : ℕ → Ω → E} (h : Submartingale f 𝒢 μ)
+    (hτ : IsStoppingTime 𝒢 τ) : Submartingale (stoppedProcess f τ) 𝒢 μ := by
+  have hξ : StronglyAdapted 𝒢 fun k ↦ {ω | (k : WithTop ℕ) < τ ω}.indicator fun _ ↦ (1 : ℝ) :=
+    fun k ↦ stronglyMeasurable_const.indicator (hτ.measurableSet_gt k)
+  have h_sum := h.sum_smul_sub hξ (R := 1)
+    (fun _ _ ↦ Set.indicator_le_self' (fun _ _ ↦ zero_le_one) _)
+    fun _ _ ↦ Set.indicator_nonneg (fun _ _ ↦ zero_le_one) _
+  have h_eq : stoppedProcess f τ = (fun _ ↦ f 0) + fun n ↦ ∑ k ∈ Finset.range n,
+      {ω | (k : WithTop ℕ) < τ ω}.indicator (fun _ ↦ (1 : ℝ)) • (f (k + 1) - f k) := by
+    funext n
+    change stoppedProcess f τ n = f 0 + ∑ k ∈ Finset.range n, _
+    rw [← sub_eq_iff_eq_add', stoppedProcess_sub_eq_sum]
+    refine Finset.sum_congr rfl fun k _ ↦ ?_
+    ext ω
+    by_cases hω : (k : WithTop ℕ) < τ ω <;> simp [hω]
+  rw [h_eq]
+  exact (martingale_const_fun 𝒢 μ (h.stronglyAdapted 0) (h.integrable 0)).submartingale.add h_sum
 
 section Maximal
 

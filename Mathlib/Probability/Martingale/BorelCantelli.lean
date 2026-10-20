@@ -71,7 +71,7 @@ noncomputable def stoppedAbove [LinearOrder ι] [OrderBot ι] [InfSet ι] [Preor
 
 variable {ℱ : Filtration ℕ m0} {f : ℕ → Ω → ℝ}
 
-protected lemma Submartingale.stoppedAbove [IsFiniteMeasure μ] (hf : Submartingale f ℱ μ) (r : ℝ) :
+protected lemma Submartingale.stoppedAbove (hf : Submartingale f ℱ μ) (r : ℝ) :
     Submartingale (stoppedAbove f r) ℱ μ :=
   hf.stoppedProcess (hf.stronglyAdapted.isStoppingTime_leastGE r)
 
@@ -98,7 +98,7 @@ theorem stoppedAbove_le (hr : 0 ≤ r) (hf0 : f 0 = 0)
     simp only [WithTop.untopD_coe, WithTop.coe_lt_coe, gt_iff_lt] at *
     lia
 
-theorem Submartingale.eLpNorm_stoppedAbove_le [IsFiniteMeasure μ] (hf : Submartingale f ℱ μ)
+theorem Submartingale.eLpNorm_stoppedAbove_le (hf : Submartingale f ℱ μ)
     (hr : 0 ≤ r) (hf0 : f 0 = 0) (hbdd : ∀ᵐ ω ∂μ, ∀ i, |f (i + 1) ω - f i ω| ≤ R) (i : ℕ) :
     eLpNorm (stoppedAbove f r i) 1 μ ≤ 2 * μ Set.univ * ENNReal.ofReal (r + R) := by
   refine eLpNorm_one_le_of_le' ((hf.stoppedAbove r).integrable _) ?_

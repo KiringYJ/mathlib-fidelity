@@ -71,6 +71,9 @@ exact domain.
 * `MeasureTheory.IsCondExp.add`, `MeasureTheory.IsCondExp.smul`, `MeasureTheory.IsCondExp.tsum`,
   `MeasureTheory.IsCondExp.of_tendsto` and `MeasureTheory.IsCondExp.mono`: linearity, countable
   additivity, dominated convergence and monotonicity.
+* `MeasureTheory.IsCondExp.exists_isCondExp_of_nonneg_of_le`: an integrable function between `0`
+  and an integrable function with a conditional expectation has a nonnegative one, without
+  σ-finiteness.
 
 ## Implementation notes
 
@@ -396,6 +399,23 @@ theorem exists_stronglyMeasurable_isCondExp (hm : m ≤ m₀) [SigmaFinite (μ.t
   ⟨h.aestronglyMeasurable.mk _, h.aestronglyMeasurable.stronglyMeasurable_mk,
     h.congr_right h.aestronglyMeasurable.ae_eq_mk⟩
 
+/-- An integrable function whose integrals over the sets of `m` in the complement of a set `t ∈ m`
+vanish has a conditional expectation given `m` when the restriction of `μ` to `t` is σ-finite on
+`m`: the indicator of `t` of a conditional expectation for the measure restricted to `t`. -/
+theorem exists_isCondExp_of_setIntegral_compl_eq_zero (hm : m ≤ m₀) {t : Set α} (ht : t ∈ m)
+    [SigmaFinite ((μ.restrict t).trim hm)] (hf : Integrable f μ)
+    (hft : ∀ s ∈ m, s ⊆ tᶜ → ∫ x in s, f x ∂μ = 0) : ∃ g, IsCondExp m μ f g := by
+  obtain ⟨g, hgm, hg⟩ := exists_stronglyMeasurable_isCondExp (μ := μ.restrict t) hm hf.restrict
+  have hg_int : Integrable (t.indicator g) μ :=
+    (integrable_indicator_iff (hm ht)).2 (hg.integrable hf.restrict)
+  refine ⟨t.indicator g, (hgm.indicator ht).aestronglyMeasurable,
+    fun _ _ _ ↦ hg_int.integrableOn, fun s hs _ ↦ ?_⟩
+  have h_split := integral_inter_add_sdiff (hm ht) (hf.integrableOn : IntegrableOn f s μ)
+  rw [hft (s \ t) (by rw [Set.sdiff_eq]; exact m.inter_mem hs (m.compl_mem ht)) fun _ hx ↦ hx.2,
+    add_zero] at h_split
+  rw [setIntegral_indicator (hm ht), ← Measure.restrict_restrict (hm hs),
+    hg.setIntegral_eq s hs hf.restrict.integrableOn, Measure.restrict_restrict (hm hs), h_split]
+
 /-- A function that is almost everywhere `m`-strongly measurable, integrable on the sets of `m` of
 finite measure, and has the integral of an integrable `f` over each of them is a conditional
 expectation of `f`, when `μ` is σ-finite on the sub-σ-algebra `m`. -/
@@ -558,6 +578,25 @@ theorem nonpos (hm : m ≤ m₀) (h : IsCondExp m μ f g) (hf : Integrable f μ)
     (hf_nonpos : f ≤ᵐ[μ] 0) : g ≤ᵐ[μ] 0 :=
   h.mono hm zero hf (integrable_zero _ _ _) hf_nonpos
 
+/-- An integrable function between `0` and an integrable function with a conditional expectation
+given a sub-σ-algebra has a nonnegative conditional expectation. No σ-finiteness is needed: the
+conditional expectation of the larger function vanishes outside a set of `m` on which `μ` is
+σ-finite, so the integrals of both functions over the sets of `m` outside it vanish. -/
+theorem exists_isCondExp_of_nonneg_of_le (hm : m ≤ m₀) (h' : IsCondExp m μ f' g')
+    (hf : Integrable f μ) (hf' : Integrable f' μ) (hf0 : 0 ≤ᵐ[μ] f) (hff' : f ≤ᵐ[μ] f') :
+    ∃ g, IsCondExp m μ f g ∧ 0 ≤ᵐ[μ] g := by
+  obtain ⟨t, ht, hσ, hgt⟩ :=
+    exists_mem_sigmaFinite_trim_restrict hm (h'.integrable hf') h'.aestronglyMeasurable
+  obtain ⟨g, hg⟩ := exists_isCondExp_of_setIntegral_compl_eq_zero hm ht hf fun s hs hst ↦ by
+    have hf's : ∫ x in s, f' x ∂μ = 0 := by
+      rw [← h'.setIntegral_eq s hs hf'.integrableOn]
+      exact integral_eq_zero_of_ae (ae_restrict_of_ae_restrict_of_subset hst hgt)
+    refine le_antisymm ?_ (integral_nonneg_of_ae (ae_restrict_of_ae hf0))
+    calc ∫ x in s, f x ∂μ ≤ ∫ x in s, f' x ∂μ :=
+          integral_mono_ae hf.integrableOn hf'.integrableOn (ae_restrict_of_ae hff')
+      _ = 0 := hf's
+  exact ⟨g, hg, hg.nonneg hm hf hf0⟩
+
 end IsCondExp
 
 /-! ### The domain -/
@@ -576,6 +615,15 @@ measure is σ-finite. -/
 theorem of_integrable (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)] (hf : Integrable f μ) :
     HasUniqueCondExp m μ f :=
   of_isCondExp hm hf (isCondExp_condExpL1CLM hm hf)
+
+/-- An integrable function between `0` and an integrable function with a unique conditional
+expectation given a sub-σ-algebra has a unique conditional expectation. -/
+theorem of_nonneg_of_le [PartialOrder E] [ClosedIciTopology E] [IsOrderedAddMonoid E]
+    [IsOrderedModule ℝ E] (hm : m ≤ m₀) (h' : HasUniqueCondExp m μ f') (hf : Integrable f μ)
+    (hf' : Integrable f' μ) (hf0 : 0 ≤ᵐ[μ] f) (hff' : f ≤ᵐ[μ] f') : HasUniqueCondExp m μ f :=
+  let ⟨_, hg'⟩ := h'.exists_isCondExp
+  let ⟨_, hg, _⟩ := hg'.exists_isCondExp_of_nonneg_of_le hm hf hf' hf0 hff'
+  of_isCondExp hm hf hg
 
 theorem congr (h : HasUniqueCondExp m μ f) (hf : f =ᵐ[μ] f') : HasUniqueCondExp m μ f' where
   le_eventuallySigmaAlgebra := h.le_eventuallySigmaAlgebra

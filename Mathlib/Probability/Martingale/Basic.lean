@@ -662,7 +662,14 @@ section SumSMul
 
 variable [PartialOrder E] [IsOrderedModule ℝ E] [ClosedIciTopology E] [IsOrderedAddMonoid E]
 
-theorem Submartingale.sum_smul_sub [SigmaFiniteFiltration μ 𝒢] {R : ℝ}
+/-- Given a discrete submartingale `f` and a strongly adapted process `ξ` with values in `[0, R]`,
+the process defined by `fun n => ∑ k ∈ Finset.range n, ξ k • (f (k + 1) - f k)` is also a
+submartingale. No σ-finiteness is needed: for `i ≤ k`, the increment `ξ k • (f (k + 1) - f k)`
+has a conditional expectation given `𝒢 k` between `0` and `R` times a nonnegative conditional
+expectation of `f (k + 1) - f k`, which has a conditional expectation given `𝒢 i` since `f` is a
+submartingale, so the increment has a nonnegative conditional expectation given `𝒢 i`
+(`MeasureTheory.IsCondExp.exists_isCondExp_of_nonneg_of_le`). -/
+theorem Submartingale.sum_smul_sub {R : ℝ}
     {f : ℕ → Ω → E} {ξ : ℕ → Ω → ℝ}
     (hf : Submartingale f 𝒢 μ) (hξ : StronglyAdapted 𝒢 ξ) (hbdd : ∀ n ω, ξ n ω ≤ R)
     (hnonneg : ∀ n ω, 0 ≤ ξ n ω) :
@@ -670,10 +677,11 @@ theorem Submartingale.sum_smul_sub [SigmaFiniteFiltration μ 𝒢] {R : ℝ}
   have hξbdd : ∀ i, ∃ C, ∀ ω, ‖ξ i ω‖ ≤ C := fun i =>
     ⟨R, fun ω => (abs_of_nonneg (hnonneg i ω)).trans_le (hbdd i ω)⟩
   choose C hC using hξbdd
+  have hint_inc (k : ℕ) : Integrable (ξ k • (f (k + 1) - f k)) μ :=
+    ((hf.integrable _).sub (hf.integrable _)).bdd_smul (C k)
+      hξ.stronglyMeasurable.aestronglyMeasurable (ae_of_all _ (hC k))
   have hint : ∀ m, Integrable (∑ k ∈ Finset.range m, ξ k • (f (k + 1) - f k)) μ := fun m =>
-      integrable_finsetSum' _ fun i _ => Integrable.bdd_smul
-        ((hf.integrable _).sub (hf.integrable _)) (C i)
-        hξ.stronglyMeasurable.aestronglyMeasurable (ae_of_all _ (hC i))
+    integrable_finsetSum' _ fun k _ => hint_inc k
   have hadp : StronglyAdapted 𝒢 fun n => ∑ k ∈ Finset.range n, ξ k • (f (k + 1) - f k) := by
     intro m
     refine Finset.stronglyMeasurable_sum _ fun i hi => ?_
@@ -681,30 +689,57 @@ theorem Submartingale.sum_smul_sub [SigmaFiniteFiltration μ 𝒢] {R : ℝ}
     exact (hξ.stronglyMeasurable_le hi.le).smul
       ((hf.stronglyAdapted.stronglyMeasurable_le (Nat.succ_le_of_lt hi)).sub
         (hf.stronglyAdapted.stronglyMeasurable_le hi.le))
-  refine submartingale_of_isCondExp_sub_nonneg_nat hadp hint fun i => ?_
-  simp only [← Finset.sum_Ico_eq_sub _ (Nat.le_succ _), Nat.succ_eq_add_one,
-    Nat.Ico_succ_singleton, Finset.sum_singleton]
-  obtain ⟨g, hg, hfg⟩ := hf.exists_ae_le_isCondExp i.le_succ
-  have hd : IsCondExp (𝒢 i) μ (f (i + 1) - f i) (g - f i) :=
-    hg.sub (isCondExp_self (hf.stronglyAdapted i).aestronglyMeasurable) (hf.integrable _)
-      (hf.integrable _)
-  refine ⟨ξ i • (g - f i), hd.smul_left (𝒢.le i) (hξ i).aestronglyMeasurable
-    (((hf.integrable (i + 1)).sub (hf.integrable i)).bdd_smul (C i)
-      hξ.stronglyMeasurable.aestronglyMeasurable (ae_of_all _ (hC i)))
-    ((hf.integrable _).sub (hf.integrable _)), ?_⟩
-  filter_upwards [hfg] with ω hω
-  exact _root_.smul_nonneg (hnonneg i ω) (sub_nonneg.2 hω)
+  -- given each earlier `𝒢 i`, an increment has a nonnegative conditional expectation
+  have hstep (i k : ℕ) : ∃ w, i ≤ k →
+      IsCondExp (𝒢 i) μ (ξ k • (f (k + 1) - f k)) w ∧ 0 ≤ᵐ[μ] w := by
+    by_cases hik : i ≤ k
+    swap
+    · exact ⟨0, fun h ↦ absurd h hik⟩
+    obtain ⟨u, hu, hfu⟩ := hf.exists_ae_le_isCondExp k.le_succ
+    obtain ⟨a, ha, -⟩ := hf.exists_ae_le_isCondExp (hik.trans k.le_succ)
+    obtain ⟨b, hb, -⟩ := hf.exists_ae_le_isCondExp hik
+    have hu_int : Integrable u μ := hu.integrable (hf.integrable _)
+    have hd_int : Integrable (u - f k) μ := hu_int.sub (hf.integrable _)
+    -- `ξ k • (u - f k)` is a conditional expectation of the increment given `𝒢 k`
+    have hξd : IsCondExp (𝒢 k) μ (ξ k • (f (k + 1) - f k)) (ξ k • (u - f k)) :=
+      (hu.sub (isCondExp_self (hf.stronglyAdapted k).aestronglyMeasurable) (hf.integrable _)
+        (hf.integrable _)).smul_left (𝒢.le k) (hξ k).aestronglyMeasurable (hint_inc k)
+        ((hf.integrable _).sub (hf.integrable _))
+    -- `R • (a - b)` is a conditional expectation of `R • (u - f k)` given `𝒢 i`
+    have hab : IsCondExp (𝒢 i) μ (R • (u - f k)) (R • (a - b)) :=
+      ((IsCondExp.of_trans (𝒢.mono hik) (hf.integrable _) hu ha).sub hb hu_int
+        (hf.integrable _)).smul R
+    have h0 : 0 ≤ᵐ[μ] ξ k • (u - f k) := by
+      filter_upwards [hfu] with ω hω
+      exact _root_.smul_nonneg (hnonneg k ω) (sub_nonneg.2 hω)
+    have hle : ξ k • (u - f k) ≤ᵐ[μ] R • (u - f k) := by
+      filter_upwards [hfu] with ω hω
+      exact smul_le_smul_of_nonneg_right (hbdd k ω) (sub_nonneg.2 hω)
+    obtain ⟨w, hw, hw0⟩ := hab.exists_isCondExp_of_nonneg_of_le (𝒢.le i)
+      (hd_int.bdd_smul (C k) hξ.stronglyMeasurable.aestronglyMeasurable (ae_of_all _ (hC k)))
+      (hd_int.smul R) h0 hle
+    exact ⟨w, fun _ ↦ ⟨hξd.trans hw (𝒢.mono hik), hw0⟩⟩
+  choose w hw using hstep
+  refine submartingale_of_isCondExp_sub_nonneg hadp hint fun i j hij => ?_
+  refine ⟨∑ k ∈ Finset.Ico i j, w i k, ?_, ?_⟩
+  · rw [← Finset.sum_Ico_eq_sub _ hij]
+    exact IsCondExp.finsetSum (fun k hk ↦ (hw i k (Finset.mem_Ico.1 hk).1).1)
+      fun k _ ↦ hint_inc k
+  · have h_all : ∀ᵐ ω ∂μ, ∀ k ∈ Finset.Ico i j, 0 ≤ w i k ω :=
+      (Filter.eventually_all_finset _).2 fun k hk ↦ (hw i k (Finset.mem_Ico.1 hk).1).2
+    filter_upwards [h_all] with ω hω
+    simpa [Finset.sum_apply] using Finset.sum_nonneg hω
 
 /-- Given a discrete submartingale `f` and a predictable process `ξ` (i.e. `ξ (n + 1)` is strongly
 adapted) the process defined by `fun n => ∑ k ∈ Finset.range n, ξ (k + 1) * (f (k + 1) - f k)` is
 also a submartingale. -/
-theorem Submartingale.sum_smul_sub' [SigmaFiniteFiltration μ 𝒢] {R : ℝ} {ξ : ℕ → Ω → ℝ}
+theorem Submartingale.sum_smul_sub' {R : ℝ} {ξ : ℕ → Ω → ℝ}
     {f : ℕ → Ω → E} (hf : Submartingale f 𝒢 μ) (hξ : StronglyAdapted 𝒢 fun n => ξ (n + 1))
     (hbdd : ∀ n ω, ξ n ω ≤ R) (hnonneg : ∀ n ω, 0 ≤ ξ n ω) :
     Submartingale (fun n => ∑ k ∈ Finset.range n, ξ (k + 1) • (f (k + 1) - f k)) 𝒢 μ :=
   hf.sum_smul_sub hξ (fun _ => hbdd _) fun _ => hnonneg _
 
-theorem Submartingale.sum_mul_sub [SigmaFiniteFiltration μ 𝒢] {R : ℝ} {ξ f : ℕ → Ω → ℝ}
+theorem Submartingale.sum_mul_sub {R : ℝ} {ξ f : ℕ → Ω → ℝ}
     (hf : Submartingale f 𝒢 μ) (hξ : StronglyAdapted 𝒢 ξ) (hbdd : ∀ n ω, ξ n ω ≤ R)
     (hnonneg : ∀ n ω, 0 ≤ ξ n ω) :
     Submartingale (fun n => ∑ k ∈ Finset.range n, ξ k * (f (k + 1) - f k)) 𝒢 μ :=
@@ -713,7 +748,7 @@ theorem Submartingale.sum_mul_sub [SigmaFiniteFiltration μ 𝒢] {R : ℝ} {ξ 
 /-- Given a discrete submartingale `f` and a predictable process `ξ` (i.e. `ξ (n + 1)` is strongly
 adapted) the process defined by `fun n => ∑ k ∈ Finset.range n, ξ (k + 1) * (f (k + 1) - f k)` is
 also a submartingale. -/
-theorem Submartingale.sum_mul_sub' [SigmaFiniteFiltration μ 𝒢] {R : ℝ} {ξ f : ℕ → Ω → ℝ}
+theorem Submartingale.sum_mul_sub' {R : ℝ} {ξ f : ℕ → Ω → ℝ}
     (hf : Submartingale f 𝒢 μ) (hξ : StronglyAdapted 𝒢 fun n => ξ (n + 1))
     (hbdd : ∀ n ω, ξ n ω ≤ R) (hnonneg : ∀ n ω, 0 ≤ ξ n ω) :
     Submartingale (fun n => ∑ k ∈ Finset.range n, ξ (k + 1) * (f (k + 1) - f k)) 𝒢 μ :=
