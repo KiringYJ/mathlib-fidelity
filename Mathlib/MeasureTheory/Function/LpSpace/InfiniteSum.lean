@@ -5,6 +5,7 @@ Authors: Sébastien Gouëzel
 -/
 module
 
+public import Mathlib.MeasureTheory.Function.L1Space.Integrable
 public import Mathlib.MeasureTheory.Function.LpSpace.Basic
 
 import Mathlib.MeasureTheory.Function.StronglyMeasurable.Lp
@@ -142,5 +143,17 @@ theorem coeFn_tsum {ι : Type*} [Countable ι] {p : ℝ≥0∞} [hp : Fact (1 �
   filter_upwards [Lp.hasSum_coeFn_tsum hf] with x hx using hx.tsum_eq.symm
 
 end Lp
+
+/-- A countable sum of almost everywhere strongly measurable functions whose `L¹` norms are
+summable is integrable. -/
+theorem integrable_tsum {ι : Type*} [Countable ι] [CompleteSpace E] {f : ι → X → E}
+    (hf : ∀ i, AEStronglyMeasurable (f i) μ) (hf' : ∑' i, ∫⁻ x, ‖f i x‖ₑ ∂μ ≠ ∞) :
+    Integrable (fun x ↦ ∑' i, f i x) μ := by
+  replace hf (i : ι) : Integrable (f i) μ := ⟨hf i, (ENNReal.le_tsum i).trans_lt hf'.lt_top⟩
+  have h : ∑' i, ‖(hf i).toL1 (f i)‖ₑ ≠ ∞ := by simpa only [Integrable.enorm_toL1] using hf'
+  refine (L1.integrable_coeFn (∑' i, (hf i).toL1 (f i))).congr ?_
+  filter_upwards [Lp.coeFn_tsum h, ae_all_iff.2 fun i ↦ (hf i).coeFn_toL1] with x hx h'x
+  rw [hx]
+  exact tsum_congr h'x
 
 end MeasureTheory
