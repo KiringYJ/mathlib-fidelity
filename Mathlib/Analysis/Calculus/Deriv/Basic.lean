@@ -16,7 +16,9 @@ public import Mathlib.Analysis.Normed.Operator.Bilinear
 
 This file defines the derivative of a function `f : 𝕜 → F` where `𝕜` is a
 normed field and `F` is a normed space over this field. The derivative of
-such a function `f` at a point `x` is given by an element `f' : F`.
+such a function `f` at a point `x` is given by an element `f' : F`. The same predicates and
+projections accept a domain `D` with coordinates `coord : D → 𝕜`; a subtype uses its inclusion.
+The default coordinates are the identity, and the derivative still takes values in `F`.
 
 The theory is developed analogously to the [Fréchet
 derivatives](./fderiv.html). We first introduce predicates defined in terms
@@ -97,7 +99,7 @@ universe u v w
 noncomputable section
 
 open scoped Topology ENNReal NNReal
-open Filter Asymptotics Set
+open Filter Asymptotics Set Topology
 
 open ContinuousLinearMap (smulRight toSpanSingleton_inj toSpanSingleton)
 
@@ -111,30 +113,34 @@ variable [ContinuousSMul 𝕜 F]
 
 /-- `f` has the derivative `f'` along the filter `L`.
 
-That is, `f x' = f x + (x' - x) • f' + o(x' - x)` where `(x', x)` converges along the filter `L`.
+That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)` where `(x', x)` converges along the filter `L`.
 -/
-def HasDerivAtFilter (f : 𝕜 → F) (f' : F) (L : Filter (𝕜 × 𝕜)) :=
-  HasFDerivAtFilter f (toSpanSingleton 𝕜 f') L
+def HasDerivAtFilter {D : Type*} (f : D → F) (f' : F) (L : Filter (D × D))
+    (coord : D → 𝕜 := by exact id) :=
+  HasFDerivAtFilter f (toSpanSingleton 𝕜 f') L coord
 
 /-- `f` has the derivative `f'` at the point `x` within the subset `s`.
 
-That is, `f x' = f x + (x' - x) • f' + o(x' - x)` where `x'` converges to `x` inside `s`.
+That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)` where `x'` converges to `x` inside `s`.
 -/
-def HasDerivWithinAt (f : 𝕜 → F) (f' : F) (s : Set 𝕜) (x : 𝕜) :=
-  HasDerivAtFilter f f' (𝓝[s] x ×ˢ pure x)
+def HasDerivWithinAt {D : Type*} [TopologicalSpace D] (f : D → F) (f' : F)
+    (s : Set D) (x : D) (coord : D → 𝕜 := by exact id) :=
+  HasDerivAtFilter f f' (𝓝[s] x ×ˢ pure x) coord
 
 /-- `f` has the derivative `f'` at the point `x`.
 
-That is, `f x' = f x + (x' - x) • f' + o(x' - x)` where `x'` converges to `x`.
+That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)` where `x'` converges to `x`.
 -/
-def HasDerivAt (f : 𝕜 → F) (f' : F) (x : 𝕜) :=
-  HasDerivAtFilter f f' (𝓝 x ×ˢ pure x)
+def HasDerivAt {D : Type*} [TopologicalSpace D] (f : D → F) (f' : F)
+    (x : D) (coord : D → 𝕜 := by exact id) :=
+  HasDerivAtFilter f f' (𝓝 x ×ˢ pure x) coord
 
 /-- `f` has the derivative `f'` at the point `x` in the sense of strict differentiability.
 
-That is, `f y - f z = (y - z) • f' + o(y - z)` as `y, z → x`. -/
-def HasStrictDerivAt (f : 𝕜 → F) (f' : F) (x : 𝕜) :=
-  HasDerivAtFilter f f' (𝓝 (x, x))
+That is, `f y - f z = (coord y - coord z) • f' + o(coord y - coord z)` as `y, z → x`. -/
+def HasStrictDerivAt {D : Type*} [TopologicalSpace D] (f : D → F) (f' : F)
+    (x : D) (coord : D → 𝕜 := by exact id) :=
+  HasDerivAtFilter f f' (𝓝 (x, x)) coord
 
 end
 /-- Derivative of `f` at the point `x` within the set `s`, if it exists.  Zero otherwise.
@@ -142,16 +148,18 @@ end
 If the derivative exists (i.e., `∃ f', HasDerivWithinAt f f' s x`), then
 `f x' = f x + (x' - x) • derivWithin f s x + o(x' - x)` where `x'` converges to `x` inside `s`.
 -/
-def derivWithin (f : 𝕜 → F) (s : Set 𝕜) (x : 𝕜) :=
-  fderivWithin 𝕜 f s x 1
+def derivWithin {D : Type*} [TopologicalSpace D] (f : D → F)
+    (s : Set D) (x : D) (coord : D → 𝕜 := by exact id) :=
+  fderivWithin 𝕜 f s x coord 1
 
 /-- Derivative of `f` at the point `x`, if it exists.  Zero otherwise.
 
 If the derivative exists (i.e., `∃ f', HasDerivAt f f' x`), then
 `f x' = f x + (x' - x) • deriv f x + o(x' - x)` where `x'` converges to `x`.
 -/
-def deriv (f : 𝕜 → F) (x : 𝕜) :=
-  fderiv 𝕜 f x 1
+def deriv {D : Type*} [TopologicalSpace D] (f : D → F)
+    (x : D) (coord : D → 𝕜 := by exact id) :=
+  fderiv 𝕜 f x coord 1
 
 variable {f : 𝕜 → F}
 variable {f' : F}
@@ -162,54 +170,63 @@ variable {L : Filter (𝕜 × 𝕜)}
 section
 variable [ContinuousSMul 𝕜 F]
 /-- Expressing `HasFDerivAtFilter f f' x L` in terms of `HasDerivAtFilter` -/
-theorem hasFDerivAtFilter_iff_hasDerivAtFilter {f' : 𝕜 →L[𝕜] F} :
-    HasFDerivAtFilter f f' L ↔ HasDerivAtFilter f (f' 1) L := by simp [HasDerivAtFilter]
+theorem hasFDerivAtFilter_iff_hasDerivAtFilter {D : Type*} {f : D → F}
+    {coord : D → 𝕜} {L : Filter (D × D)} {f' : 𝕜 →L[𝕜] F} :
+    HasFDerivAtFilter f f' L coord ↔ HasDerivAtFilter f (f' 1) L coord := by simp [HasDerivAtFilter]
 
 alias ⟨HasFDerivAtFilter.hasDerivAtFilter, _⟩ := hasFDerivAtFilter_iff_hasDerivAtFilter
 
-theorem hasDerivAtFilter_iff_hasFDerivAtFilter :
-    HasDerivAtFilter f f' L ↔ HasFDerivAtFilter f (toSpanSingleton 𝕜 f') L :=
+theorem hasDerivAtFilter_iff_hasFDerivAtFilter {D : Type*} {f : D → F}
+    {coord : D → 𝕜} {L : Filter (D × D)} :
+    HasDerivAtFilter f f' L coord ↔ HasFDerivAtFilter f (toSpanSingleton 𝕜 f') L coord :=
   .rfl
 
 alias ⟨HasDerivAtFilter.hasFDerivAtFilter, _⟩ := hasDerivAtFilter_iff_hasFDerivAtFilter
 
 /-- Expressing `HasFDerivWithinAt f f' s x` in terms of `HasDerivWithinAt` -/
-theorem hasFDerivWithinAt_iff_hasDerivWithinAt {f' : 𝕜 →L[𝕜] F} :
-    HasFDerivWithinAt f f' s x ↔ HasDerivWithinAt f (f' 1) s x :=
+theorem hasFDerivWithinAt_iff_hasDerivWithinAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → 𝕜} {x : D} {s : Set D} {f' : 𝕜 →L[𝕜] F} :
+    HasFDerivWithinAt f f' s x coord ↔ HasDerivWithinAt f (f' 1) s x coord :=
   hasFDerivAtFilter_iff_hasDerivAtFilter
 
 alias ⟨HasFDerivWithinAt.hasDerivWithinAt, _⟩ := hasFDerivWithinAt_iff_hasDerivWithinAt
 
 /-- Expressing `HasDerivWithinAt f f' s x` in terms of `HasFDerivWithinAt` -/
-theorem hasDerivWithinAt_iff_hasFDerivWithinAt {f' : F} :
-    HasDerivWithinAt f f' s x ↔ HasFDerivWithinAt f (toSpanSingleton 𝕜 f') s x :=
+theorem hasDerivWithinAt_iff_hasFDerivWithinAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → 𝕜} {x : D} {s : Set D} {f' : F} :
+    HasDerivWithinAt f f' s x coord ↔ HasFDerivWithinAt f (toSpanSingleton 𝕜 f') s x coord :=
   Iff.rfl
 
 alias ⟨HasDerivWithinAt.hasFDerivWithinAt, _⟩ :=
   hasDerivWithinAt_iff_hasFDerivWithinAt
 
 /-- Expressing `HasFDerivAt f f' x` in terms of `HasDerivAt` -/
-theorem hasFDerivAt_iff_hasDerivAt {f' : 𝕜 →L[𝕜] F} : HasFDerivAt f f' x ↔ HasDerivAt f (f' 1) x :=
+theorem hasFDerivAt_iff_hasDerivAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → 𝕜} {x : D} {f' : 𝕜 →L[𝕜] F} :
+    HasFDerivAt f f' x coord ↔ HasDerivAt f (f' 1) x coord :=
   hasFDerivAtFilter_iff_hasDerivAtFilter
 
 alias ⟨HasFDerivAt.hasDerivAt, _⟩ := hasFDerivAt_iff_hasDerivAt
 
 /-- Expressing `HasDerivAt f f' x` in terms of `HasFDerivAt` -/
-theorem hasDerivAt_iff_hasFDerivAt {f' : F} :
-    HasDerivAt f f' x ↔ HasFDerivAt f (toSpanSingleton 𝕜 f') x :=
+theorem hasDerivAt_iff_hasFDerivAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → 𝕜} {x : D} {f' : F} :
+    HasDerivAt f f' x coord ↔ HasFDerivAt f (toSpanSingleton 𝕜 f') x coord :=
   Iff.rfl
 
 alias ⟨HasDerivAt.hasFDerivAt, _⟩ := hasDerivAt_iff_hasFDerivAt
 
-theorem hasStrictFDerivAt_iff_hasStrictDerivAt {f' : 𝕜 →L[𝕜] F} :
-    HasStrictFDerivAt f f' x ↔ HasStrictDerivAt f (f' 1) x :=
+theorem hasStrictFDerivAt_iff_hasStrictDerivAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → 𝕜} {x : D} {f' : 𝕜 →L[𝕜] F} :
+    HasStrictFDerivAt f f' x coord ↔ HasStrictDerivAt f (f' 1) x coord :=
   hasFDerivAtFilter_iff_hasDerivAtFilter
 
 protected alias ⟨HasStrictFDerivAt.hasStrictDerivAt, _⟩ :=
   hasStrictFDerivAt_iff_hasStrictDerivAt
 
-theorem hasStrictDerivAt_iff_hasStrictFDerivAt :
-    HasStrictDerivAt f f' x ↔ HasStrictFDerivAt f (toSpanSingleton 𝕜 f') x :=
+theorem hasStrictDerivAt_iff_hasStrictFDerivAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → 𝕜} {x : D} :
+    HasStrictDerivAt f f' x coord ↔ HasStrictFDerivAt f (toSpanSingleton 𝕜 f') x coord :=
   Iff.rfl
 
 alias ⟨HasStrictDerivAt.hasStrictFDerivAt, _⟩ := hasStrictDerivAt_iff_hasStrictFDerivAt
@@ -380,11 +397,11 @@ theorem HasDerivAt.hasDerivAtFilter (h : HasDerivAt f f' x) (hL : L ≤ 𝓝 x �
 theorem HasDerivAt.hasDerivWithinAt (h : HasDerivAt f f' x) : HasDerivWithinAt f f' s x :=
   HasFDerivAt.hasFDerivWithinAt h
 
-theorem HasDerivWithinAt.differentiableWithinAt (h : HasDerivWithinAt f f' s x) :
-    DifferentiableWithinAt 𝕜 f s x :=
+theorem HasDerivWithinAt.differentiableWithinAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → 𝕜} {x : D} {s : Set D} (h : HasDerivWithinAt f f' s x coord) :
+    DifferentiableWithinAt 𝕜 f s x coord :=
   HasFDerivWithinAt.differentiableWithinAt h
 
-theorem HasDerivAt.differentiableAt (h : HasDerivAt f f' x) : DifferentiableAt 𝕜 f x :=
+theorem HasDerivAt.differentiableAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → 𝕜} {x : D} (h : HasDerivAt f f' x coord) : DifferentiableAt 𝕜 f x coord :=
   HasFDerivAt.differentiableAt h
 
 @[simp]
@@ -430,11 +447,36 @@ theorem DifferentiableOn.hasDerivAt (h : DifferentiableOn 𝕜 f s) (hs : s ∈ 
     HasDerivAt f (deriv f x) x :=
   (h.hasFDerivAt hs).hasDerivAt
 
-theorem HasDerivAt.deriv (h : HasDerivAt f f' x) : deriv f x = f' :=
-  h.differentiableAt.hasDerivAt.unique h
+/-- The scalar derivative projection is canonical on a local coordinate neighbourhood. -/
+theorem HasDerivAt.deriv_of_mem_nhds {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → 𝕜} {x : D} (h : HasDerivAt f f' x coord) (hcoord : IsEmbedding coord)
+    (hdom : range coord ∈ 𝓝 (coord x)) : deriv f x coord = f' := by
+  unfold deriv
+  rw [h.hasFDerivAt.fderiv_of_mem_nhds hcoord hdom]
+  simp
+
+theorem HasDerivAt.deriv {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → 𝕜} {x : D} (h : HasDerivAt f f' x coord)
+    (hcoord : IsOpenEmbedding coord := by exact IsOpenEmbedding.id) :
+    deriv f x coord = f' := by
+  unfold deriv
+  rw [h.hasFDerivAt.fderiv hcoord]
+  simp
+
 
 theorem deriv_eq {f' : 𝕜 → F} (h : ∀ x, HasDerivAt f (f' x) x) : deriv f = f' :=
   funext fun x => (h x).deriv
+
+/-- Compute a within-set derivative in coordinates when its ambient tangent directions give
+uniqueness. -/
+theorem HasDerivWithinAt.derivWithin_of_isEmbedding {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → 𝕜} {x : D} {s : Set D}
+    (h : HasDerivWithinAt f f' s x coord) (hcoord : IsEmbedding coord)
+    (hxs : UniqueDiffWithinAt 𝕜 (coord '' s) (coord x)) : derivWithin f s x coord = f' := by
+  unfold derivWithin
+  rw [h.hasFDerivWithinAt.fderivWithin_of_unique (fun g hg ↦
+    hg.unique_of_isEmbedding h.hasFDerivWithinAt hcoord hxs)]
+  simp
 
 theorem HasDerivWithinAt.derivWithin (h : HasDerivWithinAt f f' s x)
     (hxs : UniqueDiffWithinAt 𝕜 s x) : derivWithin f s x = f' :=

@@ -171,9 +171,49 @@ theorem UniqueDiffOn.eq (H : UniqueDiffOn 𝕜 s) (hx : x ∈ s) (h : HasFDerivW
     (h₁ : HasFDerivWithinAt f f₁' s x) : f' = f₁' :=
   (H x hx).eq h h₁
 
-theorem HasFDerivAt.unique (h₀ : HasFDerivAt f f' x) (h₁ : HasFDerivAt f f₁' x) : f' = f₁' := by
-  rw [HasFDerivAt, ← nhdsWithin_univ] at *
-  exact uniqueDiffWithinAt_univ.eq h₀ h₁
+/-- A coordinate embedding transports the usual sufficient condition for uniqueness of a
+within-set derivative. No uniqueness is asserted without the tangent-domain hypothesis. -/
+theorem HasFDerivWithinAt.unique_of_isEmbedding {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} {s : Set D}
+    (h₀ : HasFDerivWithinAt f f' s x coord) (h₁ : HasFDerivWithinAt f f₁' s x coord)
+    (hcoord : IsEmbedding coord) (hxs : UniqueDiffWithinAt 𝕜 (coord '' s) (coord x)) :
+    f' = f₁' := by
+  let d : E →L[𝕜] F := f' - f₁'
+  have hdiff : (fun y : D ↦ d (coord y - coord x)) =o[𝕜; 𝓝[s] x]
+      (fun y ↦ coord y - coord x) := by
+    simpa only [d, ContinuousLinearMap.sub_apply, sub_sub_sub_cancel_left] using
+      h₁.isLittleOTVS.sub h₀.isLittleOTVS
+  have hambient : (fun y : E ↦ d (y - coord x)) =o[𝕜; 𝓝[coord '' s] (coord x)]
+      (fun y ↦ y - coord x) := by
+    rw [← hcoord.map_nhdsWithin_eq s x, isLittleOTVS_map]
+    exact hdiff
+  have hzero : HasFDerivWithinAt (fun y : E ↦ d (y - coord x)) (0 : E →L[𝕜] F)
+      (coord '' s) (coord x) := by
+    apply HasFDerivWithinAt.of_isLittleOTVS
+    simpa only [sub_self, map_zero, ContinuousLinearMap.zero_apply, sub_zero] using hambient
+  have hself : HasFDerivWithinAt (fun y : E ↦ d (y - coord x)) d (coord '' s) (coord x) := by
+    apply HasFDerivWithinAt.of_isLittleOTVS
+    simpa only [sub_self, map_zero, sub_zero, Pi.zero_apply] using
+      (IsLittleOTVS.zero (𝕜 := 𝕜) (fun y : E ↦ y - coord x) (𝓝[coord '' s] (coord x)))
+  exact sub_eq_zero.mp (hxs.eq hself hzero)
+
+/-- Local openness of the coordinate image suffices for uniqueness at the point. -/
+theorem HasFDerivAt.unique_of_mem_nhds {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → E} {x : D} (h₀ : HasFDerivAt f f' x coord)
+    (h₁ : HasFDerivAt f f₁' x coord) (hcoord : IsEmbedding coord)
+    (hdom : range coord ∈ 𝓝 (coord x)) : f' = f₁' := by
+  rw [HasFDerivAt, ← nhdsWithin_univ] at h₀ h₁
+  apply HasFDerivWithinAt.unique_of_isEmbedding h₀ h₁ hcoord
+  simpa only [image_univ] using uniqueDiffWithinAt_of_mem_nhds hdom
+
+/-- Derivatives are unique in an open coordinate domain. The identity coordinates recover
+ordinary uniqueness; this statement does not assert uniqueness on an arbitrary subset. -/
+theorem HasFDerivAt.unique {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → E} {x : D} (h₀ : HasFDerivAt f f' x coord)
+    (h₁ : HasFDerivAt f f₁' x coord)
+    (hcoord : IsOpenEmbedding coord := by exact IsOpenEmbedding.id) : f' = f₁' :=
+  h₀.unique_of_mem_nhds h₁ hcoord.isEmbedding
+    (hcoord.isOpen_range.mem_nhds (mem_range_self x))
 
 end DerivativeUniqueness
 
@@ -191,44 +231,51 @@ section FDerivProperties
 
 /-! ### Basic properties of the derivative -/
 
-nonrec theorem HasFDerivAtFilter.mono (h : HasFDerivAtFilter f f' L₂) (hst : L₁ ≤ L₂) :
-    HasFDerivAtFilter f f' L₁ :=
+nonrec theorem HasFDerivAtFilter.mono {D : Type*} {f : D → F} {coord : D → E}
+    {L₁ L₂ : Filter (D × D)} (h : HasFDerivAtFilter f f' L₂ coord) (hst : L₁ ≤ L₂) :
+    HasFDerivAtFilter f f' L₁ coord :=
   .of_isLittleOTVS <| h.isLittleOTVS.mono hst
 
-theorem HasFDerivWithinAt.mono_of_mem_nhdsWithin
-    (h : HasFDerivWithinAt f f' t x) (hst : t ∈ 𝓝[s] x) :
-    HasFDerivWithinAt f f' s x :=
+theorem HasFDerivWithinAt.mono_of_mem_nhdsWithin {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+    {x : D} {s t : Set D}
+    (h : HasFDerivWithinAt f f' t x coord) (hst : t ∈ 𝓝[s] x) :
+    HasFDerivWithinAt f f' s x coord :=
   h.mono <| prod_mono_left _ (nhdsWithin_le_iff.mpr hst)
 
-nonrec theorem HasFDerivWithinAt.mono (h : HasFDerivWithinAt f f' t x) (hst : s ⊆ t) :
-    HasFDerivWithinAt f f' s x :=
+nonrec theorem HasFDerivWithinAt.mono {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+    {x : D} {s t : Set D} (h : HasFDerivWithinAt f f' t x coord) (hst : s ⊆ t) :
+    HasFDerivWithinAt f f' s x coord :=
   h.mono <| by gcongr
 
-theorem HasFDerivAt.hasFDerivAtFilter (h : HasFDerivAt f f' x) (hL : L ≤ 𝓝 x ×ˢ pure x) :
-    HasFDerivAtFilter f f' L :=
+theorem HasFDerivAt.hasFDerivAtFilter {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+    {x : D} {L : Filter (D × D)} (h : HasFDerivAt f f' x coord) (hL : L ≤ 𝓝 x ×ˢ pure x) :
+    HasFDerivAtFilter f f' L coord :=
   h.mono hL
 
 @[fun_prop]
-theorem HasFDerivAt.hasFDerivWithinAt (h : HasFDerivAt f f' x) : HasFDerivWithinAt f f' s x :=
+theorem HasFDerivAt.hasFDerivWithinAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+    {x : D} {s : Set D} (h : HasFDerivAt f f' x coord) : HasFDerivWithinAt f f' s x coord :=
   h.hasFDerivAtFilter <| prod_mono_left _ nhdsWithin_le_nhds
 
 @[fun_prop]
-theorem HasFDerivWithinAt.differentiableWithinAt (h : HasFDerivWithinAt f f' s x) :
-    DifferentiableWithinAt 𝕜 f s x :=
+theorem HasFDerivWithinAt.differentiableWithinAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+    {x : D} {s : Set D} (h : HasFDerivWithinAt f f' s x coord) :
+    DifferentiableWithinAt 𝕜 f s x coord :=
   ⟨f', h⟩
 
 @[fun_prop]
-theorem HasFDerivAt.differentiableAt (h : HasFDerivAt f f' x) : DifferentiableAt 𝕜 f x :=
+theorem HasFDerivAt.differentiableAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+    {x : D} (h : HasFDerivAt f f' x coord) : DifferentiableAt 𝕜 f x coord :=
   ⟨f', h⟩
 
 @[simp]
-theorem hasFDerivWithinAt_univ : HasFDerivWithinAt f f' univ x ↔ HasFDerivAt f f' x := by
+theorem hasFDerivWithinAt_univ {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D} : HasFDerivWithinAt f f' univ x coord ↔ HasFDerivAt f f' x coord := by
   simp only [HasFDerivWithinAt, nhdsWithin_univ, HasFDerivAt]
 
 alias ⟨HasFDerivWithinAt.hasFDerivAt_of_univ, _⟩ := hasFDerivWithinAt_univ
 
-theorem differentiableWithinAt_univ :
-    DifferentiableWithinAt 𝕜 f univ x ↔ DifferentiableAt 𝕜 f x := by
+theorem differentiableWithinAt_univ {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D} :
+    DifferentiableWithinAt 𝕜 f univ x coord ↔ DifferentiableAt 𝕜 f x coord := by
   simp only [DifferentiableWithinAt, hasFDerivWithinAt_univ, DifferentiableAt]
 
 theorem fderiv_zero_of_not_differentiableAt (h : ¬DifferentiableAt 𝕜 f x) : fderiv 𝕜 f x = 0 := by
@@ -320,8 +367,9 @@ theorem DifferentiableWithinAt.of_subsingleton [T1Space E] (h : s.Subsingleton) 
   .of_finite h.finite
 
 @[fun_prop]
-protected theorem HasStrictFDerivAt.hasFDerivAt (hf : HasStrictFDerivAt f f' x) :
-    HasFDerivAt f f' x :=
+protected theorem HasStrictFDerivAt.hasFDerivAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+    {x : D} (hf : HasStrictFDerivAt f f' x coord) :
+    HasFDerivAt f f' x coord :=
   .of_isLittleOTVS <| by
     simpa only using! hf.isLittleOTVS.comp_tendsto (tendsto_id.prodMk_nhds tendsto_const_nhds)
 
@@ -388,14 +436,14 @@ theorem fderivWithin_zero_of_not_uniqueDiffWithinAt {f : 𝕜 → F} {x : 𝕜} 
     (h : ¬UniqueDiffWithinAt 𝕜 s x) : fderivWithin 𝕜 f s x = 0 :=
   fderivWithin_zero_of_not_accPt <| mt AccPt.uniqueDiffWithinAt h
 
-theorem DifferentiableWithinAt.hasFDerivWithinAt (h : DifferentiableWithinAt 𝕜 f s x) :
-    HasFDerivWithinAt f (fderivWithin 𝕜 f s x) s x := by
+theorem DifferentiableWithinAt.hasFDerivWithinAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D} {s : Set D} (h : DifferentiableWithinAt 𝕜 f s x coord) :
+    HasFDerivWithinAt f (fderivWithin 𝕜 f s x coord) s x coord := by
   simp only [fderivWithin, dite_eq_left h]
   split_ifs with h₀
   exacts [h₀, Classical.choose_spec h]
 
-theorem DifferentiableAt.hasFDerivAt (h : DifferentiableAt 𝕜 f x) :
-    HasFDerivAt f (fderiv 𝕜 f x) x := by
+theorem DifferentiableAt.hasFDerivAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D} (h : DifferentiableAt 𝕜 f x coord) :
+    HasFDerivAt f (fderiv 𝕜 f x coord) x coord := by
   rw [fderiv, ← hasFDerivWithinAt_univ]
   rw [← differentiableWithinAt_univ] at h
   exact h.hasFDerivWithinAt
@@ -412,16 +460,35 @@ theorem DifferentiableOn.eventually_differentiableAt (h : DifferentiableOn 𝕜 
     ∀ᶠ y in 𝓝 x, DifferentiableAt 𝕜 f y :=
   (eventually_eventually_nhds.2 hs).mono fun _ => h.differentiableAt
 
+/-- A valid local coordinate neighbourhood makes the existing derivative projection canonical. -/
+theorem HasFDerivAt.fderiv_of_mem_nhds
+    [ContinuousAdd E] [ContinuousSMul 𝕜 E] [ContinuousAdd F] [ContinuousSMul 𝕜 F] [T2Space F]
+    {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D}
+    (h : HasFDerivAt f f' x coord) (hcoord : IsEmbedding coord)
+    (hdom : range coord ∈ 𝓝 (coord x)) : fderiv 𝕜 f x coord = f' :=
+  (h.unique_of_mem_nhds h.differentiableAt.hasFDerivAt hcoord hdom).symm
+
 protected theorem HasFDerivAt.fderiv
     [ContinuousAdd E] [ContinuousSMul 𝕜 E] [ContinuousAdd F] [ContinuousSMul 𝕜 F] [T2Space F]
-    (h : HasFDerivAt f f' x) :
-    fderiv 𝕜 f x = f' := by
-  rw [h.unique h.differentiableAt.hasFDerivAt]
+    {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D}
+    (h : HasFDerivAt f f' x coord)
+    (hcoord : IsOpenEmbedding coord := by exact IsOpenEmbedding.id) :
+    fderiv 𝕜 f x coord = f' :=
+  (h.unique h.differentiableAt.hasFDerivAt hcoord).symm
 
 theorem fderiv_eq
     [ContinuousAdd E] [ContinuousSMul 𝕜 E] [ContinuousAdd F] [ContinuousSMul 𝕜 F] [T2Space F]
     {f' : E → E →L[𝕜] F} (h : ∀ x, HasFDerivAt f (f' x) x) : fderiv 𝕜 f = f' :=
   funext fun x => (h x).fderiv
+
+/-- The existing derivative projection equals any derivative proved to be unique on its domain.
+This lemma uses no value from the nondifferentiable branch of the projection. -/
+theorem HasFDerivWithinAt.fderivWithin_of_unique {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} {s : Set D}
+    (h : HasFDerivWithinAt f f' s x coord)
+    (huniq : ∀ g : E →L[𝕜] F, HasFDerivWithinAt f g s x coord → g = f') :
+    fderivWithin 𝕜 f s x coord = f' :=
+  huniq _ h.differentiableWithinAt.hasFDerivWithinAt
 
 protected theorem HasFDerivWithinAt.fderivWithin
     [ContinuousAdd E] [ContinuousSMul 𝕜 E] [ContinuousAdd F] [ContinuousSMul 𝕜 F] [T2Space F]
@@ -602,8 +669,9 @@ between two topological vector spaces.
 section Asymptotics
 variable [ContinuousAdd F] [ContinuousSMul 𝕜 F]
 
-theorem HasFDerivAtFilter.isBigOTVS_sub (hf : HasFDerivAtFilter f f' L) :
-    (fun p => f p.1 - f p.2) =O[𝕜; L] fun p => p.1 - p.2 := by
+theorem HasFDerivAtFilter.isBigOTVS_sub {D : Type*} {f : D → F} {coord : D → E}
+    {L : Filter (D × D)} (hf : HasFDerivAtFilter f f' L coord) :
+    (fun p => f p.1 - f p.2) =O[𝕜; L] fun p => coord p.1 - coord p.2 := by
   simpa using hf.isLittleOTVS.isBigOTVS.fun_add f'.isBigOTVS_comp
 
 theorem HasStrictFDerivAt.isBigOTVS_sub (hf : HasStrictFDerivAt f f' x) :
@@ -632,45 +700,62 @@ section Continuous
 /-! ### Deducing continuity from differentiability -/
 variable [ContinuousAdd E] [ContinuousSMul 𝕜 E] [ContinuousAdd F] [ContinuousSMul 𝕜 F]
 
-theorem HasFDerivAtFilter.tendsto_nhds {L : Filter E} (hL : L ≤ 𝓝 x)
-    (h : HasFDerivAtFilter f f' (L ×ˢ pure x)) :
+theorem HasFDerivAtFilter.tendsto_nhds {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} {L : Filter D} (hL : L ≤ 𝓝 x)
+    (h : HasFDerivAtFilter f f' (L ×ˢ pure x) coord)
+    (hcoord : Tendsto coord L (𝓝 (coord x)) := by exact tendsto_id'.mpr hL) :
     Tendsto f L (𝓝 (f x)) := by
-  have : (f · - f x) =o[𝕜; L] (1 : E → 𝕜) := by
+  have : (f · - f x) =o[𝕜; L] (1 : D → 𝕜) := by
     refine h.isBigOTVS_sub |>.comp_tendsto prod_pure.ge |>.trans_isLittleOTVS ?_
     rw [isLittleOTVS_one]
-    simpa [sub_eq_add_neg] using! (tendsto_id'.mpr hL).add_const (-x)
+    simpa [sub_eq_add_neg] using! hcoord.add_const (-coord x)
   rw [isLittleOTVS_one] at this
   simpa using! this.add_const (f x)
 
-theorem HasFDerivWithinAt.continuousWithinAt (h : HasFDerivWithinAt f f' s x) :
+theorem HasFDerivWithinAt.continuousWithinAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} {s : Set D}
+    (h : HasFDerivWithinAt f f' s x coord)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id) :
     ContinuousWithinAt f s x :=
-  HasFDerivAtFilter.tendsto_nhds inf_le_left h
+  HasFDerivAtFilter.tendsto_nhds inf_le_left h hcoord
 
-theorem HasFDerivAt.continuousAt (h : HasFDerivAt f f' x) : ContinuousAt f x :=
-  HasFDerivAtFilter.tendsto_nhds le_rfl h
+theorem HasFDerivAt.continuousAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} (h : HasFDerivAt f f' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) : ContinuousAt f x :=
+  HasFDerivAtFilter.tendsto_nhds le_rfl h hcoord
 
 @[fun_prop]
-theorem DifferentiableWithinAt.continuousWithinAt (h : DifferentiableWithinAt 𝕜 f s x) :
+theorem DifferentiableWithinAt.continuousWithinAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} {s : Set D}
+    (h : DifferentiableWithinAt 𝕜 f s x coord)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id) :
     ContinuousWithinAt f s x :=
   let ⟨_, hf'⟩ := h
-  hf'.continuousWithinAt
+  hf'.continuousWithinAt hcoord
 
 @[fun_prop]
-theorem DifferentiableAt.continuousAt (h : DifferentiableAt 𝕜 f x) : ContinuousAt f x :=
+theorem DifferentiableAt.continuousAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} (h : DifferentiableAt 𝕜 f x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) : ContinuousAt f x :=
   let ⟨_, hf'⟩ := h
-  hf'.continuousAt
+  hf'.continuousAt hcoord
 
 @[fun_prop]
-theorem DifferentiableOn.continuousOn (h : DifferentiableOn 𝕜 f s) : ContinuousOn f s := fun x hx =>
-  (h x hx).continuousWithinAt
+theorem DifferentiableOn.continuousOn {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {s : Set D} (h : DifferentiableOn 𝕜 f s coord)
+    (hcoord : ContinuousOn coord s := by exact continuousOn_id) : ContinuousOn f s :=
+  fun x hx => (h x hx).continuousWithinAt (hcoord x hx)
 
 @[fun_prop]
-theorem Differentiable.continuous (h : Differentiable 𝕜 f) : Continuous f :=
-  continuous_iff_continuousAt.2 fun x => (h x).continuousAt
+theorem Differentiable.continuous {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} (h : Differentiable 𝕜 f coord)
+    (hcoord : Continuous coord := by exact continuous_id) : Continuous f :=
+  continuous_iff_continuousAt.2 fun x => (h x).continuousAt hcoord.continuousAt
 
-protected theorem HasStrictFDerivAt.continuousAt (hf : HasStrictFDerivAt f f' x) :
-    ContinuousAt f x :=
-  hf.hasFDerivAt.continuousAt
+protected theorem HasStrictFDerivAt.continuousAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} (hf : HasStrictFDerivAt f f' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) : ContinuousAt f x :=
+  hf.hasFDerivAt.continuousAt hcoord
 
 end Continuous
 

@@ -19,14 +19,14 @@ This file contains the usual formulas (and existence assertions) for the derivat
 
 * multiplication of a function by a scalar function
 * product of finitely many scalar functions
-* taking the pointwise multiplicative inverse (i.e. `Inv.inv` or `Ring.inverse`) of a function
+* multiplicative inversion on units and inverse compositions on their exact unit domains
 -/
 
 public section
 
 open Asymptotics ContinuousLinearMap
 
-open scoped Ring Topology
+open scoped Topology
 
 section
 
@@ -167,44 +167,50 @@ variable {𝔸 𝔸' : Type*} [NormedRing 𝔸] [NormedCommRing 𝔸'] [NormedAl
   {a b : E → 𝔸} {a' b' : E →L[𝕜] 𝔸} {c d : E → 𝔸'} {c' d' : E →L[𝕜] 𝔸'}
 
 @[to_fun (attr := fun_prop)]
-theorem HasStrictFDerivAt.mul' {x : E} (ha : HasStrictFDerivAt a a' x)
-    (hb : HasStrictFDerivAt b b' x) :
-    HasStrictFDerivAt (a * b) (a x • b' + a' <• b x) x :=
+theorem HasStrictFDerivAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → 𝔸} {coord : D → E} {x : D} (ha : HasStrictFDerivAt a a' x coord)
+    (hb : HasStrictFDerivAt b b' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
+    HasStrictFDerivAt (a * b) (a x • b' + a' <• b x) x coord :=
   ((ContinuousLinearMap.mul 𝕜 𝔸).isBoundedBilinearMap.hasStrictFDerivAt (a x, b x)).comp x
-    (ha.prodMk hb)
+    (ha.prodMk hb) hcoord
 
 @[to_fun (attr := fun_prop)]
-theorem HasStrictFDerivAt.mul (hc : HasStrictFDerivAt c c' x) (hd : HasStrictFDerivAt d d' x) :
-    HasStrictFDerivAt (c * d) (c x • d' + d x • c') x := by
-  convert! hc.mul' hd
+theorem HasStrictFDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸'} {coord : D → E} {x : D} (hc : HasStrictFDerivAt c c' x coord) (hd : HasStrictFDerivAt d d' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
+    HasStrictFDerivAt (c * d) (c x • d' + d x • c') x coord := by
+  convert! hc.mul' hd hcoord
   ext z
   apply mul_comm
 
 @[to_fun (attr := fun_prop)]
-theorem HasFDerivWithinAt.mul' (ha : HasFDerivWithinAt a a' s x) (hb : HasFDerivWithinAt b b' s x) :
-    HasFDerivWithinAt (a * b) (a x • b' + a' <• b x) s x := by
+theorem HasFDerivWithinAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → 𝔸} {coord : D → E} {x : D} {s : Set D} (ha : HasFDerivWithinAt a a' s x coord) (hb : HasFDerivWithinAt b b' s x coord)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id) :
+    HasFDerivWithinAt (a * b) (a x • b' + a' <• b x) s x coord := by
   -- `by exact` to solve unification issues.
   exact ((ContinuousLinearMap.mul 𝕜 𝔸).isBoundedBilinearMap.hasFDerivAt
-    (a x, b x)).comp_hasFDerivWithinAt x (ha.prodMk hb)
+    (a x, b x)).comp_hasFDerivWithinAt x (ha.prodMk hb) hcoord
 
 @[to_fun (attr := fun_prop)]
-theorem HasFDerivWithinAt.mul (hc : HasFDerivWithinAt c c' s x) (hd : HasFDerivWithinAt d d' s x) :
-    HasFDerivWithinAt (c * d) (c x • d' + d x • c') s x := by
-  convert! hc.mul' hd
+theorem HasFDerivWithinAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸'} {coord : D → E} {x : D} {s : Set D} (hc : HasFDerivWithinAt c c' s x coord) (hd : HasFDerivWithinAt d d' s x coord)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id) :
+    HasFDerivWithinAt (c * d) (c x • d' + d x • c') s x coord := by
+  convert! hc.mul' hd hcoord
   ext z
   apply mul_comm
 
 @[to_fun (attr := fun_prop)]
-theorem HasFDerivAt.mul' (ha : HasFDerivAt a a' x) (hb : HasFDerivAt b b' x) :
-    HasFDerivAt (a * b) (a x • b' + a' <• b x) x := by
+theorem HasFDerivAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → 𝔸} {coord : D → E} {x : D} (ha : HasFDerivAt a a' x coord) (hb : HasFDerivAt b b' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
+    HasFDerivAt (a * b) (a x • b' + a' <• b x) x coord := by
   -- `by exact` to solve unification issues.
   exact ((ContinuousLinearMap.mul 𝕜 𝔸).isBoundedBilinearMap.hasFDerivAt
-    (a x, b x)).comp x (ha.prodMk hb)
+    (a x, b x)).comp x (ha.prodMk hb) hcoord
 
 @[to_fun (attr := fun_prop)]
-theorem HasFDerivAt.mul (hc : HasFDerivAt c c' x) (hd : HasFDerivAt d d' x) :
-    HasFDerivAt (c * d) (c x • d' + d x • c') x := by
-  convert! hc.mul' hd
+theorem HasFDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸'} {coord : D → E} {x : D} (hc : HasFDerivAt c c' x coord) (hd : HasFDerivAt d d' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
+    HasFDerivAt (c * d) (c x • d' + d x • c') x coord := by
+  convert! hc.mul' hd hcoord
   ext z
   apply mul_comm
 
@@ -650,135 +656,181 @@ section AlgebraInverse
 
 variable {R : Type*} [NormedRing R] [HasSummableGeomSeries R] [NormedAlgebra 𝕜 R]
 
-open NormedRing ContinuousLinearMap Ring
+open NormedRing ContinuousLinearMap Filter
 
 /-- At an invertible element `x` of a normed algebra `R`, the Fréchet derivative of the inversion
 operation is the linear map `fun t ↦ - x⁻¹ * t * x⁻¹`.
 
-TODO (low prio): prove a version without assumption `[HasSummableGeomSeries R]` but within the set
-of units. -/
+The function is defined on units, with their coercion as coordinates in the ambient algebra.
+The derivative relation therefore requires no value of inversion at a nonunit. -/
 @[fun_prop]
-theorem hasFDerivAt_ringInverse (x : Rˣ) :
-    HasFDerivAt Ring.inverse (-mulLeftRight 𝕜 R ↑x⁻¹ ↑x⁻¹) x := by
-  have : (fun t : R => Ring.inverse (↑x + t) - ↑x⁻¹ + ↑x⁻¹ * t * ↑x⁻¹) =o[𝓝 0] id :=
-    (inverse_add_norm_diff_second_order x).trans_isLittleO (isLittleO_norm_pow_id one_lt_two)
-  simpa [hasFDerivAt_iff_isLittleO_nhds_zero] using! this
+theorem hasFDerivAt_inv' (x : Rˣ) :
+    HasFDerivAt (fun u : Rˣ ↦ (↑u⁻¹ : R)) (-mulLeftRight 𝕜 R ↑x⁻¹ ↑x⁻¹) x
+      (fun u ↦ (u : R)) := by
+  apply HasFDerivAt.of_isLittleO
+  have hsmall : (fun u : Rˣ ↦ (↑x⁻¹ : R) - ↑u⁻¹) =o[𝓝 x]
+      (fun _ ↦ (1 : ℝ)) := by
+    apply (isLittleO_one_iff ℝ).2
+    simpa only [sub_self] using
+      tendsto_const_nhds.sub (Units.continuous_coe_inv.tendsto x)
+  have hlinear :
+      (fun u : Rˣ ↦ ((↑x⁻¹ : R) - ↑u⁻¹) * (↑u - ↑x) * ↑x⁻¹) =o[𝓝 x]
+        (fun u ↦ (u : R) - ↑x) := by
+    simpa only [one_mul, mul_one, isLittleO_norm_right] using
+      (hsmall.mul_isBigO (isBigO_refl (fun u : Rˣ ↦ (u : R) - ↑x) (𝓝 x)).norm_right).mul_isBigO
+        (isBigO_const_const (↑x⁻¹ : R) (one_ne_zero : (1 : ℝ) ≠ 0) (𝓝 x))
+  simpa only [ContinuousLinearMap.neg_apply, mulLeftRight_apply, sub_neg_eq_add,
+    Units.inv_sub_inv_remainder, sub_self, mul_zero, add_zero] using hlinear
 
 @[fun_prop]
-theorem differentiableAt_inverse {x : R} (hx : IsUnit x) :
-    DifferentiableAt 𝕜 (@Ring.inverse R _) x :=
-  let ⟨u, hu⟩ := hx; hu ▸ (hasFDerivAt_ringInverse u).differentiableAt
+theorem differentiableAt_inv (x : Rˣ) :
+    DifferentiableAt 𝕜 (fun u : Rˣ ↦ (↑u⁻¹ : R)) x (fun u ↦ (u : R)) :=
+  (hasFDerivAt_inv' x).differentiableAt
 
 @[fun_prop]
-theorem differentiableWithinAt_inverse {x : R} (hx : IsUnit x) (s : Set R) :
-    DifferentiableWithinAt 𝕜 (@Ring.inverse R _) s x :=
-  (differentiableAt_inverse hx).differentiableWithinAt
+theorem differentiableWithinAt_inv (x : Rˣ) (s : Set Rˣ) :
+    DifferentiableWithinAt 𝕜 (fun u : Rˣ ↦ (↑u⁻¹ : R)) s x (fun u ↦ (u : R)) :=
+  (hasFDerivAt_inv' x).hasFDerivWithinAt.differentiableWithinAt
 
 @[fun_prop]
-theorem differentiableOn_inverse : DifferentiableOn 𝕜 (@Ring.inverse R _) {x | IsUnit x} :=
-  fun _x hx => differentiableWithinAt_inverse hx _
+theorem differentiableOn_inv (s : Set Rˣ) :
+    DifferentiableOn 𝕜 (fun u : Rˣ ↦ (↑u⁻¹ : R)) s (fun u ↦ (u : R)) :=
+  fun x _ ↦ differentiableWithinAt_inv x s
 
-theorem fderiv_inverse (x : Rˣ) : fderiv 𝕜 (@Ring.inverse R _) x = -mulLeftRight 𝕜 R ↑x⁻¹ ↑x⁻¹ :=
-  (hasFDerivAt_ringInverse x).fderiv
+/-- The computed derivative of inversion on its open unit domain. -/
+theorem fderiv_inv' (x : Rˣ) :
+    fderiv 𝕜 (fun u : Rˣ ↦ (↑u⁻¹ : R)) x (fun u ↦ (u : R)) =
+      -mulLeftRight 𝕜 R ↑x⁻¹ ↑x⁻¹ :=
+  (hasFDerivAt_inv' x).fderiv Units.isOpenEmbedding_val
 
-theorem hasStrictFDerivAt_ringInverse (x : Rˣ) :
-    HasStrictFDerivAt Ring.inverse (-mulLeftRight 𝕜 R ↑x⁻¹ ↑x⁻¹) x := by
-  convert! (analyticAt_inverse (𝕜 := 𝕜) x).hasStrictFDerivAt
-  exact (fderiv_inverse x).symm
+/-- The computed inverse derivative within a set whose ambient tangent directions determine it. -/
+theorem fderivWithin_inv' {s : Set Rˣ} (x : Rˣ)
+    (hxs : UniqueDiffWithinAt 𝕜 ((fun u : Rˣ ↦ (u : R)) '' s) (x : R)) :
+    fderivWithin 𝕜 (fun u : Rˣ ↦ (↑u⁻¹ : R)) s x (fun u ↦ (u : R)) =
+      -mulLeftRight 𝕜 R ↑x⁻¹ ↑x⁻¹ := by
+  apply (hasFDerivAt_inv' x).hasFDerivWithinAt.fderivWithin_of_unique
+  intro g hg
+  exact hg.unique_of_isEmbedding (hasFDerivAt_inv' x).hasFDerivWithinAt
+    Units.isOpenEmbedding_val.isEmbedding hxs
+
+/-- Inversion on the open unit locus has a uniquely determined ambient derivative. -/
+theorem hasUniqueFDerivAt_inv' (x : Rˣ) :
+    ∃! f' : R →L[𝕜] R,
+      HasFDerivAt (fun u : Rˣ ↦ (↑u⁻¹ : R)) f' x (fun u ↦ (u : R)) := by
+  refine ⟨-mulLeftRight 𝕜 R ↑x⁻¹ ↑x⁻¹, hasFDerivAt_inv' x, ?_⟩
+  intro f' hf'
+  exact hf'.unique (hasFDerivAt_inv' x) Units.isOpenEmbedding_val
+
+theorem hasStrictFDerivAt_inv' (x : Rˣ) :
+    HasStrictFDerivAt (fun u : Rˣ ↦ (↑u⁻¹ : R)) (-mulLeftRight 𝕜 R ↑x⁻¹ ↑x⁻¹) x
+      (fun u ↦ (u : R)) := by
+  apply HasStrictFDerivAt.of_isLittleO
+  let d : Rˣ × Rˣ → R := fun p ↦ (p.1 : R) - ↑p.2
+  have hu : Tendsto (fun p : Rˣ × Rˣ ↦ (↑p.1⁻¹ : R)) (𝓝 (x, x)) (𝓝 (↑x⁻¹ : R)) :=
+    (Units.continuous_coe_inv.comp continuous_fst).tendsto (x, x)
+  have hv : Tendsto (fun p : Rˣ × Rˣ ↦ (↑p.2⁻¹ : R)) (𝓝 (x, x)) (𝓝 (↑x⁻¹ : R)) :=
+    (Units.continuous_coe_inv.comp continuous_snd).tendsto (x, x)
+  have hdu : (fun p : Rˣ × Rˣ ↦ (↑x⁻¹ : R) - ↑p.1⁻¹) =o[𝓝 (x, x)]
+      (fun _ ↦ (1 : ℝ)) :=
+    (isLittleO_one_iff ℝ).2 (by simpa only [sub_self] using tendsto_const_nhds.sub hu)
+  have hdv : (fun p : Rˣ × Rˣ ↦ (↑x⁻¹ : R) - ↑p.2⁻¹) =o[𝓝 (x, x)]
+      (fun _ ↦ (1 : ℝ)) :=
+    (isLittleO_one_iff ℝ).2 (by simpa only [sub_self] using tendsto_const_nhds.sub hv)
+  have hd := (isBigO_refl d (𝓝 (x, x))).norm_right
+  have hleft := (hdu.mul_isBigO hd).mul_isBigO
+    (isBigO_const_const (↑x⁻¹ : R) (one_ne_zero : (1 : ℝ) ≠ 0) (𝓝 (x, x)))
+  have hright := ((hu.isBigO_one ℝ).mul hd).mul_isLittleO hdv
+  have hrem :
+      (fun p : Rˣ × Rˣ ↦ ((↑x⁻¹ : R) - ↑p.1⁻¹) * d p * ↑x⁻¹ +
+        ↑p.1⁻¹ * d p * (↑x⁻¹ - ↑p.2⁻¹)) =o[𝓝 (x, x)] d := by
+    simpa only [one_mul, mul_one, isLittleO_norm_right] using hleft.add hright
+  simpa only [d, ContinuousLinearMap.neg_apply, mulLeftRight_apply, sub_neg_eq_add,
+    Units.inv_sub_inv_remainder] using hrem
 
 variable {h : E → R} {z : E} {S : Set E}
 
 @[fun_prop]
-theorem DifferentiableWithinAt.inverse (hf : DifferentiableWithinAt 𝕜 h S z) (hz : IsUnit (h z)) :
-    DifferentiableWithinAt 𝕜 (fun x => (h x)⁻¹ʳ) S z :=
-  (differentiableAt_inverse hz).comp_differentiableWithinAt z hf
-
-@[simp, fun_prop]
-theorem DifferentiableAt.inverse (hf : DifferentiableAt 𝕜 h z) (hz : IsUnit (h z)) :
-    DifferentiableAt 𝕜 (fun x => (h x)⁻¹ʳ) z :=
-  (differentiableAt_inverse hz).comp z hf
+theorem HasFDerivWithinAt.inv {h' : E →L[𝕜] R} (hf : HasFDerivWithinAt h h' S z) (hz : IsUnit (h z)) :
+    HasFDerivWithinAt
+      (fun y : {y : E | IsUnit (h y)} ↦ (↑y.property.unit⁻¹ : R))
+      ((-mulLeftRight 𝕜 R ↑hz.unit⁻¹ ↑hz.unit⁻¹).comp h') (Subtype.val ⁻¹' S) ⟨z, hz⟩ (fun y ↦ (y : E)) := by
+  let D := {y : E | IsUnit (h y)}
+  let q : D → Rˣ := fun y ↦ y.property.unit
+  have hrestricted :
+      HasFDerivWithinAt (fun y : D ↦ h y) h'
+        (Subtype.val ⁻¹' S) ⟨z, hz⟩ (fun y ↦ (y : E)) := by
+    exact HasFDerivAtFilter.comp_tendsto hf Subtype.val
+      ((continuous_subtype_val.continuousWithinAt.tendsto_nhdsWithin (fun _ hy ↦ hy)).prodMap
+        (tendsto_pure_pure ..))
+  have hcoordinates :
+      HasFDerivWithinAt ((fun u : Rˣ ↦ (u : R)) ∘ q) h'
+        (Subtype.val ⁻¹' S) ⟨z, hz⟩ (fun y ↦ (y : E)) := by
+    simpa only [q, Function.comp_def, IsUnit.unit_spec] using hrestricted
+  exact ((hasFDerivAt_inv' (q ⟨z, hz⟩)).comp_hasFDerivWithinAt ⟨z, hz⟩ hcoordinates
+    continuous_subtype_val.continuousWithinAt Units.isOpenEmbedding_val.isEmbedding)
 
 @[fun_prop]
-theorem DifferentiableOn.inverse (hf : DifferentiableOn 𝕜 h S) (hz : ∀ x ∈ S, IsUnit (h x)) :
-    DifferentiableOn 𝕜 (fun x => (h x)⁻¹ʳ) S := fun x h => (hf x h).inverse (hz x h)
+theorem HasStrictFDerivAt.inv {h' : E →L[𝕜] R} (hf : HasStrictFDerivAt h h' z) (hz : IsUnit (h z)) :
+    HasStrictFDerivAt (fun y : {y : E | IsUnit (h y)} ↦ (↑y.property.unit⁻¹ : R))
+      ((-mulLeftRight 𝕜 R ↑hz.unit⁻¹ ↑hz.unit⁻¹).comp h') ⟨z, hz⟩ (fun y ↦ (y : E)) := by
+  let D := {y : E | IsUnit (h y)}
+  let q : D → Rˣ := fun y ↦ y.property.unit
+  have hrestricted : HasStrictFDerivAt (fun y : D ↦ h y) h'
+      ⟨z, hz⟩ (fun y ↦ (y : E)) := by
+    exact HasFDerivAtFilter.comp_tendsto hf Subtype.val
+      ((continuous_subtype_val.tendsto ⟨z, hz⟩).prodMap_nhds
+        (continuous_subtype_val.tendsto ⟨z, hz⟩))
+  have hcoordinates : HasStrictFDerivAt ((fun u : Rˣ ↦ (u : R)) ∘ q) h'
+      ⟨z, hz⟩ (fun y ↦ (y : E)) := by
+    simpa only [q, Function.comp_def, IsUnit.unit_spec] using hrestricted
+  exact ((hasStrictFDerivAt_inv' (q ⟨z, hz⟩)).comp ⟨z, hz⟩ hcoordinates
+    continuous_subtype_val.continuousAt Units.isOpenEmbedding_val.isEmbedding)
+
+@[fun_prop]
+theorem HasFDerivAt.inv {h' : E →L[𝕜] R} (hf : HasFDerivAt h h' z) (hz : IsUnit (h z)) :
+    HasFDerivAt (fun y : {y : E | IsUnit (h y)} ↦ (↑y.property.unit⁻¹ : R))
+      ((-mulLeftRight 𝕜 R ↑hz.unit⁻¹ ↑hz.unit⁻¹).comp h') ⟨z, hz⟩ (fun y ↦ (y : E)) := by
+  let D := {y : E | IsUnit (h y)}
+  let q : D → Rˣ := fun y ↦ y.property.unit
+  have hrestricted : HasFDerivAt (fun y : D ↦ h y) h'
+      ⟨z, hz⟩ (fun y ↦ (y : E)) := by
+    exact HasFDerivAtFilter.comp_tendsto hf Subtype.val
+      ((continuous_subtype_val.tendsto ⟨z, hz⟩).prodMap (tendsto_pure_pure ..))
+  have hcoordinates : HasFDerivAt ((fun u : Rˣ ↦ (u : R)) ∘ q) h'
+      ⟨z, hz⟩ (fun y ↦ (y : E)) := by
+    simpa only [q, Function.comp_def, IsUnit.unit_spec] using hrestricted
+  exact ((hasFDerivAt_inv' (q ⟨z, hz⟩)).comp ⟨z, hz⟩ hcoordinates
+    continuous_subtype_val.continuousAt Units.isOpenEmbedding_val.isEmbedding)
+
+@[fun_prop]
+theorem DifferentiableWithinAt.inv (hf : DifferentiableWithinAt 𝕜 h S z) (hz : IsUnit (h z)) :
+    DifferentiableWithinAt 𝕜
+      (fun y : {y : E | IsUnit (h y)} ↦ (↑y.property.unit⁻¹ : R))
+      (Subtype.val ⁻¹' S) ⟨z, hz⟩ (fun y ↦ (y : E)) :=
+  (hf.hasFDerivWithinAt.inv hz).differentiableWithinAt
 
 @[simp, fun_prop]
-theorem Differentiable.inverse (hf : Differentiable 𝕜 h) (hz : ∀ x, IsUnit (h x)) :
-    Differentiable 𝕜 fun x => (h x)⁻¹ʳ := fun x => (hf x).inverse (hz x)
+theorem DifferentiableAt.inv (hf : DifferentiableAt 𝕜 h z) (hz : IsUnit (h z)) :
+    DifferentiableAt 𝕜 (fun y : {y : E | IsUnit (h y)} ↦ (↑y.property.unit⁻¹ : R))
+      ⟨z, hz⟩ (fun y ↦ (y : E)) :=
+  (hf.hasFDerivAt.inv hz).differentiableAt
+
+@[fun_prop]
+theorem DifferentiableOn.inv (hf : DifferentiableOn 𝕜 h S) (hz : ∀ x ∈ S, IsUnit (h x)) :
+    DifferentiableOn 𝕜 (fun y : {y : E | IsUnit (h y)} ↦ (↑y.property.unit⁻¹ : R))
+      (Subtype.val ⁻¹' S) (fun y ↦ (y : E)) :=
+  fun x hx ↦ (hf x hx).inv (hz x hx)
+
+@[simp, fun_prop]
+theorem Differentiable.inv (hf : Differentiable 𝕜 h) (hz : ∀ x, IsUnit (h x)) :
+    Differentiable 𝕜 (fun x ↦ (↑(hz x).unit⁻¹ : R)) := by
+  intro z
+  let q : E → Rˣ := fun x ↦ (hz x).unit
+  have hcoordinates : HasFDerivAt ((fun u : Rˣ ↦ (u : R)) ∘ q) (fderiv 𝕜 h z) z := by
+    simpa only [q, Function.comp_def, IsUnit.unit_spec] using (hf z).hasFDerivAt
+  exact ((hasFDerivAt_inv' (q z)).comp z hcoordinates
+    continuousAt_id Units.isOpenEmbedding_val.isEmbedding).differentiableAt
 
 end AlgebraInverse
-
-/-! ### Derivative of the inverse in a division ring
-
-Note that some lemmas are primed as they are expressed without commutativity, whereas their
-counterparts in commutative fields involve simpler expressions, and are given in
-`Mathlib/Analysis/Calculus/Deriv/Inv.lean`.
--/
-
-section DivisionRingInverse
-
-variable {R : Type*} [NormedDivisionRing R] [NormedAlgebra 𝕜 R]
-
-open NormedRing ContinuousLinearMap Ring
-
-/-- At an invertible element `x` of a normed division algebra `R`, the inversion is strictly
-differentiable, with derivative the linear map `fun t ↦ - x⁻¹ * t * x⁻¹`. For a nicer formula in
-the commutative case, see `hasStrictFDerivAt_inv`. -/
-theorem hasStrictFDerivAt_inv' {x : R} (hx : x ≠ 0) :
-    HasStrictFDerivAt Inv.inv (-mulLeftRight 𝕜 R x⁻¹ x⁻¹) x := by
-  simpa using hasStrictFDerivAt_ringInverse (Units.mk0 _ hx)
-
-/-- At an invertible element `x` of a normed division algebra `R`, the Fréchet derivative of the
-inversion operation is the linear map `fun t ↦ - x⁻¹ * t * x⁻¹`. For a nicer formula in the
-commutative case, see `hasFDerivAt_inv`. -/
-@[fun_prop]
-theorem hasFDerivAt_inv' {x : R} (hx : x ≠ 0) :
-    HasFDerivAt Inv.inv (-mulLeftRight 𝕜 R x⁻¹ x⁻¹) x := by
-  simpa using hasFDerivAt_ringInverse (Units.mk0 _ hx)
-
-@[fun_prop]
-theorem differentiableAt_inv {x : R} (hx : x ≠ 0) : DifferentiableAt 𝕜 Inv.inv x :=
-  (hasFDerivAt_inv' hx).differentiableAt
-
-@[fun_prop]
-theorem differentiableWithinAt_inv {x : R} (hx : x ≠ 0) (s : Set R) :
-    DifferentiableWithinAt 𝕜 (fun x => x⁻¹) s x :=
-  (differentiableAt_inv hx).differentiableWithinAt
-
-@[fun_prop]
-theorem differentiableOn_inv : DifferentiableOn 𝕜 (fun x : R => x⁻¹) {x | x ≠ 0} := fun _x hx =>
-  differentiableWithinAt_inv hx _
-
-/-- Non-commutative version of `fderiv_inv` -/
-theorem fderiv_inv' {x : R} (hx : x ≠ 0) : fderiv 𝕜 Inv.inv x = -mulLeftRight 𝕜 R x⁻¹ x⁻¹ :=
-  (hasFDerivAt_inv' hx).fderiv
-
-/-- Non-commutative version of `fderivWithin_inv` -/
-theorem fderivWithin_inv' {s : Set R} {x : R} (hx : x ≠ 0) (hxs : UniqueDiffWithinAt 𝕜 s x) :
-    fderivWithin 𝕜 (fun x => x⁻¹) s x = -mulLeftRight 𝕜 R x⁻¹ x⁻¹ := by
-  rw [DifferentiableAt.fderivWithin (differentiableAt_inv hx) hxs]
-  exact fderiv_inv' hx
-
-variable {h : E → R} {z : E} {S : Set E}
-
-@[to_fun (attr := fun_prop)]
-theorem DifferentiableWithinAt.inv (hf : DifferentiableWithinAt 𝕜 h S z) (hz : h z ≠ 0) :
-    DifferentiableWithinAt 𝕜 (h⁻¹) S z :=
-  (differentiableAt_inv hz).comp_differentiableWithinAt z hf
-
-@[to_fun (attr := simp, fun_prop)]
-theorem DifferentiableAt.inv (hf : DifferentiableAt 𝕜 h z) (hz : h z ≠ 0) :
-    DifferentiableAt 𝕜 (h⁻¹) z :=
-  (differentiableAt_inv hz).comp z hf
-
-@[to_fun (attr := fun_prop)]
-theorem DifferentiableOn.inv (hf : DifferentiableOn 𝕜 h S) (hz : ∀ x ∈ S, h x ≠ 0) :
-    DifferentiableOn 𝕜 (h⁻¹) S := fun x h => (hf x h).inv (hz x h)
-
-@[to_fun (attr := simp, fun_prop)]
-theorem Differentiable.inv (hf : Differentiable 𝕜 h) (hz : ∀ x, h x ≠ 0) :
-    Differentiable 𝕜 (h⁻¹) := fun x => (hf x).inv (hz x)
-
-end DivisionRingInverse
 
 end

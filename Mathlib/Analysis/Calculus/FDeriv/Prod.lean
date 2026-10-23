@@ -49,25 +49,25 @@ section Prod
 
 variable {f₂ : E → G} {f₂' : E →L[𝕜] G}
 
-theorem HasFDerivAtFilter.prodMk (hf₁ : HasFDerivAtFilter f₁ f₁' L)
-    (hf₂ : HasFDerivAtFilter f₂ f₂' L) :
-    HasFDerivAtFilter (fun x => (f₁ x, f₂ x)) (f₁'.prod f₂') L :=
+theorem HasFDerivAtFilter.prodMk {D : Type*} {f₁ : D → F} {f₂ : D → G} {coord : D → E} {L : Filter (D × D)} (hf₁ : HasFDerivAtFilter f₁ f₁' L coord)
+    (hf₂ : HasFDerivAtFilter f₂ f₂' L coord) :
+    HasFDerivAtFilter (fun x => (f₁ x, f₂ x)) (f₁'.prod f₂') L coord :=
   .of_isLittleO <| hf₁.isLittleO.prod_left hf₂.isLittleO
 
-protected theorem HasStrictFDerivAt.prodMk (hf₁ : HasStrictFDerivAt f₁ f₁' x)
-    (hf₂ : HasStrictFDerivAt f₂ f₂' x) :
-    HasStrictFDerivAt (fun x => (f₁ x, f₂ x)) (f₁'.prod f₂') x :=
+protected theorem HasStrictFDerivAt.prodMk {D : Type*} [TopologicalSpace D] {f₁ : D → F} {f₂ : D → G} {coord : D → E} {x : D} (hf₁ : HasStrictFDerivAt f₁ f₁' x coord)
+    (hf₂ : HasStrictFDerivAt f₂ f₂' x coord) :
+    HasStrictFDerivAt (fun x => (f₁ x, f₂ x)) (f₁'.prod f₂') x coord :=
   HasFDerivAtFilter.prodMk hf₁ hf₂
 
 @[fun_prop]
-nonrec theorem HasFDerivWithinAt.prodMk (hf₁ : HasFDerivWithinAt f₁ f₁' s x)
-    (hf₂ : HasFDerivWithinAt f₂ f₂' s x) :
-    HasFDerivWithinAt (fun x => (f₁ x, f₂ x)) (f₁'.prod f₂') s x :=
+nonrec theorem HasFDerivWithinAt.prodMk {D : Type*} [TopologicalSpace D] {f₁ : D → F} {f₂ : D → G} {coord : D → E} {x : D} {s : Set D} (hf₁ : HasFDerivWithinAt f₁ f₁' s x coord)
+    (hf₂ : HasFDerivWithinAt f₂ f₂' s x coord) :
+    HasFDerivWithinAt (fun x => (f₁ x, f₂ x)) (f₁'.prod f₂') s x coord :=
   hf₁.prodMk hf₂
 
 @[fun_prop]
-nonrec theorem HasFDerivAt.prodMk (hf₁ : HasFDerivAt f₁ f₁' x) (hf₂ : HasFDerivAt f₂ f₂' x) :
-    HasFDerivAt (fun x => (f₁ x, f₂ x)) (f₁'.prod f₂') x :=
+nonrec theorem HasFDerivAt.prodMk {D : Type*} [TopologicalSpace D] {f₁ : D → F} {f₂ : D → G} {coord : D → E} {x : D} (hf₁ : HasFDerivAt f₁ f₁' x coord) (hf₂ : HasFDerivAt f₂ f₂' x coord) :
+    HasFDerivAt (fun x => (f₁ x, f₂ x)) (f₁'.prod f₂') x coord :=
   hf₁.prodMk hf₂
 
 @[fun_prop]

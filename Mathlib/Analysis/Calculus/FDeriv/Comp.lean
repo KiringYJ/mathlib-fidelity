@@ -20,7 +20,7 @@ composition of functions (the chain rule).
 public section
 
 
-open Filter Asymptotics ContinuousLinearMap Set
+open Filter Asymptotics ContinuousLinearMap Set Topology
 
 open scoped Topology
 
@@ -46,50 +46,80 @@ get confused since there are too many possibilities for composition. -/
 
 variable (x)
 
-theorem HasFDerivAtFilter.comp {g : F → G} {g' : F →L[𝕜] G} {L' : Filter (F × F)}
-    (hg : HasFDerivAtFilter g g' L') (hf : HasFDerivAtFilter f f' L)
+/-- Compose derivatives on domains with their ambient coordinate maps. The derivative of the
+inner map is that of its coordinates; no vector-space structure on either domain is required. -/
+theorem HasFDerivAtFilter.comp {D D' : Type*} {f : D → D'} {g : D' → G}
+    {coord : D → E} {coord' : D' → F} {g' : F →L[𝕜] G}
+    {L : Filter (D × D)} {L' : Filter (D' × D')}
+    (hg : HasFDerivAtFilter g g' L' coord')
+    (hf : HasFDerivAtFilter (coord' ∘ f) f' L coord)
     (hL : Tendsto (Prod.map f f) L L') :
-    HasFDerivAtFilter (g ∘ f) (g' ∘L f') L := by
-  -- This proof can be golfed a lot. However, it should be left this way for readability.
+    HasFDerivAtFilter (g ∘ f) (g' ∘L f') L coord := by
   refine .of_isLittleOTVS <| calc
-    (fun p ↦ (g ∘ f) p.1 - (g ∘ f) p.2 - (g' ∘L f') (p.1 - p.2))
-      = fun p ↦ (g (f p.1) - g (f p.2) - g' (f p.1 - f p.2)) +
-          g' (f p.1 - f p.2 - f' (p.1 - p.2)) := by
+    (fun p ↦ (g ∘ f) p.1 - (g ∘ f) p.2 - (g' ∘L f') (coord p.1 - coord p.2))
+      = fun p ↦ (g (f p.1) - g (f p.2) - g' (coord' (f p.1) - coord' (f p.2))) +
+          g' (coord' (f p.1) - coord' (f p.2) - f' (coord p.1 - coord p.2)) := by
       ext; simp
-    _ =o[𝕜; L] (fun p ↦ p.1 - p.2) := .add ?Hg ?Hf
-  case Hg => calc (fun p ↦ g (f p.1) - g (f p.2) - g' (f p.1 - f p.2))
-    _ =o[𝕜; L] (fun p ↦ f p.1 - f p.2) :=
-      hg.isLittleOTVS.comp_tendsto hL
-    _ =O[𝕜; L] (fun p ↦ p.1 - p.2) := hf.isBigOTVS_sub
-  case Hf => calc (fun p ↦ g' (f p.1 - f p.2 - f' (p.1 - p.2)))
-    _ =O[𝕜; L] (fun p ↦ f p.1 - f p.2 - f' (p.1 - p.2)) := g'.isBigOTVS_comp
-    _ =o[𝕜; L] (fun p ↦ p.1 - p.2) := hf.isLittleOTVS
+    _ =o[𝕜; L] (fun p ↦ coord p.1 - coord p.2) := .add ?Hg ?Hf
+  case Hg => calc
+    (fun p ↦ g (f p.1) - g (f p.2) - g' (coord' (f p.1) - coord' (f p.2)))
+      =o[𝕜; L] (fun p ↦ coord' (f p.1) - coord' (f p.2)) :=
+        hg.isLittleOTVS.comp_tendsto hL
+    _ =O[𝕜; L] (fun p ↦ coord p.1 - coord p.2) := hf.isBigOTVS_sub
+  case Hf => calc
+    (fun p ↦ g' (coord' (f p.1) - coord' (f p.2) - f' (coord p.1 - coord p.2)))
+      =O[𝕜; L] (fun p ↦ coord' (f p.1) - coord' (f p.2) - f' (coord p.1 - coord p.2)) :=
+        g'.isBigOTVS_comp
+    _ =o[𝕜; L] (fun p ↦ coord p.1 - coord p.2) := hf.isLittleOTVS
 
 /-- The chain rule for derivatives in the sense of strict differentiability. -/
 @[fun_prop]
-protected theorem HasStrictFDerivAt.comp {g : F → G} {g' : F →L[𝕜] G}
-    (hg : HasStrictFDerivAt g g' (f x)) (hf : HasStrictFDerivAt f f' x) :
-    HasStrictFDerivAt (fun x => g (f x)) (g'.comp f') x :=
-  HasFDerivAtFilter.comp hg hf <| hf.continuousAt.tendsto.prodMap_nhds hf.continuousAt.tendsto
+protected theorem HasStrictFDerivAt.comp {D D' : Type*}
+    [TopologicalSpace D] [TopologicalSpace D'] {f : D → D'} {g : D' → G}
+    {coord : D → E} {coord' : D' → F} {g' : F →L[𝕜] G} (x : D)
+    (hg : HasStrictFDerivAt g g' (f x) coord')
+    (hf : HasStrictFDerivAt (coord' ∘ f) f' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id)
+    (hcoord' : IsEmbedding coord' := by exact IsEmbedding.id) :
+    HasStrictFDerivAt (fun x => g (f x)) (g'.comp f') x coord := by
+  have hcont : ContinuousAt f x :=
+    hcoord'.isInducing.continuousAt_iff.2 (hf.continuousAt hcoord)
+  exact HasFDerivAtFilter.comp hg hf (hcont.tendsto.prodMap_nhds hcont.tendsto)
 
 @[fun_prop]
-theorem HasFDerivWithinAt.comp {g : F → G} {g' : F →L[𝕜] G} {t : Set F}
-    (hg : HasFDerivWithinAt g g' t (f x)) (hf : HasFDerivWithinAt f f' s x) (hst : MapsTo f s t) :
-    HasFDerivWithinAt (g ∘ f) (g'.comp f') s x :=
-  HasFDerivAtFilter.comp hg hf <| .prodMap (hf.continuousWithinAt.tendsto_nhdsWithin hst) <|
-    tendsto_pure_pure ..
+theorem HasFDerivWithinAt.comp {D D' : Type*}
+    [TopologicalSpace D] [TopologicalSpace D'] {f : D → D'} {g : D' → G}
+    {coord : D → E} {coord' : D' → F} {g' : F →L[𝕜] G} {s : Set D} {t : Set D'} (x : D)
+    (hg : HasFDerivWithinAt g g' t (f x) coord')
+    (hf : HasFDerivWithinAt (coord' ∘ f) f' s x coord) (hst : MapsTo f s t)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id)
+    (hcoord' : IsEmbedding coord' := by exact IsEmbedding.id) :
+    HasFDerivWithinAt (g ∘ f) (g'.comp f') s x coord := by
+  have hcont : ContinuousWithinAt f s x :=
+    hcoord'.isInducing.continuousWithinAt_iff.2 (hf.continuousWithinAt hcoord)
+  exact HasFDerivAtFilter.comp hg hf <|
+    (hcont.tendsto_nhdsWithin hst).prodMap (tendsto_pure_pure ..)
 
 @[fun_prop]
-theorem HasFDerivAt.comp_hasFDerivWithinAt {g : F → G} {g' : F →L[𝕜] G}
-    (hg : HasFDerivAt g g' (f x)) (hf : HasFDerivWithinAt f f' s x) :
-    HasFDerivWithinAt (g ∘ f) (g'.comp f') s x :=
-  hg.hasFDerivWithinAt.comp x hf (mapsTo_univ _ _)
+theorem HasFDerivAt.comp_hasFDerivWithinAt {D D' : Type*}
+    [TopologicalSpace D] [TopologicalSpace D'] {f : D → D'} {g : D' → G}
+    {coord : D → E} {coord' : D' → F} {g' : F →L[𝕜] G} {s : Set D} (x : D)
+    (hg : HasFDerivAt g g' (f x) coord')
+    (hf : HasFDerivWithinAt (coord' ∘ f) f' s x coord)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id)
+    (hcoord' : IsEmbedding coord' := by exact IsEmbedding.id) :
+    HasFDerivWithinAt (g ∘ f) (g'.comp f') s x coord :=
+  hg.hasFDerivWithinAt.comp x hf (mapsTo_univ _ _) hcoord hcoord'
 
 @[fun_prop]
-theorem HasFDerivWithinAt.comp_of_tendsto {g : F → G} {g' : F →L[𝕜] G} {t : Set F}
-    (hg : HasFDerivWithinAt g g' t (f x)) (hf : HasFDerivWithinAt f f' s x)
-    (hst : Tendsto f (𝓝[s] x) (𝓝[t] f x)) : HasFDerivWithinAt (g ∘ f) (g'.comp f') s x :=
-  HasFDerivAtFilter.comp hg hf <| hst.prodMap <| tendsto_pure_pure ..
+theorem HasFDerivWithinAt.comp_of_tendsto {D D' : Type*}
+    [TopologicalSpace D] [TopologicalSpace D'] {f : D → D'} {g : D' → G}
+    {coord : D → E} {coord' : D' → F} {g' : F →L[𝕜] G} {s : Set D} {t : Set D'} (x : D)
+    (hg : HasFDerivWithinAt g g' t (f x) coord')
+    (hf : HasFDerivWithinAt (coord' ∘ f) f' s x coord)
+    (hst : Tendsto f (𝓝[s] x) (𝓝[t] f x)) :
+    HasFDerivWithinAt (g ∘ f) (g'.comp f') s x coord :=
+  HasFDerivAtFilter.comp hg hf (hst.prodMap (tendsto_pure_pure ..))
 
 theorem HasFDerivWithinAt.comp_hasFDerivAt {g : F → G} {g' : F →L[𝕜] G} {t : Set F}
     (hg : HasFDerivWithinAt g g' t (f x)) (hf : HasFDerivAt f f' x)
@@ -104,9 +134,17 @@ theorem HasFDerivWithinAt.comp_hasFDerivAt_of_eq {g : F → G} {g' : F →L[𝕜
 
 /-- The chain rule. -/
 @[fun_prop]
-theorem HasFDerivAt.comp {g : F → G} {g' : F →L[𝕜] G} (hg : HasFDerivAt g g' (f x))
-    (hf : HasFDerivAt f f' x) : HasFDerivAt (g ∘ f) (g'.comp f') x :=
-  HasFDerivAtFilter.comp hg hf <| hf.continuousAt.tendsto.prodMap <| tendsto_pure_pure ..
+theorem HasFDerivAt.comp {D D' : Type*}
+    [TopologicalSpace D] [TopologicalSpace D'] {f : D → D'} {g : D' → G}
+    {coord : D → E} {coord' : D' → F} {g' : F →L[𝕜] G} (x : D)
+    (hg : HasFDerivAt g g' (f x) coord')
+    (hf : HasFDerivAt (coord' ∘ f) f' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id)
+    (hcoord' : IsEmbedding coord' := by exact IsEmbedding.id) :
+    HasFDerivAt (g ∘ f) (g'.comp f') x coord := by
+  have hcont : ContinuousAt f x :=
+    hcoord'.isInducing.continuousAt_iff.2 (hf.continuousAt hcoord)
+  exact HasFDerivAtFilter.comp hg hf (hcont.tendsto.prodMap (tendsto_pure_pure ..))
 
 @[fun_prop]
 theorem DifferentiableWithinAt.comp {g : F → G} {t : Set F}

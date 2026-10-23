@@ -248,20 +248,22 @@ variable {𝕜' 𝔸 : Type*} [NormedDivisionRing 𝕜'] [NormedRing 𝔸] [Norm
   [NormedAlgebra 𝕜 𝔸] {c d : 𝕜 → 𝔸} {c' d' : 𝔸} {u v : 𝕜 → 𝕜'}
 
 @[to_fun]
-theorem HasDerivWithinAt.mul (hc : HasDerivWithinAt c c' s x) (hd : HasDerivWithinAt d d' s x) :
-    HasDerivWithinAt (c * d) (c' * d x + c x * d') s x := by
-  simpa [add_comm] using (HasFDerivWithinAt.mul' hc hd).hasDerivWithinAt
+theorem HasDerivWithinAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸} {coord : D → 𝕜} {x : D} {s : Set D} (hc : HasDerivWithinAt c c' s x coord) (hd : HasDerivWithinAt d d' s x coord)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id) :
+    HasDerivWithinAt (c * d) (c' * d x + c x * d') s x coord := by
+  simpa [add_comm] using (HasFDerivWithinAt.mul' hc hd hcoord).hasDerivWithinAt
 
 @[to_fun]
-theorem HasDerivAt.mul (hc : HasDerivAt c c' x) (hd : HasDerivAt d d' x) :
-    HasDerivAt (c * d) (c' * d x + c x * d') x := by
-  rw [← hasDerivWithinAt_univ] at *
-  exact HasDerivWithinAt.mul hc hd
+theorem HasDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸} {coord : D → 𝕜} {x : D} (hc : HasDerivAt c c' x coord) (hd : HasDerivAt d d' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
+    HasDerivAt (c * d) (c' * d x + c x * d') x coord := by
+  simpa [add_comm] using (HasFDerivAt.mul' hc hd hcoord).hasDerivAt
 
 @[to_fun]
-theorem HasStrictDerivAt.mul (hc : HasStrictDerivAt c c' x) (hd : HasStrictDerivAt d d' x) :
-    HasStrictDerivAt (c * d) (c' * d x + c x * d') x := by
-  simpa [add_comm] using (HasStrictFDerivAt.mul' hc hd).hasStrictDerivAt
+theorem HasStrictDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸} {coord : D → 𝕜} {x : D} (hc : HasStrictDerivAt c c' x coord) (hd : HasStrictDerivAt d d' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
+    HasStrictDerivAt (c * d) (c' * d x + c x * d') x coord := by
+  simpa [add_comm] using (HasStrictFDerivAt.mul' hc hd hcoord).hasStrictDerivAt
 
 theorem derivWithin_fun_mul (hc : DifferentiableWithinAt 𝕜 c s x)
     (hd : DifferentiableWithinAt 𝕜 d s x) :

@@ -11,7 +11,10 @@ public import Mathlib.Analysis.Asymptotics.TVS
 # The Fréchet derivative: definition
 
 Let `E` and `F` be normed spaces, `f : E → F`, and `f' : E →L[𝕜] F` a
-continuous 𝕜-linear map, where `𝕜` is a non-discrete normed field. Then
+continuous 𝕜-linear map, where `𝕜` is a non-discrete normed field. More generally, a function
+`f : D → F` can be differentiated in coordinates `coord : D → E`. A subset uses its inclusion;
+units use their coercion into the ambient algebra. The tangent space stays `E`. Identity
+coordinates are the default for an ambient function. Then
 
   `HasFDerivWithinAt f f' s x`
 
@@ -98,6 +101,11 @@ variable {F : Type*} [AddCommGroup F] [Module 𝕜 F] [TopologicalSpace F]
 
 /-- A function `f` has the continuous linear map `f'` as derivative along the filter `L` if
 `f x₁ = f x₂ + f' (x₁ - x₂) + o (x₁ - x₂)` when `x = (x₁, x₂)` converges along the filter `L`.
+The domain `D` can be a subset or the units of an ambient algebra. In that case `coord` is
+its inclusion into the ambient vector space `E`; tangent vectors and the linear map still belong
+to `E`. No additive structure on `D` or extension of `f` outside `D` is required. For functions
+on `E` itself, `coord` defaults to the identity, recovering the usual relation.
+
 This definition is designed to be specialized
 
 - for `L = 𝓝 (x, x)` (in `HasStrictFDerivAt`),
@@ -107,68 +115,92 @@ This definition is designed to be specialized
   giving rise to the notion of Fréchet derivative along the set `s`.
 -/
 @[mk_iff hasFDerivAtFilter_iff_isLittleOTVS]
-structure HasFDerivAtFilter (f : E → F) (f' : E →L[𝕜] F) (L : Filter (E × E)) : Prop where
+structure HasFDerivAtFilter {D : Type*} (f : D → F) (f' : E →L[𝕜] F)
+    (L : Filter (D × D)) (coord : D → E := by exact id) : Prop where
   of_isLittleOTVS ::
-    isLittleOTVS : (fun p ↦ f p.1 - f p.2 - f' (p.1 - p.2)) =o[𝕜; L] (fun p ↦ p.1 - p.2)
+    isLittleOTVS :
+      (fun p ↦ f p.1 - f p.2 - f' (coord p.1 - coord p.2)) =o[𝕜; L]
+        (fun p ↦ coord p.1 - coord p.2)
+
+/-- Pull back a derivative relation along a map of domains. The ambient tangent map is unchanged;
+only the domain coordinates and the filter are pulled back. -/
+theorem HasFDerivAtFilter.comp_tendsto {D D' : Type*} {f : D → F}
+    {f' : E →L[𝕜] F} {coord : D → E} {L : Filter (D × D)}
+    {L' : Filter (D' × D')} (h : HasFDerivAtFilter f f' L coord) (g : D' → D)
+    (hg : Tendsto (Prod.map g g) L' L) :
+    HasFDerivAtFilter (f ∘ g) f' L' (coord ∘ g) := by
+  constructor
+  simpa only [Function.comp_def, Prod.map] using h.isLittleOTVS.comp_tendsto hg
 
 /-- A function `f` has the continuous linear map `f'` as derivative at `x` within a set `s` if
-`f x' = f x + f' (x' - x) + o (x' - x)` when `x'` tends to `x` inside `s`. -/
+`f x' = f x + f' (coord x' - coord x) + o (coord x' - coord x)` as `x'` tends to `x`
+inside `s`. Identity coordinates give the ordinary within-set derivative. -/
 @[fun_prop]
-def HasFDerivWithinAt (f : E → F) (f' : E →L[𝕜] F) (s : Set E) (x : E) :=
-  HasFDerivAtFilter f f' (𝓝[s] x ×ˢ pure x)
+def HasFDerivWithinAt {D : Type*} [TopologicalSpace D] (f : D → F)
+    (f' : E →L[𝕜] F) (s : Set D) (x : D) (coord : D → E := by exact id) :=
+  HasFDerivAtFilter f f' (𝓝[s] x ×ˢ pure x) coord
 
 /-- A function `f` has the continuous linear map `f'` as derivative at `x` if
-`f x' = f x + f' (x' - x) + o (x' - x)` when `x'` tends to `x`. -/
+`f x' = f x + f' (coord x' - coord x) + o (coord x' - coord x)` as `x'` tends to `x`. -/
 @[fun_prop]
-def HasFDerivAt (f : E → F) (f' : E →L[𝕜] F) (x : E) :=
-  HasFDerivAtFilter f f' (𝓝 x ×ˢ pure x)
+def HasFDerivAt {D : Type*} [TopologicalSpace D] (f : D → F)
+    (f' : E →L[𝕜] F) (x : D) (coord : D → E := by exact id) :=
+  HasFDerivAtFilter f f' (𝓝 x ×ˢ pure x) coord
 
 /-- A function `f` has derivative `f'` at `a` in the sense of *strict differentiability*
-if `f x - f y - f' (x - y) = o(x - y)` as `x, y → a`. This form of differentiability is required,
+if `f x - f y - f' (coord x - coord y) = o(coord x - coord y)` as `x, y → a`.
+This form of differentiability is required,
 e.g., by the inverse function theorem. Any `C^1` function on a vector space over `ℝ` is strictly
 differentiable but this definition works, e.g., for vector spaces over `p`-adic numbers. -/
 @[fun_prop]
-def HasStrictFDerivAt (f : E → F) (f' : E →L[𝕜] F) (x : E) :=
-  HasFDerivAtFilter f f' (𝓝 (x, x))
+def HasStrictFDerivAt {D : Type*} [TopologicalSpace D] (f : D → F)
+    (f' : E →L[𝕜] F) (x : D) (coord : D → E := by exact id) :=
+  HasFDerivAtFilter f f' (𝓝 (x, x)) coord
 
 variable (𝕜)
 
 /-- A function `f` is differentiable at a point `x` within a set `s` if it admits a derivative
 there (possibly non-unique). -/
 @[fun_prop]
-def DifferentiableWithinAt (f : E → F) (s : Set E) (x : E) :=
-  ∃ f' : E →L[𝕜] F, HasFDerivWithinAt f f' s x
+def DifferentiableWithinAt {D : Type*} [TopologicalSpace D] (f : D → F)
+    (s : Set D) (x : D) (coord : D → E := by exact id) :=
+  ∃ f' : E →L[𝕜] F, HasFDerivWithinAt f f' s x coord
 
 /-- A function `f` is differentiable at a point `x` if it admits a derivative there (possibly
 non-unique). -/
 @[fun_prop]
-def DifferentiableAt (f : E → F) (x : E) :=
-  ∃ f' : E →L[𝕜] F, HasFDerivAt f f' x
+def DifferentiableAt {D : Type*} [TopologicalSpace D] (f : D → F)
+    (x : D) (coord : D → E := by exact id) :=
+  ∃ f' : E →L[𝕜] F, HasFDerivAt f f' x coord
 
 open scoped Classical in
 /-- If `f` has a derivative at `x` within `s`, then `fderivWithin 𝕜 f s x` is such a derivative.
 Otherwise, it is set to `0`. We also set it to be zero, if zero is one of possible derivatives. -/
-irreducible_def fderivWithin (f : E → F) (s : Set E) (x : E) : E →L[𝕜] F :=
-  if HasFDerivWithinAt f (0 : E →L[𝕜] F) s x
+irreducible_def fderivWithin {D : Type*} [TopologicalSpace D] (f : D → F)
+    (s : Set D) (x : D) (coord : D → E := by exact id) : E →L[𝕜] F :=
+  if HasFDerivWithinAt f (0 : E →L[𝕜] F) s x coord
     then 0
-  else if h : DifferentiableWithinAt 𝕜 f s x
+  else if h : DifferentiableWithinAt 𝕜 f s x coord
     then Classical.choose h
   else 0
 
 /-- If `f` has a derivative at `x`, then `fderiv 𝕜 f x` is such a derivative. Otherwise, it is
 set to `0`. -/
-irreducible_def fderiv (f : E → F) (x : E) : E →L[𝕜] F :=
-  fderivWithin 𝕜 f univ x
+irreducible_def fderiv {D : Type*} [TopologicalSpace D] (f : D → F)
+    (x : D) (coord : D → E := by exact id) : E →L[𝕜] F :=
+  fderivWithin 𝕜 f univ x coord
 
 /-- `DifferentiableOn 𝕜 f s` means that `f` is differentiable within `s` at any point of `s`. -/
 @[fun_prop]
-def DifferentiableOn (f : E → F) (s : Set E) :=
-  ∀ x ∈ s, DifferentiableWithinAt 𝕜 f s x
+def DifferentiableOn {D : Type*} [TopologicalSpace D] (f : D → F)
+    (s : Set D) (coord : D → E := by exact id) :=
+  ∀ x ∈ s, DifferentiableWithinAt 𝕜 f s x coord
 
 /-- `Differentiable 𝕜 f` means that `f` is differentiable at any point. -/
 @[fun_prop]
-def Differentiable (f : E → F) :=
-  ∀ x, DifferentiableAt 𝕜 f x
+def Differentiable {D : Type*} [TopologicalSpace D] (f : D → F)
+    (coord : D → E := by exact id) :=
+  ∀ x, DifferentiableAt 𝕜 f x coord
 
 variable {𝕜}
 variable {f : E → F}
@@ -177,23 +209,28 @@ variable {x : E}
 variable {s : Set E}
 variable {L : Filter E}
 
-theorem hasFDerivAt_iff_isLittleOTVS :
-    HasFDerivAt f f' x ↔ (fun x' ↦ f x' - f x - f' (x' - x)) =o[𝕜; 𝓝 x] (fun x' ↦ x' - x) := by
+theorem hasFDerivAt_iff_isLittleOTVS {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} :
+    HasFDerivAt f f' x coord ↔
+      (fun x' ↦ f x' - f x - f' (coord x' - coord x)) =o[𝕜; 𝓝 x] (fun x' ↦ coord x' - coord x) := by
   simp [HasFDerivAt, hasFDerivAtFilter_iff_isLittleOTVS, Function.comp_def]
 
 alias ⟨HasFDerivAt.isLittleOTVS, HasFDerivAt.of_isLittleOTVS⟩ := hasFDerivAt_iff_isLittleOTVS
 
-theorem hasFDerivWithinAt_iff_isLittleOTVS :
-    HasFDerivWithinAt f f' s x ↔
-      (fun x' ↦ f x' - f x - f' (x' - x)) =o[𝕜; 𝓝[s] x] (fun x' ↦ x' - x) := by
+theorem hasFDerivWithinAt_iff_isLittleOTVS {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} {s : Set D} :
+    HasFDerivWithinAt f f' s x coord ↔
+      (fun x' ↦ f x' - f x - f' (coord x' - coord x)) =o[𝕜; 𝓝[s] x] (fun x' ↦ coord x' - coord x) := by
   simp [HasFDerivWithinAt, hasFDerivAtFilter_iff_isLittleOTVS, Function.comp_def]
 
 alias ⟨HasFDerivWithinAt.isLittleOTVS, HasFDerivWithinAt.of_isLittleOTVS⟩ :=
   hasFDerivWithinAt_iff_isLittleOTVS
 
-theorem hasStrictFDerivAt_iff_isLittleOTVS :
-    HasStrictFDerivAt f f' x ↔
-      (fun p ↦ f p.1 - f p.2 - f' (p.1 - p.2)) =o[𝕜; 𝓝 (x, x)] (fun p ↦ p.1 - p.2) :=
+theorem hasStrictFDerivAt_iff_isLittleOTVS {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} :
+    HasStrictFDerivAt f f' x coord ↔
+      (fun p ↦ f p.1 - f p.2 - f' (coord p.1 - coord p.2)) =o[𝕜; 𝓝 (x, x)]
+        (fun p ↦ coord p.1 - coord p.2) :=
   hasFDerivAtFilter_iff_isLittleOTVS ..
 
 theorem fderivWithin_zero_of_not_differentiableWithinAt (h : ¬DifferentiableWithinAt 𝕜 f s x) :
@@ -216,30 +253,36 @@ variable {E : Type*} [SeminormedAddCommGroup E] [NormedSpace 𝕜 E]
 variable {F : Type*} [SeminormedAddCommGroup F] [NormedSpace 𝕜 F]
 variable {f : E → F} {f' : E →L[𝕜] F} {s : Set E} {x : E}
 
-theorem hasFDerivAtFilter_iff_isLittleO {L : Filter (E × E)} :
-    HasFDerivAtFilter f f' L ↔ (fun p => f p.1 - f p.2 - f' (p.1 - p.2)) =o[L] fun p => p.1 - p.2 :=
+theorem hasFDerivAtFilter_iff_isLittleO {D : Type*} {f : D → F} {coord : D → E} {L : Filter (D × D)} :
+    HasFDerivAtFilter f f' L coord ↔
+      (fun p => f p.1 - f p.2 - f' (coord p.1 - coord p.2)) =o[L] fun p => coord p.1 - coord p.2 :=
   (hasFDerivAtFilter_iff_isLittleOTVS ..).trans isLittleOTVS_iff_isLittleO
 
 alias ⟨HasFDerivAtFilter.isLittleO, HasFDerivAtFilter.of_isLittleO⟩ :=
   hasFDerivAtFilter_iff_isLittleO
 
-theorem hasFDerivAt_iff_isLittleO :
-    HasFDerivAt f f' x ↔ (fun x' ↦ f x' - f x - f' (x' - x)) =o[𝓝 x] (fun x' ↦ x' - x) :=
+theorem hasFDerivAt_iff_isLittleO {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} :
+    HasFDerivAt f f' x coord ↔
+      (fun x' ↦ f x' - f x - f' (coord x' - coord x)) =o[𝓝 x] (fun x' ↦ coord x' - coord x) :=
   hasFDerivAt_iff_isLittleOTVS.trans isLittleOTVS_iff_isLittleO
 
 alias ⟨HasFDerivAt.isLittleO, HasFDerivAt.of_isLittleO⟩ := hasFDerivAt_iff_isLittleO
 
-theorem hasFDerivWithinAt_iff_isLittleO :
-    HasFDerivWithinAt f f' s x ↔
-      (fun x' ↦ f x' - f x - f' (x' - x)) =o[𝓝[s] x] (fun x' ↦ x' - x) :=
+theorem hasFDerivWithinAt_iff_isLittleO {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} {s : Set D} :
+    HasFDerivWithinAt f f' s x coord ↔
+      (fun x' ↦ f x' - f x - f' (coord x' - coord x)) =o[𝓝[s] x] (fun x' ↦ coord x' - coord x) :=
   hasFDerivWithinAt_iff_isLittleOTVS.trans isLittleOTVS_iff_isLittleO
 
 alias ⟨HasFDerivWithinAt.isLittleO, HasFDerivWithinAt.of_isLittleO⟩ :=
   hasFDerivWithinAt_iff_isLittleO
 
-theorem hasStrictFDerivAt_iff_isLittleO :
-    HasStrictFDerivAt f f' x ↔
-      (fun p : E × E => f p.1 - f p.2 - f' (p.1 - p.2)) =o[𝓝 (x, x)] fun p : E × E => p.1 - p.2 :=
+theorem hasStrictFDerivAt_iff_isLittleO {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} :
+    HasStrictFDerivAt f f' x coord ↔
+      (fun p : D × D => f p.1 - f p.2 - f' (coord p.1 - coord p.2)) =o[𝓝 (x, x)]
+        fun p : D × D => coord p.1 - coord p.2 :=
   (hasStrictFDerivAt_iff_isLittleOTVS ..).trans isLittleOTVS_iff_isLittleO
 
 alias ⟨HasStrictFDerivAt.isLittleO, HasStrictFDerivAt.of_isLittleO⟩ :=
