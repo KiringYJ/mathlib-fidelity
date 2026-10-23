@@ -7,7 +7,7 @@ module
 
 public import Mathlib.Algebra.Field.Basic
 public import Mathlib.Algebra.Ring.Subring.Defs
-public import Mathlib.Algebra.Order.Ring.Unbundled.Rat
+public import Mathlib.Data.Rat.Cast.Defs
 
 /-!
 # Subfields
@@ -36,7 +36,7 @@ Notation used here:
 
 ## Implementation notes
 
-A subfield is implemented as a subring which is closed under `⁻¹`.
+A subfield is implemented as a subring closed under inversion of ambient units.
 
 Lattice inclusion (e.g. `≤` and `⊓`) is used rather than set notation (`⊆` and `∩`), although
 `∈` is defined as membership of a subfield's underlying set.
@@ -55,73 +55,53 @@ variable [DivisionRing K]
 
 /-- `SubfieldClass S K` states `S` is a type of subsets `s ⊆ K` closed under field operations. -/
 class SubfieldClass (S K : Type*) [DivisionRing K] [SetLike S K] : Prop
-    extends SubringClass S K, InvMemClass S K
+    extends SubringClass S K where
+  /-- The inverse of an ambient unit belonging to the subfield also belongs to it. -/
+  unit_inv_mem : ∀ {s : S} {u : Kˣ}, (u : K) ∈ s → (↑u⁻¹ : K) ∈ s
 
 namespace SubfieldClass
 
 variable (S : Type*) [SetLike S K] [h : SubfieldClass S K]
 
--- See note [lower instance priority]
-/-- A subfield contains `1`, products and inverses.
+variable {S}
 
-Be assured that we're not actually proving that subfields are subgroups:
-`SubgroupClass` is really an abbreviation of `SubgroupWithOrWithoutZeroClass`.
--/
-instance (priority := 100) toSubgroupClass : SubgroupClass S K :=
-  { h with }
+/-- A subfield is closed under inversion of units. -/
+theorem inv_mem {s : S} {u : Kˣ} (hu : (u : K) ∈ s) : (↑u⁻¹ : K) ∈ s :=
+  SubfieldClass.unit_inv_mem hu
 
-variable {S} {x : K}
+/-- Mixed division stays in a subfield when the numerator and unit denominator belong to it. -/
+theorem divp_mem {s : S} {x : K} {u : Kˣ} (hx : x ∈ s) (hu : (u : K) ∈ s) : x /ₚ u ∈ s :=
+  mul_mem hx (inv_mem hu)
 
-@[simp, aesop safe (rule_sets := [SetLike])]
-lemma nnratCast_mem (s : S) (q : ℚ≥0) : (q : K) ∈ s := by
-  simpa only [NNRat.cast_def] using div_mem (natCast_mem s q.num) (natCast_mem s q.den)
+/-- Checked rational evaluation lies in every subfield. -/
+theorem rat_eval_mem (s : S) (q : ℚ) (hd : (q.den : K) ≠ 0) : Rat.eval q hd ∈ s :=
+  divp_mem (intCast_mem s q.num) (natCast_mem s q.den)
 
-@[simp, aesop safe (rule_sets := [SetLike])]
-lemma ratCast_mem (s : S) (q : ℚ) : (q : K) ∈ s := by
-  simpa only [Rat.cast_def] using div_mem (intCast_mem s q.num) (natCast_mem s q.den)
+/-- Checked nonnegative rational evaluation lies in every subfield. -/
+theorem nnrat_eval_mem (s : S) (q : ℚ≥0) (hd : (q.den : K) ≠ 0) : NNRat.eval q hd ∈ s :=
+  divp_mem (natCast_mem s q.num) (natCast_mem s q.den)
 
-instance instNNRatCast (s : S) : NNRatCast s where nnratCast q := ⟨q, nnratCast_mem s q⟩
-instance instRatCast (s : S) : RatCast s where ratCast q := ⟨q, ratCast_mem s q⟩
+/-- Integer powers of units belonging to a subfield belong to it. -/
+theorem zpow_mem {s : S} {u : Kˣ} (hu : (u : K) ∈ s) (n : ℤ) : (↑(u ^ n) : K) ∈ s := by
+  cases n with
+  | ofNat n => simpa using pow_mem hu n
+  | negSucc n => simpa [zpow_negSucc] using pow_mem (inv_mem hu) (n + 1)
 
-@[simp, norm_cast] lemma coe_nnratCast (s : S) (q : ℚ≥0) : ((q : s) : K) = q := rfl
-@[simp, norm_cast] lemma coe_ratCast (s : S) (x : ℚ) : ((x : s) : K) = x := rfl
+/-- A subfield inherits the property that each nonzero element is a unit. -/
+instance (priority := 75) toDivisionRing (s : S) : DivisionRing s where
+  toRing := SubringClass.toRing s
+  exists_pair_ne := ⟨0, 1, fun h => zero_ne_one (congrArg Subtype.val h)⟩
+  isUnit_of_ne_zero {a} ha := by
+    have ha' : (a : K) ≠ 0 := fun h => ha (Subtype.ext h)
+    let u := Units.mk0 (a : K) ha'
+    let b : s := ⟨↑u⁻¹, inv_mem (u := u) a.property⟩
+    exact ⟨⟨a, b, Subtype.ext u.mul_inv, Subtype.ext u.inv_mul⟩, rfl⟩
 
-@[aesop 90% (rule_sets := [SetLike])]
-lemma nnqsmul_mem (s : S) (q : ℚ≥0) (hx : x ∈ s) : q • x ∈ s := by
-  simpa only [NNRat.smul_def] using mul_mem (nnratCast_mem _ _) hx
-
-@[aesop 90% (rule_sets := [SetLike])]
-lemma qsmul_mem (s : S) (q : ℚ) (hx : x ∈ s) : q • x ∈ s := by
-  simpa only [Rat.smul_def] using mul_mem (ratCast_mem _ _) hx
-
-@[simp, aesop safe (rule_sets := [SetLike])]
-lemma ofScientific_mem (s : S) {b : Bool} {n m : ℕ} :
-    (OfScientific.ofScientific n b m : K) ∈ s :=
-  SubfieldClass.nnratCast_mem s (OfScientific.ofScientific n b m)
-
-instance instSMulNNRat (s : S) : SMul ℚ≥0 s where smul q x := ⟨q • x, nnqsmul_mem s q x.2⟩
-instance instSMulRat (s : S) : SMul ℚ s where smul q x := ⟨q • x, qsmul_mem s q x.2⟩
-
-@[simp, norm_cast] lemma coe_nnqsmul (s : S) (q : ℚ≥0) (x : s) : ↑(q • x) = q • (x : K) := rfl
-@[simp, norm_cast] lemma coe_qsmul (s : S) (q : ℚ) (x : s) : ↑(q • x) = q • (x : K) := rfl
-
-/-- A subfield inherits a division ring structure -/
-instance (priority := 75) toDivisionRing (s : S) : DivisionRing s := fast_instance%
-  Subtype.coe_injective.divisionRing ((↑) : s → K)
-    rfl rfl (fun _ _ ↦ rfl) (fun _ _ ↦ rfl) (fun _ ↦ rfl)
-    (fun _ _ ↦ rfl) (fun _ ↦ rfl) (fun _ _ ↦ rfl) (fun _ _ ↦ rfl)
-    (fun _ _ ↦ rfl) (coe_nnqsmul _) (coe_qsmul _) (fun _ _ ↦ rfl) (fun _ _ ↦ rfl)
-    (fun _ ↦ rfl) (fun _ ↦ rfl) (fun _ ↦ rfl) (fun _ ↦ rfl)
-
--- Prefer subclasses of `Field` over subclasses of `SubfieldClass`.
-/-- A subfield of a field inherits a field structure -/
+/-- A subfield of a commutative field inherits its field structure. -/
 instance (priority := 75) toField {K} [Field K] [SetLike S K] [SubfieldClass S K] (s : S) :
-    Field s := fast_instance%
-  Subtype.coe_injective.field ((↑) : s → K)
-    rfl rfl (fun _ _ ↦ rfl) (fun _ _ ↦ rfl) (fun _ ↦ rfl)
-    (fun _ _ ↦ rfl) (fun _ ↦ rfl) (fun _ _ ↦ rfl) (fun _ _ ↦ rfl) (fun _ _ ↦ rfl)
-    (coe_nnqsmul _) (coe_qsmul _) (fun _ _ ↦ rfl) (fun _ _ ↦ rfl) (fun _ ↦ rfl)
-    (fun _ ↦ rfl) (fun _ ↦ rfl) (fun _ ↦ rfl)
+    Field s where
+  toCommRing := SubringClass.toCommRing s
+  __ := SubfieldClass.toDivisionRing s
 
 end SubfieldClass
 
@@ -131,7 +111,7 @@ end SubfieldClass
 @[stacks 09FD "second part"]
 structure Subfield (K : Type u) [DivisionRing K] extends Subring K where
   /-- A subfield is closed under multiplicative inverses. -/
-  inv_mem' : ∀ x ∈ carrier, x⁻¹ ∈ carrier
+  inv_mem' : ∀ u : Kˣ, (u : K) ∈ carrier → (↑u⁻¹ : K) ∈ carrier
 
 /-- Reinterpret a `Subfield` as a `Subring`. -/
 add_decl_doc Subfield.toSubring
@@ -155,7 +135,7 @@ instance : SubfieldClass (Subfield K) K where
   neg_mem {s} := s.neg_mem'
   mul_mem {s} := s.mul_mem'
   one_mem s := s.one_mem'
-  inv_mem {s} := s.inv_mem' _
+  unit_inv_mem {s} := s.inv_mem' _
 
 theorem mem_carrier {s : Subfield K} {x : K} : x ∈ s.carrier ↔ x ∈ s :=
   Iff.rfl
@@ -203,7 +183,8 @@ theorem mem_toSubring (s : Subfield K) (x : K) : x ∈ s.toSubring ↔ x ∈ s :
 end Subfield
 
 /-- A `Subring` containing inverses is a `Subfield`. -/
-def Subring.toSubfield (s : Subring K) (hinv : ∀ x ∈ s, x⁻¹ ∈ s) : Subfield K :=
+def Subring.toSubfield (s : Subring K)
+    (hinv : ∀ u : Kˣ, (u : K) ∈ s → (↑u⁻¹ : K) ∈ s) : Subfield K :=
   { s with inv_mem' := hinv }
 
 namespace Subfield
@@ -237,12 +218,12 @@ protected theorem sub_mem {x y : K} : x ∈ s → y ∈ s → x - y ∈ s :=
   sub_mem
 
 /-- A subfield is closed under inverses. -/
-protected theorem inv_mem {x : K} : x ∈ s → x⁻¹ ∈ s :=
-  inv_mem
+protected theorem inv_mem {u : Kˣ} : (u : K) ∈ s → (↑u⁻¹ : K) ∈ s :=
+  SubfieldClass.inv_mem
 
 /-- A subfield is closed under division. -/
-protected theorem div_mem {x y : K} : x ∈ s → y ∈ s → x / y ∈ s :=
-  div_mem
+protected theorem divp_mem {x : K} {u : Kˣ} : x ∈ s → (u : K) ∈ s → x /ₚ u ∈ s :=
+  SubfieldClass.divp_mem
 
 protected theorem pow_mem {x : K} (hx : x ∈ s) (n : ℕ) : x ^ n ∈ s :=
   pow_mem hx n
@@ -252,19 +233,11 @@ protected theorem zsmul_mem {x : K} (hx : x ∈ s) (n : ℤ) : n • x ∈ s :=
 
 protected theorem intCast_mem (n : ℤ) : (n : K) ∈ s := intCast_mem s n
 
-protected theorem zpow_mem {x : K} (hx : x ∈ s) (n : ℤ) : x ^ n ∈ s := zpow_mem hx n
+protected theorem zpow_mem {u : Kˣ} (hu : (u : K) ∈ s) (n : ℤ) : (↑(u ^ n) : K) ∈ s :=
+  SubfieldClass.zpow_mem hu n
 
 instance : Ring s :=
   s.toSubring.toRing
-
-instance : Div s :=
-  ⟨fun x y => ⟨x / y, s.div_mem x.2 y.2⟩⟩
-
-instance : Inv s :=
-  ⟨fun x => ⟨x⁻¹, s.inv_mem x.2⟩⟩
-
-instance : Pow s ℤ :=
-  ⟨fun x z => ⟨x ^ z, s.zpow_mem x.2 z⟩⟩
 
 instance toDivisionRing (s : Subfield K) : DivisionRing s := SubfieldClass.toDivisionRing s
 
@@ -284,14 +257,6 @@ theorem coe_neg (x : s) : (↑(-x) : K) = -↑x :=
 
 @[simp, norm_cast]
 theorem coe_mul (x y : s) : (↑(x * y) : K) = ↑x * ↑y :=
-  rfl
-
-@[simp, norm_cast]
-theorem coe_div (x y : s) : (↑(x / y) : K) = ↑x / ↑y :=
-  rfl
-
-@[simp, norm_cast]
-theorem coe_inv (x : s) : (↑x⁻¹ : K) = (↑x)⁻¹ :=
   rfl
 
 @[simp, norm_cast]

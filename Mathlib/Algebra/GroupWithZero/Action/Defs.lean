@@ -248,19 +248,7 @@ def MulActionWithZero.compHom (f : M₀' →*₀ M₀) : MulActionWithZero M₀'
 
 end MonoidWithZero
 
-section GroupWithZero
-variable [GroupWithZero G₀] [GroupWithZero G₀'] [MulActionWithZero G₀ G₀']
-  [SMulCommClass G₀ G₀' G₀'] [IsScalarTower G₀ G₀' G₀']
 
-lemma smul_inv₀ (c : G₀) (x : G₀') : (c • x)⁻¹ = c⁻¹ • x⁻¹ := by
-  obtain rfl | hc := eq_or_ne c 0
-  · simp only [inv_zero, zero_smul]
-  obtain rfl | hx := eq_or_ne x 0
-  · simp only [inv_zero, smul_zero]
-  · refine inv_eq_of_mul_eq_one_left ?_
-    rw [smul_mul_smul_comm, inv_mul_cancel₀ hc, inv_mul_cancel₀ hx, one_smul]
-
-end GroupWithZero
 
 /-- Typeclass for scalar multiplication that preserves `0` and `+` on the right.
 
@@ -427,18 +415,8 @@ section MulDistribMulAction
 variable [Group α] [GroupWithZero β] [MulDistribMulAction α β]
 
 instance : SMulZeroClass α β where
-  smul_zero g := not_imp_comm.mp mul_inv_cancel₀ <| by
-    rw [← smul_one g, ← inv_smul_eq_iff, smul_mul', inv_smul_smul, zero_mul]
-    exact zero_ne_one
-
-/-- A version of `smul_inv'` for groups with zero. -/
-@[simp] theorem smul_inv₀' (g : α) (x : β) : g • x⁻¹ = (g • x)⁻¹ := by
-  by_cases hx : x = 0
-  · rw [hx, inv_zero, smul_zero, inv_zero]
-  · apply eq_inv_of_mul_eq_one_right
-    rw [← smul_mul', mul_inv_cancel₀ hx, smul_one]
-
-theorem smul_div₀' (g : α) (x y : β) : g • (x / y) = (g • x) / (g • y) := by
-  rw [div_eq_mul_inv, div_eq_mul_inv, smul_mul', smul_inv₀']
+  smul_zero g := by
+    have h := smul_mul' g (0 : β) (g⁻¹ • (0 : β))
+    simpa only [zero_mul, smul_inv_smul, mul_zero] using h
 
 end MulDistribMulAction

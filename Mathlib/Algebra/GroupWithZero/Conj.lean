@@ -22,13 +22,11 @@ namespace GroupWithZero
 
 variable {α : Type*} [GroupWithZero α] {a b : α}
 
-@[simp] lemma isConj_iff₀ : IsConj a b ↔ ∃ c : α, c ≠ 0 ∧ c * a * c⁻¹ = b := by
-  rw [IsConj, Units.exists_iff_ne_zero (p := (SemiconjBy · a b))]
-  congr! 2 with c
-  exact and_congr_right (mul_inv_eq_iff_eq_mul₀ · |>.symm)
-
-lemma conj_pow₀ {s : ℕ} {a d : α} (ha : a ≠ 0) : (a⁻¹ * d * a) ^ s = a⁻¹ * d ^ s * a :=
-  let u : αˣ := ⟨a, a⁻¹, mul_inv_cancel₀ ha, inv_mul_cancel₀ ha⟩
-  Units.conj_pow' u d s
+/-- Conjugacy can be witnessed by a checked nonzero conjugating element. -/
+lemma isConj_iff_exists_mk0 : IsConj a b ↔
+    ∃ (c : α) (hc : c ≠ 0), c * a /ₚ Units.mk0 c hc = b := by
+  rw [IsConj, Units.exists0]
+  exact exists_congr fun c => exists_congr fun hc =>
+    (divp_eq_iff_mul_eq.trans eq_comm).symm
 
 end GroupWithZero

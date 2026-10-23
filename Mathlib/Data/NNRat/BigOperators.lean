@@ -8,6 +8,7 @@ module
 public import Mathlib.Algebra.Order.BigOperators.GroupWithZero.Finset
 public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Mathlib.Data.NNRat.Defs
+public import Mathlib.Data.Rat.Cast.CharZero
 
 /-! # Casting lemmas for non-negative rational numbers involving sums and products
 -/
@@ -58,12 +59,16 @@ section Rat
 
 theorem toNNRat_sum_of_nonneg {s : Finset α} {f : α → ℚ} (hf : ∀ a, a ∈ s → 0 ≤ f a) :
     (∑ a ∈ s, f a).toNNRat = ∑ a ∈ s, (f a).toNNRat := by
-  rw [← coe_inj, cast_sum, Rat.coe_toNNRat _ (Finset.sum_nonneg hf)]
+  have hc : ((∑ a ∈ s, (f a).toNNRat : ℚ≥0) : ℚ) =
+      ∑ a ∈ s, ((f a).toNNRat : ℚ) := map_sum coeHom _ _
+  rw [← coe_inj, hc, Rat.coe_toNNRat _ (Finset.sum_nonneg hf)]
   exact Finset.sum_congr rfl fun x hxs ↦ by rw [Rat.coe_toNNRat _ (hf x hxs)]
 
 theorem toNNRat_prod_of_nonneg {s : Finset α} {f : α → ℚ} (hf : ∀ a ∈ s, 0 ≤ f a) :
     (∏ a ∈ s, f a).toNNRat = ∏ a ∈ s, (f a).toNNRat := by
-  rw [← coe_inj, cast_prod, Rat.coe_toNNRat _ (Finset.prod_nonneg hf)]
+  have hc : ((∏ a ∈ s, (f a).toNNRat : ℚ≥0) : ℚ) =
+      ∏ a ∈ s, ((f a).toNNRat : ℚ) := map_prod coeHom _ _
+  rw [← coe_inj, hc, Rat.coe_toNNRat _ (Finset.prod_nonneg hf)]
   exact Finset.prod_congr rfl fun x hxs ↦ by rw [Rat.coe_toNNRat _ (hf x hxs)]
 
 end Rat

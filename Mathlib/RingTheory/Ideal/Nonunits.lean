@@ -6,6 +6,7 @@ Authors: Kenny Lau, Chris Hughes, Mario Carneiro
 module
 
 public import Mathlib.RingTheory.Ideal.Maximal
+public import Mathlib.Algebra.GroupWithZero.CheckedHom
 
 /-!
 # The set of non-invertible elements of a monoid
@@ -88,23 +89,54 @@ protected theorem mem_nonunits_iff : a ∈ nonunits S ↔ (a : α)⁻¹ ∉ S :=
 
 end Group
 
+section Monoid
+
+variable [Monoid α] [SubmonoidClass C α] {S : C} {a : S}
+
+theorem checked_inv_mem_of_isUnit (ha : IsUnit a) :
+    Checked.inv (a : α) (ha.map (subtype <| ofClass S)) ∈ S := by
+  convert (Checked.inv a ha).property using 1
+  exact (Checked.map_inv (subtype <| ofClass S) a ha).symm
+
+theorem isUnit_iff_exists_inv_mem :
+    IsUnit a ↔ ∃ ha : IsUnit (a : α), Checked.inv (a : α) ha ∈ S where
+  mp h := ⟨h.map (subtype <| ofClass S), checked_inv_mem_of_isUnit h⟩
+  mpr h := by
+    obtain ⟨ha, hm⟩ := h
+    exact ⟨⟨a, ⟨_, hm⟩, Subtype.ext (Checked.mul_inv_cancel (a : α) ha),
+      Subtype.ext (Checked.inv_mul_cancel (a : α) ha)⟩, rfl⟩
+
+theorem isUnit_iff_of_isUnit (ha : IsUnit (a : α)) :
+    IsUnit a ↔ Checked.inv (a : α) ha ∈ S := by
+  rw [isUnit_iff_exists_inv_mem]
+  exact ⟨fun ⟨_, hm⟩ => hm, fun hm => ⟨ha, hm⟩⟩
+
+end Monoid
+
 section GroupWithZero
 
 variable [GroupWithZero α] [SubmonoidClass C α] {S : C} {a : S}
 
-theorem isUnit_iff_and : IsUnit a ↔ (a : α) ≠ 0 ∧ (a : α)⁻¹ ∈ S where
-  mp h := ⟨(h.map <| subtype <| ofClass S).ne_zero, inv_mem_of_isUnit h⟩
-  mpr h :=
-    ⟨⟨a, ⟨_, h.2⟩, Subtype.ext (mul_inv_cancel₀ h.1), Subtype.ext (inv_mul_cancel₀ h.1)⟩, rfl⟩
+theorem isUnit_iff_of_ne_zero (ha : (a : α) ≠ 0) :
+    IsUnit a ↔ Checked.inv (a : α) (GroupWithZero.isUnit_of_ne_zero ha) ∈ S :=
+  isUnit_iff_of_isUnit (GroupWithZero.isUnit_of_ne_zero ha)
 
-theorem isUnit_iff_of_ne_zero (ha : (a : α) ≠ 0) : IsUnit a ↔ (a : α)⁻¹ ∈ S := by
-  rw [isUnit_iff_and, and_iff_right ha]
+theorem mem_nonunits_iff_eq_zero_or_exists_inv_not_mem :
+    a ∈ nonunits S ↔ (a : α) = 0 ∨
+      ∃ ha : IsUnit (a : α), Checked.inv (a : α) ha ∉ S := by
+  rw [mem_nonunits_iff, isUnit_iff_exists_inv_mem]
+  constructor
+  · intro h
+    by_cases ha : (a : α) = 0
+    · exact Or.inl ha
+    · exact Or.inr ⟨GroupWithZero.isUnit_of_ne_zero ha, fun hm => h ⟨_, hm⟩⟩
+  · rintro (ha | ⟨ha, hnot⟩) ⟨hu, hm⟩
+    · exact hu.ne_zero ha
+    · exact hnot hm
 
-theorem mem_nonunits_iff_or : a ∈ nonunits S ↔ (a : α) = 0 ∨ (a : α)⁻¹ ∉ S := by
-  rw [mem_nonunits_iff, isUnit_iff_and, not_and_or, Ne, not_not]
-
-theorem mem_nonunits_iff_of_ne_zero (ha : (a : α) ≠ 0) : a ∈ nonunits S ↔ (a : α)⁻¹ ∉ S := by
-  rw [mem_nonunits_iff_or, or_iff_right ha]
+theorem mem_nonunits_iff_of_ne_zero (ha : (a : α) ≠ 0) :
+    a ∈ nonunits S ↔ Checked.inv (a : α) (GroupWithZero.isUnit_of_ne_zero ha) ∉ S := by
+  rw [mem_nonunits_iff, isUnit_iff_of_ne_zero ha]
 
 end GroupWithZero
 

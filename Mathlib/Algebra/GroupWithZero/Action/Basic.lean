@@ -6,6 +6,7 @@ Authors: Chris Hughes, Yury Kudryashov
 module
 
 public import Mathlib.Algebra.Group.Action.End
+public import Mathlib.Algebra.Group.Action.Units
 public import Mathlib.Algebra.GroupWithZero.Action.Defs
 public import Mathlib.Algebra.Group.Action.Prod
 public import Mathlib.Algebra.GroupWithZero.Prod
@@ -104,18 +105,21 @@ lemma IsUnit.smul_sub_iff_sub_inv_smul [Group G] [Monoid R] [AddGroup R] [Distri
     IsUnit (r • (1 : R) - a) ↔ IsUnit (1 - r⁻¹ • a) := by
   rw [← isUnit_smul_iff r (1 - r⁻¹ • a), smul_sub, smul_inv_smul]
 
-theorem div_smul_div_comm [Group G] [GroupWithZero G₀] [MulAction G G₀]
-    [IsScalarTower G G₀ G₀] [SMulCommClass G G₀ G₀] (g h : G) (a b : G₀) :
-    (g / h) • (a / b) = (g • a) / (h • b) := by
-  have (x : G) : x • (0 : G₀) = 0 := by simpa using (smul_assoc x (0 : G₀) (0 : G₀)).symm
-  by_cases hb : b = 0
-  · simp [hb, this]
-  have : h • b ≠ 0 := by
-    refine (ne_of_apply_ne (h⁻¹ • ·) ?_)
-    simpa [this]
-  rw [eq_div_iff_mul_eq this, smul_mul_smul_comm]
-  simp [hb]
+/-- Scale both parts of a quotient by units using compatible multiplicative scalar actions. -/
+theorem div_smul_divp_comm [Group G] [Monoid G₀] [MulAction G G₀]
+    [IsScalarTower G G₀ G₀] [SMulCommClass G G₀ G₀] (g h : G) (a : G₀) (u : G₀ˣ) :
+    (g / h) • (a /ₚ u) = (g • a) /ₚ (h • u) := by
+  change (g / h) • (a * ↑u⁻¹) = (g • a) * (h⁻¹ • (↑u⁻¹ : G₀))
+  rw [smul_mul_smul_comm, div_eq_mul_inv]
 
-@[simp] theorem smul_zpow₀' [Group G] [GroupWithZero G₀] [MulDistribMulAction G G₀]
-    (g : G) (x : G₀) (n : ℤ) : g • (x ^ n) = (g • x) ^ n := by
-  cases n <;> simp
+section MulDistribMulAction
+variable [Monoid G] [Monoid G₀] [MulDistribMulAction G G₀]
+
+attribute [local instance] Units.mulDistribMulActionRight
+
+/-- Multiplicative scalar actions preserve mixed division by units. -/
+@[simp] theorem smul_divp (g : G) (a : G₀) (u : G₀ˣ) :
+    g • (a /ₚ u) = (g • a) /ₚ (g • u) :=
+  smul_mul' g a ↑u⁻¹
+
+end MulDistribMulAction

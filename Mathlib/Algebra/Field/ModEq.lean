@@ -20,22 +20,25 @@ public section
 
 namespace AddCommGroup
 
-section DivisionSemiring
-variable {K : Type*} [DivisionSemiring K] {a b c p : K}
+section Semiring
+variable {K : Type*} [Semiring K] {a b p : K}
 
-@[simp] lemma div_modEq_div (hc : c ≠ 0) : a / c ≡ b / c [PMOD p] ↔ a ≡ b [PMOD (p * c)] := by
-  simp [modEq_iff_nsmul, add_div' _ _ _ hc, div_left_inj' hc, mul_assoc]
+@[simp] lemma divp_modEq_divp (u : Kˣ) :
+    a /ₚ u ≡ b /ₚ u [PMOD p] ↔ a ≡ b [PMOD (p * u)] := by
+  simp [modEq_iff_nsmul, Units.add_divp, divp_left_inj, mul_assoc]
 
-@[simp] lemma mul_modEq_mul_right (hc : c ≠ 0) : a * c ≡ b * c [PMOD p] ↔ a ≡ b [PMOD (p / c)] := by
-  rw [div_eq_mul_inv, ← div_modEq_div (inv_ne_zero hc), div_inv_eq_mul, div_inv_eq_mul]
+@[simp] lemma mul_modEq_mul_right (u : Kˣ) :
+    a * u ≡ b * u [PMOD p] ↔ a ≡ b [PMOD (p /ₚ u)] := by
+  simpa only [divp, inv_inv] using (divp_modEq_divp (a := a) (b := b) (p := p) u⁻¹)
 
-end DivisionSemiring
+end Semiring
 
-section Semifield
-variable {K : Type*} [Semifield K] {a b c p : K}
+section CommSemiring
+variable {K : Type*} [CommSemiring K] {a b p : K}
 
-@[simp] lemma mul_modEq_mul_left (hc : c ≠ 0) : c * a ≡ c * b [PMOD p] ↔ a ≡ b [PMOD (p / c)] := by
-  simp [mul_comm c, hc]
+@[simp] lemma mul_modEq_mul_left (u : Kˣ) :
+    (u : K) * a ≡ (u : K) * b [PMOD p] ↔ a ≡ b [PMOD (p /ₚ u)] := by
+  simpa only [mul_comm (u : K)] using (mul_modEq_mul_right (a := a) (b := b) (p := p) u)
 
-end Semifield
+end CommSemiring
 end AddCommGroup

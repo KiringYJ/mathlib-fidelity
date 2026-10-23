@@ -10,9 +10,12 @@ public import Mathlib.Algebra.Field.Defs
 public import Mathlib.Algebra.GroupWithZero.Units.Basic
 
 /-!
-# Instances for Euclidean domains
+# Euclidean division on fields
 
-* `Field.toEuclideanDomain`: shows that any field is a Euclidean domain.
+* `Field.toEuclideanDomain`: explicitly equips a field with Euclidean quotient and remainder.
+
+This is not a global instance: Euclidean quotient has a separate domain convention and must
+not install ambient inverse-based division through the ordinary field hierarchy.
 -/
 
 public section
@@ -21,21 +24,41 @@ namespace Field
 
 variable {K : Type*} [Field K]
 
--- see Note [lower instance priority]
-instance (priority := 100) toEuclideanDomain : EuclideanDomain K :=
-{ toCommRing := toCommRing
-  quotient := (· / ·), remainder := fun a b => a - a * b / b, quotient_zero := div_zero,
-  quotient_mul_add_remainder_eq := fun a b => by
-    by_cases h : b = 0 <;> simp [h, mul_div_cancel₀]
-  r := fun a b => a = 0 ∧ b ≠ 0,
-  r_wellFounded :=
-    WellFounded.intro fun _ =>
-      (Acc.intro _) fun _ ⟨hb, _⟩ => (Acc.intro _) fun _ ⟨_, hnb⟩ => False.elim <| hnb hb,
-  remainder_lt := fun a b hnb => by simp [hnb],
-  mul_left_not_lt := fun _ _ hnb ⟨hab, hna⟩ => Or.casesOn (mul_eq_zero.1 hab) hna hnb }
+/-- Equip a field with Euclidean division, explicitly selecting the Euclidean quotient contract. -/
+@[instance_reducible]
+noncomputable def toEuclideanDomain : EuclideanDomain K := by
+  classical
+  exact
+    { toCommRing := toCommRing
+      quotient := fun a b => if hb : b = 0 then 0 else a /ₚ Units.mk0 b hb
+      remainder := fun a b => if b = 0 then a else 0
+      quotient_zero := fun a => by simp
+      quotient_mul_add_remainder_eq := fun a b => by
+        by_cases hb : b = 0
+        · simp [hb]
+        · simp only [dite_eq_right hb, ite_eq_right hb, add_zero]
+          rw [mul_comm]
+          simpa only [Units.val_mk0] using divp_mul_cancel a (Units.mk0 b hb)
+      r := fun a b => a = 0 ∧ b ≠ 0
+      r_wellFounded :=
+        WellFounded.intro fun _ =>
+          (Acc.intro _) fun _ ⟨hb, _⟩ => (Acc.intro _) fun _ ⟨_, hnb⟩ => False.elim <| hnb hb
+      remainder_lt := fun a b hnb => by simp [hnb]
+      mul_left_not_lt := fun _ _ hnb ⟨hab, hna⟩ => Or.casesOn (mul_eq_zero.1 hab) hna hnb }
 
+attribute [local instance] toEuclideanDomain
+
+open Classical in
 @[simp]
-protected theorem mod_eq (a b : K) : a % b = a - a * b / b := rfl
+protected theorem mod_eq (a b : K) : a % b = if b = 0 then a else 0 := by
+  classical
+  rfl
+
+/-- Euclidean quotient agrees with unit division for a nonzero divisor. -/
+protected theorem quotient_eq_divp (a : K) {b : K} (hb : b ≠ 0) :
+    EuclideanDomain.quotient a b = a /ₚ Units.mk0 b hb := by
+  classical
+  exact dite_eq_right hb
 
 @[simp]
 protected theorem gcd_eq [DecidableEq K] (a b : K) :

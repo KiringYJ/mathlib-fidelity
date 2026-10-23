@@ -23,11 +23,9 @@ once the `Field` class has been defined.
 
 ## Main Definitions
 
-- `Rat.divInt n d` constructs a rational number `q = n / d` from `n d : ℤ`.
-
-## Notation
-
-- `/.` is infix notation for `Rat.divInt`.
+- `Rat.fraction n d hd` constructs a rational from an integer numerator and a nonzero
+  natural denominator.
+- `Rat.fractionInt n d hd` permits a nonzero integer denominator.
 
 -/
 
@@ -58,47 +56,11 @@ lemma natCast_injective : Injective (Nat.cast : ℕ → ℚ) :=
 
 @[simp high, norm_cast] lemma natCast_eq_one_iff {n : ℕ} : (n : ℚ) = 1 ↔ n = 1 := natCast_inj
 
-lemma mkRat_eq_divInt (n d) : mkRat n d = n /. d := rfl
-
 @[simp] lemma mk'_zero (d) (h : d ≠ 0) (w) : mk' 0 d h w = 0 := by congr; simp_all
 
 lemma num_ne_zero {q : ℚ} : q.num ≠ 0 ↔ q ≠ 0 := num_eq_zero.not
 
 @[simp] lemma den_ne_zero (q : ℚ) : q.den ≠ 0 := q.den_pos.ne'
-
-@[simp]
-theorem divInt_eq_zero {a b : ℤ} (b0 : b ≠ 0) : a /. b = 0 ↔ a = 0 := by
-  rw [← zero_divInt b, divInt_eq_divInt_iff b0 b0, Int.zero_mul, Int.mul_eq_zero, or_iff_left b0]
-
-theorem divInt_ne_zero {a b : ℤ} (b0 : b ≠ 0) : a /. b ≠ 0 ↔ a ≠ 0 :=
-  (divInt_eq_zero b0).not
-
--- TODO: Rename `mkRat_num_den` in Lean core
-alias mkRat_num_den' := mkRat_self
-
-theorem intCast_eq_divInt (z : ℤ) : (z : ℚ) = z /. 1 := mk_eq_divInt
-
-theorem lift_binop_eq (f : ℚ → ℚ → ℚ) (f₁ : ℤ → ℤ → ℤ → ℤ → ℤ) (f₂ : ℤ → ℤ → ℤ → ℤ → ℤ)
-    (fv :
-      ∀ {n₁ d₁ h₁ c₁ n₂ d₂ h₂ c₂},
-        f ⟨n₁, d₁, h₁, c₁⟩ ⟨n₂, d₂, h₂, c₂⟩ = f₁ n₁ d₁ n₂ d₂ /. f₂ n₁ d₁ n₂ d₂)
-    (f0 : ∀ {n₁ d₁ n₂ d₂}, d₁ ≠ 0 → d₂ ≠ 0 → f₂ n₁ d₁ n₂ d₂ ≠ 0) (a b c d : ℤ)
-    (b0 : b ≠ 0) (d0 : d ≠ 0)
-    (H :
-      ∀ {n₁ d₁ n₂ d₂}, a * d₁ = n₁ * b → c * d₂ = n₂ * d →
-        f₁ n₁ d₁ n₂ d₂ * f₂ a b c d = f₁ a b c d * f₂ n₁ d₁ n₂ d₂) :
-    f (a /. b) (c /. d) = f₁ a b c d /. f₂ a b c d := by
-  generalize ha : a /. b = x; obtain ⟨n₁, d₁, h₁, c₁⟩ := x; rw [mk_eq_divInt] at ha
-  generalize hc : c /. d = x; obtain ⟨n₂, d₂, h₂, c₂⟩ := x; rw [mk_eq_divInt] at hc
-  rw [fv]
-  have d₁0 := Int.ofNat_ne_zero.2 h₁
-  have d₂0 := Int.ofNat_ne_zero.2 h₂
-  exact (divInt_eq_divInt_iff (f0 d₁0 d₂0) (f0 b0 d0)).2
-    (H ((divInt_eq_divInt_iff b0 d₁0).1 ha) ((divInt_eq_divInt_iff d0 d₂0).1 hc))
-
-lemma neg_def (q : ℚ) : -q = -q.num /. q.den := by rw [← neg_divInt, num_divInt_den]
-
-@[simp] lemma divInt_neg (n d : ℤ) : n /. -d = -n /. d := divInt_neg' ..
 
 lemma mk'_mul_mk' (n₁ n₂ : ℤ) (d₁ d₂ : ℕ) (hd₁ hd₂ hnd₁ hnd₂) (h₁₂ : n₁.natAbs.Coprime d₂)
     (h₂₁ : n₂.natAbs.Coprime d₁) :
@@ -106,39 +68,22 @@ lemma mk'_mul_mk' (n₁ n₂ : ℤ) (d₁ d₂ : ℕ) (hd₁ hd₂ hnd₁ hnd₂
       rw [Int.natAbs_mul]; exact (hnd₁.mul_left h₂₁).mul_right (h₁₂.mul_left hnd₂)) := by
   rw [mul_def]; simp [mk_eq_normalize]
 
-lemma mul_eq_mkRat (q r : ℚ) : q * r = mkRat (q.num * r.num) (q.den * r.den) := by
-  rw [mul_def, normalize_eq_mkRat]
+lemma mul_eq_fraction (q r : ℚ) :
+    q * r = fraction (q.num * r.num) (q.den * r.den) (Nat.mul_ne_zero q.den_nz r.den_nz) :=
+  mul_def q r
 
-lemma pow_eq_mkRat (q : ℚ) (n : ℕ) : q ^ n = mkRat (q.num ^ n) (q.den ^ n) := by
-  rw [pow_def, mk_eq_mkRat]
-
-lemma pow_eq_divInt (q : ℚ) (n : ℕ) : q ^ n = q.num ^ n /. q.den ^ n := by
-  rw [pow_def, mk_eq_divInt, Int.natCast_pow]
+lemma pow_eq_fraction (q : ℚ) (n : ℕ) :
+    q ^ n = fraction (q.num ^ n) (q.den ^ n) (by simp [Nat.pow_eq_zero, q.den_nz]) := by
+  rw [pow_def, fraction, ← mk_eq_normalize]
 
 @[simp] lemma mk'_pow (num : ℤ) (den : ℕ) (hd hdn) (n : ℕ) :
     mk' num den hd hdn ^ n = mk' (num ^ n) (den ^ n)
       (by simp [Nat.pow_eq_zero, hd]) (by rw [Int.natAbs_pow]; exact hdn.pow _ _) := rfl
 
-@[simp] lemma inv_mkRat (a : ℤ) (b : ℕ) : (mkRat a b)⁻¹ = b /. a := by
-  rw [mkRat_eq_divInt, inv_divInt]
-
-@[simp] lemma divInt_div_divInt (n₁ d₁ n₂ d₂) :
-    (n₁ /. d₁) / (n₂ /. d₂) = (n₁ * d₂) /. (d₁ * n₂) := by
-  rw [div_def, inv_divInt, divInt_mul_divInt]
-
-lemma div_def' (q r : ℚ) : q / r = (q.num * r.den) /. (q.den * r.num) := by
-  rw [← divInt_div_divInt, num_divInt_den, num_divInt_den]
-
-variable (a b c : ℚ)
-
-@[simp] lemma divInt_one (n : ℤ) : n /. 1 = n := by simp [divInt, mkRat, normalize]
-
-lemma divInt_one_one : 1 /. 1 = 1 := by rw [divInt_one, Rat.intCast_one]
-
 protected theorem zero_ne_one : 0 ≠ (1 : ℚ) := by
-  rw [ne_comm, ← divInt_one_one, divInt_ne_zero] <;> lia
-
-attribute [simp] mkRat_eq_zero
+  intro h
+  have := congrArg Rat.num h
+  contradiction
 
 -- Extra instances to short-circuit type class resolution
 -- TODO(Mario): this instance slows down Mathlib.Basic.Real.Basic
@@ -211,7 +156,7 @@ theorem num_zero : Rat.num 0 = 0 :=
 theorem den_zero : Rat.den 0 = 1 :=
   rfl
 
-lemma zero_of_num_zero {q : ℚ} (hq : q.num = 0) : q = 0 := by simpa [hq] using q.num_divInt_den.symm
+lemma zero_of_num_zero {q : ℚ} (hq : q.num = 0) : q = 0 := Rat.num_eq_zero.mp hq
 
 theorem zero_iff_num_zero {q : ℚ} : q = 0 ↔ q.num = 0 :=
   ⟨fun _ => by simp [*], zero_of_num_zero⟩
@@ -224,37 +169,12 @@ theorem num_one : (1 : ℚ).num = 1 :=
 theorem den_one : (1 : ℚ).den = 1 :=
   rfl
 
-theorem mk_num_ne_zero_of_ne_zero {q : ℚ} {n d : ℤ} (hq : q ≠ 0) (hqnd : q = n /. d) : n ≠ 0 :=
-  fun this => hq <| by simpa [this] using hqnd
-
-theorem mk_denom_ne_zero_of_ne_zero {q : ℚ} {n d : ℤ} (hq : q ≠ 0) (hqnd : q = n /. d) : d ≠ 0 :=
-  fun this => hq <| by simpa [this] using hqnd
-
-theorem divInt_ne_zero_of_ne_zero {n d : ℤ} (h : n ≠ 0) (hd : d ≠ 0) : n /. d ≠ 0 :=
-  (divInt_ne_zero hd).mpr h
-
 section Casts
 
-protected theorem add_divInt (a b c : ℤ) : (a + b) /. c = a /. c + b /. c :=
-  if h : c = 0 then by simp [h]
-  else by
-    rw [divInt_add_divInt _ _ h h, divInt_eq_divInt_iff h (Int.mul_ne_zero h h)]
-    simp [Int.add_mul, Int.mul_assoc]
-
-lemma intCast_div_eq_divInt (n d : ℤ) : (n : ℚ) / d = n /. d := by rw [divInt_eq_div]
-
-theorem natCast_div_eq_divInt (n d : ℕ) : (n : ℚ) / d = n /. d := Rat.intCast_div_eq_divInt n d
-
-theorem divInt_mul_divInt_cancel {x : ℤ} (hx : x ≠ 0) (n d : ℤ) : n /. x * (x /. d) = n /. d := by
-  by_cases hd : d = 0
-  · rw [hd]
-    simp
-  rw [divInt_mul_divInt, x.mul_comm, divInt_mul_right hx]
-
 theorem coe_int_num_of_den_eq_one {q : ℚ} (hq : q.den = 1) : (q.num : ℚ) = q := by
-  conv_rhs => rw [← num_divInt_den q, hq]
-  rw [intCast_eq_divInt]
-  rfl
+  have h := Rat.normalize_self q
+  simpa only [hq, Rat.normalize_eq, Nat.gcd_one_right, Int.natCast_one, Int.ediv_one, Nat.div_one,
+    Rat.mk_den_one] using h
 
 lemma eq_num_of_isInt {q : ℚ} (h : q.isInt) : q = q.num := by
   rw [Rat.isInt, Nat.beq_eq_true_eq] at h
@@ -270,16 +190,12 @@ instance canLift : CanLift ℚ ℤ (↑) fun q => q.den = 1 :=
 
 end Casts
 
-/--
-A version of `Rat.casesOn` that uses `/` instead of `Rat.mk'`. Use as
-```lean
-cases r with
-| div p q nonzero coprime =>
-```
--/
+/-- Eliminate a rational into its numerator and its nonzero natural denominator. -/
 @[elab_as_elim, cases_eliminator, induction_eliminator]
 def divCasesOn {C : ℚ → Sort*} (a : ℚ)
-    (div : ∀ (n : ℤ) (d : ℕ), d ≠ 0 → n.natAbs.Coprime d → C (n / d)) : C a :=
-  a.casesOn fun n d nz red => by rw [Rat.mk_eq_divInt, Rat.divInt_eq_div]; exact div n d nz red
+    (div : ∀ (n : ℤ) (d : ℕ) (hd : d ≠ 0), n.natAbs.Coprime d → C (fraction n d hd)) : C a :=
+  a.casesOn fun n d nz red => by
+    rw [Rat.mk_eq_normalize]
+    exact div n d nz red
 
 end Rat

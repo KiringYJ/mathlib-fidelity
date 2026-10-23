@@ -39,23 +39,29 @@ instance [MulZeroOneClass G] [CommMonoidWithZero H] (f : G →*₀ H) :
 
 instance [GroupWithZero G] [GroupWithZero H] (f : G →*₀ H) :
     GroupWithZero (MonoidHom.mrange f) where
-  inv := fun x ↦ ⟨x⁻¹, by
-    obtain ⟨y, hy⟩ := x.prop
-    use y⁻¹
-    simp [← hy]⟩
   exists_pair_ne := ⟨⟨f 0, 0, rfl⟩, ⟨f 1, by simp [-map_one]⟩, by simp⟩
-  inv_zero := Subtype.ext inv_zero
-  mul_inv_cancel := by
-    rintro ⟨a, ha⟩ h
-    simp only [ne_eq, Subtype.ext_iff] at h
-    simpa using mul_inv_cancel₀ h
+  isUnit_of_ne_zero {a} ha := by
+    obtain ⟨y, hy⟩ := a.prop
+    have hy0 : y ≠ 0 := by
+      intro h
+      apply ha
+      apply Subtype.ext
+      simpa [h] using hy.symm
+    let u := Units.mk0 y hy0
+    let v : MonoidHom.mrange f := ⟨f ↑u⁻¹, ↑u⁻¹, rfl⟩
+    refine ⟨⟨a, v, ?_, ?_⟩, rfl⟩
+    · apply Subtype.ext
+      change (a : H) * f ↑u⁻¹ = 1
+      rw [← hy, ← map_mul]
+      change f ((u : G) * ↑u⁻¹) = 1
+      rw [u.mul_inv, map_one]
+    · apply Subtype.ext
+      change f ↑u⁻¹ * (a : H) = 1
+      rw [← hy, ← map_mul]
+      change f (↑u⁻¹ * (u : G)) = 1
+      rw [u.inv_mul, map_one]
 
 instance [GroupWithZero G] [CommGroupWithZero H] (f : G →*₀ H) :
     CommGroupWithZero (MonoidHom.mrange f) where
-
-lemma mker_inverse [CommGroupWithZero H] :
-    MonoidHom.mker (MonoidWithZero.inverse (M := H)) = ⊥ := by
-  ext
-  simp
 
 end MonoidWithZeroHom

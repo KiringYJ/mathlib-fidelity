@@ -416,24 +416,25 @@ section DivisionRing
 variable {K : Type u} [DivisionRing K]
 
 instance instField : Field (center K) where
-  inv a := ⟨a⁻¹, Set.inv_mem_center a.prop⟩
-  mul_inv_cancel _ ha := Subtype.ext <| mul_inv_cancel₀ <| Subtype.coe_injective.ne ha
-  div a b := ⟨a / b, Set.div_mem_center a.prop b.prop⟩
-  div_eq_mul_inv _ _ := Subtype.ext <| div_eq_mul_inv _ _
-  inv_zero := Subtype.ext inv_zero
-  -- TODO: use a nicer defeq
-  nnqsmul := _
-  nnqsmul_def := fun _ _ => rfl
-  qsmul := _
-  qsmul_def := fun _ _ => rfl
+  __ := (inferInstance : CommRing (center K))
+  exists_pair_ne := ⟨0, 1, fun h => zero_ne_one (congrArg (fun a : center K => (a : K)) h)⟩
+  isUnit_of_ne_zero {a} ha := by
+    have hn : (a : K) ≠ 0 := fun h => ha (Subtype.ext h)
+    let u := Units.mk0 (a : K) hn
+    refine ⟨{
+      val := a
+      inv := ⟨u.inv, ?_⟩
+      val_inv := Subtype.ext u.mul_inv
+      inv_val := Subtype.ext u.inv_mul }, rfl⟩
+    exact Set.units_inv_mem_center (a := u) a.property
 
 @[simp]
-theorem center.coe_inv (a : center K) : ((a⁻¹ : center K) : K) = (a : K)⁻¹ :=
-  rfl
+theorem center.coe_inv {R : Type*} [Ring R] (u : (center R)ˣ) :
+    (u.inv : R) = (Units.map (center R).subtype.toMonoidHom u).inv := rfl
 
 @[simp]
-theorem center.coe_div (a b : center K) : ((a / b : center K) : K) = (a : K) / (b : K) :=
-  rfl
+theorem center.coe_div {R : Type*} [Ring R] (a : center R) (u : (center R)ˣ) :
+    ((a /ₚ u : center R) : R) = (a : R) /ₚ Units.map (center R).subtype.toMonoidHom u := rfl
 
 end DivisionRing
 

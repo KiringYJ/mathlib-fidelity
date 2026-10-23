@@ -156,32 +156,35 @@ section GroupWithZero
 
 variable [GroupWithZero G₀]
 
-/-- Pull back a `GroupWithZero` along an injective function.
+/-- Pull back a group with zero along an injective function whose image contains the inverses
+of its nonzero elements. Injectivity alone does not guarantee this closure property.
 See note [reducible non-instances]. -/
-protected abbrev Function.Injective.groupWithZero [Zero G₀'] [Mul G₀'] [One G₀'] [Inv G₀'] [Div G₀']
-    [Pow G₀' ℕ] [Pow G₀' ℤ] (f : G₀' → G₀) (hf : Injective f) (zero : f 0 = 0) (one : f 1 = 1)
-    (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (x / y) = f x / f y) (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
-    (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : GroupWithZero G₀' :=
-  { hf.monoidWithZero f zero one mul npow,
-    hf.divInvMonoid f one mul inv div npow zpow,
-    domain_nontrivial f zero one with
-    inv_zero := hf <| by rw [inv, zero, inv_zero],
-    mul_inv_cancel := fun x hx => hf <| by
-      rw [one, mul, inv, mul_inv_cancel₀ ((hf.ne_iff' zero).2 hx)] }
+protected abbrev Function.Injective.groupWithZero [Zero G₀'] [Mul G₀'] [One G₀']
+    [Pow G₀' ℕ] (f : G₀' → G₀) (hf : Injective f) (zero : f 0 = 0) (one : f 1 = 1)
+    (mul : ∀ x y, f (x * y) = f x * f y) (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
+    (inverse_closed : ∀ a, f a ≠ 0 → ∃ b, f a * f b = 1 ∧ f b * f a = 1) :
+    GroupWithZero G₀' := by
+  letI := hf.monoidWithZero f zero one mul npow
+  exact { hf.monoidWithZero f zero one mul npow, domain_nontrivial f zero one with
+    isUnit_of_ne_zero := fun {a} ha => by
+      obtain ⟨b, hab, hba⟩ := inverse_closed a ((hf.ne_iff' zero).2 ha)
+      exact ⟨⟨a, b, hf (by rw [mul, hab, one]), hf (by rw [mul, hba, one])⟩, rfl⟩ }
 
-/-- Push forward a `GroupWithZero` along a surjective function.
-See note [reducible non-instances]. -/
-protected abbrev Function.Surjective.groupWithZero [Zero G₀'] [Mul G₀'] [One G₀'] [Inv G₀']
-    [Div G₀'] [Pow G₀' ℕ] [Pow G₀' ℤ] (h01 : (0 : G₀') ≠ 1) (f : G₀ → G₀') (hf : Surjective f)
+/-- Push forward a group with zero along a surjective function preserving multiplication,
+zero and one. See note [reducible non-instances]. -/
+protected abbrev Function.Surjective.groupWithZero [Zero G₀'] [Mul G₀'] [One G₀']
+    [Pow G₀' ℕ] (h01 : (0 : G₀') ≠ 1) (f : G₀ → G₀') (hf : Surjective f)
     (zero : f 0 = 0) (one : f 1 = 1) (mul : ∀ x y, f (x * y) = f x * f y)
-    (inv : ∀ x, f x⁻¹ = (f x)⁻¹) (div : ∀ x y, f (x / y) = f x / f y)
-    (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n) (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) :
-    GroupWithZero G₀' :=
-  { hf.monoidWithZero f zero one mul npow, hf.divInvMonoid f one mul inv div npow zpow with
-    inv_zero := by rw [← zero, ← inv, inv_zero],
-    mul_inv_cancel := hf.forall.2 fun x hx => by
-        rw [← inv, ← mul, mul_inv_cancel₀ (mt (congr_arg f) fun h ↦ hx (h.trans zero)), one]
+    (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n) : GroupWithZero G₀' := by
+  letI := hf.monoidWithZero f zero one mul npow
+  exact { hf.monoidWithZero f zero one mul npow with
+    isUnit_of_ne_zero := fun {a} ha => by
+      obtain ⟨x, rfl⟩ := hf a
+      have hx : x ≠ 0 := fun h => ha (h ▸ zero)
+      obtain ⟨u, hu⟩ := GroupWithZero.isUnit_of_ne_zero hx
+      refine ⟨⟨f u, f (↑u⁻¹), ?_, ?_⟩, congr_arg f hu⟩
+      · rw [← mul, u.mul_inv, one]
+      · rw [← mul, u.inv_mul, one]
     exists_pair_ne := ⟨0, 1, h01⟩ }
 
 end GroupWithZero
@@ -190,24 +193,22 @@ section CommGroupWithZero
 
 variable [CommGroupWithZero G₀]
 
-/-- Pull back a `CommGroupWithZero` along an injective function.
-See note [reducible non-instances]. -/
-protected abbrev Function.Injective.commGroupWithZero [Zero G₀'] [Mul G₀'] [One G₀'] [Inv G₀']
-    [Div G₀'] [Pow G₀' ℕ] [Pow G₀' ℤ] (f : G₀' → G₀) (hf : Injective f) (zero : f 0 = 0)
-    (one : f 1 = 1) (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (x / y) = f x / f y) (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
-    (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : CommGroupWithZero G₀' :=
-  { hf.groupWithZero f zero one mul inv div npow zpow, hf.commSemigroup f mul with }
+/-- Pull back a commutative group with zero along an injective function whose image is closed
+under inversion of nonzero elements. See note [reducible non-instances]. -/
+protected abbrev Function.Injective.commGroupWithZero [Zero G₀'] [Mul G₀'] [One G₀']
+    [Pow G₀' ℕ] (f : G₀' → G₀) (hf : Injective f) (zero : f 0 = 0) (one : f 1 = 1)
+    (mul : ∀ x y, f (x * y) = f x * f y) (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
+    (inverse_closed : ∀ a, f a ≠ 0 → ∃ b, f a * f b = 1 ∧ f b * f a = 1) :
+    CommGroupWithZero G₀' :=
+  { hf.groupWithZero f zero one mul npow inverse_closed, hf.commSemigroup f mul with }
 
-/-- Push forward a `CommGroupWithZero` along a surjective function.
+/-- Push forward a commutative group with zero along a surjective function.
 See note [reducible non-instances]. -/
 @[instance_reducible]
-protected def Function.Surjective.commGroupWithZero [Zero G₀'] [Mul G₀'] [One G₀'] [Inv G₀']
-    [Div G₀'] [Pow G₀' ℕ] [Pow G₀' ℤ] (h01 : (0 : G₀') ≠ 1) (f : G₀ → G₀') (hf : Surjective f)
+protected def Function.Surjective.commGroupWithZero [Zero G₀'] [Mul G₀'] [One G₀']
+    [Pow G₀' ℕ] (h01 : (0 : G₀') ≠ 1) (f : G₀ → G₀') (hf : Surjective f)
     (zero : f 0 = 0) (one : f 1 = 1) (mul : ∀ x y, f (x * y) = f x * f y)
-    (inv : ∀ x, f x⁻¹ = (f x)⁻¹) (div : ∀ x y, f (x / y) = f x / f y)
-    (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n) (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) :
-    CommGroupWithZero G₀' :=
-  { hf.groupWithZero h01 f zero one mul inv div npow zpow, hf.commSemigroup f mul with }
+    (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n) : CommGroupWithZero G₀' :=
+  { hf.groupWithZero h01 f zero one mul npow, hf.commSemigroup f mul with }
 
 end CommGroupWithZero

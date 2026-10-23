@@ -83,17 +83,20 @@ instance : DecidableLE SignType := fun a b => by
 
 /-- We can define a `Field` instance on `SignType`, but it's not mathematically sensible,
 so we only define the `CommGroupWithZero`. -/
-instance : CommGroupWithZero SignType where
-  inv := id
+instance : CommMonoidWithZero SignType where
   mul_zero a := by cases a <;> rfl
   zero_mul a := by cases a <;> rfl
   mul_one a := by cases a <;> rfl
   one_mul a := by cases a <;> rfl
-  mul_inv_cancel a ha := by cases a <;> trivial
   mul_comm := by decide
   mul_assoc := by decide
+
+instance : CommGroupWithZero SignType where
+  toCommMonoidWithZero := inferInstance
   exists_pair_ne := ⟨0, 1, by rintro ⟨_⟩⟩
-  inv_zero := rfl
+  isUnit_of_ne_zero {a} ha := by
+    have h : a * a = 1 := by cases a <;> first | rfl | contradiction
+    exact ⟨⟨a, a, h, h⟩, rfl⟩
 
 instance : LinearOrder SignType where
   le_refl a := by cases a <;> constructor

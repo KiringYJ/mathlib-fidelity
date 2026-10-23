@@ -35,12 +35,15 @@ instance monoidWithZero [MonoidWithZero α] : MonoidWithZero (ULift α) :=
 instance commMonoidWithZero [CommMonoidWithZero α] : CommMonoidWithZero (ULift α) :=
   Equiv.ulift.injective.commMonoidWithZero _ rfl rfl (fun _ _ => rfl) fun _ _ => rfl
 
-instance groupWithZero [GroupWithZero α] : GroupWithZero (ULift α) :=
-  Equiv.ulift.injective.groupWithZero _ rfl rfl (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-    (fun _ _ => rfl) fun _ _ => rfl
+instance groupWithZero [GroupWithZero α] : GroupWithZero (ULift α) where
+  __ := monoidWithZero
+  isUnit_of_ne_zero {a} ha := by
+    obtain ⟨u, hu⟩ := GroupWithZero.isUnit_of_ne_zero (Equiv.ulift.injective.ne ha)
+    change (u : α) = a.down at hu
+    exact ⟨⟨a, up ↑u⁻¹,
+      Equiv.ulift.injective (by change a.down * ↑u⁻¹ = 1; rw [← hu]; exact u.mul_inv),
+      Equiv.ulift.injective (by change ↑u⁻¹ * a.down = 1; rw [← hu]; exact u.inv_mul)⟩, rfl⟩
 
-instance commGroupWithZero [CommGroupWithZero α] : CommGroupWithZero (ULift α) :=
-  Equiv.ulift.injective.commGroupWithZero _ rfl rfl (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-    (fun _ _ => rfl) fun _ _ => rfl
+instance commGroupWithZero [CommGroupWithZero α] : CommGroupWithZero (ULift α) where
 
 end ULift

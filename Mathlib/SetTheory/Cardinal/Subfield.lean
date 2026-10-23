@@ -40,38 +40,79 @@ private abbrev Operands : Fin 6 ⊕ s → Type
 
 variable [DivisionRing α]
 
-private def operate : (Σ n, Operands s n → closure s) → closure s
-  | ⟨.inl 0, f⟩ => f false + f true
-  | ⟨.inl 1, f⟩ => f false * f true
-  | ⟨.inl 2, f⟩ => -f ()
-  | ⟨.inl 3, f⟩ => (f ())⁻¹
-  | ⟨.inl 4, _⟩ => 0
-  | ⟨.inl 5, _⟩ => 1
-  | ⟨.inr a, _⟩ => ⟨a, subset_closure a.prop⟩
+private noncomputable def inverse? (x : closure s) : Option (closure s) := by
+  classical
+  exact if hx : x ≠ 0 then some (↑(Units.mk0 x hx)⁻¹ : closure s) else none
 
-private def rangeOfWType : Subfield (closure s) where
-  carrier := Set.range (WType.elim _ <| operate s)
-  add_mem' := by rintro _ _ ⟨x, rfl⟩ ⟨y, rfl⟩; exact ⟨WType.mk (.inl 0) (Bool.rec x y), by rfl⟩
-  mul_mem' := by rintro _ _ ⟨x, rfl⟩ ⟨y, rfl⟩; exact ⟨WType.mk (.inl 1) (Bool.rec x y), by rfl⟩
-  neg_mem' := by rintro _ ⟨x, rfl⟩; exact ⟨WType.mk (.inl 2) fun _ ↦ x, rfl⟩
-  inv_mem' := by rintro _ ⟨x, rfl⟩; exact ⟨WType.mk (.inl 3) fun _ ↦ x, rfl⟩
-  zero_mem' := ⟨WType.mk (.inl 4) Empty.rec, rfl⟩
-  one_mem' := ⟨WType.mk (.inl 5) Empty.rec, rfl⟩
+private noncomputable def operate? :
+    (Σ n, Operands s n → Option (closure s)) → Option (closure s)
+  | ⟨.inl 0, f⟩ => return (← f false) + (← f true)
+  | ⟨.inl 1, f⟩ => return (← f false) * (← f true)
+  | ⟨.inl 2, f⟩ => return -(← f ())
+  | ⟨.inl 3, f⟩ => (f ()).bind (inverse? s)
+  | ⟨.inl 4, _⟩ => some 0
+  | ⟨.inl 5, _⟩ => some 1
+  | ⟨.inr a, _⟩ => some ⟨a, subset_closure a.prop⟩
 
-private lemma rangeOfWType_eq_top : rangeOfWType s = ⊤ := top_le_iff.mp fun a _ ↦ by
-  rw [← SetLike.mem_coe, ← Subtype.val_injective.mem_set_image]
-  change ↑a ∈ map (closure s).subtype _
-  refine closure_le.mpr (fun a ha ↦ ?_) a.prop
-  exact ⟨⟨a, subset_closure ha⟩, ⟨WType.mk (.inr ⟨a, ha⟩) Empty.rec, rfl⟩, rfl⟩
+/-- Partial evaluation of formal division-ring expressions. An inverse node is admissible exactly
+when its child evaluates to a nonzero element; invalid inverse nodes have no value. -/
+private noncomputable def eval? : WType (Operands s) → Option (closure s) :=
+  WType.elim _ <| operate? s
 
-private lemma surjective_ofWType : Function.Surjective (WType.elim _ <| operate s) := by
-  rw [← Set.range_eq_univ]
-  exact SetLike.coe_set_eq.mpr (rangeOfWType_eq_top s)
+private lemma eval?_mk (n : Fin 6 ⊕ s) (f : Operands s n → WType (Operands s)) :
+    eval? s (WType.mk n f) = operate? s ⟨n, fun i ↦ eval? s (f i)⟩ := rfl
+
+private noncomputable abbrev AdmissibleExpr := {w : WType (Operands s) // (eval? s w).isSome}
+
+private noncomputable def value (w : AdmissibleExpr s) : closure s :=
+  (eval? s w.1).get w.2
+
+private lemma exists_eval?_eq_some (a : closure s) : ∃ w, eval? s w = some a := by
+  apply closure_induction (s := s)
+    (p := fun a ha ↦ ∃ w, eval? s w = some (⟨a, ha⟩ : closure s))
+  · intro a ha
+    exact ⟨WType.mk (.inr ⟨a, ha⟩) Empty.rec, rfl⟩
+  · exact ⟨WType.mk (.inl 5) Empty.rec, rfl⟩
+  · rintro x y _ _ ⟨wx, hwx⟩ ⟨wy, hwy⟩
+    exact ⟨WType.mk (.inl 0) (Bool.rec wx wy), by
+      rw [eval?_mk]
+      simp [operate?, hwx, hwy]⟩
+  · rintro x _ ⟨wx, hwx⟩
+    refine ⟨WType.mk (.inl 2) (fun _ ↦ wx), ?_⟩
+    rw [eval?_mk]
+    simp only [operate?, hwx]
+    exact congrArg some (Subtype.ext rfl)
+  · rintro u hu ⟨wx, hwx⟩
+    refine ⟨WType.mk (.inl 3) (fun _ ↦ wx), ?_⟩
+    rw [eval?_mk]
+    simp only [operate?, hwx]
+    let xu : closure s := ⟨u, hu⟩
+    change inverse? s xu = some _
+    have hxu : xu ≠ 0 := fun h ↦ u.ne_zero (congrArg Subtype.val h)
+    let us : (closure s)ˣ :=
+      ⟨xu, ⟨↑u⁻¹, (closure s).inv_mem hu⟩, Subtype.ext u.mul_inv, Subtype.ext u.inv_mul⟩
+    have hmk : Units.mk0 xu hxu = us := Units.ext rfl
+    have hinv : (↑(Units.mk0 xu hxu)⁻¹ : closure s) =
+        ⟨↑u⁻¹, (closure s).inv_mem hu⟩ := by
+      rw [hmk]
+      rfl
+    simpa [inverse?, hxu] using congrArg some hinv
+  · rintro x y _ _ ⟨wx, hwx⟩ ⟨wy, hwy⟩
+    exact ⟨WType.mk (.inl 1) (Bool.rec wx wy), by
+      rw [eval?_mk]
+      simp [operate?, hwx, hwy]⟩
+
+private lemma surjective_value : Function.Surjective (value s) := by
+  intro a
+  obtain ⟨w, hw⟩ := exists_eval?_eq_some s a
+  refine ⟨⟨w, by simp [hw]⟩, ?_⟩
+  simp [value, hw]
 
 open Cardinal
 
 lemma cardinalMk_closure_le_max : #(closure s) ≤ max #s ℵ₀ :=
-  (Cardinal.mk_le_of_surjective <| surjective_ofWType s).trans <| by
+  (Cardinal.mk_le_of_surjective <| surjective_value s).trans <|
+    (Cardinal.mk_subtype_le _).trans <| by
     convert! WType.cardinalMk_le_max_aleph0_of_finite' using 1
     · rw [lift_uzero, mk_sum, lift_uzero]
       have : lift.{u, 0} #(Fin 6) < ℵ₀ := lift_lt_aleph0.mpr (lt_aleph0_of_finite _)

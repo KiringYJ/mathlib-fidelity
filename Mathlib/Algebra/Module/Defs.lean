@@ -37,7 +37,7 @@ semimodule, module, vector space
 
 public section
 
-assert_not_exists Field Invertible Pi.single_smul₀ RingHom Set.indicator Multiset Units
+assert_not_exists Field Invertible Pi.single_smul₀ RingHom Set.indicator Multiset
 
 open Function
 

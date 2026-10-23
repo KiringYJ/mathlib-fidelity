@@ -25,4 +25,9 @@ variable {𝕜 M : Type*} [DivisionSemiring 𝕜] [AddCommMonoid M] [Module 𝕜
 
 /-- Any (semi)vector space is torsion-free. -/
 instance (priority := 100) DivisionSemiring.to_moduleIsTorsionFree : IsTorsionFree 𝕜 M where
-  isSMulRegular r hr m₁ m₂ hm := by simpa [hr.ne_zero] using congr(r⁻¹ • $hm)
+  isSMulRegular r hr m₁ m₂ hm := by
+    let u := Units.mk0 r hr.ne_zero
+    have hu : (↑u⁻¹ : 𝕜) * r = 1 := by
+      change (↑u⁻¹ : 𝕜) * (u : 𝕜) = 1
+      exact u.inv_mul
+    simpa only [← mul_smul, hu, one_smul] using congr((↑u⁻¹ : 𝕜) • $hm)

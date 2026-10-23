@@ -40,9 +40,11 @@ instance instMonoidWithZero [MonoidWithZero α] : MonoidWithZero αᵐᵒᵖ whe
 instance instGroupWithZero [GroupWithZero α] : GroupWithZero αᵐᵒᵖ where
   __ := instMonoidWithZero
   __ := instNontrivial
-  __ := instDivInvMonoid
-  mul_inv_cancel _ hx := unop_injective <| inv_mul_cancel₀ <| unop_injective.ne hx
-  inv_zero := unop_injective inv_zero
+  isUnit_of_ne_zero {a} ha := by
+    obtain ⟨u, hu⟩ := GroupWithZero.isUnit_of_ne_zero (unop_injective.ne ha)
+    exact ⟨⟨a, op ↑u⁻¹,
+      unop_injective (by change ↑u⁻¹ * unop a = 1; rw [← hu]; exact u.inv_mul),
+      unop_injective (by change unop a * ↑u⁻¹ = 1; rw [← hu]; exact u.mul_inv)⟩, rfl⟩
 
 instance instNoZeroDivisors [Zero α] [Mul α] [NoZeroDivisors α] : NoZeroDivisors αᵐᵒᵖ where
   eq_zero_or_eq_zero_of_mul_eq_zero (H : op (_ * _) = op (0 : α)) :=
@@ -102,8 +104,10 @@ instance instNoZeroDivisors [Zero α] [Mul α] [NoZeroDivisors α] : NoZeroDivis
 instance instGroupWithZero [GroupWithZero α] : GroupWithZero αᵃᵒᵖ where
   __ := instMonoidWithZero
   __ := instNontrivial
-  __ := instDivInvMonoid
-  mul_inv_cancel _ hx := unop_injective <| mul_inv_cancel₀ <| unop_injective.ne hx
-  inv_zero := unop_injective inv_zero
+  isUnit_of_ne_zero {a} ha := by
+    obtain ⟨u, hu⟩ := GroupWithZero.isUnit_of_ne_zero (unop_injective.ne ha)
+    exact ⟨⟨a, op ↑u⁻¹,
+      unop_injective (by change unop a * ↑u⁻¹ = 1; rw [← hu]; exact u.mul_inv),
+      unop_injective (by change ↑u⁻¹ * unop a = 1; rw [← hu]; exact u.inv_mul)⟩, rfl⟩
 
 end AddOpposite

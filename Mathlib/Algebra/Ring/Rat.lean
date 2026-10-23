@@ -37,19 +37,13 @@ instance commRing : CommRing ℚ where
   intCast := fun n => n
   natCast n := Int.cast n
   natCast_zero := rfl
-  natCast_succ n := by
-    simp only [intCast_eq_divInt, divInt_add_divInt _ _ Int.one_ne_zero Int.one_ne_zero,
-      ← divInt_one_one, Int.natCast_add, Int.natCast_one, mul_one]
+  natCast_succ n := Rat.natCast_add n 1
 
-instance commGroupWithZero : CommGroupWithZero ℚ :=
-  { exists_pair_ne := ⟨0, 1, Rat.zero_ne_one⟩
-    inv_zero := Rat.inv_zero
-    mul_inv_cancel := Rat.mul_inv_cancel
-    mul_zero := mul_zero
-    zero_mul := zero_mul
-    zpow z q := q ^ z
-    zpow_zero' := Rat.zpow_zero
-    zpow_succ' _ _ := by rw [Rat.zpow_natCast, Rat.zpow_natCast, Rat.pow_succ] }
+instance commGroupWithZero : CommGroupWithZero ℚ where
+  __ := commRing
+  __ := Rat.nontrivial
+  isUnit_of_ne_zero {q} hq :=
+    ⟨⟨q, Rat.reciprocal q hq, Rat.mul_reciprocal q hq, Rat.reciprocal_mul q hq⟩, rfl⟩
 
 instance isDomain : IsDomain ℚ := NoZeroDivisors.to_isDomain _
 /-- The characteristic of `ℚ` is 0. -/
@@ -67,30 +61,37 @@ instance semiring : Semiring ℚ := by infer_instance
 
 /-! ### Miscellaneous lemmas -/
 
-lemma divInt_div_divInt_cancel_left {x : ℤ} (hx : x ≠ 0) (n d : ℤ) :
-    n /. x / (d /. x) = n /. d := by
-  rw [div_eq_mul_inv, inv_divInt, divInt_mul_divInt_cancel hx]
-
-lemma divInt_div_divInt_cancel_right {x : ℤ} (hx : x ≠ 0) (n d : ℤ) :
-    x /. n / (x /. d) = d /. n := by
-  rw [div_eq_mul_inv, inv_divInt, mul_comm, divInt_mul_divInt_cancel hx]
-
-lemma num_div_den (r : ℚ) : (r.num : ℚ) / (r.den : ℚ) = r := by
-  rw [← Int.cast_natCast, ← divInt_eq_div, num_divInt_den]
-
-@[simp] lemma divInt_pow (num : ℕ) (den : ℤ) (n : ℕ) : (num /. den) ^ n = num ^ n /. den ^ n := by
-  simp [divInt_eq_div, div_pow]
-
-@[simp] lemma mkRat_pow (num den : ℕ) (n : ℕ) : mkRat num den ^ n = mkRat (num ^ n) (den ^ n) := by
-  rw [mkRat_eq_divInt, mkRat_eq_divInt, divInt_pow, Int.natCast_pow]
-
-lemma natCast_eq_divInt (n : ℕ) : ↑n = n /. 1 := by rw [← Int.cast_natCast, intCast_eq_divInt]
-
 @[simp] lemma mul_den_eq_num (q : ℚ) : q * q.den = q.num := by
-  suffices (q.num /. ↑q.den) * (↑q.den /. 1) = q.num /. 1 by simp_all
-  have : (q.den : ℤ) ≠ 0 := mod_cast q.den_ne_zero
-  rw [divInt_mul_divInt, mul_comm (q.den : ℤ) 1, divInt_mul_right this]
+  simp only [Rat.mul_def, Rat.num_natCast, Rat.den_natCast, Nat.mul_one]
+  have h := Rat.normalize_mul_right (n := q.num) (d := 1) (a := q.den)
+    (by decide) q.den_nz
+  simpa only [Nat.one_mul, Rat.normalize_eq, Nat.gcd_one_right, Int.natCast_one, Int.ediv_one,
+    Nat.div_one, Rat.mk_den_one] using h
 
 @[simp] lemma den_mul_eq_num (q : ℚ) : q.den * q = q.num := by rw [mul_comm, mul_den_eq_num]
+
+/-- A checked fraction satisfies its original numerator-denominator equation. -/
+theorem fraction_mul_den (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
+    fraction n d hd * (d : ℚ) = (n : ℚ) := by
+  obtain ⟨g, _, hn, he⟩ := Rat.normalize_num_den' n d hd
+  have hn' := congrArg (fun x : ℤ => (x : ℚ)) hn
+  have he' := congrArg (fun x : ℕ => (x : ℚ)) he
+  simp only [Int.cast_mul, Int.cast_natCast] at hn'
+  simp only [Rat.natCast_mul] at he'
+  calc
+    _ = fraction n d hd * ((fraction n d hd).den : ℚ) * (g : ℚ) := by
+      conv => lhs; rhs; rw [he']
+      simp only [fraction, mul_assoc]
+    _ = (n : ℚ) := by rw [mul_den_eq_num]; exact hn'.symm
+
+theorem fraction_eq_divp (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
+    fraction n d hd = (n : ℚ) /ₚ Units.mk0 (d : ℚ) (Nat.cast_ne_zero.mpr hd) :=
+  eq_divp_iff_mul_eq.mpr (fraction_mul_den n d hd)
+
+/-- Reconstruct a rational using its denominator as a unit. -/
+lemma num_div_den (r : ℚ) :
+    (r.num : ℚ) /ₚ Units.mk0 (r.den : ℚ) (by exact_mod_cast r.den_nz) = r := by
+  apply divp_eq_iff_mul_eq.mpr
+  exact mul_den_eq_num r
 
 end Rat

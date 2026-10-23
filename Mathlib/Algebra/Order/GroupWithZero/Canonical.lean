@@ -115,34 +115,14 @@ variable [LinearOrderedCommGroupWithZero α] {a b c d : α} {n : ℕ}
 theorem Units.zero_lt (u : αˣ) : (0 : α) < u :=
   u.ne_zero.pos
 
-theorem mul_inv_lt_of_lt_mul₀ (h : a < b * c) : a * c⁻¹ < b := by
-  contrapose! h
-  simpa only [inv_inv] using mul_inv_le_of_le_mul₀ zero_le zero_le h
+theorem divp_lt_of_lt_mul {u : αˣ} (h : a < b * u) : a /ₚ u < b :=
+  (divp_lt_iff u.zero_lt).2 h
 
-theorem inv_mul_lt_of_lt_mul₀ (h : a < b * c) : b⁻¹ * a < c := by
-  rw [mul_comm] at *
-  exact mul_inv_lt_of_lt_mul₀ h
+theorem units_inv_mul_lt_of_lt_mul {u : αˣ} (h : a < u * c) : ↑u⁻¹ * a < c :=
+  (Units.inv_mul_lt_iff u.zero_lt).2 h
 
-theorem lt_of_mul_lt_mul_of_le₀ (h : a * b < c * d) (hc : 0 < c) (hh : c ≤ a) : b < d := by
-  have ha : a ≠ 0 := ne_of_gt (lt_of_lt_of_le hc hh)
-  rw [← inv_le_inv₀ ha.pos hc] at hh
-  simpa [inv_mul_cancel_left₀ ha, inv_mul_cancel_left₀ hc.ne']
-    using mul_lt_mul_of_le_of_lt_of_nonneg_of_pos hh h zero_le (inv_pos.2 hc)
-
-instance : LinearOrderedAddCommGroupWithTop (Additive αᵒᵈ) where
-  top_add' := by simp
-  neg_top := by ext; simp [bot_eq_zero]
-  add_neg_cancel_of_ne_top := by
-    simp +contextual [bot_eq_zero, Additive.ext_iff, OrderDual.ext_iff, -Additive.toMul_eq_top,
-      -ofDual_eq_zero]
-
-instance : LinearOrderedAddCommGroupWithTop (Additive α)ᵒᵈ where
-  top_add' := by simp
-  neg_top := by ext; simp; simp [bot_eq_zero]
-  add_neg_cancel_of_ne_top := by
-    simp
-    simp +contextual [bot_eq_zero, Additive.ext_iff, OrderDual.ext_iff, -Additive.toMul_eq_top,
-      -ofDual_eq_zero]
+theorem lt_of_mul_lt_mul_of_le₀ (h : a * b < c * d) (hc : 0 < c) (hh : c ≤ a) : b < d :=
+  (mul_lt_mul_iff_right₀ hc).mp ((mul_le_mul_of_nonneg_right hh zero_le).trans_lt h)
 
 -- Counterexample with monoid for the backward direction:
 -- Take `Mᵐ⁰` where `M := ℚ ×ₗ ℕ`.
@@ -197,8 +177,15 @@ theorem ofDual_toAdd_zero [LinearOrderedAddCommMonoidWithTop α] :
 
 instance [LinearOrderedAddCommGroupWithTop α] :
     LinearOrderedCommGroupWithZero (Multiplicative αᵒᵈ) where
-  inv_zero := LinearOrderedAddCommGroupWithTop.neg_top (α := α)
-  mul_inv_cancel := LinearOrderedAddCommGroupWithTop.add_neg_cancel_of_ne_top (α := α)
+  isUnit_of_ne_zero {a} ha := by
+    have ha' : OrderDual.ofDual a.toAdd ≠ ⊤ := ha
+    let b : Multiplicative αᵒᵈ := .ofAdd (.toDual (-OrderDual.ofDual a.toAdd))
+    refine ⟨⟨a, b, ?_, ?_⟩, rfl⟩
+    · change OrderDual.ofDual a.toAdd + -OrderDual.ofDual a.toAdd = 0
+      exact LinearOrderedAddCommGroupWithTop.add_neg_cancel_of_ne_top ha'
+    · change -OrderDual.ofDual a.toAdd + OrderDual.ofDual a.toAdd = 0
+      rw [add_comm]
+      exact LinearOrderedAddCommGroupWithTop.add_neg_cancel_of_ne_top ha'
 
 namespace WithZero
 

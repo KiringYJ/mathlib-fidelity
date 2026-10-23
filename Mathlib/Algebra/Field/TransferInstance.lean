@@ -6,6 +6,7 @@ Authors: Johannes Hölzl
 module
 
 public import Mathlib.Algebra.Field.Basic
+public import Mathlib.Algebra.GroupWithZero.TransferInstance
 public import Mathlib.Algebra.Ring.TransferInstance
 
 /-!
@@ -29,32 +30,13 @@ protected abbrev nnratCast [NNRatCast β] : NNRatCast α where nnratCast q := e.
 protected abbrev ratCast [RatCast β] : RatCast α where ratCast n := e.invFun n
 
 /-- Transfer `DivisionRing` across an `Equiv` -/
-protected abbrev divisionRing [DivisionRing β] : DivisionRing α := by
-  let add_group_with_one := e.addGroupWithOne
-  let inv := e.Inv
-  let div := e.div
-  let mul := e.mul
-  let npow := e.pow ℕ
-  let zpow := e.pow ℤ
-  let nnratCast := e.nnratCast
-  let ratCast := e.ratCast
-  let nnqsmul := e.smul ℚ≥0
-  let qsmul := e.smul ℚ
-  apply e.injective.divisionRing _ <;> intros <;> exact e.apply_symm_apply _
+protected abbrev divisionRing [DivisionRing β] : DivisionRing α where
+  toRing := e.ring
+  __ := e.groupWithZero
 
 /-- Transfer `Field` across an `Equiv` -/
-protected abbrev field [Field β] : Field α := by
-  let add_group_with_one := e.addGroupWithOne
-  let neg := e.Neg
-  let inv := e.Inv
-  let div := e.div
-  let mul := e.mul
-  let npow := e.pow ℕ
-  let zpow := e.pow ℤ
-  let nnratCast := e.nnratCast
-  let ratCast := e.ratCast
-  let nnqsmul := e.smul ℚ≥0
-  let qsmul := e.smul ℚ
-  apply e.injective.field _ <;> intros <;> exact e.apply_symm_apply _
+protected abbrev field [Field β] : Field α where
+  toCommRing := e.commRing
+  __ := e.divisionRing
 
 end Equiv

@@ -206,96 +206,23 @@ instance instMonoidWithZero [Monoid α] : MonoidWithZero (WithZero α) where
 instance instCommMonoidWithZero [CommMonoid α] : CommMonoidWithZero (WithZero α) :=
   { WithZero.instMonoidWithZero, WithZero.instCommSemigroup with }
 
-section Inv
-variable [Inv α]
-
-/-- Extend the inverse operation on `α` to `WithZero α` by sending `0` to `0`. -/
-instance inv : Inv (WithZero α) where inv a := Option.map (·⁻¹) a
-
-@[simp, norm_cast] lemma coe_inv (a : α) : ((a⁻¹ : α) : WithZero α) = (↑a)⁻¹ := rfl
-
-@[simp] protected lemma inv_zero : (0 : WithZero α)⁻¹ = 0 := rfl
-
-end Inv
-
-instance invOneClass [InvOneClass α] : InvOneClass (WithZero α) where
-  inv_one := show ((1⁻¹ : α) : WithZero α) = 1 by simp
-
-section Div
-variable [Div α]
-
-instance div : Div (WithZero α) where div := Option.map₂ (· / ·)
-
-@[norm_cast] lemma coe_div (a b : α) : ↑(a / b : α) = (a / b : WithZero α) := rfl
-
-end Div
-
-section ZPow
-variable [One α] [Pow α ℤ]
-
-instance : Pow (WithZero α) ℤ where
-  pow
-    | none, Int.ofNat 0 => 1
-    | none, Int.ofNat (Nat.succ _) => 0
-    | none, Int.negSucc _ => 0
-    | some x, n => ↑(x ^ n)
-
-@[simp, norm_cast] lemma coe_zpow (a : α) (n : ℤ) : ↑(a ^ n) = (↑a : WithZero α) ^ n := rfl
-
-end ZPow
-
-instance instDivInvMonoid [DivInvMonoid α] : DivInvMonoid (WithZero α) where
-  div_eq_mul_inv
-    | none, _ => rfl
-    | some _, none => rfl
-    | some a, some b => congr_arg some (div_eq_mul_inv a b)
-  zpow n a := a ^ n
-  zpow_zero'
-    | none => rfl
-    | some _ => congr_arg some (zpow_zero _)
-  zpow_succ'
-    | n, none => by change 0 ^ _ = 0 ^ _ * 0; simp only [mul_zero]; rfl
-    | n, some _ => congr_arg some (DivInvMonoid.zpow_succ' _ _)
-  zpow_neg'
-    | n, none => rfl
-    | n, some _ => congr_arg some (DivInvMonoid.zpow_neg' _ _)
-
-instance instDivInvOneMonoid [DivInvOneMonoid α] : DivInvOneMonoid (WithZero α) where
-
-set_option backward.isDefEq.respectTransparency false in
-instance instInvolutiveInv [InvolutiveInv α] : InvolutiveInv (WithZero α) where
-  inv_inv a := (Option.map_map _ _ _).trans <| by simp
-
-instance instDivisionMonoid [DivisionMonoid α] : DivisionMonoid (WithZero α) where
-  mul_inv_rev
-    | none, none => rfl
-    | none, some _ => rfl
-    | some _, none => rfl
-    | some _, some _ => congr_arg some (mul_inv_rev _ _)
-  inv_eq_of_mul
-    | none, none, _ => rfl
-    | some _, some _, h =>
-      congr_arg some <| inv_eq_of_mul_eq_one_right <| Option.some_injective _ h
-
-instance instDivisionCommMonoid [DivisionCommMonoid α] : DivisionCommMonoid (WithZero α) where
-
 section Group
 variable [Group α]
 
 /-- If `α` is a group then `WithZero α` is a group with zero. -/
 instance instGroupWithZero : GroupWithZero (WithZero α) where
-  inv_zero := WithZero.inv_zero
-  mul_inv_cancel a ha := by
+  isUnit_of_ne_zero {a} ha := by
     lift a to α using ha
-    norm_cast
-    apply mul_inv_cancel
+    exact ⟨⟨a, ↑a⁻¹, by rw [← coe_mul, mul_inv_cancel, coe_one],
+      by rw [← coe_mul, inv_mul_cancel, coe_one]⟩, rfl⟩
 
 /-- Any group is isomorphic to the units of itself adjoined with `0`. -/
 @[simps]
 def unitsWithZeroEquiv : (WithZero α)ˣ ≃* α where
   toFun a := unzero a.ne_zero
-  invFun a := Units.mk0 a coe_ne_zero
-  left_inv _ := Units.ext <| by simp only [coe_unzero, Units.mk0_val]
+  invFun a := ⟨a, ↑a⁻¹, by rw [← coe_mul, mul_inv_cancel, coe_one],
+    by rw [← coe_mul, inv_mul_cancel, coe_one]⟩
+  left_inv _ := Units.ext <| by simp only [coe_unzero]
   map_mul' _ _ := coe_inj.mp <| by simp only [Units.val_mul, coe_unzero, coe_mul]
 
 instance [Nontrivial α] : Nontrivial (WithZero α)ˣ :=
@@ -307,7 +234,7 @@ theorem coe_unitsWithZeroEquiv_eq_units_val (γ : (WithZero α)ˣ) :
 
 /-- Any group with zero is isomorphic to adjoining `0` to the units of itself. -/
 @[simps]
-def withZeroUnitsEquiv {G : Type*} [GroupWithZero G]
+noncomputable def withZeroUnitsEquiv {G : Type*} [GroupWithZero G]
     [DecidablePred (fun a : G ↦ a = 0)] :
     WithZero Gˣ ≃* G where
   toFun := WithZero.recZeroCoe 0 Units.val
@@ -444,28 +371,28 @@ def logEquiv : (Gᵐ⁰)ˣ ≃ G := unitsWithZeroEquiv.toEquiv.trans Multiplicat
 
 lemma logEquiv_unitsMk0 (x : Gᵐ⁰) (hx) : logEquiv (.mk0 x hx) = log x := logEquiv_apply _
 
-@[simp] lemma exp_sub (a b : G) : exp (a - b) = exp a / exp b := rfl
+/-- Subtraction corresponds to division in the group of nonzero exponential values. -/
+@[simp] lemma expEquiv_sub (a b : G) : expEquiv (a - b) = expEquiv a / expEquiv b := by
+  apply Units.ext
+  change exp (a - b) = exp a * exp (-b)
+  rw [sub_eq_add_neg, exp_add]
 
-@[simp]
-lemma log_div {x y : Gᵐ⁰} (hx : x ≠ 0) (hy : y ≠ 0) : log (x / y) = log x - log y := by
-  lift x to Multiplicative G using hx; lift y to Multiplicative G using hy; rfl
+@[simp] lemma expEquiv_neg (a : G) : expEquiv (-a) = (expEquiv a)⁻¹ := Units.ext rfl
 
--- This is deliberately not a `simp` lemma: the group structure on `Gᵐ⁰` interacts much worse with
--- the order relation than the one on `G`, so `exp (-a)` is a better normal form than `(exp a)⁻¹`.
--- The `simp` lemma pushing `⁻¹` inside `exp` is `WithZero.inv_exp` below.
-lemma exp_neg (a : G) : exp (-a) = (exp a)⁻¹ := rfl
+@[simp] lemma logEquiv_inv (x : (Gᵐ⁰)ˣ) : logEquiv x⁻¹ = -logEquiv x := by
+  obtain ⟨a, rfl⟩ := expEquiv.surjective x
+  rw [← expEquiv_neg]
+  exact expEquiv.left_inv (-a) |>.trans (congr_arg Neg.neg (expEquiv.left_inv a).symm)
 
-@[simp] lemma inv_exp (a : G) : (exp a)⁻¹ = exp (-a) := rfl
+@[simp] lemma expEquiv_zsmul (n : ℤ) (a : G) :
+    expEquiv (n • a) = expEquiv a ^ n :=
+  map_zpow unitsWithZeroEquiv.symm (Multiplicative.ofAdd a) n
 
-@[simp]
-lemma log_inv : ∀ x : Gᵐ⁰, log x⁻¹ = -log x
-  | 0 => by simp
-  | (x : Multiplicative G) => rfl
-
-@[simp ←] lemma exp_zsmul (n : ℤ) (a : G) : exp (n • a) = exp a ^ n := rfl
-
-@[simp]
-lemma log_zpow (x : Gᵐ⁰) (n : ℤ) : log (x ^ n) = n • log x := by cases n <;> simp [log_pow, log_inv]
+@[simp] lemma logEquiv_zpow (x : (Gᵐ⁰)ˣ) (n : ℤ) :
+    logEquiv (x ^ n) = n • logEquiv x := by
+  obtain ⟨a, rfl⟩ := expEquiv.surjective x
+  rw [← expEquiv_zsmul]
+  exact expEquiv.left_inv (n • a) |>.trans (congr_arg (n • ·) (expEquiv.left_inv a).symm)
 
 end AddGroup
 end WithZero

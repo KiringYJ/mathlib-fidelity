@@ -638,14 +638,39 @@ end PosMul
 variable {G₀ : Type*} [GroupWithZero G₀] [PartialOrder G₀] [PosMulReflectLT G₀]
   [MulPosReflectLT G₀] {a : G₀}
 
-/-- The (pre)image under `inv` of `Ioo 0 a` is `Ioi a⁻¹`. -/
-theorem inv_Ioo_0_left (ha : 0 < a) : (Ioo 0 a)⁻¹ = Ioi a⁻¹ := by
-  ext x
-  exact ⟨fun h ↦ inv_lt_of_inv_lt₀ (inv_pos.1 h.1) h.2,
-         fun h ↦ ⟨inv_pos.2 <| (inv_pos.2 ha).trans h, inv_lt_of_inv_lt₀ ha h⟩⟩
+/-- Inversion of the positive unit interval reverses its finite endpoint. -/
+theorem inv_Ioo_0_left (ha : 0 < a) :
+    {u : G₀ˣ | (0 : G₀) < u ∧ (u : G₀) < a}⁻¹ =
+      {u : G₀ˣ | (↑(Units.mk0 a ha.ne')⁻¹ : G₀) < u} := by
+  ext u
+  change (0 < (↑u⁻¹ : G₀) ∧ (↑u⁻¹ : G₀) < a) ↔
+    (↑(Units.mk0 a ha.ne')⁻¹ : G₀) < u
+  constructor
+  · rintro ⟨hu, h⟩
+    simpa only [inv_inv, Units.val_mk0] using
+      (Units.inv_lt_inv (u := Units.mk0 a ha.ne') (v := u⁻¹) ha hu).mpr h
+  · intro h
+    have hu : 0 < (↑u⁻¹ : G₀) := (Units.inv_pos u).mpr
+      ((Units.inv_pos (Units.mk0 a ha.ne')).mpr ha |>.trans h)
+    refine ⟨hu, ?_⟩
+    exact (Units.inv_lt_inv (u := Units.mk0 a ha.ne') (v := u⁻¹) ha hu).mp
+      (by simpa only [inv_inv] using h)
 
-theorem inv_Ioi₀ (ha : 0 < a) : (Ioi a)⁻¹ = Ioo 0 a⁻¹ := by
-  rw [inv_eq_iff_eq_inv, inv_Ioo_0_left (inv_pos.2 ha), inv_inv]
+/-- Inversion of a positive unit ray gives the interval between zero and the inverse endpoint. -/
+theorem inv_Ioi₀ (ha : 0 < a) :
+    {u : G₀ˣ | a < (u : G₀)}⁻¹ =
+      {u : G₀ˣ | (0 : G₀) < u ∧ (u : G₀) < ↑(Units.mk0 a ha.ne')⁻¹} := by
+  ext u
+  change a < (↑u⁻¹ : G₀) ↔ _
+  constructor
+  · intro h
+    have hu := ha.trans h
+    refine ⟨(Units.inv_pos u).mp hu, ?_⟩
+    simpa only [inv_inv] using
+      (Units.inv_lt_inv (u := u⁻¹) (v := Units.mk0 a ha.ne') hu ha).mpr h
+  · rintro ⟨hu, h⟩
+    exact (Units.inv_lt_inv (u := u⁻¹) (v := Units.mk0 a ha.ne')
+      ((Units.inv_pos u).mpr hu) ha).mp (by simpa only [inv_inv] using h)
 
 end GroupWithZero
 
@@ -661,15 +686,19 @@ instead of depending on commutativity.
 
 section CommGroupWithZero
 
+attribute [local instance] PosMulReflectLT.toMulPosReflectLT
+
 variable {G₀ : Type*} [CommGroupWithZero G₀] [PartialOrder G₀] [PosMulReflectLT G₀] {a b c : G₀}
 
 @[simp]
 theorem preimage_const_mul_Iic₀ (a : G₀) (h : 0 < c) : (c * ·) ⁻¹' Iic a = Iic (a / c) :=
-  ext fun _x => (le_div_iff₀' h).symm
+  ext fun _x => by simpa only [mem_preimage, mem_Iic, mul_comm] using
+    (Checked.le_div_iff h).symm
 
 @[simp]
 theorem preimage_const_mul_Ici₀ (a : G₀) (h : 0 < c) : (c * ·) ⁻¹' Ici a = Ici (a / c) :=
-  ext fun _x => (div_le_iff₀' h).symm
+  ext fun _x => by simpa only [mem_preimage, mem_Ici, mul_comm] using
+    (Checked.div_le_iff h).symm
 
 @[simp]
 theorem preimage_const_mul_Icc₀ (a b : G₀) {c : G₀} (h : 0 < c) :
@@ -677,11 +706,13 @@ theorem preimage_const_mul_Icc₀ (a b : G₀) {c : G₀} (h : 0 < c) :
 
 @[simp]
 theorem preimage_const_mul_Iio₀ (a : G₀) (h : 0 < c) : (c * ·) ⁻¹' Iio a = Iio (a / c) :=
-  ext fun _x => (lt_div_iff₀' h).symm
+  ext fun _x => by simpa only [mem_preimage, mem_Iio, mul_comm] using
+    (Checked.lt_div_iff h).symm
 
 @[simp]
 theorem preimage_const_mul_Ioi₀ (a : G₀) (h : 0 < c) : (c * ·) ⁻¹' Ioi a = Ioi (a / c) :=
-  ext fun _x => (div_lt_iff₀' h).symm
+  ext fun _x => by simpa only [mem_preimage, mem_Ioi, mul_comm] using
+    (Checked.div_lt_iff h).symm
 
 @[simp]
 theorem preimage_const_mul_Ioo₀ (a b : G₀) (h : 0 < c) :
@@ -838,19 +869,25 @@ theorem preimage_const_mul_uIcc (ha : a ≠ 0) (b c : α) :
 @[simp]
 theorem preimage_div_const_uIcc (ha : a ≠ 0) (b c : α) :
     (fun x => x / a) ⁻¹' [[b, c]] = [[b * a, c * a]] := by
-  simp only [div_eq_mul_inv, preimage_mul_const_uIcc (inv_ne_zero ha), inv_inv]
+  let hu := GroupWithZero.isUnit_of_ne_zero ha
+  have hi : IsUnit (Checked.inv a hu) := hu.unit⁻¹.isUnit
+  calc
+    _ = (fun x => x * Checked.inv a hu) ⁻¹' [[b, c]] := rfl
+    _ = [[Checked.div b (Checked.inv a hu) hi, Checked.div c (Checked.inv a hu) hi]] :=
+      preimage_mul_const_uIcc (Checked.inv_ne_zero (ha := hu)) b c
+    _ = _ := by simp only [Checked.div_eq_mul_inv, Checked.inv_inv]
 
 lemma preimage_const_mul_Ioi_or_Iio (hb : a ≠ 0) {U V : Set α}
     (hU : U ∈ {s | ∃ a, s = Ioi a ∨ s = Iio a}) (hV : V = (a * ·) ⁻¹' U) :
     V ∈ {s | ∃ a, s = Ioi a ∨ s = Iio a} := by
   obtain ⟨aU, (haU | haU)⟩ := hU <;>
   simp only [hV, haU, mem_ofPred_eq] <;>
-  use a⁻¹ * aU <;>
+  use aU / a <;>
   rcases lt_or_gt_of_ne hb with (hb | hb)
-  · right; rw [Set.preimage_const_mul_Ioi_of_neg _ hb, div_eq_inv_mul]
-  · left; rw [Set.preimage_const_mul_Ioi₀ _ hb, div_eq_inv_mul]
-  · left; rw [Set.preimage_const_mul_Iio_of_neg _ hb, div_eq_inv_mul]
-  · right; rw [Set.preimage_const_mul_Iio₀ _ hb, div_eq_inv_mul]
+  · right; rw [Set.preimage_const_mul_Ioi_of_neg _ hb]
+  · left; rw [Set.preimage_const_mul_Ioi₀ _ hb]
+  · left; rw [Set.preimage_const_mul_Iio_of_neg _ hb]
+  · right; rw [Set.preimage_const_mul_Iio₀ _ hb]
 
 @[simp]
 theorem image_mul_const_uIcc (a b c : α) : (· * a) '' [[b, c]] = [[b * a, c * a]] :=
@@ -858,7 +895,7 @@ theorem image_mul_const_uIcc (a b c : α) : (· * a) '' [[b, c]] = [[b * a, c * 
   else calc
     (fun x => x * a) '' [[b, c]] = (· * a⁻¹) ⁻¹' [[b, c]] :=
       (Units.mk0 a ha).mulRight.image_eq_preimage_symm _
-    _ = (fun x => x / a) ⁻¹' [[b, c]] := by simp only [div_eq_mul_inv]
+    _ = (fun x => x / a) ⁻¹' [[b, c]] := by simp only [Checked.div_eq_mul_inv]
     _ = [[b * a, c * a]] := preimage_div_const_uIcc ha _ _
 
 @[simp]
@@ -866,18 +903,53 @@ theorem image_const_mul_uIcc (a b c : α) : (a * ·) '' [[b, c]] = [[a * b, a * 
   simpa only [mul_comm] using image_mul_const_uIcc a b c
 
 @[simp]
-theorem image_div_const_uIcc (a b c : α) : (fun x => x / a) '' [[b, c]] = [[b / a, c / a]] := by
-  simp only [div_eq_mul_inv, image_mul_const_uIcc]
+theorem image_div_const_uIcc (a b c : α) (ha : IsUnit a) :
+    (fun x => x / a) '' [[b, c]] = [[b / a, c / a]] := by
+  simp only [Checked.div_eq_mul_inv, image_mul_const_uIcc]
 
-/-- The (pre)image under `inv` of `Ioo a 0` is `Iio a⁻¹`. -/
-theorem inv_Ioo_0_right {a : α} (ha : a < 0) : (Ioo a 0)⁻¹ = Iio a⁻¹ := by
-  ext x
-  refine ⟨fun h ↦ (lt_inv_of_neg (inv_neg''.1 h.2) ha).2 h.1, fun h ↦ ?_⟩
-  have h' := (h.trans (inv_neg''.2 ha))
-  exact ⟨(lt_inv_of_neg ha h').2 h, inv_neg''.2 h'⟩
+private theorem unit_inv_lt_unit_inv_of_neg (u v : αˣ)
+    (hu : (u : α) < 0) (hv : (v : α) < 0) :
+    (↑u⁻¹ : α) < ↑v⁻¹ ↔ (v : α) < u := by
+  have hunit : u.isUnit.unit = u := Units.ext rfl
+  have hvunit : v.isUnit.unit = v := Units.ext rfl
+  simpa only [Checked.inv, hunit, hvunit] using
+    (inv_lt_inv_of_neg (haUnit := u.isUnit) (hbUnit := v.isUnit) hu hv)
 
-theorem inv_Iio₀ {a : α} (ha : a < 0) : (Iio a)⁻¹ = Ioo a⁻¹ 0 := by
-  rw [inv_eq_iff_eq_inv, inv_Ioo_0_right (inv_neg''.2 ha), inv_inv]
+/-- Inversion reverses a negative unit interval without adjoining zero. -/
+theorem inv_Ioo_0_right {a : α} (ha : a < 0) :
+    {u : αˣ | a < (u : α) ∧ (u : α) < 0}⁻¹ =
+      {u : αˣ | (u : α) < ↑(Units.mk0 a ha.ne)⁻¹} := by
+  ext u
+  change (a < (↑u⁻¹ : α) ∧ (↑u⁻¹ : α) < 0) ↔
+    (u : α) < ↑(Units.mk0 a ha.ne)⁻¹
+  constructor
+  · rintro ⟨h, hu⟩
+    simpa only [inv_inv] using
+      (unit_inv_lt_unit_inv_of_neg u⁻¹ (Units.mk0 a ha.ne) hu ha).mpr h
+  · intro h
+    have hx := h.trans
+      ((Units.inv_neg (Units.mk0 a ha.ne)).mpr ha : (↑(Units.mk0 a ha.ne)⁻¹ : α) < 0)
+    have hu : (↑u⁻¹ : α) < 0 := (Units.inv_neg u).mpr hx
+    refine ⟨?_, hu⟩
+    exact (unit_inv_lt_unit_inv_of_neg u⁻¹ (Units.mk0 a ha.ne) hu ha).mp
+      (by simpa only [inv_inv] using h)
+
+/-- Inversion of a negative unit ray gives the interval from the inverse endpoint to zero. -/
+theorem inv_Iio₀ {a : α} (ha : a < 0) :
+    {u : αˣ | (u : α) < a}⁻¹ =
+      {u : αˣ | ↑(Units.mk0 a ha.ne)⁻¹ < (u : α) ∧ (u : α) < 0} := by
+  ext u
+  change (↑u⁻¹ : α) < a ↔
+    (↑(Units.mk0 a ha.ne)⁻¹ : α) < u ∧ (u : α) < 0
+  constructor
+  · intro h
+    have hu := h.trans ha
+    refine ⟨?_, (Units.inv_neg u).mp hu⟩
+    simpa only [inv_inv] using
+      (unit_inv_lt_unit_inv_of_neg (Units.mk0 a ha.ne) u⁻¹ ha hu).mpr h
+  · rintro ⟨h, hx⟩
+    exact (unit_inv_lt_unit_inv_of_neg (Units.mk0 a ha.ne) u⁻¹ ha
+      ((Units.inv_neg u).mpr hx)).mp (by simpa only [inv_inv] using h)
 
 end LinearOrderedField
 

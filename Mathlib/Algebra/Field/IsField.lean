@@ -13,9 +13,9 @@ public import Mathlib.Tactic.Common
 
 Predicate on a (semi)ring that it is a (semi)field, i.e. that the multiplication is
 commutative, that it has more than one element and that all non-zero elements have a
-multiplicative inverse. In contrast to `Field`, which contains the data of a function associating
-to an element of the field its multiplicative inverse, this predicate only assumes the existence
-and can therefore more easily be used to e.g. transfer along ring isomorphisms.
+multiplicative inverse. This predicate describes a given semiring structure without carrying
+algebraic operations, and can therefore be transported along ring isomorphisms. Converting it
+to `Field` adds the field property to the given operations; it does not define an ambient inverse.
 -/
 
 @[expose] public section
@@ -41,7 +41,7 @@ structure IsField (R : Type u) [Semiring R] : Prop where
 /-- Transferring from `Semifield` to `IsField`. -/
 theorem Semifield.toIsField (R : Type u) [Semifield R] : IsField R where
   __ := ‹Semifield R›
-  mul_inv_cancel {a} ha := ⟨a⁻¹, mul_inv_cancel₀ ha⟩
+  mul_inv_cancel {a} ha := (GroupWithZero.isUnit_of_ne_zero ha).exists_right_inv
 
 /-- Transferring from `Field` to `IsField`. -/
 theorem Field.toIsField (R : Type u) [Field R] : IsField R :=
@@ -69,27 +69,25 @@ theorem not_isField_of_subsingleton (R : Type u) [Semiring R] [Subsingleton R] :
   let ⟨_, _, h⟩ := h.exists_pair_ne
   h (Subsingleton.elim _ _)
 
-open scoped Classical in
-/-- Transferring from `IsField` to `Semifield`. -/
-@[instance_reducible]
-noncomputable def IsField.toSemifield {R : Type u} [Semiring R] (h : IsField R) : Semifield R where
-  __ := ‹Semiring R›
-  __ := h
-  inv a := if ha : a = 0 then 0 else Classical.choose (h.mul_inv_cancel ha)
-  inv_zero := dite_eq_left rfl
-  mul_inv_cancel a ha := by
-    convert! Classical.choose_spec (h.mul_inv_cancel ha)
-    exact dite_eq_right ha
-  nnqsmul := _
-  nnqsmul_def _ _ := rfl
+/-- A nonzero element of a semiring satisfying `IsField` is a unit. -/
+theorem IsField.isUnit_of_ne_zero {R : Type u} [Semiring R] (h : IsField R)
+    {a : R} (ha : a ≠ 0) : IsUnit a := by
+  obtain ⟨b, hb⟩ := h.mul_inv_cancel ha
+  exact ⟨⟨a, b, hb, (h.mul_comm b a).trans hb⟩, rfl⟩
 
-/-- Transferring from `IsField` to `Field`. -/
+/-- Transferring from `IsField` to `Semifield`, keeping the given semiring operations. -/
 @[instance_reducible]
-noncomputable def IsField.toField {R : Type u} [Ring R] (h : IsField R) : Field R where
+def IsField.toSemifield {R : Type u} [Semiring R] (h : IsField R) : Semifield R where
+  __ := ‹Semiring R›
+  __ := h.nontrivial
+  mul_comm := h.mul_comm
+  isUnit_of_ne_zero := h.isUnit_of_ne_zero
+
+/-- Transferring from `IsField` to `Field`, keeping the given ring operations. -/
+@[instance_reducible]
+def IsField.toField {R : Type u} [Ring R] (h : IsField R) : Field R where
   __ := (‹Ring R› :) -- this also works without the `( :)`, but it's slow
   __ := h.toSemifield
-  qsmul := _
-  qsmul_def := fun _ _ => rfl
 
 /-- For each field, and for each nonzero element of said field, there is a unique inverse.
 Since `IsField` doesn't remember the data of an `inv` function and as such,

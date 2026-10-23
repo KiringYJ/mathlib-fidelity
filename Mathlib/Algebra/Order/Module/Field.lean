@@ -27,12 +27,19 @@ variable [Semifield 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [AddComm
 instance (priority := 100) PosSMulMono.toPosSMulReflectLE [MulAction 𝕜 G] [PosSMulMono 𝕜 G] :
     PosSMulReflectLE 𝕜 G where
   le_of_smul_le_smul_left _a ha b₁ b₂ h := by
-    simpa [ha.ne'] using smul_le_smul_of_nonneg_left h <| inv_nonneg.2 ha.le
+    let u := Units.mk0 _ ha.ne'
+    change (u : 𝕜) • b₁ ≤ (u : 𝕜) • b₂ at h
+    simpa only [smul_smul, Units.inv_mul, one_smul] using
+      smul_le_smul_of_nonneg_left h ((Units.inv_nonneg u).2 ha.le)
 
 -- See note [lower instance priority]
 instance (priority := 100) PosSMulStrictMono.toPosSMulReflectLT [MulActionWithZero 𝕜 G]
     [PosSMulStrictMono 𝕜 G] : PosSMulReflectLT 𝕜 G :=
-  .of_pos fun a ha b₁ b₂ h ↦ by simpa [ha.ne'] using smul_lt_smul_of_pos_left h <| inv_pos.2 ha
+  .of_pos fun a ha b₁ b₂ h ↦ by
+    let u := Units.mk0 _ ha.ne'
+    change (u : 𝕜) • b₁ < (u : 𝕜) • b₂ at h
+    simpa only [smul_smul, Units.inv_mul, one_smul] using
+      smul_lt_smul_of_pos_left h ((Units.inv_pos u).2 ha)
 
 end LinearOrderedSemifield
 
@@ -43,17 +50,19 @@ variable [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
 section PosSMulMono
 variable [PosSMulMono 𝕜 G]
 
-lemma inv_smul_le_iff_of_neg (h : a < 0) : a⁻¹ • b₁ ≤ b₂ ↔ a • b₂ ≤ b₁ := by
+lemma inv_smul_le_iff_of_neg (h : a < 0) :
+    (Units.mk0 a h.ne)⁻¹ • b₁ ≤ b₂ ↔ a • b₂ ≤ b₁ := by
   rw [← smul_le_smul_iff_of_neg_left h, smul_inv_smul₀ h.ne]
 
-lemma smul_inv_le_iff_of_neg (h : a < 0) : b₁ ≤ a⁻¹ • b₂ ↔ b₂ ≤ a • b₁ := by
+lemma smul_inv_le_iff_of_neg (h : a < 0) :
+    b₁ ≤ (Units.mk0 a h.ne)⁻¹ • b₂ ↔ b₂ ≤ a • b₁ := by
   rw [← smul_le_smul_iff_of_neg_left h, smul_inv_smul₀ h.ne]
 
 variable (G)
 
 /-- Left scalar multiplication as an order isomorphism. -/
 @[simps!]
-def OrderIso.smulRightDual (ha : a < 0) : G ≃o Gᵒᵈ where
+noncomputable def OrderIso.smulRightDual (ha : a < 0) : G ≃o Gᵒᵈ where
   toEquiv := (Equiv.smulRight ha.ne).trans toDual
   map_rel_iff' := (@OrderDual.toDual_le_toDual G).trans <| smul_le_smul_iff_of_neg_left ha
 
@@ -61,10 +70,12 @@ end PosSMulMono
 
 variable [PosSMulStrictMono 𝕜 G]
 
-lemma inv_smul_lt_iff_of_neg (h : a < 0) : a⁻¹ • b₁ < b₂ ↔ a • b₂ < b₁ := by
+lemma inv_smul_lt_iff_of_neg (h : a < 0) :
+    (Units.mk0 a h.ne)⁻¹ • b₁ < b₂ ↔ a • b₂ < b₁ := by
   rw [← smul_lt_smul_iff_of_neg_left h, smul_inv_smul₀ h.ne]
 
-lemma smul_inv_lt_iff_of_neg (h : a < 0) : b₁ < a⁻¹ • b₂ ↔ b₂ < a • b₁ := by
+lemma smul_inv_lt_iff_of_neg (h : a < 0) :
+    b₁ < (Units.mk0 a h.ne)⁻¹ • b₂ ↔ b₂ < a • b₁ := by
   rw [← smul_lt_smul_iff_of_neg_left h, smul_inv_smul₀ h.ne]
 
 end Field

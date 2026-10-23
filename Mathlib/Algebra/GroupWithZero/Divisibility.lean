@@ -197,9 +197,8 @@ variable [GroupWithZero α]
 lemma GroupWithZero.dvd_iff {m n : α} : m ∣ n ↔ (m = 0 → n = 0) := by
   refine ⟨fun ⟨a, ha⟩ hm => ?_, fun h => ?_⟩
   · simp [hm, ha]
-  · refine ⟨m⁻¹ * n, ?_⟩
-    obtain rfl | hn := eq_or_ne n 0
-    · simp
-    · rw [mul_inv_cancel_left₀ (mt h hn)]
+  · obtain rfl | hm := eq_or_ne m 0
+    · exact ⟨0, by simp [h rfl]⟩
+    · exact ⟨↑(Units.mk0 m hm)⁻¹ * n, ((Units.mk0 m hm).mul_inv_cancel_left n).symm⟩
 
 end GroupWithZero

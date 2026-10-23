@@ -422,22 +422,6 @@ theorem nonpos_of_mul_nonneg_right [MulPosStrictMono R]
     (h : 0 ≤ a * b) (ha : a < 0) : b ≤ 0 :=
   le_of_not_gt fun hb => absurd h (mul_neg_of_neg_of_pos ha hb).not_ge
 
-@[simp]
-theorem Units.inv_pos
-    [ZeroLEOneClass R] [NeZero (1 : R)] [PosMulStrictMono R]
-    {u : Rˣ} : (0 : R) < ↑u⁻¹ ↔ (0 : R) < u :=
-  have : ∀ {u : Rˣ}, (0 : R) < u → (0 : R) < ↑u⁻¹ := @fun u h =>
-    (mul_pos_iff_of_pos_left h).mp <| u.mul_inv.symm ▸ zero_lt_one
-  ⟨this, this⟩
-
-@[simp]
-theorem Units.inv_neg
-    [ZeroLEOneClass R] [NeZero (1 : R)] [MulPosMono R] [PosMulMono R]
-    {u : Rˣ} : ↑u⁻¹ < (0 : R) ↔ ↑u < (0 : R) :=
-  have : ∀ {u : Rˣ}, ↑u < (0 : R) → ↑u⁻¹ < (0 : R) := @fun u h =>
-    neg_of_mul_pos_right (u.mul_inv.symm ▸ zero_lt_one) h.le
-  ⟨this, this⟩
-
 theorem cmp_mul_pos_left [PosMulStrictMono R]
     (ha : 0 < a) (b c : R) : cmp (a * b) (a * c) = cmp b c :=
   (strictMono_mul_left_of_pos ha).cmp_map_eq b c

@@ -9,24 +9,13 @@ public import Mathlib.Data.Rat.Cast.CharZero
 public import Mathlib.Data.Rat.Cast.Lemmas
 
 /-!
-# Scientific notation for characteristic-zero fields
+# Scientific literals from characteristic-zero rational casts
 
-The `OfScientific` instance for any characteristic zero field
-is well-behaved with respect to the field operations.
+The imported cast instances interpret scientific literals through normalized rational
+numbers, whose powers-of-ten denominators are nonzero in characteristic zero.
 
-It's probably possible, by adjusting the `OfScientific` instances,
-to make this more general, but it's not needed at present.
+The official `Lean.Grind.LawfulOfScientific` class presupposes the core totalized
+field structure. Installing that bridge for the fork's field hierarchy would reopen
+ambient inverse and division through its parent instances, so this module exposes
+the characteristic-zero cast interface directly.
 -/
-
-public section
-
-set_option backward.isDefEq.respectTransparency false in
-open Lean.Grind in
-instance {K : Type*} [_root_.Field K] [CharZero K] : LawfulOfScientific K where
-  ofScientific_def {m s e} := by
-    rw [← NNRat.cast_ofScientific, NNRatCast.toOfScientific_def]
-    simp only [LawfulOfScientific.ofScientific_def]
-    split
-    · norm_cast
-      simp
-    · norm_cast

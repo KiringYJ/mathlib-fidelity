@@ -56,4 +56,17 @@ protected abbrev commMonoidWithZero [CommMonoidWithZero β] : CommMonoidWithZero
   let _ := e.monoidWithZero
   apply e.injective.commMonoidWithZero _ <;> intros <;> exact e.apply_symm_apply _
 
+/-- Transfer a group with zero across an equivalence, including its unit witnesses. -/
+protected abbrev groupWithZero [GroupWithZero β] : GroupWithZero α := by
+  letI := e.monoidWithZero
+  exact e.injective.groupWithZero e (e.apply_symm_apply _) (e.apply_symm_apply _)
+    (fun _ _ => e.apply_symm_apply _) (fun _ _ => e.apply_symm_apply _) fun a ha => by
+      obtain ⟨u, hu⟩ := GroupWithZero.isUnit_of_ne_zero ha
+      exact ⟨e.symm ↑u⁻¹, by simpa only [e.apply_symm_apply, ← hu] using u.mul_inv,
+        by simpa only [e.apply_symm_apply, ← hu] using u.inv_mul⟩
+
+/-- Transfer a commutative group with zero across an equivalence. -/
+protected abbrev commGroupWithZero [CommGroupWithZero β] : CommGroupWithZero α :=
+  { e.groupWithZero, e.commMonoidWithZero with }
+
 end Equiv

@@ -7,7 +7,7 @@ module
 
 public import Mathlib.Algebra.Group.Pi.Basic
 public import Mathlib.Algebra.Group.Support
-public import Mathlib.Algebra.GroupWithZero.Basic
+public import Mathlib.Algebra.GroupWithZero.Units.Basic
 public import Mathlib.Algebra.Notation.Indicator
 
 /-!
@@ -136,21 +136,14 @@ variable [MonoidWithZero M₀] [IsReduced M₀] {n : ℕ}
 
 end MonoidWithZero
 
-section GroupWithZero
-variable [GroupWithZero G₀]
+section MonoidWithZero
+variable [MonoidWithZero G₀]
 
-@[simp] lemma support_inv (f : ι → G₀) : support (fun a ↦ (f a)⁻¹) = support f :=
-  Set.ext fun _ ↦ not_congr inv_eq_zero
+@[simp] lemma support_divp (f : ι → G₀) (u : ι → G₀ˣ) :
+    support (fun a ↦ f a /ₚ u a) = support f :=
+  Set.ext fun a ↦ divp_ne_zero_iff (u a)
 
-@[simp] lemma support_inv' (f : ι → G₀) : support f⁻¹ = support f := support_inv _
-
-@[simp] lemma support_div (f g : ι → G₀) : support (fun a ↦ f a / g a) = support f ∩ support g := by
-  simp [div_eq_mul_inv]
-
-@[simp] lemma support_div' (f g : ι → G₀) : support (f / g) = support f ∩ support g :=
-  support_div _ _
-
-end GroupWithZero
+end MonoidWithZero
 
 variable [One R]
 

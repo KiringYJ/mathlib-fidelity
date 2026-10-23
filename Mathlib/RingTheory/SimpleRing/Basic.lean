@@ -54,7 +54,10 @@ instance _root_.DivisionRing.isSimpleRing (A : Type*) [DivisionRing A] : IsSimpl
     rw [or_iff_not_imp_left, ← I.one_mem_iff]
     intro H
     obtain ⟨x, hx1, hx2 : x ≠ 0⟩ := SetLike.exists_of_lt (bot_lt_iff_ne_bot.mpr H : ⊥ < I)
-    simpa [inv_mul_cancel₀ hx2] using I.mul_mem_left x⁻¹ _ hx1
+    let u := Units.mk0 x hx2
+    have hmem := I.mul_mem_left (↑u⁻¹ : A) _ hx1
+    rw [show (↑u⁻¹ : A) * x = 1 by exact Units.inv_mul u] at hmem
+    exact hmem
 
 lemma injective_ringHom_or_subsingleton_codomain
     {R S : Type*} [NonAssocRing R] [IsSimpleRing R] [NonAssocSemiring S]

@@ -288,7 +288,7 @@ def OrderMonoidIso.withZero {G H : Type*}
 
 /-- Any linearly ordered group with zero is isomorphic to adjoining `0` to the units of itself. -/
 @[simps!]
-def OrderMonoidIso.withZeroUnits {α : Type*} [LinearOrderedCommGroupWithZero α]
+noncomputable def OrderMonoidIso.withZeroUnits {α : Type*} [LinearOrderedCommGroupWithZero α]
     [DecidablePred (fun a : α ↦ a = 0)] :
     WithZero αˣ ≃*o α where
   toMulEquiv := WithZero.withZeroUnitsEquiv

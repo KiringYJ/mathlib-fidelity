@@ -56,16 +56,17 @@ end Units
 section GroupWithZero
 variable [GroupWithZero α] [MulAction α β] {a : α}
 
-@[simp] lemma inv_smul_smul₀ (ha : a ≠ 0) (x : β) : a⁻¹ • a • x = x :=
+@[simp] lemma inv_smul_smul₀ (ha : a ≠ 0) (x : β) : (Units.mk0 a ha)⁻¹ • a • x = x :=
   inv_smul_smul (Units.mk0 a ha) x
 
 @[simp]
-lemma smul_inv_smul₀ (ha : a ≠ 0) (x : β) : a • a⁻¹ • x = x := smul_inv_smul (Units.mk0 a ha) x
+lemma smul_inv_smul₀ (ha : a ≠ 0) (x : β) :
+    a • (Units.mk0 a ha)⁻¹ • x = x := smul_inv_smul (Units.mk0 a ha) x
 
-lemma inv_smul_eq_iff₀ (ha : a ≠ 0) {x y : β} : a⁻¹ • x = y ↔ x = a • y :=
+lemma inv_smul_eq_iff₀ (ha : a ≠ 0) {x y : β} : (Units.mk0 a ha)⁻¹ • x = y ↔ x = a • y :=
   inv_smul_eq_iff (g := Units.mk0 a ha)
 
-lemma eq_inv_smul_iff₀ (ha : a ≠ 0) {x y : β} : x = a⁻¹ • y ↔ a • x = y :=
+lemma eq_inv_smul_iff₀ (ha : a ≠ 0) {x y : β} : x = (Units.mk0 a ha)⁻¹ • y ↔ a • x = y :=
   eq_inv_smul_iff (g := Units.mk0 a ha)
 
 @[simp]
@@ -89,9 +90,9 @@ lemma Commute.smul_left_iff₀ [Mul β] [SMulCommClass α β β] [IsScalarTower 
   SemiconjBy.smul_left_iff₀ ha
 
 /-- Right scalar multiplication as a bijection. -/
-@[simps] def Equiv.smulRight (ha : a ≠ 0) : β ≃ β where
+@[simps] noncomputable def Equiv.smulRight (ha : a ≠ 0) : β ≃ β where
   toFun b := a • b
-  invFun b := a⁻¹ • b
+  invFun b := (Units.mk0 a ha)⁻¹ • b
   left_inv := inv_smul_smul₀ ha
   right_inv := smul_inv_smul₀ ha
 

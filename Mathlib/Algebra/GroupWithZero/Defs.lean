@@ -5,7 +5,7 @@ Authors: Johan Commelin
 -/
 module
 
-public import Mathlib.Algebra.Group.DivInvMonoid
+public import Mathlib.Algebra.Group.Units.Defs
 public import Mathlib.Basic.Nontrivial.Defs
 public import Mathlib.Basic.Logic.Basic
 public import Batteries.Tactic.SeqFocus
@@ -28,8 +28,6 @@ assert_not_exists DenselyOrdered Ring
 
 universe u
 
--- We have to fix the universe of `G₀` here, since the default argument to
--- `GroupWithZero.div'` cannot contain a universe metavariable.
 variable {G₀ : Type u} {M₀ : Type*}
 
 /-- Typeclass for expressing that a type `M₀` with multiplication and a zero satisfies
@@ -206,60 +204,32 @@ variable [CommMonoidWithZero M₀] [Div M₀] [MulDivCancelClass M₀]
 
 end MulDivCancelClass
 
-/-- A type `G₀` is a “group with zero” if it is a monoid with zero element (distinct from `1`)
-such that every nonzero element is invertible.
-The type is required to come with an “inverse” function, and the inverse of `0` must be `0`.
+/-- A monoid with a zero distinct from one in which every nonzero element is a unit.
+Inversion, division and integer powers are operations on its group of units. -/
+class GroupWithZero (G₀ : Type u) extends MonoidWithZero G₀, Nontrivial G₀ where
+  /-- Every nonzero element is a unit. -/
+  isUnit_of_ne_zero : ∀ {a : G₀}, a ≠ 0 → IsUnit a
 
-Examples include division rings and the ordered monoids that are the
-target of valuations in general valuation theory. -/
-class GroupWithZero (G₀ : Type u) extends MonoidWithZero G₀, DivInvMonoid G₀, Nontrivial G₀ where
-  /-- The inverse of `0` in a group with zero is `0`. -/
-  protected inv_zero : (0 : G₀)⁻¹ = 0
-  /-- Every nonzero element of a group with zero is invertible. -/
-  protected mul_inv_cancel (a : G₀) : a ≠ 0 → a * a⁻¹ = 1
-
-section GroupWithZero
-variable [GroupWithZero G₀] {a : G₀}
-
-@[simp] lemma inv_zero : (0 : G₀)⁻¹ = 0 := GroupWithZero.inv_zero
-
-@[simp high] -- should take priority over `IsUnit.mul_inv_cancel`
-lemma mul_inv_cancel₀ (h : a ≠ 0) : a * a⁻¹ = 1 := GroupWithZero.mul_inv_cancel a h
-
--- See note [lower instance priority]
-instance (priority := 100) GroupWithZero.toMulDivCancelClass : MulDivCancelClass G₀ where
-  mul_div_cancel a b hb := by rw [div_eq_mul_inv, mul_assoc, mul_inv_cancel₀ hb, mul_one]
-
-end GroupWithZero
-
-/-- A type `G₀` is a commutative “group with zero”
-if it is a commutative monoid with zero element (distinct from `1`)
-such that every nonzero element is invertible.
-The type is required to come with an “inverse” function, and the inverse of `0` must be `0`. -/
+/-- A commutative monoid with a zero distinct from one whose nonzero elements are units. -/
 class CommGroupWithZero (G₀ : Type*) extends CommMonoidWithZero G₀, GroupWithZero G₀
+
+namespace Units
+
+variable [GroupWithZero G₀]
+
+/-- Construct a unit from a nonzero element. Its value is definitionally the given element.
+Use unit operations for inversion and integer powers, and `divp` for an ambient numerator. -/
+@[expose] noncomputable def mk0 (a : G₀) (ha : a ≠ 0) : G₀ˣ :=
+  (GroupWithZero.isUnit_of_ne_zero ha).unit
+
+@[simp] theorem val_mk0 {a : G₀} (ha : a ≠ 0) : (mk0 a ha : G₀) = a := rfl
+
+end Units
 
 lemma eq_zero_or_one_of_sq_eq_self [MonoidWithZero M₀] [IsRightCancelMulZero M₀]
     {x : M₀} (hx : x ^ 2 = x) :
     x = 0 ∨ x = 1 :=
   or_iff_not_imp_left.mpr (mul_left_injective₀ · <| by simpa [sq] using hx)
-
-section GroupWithZero
-
-variable [GroupWithZero G₀] {a b : G₀}
-
-@[simp high] -- should take priority over `IsUnit.mul_inv_cancel_right`
-theorem mul_inv_cancel_right₀ (h : b ≠ 0) (a : G₀) : a * b * b⁻¹ = a :=
-  calc
-    a * b * b⁻¹ = a * (b * b⁻¹) := mul_assoc _ _ _
-    _ = a := by simp [h]
-
-@[simp high] -- should take priority over `IsUnit.mul_inv_cancel_left`
-theorem mul_inv_cancel_left₀ (h : a ≠ 0) (b : G₀) : a * (a⁻¹ * b) = b :=
-  calc
-    a * (a⁻¹ * b) = a * a⁻¹ * b := (mul_assoc _ _ _).symm
-    _ = b := by simp [h]
-
-end GroupWithZero
 
 section MulZeroClass
 

@@ -182,9 +182,15 @@ lemma valueMonoid_eq_valueGroup : (valueMonoid f) = (valueGroup f).toSubmonoid :
   rw [valueGroup_def, Subgroup.closure_toSubmonoid, Eq.comm]
   apply Submonoid.closure_eq_of_le
   · simp only [union_subset_iff, subset_refl, true_and]
-    intro _ ⟨y, hy⟩
-    use y⁻¹
-    simp [hy]
+    intro u ⟨y, hy⟩
+    have hy0 : y ≠ 0 := by
+      intro h
+      exact u⁻¹.ne_zero (by simpa [h] using hy.symm)
+    let v := Units.mk0 y hy0
+    have huv : Units.map f.toMonoidHom v = u⁻¹ := Units.ext hy
+    use (↑v⁻¹ : A)
+    change (↑(Units.map f.toMonoidHom v)⁻¹ : B) = (u : B)
+    rw [huv, inv_inv]
   · simp [Submonoid.closure_union]
 
 variable (f)

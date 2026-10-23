@@ -5,7 +5,7 @@ Authors: Robert Y. Lewis, Leonardo de Moura, Mario Carneiro, Floris van Doorn
 -/
 module
 
-public import Mathlib.Algebra.Field.Defs
+public import Mathlib.Algebra.Field.Basic
 public import Mathlib.Algebra.Order.GroupWithZero.Canonical
 public import Mathlib.Algebra.Order.Ring.Canonical
 
@@ -30,4 +30,5 @@ abbrev CanonicallyOrderedAdd.toLinearOrderedCommGroupWithZero :
 
 variable [IsStrictOrderedRing α] [Sub α] [OrderedSub α]
 
-theorem tsub_div (a b c : α) : (a - b) / c = a / c - b / c := by simp_rw [div_eq_mul_inv, tsub_mul]
+theorem tsub_divp (a b : α) (u : αˣ) : (a - b) /ₚ u = a /ₚ u - b /ₚ u := by
+  simp only [divp, tsub_mul]

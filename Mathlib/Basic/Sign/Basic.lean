@@ -6,10 +6,13 @@ Authors: Eric Rodriguez
 module
 
 public import Mathlib.Algebra.GroupWithZero.Units.Lemmas
+public import Mathlib.Algebra.GroupWithZero.CheckedHom
 public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Mathlib.Algebra.Order.Ring.Cast
 public import Mathlib.Basic.Sign.Defs
 public import Mathlib.Data.Fintype.BigOperators
+public import Mathlib.Algebra.Ring.Int.Parity
+public import Mathlib.Util.CheckedOperations
 
 /-!
 # Sign function
@@ -35,14 +38,25 @@ theorem pow_odd (s : SignType) {n : ℕ} (hn : Odd n) : s ^ n = s := by
   rw [pow_add, pow_one, pow_mul, sq]
   cases s <;> simp
 
-theorem zpow_odd (s : SignType) {z : ℤ} (hz : Odd z) : s ^ z = s := by
-  obtain rfl | hs := eq_or_ne s 0
-  · rw [zero_zpow]
-    rintro rfl
-    simp at hz
-  obtain ⟨k, rfl⟩ := hz
-  rw [zpow_add₀ hs, zpow_one, zpow_mul, zpow_two]
-  cases s <;> simp
+theorem checked_inv_eq_self (s : SignType) (hs : IsUnit s) : Checked.inv s hs = s := by
+  change (↑hs.unit⁻¹ : SignType) = s
+  symm
+  apply hs.unit.eq_inv_of_mul_eq_one_left
+  rw [hs.unit_spec]
+  cases s <;> first | rfl | exact (hs.ne_zero rfl).elim
+
+theorem zpow_eq_pow_natAbs (s : SignType) (z : ℤ) (h : z < 0 → IsUnit s) :
+    Checked.zpow s z h = s ^ z.natAbs := by
+  cases z with
+  | ofNat n => rfl
+  | negSucc n =>
+    rw [Checked.zpow_negSucc, checked_inv_eq_self]
+    rfl
+
+theorem zpow_odd (s : SignType) {z : ℤ} (hz : Odd z)
+    (h : z < 0 → IsUnit s := by checked_power) : Checked.zpow s z h = s := by
+  rw [zpow_eq_pow_natAbs]
+  exact pow_odd s hz.natAbs
 
 lemma pow_even (s : SignType) {n : ℕ} (hn : Even n) (hs : s ≠ 0) :
     s ^ n = 1 := by
@@ -50,7 +64,8 @@ lemma pow_even (s : SignType) {n : ℕ} (hn : Even n) (hs : s ≠ 0) :
 
 lemma zpow_even (s : SignType) {z : ℤ} (hz : Even z) (hs : s ≠ 0) :
     s ^ z = 1 := by
-  cases s <;> simp_all [Even.neg_one_zpow]
+  rw [zpow_eq_pow_natAbs]
+  exact pow_even s hz.natAbs hs
 
 /-- `SignType.cast` as a `MulWithZeroHom`. -/
 @[simps]
@@ -75,9 +90,11 @@ theorem range_eq {α} (f : SignType → α) : Set.range f = {f zero, f neg, f po
     ↑(a ^ k) = (a : α) ^ k :=
   map_pow SignType.castHom _ _
 
-@[simp, norm_cast] lemma coe_zpow {α} [GroupWithZero α] [HasDistribNeg α] (a : SignType) (k : ℤ) :
-    ↑(a ^ k) = (a : α) ^ k :=
-  map_zpow₀ SignType.castHom _ _
+@[simp, norm_cast] lemma coe_zpow {α} [GroupWithZero α] [HasDistribNeg α] (a : SignType) (k : ℤ)
+    (h : k < 0 → IsUnit a) :
+    (↑(Checked.zpow a k h) : α) =
+      Checked.zpow (a : α) k (fun hk => (h hk).map SignType.castHom) :=
+  Checked.map_zpow (SignType.castHom (α := α)).toMonoidHom a k h
 
 end SignType
 

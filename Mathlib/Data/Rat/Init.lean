@@ -28,14 +28,14 @@ def NNRat := {q : ℚ // 0 ≤ q}
 /-!
 ### Cast from `NNRat`
 
-This section sets up the typeclasses necessary to declare the canonical embedding `ℚ≥0` to any
-semifield.
+This section declares the notation class for a total embedding of `ℚ≥0`. The canonical
+division-semiring instance is provided under characteristic zero in `Data.Rat.Cast.CharZero`.
 -/
 
 /-- Typeclass for the canonical homomorphism `ℚ≥0 → K`.
 
-This should be considered as a notation typeclass. The sole purpose of this typeclass is to be
-extended by `DivisionSemiring`. -/
+This is a notation typeclass. A division semiring alone does not supply this class:
+a total rational embedding also requires its natural denominators to remain nonzero. -/
 class NNRatCast (K : Type*) where
   /-- The canonical homomorphism `ℚ≥0 → K`.
 
@@ -46,9 +46,7 @@ instance NNRat.instNNRatCast : NNRatCast ℚ≥0 where nnratCast q := q
 
 variable {K : Type*} [NNRatCast K]
 
-/-- Canonical homomorphism from `ℚ≥0` to a division semiring `K`.
-
-This is just the bare function in order to aid in creating instances of `DivisionSemiring`. -/
+/-- Cast a nonnegative rational using the supplied total rational embedding. -/
 @[coe, reducible, match_pattern] protected def NNRat.cast : ℚ≥0 → K := NNRatCast.nnratCast
 
 -- See note [coercion into rings]
@@ -79,7 +77,38 @@ end NNRat
 
 namespace Rat
 
+/-- A fraction with an integer numerator and a nonzero natural denominator. -/
+def fraction (n : Int) (d : ℕ) (hd : d ≠ 0) : ℚ := normalize n d hd
+
+/-- A fraction with a nonzero integer denominator. Its sign is absorbed into the numerator. -/
+def fractionInt (n d : Int) (hd : d ≠ 0) : ℚ :=
+  normalize (d.sign * n) d.natAbs (Int.natAbs_ne_zero.mpr hd)
+
+/-- The reciprocal of a nonzero rational, constructed directly from normalized integer data. -/
+def reciprocal (q : ℚ) (hq : q ≠ 0) : ℚ :=
+  fractionInt q.den q.num (fun h => hq (num_eq_zero.mp h))
+
+/-- Divide an arbitrary rational by a nonzero rational. -/
+def quotient (a b : ℚ) (hb : b ≠ 0) : ℚ := a * reciprocal b hb
+
+@[simp] theorem mul_reciprocal (q : ℚ) (hq : q ≠ 0) : q * reciprocal q hq = 1 := by
+  unfold reciprocal fractionInt
+  conv => lhs; lhs; rw [← normalize_self q]
+  rw [normalize_mul_normalize]
+  change normalize _ _ _ = normalize 1 1 (by decide)
+  rw [normalize_eq_iff]
+  simp only [Int.natCast_one, Int.mul_one, Int.one_mul, Int.natCast_mul]
+  rw [← Int.mul_assoc, Int.mul_sign_self, Int.mul_comm]
+
+@[simp] theorem reciprocal_mul (q : ℚ) (hq : q ≠ 0) : reciprocal q hq * q = 1 := by
+  rw [Rat.mul_comm, mul_reciprocal]
+
 @[norm_cast] lemma cast_id (n : ℚ) : Rat.cast n = n := rfl
 @[simp] lemma cast_eq_id : Rat.cast = id := rfl
 
 end Rat
+
+/-- `OfScientific.ofScientific` is the simp-normal form. -/
+@[simp]
+theorem Rat.ofScientific_eq_ofScientific (m : ℕ) (s : Bool) (e : ℕ) :
+    Rat.ofScientific (OfNat.ofNat m) s (OfNat.ofNat e) = OfScientific.ofScientific m s e := rfl

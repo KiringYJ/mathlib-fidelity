@@ -26,15 +26,29 @@ namespace Rat
 /-- Square root function on rational numbers, defined by taking the (integer) square root of the
 numerator and the square root (on natural numbers) of the denominator. -/
 @[pp_nodot]
-def sqrt (q : ℚ) : ℚ := mkRat (Int.sqrt q.num) (Nat.sqrt q.den)
+def sqrt (q : ℚ) : ℚ :=
+  fraction (Int.sqrt q.num) (Nat.sqrt q.den) (Nat.sqrt_pos.mpr q.den_pos).ne'
 
 theorem sqrt_eq (q : ℚ) : Rat.sqrt (q * q) = |q| := by
-  rw [sqrt, mul_self_num, mul_self_den, Int.sqrt_eq, Nat.sqrt_eq, abs_def, divInt_ofNat]
+  simp only [sqrt, mul_self_num, mul_self_den, Int.sqrt_eq, Nat.sqrt_eq]
+  by_cases h : 0 ≤ q
+  · rw [abs_of_nonneg h]
+    simpa only [fraction, Int.natAbs_of_nonneg (Rat.num_nonneg.mpr h)] using
+      Rat.normalize_self q
+  · rw [abs_of_nonpos (le_of_not_ge h)]
+    have hn : q.num ≤ 0 := by
+      have hn := Rat.num_nonneg.mpr (neg_nonneg.mpr (le_of_not_ge h))
+      simpa only [Rat.neg_num, Int.neg_nonneg] using hn
+    simpa only [fraction, Int.ofNat_natAbs_of_nonpos hn, Rat.neg_num, Rat.neg_den] using
+      Rat.normalize_self (-q)
 
 theorem exists_mul_self (x : ℚ) : (∃ q, q * q = x) ↔ Rat.sqrt x * Rat.sqrt x = x :=
   ⟨fun ⟨n, hn⟩ => by rw [← hn, sqrt_eq, abs_mul_abs_self], fun h => ⟨Rat.sqrt x, h⟩⟩
 
-lemma sqrt_nonneg (q : ℚ) : 0 ≤ Rat.sqrt q := mkRat_nonneg (Int.sqrt_nonneg _) _
+lemma sqrt_nonneg (q : ℚ) : 0 ≤ Rat.sqrt q := by
+  apply Rat.num_nonneg.mp
+  rw [sqrt, fraction, Rat.num_normalize]
+  exact Int.ediv_nonneg (Int.sqrt_nonneg _) (Int.natCast_nonneg _)
 
 /-- `IsSquare` can be decided on `ℚ` by checking against the square root. -/
 instance : DecidablePred (IsSquare : ℚ → Prop) :=
@@ -43,7 +57,9 @@ instance : DecidablePred (IsSquare : ℚ → Prop) :=
 
 @[simp, norm_cast]
 theorem sqrt_intCast (z : ℤ) : Rat.sqrt (z : ℚ) = Int.sqrt z := by
-  simp only [sqrt, num_intCast, den_intCast, Nat.sqrt_one, mkRat_one]
+  simp only [sqrt, num_intCast, den_intCast, Nat.sqrt_one, fraction, Rat.normalize_eq,
+    Nat.gcd_one_right,
+    Int.natCast_one, Int.ediv_one, Nat.div_one, Rat.mk_den_one]
 
 @[simp, norm_cast]
 theorem sqrt_natCast (n : ℕ) : Rat.sqrt (n : ℚ) = Nat.sqrt n := by

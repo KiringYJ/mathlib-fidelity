@@ -5,8 +5,8 @@ Authors: Kim Morrison
 -/
 module
 
-public import Mathlib.Tactic.Positivity
-public import Mathlib.Algebra.Order.Field.Basic
+public import Mathlib.Data.Nat.Sqrt
+public import Mathlib.Data.Rat.Cast.Order
 
 /-!
 # Rational approximations to square roots of naturals
@@ -22,28 +22,32 @@ See also `Mathlib.Analysis.Rat.NatSqrt.Real` for comparisons with the real squar
 namespace Nat
 
 /--
-Approximate the square root of a natural number as a rational number, to within `1 / prec`.
+Approximate the square root of a natural number using positive precision `prec`,
+to within `1 / prec`.
 -/
-def ratSqrt (x : ℕ) (prec : ℕ) : ℚ := ((x * prec ^ 2).sqrt : ℚ) / prec
+def ratSqrt (x prec : ℕ) (hprec : 0 < prec) : ℚ :=
+  Rat.fraction ((x * prec ^ 2).sqrt : ℤ) prec hprec.ne'
 
-theorem ratSqrt_nonneg (x prec : ℕ) : 0 ≤ ratSqrt x prec := by
-  unfold ratSqrt
-  positivity
+theorem ratSqrt_nonneg (x prec : ℕ) (hprec : 0 < prec) : 0 ≤ ratSqrt x prec hprec :=
+  Rat.fraction_nonneg (Int.natCast_nonneg _) _ _
 
-theorem ratSqrt_sq_le (x : ℕ) {prec : ℕ} (h : 0 < prec) : (ratSqrt x prec) ^ 2 ≤ x := by
-  unfold ratSqrt
-  rw [div_pow, div_le_iff₀ (by positivity)]
-  norm_cast
-  exact sqrt_le' (x * prec ^ 2)
+theorem ratSqrt_mul_prec (x prec : ℕ) (hprec : 0 < prec) :
+    ratSqrt x prec hprec * (prec : ℚ) = ((x * prec ^ 2).sqrt : ℚ) := by
+  exact Rat.fraction_mul_den _ _ _
+
+theorem ratSqrt_sq_le (x : ℕ) {prec : ℕ} (h : 0 < prec) :
+    (ratSqrt x prec h) ^ 2 ≤ (x : ℚ) := by
+  apply (mul_le_mul_iff_of_pos_right (pow_pos (Nat.cast_pos.mpr h : (0 : ℚ) < prec) 2)).mp
+  rw [← mul_pow, ratSqrt_mul_prec]
+  exact_mod_cast sqrt_le' (x * prec ^ 2)
 
 theorem lt_ratSqrt_add_inv_prec_sq (x : ℕ) {prec : ℕ} (h : 0 < prec) :
-    x < (ratSqrt x prec + 1 / prec) ^ 2 := by
-  unfold ratSqrt
-  rw [← mul_lt_mul_iff_of_pos_right (a := (prec ^ 2 : ℚ)) (by positivity)]
-  rw [← mul_pow, add_mul]
-  rw [div_mul_cancel₀, div_mul_cancel₀]
-  · norm_cast
-    exact lt_succ_sqrt' (x * prec ^ 2)
-  all_goals norm_cast; positivity
+    (x : ℚ) < (ratSqrt x prec h +
+      (1 : ℚ) /ₚ Units.mk0 (prec : ℚ) (Nat.cast_ne_zero.mpr h.ne')) ^ 2 := by
+  apply (mul_lt_mul_iff_of_pos_right (pow_pos (Nat.cast_pos.mpr h : (0 : ℚ) < prec) 2)).mp
+  have hc : (1 : ℚ) /ₚ Units.mk0 (prec : ℚ) (Nat.cast_ne_zero.mpr h.ne') *
+      (prec : ℚ) = 1 := divp_mul_cancel _ _
+  rw [← mul_pow, add_mul, ratSqrt_mul_prec, hc]
+  exact_mod_cast lt_succ_sqrt' (x * prec ^ 2)
 
 end Nat

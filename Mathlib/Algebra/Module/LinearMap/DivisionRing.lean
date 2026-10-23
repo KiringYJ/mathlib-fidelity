@@ -29,7 +29,9 @@ theorem surjective_iff_ne_zero [DivisionSemiring R] [Module R M] {f : M →ₗ[R
     Function.Surjective f ↔ f ≠ 0 := by
   refine ⟨ne_zero_of_surjective, fun hf z ↦ ?_⟩
   obtain ⟨y, hy⟩ : ∃ y, f y ≠ 0 := by simpa [Ne, LinearMap.ext_iff] using hf
-  exact ⟨(z * (f y)⁻¹) • y, by simp [hy]⟩
+  refine ⟨(z /ₚ Units.mk0 (f y) hy) • y, ?_⟩
+  rw [map_smul, smul_eq_mul]
+  exact divp_mul_cancel z (Units.mk0 (f y) hy)
 
 protected alias ⟨_, surjective⟩ := surjective_iff_ne_zero
 

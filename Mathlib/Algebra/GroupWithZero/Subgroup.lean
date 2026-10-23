@@ -31,19 +31,21 @@ lemma smul_mem_pointwise_smul_iff₀ (ha : a ≠ 0) (S : Subgroup G) (x : G) :
   smul_mem_smul_set_iff₀ ha (S : Set G) x
 
 lemma mem_pointwise_smul_iff_inv_smul_mem₀ (ha : a ≠ 0) (S : Subgroup G) (x : G) :
-    x ∈ a • S ↔ a⁻¹ • x ∈ S :=
+    x ∈ a • S ↔ (Units.mk0 a ha)⁻¹ • x ∈ S :=
   mem_smul_set_iff_inv_smul_mem₀ ha (S : Set G) x
 
 lemma mem_inv_pointwise_smul_iff₀ (ha : a ≠ 0) (S : Subgroup G) (x : G) :
-    x ∈ a⁻¹ • S ↔ a • x ∈ S :=
+    x ∈ (Units.mk0 a ha)⁻¹ • S ↔ a • x ∈ S :=
   mem_inv_smul_set_iff₀ ha (S : Set G) x
 
 @[simp]
 lemma pointwise_smul_le_pointwise_smul_iff₀ (ha : a ≠ 0) : a • S ≤ a • T ↔ S ≤ T :=
   smul_set_subset_smul_set_iff₀ ha
 
-lemma pointwise_smul_le_iff₀ (ha : a ≠ 0) : a • S ≤ T ↔ S ≤ a⁻¹ • T := smul_set_subset_iff₀ ha
-lemma le_pointwise_smul_iff₀ (ha : a ≠ 0) : S ≤ a • T ↔ a⁻¹ • S ≤ T := subset_smul_set_iff₀ ha
+lemma pointwise_smul_le_iff₀ (ha : a ≠ 0) :
+    a • S ≤ T ↔ S ≤ (Units.mk0 a ha)⁻¹ • T := smul_set_subset_iff₀ ha
+lemma le_pointwise_smul_iff₀ (ha : a ≠ 0) :
+    S ≤ a • T ↔ (Units.mk0 a ha)⁻¹ • S ≤ T := subset_smul_set_iff₀ ha
 
 end GroupWithZero
 end Subgroup
@@ -130,19 +132,21 @@ lemma smul_mem_pointwise_smul_iff₀ (ha : a ≠ 0) (S : AddSubgroup A) (x : A) 
   smul_mem_smul_set_iff₀ ha (S : Set A) x
 
 lemma mem_pointwise_smul_iff_inv_smul_mem₀ (ha : a ≠ 0) (S : AddSubgroup A) (x : A) :
-    x ∈ a • S ↔ a⁻¹ • x ∈ S :=
+    x ∈ a • S ↔ (Units.mk0 a ha)⁻¹ • x ∈ S :=
   mem_smul_set_iff_inv_smul_mem₀ ha (S : Set A) x
 
 lemma mem_inv_pointwise_smul_iff₀ (ha : a ≠ 0) (S : AddSubgroup A) (x : A) :
-    x ∈ a⁻¹ • S ↔ a • x ∈ S :=
+    x ∈ (Units.mk0 a ha)⁻¹ • S ↔ a • x ∈ S :=
   mem_inv_smul_set_iff₀ ha (S : Set A) x
 
 @[simp]
 lemma pointwise_smul_le_pointwise_smul_iff₀ (ha : a ≠ 0) : a • S ≤ a • T ↔ S ≤ T :=
   smul_set_subset_smul_set_iff₀ ha
 
-lemma pointwise_smul_le_iff₀ (ha : a ≠ 0) : a • S ≤ T ↔ S ≤ a⁻¹ • T := smul_set_subset_iff₀ ha
-lemma le_pointwise_smul_iff₀ (ha : a ≠ 0) : S ≤ a • T ↔ a⁻¹ • S ≤ T := subset_smul_set_iff₀ ha
+lemma pointwise_smul_le_iff₀ (ha : a ≠ 0) :
+    a • S ≤ T ↔ S ≤ (Units.mk0 a ha)⁻¹ • T := smul_set_subset_iff₀ ha
+lemma le_pointwise_smul_iff₀ (ha : a ≠ 0) :
+    S ≤ a • T ↔ (Units.mk0 a ha)⁻¹ • S ≤ T := subset_smul_set_iff₀ ha
 
 end GroupWithZero
 end AddSubgroup

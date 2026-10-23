@@ -5,7 +5,7 @@ Authors: Johannes Hölzl, Mario Carneiro
 -/
 module
 
-public import Mathlib.Algebra.Field.Defs
+public import Mathlib.Data.Rat.Cast.CharZero
 public import Mathlib.Algebra.GroupWithZero.Action.Defs
 
 /-!
@@ -21,9 +21,9 @@ variable {R : Type*}
 /-! ### Scalar multiplication -/
 
 namespace NNRat
-variable [DivisionSemiring R]
+variable [DivisionSemiring R] [CharZero R]
 
-instance (priority := 100) instDistribSMul : DistribSMul ℚ≥0 R where
+noncomputable instance (priority := 100) instDistribSMul : DistribSMul ℚ≥0 R where
   smul_zero a := by rw [smul_def, mul_zero]
   smul_add a x y := by rw [smul_def, smul_def, smul_def, mul_add]
 
@@ -33,9 +33,9 @@ instance instIsScalarTowerRight : IsScalarTower ℚ≥0 R R where
 end NNRat
 
 namespace Rat
-variable [DivisionRing R]
+variable [DivisionRing R] [CharZero R]
 
-instance (priority := 100) instDistribSMul : DistribSMul ℚ R where
+noncomputable instance (priority := 100) instDistribSMul : DistribSMul ℚ R where
   smul_zero a := by rw [smul_def, mul_zero]
   smul_add a x y := by rw [smul_def, smul_def, smul_def, mul_add]
 

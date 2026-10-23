@@ -14,44 +14,66 @@ public import Mathlib.Data.Rat.Cast.Defs
 
 @[expose] public section
 
-open Function
-
 variable {α : Type*}
+
+/-- A total rational cast exists in characteristic zero. -/
+noncomputable instance (priority := 100) DivisionRing.toRatCast [DivisionRing α] [CharZero α] :
+    RatCast α where
+  ratCast q := Rat.eval q (Nat.cast_ne_zero.mpr q.den_nz)
 
 namespace Rat
 variable [DivisionRing α] [CharZero α] {p q : ℚ}
 
+lemma cast_def (q : ℚ) : (q : α) = eval q (Nat.cast_ne_zero.mpr q.den_nz) := rfl
+
+@[simp] theorem cast_mul_den (q : ℚ) : (q : α) * (q.den : α) = (q.num : α) :=
+  eval_mul_den _ _
+
+@[simp, norm_cast] theorem cast_natCast (n : ℕ) : ((n : ℚ) : α) = n := eval_natCast _ _
+@[simp, norm_cast] theorem cast_intCast (n : ℤ) : ((n : ℚ) : α) = n := eval_intCast _ _
+@[simp, norm_cast] theorem cast_zero : ((0 : ℚ) : α) = 0 := by
+  simpa only [Nat.cast_zero] using (cast_natCast (α := α) 0)
+@[simp, norm_cast] theorem cast_one : ((1 : ℚ) : α) = 1 := by
+  simpa only [Nat.cast_one] using (cast_natCast (α := α) 1)
+
+@[simp, norm_cast] theorem cast_add (p q : ℚ) : ((p + q : ℚ) : α) = (p : α) + q :=
+  eval_add _ _ _ _ _
+
+@[simp, norm_cast] theorem cast_mul (p q : ℚ) : ((p * q : ℚ) : α) = (p : α) * q :=
+  eval_mul _ _ _ _ _
+
+@[simp, norm_cast] theorem cast_neg (q : ℚ) : ((-q : ℚ) : α) = -(q : α) := eval_neg _ _
+
+@[simp, norm_cast] theorem cast_sub (p q : ℚ) : ((p-q : ℚ) : α) = (p : α) - q := by
+  simp only [sub_eq_add_neg, cast_add, cast_neg]
+
+@[simp, norm_cast] theorem cast_ofNat (n : ℕ) [n.AtLeastTwo] :
+    ((ofNat(n) : ℚ) : α) = ofNat(n) := cast_natCast n
+
 @[stacks 09FR "Characteristic zero case."]
-lemma cast_injective : Injective ((↑) : ℚ → α)
-  | ⟨n₁, d₁, d₁0, c₁⟩, ⟨n₂, d₂, d₂0, c₂⟩, h => by
-    have d₁a : (d₁ : α) ≠ 0 := Nat.cast_ne_zero.2 d₁0
-    have d₂a : (d₂ : α) ≠ 0 := Nat.cast_ne_zero.2 d₂0
-    rw [mk_eq_divInt, mk_eq_divInt] at h ⊢
-    rw [cast_divInt_of_ne_zero _ (by simpa), cast_divInt_of_ne_zero _ (by simpa)] at h
-    norm_cast at h
-    rwa [eq_div_iff_mul_eq d₂a, division_def, mul_assoc, (d₁.cast_commute (d₂ : α)).inv_left₀.eq,
-      ← mul_assoc, ← division_def, eq_comm, eq_div_iff_mul_eq d₁a, eq_comm, ← Int.cast_natCast d₁,
-      ← Int.cast_mul, ← Int.cast_natCast d₂, ← Int.cast_mul, Int.cast_inj, ← mkRat_eq_iff d₁0 d₂0]
-      at h
+lemma cast_injective : Function.Injective ((↑) : ℚ → α) := by
+  intro p q h
+  have hp := eval_mul_den (α := α) p (Nat.cast_ne_zero.mpr p.den_nz)
+  have hq := eval_mul_den (α := α) q (Nat.cast_ne_zero.mpr q.den_nz)
+  change (p : α) * (p.den : α) = (p.num : α) at hp
+  change (q : α) * (q.den : α) = (q.num : α) at hq
+  have he : (p.num : α) * (q.den : α) = (q.num : α) * (p.den : α) := by
+    rw [← hp, h, mul_assoc, (Nat.cast_commute p.den (q.den : α)).eq,
+      ← mul_assoc, hq]
+  have hn : p.num * q.den = q.num * p.den := by
+    apply Int.cast_injective (α := α)
+    simpa only [Int.cast_mul, Int.cast_natCast] using he
+  exact (Rat.normalize_self p).symm.trans
+    (((Rat.normalize_eq_iff p.den_nz q.den_nz).mpr hn).trans (Rat.normalize_self q))
 
 @[simp, norm_cast] lemma cast_inj : (p : α) = q ↔ p = q := cast_injective.eq_iff
-
-@[simp, norm_cast] lemma cast_eq_zero : (p : α) = 0 ↔ p = 0 := cast_injective.eq_iff' cast_zero
+@[simp, norm_cast] lemma cast_eq_zero : (p : α) = 0 ↔ p = 0 :=
+  cast_injective.eq_iff' cast_zero
 lemma cast_ne_zero : (p : α) ≠ 0 ↔ p ≠ 0 := cast_eq_zero.ne
 
-@[simp, norm_cast] lemma cast_add (p q : ℚ) : ↑(p + q) = (p + q : α) :=
-  cast_add_of_ne_zero (Nat.cast_ne_zero.2 p.pos.ne') (Nat.cast_ne_zero.2 q.pos.ne')
-
-@[simp, norm_cast] lemma cast_sub (p q : ℚ) : ↑(p - q) = (p - q : α) :=
-  cast_sub_of_ne_zero (Nat.cast_ne_zero.2 p.pos.ne') (Nat.cast_ne_zero.2 q.pos.ne')
-
-@[simp, norm_cast] lemma cast_mul (p q : ℚ) : ↑(p * q) = (p * q : α) :=
-  cast_mul_of_ne_zero (Nat.cast_ne_zero.2 p.pos.ne') (Nat.cast_ne_zero.2 q.pos.ne')
-
 variable (α) in
-/-- Coercion `ℚ → α` as a `RingHom`. -/
-@[implicit_reducible]
-def castHom : ℚ →+* α where
+/-- The characteristic-zero rational embedding as a ring homomorphism. -/
+noncomputable def castHom : ℚ →+* α where
   toFun := (↑)
   map_one' := cast_one
   map_mul' := cast_mul
@@ -60,63 +82,126 @@ def castHom : ℚ →+* α where
 
 @[simp] lemma coe_castHom : ⇑(castHom α) = ((↑) : ℚ → α) := rfl
 
-@[simp, norm_cast] lemma cast_inv (p : ℚ) : ↑(p⁻¹) = (p⁻¹ : α) := map_inv₀ (castHom α) _
-@[simp, norm_cast] lemma cast_div (p q : ℚ) : ↑(p / q) = (p / q : α) := map_div₀ (castHom α) ..
+theorem cast_commute (q : ℚ) (a : α) : Commute (q : α) a := by
+  change (q : α) * a = a * (q : α)
+  apply mul_right_cancel₀ (Nat.cast_ne_zero.mpr q.den_nz : (q.den : α) ≠ 0)
+  rw [mul_assoc, ← (Nat.cast_commute q.den a).eq, ← mul_assoc, cast_mul_den,
+    mul_assoc, cast_mul_den]
+  exact (Int.cast_commute q.num a).eq
 
-@[simp, norm_cast]
-lemma cast_zpow (p : ℚ) (n : ℤ) : ↑(p ^ n) = (p ^ n : α) := map_zpow₀ (castHom α) ..
+theorem commute_cast (a : α) (q : ℚ) : Commute a (q : α) := (cast_commute q a).symm
 
-@[norm_cast]
-theorem cast_divInt (a b : ℤ) : (a /. b : α) = a / b := by
-  simp only [divInt_eq_div, cast_div, cast_intCast]
+theorem cast_comm (q : ℚ) (a : α) : (q : α) * a = a * (q : α) := (cast_commute q a).eq
 
 end Rat
+
+/-- A total nonnegative rational cast exists in characteristic zero. -/
+noncomputable instance (priority := 100) DivisionSemiring.toNNRatCast
+    [DivisionSemiring α] [CharZero α] : NNRatCast α where
+  nnratCast q := NNRat.eval q (Nat.cast_ne_zero.mpr q.den_ne_zero)
 
 namespace NNRat
 variable [DivisionSemiring α] [CharZero α] {p q : ℚ≥0}
 
-lemma cast_injective : Injective ((↑) : ℚ≥0 → α) := by
-  rintro p q hpq
-  rw [NNRat.cast_def, NNRat.cast_def, Commute.div_eq_div_iff] at hpq
-  on_goal 1 => rw [← p.num_div_den, ← q.num_div_den, div_eq_div_iff]
-  · norm_cast at hpq ⊢
-  any_goals norm_cast
-  any_goals apply den_ne_zero
-  exact Nat.cast_commute ..
+lemma cast_def (q : ℚ≥0) : (q : α) = eval q (Nat.cast_ne_zero.mpr q.den_ne_zero) := rfl
+
+@[simp] theorem cast_mul_den (q : ℚ≥0) : (q : α) * (q.den : α) = (q.num : α) :=
+  eval_mul_den _ _
+
+@[simp, norm_cast] theorem cast_natCast (n : ℕ) : ((n : ℚ≥0) : α) = n := eval_natCast _ _
+@[simp, norm_cast] theorem cast_zero : ((0 : ℚ≥0) : α) = 0 := by
+  simpa only [Nat.cast_zero] using (cast_natCast (α := α) 0)
+@[simp, norm_cast] theorem cast_one : ((1 : ℚ≥0) : α) = 1 := by
+  simpa only [Nat.cast_one] using (cast_natCast (α := α) 1)
+@[simp, norm_cast] theorem cast_ofNat (n : ℕ) [n.AtLeastTwo] :
+    ((ofNat(n) : ℚ≥0) : α) = ofNat(n) := cast_natCast n
+
+@[simp, norm_cast] theorem cast_add (p q : ℚ≥0) : ((p + q : ℚ≥0) : α) = (p : α) + q :=
+  eval_add _ _ _ _ _
+@[simp, norm_cast] theorem cast_mul (p q : ℚ≥0) : ((p * q : ℚ≥0) : α) = (p : α) * q :=
+  eval_mul _ _ _ _ _
+
+lemma cast_injective : Function.Injective ((↑) : ℚ≥0 → α) := by
+  intro p q h
+  have he : (p.num : α) * (q.den : α) = (q.num : α) * (p.den : α) := by
+    rw [← cast_mul_den p, h, mul_assoc, (Nat.cast_commute p.den (q.den : α)).eq,
+      ← mul_assoc, cast_mul_den]
+  have hn : p.num * q.den = q.num * p.den := by
+    apply Nat.cast_injective (R := α)
+    simpa only [Nat.cast_mul] using he
+  calc
+    p = divNat p.num p.den p.den_ne_zero := p.num_divNat_den.symm
+    _ = divNat q.num q.den q.den_ne_zero :=
+      (divNat_inj p.den_ne_zero q.den_ne_zero).mpr hn
+    _ = q := q.num_divNat_den
 
 @[simp, norm_cast] lemma cast_inj : (p : α) = q ↔ p = q := cast_injective.eq_iff
-
-@[simp, norm_cast] lemma cast_eq_zero : (q : α) = 0 ↔ q = 0 := by rw [← cast_zero, cast_inj]
-lemma cast_ne_zero : (q : α) ≠ 0 ↔ q ≠ 0 := cast_eq_zero.not
-
-@[simp, norm_cast] lemma cast_add (p q : ℚ≥0) : ↑(p + q) = (p + q : α) :=
-  cast_add_of_ne_zero (Nat.cast_ne_zero.2 p.den_pos.ne') (Nat.cast_ne_zero.2 q.den_pos.ne')
-
-@[simp, norm_cast] lemma cast_mul (p q) : (p * q : ℚ≥0) = (p * q : α) :=
-  cast_mul_of_ne_zero (Nat.cast_ne_zero.2 p.den_pos.ne') (Nat.cast_ne_zero.2 q.den_pos.ne')
+@[simp, norm_cast] lemma cast_eq_zero : (p : α) = 0 ↔ p = 0 :=
+  cast_injective.eq_iff' cast_zero
+lemma cast_ne_zero : (p : α) ≠ 0 ↔ p ≠ 0 := cast_eq_zero.ne
 
 variable (α) in
-/-- Coercion `ℚ≥0 → α` as a `RingHom`. -/
-def castHom : ℚ≥0 →+* α where
+/-- The characteristic-zero nonnegative rational embedding. -/
+noncomputable def castHom : ℚ≥0 →+* α where
   toFun := (↑)
   map_one' := cast_one
   map_mul' := cast_mul
   map_zero' := cast_zero
   map_add' := cast_add
 
-@[simp, norm_cast] lemma coe_castHom : ⇑(castHom α) = (↑) := rfl
+@[simp] lemma coe_castHom : ⇑(castHom α) = ((↑) : ℚ≥0 → α) := rfl
 
-@[simp, norm_cast] lemma cast_inv (p) : (p⁻¹ : ℚ≥0) = (p : α)⁻¹ := map_inv₀ (castHom α) _
-@[simp, norm_cast] lemma cast_div (p q) : (p / q : ℚ≥0) = (p / q : α) := map_div₀ (castHom α) ..
+theorem cast_commute (q : ℚ≥0) (a : α) : Commute (q : α) a := by
+  change (q : α) * a = a * (q : α)
+  apply mul_right_cancel₀ (Nat.cast_ne_zero.mpr q.den_ne_zero : (q.den : α) ≠ 0)
+  rw [mul_assoc, ← (Nat.cast_commute q.den a).eq, ← mul_assoc, cast_mul_den,
+    mul_assoc, cast_mul_den]
+  exact (Nat.cast_commute q.num a).eq
 
-@[simp, norm_cast]
-lemma cast_zpow (q : ℚ≥0) (p : ℤ) : ↑(q ^ p) = ((q : α) ^ p : α) := map_zpow₀ (castHom α) ..
+theorem commute_cast (a : α) (q : ℚ≥0) : Commute a (q : α) := (cast_commute q a).symm
 
-@[simp]
-lemma cast_divNat (a b : ℕ) : (divNat a b : α) = a / b := by
-  rw [← cast_natCast, ← cast_natCast b, ← cast_div]
-  congr
-  ext
-  apply Rat.mkRat_eq_div
+theorem cast_comm (q : ℚ≥0) (a : α) : (q : α) * a = a * (q : α) := (cast_commute q a).eq
 
 end NNRat
+
+/-- Rational scalars act by multiplication through the characteristic-zero embedding. -/
+noncomputable instance (priority := 100) DivisionRing.toRatSMul [DivisionRing α] [CharZero α] :
+    SMul ℚ α := ⟨fun q x => (q : α) * x⟩
+
+/-- Nonnegative rational scalars act through the characteristic-zero embedding. -/
+noncomputable instance (priority := 100) DivisionSemiring.toNNRatSMul
+    [DivisionSemiring α] [CharZero α] : SMul ℚ≥0 α := ⟨fun q x => (q : α) * x⟩
+
+lemma Rat.smul_def [DivisionRing α] [CharZero α] (q : ℚ) (x : α) : q • x = (q : α) * x := rfl
+lemma NNRat.smul_def [DivisionSemiring α] [CharZero α] (q : ℚ≥0) (x : α) :
+    q • x = (q : α) * x := rfl
+
+section MapCasts
+variable {F β : Type*}
+
+@[simp] theorem map_ratCast [DivisionRing α] [CharZero α] [DivisionRing β] [CharZero β]
+    [FunLike F α β] [RingHomClass F α β] (f : F) (q : ℚ) : f (q : α) = (q : β) := by
+  apply mul_right_cancel₀ (Nat.cast_ne_zero.mpr q.den_nz : (q.den : β) ≠ 0)
+  rw [Rat.cast_mul_den]
+  have h := congrArg f (Rat.cast_mul_den (α := α) q)
+  simpa only [map_mul, map_natCast, map_intCast] using h
+
+@[simp] lemma eq_ratCast [DivisionRing α] [CharZero α]
+    [FunLike F ℚ α] [RingHomClass F ℚ α] (f : F) (q : ℚ) : f q = (q : α) := by
+  have h := map_ratCast f q
+  simpa only [Rat.cast_def, Rat.eval_rat] using h
+
+@[simp] theorem map_nnratCast [DivisionSemiring α] [CharZero α]
+    [DivisionSemiring β] [CharZero β] [FunLike F α β] [RingHomClass F α β]
+    (f : F) (q : ℚ≥0) : f (q : α) = (q : β) := by
+  apply mul_right_cancel₀ (Nat.cast_ne_zero.mpr q.den_ne_zero : (q.den : β) ≠ 0)
+  rw [NNRat.cast_mul_den]
+  have h := congrArg f (NNRat.cast_mul_den (α := α) q)
+  simpa only [map_mul, map_natCast] using h
+
+@[simp] lemma eq_nnratCast [DivisionSemiring α] [CharZero α]
+    [FunLike F ℚ≥0 α] [RingHomClass F ℚ≥0 α] (f : F) (q : ℚ≥0) : f q = (q : α) := by
+  have h := map_nnratCast f q
+  simpa only [NNRat.cast_def, NNRat.eval_nnrat] using h
+
+end MapCasts

@@ -8,6 +8,7 @@ module
 public import Batteries.Data.List.Count
 public import Mathlib.Data.Finsupp.Multiset
 public import Mathlib.Data.Finsupp.Order
+public import Mathlib.Data.PNat.Defs
 public import Mathlib.Data.Nat.PrimeFin
 public import Mathlib.NumberTheory.Padics.PadicVal.Defs
 

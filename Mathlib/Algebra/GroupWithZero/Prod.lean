@@ -18,7 +18,7 @@ In this file we define `MonoidWithZero`, `GroupWithZero`, etc... instances for `
 ## Main declarations
 
 * `mulMonoidWithZeroHom`: Multiplication bundled as a monoid with zero homomorphism.
-* `divMonoidWithZeroHom`: Division bundled as a monoid with zero homomorphism.
+Mixed division uses an ambient numerator and a unit denominator via `divp`.
 -/
 
 @[expose] public section
@@ -71,11 +71,5 @@ section BundledMulDiv
 def mulMonoidWithZeroHom [CommMonoidWithZero M₀] : M₀ × M₀ →*₀ M₀ where
   __ := mulMonoidHom
   map_zero' := mul_zero _
-
-/-- Division as a multiplicative homomorphism with zero. -/
-@[simps]
-def divMonoidWithZeroHom [CommGroupWithZero M₀] : M₀ × M₀ →*₀ M₀ where
-  __ := divMonoidHom
-  map_zero' := zero_div _
 
 end BundledMulDiv

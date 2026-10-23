@@ -15,8 +15,6 @@ public import Mathlib.Algebra.Ring.Defs
 
 @[expose] public section
 
-open scoped Ring
-
 variable {R : Type*}
 
 section NonUnitalNonAssocSemiring
@@ -115,25 +113,3 @@ theorem eq_of_invOf_add_eq_invOf_add_invOf [Ring R] {a b : R} [Invertible a] [In
     rw [add_comm] at h'
     exact neg_add_eq_mul_invOf_mul_same_iff.mpr h'
   rw [← h_a_binv_a, ← h_b_ainv_b, add_comm]
-
-/-- A version of `inv_add_inv'` for `Ring.inverse`. -/
-theorem Ring.inverse_add_inverse [Semiring R] {a b : R} (h : IsUnit a ↔ IsUnit b) :
-    a⁻¹ʳ + b⁻¹ʳ = a⁻¹ʳ * (a + b) * b⁻¹ʳ := by
-  by_cases ha : IsUnit a
-  · have hb := h.mp ha
-    obtain ⟨ia⟩ := ha.nonempty_invertible
-    obtain ⟨ib⟩ := hb.nonempty_invertible
-    simp_rw [inverse_invertible, invOf_add_invOf]
-  · have hb := h.not.mp ha
-    simp [inverse_non_unit, ha, hb]
-
-/-- A version of `inv_sub_inv'` for `Ring.inverse`. -/
-theorem Ring.inverse_sub_inverse [Ring R] {a b : R} (h : IsUnit a ↔ IsUnit b) :
-    a⁻¹ʳ - b⁻¹ʳ = a⁻¹ʳ * (b - a) * b⁻¹ʳ := by
-  by_cases ha : IsUnit a
-  · have hb := h.mp ha
-    obtain ⟨ia⟩ := ha.nonempty_invertible
-    obtain ⟨ib⟩ := hb.nonempty_invertible
-    simp_rw [inverse_invertible, invOf_sub_invOf]
-  · have hb := h.not.mp ha
-    simp [inverse_non_unit, ha, hb]

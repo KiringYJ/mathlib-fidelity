@@ -6,6 +6,7 @@ Authors: Bhavik Mehta
 module
 
 public import Mathlib.Algebra.Field.Defs
+public import Mathlib.Algebra.GroupWithZero.Units.Basic
 public import Mathlib.Algebra.Ring.Int.Defs
 
 /-!
@@ -37,9 +38,9 @@ theorem cast_neg_natCast {R} [DivisionRing R] (n : ℕ) : ((-n : ℤ) : R) = -n 
 
 @[simp]
 theorem cast_div [DivisionRing α] {m n : ℤ} (n_dvd : n ∣ m) (hn : (n : α) ≠ 0) :
-    ((m / n : ℤ) : α) = m / n := by
-  rcases n_dvd with ⟨k, rfl⟩
-  have : n ≠ 0 := by rintro rfl; simp at hn
-  rw [Int.mul_ediv_cancel_left _ this, mul_comm n, Int.cast_mul, mul_div_cancel_right₀ _ hn]
+    ((m / n : ℤ) : α) = (m : α) /ₚ Units.mk0 (n : α) hn := by
+  apply eq_divp_iff_mul_eq.mpr
+  change ((m / n : ℤ) : α) * (n : α) = (m : α)
+  rw [← Int.cast_mul, Int.ediv_mul_cancel n_dvd]
 
 end Int

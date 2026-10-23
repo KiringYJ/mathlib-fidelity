@@ -357,60 +357,75 @@ theorem ext_num_den (hn : p.num = q.num) (hd : p.den = q.den) : p = q := by
 theorem ext_num_den_iff : p = q ↔ p.num = q.num ∧ p.den = q.den :=
   ⟨by rintro rfl; exact ⟨rfl, rfl⟩, fun h ↦ ext_num_den h.1 h.2⟩
 
-/-- Form the quotient `n / d` where `n d : ℕ`.
-
-See also `Rat.divInt` and `mkRat`. -/
-def divNat (n d : ℕ) : ℚ≥0 :=
-  ⟨.divInt n d, Rat.divInt_nonneg (Int.natCast_nonneg n) (Int.natCast_nonneg d)⟩
+/-- A nonnegative rational fraction with a nonzero denominator. -/
+def divNat (n d : ℕ) (hd : d ≠ 0) : ℚ≥0 :=
+  ⟨Rat.fraction n d hd, Rat.num_nonneg.mp (by
+    rw [Rat.fraction, Rat.num_normalize]
+    exact Int.ediv_nonneg (Int.natCast_nonneg n) (Int.natCast_nonneg _))⟩
 
 variable {n₁ n₂ d₁ d₂ : ℕ}
 
-@[simp, norm_cast] lemma coe_divNat (n d : ℕ) : (divNat n d : ℚ) = .divInt n d := rfl
+@[simp, norm_cast] lemma coe_divNat (n d : ℕ) (hd : d ≠ 0) :
+    (divNat n d hd : ℚ) = Rat.fraction n d hd := rfl
 
-lemma mk_divInt (n d : ℕ) :
-    ⟨.divInt n d, Rat.divInt_nonneg (Int.natCast_nonneg n) (Int.natCast_nonneg d)⟩ =
-      divNat n d := rfl
+lemma divNat_inj (h₁ : d₁ ≠ 0) (h₂ : d₂ ≠ 0) :
+    divNat n₁ d₁ h₁ = divNat n₂ d₂ h₂ ↔ n₁ * d₂ = n₂ * d₁ := by
+  rw [← coe_inj, coe_divNat, coe_divNat, Rat.fraction, Rat.fraction,
+    Rat.normalize_eq_iff]
+  exact_mod_cast Iff.rfl
 
-lemma divNat_inj (h₁ : d₁ ≠ 0) (h₂ : d₂ ≠ 0) : divNat n₁ d₁ = divNat n₂ d₂ ↔ n₁ * d₂ = n₂ * d₁ := by
-  rw [← coe_inj]; simp [Rat.mkRat_eq_iff, h₁, h₂]; norm_cast
+@[simp] lemma num_divNat_den (q : ℚ≥0) : divNat q.num q.den q.den_ne_zero = q := by
+  apply ext
+  change Rat.normalize (q.num : Int) q.den q.den_ne_zero = (q : ℚ)
+  simpa only [num_coe, den_coe] using Rat.normalize_self (q : ℚ)
 
-set_option backward.isDefEq.respectTransparency false in
-@[simp] lemma divNat_zero (n : ℕ) : divNat n 0 = 0 := by simp [divNat]
+lemma natCast_eq_divNat (n : ℕ) : (n : ℚ≥0) = divNat n 1 (by decide) :=
+  (num_divNat_den _).symm
 
-@[simp] lemma num_divNat_den (q : ℚ≥0) : divNat q.num q.den = q :=
-  ext <| by rw [← (q : ℚ).mkRat_num_den']; simp [num_coe, den_coe]
+lemma divNat_mul_divNat (n₁ n₂ : ℕ) {d₁ d₂} (h₁ : d₁ ≠ 0) (h₂ : d₂ ≠ 0) :
+    divNat n₁ d₁ h₁ * divNat n₂ d₂ h₂ =
+      divNat (n₁ * n₂) (d₁ * d₂) (Nat.mul_ne_zero h₁ h₂) := by
+  apply ext
+  simp only [coe_mul, coe_divNat, Rat.fraction, Rat.normalize_mul_normalize, Int.natCast_mul]
 
-lemma natCast_eq_divNat (n : ℕ) : (n : ℚ≥0) = divNat n 1 := (num_divNat_den _).symm
+lemma divNat_mul_left {a : ℕ} (ha : a ≠ 0) (n d : ℕ) (hd : d ≠ 0) :
+    divNat (a * n) (a * d) (Nat.mul_ne_zero ha hd) = divNat n d hd := by
+  apply ext
+  simpa only [coe_divNat, Rat.fraction, Int.natCast_mul] using
+    Rat.normalize_mul_left (n := (n : Int)) hd ha
 
-lemma divNat_mul_divNat (n₁ n₂ : ℕ) {d₁ d₂} :
-    divNat n₁ d₁ * divNat n₂ d₂ = divNat (n₁ * n₂) (d₁ * d₂) := by
-  ext; push_cast; exact Rat.divInt_mul_divInt _ _
-
-lemma divNat_mul_left {a : ℕ} (ha : a ≠ 0) (n d : ℕ) : divNat (a * n) (a * d) = divNat n d := by
-  ext; push_cast; exact Rat.divInt_mul_left (mod_cast ha)
-
-lemma divNat_mul_right {a : ℕ} (ha : a ≠ 0) (n d : ℕ) : divNat (n * a) (d * a) = divNat n d := by
-  ext; push_cast; exact Rat.divInt_mul_right (mod_cast ha)
+lemma divNat_mul_right {a : ℕ} (ha : a ≠ 0) (n d : ℕ) (hd : d ≠ 0) :
+    divNat (n * a) (d * a) (Nat.mul_ne_zero hd ha) = divNat n d hd := by
+  apply ext
+  simpa only [coe_divNat, Rat.fraction, Int.natCast_mul] using
+    Rat.normalize_mul_right (n := (n : Int)) hd ha
 
 @[simp] lemma mul_den_eq_num (q : ℚ≥0) : q * q.den = q.num := by
-  ext
-  push_cast
-  rw [← Int.cast_natCast, ← den_coe, ← Int.cast_natCast q.num, ← num_coe]
-  exact Rat.mul_den_eq_num _
+  apply ext
+  simp only [coe_mul, coe_natCast]
+  simpa only [num_coe, den_coe, Int.cast_natCast] using Rat.mul_den_eq_num (q : ℚ)
 
 @[simp] lemma den_mul_eq_num (q : ℚ≥0) : q.den * q = q.num := by rw [mul_comm, mul_den_eq_num]
 
-/-- Define a (dependent) function or prove `∀ r : ℚ, p r` by dealing with nonnegative rational
-numbers of the form `n / d` with `d ≠ 0` and `n`, `d` coprime. -/
+/-- Eliminate a nonnegative rational into a fraction with a nonzero natural denominator. -/
 @[elab_as_elim]
-def numDenCasesOn.{u} {C : ℚ≥0 → Sort u} (q) (H : ∀ n d, d ≠ 0 → n.Coprime d → C (divNat n d)) :
-    C q := by rw [← q.num_divNat_den]; exact H _ _ q.den_ne_zero q.coprime_num_den
+def numDenCasesOn.{u} {C : ℚ≥0 → Sort u} (q)
+    (H : ∀ n d (hd : d ≠ 0), n.Coprime d → C (divNat n d hd)) : C q := by
+  rw [← q.num_divNat_den]
+  exact H _ _ q.den_ne_zero q.coprime_num_den
 
-lemma add_def (q r : ℚ≥0) : q + r = divNat (q.num * r.den + r.num * q.den) (q.den * r.den) := by
-  ext; simp [Rat.add_def', Rat.mkRat_eq_divInt, num_coe, den_coe]
+lemma add_def (q r : ℚ≥0) : q + r =
+    divNat (q.num * r.den + r.num * q.den) (q.den * r.den)
+      (Nat.mul_ne_zero q.den_ne_zero r.den_ne_zero) := by
+  apply ext
+  simp only [coe_add, coe_divNat, Rat.fraction, Rat.add_def, num_coe, den_coe,
+    Int.natCast_add, Int.natCast_mul]
 
-lemma mul_def (q r : ℚ≥0) : q * r = divNat (q.num * r.num) (q.den * r.den) := by
-  ext; simp [Rat.mul_eq_mkRat, Rat.mkRat_eq_divInt, num_coe, den_coe]
+lemma mul_def (q r : ℚ≥0) : q * r =
+    divNat (q.num * r.num) (q.den * r.den) (Nat.mul_ne_zero q.den_ne_zero r.den_ne_zero) := by
+  apply ext
+  simp only [coe_mul, coe_divNat, Rat.fraction, Rat.mul_def, num_coe, den_coe,
+    Int.natCast_mul]
 
 theorem lt_def {p q : ℚ≥0} : p < q ↔ p.num * q.den < q.num * p.den := by
   rw [← NNRat.coe_lt_coe, Rat.lt_iff]; norm_cast

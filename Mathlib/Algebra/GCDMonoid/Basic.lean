@@ -1353,7 +1353,7 @@ namespace CommGroupWithZero
 variable (G₀ : Type*) [CommGroupWithZero G₀] [DecidableEq G₀]
 
 -- see Note [lower instance priority]
-instance (priority := 100) : StrongNormalizedGCDMonoid G₀ where
+noncomputable instance (priority := 100) : StrongNormalizedGCDMonoid G₀ where
   normUnit x := if h : x = 0 then 1 else (Units.mk0 x h)⁻¹
   normUnit_zero := dite_eq_left rfl
   normUnit_mul {x y} x0 y0 := Units.ext <| by simp [x0, y0, mul_comm]
@@ -1374,10 +1374,13 @@ instance (priority := 100) : StrongNormalizedGCDMonoid G₀ where
     if h : a = 0 ∨ b = 0 then by simp [ite_eq_left h] else by simp [ite_eq_right h]
 
 @[simp]
-theorem coe_normUnit {a : G₀} (h0 : a ≠ 0) : (↑(normUnit a) : G₀) = a⁻¹ := by
+theorem coe_normUnit {a : G₀} (h0 : a ≠ 0) :
+    (↑(normUnit a) : G₀) = ↑(Units.mk0 a h0)⁻¹ := by
   simp [normUnit, h0]
 
-theorem normalize_eq_one {a : G₀} (h0 : a ≠ 0) : normalize a = 1 := by simp [normalize_apply, h0]
+theorem normalize_eq_one {a : G₀} (h0 : a ≠ 0) : normalize a = 1 := by
+  rw [normalize_apply, coe_normUnit G₀ h0]
+  exact (Units.mk0 a h0).mul_inv
 
 end CommGroupWithZero
 

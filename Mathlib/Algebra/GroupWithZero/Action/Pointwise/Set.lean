@@ -127,26 +127,29 @@ variable [GroupWithZero α] [MulAction α β] {s t : Set β} {a : α}
 lemma smul_mem_smul_set_iff₀ (ha : a ≠ 0) (A : Set β) (x : β) : a • x ∈ a • A ↔ x ∈ A :=
   show Units.mk0 a ha • _ ∈ _ ↔ _ from smul_mem_smul_set_iff
 
-lemma mem_smul_set_iff_inv_smul_mem₀ (ha : a ≠ 0) (A : Set β) (x : β) : x ∈ a • A ↔ a⁻¹ • x ∈ A :=
+lemma mem_smul_set_iff_inv_smul_mem₀ (ha : a ≠ 0) (A : Set β) (x : β) :
+    x ∈ a • A ↔ (Units.mk0 a ha)⁻¹ • x ∈ A :=
   show _ ∈ Units.mk0 a ha • _ ↔ _ from mem_smul_set_iff_inv_smul_mem
 
-lemma mem_inv_smul_set_iff₀ (ha : a ≠ 0) (A : Set β) (x : β) : x ∈ a⁻¹ • A ↔ a • x ∈ A :=
+lemma mem_inv_smul_set_iff₀ (ha : a ≠ 0) (A : Set β) (x : β) :
+    x ∈ (Units.mk0 a ha)⁻¹ • A ↔ a • x ∈ A :=
   show _ ∈ (Units.mk0 a ha)⁻¹ • _ ↔ _ from mem_inv_smul_set_iff
 
-lemma preimage_smul₀ (ha : a ≠ 0) (t : Set β) : (fun x ↦ a • x) ⁻¹' t = a⁻¹ • t :=
+lemma preimage_smul₀ (ha : a ≠ 0) (t : Set β) : (fun x ↦ a • x) ⁻¹' t = (Units.mk0 a ha)⁻¹ • t :=
   preimage_smul (Units.mk0 a ha) t
 
-lemma preimage_smul_inv₀ (ha : a ≠ 0) (t : Set β) : (fun x ↦ a⁻¹ • x) ⁻¹' t = a • t :=
+lemma preimage_smul_inv₀ (ha : a ≠ 0) (t : Set β) :
+    (fun x ↦ (Units.mk0 a ha)⁻¹ • x) ⁻¹' t = a • t :=
   preimage_smul (Units.mk0 a ha)⁻¹ t
 
 @[simp]
 lemma smul_set_subset_smul_set_iff₀ (ha : a ≠ 0) {A B : Set β} : a • A ⊆ a • B ↔ A ⊆ B :=
   show Units.mk0 a ha • A ⊆ _ ↔ _ from smul_set_subset_smul_set_iff
 
-lemma smul_set_subset_iff₀ (ha : a ≠ 0) {A B : Set β} : a • A ⊆ B ↔ A ⊆ a⁻¹ • B :=
+lemma smul_set_subset_iff₀ (ha : a ≠ 0) {A B : Set β} : a • A ⊆ B ↔ A ⊆ (Units.mk0 a ha)⁻¹ • B :=
   show Units.mk0 a ha • A ⊆ _ ↔ _ from smul_set_subset_iff_subset_inv_smul_set
 
-lemma subset_smul_set_iff₀ (ha : a ≠ 0) {A B : Set β} : A ⊆ a • B ↔ a⁻¹ • A ⊆ B :=
+lemma subset_smul_set_iff₀ (ha : a ≠ 0) {A B : Set β} : A ⊆ a • B ↔ (Units.mk0 a ha)⁻¹ • A ⊆ B :=
   show _ ⊆ Units.mk0 a ha • B ↔ _ from subset_smul_set_iff
 
 lemma smul_set_inter₀ (ha : a ≠ 0) : a • (s ∩ t) = a • s ∩ a • t :=
@@ -164,22 +167,10 @@ lemma smul_set_univ₀ (ha : a ≠ 0) : a • (univ : Set β) = univ :=
 
 lemma smul_univ₀ {s : Set α} (hs : ¬s ⊆ 0) : s • (univ : Set β) = univ :=
   let ⟨a, ha, ha₀⟩ := not_subset.1 hs
-  eq_univ_of_forall fun b ↦ ⟨a, ha, a⁻¹ • b, trivial, smul_inv_smul₀ ha₀ _⟩
+  eq_univ_of_forall fun b ↦ ⟨a, ha, (Units.mk0 a ha₀)⁻¹ • b, trivial, smul_inv_smul₀ ha₀ _⟩
 
 lemma smul_univ₀' {s : Set α} (hs : s.Nontrivial) : s • (univ : Set β) = univ :=
   smul_univ₀ hs.not_subset_singleton
-
-open scoped RightActions in
-@[simp] lemma inv_smul_set_distrib₀ (a : α) (s : Set α) : (a • s)⁻¹ = s⁻¹ <• a⁻¹ := by
-  obtain rfl | ha := eq_or_ne a 0
-  · obtain rfl | hs := s.eq_empty_or_nonempty <;> simp [*]
-  · ext; simp [mem_smul_set_iff_inv_smul_mem₀, *]
-
-open scoped RightActions in
-@[simp] lemma inv_op_smul_set_distrib₀ (a : α) (s : Set α) : (s <• a)⁻¹ = a⁻¹ • s⁻¹ := by
-  obtain rfl | ha := eq_or_ne a 0
-  · obtain rfl | hs := s.eq_empty_or_nonempty <;> simp [*]
-  · ext; simp [mem_smul_set_iff_inv_smul_mem₀, *]
 
 end GroupWithZero
 end Set

@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Algebra.Divisibility.Basic
 public import Mathlib.Algebra.Group.Commute.Units
+public import Mathlib.Algebra.Group.Commute.Basic
 public import Mathlib.Algebra.Group.Int.Defs
 public import Mathlib.Algebra.Group.Nat.Defs
 public import Mathlib.Algebra.GroupWithZero.Semiconj
@@ -300,13 +301,21 @@ protected lemma Commute.pow_eq_pow_iff_of_coprime (hab : Commute a b) (hmn : m.C
   by_cases n = 0; · simp_all
   by_cases hb : b = 0; · exact ⟨0, by simp_all⟩
   by_cases ha : a = 0; · exact ⟨0, by have := h.symm; simp_all⟩
+  lift a to αˣ using GroupWithZero.isUnit_of_ne_zero ha
+  lift b to αˣ using GroupWithZero.isUnit_of_ne_zero hb
+  have hab' : Commute a b := Units.ext hab
+  have h' : a ^ m = b ^ n := Units.ext (by simpa using h)
+  suffices hu : ∃ c : αˣ, a = c ^ n ∧ b = c ^ m by
+    obtain ⟨c, hc, hc'⟩ := hu
+    exact ⟨c, by simpa using congr_arg Units.val hc,
+      by simpa using congr_arg Units.val hc'⟩
   refine ⟨a ^ Nat.gcdB m n * b ^ Nat.gcdA m n, ?_, ?_⟩ <;>
   · refine (pow_one _).symm.trans ?_
     conv_lhs => rw [← zpow_natCast, ← hmn, Nat.gcd_eq_gcd_ab]
-    simp only [zpow_add₀ ha, zpow_add₀ hb, ← zpow_natCast, (hab.zpow_zpow₀ _ _).mul_zpow,
+    simp only [zpow_add, ← zpow_natCast, (hab'.zpow_zpow _ _).mul_zpow,
       ← zpow_mul, mul_comm (Nat.gcdB m n), mul_comm (Nat.gcdA m n)]
-    simp only [zpow_mul, zpow_natCast, h]
-    exact ((Commute.pow_pow (by aesop) _ _).zpow_zpow₀ _ _).symm
+    simp only [zpow_mul, zpow_natCast, h']
+    exact ((Commute.pow_pow (by aesop) _ _).zpow_zpow _ _).symm
 
 end GroupWithZero
 

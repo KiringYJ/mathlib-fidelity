@@ -94,18 +94,20 @@ variable [Semifield K]
 /-- A natural number `t` is invertible in a semifield `K` if the characteristic of `K` does not
 divide `t`. -/
 @[instance_reducible]
-def invertibleOfRingCharNotDvd {t : ℕ} (not_dvd : ¬ringChar K ∣ t) : Invertible (t : K) :=
+noncomputable def invertibleOfRingCharNotDvd {t : ℕ}
+    (not_dvd : ¬ringChar K ∣ t) : Invertible (t : K) :=
   invertibleOfNonzero fun h => not_dvd ((ringChar.spec K t).mp h)
 
 /-- A natural number `t` is invertible in a semifield `K` of characteristic `p` if `p` does not
 divide `t`. -/
 @[instance_reducible]
-def invertibleOfCharPNotDvd {p : ℕ} [CharP K p] {t : ℕ} (not_dvd : ¬p ∣ t) : Invertible (t : K) :=
+noncomputable def invertibleOfCharPNotDvd {p : ℕ} [CharP K p] {t : ℕ}
+    (not_dvd : ¬p ∣ t) : Invertible (t : K) :=
   invertibleOfNonzero fun h => not_dvd ((CharP.cast_eq_zero_iff K p t).mp h)
 
 -- warning: this could potentially loop with `Invertible.ne_zero` - if there are weird type-class
 -- loops, watch out for that.
-instance invertibleOfPos [CharZero K] (n : ℕ) [NeZero n] : Invertible (n : K) :=
+noncomputable instance invertibleOfPos [CharZero K] (n : ℕ) [NeZero n] : Invertible (n : K) :=
   invertibleOfNonzero <| NeZero.out
 
 end Semifield
@@ -113,7 +115,7 @@ end Semifield
 section DivisionSemiring
 variable [DivisionSemiring K] [CharZero K]
 
-instance invertibleSucc (n : ℕ) : Invertible (n.succ : K) :=
+noncomputable instance invertibleSucc (n : ℕ) : Invertible (n.succ : K) :=
   invertibleOfNonzero (Nat.cast_ne_zero.mpr (Nat.succ_ne_zero _))
 
 /-!
@@ -122,10 +124,10 @@ number when you need its inverse.
 -/
 
 
-instance invertibleTwo : Invertible (2 : K) :=
+noncomputable instance invertibleTwo : Invertible (2 : K) :=
   invertibleOfNonzero (mod_cast (by decide : 2 ≠ 0))
 
-instance invertibleThree : Invertible (3 : K) :=
+noncomputable instance invertibleThree : Invertible (3 : K) :=
   invertibleOfNonzero (mod_cast (by decide : 3 ≠ 0))
 
 end DivisionSemiring

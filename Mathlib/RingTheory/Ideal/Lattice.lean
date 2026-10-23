@@ -110,7 +110,10 @@ theorem eq_bot_or_top : I = ⊥ ∨ I = ⊤ := by
   rw [eq_bot_iff]
   intro r hr
   by_cases H : r = 0; · simpa
-  simpa [H, h1] using I.mul_mem_left r⁻¹ hr
+  exfalso
+  apply h1
+  simpa only [Checked.inv_mul_cancel] using
+    I.mul_mem_left (Checked.inv r (GroupWithZero.isUnit_of_ne_zero H)) hr
 
 end Ideal
 

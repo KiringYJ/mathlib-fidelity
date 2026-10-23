@@ -45,16 +45,16 @@ lemma center_units_subset : center G₀ˣ ⊆ ((↑) : G₀ˣ → G₀) ⁻¹' c
 lemma center_units_eq : center G₀ˣ = ((↑) : G₀ˣ → G₀) ⁻¹' center G₀ :=
   center_units_subset.antisymm subset_center_units
 
-@[simp] lemma inv_mem_centralizer₀ (ha : a ∈ centralizer s) : a⁻¹ ∈ centralizer s := by
-  obtain rfl | ha₀ := eq_or_ne a 0
-  · rw [inv_zero]
-    exact zero_mem_centralizer
-  · rintro c hc
-    rw [mul_inv_eq_iff_eq_mul₀ ha₀, mul_assoc, eq_inv_mul_iff_mul_eq₀ ha₀, ha c hc]
+/-- Inversion of a unit preserves membership in a centralizer. -/
+lemma units_inv_mem_centralizer {u : G₀ˣ} (hu : (u : G₀) ∈ centralizer s) :
+    (↑u⁻¹ : G₀) ∈ centralizer s := by
+  intro c hc
+  exact (Commute.units_inv_right (hu c hc)).eq
 
-@[simp] lemma div_mem_centralizer₀ (ha : a ∈ centralizer s) (hb : b ∈ centralizer s) :
-    a / b ∈ centralizer s := by
-  simpa only [div_eq_mul_inv] using mul_mem_centralizer ha (inv_mem_centralizer₀ hb)
+/-- Division by a unit preserves a centralizer when both factors belong to it. -/
+lemma divp_mem_centralizer {u : G₀ˣ} (ha : a ∈ centralizer s)
+    (hu : (u : G₀) ∈ centralizer s) : a /ₚ u ∈ centralizer s :=
+  mul_mem_centralizer ha (units_inv_mem_centralizer hu)
 
 end GroupWithZero
 end Set

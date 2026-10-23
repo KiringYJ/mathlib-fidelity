@@ -6,7 +6,7 @@ Authors: Johan Commelin
 module
 
 public import Mathlib.Algebra.Group.Units.Hom
-public import Mathlib.Algebra.GroupWithZero.Commute
+public import Mathlib.Algebra.GroupWithZero.Units.Basic
 public import Mathlib.Algebra.GroupWithZero.Hom
 
 /-!
@@ -17,8 +17,6 @@ public import Mathlib.Algebra.GroupWithZero.Hom
 @[expose] public section
 
 assert_not_exists DenselyOrdered MulAction Ring
-
-open scoped Ring
 
 variable {M M₀ G₀ M₀' G₀' F F' : Type*}
 variable [MonoidWithZero M₀]
@@ -36,7 +34,7 @@ lemma isLocalHom_of_exists_map_ne_one [FunLike F G₀ M] [MonoidHomClass F G₀ 
       have := map_mul f t 0
       rw [← one_mul (f (t * 0)), mul_zero] at this
       exact (h.mul_right_cancel this).symm
-    · exact ⟨⟨a, a⁻¹, mul_inv_cancel₀ h, inv_mul_cancel₀ h⟩, rfl⟩
+    · exact GroupWithZero.isUnit_of_ne_zero h
 
 instance [FunLike F G₀ M₀] [MonoidWithZeroHomClass F G₀ M₀] [Nontrivial M₀]
     (f : F) : IsLocalHom f :=
@@ -46,26 +44,12 @@ end Monoid
 
 section GroupWithZero
 
-namespace Commute
-
-variable [GroupWithZero G₀] {a b c d : G₀}
-
-/-- The `MonoidWithZero` version of `div_eq_div_iff_mul_eq_mul`. -/
-protected lemma div_eq_div_iff (hbd : Commute b d) (hb : b ≠ 0) (hd : d ≠ 0) :
-    a / b = c / d ↔ a * d = c * b :=
-  hbd.div_eq_div_iff_of_isUnit hb.isUnit hd.isUnit
-
-/-- The `MonoidWithZero` version of `mul_inv_eq_mul_inv_iff_mul_eq_mul`. -/
-protected lemma mul_inv_eq_mul_inv_iff (hbd : Commute b d) (hb : b ≠ 0) (hd : d ≠ 0) :
-    a * b⁻¹ = c * d⁻¹ ↔ a * d = c * b :=
-  hbd.mul_inv_eq_mul_inv_iff_of_isUnit hb.isUnit hd.isUnit
-
-/-- The `MonoidWithZero` version of `inv_mul_eq_inv_mul_iff_mul_eq_mul`. -/
-protected lemma inv_mul_eq_inv_mul_iff (hbd : Commute b d) (hb : b ≠ 0) (hd : d ≠ 0) :
-    b⁻¹ * a = d⁻¹ * c ↔ d * a = b * c :=
-  hbd.inv_mul_eq_inv_mul_iff_of_isUnit hb.isUnit hd.isUnit
-
-end Commute
+/-- Clear two commuting unit denominators without requiring the numerators to be units. -/
+theorem Commute.divp_eq_divp_iff {a c : M₀} {u v : M₀ˣ} (h : Commute u v) :
+    a /ₚ u = c /ₚ v ↔ a * v = c * u := by
+  rw [divp_eq_iff_mul_eq, ← v.mul_left_inj]
+  rw [mul_assoc, show (u : M₀) * v = v * u from congr_arg Units.val h.eq,
+    ← mul_assoc, divp_mul_cancel, eq_comm]
 
 section MulZeroOneClass
 
@@ -88,65 +72,35 @@ end MulZeroOneClass
 
 section MonoidWithZero
 
-variable [GroupWithZero G₀] [Nontrivial M₀] [MonoidWithZero M₀'] [FunLike F G₀ M₀]
-  [MonoidWithZeroHomClass F G₀ M₀] [FunLike F' G₀ M₀']
-  (f : F) {a : G₀}
+variable [MonoidWithZero M₀']
 
-theorem eq_on_inv₀ [MonoidWithZeroHomClass F' G₀ M₀'] (f g : F') (h : f a = g a) :
-    f a⁻¹ = g a⁻¹ := by
-  rcases eq_or_ne a 0 with (rfl | ha)
-  · rw [inv_zero, map_zero, map_zero]
-  · exact (IsUnit.mk0 a ha).eq_on_inv f g h
+/-- Homomorphisms agreeing on a unit agree on its inverse. -/
+theorem eq_on_unit_inv (f g : M₀ →* M₀') (u : M₀ˣ) (h : f u = g u) :
+    f ↑u⁻¹ = g ↑u⁻¹ :=
+  left_inv_eq_right_inv (map_mul_eq_one f u.inv_mul)
+    (h.symm ▸ map_mul_eq_one g u.mul_inv)
+
+/-- A monoid homomorphism preserves mixed division by a unit. -/
+@[simp] theorem map_divp (f : M₀ →* M₀') (a : M₀) (u : M₀ˣ) :
+    f (a /ₚ u) = f a /ₚ Units.map f u := map_mul f _ _
 
 end MonoidWithZero
 
 section GroupWithZero
 
-variable [GroupWithZero G₀] [GroupWithZero G₀'] [FunLike F G₀ G₀']
-  [MonoidWithZeroHomClass F G₀ G₀'] (f : F) (a b : G₀)
+variable [GroupWithZero G₀] [GroupWithZero G₀']
 
-/-- A monoid homomorphism between groups with zeros sending `0` to `0` sends `a⁻¹` to `(f a)⁻¹`. -/
-@[simp]
-theorem map_inv₀ : f a⁻¹ = (f a)⁻¹ := by
-  by_cases h : a = 0
-  · simp [h, map_zero f]
-  · apply eq_inv_of_mul_eq_one_left
-    rw [← map_mul, inv_mul_cancel₀ h, map_one]
+/-- Mapping a checked nonzero element agrees with constructing the unit of its image. -/
+@[simp] theorem Units.map_mk0 (f : G₀ →*₀ G₀') (a : G₀) (ha : a ≠ 0) :
+    Units.map f.toMonoidHom (Units.mk0 a ha) = Units.mk0 (f a) ((map_ne_zero f).2 ha) :=
+  Units.ext rfl
 
-@[simp]
-theorem map_div₀ : f (a / b) = f a / f b :=
-  map_div' f (map_inv₀ f) a b
+/-- A homomorphism preserves inversion on a checked nonzero element. -/
+theorem map_mk0_inv (f : G₀ →*₀ G₀') (a : G₀) (ha : a ≠ 0) :
+    f (↑(Units.mk0 a ha)⁻¹ : G₀) =
+      (↑(Units.mk0 (f a) ((map_ne_zero f).2 ha))⁻¹ : G₀') := by
+  rw [← Units.map_mk0 f a ha]
+  rfl
 
 end GroupWithZero
-
-/-- We define the inverse as a `MonoidWithZeroHom` by extending the inverse map by zero
-on non-units. -/
-noncomputable def MonoidWithZero.inverse {M : Type*} [CommMonoidWithZero M] :
-    M →*₀ M where
-  toFun := Ring.inverse
-  map_zero' := Ring.inverse_zero _
-  map_one' := Ring.inverse_one _
-  map_mul' x y := (Ring.mul_inverse_rev x y).trans (mul_comm _ _)
-
-@[simp]
-theorem MonoidWithZero.coe_inverse {M : Type*} [CommMonoidWithZero M] :
-    (MonoidWithZero.inverse : M → M) = Ring.inverse :=
-  rfl
-
-@[simp]
-theorem MonoidWithZero.inverse_apply {M : Type*} [CommMonoidWithZero M] (a : M) :
-    MonoidWithZero.inverse a = a⁻¹ʳ :=
-  rfl
-
-/-- Inversion on a commutative group with zero, considered as a monoid with zero homomorphism. -/
-def invMonoidWithZeroHom {G₀ : Type*} [CommGroupWithZero G₀] : G₀ →*₀ G₀ :=
-  { invMonoidHom with map_zero' := inv_zero }
-
-/-- If a monoid homomorphism `f` between two `GroupWithZero`s maps `0` to `0`, then it maps `x^n`,
-`n : ℤ`, to `(f x)^n`. -/
-@[simp]
-theorem map_zpow₀ {F G₀ G₀' : Type*} [GroupWithZero G₀] [GroupWithZero G₀'] [FunLike F G₀ G₀']
-    [MonoidWithZeroHomClass F G₀ G₀'] (f : F) (x : G₀) (n : ℤ) : f (x ^ n) = f x ^ n :=
-  map_zpow' f (map_inv₀ f) x n
-
 end GroupWithZero

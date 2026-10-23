@@ -32,15 +32,19 @@ namespace Rat
 
 variable {a b c q : ℚ}
 
-@[simp] lemma mkRat_nonneg {a : ℤ} (ha : 0 ≤ a) (b : ℕ) : 0 ≤ mkRat a b := by
-  simpa using divInt_nonneg ha (Int.natCast_nonneg _)
+@[simp] lemma fraction_nonneg {a : ℤ} (ha : 0 ≤ a) (b : ℕ) (hb : b ≠ 0) :
+    0 ≤ fraction a b hb := by
+  apply Rat.num_nonneg.mp
+  rw [fraction, Rat.num_normalize]
+  exact Int.ediv_nonneg ha (Int.natCast_nonneg _)
 
 theorem ofScientific_nonneg (m : ℕ) (s : Bool) (e : ℕ) : 0 ≤ Rat.ofScientific m s e := by
   rw [Rat.ofScientific]
   cases s
   · rw [ite_eq_right (by decide)]
     exact num_nonneg.mp <| Int.natCast_nonneg _
-  · grind [normalize_eq_mkRat, Rat.mkRat_nonneg]
+  · rw [ite_eq_left (by decide)]
+    exact fraction_nonneg (Int.natCast_nonneg _) _ _
 
 instance _root_.NNRatCast.toOfScientific {K} [NNRatCast K] : OfScientific K where
   ofScientific (m : ℕ) (b : Bool) (d : ℕ) :=
@@ -57,11 +61,6 @@ theorem _root_.NNRat.cast_ofScientific {K} [NNRatCast K] (m : ℕ) (s : Bool) (e
     (OfScientific.ofScientific m s e : ℚ≥0) = (OfScientific.ofScientific m s e : K) :=
   rfl
 
-protected lemma divInt_le_divInt {a b c d : ℤ} (b0 : 0 < b) (d0 : 0 < d) :
-    a /. b ≤ c /. d ↔ a * d ≤ c * b := by
-  rw [Rat.le_iff_sub_nonneg, ← Int.sub_nonneg]
-  simp [sub_eq_add_neg, ne_of_gt b0, ne_of_gt d0, Int.mul_pos d0 b0]
-
 protected lemma lt_iff_le_not_ge (a b : ℚ) : a < b ↔ a ≤ b ∧ ¬b ≤ a :=
   Std.LawfulOrderLT.lt_iff a b
 
@@ -75,28 +74,38 @@ instance linearOrder : LinearOrder ℚ where
   toDecidableLT := inferInstance
   lt_iff_le_not_ge := Rat.lt_iff_le_not_ge
 
-theorem mkRat_nonneg_iff (a : ℤ) {b : ℕ} (hb : b ≠ 0) : 0 ≤ mkRat a b ↔ 0 ≤ a :=
-  divInt_nonneg_iff_of_pos_right (show 0 < (b : ℤ) by simpa using Nat.pos_of_ne_zero hb)
+theorem fraction_nonneg_iff (a : ℤ) (b : ℕ) (hb : b ≠ 0) :
+    0 ≤ fraction a b hb ↔ 0 ≤ a := by
+  rw [← Rat.num_nonneg]
+  obtain ⟨g, hg, hn, _⟩ := Rat.normalize_num_den' a b hb
+  have hgpos : 0 < (g : Int) := Int.natCast_pos.mpr (Nat.pos_of_ne_zero hg)
+  simpa only [fraction, ← hn] using
+    (Int.mul_nonneg_iff_of_pos_right (a := (normalize a b hb).num) hgpos).symm
 
-theorem mkRat_pos_iff (a : ℤ) {b : ℕ} (hb : b ≠ 0) : 0 < mkRat a b ↔ 0 < a := by
-  grind [mkRat_nonneg_iff, Rat.mkRat_eq_zero]
+@[simp] theorem fraction_eq_zero (a : ℤ) (b : ℕ) (hb : b ≠ 0) :
+    fraction a b hb = 0 ↔ a = 0 := Rat.normalize_eq_zero hb
 
-theorem mkRat_pos {a : ℤ} (ha : 0 < a) {b : ℕ} (hb : b ≠ 0) : 0 < mkRat a b :=
-  (mkRat_pos_iff a hb).mpr ha
+theorem fraction_pos_iff (a : ℤ) (b : ℕ) (hb : b ≠ 0) :
+    0 < fraction a b hb ↔ 0 < a := by
+  simp only [lt_iff_le_and_ne, ne_eq, eq_comm (a := (0 : ℚ)), eq_comm (a := (0 : ℤ)),
+    fraction_eq_zero, fraction_nonneg_iff]
 
-theorem mkRat_nonpos_iff (a : ℤ) {b : ℕ} (hb : b ≠ 0) : mkRat a b ≤ 0 ↔ a ≤ 0 := by
-  grind [mkRat_pos_iff]
+theorem fraction_pos {a : ℤ} (ha : 0 < a) (b : ℕ) (hb : b ≠ 0) :
+    0 < fraction a b hb := (fraction_pos_iff a b hb).mpr ha
 
-theorem mkRat_nonpos {a : ℤ} (ha : a ≤ 0) (b : ℕ) : mkRat a b ≤ 0 := by
-  obtain rfl | hb := eq_or_ne b 0
-  · simp
-  · exact (mkRat_nonpos_iff a hb).mpr ha
+theorem fraction_nonpos_iff (a : ℤ) (b : ℕ) (hb : b ≠ 0) :
+    fraction a b hb ≤ 0 ↔ a ≤ 0 := by
+  rw [← not_lt, fraction_pos_iff, not_lt]
 
-theorem mkRat_neg_iff (a : ℤ) {b : ℕ} (hb : b ≠ 0) : mkRat a b < 0 ↔ a < 0 := by
-  grind [mkRat_nonneg_iff]
+theorem fraction_nonpos {a : ℤ} (ha : a ≤ 0) (b : ℕ) (hb : b ≠ 0) :
+    fraction a b hb ≤ 0 := (fraction_nonpos_iff a b hb).mpr ha
 
-theorem mkRat_neg {a : ℤ} (ha : a < 0) {b : ℕ} (hb : b ≠ 0) : mkRat a b < 0 :=
-  (mkRat_neg_iff a hb).mpr ha
+theorem fraction_neg_iff (a : ℤ) (b : ℕ) (hb : b ≠ 0) :
+    fraction a b hb < 0 ↔ a < 0 := by
+  rw [lt_iff_not_ge, fraction_nonneg_iff, ← lt_iff_not_ge]
+
+theorem fraction_neg {a : ℤ} (ha : a < 0) (b : ℕ) (hb : b ≠ 0) :
+    fraction a b hb < 0 := (fraction_neg_iff a b hb).mpr ha
 
 /-!
 ### Extra instances to short-circuit type class resolution
@@ -123,26 +132,26 @@ instance : AddLeftMono ℚ where
 @[simp] lemma num_pos {a : ℚ} : 0 < a.num ↔ 0 < a := lt_iff_lt_of_le_iff_le num_nonpos
 @[simp] lemma num_neg {a : ℚ} : a.num < 0 ↔ a < 0 := lt_iff_lt_of_le_iff_le num_nonneg
 
-@[deprecated "use `div_lt_div_iff₀`" (since := "2026-03-20")] theorem div_lt_div_iff_mul_lt_mul
-    {a b c d : ℤ} (b_pos : 0 < b) (d_pos : 0 < d) :
-    (a : ℚ) / b < c / d ↔ a * d < c * b := by
-  simp only [lt_iff_le_not_ge]
-  apply and_congr
-  · simp [div_def', Rat.divInt_le_divInt b_pos d_pos]
-  · simp [div_def', Rat.divInt_le_divInt d_pos b_pos]
-
 theorem num_le_denom_iff {q : ℚ} : q.num ≤ q.den ↔ q ≤ 1 := by simp [Rat.le_iff]
 
 theorem num_lt_denom_iff {q : ℚ} : q.num < q.den ↔ q < 1 := by simp [Rat.lt_iff]
 
-theorem abs_def (q : ℚ) : |q| = q.num.natAbs /. q.den := by
-  grind [abs_of_nonpos, neg_def, Rat.num_nonneg, abs_of_nonneg, num_divInt_den]
+theorem abs_def (q : ℚ) : |q| = fraction q.num.natAbs q.den q.den_nz := by
+  by_cases h : 0 ≤ q
+  · rw [abs_of_nonneg h]
+    simpa only [fraction, Int.natAbs_of_nonneg (Rat.num_nonneg.mpr h)] using
+      (Rat.normalize_self q).symm
+  · rw [abs_of_nonpos (le_of_not_ge h)]
+    have hn : q.num ≤ 0 := Rat.num_nonpos.mpr (le_of_not_ge h)
+    simpa only [fraction, Int.ofNat_natAbs_of_nonpos hn, Rat.neg_num, Rat.neg_den] using
+      (Rat.normalize_self (-q)).symm
 
 theorem abs_def' (q : ℚ) :
     |q| = ⟨|q.num|, q.den, q.den_ne_zero, q.num.abs_eq_natAbs ▸ q.reduced⟩ := by
-  refine ext ?_ ?_ <;>
-    simp [Int.abs_eq_natAbs, abs_def,
-      ← Rat.mk_eq_divInt (num := q.num.natAbs) (nz := q.den_ne_zero) (c := q.reduced)]
+  rw [abs_def]
+  simpa only [fraction, Int.abs_eq_natAbs] using
+    (Rat.mk_eq_normalize (num := q.num.natAbs) (den := q.den)
+      (nz := q.den_ne_zero) (c := q.reduced)).symm
 
 @[simp]
 theorem num_abs_eq_abs_num (q : ℚ) : |q|.num = |q.num| := by

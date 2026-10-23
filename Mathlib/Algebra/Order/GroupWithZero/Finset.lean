@@ -59,18 +59,17 @@ lemma mul₀_sup' [PosMulReflectLT G₀] (ha : 0 ≤ a) (f : ι → G₀) (s : F
   · simp [← h]
   exact map_finset_sup' (OrderIso.mulLeft₀ _ (lt_of_le_of_ne ha h)) hs f
 
-lemma sup'_div₀ [MulPosReflectLT G₀] (ha : 0 ≤ a) (f : ι → G₀) (s : Finset ι) (hs) :
-    s.sup' hs f / a = s.sup' hs fun i ↦ f i / a := by
-  by_cases! h : 0 = a
-  · simp [← h]
-  exact map_finset_sup' (OrderIso.divRight₀ _ (lt_of_le_of_ne ha h)) hs f
+lemma sup'_divp [MulPosReflectLT G₀] (ha : 0 < a) (f : ι → G₀) (s : Finset ι) (hs) :
+    s.sup' hs f /ₚ Units.mk0 a ha.ne' = s.sup' hs fun i ↦ f i /ₚ Units.mk0 a ha.ne' :=
+  map_finset_sup' (OrderIso.divRight₀ a ha) hs f
 
 end GroupWithZero
 
-lemma sup_div₀ [LinearOrderedCommGroupWithZero G₀] {a : G₀} (ha : 0 ≤ a)
-    (s : Finset ι) (f : ι → G₀) : s.sup f / a = s.sup fun i ↦ f i / a := by
+lemma sup_divp [LinearOrderedCommGroupWithZero G₀] (u : G₀ˣ)
+    (s : Finset ι) (f : ι → G₀) : s.sup f /ₚ u = s.sup fun i ↦ f i /ₚ u := by
   obtain rfl | hs := s.eq_empty_or_nonempty
   · simp [bot_eq_zero]
-  rw [← Finset.sup'_eq_sup hs, ← Finset.sup'_eq_sup hs, sup'_div₀ (ha := ha)]
+  rw [← Finset.sup'_eq_sup hs, ← Finset.sup'_eq_sup hs]
+  simpa using sup'_divp (a := (u : G₀)) u.zero_lt f s hs
 
 end Finset

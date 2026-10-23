@@ -21,16 +21,19 @@ namespace Rat
 variable {p q : ℚ}
 
 @[simp]
-theorem castHom_rat : castHom ℚ = RingHom.id ℚ :=
-  RingHom.ext cast_id
+theorem castHom_rat : castHom ℚ = RingHom.id ℚ := by
+  ext q
+  exact eval_rat q _
 
 section LinearOrderedField
 
 variable {K : Type*} [Field K] [LinearOrder K] [IsStrictOrderedRing K]
 
 theorem cast_pos_of_pos (hq : 0 < q) : (0 : K) < q := by
-  rw [Rat.cast_def]
-  exact div_pos (Int.cast_pos.2 <| num_pos.2 hq) (Nat.cast_pos.2 q.pos)
+  apply pos_of_mul_pos_left (b := (q.den : K))
+  · rw [Rat.cast_mul_den]
+    exact Int.cast_pos.mpr (Rat.num_pos.mpr hq)
+  · exact Nat.cast_nonneg _
 
 @[gcongr, mono]
 theorem cast_strictMono : StrictMono ((↑) : ℚ → K) := fun p q => by
@@ -42,7 +45,7 @@ theorem cast_mono : Monotone ((↑) : ℚ → K) :=
 
 /-- Coercion from `ℚ` as an order embedding. -/
 @[simps!]
-def castOrderEmbedding : ℚ ↪o K :=
+noncomputable def castOrderEmbedding : ℚ ↪o K :=
   OrderEmbedding.ofStrictMono (↑) cast_strictMono
 
 @[simp, norm_cast] lemma cast_le : (p : K) ≤ q ↔ p ≤ q := castOrderEmbedding.le_iff_le
@@ -147,10 +150,11 @@ namespace NNRat
 variable {K} [Semifield K] [LinearOrder K] [IsStrictOrderedRing K] {p q : ℚ≥0}
 
 theorem cast_strictMono : StrictMono ((↑) : ℚ≥0 → K) := fun p q h => by
-  rwa [NNRat.cast_def, NNRat.cast_def, div_lt_div_iff₀, ← Nat.cast_mul, ← Nat.cast_mul,
-    Nat.cast_lt (α := K), ← NNRat.lt_def]
-  · simp
-  · simp
+  apply (mul_lt_mul_iff_of_pos_right
+    (mul_pos (Nat.cast_pos.mpr p.den_pos) (Nat.cast_pos.mpr q.den_pos))).mp
+  rw [← mul_assoc, NNRat.cast_mul_den,
+    mul_comm (p.den : K) (q.den : K), ← mul_assoc, NNRat.cast_mul_den]
+  exact_mod_cast NNRat.lt_def.mp h
 
 @[gcongr, mono]
 theorem cast_mono : Monotone ((↑) : ℚ≥0 → K) :=
@@ -158,7 +162,7 @@ theorem cast_mono : Monotone ((↑) : ℚ≥0 → K) :=
 
 /-- Coercion from `ℚ` as an order embedding. -/
 @[simps!]
-def castOrderEmbedding : ℚ≥0 ↪o K :=
+noncomputable def castOrderEmbedding : ℚ≥0 ↪o K :=
   OrderEmbedding.ofStrictMono (↑) cast_strictMono
 
 @[simp, norm_cast] lemma cast_le : (p : K) ≤ q ↔ p ≤ q := castOrderEmbedding.le_iff_le

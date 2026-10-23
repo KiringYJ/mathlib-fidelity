@@ -3,6 +3,8 @@ module  -- shake: keep-all, shake: keep-downstream
 public import Lean.Linter.Sets -- for the definition of linter sets
 public import Lean.LibrarySuggestions.Default -- for `+suggestions` modes in tactics
 public import Mathlib.Lean.Linter -- linter utilities; will be transitively imported in #31134
+-- Retired rational operations must not be restored by importing official Lean instances.
+public meta import Mathlib.Lean.Elab.OperatorPolicy
 public import Mathlib.Tactic.AdaptationNote -- make #adaptation_note available everywhere
 public import Mathlib.Tactic.Lemma
 public import Mathlib.Tactic.Linter.AuxLemma

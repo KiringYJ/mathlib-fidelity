@@ -26,7 +26,7 @@ def Units.posSubgroup (R : Type*) [Semiring R] [LinearOrder R] [IsStrictOrderedR
     Subgroup Rˣ :=
   { (Submonoid.pos R).comap (Units.coeHom R) with
     carrier := { x | (0 : R) < x }
-    inv_mem' := Units.inv_pos.mpr }
+    inv_mem' := (Units.inv_pos _).mpr }
 
 @[simp]
 theorem Units.mem_posSubgroup {R : Type*} [Semiring R] [LinearOrder R] [IsStrictOrderedRing R]

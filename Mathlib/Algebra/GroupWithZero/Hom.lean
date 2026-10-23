@@ -14,7 +14,7 @@ public import Mathlib.Algebra.GroupWithZero.Basic
 This file defines homomorphisms of monoids with zero.
 
 We also define coercion to a function, and usual operations: composition, identity homomorphism,
-pointwise multiplication and pointwise inversion.
+and pointwise multiplication when the target is commutative.
 
 
 ## Notation

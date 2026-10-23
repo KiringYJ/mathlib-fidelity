@@ -33,14 +33,16 @@ end RingHom
 namespace NNRat
 variable [DivisionSemiring R] [CharZero R] [DivisionSemiring S] [CharZero S]
 
-instance _root_.DivisionSemiring.toNNRatAlgebra : Algebra ℚ≥0 R where
+noncomputable instance _root_.DivisionSemiring.toNNRatAlgebra : Algebra ℚ≥0 R where
   smul_def' := smul_def
   algebraMap := castHom _
   commutes' := cast_commute
 
 instance _root_.RingHomClass.toLinearMapClassNNRat [FunLike F R S] [RingHomClass F R S] :
     LinearMapClass F ℚ≥0 R S where
-  map_smulₛₗ f q a := by simp [smul_def, cast_id]
+  map_smulₛₗ f q a := by
+    simp only [smul_def, map_mul, map_nnratCast]
+    rfl
 
 variable [SMul R S]
 
@@ -55,14 +57,16 @@ end NNRat
 namespace Rat
 variable [DivisionRing R] [CharZero R] [DivisionRing S] [CharZero S]
 
-instance _root_.DivisionRing.toRatAlgebra : Algebra ℚ R where
+noncomputable instance _root_.DivisionRing.toRatAlgebra : Algebra ℚ R where
   smul_def' := smul_def
   algebraMap := castHom _
   commutes' := cast_commute
 
 instance _root_.RingHomClass.toLinearMapClassRat [FunLike F R S] [RingHomClass F R S] :
     LinearMapClass F ℚ R S where
-  map_smulₛₗ f q a := by simp [smul_def, cast_id]
+  map_smulₛₗ f q a := by
+    simp only [smul_def, map_mul, map_ratCast]
+    rfl
 
 instance _root_.RingEquivClass.toLinearEquivClassRat [EquivLike F R S] [RingEquivClass F R S] :
     LinearEquivClass F ℚ R S where

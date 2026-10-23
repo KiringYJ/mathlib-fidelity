@@ -91,8 +91,8 @@ theorem intCeil_cast (x : ℚ≥0) : ⌈(x : K)⌉ = ⌈(x : ℚ)⌉ := by
 end Field
 
 @[norm_cast]
-theorem floor_natCast_div_natCast (n d : ℕ) : ⌊(↑n / ↑d : ℚ≥0)⌋₊ = n / d :=
-  Rat.natFloor_natCast_div_natCast n d
+theorem floor_divNat (n d : ℕ) (hd : d ≠ 0) : ⌊NNRat.divNat n d hd⌋₊ = n / d := by
+  rw [← floor_coe, coe_divNat, Rat.natFloor_fraction]
 
 end NNRat
 
@@ -116,15 +116,17 @@ theorem IsInt.natCeil {R : Type*} [Ring R] [LinearOrder R] [IsStrictOrderedRing 
 
 theorem IsNNRat.natCeil {R : Type*} [Semifield R] [LinearOrder R] [IsStrictOrderedRing R]
     [FloorSemiring R] (r : R) (n d : ℕ) (h : IsNNRat r n d) (res : ℕ)
-    (hres : ⌈(n / d : ℚ≥0)⌉₊ = res) : IsNat ⌈r⌉₊ res := by
+    (hd : d ≠ 0) (hres : ⌈NNRat.divNat n d hd⌉₊ = res) : IsNat ⌈r⌉₊ res := by
   constructor
   rw [← hres, h.to_eq rfl rfl, ← @NNRat.ceil_cast R]
   simp
 
 theorem IsRat.natCeil {R : Type*} [Field R] [LinearOrder R] [IsStrictOrderedRing R]
     [FloorSemiring R] (r : R) (n d : ℕ) (h : IsRat r (.negOfNat n) d) : IsNat ⌈r⌉₊ 0 := by
+  have hd : d ≠ 0 := fun hd => h.den_nz (by simp [hd])
   constructor
-  simp [h.neg_to_eq, div_nonneg]
+  rw [h.eq_cast_fraction r (.negOfNat n) d hd]
+  simp [Rat.fraction_nonpos]
 
 open Lean in
 /-- `norm_num` extension for `Nat.ceil` -/
@@ -150,8 +152,9 @@ meta def evalNatCeil : NormNumExt where eval {u αZ} e := do
       let instIsStrictOrderedRing ← synthInstanceQ q(IsStrictOrderedRing $α)
       assertInstancesCommute
       have z : Q(ℕ) := mkRawNatLit (⌈q⌉₊)
-      letI : $z =Q ⌈($n / $d : NNRat)⌉₊ := ⟨⟩
-      return .isNat q(inferInstance) z q(IsNNRat.natCeil _ $n $d $h $z rfl)
+      let hd ← mkDecideProofQ q($d ≠ 0)
+      letI : $z =Q ⌈NNRat.divNat $n $d $hd⌉₊ := ⟨⟩
+      return .isNat q(inferInstance) z q(IsNNRat.natCeil _ $n $d $h $z $hd rfl)
     | .isNegNNRat _ q n d h => do
       let instField ← synthInstanceQ q(Field $α)
       let instLinearOrder ← synthInstanceQ q(LinearOrder $α)

@@ -875,7 +875,8 @@ theorem span_singleton_sup_ker_eq_top (f : V →ₗ[K] K) {x : V} (hx : f x ≠ 
   top_unique fun y _ =>
     Submodule.mem_sup.2
       ⟨(f y * (f x)⁻¹) • x, Submodule.mem_span_singleton.2 ⟨f y * (f x)⁻¹, rfl⟩,
-        ⟨y - (f y * (f x)⁻¹) • x, by simp [hx]⟩⟩
+        ⟨y - (f y * (f x)⁻¹) • x, by
+          simp [mul_assoc, Checked.inv_mul_cancel _ (GroupWithZero.isUnit_of_ne_zero hx)]⟩⟩
 
 end Field
 

@@ -6,6 +6,7 @@ Authors: Yaël Dillies
 module
 
 public import Mathlib.Algebra.Field.Defs
+public import Mathlib.Data.Rat.Init
 public import Mathlib.Algebra.GroupWithZero.ULift
 public import Mathlib.Algebra.Ring.ULift
 
@@ -33,9 +34,8 @@ instance instRatCast [RatCast α] : RatCast (ULift α) where ratCast q := up q
 @[simp, norm_cast] lemma down_ratCast [RatCast α] (q : ℚ) : down (q : ULift α) = q := rfl
 
 instance divisionSemiring [DivisionSemiring α] : DivisionSemiring (ULift α) where
-  nnqsmul q x := up (DivisionSemiring.nnqsmul q x.down)
-  nnqsmul_def _ _ := congrArg up <| DivisionSemiring.nnqsmul_def _ _
-  nnratCast_def _ := congrArg up <| DivisionSemiring.nnratCast_def _
+  toSemiring := semiring
+  __ := groupWithZero
 
 instance semifield [Semifield α] : Semifield (ULift α) :=
   { ULift.divisionSemiring, ULift.commGroupWithZero with }
@@ -43,12 +43,6 @@ instance semifield [Semifield α] : Semifield (ULift α) :=
 instance divisionRing [DivisionRing α] : DivisionRing (ULift α) where
   toRing := ring
   __ := groupWithZero
-  nnqsmul q x := up (DivisionSemiring.nnqsmul q x.down)
-  nnqsmul_def _ _ := congrArg up <| DivisionSemiring.nnqsmul_def _ _
-  nnratCast_def _ := congrArg up <| DivisionSemiring.nnratCast_def _
-  qsmul q x := up (DivisionRing.qsmul q x.down)
-  qsmul_def _ _ := congrArg up <| DivisionRing.qsmul_def _ _
-  ratCast_def _ := congrArg up <| DivisionRing.ratCast_def _
 
 instance field [Field α] : Field (ULift α) := {}
 
