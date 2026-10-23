@@ -30,11 +30,13 @@ noncomputable def discr (A : Matrix n n R) : R :=
   if h : 0 < A.charpoly.natDegree then A.charpoly.discr h else 1
 
 @[simp]
-lemma discr_conj (g : GL n R) (m : Matrix n n R) : (g.val * m * g.val⁻¹).discr = m.discr := by
+lemma discr_conj (g : GL n R) (m : Matrix n n R) :
+    (g.val * m * (↑g⁻¹ : Matrix n n R)).discr = m.discr := by
   simp [discr]
 
 @[simp]
-lemma discr_conj' (g : GL n R) (m : Matrix n n R) : (g.val⁻¹ * m * g.val).discr = m.discr := by
+lemma discr_conj' (g : GL n R) (m : Matrix n n R) :
+    ((↑g⁻¹ : Matrix n n R) * m * g.val).discr = m.discr := by
   simp [discr]
 
 lemma discr_of_card_eq_two (A : Matrix n n R) (hn : Fintype.card n = 2) :

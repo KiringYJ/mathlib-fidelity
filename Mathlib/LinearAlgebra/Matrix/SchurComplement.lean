@@ -11,7 +11,7 @@ public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 /-! # 2×2 block matrices and the Schur complement
 
 This file proves properties of 2×2 block matrices `[A B; C D]` that relate to the Schur complement
-`D - C*A⁻¹*B`.
+`D - C*(⅟A)*B` when `A` carries constructive invertibility evidence.
 
 Some of the results here generalize to 2×2 matrices in a category, rather than just a ring. A few
 results in this direction can be found in `Mathlib/CategoryTheory/Preadditive/Biproducts.lean`,
@@ -182,40 +182,6 @@ theorem isUnit_fromBlocks_zero₁₂ {A : Matrix m m α} {C : Matrix n m α} {D 
     IsUnit (fromBlocks A 0 C D) ↔ IsUnit A ∧ IsUnit D := by
   simp only [← nonempty_invertible_iff_isUnit, ← nonempty_prod,
     (fromBlocksZero₁₂InvertibleEquiv _ _ _).nonempty_congr]
-
-/-- An expression for the inverse of an upper block-triangular matrix, when either both elements of
-diagonal are invertible, or both are not. -/
-theorem inv_fromBlocks_zero₂₁_of_isUnit_iff (A : Matrix m m α) (B : Matrix m n α) (D : Matrix n n α)
-    (hAD : IsUnit A ↔ IsUnit D) :
-    (fromBlocks A B 0 D)⁻¹ = fromBlocks A⁻¹ (-(A⁻¹ * B * D⁻¹)) 0 D⁻¹ := by
-  by_cases hA : IsUnit A
-  · have hD := hAD.mp hA
-    cases hA.nonempty_invertible
-    cases hD.nonempty_invertible
-    let := fromBlocksZero₂₁Invertible A B D
-    simp_rw [← invOf_eq_nonsing_inv, invOf_fromBlocks_zero₂₁_eq]
-  · have hD := hAD.not.mp hA
-    have : ¬IsUnit (fromBlocks A B 0 D) :=
-      isUnit_fromBlocks_zero₂₁.not.mpr (not_and'.mpr fun _ => hA)
-    simp_rw [nonsing_inv_eq_ringInverse, Ring.inverse_non_unit _ hA, Ring.inverse_non_unit _ hD,
-      Ring.inverse_non_unit _ this, Matrix.zero_mul, neg_zero, fromBlocks_zero]
-
-/-- An expression for the inverse of a lower block-triangular matrix, when either both elements of
-diagonal are invertible, or both are not. -/
-theorem inv_fromBlocks_zero₁₂_of_isUnit_iff (A : Matrix m m α) (C : Matrix n m α) (D : Matrix n n α)
-    (hAD : IsUnit A ↔ IsUnit D) :
-    (fromBlocks A 0 C D)⁻¹ = fromBlocks A⁻¹ 0 (-(D⁻¹ * C * A⁻¹)) D⁻¹ := by
-  by_cases hA : IsUnit A
-  · have hD := hAD.mp hA
-    cases hA.nonempty_invertible
-    cases hD.nonempty_invertible
-    let := fromBlocksZero₁₂Invertible A C D
-    simp_rw [← invOf_eq_nonsing_inv, invOf_fromBlocks_zero₁₂_eq]
-  · have hD := hAD.not.mp hA
-    have : ¬IsUnit (fromBlocks A 0 C D) :=
-      isUnit_fromBlocks_zero₁₂.not.mpr (not_and'.mpr fun _ => hA)
-    simp_rw [nonsing_inv_eq_ringInverse, Ring.inverse_non_unit _ hA, Ring.inverse_non_unit _ hD,
-      Ring.inverse_non_unit _ this, Matrix.zero_mul, neg_zero, fromBlocks_zero]
 
 end Triangular
 
@@ -428,17 +394,17 @@ TODO: show the more general version without `hA : IsUnit A.det` as
 theorem det_add_replicateCol_mul_replicateRow {ι : Type*} [Unique ι]
     {A : Matrix m m α} (hA : IsUnit A.det) (u v : m → α) :
     (A + replicateCol ι u * replicateRow ι v).det =
-    A.det * (1 + replicateRow ι v * A⁻¹ * replicateCol ι u).det := by
+    A.det * (1 + replicateRow ι v * Matrix.nonsingularInverse A hA * replicateCol ι u).det := by
   nth_rewrite 1 [← Matrix.mul_one A]
-  rwa [← Matrix.mul_nonsing_inv_cancel_left A (replicateCol ι u * replicateRow ι v),
+  rwa [← Matrix.mul_nonsingularInverse_cancel_left A (replicateCol ι u * replicateRow ι v),
     ← Matrix.mul_add, det_mul, ← Matrix.mul_assoc, det_one_add_mul_comm, ← Matrix.mul_assoc]
 
 /-- A generalization of the **Matrix determinant lemma** -/
 theorem det_add_mul {A : Matrix m m α} (U : Matrix m n α)
     (V : Matrix n m α) (hA : IsUnit A.det) :
-    (A + U * V).det = A.det * (1 + V * A⁻¹ * U).det := by
+    (A + U * V).det = A.det * (1 + V * Matrix.nonsingularInverse A hA * U).det := by
   nth_rewrite 1 [← Matrix.mul_one A]
-  rwa [← Matrix.mul_nonsing_inv_cancel_left A (U * V), ← Matrix.mul_add,
+  rwa [← Matrix.mul_nonsingularInverse_cancel_left A (U * V), ← Matrix.mul_add,
     det_mul, ← Matrix.mul_assoc, det_one_add_mul_comm, ← Matrix.mul_assoc]
 
 end Det

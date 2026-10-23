@@ -273,9 +273,10 @@ theorem discr_mul_isIntegral_mem_adjoin [Algebra.IsSeparable K L] [IsIntegrallyC
     exact Subalgebra.pow_mem _ (subset_adjoin (Set.mem_singleton _)) _
   intro i
   rw [← H, ← mulVec_smul] at cramer
-  replace cramer := congr_arg (mulVec (traceMatrix K B.basis)⁻¹) cramer
-  rw [mulVec_mulVec, nonsing_inv_mul _ hinv, mulVec_mulVec, nonsing_inv_mul _ hinv, one_mulVec,
-    one_mulVec] at cramer
+  replace cramer :=
+    congr_arg (mulVec (Matrix.nonsingularInverse (traceMatrix K B.basis) hinv)) cramer
+  rw [mulVec_mulVec, Matrix.nonsingularInverse_mul _ hinv, mulVec_mulVec,
+    Matrix.nonsingularInverse_mul _ hinv, one_mulVec, one_mulVec] at cramer
   rw [← congr_fun cramer i, cramer_apply, det_apply]
   refine
     Subalgebra.sum_mem _ fun σ _ => Subalgebra.zsmul_mem _ (Subalgebra.prod_mem _ fun j _ => ?_) _

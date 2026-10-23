@@ -318,7 +318,9 @@ variable (J J₃ A A' : Matrix n n R₂)
 
 theorem Matrix.isAdjointPair_equiv' [DecidableEq n] (P : Matrix n n R₂) (h : IsUnit P) :
     (Pᵀ * J * P).IsAdjointPair (Pᵀ * J * P) A A' ↔
-      J.IsAdjointPair J (P * A * P⁻¹) (P * A' * P⁻¹) :=
+      J.IsAdjointPair J
+        (P * A * nonsingularInverse P (P.isUnit_iff_isUnit_det.mp h))
+        (P * A' * nonsingularInverse P (P.isUnit_iff_isUnit_det.mp h)) :=
   Matrix.isAdjointPair_equiv _ _ _ _ h
 
 variable [DecidableEq n]

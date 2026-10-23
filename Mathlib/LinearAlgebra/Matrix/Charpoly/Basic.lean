@@ -283,13 +283,13 @@ theorem charpoly_vecMulVec (u v : n → R) :
 
 @[simp]
 theorem charpoly_units_conj (M : (Matrix n n R)ˣ) (N : Matrix n n R) :
-    (M.val * N * M.val⁻¹).charpoly = N.charpoly := by
+    (M.val * N * (↑M⁻¹ : Matrix n n R)).charpoly = N.charpoly := by
   rw [Matrix.charpoly_mul_comm, ← mul_assoc]
   simp
 
 @[simp]
 theorem charpoly_units_conj' (M : (Matrix n n R)ˣ) (N : Matrix n n R) :
-    (M.val⁻¹ * N * M.val).charpoly = N.charpoly := by
+    ((↑M⁻¹ : Matrix n n R) * N * M.val).charpoly = N.charpoly := by
   simpa using charpoly_units_conj M⁻¹ N
 
 theorem charpoly_sub_scalar (M : Matrix n n R) (μ : R) :

@@ -26,7 +26,7 @@ Instead of defining a minor by deleting row `i` and column `j` of `A`, we
 replace the `i`th row of `A` with the `j`th basis vector; the resulting matrix
 has the same determinant but more importantly equals Cramer's rule applied
 to `A` and the `j`th basis vector, simplifying the subsequent proofs.
-We prove the adjugate behaves like `det A • A⁻¹`.
+We prove the adjugate gives the numerator of the inverse on the unit-determinant domain.
 
 ## Main definitions
 

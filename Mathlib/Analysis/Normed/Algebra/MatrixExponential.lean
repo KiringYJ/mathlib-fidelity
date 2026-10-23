@@ -173,26 +173,72 @@ section NormedComm
 variable [Fintype m] [DecidableEq m]
   [NormedCommRing 𝔸] [NormedAlgebra ℚ 𝔸] [CompleteSpace 𝔸]
 
-set_option backward.isDefEq.respectTransparency false in
-theorem exp_neg (A : Matrix m m 𝔸) : exp (-A) = (exp A)⁻¹ := by
-  rw [nonsing_inv_eq_ringInverse]
-  open scoped Norms.Operator in exact (Ring.inverse_exp A).symm
+/-- The matrix exponential bundled as a unit. -/
+noncomputable def expUnit (A : Matrix m m 𝔸) : (Matrix m m 𝔸)ˣ :=
+  (isUnit_exp A).unit
 
-theorem exp_zsmul (z : ℤ) (A : Matrix m m 𝔸) : exp (z • A) = exp A ^ z := by
+@[simp, norm_cast]
+theorem coe_expUnit (A : Matrix m m 𝔸) : (expUnit A : Matrix m m 𝔸) = exp A :=
+  (isUnit_exp A).unit_spec
+
+theorem coe_expUnit_inv (A : Matrix m m 𝔸) :
+    (↑(expUnit A)⁻¹ : Matrix m m 𝔸) =
+      Matrix.nonsingularInverse (exp A)
+        (Matrix.isUnit_iff_isUnit_det _ |>.mp (isUnit_exp A)) := by
+  apply Matrix.right_inv_eq_right_inv
+  · simpa only [Units.val_mul, Units.val_one, coe_expUnit] using
+      congr_arg Units.val (mul_inv_cancel (expUnit A))
+  · exact Matrix.mul_nonsingularInverse _ _
+
+set_option backward.isDefEq.respectTransparency false in
+theorem exp_neg (A : Matrix m m 𝔸) :
+    exp (-A) = Matrix.nonsingularInverse (exp A)
+      (Matrix.isUnit_iff_isUnit_det _ |>.mp (isUnit_exp A)) := by
+  symm
+  apply Matrix.nonsingularInverse_eq_rightInverse
+  rw [← exp_add_of_commute (Commute.refl A).neg_right, add_neg, exp_zero]
+
+theorem exp_neg_nsmul (n : ℕ) (A : Matrix m m 𝔸) :
+    exp (-(n • A)) = Matrix.nonsingularInverse (exp (n • A))
+      (Matrix.isUnit_iff_isUnit_det _ |>.mp (isUnit_exp (n • A))) :=
+  exp_neg (n • A)
+
+/-- Integer scalar multiplication exponentiates to integer powers in the unit group. -/
+theorem exp_zsmul (z : ℤ) (A : Matrix m m 𝔸) :
+    exp (z • A) = (↑(expUnit A ^ z) : Matrix m m 𝔸) := by
   obtain ⟨n, rfl | rfl⟩ := z.eq_nat_or_neg
-  · rw [zpow_natCast, natCast_zsmul, exp_nsmul]
-  · have : IsUnit (exp A).det := (Matrix.isUnit_iff_isUnit_det _).mp (isUnit_exp _)
-    rw [Matrix.zpow_neg this, zpow_natCast, neg_smul, exp_neg, natCast_zsmul, exp_nsmul]
+  · simp only [natCast_zsmul, exp_nsmul, zpow_natCast, Units.val_pow_eq_pow_val,
+      coe_expUnit]
+  · have hu : expUnit (n • A) = expUnit A ^ n := by
+      apply Units.ext
+      simp only [coe_expUnit, exp_nsmul, Units.val_pow_eq_pow_val]
+    rw [neg_smul, natCast_zsmul, exp_neg_nsmul, ← coe_expUnit_inv, hu, zpow_neg_natCast]
 
 theorem exp_conj (U : Matrix m m 𝔸) (A : Matrix m m 𝔸) (hy : IsUnit U) :
-    exp (U * A * U⁻¹) = U * exp A * U⁻¹ :=
-  let ⟨u, hu⟩ := hy
-  hu ▸ by simpa only [Matrix.coe_units_inv] using exp_units_conj u A
+    exp (U * A * Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy)) =
+      U * exp A * Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy) := by
+  let u := hy.unit
+  have hu : (u : Matrix m m 𝔸) = U := hy.unit_spec
+  have hinv : (↑u⁻¹ : Matrix m m 𝔸) =
+      Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy) := by
+    apply Matrix.right_inv_eq_right_inv
+    · simpa only [Units.val_mul, Units.val_one, hu] using congr_arg Units.val (mul_inv_cancel u)
+    · exact Matrix.mul_nonsingularInverse _ _
+  rw [← hu, ← hinv]
+  exact exp_units_conj u A
 
 theorem exp_conj' (U : Matrix m m 𝔸) (A : Matrix m m 𝔸) (hy : IsUnit U) :
-    exp (U⁻¹ * A * U) = U⁻¹ * exp A * U :=
-  let ⟨u, hu⟩ := hy
-  hu ▸ by simpa only [Matrix.coe_units_inv] using exp_units_conj' u A
+    exp (Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy) * A * U) =
+      Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy) * exp A * U := by
+  let u := hy.unit
+  have hu : (u : Matrix m m 𝔸) = U := hy.unit_spec
+  have hinv : (↑u⁻¹ : Matrix m m 𝔸) =
+      Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy) := by
+    apply Matrix.right_inv_eq_right_inv
+    · simpa only [Units.val_mul, Units.val_one, hu] using congr_arg Units.val (mul_inv_cancel u)
+    · exact Matrix.mul_nonsingularInverse _ _
+  rw [← hu, ← hinv]
+  exact exp_units_conj' u A
 
 end NormedComm
 

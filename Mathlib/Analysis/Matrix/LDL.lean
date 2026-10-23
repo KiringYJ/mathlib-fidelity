@@ -107,17 +107,16 @@ theorem LDL.diag_eq_lowerInv_conj : LDL.diag hS = LDL.lowerInv hS * S * (LDL.low
 
 /-- The lower triangular matrix `L` of the LDL decomposition. -/
 noncomputable def LDL.lower :=
-  (LDL.lowerInv hS)⁻¹
+  ⅟(LDL.lowerInv hS)
 
 theorem LDL.isLowerTriangular_lower : (LDL.lower hS).IsLowerTriangular :=
-  blockTriangular_inv_of_blockTriangular (isLowerTriangular_lowerInv hS)
+  blockTriangular_invOf_of_blockTriangular (isLowerTriangular_lowerInv hS)
 
 /-- **LDL decomposition**: any positive definite matrix `S` can be
 decomposed as `S = LDLᴴ` where `L` is a lower-triangular matrix and `D` is a diagonal matrix. -/
 theorem LDL.lower_conj_diag : LDL.lower hS * LDL.diag hS * (LDL.lower hS)ᴴ = S := by
-  rw [LDL.lower, conjTranspose_nonsing_inv, Matrix.mul_assoc,
-    Matrix.inv_mul_eq_iff_eq_mul_of_invertible (LDL.lowerInv hS),
-    Matrix.mul_inv_eq_iff_eq_mul_of_invertible]
+  rw [LDL.lower, conjTranspose_invOf, Matrix.mul_assoc,
+    Matrix.invOf_mul_eq_iff_eq_mul_left, Matrix.mul_invOf_eq_iff_eq_mul_right]
   exact LDL.diag_eq_lowerInv_conj hS
 
 end set_options

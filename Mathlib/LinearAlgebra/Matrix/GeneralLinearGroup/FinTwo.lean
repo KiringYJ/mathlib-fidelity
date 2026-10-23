@@ -44,12 +44,14 @@ variable {m}
 
 section conjugation
 
-@[simp] lemma isParabolic_conj_iff : (g.val * m * g.val⁻¹).IsParabolic ↔ IsParabolic m := by
-  simp_rw [IsParabolic, discr_conj, Set.mem_range, ← Matrix.coe_units_inv,
+@[simp] lemma isParabolic_conj_iff :
+    (g.val * m * (↑g⁻¹ : Matrix (Fin 2) (Fin 2) R)).IsParabolic ↔ IsParabolic m := by
+  simp_rw [IsParabolic, discr_conj, Set.mem_range,
     Units.eq_mul_inv_iff_mul_eq, scalar_apply, ← smul_eq_diagonal_mul, smul_eq_mul_diagonal,
     Units.mul_right_inj]
 
-@[simp] lemma isParabolic_conj'_iff : (g.val⁻¹ * m * g.val).IsParabolic ↔ m.IsParabolic := by
+@[simp] lemma isParabolic_conj'_iff :
+    ((↑g⁻¹ : Matrix (Fin 2) (Fin 2) R) * m * g.val).IsParabolic ↔ m.IsParabolic := by
   simpa using isParabolic_conj_iff g⁻¹
 
 lemma IsParabolic.neg (h : IsParabolic m) : IsParabolic (-m) := by
@@ -182,16 +184,20 @@ def IsElliptic : Prop := m.discr < 0
 
 variable {m}
 
-lemma isHyperbolic_conj_iff : (g.val * m * g.val⁻¹).IsHyperbolic ↔ m.IsHyperbolic := by
+lemma isHyperbolic_conj_iff :
+    (g.val * m * (↑g⁻¹ : Matrix (Fin 2) (Fin 2) R)).IsHyperbolic ↔ m.IsHyperbolic := by
   simp [IsHyperbolic]
 
-lemma isHyperbolic_conj'_iff : (g.val⁻¹ * m * g.val).IsHyperbolic ↔ m.IsHyperbolic := by
+lemma isHyperbolic_conj'_iff :
+    ((↑g⁻¹ : Matrix (Fin 2) (Fin 2) R) * m * g.val).IsHyperbolic ↔ m.IsHyperbolic := by
   simpa using isHyperbolic_conj_iff g⁻¹
 
-lemma isElliptic_conj_iff : (g.val * m * g.val⁻¹).IsElliptic ↔ m.IsElliptic := by
+lemma isElliptic_conj_iff :
+    (g.val * m * (↑g⁻¹ : Matrix (Fin 2) (Fin 2) R)).IsElliptic ↔ m.IsElliptic := by
   simp [IsElliptic]
 
-lemma isElliptic_conj'_iff : (g.val⁻¹ * m * g.val).IsElliptic ↔ m.IsElliptic := by
+lemma isElliptic_conj'_iff :
+    ((↑g⁻¹ : Matrix (Fin 2) (Fin 2) R) * m * g.val).IsElliptic ↔ m.IsElliptic := by
   simpa using isElliptic_conj_iff g⁻¹
 
 @[simp]

@@ -78,11 +78,6 @@ theorem J_squared : J l R * J l R = -1 := by
   simp only [Matrix.zero_mul, Matrix.neg_mul, zero_add, neg_zero, Matrix.one_mul, add_zero]
   rw [← neg_zero, ← Matrix.fromBlocks_neg, ← fromBlocks_one]
 
-theorem J_inv : (J l R)⁻¹ = -J l R := by
-  refine Matrix.inv_eq_right_inv ?_
-  rw [Matrix.mul_neg, J_squared]
-  exact neg_neg 1
-
 theorem J_det_mul_J_det : det (J l R) * det (J l R) = 1 := by
   rw [← det_mul, J_squared, ← one_smul R (-1 : Matrix _ _ R), smul_neg, ← neg_smul, det_smul,
     Fintype.card_sum, det_one, mul_one]
@@ -91,6 +86,12 @@ theorem J_det_mul_J_det : det (J l R) * det (J l R) = 1 := by
 
 theorem isUnit_det_J : IsUnit (det (J l R)) :=
   isUnit_iff_exists_inv.mpr ⟨det (J l R), J_det_mul_J_det _ _⟩
+
+theorem J_nonsingularInverse :
+    Matrix.nonsingularInverse (J l R) (isUnit_det_J l R) = -J l R := by
+  refine Matrix.nonsingularInverse_eq_rightInverse ?_
+  rw [Matrix.mul_neg, J_squared]
+  exact neg_neg 1
 
 end JMatrixLemmas
 
@@ -167,16 +168,24 @@ theorem transpose_mem (hA : A ∈ symplecticGroup l R) : Aᵀ ∈ symplecticGrou
   have huAT : IsUnit Aᵀ.det := by
     rw [Matrix.det_transpose]
     exact huA
+  letI : Invertible A := (Matrix.isUnit_iff_isUnit_det A |>.2 huA).invertible
+  letI : Invertible Aᵀ := (Matrix.isUnit_iff_isUnit_det Aᵀ |>.2 huAT).invertible
+  letI : Invertible (J l R) :=
+    (Matrix.isUnit_iff_isUnit_det (J l R) |>.2 (isUnit_det_J l R)).invertible
+  have hJinv : ⅟(J l R) = -J l R := by
+    apply invOf_eq_right_inv
+    rw [Matrix.mul_neg, J_squared]
+    exact neg_neg 1
   calc
-    Aᵀ * J l R * A = (-Aᵀ) * (J l R)⁻¹ * A := by
-      rw [J_inv]
+    Aᵀ * J l R * A = (-Aᵀ) * ⅟(J l R) * A := by
+      rw [hJinv]
       simp
-    _ = (-Aᵀ) * (A * J l R * Aᵀ)⁻¹ * A := by rw [hA]
-    _ = -(Aᵀ * (Aᵀ⁻¹ * (J l R)⁻¹)) * A⁻¹ * A := by
-      simp only [Matrix.mul_inv_rev, Matrix.mul_assoc, Matrix.neg_mul]
-    _ = -(J l R)⁻¹ := by
-      rw [mul_nonsing_inv_cancel_left _ _ huAT, nonsing_inv_mul_cancel_right _ _ huA]
-    _ = J l R := by simp [J_inv]
+    _ = (-Aᵀ) * ⅟(A * J l R * Aᵀ) * A := by rw [hA]
+    _ = -(Aᵀ * (⅟(Aᵀ) * ⅟(J l R))) * ⅟A * A := by
+      simp only [invOf_mul, Matrix.mul_assoc, Matrix.neg_mul]
+    _ = -⅟(J l R) := by
+      rw [Matrix.mul_invOf_cancel_left, Matrix.invOf_mul_cancel_right]
+    _ = J l R := by rw [hJinv, neg_neg]
 
 @[simp]
 theorem transpose_mem_iff : Aᵀ ∈ symplecticGroup l R ↔ A ∈ symplecticGroup l R :=
@@ -202,13 +211,19 @@ theorem inv_left_mul_aux (hA : A ∈ symplecticGroup l R) : -(J l R * Aᵀ * J l
     _ = (-1 : R) • (-1 : Matrix _ _ _) := by rw [J_squared]
     _ = 1 := by simp only [neg_smul_neg, one_smul]
 
-theorem coe_inv' (A : symplecticGroup l R) : (↑A⁻¹ : Matrix (l ⊕ l) (l ⊕ l) R) = (↑A)⁻¹ := by
-  refine (coe_inv A).trans (inv_eq_left_inv ?_).symm
-  simp [inv_left_mul_aux]
+theorem coe_inv' (A : symplecticGroup l R) :
+    (↑A⁻¹ : Matrix (l ⊕ l) (l ⊕ l) R) =
+      Matrix.nonsingularInverse (↑A) (symplectic_det A.2) := by
+  apply Matrix.right_inv_eq_left_inv
+  · apply Matrix.mul_eq_one_comm.2
+    rw [coe_inv]
+    exact inv_left_mul_aux A.2
+  · exact Matrix.nonsingularInverse_mul _ _
 
-theorem inv_eq_symplectic_inv (A : Matrix (l ⊕ l) (l ⊕ l) R) (hA : A ∈ symplecticGroup l R) :
-    A⁻¹ = (-J l R) * Aᵀ * J l R :=
-  inv_eq_left_inv (by simp only [Matrix.neg_mul, inv_left_mul_aux hA])
+theorem nonsingularInverse_eq_symplecticInverse
+    (A : Matrix (l ⊕ l) (l ⊕ l) R) (hA : A ∈ symplecticGroup l R) :
+    Matrix.nonsingularInverse A (symplectic_det hA) = (-J l R) * Aᵀ * J l R :=
+  Matrix.nonsingularInverse_eq_leftInverse (by simp only [Matrix.neg_mul, inv_left_mul_aux hA])
 
 instance : Group (symplecticGroup l R) :=
   { SymplecticGroup.hasInv, Submonoid.toMonoid _ with
@@ -242,9 +257,9 @@ private lemma det_one_if_fromBlocks_invertible [Invertible A]
     (hA : fromBlocks A B C D ∈ symplecticGroup l R) :
     (fromBlocks A B C D).det = 1 := by
   have h_block := fromBlocks_mem_iff.1 hA
-  rw [det_fromBlocks₁₁, invOf_eq_nonsing_inv, ← A.det_transpose, ← det_mul,
+  rw [det_fromBlocks₁₁, ← A.det_transpose, ← det_mul,
     mul_sub, ← mul_assoc, ← mul_assoc, h_block.1, mul_assoc Cᵀ,
-    mul_inv_of_invertible, mul_one, h_block.2.2, det_one]
+    mul_invOf_self, mul_one, h_block.2.2, det_one]
 
 /-- Given square matrices `A` and `C` over a field, if the only vector annihilated by both of
 them is 0, and `Aᵀ * C = Cᵀ * A`, then one can construct a symmetric matrix `X` such that
@@ -258,13 +273,13 @@ private lemma exists_symmetric_X_invertible_add_mul_of_ker_inter_eq_bot {R : Typ
     ∃ (X : Matrix l l R), X.IsSymm ∧ IsUnit (A + X * C) := by
   -- `C` is transformed into `P = fromBlocks 1 0 0 0` by invertible matrices `V` and `U`.
   rcases exists_rank_normal_form C with ⟨V, U, s, hV, hU, heq⟩
-  set P := V * C * U with P_def; set Q := Vᵀ⁻¹ * A * U with Q_def
+  have _ : Invertible V := hV.invertible
+  have _ : Invertible U := hU.invertible
+  set P := V * C * U with P_def; set Q := ⅟(Vᵀ) * A * U with Q_def
   set f := fun (x : Matrix l l R) ↦ x.submatrix s.symm s.symm
   have hf (x) : f x = x.submatrix s.symm s.symm := rfl
   have f_unit {x} : IsUnit x → IsUnit (f x) := (isUnit_submatrix_equiv ..).2
   have f_mul (x y) : f (x * y) = f x * f y := submatrix_mul _ _ _ _ _ s.symm.bijective
-  have _ : Invertible V := hV.invertible
-  have _ : Invertible U := hU.invertible
   have _ : Invertible (f Vᵀ) := (f_unit (V.isUnit_transpose.2 hV)).invertible
   -- The hypothesis that the only vector annihilated by both matrices is 0, holds for `P` and `Q`.
   have con1 (x : Fin C.rank ⊕ Fin (Fintype.card l - C.rank) → R)
@@ -275,11 +290,11 @@ private lemma exists_symmetric_X_invertible_add_mul_of_ker_inter_eq_bot {R : Typ
     · rw [Equiv.comp_symm_eq, Pi.zero_comp] at heq1 heq2
       exact s.surjective.injective_comp_right <| by simpa using hker _ heq1 heq2
     · exact f_unit hV
-    · exact f_unit <| isUnit_nonsing_inv_iff.2 <| V.isUnit_transpose.2 hV
+    · exact f_unit (isUnit_of_invertible _)
   -- The symmetry relation also holds for `P` and `Q`.
   have con2 : Qᵀ * P = Pᵀ * Q := by
-    simp only [P_def, mul_assoc, transpose_mul, transpose_nonsing_inv, transpose_transpose, Q_def,
-      inv_mul_cancel_left_of_invertible, mul_inv_cancel_left_of_invertible]
+    simp only [P_def, mul_assoc, transpose_mul, transpose_invOf, transpose_transpose, Q_def,
+      invOf_mul_cancel_left, mul_invOf_cancel_left]
     rw [← mul_assoc Aᵀ, hsymm, mul_assoc]
   replace con2 : (f Q).toBlocks₁₁ᵀ = (f Q).toBlocks₁₁ ∧ (f Q).toBlocks₁₂ = 0 := by
     apply_fun reindex s s at con2
@@ -305,15 +320,16 @@ private lemma exists_symmetric_X_invertible_add_mul_of_ker_inter_eq_bot {R : Typ
   refine ⟨X.submatrix s s, IsSymm.submatrix ?_ s, (isUnit_submatrix_equiv s.symm s.symm).1 ?_⟩
   · simp_rw [X_def, Matrix.IsSymm, transpose_mul, hY_symm.eq, hf, transpose_submatrix,
       transpose_transpose, mul_assoc]
-  · have heq' : f (A + X.submatrix s s * C) = (f Vᵀ) * (f Q + Y * (f P)) * f (U⁻¹) := by
+  · have heq' : f (A + X.submatrix s s * C) = (f Vᵀ) * (f Q + Y * (f P)) * f (⅟U) := by
       simp_rw [hf, submatrix_add, Pi.add_apply, Q_def, P_def, ← hf, f_mul, hf, mul_add, ← mul_assoc,
-        ← inv_submatrix_equiv, add_mul, mul_assoc _ (U.submatrix _ _), mul_inv_of_invertible]
+        ← invOf_submatrix_equiv_eq, add_mul, mul_assoc _ (U.submatrix _ _),
+        mul_invOf_self]
       simp [X_def]; rfl
     rw [← hf, heq', IsUnit.mul_iff, IsUnit.mul_iff]
     refine ⟨⟨isUnit_of_invertible _, ?_⟩, ?_⟩
     · nth_rw 1 [Y_def, heq, ← (f Q).fromBlocks_toBlocks, con2.2]
       simpa [hf, fromBlocks_multiply, fromBlocks_add]
-    · exact f_unit <| isUnit_nonsing_inv_iff.2 hU
+    · exact f_unit (isUnit_of_invertible _)
 
 /-- For any symplectic matrix `fromBlocks A B C D` over a local ring `R`, we can construct
 a symmetric `X` s.t. `A + X * C` is invertible.

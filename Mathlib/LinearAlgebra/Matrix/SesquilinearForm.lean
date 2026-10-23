@@ -598,16 +598,17 @@ theorem isAdjointPair_toLinearMap₂ :
 
 theorem Matrix.isAdjointPair_equiv (P : Matrix n n R) (h : IsUnit P) :
     (Pᵀ * J * P).IsAdjointPair (Pᵀ * J * P) A₁ A₂ ↔
-      J.IsAdjointPair J (P * A₁ * P⁻¹) (P * A₂ * P⁻¹) := by
+      J.IsAdjointPair J (P * A₁ * nonsingularInverse P (P.isUnit_iff_isUnit_det.mp h))
+        (P * A₂ * nonsingularInverse P (P.isUnit_iff_isUnit_det.mp h)) := by
   have h' : IsUnit P.det := P.isUnit_iff_isUnit_det.mp h
-  let u := P.nonsingInvUnit h'
-  let v := Pᵀ.nonsingInvUnit (P.isUnit_det_transpose h')
+  let u := P.unitOfIsUnitDet h'
+  let v := Pᵀ.unitOfIsUnitDet (P.isUnit_det_transpose h')
   let x := A₁ᵀ * Pᵀ * J
   let y := J * P * A₂
   suffices x * u = v * y ↔ v⁻¹ * x = y * u⁻¹ by
     dsimp only [Matrix.IsAdjointPair]
     simp only [Matrix.transpose_mul]
-    simp only [← mul_assoc, P.transpose_nonsing_inv]
+    simp only [← mul_assoc, P.transpose_nonsingularInverse]
     convert! this using 2
     · rw [mul_assoc, mul_assoc, ← mul_assoc J]
       rfl

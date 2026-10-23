@@ -32,8 +32,8 @@ order on matrices on `ℝ` or `ℂ`.
 ## Main results
 
 * `Matrix.PosSemidef.fromBlocks₁₁` and `Matrix.PosSemidef.fromBlocks₂₂`: If a matrix `A` is
-  positive definite, then `[A B; Bᴴ D]` is positive semidefinite if and only if `D - Bᴴ A⁻¹ B` is
-  positive semidefinite.
+  positive definite, then `[A B; Bᴴ D]` is positive semidefinite if and only if the Schur
+  complement formed with its constructive inverse is positive semidefinite.
 * `Matrix.PosDef.isUnit`: A positive definite matrix in a field is invertible.
 -/
 
@@ -333,19 +333,34 @@ protected lemma pow [StarOrderedRing R] [DecidableEq n]
     rw [pow_succ, pow_succ']
     simpa only [hM.isHermitian.eq] using (hM.pow k).mul_mul_conjTranspose_same M
 
-protected lemma inv [DecidableEq n] {M : Matrix n n R'} (hM : M.PosSemidef) : M⁻¹.PosSemidef := by
-  by_cases h : IsUnit M.det
-  · have := (conjTranspose_mul_mul_same hM M⁻¹).conjTranspose
-    rwa [mul_nonsing_inv_cancel_right _ _ h, conjTranspose_conjTranspose] at this
-  · rw [nonsing_inv_apply_not_isUnit _ h]
-    exact .zero
+protected lemma nonsingularInverse [DecidableEq n] {M : Matrix n n R'}
+    (hM : M.PosSemidef) (h : IsUnit M.det) : (Matrix.nonsingularInverse M h).PosSemidef := by
+  have := (conjTranspose_mul_mul_same hM (Matrix.nonsingularInverse M h)).conjTranspose
+  rwa [mul_nonsingularInverse_cancel_right _ _ h, conjTranspose_conjTranspose] at this
 
-protected lemma zpow [StarOrderedRing R'] [DecidableEq n]
-    {M : Matrix n n R'} (hM : M.PosSemidef) (z : ℤ) :
-    (M ^ z).PosSemidef := by
-  obtain ⟨n, rfl | rfl⟩ := z.eq_nat_or_neg
-  · simpa using hM.pow n
-  · simpa using (hM.pow n).inv
+/-- Integer powers of a positive semidefinite invertible matrix remain positive semidefinite.
+The power is formed in the unit group, so negative exponents retain their exact domain. For every
+natural exponent, including singular matrices, use `Matrix.PosSemidef.pow`. -/
+protected lemma zpow [StarOrderedRing R'] [DecidableEq n] {M : Matrix n n R'}
+    (hM : M.PosSemidef) (h : IsUnit M.det) (z : ℤ) :
+    (↑(Matrix.unitOfIsUnitDet M h ^ z) : Matrix n n R').PosSemidef := by
+  cases z with
+  | ofNat k =>
+      simpa only [zpow_natCast, Units.val_pow_eq_pow_val, coe_unitOfIsUnitDet] using hM.pow k
+  | negSucc k =>
+      let hk : IsUnit (M ^ (k + 1)).det := by
+        rw [det_pow]
+        exact h.pow _
+      have hinv :
+          (↑((Matrix.unitOfIsUnitDet M h ^ (k + 1))⁻¹) : Matrix n n R') =
+            Matrix.nonsingularInverse (M ^ (k + 1)) hk := by
+        apply Matrix.right_inv_eq_right_inv
+        · simpa only [Units.val_mul, Units.val_one, Units.val_pow_eq_pow_val,
+            coe_unitOfIsUnitDet] using
+              congr_arg Units.val (mul_inv_cancel (Matrix.unitOfIsUnitDet M h ^ (k + 1)))
+        · exact Matrix.mul_nonsingularInverse _ _
+      rw [zpow_negSucc, hinv]
+      exact (hM.pow (k + 1)).nonsingularInverse hk
 
 lemma trace_nonneg [AddLeftMono R] {A : Matrix n n R} (hA : A.PosSemidef) : 0 ≤ A.trace :=
   Fintype.sum_nonneg fun _ ↦ hA.diag_nonneg
@@ -561,18 +576,23 @@ theorem isUnit [DecidableEq n] {M : Matrix n n K} (hM : M.PosDef) : IsUnit M := 
     exact ⟨a - b, by simp [sub_eq_zero, ha, mulVec_sub]⟩
   simpa [ha2] using hM.dotProduct_mulVec_pos ha
 
-protected theorem inv [DecidableEq n] {M : Matrix n n K} (hM : M.PosDef) : M⁻¹.PosDef := by
-  have := hM.mul_mul_conjTranspose_same (B := M⁻¹) ?_
-  · let _ := hM.isUnit.invertible
-    simpa using this.conjTranspose
-  · simp only [Matrix.vecMul_injective_iff_isUnit, isUnit_nonsing_inv_iff, hM.isUnit]
+protected theorem nonsingularInverse [DecidableEq n] {M : Matrix n n K} (hM : M.PosDef) :
+    (Matrix.nonsingularInverse M (Matrix.isUnit_iff_isUnit_det M |>.mp hM.isUnit)).PosDef := by
+  let hdet := Matrix.isUnit_iff_isUnit_det M |>.mp hM.isUnit
+  have := hM.mul_mul_conjTranspose_same (B := Matrix.nonsingularInverse M hdet) ?_
+  · simpa using this.conjTranspose
+  · exact Matrix.vecMul_injective_iff_isUnit.2 <|
+      Matrix.isUnit_iff_isUnit_det _ |>.2 <| Matrix.isUnit_det_nonsingularInverse M hdet
 
 @[simp]
-theorem _root_.Matrix.posDef_inv_iff [DecidableEq n] {M : Matrix n n K} :
-    M⁻¹.PosDef ↔ M.PosDef :=
-  ⟨fun h =>
-    letI := (Matrix.isUnit_nonsing_inv_iff.1 <| h.isUnit).invertible
-    Matrix.inv_inv_of_invertible M ▸ h.inv, (·.inv)⟩
+theorem _root_.Matrix.posDef_nonsingularInverse_iff [DecidableEq n] {M : Matrix n n K}
+    (h : IsUnit M.det) : (Matrix.nonsingularInverse M h).PosDef ↔ M.PosDef := by
+  constructor
+  · intro hInv
+    simpa only [Matrix.nonsingularInverse_nonsingularInverse] using hInv.nonsingularInverse
+  · exact fun hM ↦ by
+      simpa only [Subsingleton.elim h (Matrix.isUnit_iff_isUnit_det M |>.mp hM.isUnit)] using
+        hM.nonsingularInverse
 
 end Field
 
@@ -612,12 +632,14 @@ variable [StarOrderedRing R']
 omit [Fintype n] in variable [Finite n] in
 theorem fromBlocks₁₁ [DecidableEq m] {A : Matrix m m R'}
     (B : Matrix m n R') (D : Matrix n n R') (hA : A.PosDef) [Invertible A] :
-    (fromBlocks A B Bᴴ D).PosSemidef ↔ (D - Bᴴ * A⁻¹ * B).PosSemidef := by
+    (fromBlocks A B Bᴴ D).PosSemidef ↔ (D - Bᴴ * ⅟A * B).PosSemidef := by
   have := Fintype.ofFinite n
-  rw [posSemidef_iff_dotProduct_mulVec, IsHermitian.fromBlocks₁₁ _ _ hA.1]
+  let hdet := isUnit_det_of_invertible A
+  have hinv : ⅟A = nonsingularInverse A hdet := invOf_eq_nonsingularInverse
+  rw [posSemidef_iff_dotProduct_mulVec, IsHermitian.fromBlocks₁₁ _ _ hA.1 hdet, ← hinv]
   constructor
   · refine fun h => .of_dotProduct_mulVec_nonneg h.1 fun x => ?_
-    have := h.2 (-((A⁻¹ * B) *ᵥ x) ⊕ᵥ x)
+    have := h.2 (-((⅟A * B) *ᵥ x) ⊕ᵥ x)
     rwa [dotProduct_mulVec, schur_complement_eq₁₁ B D _ _ hA.1, neg_add_cancel, dotProduct_zero,
       zero_add, ← dotProduct_mulVec] at this
   · refine fun h => ⟨h.1, fun x => ?_⟩
@@ -631,7 +653,7 @@ theorem fromBlocks₁₁ [DecidableEq m] {A : Matrix m m R'}
 omit [Fintype m] in variable [Finite m] in
 theorem fromBlocks₂₂ [DecidableEq n] (A : Matrix m m R')
     (B : Matrix m n R') {D : Matrix n n R'} (hD : D.PosDef) [Invertible D] :
-    (fromBlocks A B Bᴴ D).PosSemidef ↔ (A - B * D⁻¹ * Bᴴ).PosSemidef := by
+    (fromBlocks A B Bᴴ D).PosSemidef ↔ (A - B * ⅟D * Bᴴ).PosSemidef := by
   rw [← posSemidef_submatrix_equiv (Equiv.sumComm n m), Equiv.sumComm_apply,
     fromBlocks_submatrix_sum_swap_sum_swap]
   convert! fromBlocks₁₁ Bᴴ A hD <;> simp

@@ -12,8 +12,8 @@ public import Mathlib.Tactic.Abel
 
 A few of the `Invertible` lemmas generalize to multiplication of rectangular matrices.
 
-For lemmas about the matrix inverse in terms of the determinant and adjugate, see `Matrix.inv`
-in `Mathlib/LinearAlgebra/Matrix/NonsingularInverse.lean`.
+For lemmas about the matrix inverse in terms of the determinant and adjugate, see
+`Matrix.nonsingularInverse` in `Mathlib/LinearAlgebra/Matrix/NonsingularInverse.lean`.
 
 ## Main results
 
@@ -186,7 +186,7 @@ lemma add_mul_mul_invOf_mul_eq_one' :
       rw [Matrix.invOf_mul_cancel_right]
       abel
 
-/-- If matrices `A`, `C`, and `C⁻¹ + V * A⁻¹ * U` are invertible, then so is `A + U * C * V`. -/
+/-- If matrices `A`, `C`, and `⅟C + V * ⅟A * U` are invertible, then so is `A + U * C * V`. -/
 @[implicit_reducible]
 def invertibleAddMulMul : Invertible (A + U * C * V) where
   invOf := ⅟A - ⅟A * U * ⅟(⅟C + V * ⅟A * U) * V * ⅟A
@@ -230,7 +230,7 @@ lemma add_mul_mul_mul_invOf_eq_one' :
   simp only [Matrix.add_mul, invOf_mul_self', Matrix.mul_one, add_right_inj]
   simp only [Matrix.mul_assoc]
 
-/-- If matrices `A` and `C + C * V * A⁻¹ * U * C` are invertible, then so is `A + U * C * V`. -/
+/-- If matrices `A` and `C + C * V * ⅟A * U * C` are invertible, then so is `A + U * C * V`. -/
 @[implicit_reducible]
 def invertibleAddMulMul' : Invertible (A + U * C * V) where
   invOf := ⅟A - ⅟A * U * C * ⅟(C + C * V * ⅟A * U * C) * C * V * ⅟A

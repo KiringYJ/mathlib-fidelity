@@ -315,19 +315,28 @@ lemma reverse_charpoly (M : Matrix n n R) :
     diagonal_one, invert.map_det]
   simp [t_inv, map_sub, map_one, map_mul, t, smul_eq_diagonal_mul]
 
-theorem charpoly_inv (A : Matrix n n R) (h : IsUnit A) :
-    A⁻¹.charpoly = (-1) ^ Fintype.card n * C A.det⁻¹ʳ * A.charpolyRev := by
-  have : Invertible A := h.invertible
+theorem charpoly_nonsingularInverse (A : Matrix n n R) (h : IsUnit A) :
+    (nonsingularInverse A (isUnit_iff_isUnit_det A |>.mp h)).charpoly =
+      (-1) ^ Fintype.card n *
+        C (↑(isUnit_iff_isUnit_det A |>.mp h).unit⁻¹ : R) * A.charpolyRev := by
+  let hdet := isUnit_iff_isUnit_det A |>.mp h
+  let Ainv := nonsingularInverse A hdet
   calc
-  _ = (scalar n X - C.mapMatrix A⁻¹).det := rfl
-  _ = C (A⁻¹ * A).det * (scalar n X - C.mapMatrix A⁻¹).det := by simp
-  _ = C A⁻¹.det * C A.det * (scalar n X - C.mapMatrix A⁻¹).det := by rw [det_mul]; simp
-  _ = C A⁻¹.det * (C A.det * (scalar n X - C.mapMatrix A⁻¹).det) := by ac_rfl
-  _ = C A⁻¹.det * (C.mapMatrix A * (scalar n X - C.mapMatrix A⁻¹)).det := by simp [RingHom.map_det]
-  _ = C A⁻¹.det * (C.mapMatrix A * scalar n X - 1).det := by rw [mul_sub, ← map_mul]; simp
-  _ = C A⁻¹.det * ((-1) ^ Fintype.card n * (1 - scalar n X * C.mapMatrix A).det) := by
+  _ = (scalar n X - C.mapMatrix Ainv).det := rfl
+  _ = C (Ainv * A).det * (scalar n X - C.mapMatrix Ainv).det := by
+    simp [Ainv, hdet]
+  _ = C Ainv.det * C A.det * (scalar n X - C.mapMatrix Ainv).det := by
+    rw [det_mul]
+    simp
+  _ = C Ainv.det * (C A.det * (scalar n X - C.mapMatrix Ainv).det) := by ac_rfl
+  _ = C Ainv.det * (C.mapMatrix A * (scalar n X - C.mapMatrix Ainv)).det := by
+    simp [RingHom.map_det, Ainv, hdet]
+  _ = C Ainv.det * (C.mapMatrix A * scalar n X - 1).det := by
+    rw [mul_sub, ← map_mul]
+    simp [Ainv, hdet]
+  _ = C Ainv.det * ((-1) ^ Fintype.card n * (1 - scalar n X * C.mapMatrix A).det) := by
     rw [← neg_sub, det_neg, det_one_sub_mul_comm]
-  _ = _ := by simp [charpolyRev, smul_eq_diagonal_mul]; ac_rfl
+  _ = _ := by simp [Ainv, hdet, charpolyRev, smul_eq_diagonal_mul]; ac_rfl
 
 @[simp] lemma eval_charpolyRev :
     eval 0 M.charpolyRev = 1 := by
