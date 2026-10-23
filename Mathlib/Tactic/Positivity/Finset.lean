@@ -54,10 +54,10 @@ It calls `Mathlib.Meta.proveFinsetNonempty` to attempt proving that the finset i
 meta def evalFinsetDens : PositivityExt where eval {u 𝕜} _ pα? e :=
   match pα? with | none => pure .none | some _ => do
   match u, 𝕜, e with
-  | 0, ~q(ℚ≥0), ~q(@Finset.dens $α $instα $s) =>
+  | 0, ~q(ℚ≥0), ~q(@Finset.dens $α $instα $instNonempty $s) =>
     let some ps ← proveFinsetNonempty s | return .none
     assumeInstancesCommute
-    return .positive q(@Nonempty.dens_pos $α $instα $s $ps)
+    return .positive q(@Nonempty.dens_pos $α $instα $instNonempty $s $ps)
   | _, _, _ => throwError "not Finset.dens"
 
 attribute [local instance] monadLiftOptionMetaM in
@@ -109,9 +109,9 @@ example (hs : s.Nonempty) : 0 < #s := by positivity
 variable [Fintype α]
 
 example : 0 ≤ Fintype.card α := by positivity
-example : 0 ≤ dens s := by positivity
-example (hs : s.Nonempty) : 0 < dens s := by positivity
-example (hs : s.Nonempty) : dens s ≠ 0 := by positivity
+example [Nonempty α] : 0 ≤ dens s := by positivity
+example [Nonempty α] (hs : s.Nonempty) : 0 < dens s := by positivity
+example [Nonempty α] (hs : s.Nonempty) : dens s ≠ 0 := by positivity
 example [Nonempty α] : 0 < #(univ : Finset α) := by positivity
 example [Nonempty α] : 0 < Fintype.card α := by positivity
 example [Nonempty α] : 0 < dens (univ : Finset α) := by positivity

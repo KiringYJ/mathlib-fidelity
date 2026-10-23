@@ -24,9 +24,9 @@ This file defines `Finset.expect`, the average (aka expectation) of a function o
 ## Notation
 
 * `𝔼 i ∈ s, f i` is notation for `Finset.expect s f`. It is the expectation of `f i` where `i`
-  ranges over the finite set `s` (either a `Finset` or a `Set` with a `Fintype` instance).
+  ranges over the nonempty finite set `s` (either a `Finset` or a `Set` with a `Fintype` instance).
 * `𝔼 i, f i` is notation for `Finset.expect Finset.univ f`. It is the expectation of `f i` where `i`
-  ranges over the finite domain of `f`.
+  ranges over the nonempty finite domain of `f`.
 * `𝔼 i ∈ s with p i, f i` is notation for `Finset.expect (Finset.filter p s) f`. This is referred to
   as `expectWith` in lemma names.
 * `𝔼 (i ∈ s) (j ∈ t), f i j` is notation for `Finset.expect (s ×ˢ t) (fun ⟨i, j⟩ ↦ f i j)`.
@@ -55,20 +55,44 @@ open scoped Pointwise
 
 variable {ι κ K M N : Type*}
 
-local notation a " /ℚ " q => (q : ℚ≥0)⁻¹ • a
+set_option quotPrecheck false in
+local notation a " /ℚ " q =>
+  (((Units.mk0 (q : ℚ≥0) (by
+    apply Nat.cast_ne_zero.mpr
+    first
+    | exact Finset.Nonempty.card_ne_zero (by assumption)
+    | exact Fintype.card_ne_zero))⁻¹ : ℚ≥0ˣ) : ℚ≥0) • a
 
-/-- Average of a function over a finset. If the finset is empty, this is equal to zero. -/
-def Finset.expect [AddCommMonoid M] [Module ℚ≥0 M] (s : Finset ι) (f : ι → M) : M :=
-  (#s : ℚ≥0)⁻¹ • ∑ i ∈ s, f i
+/-- Average of a function over a nonempty finset. The domain proof is required before
+forming the reciprocal cardinality. -/
+def Finset.expect [AddCommMonoid M] [Module ℚ≥0 M] (s : Finset ι) (f : ι → M)
+    (hs : s.Nonempty := by
+      first
+      | assumption
+      | exact Finset.univ_nonempty
+      | exact Finset.singleton_nonempty _
+      | exact Finset.nonempty_product.mpr ⟨‹_›, ‹_›⟩
+      | exact Finset.image_nonempty.mpr ‹_›
+      | exact Finset.inv_nonempty_iff.mpr ‹_›
+      | exact Fintype.piFinset_nonempty.mpr (fun _ ↦ ‹_›)
+      | fail "finite average requires a proof that the index set is nonempty") : M :=
+  NNRat.divNat 1 #s hs.card_ne_zero • ∑ i ∈ s, f i
+
+/-- The executable rational coefficient agrees with inversion of the cardinality unit. -/
+lemma Finset.expect_def [AddCommMonoid M] [Module ℚ≥0 M] (s : Finset ι) (f : ι → M)
+    (hs : s.Nonempty) : Finset.expect s f hs =
+      (((Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero))⁻¹ : ℚ≥0ˣ) : ℚ≥0) •
+        ∑ i ∈ s, f i := by
+  simp only [Finset.expect, NNRat.divNat_eq_divp, Nat.cast_one, divp, one_mul]
 
 namespace BigOperators
 open Batteries.ExtendedBinder Lean Meta
 
 /--
 * `𝔼 i ∈ s, f i` is notation for `Finset.expect s f`. It is the expectation of `f i` where `i`
-  ranges over the finite set `s` (either a `Finset` or a `Set` with a `Fintype` instance).
+  ranges over the nonempty finite set `s` (either a `Finset` or a `Set` with a `Fintype` instance).
 * `𝔼 i, f i` is notation for `Finset.expect Finset.univ f`. It is the expectation of `f i` where `i`
-  ranges over the finite domain of `f`.
+  ranges over the nonempty finite domain of `f`.
 * `𝔼 i ∈ s with p i, f i` is notation for `Finset.expect (Finset.filter p s) f`.
 * `𝔼 (i ∈ s) (j ∈ t), f i j` is notation for `Finset.expect (s ×ˢ t) (fun ⟨i, j⟩ ↦ f i j)`.
 
@@ -92,11 +116,11 @@ open Batteries.ExtendedBinder
 /-- Delaborator for `Finset.expect`. The `pp.funBinderTypes` option controls whether
 to show the domain type when the expect is over `Finset.univ`. -/
 @[scoped app_delab Finset.expect] meta def delabFinsetExpect : Delab :=
-  whenPPOption getPPNotation <| withOverApp 6 <| do
-  let #[_, _, _, _, s, f] := (← getExpr).getAppArgs | failure
+  whenPPOption getPPNotation <| withOverApp 7 <| do
+  let #[_, _, _, _, s, f, _] := (← getExpr).getAppArgs | failure
   guard <| f.isLambda
   let ppDomain ← getPPOption getPPFunBinderTypes
-  let (i, body) ← withAppArg <| withBindingBodyUnusedName fun i => do
+  let (i, body) ← withNaryArg 5 <| withBindingBodyUnusedName fun i => do
     return (i, ← delab)
   if s.isAppOfArity ``Finset.univ 2 then
     let binder ←
@@ -119,78 +143,118 @@ section AddCommMonoid
 variable [AddCommMonoid M] [Module ℚ≥0 M] [AddCommMonoid N] [Module ℚ≥0 N] {s t : Finset ι}
   {f g : ι → M} {p q : ι → Prop} [DecidablePred p] [DecidablePred q]
 
-lemma expect_univ [Fintype ι] : 𝔼 i, f i = (∑ i, f i) /ℚ Fintype.card ι := by
-  rw [expect, card_univ]
+lemma expect_univ [Fintype ι] [Nonempty ι] : 𝔼 i, f i = (∑ i, f i) /ℚ Fintype.card ι := by
+  simp only [expect_def, card_univ]
 
-@[simp] lemma expect_empty (f : ι → M) : 𝔼 i ∈ ∅, f i = 0 := by simp [expect]
+@[simp] lemma expect_singleton (f : ι → M) (i : ι) : 𝔼 j ∈ {i}, f j = f i := by simp [expect_def]
 
-@[simp] lemma expect_singleton (f : ι → M) (i : ι) : 𝔼 j ∈ {i}, f j = f i := by simp [expect]
-
-@[simp] lemma expect_const_zero (s : Finset ι) : 𝔼 _i ∈ s, (0 : M) = 0 := by simp [expect]
+@[simp] lemma expect_const_zero (s : Finset ι)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    𝔼 _i ∈ s, (0 : M) = 0 := by simp [expect_def]
 
 @[congr]
-lemma expect_congr {t : Finset ι} (hst : s = t) (h : ∀ i ∈ t, f i = g i) :
-    𝔼 i ∈ s, f i = 𝔼 i ∈ t, g i := by rw [expect, expect, sum_congr hst h, hst]
+lemma expect_congr {t : Finset ι}
+    (hst : s = t) (h : ∀ i ∈ t, f i = g i)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (ht : t.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    𝔼 i ∈ s, f i = 𝔼 i ∈ t, g i := by
+  subst t
+  simp only [expect_def, sum_congr rfl h]
 
-lemma expectWith_congr (hst : s = t) (hpq : ∀ i ∈ t, p i ↔ q i) (h : ∀ i ∈ t, q i → f i = g i) :
+lemma expectWith_congr
+    (hst : s = t) (hpq : ∀ i ∈ t, p i ↔ q i) (h : ∀ i ∈ t, q i → f i = g i)
+    (hsp : (s.filter p).Nonempty)
+    (hsq : (t.filter q).Nonempty) :
     𝔼 i ∈ s with p i, f i = 𝔼 i ∈ t with q i, g i :=
   expect_congr (by rw [hst, filter_inj'.2 hpq]) <| by simpa using h
 
-lemma expect_sum_comm (s : Finset ι) (t : Finset κ) (f : ι → κ → M) :
+lemma expect_sum_comm (s : Finset ι) (t : Finset κ) (f : ι → κ → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i ∈ s, ∑ j ∈ t, f i j = ∑ j ∈ t, 𝔼 i ∈ s, f i j := by
-  simpa only [expect, smul_sum] using sum_comm
+  simpa only [expect_def, smul_sum] using sum_comm
 
-lemma expect_comm (s : Finset ι) (t : Finset κ) (f : ι → κ → M) :
+lemma expect_comm (s : Finset ι) (t : Finset κ) (f : ι → κ → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (ht : t.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i ∈ s, 𝔼 j ∈ t, f i j = 𝔼 j ∈ t, 𝔼 i ∈ s, f i j := by
-  rw [expect, expect, ← expect_sum_comm, ← expect_sum_comm, expect, expect, smul_comm, sum_comm]
+  simp only [expect_def, smul_sum]
+  rw [sum_comm]
+  apply sum_congr rfl
+  intro j hj
+  apply sum_congr rfl
+  intro i hi
+  exact smul_comm _ _ _
 
-lemma expect_eq_zero (h : ∀ i ∈ s, f i = 0) : 𝔼 i ∈ s, f i = 0 :=
+lemma expect_eq_zero (h : ∀ i ∈ s, f i = 0)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) : 𝔼 i ∈ s, f i = 0 :=
   (expect_congr rfl h).trans s.expect_const_zero
 
-lemma exists_ne_zero_of_expect_ne_zero (h : 𝔼 i ∈ s, f i ≠ 0) : ∃ i ∈ s, f i ≠ 0 := by
+lemma exists_ne_zero_of_expect_ne_zero
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (h : 𝔼 i ∈ s, f i ≠ 0) :
+    ∃ i ∈ s, f i ≠ 0 := by
   contrapose! h; exact expect_eq_zero h
 
-lemma expect_add_distrib (s : Finset ι) (f g : ι → M) :
+lemma expect_add_distrib (s : Finset ι) (f g : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i ∈ s, (f i + g i) = 𝔼 i ∈ s, f i + 𝔼 i ∈ s, g i := by
-  simp [expect, sum_add_distrib]
+  simp [expect_def, sum_add_distrib]
 
-lemma expect_add_expect_comm (f₁ f₂ g₁ g₂ : ι → M) :
+lemma expect_add_expect_comm (f₁ f₂ g₁ g₂ : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i ∈ s, (f₁ i + f₂ i) + 𝔼 i ∈ s, (g₁ i + g₂ i) =
       𝔼 i ∈ s, (f₁ i + g₁ i) + 𝔼 i ∈ s, (f₂ i + g₂ i) := by
   simp_rw [expect_add_distrib, add_add_add_comm]
 
-lemma expect_eq_single_of_mem (i : ι) (hi : i ∈ s) (h : ∀ j ∈ s, j ≠ i → f j = 0) :
-    𝔼 i ∈ s, f i = f i /ℚ #s := by rw [expect, sum_eq_single_of_mem _ hi h]
+lemma expect_eq_single_of_mem (i : ι) (hi : i ∈ s) (h : ∀ j ∈ s, j ≠ i → f j = 0)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    𝔼 i ∈ s, f i = f i /ℚ #s := by rw [expect_def, sum_eq_single_of_mem _ hi h]
 
 lemma expect_ite_zero (s : Finset ι) (p : ι → Prop) [DecidablePred p]
-    (h : ∀ i ∈ s, ∀ j ∈ s, p i → p j → i = j) (a : M) :
+    (h : ∀ i ∈ s, ∀ j ∈ s, p i → p j → i = j) (a : M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i ∈ s, ite (p i) a 0 = ite (∃ i ∈ s, p i) (a /ℚ #s) 0 := by
-  split_ifs <;> simp [expect, sum_ite_zero _ _ h, *]
+  split_ifs <;> simp [expect_def, sum_ite_zero _ _ h, *]
 
 section DecidableEq
 variable [DecidableEq ι]
 
-lemma expect_ite_mem (s t : Finset ι) (f : ι → M) :
-    𝔼 i ∈ s, (if i ∈ t then f i else 0) = (#(s ∩ t) / #s : ℚ≥0) • 𝔼 i ∈ s ∩ t, f i := by
-  obtain hst | hst := (s ∩ t).eq_empty_or_nonempty
-  · simp [expect, hst]
-  · simp [expect, smul_smul, ← inv_mul_eq_div, hst.card_ne_zero]
+lemma expect_ite_mem (s t : Finset ι) (f : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (hst : (s ∩ t).Nonempty) :
+    𝔼 i ∈ s, (if i ∈ t then f i else 0) =
+      ((#(s ∩ t) : ℚ≥0) /ₚ Units.mk0 (#s : ℚ≥0)
+        (Nat.cast_ne_zero.mpr hs.card_ne_zero)) •
+          𝔼 i ∈ s ∩ t, f i := by
+  rw [expect_def, expect_def, sum_ite_mem, smul_smul]
+  congr 1
+  change (((Units.mk0 (#s : ℚ≥0) _)⁻¹ : ℚ≥0ˣ) : ℚ≥0) =
+    ((#(s ∩ t) : ℚ≥0) * (((Units.mk0 (#s : ℚ≥0) _)⁻¹ : ℚ≥0ˣ) : ℚ≥0)) *
+      (((Units.mk0 (#(s ∩ t) : ℚ≥0) _)⁻¹ : ℚ≥0ˣ) : ℚ≥0)
+  have hi : (#(s ∩ t) : ℚ≥0) *
+      (((Units.mk0 (#(s ∩ t) : ℚ≥0) (Nat.cast_ne_zero.mpr hst.card_ne_zero))⁻¹ : ℚ≥0ˣ) : ℚ≥0) = 1 :=
+    (Units.mk0 (#(s ∩ t) : ℚ≥0) (Nat.cast_ne_zero.mpr hst.card_ne_zero)).mul_inv
+  rw [mul_right_comm, hi, one_mul]
 
-@[simp] lemma expect_dite_eq (i : ι) (f : ∀ j, i = j → M) :
+@[simp] lemma expect_dite_eq (i : ι) (f : ∀ j, i = j → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 j ∈ s, (if h : i = j then f j h else 0) = if i ∈ s then f i rfl /ℚ #s else 0 := by
-  split_ifs <;> simp [expect, *]
+  split_ifs <;> simp [expect_def, *]
 
-@[simp] lemma expect_dite_eq' (i : ι) (f : ∀ j, j = i → M) :
+@[simp] lemma expect_dite_eq' (i : ι) (f : ∀ j, j = i → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 j ∈ s, (if h : j = i then f j h else 0) = if i ∈ s then f i rfl /ℚ #s else 0 := by
-  split_ifs <;> simp [expect, *]
+  split_ifs <;> simp [expect_def, *]
 
-@[simp] lemma expect_ite_eq (i : ι) (f : ι → M) :
+@[simp] lemma expect_ite_eq (i : ι) (f : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 j ∈ s, (if i = j then f j else 0) = if i ∈ s then f i /ℚ #s else 0 := by
-  split_ifs <;> simp [expect, *]
+  split_ifs <;> simp [expect_def, *]
 
-@[simp] lemma expect_ite_eq' (i : ι) (f : ι → M) :
+@[simp] lemma expect_ite_eq' (i : ι) (f : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 j ∈ s, (if j = i then f j else 0) = if i ∈ s then f i /ℚ #s else 0 := by
-  split_ifs <;> simp [expect, *]
+  split_ifs <;> simp [expect_def, *]
 
 end DecidableEq
 
@@ -206,8 +270,11 @@ The difference with `Finset.expect_nbij` is that the bijection is allowed to use
 domain of the average, rather than being a non-dependent function. -/
 lemma expect_bij (i : ∀ a ∈ s, κ) (hi : ∀ a ha, i a ha ∈ t) (h : ∀ a ha, f a = g (i a ha))
     (i_inj : ∀ a₁ ha₁ a₂ ha₂, i a₁ ha₁ = i a₂ ha₂ → a₁ = a₂)
-    (i_surj : ∀ b ∈ t, ∃ a ha, i a ha = b) : 𝔼 i ∈ s, f i = 𝔼 i ∈ t, g i := by
-  simp_rw [expect, card_bij i hi i_inj i_surj, sum_bij i hi i_inj i_surj h]
+    (i_surj : ∀ b ∈ t, ∃ a ha, i a ha = b)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (ht : t.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    𝔼 i ∈ s, f i = 𝔼 i ∈ t, g i := by
+  simp_rw [expect_def, card_bij i hi i_inj i_surj, sum_bij i hi i_inj i_surj h]
 
 /-- Reorder an average.
 
@@ -218,9 +285,12 @@ The difference with `Finset.expect_nbij'` is that the bijection and its inverse 
 membership of the domains of the averages, rather than being non-dependent functions. -/
 lemma expect_bij' (i : ∀ a ∈ s, κ) (j : ∀ a ∈ t, ι) (hi : ∀ a ha, i a ha ∈ t)
     (hj : ∀ a ha, j a ha ∈ s) (left_inv : ∀ a ha, j (i a ha) (hi a ha) = a)
-    (right_inv : ∀ a ha, i (j a ha) (hj a ha) = a) (h : ∀ a ha, f a = g (i a ha)) :
+    (right_inv : ∀ a ha, i (j a ha) (hj a ha) = a) (h : ∀ a ha, f a = g (i a ha))
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (ht : t.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i ∈ s, f i = 𝔼 i ∈ t, g i := by
-  simp_rw [expect, card_bij' i j hi hj left_inv right_inv, sum_bij' i j hi hj left_inv right_inv h]
+  simp_rw [expect_def, card_bij' i j hi hj left_inv right_inv,
+    sum_bij' i j hi hj left_inv right_inv h]
 
 /-- Reorder an average.
 
@@ -230,9 +300,11 @@ injection, rather than by an inverse function.
 The difference with `Finset.expect_bij` is that the bijection is a non-dependent function, rather
 than being allowed to use membership of the domain of the average. -/
 lemma expect_nbij (i : ι → κ) (hi : ∀ a ∈ s, i a ∈ t) (h : ∀ a ∈ s, f a = g (i a))
-    (i_inj : (s : Set ι).InjOn i) (i_surj : (s : Set ι).SurjOn i t) :
+    (i_inj : (s : Set ι).InjOn i) (i_surj : (s : Set ι).SurjOn i t)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (ht : t.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i ∈ s, f i = 𝔼 i ∈ t, g i := by
-  simp_rw [expect, card_nbij i hi i_inj i_surj, sum_nbij i hi i_inj i_surj h]
+  simp_rw [expect_def, card_nbij i hi i_inj i_surj, sum_nbij i hi i_inj i_surj h]
 
 /-- Reorder an average.
 
@@ -246,94 +318,130 @@ The difference with `Finset.expect_equiv` is that bijectivity is only required t
 domains of the averages, rather than on the entire types. -/
 lemma expect_nbij' (i : ι → κ) (j : κ → ι) (hi : ∀ a ∈ s, i a ∈ t) (hj : ∀ a ∈ t, j a ∈ s)
     (left_inv : ∀ a ∈ s, j (i a) = a) (right_inv : ∀ a ∈ t, i (j a) = a)
-    (h : ∀ a ∈ s, f a = g (i a)) : 𝔼 i ∈ s, f i = 𝔼 i ∈ t, g i := by
-  simp_rw [expect, card_nbij' i j hi hj left_inv right_inv,
+    (h : ∀ a ∈ s, f a = g (i a))
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (ht : t.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    𝔼 i ∈ s, f i = 𝔼 i ∈ t, g i := by
+  simp_rw [expect_def, card_nbij' i j hi hj left_inv right_inv,
     sum_nbij' i j hi hj left_inv right_inv h]
 
 /-- `Finset.expect_equiv` is a specialization of `Finset.expect_bij` that automatically fills in
 most arguments. -/
-lemma expect_equiv (e : ι ≃ κ) (hst : ∀ i, i ∈ s ↔ e i ∈ t) (hfg : ∀ i ∈ s, f i = g (e i)) :
-    𝔼 i ∈ s, f i = 𝔼 i ∈ t, g i := by simp_rw [expect, card_equiv e hst, sum_equiv e hst hfg]
+lemma expect_equiv (e : ι ≃ κ)
+    (hst : ∀ i, i ∈ s ↔ e i ∈ t) (hfg : ∀ i ∈ s, f i = g (e i))
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (ht : t.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    𝔼 i ∈ s, f i = 𝔼 i ∈ t, g i := by simp_rw [expect_def, card_equiv e hst, sum_equiv e hst hfg]
 
 /-- Expectation over a product set equals the expectation of the fiberwise expectations.
 
 For rewriting in the reverse direction, use `Finset.expect_product'`. -/
-lemma expect_product (s : Finset ι) (t : Finset κ) (f : ι × κ → M) :
+lemma expect_product (s : Finset ι) (t : Finset κ) (f : ι × κ → M)
+    (hs : s.Nonempty)
+    (ht : t.Nonempty)
+    (hst : (s ×ˢ t).Nonempty := Finset.nonempty_product.mpr ⟨hs, ht⟩) :
     𝔼 x ∈ s ×ˢ t, f x = 𝔼 i ∈ s, 𝔼 j ∈ t, f (i, j) := by
-  simp only [expect, card_product, sum_product, smul_sum, mul_inv, mul_smul, Nat.cast_mul]
+  simp only [expect_def, card_product, sum_product, Nat.cast_mul]
+  rw [Units.mk0_mul]
+  simp only [mul_inv, Units.val_mul, mul_smul, smul_sum]
 
 /-- Expectation over a product set equals the expectation of the fiberwise expectations.
 
 For rewriting in the reverse direction, use `Finset.expect_product`. -/
-lemma expect_product' (s : Finset ι) (t : Finset κ) (f : ι → κ → M) :
+lemma expect_product' (s : Finset ι) (t : Finset κ) (f : ι → κ → M)
+    (hs : s.Nonempty)
+    (ht : t.Nonempty)
+    (hst : (s ×ˢ t).Nonempty := Finset.nonempty_product.mpr ⟨hs, ht⟩) :
     𝔼 i ∈ s ×ˢ t, f i.1 i.2 = 𝔼 i ∈ s, 𝔼 j ∈ t, f i j :=
   expect_product ..
 
 @[simp]
-lemma expect_image [DecidableEq ι] {m : κ → ι} (hm : (t : Set κ).InjOn m) :
+lemma expect_image [DecidableEq ι] {m : κ → ι} (hm : (t : Set κ).InjOn m)
+    (ht : t.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i ∈ t.image m, f i = 𝔼 i ∈ t, f (m i) := by
-  simp_rw [expect, card_image_of_injOn hm, sum_image hm]
+  simp_rw [expect_def, card_image_of_injOn hm, sum_image hm]
 
 end bij
 
 @[to_additive (attr := simp)]
-lemma expect_inv_index [DecidableEq ι] [InvolutiveInv ι] (s : Finset ι) (f : ι → M) :
+lemma expect_inv_index [DecidableEq ι] [InvolutiveInv ι] (s : Finset ι) (f : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i ∈ s⁻¹, f i = 𝔼 i ∈ s, f i⁻¹ := expect_image inv_injective.injOn
 
 lemma _root_.map_expect {F : Type*} [FunLike F M N] [LinearMapClass F ℚ≥0 M N]
-    (g : F) (f : ι → M) (s : Finset ι) :
-    g (𝔼 i ∈ s, f i) = 𝔼 i ∈ s, g (f i) := by simp only [expect, map_smul, map_sum]
+    (g : F) (f : ι → M) (s : Finset ι)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    g (𝔼 i ∈ s, f i) = 𝔼 i ∈ s, g (f i) := by simp only [expect_def, map_smul, map_sum]
 
 @[simp]
-lemma card_smul_expect (s : Finset ι) (f : ι → M) : #s • 𝔼 i ∈ s, f i = ∑ i ∈ s, f i := by
-  obtain rfl | hs := s.eq_empty_or_nonempty
-  · simp
-  · rw [expect, ← Nat.cast_smul_eq_nsmul ℚ≥0, smul_inv_smul₀]
-    exact mod_cast hs.card_ne_zero
+lemma card_smul_expect (s : Finset ι) (f : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    #s • 𝔼 i ∈ s, f i = ∑ i ∈ s, f i := by
+  rw [expect_def, ← Nat.cast_smul_eq_nsmul ℚ≥0, ← mul_smul]
+  have hi : (#s : ℚ≥0) *
+      (((Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero))⁻¹ : ℚ≥0ˣ) : ℚ≥0) = 1 :=
+    (Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero)).mul_inv
+  rw [hi, one_smul]
 
-@[simp] lemma _root_.Fintype.card_smul_expect [Fintype ι] (f : ι → M) :
+@[simp] lemma _root_.Fintype.card_smul_expect [Fintype ι] [Nonempty ι] (f : ι → M) :
     Fintype.card ι • 𝔼 i, f i = ∑ i, f i := Finset.card_smul_expect _ _
 
-@[simp] lemma expect_const (hs : s.Nonempty) (a : M) : 𝔼 _i ∈ s, a = a := by
-  rw [expect, sum_const, ← Nat.cast_smul_eq_nsmul ℚ≥0, inv_smul_smul₀]
-  exact mod_cast hs.card_ne_zero
+@[simp] lemma expect_const
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (a : M) :
+    𝔼 _i ∈ s, a = a := by
+  rw [expect_def, sum_const, ← Nat.cast_smul_eq_nsmul ℚ≥0, ← mul_smul]
+  have hi : (((Units.mk0 (#s : ℚ≥0)
+      (Nat.cast_ne_zero.mpr hs.card_ne_zero))⁻¹ : ℚ≥0ˣ) : ℚ≥0) * (#s : ℚ≥0) = 1 :=
+    (Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero)).inv_mul
+  rw [hi, one_smul]
 
 lemma smul_expect {G : Type*} [DistribSMul G M] [SMulCommClass G ℚ≥0 M] (a : G)
-    (s : Finset ι) (f : ι → M) : a • 𝔼 i ∈ s, f i = 𝔼 i ∈ s, a • f i := by
-  simp only [expect, smul_sum, smul_comm]
+    (s : Finset ι) (f : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    a • 𝔼 i ∈ s, f i = 𝔼 i ∈ s, a • f i := by
+  simp only [expect_def, smul_sum, smul_comm]
 
 end AddCommMonoid
 
 section AddCommGroup
 variable [AddCommGroup M] [Module ℚ≥0 M]
 
-lemma expect_sub_distrib (s : Finset ι) (f g : ι → M) :
+lemma expect_sub_distrib (s : Finset ι) (f g : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i ∈ s, (f i - g i) = 𝔼 i ∈ s, f i - 𝔼 i ∈ s, g i := by
-  simp only [expect, sum_sub_distrib, smul_sub]
+  simp only [expect_def, sum_sub_distrib, smul_sub]
 
 @[simp]
-lemma expect_neg_distrib (s : Finset ι) (f : ι → M) : 𝔼 i ∈ s, -f i = -𝔼 i ∈ s, f i := by
-  simp [expect]
+lemma expect_neg_distrib (s : Finset ι) (f : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    𝔼 i ∈ s, -f i = -𝔼 i ∈ s, f i := by
+  simp [expect_def]
 
 end AddCommGroup
 
 section Semiring
 variable [Semiring M] [Module ℚ≥0 M]
 
-@[simp] lemma card_mul_expect (s : Finset ι) (f : ι → M) :
-    #s * 𝔼 i ∈ s, f i = ∑ i ∈ s, f i := by rw [← nsmul_eq_mul, card_smul_expect]
+@[simp] lemma card_mul_expect (s : Finset ι) (f : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    #s * 𝔼 i ∈ s, f i = ∑ i ∈ s, f i := by rw [← nsmul_eq_mul, card_smul_expect s f hs]
 
-@[simp] lemma _root_.Fintype.card_mul_expect [Fintype ι] (f : ι → M) :
+@[simp] lemma _root_.Fintype.card_mul_expect [Fintype ι] [Nonempty ι] (f : ι → M) :
     Fintype.card ι * 𝔼 i, f i = ∑ i, f i := Finset.card_mul_expect _ _
 
-lemma expect_mul [IsScalarTower ℚ≥0 M M] (s : Finset ι) (f : ι → M) (a : M) :
-    (𝔼 i ∈ s, f i) * a = 𝔼 i ∈ s, f i * a := by rw [expect, expect, smul_mul_assoc, sum_mul]
+lemma expect_mul [IsScalarTower ℚ≥0 M M] (s : Finset ι) (f : ι → M) (a : M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    (𝔼 i ∈ s, f i) * a = 𝔼 i ∈ s, f i * a := by rw [expect_def, expect_def, smul_mul_assoc, sum_mul]
 
-lemma mul_expect [SMulCommClass ℚ≥0 M M] (s : Finset ι) (f : ι → M) (a : M) :
-    a * 𝔼 i ∈ s, f i = 𝔼 i ∈ s, a * f i := by rw [expect, expect, mul_smul_comm, mul_sum]
+lemma mul_expect [SMulCommClass ℚ≥0 M M] (s : Finset ι) (f : ι → M) (a : M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    a * 𝔼 i ∈ s, f i = 𝔼 i ∈ s, a * f i := by rw [expect_def, expect_def, mul_smul_comm, mul_sum]
 
 lemma expect_mul_expect [IsScalarTower ℚ≥0 M M] [SMulCommClass ℚ≥0 M M] (s : Finset ι)
-    (t : Finset κ) (f : ι → M) (g : κ → M) :
+    (t : Finset κ) (f : ι → M) (g : κ → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
+    (ht : t.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     (𝔼 i ∈ s, f i) * 𝔼 j ∈ t, g j = 𝔼 i ∈ s, 𝔼 j ∈ t, f i * g j := by
   simp_rw [expect_mul, mul_expect]
 
@@ -342,44 +450,64 @@ end Semiring
 section CommSemiring
 variable [CommSemiring M] [Module ℚ≥0 M] [IsScalarTower ℚ≥0 M M] [SMulCommClass ℚ≥0 M M]
 
-lemma expect_pow (s : Finset ι) (f : ι → M) (n : ℕ) :
+lemma expect_pow (s : Finset ι) (f : ι → M) (n : ℕ)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     (𝔼 i ∈ s, f i) ^ n = 𝔼 p ∈ Fintype.piFinset fun _ : Fin n ↦ s, ∏ i, f (p i) := by
-  rw [expect, smul_pow, sum_pow', expect, Fintype.card_piFinset_const, inv_pow, Nat.cast_pow]
+  simp only [expect_def, smul_pow, sum_pow', Fintype.card_piFinset_const, Nat.cast_pow]
+  have hu : Units.mk0 ((#s : ℚ≥0) ^ n)
+      (pow_ne_zero n (Nat.cast_ne_zero.mpr hs.card_ne_zero)) =
+      (Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero)) ^ n := by
+    apply Units.ext
+    simp only [Units.val_mk0, Units.val_pow_eq_pow_val]
+  rw [hu]
+  simp only [← inv_pow, Units.val_pow_eq_pow_val]
 
 end CommSemiring
 
 section Semifield
 variable [Semifield K] [CharZero K]
 
-@[simp] lemma expect_indicator_one [Fintype ι] (s : Finset ι) :
+@[simp] lemma expect_indicator_one [Fintype ι] [Nonempty ι] (s : Finset ι) :
     𝔼 i : ι, (Set.indicator s 1 i : K) = s.dens := by
-  classical simp [expect, sum_indicator_eq_sum_inter, dens, div_eq_inv_mul, NNRat.smul_def]
+  classical
+  apply mul_left_cancel₀ (Nat.cast_ne_zero.mpr Fintype.card_ne_zero :
+    (Fintype.card ι : K) ≠ 0)
+  rw [Fintype.card_mul_expect, mul_comm _ (s.dens : K), nnratCast_dens_mul_natCast_card]
+  simp [sum_indicator_eq_sum_inter]
 
 lemma expect_boole_mul [Fintype ι] [Nonempty ι] [DecidableEq ι] (f : ι → K) (i : ι) :
     𝔼 j, ite (i = j) (Fintype.card ι : K) 0 * f j = f i := by
-  simp_rw [expect_univ, ite_mul, zero_mul, sum_ite_eq, ite_eq_left (mem_univ _)]
-  rw [← @NNRat.cast_natCast K, ← NNRat.smul_def, inv_smul_smul₀]
-  simp [Fintype.card_ne_zero]
+  apply mul_left_cancel₀ (Nat.cast_ne_zero.mpr Fintype.card_ne_zero :
+    (Fintype.card ι : K) ≠ 0)
+  rw [Fintype.card_mul_expect]
+  simp [ite_mul]
 
 lemma expect_boole_mul' [Fintype ι] [Nonempty ι] [DecidableEq ι] (f : ι → K) (i : ι) :
     𝔼 j, ite (j = i) (Fintype.card ι : K) 0 * f j = f i := by
   simp_rw [@eq_comm _ _ i, expect_boole_mul]
 
-lemma expect_eq_sum_div_card (s : Finset ι) (f : ι → K) :
-    𝔼 i ∈ s, f i = (∑ i ∈ s, f i) / #s := by
-  rw [expect, NNRat.smul_def, div_eq_inv_mul, NNRat.cast_inv, NNRat.cast_natCast]
+lemma expect_eq_sum_div_card (s : Finset ι) (f : ι → K) (hs : s.Nonempty) :
+    𝔼 i ∈ s, f i = (∑ i ∈ s, f i) /ₚ
+      Units.mk0 (#s : K) (Nat.cast_ne_zero.mpr hs.card_ne_zero) := by
+  apply eq_divp_iff_mul_eq.mpr
+  change (𝔼 i ∈ s, f i) * (#s : K) = ∑ i ∈ s, f i
+  rw [mul_comm, card_mul_expect s f hs]
 
-lemma _root_.Fintype.expect_eq_sum_div_card [Fintype ι] (f : ι → K) :
-    𝔼 i, f i = (∑ i, f i) / Fintype.card ι := Finset.expect_eq_sum_div_card _ _
+lemma _root_.Fintype.expect_eq_sum_div_card [Fintype ι] [Nonempty ι] (f : ι → K) :
+    𝔼 i, f i = (∑ i, f i) /ₚ
+      Units.mk0 (Fintype.card ι : K) (Nat.cast_ne_zero.mpr Fintype.card_ne_zero) :=
+  Finset.expect_eq_sum_div_card _ _ univ_nonempty
 
-lemma expect_div (s : Finset ι) (f : ι → K) (a : K) : (𝔼 i ∈ s, f i) / a = 𝔼 i ∈ s, f i / a := by
-  simp_rw [div_eq_mul_inv, expect_mul]
+lemma expect_div (s : Finset ι) (f : ι → K) (a : Kˣ) (hs : s.Nonempty) :
+    (𝔼 i ∈ s, f i) /ₚ a = 𝔼 i ∈ s, f i /ₚ a := by
+  simp only [divp, expect_mul s f _ hs]
 
 end Semifield
 
 @[simp] lemma expect_apply {α : Type*} {π : α → Type*} [∀ a, CommSemiring (π a)]
-    [∀ a, Module ℚ≥0 (π a)] (s : Finset ι) (f : ι → ∀ a, π a) (a : α) :
-    (𝔼 i ∈ s, f i) a = 𝔼 i ∈ s, f i a := by simp [expect]
+    [∀ a, Module ℚ≥0 (π a)] (s : Finset ι) (f : ι → ∀ a, π a) (a : α)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    (𝔼 i ∈ s, f i) a = 𝔼 i ∈ s, f i a := by simp [expect_def]
 
 end Finset
 
@@ -387,13 +515,15 @@ namespace algebraMap
 variable [Semifield M] [CharZero M] [Semifield N] [CharZero N] [Algebra M N]
 
 @[simp, norm_cast]
-lemma coe_expect (s : Finset ι) (f : ι → M) : 𝔼 i ∈ s, f i = 𝔼 i ∈ s, (f i : N) :=
+lemma coe_expect (s : Finset ι) (f : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    𝔼 i ∈ s, f i = 𝔼 i ∈ s, (f i : N) :=
   map_expect (algebraMap _ _) _ _
 
 end algebraMap
 
 namespace Fintype
-variable [Fintype ι] [Fintype κ]
+variable [Fintype ι] [Nonempty ι] [Fintype κ] [Nonempty κ]
 
 section AddCommMonoid
 variable [AddCommMonoid M] [Module ℚ≥0 M]
@@ -414,7 +544,7 @@ See `Equiv.expect_comp` for a version without `h`. -/
 lemma expect_equiv (e : ι ≃ κ) (f : ι → M) (g : κ → M) (h : ∀ i, f i = g (e i)) :
     𝔼 i, f i = 𝔼 i, g i := expect_bijective _ e.bijective f g h
 
-lemma expect_const [Nonempty ι] (a : M) : 𝔼 _i : ι, a = a := Finset.expect_const univ_nonempty _
+lemma expect_const (a : M) : 𝔼 _i : ι, a = a := Finset.expect_const univ_nonempty _
 
 lemma expect_ite_zero (p : ι → Prop) [DecidablePred p] (h : ∀ i j, p i → p j → i = j) (a : M) :
     𝔼 i, ite (p i) a 0 = ite (∃ i, p i) (a /ℚ Fintype.card ι) 0 := by
@@ -422,9 +552,12 @@ lemma expect_ite_zero (p : ι → Prop) [DecidablePred p] (h : ∀ i j, p i → 
 
 variable [DecidableEq ι]
 
-@[simp] lemma expect_ite_mem (s : Finset ι) (f : ι → M) :
+@[simp] lemma expect_ite_mem (s : Finset ι) (f : ι → M)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     𝔼 i, (if i ∈ s then f i else 0) = s.dens • 𝔼 i ∈ s, f i := by
-  simp [Finset.expect_ite_mem, dens]
+  have h := Finset.expect_ite_mem univ s f univ_nonempty
+    (by simpa using hs)
+  simpa only [univ_inter, card_univ, dens_eq_card_div_card] using h
 
 lemma expect_dite_eq (i : ι) (f : ∀ j, i = j → M) :
     𝔼 j, (if h : i = j then f j h else 0) = f i rfl /ℚ card ι := by simp
@@ -443,7 +576,7 @@ end AddCommMonoid
 section Semiring
 variable [Semiring M] [Module ℚ≥0 M]
 
-lemma expect_one [Nonempty ι] : 𝔼 _i : ι, (1 : M) = 1 := expect_const _
+lemma expect_one : 𝔼 _i : ι, (1 : M) = 1 := expect_const _
 
 lemma expect_mul_expect [IsScalarTower ℚ≥0 M M] [SMulCommClass ℚ≥0 M M] (f : ι → M)
     (g : κ → M) : (𝔼 i, f i) * 𝔼 j, g j = 𝔼 i, 𝔼 j, f i * g j :=

@@ -174,20 +174,32 @@ lemma sum_mul_sq_le_sq_mul_sq [CommSemiring R] [LinearOrder R] [IsStrictOrderedR
   sum_sq_le_sum_mul_sum_of_sq_le_mul s
     (fun _ _ ↦ sq_nonneg _) (fun _ _ ↦ sq_nonneg _) (fun _ _ ↦ (mul_pow ..).le)
 
+lemma sum_pos_of_pos_on [Semiring R] [LinearOrder R] [IsStrictOrderedRing R]
+    {s : Finset ι} (hs : s.Nonempty) {g : ι → R} (hg : ∀ i ∈ s, 0 < g i) :
+    0 < ∑ i ∈ s, g i := by
+  refine sum_pos' (fun i hi ↦ (hg i hi).le) ?_
+  obtain ⟨i, hi⟩ := hs
+  exact ⟨i, hi, hg i hi⟩
+
 /-- **Sedrakyan's lemma**, aka **Titu's lemma** or **Engel's form**.
 
 This is a specialization of the Cauchy-Schwarz inequality with the sequences `f n / √(g n)` and
 `√(g n)`, though here it is proven without relying on square roots. -/
 theorem sq_sum_div_le_sum_sq_div [Semifield R] [LinearOrder R] [IsStrictOrderedRing R]
-    [ExistsAddOfLE R] (s : Finset ι)
-    (f : ι → R) {g : ι → R} (hg : ∀ i ∈ s, 0 < g i) :
-    (∑ i ∈ s, f i) ^ 2 / ∑ i ∈ s, g i ≤ ∑ i ∈ s, f i ^ 2 / g i := by
-  have hg' : ∀ i ∈ s, 0 ≤ g i := fun i hi ↦ (hg i hi).le
-  have H : ∀ i ∈ s, 0 ≤ f i ^ 2 / g i := fun i hi ↦ div_nonneg (sq_nonneg _) (hg' i hi)
-  refine div_le_of_le_mul₀ (sum_nonneg hg') (sum_nonneg H)
-    (sum_sq_le_sum_mul_sum_of_sq_le_mul _ H hg' fun i hi ↦ ?_)
-  rw [div_mul_cancel₀]
-  exact (hg i hi).ne'
+    [ExistsAddOfLE R] (s : Finset ι) (hs : s.Nonempty)
+    (f : ι → R) (g : ι → R) (hg : ∀ i ∈ s, 0 < g i) :
+    (∑ i ∈ s, f i) ^ 2 /ₚ
+        Units.mk0 (∑ i ∈ s, g i) (ne_of_gt (sum_pos_of_pos_on hs hg)) ≤
+      ∑ i : s, f i ^ 2 /ₚ Units.mk0 (g i) (hg i i.property).ne' := by
+  have hsum : 0 < ∑ i ∈ s, g i := sum_pos_of_pos_on hs hg
+  rw [divp_le_iff (u := Units.mk0 _ hsum.ne') hsum]
+  have hc := sum_sq_le_sum_mul_sum_of_sq_le_mul (s := Finset.univ)
+    (r := fun i : s ↦ f i)
+    (f := fun i : s ↦ f i ^ 2 /ₚ Units.mk0 (g i) (hg i i.property).ne')
+    (g := fun i : s ↦ g i)
+    (fun i _ ↦ divp_nonneg (sq_nonneg _) (hg i i.property).le)
+    (fun i _ ↦ (hg i i.property).le) (fun i _ ↦ by rw [divp_mul_cancel])
+  simpa only [sum_attach] using hc
 
 end Finset
 

@@ -19,37 +19,41 @@ open Fintype
 
 variable {ι K : Type*} [DivisionSemiring K]
 
-lemma Multiset.sum_map_div (s : Multiset ι) (f : ι → K) (a : K) :
-    (s.map (fun x ↦ f x / a)).sum = (s.map f).sum / a := by
-  simp only [div_eq_mul_inv, Multiset.sum_map_mul_right]
+lemma Multiset.sum_map_div (s : Multiset ι) (f : ι → K) (a : Kˣ) :
+    (s.map (fun x ↦ f x /ₚ a)).sum = (s.map f).sum /ₚ a := by
+  simp only [divp, Multiset.sum_map_mul_right]
 
-lemma Finset.sum_div (s : Finset ι) (f : ι → K) (a : K) :
-    (∑ i ∈ s, f i) / a = ∑ i ∈ s, f i / a := by simp only [div_eq_mul_inv, sum_mul]
+lemma Finset.sum_div (s : Finset ι) (f : ι → K) (a : Kˣ) :
+    (∑ i ∈ s, f i) /ₚ a = ∑ i ∈ s, f i /ₚ a := by simp only [divp, sum_mul]
 
 -- TODO: Move these to `Algebra.BigOperators.Group.Finset.Basic`, next to the corresponding `card`
 -- lemmas, once `Finset.dens` doesn't depend on `Field` anymore.
 namespace Finset
-variable {α β : Type*} [Fintype β]
+variable {α β : Type*} [Fintype β] [Nonempty β]
 
 @[simp]
 lemma dens_disjiUnion (s : Finset α) (t : α → Finset β) (h) :
     (s.disjiUnion t h).dens = ∑ a ∈ s, (t a).dens := by
-  simp [dens, sum_div]
+  apply mul_right_cancel₀ (Nat.cast_ne_zero.mpr Fintype.card_ne_zero : (Fintype.card β : ℚ≥0) ≠ 0)
+  simp only [sum_mul, dens_mul_card, card_disjiUnion, Nat.cast_sum]
 
 variable {s : Finset α} {t : α → Finset β}
 
 lemma dens_biUnion [DecidableEq β] (h : (s : Set α).PairwiseDisjoint t) :
     (s.biUnion t).dens = ∑ u ∈ s, (t u).dens := by
-  simp [dens, card_biUnion h, sum_div]
+  apply mul_right_cancel₀ (Nat.cast_ne_zero.mpr Fintype.card_ne_zero : (Fintype.card β : ℚ≥0) ≠ 0)
+  simp only [sum_mul, dens_mul_card, card_biUnion h, Nat.cast_sum]
 
 lemma dens_biUnion_le [DecidableEq β] : (s.biUnion t).dens ≤ ∑ a ∈ s, (t a).dens := by
-  simp only [dens, ← sum_div]
-  gcongr
-  exact mod_cast card_biUnion_le
+  apply (mul_le_mul_iff_of_pos_right
+    (Nat.cast_pos.mpr Fintype.card_pos : (0 : ℚ≥0) < Fintype.card β)).mp
+  simp only [sum_mul, dens_mul_card]
+  exact_mod_cast card_biUnion_le
 
 lemma dens_eq_sum_dens_fiberwise [DecidableEq α] {f : β → α} {t : Finset β}
     (h : (t : Set β).MapsTo f s) : t.dens = ∑ a ∈ s, {b ∈ t | f b = a}.dens := by
-  simp [dens, ← sum_div, card_eq_sum_card_fiberwise h]
+  apply mul_right_cancel₀ (Nat.cast_ne_zero.mpr Fintype.card_ne_zero : (Fintype.card β : ℚ≥0) ≠ 0)
+  simp only [sum_mul, dens_mul_card, card_eq_sum_card_fiberwise h, Nat.cast_sum]
 
 lemma dens_eq_sum_dens_image [DecidableEq α] (f : β → α) (t : Finset β) :
     t.dens = ∑ a ∈ t.image f, {b ∈ t | f b = a}.dens :=

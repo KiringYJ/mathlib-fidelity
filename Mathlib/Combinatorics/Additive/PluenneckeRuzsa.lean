@@ -6,11 +6,10 @@ Authors: Yaël Dillies, George Shakan
 module
 
 public import Mathlib.Algebra.Order.Field.Rat
+public import Mathlib.Algebra.Order.Field.Checked
 public import Mathlib.Combinatorics.Enumerative.DoubleCounting
-public import Mathlib.Tactic.FieldSimp
 public import Mathlib.Tactic.GCongr
 public import Mathlib.Tactic.Positivity
-public import Mathlib.Tactic.Ring
 public import Mathlib.Algebra.Group.Pointwise.Finset.Basic
 
 /-!
@@ -157,21 +156,50 @@ end Group
 section CommGroup
 variable [CommGroup G] {A B C : Finset G}
 
+attribute [local simp] nonempty_iff_ne_empty
+
 /-! ### Commutative Ruzsa triangle inequality -/
 
--- Auxiliary lemma for Ruzsa's triangle sum inequality, and the Plünnecke-Ruzsa inequality.
+@[to_additive]
+private lemma card_mul_ratio_le_iff (hA : A.Nonempty) (hB : B.Nonempty) :
+    (#(A * C) / #A : ℚ≥0) ≤ #(B * C) / #B ↔
+      #(A * C) * #B ≤ #(B * C) * #A := by
+  have h := divp_le_divp_iff_cross
+    (a := (#(A * C) : ℚ≥0)) (b := (#(B * C) : ℚ≥0))
+    (u := Units.mk0 (#A : ℚ≥0) (Nat.cast_ne_zero.mpr hA.card_ne_zero))
+    (v := Units.mk0 (#B : ℚ≥0) (Nat.cast_ne_zero.mpr hB.card_ne_zero))
+    (Nat.cast_pos.mpr hA.card_pos) (Nat.cast_pos.mpr hB.card_pos)
+  simpa only [Checked.div, Units.mk0, IsUnit.unit_spec, ← Nat.cast_mul, Nat.cast_le] using h
+
+/-- Minimize the ratio only over nonempty subsets, so every evaluated denominator is valid. -/
+@[to_additive]
+private theorem exists_min_card_mul_ratio (hB : B.Nonempty) (C : Finset G) :
+    ∃ (A : Finset G) (hA : A.Nonempty), A ⊆ B ∧
+      ∀ (A' : Finset G) (hA' : A'.Nonempty), A' ⊆ B →
+        (#(A * C) / #A : ℚ≥0) ≤ #(A' * C) / #A' := by
+  let S := B.powerset.erase ∅
+  let f (U : S) : ℚ≥0 :=
+    have hU : U.val.Nonempty := nonempty_iff_ne_empty.mpr (mem_erase.mp U.property).1
+    #(U.val * C) / #U.val
+  have hBmem : B ∈ S := mem_erase_of_ne_of_mem hB.ne_empty (mem_powerset_self _)
+  obtain ⟨U, _, hmin⟩ := exists_min_image S.attach f
+    ⟨⟨B, hBmem⟩, mem_attach _ _⟩
+  have hU : U.val.Nonempty := nonempty_iff_ne_empty.mpr (mem_erase.mp U.property).1
+  refine ⟨U.val, hU, mem_powerset.mp (mem_erase.mp U.property).2, ?_⟩
+  intro V hV hVB
+  exact hmin ⟨V, mem_erase_of_ne_of_mem hV.ne_empty (mem_powerset.mpr hVB)⟩
+    (mem_attach _ _)
+
+-- The empty-subset case remains meaningful after the ratios have been cleared.
 @[to_additive]
 private theorem mul_aux (hA : A.Nonempty) (hAB : A ⊆ B)
-    (h : ∀ A' ∈ B.powerset.erase ∅, (#(A * C) : ℚ≥0) / #A ≤ #(A' * C) / #A') :
+    (h : ∀ (A' : Finset G) (hA' : A'.Nonempty), A' ⊆ B →
+      (#(A * C) / #A : ℚ≥0) ≤ #(A' * C) / #A') :
     ∀ A' ⊆ A, #(A * C) * #A' ≤ #(A' * C) * #A := by
   rintro A' hAA'
   obtain rfl | hA' := A'.eq_empty_or_nonempty
   · simp
-  have hA₀ : (0 : ℚ≥0) < #A := cast_pos.2 hA.card_pos
-  have hA₀' : (0 : ℚ≥0) < #A' := cast_pos.2 hA'.card_pos
-  exact mod_cast
-    (div_le_div_iff₀ hA₀ hA₀').1
-      (h _ <| mem_erase_of_ne_of_mem hA'.ne_empty <| mem_powerset.2 <| hAA'.trans hAB)
+  exact (card_mul_ratio_le_iff hA hA').mp (h A' hA' (hAA'.trans hAB))
 
 /-- **Ruzsa's triangle inequality**. Multiplication version. -/
 @[to_additive /-- **Ruzsa's triangle inequality**. Addition version. -/]
@@ -179,17 +207,23 @@ theorem ruzsa_triangle_inequality_mul_mul_mul (A B C : Finset G) :
     #(A * C) * #B ≤ #(A * B) * #(B * C) := by
   obtain rfl | hB := B.eq_empty_or_nonempty
   · simp
-  have hB' : B ∈ B.powerset.erase ∅ := mem_erase_of_ne_of_mem hB.ne_empty (mem_powerset_self _)
-  obtain ⟨U, hU, hUA⟩ :=
-    exists_min_image (B.powerset.erase ∅) (fun U ↦ #(U * A) / #U : _ → ℚ≥0) ⟨B, hB'⟩
-  rw [mem_erase, mem_powerset, ← nonempty_iff_ne_empty] at hU
-  refine cast_le.1 (?_ : (_ : ℚ≥0) ≤ _)
-  push_cast
-  rw [← le_div_iff₀ (cast_pos.2 hB.card_pos), mul_div_right_comm, mul_comm _ B]
-  grw [card_le_card_mul_left hU.1, ← hUA _ hB', ← mul_subset_mul_right hU.2]
-  rw [← mul_div_right_comm, ← mul_assoc, le_div_iff₀ (cast_pos.2 hU.1.card_pos), mul_comm _ C,
-    ← mul_assoc, mul_comm _ C]
-  exact mod_cast pluennecke_petridis_inequality_mul C (mul_aux hU.1 hU.2 hUA)
+  obtain ⟨U, hU, hUB, hmin⟩ := exists_min_card_mul_ratio hB A
+  have hminB := (card_mul_ratio_le_iff hU hB).mp (hmin B hB Subset.rfl)
+  have hpet := pluennecke_petridis_inequality_mul C (mul_aux hU hUB hmin)
+  have hac : #(A * C) ≤ #(C * U * A) := by
+    simpa only [mul_assoc, mul_left_comm, mul_comm] using
+      (card_le_card_mul_left (t := A * C) hU)
+  refine le_of_mul_le_mul_right ?_ hU.card_pos
+  calc
+    #(A * C) * #B * #U = (#(A * C) * #U) * #B := by ac_rfl
+    _ ≤ (#(C * U * A) * #U) * #B := by gcongr
+    _ ≤ (#(U * A) * #(C * U)) * #B := Nat.mul_le_mul_right _ hpet
+    _ = (#(U * A) * #B) * #(C * U) := by ac_rfl
+    _ ≤ (#(B * A) * #U) * #(C * B) :=
+      Nat.mul_le_mul hminB (card_le_card (mul_subset_mul_left hUB))
+    _ = #(A * B) * #(B * C) * #U := by
+      rw [mul_comm B A, mul_comm C B]
+      ac_rfl
 
 /-- **Ruzsa's triangle inequality**. Mul-div-div version. -/
 @[to_additive /-- **Ruzsa's triangle inequality**. Add-sub-sub version. -/]
@@ -214,10 +248,10 @@ theorem card_div_mul_le_card_div_mul_card_mul (A B C : Finset G) :
 
 -- Auxiliary lemma towards the Plünnecke-Ruzsa inequality
 @[to_additive]
-private lemma card_mul_pow_le (hAB : ∀ A' ⊆ A, #(A * B) * #A' ≤ #(A' * B) * #A) (n : ℕ) :
+private lemma card_mul_pow_le (hA : A.Nonempty)
+    (hAB : ∀ A' ⊆ A, #(A * B) * #A' ≤ #(A' * B) * #A) (n : ℕ) :
     #(A * B ^ n) ≤ (#(A * B) / #A : ℚ≥0) ^ n * #A := by
-  obtain rfl | hA := A.eq_empty_or_nonempty
-  · simp
+  have hAc : (#A : ℚ≥0) ≠ 0 := Nat.cast_ne_zero.mpr hA.card_ne_zero
   induction n with
   | zero => simp
   | succ n ih =>
@@ -227,7 +261,13 @@ private lemma card_mul_pow_le (hAB : ∀ A' ⊆ A, #(A * B) * #A' ≤ #(A' * B) 
         = #(B ^ n * A * B) * #A := by rw [pow_succ, mul_left_comm, mul_assoc]
       _ ≤ #(A * B) * #(B ^ n * A) := mod_cast pluennecke_petridis_inequality_mul _ hAB
       _ ≤ #(A * B) * ((#(A * B) / #A) ^ n * #A) := by rw [mul_comm _ A]; gcongr
-      _ = (#(A * B) / #A) ^ (n + 1) * #A * #A := by simp [field, pow_add]
+      _ = (#(A * B) / #A) ^ (n + 1) * #A * #A := by
+        let r : ℚ≥0 := #(A * B) / #A
+        change (#(A * B) : ℚ≥0) * (r ^ n * #A) = r ^ (n + 1) * #A * #A
+        have hc : r * (#A : ℚ≥0) = #(A * B) := Checked.div_mul_cancel _ _ _
+        conv_lhs => lhs; rw [← hc]
+        rw [pow_succ]
+        ac_rfl
 
 /-- The **Plünnecke-Ruzsa inequality**. Multiplication version. Note that this is genuinely harder
 than the division version because we cannot use a double counting argument. -/
@@ -235,20 +275,20 @@ than the division version because we cannot use a double counting argument. -/
 harder than the subtraction version because we cannot use a double counting argument. -/]
 theorem pluennecke_ruzsa_inequality_pow_div_pow_mul (hA : A.Nonempty) (B : Finset G) (m n : ℕ) :
     #(B ^ m / B ^ n) ≤ (#(A * B) / #A : ℚ≥0) ^ (m + n) * #A := by
-  have hA' : A ∈ A.powerset.erase ∅ := mem_erase_of_ne_of_mem hA.ne_empty (mem_powerset_self _)
-  obtain ⟨C, hC, hCmin⟩ :=
-    exists_min_image (A.powerset.erase ∅) (fun C ↦ #(C * B) / #C : _ → ℚ≥0) ⟨A, hA'⟩
-  rw [mem_erase, mem_powerset, ← nonempty_iff_ne_empty] at hC
-  obtain ⟨hC, hCA⟩ := hC
+  have hAc : (#A : ℚ≥0) ≠ 0 := Nat.cast_ne_zero.mpr hA.card_ne_zero
+  obtain ⟨C, hC, hCA, hCmin⟩ := exists_min_card_mul_ratio hA B
+  have hCc : (#C : ℚ≥0) ≠ 0 := Nat.cast_ne_zero.mpr hC.card_ne_zero
   refine le_of_mul_le_mul_right ?_ (by positivity : (0 : ℚ≥0) < #C)
   calc
     (#(B ^ m / B ^ n) * #C : ℚ≥0)
       ≤ #(B ^ m * C) * #(B ^ n * C) := mod_cast ruzsa_triangle_inequality_div_mul_mul ..
     _ = #(C * B ^ m) * #(C * B ^ n) := by simp_rw [mul_comm]
     _ ≤ ((#(C * B) / #C) ^ m * #C) * ((#(C * B) / #C : ℚ≥0) ^ n * #C) := by
-      gcongr <;> exact card_mul_pow_le (mul_aux hC hCA hCmin) _
-    _ = (#(C * B) / #C) ^ (m + n) * #C * #C := by ring
-    _ ≤ (#(A * B) / #A) ^ (m + n) * #A * #C := by gcongr (?_ ^ _) * #?_ * _; exact hCmin _ hA'
+      gcongr <;> exact card_mul_pow_le hC (mul_aux hC hCA hCmin) _
+    _ = (#(C * B) / #C) ^ (m + n) * #C * #C := by rw [pow_add]; ac_rfl
+    _ ≤ (#(A * B) / #A) ^ (m + n) * #A * #C := by
+      gcongr (?_ ^ _) * #?_ * _
+      exact hCmin A hA Subset.rfl
 
 /-- The **Plünnecke-Ruzsa inequality**. Division version. -/
 @[to_additive /-- The **Plünnecke-Ruzsa inequality**. Subtraction version. -/]

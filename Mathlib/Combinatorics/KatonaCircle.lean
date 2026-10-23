@@ -8,7 +8,7 @@ module
 public import Mathlib.Data.Finset.Density
 public import Mathlib.Data.Fintype.Prod
 public import Mathlib.Data.Fintype.Perm
-public import Mathlib.Data.Nat.Choose.Cast
+public import Mathlib.Data.Nat.Choose.Basic
 
 /-!
 # The Katona circle method
@@ -26,6 +26,8 @@ variable {X : Type*} [Fintype X]
 variable (X) in
 /-- A numbering of a fintype `X` is a bijection between `X` and `Fin (card X)`. -/
 abbrev Numbering : Type _ := X ≃ Fin (card X)
+
+instance : Nonempty (Numbering X) := ⟨equivFin X⟩
 
 @[simp] lemma Fintype.card_numbering [DecidableEq X] : card (Numbering X) = (card X)! :=
   card_equiv (equivFin _)
@@ -108,8 +110,22 @@ lemma card_prefixed (s : Finset X) : #(prefixed s) = (#s)! * (card X - #s)! := b
   simpa [-mem_prefixed] using Fintype.card_congr (prefixedEquiv s)
 
 @[simp]
-lemma dens_prefixed (s : Finset X) : (prefixed s).dens = ((card X).choose #s : ℚ≥0)⁻¹ := by
-  simp [dens, card_prefixed, Nat.cast_choose _ s.card_le_univ]
+lemma dens_prefixed (s : Finset X) : (prefixed s).dens =
+    (((Units.mk0 ((card X).choose #s : ℚ≥0)
+      (Nat.cast_ne_zero.mpr (Nat.choose_pos s.card_le_univ).ne'))⁻¹ : ℚ≥0ˣ) : ℚ≥0) := by
+  have hc : ((card X).choose #s : ℚ≥0) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (Nat.choose_pos s.card_le_univ).ne'
+  apply mul_left_cancel₀ hc
+  have hi := (Units.mk0 ((card X).choose #s : ℚ≥0) hc).mul_inv
+  change ((card X).choose #s : ℚ≥0) * (prefixed s).dens =
+    ((card X).choose #s : ℚ≥0) * (((Units.mk0 _ hc)⁻¹ : ℚ≥0ˣ) : ℚ≥0)
+  simp only [Units.val_mk0] at hi
+  rw [hi]
+  apply mul_right_cancel₀ (dens_card_cast_ne_zero (α := Numbering X))
+  rw [mul_assoc, dens_mul_card, one_mul, card_prefixed, card_numbering]
+  exact_mod_cast (by simpa only [Nat.mul_assoc] using
+    Nat.choose_mul_factorial_mul_factorial s.card_le_univ :
+    (card X).choose #s * ((#s)! * (card X - #s)!) = (card X)!)
 
 -- TODO: This can be strengthened to an iff
 lemma disjoint_prefixed_prefixed (hst : ¬ s ⊆ t) (hts : ¬ t ⊆ s) :
