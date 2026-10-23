@@ -9,6 +9,7 @@ public import Mathlib.Algebra.Group.Action.Opposite
 public import Mathlib.Algebra.Group.Action.Units
 public import Mathlib.Algebra.Group.Invertible.Defs
 public import Mathlib.Algebra.GroupWithZero.Units.Lemmas
+public import Mathlib.Algebra.GroupWithZero.Checked
 public import Mathlib.Algebra.Ring.Aut
 public import Mathlib.Algebra.Ring.CompTypeclasses
 public import Mathlib.Algebra.Ring.Opposite
@@ -36,8 +37,6 @@ Our star rings are actually star non-unital, non-associative, semirings, but of 
 @[expose] public section
 
 assert_not_exists Finset Subgroup Rat.instField
-
-open scoped Ring
 
 universe u v w
 
@@ -379,20 +378,6 @@ open scoped ComplexConjugate
 
 end CommSemiring
 
-@[simp]
-theorem star_inv₀ [GroupWithZero R] [StarMul R] (x : R) : star x⁻¹ = (star x)⁻¹ :=
-  op_injective <| (map_inv₀ (starMulEquiv : R ≃* Rᵐᵒᵖ) x).trans (op_inv (star x)).symm
-
-@[simp]
-theorem star_zpow₀ [GroupWithZero R] [StarMul R] (x : R) (z : ℤ) : star (x ^ z) = star x ^ z :=
-  op_injective <| (map_zpow₀ (starMulEquiv : R ≃* Rᵐᵒᵖ) x z).trans (op_zpow (star x) z).symm
-
-/-- When multiplication is commutative, `star` preserves division. -/
-@[simp]
-theorem star_div₀ [CommGroupWithZero R] [StarMul R] (x y : R) : star (x / y) = star x / star y := by
-  apply op_injective
-  rw [division_def, op_div, mul_comm, star_mul, star_inv₀, op_mul, op_inv]
-
 /-- Any commutative semiring admits the trivial \*-structure.
 
 See note [reducible non-instances].
@@ -492,13 +477,37 @@ protected theorem IsUnit.star [Monoid R] [StarMul R] {a : R} : IsUnit a → IsUn
 theorem isUnit_star [Monoid R] [StarMul R] {a : R} : IsUnit (star a) ↔ IsUnit a :=
   ⟨fun h => star_star a ▸ h.star, IsUnit.star⟩
 
-@[grind _=_]
-theorem Ring.inverse_star [Semiring R] [StarRing R] (a : R) :
-    (star a)⁻¹ʳ = star (a⁻¹ʳ) := by
-  by_cases ha : IsUnit a
-  · obtain ⟨u, rfl⟩ := ha
-    rw [Ring.inverse_unit, ← Units.coe_star, Ring.inverse_unit, ← Units.coe_star_inv]
-  rw [Ring.inverse_non_unit _ ha, Ring.inverse_non_unit _ (mt isUnit_star.mp ha), star_zero]
+/-- Star preserves mixed division by a unit in a commutative monoid. -/
+@[simp] theorem star_divp [CommMonoid R] [StarMul R] (a : R) (u : Rˣ) :
+    star (a /ₚ u) = star a /ₚ star u := by
+  change star (a * ↑u⁻¹) = star a * star (↑u⁻¹ : R)
+  rw [star_mul, mul_comm]
+
+/-- The unit associated with a starred element is the star of its unit witness. -/
+@[simp] theorem IsUnit.unit_star [Monoid R] [StarMul R] {a : R} (ha : IsUnit a) :
+    ha.star.unit = star ha.unit := Units.ext rfl
+
+/-- Star preserves inversion on its actual unit domain. -/
+@[simp] theorem star_checked_inv [Monoid R] [StarMul R] (a : R) (ha : IsUnit a) :
+    star (Checked.inv a ha) = Checked.inv (star a) ha.star := by
+  change star (↑ha.unit⁻¹ : R) = ↑ha.star.unit⁻¹
+  rw [IsUnit.unit_star]
+  rfl
+
+/-- Star preserves checked integer powers, with the mapped negative-power obligation. -/
+@[simp] theorem star_checked_zpow [Monoid R] [StarMul R] (a : R) (n : ℤ)
+    (ha : n < 0 → IsUnit a) :
+    star (Checked.zpow a n ha) = Checked.zpow (star a) n (fun hn => (ha hn).star) := by
+  cases n with
+  | ofNat k => exact star_pow a k
+  | negSucc k =>
+    rw [Checked.zpow_negSucc, Checked.zpow_negSucc, star_pow, star_checked_inv]
+
+/-- In a commutative monoid, star preserves division by a known unit. -/
+@[simp] theorem star_checked_div [CommMonoid R] [StarMul R] (a b : R) (hb : IsUnit b) :
+    star (Checked.div a b hb) = Checked.div (star a) (star b) hb.star := by
+  change star (a /ₚ hb.unit) = star a /ₚ hb.star.unit
+  rw [star_divp, IsUnit.unit_star]
 
 protected instance Invertible.star {R : Type*} [MulOneClass R] [StarMul R] (r : R) [Invertible r] :
     Invertible (star r) where

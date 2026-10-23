@@ -28,14 +28,19 @@ namespace NNRat
 @[simp] lemma addSubmonoid_closure_range_pow {n : ℕ} (hn₀ : n ≠ 0) :
     closure (range fun x : ℚ≥0 ↦ x ^ n) = ⊤ := by
   refine (eq_top_iff' _).2 fun x ↦ ?_
-  suffices x = (x.num * x.den ^ (n - 1)) • (x.den : ℚ≥0)⁻¹ ^ n by
+  have hd : (x.den : ℚ≥0) ≠ 0 := Nat.cast_ne_zero.mpr x.den_ne_zero
+  let u := Units.mk0 (x.den : ℚ≥0) hd
+  suffices x = (x.num * x.den ^ (n - 1)) • u.inv ^ n by
     rw [this]
     exact nsmul_mem (subset_closure <| mem_range_self _) _
-  rw [nsmul_eq_mul]
-  push_cast
-  rw [mul_assoc, pow_sub₀, pow_one, mul_right_comm, ← mul_pow, mul_inv_cancel₀, one_pow, one_mul,
-    ← div_eq_mul_inv, num_div_den]
-  all_goals simp [x.den_pos.ne', Nat.one_le_iff_ne_zero, *]
+  simp only [nsmul_eq_mul, Nat.cast_mul, Nat.cast_pow]
+  apply mul_right_cancel₀ (pow_ne_zero n hd)
+  have hu : u.inv * (x.den : ℚ≥0) = 1 := u.inv_mul
+  rw [mul_assoc, ← mul_pow, hu, one_pow, mul_one]
+  have hpow : (x.den : ℚ≥0) ^ n = (x.den : ℚ≥0) * (x.den : ℚ≥0) ^ (n - 1) := by
+    simpa only [Nat.sub_add_cancel (Nat.one_le_iff_ne_zero.mpr hn₀)] using
+      pow_succ' (x.den : ℚ≥0) (n - 1)
+  rw [hpow, ← mul_assoc, NNRat.mul_den_eq_num]
 
 @[simp] lemma addSubmonoid_closure_range_mul_self : closure (range fun x : ℚ≥0 ↦ x * x) = ⊤ := by
   simpa only [sq] using addSubmonoid_closure_range_pow two_ne_zero
@@ -50,10 +55,23 @@ namespace Rat
 @[simp] lemma addSubmonoid_closure_range_pow {n : ℕ} (hn₀ : n ≠ 0) (hn : Even n) :
     closure (range fun x : ℚ ↦ x ^ n) = nonneg _ := by
   convert! (AddMonoidHom.map_mclosure NNRat.coeHom <| range fun x ↦ x ^ n).symm
-  · have (x : ℚ) : ∃ y : ℚ≥0, y ^ n = x ^ n := ⟨x.nnabs, by simp [hn.pow_abs]⟩
-    simp [subset_antisymm_iff, range_subset_iff, this]
+  · have (x : ℚ) : ∃ y : ℚ≥0, (y : ℚ) ^ n = x ^ n := ⟨x.nnabs, by simp [hn.pow_abs]⟩
+    simp only [subset_antisymm_iff, range_subset_iff, Set.mem_image, Set.mem_range]
+    constructor
+    · intro x
+      obtain ⟨y, hy⟩ := this x
+      exact ⟨y ^ n, ⟨y, rfl⟩, by
+        change ((y ^ n : ℚ≥0) : ℚ) = x ^ n
+        simpa only [NNRat.coe_pow] using hy⟩
+    · rintro _ ⟨y, ⟨z, rfl⟩, rfl⟩
+      exact ⟨(z : ℚ), NNRat.coe_pow z n |>.symm⟩
   · ext
-    simp [NNRat.addSubmonoid_closure_range_pow hn₀, NNRat.exists]
+    simp only [NNRat.addSubmonoid_closure_range_pow hn₀]
+    constructor
+    · intro h
+      exact ⟨⟨_, h⟩, trivial, rfl⟩
+    · rintro ⟨q, _, rfl⟩
+      exact q.2
 
 @[simp]
 lemma addSubmonoid_closure_range_mul_self : closure (range fun x : ℚ ↦ x * x) = nonneg _ := by
