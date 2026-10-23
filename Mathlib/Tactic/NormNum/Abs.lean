@@ -6,6 +6,7 @@ Authors: David Renshaw
 module
 
 public import Mathlib.Data.Nat.Cast.Order.Ring
+public import Mathlib.Algebra.Order.Invertible
 public import Mathlib.Tactic.NormNum.Basic
 
 
@@ -40,7 +41,7 @@ theorem isNNRat_abs_nonneg {α : Type*} [DivisionRing α] [LinearOrder α]
   refine ⟨ha1, abs_of_nonneg ?_⟩
   apply mul_nonneg
   · exact Nat.cast_nonneg' num
-  · simp only [invOf_eq_inv, inv_nonneg, Nat.cast_nonneg]
+  · exact invOf_nonneg.mpr (Nat.cast_nonneg den)
 
 theorem isNNRat_abs_neg {α : Type*} [DivisionRing α] [LinearOrder α] [IsStrictOrderedRing α]
     {a : α} {num den : ℕ} (ra : IsRat a (.negOfNat num) den) : IsNNRat |a| num den := by
@@ -49,7 +50,7 @@ theorem isNNRat_abs_neg {α : Type*} [DivisionRing α] [LinearOrder α] [IsStric
   refine ⟨ha1, abs_of_nonneg ?_⟩
   apply mul_nonneg
   · exact Nat.cast_nonneg' num
-  · simp only [invOf_eq_inv, inv_nonneg, Nat.cast_nonneg]
+  · exact invOf_nonneg.mpr (Nat.cast_nonneg den)
 
 /-- The `norm_num` extension which identifies expressions of the form `|a|`,
 such that `norm_num` successfully recognises `a`. -/

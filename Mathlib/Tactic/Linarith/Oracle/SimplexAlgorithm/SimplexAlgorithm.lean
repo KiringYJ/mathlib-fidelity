@@ -35,28 +35,34 @@ Given indexes `exitIdx` and `enterIdx` of exiting and entering variables in the 
 arrays, performs pivot operation, i.e. expresses one through the other and makes the free one basic
 and vice versa.
 -/
-def doPivotOperation (exitIdx enterIdx : Nat) : SimplexAlgorithmM matType Unit :=
-  modify fun s : Tableau matType => Id.run do
-    let mut mat := s.mat
-    let intersectCoef := mat[(exitIdx, enterIdx)]!
+def doPivotOperation (exitIdx enterIdx : Nat) : SimplexAlgorithmM matType Unit := do
+  let s ← get
+  let intersectCoef := s.mat[(exitIdx, enterIdx)]!
+  if hp : intersectCoef = 0 then
+    throwError "linarith: simplex selected a zero pivot"
+  else
+    have hneg : -intersectCoef ≠ 0 := by
+      intro h
+      apply hp
+      simpa only [Rat.neg_neg, Rat.neg_zero] using congrArg (fun q : Rat => -q) h
+    let updated := Id.run do
+      let mut mat := s.mat
+      for i in [:s.basic.size] do
+        if i == exitIdx then
+          continue
+        let coef := Rat.quotient mat[(i, enterIdx)]! intersectCoef hp
+        if coef != 0 then
+          mat := subtractRow mat exitIdx i coef
+        mat := setElem mat i enterIdx coef
+      mat := setElem mat exitIdx enterIdx (-1)
+      mat := divideRow mat exitIdx (-intersectCoef) hneg
 
-    for i in [:s.basic.size] do
-      if i == exitIdx then
-        continue
-      let coef := mat[(i, enterIdx)]! / intersectCoef
-      if coef != 0 then
-        mat := subtractRow mat exitIdx i coef
-      mat := setElem mat i enterIdx coef
-    mat := setElem mat exitIdx enterIdx (-1)
-    mat := divideRow mat exitIdx (-intersectCoef)
-
-    let newBasic := s.basic.set! exitIdx s.free[enterIdx]!
-    let newFree := s.free.set! enterIdx s.basic[exitIdx]!
-
-    have hb : newBasic.size = s.basic.size := by apply Array.size_setIfInBounds
-    have hf : newFree.size = s.free.size := by apply Array.size_setIfInBounds
-
-    return (⟨newBasic, newFree, hb ▸ hf ▸ mat⟩ : Tableau matType)
+      let newBasic := s.basic.set! exitIdx s.free[enterIdx]!
+      let newFree := s.free.set! enterIdx s.basic[exitIdx]!
+      have hb : newBasic.size = s.basic.size := by apply Array.size_setIfInBounds
+      have hf : newFree.size = s.free.size := by apply Array.size_setIfInBounds
+      return (⟨newBasic, newFree, hb ▸ hf ▸ mat⟩ : Tableau matType)
+    set updated
 
 /--
 Check if the solution is found: the objective function is positive and all basic variables are
@@ -94,15 +100,16 @@ def chooseExitingVar (enterIdx : Nat) : SimplexAlgorithmM matType Nat := do
   let mut minCoef := 0
   let mut minIdx := 0
   for i in [1:(← get).basic.size] do
-    if (← get).mat[(i, enterIdx)]! >= 0 then
-      continue
-    let lastIdx := (← get).free.size - 1
-    let coef := -(← get).mat[(i, lastIdx)]! / (← get).mat[(i, enterIdx)]!
-    if exitIdxOpt.isNone || coef < minCoef ||
-        (coef == minCoef && (← get).basic[i]! < minIdx) then
-      exitIdxOpt := i
-      minCoef := coef
-      minIdx := (← get).basic[i]!
+    let s ← get
+    let pivot := s.mat[(i, enterIdx)]!
+    if hp : pivot < 0 then
+      let lastIdx := s.free.size - 1
+      let coef := Rat.quotient (-s.mat[(i, lastIdx)]!) pivot (Rat.ne_of_lt hp)
+      if exitIdxOpt.isNone || coef < minCoef ||
+          (coef == minCoef && s.basic[i]! < minIdx) then
+        exitIdxOpt := i
+        minCoef := coef
+        minIdx := s.basic[i]!
   return exitIdxOpt.get! -- such variable always exists because our problem is bounded
 
 /--

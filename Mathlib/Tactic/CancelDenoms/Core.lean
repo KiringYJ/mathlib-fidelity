@@ -8,11 +8,14 @@ module
 public meta import Mathlib.Algebra.Group.Nat.Defs
 public meta import Mathlib.Basic.Logic.Basic
 public meta import Mathlib.Data.Tree.Basic
+public meta import Mathlib.Data.Rat.Init
 
 public import Mathlib.Algebra.Field.Basic
 public import Mathlib.Algebra.Order.Ring.Defs
+public import Mathlib.Algebra.Order.Field.Checked
 public import Mathlib.Data.Tree.Basic
 public import Mathlib.Tactic.NormNum.Core
+public import Mathlib.Tactic.CancelDenoms.Denominator
 public import Mathlib.Util.SynthesizeUsing
 
 /-!
@@ -47,13 +50,19 @@ theorem mul_subst {α} [CommRing α] {n1 n2 k e1 e2 t1 t2 : α}
   rw [← h3, mul_comm n1, mul_assoc n2, ← mul_assoc n1, h1,
       ← mul_assoc n2, mul_comm n2, mul_assoc, h2]
 
-theorem div_subst {α} [Field α] {n1 n2 k e1 e2 t1 : α}
-    (h1 : n1 * e1 = t1) (h2 : n2 / e2 = 1) (h3 : n1 * n2 = k) : k * (e1 / e2) = t1 := by
-  rw [← h3, mul_assoc, mul_div_left_comm, h2, ← mul_assoc, h1, mul_comm, one_mul]
+theorem div_subst {α} [Field α] {n1 n2 k e1 e2 t1 t2 : α} (he2 : IsUnit e2)
+    (h1 : n1 * e1 = t1) (h2 : Checked.div n2 e2 he2 = t2) (h3 : n1 * n2 = k) :
+    k * Checked.div e1 e2 he2 = t1 * t2 := by
+  calc
+    k * Checked.div e1 e2 he2 = (n1 * e1) * Checked.div n2 e2 he2 := by
+      rw [← h3]
+      simp only [Checked.div, divp]
+      ac_rfl
+    _ = t1 * t2 := by rw [h1, h2]
 
 theorem cancel_factors_eq_div {α} [Field α] {n e e' : α}
     (h : n * e = e') (h2 : n ≠ 0) : e = e' / n :=
-  eq_div_of_mul_eq h2 <| by rwa [mul_comm] at h
+  eq_divp_iff_mul_eq.mpr <| by simpa only [IsUnit.unit_spec, mul_comm] using h
 
 theorem add_subst {α} [Ring α] {n e1 e2 t1 t2 : α} (h1 : n * e1 = t1) (h2 : n * e2 = t2) :
     n * (e1 + e2) = t1 + t2 := by simp [left_distrib, *]
@@ -67,8 +76,15 @@ theorem pow_subst {α} [CommRing α] {n e1 t1 k l : α} {e2 : ℕ}
     (h1 : n * e1 = t1) (h2 : l * n ^ e2 = k) : k * (e1 ^ e2) = l * t1 ^ e2 := by
   rw [← h2, ← h1, mul_pow, mul_assoc]
 
-theorem inv_subst {α} [Field α] {n k e : α} (h2 : e ≠ 0) (h3 : n * e = k) :
-    k * (e ⁻¹) = n := by rw [← div_eq_mul_inv, ← h3, mul_div_cancel_right₀ _ h2]
+theorem inv_subst {α} [Field α] {n k e : α} (he : IsUnit e) (h3 : n * e = k) :
+    k * Checked.inv e he = n := by
+  rw [← h3, mul_assoc, Checked.mul_inv_cancel, mul_one]
+
+theorem unit_inv_eq_checked {α} [Monoid α] (u : αˣ) :
+    (↑u⁻¹ : α) = Checked.inv (u : α) u.isUnit := by
+  have hu : u.isUnit.unit = u := Units.ext rfl
+  change (↑u⁻¹ : α) = ↑u.isUnit.unit⁻¹
+  rw [hu]
 
 theorem cancel_factors_lt {α} [Field α] [LinearOrder α] [IsStrictOrderedRing α]
     {a b ad bd a' b' gcd : α}
@@ -77,7 +93,7 @@ theorem cancel_factors_lt {α} [Field α] [LinearOrder α] [IsStrictOrderedRing 
   rw [mul_lt_mul_iff_right₀, ← ha, ← hb, ← mul_assoc, ← mul_assoc, mul_comm bd,
     mul_lt_mul_iff_right₀]
   · exact mul_pos had hbd
-  · exact one_div_pos.2 hgcd
+  · exact Checked.div_pos zero_lt_one hgcd
 
 theorem cancel_factors_le {α} [Field α] [LinearOrder α] [IsStrictOrderedRing α]
     {a b ad bd a' b' gcd : α}
@@ -86,12 +102,22 @@ theorem cancel_factors_le {α} [Field α] [LinearOrder α] [IsStrictOrderedRing 
   rw [mul_le_mul_iff_right₀, ← ha, ← hb, ← mul_assoc, ← mul_assoc, mul_comm bd,
     mul_le_mul_iff_right₀]
   · exact mul_pos had hbd
-  · exact one_div_pos.2 hgcd
+  · exact Checked.div_pos zero_lt_one hgcd
 
 theorem cancel_factors_eq {α} [Field α] {a b ad bd a' b' gcd : α} (ha : ad * a = a')
     (hb : bd * b = b') (had : ad ≠ 0) (hbd : bd ≠ 0) (hgcd : gcd ≠ 0) :
     (a = b) = (1 / gcd * (bd * a') = 1 / gcd * (ad * b')) := by
-  grind
+  have hi : (1 / gcd : α) ≠ 0 := by
+    simpa only [Checked.div, divp, one_mul] using
+      (Units.ne_zero ((GroupWithZero.isUnit_of_ne_zero hgcd).unit⁻¹))
+  have hl : 1 / gcd * (bd * a') = (1 / gcd * (ad * bd)) * a := by
+    rw [← ha]
+    ac_rfl
+  have hr : 1 / gcd * (ad * b') = (1 / gcd * (ad * bd)) * b := by
+    rw [← hb]
+    ac_rfl
+  rw [hl, hr]
+  exact propext (mul_right_inj' (mul_ne_zero hi (mul_ne_zero had hbd))).symm
 
 theorem cancel_factors_ne {α} [Field α] {a b ad bd a' b' gcd : α} (ha : ad * a = a')
     (hb : bd * b = b') (had : ad ≠ 0) (hbd : bd ≠ 0) (hgcd : gcd ≠ 0) :
@@ -100,12 +126,59 @@ theorem cancel_factors_ne {α} [Field α] {a b ad bd a' b' gcd : α} (ha : ad * 
 
 /-! ### Computing cancellation factors -/
 
+mutual
+
+/-- Recognize the coefficient forms produced by `norm_num`, including its checked raw casts. -/
+private partial def rationalLiteral? (e : Expr) : Option Rat := do
+  if let some q := e.rat? then return q
+  if let .proj ``Units 0 u := e then return ← unitRationalLiteral? u
+  match e.getAppFnArgs with
+  | (``Nat.rawCast, #[_, _, n]) => return ← n.rawNatLit?
+  | (``Int.rawCast, #[_, _, n]) =>
+    match n.getAppFnArgs with
+    | (``Int.ofNat, #[n]) => return ← n.rawNatLit?
+    | (``Int.negOfNat, #[n]) => return Rat.ofInt (.negOfNat (← n.rawNatLit?))
+    | _ => none
+  | (``NNRat.rawCast, #[_, _, n, d, _]) =>
+    let n ← n.rawNatLit?
+    let d ← d.rawNatLit?
+    if hd : d ≠ 0 then return Rat.fraction n d hd else none
+  | (``Rat.rawCast, #[_, _, n, d, _]) =>
+    let n ← match n.getAppFnArgs with
+      | (``Int.ofNat, #[n]) => n.rawNatLit?.map Int.ofNat
+      | (``Int.negOfNat, #[n]) => n.rawNatLit?.map Int.negOfNat
+      | _ => none
+    let d ← d.rawNatLit?
+    if hd : d ≠ 0 then return Rat.fraction n d hd else none
+  | (``Units.val, #[_, _, u]) => unitRationalLiteral? u
+  | (``Neg.neg, #[_, _, a]) => return -(← rationalLiteral? a)
+  | (``HMul.hMul, #[_, _, _, _, a, b]) =>
+    return (← rationalLiteral? a) * (← rationalLiteral? b)
+  | _ => none
+
+private partial def unitRationalLiteral? (u : Expr) : Option Rat := do
+  match u.getAppFnArgs with
+  | (``Units.mk0, #[_, _, a, _]) | (``IsUnit.unit, #[_, _, a, _]) =>
+    rationalLiteral? a
+  | (``Units.mk, #[_, _, a, _, _, _]) => rationalLiteral? a
+  | (``Inv.inv, #[_, _, v]) =>
+    let q ← unitRationalLiteral? v
+    if hq : q ≠ 0 then return Rat.reciprocal q hq else none
+  | (``HMul.hMul, #[_, _, _, _, a, b]) =>
+    return (← unitRationalLiteral? a) * (← unitRationalLiteral? b)
+  | _ => none
+
+end
+
 /--
 `findCancelFactor e` produces a natural number `n`, such that multiplying `e` by `n` will
 be able to cancel all the numeric denominators in `e`. The returned `Tree` describes how to
 distribute the value `n` over products inside `e`.
 -/
 partial def findCancelFactor (e : Expr) : ℕ × BinaryTree ℕ :=
+  if let some q := rationalLiteral? e then
+    (q.den, .node q.den .nil .nil)
+  else
   match e.getAppFnArgs with
   | (``HAdd.hAdd, #[_, _, _, _, e1, e2]) | (``HSub.hSub, #[_, _, _, _, e1, e2]) =>
     let (v1, t1) := findCancelFactor e1
@@ -117,9 +190,9 @@ partial def findCancelFactor (e : Expr) : ℕ × BinaryTree ℕ :=
     let (v2, t2) := findCancelFactor e2
     let pd := v1 * v2
     (pd, .node pd t1 t2)
-  | (``HDiv.hDiv, #[_, _, _, _, e1, e2]) =>
-    -- If e2 is a rational, then it's a natural number due to the simp lemmas in `deriveThms`.
-    match e2.nat? with
+  | (``Checked.div, #[_, _, e1, e2, _]) =>
+    match (rationalLiteral? e2).map (·.num.natAbs) with
+    | some 0 => (1, .node 1 .nil .nil)
     | some q =>
       let (v1, t1) := findCancelFactor e1
       let n := v1 * q
@@ -133,17 +206,22 @@ partial def findCancelFactor (e : Expr) : ℕ × BinaryTree ℕ :=
       let n := v1 ^ k
       (n, .node n t1 <| .node k .nil .nil)
     | none => (1, .node 1 .nil .nil)
-  | (``Inv.inv, #[_, _, e]) =>
-    match e.nat? with
+  | (``Checked.inv, #[_, _, e, _]) =>
+    match (rationalLiteral? e).map (·.num.natAbs) with
+    | some 0 => (1, .node 1 .nil .nil)
     | some q => (q, .node q .nil <| .node q .nil .nil)
     | none => (1, .node 1 .nil .nil)
   | _ => (1, .node 1 .nil .nil)
 
 private def synthesizeUsingNormNum (type : Q(Prop)) : MetaM Q($type) := do
   try
-    synthesizeUsingTactic' type (← `(tactic| norm_num))
+    synthesizeUsingTactic' type (← `(tactic| first | assumption | norm_num))
   catch e =>
     throwError "Could not prove {type} using norm_num. {e.toMessageData}"
+
+private def normalizeArithmetic (e : Expr) : MetaM Simp.Result := do
+  let r ← simpOnlyNames [``unit_inv_eq_checked] e
+  r.mkEqTrans (← NormNum.deriveSimp (← Simp.mkContext) (useSimp := false) (e := r.expr))
 
 /-- `CancelResult mα e v'` provides a value for `v * e` where the denominators have been cancelled.
 -/
@@ -182,38 +260,36 @@ partial def mkProdPrf {u : Level} (α : Q(Type u)) (sα : Q(Field $α)) (v : ℕ
     let ⟨v2, hv2⟩ ← mkProdPrf α sα (v / ln) vln' rhs e2
     let npf ← synthesizeUsingNormNum q($ln' * $vln' = $v')
     return ⟨q($v1 * $v2), q(CancelDenoms.mul_subst $hv1 $hv2 $npf)⟩
-  | .node _ lhs (.node rn _ _), ~q($e1 / $e2) => do
-    -- Invariant: e2 is equal to the natural number rn
+  | .node _ lhs (.node rn _ _), ~q(Checked.div $e1 $e2 $he2) => do
+    -- `rn` is the absolute numerator of the normalized nonzero rational denominator.
     have rn' := (← mkOfNat α amwo <| mkRawNatLit rn).1
     have vrn' := (← mkOfNat α amwo <| mkRawNatLit <| v / rn).1
     let ⟨v1, hv1⟩ ← mkProdPrf α sα (v / rn) vrn' lhs e1
-    let npf ← synthesizeUsingNormNum q($rn' / $e2 = 1)
+    let ratio ← normalizeArithmetic q(Checked.div $rn' $e2 $he2)
+    have ratioValue : Q($α) := ratio.expr
+    have npf : Q(Checked.div $rn' $e2 $he2 = $ratioValue) :=
+      ← ratio.getProof
     let npf2 ← synthesizeUsingNormNum q($vrn' * $rn' = $v')
-    return ⟨q($v1), q(CancelDenoms.div_subst $hv1 $npf $npf2)⟩
+    return ⟨q($v1 * $ratioValue), q(CancelDenoms.div_subst $he2 $hv1 $npf $npf2)⟩
   | t, ~q(-$e) => do
     let ⟨v, hv⟩ ← mkProdPrf α sα v v' t e
     return ⟨q(-$v), q(CancelDenoms.neg_subst $hv)⟩
-  | .node _ lhs@(.node k1 _ _) (.node k2 .nil .nil), ~q($e1 ^ $e2) => do
+  | .node _ lhs@(.node k1 _ _) (.node k2 .nil .nil), ~q(HPow.hPow $e1 ($e2 : ℕ)) => do
     have k1' := (← mkOfNat α amwo <| mkRawNatLit k1).1
     let ⟨v1, hv1⟩ ← mkProdPrf α sα k1 k1' lhs e1
     have l : ℕ := v / (k1 ^ k2)
     have l' := (← mkOfNat α amwo <| mkRawNatLit l).1
     let npf ← synthesizeUsingNormNum q($l' * $k1' ^ $e2 = $v')
     return ⟨q($l' * $v1 ^ $e2), q(CancelDenoms.pow_subst $hv1 $npf)⟩
-  | .node _ .nil (.node rn _ _), ~q($ei ⁻¹) => do
-    have rn' := (← mkOfNat α amwo <| mkRawNatLit rn).1
-    have vrn' := (← mkOfNat α amwo <| mkRawNatLit <| v / rn).1
-    have _ : $rn' =Q $ei := ⟨⟩
-    let npf ← synthesizeUsingNormNum q($rn' ≠ 0)
-    let npf2 ← synthesizeUsingNormNum q($vrn' * $rn' = $v')
-    return ⟨q($vrn'), q(CancelDenoms.inv_subst $npf $npf2)⟩
   | _, _ => do
-    return ⟨q($v' * $e), q(rfl)⟩
+    let result ← normalizeArithmetic q($v' * $e)
+    have value : Q($α) := result.expr
+    have proof : Q($v' * $e = $value) := ← result.getProof
+    return ⟨value, proof⟩
 
-/-- Theorems to get expression into a form that `findCancelFactor` and `mkProdPrf`
-can more easily handle. These are important for dividing by rationals and negative integers. -/
+/-- The coefficient normalizer handles rational and signed denominators directly. -/
 def deriveThms : List Name :=
-  [``div_div_eq_mul_div, ``div_neg]
+  []
 
 /-- Helper lemma to chain together a `simp` proof and the result of `mkProdPrf`. -/
 theorem derive_trans {α} [Mul α] {a b c d : α} (h : a = b) (h' : c * b = d) : c * a = d := h ▸ h'
@@ -278,10 +354,13 @@ Numeric denominators have been canceled in `lhs'` and `rhs'`.
 def cancelDenominatorsInType (h : Expr) : MetaM (Expr × Expr) := do
   let some (lhs, rhs, lem, ord) ← findCompLemma h | throwError m!"cannot kill factors"
   let (al, lhs_p) ← derive lhs
+  let leftFactor := al
   let ⟨u, α, _⟩ ← inferTypeQ' lhs
   let amwo ← synthInstanceQ q(AddMonoidWithOne $α)
   let (ar, rhs_p) ← derive rhs
+  let rightFactor := ar
   let gcd := al.gcd ar
+  let commonFactor := gcd
   have al := (← mkOfNat α amwo <| mkRawNatLit al).1
   have ar := (← mkOfNat α amwo <| mkRawNatLit ar).1
   have gcd := (← mkOfNat α amwo <| mkRawNatLit gcd).1
@@ -299,9 +378,12 @@ def cancelDenominatorsInType (h : Expr) : MetaM (Expr × Expr) := do
       let ar_ne : Q(Prop) := q($ar ≠ 0)
       let gcd_ne : Q(Prop) := q($gcd ≠ 0)
       pure (al_ne, ar_ne, gcd_ne)
-  let al_cond ← synthesizeUsingNormNum al_cond
-  let ar_cond ← synthesizeUsingNormNum ar_cond
-  let gcd_cond ← synthesizeUsingNormNum gcd_cond
+  let al_cond ← if ord then synthesizeUsingNormNum al_cond
+    else proveCancelFactorNonzero lhs leftFactor al
+  let ar_cond ← if ord then synthesizeUsingNormNum ar_cond
+    else proveCancelFactorNonzero rhs rightFactor ar
+  let gcd_cond ← if ord then synthesizeUsingNormNum gcd_cond
+    else proveCancelFactorNonzero lhs commonFactor gcd
   let pf ← mkAppM lem #[lhs_p, rhs_p, al_cond, ar_cond, gcd_cond]
   let pf_tp ← inferType pf
   return ((← findCompLemma pf_tp).elim default (Prod.fst ∘ Prod.snd), pf)

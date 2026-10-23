@@ -49,7 +49,12 @@ def getTableauImp : GaussM n m matType <| Tableau matType := do
     | some rowToSwap =>
       modify fun mat => swapRows mat row rowToSwap
 
-    modify fun mat => divideRow mat row mat[(row, col)]!
+    let mat ← get
+    let pivot := mat[(row, col)]!
+    if hp : pivot ≠ 0 then
+      set (divideRow mat row pivot hp)
+    else
+      throwError "linarith: Gaussian elimination selected a zero pivot"
 
     for i in [:n] do
       if i == row then

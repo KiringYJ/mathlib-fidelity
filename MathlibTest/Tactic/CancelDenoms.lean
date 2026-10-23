@@ -105,7 +105,7 @@ example (h : a > 2) : 1 < 2⁻¹ * a := by
   cancel_denoms
   assumption
 
-example (h : 6 * b = a⁻¹ * 3 + c * 2): b = a⁻¹ * 2⁻¹ + c * 3⁻¹ := by
+example (ha : a ≠ 0) (h : 6 * b = a⁻¹ * 3 + c * 2): b = a⁻¹ * 2⁻¹ + c * 3⁻¹ := by
   cancel_denoms
   assumption
 

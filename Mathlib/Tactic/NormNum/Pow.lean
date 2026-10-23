@@ -5,8 +5,11 @@ Authors: Mario Carneiro, Thomas Murrills
 -/
 module
 
+public meta import Mathlib.Data.Rat.Init
+
 public import Mathlib.Data.Int.Cast.Lemmas
 public import Mathlib.Tactic.NormNum.Basic
+public import Mathlib.Tactic.NormNum.Inv.Basic
 public import Mathlib.Util.Qq
 
 /-!
@@ -201,14 +204,16 @@ meta def evalPow.core {u : Level} {α : Q(Type u)} (e : Q(«$α»)) (f : Q(«$α
     assumeInstancesCommute
     let ⟨nc, r1⟩ ← evalNatPow na nb
     let ⟨dc, r2⟩ ← evalNatPow da nb
-    let qc := mkRat nc.natLit! dc.natLit!
-    return .isNNRat dα qc nc dc q(isNNRat_pow (f := $f) (.refl $f) $pa $pb $r1 $r2)
+    if hdc : dc.natLit! = 0 then failure else
+      let qc := Rat.fraction nc.natLit! dc.natLit! hdc
+      return .isNNRat dα qc nc dc q(isNNRat_pow (f := $f) (.refl $f) $pa $pb $r1 $r2)
   | .isNegNNRat dα qa na da pa =>
     assumeInstancesCommute
     let ⟨zc, nc, r1⟩ ← evalIntPow qa.num q(Int.negOfNat $na) nb
     let ⟨dc, r2⟩ ← evalNatPow da nb
-    let qc := mkRat zc dc.natLit!
-    return .isRat dα qc nc dc q(isRat_pow (f := $f) (.refl $f) $pa $pb $r1 $r2)
+    if hdc : dc.natLit! = 0 then failure else
+      let qc := Rat.fraction zc dc.natLit! hdc
+      return .isRat dα qc nc dc q(isRat_pow (f := $f) (.refl $f) $pa $pb $r1 $r2)
 
 /-- The `norm_num` extension which identifies expressions of the form `a ^ b`,
 such that `norm_num` successfully recognises both `a` and `b`, with `b : ℕ`. -/
@@ -225,104 +230,67 @@ meta def evalPow : NormNumExt where eval {u α} e := do
     liftM <| OptionT.run (evalPow.core q($e) q($f) q($a) q($b) q($nb) q($pb) q($sα) ra) | failure
   return r
 
-theorem isNat_zpow_pos {α : Type*} [DivisionSemiring α] {a : α} {b : ℤ} {nb ne : ℕ}
-    (pb : IsNat b nb) (pe' : IsNat (a ^ nb) ne) :
-    IsNat (a ^ b) ne := by
-  rwa [pb.out, zpow_natCast]
+/-- Evaluating a nonnegative integer power never requires invertibility of its base. -/
+theorem zpow_nat {α : Type*} [Monoid α] {a : α} {b : ℤ} {nb : ℕ}
+    (h : b < 0 → IsUnit a) (pb : IsNat b nb) : Checked.zpow a b h = a ^ nb := by
+  obtain ⟨hb⟩ := pb
+  subst b
+  rfl
 
-theorem isNat_zpow_neg {α : Type*} [DivisionSemiring α] {a : α} {b : ℤ} {nb ne : ℕ}
-    (pb : IsInt b (Int.negOfNat nb)) (pe' : IsNat (a ^ nb)⁻¹ ne) :
-    IsNat (a ^ b) ne := by
-  rwa [pb.out, Int.cast_negOfNat, zpow_neg, zpow_natCast]
+/-- The natural power used to evaluate a negative exponent is invertible.
+The zero exponent case needs no invertibility assumption on the base. -/
+theorem zpow_neg_isUnit {α : Type*} [Monoid α] {a : α} {b : ℤ} {nb : ℕ}
+    (h : b < 0 → IsUnit a) (pb : IsInt b (Int.negOfNat nb)) : IsUnit (a ^ nb) := by
+  by_cases hn : nb = 0
+  · subst nb
+    simpa only [pow_zero] using (isUnit_one : IsUnit (1 : α))
+  · have hb : b < 0 := by
+      rw [pb.out, Int.cast_negOfNat]
+      omega
+    exact (h hb).pow nb
 
-theorem isInt_zpow_pos {α : Type*} [DivisionRing α] {a : α} {b : ℤ} {nb ne : ℕ}
-    (pb : IsNat b nb) (pe' : IsInt (a ^ nb) (Int.negOfNat ne)) :
-    IsInt (a ^ b) (Int.negOfNat ne) := by
-  rwa [pb.out, zpow_natCast]
+/-- Negative integer powers reduce to a checked inverse of a natural power,
+carrying the original exponent-dependent domain evidence. -/
+theorem zpow_neg {α : Type*} [Monoid α] {a : α} {b : ℤ} {nb : ℕ}
+    (h : b < 0 → IsUnit a) (pb : IsInt b (Int.negOfNat nb)) :
+    Checked.zpow a b h = Checked.inv (a ^ nb) (zpow_neg_isUnit h pb) := by
+  by_cases hn : nb = 0
+  · subst nb
+    have hb : b = 0 := pb.out.trans rfl
+    subst b
+    simp only [Checked.zpow_zero, pow_zero, Checked.inv_one]
+  · have hb : b < 0 := by
+      rw [pb.out, Int.cast_negOfNat]
+      omega
+    let hu := h hb
+    rw [Checked.zpow_eq_unit a b hu h]
+    have hp : (zpow_neg_isUnit h pb).unit = hu.unit ^ nb := Units.ext (by
+      simp only [IsUnit.unit_spec, Units.val_pow_eq_pow_val])
+    change (↑(hu.unit ^ b) : α) = ↑(zpow_neg_isUnit h pb).unit⁻¹
+    rw [hp, pb.out, Int.cast_negOfNat, _root_.zpow_neg, zpow_natCast]
 
-theorem isInt_zpow_neg {α : Type*} [DivisionRing α] {a : α} {b : ℤ} {nb ne : ℕ}
-    (pb : IsInt b (Int.negOfNat nb)) (pe' : IsInt (a ^ nb)⁻¹ (Int.negOfNat ne)) :
-    IsInt (a ^ b) (Int.negOfNat ne) := by
-  rwa [pb.out, Int.cast_negOfNat, zpow_neg, zpow_natCast]
-
-theorem isNNRat_zpow_pos {α : Type*} [DivisionSemiring α] {a : α} {b : ℤ} {nb : ℕ}
-    {num : ℕ} {den : ℕ}
-    (pb : IsNat b nb) (pe' : IsNNRat (a ^ nb) num den) :
-    IsNNRat (a^b) num den := by
-  rwa [pb.out, zpow_natCast]
-
-theorem isNNRat_zpow_neg {α : Type*} [DivisionSemiring α] {a : α} {b : ℤ} {nb : ℕ}
-    {num : ℕ} {den : ℕ}
-    (pb : IsInt b (Int.negOfNat nb)) (pe' : IsNNRat ((a ^ nb)⁻¹) num den) :
-    IsNNRat (a^b) num den := by
-  rwa [pb.out, Int.cast_negOfNat, zpow_neg, zpow_natCast]
-
-theorem isRat_zpow_pos {α : Type*} [DivisionRing α] {a : α} {b : ℤ} {nb : ℕ}
-    {num : ℤ} {den : ℕ}
-    (pb : IsNat b nb) (pe' : IsRat (a ^ nb) num den) :
-    IsRat (a ^ b) num den := by
-  rwa [pb.out, zpow_natCast]
-
-theorem isRat_zpow_neg {α : Type*} [DivisionRing α] {a : α} {b : ℤ} {nb : ℕ}
-    {num : ℤ} {den : ℕ}
-    (pb : IsInt b (Int.negOfNat nb)) (pe' : IsRat ((a ^ nb)⁻¹) num den) :
-    IsRat (a ^ b) num den := by
-  rwa [pb.out, Int.cast_negOfNat, zpow_neg, zpow_natCast]
-
-#adaptation_note /-- https://github.com/leanprover/lean4/pull/4096
-the two
-```
-have h : $e =Q (HPow.hPow (γ := $α) $a $b) := ⟨⟩
-h.check
-```
-blocks below were not necessary: we just did it once outside the `match rb with` block.
--/
-/-- The `norm_num` extension which identifies expressions of the form `a ^ b`,
-such that `norm_num` successfully recognises both `a` and `b`, with `b : ℤ`. -/
-@[norm_num _ ^ (_ : ℤ)]
+/-- Evaluate a checked integer power by evaluating its natural power and, when
+needed, its checked inverse. Equality transport retains the source domain proof. -/
+@[norm_num (Checked.zpow _ _ _ : _)]
 meta def evalZPow : NormNumExt where eval {u α} e := do
-  let .app (.app (f : Q($α → ℤ → $α)) (a : Q($α))) (b : Q(ℤ)) ← whnfR e | failure
-  let _c ← synthInstanceQ q(DivisionSemiring $α)
+  let .app (.app (.app (.app (.app (.const ``Checked.zpow _) _)
+      (inst : Q(Monoid $α))) (a : Q($α))) (b : Q(ℤ))) (sourceH : Expr) := e | failure
+  let dsα ← inferDivisionSemiring α
+  guard <| ← isDefEq inst q(@Semiring.toMonoid $α (@DivisionSemiring.toSemiring $α $dsα))
+  assumeInstancesCommute
+  have h : Q($b < 0 → IsUnit $a) := sourceH
+  haveI' : $e =Q Checked.zpow $a $b $h := ⟨⟩
   let rb ← derive (α := q(ℤ)) b
   match rb with
   | .isBool .. | .isNNRat _ .. | .isNegNNRat _ .. => failure
-  | .isNat sβ nb pb =>
-    have h : $e =Q (HPow.hPow (γ := $α) $a $b) := ⟨⟩
-    h.check
-    match ← derive q($a ^ $nb) with
-    | .isBool .. => failure
-    | .isNat sα' ne' pe' =>
-      assumeInstancesCommute
-      return .isNat sα' ne' q(isNat_zpow_pos $pb $pe')
-    | .isNegNat sα' ne' pe' =>
-      let _c ← synthInstanceQ q(DivisionRing $α)
-      assumeInstancesCommute
-      return .isNegNat sα' ne' q(isInt_zpow_pos $pb $pe')
-    | .isNNRat dsα' qe' nume' dene' pe' =>
-      assumeInstancesCommute
-      return .isNNRat dsα' qe' nume' dene' q(isNNRat_zpow_pos $pb $pe')
-    | .isNegNNRat dα' qe' nume' dene' pe' =>
-      assumeInstancesCommute
-      let proof := q(isRat_zpow_pos $pb $pe')
-      return .isRat dα' qe' nume' dene' proof
-  | .isNegNat sβ nb pb =>
-    have h : $e =Q (HPow.hPow (γ := $α) $a $b) := ⟨⟩
-    h.check
-    match ← derive q(($a ^ $nb)⁻¹) with
-    | .isBool .. => failure
-    | .isNat sα' ne' pe' =>
-      assumeInstancesCommute
-      return .isNat sα' ne' q(isNat_zpow_neg $pb $pe')
-    | .isNegNat sα' ne' pe' =>
-      let _c ← synthInstanceQ q(DivisionRing $α)
-      assumeInstancesCommute
-      return .isNegNat sα' ne' q(isInt_zpow_neg $pb $pe')
-    | .isNNRat dsα' qe' nume' dene' pe' =>
-      assumeInstancesCommute
-      return .isNNRat dsα' qe' nume' dene' q(isNNRat_zpow_neg $pb $pe')
-    | .isNegNNRat dα' qe' nume' dene' pe' =>
-      assumeInstancesCommute
-      return .isRat dα' qe' q(.negOfNat $nume') dene' q(isRat_zpow_neg $pb $pe')
+  | .isNat _ nb pb =>
+    assumeInstancesCommute
+    return Result.eqTrans q(zpow_nat $h $pb) (← derive q($a ^ $nb))
+  | .isNegNat _ nb pb =>
+    assumeInstancesCommute
+    have hp : Q(IsUnit ($a ^ $nb)) := q(zpow_neg_isUnit $h $pb)
+    let r ← (← derive q($a ^ $nb)).inv dsα hp
+    return Result.eqTrans q(zpow_neg $h $pb) r
 
 end NormNum
 

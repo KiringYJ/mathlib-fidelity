@@ -27,15 +27,24 @@ namespace Lean.Expr
 Check if an expression is a "rational in normal form",
 i.e. either an integer number in normal form,
 or `n / d` where `n` is an integer in normal form, `d` is a natural number in normal form,
-`d ≠ 1`, and `n` and `d` are coprime (in particular, we check that `(mkRat n d).den = d`).
+`d ≠ 0`, `d ≠ 1`, and `n` and `d` are coprime (normalization preserves `d`).
 If so returns the rational number.
+
+This is syntactic recognition, including the generic `Div.div` syntax; it does not evaluate the
+selected division instance. Proof-producing callers must validate that instance and certify the
+recognized value.
 -/
 def rat? (e : Expr) : Option Rat := do
-  if e.isAppOfArity ``Div.div 4 then
-    let d ← e.appArg!.nat?
+  let args := e.getAppArgs
+  let fraction? :=
+    if e.isAppOfArity ``Div.div 4 then some (args[2]!, args[3]!)
+    else if e.isAppOfArity `Checked.div 5 then some (args[2]!, args[3]!)
+    else none
+  if let some (numerator, denominator) := fraction? then
+    let d ← denominator.nat?
     guard (d ≠ 1)
-    let n ← e.appFn!.appArg!.int?
-    let q := mkRat n d
+    let n ← numerator.int?
+    let q ← if hd : d ≠ 0 then pure (Rat.normalize n d hd) else none
     guard (q.den = d)
     pure q
   else
@@ -49,7 +58,7 @@ Test if an expression represents an explicit number written in normal form:
   or `-n`, where `n` is a natural number in normal form.
 * A "rational in normal form" is an expressions which is either an integer in normal form,
   or `n / d` where `n` is an integer in normal form, `d` is a natural number in normal form,
-  `d ≠ 1`, and `n` and `d` are coprime (in particular, we check that `(mkRat n d).den = d`).
+  `d ≠ 0`, `d ≠ 1`, and `n` and `d` are coprime (normalization preserves `d`).
 -/
 def isExplicitNumber : Expr → Bool
   | .lit _ => true

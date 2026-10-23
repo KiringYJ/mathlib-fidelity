@@ -60,11 +60,8 @@ There are some details we glossed over which make the plan more complicated:
 The normalized form of an expression is the one that is useful for the tactic,
 but not as nice to read. To remedy this, the user-facing normalization calls `ringNFCore`.
 
-Subtraction cancels out identical terms, but division does not.
-That is: `a - a = 0 := by ring` solves the goal,
-but `a / a := 1 by ring` doesn't.
-Note that `0 / 0` is generally defined to be `0`,
-so division cancelling out is not true in general.
+Subtraction cancels out identical terms. Checked division is normalized only after its denominator
+comes with exact `IsUnit` evidence; the tactic does not synthesize or cancel that obligation.
 
 Multiplication of powers can be simplified a little bit further:
 `2 ^ n * 2 ^ n = 4 ^ n := by ring` could be implemented
@@ -308,8 +305,8 @@ structure RingCompute {u : Lean.Level} {α : Q(Type u)} (BaseType : Q($α) → T
   pow {x : Q($α)} {b : Q(ℕ)} : BaseType x → (vb : ExProdNat q($b)) →
     OptionT MetaM (Result BaseType q($x ^ $b))
   /-- Evaluate the inverse of a coefficient. -/
-  inv {x : Q($α)} (czα : Option Q(CharZero $α)) (fα : Q(Semifield $α)) : BaseType x →
-    AtomM (Option <| Result BaseType q($x⁻¹))
+  inv {x : Q($α)} (fα : Q(Semifield $α)) (hx : Q(IsUnit $x)) : BaseType x →
+    AtomM (Option <| Result BaseType q(Checked.inv $x $hx))
   /-- Evaluate an expression as a potential coefficient. -/
   derive (x : Q($α)) : MetaM (Result (ExSum BaseType sα) q($x))
   /-- Decides whether a coefficient is 1 and returns a proof if so. -/
@@ -1102,15 +1099,13 @@ def evalAtom (e : Q($α)) : AtomM (Result (ExSum bt sα) e) := do
   | some (p : Q($e = $a')) =>
     q(atom_pf' $p $pf_one $pb)⟩
 
-theorem inv_mul {R} [Semifield R] {a₁ a₂ a₃ b₁ b₃ c}
-    (_ : (a₁⁻¹ : R) = b₁) (_ : (a₃⁻¹ : R) = b₃)
-    (_ : b₃ * (b₁ ^ a₂ * (nat_lit 1).rawCast) = c) :
-    (a₁ ^ a₂ * a₃ : R)⁻¹ = c := by subst_vars; simp
+theorem isUnit_add_zero {R} [Semifield R] {a : R} : IsUnit (a + 0) → IsUnit a := by
+  simp
 
-nonrec theorem inv_zero {R} [Semifield R] : (0 : R)⁻¹ = 0 := inv_zero
-
-theorem inv_single {R} [Semifield R] {a b : R}
-    (_ : (a : R)⁻¹ = b) : (a + 0)⁻¹ = b + 0 := by simp [*]
+theorem inv_single {R} [Semifield R] {a b : R} {ha : IsUnit (a + 0)} {ha' : IsUnit a}
+    (_ : Checked.inv a ha' = b) : Checked.inv (a + 0) ha = b + 0 := by
+  subst_vars
+  simp only [add_zero]
 theorem inv_add {a₁ a₂ : ℕ} (_ : ((a₁ : ℕ) : R) = b₁) (_ : ((a₂ : ℕ) : R) = b₂) :
     ((a₁ + a₂ : ℕ) : R) = b₁ + b₂ := by
   subst_vars; simp
@@ -1119,50 +1114,51 @@ section
 
 variable (dsα : Q(Semifield $α))
 
-/-- Applies `⁻¹` to a polynomial to get an atom. -/
-def evalInvAtom (a : Q($α)) : AtomM (Result (ExBase bt sα) q($a⁻¹)) := do
-  let (i, ⟨b', _⟩) ← addAtomQ q($a⁻¹)
+/-- Applies checked inversion to a polynomial to get an atom. -/
+def evalInvAtom (a : Q($α)) (ha : Q(IsUnit $a)) :
+    AtomM (Result (ExBase bt sα) q(Checked.inv $a $ha)) := do
+  let (i, ⟨b', _⟩) ← addAtomQ q(Checked.inv $a $ha)
   pure ⟨b', ExBase.atom i, q(Eq.refl $b')⟩
 
 /-- Inverts a polynomial `va` to get a normalized result polynomial.
 
-* `c⁻¹ = (c⁻¹)` if `c` is a constant
-* `(a ^ b * c)⁻¹ = a⁻¹ ^ b * c⁻¹`
+ * a checked inverse of a constant is delegated to the coefficient normalizer;
+ * otherwise the checked inverse is retained as an atom.
 -/
-def ExProd.evalInv {a : Q($α)} (czα : Option Q(CharZero $α)) (va : ExProd bt sα a) :
-    AtomM (Result (ExProd bt sα) q($a⁻¹)) :=
+def ExProd.evalInv {a : Q($α)} (ha : Q(IsUnit $a)) (va : ExProd bt sα a) :
+    AtomM (Result (ExProd bt sα) q(Checked.inv $a $ha)) :=
   Lean.Core.checkSystem decl_name%.toString *>
   match va with
   | .const c => do
-    match ← rc.inv czα q($dsα) c with
+    match ← rc.inv q($dsα) ha c with
     | some ⟨_, vd, pd⟩ => pure ⟨_, .const vd, q($pd)⟩
     | none =>
-      let ⟨_, vc, pc⟩ ← evalInvAtom dsα a
+      let ⟨_, vc, pc⟩ ← evalInvAtom a ha
       let ⟨_, one, pf⟩ := rcℕ.one
       let ⟨_, vc', pc'⟩ := vc.toProd rc (ExProdNat.const (one))
       pure ⟨_, vc', q($pc' ▸ toProd_pf $pc $pf)⟩
-  | .mul (x := a₁) (e := _a₂) _va₁ va₂ va₃ => do
-    let ⟨_b₁, vb₁, pb₁⟩ ← evalInvAtom dsα a₁
-    let ⟨_b₃, vb₃, pb₃⟩ ← va₃.evalInv czα
-    let ⟨_b₁', vb₁', pb₁'⟩ := (vb₁.toProd rc va₂)
-    let ⟨c, vc, pc⟩ ← evalMulProd rc rcℕ vb₃ vb₁'
-    assumeInstancesCommute
-    pure ⟨c, vc, q(inv_mul $pb₁ $pb₃ ($pb₁' ▸ $pc))⟩
+  | .mul (x := x) (e := e) (b := b) .. => do
+      haveI' : $a =Q $x ^ $e * $b := ⟨⟩
+      let ⟨_, vc, pc⟩ ← evalInvAtom q($x ^ $e * $b) ha
+      let ⟨_, one, pf⟩ := rcℕ.one
+      let ⟨_, vc', pc'⟩ := vc.toProd rc (ExProdNat.const one)
+      pure ⟨_, vc', q($pc' ▸ toProd_pf $pc $pf)⟩
 
 /-- Inverts a polynomial `va` to get a normalized result polynomial.
 
-* `0⁻¹ = 0`
-* `a⁻¹ = (a⁻¹)` if `a` is a nontrivial sum
+ * a checked inverse of one monomial delegates to `ExProd.evalInv`;
+ * otherwise the checked inverse is retained as an atom.
 -/
-def ExSum.evalInv {a : Q($α)} (czα : Option Q(CharZero $α)) (va : ExSum bt sα a) :
-    AtomM (Result (ExSum bt sα) q($a⁻¹)) :=
+def ExSum.evalInv {a : Q($α)} (ha : Q(IsUnit $a)) (va : ExSum bt sα a) :
+    AtomM (Result (ExSum bt sα) q(Checked.inv $a $ha)) :=
   match va with
-  | ExSum.zero => pure ⟨_, .zero, (q(inv_zero (R := $α)) : Expr)⟩
-  | ExSum.add va ExSum.zero => do
-    let ⟨_, vb, pb⟩ ← va.evalInv rc rcℕ dsα czα
-    pure ⟨_, vb.toSum, (q(inv_single $pb) : Expr)⟩
+  | ExSum.add (a := a') va ExSum.zero => do
+    assumeInstancesCommute
+    let ha' : Q(IsUnit $a') := q(isUnit_add_zero $ha)
+    let ⟨_, vb, pb⟩ ← ExProd.evalInv (rc := rc) (rcℕ := rcℕ) (dsα := dsα) ha' va
+    pure ⟨_, vb.toSum, (q(inv_single (ha := $ha) (ha' := $ha') $pb) : Expr)⟩
   | va => do
-    let ⟨_, vb, pb⟩ ← evalInvAtom dsα a
+    let ⟨_, vb, pb⟩ ← evalInvAtom a ha
     let ⟨_, one, pf⟩ := rcℕ.one
     let ⟨_', vb', pb'⟩ := vb.toProd rc (ExProdNat.const (one))
     assumeInstancesCommute
@@ -1170,17 +1166,19 @@ def ExSum.evalInv {a : Q($α)} (czα : Option Q(CharZero $α)) (va : ExSum bt s�
 
 end
 
-theorem div_pf {R} [Semifield R] {a b c d : R}
-    (_ : b⁻¹ = c) (_ : a * c = d) : a / b = d := by
-  subst_vars; simp [div_eq_mul_inv]
+theorem div_pf {R} [Semifield R] {a b c d : R} {hb : IsUnit b}
+    (_ : Checked.inv b hb = c) (_ : a * c = d) : Checked.div a b hb = d := by
+  subst_vars
+  rfl
 
 /-- Divides two polynomials `va, vb` to get a normalized result polynomial.
 
-* `a / b = a * b⁻¹`
+ * `Checked.div a b hb = a * Checked.inv b hb`
 -/
-def evalDiv {a b : Q($α)} (rα : Q(Semifield $α)) (czα : Option Q(CharZero $α))
-    (va : ExSum bt sα a) (vb : ExSum bt sα b) : AtomM (Result (ExSum bt sα) q($a / $b)) := do
-  let ⟨_c, vc, pc⟩ ← vb.evalInv rc rcℕ rα czα
+def evalDiv {a b : Q($α)} (rα : Q(Semifield $α)) (hb : Q(IsUnit $b))
+    (va : ExSum bt sα a) (vb : ExSum bt sα b) :
+    AtomM (Result (ExSum bt sα) q(Checked.div $a $b $hb)) := do
+  let ⟨_c, vc, pc⟩ ← ExSum.evalInv (rc := rc) (rcℕ := rcℕ) (dsα := rα) hb vb
   let ⟨d, vd, pd⟩ ← evalMul rc rcℕ va vc
   assumeInstancesCommute
   pure ⟨d, vd, q(div_pf $pc $pd)⟩
@@ -1209,11 +1207,16 @@ theorem neg_congr {R} [CommRing R] {a a' b : R} (_ : a = a')
 theorem sub_congr {R} [CommRing R] {a a' b b' c : R} (_ : a = a') (_ : b = b')
     (_ : a' - b' = c) : (a - b : R) = c := by subst_vars; rfl
 
-theorem inv_congr {R} [Semifield R] {a a' b : R} (_ : a = a')
-    (_ : a'⁻¹ = b) : (a⁻¹ : R) = b := by subst_vars; rfl
+theorem inv_congr {R} [Semifield R] {a a' b : R} {ha : IsUnit a} {ha' : IsUnit a'}
+    (_ : a = a') (_ : Checked.inv a' ha' = b) : Checked.inv a ha = b := by
+  subst_vars
+  congr
 
-theorem div_congr {R} [Semifield R] {a a' b b' c : R} (_ : a = a') (_ : b = b')
-    (_ : a' / b' = c) : (a / b : R) = c := by subst_vars; rfl
+theorem div_congr {R} [Semifield R] {a a' b b' c : R} {hb : IsUnit b} {hb' : IsUnit b'}
+    (_ : a = a') (_ : b = b') (_ : Checked.div a' b' hb' = c) :
+    Checked.div a b hb = c := by
+  subst_vars
+  congr
 
 theorem smul_congr {R α : Type*} [CommSemiring α] [SMul R α]
     {r : R} {a b t c : α}
@@ -1250,8 +1253,8 @@ def isAtomOrDerivable
   | ``HPow.hPow, _, _ | ``Pow.pow, _, _
   | ``Neg.neg, some _, _
   | ``HSub.hSub, some _, _ | ``Sub.sub, some _, _
-  | ``Inv.inv, _, some _
-  | ``HDiv.hDiv, _, some _ | ``Div.div, _, some _ => pure none
+  | ``Checked.inv, _, some _
+  | ``Checked.div, _, some _ => pure none
   | _, _, _ => els
 
 end
@@ -1324,18 +1327,22 @@ partial def eval  {u : Lean.Level}
       let ⟨c, vc, p⟩ ← evalSub rc rcℕ rα va vb
       pure ⟨c, vc, q(sub_congr $pa $pb $p)⟩
     | _ => els
-  | ``Inv.inv, _, some dsα => match e with
-    | ~q($a⁻¹) =>
-      let ⟨_, va, pa⟩ ← eval rc c a
-      let ⟨b, vb, p⟩ ← va.evalInv rc rcℕ dsα c.czα
-      pure ⟨b, vb, q(inv_congr $pa $p)⟩
+  | ``Checked.inv, _, some dsα => match e with
+    | ~q(Checked.inv $a $ha) =>
+      let ⟨a', va, pa⟩ ← eval rc c a
+      assumeInstancesCommute
+      let ha' : Q(IsUnit $a') := q($pa ▸ $ha)
+      let ⟨b, vb, p⟩ ← ExSum.evalInv (rc := rc) (rcℕ := rcℕ) (dsα := dsα) ha' va
+      pure ⟨b, vb, q(inv_congr (ha := $ha) (ha' := $ha') $pa $p)⟩
     | _ => els
-  | ``HDiv.hDiv, _, some dsα | ``Div.div, _, some dsα => match e with
-    | ~q($a / $b) => do
+  | ``Checked.div, _, some dsα => match e with
+    | ~q(Checked.div $a $b $hb) => do
       let ⟨_, va, pa⟩ ← eval rc c a
-      let ⟨_, vb, pb⟩ ← eval rc c b
-      let ⟨c, vc, p⟩ ← evalDiv rc rcℕ dsα c.czα va vb
-      pure ⟨c, vc, q(div_congr $pa $pb $p)⟩
+      let ⟨b', vb, pb⟩ ← eval rc c b
+      assumeInstancesCommute
+      let hb' : Q(IsUnit $b') := q($pb ▸ $hb)
+      let ⟨c, vc, p⟩ ← evalDiv rc rcℕ dsα hb' va vb
+      pure ⟨c, vc, q(div_congr (hb := $hb) (hb' := $hb') $pa $pb $p)⟩
     | _ => els
   | _, _, _ => els
 

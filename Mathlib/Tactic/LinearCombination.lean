@@ -49,15 +49,14 @@ inductive Expanded
   /-- A value, equivalently a proof of `c = c`. -/
   | const (c : Syntax.Term)
 
-/-- The handling in `linear_combination` of left- and right-multiplication and scalar-multiplication
-and of division all five proceed according to the same logic, specified here: given a proof `p` of
-an (in)equality and a constant `c`,
-* if `p` is a proof of an equation, multiply/divide through by `c`;
-* if `p` is a proof of a non-strict inequality, run `positivity` to find a proof that `c` is
-  nonnegative, then multiply/divide through by `c`, invoking the nonnegativity of `c` where needed;
-* if `p` is a proof of a strict inequality, run `positivity` to find a proof that `c` is positive
-  (if possible) or nonnegative (if not), then multiply/divide through by `c`, invoking the
-  positivity or nonnegativity of `c` where needed.
+/-- Left and right multiplication, including scalar multiplication, share the following logic.
+Given a proof `p` of an (in)equality and a constant `c`:
+* if `p` is a proof of an equation, multiply through by `c`;
+* if `p` is a proof of a non-strict inequality, prove that `c` is nonnegative;
+* if `p` is a proof of a strict inequality, prove that `c` is positive if possible, otherwise
+  nonnegative, and retain the strictness justified by that proof.
+
+Division uses `divide` below, which additionally retains the denominator's unit evidence.
 
 This generic logic takes as a parameter the object `lems`: the four lemmas corresponding to the four
 cases. -/
@@ -77,6 +76,32 @@ def rescale (lems : Ineq.WithStrictness → Name) (ty : Option Expr) (p c : Term
     let i := mkIdent <| lems (.lt strict)
     let p' : Term ← ``($i $p $(← hc₂.toSyntax))
     if strict then pure (.proof lt p') else pure (.proof le p')
+
+/-- Divide an (in)equality while retaining the denominator's invertibility obligation.
+Equality uses the elaborated division operation, so genuine Euclidean quotients and group
+operations remain available. Ordered field division also supplies its exact unit evidence. -/
+def divide (ty : Option Expr) (p c : Term) (rel : Ineq) : TermElabM Expanded := do
+  let e ← withSynthesizeLight <| Term.elabTerm c ty
+  let c ← e.toSyntax
+  let finish (rel : Ineq) (stx : Term) : TermElabM Expanded := do
+    let saved ← Term.saveState
+    let pf ← Term.withoutErrToSorry <| withSynthesize <| Term.elabTerm stx none
+    let pf ← instantiateMVars pf
+    if pf.hasSyntheticSorry then
+      saved.restore
+      throwError "division in a linear combination requires valid denominator evidence"
+    return .proof rel (← pf.toSyntax)
+  if rel == .eq then
+    let α ← (← inferType e).toSyntax
+    return ← finish .eq (← ``(congrArg (fun x : $α => x / $c) $p))
+  let (strict, hc) ← if rel == .le then
+    pure (false, ← Meta.Positivity.proveNonneg e)
+  else Meta.Positivity.bestResult e
+  let i := mkIdent <| divRelConstData (if rel == .le then .le else .lt strict)
+  let hc ← hc.toSyntax
+  let proof ← `(let denominator_sign := $hc
+    $i $p denominator_sign (by checked_unit))
+  finish (if strict then .lt else .le) proof
 
 /--
 Performs macro expansion of a linear combination expression,
@@ -142,7 +167,7 @@ partial def expandLinearCombo (ty : Option Expr) (stx : Syntax.Term) :
   | `($e₁ /%$tk $e₂) => do
     match ← expandLinearCombo ty e₁, ← expandLinearCombo ty e₂ with
     | .const c₁, .const c₂ => .const <$> ``($c₁ / $c₂)
-    | .proof rel₁ p₁, .const c₂ => rescale divRelConstData ty p₁ c₂ rel₁
+    | .proof rel₁ p₁, .const c₂ => divide ty p₁ c₂ rel₁
     | _, .proof _ _ => throwErrorAt tk "'linear_combination' supports only linear operations"
   | e =>
     -- We have the expected type from the goal, so we can fully synthesize this leaf node.

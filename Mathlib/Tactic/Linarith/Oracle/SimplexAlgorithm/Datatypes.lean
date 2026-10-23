@@ -5,7 +5,8 @@ Authors: Vasily Nesterov
 -/
 module
 
-public import Mathlib.Init
+public import Mathlib.Data.Rat.Init
+public meta import Mathlib.Data.Rat.Init
 
 /-!
 # Datatypes for the Simplex Algorithm implementation
@@ -32,8 +33,8 @@ class UsableInSimplexAlgorithm (α : Nat → Nat → Type) where
   swapRows {n m : Nat} (mat : α n m) (i j : Nat) : α n m
   /-- Subtracts `i`-th row multiplied by `coef` from `j`-th row. -/
   subtractRow {n m : Nat} (mat : α n m) (i j : Nat) (coef : Rat) : α n m
-  /-- Divides the `i`-th row by `coef`. -/
-  divideRow {n m : Nat} (mat : α n m) (i : Nat) (coef : Rat) : α n m
+  /-- Divides the `i`-th row by a nonzero `coef`. -/
+  divideRow {n m : Nat} (mat : α n m) (i : Nat) (coef : Rat) (hcoef : coef ≠ 0) : α n m
 
 export UsableInSimplexAlgorithm (setElem getValues ofValues swapRows subtractRow divideRow)
 
@@ -76,7 +77,7 @@ instance : UsableInSimplexAlgorithm DenseMatrix where
     let newData : Array (Array Rat) := mat.data.modify j fun row =>
       Array.zipWith (fun x y => x - coef * y) row mat.data[i]!
     ⟨newData⟩
-  divideRow mat i coef := ⟨mat.data.modify i (·.map (· / coef))⟩
+  divideRow mat i coef hcoef := ⟨mat.data.modify i (·.map (Rat.quotient · coef hcoef))⟩
 
 /--
 Structure for sparse matrices over ℚ, implemented as an array of hashmaps, containing only nonzero
@@ -111,9 +112,9 @@ instance : UsableInSimplexAlgorithm SparseMatrix where
         if newVal != 0 then cur.insert k newVal else cur.erase k
       ) row
     ⟨newData⟩
-  divideRow mat i coef :=
+  divideRow mat i coef hcoef :=
     let newData : Array (Std.HashMap Nat Rat) := mat.data.modify i fun row =>
-      row.fold (fun cur k v => cur.insert k (v / coef)) row
+      row.fold (fun cur k v => cur.insert k (Rat.quotient v coef hcoef)) row
     ⟨newData⟩
 
 /--

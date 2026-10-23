@@ -44,11 +44,8 @@ It further implements the core `ring1` tactic.
 The normalized form of an expression is the one that is useful for the tactic,
 but not as nice to read. To remedy this, the user-facing normalization calls `ringNFCore`.
 
-Subtraction cancels out identical terms, but division does not.
-That is: `a - a = 0 := by ring` solves the goal,
-but `a / a := 1 by ring` doesn't.
-Note that `0 / 0` is generally defined to be `0`,
-so division cancelling out is not true in general.
+Subtraction cancels out identical terms. Checked division is normalized only after its denominator
+comes with exact `IsUnit` evidence; the tactic does not synthesize or cancel that obligation.
 
 Multiplication of powers can be simplified a little bit further:
 `2 ^ n * 2 ^ n = 4 ^ n := by ring` could be implemented
@@ -98,12 +95,16 @@ theorem cast_neg {n : ℕ} {R} [Ring R] {a : R} :
   | ⟨e⟩ => by simp [e]
 
 theorem cast_nnrat {n : ℕ} {d : ℕ} {R} [DivisionSemiring R] {a : R} :
-    IsNNRat a n d → a = NNRat.rawCast n d + 0
-  | ⟨_, e⟩ => by simp [e, div_eq_mul_inv]
+    (h : IsNNRat a n d) → a = NNRat.rawCast n d h.den_nz + 0
+  | ⟨inv, e⟩ => by
+      let _ := inv
+      simp [e, NNRat.rawCast, divp, ← invOf_eq_mk0_inv]
 
 theorem cast_rat {n : ℤ} {d : ℕ} {R} [DivisionRing R] {a : R} :
-    IsRat a n d → a = Rat.rawCast n d + 0
-  | ⟨_, e⟩ => by simp [e, div_eq_mul_inv]
+    (h : IsRat a n d) → a = Rat.rawCast n d h.den_nz + 0
+  | ⟨inv, e⟩ => by
+      let _ := inv
+      simp [e, Rat.rawCast, divp, ← invOf_eq_mk0_inv]
 
 end
 
@@ -124,23 +125,6 @@ def ExProd.mkNegNat (_ : Q(Ring $α)) (n : ℕ) : (e : Q($α)) × ExProd sα e :
   let lit : Q(ℕ) := mkRawNatLit n
   ⟨q((Int.negOfNat $lit).rawCast : $α), .const ⟨(-n), none⟩⟩
 
-/--
-Constructs the expression corresponding to `.const q h` for `q = n / d`
-and `h` a proof that `(d : α) ≠ 0`.
-(The `.const` constructor does not check that the expression is correct.)
--/
-def ExProd.mkNNRat (_ : Q(DivisionSemiring $α)) (q : ℚ) (n : Q(ℕ)) (d : Q(ℕ)) (h : Expr) :
-    (e : Q($α)) × ExProd sα e :=
-  ⟨q(NNRat.rawCast $n $d : $α), .const ⟨q, h⟩⟩
-
-/--
-Constructs the expression corresponding to `.const q h` for `q = -(n / d)`
-and `h` a proof that `(d : α) ≠ 0`.
-(The `.const` constructor does not check that the expression is correct.)
--/
-def ExProd.mkNegNNRat (_ : Q(DivisionRing $α)) (q : ℚ) (n : Q(ℕ)) (d : Q(ℕ)) (h : Expr) :
-    (e : Q($α)) × ExProd sα e :=
-  ⟨q(Rat.rawCast (.negOfNat $n) $d : $α), .const ⟨q, h⟩⟩
 end
 
 /-- Converts a proof by `norm_num` that `e` is a numeral, into a normalization as a monomial:
@@ -165,10 +149,16 @@ def evalCast {α : Q(Type u)} (sα : Q(CommSemiring $α)) {e : Q($α)} :
   in the expected type, which arise from different instances. -/
   | .isNegNat rα lit p =>
     pure ⟨_, (ExProd.mkNegNat sα rα lit.natLit!).2.toSum, (q(cast_neg $p) : Expr)⟩
-  | .isNNRat dsα q n d p =>
-    pure ⟨_, (ExProd.mkNNRat sα dsα q n d q(IsNNRat.den_nz $p)).2.toSum, (q(cast_nnrat $p) : Expr)⟩
-  | .isNegNNRat dα q n d p =>
-    pure ⟨_, (ExProd.mkNegNNRat sα dα q n d q(IsRat.den_nz $p)).2.toSum, (q(cast_rat $p) : Expr)⟩
+  | .isNNRat dsα q n d p => do
+    assumeInstancesCommute
+    let v : ExProd sα q(@NNRat.rawCast $α $dsα $n $d (IsNNRat.den_nz $p)) :=
+      .const ⟨q, q(IsNNRat.den_nz $p)⟩
+    pure ⟨_, v.toSum, (q(cast_nnrat $p) : Expr)⟩
+  | .isNegNNRat dα q n d p => do
+    assumeInstancesCommute
+    let v : ExProd sα q(@Rat.rawCast $α $dα (.negOfNat $n) $d (IsRat.den_nz $p)) :=
+      .const ⟨q, q(IsRat.den_nz $p)⟩
+    pure ⟨_, v.toSum, (q(cast_rat $p) : Expr)⟩
   | _ => none
 
 section
@@ -454,10 +444,11 @@ partial def pow {u : Lean.Level} {α : Q(Type u)} (sα : Q(CommSemiring $α))
 
 /-- Evaluate the inverse of a natural number expression. -/
 partial def inv {u : Lean.Level} {α : Q(Type u)} (_sα : Q(CommSemiring $α))
-    {a : Q($α)} (czα : Option Q(CharZero $α)) (_sfα : Q(Semifield $α)) (za : RatCoeff a) :
-    AtomM (Option (Result RatCoeff q($a⁻¹))) := do
-  match (← (Lean.observing? <| za.toResult.inv _ czα :)) with
+    {a : Q($α)} (_sfα : Q(Semifield $α)) (ha : Q(IsUnit $a)) (za : RatCoeff a) :
+    AtomM (Option (Result RatCoeff q(Checked.inv $a $ha))) := do
+  match (← (Lean.observing? <| za.toResult.inv _ ha :)) with
   | some res =>
+    assumeInstancesCommute
     let ⟨_, vc, pc⟩ ← RatCoeff.ofResult res
     return some ⟨_, vc, q($pc)⟩
   | none => return none

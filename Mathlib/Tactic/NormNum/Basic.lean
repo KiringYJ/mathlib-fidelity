@@ -6,11 +6,13 @@ Authors: Mario Carneiro, Thomas Murrills
 module
 
 public import Mathlib.Algebra.Group.Invertible.Defs
+public import Mathlib.Algebra.GroupWithZero.Checked
 public import Mathlib.Algebra.Ring.Defs
 public import Mathlib.Algebra.Ring.Int.Defs
 public import Mathlib.Data.Nat.Cast.Basic
 public import Mathlib.Data.Nat.Cast.Commute
 public import Mathlib.Tactic.HaveI
+public import Mathlib.Tactic.NormNum.Inv.Basic
 public import Mathlib.Tactic.NormNum.Core
 
 /-!
@@ -551,14 +553,6 @@ such that `norm_num` successfully recognises both `a` and `b`. -/
   haveI' : $e =Q $a * $b := ⟨⟩
   ra.mul rb
 
-theorem isNNRat_div {α : Type u} [DivisionSemiring α] : {a b : α} → {cn : ℕ} → {cd : ℕ} →
-    IsNNRat (a * b⁻¹) cn cd → IsNNRat (a / b) cn cd
-  | _, _, _, _, h => by simpa [div_eq_mul_inv] using h
-
-theorem isRat_div {α : Type u} [DivisionRing α] : {a b : α} → {cn : ℤ} → {cd : ℕ} →
-    IsRat (a * b⁻¹) cn cd → IsRat (a / b) cn cd
-  | _, _, _, _, h => by simpa [div_eq_mul_inv] using h
-
 /-- Helper function to synthesize a typed `DivisionSemiring α` expression. -/
 def inferDivisionSemiring {u : Level} (α : Q(Type u)) : MetaM Q(DivisionSemiring $α) :=
   return ← synthInstanceQ q(DivisionSemiring $α) <|> throwError "not a division semiring"
@@ -568,22 +562,28 @@ def inferDivisionRing {u : Level} (α : Q(Type u)) : MetaM Q(DivisionRing $α) :
   return ← synthInstanceQ q(DivisionRing $α) <|> throwError "not a division ring"
 
 attribute [local instance] monadLiftOptionMetaM in
-/-- The `norm_num` extension which identifies expressions of the form `a / b`,
+/-- The `norm_num` extension which identifies checked division,
 such that `norm_num` successfully recognises both `a` and `b`. -/
-@[norm_num _ / _] def evalDiv : NormNumExt where eval {u α} e := do
-  let .app (.app f (a : Q($α))) (b : Q($α)) ← whnfR e | failure
+@[norm_num (Checked.div _ _ _ : _)] def evalDiv : NormNumExt where eval {u α} e := do
+  let .app (.app (.app (.app (.app (.const ``Checked.div _) _) (inst : Q(Monoid $α))) (a : Q($α)))
+      (b : Q($α))) (hb : Expr) := e | failure
   let dsα ← inferDivisionSemiring α
-  haveI' : $e =Q $a / $b := ⟨⟩
-  guard <| ← withNewMCtxDepth <| isDefEq f q(HDiv.hDiv (α := $α))
-  let rab ← derive (q($a * $b⁻¹) : Q($α))
-  if let some ⟨qa, na, da, pa⟩ := rab.toNNRat' dsα then
-    assumeInstancesCommute
-    return .isNNRat' dsα qa na da q(isNNRat_div $pa)
-  else
-    let dα ← inferDivisionRing α
-    let ⟨qa, na, da, pa⟩ ← rab.toRat' dα
-    assumeInstancesCommute
-    return .isRat dα qa na da q(isRat_div $pa)
+  have hb : Q(@IsUnit $α $inst $b) := hb
+  guard <| ← isDefEq inst q(@Semiring.toMonoid $α (@DivisionSemiring.toSemiring $α $dsα))
+  haveI' : $inst =Q @Semiring.toMonoid $α (@DivisionSemiring.toSemiring $α $dsα) := ⟨⟩
+  assumeInstancesCommute
+  have hb' : Q(@IsUnit $α (@Semiring.toMonoid $α
+      (@DivisionSemiring.toSemiring $α $dsα)) $b) := hb
+  let checked : Q($α) := q(@Checked.div $α (@Semiring.toMonoid $α
+    (@DivisionSemiring.toSemiring $α $dsα)) $a $b $hb')
+  let he : Q($e = $checked) := (q(Eq.refl $e) : Expr)
+  let ra ← derive a
+  let rb ← derive b
+  let rib ← rb.inv dsα hb'
+  let product ← ra.mul rib q(@DivisionSemiring.toSemiring $α $dsα)
+  let hdiv : Q($checked = $a * Checked.inv $b $hb') :=
+    q(Checked.div_eq_mul_inv (hb := $hb') $a $b)
+  return product.eqTrans q(Eq.trans $he $hdiv)
 
 /-! ### Logic -/
 

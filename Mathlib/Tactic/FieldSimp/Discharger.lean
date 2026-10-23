@@ -95,7 +95,7 @@ partial def discharge (prop : Expr) : SimpM (Option Expr) :=
       -- these lemmas allow `simp` to function as a cheap approximation to `positivity` in fields
       -- where `positivity` is not available (e.g. through lack of a `≤`)
       let lems := [``two_ne_zero, ``three_ne_zero, ``four_ne_zero, ``mul_ne_zero, ``pow_ne_zero,
-        ``zpow_ne_zero, ``Nat.cast_add_one_ne_zero]
+        ``Nat.cast_add_one_ne_zero]
       let ctx' := ctx.setSimpTheorems <| ctx.simpTheorems.push <|
         ← lems.foldlM (SimpTheorems.addConst · · (post := false)) {}
       let stats : Simp.Stats := { (← get) with }

@@ -10,6 +10,7 @@ public meta import Mathlib.Tactic.Bound.Attribute
 public meta import Mathlib.Tactic.NormNum.Core
 public import Mathlib.Tactic.Bound.Attribute
 public import Mathlib.Tactic.Linarith.Frontend
+public import Mathlib.Algebra.Order.Field.Checked
 
 /-!
 ## The `bound` tactic
@@ -111,6 +112,26 @@ lemma Nat.one_le_cast_of_le {α : Type} [AddCommMonoidWithOne α] [PartialOrder 
     [CharZero α] {n : ℕ} : 1 ≤ n → 1 ≤ (n : α) :=
   Nat.one_le_cast.mpr
 
+@[bound] lemma checked_inv_nonneg_of_nonneg {α : Type*} [GroupWithZero α] [PartialOrder α]
+    [PosMulReflectLT α] {a : α} {ha : IsUnit a} (h : 0 ≤ a) :
+    0 ≤ Checked.inv a ha :=
+  Checked.inv_nonneg.mpr h
+
+@[bound] lemma checked_inv_pos_of_pos {α : Type*} [GroupWithZero α] [PartialOrder α]
+    [PosMulReflectLT α] {a : α} {ha : IsUnit a} (h : 0 < a) :
+    0 < Checked.inv a ha :=
+  Checked.inv_pos.mpr h
+
+@[bound] lemma checked_div_nonneg {α : Type*} [GroupWithZero α] [PartialOrder α]
+    [PosMulReflectLT α] {a b : α} {hb : IsUnit b} (ha : 0 ≤ a) (hb0 : 0 ≤ b) :
+    0 ≤ Checked.div a b hb :=
+  Checked.div_nonneg ha hb0
+
+@[bound] lemma checked_div_pos {α : Type*} [GroupWithZero α] [PartialOrder α]
+    [PosMulReflectLT α] {a b : α} {hb : IsUnit b} (ha : 0 < a) (hb0 : 0 < b) :
+    0 < Checked.div a b hb :=
+  Checked.div_pos ha hb0
+
 /-!
 ### Apply rules for `bound`
 
@@ -123,8 +144,7 @@ attribute [bound] le_refl
 
 -- 0 ≤, 0 <
 attribute [bound] sq_nonneg Nat.cast_nonneg abs_nonneg Nat.zero_lt_succ pow_pos pow_nonneg
-  sub_nonneg_of_le sub_pos_of_lt inv_nonneg_of_nonneg inv_pos_of_pos tsub_pos_of_lt mul_pos
-  mul_nonneg div_pos div_nonneg add_nonneg
+  sub_nonneg_of_le sub_pos_of_lt tsub_pos_of_lt mul_pos mul_nonneg add_nonneg
 
 -- 1 ≤, ≤ 1
 attribute [bound] Nat.one_le_cast_of_le one_le_mul_of_one_le_of_one_le

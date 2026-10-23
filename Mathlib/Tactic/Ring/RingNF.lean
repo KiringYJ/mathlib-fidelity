@@ -94,10 +94,11 @@ theorem nat_rawCast_0 : (Nat.rawCast 0 : R) = 0 := by simp
 theorem nat_rawCast_1 : (Nat.rawCast 1 : R) = 1 := by simp
 theorem nat_rawCast_2 [Nat.AtLeastTwo n] : (Nat.rawCast n : R) = OfNat.ofNat n := rfl
 theorem int_rawCast_neg {R} [Ring R] : (Int.rawCast (.negOfNat n) : R) = -Nat.rawCast n := by simp
-theorem nnrat_rawCast {R} [DivisionSemiring R] :
-    (NNRat.rawCast n d : R) = Nat.rawCast n / Nat.rawCast d := by simp
-theorem rat_rawCast_neg {R} [DivisionRing R] :
-    (Rat.rawCast (.negOfNat n) d : R) = Int.rawCast (.negOfNat n) / Nat.rawCast d := by simp
+theorem nnrat_rawCast {R} [DivisionSemiring R] (hd : (d : R) ≠ 0) :
+    (NNRat.rawCast n d hd : R) = Nat.rawCast n /ₚ Units.mk0 (Nat.rawCast d : R) hd := by rfl
+theorem rat_rawCast_neg {R} [DivisionRing R] (hd : (d : R) ≠ 0) :
+    (Rat.rawCast (.negOfNat n) d hd : R) =
+      Int.rawCast (.negOfNat n) /ₚ Units.mk0 (Nat.rawCast d : R) hd := by rfl
 
 /-- A cleanup routine, which simplifies normalized polynomials to a more human-friendly format. -/
 def cleanup (cfg : RingNF.Config) (r : Simp.Result) : MetaM Simp.Result := do

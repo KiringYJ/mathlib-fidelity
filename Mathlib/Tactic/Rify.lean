@@ -122,6 +122,6 @@ don't need to be imported when using this tactic for `ℕ, ℤ`, or `ℚ`)
 -/
 
 @[rify_simps] lemma ofNat_rat_real (a : ℕ) [a.AtLeastTwo] :
-    ((ofNat(a) : ℚ) : ℝ) = (ofNat(a) : ℝ) := rfl
+    ((ofNat(a) : ℚ) : ℝ) = (ofNat(a) : ℝ) := by norm_cast
 
 end Mathlib.Tactic.Rify

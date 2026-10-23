@@ -112,15 +112,23 @@ def evalCast (cR : Algebra.Cache q($sR)) (cA : Algebra.Cache q($sA)):
     let some dsR := cR.dsα | none
     let some dsA := cA.dsα | none
     assumeInstancesCommute
-    let ⟨r, vr⟩ := Ring.ExProd.mkNNRat q($sR) q(inferInstance) q n d q(IsNNRat.den_nz (α := $A) $p)
-    have : $r =Q (NNRat.rawCast $n $d : $R) := ⟨⟩
+    let hdR : Q(($d : $R) ≠ 0) := q(by
+      intro hd
+      exact (IsNNRat.den_nz $p) (by simpa using congrArg (algebraMap $R $A) hd))
+    let r : Q($R) := q(@NNRat.rawCast $R (@Semifield.toDivisionSemiring $R $dsR)
+      $n $d $hdR)
+    let vr : Ring.ExProd q($sR) r := .const ⟨q, hdR⟩
     pure ⟨_, (Common.ExProd.const ⟨_, vr.toSum⟩).toSum, q(isNNRat_eq_rawCast (a := $a) $p)⟩
   | .isNegNNRat dA q n d p => do
     let some fR := cR.field | none
     let some fA := cA.field | none
     assumeInstancesCommute
-    let ⟨r, vr⟩ := Ring.ExProd.mkNegNNRat q($sR) q(inferInstance) q n d q(IsRat.den_nz $p)
-    have : $r =Q (Rat.rawCast (.negOfNat $n) $d : $R) := ⟨⟩
+    let hdR : Q(($d : $R) ≠ 0) := q(by
+      intro hd
+      exact (IsRat.den_nz $p) (by simpa using congrArg (algebraMap $R $A) hd))
+    let r : Q($R) := q(@Rat.rawCast $R (@Field.toDivisionRing $R $fR)
+      (.negOfNat $n) $d $hdR)
+    let vr : Ring.ExProd q($sR) r := .const ⟨q, hdR⟩
     pure ⟨_, (Common.ExProd.const ⟨_, vr.toSum⟩).toSum, (q(isRat_eq_rawCast (a := $a) $p))⟩
   | _ => none
 
@@ -226,20 +234,12 @@ def pow (cR : Common.Cache sR) {a : Q($A)} {b : Q(ℕ)} (za : BaseType sAlg a)
     let ⟨_, vs, ps⟩ ← Common.evalPow₁ (Ring.ringCompute cR) rcℕ vr vb
     return ⟨_, ⟨_, vs⟩, q(pow_algebraMap $ps)⟩
 
-/-- Evaluate the inverse of two normalized expressions in `R` using `ring`. -/
-/- We include the CharZero argument to match the type signature of the ringCompute entry. -/
-@[nolint unusedArguments]
-def inv (cR : Algebra.Cache sR) {a : Q($A)} (_ : Option Q(CharZero $A)) (fA : Q(Semifield $A))
-    (za : BaseType sAlg a) : AtomM (Option (Common.Result (BaseType sAlg) q($a⁻¹))) :=
-  match za with
-  | .mk r vr => do
-    match cR.dsα with
-    | some fR =>
-      let ⟨_, vs, ps⟩ ← Common.ExSum.evalInv (Ring.ringCompute cR.toCache) rcℕ q($fR) cR.czα vr
-      assumeInstancesCommute
-      return some ⟨_, ⟨_, vs⟩, q(inv_algebraMap $ps)⟩
-    | none =>
-      return none
+/-- A unit in an algebra need not come from a unit in its base ring, so checked inversion cannot in
+general be delegated to the normalized base-ring coefficient. -/
+def inv (_cR : Algebra.Cache sR) {a : Q($A)} (_fA : Q(Semifield $A)) (ha : Q(IsUnit $a))
+    (_za : BaseType sAlg a) :
+    AtomM (Option (Common.Result (BaseType sAlg) q(Checked.inv $a $ha))) :=
+  return none
 
 /-- Evaluate constants in `A` using `norm_num`. -/
 def derive (cR : Algebra.Cache sR) (cA : Algebra.Cache sA) (x : Q($A)) :
