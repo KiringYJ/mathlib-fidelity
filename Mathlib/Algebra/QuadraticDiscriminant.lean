@@ -84,8 +84,18 @@ variable {K : Type*} [Field K] [NeZero (2 : K)] {a b c : K}
 theorem quadratic_eq_zero_iff (ha : a ≠ 0) {s : K} (h : discrim a b c = s * s) (x : K) :
     a * (x * x) + b * x + c = 0 ↔ x = (-b + s) / (2 * a) ∨ x = (-b - s) / (2 * a) := by
   rw [quadratic_eq_zero_iff_discrim_eq_sq ha, h, sq, mul_self_eq_mul_self_iff]
-  field_simp
-  grind
+  rw [Checked.eq_div_iff_mul_eq, Checked.eq_div_iff_mul_eq]
+  constructor
+  · rintro (h₁ | h₁)
+    · left
+      linear_combination -h₁
+    · right
+      linear_combination h₁
+  · rintro (h₁ | h₁)
+    · left
+      linear_combination -h₁
+    · right
+      linear_combination h₁
 
 /-- A quadratic has roots if its discriminant has square roots -/
 theorem exists_quadratic_eq_zero (ha : a ≠ 0) (h : ∃ s, discrim a b c = s * s) :
@@ -103,11 +113,17 @@ theorem quadratic_eq_zero_iff_of_discrim_eq_zero (ha : a ≠ 0) (h : discrim a b
 
 theorem discrim_eq_zero_of_existsUnique (ha : a ≠ 0) (h : ∃! x, a * (x * x) + b * x + c = 0) :
     discrim a b c = 0 := by
-  simp_rw [quadratic_eq_zero_iff_discrim_eq_sq ha] at h
-  generalize discrim a b c = d at h
-  obtain ⟨x, rfl, hx⟩ := h
-  specialize hx (-(x + b / a))
-  grind
+  obtain ⟨x, hx, hu⟩ := h
+  let s := 2 * a * x + b
+  have hs : discrim a b c = s * s := by
+    simpa only [s, sq] using discrim_eq_sq_of_quadratic_eq_zero hx
+  have hp := (quadratic_eq_zero_iff ha hs ((-b + s) / (2 * a))).mpr (Or.inl rfl)
+  have hm := (quadratic_eq_zero_iff ha hs ((-b - s) / (2 * a))).mpr (Or.inr rfl)
+  have he := congrArg (fun y : K ↦ y * (2 * a)) ((hu _ hp).trans (hu _ hm).symm)
+  simp only [Checked.div_mul_cancel] at he
+  have htwo : (2 : K) * s = 0 := by linear_combination he
+  have hs0 : s = 0 := (mul_eq_zero.mp htwo).resolve_left (NeZero.ne _)
+  rw [hs, hs0, mul_zero]
 
 theorem discrim_eq_zero_iff (ha : a ≠ 0) :
     discrim a b c = 0 ↔ (∃! x, a * (x * x) + b * x + c = 0) := by
@@ -135,12 +151,19 @@ theorem discrim_le_zero (h : ∀ x : K, 0 ≤ a * (x * x) + b * x + c) : discrim
   · rcases eq_or_ne b 0 with (rfl | hb)
     · simp
     · have := h ((-c - 1) / b)
-      rw [mul_div_cancel₀ _ hb] at this
+      simp only [zero_mul, zero_add] at this
+      rw [mul_comm b, Checked.div_mul_cancel] at this
       linarith
   -- if a > 0
   · have ha' : 0 ≤ 4 * a := mul_nonneg zero_le_four ha.le
-    convert neg_nonpos.2 (mul_nonneg ha' (h (-b / (2 * a))))
-    field
+    let x := -b / (2 * a)
+    have hx : (2 * a) * x = -b := by
+      change (2 * a) * Checked.div (-b) (2 * a) = -b
+      rw [mul_comm, Checked.div_mul_cancel]
+    have he : b * b - 4 * a * c = -(4 * a * (a * (x * x) + b * x + c)) := by
+      linear_combination (2 * a * x + b) * hx
+    rw [he]
+    exact neg_nonpos.mpr (mul_nonneg ha' (h x))
 
 lemma discrim_le_zero_of_nonpos (h : ∀ x : K, a * (x * x) + b * x + c ≤ 0) : discrim a b c ≤ 0 :=
   discrim_neg a b c ▸ discrim_le_zero <| by simpa only [neg_mul, ← neg_add, neg_nonneg]
