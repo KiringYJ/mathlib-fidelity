@@ -956,6 +956,11 @@ transitional totalized hierarchy. The requirements below define the work and
 its acceptance criteria; they do not claim that the migration has been
 implemented or that its concrete API has been validated.
 
+Implementation is currently paused at the user's requested 2026-10-24 checkpoint.
+The checkpoint commits preserve unfinished work. The inverse item in `TODO.md`
+records the remaining proof, consumer, audit, and verification obligations;
+the complete-delivery acceptance criteria still apply when work resumes.
+
 ### Inventory and mathematical contracts
 
 Map the current hierarchy, notation, instances, rational casts and scalar
@@ -997,7 +1002,12 @@ Preserve these distinctions while migrating every affected connection.
   Construction should find routine local evidence and propagate closure facts.
 - Account for negative powers, rational casts, and rational scalar operations.
   Nonnegative powers retain the whole ambient domain; negative powers require
-  invertibility. A unital ring homomorphism from all rationals into a field
+  invertibility. These are algebraic powers: the monoid law `a ^ 0 = 1` is the
+  empty-product case, including `0 ^ 0 = 1`; a positive power of zero is zero.
+  An integer-exponent interface therefore requires invertibility only when
+  the exponent is negative. This does not specify real-exponent powers or
+  limits of the indeterminate form `0 ^ 0`.
+  A unital ring homomorphism from all rationals into a field
   requires characteristic zero; in positive characteristic, evaluation of a
   rational requires its reduced denominator to remain nonzero. Checking a raw fraction expression
   must precede cancellation, even if its reduced rational value is admissible.

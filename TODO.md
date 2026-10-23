@@ -3654,13 +3654,16 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
 
 - [ ] **Complete the inverse and division migration in one delivery.**
   Follow the total-inverse migration contract in `FORK_DESIGN.md`. The complete-delivery policy is
-  adopted; concrete APIs still need validation, and this documentation does not authorize Lean
-  implementation. Once requested, the migration includes the selected hierarchy, notation,
+  adopted and implementation has been requested; this item remains open until the final APIs and
+  their consumers pass verification. The migration includes the selected hierarchy, notation,
   instances, casts, scalar operations, tactics, matrices, affected analysis consumers, and tests.
   Internal experiments validate the design within that work; there is no prototype-only delivery,
   compatibility stage, or private transitional hierarchy. Independently scoped foundational
   problems may remain precise TODOs behind proved boundaries, but required inverse/division
   consumers and removals cannot be deferred.
+  Preserve the monoid meaning of nonnegative integer powers, including the empty product
+  `0 ^ 0 = 1` and positive powers of zero. Require invertibility only for negative exponents;
+  test these domains separately from real-exponent powers and analytic limit conventions.
   Retain the official Lean toolchain; the experimental custom-toolchain route is withdrawn. Keep
   core `Rat` as a legitimate carrier and audit its operators separately. Replace selected unfaithful
   operations rather than duplicating the rational representation or rebuilding dependent number
@@ -3680,15 +3683,17 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   auxiliaries by provenance. Add regression coverage for hidden operator dependencies, retained
   carriers and faithful operations, and unavoidable proof-only dependencies. A source grep, carrier
   blacklist, import ban, or full transitive proof-dependency ban is not this audit. Conjecture and
-  trusted-axiom checks must still traverse proofs. This entry implements neither the audit nor the API.
+  trusted-axiom checks must still traverse proofs.
   First decide where total inversion is independently meaningful algebraic
   structure, where literature supports a total convention guarded by theorem hypotheses, and where an
   unsupported branch leaks into a claimed mathematical result.  A proof-bearing inverse is not
   automatically more faithful than a total inverse, and the audit must state the equations and
   universal properties each interface is intended to preserve.  The inventory must include scalar
   inverse/division by zero, negative powers, rational casts, simplifier/tactic behavior, and
-  `Matrix.inv` in `Mathlib/LinearAlgebra/Matrix/NonsingularInverse.lean:169`, which returns zero
-  when the determinant is not a unit.  Treat matrix inversion, scalar field inversion, units, and
+  the former zero-on-nonunit `Matrix.inv` interface. The current
+  `Mathlib/LinearAlgebra/Matrix/NonsingularInverse.lean` draft uses `IsUnit A.det` for
+  `nonsingularInverse` and `unitOfIsUnitDet`; its consumer migration still needs verification.
+  Treat matrix inversion, scalar field inversion, units, and
   Euclidean quotient/remainder as separate mathematical contracts: `EuclideanDomain` requires
   `a / 0 = 0` and derives `a % 0 = a` in
   `Mathlib/Algebra/EuclideanDomain/Defs.lean:159` and `:152`, respectively, while a nonzero
@@ -3699,6 +3704,185 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   nonzero evidence, products versus sums, characteristic-sensitive denominators, negative powers,
   and obligations that must survive simplification. Complete the affected local-domain analysis
   interfaces and final-state verification in the same migration.
+
+  **Paused checkpoint, 2026-10-24 (at the user's request).** The checkpoint commits preserve
+  unfinished implementation; they do not close this item or establish a supported intermediate
+  interface. Official Lean and the `Rat` carrier are retained. Resume the same complete migration,
+  without restoring a retired total operator or adding compatibility layers. Earlier isolated
+  module passes are scoped evidence, not final integration verification. Discard evidence from
+  mixed private artifacts or import-only placeholders, and rebuild affected dependencies after
+  source changes or byte-level normalization.
+
+  Remaining tasks, in dependency order:
+
+  - [ ] **Rebuild the final scalar foundation and inference boundary.** Recheck the property-only
+    `GroupWithZero`/field hierarchy, `Checked`/`CheckedHom`, field transports, rational casts and
+    scalar actions, Cauchy completion, and real/complex field constructors against one current
+    artifact graph. The scoped foundation and arithmetic regression passes do not replace this
+    integration check. Keep arbitrary-characteristic admissible rational evaluation separate from
+    characteristic-zero casts. Preserve native unit operations and their computability.
+    Resolve `Mathlib/Util/CheckedOperations.lean`'s directory-dependency warnings by placing the
+    algebra-dependent elaborator at an appropriate layer; do not silence the boundary linter.
+  - [ ] **Close the concrete carrier and Pi operator checks.** The named-carrier lookup fix in
+    `Mathlib/Util/CheckedOperations.lean` passed its regression suite. Freshly check raw
+    `Inv`/`Div`/integer-power synthesis for both `Rat` and `Matrix (Fin 1) (Fin 1) Rat`, and check
+    ordinary notation's exact domain errors separately. The reported concrete Pi leak was based on
+    an invalidated overlay and is unconfirmed. Retained core operators are not an exception for
+    maintained statements, data, or implicit APIs. Keep exact `#guard_msgs` diagnostics; a bare
+    `fail_if_success` or `#check_failure` does not identify the intended failure.
+  - [ ] **Finish `cancel_denoms` runtime closure.** Check
+    `Mathlib/Tactic/CancelDenoms/{Core,Denominator}.lean` and
+    `MathlibTest/{CheckedCancelDenoms,Tactic/CancelDenoms}.lean`. Cancellation-factor nonzeroness
+    must follow from the original denominator certificates, including products in positive
+    characteristic, without adding `CharZero`. Verify normalized rational and negative
+    denominators, unit-coercion reciprocals, nested quotients, natural powers, and the named-carrier
+    regression. At the checkpoint, `CheckedCancelDenoms` passes, including generic-field factors
+    two and six, and the named-carrier fixture no longer fails. The existing
+    `MathlibTest/Tactic/CancelDenoms.lean` still has four failures: positivity of a nested quotient,
+    cancellation of `2 * ↑(Units.mk0 2 ...)⁻¹`, and two rational-coefficient normalization cases
+    with unit reciprocals. Preserve these tests and finish the runtime normalization.
+  - [ ] **Complete the real floor/round prerequisites, then rational certificates.** Migrate and
+    rebuild `Mathlib/Algebra/Order/Floor/Ring.lean`: `floor_div_cast_of_nonneg`,
+    `floor_div_natCast`, and fractional-part quotient formulas need the exact nonzero denominator;
+    `ceil_div_ceil_inv_sub_one` must exclude its denominator-zero case. Do the same for
+    `Mathlib/Algebra/Order/Round.lean`, including `abs_sub_round_div_natCast_eq` and canonical half
+    transport. Neither prerequisite was edited at this checkpoint. The current
+    `Mathlib/Data/Rat/Floor.lean` check stops in `round_cast` when an imported old `round_eq`
+    references retired `DivisionRing.toDivInvMonoid`; this is a failure, not a module pass.
+    Recheck the new `fract_fraction`, `num_intFract`, floor/ceil/fract/round evaluators, and
+    normalized-coprime reciprocal proof, then `Mathlib/Data/NNRat/Floor.lean`. Migrate affected
+    `Floor/BigOperators`, `Floor/Semifield`, and `Analysis/Normed/Group/AddCircle` callers too.
+  - [ ] **Migrate Cauchy series estimates.** In
+    `Mathlib/Algebra/Order/CauSeq/BigOperators.lean`, move `geo_series`'s positive-denominator
+    evidence before reciprocals and replace the old cancellation lemmas. In `series_ratio_test`,
+    split `r = 0` before constructing a reciprocal: that branch has eventually zero terms and
+    eventually constant partial sums; only the positive branch uses geometric reciprocal bounds.
+    Rerun `MathlibTest/InverseCauchy.lean` and the completed foundation's semantic audit afterward.
+  - [ ] **Verify chosen-root and localization transports.** `RootableBy`/`DivisibleBy` now require
+    a nonzero index, and Ore localization constructs actual inverse units with no zero fallback.
+    Scoped module/domain tests and `Algebra/Category/Grp/Injective` passed. Rebuild all class-shape
+    consumers, especially `Topology/Instances/AddCircle/Defs.lean` and
+    `Dynamics/Ergodic/AddCircle.lean`, with the current natural-cast/factorization prerequisites.
+    Preserve the proved Ore `CharZero` transport without restricting arbitrary-characteristic
+    localization constructors.
+  - [ ] **Finish matrix and square-zero integration checks.** Rebuild the exact determinant-unit
+    inverse and every changed Matrix/Charpoly/Schur/PosDef/Hermitian/GL/symplectic/discriminant/LDL
+    consumer. The independent review's vecMul direction, mapped identity, inverse-data bridge,
+    Schur evidence, and symplectic instance-order fixes are in source but need fresh checks.
+    Verify restored `exp_zsmul`, Hermitian and positive-semidefinite integer powers; retain ordinary
+    nonnegative powers for singular matrices. Check exact concrete/generic operator failures,
+    nonzero but nonunit integer determinants, proof irrelevance, empty dimensions, and trivial
+    coefficient rings. In `Matrix/PosDef.lean`, check the `fromBlocks₁₁` inverse bridge: the current
+    bare `invOf_eq_nonsingularInverse` needs its explicit matrix argument `A`.
+    Recheck `TrivSqZeroExt`, `DualNumber`, and their exact epsilon-inverse rejection tests.
+    The elaborated signature of `TrivSqZeroExt.inverse` currently drops the unused section
+    `[SMulCommClass R Rᵐᵒᵖ M]` parameter, although both inverse laws require the commuting-action
+    domain. Repair that signature explicitly and verify both laws. Without commutation, take
+    `R = ℤ × ℤ`, `M = ℤ²`, left action `(a,b) • (u,v) = (au,bv)` and right action
+    `(u,v) • (a,b) = (au + (b-a)v,bv)`. For `x = ((1,-1),(0,1))` the proposed inverse is
+    `y = ((1,-1),(-2,-1))`: `yx = 1`, but `xy = (1,(-4,0)) ≠ 1`. This is a known domain defect,
+    not an open algebraic question. Private mixed-graph passes are not final evidence.
+  - [ ] **Complete finite-ratio and convex consumers.** Recheck finite expectations, density,
+    Sedrakyan, Pluennecke-Ruzsa, doubling constants, and `MathlibTest/ExpectDomain.lean` together.
+    The checkpoint build of `Algebra/Order/BigOperators/Ring/Finset.lean` fails in
+    `sq_sum_div_le_sum_sq_div`: expose the `Units.mk0` coercion for pointwise `divp` cancellation
+    and transport the subtype-indexed sums to the original finset sum. These are two unresolved
+    proof elaboration errors, not a verified Sedrakyan port.
+    Preserve legal empty-numerator/cardinality cases and require nonempty denominator sets only
+    where needed. Revalidate all `centerMass` consumers; residual raw calls remain in
+    `Mathlib/Analysis/Convex/Caratheodory.lean` (`mem_convexHull_erase`) and
+    `Mathlib/Analysis/Complex/Polynomial/GaussLucas.lean`. The former also has a proof-local
+    `f i₀ / g i₀` selection that needs its actual denominator evidence.
+  - [ ] **Finish affine and Euclidean geometry proofs.** Check the final slope, weighted-center,
+    centroid, basis, simplex, finite-dimensional, and normed-affine closure. Scoped basis/simplex
+    and quadratic-discriminant passes exist; the full Euclidean and normed-affine drafts have no
+    final module pass. Verify `AddTorsorBases`' exterior-point coefficient domain and `Circumcenter`
+    cancellation. `MongePoint`'s point-valued domain is `n ≠ 1`: dimension zero has a unique vertex,
+    dimension one has no unique Monge point, and the ratio formula requires `n ≥ 2`. Euler points
+    retain their meaningful positive-dimensional definition, including dimension one. Kernel-check
+    those low-dimensional and reindexing proofs instead of adding centroid fallback values.
+  - [ ] **Check the topology and normed inverse hierarchy.** Rebuild `ContinuousInv₀` on the ambient
+    invertibility subtype, its unit embedding/homeomorphism, the full ordered inverse-filter
+    module, and `Topology/Algebra/Field`. The latter's topological subfield-closure argument must
+    retain the non-Hausdorff case rather than adding `T1`. Check `Normed/Field/{Basic,Lemmas}` and
+    `Normed/Ring/Units`: relative continuity in the trivial ring, openness, uniform inverse bounds,
+    finite remainders, and completeness must retain their actual hypotheses. Preserve the moved
+    pure `Units.inv_sub_inv_remainder` identity without unnecessary analytic assumptions.
+  - [ ] **Validate canonical convergence and derivative domains.** The dependent-domain
+    `LocallyUniformConvergence` and `UniformApproximation` modules have scoped passes. Recheck their
+    consumers and inverse/quotient families, including eventual local range coverage. Arbitrary
+    coordinates alone supply neither continuity nor derivative uniqueness. An embedding does imply
+    coordinate continuity; uniqueness still needs the actual tangent or range coverage. Compile the generalized
+    FDeriv/Deriv relations and rules, computed derivatives with their uniqueness evidence, and all
+    changed product/composition/inverse consumers. The accidentally truncated
+    `HasDerivAt.mul` and `HasFDerivAt.unique` headers were restored during checkpoint review;
+    those source repairs do not establish a module pass. Complete ContDiff/Taylor and secant-slope
+    consumers; no vector-space structure may be invented on units.
+  - [ ] **Finish analytic, complex, and spectral consumers.** The property-only `Complex.Basic`
+    module passed before the final dependency changes; `RCLike.Basic`, the large analytic modules,
+    resolvent APIs, Gelfand formula, and polynomial-root proof remain source drafts. Validate all
+    power-series domain pullback/descent, multiplication/composition, inverse, quotient, and
+    reciprocal-cancellation proofs and their identity-domain specializations. Preserve global
+    reciprocal constructions only when everywhere invertibility has actually been proved.
+    In `GelfandFormula.lean`, port the still ambient-only support
+    `DifferentiableOn.hasFPowerSeriesOnBall` (`Complex/CauchyIntegral.lean`) and
+    `HasFPowerSeriesOnBall.exchange_radius` (`Analytic/Uniqueness.lean`) to actual domains, with
+    closed-ball coordinate coverage; preimage differentiability alone does not discharge those
+    calls. Audit every direct `.hasSum` constructor and consumer: the identity-domain relation now
+    takes the actual point `y` and displacement `y - x`, rather than displacement `y` and value
+    `f (x + y)`. Matching declaration counts is not verification of that semantic change.
+    In `Analytic/Basic.lean`, `uniform_geometric_approx'` still divides by an arbitrary
+    `r' : ℝ≥0`; obtain positive-radius evidence from ball membership or handle `r' = 0` without
+    constructing a reciprocal.
+    Migrate spectral-radius/`RadiusLiminf`/Gelfand nth-root sequences to positive or shifted indices;
+    their real exponent `1 / n` cannot be formed at zero. Port the supporting
+    `ENNReal.eventually_pow_one_div_le` theorem in
+    `Mathlib/Analysis/SpecialFunctions/Pow/Continuity.lean` consistently. The intrinsic ENNReal reciprocal,
+    which yields infinite radius for zero coefficient growth, is a separate legitimate object.
+  - [ ] **Complete operator/dependency audits and residual production ports.** The SCC-safe graph
+    prefilter and audit fixture passed locally. Run `MathlibTest/OperatorFidelityFull.lean` after
+    rebuilding `Mathlib`; its `in Mathlib` commands audit that package's declarations only. Add
+    separate aggregate imports and ownership-scoped semantic/proof gates for maintained Archive,
+    Counterexamples, Wanted, and MathlibTest declarations, explicitly classifying deliberate
+    negative fixtures. The lexical inventory currently scans only Mathlib, Archive, and
+    MathlibTest; extend it to Counterexamples and Wanted as well. The Cauchy/Real normalizing audit
+    still needs its final rerun. Classify lexical candidates in
+    `Basic/Real/Embedding`, `Data/FP/Basic`, `Testing/Plausible/Sampleable`, `Tactic/Echelon/Rat`,
+    `Tactic/Inclusion/Extension/IntervalDyadicReal/Rational`,
+    `Analysis/SpecialFunctions/Trigonometric/Chebyshev/RootsExtrema`, and `NumberTheory/Bernoulli`.
+    Migrate the legacy total-constructor tests in `MathlibTest/Tactic/NormNum/Basic.lean`.
+    `scripts/operator_fidelity_source_inventory.py` is supplementary; textual matches include
+    names/comments and deliberate negative fixtures. Remove replaceable proof/automation uses;
+    record exact unavoidable official-toolchain proof roots and their faithful boundary. Keep
+    fuel/budget exhaustion fail-closed. `Lean.Expr.rat?` retains generic `Div.div` syntax recognition;
+    this does not execute its instance. Audit proof-producing callers' typed interpretation and
+    certificates rather than treating parsing alone as a retired arithmetic backend.
+  - [ ] **Run the complete final acceptance matrix.** Regenerate imports, audit retained/removed
+    theorem coverage and every implicit entry point, and inspect new `sorry`/`admit`, old interfaces,
+    and private/transitional adapters. At one final coherent source state run `lake build`,
+    `lake build MathlibTest Archive Counterexamples Wanted`, `lake test`, `lake lint`,
+    `lake exe lint-style`, `lake exe mk_all --check`, `git diff --check`, and the full semantic and
+    provenance-aware proof reports. Repeat affected independent reviews and tests after any fixes.
+    No complete-library pass or completed-migration claim exists at this checkpoint.
+
+- [ ] **Audit the independently specified Euclidean zero-divisor convention.**
+  `EuclideanDomain.quotient_zero` and its remainder law belong to Euclidean division, including
+  nonunit divisors, rather than exact division by an invertible element. In
+  `Mathlib/Algebra/EuclideanDomain/Field.lean`, `Field.toEuclideanDomain` explicitly selects this
+  contract and is not a global instance. `Field.quotient_eq_divp` proves agreement with unit
+  division only under `b ≠ 0`; the zero branch cannot justify an inverse or cancellation theorem.
+  Audit Euclidean algorithms and their zero-divisor statements under their own contract. Preserve
+  this proved nonzero boundary while replacing any future unsupported Euclidean convention.
+
+- [ ] **Audit negation at the top element of additive ordered groups with top.**
+  `LinearOrderedAddCommGroupWithTop` in `Mathlib/Algebra/Order/AddGroupWithTop.lean` retains total
+  negation and its `neg_top` convention. The reverse `Multiplicative` adapters in
+  `Mathlib/Algebra/Order/GroupWithZero/Canonical.lean` construct units only for nonzero elements:
+  the corresponding additive element is not top, and both inverse laws use
+  `LinearOrderedAddCommGroupWithTop.add_neg_cancel_of_ne_top` on that finite domain. These laws
+  do not validate negation at top. Migrate the additive foundation separately, including generic
+  type-tag instances; it must not supply an unrestricted multiplicative inverse to the selected
+  field/group-with-zero interface.
 
 - [ ] **Separate natural monus from partial subtraction and predecessor.**
   Work on official Lean without replacing core `Nat` or changing its kernel/compiler primitives.
@@ -3767,6 +3951,11 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   accidental reliance on the zero branch; offer a canonical value only when existence and the
   relevant uniqueness are established.  Treat `UniqueDiffWithinAt` as a common sufficient
   hypothesis, not the definition of every legitimate within-set derivative.
+  The inverse migration uses domain-coordinate derivative relations on units or on the actual
+  locus of invertibility. Its computed inverse derivatives must be justified by the proved
+  derivative and uniqueness at that point, with the required coordinate embedding/range
+  hypotheses; they cannot use the projection's nondifferentiable or nonunique branch. The
+  underlying projection redesign remains this separate foundational task.
 
 - [ ] **Separate integrability from existence of a target-valued Bochner integral.**
   `MeasureTheory.integral` in `Mathlib/MeasureTheory/Integral/Bochner/Basic.lean:158` returns zero
@@ -3809,6 +3998,11 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   and make the relational or exact existence-and-uniqueness boundary mathematician-facing.
   Coordinate the complete accepted scope with dependent series, power-series evaluation, and the
   separate `finsum`-based Euler-characteristic audit.
+  `Units.oneSub` in `Mathlib/Analysis/SpecificLimits/Normed.lean` uses a geometric series as the
+  inverse of `1 - t` under `‖t‖ < 1`. Here `summable_geometric_of_norm_lt_one` supplies convergence,
+  the two multiplication laws certify the unit, and `hasSum_geom_series_inverse` supplies the
+  relational sum. This construction must keep that proved summability boundary while `tsum` is
+  audited separately; an arbitrary nonsummable series cannot become an inverse by its zero value.
   In particular, the analytic Dirichlet-density work above proves convergence and denominator
   positivity on its right-hand germ, but `NumberField.Set.primeIdealZetaSum` still has an
   unrestricted real input. Audit its public projection against its exact convergence domain.
