@@ -21,6 +21,10 @@ kinds sharing one Lean mechanism. Its registry, admission gate, dependency
 index, and migrations are pending work in `TODO.md`; recording them here does
 not implement or authorize those changes.
 
+The official-Lean and operator-fidelity boundary below is adopted. Operator
+migrations and their semantic dependency checks remain implementation work;
+earlier inverse experiments do not establish completion.
+
 ## Purpose
 
 This fork is an independent downstream mathematical library built from
@@ -33,6 +37,81 @@ not designed, partitioned, or rewritten for submission to
 `leanprover-community/mathlib4`. Upstream remains a valuable source of
 implementations, theorems, and updates, but upstream compatibility or reviewer
 preference does not override the design commitments in this document.
+
+## Official Lean and Operator Fidelity
+
+Use the official Lean toolchain selected by `lean-toolchain`. Do not maintain
+a patched compiler, kernel, `Init`, `Std`, or core Lean metaprogramming library
+for this fork. Future XL migrations must respect this boundary; encountering
+a totalized toolchain operation does not authorize a toolchain fork or require
+replacing every core type with a library-owned copy.
+
+Ban mathematically unfaithful operators, not otherwise legitimate carriers.
+Core `Rat` and `Nat` remain available. In particular, core `Rat` represents a
+reduced integer numerator and nonzero natural denominator; the existence of
+totalized inverse or division does not invalidate that data representation.
+Classify each operator by the exact domain, specifying properties, name, and
+notation required by Mathematical fidelity below. A genuinely total operation
+such as monus is not excluded merely because it is total.
+
+For every selected operator migration, apply the following boundary to all
+maintained declarations, including inherited and private declarations and
+generated mathematical APIs:
+
+- Remove the unfaithful operator from elaborated statements and mathematical
+  definition semantics. Inspect parameter and result types, hypotheses,
+  conclusions, implicit arguments, non-proof bodies, structure data fields,
+  instances, casts, coercions, notation, and defaults. Follow semantic
+  dependencies through aliases and referenced definitions; visibility and
+  opacity do not hide a forbidden operation.
+- Retain faithful operations on the same carrier. For example, `Rat.normalize`
+  already requires a nonzero denominator and can support checked fraction
+  construction. A replacement must not delegate to the selected retired
+  totalized operation behind a strict wrapper; the complete-migration and
+  independently deferred foundation rules still apply.
+  An independently specified and audited monus may retain core `Nat.sub` as
+  its implementation and support checked subtraction: monus is retained
+  mathematics, while unrestricted ordinary subtraction is the retired
+  interface. Classify these mathematical roles before selecting forbidden
+  dependencies. This does not permit wrapping an operator whose totalized
+  semantics are themselves selected for removal.
+- Remove uses of unfaithful operators from fork-controlled proofs and
+  proof-producing automation wherever feasible. Prefer faithful operations
+  and lemmas, and migrate replaceable helpers, coefficient computations,
+  quotation adapters, and certificate construction within the selected scope.
+  Proof irrelevance alone is not a reason to retain an avoidable use.
+- Retain an unavoidable dependency owned by official Lean only within proof
+  implementation when removing it would require modifying the toolchain.
+  Identify the actual core declarations and prove that their use establishes
+  the faithful elaborated proposition without exporting the excluded
+  semantics. This is not permission to keep replaceable fork-owned uses,
+  introduce a new totalized proof helper, or restore a retired mathematical API.
+- A proposition or predicate definition is statement semantics:
+  `def P : Prop := ...` is not a proof exemption. For `def h : P := ...` with
+  `P : Prop`, the type must satisfy the semantic boundary and the proof body
+  follows the proof-cleanup rule. A data-producing body written with `by`
+  remains mathematical implementation. Likewise, instance law proofs and
+  instance data fields must be inspected separately.
+
+Imported presence and an unavoidable official-toolchain proof dependency do
+not violate this policy. Audit generated proof auxiliaries by provenance and
+keep proof-only constructions from becoming independently maintained
+mathematical statements or value-producing implementations. A source grep,
+carrier blacklist, import ban, or blanket transitive proof-dependency ban
+cannot replace this distinction. The implementation and acceptance checks for
+the selected migration must establish the boundary; this policy does not claim
+that every inherited declaration has already been migrated.
+
+Under the reviewed axiom base, kernel checking establishes that a proof has its
+elaborated proposition as its type. The mathematical audit must establish that
+the proposition and its defining semantics express the intended mathematics;
+kernel checking does not perform that audit. See Lean's documentation on
+[propositions](https://lean-lang.org/doc/reference/latest/The-Type-System/Propositions/)
+and [proof validation](https://lean-lang.org/doc/reference/latest/ValidatingProofs/).
+Retaining unavoidable toolchain dependencies inside proofs does not relax the
+conjecture, proof-status, axiom, or evaluation-trust admission policy. Those
+checks still inspect proof dependencies, separately from the semantic operator
+audit and the cleanup of fork-controlled proof implementations.
 
 ## Complete Migrations
 
@@ -926,6 +1005,30 @@ Preserve these distinctions while migrating every affected connection.
   rules, and tactics so that none can reintroduce the retired totalized
   operation. Removing a named function alone is insufficient.
 
+### Rational foundation and proof infrastructure
+
+Complete this migration on official Lean under the operator-fidelity boundary
+above. Retain core `Rat` as a legitimate rational carrier; no independent
+rational representation is required merely to exclude its unfaithful
+operators. Keep faithful arithmetic and nonnegative powers after their
+dependency audit. Construct checked fractions and reciprocals from valid data,
+using the already checked `Rat.normalize` where appropriate.
+
+The operation inventory must include `Rat.inv`, `Rat.div`, negative integer
+powers, unchecked `mkRat` and `Rat.divInt`, and every notation, cast, instance,
+or automation path that introduces them. Banning only the name `Rat.inv` is
+insufficient. Fork mathematical definitions and statements must not depend on
+the selected retired operations, directly or through a strict wrapper.
+
+Remove their replaceable uses from fork-controlled proofs and proof engines
+as well. Retain legitimate core-rational coefficient arithmetic; keep an
+unavoidable unfaithful operation in official Lean proof infrastructure only
+under the recorded proof boundary above. Do not patch core quotation or Grind
+to remove it. Audit the fork's adapters and emitted terms instead. In
+particular, a `Field.toGrindField` bridge must not restore unconditional `Inv`,
+`Div`, or negative powers on the fork's mathematical field interface through
+the instances of core `Lean.Grind.Field`.
+
 ### Required acceptance cases
 
 Verify these behaviours in the completed implementation, using small internal
@@ -941,9 +1044,17 @@ experiments where needed to settle the design:
   or rewriting friction;
 - numerals are not assumed nonzero without the characteristic hypotheses needed
   in the ambient algebraic structure;
-- strict code cannot fall back to a reachable legacy totalized `/` or inverse;
-- no declaration, notation, coercion, instance, delaborator, or private helper
-  retains a retired totalized operation;
+- mathematical declarations and operations cannot fall back to a legacy
+  totalized `/` or inverse through any implicit or explicit fork interface;
+- no mathematical definition, statement, notation, coercion, instance data
+  field, delaborator, or private semantic helper retains a retired totalized
+  operation; retaining the carrier `Rat` is not a violation;
+- elaborated declarations and their semantic definition dependencies are
+  independent of the selected retired operators, including uses hidden by
+  aliases, wrappers, casts, and instance synthesis;
+- replaceable proof and automation uses have been removed, while unavoidable
+  official-toolchain proof dependencies have their ownership and faithful
+  boundary recorded; imported presence alone is not a failure;
 - error messages identify the failed mathematical obligation instead of exposing
   an undiagnosed coercion or instance-search failure;
 - pretty-printing exposes only the faithful public operation and never
@@ -987,3 +1098,5 @@ the completed inverse/division interface faithful.
   totalization in the repository, declaration by declaration, remains out of
   scope.
 - Preserving fork-only changes in a form suitable for an upstream pull request.
+- Modifying or maintaining Lean's toolchain, banning the carrier `Rat`, or
+  eliminating unavoidable official-toolchain dependencies from proof terms.

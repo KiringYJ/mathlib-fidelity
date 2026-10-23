@@ -140,6 +140,27 @@ Provenance for external material. The heuristics and the refactor protocol
 below are working tools derived from those rules; when they seem to disagree,
 `FORK_DESIGN.md` decides.
 
+### Official toolchain and operator dependency checks
+
+Apply the official-Lean and operator-fidelity boundary in `FORK_DESIGN.md`.
+Keep `lean-toolchain` on an official release and do not patch Lean, `Init`,
+`Std`, or core proof infrastructure for a mathematical migration. An ordinary
+official version upgrade remains a separate compatibility and validation task.
+
+For a selected operator migration, audit maintained declarations' elaborated
+types and semantic definition dependencies, including private and inherited
+declarations, aliases, predicate bodies, implicit instances, and structure data.
+Do not blacklist a legitimate carrier such as core `Rat` merely because it has
+an unfaithful operator. Inspect proofs and proof-producing automation too, and
+remove uses controlled by the fork wherever feasible. For unavoidable proof-only
+dependencies requiring a toolchain change to eliminate, record the actual
+declaration, ownership, and faithful boundary. Classify generated proof
+auxiliaries by provenance. Test hidden semantic dependencies, retained faithful
+operations, and the narrow toolchain exception when implementing the audit.
+Do not substitute a source grep, import prohibition, or full proof dependency
+ban. Existing conjecture, axiom, and evaluation-trust checks still traverse
+proofs. This workflow requirement does not claim the audit exists.
+
 ## Working API Heuristics
 
 These are review questions, not unconditional rules. Establish them against
@@ -237,8 +258,12 @@ For an explicitly authorized public-API canonicalization:
    `git diff --check` for a cross-cutting refactor of this scale.
 7. Add repository-wide negative scans for every removed surface, obsolete
    theorem name, compatibility shim, legacy representation, and newly added
-   `sorry` or `admit`. A later core edit or byte-level normalization invalidates
-   affected evidence and requires the relevant checks to be rerun.
+   `sorry` or `admit`. Apply the operator-fidelity boundary when classifying
+   hits: retained carriers and unavoidable toolchain proof dependencies are
+   distinct from forbidden mathematical semantics and removable proof uses.
+   Textual absence alone does not establish the boundary. A later core edit or
+   byte-level normalization invalidates affected evidence and requires the
+   relevant checks to be rerun.
 
 When a style tool traverses transitive imports, distinguish errors introduced
 by the current diff from pre-existing repository debt. Fix in-scope new errors

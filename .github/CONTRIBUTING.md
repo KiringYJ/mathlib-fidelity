@@ -70,6 +70,13 @@ workflow or secret access as ordinary integration authority.
 - Preserve the intended mathematical objects, domains, hypotheses, and
   conclusions. Do not simplify a formal interface by weakening its mathematics
   or hiding a genuine definedness obligation.
+- Follow the [official-Lean and operator-fidelity boundary](../FORK_DESIGN.md#official-lean-and-operator-fidelity).
+  Exclude unfaithful operators from mathematical definitions and statements,
+  including uses hidden by private helpers or aliases. Retain legitimate core
+  types such as `Rat`. Remove replaceable uses from proofs and automation;
+  record unavoidable official-toolchain proof dependencies and their faithful
+  boundary. Keep official Lean unchanged and audit semantics rather than
+  banning imports or every proof dependency.
 - Prefer established mathematical vocabulary and natural theorem statements.
 - Exercise new or changed APIs in real formalizations or meaningful regression
   tests when practical.

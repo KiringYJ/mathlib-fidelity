@@ -39,6 +39,29 @@ distinct, stable remote names when a later task explicitly adds them.
   each import boundary
 - Status: active
 
+### Official Lean toolchain dependency
+
+- Repository: `leanprover/lean4`
+- URL: `https://github.com/leanprover/lean4.git`
+- Selected release: `v4.34.0-rc2`, commit
+  `6a10ac8c22beadecabdbb0919c2b50214762f91d`; `lean-toolchain` is authoritative
+  for the current official release selection
+- Integration mode: unchanged official compiler, kernel, standard libraries,
+  and core metaprogramming infrastructure; no maintained toolchain fork
+- Semantic boundary: retain legitimate core carriers, including `Rat`; exclude
+  unfaithful operators from fork mathematical definitions and statements under
+  `FORK_DESIGN.md`. Remove replaceable proof and automation uses too. Unavoidable
+  official-toolchain-owned dependencies may remain proof-only with their
+  declarations and faithful boundary recorded. The fork owns its operator APIs
+  and semantic adapters, not a replacement Lean distribution.
+- License evidence: the pinned source root `LICENSE` is Apache License 2.0;
+  its rational and Grind source headers carry the same license.
+  Preserve their existing authorship and all applicable distribution notices.
+- Status: official dependency retained. The experimental custom-toolchain route
+  is withdrawn; it produced no maintained release or completed integration.
+  The fork's inverse and rational-operator migrations remain incomplete work
+  in `TODO.md`; this registry does not claim their validation.
+
 ## Candidate Sources
 
 The following repositories are a future intake backlog, not accepted sources.

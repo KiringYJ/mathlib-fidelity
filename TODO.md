@@ -82,6 +82,15 @@ proof, consumer migration, or removal. A literature-supported total object is re
 mathematics; it is not a renamed extension of the partial operation. Historical completion records
 below describe their recorded scope, not certification that all foundational dependencies are fixed.
 
+The official-Lean and operator-fidelity boundary in `FORK_DESIGN.md` is adopted. Ban unfaithful
+operators in maintained mathematical statements and definition semantics, including private and
+inherited declarations, without banning legitimate carriers such as core `Rat` or `Nat`. Remove
+replaceable uses from fork-controlled proofs and proof-producing automation too. Unavoidable
+dependencies owned by the official toolchain may remain proof-only, with the actual declarations
+and faithful boundary recorded; do not patch Lean to eliminate them. Aliases, wrappers, hidden casts,
+and instance data cannot conceal an excluded semantic dependency. Operator migrations and their
+enforcement remain unchecked work below, not an already established repository-wide property.
+
 ## Paper formalizations and Palomar submissions
 
 These unchecked items record intended Lean formalization and Palomar submission projects.
@@ -3652,6 +3661,26 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   compatibility stage, or private transitional hierarchy. Independently scoped foundational
   problems may remain precise TODOs behind proved boundaries, but required inverse/division
   consumers and removals cannot be deferred.
+  Retain the official Lean toolchain; the experimental custom-toolchain route is withdrawn. Keep
+  core `Rat` as a legitimate carrier and audit its operators separately. Replace selected unfaithful
+  operations rather than duplicating the rational representation or rebuilding dependent number
+  systems solely to avoid the type. Include `Rat.inv`, `Rat.div`, negative integer powers, unchecked
+  `mkRat`/`Rat.divInt`, rational casts, and every implicit or generated path to them. `Rat.normalize`
+  already requires a nonzero denominator and is a valid substrate for checked fraction construction.
+  A strict wrapper that still delegates to a selected retired operation does not complete migration.
+  Remove replaceable uses from fork-controlled proofs, coefficient engines, quotation adapters, and
+  certificates. Retain legitimate rational arithmetic; record unavoidable official-toolchain-owned
+  proof dependencies and their faithful boundary rather than changing Lean. Audit instance synthesis:
+  `Field.toGrindField` must not recreate ambient total inverse, division, or negative powers through
+  core `Lean.Grind.Field`. Official Lean's own `Rat` and Grind implementations remain unchanged.
+  Implement a declaration-aware audit for the selected retired operators over elaborated types and
+  semantic definition dependencies, including implicit arguments, predicate definitions, structure
+  data, private helpers, and generated mathematical APIs. Inspect law proofs and other proof bodies
+  separately for removable uses and documented toolchain exceptions; classify generated proof
+  auxiliaries by provenance. Add regression coverage for hidden operator dependencies, retained
+  carriers and faithful operations, and unavoidable proof-only dependencies. A source grep, carrier
+  blacklist, import ban, or full transitive proof-dependency ban is not this audit. Conjecture and
+  trusted-axiom checks must still traverse proofs. This entry implements neither the audit nor the API.
   First decide where total inversion is independently meaningful algebraic
   structure, where literature supports a total convention guarded by theorem hypotheses, and where an
   unsupported branch leaks into a claimed mathematical result.  A proof-bearing inverse is not
@@ -3672,15 +3701,27 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   interfaces and final-state verification in the same migration.
 
 - [ ] **Separate natural monus from partial subtraction and predecessor.**
+  Work on official Lean without replacing core `Nat` or changing its kernel/compiler primitives.
+  Core `Nat.sub`, `Nat.pred`, division, and remainder remain imported and explicitly reachable.
+  The selected migration must instead complete the fork's mathematical subtraction/predecessor
+  interface, notation, elaboration, instances, statements, and semantic uses. An independently
+  specified and audited monus may retain core `Nat.sub` as its implementation and support checked
+  subtraction. Monus is retained mathematics; the retired interface is unrestricted ordinary
+  subtraction. This does not permit wrapping an operator whose totalized semantics are selected for
+  removal. Proof computations using faithful monus remain legitimate; remove replaceable uses of
+  unfaithful operators and retain unavoidable toolchain dependencies only under the recorded proof
+  boundary. Do not interpret removal of the ordinary fork surface as erasing or retyping Lean's
+  existing builtin declarations, or defer required fork consumers to a toolchain task.
   `Nat.sub` returns zero when the subtrahend is larger, and `Nat.pred 0 = 0`; the current source
   calls these results garbage values in `Mathlib/Data/Nat/PSub.lean:15`.  Truncated subtraction is a
   legitimate monus operation with order-theoretic laws, but exposing it as ordinary `Nat.sub` and
   `a - b` makes it easy to read a theorem as partial or group subtraction while silently truncating
   outside `b ≤ a`.  Make `Nat.psub`/`Nat.ppred`, defined at lines 44 and 32, or proof-bearing
   wrappers the ordinary subtraction/predecessor boundary.  If literature supports monus as the
-  intended mathematical object, expose it under the literature's name and notation; otherwise keep
-  the truncating operation private.  Remove the ordinary subtraction surface because it invites the
-  wrong mathematical reading even when monus itself is independently justified.  Audit and migrate
+  intended mathematical object, expose it under the literature's name and notation; otherwise do not
+  expose it through the fork's mathematical interface. Remove the ordinary subtraction surface
+  because it invites the wrong mathematical reading even when monus itself is independently justified.
+  Audit and migrate
   theorem statements whose natural reading currently depends on that ambiguous surface.
 
 - [ ] **Base conditional extrema on exact `IsLUB`/`IsGLB` existence.**

@@ -12,6 +12,10 @@ conclusions. For a migration, describe the final canonical API, all affected
 consumers, and removal of obsolete notation, instances, aliases, and private
 compatibility machinery. Write "Not applicable" if the change has no
 mathematical or API surface.
+For operator migrations, explain removal of unfaithful operations from elaborated
+statements and mathematical definitions, including hidden dependencies and
+replaceable proof uses. Identify unavoidable official-toolchain proof dependencies
+and their faithful boundary. Retain official Lean and legitimate carriers such as Rat.
 -->
 
 ## Sources and provenance

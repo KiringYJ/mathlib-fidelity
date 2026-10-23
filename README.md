@@ -16,6 +16,9 @@ it is not the design authority for this fork.
 
 - Represent genuinely partial mathematical operations with explicit domains or
   explicit partiality rather than silent fallback values.
+- Retain official Lean and legitimate core types such as `Rat`. Exclude
+  unfaithful operators from mathematical definitions and statements, remove
+  replaceable proof uses, and document unavoidable toolchain proof dependencies.
 - Prefer established mathematical vocabulary and discoverable public APIs over
   representation-driven interfaces.
 - Treat natural formal proofs and real downstream formalizations as tests of
@@ -79,6 +82,11 @@ last-reconciled SHA is maintained; Git ancestry records the reconciled upstream
 baseline.
 
 ## Getting started
+
+Use the official Lean release selected by `lean-toolchain`; this fork does not
+require a custom compiler or standard library. The rational-operator migration
+is an adopted design commitment tracked in `TODO.md`, not a completed property
+of the current source tree.
 
 Install Lean and the supporting tools using the
 [upstream mathlib instructions](https://leanprover-community.github.io/get_started.html),
