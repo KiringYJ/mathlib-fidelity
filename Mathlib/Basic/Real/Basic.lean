@@ -47,7 +47,7 @@ namespace CauSeq.Completion
 @[simp]
 theorem ofRat_rat {abv : ℚ → ℚ} [IsAbsoluteValue abv] (q : ℚ) :
     ofRat (q : ℚ) = (q : Cauchy abv) :=
-  rfl
+  eq_ratCast (ofRatRingHom (abv := abv)) q
 
 end CauSeq.Completion
 
@@ -83,9 +83,6 @@ private irreducible_def neg : ℝ → ℝ
 private irreducible_def mul : ℝ → ℝ → ℝ
   | ⟨a⟩, ⟨b⟩ => ⟨a * b⟩
 
-private noncomputable irreducible_def inv' : ℝ → ℝ
-  | ⟨a⟩ => ⟨a⁻¹⟩
-
 @[no_expose]
 instance : Zero ℝ :=
   ⟨zero⟩
@@ -109,10 +106,6 @@ instance : Mul ℝ :=
 instance : Sub ℝ :=
   ⟨fun a b => a + -b⟩
 
-@[no_expose]
-noncomputable instance : Inv ℝ :=
-  ⟨inv'⟩
-
 theorem ofCauchy_zero : (⟨0⟩ : ℝ) = 0 :=
   zero_def.symm
 
@@ -131,9 +124,6 @@ theorem ofCauchy_sub (a b) : (⟨a - b⟩ : ℝ) = ⟨a⟩ - ⟨b⟩ := by
 
 theorem ofCauchy_mul (a b) : (⟨a * b⟩ : ℝ) = ⟨a⟩ * ⟨b⟩ :=
   (mul_def _ _).symm
-
-theorem ofCauchy_inv {f} : (⟨f⁻¹⟩ : ℝ) = ⟨f⟩⁻¹ :=
-  show _ = inv' _ by rw [inv']
 
 theorem cauchy_zero : (0 : ℝ).cauchy = 0 :=
   show zero.cauchy = 0 by rw [zero_def]
@@ -155,23 +145,14 @@ theorem cauchy_sub : ∀ a b, (a - b : ℝ).cauchy = a.cauchy - b.cauchy
     rw [sub_eq_add_neg, ← cauchy_neg, ← cauchy_add]
     rfl
 
-theorem cauchy_inv : ∀ f, (f⁻¹ : ℝ).cauchy = f.cauchy⁻¹
-  | ⟨f⟩ => show (inv' _).cauchy = _ by rw [inv']
-
 instance instNatCast : NatCast ℝ where natCast n := ⟨n⟩
 instance instIntCast : IntCast ℝ where intCast z := ⟨z⟩
-instance instNNRatCast : NNRatCast ℝ where nnratCast q := ⟨q⟩
-instance instRatCast : RatCast ℝ where ratCast q := ⟨q⟩
 
 lemma ofCauchy_natCast (n : ℕ) : (⟨n⟩ : ℝ) = n := rfl
 lemma ofCauchy_intCast (z : ℤ) : (⟨z⟩ : ℝ) = z := rfl
-lemma ofCauchy_nnratCast (q : ℚ≥0) : (⟨q⟩ : ℝ) = q := rfl
-lemma ofCauchy_ratCast (q : ℚ) : (⟨q⟩ : ℝ) = q := rfl
 
 lemma cauchy_natCast (n : ℕ) : (n : ℝ).cauchy = n := rfl
 lemma cauchy_intCast (z : ℤ) : (z : ℝ).cauchy = z := rfl
-lemma cauchy_nnratCast (q : ℚ≥0) : (q : ℝ).cauchy = q := rfl
-lemma cauchy_ratCast (q : ℚ) : (q : ℝ).cauchy = q := rfl
 
 instance commRing : CommRing ℝ where
   natCast n := ⟨n⟩
@@ -245,6 +226,50 @@ instance : CommSemigroup ℝ := by infer_instance
 
 instance : Semigroup ℝ := by infer_instance
 
+instance instNontrivial : Nontrivial ℝ where
+  exists_pair_ne := ⟨0, 1, fun h ↦ (_root_.zero_ne_one : (0 : Cauchy (abs : ℚ → ℚ)) ≠ 1)
+    (by simpa only [cauchy_zero, cauchy_one] using congrArg cauchy h)⟩
+
+/-- Every nonzero real number is a unit, transported from its Cauchy-completion representative.
+This supplies the field property without an inverse operation on all real numbers. -/
+noncomputable instance instField : Field ℝ where
+  __ := commRing
+  __ := instNontrivial
+  isUnit_of_ne_zero {x} hx := by
+    have hc : x.cauchy ≠ 0 := fun h ↦ hx (ext_cauchy (h.trans cauchy_zero.symm))
+    obtain ⟨u, hu⟩ := GroupWithZero.isUnit_of_ne_zero hc
+    refine ⟨Units.map ringEquivCauchy.symm.toMonoidHom u, ?_⟩
+    exact ext_cauchy hu
+
+instance instCharZero : CharZero ℝ where
+  cast_injective m n h := Nat.cast_injective (R := Cauchy (abs : ℚ → ℚ)) <| by
+    simpa only [cauchy_natCast] using congrArg cauchy h
+
+lemma ofCauchy_nnratCast (q : ℚ≥0) : (⟨(q : Cauchy (abs : ℚ → ℚ))⟩ : ℝ) = q :=
+  map_nnratCast ringEquivCauchy.symm q
+
+lemma ofCauchy_ratCast (q : ℚ) : (⟨(q : Cauchy (abs : ℚ → ℚ))⟩ : ℝ) = q :=
+  map_ratCast ringEquivCauchy.symm q
+
+lemma cauchy_nnratCast (q : ℚ≥0) : (q : ℝ).cauchy = q :=
+  map_nnratCast ringEquivCauchy q
+
+lemma cauchy_ratCast (q : ℚ) : (q : ℝ).cauchy = q :=
+  map_ratCast ringEquivCauchy q
+
+theorem ofCauchy_inv (u : (Cauchy (abs : ℚ → ℚ))ˣ) :
+    (⟨(↑u⁻¹ : Cauchy (abs : ℚ → ℚ))⟩ : ℝ) =
+      (↑(Units.map ringEquivCauchy.symm.toMonoidHom u)⁻¹ : ℝ) := rfl
+
+theorem cauchy_inv (u : ℝˣ) :
+    (↑u⁻¹ : ℝ).cauchy =
+      (↑(Units.map ringEquivCauchy.toMonoidHom u)⁻¹ : Cauchy (abs : ℚ → ℚ)) := rfl
+
+lemma ofCauchy_div (f : Cauchy (abs : ℚ → ℚ)) (g : (Cauchy (abs : ℚ → ℚ))ˣ) :
+    (⟨f /ₚ g⟩ : ℝ) = (⟨f⟩ : ℝ) /ₚ Units.map ringEquivCauchy.symm.toMonoidHom g := by
+  rw [divp, divp, ofCauchy_mul]
+  rfl
+
 instance : Inhabited ℝ :=
   ⟨0⟩
 
@@ -288,7 +313,9 @@ theorem mk_pos {f : CauSeq ℚ abs} : 0 < mk f ↔ Pos f := by
   rw [← mk_zero, mk_lt]
   exact iff_of_eq (congr_arg Pos (sub_zero f))
 
-lemma mk_const {x : ℚ} : mk (const abs x) = x := rfl
+lemma mk_const {x : ℚ} : mk (const abs x) = x := by
+  change (Real.ofCauchy (ofRat x) : ℝ) = (x : ℝ)
+  rw [ofRat_rat, ofCauchy_ratCast]
 
 private irreducible_def le (x y : ℝ) : Prop :=
   x < y ∨ x = y
@@ -335,10 +362,8 @@ theorem ratCast_lt {x y : ℚ} : (x : ℝ) < (y : ℝ) ↔ x < y := by
   exact const_lt
 
 protected theorem zero_lt_one : (0 : ℝ) < 1 := by
-  convert! ratCast_lt.2 zero_lt_one <;> simp [← ofCauchy_ratCast, ofCauchy_one, ofCauchy_zero]
-
-instance instNontrivial : Nontrivial ℝ where
-  exists_pair_ne := ⟨0, 1, Real.zero_lt_one.ne⟩
+  simpa only [Rat.cast_zero, Rat.cast_one] using
+    (ratCast_lt (x := 0) (y := 1)).mpr (zero_lt_one : (0 : ℚ) < 1)
 
 instance instZeroLEOneClass : ZeroLEOneClass ℝ where
   zero_le_one := le_of_lt Real.zero_lt_one
@@ -473,28 +498,6 @@ noncomputable instance linearOrder : LinearOrder ℝ :=
 
 instance : IsDomain ℝ := IsStrictOrderedRing.isDomain
 
-noncomputable instance instDivInvMonoid : DivInvMonoid ℝ where
-
-lemma ofCauchy_div (f g) : (⟨f / g⟩ : ℝ) = (⟨f⟩ : ℝ) / (⟨g⟩ : ℝ) := by
-  simp_rw [div_eq_mul_inv, ofCauchy_mul, ofCauchy_inv]
-
-noncomputable instance instField : Field ℝ where
-  mul_inv_cancel := by
-    rintro ⟨a⟩ h
-    rw [mul_comm]
-    simp only [← ofCauchy_inv, ← ofCauchy_mul, ← ofCauchy_one, ← ofCauchy_zero,
-      Ne, ofCauchy.injEq] at *
-    exact CauSeq.Completion.inv_mul_cancel h
-  inv_zero := by simp [← ofCauchy_zero, ← ofCauchy_inv]
-  nnqsmul := _
-  nnqsmul_def := fun _ _ => rfl
-  qsmul := _
-  qsmul_def := fun _ _ => rfl
-  nnratCast_def q := by
-    rw [← ofCauchy_nnratCast, NNRat.cast_def, ofCauchy_div, ofCauchy_natCast, ofCauchy_natCast]
-  ratCast_def q := by
-    rw [← ofCauchy_ratCast, Rat.cast_def, ofCauchy_div, ofCauchy_natCast, ofCauchy_intCast]
-
 -- Extra instances to short-circuit type class resolution
 noncomputable instance : DivisionRing ℝ := by infer_instance
 
@@ -551,8 +554,10 @@ lemma mul_add_one_le_add_one_pow {a : ℝ} (ha : 0 ≤ a) (b : ℕ) : a * b + 1 
       a * ↑(b + 1) + 1 = (0 + 1) ^ b * a + (a * b + 1) := by
         simp [mul_add, add_assoc, add_left_comm]
       _ ≤ (a + 1) ^ b * a + (a + 1) ^ b := by
-        gcongr
-        · norm_num
+        apply add_le_add
+        · apply mul_le_mul_of_nonneg_right _ ha'.le
+          simpa only [zero_add, one_pow] using
+            (one_le_pow₀ (le_add_of_nonneg_left ha'.le) : (1 : ℝ) ≤ (a + 1) ^ b)
         · exact hb ha'
       _ = (a + 1) ^ (b + 1) := by simp [pow_succ, mul_add]
 

@@ -162,6 +162,11 @@ theorem ofRat_sub (x y : β) : ofRat (x - y) = (ofRat x - ofRat y : Cauchy abv) 
 noncomputable instance Cauchy.instNonTrivial [Nontrivial β] : Nontrivial (Cauchy abv) :=
   ofRat_injective.nontrivial
 
+instance Cauchy.charZero [CharZero β] : CharZero (Cauchy abv) where
+  cast_injective m n h := Nat.cast_injective (R := β) <|
+    ofRat_injective (abv := abv) <| by
+      simpa only [ofRat_natCast] using h
+
 end
 
 section
@@ -182,33 +187,27 @@ section
 variable {α : Type*} [Field α] [LinearOrder α] [IsStrictOrderedRing α]
 variable {β : Type*} [DivisionRing β] {abv : β → α} [IsAbsoluteValue abv]
 
-instance instNNRatCast : NNRatCast (Cauchy abv) where nnratCast q := ofRat q
-instance instRatCast : RatCast (Cauchy abv) where ratCast q := ofRat q
+/-- A sequence with nonzero limit determines a unit of the Cauchy completion. Its inverse is
+represented by the reciprocal of a nonzero tail, with no inversion at zero entries. -/
+noncomputable def mkUnit (f : CauSeq β abv) (hf : ¬LimZero f) : (Cauchy abv)ˣ where
+  val := mk f
+  inv := mk (inv f hf)
+  val_inv := by
+    rw [mk_mul]
+    exact mk_eq.mpr (CauSeq.mul_inv_cancel hf)
+  inv_val := by
+    rw [mk_mul]
+    exact mk_eq.mpr (CauSeq.inv_mul_cancel hf)
 
-@[simp, norm_cast] lemma ofRat_nnratCast (q : ℚ≥0) : ofRat (q : β) = (q : Cauchy abv) := rfl
-@[simp, norm_cast] lemma ofRat_ratCast (q : ℚ) : ofRat (q : β) = (q : Cauchy abv) := rfl
+@[simp] theorem val_mkUnit (f : CauSeq β abv) (hf : ¬LimZero f) :
+    (mkUnit f hf : Cauchy abv) = mk f := rfl
 
-open scoped Classical in
-noncomputable instance : Inv (Cauchy abv) :=
-  ⟨fun x =>
-    (Quotient.liftOn x fun f => mk <| if h : LimZero f then 0 else inv f h) fun f g fg => by
-      have := limZero_congr fg
-      by_cases hf : LimZero f
-      · simp [hf, this.1 hf]
-      · have hg := mt this.2 hf
-        simp only [hf, dite_false, hg]
-        have If : mk (inv f hf) * mk f = 1 := mk_eq.2 (inv_mul_cancel hf)
-        have Ig : mk (inv g hg) * mk g = 1 := mk_eq.2 (inv_mul_cancel hg)
-        have Ig' : mk g * mk (inv g hg) = 1 := mk_eq.2 (mul_inv_cancel hg)
-        rw [mk_eq.2 fg, ← Ig] at If
-        rw [← mul_one (mk (inv f hf)), ← Ig', ← mul_assoc, If, mul_assoc, Ig', mul_one]⟩
+theorem mkUnit_eq {f g : CauSeq β abv} (hf : ¬LimZero f) (hg : ¬LimZero g)
+    (h : f ≈ g) : mkUnit f hf = mkUnit g hg :=
+  Units.ext (mk_eq.mpr h)
 
-theorem inv_zero : (0 : (Cauchy abv))⁻¹ = 0 :=
-  congr_arg mk <| by rw [dite_eq_left] <;> [rfl; exact zero_limZero]
-
-@[simp]
-theorem inv_mk {f} (hf) : (mk (abv := abv) f)⁻¹ = mk (inv f hf) :=
-  congr_arg mk <| by rw [dite_eq_right]
+@[simp] theorem inv_mk (f : CauSeq β abv) (hf : ¬LimZero f) :
+    (↑(mkUnit f hf)⁻¹ : Cauchy abv) = mk (inv f hf) := rfl
 
 theorem cau_seq_zero_ne_one : ¬(0 : CauSeq _ abv) ≈ 1 := fun h ↦
   have : LimZero (1 - 0 : CauSeq _ abv) := Setoid.symm h
@@ -217,37 +216,48 @@ theorem cau_seq_zero_ne_one : ¬(0 : CauSeq _ abv) ≈ 1 := fun h ↦
 
 theorem zero_ne_one : (0 : (Cauchy abv)) ≠ 1 := fun h => cau_seq_zero_ne_one <| mk_eq.1 h
 
-protected theorem inv_mul_cancel {x : (Cauchy abv)} : x ≠ 0 → x⁻¹ * x = 1 :=
-  Quotient.inductionOn x fun f hf => by
-    simp only [mk_eq_mk, ne_eq, mk_eq_zero] at hf
-    simp only [mk_eq_mk, hf, not_false_eq_true, inv_mk, mk_mul]
-    exact Quotient.sound (CauSeq.inv_mul_cancel hf)
-
-protected theorem mul_inv_cancel {x : (Cauchy abv)} : x ≠ 0 → x * x⁻¹ = 1 :=
-  Quotient.inductionOn x fun f hf => by
-    simp only [mk_eq_mk, ne_eq, mk_eq_zero] at hf
-    simp only [mk_eq_mk, hf, not_false_eq_true, inv_mk, mk_mul]
-    exact Quotient.sound (CauSeq.mul_inv_cancel hf)
-
-theorem ofRat_inv (x : β) : ofRat x⁻¹ = ((ofRat x)⁻¹ : (Cauchy abv)) :=
-  congr_arg mk <| by split_ifs with h <;>
-    [simp only [const_limZero.1 h, GroupWithZero.inv_zero, const_zero]; rfl]
-
-noncomputable instance instDivInvMonoid : DivInvMonoid (Cauchy abv) where
-
-lemma ofRat_div (x y : β) : ofRat (x / y) = (ofRat x / ofRat y : Cauchy abv) := by
-  simp only [div_eq_mul_inv, ofRat_inv, ofRat_mul]
-
 /-- The Cauchy completion forms a division ring. -/
 noncomputable instance Cauchy.divisionRing : DivisionRing (Cauchy abv) where
-  inv_zero := inv_zero
-  mul_inv_cancel _ := CauSeq.Completion.mul_inv_cancel
-  nnqsmul := (· • ·)
-  qsmul := (· • ·)
-  nnratCast_def q := by simp_rw [← ofRat_nnratCast, NNRat.cast_def, ofRat_div, ofRat_natCast]
-  ratCast_def q := by rw [← ofRat_ratCast, Rat.cast_def, ofRat_div, ofRat_natCast, ofRat_intCast]
-  nnqsmul_def _ x := Quotient.inductionOn x fun _ ↦ congr_arg mk <| ext fun _ ↦ NNRat.smul_def _ _
-  qsmul_def _ x := Quotient.inductionOn x fun _ ↦ congr_arg mk <| ext fun _ ↦ Rat.smul_def _ _
+  __ := Cauchy.ring
+  __ := Cauchy.instNonTrivial
+  isUnit_of_ne_zero {x} := Quotient.inductionOn x fun f hf ↦
+    ⟨mkUnit f (fun h ↦ hf (mk_eq_zero.mpr h)), rfl⟩
+
+theorem ofRat_inv (x : βˣ) :
+    ofRat (↑x⁻¹ : β) =
+      (↑(Units.map (ofRatRingHom (abv := abv)).toMonoidHom x)⁻¹ : Cauchy abv) := rfl
+
+lemma ofRat_div (x : β) (y : βˣ) :
+    ofRat (x /ₚ y) =
+      ofRat x /ₚ Units.map (ofRatRingHom (abv := abv)).toMonoidHom y := by
+  rw [divp, divp, ofRat_mul]
+  rfl
+
+@[simp, norm_cast] lemma ofRat_nnratCast [CharZero β] (q : ℚ≥0) :
+    ofRat (q : β) = (q : Cauchy abv) := map_nnratCast (ofRatRingHom (abv := abv)) q
+
+@[simp, norm_cast] lemma ofRat_ratCast [CharZero β] (q : ℚ) :
+    ofRat (q : β) = (q : Cauchy abv) := map_ratCast (ofRatRingHom (abv := abv)) q
+
+theorem nnrat_smul_def [CharZero β] (q : ℚ≥0) (x : Cauchy abv) :
+    q • x = (q : Cauchy abv) * x := by
+  induction x using Quotient.inductionOn with
+  | _ f =>
+    change q • mk f = (q : Cauchy abv) * mk f
+    rw [mk_smul, ← ofRat_nnratCast, ofRat, mk_mul]
+    apply congrArg mk
+    ext n
+    exact NNRat.smul_def q (f n)
+
+theorem rat_smul_def [CharZero β] (q : ℚ) (x : Cauchy abv) :
+    q • x = (q : Cauchy abv) * x := by
+  induction x using Quotient.inductionOn with
+  | _ f =>
+    change q • mk f = (q : Cauchy abv) * mk f
+    rw [mk_smul, ← ofRat_ratCast, ofRat, mk_mul]
+    apply congrArg mk
+    ext n
+    exact Rat.smul_def q (f n)
 
 /-- Show the first 10 items of a representative of this equivalence class of Cauchy sequences.
 
@@ -365,32 +375,16 @@ end
 
 section
 
-variable {β : Type*} [Field β] {abv : β → α} [IsAbsoluteValue abv] [IsComplete β abv]
+variable {β : Type*} [DivisionRing β] {abv : β → α} [IsAbsoluteValue abv] [IsComplete β abv]
 
-theorem lim_inv {f : CauSeq β abv} (hf : ¬LimZero f) : lim (inv f hf) = (lim f)⁻¹ :=
-  have hl : lim f ≠ 0 := by rwa [← lim_eq_zero_iff] at hf
-  lim_eq_of_equiv_const <|
-    show LimZero (inv f hf - const abv (lim f)⁻¹) from
-      have h₁ : ∀ (g f : CauSeq β abv) (hf : ¬LimZero f), LimZero (g - f * inv f hf * g) :=
-        fun g f hf => by
-          have h₂ : g - f * inv f hf * g = 1 * g - f * inv f hf * g := by rw [one_mul g]
-          have h₃ : f * inv f hf * g = (f * inv f hf) * g := by simp [mul_assoc]
-          have h₄ : g - f * inv f hf * g = (1 - f * inv f hf) * g := by rw [h₂, h₃, ← sub_mul]
-          have h₅ : g - f * inv f hf * g = g * (1 - f * inv f hf) := by rw [h₄, mul_comm]
-          have h₆ : g - f * inv f hf * g = g * (1 - inv f hf * f) := by rw [h₅, mul_comm f]
-          rw [h₆]; exact mul_limZero_right _ (Setoid.symm (CauSeq.inv_mul_cancel _))
-      have h₂ :
-        LimZero
-          (inv f hf - const abv (lim f)⁻¹ -
-            (const abv (lim f) - f) * (inv f hf * const abv (lim f)⁻¹)) := by
-              rw [sub_mul, ← sub_add, sub_sub, sub_add_eq_sub_sub, sub_right_comm, sub_add]
-              change LimZero
-                (inv f hf - const abv (lim f) * (inv f hf * const abv (lim f)⁻¹) -
-                  (const abv (lim f)⁻¹ - f * (inv f hf * const abv (lim f)⁻¹)))
-              exact sub_limZero
-                (by rw [← mul_assoc, mul_right_comm, const_inv hl]; exact h₁ _ _ _)
-                (by rw [← mul_assoc]; exact h₁ _ _ _)
-      (limZero_congr h₂).mpr <| mul_limZero_left _ (Setoid.symm (equiv_lim f))
+theorem lim_inv {f : CauSeq β abv} (hf : ¬LimZero f) :
+    lim (inv f hf) =
+      (↑(Units.mk0 (lim f) (fun h ↦ hf ((lim_eq_zero_iff f).mp h)))⁻¹ : β) := by
+  apply (Units.inv_eq_of_mul_eq_one_left (u :=
+    Units.mk0 (lim f) (fun h ↦ hf ((lim_eq_zero_iff f).mp h))) ?_).symm
+  change lim (inv f hf) * lim f = 1
+  rw [lim_mul_lim]
+  exact (lim_eq_lim_of_equiv (CauSeq.inv_mul_cancel hf)).trans (lim_const 1)
 
 end
 

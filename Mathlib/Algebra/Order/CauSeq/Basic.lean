@@ -7,7 +7,7 @@ module
 
 public import Mathlib.Algebra.Group.Action.Pi
 public import Mathlib.Algebra.Order.AbsoluteValue.Basic
-public import Mathlib.Algebra.Order.Field.Basic
+public import Mathlib.Algebra.Order.Field.Halves
 public import Mathlib.Algebra.Order.Group.MinMax
 public import Mathlib.Algebra.Ring.Pi
 public import Mathlib.Data.Setoid.Basic
@@ -56,26 +56,38 @@ theorem rat_mul_continuous_lemma {ε K₁ K₂ : α} (ε0 : 0 < ε) :
     ∃ δ > 0, ∀ {a₁ a₂ b₁ b₂ : β}, abv a₁ < K₁ → abv b₂ < K₂ → abv (a₁ - b₁) < δ →
       abv (a₂ - b₂) < δ → abv (a₁ * a₂ - b₁ * b₂) < ε := by
   have K0 : (0 : α) < max 1 (max K₁ K₂) := lt_of_lt_of_le zero_lt_one (le_max_left _ _)
-  have εK := div_pos (half_pos ε0) K0
+  let u : αˣ := Units.mk0 (max 1 (max K₁ K₂)) K0.ne'
+  have εK : 0 < (ε / 2) /ₚ u := divp_pos (half_pos ε0) K0
   refine ⟨_, εK, fun {a₁ a₂ b₁ b₂} ha₁ hb₂ h₁ h₂ => ?_⟩
   replace ha₁ := lt_of_lt_of_le ha₁ (le_trans (le_max_left _ K₂) (le_max_right 1 _))
   replace hb₂ := lt_of_lt_of_le hb₂ (le_trans (le_max_right K₁ _) (le_max_right 1 _))
   set M := max 1 (max K₁ K₂)
+  have hu : (u : α) = M := by simp only [u, M, Units.val_mk0]
+  have hcancel : (ε / 2) /ₚ u * M = ε / 2 := by
+    simpa only [hu] using divp_mul_cancel (ε / 2) u
   suffices abv ((a₁ - b₁) * b₂ + a₁ * (a₂ - b₂)) < ε by
     simpa [sub_eq_add_neg, mul_add, add_mul, add_left_comm] using this
   grw [abv_add abv, abv_mul abv, abv_mul abv, h₁.le, h₂.le, ha₁, hb₂, mul_comm M,
-    div_mul_cancel₀ _ (ne_of_gt K0), add_halves]
+    hcancel, add_halves]
 
-theorem rat_inv_continuous_lemma {β : Type*} [DivisionRing β] (abv : β → α) [IsAbsoluteValue abv]
+theorem rat_inv_continuous_lemma {β : Type*} [Ring β] (abv : β → α) [IsAbsoluteValue abv]
     {ε K : α} (ε0 : 0 < ε) (K0 : 0 < K) :
-    ∃ δ > 0, ∀ {a b : β}, K ≤ abv a → K ≤ abv b → abv (a - b) < δ → abv (a⁻¹ - b⁻¹) < ε := by
+    ∃ δ > 0, ∀ {a b : βˣ}, K ≤ abv (a : β) → K ≤ abv (b : β) →
+      abv ((a : β) - b) < δ → abv ((↑a⁻¹ : β) - ↑b⁻¹) < ε := by
   refine ⟨K * ε * K, mul_pos (mul_pos K0 ε0) K0, fun {a b} ha hb h => ?_⟩
-  have a0 := K0.trans_le ha
-  have b0 := K0.trans_le hb
-  rw [inv_sub_inv' ((abv_pos abv).1 a0) ((abv_pos abv).1 b0), abv_mul abv, abv_mul abv, abv_inv abv,
-    abv_inv abv, abv_sub abv]
-  grw [← ha, mul_assoc, ← hb, h]
-  simp [K0.ne']
+  have hmul : abv (a : β) * abv ((↑a⁻¹ : β) - ↑b⁻¹) * abv (b : β) =
+      abv ((a : β) - b) := by
+    rw [← abv_mul abv, ← abv_mul abv]
+    simpa only [mul_sub, sub_mul, mul_assoc, Units.mul_inv, Units.inv_mul,
+      one_mul, mul_one] using abv_sub abv (b : β) (a : β)
+  have hnonneg := abv_nonneg abv ((↑a⁻¹ : β) - ↑b⁻¹)
+  have hbound : K * abv ((↑a⁻¹ : β) - ↑b⁻¹) * K ≤
+      abv (a : β) * abv ((↑a⁻¹ : β) - ↑b⁻¹) * abv (b : β) :=
+    mul_le_mul (mul_le_mul_of_nonneg_right ha hnonneg) hb K0.le
+      (mul_nonneg (abv_nonneg abv _) hnonneg)
+  rw [hmul] at hbound
+  exact (mul_lt_mul_iff_right₀ K0).mp <|
+    (mul_lt_mul_iff_left₀ K0).mp (hbound.trans_lt h)
 
 end
 
@@ -370,16 +382,20 @@ theorem add_limZero {f g : CauSeq β abv} (hf : LimZero f) (hg : LimZero g) : Li
 theorem mul_limZero_right (f : CauSeq β abv) {g} (hg : LimZero g) : LimZero (f * g)
   | ε, ε0 =>
     let ⟨F, F0, hF⟩ := f.bounded' 0
-    (hg _ <| div_pos ε0 F0).imp fun _ H j ij => by
+    (hg (ε /ₚ Units.mk0 F F0.ne') <| divp_pos ε0 F0).imp fun _ H j ij => by
       have := mul_lt_mul' (le_of_lt <| hF j) (H _ ij) (abv_nonneg abv _) F0
-      rwa [mul_comm F, div_mul_cancel₀ _ (ne_of_gt F0), ← abv_mul] at this
+      have hcancel : ε /ₚ Units.mk0 F F0.ne' * F = ε := by
+        simpa only [Units.val_mk0] using divp_mul_cancel ε (Units.mk0 F F0.ne')
+      rwa [mul_comm F, hcancel, ← abv_mul] at this
 
 theorem mul_limZero_left {f} (g : CauSeq β abv) (hg : LimZero f) : LimZero (f * g)
   | ε, ε0 =>
     let ⟨G, G0, hG⟩ := g.bounded' 0
-    (hg _ <| div_pos ε0 G0).imp fun _ H j ij => by
+    (hg (ε /ₚ Units.mk0 G G0.ne') <| divp_pos ε0 G0).imp fun _ H j ij => by
       have := mul_lt_mul'' (H _ ij) (hG j) (abv_nonneg abv _) (abv_nonneg abv _)
-      rwa [div_mul_cancel₀ _ (ne_of_gt G0), ← abv_mul] at this
+      have hcancel : ε /ₚ Units.mk0 G G0.ne' * G = ε := by
+        simpa only [Units.val_mk0] using divp_mul_cancel ε (Units.mk0 G G0.ne')
+      rwa [hcancel, ← abv_mul] at this
 
 theorem neg_limZero {f : CauSeq β abv} (hf : LimZero f) : LimZero (-f) := by
   rw [← neg_one_mul f]
@@ -521,39 +537,84 @@ section DivisionRing
 
 variable [DivisionRing β] {abv : β → α} [IsAbsoluteValue abv]
 
-theorem inv_aux {f : CauSeq β abv} (hf : ¬LimZero f) :
-    ∀ ε > 0, ∃ i, ∀ j ≥ i, abv ((f j)⁻¹ - (f i)⁻¹) < ε
-  | _, ε0 =>
-    let ⟨_, K0, HK⟩ := abv_pos_of_not_limZero hf
-    let ⟨_, δ0, Hδ⟩ := rat_inv_continuous_lemma abv ε0 K0
-    let ⟨i, H⟩ := exists_forall_ge_and HK (f.cauchy₃ δ0)
-    ⟨i, fun _ ij =>
-      let ⟨iK, H'⟩ := H _ le_rfl
-      Hδ (H _ ij).1 iK (H' _ ij)⟩
+theorem exists_ne_zero_tail {f : CauSeq β abv} (hf : ¬LimZero f) :
+    ∃ i, ∀ j ≥ i, f j ≠ 0 := by
+  obtain ⟨K, hK, i, hi⟩ := abv_pos_of_not_limZero hf
+  exact ⟨i, fun j hj ↦ (abv_pos abv).mp (hK.trans_le (hi j hj))⟩
 
-/-- Given a Cauchy sequence `f` with nonzero limit, create a Cauchy sequence with values equal to
-the inverses of the values of `f`. -/
-def inv (f : CauSeq β abv) (hf : ¬LimZero f) : CauSeq β abv :=
+/-- An index after which a Cauchy sequence with nonzero limit has no zero terms. -/
+noncomputable def nonzeroTailIndex (f : CauSeq β abv) (hf : ¬LimZero f) : ℕ :=
+  Classical.choose (exists_ne_zero_tail hf)
+
+theorem nonzeroTailIndex_spec {f : CauSeq β abv} (hf : ¬LimZero f) {j : ℕ}
+    (hj : nonzeroTailIndex f hf ≤ j) : f j ≠ 0 :=
+  Classical.choose_spec (exists_ne_zero_tail hf) j hj
+
+theorem inv_aux {f : CauSeq β abv} (hf : ¬LimZero f) :
+    IsCauSeq abv fun j ↦
+      (↑(Units.mk0 (f (max j (nonzeroTailIndex f hf)))
+        (nonzeroTailIndex_spec hf (le_max_right _ _)))⁻¹ : β) := by
+  intro ε hε
+  obtain ⟨K, hK, n, hn⟩ := abv_pos_of_not_limZero hf
+  obtain ⟨δ, hδ, hcont⟩ := rat_inv_continuous_lemma abv hε hK
+  obtain ⟨i, hi⟩ := f.cauchy₂ hδ
+  refine ⟨max i n, fun j hj ↦ hcont ?_ ?_ ?_⟩
+  · exact hn _ ((le_max_right i n).trans (hj.trans (le_max_left _ _)))
+  · exact hn _ ((le_max_right i n).trans (le_max_left _ _))
+  · exact hi _ ((le_max_left i n).trans (hj.trans (le_max_left _ _)))
+      _ ((le_max_left i n).trans (le_max_left _ _))
+
+/-- The reciprocal of a Cauchy sequence with nonzero limit. Before the nonzero tail begins,
+repeat its first term; every entry being inverted is therefore nonzero. The resulting sequence
+agrees with pointwise inversion on the tail and represents the inverse in the completion. -/
+noncomputable def inv (f : CauSeq β abv) (hf : ¬LimZero f) : CauSeq β abv :=
   ⟨_, inv_aux hf⟩
 
-@[simp, norm_cast]
-theorem coe_inv {f : CauSeq β abv} (hf) : ⇑(inv f hf) = (f : ℕ → β)⁻¹ :=
+theorem coe_inv {f : CauSeq β abv} (hf) :
+    ⇑(inv f hf) = fun j ↦
+      (↑(Units.mk0 (f (max j (nonzeroTailIndex f hf)))
+        (nonzeroTailIndex_spec hf (le_max_right _ _)))⁻¹ : β) :=
   rfl
 
-@[simp, norm_cast]
-theorem inv_apply {f : CauSeq β abv} (hf i) : inv f hf i = (f i)⁻¹ :=
+@[simp]
+theorem inv_apply {f : CauSeq β abv} (hf i) :
+    inv f hf i = (↑(Units.mk0 (f (max i (nonzeroTailIndex f hf)))
+      (nonzeroTailIndex_spec hf (le_max_right _ _)))⁻¹ : β) :=
   rfl
 
-theorem inv_mul_cancel {f : CauSeq β abv} (hf) : inv f hf * f ≈ 1 := fun ε ε0 =>
-  let ⟨K, K0, i, H⟩ := abv_pos_of_not_limZero hf
-  ⟨i, fun j ij => by simpa [(abv_pos abv).1 (lt_of_lt_of_le K0 (H _ ij)), abv_zero abv] using ε0⟩
+theorem inv_apply_of_le {f : CauSeq β abv} (hf : ¬LimZero f) {j : ℕ}
+    (hj : nonzeroTailIndex f hf ≤ j) :
+    inv f hf j = (↑(Units.mk0 (f j) (nonzeroTailIndex_spec hf hj))⁻¹ : β) := by
+  simp only [inv_apply, max_eq_left hj]
 
-theorem mul_inv_cancel {f : CauSeq β abv} (hf) : f * inv f hf ≈ 1 := fun ε ε0 =>
-  let ⟨K, K0, i, H⟩ := abv_pos_of_not_limZero hf
-  ⟨i, fun j ij => by simpa [(abv_pos abv).1 (lt_of_lt_of_le K0 (H _ ij)), abv_zero abv] using ε0⟩
+theorem inv_ne_zero {f : CauSeq β abv} (hf : ¬LimZero f) (j : ℕ) : inv f hf j ≠ 0 := by
+  rw [inv_apply]
+  exact Units.ne_zero _
+
+theorem inv_mul_cancel_apply {f : CauSeq β abv} (hf : ¬LimZero f) {j : ℕ}
+    (hj : nonzeroTailIndex f hf ≤ j) : inv f hf j * f j = 1 := by
+  simpa only [inv_apply, max_eq_left hj, Units.val_mk0] using
+    (Units.mk0 (f j) (nonzeroTailIndex_spec hf hj)).inv_mul
+
+theorem mul_inv_cancel_apply {f : CauSeq β abv} (hf : ¬LimZero f) {j : ℕ}
+    (hj : nonzeroTailIndex f hf ≤ j) : f j * inv f hf j = 1 := by
+  simpa only [inv_apply, max_eq_left hj, Units.val_mk0] using
+    (Units.mk0 (f j) (nonzeroTailIndex_spec hf hj)).mul_inv
+
+theorem inv_mul_cancel {f : CauSeq β abv} (hf) : inv f hf * f ≈ 1 := fun ε ε0 ↦
+  ⟨nonzeroTailIndex f hf, fun j hj ↦ by
+    simpa only [sub_apply, mul_apply, one_apply, inv_mul_cancel_apply hf hj,
+      sub_self, abv_zero abv] using ε0⟩
+
+theorem mul_inv_cancel {f : CauSeq β abv} (hf) : f * inv f hf ≈ 1 := fun ε ε0 ↦
+  ⟨nonzeroTailIndex f hf, fun j hj ↦ by
+    simpa only [sub_apply, mul_apply, one_apply, mul_inv_cancel_apply hf hj,
+      sub_self, abv_zero abv] using ε0⟩
 
 theorem const_inv {x : β} (hx : x ≠ 0) :
-    const abv x⁻¹ = inv (const abv x) (by rwa [const_limZero]) :=
+    const abv (↑(Units.mk0 x hx)⁻¹ : β) =
+      inv (const abv x) (by rwa [const_limZero]) := by
+  ext i
   rfl
 
 end DivisionRing

@@ -369,17 +369,25 @@ variable [Field R] [Semifield S] [LinearOrder S] [IsStrictOrderedRing S] [Exists
 lemma IsNontrivial.exists_abv_gt_one (h : v.IsNontrivial) : ∃ x, 1 < v x := by
   obtain ⟨x, hx₀, hx₁⟩ := h
   rcases hx₁.lt_or_gt with h | h
-  · refine ⟨x⁻¹, ?_⟩
-    rw [map_inv₀]
-    exact (one_lt_inv₀ <| v.pos hx₀).mpr h
+  · let u := Units.mk0 x hx₀
+    refine ⟨(↑u⁻¹ : R), ?_⟩
+    have hmul : v (↑u⁻¹ : R) * v x = 1 := by
+      change v (↑u⁻¹ : R) * v (u : R) = 1
+      rw [← map_mul, Units.inv_mul, map_one]
+    simpa only [hmul, mul_one] using
+      mul_lt_mul_of_pos_left h (v.pos (Units.ne_zero u⁻¹))
   · exact ⟨x, h⟩
 
 lemma IsNontrivial.exists_abv_lt_one (h : v.IsNontrivial) : ∃ x ≠ 0, v x < 1 := by
   obtain ⟨y, hy⟩ := h.exists_abv_gt_one
   have hy₀ := v.ne_zero_iff.mp <| (zero_lt_one.trans hy).ne'
-  refine ⟨y⁻¹, inv_ne_zero hy₀, ?_⟩
-  rw [map_inv₀]
-  exact (inv_lt_one₀ <| v.pos hy₀).mpr hy
+  let u := Units.mk0 y hy₀
+  refine ⟨(↑u⁻¹ : R), Units.ne_zero u⁻¹, ?_⟩
+  have hmul : v (↑u⁻¹ : R) * v y = 1 := by
+    change v (↑u⁻¹ : R) * v (u : R) = 1
+    rw [← map_mul, Units.inv_mul, map_one]
+  simpa only [mul_one, hmul] using
+    mul_lt_mul_of_pos_left hy (v.pos (Units.ne_zero u⁻¹))
 
 end LinearOrderedSemifield
 
@@ -555,11 +563,18 @@ section DivisionSemiring
 
 variable {R : Type*} [DivisionSemiring R] (abv : R → S) [IsAbsoluteValue abv]
 
-theorem abv_inv (a : R) : abv a⁻¹ = (abv a)⁻¹ :=
-  map_inv₀ (abvHom' abv) a
+theorem abv_inv (a : Rˣ) :
+    abv (↑a⁻¹ : R) =
+      (↑(Units.mk0 (abv (a : R)) (fun h ↦ a.ne_zero ((abv_eq_zero abv).mp h)))⁻¹ : S) := by
+  have h : Units.map (abvHom' abv).toMonoidHom a =
+      Units.mk0 (abv (a : R)) (fun h ↦ a.ne_zero ((abv_eq_zero abv).mp h)) :=
+    Units.ext rfl
+  exact congrArg (fun u : Sˣ ↦ (↑u⁻¹ : S)) h
 
-theorem abv_div (a b : R) : abv (a / b) = abv a / abv b :=
-  map_div₀ (abvHom' abv) a b
+theorem abv_div (a : R) (b : Rˣ) :
+    abv (a /ₚ b) =
+      abv a /ₚ Units.mk0 (abv (b : R)) (fun h ↦ b.ne_zero ((abv_eq_zero abv).mp h)) := by
+  rw [divp, divp, abv_mul abv, abv_inv abv]
 
 end DivisionSemiring
 
