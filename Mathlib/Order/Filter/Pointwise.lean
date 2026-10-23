@@ -765,21 +765,7 @@ protected theorem Tendsto.div_div (hf : Tendsto m f₁ f₂) (hg : Tendsto m g�
 
 end Group
 
-section GroupWithZero
 
-variable [GroupWithZero α] {f g : Filter α}
-
-theorem NeBot.div_zero_nonneg (hf : f.NeBot) : 0 ≤ f / 0 :=
-  Filter.le_div_iff.2 fun _ h₁ _ h₂ =>
-    let ⟨_, ha⟩ := hf.nonempty_of_mem h₁
-    ⟨_, ha, _, h₂, div_zero _⟩
-
-theorem NeBot.zero_div_nonneg (hg : g.NeBot) : 0 ≤ 0 / g :=
-  Filter.le_div_iff.2 fun _ h₁ _ h₂ =>
-    let ⟨_, hb⟩ := hg.nonempty_of_mem h₂
-    ⟨_, h₁, _, hb, zero_div _⟩
-
-end GroupWithZero
 
 /-! ### Scalar addition/multiplication of filters -/
 

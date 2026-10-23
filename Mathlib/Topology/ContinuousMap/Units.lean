@@ -67,14 +67,8 @@ variable [NormedRing R] [CompleteSpace R]
 
 theorem continuous_isUnit_unit {f : C(X, R)} (h : ∀ x, IsUnit (f x)) :
     Continuous fun x => (h x).unit := by
-  refine
-    continuous_induced_rng.2
-      (Continuous.prodMk f.continuous
-        (MulOpposite.continuous_op.comp (continuous_iff_continuousAt.mpr fun x => ?_)))
-  have := NormedRing.inverse_continuousAt (h x).unit
-  simp only
-  simp only [← Ring.inverse_unit, IsUnit.unit_spec] at this ⊢
-  exact this.comp (f.continuousAt x)
+  apply Units.isOpenEmbedding_val.isEmbedding.continuous_iff.2
+  simpa only [Function.comp_def, IsUnit.unit_spec] using f.continuous
 
 /-- Construct a continuous map into the group of units of a normed ring from a function into the
 normed ring and a proof that every element of the range is a unit. -/

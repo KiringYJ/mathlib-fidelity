@@ -49,60 +49,156 @@ theorem Filter.Tendsto.pos_mul_atTop {C : 𝕜} (hC : 0 < C) (hf : Tendsto f l (
     (hg : Tendsto g l atTop) : Tendsto (fun x => f x * g x) l atTop := by
   simpa only [mul_comm] using hg.atTop_mul_pos hC hf
 
+/-- Inversion sends the unit part of the filter at positive infinity to the right
+neighbourhood of zero. No value of the inverse at zero is used. -/
 @[simp]
-lemma inv_atTop₀ : (atTop : Filter 𝕜)⁻¹ = 𝓝[>] 0 :=
-  (((atTop_basis_Ioi' (0 : 𝕜)).map _).comp_surjective inv_surjective).eq_of_same_basis <|
-    (nhdsGT_basis _).congr (by simp) fun a ha ↦ by simp [inv_Ioi₀ (inv_pos.2 ha)]
+lemma inv_atTop₀ :
+    map (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atTop) = 𝓝[>] 0 := by
+  have hb : (atTop : Filter 𝕜).HasBasis
+      (fun u : 𝕜ˣ ↦ 0 < (u : 𝕜)) (fun u ↦ Ioi (u : 𝕜)) :=
+    (atTop_basis_Ioi' (0 : 𝕜)).to_hasBasis
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : 𝕜), hu, Subset.rfl⟩)
+  have hn : (𝓝[>] (0 : 𝕜)).HasBasis
+      (fun u : 𝕜ˣ ↦ 0 < (u : 𝕜)) (fun u ↦ Ioo 0 (u : 𝕜)) :=
+    (nhdsGT_basis (0 : 𝕜)).to_hasBasis
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : 𝕜), hu, Subset.rfl⟩)
+  apply (((hb.comap (fun u : 𝕜ˣ ↦ (u : 𝕜))).map
+    (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))).comp_surjective
+      (inv_surjective : Function.Surjective (Inv.inv : 𝕜ˣ → 𝕜ˣ))).eq_of_same_basis
+  apply hn.congr
+  · intro u
+    exact (Units.inv_pos u).symm
+  · intro u hu
+    ext y
+    symm
+    constructor
+    · rintro ⟨v, hv, rfl⟩
+      have hvpos : 0 < (v : 𝕜) := ((Units.inv_pos u).mpr hu).trans hv
+      exact ⟨(Units.inv_pos v).mpr hvpos,
+        by simpa only [inv_inv] using (Units.inv_lt_inv (u := v) (v := u⁻¹) hvpos
+          ((Units.inv_pos u).mpr hu)).mpr hv⟩
+    · intro hy
+      refine ⟨(Units.mk0 y hy.1.ne')⁻¹, ?_, ?_⟩
+      · exact (Units.inv_lt_inv (u := u) (v := Units.mk0 y hy.1.ne') hu hy.1).mpr hy.2
+      · simp
 
 @[simp]
-lemma inv_nhdsGT_zero : (𝓝[>] (0 : 𝕜))⁻¹ = atTop := by rw [← inv_atTop₀, inv_inv]
+lemma inv_nhdsGT_zero :
+    map (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) (𝓝[>] 0)) = atTop := by
+  have hb : (atTop : Filter 𝕜).HasBasis
+      (fun u : 𝕜ˣ ↦ 0 < (u : 𝕜)) (fun u ↦ Ioi (u : 𝕜)) :=
+    (atTop_basis_Ioi' (0 : 𝕜)).to_hasBasis
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : 𝕜), hu, Subset.rfl⟩)
+  have hn : (𝓝[>] (0 : 𝕜)).HasBasis
+      (fun u : 𝕜ˣ ↦ 0 < (u : 𝕜)) (fun u ↦ Ioo 0 (u : 𝕜)) :=
+    (nhdsGT_basis (0 : 𝕜)).to_hasBasis
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : 𝕜), hu, Subset.rfl⟩)
+  apply (((hn.comap (fun u : 𝕜ˣ ↦ (u : 𝕜))).map
+    (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))).comp_surjective
+      (inv_surjective : Function.Surjective (Inv.inv : 𝕜ˣ → 𝕜ˣ))).eq_of_same_basis
+  apply hb.congr
+  · intro u
+    exact (Units.inv_pos u).symm
+  · intro u hu
+    ext y
+    symm
+    constructor
+    · rintro ⟨v, hv, rfl⟩
+      simpa only [inv_inv, Set.mem_Ioi] using
+        (Units.inv_lt_inv (u := u⁻¹) (v := v) ((Units.inv_pos u).mpr hu) hv.1).mpr hv.2
+    · intro hy
+      have hypos : 0 < y := hu.trans hy
+      refine ⟨(Units.mk0 y hypos.ne')⁻¹, ?_, ?_⟩
+      · exact ⟨(Units.inv_pos _).mpr hypos, (Units.inv_lt_inv (u := Units.mk0 y hypos.ne') (v := u) hypos hu).mpr hy⟩
+      · simp
 
 /-- The function `x ↦ x⁻¹` tends to `+∞` on the right of `0`. -/
-theorem tendsto_inv_nhdsGT_zero : Tendsto (fun x : 𝕜 => x⁻¹) (𝓝[>] (0 : 𝕜)) atTop :=
+theorem tendsto_inv_nhdsGT_zero :
+    Tendsto (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) (𝓝[>] 0)) atTop :=
   inv_nhdsGT_zero.le
 
-/-- The function `r ↦ r⁻¹` tends to `0` on the right as `r → +∞`. -/
-theorem tendsto_inv_atTop_nhdsGT_zero : Tendsto (fun r : 𝕜 => r⁻¹) atTop (𝓝[>] (0 : 𝕜)) :=
+/-- The inverse on units tends to zero from the right at positive infinity. -/
+theorem tendsto_inv_atTop_nhdsGT_zero :
+    Tendsto (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atTop) (𝓝[>] 0) :=
   inv_atTop₀.le
 
 theorem tendsto_nhdsGT_zero_of_comp_inv_tendsto_atTop {f : 𝕜 → α}
-    (h : Tendsto (fun x ↦ f x⁻¹) atTop l) :
+    (h : Tendsto (fun u : 𝕜ˣ ↦ f (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atTop) l) :
     Tendsto f (𝓝[>] 0) l := by
-  convert! h.comp tendsto_inv_nhdsGT_zero
-  grind [inv_inv]
+  rw [← inv_atTop₀, tendsto_map'_iff]
+  exact h
 
-theorem tendsto_inv_atTop_zero : Tendsto (fun r : 𝕜 => r⁻¹) atTop (𝓝 0) :=
+theorem tendsto_inv_atTop_zero :
+    Tendsto (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atTop) (𝓝 0) :=
   tendsto_inv_atTop_nhdsGT_zero.mono_right inf_le_left
 
-theorem Filter.Tendsto.inv_tendsto_atTop (h : Tendsto f l atTop) : Tendsto f⁻¹ l (𝓝 0) :=
-  tendsto_inv_atTop_zero.comp h
+theorem Filter.Tendsto.inv_tendsto_atTop {f : α → 𝕜ˣ}
+    (h : Tendsto (fun x ↦ (f x : 𝕜)) l atTop) :
+    Tendsto (fun x ↦ (↑(f x)⁻¹ : 𝕜)) l (𝓝 0) :=
+  tendsto_inv_atTop_zero.comp (tendsto_comap_iff.mpr h)
 
-theorem Filter.Tendsto.inv_tendsto_nhdsGT_zero (h : Tendsto f l (𝓝[>] 0)) : Tendsto f⁻¹ l atTop :=
-  tendsto_inv_nhdsGT_zero.comp h
+theorem Filter.Tendsto.inv_tendsto_nhdsGT_zero {f : α → 𝕜ˣ}
+    (h : Tendsto (fun x ↦ (f x : 𝕜)) l (𝓝[>] 0)) :
+    Tendsto (fun x ↦ (↑(f x)⁻¹ : 𝕜)) l atTop :=
+  tendsto_inv_nhdsGT_zero.comp (tendsto_comap_iff.mpr h)
 
 /-- The function `x^(-n)` tends to `0` at `+∞` for any positive natural `n`.
 A version for positive real powers exists as `tendsto_rpow_neg_atTop`. -/
 theorem tendsto_pow_neg_atTop {n : ℕ} (hn : n ≠ 0) :
-    Tendsto (fun x : 𝕜 => x ^ (-(n : ℤ))) atTop (𝓝 0) := by
-  simpa only [zpow_neg, zpow_natCast] using! (tendsto_pow_atTop (α := 𝕜) hn).inv_tendsto_atTop
+    Tendsto (fun x : 𝕜ˣ => (↑(x ^ (-(n : ℤ))) : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atTop) (𝓝 0) := by
+  have h : Tendsto (fun u : 𝕜ˣ ↦ (↑(u ^ n) : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atTop) atTop := by
+    simpa only [Units.val_pow_eq_pow_val, Function.comp_def] using
+      (tendsto_pow_atTop (α := 𝕜) hn).comp tendsto_comap
+  simpa only [zpow_neg, zpow_natCast] using h.inv_tendsto_atTop
 
 theorem tendsto_zpow_atTop_zero {n : ℤ} (hn : n < 0) :
-    Tendsto (fun x : 𝕜 => x ^ n) atTop (𝓝 0) := by
+    Tendsto (fun x : 𝕜ˣ => (↑(x ^ n) : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atTop) (𝓝 0) := by
   lift -n to ℕ using le_of_lt (neg_pos.mpr hn) with N h
-  rw [← neg_pos, ← h, Nat.cast_pos] at hn
-  simpa only [h, neg_neg] using tendsto_pow_neg_atTop hn.ne'
+  have hN : N ≠ 0 := by omega
+  have hn' : n = -(N : ℤ) := by omega
+  rw [hn']
+  exact tendsto_pow_neg_atTop hN
 
 -- see Note [lower instance priority]
 instance (priority := 100) IsStrictOrderedRing.toContinuousInv₀ [ContinuousMul 𝕜] :
     ContinuousInv₀ 𝕜 := .of_nhds_one <| tendsto_order.2 <| by
   refine ⟨fun x hx => ?_, fun x hx => ?_⟩
-  · obtain ⟨x', h₀, hxx', h₁⟩ : ∃ x', 0 < x' ∧ x ≤ x' ∧ x' < 1 :=
-      ⟨max x (1 / 2), one_half_pos.trans_le (le_max_right _ _), le_max_left _ _,
-        max_lt hx one_half_lt_one⟩
-    filter_upwards [Ioo_mem_nhds one_pos ((one_lt_inv₀ h₀).2 h₁)] with y hy
-    exact hxx'.trans_lt <| lt_inv_of_lt_inv₀ hy.1 hy.2
-  · filter_upwards [Ioi_mem_nhds (inv_lt_one_of_one_lt₀ hx)] with y hy
-    exact inv_lt_of_inv_lt₀ (by positivity) hy
+  · obtain ⟨x', hmid, h₁⟩ := exists_between (max_lt (zero_lt_one : (0 : 𝕜) < 1) hx)
+    have h₀ : 0 < x' := (le_max_left 0 x).trans_lt hmid
+    have hxx' : x ≤ x' := (le_max_right 0 x).trans hmid.le
+    let u := Units.mk0 x' h₀.ne'
+    have hu : 1 < (↑u⁻¹ : 𝕜) := by
+      simpa only [mul_one] using (Units.lt_inv_mul_iff (u := u) h₀).mpr h₁
+    filter_upwards [(continuous_subtype_val.tendsto
+      (⟨1, isUnit_one⟩ : {y : 𝕜 | IsUnit y})).eventually (Ioo_mem_nhds one_pos hu)]
+      with y hy
+    apply hxx'.trans_lt
+    simpa only [inv_inv, Units.val_mk0] using
+      (Units.inv_lt_inv (u := u⁻¹) (v := y.property.unit)
+        ((Units.inv_pos u).mpr h₀) hy.1).mpr hy.2
+  · let u := Units.mk0 x (zero_lt_one.trans hx).ne'
+    have hu : (↑u⁻¹ : 𝕜) < 1 := by
+      simpa only [mul_one] using
+        (Units.inv_mul_lt_iff (u := u) (zero_lt_one.trans hx)).mpr hx
+    filter_upwards [(continuous_subtype_val.tendsto
+      (⟨1, isUnit_one⟩ : {y : 𝕜 | IsUnit y})).eventually (Ioi_mem_nhds hu)] with y hy
+    have hypos : 0 < y.val := ((Units.inv_pos u).mpr (zero_lt_one.trans hx)).trans hy
+    simpa only [inv_inv, Units.val_mk0] using
+      (Units.inv_lt_inv (u := y.property.unit) (v := u⁻¹)
+        hypos ((Units.inv_pos u).mpr (zero_lt_one.trans hx))).mpr hy
 
 end Semifield
 
@@ -184,54 +280,127 @@ theorem Filter.Tendsto.neg_mul_atBot {C : 𝕜} (hC : C < 0) (hf : Tendsto f l (
   simpa only [mul_comm] using hg.atBot_mul_neg hC hf
 
 @[simp]
-lemma inv_atBot₀ : (atBot : Filter 𝕜)⁻¹ = 𝓝[<] 0 :=
-  (((atBot_basis_Iio' (0 : 𝕜)).map _).comp_surjective inv_surjective).eq_of_same_basis <|
-    (nhdsLT_basis _).congr (by simp) fun a ha ↦ by simp [inv_Iio₀ (inv_neg''.2 ha)]
+lemma inv_atBot₀ :
+    map (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atBot) = 𝓝[<] 0 := by
+  have hi (u v : 𝕜ˣ) (hu : (u : 𝕜) < 0) (hv : (v : 𝕜) < 0) :
+      (↑u⁻¹ : 𝕜) < ↑v⁻¹ ↔ (v : 𝕜) < u := by
+    simpa only [inv_neg, Units.val_neg, neg_lt_neg_iff] using
+      (Units.inv_lt_inv (u := -v) (v := -u) (neg_pos.mpr hv) (neg_pos.mpr hu))
+  have hb : (atBot : Filter 𝕜).HasBasis
+      (fun u : 𝕜ˣ ↦ (u : 𝕜) < 0) (fun u ↦ Iio (u : 𝕜)) :=
+    (atBot_basis_Iio' (0 : 𝕜)).to_hasBasis
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne, ha, Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : 𝕜), hu, Subset.rfl⟩)
+  have hn : (𝓝[<] (0 : 𝕜)).HasBasis
+      (fun u : 𝕜ˣ ↦ (u : 𝕜) < 0) (fun u ↦ Ioo (u : 𝕜) 0) :=
+    (nhdsLT_basis (0 : 𝕜)).to_hasBasis
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne, ha, Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : 𝕜), hu, Subset.rfl⟩)
+  apply (((hb.comap (fun u : 𝕜ˣ ↦ (u : 𝕜))).map
+    (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))).comp_surjective
+      (inv_surjective : Function.Surjective (Inv.inv : 𝕜ˣ → 𝕜ˣ))).eq_of_same_basis
+  apply hn.congr
+  · intro u
+    exact (Units.inv_neg u).symm
+  · intro u hu
+    ext y
+    symm
+    constructor
+    · rintro ⟨v, hv, rfl⟩
+      have hvneg : (v : 𝕜) < 0 := hv.trans ((Units.inv_neg u).mpr hu)
+      exact ⟨by simpa only [inv_inv] using (hi (u⁻¹) v ((Units.inv_neg u).mpr hu) hvneg).mpr hv,
+        (Units.inv_neg v).mpr hvneg⟩
+    · intro hy
+      refine ⟨(Units.mk0 y hy.2.ne)⁻¹, ?_, by simp⟩
+      exact (hi (Units.mk0 y hy.2.ne) u hy.2 hu).mpr hy.1
 
 @[simp]
-lemma inv_nhdsLT_zero : (𝓝[<] (0 : 𝕜))⁻¹ = atBot := by
-  rw [← inv_atBot₀, inv_inv]
+lemma inv_nhdsLT_zero :
+    map (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) (𝓝[<] 0)) = atBot := by
+  have hi (u v : 𝕜ˣ) (hu : (u : 𝕜) < 0) (hv : (v : 𝕜) < 0) :
+      (↑u⁻¹ : 𝕜) < ↑v⁻¹ ↔ (v : 𝕜) < u := by
+    simpa only [inv_neg, Units.val_neg, neg_lt_neg_iff] using
+      (Units.inv_lt_inv (u := -v) (v := -u) (neg_pos.mpr hv) (neg_pos.mpr hu))
+  have hb : (atBot : Filter 𝕜).HasBasis
+      (fun u : 𝕜ˣ ↦ (u : 𝕜) < 0) (fun u ↦ Iio (u : 𝕜)) :=
+    (atBot_basis_Iio' (0 : 𝕜)).to_hasBasis
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne, ha, Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : 𝕜), hu, Subset.rfl⟩)
+  have hn : (𝓝[<] (0 : 𝕜)).HasBasis
+      (fun u : 𝕜ˣ ↦ (u : 𝕜) < 0) (fun u ↦ Ioo (u : 𝕜) 0) :=
+    (nhdsLT_basis (0 : 𝕜)).to_hasBasis
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne, ha, Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : 𝕜), hu, Subset.rfl⟩)
+  apply (((hn.comap (fun u : 𝕜ˣ ↦ (u : 𝕜))).map
+    (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))).comp_surjective
+      (inv_surjective : Function.Surjective (Inv.inv : 𝕜ˣ → 𝕜ˣ))).eq_of_same_basis
+  apply hb.congr
+  · intro u
+    exact (Units.inv_neg u).symm
+  · intro u hu
+    ext y
+    symm
+    constructor
+    · rintro ⟨v, hv, rfl⟩
+      simpa only [inv_inv, Set.mem_Iio] using
+        (hi v (u⁻¹) hv.2 ((Units.inv_neg u).mpr hu)).mpr hv.1
+    · intro hy
+      have hyneg : y < 0 := hy.trans hu
+      refine ⟨(Units.mk0 y hyneg.ne)⁻¹, ⟨?_, (Units.inv_neg _).mpr hyneg⟩, by simp⟩
+      exact (hi u (Units.mk0 y hyneg.ne) hu hyneg).mpr hy
 
-/-- The function `x ↦ x⁻¹` tends to `-∞` on the left of `0`. -/
-theorem tendsto_inv_nhdsLT_zero : Tendsto (fun x : 𝕜 => x⁻¹) (𝓝[<] (0 : 𝕜)) atBot :=
-  inv_nhdsLT_zero.le
+theorem tendsto_inv_nhdsLT_zero :
+    Tendsto (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) (𝓝[<] 0)) atBot := inv_nhdsLT_zero.le
 
 theorem tendsto_nhdsLT_zero_of_comp_inv_tendsto_atBot {f : 𝕜 → α}
-    (h : Tendsto (fun x ↦ f x⁻¹) atBot l) :
-    Tendsto f (𝓝[<] 0) l := by
-  convert! h.comp tendsto_inv_nhdsLT_zero
-  grind
+    (h : Tendsto (fun u : 𝕜ˣ ↦ f (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atBot) l) : Tendsto f (𝓝[<] 0) l := by
+  rw [← inv_atBot₀, tendsto_map'_iff]
+  exact h
 
-/-- The function `r ↦ r⁻¹` tends to `0` on the left as `r → -∞`. -/
-theorem tendsto_inv_atBot_nhdsLT_zero : Tendsto (fun r : 𝕜 => r⁻¹) atBot (𝓝[<] (0 : 𝕜)) :=
-  inv_atBot₀.le
+theorem tendsto_inv_atBot_nhdsLT_zero :
+    Tendsto (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atBot) (𝓝[<] 0) := inv_atBot₀.le
 
-theorem tendsto_inv_atBot_zero : Tendsto (fun r : 𝕜 => r⁻¹) atBot (𝓝 0) :=
+theorem tendsto_inv_atBot_zero :
+    Tendsto (fun u : 𝕜ˣ ↦ (↑u⁻¹ : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atBot) (𝓝 0) :=
   tendsto_inv_atBot_nhdsLT_zero.mono_right inf_le_left
 
-theorem Filter.Tendsto.div_atTop {a : 𝕜} (h : Tendsto f l (𝓝 a)) (hg : Tendsto g l atTop) :
-    Tendsto (fun x => f x / g x) l (𝓝 0) := by
-  simp only [div_eq_mul_inv]
-  exact mul_zero a ▸ h.mul (tendsto_inv_atTop_zero.comp hg)
+theorem Filter.Tendsto.div_atTop {a : 𝕜} {g : α → 𝕜ˣ}
+    (h : Tendsto f l (𝓝 a)) (hg : Tendsto (fun x ↦ (g x : 𝕜)) l atTop) :
+    Tendsto (fun x => f x /ₚ g x) l (𝓝 0) := by
+  simpa only [mul_zero, divp, Function.comp_def] using h.mul
+    (tendsto_inv_atTop_zero.comp (tendsto_comap_iff.mpr hg))
 
-theorem Filter.Tendsto.div_atBot {a : 𝕜} (h : Tendsto f l (𝓝 a)) (hg : Tendsto g l atBot) :
-    Tendsto (fun x => f x / g x) l (𝓝 0) := by
-  simp only [div_eq_mul_inv]
-  exact mul_zero a ▸ h.mul (tendsto_inv_atBot_zero.comp hg)
-
-lemma Filter.Tendsto.const_div_atTop (hg : Tendsto g l atTop) (r : 𝕜) :
-    Tendsto (fun n ↦ r / g n) l (𝓝 0) :=
+lemma Filter.Tendsto.const_div_atTop {g : α → 𝕜ˣ}
+    (hg : Tendsto (fun x ↦ (g x : 𝕜)) l atTop) (r : 𝕜) :
+    Tendsto (fun n ↦ r /ₚ g n) l (𝓝 0) :=
   tendsto_const_nhds.div_atTop hg
 
-lemma Filter.Tendsto.const_div_atBot (hg : Tendsto g l atBot) (r : 𝕜) :
-    Tendsto (fun n ↦ r / g n) l (𝓝 0) :=
+theorem Filter.Tendsto.div_atBot {a : 𝕜} {g : α → 𝕜ˣ}
+    (h : Tendsto f l (𝓝 a)) (hg : Tendsto (fun x ↦ (g x : 𝕜)) l atBot) :
+    Tendsto (fun x => f x /ₚ g x) l (𝓝 0) := by
+  simpa only [mul_zero, divp, Function.comp_def] using h.mul
+    (tendsto_inv_atBot_zero.comp (tendsto_comap_iff.mpr hg))
+
+lemma Filter.Tendsto.const_div_atBot {g : α → 𝕜ˣ}
+    (hg : Tendsto (fun x ↦ (g x : 𝕜)) l atBot) (r : 𝕜) :
+    Tendsto (fun n ↦ r /ₚ g n) l (𝓝 0) :=
   tendsto_const_nhds.div_atBot hg
 
-theorem Filter.Tendsto.inv_tendsto_atBot (h : Tendsto f l atBot) : Tendsto f⁻¹ l (𝓝 0) :=
-  tendsto_inv_atBot_zero.comp h
+theorem Filter.Tendsto.inv_tendsto_atBot {f : α → 𝕜ˣ}
+    (h : Tendsto (fun x ↦ (f x : 𝕜)) l atBot) :
+    Tendsto (fun x ↦ (↑(f x)⁻¹ : 𝕜)) l (𝓝 0) :=
+  tendsto_inv_atBot_zero.comp (tendsto_comap_iff.mpr h)
 
-theorem Filter.Tendsto.inv_tendsto_nhdsLT_zero (h : Tendsto f l (𝓝[<] 0)) : Tendsto f⁻¹ l atBot :=
-  tendsto_inv_nhdsLT_zero.comp h
+theorem Filter.Tendsto.inv_tendsto_nhdsLT_zero {f : α → 𝕜ˣ}
+    (h : Tendsto (fun x ↦ (f x : 𝕜)) l (𝓝[<] 0)) :
+    Tendsto (fun x ↦ (↑(f x)⁻¹ : 𝕜)) l atBot :=
+  tendsto_inv_nhdsLT_zero.comp (tendsto_comap_iff.mpr h)
 
 /-- If `g` tends to zero and there exists a constant `C : 𝕜` such that eventually `|f x| ≤ C`,
   then the product `f * g` tends to zero. -/
@@ -261,14 +430,14 @@ theorem bdd_le_mul_tendsto_zero {f g : α → 𝕜} {b B : 𝕜} (hb : ∀ᶠ x 
 
 /-- If `g` tends to `atTop` and there exist constants `b B : 𝕜` such that eventually
   `b ≤ f x| ≤ B`, then the quotient `f / g` tends to zero. -/
-theorem tendsto_bdd_div_atTop_nhds_zero {f g : α → 𝕜} {b B : 𝕜}
-    (hb : ∀ᶠ x in l, b ≤ f x) (hB : ∀ᶠ x in l, f x ≤ B) (hg : Tendsto g l atTop) :
-    Tendsto (fun x => f x / g x) l (𝓝 0) := by
-  simp only [div_eq_mul_inv]
+theorem tendsto_bdd_div_atTop_nhds_zero {f : α → 𝕜} {g : α → 𝕜ˣ} {b B : 𝕜}
+    (hb : ∀ᶠ x in l, b ≤ f x) (hB : ∀ᶠ x in l, f x ≤ B) (hg : Tendsto (fun x ↦ (g x : 𝕜)) l atTop) :
+    Tendsto (fun x => f x /ₚ g x) l (𝓝 0) := by
   exact bdd_le_mul_tendsto_zero hb hB hg.inv_tendsto_atTop
 
 theorem tendsto_const_mul_zpow_atTop_zero {n : ℤ} {c : 𝕜} (hn : n < 0) :
-    Tendsto (fun x => c * x ^ n) atTop (𝓝 0) :=
+    Tendsto (fun x : 𝕜ˣ => c * (↑(x ^ n) : 𝕜))
+      (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) atTop) (𝓝 0) :=
   mul_zero c ▸ Filter.Tendsto.const_mul c (tendsto_zpow_atTop_zero hn)
 
 theorem tendsto_const_mul_pow_nhds_iff' {n : ℕ} {c d : 𝕜} :

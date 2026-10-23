@@ -24,10 +24,9 @@ in their optimal form; more precise versions would use the spectral radius.
 The first main result is `Units.isOpen`: the group of units of a normed ring with summable
 geometric series is an open subset of the ring.
 
-The function `Ring.inverse` (defined elsewhere), for a ring `R`, sends `a : R` to `a⁻¹` if `a` is a
-unit and `0` if not.  The other major results of this file (notably `NormedRing.inverse_add`,
-`NormedRing.inverse_add_norm` and `NormedRing.inverse_add_norm_diff_nth_order`) cover the asymptotic
-properties of `Ring.inverse (x + t)` as `t → 0`.
+Inverse values in this file are evaluated only on units. The finite expansion and asymptotic
+estimates use a second unit `y` and its ambient displacement `y - x`. Continuity on the ambient
+unit subtype establishes that its topology agrees with the usual topology on `Rˣ`.
 -/
 
 @[expose] public section
@@ -35,43 +34,35 @@ properties of `Ring.inverse (x + t)` as `t → 0`.
 noncomputable section
 
 open Topology
-open scoped Ring
 
 variable {R : Type*} [NormedRing R] [HasSummableGeomSeries R]
 
 namespace Units
 
-/-- In a normed ring with summable geometric series, a perturbation of a unit `x` by an
-element `t` of distance less than `‖x⁻¹‖⁻¹` from `x` is a unit.
-Here we construct its `Units` structure. -/
+/-- A perturbation of a unit is invertible when its relative displacement has norm below one.
+The multiplicative bound also applies to the trivial ring. -/
 @[simps! val]
-def add (x : Rˣ) (t : R) (h : ‖t‖ < ‖(↑x⁻¹ : R)‖⁻¹) : Rˣ :=
-  Units.copy -- to make `add_val` true definitionally, for convenience
+def add (x : Rˣ) (t : R) (h : ‖(↑x⁻¹ : R)‖ * ‖t‖ < 1) : Rˣ :=
+  Units.copy
     (x * Units.oneSub (-((x⁻¹).1 * t)) (by
-      nontriviality R using zero_lt_one
-      have hpos : 0 < ‖(↑x⁻¹ : R)‖ := Units.norm_pos x⁻¹
-      calc
-        ‖-(↑x⁻¹ * t)‖ = ‖↑x⁻¹ * t‖ := by rw [norm_neg]
-        _ ≤ ‖(↑x⁻¹ : R)‖ * ‖t‖ := norm_mul_le (x⁻¹).1 _
-        _ < ‖(↑x⁻¹ : R)‖ * ‖(↑x⁻¹ : R)‖⁻¹ := by nlinarith only [h, hpos]
-        _ = 1 := mul_inv_cancel₀ (ne_of_gt hpos)))
+      exact (norm_neg _).trans_le (norm_mul_le _ _) |>.trans_lt h))
     (x + t) (by simp [mul_add]) _ rfl
 
-/-- In a normed ring with summable geometric series, an element `y` of distance less
-than `‖x⁻¹‖⁻¹` from `x` is a unit. Here we construct its `Units` structure. -/
+/-- Construct a nearby unit using the exact relative-displacement bound. -/
 @[simps! val]
-def ofNearby (x : Rˣ) (y : R) (h : ‖y - x‖ < ‖(↑x⁻¹ : R)‖⁻¹) : Rˣ :=
+def ofNearby (x : Rˣ) (y : R) (h : ‖(↑x⁻¹ : R)‖ * ‖y - x‖ < 1) : Rˣ :=
   (x.add (y - x : R) h).copy y (by simp) _ rfl
 
-/-- The group of units of a normed ring with summable geometric series is an open subset
-of the ring. -/
+/-- The invertible elements of a normed ring with summable geometric series form an open set. -/
 protected theorem isOpen : IsOpen { x : R | IsUnit x } := by
-  nontriviality R
   rw [Metric.isOpen_iff]
   rintro _ ⟨x, rfl⟩
-  refine ⟨‖(↑x⁻¹ : R)‖⁻¹, _root_.inv_pos.mpr (Units.norm_pos x⁻¹), fun y hy ↦ ?_⟩
+  have hp : 0 < ‖(↑x⁻¹ : R)‖ + 1 := by positivity
+  refine ⟨(‖(↑x⁻¹ : R)‖ + 1)⁻¹, Checked.inv_pos.mpr hp, fun y hy ↦ ?_⟩
   rw [mem_ball_iff_norm] at hy
-  exact (x.ofNearby y hy).isUnit
+  have hy' : ‖y - (x : R)‖ * (‖(↑x⁻¹ : R)‖ + 1) < 1 :=
+    (Checked.lt_div_iff hp).mp (by simpa only [Checked.one_div] using hy)
+  exact (x.ofNearby y (by nlinarith [norm_nonneg (y - (x : R))])).isUnit
 
 protected theorem nhds (x : Rˣ) : { x : R | IsUnit x } ∈ 𝓝 (x : R) :=
   IsOpen.mem_nhds Units.isOpen x.isUnit
@@ -93,102 +84,162 @@ end nonunits
 
 namespace NormedRing
 
-open Asymptotics Filter Metric Finset Ring
+open Asymptotics Filter Metric Finset
 
-theorem inverse_one_sub (t : R) (h : ‖t‖ < 1) : inverse (1 - t) = ↑(Units.oneSub t h)⁻¹ := by
-  rw [← inverse_unit (Units.oneSub t h), Units.val_oneSub]
+/-- The inverse of `1 - t`, constructed as a unit, is its convergent geometric series. -/
+theorem inverse_one_sub (t : R) (h : ‖t‖ < 1) :
+    (↑(Units.oneSub t h)⁻¹ : R) = ∑' i : ℕ, t ^ i :=
+  (geom_series_eq_inverse t h).symm
 
-/-- The formula `Ring.inverse (x + t) = Ring.inverse (1 + x⁻¹ * t) * x⁻¹` holds for `t` sufficiently
-small. -/
-theorem inverse_add (x : Rˣ) :
-    ∀ᶠ t in 𝓝 0, ((x : R) + t)⁻¹ʳ = (1 + ↑x⁻¹ * t)⁻¹ʳ * ↑x⁻¹ := by
-  nontriviality R
-  rw [Metric.eventually_nhds_iff]
-  refine ⟨‖(↑x⁻¹ : R)‖⁻¹, by cancel_denoms, fun t ht ↦ ?_⟩
-  rw [dist_zero_right] at ht
-  rw [← x.val_add t ht, inverse_unit, Units.add, Units.copy_eq, mul_inv_rev, Units.val_mul,
-    ← inverse_unit, Units.val_oneSub, sub_neg_eq_add]
+/-- Recenter an inverse at another unit. Both arguments lie in the exact inverse domain. -/
+omit [HasSummableGeomSeries R] in
+theorem inverse_add (x y : Rˣ) : (↑y⁻¹ : R) = ↑(x⁻¹ * y)⁻¹ * ↑x⁻¹ := by
+  simp only [mul_inv_rev, inv_inv, Units.val_mul, mul_assoc, Units.mul_inv, mul_one]
+
+/-- The finite geometric expansion of an inverse is valid on the entire unit domain. -/
+omit [HasSummableGeomSeries R] in
+theorem inverse_one_sub_nth_order (u : Rˣ) (n : ℕ) :
+    (↑u⁻¹ : R) = (∑ i ∈ range n, (1 - (u : R)) ^ i) + (1 - (u : R)) ^ n * ↑u⁻¹ := by
+  induction n with
+  | zero => simp
+  | succ n ih =>
+    rw [sum_range_succ, pow_succ, mul_assoc, sub_mul, one_mul, Units.mul_inv]
+    calc
+      (↑u⁻¹ : R) = (∑ i ∈ range n, (1 - (u : R)) ^ i) + (1 - (u : R)) ^ n * ↑u⁻¹ := ih
+      _ = _ := by
+        rw [add_assoc, mul_sub, mul_one, ← add_sub_assoc, add_sub_cancel_left]
 
 theorem inverse_one_sub_nth_order' (n : ℕ) {t : R} (ht : ‖t‖ < 1) :
-    inverse ((1 : R) - t) = (∑ i ∈ range n, t ^ i) + t ^ n * inverse (1 - t) :=
-  have := _root_.summable_geometric_of_norm_lt_one ht
-  calc inverse (1 - t) = ∑' i : ℕ, t ^ i := inverse_one_sub t ht
-    _ = ∑ i ∈ range n, t ^ i + ∑' i : ℕ, t ^ (i + n) := (this.sum_add_tsum_nat_add _).symm
-    _ = (∑ i ∈ range n, t ^ i) + t ^ n * inverse (1 - t) := by
-      simp only [inverse_one_sub t ht, add_comm _ n, pow_add, this.tsum_mul_left]; rfl
+    (↑(Units.oneSub t ht)⁻¹ : R) =
+      (∑ i ∈ range n, t ^ i) + t ^ n * ↑(Units.oneSub t ht)⁻¹ := by
+  simpa only [Units.val_oneSub, sub_sub_cancel] using
+    inverse_one_sub_nth_order (Units.oneSub t ht) n
 
-theorem inverse_one_sub_nth_order (n : ℕ) :
-    ∀ᶠ t in 𝓝 0, inverse ((1 : R) - t) = (∑ i ∈ range n, t ^ i) + t ^ n * inverse (1 - t) :=
-  Metric.eventually_nhds_iff.2 ⟨1, one_pos, fun t ht ↦ inverse_one_sub_nth_order' n <| by
-    rwa [← dist_zero_right]⟩
+/-- The finite inverse expansion about `x`, with displacement `y - x`. -/
+omit [HasSummableGeomSeries R] in
+theorem inverse_add_nth_order (x y : Rˣ) (n : ℕ) :
+    (↑y⁻¹ : R) =
+      (∑ i ∈ range n, (-(↑x⁻¹ : R) * ((y : R) - x)) ^ i) * ↑x⁻¹ +
+        (-(↑x⁻¹ : R) * ((y : R) - x)) ^ n * ↑y⁻¹ := by
+  have ht : (1 : R) - ↑(x⁻¹ * y) = -(↑x⁻¹ : R) * ((y : R) - x) := by
+    rw [Units.val_mul, neg_mul, mul_sub, Units.inv_mul, neg_sub]
+  have h := congrArg (fun z : R ↦ z * ↑x⁻¹) (inverse_one_sub_nth_order (x⁻¹ * y) n)
+  simpa only [add_mul, mul_assoc, ← inverse_add x y, ht] using h
 
+/-- Inverse values are locally bounded on units. -/
+omit [HasSummableGeomSeries R] in
+theorem inverse_add_norm (x : Rˣ) :
+    (fun y : Rˣ ↦ (↑y⁻¹ : R)) =O[𝓝 x] (fun _ ↦ (1 : ℝ)) :=
+  (Units.continuous_coe_inv.tendsto x).isBigO_one ℝ
 
-/-- The formula
-`Ring.inverse (x + t) =
-  (∑ i ∈ Finset.range n, (- x⁻¹ * t) ^ i) * x⁻¹ + (- x⁻¹ * t) ^ n * Ring.inverse (x + t)`
-holds for `t` sufficiently small. -/
-theorem inverse_add_nth_order (x : Rˣ) (n : ℕ) :
-    ∀ᶠ t in 𝓝 0, ((x : R) + t)⁻¹ʳ =
-      (∑ i ∈ range n, (-↑x⁻¹ * t) ^ i) * ↑x⁻¹ + (-↑x⁻¹ * t) ^ n * (x + t)⁻¹ʳ := by
-  have hzero : Tendsto (-(↑x⁻¹ : R) * ·) (𝓝 0) (𝓝 0) :=
-    (mulLeft_continuous _).tendsto' _ _ <| mul_zero _
-  filter_upwards [inverse_add x, hzero.eventually (inverse_one_sub_nth_order n)] with t ht ht'
-  rw [neg_mul, sub_neg_eq_add] at ht'
-  conv_lhs => rw [ht, ht', add_mul, ← neg_mul, mul_assoc]
-  rw [ht]
-
-theorem inverse_one_sub_norm : (fun t : R => inverse (1 - t)) =O[𝓝 0] (fun _t => 1 : R → ℝ) := by
-  simp only [IsBigO, IsBigOWith, Metric.eventually_nhds_iff]
-  refine ⟨‖(1 : R)‖ + 1, (2 : ℝ)⁻¹, by simp, fun t ht ↦ ?_⟩
-  rw [dist_zero_right] at ht
-  have ht' : ‖t‖ < 1 := by linarith
-  simp only [inverse_one_sub t ht', norm_one, mul_one]
-  change ‖∑' n : ℕ, t ^ n‖ ≤ _
-  have := tsum_geometric_le_of_norm_lt_one t ht'
-  have : (1 - ‖t‖)⁻¹ ≤ 2 := inv_le_of_inv_le₀ (by simp) (by linarith)
-  linarith
-
-/-- The function `fun t ↦ inverse (x + t)` is O(1) as `t → 0`. -/
-theorem inverse_add_norm (x : Rˣ) : (fun t : R => inverse (↑x + t)) =O[𝓝 0] fun _t => (1 : ℝ) := by
-  refine EventuallyEq.trans_isBigO (inverse_add x) (one_mul (1 : ℝ) ▸ ?_)
-  simp only [← sub_neg_eq_add, ← neg_mul]
-  have hzero : Tendsto (-(↑x⁻¹ : R) * ·) (𝓝 0) (𝓝 0) :=
-    (mulLeft_continuous _).tendsto' _ _ <| mul_zero _
-  exact (inverse_one_sub_norm.comp_tendsto hzero).mul (isBigO_const_const _ one_ne_zero _)
-
-/-- The function
-`fun t ↦ Ring.inverse (x + t) - (∑ i ∈ Finset.range n, (- x⁻¹ * t) ^ i) * x⁻¹`
-is `O(t ^ n)` as `t → 0`. -/
+/-- The remainder of the finite expansion is bounded by the corresponding displacement power. -/
+omit [HasSummableGeomSeries R] in
 theorem inverse_add_norm_diff_nth_order (x : Rˣ) (n : ℕ) :
-    (fun t : R => (↑x + t)⁻¹ʳ - (∑ i ∈ range n, (-↑x⁻¹ * t) ^ i) * ↑x⁻¹) =O[𝓝 (0 : R)]
-      fun t => ‖t‖ ^ n := by
-  refine EventuallyEq.trans_isBigO (.fun_sub (inverse_add_nth_order x n) (.refl _ _)) ?_
-  simp only [add_sub_cancel_left]
+    (fun y : Rˣ ↦ (↑y⁻¹ : R) -
+      (∑ i ∈ range n, (-(↑x⁻¹ : R) * ((y : R) - x)) ^ i) * ↑x⁻¹) =O[𝓝 x]
+      (fun y ↦ ‖(y : R) - x‖ ^ n) := by
+  have heq :
+      (fun y : Rˣ ↦ (↑y⁻¹ : R) -
+        (∑ i ∈ range n, (-(↑x⁻¹ : R) * ((y : R) - x)) ^ i) * ↑x⁻¹) =
+      (fun y ↦ (-(↑x⁻¹ : R) * ((y : R) - x)) ^ n * ↑y⁻¹) := by
+    funext y
+    exact sub_eq_iff_eq_add.mpr ((inverse_add_nth_order x y n).trans (add_comm _ _))
+  rw [heq]
   refine ((isBigO_refl _ _).norm_right.mul (inverse_add_norm x)).trans ?_
   simp only [mul_one, isBigO_norm_left]
   exact ((isBigO_refl _ _).norm_right.const_mul_left _).pow _
 
-/-- The function `fun t ↦ Ring.inverse (x + t) - x⁻¹` is `O(t)` as `t → 0`. -/
+/-- First-order control of inverse values on their unit domain. -/
+omit [HasSummableGeomSeries R] in
 theorem inverse_add_norm_diff_first_order (x : Rˣ) :
-    (fun t : R => (↑x + t)⁻¹ʳ - ↑x⁻¹) =O[𝓝 0] fun t => ‖t‖ := by
+    (fun y : Rˣ ↦ (↑y⁻¹ : R) - ↑x⁻¹) =O[𝓝 x] (fun y ↦ ‖(y : R) - x‖) := by
   simpa using inverse_add_norm_diff_nth_order x 1
 
-/-- The function `fun t ↦ Ring.inverse (x + t) - x⁻¹ + x⁻¹ * t * x⁻¹` is `O(t ^ 2)` as `t → 0`. -/
+/-- Second-order control after subtracting the derivative of inversion. -/
+omit [HasSummableGeomSeries R] in
 theorem inverse_add_norm_diff_second_order (x : Rˣ) :
-    (fun t : R => (↑x + t)⁻¹ʳ - ↑x⁻¹ + ↑x⁻¹ * t * ↑x⁻¹) =O[𝓝 0] fun t => ‖t‖ ^ 2 := by
+    (fun y : Rˣ ↦ (↑y⁻¹ : R) - ↑x⁻¹ + ↑x⁻¹ * ((y : R) - x) * ↑x⁻¹) =O[𝓝 x]
+      (fun y ↦ ‖(y : R) - x‖ ^ 2) := by
   convert! inverse_add_norm_diff_nth_order x 2 using 2
   simp only [sum_range_succ, sum_range_zero, zero_add, pow_zero, pow_one, add_mul, one_mul,
     ← sub_sub, neg_mul, sub_neg_eq_add]
 
-/-- The function `Ring.inverse` is continuous at each unit of `R`. -/
-theorem inverse_continuousAt (x : Rˣ) : ContinuousAt inverse (x : R) := by
-  have h_is_o : (fun t : R => (↑x + t)⁻¹ʳ - ↑x⁻¹) =o[𝓝 0] (fun _ => 1 : R → ℝ) :=
-    (inverse_add_norm_diff_first_order x).trans_isLittleO (isLittleO_id_const one_ne_zero).norm_left
-  have h_lim : Tendsto (fun y : R => y - x) (𝓝 x) (𝓝 0) := by
-    refine tendsto_zero_iff_norm_tendsto_zero.mpr ?_
-    exact tendsto_iff_norm_sub_tendsto_zero.mp tendsto_id
-  rw [ContinuousAt, tendsto_iff_norm_sub_tendsto_zero, inverse_unit]
-  simpa [Function.comp_def] using h_is_o.norm_left.tendsto_div_nhds_zero.comp h_lim
+/-- A local estimate for inverse values, using only multiplication of units. -/
+omit [HasSummableGeomSeries R] in
+theorem inverse_sub_norm_le (x y : Rˣ)
+    (h : ‖(↑x⁻¹ : R)‖ * ‖(y : R) - x‖ ≤ (1 / 2 : ℝ)) :
+    ‖(↑y⁻¹ : R) - ↑x⁻¹‖ ≤ 2 * ‖(↑x⁻¹ : R)‖ ^ 2 * ‖(y : R) - x‖ := by
+  have hdiff : ‖(↑y⁻¹ : R) - ↑x⁻¹‖ ≤
+      ‖(↑y⁻¹ : R)‖ * ‖(y : R) - x‖ * ‖(↑x⁻¹ : R)‖ := by
+    rw [Units.inv_sub_inv' y x]
+    calc
+      ‖(↑y⁻¹ : R) * (↑x - ↑y) * ↑x⁻¹‖ ≤
+          ‖(↑y⁻¹ : R) * (↑x - ↑y)‖ * ‖(↑x⁻¹ : R)‖ := norm_mul_le _ _
+      _ ≤ (‖(↑y⁻¹ : R)‖ * ‖(x : R) - y‖) * ‖(↑x⁻¹ : R)‖ :=
+        mul_le_mul_of_nonneg_right (norm_mul_le _ _) (norm_nonneg _)
+      _ = _ := by rw [norm_sub_rev]
+  have hnorm : ‖(↑y⁻¹ : R)‖ ≤
+      ‖(↑y⁻¹ : R)‖ * ‖(y : R) - x‖ * ‖(↑x⁻¹ : R)‖ + ‖(↑x⁻¹ : R)‖ :=
+    calc
+      ‖(↑y⁻¹ : R)‖ ≤ ‖(↑x⁻¹ : R)‖ + ‖(↑y⁻¹ : R) - ↑x⁻¹‖ := norm_le_norm_add_norm_sub' _ _
+      _ ≤ ‖(↑x⁻¹ : R)‖ + ‖(↑y⁻¹ : R)‖ * ‖(y : R) - x‖ * ‖(↑x⁻¹ : R)‖ :=
+        add_le_add_left hdiff _
+      _ = _ := add_comm _ _
+  have hmul := mul_le_mul_of_nonneg_left h (norm_nonneg (↑y⁻¹ : R))
+  have hbound : ‖(↑y⁻¹ : R)‖ ≤ 2 * ‖(↑x⁻¹ : R)‖ := by nlinarith
+  have hmul' := mul_le_mul_of_nonneg_right hbound
+    (mul_nonneg (norm_nonneg ((y : R) - x)) (norm_nonneg (↑x⁻¹ : R)))
+  nlinarith
+
+/-- Inverse values are continuous on the subtype of invertible elements with its ambient topology.
+This proof does not extend inversion to nonunits or assume completeness of the ring. -/
+omit [HasSummableGeomSeries R] in
+theorem inverse_continuous :
+    Continuous (fun x : {x : R | IsUnit x} ↦ (↑x.property.unit⁻¹ : R)) := by
+  apply continuous_iff_continuousAt.2
+  intro x
+  apply Metric.continuousAt_iff.2
+  intro ε hε
+  let c := ‖(↑x.property.unit⁻¹ : R)‖
+  have hc : 0 ≤ c := norm_nonneg _
+  have hp : 0 < 2 * c + 1 := by positivity
+  have hq : 0 < 2 * c ^ 2 + 1 := by positivity
+  refine ⟨min ((2 * c + 1)⁻¹) (ε / (2 * c ^ 2 + 1)),
+    lt_min (Checked.inv_pos.mpr hp) (Checked.div_pos hε hq), ?_⟩
+  intro y hy
+  change dist (y : R) (x : R) < _ at hy
+  rw [dist_eq_norm] at hy
+  have hy₁ := lt_of_lt_of_le hy (min_le_left _ _)
+  have hy₂ := lt_of_lt_of_le hy (min_le_right _ _)
+  have hsmall : c * ‖(y : R) - x‖ ≤ (1 / 2 : ℝ) := by
+    have := (Checked.lt_div_iff hp).mp (by simpa only [Checked.one_div] using hy₁)
+    nlinarith [norm_nonneg ((y : R) - x)]
+  have hε' := (Checked.lt_div_iff hq).mp hy₂
+  have hbound := inverse_sub_norm_le x.property.unit y.property.unit (by
+    simpa only [IsUnit.unit_spec] using hsmall)
+  rw [dist_eq_norm]
+  simp only [IsUnit.unit_spec] at hbound
+  change ‖(↑y.property.unit⁻¹ : R) - ↑x.property.unit⁻¹‖ < ε
+  dsimp only [c] at hε' ⊢
+  nlinarith [norm_nonneg ((y : R) - x)]
+
+/-- Inverse values of `1 - t` are bounded near zero on their exact domain. -/
+omit [HasSummableGeomSeries R] in
+theorem inverse_one_sub_norm :
+    (fun t : {t : R | IsUnit (1 - t)} ↦ (↑t.property.unit⁻¹ : R)) =O[
+      𝓝 (⟨0, by simpa using (isUnit_one : IsUnit (1 : R))⟩ : {t : R | IsUnit (1 - t)})]
+      (fun _ ↦ (1 : ℝ)) := by
+  have hmap : Continuous (fun t : {t : R | IsUnit (1 - t)} ↦
+      (⟨1 - t.val, t.property⟩ : {x : R | IsUnit x})) :=
+    (continuous_const.sub continuous_subtype_val).subtype_mk fun t ↦ t.property
+  exact ((inverse_continuous.comp hmap).tendsto _).isBigO_one ℝ
+
+/-- Inverse values are continuous at every point of their exact domain. -/
+omit [HasSummableGeomSeries R] in
+theorem inverse_continuousAt (x : Rˣ) :
+    ContinuousAt (fun y : {y : R | IsUnit y} ↦ (↑y.property.unit⁻¹ : R))
+      ⟨(x : R), x.isUnit⟩ :=
+  inverse_continuous.continuousAt
 
 end NormedRing
 
@@ -199,8 +250,10 @@ open NormedRing
 /-- In a normed ring with summable geometric series, the coercion from `Rˣ` (equipped with the
 induced topology from the embedding in `R × R`) to `R` is an open embedding. -/
 theorem isOpenEmbedding_val : IsOpenEmbedding (val : Rˣ → R) where
-  toIsEmbedding := isEmbedding_val_mk'
-    (fun _ ⟨u, hu⟩ ↦ hu ▸ (inverse_continuousAt u).continuousWithinAt) Ring.inverse_unit
+  toIsEmbedding := isEmbedding_val_mk' inverse_continuous fun u ↦ by
+    have hu : u.isUnit.unit = u := Units.ext u.isUnit.unit_spec
+    change (↑u.isUnit.unit⁻¹ : R) = ↑u⁻¹
+    rw [hu]
   isOpen_range := Units.isOpen
 
 /-- In a normed ring with summable geometric series, the coercion from `Rˣ` (equipped with the

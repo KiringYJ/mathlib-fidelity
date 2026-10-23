@@ -49,23 +49,83 @@ variable {F : ι → α → β} {f : α → β} {s s' : Set α} {x : α} {p : Fi
 /-- A sequence of functions `Fₙ` converges locally uniformly on a set `s` to a limiting function
 `f` with respect to a filter `p` if, for any entourage of the diagonal `u`, for any `x ∈ s`, one
 has `p`-eventually `(f y, Fₙ y) ∈ u` for all `y` in a neighborhood of `x` in `s`. -/
-def TendstoLocallyUniformlyOn (F : ι → α → β) (f : α → β) (p : Filter ι) (s : Set α) :=
-  ∀ u ∈ 𝓤 β, ∀ x ∈ s, ∃ t ∈ 𝓝[s] x, ∀ᶠ n in p, ∀ y ∈ t, (f y, F n y) ∈ u
+def TendstoLocallyUniformlyOn {D : ι → Type*} (F : ∀ i, D i → β)
+    (f : α → β) (p : Filter ι) (s : Set α)
+    (coord : ∀ i, D i ↪ α := by exact fun _ => Function.Embedding.refl _) : Prop :=
+  ∀ u ∈ 𝓤 β, ∀ x ∈ s, ∃ t ∈ 𝓝[s] x, ∀ᶠ i in p,
+    t ⊆ Set.range (coord i) ∧ ∀ y : D i, coord i y ∈ t → (f (coord i y), F i y) ∈ u
 
-/-- A sequence of functions `Fₙ` converges locally uniformly to a limiting function `f` with respect
-to a filter `p` if, for any entourage of the diagonal `u`, for any `x`, one has `p`-eventually
-`(f y, Fₙ y) ∈ u` for all `y` in a neighborhood of `x`. -/
-def TendstoLocallyUniformly (F : ι → α → β) (f : α → β) (p : Filter ι) :=
-  ∀ u ∈ 𝓤 β, ∀ x : α, ∃ t ∈ 𝓝 x, ∀ᶠ n in p, ∀ y ∈ t, (f y, F n y) ∈ u
+/-- Local uniform convergence on actual embedded domains. Every neighbourhood used by the
+convergence condition is eventually covered by the family domains. -/
+def TendstoLocallyUniformly {D : ι → Type*} (F : ∀ i, D i → β)
+    (f : α → β) (p : Filter ι)
+    (coord : ∀ i, D i ↪ α := by exact fun _ => Function.Embedding.refl _) : Prop :=
+  ∀ u ∈ 𝓤 β, ∀ x : α, ∃ t ∈ 𝓝 x, ∀ᶠ i in p,
+    t ⊆ Set.range (coord i) ∧ ∀ y : D i, coord i y ∈ t → (f (coord i y), F i y) ∈ u
 
-theorem tendstoLocallyUniformlyOn_univ :
-    TendstoLocallyUniformlyOn F f p univ ↔ TendstoLocallyUniformly F f p := by
+/-- For identity domains, the domain-coverage condition is automatic. -/
+theorem tendstoLocallyUniformlyOn_iff :
+    TendstoLocallyUniformlyOn F f p s ↔
+      ∀ u ∈ 𝓤 β, ∀ x ∈ s, ∃ t ∈ 𝓝[s] x, ∀ᶠ i in p, ∀ y ∈ t, (f y, F i y) ∈ u := by
+  simp [TendstoLocallyUniformlyOn, Function.Embedding.coe_refl]
+
+/-- The usual local uniform convergence formula is the identity-domain specialization. -/
+theorem tendstoLocallyUniformly_iff :
+    TendstoLocallyUniformly F f p ↔
+      ∀ u ∈ 𝓤 β, ∀ x : α, ∃ t ∈ 𝓝 x, ∀ᶠ i in p, ∀ y ∈ t, (f y, F i y) ∈ u := by
+  simp [TendstoLocallyUniformly, Function.Embedding.coe_refl]
+
+/-- The filter characterization of locally uniform convergence on actual domains includes
+coverage of the ambient local filter. Restricting to an empty family domain is therefore not
+sufficient to establish convergence. -/
+theorem tendstoLocallyUniformlyOn_iff_domain {D : ι → Type*} {F : ∀ i, D i → β}
+    {coord : ∀ i, D i ↪ α} :
+    TendstoLocallyUniformlyOn F f p s coord ↔ ∀ x ∈ s,
+      (∀ᶠ q : ι × α in p ×ˢ 𝓝[s] x, q.2 ∈ Set.range (coord q.1)) ∧
+      Tendsto (fun q : Σ i, D i ↦ (f (coord q.1 q.2), F q.1 q.2))
+        (comap (fun q : Σ i, D i ↦ (q.1, coord q.1 q.2)) (p ×ˢ 𝓝[s] x)) (𝓤 β) := by
+  constructor
+  · intro h x hx
+    constructor
+    · obtain ⟨t, ht, H⟩ := h Set.univ univ_mem x hx
+      filter_upwards [H.prod_mk (eventually_of_mem ht fun _ hy => hy)] with q hq
+      exact hq.1.1 hq.2
+    · intro u hu
+      change ∀ᶠ q : Σ i, D i in
+        comap (fun q : Σ i, D i ↦ (q.1, coord q.1 q.2)) (p ×ˢ 𝓝[s] x),
+        (f (coord q.1 q.2), F q.1 q.2) ∈ u
+      obtain ⟨t, ht, H⟩ := h u hu x hx
+      have he : ∀ᶠ q : ι × α in p ×ˢ 𝓝[s] x,
+          ∀ z : D q.1, coord q.1 z = q.2 → (f q.2, F q.1 z) ∈ u := by
+        filter_upwards [H.prod_mk (eventually_of_mem ht fun _ hy => hy)] with q hq z hz
+        simpa only [hz] using hq.1.2 z (by simpa only [hz] using hq.2)
+      have he' := (tendsto_comap (f := fun q : Σ i, D i ↦ (q.1, coord q.1 q.2))).eventually he
+      filter_upwards [he'] with q hq using hq q.2 rfl
+  · intro h u hu x hx
+    obtain ⟨hc, ht⟩ := h x hx
+    have he := eventually_comap.mp (ht.eventually hu)
+    have hall : ∀ᶠ q : ι × α in p ×ˢ 𝓝[s] x,
+        q.2 ∈ Set.range (coord q.1) ∧
+          ∀ z : D q.1, coord q.1 z = q.2 → (f q.2, F q.1 z) ∈ u := by
+      filter_upwards [hc, he] with q hqc hqe
+      refine ⟨hqc, fun z hz => ?_⟩
+      have hz' := hqe ⟨q.1, z⟩ (Prod.ext rfl hz)
+      change (f (coord q.1 z), F q.1 z) ∈ u at hz'
+      simpa only [hz] using hz'
+    obtain ⟨t, ht, H⟩ := mem_prod_iff_right.mp hall
+    refine ⟨t, ht, H.mono fun i hi => ⟨fun y hy => (hi y hy).1, fun z hz => ?_⟩⟩
+    exact (hi (coord i z) hz).2 z rfl
+
+theorem tendstoLocallyUniformlyOn_univ {D : ι → Type*} {F : ∀ i, D i → β}
+    {coord : ∀ i, D i ↪ α} :
+    TendstoLocallyUniformlyOn F f p univ coord ↔ TendstoLocallyUniformly F f p coord := by
   simp [TendstoLocallyUniformlyOn, TendstoLocallyUniformly, nhdsWithin_univ]
 
 theorem tendstoLocallyUniformlyOn_iff_forall_tendsto :
     TendstoLocallyUniformlyOn F f p s ↔
-      ∀ x ∈ s, Tendsto (fun y : ι × α => (f y.2, F y.1 y.2)) (p ×ˢ 𝓝[s] x) (𝓤 β) :=
-  forall₂_comm.trans <| forall₄_congr fun _ _ _ _ => by
+      ∀ x ∈ s, Tendsto (fun y : ι × α => (f y.2, F y.1 y.2)) (p ×ˢ 𝓝[s] x) (𝓤 β) := by
+  rw [tendstoLocallyUniformlyOn_iff]
+  exact forall₂_comm.trans <| forall₄_congr fun _ _ _ _ => by
     simp_rw [mem_map, mem_prod_iff_right, mem_preimage]
 
 nonrec theorem IsOpen.tendstoLocallyUniformlyOn_iff_forall_tendsto (hs : IsOpen s) :
@@ -81,22 +141,36 @@ theorem tendstoLocallyUniformly_iff_forall_tendsto :
 
 theorem tendstoLocallyUniformlyOn_iff_tendstoLocallyUniformly_comp_coe :
     TendstoLocallyUniformlyOn F f p s ↔
-      TendstoLocallyUniformly (fun i (x : s) => F i x) (f ∘ (↑)) p := by
+      TendstoLocallyUniformly (fun i (x : s) => F i x.val) (fun x : s => f x.val) p := by
   simp only [tendstoLocallyUniformly_iff_forall_tendsto, Subtype.forall', tendsto_map'_iff,
     tendstoLocallyUniformlyOn_iff_forall_tendsto, ← map_nhds_subtype_val, prod_map_right]; rfl
 
 protected theorem TendstoUniformlyOn.tendstoLocallyUniformlyOn (h : TendstoUniformlyOn F f p s) :
-    TendstoLocallyUniformlyOn F f p s := fun u hu _ _ =>
-  ⟨s, self_mem_nhdsWithin, by simpa using h u hu⟩
+    TendstoLocallyUniformlyOn F f p s := by
+  rw [tendstoLocallyUniformlyOn_iff]
+  exact fun u hu _ _ => ⟨s, self_mem_nhdsWithin, by simpa using h u hu⟩
 
 protected theorem TendstoUniformly.tendstoLocallyUniformly (h : TendstoUniformly F f p) :
-    TendstoLocallyUniformly F f p := fun u hu _ => ⟨univ, univ_mem, by simpa using h u hu⟩
+    TendstoLocallyUniformly F f p := by
+  rw [tendstoLocallyUniformly_iff]
+  exact fun u hu _ => ⟨univ, univ_mem, by simpa using h u hu⟩
 
-theorem TendstoLocallyUniformlyOn.mono (h : TendstoLocallyUniformlyOn F f p s) (h' : s' ⊆ s) :
-    TendstoLocallyUniformlyOn F f p s' := by
+theorem TendstoLocallyUniformlyOn.mono {D : ι → Type*} {F : ∀ i, D i → β}
+    {coord : ∀ i, D i ↪ α} (h : TendstoLocallyUniformlyOn F f p s coord) (h' : s' ⊆ s) :
+    TendstoLocallyUniformlyOn F f p s' coord := by
   intro u hu x hx
   rcases h u hu x (h' hx) with ⟨t, ht, H⟩
   exact ⟨t, nhdsWithin_mono x h' ht, H.mono fun n => id⟩
+
+/-- Reindex a locally uniformly convergent family along a convergent index map. -/
+theorem TendstoLocallyUniformlyOn.comp_tendsto {κ : Type*} {D : ι → Type*}
+    {F : ∀ i, D i → β} {coord : ∀ i, D i ↪ α}
+    (h : TendstoLocallyUniformlyOn F f p s coord) {q : Filter κ} {φ : κ → ι}
+    (hφ : Tendsto φ q p) :
+    TendstoLocallyUniformlyOn (fun i ↦ F (φ i)) f q s (fun i ↦ coord (φ i)) := by
+  intro u hu x hx
+  obtain ⟨t, ht, H⟩ := h u hu x hx
+  exact ⟨t, ht, hφ.eventually H⟩
 
 theorem tendstoLocallyUniformlyOn_iUnion {ι' : Sort*} {S : ι' → Set α} (hS : ∀ i, IsOpen (S i))
     (h : ∀ i, TendstoLocallyUniformlyOn F f p (S i)) :
@@ -123,13 +197,16 @@ theorem TendstoLocallyUniformlyOn.union (hs₁ : IsOpen s) (hs₂ : IsOpen s')
   refine tendstoLocallyUniformlyOn_sUnion _ ?_ ?_ <;> simp [*]
 
 protected theorem TendstoLocallyUniformly.tendstoLocallyUniformlyOn
-    (h : TendstoLocallyUniformly F f p) : TendstoLocallyUniformlyOn F f p s :=
+    {D : ι → Type*} {F : ∀ i, D i → β} {coord : ∀ i, D i ↪ α}
+    (h : TendstoLocallyUniformly F f p coord) : TendstoLocallyUniformlyOn F f p s coord :=
   (tendstoLocallyUniformlyOn_univ.mpr h).mono (subset_univ _)
 
 /-- On a compact space, locally uniform convergence is just uniform convergence. -/
 theorem tendstoLocallyUniformly_iff_tendstoUniformly_of_compactSpace [CompactSpace α] :
     TendstoLocallyUniformly F f p ↔ TendstoUniformly F f p := by
-  refine ⟨fun h V hV => ?_, TendstoUniformly.tendstoLocallyUniformly⟩
+  refine ⟨fun h => ?_, TendstoUniformly.tendstoLocallyUniformly⟩
+  rw [tendstoLocallyUniformly_iff] at h
+  intro V hV
   choose U hU using h V hV
   obtain ⟨t, ht⟩ := isCompact_univ.elim_nhds_subcover' (fun k _ => U k) fun k _ => (hU k).1
   replace hU := fun x : t => (hU x).2
@@ -145,9 +222,9 @@ theorem tendstoLocallyUniformlyOn_iff_tendstoUniformlyOn_of_compact (hs : IsComp
     TendstoLocallyUniformlyOn F f p s ↔ TendstoUniformlyOn F f p s := by
   have : CompactSpace s := isCompact_iff_compactSpace.mp hs
   refine ⟨fun h => ?_, TendstoUniformlyOn.tendstoLocallyUniformlyOn⟩
-  rwa [tendstoLocallyUniformlyOn_iff_tendstoLocallyUniformly_comp_coe,
-    tendstoLocallyUniformly_iff_tendstoUniformly_of_compactSpace, ←
-    tendstoUniformlyOn_iff_tendstoUniformly_comp_coe] at h
+  apply tendstoUniformlyOn_iff_tendstoUniformly_comp_coe.mpr
+  apply tendstoLocallyUniformly_iff_tendstoUniformly_of_compactSpace.mp
+  exact tendstoLocallyUniformlyOn_iff_tendstoLocallyUniformly_comp_coe.mp h
 
 /-!
 ### Composition
@@ -158,6 +235,7 @@ section Comp
 theorem TendstoLocallyUniformlyOn.comp [TopologicalSpace γ] {t : Set γ}
     (h : TendstoLocallyUniformlyOn F f p s) (g : γ → α) (hg : MapsTo g t s)
     (cg : ContinuousOn g t) : TendstoLocallyUniformlyOn (fun n => F n ∘ g) (f ∘ g) p t := by
+  rw [tendstoLocallyUniformlyOn_iff] at h ⊢
   intro u hu x hx
   rcases h u hu (g x) (hg hx) with ⟨a, ha, H⟩
   have : g ⁻¹' a ∈ 𝓝[t] x :=
@@ -261,7 +339,9 @@ theorem tendstoLocallyUniformlyOn_TFAE [LocallyCompactSpace α] (G : ι → α �
     obtain ⟨K, ⟨hK1, hK2⟩, hK3⟩ := (compact_basis_nhds x).mem_iff.mp (hs.mem_nhds hx)
     exact ⟨K, nhdsWithin_le_nhds hK1, h K hK3 hK2⟩
   tfae_have 3 → 1
-  | h, u, hu, x, hx => by
+  | h => by
+    rw [tendstoLocallyUniformlyOn_iff]
+    intro u hu x hx
     obtain ⟨v, hv1, hv2⟩ := h x hx
     exact ⟨v, hv1, hv2 u hu⟩
   tfae_finish
@@ -277,6 +357,7 @@ lemma tendstoLocallyUniformly_iff_forall_isCompact [LocallyCompactSpace α] :
 
 theorem tendstoLocallyUniformlyOn_iff_filter :
     TendstoLocallyUniformlyOn F f p s ↔ ∀ x ∈ s, TendstoUniformlyOnFilter F f p (𝓝[s] x) := by
+  rw [tendstoLocallyUniformlyOn_iff]
   simp only [TendstoUniformlyOnFilter, eventually_prod_iff]
   constructor
   · rintro h x hx u hu

@@ -105,12 +105,43 @@ limits.
 
 /-- A locally uniform limit on a set of functions which are continuous on this set is itself
 continuous on this set. -/
-protected theorem TendstoLocallyUniformlyOn.continuousOn (h : TendstoLocallyUniformlyOn F f p s)
-    (hc : ∃ᶠ n in p, ContinuousOn (F n) s) : ContinuousOn f s := by
-  refine continuousOn_of_locally_uniform_approx_of_continuousWithinAt fun x hx u hu => ?_
-  rcases h u hu x hx with ⟨t, ht, H⟩
-  rcases (hc.and_eventually H).exists with ⟨n, hFc, hF⟩
-  exact ⟨t, ht, ⟨F n, hFc.continuousWithinAt hx, hF⟩⟩
+protected theorem TendstoLocallyUniformlyOn.continuousOn
+    {D : ι → Type*} [∀ i, TopologicalSpace (D i)] {F : ∀ i, D i → β}
+    {coord : ∀ i, D i ↪ α} (h : TendstoLocallyUniformlyOn F f p s coord)
+    (hc : ∃ᶠ i in p, ContinuousOn (F i) ((coord i) ⁻¹' s))
+    (hcoord : ∀ i, Topology.IsEmbedding (coord i) := by exact fun _ => Topology.IsEmbedding.id) :
+    ContinuousOn f s := by
+  intro x hx
+  refine Uniform.continuousWithinAt_iff'_left.2 fun u₀ hu₀ => ?_
+  obtain ⟨u₁, h₁, u₁₀⟩ : ∃ u ∈ 𝓤 β, u ○ u ⊆ u₀ := comp_mem_uniformity_sets hu₀
+  obtain ⟨u₂, h₂, hsymm, u₂₁⟩ :
+      ∃ u ∈ 𝓤 β, (∀ {a b}, (a, b) ∈ u → (b, a) ∈ u) ∧ u ○ u ⊆ u₁ :=
+    comp_symm_of_uniformity h₁
+  obtain ⟨t, ht, H⟩ := h u₂ h₂ x hx
+  obtain ⟨i, hFi, hcover, hclose⟩ := (hc.and_eventually H).exists
+  obtain ⟨z, hz⟩ := hcover (mem_of_mem_nhdsWithin hx ht)
+  have hmap : map (coord i) (𝓝[(coord i) ⁻¹' s] z) = 𝓝[s] x := by
+    rw [(hcoord i).map_nhdsWithin_eq, image_preimage_eq_inter_range, hz]
+    exact nhdsWithin_inter_of_mem' (mem_of_superset ht hcover)
+  have hb₀ : ∀ᶠ w in 𝓝[(coord i) ⁻¹' s] z, (F i w, F i z) ∈ u₂ :=
+    Uniform.continuousWithinAt_iff'_left.1
+      (hFi z (by simpa only [Set.mem_preimage, hz] using hx)) h₂
+  have hb : ∀ᶠ y in 𝓝[s] x, ∀ w : D i, coord i w = y → (F i w, F i z) ∈ u₂ := by
+    rw [← hmap]
+    change ∀ᶠ w in 𝓝[(coord i) ⁻¹' s] z,
+      ∀ v : D i, coord i v = coord i w → (F i v, F i z) ∈ u₂
+    filter_upwards [hb₀] with w hw v hv
+    simpa only [(coord i).injective hv] using hw
+  have hzx : (F i z, f x) ∈ u₁ := by
+    have hzclose : (f x, F i z) ∈ u₂ := by
+      simpa only [hz] using hclose z (by simpa only [hz] using mem_of_mem_nhdsWithin hx ht)
+    exact u₂₁ (prodMk_mem_comp (refl_mem_uniformity h₂) (hsymm hzclose))
+  change ∀ᶠ y in 𝓝[s] x, (f y, f x) ∈ u₀
+  filter_upwards [ht, hb] with y hy hby
+  obtain ⟨w, hw⟩ := hcover hy
+  have hyclose : (f y, F i w) ∈ u₂ := by
+    simpa only [hw] using hclose w (by simpa only [hw] using hy)
+  exact u₁₀ (prodMk_mem_comp (u₂₁ (prodMk_mem_comp hyclose (hby w hw))) hzx)
 
 /-- A uniform limit on a set of functions which are continuous on this set is itself continuous
 on this set. -/
@@ -119,10 +150,14 @@ protected theorem TendstoUniformlyOn.continuousOn (h : TendstoUniformlyOn F f p 
   h.tendstoLocallyUniformlyOn.continuousOn hc
 
 /-- A locally uniform limit of continuous functions is continuous. -/
-protected theorem TendstoLocallyUniformly.continuous (h : TendstoLocallyUniformly F f p)
-    (hc : ∃ᶠ n in p, Continuous (F n)) : Continuous f :=
+protected theorem TendstoLocallyUniformly.continuous
+    {D : ι → Type*} [∀ i, TopologicalSpace (D i)] {F : ∀ i, D i → β}
+    {coord : ∀ i, D i ↪ α} (h : TendstoLocallyUniformly F f p coord)
+    (hc : ∃ᶠ i in p, Continuous (F i))
+    (hcoord : ∀ i, Topology.IsEmbedding (coord i) := by exact fun _ => Topology.IsEmbedding.id) :
+    Continuous f :=
   continuousOn_univ.mp <|
-    h.tendstoLocallyUniformlyOn.continuousOn <| hc.mono fun _n hn => hn.continuousOn
+    h.tendstoLocallyUniformlyOn.continuousOn (hc.mono fun _i hi => hi.continuousOn) hcoord
 
 /-- A uniform limit of continuous functions is continuous. -/
 protected theorem TendstoUniformly.continuous (h : TendstoUniformly F f p)
@@ -163,10 +198,21 @@ theorem tendsto_comp_of_locally_uniform_limit (h : ContinuousAt f x) (hg : Tends
 
 /-- If `Fₙ` tends locally uniformly to `f` on a set `s`, and `gₙ` tends to `x` within `s`, then
 `Fₙ gₙ` tends to `f x` if `f` is continuous at `x` within `s` and `x ∈ s`. -/
-theorem TendstoLocallyUniformlyOn.tendsto_comp (h : TendstoLocallyUniformlyOn F f p s)
-    (hf : ContinuousWithinAt f s x) (hx : x ∈ s) (hg : Tendsto g p (𝓝[s] x)) :
-    Tendsto (fun n => F n (g n)) p (𝓝 (f x)) :=
-  tendsto_comp_of_locally_uniform_limit_within hf hg fun u hu => h u hu x hx
+theorem TendstoLocallyUniformlyOn.tendsto_comp
+    {D : ι → Type*} {F : ∀ i, D i → β} {coord : ∀ i, D i ↪ α} {g : ∀ i, D i}
+    (h : TendstoLocallyUniformlyOn F f p s coord)
+    (hf : ContinuousWithinAt f s x) (hx : x ∈ s)
+    (hg : Tendsto (fun i ↦ coord i (g i)) p (𝓝[s] x)) :
+    Tendsto (fun i => F i (g i)) p (𝓝 (f x)) := by
+  refine Uniform.tendsto_nhds_right.2 fun u₀ hu₀ => ?_
+  obtain ⟨u₁, h₁, u₁₀⟩ : ∃ u ∈ 𝓤 β, u ○ u ⊆ u₀ := comp_mem_uniformity_sets hu₀
+  obtain ⟨t, ht, H⟩ := h u₁ h₁ x hx
+  have A : ∀ᶠ i in p, coord i (g i) ∈ t := hg ht
+  have B : ∀ᶠ i in p, (f x, f (coord i (g i))) ∈ u₁ :=
+    hg (Uniform.continuousWithinAt_iff'_right.1 hf h₁)
+  change ∀ᶠ i in p, (f x, F i (g i)) ∈ u₀
+  filter_upwards [H, A, B] with i hi ha hb
+  exact u₁₀ (prodMk_mem_comp hb (hi.2 (g i) ha))
 
 /-- If `Fₙ` tends uniformly to `f` on a set `s`, and `gₙ` tends to `x` within `s`, then `Fₙ gₙ`
 tends to `f x` if `f` is continuous at `x` within `s`. -/
@@ -176,9 +222,13 @@ theorem TendstoUniformlyOn.tendsto_comp (h : TendstoUniformlyOn F f p s)
   tendsto_comp_of_locally_uniform_limit_within hf hg fun u hu => ⟨s, self_mem_nhdsWithin, h u hu⟩
 
 /-- If `Fₙ` tends locally uniformly to `f`, and `gₙ` tends to `x`, then `Fₙ gₙ` tends to `f x`. -/
-theorem TendstoLocallyUniformly.tendsto_comp (h : TendstoLocallyUniformly F f p)
-    (hf : ContinuousAt f x) (hg : Tendsto g p (𝓝 x)) : Tendsto (fun n => F n (g n)) p (𝓝 (f x)) :=
-  tendsto_comp_of_locally_uniform_limit hf hg fun u hu => h u hu x
+theorem TendstoLocallyUniformly.tendsto_comp
+    {D : ι → Type*} {F : ∀ i, D i → β} {coord : ∀ i, D i ↪ α} {g : ∀ i, D i}
+    (h : TendstoLocallyUniformly F f p coord) (hf : ContinuousAt f x)
+    (hg : Tendsto (fun i ↦ coord i (g i)) p (𝓝 x)) :
+    Tendsto (fun i => F i (g i)) p (𝓝 (f x)) :=
+  h.tendstoLocallyUniformlyOn.tendsto_comp hf.continuousWithinAt (Set.mem_univ x)
+    (by simpa only [nhdsWithin_univ] using hg)
 
 /-- If `Fₙ` tends uniformly to `f`, and `gₙ` tends to `x`, then `Fₙ gₙ` tends to `f x`. -/
 theorem TendstoUniformly.tendsto_comp (h : TendstoUniformly F f p) (hf : ContinuousAt f x)

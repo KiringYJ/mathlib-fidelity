@@ -125,15 +125,17 @@ instance instDiscreteTopology [DiscreteTopology M] : DiscreteTopology Mˣ :=
 Use `Units.isEmbedding_val₀`, `Units.isEmbedding_val`, or `toUnits_homeomorph` instead. -/
 @[to_additive /-- An auxiliary lemma that can be used to prove that coercion `AddUnits M → M` is a
 topological embedding. Use `AddUnits.isEmbedding_val` or `toAddUnits_homeomorph` instead. -/]
-lemma isEmbedding_val_mk' {M : Type*} [Monoid M] [TopologicalSpace M] {f : M → M}
-    (hc : ContinuousOn f {x : M | IsUnit x}) (hf : ∀ u : Mˣ, f u.1 = ↑u⁻¹) :
+lemma isEmbedding_val_mk' {M : Type*} [Monoid M] [TopologicalSpace M]
+    {f : {x : M | IsUnit x} → M} (hc : Continuous f)
+    (hf : ∀ u : Mˣ, f ⟨u.1, u.isUnit⟩ = ↑u⁻¹) :
     IsEmbedding (val : Mˣ → M) := by
   refine ⟨⟨?_⟩, val_injective⟩
-  rw [topology_eq_inf, inf_eq_left, ← continuous_iff_le_induced,
-    @continuous_iff_continuousAt _ _ (.induced _ _)]
-  intro u s hs
-  simp only [← hf, nhds_induced, Filter.mem_map] at hs ⊢
-  exact ⟨_, mem_inf_principal.1 (hc u u.isUnit hs), fun u' hu' ↦ hu' u'.isUnit⟩
+  rw [topology_eq_inf, inf_eq_left, ← continuous_iff_le_induced]
+  let : TopologicalSpace Mˣ := .induced (val : Mˣ → M) ‹TopologicalSpace M›
+  have hval : Continuous (val : Mˣ → M) := continuous_induced_dom
+  have hsub : Continuous (fun u : Mˣ ↦ (⟨u.1, u.isUnit⟩ : {x : M | IsUnit x})) :=
+    hval.subtype_mk fun u ↦ u.isUnit
+  simpa only [Function.comp_def, hf] using hc.comp hsub
 
 /-- An auxiliary lemma that can be used to prove that coercion `Mˣ → M` is a topological embedding.
 Use `Units.isEmbedding_val₀`, `Units.isEmbedding_val`, or `toUnits_homeomorph` instead. -/
@@ -141,7 +143,8 @@ Use `Units.isEmbedding_val₀`, `Units.isEmbedding_val`, or `toUnits_homeomorph`
 topological embedding. Use `AddUnits.isEmbedding_val` or `toAddUnits_homeomorph` instead. -/]
 lemma embedding_val_mk {M : Type*} [DivisionMonoid M] [TopologicalSpace M]
     (h : ContinuousOn Inv.inv {x : M | IsUnit x}) : IsEmbedding (val : Mˣ → M) :=
-  isEmbedding_val_mk' h fun u ↦ (val_inv_eq_inv_val u).symm
+  isEmbedding_val_mk' (continuousOn_iff_continuous_domRestrict.mp h)
+    fun u ↦ (val_inv_eq_inv_val u).symm
 
 @[to_additive]
 theorem continuous_embedProduct : Continuous (embedProduct M) :=

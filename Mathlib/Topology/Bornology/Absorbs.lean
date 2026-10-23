@@ -144,9 +144,23 @@ protected lemma Absorbs.univ : Absorbs G₀ univ s :=
   (eventually_ne_cobounded 0).mono fun a ha ↦ by rw [smul_set_univ₀ ha]; apply subset_univ
 
 lemma absorbs_iff_eventually_cobounded_mapsTo :
-    Absorbs G₀ s t ↔ ∀ᶠ c in cobounded G₀, MapsTo (c⁻¹ • ·) t s :=
-  eventually_congr <| (eventually_ne_cobounded 0).mono fun c hc ↦ by
-    rw [← preimage_smul_inv₀ hc]; rfl
+    Absorbs G₀ s t ↔
+      ∀ᶠ c : G₀ˣ in comap (fun u : G₀ˣ ↦ (u : G₀)) (cobounded G₀),
+        MapsTo (c⁻¹ • ·) t s := by
+  rw [eventually_comap]
+  constructor
+  · intro h
+    exact h.eventually.mono fun c hc u hu ↦ by
+      subst c
+      change t ⊆ (fun x ↦ u⁻¹ • x) ⁻¹' s
+      rw [preimage_smul_inv]
+      exact hc
+  · intro h
+    filter_upwards [h, eventually_ne_cobounded (0 : G₀)] with c hc hc₀
+    have hu := hc (Units.mk0 c hc₀) rfl
+    change t ⊆ (fun x ↦ (Units.mk0 c hc₀)⁻¹ • x) ⁻¹' s at hu
+    rw [preimage_smul_inv] at hu
+    exact hu
 
 alias ⟨eventually_cobounded_mapsTo, _⟩ := absorbs_iff_eventually_cobounded_mapsTo
 
@@ -191,6 +205,10 @@ protected alias ⟨_, Absorbs.biInter⟩ := Set.Finite.absorbs_biInter
 lemma absorbs_zero_iff [NeBot (cobounded G₀)]
     {E : Type*} [AddMonoid E] [DistribMulAction G₀ E] {s : Set E} :
     Absorbs G₀ s 0 ↔ 0 ∈ s := by
+  have hrange : range (fun u : G₀ˣ ↦ (u : G₀)) ∈ cobounded G₀ :=
+    (eventually_ne_cobounded (0 : G₀)).mono fun c hc ↦ ⟨Units.mk0 c hc, rfl⟩
+  let : NeBot (comap (fun u : G₀ˣ ↦ (u : G₀)) (cobounded G₀)) :=
+    (inferInstance : NeBot (cobounded G₀)).comap_of_range_mem hrange
   simp only [absorbs_iff_eventually_cobounded_mapsTo, ← singleton_zero,
     mapsTo_singleton, smul_zero, eventually_const]
 
@@ -244,7 +262,8 @@ variable {G₀ α E : Type*} [GroupWithZero G₀] [Bornology G₀] [MulAction G�
 lemma absorbent_univ : Absorbent G₀ (univ : Set α) := fun _ ↦ .univ
 
 lemma absorbent_iff_inv_smul {s : Set α} :
-    Absorbent G₀ s ↔ ∀ x, ∀ᶠ c in cobounded G₀, c⁻¹ • x ∈ s :=
+    Absorbent G₀ s ↔ ∀ x,
+      ∀ᶠ c : G₀ˣ in comap (fun u : G₀ˣ ↦ (u : G₀)) (cobounded G₀), c⁻¹ • x ∈ s :=
   forall_congr' fun x ↦ by simp only [absorbs_iff_eventually_cobounded_mapsTo, mapsTo_singleton]
 
 lemma Absorbent.zero_mem [NeBot (cobounded G₀)] [AddMonoid E] [DistribMulAction G₀ E]
