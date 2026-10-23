@@ -83,9 +83,11 @@ theorem eps_mul_eps [Semiring R] : (ε * ε : R[ε]) = 0 :=
 lemma eps_pow_two [Semiring R] : (ε : R[ε]) ^ 2 = 0 := by
   simp [pow_two]
 
-@[simp]
-theorem inv_eps [DivisionRing R] : (ε : R[ε])⁻¹ = 0 :=
-  TrivSqZeroExt.inv_inr 1
+theorem not_isUnit_eps [Nontrivial R] [Ring R] : ¬IsUnit (ε : R[ε]) := by
+  intro h
+  have h0 : IsUnit (TrivSqZeroExt.fst (ε : R[ε])) :=
+    TrivSqZeroExt.isUnit_iff_isUnit_fst.mp h
+  exact not_isUnit_zero (by simpa only [fst_eps] using h0)
 
 @[simp]
 theorem inr_eq_smul_eps [MulZeroOneClass R] (r : R) : inr r = (r • ε : R[ε]) :=

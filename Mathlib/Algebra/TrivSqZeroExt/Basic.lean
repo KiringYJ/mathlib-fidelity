@@ -41,6 +41,8 @@ Many of the later results in this file are only stated for the commutative `R'` 
   `TrivSqZeroExt R M`.
 * `TrivSqZeroExt.fst`, `TrivSqZeroExt.snd`: the canonical projections from
   `TrivSqZeroExt R M`.
+* `TrivSqZeroExt.inverse`: the inverse of an element whose first component is a unit.
+* `TrivSqZeroExt.unitOfIsUnitFst`: such an element bundled as a unit.
 * `triv_sq_zero_ext.algebra`: the associated `R`-algebra structure.
 * `TrivSqZeroExt.lift`: the universal property of the trivial square-zero extension; algebra
   morphisms `TrivSqZeroExt R M →ₐ[S] A` are uniquely defined by an algebra morphism `f : R →ₐ[S] A`
@@ -678,24 +680,6 @@ def inlHom [Semiring R] [AddCommMonoid M] [Module R M] [Module Rᵐᵒᵖ M] : R
 
 end Mul
 
-section Inv
-variable {R : Type u} {M : Type v}
-variable [Neg M] [Inv R] [SMul Rᵐᵒᵖ M] [SMul R M]
-
-/-- Inversion of the trivial-square-zero extension, sending $r + m$ to $r^{-1} - r^{-1}mr^{-1}$.
-
-Strictly this is only a _two_-sided inverse when the left and right actions associate. -/
-instance instInv : Inv (tsze R M) :=
-  ⟨fun b => (b.1⁻¹, -(b.1⁻¹ •> b.2 <• b.1⁻¹))⟩
-
-@[simp] theorem fst_inv (x : tsze R M) : fst x⁻¹ = (fst x)⁻¹ :=
-  rfl
-
-@[simp] theorem snd_inv (x : tsze R M) : snd x⁻¹ = -((fst x)⁻¹ •> snd x <• (fst x)⁻¹) :=
-  rfl
-
-end Inv
-
 /-! This section is heavily inspired by analogous results about matrices. -/
 section Invertible
 variable {R : Type u} {M : Type v}
@@ -752,7 +736,7 @@ def invertibleEquivInvertibleFst (x : tsze R M) : Invertible x ≃ Invertible x.
   left_inv _ := Subsingleton.elim _ _
   right_inv _ := Subsingleton.elim _ _
 
-/-- When lowered to a prop, `Matrix.invertibleEquivInvertibleFst` forms an `iff`. -/
+/-- When lowered to a prop, `TrivSqZeroExt.invertibleEquivInvertibleFst` forms an `iff`. -/
 theorem isUnit_iff_isUnit_fst {x : tsze R M} : IsUnit x ↔ IsUnit x.fst := by
   simp only [← nonempty_invertible_iff_isUnit, (invertibleEquivInvertibleFst x).nonempty_congr]
 
@@ -766,82 +750,110 @@ theorem isUnit_inr_iff {m : M} : IsUnit (inr m : tsze R M) ↔ Subsingleton R :=
 
 end Invertible
 
-section DivisionSemiring
+section Inverse
 variable {R : Type u} {M : Type v}
-variable [DivisionSemiring R] [AddCommGroup M] [Module Rᵐᵒᵖ M] [Module R M]
-
-protected theorem inv_inl (r : R) :
-    (inl r)⁻¹ = (inl (r⁻¹ : R) : tsze R M) := by
-  ext
-  · rw [fst_inv, fst_inl, fst_inl]
-  · rw [snd_inv, fst_inl, snd_inl, snd_inl, smul_zero, smul_zero, neg_zero]
-
-@[simp]
-theorem inv_inr (m : M) : (inr m)⁻¹ = (0 : tsze R M) := by
-  ext
-  · rw [fst_inv, fst_inr, fst_zero, inv_zero]
-  · rw [snd_inv, snd_inr, fst_inr, inv_zero, op_zero, zero_smul, snd_zero, neg_zero]
-
-@[simp]
-protected theorem inv_zero : (0 : tsze R M)⁻¹ = (0 : tsze R M) := by
-  rw [← inl_zero, TrivSqZeroExt.inv_inl, inv_zero]
-
-@[simp]
-protected theorem inv_one : (1 : tsze R M)⁻¹ = (1 : tsze R M) := by
-  rw [← inl_one, TrivSqZeroExt.inv_inl, inv_one]
-
-protected theorem inv_mul_cancel {x : tsze R M} (hx : fst x ≠ 0) : x⁻¹ * x = 1 := by
-  convert mul_left_eq_one _ _ (_root_.inv_mul_cancel₀ hx)
-  ext <;> simp
-
+variable [Semiring R] [AddCommGroup M] [Module Rᵐᵒᵖ M] [Module R M]
 variable [SMulCommClass R Rᵐᵒᵖ M]
 
-@[simp] theorem invOf_eq_inv (x : tsze R M) [Invertible x] : ⅟x = x⁻¹ := by
-  let := invertibleFstOfInvertible x
-  ext <;> simp [fst_invOf, snd_invOf]
+/-- The inverse of an element of a trivial square-zero extension whose first component is a unit. -/
+noncomputable def inverse (x : tsze R M) (hx : IsUnit x.fst) : tsze R M :=
+  ((↑hx.unit⁻¹ : R), -((↑hx.unit⁻¹ : R) •> x.snd <• (↑hx.unit⁻¹ : R)))
 
-protected theorem mul_inv_cancel {x : tsze R M} (hx : fst x ≠ 0) : x * x⁻¹ = 1 := by
-  have : Invertible x.fst := Units.invertible (.mk0 _ hx)
-  have := invertibleOfInvertibleFst x
-  rw [← invOf_eq_inv, mul_invOf_self]
+omit [SMulCommClass R Rᵐᵒᵖ M] in
+@[simp]
+theorem fst_inverse (x : tsze R M) (hx : IsUnit x.fst) :
+    fst (inverse x hx) = (↑hx.unit⁻¹ : R) :=
+  rfl
 
-protected theorem mul_inv_rev (a b : tsze R M) :
-    (a * b)⁻¹ = b⁻¹ * a⁻¹ := by
-  ext
-  · rw [fst_inv, fst_mul, fst_mul, mul_inv_rev, fst_inv, fst_inv]
-  · simp only [snd_inv, snd_mul, fst_mul, fst_inv]
-    simp only [smul_neg, smul_add]
-    simp_rw [mul_inv_rev, smul_comm (_ : R), op_smul_op_smul, smul_smul, add_comm, neg_add]
-    obtain ha0 | ha := eq_or_ne (fst a) 0
-    · simp [ha0]
-    obtain hb0 | hb := eq_or_ne (fst b) 0
-    · simp [hb0]
-    rw [inv_mul_cancel_right₀ ha, mul_inv_cancel_left₀ hb]
+omit [SMulCommClass R Rᵐᵒᵖ M] in
+@[simp]
+theorem snd_inverse (x : tsze R M) (hx : IsUnit x.fst) :
+    snd (inverse x hx) = -((↑hx.unit⁻¹ : R) •> x.snd <• (↑hx.unit⁻¹ : R)) :=
+  rfl
 
-protected theorem inv_inv {x : tsze R M} (hx : fst x ≠ 0) : x⁻¹⁻¹ = x :=
-  -- adapted from `Matrix.nonsing_inv_nonsing_inv`
-  calc
-    x⁻¹⁻¹ = 1 * x⁻¹⁻¹ := by rw [one_mul]
-    _ = x * x⁻¹ * x⁻¹⁻¹ := by rw [TrivSqZeroExt.mul_inv_cancel hx]
-    _ = x := by
-      rw [mul_assoc, TrivSqZeroExt.mul_inv_cancel, mul_one]
-      rw [fst_inv]
-      apply inv_ne_zero hx
+omit [SMulCommClass R Rᵐᵒᵖ M] in
+@[simp]
+theorem inverse_mul (x : tsze R M) (hx : IsUnit x.fst) : inverse x hx * x = 1 := by
+  convert mul_left_eq_one (↑hx.unit⁻¹ : R) x hx.val_inv_mul
+  ext <;> simp [inverse]
 
 @[simp]
-theorem isUnit_inv_iff {x : tsze R M} : IsUnit x⁻¹ ↔ IsUnit x := by
-  simp_rw [isUnit_iff_isUnit_fst, fst_inv, isUnit_iff_ne_zero, ne_eq, inv_eq_zero]
+theorem mul_inverse (x : tsze R M) (hx : IsUnit x.fst) : x * inverse x hx = 1 := by
+  convert mul_right_eq_one x (↑hx.unit⁻¹ : R) hx.mul_val_inv
+  ext <;> simp [inverse, smul_comm]
 
-end DivisionSemiring
+/-- An element of a trivial square-zero extension with unit first component, bundled as a unit. -/
+noncomputable def unitOfIsUnitFst (x : tsze R M) (hx : IsUnit x.fst) : (tsze R M)ˣ where
+  val := x
+  inv := inverse x hx
+  val_inv := mul_inverse x hx
+  inv_val := inverse_mul x hx
 
-section DivisionRing
+@[simp, norm_cast]
+theorem coe_unitOfIsUnitFst (x : tsze R M) (hx : IsUnit x.fst) :
+    ↑(unitOfIsUnitFst x hx) = x :=
+  rfl
+
+@[simp, norm_cast]
+theorem coe_unitOfIsUnitFst_inv (x : tsze R M) (hx : IsUnit x.fst) :
+    ↑(unitOfIsUnitFst x hx)⁻¹ = inverse x hx :=
+  rfl
+
+theorem inverse_eq_of_mul_eq_one (x : tsze R M) (hx : IsUnit x.fst) {y : tsze R M}
+    (hxy : x * y = 1) : inverse x hx = y := by
+  calc
+    inverse x hx = inverse x hx * 1 := by rw [mul_one]
+    _ = inverse x hx * (x * y) := by rw [hxy]
+    _ = (inverse x hx * x) * y := by rw [mul_assoc]
+    _ = y := by rw [inverse_mul, one_mul]
+
+@[simp]
+theorem inverse_eq_invOf (x : tsze R M) (hx : IsUnit x.fst) [Invertible x] :
+    inverse x hx = ⅟x :=
+  inverse_eq_of_mul_eq_one x hx (mul_invOf_self x)
+
+omit [SMulCommClass R Rᵐᵒᵖ M] in
+@[simp]
+theorem inverse_inl (r : R) (hr : IsUnit r) :
+    inverse (inl r : tsze R M) (by simpa only [fst_inl] using hr) =
+      inl (↑hr.unit⁻¹ : R) := by
+  ext <;> simp [inverse]
+
+@[simp]
+theorem inverse_one :
+    inverse (1 : tsze R M) (by simpa only [fst_one] using (isUnit_one : IsUnit (1 : R))) = 1 := by
+  apply inverse_eq_of_mul_eq_one
+  rw [one_mul]
+
+theorem inverse_mul_rev (a b : tsze R M) (ha : IsUnit a.fst) (hb : IsUnit b.fst) :
+    inverse (a * b) (by simpa only [fst_mul] using ha.mul hb) =
+      inverse b hb * inverse a ha := by
+  apply inverse_eq_of_mul_eq_one
+  rw [mul_assoc, ← mul_assoc b, mul_inverse, one_mul, mul_inverse]
+
+theorem isUnit_inverse (x : tsze R M) (hx : IsUnit x.fst) : IsUnit (inverse x hx) := by
+  simpa only [coe_unitOfIsUnitFst_inv] using ((unitOfIsUnitFst x hx)⁻¹).isUnit
+
+@[simp]
+theorem inverse_inverse (x : tsze R M) (hx : IsUnit x.fst) :
+    inverse (inverse x hx) (isUnit_iff_isUnit_fst.mp (isUnit_inverse x hx)) = x := by
+  apply inverse_eq_of_mul_eq_one
+  exact inverse_mul x hx
+
+end Inverse
+
+section InverseRing
 variable {R : Type u} {M : Type v}
-variable [DivisionRing R] [AddCommGroup M] [Module Rᵐᵒᵖ M] [Module R M]
+variable [Ring R] [AddCommGroup M] [Module Rᵐᵒᵖ M] [Module R M]
+variable [SMulCommClass R Rᵐᵒᵖ M]
 
-protected theorem inv_neg {x : tsze R M} : (-x)⁻¹ = -(x⁻¹) := by
-  ext <;> simp [inv_neg]
+@[simp]
+theorem inverse_neg (x : tsze R M) (hx : IsUnit x.fst) :
+    inverse (-x) (by simpa only [fst_neg] using hx.neg) = -inverse x hx := by
+  apply inverse_eq_of_mul_eq_one
+  simpa only [neg_mul_neg] using mul_inverse x hx
 
-end DivisionRing
+end InverseRing
 
 section Algebra
 
