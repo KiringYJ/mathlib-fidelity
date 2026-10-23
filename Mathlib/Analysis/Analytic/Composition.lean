@@ -8,6 +8,7 @@ module
 public import Mathlib.Analysis.Analytic.Basic
 public import Mathlib.Analysis.Analytic.CPolynomialDef
 public import Mathlib.Combinatorics.Enumerative.Composition
+import Mathlib.Topology.MetricSpace.Pseudo.Constructions
 
 /-!
 # Composition of analytic functions
@@ -756,60 +757,53 @@ open FormalMultilinearSeries
 /-- If two functions `g` and `f` have power series `q` and `p` respectively at `f x` and `x`, within
 two sets `s` and `t` such that `f` maps `s` to `t`, then `g ∘ f` admits the power
 series `q.comp p` at `x` within `s`. -/
-theorem HasFPowerSeriesWithinAt.comp {g : F → G} {f : E → F} {q : FormalMultilinearSeries 𝕜 F G}
-    {p : FormalMultilinearSeries 𝕜 E F} {x : E} {t : Set F} {s : Set E}
-    (hg : HasFPowerSeriesWithinAt g q t (f x)) (hf : HasFPowerSeriesWithinAt f p s x)
-    (hs : Set.MapsTo f s t) : HasFPowerSeriesWithinAt (g ∘ f) (q.comp p) s x := by
-  /- Consider `rf` and `rg` such that `f` and `g` have power series expansion on the disks
-    of radius `rf` and `rg`. -/
+theorem HasFPowerSeriesWithinAt.comp {D D' : Type*}
+    [TopologicalSpace D] [TopologicalSpace D'] {g : D' → G} {f : D → D'}
+    {coord : D → E} {coord' : D' → F} {q : FormalMultilinearSeries 𝕜 F G}
+    {p : FormalMultilinearSeries 𝕜 E F} {x : D} {t : Set D'} {s : Set D}
+    (hg : HasFPowerSeriesWithinAt g q t (f x) coord')
+    (hf : HasFPowerSeriesWithinAt (coord' ∘ f) p s x coord) (hs : Set.MapsTo f s t)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    HasFPowerSeriesWithinAt (g ∘ f) (q.comp p) s x coord := by
+  let : PseudoMetricSpace D := hcoord.isInducing.comapPseudoMetricSpace
+  let : PseudoMetricSpace D' := hcoord'.isInducing.comapPseudoMetricSpace
   rcases hg with ⟨rg, Hg⟩
   rcases hf with ⟨rf, Hf⟩
-  -- The terms defining `q.comp p` are geometrically summable in a disk of some radius `r`.
   rcases q.comp_summable_nnreal p Hg.radius_pos Hf.radius_pos with ⟨r, r_pos : 0 < r, hr⟩
-  /- We will consider `y` which is smaller than `r` and `rf`, and also small enough that
-    `f (x + y)` is close enough to `f x` to be in the disk where `g` is well behaved. Let
-    `min (r, rf, δ)` be this new radius. -/
   obtain ⟨δ, δpos, hδ⟩ :
-    ∃ δ : ℝ≥0∞, 0 < δ ∧ ∀ {z : E}, z ∈ insert x s ∩ Metric.eball x δ
+    ∃ δ : ℝ≥0∞, 0 < δ ∧ ∀ {z : D}, z ∈ insert x s ∩ Metric.eball x δ
       → f z ∈ insert (f x) t ∩ Metric.eball (f x) rg := by
-    have : insert (f x) t ∩ Metric.eball (f x) rg ∈ 𝓝[insert (f x) t] (f x) := by
-      apply inter_mem_nhdsWithin
-      exact Metric.eball_mem_nhds _ Hg.r_pos
-    have := Hf.analyticWithinAt.continuousWithinAt_insert.tendsto_nhdsWithin (hs.insert x) this
-    rcases EMetric.mem_nhdsWithin_iff.1 this with ⟨δ, δpos, Hδ⟩
+    have htarget : insert (f x) t ∩ Metric.eball (f x) rg ∈ 𝓝[insert (f x) t] (f x) :=
+      inter_mem_nhdsWithin _ (Metric.eball_mem_nhds _ Hg.r_pos)
+    have hcont : ContinuousWithinAt f (insert x s) x :=
+      hcoord'.isInducing.continuousWithinAt_iff.2
+        (Hf.analyticWithinAt.continuousWithinAt_insert hcoord.continuous)
+    have hpre := hcont.tendsto_nhdsWithin (hs.insert x) htarget
+    rcases EMetric.mem_nhdsWithin_iff.1 hpre with ⟨δ, δpos, Hδ⟩
     exact ⟨δ, δpos, fun {z} hz => Hδ (by rwa [Set.inter_comm])⟩
   let rf' := min rf δ
   have min_pos : 0 < min rf' r := by
     simp only [rf', r_pos, Hf.r_pos, δpos, lt_min_iff, ENNReal.coe_pos, and_self_iff]
-  /- We will show that `g ∘ f` admits the power series `q.comp p` in the disk of
-    radius `min (r, rf', δ)`. -/
   refine ⟨min rf' r, ?_⟩
-  refine
-    ⟨le_trans (min_le_right rf' r) (FormalMultilinearSeries.le_comp_radius_of_summable q p r hr),
-      min_pos, fun {y} h'y hy ↦ ?_⟩
-  /- Let `y` satisfy `‖y‖ < min (r, rf', δ)`. We want to show that `g (f (x + y))` is the sum of
-    `q.comp p` applied to `y`. -/
-  -- First, check that `y` is small enough so that estimates for `f` and `g` apply.
+  refine ⟨le_trans (min_le_right rf' r)
+    (FormalMultilinearSeries.le_comp_radius_of_summable q p r hr), min_pos, ?_⟩
+  intro z hz hy
+  let y := coord z - coord x
   have y_mem : y ∈ Metric.eball (0 : E) rf :=
     (Metric.eball_subset_eball (le_trans (min_le_left _ _) (min_le_left _ _))) hy
-  have fy_mem : f (x + y) ∈ insert (f x) t ∩ Metric.eball (f x) rg := by
+  have fy_mem : f z ∈ insert (f x) t ∩ Metric.eball (f x) rg := by
     apply hδ
-    have : y ∈ Metric.eball (0 : E) δ :=
+    refine ⟨hz, ?_⟩
+    have hsmall : y ∈ Metric.eball (0 : E) δ :=
       (Metric.eball_subset_eball (le_trans (min_le_left _ _) (min_le_right _ _))) hy
-    simpa [-Set.mem_insert_iff, edist_eq_enorm_sub, h'y]
-  /- Now the proof starts. To show that the sum of `q.comp p` at `y` is `g (f (x + y))`,
-    we will write `q.comp p` applied to `y` as a big sum over all compositions.
-    Since the sum is summable, to get its convergence it suffices to get
-    the convergence along some increasing sequence of sets.
-    We will use the sequence of sets `compPartialSumTarget 0 n n`,
-    along which the sum is exactly the composition of the partial sums of `q` and `p`, by design.
-    To show that it converges to `g (f (x + y))`, pointwise convergence would not be enough,
-    but we have uniform convergence to save the day. -/
-  -- First step: the partial sum of `p` converges to `f (x + y)`.
+    change coord z ∈ Metric.eball (coord x) δ
+    simpa only [y, Metric.mem_eball, edist_eq_enorm_sub, sub_zero] using hsmall
+  have fy_coord_mem : coord' (f z) ∈ Metric.eball (coord' (f x)) rg := fy_mem.2
   have A : Tendsto (fun n ↦ (n, ∑ a ∈ Finset.Ico 1 n, p a fun _ ↦ y))
-      atTop (atTop ×ˢ 𝓝 (f (x + y) - f x)) := by
+      atTop (atTop ×ˢ 𝓝 (coord' (f z) - coord' (f x))) := by
     apply Tendsto.prodMk tendsto_id
-    have L : ∀ᶠ n in atTop, (∑ a ∈ Finset.range n, p a fun _b ↦ y) - f x
+    have L : ∀ᶠ n in atTop, (∑ a ∈ Finset.range n, p a fun _b ↦ y) - coord' (f x)
         = ∑ a ∈ Finset.Ico 1 n, p a fun _b ↦ y := by
       rw [eventually_atTop]
       refine ⟨1, fun n hn => ?_⟩
@@ -817,35 +811,35 @@ theorem HasFPowerSeriesWithinAt.comp {g : F → G} {f : E → F} {q : FormalMult
       rw [eq_sub_iff_add_eq', Finset.range_eq_Ico, ← Hf.coeff_zero fun _i => y,
         Finset.sum_eq_sum_Ico_succ_bot hn]
     have :
-      Tendsto (fun n => (∑ a ∈ Finset.range n, p a fun _b => y) - f x) atTop
-        (𝓝 (f (x + y) - f x)) :=
-      (Hf.hasSum h'y y_mem).tendsto_sum_nat.sub tendsto_const_nhds
+      Tendsto (fun n => (∑ a ∈ Finset.range n, p a fun _b => y) - coord' (f x)) atTop
+        (𝓝 (coord' (f z) - coord' (f x))) :=
+      (Hf.hasSum hz y_mem).tendsto_sum_nat.sub tendsto_const_nhds
     exact Tendsto.congr' L this
-  -- Second step: the composition of the partial sums of `q` and `p` converges to `g (f (x + y))`.
+  -- Second step: the composition of the partial sums of `q` and `p` converges to `g (f z)`.
   have B : Tendsto (fun n => q.partialSum n (∑ a ∈ Finset.Ico 1 n, p a fun _b ↦ y)) atTop
-      (𝓝 (g (f (x + y)))) := by
-    -- we use the fact that the partial sums of `q` converge to `g (f (x + y))`, uniformly on a
-    -- neighborhood of `f (x + y)`.
+      (𝓝 (g (f z))) := by
+    -- we use the fact that the partial sums of `q` converge to `g (f z)`, uniformly on a
+    -- neighborhood of `coord' (f z)`.
     have : Tendsto (fun (z : ℕ × F) ↦ q.partialSum z.1 z.2)
-        (atTop ×ˢ 𝓝 (f (x + y) - f x)) (𝓝 (g (f x + (f (x + y) - f x)))) := by
-      apply Hg.tendsto_partialSum_prod (y := f (x + y) - f x)
-      · simpa [edist_eq_enorm_sub] using! fy_mem.2
+        (atTop ×ˢ 𝓝 (coord' (f z) - coord' (f x))) (𝓝 (g (f z))) := by
+      apply Hg.tendsto_partialSum_prod (y := f z)
+      · simpa [edist_eq_enorm_sub] using! fy_coord_mem
       · simpa using! fy_mem.1
     simpa using! this.comp A
   -- Third step: the sum over all compositions in `compPartialSumTarget 0 n n` converges to
-  -- `g (f (x + y))`. As this sum is exactly the composition of the partial sum, this is a direct
+  -- `g (f z)`. As this sum is exactly the composition of the partial sum, this is a direct
   -- consequence of the second step
   have C :
     Tendsto
       (fun n => ∑ i ∈ compPartialSumTarget 0 n n, q.compAlongComposition p i.2 fun _j => y)
-      atTop (𝓝 (g (f (x + y)))) := by
+      atTop (𝓝 (g (f z))) := by
     simpa [comp_partialSum] using! B
-  -- Fourth step: the sum over all compositions is `g (f (x + y))`. This follows from the
+  -- Fourth step: the sum over all compositions is `g (f z)`. This follows from the
   -- convergence along a subsequence proved in the third step, and the fact that the sum is Cauchy
   -- thanks to the summability properties.
   have D :
     HasSum (fun i : Σ n, Composition n => q.compAlongComposition p i.2 fun _j => y)
-      (g (f (x + y))) :=
+      (g (f z)) :=
     haveI cau :
       CauchySeq fun s : Finset (Σ n, Composition n) =>
         ∑ i ∈ s, q.compAlongComposition p i.2 fun _j => y := by
@@ -867,7 +861,7 @@ theorem HasFPowerSeriesWithinAt.comp {g : F → G} {f : E → F} {q : FormalMult
   -- the sum over all compositions, by grouping together the compositions of the same
   -- integer `n`. The convergence of the whole sum therefore implies the convergence of the sum
   -- of `q.comp p n`
-  have E : HasSum (fun n => (q.comp p) n fun _j => y) (g (f (x + y))) := by
+  have E : HasSum (fun n => (q.comp p) n fun _j => y) (g (f z)) := by
     apply D.sigma
     intro n
     simp only [compAlongComposition_apply, FormalMultilinearSeries.comp, sum_apply]
@@ -877,29 +871,38 @@ theorem HasFPowerSeriesWithinAt.comp {g : F → G} {f : E → F} {q : FormalMult
 
 /-- If two functions `g` and `f` have power series `q` and `p` respectively at `f x` and `x`,
 then `g ∘ f` admits the power series `q.comp p` at `x`. -/
-theorem HasFPowerSeriesAt.comp {g : F → G} {f : E → F} {q : FormalMultilinearSeries 𝕜 F G}
-    {p : FormalMultilinearSeries 𝕜 E F} {x : E}
-    (hg : HasFPowerSeriesAt g q (f x)) (hf : HasFPowerSeriesAt f p x) :
-    HasFPowerSeriesAt (g ∘ f) (q.comp p) x := by
+theorem HasFPowerSeriesAt.comp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {q : FormalMultilinearSeries 𝕜 F G}
+    {p : FormalMultilinearSeries 𝕜 E F} {x : D}
+    (hg : HasFPowerSeriesAt g q (f x) coord') (hf : HasFPowerSeriesAt (coord' ∘ f) p x coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    HasFPowerSeriesAt (g ∘ f) (q.comp p) x coord := by
   rw [← hasFPowerSeriesWithinAt_univ] at hf hg ⊢
-  apply hg.comp hf (by simp)
+  exact hg.comp hf (by simp) hcoord hcoord'
 
 /-- If two functions `g` and `f` are analytic respectively at `f x` and `x`, within
 two sets `s` and `t` such that `f` maps `s` to `t`, then `g ∘ f` is analytic at `x` within `s`. -/
-theorem AnalyticWithinAt.comp {g : F → G} {f : E → F} {x : E} {t : Set F} {s : Set E}
-    (hg : AnalyticWithinAt 𝕜 g t (f x)) (hf : AnalyticWithinAt 𝕜 f s x) (h : Set.MapsTo f s t) :
-    AnalyticWithinAt 𝕜 (g ∘ f) s x := by
+theorem AnalyticWithinAt.comp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {x : D} {t : Set D'} {s : Set D}
+    (hg : AnalyticWithinAt 𝕜 g t (f x) coord') (hf : AnalyticWithinAt 𝕜 (coord' ∘ f) s x coord) (h : Set.MapsTo f s t)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    AnalyticWithinAt 𝕜 (g ∘ f) s x coord := by
   let ⟨_q, hq⟩ := hg
   let ⟨_p, hp⟩ := hf
-  exact (hq.comp hp h).analyticWithinAt
+  exact (hq.comp hp h hcoord hcoord').analyticWithinAt
 
 /-- Version of `AnalyticWithinAt.comp` where point equality is a separate hypothesis. -/
-theorem AnalyticWithinAt.comp_of_eq {g : F → G} {f : E → F} {y : F} {x : E} {t : Set F} {s : Set E}
-    (hg : AnalyticWithinAt 𝕜 g t y) (hf : AnalyticWithinAt 𝕜 f s x) (h : Set.MapsTo f s t)
-    (hy : f x = y) :
-    AnalyticWithinAt 𝕜 (g ∘ f) s x := by
+theorem AnalyticWithinAt.comp_of_eq {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {y : D'} {x : D} {t : Set D'} {s : Set D}
+    (hg : AnalyticWithinAt 𝕜 g t y coord') (hf : AnalyticWithinAt 𝕜 (coord' ∘ f) s x coord) (h : Set.MapsTo f s t)
+    (hy : f x = y)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    AnalyticWithinAt 𝕜 (g ∘ f) s x coord := by
   rw [← hy] at hg
-  exact hg.comp hf h
+  exact hg.comp hf h hcoord hcoord'
 
 lemma AnalyticOn.comp {f : F → G} {g : E → F} {s : Set F}
     {t : Set E} (hf : AnalyticOn 𝕜 f s) (hg : AnalyticOn 𝕜 g t) (h : Set.MapsTo g t s) :
@@ -912,30 +915,42 @@ attribute [local push ←] Function.comp_def
 /-- If two functions `g` and `f` are analytic respectively at `f x` and `x`, then `g ∘ f` is
 analytic at `x`. -/
 @[to_fun (attr := fun_prop)]
-theorem AnalyticAt.comp {g : F → G} {f : E → F} {x : E} (hg : AnalyticAt 𝕜 g (f x))
-    (hf : AnalyticAt 𝕜 f x) : AnalyticAt 𝕜 (g ∘ f) x := by
+theorem AnalyticAt.comp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {x : D} (hg : AnalyticAt 𝕜 g (f x) coord')
+    (hf : AnalyticAt 𝕜 (coord' ∘ f) x coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) : AnalyticAt 𝕜 (g ∘ f) x coord := by
   rw [← analyticWithinAt_univ] at hg hf ⊢
-  apply hg.comp hf (by simp)
+  exact hg.comp hf (by simp) hcoord hcoord'
 
 /-- Version of `AnalyticAt.comp` where point equality is a separate hypothesis. -/
 @[to_fun]
-theorem AnalyticAt.comp_of_eq {g : F → G} {f : E → F} {y : F} {x : E} (hg : AnalyticAt 𝕜 g y)
-    (hf : AnalyticAt 𝕜 f x) (hy : f x = y) : AnalyticAt 𝕜 (g ∘ f) x := by
+theorem AnalyticAt.comp_of_eq {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {y : D'} {x : D} (hg : AnalyticAt 𝕜 g y coord')
+    (hf : AnalyticAt 𝕜 (coord' ∘ f) x coord) (hy : f x = y)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) : AnalyticAt 𝕜 (g ∘ f) x coord := by
   rw [← hy] at hg
-  exact hg.comp hf
+  exact hg.comp hf hcoord hcoord'
 @[deprecated (since := "2026-05-18")] alias AnalyticAt.comp_of_eq' := AnalyticAt.fun_comp_of_eq
 
-theorem AnalyticAt.comp_analyticWithinAt {g : F → G} {f : E → F} {x : E} {s : Set E}
-    (hg : AnalyticAt 𝕜 g (f x)) (hf : AnalyticWithinAt 𝕜 f s x) :
-    AnalyticWithinAt 𝕜 (g ∘ f) s x := by
+theorem AnalyticAt.comp_analyticWithinAt {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {x : D} {s : Set D}
+    (hg : AnalyticAt 𝕜 g (f x) coord') (hf : AnalyticWithinAt 𝕜 (coord' ∘ f) s x coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    AnalyticWithinAt 𝕜 (g ∘ f) s x coord := by
   rw [← analyticWithinAt_univ] at hg
-  exact hg.comp hf (Set.mapsTo_univ _ _)
+  exact hg.comp hf (Set.mapsTo_univ _ _) hcoord hcoord'
 
-theorem AnalyticAt.comp_analyticWithinAt_of_eq {g : F → G} {f : E → F} {x : E} {y : F} {s : Set E}
-    (hg : AnalyticAt 𝕜 g y) (hf : AnalyticWithinAt 𝕜 f s x) (h : f x = y) :
-    AnalyticWithinAt 𝕜 (g ∘ f) s x := by
+theorem AnalyticAt.comp_analyticWithinAt_of_eq {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {x : D} {y : D'} {s : Set D}
+    (hg : AnalyticAt 𝕜 g y coord') (hf : AnalyticWithinAt 𝕜 (coord' ∘ f) s x coord) (h : f x = y)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    AnalyticWithinAt 𝕜 (g ∘ f) s x coord := by
   rw [← h] at hg
-  exact hg.comp_analyticWithinAt hf
+  exact hg.comp_analyticWithinAt hf hcoord hcoord'
 
 /-- If two functions `g` and `f` are analytic respectively on `s.image f` and `s`, then `g ∘ f` is
 analytic on `s`. -/

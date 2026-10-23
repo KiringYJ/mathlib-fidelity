@@ -50,31 +50,31 @@ section NonTriviallyNormedField
 
 variable [NontriviallyNormedField 𝕜] [NormedRing A] [NormedAlgebra 𝕜 A] [CompleteSpace A]
 
-theorem hasDerivAt_resolvent_const_left {a : A} {k : 𝕜} (hk : k ∈ resolventSet 𝕜 a) :
-    HasDerivAt (resolvent a) (-resolvent a k ^ 2) k := by
-  have H₁ : HasFDerivAt Ring.inverse _ (algebraMap 𝕜 A k - a) :=
-    hasFDerivAt_ringInverse (𝕜 := 𝕜) hk.unit
-  have H₂ : HasDerivAt (fun k => algebraMap 𝕜 A k - a) 1 k := by
-    simpa using! (Algebra.linearMap 𝕜 A).hasDerivAt.sub_const a
-  simpa [resolvent, sq, hk.unit_spec, ← Ring.inverse_unit hk.unit] using! H₁.comp_hasDerivAt k H₂
+theorem hasDerivAt_resolvent_const_left {a : A} (k : resolventSet 𝕜 a) :
+    HasDerivAt (resolvent a) (-resolvent a k ^ 2) k Subtype.val := by
+  have H₂ : HasDerivAt (fun k => algebraMap 𝕜 A k - a) 1 k.val := by
+    simpa using (Algebra.linearMap 𝕜 A).hasDerivAt.sub_const a
+  simpa [resolvent, sq] using (H₂.hasFDerivAt.inv k.property).hasDerivAt
 
 @[deprecated (since := "2026-03-26")]
 alias hasDerivAt_resolvent := hasDerivAt_resolvent_const_left
 
 theorem hasFDerivAt_resolvent {a : A} {k : 𝕜} (hk : k ∈ resolventSet 𝕜 a) :
-    HasFDerivAt (resolvent · k)
-      (((ContinuousLinearMap.mulLeftRight 𝕜 A) (resolvent a k)) (resolvent a k)) a := by
-  have H₁ : HasFDerivAt Ring.inverse _ (algebraMap 𝕜 A k - a) :=
-    hasFDerivAt_ringInverse (𝕜 := 𝕜) hk.unit
+    HasFDerivAt
+      (fun b : {b : A | k ∈ resolventSet 𝕜 b} ↦ resolvent b.val ⟨k, b.property⟩)
+      (((ContinuousLinearMap.mulLeftRight 𝕜 A) (resolvent a ⟨k, hk⟩)) (resolvent a ⟨k, hk⟩))
+      ⟨a, hk⟩ Subtype.val := by
   have H₂ : HasFDerivAt (fun a => algebraMap 𝕜 A k - a) (- .id 𝕜 A) a := by
-    simpa using! (hasFDerivAt_const _ a).sub (hasFDerivAt_id a)
-  simpa [resolvent_eq hk] using! H₁.comp a H₂
+    simpa using (hasFDerivAt_const _ a).sub (hasFDerivAt_id a)
+  simpa [resolvent] using H₂.inv hk
 
 end NonTriviallyNormedField
 
 theorem hasDerivAt_resolvent_const_right [NontriviallyNormedField 𝕜] [NontriviallyNormedField A]
     [NormedAlgebra 𝕜 A] [CompleteSpace A] {a : A} {k : 𝕜} (hk : k ∈ resolventSet 𝕜 a) :
-    HasDerivAt (resolvent · k) (resolvent a k ^ 2) a := by
+    HasDerivAt
+      (fun b : {b : A | k ∈ resolventSet 𝕜 b} ↦ resolvent b.val ⟨k, b.property⟩)
+      (resolvent a ⟨k, hk⟩ ^ 2) ⟨a, hk⟩ Subtype.val := by
   convert! hasFDerivAt_resolvent (𝕜 := A) hk |>.hasDerivAt
   simp [resolvent, pow_two]
 
@@ -84,15 +84,17 @@ differentiable on any closed ball centered at zero of radius `r < (spectralRadiu
 theorem differentiableOn_inverse_one_sub_smul [NontriviallyNormedField 𝕜] [NormedRing A]
     [NormedAlgebra 𝕜 A] [CompleteSpace A] {a : A} {r : ℝ≥0}
     (hr : (r : ℝ≥0∞) < (spectralRadius 𝕜 a)⁻¹) :
-    DifferentiableOn 𝕜 (fun z : 𝕜 => (1 - z • a)⁻¹ʳ) (Metric.closedBall 0 r) := by
+    DifferentiableOn 𝕜
+      (fun z : {z : 𝕜 | IsUnit (1 - z • a)} ↦ (↑z.property.unit⁻¹ : A))
+      (Subtype.val ⁻¹' Metric.closedBall 0 r) Subtype.val := by
   intro z z_mem
   apply DifferentiableAt.differentiableWithinAt
-  have hu : IsUnit (1 - z • a) := by
+  have hu : IsUnit (1 - z.val • a) := by
     refine isUnit_one_sub_smul_of_lt_inv_radius (lt_of_le_of_lt (coe_mono ?_) hr)
     simpa only [norm_toNNReal, Real.toNNReal_coe] using
       Real.toNNReal_mono (mem_closedBall_zero_iff.mp z_mem)
   have H₁ : Differentiable 𝕜 fun w : 𝕜 => 1 - w • a := (differentiable_id.smul_const a).const_sub 1
-  exact DifferentiableAt.comp z (differentiableAt_inverse hu) H₁.differentiableAt
+  exact H₁.differentiableAt.inv hu
 
 section Complex
 
@@ -148,14 +150,20 @@ protected theorem nonempty (a : A) : (spectrum ℂ a).Nonempty := by
     is differentiable on `ℂ`. -/
   by_contra! h
   have H₀ : resolventSet ℂ a = Set.univ := by rwa [spectrum, Set.compl_empty_iff] at h
-  have H₁ : Differentiable ℂ fun z : ℂ => resolvent a z := fun z =>
-    hasDerivAt_resolvent_const_left (H₀.symm ▸ Set.mem_univ z : z ∈ resolventSet ℂ a)
-      |>.differentiableAt
-  /- Since `resolvent a` tends to zero at infinity, by Liouville's theorem `resolvent a = 0`,
-  which contradicts that `resolvent a z` is invertible. -/
+  let lift : ℂ → resolventSet ℂ a := fun z ↦ ⟨z, H₀.symm ▸ Set.mem_univ z⟩
+  have H₁ : Differentiable ℂ (resolvent a ∘ lift) := by
+    intro z
+    exact ((hasDerivAt_resolvent_const_left (lift z)).hasFDerivAt.comp z
+      (hasFDerivAt_id z) continuousAt_id IsEmbedding.subtypeVal).differentiableAt
+  /- The lift exists on all scalars only under the empty-spectrum assumption. Liouville's
+    theorem therefore applies to an everywhere-defined, genuinely invertible resolvent. -/
+  have H₂ : Tendsto lift (cobounded ℂ)
+      (comap (Subtype.val : resolventSet ℂ a → ℂ) (cobounded ℂ)) :=
+    tendsto_comap_iff.mpr tendsto_id
   have H₃ := H₁.apply_eq_of_tendsto_cocompact 0 <| by
-    simpa [Metric.cobounded_eq_cocompact] using resolvent_tendsto_cobounded a (𝕜 := ℂ)
-  exact not_isUnit_zero <| H₃ ▸ (isUnit_resolvent.mp <| H₀.symm ▸ Set.mem_univ 0)
+    simpa [Metric.cobounded_eq_cocompact] using
+      (resolvent_tendsto_cobounded a (𝕜 := ℂ)).comp H₂
+  exact not_isUnit_zero <| H₃ ▸ isUnit_resolvent (lift 0)
 
 /-- In a complex Banach algebra, the spectral radius is always attained by some element of the
 spectrum. -/

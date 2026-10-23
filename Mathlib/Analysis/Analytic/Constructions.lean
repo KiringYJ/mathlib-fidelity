@@ -244,23 +244,27 @@ theorem AnalyticOn.const_smul (hf : AnalyticOn 𝕜 f s) : AnalyticOn 𝕜 (c �
 theorem AnalyticOnNhd.const_smul (hf : AnalyticOnNhd 𝕜 f s) : AnalyticOnNhd 𝕜 (c • f) s :=
   fun x hx ↦ (hf x hx).const_smul
 
-lemma AnalyticWithinAt.div_const {f : E → 𝕝} (hf : AnalyticWithinAt 𝕜 f s x) {c : 𝕝} :
-    AnalyticWithinAt 𝕜 (f · / c) s x := by
-  simpa [div_eq_mul_inv] using! hf.const_smul (R := 𝕝ᵐᵒᵖ)
+lemma AnalyticWithinAt.div_const {f : E → 𝕝} (hf : AnalyticWithinAt 𝕜 f s x) {c : 𝕝ˣ} :
+    AnalyticWithinAt 𝕜 (fun y ↦ f y /ₚ c) s x := by
+  simpa only [divp] using
+    hf.const_smul (R := 𝕝ᵐᵒᵖ) (c := MulOpposite.op (↑c⁻¹ : 𝕝))
 
 @[fun_prop]
-lemma AnalyticAt.div_const {f : E → 𝕝} (hf : AnalyticAt 𝕜 f x) {c : 𝕝} :
-    AnalyticAt 𝕜 (f · / c) x := by
-  simpa [div_eq_mul_inv] using! hf.const_smul (R := 𝕝ᵐᵒᵖ)
+lemma AnalyticAt.div_const {f : E → 𝕝} (hf : AnalyticAt 𝕜 f x) {c : 𝕝ˣ} :
+    AnalyticAt 𝕜 (fun y ↦ f y /ₚ c) x := by
+  simpa only [divp] using
+    hf.const_smul (R := 𝕝ᵐᵒᵖ) (c := MulOpposite.op (↑c⁻¹ : 𝕝))
 
-lemma AnalyticOn.div_const {f : E → 𝕝} (hf : AnalyticOn 𝕜 f s) {c : 𝕝} :
-    AnalyticOn 𝕜 (f · / c) s := by
-  simpa [div_eq_mul_inv] using! hf.const_smul (R := 𝕝ᵐᵒᵖ)
+lemma AnalyticOn.div_const {f : E → 𝕝} (hf : AnalyticOn 𝕜 f s) {c : 𝕝ˣ} :
+    AnalyticOn 𝕜 (fun y ↦ f y /ₚ c) s := by
+  simpa only [divp] using
+    hf.const_smul (R := 𝕝ᵐᵒᵖ) (c := MulOpposite.op (↑c⁻¹ : 𝕝))
 
 @[fun_prop]
-lemma AnalyticOnNhd.div_const {f : E → 𝕝} (hf : AnalyticOnNhd 𝕜 f s) {c : 𝕝} :
-    AnalyticOnNhd 𝕜 (f · / c) s := by
-  simpa [div_eq_mul_inv] using! hf.const_smul (R := 𝕝ᵐᵒᵖ)
+lemma AnalyticOnNhd.div_const {f : E → 𝕝} (hf : AnalyticOnNhd 𝕜 f s) {c : 𝕝ˣ} :
+    AnalyticOnNhd 𝕜 (fun y ↦ f y /ₚ c) s := by
+  simpa only [divp] using
+    hf.const_smul (R := 𝕝ᵐᵒᵖ) (c := MulOpposite.op (↑c⁻¹ : 𝕝))
 
 end
 
@@ -296,10 +300,10 @@ lemma FormalMultilinearSeries.radius_prod_eq_min
     refine (max_le_add_of_nonneg (norm_nonneg _) (norm_nonneg _)).trans ?_
     apply Real.le_norm_self
 
-lemma HasFPowerSeriesWithinOnBall.prod {e : E} {f : E → F} {g : E → G} {r s : ℝ≥0∞} {t : Set E}
+lemma HasFPowerSeriesWithinOnBall.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G} {r s : ℝ≥0∞} {t : Set D}
     {p : FormalMultilinearSeries 𝕜 E F} {q : FormalMultilinearSeries 𝕜 E G}
-    (hf : HasFPowerSeriesWithinOnBall f p t e r) (hg : HasFPowerSeriesWithinOnBall g q t e s) :
-    HasFPowerSeriesWithinOnBall (fun x ↦ (f x, g x)) (p.prod q) t e (min r s) where
+    (hf : HasFPowerSeriesWithinOnBall (coord := coord) f p t e r) (hg : HasFPowerSeriesWithinOnBall (coord := coord) g q t e s) :
+    HasFPowerSeriesWithinOnBall (coord := coord) (fun x ↦ (f x, g x)) (p.prod q) t e (min r s) where
   r_le := by
     rw [p.radius_prod_eq_min]
     exact min_le_min hf.r_le hg.r_le
@@ -311,57 +315,57 @@ lemma HasFPowerSeriesWithinOnBall.prod {e : E} {f : E → F} {g : E → G} {r s 
     · exact Metric.mem_eball.mpr (lt_of_lt_of_le hy (min_le_left _ _))
     · exact Metric.mem_eball.mpr (lt_of_lt_of_le hy (min_le_right _ _))
 
-lemma HasFPowerSeriesOnBall.prod {e : E} {f : E → F} {g : E → G} {r s : ℝ≥0∞}
+lemma HasFPowerSeriesOnBall.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G} {r s : ℝ≥0∞}
     {p : FormalMultilinearSeries 𝕜 E F} {q : FormalMultilinearSeries 𝕜 E G}
-    (hf : HasFPowerSeriesOnBall f p e r) (hg : HasFPowerSeriesOnBall g q e s) :
-    HasFPowerSeriesOnBall (fun x ↦ (f x, g x)) (p.prod q) e (min r s) := by
+    (hf : HasFPowerSeriesOnBall (coord := coord) f p e r) (hg : HasFPowerSeriesOnBall (coord := coord) g q e s) :
+    HasFPowerSeriesOnBall (coord := coord) (fun x ↦ (f x, g x)) (p.prod q) e (min r s) := by
   rw [← hasFPowerSeriesWithinOnBall_univ] at hf hg ⊢
   exact hf.prod hg
 
-lemma HasFPowerSeriesWithinAt.prod {e : E} {f : E → F} {g : E → G} {s : Set E}
+lemma HasFPowerSeriesWithinAt.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G} {s : Set D}
     {p : FormalMultilinearSeries 𝕜 E F} {q : FormalMultilinearSeries 𝕜 E G}
-    (hf : HasFPowerSeriesWithinAt f p s e) (hg : HasFPowerSeriesWithinAt g q s e) :
-    HasFPowerSeriesWithinAt (fun x ↦ (f x, g x)) (p.prod q) s e := by
+    (hf : HasFPowerSeriesWithinAt (coord := coord) f p s e) (hg : HasFPowerSeriesWithinAt (coord := coord) g q s e) :
+    HasFPowerSeriesWithinAt (coord := coord) (fun x ↦ (f x, g x)) (p.prod q) s e := by
   rcases hf with ⟨_, hf⟩
   rcases hg with ⟨_, hg⟩
   exact ⟨_, hf.prod hg⟩
 
-lemma HasFPowerSeriesAt.prod {e : E} {f : E → F} {g : E → G}
+lemma HasFPowerSeriesAt.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G}
     {p : FormalMultilinearSeries 𝕜 E F} {q : FormalMultilinearSeries 𝕜 E G}
-    (hf : HasFPowerSeriesAt f p e) (hg : HasFPowerSeriesAt g q e) :
-    HasFPowerSeriesAt (fun x ↦ (f x, g x)) (p.prod q) e := by
+    (hf : HasFPowerSeriesAt (coord := coord) f p e) (hg : HasFPowerSeriesAt (coord := coord) g q e) :
+    HasFPowerSeriesAt (coord := coord) (fun x ↦ (f x, g x)) (p.prod q) e := by
   rcases hf with ⟨_, hf⟩
   rcases hg with ⟨_, hg⟩
   exact ⟨_, hf.prod hg⟩
 
 /-- The Cartesian product of analytic functions is analytic. -/
-lemma AnalyticWithinAt.prod {e : E} {f : E → F} {g : E → G} {s : Set E}
-    (hf : AnalyticWithinAt 𝕜 f s e) (hg : AnalyticWithinAt 𝕜 g s e) :
-    AnalyticWithinAt 𝕜 (fun x ↦ (f x, g x)) s e := by
+lemma AnalyticWithinAt.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G} {s : Set D}
+    (hf : AnalyticWithinAt (coord := coord) 𝕜 f s e) (hg : AnalyticWithinAt (coord := coord) 𝕜 g s e) :
+    AnalyticWithinAt (coord := coord) 𝕜 (fun x ↦ (f x, g x)) s e := by
   rcases hf with ⟨_, hf⟩
   rcases hg with ⟨_, hg⟩
   exact ⟨_, hf.prod hg⟩
 
 /-- The Cartesian product of analytic functions is analytic. -/
 @[fun_prop]
-lemma AnalyticAt.prod {e : E} {f : E → F} {g : E → G}
-    (hf : AnalyticAt 𝕜 f e) (hg : AnalyticAt 𝕜 g e) :
-    AnalyticAt 𝕜 (fun x ↦ (f x, g x)) e := by
+lemma AnalyticAt.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G}
+    (hf : AnalyticAt (coord := coord) 𝕜 f e) (hg : AnalyticAt (coord := coord) 𝕜 g e) :
+    AnalyticAt (coord := coord) 𝕜 (fun x ↦ (f x, g x)) e := by
   rcases hf with ⟨_, hf⟩
   rcases hg with ⟨_, hg⟩
   exact ⟨_, hf.prod hg⟩
 
 /-- The Cartesian product of analytic functions within a set is analytic. -/
-lemma AnalyticOn.prod {f : E → F} {g : E → G} {s : Set E}
-    (hf : AnalyticOn 𝕜 f s) (hg : AnalyticOn 𝕜 g s) :
-    AnalyticOn 𝕜 (fun x ↦ (f x, g x)) s :=
+lemma AnalyticOn.prod {D : Type*} {coord : D → E} {f : D → F} {g : D → G} {s : Set D}
+    (hf : AnalyticOn (coord := coord) 𝕜 f s) (hg : AnalyticOn (coord := coord) 𝕜 g s) :
+    AnalyticOn (coord := coord) 𝕜 (fun x ↦ (f x, g x)) s :=
   fun x hx ↦ (hf x hx).prod (hg x hx)
 
 /-- The Cartesian product of analytic functions is analytic. -/
 @[fun_prop]
-lemma AnalyticOnNhd.prod {f : E → F} {g : E → G} {s : Set E}
-    (hf : AnalyticOnNhd 𝕜 f s) (hg : AnalyticOnNhd 𝕜 g s) :
-    AnalyticOnNhd 𝕜 (fun x ↦ (f x, g x)) s :=
+lemma AnalyticOnNhd.prod {D : Type*} {coord : D → E} {f : D → F} {g : D → G} {s : Set D}
+    (hf : AnalyticOnNhd (coord := coord) 𝕜 f s) (hg : AnalyticOnNhd (coord := coord) 𝕜 g s) :
+    AnalyticOnNhd (coord := coord) 𝕜 (fun x ↦ (f x, g x)) s :=
   fun x hx ↦ (hf x hx).prod (hg x hx)
 
 /-- `AnalyticAt.comp` for functions on product spaces -/
@@ -611,58 +615,77 @@ lemma analyticAt_smul [Module A E] [IsBoundedSMul A E] [IsScalarTower 𝕜 A E] 
 lemma analyticAt_mul (z : A × A) : AnalyticAt 𝕜 (fun x : A × A ↦ x.1 * x.2) z :=
   analyticAt_smul z
 
-/-- Scalar multiplication of one analytic function by another. -/
-lemma AnalyticWithinAt.smul [Module A F] [IsBoundedSMul A F] [IsScalarTower 𝕜 A F]
-    {f : E → A} {g : E → F} {s : Set E} {z : E}
-    (hf : AnalyticWithinAt 𝕜 f s z) (hg : AnalyticWithinAt 𝕜 g s z) :
-    AnalyticWithinAt 𝕜 (fun x ↦ f x • g x) s z :=
-  (analyticAt_smul _).comp₂_analyticWithinAt hf hg
+/-- Scalar multiplication preserves analyticity on an embedded domain. -/
+lemma AnalyticWithinAt.smul {D : Type*} [TopologicalSpace D] {coord : D → E}
+    [Module A F] [IsBoundedSMul A F] [IsScalarTower 𝕜 A F]
+    {f : D → A} {g : D → F} {s : Set D} {z : D}
+    (hf : AnalyticWithinAt 𝕜 f s z coord) (hg : AnalyticWithinAt 𝕜 g s z coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id) :
+    AnalyticWithinAt 𝕜 (f • g) s z coord :=
+  (analyticAt_smul _).comp_analyticWithinAt (hf.prod hg) hcoord Topology.IsEmbedding.id
 
-/-- Scalar multiplication of one analytic function by another. -/
+/-- Scalar multiplication preserves analyticity on an embedded domain. -/
 @[to_fun (attr := fun_prop)]
-lemma AnalyticAt.smul [Module A F] [IsBoundedSMul A F] [IsScalarTower 𝕜 A F] {f : E → A}
-    {g : E → F} {z : E} (hf : AnalyticAt 𝕜 f z) (hg : AnalyticAt 𝕜 g z) :
-    AnalyticAt 𝕜 (f • g) z :=
-  (analyticAt_smul _).comp₂ hf hg
+lemma AnalyticAt.smul {D : Type*} [TopologicalSpace D] {coord : D → E}
+    [Module A F] [IsBoundedSMul A F] [IsScalarTower 𝕜 A F]
+    {f : D → A} {g : D → F} {z : D}
+    (hf : AnalyticAt 𝕜 f z coord) (hg : AnalyticAt 𝕜 g z coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id) :
+    AnalyticAt 𝕜 (f • g) z coord :=
+  (analyticAt_smul _).comp (hf.prod hg) hcoord Topology.IsEmbedding.id
 
-/-- Scalar multiplication of one analytic function by another. -/
-lemma AnalyticOn.smul [Module A F] [IsBoundedSMul A F] [IsScalarTower 𝕜 A F]
-    {f : E → A} {g : E → F} {s : Set E}
-    (hf : AnalyticOn 𝕜 f s) (hg : AnalyticOn 𝕜 g s) :
-    AnalyticOn 𝕜 (fun x ↦ f x • g x) s :=
-  fun _ m ↦ (hf _ m).smul (hg _ m)
+/-- Scalar multiplication preserves analyticity on an embedded domain. -/
+lemma AnalyticOn.smul {D : Type*} [TopologicalSpace D] {coord : D → E}
+    [Module A F] [IsBoundedSMul A F] [IsScalarTower 𝕜 A F]
+    {f : D → A} {g : D → F} {s : Set D}
+    (hf : AnalyticOn 𝕜 f s coord) (hg : AnalyticOn 𝕜 g s coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id) :
+    AnalyticOn 𝕜 (f • g) s coord :=
+  fun z hz ↦ (hf z hz).smul (hg z hz) hcoord
 
-/-- Scalar multiplication of one analytic function by another. -/
+/-- Scalar multiplication preserves analyticity on an embedded domain. -/
 @[fun_prop]
-lemma AnalyticOnNhd.smul [Module A F] [IsBoundedSMul A F] [IsScalarTower 𝕜 A F]
-    {f : E → A} {g : E → F} {s : Set E} (hf : AnalyticOnNhd 𝕜 f s) (hg : AnalyticOnNhd 𝕜 g s) :
-    AnalyticOnNhd 𝕜 (fun x ↦ f x • g x) s :=
-  fun _ m ↦ (hf _ m).smul (hg _ m)
+lemma AnalyticOnNhd.smul {D : Type*} [TopologicalSpace D] {coord : D → E}
+    [Module A F] [IsBoundedSMul A F] [IsScalarTower 𝕜 A F]
+    {f : D → A} {g : D → F} {s : Set D}
+    (hf : AnalyticOnNhd 𝕜 f s coord) (hg : AnalyticOnNhd 𝕜 g s coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id) :
+    AnalyticOnNhd 𝕜 (f • g) s coord :=
+  fun z hz ↦ (hf z hz).smul (hg z hz) hcoord
 
-/-- Multiplication of analytic functions (valued in a normed `𝕜`-algebra) is analytic. -/
-lemma AnalyticWithinAt.mul {f g : E → A} {s : Set E} {z : E}
-    (hf : AnalyticWithinAt 𝕜 f s z) (hg : AnalyticWithinAt 𝕜 g s z) :
-    AnalyticWithinAt 𝕜 (fun x ↦ f x * g x) s z :=
-  (analyticAt_mul _).comp₂_analyticWithinAt hf hg
+/-- Multiplication preserves analyticity on an embedded domain. -/
+lemma AnalyticWithinAt.mul {D : Type*} [TopologicalSpace D] {coord : D → E}
+    {f g : D → A} {s : Set D} {z : D}
+    (hf : AnalyticWithinAt 𝕜 f s z coord) (hg : AnalyticWithinAt 𝕜 g s z coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id) :
+    AnalyticWithinAt 𝕜 (f * g) s z coord :=
+  (analyticAt_mul _).comp_analyticWithinAt (hf.prod hg) hcoord Topology.IsEmbedding.id
 
-/-- Multiplication of analytic functions (valued in a normed `𝕜`-algebra) is analytic. -/
+/-- Multiplication preserves analyticity on an embedded domain. -/
 @[to_fun (attr := fun_prop)]
-lemma AnalyticAt.mul {f g : E → A} {z : E} (hf : AnalyticAt 𝕜 f z) (hg : AnalyticAt 𝕜 g z) :
-    AnalyticAt 𝕜 (f * g) z :=
-  hf.smul hg
+lemma AnalyticAt.mul {D : Type*} [TopologicalSpace D] {coord : D → E}
+    {f g : D → A} {z : D}
+    (hf : AnalyticAt 𝕜 f z coord) (hg : AnalyticAt 𝕜 g z coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id) :
+    AnalyticAt 𝕜 (f * g) z coord :=
+  hf.smul hg hcoord
 
-/-- Multiplication of analytic functions (valued in a normed `𝕜`-algebra) is analytic. -/
-lemma AnalyticOn.mul {f g : E → A} {s : Set E}
-    (hf : AnalyticOn 𝕜 f s) (hg : AnalyticOn 𝕜 g s) :
-    AnalyticOn 𝕜 (fun x ↦ f x * g x) s :=
-  hf.smul hg
+/-- Multiplication preserves analyticity on an embedded domain. -/
+lemma AnalyticOn.mul {D : Type*} [TopologicalSpace D] {coord : D → E}
+    {f g : D → A} {s : Set D}
+    (hf : AnalyticOn 𝕜 f s coord) (hg : AnalyticOn 𝕜 g s coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id) :
+    AnalyticOn 𝕜 (f * g) s coord :=
+  hf.smul hg hcoord
 
-/-- Multiplication of analytic functions (valued in a normed `𝕜`-algebra) is analytic. -/
+/-- Multiplication preserves analyticity on an embedded domain. -/
 @[fun_prop]
-lemma AnalyticOnNhd.mul {f g : E → A} {s : Set E}
-    (hf : AnalyticOnNhd 𝕜 f s) (hg : AnalyticOnNhd 𝕜 g s) :
-    AnalyticOnNhd 𝕜 (fun x ↦ f x * g x) s :=
-  hf.smul hg
+lemma AnalyticOnNhd.mul {D : Type*} [TopologicalSpace D] {coord : D → E}
+    {f g : D → A} {s : Set D}
+    (hf : AnalyticOnNhd 𝕜 f s coord) (hg : AnalyticOnNhd 𝕜 g s coord)
+    (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id) :
+    AnalyticOnNhd 𝕜 (f * g) s coord :=
+  hf.smul hg hcoord
 
 /-- Powers of analytic functions (into a normed `𝕜`-algebra) are analytic. -/
 @[to_fun]
@@ -696,37 +719,37 @@ lemma AnalyticOnNhd.pow {f : E → A} {s : Set E} (hf : AnalyticOnNhd 𝕜 f s) 
     AnalyticOnNhd 𝕜 (f ^ n) s :=
   fun _ m ↦ (hf _ m).pow n
 
-/-- ZPowers of analytic functions (into a normed division algebra over `𝕜`) are analytic if the
-exponent is nonnegative. -/
-@[to_fun]
+/-- Nonnegative integer powers of an analytic function are analytic, including at its zeros. -/
 lemma AnalyticWithinAt.zpow_nonneg {f : E → 𝕝} {z : E} {s : Set E} {n : ℤ}
     (hf : AnalyticWithinAt 𝕜 f s z) (hn : 0 ≤ n) :
-    AnalyticWithinAt 𝕜 (f ^ n) s z := by
-  simpa [← zpow_natCast, hn] using hf.pow n.toNat
+    AnalyticWithinAt 𝕜
+      (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) s z := by
+  lift n to ℕ using hn
+  simpa only [Checked.zpow_ofNat, Pi.pow_apply] using hf.pow n
 
-/-- ZPowers of analytic functions (into a normed division algebra over `𝕜`) are analytic if the
-exponent is nonnegative. -/
-@[to_fun]
-lemma AnalyticAt.zpow_nonneg {f : E → 𝕝} {z : E} {n : ℤ} (hf : AnalyticAt 𝕜 f z) (hn : 0 ≤ n) :
-    AnalyticAt 𝕜 (f ^ n) z := by
-  simpa [← zpow_natCast, hn] using hf.pow n.toNat
+/-- Nonnegative integer powers of an analytic function are analytic, including at its zeros. -/
+lemma AnalyticAt.zpow_nonneg {f : E → 𝕝} {z : E} {n : ℤ}
+    (hf : AnalyticAt 𝕜 f z) (hn : 0 ≤ n) :
+    AnalyticAt 𝕜
+      (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) z := by
+  lift n to ℕ using hn
+  simpa only [Checked.zpow_ofNat, Pi.pow_apply] using hf.pow n
 
-/-- ZPowers of analytic functions (into a normed division algebra over `𝕜`) are analytic if the
-exponent is nonnegative. -/
-@[to_fun]
-lemma AnalyticOn.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ} (hf : AnalyticOn 𝕜 f s)
-    (hn : 0 ≤ n) :
-    AnalyticOn 𝕜 (f ^ n) s := by
-  simpa [← zpow_natCast, hn] using hf.pow n.toNat
+/-- Nonnegative integer powers of an analytic function are analytic, including at its zeros. -/
+lemma AnalyticOn.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ}
+    (hf : AnalyticOn 𝕜 f s) (hn : 0 ≤ n) :
+    AnalyticOn 𝕜
+      (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) s := by
+  lift n to ℕ using hn
+  simpa only [Checked.zpow_ofNat, Pi.pow_apply] using hf.pow n
 
-/-- ZPowers of analytic functions (into a normed division algebra over `𝕜`) are analytic if the
-exponent is nonnegative. -/
-@[to_fun (attr := fun_prop)]
-lemma AnalyticOnNhd.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ} (hf : AnalyticOnNhd 𝕜 f s)
-    (hn : 0 ≤ n) :
-    AnalyticOnNhd 𝕜 (f ^ n) s := by
-  simp_rw [(Eq.symm (Int.toNat_of_nonneg hn) : n = OfNat.ofNat n.toNat), zpow_ofNat]
-  apply pow hf
+/-- Nonnegative integer powers of an analytic function are analytic, including at its zeros. -/
+lemma AnalyticOnNhd.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ}
+    (hf : AnalyticOnNhd 𝕜 f s) (hn : 0 ≤ n) :
+    AnalyticOnNhd 𝕜
+      (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) s := by
+  lift n to ℕ using hn
+  simpa only [Checked.zpow_ofNat, Pi.pow_apply] using hf.pow n
 
 /-!
 ### Composition with a linear map
@@ -749,13 +772,17 @@ theorem HasFPowerSeriesWithinOnBall.compContinuousLinearMap
   r_pos := by
     simp only [ENNReal.div_pos_iff, ne_eq, enorm_ne_top, not_false_eq_true, and_true]
     exact pos_iff_ne_zero.mp hf.r_pos
-  hasSum hy1 hy2 := by
-    convert! hf.hasSum _ _
-    · simp
-    · simp only [Set.mem_insert_iff, add_eq_left, Set.mem_preimage, map_add] at hy1 ⊢
-      rcases hy1 with (hy1 | hy1) <;> simp [hy1]
-    · simp only [Metric.eball, edist_zero_right, Set.mem_ofPred_eq] at hy2 ⊢
+  hasSum {y} hy1 hy2 := by
+    have hmem : u y ∈ Set.insert (u x) s := by
+      rcases hy1 with rfl | hy1
+      · exact Set.mem_insert _ _
+      · exact Set.mem_insert_of_mem _ hy1
+    have hsmall : u y - u x ∈ Metric.eball (0 : F) r := by
+      rw [← map_sub]
+      simp only [Metric.eball, edist_zero_right, Set.mem_ofPred_eq] at hy2 ⊢
       exact lt_of_le_of_lt (ContinuousLinearMap.le_opENorm _ _) (mul_lt_of_lt_div' hy2)
+    simpa only [FormalMultilinearSeries.compContinuousLinearMap_apply, map_sub,
+      Function.comp_def] using hf.hasSum hmem hsmall
 
 theorem HasFPowerSeriesOnBall.compContinuousLinearMap (hf : HasFPowerSeriesOnBall f pf (u x) r) :
     HasFPowerSeriesOnBall (f ∘ u) (pf.compContinuousLinearMap u) x (r / ‖u‖ₑ) := by
@@ -882,21 +909,25 @@ lemma formalMultilinearSeries_geometric_radius [NormOneClass A] :
     FormalMultilinearSeries.ofScalars_radius_eq_of_tendsto A _ one_ne_zero (by simp)
 
 lemma hasFPowerSeriesOnBall_inverse_one_sub [HasSummableGeomSeries A] :
-    HasFPowerSeriesOnBall (fun x : A ↦ (1 - x)⁻¹ʳ)
-      (formalMultilinearSeries_geometric 𝕜 A) 0 1 := by
+    HasFPowerSeriesOnBall
+      (fun x : {x : A | IsUnit (1 - x)} ↦ (↑x.property.unit⁻¹ : A))
+      (formalMultilinearSeries_geometric 𝕜 A)
+      ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩ 1 Subtype.val := by
   constructor
   · exact one_le_formalMultilinearSeries_geometric_radius 𝕜 A
   · exact one_pos
   · intro y hy
-    simp only [Metric.mem_eball, edist_dist, dist_zero_right, ofReal_lt_one] at hy
-    simp only [zero_add, NormedRing.inverse_one_sub _ hy, Units.oneSub, Units.inv_mk,
-      formalMultilinearSeries_geometric, ContinuousMultilinearMap.mkPiAlgebraFin_apply,
-      List.ofFn_const, List.prod_replicate]
-    exact (summable_geometric_of_norm_lt_one hy).hasSum
+    have hy' : ‖(y : A)‖ < 1 := by
+      simpa only [sub_zero, Metric.mem_eball, edist_dist, dist_zero_right, ofReal_lt_one] using hy
+    have hu : y.property.unit = Units.oneSub (y : A) hy' := Units.ext rfl
+    simpa only [sub_zero, hu, formalMultilinearSeries_geometric,
+      ContinuousMultilinearMap.mkPiAlgebraFin_apply, List.ofFn_const, List.prod_replicate] using
+      hasSum_geom_series_inverse (y : A) hy'
 
 @[fun_prop]
 lemma analyticAt_inverse_one_sub [HasSummableGeomSeries A] :
-    AnalyticAt 𝕜 (fun x : A ↦ (1 - x)⁻¹ʳ) 0 :=
+    AnalyticAt 𝕜 (fun x : {x : A | IsUnit (1 - x)} ↦ (↑x.property.unit⁻¹ : A))
+      ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩ Subtype.val :=
   ⟨_, ⟨_, hasFPowerSeriesOnBall_inverse_one_sub 𝕜 A⟩⟩
 
 /-- The alternating geometric series `1 - x + x ^ 2 - ...` as a `FormalMultilinearSeries`. -/
@@ -930,160 +961,196 @@ lemma alternatingGeometricSeries_radius [NormOneClass A] :
   FormalMultilinearSeries.ofScalars_radius_eq_of_tendsto A _ one_ne_zero (by simp)
 
 lemma hasFPowerSeriesOnBall_inverse_one_add [HasSummableGeomSeries A] [Nontrivial A] :
-    HasFPowerSeriesOnBall (fun x : A ↦ Ring.inverse (1 + x))
-      (alternatingGeometricSeries 𝕜 A) 0 1 := by
-  rw [alternatingGeometricSeries_eq_formalMultilinearSeries_geometric_comp_neg]
-  convert_to HasFPowerSeriesOnBall ((fun x ↦ Ring.inverse (1 - x)) ∘ (-ContinuousLinearMap.id 𝕜 A))
-    ((formalMultilinearSeries_geometric 𝕜 A).compContinuousLinearMap (-ContinuousLinearMap.id 𝕜 A))
-    0 1
-  · ext; simp
-  convert HasFPowerSeriesOnBall.compContinuousLinearMap _ (r := 1)
-  · simp [← ofReal_norm]
-  · simpa using (hasFPowerSeriesOnBall_inverse_one_sub 𝕜 A)
+    HasFPowerSeriesOnBall
+      (fun x : {x : A | IsUnit (1 + x)} ↦ (↑x.property.unit⁻¹ : A))
+      (alternatingGeometricSeries 𝕜 A)
+      ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩ 1 Subtype.val := by
+  constructor
+  · exact one_le_alternatingGeometricSeries_radius 𝕜 A
+  · exact one_pos
+  · intro y hy
+    have hy' : ‖-(y : A)‖ < 1 := by
+      simpa only [norm_neg, sub_zero, Metric.mem_eball, edist_dist, dist_zero_right,
+        ofReal_lt_one] using hy
+    have hu : y.property.unit = Units.oneSub (-(y : A)) hy' := by
+      apply Units.ext
+      simp only [IsUnit.unit_spec, Units.oneSub, sub_neg_eq_add]
+    simpa [sub_zero, hu, alternatingGeometricSeries_eq_formalMultilinearSeries_geometric_comp_neg,
+      FormalMultilinearSeries.compContinuousLinearMap_apply, formalMultilinearSeries_geometric,
+      ContinuousMultilinearMap.mkPiAlgebraFin_apply] using
+      hasSum_geom_series_inverse (-(y : A)) hy'
 
 @[fun_prop]
 lemma analyticAt_inverse_one_add [HasSummableGeomSeries A] [Nontrivial A] :
-    AnalyticAt 𝕜 (fun x : A ↦ Ring.inverse (1 + x)) 0 :=
+    AnalyticAt 𝕜 (fun x : {x : A | IsUnit (1 + x)} ↦ (↑x.property.unit⁻¹ : A))
+      ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩ Subtype.val :=
   ⟨_, ⟨_, hasFPowerSeriesOnBall_inverse_one_add 𝕜 A⟩⟩
 
 end Geometric
 
-/-- If `A` is a normed algebra over `𝕜` with summable geometric series, then inversion on `A` is
-analytic at any unit. -/
+/-- Inversion is analytic on the group of units, with the algebra as ambient coordinates. -/
 @[fun_prop]
 lemma analyticAt_inverse [HasSummableGeomSeries A] (z : Aˣ) :
-    AnalyticAt 𝕜 Ring.inverse (z : A) := by
-  rcases subsingleton_or_nontrivial A with hA | hA
-  · convert! analyticAt_const (v := (0 : A))
-  · let f1 : A → A := fun a ↦ a * z.inv
-    let f2 : A → A := fun b ↦ (1 - b)⁻¹ʳ
-    let f3 : A → A := fun c ↦ 1 - z.inv * c
-    have feq : ∀ᶠ y in 𝓝 (z : A), (f1 ∘ f2 ∘ f3) y = y⁻¹ʳ := by
-      have : Metric.ball (z : A) (‖(↑z⁻¹ : A)‖⁻¹) ∈ 𝓝 (z : A) := by
-        apply Metric.ball_mem_nhds
-        simp
-      filter_upwards [this] with y hy
-      simp only [Metric.mem_ball, dist_eq_norm] at hy
-      have : y = Units.ofNearby z y hy := rfl
-      rw [this, Eq.comm]
-      simp only [Ring.inverse_unit, Function.comp_apply]
-      simp only [Units.ofNearby, Units.add, mul_sub, Units.inv_mul, neg_sub, add_sub_cancel,
-        mul_inv_rev, Units.val_mul, Units.val_inv_copy, Units.inv_eq_val_inv, Units.val_copy,
-        _root_.sub_sub_cancel, Units.mul_left_inj, f1, f2, f3]
-      rw [← Ring.inverse_unit]
-      congr
-      simp
-    apply AnalyticAt.congr _ feq
-    apply (analyticAt_id.mul analyticAt_const).comp
-    apply AnalyticAt.comp
-    · simp only [Units.inv_eq_val_inv, Units.inv_mul, sub_self, f2, f3]
-      exact analyticAt_inverse_one_sub 𝕜 A
-    · exact analyticAt_const.sub (analyticAt_const.mul analyticAt_id)
+    AnalyticAt 𝕜 (fun y : Aˣ ↦ (↑y⁻¹ : A)) z Units.val := by
+  let g : Aˣ → {a : A | IsUnit (1 - a)} := fun y ↦
+    ⟨1 - (↑z⁻¹ : A) * y, by simpa only [sub_sub_cancel] using (z⁻¹ * y).isUnit⟩
+  have h3 : AnalyticAt 𝕜 (fun y : Aˣ ↦ 1 - (↑z⁻¹ : A) * y) z Units.val :=
+    (analyticAt_const.sub (analyticAt_const.mul analyticAt_id)).comp_domain (g := Units.val)
+  have hg : AnalyticAt 𝕜
+      (fun a : {a : A | IsUnit (1 - a)} ↦ (↑a.property.unit⁻¹ : A)) (g z) Subtype.val := by
+    have hz : g z = ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩ := by
+      apply Subtype.ext
+      simp [g]
+    rw [hz]
+    exact analyticAt_inverse_one_sub 𝕜 A
+  have h2 := hg.comp h3 Units.isOpenEmbedding_val.isEmbedding Topology.IsEmbedding.subtypeVal
+  have h := (analyticAt_id.mul (analyticAt_const (v := (↑z⁻¹ : A)))).comp h2
+    Units.isOpenEmbedding_val.isEmbedding Topology.IsEmbedding.id
+  have heq : (fun y : Aˣ ↦ (↑(g y).property.unit⁻¹ : A) * ↑z⁻¹) =
+      (fun y : Aˣ ↦ (↑y⁻¹ : A)) := by
+    funext y
+    have hu : (g y).property.unit = z⁻¹ * y := by
+      apply Units.ext
+      simp only [IsUnit.unit_spec, g, sub_sub_cancel, Units.val_mul]
+    simp only [hu, mul_inv_rev, inv_inv, Units.val_mul, mul_assoc, Units.mul_inv, mul_one]
+  simpa only [Function.comp_def, heq] using h
 
 lemma analyticOnNhd_inverse [HasSummableGeomSeries A] :
-    AnalyticOnNhd 𝕜 Ring.inverse {x : A | IsUnit x} :=
-  fun _ hx ↦ analyticAt_inverse (IsUnit.unit hx)
+    AnalyticOnNhd 𝕜 (fun y : Aˣ ↦ (↑y⁻¹ : A)) Set.univ Units.val :=
+  fun y _ ↦ analyticAt_inverse y
 
 variable (𝕜 𝕝) in
 lemma hasFPowerSeriesOnBall_inv_one_sub :
-    HasFPowerSeriesOnBall (fun x : 𝕝 ↦ (1 - x)⁻¹) (formalMultilinearSeries_geometric 𝕜 𝕝) 0 1 := by
-  convert! hasFPowerSeriesOnBall_inverse_one_sub 𝕜 𝕝
-  exact Ring.inverse_eq_inv'.symm
+    HasFPowerSeriesOnBall
+      (fun x : {x : 𝕝 | IsUnit (1 - x)} ↦ (↑x.property.unit⁻¹ : 𝕝))
+      (formalMultilinearSeries_geometric 𝕜 𝕝)
+      ⟨0, by simpa using (isUnit_one : IsUnit (1 : 𝕝))⟩ 1 Subtype.val :=
+  hasFPowerSeriesOnBall_inverse_one_sub 𝕜 𝕝
 
 variable (𝕝) in
 @[fun_prop]
-lemma analyticAt_inv_one_sub : AnalyticAt 𝕜 (fun x : 𝕝 ↦ (1 - x)⁻¹) 0 :=
-  ⟨_, ⟨_, hasFPowerSeriesOnBall_inv_one_sub 𝕜 𝕝⟩⟩
+lemma analyticAt_inv_one_sub :
+    AnalyticAt 𝕜 (fun x : {x : 𝕝 | IsUnit (1 - x)} ↦ (↑x.property.unit⁻¹ : 𝕝))
+      ⟨0, by simpa using (isUnit_one : IsUnit (1 : 𝕝))⟩ Subtype.val :=
+  analyticAt_inverse_one_sub 𝕜 𝕝
 
 variable (𝕜 𝕝) in
 lemma hasFPowerSeriesOnBall_inv_one_add :
-    HasFPowerSeriesOnBall (fun x : 𝕝 ↦ (1 + x)⁻¹) (alternatingGeometricSeries 𝕜 𝕝) 0 1 := by
-  convert! hasFPowerSeriesOnBall_inverse_one_add 𝕜 𝕝
-  exact Ring.inverse_eq_inv'.symm
+    HasFPowerSeriesOnBall
+      (fun x : {x : 𝕝 | IsUnit (1 + x)} ↦ (↑x.property.unit⁻¹ : 𝕝))
+      (alternatingGeometricSeries 𝕜 𝕝)
+      ⟨0, by simpa using (isUnit_one : IsUnit (1 : 𝕝))⟩ 1 Subtype.val :=
+  hasFPowerSeriesOnBall_inverse_one_add 𝕜 𝕝
 
 variable (𝕝) in
 @[fun_prop]
-lemma analyticAt_inv_one_add : AnalyticAt 𝕜 (fun x : 𝕝 ↦ (1 + x)⁻¹) 0 :=
-  ⟨_, ⟨_, hasFPowerSeriesOnBall_inv_one_add 𝕜 𝕝⟩⟩
+lemma analyticAt_inv_one_add :
+    AnalyticAt 𝕜 (fun x : {x : 𝕝 | IsUnit (1 + x)} ↦ (↑x.property.unit⁻¹ : 𝕝))
+      ⟨0, by simpa using (isUnit_one : IsUnit (1 : 𝕝))⟩ Subtype.val :=
+  analyticAt_inverse_one_add 𝕜 𝕝
 
-/-- If `𝕝` is a normed field extension of `𝕜`, then the inverse map `𝕝 → 𝕝` is `𝕜`-analytic
-away from 0. -/
+/-- The inverse of a normed field extension is analytic on its units. -/
 @[fun_prop]
-lemma analyticAt_inv {z : 𝕝} (hz : z ≠ 0) : AnalyticAt 𝕜 Inv.inv z := by
-  convert! analyticAt_inverse (𝕜 := 𝕜) (Units.mk0 _ hz)
-  exact Ring.inverse_eq_inv'.symm
+lemma analyticAt_inv (z : 𝕝ˣ) :
+    AnalyticAt 𝕜 (fun y : 𝕝ˣ ↦ (↑y⁻¹ : 𝕝)) z Units.val :=
+  analyticAt_inverse z
 
-/-- `x⁻¹` is analytic away from zero -/
-lemma analyticOnNhd_inv : AnalyticOnNhd 𝕜 (fun z ↦ z⁻¹) {z : 𝕝 | z ≠ 0} := by
-  intro z m; exact analyticAt_inv m
+@[fun_prop]
+lemma analyticOnNhd_inv :
+    AnalyticOnNhd 𝕜 (fun z : 𝕝ˣ ↦ (↑z⁻¹ : 𝕝)) Set.univ Units.val :=
+  fun z _ ↦ analyticAt_inv z
 
-lemma analyticOn_inv : AnalyticOn 𝕜 (fun z ↦ z⁻¹) {z : 𝕝 | z ≠ 0} :=
+lemma analyticOn_inv :
+    AnalyticOn 𝕜 (fun z : 𝕝ˣ ↦ (↑z⁻¹ : 𝕝)) Set.univ Units.val :=
   analyticOnNhd_inv.analyticOn
 
-/-- `(f x)⁻¹` is analytic away from `f x = 0` -/
-@[to_fun]
-theorem AnalyticWithinAt.inv {f : E → 𝕝} {x : E} {s : Set E} (fa : AnalyticWithinAt 𝕜 f s x)
-    (f0 : f x ≠ 0) :
-    AnalyticWithinAt 𝕜 f⁻¹ s x :=
-  (analyticAt_inv f0).comp_analyticWithinAt fa
+theorem AnalyticWithinAt.inv {f : E → 𝕝} {x : E} {s : Set E}
+    (fa : AnalyticWithinAt 𝕜 f s x) (f0 : IsUnit (f x)) :
+    AnalyticWithinAt 𝕜
+      (fun y : {y : E | IsUnit (f y)} ↦ (↑y.property.unit⁻¹ : 𝕝))
+      (Subtype.val ⁻¹' s) ⟨x, f0⟩ Subtype.val := by
+  have h := fa.comp_domain (g := (Subtype.val : {y : E | IsUnit (f y)} → E))
+    (x := ⟨x, f0⟩) (t := Subtype.val ⁻¹' s) (fun _ hy => hy)
+  exact (analyticAt_inv f0.unit).comp_analyticWithinAt
+    (f := fun y : {y : E | IsUnit (f y)} ↦ y.property.unit) h
+    Topology.IsEmbedding.subtypeVal Units.isOpenEmbedding_val.isEmbedding
 
-/-- `(f x)⁻¹` is analytic away from `f x = 0` -/
-@[to_fun (attr := fun_prop)]
-theorem AnalyticAt.inv {f : E → 𝕝} {x : E} (fa : AnalyticAt 𝕜 f x) (f0 : f x ≠ 0) :
-    AnalyticAt 𝕜 f⁻¹ x :=
-  (analyticAt_inv f0).comp fa
+/-- Analytic inversion is defined on the exact invertibility locus of the function. -/
+theorem AnalyticAt.inv {f : E → 𝕝} {x : E}
+    (fa : AnalyticAt 𝕜 f x) (f0 : IsUnit (f x)) :
+    AnalyticAt 𝕜 (fun y : {y : E | IsUnit (f y)} ↦ (↑y.property.unit⁻¹ : 𝕝))
+      ⟨x, f0⟩ Subtype.val := by
+  have h := fa.comp_domain (g := (Subtype.val : {y : E | IsUnit (f y)} → E))
+    (x := ⟨x, f0⟩)
+  exact (analyticAt_inv f0.unit).comp
+    (f := fun y : {y : E | IsUnit (f y)} ↦ y.property.unit) h
+    Topology.IsEmbedding.subtypeVal Units.isOpenEmbedding_val.isEmbedding
 
-/-- `(f x)⁻¹` is analytic away from `f x = 0` -/
-@[to_fun]
-theorem AnalyticOn.inv {f : E → 𝕝} {s : Set E} (fa : AnalyticOn 𝕜 f s) (f0 : ∀ x ∈ s, f x ≠ 0) :
-    AnalyticOn 𝕜 f⁻¹ s :=
-  fun x m ↦ (fa x m).inv (f0 x m)
+theorem AnalyticOn.inv {f : E → 𝕝} {s : Set E} (fa : AnalyticOn 𝕜 f s) :
+    AnalyticOn 𝕜 (fun y : {y : E | IsUnit (f y)} ↦ (↑y.property.unit⁻¹ : 𝕝))
+      (Subtype.val ⁻¹' s) Subtype.val :=
+  fun x hx ↦ (fa x.val hx).inv x.property
 
-/-- `(f x)⁻¹` is analytic away from `f x = 0` -/
-@[to_fun (attr := fun_prop)]
-theorem AnalyticOnNhd.inv {f : E → 𝕝} {s : Set E} (fa : AnalyticOnNhd 𝕜 f s)
-    (f0 : ∀ x ∈ s, f x ≠ 0) :
-    AnalyticOnNhd 𝕜 f⁻¹ s :=
-  fun x m ↦ (fa x m).inv (f0 x m)
+theorem AnalyticOnNhd.inv {f : E → 𝕝} {s : Set E} (fa : AnalyticOnNhd 𝕜 f s) :
+    AnalyticOnNhd 𝕜 (fun y : {y : E | IsUnit (f y)} ↦ (↑y.property.unit⁻¹ : 𝕝))
+      (Subtype.val ⁻¹' s) Subtype.val :=
+  fun x hx ↦ (fa x.val hx).inv x.property
 
-/-- ZPowers of analytic functions (into a normed field over `𝕜`) are analytic away from the zeros.
--/
-@[to_fun]
+/-- Integer powers of an analytic function are analytic on the exact exponent-dependent domain. -/
 lemma AnalyticWithinAt.zpow {f : E → 𝕝} {z : E} {s : Set E} {n : ℤ}
-    (h₁f : AnalyticWithinAt 𝕜 f s z) (h₂f : f z ≠ 0) :
-    AnalyticWithinAt 𝕜 (f ^ n) s z := by
-  by_cases hn : 0 ≤ n
-  · exact zpow_nonneg h₁f hn
-  · rw [(Int.eq_neg_comm.mp rfl : n = -(-n))]
-    conv => arg 2; intro x; rw [zpow_neg]
-    exact (h₁f.zpow_nonneg (by linarith)).inv (zpow_ne_zero (-n) h₂f)
+    (hf : AnalyticWithinAt 𝕜 f s z) (hz : n < 0 → IsUnit (f z)) :
+    AnalyticWithinAt 𝕜
+      (fun y : {y : E | n < 0 → IsUnit (f y)} ↦ Checked.zpow (f y.val) n y.property)
+      (Subtype.val ⁻¹' s) ⟨z, hz⟩ Subtype.val := by
+  cases n with
+  | ofNat n =>
+    simpa only [Checked.zpow, Function.comp_def, Pi.pow_apply] using
+      (hf.pow n).comp_domain
+        (g := (Subtype.val : {y : E | (n : ℤ) < 0 → IsUnit (f y)} → E)) (fun _ hy => hy)
+  | negSucc n =>
+    let g : {y : E | Int.negSucc n < 0 → IsUnit (f y)} →
+        {y : E | IsUnit (f y ^ (n + 1))} := fun y ↦
+      ⟨y.val, (y.property (Int.negSucc_lt_zero n)).pow (n + 1)⟩
+    have h := ((hf.pow (n + 1)).inv ((hz (Int.negSucc_lt_zero n)).pow (n + 1))).comp_domain
+      (g := g) (fun _ hy => hy)
+    have hu (y : {y : E | Int.negSucc n < 0 → IsUnit (f y)}) :
+        (g y).property.unit = (y.property (Int.negSucc_lt_zero n)).unit ^ (n + 1) :=
+      Units.ext rfl
+    simpa only [Checked.zpow, zpow_negSucc, Function.comp_def, hu, g] using h
 
-/-- ZPowers of analytic functions (into a normed field over `𝕜`) are analytic away from the zeros.
--/
-@[to_fun]
-lemma AnalyticAt.zpow {f : E → 𝕝} {z : E} {n : ℤ} (h₁f : AnalyticAt 𝕜 f z) (h₂f : f z ≠ 0) :
-    AnalyticAt 𝕜 (f ^ n) z := by
-  by_cases hn : 0 ≤ n
-  · exact zpow_nonneg h₁f hn
-  · rw [(Int.eq_neg_comm.mp rfl : n = -(-n))]
-    conv => arg 2; intro x; rw [zpow_neg]
-    exact (h₁f.zpow_nonneg (by linarith)).inv (zpow_ne_zero (-n) h₂f)
+/-- Integer powers of an analytic function are analytic on the exact exponent-dependent domain. -/
+lemma AnalyticAt.zpow {f : E → 𝕝} {z : E} {n : ℤ}
+    (hf : AnalyticAt 𝕜 f z) (hz : n < 0 → IsUnit (f z)) :
+    AnalyticAt 𝕜
+      (fun y : {y : E | n < 0 → IsUnit (f y)} ↦ Checked.zpow (f y.val) n y.property)
+      ⟨z, hz⟩ Subtype.val := by
+  cases n with
+  | ofNat n =>
+    simpa only [Checked.zpow, Function.comp_def, Pi.pow_apply] using
+      (hf.pow n).comp_domain
+        (g := (Subtype.val : {y : E | (n : ℤ) < 0 → IsUnit (f y)} → E))
+  | negSucc n =>
+    let g : {y : E | Int.negSucc n < 0 → IsUnit (f y)} →
+        {y : E | IsUnit (f y ^ (n + 1))} := fun y ↦
+      ⟨y.val, (y.property (Int.negSucc_lt_zero n)).pow (n + 1)⟩
+    have h := ((hf.pow (n + 1)).inv ((hz (Int.negSucc_lt_zero n)).pow (n + 1))).comp_domain
+      (g := g)
+    have hu (y : {y : E | Int.negSucc n < 0 → IsUnit (f y)}) :
+        (g y).property.unit = (y.property (Int.negSucc_lt_zero n)).unit ^ (n + 1) :=
+      Units.ext rfl
+    simpa only [Checked.zpow, zpow_negSucc, Function.comp_def, hu, g] using h
 
-/-- ZPowers of analytic functions (into a normed field over `𝕜`) are analytic away from the zeros.
--/
-@[to_fun]
-lemma AnalyticOn.zpow {f : E → 𝕝} {s : Set E} {n : ℤ} (h₁f : AnalyticOn 𝕜 f s)
-    (h₂f : ∀ z ∈ s, f z ≠ 0) :
-    AnalyticOn 𝕜 (f ^ n) s :=
-  fun z hz ↦ (h₁f z hz).zpow (h₂f z hz)
+lemma AnalyticOn.zpow {f : E → 𝕝} {s : Set E} {n : ℤ} (hf : AnalyticOn 𝕜 f s) :
+    AnalyticOn 𝕜
+      (fun y : {y : E | n < 0 → IsUnit (f y)} ↦ Checked.zpow (f y.val) n y.property)
+      (Subtype.val ⁻¹' s) Subtype.val :=
+  fun y hy ↦ (hf y.val hy).zpow y.property
 
-/-- ZPowers of analytic functions (into a normed field over `𝕜`) are analytic away from the zeros.
--/
-@[to_fun (attr := fun_prop)]
-lemma AnalyticOnNhd.zpow {f : E → 𝕝} {s : Set E} {n : ℤ} (h₁f : AnalyticOnNhd 𝕜 f s)
-    (h₂f : ∀ z ∈ s, f z ≠ 0) :
-    AnalyticOnNhd 𝕜 (f ^ n) s :=
-  fun z hz ↦ (h₁f z hz).zpow (h₂f z hz)
+lemma AnalyticOnNhd.zpow {f : E → 𝕝} {s : Set E} {n : ℤ} (hf : AnalyticOnNhd 𝕜 f s) :
+    AnalyticOnNhd 𝕜
+      (fun y : {y : E | n < 0 → IsUnit (f y)} ↦ Checked.zpow (f y.val) n y.property)
+      (Subtype.val ⁻¹' s) Subtype.val :=
+  fun y hy ↦ (hf y.val hy).zpow y.property
 
 /-- A function is analytic at a point iff it is analytic after scalar
   multiplication with a non-vanishing analytic function. -/
@@ -1093,12 +1160,15 @@ theorem analyticAt_iff_analytic_fun_smul [Module 𝕝 F] [IsBoundedSMul 𝕝 F] 
   constructor
   · exact fun a ↦ h₁f.smul a
   · intro hprod
-    rw [analyticAt_congr (g := (f⁻¹ • f) • g), smul_assoc]
-    · exact (h₁f.inv h₂f).fun_smul hprod
-    · filter_upwards [h₁f.continuousAt.preimage_mem_nhds (compl_singleton_mem_nhds_iff.2 h₂f)]
-      intro y hy
-      rw [Set.preimage_compl, Set.mem_compl_iff, Set.mem_preimage, Set.mem_singleton_iff] at hy
-      simp [hy]
+    have hz : IsUnit (f z) := isUnit_iff_ne_zero.mpr h₂f
+    have hlocal := (h₁f.inv hz).smul
+      (hprod.comp_domain (g := (Subtype.val : {y : E | IsUnit (f y)} → E)) (x := ⟨z, hz⟩))
+      Topology.IsEmbedding.subtypeVal
+    apply AnalyticAt.of_comp_domain (coord := (Subtype.val : {y : E | IsUnit (f y)} → E))
+      (x := ⟨z, hz⟩)
+    · simpa only [Function.comp_def, Pi.smul_apply, smul_smul, IsUnit.val_inv_mul, one_smul] using hlocal
+    · rw [Subtype.range_val]
+      exact h₁f.continuousAt.preimage_mem_nhds (Units.isOpen.mem_nhds hz)
 
 /-- A function is analytic at a point iff it is analytic after scalar
   multiplication with a non-vanishing analytic function. -/
@@ -1116,31 +1186,37 @@ theorem analyticAt_iff_analytic_mul {f g : E → 𝕝} {z : E} (h₁f : Analytic
   simp_rw [← smul_eq_mul]
   exact analyticAt_iff_analytic_smul h₁f h₂f
 
-/-- `f x / g x` is analytic away from `g x = 0` -/
+/-- Analytic division on the exact invertibility locus of the denominator. -/
 theorem AnalyticWithinAt.div {f g : E → 𝕝} {s : Set E} {x : E}
-    (fa : AnalyticWithinAt 𝕜 f s x) (ga : AnalyticWithinAt 𝕜 g s x) (g0 : g x ≠ 0) :
-    AnalyticWithinAt 𝕜 (fun x ↦ f x / g x) s x := by
-  simp_rw [div_eq_mul_inv]; exact fa.mul (ga.inv g0)
+    (fa : AnalyticWithinAt 𝕜 f s x) (ga : AnalyticWithinAt 𝕜 g s x) (g0 : IsUnit (g x)) :
+    AnalyticWithinAt 𝕜 (fun y : {y : E | IsUnit (g y)} ↦ f y.val /ₚ y.property.unit)
+      (Subtype.val ⁻¹' s) ⟨x, g0⟩ Subtype.val := by
+  have hf := fa.comp_domain (g := (Subtype.val : {y : E | IsUnit (g y)} → E))
+    (x := ⟨x, g0⟩) (t := Subtype.val ⁻¹' s) (fun _ hy => hy)
+  exact hf.mul (ga.inv g0) Topology.IsEmbedding.subtypeVal
 
-/-- `f x / g x` is analytic away from `g x = 0` -/
-@[to_fun (attr := fun_prop)]
+/-- Analytic division on the exact invertibility locus of the denominator. -/
 theorem AnalyticAt.div {f g : E → 𝕝} {x : E}
-    (fa : AnalyticAt 𝕜 f x) (ga : AnalyticAt 𝕜 g x) (g0 : g x ≠ 0) :
-    AnalyticAt 𝕜 (f / g) x := by
-  simp_rw [div_eq_mul_inv]; exact fa.mul (ga.inv g0)
+    (fa : AnalyticAt 𝕜 f x) (ga : AnalyticAt 𝕜 g x) (g0 : IsUnit (g x)) :
+    AnalyticAt 𝕜 (fun y : {y : E | IsUnit (g y)} ↦ f y.val /ₚ y.property.unit)
+      ⟨x, g0⟩ Subtype.val := by
+  have hf := fa.comp_domain (g := (Subtype.val : {y : E | IsUnit (g y)} → E))
+    (x := ⟨x, g0⟩)
+  exact hf.mul (ga.inv g0) Topology.IsEmbedding.subtypeVal
 
-/-- `f x / g x` is analytic away from `g x = 0` -/
+/-- Analytic division on the exact invertibility locus of the denominator. -/
 theorem AnalyticOn.div {f g : E → 𝕝} {s : Set E}
-    (fa : AnalyticOn 𝕜 f s) (ga : AnalyticOn 𝕜 g s) (g0 : ∀ x ∈ s, g x ≠ 0) :
-    AnalyticOn 𝕜 (fun x ↦ f x / g x) s := fun x m ↦
-  (fa x m).div (ga x m) (g0 x m)
+    (fa : AnalyticOn 𝕜 f s) (ga : AnalyticOn 𝕜 g s) :
+    AnalyticOn 𝕜 (fun y : {y : E | IsUnit (g y)} ↦ f y.val /ₚ y.property.unit)
+      (Subtype.val ⁻¹' s) Subtype.val :=
+  fun y hy ↦ (fa y.val hy).div (ga y.val hy) y.property
 
-/-- `f x / g x` is analytic away from `g x = 0` -/
-@[fun_prop]
+/-- Analytic division on the exact invertibility locus of the denominator. -/
 theorem AnalyticOnNhd.div {f g : E → 𝕝} {s : Set E}
-    (fa : AnalyticOnNhd 𝕜 f s) (ga : AnalyticOnNhd 𝕜 g s) (g0 : ∀ x ∈ s, g x ≠ 0) :
-    AnalyticOnNhd 𝕜 (fun x ↦ f x / g x) s := fun x m ↦
-  (fa x m).div (ga x m) (g0 x m)
+    (fa : AnalyticOnNhd 𝕜 f s) (ga : AnalyticOnNhd 𝕜 g s) :
+    AnalyticOnNhd 𝕜 (fun y : {y : E | IsUnit (g y)} ↦ f y.val /ₚ y.property.unit)
+      (Subtype.val ⁻¹' s) Subtype.val :=
+  fun y hy ↦ (fa y.val hy).div (ga y.val hy) y.property
 
 /-!
 ### Finite sums and products of analytic functions
@@ -1276,7 +1352,7 @@ theorem HasFPowerSeriesWithinOnBall.unshift (hf : HasFPowerSeriesWithinOnBall f 
     apply HasSum.zero_add
     simp only [FormalMultilinearSeries.unshift, Nat.succ_eq_add_one,
       continuousMultilinearCurryRightEquiv_symm_apply', add_sub_cancel_left]
-    exact (ContinuousLinearMap.apply 𝕜 F y).hasSum (hf.hasSum hy h'y)
+    exact (ContinuousLinearMap.apply 𝕜 F (y - x)).hasSum (hf.hasSum hy h'y)
 
 theorem HasFPowerSeriesOnBall.unshift (hf : HasFPowerSeriesOnBall f pf x r) :
     HasFPowerSeriesOnBall (fun y ↦ z + f y (y - x)) (pf.unshift z) x r where
@@ -1289,7 +1365,7 @@ theorem HasFPowerSeriesOnBall.unshift (hf : HasFPowerSeriesOnBall f pf x r) :
     apply HasSum.zero_add
     simp only [FormalMultilinearSeries.unshift, Nat.succ_eq_add_one,
       continuousMultilinearCurryRightEquiv_symm_apply', add_sub_cancel_left]
-    exact (ContinuousLinearMap.apply 𝕜 F y).hasSum (hf.hasSum hy)
+    exact (ContinuousLinearMap.apply 𝕜 F (y - x)).hasSum (hf.hasSum hy)
 
 theorem HasFPowerSeriesWithinAt.unshift (hf : HasFPowerSeriesWithinAt f pf s x) :
     HasFPowerSeriesWithinAt (fun y ↦ z + f y (y - x)) (pf.unshift z) s x :=

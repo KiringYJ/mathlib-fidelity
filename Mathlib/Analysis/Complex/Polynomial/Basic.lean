@@ -36,16 +36,18 @@ namespace Complex
   has a root. -/
 theorem exists_root {f : ℂ[X]} (hf : 0 < degree f) : ∃ z : ℂ, IsRoot f z := by
   by_contra! hf'
-  /- Since `f` has no roots, `f⁻¹` is differentiable. And since `f` is a polynomial, it tends to
-  infinity at infinity, thus `f⁻¹` tends to zero at infinity. By Liouville's theorem, `f⁻¹ = 0`. -/
-  have (z : ℂ) : (f.eval z)⁻¹ = 0 :=
-    (f.differentiable.inv hf').apply_eq_of_tendsto_cocompact z <|
-      Metric.cobounded_eq_cocompact (α := ℂ) ▸ (Filter.tendsto_inv₀_cobounded.comp <| by
-        simpa only [tendsto_norm_atTop_iff_cobounded]
-          using f.tendsto_norm_atTop hf tendsto_norm_cobounded_atTop)
-  -- Thus `f = 0`, contradicting the fact that `0 < degree f`.
-  obtain rfl : f = C 0 := Polynomial.funext fun z ↦ inv_injective <| by simp [this]
-  simp at hf
+  have hu (z : ℂ) : IsUnit (f.eval z) :=
+    GroupWithZero.isUnit_of_ne_zero (hf' z)
+  /- Absence of roots supplies an actual unit at every point. Its reciprocal is entire,
+    and polynomial growth forces this reciprocal to tend to zero at infinity. -/
+  have hzero : (↑(hu 0).unit⁻¹ : ℂ) = 0 :=
+    (f.differentiable.inv hu).apply_eq_of_tendsto_cocompact 0 <| by
+      rw [← Metric.cobounded_eq_cocompact]
+      apply Filter.tendsto_inv₀_cobounded.comp
+      apply Filter.tendsto_comap_iff.mpr
+      simpa only [IsUnit.unit_spec, tendsto_norm_atTop_iff_cobounded]
+        using f.tendsto_norm_atTop hf tendsto_norm_cobounded_atTop
+  exact (hu 0).unit⁻¹.ne_zero hzero
 
 /-- **Fundamental theorem of algebra**: the field `ℂ` of complex numbers is algebraically closed. -/
 @[wikidata Q192760]

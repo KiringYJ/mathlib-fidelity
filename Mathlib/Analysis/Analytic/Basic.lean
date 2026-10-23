@@ -68,36 +68,38 @@ section
 
 variable {f g : E → F} {p pf : FormalMultilinearSeries 𝕜 E F} {s t : Set E} {x : E} {r r' : ℝ≥0∞}
 
-/-- Given a function `f : E → F` and a formal multilinear series `p`, we say that `f` has `p` as
-a power series on the ball of radius `r > 0` around `x` if `f (x + y) = ∑' pₙ yⁿ` for all `‖y‖ < r`.
--/
-structure HasFPowerSeriesOnBall (f : E → F) (p : FormalMultilinearSeries 𝕜 E F) (x : E) (r : ℝ≥0∞) :
-    Prop where
+/-- A power series on a coordinate ball. Its coefficients act on the ambient vector space `E`,
+while `f` is evaluated only at points of its actual domain `D`. -/
+structure HasFPowerSeriesOnBall {D : Type*} (f : D → F)
+    (p : FormalMultilinearSeries 𝕜 E F) (x : D) (r : ℝ≥0∞)
+    (coord : D → E := by exact id) : Prop where
   r_le : r ≤ p.radius
   r_pos : 0 < r
-  hasSum :
-    ∀ {y}, y ∈ Metric.eball (0 : E) r → HasSum (fun n : ℕ => p n fun _ : Fin n => y) (f (x + y))
+  hasSum : ∀ {y}, coord y - coord x ∈ Metric.eball (0 : E) r →
+    HasSum (fun n : ℕ => p n fun _ : Fin n => coord y - coord x) (f y)
 
-/-- Analogue of `HasFPowerSeriesOnBall` where convergence is required only on a set `s`. We also
-require convergence at `x` as the behavior of this notion is very bad otherwise. -/
-structure HasFPowerSeriesWithinOnBall (f : E → F) (p : FormalMultilinearSeries 𝕜 E F) (s : Set E)
-    (x : E) (r : ℝ≥0∞) : Prop where
+/-- A power series restricted to a subset of its coordinate domain. Convergence is required at
+the centre as well as at the specified points of `s`. -/
+structure HasFPowerSeriesWithinOnBall {D : Type*} (f : D → F)
+    (p : FormalMultilinearSeries 𝕜 E F) (s : Set D) (x : D) (r : ℝ≥0∞)
+    (coord : D → E := by exact id) : Prop where
   /-- `p` converges on `ball 0 r` -/
   r_le : r ≤ p.radius
   /-- The radius of convergence is positive -/
   r_pos : 0 < r
-  /-- `p converges to f` within `s` -/
-  hasSum : ∀ {y}, x + y ∈ insert x s → y ∈ Metric.eball (0 : E) r →
-    HasSum (fun n : ℕ => p n fun _ : Fin n => y) (f (x + y))
+  /-- `p` converges to `f` at points of the coordinate ball lying in `s` or at its centre. -/
+  hasSum : ∀ {y}, y ∈ insert x s → coord y - coord x ∈ Metric.eball (0 : E) r →
+    HasSum (fun n : ℕ => p n fun _ : Fin n => coord y - coord x) (f y)
 
-/-- Given a function `f : E → F` and a formal multilinear series `p`, we say that `f` has `p` as
-a power series around `x` if `f (x + y) = ∑' pₙ yⁿ` for all `y` in a neighborhood of `0`. -/
-def HasFPowerSeriesAt (f : E → F) (p : FormalMultilinearSeries 𝕜 E F) (x : E) :=
-  ∃ r, HasFPowerSeriesOnBall f p x r
+/-- A convergent power series expansion at a point of the actual function domain. -/
+def HasFPowerSeriesAt {D : Type*} (f : D → F) (p : FormalMultilinearSeries 𝕜 E F)
+    (x : D) (coord : D → E := by exact id) :=
+  ∃ r, HasFPowerSeriesOnBall f p x r coord
 
-/-- Analogue of `HasFPowerSeriesAt` where convergence is required only on a set `s`. -/
-def HasFPowerSeriesWithinAt (f : E → F) (p : FormalMultilinearSeries 𝕜 E F) (s : Set E) (x : E) :=
-  ∃ r, HasFPowerSeriesWithinOnBall f p s x r
+/-- A convergent power series expansion within a subset of the function domain. -/
+def HasFPowerSeriesWithinAt {D : Type*} (f : D → F) (p : FormalMultilinearSeries 𝕜 E F)
+    (s : Set D) (x : D) (coord : D → E := by exact id) :=
+  ∃ r, HasFPowerSeriesWithinOnBall f p s x r coord
 
 -- Teach the `bound` tactic that power series have positive radius
 attribute [bound_forward] HasFPowerSeriesOnBall.r_pos HasFPowerSeriesWithinOnBall.r_pos
@@ -107,23 +109,24 @@ variable (𝕜)
 /-- Given a function `f : E → F`, we say that `f` is analytic at `x` if it admits a convergent power
 series expansion around `x`. -/
 @[fun_prop]
-def AnalyticAt (f : E → F) (x : E) :=
-  ∃ p : FormalMultilinearSeries 𝕜 E F, HasFPowerSeriesAt f p x
+def AnalyticAt {D : Type*} (f : D → F) (x : D) (coord : D → E := by exact id) :=
+  ∃ p : FormalMultilinearSeries 𝕜 E F, HasFPowerSeriesAt f p x coord
 
 /-- `f` is analytic within `s` at `x` if it has a power series at `x` that converges on `𝓝[s] x` -/
-def AnalyticWithinAt (f : E → F) (s : Set E) (x : E) : Prop :=
-  ∃ p : FormalMultilinearSeries 𝕜 E F, HasFPowerSeriesWithinAt f p s x
+def AnalyticWithinAt {D : Type*} (f : D → F) (s : Set D) (x : D)
+    (coord : D → E := by exact id) : Prop :=
+  ∃ p : FormalMultilinearSeries 𝕜 E F, HasFPowerSeriesWithinAt f p s x coord
 
 /-- Given a function `f : E → F`, we say that `f` is analytic on a set `s` if it is analytic around
 every point of `s`. -/
 @[fun_prop]
-def AnalyticOnNhd (f : E → F) (s : Set E) :=
-  ∀ x, x ∈ s → AnalyticAt 𝕜 f x
+def AnalyticOnNhd {D : Type*} (f : D → F) (s : Set D) (coord : D → E := by exact id) :=
+  ∀ x, x ∈ s → AnalyticAt 𝕜 f x coord
 
 /-- `f` is analytic within `s` if it is analytic within `s` at each point of `s`.  Note that
 this is weaker than `AnalyticOnNhd 𝕜 f s`, as `f` is allowed to be arbitrary outside `s`. -/
-def AnalyticOn (f : E → F) (s : Set E) : Prop :=
-  ∀ x ∈ s, AnalyticWithinAt 𝕜 f s x
+def AnalyticOn {D : Type*} (f : D → F) (s : Set D) (coord : D → E := by exact id) : Prop :=
+  ∀ x ∈ s, AnalyticWithinAt 𝕜 f s x coord
 
 /-!
 ### `HasFPowerSeriesOnBall` and `HasFPowerSeriesWithinOnBall`
@@ -131,26 +134,98 @@ def AnalyticOn (f : E → F) (s : Set E) : Prop :=
 
 variable {𝕜}
 
-theorem HasFPowerSeriesOnBall.hasFPowerSeriesAt (hf : HasFPowerSeriesOnBall f p x r) :
-    HasFPowerSeriesAt f p x :=
+theorem HasFPowerSeriesOnBall.hasFPowerSeriesAt {D : Type*} {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesOnBall f p x r coord) :
+    HasFPowerSeriesAt f p x coord :=
   ⟨r, hf⟩
 
-theorem HasFPowerSeriesAt.analyticAt (hf : HasFPowerSeriesAt f p x) : AnalyticAt 𝕜 f x :=
+theorem HasFPowerSeriesAt.analyticAt {D : Type*} {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesAt f p x coord) : AnalyticAt 𝕜 f x coord :=
   ⟨p, hf⟩
 
-theorem HasFPowerSeriesOnBall.analyticAt (hf : HasFPowerSeriesOnBall f p x r) : AnalyticAt 𝕜 f x :=
+theorem HasFPowerSeriesOnBall.analyticAt {D : Type*} {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesOnBall f p x r coord) : AnalyticAt 𝕜 f x coord :=
   hf.hasFPowerSeriesAt.analyticAt
 
-theorem HasFPowerSeriesWithinOnBall.hasFPowerSeriesWithinAt
-    (hf : HasFPowerSeriesWithinOnBall f p s x r) : HasFPowerSeriesWithinAt f p s x :=
+theorem HasFPowerSeriesWithinOnBall.hasFPowerSeriesWithinAt {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D}
+    (hf : HasFPowerSeriesWithinOnBall f p s x r coord) : HasFPowerSeriesWithinAt f p s x coord :=
   ⟨r, hf⟩
 
-theorem HasFPowerSeriesWithinAt.analyticWithinAt (hf : HasFPowerSeriesWithinAt f p s x) :
-    AnalyticWithinAt 𝕜 f s x := ⟨p, hf⟩
+theorem HasFPowerSeriesWithinAt.analyticWithinAt {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} (hf : HasFPowerSeriesWithinAt f p s x coord) :
+    AnalyticWithinAt 𝕜 f s x coord := ⟨p, hf⟩
 
-theorem HasFPowerSeriesWithinOnBall.analyticWithinAt (hf : HasFPowerSeriesWithinOnBall f p s x r) :
-    AnalyticWithinAt 𝕜 f s x :=
+theorem HasFPowerSeriesWithinOnBall.analyticWithinAt {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} (hf : HasFPowerSeriesWithinOnBall f p s x r coord) :
+    AnalyticWithinAt 𝕜 f s x coord :=
   hf.hasFPowerSeriesWithinAt.analyticWithinAt
+
+/-- Pull back a power series along a map of domains, pulling back its ambient coordinates too. -/
+theorem HasFPowerSeriesOnBall.comp_domain {D D' : Type*} {f : D → F} {coord : D → E}
+    {g : D' → D} {x : D'} (hf : HasFPowerSeriesOnBall f p (g x) r coord) :
+    HasFPowerSeriesOnBall (f ∘ g) p x r (coord ∘ g) where
+  r_le := hf.r_le
+  r_pos := hf.r_pos
+  hasSum hy := hf.hasSum hy
+
+/-- Restrict a power series and its coordinates to a new domain. -/
+theorem HasFPowerSeriesWithinOnBall.comp_domain {D D' : Type*} {f : D → F} {coord : D → E}
+    {g : D' → D} {x : D'} {s : Set D} {t : Set D'}
+    (hf : HasFPowerSeriesWithinOnBall f p s (g x) r coord) (hg : MapsTo g t s) :
+    HasFPowerSeriesWithinOnBall (f ∘ g) p t x r (coord ∘ g) where
+  r_le := hf.r_le
+  r_pos := hf.r_pos
+  hasSum hy hdist := hf.hasSum (hg.insert x hy) hdist
+
+theorem HasFPowerSeriesAt.comp_domain {D D' : Type*} {f : D → F} {coord : D → E}
+    {g : D' → D} {x : D'} (hf : HasFPowerSeriesAt f p (g x) coord) :
+    HasFPowerSeriesAt (f ∘ g) p x (coord ∘ g) := by
+  obtain ⟨r, hr⟩ := hf
+  exact ⟨r, hr.comp_domain⟩
+
+theorem HasFPowerSeriesWithinAt.comp_domain {D D' : Type*} {f : D → F} {coord : D → E}
+    {g : D' → D} {x : D'} {s : Set D} {t : Set D'}
+    (hf : HasFPowerSeriesWithinAt f p s (g x) coord) (hg : MapsTo g t s) :
+    HasFPowerSeriesWithinAt (f ∘ g) p t x (coord ∘ g) := by
+  obtain ⟨r, hr⟩ := hf
+  exact ⟨r, hr.comp_domain hg⟩
+
+theorem AnalyticAt.comp_domain {D D' : Type*} {f : D → F} {coord : D → E}
+    {g : D' → D} {x : D'} (hf : AnalyticAt 𝕜 f (g x) coord) :
+    AnalyticAt 𝕜 (f ∘ g) x (coord ∘ g) := by
+  obtain ⟨p, hp⟩ := hf
+  exact ⟨p, hp.comp_domain⟩
+
+theorem AnalyticWithinAt.comp_domain {D D' : Type*} {f : D → F} {coord : D → E}
+    {g : D' → D} {x : D'} {s : Set D} {t : Set D'}
+    (hf : AnalyticWithinAt 𝕜 f s (g x) coord) (hg : MapsTo g t s) :
+    AnalyticWithinAt 𝕜 (f ∘ g) t x (coord ∘ g) := by
+  obtain ⟨p, hp⟩ := hf
+  exact ⟨p, hp.comp_domain hg⟩
+
+/-- A power series on a domain covering a neighbourhood gives a power series for the original
+ambient function. No values of the restricted function outside its domain are introduced. -/
+theorem HasFPowerSeriesAt.of_comp_domain {D : Type*} {coord : D → E} {x : D}
+    (hf : HasFPowerSeriesAt (f ∘ coord) p x coord)
+    (hcover : Set.range coord ∈ 𝓝 (coord x)) : HasFPowerSeriesAt f p (coord x) := by
+  obtain ⟨r, hr⟩ := hf
+  obtain ⟨ε, hε, hball⟩ := Metric.mem_nhds_iff.mp hcover
+  let δ : ℝ≥0 := ⟨ε, hε.le⟩
+  refine ⟨min r (δ : ℝ≥0∞), ⟨(min_le_left _ _).trans hr.r_le,
+    lt_min hr.r_pos (ENNReal.coe_pos.mpr hε), ?_⟩⟩
+  intro y hy
+  have hyδ : y - coord x ∈ Metric.ball (0 : E) (δ : ℝ) := by
+    rw [← Metric.eball_coe]
+    exact (Metric.eball_subset_eball (min_le_right _ _)) hy
+  have hyball : y ∈ Metric.ball (coord x) ε := by
+    simpa only [Metric.mem_ball, dist_eq_norm, sub_zero] using hyδ
+  obtain ⟨z, hz⟩ := hball hyball
+  have hyr : coord z - coord x ∈ Metric.eball (0 : E) r := by
+    rw [hz]
+    exact (Metric.eball_subset_eball (min_le_left _ _)) hy
+  simpa only [Function.comp_def, hz] using hr.hasSum hyr
+
+/-- Analyticity of an ambient function can be checked on a domain covering a neighbourhood. -/
+theorem AnalyticAt.of_comp_domain {D : Type*} {coord : D → E} {x : D}
+    (hf : AnalyticAt 𝕜 (f ∘ coord) x coord)
+    (hcover : Set.range coord ∈ 𝓝 (coord x)) : AnalyticAt 𝕜 f (coord x) := by
+  obtain ⟨p, hp⟩ := hf
+  exact ⟨p, hp.of_comp_domain hcover⟩
 
 /-- If a function `f` has a power series `p` around `x`, then the function `z ↦ f (z - y)` has the
 same power series around `x + y`. -/
@@ -159,20 +234,20 @@ theorem HasFPowerSeriesOnBall.comp_sub (hf : HasFPowerSeriesOnBall f p x r) (y :
   { r_le := hf.r_le
     r_pos := hf.r_pos
     hasSum := fun {z} hz => by
-      convert hf.hasSum hz
-      abel }
+      have hshift : (z - y) - x = z - (x + y) := by abel
+      simpa only [hshift] using hf.hasSum (y := z - y) (by simpa only [hshift] using hz) }
 
 theorem HasFPowerSeriesWithinOnBall.comp_sub (hf : HasFPowerSeriesWithinOnBall f p s x r) (y : E) :
     HasFPowerSeriesWithinOnBall (fun z ↦ f (z - y)) p (s + {y}) (x + y) r where
   r_le := hf.r_le
   r_pos := hf.r_pos
   hasSum {z} hz1 hz2 := by
-    have : x + z ∈ insert x s := by
-      simp only [add_singleton, image_add_right, mem_insert_iff, add_eq_left, mem_preimage] at hz1 ⊢
-      abel_nf at hz1
-      assumption
-    convert hf.hasSum this hz2
-    abel
+    have hmem : z - y ∈ insert x s := by
+      simpa only [add_singleton, image_add_right, mem_insert_iff, mem_preimage,
+        sub_eq_iff_eq_add] using hz1
+    have hshift : (z - y) - x = z - (x + y) := by abel
+    simpa only [hshift] using hf.hasSum hmem (by simpa only [hshift] using hz2)
+
 
 theorem HasFPowerSeriesAt.comp_sub (hf : HasFPowerSeriesAt f p x) (y : E) :
     HasFPowerSeriesAt (fun z ↦ f (z - y)) p (x + y) := by
@@ -212,31 +287,31 @@ theorem HasFPowerSeriesWithinOnBall.hasSum_sub (hf : HasFPowerSeriesWithinOnBall
     (hy : y ∈ (insert x s) ∩ Metric.eball x r) :
     HasSum (fun n : ℕ => p n fun _ => y - x) (f y) := by
   have : y - x ∈ Metric.eball 0 r := by simpa [edist_eq_enorm_sub] using hy.2
-  simpa only [add_sub_cancel] using hf.hasSum (by simpa only [add_sub_cancel] using hy.1) this
+  exact hf.hasSum hy.1 this
 
 theorem HasFPowerSeriesOnBall.hasSum_sub (hf : HasFPowerSeriesOnBall f p x r) {y : E}
     (hy : y ∈ Metric.eball x r) : HasSum (fun n : ℕ => p n fun _ => y - x) (f y) := by
   have : y - x ∈ Metric.eball 0 r := by simpa [edist_eq_enorm_sub] using hy
-  simpa only [add_sub_cancel] using hf.hasSum this
+  exact hf.hasSum this
 
-theorem HasFPowerSeriesOnBall.radius_pos (hf : HasFPowerSeriesOnBall f p x r) : 0 < p.radius :=
+theorem HasFPowerSeriesOnBall.radius_pos {D : Type*} {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesOnBall f p x r coord) : 0 < p.radius :=
   lt_of_lt_of_le hf.r_pos hf.r_le
 
-theorem HasFPowerSeriesWithinOnBall.radius_pos (hf : HasFPowerSeriesWithinOnBall f p s x r) :
+theorem HasFPowerSeriesWithinOnBall.radius_pos {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} (hf : HasFPowerSeriesWithinOnBall f p s x r coord) :
     0 < p.radius :=
   lt_of_lt_of_le hf.r_pos hf.r_le
 
-theorem HasFPowerSeriesAt.radius_pos (hf : HasFPowerSeriesAt f p x) : 0 < p.radius :=
+theorem HasFPowerSeriesAt.radius_pos {D : Type*} {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesAt f p x coord) : 0 < p.radius :=
   let ⟨_, hr⟩ := hf
   hr.radius_pos
 
-theorem HasFPowerSeriesWithinOnBall.of_le
-    (hf : HasFPowerSeriesWithinOnBall f p s x r) (r'_pos : 0 < r') (hr : r' ≤ r) :
-    HasFPowerSeriesWithinOnBall f p s x r' :=
+theorem HasFPowerSeriesWithinOnBall.of_le {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D}
+    (hf : HasFPowerSeriesWithinOnBall f p s x r coord) (r'_pos : 0 < r') (hr : r' ≤ r) :
+    HasFPowerSeriesWithinOnBall f p s x r' coord :=
   ⟨le_trans hr hf.1, r'_pos, fun hy h'y => hf.hasSum hy (Metric.eball_subset_eball hr h'y)⟩
 
-theorem HasFPowerSeriesOnBall.mono (hf : HasFPowerSeriesOnBall f p x r) (r'_pos : 0 < r')
-    (hr : r' ≤ r) : HasFPowerSeriesOnBall f p x r' :=
+theorem HasFPowerSeriesOnBall.mono {D : Type*} {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesOnBall f p x r coord) (r'_pos : 0 < r')
+    (hr : r' ≤ r) : HasFPowerSeriesOnBall f p x r' coord :=
   ⟨le_trans hr hf.1, r'_pos, fun hy => hf.hasSum (Metric.eball_subset_eball hr hy)⟩
 
 lemma HasFPowerSeriesWithinOnBall.congr {f g : E → F} {p : FormalMultilinearSeries 𝕜 E F}
@@ -314,7 +389,9 @@ protected theorem HasFPowerSeriesAt.eventually (hf : HasFPowerSeriesAt f p x) :
 
 theorem HasFPowerSeriesOnBall.eventually_hasSum (hf : HasFPowerSeriesOnBall f p x r) :
     ∀ᶠ y in 𝓝 0, HasSum (fun n : ℕ => p n fun _ : Fin n => y) (f (x + y)) := by
-  filter_upwards [Metric.eball_mem_nhds (0 : E) hf.r_pos] using fun _ => hf.hasSum
+  filter_upwards [Metric.eball_mem_nhds (0 : E) hf.r_pos] with y hy
+  simpa only [add_sub_cancel_left] using
+    hf.hasSum (y := x + y) (by simpa only [add_sub_cancel_left] using hy)
 
 theorem HasFPowerSeriesAt.eventually_hasSum (hf : HasFPowerSeriesAt f p x) :
     ∀ᶠ y in 𝓝 0, HasSum (fun n : ℕ => p n fun _ : Fin n => y) (f (x + y)) :=
@@ -340,36 +417,36 @@ theorem HasFPowerSeriesAt.eventually_eq_zero
   let ⟨_, hr⟩ := hf
   hr.eventually_eq_zero
 
-@[simp] lemma hasFPowerSeriesWithinOnBall_univ :
-    HasFPowerSeriesWithinOnBall f p univ x r ↔ HasFPowerSeriesOnBall f p x r := by
+@[simp] lemma hasFPowerSeriesWithinOnBall_univ {D : Type*} {f : D → F} {coord : D → E} {x : D} :
+    HasFPowerSeriesWithinOnBall f p univ x r coord ↔ HasFPowerSeriesOnBall f p x r coord := by
   constructor
   · intro h
     refine ⟨h.r_le, h.r_pos, fun {y} m ↦ h.hasSum (by simp) m⟩
   · intro h
     exact ⟨h.r_le, h.r_pos, fun {y} _ m => h.hasSum m⟩
 
-@[simp] lemma hasFPowerSeriesWithinAt_univ :
-    HasFPowerSeriesWithinAt f p univ x ↔ HasFPowerSeriesAt f p x := by
+@[simp] lemma hasFPowerSeriesWithinAt_univ {D : Type*} {f : D → F} {coord : D → E} {x : D} :
+    HasFPowerSeriesWithinAt f p univ x coord ↔ HasFPowerSeriesAt f p x coord := by
   simp only [HasFPowerSeriesWithinAt, hasFPowerSeriesWithinOnBall_univ, HasFPowerSeriesAt]
 
-lemma HasFPowerSeriesWithinOnBall.mono (hf : HasFPowerSeriesWithinOnBall f p s x r) (h : t ⊆ s) :
-    HasFPowerSeriesWithinOnBall f p t x r where
+lemma HasFPowerSeriesWithinOnBall.mono {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} {t : Set D} (hf : HasFPowerSeriesWithinOnBall f p s x r coord) (h : t ⊆ s) :
+    HasFPowerSeriesWithinOnBall f p t x r coord where
   r_le := hf.r_le
   r_pos := hf.r_pos
   hasSum hy h'y := hf.hasSum (insert_subset_insert h hy) h'y
 
-lemma HasFPowerSeriesOnBall.hasFPowerSeriesWithinOnBall (hf : HasFPowerSeriesOnBall f p x r) :
-    HasFPowerSeriesWithinOnBall f p s x r := by
+lemma HasFPowerSeriesOnBall.hasFPowerSeriesWithinOnBall {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} (hf : HasFPowerSeriesOnBall f p x r coord) :
+    HasFPowerSeriesWithinOnBall f p s x r coord := by
   rw [← hasFPowerSeriesWithinOnBall_univ] at hf
   exact hf.mono (subset_univ _)
 
-lemma HasFPowerSeriesWithinAt.mono (hf : HasFPowerSeriesWithinAt f p s x) (h : t ⊆ s) :
-    HasFPowerSeriesWithinAt f p t x := by
+lemma HasFPowerSeriesWithinAt.mono {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} {t : Set D} (hf : HasFPowerSeriesWithinAt f p s x coord) (h : t ⊆ s) :
+    HasFPowerSeriesWithinAt f p t x coord := by
   obtain ⟨r, hp⟩ := hf
   exact ⟨r, hp.mono h⟩
 
-lemma HasFPowerSeriesAt.hasFPowerSeriesWithinAt (hf : HasFPowerSeriesAt f p x) :
-    HasFPowerSeriesWithinAt f p s x := by
+lemma HasFPowerSeriesAt.hasFPowerSeriesWithinAt {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} (hf : HasFPowerSeriesAt f p x coord) :
+    HasFPowerSeriesWithinAt f p s x coord := by
   rw [← hasFPowerSeriesWithinAt_univ] at hf
   apply hf.mono (subset_univ _)
 
@@ -411,7 +488,7 @@ lemma hasFPowerSeriesWithinAt_iff_of_nhds (f : E → F) (p : FormalMultilinearSe
     rw [nhdsWithin_insert_of_ne hy]
     exact self_mem_nhdsWithin
 
-theorem HasFPowerSeriesWithinOnBall.coeff_zero (hf : HasFPowerSeriesWithinOnBall f pf s x r)
+theorem HasFPowerSeriesWithinOnBall.coeff_zero {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} (hf : HasFPowerSeriesWithinOnBall f pf s x r coord)
     (v : Fin 0 → E) : pf 0 v = f x := by
   have v_eq : v = fun i => 0 := Subsingleton.elim _ _
   have zero_mem : (0 : E) ∈ Metric.eball (0 : E) r := by simp [hf.r_pos]
@@ -419,20 +496,22 @@ theorem HasFPowerSeriesWithinOnBall.coeff_zero (hf : HasFPowerSeriesWithinOnBall
     intro i hi
     have : 0 < i := pos_iff_ne_zero.2 hi
     exact ContinuousMultilinearMap.map_coord_zero _ (⟨0, this⟩ : Fin i) rfl
-  have A := (hf.hasSum (by simp) zero_mem).unique (hasSum_single _ this)
+  have hx := hf.hasSum (y := x) (by simp) (by simpa only [sub_self] using zero_mem)
+  simp only [sub_self] at hx
+  have A := hx.unique (hasSum_single _ this)
   simpa [v_eq] using A.symm
 
-theorem HasFPowerSeriesOnBall.coeff_zero (hf : HasFPowerSeriesOnBall f pf x r)
+theorem HasFPowerSeriesOnBall.coeff_zero {D : Type*} {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesOnBall f pf x r coord)
     (v : Fin 0 → E) : pf 0 v = f x := by
   rw [← hasFPowerSeriesWithinOnBall_univ] at hf
   exact hf.coeff_zero v
 
-theorem HasFPowerSeriesWithinAt.coeff_zero (hf : HasFPowerSeriesWithinAt f pf s x) (v : Fin 0 → E) :
+theorem HasFPowerSeriesWithinAt.coeff_zero {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} (hf : HasFPowerSeriesWithinAt f pf s x coord) (v : Fin 0 → E) :
     pf 0 v = f x :=
   let ⟨_, hrf⟩ := hf
   hrf.coeff_zero v
 
-theorem HasFPowerSeriesAt.coeff_zero (hf : HasFPowerSeriesAt f pf x) (v : Fin 0 → E) :
+theorem HasFPowerSeriesAt.coeff_zero {D : Type*} {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesAt f pf x coord) (v : Fin 0 → E) :
     pf 0 v = f x :=
   let ⟨_, hrf⟩ := hf
   hrf.coeff_zero v
@@ -445,24 +524,24 @@ theorem HasFPowerSeriesAt.coeff_zero (hf : HasFPowerSeriesAt f pf x) (v : Fin 0 
 
 @[simp] theorem analyticOnNhd_empty : AnalyticOnNhd 𝕜 f ∅ := by intro; simp
 
-@[simp] lemma analyticWithinAt_univ :
-    AnalyticWithinAt 𝕜 f univ x ↔ AnalyticAt 𝕜 f x := by
+@[simp] lemma analyticWithinAt_univ {D : Type*} {f : D → F} {coord : D → E} {x : D} :
+    AnalyticWithinAt 𝕜 f univ x coord ↔ AnalyticAt 𝕜 f x coord := by
   simp [AnalyticWithinAt, AnalyticAt]
 
 @[simp] lemma analyticOn_univ {f : E → F} :
     AnalyticOn 𝕜 f univ ↔ AnalyticOnNhd 𝕜 f univ := by
   simp only [AnalyticOn, analyticWithinAt_univ, AnalyticOnNhd]
 
-lemma AnalyticWithinAt.mono (hf : AnalyticWithinAt 𝕜 f s x) (h : t ⊆ s) :
-    AnalyticWithinAt 𝕜 f t x := by
+lemma AnalyticWithinAt.mono {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} {t : Set D} (hf : AnalyticWithinAt 𝕜 f s x coord) (h : t ⊆ s) :
+    AnalyticWithinAt 𝕜 f t x coord := by
   obtain ⟨p, hp⟩ := hf
   exact ⟨p, hp.mono h⟩
 
-lemma AnalyticAt.analyticWithinAt (hf : AnalyticAt 𝕜 f x) : AnalyticWithinAt 𝕜 f s x := by
+lemma AnalyticAt.analyticWithinAt {D : Type*} {f : D → F} {coord : D → E} {x : D} {s : Set D} (hf : AnalyticAt 𝕜 f x coord) : AnalyticWithinAt 𝕜 f s x coord := by
   rw [← analyticWithinAt_univ] at hf
   apply hf.mono (subset_univ _)
 
-lemma AnalyticOnNhd.analyticOn (hf : AnalyticOnNhd 𝕜 f s) : AnalyticOn 𝕜 f s :=
+lemma AnalyticOnNhd.analyticOn {D : Type*} {f : D → F} {coord : D → E} {s : Set D} (hf : AnalyticOnNhd 𝕜 f s coord) : AnalyticOn 𝕜 f s coord :=
   fun x hx ↦ (hf x hx).analyticWithinAt
 
 lemma AnalyticWithinAt.congr_of_eventuallyEq {f g : E → F} {s : Set E} {x : E}
@@ -587,13 +666,15 @@ theorem ContinuousLinearMap.comp_analyticOnNhd
 theorem HasFPowerSeriesWithinOnBall.tendsto_partialSum
     (hf : HasFPowerSeriesWithinOnBall f p s x r) {y : E} (hy : y ∈ Metric.eball (0 : E) r)
     (h'y : x + y ∈ insert x s) :
-    Tendsto (fun n => p.partialSum n y) atTop (𝓝 (f (x + y))) :=
-  (hf.hasSum h'y hy).tendsto_sum_nat
+    Tendsto (fun n => p.partialSum n y) atTop (𝓝 (f (x + y))) := by
+  have hsum := hf.hasSum (y := x + y) h'y (by simpa only [add_sub_cancel_left] using hy)
+  simpa only [add_sub_cancel_left] using hsum.tendsto_sum_nat
 
 theorem HasFPowerSeriesOnBall.tendsto_partialSum
     (hf : HasFPowerSeriesOnBall f p x r) {y : E} (hy : y ∈ Metric.eball (0 : E) r) :
-    Tendsto (fun n => p.partialSum n y) atTop (𝓝 (f (x + y))) :=
-  (hf.hasSum hy).tendsto_sum_nat
+    Tendsto (fun n => p.partialSum n y) atTop (𝓝 (f (x + y))) := by
+  have hsum := hf.hasSum (y := x + y) (by simpa only [add_sub_cancel_left] using hy)
+  simpa only [add_sub_cancel_left] using hsum.tendsto_sum_nat
 
 theorem HasFPowerSeriesAt.tendsto_partialSum
     (hf : HasFPowerSeriesAt f p x) :
@@ -606,33 +687,37 @@ open Finset in
 /-- If a function admits a power series expansion within a ball, then the partial sums
 `p.partialSum n z` converge to `f (x + y)` as `n → ∞` and `z → y`. Note that `x + z` doesn't need
 to belong to the set where the power series expansion holds. -/
-theorem HasFPowerSeriesWithinOnBall.tendsto_partialSum_prod {y : E}
-    (hf : HasFPowerSeriesWithinOnBall f p s x r) (hy : y ∈ Metric.eball (0 : E) r)
-    (h'y : x + y ∈ insert x s) :
-    Tendsto (fun (z : ℕ × E) ↦ p.partialSum z.1 z.2) (atTop ×ˢ 𝓝 y) (𝓝 (f (x + y))) := by
-  have A : Tendsto (fun (z : ℕ × E) ↦ p.partialSum z.1 y) (atTop ×ˢ 𝓝 y) (𝓝 (f (x + y))) := by
-    apply (hf.tendsto_partialSum hy h'y).comp tendsto_fst
-  suffices Tendsto (fun (z : ℕ × E) ↦ p.partialSum z.1 z.2 - p.partialSum z.1 y)
-    (atTop ×ˢ 𝓝 y) (𝓝 0) by simpa using A.add this
+theorem HasFPowerSeriesWithinOnBall.tendsto_partialSum_prod {D : Type*}
+    {f : D → F} {coord : D → E} {s : Set D} {x y : D}
+    (hf : HasFPowerSeriesWithinOnBall f p s x r coord)
+    (hy : coord y - coord x ∈ Metric.eball (0 : E) r) (h'y : y ∈ insert x s) :
+    Tendsto (fun (z : ℕ × E) ↦ p.partialSum z.1 z.2)
+      (atTop ×ˢ 𝓝 (coord y - coord x)) (𝓝 (f y)) := by
+  let w := coord y - coord x
+  change Tendsto _ (atTop ×ˢ 𝓝 w) (𝓝 (f y))
+  have A : Tendsto (fun (z : ℕ × E) ↦ p.partialSum z.1 w) (atTop ×ˢ 𝓝 w) (𝓝 (f y)) := by
+    exact (hf.hasSum h'y hy).tendsto_sum_nat.comp tendsto_fst
+  suffices Tendsto (fun (z : ℕ × E) ↦ p.partialSum z.1 z.2 - p.partialSum z.1 w)
+    (atTop ×ˢ 𝓝 w) (𝓝 0) by simpa using A.add this
   apply Metric.tendsto_nhds.2 (fun ε εpos ↦ ?_)
-  obtain ⟨r', yr', r'r⟩ : ∃ (r' : ℝ≥0), ‖y‖₊ < r' ∧ r' < r := by
+  obtain ⟨r', yr', r'r⟩ : ∃ (r' : ℝ≥0), ‖w‖₊ < r' ∧ r' < r := by
     simp at hy
     simpa using ENNReal.lt_iff_exists_nnreal_btwn.1 hy
-  have yr'_2 : ‖y‖ < r' := by simpa [← coe_nnnorm] using yr'
+  have yr'_2 : ‖w‖ < r' := by simpa [← coe_nnnorm] using yr'
   have S : Summable fun n ↦ ‖p n‖ * ↑r' ^ n := p.summable_norm_mul_pow (r'r.trans_le hf.r_le)
   obtain ⟨k, hk⟩ : ∃ k, ∑' (n : ℕ), ‖p (n + k)‖ * ↑r' ^ (n + k) < ε / 4 := by
     have : Tendsto (fun k ↦ ∑' n, ‖p (n + k)‖ * ↑r' ^ (n + k)) atTop (𝓝 0) := by
       apply _root_.tendsto_sum_nat_add (f := fun n ↦ ‖p n‖ * ↑r' ^ n)
     exact ((tendsto_order.1 this).2 _ (by linarith)).exists
-  have A : ∀ᶠ (z : ℕ × E) in atTop ×ˢ 𝓝 y,
-      dist (p.partialSum k z.2) (p.partialSum k y) < ε / 4 := by
-    have : ContinuousAt (fun z ↦ p.partialSum k z) y := (p.partialSum_continuous k).continuousAt
+  have A : ∀ᶠ (z : ℕ × E) in atTop ×ˢ 𝓝 w,
+      dist (p.partialSum k z.2) (p.partialSum k w) < ε / 4 := by
+    have : ContinuousAt (fun z ↦ p.partialSum k z) w := (p.partialSum_continuous k).continuousAt
     exact tendsto_snd (Metric.tendsto_nhds.1 this.tendsto (ε / 4) (by linarith))
-  have B : ∀ᶠ (z : ℕ × E) in atTop ×ˢ 𝓝 y, ‖z.2‖₊ < r' := by
-    suffices ∀ᶠ (z : E) in 𝓝 y, ‖z‖₊ < r' from tendsto_snd this
-    have : Metric.ball 0 r' ∈ 𝓝 y := Metric.isOpen_ball.mem_nhds (by simpa using yr'_2)
+  have B : ∀ᶠ (z : ℕ × E) in atTop ×ˢ 𝓝 w, ‖z.2‖₊ < r' := by
+    suffices ∀ᶠ (z : E) in 𝓝 w, ‖z‖₊ < r' from tendsto_snd this
+    have : Metric.ball 0 r' ∈ 𝓝 w := Metric.isOpen_ball.mem_nhds (by simpa using yr'_2)
     filter_upwards [this] with a ha using by simpa [← coe_nnnorm] using ha
-  have C : ∀ᶠ (z : ℕ × E) in atTop ×ˢ 𝓝 y, k ≤ z.1 := tendsto_fst (Ici_mem_atTop _)
+  have C : ∀ᶠ (z : ℕ × E) in atTop ×ˢ 𝓝 w, k ≤ z.1 := tendsto_fst (Ici_mem_atTop _)
   filter_upwards [A, B, C]
   rintro ⟨n, z⟩ hz h'z hkn
   simp only [dist_eq_norm, sub_zero] at hz ⊢
@@ -652,18 +737,18 @@ theorem HasFPowerSeriesWithinOnBall.tendsto_partialSum_prod {y : E}
         apply ((_root_.summable_nat_add_iff k).2 S)
     _ ≤ ε / 4 := hk.le
   calc
-  ‖p.partialSum n z - p.partialSum n y‖
-  _ = ‖∑ i ∈ range n, p i (fun _ ↦ z) - ∑ i ∈ range n, p i (fun _ ↦ y)‖ := rfl
+  ‖p.partialSum n z - p.partialSum n w‖
+  _ = ‖∑ i ∈ range n, p i (fun _ ↦ z) - ∑ i ∈ range n, p i (fun _ ↦ w)‖ := rfl
   _ = ‖(∑ i ∈ range k, p i (fun _ ↦ z) + ∑ i ∈ Ico k n, p i (fun _ ↦ z))
-        - (∑ i ∈ range k, p i (fun _ ↦ y) + ∑ i ∈ Ico k n, p i (fun _ ↦ y))‖ := by
+        - (∑ i ∈ range k, p i (fun _ ↦ w) + ∑ i ∈ Ico k n, p i (fun _ ↦ w))‖ := by
     simp [sum_range_add_sum_Ico _ hkn]
-  _ = ‖(p.partialSum k z - p.partialSum k y) + (∑ i ∈ Ico k n, p i (fun _ ↦ z))
-        + (- ∑ i ∈ Ico k n, p i (fun _ ↦ y))‖ := by
+  _ = ‖(p.partialSum k z - p.partialSum k w) + (∑ i ∈ Ico k n, p i (fun _ ↦ z))
+        + (- ∑ i ∈ Ico k n, p i (fun _ ↦ w))‖ := by
     congr 1
     simp only [FormalMultilinearSeries.partialSum]
     abel
-  _ ≤ ‖p.partialSum k z - p.partialSum k y‖ + ‖∑ i ∈ Ico k n, p i (fun _ ↦ z)‖
-      + ‖- ∑ i ∈ Ico k n, p i (fun _ ↦ y)‖ := norm_add₃_le
+  _ ≤ ‖p.partialSum k z - p.partialSum k w‖ + ‖∑ i ∈ Ico k n, p i (fun _ ↦ z)‖
+      + ‖- ∑ i ∈ Ico k n, p i (fun _ ↦ w)‖ := norm_add₃_le
   _ ≤ ε / 4 + ε / 4 + ε / 4 := by
     gcongr
     · exact I _ h'z
@@ -672,9 +757,11 @@ theorem HasFPowerSeriesWithinOnBall.tendsto_partialSum_prod {y : E}
 
 /-- If a function admits a power series on a ball, then the partial sums
 `p.partialSum n z` converges to `f (x + y)` as `n → ∞` and `z → y`. -/
-theorem HasFPowerSeriesOnBall.tendsto_partialSum_prod {y : E}
-    (hf : HasFPowerSeriesOnBall f p x r) (hy : y ∈ Metric.eball (0 : E) r) :
-    Tendsto (fun (z : ℕ × E) ↦ p.partialSum z.1 z.2) (atTop ×ˢ 𝓝 y) (𝓝 (f (x + y))) :=
+theorem HasFPowerSeriesOnBall.tendsto_partialSum_prod {D : Type*}
+    {f : D → F} {coord : D → E} {x y : D} (hf : HasFPowerSeriesOnBall f p x r coord)
+    (hy : coord y - coord x ∈ Metric.eball (0 : E) r) :
+    Tendsto (fun (z : ℕ × E) ↦ p.partialSum z.1 z.2)
+      (atTop ×ˢ 𝓝 (coord y - coord x)) (𝓝 (f y)) :=
   (hf.hasFPowerSeriesWithinOnBall (s := univ)).tendsto_partialSum_prod hy (by simp)
 
 /-- If a function admits a power series expansion, then it is exponentially close to the partial
@@ -682,13 +769,18 @@ sums of this power series on strict subdisks of the disk of convergence.
 
 This version provides an upper estimate that decreases both in `‖y‖` and `n`. See also
 `HasFPowerSeriesWithinOnBall.uniform_geometric_approx` for a weaker version. -/
-theorem HasFPowerSeriesWithinOnBall.uniform_geometric_approx' {r' : ℝ≥0}
-    (hf : HasFPowerSeriesWithinOnBall f p s x r) (h : (r' : ℝ≥0∞) < r) :
-    ∃ a ∈ Ioo (0 : ℝ) 1, ∃ C > 0, ∀ y ∈ Metric.ball (0 : E) r', ∀ n, x + y ∈ insert x s →
-      ‖f (x + y) - p.partialSum n y‖ ≤ C * (a * (‖y‖ / r')) ^ n := by
+theorem HasFPowerSeriesWithinOnBall.uniform_geometric_approx' {D : Type*}
+    {f : D → F} {coord : D → E} {s : Set D} {x : D} {r' : ℝ≥0}
+    (hf : HasFPowerSeriesWithinOnBall f p s x r coord) (h : (r' : ℝ≥0∞) < r) :
+    ∃ a ∈ Ioo (0 : ℝ) 1, ∃ C > 0, ∀ y,
+      coord y - coord x ∈ Metric.ball (0 : E) r' → ∀ n, y ∈ insert x s →
+        ‖f y - p.partialSum n (coord y - coord x)‖ ≤
+          C * (a * (‖coord y - coord x‖ / r')) ^ n := by
   obtain ⟨a, ha, C, hC, hp⟩ : ∃ a ∈ Ioo (0 : ℝ) 1, ∃ C > 0, ∀ n, ‖p n‖ * (r' : ℝ) ^ n ≤ C * a ^ n :=
     p.norm_mul_pow_le_mul_pow_of_lt_radius (h.trans_le hf.r_le)
-  refine ⟨a, ha, C / (1 - a), div_pos hC (sub_pos.2 ha.2), fun y hy n ys => ?_⟩
+  refine ⟨a, ha, C / (1 - a), div_pos hC (sub_pos.2 ha.2), fun z hz n ys => ?_⟩
+  let y := coord z - coord x
+  have hy : y ∈ Metric.ball (0 : E) r' := hz
   have yr' : ‖y‖ < r' := by
     rw [ball_zero_eq] at hy
     exact hy
@@ -699,12 +791,13 @@ theorem HasFPowerSeriesWithinOnBall.uniform_geometric_approx' {r' : ℝ≥0}
   rw [norm_sub_rev, ← mul_div_right_comm]
   have ya : a * (‖y‖ / ↑r') ≤ a :=
     mul_le_of_le_one_right ha.1.le (div_le_one_of_le₀ yr'.le r'.coe_nonneg)
-  suffices ‖p.partialSum n y - f (x + y)‖ ≤ C * (a * (‖y‖ / r')) ^ n / (1 - a * (‖y‖ / r')) by
+  suffices ‖p.partialSum n y - f z‖ ≤ C * (a * (‖y‖ / r')) ^ n / (1 - a * (‖y‖ / r')) by
     refine this.trans ?_
     have : 0 < a := ha.1
     gcongr
     apply_rules [sub_pos.2, ha.2]
-  apply norm_sub_le_of_geometric_bound_of_hasSum (ya.trans_lt ha.2) _ (hf.hasSum ys this)
+  have hsum : HasSum (fun n ↦ p n fun _ ↦ y) (f z) := hf.hasSum ys this
+  apply norm_sub_le_of_geometric_bound_of_hasSum (ya.trans_lt ha.2) _ hsum
   intro n
   calc
     ‖(p n) fun _ : Fin n => y‖
@@ -723,7 +816,11 @@ theorem HasFPowerSeriesOnBall.uniform_geometric_approx' {r' : ℝ≥0}
     ∃ a ∈ Ioo (0 : ℝ) 1, ∃ C > 0, ∀ y ∈ Metric.ball (0 : E) r', ∀ n,
       ‖f (x + y) - p.partialSum n y‖ ≤ C * (a * (‖y‖ / r')) ^ n := by
   rw [← hasFPowerSeriesWithinOnBall_univ] at hf
-  simpa using hf.uniform_geometric_approx' h
+  obtain ⟨a, ha, C, hC, hp⟩ := hf.uniform_geometric_approx' h
+  refine ⟨a, ha, C, hC, ?_⟩
+  intro y hy n
+  simpa only [add_sub_cancel_left] using
+    hp (x + y) (by simpa only [add_sub_cancel_left] using hy) n (by simp)
 
 /-- If a function admits a power series expansion within a set in a ball, then it is exponentially
 close to the partial sums of this power series on strict subdisks of the disk of convergence. -/
@@ -734,7 +831,12 @@ theorem HasFPowerSeriesWithinOnBall.uniform_geometric_approx {r' : ℝ≥0}
       ‖f (x + y) - p.partialSum n y‖ ≤ C * a ^ n := by
   obtain ⟨a, ha, C, hC, hp⟩ : ∃ a ∈ Ioo (0 : ℝ) 1, ∃ C > 0, ∀ y ∈ Metric.ball (0 : E) r', ∀ n,
       x + y ∈ insert x s → ‖f (x + y) - p.partialSum n y‖ ≤ C * (a * (‖y‖ / r')) ^ n :=
-    hf.uniform_geometric_approx' h
+    by
+      obtain ⟨a, ha, C, hC, hp⟩ := hf.uniform_geometric_approx' h
+      refine ⟨a, ha, C, hC, ?_⟩
+      intro y hy n hs
+      simpa only [add_sub_cancel_left] using
+        hp (x + y) (by simpa only [add_sub_cancel_left] using hy) n hs
   refine ⟨a, ha, C, hC, fun y hy n ys => (hp y hy n ys).trans ?_⟩
   have yr' : ‖y‖ < r' := by rwa [ball_zero_eq] at hy
   have := ha.1.le -- needed to discharge a side goal on the next line
@@ -760,7 +862,12 @@ theorem HasFPowerSeriesWithinAt.isBigO_sub_partialSum_pow
   rcases ENNReal.lt_iff_exists_nnreal_btwn.1 hf.r_pos with ⟨r', r'0, h⟩
   obtain ⟨a, -, C, -, hp⟩ : ∃ a ∈ Ioo (0 : ℝ) 1, ∃ C > 0, ∀ y ∈ Metric.ball (0 : E) r', ∀ n,
       x + y ∈ insert x s → ‖f (x + y) - p.partialSum n y‖ ≤ C * (a * (‖y‖ / r')) ^ n :=
-    hf.uniform_geometric_approx' h
+    by
+      obtain ⟨a, ha, C, hC, hp⟩ := hf.uniform_geometric_approx' h
+      refine ⟨a, ha, C, hC, ?_⟩
+      intro y hy n hs
+      simpa only [add_sub_cancel_left] using
+        hp (x + y) (by simpa only [add_sub_cancel_left] using hy) n hs
   refine isBigO_iff.2 ⟨C * (a / r') ^ n, ?_⟩
   replace r'0 : 0 < (r' : ℝ) := mod_cast r'0
   filter_upwards [inter_mem_nhdsWithin _ (Metric.ball_mem_nhds (0 : E) r'0)] with y hy
@@ -930,6 +1037,7 @@ theorem HasFPowerSeriesWithinOnBall.tendstoLocallyUniformlyOn
     (hf : HasFPowerSeriesWithinOnBall f p s x r) :
     TendstoLocallyUniformlyOn (fun n y => p.partialSum n y) (fun y => f (x + y)) atTop
       ((x + ·) ⁻¹' (insert x s) ∩ Metric.eball (0 : E) r) := by
+  rw [tendstoLocallyUniformlyOn_iff]
   intro u hu y hy
   rcases ENNReal.lt_iff_exists_nnreal_btwn.1 hy.2 with ⟨r', yr', hr'⟩
   have : Metric.eball (0 : E) r' ∈ 𝓝 y := IsOpen.mem_nhds Metric.isOpen_eball yr'
@@ -952,102 +1060,143 @@ theorem HasFPowerSeriesOnBall.tendstoLocallyUniformlyOn (hf : HasFPowerSeriesOnB
 /-- If a function admits a power series expansion within a set at `x`, then it is the uniform limit
 of the partial sums of this power series on strict subdisks of the disk of convergence, i.e., `f y`
 is the uniform limit of `p.partialSum n (y - x)` there. -/
-theorem HasFPowerSeriesWithinOnBall.tendstoUniformlyOn' {r' : ℝ≥0}
-    (hf : HasFPowerSeriesWithinOnBall f p s x r) (h : (r' : ℝ≥0∞) < r) :
-    TendstoUniformlyOn (fun n y => p.partialSum n (y - x)) f atTop
-      (insert x s ∩ Metric.ball (x : E) r') := by
-  convert! (hf.tendstoUniformlyOn h).comp fun y => y - x using 1
-  · simp [Function.comp_def]
-  · ext z
-    simp [dist_eq_norm]
+theorem HasFPowerSeriesWithinOnBall.tendstoUniformlyOn' {D : Type*}
+    {f : D → F} {coord : D → E} {s : Set D} {x : D} {r' : ℝ≥0}
+    (hf : HasFPowerSeriesWithinOnBall f p s x r coord) (h : (r' : ℝ≥0∞) < r) :
+    TendstoUniformlyOn (fun n y => p.partialSum n (coord y - coord x)) f atTop
+      (insert x s ∩ coord ⁻¹' Metric.ball (coord x) r') := by
+  obtain ⟨a, ha, C, hC, hp⟩ := hf.uniform_geometric_approx' h
+  refine Metric.tendstoUniformlyOn_iff.2 fun ε εpos => ?_
+  have L : Tendsto (fun n => C * a ^ n) atTop (𝓝 (C * 0)) :=
+    tendsto_const_nhds.mul (tendsto_pow_atTop_nhds_zero_of_lt_one ha.1.le ha.2)
+  rw [mul_zero] at L
+  refine (L.eventually (gt_mem_nhds εpos)).mono fun n hn y hy => ?_
+  have hy₀ : coord y - coord x ∈ Metric.ball (0 : E) r' := by
+    simpa only [Metric.mem_ball, dist_eq_norm, sub_zero] using hy.2
+  have hnorm : ‖coord y - coord x‖ < r' := by simpa only [ball_zero_eq] using hy₀
+  rw [dist_eq_norm]
+  apply lt_of_le_of_lt (hp y hy₀ n hy.1) ?_
+  apply lt_of_le_of_lt _ hn
+  have := ha.1.le
+  gcongr
+  exact mul_le_of_le_one_right ha.1.le (div_le_one_of_le₀ hnorm.le r'.coe_nonneg)
 
 /-- If a function admits a power series expansion at `x`, then it is the uniform limit of the
 partial sums of this power series on strict subdisks of the disk of convergence, i.e., `f y`
 is the uniform limit of `p.partialSum n (y - x)` there. -/
-theorem HasFPowerSeriesOnBall.tendstoUniformlyOn' {r' : ℝ≥0} (hf : HasFPowerSeriesOnBall f p x r)
-    (h : (r' : ℝ≥0∞) < r) :
-    TendstoUniformlyOn (fun n y => p.partialSum n (y - x)) f atTop (Metric.ball (x : E) r') := by
+theorem HasFPowerSeriesOnBall.tendstoUniformlyOn' {D : Type*}
+    {f : D → F} {coord : D → E} {x : D} {r' : ℝ≥0}
+    (hf : HasFPowerSeriesOnBall f p x r coord) (h : (r' : ℝ≥0∞) < r) :
+    TendstoUniformlyOn (fun n y => p.partialSum n (coord y - coord x)) f atTop
+      (coord ⁻¹' Metric.ball (coord x) r') := by
   rw [← hasFPowerSeriesWithinOnBall_univ] at hf
   simpa using hf.tendstoUniformlyOn' h
 
 /-- If a function admits a power series expansion within a set at `x`, then it is the locally
 uniform limit of the partial sums of this power series on the disk of convergence, i.e., `f y`
 is the locally uniform limit of `p.partialSum n (y - x)` there. -/
-theorem HasFPowerSeriesWithinOnBall.tendstoLocallyUniformlyOn'
-    (hf : HasFPowerSeriesWithinOnBall f p s x r) :
-    TendstoLocallyUniformlyOn (fun n y => p.partialSum n (y - x)) f atTop
-      (insert x s ∩ Metric.eball (x : E) r) := by
-  have A : ContinuousOn (fun y : E => y - x) (insert x s ∩ Metric.eball (x : E) r) := by fun_prop
-  convert! hf.tendstoLocallyUniformlyOn.comp (fun y : E => y - x) _ A using 1
-  · ext z
-    simp
-  · intro z
-    simp [edist_eq_enorm_sub]
+theorem HasFPowerSeriesWithinOnBall.tendstoLocallyUniformlyOn' {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {s : Set D} {x : D}
+    (hf : HasFPowerSeriesWithinOnBall f p s x r coord)
+    (hcoord : Continuous coord := by exact continuous_id) :
+    TendstoLocallyUniformlyOn (fun n y => p.partialSum n (coord y - coord x)) f atTop
+      (insert x s ∩ coord ⁻¹' Metric.eball (coord x) r) := by
+  rw [tendstoLocallyUniformlyOn_iff]
+  intro u hu y hy
+  rcases ENNReal.lt_iff_exists_nnreal_btwn.1 hy.2 with ⟨r', yr', hr'⟩
+  have hnbhd : coord ⁻¹' Metric.eball (coord x) r' ∈ 𝓝 y :=
+    hcoord.continuousAt.eventually (Metric.isOpen_eball.mem_nhds yr')
+  refine ⟨insert x s ∩ coord ⁻¹' Metric.eball (coord x) r', ?_, ?_⟩
+  · rw [nhdsWithin_inter_of_mem']
+    · exact inter_mem_nhdsWithin _ hnbhd
+    · exact mem_nhdsWithin_of_mem_nhds <|
+        mem_of_superset hnbhd (preimage_mono (Metric.eball_subset_eball hr'.le))
+  · simpa only [Metric.eball_coe] using hf.tendstoUniformlyOn' hr' u hu
 
 /-- If a function admits a power series expansion at `x`, then it is the locally uniform limit of
 the partial sums of this power series on the disk of convergence, i.e., `f y`
 is the locally uniform limit of `p.partialSum n (y - x)` there. -/
-theorem HasFPowerSeriesOnBall.tendstoLocallyUniformlyOn' (hf : HasFPowerSeriesOnBall f p x r) :
-    TendstoLocallyUniformlyOn (fun n y => p.partialSum n (y - x)) f atTop
-      (Metric.eball (x : E) r) := by
+theorem HasFPowerSeriesOnBall.tendstoLocallyUniformlyOn' {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesOnBall f p x r coord)
+    (hcoord : Continuous coord := by exact continuous_id) :
+    TendstoLocallyUniformlyOn (fun n y => p.partialSum n (coord y - coord x)) f atTop
+      (coord ⁻¹' Metric.eball (coord x) r) := by
   rw [← hasFPowerSeriesWithinOnBall_univ] at hf
-  simpa using hf.tendstoLocallyUniformlyOn'
+  simpa using hf.tendstoLocallyUniformlyOn' hcoord
 
 /-- If a function admits a power series expansion within a set on a ball, then it is
 continuous there. -/
-protected theorem HasFPowerSeriesWithinOnBall.continuousOn
-    (hf : HasFPowerSeriesWithinOnBall f p s x r) :
-    ContinuousOn f (insert x s ∩ Metric.eball x r) :=
-  hf.tendstoLocallyUniformlyOn'.continuousOn <|
+protected theorem HasFPowerSeriesWithinOnBall.continuousOn {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {s : Set D} {x : D}
+    (hf : HasFPowerSeriesWithinOnBall f p s x r coord)
+    (hcoord : Continuous coord := by exact continuous_id) :
+    ContinuousOn f (insert x s ∩ coord ⁻¹' Metric.eball (coord x) r) :=
+  (hf.tendstoLocallyUniformlyOn' hcoord).continuousOn <|
     Frequently.of_forall fun n =>
-      ((p.partialSum_continuous n).comp (continuous_id.sub continuous_const)).continuousOn
+      ((p.partialSum_continuous n).comp (hcoord.sub continuous_const)).continuousOn
 
-/-- If a function admits a power series expansion on a ball, then it is continuous there. -/
-protected theorem HasFPowerSeriesOnBall.continuousOn (hf : HasFPowerSeriesOnBall f p x r) :
-    ContinuousOn f (Metric.eball x r) := by
+/-- Convergence on a coordinate ball implies continuity when the coordinates are continuous. -/
+protected theorem HasFPowerSeriesOnBall.continuousOn {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesOnBall f p x r coord)
+    (hcoord : Continuous coord := by exact continuous_id) :
+    ContinuousOn f (coord ⁻¹' Metric.eball (coord x) r) := by
   rw [← hasFPowerSeriesWithinOnBall_univ] at hf
-  simpa using hf.continuousOn
+  simpa using hf.continuousOn hcoord
 
-protected theorem HasFPowerSeriesWithinOnBall.continuousWithinAt_insert
-    (hf : HasFPowerSeriesWithinOnBall f p s x r) :
+protected theorem HasFPowerSeriesWithinOnBall.continuousWithinAt_insert {D : Type*}
+    [TopologicalSpace D] {f : D → F} {coord : D → E} {s : Set D} {x : D}
+    (hf : HasFPowerSeriesWithinOnBall f p s x r coord)
+    (hcoord : Continuous coord := by exact continuous_id) :
     ContinuousWithinAt f (insert x s) x := by
-  apply (hf.continuousOn.continuousWithinAt (x := x) (by simp [hf.r_pos])).mono_of_mem_nhdsWithin
-  exact inter_mem_nhdsWithin _ (Metric.eball_mem_nhds x hf.r_pos)
+  apply ((hf.continuousOn hcoord).continuousWithinAt (x := x)
+    (by simp [hf.r_pos])).mono_of_mem_nhdsWithin
+  exact inter_mem_nhdsWithin _ (hcoord.continuousAt.eventually (Metric.eball_mem_nhds _ hf.r_pos))
 
-protected theorem HasFPowerSeriesWithinOnBall.continuousWithinAt
-    (hf : HasFPowerSeriesWithinOnBall f p s x r) :
-    ContinuousWithinAt f s x :=
-  hf.continuousWithinAt_insert.mono (subset_insert x s)
+protected theorem HasFPowerSeriesWithinOnBall.continuousWithinAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {s : Set D} {x : D}
+    (hf : HasFPowerSeriesWithinOnBall f p s x r coord)
+    (hcoord : Continuous coord := by exact continuous_id) : ContinuousWithinAt f s x :=
+  (hf.continuousWithinAt_insert hcoord).mono (subset_insert x s)
 
-protected theorem HasFPowerSeriesWithinAt.continuousWithinAt_insert
-    (hf : HasFPowerSeriesWithinAt f p s x) :
-    ContinuousWithinAt f (insert x s) x := by
+protected theorem HasFPowerSeriesWithinAt.continuousWithinAt_insert {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {s : Set D} {x : D}
+    (hf : HasFPowerSeriesWithinAt f p s x coord)
+    (hcoord : Continuous coord := by exact continuous_id) : ContinuousWithinAt f (insert x s) x := by
   rcases hf with ⟨r, hr⟩
-  apply hr.continuousWithinAt_insert
+  exact hr.continuousWithinAt_insert hcoord
 
-protected theorem HasFPowerSeriesWithinAt.continuousWithinAt
-    (hf : HasFPowerSeriesWithinAt f p s x) :
-    ContinuousWithinAt f s x :=
-  hf.continuousWithinAt_insert.mono (subset_insert x s)
+protected theorem HasFPowerSeriesWithinAt.continuousWithinAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {s : Set D} {x : D}
+    (hf : HasFPowerSeriesWithinAt f p s x coord)
+    (hcoord : Continuous coord := by exact continuous_id) : ContinuousWithinAt f s x :=
+  (hf.continuousWithinAt_insert hcoord).mono (subset_insert x s)
 
-protected theorem HasFPowerSeriesAt.continuousAt (hf : HasFPowerSeriesAt f p x) :
-    ContinuousAt f x :=
-  let ⟨_, hr⟩ := hf
-  hr.continuousOn.continuousAt (Metric.eball_mem_nhds x hr.r_pos)
+protected theorem HasFPowerSeriesAt.continuousAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} (hf : HasFPowerSeriesAt f p x coord)
+    (hcoord : Continuous coord := by exact continuous_id) : ContinuousAt f x := by
+  obtain ⟨r, hr⟩ := hf
+  exact (hr.continuousOn hcoord).continuousAt
+    (hcoord.continuousAt.eventually (Metric.eball_mem_nhds _ hr.r_pos))
 
-protected theorem AnalyticWithinAt.continuousWithinAt_insert (hf : AnalyticWithinAt 𝕜 f s x) :
-    ContinuousWithinAt f (insert x s) x :=
+protected theorem AnalyticWithinAt.continuousWithinAt_insert {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {s : Set D} {x : D}
+    (hf : AnalyticWithinAt 𝕜 f s x coord)
+    (hcoord : Continuous coord := by exact continuous_id) : ContinuousWithinAt f (insert x s) x :=
   let ⟨_, hp⟩ := hf
-  hp.continuousWithinAt_insert
+  hp.continuousWithinAt_insert hcoord
 
-protected theorem AnalyticWithinAt.continuousWithinAt (hf : AnalyticWithinAt 𝕜 f s x) :
-    ContinuousWithinAt f s x :=
-  hf.continuousWithinAt_insert.mono (subset_insert x s)
+protected theorem AnalyticWithinAt.continuousWithinAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {s : Set D} {x : D}
+    (hf : AnalyticWithinAt 𝕜 f s x coord)
+    (hcoord : Continuous coord := by exact continuous_id) : ContinuousWithinAt f s x :=
+  (hf.continuousWithinAt_insert hcoord).mono (subset_insert x s)
 
 @[fun_prop]
-protected theorem AnalyticAt.continuousAt (hf : AnalyticAt 𝕜 f x) : ContinuousAt f x :=
+protected theorem AnalyticAt.continuousAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} (hf : AnalyticAt 𝕜 f x coord)
+    (hcoord : Continuous coord := by exact continuous_id) : ContinuousAt f x :=
   let ⟨_, hp⟩ := hf
-  hp.continuousAt
+  hp.continuousAt hcoord
 
 protected theorem AnalyticAt.eventually_continuousAt (hf : AnalyticAt 𝕜 f x) :
     ∀ᶠ y in 𝓝 x, ContinuousAt f y := by
@@ -1076,17 +1225,18 @@ protected theorem FormalMultilinearSeries.hasFPowerSeriesOnBall [CompleteSpace F
     HasFPowerSeriesOnBall p.sum p 0 p.radius :=
   { r_le := le_rfl
     r_pos := h
-    hasSum := fun hy => by
-      rw [zero_add]
-      exact p.hasSum hy }
+    hasSum := fun {y} hy => by
+      simpa only [sub_zero] using p.hasSum (by simpa only [sub_zero] using hy) }
 
 theorem HasFPowerSeriesWithinOnBall.sum (h : HasFPowerSeriesWithinOnBall f p s x r) {y : E}
-    (h'y : x + y ∈ insert x s) (hy : y ∈ Metric.eball (0 : E) r) : f (x + y) = p.sum y :=
-  (h.hasSum h'y hy).tsum_eq.symm
+    (h'y : x + y ∈ insert x s) (hy : y ∈ Metric.eball (0 : E) r) : f (x + y) = p.sum y := by
+  simpa only [add_sub_cancel_left] using
+    (h.hasSum (y := x + y) h'y (by simpa only [add_sub_cancel_left] using hy)).tsum_eq.symm
 
 theorem HasFPowerSeriesOnBall.sum (h : HasFPowerSeriesOnBall f p x r) {y : E}
-    (hy : y ∈ Metric.eball (0 : E) r) : f (x + y) = p.sum y :=
-  (h.hasSum hy).tsum_eq.symm
+    (hy : y ∈ Metric.eball (0 : E) r) : f (x + y) = p.sum y := by
+  simpa only [add_sub_cancel_left] using
+    (h.hasSum (y := x + y) (by simpa only [add_sub_cancel_left] using hy)).tsum_eq.symm
 
 /-- The sum of a converging power series is continuous in its disk of convergence. -/
 protected theorem FormalMultilinearSeries.continuousOn [CompleteSpace F] :
