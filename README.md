@@ -20,12 +20,16 @@ it is not the design authority for this fork.
   representation-driven interfaces.
 - Treat natural formal proofs and real downstream formalizations as tests of
   API quality.
+- Complete each accepted migration across its selected API and all affected
+  consumers in one delivery, without compatibility or transitional layers.
+  Independent foundational problems may be tracked separately in `TODO.md`
+  when a proved boundary preserves the completed API's mathematical contract.
 - Admit external formalizations through explicit mathematical, licensing,
   provenance, and implementation review.
 
 These are design commitments, not claims that every inherited interface has
 already been migrated. See [FORK_DESIGN.md](FORK_DESIGN.md) for the complete
-design contract and deferred roadmap.
+design and migration contract.
 
 ## Branch model
 

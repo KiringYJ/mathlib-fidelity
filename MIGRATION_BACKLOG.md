@@ -28,6 +28,12 @@ its hypotheses, constructions, trusted proof boundary, and correspondence to a
 current declaration. File counts, commit counts, matching names, and successful
 syntax translation are not acceptance criteria.
 
+Each accepted recovery or API migration follows the complete-migration contract
+in `FORK_DESIGN.md`: deliver its selected theorem and interface scope in full,
+without compatibility or transitional layers. Independent foundational problems
+may be separate TODO items only when a proved boundary supports the completed
+scope. This inventory does not authorize unaudited source integration.
+
 ## Recovery gates
 
 Before implementation, each candidate must pass these gates:
@@ -74,8 +80,8 @@ required theorem.
 
 Next gate: map the source blueprint and theorem DAG to current condensed and
 homological-algebra declarations, identify the unmatched mathematical layer,
-and design a staged reconstruction whose final target is the audited theorem
-correspondence.
+and design a reconstruction whose complete delivery establishes the audited
+theorem correspondence on the canonical current-library API.
 
 ### `leanprover-community/lean-perfectoid-spaces` -- coverage audit, then reconstruction
 

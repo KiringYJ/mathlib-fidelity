@@ -15,8 +15,8 @@ this fork.
 `FORK_DESIGN.md` owns what the library should be: every design rule about
 semantics and domains, interfaces and quality of life, naming and notation,
 generality, and the admission and canonicalization of external material, plus
-the deferred foundational roadmap, which it records without authorizing the
-total-inverse migration. This file owns how work is done here: branches,
+the foundational migration contracts, which it records without authorizing
+their implementation. This file owns how work is done here: branches,
 reconciliation, contribution and intake mechanics, the refactor protocol,
 commands, and constraints. It does not restate design rules; on a design
 question, `FORK_DESIGN.md` decides.
@@ -161,13 +161,14 @@ concrete use cases before redesigning existing code.
   greatest element from a merely maximal one when the stronger result is proved?
 - If a total object is claimed to be independently mathematical, which exact
   literature and specifying properties establish its degenerate cases? If it
-  is merely an implementation extension, is it private, transitional, and tied
-  to a concrete removal condition?
+  is the selected operation's fallback, is it removed? If it belongs to an
+  independent lower-level problem, is its use proved faithful and recorded in
+  a precise TODO entry?
 - Can a thin facade improve semantic fidelity without duplicating a parallel
   theorem ecosystem?
-- If a better public interface replaces an established one, is there a
-  deliberate migration path that distinguishes interface progress from removal
-  of totalized implementation dependencies?
+- Does the migration replace the selected interface and all affected callers
+  completely, while identifying any independently deferred foundational
+  dependencies without claiming their removal?
 - Does generated proof glue merely conceal an ontology mismatch? Automation
   and language models can assist discovery, but should not be used as evidence
   that a human-facing interface is already adequate.
@@ -177,7 +178,24 @@ claims about every mathlib module or maintainer. Keep criticism technical and
 specific; do not put personal attacks in repository history, commits, issues,
 or other project records.
 
-## Broad API Refactor Protocol
+## Complete Migration Workflow
+
+Apply the complete-migration contract in `FORK_DESIGN.md` to every fork
+migration, not only totalized APIs. It overrides the shared guide's default
+preference for preserving backward compatibility. Deliver the final design for
+the selected scope in one change, with no compatibility stage, dual API,
+deprecated aliases, or private transitional adapters. Internal experiments,
+incremental edits, and focused builds remain part of the same work; a
+prototype-only delivery is not completion of an accepted migration.
+
+An independent lower-level problem may be deferred: an L migration can finish
+while an XL foundational issue is recorded in `TODO.md`. Identify the actual
+declarations and obligation, and prove that the completed L interface is
+faithful despite that dependency. This does not permit deferring callers or
+proof obligations required by the selected L interface. Keep the completed
+scope and deferred foundation distinct in the final report.
+
+### Broad API refactor protocol
 
 For an explicitly authorized public-API canonicalization:
 
@@ -199,17 +217,16 @@ For an explicitly authorized public-API canonicalization:
    unrelated errors. Give a default discharger's tactic syntax an explicit
    `(name := …)` and bound its search, so that failures stay fast and the
    syntax passes the environment linters.
-3. Prototype the replacement in real consumers. Closure-heavy proofs should
-   use the operations of the structure that owns the invariant; cross a
-   predicate-membership bridge only at an interface that genuinely requires
-   the other form.
-4. When compatibility is explicitly out of scope, remove obsolete notation,
-   aliases, ambient-only instances, and legacy subtype spellings across the
-   repository. Do not preserve them merely to conceal an incomplete migration.
-   Totalized compatibility surfaces are an unconditional exception: remove
-   every public shim, and remove every private transitional adapter before
-   declaring its migration complete, regardless of the general compatibility
-   policy.
+3. Validate the replacement in real consumers during implementation.
+   Closure-heavy proofs should use the operations of the structure that owns
+   the invariant; cross a predicate-membership bridge only at an interface
+   that genuinely requires the other form.
+4. Remove the selected API's obsolete notation, aliases, ambient-only instances,
+   and legacy subtype spellings across the repository. Do not introduce or
+   retain public shims or private transitional adapters. Migrate all affected
+   callers in the same change. Separately tracked lower-level dependencies must
+   satisfy the proved-boundary requirements in `FORK_DESIGN.md`; they do not
+   justify retaining the selected operation's old interface or implementation.
 5. Rename declarations when their mathematical category changes, not merely
    their typography. Keep established terminology primary and implementation
    class names out of the public mathematical language.
@@ -230,10 +247,12 @@ and report inherited failures accurately without expanding the refactor.
 ## Remaining Work
 
 `TODO.md` is the fork's backlog: it keeps completed migrations as records and
-unresolved items as candidates under its fidelity gate. Before reporting a task
-complete, resolve each remaining item within the task or record it in
-`TODO.md`; never leave one only in a final report or conversation. Remaining
-items include open mathematical questions, hypotheses stronger than necessary,
+unresolved items as candidates under its fidelity gate. Resolve every obligation
+of the selected migration before reporting it complete. Record independent
+foundational problems and other separately scoped work in `TODO.md`; never
+leave them only in a final report or conversation. A TODO cannot substitute for
+an in-scope proof, consumer migration, or removal. Remaining items include open
+mathematical questions, hypotheses stronger than necessary,
 deferred instances or API, unverified claims, and deferred reviewer
 suggestions. An entry names the affected files and declarations, states the
 obligation precisely, and records any known paper proof, counterexample, or
@@ -249,7 +268,7 @@ remaining item to the commit that resolved it or to its `TODO.md` entry.
   modules are added.
 - `MathlibTest/`, `Archive/`, `Counterexamples/`, and `scripts/` provide tests,
   historical material, examples, and repository tooling.
-- `FORK_DESIGN.md` is the authoritative design contract and deferred roadmap.
+- `FORK_DESIGN.md` is the authoritative design and complete-migration contract.
 - `UPSTREAMS.md` records external source identity, license evidence,
   provenance, integration mode, and status.
 - `AI_AGENT_GUIDE.md` is generated shared agent policy.
@@ -291,7 +310,7 @@ they remain applicable to the affected area.
 - `README.md`: fork overview, branch model, setup, contribution policy, and
   upstream resource links.
 - `FORK_DESIGN.md`: authoritative design contract: purpose, design rules,
-  contribution and intake policy, and deferred foundational migration plans.
+  contribution and intake policy, and foundational migration contracts.
 - `UPSTREAMS.md`: canonical source-repository and provenance registry.
 - `TODO.md`: backlog of fidelity and API-hygiene work, with completed
   migrations kept as records and unresolved items as candidates under its
@@ -320,9 +339,9 @@ they remain applicable to the affected area.
   mathematical concept naturally while reusing a sound generic core.
 - **strict public API**: an interface whose ordinary mathematical operations
   expose their domains instead of relying on silent fallback values.
-- **transitional total extension**: private implementation machinery used only
-  while consumers migrate to a faithful domain-bearing API; it has an explicit
-  removal condition and is not a permanent public mathematical operation.
+- **independent foundational dependency**: an existing lower-level API with a
+  separately recorded problem; a completed scoped migration may use it only
+  through a proved faithful boundary, without retaining its own retired API.
 
 ## Workspace Configuration
 
@@ -362,8 +381,10 @@ and the provenance ledger, but must never rewrite this project file.
   sources without a verified compatible license reference-only pending review,
   and preserve all applicable authorship, license, modification, and `NOTICE`
   records when integration is authorized.
-- Do not start the deferred total-inverse migration merely because its roadmap
-  is recorded. It requires a separate explicit task and prototype evidence.
+- A recorded migration design or documentation update does not authorize Lean
+  implementation. Once implementation is requested, complete the selected
+  scope under the complete-migration contract, including its internal design
+  experiments and final-state verification.
 - Do not stage, commit, push, open a PR, or modify remote settings unless the
   current request authorizes that action. No project change is intended for an
   upstream PR.

@@ -5,13 +5,16 @@
 This document records the accepted direction of the personal fork. It is a
 design contract, not a claim that the described APIs already exist.
 
-The interface goals below are adopted. The hierarchy split, proposed roadmap
-API names, representation, automation, and migration sequence are candidates
-that require prototypes and downstream evaluation; they are not an implemented
-or validated API. The total-inverse migration is deferred, and this document
-does not authorize code changes. Begin that work only in a task that explicitly
-requests it, after inspecting the then-current dependency graph and
-establishing a small prototype.
+The interface goals and complete-migration policy below are adopted. Every
+accepted migration must deliver the final design across its selected scope in
+one complete change, without compatibility stages or transitional layers.
+Independent lower-level problems may remain tracked work under the dependency
+boundary below.
+Concrete API names, representations, and automation still require source
+inspection and validation in real consumers; recording a design does not
+certify its implementation. The total-inverse contract below is planned work.
+This documentation does not authorize its Lean implementation; that requires
+an explicit implementation request.
 
 The conjecture and proof-status policy is also adopted, with two epistemic
 kinds sharing one Lean mechanism. Its registry, admission gate, dependency
@@ -30,6 +33,73 @@ not designed, partitioned, or rewritten for submission to
 `leanprover-community/mathlib4`. Upstream remains a valuable source of
 implementations, theorems, and updates, but upstream compatibility or reviewer
 preference does not override the design commitments in this document.
+
+## Complete Migrations
+
+Every accepted migration in this fork goes directly to its final design in one
+complete delivery. This applies to mathematical APIs, representations, naming,
+notation, instances, automation, and source integrations, including foundational
+changes such as inverse and division. Migration size and upstream compatibility
+do not justify compromising mathematical fidelity, type-theoretic naturalness,
+or quality of life.
+
+- Cover the selected interface and all its affected consumers in the same change:
+  definitions, proofs, implicit entry points, tactics, tests, generated imports,
+  and documentation. Changing a type or contract includes every caller that
+  needs that change; those callers cannot be deferred as another migration.
+- Implement the selected design directly. Do not introduce or retain
+  compatibility shims, deprecated aliases, dual old/new APIs, version switches,
+  private transitional adapters, or renamed totalized fallbacks to bridge a
+  migration. Update callers to the canonical interface and delete the replaced
+  machinery.
+- Do not deliver a prototype-only milestone, a partial subsystem migration, or
+  a strict facade over the old implementation as completion of an accepted
+  migration. Moving an in-scope consumer, proof obligation, or removal to
+  `TODO.md` does not complete the work. An unresolved obligation of the selected
+  interface keeps the migration incomplete.
+- Investigation, small experiments, incremental edits, focused builds, and
+  independent review are internal work within the same migration. They do not
+  establish supported intermediate APIs or relax the final acceptance criteria.
+  One delivery does not require one edit or one commit; logical commit discipline
+  and authorization for commits and publication still apply.
+- Validate the complete final source state and scan for every retired surface
+  and in-scope implementation dependency. Preserve mathematical statements and
+  useful theorem coverage on their correct domains; do not obtain a green build
+  by dropping consumers, weakening specifications, adding proof holes, or
+  disabling checks.
+
+Mathematical equivalences and conversions between independently meaningful
+objects remain legitimate parts of the final API. They are not permission to
+retain a superseded interface for compatibility. A genuine total mathematical
+object still requires the literature and specifying properties below; renaming
+a fallback does not establish such an object.
+
+### Independent foundational dependencies
+
+A migration is complete within its selected mathematical and API scope; it need
+not resolve every independent problem in the foundations it uses. In particular,
+an L migration may finish while an XL problem in an existing lower-level API is
+recorded in `TODO.md` for a future XL task. Effort labels help describe the
+boundary; they do not by themselves justify deferring a required part of the
+selected migration.
+
+- Identify the lower-level declarations, the separate mathematical obligation,
+  and the current consumers in a precise TODO entry. Report that dependency
+  separately from completion of the selected migration.
+- Prove that the selected API has its correct domain and specification while
+  using the existing substrate. For a totalized substrate, prove valid-domain
+  use, unreachability of invalid branches, or independence from their values.
+  If an unchanged generic interface requires a total function, a necessary
+  off-domain branch stays anonymous at its construction site, with the same
+  proof and a TODO for the lower-level interface.
+- Keep the selected API in its final form. Do not add old/new API pairs,
+  compatibility aliases, reverse bridges, or a named transitional layer for
+  the selected migration. A future foundational repair should replace its
+  substrate without reviving the retired API.
+- Defer only a genuinely separate foundational problem. If it prevents a
+  faithful public contract or a required proof in the selected scope, that
+  migration is still incomplete. Do not hide the gap by changing a label or
+  claiming that the underlying totalization has already been removed.
 
 ## Coequal Design Goals
 
@@ -62,17 +132,11 @@ the interface.
   an arbitrary choice, such as normalizing a locally finite measure at `0`.
 - Do not silently extend a partial mathematical operation with a junk or
   arbitrary value while continuing to present it as the same operation.
-- A total fallback is not a second permanent public API. Delete fallback
-  machinery rather than making it private. A private transitional bridge is
-  permitted only when a staged migration cannot otherwise keep the library
-  compiling, as in the deferred total-inverse roadmap, and then it carries a
-  recorded list of consumers and a removal condition. When a generic interface
-  outside the migration requires a total value, such as a set function defined
-  on every set, keep the residual branch anonymous at its single construction
-  site, prove the result independent of it, and record in `TODO.md` the change
-  to that interface that would remove it. The public boundary must prove that
-  any remaining fallback is unreachable or that the result is independent of
-  the chosen value.
+- Delete the selected operation's invalid-domain fallback machinery, including
+  private compatibility helpers. Making its old implementation private does
+  not complete the migration. An existing lower-level interface that demands
+  a total value may remain only under the independent-foundational-dependency
+  requirements above, with a proved boundary and a precise TODO.
 - When the exact domain depends on the input and has no closed form, state it
   as the existence and uniqueness of the specified object, as a proposition or
   class such as `HasUniqueCondExp m μ f` or `HasUniqueCondCDF ρ`, together
@@ -97,8 +161,7 @@ the interface.
   version" does not make a choice canonical. Concrete representatives may
   appear only as private witnesses inside proofs of Prop-valued existence
   statements. Such a witness construction is a proof device, not an
-  implementation bridge: no public definition unfolds to it, so it needs no
-  removal condition.
+  implementation bridge: no public definition unfolds to it.
 - If mathematical literature defines a genuinely total object on the same
   inputs, including the degenerate cases, treat that as an independent
   mathematical object with its own specifying properties rather than as a
@@ -116,10 +179,10 @@ the interface.
   or a deliberately installed local instance; documenting a global convention
   alone does not resolve this interface mismatch. This is an interface policy,
   not a claim that choosing a nonunique construction is mathematically invalid.
-- Distinguish a strict public interface from a strict implementation. A proved
-  bridge may initially reuse a totalized implementation on its valid domain,
-  but only as private transitional machinery. Track and remove that dependency
-  before declaring the migration complete.
+- Replace the selected operation and its implementation together. Distinguish
+  removal of its old machinery from reliance on an existing lower-level API:
+  a proved use of a separately tracked foundational dependency can support a
+  completed scoped migration, but does not establish removal of that dependency.
 
 ### API quality and quality of life
 
@@ -235,10 +298,9 @@ uncurried presentation of separate arguments.
   generated documentation entries, editor support, normalization lemmas, or a
   small tactic that routes users to the canonical declaration. A documentation
   index may expose both spellings without adding a second kernel declaration.
-- If an external compatibility boundary requires a named transported theorem,
-  generate it mechanically as an attribute-free compatibility declaration or
-  place it in a dedicated compatibility namespace. It must remain visibly
-  derived and must not acquire its own theorem ecosystem.
+- Update external-facing call sites to the canonical declaration or an inline
+  transport. Do not generate compatibility declarations or maintain a legacy
+  namespace to preserve a retired theorem spelling.
 
 This rule applies only when the passage is beta/eta-equivalent presentation.
 Separate curry or uncurry definitions and theorems are legitimate when the
@@ -403,7 +465,7 @@ Systematic repository-wide renaming is permitted only for the first priority:
 declarations for results that already have an established mathematical name
 but do not expose it consistently. That eligibility does not itself authorize a
 migration; an actual audit and rename still require an explicit task,
-dependency review, compatibility plan, and validation.
+dependency review, a complete consumer migration plan, and validation.
 
 All inherited upstream declarations and existing fork declarations are
 otherwise grandfathered. Adding or changing a proof, touching a file, moving a
@@ -806,14 +868,16 @@ migration.
   Material becomes part of this library only through the same faithful,
   canonicalizing integration process.
 
-## Deferred Total-Inverse Roadmap
+## Total-Inverse Migration Contract
 
-The names in this section, including `TotalizedField` and `NZ`, are working
-prototype names, not candidate permanent public APIs. Any totalized structure
-introduced by the prototype is private transitional machinery and must be
-removed before the migration is complete.
+When its implementation is authorized, this migration must replace the ordinary
+inverse and division interfaces and their affected consumers in one complete
+delivery. There is no prototype-only delivery, compatibility stage, or
+transitional totalized hierarchy. The requirements below define the work and
+its acceptance criteria; they do not claim that the migration has been
+implemented or that its concrete API has been validated.
 
-### 0. Inventory before refactoring
+### Inventory and mathematical contracts
 
 Map the current hierarchy, notation, instances, rational casts and scalar
 operations, characteristic-sensitive behavior, theorem dependencies,
@@ -822,55 +886,50 @@ division. Classify totalizations rather than searching and replacing blindly:
 
 1. independently meaningful total mathematical objects supported by exact
    literature and specifying properties;
-2. private implementation extensions that may exist only as transitional
-   bridges with explicit removal conditions;
+2. implementation extensions of the inverse/division interfaces being replaced,
+   which must be removed with those interfaces;
 3. totalizations that leak invalid-domain semantics through a public
    declaration, notation, coercion, instance, or mathematical name and must be
    removed.
 
-Record both interface and implementation status for each migrated area. A
-strict statement proved through a validated bridge is progress, but it is not
-evidence that all totalized dependencies have disappeared.
+Record the exact specification and domain of each operation. Scalar field
+inversion, unit inversion, matrix inversion, and Euclidean quotient/remainder
+are separate mathematical contracts. Nonzero is sufficient for field inversion;
+in a general ring, inversion requires a unit. For finite square matrices over
+a commutative ring, the determinant must be a unit. Euclidean division does not
+require its nonzero divisor to be a unit and is not inverse-based division.
+Preserve these distinctions while migrating every affected connection.
 
-### 1. Build an isolated algebra prototype
+### Final algebra and operational interface
 
-Test the candidate architecture away from the production hierarchy before any
-global rename:
+- Separate the property that nonzero elements admit inverses from the operation
+  on invertible elements. The ordinary field hierarchy must not supply an
+  unconditional inverse or division operation on its ambient carrier.
+- Reuse or adapt `IsField` for the property-level core and `Units` for the
+  multiplicative carrier. Construct units directly from existence evidence;
+  remove conversions that rebuild a totalized field as a compatibility route.
+  Validate the concrete hierarchy and inference in real consumers.
+- Reuse unit inversion, division, integer powers, extensionality, and coercions.
+  Establish the equivalence with nonzero field elements without introducing a
+  competing nonzero-carrier theorem ecosystem. Mixed division accepts an
+  arbitrary ambient numerator and a unit denominator, as existing `divp` does.
+- Supply checked construction, predictable coercions, rewrite lemmas, useful
+  diagnostics, and denominator-clearing automation together with the API.
+  Construction should find routine local evidence and propagate closure facts.
+- Account for negative powers, rational casts, and rational scalar operations.
+  Nonnegative powers retain the whole ambient domain; negative powers require
+  invertibility. A unital ring homomorphism from all rationals into a field
+  requires characteristic zero; in positive characteristic, evaluation of a
+  rational requires its reduced denominator to remain nonzero. Checking a raw fraction expression
+  must precede cancellation, even if its reduced rational value is admissible.
+- Migrate notation, implicit instances, concrete field structures, simplifier
+  rules, and tactics so that none can reintroduce the retired totalized
+  operation. Removing a named function alone is insufficient.
 
-- separate the property that nonzero elements admit inverses from the data of a
-  chosen total inverse and division operation;
-- evaluate reusing or adapting the role currently played by the `IsField`
-  predicate. It already records a property-level existence claim, but it is not
-  a strict operational API, and its conversions back to the current hierarchy
-  construct totalized inverse data;
-- isolate any required totalized implementation behind a private transitional
-  adapter and a one-way bridge to the strict property, without an automatic
-  bridge that recreates totalization in the reverse direction; record the
-  adapter's consumers and removal condition;
-- account for all data and laws carried by the current hierarchy, including
-  rational casts and scalar operations, rather than treating the work as a
-  rename of one inverse field;
-- for fields, use one stable nonzero-carrier interface for multiplicative work,
-  connected to existing units theory by proved equivalences rather than
-  competing global instances;
-- cover mixed operations explicitly: division may have an arbitrary ambient
-  numerator while its denominator carries nonzero evidence;
-- prototype checked construction, predictable coercions, extensionality,
-  rewrite lemmas, and denominator-clearing tactics;
-- isolate legacy notation and instances strongly enough that strict code cannot
-  resolve an unproved division through the old totalized operation.
+### Required acceptance cases
 
-Outside a field-like setting, nonzero does not by itself imply invertible. Do
-not export the prototype's nonzero-carrier operations under weaker assumptions
-until their actual algebraic requirements have been established.
-
-The prototype must include negative tests. It is not successful merely because
-positive examples elaborate.
-
-### 2. Prototype acceptance cases
-
-At minimum, verify the following behaviours before considering a production
-migration:
+Verify these behaviours in the completed implementation, using small internal
+experiments where needed to settle the design:
 
 - repeated multiplication, division, and inversion of nonzero objects do not
   ask users to resupply facts already carried by those objects;
@@ -883,52 +942,46 @@ migration:
 - numerals are not assumed nonzero without the characteristic hypotheses needed
   in the ambient algebraic structure;
 - strict code cannot fall back to a reachable legacy totalized `/` or inverse;
-- no public declaration, notation, coercion, instance, or delaborator exposes
-  a transitional totalized operation;
+- no declaration, notation, coercion, instance, delaborator, or private helper
+  retains a retired totalized operation;
 - error messages identify the failed mathematical obligation instead of exposing
   an undiagnosed coercion or instance-search failure;
 - pretty-printing exposes only the faithful public operation and never
-  normalizes a term back to a transitional totalized form;
+  normalizes a term back to a retired totalized form;
 - nested fractions, function composition, and denominator clearing remain
   readable in a real downstream development.
 
-### 3. Migrate only after the prototype survives use
+Exercise a real algebraic consumer such as Cramer's rule, including solution
+and uniqueness, and test both abstract property-only contexts and concrete
+field contexts. Positive examples alone do not establish the domain boundary;
+pin invalid-input failures to their actual mathematical obligations.
 
-If a later task authorizes the migration and the prototype meets its acceptance
-criteria, first preserve a compiling compatibility state, then weaken
-dependencies module by module. A possible sequence is:
-
-1. introduce the strict property and a private transitional adapter;
-2. identify and instrument legacy consumers that still depend on totalized
-   behavior without promoting that dependency to a new public requirement;
-3. provide proved adapters on valid domains;
-4. migrate coherent downstream slices to the strict API;
-5. weaken module requirements only after checking that their statements and
-   implementations no longer rely on totalized semantics;
-6. add checks that prevent new unnecessary dependencies on the totalized layer;
-7. remove every transitional totalized adapter and compatibility surface after
-   its consumers and replacement paths are known; the migration is not complete
-   while any remains.
-
-Do not begin with a repository-wide mechanical rename that has not accounted
-for casts, notation, tactics, instance coherence, performance, and downstream
-breakage.
-
-### 4. Treat analysis as a separate design boundary
+### Analysis within the same migration
 
 A field's nonzero carrier is suited to multiplicative algebra but is not closed
 under ambient addition and does not contain the ambient zero. It therefore
 cannot simply replace the ambient vector-space domain. Differentiation,
 continuity, integration, and other APIs for functions defined on open subsets
-or local domains need their own design. Do not claim that a successful algebra
-prototype solves the analysis migration. Establish the appropriate open-set,
-local-function, or chart interfaces before porting analysis code.
+or local domains need their own design. Establish the appropriate open-set,
+local-function, or chart interfaces and migrate affected analysis consumers in
+the same delivery. A successful algebra experiment does not discharge these
+obligations or justify leaving the old analysis implementation in place.
+
+### Completion
+
+Inspect and migrate all in-scope definitions, theorems, casts, scalar actions,
+matrix APIs, instances, notation, tactics, analysis consumers, tests, and
+documentation. No old/new API pair or private compatibility layer may remain.
+Run the full final-state build, test, lint, generated-import, and negative-scan
+checks specified in `AI_AGENT_PROJECT.md`. Required inverse/division consumers
+cannot be deferred to claim completion. Record genuinely independent lower-level
+problems under the dependency boundary above, with the proofs needed to keep
+the completed inverse/division interface faithful.
 
 ## Current Non-goals
 
-- Starting the total-inverse migration.
-- Renaming `Field`, `DivisionRing`, `GroupWithZero`, or their consumers now.
-- Introducing the provisional `NZ`, checked-division, or tactic APIs now.
+- Treating this documentation update as authorization to implement the
+  total-inverse migration or rename its hierarchy and consumers.
 - Repairing every documented fallback now. The 2026-10-20 inventory of
   documented fallbacks is recorded as candidates in `TODO.md`; an audit of every
   totalization in the repository, declaration by declaration, remains out of

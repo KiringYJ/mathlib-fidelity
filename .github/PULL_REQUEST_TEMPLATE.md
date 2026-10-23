@@ -8,9 +8,10 @@
 
 <!--
 Describe the relevant mathematical objects, domains, hypotheses, and
-conclusions. Explain public-API choices and any migration from an existing
-interface. Write "Not applicable" if the change has no mathematical or API
-surface.
+conclusions. For a migration, describe the final canonical API, all affected
+consumers, and removal of obsolete notation, instances, aliases, and private
+compatibility machinery. Write "Not applicable" if the change has no
+mathematical or API surface.
 -->
 
 ## Sources and provenance
@@ -27,7 +28,12 @@ when external material is involved. Write "No external material" otherwise.
 
 ## Limitations and follow-up
 
-<!-- State known gaps or write "None". -->
+<!--
+State known gaps or write "None". For migrations, link independent foundational
+TODO items and explain the proved boundary that permits their deferral.
+Unfinished in-scope proofs, consumers, or removals mean the migration is
+incomplete, not an accepted partial delivery.
+-->
 
 ## Moving-base acknowledgement
 
@@ -46,5 +52,8 @@ containing GitHub Actions workflows.
 - [ ] Repository artifacts, commits, and this description are in English.
 - [ ] Relevant source, license, provenance, and verification information is
       included.
+- [ ] Any migration completes its selected scope without compatibility or
+      transitional layers; remaining foundational dependencies have precise TODO
+      entries and proved boundaries, and final-state checks cover the change.
 - [ ] No credentials, private paths, generated noise, or unrelated changes are
       included.

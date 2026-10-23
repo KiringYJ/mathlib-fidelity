@@ -20,7 +20,9 @@ design direction.
 - Write repository artifacts, commit messages, and PR descriptions in English;
   use Conventional Commit subjects and do not bypass repository hooks.
 - Preserve existing public behavior unless the PR explicitly motivates and
-  documents an intended migration.
+  implements a complete migration. A migration must replace the selected API
+  and all affected consumers together, without compatibility shims, deprecated
+  aliases, dual APIs, or private transitional adapters.
 - Run checks proportional to the affected modules and report the exact commands
   and results in the PR description.
 - Do not include credentials, private paths, generated noise, or unrelated
@@ -74,6 +76,14 @@ workflow or secret access as ordinary integration authority.
 - State unresolved mathematical, implementation, or verification gaps
   explicitly.
 
+Every migration follows the [complete-migration contract](../FORK_DESIGN.md#complete-migrations).
+Internal experiments and incremental development are allowed; a prototype or
+partial consumer migration is not a completed migration. Independent
+foundational problems may remain separate TODO items, for example an XL issue
+encountered during an L migration, provided the PR proves that its selected API
+is faithful and identifies the lower-level dependency precisely. Required
+in-scope proofs, consumer updates, and removals cannot be deferred this way.
+
 ## External sources and provenance
 
 When a contribution copies, adapts, or reconstructs external material:
@@ -100,6 +110,10 @@ Describe:
 - source and license information when external material is involved;
 - verification performed; and
 - known limitations or follow-up work.
+
+For migrations, distinguish independently deferred foundational work from the
+completed scope. Remaining obligations of the selected migration make it
+incomplete; recording them as follow-up does not satisfy acceptance.
 
 ## Upstream boundary
 

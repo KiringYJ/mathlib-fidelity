@@ -15,8 +15,8 @@ carries existence evidence, whose theorems prove the specifying property, and wh
 determines a unique value.  When the specification determines its object only up to an
 equivalence, such as almost-everywhere equality, the public object is the equivalence class, not a
 chosen representative (`FORK_DESIGN.md`).  A no-witness branch is still a fallback governed by the
-transitional-only rule below, unless it occurs only in a private witness for a Prop-valued
-existence statement.  Conversely, adding a proof
+scoped completion and foundational dependency rule below, unless it occurs only in a private witness
+for a Prop-valued existence statement. Conversely, adding a proof
 argument proves only that the chosen hypothesis is sufficient; it does not show that the hypothesis
 is the exact mathematical domain.
 Even a coherent total operation is not faithful under an ordinary name or notation when that surface
@@ -31,8 +31,15 @@ without a dependency prototype.  Effort does not measure mathematical importance
 - **S**: a bounded declaration or theorem family with an existing strict substrate; normally a few
   files.
 - **M**: one coherent subsystem, with statement and consumer migration or a local design decision.
-- **L**: a cross-module API with notation, instances, or many downstream consumers; stage the work.
-- **XL**: foundational hierarchy or ubiquitous notation; prototype first and migrate in slices.
+- **L**: a cross-module API with notation, instances, or many downstream consumers.
+- **XL**: foundational hierarchy or ubiquitous notation, requiring substantial design validation.
+
+Every accepted migration completes its selected scope in one delivery, regardless of effort bucket.
+Experiments and incremental edits are internal work, not transitional API deliveries. An L migration
+may finish while a genuinely independent XL problem in its existing substrate remains a separate
+TODO, provided its own domain, specification, proofs, and consumer migration are complete. Identify
+the lower-level declarations and obligation, and prove valid-domain use or independence from any
+lower-level fallback. Do not reclassify unfinished parts of the selected API as XL to defer them.
 
 Before promoting an unchecked candidate to an implementation task:
 
@@ -53,25 +60,27 @@ Before promoting an unchecked candidate to an implementation task:
 5. audit whether the proposed name and notation communicate that exact object without inviting a
    standard but different reading, then choose among a relation, extended-valued invariant,
    canonical value, equivalence class, subtype, proof argument, or explicit partiality type; and
-6. prototype real consumers and record the candidate as accepted, reframed, rejected, or still
-   unknown before scheduling a migration.
+6. validate the candidate in representative consumers and record it as accepted, reframed,
+   rejected, or still unknown before committing to its replacement. These experiments are internal
+   design evidence, not a separate prototype delivery or a substitute for a completed migration.
 
-For an accepted strict-partiality migration, preserve a proved bridge on the valid domain and delete
-the fallback rather than merely renaming it or making it private.  A total extension may remain only
-as a private transitional helper when a staged migration cannot otherwise keep the library
-compiling, and only when the public boundary proves that its fallback is unreachable or that the
-result is independent of it.  Record its consumers and removal condition, and remove it before
-declaring the migration complete.  When a generic interface outside the migration requires a total
-value, such as a set function defined on every set, keep the residual branch anonymous at its single
-construction site, prove the result independent of it, and record here the change to that interface
-that would remove it.  A private construction used only as the witness of a Prop-valued existence
-statement, to which no public definition unfolds, is not such a helper and needs no removal
-condition.  Audit statements that exploit the branch, add negative tests for the actual boundary,
-and run the affected downstream checks at the final source state.
+For an accepted migration, replace the selected operation and its affected callers completely.
+Delete its fallback and retired interface rather than retaining private helpers, compatibility
+aliases, a dual API, or a transitional layer. Prove agreement on the valid domain without retaining
+the old operation as a compatibility surface. If an independent existing lower-level interface
+requires a total value, such as a set function defined on every set, it may remain a separate
+foundational TODO. Keep any necessary residual branch anonymous at its construction site, prove
+unreachability or independence, and name the lower-level interface and consumers in the TODO. The
+selected API must already be faithful; do not claim that this also removes the lower-level problem.
+A private witness used only inside a Prop-valued existence proof, to which no public definition
+unfolds, is not an operational compatibility layer. Audit statements that exploit fallback branches,
+add negative tests for the actual boundary, and run affected checks at the final source state.
 
-This transitional-only rule is the canonical policy in `FORK_DESIGN.md`.  A literature-supported
-total object is reviewed on its own mathematics; it is not a permanent extension of the partial
-operation.
+The complete-migration contract and independent foundational dependency boundary in `FORK_DESIGN.md`
+are canonical. A TODO can track separate foundational work but cannot discharge a missing in-scope
+proof, consumer migration, or removal. A literature-supported total object is reviewed on its own
+mathematics; it is not a renamed extension of the partial operation. Historical completion records
+below describe their recorded scope, not certification that all foundational dependencies are fixed.
 
 ## Paper formalizations and Palomar submissions
 
@@ -2425,24 +2434,23 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   evidence, whether `{τ = ⊤}` is handled by a separately specified limit value (compare the
   limit-process item above), and which theorems then need `τ ≠ ⊤` almost everywhere.
 
-## L -- staged cross-module audit candidates
+## L -- cross-module audit candidates
 
 - [ ] **Put matroid closure on subsets of the ground set.**
   `Matroid.closure` in `Mathlib/Combinatorics/Matroid/Closure.lean:135` deliberately extends closure
   to every `Set α` by replacing `X` with `X ∩ M.E`; the module describes off-ground inputs as junk,
   and the resulting operation is not extensive on all `Set α`.  Reuse `Matroid.subtypeClosure` at
   line 116 to make the ordinary closure domain-bearing, or prototype an equally faithful proof-last
-  interface.  Keep the intersection convention private unless literature supports it as a public
-  closure operation.  The current surface has roughly 258 `M.closure` matching lines across
+  interface. Remove the off-ground fallback unless literature establishes it as an independent
+  closure operation. The current surface has roughly 258 `M.closure` matching lines across
   nine maintained files, so migrate the closure theorem family and its rank, minor, circuit, and loop
-  consumers as one staged change.
+  consumers in the same complete migration.
 
 - [ ] **Require integrality for `minpoly`.**
   `Mathlib/FieldTheory/Minpoly/Basic.lean:41` assigns polynomial zero to a nonintegral element;
   `minpoly.aeval` at line 89 then states unconditionally that every element is a root of its minimal
-  polynomial.  Put `IsIntegral` in the ordinary construction and theorem family.  If the zero branch
-  is temporarily needed to implement bridges, keep it private and prove it unreachable at the
-  public boundary.
+  polynomial. Put `IsIntegral` in the ordinary construction and theorem family, migrate its
+  consumers, and remove the nonintegral zero branch without a private compatibility bridge.
 
 - [ ] **Replace finite separable/inseparable degree projections outside their domains.**
   `Field.finSepDegree` in `Mathlib/FieldTheory/SeparableDegree.lean:141` uses `Nat.card` even for a
@@ -2484,16 +2492,16 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `Mathlib/Data/Set/Card.lean:613` return zero on infinite inputs.  Require `Finite α`/`s.Finite` for
   natural values and use `ENat.card`/`Set.encard` globally.
 
-- [ ] **Make lossy extended-value conversions checked and keep zero fallbacks private.**
+- [ ] **Make lossy extended-value conversions checked and remove their zero fallbacks.**
   `ENat.toNat` (`Mathlib/Data/ENat/Basic.lean:118`), `Cardinal.toNat`
   (`Mathlib/SetTheory/Cardinal/ToNat.lean:31`), and `ENNReal.toNNReal`/`toReal`
   (`Mathlib/Basic/ENNReal/Basic.lean:225`) send infinity to zero.  Provide proof-bearing finite
-  conversions and keep infinity-to-zero maps private; a more explicit public name does not prevent
-  their accidental use as genuine conversions.
+  conversions and remove the replaced infinity-to-zero maps; a more explicit public name does not
+  prevent their accidental use as genuine conversions.
   `Measure.real` (`Mathlib/MeasureTheory/Measure/MeasureSpaceDef.lean:102`) is `(μ s).toReal`, and
   its docstring says that it maps infinite measure sets to zero; the projection `μ.real s` occurs in
   over a hundred files, so the finite-measure and finite-set cases (`IsFiniteMeasure`, `μ s ≠ ∞`)
-  must be separated from the conversion before the zero fallback leaves the public API.
+  must be expressed in the conversion and its consumers in the same migration.
 
 - [ ] **Separate chosen preimages from true inverses and true extensions.**
   `Function.invFun` in `Mathlib/Logic/Function/Basic.lean:526` picks an arbitrary element outside
@@ -2504,8 +2512,9 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   explicitness alone does not make it a faithful extension.  Without `g.FactorsThrough f` it chooses
   one representative's `g`-value for a fiber and cannot agree with every original `g`-value on that
   fiber.  Require `FactorsThrough` for
-  the ordinary extension name.  Keep an unrestricted chosen-representative construction private
-  unless literature treats that choice operation itself as the intended public object.
+  the ordinary extension name. Remove the unrestricted chosen-representative construction unless
+  literature establishes that choice operation as an independent mathematical object; private
+  witnesses used only in existence proofs remain legitimate.
   `MeasurableEmbedding.invFun` (`Mathlib/MeasureTheory/SigmaAlgebra/Embedding.lean:793`) is a
   measurable left inverse of a measurable embedding: it inverts `equivRange` on the range and takes
   `Nonempty.some` off it.  Its one consumer, `exists_measurable_map_eq_unitInterval` in
@@ -2592,7 +2601,9 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `Mathlib/Geometry/Manifold/MFDeriv/Tangent.lean` and the integral curve files.  Decide between a
   dependent field `∀ b ∈ baseSet i ∩ baseSet j, F →L[R] F` with a documented construction contract
   and a strict exported operation on the overlap, give `tangentCoordChange` the overlap evidence,
-  and keep any total representative private.
+  and remove the selected coordinate API's total fallback. If a separate bundle foundation still
+  requires total representatives, record that dependency precisely and prove independence from
+  off-domain values under the foundational dependency rule.
 
 - [ ] **Audit the choice-based `Filter.lim` projection and its theorem boundaries.**
   `Filter.lim` and `Filter.limUnder` in `Mathlib/Topology/Defs/Filter.lean:255` and `:260` use
@@ -2600,8 +2611,9 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   choice projection, not by itself a false mathematical statement.  Inventory whether any public
   theorem omits convergence, separation, or nontrivial-filter hypotheses.  Retaining the ordinary
   `lim` name for a value at nonconvergent filters additionally requires literature using the same
-  total convention; otherwise expose the choice only behind existence evidence and keep any
-  fallback private.  Audit `IsDenseInducing.extend`/`extendFrom` under the same distinction between
+  total convention; otherwise expose the canonical value only on its exact existence-and-uniqueness
+  domain, or use the limit relation, and remove the selected projection's fallback.
+  Audit `IsDenseInducing.extend`/`extendFrom` under the same distinction between
   a chosen representative and a claimed canonical extension.
   Documented consumers of `limUnder` are `UpperHalfPlane.valueAtInfty`
   (`Mathlib/NumberTheory/ModularForms/QExpansion.lean:64`), whose docstring says 'an arbitrary
@@ -3629,11 +3641,18 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   API, or whether `next` and `prev` should take the relation as evidence or return an `Option`, and
   which theorems depend on `xNext` at an index with no successor.
 
-## XL -- foundational audit candidates; no migration is authorized
+## XL -- foundational work; implementation requires an explicit task
 
-- [ ] **Classify inverse and division semantics before prototyping any hierarchy split.**
-  Follow the deferred acceptance criteria in `FORK_DESIGN.md`; this item does not authorize a
-  production migration.  First decide where total inversion is independently meaningful algebraic
+- [ ] **Complete the inverse and division migration in one delivery.**
+  Follow the total-inverse migration contract in `FORK_DESIGN.md`. The complete-delivery policy is
+  adopted; concrete APIs still need validation, and this documentation does not authorize Lean
+  implementation. Once requested, the migration includes the selected hierarchy, notation,
+  instances, casts, scalar operations, tactics, matrices, affected analysis consumers, and tests.
+  Internal experiments validate the design within that work; there is no prototype-only delivery,
+  compatibility stage, or private transitional hierarchy. Independently scoped foundational
+  problems may remain precise TODOs behind proved boundaries, but required inverse/division
+  consumers and removals cannot be deferred.
+  First decide where total inversion is independently meaningful algebraic
   structure, where literature supports a total convention guarded by theorem hypotheses, and where an
   unsupported branch leaks into a claimed mathematical result.  A proof-bearing inverse is not
   automatically more faithful than a total inverse, and the audit must state the equations and
@@ -3645,6 +3664,12 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `a / 0 = 0` and derives `a % 0 = a` in
   `Mathlib/Algebra/EuclideanDomain/Defs.lean:159` and `:152`, respectively, while a nonzero
   Euclidean divisor need not be a unit and its quotient is not exact field division.
+  Reuse the property-level role of `IsField` and the existing `Units`/`divp` substrate; construct
+  units from existence evidence without restoring ambient total inverse through `IsField.toField`.
+  Test the actual hierarchy and automation, including Cramer solution and uniqueness, local
+  nonzero evidence, products versus sums, characteristic-sensitive denominators, negative powers,
+  and obligations that must survive simplification. Complete the affected local-domain analysis
+  interfaces and final-state verification in the same migration.
 
 - [ ] **Separate natural monus from partial subtraction and predecessor.**
   `Nat.sub` returns zero when the subtrahend is larger, and `Nat.pred 0 = 0`; the current source
@@ -3726,9 +3751,11 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   (`:122`, `:127`; `mgf_undef` and `cgf_undef` at lines 176 and 179, with `cgf` adding `log 0 = 0`),
   and `complexMGF` (`Mathlib/Probability/Moments/ComplexMGF.lean:72`; `complexMGF_undef`, line 74).
   Decide for each whether the public operation takes the integrability, interval integrability, or
-  circle integrability as evidence, or may keep the zero value as a consequence of the base
-  operation.  Theorems that hold only because both sides are fallback values are listed in the S
-  candidate on coinciding fallbacks.
+  circle integrability as evidence, or has another independently justified mathematical domain.
+  An inherited base zero fallback alone does not justify the derived operation. If the base
+  integral is a separately deferred foundational problem, prove that the selected operation uses
+  it on its valid domain and record the dependency. Theorems that hold only because both sides
+  are fallback values are listed in the S candidate on coinciding fallbacks.
 
 - [ ] **Audit `tsum`/`tprod` choice projections against `HasSum`/`HasProd`.**
   `tsum` and `tprod` in `Mathlib/Topology/Algebra/InfiniteSum/Defs.lean:132` and `:142` return zero
@@ -3737,11 +3764,10 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   projections.  Identify theorem statements or consumers that actually exploit fallback or
   nonuniqueness; do not infer that every syntactically unguarded term is a false statement.  Keeping
   zero or one under ordinary infinite-sum/product names outside the convergence domain requires
-  literature using those exact conventions.  Without it, keep the fallback only in a private
-  implementation helper whose branch cannot reach public statements, and make the relational or
-  summable boundary mathematician-facing.
-  Coordinate any accepted slice with dependent series, power-series evaluation, and the separate
-  `finsum`-based Euler-characteristic audit.
+  literature using those exact conventions. Without it, remove the selected projection's fallback
+  and make the relational or exact existence-and-uniqueness boundary mathematician-facing.
+  Coordinate the complete accepted scope with dependent series, power-series evaluation, and the
+  separate `finsum`-based Euler-characteristic audit.
   In particular, the analytic Dirichlet-density work above proves convergence and denominator
   positivity on its right-hand germ, but `NumberField.Set.primeIdealZetaSum` still has an
   unrestricted real input. Audit its public projection against its exact convergence domain.
@@ -3753,8 +3779,8 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   Their names and source docstrings disclose the zero/one result outside finite support, but that is
   not literature evidence for treating those values as finite sums or products.  Find mathematical
   sources using the same convention under the same operators.  Without such evidence, require finite
-  support at the public boundary and keep any total fallback private; audit `eulerChar` and other
-  consumers independently rather than inheriting the implementation convention.
+  support at the public boundary and remove the selected operation's total fallback; audit
+  `eulerChar` and other consumers independently rather than inheriting the implementation convention.
 
 - [ ] **Audit special-function extensions family by family.**
   `Real.log` (`Mathlib/Analysis/SpecialFunctions/Log/Basic.lean:44`) is absolute-value log off zero
@@ -3770,9 +3796,9 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   specifying laws, branch choices, and degenerate cases before proposing constrained carriers or
   renames.  The source's description of `Real.log` as an "unconventional extension" is not evidence
   for retaining it publicly.  A total definition needs matching literature for the same real/complex
-  domain and must be specified as an independent mathematical object; otherwise its fallback is only
-  a private transitional bridge.  Preserve the useful algebraic and analytic theorem families in
-  either design.
+  domain and must be specified as an independent mathematical object; otherwise remove its fallback
+  with the selected function's consumer migration. Preserve the useful algebraic and analytic theorem
+  families in either design.
 
 ## Representation fidelity lint -- total objects whose representation changes the semantics
 
@@ -3994,10 +4020,10 @@ linearity, or another invariant adds hypotheses or preservation content.
   consumers, taking account of whether the product is the actual domain and which equality
   orientation is the useful rewrite normal form.  Make the other spelling a documentation/search
   view or an inline transport through `Function.curry`/`Function.uncurry`, not another hand-written
-  proof.  If compatibility still requires a named entry, generate the exact transport mechanically
-  under the compatibility policy.  Preserve genuine Tonelli, Fubini, measurability, integrability,
-  and change-of-order results; migrate consumers together and negative-scan only the hand-maintained
-  duplicate proofs and any names the prototype actually retires.
+  proof. Remove retired presentation declarations rather than generating compatibility entries;
+  use canonical declarations or inline transport at call sites. Preserve genuine Tonelli, Fubini,
+  measurability, integrability, and change-of-order results; migrate consumers together and
+  negative-scan only the hand-maintained duplicate proofs and any names the prototype actually retires.
 
 - [ ] **[L] Add an elaborated-statement lint for redundant presentation declarations.**
   A 2026-09-12 source scan found 621 curry/uncurry-named declaration lines in 114 files among all
@@ -4153,9 +4179,9 @@ was found, and none should inherit validation merely from the earlier scan:
   conditional kernels have become their almost-everywhere classes.  `Function.invFun` and
   `Function.extend` remain separate audit candidates: first distinguish a legitimate chosen
   preimage or representative from a name or theorem that falsely asserts inverse laws.
-- [x] **An explicit default does not justify a public mathematical operation.**  A technical
-  representative constructor may remain only privately behind a proved boundary that makes its
-  fallback unreachable or proves representative independence.  The integration-facing
+- [x] **An explicit default does not justify a public mathematical operation.** Making the selected
+  operation's fallback constructor private is not a completed migration. Independently deferred
+  foundational dependencies follow the proved-boundary rule above. The integration-facing
   `ContinuousMap.mkD` was removed in favour of bundled representatives with an almost everywhere
   specification (entry above).
 - [x] **Conditional expectation and probability brackets are conventional secondary surfaces.**
