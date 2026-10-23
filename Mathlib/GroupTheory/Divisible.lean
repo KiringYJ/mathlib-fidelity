@@ -22,12 +22,12 @@ properties.
 
 * `DivisibleBy A α`: An additive monoid `A` is said to be divisible by `α` iff for all `n ≠ 0 ∈ α`
   and `y ∈ A`, there is an `x ∈ A` such that `n • x = y`. In this file, we adopt a constructive
-  approach, i.e. we ask for an explicit `div : A → α → A` function such that `div a 0 = 0` and
-  `n • div a n = a` for all `n ≠ 0 ∈ α`.
+  approach: division takes an explicit proof `hn : n ≠ 0`, and satisfies
+  `n • div a n hn = a`.
 * `RootableBy A α`: A monoid `A` is said to be rootable by `α` iff for all `n ≠ 0 ∈ α` and `y ∈ A`,
   there is an `x ∈ A` such that `x^n = y`. In this file, we adopt a constructive approach, i.e. we
-  ask for an explicit `root : A → α → A` function such that `root a 0 = 1` and `(root a n)ⁿ = a` for
-  all `n ≠ 0 ∈ α`.
+  ask for an explicit root function on nonzero indices, satisfying `(root a n hn)ⁿ = a` for
+  every proof `hn : n ≠ 0`.
 
 ## Main results
 
@@ -82,15 +82,13 @@ variable (A α : Type*) [AddMonoid A] [SMul α A] [Zero α]
 
 /--
 An `AddMonoid A` is `α`-divisible iff `n • x = a` has a solution for all `n ≠ 0 ∈ α` and `a ∈ A`.
-Here we adopt a constructive approach where we ask an explicit `div : A → α → A` function such that
-* `div a 0 = 0` for all `a ∈ A`
-* `n • div a n = a` for all `n ≠ 0 ∈ α` and `a ∈ A`.
+The constructive division function accepts only indices equipped with a proof `hn : n ≠ 0`,
+and satisfies `n • div a n hn = a`.
 -/
 class DivisibleBy where
   /-- The division function -/
-  div : A → α → A
-  div_zero : ∀ a, div a 0 = 0
-  div_cancel : ∀ {n : α} (a : A), n ≠ 0 → n • div a n = a
+  div : A → (n : α) → n ≠ 0 → A
+  div_cancel : ∀ {n : α} (a : A) (hn : n ≠ 0), n • div a n hn = a
 
 end AddMonoid
 
@@ -99,21 +97,20 @@ section Monoid
 variable (A α : Type*) [Monoid A] [Pow A α] [Zero α]
 
 /-- A `Monoid A` is `α`-rootable iff `xⁿ = a` has a solution for all `n ≠ 0 ∈ α` and `a ∈ A`.
-Here we adopt a constructive approach where we ask an explicit `root : A → α → A` function such that
-* `root a 0 = 1` for all `a ∈ A`
-* `(root a n)ⁿ = a` for all `n ≠ 0 ∈ α` and `a ∈ A`.
+The constructive root function accepts only indices equipped with a proof `hn : n ≠ 0`,
+and satisfies `(root a n hn)ⁿ = a`.
 -/
 @[to_additive]
 class RootableBy where
   /-- The root function -/
-  root : A → α → A
-  root_zero : ∀ a, root a 0 = 1
-  root_cancel : ∀ {n : α} (a : A), n ≠ 0 → root a n ^ n = a
+  root : A → (n : α) → n ≠ 0 → A
+  root_cancel : ∀ {n : α} (a : A) (hn : n ≠ 0), root a n hn ^ n = a
 
+omit [Monoid A] in
 @[to_additive DivisibleBy.surjective_smul]
 theorem RootableBy.surjective_pow [RootableBy A α] {n : α} (hn : n ≠ 0) :
     Function.Surjective fun a : A => a ^ n := fun x =>
-  ⟨RootableBy.root x n, RootableBy.root_cancel _ hn⟩
+  ⟨RootableBy.root x n hn, RootableBy.root_cancel _ hn⟩
 
 @[deprecated (since := "2026-04-19")] alias pow_left_surj_of_rootableBy :=
   RootableBy.surjective_pow
@@ -130,12 +127,8 @@ implies the textbook approach.
   constructive version implies the textbook approach. -/]
 noncomputable def rootableByOfPowLeftSurj
     (H : ∀ {n : α}, n ≠ 0 → Function.Surjective (fun a => a ^ n : A → A)) : RootableBy A α where
-  root a n := @dite _ (n = 0) (Classical.dec _) (fun _ => (1 : A)) fun hn => (H hn a).choose
-  root_zero _ := by exact dite_eq_left rfl
-  root_cancel a hn := by
-    dsimp only
-    rw [dite_eq_right hn]
-    exact (H hn a).choose_spec
+  root a _ hn := (H hn a).choose
+  root_cancel a hn := (H hn a).choose_spec
 
 section Pi
 
@@ -144,8 +137,7 @@ variable [Zero β] [∀ i : ι, Monoid (B i)] [∀ i, RootableBy (B i) β]
 
 @[to_additive]
 instance Pi.rootableBy : RootableBy (∀ i, B i) β where
-  root x n i := RootableBy.root (x i) n
-  root_zero _x := funext fun _i => RootableBy.root_zero _
+  root x n hn i := RootableBy.root (x i) n hn
   root_cancel _x hn := funext fun _i => RootableBy.root_cancel _ hn
 
 end Pi
@@ -157,8 +149,7 @@ variable [Zero β] [Monoid B] [Monoid B'] [RootableBy B β] [RootableBy B' β]
 
 @[to_additive]
 instance Prod.rootableBy : RootableBy (B × B') β where
-  root p n := (RootableBy.root p.1 n, RootableBy.root p.2 n)
-  root_zero _p := Prod.ext (RootableBy.root_zero _) (RootableBy.root_zero _)
+  root p n hn := (RootableBy.root p.1 n hn, RootableBy.root p.2 n hn)
   root_cancel _p hn := Prod.ext (RootableBy.root_cancel _ hn) (RootableBy.root_cancel _ hn)
 
 end Prod
@@ -167,8 +158,7 @@ section ULift
 
 @[to_additive]
 instance ULift.instRootableBy [RootableBy A α] : RootableBy (ULift A) α where
-  root x a := ULift.up <| RootableBy.root x.down a
-  root_zero x := ULift.ext _ _ <| RootableBy.root_zero x.down
+  root x a ha := ULift.up <| RootableBy.root x.down a ha
   root_cancel _ h := ULift.ext _ _ <| RootableBy.root_cancel _ h
 
 end ULift
@@ -181,29 +171,28 @@ variable (A : Type*) [AddCommGroup A]
 
 theorem smul_top_eq_top_of_divisibleBy_int [DivisibleBy A ℤ] {n : ℤ} (hn : n ≠ 0) :
     n • (⊤ : AddSubgroup A) = ⊤ :=
-  AddSubgroup.map_top_of_surjective _ fun a => ⟨DivisibleBy.div a n, DivisibleBy.div_cancel _ hn⟩
+  AddSubgroup.map_top_of_surjective _ fun a => ⟨DivisibleBy.div a n hn, DivisibleBy.div_cancel _ hn⟩
 
 /-- If for all `n ≠ 0 ∈ ℤ`, `n • A = A`, then `A` is divisible.
 -/
 @[instance_reducible]
 noncomputable def divisibleByIntOfSMulTopEqTop
     (H : ∀ {n : ℤ} (_hn : n ≠ 0), n • (⊤ : AddSubgroup A) = ⊤) : DivisibleBy A ℤ where
-  div a n :=
-    if hn : n = 0 then 0 else (show a ∈ n • (⊤ : AddSubgroup A) by rw [H hn]; trivial).choose
-  div_zero _ := dite_eq_left rfl
-  div_cancel a hn := by
-    simp_rw [dite_eq_right hn]
-    generalize_proofs h1
-    exact h1.choose_spec.2
+  div a n hn :=
+    (show a ∈ n • (⊤ : AddSubgroup A) by rw [H hn]; trivial).choose
+  div_cancel {n} a hn :=
+    (show a ∈ n • (⊤ : AddSubgroup A) by rw [H hn]; trivial).choose_spec.2
 
 end AddCommGroup
 
-instance (priority := 100) divisibleByIntOfCharZero {𝕜} [DivisionRing 𝕜] [CharZero 𝕜] :
+noncomputable instance (priority := 100) divisibleByIntOfCharZero {𝕜}
+    [DivisionRing 𝕜] [CharZero 𝕜] :
     DivisibleBy 𝕜 ℤ where
-  div q n := q / n
-  div_zero q := by simp
+  div q n hn := q /ₚ Units.mk0 (n : 𝕜) (Int.cast_ne_zero.mpr hn)
   div_cancel {n} q hn := by
-    rw [zsmul_eq_mul, (Int.cast_commute n _).eq, div_mul_cancel₀ q (Int.cast_ne_zero.mpr hn)]
+    rw [zsmul_eq_mul, (Int.cast_commute n _).eq]
+    simpa only [Units.val_mk0] using
+      divp_mul_cancel q (Units.mk0 (n : 𝕜) (Int.cast_ne_zero.mpr hn))
 
 namespace Group
 
@@ -215,11 +204,10 @@ open Int in
 @[to_additive (attr := instance_reducible)
   /-- An additive group is `ℤ`-divisible if it is `ℕ`-divisible. -/]
 def rootableByIntOfRootableByNat [RootableBy A ℕ] : RootableBy A ℤ where
-  root a z :=
-    match z with
-    | (n : ℕ) => RootableBy.root a n
-    | -[n+1] => (RootableBy.root a (n + 1))⁻¹
-  root_zero a := RootableBy.root_zero a
+  root a z hz :=
+    match z, hz with
+    | (n : ℕ), hn => RootableBy.root a n (by simpa using hn)
+    | -[n+1], _ => (RootableBy.root a (n + 1) (Nat.succ_ne_zero n))⁻¹
   root_cancel {n} a hn := by
     cases n
     · rw [Int.ofNat_eq_natCast, Nat.cast_ne_zero] at hn
@@ -231,8 +219,7 @@ def rootableByIntOfRootableByNat [RootableBy A ℕ] : RootableBy A ℤ where
 @[to_additive (attr := instance_reducible)
   /-- An additive group is `ℕ`-divisible if it `ℤ`-divisible. -/]
 def rootableByNatOfRootableByInt [RootableBy A ℤ] : RootableBy A ℕ where
-  root a n := RootableBy.root a (n : ℤ)
-  root_zero a := RootableBy.root_zero a
+  root a n hn := RootableBy.root a (n : ℤ) (by exact_mod_cast hn)
   root_cancel {n} a hn := by
     have := RootableBy.root_cancel a (show (n : ℤ) ≠ 0 from mod_cast hn)
     simpa
@@ -255,8 +242,8 @@ noncomputable def Function.Surjective.rootableBy (hf : Function.Surjective f)
     (hpow : ∀ (a : A) (n : α), f (a ^ n) = f a ^ n) : RootableBy B α :=
   rootableByOfPowLeftSurj _ _ fun {n} hn x =>
     let ⟨y, hy⟩ := hf x
-    ⟨f <| RootableBy.root y n,
-      (by rw [← hpow (RootableBy.root y n) n, RootableBy.root_cancel _ hn, hy] : _ ^ n = x)⟩
+    ⟨f <| RootableBy.root y n hn,
+      (by rw [← hpow (RootableBy.root y n hn) n, RootableBy.root_cancel _ hn, hy] : _ ^ n = x)⟩
 
 end Hom
 

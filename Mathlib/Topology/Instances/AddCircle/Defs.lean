@@ -563,14 +563,8 @@ theorem coe_equivIco_mk_apply (x : 𝕜) :
     (equivIco p 0 <| QuotientAddGroup.mk x : 𝕜) = Int.fract (x / p) * p :=
   toIcoMod_eq_fract_mul _ x
 
-instance : DivisibleBy (AddCircle p) ℤ where
-  div x n := (↑((n : 𝕜)⁻¹ * (equivIco p 0 x : 𝕜)) : AddCircle p)
-  div_zero x := by simp
-  div_cancel {n} x hn := by
-    replace hn : (n : 𝕜) ≠ 0 := by norm_cast
-    change n • QuotientAddGroup.mk' _ ((n : 𝕜)⁻¹ * ↑(equivIco p 0 x)) = x
-    rw [← map_zsmul, ← smul_mul_assoc, zsmul_eq_mul, mul_inv_cancel₀ hn, one_mul]
-    exact (equivIco p 0).symm_apply_apply x
+noncomputable instance : DivisibleBy (AddCircle p) ℤ :=
+  QuotientAddGroup.mk_surjective.divisibleBy _ fun _ _ => rfl
 
 omit [IsStrictOrderedRing 𝕜] in
 @[simp] lemma coe_fract (x : 𝕜) : (↑(Int.fract x) : AddCircle (1 : 𝕜)) = x := by
