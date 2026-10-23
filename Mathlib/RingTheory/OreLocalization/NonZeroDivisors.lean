@@ -41,52 +41,30 @@ instance nontrivial : Nontrivial R[R⁰⁻¹] :=
 
 variable [NoZeroDivisors R]
 
-open scoped Classical in
-/-- The inversion of Ore fractions for a ring without zero divisors, satisfying `0⁻¹ = 0` and
-`(r /ₒ r')⁻¹ = r' /ₒ r` for `r ≠ 0`. -/
-@[irreducible]
-protected noncomputable def inv : R[R⁰⁻¹] → R[R⁰⁻¹] :=
-  liftExpand
-    (fun r s =>
-      if hr : r = (0 : R) then (0 : R[R⁰⁻¹])
-      else s /ₒ ⟨r, mem_nonZeroDivisors_of_ne_zero hr⟩)
-    (by
-      intro r t s hst
-      by_cases hr : r = 0
-      · simp [hr]
-      · by_cases ht : t = 0
-        · exfalso
-          apply nonZeroDivisors.coe_ne_zero ⟨_, hst⟩
-          simp [ht]
-        · simp only [hr, ht, dite_eq_right, not_false_iff, or_self_iff, mul_eq_zero, smul_eq_mul]
-          apply OreLocalization.expand)
+/-- An Ore fraction with nonzero numerator is a unit. Its reciprocal is the fraction
+with numerator and denominator interchanged. -/
+def oreDivUnit (r : R) (s : R⁰) (hr : r ≠ 0) : (R[R⁰⁻¹])ˣ where
+  val := r /ₒ s
+  inv := (s : R) /ₒ ⟨r, mem_nonZeroDivisors_of_ne_zero hr⟩
+  val_inv := OreLocalization.mul_inv ⟨r, mem_nonZeroDivisors_of_ne_zero hr⟩ s
+  inv_val := OreLocalization.mul_inv s ⟨r, mem_nonZeroDivisors_of_ne_zero hr⟩
 
-noncomputable instance inv' : Inv R[R⁰⁻¹] :=
-  ⟨OreLocalization.inv⟩
+omit [Nontrivial R] in
+@[simp] theorem val_oreDivUnit (r : R) (s : R⁰) (hr : r ≠ 0) :
+    (oreDivUnit r s hr : R[R⁰⁻¹]) = r /ₒ s := rfl
 
-open scoped Classical in
-protected theorem inv_def {r : R} {s : R⁰} :
-    (r /ₒ s)⁻¹ =
-      if hr : r = (0 : R) then (0 : R[R⁰⁻¹])
-      else s /ₒ ⟨r, mem_nonZeroDivisors_of_ne_zero hr⟩ := by
-  with_unfolding_all rfl
+omit [Nontrivial R] in
+@[simp] theorem inv_oreDivUnit (r : R) (s : R⁰) (hr : r ≠ 0) :
+    (↑(oreDivUnit r s hr)⁻¹ : R[R⁰⁻¹]) =
+      (s : R) /ₒ ⟨r, mem_nonZeroDivisors_of_ne_zero hr⟩ := rfl
 
-protected theorem mul_inv_cancel (x : R[R⁰⁻¹]) (h : x ≠ 0) : x * x⁻¹ = 1 := by
-  induction x with | _ r s
-  rw [OreLocalization.inv_def, OreLocalization.one_def]
-  have hr : r ≠ 0 := by
-    rintro rfl
-    simp at h
-  simp only [hr]
-  with_unfolding_all apply OreLocalization.mul_inv ⟨r, _⟩
-
-protected theorem inv_zero : (0 : R[R⁰⁻¹])⁻¹ = 0 := by
-  rw [OreLocalization.zero_def, OreLocalization.inv_def]
-  simp
-
-noncomputable instance : GroupWithZero R[R⁰⁻¹] where
-  inv_zero := OreLocalization.inv_zero
-  mul_inv_cancel := OreLocalization.mul_inv_cancel
+instance : GroupWithZero R[R⁰⁻¹] where
+  isUnit_of_ne_zero {x} hx := by
+    induction x with | _ r s
+    have hr : r ≠ 0 := by
+      rintro rfl
+      simp at hx
+    exact ⟨oreDivUnit r s hr, rfl⟩
 
 end MonoidWithZero
 
@@ -94,7 +72,7 @@ section CommMonoidWithZero
 
 variable {R : Type*} [CommMonoidWithZero R] [Nontrivial R] [OreSet R⁰] [NoZeroDivisors R]
 
-noncomputable instance : CommGroupWithZero R[R⁰⁻¹] where
+instance : CommGroupWithZero R[R⁰⁻¹] where
 
 end CommMonoidWithZero
 

@@ -201,19 +201,22 @@ theorem numeratorHom_inj (hS : S ≤ nonZeroDivisorsLeft R) :
 
 end Ring
 
+open scoped nonZeroDivisors in
+/-- The standard localization at non-zero-divisors preserves characteristic zero. -/
+instance {R : Type*} [Ring R] [CharZero R] [OreSet R⁰] : CharZero R[R⁰⁻¹] where
+  cast_injective m n h := Nat.cast_injective <|
+    (numeratorHom_inj (R := R) (S := R⁰) inf_le_left) <|
+      (map_natCast (numeratorRingHom (R := R) (S := R⁰)) m).trans
+        (h.trans (map_natCast (numeratorRingHom (R := R) (S := R⁰)) n).symm)
+
 noncomputable section DivisionRing
 
 open nonZeroDivisors
 
 variable {R : Type*} [Ring R] [Nontrivial R] [NoZeroDivisors R] [OreSet R⁰]
 
-instance : DivisionRing R[R⁰⁻¹] where
-  mul_inv_cancel := OreLocalization.mul_inv_cancel
-  inv_zero := OreLocalization.inv_zero
-  nnqsmul := _
-  nnqsmul_def := fun _ _ => rfl
-  qsmul := _
-  qsmul_def := fun _ _ => rfl
+instance : DivisionRing R[R⁰⁻¹] :=
+  { (inferInstance : Ring R[R⁰⁻¹]), (inferInstance : GroupWithZero R[R⁰⁻¹]) with }
 
 end DivisionRing
 
