@@ -25,6 +25,7 @@ public import Mathlib.Tactic.ByCases
 public import Mathlib.Tactic.ByContra
 public import Mathlib.Tactic.CancelDenoms
 public import Mathlib.Tactic.CancelDenoms.Core
+public import Mathlib.Tactic.CancelDenoms.Denominator
 public import Mathlib.Tactic.Cases
 public import Mathlib.Tactic.CasesM
 public import Mathlib.Tactic.CategoryTheory.BicategoricalComp
@@ -224,6 +225,7 @@ public import Mathlib.Tactic.Linter.Lint
 public import Mathlib.Tactic.Linter.MinImports
 public import Mathlib.Tactic.Linter.Multigoal
 public import Mathlib.Tactic.Linter.OldObtain
+public import Mathlib.Tactic.Linter.OperatorFidelity
 public import Mathlib.Tactic.Linter.OverlappingInstances
 public import Mathlib.Tactic.Linter.PPRoundtrip
 public import Mathlib.Tactic.Linter.PrivateModule
@@ -263,6 +265,7 @@ public import Mathlib.Tactic.NormNum.Eq
 public import Mathlib.Tactic.NormNum.GCD
 public import Mathlib.Tactic.NormNum.Ineq
 public import Mathlib.Tactic.NormNum.Inv
+public import Mathlib.Tactic.NormNum.Inv.Basic
 public import Mathlib.Tactic.NormNum.Irrational
 public import Mathlib.Tactic.NormNum.IsCoprime
 public import Mathlib.Tactic.NormNum.IsSquare

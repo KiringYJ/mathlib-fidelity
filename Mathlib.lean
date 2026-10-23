@@ -533,6 +533,8 @@ public import Mathlib.Algebra.GroupWithZero.Action.Units
 public import Mathlib.Algebra.GroupWithZero.Associated
 public import Mathlib.Algebra.GroupWithZero.Basic
 public import Mathlib.Algebra.GroupWithZero.Center
+public import Mathlib.Algebra.GroupWithZero.Checked
+public import Mathlib.Algebra.GroupWithZero.CheckedHom
 public import Mathlib.Algebra.GroupWithZero.Commute
 public import Mathlib.Algebra.GroupWithZero.Conj
 public import Mathlib.Algebra.GroupWithZero.Defs
@@ -971,7 +973,9 @@ public import Mathlib.Algebra.Order.CompleteField
 public import Mathlib.Algebra.Order.Disjointed
 public import Mathlib.Algebra.Order.Field.Basic
 public import Mathlib.Algebra.Order.Field.Canonical
+public import Mathlib.Algebra.Order.Field.Checked
 public import Mathlib.Algebra.Order.Field.GeomSum
+public import Mathlib.Algebra.Order.Field.Halves
 public import Mathlib.Algebra.Order.Field.Pi
 public import Mathlib.Algebra.Order.Field.Pointwise
 public import Mathlib.Algebra.Order.Field.Power
@@ -5051,6 +5055,7 @@ public import Mathlib.Init
 public import Mathlib.Lean.ContextInfo
 public import Mathlib.Lean.CoreM
 public import Mathlib.Lean.Elab.InfoTree
+public import Mathlib.Lean.Elab.OperatorPolicy
 public import Mathlib.Lean.Elab.Tactic.Basic
 public import Mathlib.Lean.Elab.Tactic.Meta
 public import Mathlib.Lean.Elab.Term
@@ -7462,6 +7467,7 @@ public import Mathlib.Tactic.ByCases
 public import Mathlib.Tactic.ByContra
 public import Mathlib.Tactic.CancelDenoms
 public import Mathlib.Tactic.CancelDenoms.Core
+public import Mathlib.Tactic.CancelDenoms.Denominator
 public import Mathlib.Tactic.Cases
 public import Mathlib.Tactic.CasesM
 public import Mathlib.Tactic.CategoryTheory.BicategoricalComp
@@ -7661,6 +7667,7 @@ public import Mathlib.Tactic.Linter.Lint
 public import Mathlib.Tactic.Linter.MinImports
 public import Mathlib.Tactic.Linter.Multigoal
 public import Mathlib.Tactic.Linter.OldObtain
+public import Mathlib.Tactic.Linter.OperatorFidelity
 public import Mathlib.Tactic.Linter.OverlappingInstances
 public import Mathlib.Tactic.Linter.PPRoundtrip
 public import Mathlib.Tactic.Linter.PrivateModule
@@ -7700,6 +7707,7 @@ public import Mathlib.Tactic.NormNum.Eq
 public import Mathlib.Tactic.NormNum.GCD
 public import Mathlib.Tactic.NormNum.Ineq
 public import Mathlib.Tactic.NormNum.Inv
+public import Mathlib.Tactic.NormNum.Inv.Basic
 public import Mathlib.Tactic.NormNum.Irrational
 public import Mathlib.Tactic.NormNum.IsCoprime
 public import Mathlib.Tactic.NormNum.IsSquare
@@ -8532,6 +8540,7 @@ public import Mathlib.Util.AssertNoSorry
 public import Mathlib.Util.AtLocation
 public import Mathlib.Util.AtomM
 public import Mathlib.Util.AtomM.Recurse
+public import Mathlib.Util.CheckedOperations
 public import Mathlib.Util.CodeActions
 public import Mathlib.Util.CodeActions.BinderPlicity
 public import Mathlib.Util.CompileInductive
