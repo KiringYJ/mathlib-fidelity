@@ -85,24 +85,26 @@ theorem IsOpen.exists_between_affineIndependent_span_eq_top {s u : Set P} (hu : 
   obtain ⟨q, hq⟩ := hne
   obtain ⟨ε, ε0, hεu⟩ := Metric.nhds_basis_closedBall.mem_iff.1 (hu.mem_nhds <| hsu hq)
   obtain ⟨t, ht₁, ht₂, ht₃⟩ := exists_subset_affineIndependent_affineSpan_eq_top h
-  let f : P → P := fun y => lineMap q y (ε / dist y q)
-  have hf : ∀ y, f y ∈ u := by
-    refine fun y => hεu ?_
-    simp only [f]
+  have hdist (y : P) (hy : y ∉ s) : 0 < dist y q :=
+    dist_pos.mpr (ne_of_mem_of_not_mem hq hy).symm
+  let r (y : P) (hy : y ∉ s) : ℝ :=
+    Checked.div ε (dist y q) (GroupWithZero.isUnit_of_ne_zero (hdist y hy).ne')
+  have hr (y : P) (hy : y ∉ s) : 0 < r y hy := Checked.div_pos ε0 (hdist y hy)
+  have hf (y : P) (hy : y ∉ s) : lineMap q y (r y hy) ∈ u := by
+    apply hεu
     rw [Metric.mem_closedBall, lineMap_apply, dist_vadd_left, norm_smul, Real.norm_eq_abs,
-      dist_eq_norm_vsub V y q, abs_div, abs_of_pos ε0, abs_of_nonneg (norm_nonneg _), div_mul_comm]
-    exact mul_le_of_le_one_left ε0.le (div_self_le_one _)
-  have hεyq : ∀ y ∉ s, ε / dist y q ≠ 0 := fun y hy =>
-    div_ne_zero ε0.ne' (dist_ne_zero.2 (ne_of_mem_of_not_mem hq hy).symm)
+      abs_of_pos (hr y hy), ← dist_eq_norm_vsub V y q]
+    exact (Checked.div_mul_cancel ε (dist y q) _).le
   classical
-  let w : t → ℝˣ := fun p => if hp : (p : P) ∈ s then 1 else Units.mk0 _ (hεyq (↑p) hp)
+  let w : t → ℝˣ := fun p =>
+    if hp : (p : P) ∈ s then 1 else Units.mk0 (r p hp) (hr p hp).ne'
   refine ⟨Set.range fun p : t => lineMap q p (w p : ℝ), ?_, ?_, ?_, ?_⟩
   · intro p hp; use ⟨p, ht₁ hp⟩; simp [w, hp]
   · rintro y ⟨⟨p, hp⟩, rfl⟩
     by_cases hps : p ∈ s <;>
     simp only [w, hps, lineMap_apply_one, Units.val_mk0, dite_eq_right, dite_eq_left, not_false_iff,
       Units.val_one] <;>
-    [exact hsu hps; exact hf p]
+    [exact hsu hps; exact hf p hps]
   · exact (ht₂.units_lineMap ⟨q, ht₁ hq⟩ w).range
   · rw [affineSpan_eq_affineSpan_lineMap_units (ht₁ hq) w, ht₃]
 
@@ -125,10 +127,21 @@ theorem affineSpan_eq_top_of_nonempty_interior {s : Set V}
     (affineSpan_mono _ interior_subset).trans_eq (affineSpan_convexHull _)
 
 theorem AffineBasis.centroid_mem_interior_convexHull {ι} [Fintype ι] (b : AffineBasis ι ℝ V) :
-    Finset.univ.centroid ℝ b ∈ interior (convexHull ℝ (range b)) := by
+    Finset.univ.centroid ℝ b (by
+      have := b.nonempty
+      exact Nat.cast_ne_zero.mpr (Finset.card_ne_zero.mpr Finset.univ_nonempty)) ∈
+        interior (convexHull ℝ (range b)) := by
   have := b.nonempty
-  simp only [b.interior_convexHull, mem_ofPred_eq, b.coord_apply_centroid (Finset.mem_univ _),
-    inv_pos, Nat.cast_pos, Finset.card_pos, Finset.univ_nonempty, forall_true_iff]
+  have hs : ((Finset.univ : Finset ι).card : ℝ) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (Finset.card_ne_zero.mpr Finset.univ_nonempty)
+  rw [b.interior_convexHull]
+  change ∀ i, 0 < b.coord i (Finset.univ.centroid ℝ b hs)
+  intro i
+  rw [b.coord_apply_centroid (Finset.mem_univ i) hs]
+  apply (Units.inv_pos _).mpr
+  simpa only [Units.val_mk0] using
+    (Nat.cast_pos.mpr (Finset.card_pos.mpr Finset.univ_nonempty) :
+      (0 : ℝ) < (Finset.univ : Finset ι).card)
 
 theorem interior_convexHull_nonempty_iff_affineSpan_eq_top [FiniteDimensional ℝ V] {s : Set V} :
     (interior (convexHull ℝ s)).Nonempty ↔ affineSpan ℝ s = ⊤ := by

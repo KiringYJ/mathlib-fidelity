@@ -51,7 +51,7 @@ variable [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [AddCommGrou
 /-- Convex **Jensen's inequality**, `Finset.centerMass` version. -/
 theorem ConvexOn.map_centerMass_le (hf : ConvexOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 ≤ w i)
     (h₁ : 0 < ∑ i ∈ t, w i) (hmem : ∀ i ∈ t, p i ∈ s) :
-    f (t.centerMass w p) ≤ t.centerMass w (f ∘ p) := by
+    f (t.centerMass w p h₁.ne') ≤ t.centerMass w (f ∘ p) h₁.ne' := by
   have hmem' : ∀ i ∈ t, (p i, (f ∘ p) i) ∈ { p : E × β | p.1 ∈ s ∧ f p.1 ≤ p.2 } := fun i hi =>
     ⟨hmem i hi, le_rfl⟩
   convert! (hf.convex_epigraph.centerMass_mem h₀ h₁ hmem').2 <;>
@@ -60,14 +60,15 @@ theorem ConvexOn.map_centerMass_le (hf : ConvexOn 𝕜 s f) (h₀ : ∀ i ∈ t,
 /-- Concave **Jensen's inequality**, `Finset.centerMass` version. -/
 theorem ConcaveOn.le_map_centerMass (hf : ConcaveOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 ≤ w i)
     (h₁ : 0 < ∑ i ∈ t, w i) (hmem : ∀ i ∈ t, p i ∈ s) :
-    t.centerMass w (f ∘ p) ≤ f (t.centerMass w p) :=
+    t.centerMass w (f ∘ p) h₁.ne' ≤ f (t.centerMass w p h₁.ne') :=
   ConvexOn.map_centerMass_le (β := βᵒᵈ) hf h₀ h₁ hmem
 
 /-- Convex **Jensen's inequality**, `Finset.sum` version. -/
 theorem ConvexOn.map_sum_le (hf : ConvexOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 ≤ w i) (h₁ : ∑ i ∈ t, w i = 1)
     (hmem : ∀ i ∈ t, p i ∈ s) : f (∑ i ∈ t, w i • p i) ≤ ∑ i ∈ t, w i • f (p i) := by
-  simpa only [centerMass, h₁, inv_one, one_smul] using!
-    hf.map_centerMass_le h₀ (h₁.symm ▸ zero_lt_one) hmem
+  have h := hf.map_centerMass_le h₀ (h₁.symm ▸ zero_lt_one) hmem
+  rw [t.centerMass_eq_of_sum_1 p h₁, t.centerMass_eq_of_sum_1 (f ∘ p) h₁] at h
+  simpa only [Function.comp_apply] using h
 
 /-- Concave **Jensen's inequality**, `Finset.sum` version. -/
 theorem ConcaveOn.le_map_sum (hf : ConcaveOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 ≤ w i)
@@ -116,26 +117,41 @@ lemma StrictConvexOn.map_sum_lt (hf : StrictConvexOn 𝕜 s f) (h₀ : ∀ i ∈
   clear_value u
   subst ht
   simp only [sum_cons]
-  have := h₀ j <| by simp
-  have := h₀ k <| by simp
+  have hjpos := h₀ j <| by simp
+  have hkpos := h₀ k <| by simp
   let c := w j + w k
-  have hc : w j / c + w k / c = 1 := by simp [field, c]
+  have hcpos : 0 < c := add_pos hjpos hkpos
+  have hc0 : c ≠ 0 := hcpos.ne'
+  let uc := Units.mk0 c hc0
+  have huc : (uc : 𝕜) = c := rfl
+  have hucpos : 0 < (uc : 𝕜) := huc.symm ▸ hcpos
+  have hc : w j /ₚ uc + w k /ₚ uc = 1 := by
+    rw [Units.divp_add_divp_same]
+    change c /ₚ uc = 1
+    rw [← huc]
+    exact divp_self uc
+  have hcancel (x : 𝕜) : c * (x /ₚ uc) = x := by
+    change (uc : 𝕜) * (x /ₚ uc) = x
+    rw [mul_comm, divp_mul_cancel]
   calc f (w j • p j + (w k • p k + ∑ x ∈ u, w x • p x))
-    _ = f (c • ((w j / c) • p j + (w k / c) • p k) + ∑ x ∈ u, w x • p x) := by
+    _ = f (c • ((w j /ₚ uc) • p j + (w k /ₚ uc) • p k) + ∑ x ∈ u, w x • p x) := by
       congrm f ?_
-      match_scalars <;> simp [field, c]
-    _ ≤ c • f ((w j / c) • p j + (w k / c) • p k) + ∑ x ∈ u, w x • f (p x) :=
+      match_scalars <;> simp only [hcancel]
+    _ ≤ c • f ((w j /ₚ uc) • p j + (w k /ₚ uc) • p k) + ∑ x ∈ u, w x • f (p x) :=
       -- apply the usual Jensen's inequality w.r.t. the weighted average of the two distinguished
       -- points and all the other points
         hf.convexOn.map_add_sum_le (fun i hi ↦ (h₀ _ <| by simp [hi]).le)
           (by simpa [-cons_eq_insert, ← add_assoc] using h₁)
           (forall_of_forall_cons <| forall_of_forall_cons hmem) (by positivity) <| by
-           refine hf.1 (hmem _ <| by simp) (hmem _ <| by simp) ?_ ?_ hc <;> positivity
-    _ < c • ((w j / c) • f (p j) + (w k / c) • f (p k)) + ∑ x ∈ u, w x • f (p x) := by
+           exact hf.1 (hmem _ <| by simp) (hmem _ <| by simp)
+             (divp_pos hjpos hucpos).le (divp_pos hkpos hucpos).le hc
+    _ < c • ((w j /ₚ uc) • f (p j) + (w k /ₚ uc) • f (p k)) + ∑ x ∈ u, w x • f (p x) := by
       -- then apply the definition of strict convexity for the two distinguished points
-      gcongr; refine hf.2 (hmem _ <| by simp) (hmem _ <| by simp) hjk ?_ ?_ hc <;> positivity
+      gcongr
+      exact hf.2 (hmem _ <| by simp) (hmem _ <| by simp) hjk
+        (divp_pos hjpos hucpos) (divp_pos hkpos hucpos) hc
     _ = (w j • f (p j) + w k • f (p k)) + ∑ x ∈ u, w x • f (p x) := by
-      match_scalars <;> simp [field, c]
+      match_scalars <;> simp only [hcancel]
     _ = w j • f (p j) + (w k • f (p k) + ∑ x ∈ u, w x • f (p x)) := by abel_nf
 
 /-- Concave **strict Jensen inequality**.
@@ -341,7 +357,7 @@ variable [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [AddCommGrou
 theorem ConvexOn.le_sup_of_mem_convexHull {t : Finset E} (hf : ConvexOn 𝕜 s f) (hts : ↑t ⊆ s)
     (hx : x ∈ convexHull 𝕜 (t : Set E)) :
     f x ≤ t.sup' (coe_nonempty.1 <| convexHull_nonempty_iff.1 ⟨x, hx⟩) f := by
-  obtain ⟨w, hw₀, hw₁, rfl⟩ := mem_convexHull.1 hx
+  obtain ⟨w, hw₁, hw₀, rfl⟩ := mem_convexHull.1 hx
   exact (hf.map_centerMass_le hw₀ (by positivity) hts).trans
     (centerMass_le_sup hw₀ <| by positivity)
 
@@ -354,15 +370,26 @@ theorem ConvexOn.inf_le_of_mem_convexHull {t : Finset E} (hf : ConcaveOn 𝕜 s 
 `s` is less than the value it takes on one of those points. -/
 lemma ConvexOn.exists_ge_of_centerMass {t : Finset ι} (h : ConvexOn 𝕜 s f)
     (hw₀ : ∀ i ∈ t, 0 ≤ w i) (hw₁ : 0 < ∑ i ∈ t, w i) (hp : ∀ i ∈ t, p i ∈ s) :
-    ∃ i ∈ t, f (t.centerMass w p) ≤ f (p i) := by
-  set y := t.centerMass w p
+    ∃ i ∈ t, f (t.centerMass w p hw₁.ne') ≤ f (p i) := by
+  set y := t.centerMass w p hw₁.ne'
   -- TODO: can `rsuffices` be used to write the `exact` first, then the proof of this obtain?
   obtain ⟨i, hi, hfi⟩ : ∃ i ∈ {i ∈ t | w i ≠ 0}, w i • f y ≤ w i • (f ∘ p) i := by
     have hw' : (0 : 𝕜) < ∑ i ∈ t with w i ≠ 0, w i := by rwa [sum_filter_ne_zero]
     refine exists_le_of_sum_le (nonempty_of_sum_ne_zero hw'.ne') ?_
-    rw [← sum_smul, ← smul_le_smul_iff_of_pos_left (inv_pos.2 hw'), inv_smul_smul₀ hw'.ne', ←
-      centerMass, centerMass_filter_ne_zero]
-    exact h.map_centerMass_le hw₀ hw₁ hp
+    have hle := h.map_centerMass_le
+      (t := {i ∈ t | w i ≠ 0}) (w := w) (p := p)
+      (fun i hi ↦ hw₀ i (mem_filter.mp hi).1) hw'
+      (fun i hi ↦ hp i (mem_filter.mp hi).1)
+    have hs := smul_le_smul_of_nonneg_left hle hw'.le
+    rw [← sum_smul]
+    have hcoef :
+        (∑ i ∈ t with w i ≠ 0, w i) *
+          (↑(Units.mk0 (∑ i ∈ t with w i ≠ 0, w i) hw'.ne')⁻¹ : 𝕜) = 1 := by
+      change (↑(Units.mk0 (∑ i ∈ t with w i ≠ 0, w i) hw'.ne') : 𝕜) *
+        (↑(Units.mk0 (∑ i ∈ t with w i ≠ 0, w i) hw'.ne')⁻¹ : 𝕜) = 1
+      exact Units.mul_inv _
+    simpa only [y, ← centerMass_filter_ne_zero (t := t) (w := w) p hw₁.ne', centerMass, smul_smul,
+      hcoef, one_smul] using hs
   rw [mem_filter] at hi
   exact ⟨i, hi.1, (smul_le_smul_iff_of_pos_left <| (hw₀ i hi.1).lt_of_ne hi.2.symm).1 hfi⟩
 
@@ -370,14 +397,15 @@ lemma ConvexOn.exists_ge_of_centerMass {t : Finset ι} (h : ConvexOn 𝕜 s f)
 `s` is greater than the value it takes on one of those points. -/
 lemma ConcaveOn.exists_le_of_centerMass {t : Finset ι} (h : ConcaveOn 𝕜 s f)
     (hw₀ : ∀ i ∈ t, 0 ≤ w i) (hw₁ : 0 < ∑ i ∈ t, w i) (hp : ∀ i ∈ t, p i ∈ s) :
-    ∃ i ∈ t, f (p i) ≤ f (t.centerMass w p) := h.dual.exists_ge_of_centerMass hw₀ hw₁ hp
+    ∃ i ∈ t, f (p i) ≤ f (t.centerMass w p hw₁.ne') :=
+  h.dual.exists_ge_of_centerMass hw₀ hw₁ hp
 
 /-- **Maximum principle** for convex functions. If a function `f` is convex on the convex hull of
 `s`, then the eventual maximum of `f` on `convexHull 𝕜 s` lies in `s`. -/
 lemma ConvexOn.exists_ge_of_mem_convexHull {t : Set E} (hf : ConvexOn 𝕜 s f) (hts : t ⊆ s)
     (hx : x ∈ convexHull 𝕜 t) : ∃ y ∈ t, f x ≤ f y := by
   rw [_root_.convexHull_eq] at hx
-  obtain ⟨α, t, w, p, hw₀, hw₁, hp, rfl⟩ := hx
+  obtain ⟨α, t, w, p, hw₁, hw₀, hp, rfl⟩ := hx
   obtain ⟨i, hit, Hi⟩ := hf.exists_ge_of_centerMass hw₀ (hw₁.symm ▸ zero_lt_one)
     fun i hi ↦ hts (hp i hi)
   exact ⟨p i, hp i hit, Hi⟩

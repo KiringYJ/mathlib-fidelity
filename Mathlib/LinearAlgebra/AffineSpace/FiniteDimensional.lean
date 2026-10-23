@@ -634,11 +634,11 @@ theorem Collinear.mem_affineSpan_of_mem_of_ne {s : Set P} (h : Collinear k s) {p
   rcases h p₂ hp₂ with ⟨r₂, rfl⟩
   rcases h p₃ hp₃ with ⟨r₃, rfl⟩
   rw [vadd_left_mem_affineSpan_pair]
-  refine ⟨r₃ / r₂, ?_⟩
   have h₂ : r₂ ≠ 0 := by
     rintro rfl
     simp at hp₁p₂
-  simp [smul_smul, h₂]
+  refine ⟨r₃ / r₂, ?_⟩
+  simp only [smul_smul, Checked.div_mul_cancel]
 
 /-- The affine span of any two distinct points of a collinear set of points equals the affine
 span of the whole set. -/

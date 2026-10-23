@@ -50,7 +50,6 @@ theorem radon_partition {f : ι → E} (h : ¬ AffineIndependent 𝕜 f) :
   obtain ⟨s, w, h_wsum, h_vsum, nonzero_w_index, h1, h2⟩ := h
   let I : Finset ι := {i ∈ s | 0 ≤ w i}
   let J : Finset ι := {i ∈ s | w i < 0}
-  let p : E := centerMass I w f -- point of intersection
   have hJI : ∑ j ∈ J, w j + ∑ i ∈ I, w i = 0 := by
     simpa only [h_wsum, not_lt] using sum_filter_add_sum_filter_not s (fun i ↦ w i < 0) w
   have hI : 0 < ∑ i ∈ I, w i := by
@@ -58,8 +57,11 @@ theorem radon_partition {f : ι → E} (h : ¬ AffineIndependent 𝕜 f) :
       with ⟨pos_w_index, h1', h2'⟩
     exact sum_pos' (fun _i hi ↦ (mem_filter.1 hi).2)
       ⟨pos_w_index, by simp only [I, mem_filter, h1', h2'.le, and_self, h2']⟩
-  have hp : centerMass J w f = p := centerMass_of_sum_add_sum_eq_zero hJI <| by
+  have hJ : ∑ j ∈ J, w j ≠ 0 := by linarith only [hI, hJI]
+  let p : E := centerMass I w f hI.ne' -- point of intersection
+  have hp : centerMass J w f hJ = p := centerMass_of_sum_add_sum_eq_zero hJI (by
     simpa only [← h_vsum, not_lt] using sum_filter_add_sum_filter_not s (fun i ↦ w i < 0) _
+    ) hJ hI.ne'
   refine ⟨I, p, ?_, ?_⟩
   · exact centerMass_mem_convexHull _ (fun _i hi ↦ (mem_filter.mp hi).2) hI
       (fun _i hi ↦ mem_image_of_mem _ hi)

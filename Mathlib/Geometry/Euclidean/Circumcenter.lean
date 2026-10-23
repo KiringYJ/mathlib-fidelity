@@ -63,6 +63,12 @@ theorem existsUnique_dist_eq_of_insert {s : AffineSubspace ℝ P}
   let y := dist p (orthogonalProjection s p)
   have hy0 : y ≠ 0 := dist_orthogonalProjection_ne_zero_of_notMem hp
   let ycc₂ := (x * x + y * y - cr * cr) / (2 * y)
+  have hycc₂ : |ycc₂ / y| * y = |ycc₂| := by
+    calc
+      |ycc₂ / y| * y = |ycc₂ / y| * |y| := by
+        rw [abs_of_nonneg (show 0 ≤ y from dist_nonneg)]
+      _ = |(ycc₂ / y) * y| := (abs_mul _ _).symm
+      _ = |ycc₂| := congrArg abs (Checked.div_mul_cancel _ _ _)
   let cc₂ := (ycc₂ / y) • (p -ᵥ orthogonalProjection s p : V) +ᵥ cc
   let cr₂ := √(cr * cr + ycc₂ * ycc₂)
   use ⟨cc₂, cr₂⟩
@@ -91,8 +97,7 @@ theorem existsUnique_dist_eq_of_insert {s : AffineSubspace ℝ P}
       · rw [dist_sq_eq_dist_orthogonalProjection_sq_add_dist_orthogonalProjection_sq _ (hps hp₁),
           orthogonalProjection_vadd_smul_vsub_orthogonalProjection _ _ hcc, Subtype.coe_mk,
           dist_of_mem_subset_mk_sphere hp₁ hcr, dist_eq_norm_vsub V cc₂ cc, vadd_vsub, norm_smul, ←
-          dist_eq_norm_vsub V, Real.norm_eq_abs, abs_div, abs_of_nonneg dist_nonneg,
-          div_mul_cancel₀ _ hy0, abs_mul_abs_self]
+          dist_eq_norm_vsub V, Real.norm_eq_abs, hycc₂, abs_mul_abs_self]
   · rintro ⟨cc₃, cr₃⟩ ⟨hcc₃, hcr₃⟩
     simp only at hcc₃ hcr₃
     obtain ⟨t₃, cc₃', hcc₃', hcc₃''⟩ :
@@ -297,11 +302,10 @@ lemma circumcenter_ne_point {n : ℕ} (s : Simplex ℝ P (n + 1)) (i : Fin (n + 
 
 /-- The circumcenter of a 1-simplex equals its centroid. -/
 theorem circumcenter_eq_centroid (s : Simplex ℝ P 1) :
-    s.circumcenter = Finset.univ.centroid ℝ s.points := by
+    s.circumcenter = s.centroid := by
   have hr :
     Set.Pairwise Set.univ fun i j : Fin 2 =>
-      dist (s.points i) (Finset.univ.centroid ℝ s.points) =
-        dist (s.points j) (Finset.univ.centroid ℝ s.points) := by
+      dist (s.points i) s.centroid = dist (s.points j) s.centroid := by
     intro i hi j hj hij
     rw [Finset.centroid_pair_fin, dist_eq_norm_vsub V (s.points i),
       dist_eq_norm_vsub V (s.points j), vsub_vadd_eq_vsub_sub, vsub_vadd_eq_vsub_sub, ←
@@ -511,33 +515,29 @@ theorem point_eq_affineCombination_of_pointsWithCircumcenter {n : ℕ} (s : Simp
 
 /-- The weights for the centroid of some vertices of a simplex, in
 terms of `pointsWithCircumcenter`. -/
-def centroidWeightsWithCircumcenter {n : ℕ} (fs : Finset (Fin (n + 1))) :
+def centroidWeightsWithCircumcenter {n : ℕ} (fs : Finset (Fin (n + 1))) (hfs : fs.Nonempty) :
     PointsWithCircumcenterIndex n → ℝ
-  | pointIndex i => if i ∈ fs then (#fs : ℝ)⁻¹ else 0
+  | pointIndex i => fs.centroidWeightsIndicator ℝ
+      (Nat.cast_ne_zero.mpr (Finset.card_ne_zero.mpr hfs)) i
   | circumcenterIndex => 0
 
 /-- `centroidWeightsWithCircumcenter` sums to 1, if the `Finset` is nonempty. -/
 @[simp]
 theorem sum_centroidWeightsWithCircumcenter {n : ℕ} {fs : Finset (Fin (n + 1))} (h : fs.Nonempty) :
-    ∑ i, centroidWeightsWithCircumcenter fs i = 1 := by
-  simp_rw [sum_pointsWithCircumcenter, centroidWeightsWithCircumcenter, add_zero, ←
-    fs.sum_centroidWeights_eq_one_of_nonempty ℝ h, ← sum_indicator_subset _ fs.subset_univ]
-  rcongr
+    ∑ i, centroidWeightsWithCircumcenter fs h i = 1 := by
+  simp only [sum_pointsWithCircumcenter, centroidWeightsWithCircumcenter, add_zero]
+  exact fs.sum_centroidWeightsIndicator_eq_one_of_nonempty ℝ h
 
 /-- The centroid of some vertices of a simplex, in terms of `pointsWithCircumcenter`. -/
 theorem centroid_eq_affineCombination_of_pointsWithCircumcenter {n : ℕ} (s : Simplex ℝ P n)
-    (fs : Finset (Fin (n + 1))) :
-    fs.centroid ℝ s.points =
+    (fs : Finset (Fin (n + 1))) (hfs : fs.Nonempty) :
+    fs.centroid ℝ s.points (Nat.cast_ne_zero.mpr (Finset.card_ne_zero.mpr hfs)) =
       (univ : Finset (PointsWithCircumcenterIndex n)).affineCombination ℝ s.pointsWithCircumcenter
-        (centroidWeightsWithCircumcenter fs) := by
-  simp_rw [centroid_def, affineCombination_apply, weightedVSubOfPoint_apply,
+        (centroidWeightsWithCircumcenter fs hfs) := by
+  simp only [Finset.centroid_eq_affineCombination_fintype,
+    affineCombination_apply, weightedVSubOfPoint_apply,
     sum_pointsWithCircumcenter, centroidWeightsWithCircumcenter,
-    pointsWithCircumcenter_point, zero_smul, add_zero, centroidWeights,
-    ← sum_indicator_subset_of_eq_zero (Function.const (Fin (n + 1)) (#fs : ℝ)⁻¹)
-      (fun i wi => wi • (s.points i -ᵥ Classical.choice AddTorsor.nonempty)) fs.subset_univ fun _ =>
-      zero_smul ℝ _,
-    Set.indicator_apply]
-  congr
+    pointsWithCircumcenter_point, zero_smul, add_zero]
 
 /-- The weights for the circumcenter of a simplex, in terms of `pointsWithCircumcenter`. -/
 def circumcenterWeightsWithCircumcenter (n : ℕ) : PointsWithCircumcenterIndex n → ℝ
@@ -588,6 +588,7 @@ theorem reflection_circumcenter_eq_affineCombination_of_pointsWithCircumcenter {
       (univ : Finset (PointsWithCircumcenterIndex n)).affineCombination ℝ s.pointsWithCircumcenter
         (reflectionCircumcenterWeightsWithCircumcenter i₁ i₂) := by
   have hc : #{i₁, i₂} = 2 := by simp [h]
+  have hinv : (↑(Units.mk0 (2 : ℝ) (by checked_nonzero))⁻¹ : ℝ) = (2 : ℝ)⁻¹ := rfl
   -- Making the next line a separate definition helps the elaborator:
   set W : AffineSubspace ℝ P := affineSpan ℝ (s.points '' {i₁, i₂})
   have h_faces :
@@ -597,14 +598,17 @@ theorem reflection_circumcenter_eq_affineCombination_of_pointsWithCircumcenter {
     simp [W]
   rw [reflection_apply', h_faces, s.orthogonalProjection_circumcenter hc,
     circumcenter_eq_centroid, s.face_centroid_eq_centroid hc,
-    centroid_eq_affineCombination_of_pointsWithCircumcenter,
+    centroid_eq_affineCombination_of_pointsWithCircumcenter s {i₁, i₂} (by simp),
     circumcenter_eq_affineCombination_of_pointsWithCircumcenter, ← @vsub_eq_zero_iff_eq V,
     affineCombination_vsub, weightedVSub_vadd_affineCombination, affineCombination_vsub,
     weightedVSub_apply, sum_pointsWithCircumcenter]
   simp_rw [Pi.sub_apply, Pi.add_apply, Pi.sub_apply, sub_smul, add_smul, sub_smul,
-    centroidWeightsWithCircumcenter, circumcenterWeightsWithCircumcenter,
+    centroidWeightsWithCircumcenter, Finset.centroidWeightsIndicator_def,
+    Set.indicator_apply, Finset.centroidWeights_apply, Finset.mem_coe,
+    Finset.mem_insert, Finset.mem_singleton, circumcenterWeightsWithCircumcenter,
     reflectionCircumcenterWeightsWithCircumcenter, ite_smul, zero_smul, sub_zero,
-    apply_ite₂ (· + ·), add_zero, ← add_smul, hc, zero_sub, neg_smul, sub_self, add_zero]
+    apply_ite₂ (· + ·), add_zero, ← add_smul, hc, Nat.cast_ofNat, hinv,
+    zero_sub, neg_smul, sub_self, add_zero]
   convert! sum_const_zero
   norm_num
 

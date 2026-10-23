@@ -66,77 +66,149 @@ the intersection of the Monge planes, where a Monge plane is the
 (n-1)-dimensional affine subspace of the subspace spanned by the
 simplex that passes through the centroid of an (n-2)-dimensional face
 and is orthogonal to the opposite edge (in 2 dimensions, this is the
-same as an altitude).  The circumcenter O, centroid G and Monge point
-M are collinear in that order on the Euler line, with OG : GM = (n-1): 2.
-Here, we use that ratio to define the Monge point (so resulting
-in a point that equals the centroid in 0 or 1 dimensions), and then
-show in subsequent lemmas that the point so defined lies in the Monge
-planes and is their unique point of intersection. -/
-def mongePoint {n : ℕ} (s : Simplex ℝ P n) : P :=
-  (((n + 1 : ℕ) : ℝ) / ((n - 1 : ℕ) : ℝ)) •
-      ((univ : Finset (Fin (n + 1))).centroid ℝ s.points -ᵥ s.circumcenter) +ᵥ
-    s.circumcenter
+same as an altitude). The circumcenter O, centroid G and Monge point M satisfy
+`(n - 1) • (M - O) = (n + 1) • (G - O)` in dimensions at least two.
+The zero-dimensional case is the unique vertex of its affine span. In dimension one the
+Monge-plane conditions do not determine a point, so the point-valued operation excludes it. -/
+def mongePoint {n : ℕ} (s : Simplex ℝ P n) (hn : n ≠ 1 := by omega) : P :=
+  if h0 : n = 0 then s.centroid else
+    (((n + 1 : ℕ) : ℝ) /ₚ
+      Units.mk0 ((n - 1 : ℕ) : ℝ) (Nat.cast_ne_zero.mpr (by omega))) •
+        (s.centroid -ᵥ s.circumcenter) +ᵥ s.circumcenter
+
+/-- The intrinsic Monge condition, including membership in the affine span. A pair of vertices
+contributes an orthogonality condition only when its opposite face is nonempty. -/
+def IsMongePoint {n : ℕ} (s : Simplex ℝ P n) (p : P) : Prop :=
+  p ∈ affineSpan ℝ (Set.range s.points) ∧
+    ∀ (i j : Fin (n + 1)) (h : ({i, j}ᶜ : Finset (Fin (n + 1))).Nonempty),
+      ⟪p -ᵥ ({i, j}ᶜ : Finset (Fin (n + 1))).centroid ℝ s.points
+          (Nat.cast_ne_zero.mpr (card_ne_zero.mpr h)), s.points i -ᵥ s.points j⟫ = 0
+
+theorem isMongePoint_zero_iff (s : Simplex ℝ P 0) (p : P) :
+    s.IsMongePoint p ↔ p = s.points 0 := by
+  have hrange : Set.range s.points = {s.points 0} := by simp
+  constructor
+  · intro h
+    simpa only [hrange, mem_affineSpan_singleton] using h.1
+  · rintro rfl
+    refine ⟨mem_affineSpan _ (Set.mem_range_self _), ?_⟩
+    intro i j _
+    have hij : i = j := Subsingleton.elim _ _
+    simp [hij]
+
+theorem isMongePoint_one_iff (s : Simplex ℝ P 1) (p : P) :
+    s.IsMongePoint p ↔ p ∈ affineSpan ℝ (Set.range s.points) := by
+  refine ⟨And.left, fun hp ↦ ⟨hp, ?_⟩⟩
+  intro i j h
+  by_cases hij : i = j
+  · simp [hij]
+  · have hcard := card_pos.mpr h
+    simp [card_compl, hij] at hcard
+
+theorem not_existsUnique_isMongePoint_one (s : Simplex ℝ P 1) :
+    ¬∃! p, s.IsMongePoint p := by
+  rintro ⟨p, _, hu⟩
+  have h0 : s.IsMongePoint (s.points 0) :=
+    (s.isMongePoint_one_iff _).mpr (mem_affineSpan _ (Set.mem_range_self _))
+  have h1 : s.IsMongePoint (s.points 1) :=
+    (s.isMongePoint_one_iff _).mpr (mem_affineSpan _ (Set.mem_range_self _))
+  have he := s.independent.injective ((hu _ h0).trans (hu _ h1).symm)
+  exact (by decide : (0 : Fin 2) ≠ 1) he
+
+@[simp] theorem mongePoint_zero_eq (s : Simplex ℝ P 0) :
+    s.mongePoint = s.points 0 := by
+  have hrange : Set.range s.points = {s.points 0} := by simp
+  have h := s.centroid_mem_affineSpan
+  rw [hrange, mem_affineSpan_singleton] at h
+  simpa [mongePoint] using h
+
+theorem existsUnique_isMongePoint_zero (s : Simplex ℝ P 0) : ∃! p, s.IsMongePoint p := by
+  refine ⟨s.points 0, (s.isMongePoint_zero_iff _).mpr rfl, ?_⟩
+  intro p hp
+  exact (s.isMongePoint_zero_iff p).mp hp
 
 /-- The position of the Monge point in relation to the circumcenter
 and centroid. -/
-theorem mongePoint_eq_smul_vsub_vadd_circumcenter {n : ℕ} (s : Simplex ℝ P n) :
-    s.mongePoint =
-      (((n + 1 : ℕ) : ℝ) / ((n - 1 : ℕ) : ℝ)) •
-          ((univ : Finset (Fin (n + 1))).centroid ℝ s.points -ᵥ s.circumcenter) +ᵥ
-        s.circumcenter :=
-  rfl
+theorem mongePoint_eq_smul_vsub_vadd_circumcenter {n : ℕ} (s : Simplex ℝ P n)
+    (hn : 2 ≤ n := by omega) :
+    s.mongePoint (by omega) =
+      (((n + 1 : ℕ) : ℝ) /ₚ
+        Units.mk0 ((n - 1 : ℕ) : ℝ) (Nat.cast_ne_zero.mpr (by omega))) •
+          (s.centroid -ᵥ s.circumcenter) +ᵥ s.circumcenter := by
+  simp only [mongePoint, dif_neg (show n ≠ 0 by omega)]
 
-@[simp] lemma mongePoint_reindex {m n : ℕ} (s : Simplex ℝ P n) (e : Fin (n + 1) ≃ Fin (m + 1)) :
-    (s.reindex e).mongePoint = s.mongePoint := by
-  simp_rw [mongePoint, circumcenter_reindex, centroid_def, reindex]
+/-- The denominator-free Euler-line relation for the Monge point. -/
+theorem smul_mongePoint_vsub_circumcenter_eq_smul_centroid_vsub {n : ℕ}
+    (s : Simplex ℝ P n) (hn : 2 ≤ n) :
+    ((n - 1 : ℕ) : ℝ) • (s.mongePoint (by omega) -ᵥ s.circumcenter) =
+      ((n + 1 : ℕ) : ℝ) • (s.centroid -ᵥ s.circumcenter) := by
+  rw [mongePoint_eq_smul_vsub_vadd_circumcenter s hn, vadd_vsub, smul_smul]
+  congr 1
+  rw [mul_comm]
+  exact divp_mul_cancel _ (Units.mk0 _ (Nat.cast_ne_zero.mpr (by omega)))
+
+@[simp] lemma mongePoint_reindex {m n : ℕ} (s : Simplex ℝ P n)
+    (e : Fin (n + 1) ≃ Fin (m + 1)) (hn : n ≠ 1 := by omega) :
+    (s.reindex e).mongePoint (by
+      have hnm : n = m := by simpa using Fintype.card_eq.2 ⟨e⟩
+      simpa only [← hnm] using hn) = s.mongePoint hn := by
   obtain rfl : n = m := by simpa using Fintype.card_eq.2 ⟨e⟩
-  congr 3
-  convert! Finset.univ.affineCombination_map e.toEmbedding _ _ <;> simp [Function.comp_assoc]
+  simp only [mongePoint, circumcenter_reindex, centroid_reindex]
 
 @[simp]
 theorem mongePoint_map {V₂ P₂ : Type*} [NormedAddCommGroup V₂] [InnerProductSpace ℝ V₂]
     [MetricSpace P₂] [NormedAddTorsor V₂ P₂]
-    {n : ℕ} (s : Simplex ℝ P n) (f : P →ᵃⁱ[ℝ] P₂) :
-    (s.map f.toAffineMap f.injective).mongePoint = f s.mongePoint := by
-  simp_rw [mongePoint_eq_smul_vsub_vadd_circumcenter]
-  rw [← Simplex.centroid, ← Simplex.centroid]
-  simp [centroid_map, circumcenter_map]
+    {n : ℕ} (s : Simplex ℝ P n) (f : P →ᵃⁱ[ℝ] P₂) (hn : n ≠ 1 := by omega) :
+    (s.map f.toAffineMap f.injective).mongePoint hn = f (s.mongePoint hn) := by
+  by_cases h0 : n = 0 <;> simp [mongePoint, h0, centroid_map, circumcenter_map]
 
 /-- **Sylvester's theorem**: The position of the Monge point relative to the circumcenter via the
 sum of vectors to the vertices. -/
 theorem smul_mongePoint_vsub_circumcenter_eq_sum_vsub {n : ℕ} (s : Simplex ℝ P (n + 2)) :
     (n + 1) • (s.mongePoint -ᵥ s.circumcenter) = ∑ i, (s.points i -ᵥ s.circumcenter) := by
-  rw [mongePoint_eq_smul_vsub_vadd_circumcenter, vadd_vsub, ← smul_assoc]
-  simp only [Nat.cast_add, Nat.cast_ofNat, Nat.cast_one, Nat.add_one_sub_one, nsmul_eq_mul]
-  field_simp
-  have h : Invertible (n + 2 + 1 : ℝ) := by norm_cast; apply invertibleOfPos
-  rw [smul_eq_iff_eq_invOf_smul, smul_sum]
-  rw [univ_centroid_eq, centroid_eq_affineCombination]
-  rw [← Finset.sum_smul_vsub_const_eq_affineCombination_vsub _ _ _ _ (by simp)]
-  simp only [centroidWeights_apply, card_univ, Fintype.card_fin, Nat.cast_add, Nat.cast_ofNat,
-    Nat.cast_one, invOf_eq_inv]
+  have hm := s.smul_mongePoint_vsub_circumcenter_eq_smul_centroid_vsub (by omega)
+  have hc := congrArg (fun v : V ↦ ((n + 2 : ℕ) + 1 : ℝ) • v)
+    (s.centroid_vsub_eq s.circumcenter)
+  have hc' : ((n + 2 : ℕ) + 1 : ℝ) • (s.centroid -ᵥ s.circumcenter) =
+      ∑ i, (s.points i -ᵥ s.circumcenter) := by
+    simpa only [smul_smul, Checked.mul_inv_cancel, one_smul] using hc
+  have hm' : (n + 1) • (s.mongePoint -ᵥ s.circumcenter) =
+      ((n + 2 : ℕ) + 1 : ℝ) • (s.centroid -ᵥ s.circumcenter) := by
+    simpa only [show n + 2 - 1 = n + 1 by omega, ← Nat.cast_smul_eq_nsmul ℝ,
+      Nat.cast_add, Nat.cast_one] using hm
+  exact hm'.trans hc'
 
 /-- The Monge point lies in the affine span. -/
-theorem mongePoint_mem_affineSpan {n : ℕ} (s : Simplex ℝ P n) :
-    s.mongePoint ∈ affineSpan ℝ (Set.range s.points) :=
-  smul_vsub_vadd_mem _ _ (centroid_mem_affineSpan_of_card_eq_add_one ℝ _ (card_fin (n + 1)))
-    s.circumcenter_mem_affineSpan s.circumcenter_mem_affineSpan
+theorem mongePoint_mem_affineSpan {n : ℕ} (s : Simplex ℝ P n) (hn : n ≠ 1 := by omega) :
+    s.mongePoint hn ∈ affineSpan ℝ (Set.range s.points) := by
+  unfold mongePoint
+  split_ifs
+  · exact s.centroid_mem_affineSpan
+  · exact smul_vsub_vadd_mem _ _ s.centroid_mem_affineSpan
+      s.circumcenter_mem_affineSpan s.circumcenter_mem_affineSpan
 
 @[simp]
 theorem mongePoint_restrict {n : ℕ} (s : Simplex ℝ P n) (S : AffineSubspace ℝ P)
-    (hS : affineSpan ℝ (Set.range s.points) ≤ S) :
+    (hS : affineSpan ℝ (Set.range s.points) ≤ S) (hn : n ≠ 1 := by omega) :
     haveI := Nonempty.map (AffineSubspace.inclusion hS) inferInstance
-    (s.restrict S hS).mongePoint = s.mongePoint := by
+    (s.restrict S hS).mongePoint hn = s.mongePoint hn := by
   have := Nonempty.map (AffineSubspace.inclusion hS) inferInstance
-  simp_rw [mongePoint]
-  rw [← Simplex.centroid, ← Simplex.centroid]
-  simp [centroid_restrict, circumcenter_restrict]
+  by_cases h0 : n = 0 <;> simp [mongePoint, h0, centroid_restrict, circumcenter_restrict]
 
 /-- Two simplices with the same points have the same Monge point. -/
 theorem mongePoint_eq_of_range_eq {n : ℕ} {s₁ s₂ : Simplex ℝ P n}
-    (h : Set.range s₁.points = Set.range s₂.points) : s₁.mongePoint = s₂.mongePoint := by
-  simp_rw [mongePoint_eq_smul_vsub_vadd_circumcenter, centroid_eq_of_range_eq h,
+    (h : Set.range s₁.points = Set.range s₂.points) (hn : n ≠ 1 := by omega) :
+    s₁.mongePoint hn = s₂.mongePoint hn := by
+  simp only [mongePoint, centroid_eq_of_range_eq h,
     circumcenter_eq_of_range_eq h]
+
+/-- Removing two indices from at least three indices leaves a nonempty opposite face. -/
+theorem pair_compl_nonempty {n : ℕ} (i j : Fin (n + 3)) :
+    ({i, j}ᶜ : Finset (Fin (n + 3))).Nonempty := by
+  apply card_pos.mp
+  rw [card_compl, Fintype.card_fin]
+  have h : #({i, j} : Finset (Fin (n + 3))) ≤ 2 := card_le_two
+  omega
 
 /-- The weights for the Monge point of an (n+2)-simplex, in terms of
 `pointsWithCircumcenter`. -/
@@ -149,9 +221,12 @@ def mongePointWeightsWithCircumcenter (n : ℕ) : PointsWithCircumcenterIndex (n
 theorem sum_mongePointWeightsWithCircumcenter (n : ℕ) :
     ∑ i, mongePointWeightsWithCircumcenter n i = 1 := by
   simp_rw [sum_pointsWithCircumcenter, mongePointWeightsWithCircumcenter, sum_const, card_fin,
-    nsmul_eq_mul]
-  simp [field]
-  ring
+    nsmul_eq_mul, Checked.div_eq_mul_inv]
+  rw [← add_mul]
+  have h : ((n + 2 + 1 : ℕ) : ℝ) + -2 = ((n + 1 : ℕ) : ℝ) := by
+    push_cast
+    ring
+  rw [h, Checked.mul_inv_cancel]
 
 /-- The Monge point of an (n+2)-simplex, in terms of
 `pointsWithCircumcenter`. -/
@@ -161,18 +236,24 @@ theorem mongePoint_eq_affineCombination_of_pointsWithCircumcenter {n : ℕ}
       (univ : Finset (PointsWithCircumcenterIndex (n + 2))).affineCombination ℝ
         s.pointsWithCircumcenter (mongePointWeightsWithCircumcenter n) := by
   rw [mongePoint_eq_smul_vsub_vadd_circumcenter,
-    centroid_eq_affineCombination_of_pointsWithCircumcenter,
+    centroid_eq_affineCombination_of_pointsWithCircumcenter s univ univ_nonempty,
     circumcenter_eq_affineCombination_of_pointsWithCircumcenter, affineCombination_vsub, ← map_smul,
     weightedVSub_vadd_affineCombination]
   congr with i
   rw [Pi.add_apply, Pi.smul_apply, smul_eq_mul, Pi.sub_apply]
   cases i <;>
-      simp_rw [centroidWeightsWithCircumcenter, circumcenterWeightsWithCircumcenter,
-        mongePointWeightsWithCircumcenter] <;>
-    rw [add_tsub_assoc_of_le (by decide : 1 ≤ 2), (by decide : 2 - 1 = 1)]
-  · rw [ite_eq_left (mem_univ _), card_fin]
-    field
-  · simp [field]
+    simp only [centroidWeightsWithCircumcenter, centroidWeightsIndicator_def,
+      coe_univ, Set.indicator_univ, centroidWeights_apply,
+      circumcenterWeightsWithCircumcenter, mongePointWeightsWithCircumcenter,
+      card_univ, Fintype.card_fin, sub_zero, zero_sub, mul_neg_one, add_zero,
+      show n + 2 - 1 = n + 1 by omega]
+  · change Checked.div ((n + 2 + 1 : ℕ) : ℝ) ((n + 1 : ℕ) : ℝ) *
+        Checked.inv ((n + 2 + 1 : ℕ) : ℝ) = Checked.inv ((n + 1 : ℕ) : ℝ)
+    rw [Checked.div_eq_mul_inv, mul_right_comm, Checked.mul_inv_cancel, one_mul]
+  · change -(Checked.div ((n + 2 + 1 : ℕ) : ℝ) ((n + 1 : ℕ) : ℝ)) + 1 =
+      Checked.div (-2) ((n + 1 : ℕ) : ℝ)
+    rw [Checked.eq_div_iff_mul_eq, add_mul, neg_mul, Checked.div_mul_cancel, one_mul]
+    push_cast
     ring
 
 /-- The weights for the Monge point of an (n+2)-simplex, minus the
@@ -189,15 +270,17 @@ result of subtracting `centroidWeightsWithCircumcenter` from
 theorem mongePointVSubFaceCentroidWeightsWithCircumcenter_eq_sub {n : ℕ} {i₁ i₂ : Fin (n + 3)}
     (h : i₁ ≠ i₂) :
     mongePointVSubFaceCentroidWeightsWithCircumcenter i₁ i₂ =
-      mongePointWeightsWithCircumcenter n - centroidWeightsWithCircumcenter {i₁, i₂}ᶜ := by
+      mongePointWeightsWithCircumcenter n -
+        centroidWeightsWithCircumcenter {i₁, i₂}ᶜ (pair_compl_nonempty i₁ i₂) := by
   ext i
   obtain i | i := i
   · rw [Pi.sub_apply, mongePointWeightsWithCircumcenter, centroidWeightsWithCircumcenter,
       mongePointVSubFaceCentroidWeightsWithCircumcenter]
     have hu : #{i₁, i₂}ᶜ = n + 1 := by
       simp [card_compl, Fintype.card_fin, h]
-    rw [hu]
-    by_cases hi : i = i₁ ∨ i = i₂ <;> simp [compl_eq_univ_sdiff, hi]
+    by_cases hi : i = i₁ ∨ i = i₂ <;>
+      simp [centroidWeightsIndicator, centroidWeights, hu, compl_eq_univ_sdiff, hi,
+        Checked.inv, Units.mk0]
   · simp [mongePointWeightsWithCircumcenter, centroidWeightsWithCircumcenter,
       mongePointVSubFaceCentroidWeightsWithCircumcenter]
 
@@ -208,17 +291,18 @@ theorem sum_mongePointVSubFaceCentroidWeightsWithCircumcenter {n : ℕ} {i₁ i�
   rw [mongePointVSubFaceCentroidWeightsWithCircumcenter_eq_sub h]
   simp_rw [Pi.sub_apply, sum_sub_distrib, sum_mongePointWeightsWithCircumcenter]
   rw [sum_centroidWeightsWithCircumcenter, sub_self]
-  simp [← card_pos, card_compl, h]
 
 /-- The Monge point of an (n+2)-simplex, minus the centroid of an
 n-dimensional face, in terms of `pointsWithCircumcenter`. -/
 theorem mongePoint_vsub_face_centroid_eq_weightedVSub_of_pointsWithCircumcenter {n : ℕ}
     (s : Simplex ℝ P (n + 2)) {i₁ i₂ : Fin (n + 3)} (h : i₁ ≠ i₂) :
-    s.mongePoint -ᵥ ({i₁, i₂}ᶜ : Finset (Fin (n + 3))).centroid ℝ s.points =
+    s.mongePoint -ᵥ ({i₁, i₂}ᶜ : Finset (Fin (n + 3))).centroid ℝ s.points
+      (Nat.cast_ne_zero.mpr (card_ne_zero.mpr (pair_compl_nonempty i₁ i₂))) =
       (univ : Finset (PointsWithCircumcenterIndex (n + 2))).weightedVSub s.pointsWithCircumcenter
         (mongePointVSubFaceCentroidWeightsWithCircumcenter i₁ i₂) := by
   simp_rw [mongePoint_eq_affineCombination_of_pointsWithCircumcenter,
-    centroid_eq_affineCombination_of_pointsWithCircumcenter, affineCombination_vsub,
+    centroid_eq_affineCombination_of_pointsWithCircumcenter s {i₁, i₂}ᶜ
+      (pair_compl_nonempty i₁ i₂), affineCombination_vsub,
     mongePointVSubFaceCentroidWeightsWithCircumcenter_eq_sub h]
 
 /-- The Monge point of an (n+2)-simplex, minus the centroid of an
@@ -226,7 +310,8 @@ n-dimensional face, is orthogonal to the difference of the two
 vertices not in that face. -/
 theorem inner_mongePoint_vsub_face_centroid_vsub {n : ℕ} (s : Simplex ℝ P (n + 2))
     {i₁ i₂ : Fin (n + 3)} :
-    ⟪s.mongePoint -ᵥ ({i₁, i₂}ᶜ : Finset (Fin (n + 3))).centroid ℝ s.points,
+    ⟪s.mongePoint -ᵥ ({i₁, i₂}ᶜ : Finset (Fin (n + 3))).centroid ℝ s.points
+        (Nat.cast_ne_zero.mpr (card_ne_zero.mpr (pair_compl_nonempty i₁ i₂))),
         s.points i₁ -ᵥ s.points i₂⟫ =
       0 := by
   by_cases h : i₁ = i₂
@@ -262,13 +347,16 @@ the centroid of an n-dimensional face and is orthogonal to the
 opposite edge (in 2 dimensions, this is the same as an altitude).
 This definition is only intended to be used when `i₁ ≠ i₂`. -/
 def mongePlane {n : ℕ} (s : Simplex ℝ P (n + 2)) (i₁ i₂ : Fin (n + 3)) : AffineSubspace ℝ P :=
-  mk' (({i₁, i₂}ᶜ : Finset (Fin (n + 3))).centroid ℝ s.points) (ℝ ∙ (s.points i₁ -ᵥ s.points i₂))ᗮ ⊓
+  mk' (({i₁, i₂}ᶜ : Finset (Fin (n + 3))).centroid ℝ s.points
+      (Nat.cast_ne_zero.mpr (card_ne_zero.mpr (pair_compl_nonempty i₁ i₂))))
+    (ℝ ∙ (s.points i₁ -ᵥ s.points i₂))ᗮ ⊓
     affineSpan ℝ (Set.range s.points)
 
 /-- The definition of a Monge plane. -/
 theorem mongePlane_def {n : ℕ} (s : Simplex ℝ P (n + 2)) (i₁ i₂ : Fin (n + 3)) :
     s.mongePlane i₁ i₂ =
-      mk' (({i₁, i₂}ᶜ : Finset (Fin (n + 3))).centroid ℝ s.points)
+      mk' (({i₁, i₂}ᶜ : Finset (Fin (n + 3))).centroid ℝ s.points
+          (Nat.cast_ne_zero.mpr (card_ne_zero.mpr (pair_compl_nonempty i₁ i₂))))
           (ℝ ∙ (s.points i₁ -ᵥ s.points i₂))ᗮ ⊓
         affineSpan ℝ (Set.range s.points) :=
   rfl
@@ -277,16 +365,16 @@ lemma mongePlane_reindex {m n : ℕ} (s : Simplex ℝ P (n + 2)) (e : Fin (n + 3
     (i₁ i₂ : Fin (m + 3)) :
     (s.reindex e).mongePlane i₁ i₂ = s.mongePlane (e.symm i₁) (e.symm i₂) := by
   obtain rfl : n = m := by simpa using Fintype.card_eq.2 ⟨e⟩
-  simp_rw [mongePlane, reindex_points, reindex_range_points, Function.comp_apply, centroid_def,
-    reindex]
-  congr 2
-  convert! Finset.affineCombination_map {e.symm i₁, e.symm i₂}ᶜ e.toEmbedding _ _ using 3
-  · ext i
-    simp
-  · simp [Function.comp_assoc]
-  · simp_rw [centroidWeights, Function.const_comp, Finset.card_compl]
-    congr 4
-    by_cases h : i₁ = i₂ <;> simp [h]
+  have hmap : ({i₁, i₂}ᶜ : Finset (Fin (n + 3))).map e.symm.toEmbedding =
+      ({e.symm i₁, e.symm i₂}ᶜ : Finset (Fin (n + 3))) := by
+    ext i
+    simp [← e.eq_symm_apply]
+  have hc := (({i₁, i₂}ᶜ : Finset (Fin (n + 3))).centroid_map ℝ
+    e.symm.toEmbedding s.points
+      (Nat.cast_ne_zero.mpr (card_ne_zero.mpr (pair_compl_nonempty i₁ i₂)))).symm
+  simp only [hmap, Equiv.coe_toEmbedding] at hc
+  simp only [mongePlane, reindex_points, reindex_range_points, Function.comp_apply]
+  rw [hc]
 
 /-- The Monge plane associated with vertices `i₁` and `i₂` equals that
 associated with `i₂` and `i₁`. -/
@@ -351,6 +439,43 @@ theorem eq_mongePoint_of_forall_mem_mongePlane {n : ℕ} {s : Simplex ℝ P (n +
     exact (Submodule.mem_inf.1 (h' i₂ h₁₂)).2
   exact Submodule.disjoint_def.1 (vectorSpan ℝ (Set.range s.points)).orthogonal_disjoint _ hv hi
 
+/-- Outside dimension one, the Monge conditions characterize the point uniquely. -/
+theorem isMongePoint_iff_eq_mongePoint {n : ℕ} (s : Simplex ℝ P n) (p : P) (hn : n ≠ 1) :
+    s.IsMongePoint p ↔ p = s.mongePoint hn := by
+  cases n with
+  | zero => simpa only [mongePoint_zero_eq] using s.isMongePoint_zero_iff p
+  | succ n =>
+    cases n with
+    | zero => exact (hn rfl).elim
+    | succ n =>
+      constructor
+      · intro hp
+        apply eq_mongePoint_of_forall_mem_mongePlane (i₁ := 0)
+        intro i _
+        rw [mongePlane_def, mem_inf_iff,
+          ← vsub_right_mem_direction_iff_mem (self_mem_mk' _ _),
+          direction_mk', Submodule.mem_orthogonal']
+        refine ⟨?_, hp.1⟩
+        intro v hv
+        rcases Submodule.mem_span_singleton.mp hv with ⟨r, rfl⟩
+        rw [inner_smul_right, hp.2 0 i (pair_compl_nonempty 0 i), mul_zero]
+      · rintro rfl
+        exact ⟨s.mongePoint_mem_affineSpan, fun i j _ ↦
+          s.inner_mongePoint_vsub_face_centroid_vsub (i₁ := i) (i₂ := j)⟩
+
+/-- The exact domain of the uniquely determined Monge point. In dimension zero the affine span
+is a singleton; in dimension one the Monge conditions leave the entire edge line. -/
+theorem existsUnique_isMongePoint_iff {n : ℕ} (s : Simplex ℝ P n) :
+    (∃! p, s.IsMongePoint p) ↔ n ≠ 1 := by
+  constructor
+  · intro h hn
+    subst n
+    exact s.not_existsUnique_isMongePoint_one h
+  · intro hn
+    refine ⟨s.mongePoint hn, (s.isMongePoint_iff_eq_mongePoint _ hn).mpr rfl, ?_⟩
+    intro p hp
+    exact (s.isMongePoint_iff_eq_mongePoint p hn).mp hp
+
 end Simplex
 
 namespace Triangle
@@ -378,7 +503,7 @@ theorem orthocenter_eq_mongePoint (t : Triangle ℝ P) : t.orthocenter = t.monge
 and centroid. -/
 theorem orthocenter_eq_smul_vsub_vadd_circumcenter (t : Triangle ℝ P) :
     t.orthocenter =
-      (3 : ℝ) • ((univ : Finset (Fin 3)).centroid ℝ t.points -ᵥ t.circumcenter : V) +ᵥ
+      (3 : ℝ) • (t.centroid -ᵥ t.circumcenter : V) +ᵥ
         t.circumcenter := by
   rw [orthocenter_eq_mongePoint, mongePoint_eq_smul_vsub_vadd_circumcenter]
   simp

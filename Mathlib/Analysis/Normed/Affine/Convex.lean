@@ -60,7 +60,9 @@ lemma exists_mem_interior_convexHull_affineBasis (hs : s ∈ 𝓝 x) :
   obtain ⟨b⟩ := exists_affineBasis_of_finiteDimensional
     (ι := Fin (finrank ℝ E + 1)) (k := ℝ) (P := E) (by simp)
   -- ... translate it to contain the origin...
-  set c : AffineBasis (Fin (finrank ℝ E + 1)) ℝ E := -Finset.univ.centroid ℝ b +ᵥ b
+  set c : AffineBasis (Fin (finrank ℝ E + 1)) ℝ E :=
+    -Finset.univ.centroid ℝ b
+      (Nat.cast_ne_zero.mpr (Finset.card_ne_zero.mpr Finset.univ_nonempty)) +ᵥ b
   have hc₀ : 0 ∈ interior (convexHull ℝ (range c) : Set E) := by
     simpa [c, convexHull_vadd, interior_vadd, range_add, Pi.vadd_def, mem_vadd_set_iff_neg_vadd_mem]
       using b.centroid_mem_interior_convexHull
@@ -70,17 +72,23 @@ lemma exists_mem_interior_convexHull_affineBasis (hs : s ∈ 𝓝 x) :
       ← sub_le_iff_le_add, Finset.le_sup'_iff, forall_mem_range] using fun i ↦ ⟨i, by simp⟩
   -- ... and finally scale it to fit inside the neighborhood `s`.
   obtain ⟨ε, hε, hεs⟩ := Metric.mem_nhds_iff.1 hs
-  set ε' : ℝ := ε / 2 / (cnorm + 1)
   have hc' : 0 < cnorm + 1 := by
     have : 0 ≤ cnorm := Finset.le_sup'_of_le _ (Finset.mem_univ 0) (norm_nonneg _)
-    positivity
-  have hε' : 0 < ε' := by positivity
+    exact add_pos_of_nonneg_of_pos this zero_lt_one
+  set ε' : ℝ := ε / 2 / (cnorm + 1)
+  have hε₀ : 0 < ε / 2 := half_pos hε
+  have hε' : 0 < ε' := Checked.div_pos hε₀ hc'
   set d : AffineBasis (Fin (finrank ℝ E + 1)) ℝ E := Units.mk0 ε' hε'.ne' • c
-  have hε₀ : 0 < ε / 2 := by positivity
   have hdnorm : (range d : Set E) ⊆ closedBall 0 (ε / 2) := by
-    simp [d, abs_of_nonneg hε'.le, range_subset_iff, norm_smul]
-    simpa [ε', hε₀.ne', range_subset_iff, ← mul_div_right_comm (ε / 2), div_le_iff₀ hc', hε₀]
-      using hcnorm
+    simp only [range_subset_iff, mem_closedBall, dist_zero_right]
+    intro i
+    have hci : ‖c i‖ ≤ cnorm + 1 := by
+      simpa only [mem_closedBall, dist_zero_right] using hcnorm (mem_range_self i)
+    calc
+      ‖d i‖ = ε' * ‖c i‖ := by
+        simp [d, Units.smul_def, norm_smul, Real.norm_eq_abs, abs_of_pos hε']
+      _ ≤ ε' * (cnorm + 1) := mul_le_mul_of_nonneg_left hci hε'.le
+      _ = ε / 2 := Checked.div_mul_cancel _ _ _
   refine ⟨d, ?_, ?_⟩
   · simpa [d, Pi.smul_def, range_smul, interior_smul₀, convexHull_smul, zero_mem_smul_set_iff,
       hε'.ne']

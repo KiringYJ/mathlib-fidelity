@@ -11,6 +11,7 @@ public import Mathlib.Geometry.Convex.ConvexSpace.CompactSpaceStdSimplex
 public import Mathlib.Geometry.Convex.ConvexSpace.PathConnectedSpaceStdSimplex
 public import Mathlib.Geometry.Convex.ConvexSpace.Module
 public import Mathlib.Analysis.Convex.PathConnected
+public import Mathlib.LinearAlgebra.AffineSpace.Simplex.Basic
 public import Mathlib.Topology.Algebra.Monoid.FunOnFinite
 
 /-!
@@ -446,23 +447,60 @@ variable {𝕜 : Type*} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing �
 /-- The barycenter of a standard simplex is the center of mass of
 the set of vertices (equally weighted). -/
 @[deprecated StdSimplex.barycenter (since := "2026-08-29")]
-def barycenter : stdSimplex 𝕜 X :=
-  ⟨fun i => (Fintype.card X : 𝕜)⁻¹, by simp [stdSimplex]⟩
+noncomputable def barycenter (h : (Fintype.card X : 𝕜) ≠ 0) : stdSimplex 𝕜 X :=
+  ⟨fun _ => (↑(Units.mk0 (Fintype.card X : 𝕜) h)⁻¹ : 𝕜), by
+    constructor
+    · intro x
+      exact (Units.inv_nonneg _).2 (Nat.cast_nonneg _)
+    · simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+      change (↑(Units.mk0 (Fintype.card X : 𝕜) h) : 𝕜) *
+        (↑(Units.mk0 (Fintype.card X : 𝕜) h)⁻¹ : 𝕜) = 1
+      exact Units.mul_inv _⟩
 
-/-- The barycenter of a standard simplex has coordinates `(Fintype.card X)⁻¹` at each index. -/
+/-- The barycenter of a standard simplex has the inverse of its cardinal unit at each index. -/
 @[simp, deprecated StdSimplex.weights_barycenter_apply (since := "2026-08-29")]
-theorem barycenter_apply (x : X) :
-    (barycenter : stdSimplex 𝕜 X).val x = (Fintype.card X : 𝕜)⁻¹ := rfl
+omit [Nonempty X] in
+theorem barycenter_apply (h : (Fintype.card X : 𝕜) ≠ 0) (x : X) :
+    (barycenter h : stdSimplex 𝕜 X).val x =
+      (↑(Units.mk0 (Fintype.card X : 𝕜) h)⁻¹ : 𝕜) := rfl
 
 /-- The barycenter equals the (equal weight) center of mass of vertices (`Finset.centerMass`). -/
 @[deprecated "no replacement" (since := "2026-08-29")]
-theorem barycenter_eq_centerMass [DecidableEq X] :
-    (barycenter : stdSimplex 𝕜 X).val =
-      Finset.centerMass Finset.univ (fun _ => (1 : 𝕜)) (fun i => Pi.single i 1) := by
-  simp only [Finset.centerMass, Finset.sum_const, Finset.card_univ]
-  ext x
-  simp [barycenter, Pi.smul_apply, Finset.sum_apply, Pi.single_apply]
+omit [Nonempty X] in
+theorem barycenter_eq_centerMass [DecidableEq X] (h : (Fintype.card X : 𝕜) ≠ 0) :
+    (barycenter h : stdSimplex 𝕜 X).val =
+      Finset.centerMass Finset.univ (fun _ => (1 : 𝕜)) (fun i => Pi.single i 1)
+        (by simpa only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one] using h) := by
+  funext x
+  simp [barycenter, Finset.centerMass, Pi.smul_apply, Finset.sum_apply, Pi.single_apply]
 
 end Barycenter
 
 end stdSimplex
+
+namespace Affine.Simplex
+
+/-- The closed interior of a simplex is the convex hull of all vertices. -/
+@[simp] theorem convexHull_eq_closedInterior {𝕜 V : Type*} [Field 𝕜] [LinearOrder 𝕜]
+    [IsOrderedRing 𝕜] [AddCommGroup V] [Module 𝕜 V] {n : ℕ} (s : Simplex 𝕜 V n) :
+    convexHull 𝕜 (Set.range s.points) = s.closedInterior := by
+  ext p
+  rw [convexHull_range_eq_exists_affineCombination, Set.mem_ofPred]
+  constructor <;> intro h
+  · obtain ⟨u, w, hw, hw1, rfl⟩ := h
+    have hw' : ∀ i ∈ u, w i ≤ 1 := by
+      intro i hi
+      rw [← hw1]
+      apply Finset.single_le_sum (fun j hj ↦ hw j hj) hi
+    have hw1' : ∑ i, (u : Set (Fin (n + 1))).indicator w i = 1 := by
+      simpa [Finset.sum_indicator_subset _ u.subset_univ] using hw1
+    rw [Finset.affineCombination_indicator_subset _ _ u.subset_univ,
+      affineCombination_mem_closedInterior_iff hw1']
+    intro i
+    by_cases hi : i ∈ (u : Set (Fin (n + 1))) <;> aesop
+  · obtain ⟨w, hw1, rfl⟩ := eq_affineCombination_of_mem_affineSpan_of_fintype <|
+      Set.mem_of_mem_of_subset h s.closedInterior_subset_affineSpan
+    rw [affineCombination_mem_closedInterior_iff hw1] at h
+    exact ⟨Finset.univ, w, fun i _ ↦ (h i).1, hw1, rfl⟩
+
+end Affine.Simplex
