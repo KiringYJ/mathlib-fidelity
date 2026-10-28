@@ -111,6 +111,20 @@ lake test
 Run `lake exe mk_all` after adding a new Mathlib module so that `Mathlib.lean`
 remains current.
 
+## Continuous integration
+
+Fidelity CI builds and tests `main` pushes and pull requests targeting `main`
+on GitHub-hosted Linux runners. It checks generated imports, both linter
+families, and the regression tests and companion libraries. Each build records
+the exact tested commit; pull requests test GitHub's merge commit with the base.
+Separate weekly and manual runs also replay Mathlib and Batteries with
+`leanchecker` and run the Mathlib test executable.
+
+See [the CI guide](.github/CI.md) for validation scope, cache and resource
+limits, and the upstream workflow isolation policy. The conjecture registry
+and proof-status admission gate remain separate implementation work in
+[TODO.md](TODO.md#conjectures-and-proof-status----accepted-design-pending-implementation).
+
 ## Using the fork as a dependency
 
 This fork deliberately evolves independently of upstream's public API. For a

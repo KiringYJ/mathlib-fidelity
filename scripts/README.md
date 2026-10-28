@@ -109,6 +109,12 @@ file used by the library's own linters.
   Usage: `python3 scripts/topological_sort.py [--reverse]`
 
 **CI debugging tools**
+- `check_fidelity_workflows.py`
+  Rejects active GitHub workflows outside the reviewed fork inventory and missing required workflows.
+  Run it before publishing an upstream reconciliation, since a newly introduced upstream workflow
+  could otherwise trigger on that same push. Archived `.github/upstream-workflows/` files are inert.
+  `test_fidelity_workflows.py` tests this boundary with isolated temporary repositories:
+  `python3 -B -m unittest discover -s scripts -p test_fidelity_workflows.py`.
 - `find-ci-errors.sh`
   Searches through recent failed CI workflow runs to find open PRs whose current CI
   contains a specific error string. Useful for diagnosing widespread CI issues affecting

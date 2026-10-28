@@ -79,6 +79,9 @@ small upstream movement.
    mathematical and API design while retaining sound upstream improvements.
 6. Run checks proportional to every affected module at the final rebased state.
    Upstream's successful checks do not validate fork-specific conflict repairs.
+   Before any publication, run `python scripts/check_fidelity_workflows.py`
+   and review the workflow diff under the isolation policy in `.github/CI.md`.
+   Newly introduced upstream workflows must not become active implicitly.
 7. After explicit publication authorization, confirm that branch rules permit
    the rewrite and push with
    `git push --force-with-lease=refs/heads/main:<expected-origin-main> origin main:refs/heads/main`.

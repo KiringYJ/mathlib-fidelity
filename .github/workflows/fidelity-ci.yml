@@ -1,0 +1,138 @@
+name: Fidelity CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      run-proof-checker:
+        description: Replay Mathlib and Batteries in fresh kernel environments.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fidelity-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-policy:
+    name: Workflow policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Reject unreviewed upstream workflows
+        run: python3 scripts/check_fidelity_workflows.py
+      - name: Test workflow inventory boundary
+        run: python3 -B -m unittest discover -s scripts -p test_fidelity_workflows.py
+
+  lean:
+    name: Build, tests and linters
+    needs: workflow-policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      LEAN_NUM_THREADS: 2
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Record the tested revision
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          tested_sha=$(git rev-parse HEAD)
+          test "$tested_sha" = "$EXPECTED_SHA"
+          {
+            printf 'Tested commit: `%s`\n\n' "$tested_sha"
+            printf 'For pull requests this is the GitHub merge commit, including the current base.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Make room on the disposable hosted runner
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h .
+
+      - name: Configure Lean without automatic builds or cache writes
+        uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1.5.0
+        with:
+          auto-config: 'false'
+          build: 'false'
+          test: 'false'
+          lint: 'false'
+          use-github-cache: 'false'
+          use-mathlib-cache: 'false'
+
+      - name: Restore this fork's build cache
+        id: lake-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/build
+            .lake/packages
+          key: fidelity-lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}-${{ github.sha }}
+          restore-keys: |
+            fidelity-lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}-
+
+      - name: Fetch available upstream artifacts
+        run: lake exe cache get --cache-from=master,legacy
+
+      - name: Check generated import roots
+        run: lake exe mk_all --check
+
+      - name: Build the library with warnings as errors
+        run: lake build --wfail
+
+      - name: Build all regression tests and companion libraries
+        run: lake build MathlibTest Archive Counterexamples Wanted
+
+      - name: Run the configured test driver
+        run: lake test
+
+      - name: Run environment linters
+        run: lake lint
+
+      - name: Replay Mathlib in a fresh kernel environment
+        if: inputs.run-proof-checker
+        run: lake env leanchecker --fresh Mathlib
+
+      - name: Replay Batteries in a fresh kernel environment
+        if: inputs.run-proof-checker
+        run: lake env leanchecker --fresh Batteries
+
+      - name: Build and run an executable importing Mathlib and its dependencies
+        if: inputs.run-proof-checker
+        run: lake exe mathlib_test_executable
+
+      - name: Check source style
+        run: lake exe lint-style
+
+      - name: Save a successful main build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.lake-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/build
+            .lake/packages
+          key: ${{ steps.lake-cache.outputs.cache-primary-key }}
+
+      - name: Record validation scope
+        run: |
+          {
+            printf '\nPassed: library build, MathlibTest, Archive, Counterexamples, Wanted, test driver, both linter families, generated imports.\n'
+            printf 'The conjecture registry and proof-status admission gate remain pending in TODO.md.\n'
+          } >> "$GITHUB_STEP_SUMMARY"

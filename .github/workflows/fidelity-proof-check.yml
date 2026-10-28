@@ -1,0 +1,15 @@
+name: Fidelity proof checks
+
+on:
+  schedule:
+    - cron: '23 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  proof-check:
+    uses: ./.github/workflows/fidelity-ci.yml
+    with:
+      run-proof-checker: true
