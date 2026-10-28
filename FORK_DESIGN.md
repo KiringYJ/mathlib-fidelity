@@ -956,7 +956,7 @@ transitional totalized hierarchy. The requirements below define the work and
 its acceptance criteria; they do not claim that the migration has been
 implemented or that its concrete API has been validated.
 
-Implementation is currently paused at the user's requested 2026-10-24 checkpoint.
+Implementation is currently paused at the user's requested 2026-10-28 checkpoint.
 The checkpoint commits preserve unfinished work. The inverse item in `TODO.md`
 records the remaining proof, consumer, audit, and verification obligations;
 the complete-delivery acceptance criteria still apply when work resumes.
@@ -1000,6 +1000,37 @@ Preserve these distinctions while migrating every affected connection.
 - Supply checked construction, predictable coercions, rewrite lemmas, useful
   diagnostics, and denominator-clearing automation together with the API.
   Construction should find routine local evidence and propagate closure facts.
+- Keep mathlib's established theorem names for statements about the faithful
+  operations. The namespace that implements checked construction is not
+  mathematical vocabulary, and goals display the operations with ordinary
+  notation. Each fact has one canonical declaration at the exact generality
+  of its content: the identity `a * a⁻¹ = 1` for a unit `a` is one theorem for
+  monoids, groups with zero, and fields. Where the established name belongs to
+  a retained group or division-monoid theorem about a total inverse, the
+  partial-inverse theorem takes the `₀` suffix, as mathlib does for groups with
+  zero.
+- Do not request invertibility evidence that a term already carries. A theorem
+  takes the evidence of each checked operation in its statement as an implicit
+  argument unified from that term, unless a genuine hypothesis such as
+  `0 < c` already implies it. Hypotheses with mathematical content, such as a
+  sign condition or a nonzero numerator, remain explicit.
+- Remove statements that hold only because of a value at an invalid
+  denominator, such as `0⁻¹ = 0`, `a / 0 = 0`, and cancellation inequalities
+  that exist only to absorb the zero case. Restate a statement whose earlier
+  form omitted a needed domain condition on its correct domain.
+- The inverse, quotient, and integer power of a function are the checked
+  operations of the function monoid, defined exactly when every value is
+  invertible. When a statement needs a quotient only at the points of a set,
+  as in `∑ i ∈ s, f i / g i` or `MonovaryOn f⁻¹ g s` with `g` or `f` positive
+  on `s`, index by the set itself, for example `∑ i : s, f i / g i`, and take
+  the evidence from membership. Requiring invertibility at every point would
+  shrink the statement to a convenient sufficient condition.
+- A construction whose value is a quotient that can fail to exist, such as a
+  convergent `A n / B n` of a generalized continued fraction, takes the
+  invertibility of its denominator as an argument; evaluation that may meet
+  a non-invertible denominator returns an explicit partiality type such as
+  `Option`, and the identification of two such constructions is stated where
+  both are defined.
 - Account for negative powers, rational casts, and rational scalar operations.
   Nonnegative powers retain the whole ambient domain; negative powers require
   invertibility. These are algebraic powers: the monoid law `a ^ 0 = 1` is the
@@ -1087,6 +1118,15 @@ or local domains need their own design. Establish the appropriate open-set,
 local-function, or chart interfaces and migrate affected analysis consumers in
 the same delivery. A successful algebra experiment does not discharge these
 obligations or justify leaving the old analysis implementation in place.
+
+A function that is defined only on a local domain is a function on that domain,
+read in coordinates: `f : D → F` with `coord : D → E`, where `coord` defaults to
+the identity for an ambient function. Derivative relations take this form, and
+so do convexity and concavity (`ConvexOn 𝕜 s f coord` for `s : Set D`), so that
+`x ↦ x ^ n` with a negative exponent is convex on the positive cone as a
+function on that cone, not through a total extension with arbitrary values
+(user decision, 2026-10-25). Do not state such results by quantifying over
+total extensions, and do not add a second predicate for partial functions.
 
 ### Completion
 
