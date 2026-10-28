@@ -314,24 +314,27 @@ theorem conjTranspose_intCast_smul [Ring R] [AddCommGroup α] [StarAddMonoid α]
   Matrix.ext <| by simp
 
 @[simp]
-theorem conjTranspose_inv_natCast_smul [DivisionSemiring R] [AddCommMonoid α] [StarAddMonoid α]
-    [Module R α] (c : ℕ) (M : Matrix m n α) : ((c : R)⁻¹ • M)ᴴ = (c : R)⁻¹ • Mᴴ :=
-  Matrix.ext <| by simp
+theorem conjTranspose_inv_natCast_smul [Semiring R] [AddCommMonoid α] [StarAddMonoid α]
+    [Module R α] (c : ℕ) {hc : IsUnit (c : R)} (M : Matrix m n α) :
+    ((c : R)⁻¹ • M)ᴴ = (c : R)⁻¹ • Mᴴ :=
+  Matrix.ext fun _ _ => star_inv_natCast_smul c _
 
 @[simp]
-theorem conjTranspose_inv_ofNat_smul [DivisionSemiring R] [AddCommMonoid α] [StarAddMonoid α]
-    [Module R α] (c : ℕ) [c.AtLeastTwo] (M : Matrix m n α) :
+theorem conjTranspose_inv_ofNat_smul [Semiring R] [AddCommMonoid α] [StarAddMonoid α]
+    [Module R α] (c : ℕ) [c.AtLeastTwo] {hc : IsUnit (ofNat(c) : R)} (M : Matrix m n α) :
     ((ofNat(c) : R)⁻¹ • M)ᴴ = (OfNat.ofNat c : R)⁻¹ • Mᴴ :=
-  conjTranspose_inv_natCast_smul c M
+  conjTranspose_inv_natCast_smul c (hc := hc) M
 
 @[simp]
-theorem conjTranspose_inv_intCast_smul [DivisionRing R] [AddCommGroup α] [StarAddMonoid α]
-    [Module R α] (c : ℤ) (M : Matrix m n α) : ((c : R)⁻¹ • M)ᴴ = (c : R)⁻¹ • Mᴴ :=
-  Matrix.ext <| by simp
+theorem conjTranspose_inv_intCast_smul [Ring R] [AddCommGroup α] [StarAddMonoid α]
+    [Module R α] (c : ℤ) {hc : IsUnit (c : R)} (M : Matrix m n α) :
+    ((c : R)⁻¹ • M)ᴴ = (c : R)⁻¹ • Mᴴ :=
+  Matrix.ext fun _ _ => star_inv_intCast_smul c _
 
 @[simp]
-theorem conjTranspose_ratCast_smul [DivisionRing R] [AddCommGroup α] [StarAddMonoid α] [Module R α]
-    (c : ℚ) (M : Matrix m n α) : ((c : R) • M)ᴴ = (c : R) • Mᴴ :=
+theorem conjTranspose_ratCast_smul [DivisionRing R] [CharZero R] [AddCommGroup α]
+    [StarAddMonoid α] [Module R α] (c : ℚ) (M : Matrix m n α) :
+    ((c : R) • M)ᴴ = (c : R) • Mᴴ :=
   Matrix.ext <| by simp
 
 theorem conjTranspose_rat_smul [AddCommGroup α] [StarAddMonoid α] [Module ℚ α] (c : ℚ)

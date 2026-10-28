@@ -615,24 +615,32 @@ instance span_maximal_of_irreducible [Fact (Irreducible f)] : (span {f}).IsMaxim
 noncomputable instance instGroupWithZero [Fact (Irreducible f)] : GroupWithZero (AdjoinRoot f) :=
   fast_instance% Quotient.groupWithZero (span {f} : Ideal K[X])
 
-/-- If `R` is a field and `f` is irreducible, then `AdjoinRoot f` is a field -/
+/-- If `K` is a field and `f` is irreducible, then `AdjoinRoot f` is a field. In characteristic
+zero, the actions of `ℚ≥0` and `ℚ` are the actions `AdjoinRoot.instSMulAdjoinRoot` through `K`. -/
 @[stacks 09FX "first part, see also 09FI"]
 noncomputable instance instField [Fact (Irreducible f)] : Field (AdjoinRoot f) where
   __ := instCommRing _
   __ := instGroupWithZero
-  nnqsmul := (· • ·)
-  qsmul := (· • ·)
-  nnratCast_def q := by
-    rw [← map_natCast (of f), ← map_natCast (of f), ← map_div₀, ← NNRat.cast_def]; rfl
-  ratCast_def q := by
-    rw [← map_natCast (of f), ← map_intCast (of f), ← map_div₀, ← Rat.cast_def]; rfl
-  nnqsmul_def q x :=
-    AdjoinRoot.induction_on f (C := fun y ↦ q • y = (of f) q * y) x fun p ↦ by
-      simp only [smul_mk, of, RingHom.comp_apply, ← (mk f).map_mul, Polynomial.nnqsmul_eq_C_mul]
-  qsmul_def q x :=
-    -- Porting note: I gave the explicit motive and changed `rw` to `simp`.
-    AdjoinRoot.induction_on f (C := fun y ↦ q • y = (of f) q * y) x fun p ↦ by
-      simp only [smul_mk, of, RingHom.comp_apply, ← (mk f).map_mul, Polynomial.qsmul_eq_C_mul]
+  nnqsmulOfCharZero _ q x :=
+    haveI := CharZero.of_map_natCast (of f) (map_natCast (of f))
+    q • x
+  nnqsmulOfCharZero_eq_mul _ q x := by
+    have := CharZero.of_map_natCast (of f) (map_natCast (of f))
+    have hq : q • x = (of f) q * x :=
+      AdjoinRoot.induction_on f (C := fun y ↦ q • y = (of f) q * y) x fun p ↦ by
+        simp only [smul_mk, of, RingHom.comp_apply, ← (mk f).map_mul, Polynomial.nnqsmul_eq_C_mul]
+    rw [hq, NNRat.cast_def, map_div₀]
+    simp only [map_natCast]
+  qsmulOfCharZero _ q x :=
+    haveI := CharZero.of_map_natCast (of f) (map_natCast (of f))
+    q • x
+  qsmulOfCharZero_eq_mul _ q x := by
+    have := CharZero.of_map_natCast (of f) (map_natCast (of f))
+    have hq : q • x = (of f) q * x :=
+      AdjoinRoot.induction_on f (C := fun y ↦ q • y = (of f) q * y) x fun p ↦ by
+        simp only [smul_mk, of, RingHom.comp_apply, ← (mk f).map_mul, Polynomial.qsmul_eq_C_mul]
+    rw [hq, Rat.cast_def, map_div₀]
+    simp only [map_intCast, map_natCast]
 
 theorem coe_injective (h : degree f ≠ 0) : Function.Injective ((↑) : K → AdjoinRoot f) :=
   have := AdjoinRoot.nontrivial f h
@@ -791,7 +799,7 @@ theorem minpoly_root (hf : f ≠ 0) : minpoly K (root f) = f * C f.leadingCoeff�
     · have : mk f q = 0 := by rw [← commutes, RingHom.comp_apply, mk_self, map_zero]
       exact mk_eq_zero.1 this
     · exact q_monic.ne_zero
-  · rwa [Ne, C_eq_zero, inv_eq_zero, leadingCoeff_eq_zero]
+  · exact C_ne_zero.mpr inv_ne_zero
 
 /-- The elements `1, root f, ..., root f ^ (d - 1)` form a basis for `AdjoinRoot f`,
 where `f` is an irreducible polynomial over a field of degree `d`. -/
@@ -799,7 +807,7 @@ def powerBasisAux (hf : f ≠ 0) : Basis (Fin f.natDegree) K (AdjoinRoot f) := b
   let f' := f * C f.leadingCoeff⁻¹
   have deg_f' : f'.natDegree = f.natDegree := by
     rw [natDegree_mul hf, natDegree_C, add_zero]
-    · rwa [Ne, C_eq_zero, inv_eq_zero, leadingCoeff_eq_zero]
+    · exact C_ne_zero.mpr inv_ne_zero
   have minpoly_eq : minpoly K (root f) = f' := minpoly_root hf
   apply Basis.mk (v := fun i : Fin f.natDegree ↦ root f ^ i.val)
   · rw [← deg_f', ← minpoly_eq]
@@ -827,7 +835,8 @@ theorem minpoly_powerBasis_gen (hf : f ≠ 0) :
 
 theorem minpoly_powerBasis_gen_of_monic (hf : f.Monic) (hf' : f ≠ 0 := hf.ne_zero) :
     minpoly K (powerBasis hf').gen = f := by
-  rw [minpoly_powerBasis_gen hf', hf.leadingCoeff, inv_one, C.map_one, mul_one]
+  rw [minpoly_powerBasis_gen hf']
+  simp only [hf.leadingCoeff, inv_one₀, map_one, mul_one]
 
 /--
 See `finrank_quotient_span_eq_natDegree'` for a version over a ring when `f` is monic.
@@ -926,7 +935,7 @@ def equiv (f : F[X]) (hf : f ≠ 0) :
   (powerBasis hf).liftEquiv'.trans
     ((Equiv.refl _).subtypeEquiv fun x => by
       rw [mem_aroots, mem_aroots, Equiv.refl_apply, powerBasis_gen, minpoly_root hf]
-      simp [hf])
+      simp)
 
 end Field
 

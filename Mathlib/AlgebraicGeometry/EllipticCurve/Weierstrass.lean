@@ -371,6 +371,13 @@ variable [W.IsElliptic]
 
 lemma isUnit_Δ : IsUnit W.Δ := IsElliptic.isUnit
 
+/- Evidence rule: the discriminant of an elliptic curve is a unit, so `W.Δ⁻¹` needs no explicit
+evidence. -/
+macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | exact WeierstrassCurve.isUnit_Δ _)
+
 /-- The discriminant `Δ'` of an elliptic curve over `R`, which is given as a unit in `R`.
 Note that to prove two equal elliptic curves have the same `Δ'`, you need to use `simp_rw`,
 as `rw` cannot transfer instance `WeierstrassCurve.IsElliptic` automatically. -/
@@ -401,7 +408,7 @@ lemma j_eq_zero_iff [IsReduced R] : W.j = 0 ↔ W.c₄ = 0 := by
 
 theorem j_eq {K : Type*} [Field K] (W : WeierstrassCurve K) [W.IsElliptic] :
     W.j = W.Δ⁻¹ * W.c₄ ^ 3 := by
-  rw [WeierstrassCurve.j, Units.val_inv_eq_inv_val, WeierstrassCurve.coe_Δ']
+  simp only [WeierstrassCurve.j, Units.val_inv_eq_inv_val₀, WeierstrassCurve.coe_Δ']
 
 section CharTwo
 

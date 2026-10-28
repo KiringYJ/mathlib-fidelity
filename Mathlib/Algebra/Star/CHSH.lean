@@ -145,8 +145,22 @@ we prepare some easy lemmas about √2.
 -/
 
 theorem sqrt_two_inv_mul_self : (√2)⁻¹ * (√2)⁻¹ = (2⁻¹ : ℝ) := by
-  rw [← mul_inv]
-  simp
+  refine eq_inv_of_mul_eq_one_left₀ ?_
+  calc (√2)⁻¹ * (√2)⁻¹ * 2 = (√2)⁻¹ * (√2)⁻¹ * (√2 * √2) := by
+        rw [Real.mul_self_sqrt zero_le_two]
+    _ = 1 := by rw [mul_mul_mul_comm, inv_mul_cancel₀, one_mul]
+
+/-- The inverse of `√2`, without an inverse. -/
+theorem inv_sqrt_two : (√2)⁻¹ = √2 / 2 :=
+  inv_eq_of_mul_eq_one_right₀ <| by rw [mul_div₀, Real.mul_self_sqrt zero_le_two, div_self]
+
+/-- The scalar identity behind the sum-of-squares decomposition below. -/
+theorem sqrt_two_pow_three : √2 ^ 3 = 2 * (√2)⁻¹ + 4 * ((√2)⁻¹ * 2⁻¹) := by
+  have h : √2 ^ 2 = (2 : ℝ) := Real.sq_sqrt zero_le_two
+  rw [inv_sqrt_two]
+  calc √2 ^ 3 = √2 ^ 2 * √2 := by ring
+    _ = 2 * √2 := by rw [h]
+    _ = 2 * (√2 / 2) + 4 * (√2 / 2 * 2⁻¹) := by ring
 
 end TsirelsonInequality
 
@@ -184,9 +198,9 @@ theorem tsirelson_inequality [Ring R] [PartialOrder R] [StarRing R] [StarOrdered
     abel_nf
     -- all terms coincide, but the last one. Simplify all other terms
     simp only [M]
-    simp only [neg_mul, mul_inv_cancel_of_invertible, add_assoc, add_comm,
-      add_left_comm, one_smul, Int.cast_neg, neg_smul, Int.cast_ofNat, ← add_smul]
-    grind
+    simp only [neg_mul, mul_inv_cancel₀, add_assoc, add_comm,
+      add_left_comm, one_smul, Int.cast_neg, neg_smul, Int.cast_ofNat, ← add_smul,
+      sqrt_two_pow_three]
   have pos : 0 ≤ (√2)⁻¹ • (P ^ 2 + Q ^ 2) := by
     have P_sa : star P = P := by
       simp only [P, star_smul, star_add, star_sub, star_id_of_comm, T.A₀_sa, T.A₁_sa, T.B₀_sa]

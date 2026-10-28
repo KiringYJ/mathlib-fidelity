@@ -48,15 +48,32 @@ open scoped Topology
 
 namespace GenContFract
 
-theorem of_convs_eq_convs' : (of v).convs = (of v).convs' :=
-  ContFract.convs_eq_convs' (c := ContFract.of v)
+theorem of_convs_eq_convs' (n : ℕ) : (of v).convs' n = some ((of v).convs n) :=
+  ContFract.convs_eq_convs' (c := ContFract.of v) n
 
+variable {v} in
+/-- The convergents of the continued fraction expansion of the inverse of the fractional part of
+a non-integer `v` are units. -/
+theorem isUnit_of_convs_inv_fract (hv : Int.fract v ≠ 0) (n : ℕ) :
+    IsUnit ((of (Int.fract v)⁻¹).convs n) := by
+  have h := convs'_succ v (n := n) hv
+  rw [of_convs_eq_convs', of_convs_eq_convs', Option.bind_some] at h
+  by_contra hc
+  rw [dite_eq_right hc] at h
+  exact Option.some_ne_none _ h
+
+variable {v} in
 /-- The recurrence relation for the convergents of the continued fraction expansion
-of an element `v` of `K` in terms of the convergents of the inverse of its fractional part.
+of an element `v` of `K` that is not an integer, in terms of the convergents of the inverse of its
+fractional part.
 -/
-theorem convs_succ (n : ℕ) :
-    (of v).convs (n + 1) = ⌊v⌋ + 1 / (of (Int.fract v)⁻¹).convs n := by
-  rw [of_convs_eq_convs', convs'_succ, of_convs_eq_convs']
+theorem convs_succ (hv : Int.fract v ≠ 0) (n : ℕ) :
+    (of v).convs (n + 1) =
+      ⌊v⌋ + Checked.div 1 ((of (Int.fract v)⁻¹).convs n) (isUnit_of_convs_inv_fract hv n) := by
+  have h := convs'_succ v (n := n) hv
+  rw [of_convs_eq_convs', of_convs_eq_convs', Option.bind_some,
+    dite_eq_left (isUnit_of_convs_inv_fract hv n)] at h
+  exact Option.some_inj.mp h
 
 section Convergence
 
@@ -117,7 +134,7 @@ theorem of_convergence_epsilon :
 
 set_option backward.isDefEq.respectTransparency false in
 theorem of_convergence [TopologicalSpace K] [OrderTopology K] :
-    Filter.Tendsto (of v).convs Filter.atTop <| 𝓝 v := by
+    Filter.Tendsto (fun n ↦ (of v).convs n) Filter.atTop <| 𝓝 v := by
   simpa [LinearOrderedAddCommGroup.tendsto_nhds, abs_sub_comm] using of_convergence_epsilon v
 
 end Convergence

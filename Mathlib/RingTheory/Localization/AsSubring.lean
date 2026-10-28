@@ -110,12 +110,12 @@ namespace subalgebra
 theorem mem_range_mapToFractionRing_iff_ofField (B : Type*) [CommRing B] [Algebra A B]
     [IsLocalization S B] (x : K) :
     x ∈ (mapToFractionRing K S B hS).range ↔
-      ∃ (a s : A) (_ : s ∈ S), x = algebraMap A K a * (algebraMap A K s)⁻¹ := by
+      ∃ (a s : A) (hs : s ∈ S),
+        haveI := map_isUnit_of_le K S hS ⟨s, hs⟩
+        x = algebraMap A K a * (algebraMap A K s)⁻¹ := by
   rw [mem_range_mapToFractionRing_iff]
-  convert! Iff.rfl
-  congr
-  rw [Units.val_inv_eq_inv_val]
-  rfl
+  refine exists_congr fun a ↦ exists_congr fun s ↦ exists_congr fun hs ↦ ?_
+  rw [(IsLocalization.mk'_eq_iff_eq_mul (S := K)).2 (inv_mul_cancel_right₀ _).symm]
 
 /-- Given a domain `A` with fraction field `K`, and a submonoid `S` of `A` which
 contains no zero divisor, this is the localization of `A` at `S`, considered as
@@ -126,7 +126,9 @@ The carrier of this subalgebra is defined as the set of all `x : K` of the form
 -/
 noncomputable def ofField : Subalgebra A K :=
   (mapToFractionRing K S (Localization S) hS).range.copy
-      { x | ∃ (a s : A) (_ : s ∈ S), x = algebraMap A K a * (algebraMap A K s)⁻¹ } <| by
+      { x | ∃ (a s : A) (hs : s ∈ S),
+        haveI := map_isUnit_of_le K S hS ⟨s, hs⟩
+        x = algebraMap A K a * (algebraMap A K s)⁻¹ } <| by
     ext
     symm
     apply mem_range_mapToFractionRing_iff_ofField
@@ -140,8 +142,9 @@ instance isLocalization_ofField : IsLocalization S (ofField K S hS) := by
 
 instance (S : Subalgebra A K) : IsFractionRing S K := by
   refine IsFractionRing.of_field S K fun z ↦ ?_
-  rcases IsFractionRing.div_surjective A z with ⟨x, y, _, eq⟩
-  exact ⟨algebraMap A S x, algebraMap A S y, eq.symm⟩
+  obtain ⟨x, y, hy, eq⟩ := IsFractionRing.div_surjective A z
+  have hy' : algebraMap A K y ≠ 0 := (IsLocalization.map_units K ⟨y, hy⟩).ne_zero
+  exact ⟨algebraMap A S x, algebraMap A S y, fun h ↦ hy' (congrArg Subtype.val h), eq.symm⟩
 
 instance isFractionRing_ofField : IsFractionRing (ofField K S hS) K :=
   inferInstance

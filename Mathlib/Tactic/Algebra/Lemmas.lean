@@ -19,19 +19,6 @@ open Mathlib.Meta.NormNum
 
 namespace Mathlib.Tactic.Algebra
 
-theorem algebraMap_divp_mk0 {R A : Type*} [Semifield R] [Semifield A] [Algebra R A]
-    (a b : R) (hb : b ≠ 0) (hfb : algebraMap R A b ≠ 0) :
-    algebraMap R A (divp a (Units.mk0 b hb)) =
-      divp (algebraMap R A a) (Units.mk0 (algebraMap R A b) hfb) := by
-  let f := (algebraMap R A).toMonoidHom
-  let u := Units.mk0 b hb
-  let v := Units.mk0 (algebraMap R A b) hfb
-  have huv : Units.map f u = v := Units.ext rfl
-  simp only [divp, map_mul]
-  congr 1
-  exact (Units.coe_map_inv f u).symm.trans <|
-    congrArg Units.val (congrArg Inv.inv huv)
-
 section ring
 
 variable {R A : Type*} [CommRing R] [CommRing A] [Algebra R A]
@@ -53,14 +40,13 @@ theorem isNNRat_eq_rawCast {a : A} {n d : ℕ} (h : IsNNRat a n d) :
       intro hd
       exact h.den_nz (by simpa using congrArg (algebraMap R A) hd)) + 0 : R) + 0 := by
   rw [add_zero, map_add, map_zero, add_zero]
+  have hdA : (d : A) ≠ 0 := h.den_nz
+  have hdR : (d : R) ≠ 0 := fun hd ↦ h.den_nz (by simpa using congrArg (algebraMap R A) hd)
   calc
     a = NNRat.rawCast n d h.den_nz := h.to_raw_eq
-    _ = algebraMap R A (NNRat.rawCast n d (by
-        intro hd
-        exact h.den_nz (by simpa using congrArg (algebraMap R A) hd)) : R) := by
-      simp only [NNRat.rawCast]
-      simpa only [map_natCast] using (algebraMap_divp_mk0 (R := R) (A := A)
-        (n : R) (d : R) _ (by simpa using h.den_nz)).symm
+    _ = algebraMap R A (NNRat.rawCast n d hdR : R) := by
+      change (n : A) / (d : A) = algebraMap R A ((n : R) / (d : R))
+      simp only [map_div₀, map_natCast]
 
 end semifield
 
@@ -74,14 +60,14 @@ theorem isRat_eq_rawCast {a : A} {n d : ℕ} (h : IsRat a (.negOfNat n) d) :
       intro hd
       exact h.den_nz (by simpa using congrArg (algebraMap R A) hd)) + 0 : R) + 0 := by
   rw [add_zero, map_add, map_zero, add_zero]
+  have hdA : (d : A) ≠ 0 := h.den_nz
+  have hdR : (d : R) ≠ 0 := fun hd ↦ h.den_nz (by simpa using congrArg (algebraMap R A) hd)
   calc
     a = Rat.rawCast (.negOfNat n) d h.den_nz := h.to_raw_eq
-    _ = algebraMap R A (Rat.rawCast (.negOfNat n) d (by
-        intro hd
-        exact h.den_nz (by simpa using congrArg (algebraMap R A) hd)) : R) := by
-      simp only [Rat.rawCast]
-      simpa only [map_intCast, map_natCast] using (algebraMap_divp_mk0 (R := R) (A := A)
-        (Int.negOfNat n : R) (d : R) _ (by simpa using h.den_nz)).symm
+    _ = algebraMap R A (Rat.rawCast (.negOfNat n) d hdR : R) := by
+      change ((Int.negOfNat n : ℤ) : A) / (d : A) =
+        algebraMap R A (((Int.negOfNat n : ℤ) : R) / (d : R))
+      simp only [map_div₀, map_intCast, map_natCast]
 
 end field
 
@@ -112,10 +98,10 @@ theorem nat_rawCast_1 : (Nat.rawCast 1 : R) = 1 := by simp
 theorem nat_rawCast_2 [Nat.AtLeastTwo n] : (Nat.rawCast n : R) = OfNat.ofNat n := rfl
 theorem int_rawCast_neg {R} [Ring R] : (Int.rawCast (.negOfNat n) : R) = -Nat.rawCast n := by simp
 theorem nnrat_rawCast {R} [DivisionSemiring R] (hd : (d : R) ≠ 0) :
-    (NNRat.rawCast n d hd : R) = Nat.rawCast n /ₚ Units.mk0 (Nat.rawCast d : R) hd := by rfl
+    (NNRat.rawCast n d hd : R) = Nat.rawCast n / (Nat.rawCast d : R) := by rfl
 theorem rat_rawCast_neg {R} [DivisionRing R] (hd : (d : R) ≠ 0) :
-    (Rat.rawCast (.negOfNat n) d hd : R) =
-      Int.rawCast (.negOfNat n) /ₚ Units.mk0 (Nat.rawCast d : R) hd := by rfl
+    (Rat.rawCast (.negOfNat n) d hd : R) = Int.rawCast (.negOfNat n) / (Nat.rawCast d : R) := by
+  rfl
 
 end cleanupSMul
 section cleanupConsts
@@ -134,29 +120,33 @@ theorem neg_1_smul {R A} [CommRing R] [CommRing A] [Algebra R A] {a : A} :
     (-1 : R) • a = - a := by
   simp
 
+/-- The image of an invertible numeral of the scalar ring is an invertible numeral. -/
+theorem isUnit_ofNat_algebraMap {R A} [CommSemiring R] [Semiring A] [Algebra R A]
+    [d.AtLeastTwo] (hd : IsUnit (ofNat(d) : R)) : IsUnit (ofNat(d) : A) :=
+  map_ofNat (algebraMap R A) d ▸ hd.map (algebraMap R A)
+
 theorem nnRat_ofNat_smul_1 {R A} [Semifield R] [Semifield A] [Algebra R A] {a : A}
-    [d.AtLeastTwo] (hd : (ofNat(d) : R) ≠ 0) :
-    (1 /ₚ Units.mk0 ofNat(d) hd : R) • a =
-      algebraMap R A (1 /ₚ Units.mk0 ofNat(d) hd : R) * a := by
-  rw [Algebra.smul_def]
+    [d.AtLeastTwo] {hd : IsUnit (ofNat(d) : R)} :
+    (1 / ofNat(d) : R) • a = Checked.div 1 (ofNat(d) : A) (isUnit_ofNat_algebraMap hd) * a := by
+  simp only [Algebra.smul_def, map_div₀, map_one, map_ofNat]
 
 theorem nnRat_ofNat_smul_2 {R A} [Semifield R] [Semifield A] [Algebra R A] {a : A}
-    [n.AtLeastTwo] [d.AtLeastTwo] (hd : (ofNat(d) : R) ≠ 0) :
-    (ofNat(n) /ₚ Units.mk0 ofNat(d) hd : R) • a =
-      algebraMap R A (ofNat(n) /ₚ Units.mk0 ofNat(d) hd : R) * a := by
-  rw [Algebra.smul_def]
+    [n.AtLeastTwo] [d.AtLeastTwo] {hd : IsUnit (ofNat(d) : R)} :
+    (ofNat(n) / ofNat(d) : R) • a =
+      Checked.div (ofNat(n) : A) (ofNat(d) : A) (isUnit_ofNat_algebraMap hd) * a := by
+  simp only [Algebra.smul_def, map_div₀, map_ofNat]
 
 theorem rat_ofNat_smul_1 {R A} [Field R] [Field A] [Algebra R A] {a : A}
-    [d.AtLeastTwo] (hd : (ofNat(d) : R) ≠ 0) :
-    ((-1) /ₚ Units.mk0 ofNat(d) hd : R) • a =
-      algebraMap R A ((-1) /ₚ Units.mk0 ofNat(d) hd : R) * a := by
-  rw [Algebra.smul_def]
+    [d.AtLeastTwo] {hd : IsUnit (ofNat(d) : R)} :
+    ((-1) / ofNat(d) : R) • a =
+      Checked.div (-1 : A) (ofNat(d) : A) (isUnit_ofNat_algebraMap hd) * a := by
+  simp only [Algebra.smul_def, map_div₀, map_neg, map_one, map_ofNat]
 
 theorem rat_ofNat_smul_2 {R A} [Field R] [Field A] [Algebra R A] {a : A}
-    [n.AtLeastTwo] [d.AtLeastTwo] (hd : (ofNat(d) : R) ≠ 0) :
-    ((-ofNat(n)) /ₚ Units.mk0 ofNat(d) hd : R) • a =
-      algebraMap R A ((-ofNat(n)) /ₚ Units.mk0 ofNat(d) hd : R) * a := by
-  rw [Algebra.smul_def]
+    [n.AtLeastTwo] [d.AtLeastTwo] {hd : IsUnit (ofNat(d) : R)} :
+    ((-ofNat(n)) / ofNat(d) : R) • a =
+      Checked.div (-ofNat(n) : A) (ofNat(d) : A) (isUnit_ofNat_algebraMap hd) * a := by
+  simp only [Algebra.smul_def, map_div₀, map_neg, map_ofNat]
 
 end cleanupConsts
 

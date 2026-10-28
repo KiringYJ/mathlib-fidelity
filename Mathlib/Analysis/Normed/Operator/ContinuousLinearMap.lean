@@ -182,7 +182,7 @@ variable {σ₂₁ : 𝕜₂ →+* 𝕜} [RingHomInvPair σ σ₂₁] [RingHomIn
 theorem ContinuousLinearEquiv.homothety_inverse (a : ℝ) (ha : 0 < a) (f : E ≃ₛₗ[σ] F) :
     (∀ x : E, ‖f x‖ = a * ‖x‖) → ∀ y : F, ‖f.symm y‖ = a⁻¹ * ‖y‖ := by
   intro hf y
-  simpa [eq_inv_mul_iff_mul_eq₀ (ne_of_gt ha)] using (hf (f.symm y)).symm
+  simpa [eq_inv_mul_iff_mul_eq₀] using (hf (f.symm y)).symm
 
 /-- A linear equivalence which is a homothety is a continuous linear equivalence. -/
 noncomputable def ContinuousLinearEquiv.ofHomothety (f : E ≃ₛₗ[σ] F) (a : ℝ) (ha : 0 < a)

@@ -51,6 +51,9 @@ For `α` a semigroup/monoid, `Filter α` is a semigroup/monoid.
 As an unfortunate side effect, this means that `n • f`, where `n : ℕ`, is ambiguous between
 pointwise scaling and repeated pointwise addition. See note [pointwise nat action].
 
+A group with zero has no ambient inverse or division, so there is no pointwise inversion or
+division of filters on it. These operations exist for filters on its units, which form a group.
+
 ## Implementation notes
 
 We put all instances in the scope `Pointwise`, so that these instances are not available by
@@ -386,7 +389,8 @@ variable [Div α] {f f₁ f₂ g g₁ g₂ h : Filter α} {s t : Set α} {a b : 
 protected def instDiv : Div (Filter α) :=
   ⟨/- This is defeq to `map₂ (· / ·) f g`, but the hypothesis unfolds to `t₁ / t₂ ⊆ s`
   rather than all the way to `Set.image2 (· / ·) t₁ t₂ ⊆ s`. -/
-  fun f g => { map₂ (· / ·) f g with sets := { s | ∃ t₁ ∈ f, ∃ t₂ ∈ g, t₁ / t₂ ⊆ s } }⟩
+  fun f g => { map₂ (· / · : α → α → α) f g with
+    sets := { s | ∃ t₁ ∈ f, ∃ t₂ ∈ g, t₁ / t₂ ⊆ s } }⟩
 
 scoped[Pointwise] attribute [instance] Filter.instDiv Filter.instSub
 
@@ -764,8 +768,6 @@ protected theorem Tendsto.div_div (hf : Tendsto m f₁ f₂) (hg : Tendsto m g�
   (Filter.map_div m).trans_le <| Filter.div_le_div hf hg
 
 end Group
-
-
 
 /-! ### Scalar addition/multiplication of filters -/
 

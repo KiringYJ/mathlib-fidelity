@@ -52,8 +52,10 @@ theorem Real.mem_closure_iff {s : Set ℝ} {x : ℝ} :
     x ∈ closure s ↔ ∀ ε > 0, ∃ y ∈ s, |y - x| < ε := by
   simp [mem_closure_iff_nhds_basis nhds_basis_ball, Real.dist_eq]
 
+/-- Inversion is uniformly continuous on a set of reals bounded away from `0`; the inverse of
+`p : s` exists because `0 < r ≤ |p|`. -/
 theorem Real.uniformContinuous_inv (s : Set ℝ) {r : ℝ} (r0 : 0 < r) (H : ∀ x ∈ s, r ≤ |x|) :
-    UniformContinuous fun p : s => p.1⁻¹ :=
+    UniformContinuous fun p : s => Checked.inv p.1 (abs_pos.1 (r0.trans_le (H _ p.2))).isUnit :=
   Metric.uniformContinuous_iff.2 fun _ε ε0 =>
     let ⟨δ, δ0, Hδ⟩ := rat_inv_continuous_lemma abs ε0 r0
     ⟨δ, δ0, fun {a b} h => Hδ (H _ a.2) (H _ b.2) h⟩
@@ -62,8 +64,9 @@ theorem Real.uniformContinuous_abs : UniformContinuous (abs : ℝ → ℝ) :=
   Metric.uniformContinuous_iff.2 fun ε ε0 =>
     ⟨ε, ε0, fun _ _ ↦ lt_of_le_of_lt (abs_abs_sub_abs_le_abs_sub _ _)⟩
 
-theorem Real.continuous_inv : Continuous fun a : { r : ℝ // r ≠ 0 } => a.val⁻¹ :=
-  continuousOn_inv₀.domRestrict
+theorem Real.continuous_inv :
+    Continuous fun a : { r : ℝ // r ≠ 0 } => Checked.inv a.val a.2.isUnit :=
+  continuous_subtype_val.fun_inv₀
 
 theorem Real.uniformContinuous_mul (s : Set (ℝ × ℝ)) {r₁ r₂ : ℝ}
     (H : ∀ x ∈ s, |(x : ℝ × ℝ).1| < r₁ ∧ |x.2| < r₂) :

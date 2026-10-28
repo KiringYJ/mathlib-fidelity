@@ -68,12 +68,16 @@ namespace Archimedean
 Formally, these are numbers `p / q` such that `p • 1 < q • x`. -/
 abbrev ratLt (x : M) : Set ℚ := {r | r.num • 1 < r.den • x}
 
-theorem mkRat_mem_ratLt {num : ℤ} {den : ℕ} (hden : den ≠ 0) {x : M} :
-    mkRat num den ∈ ratLt x ↔ num • 1 < den • x := by
-  rw [Set.mem_ofPred]
-  obtain ⟨m, hm0, hnum, hden⟩ := Rat.mkRat_num_den hden (show mkRat num den = _ by rfl)
+theorem intCast_div_natCast_mem_ratLt {num : ℤ} {den : ℕ} {hden : IsUnit (den : ℚ)} {x : M} :
+    (num / den : ℚ) ∈ ratLt x ↔ num • 1 < den • x := by
+  replace hden : den ≠ 0 := Nat.cast_ne_zero.1 hden.ne_zero
+  rw [← Rat.fraction_eq_div num den hden, Set.mem_ofPred]
+  obtain ⟨m, hnum, hdenm⟩ := Rat.num_den_mk (n := num) hden rfl
+  have hm0 : m ≠ 0 := by
+    rintro rfl
+    exact hden (by simpa using hdenm)
   conv in num • 1 => rw [hnum, mul_comm, ← smul_smul, natCast_zsmul]
-  conv in den • x => rw [hden, mul_comm, ← smul_smul]
+  conv in den • x => rw [hdenm, mul_comm, ← smul_smul]
   exact (smul_lt_smul_iff_of_pos_left (Nat.zero_lt_of_ne_zero hm0)).symm
 
 /-- `ratLt` as a set of real numbers. -/
@@ -128,8 +132,8 @@ theorem ratLt_add (x y : M) : ratLt (x + y) = ratLt x + ratLt y := by
       simp [hk]
     have hka0 : k * a.den ≠ 0 := mul_ne_zero hk0 a.den_ne_zero
     obtain ⟨m, ⟨hm1, hm2⟩, _⟩ := existsUnique_add_zsmul_mem_Ico zero_lt_one 0 (k • a.den • x - 1)
-    refine ⟨mkRat m (k * a.den), ?_, mkRat (k * a.num - m) (k * a.den), ?_, ?_⟩
-    · rw [mkRat_mem_ratLt hka0, ← smul_smul]
+    refine ⟨(m / (k * a.den : ℕ) : ℚ), ?_, ((k * a.num - m : ℤ) / (k * a.den : ℕ) : ℚ), ?_, ?_⟩
+    · rw [intCast_div_natCast_mem_ratLt, ← smul_smul]
       simpa using hm2
     · have hk' : 1 + (k • a.num • 1 - k • a.den • y) ≤ k • a.den • x - 1 := by
         rw [smul_add, smul_sub, smul_add, le_sub_iff_add_le, ← sub_le_iff_le_add] at hk
@@ -138,10 +142,13 @@ theorem ratLt_add (x y : M) : ratLt (x + y) = ratLt x + ratLt y := by
         abel
       have : k • a.num • 1 - k • a.den • y < m • 1 :=
         lt_of_lt_of_le (lt_add_of_pos_left _ zero_lt_one) (by simpa using hk'.trans hm1)
-      rw [mkRat_mem_ratLt hka0, sub_smul, sub_lt_comm, ← smul_smul, ← smul_smul, natCast_zsmul]
+      rw [intCast_div_natCast_mem_ratLt, sub_smul, sub_lt_comm, ← smul_smul, ← smul_smul,
+        natCast_zsmul]
       exact this
-    · rw [Rat.mkRat_add_mkRat_of_den _ _ hka0]
-      rw [add_sub_cancel, Rat.mkRat_mul_left hk0, Rat.mkRat_num_den']
+    · rw [← add_div, div_eq_iff, ← Int.cast_add, add_sub_cancel]
+      push_cast
+      rw [← Rat.mul_den_eq_num a]
+      ring
   · -- `u ∈ ratLt 1 x`, `v ∈ ratLt 1 y` → `u + v ∈ ratLt 1 (x + y)`
     intro ⟨u, hu, v, hv, huv⟩
     rw [← huv]

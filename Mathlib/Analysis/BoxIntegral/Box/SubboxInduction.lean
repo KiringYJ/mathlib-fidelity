@@ -135,7 +135,7 @@ theorem subbox_induction_on' {p : Box ι → Prop} (I : Box ι)
   have hJsub (m i) : (J m).upper i - (J m).lower i = (I.upper i - I.lower i) / 2 ^ m := by
     induction m with
     | zero => simp [J]
-    | succ m ihm => simp only [pow_succ, J_succ, upper_sub_lower_splitCenterBox, ihm, div_div]
+    | succ m ihm => simp only [pow_succ, J_succ, upper_sub_lower_splitCenterBox, ihm, div_div₀]
   have h0 : J 0 = I := rfl
   clear_value J
   clear hpI hs J_succ s
@@ -152,8 +152,9 @@ theorem subbox_induction_on' {p : Box ι → Prop} (I : Box ι)
   have hJuz : Tendsto (fun m ↦ (J m).upper) atTop (𝓝 z) := by
     suffices Tendsto (fun m ↦ (J m).upper - (J m).lower) atTop (𝓝 0) by simpa using hJlz.add this
     refine tendsto_pi_nhds.2 fun i ↦ ?_
-    simpa [hJsub] using
-      tendsto_const_nhds.div_atTop (tendsto_pow_atTop_atTop_of_one_lt _root_.one_lt_two)
+    have h2 : Tendsto (fun m : ℕ ↦ (2⁻¹ : ℝ) ^ m) atTop (𝓝 0) :=
+      tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num) (by norm_num)
+    simpa [hJsub, div_eq_mul_inv₀, inv_pow₀] using h2.const_mul (I.upper i - I.lower i)
   replace hJlz : Tendsto (fun m ↦ (J m).lower) atTop (𝓝[Icc I.lower I.upper] z) :=
     tendsto_nhdsWithin_of_tendsto_nhds_of_eventually_within _ hJlz (Eventually.of_forall hJl_mem)
   replace hJuz : Tendsto (fun m ↦ (J m).upper) atTop (𝓝[Icc I.lower I.upper] z) :=

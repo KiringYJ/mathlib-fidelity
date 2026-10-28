@@ -27,10 +27,10 @@ theorem map_nnratEval_smul [AddCommMonoid M] [AddCommMonoid M₂] {F : Type*} [F
     f (NNRat.eval c hR • x) = NNRat.eval c hS • f x := by
   have uR : IsUnit (c.den : R) := isUnit_iff_ne_zero.mpr hR
   have uS : IsUnit (c.den : S) := isUnit_iff_ne_zero.mpr hS
-  simp only [NNRat.eval, divp, mul_smul]
+  simp only [NNRat.eval, div_eq_mul_inv₀, mul_smul]
   rw [map_natCast_smul f R S]
   congr 1
-  exact map_inv_natCast_smul f R S c.den uR uS x
+  exact map_inv_natCast_smul f R S c.den (hR := uR) (hS := uS) x
 
 /-- Additive maps preserve admissible rational scalars, in any characteristic. -/
 theorem map_ratEval_smul [AddCommGroup M] [AddCommGroup M₂] {F : Type*} [FunLike F M M₂]
@@ -40,38 +40,40 @@ theorem map_ratEval_smul [AddCommGroup M] [AddCommGroup M₂] {F : Type*} [FunLi
     f (Rat.eval c hR • x) = Rat.eval c hS • f x := by
   have uR : IsUnit (c.den : R) := isUnit_iff_ne_zero.mpr hR
   have uS : IsUnit (c.den : S) := isUnit_iff_ne_zero.mpr hS
-  simp only [Rat.eval, divp, mul_smul]
+  simp only [Rat.eval, div_eq_mul_inv₀, mul_smul]
   rw [map_intCast_smul f R S]
   congr 1
-  exact map_inv_natCast_smul f R S c.den uR uS x
+  exact map_inv_natCast_smul f R S c.den (hR := uR) (hS := uS) x
 
 theorem map_nnratCast_smul [AddCommMonoid M] [AddCommMonoid M₂] {F : Type*} [FunLike F M M₂]
     [AddMonoidHomClass F M M₂] (f : F) (R S : Type*)
     [DivisionSemiring R] [CharZero R] [DivisionSemiring S] [CharZero S]
     [Module R M] [Module S M₂] (c : ℚ≥0) (x : M) :
     f ((c : R) • x) = (c : S) • f x := by
-  exact map_nnratEval_smul f R S c (Nat.cast_ne_zero.mpr c.den_ne_zero)
-    (Nat.cast_ne_zero.mpr c.den_ne_zero) x
+  rw [NNRat.cast_eq_eval (α := R) c (Nat.cast_ne_zero.mpr c.den_ne_zero),
+    NNRat.cast_eq_eval (α := S) c (Nat.cast_ne_zero.mpr c.den_ne_zero)]
+  exact map_nnratEval_smul f R S c _ _ x
 
 theorem map_ratCast_smul [AddCommGroup M] [AddCommGroup M₂] {F : Type*} [FunLike F M M₂]
     [AddMonoidHomClass F M M₂] (f : F) (R S : Type*)
     [DivisionRing R] [CharZero R] [DivisionRing S] [CharZero S] [Module R M]
     [Module S M₂] (c : ℚ) (x : M) :
     f ((c : R) • x) = (c : S) • f x := by
-  exact map_ratEval_smul f R S c (Nat.cast_ne_zero.mpr c.den_nz)
-    (Nat.cast_ne_zero.mpr c.den_nz) x
+  rw [Rat.cast_eq_eval (α := R) c (Nat.cast_ne_zero.mpr c.den_nz),
+    Rat.cast_eq_eval (α := S) c (Nat.cast_ne_zero.mpr c.den_nz)]
+  exact map_ratEval_smul f R S c _ _ x
 
 theorem map_nnrat_smul [AddCommMonoid M] [AddCommMonoid M₂]
     [_instM : Module ℚ≥0 M] [_instM₂ : Module ℚ≥0 M₂]
     {F : Type*} [FunLike F M M₂] [AddMonoidHomClass F M M₂]
     (f : F) (c : ℚ≥0) (x : M) : f (c • x) = c • f x := by
-  simpa only [NNRat.cast_def, NNRat.eval_nnrat] using map_nnratCast_smul f ℚ≥0 ℚ≥0 c x
+  simpa only [NNRat.cast_def, NNRat.num_div_den] using map_nnratCast_smul f ℚ≥0 ℚ≥0 c x
 
 theorem map_rat_smul [AddCommGroup M] [AddCommGroup M₂]
     [_instM : Module ℚ M] [_instM₂ : Module ℚ M₂]
     {F : Type*} [FunLike F M M₂] [AddMonoidHomClass F M M₂]
     (f : F) (c : ℚ) (x : M) : f (c • x) = c • f x := by
-  simpa only [Rat.cast_def, Rat.eval_rat] using map_ratCast_smul f ℚ ℚ c x
+  simpa only [Rat.cast_def, Rat.num_div_den] using map_ratCast_smul f ℚ ℚ c x
 
 /-- There can be at most one `Module ℚ≥0 E` structure on an additive commutative monoid. -/
 instance subsingleton_nnrat_module (E : Type*) [AddCommMonoid E] : Subsingleton (Module ℚ≥0 E) :=

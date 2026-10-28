@@ -157,7 +157,8 @@ theorem ofVector_ofPoint_cases {R V P : Type*} [DivisionRing R] [AddCommGroup V]
   rcases eq_or_ne c 0 with rfl | hc
   · simpa using ofVector v
   · convert smul_ofPoint c (c⁻¹ • v +ᵥ p) hc using 1
-    rw [AffineMap.map_vadd, ofPoint_linear, vadd_eq_add, smul_add, map_smul, smul_inv_smul₀ hc]
+    rw [AffineMap.map_vadd, ofPoint_linear, vadd_eq_add, smul_add, map_smul, smul_smul,
+      mul_inv_cancel₀, one_smul]
 
 theorem span_range_ofPoint : Submodule.span R (Set.range (ofPoint (R := R) (P := P))) = ⊤ := by
   refine Submodule.eq_top_iff'.mpr fun x => ?_

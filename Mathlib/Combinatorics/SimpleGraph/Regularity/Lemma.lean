@@ -107,12 +107,13 @@ theorem szemeredi_regularity (hε : 0 < ε) (hl : l ≤ card α) :
     · rw [iterate_succ_apply', stepBound, bound]
       gcongr
       simp
+    have hε₅ : IsUnit (ε ^ 5) := (pow_pos hε 5).ne'.isUnit
     calc
       (1 : ℝ) = ε ^ 5 / ↑4 * (↑4 / ε ^ 5) := by
-        rw [mul_comm, div_mul_div_cancel₀ (pow_pos hε 5).ne']; simp
+        rw [mul_comm, div_mul_div_cancel₀]; simp
       _ < ε ^ 5 / 4 * (⌊4 / ε ^ 5⌋₊ + 1) := by gcongr; exact Nat.lt_floor_add_one _
       _ ≤ (P.energy G : ℝ) := by rwa [← Nat.cast_add_one]
-      _ ≤ 1 := mod_cast P.energy_le_one G
+      _ ≤ 1 := mod_cast P.energy_le_one G (P.parts_nonempty univ_nonempty.ne_empty)
   -- Let's do the actual induction.
   intro i
   induction i with
@@ -120,7 +121,7 @@ theorem szemeredi_regularity (hε : 0 < ε) (hl : l ≤ card α) :
   | zero =>
     refine ⟨dum, hdum₁, hdum₂.ge, hdum₂.le, Or.inr ?_⟩
     rw [Nat.cast_zero, mul_zero]
-    exact mod_cast dum.energy_nonneg G
+    exact mod_cast dum.energy_nonneg G (dum.parts_nonempty univ_nonempty.ne_empty)
   -- For the induction step at `i + 1`, find `P` the equipartition at `i`.
   | succ i ih =>
   obtain ⟨P, hP₁, hP₂, hP₃, hP₄⟩ := ih
@@ -136,8 +137,9 @@ theorem szemeredi_regularity (hε : 0 < ε) (hl : l ≤ card α) :
     (hundred_lt_pow_initialBound_mul hε l).le.trans
       (mul_le_mul_of_nonneg_right (pow_right_mono₀ (by simp) hP₂) <| by positivity)
   have hi : (i : ℝ) ≤ 4 / ε ^ 5 := by
-    have hi : ε ^ 5 / 4 * ↑i ≤ 1 := hP₄.trans (mod_cast P.energy_le_one G)
-    rw [div_mul_eq_mul_div, div_le_iff₀ (show (0 : ℝ) < 4 by simp)] at hi
+    have hi : ε ^ 5 / 4 * ↑i ≤ 1 :=
+      hP₄.trans (mod_cast P.energy_le_one G (P.parts_nonempty univ_nonempty.ne_empty))
+    rw [div_mul_eq_mul_div₀, div_le_iff₀ (show (0 : ℝ) < 4 by simp)] at hi
     norm_num at hi
     rwa [le_div_iff₀' (pow_pos hε _)]
   have hsize : #P.parts ≤ stepBound^[⌊4 / ε ^ 5⌋₊] t :=

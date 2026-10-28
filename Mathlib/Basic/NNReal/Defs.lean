@@ -91,29 +91,22 @@ end
 
 example : (0 : ℝ≥0) = ⊥ := by with_reducible_and_instances rfl
 
--- a computable copy of `Nonneg.instNNRatCast`
+/-- The embedding of `ℚ≥0`, restricted from the one of `ℝ`, as for `Nonneg`. -/
 instance : NNRatCast ℝ≥0 where nnratCast r := ⟨r, r.cast_nonneg⟩
 
-noncomputable instance : Inv ℝ≥0 where
-  inv x := .mk (x : ℝ)⁻¹ (inv_nonneg.mpr x.2)
-
-noncomputable instance : Div ℝ≥0 where
-  div x y := .mk ((x : ℝ) / (y : ℝ)) (div_nonneg x.2 y.2)
-
-noncomputable instance : SMul ℚ≥0 ℝ≥0 where
+instance : SMul ℚ≥0 ℝ≥0 where
   smul x y := .mk (x • (y : ℝ)) (by rw [NNRat.smul_def]; exact mul_nonneg x.cast_nonneg y.2)
-
-noncomputable instance zpow : Pow ℝ≥0 ℤ where
-  pow x n := .mk ((x : ℝ) ^ n) (zpow_nonneg x.2 _)
 
 /-- Redo the `Nonneg.semifield` instance, because this will get unfolded a lot,
 and ends up inserting the non-reducible defeq `ℝ≥0 = { x // x ≥ 0 }` in places where
-it needs to be reducible(-with-instances).
+it needs to be reducible(-with-instances). A nonzero element is invertible because the inverse of
+its coercion to `ℝ` is nonnegative.
 -/
-noncomputable instance : Semifield ℝ≥0 := fast_instance%
+instance : Semifield ℝ≥0 := fast_instance%
   Function.Injective.semifield toReal Subtype.val_injective
-    rfl rfl (fun _ _ => rfl) (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl)
-    (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ => rfl) (fun _ => rfl)
+    rfl rfl (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ => rfl)
+    (fun _ => rfl) (fun _ _ => rfl)
+    fun a ha => ⟨.mk (a : ℝ)⁻¹ (inv_nonneg.2 a.2), mul_inv_cancel₀, inv_mul_cancel₀⟩
 
 instance : IsOrderedRing ℝ≥0 :=
   Nonneg.isOrderedRing
@@ -121,8 +114,8 @@ instance : IsOrderedRing ℝ≥0 :=
 instance : IsStrictOrderedRing ℝ≥0 :=
   Nonneg.isStrictOrderedRing
 
-noncomputable instance : LinearOrderedCommGroupWithZero ℝ≥0 where
-  bot_le h := h.2
+noncomputable instance : LinearOrderedCommGroupWithZero ℝ≥0 :=
+  fast_instance% CanonicallyOrderedAdd.toLinearOrderedCommGroupWithZero
 
 example {p q : ℝ≥0} (h1p : 0 < p) (h2p : p ≤ q) : q⁻¹ ≤ p⁻¹ := by
   with_reducible_and_instances exact inv_anti₀ h1p h2p
@@ -179,10 +172,6 @@ example : Sub ℝ≥0 := by infer_instance
 
 example : Mul ℝ≥0 := by infer_instance
 
-noncomputable example : Inv ℝ≥0 := by infer_instance
-
-noncomputable example : Div ℝ≥0 := by infer_instance
-
 example : LE ℝ≥0 := by infer_instance
 
 example : Bot ℝ≥0 := by infer_instance
@@ -212,14 +201,6 @@ protected theorem coe_add (r₁ r₂ : ℝ≥0) : ((r₁ + r₂ : ℝ≥0) : ℝ
 protected theorem coe_mul (r₁ r₂ : ℝ≥0) : ((r₁ * r₂ : ℝ≥0) : ℝ) = r₁ * r₂ :=
   rfl
 
-@[simp, norm_cast]
-protected theorem coe_inv (r : ℝ≥0) : ((r⁻¹ : ℝ≥0) : ℝ) = (r : ℝ)⁻¹ :=
-  rfl
-
-@[simp, norm_cast]
-protected theorem coe_div (r₁ r₂ : ℝ≥0) : ((r₁ / r₂ : ℝ≥0) : ℝ) = (r₁ : ℝ) / r₂ :=
-  rfl
-
 protected theorem coe_two : ((2 : ℝ≥0) : ℝ) = 2 := rfl
 
 @[simp, norm_cast]
@@ -236,6 +217,14 @@ variable {r r₁ r₂ : ℝ≥0} {x y : ℝ}
 
 @[norm_cast] lemma coe_ne_one : (r : ℝ) ≠ 1 ↔ r ≠ 1 := coe_eq_one.not
 
+/-! The evidence search `checked_nonzero` also uses that the coercion to `ℝ` of a nonzero element
+of `ℝ≥0` is nonzero. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply NNReal.coe_ne_zero.mpr); checked_nonzero))
+
 example : CommSemiring ℝ≥0 := by infer_instance
 
 /-- Coercion `ℝ≥0 → ℝ` as a `RingHom`.
@@ -249,6 +238,15 @@ def toRealHom : ℝ≥0 →+* ℝ where
   map_add' := NNReal.coe_add
 
 @[simp] theorem coe_toRealHom : ⇑toRealHom = toReal := rfl
+
+@[simp, norm_cast]
+protected theorem coe_inv (r : ℝ≥0) {hr : IsUnit r} : ((r⁻¹ : ℝ≥0) : ℝ) = (r : ℝ)⁻¹ :=
+  map_inv₀ toRealHom r
+
+@[simp, norm_cast]
+protected theorem coe_div (r₁ r₂ : ℝ≥0) {hr₂ : IsUnit r₂} :
+    ((r₁ / r₂ : ℝ≥0) : ℝ) = (r₁ : ℝ) / r₂ :=
+  map_div₀ toRealHom r₁ r₂
 
 section Actions
 
@@ -303,7 +301,9 @@ noncomputable example : CommGroupWithZero ℝ≥0 := by infer_instance
 theorem coe_pow (r : ℝ≥0) (n : ℕ) : ((r ^ n : ℝ≥0) : ℝ) = (r : ℝ) ^ n := rfl
 
 @[simp, norm_cast]
-theorem coe_zpow (r : ℝ≥0) (n : ℤ) : ((r ^ n : ℝ≥0) : ℝ) = (r : ℝ) ^ n := rfl
+theorem coe_zpow (r : ℝ≥0) (n : ℤ) {h : n < 0 → IsUnit r} :
+    ((r ^ n : ℝ≥0) : ℝ) = (r : ℝ) ^ n :=
+  map_zpow₀ toRealHom r n
 
 variable {ι : Type*}
 
@@ -690,8 +690,11 @@ theorem toNNReal_pow {x : ℝ} (hx : 0 ≤ x) (n : ℕ) : (x ^ n).toNNReal = x.t
   rw [← coe_inj, NNReal.coe_pow, Real.coe_toNNReal _ (pow_nonneg hx _),
     Real.coe_toNNReal x hx]
 
-theorem toNNReal_zpow {x : ℝ} (hx : 0 ≤ x) (n : ℤ) : (x ^ n).toNNReal = x.toNNReal ^ n := by
-  rw [← coe_inj, NNReal.coe_zpow, Real.coe_toNNReal _ (zpow_nonneg hx _), Real.coe_toNNReal x hx]
+theorem toNNReal_zpow {x : ℝ} (hx : 0 ≤ x) (n : ℤ) {h : n < 0 → IsUnit x} :
+    (x ^ n).toNNReal = Checked.zpow x.toNNReal n
+      fun hn ↦ (toNNReal_pos.2 (hx.lt_of_ne' (h hn).ne_zero)).ne'.isUnit := by
+  rw [← coe_inj, NNReal.coe_zpow, Real.coe_toNNReal _ (zpow_nonneg hx _)]
+  simp only [Real.coe_toNNReal x hx]
 
 theorem toNNReal_mul {p q : ℝ} (hp : 0 ≤ p) :
     Real.toNNReal (p * q) = Real.toNNReal p * Real.toNNReal q :=
@@ -755,39 +758,35 @@ end Sub
 section Inv
 
 @[simp]
-theorem inv_mk {r : ℝ} (hr : 0 ≤ r) : (NNReal.mk r hr)⁻¹ = .mk (r⁻¹) (inv_nonneg.2 hr) := rfl
+theorem inv_mk {r : ℝ} (hr : 0 ≤ r) {h : IsUnit (NNReal.mk r hr)} :
+    (NNReal.mk r hr)⁻¹ = .mk (Checked.inv r (h.map toRealHom)) (inv_nonneg.2 hr) :=
+  NNReal.eq (NNReal.coe_inv _)
 
 @[simp]
-theorem inv_le {r p : ℝ≥0} (h : r ≠ 0) : r⁻¹ ≤ p ↔ 1 ≤ r * p := by
-  rw [← mul_le_mul_iff_right₀ (pos_iff_ne_zero.2 h), mul_inv_cancel₀ h]
+theorem inv_le {r p : ℝ≥0} {hr : IsUnit r} : r⁻¹ ≤ p ↔ 1 ≤ r * p := by
+  rw [← mul_le_mul_iff_right₀ (pos_iff_ne_zero.2 hr.ne_zero), mul_inv_cancel₀]
 
-theorem inv_le_of_le_mul {r p : ℝ≥0} (h : 1 ≤ r * p) : r⁻¹ ≤ p := by
-  by_cases r = 0 <;> simp [*, inv_le]
-
-@[simp]
-theorem le_inv_iff_mul_le {r p : ℝ≥0} (h : p ≠ 0) : r ≤ p⁻¹ ↔ r * p ≤ 1 := by
-  rw [← mul_le_mul_iff_right₀ (pos_iff_ne_zero.2 h), mul_inv_cancel₀ h, mul_comm]
+theorem inv_le_of_le_mul {r p : ℝ≥0} (h : 1 ≤ r * p) :
+    Checked.inv r (left_ne_zero_of_mul (zero_lt_one.trans_le h).ne').isUnit ≤ p :=
+  inv_le.2 h
 
 @[simp]
-theorem lt_inv_iff_mul_lt {r p : ℝ≥0} (h : p ≠ 0) : r < p⁻¹ ↔ r * p < 1 := by
-  rw [← mul_lt_mul_iff_right₀ (pos_iff_ne_zero.2 h), mul_inv_cancel₀ h, mul_comm]
+theorem le_inv_iff_mul_le {r p : ℝ≥0} {hp : IsUnit p} : r ≤ p⁻¹ ↔ r * p ≤ 1 := by
+  rw [← mul_le_mul_iff_right₀ (pos_iff_ne_zero.2 hp.ne_zero), mul_inv_cancel₀, mul_comm]
 
-theorem div_le_of_le_mul {a b c : ℝ≥0} (h : a ≤ b * c) : a / c ≤ b :=
-  if h0 : c = 0 then by simp [h0] else (div_le_iff₀ (pos_iff_ne_zero.2 h0)).2 h
+@[simp]
+theorem lt_inv_iff_mul_lt {r p : ℝ≥0} {hp : IsUnit p} : r < p⁻¹ ↔ r * p < 1 := by
+  rw [← mul_lt_mul_iff_right₀ (pos_iff_ne_zero.2 hp.ne_zero), mul_inv_cancel₀, mul_comm]
 
-theorem div_le_of_le_mul' {a b c : ℝ≥0} (h : a ≤ b * c) : a / b ≤ c :=
-  div_le_of_le_mul <| mul_comm b c ▸ h
-
-theorem mul_lt_of_lt_div {a b r : ℝ≥0} (h : a < b / r) : a * r < b :=
-  (lt_div_iff₀ <| pos_iff_ne_zero.2 fun hr => False.elim <| by simp [hr] at h).1 h
+theorem mul_lt_of_lt_div {a b r : ℝ≥0} {hr : IsUnit r} (h : a < b / r) : a * r < b :=
+  (lt_div_iff₀ (pos_iff_ne_zero.2 hr.ne_zero)).1 h
 
 theorem le_of_forall_lt_one_mul_le {x y : ℝ≥0} (h : ∀ a < 1, a * x ≤ y) : x ≤ y :=
   le_of_forall_lt_imp_le_of_dense fun a ha => by
     have hx : x ≠ 0 := ha.ne_zero
-    have hx' : x⁻¹ ≠ 0 := by rwa [Ne, inv_eq_zero]
-    have : a * x⁻¹ < 1 := by rwa [← lt_inv_iff_mul_lt hx', inv_inv]
+    have : a * x⁻¹ < 1 := by rwa [mul_inv_lt_iff₀ (pos_iff_ne_zero.2 hx), one_mul]
     have : a * x⁻¹ * x ≤ y := h _ this
-    rwa [mul_assoc, inv_mul_cancel₀ hx, mul_one] at this
+    rwa [mul_assoc, inv_mul_cancel₀, mul_one] at this
 
 nonrec theorem half_le_self (a : ℝ≥0) : a / 2 ≤ a :=
   half_le_self bot_le
@@ -798,29 +797,26 @@ nonrec theorem half_lt_self {a : ℝ≥0} (h : a ≠ 0) : a / 2 < a :=
 theorem div_lt_one_of_lt {a b : ℝ≥0} (h : a < b) : a / b < 1 := by
   rwa [div_lt_iff₀ h.bot_lt, one_mul]
 
-theorem _root_.Real.toNNReal_inv {x : ℝ} : Real.toNNReal x⁻¹ = (Real.toNNReal x)⁻¹ := by
-  rcases le_total 0 x with hx | hx
-  · nth_rw 1 [← Real.coe_toNNReal x hx]
-    rw [← NNReal.coe_inv, Real.toNNReal_coe]
-  · rw [toNNReal_eq_zero.mpr hx, inv_zero, toNNReal_eq_zero.mpr (inv_nonpos.mpr hx)]
+theorem _root_.Real.toNNReal_inv {x : ℝ} (hx : 0 < x) :
+    Real.toNNReal x⁻¹ = (Real.toNNReal x)⁻¹ := by
+  rw [← NNReal.coe_inj, NNReal.coe_inv, Real.coe_toNNReal _ (inv_pos.2 hx).le]
+  simp only [Real.coe_toNNReal x hx.le]
 
-theorem _root_.Real.toNNReal_div {x y : ℝ} (hx : 0 ≤ x) :
+theorem _root_.Real.toNNReal_div {x y : ℝ} (hy : 0 < y) :
     Real.toNNReal (x / y) = Real.toNNReal x / Real.toNNReal y := by
-  rw [div_eq_mul_inv, div_eq_mul_inv, ← Real.toNNReal_inv, ← Real.toNNReal_mul hx]
+  rw [div_eq_inv_mul₀, div_eq_inv_mul₀, Real.toNNReal_mul (inv_pos.2 hy).le,
+    Real.toNNReal_inv hy]
 
-theorem _root_.Real.toNNReal_div' {x y : ℝ} (hy : 0 ≤ y) :
-    Real.toNNReal (x / y) = Real.toNNReal x / Real.toNNReal y := by
-  rw [div_eq_inv_mul, div_eq_inv_mul, Real.toNNReal_mul (inv_nonneg.2 hy), Real.toNNReal_inv]
+theorem inv_lt_one_iff {x : ℝ≥0} {hx : IsUnit x} : x⁻¹ < 1 ↔ 1 < x :=
+  inv_lt_one₀ (pos_iff_ne_zero.2 hx.ne_zero)
 
-theorem inv_lt_one_iff {x : ℝ≥0} (hx : x ≠ 0) : x⁻¹ < 1 ↔ 1 < x := by
-  rw [← one_div, div_lt_iff₀ hx.bot_lt, one_mul]
-
-theorem inv_lt_inv {x y : ℝ≥0} (hx : x ≠ 0) (h : x < y) : y⁻¹ < x⁻¹ :=
-  inv_strictAnti₀ hx.bot_lt h
+theorem inv_lt_inv {x y : ℝ≥0} {hx : IsUnit x} (h : x < y) : y⁻¹ < x⁻¹ :=
+  inv_strictAnti₀ (pos_iff_ne_zero.2 hx.ne_zero) h
 
 lemma exists_nat_pos_inv_lt {b : ℝ≥0} (hb : 0 < b) :
-    ∃ (n : ℕ), 0 < n ∧ (n : ℝ≥0)⁻¹ < b :=
-  b.toReal.exists_nat_pos_inv_lt hb
+    ∃ (n : ℕ) (_ : 0 < n), (n : ℝ≥0)⁻¹ < b := by
+  obtain ⟨n, hn, h⟩ := b.toReal.exists_nat_pos_inv_lt hb
+  exact ⟨n, hn, NNReal.coe_lt_coe.1 (by simpa only [NNReal.coe_inv, NNReal.coe_natCast] using h)⟩
 
 end Inv
 
@@ -977,7 +973,8 @@ theorem NNReal.exists_lt_of_strictMono [h : Nontrivial Γ₀ˣ] {f : Γ₀ →*�
     · have hfg0 : f g ≠ 0 :=
         fun h0 ↦ (Units.ne_zero g) ((map_eq_zero f).mp h0)
       have hg1' : 1 < g := lt_of_le_of_ne (not_lt.mp hu1) hg1.symm
-      rw [Units.val_inv_eq_inv_val, map_inv₀, inv_lt_one_iff hfg0, ← map_one f]
+      rw [← inv_eq_val_inv_of_eq_val₀ (hb := g.isUnit) g rfl, map_inv₀, inv_lt_one_iff,
+        ← map_one f]
       exact hf hg1'
   obtain ⟨n, hn⟩ := exists_pow_lt_of_lt_one hr hfu
   use u ^ n

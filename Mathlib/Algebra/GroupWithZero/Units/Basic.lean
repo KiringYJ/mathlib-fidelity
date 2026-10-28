@@ -126,31 +126,124 @@ theorem Units.mk0_mul (x y : G₀) (hxy) :
       Units.mk0 x (mul_ne_zero_iff.mp hxy).1 * Units.mk0 y (mul_ne_zero_iff.mp hxy).2 := by
   ext; rfl
 
+@[simp] lemma divp_mk0 (a : G₀) (hb : b ≠ 0) : a /ₚ Units.mk0 b hb = a / b :=
+  congrArg (a /ₚ ·) (Units.ext rfl)
+
 end GroupWithZero
 
+/-! ### Integer powers
+
+A negative power requires an invertible base; nonnegative powers are the natural powers of the
+monoid. In particular `(0 : M₀) ^ n` is defined exactly for `0 ≤ n` in a nontrivial monoid with
+zero, and `0 ^ 0 = 1` is the empty product. -/
+
 section MonoidWithZero
+variable {n : ℤ}
 
-variable {a : M₀} (u : M₀ˣ)
+lemma zero_zpow (n : ℤ) (hn : n ≠ 0) {h : n < 0 → IsUnit (0 : M₀)} : (0 : M₀) ^ n = 0 := by
+  cases n with
+  | ofNat k => exact zero_pow (by rintro rfl; exact hn rfl)
+  | negSucc k =>
+    exact eq_of_zero_eq_one (isUnit_zero_iff.1 (h (Int.negSucc_lt_zero k))) _ _
 
-@[simp] theorem divp_eq_zero_iff : a /ₚ u = 0 ↔ a = 0 := by
-  exact u⁻¹.mul_left_eq_zero
+lemma zero_zpow_eq (n : ℤ) {h : n < 0 → IsUnit (0 : M₀)} :
+    (0 : M₀) ^ n = if n = 0 then 1 else 0 := by
+  split_ifs with hn
+  · subst hn; exact zpow_zero₀ 0
+  · exact zero_zpow n hn
 
-theorem divp_ne_zero_iff : a /ₚ u ≠ 0 ↔ a ≠ 0 := (divp_eq_zero_iff u).not
-
-@[simp] theorem zero_divp : (0 : M₀) /ₚ u = 0 := zero_mul _
+lemma zero_zpow_eq_one₀ [Nontrivial M₀] {h : n < 0 → IsUnit (0 : M₀)} :
+    (0 : M₀) ^ n = 1 ↔ n = 0 := by
+  rw [zero_zpow_eq, one_ne_zero.ite_eq_left_iff]
 
 end MonoidWithZero
 
 section GroupWithZero
+variable [GroupWithZero G₀] {a b : G₀} {m n : ℕ}
 
-variable [GroupWithZero G₀] {m n : ℕ}
+lemma zpow_ne_zero (n : ℤ) (h : a ≠ 0) : a ^ n ≠ 0 := by
+  rw [(GroupWithZero.isUnit_of_ne_zero h).zpow_eq_val_unit_zpow]
+  exact Units.ne_zero _
 
-/-- Subtract natural exponents by dividing by a unit power. -/
-lemma pow_sub_divp (a : G₀) (ha : a ≠ 0) (h : n ≤ m) :
-    a ^ (m - n) = a ^ m /ₚ (Units.mk0 a ha) ^ n := by
-  apply eq_divp_iff_mul_eq.mpr
-  change a ^ (m - n) * a ^ n = a ^ m
-  rw [← pow_add, Nat.sub_add_cancel h]
+lemma eq_zero_of_zpow_eq_zero {n : ℤ} {h : n < 0 → IsUnit a} : a ^ n = 0 → a = 0 :=
+  not_imp_not.1 (zpow_ne_zero n)
+
+lemma zpow_eq_zero_iff {n : ℤ} (hn : n ≠ 0) {h : n < 0 → IsUnit a} : a ^ n = 0 ↔ a = 0 where
+  mp := eq_zero_of_zpow_eq_zero
+  mpr ha := by
+    subst ha
+    exact zero_zpow n hn
+
+lemma zpow_ne_zero_iff {n : ℤ} (hn : n ≠ 0) {h : n < 0 → IsUnit a} : a ^ n ≠ 0 ↔ a ≠ 0 :=
+  (zpow_eq_zero_iff hn).not
+
+lemma zpow_add₀ (ha : a ≠ 0) (m n : ℤ) : a ^ (m + n) = a ^ m * a ^ n := by
+  have hu := GroupWithZero.isUnit_of_ne_zero ha
+  rw [hu.zpow_eq_val_unit_zpow (m + n), hu.zpow_eq_val_unit_zpow m, hu.zpow_eq_val_unit_zpow n,
+    zpow_add, Units.val_mul]
+
+/-- Integer powers add whenever all three powers are defined: either the base is invertible or
+all exponents are nonnegative. -/
+lemma zpow_add' {a : G₀} {m n : ℤ} {h₁ : m + n < 0 → IsUnit a} {h₂ : m < 0 → IsUnit a}
+    {h₃ : n < 0 → IsUnit a} : a ^ (m + n) = a ^ m * a ^ n := by
+  by_cases ha : a = 0
+  · subst ha
+    obtain ⟨m, rfl⟩ : ∃ k : ℕ, (k : ℤ) = m :=
+      ⟨m.toNat, Int.toNat_of_nonneg (Int.not_lt.1 fun hm => not_isUnit_zero (h₂ hm))⟩
+    obtain ⟨n, rfl⟩ : ∃ k : ℕ, (k : ℤ) = n :=
+      ⟨n.toNat, Int.toNat_of_nonneg (Int.not_lt.1 fun hn => not_isUnit_zero (h₃ hn))⟩
+    simp only [← Int.natCast_add, zpow_natCast₀, pow_add]
+  · exact zpow_add₀ ha m n
+
+lemma zpow_add_one₀ (ha : a ≠ 0) (n : ℤ) : a ^ (n + 1) = a ^ n * a := by
+  rw [zpow_add₀ ha, zpow_one₀]
+
+lemma zpow_one_add₀ (ha : a ≠ 0) (n : ℤ) : a ^ (1 + n) = a * a ^ n := by
+  rw [zpow_add₀ ha, zpow_one₀]
+
+lemma zpow_neg₀ (ha : a ≠ 0) (n : ℤ) : a ^ (-n) = (a ^ n)⁻¹ := by
+  have hu := GroupWithZero.isUnit_of_ne_zero ha
+  rw [hu.zpow_eq_val_unit_zpow (-n), zpow_neg, inv_eq_val_inv_of_eq_val₀ (hu.unit ^ n)
+    (hu.zpow_eq_val_unit_zpow n)]
+
+lemma zpow_sub_one₀ (ha : a ≠ 0) (n : ℤ) : a ^ (n - 1) = a ^ n * a⁻¹ := by
+  simp only [Int.sub_eq_add_neg, zpow_add₀ ha, zpow_neg₀ ha, zpow_one₀]
+
+lemma zpow_sub₀ (ha : a ≠ 0) (m n : ℤ) : a ^ (m - n) = a ^ m / a ^ n := by
+  simp only [Int.sub_eq_add_neg, zpow_add₀ ha, zpow_neg₀ ha, div_eq_mul_inv₀]
+
+lemma zpow_natCast_sub_natCast₀ (ha : a ≠ 0) (m n : ℕ) : a ^ (m - n : ℤ) = a ^ m / a ^ n := by
+  simp only [zpow_sub₀ ha, zpow_natCast₀]
+
+lemma zpow_natCast_sub_one₀ (ha : a ≠ 0) (n : ℕ) : a ^ (n - 1 : ℤ) = a ^ n / a := by
+  simp only [zpow_sub₀ ha, zpow_natCast₀, zpow_one₀]
+
+lemma zpow_one_sub_natCast₀ (ha : a ≠ 0) (n : ℕ) : a ^ (1 - n : ℤ) = a / a ^ n := by
+  simp only [zpow_sub₀ ha, zpow_natCast₀, zpow_one₀]
+
+lemma zpow_neg_mul_zpow_self (n : ℤ) (ha : a ≠ 0) : a ^ (-n) * a ^ n = 1 := by
+  simp only [← zpow_add₀ ha, Int.add_left_neg, zpow_zero₀]
+
+lemma zpow_mul₀ (ha : a ≠ 0) (m n : ℤ) : a ^ (m * n) = (a ^ m) ^ n := by
+  have hu := GroupWithZero.isUnit_of_ne_zero ha
+  have hm : IsUnit (a ^ m) := hu.zpow₀ m
+  rw [hu.zpow_eq_val_unit_zpow (m * n), hm.zpow_eq_val_unit_zpow n, zpow_mul]
+  congr 2
+  ext
+  exact (hu.zpow_eq_val_unit_zpow m).symm
+
+lemma zpow_mul₀' (ha : a ≠ 0) (m n : ℤ) : a ^ (m * n) = (a ^ n) ^ m := by
+  rw [← zpow_mul₀ ha n m]
+  simp only [Int.mul_comm]
+
+lemma pow_sub₀ (a : G₀) (ha : a ≠ 0) (h : n ≤ m) : a ^ (m - n) = a ^ m * (a ^ n)⁻¹ := by
+  have hn : IsUnit (a ^ n) := (GroupWithZero.isUnit_of_ne_zero ha).pow n
+  rw [eq_mul_inv_iff_mul_eq₀, ← pow_add, Nat.sub_add_cancel h]
+
+lemma inv_pow_sub₀ (ha : a ≠ 0) (h : n ≤ m) : a⁻¹ ^ (m - n) = (a ^ m)⁻¹ * a ^ n := by
+  have hu := GroupWithZero.isUnit_of_ne_zero ha
+  rw [pow_sub₀ a⁻¹ inv_ne_zero h]
+  simp only [inv_pow₀, inv_inv₀]
 
 end GroupWithZero
 

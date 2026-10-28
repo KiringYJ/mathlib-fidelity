@@ -229,7 +229,9 @@ private theorem closedInterior_inter_shift_aux {n : ℕ} (i : Fin n) {x : k} (hx
     (hx1 : x ≤ 1) {w : Fin n → k} (hw : ∑ i, w i = 1) :
     (∀ j, w j ∈ Set.Icc 0 1) ∧ w i = 1 - x ↔
     (∀ j, j ≠ i → x⁻¹ * w j ∈ Set.Icc 0 1) ∧ x⁻¹ * (w i - 1) + 1 = 0 := by
-  rw [show x⁻¹ * (w i - 1) + 1 = 0 ↔ w i = 1 - x by grind]
+  rw [show x⁻¹ * (w i - 1) + 1 = 0 ↔ w i = 1 - x by
+    rw [add_eq_zero_iff_eq_neg, inv_mul_eq_iff_eq_mul₀]
+    grind]
   refine and_congr_left fun hi ↦ ⟨fun hj j hji ↦ ⟨?_, ?_⟩, fun hj ↦ ?_⟩
   · exact mul_nonneg (by simpa using hxpos.le) (hj j).1
   · rw [eq_sub_iff_add_eq, add_comm, ← eq_sub_iff_add_eq] at hi
@@ -253,7 +255,7 @@ theorem closedInterior_inter_shift_eq_homothety {n : ℕ} [NeZero n] (s : Affine
   · obtain ⟨w, hw, rfl⟩ := eq_affineCombination_of_mem_affineSpan_of_fintype hp
     rw [Set.mem_inter_iff, SetLike.mem_coe, s.independent.affineCombination_mem_shift_iff i hw,
       affineCombination_mem_closedInterior_iff hw, Set.mem_image]
-    simp_rw [AffineMap.homothety_eq_iff_of_mul_eq_one (mul_inv_cancel₀ hxpos.ne.symm),
+    simp_rw [AffineMap.homothety_eq_iff_of_mul_eq_one (mul_inv_cancel₀ (ha := hxpos.ne'.isUnit)),
       univ.homothety_affineCombination _ _ (mem_univ i)]
     simp only [↓existsAndEq, and_true]
     rw [faceOpposite, affineCombination_mem_closedInterior_face_iff_mem_Icc,

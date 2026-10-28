@@ -528,10 +528,9 @@ private lemma continuousAt_mul_top_pos {a : ℝ} (h : 0 < a) :
     have key := mul_le_mul_of_nonneg_left (le_of_lt p2_gt) (le_of_lt p1_pos)
     replace lock := le_trans lock key
     apply lt_of_lt_of_le _ lock
-    rw [← EReal.coe_mul, EReal.coe_lt_coe_iff, _root_.div_mul_div_comm, mul_comm,
-      ← _root_.div_mul_div_comm, mul_div_right_comm]
-    simp only [ne_eq, Ne.symm (ne_of_lt h), not_false_eq_true, _root_.div_self, OfNat.ofNat_ne_zero,
-      one_mul, lt_max_iff, lt_add_iff_pos_right, zero_lt_one, true_or]
+    have key : 2 * max (x + 1) 0 / a * (a / 2) = max (x + 1) 0 := by field
+    rw [← EReal.coe_mul, EReal.coe_lt_coe_iff, key]
+    exact lt_max_of_lt_left (lt_add_one x)
   · exact IsOpen.prod isOpen_Ioi isOpen_Ioi
   · simp
   · simp [h]

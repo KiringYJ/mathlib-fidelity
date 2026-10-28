@@ -10,15 +10,16 @@ public import Mathlib.Algebra.Field.Rat
 public import Mathlib.Algebra.Group.Commute.Basic
 public import Mathlib.Algebra.GroupWithZero.Units.Lemmas
 public import Mathlib.Data.Int.Cast.Lemmas
-public import Mathlib.Algebra.CharZero.Defs
+public import Mathlib.Data.Rat.Lemmas
 public import Mathlib.Order.Nat
 
 /-!
 # Evaluation of rational numbers on their exact domain
 
 A rational can be evaluated in a division ring when its reduced denominator is nonzero there.
-These definitions also apply in positive characteristic. A total rational cast is installed
-separately, under characteristic zero, in `Mathlib.Data.Rat.Cast.CharZero`.
+These definitions also apply in positive characteristic. In characteristic zero, the rational
+embeddings recorded by a division ring agree with evaluation (`Rat.cast_eq_eval`); their theory
+is in `Mathlib.Data.Rat.Cast.CharZero`.
 -/
 
 @[expose] public section
@@ -27,13 +28,14 @@ namespace Rat
 
 variable {α : Type*} [DivisionRing α]
 
-/-- Evaluate a rational using its denominator as a unit. -/
+/-- Evaluate a rational as the quotient of its numerator by its denominator, which must be
+nonzero in `α`. -/
 noncomputable def eval (q : ℚ) (hd : (q.den : α) ≠ 0) : α :=
-  (q.num : α) /ₚ Units.mk0 (q.den : α) hd
+  (q.num : α) / (q.den : α)
 
 @[simp] theorem eval_mul_den (q : ℚ) (hd : (q.den : α) ≠ 0) :
     eval q hd * (q.den : α) = (q.num : α) :=
-  divp_mul_cancel _ _
+  div_mul_cancel₀ _
 
 /-- Normalization preserves the nonvanishing of the original denominator. -/
 theorem normalize_den_ne_zero {R : Type*} [Semiring R] (n : ℤ) (d : ℕ)
@@ -146,13 +148,13 @@ theorem reciprocal_den_ne_zero (q : ℚ) (hq : q ≠ 0) (hd : (q.den : α) ≠ 0
 /-- Evaluation commutes with reciprocal only on the domain of the original operand. -/
 theorem eval_reciprocal (q : ℚ) (hq : q ≠ 0) (hd : (q.den : α) ≠ 0)
     (hi : ((reciprocal q hq).den : α) ≠ 0) (hv : eval q hd ≠ 0) :
-    eval (reciprocal q hq) hi = ↑((Units.mk0 (eval q hd) hv)⁻¹) := by
+    eval (reciprocal q hq) hi = (eval q hd)⁻¹ := by
   have he := eval_mul (reciprocal q hq) q hi hd (mul_den_ne_zero _ _ hi hd)
   simp only [Rat.reciprocal_mul] at he
   have he' : eval (reciprocal q hq) hi * eval q hd = 1 :=
     he.symm.trans ((eval_natCast (α := α) 1 _).trans Nat.cast_one)
   apply mul_right_cancel₀ hv
-  exact he'.trans (Units.inv_mul (Units.mk0 (eval q hd) hv)).symm
+  exact he'.trans inv_mul_cancel₀.symm
 
 theorem quotient_den_ne_zero (a b : ℚ) (hb : b ≠ 0)
     (ha : (a.den : α) ≠ 0) (hd : (b.den : α) ≠ 0) (hv : eval b hd ≠ 0) :
@@ -162,16 +164,27 @@ theorem quotient_den_ne_zero (a b : ℚ) (hb : b ≠ 0)
 theorem eval_quotient (a b : ℚ) (hb : b ≠ 0)
     (ha : (a.den : α) ≠ 0) (hd : (b.den : α) ≠ 0)
     (hr : ((quotient a b hb).den : α) ≠ 0) (hv : eval b hd ≠ 0) :
-    eval (quotient a b hb) hr = eval a ha /ₚ Units.mk0 (eval b hd) hv := by
+    eval (quotient a b hb) hr = eval a ha / eval b hd := by
   change ((a * reciprocal b hb).den : α) ≠ 0 at hr
   change eval (a * reciprocal b hb) hr = _
   rw [eval_mul _ _ ha (reciprocal_den_ne_zero b hb hd hv),
-    eval_reciprocal b hb hd (reciprocal_den_ne_zero b hb hd hv) hv]
-  rfl
+    eval_reciprocal b hb hd (reciprocal_den_ne_zero b hb hd hv) hv, div_eq_mul_inv₀]
 
 @[simp] theorem eval_rat (q : ℚ) (hd : (q.den : ℚ) ≠ 0) : eval q hd = q := by
   apply mul_right_cancel₀ hd
   rw [eval_mul_den, Rat.mul_den_eq_num]
+
+section CharZero
+variable [CharZero α]
+
+@[simp] theorem cast_mul_den (q : ℚ) : (q : α) * (q.den : α) = (q.num : α) :=
+  DivisionRing.ratCastOfCharZero_mul_den _ q
+
+/-- In characteristic zero, the rational embedding agrees with evaluation. -/
+theorem cast_eq_eval (q : ℚ) (hd : (q.den : α) ≠ 0) : (q : α) = eval q hd :=
+  mul_right_cancel₀ hd ((cast_mul_den q).trans (eval_mul_den q hd).symm)
+
+end CharZero
 
 end Rat
 
@@ -179,12 +192,13 @@ namespace NNRat
 
 variable {α : Type*} [DivisionSemiring α]
 
-/-- Evaluate a nonnegative rational using its denominator as a unit. -/
+/-- Evaluate a nonnegative rational as the quotient of its numerator by its denominator, which
+must be nonzero in `α`. -/
 noncomputable def eval (q : ℚ≥0) (hd : (q.den : α) ≠ 0) : α :=
-  (q.num : α) /ₚ Units.mk0 (q.den : α) hd
+  (q.num : α) / (q.den : α)
 
 @[simp] theorem eval_mul_den (q : ℚ≥0) (hd : (q.den : α) ≠ 0) :
-    eval q hd * (q.den : α) = (q.num : α) := divp_mul_cancel _ _
+    eval q hd * (q.den : α) = (q.num : α) := div_mul_cancel₀ _
 
 private theorem eval_divNat_mul (n d : ℕ) (hd : d ≠ 0)
     (hq : ((divNat n d hd).den : α) ≠ 0) :
@@ -255,20 +269,32 @@ theorem eval_pow (q : ℚ≥0) (hq : (q.den : α) ≠ 0) (n : ℕ)
     simp only [pow_succ] at hp ⊢
     rw [eval_mul _ _ (pow_den_ne_zero q hq n) hq, ih]
 
-/-- Evaluate a unit inverse only when the original unit's image is nonzero. -/
-theorem eval_inv (u : (ℚ≥0)ˣ) (hu : ((u : ℚ≥0).den : α) ≠ 0)
-    (hi : ((↑(u⁻¹) : ℚ≥0).den : α) ≠ 0) (hv : eval (u : ℚ≥0) hu ≠ 0) :
-    eval (↑(u⁻¹) : ℚ≥0) hi = ↑((Units.mk0 (eval (u : ℚ≥0) hu) hv)⁻¹) := by
-  have he := eval_mul (↑(u⁻¹) : ℚ≥0) (u : ℚ≥0) hi hu (mul_den_ne_zero _ _ hi hu)
-  simp only [Units.inv_mul] at he
-  have he' : eval (↑(u⁻¹) : ℚ≥0) hi * eval (u : ℚ≥0) hu = 1 :=
+/-- Evaluation commutes with the inverse where the image of the operand is nonzero. -/
+theorem eval_inv (q : ℚ≥0) {hq : IsUnit q} (hd : (q.den : α) ≠ 0)
+    (hi : ((q⁻¹).den : α) ≠ 0) (hv : eval q hd ≠ 0) :
+    eval q⁻¹ hi = (eval q hd)⁻¹ := by
+  have he := eval_mul q⁻¹ q hi hd (mul_den_ne_zero _ _ hi hd)
+  simp only [inv_mul_cancel₀] at he
+  have he' : eval q⁻¹ hi * eval q hd = 1 :=
     he.symm.trans ((eval_natCast (α := α) 1 _).trans Nat.cast_one)
   apply mul_right_cancel₀ hv
-  exact he'.trans (Units.inv_mul (Units.mk0 (eval (u : ℚ≥0) hu) hv)).symm
+  exact he'.trans inv_mul_cancel₀.symm
 
 @[simp] theorem eval_nnrat (q : ℚ≥0) (hd : (q.den : ℚ≥0) ≠ 0) : eval q hd = q := by
   apply mul_right_cancel₀ hd
   rw [eval_mul_den, NNRat.mul_den_eq_num]
+
+section CharZero
+variable [CharZero α]
+
+@[simp] theorem cast_mul_den (q : ℚ≥0) : (q : α) * (q.den : α) = (q.num : α) :=
+  DivisionSemiring.nnratCastOfCharZero_mul_den _ q
+
+/-- In characteristic zero, the nonnegative rational embedding agrees with evaluation. -/
+theorem cast_eq_eval (q : ℚ≥0) (hd : (q.den : α) ≠ 0) : (q : α) = eval q hd :=
+  mul_right_cancel₀ hd ((cast_mul_den q).trans (eval_mul_den q hd).symm)
+
+end CharZero
 
 end NNRat
 
@@ -300,22 +326,32 @@ theorem ext_rat' [FunLike F ℚ M] [MonoidWithZeroHomClass F ℚ M] {f g : F}
     simpa only [Int.cast_natCast] using h (q.den : ℤ)
   rw [← map_mul, Rat.mul_den_eq_num, h q.num, hd, ← map_mul, Rat.mul_den_eq_num]
 
+/-- If monoid with zero homs `f` and `g` from `ℚ≥0` agree on the naturals then they are equal.
+
+See note [partially-applied ext lemmas] for why `comp` is used here. -/
 @[ext] lemma ext_nnrat {f g : ℚ≥0 →*₀ M}
     (h : f.comp (.ofClass (Nat.castRingHom ℚ≥0)) =
       g.comp (.ofClass (Nat.castRingHom ℚ≥0))) : f = g :=
   ext_nnrat' <| DFunLike.congr_fun h
 
+/-- If monoid with zero homs `f` and `g` from `ℚ` agree on the integers then they are equal.
+
+See note [partially-applied ext lemmas] for why `comp` is used here. -/
 @[ext] theorem ext_rat {f g : ℚ →*₀ M}
     (h : f.comp (.ofClass (Int.castRingHom ℚ)) =
       g.comp (.ofClass (Int.castRingHom ℚ))) : f = g :=
   ext_rat' <| DFunLike.congr_fun h
 
+/-- If monoid with zero homs `f` and `g` from `ℚ≥0` agree on the positive naturals then they are
+equal. -/
 lemma ext_nnrat_on_pnat [FunLike F ℚ≥0 M] [MonoidWithZeroHomClass F ℚ≥0 M] {f g : F}
     (same_on_pnat : ∀ n : ℕ, 0 < n → f n = g n) : f = g :=
   ext_nnrat' <| DFunLike.congr_fun <| ext_nat''
     ((.ofClass f : ℚ≥0 →*₀ M).comp (.ofClass (Nat.castRingHom ℚ≥0)))
     ((.ofClass g : ℚ≥0 →*₀ M).comp (.ofClass (Nat.castRingHom ℚ≥0))) (by simpa)
 
+/-- If monoid with zero homs `f` and `g` from `ℚ` agree on the positive naturals and `-1` then
+they are equal. -/
 theorem ext_rat_on_pnat [FunLike F ℚ M] [MonoidWithZeroHomClass F ℚ M] {f g : F}
     (same_on_neg_one : f (-1) = g (-1))
     (same_on_pnat : ∀ n : ℕ, 0 < n → f n = g n) : f = g :=

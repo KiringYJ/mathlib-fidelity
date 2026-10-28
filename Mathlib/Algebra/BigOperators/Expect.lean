@@ -55,13 +55,7 @@ open scoped Pointwise
 
 variable {ι κ K M N : Type*}
 
-set_option quotPrecheck false in
-local notation a " /ℚ " q =>
-  (((Units.mk0 (q : ℚ≥0) (by
-    apply Nat.cast_ne_zero.mpr
-    first
-    | exact Finset.Nonempty.card_ne_zero (by assumption)
-    | exact Fintype.card_ne_zero))⁻¹ : ℚ≥0ˣ) : ℚ≥0) • a
+local notation a " /ℚ " q => (q : ℚ≥0)⁻¹ • a
 
 /-- Average of a function over a nonempty finset. The domain proof is required before
 forming the reciprocal cardinality. -/
@@ -78,12 +72,10 @@ def Finset.expect [AddCommMonoid M] [Module ℚ≥0 M] (s : Finset ι) (f : ι �
       | fail "finite average requires a proof that the index set is nonempty") : M :=
   NNRat.divNat 1 #s hs.card_ne_zero • ∑ i ∈ s, f i
 
-/-- The executable rational coefficient agrees with inversion of the cardinality unit. -/
+/-- The executable rational coefficient is the inverse of the cardinality. -/
 lemma Finset.expect_def [AddCommMonoid M] [Module ℚ≥0 M] (s : Finset ι) (f : ι → M)
-    (hs : s.Nonempty) : Finset.expect s f hs =
-      (((Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero))⁻¹ : ℚ≥0ˣ) : ℚ≥0) •
-        ∑ i ∈ s, f i := by
-  simp only [Finset.expect, NNRat.divNat_eq_divp, Nat.cast_one, divp, one_mul]
+    (hs : s.Nonempty) : Finset.expect s f hs = (#s : ℚ≥0)⁻¹ • ∑ i ∈ s, f i := by
+  rw [Finset.expect, NNRat.divNat_eq_div, Nat.cast_one, one_div₀]
 
 namespace BigOperators
 open Batteries.ExtendedBinder Lean Meta
@@ -222,19 +214,10 @@ variable [DecidableEq ι]
 lemma expect_ite_mem (s t : Finset ι) (f : ι → M)
     (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
     (hst : (s ∩ t).Nonempty) :
-    𝔼 i ∈ s, (if i ∈ t then f i else 0) =
-      ((#(s ∩ t) : ℚ≥0) /ₚ Units.mk0 (#s : ℚ≥0)
-        (Nat.cast_ne_zero.mpr hs.card_ne_zero)) •
-          𝔼 i ∈ s ∩ t, f i := by
+    𝔼 i ∈ s, (if i ∈ t then f i else 0) = (#(s ∩ t) / #s : ℚ≥0) • 𝔼 i ∈ s ∩ t, f i := by
   rw [expect_def, expect_def, sum_ite_mem, smul_smul]
   congr 1
-  change (((Units.mk0 (#s : ℚ≥0) _)⁻¹ : ℚ≥0ˣ) : ℚ≥0) =
-    ((#(s ∩ t) : ℚ≥0) * (((Units.mk0 (#s : ℚ≥0) _)⁻¹ : ℚ≥0ˣ) : ℚ≥0)) *
-      (((Units.mk0 (#(s ∩ t) : ℚ≥0) _)⁻¹ : ℚ≥0ˣ) : ℚ≥0)
-  have hi : (#(s ∩ t) : ℚ≥0) *
-      (((Units.mk0 (#(s ∩ t) : ℚ≥0) (Nat.cast_ne_zero.mpr hst.card_ne_zero))⁻¹ : ℚ≥0ˣ) : ℚ≥0) = 1 :=
-    (Units.mk0 (#(s ∩ t) : ℚ≥0) (Nat.cast_ne_zero.mpr hst.card_ne_zero)).mul_inv
-  rw [mul_right_comm, hi, one_mul]
+  rw [div_mul_eq_mul_div₀, mul_inv_cancel₀, one_div₀]
 
 @[simp] lemma expect_dite_eq (i : ι) (f : ∀ j, i = j → M)
     (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
@@ -341,9 +324,7 @@ lemma expect_product (s : Finset ι) (t : Finset κ) (f : ι × κ → M)
     (ht : t.Nonempty)
     (hst : (s ×ˢ t).Nonempty := Finset.nonempty_product.mpr ⟨hs, ht⟩) :
     𝔼 x ∈ s ×ˢ t, f x = 𝔼 i ∈ s, 𝔼 j ∈ t, f (i, j) := by
-  simp only [expect_def, card_product, sum_product, Nat.cast_mul]
-  rw [Units.mk0_mul]
-  simp only [mul_inv, Units.val_mul, mul_smul, smul_sum]
+  simp only [expect_def, card_product, sum_product, Nat.cast_mul, mul_inv₀, mul_smul, smul_sum]
 
 /-- Expectation over a product set equals the expectation of the fiberwise expectations.
 
@@ -377,11 +358,7 @@ lemma _root_.map_expect {F : Type*} [FunLike F M N] [LinearMapClass F ℚ≥0 M 
 lemma card_smul_expect (s : Finset ι) (f : ι → M)
     (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     #s • 𝔼 i ∈ s, f i = ∑ i ∈ s, f i := by
-  rw [expect_def, ← Nat.cast_smul_eq_nsmul ℚ≥0, ← mul_smul]
-  have hi : (#s : ℚ≥0) *
-      (((Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero))⁻¹ : ℚ≥0ˣ) : ℚ≥0) = 1 :=
-    (Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero)).mul_inv
-  rw [hi, one_smul]
+  rw [expect_def, ← Nat.cast_smul_eq_nsmul ℚ≥0, ← mul_smul, mul_inv_cancel₀, one_smul]
 
 @[simp] lemma _root_.Fintype.card_smul_expect [Fintype ι] [Nonempty ι] (f : ι → M) :
     Fintype.card ι • 𝔼 i, f i = ∑ i, f i := Finset.card_smul_expect _ _
@@ -390,11 +367,7 @@ lemma card_smul_expect (s : Finset ι) (f : ι → M)
     (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
     (a : M) :
     𝔼 _i ∈ s, a = a := by
-  rw [expect_def, sum_const, ← Nat.cast_smul_eq_nsmul ℚ≥0, ← mul_smul]
-  have hi : (((Units.mk0 (#s : ℚ≥0)
-      (Nat.cast_ne_zero.mpr hs.card_ne_zero))⁻¹ : ℚ≥0ˣ) : ℚ≥0) * (#s : ℚ≥0) = 1 :=
-    (Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero)).inv_mul
-  rw [hi, one_smul]
+  rw [expect_def, sum_const, ← Nat.cast_smul_eq_nsmul ℚ≥0, ← mul_smul, inv_mul_cancel₀, one_smul]
 
 lemma smul_expect {G : Type*} [DistribSMul G M] [SMulCommClass G ℚ≥0 M] (a : G)
     (s : Finset ι) (f : ι → M)
@@ -453,14 +426,7 @@ variable [CommSemiring M] [Module ℚ≥0 M] [IsScalarTower ℚ≥0 M M] [SMulCo
 lemma expect_pow (s : Finset ι) (f : ι → M) (n : ℕ)
     (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
     (𝔼 i ∈ s, f i) ^ n = 𝔼 p ∈ Fintype.piFinset fun _ : Fin n ↦ s, ∏ i, f (p i) := by
-  simp only [expect_def, smul_pow, sum_pow', Fintype.card_piFinset_const, Nat.cast_pow]
-  have hu : Units.mk0 ((#s : ℚ≥0) ^ n)
-      (pow_ne_zero n (Nat.cast_ne_zero.mpr hs.card_ne_zero)) =
-      (Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero)) ^ n := by
-    apply Units.ext
-    simp only [Units.val_mk0, Units.val_pow_eq_pow_val]
-  rw [hu]
-  simp only [← inv_pow, Units.val_pow_eq_pow_val]
+  simp only [expect_def, smul_pow, sum_pow', Fintype.card_piFinset_const, Nat.cast_pow, inv_pow₀]
 
 end CommSemiring
 
@@ -487,20 +453,16 @@ lemma expect_boole_mul' [Fintype ι] [Nonempty ι] [DecidableEq ι] (f : ι → 
   simp_rw [@eq_comm _ _ i, expect_boole_mul]
 
 lemma expect_eq_sum_div_card (s : Finset ι) (f : ι → K) (hs : s.Nonempty) :
-    𝔼 i ∈ s, f i = (∑ i ∈ s, f i) /ₚ
-      Units.mk0 (#s : K) (Nat.cast_ne_zero.mpr hs.card_ne_zero) := by
-  apply eq_divp_iff_mul_eq.mpr
-  change (𝔼 i ∈ s, f i) * (#s : K) = ∑ i ∈ s, f i
-  rw [mul_comm, card_mul_expect s f hs]
+    𝔼 i ∈ s, f i = (∑ i ∈ s, f i) / #s := by
+  rw [eq_div_iff, mul_comm, card_mul_expect s f hs]
 
 lemma _root_.Fintype.expect_eq_sum_div_card [Fintype ι] [Nonempty ι] (f : ι → K) :
-    𝔼 i, f i = (∑ i, f i) /ₚ
-      Units.mk0 (Fintype.card ι : K) (Nat.cast_ne_zero.mpr Fintype.card_ne_zero) :=
+    𝔼 i, f i = (∑ i, f i) / Fintype.card ι :=
   Finset.expect_eq_sum_div_card _ _ univ_nonempty
 
-lemma expect_div (s : Finset ι) (f : ι → K) (a : Kˣ) (hs : s.Nonempty) :
-    (𝔼 i ∈ s, f i) /ₚ a = 𝔼 i ∈ s, f i /ₚ a := by
-  simp only [divp, expect_mul s f _ hs]
+lemma expect_div (s : Finset ι) (f : ι → K) (a : K) {ha : IsUnit a} (hs : s.Nonempty) :
+    (𝔼 i ∈ s, f i) / a = 𝔼 i ∈ s, f i / a := by
+  simp only [div_eq_mul_inv₀, expect_mul s _ _ hs]
 
 end Semifield
 

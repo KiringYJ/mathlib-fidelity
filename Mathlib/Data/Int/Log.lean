@@ -17,24 +17,13 @@ This file defines two `ℤ`-valued analogs of the logarithm of `r : R` with base
 * `Int.log b r`: Lower logarithm, or floor **log**. Greatest `k` such that `↑b^k ≤ r`.
 * `Int.clog b r`: Upper logarithm, or **c**eil **log**. Least `k` such that `r ≤ ↑b^k`.
 
-Note that `Int.log` gives the position of the left-most non-zero digit:
-```lean
-#eval (Int.log 10 (0.09 : ℚ), Int.log 10 (0.10 : ℚ), Int.log 10 (0.11 : ℚ))
---    (-2,                    -1,                    -1)
-#eval (Int.log 10 (9 : ℚ),    Int.log 10 (10 : ℚ),   Int.log 10 (11 : ℚ))
---    (0,                     1,                     1)
-```
-which means it can be used for computing digit expansions
-```lean
-import Data.Fin.VecNotation
-import Mathlib.Data.Rat.Floor
-
-def digits (b : ℕ) (q : ℚ) (n : ℕ) (hb : 1 < b) (hq : 0 < q) : ℕ :=
-  ⌊q * ((b : ℚ) ^ (n - Int.log b q))⌋₊ % b
-
-#eval (digits 10 (1/7) · (by norm_num) (by norm_num)) ∘ ((↑) : Fin 8 → ℕ)
--- ![1, 4, 2, 8, 5, 7, 1, 4]
-```
+Note that `Int.log` gives the position of the left-most non-zero digit: `Int.log 10 r` is `-2`
+for `r = 0.09`, `-1` for `r = 0.10` and `r = 0.11`, `0` for `r = 9`, and `1` for `r = 10` and
+`r = 11`. This means that it describes digit expansions: for `1 < b` and `0 < q`, the digit of
+`q` in base `b` that lies `n` places to the right of its left-most non-zero digit is
+`⌊q * (b : ℚ) ^ (n - Int.log b q)⌋₊ % b`. For `b = 10` and `q = 1 / 7`, the places
+`n = 0, …, 7` give the digits `1, 4, 2, 8, 5, 7, 1, 4`. Both logarithms are `noncomputable`
+because they use inversion in `R`.
 
 ## Main results
 
@@ -76,8 +65,8 @@ elab (name := intLogTac) "int_log_tac" : tactic => do
 /-- The greatest power of `b` such that `b ^ log b r ≤ r`. It exists exactly when `1 < b` and
 `0 < r`: for `b ≤ 1` every power of `b` is at most `1`, and for `r ≤ 0` no power of `b` is at most
 `r`. The proofs `_hb` and `_hr` can usually be omitted, see `int_log_tac`. -/
-@[nolint unusedArguments]
-def log (b : ℕ) (r : R) (_hb : 1 < b := by int_log_tac) (_hr : 0 < r := by int_log_tac) : ℤ :=
+noncomputable def log (b : ℕ) (r : R) (_hb : 1 < b := by int_log_tac)
+    (_hr : 0 < r := by int_log_tac) : ℤ :=
   if h : 1 ≤ r then Nat.log b ⌊r⌋₊ _hb (Nat.floor_pos.mpr h).ne' else -Nat.clog b ⌈r⁻¹⌉₊
 
 theorem log_of_one_le_right {b : ℕ} (hb : 1 < b) {r : R} (hr : 1 ≤ r) {hr' : 0 < r} :
@@ -104,23 +93,27 @@ theorem log_ofNat {b : ℕ} (hb : 1 < b) (n : ℕ) [n.AtLeastTwo] {h : 0 < (ofNa
 
 theorem zpow_log_le_self {b : ℕ} {r : R} (hb : 1 < b) (hr : 0 < r) : (b : R) ^ log b r ≤ r := by
   rcases le_total 1 r with hr1 | hr1
-  · rw [log_of_one_le_right hb hr1]
-    rw [zpow_natCast, ← Nat.cast_pow, ← Nat.le_floor_iff hr.le]
+  · simp only [log_of_one_le_right hb hr1, zpow_natCast₀]
+    rw [← Nat.cast_pow, ← Nat.le_floor_iff hr.le]
     exact Nat.pow_log_le_self hb (Nat.floor_pos.mpr hr1).ne'
-  · rw [log_of_right_le_one hb hr1, zpow_neg]
+  · simp only [log_of_right_le_one hb hr1]
+    rw [zpow_neg₀ (Nat.cast_ne_zero.mpr (by omega))]
     exact_mod_cast inv_le_of_inv_le₀ hr (Nat.ceil_le.1 <| Nat.le_pow_clog hb _)
 
 theorem lt_zpow_succ_log_self {b : ℕ} (hb : 1 < b) {r : R} (hr : 0 < r) :
     r < (b : R) ^ (log b r + 1) := by
   rcases le_or_gt 1 r with hr1 | hr1
-  · rw [log_of_one_le_right hb hr1, Int.ofNat_add_one_out]
+  · simp only [log_of_one_le_right hb hr1, Int.ofNat_add_one_out]
     exact_mod_cast Nat.lt_of_floor_lt <| Nat.lt_pow_succ_log_self hb (Nat.floor_pos.mpr hr1).ne'
-  · rw [log_of_right_le_one hb hr1.le]
+  · simp only [log_of_right_le_one hb hr1.le]
     have hcri : 1 < r⁻¹ := (one_lt_inv₀ hr).2 hr1
     have : 1 ≤ Nat.clog b ⌈r⁻¹⌉₊ :=
       Nat.succ_le_of_lt (Nat.clog_pos hb <| Nat.one_lt_cast.1 <| hcri.trans_le (Nat.le_ceil _))
-    rw [neg_add_eq_sub, ← neg_sub, ← Int.ofNat_one, ← Int.ofNat_sub this, zpow_neg, zpow_natCast,
-      lt_inv_comm₀ hr (pow_pos (Nat.cast_pos.mpr <| zero_lt_one.trans hb) _), ← Nat.cast_pow]
+    have he : -(Nat.clog b ⌈r⁻¹⌉₊ : ℤ) + 1 = -((Nat.clog b ⌈r⁻¹⌉₊ - 1 : ℕ) : ℤ) := by omega
+    simp only [he]
+    rw [zpow_neg₀ (Nat.cast_ne_zero.mpr (by omega))]
+    simp only [zpow_natCast₀]
+    rw [lt_inv_comm₀ hr (pow_pos (Nat.cast_pos.mpr <| zero_lt_one.trans hb) _), ← Nat.cast_pow]
     refine Nat.lt_ceil.1 ?_
     exact Nat.pow_pred_clog_lt_self hb <| Nat.one_lt_cast.1 <| hcri.trans_le <| Nat.le_ceil _
 
@@ -133,11 +126,11 @@ theorem log_zpow {b : ℕ} (hb : 1 < b) (z : ℤ) {h : 0 < (b ^ z : R)} :
     log b (b ^ z : R) hb h = z := by
   obtain ⟨n, rfl | rfl⟩ := Int.eq_nat_or_neg z
   · rw [log_of_one_le_right hb (one_le_zpow₀ (mod_cast hb.le) <| Int.natCast_nonneg _)]
-    simp only [zpow_natCast, ← Nat.cast_pow, Nat.floor_natCast, Nat.log_pow hb]
+    simp only [zpow_natCast₀, ← Nat.cast_pow, Nat.floor_natCast, Nat.log_pow hb]
   · rw [log_of_right_le_one hb (zpow_le_one_of_nonpos₀ (mod_cast hb.le) <|
       neg_nonpos.2 (Int.natCast_nonneg _))]
-    simp only [zpow_neg, inv_inv, zpow_natCast, ← Nat.cast_pow, Nat.ceil_natCast,
-      Nat.clog_pow _ _ hb]
+    simp only [zpow_neg₀ (Nat.cast_ne_zero.mpr (by omega) : (b : R) ≠ 0), inv_inv₀,
+      zpow_natCast₀, ← Nat.cast_pow, Nat.ceil_natCast, Nat.clog_pow _ _ hb]
 
 @[mono, gcongr]
 theorem log_mono_right {b : ℕ} {hb : 1 < b} {r₁ r₂ : R} {h₀ : 0 < r₁} (h : r₁ ≤ r₂) :
@@ -155,7 +148,7 @@ theorem log_mono_right {b : ℕ} {hb : 1 < b} {r₁ r₂ : R} {h₀ : 0 < r₁} 
 
 variable (R) in
 /-- Over suitable subtypes, `zpow` and `Int.log` form a Galois coinsertion -/
-def zpowLogGi {b : ℕ} (hb : 1 < b) :
+noncomputable def zpowLogGi {b : ℕ} (hb : 1 < b) :
     GaloisCoinsertion
       (fun z : ℤ =>
         Subtype.mk ((b : R) ^ z) <| zpow_pos (mod_cast zero_lt_one.trans hb) z)
@@ -177,7 +170,8 @@ theorem zpow_le_iff_le_log {b : ℕ} (hb : 1 < b) {x : ℤ} {r : R} (hr : 0 < r)
 /-- The least power of `b` such that `r ≤ b ^ clog b r`. It exists exactly when `1 < b` and
 `0 < r`: for `b ≤ 1` and `1 < r` no power of `b` is at least `r`, and for `r ≤ 0` every power of
 `b` is. The proofs `_hb` and `_hr` can usually be omitted, see `int_log_tac`. -/
-def clog (b : ℕ) (r : R) (_hb : 1 < b := by int_log_tac) (_hr : 0 < r := by int_log_tac) : ℤ :=
+noncomputable def clog (b : ℕ) (r : R) (_hb : 1 < b := by int_log_tac)
+    (_hr : 0 < r := by int_log_tac) : ℤ :=
   if h : 1 ≤ r then Nat.clog b ⌈r⌉₊ else
     -Nat.log b ⌊r⁻¹⌋₊ _hb (Nat.floor_pos.mpr ((one_lt_inv₀ _hr).2 (lt_of_not_ge h)).le).ne'
 
@@ -198,14 +192,14 @@ theorem clog_inv {b : ℕ} (hb : 1 < b) {r : R} (hr : 0 < r) {h : 0 < r⁻¹} :
     obtain rfl | hr1 := hr1.eq_or_lt
     · simp [clog_of_one_le_right hb, Nat.log_one_right hb]
     · rw [clog_of_right_lt_one hb h (inv_lt_one_of_one_lt₀ hr1)]
-      simp only [inv_inv]
+      simp only [inv_inv₀]
   · rw [clog_of_one_le_right hb ((one_le_inv₀ hr).2 hr1), log_of_right_le_one hb hr1, neg_neg]
 
 @[simp]
 theorem log_inv {b : ℕ} (hb : 1 < b) {r : R} (hr : 0 < r) {h : 0 < r⁻¹} :
     log b r⁻¹ hb h = -clog b r := by
   have := clog_inv hb h (h := by simpa using hr)
-  simp only [inv_inv] at this
+  simp only [inv_inv₀] at this
   rw [this, neg_neg]
 
 -- note this is useful for writing in reverse
@@ -230,14 +224,16 @@ theorem clog_ofNat {b : ℕ} (hb : 1 < b) (n : ℕ) [n.AtLeastTwo] {h : 0 < (ofN
 
 theorem self_le_zpow_clog {b : ℕ} (hb : 1 < b) {r : R} (hr : 0 < r) :
     r ≤ (b : R) ^ clog b r := by
-  rw [← neg_log_inv_eq_clog hb hr, zpow_neg, le_inv_comm₀ hr (zpow_pos ..)]
-  · exact zpow_log_le_self hb (inv_pos.mpr hr)
+  simp only [← neg_log_inv_eq_clog hb hr]
+  rw [zpow_neg₀ (Nat.cast_ne_zero.mpr (by omega)), le_inv_comm₀ hr (zpow_pos ..)]
+  · exact zpow_log_le_self hb (inv_pos_of_pos hr)
   · exact Nat.cast_pos.mpr (zero_le_one.trans_lt hb)
 
 theorem zpow_pred_clog_lt_self {b : ℕ} {r : R} (hb : 1 < b) (hr : 0 < r) :
     (b : R) ^ (clog b r - 1) < r := by
-  rw [← neg_log_inv_eq_clog hb hr, ← neg_add', zpow_neg, inv_lt_comm₀ _ hr]
-  · exact lt_zpow_succ_log_self hb (inv_pos.mpr hr)
+  simp only [← neg_log_inv_eq_clog hb hr, ← neg_add']
+  rw [zpow_neg₀ (Nat.cast_ne_zero.mpr (by omega)), inv_lt_comm₀ _ hr]
+  · exact lt_zpow_succ_log_self hb (inv_pos_of_pos hr)
   · exact zpow_pos (Nat.cast_pos.mpr <| zero_le_one.trans_lt hb) _
 
 @[simp]
@@ -248,7 +244,7 @@ theorem clog_one_right {b : ℕ} (hb : 1 < b) {h : (0 : R) < 1} : clog b (1 : R)
 theorem clog_zpow {b : ℕ} (hb : 1 < b) (z : ℤ) {h : 0 < (b ^ z : R)} :
     clog b (b ^ z : R) hb h = z := by
   rw [← neg_log_inv_eq_clog hb h]
-  simp only [← zpow_neg]
+  simp only [← zpow_neg₀ (Nat.cast_ne_zero.mpr (by omega) : (b : R) ≠ 0)]
   rw [log_zpow hb, neg_neg]
 
 @[gcongr, mono]
@@ -260,7 +256,7 @@ theorem clog_mono_right {b : ℕ} {hb : 1 < b} {r₁ r₂ : R} {h₀ : 0 < r₁}
 
 variable (R) in
 /-- Over suitable subtypes, `Int.clog` and `zpow` form a Galois insertion -/
-def clogZPowGi {b : ℕ} (hb : 1 < b) :
+noncomputable def clogZPowGi {b : ℕ} (hb : 1 < b) :
     GaloisInsertion (fun r : Set.Ioi (0 : R) => Int.clog b (r : R) hb r.2) fun z : ℤ =>
       ⟨(b : R) ^ z, zpow_pos (mod_cast zero_lt_one.trans hb) z⟩ :=
   GaloisInsertion.monotoneIntro

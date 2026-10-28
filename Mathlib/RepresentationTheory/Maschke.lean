@@ -26,8 +26,8 @@ taking the average over `G` of the conjugates of `π`.
 
 ## Implementation Notes
 
-* These results assume `IsUnit (Fintype.card G : k)` which is equivalent to the more
-  familiar `¬(ringChar k ∣ Fintype.card G)`.
+* These results assume `IsUnit (Nat.card G : k)` which is equivalent to the more
+  familiar `¬(ringChar k ∣ Nat.card G)`.
 
 ## Future work
 It's not so far to give the usual statement, that every finite-dimensional representation
@@ -39,7 +39,6 @@ of a finite group is semisimple (i.e. a direct sum of irreducibles).
 noncomputable section
 
 open Module MonoidAlgebra
-open scoped Ring
 
 /-!
 We now do the key calculation in Maschke's theorem.
@@ -58,7 +57,7 @@ namespace LinearMap
 
 
 -- At first we work with any `[CommRing k]`, and add the assumption that
--- `IsUnit (Fintype.card G : k)` when it is required.
+-- `IsUnit (Nat.card G : k)` when it is required.
 variable {k : Type*} [CommRing k] {G : Type*} [Group G]
 variable {V : Type*} [AddCommGroup V] [Module k V] [Module k[G] V] [IsScalarTower k k[G] V]
 variable {W : Type*} [AddCommGroup W] [Module k W] [Module k[G] W] [IsScalarTower k k[G] W]
@@ -111,21 +110,22 @@ section
 
 /-- We construct our `k[G]`-linear retraction of `i` as
 $$ \frac{1}{|G|} \sum_{g \in G} g⁻¹ • π(g • -). $$
+The average exists exactly when the order of `G` is invertible in `k`.
 -/
-def equivariantProjection : W →ₗ[k[G]] V :=
-  (Fintype.card G : k)⁻¹ʳ • π.sumOfConjugatesEquivariant G
+def equivariantProjection (hcard : IsUnit (Nat.card G : k) := by checked_unit) :
+    W →ₗ[k[G]] V :=
+  (Nat.card G : k)⁻¹ • π.sumOfConjugatesEquivariant G
 
-theorem equivariantProjection_apply (v : W) :
-    π.equivariantProjection G v = (Nat.card G : k)⁻¹ʳ • ∑ g : G, π.conjugate g v := by
-  simp only [equivariantProjection, smul_apply, sumOfConjugatesEquivariant_apply,
-    Fintype.card_eq_nat_card]
+theorem equivariantProjection_apply {hcard : IsUnit (Nat.card G : k)} (v : W) :
+    π.equivariantProjection G hcard v = (Nat.card G : k)⁻¹ • ∑ g : G, π.conjugate g v := by
+  simp only [equivariantProjection, smul_apply, sumOfConjugatesEquivariant_apply]
 
-theorem equivariantProjection_condition (hcard : IsUnit (Nat.card G : k))
+theorem equivariantProjection_condition {hcard : IsUnit (Nat.card G : k)}
     (h : ∀ v : V, π (i v) = v) (v : V) : (π.equivariantProjection G) (i v) = v := by
   rw [equivariantProjection_apply]
   simp only [conjugate_i π i h]
   rw [Finset.sum_const, Finset.card_univ, ← Nat.cast_smul_eq_nsmul k, smul_smul,
-    Fintype.card_eq_nat_card, Ring.inverse_mul_cancel _ hcard, one_smul]
+    Fintype.card_eq_nat_card, inv_mul_cancel₀, one_smul]
 
 end
 
@@ -156,7 +156,7 @@ theorem exists_leftInverse_of_injective (f : V →ₗ[k[G]] W) (hf : LinearMap.k
   have hφ : ∀ (x : V), φ (f x) = x := fun x ↦ DFunLike.congr_fun hφ' x
   have _ : Fintype G := Fintype.ofFinite G
   refine ⟨φ.equivariantProjection G, LinearMap.ext ?_⟩
-  exact φ.equivariantProjection_condition G _ (.mk0 _ <| NeZero.ne _) <| hφ
+  exact φ.equivariantProjection_condition G _ hφ
 
 namespace Submodule
 

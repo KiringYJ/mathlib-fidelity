@@ -45,16 +45,21 @@ lemma center_units_subset : center G₀ˣ ⊆ ((↑) : G₀ˣ → G₀) ⁻¹' c
 lemma center_units_eq : center G₀ˣ = ((↑) : G₀ˣ → G₀) ⁻¹' center G₀ :=
   center_units_subset.antisymm subset_center_units
 
-/-- Inversion of a unit preserves membership in a centralizer. -/
-lemma units_inv_mem_centralizer {u : G₀ˣ} (hu : (u : G₀) ∈ centralizer s) :
-    (↑u⁻¹ : G₀) ∈ centralizer s := by
-  intro c hc
-  exact (Commute.units_inv_right (hu c hc)).eq
-
-/-- Division by a unit preserves a centralizer when both factors belong to it. -/
-lemma divp_mem_centralizer {u : G₀ˣ} (ha : a ∈ centralizer s)
-    (hu : (u : G₀) ∈ centralizer s) : a /ₚ u ∈ centralizer s :=
-  mul_mem_centralizer ha (units_inv_mem_centralizer hu)
-
 end GroupWithZero
+
+section Monoid
+variable {M : Type*} [Monoid M] {s : Set M} {a b : M}
+
+@[simp] lemma inv_mem_centralizer₀ {ha : IsUnit a} (h : a ∈ centralizer s) :
+    a⁻¹ ∈ centralizer s := by
+  intro c hc
+  have hca : Commute c (ha.unit : M) := by rw [ha.unit_spec]; exact h c hc
+  exact hca.units_inv_right.eq
+
+@[simp] lemma div_mem_centralizer₀ {hb : IsUnit b} (ha : a ∈ centralizer s)
+    (hb' : b ∈ centralizer s) : a / b ∈ centralizer s := by
+  rw [div_eq_mul_inv₀]
+  exact mul_mem_centralizer ha (inv_mem_centralizer₀ hb')
+
+end Monoid
 end Set

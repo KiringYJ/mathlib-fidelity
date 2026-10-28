@@ -444,32 +444,31 @@ alias LinearOrderedCommGroupWithZero.wellFoundedOn_setOf_le_lt_iff_nonempty_disc
 lemma LinearOrderedCommGroupWithZero.wellFoundedOn_setOfPred_ge_gt_iff_nonempty_discrete_of_ne_zero
     {G₀ : Type*} [LinearOrderedCommGroupWithZero G₀] [Nontrivial G₀ˣ] {g : G₀} (hg : g ≠ 0) :
     Set.WellFoundedOn {x : G₀ | x ≤ g} (· > ·) ↔ Nonempty (G₀ ≃*o ℤᵐ⁰) := by
-  have hg' : g⁻¹ ≠ 0 := by simp [hg]
+  have hg' : g⁻¹ ≠ 0 := inv_ne_zero
   rw [← wellFoundedOn_setOfPred_le_lt_iff_nonempty_discrete_of_ne_zero hg',
     ← Set.wellFoundedOn_sdiff_singleton (a := 0)]
-  refine ⟨fun h ↦ (h.mapsTo (·⁻¹) ?_).mono' ?_, fun h ↦ (h.mapsTo (·⁻¹) ?_).mono' ?_⟩
-  · intro x
-    rcases eq_or_ne x 0 with rfl | hx
-    · simp [hg]
-    simp only [mem_ofPred_eq, mem_sdiff, mem_singleton_iff, inv_eq_zero, hx, not_false_eq_true,
-      and_true]
-    refine (inv_le_comm₀ ?_ ?_).mp <;>
-    simp [zero_lt_iff, hg, hx]
-  · simp only [mem_ofPred_eq, Function.onFun, gt_iff_lt]
-    intro a ha b _
-    refine inv_strictAnti₀ ?_
-    contrapose! ha
-    simp only [le_zero_iff] at ha
-    simp [zero_lt_iff, ha, hg]
-  · intro x
-    simp only [mem_sdiff, mem_ofPred_eq, mem_singleton_iff, and_imp]
-    intro hxg hx
-    refine inv_anti₀ ?_ hxg
-    simp [zero_lt_iff, hx]
-  · simp only [mem_sdiff, mem_ofPred_eq, mem_singleton_iff, gt_iff_lt, Function.onFun, and_imp]
-    intro a _ _ b _ hb0
-    refine inv_strictAnti₀ ?_
-    simp [zero_lt_iff, hb0]
+  -- Both sets consist of nonzero elements; on them, `f` is inversion.
+  let f (x : G₀) : G₀ := if hx : x = 0 then 0 else Checked.inv x (Ne.isUnit hx)
+  have hf {x : G₀} (hx : x ≠ 0) : f x = x⁻¹ := dite_eq_right hx
+  have hg₀ : 0 < g⁻¹ := zero_lt_iff.2 hg'
+  refine ⟨fun h ↦ (h.mapsTo f ?_).mono' ?_, fun h ↦ (h.mapsTo f ?_).mono' ?_⟩
+  · intro x (hx : g⁻¹ ≤ x)
+    have hx₀ : 0 < x := hg₀.trans_le hx
+    rw [hf hx₀.ne']
+    exact ⟨(inv_le_comm₀ hx₀ (zero_lt_iff.2 hg)).2 hx, inv_ne_zero⟩
+  · intro a (ha : g⁻¹ ≤ a) b _ (hab : a < b)
+    have ha₀ : 0 < a := hg₀.trans_le ha
+    change f b < f a
+    rw [hf (ha₀.trans hab).ne', hf ha₀.ne']
+    exact inv_strictAnti₀ ha₀ hab
+  · intro x ⟨(hxg : x ≤ g), (hx : x ≠ 0)⟩
+    change g⁻¹ ≤ f x
+    rw [hf hx]
+    exact inv_anti₀ (zero_lt_iff.2 hx) hxg
+  · intro a ⟨_, (ha : a ≠ 0)⟩ b ⟨_, (hb : b ≠ 0)⟩ (hab : b < a)
+    change f a < f b
+    rw [hf ha, hf hb]
+    exact inv_strictAnti₀ (zero_lt_iff.2 hb) hab
 
 @[deprecated (since := "2026-07-09")]
 alias LinearOrderedCommGroupWithZero.wellFoundedOn_setOf_ge_gt_iff_nonempty_discrete_of_ne_zero :=

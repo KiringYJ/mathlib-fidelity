@@ -96,8 +96,9 @@ theorem coe_zero : ↑(0 : ℝ) = (0 : ℝ*) :=
   rfl
 
 @[simp, norm_cast]
-theorem coe_inv (x : ℝ) : ↑x⁻¹ = (x⁻¹ : ℝ*) :=
-  rfl
+theorem coe_inv (x : ℝ) {hx : IsUnit x} :
+    ↑x⁻¹ = Checked.inv (x : ℝ*) (coe_ne_zero.2 hx.ne_zero).isUnit :=
+  Germ.const_inv₀ x
 
 @[simp, norm_cast]
 theorem coe_neg (x : ℝ) : ↑(-x) = (-x : ℝ*) :=
@@ -117,8 +118,9 @@ theorem coe_mul (x y : ℝ) : ↑(x * y) = (x * y : ℝ*) :=
   rfl
 
 @[simp, norm_cast]
-theorem coe_div (x y : ℝ) : ↑(x / y) = (x / y : ℝ*) :=
-  rfl
+theorem coe_div (x y : ℝ) {hy : IsUnit y} :
+    ↑(x / y) = Checked.div (x : ℝ*) (y : ℝ*) (coe_ne_zero.2 hy.ne_zero).isUnit :=
+  Germ.const_div₀ x y
 
 @[simp, norm_cast]
 theorem coe_sub (x y : ℝ) : ↑(x - y) = (x - y : ℝ*) :=
@@ -220,9 +222,11 @@ theorem archimedeanClassMk_omega_neg : mk ω < 0 :=
 
 /-! #### ε -/
 
-/-- A sample infinitesimal hyperreal ε = ⟦(0, 1, 1/2, 1/3, ⋯)⟧. -/
+/-- A sample infinitesimal hyperreal ε = ω⁻¹, the class of the sequence `n ↦ 1 / n`. Only the
+terms with `n ≠ 0` are defined, and they determine the class, since the ultrafilter contains the
+cofinite filter. -/
 def epsilon : ℝ* :=
-  ofSeq fun n => n⁻¹
+  Checked.inv ω omega_ne_zero.isUnit
 
 @[inherit_doc] scoped notation "ε" => Hyperreal.epsilon
 recommended_spelling "epsilon" for "ε" in [epsilon, «termε»]
@@ -230,10 +234,6 @@ recommended_spelling "epsilon" for "ε" in [epsilon, «termε»]
 @[simp]
 theorem inv_omega : ω⁻¹ = ε :=
   rfl
-
-@[simp]
-theorem inv_epsilon : ε⁻¹ = ω :=
-  @inv_inv _ _ ω
 
 @[simp]
 theorem epsilon_pos : 0 < ε :=
@@ -244,8 +244,12 @@ theorem epsilon_ne_zero : ε ≠ 0 :=
   epsilon_pos.ne'
 
 @[simp]
+theorem inv_epsilon : ε⁻¹ = ω :=
+  inv_inv₀ ω
+
+@[simp]
 theorem epsilon_mul_omega : ε * ω = 1 :=
-  @inv_mul_cancel₀ _ _ ω omega_ne_zero
+  inv_mul_cancel₀
 
 @[simp]
 theorem archimedeanClassMk_epsilon_pos : 0 < mk ε := by

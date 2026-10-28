@@ -53,21 +53,25 @@ lemma smul_mk0 {α : Type*} [SMul G₀ α] {g : G₀} (hg : g ≠ 0) (a : α) : 
 
 end Units
 
+section Monoid
+variable [Monoid α] [MulAction α β] {a : α}
+
+@[simp] lemma inv_smul_smul₀ {ha : IsUnit a} (x : β) : a⁻¹ • a • x = x :=
+  inv_smul_smul ha.unit x
+
+@[simp] lemma smul_inv_smul₀ {ha : IsUnit a} (x : β) : a • a⁻¹ • x = x :=
+  smul_inv_smul ha.unit x
+
+lemma inv_smul_eq_iff₀ {ha : IsUnit a} {x y : β} : a⁻¹ • x = y ↔ x = a • y :=
+  inv_smul_eq_iff (g := ha.unit)
+
+lemma eq_inv_smul_iff₀ {ha : IsUnit a} {x y : β} : x = a⁻¹ • y ↔ a • x = y :=
+  eq_inv_smul_iff (g := ha.unit)
+
+end Monoid
+
 section GroupWithZero
 variable [GroupWithZero α] [MulAction α β] {a : α}
-
-@[simp] lemma inv_smul_smul₀ (ha : a ≠ 0) (x : β) : (Units.mk0 a ha)⁻¹ • a • x = x :=
-  inv_smul_smul (Units.mk0 a ha) x
-
-@[simp]
-lemma smul_inv_smul₀ (ha : a ≠ 0) (x : β) :
-    a • (Units.mk0 a ha)⁻¹ • x = x := smul_inv_smul (Units.mk0 a ha) x
-
-lemma inv_smul_eq_iff₀ (ha : a ≠ 0) {x y : β} : (Units.mk0 a ha)⁻¹ • x = y ↔ x = a • y :=
-  inv_smul_eq_iff (g := Units.mk0 a ha)
-
-lemma eq_inv_smul_iff₀ (ha : a ≠ 0) {x y : β} : x = (Units.mk0 a ha)⁻¹ • y ↔ a • x = y :=
-  eq_inv_smul_iff (g := Units.mk0 a ha)
 
 @[simp]
 lemma SemiconjBy.smul_right_iff₀ [Mul β] [SMulCommClass α β β] [IsScalarTower α β β] {x y z : β}
@@ -92,9 +96,9 @@ lemma Commute.smul_left_iff₀ [Mul β] [SMulCommClass α β β] [IsScalarTower 
 /-- Right scalar multiplication as a bijection. -/
 @[simps] noncomputable def Equiv.smulRight (ha : a ≠ 0) : β ≃ β where
   toFun b := a • b
-  invFun b := (Units.mk0 a ha)⁻¹ • b
-  left_inv := inv_smul_smul₀ ha
-  right_inv := smul_inv_smul₀ ha
+  invFun b := a⁻¹ • b
+  left_inv := inv_smul_smul₀ (ha := ha.isUnit)
+  right_inv := smul_inv_smul₀ (ha := ha.isUnit)
 
 end GroupWithZero
 

@@ -119,7 +119,7 @@ theorem _root_.AlgHomClass.unitization_injective {F R S A : Type*} [Field R] [Ri
     (f : F) (hf : ∀ x : s, f x = x) : Function.Injective f := by
   refine AlgHomClass.unitization_injective' s (fun r hr hr' ↦ ?_) f hf
   rw [Algebra.algebraMap_eq_smul_one] at hr'
-  exact h1 <| inv_smul_smul₀ hr (1 : A) ▸ SMulMemClass.smul_mem r⁻¹ hr'
+  exact h1 <| inv_smul_smul₀ (ha := hr.isUnit) (1 : A) ▸ SMulMemClass.smul_mem r⁻¹ hr'
 
 section Field
 

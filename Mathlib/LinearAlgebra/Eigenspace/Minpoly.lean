@@ -115,9 +115,11 @@ section Field
 variable {K : Type v} {V : Type w} [Field K] [AddCommGroup V] [Module K V]
 
 theorem eigenspace_aeval_polynomial_degree_1 (f : End K V) (q : K[X]) (hq : degree q = 1) :
-    eigenspace f (-q.coeff 0 / q.leadingCoeff) = LinearMap.ker (aeval f q) :=
+    eigenspace f (Checked.div (-q.coeff 0) q.leadingCoeff
+      (leadingCoeff_ne_zero.2 fun h ↦ by simp [h] at hq).isUnit) = LinearMap.ker (aeval f q) :=
   calc
-    eigenspace f (-q.coeff 0 / q.leadingCoeff)
+    eigenspace f (Checked.div (-q.coeff 0) q.leadingCoeff
+      (leadingCoeff_ne_zero.2 fun h ↦ by simp [h] at hq).isUnit)
     _ = LinearMap.ker (q.leadingCoeff • f - algebraMap K (End K V) (-q.coeff 0)) := by
           apply eigenspace_div
           rw [Ne, leadingCoeff_eq_zero_iff_deg_eq_bot, hq]

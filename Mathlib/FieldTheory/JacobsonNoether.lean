@@ -140,7 +140,7 @@ theorem exists_separable_and_not_isCentral (H : k ≠ (⊤ : Subring D)) :
       linarith [(Nat.find_spec h_exist).1]
   -- We define `c` to be the value that we proved above to be non-zero.
   set c := (ad k D a)^[n] b with hc_def
-  let _ : Invertible c := ⟨c⁻¹, inv_mul_cancel₀ hb.1, mul_inv_cancel₀ hb.1⟩
+  have hc₀ : c ≠ 0 := hb.1
   -- We prove that `c` commutes with `a`.
   have hc : a * c = c * a := by
     apply eq_of_sub_eq_zero
@@ -152,13 +152,13 @@ theorem exists_separable_and_not_isCentral (H : k ≠ (⊤ : Subring D)) :
   set d := c⁻¹ * a * (ad k D a)^[n - 1] b with hd_def
   have hc' : c⁻¹ * a = a * c⁻¹ := by
     apply_fun (c⁻¹ * · * c⁻¹) at hc
-    rw [mul_assoc, mul_assoc, mul_inv_cancel₀ hb.1, mul_one, ← mul_assoc,
-      inv_mul_cancel₀ hb.1, one_mul] at hc
+    rw [mul_assoc, mul_assoc, mul_inv_cancel₀, mul_one, ← mul_assoc,
+      inv_mul_cancel₀, one_mul] at hc
     exact hc
   have c_eq : a * (ad k D a)^[n - 1] b - (ad k D a)^[n - 1] b * a = c := by
     rw [hc_def, ← Nat.sub_add_cancel hn, Function.iterate_succ_apply' (ad k D a) _ b]; rfl
   have eq1 : c⁻¹ * a * (ad k D a)^[n - 1] b - c⁻¹ * (ad k D a)^[n - 1] b * a = 1 := by
-    simp_rw [mul_assoc, (mul_sub_left_distrib c⁻¹ _ _).symm, c_eq, inv_mul_cancel_of_invertible]
+    simp_rw [mul_assoc, (mul_sub_left_distrib c⁻¹ _ _).symm, c_eq, inv_mul_cancel₀]
   -- We show that `a` commutes with `d`.
   have deq : a * d - d * a = a := by
     nth_rw 3 [← mul_one a]
@@ -166,11 +166,11 @@ theorem exists_separable_and_not_isCentral (H : k ≠ (⊤ : Subring D)) :
       ← mul_assoc, ← mul_assoc, ← mul_assoc]
   -- This then yields a contradiction.
   apply_fun (a⁻¹ * ·) at deq
-  rw [mul_sub, ← mul_assoc, inv_mul_cancel₀ ha₀, one_mul, ← mul_assoc, sub_eq_iff_eq_add] at deq
+  rw [mul_sub, ← mul_assoc, inv_mul_cancel₀, one_mul, ← mul_assoc, sub_eq_iff_eq_add] at deq
   obtain ⟨r, hr⟩ := exists_pow_mem_center_of_inseparable p d insep
   apply_fun (· ^ (p ^ r)) at deq
   rw [add_pow_expChar_pow_of_commute p r (Commute.one_left _), one_pow,
-    GroupWithZero.conj_pow₀ ha₀, ← hr.comm, mul_assoc, inv_mul_cancel₀ ha₀, mul_one,
+    GroupWithZero.conj_pow₀, ← hr.comm, mul_assoc, inv_mul_cancel₀, mul_one,
     right_eq_add] at deq
   exact one_ne_zero deq
 

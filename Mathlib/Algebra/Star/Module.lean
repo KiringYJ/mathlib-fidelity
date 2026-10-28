@@ -51,15 +51,15 @@ theorem star_intCast_smul [Ring R] [AddCommGroup M] [Module R M] [StarAddMonoid 
 
 @[simp]
 theorem star_inv_natCast_smul [Semiring R] [AddCommMonoid M] [Module R M] [StarAddMonoid M]
-    (n : ℕ) (hn : IsUnit (n : R)) (x : M) :
-    star (hn.unit⁻¹ • x) = hn.unit⁻¹ • star x :=
-  map_inv_natCast_smul (starAddEquiv : M ≃+ M) R R n hn hn x
+    (n : ℕ) {hn : IsUnit (n : R)} (x : M) :
+    star ((n : R)⁻¹ • x) = (n : R)⁻¹ • star x :=
+  map_inv_natCast_smul (starAddEquiv : M ≃+ M) R R n x
 
 @[simp]
 theorem star_inv_intCast_smul [Ring R] [AddCommGroup M] [Module R M] [StarAddMonoid M]
-    (n : ℤ) (hn : IsUnit (n : R)) (x : M) :
-    star (hn.unit⁻¹ • x) = hn.unit⁻¹ • star x :=
-  map_inv_intCast_smul (starAddEquiv : M ≃+ M) R R n hn hn x
+    (n : ℤ) {hn : IsUnit (n : R)} (x : M) :
+    star ((n : R)⁻¹ • x) = (n : R)⁻¹ • star x :=
+  map_inv_intCast_smul (starAddEquiv : M ≃+ M) R R n x
 
 @[simp]
 theorem star_ratCast_smul [DivisionRing R] [CharZero R] [AddCommGroup M] [Module R M]

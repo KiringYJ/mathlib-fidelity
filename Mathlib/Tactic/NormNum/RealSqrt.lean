@@ -41,7 +41,7 @@ lemma isNat_realSqrt_of_isRat_negOfNat {x : ℝ} {num : ℕ} {denom : ℕ}
     (h : IsRat x (.negOfNat num) denom) : IsNat √x (nat_lit 0) := by
   refine ⟨?_⟩
   obtain ⟨inv, rfl⟩ := h
-  have h₁ : 0 ≤ (num : ℚ) * ⅟(denom : ℝ) :=
+  have h₁ : 0 ≤ (num : ℝ) * ⅟(denom : ℝ) :=
     mul_nonneg (Nat.cast_nonneg' _) (invOf_nonneg.2 <| Nat.cast_nonneg' _)
   simpa [Nat.cast_zero, Real.sqrt_eq_zero', Int.cast_negOfNat, neg_mul, neg_nonpos] using h₁
 
@@ -83,13 +83,15 @@ def evalRealSqrt : NormNumExt where eval {u α} e := do
           let sn := Nat.sqrt n
           let sd := Nat.sqrt d
           unless sn * sn = n ∧ sd * sd = d do failure
+          if hsd : sd = 0 then failure else
           have esn : Q(ℕ) := mkRawNatLit sn
           have esd : Q(ℕ) := mkRawNatLit sd
           have hn : Q($esn * $esn = $n') := (q(Eq.refl $n') : Expr)
           have hd : Q($esd * $esd = $ed) := (q(Eq.refl $ed) : Expr)
           assumeInstancesCommute
           -- will never be an integer
-          return .isNNRat q($sℝ) (sn / sd) _ q($esd) q(isNNRat_realSqrt_of_isNNRat $hn $hd $pf)
+          return .isNNRat q($sℝ) (Rat.fraction sn sd hsd) _ q($esd)
+            q(isNNRat_realSqrt_of_isNNRat $hn $hd $pf)
   | _ => failure
 
 /-- `norm_num` extension that evaluates the function `NNReal.sqrt`. -/
@@ -114,13 +116,15 @@ def evalNNRealSqrt : NormNumExt where eval {u α} e := do
         let sn := Nat.sqrt n
         let sd := Nat.sqrt d
         unless sn * sn = n ∧ sd * sd = d do failure
+        if hsd : sd = 0 then failure else
         have esn : Q(ℕ) := mkRawNatLit sn
         have esd : Q(ℕ) := mkRawNatLit sd
         have hn : Q($esn * $esn = $n') := (q(Eq.refl $n') : Expr)
         have hd : Q($esd * $esd = $ed) := (q(Eq.refl $ed) : Expr)
         assumeInstancesCommute
         -- will never be an integer
-        return .isNNRat q($sℝ) (sn / sd) _ q($esd) q(isNNRat_nnrealSqrt_of_isNNRat $hn $hd $pf)
+        return .isNNRat q($sℝ) (Rat.fraction sn sd hsd) _ q($esd)
+          q(isNNRat_nnrealSqrt_of_isNNRat $hn $hd $pf)
     | .isNegNNRat sℝ eq en ed pf => failure
   | _ => failure
 

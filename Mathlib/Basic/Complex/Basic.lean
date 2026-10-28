@@ -376,8 +376,8 @@ instance commRing : CommRing ℂ :=
 
 section computable_shortcuts
 
-/-- This shortcut instance ensures we do not find `Ring` via the noncomputable `Complex.field`
-instance. -/
+/-- This shortcut instance ensures we do not find `Ring` via the noncomputable
+`Complex.instNormedField` instance. -/
 instance : Ring ℂ :=
   delta% inferInstance
 
@@ -387,12 +387,12 @@ instance : NonUnitalCommRing ℂ :=
   delta% inferInstance
 
 /-- This shortcut instance ensures we do not find `CommSemiring` via the noncomputable
-`Complex.field` instance. -/
+`Complex.instNormedField` instance. -/
 instance : CommSemiring ℂ :=
   delta% inferInstance
 
 /-- This shortcut instance ensures we do not find `Semiring` via the noncomputable
-`Complex.field` instance. -/
+`Complex.instNormedField` instance. -/
 instance : Semiring ℂ :=
   delta% inferInstance
 
@@ -658,8 +658,10 @@ theorem normSq_sub (z w : ℂ) : normSq (z - w) = normSq z + normSq w - 2 * (z *
 /-! ### Inversion -/
 
 
-/-- Every nonzero complex number is a unit, using conjugation and its nonzero norm square. -/
-noncomputable instance instField : Field ℂ where
+/-- Every nonzero complex number is a unit, using conjugation and its nonzero norm square. The
+rational embeddings factor through `ℝ`, and the actions of `ℚ≥0` and `ℚ` are the componentwise
+ones, so that they agree definitionally with `Complex.instModule`. -/
+instance instField : Field ℂ where
   __ := commRing
   __ := (inferInstance : Nontrivial ℂ)
   isUnit_of_ne_zero {z} hz := by
@@ -668,6 +670,18 @@ noncomputable instance instField : Field ℂ where
       rw [← mul_assoc, mul_conj, ← ofReal_mul,
         show normSq z * (↑u⁻¹ : ℝ) = 1 from u.mul_inv, ofReal_one]
     exact ⟨⟨z, conj z * ((↑u⁻¹ : ℝ) : ℂ), h, by rw [mul_comm]; exact h⟩, rfl⟩
+  nnratCastOfCharZero _ q := ((q : ℝ) : ℂ)
+  nnratCastOfCharZero_mul_den _ q := by
+    rw [← ofReal_natCast, ← ofReal_mul, NNRat.cast_mul_den, ofReal_natCast]
+  ratCastOfCharZero _ q := ((q : ℝ) : ℂ)
+  ratCastOfCharZero_mul_den _ q := by
+    rw [← ofReal_natCast, ← ofReal_mul, Rat.cast_mul_den, ofReal_intCast]
+  nnqsmulOfCharZero _ q z := q • z
+  nnqsmulOfCharZero_eq_mul _ q z := by
+    apply Complex.ext <;> simp [smul_re, smul_im, NNRat.smul_def]
+  qsmulOfCharZero _ q z := q • z
+  qsmulOfCharZero_eq_mul _ q z := by
+    apply Complex.ext <;> simp [smul_re, smul_im, Rat.smul_def]
 
 instance instCharZero : CharZero ℂ :=
   charZero_of_inj_zero fun n h => by rwa [← ofReal_natCast, ofReal_eq_zero, Nat.cast_eq_zero] at h
@@ -695,223 +709,156 @@ theorem normSq_ratCast (q : ℚ) : normSq q = q * q := by
   rw [← ofReal_ratCast, normSq_ofReal]
 
 @[simp, norm_cast]
-lemma ofReal_ofScientific (m : ℕ) (b : Bool) (e : ℕ) :
-    ofReal (OfScientific.ofScientific m b e : ℝ) = OfScientific.ofScientific m b e :=
+lemma ofReal_ofScientific (m : ℕ) (s : Bool) (e : ℕ) :
+    ofReal (OfScientific.ofScientific m s e : ℝ) = OfScientific.ofScientific m s e :=
   ofReal_nnratCast _
 
 @[simp]
-lemma re_ofScientific (m : ℕ) (b : Bool) (e : ℕ) :
-    (OfScientific.ofScientific m b e : ℂ).re = OfScientific.ofScientific m b e := by
+lemma re_ofScientific (m : ℕ) (s : Bool) (e : ℕ) :
+    (OfScientific.ofScientific m s e : ℂ).re = OfScientific.ofScientific m s e := by
   rw [← ofReal_ofScientific]
   rfl
 
 @[simp]
-lemma im_ofScientific (m : ℕ) (b : Bool) (e : ℕ) :
-    (OfScientific.ofScientific m b e : ℂ).im = 0 := by
+lemma im_ofScientific (m : ℕ) (s : Bool) (e : ℕ) :
+    (OfScientific.ofScientific m s e : ℂ).im = 0 := by
   rw [← ofReal_ofScientific]
   rfl
 
-/-- The reciprocal formula on the exact complex unit domain. -/
-theorem inv_def (z : ℂˣ) : (↑z⁻¹ : ℂ) = conj (z : ℂ) *
-    ((↑(Units.map normSq.toMonoidHom z)⁻¹ : ℝ) : ℂ) := by
-  apply Units.mul_eq_one_iff_inv_eq.mp
-  rw [← mul_assoc, mul_conj, ← ofReal_mul,
-    show normSq (z : ℂ) * (↑(Units.map normSq.toMonoidHom z)⁻¹ : ℝ) = 1 from
-      (Units.map normSq.toMonoidHom z).mul_inv, ofReal_one]
+/-! The evidence search `checked_nonzero` also uses that `I` is nonzero, and that the coercion of a
+nonzero real number and the norm square of a nonzero complex number are nonzero. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | (with_reducible exact Complex.I_ne_zero)
+    | ((with_reducible apply Complex.ofReal_ne_zero.mpr); checked_nonzero)
+    | ((with_reducible apply Complex.normSq_eq_zero.not.mpr); checked_nonzero))
+
+theorem inv_def (z : ℂ) {hz : IsUnit z} : z⁻¹ = conj z * ((normSq z)⁻¹ : ℝ) :=
+  inv_eq_of_mul_eq_one_right₀ <| by
+    rw [← mul_assoc, mul_conj, ← ofReal_mul, mul_inv_cancel₀, ofReal_one]
 
 @[simp]
-theorem inv_re (z : ℂˣ) : (↑z⁻¹ : ℂ).re = (z : ℂ).re /ₚ Units.map normSq.toMonoidHom z := by
-  rw [inv_def]
-  simp only [mul_re, conj_re, ofReal_re, ofReal_im, mul_zero, sub_zero, divp]
+theorem inv_re (z : ℂ) {hz : IsUnit z} : z⁻¹.re = z.re / normSq z := by
+  simp [inv_def, div_eq_mul_inv₀]
 
 @[simp]
-theorem inv_im (z : ℂˣ) : (↑z⁻¹ : ℂ).im = -(z : ℂ).im /ₚ Units.map normSq.toMonoidHom z := by
-  rw [inv_def]
-  simp only [mul_im, conj_im, ofReal_re, ofReal_im, mul_zero, zero_add, divp]
-
-@[norm_cast]
-theorem ofReal_inv (r : ℝˣ) : ((↑r⁻¹ : ℝ) : ℂ) =
-    (↑(Units.map ofRealHom.toMonoidHom r)⁻¹ : ℂ) := rfl
-
-protected theorem mul_inv_cancel (z : ℂˣ) : (z : ℂ) * ↑z⁻¹ = 1 := z.mul_inv
-
-lemma div_re (z : ℂ) (w : ℂˣ) :
-    (z /ₚ w).re = z.re * (w : ℂ).re /ₚ Units.map normSq.toMonoidHom w +
-      z.im * (w : ℂ).im /ₚ Units.map normSq.toMonoidHom w := by
-  simp only [divp, mul_re, inv_re, inv_im, neg_mul, mul_neg, sub_neg_eq_add, mul_assoc]
-
-lemma div_im (z : ℂ) (w : ℂˣ) :
-    (z /ₚ w).im = z.im * (w : ℂ).re /ₚ Units.map normSq.toMonoidHom w -
-      z.re * (w : ℂ).im /ₚ Units.map normSq.toMonoidHom w := by
-  simp only [divp, mul_im, inv_re, inv_im, neg_mul, mul_neg, sub_eq_add_neg, mul_assoc, add_comm]
+theorem inv_im (z : ℂ) {hz : IsUnit z} : z⁻¹.im = -z.im / normSq z := by
+  simp [inv_def, div_eq_mul_inv₀]
 
 @[simp, norm_cast]
-lemma ofReal_nnqsmul (q : ℚ≥0) (r : ℝ) : ofReal (q • r) = q • r := Complex.ext_iff.2 <| by simp [ofReal]
+theorem ofReal_inv (r : ℝ) {hr : IsUnit r} : ((r⁻¹ : ℝ) : ℂ) = (r : ℂ)⁻¹ :=
+  map_inv₀ ofRealHom r
+
+lemma div_re (z w : ℂ) {hw : IsUnit w} :
+    (z / w).re = z.re * w.re / normSq w + z.im * w.im / normSq w := by
+  simp [div_eq_mul_inv₀, mul_assoc, sub_eq_add_neg]
+
+lemma div_im (z w : ℂ) {hw : IsUnit w} :
+    (z / w).im = z.im * w.re / normSq w - z.re * w.im / normSq w := by
+  simp [div_eq_mul_inv₀, mul_assoc, sub_eq_add_neg, add_comm]
+
+@[simp, norm_cast]
+lemma ofReal_nnqsmul (q : ℚ≥0) (r : ℝ) : ofReal (q • r) = q • r :=
+  Complex.ext_iff.2 <| by simp [ofReal]
 
 @[simp, norm_cast]
 lemma ofReal_qsmul (q : ℚ) (r : ℝ) : ofReal (q • r) = q • r := Complex.ext_iff.2 <| by simp [ofReal]
 
-theorem conj_inv (x : ℂˣ) : conj (↑x⁻¹ : ℂ) =
-    (↑(Units.map (starRingEnd ℂ).toMonoidHom x)⁻¹ : ℂ) := rfl
+theorem conj_inv (x : ℂ) {hx : IsUnit x} : conj x⁻¹ = (conj x)⁻¹ :=
+  star_inv₀ x
 
 @[simp, norm_cast]
-theorem ofReal_div (r : ℝ) (s : ℝˣ) : ((r /ₚ s : ℝ) : ℂ) =
-    (r : ℂ) /ₚ Units.map ofRealHom.toMonoidHom s :=
-  map_divp ofRealHom.toMonoidHom r s
+theorem ofReal_div (r s : ℝ) {hs : IsUnit s} : ((r / s : ℝ) : ℂ) = r / s :=
+  map_div₀ ofRealHom r s
 
 @[simp, norm_cast]
-theorem ofReal_zpow (r : ℝ) (n : ℤ) (hr : n < 0 → IsUnit r) :
-    ((Checked.zpow r n hr : ℝ) : ℂ) =
-      Checked.zpow (r : ℂ) n (fun hn ↦ (hr hn).map ofRealHom) := by
-  cases n with
-  | ofNat n => exact ofReal_pow r n
-  | negSucc n =>
-    have hu : Units.map ofRealHom.toMonoidHom (hr (Int.negSucc_lt_zero n)).unit =
-        ((hr (Int.negSucc_lt_zero n)).map ofRealHom).unit := Units.ext rfl
-    change (↑(Units.map ofRealHom.toMonoidHom
-      ((hr (Int.negSucc_lt_zero n)).unit ^ Int.negSucc n)) : ℂ) = _
-    rw [map_zpow, hu]
-    rfl
+theorem ofReal_zpow (r : ℝ) (n : ℤ) {h : n < 0 → IsUnit r} :
+    ((r ^ n : ℝ) : ℂ) = (r : ℂ) ^ n :=
+  map_zpow₀ ofRealHom r n
 
 @[simp]
-theorem inv_I : (↑(Units.mk0 I I_ne_zero)⁻¹ : ℂ) = -I := by
-  apply Units.mul_eq_one_iff_inv_eq.mp
-  simp only [Units.val_mk0, mul_neg, I_mul_I, neg_neg]
+theorem div_I (z : ℂ) : z / I = -(z * I) :=
+  div_eq_iff_mul_eq.2 <| by simp [mul_assoc]
 
 @[simp]
-theorem div_I (z : ℂ) : z /ₚ Units.mk0 I I_ne_zero = -(z * I) := by
-  rw [divp, inv_I, mul_neg]
+theorem inv_I : I⁻¹ = -I := by
+  rw [inv_eq_one_div₀, div_I, one_mul]
 
-lemma I_zpow_eq_zpow_mod (m : ℤ) :
-    (↑((Units.mk0 I I_ne_zero) ^ m) : ℂ) = ↑((Units.mk0 I I_ne_zero) ^ (m % 4)) := by
-  have hfour : (Units.mk0 I I_ne_zero) ^ (4 : ℕ) = 1 := by
-    apply Units.ext
-    simpa only [Units.val_pow_eq_pow_val, Units.val_mk0, Units.val_one] using I_pow_four
-  congr 1
-  conv_lhs => rw [← Int.mul_ediv_add_emod m 4]
-  simp only [zpow_add, zpow_mul, zpow_ofNat, hfour, one_zpow, one_mul]
+lemma I_zpow_eq_zpow_mod (m : ℤ) : I ^ m = I ^ (m % 4) := by
+  have hI : IsUnit I := I_ne_zero.isUnit
+  have hfour : hI.unit ^ (4 : ℤ) = 1 := by
+    rw [zpow_ofNat]
+    exact Units.ext <| by simp
+  rw [hI.zpow_eq_val_unit_zpow, hI.zpow_eq_val_unit_zpow, zpow_eq_zpow_emod m hfour]
 
-theorem normSq_inv (z : ℂˣ) : normSq (↑z⁻¹ : ℂ) =
-    (↑(Units.map normSq.toMonoidHom z)⁻¹ : ℝ) := rfl
+theorem normSq_inv (z : ℂ) {hz : IsUnit z} : normSq z⁻¹ = (normSq z)⁻¹ :=
+  map_inv₀ normSq z
 
-theorem normSq_div (z : ℂ) (w : ℂˣ) : normSq (z /ₚ w) =
-    normSq z /ₚ Units.map normSq.toMonoidHom w := map_divp normSq.toMonoidHom z w
+theorem normSq_div (z w : ℂ) {hw : IsUnit w} : normSq (z / w) = normSq z / normSq w :=
+  map_div₀ normSq z w
 
-lemma div_ofReal (z : ℂ) (x : ℝˣ) :
-    z /ₚ Units.map ofRealHom.toMonoidHom x = ⟨z.re /ₚ x, z.im /ₚ x⟩ := by
-  change z * ((↑x⁻¹ : ℝ) : ℂ) = ⟨z.re * (↑x⁻¹ : ℝ), z.im * (↑x⁻¹ : ℝ)⟩
-  ext <;> simp only [mul_re, mul_im, ofReal_re, ofReal_im, mul_zero, sub_zero, zero_add]
+lemma div_ofReal (z : ℂ) (x : ℝ) {hx : IsUnit (x : ℂ)} : z / x = ⟨z.re / x, z.im / x⟩ :=
+  div_eq_iff_mul_eq.2 <| Complex.ext (by simp) (by simp)
 
-lemma div_natCast (z : ℂ) (n : ℕ) (hn : n ≠ 0) :
-    z /ₚ Units.mk0 (n : ℂ) (Nat.cast_ne_zero.mpr hn) =
-      ⟨z.re /ₚ Units.mk0 (n : ℝ) (Nat.cast_ne_zero.mpr hn),
-        z.im /ₚ Units.mk0 (n : ℝ) (Nat.cast_ne_zero.mpr hn)⟩ := by
-  have hu : Units.map ofRealHom.toMonoidHom (Units.mk0 (n : ℝ) (Nat.cast_ne_zero.mpr hn)) =
-      Units.mk0 (n : ℂ) (Nat.cast_ne_zero.mpr hn) := by
-    apply Units.ext
-    change ofReal (n : ℝ) = (n : ℂ)
-    exact ofReal_natCast n
-  rw [← hu]
-  exact div_ofReal z _
+lemma div_natCast (z : ℂ) (n : ℕ) {hn : IsUnit (n : ℂ)} : z / n = ⟨z.re / n, z.im / n⟩ :=
+  div_ofReal z n
 
-lemma div_intCast (z : ℂ) (n : ℤ) (hn : n ≠ 0) :
-    z /ₚ Units.mk0 (n : ℂ) (Int.cast_ne_zero.mpr hn) =
-      ⟨z.re /ₚ Units.mk0 (n : ℝ) (Int.cast_ne_zero.mpr hn),
-        z.im /ₚ Units.mk0 (n : ℝ) (Int.cast_ne_zero.mpr hn)⟩ := by
-  have hu : Units.map ofRealHom.toMonoidHom (Units.mk0 (n : ℝ) (Int.cast_ne_zero.mpr hn)) =
-      Units.mk0 (n : ℂ) (Int.cast_ne_zero.mpr hn) := by
-    apply Units.ext
-    change ofReal (n : ℝ) = (n : ℂ)
-    exact ofReal_intCast n
-  rw [← hu]
-  exact div_ofReal z _
+lemma div_intCast (z : ℂ) (n : ℤ) {hn : IsUnit (n : ℂ)} : z / n = ⟨z.re / n, z.im / n⟩ :=
+  div_ofReal z n
 
-lemma div_ratCast (z : ℂ) (n : ℚ) (hn : n ≠ 0) :
-    z /ₚ Units.mk0 (n : ℂ) (Rat.cast_ne_zero.mpr hn) =
-      ⟨z.re /ₚ Units.mk0 (n : ℝ) (Rat.cast_ne_zero.mpr hn),
-        z.im /ₚ Units.mk0 (n : ℝ) (Rat.cast_ne_zero.mpr hn)⟩ := by
-  have hu : Units.map ofRealHom.toMonoidHom (Units.mk0 (n : ℝ) (Rat.cast_ne_zero.mpr hn)) =
-      Units.mk0 (n : ℂ) (Rat.cast_ne_zero.mpr hn) := by
-    apply Units.ext
-    change ofReal (n : ℝ) = (n : ℂ)
-    exact ofReal_ratCast n
-  rw [← hu]
-  exact div_ofReal z _
+lemma div_ratCast (z : ℂ) (x : ℚ) {hx : IsUnit (x : ℂ)} : z / x = ⟨z.re / x, z.im / x⟩ :=
+  div_ofReal z x
 
 lemma div_ofNat (z : ℂ) (n : ℕ) [n.AtLeastTwo] :
-    z /ₚ Units.mk0 (n : ℂ) (Nat.cast_ne_zero.mpr (NeZero.ne n)) =
-      ⟨z.re /ₚ Units.mk0 (n : ℝ) (Nat.cast_ne_zero.mpr (NeZero.ne n)),
-        z.im /ₚ Units.mk0 (n : ℝ) (Nat.cast_ne_zero.mpr (NeZero.ne n))⟩ :=
-  div_natCast z n (NeZero.ne n)
+    z / ofNat(n) = ⟨z.re / ofNat(n), z.im / ofNat(n)⟩ :=
+  div_natCast z n
 
-@[simp]
-lemma div_ofReal_re (z : ℂ) (x : ℝˣ) :
-    (z /ₚ Units.map ofRealHom.toMonoidHom x).re = z.re /ₚ x := by rw [div_ofReal]
+@[simp] lemma div_ofReal_re (z : ℂ) (x : ℝ) {hx : IsUnit (x : ℂ)} : (z / x).re = z.re / x := by
+  rw [div_ofReal]
 
-@[simp]
-lemma div_ofReal_im (z : ℂ) (x : ℝˣ) :
-    (z /ₚ Units.map ofRealHom.toMonoidHom x).im = z.im /ₚ x := by rw [div_ofReal]
+@[simp] lemma div_ofReal_im (z : ℂ) (x : ℝ) {hx : IsUnit (x : ℂ)} : (z / x).im = z.im / x := by
+  rw [div_ofReal]
 
-@[simp]
-lemma div_natCast_re (z : ℂ) (n : ℕ) (hn : n ≠ 0) :
-    (z /ₚ Units.mk0 (n : ℂ) (Nat.cast_ne_zero.mpr hn)).re =
-      z.re /ₚ Units.mk0 (n : ℝ) (Nat.cast_ne_zero.mpr hn) := by rw [div_natCast z n hn]
+@[simp] lemma div_natCast_re (z : ℂ) (n : ℕ) {hn : IsUnit (n : ℂ)} : (z / n).re = z.re / n := by
+  rw [div_natCast]
 
-@[simp]
-lemma div_natCast_im (z : ℂ) (n : ℕ) (hn : n ≠ 0) :
-    (z /ₚ Units.mk0 (n : ℂ) (Nat.cast_ne_zero.mpr hn)).im =
-      z.im /ₚ Units.mk0 (n : ℝ) (Nat.cast_ne_zero.mpr hn) := by rw [div_natCast z n hn]
+@[simp] lemma div_natCast_im (z : ℂ) (n : ℕ) {hn : IsUnit (n : ℂ)} : (z / n).im = z.im / n := by
+  rw [div_natCast]
 
-@[simp]
-lemma div_intCast_re (z : ℂ) (n : ℤ) (hn : n ≠ 0) :
-    (z /ₚ Units.mk0 (n : ℂ) (Int.cast_ne_zero.mpr hn)).re =
-      z.re /ₚ Units.mk0 (n : ℝ) (Int.cast_ne_zero.mpr hn) := by rw [div_intCast z n hn]
+@[simp] lemma div_intCast_re (z : ℂ) (n : ℤ) {hn : IsUnit (n : ℂ)} : (z / n).re = z.re / n := by
+  rw [div_intCast]
 
-@[simp]
-lemma div_intCast_im (z : ℂ) (n : ℤ) (hn : n ≠ 0) :
-    (z /ₚ Units.mk0 (n : ℂ) (Int.cast_ne_zero.mpr hn)).im =
-      z.im /ₚ Units.mk0 (n : ℝ) (Int.cast_ne_zero.mpr hn) := by rw [div_intCast z n hn]
+@[simp] lemma div_intCast_im (z : ℂ) (n : ℤ) {hn : IsUnit (n : ℂ)} : (z / n).im = z.im / n := by
+  rw [div_intCast]
 
-@[simp]
-lemma div_ratCast_re (z : ℂ) (n : ℚ) (hn : n ≠ 0) :
-    (z /ₚ Units.mk0 (n : ℂ) (Rat.cast_ne_zero.mpr hn)).re =
-      z.re /ₚ Units.mk0 (n : ℝ) (Rat.cast_ne_zero.mpr hn) := by rw [div_ratCast z n hn]
+@[simp] lemma div_ratCast_re (z : ℂ) (x : ℚ) {hx : IsUnit (x : ℂ)} : (z / x).re = z.re / x := by
+  rw [div_ratCast]
 
-@[simp]
-lemma div_ratCast_im (z : ℂ) (n : ℚ) (hn : n ≠ 0) :
-    (z /ₚ Units.mk0 (n : ℂ) (Rat.cast_ne_zero.mpr hn)).im =
-      z.im /ₚ Units.mk0 (n : ℝ) (Rat.cast_ne_zero.mpr hn) := by rw [div_ratCast z n hn]
+@[simp] lemma div_ratCast_im (z : ℂ) (x : ℚ) {hx : IsUnit (x : ℂ)} : (z / x).im = z.im / x := by
+  rw [div_ratCast]
 
 @[simp]
 lemma div_ofNat_re (z : ℂ) (n : ℕ) [n.AtLeastTwo] :
-    (z /ₚ Units.mk0 (n : ℂ) (Nat.cast_ne_zero.mpr (NeZero.ne n))).re =
-      z.re /ₚ Units.mk0 (n : ℝ) (Nat.cast_ne_zero.mpr (NeZero.ne n)) :=
-  div_natCast_re z n (NeZero.ne n)
+    (z / ofNat(n)).re = z.re / ofNat(n) := div_natCast_re z n
 
 @[simp]
 lemma div_ofNat_im (z : ℂ) (n : ℕ) [n.AtLeastTwo] :
-    (z /ₚ Units.mk0 (n : ℂ) (Nat.cast_ne_zero.mpr (NeZero.ne n))).im =
-      z.im /ₚ Units.mk0 (n : ℝ) (Nat.cast_ne_zero.mpr (NeZero.ne n)) :=
-  div_natCast_im z n (NeZero.ne n)
+    (z / ofNat(n)).im = z.im / ofNat(n) := div_natCast_im z n
 
 /-! ### Characteristic zero -/
-
-
 
 
 instance instIsAddTorsionFree : IsAddTorsionFree ℂ := IsDomain.instIsAddTorsionFreeOfCharZero _
 
 /-- A complex number `z` plus its conjugate `conj z` is `2` times its real part. -/
 theorem re_eq_add_conj (z : ℂ) : (z.re : ℂ) = (z + conj z) / 2 := by
-  apply Checked.eq_div_iff_mul_eq.mpr
-  rw [add_conj, ofReal_mul, ofReal_ofNat]
-  ring
+  simp only [add_conj, ofReal_mul, ofReal_ofNat, mul_div_cancel_left₀ (z.re : ℂ)]
 
 /-- A complex number `z` minus its conjugate `conj z` is `2i` times its imaginary part. -/
 theorem im_eq_sub_conj (z : ℂ) : (z.im : ℂ) = (z - conj z) / (2 * I) := by
-  apply Checked.eq_div_iff_mul_eq.mpr
-  rw [sub_conj, ofReal_mul, ofReal_ofNat]
-  ring
+  simp only [sub_conj, ofReal_mul, ofReal_ofNat, mul_right_comm, mul_div_cancel_left₀]
 
 /-- Show the imaginary number ⟨x, y⟩ as an `"x + y*I"` string
 

@@ -762,7 +762,7 @@ theorem MeasureTheory.Measure.hausdorffMeasure_smul₀ {𝕜 E : Type*} [NormedA
   · dsimp
     rw [← NNReal.inv_rpow, ← nnnorm_inv]
     · refine Eq.trans_le ?_ (this (r • s))
-      rw [inv_smul_smul₀ hr]
+      rw [inv_smul_smul₀ (ha := hr.isUnit)]
   · simp [pos_iff_ne_zero, hr]
 
 /-!
@@ -1055,7 +1055,7 @@ theorem hausdorffMeasure_smul_right_image [NormedAddCommGroup E] [NormedSpace �
   -- break lineMap into pieces
   suffices
       μH[1] ((‖v‖ • ·) '' LinearMap.toSpanSingleton ℝ E (‖v‖⁻¹ • v) '' s) = ‖v‖₊ • μH[1] s by
-    simpa only [Set.image_image, smul_comm (norm _), inv_smul_smul₀ hn,
+    simpa only [Set.image_image, smul_comm (norm _), inv_smul_smul₀ (ha := hn.isUnit),
       LinearMap.toSpanSingleton_apply] using this
   have iso_smul : Isometry (LinearMap.toSpanSingleton ℝ E (‖v‖⁻¹ • v)) := by
     refine AddMonoidHomClass.isometry_of_norm _ fun x => (norm_smul _ _).trans ?_

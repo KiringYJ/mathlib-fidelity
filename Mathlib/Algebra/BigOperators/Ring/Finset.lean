@@ -50,6 +50,15 @@ lemma card_eq_sum_ite {s t : Finset ι} [DecidablePred (· ∈ s)] (hst : s ⊆ 
 
 end AddCommMonoidWithOne
 
+/-! The evidence search `checked_nonzero` uses that a nonempty finset has nonzero cardinality, so
+that `(#s : R)⁻¹` in characteristic zero finds its evidence from a hypothesis `s.Nonempty`. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply Nat.cast_ne_zero.mpr); apply Finset.Nonempty.card_ne_zero;
+        assumption))
+
 section NonUnitalNonAssocSemiring
 variable [NonUnitalNonAssocSemiring R]
 

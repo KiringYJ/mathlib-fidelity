@@ -406,7 +406,11 @@ theorem _root_.Disjoint.exists_thickenings (hst : Disjoint s t) (hs : IsCompact 
   rw [disjoint_iff_inf_le]
   rintro z ⟨hzs, hzt⟩
   rw [mem_thickening_iff_exists_edist_lt] at hzs hzt
-  rw [← NNReal.coe_two, ← NNReal.coe_div, ENNReal.ofReal_coe_nnreal] at hzs hzt
+  have h2 : ENNReal.ofReal ((r : ℝ) / 2) = ((r / 2 : ℝ≥0) : ℝ≥0∞) := by
+    rw [← ENNReal.ofReal_coe_nnreal]
+    congr 1
+    simp only [NNReal.coe_div, NNReal.coe_two]
+  rw [h2] at hzs hzt
   obtain ⟨x, hx, hzx⟩ := hzs
   obtain ⟨y, hy, hzy⟩ := hzt
   refine (h x hx y hy).not_ge ?_

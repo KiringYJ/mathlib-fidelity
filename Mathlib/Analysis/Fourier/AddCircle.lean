@@ -96,7 +96,7 @@ theorem volume_eq_smul_haarAddCircle :
 lemma integral_haarAddCircle {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {f : AddCircle T → E} : ∫ t, f t ∂haarAddCircle = T⁻¹ • ∫ t, f t := by
   rw [volume_eq_smul_haarAddCircle, integral_smul_measure, ENNReal.toReal_ofReal hT.out.le,
-    inv_smul_smul₀ hT.out.ne']
+    inv_smul_smul₀ (ha := hT.out.ne'.isUnit)]
 
 end AddCircle
 

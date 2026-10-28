@@ -332,18 +332,23 @@ theorem exists_of_not_isSquare (h₀ : 0 < d) (hd : ¬IsSquare d) :
   have hM : {q : ℚ | |q.1 ^ 2 - d * (q.2 : ℤ) ^ 2| < M}.Infinite := by
     refine Infinite.mono (fun q h => ?_) (infinite_rat_abs_sub_lt_one_div_den_sq_of_irrational hξ)
     have h0 : 0 < (q.2 : ℝ) ^ 2 := pow_pos (Nat.cast_pos.mpr q.pos) 2
-    have h1 : (q.num : ℝ) / (q.den : ℝ) = q := mod_cast q.num_div_den
-    rw [mem_ofPred, abs_sub_comm, ← @Int.cast_lt ℝ,
-      ← div_lt_div_iff_of_pos_right (abs_pos_of_pos h0)]
+    have h1 : (q : ℝ) * q.den = q.num := Rat.cast_mul_den q
+    have hd : (d : ℝ) = ξ ^ 2 := (sq_sqrt (Int.cast_pos.mpr h₀).le).symm
+    rw [mem_ofPred, abs_sub_comm, ← @Int.cast_lt ℝ]
     push_cast
-    rw [← abs_div, abs_sq, sub_div, mul_div_cancel_right₀ _ h0.ne', ← div_pow, h1, ←
-      sq_sqrt (Int.cast_pos.mpr h₀).le, sq_sub_sq, abs_mul, ← mul_one_div]
-    refine mul_lt_mul'' (((abs_add_le ξ q).trans ?_).trans_lt hM₁) h (abs_nonneg _) (abs_nonneg _)
-    rw [two_mul, add_assoc, add_le_add_iff_left, ← sub_le_iff_le_add']
-    rw [mem_ofPred, abs_sub_comm] at h
-    refine (abs_sub_abs_le_abs_sub (q : ℝ) ξ).trans (h.le.trans ?_)
-    rw [div_le_one h0, one_le_sq_iff_one_le_abs, Nat.abs_cast, Nat.one_le_cast]
-    exact q.pos
+    rw [hd, ← h1, show ξ ^ 2 * (q.den : ℝ) ^ 2 - ((q : ℝ) * q.den) ^ 2 =
+      (q.den : ℝ) ^ 2 * ((ξ + q) * (ξ - q)) by ring, abs_mul, abs_mul, abs_of_pos h0]
+    have hlt : |ξ + q| * |ξ - q| < M * (1 / (q.den : ℝ) ^ 2) := by
+      refine mul_lt_mul'' (((abs_add_le ξ q).trans ?_).trans_lt hM₁) h (abs_nonneg _)
+        (abs_nonneg _)
+      rw [two_mul, add_assoc, add_le_add_iff_left, ← sub_le_iff_le_add']
+      rw [mem_ofPred, abs_sub_comm] at h
+      refine (abs_sub_abs_le_abs_sub (q : ℝ) ξ).trans (h.le.trans ?_)
+      rw [div_le_one h0, one_le_sq_iff_one_le_abs, Nat.abs_cast, Nat.one_le_cast]
+      exact q.pos
+    calc (q.den : ℝ) ^ 2 * (|ξ + q| * |ξ - q|) < (q.den : ℝ) ^ 2 * (M * (1 / (q.den : ℝ) ^ 2)) := by
+          gcongr
+      _ = (M : ℝ) := by field_simp; ring
   obtain ⟨m, hm⟩ : ∃ m : ℤ, {q : ℚ | q.1 ^ 2 - d * (q.den : ℤ) ^ 2 = m}.Infinite := by
     contrapose! hM
     refine (congr_arg _ (ext fun x => ?_)).mp (Finite.biUnion (finite_Ioo (-M) M) fun m _ => hM m)
@@ -372,15 +377,16 @@ theorem exists_of_not_isSquare (h₀ : 0 < d) (hd : ¬IsSquare d) :
     rw [← Int.natAbs_dvd, ← ZMod.intCast_eq_intCast_iff_dvd_sub]
     push_cast
     rw [hq1, hq2]
-  replace hm₀ : (m : ℚ) ≠ 0 := Int.cast_ne_zero.mpr hm₀
   refine ⟨(q₁.num * q₂.num - d * (q₁.den * q₂.den)) / m, (q₁.num * q₂.den - q₂.num * q₁.den) / m,
       ?_, ?_⟩
-  · qify [hd₁, hd₂]
+  · qify
+    rw [Int.cast_div_charZero hd₁ hm₀, Int.cast_div_charZero hd₂ hm₀]
     field_simp
     norm_cast
     grind
-  · qify [hd₂]
-    refine div_ne_zero_iff.mpr ⟨?_, hm₀⟩
+  · qify
+    rw [Int.cast_div_charZero hd₂ hm₀]
+    refine div_ne_zero_iff.mpr ?_
     exact mod_cast mt sub_eq_zero.mp (mt Rat.eq_iff_mul_eq_mul.mpr hne)
 
 /-- If `d` is a positive integer, then there is a nontrivial solution

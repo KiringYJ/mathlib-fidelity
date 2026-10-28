@@ -68,12 +68,13 @@ theorem isSquare_of_isNNRat_rat (a : ℚ) (n d : ℕ) (hn : IsSquare n) (hd : Is
     (ha : IsNNRat a n d) : IsSquare a := by
   rcases hn with ⟨n, rfl⟩
   rcases hd with ⟨d, rfl⟩
+  have hd : (d : ℚ) ≠ 0 := fun h ↦ ha.den_nz (by simp [h])
   use n / d
-  simp [ha.to_eq, div_mul_div_comm]
+  simp [ha.to_eq, div_mul_div_comm₀]
 
 theorem not_isSquare_of_isNNRat_rat_of_num (a : ℚ) (n d : ℕ) (hn : ¬IsSquare n)
     (hnd : n.Coprime d) (ha : IsNNRat a n d) : ¬IsSquare a := by
-  rw [ha.to_eq rfl rfl, Rat.isSquare_iff, ← Int.cast_natCast n, ← Int.cast_natCast d,
+  rw [ha.to_eq (Int.cast_natCast n).symm (Int.cast_natCast d).symm, Rat.isSquare_iff,
     Rat.num_div_eq_of_coprime]
   · simp [hn]
   · contrapose! hnd
@@ -83,7 +84,7 @@ theorem not_isSquare_of_isNNRat_rat_of_num (a : ℚ) (n d : ℕ) (hn : ¬IsSquar
 
 theorem not_isSquare_of_isNNRat_rat_of_den (a : ℚ) (n d : ℕ) (hd : ¬IsSquare d) (hnd : n.Coprime d)
     (ha : IsNNRat a n d) : ¬IsSquare a := by
-  rw [ha.to_eq rfl rfl, Rat.isSquare_iff, ← Int.cast_natCast n, ← Int.cast_natCast d,
+  rw [ha.to_eq (Int.cast_natCast n).symm (Int.cast_natCast d).symm, Rat.isSquare_iff,
     ← Int.isSquare_natCast_iff (n := Rat.den _), Rat.den_div_eq_of_coprime]
   · simp [hd]
   · contrapose! hnd

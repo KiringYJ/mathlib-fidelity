@@ -34,8 +34,8 @@ lemma ConvexOn.lipschitzOnWith_of_abs_le (hf : ConvexOn ℝ (ball x₀ r) f) (h�
     have hx₀r : ball x₀ (r - ε) ⊆ ball x₀ r := ball_subset_ball <| by linarith
     have hx' : x ∈ ball x₀ r := hx₀r hx
     have hy' : y ∈ ball x₀ r := hx₀r hy
-    let z := x + (ε / ‖x - y‖) • (x - y)
     replace hxy : 0 < ‖x - y‖ := by rwa [norm_sub_pos_iff]
+    let z := x + (ε / ‖x - y‖) • (x - y)
     have hz : z ∈ ball x₀ r := mem_ball_iff_norm.2 <| by
       calc
         _ = ‖(x - x₀) + (ε / ‖x - y‖) • (x - y)‖ := by simp only [z, add_sub_right_comm]
@@ -51,10 +51,10 @@ lemma ConvexOn.lipschitzOnWith_of_abs_le (hf : ConvexOn ℝ (ball x₀ r) f) (h�
       calc
         x = a • x + b • x := by rw [Convex.combo_self hab]
         _ = a • y + b • z := by simp [z, a, b, smul_smul, hxy.ne', smul_sub]; abel
-    rw [hK, mul_comm, ← mul_div_assoc, le_div_iff₀' hε]
+    rw [hK, mul_comm, ← mul_div_assoc₀, le_div_iff₀' hε]
     calc
       ε * (f x - f y) ≤ ‖x - y‖ * (f z - f x) := by
-        have h := hf.2 hy' hz (by positivity) (by positivity) hab
+        have h := hf.map_combo_le hy' hz (by positivity) (by positivity) hab
         simp only [← hxyz, smul_eq_mul, a, b] at h
         field_simp at h
         linear_combination h
@@ -100,8 +100,8 @@ lemma ConvexOn.isBoundedUnder_abs (hf : ConvexOn ℝ C f) {x₀ : E} (hC : C ∈
   calc
     -|2 * f x₀| ≤ 2 * f x₀ := neg_abs_le _
     _ ≤ f y + f (2 • x₀ - y) := by
-      have := hf.2 hx' hx (by positivity) (by positivity) (add_halves _)
-      simp only [one_div, ← Nat.cast_smul_eq_nsmul ℝ, Nat.cast_ofNat, smul_sub, ne_eq,
+      have := hf.map_combo_le hx' hx (by positivity) (by positivity) (add_halves _)
+      simp only [one_div₀, ← Nat.cast_smul_eq_nsmul ℝ, Nat.cast_ofNat, smul_sub, ne_eq,
         OfNat.ofNat_ne_zero, not_false_eq_true, inv_smul_smul₀, add_sub_cancel, smul_eq_mul] at this
       cancel_denoms at this
       rwa [← Nat.cast_two, Nat.cast_smul_eq_nsmul] at this
@@ -127,21 +127,29 @@ lemma ConvexOn.continuousOn_tfae (hC : IsOpen C) (hC' : C.Nonempty) (hf : Convex
     ⟨x₀, hx₀, f x₀ + 1, by simpa using! h.eventually (eventually_le_nhds (by simp))⟩
   tfae_have 4 → 5
   | ⟨x₀, hx₀, r, hr⟩, x, hx => by
-    have : ∀ᶠ δ in 𝓝 (0 : ℝ), (1 - δ)⁻¹ • x - (δ / (1 - δ)) • x₀ ∈ C := by
-      have h : ContinuousAt (fun δ : ℝ ↦ (1 - δ)⁻¹ • x - (δ / (1 - δ)) • x₀) 0 := by
-        fun_prop (disch := norm_num)
+    have : ∀ᶠ t in 𝓝 (0 : ℝ), x + t • (x - x₀) ∈ C := by
+      have h : ContinuousAt (fun t : ℝ ↦ x + t • (x - x₀)) 0 := by fun_prop
       exact h (by simpa using! hC.mem_nhds hx)
-    obtain ⟨δ, hδ₀, hy, hδ₁⟩ := (this.and <| eventually_lt_nhds zero_lt_one).exists_gt
-    set y := (1 - δ)⁻¹ • x - (δ / (1 - δ)) • x₀
+    obtain ⟨t, ht₀, hy⟩ := this.exists_gt
+    set y := x + t • (x - x₀)
+    -- `x` divides the segment from `x₀` to `y` in the ratio `δ : 1 - δ`.
+    have ht₁ : 0 < 1 + t := by positivity
+    obtain ⟨δ, hδ⟩ : ∃ δ : ℝ, δ = t / (1 + t) := ⟨_, rfl⟩
+    have hδ₀ : 0 < δ := by rw [hδ]; exact div_pos ht₀ ht₁
+    have hδ₁ : δ < 1 := by rw [hδ, div_lt_one ht₁]; linarith
+    have hδt : δ⁻¹ * t = 1 + t := by subst hδ; rw [inv_div₀, div_mul_cancel₀]
     refine ⟨max r (f y), ?_⟩
     simp only [Filter.eventually_map] at hr ⊢
     obtain ⟨ε, hε, hr⟩ := Metric.eventually_nhds_iff.1 <| hr.and (hC.eventually_mem hx₀)
     refine Metric.eventually_nhds_iff.2 ⟨ε * δ, by positivity, fun z hz ↦ ?_⟩
-    have hx₀' : δ⁻¹ • (x - y) + y = x₀ := MulAction.injective₀ (sub_ne_zero.2 hδ₁.ne') <| by
-      simp [y, smul_sub, smul_smul, hδ₀.ne', div_eq_mul_inv, sub_ne_zero.2 hδ₁.ne', mul_left_comm,
-        sub_mul, sub_smul]
+    have hx₀' : δ⁻¹ • (x - y) + y = x₀ := by
+      have hxy : x - y = t • (x₀ - x) := by
+        simp only [y, sub_add_cancel_left, ← smul_neg, neg_sub]
+      rw [hxy, smul_smul, hδt]
+      simp only [y, add_smul, one_smul, smul_sub]
+      abel
     let w := δ⁻¹ • (z - y) + y
-    have hwyz : δ • w + (1 - δ) • y = z := by simp [w, hδ₀.ne', sub_smul]
+    have hwyz : δ • w + (1 - δ) • y = z := by simp [w, sub_smul]
     have hw : dist w x₀ < ε := by
       simpa [w, ← hx₀', dist_smul₀, abs_of_nonneg, hδ₀.le, inv_mul_lt_iff₀', hδ₀]
     calc
@@ -204,11 +212,11 @@ protected lemma ConcaveOn.continuousOn (hC : IsOpen C) (hf : ConcaveOn ℝ C f) 
 
 lemma ConvexOn.locallyLipschitzOn_interior (hf : ConvexOn ℝ C f) :
     LocallyLipschitzOn (interior C) f :=
-  (hf.subset interior_subset hf.1.interior).locallyLipschitzOn isOpen_interior
+  (hf.subset interior_subset hf.convex.interior).locallyLipschitzOn isOpen_interior
 
 lemma ConcaveOn.locallyLipschitzOn_interior (hf : ConcaveOn ℝ C f) :
     LocallyLipschitzOn (interior C) f :=
-  (hf.subset interior_subset hf.1.interior).locallyLipschitzOn isOpen_interior
+  (hf.subset interior_subset hf.convex.interior).locallyLipschitzOn isOpen_interior
 
 lemma ConvexOn.continuousOn_interior (hf : ConvexOn ℝ C f) : ContinuousOn f (interior C) :=
   hf.locallyLipschitzOn_interior.continuousOn

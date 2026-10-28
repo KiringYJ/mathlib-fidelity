@@ -33,84 +33,82 @@ namespace Real
 
 variable {x y : ℝ}
 
-theorem tan_add
-    (h : ((∀ k : ℤ, x ≠ (2 * k + 1) * π / 2) ∧ ∀ l : ℤ, y ≠ (2 * l + 1) * π / 2) ∨
-      (∃ k : ℤ, x = (2 * k + 1) * π / 2) ∧ ∃ l : ℤ, y = (2 * l + 1) * π / 2) :
+/-- The addition formula for the tangent, where the tangents of `x`, `y` and `x + y` are
+defined. -/
+theorem tan_add (hx : cos x ≠ 0) (hy : cos y ≠ 0) {hxy : cos (x + y) ≠ 0} :
     tan (x + y) = (tan x + tan y) / (1 - tan x * tan y) := by
-  simpa only [← Complex.ofReal_inj, Complex.ofReal_sub, Complex.ofReal_add, Complex.ofReal_div,
-    Complex.ofReal_mul, Complex.ofReal_tan] using!
-    @Complex.tan_add (x : ℂ) (y : ℂ) (by convert h <;> norm_cast)
+  rw [eq_div_iff_mul_eq]
+  refine mul_right_cancel₀ (mul_ne_zero hx hy) ?_
+  calc tan (x + y) * (1 - tan x * tan y) * (cos x * cos y) = tan (x + y) * cos (x + y) := by
+        rw [cos_add_eq_mul_one_sub_tan_mul_tan hx hy]; ring
+    _ = (tan x + tan y) * (cos x * cos y) := by
+        rw [tan_mul_cos, sin_add, ← tan_mul_cos hx, ← tan_mul_cos hy]; ring
 
-theorem tan_add'
-    (h : (∀ k : ℤ, x ≠ (2 * k + 1) * π / 2) ∧ ∀ l : ℤ, y ≠ (2 * l + 1) * π / 2) :
-    tan (x + y) = (tan x + tan y) / (1 - tan x * tan y) :=
-  tan_add (Or.inl h)
-
-theorem tan_sub {x y : ℝ}
-    (h : ((∀ k : ℤ, x ≠ (2 * k + 1) * π / 2) ∧ ∀ l : ℤ, y ≠ (2 * l + 1) * π / 2) ∨
-      (∃ k : ℤ, x = (2 * k + 1) * π / 2) ∧ ∃ l : ℤ, y = (2 * l + 1) * π / 2) :
+/-- The subtraction formula for the tangent, where the tangents of `x`, `y` and `x - y` are
+defined. -/
+theorem tan_sub (hx : cos x ≠ 0) (hy : cos y ≠ 0) {hxy : cos (x - y) ≠ 0} :
     tan (x - y) = (tan x - tan y) / (1 + tan x * tan y) := by
-  simpa only [← Complex.ofReal_inj, Complex.ofReal_sub, Complex.ofReal_add, Complex.ofReal_div,
-    Complex.ofReal_mul, Complex.ofReal_tan] using!
-    @Complex.tan_sub (x : ℂ) (y : ℂ) (by convert h <;> norm_cast)
+  rw [eq_div_iff_mul_eq]
+  refine mul_right_cancel₀ (mul_ne_zero hx hy) ?_
+  calc tan (x - y) * (1 + tan x * tan y) * (cos x * cos y) = tan (x - y) * cos (x - y) := by
+        rw [cos_sub_eq_mul_one_add_tan_mul_tan hx hy]; ring
+    _ = (tan x - tan y) * (cos x * cos y) := by
+        rw [tan_mul_cos, sin_sub, ← tan_mul_cos hx, ← tan_mul_cos hy]; ring
 
-theorem tan_sub' {x y : ℝ}
-    (h : (∀ k : ℤ, x ≠ (2 * k + 1) * π / 2) ∧ ∀ l : ℤ, y ≠ (2 * l + 1) * π / 2) :
-    tan (x - y) = (tan x - tan y) / (1 + tan x * tan y) :=
-  tan_sub (Or.inl h)
+theorem tan_two_mul {h : cos (2 * x) ≠ 0} (hx : cos x ≠ 0) :
+    tan (2 * x) = 2 * tan x / (1 - tan x ^ 2) := by
+  have := tan_add hx hx (hxy := two_mul x ▸ h)
+  simp only [two_mul, sq] at this ⊢
+  exact this
 
-theorem tan_two_mul : tan (2 * x) = 2 * tan x / (1 - tan x ^ 2) := by
-  have := @Complex.tan_two_mul x
-  norm_cast at *
-
-theorem tan_int_mul_pi_div_two (n : ℤ) : tan (n * π / 2) = 0 :=
-  tan_eq_zero_iff.mpr (by use n)
-
-theorem continuousOn_tan : ContinuousOn tan {x | cos x ≠ 0} := by
-  suffices ContinuousOn (fun x => sin x / cos x) {x | cos x ≠ 0} by
-    have h_eq : (fun x => sin x / cos x) = tan := by ext1 x; rw [tan_eq_sin_div_cos]
-    rwa [h_eq] at this
-  exact continuousOn_sin.div continuousOn_cos fun x => id
-
+/-- The tangent is continuous on its domain. -/
 @[continuity]
-theorem continuous_tan : Continuous fun x : {x | cos x ≠ 0} => tan x :=
-  continuousOn_iff_continuous_domRestrict.1 continuousOn_tan
+theorem continuous_tan : Continuous fun x : {x : ℝ // cos x ≠ 0} ↦ tan x x.2 :=
+  (continuous_sin.comp continuous_subtype_val).div (continuous_cos.comp continuous_subtype_val)
+    fun x ↦ x.2.isUnit
 
-theorem continuousOn_tan_Ioo : ContinuousOn tan (Ioo (-(π / 2)) (π / 2)) := by
-  refine ContinuousOn.mono continuousOn_tan fun x => ?_
-  simp only [and_imp, mem_Ioo, mem_ofPred_eq, Ne]
-  rw [cos_eq_zero_iff]
-  rintro hx_gt hx_lt ⟨r, hxr_eq⟩
-  rcases le_or_gt 0 r with h | h
-  · rw [lt_iff_not_ge] at hx_lt
-    refine hx_lt ?_
-    rw [hxr_eq, ← one_mul (π / 2), mul_div_assoc, mul_le_mul_iff_left₀ (half_pos pi_pos)]
-    simp [h]
-  · rw [lt_iff_not_ge] at hx_gt
-    refine hx_gt ?_
-    rw [hxr_eq, ← one_mul (π / 2), mul_div_assoc, neg_mul_eq_neg_mul,
-      mul_le_mul_iff_left₀ (half_pos pi_pos)]
-    have hr_le : r ≤ -1 := by rwa [Int.lt_iff_add_one_le, ← le_neg_iff_add_nonpos_right] at h
-    rw [← le_sub_iff_add_le, mul_comm, ← le_div_iff₀]
-    · norm_num
-      assumption_mod_cast
-    · exact zero_lt_two
+/-- The tangent is continuous on `(-(π / 2), π / 2)`, as a function on that interval. -/
+theorem continuousOn_tan_Ioo :
+    Continuous fun x : Ioo (-(π / 2)) (π / 2) ↦ tan x (cos_pos_of_mem_Ioo x.2).ne' :=
+  continuous_tan.comp (continuous_subtype_val.subtype_mk fun x ↦ (cos_pos_of_mem_Ioo x.2).ne')
 
-theorem surjOn_tan : SurjOn tan (Ioo (-(π / 2)) (π / 2)) univ :=
-  have := neg_lt_self pi_div_two_pos
-  continuousOn_tan_Ioo.surjOn_of_tendsto (nonempty_Ioo.2 this)
-    (by rw [tendsto_comp_coe_Ioo_atBot this]; exact tendsto_tan_neg_pi_div_two)
-    (by rw [tendsto_comp_coe_Ioo_atTop this]; exact tendsto_tan_pi_div_two)
+/-- The tangent maps `(-(π / 2), π / 2)` onto `ℝ`. -/
+theorem surjOn_tan :
+    Function.Surjective fun x : Ioo (-(π / 2)) (π / 2) ↦ tan x (cos_pos_of_mem_Ioo x.2).ne' := by
+  -- a total extension of the tangent, used only to apply the intermediate value theorem
+  let g : ℝ → ℝ := fun x ↦ if h : cos x = 0 then 0 else tan x h
+  have hg {x : ℝ} (h : cos x ≠ 0) : g x = tan x h := dif_neg h
+  have hpi := neg_lt_self pi_div_two_pos
+  have hcont : ContinuousOn g (Ioo (-(π / 2)) (π / 2)) := by
+    rw [continuousOn_iff_continuous_restrict]
+    exact continuousOn_tan_Ioo.congr fun x ↦ (hg (cos_pos_of_mem_Ioo x.2).ne').symm
+  have hev (l : Filter ℝ) (hl : Ioo (-(π / 2)) (π / 2) ∈ l) : ∀ᶠ x in l, cos x ≠ 0 :=
+    Filter.mem_of_superset hl fun x hx ↦ (cos_pos_of_mem_Ioo hx).ne'
+  have htop : Tendsto g (𝓝[<] (π / 2)) atTop :=
+    (Filter.tendsto_comap_val_iff (hev _ (Ioo_mem_nhdsLT hpi))).1 <|
+      tendsto_tan_pi_div_two.congr fun x ↦ (hg x.2).symm
+  have hbot : Tendsto g (𝓝[>] (-(π / 2))) atBot :=
+    (Filter.tendsto_comap_val_iff (hev _ (Ioo_mem_nhdsGT hpi))).1 <|
+      tendsto_tan_neg_pi_div_two.congr fun x ↦ (hg x.2).symm
+  intro y
+  obtain ⟨x, hx, hxy⟩ := hcont.surjOn_of_tendsto (nonempty_Ioo.2 hpi)
+    ((tendsto_comp_coe_Ioo_atBot hpi).2 hbot) ((tendsto_comp_coe_Ioo_atTop hpi).2 htop)
+    (mem_univ y)
+  exact ⟨⟨x, hx⟩, (hg (cos_pos_of_mem_Ioo hx).ne').symm.trans hxy⟩
 
-theorem tan_surjective : Function.Surjective tan := fun _ => surjOn_tan.subset_range trivial
+/-- The tangent of a point of its domain takes every real value. -/
+theorem tan_surjective : Function.Surjective fun x : {x : ℝ // cos x ≠ 0} ↦ tan x x.2 :=
+  fun y ↦
+    let ⟨x, hx⟩ := surjOn_tan y
+    ⟨⟨x, (cos_pos_of_mem_Ioo x.2).ne'⟩, hx⟩
 
-theorem image_tan_Ioo : tan '' Ioo (-(π / 2)) (π / 2) = univ :=
-  univ_subset_iff.1 surjOn_tan
+theorem image_tan_Ioo :
+    range (fun x : Ioo (-(π / 2)) (π / 2) ↦ tan x (cos_pos_of_mem_Ioo x.2).ne') = univ :=
+  surjOn_tan.range_eq
 
 /-- `Real.tan` as an `OrderIso` between `(-(π / 2), π / 2)` and `ℝ`. -/
 def tanOrderIso : Ioo (-(π / 2)) (π / 2) ≃o ℝ :=
-  (strictMonoOn_tan.orderIso _ _).trans <|
-    (Set.orderIsoOfEq _ _ image_tan_Ioo).trans OrderIso.Set.univ
+  StrictMono.orderIsoOfSurjective _ strictMonoOn_tan surjOn_tan
 
 /-- Inverse of the `tan` function, returns values in the range `-π / 2 < arctan x` and
 `arctan x < π / 2` -/
@@ -119,7 +117,7 @@ noncomputable def arctan (x : ℝ) : ℝ :=
   tanOrderIso.symm x
 
 @[simp]
-theorem tan_arctan (x : ℝ) : tan (arctan x) = x :=
+theorem tan_arctan (x : ℝ) {h : cos (arctan x) ≠ 0} : tan (arctan x) h = x :=
   tanOrderIso.apply_symm_apply x
 
 theorem arctan_mem_Ioo (x : ℝ) : arctan x ∈ Ioo (-(π / 2)) (π / 2) :=
@@ -129,23 +127,28 @@ theorem arctan_mem_Ioo (x : ℝ) : arctan x ∈ Ioo (-(π / 2)) (π / 2) :=
 theorem range_arctan : range arctan = Ioo (-(π / 2)) (π / 2) :=
   ((EquivLike.surjective _).range_comp _).trans Subtype.range_coe
 
-theorem arctan_tan (hx₁ : -(π / 2) < x) (hx₂ : x < π / 2) : arctan (tan x) = x :=
+theorem arctan_tan (hx₁ : -(π / 2) < x) (hx₂ : x < π / 2) :
+    arctan (tan x (cos_pos_of_mem_Ioo ⟨hx₁, hx₂⟩).ne') = x :=
   Subtype.ext_iff.1 <| tanOrderIso.symm_apply_apply ⟨x, hx₁, hx₂⟩
 
 theorem cos_arctan_pos (x : ℝ) : 0 < cos (arctan x) :=
   cos_pos_of_mem_Ioo <| arctan_mem_Ioo x
 
 theorem sin_sq_arctan (x : ℝ) : sin (arctan x) ^ 2 = x ^ 2 / (1 + x ^ 2) := by
-  rw [← tan_sq_div_one_add_tan_sq (cos_arctan_pos x).ne', tan_arctan]
+  rw [← tan_sq_div_one_add_tan_sq (cos_arctan_pos x).ne']
+  simp only [tan_arctan]
 
 theorem cos_sq_arctan (x : ℝ) : cos (arctan x) ^ 2 = 1 / (1 + x ^ 2) := by
-  rw [one_div, ← inv_one_add_tan_sq (cos_arctan_pos x).ne', tan_arctan]
+  rw [one_div₀, ← inv_one_add_tan_sq (cos_arctan_pos x).ne']
+  simp only [tan_arctan]
 
 theorem sin_arctan (x : ℝ) : sin (arctan x) = x / √(1 + x ^ 2) := by
-  rw [← tan_div_sqrt_one_add_tan_sq (cos_arctan_pos x), tan_arctan]
+  rw [← tan_div_sqrt_one_add_tan_sq (cos_arctan_pos x)]
+  simp only [tan_arctan]
 
 theorem cos_arctan (x : ℝ) : cos (arctan x) = 1 / √(1 + x ^ 2) := by
-  rw [one_div, ← inv_sqrt_one_add_tan_sq (cos_arctan_pos x), tan_arctan]
+  rw [one_div₀, ← inv_sqrt_one_add_tan_sq (cos_arctan_pos x)]
+  simp only [tan_arctan]
 
 theorem arctan_lt_pi_div_two (x : ℝ) : arctan x < π / 2 :=
   (arctan_mem_Ioo x).2
@@ -191,9 +194,11 @@ theorem tendsto_arctan_atTop : Tendsto arctan atTop (𝓝[<] (π / 2)) :=
 theorem tendsto_arctan_atBot : Tendsto arctan atBot (𝓝[>] (-(π / 2))) :=
   tendsto_Ioo_atBot (by simp) |>.mp tanOrderIso.symm.tendsto_atBot
 
-theorem arctan_eq_of_tan_eq (h : tan x = y) (hx : x ∈ Ioo (-(π / 2)) (π / 2)) :
+theorem arctan_eq_of_tan_eq {hc : cos x ≠ 0} (h : tan x = y) (hx : x ∈ Ioo (-(π / 2)) (π / 2)) :
     arctan y = x :=
-  injOn_tan (arctan_mem_Ioo _) hx (by rw [tan_arctan, h])
+  congrArg Subtype.val <| @injOn_tan ⟨arctan y, arctan_mem_Ioo y⟩ ⟨x, hx⟩ <| by
+    dsimp only
+    rw [tan_arctan, ← h]
 
 @[simp]
 theorem arctan_one : arctan 1 = π / 4 :=
@@ -248,17 +253,31 @@ theorem arctan_eq_arccos (h : 0 ≤ x) : arctan x = arccos (√(1 + x ^ 2))⁻¹
 
 -- The junk values for `arccos` and `sqrt` make this true even for `1 < x`.
 theorem arccos_eq_arctan (h : 0 < x) : arccos x = arctan (√(1 - x ^ 2) / x) := by
-  rw [arccos, eq_comm]
-  refine arctan_eq_of_tan_eq ?_ ⟨?_, ?_⟩
-  · rw_mod_cast [tan_pi_div_two_sub, tan_arcsin, inv_div]
-  · linarith only [arcsin_le_pi_div_two x, pi_pos]
-  · linarith only [arcsin_pos.2 h]
+  rcases lt_or_ge x 1 with hx1 | hx1
+  · rw [arccos, eq_comm]
+    have hc : cos (arcsin x) ≠ 0 := by
+      rw [cos_arcsin]
+      exact (sqrt_pos.2 (by nlinarith)).ne'
+    have hs : cos (π / 2 - arcsin x) ≠ 0 := by
+      rw [cos_pi_div_two_sub, sin_arcsin (by linarith) hx1.le]
+      exact h.ne'
+    refine arctan_eq_of_tan_eq (hc := hs) ?_ ⟨?_, ?_⟩
+    · rw [tan_pi_div_two_sub _ hc (h := hs)]
+      simp only [tan_arcsin, inv_div₀]
+    · linarith only [arcsin_le_pi_div_two x, pi_pos]
+    · linarith only [arcsin_pos.2 h]
+  · rw [arccos_of_one_le hx1, sqrt_eq_zero_of_nonpos (by nlinarith), zero_div, arctan_zero]
 
 theorem arctan_inv_of_pos (h : 0 < x) : arctan x⁻¹ = π / 2 - arctan x := by
-  rw [← arctan_tan (x := _ - _), tan_pi_div_two_sub, tan_arctan]
-  · simpa using (arctan_lt_pi_div_two x).trans (half_lt_self_iff.mpr pi_pos)
-  · rw [sub_lt_self_iff, ← arctan_zero]
+  have hlt : π / 2 - arctan x < π / 2 := by
+    rw [sub_lt_self_iff, ← arctan_zero]
     exact tanOrderIso.symm.strictMono h
+  have hgt : -(π / 2) < π / 2 - arctan x := by
+    simpa using (arctan_lt_pi_div_two x).trans (half_lt_self_iff.mpr pi_pos)
+  have hc : cos (π / 2 - arctan x) ≠ 0 := (cos_pos_of_mem_Ioo ⟨hgt, hlt⟩).ne'
+  refine arctan_eq_of_tan_eq (hc := hc) ?_ ⟨hgt, hlt⟩
+  rw [tan_pi_div_two_sub _ (cos_arctan_pos x).ne' (h := hc)]
+  simp only [tan_arctan]
 
 theorem arctan_inv_of_neg (h : x < 0) : arctan x⁻¹ = -(π / 2) - arctan x := by
   have := arctan_inv_of_pos (neg_pos.mpr h)
@@ -283,14 +302,15 @@ lemma arctan_add_arctan_lt_pi_div_two (h : x * y < 1) : arctan x + arctan y < π
 
 theorem arctan_add (h : x * y < 1) :
     arctan x + arctan y = arctan ((x + y) / (1 - x * y)) := by
-  rw [← arctan_tan (x := _ + _)]
-  · congr
-    conv_rhs => rw [← tan_arctan x, ← tan_arctan y]
-    exact tan_add' ⟨arctan_ne_mul_pi_div_two, arctan_ne_mul_pi_div_two⟩
-  · rw [neg_lt, neg_add, ← arctan_neg, ← arctan_neg]
+  have hlt := arctan_add_arctan_lt_pi_div_two h
+  have hgt : -(π / 2) < arctan x + arctan y := by
+    rw [neg_lt, neg_add, ← arctan_neg, ← arctan_neg]
     rw [← neg_mul_neg] at h
     exact arctan_add_arctan_lt_pi_div_two h
-  · exact arctan_add_arctan_lt_pi_div_two h
+  have hxy : cos (arctan x + arctan y) ≠ 0 := (cos_pos_of_mem_Ioo ⟨hgt, hlt⟩).ne'
+  refine (arctan_eq_of_tan_eq (hc := hxy) ?_ ⟨hgt, hlt⟩).symm
+  rw [tan_add (cos_arctan_pos x).ne' (cos_arctan_pos y).ne' (hxy := hxy)]
+  simp only [tan_arctan]
 
 theorem arctan_add_eq_add_pi (h : 1 < x * y) (hx : 0 < x) :
     arctan x + arctan y = arctan ((x + y) / (1 - x * y)) + π := by
@@ -368,29 +388,6 @@ theorem continuous_arctan : Continuous arctan :=
 
 theorem continuousAt_arctan : ContinuousAt arctan x :=
   continuous_arctan.continuousAt
-
-/-- `Real.tan` as an `OpenPartialHomeomorph` between `(-(π / 2), π / 2)` and the whole line. -/
-def tanPartialHomeomorph : OpenPartialHomeomorph ℝ ℝ where
-  toFun := tan
-  invFun := arctan
-  source := Ioo (-(π / 2)) (π / 2)
-  target := univ
-  map_source' := mapsTo_univ _ _
-  map_target' y _ := arctan_mem_Ioo y
-  left_inv' _ hx := arctan_tan hx.1 hx.2
-  right_inv' y _ := tan_arctan y
-  open_source := isOpen_Ioo
-  open_target := isOpen_univ
-  continuousOn_toFun := continuousOn_tan_Ioo
-  continuousOn_invFun := continuous_arctan.continuousOn
-
-@[simp]
-theorem coe_tanPartialHomeomorph : ⇑tanPartialHomeomorph = tan :=
-  rfl
-
-@[simp]
-theorem coe_tanPartialHomeomorph_symm : ⇑tanPartialHomeomorph.symm = arctan :=
-  rfl
 
 end Real
 

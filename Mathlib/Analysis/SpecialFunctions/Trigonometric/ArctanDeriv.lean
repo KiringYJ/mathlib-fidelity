@@ -25,50 +25,86 @@ open Set Filter
 
 open scoped Topology Real
 
-theorem hasStrictDerivAt_tan {x : ℝ} (h : cos x ≠ 0) : HasStrictDerivAt tan (1 / cos x ^ 2) x :=
-  mod_cast (Complex.hasStrictDerivAt_tan (by exact mod_cast h)).real_of_complex
+/-- The inclusion of the domain of the tangent into the domain of the quotient rule. -/
+private def toUnitsDomain (y : {y : ℝ // cos y ≠ 0}) : {y : ℝ | IsUnit (cos y)} :=
+  ⟨y, y.2.isUnit⟩
 
-theorem hasDerivAt_tan {x : ℝ} (h : cos x ≠ 0) : HasDerivAt tan (1 / cos x ^ 2) x :=
-  mod_cast (Complex.hasDerivAt_tan (by exact mod_cast h)).real_of_complex
+private theorem continuous_toUnitsDomain : Continuous toUnitsDomain :=
+  continuous_subtype_val.subtype_mk _
 
+/-- The tangent has derivative `1 / cos x ^ 2` at every point of its domain. -/
+theorem hasStrictDerivAt_tan {x : ℝ} (h : cos x ≠ 0) :
+    HasStrictDerivAt (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y y.2) (1 / cos x ^ 2) ⟨x, h⟩
+      Subtype.val := by
+  have hdiv := (hasStrictDerivAt_sin x).div (hasStrictDerivAt_cos x) h.isUnit
+  have key := HasFDerivAtFilter.comp_tendsto hdiv toUnitsDomain
+    ((continuous_toUnitsDomain.tendsto ⟨x, h⟩).prodMap_nhds
+      (continuous_toUnitsDomain.tendsto ⟨x, h⟩))
+  have hD : (cos x * cos x - sin x * -sin x) /ₚ (h.isUnit.unit ^ 2) = 1 / cos x ^ 2 := by
+    rw [mul_neg, sub_neg_eq_add, ← sq, ← sq, cos_sq_add_sin_sq]
+    show 1 /ₚ _ = 1 /ₚ _
+    congr 1
+    ext
+    simp
+  rw [← hD]
+  exact key
+
+theorem hasDerivAt_tan {x : ℝ} (h : cos x ≠ 0) :
+    HasDerivAt (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y y.2) (1 / cos x ^ 2) ⟨x, h⟩ Subtype.val :=
+  (hasStrictDerivAt_tan h).hasDerivAt
+
+/-- The absolute value of the tangent tends to infinity at a pole, as a function on its domain. -/
 theorem tendsto_abs_tan_of_cos_eq_zero {x : ℝ} (hx : cos x = 0) :
-    Tendsto (fun x => abs (tan x)) (𝓝[≠] x) atTop := by
-  have hx : Complex.cos x = 0 := mod_cast hx
-  simp only [← Real.norm_eq_abs, ← Complex.norm_real, Complex.ofReal_tan]
-  refine (Complex.tendsto_norm_tan_of_cos_eq_zero hx).comp ?_
-  refine Tendsto.inf Complex.continuous_ofReal.continuousAt ?_
-  exact tendsto_principal_principal.2 fun y => mt Complex.ofReal_inj.1
+    Tendsto (fun y : {y : ℝ // cos y ≠ 0} ↦ |tan y y.2|) (comap Subtype.val (𝓝[≠] x)) atTop := by
+  have A : sin x ≠ 0 := fun h => by simpa [*, sq] using sin_sq_add_cos_sq x
+  have B : Tendsto cos (𝓝[≠] x) (𝓝[≠] 0) :=
+    hx ▸ (hasDerivAt_cos x).tendsto_nhdsNE (neg_ne_zero.2 A)
+  have hcos : Tendsto (fun y : {y : ℝ // cos y ≠ 0} ↦
+      ((Units.mk0 |cos (y : ℝ)| (abs_ne_zero.2 y.2) : ℝˣ) : ℝ))
+      (comap Subtype.val (𝓝[≠] x)) (𝓝[>] 0) := by
+    have : Tendsto (fun y : ℝ ↦ |y|) (𝓝[≠] 0) (𝓝[>] 0) := by
+      simpa only [Real.norm_eq_abs] using tendsto_norm_nhdsNE_zero
+    exact (this.comp B).comp tendsto_comap
+  have hsin : Tendsto (fun y : {y : ℝ // cos y ≠ 0} ↦ |sin (y : ℝ)|)
+      (comap Subtype.val (𝓝[≠] x)) (𝓝 |sin x|) :=
+    ((continuous_sin.abs.tendsto x).mono_left nhdsWithin_le_nhds).comp tendsto_comap
+  refine (hcos.inv_tendsto_nhdsGT_zero.atTop_mul_pos (abs_pos.2 A) hsin).congr fun y ↦ ?_
+  rw [tan_eq_sin_div_cos, abs_div, div_eq_inv_mul₀]
+  rfl
 
 theorem tendsto_abs_tan_atTop (k : ℤ) :
-    Tendsto (fun x => abs (tan x)) (𝓝[≠] ((2 * k + 1) * π / 2)) atTop :=
+    Tendsto (fun y : {y : ℝ // cos y ≠ 0} ↦ |tan y y.2|)
+      (comap Subtype.val (𝓝[≠] ((2 * k + 1) * π / 2))) atTop :=
   tendsto_abs_tan_of_cos_eq_zero <| cos_eq_zero_iff.2 ⟨k, rfl⟩
 
-theorem continuousAt_tan {x : ℝ} : ContinuousAt tan x ↔ cos x ≠ 0 := by
-  refine ⟨fun hc h₀ => ?_, fun h => (hasDerivAt_tan h).continuousAt⟩
-  exact not_tendsto_nhds_of_tendsto_atTop (tendsto_abs_tan_of_cos_eq_zero h₀) _
-    (hc.norm.tendsto.mono_left inf_le_left)
+theorem continuousAt_tan {x : ℝ} (hx : cos x ≠ 0) :
+    ContinuousAt (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y y.2) ⟨x, hx⟩ :=
+  continuous_tan.continuousAt
 
-theorem differentiableAt_tan {x : ℝ} : DifferentiableAt ℝ tan x ↔ cos x ≠ 0 :=
-  ⟨fun h => continuousAt_tan.1 h.continuousAt, fun h => (hasDerivAt_tan h).differentiableAt⟩
-
-@[simp]
-theorem deriv_tan (x : ℝ) : deriv tan x = 1 / cos x ^ 2 :=
-  if h : cos x = 0 then by
-    have : ¬DifferentiableAt ℝ tan x := mt differentiableAt_tan.1 (Classical.not_not.2 h)
-    simp [deriv_zero_of_not_differentiableAt this, h, sq]
-  else (hasDerivAt_tan h).deriv
+theorem differentiableAt_tan {x : ℝ} (hx : cos x ≠ 0) :
+    DifferentiableAt ℝ (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y y.2) ⟨x, hx⟩ Subtype.val :=
+  (hasDerivAt_tan hx).differentiableAt
 
 @[simp]
-theorem contDiffAt_tan {n : WithTop ℕ∞} {x : ℝ} : ContDiffAt ℝ n tan x ↔ cos x ≠ 0 :=
-  ⟨fun h => continuousAt_tan.1 h.continuousAt, fun h =>
-    (Complex.contDiffAt_tan.2 <| mod_cast h).real_of_complex⟩
+theorem deriv_tan (x : ℝ) {hx : cos x ≠ 0} :
+    deriv (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y y.2) ⟨x, hx⟩ Subtype.val = 1 / cos x ^ 2 := by
+  apply (hasDerivAt_tan hx).deriv_of_mem_nhds Topology.IsEmbedding.subtypeVal
+  rw [Subtype.range_val]
+  exact (isOpen_ne_fun continuous_cos continuous_const).mem_nhds hx
 
+/-- The tangent restricted to `(-(π / 2), π / 2)` has derivative `1 / cos x ^ 2`. -/
 theorem hasDerivAt_tan_of_mem_Ioo {x : ℝ} (h : x ∈ Ioo (-(π / 2) : ℝ) (π / 2)) :
-    HasDerivAt tan (1 / cos x ^ 2) x :=
-  hasDerivAt_tan (cos_pos_of_mem_Ioo h).ne'
+    HasDerivAt (fun y : Ioo (-(π / 2) : ℝ) (π / 2) ↦ tan y (cos_pos_of_mem_Ioo y.2).ne')
+      (1 / cos x ^ 2) ⟨x, h⟩ Subtype.val := by
+  have he : Continuous fun y : Ioo (-(π / 2) : ℝ) (π / 2) ↦
+      (⟨y, (cos_pos_of_mem_Ioo y.2).ne'⟩ : {y : ℝ // cos y ≠ 0}) :=
+    continuous_subtype_val.subtype_mk _
+  exact HasFDerivAtFilter.comp_tendsto (hasDerivAt_tan (cos_pos_of_mem_Ioo h).ne') _
+    ((he.tendsto ⟨x, h⟩).prodMap (tendsto_pure_pure ..))
 
 theorem differentiableAt_tan_of_mem_Ioo {x : ℝ} (h : x ∈ Ioo (-(π / 2) : ℝ) (π / 2)) :
-    DifferentiableAt ℝ tan x :=
+    DifferentiableAt ℝ (fun y : Ioo (-(π / 2) : ℝ) (π / 2) ↦ tan y (cos_pos_of_mem_Ioo y.2).ne')
+      ⟨x, h⟩ Subtype.val :=
   (hasDerivAt_tan_of_mem_Ioo h).differentiableAt
 
 theorem hasStrictDerivAt_arctan (x : ℝ) : HasStrictDerivAt arctan (1 / (1 + x ^ 2)) x := by

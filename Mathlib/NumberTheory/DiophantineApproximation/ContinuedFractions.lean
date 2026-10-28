@@ -39,7 +39,17 @@ theorem convs_eq_convergent (ξ : ℝ) (n : ℕ) :
     (GenContFract.of ξ).convs n = ξ.convergent n := by
   induction n generalizing ξ with
   | zero => simp only [zeroth_conv_eq_h, of_h_eq_floor, convergent_zero, Rat.cast_intCast]
-  | succ n ih => rw [convs_succ, ih (fract ξ)⁻¹, convergent_succ, one_div]; norm_cast
+  | succ n ih =>
+    rcases eq_or_ne (fract ξ) 0 with hξ | hξ
+    · -- `ξ` is an integer, so its continued fraction terminates at once
+      have hterm : (GenContFract.of ξ).TerminatedAt 0 :=
+        of_terminatedAt_n_iff_succ_nth_intFractPair_stream_eq_none.2
+          (IntFractPair.stream_eq_none_of_fr_eq_zero (IntFractPair.stream_zero ξ) hξ)
+      rw [← of_correctness_of_terminatedAt (terminated_stable (Nat.zero_le (n + 1)) hterm),
+        convergent_succ_of_fract_eq_zero _ _ hξ, Rat.cast_intCast]
+      exact eq_of_sub_eq_zero hξ
+    · rw [convs_succ hξ, convergent_succ _ _ hξ]
+      simp only [ih, one_div₀, Rat.cast_add, Rat.cast_inv, Rat.cast_intCast]
 
 end Real
 

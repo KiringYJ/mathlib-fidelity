@@ -233,7 +233,8 @@ noncomputable def soIndefiniteEquiv {i : R} (hi : i * i = -1) : so' p q R ≃ₗ
 set_option backward.isDefEq.respectTransparency false in
 theorem soIndefiniteEquiv_apply {i : R} (hi : i * i = -1) (A : so' p q R) :
     (soIndefiniteEquiv p q R hi A : Matrix (p ⊕ q) (p ⊕ q) R) =
-      (Pso p q R i)⁻¹ * (A : Matrix (p ⊕ q) (p ⊕ q) R) * Pso p q R i := by
+      Checked.inv (Pso p q R i) (.of_mul_eq_one _ (pso_inv p q R hi)) *
+        (A : Matrix (p ⊕ q) (p ⊕ q) R) * Pso p q R i := by
   rw [soIndefiniteEquiv, LieEquiv.trans_apply, LieEquiv.ofEq_apply]
   simp only [so', skewAdjointMatricesLieSubalgebraEquiv_apply]
 

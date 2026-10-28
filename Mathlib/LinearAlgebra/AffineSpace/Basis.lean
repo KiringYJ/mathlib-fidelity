@@ -367,8 +367,7 @@ variable [DivisionRing k] [Module k V]
 
 @[simp]
 theorem coord_apply_centroid (b : AffineBasis ι k P) {s : Finset ι} {i : ι}
-    (hi : i ∈ s) (hs : (s.card : k) ≠ 0) :
-    b.coord i (s.centroid k b hs) = (↑(Units.mk0 (s.card : k) hs)⁻¹ : k) := by
+    {hs : (s.card : k) ≠ 0} (hi : i ∈ s) : b.coord i (s.centroid k b hs) = (s.card : k)⁻¹ := by
   rw [Finset.centroid,
     b.coord_apply_combination_of_mem hi (s.sum_centroidWeights_eq_one_of_cast_card_ne_zero hs),
     Finset.centroidWeights, Function.const_apply]

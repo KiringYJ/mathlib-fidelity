@@ -248,19 +248,22 @@ variable {𝕜' 𝔸 : Type*} [NormedDivisionRing 𝕜'] [NormedRing 𝔸] [Norm
   [NormedAlgebra 𝕜 𝔸] {c d : 𝕜 → 𝔸} {c' d' : 𝔸} {u v : 𝕜 → 𝕜'}
 
 @[to_fun]
-theorem HasDerivWithinAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸} {coord : D → 𝕜} {x : D} {s : Set D} (hc : HasDerivWithinAt c c' s x coord) (hd : HasDerivWithinAt d d' s x coord)
+theorem HasDerivWithinAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸} {coord : D → 𝕜} {x : D}
+    {s : Set D} (hc : HasDerivWithinAt c c' s x coord) (hd : HasDerivWithinAt d d' s x coord)
     (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id) :
     HasDerivWithinAt (c * d) (c' * d x + c x * d') s x coord := by
   simpa [add_comm] using (HasFDerivWithinAt.mul' hc hd hcoord).hasDerivWithinAt
 
 @[to_fun]
-theorem HasDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸} {coord : D → 𝕜} {x : D} (hc : HasDerivAt c c' x coord) (hd : HasDerivAt d d' x coord)
+theorem HasDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸} {coord : D → 𝕜} {x : D}
+    (hc : HasDerivAt c c' x coord) (hd : HasDerivAt d d' x coord)
     (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
     HasDerivAt (c * d) (c' * d x + c x * d') x coord := by
   simpa [add_comm] using (HasFDerivAt.mul' hc hd hcoord).hasDerivAt
 
 @[to_fun]
-theorem HasStrictDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸} {coord : D → 𝕜} {x : D} (hc : HasStrictDerivAt c c' x coord) (hd : HasStrictDerivAt d d' x coord)
+theorem HasStrictDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸} {coord : D → 𝕜} {x : D}
+    (hc : HasStrictDerivAt c c' x coord) (hd : HasStrictDerivAt d d' x coord)
     (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
     HasStrictDerivAt (c * d) (c' * d x + c x * d') x coord := by
   simpa [add_comm] using (HasStrictFDerivAt.mul' hc hd hcoord).hasStrictDerivAt

@@ -367,6 +367,13 @@ theorem leadingCoeff_eq_zero : leadingCoeff p = 0 ↔ p = 0 :=
 
 theorem leadingCoeff_ne_zero : leadingCoeff p ≠ 0 ↔ p ≠ 0 := by rw [Ne, leadingCoeff_eq_zero]
 
+/- Evidence rule: the leading coefficient of a polynomial that the evidence search proves nonzero
+(for example from a local hypothesis that it is irreducible) is nonzero. -/
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply Polynomial.leadingCoeff_ne_zero.mpr); checked_nonzero))
+
 theorem leadingCoeff_eq_zero_iff_deg_eq_bot : leadingCoeff p = 0 ↔ degree p = ⊥ := by
   rw [leadingCoeff_eq_zero, degree_eq_bot]
 

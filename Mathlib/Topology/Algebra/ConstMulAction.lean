@@ -396,7 +396,7 @@ protected noncomputable def Homeomorph.smulOfNeZero (c : G₀) (hc : c ≠ 0) : 
 
 @[simp]
 theorem Homeomorph.smulOfNeZero_symm_apply {c : G₀} (hc : c ≠ 0) :
-    ⇑(Homeomorph.smulOfNeZero c hc).symm = ((Units.mk0 c hc)⁻¹ • · : α → α) :=
+    ⇑(Homeomorph.smulOfNeZero c hc).symm = (c⁻¹ • · : α → α) :=
   rfl
 
 theorem isHomeomorph_smul₀ {c : G₀} (hc : c ≠ 0) : IsHomeomorph fun x : α ↦ c • x :=

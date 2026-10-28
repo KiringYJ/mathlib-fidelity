@@ -432,20 +432,20 @@ lemma resultant_eq_prod_roots_sub
         rw [IsRoot.def, eval_mul, ((mem_roots hg.ne_zero).mp hx).eq_zero, zero_mul]
     · rw [natDegree_mul hg.ne_zero (by simpa [hg.ne_zero] using hf.ne_zero),
         natDegree_neg, add_comm]
-  let r := C (f %ₘ g).leadingCoeff⁻¹ * (f %ₘ g)
   have hr₀ : f %ₘ g ≠ 0 := by simpa [modByMonic_eq_zero_iff_dvd, hg]
+  let r := C (f %ₘ g).leadingCoeff⁻¹ * (f %ₘ g)
   have hrd : r.natDegree < g.natDegree := by
-    simp [r, natDegree_C_mul, hr₀, natDegree_modByMonic_lt _ hg (show g ≠ 1 by aesop)]
+    simp [r, natDegree_C_mul, natDegree_modByMonic_lt _ hg (show g ≠ 1 by aesop)]
   have hr : r.Monic := by
     dsimp only [r]
-    rw [Monic, leadingCoeff, natDegree_C_mul (by simpa), coeff_C_mul, leadingCoeff,
-      inv_mul_cancel₀ (by simpa)]
+    rw [Monic, leadingCoeff, natDegree_C_mul (by simp), coeff_C_mul, coeff_natDegree,
+      inv_mul_cancel₀]
   let L := r.SplittingField
   have := IH _ (by simp; lia)
     (g.map (algebraMap K L)) (r.map (algebraMap K L)) (hg.map _) (hr.map _)
     (hg'.map _) (SplittingField.splits _) (by simpa [r, natDegree_C_mul, hr₀] using hrd.le) rfl
   rw [resultant_map_map, natDegree_map, natDegree_map, resultant_C_mul_right,
-    map_mul, inv_pow, map_inv₀, inv_mul_eq_iff_eq_mul₀ (by simp [hr₀])] at this
+    map_mul, inv_pow₀, map_inv₀, inv_mul_eq_iff_eq_mul₀] at this
   generalize hRHS : ((f.roots ×ˢ g.roots).map fun ij ↦ ij.1 - ij.2).prod = RHS
   rw [← f.modByMonic_add_div hg, resultant_add_mul_left, f.modByMonic_add_div hg,
     ← Nat.sub_add_cancel (hrd.le.trans hfg), add_comm, resultant_add_left_deg, resultant_comm]
@@ -459,8 +459,7 @@ lemma resultant_eq_prod_roots_sub
       trans (g.roots.map ((f %ₘ g).leadingCoeff * eval · r)).prod
       · congr 1
         refine Multiset.map_congr rfl ?_
-        simp only [mem_roots hg.ne_zero, ne_eq, IsRoot.def, eval_mul, eval_C, leadingCoeff_eq_zero,
-          hr₀, not_false_eq_true, mul_inv_cancel_left₀, r]
+        simp only [mem_roots hg.ne_zero, IsRoot.def, eval_mul, eval_C, mul_inv_cancel_left₀, r]
         intro x hxg
         conv_lhs => rw [← f.modByMonic_add_div hg, eval_add, eval_mul, hxg, zero_mul, add_zero]
       · simp [hg'.natDegree_eq_card_roots hg.ne_zero]
@@ -472,7 +471,7 @@ lemma resultant_eq_prod_roots_sub
       mul_comm g.natDegree]
     congr 3 with x
     exact aeval_algebraMap_apply _ _ _
-  · simp [r, hr₀, natDegree_C_mul]
+  · simp [r, natDegree_C_mul]
   · rw [f.modByMonic_add_div hg, natDegree_divByMonic _ hg, Nat.sub_add_cancel hfg]
   · simp
 
@@ -497,7 +496,7 @@ nonrec lemma resultant_eq_prod_eval [IsDomain R]
   wlog hfm : f.Monic
   · let inst := hR.toField
     have H : (C f.leadingCoeff⁻¹ * f).Monic := by
-      rw [Monic, ← coeff_natDegree, natDegree_C_mul (by simp [hf0]), coeff_C_mul]; simp [hf0]
+      rw [Monic, ← coeff_natDegree, natDegree_C_mul (by simp), coeff_C_mul]; simp
     have := this (C f.leadingCoeff⁻¹ * f) g n hg (.mul (.C _) hf) H.ne_zero hR H
     simpa [hf0, natDegree_C_mul, resultant_C_mul_left, inv_mul_eq_iff_eq_mul₀, roots_C_mul,
       H.leadingCoeff] using this
@@ -511,9 +510,9 @@ nonrec lemma resultant_eq_prod_eval [IsDomain R]
   · let inst := hR.toField
     have := this f (C g.leadingCoeff⁻¹ * g) n (by simpa [hg0, natDegree_C_mul]) hf hf0 hR hfm
       (by simpa)
-      (by rw [Monic, ← coeff_natDegree, natDegree_C_mul (by simp [hg0]), coeff_C_mul]; simp [hg0])
-    rw [resultant_C_mul_right, inv_pow, inv_mul_eq_iff_eq_mul₀ (by simp [hg0])] at this
-    simpa [← hf.natDegree_eq_card_roots hf0, inv_pow, mul_left_comm (_ ^ g.natDegree), hg0]
+      (by rw [Monic, ← coeff_natDegree, natDegree_C_mul (by simp), coeff_C_mul]; simp)
+    rw [resultant_C_mul_right, inv_pow₀, inv_mul_eq_iff_eq_mul₀] at this
+    simpa [← hf.natDegree_eq_card_roots hf0, inv_pow₀, mul_left_comm (_ ^ g.natDegree), hg0]
       using this
   let inst := hR.toField
   let L := g.SplittingField
@@ -924,10 +923,10 @@ lemma resultant_eq_zero_iff {K : Type*} [Field K] {f g : K[X]} :
     simpa [isCoprime_zero_left, isUnit_iff, hg, natDegree_eq_zero] using
       show (∀ x, C x ≠ g) ↔ ∀ x ≠ 0, C x ≠ g by aesop
   have H : (C f.leadingCoeff⁻¹ * f).Monic := by
-    rw [Monic, ← coeff_natDegree, natDegree_C_mul (by simpa), coeff_C_mul]; simp [hf]
+    rw [Monic, ← coeff_natDegree, natDegree_C_mul (by simp), coeff_C_mul]; simp
   have := isUnit_resultant_iff_isCoprime (f := C f.leadingCoeff⁻¹ * f) (g := g) H
-  rw [resultant_C_mul_left, IsUnit.mul_iff, natDegree_C_mul (by simp [hf]),
-    isCoprime_mul_unit_left_left (isUnit_C.mpr (by simp [hf]))] at this
+  rw [resultant_C_mul_left, IsUnit.mul_iff, natDegree_C_mul (by simp),
+    isCoprime_mul_unit_left_left (isUnit_C.mpr (by simp))] at this
   simp [← this, hf]
 
 end sylvesterMap

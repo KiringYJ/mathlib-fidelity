@@ -153,31 +153,23 @@ variable [Fintype G]
 
 /-- Dense sets have small doubling. -/
 @[to_additive addConst_le_inv_dens /-- Dense sets have small doubling. -/]
-lemma mulConst_le_inv_dens (hA : A.Nonempty) : σₘ[A, B] ≤
-    (((Units.mk0 A.dens hA.dens_ne_zero)⁻¹ : ℚ≥0ˣ) : ℚ≥0) := by
+lemma mulConst_le_inv_dens (hA : A.Nonempty) : σₘ[A, B] ≤ A.dens⁻¹ := by
   apply (mul_le_mul_iff_of_pos_right (Nat.cast_pos.mpr hA.card_pos : (0 : ℚ≥0) < #A)).mp
   rw [mulConst_mul_card]
-  have hc : (((Units.mk0 A.dens hA.dens_ne_zero)⁻¹ : ℚ≥0ˣ) : ℚ≥0) * #A = Fintype.card G := by
+  have hc : A.dens⁻¹ * #A = Fintype.card G := by
     conv_lhs => rw [← A.dens_mul_card]
-    rw [← mul_assoc]
-    have hi := (Units.mk0 A.dens hA.dens_ne_zero).inv_mul
-    simp only [Units.val_mk0] at hi
-    rw [hi, one_mul]
+    rw [← mul_assoc, inv_mul_cancel₀, one_mul]
   rw [hc]
   exact_mod_cast card_le_univ (A * B)
 
 /-- Dense sets have small difference constant. -/
 @[to_additive subConst_le_inv_dens /-- Dense sets have small difference constant. -/]
-lemma divConst_le_inv_dens (hA : A.Nonempty) : δₘ[A, B] ≤
-    (((Units.mk0 A.dens hA.dens_ne_zero)⁻¹ : ℚ≥0ˣ) : ℚ≥0) := by
+lemma divConst_le_inv_dens (hA : A.Nonempty) : δₘ[A, B] ≤ A.dens⁻¹ := by
   apply (mul_le_mul_iff_of_pos_right (Nat.cast_pos.mpr hA.card_pos : (0 : ℚ≥0) < #A)).mp
   rw [divConst_mul_card]
-  have hc : (((Units.mk0 A.dens hA.dens_ne_zero)⁻¹ : ℚ≥0ˣ) : ℚ≥0) * #A = Fintype.card G := by
+  have hc : A.dens⁻¹ * #A = Fintype.card G := by
     conv_lhs => rw [← A.dens_mul_card]
-    rw [← mul_assoc]
-    have hi := (Units.mk0 A.dens hA.dens_ne_zero).inv_mul
-    simp only [Units.val_mk0] at hi
-    rw [hi, one_mul]
+    rw [← mul_assoc, inv_mul_cancel₀, one_mul]
   rw [hc]
   exact_mod_cast card_le_univ (A / B)
 
@@ -186,24 +178,16 @@ end Fintype
 variable {𝕜 : Type*} [Semifield 𝕜] [CharZero 𝕜]
 
 @[to_additive (dont_translate := 𝕜)]
-lemma cast_mulConst (A B : Finset G) (hA : A.Nonempty) : (σₘ[A, B] : 𝕜) =
-    (#(A * B) : 𝕜) /ₚ Units.mk0 (#A : 𝕜) (Nat.cast_ne_zero.mpr hA.card_ne_zero) := by
-  apply mul_right_cancel₀ (Nat.cast_ne_zero.mpr hA.card_ne_zero : (#A : 𝕜) ≠ 0)
-  have hc := congrArg (fun x : ℚ≥0 ↦ (x : 𝕜)) (mulConst_mul_card A B hA)
-  have hd := divp_mul_cancel (#(A * B) : 𝕜)
-    (Units.mk0 (#A : 𝕜) (Nat.cast_ne_zero.mpr hA.card_ne_zero))
-  simp only [Units.val_mk0] at hd
-  simpa only [NNRat.cast_mul, NNRat.cast_natCast, hd] using hc
+lemma cast_mulConst (A B : Finset G) (hA : A.Nonempty) :
+    (σₘ[A, B] : 𝕜) = #(A * B) / #A := by
+  rw [eq_div_iff]
+  exact_mod_cast mulConst_mul_card A B hA
 
 @[to_additive (dont_translate := 𝕜)]
-lemma cast_divConst (A B : Finset G) (hA : A.Nonempty) : (δₘ[A, B] : 𝕜) =
-    (#(A / B) : 𝕜) /ₚ Units.mk0 (#A : 𝕜) (Nat.cast_ne_zero.mpr hA.card_ne_zero) := by
-  apply mul_right_cancel₀ (Nat.cast_ne_zero.mpr hA.card_ne_zero : (#A : 𝕜) ≠ 0)
-  have hc := congrArg (fun x : ℚ≥0 ↦ (x : 𝕜)) (divConst_mul_card A B hA)
-  have hd := divp_mul_cancel (#(A / B) : 𝕜)
-    (Units.mk0 (#A : 𝕜) (Nat.cast_ne_zero.mpr hA.card_ne_zero))
-  simp only [Units.val_mk0] at hd
-  simpa only [NNRat.cast_mul, NNRat.cast_natCast, hd] using hc
+lemma cast_divConst (A B : Finset G) (hA : A.Nonempty) :
+    (δₘ[A, B] : 𝕜) = #(A / B) / #A := by
+  rw [eq_div_iff]
+  exact_mod_cast divConst_mul_card A B hA
 
 @[to_additive (dont_translate := 𝕜) (attr := simp) cast_addConst_mul_card]
 lemma cast_mulConst_mul_card (A B : Finset G) (hA : A.Nonempty) :

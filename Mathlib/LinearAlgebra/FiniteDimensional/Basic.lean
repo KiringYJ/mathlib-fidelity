@@ -133,18 +133,18 @@ noncomputable def basisSingleton (ι : Type*) [Unique ι] (h : finrank K V = 1) 
     { toFun := fun w => Finsupp.single default (b.repr w default / b.repr v default)
       invFun := fun f => f default • v
       map_add' := by simp [add_div]
-      map_smul' := by simp [mul_div]
+      map_smul' := by simp [mul_div_assoc₀]
       left_inv := fun w => by
         apply_fun b.repr using b.repr.toEquiv.injective
         apply_fun Finsupp.uniqueEquiv default
         simp only [map_smulₛₗ, Finsupp.coe_smul, Finsupp.single_eq_same,
           smul_eq_mul, Pi.smul_apply, Finsupp.uniqueEquiv_apply]
-        exact div_mul_cancel₀ _ h
+        exact div_mul_cancel₀ _
       right_inv := fun f => by
         ext
         simp only [map_smulₛₗ, Finsupp.coe_smul, Finsupp.single_eq_same,
           RingHom.id_apply, smul_eq_mul, Pi.smul_apply]
-        exact mul_div_cancel_right₀ _ h }
+        exact mul_div_cancel_right₀ _ }
 
 @[simp]
 theorem basisSingleton_apply (ι : Type*) [Unique ι] (h : finrank K V = 1) (v : V) (hv : v ≠ 0)
@@ -501,17 +501,12 @@ lemma FiniteDimensional.exists_mul_eq_one (F : Type*) {K : Type*} [Field F] [Rin
 noncomputable def divisionRingOfFiniteDimensional (F K : Type*) [Field F] [Ring K] [IsDomain K]
     [Algebra F K] [FiniteDimensional F K] : DivisionRing K where
   __ := ‹IsDomain K›
-  inv x :=
-    letI := Classical.decEq K
-    if H : x = 0 then 0 else Classical.choose <| FiniteDimensional.exists_mul_eq_one F H
-  mul_inv_cancel x hx := show x * dite _ (h := _) _ _ = _ by
-    rw [dite_eq_right hx]
-    exact (Classical.choose_spec (FiniteDimensional.exists_mul_eq_one F hx) :)
-  inv_zero := dite_eq_left rfl
-  nnqsmul := _
-  nnqsmul_def := fun _ _ => rfl
-  qsmul := _
-  qsmul_def := fun _ _ => rfl
+  isUnit_of_ne_zero {x} hx := by
+    obtain ⟨y, hy⟩ := FiniteDimensional.exists_mul_eq_one F hx
+    have hyx : y * x = 1 := by
+      have : x * (y * x - 1) = 0 := by rw [mul_sub, ← mul_assoc, hy, one_mul, mul_one, sub_self]
+      exact sub_eq_zero.1 ((mul_eq_zero.1 this).resolve_left hx)
+    exact ⟨⟨x, y, hy, hyx⟩, rfl⟩
 
 lemma FiniteDimensional.isUnit (F : Type*) {K : Type*} [Field F] [Ring K] [IsDomain K]
     [Algebra F K] [FiniteDimensional F K] {x : K} (H : x ≠ 0) : IsUnit x :=

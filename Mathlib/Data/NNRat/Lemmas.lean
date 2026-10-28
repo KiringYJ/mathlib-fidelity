@@ -38,34 +38,12 @@ namespace Rat
 
 variable {p q : ℚ}
 
-/-- A positive rational has a reciprocal in the nonnegative rational unit group. -/
-lemma toNNRat_reciprocal (q : ℚ) (hq : 0 < q) :
-    toNNRat (reciprocal q hq.ne') =
-      ↑((NNRat.unit (toNNRat q) (by
-        intro h
-        have hc := congrArg (fun x : ℚ≥0 => (x : ℚ)) h
-        exact hq.ne' (by simpa only [Rat.coe_toNNRat q hq.le, NNRat.coe_zero] using hc)))⁻¹) := by
-  apply NNRat.ext
-  rw [Rat.coe_toNNRat _ (Rat.reciprocal_nonneg hq.le hq.ne')]
-  have hn : ((toNNRat q : ℚ≥0) : ℚ) ≠ 0 := by
-    rw [Rat.coe_toNNRat q hq.le]
-    exact hq.ne'
-  change reciprocal q hq.ne' = reciprocal ((toNNRat q : ℚ≥0) : ℚ) hn
-  simp only [Rat.coe_toNNRat q hq.le]
+lemma toNNRat_inv (q : ℚ) (hq : 0 < q) : toNNRat q⁻¹ = (toNNRat q)⁻¹ := by
+  apply eq_inv_of_mul_eq_one_left₀
+  rw [← toNNRat_mul (inv_pos_of_pos hq).le, inv_mul_cancel₀, toNNRat_one]
 
-/-- Truncation preserves division when the numerator is nonnegative and the unit denominator
-is positive, so its nonnegative counterpart is also invertible. -/
-lemma toNNRat_divp (hp : 0 ≤ p) (u : ℚˣ) (hu : 0 < (u : ℚ)) :
-    toNNRat (p /ₚ u) = toNNRat p /ₚ
-      NNRat.unit ⟨u, hu.le⟩ (fun h => u.ne_zero (congrArg Subtype.val h)) := by
-  let v := NNRat.unit ⟨u, hu.le⟩ (fun h => u.ne_zero (congrArg Subtype.val h))
-  have hv : Units.map NNRat.coeHom.toMonoidHom v = u := Units.ext rfl
-  apply NNRat.ext
-  rw [Rat.coe_toNNRat _ (divp_nonneg hp hu.le)]
-  change p /ₚ u = NNRat.coeHom.toMonoidHom (toNNRat p /ₚ v)
-  rw [map_divp, hv]
-  change p /ₚ u = ((toNNRat p : ℚ≥0) : ℚ) /ₚ u
-  rw [Rat.coe_toNNRat p hp]
+lemma toNNRat_div (hq : 0 < q) : toNNRat (p / q) = toNNRat p / toNNRat q := by
+  rw [div_eq_inv_mul₀, div_eq_inv_mul₀, toNNRat_mul (inv_pos_of_pos hq).le, toNNRat_inv q hq]
 
 end Rat
 
@@ -76,10 +54,11 @@ namespace NNRat
 variable {q : ℚ≥0}
 
 /-- A recursor for nonnegative rationals in terms of numerators and denominators. -/
-protected def rec {α : ℚ≥0 → Sort*}
-    (h : ∀ (m n : ℕ) (hn : n ≠ 0), α (divNat m n hn)) (q : ℚ≥0) : α q := by
-  rw [← num_divNat_den q]
-  apply h
+protected def rec {α : ℚ≥0 → Sort*} (h : ∀ (m n : ℕ) (hn : n ≠ 0), α (m / n)) (q : ℚ≥0) :
+    α q := by
+  have key : (q.num : ℚ≥0) / (q.den : ℚ≥0) = q := div_eq_iff.mpr (mul_den_eq_num q).symm
+  rw [← key]
+  exact h _ _ q.den_ne_zero
 
 theorem mul_num (q₁ q₂ : ℚ≥0) :
     (q₁ * q₂).num = q₁.num * q₂.num / Nat.gcd (q₁.num * q₂.num) (q₁.den * q₂.den) := by

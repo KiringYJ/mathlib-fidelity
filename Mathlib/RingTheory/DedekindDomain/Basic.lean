@@ -140,7 +140,7 @@ The integral closure condition is independent of the choice of field of fraction
 use `isDedekindDomain_iff` to prove `IsDedekindDomain` for a given `fraction_map`.
 
 See also `isDedekindDomain_iff_isDiscreteValuationRing_atPrime` and
-`isDedekindDomain_iff_mul_inv_cancel`. -/
+`isDedekindDomain_iff_mul_colon_self_cancel`. -/
 class IsDedekindDomain : Prop
   extends IsDomain A, IsDedekindRing A
 

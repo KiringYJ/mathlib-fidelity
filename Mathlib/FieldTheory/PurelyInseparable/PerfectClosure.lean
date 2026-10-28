@@ -61,9 +61,9 @@ def perfectClosure : IntermediateField F E where
   __ := have := expChar_of_injective_algebraMap (algebraMap F E).injective (ringExpChar F)
     Subalgebra.perfectClosure F E (ringExpChar F)
   inv_mem' := by
-    rintro x ⟨n, hx⟩
-    use n; rw [inv_pow]
-    apply inv_mem (id hx : _ ∈ (⊥ : IntermediateField F E))
+    rintro x hxu ⟨n, hx⟩
+    use n; rw [inv_pow₀]
+    exact SubfieldClass.inv_mem (s := (⊥ : IntermediateField F E)) hx
 
 variable {F E}
 

@@ -114,7 +114,7 @@ theorem _root_.MonoidHom.domRestrict_surjective (H : Subgroup G) :
   refine MonoidHom.surjective_of_card_ker_le_div _ (le_of_eq ?_)
   rw [card_monoidHom_of_hasEnoughRootsOfUnity, card_monoidHom_of_hasEnoughRootsOfUnity,
     H.card_eq_card_quotient_mul_card_subgroup,
-    mul_div_cancel_right₀ _ (Fintype.card_eq_nat_card ▸ Fintype.card_ne_zero),
+    MulDivCancelClass.mul_div_cancel_right₀ _ (Fintype.card_eq_nat_card ▸ Fintype.card_ne_zero),
     ← card_monoidHom_of_hasEnoughRootsOfUnity (G ⧸ H) M,
     Nat.card_congr (domRestrictHomKerEquiv Mˣ H).toEquiv]
 

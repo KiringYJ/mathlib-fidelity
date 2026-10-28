@@ -330,7 +330,7 @@ theorem radius_smul_eq (p : FormalMultilinearSeries 𝕜 E F)
     [SMulCommClass 𝕜 𝕜' F] (hc : c ≠ 0) :
     (c • p).radius = p.radius := by
   apply eq_of_le_of_ge _ radius_le_smul
-  exact radius_le_smul.trans_eq (congr_arg _ <| inv_smul_smul₀ hc p)
+  exact radius_le_smul.trans_eq (congr_arg _ <| inv_smul_smul₀ (ha := hc.isUnit) p)
 
 lemma norm_compContinuousLinearMap_le (p : FormalMultilinearSeries 𝕜 F G) (u : E →L[𝕜] F) (n : ℕ) :
     ‖p.compContinuousLinearMap u n‖ ≤ ‖p n‖ * ‖u‖ ^ n := by

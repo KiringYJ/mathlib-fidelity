@@ -212,16 +212,18 @@ theorem isInt_ratNum : ∀ {q : ℚ} {n : ℤ} {n' : ℕ} {d : ℕ},
     IsRat q n d → n.natAbs = n' → n'.gcd d = 1 → IsInt q.num n
   | _, n, _, d, hq, rfl, h => by
     constructor
-    have hd : d ≠ 0 := Rat.natCast_ne_zero.mp hq.den_nz
-    rw [hq.to_raw_eq, Rat.rawCast, ← Rat.fraction_eq_divp n d hd]
+    have hd : d ≠ 0 := Nat.cast_ne_zero.mp hq.den_nz
+    rw [hq.to_raw_eq, show (Rat.rawCast n d hq.den_nz : ℚ) = (n : ℚ) / (d : ℚ) from rfl,
+      ← Rat.fraction_eq_div n d hd]
     simp [Rat.fraction, Rat.num_normalize, h]
 
 theorem isNat_ratDen : ∀ {q : ℚ} {n : ℤ} {n' : ℕ} {d : ℕ},
     IsRat q n d → n.natAbs = n' → n'.gcd d = 1 → IsNat q.den d
   | _, n, _, d, hq, rfl, h => by
     constructor
-    have hd : d ≠ 0 := Rat.natCast_ne_zero.mp hq.den_nz
-    rw [hq.to_raw_eq, Rat.rawCast, ← Rat.fraction_eq_divp n d hd]
+    have hd : d ≠ 0 := Nat.cast_ne_zero.mp hq.den_nz
+    rw [hq.to_raw_eq, show (Rat.rawCast n d hq.den_nz : ℚ) = (n : ℚ) / (d : ℚ) from rfl,
+      ← Rat.fraction_eq_div n d hd]
     simp [Rat.fraction, Rat.den_normalize, h]
 
 /-- Evaluates the `Rat.num` function. -/

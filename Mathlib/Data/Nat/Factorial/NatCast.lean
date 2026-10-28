@@ -99,14 +99,16 @@ end Nilpotent
 
 end IsUnit
 
-open Nat Ring
+open Nat
 
 lemma Nat.castChoose_eq {A : Type*} [CommSemiring A] {m : ℕ} {k : ℕ × ℕ}
     (hm : IsUnit (m ! : A)) (hk : k ∈ Finset.antidiagonal m) :
-    (choose m k.1 : A) = ↑m ! * inverse ↑k.1! * inverse ↑k.2! := by
+    (choose m k.1 : A) = ↑m ! *
+      Checked.inv (k.1! : A)
+        (hm.natCast_factorial_of_le (Nat.le_of_lt_succ (Finset.Nat.antidiagonal.fst_lt hk))) *
+      Checked.inv (k.2! : A)
+        (hm.natCast_factorial_of_le (Nat.le_of_lt_succ (Finset.Nat.antidiagonal.snd_lt hk))) := by
   rw [Finset.mem_antidiagonal] at hk
   subst hk
-  rw [eq_mul_inverse_iff_mul_eq, eq_mul_inverse_iff_mul_eq, ← Nat.cast_mul, ← Nat.cast_mul,
-    add_comm, Nat.add_choose_mul_factorial_mul_factorial] <;>
-    apply hm.natCast_factorial_of_le
-  exacts [Nat.le_add_right k.1 k.2, Nat.le_add_left k.2 k.1]
+  rw [eq_mul_inv_iff_mul_eq₀, eq_mul_inv_iff_mul_eq₀, ← Nat.cast_mul, ← Nat.cast_mul, add_comm,
+    Nat.add_choose_mul_factorial_mul_factorial]

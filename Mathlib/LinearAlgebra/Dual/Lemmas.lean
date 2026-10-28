@@ -212,7 +212,7 @@ theorem forall_dual_apply_eq_zero_iff
 theorem Projective.exists_dual_eq_one (K : Type*) [Semifield K] [Module K V] [Projective K V]
     {x : V} (hx : x ≠ 0) : ∃ f : Dual K V, f x = 1 :=
   have ⟨f, hf⟩ := exists_dual_ne_zero K hx
-  ⟨(f x)⁻¹ • f, inv_mul_cancel₀ hf⟩
+  ⟨(f x)⁻¹ • f, inv_mul_cancel₀⟩
 
 @[simp]
 theorem subsingleton_dual_iff : Subsingleton (Dual K V) ↔ Subsingleton V :=

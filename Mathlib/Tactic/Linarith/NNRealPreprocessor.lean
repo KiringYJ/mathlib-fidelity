@@ -50,6 +50,7 @@ partial def getNNRealCoes (e : Expr) : List Expr :=
     | (``HMul.hMul, #[_, _, _, _, a, b]) => getNNRealCoes a ++ getNNRealCoes b
     | (``HSub.hSub, #[_, _, _, _, a, b]) => getNNRealCoes a ++ getNNRealCoes b
     | (``HDiv.hDiv, #[_, _, _, _, a, _]) => getNNRealCoes a
+    | (`Checked.div, #[_, _, a, _, _]) => getNNRealCoes a
     | (``Neg.neg, #[_, _, a]) => getNNRealCoes a
     | _ => []
 

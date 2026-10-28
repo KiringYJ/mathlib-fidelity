@@ -3,7 +3,7 @@ Copyright (c) 2026 Yi-Jing Tseng. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yi-Jing Tseng
 -/
-import Mathlib.Util.CheckedOperations
+import Mathlib.Algebra.GroupWithZero.Inverse
 import Mathlib.Algebra.Field.Defs
 import Mathlib.Algebra.CharZero.Defs
 import Mathlib.Algebra.Notation.Pi.Defs
@@ -12,14 +12,14 @@ section Monoid
 
 variable {M : Type*} [Monoid M] (a b : M) (ha : IsUnit a) (hb : IsUnit b)
 
-example : Checked.inv a * a = 1 := Checked.inv_mul_cancel a ha
+example : Checked.inv a * a = 1 := inv_mul_cancel₀
 
-example : Checked.div a b * b = a := Checked.div_mul_cancel a b hb
+example : Checked.div a b * b = a := div_mul_cancel₀ a
 
 example : Checked.inv (a * b) * (a * b) = 1 :=
-  Checked.inv_mul_cancel _ (ha.mul hb)
+  inv_mul_cancel₀ (ha := ha.mul hb)
 
-example : Checked.zpow a (0 : Int) = 1 := Checked.zpow_zero a _
+example : Checked.zpow a (0 : Int) = 1 := zpow_zero₀ a
 
 example : Checked.zpow a (3 : Int) = a ^ (3 : Nat) := rfl
 
@@ -29,19 +29,15 @@ section GroupWithZero
 
 variable {K : Type*} [GroupWithZero K] (a b : K) (ha : a ≠ 0) (hb : b ≠ 0)
 
-example : Checked.inv a * a = 1 :=
-  Checked.inv_mul_cancel _ (GroupWithZero.isUnit_of_ne_zero ha)
+example : Checked.inv a * a = 1 := inv_mul_cancel₀
 
-example : Checked.div a (a * b) * (a * b) = a :=
-  Checked.div_mul_cancel _ _ (GroupWithZero.isUnit_of_ne_zero (mul_ne_zero ha hb))
+example : Checked.div a (a * b) * (a * b) = a := div_mul_cancel₀ a
 
 example (h₁ h₂ : IsUnit a) : Checked.inv a h₁ = Checked.inv a h₂ := rfl
 
-example : a⁻¹ * a = 1 :=
-  Checked.inv_mul_cancel _ (GroupWithZero.isUnit_of_ne_zero ha)
+example : a⁻¹ * a = 1 := inv_mul_cancel₀
 
-example : (a / b) * b = a :=
-  Checked.div_mul_cancel _ _ (GroupWithZero.isUnit_of_ne_zero hb)
+example : (a / b) * b = a := div_mul_cancel₀ a
 
 example : a ^ (-1 : Int) = Checked.zpow a (-1) := rfl
 
@@ -73,8 +69,7 @@ section NumeralDenominators
 
 variable {K : Type*} [DivisionSemiring K] [NeZero (2 : K)] (a : K)
 
-example : (a / 2) * 2 = a :=
-  Checked.div_mul_cancel _ _ (GroupWithZero.isUnit_of_ne_zero (NeZero.ne (2 : K)))
+example : (a / 2) * 2 = a := div_mul_cancel₀ a
 
 example : a ^ (2 : Nat) = a * a := pow_two a
 
@@ -123,13 +118,11 @@ local instance : Div K := ⟨fun _ _ => 0⟩
 
 local instance : Pow K Int := ⟨fun _ _ => 0⟩
 
-example (a : K) (ha : a ≠ 0) : a⁻¹ * a = 1 :=
-  Checked.inv_mul_cancel _ (GroupWithZero.isUnit_of_ne_zero ha)
+example (a : K) (ha : a ≠ 0) : a⁻¹ * a = 1 := inv_mul_cancel₀
 
-example (a b : K) (hb : b ≠ 0) : (a / b) * b = a :=
-  Checked.div_mul_cancel _ _ (GroupWithZero.isUnit_of_ne_zero hb)
+example (a b : K) (hb : b ≠ 0) : (a / b) * b = a := div_mul_cancel₀ a
 
-example (a : K) : a ^ (0 : Int) = 1 := Checked.zpow_zero a _
+example (a : K) : a ^ (0 : Int) = 1 := zpow_zero₀ a
 
 example (a : K) : a ^ (2 : Nat) = a * a := pow_two a
 
@@ -188,3 +181,47 @@ example (a b d : Carrier) : a / 5 + d * (b / 4) =
     Checked.div a 5 + d * Checked.div b 4 := rfl
 
 end NamedFieldCarrier
+
+section CanonicalFamily
+
+variable {K : Type*} [CommGroupWithZero K] (a b c x : K) (ha : a ≠ 0) (hb : b ≠ 0) (hc : c ≠ 0)
+
+/-- info: a / b * b = a : Prop -/
+#guard_msgs in
+#check (a / b * b = a : Prop)
+
+/-- info: a ^ 2 / b ^ 2 = (a / b) ^ 2 : Prop -/
+#guard_msgs in
+#check (a ^ 2 / b ^ 2 = (a / b) ^ 2 : Prop)
+
+-- The evidence of the left-hand side is unified from the term: no side goals.
+example : x * (a / b * b) = x * a := by rw [div_mul_cancel₀]
+example : (a * b)⁻¹ = a⁻¹ * b⁻¹ := by rw [mul_inv₀]
+example : (a / b)⁻¹ = b / a := by rw [inv_div₀]
+example : a / (b / c) = a * c / b := by rw [div_div_eq_mul_div₀]
+example : a / (b * c) = a / b / c := by rw [div_mul_eq_div_div₀]
+example : a ^ (-1 : ℤ) = a⁻¹ := by rw [zpow_neg_one₀]
+example : (a / b) ^ 2 = a ^ 2 / b ^ 2 := by rw [div_pow₀]
+example : a⁻¹⁻¹ = a := by simp
+
+end CanonicalFamily
+
+section NoncommutativeGroupWithZero
+
+variable {G : Type*} [GroupWithZero G] (a b : G) (ha : a ≠ 0) (hb : b ≠ 0)
+
+-- Groups with zero are Dedekind-finite, so a product's evidence gives its factors' evidence.
+example : (a * b)⁻¹ = b⁻¹ * a⁻¹ := by rw [mul_inv_rev₀]
+example : b / (a * b) = a⁻¹ := by rw [div_mul_cancel_right₀]
+
+end NoncommutativeGroupWithZero
+
+section MonoidEvidence
+
+variable {M : Type*} [Monoid M] (a b : M) (ha : IsUnit a) (hb : IsUnit b)
+
+example : a * a⁻¹ * b = b := by rw [mul_inv_cancel₀, one_mul]
+example : IsUnit (a⁻¹ * b) := by checked_unit
+example : IsUnit (a / b) := by checked_unit
+
+end MonoidEvidence

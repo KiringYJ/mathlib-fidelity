@@ -11,9 +11,10 @@ public import Mathlib.MeasureTheory.Integral.Bochner.ContinuousLinearMap
 # Integral average of a function
 
 In this file we define `MeasureTheory.average μ f` (notation: `⨍ x, f x ∂μ`) to be the average
-value of `f` with respect to measure `μ`. It is defined as `∫ x, f x ∂((μ univ)⁻¹ • μ)`, so it
-is equal to zero if `f` is not integrable or if `μ` is an infinite measure. If `μ` is a probability
-measure, then the average of any function is equal to its integral.
+value of `f` with respect to measure `μ`. It is defined as `∫ x, f x ∂((μ univ)⁻¹ • μ)`, with the
+inverse taken in `ℝ≥0∞`, so it is equal to zero if `f` is not integrable or if `μ` is an infinite
+measure. If `μ` is a probability measure, then the average of any function is equal to its integral.
+For `0 < μ univ < ∞` it is the integral divided by the real total measure, `average_eq`.
 
 For the average on a set, we use `⨍ x in s, f x ∂μ` (notation for `⨍ x, f x ∂(μ.restrict s)`). For
 average w.r.t. the volume, one can omit `∂volume`.
@@ -270,9 +271,9 @@ variable {f g : α → E}
 variable (μ) in
 /-- Average value of a function `f` w.r.t. a measure `μ`, denoted `⨍ x, f x ∂μ`.
 
-It is equal to `(μ.real univ)⁻¹ • ∫ x, f x ∂μ`, so it takes value zero if `f` is not integrable or
-if `μ` is an infinite measure. If `μ` is a probability measure, then the average of any function is
-equal to its integral.
+For `0 < μ univ < ∞` it is equal to `(μ.real univ)⁻¹ • ∫ x, f x ∂μ`. It takes value zero if `f` is
+not integrable or if `μ` is an infinite measure. If `μ` is a probability measure, then the average
+of any function is equal to its integral.
 
 For the average on a set, use `⨍ x in s, f x ∂μ`, defined as `⨍ x, f x ∂(μ.restrict s)`. For the
 average w.r.t. the volume, one can omit `∂volume`. -/
@@ -281,9 +282,9 @@ noncomputable def average (f : α → E) :=
 
 /-- Average value of a function `f` w.r.t. a measure `μ`.
 
-It is equal to `(μ.real univ)⁻¹ • ∫ x, f x ∂μ`, so it takes value zero if `f` is not integrable or
-if `μ` is an infinite measure. If `μ` is a probability measure, then the average of any function is
-equal to its integral.
+For `0 < μ univ < ∞` it is equal to `(μ.real univ)⁻¹ • ∫ x, f x ∂μ`. It takes value zero if `f` is
+not integrable or if `μ` is an infinite measure. If `μ` is a probability measure, then the average
+of any function is equal to its integral.
 
 For the average on a set, use `⨍ x in s, f x ∂μ`, defined as `⨍ x, f x ∂(μ.restrict s)`. For the
 average w.r.t. the volume, one can omit `∂volume`. -/
@@ -291,18 +292,18 @@ notation3 "⨍ " (...) ", " r:60:(scoped f => f) " ∂" μ:70 => average μ r
 
 /-- Average value of a function `f` w.r.t. the standard measure.
 
-It is equal to `(volume.real univ)⁻¹ * ∫ x, f x`, so it takes value zero if `f` is not integrable
-or if the space has infinite measure. In a probability space, the average of any function is equal
-to its integral.
+For `0 < volume univ < ∞` it is equal to `(volume.real univ)⁻¹ * ∫ x, f x`. It takes value zero if
+`f` is not integrable or if the space has infinite measure. In a probability space, the average of
+any function is equal to its integral.
 
 For the average on a set, use `⨍ x in s, f x`, defined as `⨍ x, f x ∂(volume.restrict s)`. -/
 notation3 "⨍ " (...) ", " r:60:(scoped f => average volume f) => r
 
 /-- Average value of a function `f` w.r.t. a measure `μ` on a set `s`.
 
-It is equal to `(μ.real s)⁻¹ * ∫ x, f x ∂μ`, so it takes value zero if `f` is not integrable on
-`s` or if `s` has infinite measure. If `s` has measure `1`, then the average of any function is
-equal to its integral.
+For `0 < μ s < ∞` it is equal to `(μ.real s)⁻¹ * ∫ x in s, f x ∂μ`. It takes value zero if `f` is
+not integrable on `s` or if `s` has infinite measure. If `s` has measure `1`, then the average of
+any function is equal to its integral.
 
 For the average w.r.t. the volume, one can omit `∂volume`. -/
 notation3 "⨍ " (...) " in " s ", " r:60:(scoped f => f) " ∂" μ:70 =>
@@ -310,9 +311,9 @@ notation3 "⨍ " (...) " in " s ", " r:60:(scoped f => f) " ∂" μ:70 =>
 
 /-- Average value of a function `f` w.r.t. the standard measure on a set `s`.
 
-It is equal to `(volume.real s)⁻¹ * ∫ x, f x`, so it takes value zero `f` is not integrable on `s`
-or if `s` has infinite measure. If `s` has measure `1`, then the average of any function is equal to
-its integral. -/
+For `0 < volume s < ∞` it is equal to `(volume.real s)⁻¹ * ∫ x in s, f x`. It takes value zero if
+`f` is not integrable on `s` or if `s` has infinite measure. If `s` has measure `1`, then the
+average of any function is equal to its integral. -/
 notation3 "⨍ " (...) " in " s ", " r:60:(scoped f => average (Measure.restrict volume s) f) => r
 
 variable (μ) in
@@ -382,8 +383,12 @@ variable (μ f) in
 theorem average_eq' : ⨍ x, f x ∂μ = ∫ x, f x ∂(μ univ)⁻¹ • μ := rfl
 
 variable (μ f) in
-theorem average_eq : ⨍ x, f x ∂μ = (μ.real univ)⁻¹ • ∫ x, f x ∂μ := by
-  rw [average_eq', integral_smul_measure, ENNReal.toReal_inv, measureReal_def]
+/-- For a measure with `0 < μ univ < ∞`, the average is the integral divided by the total measure.
+-/
+theorem average_eq {hμ : IsUnit (μ.real univ)} :
+    ⨍ x, f x ∂μ = (μ.real univ)⁻¹ • ∫ x, f x ∂μ := by
+  rw [average_eq', integral_smul_measure]
+  exact congrArg (· • ∫ x, f x ∂μ) (ENNReal.toReal_inv (μ univ) (ha := hμ))
 
 variable (μ f) in
 theorem average_eq_integral [IsProbabilityMeasure μ] : ⨍ x, f x ∂μ = ∫ x, f x ∂μ := by
@@ -394,35 +399,42 @@ variable (μ f) in
 theorem measure_smul_average [IsFiniteMeasure μ] : μ.real univ • ⨍ x, f x ∂μ = ∫ x, f x ∂μ := by
   rcases eq_or_ne μ 0 with hμ | hμ
   · rw [hμ, integral_zero_measure, average_zero_measure, smul_zero]
-  · rw [average_eq, smul_inv_smul₀]
-    refine (ENNReal.toReal_pos ?_ <| measure_ne_top _ _).ne'
-    rwa [Ne, measure_univ_eq_zero]
+  · have h : μ.real univ ≠ 0 :=
+      (ENNReal.toReal_pos (by rwa [Ne, measure_univ_eq_zero]) (measure_ne_top _ _)).ne'
+    rw [average_eq μ f (hμ := h.isUnit), smul_inv_smul₀]
 
 variable (μ f) in
-theorem setAverage_eq (s : Set α) : ⨍ x in s, f x ∂μ = (μ.real s)⁻¹ • ∫ x in s, f x ∂μ := by
-  rw [average_eq, measureReal_restrict_apply_univ]
+/-- For a set with `0 < μ s < ∞`, the average on `s` is the integral on `s` divided by `μ s`. -/
+theorem setAverage_eq (s : Set α) {hs : IsUnit (μ.real s)} :
+    ⨍ x in s, f x ∂μ = (μ.real s)⁻¹ • ∫ x in s, f x ∂μ := by
+  rw [average_eq (μ.restrict s) f (hμ := by rwa [measureReal_restrict_apply_univ])]
+  simp only [measureReal_restrict_apply_univ]
 
 variable (μ f) in
 theorem setAverage_eq' (s : Set α) : ⨍ x in s, f x ∂μ = ∫ x, f x ∂(μ s)⁻¹ • μ.restrict s := by
   simp only [average_eq', restrict_apply_univ]
 
 theorem average_congr (h : f =ᵐ[μ] g) : ⨍ x, f x ∂μ = ⨍ x, g x ∂μ := by
-  simp only [average_eq, integral_congr_ae h]
+  simp only [average_eq', integral_smul_measure, integral_congr_ae h]
 
 theorem setAverage_congr (h : s =ᵐ[μ] t) : ⨍ x in s, f x ∂μ = ⨍ x in t, f x ∂μ := by
-  simp only [setAverage_eq, setIntegral_congr_set h, measureReal_congr h]
+  simp only [setAverage_eq', restrict_congr_set h, measure_congr h]
 
 theorem setAverage_congr_fun (hs : MeasurableSet s) (h : ∀ᵐ x ∂μ, x ∈ s → f x = g x) :
-    ⨍ x in s, f x ∂μ = ⨍ x in s, g x ∂μ := by simp only [average_eq, setIntegral_congr_ae hs h]
+    ⨍ x in s, f x ∂μ = ⨍ x in s, g x ∂μ := by
+  simp only [average_eq', integral_smul_measure, setIntegral_congr_ae hs h]
 
+/-- The average with respect to a sum of finite measures, not both zero. -/
 theorem average_add_measure [IsFiniteMeasure μ] {ν : Measure α} [IsFiniteMeasure ν] {f : α → E}
-    (hμ : Integrable f μ) (hν : Integrable f ν) :
+    {hμν : IsUnit (μ.real univ + ν.real univ)} (hμ : Integrable f μ) (hν : Integrable f ν) :
     ⨍ x, f x ∂(μ + ν) =
       (μ.real univ / (μ.real univ + ν.real univ)) • ⨍ x, f x ∂μ +
         (ν.real univ / (μ.real univ + ν.real univ)) • ⨍ x, f x ∂ν := by
-  simp only [div_eq_inv_mul, mul_smul, measure_smul_average, ← smul_add,
+  have h : (μ + ν).real univ = μ.real univ + ν.real univ := measureReal_add_apply
+  simp only [div_eq_inv_mul₀, mul_smul, measure_smul_average, ← smul_add,
     ← integral_add_measure hμ hν]
-  rw [average_eq, measureReal_add_apply]
+  rw [average_eq (μ + ν) f (hμ := h ▸ hμν)]
+  simp only [h]
 
 theorem average_pair [CompleteSpace E]
     {f : α → E} {g : α → F} (hfi : Integrable f μ) (hgi : Integrable g μ) :
@@ -434,14 +446,17 @@ theorem measure_smul_setAverage (f : α → E) {s : Set α} (h : μ s ≠ ∞) :
   have := Fact.mk h.lt_top
   rw [← measure_smul_average, measureReal_restrict_apply_univ]
 
-theorem average_union {f : α → E} {s t : Set α} (hd : AEDisjoint μ s t) (ht : NullMeasurableSet t μ)
+/-- The average on a union of two almost disjoint sets of finite measure, not both null. -/
+theorem average_union {f : α → E} {s t : Set α} {hst : IsUnit (μ.real s + μ.real t)}
+    (hd : AEDisjoint μ s t) (ht : NullMeasurableSet t μ)
     (hsμ : μ s ≠ ∞) (htμ : μ t ≠ ∞) (hfs : IntegrableOn f s μ) (hft : IntegrableOn f t μ) :
     ⨍ x in s ∪ t, f x ∂μ =
       (μ.real s / (μ.real s + μ.real t)) • ⨍ x in s, f x ∂μ +
         (μ.real t / (μ.real s + μ.real t)) • ⨍ x in t, f x ∂μ := by
   have := Fact.mk hsμ.lt_top; have := Fact.mk htμ.lt_top
-  rw [restrict_union₀ hd ht, average_add_measure hfs hft, measureReal_restrict_apply_univ,
-    measureReal_restrict_apply_univ]
+  rw [restrict_union₀ hd ht,
+    average_add_measure (hμν := by simpa only [measureReal_restrict_apply_univ] using hst) hfs hft]
+  simp only [measureReal_restrict_apply_univ]
 
 theorem average_union_mem_openSegment {f : α → E} {s t : Set α} (hd : AEDisjoint μ s t)
     (ht : NullMeasurableSet t μ) (hs₀ : μ s ≠ 0) (ht₀ : μ t ≠ 0) (hsμ : μ s ≠ ∞) (htμ : μ t ≠ ∞)
@@ -536,7 +551,7 @@ theorem ofReal_average {f : α → ℝ} (hf : Integrable f μ) (hf₀ : 0 ≤ᵐ
     ENNReal.ofReal (⨍ x, f x ∂μ) = (∫⁻ x, ENNReal.ofReal (f x) ∂μ) / μ univ := by
   obtain rfl | hμ := eq_or_ne μ 0
   · simp
-  · rw [average_eq, smul_eq_mul, measureReal_def, ← toReal_inv, ofReal_mul toReal_nonneg,
+  · rw [average_eq', integral_smul_measure, smul_eq_mul, ofReal_mul toReal_nonneg,
       ofReal_toReal (inv_ne_top.2 <| measure_univ_ne_zero.2 hμ),
       ofReal_integral_eq_lintegral_ofReal hf hf₀, ENNReal.div_eq_inv_mul]
 
@@ -546,8 +561,9 @@ theorem ofReal_setAverage {f : α → ℝ} (hf : IntegrableOn f s μ) (hf₀ : 0
 
 theorem toReal_laverage {f : α → ℝ≥0∞} (hf : AEMeasurable f μ) (hf' : ∀ᵐ x ∂μ, f x ≠ ∞) :
     (⨍⁻ x, f x ∂μ).toReal = ⨍ x, (f x).toReal ∂μ := by
-    rw [average_eq, laverage_eq, smul_eq_mul, toReal_div, div_eq_inv_mul, ←
-      integral_toReal hf (hf'.mono fun _ => lt_top_iff_ne_top.2), measureReal_def]
+  rw [average_eq', integral_smul_measure, laverage_eq', lintegral_smul_measure,
+    integral_toReal hf (hf'.mono fun _ => lt_top_iff_ne_top.2)]
+  simp only [smul_eq_mul, toReal_mul]
 
 theorem toReal_setLAverage {f : α → ℝ≥0∞} (hf : AEMeasurable f (μ.restrict s))
     (hf' : ∀ᵐ x ∂μ.restrict s, f x ≠ ∞) :
@@ -583,7 +599,7 @@ theorem measure_le_setAverage_pos (hμ : μ s ≠ 0) (hμ₁ : μ s ≠ ∞) (hf
 measure. -/
 theorem measure_setAverage_le_pos (hμ : μ s ≠ 0) (hμ₁ : μ s ≠ ∞) (hf : IntegrableOn f s μ) :
     0 < μ ({x ∈ s | ⨍ a in s, f a ∂μ ≤ f x}) := by
-  simpa [integral_neg, neg_div] using measure_le_setAverage_pos hμ hμ₁ hf.neg
+  simpa [integral_neg, neg_div₀] using measure_le_setAverage_pos hμ hμ₁ hf.neg
 
 /-- **First moment method**. The minimum of an integrable function is smaller than its mean. -/
 theorem exists_le_setAverage (hμ : μ s ≠ 0) (hμ₁ : μ s ≠ ∞) (hf : IntegrableOn f s μ) :
@@ -830,7 +846,8 @@ end FirstMomentENNReal
 
 /-- If the average of a function `f` along a sequence of sets `aₙ` converges to `c` (more precisely,
 we require that `⨍ y in a i, ‖f y - c‖ ∂μ` tends to `0`), then the integral of `gₙ • f` also tends
-to `c` if `gₙ` is supported in `aₙ`, has integral converging to one and supremum at most `K / μ aₙ`.
+to `c` if `gₙ` is supported in `aₙ`, has integral converging to one and supremum at most `K / μ aₙ`,
+where `μ aₙ` is finite and positive.
 -/
 theorem tendsto_integral_smul_of_tendsto_average_norm_sub
     [CompleteSpace E]
@@ -839,7 +856,7 @@ theorem tendsto_integral_smul_of_tendsto_average_norm_sub
     (f_int : ∀ᶠ i in l, IntegrableOn f (a i) μ)
     (hg : Tendsto (fun i ↦ ∫ y, g i y ∂μ) l (𝓝 1))
     (g_supp : ∀ᶠ i in l, Function.support (g i) ⊆ a i)
-    (g_bound : ∀ᶠ i in l, ∀ x, |g i x| ≤ K / μ.real (a i)) :
+    (g_bound : ∀ᶠ i in l, ∃ (_ : 0 < μ.real (a i)), ∀ x, |g i x| ≤ K / μ.real (a i)) :
     Tendsto (fun i ↦ ∫ y, g i y • f y ∂μ) l (𝓝 c) := by
   have g_int : ∀ᶠ i in l, Integrable (g i) μ := by
     filter_upwards [(tendsto_order.1 hg).1 _ zero_lt_one] with i hi
@@ -847,6 +864,7 @@ theorem tendsto_integral_smul_of_tendsto_average_norm_sub
     simp only [integral_undef hi, lt_self_iff_false, not_false_eq_true]
   have I : ∀ᶠ i in l, ∫ y, g i y • (f y - c) ∂μ + (∫ y, g i y ∂μ) • c = ∫ y, g i y • f y ∂μ := by
     filter_upwards [f_int, g_int, g_supp, g_bound] with i hif hig hisupp hibound
+    obtain ⟨hai, hibound⟩ := hibound
     rw [← integral_smul_const, ← integral_add]
     · simp only [smul_sub, sub_add_cancel]
     · simp_rw [smul_sub]
@@ -863,17 +881,15 @@ theorem tendsto_integral_smul_of_tendsto_average_norm_sub
     have := hf.const_mul K
     simp only [mul_zero] at this
     refine squeeze_zero_norm' ?_ this
-    filter_upwards [g_supp, g_bound, f_int, (tendsto_order.1 hg).1 _ zero_lt_one]
-      with i hi h'i h''i hi_int
-    have mu_ai : μ (a i) < ∞ := by
-      rw [lt_top_iff_ne_top]
-      intro h
-      simp only [h, ENNReal.toReal_top, _root_.div_zero, abs_nonpos_iff, measureReal_def] at h'i
-      have : ∫ (y : α), g i y ∂μ = ∫ (y : α), 0 ∂μ := by congr; ext y; exact h'i y
-      simp [this] at hi_int
+    filter_upwards [g_supp, g_bound, f_int] with i hi h'i h''i
+    obtain ⟨hai, h'i⟩ := h'i
+    have mu_ai : μ (a i) < ∞ := (ENNReal.toReal_pos_iff.1 hai).2
+    have hai' : IsUnit ((μ.restrict (a i)).real univ) := by
+      rw [measureReal_restrict_apply_univ]
+      exact hai.ne'.isUnit
     apply (norm_integral_le_integral_norm _).trans
-    simp_rw [average_eq, smul_eq_mul, ← integral_const_mul, norm_smul, ← mul_assoc,
-      ← div_eq_mul_inv]
+    simp_rw [average_eq (hμ := hai'), smul_eq_mul, ← integral_const_mul, norm_smul, ← mul_assoc,
+      ← div_eq_mul_inv₀]
     have : ∀ x, x ∉ a i → ‖g i x‖ * ‖(f x - c)‖ = 0 := by
       intro x hx
       have : g i x = 0 := by rw [← Function.notMem_support]; exact fun h ↦ hx (hi h)

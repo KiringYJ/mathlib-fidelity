@@ -411,11 +411,11 @@ section Group
 
 variable [LinearOrderedCommGroupWithZero Γ₀] (v : Valuation R Γ₀) {x y : R}
 
-theorem map_inv {R : Type*} [DivisionRing R] (v : Valuation R Γ₀) : ∀ x, v x⁻¹ = (v x)⁻¹ :=
-  map_inv₀ _
+theorem map_inv (x : R) {hx : IsUnit x} : v x⁻¹ = Checked.inv (v x) (hx.map v) :=
+  map_inv₀ v x
 
-theorem map_div {R : Type*} [DivisionRing R] (v : Valuation R Γ₀) : ∀ x y, v (x / y) = v x / v y :=
-  map_div₀ _
+theorem map_div (x y : R) {hy : IsUnit y} : v (x / y) = Checked.div (v x) (v y) (hy.map v) :=
+  map_div₀ v x y
 
 theorem one_lt_val_iff (v : Valuation K Γ₀) {x : K} (h : x ≠ 0) : 1 < v x ↔ v x⁻¹ < 1 := by
   simp [inv_lt_one₀ (v.pos_iff.2 h)]
@@ -429,22 +429,20 @@ theorem val_lt_one_iff (v : Valuation K Γ₀) {x : K} (h : x ≠ 0) : v x < 1 �
 theorem val_le_one_iff (v : Valuation K Γ₀) {x : K} (h : x ≠ 0) : v x ≤ 1 ↔ 1 ≤ v x⁻¹ := by
   simp [one_le_inv₀ (v.pos_iff.2 h)]
 
-theorem val_eq_one_iff (v : Valuation K Γ₀) {x : K} : v x = 1 ↔ v x⁻¹ = 1 := by
+theorem val_eq_one_iff (v : Valuation K Γ₀) {x : K} {hx : IsUnit x} : v x = 1 ↔ v x⁻¹ = 1 := by
   simp
 
-theorem val_le_one_or_val_inv_lt_one (v : Valuation K Γ₀) (x : K) : v x ≤ 1 ∨ v x⁻¹ < 1 := by
-  obtain rfl | h := eq_or_ne x 0
-  · simp
-  · simp only [← one_lt_val_iff v h, le_or_gt]
+theorem val_le_one_or_val_inv_lt_one (v : Valuation K Γ₀) (x : K) {hx : IsUnit x} :
+    v x ≤ 1 ∨ v x⁻¹ < 1 := by
+  simp only [← one_lt_val_iff v hx.ne_zero, le_or_gt]
 
 /--
 This theorem is a weaker version of `Valuation.val_le_one_or_val_inv_lt_one`, but more symmetric
 in `x` and `x⁻¹`.
 -/
-theorem val_le_one_or_val_inv_le_one (v : Valuation K Γ₀) (x : K) : v x ≤ 1 ∨ v x⁻¹ ≤ 1 := by
-  by_cases h : x = 0
-  · simp only [h, map_zero, zero_le, inv_zero, or_self]
-  · simp only [← one_le_val_iff v h, le_total]
+theorem val_le_one_or_val_inv_le_one (v : Valuation K Γ₀) (x : K) {hx : IsUnit x} :
+    v x ≤ 1 ∨ v x⁻¹ ≤ 1 := by
+  simp only [← one_le_val_iff v hx.ne_zero, le_total]
 
 /-- The subgroup of elements whose valuation is less than or equal to a certain value. -/
 def leAddSubgroup (v : Valuation R Γ₀) (γ : Γ₀) : AddSubgroup R where
@@ -545,15 +543,16 @@ lemma restrict_eq_one_iff {x : R} : v.restrict x = 1 ↔ v x = 1 := by
   simp [restrict_def, restrict₀_eq_one_iff]
 
 lemma exists_div_eq_of_unit (γ : (ValueGroup₀ (.ofClass v))ˣ) :
-    ∃ r s, 0 < v r ∧ 0 < v s ∧ v.restrict r / v.restrict s = γ.1 := by
+    ∃ (r s : R) (_ : 0 < v r) (hs : 0 < v s),
+      Checked.div (v.restrict r) (v.restrict s) ((v.restrict_pos_iff s).2 hs).ne'.isUnit =
+        γ.1 := by
   set u := WithZero.unzero (Units.ne_zero γ) with hu_def
   obtain ⟨a, ⟨ha, x, hax⟩⟩ := (mem_valueGroup_iff_of_comm _).mp u.2
   have hx : 0 < v x := by
     rw [← restrict_pos_iff, restrict_def, WithZero.pos_iff_ne_zero, ne_eq, restrict₀_eq_zero_iff]
     aesop
-  use x, a, hx, zero_lt_iff.mpr ha
-  have ha0 : v.restrict a ≠ 0 := by simpa using ha
-  rw [div_eq_iff ha0, mul_comm, ← embedding_strictMono.injective.eq_iff, map_mul,
+  refine ⟨x, a, hx, zero_lt_iff.mpr ha, ?_⟩
+  rw [div_eq_iff, mul_comm, ← embedding_strictMono.injective.eq_iff, map_mul,
     embedding_restrict, embedding_restrict]
   rw [← MonoidWithZeroHom.coe_ofClass, ← hax]
   congr
@@ -649,8 +648,7 @@ lemma IsNontrivial.exists_lt_one {Γ₀ : Type*} [LinearOrderedCommGroupWithZero
   rcases hx with hx | hx
   · use x
     simp [hx]
-  · use x⁻¹
-    simp [-map_inv₀, ← one_lt_val_iff, hx]
+  · exact ⟨Checked.inv (x : K) x.isUnit, inv_ne_zero, (one_lt_val_iff v x.ne_zero).1 hx⟩
 
 theorem isNontrivial_iff_exists_lt_one {Γ₀ : Type*} [LinearOrderedCommGroupWithZero Γ₀]
     (v : Valuation K Γ₀) : v.IsNontrivial ↔ ∃ x ≠ 0, v x < 1 :=
@@ -930,8 +928,10 @@ theorem isEquiv_of_val_le_one (h : ∀ x, v x ≤ 1 ↔ v' x ≤ 1) : v.IsEquiv 
   intro x y
   obtain rfl | hy := eq_or_ne y 0
   · simp
-  · rw [← div_le_one₀, ← v.map_div, h, v'.map_div, div_le_one₀] <;>
-      rwa [zero_lt_iff, ne_zero_iff]
+  · have hvy : 0 < v y := zero_lt_iff.2 (v.ne_zero_iff.2 hy)
+    have hv'y : 0 < v' y := zero_lt_iff.2 (v'.ne_zero_iff.2 hy)
+    have hxy := h (x / y)
+    rwa [v.map_div, v'.map_div, div_le_one₀ hvy, div_le_one₀ hv'y] at hxy
 
 theorem isEquiv_iff_val_le_one : v.IsEquiv v' ↔ ∀ {x}, v x ≤ 1 ↔ v' x ≤ 1 :=
   ⟨IsEquiv.le_one_iff_le_one, isEquiv_of_val_le_one⟩
@@ -983,15 +983,15 @@ theorem isEquiv_iff_val_lt_one : v.IsEquiv v' ↔ ∀ {x}, v x < 1 ↔ v' x < 1 
       cases ne_iff_lt_or_gt.1 h_1 with
       | inl h_2 => simpa [hh, lt_self_iff_false] using h.2 h_2
       | inr h_2 =>
-          rw [← inv_one, ← inv_eq_iff_eq_inv, ← map_inv₀] at hh
-          exact hh.not_lt (h.2 ((one_lt_val_iff v' hx).1 h_2))
+          have hh' : v x⁻¹ = 1 := (val_eq_one_iff v).1 hh
+          exact hh'.not_lt (h.2 ((one_lt_val_iff v' hx).1 h_2))
     · intro hh
       by_contra h_1
       cases ne_iff_lt_or_gt.1 h_1 with
       | inl h_2 => simpa [hh, lt_self_iff_false] using h.1 h_2
       | inr h_2 =>
-        rw [← inv_one, ← inv_eq_iff_eq_inv, ← map_inv₀] at hh
-        exact hh.not_lt (h.1 ((one_lt_val_iff v hx).1 h_2))
+        have hh' : v' x⁻¹ = 1 := (val_eq_one_iff v').1 hh
+        exact hh'.not_lt (h.1 ((one_lt_val_iff v hx).1 h_2))
 
 theorem isEquiv_iff_val_sub_one_lt_one :
     v.IsEquiv v' ↔ ∀ {x}, v (x - 1) < 1 ↔ v' (x - 1) < 1 := by
@@ -1287,12 +1287,12 @@ section Group
 variable [LinearOrderedAddCommGroupWithTop Γ₀] [Ring R] (v : AddValuation R Γ₀) {x y : R}
 
 @[simp]
-theorem map_inv (v : AddValuation K Γ₀) {x : K} : v x⁻¹ = -(v x) :=
-  map_inv₀ (toValuation v) x
+theorem map_inv {hx : IsUnit x} : v x⁻¹ = -(v x) :=
+  eq_neg_of_add_eq_zero_left <| by rw [← v.map_mul, inv_mul_cancel₀, v.map_one]
 
 @[simp]
-theorem map_div (v : AddValuation K Γ₀) {x y : K} : v (x / y) = v x - v y :=
-  map_div₀ (toValuation v) x y
+theorem map_div {hy : IsUnit y} : v (x / y) = v x - v y := by
+  rw [div_eq_mul_inv₀, v.map_mul, v.map_inv, sub_eq_add_neg]
 
 end Group
 

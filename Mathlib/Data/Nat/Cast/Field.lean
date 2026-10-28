@@ -18,8 +18,8 @@ This file concerns the canonical homomorphism `ℕ → F`, where `F` is a field.
 
 ## Main results
 
-* `Nat.cast_div`: if `n` divides `m` and its image is nonzero, then natural division
-  agrees with division by the corresponding unit.
+* `Nat.cast_div`: if `n` divides `m` and its image is nonzero, then the cast of the natural
+  quotient `m / n` is the quotient of the casts.
 -/
 
 public section
@@ -30,17 +30,13 @@ namespace Nat
 variable {K : Type*} [DivisionSemiring K] {d m n : ℕ}
 
 @[simp]
-lemma cast_div (hnm : n ∣ m) (hn : (n : K) ≠ 0) :
-    (↑(m / n) : K) = (m : K) /ₚ Units.mk0 (n : K) hn := by
-  apply eq_divp_iff_mul_eq.mpr
-  change (↑(m / n) : K) * (n : K) = (m : K)
-  rw [← Nat.cast_mul, Nat.div_mul_cancel hnm]
+lemma cast_div (hnm : n ∣ m) (hn : (n : K) ≠ 0) : (↑(m / n) : K) = m / n := by
+  rw [eq_div_iff, ← Nat.cast_mul, Nat.div_mul_cancel hnm]
 
 variable [CharZero K]
 
-@[simp]
-lemma cast_div_charZero (hnm : n ∣ m) (hn : n ≠ 0) :
-    (↑(m / n) : K) = (m : K) /ₚ Units.mk0 (n : K) (Nat.cast_ne_zero.mpr hn) :=
+@[simp, norm_cast]
+lemma cast_div_charZero (hnm : n ∣ m) (hn : n ≠ 0) : (↑(m / n) : K) = m / n :=
   cast_div hnm (Nat.cast_ne_zero.mpr hn)
 
 /-- A nonzero multiple has a nonzero natural quotient by its divisor. -/
@@ -51,18 +47,17 @@ lemma cast_div_ne_zero (hnm : n ∣ m) (hm : m ≠ 0) : (↑(m / n) : K) ≠ 0 :
   have h := Nat.div_mul_cancel hnm
   simpa only [hq, Nat.zero_mul] using h.symm
 
+/- Evidence for a quotient by a natural quotient: a nonzero multiple has a nonzero quotient by its
+divisor. -/
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply Nat.cast_div_ne_zero) <;> assumption))
+
 lemma cast_div_div_div_cancel_right (hn : d ∣ n) (hm : d ∣ m) (hn0 : n ≠ 0) :
-    (↑(m / d) : K) /ₚ Units.mk0 (↑(n / d) : K) (cast_div_ne_zero hn hn0) =
-      (m : K) /ₚ Units.mk0 (n : K) (Nat.cast_ne_zero.mpr hn0) := by
-  apply eq_divp_iff_mul_eq.mpr
-  change ((↑(m / d) : K) /ₚ Units.mk0 (↑(n / d) : K) (cast_div_ne_zero hn hn0)) *
-    (n : K) = (m : K)
-  have hn' : (n : K) = (↑(n / d) : K) * (d : K) := by
-    rw [← Nat.cast_mul, Nat.div_mul_cancel hn]
-  rw [hn', ← mul_assoc]
-  have hc := divp_mul_cancel (↑(m / d) : K)
-    (Units.mk0 (↑(n / d) : K) (cast_div_ne_zero hn hn0))
-  simp only [Units.val_mk0] at hc
-  rw [hc, ← Nat.cast_mul, Nat.div_mul_cancel hm]
+    (↑(m / d) : K) / ↑(n / d) = m / n := by
+  have hd : (d : K) ≠ 0 := Nat.cast_ne_zero.mpr fun h ↦ hn0 (Nat.eq_zero_of_zero_dvd (h ▸ hn))
+  simp only [cast_div hm hd, cast_div hn hd]
+  exact div_div_div_cancel_right₀ _ _
 
 end Nat

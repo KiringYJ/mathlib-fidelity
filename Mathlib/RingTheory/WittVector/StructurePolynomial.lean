@@ -185,7 +185,6 @@ theorem wittStructureRat_rec (Φ : MvPolynomial idx ℚ) (n : ℕ) :
     wittStructureRat p Φ n = C (1 / (p : ℚ) ^ n) * (wittStructureRat p Φ n * C ((p : ℚ) ^ n)) := ?_
     _ = _ := by rw [wittStructureRat_rec_aux]
   rw [mul_left_comm, ← C_mul, div_mul_cancel₀, C_1, mul_one]
-  exact pow_ne_zero _ (Nat.cast_ne_zero.2 hp.1.ne_zero)
 
 /-- `wittStructureInt Φ` is a family of polynomials `ℕ → MvPolynomial (idx × ℕ) ℤ`
 that are uniquely characterised by the property that
@@ -269,7 +268,7 @@ theorem map_wittStructureInt (Φ : MvPolynomial idx ℤ) (n : ℕ) :
   induction n using Nat.strong_induction_on with | h n IH => ?_
   rw [wittStructureInt, map_mapRange_eq_iff, Int.coe_castRingHom]
   intro c
-  rw [wittStructureRat_rec, coeff_C_mul, mul_comm, mul_div_assoc', mul_one]
+  rw [wittStructureRat_rec, coeff_C_mul, mul_comm, ← mul_div_assoc₀, mul_one]
   have sum_induction_steps :
       map (Int.castRingHom ℚ)
         (∑ i ∈ range n, C ((p : ℤ) ^ i) * wittStructureInt p Φ i ^ p ^ (n - i)) =
@@ -283,9 +282,8 @@ theorem map_wittStructureInt (Φ : MvPolynomial idx ℤ) (n : ℕ) :
     rfl
   simp only [← sum_induction_steps, ← map_wittPolynomial p (Int.castRingHom ℚ), ← map_rename, ←
     map_bind₁, ← map_sub, coeff_map]
-  rw [show (p : ℚ) ^ n = ((↑(p ^ n) : ℤ) : ℚ) by norm_cast]
+  simp only [show (p : ℚ) ^ n = ((↑(p ^ n) : ℤ) : ℚ) by norm_cast]
   rw [← Rat.den_eq_one_iff, eq_intCast, Rat.den_div_intCast_eq_one_iff]
-  swap; · exact mod_cast pow_ne_zero n hp.1.ne_zero
   revert c; rw [← C_dvd_iff_dvd_coeff]
   exact C_p_pow_dvd_bind₁_rename_wittPolynomial_sub_sum Φ n IH
 

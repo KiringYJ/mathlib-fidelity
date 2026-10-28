@@ -113,18 +113,23 @@ theorem exists_rat_eq_nth_den : ∃ q : ℚ, (of v).dens n = (q : K) := by
   simp [den_eq_conts_b, nth_cont_eq]
 
 /-- Every finite convergent corresponds to a rational number. -/
-theorem exists_rat_eq_nth_conv : ∃ q : ℚ, (of v).convs n = (q : K) := by
+theorem exists_rat_eq_nth_conv {hB : IsUnit ((of v).dens n)} :
+    ∃ q : ℚ, (of v).convs n = (q : K) := by
   rcases exists_rat_eq_nth_num v n with ⟨Aₙ, nth_num_eq⟩
   rcases exists_rat_eq_nth_den v n with ⟨Bₙ, nth_den_eq⟩
+  have hBₙ : Bₙ ≠ 0 := by
+    rintro rfl
+    rw [Rat.cast_zero] at nth_den_eq
+    exact hB.ne_zero nth_den_eq
   use Aₙ / Bₙ
-  simp [nth_num_eq, nth_den_eq, conv_eq_num_div_den]
+  simp only [conv_eq_num_div_den, nth_num_eq, nth_den_eq, Rat.cast_div]
 
 variable {v}
 
 /-- Every terminating continued fraction corresponds to a rational number. -/
 theorem exists_rat_eq_of_terminates (terminates : (of v).Terminates) : ∃ q : ℚ, v = ↑q := by
-  obtain ⟨n, v_eq_conv⟩ : ∃ n, v = (of v).convs n := of_correctness_of_terminates terminates
-  obtain ⟨q, conv_eq_q⟩ : ∃ q : ℚ, (of v).convs n = (↑q : K) := exists_rat_eq_nth_conv v n
+  obtain ⟨n, hB, v_eq_conv⟩ := of_correctness_of_terminates terminates
+  obtain ⟨q, conv_eq_q⟩ : ∃ q : ℚ, (of v).convs n hB = (↑q : K) := exists_rat_eq_nth_conv v n
   have : v = (↑q : K) := Eq.trans v_eq_conv conv_eq_q
   use q, this
 
@@ -176,7 +181,7 @@ theorem coe_stream_nth_rat_eq (v_eq_q : v = (↑q : K)) (n : ℕ) :
       obtain ⟨b, fr⟩ := ifp_n
       rcases Decidable.em (fr = 0) with fr_zero | fr_ne_zero
       · simp [IntFractPair.stream, IH.symm, v_eq_q, stream_q_nth_eq, fr_zero]
-      · have : (fr : K)⁻¹ = ((fr⁻¹ : ℚ) : K) := by norm_cast
+      · have : (fr : K)⁻¹ = ((fr⁻¹ : ℚ) : K) := (Rat.cast_inv fr).symm
         have coe_of_fr := coe_of_rat_eq this
         simpa [IntFractPair.stream, IH.symm, v_eq_q, stream_q_nth_eq, fr_ne_zero]
 
@@ -251,10 +256,7 @@ theorem stream_succ_nth_fr_num_lt_nth_fr_num_rat {ifp_n ifp_succ_n : IntFractPai
     (stream_nth_eq : IntFractPair.stream q n = some ifp_n)
     (stream_succ_nth_eq : IntFractPair.stream q (n + 1) = some ifp_succ_n) :
     ifp_succ_n.fr.num < ifp_n.fr.num := by
-  obtain ⟨ifp_n', stream_nth_eq', ifp_n_fract_ne_zero, IntFractPair.of_eq_ifp_succ_n⟩ :
-    ∃ ifp_n',
-      IntFractPair.stream q n = some ifp_n' ∧
-        ifp_n'.fr ≠ 0 ∧ IntFractPair.of ifp_n'.fr⁻¹ = ifp_succ_n :=
+  obtain ⟨ifp_n', stream_nth_eq', ifp_n_fract_ne_zero, IntFractPair.of_eq_ifp_succ_n⟩ :=
     succ_nth_stream_eq_some_iff.mp stream_succ_nth_eq
   have : ifp_n = ifp_n' := by injection Eq.trans stream_nth_eq.symm stream_nth_eq'
   cases this

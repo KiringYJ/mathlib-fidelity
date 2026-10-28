@@ -190,19 +190,12 @@ theorem pderiv_invOf {i : σ} [CommRing R] (f : MvPowerSeries σ R) [Invertible 
     pderiv i ⅟f = -⅟f ^ 2 * pderiv i f :=
   (pderiv i).leibniz_invOf f
 
-/-
-The following theorem is stated only in the case that `R` is a field. This is because
-there is currently no instance of `Inv (MvPowerSeries σ R)` for more general base rings `R`.
--/
-
+/-- The partial derivative of the inverse of an invertible power series. A power series is
+invertible exactly when its constant coefficient is (`MvPowerSeries.isUnit_iff_constantCoeff`), so
+over a field exactly when its constant coefficient is nonzero. -/
 @[simp]
-theorem pderiv_inv' {i : σ} [Field R] (f : MvPowerSeries σ R) :
-    pderiv i f⁻¹ = -f⁻¹ ^ 2 * pderiv i f := by
-  by_cases h : constantCoeff f = 0
-  · suffices f⁻¹ = 0 by
-      rw [this, pow_two, zero_mul, neg_zero, zero_mul, map_zero]
-    rwa [MvPowerSeries.inv_eq_zero]
-  apply Derivation.leibniz_of_mul_eq_one
-  exact MvPowerSeries.inv_mul_cancel (h := h)
+theorem pderiv_inv' {i : σ} [CommRing R] (f : MvPowerSeries σ R) {hf : IsUnit f} :
+    pderiv i f⁻¹ = -f⁻¹ ^ 2 * pderiv i f :=
+  (pderiv i).leibniz_of_mul_eq_one (inv_mul_cancel₀ (a := f))
 
 end MvPowerSeries

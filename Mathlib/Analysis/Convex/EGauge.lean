@@ -188,7 +188,7 @@ lemma egauge_smul_left (hc : c ≠ 0) (s : Set E) (x : E) :
     egauge 𝕜 (c • s) x * ‖c‖ₑ = egauge 𝕜 (c • s) x / ‖c⁻¹‖ₑ := by
       rw [enorm_inv (by simpa), div_eq_mul_inv, inv_inv]
     _ ≤ egauge 𝕜 (c⁻¹ • c • s) x := le_egauge_smul_left _ _ _
-    _ = egauge 𝕜 s x := by rw [inv_smul_smul₀ hc]
+    _ = egauge 𝕜 s x := by rw [inv_smul_smul₀ (ha := hc.isUnit)]
 
 lemma le_egauge_smul_right (c : 𝕜) (s : Set E) (x : E) :
     ‖c‖ₑ * egauge 𝕜 s x ≤ egauge 𝕜 s (c • x) := by
@@ -199,7 +199,7 @@ lemma le_egauge_smul_right (c : 𝕜) (s : Set E) (x : E) :
   · refine ENNReal.mul_le_of_le_div' <| le_trans ?_ ENNReal.coe_div_le
     rw [div_eq_inv_mul, ← nnnorm_inv, ← nnnorm_mul]
     refine egauge_le_of_mem_smul ⟨y, hy, ?_⟩
-    simp only [mul_smul, hxy, inv_smul_smul₀ hc]
+    simp only [mul_smul, hxy, inv_smul_smul₀ (ha := hc.isUnit)]
 
 lemma egauge_smul_right (h : c = 0 → s.Nonempty) (x : E) :
     egauge 𝕜 s (c • x) = ‖c‖ₑ * egauge 𝕜 s x := by
@@ -209,7 +209,7 @@ lemma egauge_smul_right (h : c = 0 → s.Nonempty) (x : E) :
   · rw [mul_comm, ← ENNReal.div_le_iff_le_mul (.inl <| by simpa) (.inl enorm_ne_top),
       ENNReal.div_eq_inv_mul, ← enorm_inv (by simpa)]
     refine (le_egauge_smul_right _ _ _).trans_eq ?_
-    rw [inv_smul_smul₀ hc]
+    rw [inv_smul_smul₀ (ha := hc.isUnit)]
 
 /-- The extended gauge of a point `(a, b)` with respect to the product of balanced sets `U` and `V`
 is equal to the maximum of the extended gauges of `a` with respect to `U`

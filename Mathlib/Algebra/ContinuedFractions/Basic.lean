@@ -21,14 +21,22 @@ convergents. We follow the naming conventions from Wikipedia and [wall2018analyt
 1. Generalised continued fractions (gcfs)
 2. Simple continued fractions (scfs)
 3. (Regular) continued fractions ((r)cfs)
-4. Computation of convergents using the recurrence relation in `convs`.
+4. Computation of convergents using the recurrence relation in `convs`. The `n`th convergent
+   `Aₙ / Bₙ` is defined when its denominator `Bₙ` is a unit, and `convs` takes that evidence as an
+   argument.
 5. Computation of convergents by directly evaluating the fraction described by the gcf in `convs'`.
+   The evaluation returns `none` when a denominator it meets is not a unit.
 
 ## Implementation notes
 
 1. The most commonly used kind of continued fractions in the literature are regular continued
    fractions. We hence just call them `ContFract` in the library.
 2. We use sequences from `Data.Seq` to encode potentially infinite sequences.
+3. A convergent is a quotient that need not exist: a denominator `Bₙ` of a gcf can vanish, for
+   example `B₁ = b₀`. Hence `convs g n hB` takes evidence `hB : IsUnit (g.dens n)`, which
+   `checked_unit` finds from the context, and `convs'` is `Option`-valued. The partial numerators
+   and denominators of a regular continued fraction are positive, so there both computations are
+   defined.
 
 ## References
 
@@ -260,8 +268,8 @@ namespace GenContFract
 
 We now define how to compute the convergents of a gcf. There are two standard ways to do this:
 directly evaluating the (infinite) fraction described by the gcf or using a recurrence relation.
-For (r)cfs, these computations are equivalent as shown in
-`Algebra.ContinuedFractions.ConvergentsEquiv`.
+Neither needs to be defined for a general gcf, since a denominator can fail to be a unit. For
+(r)cfs, both are defined and equivalent as shown in `Algebra.ContinuedFractions.ConvergentsEquiv`.
 -/
 
 -- Fix a division ring for the computations.
@@ -273,7 +281,7 @@ We start with the definition of the recurrence relation. Given a gcf `g`, for al
 - `B₋₁ = 0,  B₀ = 1,  Bₙ = bₙ₋₁ * Bₙ₋₁ + aₙ₋₁ * Bₙ₋₂`.
 
 `Aₙ, Bₙ` are called the *nth continuants*, `Aₙ` the *nth numerator*, and `Bₙ` the
-*nth denominator* of `g`. The *nth convergent* of `g` is given by `Aₙ / Bₙ`.
+*nth denominator* of `g`. The *nth convergent* of `g` is given by `Aₙ / Bₙ` when `Bₙ` is a unit.
 -/
 
 /-- Returns the next numerator `Aₙ = bₙ₋₁ * Aₙ₋₁ + aₙ₋₁ * Aₙ₋₂`, where `predA` is `Aₙ₋₁`,
@@ -316,27 +324,42 @@ def nums (g : GenContFract K) : Stream' K :=
 def dens (g : GenContFract K) : Stream' K :=
   g.conts.map Pair.b
 
-/-- Returns the convergents `Aₙ / Bₙ` of `g`, where `Aₙ, Bₙ` are the nth continuants of `g`. -/
-def convs (g : GenContFract K) : Stream' K :=
-  fun n : ℕ ↦ g.nums n / g.dens n
+/-- The `n`th convergent `Aₙ / Bₙ` of `g`, where `Aₙ, Bₙ` are the `n`th continuants of `g`.
 
+It is defined when the denominator `Bₙ = g.dens n` is a unit, that is, nonzero; the evidence
+`hB` is found by `checked_unit` from the context. The denominator of a general gcf can vanish,
+for example `B₁ = b₀` for `g = [h; (a₀, b₀), ...]`; the denominators of a regular continued
+fraction are positive. -/
+noncomputable def convs (g : GenContFract K) (n : ℕ)
+    (hB : IsUnit (g.dens n) := by checked_unit) : K :=
+  g.nums n / g.dens n
+
+open scoped Classical in
 /--
-Returns the approximation of the fraction described by the given sequence up to a given position n.
-For example, `convs'Aux [(1, 2), (3, 4), (5, 6)] 2 = 1 / (2 + 3 / 4)` and
-`convs'Aux [(1, 2), (3, 4), (5, 6)] 0 = 0`.
+Evaluates the fraction described by the given sequence `[(a₀, b₀), (a₁, b₁), ...]` up to a given
+position `n`, that is `a₀ / (b₀ + a₁ / (b₁ + ⋯ + aₙ₋₁ / (bₙ₋₁ + 0)))`, dividing in `K` from the
+innermost quotient outwards; a sequence that terminates earlier is evaluated up to its end.
+The result is `none` exactly when one of the denominators `bᵢ + ⋯` met in this evaluation is not a
+unit. For example, `convs'Aux [(1, 2), (3, 4), (5, 6)] 2 = some (1 / (2 + 3 / 4))`,
+`convs'Aux [(1, 2), (3, 4), (5, 6)] 0 = some 0`, and `convs'Aux [(1, 0), (5, 6)] 1 = none`.
 -/
-def convs'Aux : Stream'.Seq (Pair K) → ℕ → K
-  | _, 0 => 0
+noncomputable def convs'Aux : Stream'.Seq (Pair K) → ℕ → Option K
+  | _, 0 => some 0
   | s, n + 1 =>
     match s.head with
-    | none => 0
-    | some gp => gp.a / (gp.b + convs'Aux s.tail n)
+    | none => some 0
+    | some gp => (convs'Aux s.tail n).bind fun t ↦
+      if hB : IsUnit (gp.b + t) then some (gp.a / (gp.b + t)) else none
 
-/-- Returns the convergents of `g` by evaluating the fraction described by `g` up to a given
-position `n`. For example, `convs' [9; (1, 2), (3, 4), (5, 6)] 2 = 9 + 1 / (2 + 3 / 4)` and
-`convs' [9; (1, 2), (3, 4), (5, 6)] 0 = 9`
+/-- Evaluates the fraction described by `g` up to a given position `n`, that is
+`h + a₀ / (b₀ + a₁ / (b₁ + ⋯ + aₙ₋₁ / (bₙ₋₁ + 0)))`, dividing in `K` as `convs'Aux` does.
+The result is `none` exactly when one of the denominators met in this evaluation is not a unit.
+This can happen when the convergent `g.convs n` exists: for `g = [h; (a₀, b₀), (1, 0)]`, the
+evaluation `convs' g 2` meets the denominator `0 + 0`, while `g.dens 2 = 1` and `g.convs 2 = h`.
+For example, `convs' [9; (1, 2), (3, 4), (5, 6)] 2 = some (9 + 1 / (2 + 3 / 4))` and
+`convs' [9; (1, 2), (3, 4), (5, 6)] 0 = some 9`.
 -/
-def convs' (g : GenContFract K) (n : ℕ) : K :=
-  g.h + convs'Aux g.s n
+noncomputable def convs' (g : GenContFract K) (n : ℕ) : Option K :=
+  (convs'Aux g.s n).map (g.h + ·)
 
 end GenContFract

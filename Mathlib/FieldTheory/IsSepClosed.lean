@@ -180,7 +180,8 @@ variable (k) {K}
 theorem of_exists_root (H : ∀ p : k[X], p.Monic → Irreducible p → Separable p → ∃ x, p.eval x = 0) :
     IsSepClosed k := by
   replace H (p : k[X]) (hp : Irreducible p) (hs : Separable p) : ∃ x, p.eval x = 0 := by
-    obtain ⟨x, hx⟩ := H (p * C (leadingCoeff p)⁻¹) (monic_mul_leadingCoeff_inv hp.ne_zero)
+    have hp0 : p ≠ 0 := hp.ne_zero
+    obtain ⟨x, hx⟩ := H (p * C (leadingCoeff p)⁻¹) (monic_mul_leadingCoeff_inv hp0)
       (irreducible_mul_leadingCoeff_inv.mpr hp) (hs.mul_unit (by aesop))
     exact ⟨x, by simpa [hp.ne_zero] using hx⟩
   refine ⟨fun p hp ↦ ?_⟩

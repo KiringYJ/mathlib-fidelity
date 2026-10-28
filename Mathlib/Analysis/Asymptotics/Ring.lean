@@ -12,7 +12,7 @@ public import Mathlib.Analysis.Normed.Field.Basic
 # Ring and field operations on asymptotic relations
 
 This file develops the behavior of `IsBigOWith`, `IsBigO`, and `IsLittleO` under
-multiplication by constants, multiplication of functions, powers, inversion, and division.
+multiplication by constants, multiplication of functions, powers, and inversion.
 -/
 
 @[expose] public section
@@ -54,7 +54,7 @@ theorem isBigOWith_self_const_mul' (u : Rˣ) (f : α → R) (l : Filter α) :
 
 theorem isBigOWith_self_const_mul {c : S} (hc : c ≠ 0) (f : α → S) (l : Filter α) :
     IsBigOWith ‖c‖⁻¹ l f fun x ↦ c * f x := by
-  simp [IsBigOWith, inv_mul_cancel_left₀ (norm_ne_zero_iff.mpr hc)]
+  simp [IsBigOWith, inv_mul_cancel_left₀]
 
 theorem isBigO_self_const_mul' {c : R} (hc : IsUnit c) (f : α → R) (l : Filter α) :
     f =O[l] fun x => c * f x :=
@@ -159,14 +159,14 @@ theorem IsBigO.mul_isLittleO {f₁ f₂ : α → R} {g₁ g₂ : α → S} (h₁
   simp only [IsLittleO_def] at *
   intro c cpos
   rcases h₁.exists_pos with ⟨c', c'pos, hc'⟩
-  exact (hc'.mul (h₂ (div_pos cpos c'pos))).congr_const (mul_div_cancel₀ _ (ne_of_gt c'pos))
+  exact (hc'.mul (h₂ (div_pos cpos c'pos))).congr_const (mul_div_cancel₀ _)
 
 theorem IsLittleO.mul_isBigO {f₁ f₂ : α → R} {g₁ g₂ : α → S} (h₁ : f₁ =o[l] g₁) (h₂ : f₂ =O[l] g₂) :
     (fun x ↦ f₁ x * f₂ x) =o[l] fun x ↦ g₁ x * g₂ x := by
   simp only [IsLittleO_def] at *
   intro c cpos
   rcases h₂.exists_pos with ⟨c', c'pos, hc'⟩
-  exact ((h₁ (div_pos cpos c'pos)).mul hc').congr_const (div_mul_cancel₀ _ (ne_of_gt c'pos))
+  exact ((h₁ (div_pos cpos c'pos)).mul hc').congr_const (div_mul_cancel₀ _)
 
 theorem IsLittleO.mul {f₁ f₂ : α → R} {g₁ g₂ : α → S} (h₁ : f₁ =o[l] g₁) (h₂ : f₂ =o[l] g₂) :
     (fun x ↦ f₁ x * f₂ x) =o[l] fun x ↦ g₁ x * g₂ x :=
@@ -214,49 +214,35 @@ theorem IsLittleO.of_pow [NormOneClass S] {f : α → S} {g : α → R} {n : ℕ
     (h : (f ^ n) =o[l] (g ^ n)) (hn : n ≠ 0) : f =o[l] g :=
   IsLittleO.of_isBigOWith fun _c hc => (h.def' <| pow_pos hc _).of_pow hn le_rfl hc.le
 
-/-! ### Inverse -/
+/-! ### Inverse
 
-theorem IsBigOWith.inv_rev {f : α → 𝕜} {g : α → 𝕜'} (h : IsBigOWith c l f g)
-    (h₀ : ∀ᶠ x in l, f x = 0 → g x = 0) : IsBigOWith c l (fun x => (g x)⁻¹) fun x => (f x)⁻¹ := by
-  refine IsBigOWith.of_bound (h.bound.mp (h₀.mono fun x h₀ hle => ?_))
-  rcases eq_or_ne (f x) 0 with hx | hx
-  · simp only [hx, h₀ hx, inv_zero, norm_zero, mul_zero, le_rfl]
-  · have hc : 0 < c := pos_of_mul_pos_left ((norm_pos_iff.2 hx).trans_le hle) (norm_nonneg _)
-    replace hle := inv_anti₀ (norm_pos_iff.2 hx) hle
-    simpa only [norm_inv, mul_inv, ← div_eq_inv_mul, div_le_iff₀ hc] using! hle
-
-theorem IsBigO.inv_rev {f : α → 𝕜} {g : α → 𝕜'} (h : f =O[l] g)
-    (h₀ : ∀ᶠ x in l, f x = 0 → g x = 0) : (fun x => (g x)⁻¹) =O[l] fun x => (f x)⁻¹ :=
-  let ⟨_c, hc⟩ := h.isBigOWith
-  (hc.inv_rev h₀).isBigO
-
-theorem IsLittleO.inv_rev {f : α → 𝕜} {g : α → 𝕜'} (h : f =o[l] g)
-    (h₀ : ∀ᶠ x in l, f x = 0 → g x = 0) : (fun x => (g x)⁻¹) =o[l] fun x => (f x)⁻¹ :=
-  IsLittleO.of_isBigOWith fun _c hc => (h.def' hc).inv_rev h₀
-
-/-!
-### Eventually (u / v) * v = u
-
-If `u` and `v` are linked by an `IsBigOWith` relation, then we
-eventually have `(u / v) * v = u`, even if `v` vanishes.
+The inverses `fun x ↦ (f x)⁻¹` are functions on the whole index type `α`, so they take the
+invertibility of every value as evidence, unified from the terms. For functions that are
+invertible only on a set `s ∈ l`, apply these lemmas on the subtype `s` with the filter
+`comap (↑) l`.
 -/
 
-section EventuallyMulDivCancel
+theorem IsBigOWith.inv_rev {f : α → 𝕜} {g : α → 𝕜'} {hf : ∀ x, IsUnit (f x)}
+    {hg : ∀ x, IsUnit (g x)} (h : IsBigOWith c l f g) :
+    IsBigOWith c l (fun x => Checked.inv (g x) (hg x)) fun x => Checked.inv (f x) (hf x) := by
+  refine IsBigOWith.of_bound (h.bound.mono fun x hle => ?_)
+  have hfx := hf x
+  have hgx := hg x
+  calc ‖(g x)⁻¹‖ = ‖(g x)⁻¹‖ * ‖f x * (f x)⁻¹‖ := by rw [mul_inv_cancel₀, norm_one, mul_one]
+    _ = ‖(g x)⁻¹‖ * ‖f x‖ * ‖(f x)⁻¹‖ := by rw [norm_mul]; ring
+    _ ≤ ‖(g x)⁻¹‖ * (c * ‖g x‖) * ‖(f x)⁻¹‖ := by gcongr
+    _ = c * ‖(g x)⁻¹ * g x‖ * ‖(f x)⁻¹‖ := by rw [norm_mul]; ring
+    _ = c * ‖(f x)⁻¹‖ := by rw [inv_mul_cancel₀, norm_one, mul_one]
 
-variable {u v : α → 𝕜}
-
-theorem IsBigOWith.eventually_mul_div_cancel (h : IsBigOWith c l u v) : u / v * v =ᶠ[l] u :=
-  Eventually.mono h.bound fun y hy => div_mul_cancel_of_imp fun hv => by simpa [hv] using hy
-
-/-- If `u = O(v)` along `l`, then `(u / v) * v = u` eventually at `l`. -/
-theorem IsBigO.eventually_mul_div_cancel (h : u =O[l] v) : u / v * v =ᶠ[l] u :=
+theorem IsBigO.inv_rev {f : α → 𝕜} {g : α → 𝕜'} {hf : ∀ x, IsUnit (f x)}
+    {hg : ∀ x, IsUnit (g x)} (h : f =O[l] g) :
+    (fun x => Checked.inv (g x) (hg x)) =O[l] fun x => Checked.inv (f x) (hf x) :=
   let ⟨_c, hc⟩ := h.isBigOWith
-  hc.eventually_mul_div_cancel
+  hc.inv_rev.isBigO
 
-/-- If `u = o(v)` along `l`, then `(u / v) * v = u` eventually at `l`. -/
-theorem IsLittleO.eventually_mul_div_cancel (h : u =o[l] v) : u / v * v =ᶠ[l] u :=
-  (h.forall_isBigOWith zero_lt_one).eventually_mul_div_cancel
-
-end EventuallyMulDivCancel
+theorem IsLittleO.inv_rev {f : α → 𝕜} {g : α → 𝕜'} {hf : ∀ x, IsUnit (f x)}
+    {hg : ∀ x, IsUnit (g x)} (h : f =o[l] g) :
+    (fun x => Checked.inv (g x) (hg x)) =o[l] fun x => Checked.inv (f x) (hf x) :=
+  IsLittleO.of_isBigOWith fun _c hc => (h.def' hc).inv_rev
 
 end Asymptotics

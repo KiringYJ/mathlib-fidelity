@@ -181,13 +181,11 @@ variable [TopologicalSpace β] [Field β] (l k f)
 
 theorem superpolynomialDecay_mul_const_iff [ContinuousMul β] {c : β} (hc0 : c ≠ 0) :
     (SuperpolynomialDecay l k fun n => f n * c) ↔ SuperpolynomialDecay l k f :=
-  ⟨fun h => (h.mul_const c⁻¹).congr fun x => by simp [mul_assoc, mul_inv_cancel₀ hc0], fun h =>
-    h.mul_const c⟩
+  ⟨fun h => (h.mul_const c⁻¹).congr fun x => by simp [mul_assoc], fun h => h.mul_const c⟩
 
 theorem superpolynomialDecay_const_mul_iff [ContinuousMul β] {c : β} (hc0 : c ≠ 0) :
     (SuperpolynomialDecay l k fun n => c * f n) ↔ SuperpolynomialDecay l k f :=
-  ⟨fun h => (h.const_mul c⁻¹).congr fun x => by simp [← mul_assoc, inv_mul_cancel₀ hc0], fun h =>
-    h.const_mul c⟩
+  ⟨fun h => (h.const_mul c⁻¹).congr fun x => by simp [← mul_assoc], fun h => h.const_mul c⟩
 
 end Field
 
@@ -203,58 +201,79 @@ theorem superpolynomialDecay_iff_abs_isBoundedUnder (hk : Tendsto k l atTop) :
     ⟨fun h z => Tendsto.isBoundedUnder_le (Tendsto.abs (h z)), fun h =>
       (superpolynomialDecay_iff_abs_tendsto_zero l k f).2 fun z => ?_⟩
   obtain ⟨m, hm⟩ := h (z + 1)
-  have h1 : Tendsto (fun _ : α => (0 : β)) l (𝓝 0) := tendsto_const_nhds
-  have h2 : Tendsto (fun a : α => |(k a)⁻¹| * m) l (𝓝 0) :=
-    zero_mul m ▸
-      Tendsto.mul_const m ((tendsto_zero_iff_abs_tendsto_zero _).1 hk.inv_tendsto_atTop)
+  -- Where `k` does not vanish, which is eventually, `k a ^ z * f a` is
+  -- `(k a)⁻¹ * (k a ^ (z + 1) * f a)`.
+  rw [← Filter.tendsto_comap_val_iff (hk.eventually_ne_atTop 0)]
+  have h1 : Tendsto (fun _ : {a // k a ≠ 0} => (0 : β)) (comap Subtype.val l) (𝓝 0) :=
+    tendsto_const_nhds
+  have h2 : Tendsto (fun a : {a // k a ≠ 0} => |Checked.inv (k a) a.2.isUnit| * m)
+      (comap Subtype.val l) (𝓝 0) := by
+    have h := ((tendsto_zero_iff_abs_tendsto_zero _).1
+      ((hk.comp (tendsto_comap (f := (Subtype.val : {a // k a ≠ 0} → α)))).fun_inv_tendsto_atTop
+        (h0 := fun a : {a // k a ≠ 0} => a.2.isUnit))).mul_const m
+    rwa [zero_mul] at h
   refine
     tendsto_of_tendsto_of_tendsto_of_le_of_le' h1 h2 (Eventually.of_forall fun x => abs_nonneg _)
-      ((eventually_map.1 hm).mp ?_)
-  refine (hk.eventually_ne_atTop 0).mono fun x hk0 hx => ?_
-  refine Eq.trans_le ?_ (mul_le_mul_of_nonneg_left hx <| abs_nonneg (k x)⁻¹)
-  rw [← abs_mul, ← mul_assoc, pow_succ', ← mul_assoc, inv_mul_cancel₀ hk0, one_mul]
+      ?_
+  filter_upwards [tendsto_comap.eventually (eventually_map.1 hm)] with a ha
+  refine Eq.trans_le ?_ (mul_le_mul_of_nonneg_left ha <| abs_nonneg _)
+  rw [← abs_mul, ← mul_assoc, pow_succ', ← mul_assoc, inv_mul_cancel₀, one_mul]
 
+/-- For negative exponents, the power `k a ^ z` is taken on the subtype `{a // k a ≠ 0}` where it
+is defined, with the filter `comap Subtype.val l`. -/
 theorem superpolynomialDecay_iff_zpow_tendsto_zero (hk : Tendsto k l atTop) :
-    SuperpolynomialDecay l k f ↔ ∀ z : ℤ, Tendsto (fun a : α => k a ^ z * f a) l (𝓝 0) := by
-  refine ⟨fun h z => ?_, fun h n => by simpa only [zpow_natCast] using! h (n : ℤ)⟩
-  by_cases! hz : 0 ≤ z
-  · unfold Tendsto
-    lift z to ℕ using hz
-    simpa using! h z
-  · have : Tendsto (fun a => k a ^ z) l (𝓝 0) :=
-      Tendsto.comp (tendsto_zpow_atTop_zero hz) hk
-    have h : Tendsto f l (𝓝 0) := by simpa using! h 0
-    exact zero_mul (0 : β) ▸ this.mul h
+    SuperpolynomialDecay l k f ↔ ∀ z : ℤ,
+      Tendsto (fun a : {a // k a ≠ 0} => Checked.zpow (k a) z (fun _ => a.2.isUnit) * f a)
+        (comap Subtype.val l) (𝓝 0) := by
+  refine ⟨fun h z => ?_, fun h n => ?_⟩
+  · by_cases! hz : 0 ≤ z
+    · lift z to ℕ using hz
+      simpa [Function.comp_def] using (h z).comp tendsto_comap
+    · have hu : Tendsto (fun a : {a // k a ≠ 0} => (⟨k a, a.2.isUnit⟩ : {x : β | IsUnit x}))
+          (comap Subtype.val l) (comap Subtype.val atTop) :=
+        tendsto_comap_iff.mpr (hk.comp tendsto_comap)
+      have h₁ : Tendsto (fun a : {a // k a ≠ 0} => Checked.zpow (k a) z (fun _ => a.2.isUnit))
+          (comap Subtype.val l) (𝓝 0) :=
+        (tendsto_zpow_atTop_zero hz).comp hu
+      have h₂ : Tendsto (fun a : {a // k a ≠ 0} => f a) (comap Subtype.val l) (𝓝 0) := by
+        simpa [Function.comp_def] using (h 0).comp tendsto_comap
+      have h₃ := h₁.mul h₂
+      rwa [mul_zero] at h₃
+  · rw [← Filter.tendsto_comap_val_iff (hk.eventually_ne_atTop 0)]
+    simpa using h n
 
 variable {f}
 
 theorem SuperpolynomialDecay.param_zpow_mul (hk : Tendsto k l atTop)
-    (hf : SuperpolynomialDecay l k f) (z : ℤ) :
-    SuperpolynomialDecay l k fun a => k a ^ z * f a := by
+    (hf : SuperpolynomialDecay l k f) (z : ℤ) {hkz : ∀ a, z < 0 → IsUnit (k a)} :
+    SuperpolynomialDecay l k fun a => Checked.zpow (k a) z (hkz a) * f a := by
   rw [superpolynomialDecay_iff_zpow_tendsto_zero _ hk] at hf ⊢
-  refine fun z' => (hf <| z' + z).congr' ((hk.eventually_ne_atTop 0).mono fun x hx => ?_)
-  simp [zpow_add₀ hx, mul_assoc]
+  refine fun z' => (hf <| z' + z).congr fun a => ?_
+  simp [zpow_add₀ a.2, mul_assoc]
 
 theorem SuperpolynomialDecay.mul_param_zpow (hk : Tendsto k l atTop)
-    (hf : SuperpolynomialDecay l k f) (z : ℤ) : SuperpolynomialDecay l k fun a => f a * k a ^ z :=
-  (hf.param_zpow_mul hk z).congr fun _ => mul_comm _ _
+    (hf : SuperpolynomialDecay l k f) (z : ℤ) {hkz : ∀ a, z < 0 → IsUnit (k a)} :
+    SuperpolynomialDecay l k fun a => f a * Checked.zpow (k a) z (hkz a) :=
+  (hf.param_zpow_mul hk z (hkz := hkz)).congr fun _ => mul_comm _ _
 
-theorem SuperpolynomialDecay.inv_param_mul (hk : Tendsto k l atTop)
+theorem SuperpolynomialDecay.inv_param_mul {hk0 : IsUnit k} (hk : Tendsto k l atTop)
     (hf : SuperpolynomialDecay l k f) : SuperpolynomialDecay l k (k⁻¹ * f) := by
-  simpa using! hf.param_zpow_mul hk (-1)
+  have hka : ∀ a, IsUnit (k a) := Pi.isUnit_iff.mp hk0
+  refine (hf.param_zpow_mul hk (-1) (hkz := fun a _ => hka a)).congr fun a => ?_
+  rw [Pi.mul_apply, Pi.inv_apply₀, zpow_neg_one₀]
 
-theorem SuperpolynomialDecay.param_inv_mul (hk : Tendsto k l atTop)
+theorem SuperpolynomialDecay.param_inv_mul {hk0 : IsUnit k} (hk : Tendsto k l atTop)
     (hf : SuperpolynomialDecay l k f) : SuperpolynomialDecay l k (f * k⁻¹) :=
   (hf.inv_param_mul hk).congr fun _ => mul_comm _ _
 
 variable (f)
 
 theorem superpolynomialDecay_param_mul_iff (hk : Tendsto k l atTop) :
-    SuperpolynomialDecay l k (k * f) ↔ SuperpolynomialDecay l k f :=
-  ⟨fun h =>
-    (h.inv_param_mul hk).congr'
-      ((hk.eventually_ne_atTop 0).mono fun x hx => by simp [← mul_assoc, inv_mul_cancel₀ hx]),
+    SuperpolynomialDecay l k (k * f) ↔ SuperpolynomialDecay l k f := by
+  refine ⟨fun h => h.trans_eventually_abs_le ((hk.eventually_ge_atTop 1).mono fun x hx => ?_),
     fun h => h.param_mul⟩
+  simp only [Function.comp_apply, Pi.mul_apply, abs_mul]
+  exact le_mul_of_one_le_left (abs_nonneg _) (hx.trans (le_abs_self _))
 
 theorem superpolynomialDecay_mul_param_iff (hk : Tendsto k l atTop) :
     SuperpolynomialDecay l k (f * k) ↔ SuperpolynomialDecay l k f := by
@@ -291,32 +310,42 @@ theorem superpolynomialDecay_iff_superpolynomialDecay_norm :
 variable {l k}
 variable [LinearOrder β] [IsStrictOrderedRing β] [OrderTopology β]
 
+/-- The powers `k a ^ z` are taken on the subtype `{a // k a ≠ 0}` where they are defined, with
+the filter `comap Subtype.val l`. -/
 theorem superpolynomialDecay_iff_isBigO (hk : Tendsto k l atTop) :
-    SuperpolynomialDecay l k f ↔ ∀ z : ℤ, f =O[l] fun a : α => k a ^ z := by
-  refine (superpolynomialDecay_iff_zpow_tendsto_zero f hk).trans ?_
-  have hk0 : ∀ᶠ x in l, k x ≠ 0 := hk.eventually_ne_atTop 0
-  refine ⟨fun h z => ?_, fun h z => ?_⟩
-  · refine isBigO_of_div_tendsto_nhds (hk0.mono fun x hx hxz ↦ absurd hxz (zpow_ne_zero _ hx)) 0 ?_
-    have : (fun a : α => k a ^ z)⁻¹ = fun a : α => k a ^ (-z) := funext fun x => by simp
-    rw [div_eq_mul_inv, mul_comm f, this]
-    exact h (-z)
-  · suffices (fun a : α => k a ^ z * f a) =O[l] fun a : α => (k a)⁻¹ from
-      IsBigO.trans_tendsto this hk.inv_tendsto_atTop
-    refine ((isBigO_refl (fun a => k a ^ z) l).mul (h (-(z + 1)))).trans ?_
-    refine .of_bound' <| hk0.mono fun a ha0 => ?_
-    simp [← zpow_add₀ ha0]
+    SuperpolynomialDecay l k f ↔ ∀ z : ℤ, (fun a : {a // k a ≠ 0} => f a) =O[comap Subtype.val l]
+      fun a => Checked.zpow (k a) z (fun _ => a.2.isUnit) := by
+  refine (superpolynomialDecay_iff_zpow_tendsto_zero f hk).trans ⟨fun h z => ?_, fun h z => ?_⟩
+  · refine ((isBigO_refl (fun a : {a // k a ≠ 0} => Checked.zpow (k a) z (fun _ => a.2.isUnit))
+      _).mul ((h (-z)).isBigO_one β)).congr (fun a => ?_) fun a => mul_one _
+    rw [← mul_assoc, ← zpow_add₀ a.2]
+    simp
+  · suffices (fun a : {a // k a ≠ 0} => Checked.zpow (k a) z (fun _ => a.2.isUnit) * f a)
+        =O[comap Subtype.val l] fun a => Checked.inv (k a) a.2.isUnit from
+      IsBigO.trans_tendsto this
+        ((hk.comp tendsto_comap).fun_inv_tendsto_atTop (h0 := fun a : {a // k a ≠ 0} => a.2.isUnit))
+    refine ((isBigO_refl (fun a : {a // k a ≠ 0} => Checked.zpow (k a) z (fun _ => a.2.isUnit))
+      _).mul (h (-(z + 1)))).trans ?_
+    refine .of_bound' <| Eventually.of_forall fun a => ?_
+    simp [← zpow_add₀ a.2]
 
+/-- The powers `k a ^ z` are taken on the subtype `{a // k a ≠ 0}` where they are defined, with
+the filter `comap Subtype.val l`. -/
 theorem superpolynomialDecay_iff_isLittleO (hk : Tendsto k l atTop) :
-    SuperpolynomialDecay l k f ↔ ∀ z : ℤ, f =o[l] fun a : α => k a ^ z := by
+    SuperpolynomialDecay l k f ↔ ∀ z : ℤ, (fun a : {a // k a ≠ 0} => f a) =o[comap Subtype.val l]
+      fun a => Checked.zpow (k a) z (fun _ => a.2.isUnit) := by
   refine ⟨fun h z => ?_, fun h => (superpolynomialDecay_iff_isBigO f hk).2 fun z => (h z).isBigO⟩
-  have hk0 : ∀ᶠ x in l, k x ≠ 0 := hk.eventually_ne_atTop 0
-  have : (fun _ : α => (1 : β)) =o[l] k :=
-    isLittleO_of_tendsto' (hk0.mono fun x hkx hkx' => absurd hkx' hkx)
-      (by simpa using! hk.inv_tendsto_atTop)
-  have : f =o[l] fun x : α => k x * k x ^ (z - 1) := by
-    simpa using! this.mul_isBigO ((superpolynomialDecay_iff_isBigO f hk).1 h <| z - 1)
-  refine this.trans_isBigO <| IsBigO.of_bound' <| hk0.mono fun x hkx => le_of_eq ?_
-  simp [← zpow_one_add₀ hkx]
+  have h1 : (fun _ : {a // k a ≠ 0} => (1 : β)) =o[comap Subtype.val l] fun a => k a := by
+    refine isLittleO_of_tendsto (fun a h => absurd h a.2) ?_
+    refine (Filter.tendsto_comap_val_iff (Eventually.of_forall fun x => x.2)
+      (F := fun a : {a // k a ≠ 0} => Checked.div 1 (k a) a.2.isUnit)).2 ?_
+    simpa [one_div₀] using (hk.comp tendsto_comap).fun_inv_tendsto_atTop
+      (h0 := fun a : {a // k a ≠ 0} => a.2.isUnit)
+  have h2 : (fun a : {a // k a ≠ 0} => f a) =o[comap Subtype.val l]
+      fun a => k a * Checked.zpow (k a) (z - 1) (fun _ => a.2.isUnit) := by
+    simpa using h1.mul_isBigO ((superpolynomialDecay_iff_isBigO f hk).1 h (z - 1))
+  refine h2.trans_isBigO <| IsBigO.of_bound' <| Eventually.of_forall fun a => le_of_eq ?_
+  simp [← zpow_one_add₀ a.2]
 
 end NormedLinearOrderedField
 

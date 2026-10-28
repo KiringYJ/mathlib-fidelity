@@ -500,12 +500,17 @@ theorem LinearEquiv.isUnit_det' {A : Type*} [CommRing A] [Module A M] (f : M ≃
     IsUnit (LinearMap.det (f : M →ₗ[A] M)) :=
   .of_mul_eq_one _ f.det_mul_det_symm
 
--- see https://github.com/leanprover-community/mathlib4/issues/29041
-set_option linter.unusedSimpArgs false in
+/- Evidence rule: the determinant of a linear equivalence is a unit, so `(LinearMap.det ↑f)⁻¹`
+needs no explicit evidence. -/
+macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | with_reducible_and_instances exact LinearEquiv.isUnit_det' _)
+
 /-- The determinant of `f.symm` is the inverse of that of `f` when `f` is a linear equiv. -/
-theorem LinearEquiv.det_coe_symm {𝕜 : Type*} [Field 𝕜] [Module 𝕜 M] (f : M ≃ₗ[𝕜] M) :
-    LinearMap.det (f.symm : M →ₗ[𝕜] M) = (LinearMap.det (f : M →ₗ[𝕜] M))⁻¹ := by
-  simp [field, IsUnit.ne_zero f.isUnit_det']
+theorem LinearEquiv.det_coe_symm {A : Type*} [CommRing A] [Module A M] (f : M ≃ₗ[A] M) :
+    LinearMap.det (f.symm : M →ₗ[A] M) = (LinearMap.det (f : M →ₗ[A] M))⁻¹ :=
+  eq_inv_of_mul_eq_one_right₀ f.det_mul_det_symm
 
 /-- Builds a linear equivalence from a linear map whose determinant in some bases is a unit. -/
 @[simps]
@@ -514,17 +519,19 @@ def LinearEquiv.ofIsUnitDet {f : M →ₗ[R] M'} {v : Basis ι R M} {v' : Basis 
   toFun := f
   map_add' := f.map_add
   map_smul' := f.map_smul
-  invFun := toLin v' v (toMatrix v v' f)⁻¹
-  left_inv x :=
+  invFun := toLin v' v (Checked.inv (toMatrix v v' f) ((Matrix.isUnit_iff_isUnit_det _).2 h))
+  left_inv x := by
+    have hf : IsUnit (toMatrix v v' f) := (Matrix.isUnit_iff_isUnit_det _).2 h
     calc toLin v' v (toMatrix v v' f)⁻¹ (f x)
       _ = toLin v v ((toMatrix v v' f)⁻¹ * toMatrix v v' f) x := by
         rw [toLin_mul v v' v, toLin_toMatrix, LinearMap.comp_apply]
-      _ = x := by simp [h]
-  right_inv x :=
+      _ = x := by simp
+  right_inv x := by
+    have hf : IsUnit (toMatrix v v' f) := (Matrix.isUnit_iff_isUnit_det _).2 h
     calc f (toLin v' v (toMatrix v v' f)⁻¹ x)
       _ = toLin v' v' (toMatrix v v' f * (toMatrix v v' f)⁻¹) x := by
         rw [toLin_mul v' v v', LinearMap.comp_apply, toLin_toMatrix v v']
-      _ = x := by simp [h]
+      _ = x := by simp
 
 @[simp]
 theorem LinearEquiv.coe_ofIsUnitDet {f : M →ₗ[R] M'} {v : Basis ι R M} {v' : Basis ι R M'}

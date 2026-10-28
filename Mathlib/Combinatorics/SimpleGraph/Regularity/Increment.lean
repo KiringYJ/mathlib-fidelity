@@ -25,6 +25,12 @@ This entire file is internal to the proof of Szemerédi Regularity Lemma.
 * `SzemerediRegularity.energy_increment`: The increment partition has energy greater than the
   original by a known (small) fixed amount.
 
+## Implementation notes
+
+Edge densities exist only between nonempty finsets. The sums of squared edge densities over pairs
+of parts are indexed by the finsets of pairs themselves, so that each pair carries the membership
+from which the nonemptiness of its parts follows.
+
 ## TODO
 
 Once ported to mathlib4, this file will be a great golfing ground for Heather's new tactic
@@ -93,6 +99,12 @@ private noncomputable def distinctPairs (x : {x // x ∈ P.parts.offDiag}) :
 
 variable {hP G ε}
 
+/-- The two finsets of a pair in `distinctPairs` are parts of chunks, hence nonempty. -/
+private theorem nonempty_of_mem_distinctPairs {x : {x // x ∈ P.parts.offDiag}}
+    {i : Finset α × Finset α} (hi : i ∈ distinctPairs hP G ε x) : i.1.Nonempty ∧ i.2.Nonempty := by
+  rw [distinctPairs, mem_product] at hi
+  exact ⟨Finpartition.nonempty_of_mem_parts _ hi.1, Finpartition.nonempty_of_mem_parts _ hi.2⟩
+
 private theorem distinctPairs_increment :
     P.parts.offDiag.attach.biUnion (distinctPairs hP G ε) ⊆ (increment hP G ε).parts.offDiag := by
   rintro ⟨Ui, Vj⟩
@@ -126,10 +138,14 @@ set_option backward.privateInPublic true in
 set_option backward.privateInPublic.warn false in
 lemma le_sum_distinctPairs_edgeDensity_sq (x : {i // i ∈ P.parts.offDiag}) (hε₁ : ε ≤ 1)
     (hPα : #P.parts * 16 ^ #P.parts ≤ card α) (hPε : ↑100 ≤ ↑4 ^ #P.parts * ε ^ 5) :
-    (G.edgeDensity x.1.1 x.1.2 : ℝ) ^ 2 +
-      ((if G.IsUniform ε x.1.1 x.1.2 then 0 else ε ^ 4 / 3) - ε ^ 5 / 25) ≤
-    (∑ i ∈ distinctPairs hP G ε x, G.edgeDensity i.1 i.2 ^ 2 : ℝ) / 16 ^ #P.parts := by
-  rw [distinctPairs, ← add_sub_assoc, add_sub_right_comm]
+    (G.edgeDensity x.1.1 x.1.2 (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).1)
+        (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1) : ℝ) ^ 2 +
+      ((if G.IsUniform ε x.1.1 x.1.2 (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).1)
+          (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1) then 0 else ε ^ 4 / 3) - ε ^ 5 / 25) ≤
+    (∑ i : ↥(distinctPairs hP G ε x), (G.edgeDensity i.1.1 i.1.2
+      (Finpartition.nonempty_of_mem_parts _ (mem_product.1 i.2).1)
+      (Finpartition.nonempty_of_mem_parts _ (mem_product.1 i.2).2) : ℝ) ^ 2) / 16 ^ #P.parts := by
+  rw [← add_sub_assoc, add_sub_right_comm]
   split_ifs with h
   · rw [add_zero]
     exact edgeDensity_chunk_uniform hPα hPε _ _
@@ -140,45 +156,102 @@ theorem energy_increment (hP : P.IsEquipartition) (hP₇ : 7 ≤ #P.parts)
     (hPε : 100 ≤ 4 ^ #P.parts * ε ^ 5) (hPα : #P.parts * 16 ^ #P.parts ≤ card α)
     (hPG : ¬P.IsUniform G ε) (hε₀ : 0 ≤ ε) (hε₁ : ε ≤ 1) :
     ↑(P.energy G) + ε ^ 5 / 4 ≤ (increment hP G ε).energy G := by
-  calc
-    _ = (∑ x ∈ P.parts.offDiag, (G.edgeDensity x.1 x.2 : ℝ) ^ 2 +
-          #P.parts ^ 2 * (ε ^ 5 / 4) : ℝ) / #P.parts ^ 2 := by
-        rw [coe_energy, add_div, mul_div_cancel_left₀]; positivity
-    _ ≤ (∑ x ∈ P.parts.offDiag.attach, (∑ i ∈ distinctPairs hP G ε x,
-          G.edgeDensity i.1 i.2 ^ 2 : ℝ) / 16 ^ #P.parts) / #P.parts ^ 2 := ?_
-    _ = (∑ x ∈ P.parts.offDiag.attach, ∑ i ∈ distinctPairs hP G ε x,
-          G.edgeDensity i.1 i.2 ^ 2 : ℝ) / #(increment hP G ε).parts ^ 2 := by
-        rw [card_increment hPα hPG, coe_stepBound, mul_pow, pow_right_comm,
-          div_mul_eq_div_div_swap, ← sum_div]; norm_num
-    _ ≤ _ := by
-        rw [coe_energy]
-        gcongr
-        rw [← sum_biUnion pairwiseDisjoint_distinctPairs]
-        exact sum_le_sum_of_subset_of_nonneg distinctPairs_increment fun i _ _ ↦ sq_nonneg _
-  gcongr
+  have hPne : P.parts.Nonempty := P.parts_nonempty univ_nonempty.ne_empty
+  have hIne : (increment hP G ε).parts.Nonempty :=
+    (increment hP G ε).parts_nonempty univ_nonempty.ne_empty
+  have hcard := card_increment (hP := hP) hPα hPG
+  have hk : (0 : ℝ) < #P.parts := by positivity
+  have hk2 : IsUnit ((#P.parts : ℝ) ^ 2) := (pow_pos hk 2).ne'.isUnit
+  have hm2 : IsUnit (((#P.parts : ℝ) * 4 ^ #P.parts) ^ 2) :=
+    (pow_pos (mul_pos hk (by positivity)) 2).ne'.isUnit
+  -- The pairs of parts of the chunks of distinct parts of `P` are distinct parts of the increment.
+  have hinj : ∑ x : P.parts.offDiag, ∑ i : ↥(distinctPairs hP G ε x), (G.edgeDensity i.1.1 i.1.2
+      (nonempty_of_mem_distinctPairs i.2).1 (nonempty_of_mem_distinctPairs i.2).2 : ℝ) ^ 2 ≤
+      ∑ y : (increment hP G ε).parts.offDiag, (G.edgeDensity y.1.1 y.1.2
+        ((increment hP G ε).nonempty_of_mem_parts (mem_offDiag.1 y.2).1)
+        ((increment hP G ε).nonempty_of_mem_parts (mem_offDiag.1 y.2).2.1) : ℝ) ^ 2 := by
+    rw [← Fintype.sum_sigma' fun (x : P.parts.offDiag) (i : ↥(distinctPairs hP G ε x)) ↦
+      (G.edgeDensity i.1.1 i.1.2 (nonempty_of_mem_distinctPairs i.2).1
+        (nonempty_of_mem_distinctPairs i.2).2 : ℝ) ^ 2]
+    refine sum_le_sum_of_injOn
+      (fun xi ↦ ⟨xi.2.1, distinctPairs_increment (mem_biUnion.2 ⟨xi.1, mem_attach _ _, xi.2.2⟩)⟩)
+      ?_ (subset_univ _) (fun _ _ ↦ le_rfl) fun _ _ _ ↦ sq_nonneg _
+    rintro ⟨x, i⟩ - ⟨x', i'⟩ - h
+    have hii' : i.1 = i'.1 := congrArg Subtype.val h
+    obtain rfl : x = x' := by
+      by_contra hxx'
+      have := pairwiseDisjoint_distinctPairs (G := G) (ε := ε) (hP := hP) (mem_attach _ x)
+        (mem_attach _ x') hxx'
+      exact Finset.disjoint_left.1 this i.2 (hii' ▸ i'.2)
+    obtain rfl : i = i' := Subtype.ext hii'
+    rfl
+  -- The non-uniform pairs of parts of `P`, counted among the pairs of distinct parts.
+  have hnon : #(univ.filter fun x : P.parts.offDiag ↦ ¬G.IsUniform ε x.1.1 x.1.2
+      (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).1)
+      (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1)) = #(P.nonUniforms G ε) := by
+    refine card_bij (fun x _ ↦ x.1) (fun x hx ↦ ?_) (fun _ _ _ _ ↦ Subtype.ext) fun y hy ↦ ?_
+    · obtain ⟨hu, hv, huv⟩ := mem_offDiag.1 x.2
+      exact (mk_mem_nonUniforms _ _).2 ⟨hu, hv, huv, (mem_filter.1 hx).2⟩
+    · obtain ⟨u, v⟩ := y
+      obtain ⟨hu, hv, huv, h⟩ := (mk_mem_nonUniforms _ _).1 hy
+      exact ⟨⟨(u, v), mem_offDiag.2 ⟨hu, hv, huv⟩⟩, mem_filter.2 ⟨mem_univ _, h⟩, rfl⟩
   rw [Finpartition.IsUniform, not_le, mul_tsub, mul_one, ← offDiag_card] at hPG
-  calc
-    _ ≤ ∑ x ∈ P.parts.offDiag, (edgeDensity G x.1 x.2 : ℝ) ^ 2 +
-        (#(nonUniforms P G ε) * (ε ^ 4 / 3) - #P.parts.offDiag * (ε ^ 5 / 25)) := ?_
-    _ = ∑ x ∈ P.parts.offDiag, ((G.edgeDensity x.1 x.2 : ℝ) ^ 2 +
-        ((if G.IsUniform ε x.1 x.2 then (0 : ℝ) else ε ^ 4 / 3) - ε ^ 5 / 25) : ℝ) := by
+  -- Each pair of distinct parts of `P` gains energy, and the non-uniform pairs gain more.
+  have hsum : ∑ x : P.parts.offDiag, (G.edgeDensity x.1.1 x.1.2
+        (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).1)
+        (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1) : ℝ) ^ 2 + #P.parts ^ 2 * (ε ^ 5 / 4) ≤
+      ∑ x : P.parts.offDiag, (∑ i : ↥(distinctPairs hP G ε x), (G.edgeDensity i.1.1 i.1.2
+        (nonempty_of_mem_distinctPairs i.2).1 (nonempty_of_mem_distinctPairs i.2).2 : ℝ) ^ 2) /
+          16 ^ #P.parts := by
+    calc
+      _ ≤ ∑ x : P.parts.offDiag, (G.edgeDensity x.1.1 x.1.2
+            (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).1)
+            (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1) : ℝ) ^ 2 +
+          (#(P.nonUniforms G ε) * (ε ^ 4 / 3) - #P.parts.offDiag * (ε ^ 5 / 25)) := by
+        gcongr
+        calc
+          _ = (6 / 7 * #P.parts ^ 2) * ε ^ 5 * (7 / 24) := by ring
+          _ ≤ #P.parts.offDiag * ε ^ 5 * (22 / 75) := by
+              gcongr ?_ * _ * ?_
+              · rw [← mul_div_right_comm₀, div_le_iff₀ (by simp), offDiag_card]
+                norm_cast
+                rw [tsub_mul]
+                refine le_tsub_of_add_le_left ?_
+                nlinarith
+              · norm_num
+          _ = (#P.parts.offDiag * ε * (ε ^ 4 / 3) - #P.parts.offDiag * (ε ^ 5 / 25)) := by ring
+          _ ≤ (#(P.nonUniforms G ε) * (ε ^ 4 / 3) - #P.parts.offDiag * (ε ^ 5 / 25)) := by
+              gcongr
+      _ = ∑ x : P.parts.offDiag, ((G.edgeDensity x.1.1 x.1.2
+            (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).1)
+            (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1) : ℝ) ^ 2 +
+          ((if G.IsUniform ε x.1.1 x.1.2 (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).1)
+            (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1) then (0 : ℝ) else ε ^ 4 / 3) -
+              ε ^ 5 / 25)) := by
         rw [sum_add_distrib, sum_sub_distrib, sum_const, nsmul_eq_mul, sum_ite, sum_const_zero,
-          zero_add, sum_const, nsmul_eq_mul, ← Finpartition.nonUniforms, ← add_sub_assoc,
-          add_sub_right_comm]
-    _ = _ := (sum_attach ..).symm
-    _ ≤ _ := sum_le_sum fun i _ ↦ le_sum_distinctPairs_edgeDensity_sq i hε₁ hPα hPε
-  gcongr
+          zero_add, sum_const, nsmul_eq_mul, hnon, card_univ, Fintype.card_coe]
+      _ ≤ _ := sum_le_sum fun i _ ↦ le_sum_distinctPairs_edgeDensity_sq i hε₁ hPα hPε
+  rw [P.coe_energy G hPne, (increment hP G ε).coe_energy G hIne]
   calc
-    _ = (6 / 7 * #P.parts ^ 2) * ε ^ 5 * (7 / 24) := by ring
-    _ ≤ #P.parts.offDiag * ε ^ 5 * (22 / 75) := by
-        gcongr ?_ * _ * ?_
-        · rw [← mul_div_right_comm, div_le_iff₀ (by simp), offDiag_card]
-          norm_cast
-          rw [tsub_mul]
-          refine le_tsub_of_add_le_left ?_
-          nlinarith
-        · norm_num
-    _ = (#P.parts.offDiag * ε * (ε ^ 4 / 3) - #P.parts.offDiag * (ε ^ 5 / 25)) := by ring
-    _ ≤ (#(nonUniforms P G ε) * (ε ^ 4 / 3) - #P.parts.offDiag * (ε ^ 5 / 25)) := by gcongr
+    _ = (∑ x : P.parts.offDiag, (G.edgeDensity x.1.1 x.1.2
+          (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).1)
+          (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1) : ℝ) ^ 2 +
+            #P.parts ^ 2 * (ε ^ 5 / 4)) / #P.parts ^ 2 := by
+      rw [add_div, mul_div_cancel_left₀]
+    _ ≤ (∑ x : P.parts.offDiag, (∑ i : ↥(distinctPairs hP G ε x), (G.edgeDensity i.1.1 i.1.2
+          (nonempty_of_mem_distinctPairs i.2).1 (nonempty_of_mem_distinctPairs i.2).2 : ℝ) ^ 2) /
+            16 ^ #P.parts) / #P.parts ^ 2 := by gcongr
+    _ = (∑ x : P.parts.offDiag, ∑ i : ↥(distinctPairs hP G ε x), (G.edgeDensity i.1.1 i.1.2
+          (nonempty_of_mem_distinctPairs i.2).1 (nonempty_of_mem_distinctPairs i.2).2 : ℝ) ^ 2) /
+            (#P.parts * 4 ^ #P.parts) ^ 2 := by
+      have h4 : ((#P.parts : ℝ) * 4 ^ #P.parts) ^ 2 = #P.parts ^ 2 * 16 ^ #P.parts := by
+        rw [mul_pow, ← pow_mul, show (16 : ℝ) = 4 ^ 2 by norm_num, ← pow_mul]
+        ring
+      simp only [h4, div_eq_mul_inv₀, sum_mul, mul_inv_rev₀, mul_assoc]
+    _ ≤ (∑ y : (increment hP G ε).parts.offDiag, (G.edgeDensity y.1.1 y.1.2
+          ((increment hP G ε).nonempty_of_mem_parts (mem_offDiag.1 y.2).1)
+          ((increment hP G ε).nonempty_of_mem_parts (mem_offDiag.1 y.2).2.1) : ℝ) ^ 2) /
+            (#P.parts * 4 ^ #P.parts) ^ 2 := by gcongr
+    _ = _ := by simp only [hcard, coe_stepBound]
 
 end SzemerediRegularity

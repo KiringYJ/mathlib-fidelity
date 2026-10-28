@@ -258,7 +258,7 @@ variable [AddCommMonoid M]
 variable [MulAction 𝕜 M] (C : ConvexCone 𝕜 M)
 
 theorem smul_mem_iff {c : 𝕜} (hc : 0 < c) {x : M} : c • x ∈ C ↔ x ∈ C :=
-  ⟨fun h => inv_smul_smul₀ hc.ne' x ▸ C.smul_mem (inv_pos.2 hc) h, C.smul_mem hc⟩
+  ⟨fun h => inv_smul_smul₀ (ha := hc.ne'.isUnit) x ▸ C.smul_mem (inv_pos.2 hc) h, C.smul_mem hc⟩
 
 end MulAction
 end LinearOrderedField
@@ -693,7 +693,7 @@ def toCone (s : Set M) (hs : Convex 𝕜 s) : ConvexCone 𝕜 M := by
   · rintro _ ⟨cx, cx_pos, x, hx, rfl⟩ _ ⟨cy, cy_pos, y, hy, rfl⟩
     have : 0 < cx + cy := add_pos cx_pos cy_pos
     refine ⟨_, this, _, convex_iff_div.1 hs hx hy cx_pos.le cy_pos.le this, ?_⟩
-    simp only [smul_add, smul_smul, mul_div_assoc', mul_div_cancel_left₀ _ this.ne']
+    simp only [smul_add, smul_smul, mul_div_cancel₀]
 
 variable {s : Set M} (hs : Convex 𝕜 s) {x : M}
 
@@ -705,9 +705,9 @@ theorem mem_toCone : x ∈ hs.toCone s ↔ ∃ c : 𝕜, 0 < c ∧ ∃ y ∈ s, 
 theorem mem_toCone' : x ∈ hs.toCone s ↔ ∃ c : 𝕜, 0 < c ∧ c • x ∈ s := by
   refine hs.mem_toCone.trans ⟨?_, ?_⟩
   · rintro ⟨c, hc, y, hy, rfl⟩
-    exact ⟨c⁻¹, inv_pos.2 hc, by rwa [smul_smul, inv_mul_cancel₀ hc.ne', one_smul]⟩
+    exact ⟨c⁻¹, inv_pos.2 hc, by rwa [smul_smul, inv_mul_cancel₀, one_smul]⟩
   · rintro ⟨c, hc, hcx⟩
-    exact ⟨c⁻¹, inv_pos.2 hc, _, hcx, by rw [smul_smul, inv_mul_cancel₀ hc.ne', one_smul]⟩
+    exact ⟨c⁻¹, inv_pos.2 hc, _, hcx, by rw [smul_smul, inv_mul_cancel₀, one_smul]⟩
 
 @[deprecated ConvexCone.subset_hull (since := "2026-03-30")]
 theorem subset_toCone : s ⊆ hs.toCone s := fun x hx =>

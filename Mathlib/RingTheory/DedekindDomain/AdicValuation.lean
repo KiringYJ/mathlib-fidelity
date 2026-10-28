@@ -331,8 +331,9 @@ set_option backward.isDefEq.respectTransparency.types false in
 /--
 The `v`-adic valuation of `r / s : K` is the valuation of `r` divided by the valuation of `s`. -/
 theorem valuation_of_mk' {r : R} {s : nonZeroDivisors R} :
-    v.valuation K (IsLocalization.mk' K r s) = v.intValuation r / v.intValuation s := by
-  rw [valuation_def, Valuation.extendToLocalization_mk', div_eq_mul_inv]
+    v.valuation K (IsLocalization.mk' K r s) =
+      Checked.div (v.intValuation r) (v.intValuation s) (v.intValuation_ne_zero' s).isUnit := by
+  rw [valuation_def, Valuation.extendToLocalization_mk', div_eq_mul_inv₀]
 
 set_option backward.isDefEq.respectTransparency.types false in
 open scoped algebraMap in
@@ -376,8 +377,8 @@ theorem valuation_div_le_one_iff (a : R) {b : R} (hb : b ≠ 0)
   have ha₀ : a ≠ 0 := fun _ ↦ by simp_all
   have hva : v.valuation K a ≠ 0 := (Valuation.ne_zero_iff _).2 (by simp [ha₀])
   have hvb : v.valuation K b ≠ 0 := (Valuation.ne_zero_iff _).2 (by simp [hb])
-  rw [← WithZero.log_lt_log one_ne_zero ((Valuation.ne_zero_iff _).2 (by simp [ha₀, hb])),
-    map_div₀, WithZero.log_div hva hvb, WithZero.log_one, Int.sub_pos,
+  rw [← WithZero.log_lt_log one_ne_zero ((Valuation.ne_zero_iff _).2 (by simp [ha₀])),
+    map_div₀, WithZero.log_div hva, WithZero.log_one, Int.sub_pos,
     WithZero.log_lt_log hvb hva]
   simpa [valuation_of_algebraMap, intValuation_eq_one_iff.2 <| h hv, intValuation_lt_one_iff_mem]
 
@@ -407,6 +408,7 @@ lemma valuation_surjective :
   rcases GroupWithZero.eq_zero_or_unit x with (rfl | ⟨x, rfl⟩)
   · simp
   · obtain ⟨π, hπ⟩ := v.valuation_exists_uniformizer K
+    have hπ0 : π ≠ 0 := (Valuation.ne_zero_iff _).mp (by rw [hπ]; exact exp_ne_zero)
     refine ⟨π ^ (- log x.val), ?_⟩
     simp [hπ, exp_log]
 
@@ -472,9 +474,10 @@ variable (K) in
 /-- Given a Dedekind domain `R` in `K`, its field of fractions, the localization of `R` at
 a nonzero prime is a valuation subring of `K`. -/
 def valuationSubringAtPrime : ValuationSubring K :=
-  .ofSubring (subalgebra.ofField K _ v.asIdeal.primeCompl_le_nonZeroDivisors).toSubring fun x ↦
-    by simpa [IsLocalization.IsInteger] using ValuationRing.isInteger_or_isInteger
-        (subalgebra.ofField K _ v.asIdeal.primeCompl_le_nonZeroDivisors) x
+  .ofSubring (subalgebra.ofField K _ v.asIdeal.primeCompl_le_nonZeroDivisors).toSubring
+    fun x {hx} ↦ by
+      simpa [IsLocalization.IsInteger] using ValuationRing.isInteger_or_isInteger
+        (subalgebra.ofField K _ v.asIdeal.primeCompl_le_nonZeroDivisors) x (hx := hx)
 
 open IsDedekindDomain
 
@@ -485,8 +488,9 @@ open scoped algebraMap in
 theorem valuationSubringAtPrime_le_valuation :
     valuationSubringAtPrime K v ≤ (valuation K v).valuationSubring := by
   rintro x ⟨a, s, hs, rfl⟩
-  suffices (valuation K v) (a / (s : K)) ≤ 1 by rwa [division_def (a : K) s] at this
-  rwa [valuation_div_le_one_iff (K := K) v a (by aesop) (fun _ ↦ by contradiction)]
+  have hs0 : s ≠ 0 := fun h ↦ hs (h ▸ v.asIdeal.zero_mem)
+  suffices (valuation K v) (a / (s : K)) ≤ 1 by rwa [div_eq_mul_inv₀] at this
+  rwa [valuation_div_le_one_iff (K := K) v a hs0 (fun _ ↦ by contradiction)]
 
 instance : Algebra R (valuationSubringAtPrime K v) :=
   (subalgebra.ofField K _ v.asIdeal.primeCompl_le_nonZeroDivisors).algebra'
@@ -517,10 +521,13 @@ theorem valuationSubringAtPrime_eq_valuationSubring :
 lemma exists_primeCompl_mul_eq_or_mul_eq (x : K) :
     ∃ (n : R) (d : v.asIdeal.primeCompl), x * (algebraMap R K d) = (algebraMap R K n) ∨
         x * (algebraMap R K n) = (algebraMap R K d) := by
+  rcases eq_or_ne x 0 with rfl | hx
+  · exact ⟨0, 1, .inl (by simp)⟩
   -- It's already known that the localization of `R` at `v` is a (discrete) valuation ring, so
   -- write `x` or `x⁻¹` as `n / d` with `d ∈ vᶜ`.
+  have hxx : x * x⁻¹ = 1 := mul_inv_cancel₀
   obtain (⟨r, hr⟩ | ⟨r, hr⟩) :=
-    ValuationRing.isInteger_or_isInteger (valuationSubringAtPrime K v) x
+    ValuationRing.isInteger_or_isInteger (valuationSubringAtPrime K v) x (hx := hx.isUnit)
   <;> obtain ⟨⟨n, d⟩, hnd⟩ := IsLocalization.surj v.asIdeal.primeCompl r
   <;> use n, d
   <;> apply_fun algebraMap _ K at hnd
@@ -988,8 +995,8 @@ lemma adicCompletion.mul_nonZeroDivisor_mem_adicCompletionIntegers (v : HeightOn
     have hϖ0 : ϖ ≠ 0 := by rintro rfl; simp [exp_ne_zero.symm] at hϖ
     refine ⟨ϖ^(log (Valued.v a)).natAbs, pow_mem (mem_nonZeroDivisors_of_ne_zero hϖ0) _, ?_⟩
     -- now manually translate the goal (an inequality in ℤᵐ⁰) to an inequality of "log" of ℤ
-    simp only [map_pow, mem_adicCompletionIntegers, map_mul, this, inv_pow, ← exp_nsmul, nsmul_one,
-      Int.natCast_natAbs]
+    simp only [map_pow, mem_adicCompletionIntegers, map_mul, this, inv_pow₀, ← exp_nsmul,
+      nsmul_one, Int.natCast_natAbs]
     exact mul_inv_le_one_of_le₀ (le_exp_log.trans (by simp [le_abs_self])) zero_le
 
 instance : FaithfulSMul (v.adicCompletionIntegers K) (v.adicCompletion K) :=
@@ -1010,7 +1017,7 @@ theorem adicCompletionIntegers.isUnit_iff_valued_eq_one {a : v.adicCompletionInt
 theorem adicCompletionIntegers.mem_units_iff_valued_eq_one {a : (v.adicCompletion K)ˣ} :
     a ∈ (v.adicCompletionIntegers K).units ↔ Valued.v a.1 = 1 := by
   refine ⟨fun h ↦ ?_, fun h ↦
-     ⟨h.le, by simp [mem_adicCompletionIntegers, inv_le_one_iff₀, h.symm.le]⟩⟩
+     ⟨h.le, by simp [mem_adicCompletionIntegers, Units.val_inv_eq_inv_val₀, h]⟩⟩
   convert! isUnit_iff_valued_eq_one.1 (Submonoid.unitsEquivIsUnitSubmonoid _ ⟨_, h⟩).2
 
 section AbsoluteValue

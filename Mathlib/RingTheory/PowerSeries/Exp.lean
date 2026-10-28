@@ -46,7 +46,7 @@ variable (A A' : Type*) [Ring A] [Ring A'] [Algebra ℚ A] [Algebra ℚ A']
 open Nat
 
 /-- Power series for the exponential function at zero. -/
-def exp : PowerSeries A :=
+noncomputable def exp : PowerSeries A :=
   mk fun n => algebraMap ℚ A (1 / n !)
 
 variable {A A'} (n : ℕ) (f : A →+* A')
@@ -73,8 +73,9 @@ theorem derivative_exp (A : Type*) [CommRing A] [Algebra ℚ A] :
   rw [coeff_derivative, coeff_exp, coeff_exp]
   have key : (n + 1 : A) = algebraMap ℚ A (n + 1) := by
     rw [map_add, map_natCast, map_one]
-  rw [key, ← map_mul, factorial_succ, Nat.cast_mul, Nat.cast_add_one]
+  rw [key, ← map_mul]
   congr 1
+  simp only [factorial_succ, Nat.cast_mul, Nat.cast_add_one]
   field_simp
 
 /-! ### Uniqueness characterization -/
@@ -135,16 +136,11 @@ theorem exp_mul_exp_eq_exp_add [Algebra ℚ A] (a b : A) :
   congr 1
   rw [← map_natCast (algebraMap ℚ A) (n.choose x), ← map_mul, ← map_mul]
   refine RingHom.congr_arg _ ?_
-  rw [mul_one_div (↑(n.choose x) : ℚ), one_div_mul_one_div]
-  symm
-  rw [div_eq_iff, div_mul_eq_mul_div, one_mul, choose_eq_factorial_div_factorial]
-  · norm_cast
-    rw [cast_div_charZero]
-    apply factorial_mul_factorial_dvd_factorial (mem_range_succ_iff.1 hx)
-  · apply mem_range_succ_iff.1 hx
-  · rintro h
-    apply factorial_ne_zero n
-    rw [cast_eq_zero.1 h]
+  have h : ((n.choose x : ℕ) : ℚ) * (x ! : ℚ) * ((n - x)! : ℚ) = (n ! : ℚ) := by
+    exact_mod_cast Nat.choose_mul_factorial_mul_factorial (mem_range_succ_iff.1 hx)
+  field_simp
+  rw [← h]
+  ring
 
 /-- Shows that $e^{x} * e^{-x} = 1$ -/
 theorem exp_mul_exp_neg_eq_one [Algebra ℚ A] : exp A * evalNegHom (exp A) = 1 := by
@@ -168,7 +164,7 @@ theorem exp_pow_sum [Algebra ℚ A] (n : ℕ) :
         fun k => (k ^ p : A) * algebraMap ℚ A p.factorial⁻¹ := by
   simp only [exp_pow_eq_rescale_exp, rescale]
   ext
-  simp only [one_div, coeff_mk, coe_mk, MonoidHom.coe_mk, OneHom.coe_mk,
+  simp only [one_div₀, coeff_mk, coe_mk, MonoidHom.coe_mk, OneHom.coe_mk,
     coeff_exp, map_sum]
 
 end PowerSeries

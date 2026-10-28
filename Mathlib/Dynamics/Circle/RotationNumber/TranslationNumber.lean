@@ -80,6 +80,8 @@ We use a local notation `τ` for the translation number of `f : CircleDeg1Lift`.
 We define the translation number of `f : CircleDeg1Lift` to be the limit of the sequence
 `(f ^ (2 ^ n)) 0 / (2 ^ n)`, then prove that `((f ^ n) x - x) / n` tends to this number for any `x`.
 This way it is much easier to prove that the limit exists and basic properties of the limit.
+A quotient by `n` is taken on the nonzero indices `{n : ℕ // n ≠ 0}`, with the filter
+`comap Subtype.val atTop`; the versions with denominator `n + 1` are indexed by all of `ℕ`.
 
 We define translation number for a wider class of maps `f : ℝ → ℝ` instead of lifts of orientation
 preserving circle homeomorphisms for two reasons:
@@ -563,28 +565,45 @@ theorem translationNumber_eq_of_tendsto_aux {τ' : ℝ} (h : Tendsto f.transnumA
     τ f = τ' :=
   h.limUnder_eq
 
+/-- The quotient `f^[n] 0 / n` is taken on the nonzero indices `n`. -/
 theorem translationNumber_eq_of_tendsto₀ {τ' : ℝ}
-    (h : Tendsto (fun n : ℕ => f^[n] 0 / n) atTop (𝓝 τ')) : τ f = τ' :=
-  f.translationNumber_eq_of_tendsto_aux <| by
-    simpa [Function.comp_def, transnumAuxSeq_def, coe_pow] using
-      h.comp (tendsto_pow_atTop_atTop_of_one_lt one_lt_two)
+    (h : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ f^[n] 0 / ((n : ℕ) : ℝ)) (comap Subtype.val atTop)
+      (𝓝 τ')) : τ f = τ' := by
+  have h2 : Tendsto (fun n : ℕ ↦ (⟨2 ^ n, pow_ne_zero n two_ne_zero⟩ : {n : ℕ // n ≠ 0})) atTop
+      (comap Subtype.val atTop) :=
+    tendsto_comap_iff.2 (tendsto_pow_atTop_atTop_of_one_lt one_lt_two)
+  refine f.translationNumber_eq_of_tendsto_aux ?_
+  simpa [Function.comp_def, transnumAuxSeq_def, coe_pow] using h.comp h2
 
 theorem translationNumber_eq_of_tendsto₀' {τ' : ℝ}
-    (h : Tendsto (fun n : ℕ => f^[n + 1] 0 / (n + 1)) atTop (𝓝 τ')) : τ f = τ' :=
-  f.translationNumber_eq_of_tendsto₀ <| (tendsto_add_atTop_iff_nat 1).1 (mod_cast h)
+    (h : Tendsto (fun n : ℕ => f^[n + 1] 0 / (n + 1)) atTop (𝓝 τ')) : τ f = τ' := by
+  refine f.translationNumber_eq_of_tendsto₀ ?_
+  have he : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (n : ℕ) - 1) (comap Subtype.val atTop) atTop :=
+    (tendsto_sub_atTop_nat 1).comp tendsto_comap
+  refine (h.comp he).congr fun n ↦ ?_
+  obtain ⟨n, hn⟩ := n
+  obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hn
+  simp
 
 theorem transnumAuxSeq_zero : f.transnumAuxSeq 0 = f 0 := by simp [transnumAuxSeq]
 
 theorem transnumAuxSeq_dist_lt (n : ℕ) :
     dist (f.transnumAuxSeq n) (f.transnumAuxSeq (n + 1)) < 1 / 2 / 2 ^ n := by
-  have : 0 < (2 ^ (n + 1) : ℝ) := pow_pos zero_lt_two _
-  rw [div_div, ← pow_succ', ← abs_of_pos this]
-  calc
-    _ = dist ((f ^ 2 ^ n) 0 + (f ^ 2 ^ n) 0) ((f ^ 2 ^ n) ((f ^ 2 ^ n) 0)) / |2 ^ (n + 1)| := by
-      simp_rw [transnumAuxSeq, Real.dist_eq]
-      rw [← abs_div, sub_div, pow_succ, pow_succ', ← two_mul, mul_div_mul_left _ _ (two_ne_zero' ℝ),
-        pow_mul, sq, mul_apply]
-    _ < _ := by gcongr; exact (f ^ 2 ^ n).dist_map_map_zero_lt (f ^ 2 ^ n)
+  have h2 : (0 : ℝ) < 2 ^ (n + 1) := pow_pos zero_lt_two _
+  have hf : (f ^ 2 ^ (n + 1)) 0 = (f ^ 2 ^ n) ((f ^ 2 ^ n) 0) := by
+    rw [pow_succ, pow_mul, sq, mul_apply]
+  have hx : f.transnumAuxSeq n - f.transnumAuxSeq (n + 1) =
+      ((f ^ 2 ^ n) 0 + (f ^ 2 ^ n) 0 - (f ^ 2 ^ n) ((f ^ 2 ^ n) 0)) / 2 ^ (n + 1) := by
+    rw [transnumAuxSeq, transnumAuxSeq, hf]
+    field_simp
+    ring
+  have h1 : (1 : ℝ) / 2 / 2 ^ n = 1 / 2 ^ (n + 1) := by
+    field_simp
+    ring
+  rw [Real.dist_eq, hx, h1, abs_div]
+  simp only [abs_of_pos h2]
+  rw [div_lt_div_iff_of_pos_right h2, ← Real.dist_eq]
+  exact (f ^ 2 ^ n).dist_map_map_zero_lt (f ^ 2 ^ n)
 
 theorem tendsto_translationNumber_aux : Tendsto f.transnumAuxSeq atTop (𝓝 <| τ f) :=
   (cauchySeq_of_le_geometric_two fun n => le_of_lt <| f.transnumAuxSeq_dist_lt n).tendsto_limUnder
@@ -602,9 +621,11 @@ theorem tendsto_translationNumber_of_dist_bounded_aux (x : ℕ → ℝ) (C : ℝ
   · intro n
     have : 0 < (2 ^ n : ℝ) := pow_pos zero_lt_two _
     convert! (div_le_div_iff_of_pos_right this).2 (H (2 ^ n)) using 1
-    rw [transnumAuxSeq, Real.dist_eq, ← sub_div, abs_div, abs_of_pos this, Real.dist_eq]
-  · exact mul_zero C ▸ tendsto_const_nhds.mul <| tendsto_inv_atTop_zero.comp <|
-      tendsto_pow_atTop_atTop_of_one_lt one_lt_two
+    rw [transnumAuxSeq, Real.dist_eq, ← sub_div, abs_div]
+    simp only [abs_of_pos this, Real.dist_eq]
+  · have h := (tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num : (0 : ℝ) ≤ 1 / 2)
+      (by norm_num : (1 / 2 : ℝ) < 1)).const_mul C
+    simpa only [div_eq_mul_inv₀, one_mul, inv_pow₀, mul_zero] using h
 
 theorem translationNumber_eq_of_dist_bounded {f g : CircleDeg1Lift} (C : ℝ)
     (H : ∀ n : ℕ, dist ((f ^ n) 0) ((g ^ n) 0) ≤ C) : τ f = τ g :=
@@ -613,7 +634,7 @@ theorem translationNumber_eq_of_dist_bounded {f g : CircleDeg1Lift} (C : ℝ)
 
 @[simp]
 theorem translationNumber_one : τ 1 = 0 :=
-  translationNumber_eq_of_tendsto₀ _ <| by simp
+  translationNumber_eq_of_tendsto₀ _ <| by simpa using tendsto_const_nhds
 
 theorem translationNumber_eq_of_semiconjBy {f g₁ g₂ : CircleDeg1Lift} (H : SemiconjBy f g₁ g₂) :
     τ g₁ = τ g₂ :=
@@ -669,37 +690,48 @@ theorem tendsto_translation_number₀' :
     Tendsto (fun n : ℕ => (f ^ (n + 1) : CircleDeg1Lift) 0 / ((n : ℝ) + 1)) atTop (𝓝 <| τ f) := by
   refine
     tendsto_iff_dist_tendsto_zero.2 <|
-      squeeze_zero (fun _ => dist_nonneg) (fun n => ?_)
-        ((tendsto_const_div_atTop_nhds_zero_nat 1).comp (tendsto_add_atTop_nat 1))
-  dsimp
+      squeeze_zero (fun _ => dist_nonneg) (fun n => ?_) tendsto_one_div_add_atTop_nhds_zero_nat
   have : (0 : ℝ) < n + 1 := n.cast_add_one_pos
-  rw [Real.dist_eq, div_sub' (ne_of_gt this), abs_div, ← Real.dist_eq, abs_of_pos this,
-    Nat.cast_add_one, div_le_div_iff_of_pos_right this, ← Nat.cast_add_one]
-  apply dist_pow_map_zero_mul_translationNumber_le
+  rw [Real.dist_eq, div_sub', abs_div, ← Real.dist_eq]
+  simp only [abs_of_pos this]
+  rw [div_le_div_iff_of_pos_right this]
+  simpa using dist_pow_map_zero_mul_translationNumber_le f (n + 1)
 
-theorem tendsto_translation_number₀ : Tendsto (fun n : ℕ => (f ^ n) 0 / n) atTop (𝓝 <| τ f) :=
-  (tendsto_add_atTop_iff_nat 1).1 (mod_cast f.tendsto_translation_number₀')
+/-- The quotient `(f ^ n) 0 / n` is taken on the nonzero indices `n`. -/
+theorem tendsto_translation_number₀ :
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (f ^ (n : ℕ)) 0 / ((n : ℕ) : ℝ))
+      (comap Subtype.val atTop) (𝓝 <| τ f) := by
+  have he : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (n : ℕ) - 1) (comap Subtype.val atTop) atTop :=
+    (tendsto_sub_atTop_nat 1).comp tendsto_comap
+  refine (f.tendsto_translation_number₀'.comp he).congr fun n ↦ ?_
+  obtain ⟨n, hn⟩ := n
+  obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hn
+  simp
 
 /-- For any `x : ℝ` the sequence $\frac{f^n(x)-x}{n}$ tends to the translation number of `f`.
-In particular, this limit does not depend on `x`. -/
+In particular, this limit does not depend on `x`. The quotient is taken on the nonzero indices
+`n`. -/
 theorem tendsto_translationNumber (x : ℝ) :
-    Tendsto (fun n : ℕ => ((f ^ n) x - x) / n) atTop (𝓝 <| τ f) := by
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ((f ^ (n : ℕ)) x - x) / ((n : ℕ) : ℝ))
+      (comap Subtype.val atTop) (𝓝 <| τ f) := by
   rw [← translationNumber_conj_eq' (translate <| Multiplicative.ofAdd x)]
   refine (tendsto_translation_number₀ _).congr fun n ↦ ?_
   simp [sub_eq_neg_add, Units.conj_pow']
 
 theorem tendsto_translation_number' (x : ℝ) :
-    Tendsto (fun n : ℕ => ((f ^ (n + 1) : CircleDeg1Lift) x - x) / (n + 1)) atTop (𝓝 <| τ f) :=
-  mod_cast (tendsto_add_atTop_iff_nat 1).2 (f.tendsto_translationNumber x)
+    Tendsto (fun n : ℕ => ((f ^ (n + 1) : CircleDeg1Lift) x - x) / (n + 1)) atTop (𝓝 <| τ f) := by
+  have h : Tendsto (fun n : ℕ ↦ (⟨n + 1, n.succ_ne_zero⟩ : {n : ℕ // n ≠ 0})) atTop
+      (comap Subtype.val atTop) := tendsto_comap_iff.2 (tendsto_add_atTop_nat 1)
+  simpa [Function.comp_def] using (f.tendsto_translationNumber x).comp h
 
 theorem translationNumber_mono : Monotone τ := fun f g h =>
-  le_of_tendsto_of_tendsto' f.tendsto_translation_number₀ g.tendsto_translation_number₀ fun n => by
-    gcongr; exact pow_mono h _ _
+  le_of_tendsto_of_tendsto' f.tendsto_translation_number₀' g.tendsto_translation_number₀'
+    fun n => by gcongr; exact pow_mono h _ _
 
 theorem translationNumber_translate (x : ℝ) : τ (translate <| Multiplicative.ofAdd x) = x :=
   translationNumber_eq_of_tendsto₀' _ <| by
-    simp only [translate_iterate, translate_apply, add_zero, Nat.cast_succ,
-      mul_div_cancel_left₀ (M₀ := ℝ) _ (Nat.cast_add_one_ne_zero _), tendsto_const_nhds]
+    simp only [translate_iterate, translate_apply, add_zero, Nat.cast_succ, mul_div_cancel_left₀,
+      tendsto_const_nhds]
 
 theorem translationNumber_le_of_le_add {z : ℝ} (hz : ∀ x, f x ≤ x + z) : τ f ≤ z :=
   translationNumber_translate z ▸ translationNumber_mono fun x => (hz x).trans_eq (add_comm _ _)
@@ -766,7 +798,6 @@ theorem translationNumber_of_map_pow_eq_add_int {x : ℝ} {n : ℕ} {m : ℤ} (h
     (hn : 0 < n) : τ f = m / n := by
   have := (f ^ n).translationNumber_of_eq_add_int h
   rwa [translationNumber_pow, mul_comm, ← eq_div_iff] at this
-  exact Nat.cast_ne_zero.2 (ne_of_gt hn)
 
 /-- If a predicate depends only on `f x - x` and holds for all `0 ≤ x ≤ 1`,
 then it holds for all `x`. -/
@@ -819,7 +850,7 @@ theorem continuous_pow (hf : Continuous f) (n : ℕ) : Continuous (f ^ n : Circl
 
 theorem translationNumber_eq_rat_iff (hf : Continuous f) {m : ℤ} {n : ℕ} (hn : 0 < n) :
     τ f = m / n ↔ ∃ x, (f ^ n) x = x + m := by
-  rw [eq_div_iff, mul_comm, ← translationNumber_pow] <;> [skip; exact ne_of_gt (Nat.cast_pos.2 hn)]
+  rw [eq_div_iff, mul_comm, ← translationNumber_pow]
   exact (f ^ n).translationNumber_eq_int_iff (f.continuous_pow hf n)
 
 /-- Consider two actions `f₁ f₂ : G →* CircleDeg1Lift` of a group on the real line by lifts of

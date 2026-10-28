@@ -72,7 +72,7 @@ private theorem no_collision (hrs : r.HolderConjugate s) :
     add_sub_cancel_right, ← div_lt_iff₀ hrs.symm.pos, ← le_div_iff₀ hrs.symm.pos] at h₂
   have h₃ := add_lt_add_of_le_of_lt h₁.1 h₂.1
   have h₄ := add_lt_add_of_lt_of_le h₁.2 h₂.2
-  simp_rw [div_eq_inv_mul, ← right_distrib, hrs.inv_add_inv_eq_one, one_mul] at h₃ h₄
+  simp_rw [div_eq_inv_mul₀, ← right_distrib, hrs.inv_add_inv_eq_one, one_mul] at h₃ h₄
   rw [← Int.cast_one] at h₄
   simp_rw [← Int.cast_add, Int.cast_lt, Int.lt_add_one_iff] at h₃ h₄
   exact h₄.not_gt h₃
@@ -84,7 +84,7 @@ private theorem no_anticollision (hrs : r.HolderConjugate s) :
   intro ⟨j, k, m, h₁₁, h₁₂, h₂₁, h₂₂⟩
   have h₃ := add_lt_add_of_lt_of_le h₁₁ h₂₁
   have h₄ := add_lt_add_of_le_of_lt h₁₂ h₂₂
-  simp_rw [div_eq_inv_mul, ← right_distrib, hrs.inv_add_inv_eq_one, one_mul] at h₃ h₄
+  simp_rw [div_eq_inv_mul₀, ← right_distrib, hrs.inv_add_inv_eq_one, one_mul] at h₃ h₄
   rw [← Int.cast_one, ← add_assoc, add_lt_add_iff_right, add_right_comm] at h₄
   simp_rw [← Int.cast_add, Int.cast_lt, Int.lt_add_one_iff] at h₃ h₄
   exact h₄.not_gt h₃

@@ -115,11 +115,13 @@ variable [LinearOrderedCommGroupWithZero α] {a b c d : α} {n : ℕ}
 theorem Units.zero_lt (u : αˣ) : (0 : α) < u :=
   u.ne_zero.pos
 
-theorem divp_lt_of_lt_mul {u : αˣ} (h : a < b * u) : a /ₚ u < b :=
-  (divp_lt_iff u.zero_lt).2 h
+theorem mul_inv_lt_of_lt_mul₀ (h : a < b * c) :
+    a * Checked.inv c (right_ne_zero_of_mul (ne_zero_of_lt h)).isUnit < b :=
+  (mul_inv_lt_iff₀ (pos_iff_ne_zero.2 (right_ne_zero_of_mul (ne_zero_of_lt h)))).2 h
 
-theorem units_inv_mul_lt_of_lt_mul {u : αˣ} (h : a < u * c) : ↑u⁻¹ * a < c :=
-  (Units.inv_mul_lt_iff u.zero_lt).2 h
+theorem inv_mul_lt_of_lt_mul₀ (h : a < b * c) :
+    Checked.inv b (left_ne_zero_of_mul (ne_zero_of_lt h)).isUnit * a < c :=
+  (inv_mul_lt_iff₀ (pos_iff_ne_zero.2 (left_ne_zero_of_mul (ne_zero_of_lt h)))).2 h
 
 theorem lt_of_mul_lt_mul_of_le₀ (h : a * b < c * d) (hc : 0 < c) (hh : c ≤ a) : b < d :=
   (mul_lt_mul_iff_right₀ hc).mp ((mul_le_mul_of_nonneg_right hh zero_le).trans_lt h)

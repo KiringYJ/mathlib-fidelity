@@ -594,7 +594,8 @@ variable {M : Type*} [AddCommGroup M] [Module R M] {x y v₁ v₂ : M}
 theorem exists_pos_left (h : SameRay R x y) (hx : x ≠ 0) (hy : y ≠ 0) :
     ∃ r : R, 0 < r ∧ r • x = y :=
   let ⟨r₁, r₂, hr₁, hr₂, h⟩ := h.exists_pos hx hy
-  ⟨r₂⁻¹ * r₁, mul_pos (inv_pos.2 hr₂) hr₁, by rw [mul_smul, h, inv_smul_smul₀ hr₂.ne']⟩
+  ⟨r₂⁻¹ * r₁, mul_pos (inv_pos.2 hr₂) hr₁, by
+    rw [mul_smul, h, smul_smul, inv_mul_cancel₀, one_smul]⟩
 
 theorem exists_pos_right (h : SameRay R x y) (hx : x ≠ 0) (hy : y ≠ 0) :
     ∃ r : R, 0 < r ∧ x = r • y :=
@@ -624,9 +625,11 @@ theorem exists_eq_smul_add (h : SameRay R v₁ v₂) :
   · have h₁₂ : 0 < r₁ + r₂ := add_pos h₁ h₂
     refine
       ⟨r₂ / (r₁ + r₂), r₁ / (r₁ + r₂), div_nonneg h₂.le h₁₂.le, div_nonneg h₁.le h₁₂.le, ?_, ?_, ?_⟩
-    · rw [← add_div, add_comm, div_self h₁₂.ne']
-    · rw [div_eq_inv_mul, mul_smul, smul_add, ← H, ← add_smul, add_comm r₂, inv_smul_smul₀ h₁₂.ne']
-    · rw [div_eq_inv_mul, mul_smul, smul_add, H, ← add_smul, add_comm r₂, inv_smul_smul₀ h₁₂.ne']
+    · rw [← add_div, add_comm, div_self]
+    · rw [div_eq_inv_mul₀, mul_smul, smul_add, ← H, ← add_smul, add_comm r₂, smul_smul,
+        inv_mul_cancel₀, one_smul]
+    · rw [div_eq_inv_mul₀, mul_smul, smul_add, H, ← add_smul, add_comm r₂, smul_smul,
+        inv_mul_cancel₀, one_smul]
 
 /-- If vectors `v₁` and `v₂` are on the same ray, then they are nonnegative multiples of the same
 vector. Actually, this vector can be assumed to be `v₁ + v₂`, see `SameRay.exists_eq_smul_add`. -/

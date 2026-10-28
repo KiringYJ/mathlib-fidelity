@@ -579,11 +579,11 @@ theorem mem_span_insert_exchange :
     x ∈ span K (insert y s) → x ∉ span K s → y ∈ span K (insert x s) := by
   simp only [mem_span_insert, forall_exists_index, and_imp]
   rintro a z hz rfl h
-  refine ⟨a⁻¹, -a⁻¹ • z, smul_mem _ _ hz, ?_⟩
   have a0 : a ≠ 0 := by
     rintro rfl
     simp_all
-  match_scalars <;> simp [a0]
+  refine ⟨a⁻¹, -a⁻¹ • z, smul_mem _ _ hz, ?_⟩
+  match_scalars <;> simp
 
 protected theorem LinearIndepOn.insert {s : Set ι} {x : ι} (hs : LinearIndepOn K v s)
     (hx : v x ∉ span K (v '' s)) : LinearIndepOn K v (insert x s) := by
@@ -731,7 +731,7 @@ theorem LinearIndependent.finSnoc_of_not_mem_span_over
   have hc' : algebraMap R K c ≠ 0 := by
     rwa [ne_eq, FaithfulSMul.algebraMap_eq_zero_iff]
   rw [← algebraMap_smul K c x] at heq
-  rw [(eq_inv_smul_iff₀ hc').mpr (eq_neg_of_add_eq_zero_left heq), smul_neg]
+  rw [(eq_inv_smul_iff₀ (ha := hc'.isUnit)).mpr (eq_neg_of_add_eq_zero_left heq), smul_neg]
   exact Submodule.neg_mem _ (Submodule.smul_mem _ _ (Submodule.span_subset_span R K _ hcy))
 
 theorem linearIndependent_finSucc {n} {v : Fin (n + 1) → V} :

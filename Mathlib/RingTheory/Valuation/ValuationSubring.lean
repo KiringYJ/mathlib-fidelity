@@ -32,14 +32,14 @@ noncomputable section
 
 variable (K : Type u) [Field K]
 
-/-- A valuation subring of a field `K` is a subring `A` such that for every `x : K`,
+/-- A valuation subring of a field `K` is a subring `A` such that for every nonzero `x : K`,
 either `x ∈ A` or `x⁻¹ ∈ A`.
 
 This is equivalent to being maximal in the domination order
 of local subrings (the stacks project definition). See `LocalSubring.isMax_iff`.
 -/
 structure ValuationSubring extends Subring K where
-  mem_or_inv_mem' : ∀ x : K, x ∈ carrier ∨ x⁻¹ ∈ carrier
+  mem_or_inv_mem' : ∀ (x : K) {hx : IsUnit x}, x ∈ carrier ∨ x⁻¹ ∈ carrier
 
 namespace ValuationSubring
 
@@ -73,7 +73,7 @@ theorem mul_mem (x y : K) : x ∈ A → y ∈ A → x * y ∈ A := A.toSubring.m
 
 theorem neg_mem (x : K) : x ∈ A → -x ∈ A := A.toSubring.neg_mem
 
-theorem mem_or_inv_mem (x : K) : x ∈ A ∨ x⁻¹ ∈ A := A.mem_or_inv_mem' _
+theorem mem_or_inv_mem (x : K) {hx : IsUnit x} : x ∈ A ∨ x⁻¹ ∈ A := A.mem_or_inv_mem' x
 
 instance : SubringClass (ValuationSubring K) K where
   zero_mem := zero_mem
@@ -106,14 +106,15 @@ of itself. (That is, `⊤ : ValuationSubring K`.) -/
 instance : Field (⊤ : ValuationSubring K) := inferInstanceAs (Field (⊤ : Subfield K))
 
 @[simp, norm_cast]
-theorem top_coe_div (x y : (⊤ : ValuationSubring K)) :
-    ((x / y : (⊤ : ValuationSubring K)) : K) = (x : K) / (y : K) :=
-  rfl
+theorem top_coe_inv (x : (⊤ : ValuationSubring K)) {hx : IsUnit x} :
+    ((x⁻¹ : (⊤ : ValuationSubring K)) : K) = (x : K)⁻¹ :=
+  Eq.symm <| inv_eq_of_mul_eq_one_right₀ <| by
+    rw [← MulMemClass.coe_mul, mul_inv_cancel₀, OneMemClass.coe_one]
 
 @[simp, norm_cast]
-theorem top_coe_inv (x : (⊤ : ValuationSubring K)) :
-    ((x⁻¹ : (⊤ : ValuationSubring K)) : K) = (x : K)⁻¹ :=
-  rfl
+theorem top_coe_div (x y : (⊤ : ValuationSubring K)) {hy : IsUnit y} :
+    ((x / y : (⊤ : ValuationSubring K)) : K) = (x : K) / (y : K) := by
+  rw [div_eq_mul_inv₀, MulMemClass.coe_mul, top_coe_inv, div_eq_mul_inv₀]
 
 instance : OrderTop (ValuationSubring K) where
   le_top := le_top
@@ -123,25 +124,25 @@ instance : Inhabited (ValuationSubring K) :=
 
 instance : ValuationRing A where
   cond' a b := by
-    by_cases h : (b : K) = 0
+    by_cases hb : (b : K) = 0
     · use 0
       left
       ext
-      simp [h]
-    by_cases h : (a : K) = 0
+      simp [hb]
+    by_cases ha : (a : K) = 0
     · use 0; right
       ext
-      simp [h]
-    rcases A.mem_or_inv_mem (a / b) with hh | hh
+      simp [ha]
+    rcases A.mem_or_inv_mem ((a : K) / b) (hx := (div_ne_zero ha).isUnit) with hh | hh
     · use ⟨a / b, hh⟩
       right
       ext
-      simp [field]
+      simp [field, mul_comm]
     · rw [show (a / b : K)⁻¹ = b / a by simp] at hh
       use ⟨b / a, hh⟩
       left
       ext
-      simp [field]
+      simp [field, mul_comm]
 
 instance : Algebra A K := inferInstance
 
@@ -155,10 +156,10 @@ instance : IsFractionRing A K where
     (Units.mk0 (y : K) fun c => nonZeroDivisors.ne_zero hy <| Subtype.ext c).isUnit
   surj z := by
     by_cases h : z = 0; · use (0, 1); simp [h]
-    rcases A.mem_or_inv_mem z with hh | hh
+    rcases A.mem_or_inv_mem z (hx := Ne.isUnit h) with hh | hh
     · use (⟨z, hh⟩, 1); simp
-    · refine ⟨⟨1, ⟨⟨_, hh⟩, ?_⟩⟩, mul_inv_cancel₀ h⟩
-      exact mem_nonZeroDivisors_iff_ne_zero.2 fun c => h (inv_eq_zero.mp (congr_arg Subtype.val c))
+    · refine ⟨⟨1, ⟨⟨_, hh⟩, ?_⟩⟩, mul_inv_cancel₀⟩
+      exact mem_nonZeroDivisors_iff_ne_zero.2 fun c => inv_ne_zero (congr_arg Subtype.val c)
   exists_of_eq {a b} h := ⟨1, by ext; simpa using h⟩
 
 /-- The value group of the valuation associated to `A`. Note: it is actually a group with zero. -/
@@ -202,8 +203,10 @@ theorem valuation_eq_one_iff (a : A) : IsUnit a ↔ A.valuation a = 1 where
       intro c
       rw [c, A.valuation.map_zero] at h
       exact zero_ne_one h
-    have ha' : (a : K)⁻¹ ∈ A := by rw [← valuation_le_one_iff, map_inv₀, h, inv_one]
-    refine .of_mul_eq_one ⟨a⁻¹, ha'⟩ ?_
+    have ha' : (a : K)⁻¹ ∈ A := by
+      rw [← valuation_le_one_iff, map_inv₀]
+      simp [h]
+    refine .of_mul_eq_one ⟨(a : K)⁻¹, ha'⟩ ?_
     ext
     simp [field]
 
@@ -218,23 +221,24 @@ theorem valuation_lt_one_iff (a : A) : a ∈ IsLocalRing.maximalIdeal A ↔ A.va
   dsimp [nonunits]; rw [valuation_eq_one_iff]
   exact (A.valuation_le_one a).lt_iff_ne.symm
 
-/-- A subring `R` of `K` such that for all `x : K` either `x ∈ R` or `x⁻¹ ∈ R` is
+/-- A subring `R` of `K` such that for all nonzero `x : K` either `x ∈ R` or `x⁻¹ ∈ R` is
   a valuation subring of `K`. -/
-def ofSubring (R : Subring K) (hR : ∀ x : K, x ∈ R ∨ x⁻¹ ∈ R) : ValuationSubring K :=
+def ofSubring (R : Subring K) (hR : ∀ (x : K) {hx : IsUnit x}, x ∈ R ∨ x⁻¹ ∈ R) :
+    ValuationSubring K :=
   { R with mem_or_inv_mem' := hR }
 
 @[simp]
-theorem ofSubring_toSubring (R : Subring K) (hR : ∀ x : K, x ∈ R ∨ x⁻¹ ∈ R) :
+theorem ofSubring_toSubring (R : Subring K) (hR : ∀ (x : K) {hx : IsUnit x}, x ∈ R ∨ x⁻¹ ∈ R) :
     (ValuationSubring.ofSubring R hR).toSubring = R := rfl
 
 @[simp]
-theorem mem_ofSubring (R : Subring K) (hR : ∀ x : K, x ∈ R ∨ x⁻¹ ∈ R) (x : K) :
+theorem mem_ofSubring (R : Subring K) (hR : ∀ (x : K) {hx : IsUnit x}, x ∈ R ∨ x⁻¹ ∈ R) (x : K) :
     x ∈ ofSubring R hR ↔ x ∈ R :=
   Iff.refl _
 
 /-- An overring of a valuation ring is a valuation ring. -/
 def ofLE (R : ValuationSubring K) (S : Subring K) (h : R.toSubring ≤ S) : ValuationSubring K :=
-  { S with mem_or_inv_mem' := fun x => (R.mem_or_inv_mem x).imp (@h x) (@h _) }
+  { S with mem_or_inv_mem' := fun x {hx} => (R.mem_or_inv_mem x (hx := hx)).imp (@h x) (@h _) }
 
 section Order
 
@@ -339,13 +343,13 @@ theorem ofPrime_idealOfLE (R S : ValuationSubring K) (h : R ≤ S) :
     ofPrime R (idealOfLE R S h) = S := by
   ext x; constructor
   · rintro ⟨a, r, hr, rfl⟩; apply mul_mem; · exact h a.2
-    · rw [← valuation_le_one_iff, map_inv₀, ← inv_one, inv_le_inv₀]
+    · rw [← valuation_le_one_iff, map_inv₀, ← inv_one₀, inv_le_inv₀]
       · exact not_lt.1 ((not_iff_not.2 <| valuation_lt_one_iff S _).1 hr)
       · simpa [Valuation.pos_iff] using fun hr₀ ↦ hr₀ ▸ hr <| Ideal.zero_mem (R.idealOfLE S h)
       · exact zero_lt_one
   · intro hx; by_cases hr : x ∈ R; · exact R.le_ofPrime _ hr
     have : x ≠ 0 := fun h => hr (by rw [h]; exact R.zero_mem)
-    replace hr := (R.mem_or_inv_mem x).resolve_left hr
+    replace hr := (R.mem_or_inv_mem x (hx := this.isUnit)).resolve_left hr
     refine ⟨1, ⟨x⁻¹, hr⟩, ?_, ?_⟩
     · simp only [Ideal.primeCompl, Submonoid.mem_mk, Subsemigroup.mem_mk, Set.mem_compl_iff,
         SetLike.mem_coe, idealOfLE, Ideal.mem_comap, IsLocalRing.mem_maximalIdeal, mem_nonunits_iff,
@@ -440,8 +444,8 @@ variable {Γ Γ₁ Γ₂ : Type*} [LinearOrderedCommGroupWithZero Γ]
 def valuationSubring : ValuationSubring K :=
   { v.integer with
     mem_or_inv_mem' := by
-      intro x
-      rcases val_le_one_or_val_inv_le_one v x with h | h
+      intro x hx
+      rcases val_le_one_or_val_inv_le_one v x (hx := hx) with h | h
       exacts [Or.inl h, Or.inr h] }
 
 @[simp]
@@ -563,14 +567,18 @@ def nonunits : NonUnitalSubring K where
 theorem mem_nonunits_iff {x : K} : x ∈ A.nonunits ↔ A.valuation x < 1 :=
   Iff.rfl
 
-theorem mem_nonunits_iff_or {x : K} : x ∈ A.nonunits ↔ x = 0 ∨ x⁻¹ ∉ A := by
-  rw [← valuation_le_one_iff, ← or_congr_right' fun h ↦ (A.valuation.one_le_val_iff h).not,
-    ← lt_iff_not_ge, ← mem_nonunits_iff, or_iff_right_of_imp]
-  rintro rfl
-  exact A.nonunits.zero_mem
+/-- An element is a nonunit of `A` exactly when it is zero or invertible with inverse outside
+`A`. -/
+theorem mem_nonunits_iff_or {x : K} : x ∈ A.nonunits ↔ x = 0 ∨ ∃ hx : IsUnit x, x⁻¹ ∉ A := by
+  rcases eq_or_ne x 0 with rfl | hx
+  · simp [A.nonunits.zero_mem]
+  have : x ∈ A.nonunits ↔ x⁻¹ ∉ A := by
+    rw [mem_nonunits_iff, ← valuation_le_one_iff, ← A.valuation.one_le_val_iff hx, not_le]
+  rw [this]
+  exact ⟨fun h ↦ .inr ⟨hx.isUnit, h⟩, fun h ↦ h.elim (absurd · hx) fun ⟨_, h⟩ ↦ h⟩
 
-theorem inv_mem_nonunits_iff {x : K} : x⁻¹ ∈ A.nonunits ↔ x = 0 ∨ x ∉ A := by
-  rw [mem_nonunits_iff_or, inv_inv, inv_eq_zero]
+theorem inv_mem_nonunits_iff {x : K} {hx : IsUnit x} : x⁻¹ ∈ A.nonunits ↔ x ∉ A := by
+  rw [mem_nonunits_iff, ← A.valuation.one_lt_val_iff hx.ne_zero, ← valuation_le_one_iff, not_le]
 
 theorem nonunits_le_nonunits {A B : ValuationSubring K} : B.nonunits ≤ A.nonunits ↔ A ≤ B := by
   constructor
@@ -664,8 +672,10 @@ theorem principalUnitGroup_le_principalUnitGroup {A B : ValuationSubring K} :
   · intro h x hx
     by_cases h_1 : x = 0; · simp only [h_1, zero_mem]
     by_cases h_2 : x⁻¹ + 1 = 0
-    · rw [add_eq_zero_iff_eq_neg, inv_eq_iff_eq_inv, inv_neg, inv_one] at h_2
-      simpa only [h_2] using B.neg_mem _ B.one_mem
+    · have hx1 := mul_inv_cancel₀ (a := x) (ha := Ne.isUnit h_1)
+      rw [eq_neg_of_add_eq_zero_left h_2] at hx1
+      have h_2' : x = -1 := by linear_combination -hx1
+      simpa only [h_2'] using B.neg_mem _ B.one_mem
     · rw [← valuation_le_one_iff, ← not_lt, Valuation.one_lt_val_iff _ h_1,
         ← add_sub_cancel_right x⁻¹, ← Units.val_mk0 h_2, ← mem_principalUnitGroup_iff] at hx ⊢
       simpa only [hx] using @h (Units.mk0 (x⁻¹ + 1) h_2)
@@ -786,9 +796,10 @@ This is available as an instance in the `Pointwise` locale. -/
 def pointwiseHasSMul : SMul G (ValuationSubring K) where
   smul g S := -- TODO: if we add `ValuationSubring.map` at a later date, we should use it here
     { g • S.toSubring with
-      mem_or_inv_mem' := fun x =>
-        (mem_or_inv_mem S (g⁻¹ • x)).imp Subring.mem_pointwise_smul_iff_inv_smul_mem.mpr fun h =>
-          Subring.mem_pointwise_smul_iff_inv_smul_mem.mpr <| by rwa [smul_inv''] }
+      mem_or_inv_mem' := fun x {hx} =>
+        (mem_or_inv_mem S (g⁻¹ • x) (hx := hx.map (MulSemiringAction.toRingHom G K g⁻¹))).imp
+          Subring.mem_pointwise_smul_iff_inv_smul_mem.mpr fun h =>
+            Subring.mem_pointwise_smul_iff_inv_smul_mem.mpr <| by rwa [smul_inv''] }
 
 scoped[Pointwise] attribute [instance] ValuationSubring.pointwiseHasSMul
 
@@ -856,7 +867,8 @@ variable {L J : Type*} [Field L] [Field J]
 
 /-- The pullback of a valuation subring `A` along a ring homomorphism `K →+* L`. -/
 def comap (A : ValuationSubring L) (f : K →+* L) : ValuationSubring K :=
-  { A.toSubring.comap f with mem_or_inv_mem' := fun k => by simp [ValuationSubring.mem_or_inv_mem] }
+  { A.toSubring.comap f with
+    mem_or_inv_mem' := fun k {hk} => by simpa using A.mem_or_inv_mem (f k) (hx := hk.map f) }
 
 @[simp]
 theorem coe_comap (A : ValuationSubring L) (f : K →+* L) : (A.comap f : Set K) = f ⁻¹' A := rfl

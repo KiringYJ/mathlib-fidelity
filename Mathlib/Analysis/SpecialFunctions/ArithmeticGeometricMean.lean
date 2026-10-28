@@ -29,7 +29,7 @@ namespace NNReal
 
 /-- The AM–GM inequality for two `NNReal`s, with means in canonical form. -/
 lemma sqrt_mul_le_half_add (x y : ℝ≥0) : sqrt (x * y) ≤ (x + y) / 2 := by
-  rw [sqrt_le_iff_le_sq, div_pow, le_div_iff₀' (by positivity), ← mul_assoc]
+  rw [sqrt_le_iff_le_sq, div_pow₀, le_div_iff₀' (by positivity), ← mul_assoc]
   norm_num
   exact four_mul_le_sq_add ..
 
@@ -42,7 +42,7 @@ lemma sqrt_mul_lt_half_add_of_ne {x y : ℝ≥0} (h : x ≠ y) : sqrt (x * y) < 
   rw [sq, tsub_mul, mul_tsub, mul_tsub, tsub_tsub_eq_add_tsub_of_le (by gcongr),
     tsub_add_eq_add_tsub (by gcongr), tsub_tsub, show x * y + y * x = 2 * x * y by ring,
     tsub_pos_iff_lt, ← sq, ← sq] at key
-  rw [← sqrt_sq (_ / 2), sqrt_lt_sqrt, div_pow, lt_div_iff₀' (by positivity),
+  rw [← sqrt_sq (_ / 2), sqrt_lt_sqrt, div_pow₀, lt_div_iff₀' (by positivity),
     show (2 : ℝ≥0) ^ 2 * (x * y) = 2 * x * y + 2 * x * y by ring, add_sq, add_right_comm]
   gcongr
 
@@ -79,8 +79,7 @@ lemma le_gm_and_am_le (h : x ≤ y) : x ≤ sqrt (x * y) ∧ (x + y) / 2 ≤ y :
   constructor
   · rw [le_sqrt_iff_sq_le, sq]
     gcongr
-  · apply div_le_of_le_mul'
-    rw [two_mul]
+  · rw [div_le_iff₀ (by positivity), mul_two]
     gcongr
 
 lemma dist_gm_am_le : dist (sqrt (x * y)) ((x + y) / 2) ≤ dist x y / 2 := by
@@ -94,8 +93,9 @@ lemma dist_gm_am_le : dist (sqrt (x * y)) ((x + y) / 2) ≤ dist x y / 2 := by
       gcongr
     _ = _ := by
       nth_rw 2 [← add_halves x]
-      rw [add_div, add_tsub_add_eq_tsub_left, ← tsub_div, NNReal.coe_div, NNReal.coe_two, dist_comm,
-        dist_eq, ← NNReal.coe_sub h, abs_eq]
+      rw [add_div, add_tsub_add_eq_tsub_left, ← tsub_div, dist_comm, dist_eq, ← NNReal.coe_sub h,
+        abs_eq]
+      simp
 
 lemma agmSequences_monotone_and_antitone :
     (Monotone fun n ↦ (agmSequences x y n).1) ∧ Antitone fun n ↦ (agmSequences x y n).2 := by
@@ -148,17 +148,20 @@ lemma dist_agmSequences_fst_snd (n : ℕ) :
   | succ n ih =>
     rw [agmSequences_succ']
     apply dist_gm_am_le.trans
-    rw [pow_succ, ← div_div]
-    gcongr
+    calc _ ≤ dist x y / 2 ^ (n + 1) / 2 := by gcongr
+      _ = _ := by
+        field_simp
+        ring
 
 lemma tendsto_dist_agmSequences_atTop_zero :
     Tendsto (fun n ↦ dist (agmSequences x y n).1 (agmSequences x y n).2) atTop (𝓝 0) := by
   apply squeeze_zero (fun _ ↦ dist_nonneg) dist_agmSequences_fst_snd
-  conv =>
-    rw [← zero_mul (dist x y / 2)]
-    enter [1, n]
-    rw [pow_succ', ← div_div, div_eq_inv_mul, ← inv_pow]
-  exact (_root_.tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num) (by norm_num)).mul_const _
+  have h := (_root_.tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num : (0 : ℝ) ≤ 2⁻¹)
+    (by norm_num : (2⁻¹ : ℝ) < 1)).mul_const (dist x y / 2)
+  rw [zero_mul] at h
+  refine h.congr fun n ↦ ?_
+  field_simp
+  ring
 
 /-- The arithmetic-geometric mean of two `NNReal`s, defined as the infimum of arithmetic means. -/
 noncomputable def agm (x y : ℝ≥0) : ℝ≥0 :=
@@ -293,9 +296,9 @@ lemma agm_mul_distrib {k : ℝ≥0} : agm (k * x) (k * y) = k * agm x y := by
   simp_rw [agm, mul_iInf]
   congr! with n
   induction n generalizing x y with
-  | zero => simp [← mul_div_assoc, mul_add]
+  | zero => simp [← mul_div_assoc₀, mul_add]
   | succ n ih =>
-    rw [agmSequences_succ, ← mul_add, mul_div_assoc, mul_mul_mul_comm,
+    rw [agmSequences_succ, ← mul_add, mul_div_assoc₀, mul_mul_mul_comm,
       ← sq, sqrt_mul, sqrt_sq, ih, agmSequences_succ]
 
 end NNReal

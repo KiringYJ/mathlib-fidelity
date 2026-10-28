@@ -189,11 +189,11 @@ lemma _root_.IsIntegrallyClosed.minpoly_smul {r : R} (hr : r ≠ 0) {s : S} (hs 
   · simpa [monic_scaleRoots_iff] using minpoly.monic
       (hs.map (IsScalarTower.toAlgHom R S L)).tower_top
   · exact scaleRoots_aeval_eq_zero (minpoly.aeval _ _)
-  · rw [← Polynomial.scaleRoots_dvd_iff _ _ (r := (algebraMap R K r)⁻¹) (IsUnit.mk0 _ (by simpa)),
-      ← scaleRoots_mul, mul_inv_cancel₀ (by simpa), scaleRoots_one]
+  · rw [← Polynomial.scaleRoots_dvd_iff _ _ (r := (algebraMap R K r)⁻¹) (IsUnit.mk0 _ (by simp)),
+      ← scaleRoots_mul, mul_inv_cancel₀, scaleRoots_one]
     refine minpoly.dvd _ _ ?_
     nth_rw 1 [← inv_mul_cancel_left₀ (b := algebraMap S L s)
-      (a := algebraMap K L (algebraMap R K r)) (by simpa), ← map_inv₀]
+      (a := algebraMap K L (algebraMap R K r)) (ha := Ne.isUnit (by simpa)), ← map_inv₀]
     exact scaleRoots_aeval_eq_zero (minpoly.aeval _ _)
 
 noncomputable section AdjoinRoot

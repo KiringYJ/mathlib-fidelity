@@ -153,7 +153,7 @@ theorem det_mul (M N : Matrix n n R) : det (M * N) = det M * det N :=
       (sum_congr rfl fun σ _ =>
         Fintype.sum_equiv (Equiv.mulRight σ⁻¹) _ _ fun τ => by
           have : (∏ j, M (τ j) (σ j)) = ∏ j, M ((τ * σ⁻¹) j) j := by
-            rw [← (σ⁻¹ : _ ≃ _).prod_comp]
+            rw [← Equiv.prod_comp σ⁻¹]
             simp
           have h : ε σ * ε (τ * σ⁻¹) = ε τ :=
             calc

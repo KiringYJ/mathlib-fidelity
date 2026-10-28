@@ -159,7 +159,7 @@ noncomputable def isoPSLOfAlgClosedOfNonempty [Nonempty n] {F : Type*} [Field F]
   obtain ⟨x, hx⟩ := IsAlgClosed.exists_root (X ^ Fintype.card n - C r.1 : F[X]) (by
     simp [Polynomial.degree_X_pow_sub_C Fintype.card_pos])
   have hx' : x ≠ 0 := by aesop
-  exact ⟨⟨x, x⁻¹, mul_inv_cancel₀ hx', inv_mul_cancel₀ hx'⟩, by
+  exact ⟨⟨x, x⁻¹, mul_inv_cancel₀, inv_mul_cancel₀⟩, by
     simpa [Units.ext_iff, sub_eq_zero] using hx⟩⟩)
 
 /-- An isomorphism between `PGL(n, F)` and `PSL(n, F)` in the case of an algebraically closed field

@@ -127,68 +127,60 @@ section IsDomain
 
 variable [IsDomain K]
 
-/-- `RatFunc.mk (p q : K[X])` is `p / q` as a rational function.
-
-If `q = 0`, then `mk` returns 0.
+/-- `RatFunc.mk (p q : K[X]) hq` is `p / q` as a rational function. It is defined for a nonzero
+denominator `q`; the evidence `hq : q ≠ 0` is found by `checked_nonzero` from the context.
 
 This is an auxiliary definition used to define an `Algebra` structure on `RatFunc`;
 the `simp` normal form of `mk p q` is `algebraMap _ _ p / algebraMap _ _ q`.
 -/
-protected irreducible_def mk (p q : K[X]) : RatFunc K :=
+protected irreducible_def mk (p q : K[X]) (hq : q ≠ 0 := by checked_nonzero) : RatFunc K :=
   ofFractionRing (algebraMap _ _ p / algebraMap _ _ q)
 
-theorem mk_eq_div' (p q : K[X]) :
+theorem mk_eq_div' (p q : K[X]) {hq : q ≠ 0} :
     RatFunc.mk p q = ofFractionRing (algebraMap _ _ p / algebraMap _ _ q) := by rw [RatFunc.mk]
 
-theorem mk_zero (p : K[X]) : RatFunc.mk p 0 = ofFractionRing (0 : FractionRing K[X]) := by
-  rw [mk_eq_div', map_zero, div_zero]
-
 theorem mk_coe_def (p : K[X]) (q : K[X]⁰) :
-    RatFunc.mk p q = ofFractionRing (IsLocalization.mk' _ p q) := by
+    RatFunc.mk p q (nonZeroDivisors.coe_ne_zero q) = ofFractionRing (IsLocalization.mk' _ p q) := by
   simp only [mk_eq_div', ← Localization.mk_eq_mk', FractionRing.mk_eq_div]
 
 theorem mk_def_of_mem (p : K[X]) {q} (hq : q ∈ K[X]⁰) :
-    RatFunc.mk p q = ofFractionRing (IsLocalization.mk' (FractionRing K[X]) p ⟨q, hq⟩) := by
-  simp only [← mk_coe_def]
+    RatFunc.mk p q (nonZeroDivisors.ne_zero hq) =
+      ofFractionRing (IsLocalization.mk' (FractionRing K[X]) p ⟨q, hq⟩) :=
+  mk_coe_def p ⟨q, hq⟩
 
-theorem mk_def_of_ne (p : K[X]) {q : K[X]} (hq : q ≠ 0) :
+theorem mk_def_of_ne (p : K[X]) {q : K[X]} {hq : q ≠ 0} :
     RatFunc.mk p q =
       ofFractionRing (IsLocalization.mk' (FractionRing K[X]) p
         ⟨q, mem_nonZeroDivisors_iff_ne_zero.mpr hq⟩) :=
   mk_def_of_mem p _
 
-theorem mk_eq_localization_mk (p : K[X]) {q : K[X]} (hq : q ≠ 0) :
+theorem mk_eq_localization_mk (p : K[X]) {q : K[X]} {hq : q ≠ 0} :
     RatFunc.mk p q =
       ofFractionRing (Localization.mk p ⟨q, mem_nonZeroDivisors_iff_ne_zero.mpr hq⟩) := by
-  rw [mk_def_of_ne _ hq, Localization.mk_eq_mk']
+  rw [mk_def_of_ne, Localization.mk_eq_mk']
 
 theorem mk_one' (p : K[X]) :
     RatFunc.mk p 1 = ofFractionRing (algebraMap _ _ p) := by
-  rw [← IsLocalization.mk'_one (M := K[X]⁰) (FractionRing K[X]) p, ← mk_coe_def, Submonoid.coe_one]
+  simp only [mk_eq_div', map_one, div_one₀]
 
-theorem mk_eq_mk {p q p' q' : K[X]} (hq : q ≠ 0) (hq' : q' ≠ 0) :
+theorem mk_eq_mk {p q p' q' : K[X]} {hq : q ≠ 0} {hq' : q' ≠ 0} :
     RatFunc.mk p q = RatFunc.mk p' q' ↔ p * q' = p' * q := by
-  rw [mk_def_of_ne _ hq, mk_def_of_ne _ hq', ofFractionRing_injective.eq_iff,
+  rw [mk_def_of_ne, mk_def_of_ne, ofFractionRing_injective.eq_iff,
     IsLocalization.mk'_eq_iff_eq',
     (IsFractionRing.injective K[X] (FractionRing K[X])).eq_iff]
 
-theorem liftOn_mk {P : Sort v} (p q : K[X]) (f : K[X] → K[X] → P) (f0 : ∀ p, f p 0 = f 0 1)
+theorem liftOn_mk {P : Sort v} (p q : K[X]) {hq : q ≠ 0} (f : K[X] → K[X] → P)
     (H' : ∀ {p q p' q'} (_hq : q ≠ 0) (_hq' : q' ≠ 0), q' * p = q * p' → f p q = f p' q')
     (H : ∀ {p q p' q'} (_hq : q ∈ K[X]⁰) (_hq' : q' ∈ K[X]⁰), q' * p = q * p' → f p q = f p' q' :=
       fun {_ _ _ _} hq hq' h => H' (nonZeroDivisors.ne_zero hq) (nonZeroDivisors.ne_zero hq') h) :
     (RatFunc.mk p q).liftOn f @H = f p q := by
-  by_cases hq : q = 0
-  · subst hq
-    simp only [mk_zero, f0, ← Localization.mk_zero 1,
-      liftOn_ofFractionRing_mk, Submonoid.coe_one]
-  · simp only [mk_eq_localization_mk _ hq, liftOn_ofFractionRing_mk]
+  simp only [mk_eq_localization_mk, liftOn_ofFractionRing_mk]
 
 /-- Non-dependent recursion principle for `RatFunc K`: if `f p q : P` for all `p q`,
 such that `f (a * p) (a * q) = f p q`, then we can find a value of `P`
 for all elements of `RatFunc K` by setting `lift_on' (p / q) f _ = f p q`.
 
-The value of `f p 0` for any `p` is never used and in principle this may be anything,
-although many usages of `lift_on'` assume `f p 0 = f 0 1`.
+The value of `f p 0` for any `p` is never used and may be anything.
 -/
 protected irreducible_def liftOn' {P : Sort v} (x : RatFunc K) (f : K[X] → K[X] → P)
   (H : ∀ {p q a} (_hq : q ≠ 0) (_ha : a ≠ 0), f (a * p) (a * q) = f p q) : P :=
@@ -196,10 +188,10 @@ protected irreducible_def liftOn' {P : Sort v} (x : RatFunc K) (f : K[X] → K[X
     liftOn_condition_of_liftOn'_condition (@H) (nonZeroDivisors.ne_zero hq)
       (nonZeroDivisors.ne_zero hq')
 
-theorem liftOn'_mk {P : Sort v} (p q : K[X]) (f : K[X] → K[X] → P) (f0 : ∀ p, f p 0 = f 0 1)
+theorem liftOn'_mk {P : Sort v} (p q : K[X]) {hq : q ≠ 0} (f : K[X] → K[X] → P)
     (H : ∀ {p q a} (_hq : q ≠ 0) (_ha : a ≠ 0), f (a * p) (a * q) = f p q) :
     (RatFunc.mk p q).liftOn' f @H = f p q := by
-  rw [RatFunc.liftOn', RatFunc.liftOn_mk _ _ _ f0]
+  rw [RatFunc.liftOn', RatFunc.liftOn_mk _ _ f]
   apply liftOn_condition_of_liftOn'_condition H
 
 /-- Induction principle for `RatFunc K`: if `f p q : P (RatFunc.mk p q)` for all `p q`,

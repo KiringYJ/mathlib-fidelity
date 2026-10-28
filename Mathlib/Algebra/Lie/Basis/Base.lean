@@ -106,7 +106,8 @@ def baseSupportEquiv : ι ≃ b.base.support :=
   let := b.isCartanSubalgebra
   suffices b.h' i ∈ corootSpace (b.baseSupp' i) by
     have _i : IsAddTorsionFree L := .of_isTorsionFree K L
-    exact (eq_coroot_of_mem_corootSpace_of_two (b.baseSupp' i).val this (by simp [baseSupp'])).symm
+    exact (eq_coroot_of_mem_corootSpace_of_two (H.isNonZero_coe_root (b.baseSupp' i)) this
+      (by simp [baseSupp'])).symm
   have h_mem : ⁅b.e i, b.f i⁆ ∈ H := by
     nth_rw 1 [(b.sl2 i).lie_e_f, b.cartan_eq_lieSpan]
     exact subset_lieSpan <| mem_range_self i

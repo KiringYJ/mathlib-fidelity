@@ -1374,13 +1374,11 @@ noncomputable instance (priority := 100) : StrongNormalizedGCDMonoid G₀ where
     if h : a = 0 ∨ b = 0 then by simp [ite_eq_left h] else by simp [ite_eq_right h]
 
 @[simp]
-theorem coe_normUnit {a : G₀} (h0 : a ≠ 0) :
-    (↑(normUnit a) : G₀) = ↑(Units.mk0 a h0)⁻¹ := by
-  simp [normUnit, h0]
+theorem coe_normUnit {a : G₀} (h0 : a ≠ 0) : (↑(normUnit a) : G₀) = a⁻¹ :=
+  congrArg Units.val (dite_eq_right h0)
 
 theorem normalize_eq_one {a : G₀} (h0 : a ≠ 0) : normalize a = 1 := by
-  rw [normalize_apply, coe_normUnit G₀ h0]
-  exact (Units.mk0 a h0).mul_inv
+  rw [normalize_apply, coe_normUnit G₀ h0, mul_inv_cancel₀]
 
 end CommGroupWithZero
 

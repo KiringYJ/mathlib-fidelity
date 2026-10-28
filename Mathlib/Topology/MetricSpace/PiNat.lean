@@ -275,7 +275,7 @@ protected theorem dist_nonneg (x y : ∀ n, E n) : 0 ≤ dist x y := by
 protected theorem dist_le_one (x y : ∀ n, E n) : dist x y ≤ 1 := by
   rcases eq_or_ne x y with (rfl | h)
   · simp [dist]
-  · simp only [dist, ne_eq, h, not_false_eq_true, ↓reduceIte, one_div, inv_pow]
+  · simp only [dist, ne_eq, h, not_false_eq_true, ↓reduceIte]
     bound
 
 theorem dist_triangle_nonarch (x y z : ∀ n, E n) : dist x z ≤ max (dist x y) (dist y z) := by
@@ -285,7 +285,7 @@ theorem dist_triangle_nonarch (x y z : ∀ n, E n) : dist x z ≤ max (dist x y)
   · simp
   rcases eq_or_ne y z with (rfl | hyz)
   · simp
-  simp only [dist_eq_of_ne, hxz, hxy, hyz, inv_le_inv₀, one_div, inv_pow, zero_lt_two, Ne,
+  simp only [dist_eq_of_ne, hxz, hxy, hyz, inv_le_inv₀, one_div₀, inv_pow₀, zero_lt_two, Ne,
     not_false_iff, le_max_iff, pow_le_pow_iff_right₀, one_lt_two, pow_pos,
     min_le_iff.1 (min_firstDiff_le x y z hxz)]
 
@@ -416,7 +416,8 @@ protected def metricSpaceOfDiscreteUniformity {E : ℕ → Type*} [∀ n, Unifor
       apply le_antisymm
       · simp only [le_iInf_iff, le_principal_iff]
         intro ε εpos
-        obtain ⟨n, hn⟩ : ∃ n, (1 / 2 : ℝ) ^ n < ε := exists_pow_lt_of_lt_one εpos (by norm_num)
+        obtain ⟨n, hn⟩ : ∃ n, (1 / 2 : ℝ) ^ n < ε :=
+          exists_pow_lt_of_lt_one εpos (by norm_num : (1 / 2 : ℝ) < 1)
         apply
           @mem_iInf_of_iInter _ _ _ _ _ (Finset.range n).finite_toSet fun i =>
             { p : (∀ n : ℕ, E n) × ∀ n : ℕ, E n | p.fst i = p.snd i }
@@ -914,24 +915,26 @@ It is highly non-canonical, though, and therefore not registered as a global ins
 The distance we use here is `dist x y = ∑' i, min (1/2)^(encode i) (dist (x i) (y i))`. -/
 @[instance_reducible]
 protected def dist : Dist (∀ i, F i) where
-  dist x y := ∑' i, min (2⁻¹ ^ encode i) (dist (x i) (y i))
+  dist x y := ∑' i, min ((2 : ℝ)⁻¹ ^ encode i) (dist (x i) (y i))
 
 attribute [scoped instance] PiCountable.dist
 
-lemma dist_eq_tsum (x y : ∀ i, F i) : dist x y = ∑' i, min (2⁻¹ ^ encode i) (dist (x i) (y i)) :=
+lemma dist_eq_tsum (x y : ∀ i, F i) :
+    dist x y = ∑' i, min ((2 : ℝ)⁻¹ ^ encode i) (dist (x i) (y i)) :=
   rfl
 
 lemma dist_summable (x y : ∀ i, F i) :
-    Summable fun i ↦ min (2⁻¹ ^ encode i) (dist (x i) (y i)) := by
+    Summable fun i ↦ min ((2 : ℝ)⁻¹ ^ encode i) (dist (x i) (y i)) := by
   refine .of_nonneg_of_le (fun i => ?_) (fun i => min_le_left _ _) <| by
-    simpa [one_div] using summable_geometric_two_encode
+    simpa [one_div₀] using summable_geometric_two_encode
   exact le_min (by positivity) dist_nonneg
 
 lemma min_dist_le_dist_pi (x y : ∀ i, F i) (i : ι) :
-    min (2⁻¹ ^ encode i) (dist (x i) (y i)) ≤ dist x y :=
+    min ((2 : ℝ)⁻¹ ^ encode i) (dist (x i) (y i)) ≤ dist x y :=
   (dist_summable x y).le_tsum i fun j _ => le_min (by simp) dist_nonneg
 
-lemma dist_le_dist_pi_of_dist_lt (h : dist x y < 2⁻¹ ^ encode i) : dist (x i) (y i) ≤ dist x y := by
+lemma dist_le_dist_pi_of_dist_lt (h : dist x y < (2 : ℝ)⁻¹ ^ encode i) :
+    dist (x i) (y i) ≤ dist x y := by
   simpa only [not_le.2 h, false_or] using min_le_iff.1 (min_dist_le_dist_pi x y i)
 
 /-- Given a countable family of metric spaces, one may put a distance on their product `Π i, E i`.
@@ -1033,7 +1036,7 @@ noncomputable instance : PseudoMetricSpace (PiNatEmbed X Y f) :=
   .induced (embed X Y f) PiCountable.pseudoMetricSpace
 
 lemma dist_def (x y : PiNatEmbed X Y f) :
-    dist x y = ∑' i, min (2⁻¹ ^ encode i) (dist (f i x.ofPiNat) (f i y.ofPiNat)) := rfl
+    dist x y = ∑' i, min ((2 : ℝ)⁻¹ ^ encode i) (dist (f i x.ofPiNat) (f i y.ofPiNat)) := rfl
 
 variable [TopologicalSpace X]
 

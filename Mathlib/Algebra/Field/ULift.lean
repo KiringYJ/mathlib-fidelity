@@ -36,13 +36,25 @@ instance instRatCast [RatCast α] : RatCast (ULift α) where ratCast q := up q
 instance divisionSemiring [DivisionSemiring α] : DivisionSemiring (ULift α) where
   toSemiring := semiring
   __ := groupWithZero
+  nnratCastOfCharZero _ q :=
+    haveI := CharZero.of_map_natCast (up : α → ULift α) fun _ => rfl
+    up q
+  nnratCastOfCharZero_mul_den _ q := by
+    have := CharZero.of_map_natCast (up : α → ULift α) fun _ => rfl
+    exact congrArg up (DivisionSemiring.nnratCastOfCharZero_mul_den _ q)
 
 instance semifield [Semifield α] : Semifield (ULift α) :=
   { ULift.divisionSemiring, ULift.commGroupWithZero with }
 
 instance divisionRing [DivisionRing α] : DivisionRing (ULift α) where
   toRing := ring
-  __ := groupWithZero
+  __ := divisionSemiring
+  ratCastOfCharZero _ q :=
+    haveI := CharZero.of_map_natCast (up : α → ULift α) fun _ => rfl
+    up q
+  ratCastOfCharZero_mul_den _ q := by
+    have := CharZero.of_map_natCast (up : α → ULift α) fun _ => rfl
+    exact congrArg up (DivisionRing.ratCastOfCharZero_mul_den _ q)
 
 instance field [Field α] : Field (ULift α) := {}
 

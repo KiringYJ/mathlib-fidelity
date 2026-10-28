@@ -73,6 +73,8 @@ theorem factorial_pos : ∀ n, 0 < n !
 theorem factorial_ne_zero (n : ℕ) : n ! ≠ 0 :=
   ne_of_gt (factorial_pos _)
 
+instance (n : ℕ) : NeZero n ! := ⟨factorial_ne_zero n⟩
+
 @[gcongr]
 theorem factorial_dvd_factorial {m n} (h : m ≤ n) : m ! ∣ n ! := by
   induction h with

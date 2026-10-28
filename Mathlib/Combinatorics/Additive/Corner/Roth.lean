@@ -56,7 +56,7 @@ private lemma noAccidental (hs : IsCornerFree (A : Set (G × G))) :
 private lemma farFromTriangleFree_graph [Fintype G] [DecidableEq G] (hε : ε * card G ^ 2 ≤ #A) :
     (graph <| triangleIndices A).FarFromTriangleFree (ε / 9) := by
   refine farFromTriangleFree _ ?_
-  simp_rw [card_triangleIndices, mul_comm_div, Nat.cast_pow, Nat.cast_add]
+  simp_rw [card_triangleIndices, mul_comm_div₀, Nat.cast_pow, Nat.cast_add]
   ring_nf
   simpa only [mul_comm] using hε
 
@@ -71,7 +71,8 @@ open Corners
 
 Note that this depends on `SzemerediRegularity.bound`, which is a tower-type exponential. This means
 `cornersTheoremBound` is in practice absolutely tiny. -/
-noncomputable def cornersTheoremBound (ε : ℝ) : ℕ := ⌊(triangleRemovalBound (ε / 9) * 27)⁻¹⌋₊ + 1
+noncomputable def cornersTheoremBound (ε : ℝ) (hε : 0 < ε := by positivity) : ℕ :=
+  ⌊(triangleRemovalBound (ε / 9) * 27)⁻¹⌋₊ + 1
 
 /-- The **corners theorem** for finite abelian groups.
 
@@ -89,7 +90,7 @@ theorem corners_theorem (ε : ℝ) (hε : 0 < ε) (hG : cornersTheoremBound ε �
   rw [Nat.floor_lt' (by positivity), inv_lt_iff_one_lt_mul₀' (by positivity)] at hG
   refine hG.not_ge (le_of_mul_le_mul_right ?_ (by positivity : (0 : ℝ) < card G ^ 2))
   classical
-  have h₁ := (farFromTriangleFree_graph hAε).le_card_cliqueFinset
+  have h₁ := (farFromTriangleFree_graph hAε).le_card_cliqueFinset (hε := by positivity)
   rw [card_triangles, card_triangleIndices] at h₁
   convert! h₁.trans (Nat.cast_le.2 <| card_le_univ _) using 1 <;> simp <;> ring
 

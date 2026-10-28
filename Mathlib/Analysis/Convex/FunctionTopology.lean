@@ -28,22 +28,25 @@ variable {𝕜 α β : Type*} [Semiring 𝕜] [PartialOrder 𝕜] [PartialOrder 
     [SMul 𝕜 α] [SMul 𝕜 β]
     [ContinuousConstSMul 𝕜 β] [ContinuousAdd β]
 
-/-- The set of convex functions on a set `s` is closed. -/
-public theorem isClosed_setOfPred_convexOn {s : Set α} :
-    IsClosed {f : α → β | ConvexOn 𝕜 s f} := by
+/-- The set of convex functions on a set `s` is closed. The functions may be defined on a domain
+`D` read in coordinates `coord : D → α`, the identity by default. -/
+public theorem isClosed_setOfPred_convexOn {D : Type*} {coord : D → α} {s : Set D} :
+    IsClosed {f : D → β | ConvexOn 𝕜 s f coord} := by
   simp only [ConvexOn, ofPred_and, ofPred_forall]
   refine IsClosed.inter isClosed_const ?_
   exact isClosed_iInter fun x => isClosed_iInter fun hx => isClosed_iInter fun y =>
       isClosed_iInter fun hy => isClosed_iInter fun a => isClosed_iInter fun b =>
       isClosed_iInter fun ha => isClosed_iInter fun hb => isClosed_iInter fun hab =>
+      isClosed_iInter fun z => isClosed_iInter fun hz => isClosed_iInter fun hzxy =>
       isClosed_le (by fun_prop) (by fun_prop)
 
 @[deprecated (since := "2026-07-09")]
 public alias isClosed_setOf_convexOn := isClosed_setOfPred_convexOn
 
-/-- The set of concave functions on a set `s` is closed. -/
-public theorem isClosed_setOfPred_concaveOn {s : Set α} :
-    IsClosed {f : α → β | ConcaveOn 𝕜 s f} :=
+/-- The set of concave functions on a set `s` is closed. The functions may be defined on a domain
+`D` read in coordinates `coord : D → α`, the identity by default. -/
+public theorem isClosed_setOfPred_concaveOn {D : Type*} {coord : D → α} {s : Set D} :
+    IsClosed {f : D → β | ConcaveOn 𝕜 s f coord} :=
   isClosed_setOfPred_convexOn (α := α) (β := βᵒᵈ)
 
 @[deprecated (since := "2026-07-09")]

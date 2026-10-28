@@ -140,7 +140,7 @@ theorem increasing_cantorFunction (h1 : 0 < c) (h2 : c < 1 / 2) {n : ℕ} {f g :
         norm_num
       rwa [sub_pos]
     convert! this
-    · rw [cantorFunction_succ _ (le_of_lt h1) h3, div_eq_mul_inv, ←
+    · rw [cantorFunction_succ _ (le_of_lt h1) h3, div_eq_mul_inv₀, ←
         tsum_geometric_of_lt_one (le_of_lt h1) h3]
       apply zero_add
     · refine (tsum_eq_single 0 ?_).trans ?_
@@ -247,9 +247,11 @@ theorem mk_Ioo_real {a b : ℝ} (h : a < b) : #(Ioo a b) = 𝔠 := by
   refine le_trans ?_ h1
   rw [image_sub_const_Ioo, sub_self]
   replace h := sub_pos_of_lt h
-  have h2 : #(Inv.inv '' Ioo 0 (b - a)) ≤ #(Ioo 0 (b - a)) := mk_image_le
-  refine le_trans ?_ h2
-  rw [image_inv_eq_inv, inv_Ioo_0_left h, mk_Ioi_real]
+  have hy (y : Ioi (b - a)⁻¹) : 0 < (y : ℝ) := (inv_pos.2 h).trans y.2
+  rw [← mk_Ioi_real (b - a)⁻¹]
+  refine mk_le_of_injective (f := fun y ↦ ⟨Checked.inv (y : ℝ) (hy y).ne'.isUnit,
+    inv_pos.2 (hy y), (inv_lt_comm₀ (hy y) h).2 y.2⟩) fun y z hyz ↦ ?_
+  exact Subtype.ext (inv_inj₀.1 (congrArg Subtype.val hyz))
 
 /-- The cardinality of the interval $[a, b)$. -/
 theorem mk_Ico_real {a b : ℝ} (h : a < b) : #(Ico a b) = 𝔠 :=

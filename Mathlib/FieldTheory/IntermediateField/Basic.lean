@@ -50,7 +50,9 @@ variable (K L L' : Type*) [Field K] [Field L] [Field L'] [Algebra K L] [Algebra 
 /-- `S : IntermediateField K L` is a subset of `L` such that there is a field
 tower `L / S / K`. -/
 structure IntermediateField extends Subalgebra K L where
-  inv_mem' : ∀ x ∈ carrier, x⁻¹ ∈ carrier
+  /-- An intermediate field is closed under inverses of its invertible, that is nonzero,
+  elements. -/
+  inv_mem' : ∀ {x : L} {hx : IsUnit x}, x ∈ carrier → x⁻¹ ∈ carrier
 
 /-- Reinterpret an `IntermediateField` as a `Subalgebra`. -/
 add_decl_doc IntermediateField.toSubalgebra
@@ -83,7 +85,7 @@ instance : SubfieldClass (IntermediateField K L) L where
   neg_mem {s} := s.neg_mem
   mul_mem {s} := s.mul_mem'
   one_mem {s} := s.one_mem'
-  inv_mem {s} := s.inv_mem' _
+  inv_mem {s} := s.inv_mem'
 
 theorem mem_carrier {s : IntermediateField K L} {x : L} : x ∈ s.carrier ↔ x ∈ s :=
   Iff.rfl
@@ -178,12 +180,12 @@ protected theorem sub_mem {x y : L} : x ∈ S → y ∈ S → x - y ∈ S :=
   sub_mem
 
 /-- An intermediate field is closed under inverses. -/
-protected theorem inv_mem {x : L} : x ∈ S → x⁻¹ ∈ S :=
-  inv_mem
+protected theorem inv_mem {x : L} {hx : IsUnit x} : x ∈ S → x⁻¹ ∈ S :=
+  SubfieldClass.inv_mem
 
 /-- An intermediate field is closed under division. -/
-protected theorem div_mem {x y : L} : x ∈ S → y ∈ S → x / y ∈ S :=
-  div_mem
+protected theorem div_mem {x y : L} {hyUnit : IsUnit y} : x ∈ S → y ∈ S → x / y ∈ S :=
+  SubfieldClass.div_mem
 
 /-- Product of a list of elements in an intermediate field is in the intermediate field. -/
 protected theorem list_prod_mem {l : List L} : (∀ x ∈ l, x ∈ S) → l.prod ∈ S :=
@@ -213,8 +215,8 @@ protected theorem sum_mem {ι : Type*} {t : Finset ι} {f : ι → L} (h : ∀ c
     (∑ i ∈ t, f i) ∈ S :=
   sum_mem h
 
-protected theorem pow_mem {x : L} (hx : x ∈ S) (n : ℤ) : x ^ n ∈ S :=
-  zpow_mem hx n
+protected theorem pow_mem {x : L} (hx : x ∈ S) (n : ℤ) {h : n < 0 → IsUnit x} : x ^ n ∈ S :=
+  SubfieldClass.zpow_mem hx n
 
 protected theorem zsmul_mem {x : L} (hx : x ∈ S) (n : ℤ) : n • x ∈ S :=
   zsmul_mem hx n
@@ -235,12 +237,12 @@ protected theorem coe_mul (x y : S) : (↑(x * y) : L) = ↑x * ↑y :=
   rfl
 
 @[simp, norm_cast]
-protected theorem coe_inv (x : S) : (↑x⁻¹ : L) = (↑x)⁻¹ :=
-  rfl
+protected theorem coe_inv (x : S) {hx : IsUnit x} : (↑x⁻¹ : L) = (↑x)⁻¹ :=
+  map_inv₀ (SubringClass.subtype S) x
 
 @[simp, norm_cast]
-protected theorem coe_div (x y : S) : (↑(x / y) : L) = ↑x / ↑y :=
-  rfl
+protected theorem coe_div (x y : S) {hy : IsUnit y} : (↑(x / y) : L) = ↑x / ↑y :=
+  map_div₀ (SubringClass.subtype S) x y
 
 @[simp, norm_cast]
 protected theorem coe_zero : ((0 : S) : L) = 0 :=
@@ -263,33 +265,32 @@ instance instSMulMemClass : SMulMemClass (IntermediateField K L) K L where
 
 end IntermediateField
 
-/-- Turn a subalgebra closed under inverses into an intermediate field. -/
-def Subalgebra.toIntermediateField (S : Subalgebra K L) (inv_mem : ∀ x ∈ S, x⁻¹ ∈ S) :
-    IntermediateField K L :=
+/-- Turn a subalgebra closed under inverses of its invertible elements into an intermediate
+field. -/
+def Subalgebra.toIntermediateField (S : Subalgebra K L)
+    (inv_mem : ∀ {x : L} {hx : IsUnit x}, x ∈ S → x⁻¹ ∈ S) : IntermediateField K L :=
   { S with
-    inv_mem' := inv_mem }
+    inv_mem' := @inv_mem }
 
 @[simp]
-theorem toSubalgebra_toIntermediateField (S : Subalgebra K L) (inv_mem : ∀ x ∈ S, x⁻¹ ∈ S) :
-    (S.toIntermediateField inv_mem).toSubalgebra = S := by
+theorem toSubalgebra_toIntermediateField (S : Subalgebra K L)
+    (inv_mem : ∀ {x : L} {hx : IsUnit x}, x ∈ S → x⁻¹ ∈ S) :
+    (S.toIntermediateField @inv_mem).toSubalgebra = S := by
   ext
   rfl
 
 @[simp]
 theorem toIntermediateField_toSubalgebra (S : IntermediateField K L) :
-    (S.toSubalgebra.toIntermediateField fun _ => S.inv_mem) = S := by
+    (S.toSubalgebra.toIntermediateField fun hx => S.inv_mem hx) = S := by
   ext
   rfl
 
 /-- Turn a subalgebra satisfying `IsField` into an intermediate field. -/
 def Subalgebra.toIntermediateField' (S : Subalgebra K L) (hS : IsField S) : IntermediateField K L :=
-  S.toIntermediateField fun x hx => by
-    by_cases hx0 : x = 0
-    · rw [hx0, inv_zero]
-      exact S.zero_mem
-    let hS' := hS.toField
-    obtain ⟨y, hy⟩ := hS.mul_inv_cancel (show (⟨x, hx⟩ : S) ≠ 0 from Subtype.coe_ne_coe.1 hx0)
-    rw [Subtype.ext_iff, S.coe_mul, S.coe_one, Subtype.coe_mk, mul_eq_one_iff_inv_eq₀ hx0] at hy
+  S.toIntermediateField fun {x} {hxUnit} hx => by
+    obtain ⟨y, hy⟩ := hS.mul_inv_cancel
+      (show (⟨x, hx⟩ : S) ≠ 0 from Subtype.coe_ne_coe.1 hxUnit.ne_zero)
+    rw [Subtype.ext_iff, S.coe_mul, S.coe_one, Subtype.coe_mk, mul_eq_one_iff_inv_eq₀] at hy
     exact hy.symm ▸ y.2
 
 @[simp]
@@ -338,7 +339,7 @@ theorem coe_prod {ι : Type*} [Fintype ι] (f : ι → S) : (↑(∏ i, f i) : L
 `IntermediateField`s inherit structure from their `Subfield` coercions.
 -/
 
-variable {X Y}
+variable {X Y : Type*}
 
 /-- The action by an intermediate field is the action by the underlying field. -/
 instance [SMul L X] (F : IntermediateField K L) : SMul F X :=
@@ -459,14 +460,15 @@ end shortcut_instances
   such that `f x ∈ S ↔ x ∈ S.comap f`. -/
 def comap (f : L →ₐ[K] L') (S : IntermediateField K L') : IntermediateField K L where
   __ := S.toSubalgebra.comap f
-  inv_mem' x hx := show f x⁻¹ ∈ S by rw [map_inv₀ f x]; exact S.inv_mem hx
+  inv_mem' {x} {_} hx := show f x⁻¹ ∈ S by rw [map_inv₀ f x]; exact S.inv_mem hx
 
 /-- Given `f : L →ₐ[K] L'`, `S.map f` is the intermediate field between `K` and `L'`
 such that `x ∈ S ↔ f x ∈ S.map f`. -/
 def map (f : L →ₐ[K] L') (S : IntermediateField K L) : IntermediateField K L' where
   __ := S.toSubalgebra.map f
   inv_mem' := by
-    rintro _ ⟨x, hx, rfl⟩
+    rintro _ hy ⟨x, hx, rfl⟩
+    have hx0 : x ≠ 0 := fun h => hy.ne_zero (by rw [h, map_zero])
     exact ⟨x⁻¹, S.inv_mem hx, map_inv₀ f x⟩
 
 @[simp]

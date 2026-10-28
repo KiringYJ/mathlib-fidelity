@@ -90,13 +90,17 @@ theorem differentIdeal_dvd_map_differentIdeal [Algebra.IsIntegral R₂ B]
     ext _
     exact IsFractionRing.algEquiv_commutes (FractionRing.algEquiv A K).symm
       (FractionRing.algEquiv R₂ ↥F₂).symm _
+  have hD : ((differentIdeal A R₂ : Ideal R₂) : FractionalIdeal R₂⁰ F₂) ≠ 0 :=
+    coeIdeal_eq_zero.not.mpr differentIdeal_ne_bot
   rw [Ideal.dvd_iff_le, ← coeIdeal_le_coeIdeal L, coeIdeal_differentIdeal R₁ F₁ L B,
-    ← extendedHom_coeIdeal_eq_map L B (K := F₂), le_inv_comm _ (by simp), ← map_inv₀,
-    coeIdeal_differentIdeal A K, inv_inv, ← coe_le_coe, coe_dual_one, coe_extendedHom_eq_span,
-    ← coeToSet_coeToSubmodule, coe_dual_one]
-  · have := Submodule.span_mono (R := B) <| traceDual_le_span_map_traceDual A B R₁ R₂ h₁ h₂
-    rwa [← span_coe_eq_restrictScalars, span_span_of_tower, span_span_of_tower, span_eq] at this
-  · exact (_root_.map_ne_zero _).mpr <| coeIdeal_eq_zero.not.mpr differentIdeal_ne_bot
+    ← extendedHom_coeIdeal_eq_map L B (K := F₂),
+    le_inv_comm (hI := Ne.isUnit ((_root_.map_ne_zero _).mpr hD)),
+    ← map_inv₀ (ha := Ne.isUnit hD)]
+  simp only [coeIdeal_differentIdeal A K, inv_inv₀]
+  rw [← coe_le_coe, coe_dual_one, coe_extendedHom_eq_span, ← coeToSet_coeToSubmodule,
+    coe_dual_one]
+  have := Submodule.span_mono (R := B) <| traceDual_le_span_map_traceDual A B R₁ R₂ h₁ h₂
+  rwa [← span_coe_eq_restrictScalars, span_span_of_tower, span_span_of_tower, span_eq] at this
 
 variable [Algebra A B] [Module.Finite A B] [IsTorsionFree A B] [IsTorsionFree A R₁]
   [IsTorsionFree A R₂] [Module.Finite A R₁] [Module.Finite R₂ B] [IsScalarTower A R₂ B]
@@ -164,14 +168,17 @@ theorem Submodule.traceDual_eq_span_map_traceDual_of_linearDisjoint [Module.Free
     · exact traceDual_le_span_map_traceDual A B R₁ R₂ h₁ h₂
   have := dvd_of_eq <|
     (IsDedekindDomain.differentIdeal_eq_map_differentIdeal A B R₁ R₂ h₁ h₂ h₃).symm
-  rwa [Ideal.dvd_iff_le, ← coeIdeal_le_coeIdeal (K := L), coeIdeal_differentIdeal R₁ F₁,
-    inv_le_comm, ← extendedHom_coeIdeal_eq_map (K := F₂), coeIdeal_differentIdeal A K, map_inv₀,
-    inv_inv, ← coe_le_coe, coe_extendedHom_eq_span, coe_dual_one, ← coeToSet_coeToSubmodule,
-    coe_dual_one] at this
-  · simp
-  · rw [← extendedHom_coeIdeal_eq_map (K := F₂), ne_eq, extendedHom_eq_zero_iff]
-    rw [coeIdeal_eq_zero]
+  have hD :
+      (((differentIdeal A R₂).map (algebraMap R₂ B) : Ideal B) : FractionalIdeal B⁰ L) ≠ 0 := by
+    rw [← extendedHom_coeIdeal_eq_map (K := F₂), ne_eq, extendedHom_eq_zero_iff,
+      coeIdeal_eq_zero]
     exact differentIdeal_ne_bot
+  rw [Ideal.dvd_iff_le, ← coeIdeal_le_coeIdeal (K := L), coeIdeal_differentIdeal R₁ F₁,
+    inv_le_comm (hJ := Ne.isUnit hD)] at this
+  simp only [← extendedHom_coeIdeal_eq_map (K := F₂), coeIdeal_differentIdeal A K, map_inv₀,
+    inv_inv₀] at this
+  rwa [← coe_le_coe, coe_extendedHom_eq_span, coe_dual_one, ← coeToSet_coeToSubmodule,
+    coe_dual_one] at this
 
 namespace Module.Basis
 

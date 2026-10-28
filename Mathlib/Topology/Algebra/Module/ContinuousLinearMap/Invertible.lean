@@ -17,8 +17,6 @@ it has a continuous inverse).
 
 @[expose] public section
 
-open scoped Ring
-
 namespace ContinuousLinearMap
 
 variable {R : Type*} {M M₂ M₃ : Type*}
@@ -148,39 +146,33 @@ lemma IsInvertible.inverse_comp_apply_of_right {g : M₂ →L[R] M₃} {f : M �
     (hf : f.IsInvertible) : (g ∘L f).inverse v = f.inverse (g.inverse v) := by
   simp only [hf.inverse_comp_of_right, comp_apply]
 
+/-- The inverse of an invertible element `f` of the ring of continuous linear self-maps of `M` is
+its inverse as a continuous linear map. -/
+theorem ringInverse_eq_inverse (f : M →L[R] M) {hf : IsUnit f} : f⁻¹ = inverse f :=
+  (inverse_eq (mul_inv_cancel₀ (a := f)) (inv_mul_cancel₀ (a := f))).symm
+
+/-- A continuous linear equivalence of `M` with itself is a unit of the ring of continuous linear
+self-maps of `M`, whose inverse in that ring is its inverse as a continuous linear map. -/
 @[simp]
-theorem ringInverse_equiv (e : M ≃L[R] M) : (↑e)⁻¹ʳ = inverse (e : M →L[R] M) := by
-  suffices ((ContinuousLinearEquiv.unitsEquiv _ _).symm e : M →L[R] M)⁻¹ʳ = inverse ↑e by
-    convert! this
-  simp
-  rfl
+theorem ringInverse_equiv (e : M ≃L[R] M) :
+    Checked.inv (e : M →L[R] M) (ContinuousLinearEquiv.toUnit e).isUnit =
+      inverse (e : M →L[R] M) :=
+  ringInverse_eq_inverse _
 
-/-- The function `ContinuousLinearEquiv.inverse` can be written in terms of `Ring.inverse` for the
-ring of self-maps of the domain. -/
-theorem inverse_eq_ringInverse (e : M ≃L[R] M₂) (f : M →L[R] M₂) :
-    inverse f = ((e.symm : M₂ →L[R] M).comp f)⁻¹ʳ ∘L e.symm := by
-  by_cases h₁ : f.IsInvertible
-  · obtain ⟨e', he'⟩ := h₁
-    rw [← he']
-    change _ = (e'.trans e.symm : M →L[R] M)⁻¹ʳ ∘L (e.symm : M₂ →L[R] M)
+/-- The inverse of a continuous linear map `f : M →L[R] M₂` can be computed in the ring of
+continuous linear self-maps of `M`, after composing with `e.symm` for an equivalence `e`, when
+that composite is a unit there. -/
+theorem inverse_eq_ringInverse (e : M ≃L[R] M₂) (f : M →L[R] M₂)
+    {hf : IsUnit ((e.symm : M₂ →L[R] M).comp f)} :
+    inverse f = ((e.symm : M₂ →L[R] M).comp f)⁻¹ ∘L (e.symm : M₂ →L[R] M) := by
+  have : f = (e : M →L[R] M₂) ∘L ((e.symm : M₂ →L[R] M).comp f) := by
     ext
     simp
-  · suffices ¬IsUnit ((e.symm : M₂ →L[R] M).comp f) by simp [this, h₁]
-    contrapose h₁
-    rcases h₁ with ⟨F, hF⟩
-    use (ContinuousLinearEquiv.unitsEquiv _ _ F).trans e
-    ext
-    dsimp
-    rw [hF]
-    simp
+  conv_lhs => rw [this]
+  rw [inverse_equiv_comp, ringInverse_eq_inverse]
 
-theorem ringInverse_eq_inverse : Ring.inverse = inverse (R := R) (M := M) := by
-  ext
-  simp [inverse_eq_ringInverse (ContinuousLinearEquiv.refl R M)]
-
-@[simp] theorem inverse_id : (ContinuousLinearMap.id R M).inverse = .id R M := by
-  rw [← ringInverse_eq_inverse]
-  exact Ring.inverse_one _
+@[simp] theorem inverse_id : (ContinuousLinearMap.id R M).inverse = .id R M :=
+  inverse_eq (id_comp _) (id_comp _)
 
 namespace IsInvertible
 

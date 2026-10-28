@@ -88,16 +88,13 @@ private theorem isPrincipal_of_isUnit_fractionalIdeal (I : Ideal R)
   have hIK : I * K = Ideal.span ({a} : Set R) :=
     (coeIdeal_inj (K := FractionRing R)).mp <| by
       rw [coeIdeal_mul, coeIdeal_span_singleton]
-      rw [← mul_inv_cancel_iff_isUnit] at hI
-      have ha0' := spanSingleton_mul_inv (R₁ := R) (FractionRing R)
-        (IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors
-          (mem_nonZeroDivisors_iff_ne_zero.mpr ha0))
       replace h :=
         congrArg
           (fun t =>
             spanSingleton R⁰ ((algebraMap R (FractionRing R)) a) * I * t)
           h.symm
-      rwa [mul_mul_mul_comm, ← spanSingleton_inv, ha0', one_mul, mul_assoc, hI, mul_one] at h
+      rwa [mul_mul_mul_comm, spanSingleton_mul_spanSingleton, mul_inv_cancel₀, spanSingleton_one,
+        one_mul, mul_assoc, mul_inv_cancel₀, mul_one] at h
   refine isPrincipal_of_exists_mul_ne_zero_isPrincipal (J := I) ?_
   refine ⟨K, ?_, ?_⟩
   · simp [hIK, ha0]

@@ -27,6 +27,6 @@ theorem norm_cast_real (r : ℚ) : ‖(r : ℝ)‖ = ‖r‖ :=
 
 @[norm_cast, simp]
 theorem _root_.Int.norm_cast_rat (m : ℤ) : ‖(m : ℚ)‖ = ‖m‖ := by
-  rw [← Rat.norm_cast_real, ← Int.norm_cast_real]; congr 1
+  rw [← Rat.norm_cast_real, ← Int.norm_cast_real, Rat.cast_intCast]
 
 end Rat

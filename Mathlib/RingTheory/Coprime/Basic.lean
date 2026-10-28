@@ -494,7 +494,7 @@ lemma Semifield.isCoprime_iff {R : Type*} [Semifield R] {m n : R} :
   · simp [isCoprime_zero_right]
   suffices IsCoprime m n by simpa [hn]
   refine ⟨0, n⁻¹, ?_⟩
-  simp [Checked.inv_mul_cancel]
+  simp [inv_mul_cancel₀]
 
 namespace IsRelPrime
 

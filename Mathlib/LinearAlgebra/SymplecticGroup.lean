@@ -78,6 +78,11 @@ theorem J_squared : J l R * J l R = -1 := by
   simp only [Matrix.zero_mul, Matrix.neg_mul, zero_add, neg_zero, Matrix.one_mul, add_zero]
   rw [← neg_zero, ← Matrix.fromBlocks_neg, ← fromBlocks_one]
 
+theorem J_inv {hJ : IsUnit (J l R)} : (J l R)⁻¹ = -J l R := by
+  refine inv_eq_of_mul_eq_one_right₀ ?_
+  rw [Matrix.mul_neg, J_squared]
+  exact neg_neg 1
+
 theorem J_det_mul_J_det : det (J l R) * det (J l R) = 1 := by
   rw [← det_mul, J_squared, ← one_smul R (-1 : Matrix _ _ R), smul_neg, ← neg_smul, det_smul,
     Fintype.card_sum, det_one, mul_one]
@@ -86,12 +91,6 @@ theorem J_det_mul_J_det : det (J l R) * det (J l R) = 1 := by
 
 theorem isUnit_det_J : IsUnit (det (J l R)) :=
   isUnit_iff_exists_inv.mpr ⟨det (J l R), J_det_mul_J_det _ _⟩
-
-theorem J_nonsingularInverse :
-    Matrix.nonsingularInverse (J l R) (isUnit_det_J l R) = -J l R := by
-  refine Matrix.nonsingularInverse_eq_rightInverse ?_
-  rw [Matrix.mul_neg, J_squared]
-  exact neg_neg 1
 
 end JMatrixLemmas
 
@@ -164,28 +163,16 @@ theorem map_mem {F S : Type*} [CommRing S] [FunLike F R S] [RingHomClass F R S]
 theorem transpose_mem (hA : A ∈ symplecticGroup l R) : Aᵀ ∈ symplecticGroup l R := by
   rw [mem_iff] at hA ⊢
   rw [transpose_transpose]
-  have huA := symplectic_det hA
-  have huAT : IsUnit Aᵀ.det := by
-    rw [Matrix.det_transpose]
-    exact huA
-  letI : Invertible A := (Matrix.isUnit_iff_isUnit_det A |>.2 huA).invertible
-  letI : Invertible Aᵀ := (Matrix.isUnit_iff_isUnit_det Aᵀ |>.2 huAT).invertible
-  letI : Invertible (J l R) :=
-    (Matrix.isUnit_iff_isUnit_det (J l R) |>.2 (isUnit_det_J l R)).invertible
-  have hJinv : ⅟(J l R) = -J l R := by
-    apply invOf_eq_right_inv
-    rw [Matrix.mul_neg, J_squared]
-    exact neg_neg 1
+  -- `-(J * Aᵀ * J)` is a right inverse of `A`, hence also a left inverse.
+  have h : -(J l R * Aᵀ * J l R) * A = 1 := by
+    refine mul_eq_one_comm.1 ?_
+    rw [Matrix.mul_neg, ← Matrix.mul_assoc, ← Matrix.mul_assoc, hA, J_squared, neg_neg]
   calc
-    Aᵀ * J l R * A = (-Aᵀ) * ⅟(J l R) * A := by
-      rw [hJinv]
-      simp
-    _ = (-Aᵀ) * ⅟(A * J l R * Aᵀ) * A := by rw [hA]
-    _ = -(Aᵀ * (⅟(Aᵀ) * ⅟(J l R))) * ⅟A * A := by
-      simp only [invOf_mul, Matrix.mul_assoc, Matrix.neg_mul]
-    _ = -⅟(J l R) := by
-      rw [Matrix.mul_invOf_cancel_left, Matrix.invOf_mul_cancel_right]
-    _ = J l R := by rw [hJinv, neg_neg]
+    Aᵀ * J l R * A = -(J l R * J l R) * (Aᵀ * J l R * A) := by
+      rw [J_squared, neg_neg, Matrix.one_mul]
+    _ = J l R * (-(J l R * Aᵀ * J l R) * A) := by
+      simp only [Matrix.mul_assoc, Matrix.neg_mul, Matrix.mul_neg]
+    _ = J l R := by rw [h, Matrix.mul_one]
 
 @[simp]
 theorem transpose_mem_iff : Aᵀ ∈ symplecticGroup l R ↔ A ∈ symplecticGroup l R :=
@@ -211,19 +198,19 @@ theorem inv_left_mul_aux (hA : A ∈ symplecticGroup l R) : -(J l R * Aᵀ * J l
     _ = (-1 : R) • (-1 : Matrix _ _ _) := by rw [J_squared]
     _ = 1 := by simp only [neg_smul_neg, one_smul]
 
+/-- The coercion of the inverse in the symplectic group is the inverse of the matrix, which is
+a unit since its determinant is. -/
 theorem coe_inv' (A : symplecticGroup l R) :
     (↑A⁻¹ : Matrix (l ⊕ l) (l ⊕ l) R) =
-      Matrix.nonsingularInverse (↑A) (symplectic_det A.2) := by
-  apply Matrix.right_inv_eq_left_inv
-  · apply Matrix.mul_eq_one_comm.2
-    rw [coe_inv]
-    exact inv_left_mul_aux A.2
-  · exact Matrix.nonsingularInverse_mul _ _
+      Checked.inv (A : Matrix (l ⊕ l) (l ⊕ l) R)
+        ((isUnit_iff_isUnit_det _).2 (symplectic_det A.2)) := by
+  refine (coe_inv A).trans (inv_eq_of_mul_eq_one_left₀ ?_).symm
+  simp [inv_left_mul_aux]
 
-theorem nonsingularInverse_eq_symplecticInverse
-    (A : Matrix (l ⊕ l) (l ⊕ l) R) (hA : A ∈ symplecticGroup l R) :
-    Matrix.nonsingularInverse A (symplectic_det hA) = (-J l R) * Aᵀ * J l R :=
-  Matrix.nonsingularInverse_eq_leftInverse (by simp only [Matrix.neg_mul, inv_left_mul_aux hA])
+/-- The inverse of a symplectic matrix, which is a unit since its determinant is. -/
+theorem inv_eq_symplectic_inv (A : Matrix (l ⊕ l) (l ⊕ l) R) (hA : A ∈ symplecticGroup l R) :
+    Checked.inv A ((isUnit_iff_isUnit_det A).2 (symplectic_det hA)) = (-J l R) * Aᵀ * J l R :=
+  inv_eq_of_mul_eq_one_left₀ (by simp only [Matrix.neg_mul, inv_left_mul_aux hA])
 
 instance : Group (symplecticGroup l R) :=
   { SymplecticGroup.hasInv, Submonoid.toMonoid _ with

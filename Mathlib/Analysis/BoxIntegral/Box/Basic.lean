@@ -439,29 +439,27 @@ variable [Fintype ι]
 
 /-- The distortion of a box `I` is the maximum of the ratios of the lengths of its edges.
 It is defined as the maximum of the ratios
-`nndist I.lower I.upper / nndist (I.lower i) (I.upper i)`. -/
+`nndist I.lower I.upper / nndist (I.lower i) (I.upper i)`, whose denominators are positive because
+`I.lower i < I.upper i`. -/
 def distortion (I : Box ι) : ℝ≥0 :=
-  Finset.univ.sup fun i : ι ↦ nndist I.lower I.upper / nndist (I.lower i) (I.upper i)
+  Finset.univ.sup fun i : ι ↦
+    Checked.div (nndist I.lower I.upper) (nndist (I.lower i) (I.upper i))
+      (Ne.isUnit <| mt nndist_eq_zero.1 (I.lower_lt_upper i).ne)
 
-theorem distortion_eq_of_sub_eq_div {I J : Box ι} {r : ℝ}
+theorem distortion_eq_of_sub_eq_div {I J : Box ι} {r : ℝ} {hr : IsUnit r}
     (h : ∀ i, I.upper i - I.lower i = (J.upper i - J.lower i) / r) :
     distortion I = distortion J := by
   simp only [distortion, nndist_pi_def, Real.nndist_eq', h, map_div₀]
   congr 1 with i
-  have : 0 < r := by
-    by_contra hr
-    have := div_nonpos_of_nonneg_of_nonpos (sub_nonneg.2 <| J.lower_le_upper i) (not_lt.1 hr)
-    rw [← h] at this
-    exact this.not_gt (sub_pos.2 <| I.lower_lt_upper i)
-  have hn0 := (map_ne_zero Real.nnabs).2 this.ne'
-  simp_rw [NNReal.finset_sup_div, div_div_div_cancel_right₀ hn0]
+  simp_rw [NNReal.finset_sup_div, div_div_div_cancel_right₀]
 
 theorem nndist_le_distortion_mul (I : Box ι) (i : ι) :
     nndist I.lower I.upper ≤ I.distortion * nndist (I.lower i) (I.upper i) :=
+  have hi : nndist (I.lower i) (I.upper i) ≠ 0 := mt nndist_eq_zero.1 (I.lower_lt_upper i).ne
   calc
     nndist I.lower I.upper =
         nndist I.lower I.upper / nndist (I.lower i) (I.upper i) * nndist (I.lower i) (I.upper i) :=
-      (div_mul_cancel₀ _ <| mt nndist_eq_zero.1 (I.lower_lt_upper i).ne).symm
+      (div_mul_cancel₀ _).symm
     _ ≤ I.distortion * nndist (I.lower i) (I.upper i) := by
       grw [distortion, ← Finset.le_sup (Finset.mem_univ i)]
 

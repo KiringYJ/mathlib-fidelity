@@ -30,7 +30,7 @@ theorem IntermediateField.coe_isIntegral_iff {R : Type*} [CommRing R] [Algebra R
 def Subalgebra.IsAlgebraic.toIntermediateField {S : Subalgebra K L} (hS : S.IsAlgebraic) :
     IntermediateField K L where
   toSubalgebra := S
-  inv_mem' x hx := Algebra.adjoin_le_iff.mpr
+  inv_mem' {x} {_} hx := Algebra.adjoin_le_iff.mpr
     (Set.singleton_subset_iff.mpr hx) (hS x hx).isIntegral.inv_mem_adjoin
 
 /-- Turn an algebraic subalgebra into an intermediate field, `Algebra.IsAlgebraic` version. -/
@@ -158,8 +158,8 @@ end IntermediateField
 /-- If `L/K` is algebraic, the `K`-subalgebras of `L` are all fields. -/
 def subalgebraEquivIntermediateField [Algebra.IsAlgebraic K L] :
     Subalgebra K L ≃o IntermediateField K L where
-  toFun S := S.toIntermediateField fun x hx => S.inv_mem_of_algebraic
-    (Algebra.IsAlgebraic.isAlgebraic ((⟨x, hx⟩ : S) : L))
+  toFun S := S.toIntermediateField fun {x} {_} hx => S.inv_mem_of_algebraic (x := ⟨x, hx⟩)
+    (Algebra.IsAlgebraic.isAlgebraic x)
   invFun S := S.toSubalgebra
   left_inv _ := toSubalgebra_toIntermediateField _ _
   right_inv := toIntermediateField_toSubalgebra

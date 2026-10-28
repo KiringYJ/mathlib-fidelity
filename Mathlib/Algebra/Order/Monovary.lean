@@ -6,6 +6,7 @@ Authors: Yaël Dillies
 module
 
 public import Mathlib.Algebra.Field.Defs
+public import Mathlib.Algebra.GroupWithZero.Pi
 public import Mathlib.Algebra.Order.Module.Defs
 public import Mathlib.Algebra.Order.Module.Synonym
 public import Mathlib.Algebra.Order.Monoid.OrderDual
@@ -16,6 +17,14 @@ public import Mathlib.Order.Monotone.Monovary
 
 This file characterises the interaction of ordered algebraic structures with monovariance
 of functions.
+
+## Implementation notes
+
+In a semifield, the inverse `f⁻¹` and the quotient `f₁ / f₂` of functions are those of the
+function monoid, so every value of the inverted function must be invertible (`Pi.isUnit_iff`).
+A statement whose positivity hypothesis holds everywhere (`StrongLT 0 f`) derives this evidence.
+A statement whose hypothesis holds only on `s` takes the inverse or quotient on the subtype `s`,
+where it is defined, in the shape of `monovaryOn_iff_monovary`: `fun i : s ↦ (f i)⁻¹`.
 
 ## See also
 
@@ -259,35 +268,55 @@ section
 variable [Semifield α] [LinearOrder α] [IsStrictOrderedRing α] [LinearOrder β]
   {s : Set ι} {f f₁ f₂ : ι → α} {g : ι → β}
 
+/-- The inverse of `f`, taken on `s` where `f` is positive, monovaries with `g` if and only if `f`
+antivaries with `g` on `s`. -/
 @[simp]
-lemma monovaryOn_inv_left₀ (hf : ∀ i ∈ s, 0 < f i) : MonovaryOn f⁻¹ g s ↔ AntivaryOn f g s :=
-  forall₅_congr fun _i hi _j hj _ ↦ inv_le_inv₀ (hf _ hi) (hf _ hj)
+lemma monovaryOn_inv_left₀ (hf : ∀ i ∈ s, 0 < f i) :
+    Monovary (fun i : s ↦ Checked.inv (f i) (hf i i.2).ne'.isUnit) (fun i ↦ g i) ↔
+      AntivaryOn f g s := by
+  rw [antivaryOn_iff_antivary]
+  exact forall₃_congr fun i j _ ↦ inv_le_inv₀ (hf i i.2) (hf j j.2)
 
+/-- The inverse of `f`, taken on `s` where `f` is positive, antivaries with `g` if and only if `f`
+monovaries with `g` on `s`. -/
 @[simp]
-lemma antivaryOn_inv_left₀ (hf : ∀ i ∈ s, 0 < f i) : AntivaryOn f⁻¹ g s ↔ MonovaryOn f g s :=
-  forall₅_congr fun _i hi _j hj _ ↦ inv_le_inv₀ (hf _ hj) (hf _ hi)
+lemma antivaryOn_inv_left₀ (hf : ∀ i ∈ s, 0 < f i) :
+    Antivary (fun i : s ↦ Checked.inv (f i) (hf i i.2).ne'.isUnit) (fun i ↦ g i) ↔
+      MonovaryOn f g s := by
+  rw [monovaryOn_iff_monovary]
+  exact forall₃_congr fun i j _ ↦ inv_le_inv₀ (hf j j.2) (hf i i.2)
 
-@[simp] lemma monovary_inv_left₀ (hf : StrongLT 0 f) : Monovary f⁻¹ g ↔ Antivary f g :=
-  forall₃_congr fun _i _j _ ↦ inv_le_inv₀ (hf _) (hf _)
+@[simp] lemma monovary_inv_left₀ (hf : StrongLT 0 f) :
+    Monovary (Checked.inv f (Pi.isUnit_iff.2 fun i ↦ (hf i).ne'.isUnit)) g ↔ Antivary f g :=
+  forall₃_congr fun _i _j _ ↦ by rw [Pi.inv_apply₀, Pi.inv_apply₀, inv_le_inv₀ (hf _) (hf _)]
 
-@[simp] lemma antivary_inv_left₀ (hf : StrongLT 0 f) : Antivary f⁻¹ g ↔ Monovary f g :=
-  forall₃_congr fun _i _j _ ↦ inv_le_inv₀ (hf _) (hf _)
+@[simp] lemma antivary_inv_left₀ (hf : StrongLT 0 f) :
+    Antivary (Checked.inv f (Pi.isUnit_iff.2 fun i ↦ (hf i).ne'.isUnit)) g ↔ Monovary f g :=
+  forall₃_congr fun _i _j _ ↦ by rw [Pi.inv_apply₀, Pi.inv_apply₀, inv_le_inv₀ (hf _) (hf _)]
 
+/-- The quotient `f₁ / f₂`, taken on `s` where `f₂` is positive, monovaries with `g`. -/
 lemma MonovaryOn.div_left₀ (hf₁ : ∀ i ∈ s, 0 ≤ f₁ i) (hf₂ : ∀ i ∈ s, 0 < f₂ i)
-    (h₁ : MonovaryOn f₁ g s) (h₂ : AntivaryOn f₂ g s) : MonovaryOn (f₁ / f₂) g s :=
-  fun _i hi _j hj hij ↦ div_le_div₀ (hf₁ _ hj) (h₁ hi hj hij) (hf₂ _ hj) <| h₂ hi hj hij
+    (h₁ : MonovaryOn f₁ g s) (h₂ : AntivaryOn f₂ g s) :
+    Monovary (fun i : s ↦ Checked.div (f₁ i) (f₂ i) (hf₂ i i.2).ne'.isUnit) fun i ↦ g i :=
+  fun i j hij ↦ div_le_div₀ (hf₁ j j.2) (h₁ i.2 j.2 hij) (hf₂ j j.2) <| h₂ i.2 j.2 hij
 
+/-- The quotient `f₁ / f₂`, taken on `s` where `f₂` is positive, antivaries with `g`. -/
 lemma AntivaryOn.div_left₀ (hf₁ : ∀ i ∈ s, 0 ≤ f₁ i) (hf₂ : ∀ i ∈ s, 0 < f₂ i)
-    (h₁ : AntivaryOn f₁ g s) (h₂ : MonovaryOn f₂ g s) : AntivaryOn (f₁ / f₂) g s :=
-  fun _i hi _j hj hij ↦ div_le_div₀ (hf₁ _ hi) (h₁ hi hj hij) (hf₂ _ hi) <| h₂ hi hj hij
+    (h₁ : AntivaryOn f₁ g s) (h₂ : MonovaryOn f₂ g s) :
+    Antivary (fun i : s ↦ Checked.div (f₁ i) (f₂ i) (hf₂ i i.2).ne'.isUnit) fun i ↦ g i :=
+  fun i j hij ↦ div_le_div₀ (hf₁ i i.2) (h₁ i.2 j.2 hij) (hf₂ i i.2) <| h₂ i.2 j.2 hij
 
 lemma Monovary.div_left₀ (hf₁ : 0 ≤ f₁) (hf₂ : StrongLT 0 f₂) (h₁ : Monovary f₁ g)
-    (h₂ : Antivary f₂ g) : Monovary (f₁ / f₂) g :=
-  fun _i _j hij ↦ div_le_div₀ (hf₁ _) (h₁ hij) (hf₂ _) <| h₂ hij
+    (h₂ : Antivary f₂ g) :
+    Monovary (Checked.div f₁ f₂ (Pi.isUnit_iff.2 fun i ↦ (hf₂ i).ne'.isUnit)) g :=
+  fun _i _j hij ↦ by
+    rw [Pi.div_apply₀, Pi.div_apply₀]; exact div_le_div₀ (hf₁ _) (h₁ hij) (hf₂ _) <| h₂ hij
 
 lemma Antivary.div_left₀ (hf₁ : 0 ≤ f₁) (hf₂ : StrongLT 0 f₂) (h₁ : Antivary f₁ g)
-    (h₂ : Monovary f₂ g) : Antivary (f₁ / f₂) g :=
-  fun _i _j hij ↦ div_le_div₀ (hf₁ _) (h₁ hij) (hf₂ _) <| h₂ hij
+    (h₂ : Monovary f₂ g) :
+    Antivary (Checked.div f₁ f₂ (Pi.isUnit_iff.2 fun i ↦ (hf₂ i).ne'.isUnit)) g :=
+  fun _i _j hij ↦ by
+    rw [Pi.div_apply₀, Pi.div_apply₀]; exact div_le_div₀ (hf₁ _) (h₁ hij) (hf₂ _) <| h₂ hij
 
 end
 
@@ -295,33 +324,57 @@ section
 variable [LinearOrder α] [Semifield β] [LinearOrder β] [IsStrictOrderedRing β]
   {s : Set ι} {f : ι → α} {g g₁ g₂ : ι → β}
 
+/-- `f` monovaries with the inverse of `g`, taken on `s` where `g` is positive, if and only if `f`
+antivaries with `g` on `s`. -/
 @[simp]
-lemma monovaryOn_inv_right₀ (hg : ∀ i ∈ s, 0 < g i) : MonovaryOn f g⁻¹ s ↔ AntivaryOn f g s :=
-  forall₂_comm.trans <| forall₄_congr fun i hi j hj ↦ by simp [inv_lt_inv₀ (hg _ hj) (hg _ hi)]
+lemma monovaryOn_inv_right₀ (hg : ∀ i ∈ s, 0 < g i) :
+    Monovary (fun i : s ↦ f i) (fun i : s ↦ Checked.inv (g i) (hg i i.2).ne'.isUnit) ↔
+      AntivaryOn f g s := by
+  rw [antivaryOn_iff_antivary]
+  exact forall_comm.trans <| forall₂_congr fun i j ↦
+    imp_congr_left (inv_lt_inv₀ (hg j j.2) (hg i i.2))
 
+/-- `f` antivaries with the inverse of `g`, taken on `s` where `g` is positive, if and only if `f`
+monovaries with `g` on `s`. -/
 @[simp]
-lemma antivaryOn_inv_right₀ (hg : ∀ i ∈ s, 0 < g i) : AntivaryOn f g⁻¹ s ↔ MonovaryOn f g s :=
-  forall₂_comm.trans <| forall₄_congr fun i hi j hj ↦ by simp [inv_lt_inv₀ (hg _ hj) (hg _ hi)]
+lemma antivaryOn_inv_right₀ (hg : ∀ i ∈ s, 0 < g i) :
+    Antivary (fun i : s ↦ f i) (fun i : s ↦ Checked.inv (g i) (hg i i.2).ne'.isUnit) ↔
+      MonovaryOn f g s := by
+  rw [monovaryOn_iff_monovary]
+  exact forall_comm.trans <| forall₂_congr fun i j ↦
+    imp_congr_left (inv_lt_inv₀ (hg j j.2) (hg i i.2))
 
-@[simp] lemma monovary_inv_right₀ (hg : StrongLT 0 g) : Monovary f g⁻¹ ↔ Antivary f g :=
-  forall_comm.trans <| forall₂_congr fun i j ↦ by simp [inv_lt_inv₀ (hg _) (hg _)]
+@[simp] lemma monovary_inv_right₀ (hg : StrongLT 0 g) :
+    Monovary f (Checked.inv g (Pi.isUnit_iff.2 fun i ↦ (hg i).ne'.isUnit)) ↔ Antivary f g :=
+  forall_comm.trans <| forall₂_congr fun i j ↦ by
+    simp [Pi.inv_apply₀, inv_lt_inv₀ (hg _) (hg _)]
 
-@[simp] lemma antivary_inv_right₀ (hg : StrongLT 0 g) : Antivary f g⁻¹ ↔ Monovary f g :=
-  forall_comm.trans <| forall₂_congr fun i j ↦ by simp [inv_lt_inv₀ (hg _) (hg _)]
+@[simp] lemma antivary_inv_right₀ (hg : StrongLT 0 g) :
+    Antivary f (Checked.inv g (Pi.isUnit_iff.2 fun i ↦ (hg i).ne'.isUnit)) ↔ Monovary f g :=
+  forall_comm.trans <| forall₂_congr fun i j ↦ by
+    simp [Pi.inv_apply₀, inv_lt_inv₀ (hg _) (hg _)]
 
+/-- `f` monovaries with the quotient `g₁ / g₂`, taken on `s` where `g₂` is positive. -/
 lemma MonovaryOn.div_right₀ (hg₁ : ∀ i ∈ s, 0 ≤ g₁ i) (hg₂ : ∀ i ∈ s, 0 < g₂ i)
-    (h₁ : MonovaryOn f g₁ s) (h₂ : AntivaryOn f g₂ s) : MonovaryOn f (g₁ / g₂) s :=
+    (h₁ : MonovaryOn f g₁ s) (h₂ : AntivaryOn f g₂ s) :
+    Monovary (fun i : s ↦ f i) fun i : s ↦ Checked.div (g₁ i) (g₂ i) (hg₂ i i.2).ne'.isUnit :=
   (h₁.symm.div_left₀ hg₁ hg₂ h₂.symm).symm
 
+/-- `f` antivaries with the quotient `g₁ / g₂`, taken on `s` where `g₂` is positive. -/
 lemma AntivaryOn.div_right₀ (hg₁ : ∀ i ∈ s, 0 ≤ g₁ i) (hg₂ : ∀ i ∈ s, 0 < g₂ i)
-    (h₁ : AntivaryOn f g₁ s) (h₂ : MonovaryOn f g₂ s) : AntivaryOn f (g₁ / g₂) s :=
+    (h₁ : AntivaryOn f g₁ s) (h₂ : MonovaryOn f g₂ s) :
+    Antivary (fun i : s ↦ f i) fun i : s ↦ Checked.div (g₁ i) (g₂ i) (hg₂ i i.2).ne'.isUnit :=
   (h₁.symm.div_left₀ hg₁ hg₂ h₂.symm).symm
 
 lemma Monovary.div_right₀ (hg₁ : 0 ≤ g₁) (hg₂ : StrongLT 0 g₂) (h₁ : Monovary f g₁)
-    (h₂ : Antivary f g₂) : Monovary f (g₁ / g₂) := (h₁.symm.div_left₀ hg₁ hg₂ h₂.symm).symm
+    (h₂ : Antivary f g₂) :
+    Monovary f (Checked.div g₁ g₂ (Pi.isUnit_iff.2 fun i ↦ (hg₂ i).ne'.isUnit)) :=
+  (h₁.symm.div_left₀ hg₁ hg₂ h₂.symm).symm
 
 lemma Antivary.div_right₀ (hg₁ : 0 ≤ g₁) (hg₂ : StrongLT 0 g₂) (h₁ : Antivary f g₁)
-    (h₂ : Monovary f g₂) : Antivary f (g₁ / g₂) := (h₁.symm.div_left₀ hg₁ hg₂ h₂.symm).symm
+    (h₂ : Monovary f g₂) :
+    Antivary f (Checked.div g₁ g₂ (Pi.isUnit_iff.2 fun i ↦ (hg₂ i).ne'.isUnit)) :=
+  (h₁.symm.div_left₀ hg₁ hg₂ h₂.symm).symm
 
 end
 
@@ -330,16 +383,31 @@ variable [Semifield α] [LinearOrder α] [IsStrictOrderedRing α]
   [Semifield β] [LinearOrder β] [IsStrictOrderedRing β]
   {s : Set ι} {f : ι → α} {g : ι → β}
 
+/-- The inverses of `f` and `g`, taken on `s` where both are positive, monovary if and only if `f`
+and `g` monovary on `s`. -/
 lemma monovaryOn_inv₀ (hf : ∀ i ∈ s, 0 < f i) (hg : ∀ i ∈ s, 0 < g i) :
-    MonovaryOn f⁻¹ g⁻¹ s ↔ MonovaryOn f g s := by
-  rw [monovaryOn_inv_left₀ hf, antivaryOn_inv_right₀ hg]
-lemma antivaryOn_inv₀ (hf : ∀ i ∈ s, 0 < f i) (hg : ∀ i ∈ s, 0 < g i) :
-    AntivaryOn f⁻¹ g⁻¹ s ↔ AntivaryOn f g s := by
-  rw [antivaryOn_inv_left₀ hf, monovaryOn_inv_right₀ hg]
+    Monovary (fun i : s ↦ Checked.inv (f i) (hf i i.2).ne'.isUnit)
+      (fun i : s ↦ Checked.inv (g i) (hg i i.2).ne'.isUnit) ↔ MonovaryOn f g s := by
+  rw [monovaryOn_iff_monovary]
+  exact forall_comm.trans <| forall₂_congr fun i j ↦
+    imp_congr (inv_lt_inv₀ (hg j j.2) (hg i i.2)) (inv_le_inv₀ (hf j j.2) (hf i i.2))
 
-lemma monovary_inv₀ (hf : StrongLT 0 f) (hg : StrongLT 0 g) : Monovary f⁻¹ g⁻¹ ↔ Monovary f g := by
+/-- The inverses of `f` and `g`, taken on `s` where both are positive, antivary if and only if `f`
+and `g` antivary on `s`. -/
+lemma antivaryOn_inv₀ (hf : ∀ i ∈ s, 0 < f i) (hg : ∀ i ∈ s, 0 < g i) :
+    Antivary (fun i : s ↦ Checked.inv (f i) (hf i i.2).ne'.isUnit)
+      (fun i : s ↦ Checked.inv (g i) (hg i i.2).ne'.isUnit) ↔ AntivaryOn f g s := by
+  rw [antivaryOn_iff_antivary]
+  exact forall_comm.trans <| forall₂_congr fun i j ↦
+    imp_congr (inv_lt_inv₀ (hg j j.2) (hg i i.2)) (inv_le_inv₀ (hf i i.2) (hf j j.2))
+
+lemma monovary_inv₀ (hf : StrongLT 0 f) (hg : StrongLT 0 g) :
+    Monovary (Checked.inv f (Pi.isUnit_iff.2 fun i ↦ (hf i).ne'.isUnit))
+      (Checked.inv g (Pi.isUnit_iff.2 fun i ↦ (hg i).ne'.isUnit)) ↔ Monovary f g := by
   rw [monovary_inv_left₀ hf, antivary_inv_right₀ hg]
-lemma antivary_inv₀ (hf : StrongLT 0 f) (hg : StrongLT 0 g) : Antivary f⁻¹ g⁻¹ ↔ Antivary f g := by
+lemma antivary_inv₀ (hf : StrongLT 0 f) (hg : StrongLT 0 g) :
+    Antivary (Checked.inv f (Pi.isUnit_iff.2 fun i ↦ (hf i).ne'.isUnit))
+      (Checked.inv g (Pi.isUnit_iff.2 fun i ↦ (hg i).ne'.isUnit)) ↔ Antivary f g := by
   rw [antivary_inv_left₀ hf, monovary_inv_right₀ hg]
 
 end

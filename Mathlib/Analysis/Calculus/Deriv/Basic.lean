@@ -116,7 +116,7 @@ variable [ContinuousSMul 𝕜 F]
 That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)` where `(x', x)` converges along the filter `L`.
 -/
 def HasDerivAtFilter {D : Type*} (f : D → F) (f' : F) (L : Filter (D × D))
-    (coord : D → 𝕜 := by exact id) :=
+    (coord : D → 𝕜 := by exact _root_.id) :=
   HasFDerivAtFilter f (toSpanSingleton 𝕜 f') L coord
 
 /-- `f` has the derivative `f'` at the point `x` within the subset `s`.
@@ -124,7 +124,7 @@ def HasDerivAtFilter {D : Type*} (f : D → F) (f' : F) (L : Filter (D × D))
 That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)` where `x'` converges to `x` inside `s`.
 -/
 def HasDerivWithinAt {D : Type*} [TopologicalSpace D] (f : D → F) (f' : F)
-    (s : Set D) (x : D) (coord : D → 𝕜 := by exact id) :=
+    (s : Set D) (x : D) (coord : D → 𝕜 := by exact _root_.id) :=
   HasDerivAtFilter f f' (𝓝[s] x ×ˢ pure x) coord
 
 /-- `f` has the derivative `f'` at the point `x`.
@@ -132,14 +132,14 @@ def HasDerivWithinAt {D : Type*} [TopologicalSpace D] (f : D → F) (f' : F)
 That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)` where `x'` converges to `x`.
 -/
 def HasDerivAt {D : Type*} [TopologicalSpace D] (f : D → F) (f' : F)
-    (x : D) (coord : D → 𝕜 := by exact id) :=
+    (x : D) (coord : D → 𝕜 := by exact _root_.id) :=
   HasDerivAtFilter f f' (𝓝 x ×ˢ pure x) coord
 
 /-- `f` has the derivative `f'` at the point `x` in the sense of strict differentiability.
 
 That is, `f y - f z = (coord y - coord z) • f' + o(coord y - coord z)` as `y, z → x`. -/
 def HasStrictDerivAt {D : Type*} [TopologicalSpace D] (f : D → F) (f' : F)
-    (x : D) (coord : D → 𝕜 := by exact id) :=
+    (x : D) (coord : D → 𝕜 := by exact _root_.id) :=
   HasDerivAtFilter f f' (𝓝 (x, x)) coord
 
 end
@@ -149,7 +149,7 @@ If the derivative exists (i.e., `∃ f', HasDerivWithinAt f f' s x`), then
 `f x' = f x + (x' - x) • derivWithin f s x + o(x' - x)` where `x'` converges to `x` inside `s`.
 -/
 def derivWithin {D : Type*} [TopologicalSpace D] (f : D → F)
-    (s : Set D) (x : D) (coord : D → 𝕜 := by exact id) :=
+    (s : Set D) (x : D) (coord : D → 𝕜 := by exact _root_.id) :=
   fderivWithin 𝕜 f s x coord 1
 
 /-- Derivative of `f` at the point `x`, if it exists.  Zero otherwise.
@@ -158,7 +158,7 @@ If the derivative exists (i.e., `∃ f', HasDerivAt f f' x`), then
 `f x' = f x + (x' - x) • deriv f x + o(x' - x)` where `x'` converges to `x`.
 -/
 def deriv {D : Type*} [TopologicalSpace D] (f : D → F)
-    (x : D) (coord : D → 𝕜 := by exact id) :=
+    (x : D) (coord : D → 𝕜 := by exact _root_.id) :=
   fderiv 𝕜 f x coord 1
 
 variable {f : 𝕜 → F}

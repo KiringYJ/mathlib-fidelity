@@ -63,14 +63,14 @@ theorem ninePointCircle_center_vsub_circumcenter {n : ℕ} [NeZero n]
       (n : ℝ)⁻¹ • (s.centroid -ᵥ s.circumcenter) + (s.centroid -ᵥ s.circumcenter) := by
   rw [ninePointCircle_center, vadd_vsub]
   have h : ((n + 1) / n : ℝ) = (n : ℝ)⁻¹ + 1 := by
-    rw [Checked.div_eq_mul_inv, add_mul, Checked.mul_inv_cancel, one_mul, add_comm]
+    rw [div_eq_mul_inv₀, add_mul, mul_inv_cancel₀, one_mul, add_comm]
   rw [h, add_smul, one_smul]
 
 theorem smul_ninePointCircle_center_vsub_circumcenter {n : ℕ} [NeZero n]
     (s : Simplex ℝ P n) :
     (n : ℝ) • (s.ninePointCircle.center -ᵥ s.circumcenter) =
       (n + 1 : ℝ) • (s.centroid -ᵥ s.circumcenter) := by
-  rw [ninePointCircle_center, vadd_vsub, smul_smul, mul_comm, Checked.div_mul_cancel]
+  rw [ninePointCircle_center, vadd_vsub, smul_smul, mul_comm, div_mul_cancel₀]
 
 theorem ninePointCircle_center_mem_affineSpan {n : ℕ} [NeZero n] (s : Simplex ℝ P n) :
     s.ninePointCircle.center ∈ affineSpan ℝ (Set.range s.points) := by
@@ -116,10 +116,10 @@ theorem faceOppositeCentroid_mem_ninePointCircle {n : ℕ} [NeZero n] (s : Simpl
   rw [mem_sphere, ninePointCircle_center, ninePointCircle_radius,
     ← dist_circumcenter_eq_circumradius' s i]
   simp_rw [dist_eq_norm_vsub]
-  rw [Checked.eq_div_iff_mul_eq, mul_comm]
+  rw [eq_div_iff_mul_eq, mul_comm]
   nth_rw 1 [show (n : ℝ) = ‖(n : ℝ)‖ by simp]
   rw [← norm_smul, vsub_vadd_eq_vsub_sub, smul_sub, smul_smul,
-    mul_comm (n : ℝ), Checked.div_mul_cancel, add_smul, one_smul, ← sub_sub, ← smul_sub,
+    mul_comm (n : ℝ), div_mul_cancel₀, add_smul, one_smul, ← sub_sub, ← smul_sub,
     vsub_sub_vsub_cancel_right, ← centroid_vsub_point_eq_smul_vsub, vsub_sub_vsub_cancel_left]
 
 theorem ninePointCircle_eq_circumsphere_medial {n : ℕ} [NeZero n] (s : Simplex ℝ P n) :
@@ -177,11 +177,11 @@ theorem eulerPoint_eq_smul_vsub_vadd_mongePoint {n : ℕ} [NeZero n] (s : Simple
       (s.points i -ᵥ s.circumcenter) +
         (n : ℝ) • (s.ninePointCircle.center -ᵥ s.circumcenter) := by
     rw [eulerPoint, vadd_vsub_assoc, smul_add, smul_smul,
-      Checked.mul_inv_cancel, one_smul]
+      mul_inv_cancel₀, one_smul]
   apply vsub_left_cancel (p := s.mongePoint (by omega))
   rw [vadd_vsub]
   apply (GroupWithZero.isUnit_of_ne_zero (by checked_nonzero : (n : ℝ) ≠ 0)).smul_left_cancel.mp
-  rw [smul_smul, Checked.mul_inv_cancel, one_smul,
+  rw [smul_smul, mul_inv_cancel₀, one_smul,
     ← vsub_sub_vsub_cancel_right (s.eulerPoint i) (s.mongePoint (by omega)) s.circumcenter,
     ← vsub_sub_vsub_cancel_right (s.points i) (s.mongePoint (by omega)) s.circumcenter,
     smul_sub, he, smul_ninePointCircle_center_vsub_circumcenter, ← hm]
@@ -192,7 +192,7 @@ theorem points_vsub_eulerPoint {n : ℕ} [NeZero n] (s : Simplex ℝ P n) (i : F
     s.points i -ᵥ s.eulerPoint i = (((n : ℝ) - 1) / n) •
       (s.points i -ᵥ s.mongePoint (by omega)) := by
   rw [eulerPoint_eq_smul_vsub_vadd_mongePoint s i hn, vsub_vadd_eq_vsub_sub,
-    Checked.div_eq_mul_inv, sub_mul, Checked.mul_inv_cancel, one_mul, sub_smul, one_smul]
+    div_eq_mul_inv₀, sub_mul, mul_inv_cancel₀, one_mul, sub_smul, one_smul]
 
 theorem midpoint_faceOppositeCentroid_eulerPoint {n : ℕ} [hn : NeZero n] (s : Simplex ℝ P n)
     (i : Fin (n + 1)) :

@@ -52,30 +52,35 @@ theorem isField_of_isIntegral_of_isField' [CommRing R] [CommRing S] [IsDomain S]
 
 variable [Field R] [DivisionRing S] [Algebra R S] {x : S} {A : Subalgebra R S}
 
-theorem IsIntegral.inv_mem_adjoin (int : IsIntegral R x) : x⁻¹ ∈ R[x] := by
-  obtain rfl | h0 := eq_or_ne x 0
-  · rw [inv_zero]; exact Subalgebra.zero_mem _
+/-- The inverse of an invertible integral element `x` of a division ring over a field lies in
+`R[x]`. -/
+theorem IsIntegral.inv_mem_adjoin (int : IsIntegral R x) {hx : IsUnit x} : x⁻¹ ∈ R[x] := by
+  have h0 : x ≠ 0 := hx.ne_zero
   have : FiniteDimensional R (R[x]) := .of_fg int.fg_adjoin_singleton
   obtain ⟨⟨y, hy⟩, h1⟩ := FiniteDimensional.exists_mul_eq_one R
     (K := R[x]) (x := ⟨x, subset_adjoin rfl⟩) (mt Subtype.ext_iff.mp h0)
-  rwa [← mul_left_cancel₀ h0 ((Subtype.ext_iff.mp h1).trans (mul_inv_cancel₀ h0).symm)]
+  rwa [← mul_left_cancel₀ h0 ((Subtype.ext_iff.mp h1).trans (mul_inv_cancel₀ (ha := hx)).symm)]
 
-/-- The inverse of an integral element in a subalgebra of a division ring over a field
+/-- The inverse of an invertible integral element in a subalgebra of a division ring over a field
   also lies in that subalgebra. -/
-theorem IsIntegral.inv_mem (int : IsIntegral R x) (hx : x ∈ A) : x⁻¹ ∈ A :=
+theorem IsIntegral.inv_mem (int : IsIntegral R x) {hu : IsUnit x} (hx : x ∈ A) : x⁻¹ ∈ A :=
   adjoin_le (Set.singleton_subset_iff.mpr hx) int.inv_mem_adjoin
 
 /-- An integral subalgebra of a division ring over a field is closed under inverses. -/
-theorem Algebra.IsIntegral.inv_mem [Algebra.IsIntegral R A] (hx : x ∈ A) : x⁻¹ ∈ A :=
+theorem Algebra.IsIntegral.inv_mem [Algebra.IsIntegral R A] {hu : IsUnit x} (hx : x ∈ A) :
+    x⁻¹ ∈ A :=
   ((isIntegral_algHom_iff A.val Subtype.val_injective).mpr <|
     Algebra.IsIntegral.isIntegral (⟨x, hx⟩ : A)).inv_mem hx
 
-/-- The inverse of an integral element in a division ring over a field is also integral. -/
-theorem IsIntegral.inv (int : IsIntegral R x) : IsIntegral R x⁻¹ :=
+/-- The inverse of an invertible integral element in a division ring over a field is also
+integral. -/
+theorem IsIntegral.inv (int : IsIntegral R x) {hx : IsUnit x} : IsIntegral R x⁻¹ :=
   .of_mem_of_fg _ int.fg_adjoin_singleton _ int.inv_mem_adjoin
 
-theorem IsIntegral.mem_of_inv_mem (int : IsIntegral R x) (inv_mem : x⁻¹ ∈ A) : x ∈ A := by
-  rw [← inv_inv x]; exact int.inv.inv_mem inv_mem
+theorem IsIntegral.mem_of_inv_mem (int : IsIntegral R x) {hx : IsUnit x} (inv_mem : x⁻¹ ∈ A) :
+    x ∈ A := by
+  rw [← inv_inv₀ x (ha := hx)]
+  exact int.inv.inv_mem inv_mem
 
 end inv
 

@@ -5,8 +5,10 @@ Authors: Kim Morrison
 -/
 module
 
+public import Mathlib.Algebra.Order.Field.Basic
 public import Mathlib.Data.Nat.Sqrt
 public import Mathlib.Data.Rat.Cast.Order
+public import Mathlib.Tactic.Positivity
 
 /-!
 # Rational approximations to square roots of naturals
@@ -42,12 +44,9 @@ theorem ratSqrt_sq_le (x : ℕ) {prec : ℕ} (h : 0 < prec) :
   exact_mod_cast sqrt_le' (x * prec ^ 2)
 
 theorem lt_ratSqrt_add_inv_prec_sq (x : ℕ) {prec : ℕ} (h : 0 < prec) :
-    (x : ℚ) < (ratSqrt x prec h +
-      (1 : ℚ) /ₚ Units.mk0 (prec : ℚ) (Nat.cast_ne_zero.mpr h.ne')) ^ 2 := by
+    (x : ℚ) < (ratSqrt x prec h + 1 / prec) ^ 2 := by
   apply (mul_lt_mul_iff_of_pos_right (pow_pos (Nat.cast_pos.mpr h : (0 : ℚ) < prec) 2)).mp
-  have hc : (1 : ℚ) /ₚ Units.mk0 (prec : ℚ) (Nat.cast_ne_zero.mpr h.ne') *
-      (prec : ℚ) = 1 := divp_mul_cancel _ _
-  rw [← mul_pow, add_mul, ratSqrt_mul_prec, hc]
+  rw [← mul_pow, add_mul, ratSqrt_mul_prec, div_mul_cancel₀]
   exact_mod_cast lt_succ_sqrt' (x * prec ^ 2)
 
 end Nat

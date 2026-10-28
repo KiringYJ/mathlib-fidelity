@@ -10,6 +10,10 @@ public import Mathlib.Algebra.GroupWithZero.Units.Basic
 
 /-!
 # Multiplication by a nonzero element in a `GroupWithZero` is a permutation.
+
+Division on the right by a nonzero element is a permutation as well. Division on the left,
+`x ↦ a / x`, is not: its denominator `x` must be a unit, so it permutes the group of units `G₀ˣ`,
+where it is `Equiv.divLeft`.
 -/
 
 @[expose] public section
@@ -50,13 +54,10 @@ theorem _root_.mulRight_bijective₀ (a : G₀) (ha : a ≠ 0) : Function.Biject
 underlying type. -/
 @[simps! +simpRhs]
 noncomputable def divRight₀ (a : G₀) (ha : a ≠ 0) : Perm G₀ where
-  toFun := (· /ₚ Units.mk0 a ha)
+  toFun := (· / a)
   invFun := (· * a)
-  left_inv x := divp_mul_cancel x (Units.mk0 a ha)
-  right_inv x := mul_divp_cancel x (Units.mk0 a ha)
+  left_inv _ := by simp
+  right_inv _ := by simp
 
 end GroupWithZero
-
--- For left division, use `Equiv.divLeft` on the group of units. Its varying denominator
--- must be a unit, so it is not a permutation of the ambient carrier.
 end Equiv

@@ -77,7 +77,7 @@ theorem IsField.isUnit_of_ne_zero {R : Type u} [Semiring R] (h : IsField R)
 
 /-- Transferring from `IsField` to `Semifield`, keeping the given semiring operations. -/
 @[instance_reducible]
-def IsField.toSemifield {R : Type u} [Semiring R] (h : IsField R) : Semifield R where
+noncomputable def IsField.toSemifield {R : Type u} [Semiring R] (h : IsField R) : Semifield R where
   __ := ‹Semiring R›
   __ := h.nontrivial
   mul_comm := h.mul_comm
@@ -85,7 +85,7 @@ def IsField.toSemifield {R : Type u} [Semiring R] (h : IsField R) : Semifield R 
 
 /-- Transferring from `IsField` to `Field`, keeping the given ring operations. -/
 @[instance_reducible]
-def IsField.toField {R : Type u} [Ring R] (h : IsField R) : Field R where
+noncomputable def IsField.toField {R : Type u} [Ring R] (h : IsField R) : Field R where
   __ := (‹Ring R› :) -- this also works without the `( :)`, but it's slow
   __ := h.toSemifield
 

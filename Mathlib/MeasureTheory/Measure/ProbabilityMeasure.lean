@@ -542,7 +542,7 @@ theorem eq_normalize_iff {P : ProbabilityMeasure Ω} (hμ : μ ≠ 0) :
     P = μ.normalize hμ ↔ μ.mass • P.toFiniteMeasure = μ := by
   refine ⟨fun h ↦ h ▸ mass_smul_normalize hμ, fun h ↦ ?_⟩
   apply ProbabilityMeasure.toFiniteMeasure_injective
-  rw [toFiniteMeasure_normalize, eq_inv_smul_iff₀ ((mass_nonzero_iff μ).mpr hμ), h]
+  rw [toFiniteMeasure_normalize, eq_inv_smul_iff₀ (ha := ((mass_nonzero_iff μ).mpr hμ).isUnit), h]
 
 /-- Normalization is invariant under multiplication by a nonzero scalar. -/
 theorem normalize_smul {c : ℝ≥0} (hc : c ≠ 0) (hμ : μ ≠ 0) :

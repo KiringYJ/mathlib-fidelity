@@ -131,15 +131,18 @@ end EqZeroIff
 
 section DivisionRing
 
-variable {L : Type*} [DivisionRing L] [Algebra K L] [Module.Finite K L]
+variable {L : Type*} [DivisionRing L] [Algebra K L]
 
-theorem norm_inv (x : L) : Algebra.norm K x⁻¹ = (Algebra.norm K x)⁻¹ := by
-  by_cases hx : x = 0
-  · simp [hx]
-  exact mul_left_injective₀ (norm_ne_zero_iff.mpr hx) (by simp [hx, ← map_mul])
+/-- The norm of the inverse of an invertible element is the inverse of its norm. -/
+theorem norm_inv (x : L) {hx : IsUnit x} :
+    Algebra.norm K x⁻¹ = Checked.inv (Algebra.norm K x) (hx.map (Algebra.norm K)) :=
+  map_inv₀ (Algebra.norm K) x
 
-theorem norm_zpow (x : L) (n : ℤ) : Algebra.norm K (x ^ n) = Algebra.norm K x ^ n :=
-  map_zpow' _ norm_inv _ _
+/-- The norm of an integer power; a negative power requires an invertible element. -/
+theorem norm_zpow (x : L) (n : ℤ) {h : n < 0 → IsUnit x} :
+    Algebra.norm K (x ^ n) =
+      Checked.zpow (Algebra.norm K x) n (fun hn => (h hn).map (Algebra.norm K)) :=
+  map_zpow₀ (Algebra.norm K) x n
 
 end DivisionRing
 

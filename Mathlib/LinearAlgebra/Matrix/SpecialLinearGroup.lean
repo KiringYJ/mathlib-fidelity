@@ -394,12 +394,12 @@ theorem fin_two_induction (P : SL(2, R) → Prop)
 set_option backward.isDefEq.respectTransparency false in
 theorem fin_two_exists_eq_mk_of_apply_zero_one_eq_zero {R : Type*} [Field R] (g : SL(2, R))
     (hg : g 1 0 = 0) :
-    ∃ (a b : R) (h : a ≠ 0), g = (⟨!![a, b; 0, a⁻¹], by simp [h]⟩ : SL(2, R)) := by
+    ∃ (a b : R) (h : a ≠ 0), g = (⟨!![a, b; 0, a⁻¹], by simp⟩ : SL(2, R)) := by
   induction g using Matrix.SpecialLinearGroup.fin_two_induction with | h a b c d h_det =>
   replace hg : c = 0 := by simpa using hg
   have had : a * d = 1 := by rwa [hg, mul_zero, sub_zero] at h_det
   refine ⟨a, b, left_ne_zero_of_mul_eq_one had, ?_⟩
-  simp_rw [eq_inv_of_mul_eq_one_right had, hg]
+  simp_rw [eq_inv_of_mul_eq_one_right₀ (ha := .of_mul_eq_one d had) had, hg]
 
 lemma isCoprime_row (A : SL(2, R)) (i : Fin 2) : IsCoprime (A i 0) (A i 1) := by
   refine match i with
@@ -595,7 +595,7 @@ noncomputable def diag2n {ι : Type*} [Fintype ι] [DecidableEq ι] {i j : ι} (
     (ha : a ≠ 0) : SpecialLinearGroup ι F :=
   ⟨diagonal (fun k ↦ if k = i then a else if k = j then a⁻¹ else 1), by
     simp [Finset.prod_ite, hij.symm, Finset.card_eq_one (s := {x : ι | x = i}).2 ⟨i, by grind⟩,
-      mul_inv_cancel₀ ha]⟩
+      mul_inv_cancel₀]⟩
 
 lemma diag2n_coe {ι : Type*} [Fintype ι] [DecidableEq ι] {i j : ι} (hij : i ≠ j) (a : F)
     (ha : a ≠ 0) : (diag2n hij a ha).1 = diagonal (fun k ↦
@@ -625,11 +625,11 @@ lemma diag2_smul_single_i₂ {a : F} (ha : a ≠ 0) :
   ext k; fin_cases k <;> simp [Matrix.SpecialLinearGroup.smul_def, diag2_coe]
 
 lemma diag2_mul_inv (a : F) (ha : a ≠ 0) :
-    diag2 a ha * diag2 a⁻¹ (inv_ne_zero ha) = 1 := Subtype.ext <| by
-  simp [diag2_coe, funext_iff, mul_inv_cancel₀ ha, inv_mul_cancel₀ ha]
+    diag2 a ha * diag2 a⁻¹ inv_ne_zero = 1 := Subtype.ext <| by
+  simp [diag2_coe, funext_iff, mul_inv_cancel₀, inv_mul_cancel₀]
 
 lemma diag2_inv (a : F) (ha : a ≠ 0) :
-    (diag2 a ha)⁻¹ = diag2 a⁻¹ (inv_ne_zero ha) := by
+    (diag2 a ha)⁻¹ = diag2 a⁻¹ inv_ne_zero := by
   apply inv_eq_of_mul_eq_one_right
   exact diag2_mul_inv a ha
 
@@ -649,22 +649,28 @@ lemma coeMonoidHom_apply (g : SpecialLinearGroup ι R) : coeMonoidHom g = (g : M
 lemma coeMonoidHom_injective : Function.Injective (coeMonoidHom : SpecialLinearGroup ι R → _) :=
   Subtype.val_injective
 
-private lemma diag_decompose (i₀ : ι) (D : ι → F) (hD : det (diagonal D) = 1) :
-    Finset.prod {i | i ≠ i₀} (fun i k ↦ if k = i then D i else
-      if k = i₀ then (D i)⁻¹ else 1 : ι → ι → F) = D := by
-  rw [det_diagonal, show Finset.univ = insert i₀ ({i | i ≠ i₀} : Finset ι) by grind,
-    Finset.prod_insert (by grind), mul_eq_one_iff_eq_inv₀ (by grind),
-    ← Finset.prod_inv_distrib] at hD
-  ext x
-  by_cases hx : x = i₀
-  · simpa [hx, hD, -Finset.prod_inv_distrib] using Finset.prod_congr rfl (by grind)
-  · simp [hx]
-
 lemma diagonal_neZero (D : ι → F) (hD : det (diagonal D) = 1) (j : ι) :
     D j ≠ 0 := fun h ↦ by
   rw [det_diagonal, show Finset.univ = insert j ({i | i ≠ j} : Finset ι) by grind,
     Finset.prod_insert (by grind), h, zero_mul] at hD
   exact zero_ne_one hD
+
+private lemma diag_decompose (i₀ : ι) (D : ι → F) (hD : det (diagonal D) = 1) :
+    Finset.prod {i | i ≠ i₀} (fun i k ↦ if k = i then D i else
+      if k = i₀ then Checked.inv (D i) (diagonal_neZero D hD i).isUnit else 1 : ι → ι → F) =
+      D := by
+  have hD₀ : D i₀ * ∏ i ∈ {i | i ≠ i₀}, D i = 1 := by
+    rwa [det_diagonal, show Finset.univ = insert i₀ ({i | i ≠ i₀} : Finset ι) by grind,
+      Finset.prod_insert (by grind)] at hD
+  ext x
+  by_cases hx : x = i₀
+  · simp only [hx, Finset.prod_apply]
+    calc _ = ∏ i ∈ {i | i ≠ i₀}, Checked.inv (D i) (diagonal_neZero D hD i).isUnit :=
+          Finset.prod_congr rfl fun i hi ↦ by simp [Ne.symm (Finset.mem_filter.1 hi).2]
+      _ = Checked.inv (∏ i ∈ {i | i ≠ i₀}, D i) _ :=
+          Finset.prod_inv_distrib₀ D (hf := fun i ↦ (diagonal_neZero D hD i).isUnit)
+      _ = D i₀ := (eq_inv_of_mul_eq_one_left₀ hD₀).symm
+  · simp [hx]
 
 set_option backward.isDefEq.respectTransparency.types false in
 lemma diag_commute (i₀ : ι) (D : ι → F) (hD : det (diagonal D) = 1) :
@@ -680,7 +686,8 @@ lemma diag_eq_diag2n_prod (i₀ : ι) (D : ι → F) (hD : det (diagonal D) = 1)
     (⟨diagonal D, hD⟩ : SpecialLinearGroup ι F) =
       Finset.noncommProd {i : ι | i ≠ i₀} (fun i ↦ if hi : i ≠ i₀ then
       diag2n hi (D i) (diagonal_neZero D hD i) else 1) (diag_commute i₀ D hD) := by
-  set g : ι → ι → F := fun i k ↦ if k = i then D i else if k = i₀ then (D i)⁻¹ else 1 with hg_def
+  set g : ι → ι → F := fun i k ↦ if k = i then D i else
+    if k = i₀ then Checked.inv (D i) (diagonal_neZero D hD i).isUnit else 1 with hg_def
   apply coeMonoidHom_injective
   rw [Finset.map_noncommProd]
   simp_rw [coeMonoidHom_apply, apply_dite, coe_one]
@@ -740,30 +747,31 @@ lemma commutator_diag2_transvection (a : F) (ha : a ≠ 0) (b c : F)
   refine Subtype.ext <| Matrix.ext fun i j ↦ ?_
   fin_cases i <;> fin_cases j
   <;> simp [hc, SpecialLinearGroup.transvection_coe, diag2_coe, mul_add, add_mul,
-    mul_inv_cancel₀ ha, inv_mul_cancel₀ ha, mul_comm a b, mul_assoc b a a, ← pow_two,
+    mul_inv_cancel₀, inv_mul_cancel₀, mul_comm a b, mul_assoc b a a, ← pow_two,
     mul_sub_one, ← sub_eq_add_neg]
 
 /-- For any `c : F`, given `a ≠ 0` and `a² ≠ 1`, the transvection `transvection i₁ i₂ hij c` is
 a commutator in `SL ι F`, hence lies in `commutator (SL ι F)`. -/
 lemma transvection_mem_commutator₀ {a : F} (ha : a ≠ 0) (hasq : a ^ 2 ≠ 1) (c : F) :
     SpecialLinearGroup.transvection zero_ne_one c ∈ commutator SL(2, F) := by
-  rw [← commutator_diag2_transvection a ha (c / (a ^ 2 - 1)) c
-    (div_mul_cancel₀ c (sub_ne_zero_of_ne hasq)).symm]
+  have hasq' : a ^ 2 - 1 ≠ 0 := sub_ne_zero_of_ne hasq
+  rw [← commutator_diag2_transvection a ha (c / (a ^ 2 - 1)) c (div_mul_cancel₀ c).symm]
   exact Subgroup.commutator_mem_commutator (Subgroup.mem_top _) (Subgroup.mem_top _)
 
 lemma transvection_mem_commutator₁ {a : F} (ha : a ≠ 0) (hasq : a ^ 2 ≠ 1) (c : F) :
     SpecialLinearGroup.transvection one_ne_zero c ∈ commutator SL(2, F) := by
   have (b c' : F) (hc : c' = b * (a ^ 2 - 1)) :
-      ⁅diag2 a⁻¹ (inv_ne_zero ha), SpecialLinearGroup.transvection one_ne_zero b⁆ =
+      ⁅diag2 a⁻¹ inv_ne_zero, SpecialLinearGroup.transvection one_ne_zero b⁆ =
       (SpecialLinearGroup.transvection one_ne_zero c' : SL(2, F)) := by
-    rw [commutatorElement_def, diag2_inv a⁻¹ (inv_ne_zero ha),
+    rw [commutatorElement_def, diag2_inv a⁻¹ inv_ne_zero,
       SpecialLinearGroup.transvection_inv one_ne_zero b]
     refine Subtype.ext <| Matrix.ext fun i j ↦ ?_
     fin_cases i <;> fin_cases j <;>
-    simp [hc, SpecialLinearGroup.transvection_coe, diag2_coe, inv_inv, mul_add, add_mul,
-      mul_inv_cancel₀ ha, inv_mul_cancel₀ ha, mul_comm a b, mul_assoc b a a, ← pow_two,
+    simp [hc, SpecialLinearGroup.transvection_coe, diag2_coe, inv_inv₀, mul_add, add_mul,
+      mul_inv_cancel₀, inv_mul_cancel₀, mul_comm a b, mul_assoc b a a, ← pow_two,
       mul_sub_one, ← sub_eq_add_neg]
-  rw [← this (c / (a ^ 2 - 1)) c (div_mul_cancel₀ c (sub_ne_zero_of_ne hasq)).symm]
+  have hasq' : a ^ 2 - 1 ≠ 0 := sub_ne_zero_of_ne hasq
+  rw [← this (c / (a ^ 2 - 1)) c (div_mul_cancel₀ c).symm]
   exact Subgroup.commutator_mem_commutator (Subgroup.mem_top _) (Subgroup.mem_top _)
 
 lemma transvection_mem_commutator {a : F} (ha : a ≠ 0) (hasq : a ^ 2 ≠ 1) {i j : Fin 2} (h : i ≠ j)
@@ -783,7 +791,7 @@ lemma diag2_decompose (a : F) (ha : a ≠ 0) :
       SpecialLinearGroup.transvection zero_ne_one (-1) := by
   ext i j
   fin_cases i <;> fin_cases j <;>
-  simp [diag2_coe', transvection_coe, mul_add, add_mul, mul_inv_cancel₀ ha, inv_mul_cancel₀ ha]
+  simp [diag2_coe', transvection_coe, mul_add, add_mul, mul_inv_cancel₀, inv_mul_cancel₀]
 
 theorem SL2.transvection_induction (P : SL(2, F) → Prop)
     (htransvec : ∀ (i j : Fin 2) (h : i ≠ j) c, P (SpecialLinearGroup.transvection h c))
@@ -796,8 +804,8 @@ theorem SL2.transvection_induction (P : SL(2, F) → Prop)
     refine hmul _ _ (hmul _ _ (hmul _ _ (hmul _ _ (hmul _ _ ?_ ?_) ?_) ?_) ?_) ?_
     all_goals exact htransvec _ _ _ _
   · obtain rfl : j = 0 := by fin_cases j <;> tauto
-    rw [show diag2n hij c hc = diag2 c⁻¹ (inv_ne_zero hc) by
-      ext; simp [diag2n_coe, diagonal_apply]; grind, diag2_decompose c⁻¹ (inv_ne_zero hc)]
+    rw [show diag2n hij c hc = diag2 c⁻¹ inv_ne_zero by
+      ext; simp [diag2n_coe, diagonal_apply]; grind, diag2_decompose c⁻¹ inv_ne_zero]
     refine hmul _ _ (hmul _ _ (hmul _ _ (hmul _ _ (hmul _ _ ?_ ?_) ?_) ?_) ?_) ?_
     all_goals exact htransvec _ _ _ _
 

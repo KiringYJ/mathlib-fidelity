@@ -112,7 +112,7 @@ theorem eq_bot_or_top : I = ⊥ ∨ I = ⊤ := by
   by_cases H : r = 0; · simpa
   exfalso
   apply h1
-  simpa only [Checked.inv_mul_cancel] using
+  simpa only [inv_mul_cancel₀] using
     I.mul_mem_left (Checked.inv r (GroupWithZero.isUnit_of_ne_zero H)) hr
 
 end Ideal

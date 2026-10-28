@@ -341,9 +341,9 @@ private theorem fixed_of_fixed2 (f : Gal(L/K)) (x : L)
   replace h : algebraMap (B ⧸ Q) L x / algebraMap (B ⧸ Q) L y =
       algebraMap (B ⧸ Q) L b / algebraMap (A ⧸ P) L a := by
     rw [mul_comm, Algebra.smul_def, mul_comm] at h
-    rw [div_eq_div_iff hy ha, ← map_mul, ← h, map_mul, ← algebraMap_apply]
+    rw [div_eq_div_iff, ← map_mul, ← h, map_mul, ← algebraMap_apply]
   simp only [h, map_div₀, algebraMap_apply (A ⧸ P) K L, AlgEquiv.commutes] at hx ⊢
-  simp only [← algebraMap_apply, div_left_inj' ha] at hx ⊢
+  simp only [← algebraMap_apply, div_left_inj'] at hx ⊢
   exact fixed_of_fixed1 G P Q K L f b (fun g ↦ IsFractionRing.injective (B ⧸ Q) L
     ((IsFractionRing.fieldEquivOfAlgEquiv_algebraMap K L L
       (Ideal.Quotient.stabilizerHom Q P G g) b).symm.trans (hx g)))
@@ -565,11 +565,13 @@ theorem isInvariant_of_isIntegral [Algebra.IsIntegral A B] : Algebra.IsInvariant
   replace ha : (algebraMap B L) (algebraMap A B a) ≠ 0 := by simpa [← hc]
   have hxy : algebraMap B L x / algebraMap B L y =
     algebraMap B L b / algebraMap B L (algebraMap A B a) := by
-    rw [div_eq_div_iff hy' ha, ← map_mul, hb, map_mul]
+    rw [div_eq_div_iff, ← map_mul, hb, map_mul]
   obtain ⟨b, rfl⟩ := hAB.isInvariant b
-    (by simpa [ha, hxy, smul_div₀', ← algebraMap.coe_smul'] using h)
+    (by simpa [ha, hxy, smul_div₀', ← algebraMap.coe_smul', div_left_inj'] using h)
+  have ha' : algebraMap A K a ≠ 0 := fun h0 ↦ ha (by rw [← hc, h0, map_zero])
   use algebraMap A K b / algebraMap A K a
-  rw [hxy, map_div₀, hc, hc]
+  rw [hxy, map_div₀]
+  simp only [hc]
 
 include A B in
 /-- If `G` acts on `B/A` with `A` as the fixed subring, then `G` also acts on `L/K` with `K` as

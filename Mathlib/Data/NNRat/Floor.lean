@@ -34,7 +34,7 @@ namespace NNRat
 instance : FloorSemiring ℚ≥0 where
   floor q := ⌊q.val⌋₊
   ceil q := ⌈q.val⌉₊
-  floor_of_neg h := by simpa using h.trans zero_lt_one
+  floor_of_neg h := absurd h (not_lt.2 zero_le)
   gc_floor {a n} h := by rw [← NNRat.coe_le_coe, Nat.le_floor_iff] <;> norm_cast
   gc_ceil {a b} := by rw [← NNRat.coe_le_coe, Nat.ceil_le]; norm_cast
 
@@ -59,7 +59,8 @@ variable {K} [Semifield K] [LinearOrder K] [IsStrictOrderedRing K] [FloorSemirin
 
 @[simp, norm_cast]
 theorem floor_cast (x : ℚ≥0) : ⌊(x : K)⌋₊ = ⌊x⌋₊ :=
-  (Nat.floor_eq_iff x.cast_nonneg).2 (mod_cast (Nat.floor_eq_iff x.cast_nonneg).1 (Eq.refl ⌊x⌋₊))
+  (Nat.floor_eq_iff x.cast_nonneg).2
+    (mod_cast (Nat.floor_eq_iff (zero_le : 0 ≤ x)).1 (Eq.refl ⌊x⌋₊))
 
 @[simp, norm_cast]
 theorem ceil_cast (x : ℚ≥0) : ⌈(x : K)⌉₊ = ⌈x⌉₊ := by
@@ -91,8 +92,11 @@ theorem intCeil_cast (x : ℚ≥0) : ⌈(x : K)⌉ = ⌈(x : ℚ)⌉ := by
 end Field
 
 @[norm_cast]
-theorem floor_divNat (n d : ℕ) (hd : d ≠ 0) : ⌊NNRat.divNat n d hd⌋₊ = n / d := by
-  rw [← floor_coe, coe_divNat, Rat.natFloor_fraction]
+theorem floor_natCast_div_natCast (n d : ℕ) {hd : IsUnit (d : ℚ≥0)} :
+    ⌊(↑n / ↑d : ℚ≥0)⌋₊ = n / d := by
+  rw [← floor_coe, coe_div]
+  simp only [coe_natCast]
+  exact Rat.natFloor_natCast_div_natCast n d
 
 end NNRat
 
@@ -126,7 +130,7 @@ theorem IsRat.natCeil {R : Type*} [Field R] [LinearOrder R] [IsStrictOrderedRing
   have hd : d ≠ 0 := fun hd => h.den_nz (by simp [hd])
   constructor
   rw [h.eq_cast_fraction r (.negOfNat n) d hd]
-  simp [Rat.fraction_nonpos]
+  simpa using Rat.fraction_nonpos (by simp [Int.negOfNat_eq]) d hd
 
 open Lean in
 /-- `norm_num` extension for `Nat.ceil` -/

@@ -77,7 +77,7 @@ example : 0 ≤ ‖z‖ := by bound
 example : ‖z‖ ≥ 0 := by bound
 example : x^2 ≥ 0 := by bound
 example (p : x ≥ 0) (q : y ≥ 0) : x * y ≥ 0 := by bound
-example (p : x ≥ 0) (q : y ≥ 0) : x / y ≥ 0 := by bound
+example (p : x ≥ 0) (q : y ≥ 0) (hy : y ≠ 0) : x / y ≥ 0 := by bound
 example (p : x ≥ 0) (q : y ≥ 0) : x + y ≥ 0 := by bound
 example : (n : ℝ) ≥ 0 := by bound
 example : 0 ≤ 7 := by bound
@@ -86,7 +86,6 @@ example : 0 ≤ (1 : ℝ) := by bound
 example : 0 ≤ (u : ℝ) := by bound
 example : 0 ≤ (0 : ℝ) := by bound
 example : 0 ≤ 2^n := by bound
-example : 0 ≤ (0 : ℝ)⁻¹ := by bound
 end nonneg_tests
 
 section bound_tests
@@ -106,7 +105,7 @@ example (h : x ≥ y) : a - x ≤ a - y := by bound
 example (h : x ≤ y) : x - a ≤ y - a := by bound
 example (ab : a ≤ b) (xy : x ≥ y) : a - x ≤ b - y := by bound
 example (h : x > 0) : x ≥ 0 := by bound
-example (hc : c ≥ 0) (h : a ≤ b) : a / c ≤ b / c := by bound
+example (hc : c ≥ 0) (hc0 : c ≠ 0) (h : a ≤ b) : a / c ≤ b / c := by bound
 example (ha : a ≥ 0) (hc : c > 0) (h : b ≥ c) : a / b ≤ a / c := by bound
 example (x y : ℝ) (x0 : 0 < x) (h : x ≤ y) : x.log ≤ y.log := by bound
 

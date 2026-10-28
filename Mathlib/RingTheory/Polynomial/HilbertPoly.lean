@@ -26,14 +26,16 @@ For example, given `d : ℕ`, the power series expansion of `1/(1 - X)ᵈ⁺¹` 
 is `Σₙ ((d + n).choose d)Xⁿ`, which equals `Σₙ ((n + 1)···(n + d)/d!)Xⁿ` and hence
 `Polynomial.hilbertPoly (1 : F[X]) (d + 1)` is the polynomial `(X + 1)···(X + d)/d!`. Note that
 if `d! = 0` in `F`, then the polynomial `(X + 1)···(X + d)/d!` no longer works, so we do not want
-`d!` to be divisible by the characteristic of `F`. As `Polynomial.hilbertPoly` may take any
-`p : F[X]` and `d : ℕ` as its inputs, it is necessary for us to assume that `CharZero F`.
+`d!` to be divisible by the characteristic of `F`. The polynomial `Polynomial.hilbertPoly p d`
+is defined when `(d - 1)!` is invertible in `F`, which holds for every `d` if `CharZero F`; its
+characterizing property is proved under `CharZero F`.
 
 ## Main definitions
 
-* `Polynomial.hilbertPoly p d`. Given a field `F`, a polynomial `p : F[X]` and a natural number `d`,
-  if `F` is of characteristic `0`, then `Polynomial.hilbertPoly p d : F[X]` is the polynomial whose
-  value at `n` equals the coefficient of `Xⁿ` in the power series expansion of `p/(1 - X)ᵈ`.
+* `Polynomial.hilbertPoly p d`. Given a field `F`, a polynomial `p : F[X]` and a natural number `d`
+  such that `(d - 1)!` is invertible in `F`, `Polynomial.hilbertPoly p d : F[X]` is defined. If `F`
+  is of characteristic `0`, it is the polynomial whose value at `n` equals the coefficient of `Xⁿ`
+  in the power series expansion of `p/(1 - X)ᵈ`.
 
 ## TODO
 
@@ -50,8 +52,9 @@ namespace Polynomial
 
 /--
 For any field `F` and natural numbers `d` and `k`, `Polynomial.preHilbertPoly F d k`
-is defined as `(d.factorial : F)⁻¹ • ((ascPochhammer F d).comp (X - (C (k : F)) + 1))`.
-This is the most basic form of Hilbert polynomials. `Polynomial.preHilbertPoly ℚ d 0`
+is defined as `(d.factorial : F)⁻¹ • ((ascPochhammer F d).comp (X - (C (k : F)) + 1))`, which
+requires `d.factorial` to be invertible in `F`. This is the most basic form of Hilbert polynomials.
+`Polynomial.preHilbertPoly ℚ d 0`
 is exactly the Hilbert polynomial of the polynomial ring `ℚ[X_0,...,X_d]` viewed as
 a graded module over itself. In fact, `Polynomial.preHilbertPoly F d k` is the
 same as `Polynomial.hilbertPoly ((X : F[X]) ^ k) (d + 1)` for any field `F` and
@@ -60,28 +63,25 @@ same as `Polynomial.hilbertPoly ((X : F[X]) ^ k) (d + 1)` for any field `F` and
 then for any `d k n : ℕ` with `k ≤ n + d`, `(Polynomial.preHilbertPoly F d k).eval (n : F)`
 equals `(n + d - k).choose d`.
 -/
-noncomputable def preHilbertPoly (d k : ℕ) : F[X] :=
+noncomputable def preHilbertPoly (d k : ℕ) (hd : IsUnit (d.factorial : F) := by checked_unit) :
+    F[X] :=
   (d.factorial : F)⁻¹ • ((ascPochhammer F d).comp (Polynomial.X - (C (k : F)) + 1))
 
 lemma natDegree_preHilbertPoly [CharZero F] (d k : ℕ) :
     (preHilbertPoly F d k).natDegree = d := by
-  have hne : (d ! : F) ≠ 0 := by norm_cast; positivity
-  rw [preHilbertPoly, natDegree_smul _ (inv_ne_zero hne), natDegree_comp, ascPochhammer_natDegree,
+  rw [preHilbertPoly, natDegree_smul _ inv_ne_zero, natDegree_comp, ascPochhammer_natDegree,
     add_comm_sub, ← C_1, ← map_sub, natDegree_add_C, natDegree_X, mul_one]
 
 lemma coeff_preHilbertPoly_self [CharZero F] (d k : ℕ) :
     (preHilbertPoly F d k).coeff d = (d ! : F)⁻¹ := by
-  delta preHilbertPoly
-  have hne : (d ! : F) ≠ 0 := by norm_cast; positivity
-  have heq : d = ((ascPochhammer F d).comp (X - C (k : F) + 1)).natDegree :=
-    (natDegree_preHilbertPoly F d k).symm.trans (natDegree_smul _ (inv_ne_zero hne))
-  nth_rw 3 [heq]
-  calc
-  _ = (d ! : F)⁻¹ • ((ascPochhammer F d).comp (X - C ((k : F) - 1))).leadingCoeff := by
-    simp only [sub_add, ← C_1, ← map_sub, coeff_smul, coeff_natDegree]
-  _ = (d ! : F)⁻¹ := by
-    simp only [leadingCoeff_comp (ne_of_eq_of_ne (natDegree_X_sub_C _) one_ne_zero), Monic.def.1
-      (monic_ascPochhammer _ _), leadingCoeff_X_sub_C, one_pow, smul_eq_mul, mul_one]
+  have hdeg : ((ascPochhammer F d).comp (X - C (k : F) + 1)).natDegree = d :=
+    (natDegree_smul _ (a := (d ! : F)⁻¹) inv_ne_zero).symm.trans
+      (natDegree_preHilbertPoly F d k)
+  have hlc : ((ascPochhammer F d).comp (X - C (k : F) + 1)).leadingCoeff = 1 := by
+    simp only [sub_add, ← C_1, ← map_sub, leadingCoeff_comp (ne_of_eq_of_ne (natDegree_X_sub_C _)
+      one_ne_zero), Monic.def.1 (monic_ascPochhammer _ _), leadingCoeff_X_sub_C, one_pow, mul_one]
+  rw [leadingCoeff, hdeg] at hlc
+  rw [preHilbertPoly, coeff_smul, hlc, smul_eq_mul, mul_one]
 
 lemma leadingCoeff_preHilbertPoly [CharZero F] (d k : ℕ) :
     (preHilbertPoly F d k).leadingCoeff = (d ! : F)⁻¹ := by
@@ -98,7 +98,7 @@ lemma preHilbertPoly_eq_choose_add_sub [CharZero F] (d : ℕ) {k n : ℕ} (hkn :
       simp [field, ascFactorial_eq_factorial_mul_choose, Nat.sub_add_comm h]
   · rw [Nat.choose_eq_zero_of_lt (by omega)]
     simpa [preHilbertPoly] using
-      Or.inr ⟨k - n - 1, by omega, by rw [Nat.sub_sub, Nat.cast_sub h]; push_cast; ring⟩
+      ⟨k - n - 1, by omega, by rw [Nat.sub_sub, Nat.cast_sub h]; push_cast; ring⟩
 
 @[deprecated (since := "2026-08-25")]
 alias preHilbertPoly_eq_choose_sub_add := preHilbertPoly_eq_choose_add_sub
@@ -106,63 +106,66 @@ alias preHilbertPoly_eq_choose_sub_add := preHilbertPoly_eq_choose_add_sub
 variable {F}
 
 /--
-`Polynomial.hilbertPoly p 0 = 0`; for any `d : ℕ`, `Polynomial.hilbertPoly p (d + 1)`
-is defined as `∑ i ∈ p.support, (p.coeff i) • Polynomial.preHilbertPoly F d i`. If
+`Polynomial.hilbertPoly p 0 = 0`; for any `d : ℕ` such that `d !` is invertible in `F`,
+`Polynomial.hilbertPoly p (d + 1)` is defined as
+`∑ i ∈ p.support, (p.coeff i) • Polynomial.preHilbertPoly F d i`. If
 `M` is a graded module whose Poincaré series can be written as `p(X)/(1 - X)ᵈ` for some
 `p : ℚ[X]` with integer coefficients, then `Polynomial.hilbertPoly p d` is the Hilbert
 polynomial of `M`. See also `Polynomial.coeff_mul_invOneSubPow_eq_hilbertPoly_eval`,
 which says that `PowerSeries.coeff F n (p * PowerSeries.invOneSubPow F d)` equals
 `(Polynomial.hilbertPoly p d).eval (n : F)` for any large enough `n : ℕ`.
 -/
-noncomputable def hilbertPoly (p : F[X]) : (d : ℕ) → F[X]
-  | 0 => 0
-  | d + 1 => ∑ i ∈ p.support, (p.coeff i) • preHilbertPoly F d i
+noncomputable def hilbertPoly (p : F[X]) (d : ℕ)
+    (hd : IsUnit ((d - 1).factorial : F) := by checked_unit) : F[X] :=
+  match d, hd with
+  | 0, _ => 0
+  | d + 1, hd => ∑ i ∈ p.support, (p.coeff i) • preHilbertPoly F d i hd
 
-lemma hilbertPoly_zero_left (d : ℕ) : hilbertPoly (0 : F[X]) d = 0 := by
-  delta hilbertPoly; induction d with
-  | zero => simp only
-  | succ d _ => simp only [coeff_zero, zero_smul, Finset.sum_const_zero]
+lemma hilbertPoly_zero_left (d : ℕ) {hd : IsUnit ((d - 1)! : F)} :
+    hilbertPoly (0 : F[X]) d hd = 0 := by
+  rcases d with _ | d
+  · rfl
+  · simp [hilbertPoly]
 
-lemma ne_zero_of_hilbertPoly_ne_zero {p : F[X]} {d : ℕ} (hh : hilbertPoly p d ≠ 0) : p ≠ 0 := by
+lemma ne_zero_of_hilbertPoly_ne_zero {p : F[X]} {d : ℕ} {hd : IsUnit ((d - 1)! : F)}
+    (hh : hilbertPoly p d hd ≠ 0) : p ≠ 0 := by
   rintro rfl
   exact hh (hilbertPoly_zero_left d)
 
-lemma hilbertPoly_zero_right (p : F[X]) : hilbertPoly p 0 = 0 := rfl
+lemma hilbertPoly_zero_right (p : F[X]) {hd : IsUnit ((0 - 1)! : F)} : hilbertPoly p 0 hd = 0 :=
+  rfl
 
-lemma hilbertPoly_succ (p : F[X]) (d : ℕ) :
-    hilbertPoly p (d + 1) = ∑ i ∈ p.support, (p.coeff i) • preHilbertPoly F d i := rfl
+lemma hilbertPoly_succ (p : F[X]) (d : ℕ) {hd : IsUnit (d ! : F)} :
+    hilbertPoly p (d + 1) hd = ∑ i ∈ p.support, (p.coeff i) • preHilbertPoly F d i hd := rfl
 
-lemma hilbertPoly_X_pow_succ (d k : ℕ) :
-    hilbertPoly ((X : F[X]) ^ k) (d + 1) = preHilbertPoly F d k := by
-  delta hilbertPoly; simp
+lemma hilbertPoly_X_pow_succ (d k : ℕ) {hd : IsUnit (d ! : F)} :
+    hilbertPoly ((X : F[X]) ^ k) (d + 1) hd = preHilbertPoly F d k hd := by
+  simp [hilbertPoly_succ]
 
-lemma hilbertPoly_add_left (p q : F[X]) (d : ℕ) :
-    hilbertPoly (p + q) d = hilbertPoly p d + hilbertPoly q d := by
-  delta hilbertPoly
-  induction d with
-  | zero => simp only [add_zero]
-  | succ d _ =>
-      simp only
-      rw [← sum_def _ fun _ r => r • _]
-      exact sum_add_index _ _ _ (fun _ => zero_smul ..) (fun _ _ _ => add_smul ..)
+lemma hilbertPoly_add_left (p q : F[X]) (d : ℕ) {hd : IsUnit ((d - 1)! : F)} :
+    hilbertPoly (p + q) d hd = hilbertPoly p d hd + hilbertPoly q d hd := by
+  rcases d with _ | d
+  · simp only [hilbertPoly_zero_right, add_zero]
+  · simp only [hilbertPoly_succ]
+    rw [← sum_def _ fun _ r => r • _]
+    exact sum_add_index _ _ _ (fun _ => zero_smul ..) (fun _ _ _ => add_smul ..)
 
-lemma hilbertPoly_smul (a : F) (p : F[X]) (d : ℕ) :
-    hilbertPoly (a • p) d = a • hilbertPoly p d := by
-  delta hilbertPoly
-  induction d with
-  | zero => simp only [smul_zero]
-  | succ d _ =>
-      simp only
-      rw [← sum_def _ fun _ r => r • _, ← sum_def _ fun _ r => r • _, Polynomial.smul_sum,
-        sum_smul_index' _ _ _ fun i => zero_smul F (preHilbertPoly F d i)]
-      simp only [smul_assoc]
+lemma hilbertPoly_smul (a : F) (p : F[X]) (d : ℕ) {hd : IsUnit ((d - 1)! : F)} :
+    hilbertPoly (a • p) d hd = a • hilbertPoly p d hd := by
+  rcases d with _ | d
+  · simp only [hilbertPoly_zero_right, smul_zero]
+  · simp only [hilbertPoly_succ]
+    rw [← sum_def _ fun _ r => r • _, ← sum_def _ fun _ r => r • _, Polynomial.smul_sum,
+      sum_smul_index' _ _ _ fun i => zero_smul F (preHilbertPoly F d i hd)]
+    simp only [smul_assoc]
 
 variable (F) in
 /--
 The function that sends any `p : F[X]` to `Polynomial.hilbertPoly p d` is an `F`-linear map from
 `F[X]` to `F[X]`.
 -/
-noncomputable def hilbertPoly_linearMap (d : ℕ) : F[X] →ₗ[F] F[X] where
+noncomputable def hilbertPoly_linearMap (d : ℕ)
+    (hd : IsUnit ((d - 1).factorial : F) := by checked_unit) : F[X] →ₗ[F] F[X] where
   toFun p := hilbertPoly p d
   map_add' p q := hilbertPoly_add_left p q d
   map_smul' r p := hilbertPoly_smul r p d
@@ -241,7 +244,9 @@ lemma hilbertPoly_mul_one_sub_pow_add (p : F[X]) (d e : ℕ) :
     hilbertPoly (p * (1 - X) ^ e) (d + e) = hilbertPoly p d := by
   induction e with
   | zero => simp
-  | succ e he => rw [pow_add, pow_one, ← mul_assoc, ← add_assoc, hilbertPoly_mul_one_sub_succ, he]
+  | succ e he =>
+    rw [pow_add, pow_one, ← mul_assoc]
+    exact (hilbertPoly_mul_one_sub_succ _ (d + e)).trans he
 
 lemma hilbertPoly_eq_zero_of_le_rootMultiplicity_one
     {p : F[X]} {d : ℕ} (hp : p ≠ 0) (hdp : d ≤ p.rootMultiplicity 1) :
@@ -251,7 +256,7 @@ lemma hilbertPoly_eq_zero_of_le_rootMultiplicity_one
     simp only [mul_assoc, ← mul_pow, neg_mul, one_mul, neg_sub]
     exact hq1.trans (mul_comm _ _)
   rw [heq, ← zero_add d, ← Nat.sub_add_cancel hdp, pow_add (1 - X), ← mul_assoc,
-    hilbertPoly_mul_one_sub_pow_add, hilbertPoly]
+    hilbertPoly_mul_one_sub_pow_add, hilbertPoly_zero_right]
 
 theorem natDegree_hilbertPoly_of_ne_zero_of_rootMultiplicity_lt
     {p : F[X]} {d : ℕ} (hp : p ≠ 0) (hpd : p.rootMultiplicity 1 < d) :
@@ -260,9 +265,13 @@ theorem natDegree_hilbertPoly_of_ne_zero_of_rootMultiplicity_lt
   have heq : p = q * (-1) ^ p.rootMultiplicity 1 * (1 - X) ^ p.rootMultiplicity 1 := by
     simp only [mul_assoc, ← mul_pow, neg_mul, one_mul, neg_sub]
     exact hq1.trans (mul_comm _ _)
-  nth_rw 1 [heq, ← Nat.sub_add_cancel (le_of_lt hpd), hilbertPoly_mul_one_sub_pow_add,
-    ← Nat.sub_add_cancel (Nat.le_sub_of_add_le' <| add_one_le_of_lt hpd)]
-  delta hilbertPoly
+  obtain ⟨e, he⟩ : ∃ e, d = e + 1 + p.rootMultiplicity 1 :=
+    ⟨d - p.rootMultiplicity 1 - 1, by omega⟩
+  have key : hilbertPoly p d = hilbertPoly (q * (-1) ^ p.rootMultiplicity 1) (e + 1) := by
+    subst he
+    nth_rw 1 [heq]
+    exact hilbertPoly_mul_one_sub_pow_add _ _ _
+  rw [key, show d - p.rootMultiplicity 1 - 1 = e by omega, hilbertPoly_succ]
   apply natDegree_eq_of_le_of_coeff_ne_zero
   · apply natDegree_sum_le_of_forall_le _ _ <| fun _ _ => ?_
     apply le_trans (natDegree_smul_le _ _)
@@ -271,8 +280,8 @@ theorem natDegree_hilbertPoly_of_ne_zero_of_rootMultiplicity_lt
     simp only [finsetSum_coeff, coeff_smul, smul_eq_mul, coeff_preHilbertPoly_self,
       ← Finset.sum_mul, ← sum_def _ (fun _ a => a), this, ← eval_eq_sum, eval_mul, eval_pow,
       eval_neg, eval_one, _root_.mul_eq_zero, pow_eq_zero_iff', neg_eq_zero, one_ne_zero, ne_eq,
-      false_and, or_false, inv_eq_zero, cast_eq_zero, not_or]
-    exact ⟨(not_iff_not.2 dvd_iff_isRoot).1 hq2, factorial_ne_zero _⟩
+      false_and, or_false, inv_ne_zero]
+    exact (not_iff_not.2 dvd_iff_isRoot).1 hq2
 
 theorem natDegree_hilbertPoly_of_ne_zero
     {p : F[X]} {d : ℕ} (hh : hilbertPoly p d ≠ 0) :

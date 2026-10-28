@@ -84,7 +84,7 @@ variable {K : Type*} [Field K] [NeZero (2 : K)] {a b c : K}
 theorem quadratic_eq_zero_iff (ha : a ≠ 0) {s : K} (h : discrim a b c = s * s) (x : K) :
     a * (x * x) + b * x + c = 0 ↔ x = (-b + s) / (2 * a) ∨ x = (-b - s) / (2 * a) := by
   rw [quadratic_eq_zero_iff_discrim_eq_sq ha, h, sq, mul_self_eq_mul_self_iff]
-  rw [Checked.eq_div_iff_mul_eq, Checked.eq_div_iff_mul_eq]
+  rw [eq_div_iff_mul_eq, eq_div_iff_mul_eq]
   constructor
   · rintro (h₁ | h₁)
     · left
@@ -120,7 +120,7 @@ theorem discrim_eq_zero_of_existsUnique (ha : a ≠ 0) (h : ∃! x, a * (x * x) 
   have hp := (quadratic_eq_zero_iff ha hs ((-b + s) / (2 * a))).mpr (Or.inl rfl)
   have hm := (quadratic_eq_zero_iff ha hs ((-b - s) / (2 * a))).mpr (Or.inr rfl)
   have he := congrArg (fun y : K ↦ y * (2 * a)) ((hu _ hp).trans (hu _ hm).symm)
-  simp only [Checked.div_mul_cancel] at he
+  simp only [div_mul_cancel₀] at he
   have htwo : (2 : K) * s = 0 := by linear_combination he
   have hs0 : s = 0 := (mul_eq_zero.mp htwo).resolve_left (NeZero.ne _)
   rw [hs, hs0, mul_zero]
@@ -152,14 +152,14 @@ theorem discrim_le_zero (h : ∀ x : K, 0 ≤ a * (x * x) + b * x + c) : discrim
     · simp
     · have := h ((-c - 1) / b)
       simp only [zero_mul, zero_add] at this
-      rw [mul_comm b, Checked.div_mul_cancel] at this
+      rw [mul_comm b, div_mul_cancel₀] at this
       linarith
   -- if a > 0
   · have ha' : 0 ≤ 4 * a := mul_nonneg zero_le_four ha.le
     let x := -b / (2 * a)
     have hx : (2 * a) * x = -b := by
       change (2 * a) * Checked.div (-b) (2 * a) = -b
-      rw [mul_comm, Checked.div_mul_cancel]
+      rw [mul_comm, div_mul_cancel₀]
     have he : b * b - 4 * a * c = -(4 * a * (a * (x * x) + b * x + c)) := by
       linear_combination (2 * a * x + b) * hx
     rw [he]

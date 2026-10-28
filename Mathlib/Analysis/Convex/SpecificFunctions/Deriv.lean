@@ -20,7 +20,7 @@ In this file we prove that certain specific functions are strictly convex, inclu
 * `Even.strictConvexOn_pow` : For an even `n : ℕ` with `2 ≤ n`, `fun x => x ^ n` is strictly convex.
 * `strictConvexOn_pow` : For `n : ℕ`, with `2 ≤ n`, `fun x => x ^ n` is strictly convex on $[0,+∞)$.
 * `strictConvexOn_zpow` : For `m : ℤ` with `m ≠ 0, 1`, `fun x => x ^ m` is strictly convex on
-  $[0, +∞)$.
+  $(0, +∞)$, as a function on the positive elements.
 * `strictConcaveOn_sin_Icc` : `sin` is strictly concave on $[0, π]$
 * `strictConcaveOn_cos_Icc` : `cos` is strictly concave on $[-π/2, π/2]$
 
@@ -37,7 +37,7 @@ public section
 
 open Real Set
 
-open scoped NNReal
+open scoped NNReal Topology
 
 /-- `x^n`, `n : ℕ` is strictly convex on `[0, +∞)` for all `n` greater than `2`. -/
 theorem strictConvexOn_pow {n : ℕ} (hn : 2 ≤ n) : StrictConvexOn ℝ (Ici 0) fun x : ℝ => x ^ n := by
@@ -95,63 +95,90 @@ theorem int_prod_range_pos {m : ℤ} {n : ℕ} (hn : Even n) (hm : m ∉ Ico (0 
   rw [sub_eq_zero.1 h]
   exact ⟨Int.natCast_nonneg _, Int.ofNat_lt.2 <| Finset.mem_range.1 ha⟩
 
-/-- `x^m`, `m : ℤ` is convex on `(0, +∞)` for all `m` except `0` and `1`. -/
+/-- `x^m`, `m : ℤ` is strictly convex on `(0, +∞)` for all `m` except `0` and `1`. A negative power
+exists only at invertible elements, so the function is defined on the positive elements `Ioi 0`
+and is strictly convex in the coordinate `Subtype.val`. -/
 theorem strictConvexOn_zpow {m : ℤ} (hm₀ : m ≠ 0) (hm₁ : m ≠ 1) :
-    StrictConvexOn ℝ (Ioi 0) fun x : ℝ => x ^ m := by
-  apply strictConvexOn_of_deriv2_pos' (convex_Ioi 0)
-  · exact (continuousOn_zpow₀ m).mono fun x hx => ne_of_gt hx
-  intro x hx
-  rw [mem_Ioi] at hx
-  rw [iter_deriv_zpow]
-  refine mul_pos ?_ (zpow_pos hx _)
-  norm_cast
-  refine int_prod_range_pos (by decide) fun hm => ?_
-  rw [← Finset.coe_Ico] at hm
-  norm_cast at hm
-  fin_cases hm <;> simp_all
+    StrictConvexOn ℝ univ (fun x : Ioi (0 : ℝ) ↦ Checked.zpow (x : ℝ) m fun _ ↦ x.2.ne'.isUnit)
+      Subtype.val := by
+  have himage : Convex ℝ ((Subtype.val : Ioi (0 : ℝ) → ℝ) '' univ) := by
+    rw [image_univ, Subtype.range_coe]
+    exact convex_Ioi 0
+  refine ⟨himage, fun x _ y _ hxy a b ha hb hab z _ hz ↦ ?_⟩
+  have hx : (0 : ℝ) < x := x.2
+  have hy : (0 : ℝ) < y := y.2
+  have hz₀ : (0 : ℝ) < z := z.2
+  have hz' : (z : ℝ) = a * x + b * y := hz
+  simp only [smul_eq_mul]
+  rcases m with n | n
+  · -- `x ^ n` with a natural `n ≥ 2` is strictly convex on `[0, +∞)`.
+    have hn : 2 ≤ n := by rw [Int.ofNat_eq_natCast] at hm₀ hm₁; omega
+    simp only [Int.ofNat_eq_natCast, zpow_natCast₀, hz']
+    exact (strictConvexOn_pow hn).map_combo_lt hx.le hy.le hxy ha hb hab
+  -- `x ^ -[n+1] = x⁻¹ ^ (n + 1)`: the inverse is strictly convex on `(0, +∞)`, and
+  -- `t ↦ t ^ (n + 1)` is convex and strictly increasing on `[0, +∞)`.
+  have hinv : (z : ℝ)⁻¹ < a * (x : ℝ)⁻¹ + b * (y : ℝ)⁻¹ := by
+    obtain rfl : b = 1 - a := eq_sub_of_add_eq' hab
+    have key : a * (x : ℝ)⁻¹ + (1 - a) * (y : ℝ)⁻¹ - (z : ℝ)⁻¹ =
+        a * (1 - a) * ((x : ℝ) - y) ^ 2 / (x * y * z) := by
+      field_simp
+      rw [hz']
+      ring
+    have hsq : 0 < ((x : ℝ) - y) ^ 2 := sq_pos_iff.2 (sub_ne_zero.2 hxy)
+    have : 0 < a * (1 - a) * ((x : ℝ) - y) ^ 2 / (x * y * z) :=
+      div_pos (mul_pos (mul_pos ha hb) hsq) (by positivity)
+    linarith
+  have e : ∀ w : Ioi (0 : ℝ), Checked.zpow (w : ℝ) (Int.negSucc n) (fun _ ↦ w.2.ne'.isUnit) =
+      Checked.inv (w : ℝ) w.2.ne'.isUnit ^ (n + 1) := fun w ↦ by
+    rw [zpow_negSucc₀, inv_pow₀]
+  simp only [e]
+  calc Checked.inv (z : ℝ) z.2.ne'.isUnit ^ (n + 1)
+      < (a * (x : ℝ)⁻¹ + b * (y : ℝ)⁻¹) ^ (n + 1) := by gcongr
+    _ ≤ a * (x : ℝ)⁻¹ ^ (n + 1) + b * (y : ℝ)⁻¹ ^ (n + 1) :=
+      (convexOn_pow (n + 1)).map_combo_le (inv_pos_of_pos hx).le (inv_pos_of_pos hy).le ha.le
+        hb.le hab
 
 section SqrtMulLog
 
-theorem hasDerivAt_sqrt_mul_log {x : ℝ} (hx : x ≠ 0) :
+theorem hasDerivAt_sqrt_mul_log {x : ℝ} (hx : 0 < x) :
     HasDerivAt (fun x => √x * log x) ((2 + log x) / (2 * √x)) x := by
-  convert! (hasDerivAt_sqrt hx).mul (hasDerivAt_log hx) using 1
-  rw [add_div, div_mul_cancel_left₀ two_ne_zero, ← div_eq_mul_inv, sqrt_div_self', add_comm,
-    one_div, one_div, ← div_eq_inv_mul]
+  have hs : √x * √x = x := mul_self_sqrt hx.le
+  convert! (hasDerivAt_sqrt hx.ne').mul (hasDerivAt_log hx.ne') using 1
+  field_simp
+  linear_combination (-4 * √x) * hs
 
-theorem deriv_sqrt_mul_log (x : ℝ) :
-    deriv (fun x => √x * log x) x = (2 + log x) / (2 * √x) := by
-  rcases lt_or_ge 0 x with hx | hx
-  · exact (hasDerivAt_sqrt_mul_log hx.ne').deriv
-  · rw [sqrt_eq_zero_of_nonpos hx, mul_zero, div_zero]
-    refine HasDerivWithinAt.deriv_eq_zero ?_ (uniqueDiffOn_Iic 0 x hx)
-    refine (hasDerivWithinAt_const x _ 0).congr_of_mem (fun x hx => ?_) hx
-    rw [sqrt_eq_zero_of_nonpos hx, zero_mul]
+theorem deriv_sqrt_mul_log {x : ℝ} (hx : 0 < x) :
+    deriv (fun x => √x * log x) x = (2 + log x) / (2 * √x) :=
+  (hasDerivAt_sqrt_mul_log hx).deriv
 
-theorem deriv_sqrt_mul_log' :
-    (deriv fun x => √x * log x) = fun x => (2 + log x) / (2 * √x) :=
-  funext deriv_sqrt_mul_log
-
-theorem deriv2_sqrt_mul_log (x : ℝ) :
+theorem deriv2_sqrt_mul_log {x : ℝ} (hx : 0 < x) :
     deriv^[2] (fun x => √x * log x) x = -log x / (4 * √x ^ 3) := by
-  simp only [Nat.iterate, deriv_sqrt_mul_log']
-  rcases le_or_gt x 0 with hx | hx
-  · rw [sqrt_eq_zero_of_nonpos hx, zero_pow three_ne_zero, mul_zero, div_zero]
-    refine HasDerivWithinAt.deriv_eq_zero ?_ (uniqueDiffOn_Iic 0 x hx)
-    refine (hasDerivWithinAt_const _ _ 0).congr_of_mem (fun x hx => ?_) hx
-    rw [sqrt_eq_zero_of_nonpos hx, mul_zero, div_zero]
-  · have h₀ : √x ≠ 0 := sqrt_ne_zero'.2 hx
-    convert!
-      (((hasDerivAt_log hx.ne').const_add 2).div ((hasDerivAt_sqrt hx.ne').const_mul 2) <|
-          mul_ne_zero two_ne_zero h₀).deriv using 1
-    nth_rw 3 [← mul_self_sqrt hx.le]
-    field
+  -- On `(0, +∞)`, the derivative `(2 + log y) / (2 * √y)` equals
+  -- `(2 + log y) * exp (-(log y / 2)) / 2`, an expression defined on the whole line.
+  have hexp : ∀ {y : ℝ}, 0 < y → exp (log y / 2) = √y := fun {y} hy ↦ by
+    rw [← sqrt_sq (exp_pos _).le, ← exp_nat_mul, Nat.cast_ofNat, mul_div_cancel₀, exp_log hy]
+  have hE : ∀ {y : ℝ}, 0 < y → exp (-(log y / 2)) * √y = 1 := fun {y} hy ↦ by
+    rw [← hexp hy, ← exp_add, neg_add_cancel, exp_zero]
+  have hderiv : deriv (fun y => √y * log y) =ᶠ[𝓝 x]
+      fun y => (2 + log y) * exp (-(log y / 2)) / 2 := by
+    filter_upwards [Ioi_mem_nhds hx] with y (hy : 0 < y)
+    rw [deriv_sqrt_mul_log hy, div_eq_iff]
+    linear_combination (-(2 + log y)) * hE hy
+  have hlog := hasDerivAt_log hx.ne'
+  have hg := (((hlog.const_add 2).mul (hlog.div_const 2).neg.exp)).div_const 2
+  simp only [Nat.iterate]
+  rw [hderiv.deriv_eq, hg.deriv]
+  have hs : √x ^ 2 = x := sq_sqrt hx.le
+  have hs₀ : 0 < √x := sqrt_pos.2 hx
+  field_simp
+  linear_combination (-4 * x * log x * √x ^ 2) * hE hx + (-4 * x * log x) * hs
 
 theorem strictConcaveOn_sqrt_mul_log_Ioi :
     StrictConcaveOn ℝ (Set.Ioi 1) fun x => √x * log x := by
   apply strictConcaveOn_of_deriv2_neg' (convex_Ioi 1) _ fun x hx => ?_
   · exact continuous_sqrt.continuousOn.mul
       (continuousOn_log.mono fun x hx => ne_of_gt (zero_lt_one.trans hx))
-  · rw [deriv2_sqrt_mul_log x]
+  · rw [deriv2_sqrt_mul_log (zero_lt_one.trans hx)]
     exact div_neg_of_neg_of_pos (neg_neg_of_pos (log_pos hx))
       (mul_pos four_pos (pow_pos (sqrt_pos.mpr (zero_lt_one.trans hx)) 3))
 

@@ -32,9 +32,7 @@ noncomputable def mulLeft₀ (a : G₀) (ha : 0 < a) : G₀ ≃o G₀ where
   toEquiv := .mulLeft₀ a ha.ne'
   map_rel_iff' := mul_le_mul_iff_right₀ ha
 
-lemma mulLeft₀_symm (a : G₀) (ha : 0 < a) :
-    (mulLeft₀ a ha).symm = mulLeft₀ (↑(Units.mk0 a ha.ne')⁻¹)
-      ((Units.inv_pos _).2 ha) := by
+lemma mulLeft₀_symm (a : G₀) (ha : 0 < a) : (mulLeft₀ a ha).symm = mulLeft₀ a⁻¹ (inv_pos.2 ha) := by
   ext; rfl
 
 end left
@@ -51,15 +49,15 @@ noncomputable def mulRight₀ (a : G₀) (ha : 0 < a) : G₀ ≃o G₀ where
   map_rel_iff' := mul_le_mul_iff_left₀ ha
 
 lemma mulRight₀_symm (a : G₀) (ha : 0 < a) :
-    (mulRight₀ a ha).symm = mulRight₀ (↑(Units.mk0 a ha.ne')⁻¹)
-      ((Units.inv_pos_right _).2 ha) := by ext; rfl
+    (mulRight₀ a ha).symm = mulRight₀ a⁻¹ (Right.inv_pos.2 ha) := by ext; rfl
 
 /-- `Equiv.divRight₀` as an order isomorphism. -/
 @[simps! +simpRhs]
 noncomputable def divRight₀ (a : G₀) (ha : 0 < a) : G₀ ≃o G₀ where
   toEquiv := .divRight₀ a ha.ne'
   map_rel_iff' {b c} := by
-    exact divp_le_divp_iff (u := Units.mk0 a ha.ne') ha
+    simp only [Equiv.divRight₀_apply]
+    exact div_le_div_iff_of_pos_right ha
 
 end right
 

@@ -23,7 +23,7 @@ by defining
 
 For a linearly ordered field, we can define a negative as
 
-* `-mk x = mk x⁻¹`
+* `-mk x = mk x⁻¹` for `x ≠ 0`, and `-⊤ = ⊤` for the class `⊤ = mk 0`
 
 which turns them into a `LinearOrderedAddCommGroupWithTop`.
 
@@ -275,48 +275,53 @@ end Ring
 section Field
 variable [Field R] [IsOrderedRing R]
 
-instance : Neg (ArchimedeanClass R) where
-  neg := lift (fun x ↦ mk x⁻¹) fun x y h ↦ by
+/-- Negation of Archimedean classes: `-mk x = mk x⁻¹` for `x ≠ 0` (`ArchimedeanClass.mk_inv`).
+The top class `⊤ = mk 0` has no invertible representative; its negation is `⊤`, the convention
+`neg_top` of `LinearOrderedAddCommGroupWithTop`. -/
+noncomputable instance : Neg (ArchimedeanClass R) where
+  neg := lift (fun x ↦ if hx : x = 0 then ⊤ else mk x⁻¹) fun x y h ↦ by
     obtain rfl | hx := eq_or_ne x 0
-    · simp_all
-    obtain rfl | hy := eq_or_ne y 0
-    · simp_all
+    · obtain rfl : y = 0 := by simpa using h.symm
+      rfl
+    have hy : y ≠ 0 := by
+      rintro rfl
+      exact hx (by simpa using h)
+    rw [dite_eq_right hx, dite_eq_right hy]
     have hx' : mk x ≠ ⊤ := by simpa using hx
     apply add_left_cancel_of_ne_top hx'
     nth_rw 2 [h]
-    simp [← mk_mul, hx, hy]
+    rw [← mk_mul, ← mk_mul, mul_inv_cancel₀, mul_inv_cancel₀]
 
-@[simp] theorem mk_inv (x : R) : mk x⁻¹ = -mk x := rfl
+@[simp] theorem mk_inv (x : R) {hx : IsUnit x} : mk x⁻¹ = -mk x := by
+  change mk x⁻¹ = if hx : x = 0 then ⊤ else mk x⁻¹
+  rw [dite_eq_right hx.ne_zero]
 
-instance : SMul ℤ (ArchimedeanClass R) where
-  smul n := lift (fun x ↦ mk (x ^ n)) fun x y h ↦ by
-    obtain ⟨n, rfl | rfl⟩ := n.eq_nat_or_neg <;> simp [h]
-
-@[simp] theorem mk_zpow (n : ℤ) (x : R) : mk (x ^ n) = n • mk x := rfl
-
-private theorem zsmul_succ' (n : ℕ) (x : ArchimedeanClass R) :
-    (n.succ : ℤ) • x = (n : ℤ) • x + x := by
-  induction x with | mk x
-  rw [← mk_zpow, Nat.cast_succ]
-  obtain rfl | hx := eq_or_ne x 0
-  · simp [zero_zpow _ n.cast_add_one_ne_zero]
-  · rw [zpow_add_one₀ hx, mk_mul, mk_zpow]
+/-- Integer multiples of Archimedean classes, from natural multiples and negation. -/
+noncomputable instance : SMul ℤ (ArchimedeanClass R) where
+  smul := zsmulRec (· • ·)
 
 noncomputable instance : LinearOrderedAddCommGroupWithTop (ArchimedeanClass R) where
-  neg_top := by simp [← mk_zero, ← mk_inv]
+  neg_top := dite_eq_left rfl
   top_add' := by simp
   add_neg_cancel_of_ne_top x h := by
     induction x with | mk x
-    simp [← mk_inv, ← mk_mul, mul_inv_cancel₀ (mk_eq_top_iff.not.1 h)]
-  zsmul_zero' x := by induction x with | mk x => rw [← mk_zpow, zpow_zero, mk_one]
-  zsmul_succ' := by exact zsmul_succ'
-  zsmul_neg' n x := by
-    induction x with | mk x
-    rw [← mk_zpow, zpow_negSucc, pow_succ, zsmul_succ', mk_inv, mk_mul, ← zpow_natCast, mk_zpow]
+    have hx : x ≠ 0 := mk_eq_top_iff.not.1 h
+    rw [← mk_inv x (hx := hx.isUnit), ← mk_mul, mul_inv_cancel₀, mk_one]
+  zsmul_zero' x := zero_nsmul x
+  zsmul_succ' n x := succ_nsmul x n
+  zsmul_neg' _ _ := rfl
+
+@[simp] theorem mk_zpow (n : ℤ) (x : R) {h : n < 0 → IsUnit x} : mk (x ^ n) = n • mk x := by
+  cases n with
+  | ofNat k => exact mk_pow k x
+  | negSucc k =>
+    rw [zpow_negSucc₀, mk_inv, mk_pow]
+    rfl
 
 @[simp]
-theorem mk_div (x y : R) : mk (x / y) = mk x - mk y := by
-  rw [div_eq_mul_inv, mk_mul, mk_inv, sub_eq_add_neg]
+theorem mk_div (x y : R) {hy : IsUnit y} : mk (x / y) = mk x - mk y := by
+  rw [div_eq_mul_inv₀, mk_mul, mk_inv]
+  exact (sub_eq_add_neg _ _).symm
 
 @[simp]
 theorem mk_ratCast {q : ℚ} (h : q ≠ 0) : mk (q : R) = 0 := by

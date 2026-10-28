@@ -47,12 +47,11 @@ namespace Nonneg
 noncomputable def unit [DivisionSemiring α] [PartialOrder α] [IsStrictOrderedRing α]
     [PosMulReflectLT α] (a : Nonneg α) (ha : a ≠ 0) : (Nonneg α)ˣ := by
   have hn : (a : α) ≠ 0 := fun h => ha (Subtype.ext h)
-  let u := Units.mk0 (a : α) hn
   exact {
     val := a
-    inv := ⟨u.inv, (Units.inv_nonneg u).mpr a.property⟩
-    val_inv := Subtype.ext u.mul_inv
-    inv_val := Subtype.ext u.inv_mul }
+    inv := ⟨(a : α)⁻¹, inv_nonneg.2 a.property⟩
+    val_inv := Subtype.ext mul_inv_cancel₀
+    inv_val := Subtype.ext inv_mul_cancel₀ }
 
 @[simp] theorem coe_unit [DivisionSemiring α] [PartialOrder α] [IsStrictOrderedRing α]
     [PosMulReflectLT α] (a : Nonneg α) (ha : a ≠ 0) : (unit a ha : Nonneg α) = a := rfl
@@ -71,44 +70,75 @@ noncomputable def unitsEquivPos (R : Type*) [DivisionSemiring R] [PartialOrder R
 section OrderedSemiring
 variable [Semiring α] [PartialOrder α] [ZeroLEOneClass α] [AddLeftMono α] [PosMulMono α]
 
-@[simp]
-protected theorem coe_inv (u : (Nonneg α)ˣ) :
-    (u.inv : α) = (Units.map coeRingHom.toMonoidHom u).inv := rfl
+/-- The value of an invertible nonnegative element is invertible. -/
+theorem isUnit_coe {a : Nonneg α} (ha : IsUnit a) : IsUnit (a : α) := ha.map coeRingHom
 
-@[simp]
-protected theorem coe_div (a : Nonneg α) (u : (Nonneg α)ˣ) :
-    ((a /ₚ u : Nonneg α) : α) = (a : α) /ₚ Units.map coeRingHom.toMonoidHom u := rfl
+/- Evidence rule: the value of an invertible nonnegative element is invertible. -/
+macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply Nonneg.isUnit_coe); checked_unit))
 
-@[simp]
-protected theorem coe_zpow (u : (Nonneg α)ˣ) (n : ℤ) :
-    (((u ^ n : (Nonneg α)ˣ) : Nonneg α) : α) =
-      (Units.map coeRingHom.toMonoidHom u ^ n : αˣ) := by
-  exact congrArg (fun v : αˣ => (v : α)) (map_zpow (Units.map coeRingHom.toMonoidHom) u n)
+@[simp, norm_cast]
+protected theorem coe_inv (a : Nonneg α) {ha : IsUnit a} : ((a⁻¹ : Nonneg α) : α) = (a : α)⁻¹ :=
+  Eq.symm <| inv_eq_of_mul_eq_one_right₀ <| map_mul_eq_one coeRingHom mul_inv_cancel₀
+
+@[simp, norm_cast]
+protected theorem coe_div (a b : Nonneg α) {hb : IsUnit b} :
+    ((a / b : Nonneg α) : α) = a / b := by
+  rw [div_eq_mul_inv₀, Nonneg.coe_mul, Nonneg.coe_inv, div_eq_mul_inv₀]
+
+@[simp, norm_cast]
+protected theorem coe_zpow (a : Nonneg α) (n : ℤ) {h : n < 0 → IsUnit a} :
+    ((a ^ n : Nonneg α) : α) = (a : α) ^ n := by
+  cases n with
+  | ofNat k => exact Nonneg.coe_pow a k
+  | negSucc k =>
+    rw [zpow_negSucc₀, Nonneg.coe_inv, zpow_negSucc₀ (a : α) k]
+    simp only [Nonneg.coe_pow]
 
 end OrderedSemiring
 
 section LinearOrderedDivisionSemiring
 
-variable [DivisionSemiring α] [LinearOrder α] [IsStrictOrderedRing α]
+variable [DivisionSemiring α] [LinearOrder α] [IsStrictOrderedRing α] {x y : α}
 
+@[simp]
+theorem inv_mk (hx : 0 ≤ x) {h : IsUnit (⟨x, hx⟩ : Nonneg α)} :
+    (⟨x, hx⟩ : Nonneg α)⁻¹ = ⟨Checked.inv x (isUnit_coe h), inv_nonneg.2 hx⟩ :=
+  Subtype.ext (Nonneg.coe_inv ⟨x, hx⟩)
+
+@[simp]
+theorem mk_div_mk (hx : 0 ≤ x) (hy : 0 ≤ y) {h : IsUnit (⟨y, hy⟩ : Nonneg α)} :
+    (⟨x, hx⟩ : Nonneg α) / ⟨y, hy⟩ = ⟨Checked.div x y (isUnit_coe h), div_nonneg hx hy⟩ :=
+  Subtype.ext (Nonneg.coe_div ⟨x, hx⟩ ⟨y, hy⟩)
+
+@[simp]
+theorem mk_zpow (hx : 0 ≤ x) (n : ℤ) {h : n < 0 → IsUnit (⟨x, hx⟩ : Nonneg α)} :
+    (⟨x, hx⟩ : Nonneg α) ^ n =
+      ⟨Checked.zpow x n fun hn ↦ isUnit_coe (h hn), zpow_nonneg hx n⟩ :=
+  Subtype.ext (Nonneg.coe_zpow ⟨x, hx⟩ n)
+
+/-- The nonnegative elements form a division semiring. Its embedding of `ℚ≥0` and its action
+of `ℚ≥0` are those of `α`. -/
 instance divisionSemiring : DivisionSemiring (Nonneg α) where
   __ := (inferInstance : Semiring (Nonneg α))
   __ := (inferInstance : Nontrivial (Nonneg α))
   isUnit_of_ne_zero {a} ha := ⟨unit a ha, rfl⟩
+  nnratCastOfCharZero _ q := ⟨q, q.cast_nonneg⟩
+  nnratCastOfCharZero_mul_den _ q := Subtype.ext (NNRat.cast_mul_den q)
+  nnqsmulOfCharZero _ q a := ⟨q • (a : α), nnqsmul_nonneg q a.2⟩
+  nnqsmulOfCharZero_eq_mul _ q a := Subtype.ext (NNRat.smul_def q (a : α))
 
-@[simp, norm_cast] lemma coe_nnratCast (q : ℚ≥0) : ((q : Nonneg α) : α) = (q : α) :=
-  map_nnratCast coeRingHom q
+@[simp, norm_cast] lemma coe_nnratCast (q : ℚ≥0) : ((q : Nonneg α) : α) = (q : α) := rfl
 
-@[simp] lemma mk_nnratCast (q : ℚ≥0) : (⟨q, q.cast_nonneg⟩ : Nonneg α) = q :=
-  Subtype.ext (coe_nnratCast q).symm
+@[simp] lemma mk_nnratCast (q : ℚ≥0) : (⟨q, q.cast_nonneg⟩ : Nonneg α) = q := rfl
 
 @[simp, norm_cast] lemma coe_nnqsmul (q : ℚ≥0) (a : Nonneg α) :
-    (↑(q • a) : α) = (q • (a : α) : α) := by
-  simp only [NNRat.smul_def, Nonneg.coe_mul, coe_nnratCast]
+    (↑(q • a) : α) = (q • (a : α) : α) := rfl
 
 @[simp] lemma mk_nnqsmul (q : ℚ≥0) (a : α) (ha : 0 ≤ a) :
-    (⟨q • a, nnqsmul_nonneg q ha⟩ : Nonneg α) = q • (⟨a, ha⟩ : Nonneg α) :=
-  Subtype.ext (coe_nnqsmul q ⟨a, ha⟩).symm
+    (⟨q • a, nnqsmul_nonneg q ha⟩ : Nonneg α) = q • (⟨a, ha⟩ : Nonneg α) := rfl
 
 end LinearOrderedDivisionSemiring
 

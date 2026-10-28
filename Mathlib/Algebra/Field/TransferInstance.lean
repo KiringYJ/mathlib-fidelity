@@ -29,10 +29,51 @@ protected abbrev nnratCast [NNRatCast β] : NNRatCast α where nnratCast q := e.
 /-- Transfer `RatCast` across an `Equiv` -/
 protected abbrev ratCast [RatCast β] : RatCast α where ratCast n := e.invFun n
 
-/-- Transfer `DivisionRing` across an `Equiv` -/
+/-- Transfer `DivisionRing` across an `Equiv`. In characteristic zero, the rational embeddings
+and actions are transferred from `β`. -/
 protected abbrev divisionRing [DivisionRing β] : DivisionRing α where
   toRing := e.ring
   __ := e.groupWithZero
+  nnratCastOfCharZero _ q :=
+    letI := e.ring
+    haveI := CharZero.of_map_natCast (R := β) (S := α) e.symm fun _ => rfl
+    e.symm q
+  nnratCastOfCharZero_mul_den _ q := by
+    let := e.ring
+    have := CharZero.of_map_natCast (R := β) (S := α) e.symm fun _ => rfl
+    change e.symm (e (e.symm _) * e (e.symm _)) = e.symm _
+    rw [e.apply_symm_apply, e.apply_symm_apply]
+    exact congrArg e.symm (DivisionRing.nnratCastOfCharZero_mul_den _ q)
+  nnqsmulOfCharZero _ q a :=
+    letI := e.ring
+    haveI := CharZero.of_map_natCast (R := β) (S := α) e.symm fun _ => rfl
+    e.symm (q • e a)
+  nnqsmulOfCharZero_eq_mul _ q a := by
+    let := e.ring
+    have := CharZero.of_map_natCast (R := β) (S := α) e.symm fun _ => rfl
+    change e.symm _ = e.symm (e (e.symm _) * e a)
+    rw [e.apply_symm_apply]
+    exact congrArg e.symm (DivisionRing.nnqsmulOfCharZero_eq_mul _ q (e a))
+  ratCastOfCharZero _ q :=
+    letI := e.ring
+    haveI := CharZero.of_map_natCast (R := β) (S := α) e.symm fun _ => rfl
+    e.symm q
+  ratCastOfCharZero_mul_den _ q := by
+    let := e.ring
+    have := CharZero.of_map_natCast (R := β) (S := α) e.symm fun _ => rfl
+    change e.symm (e (e.symm _) * e (e.symm _)) = e.symm _
+    rw [e.apply_symm_apply, e.apply_symm_apply]
+    exact congrArg e.symm (DivisionRing.ratCastOfCharZero_mul_den _ q)
+  qsmulOfCharZero _ q a :=
+    letI := e.ring
+    haveI := CharZero.of_map_natCast (R := β) (S := α) e.symm fun _ => rfl
+    e.symm (q • e a)
+  qsmulOfCharZero_eq_mul _ q a := by
+    let := e.ring
+    have := CharZero.of_map_natCast (R := β) (S := α) e.symm fun _ => rfl
+    change e.symm _ = e.symm (e (e.symm _) * e a)
+    rw [e.apply_symm_apply]
+    exact congrArg e.symm (DivisionRing.qsmulOfCharZero_eq_mul _ q (e a))
 
 /-- Transfer `Field` across an `Equiv` -/
 protected abbrev field [Field β] : Field α where

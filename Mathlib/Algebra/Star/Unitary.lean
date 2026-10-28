@@ -389,18 +389,20 @@ section GroupWithZero
 variable [GroupWithZero R] [StarMul R]
 
 @[norm_cast]
-theorem coe_inv (U : unitary R) : ↑U⁻¹ = (U⁻¹ : R) :=
-  eq_inv_of_mul_eq_one_right <| coe_mul_star_self _
+theorem coe_inv (U : unitary R) : ↑U⁻¹ = Checked.inv (U : R) isUnit_coe :=
+  eq_inv_of_mul_eq_one_right₀ <| coe_mul_star_self _
 
 @[norm_cast]
-theorem coe_div (U₁ U₂ : unitary R) : ↑(U₁ / U₂) = (U₁ / U₂ : R) := by
-  simp only [div_eq_mul_inv, coe_inv, Submonoid.coe_mul]
+theorem coe_div (U₁ U₂ : unitary R) :
+    ↑(U₁ / U₂) = Checked.div (U₁ : R) (U₂ : R) isUnit_coe := by
+  simp only [div_eq_mul_inv, div_eq_mul_inv₀, coe_inv, Submonoid.coe_mul]
 
 @[norm_cast]
-theorem coe_zpow (U : unitary R) (z : ℤ) : ↑(U ^ z) = (U : R) ^ z := by
+theorem coe_zpow (U : unitary R) (z : ℤ) :
+    ↑(U ^ z) = Checked.zpow (U : R) z (fun _ ↦ isUnit_coe) := by
   cases z
   · simp [SubmonoidClass.coe_pow]
-  · simp [coe_inv]
+  · simp [coe_inv, zpow_negSucc₀]
 
 end GroupWithZero
 

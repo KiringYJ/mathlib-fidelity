@@ -12,7 +12,7 @@ public meta import Mathlib.Data.Rat.Init
 
 public import Mathlib.Algebra.Field.Basic
 public import Mathlib.Algebra.Order.Ring.Defs
-public import Mathlib.Algebra.Order.Field.Checked
+public import Mathlib.Algebra.Order.GroupWithZero.Basic
 public import Mathlib.Data.Tree.Basic
 public import Mathlib.Tactic.NormNum.Core
 public import Mathlib.Tactic.CancelDenoms.Denominator
@@ -78,7 +78,7 @@ theorem pow_subst {α} [CommRing α] {n e1 t1 k l : α} {e2 : ℕ}
 
 theorem inv_subst {α} [Field α] {n k e : α} (he : IsUnit e) (h3 : n * e = k) :
     k * Checked.inv e he = n := by
-  rw [← h3, mul_assoc, Checked.mul_inv_cancel, mul_one]
+  rw [← h3, mul_assoc, mul_inv_cancel₀, mul_one]
 
 theorem unit_inv_eq_checked {α} [Monoid α] (u : αˣ) :
     (↑u⁻¹ : α) = Checked.inv (u : α) u.isUnit := by
@@ -93,7 +93,7 @@ theorem cancel_factors_lt {α} [Field α] [LinearOrder α] [IsStrictOrderedRing 
   rw [mul_lt_mul_iff_right₀, ← ha, ← hb, ← mul_assoc, ← mul_assoc, mul_comm bd,
     mul_lt_mul_iff_right₀]
   · exact mul_pos had hbd
-  · exact Checked.div_pos zero_lt_one hgcd
+  · exact div_pos zero_lt_one hgcd
 
 theorem cancel_factors_le {α} [Field α] [LinearOrder α] [IsStrictOrderedRing α]
     {a b ad bd a' b' gcd : α}
@@ -102,7 +102,7 @@ theorem cancel_factors_le {α} [Field α] [LinearOrder α] [IsStrictOrderedRing 
   rw [mul_le_mul_iff_right₀, ← ha, ← hb, ← mul_assoc, ← mul_assoc, mul_comm bd,
     mul_le_mul_iff_right₀]
   · exact mul_pos had hbd
-  · exact Checked.div_pos zero_lt_one hgcd
+  · exact div_pos zero_lt_one hgcd
 
 theorem cancel_factors_eq {α} [Field α] {a b ad bd a' b' gcd : α} (ha : ad * a = a')
     (hb : bd * b = b') (had : ad ≠ 0) (hbd : bd ≠ 0) (hgcd : gcd ≠ 0) :

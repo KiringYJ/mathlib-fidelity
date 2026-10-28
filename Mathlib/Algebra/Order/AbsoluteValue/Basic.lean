@@ -113,6 +113,14 @@ protected theorem ne_zero_iff {x : R} : abv x ≠ 0 ↔ x ≠ 0 :=
   abv.eq_zero.not
 protected alias ⟨_, ne_zero⟩ := AbsoluteValue.ne_zero_iff
 
+/-! The evidence search `checked_nonzero` also uses that an absolute value of a nonzero element is
+nonzero, so that `(abv x)⁻¹` elaborates from `x ≠ 0`. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply AbsoluteValue.ne_zero); checked_nonzero))
+
 @[simp]
 protected theorem pos_iff {x : R} : 0 < abv x ↔ x ≠ 0 :=
   (abv.nonneg x).lt_iff_ne'.trans abv.ne_zero_iff
@@ -369,25 +377,17 @@ variable [Field R] [Semifield S] [LinearOrder S] [IsStrictOrderedRing S] [Exists
 lemma IsNontrivial.exists_abv_gt_one (h : v.IsNontrivial) : ∃ x, 1 < v x := by
   obtain ⟨x, hx₀, hx₁⟩ := h
   rcases hx₁.lt_or_gt with h | h
-  · let u := Units.mk0 x hx₀
-    refine ⟨(↑u⁻¹ : R), ?_⟩
-    have hmul : v (↑u⁻¹ : R) * v x = 1 := by
-      change v (↑u⁻¹ : R) * v (u : R) = 1
-      rw [← map_mul, Units.inv_mul, map_one]
-    simpa only [hmul, mul_one] using
-      mul_lt_mul_of_pos_left h (v.pos (Units.ne_zero u⁻¹))
+  · refine ⟨x⁻¹, ?_⟩
+    rw [map_inv₀]
+    exact (one_lt_inv₀ <| v.pos hx₀).mpr h
   · exact ⟨x, h⟩
 
 lemma IsNontrivial.exists_abv_lt_one (h : v.IsNontrivial) : ∃ x ≠ 0, v x < 1 := by
   obtain ⟨y, hy⟩ := h.exists_abv_gt_one
-  have hy₀ := v.ne_zero_iff.mp <| (zero_lt_one.trans hy).ne'
-  let u := Units.mk0 y hy₀
-  refine ⟨(↑u⁻¹ : R), Units.ne_zero u⁻¹, ?_⟩
-  have hmul : v (↑u⁻¹ : R) * v y = 1 := by
-    change v (↑u⁻¹ : R) * v (u : R) = 1
-    rw [← map_mul, Units.inv_mul, map_one]
-  simpa only [mul_one, hmul] using
-    mul_lt_mul_of_pos_left hy (v.pos (Units.ne_zero u⁻¹))
+  have hy₀ := v.ne_zero_iff.mp (zero_lt_one.trans hy).ne'
+  refine ⟨y⁻¹, inv_ne_zero, ?_⟩
+  rw [map_inv₀]
+  exact (inv_lt_one₀ <| v.pos hy₀).mpr hy
 
 end LinearOrderedSemifield
 
@@ -563,18 +563,13 @@ section DivisionSemiring
 
 variable {R : Type*} [DivisionSemiring R] (abv : R → S) [IsAbsoluteValue abv]
 
-theorem abv_inv (a : Rˣ) :
-    abv (↑a⁻¹ : R) =
-      (↑(Units.mk0 (abv (a : R)) (fun h ↦ a.ne_zero ((abv_eq_zero abv).mp h)))⁻¹ : S) := by
-  have h : Units.map (abvHom' abv).toMonoidHom a =
-      Units.mk0 (abv (a : R)) (fun h ↦ a.ne_zero ((abv_eq_zero abv).mp h)) :=
-    Units.ext rfl
-  exact congrArg (fun u : Sˣ ↦ (↑u⁻¹ : S)) h
+theorem abv_inv (a : R) {ha : IsUnit a} :
+    abv a⁻¹ = Checked.inv (abv a) (Ne.isUnit ((abv_eq_zero abv).not.mpr ha.ne_zero)) :=
+  map_inv₀ (abvHom' abv) a
 
-theorem abv_div (a : R) (b : Rˣ) :
-    abv (a /ₚ b) =
-      abv a /ₚ Units.mk0 (abv (b : R)) (fun h ↦ b.ne_zero ((abv_eq_zero abv).mp h)) := by
-  rw [divp, divp, abv_mul abv, abv_inv abv]
+theorem abv_div (a b : R) {hb : IsUnit b} :
+    abv (a / b) = Checked.div (abv a) (abv b) (Ne.isUnit ((abv_eq_zero abv).not.mpr hb.ne_zero)) :=
+  map_div₀ (abvHom' abv) a b
 
 end DivisionSemiring
 

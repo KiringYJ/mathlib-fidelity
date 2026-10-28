@@ -573,6 +573,9 @@ def equivQuotMaximalIdeal : R ⧸ p ≃+* Rₚ ⧸ maximalIdeal Rₚ := by
   · intro x
     obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
     obtain ⟨x, s, rfl⟩ := IsLocalization.exists_mk'_eq p.primeCompl x
+    have hs₀ : Ideal.Quotient.mk p (s : R) ≠ 0 := by
+      rw [Ne, Ideal.Quotient.eq_zero_iff_mem]
+      exact s.prop
     obtain ⟨s', hs⟩ := Ideal.Quotient.mk_surjective (I := p) (Ideal.Quotient.mk p s)⁻¹
     simp only [IsScalarTower.algebraMap_eq R Rₚ (Rₚ ⧸ _),
       Ideal.Quotient.algebraMap_eq, RingHom.comp_apply]
@@ -586,8 +589,6 @@ def equivQuotMaximalIdeal : R ⧸ p ≃+* Rₚ ⧸ maximalIdeal Rₚ := by
       ← map_mul, ← map_sub, ← Ideal.mem_under, under_maximalIdeal Rₚ p,
       mul_left_comm, ← Ideal.Quotient.eq_zero_iff_mem, map_sub, map_mul, map_mul, hs,
       mul_inv_cancel₀, mul_one, sub_self]
-    rw [Ne, Ideal.Quotient.eq_zero_iff_mem]
-    exact s.prop
 
 @[simp]
 theorem equivQuotMaximalIdeal_apply_mk (x : R) :
@@ -597,13 +598,15 @@ theorem equivQuotMaximalIdeal_apply_mk (x : R) :
 @[simp]
 theorem equivQuotMaximalIdeal_symm_apply_mk (x : R) (s : p.primeCompl) :
     (equivQuotMaximalIdeal p Rₚ).symm (Ideal.Quotient.mk _ (IsLocalization.mk' Rₚ x s)) =
-        (Ideal.Quotient.mk p x) * (Ideal.Quotient.mk p s)⁻¹ := by
+        (Ideal.Quotient.mk p x) * Checked.inv (Ideal.Quotient.mk p s)
+          (Ne.isUnit <| Ideal.Quotient.eq_zero_iff_mem.not.2 <|
+            Ideal.mem_primeCompl_iff.mp s.prop) := by
   have h₁ : Ideal.Quotient.mk p ↑s ≠ 0 := by
     simpa [ne_eq, Ideal.Quotient.eq_zero_iff_mem] using Ideal.mem_primeCompl_iff.mp s.prop
   have h₂ : equivQuotMaximalIdeal p Rₚ (Ideal.Quotient.mk p ↑s) ≠ 0 := by
     rwa [RingEquiv.map_ne_zero_iff]
   rw [RingEquiv.symm_apply_eq, ← mul_left_inj' h₂, map_mul, mul_assoc, ← map_mul,
-    inv_mul_cancel₀ h₁, map_one, mul_one, equivQuotMaximalIdeal_apply_mk, ← map_mul,
+    inv_mul_cancel₀, map_one, mul_one, equivQuotMaximalIdeal_apply_mk, ← map_mul,
     mk'_spec, Ideal.Quotient.mk_algebraMap, equivQuotMaximalIdeal_apply_mk,
     Ideal.Quotient.mk_algebraMap]
 
@@ -662,11 +665,11 @@ lemma under_map_eq_map : (Ideal.map (algebraMap R Sₚ) p).under S = pS := by
     rw [Algebra.smul_def, e, Submonoid.coe_mul, mul_assoc, mul_comm _ x, hc]
     exact Ideal.mul_mem_left _ _ y.prop
   obtain ⟨β, γ, hγ, hβ⟩ : ∃ β γ, γ ∈ p ∧ β * α = 1 + γ := by
+    have hα₀ : Ideal.Quotient.mk p α ≠ 0 := by rwa [Ne, Ideal.Quotient.eq_zero_iff_mem]
     obtain ⟨β, hβ⟩ := Ideal.Quotient.mk_surjective (I := p) (Ideal.Quotient.mk p α)⁻¹
     refine ⟨β, β * α - 1, ?_, ?_⟩
     · rw [← Ideal.Quotient.eq_zero_iff_mem, map_sub, map_one,
         map_mul, hβ, inv_mul_cancel₀, sub_self]
-      rwa [Ne, Ideal.Quotient.eq_zero_iff_mem]
     · rw [add_sub_cancel]
   have := Ideal.mul_mem_left _ (algebraMap _ _ β) hαx
   rw [← Algebra.smul_def, smul_smul, hβ, add_smul, one_smul] at this
@@ -698,11 +701,11 @@ noncomputable def equivQuotientMapMaximalIdeal : S ⧸ pS ≃+* Sₚ ⧸ pSₚ :
       (Algebra.algebraMapSubmonoid S p.primeCompl) x
     obtain ⟨α, hα : α ∉ p, e⟩ := s.prop
     obtain ⟨β, γ, hγ, hβ⟩ : ∃ β γ, γ ∈ p ∧ α * β = 1 + γ := by
+      have hα₀ : Ideal.Quotient.mk p α ≠ 0 := by rwa [Ne, Ideal.Quotient.eq_zero_iff_mem]
       obtain ⟨β, hβ⟩ := Ideal.Quotient.mk_surjective (I := p) (Ideal.Quotient.mk p α)⁻¹
       refine ⟨β, α * β - 1, ?_, ?_⟩
       · rw [← Ideal.Quotient.eq_zero_iff_mem, map_sub, map_one,
           map_mul, hβ, mul_inv_cancel₀, sub_self]
-        rwa [Ne, Ideal.Quotient.eq_zero_iff_mem]
       · rw [add_sub_cancel]
     use β • x
     rw [IsScalarTower.algebraMap_eq S Sₚ (Sₚ ⧸ pSₚ), Ideal.Quotient.algebraMap_eq,

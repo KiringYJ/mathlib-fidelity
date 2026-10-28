@@ -123,10 +123,13 @@ theorem gal_X_pow_sub_C_isSolvable_aux (n : ℕ) (a : F)
     exact ha' hb.symm
   have key : ∀ σ : (X ^ n - C a).Gal, ∃ c, σ b = b * algebraMap F _ c := by
     intro σ
-    have key : (σ b / b) ^ n = 1 := by rw [div_pow, ← map_pow, hb, σ.commutes, div_self ha']
+    have key : (σ b / b) ^ n = 1 := by
+      rw [div_pow₀, ← map_pow]
+      simp only [hb]
+      rw [σ.commutes, div_self]
     obtain ⟨c, hc⟩ := mem_range key
     use c
-    rw [hc, mul_div_cancel₀ (σ b) hb']
+    rw [hc, mul_div_cancel₀ (σ b)]
   obtain ⟨c, hc⟩ := key σ
   obtain ⟨d, hd⟩ := key τ
   rw [σ.mul_apply, τ.mul_apply, hc, map_mul, τ.commutes, hd, map_mul, σ.commutes, hc,
@@ -157,7 +160,7 @@ theorem splits_X_pow_sub_one_of_X_pow_sub_C {F : Type*} [Field F] {E : Type*} [F
   use (s.map fun c ↦ c / b)
   rw [leadingCoeff_X_pow_sub_one hn', map_one, C_1, one_mul, Multiset.map_map]
   have C_mul_C : C (i a⁻¹) * C (i a) = 1 := by
-    rw [← C_mul, ← i.map_mul, inv_mul_cancel₀ ha, i.map_one, C_1]
+    rw [← C_mul, ← i.map_mul, inv_mul_cancel₀, i.map_one, C_1]
   have key1 : (X ^ n - 1 : F[X]).map i = C (i a⁻¹) * ((X ^ n - C a).map i).comp (C b * X) := by
     rw [Polynomial.map_sub, Polynomial.map_sub, Polynomial.map_pow, map_X, map_C,
       Polynomial.map_one, sub_comp, pow_comp, X_comp, C_comp, mul_pow, ← C_pow, hb, mul_sub, ←
@@ -166,7 +169,7 @@ theorem splits_X_pow_sub_one_of_X_pow_sub_C {F : Type*} [Field F] {E : Type*} [F
       C b * (X - C (c / b)) := by
     ext1 c
     dsimp only [Function.comp_apply]
-    rw [sub_comp, X_comp, C_comp, mul_sub, ← C_mul, mul_div_cancel₀ c hb']
+    rw [sub_comp, X_comp, C_comp, mul_sub, ← C_mul, mul_div_cancel₀ c]
   rw [key1, hs, multiset_prod_comp, Multiset.map_map, key2, Multiset.prod_map_mul,
     Function.const_def (α := E) (y := C b), Multiset.map_const, Multiset.prod_replicate,
     hs', ← C_pow, hb, ← mul_assoc, C_mul_C, one_mul]
@@ -312,6 +315,7 @@ theorem isSolvable_gal_minpoly {x : E} (hx : x ∈ solvableByRad F E) :
 has a solvable Galois group. -/
 theorem isSolvable_gal_of_irreducible {x : E} (hx : x ∈ solvableByRad F E) {q : F[X]}
     (q_irred : Irreducible q) (q_aeval : aeval x q = 0) : Group.IsSolvable q.Gal := by
+  have hq0 : q ≠ 0 := q_irred.ne_zero
   have : Group.IsSolvable (q * C q.leadingCoeff⁻¹).Gal := by
     rw [minpoly.eq_of_irreducible q_irred q_aeval]
     exact isSolvable_gal_minpoly hx

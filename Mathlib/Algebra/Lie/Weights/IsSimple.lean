@@ -67,8 +67,8 @@ noncomputable def rootSpan (I : LieIdeal K L) : Submodule K (Dual K H) :=
   Submodule.span K ((rootSystem H).root '' I.rootSet)
 
 lemma rootSpace_le_of_apply_coroot_ne_zero (I : LieIdeal K L)
-    {α : Weight K H L} (hα : rootSpace H α ≤ I.restr H)
-    {γ : H → K} (hγ_ne : γ (coroot α) ≠ 0) :
+    {α : Weight K H L} {hαUnit : IsUnit (α ((cartanEquivDual H).symm α))}
+    (hα : rootSpace H α ≤ I.restr H) {γ : H → K} (hγ_ne : γ (coroot α) ≠ 0) :
     rootSpace H γ ≤ I.restr H := by
   intro y hy
   have : γ (coroot α) • y ∈ I.toSubmodule := by
@@ -135,9 +135,10 @@ lemma rootSet_apply_coroot_eq_zero_of_notMem_rootSet (I : LieIdeal K L)
     I.root_apply_eq_zero_of_notMem_rootSet
       (I.corootSubmodule_le hα (coe_coroot_mem_corootSubmodule _)) hβ
   change coroot (β : Weight K H L) ∈ (α : Weight K H L).ker
-  rw [← orthogonal_span_coroot_eq_ker,
+  rw [← orthogonal_span_coroot_eq_ker (H.isNonZero_coe_root α),
     LinearMap.BilinForm.orthogonal_span_singleton_eq_toLin_ker, LinearMap.mem_ker]
-  exact traceForm_eq_zero_of_mem_ker_of_mem_span_coroot h_ker (Submodule.mem_span_singleton_self _)
+  exact traceForm_eq_zero_of_mem_ker_of_mem_span_coroot (H.isNonZero_coe_root β) h_ker
+    (Submodule.mem_span_singleton_self _)
 
 set_option backward.isDefEq.respectTransparency.types false in
 /-- The intersection of a Lie ideal and a Cartan subalgebra is the span of the coroots whose roots
@@ -165,7 +166,8 @@ lemma restr_inf_cartan_eq_biSup_corootSubmodule (I : LieIdeal K L) :
       simp_rw [span_compl_roots, LieSubmodule.iSup_toSubmodule]
     rw [this]
     exact iSup₂_le fun γ hγ ↦ by
-      rw [coe_corootSpace_eq_span_singleton, Submodule.span_singleton_le_iff_mem, LinearMap.mem_ker]
+      rw [coe_corootSpace_eq_span_singleton (H.isNonZero_coe_root γ),
+        Submodule.span_singleton_le_iff_mem, LinearMap.mem_ker]
       exact I.rootSet_apply_coroot_eq_zero_of_notMem_rootSet hμ hγ
   have hx_top : (⟨x, hxH⟩ : H) ∈ span_I_roots ⊔ span_compl_roots := h_top ▸ trivial
   obtain ⟨a, ha, b, hb, hab⟩ := Submodule.mem_sup.mp hx_top
@@ -218,7 +220,7 @@ lemma restr_eq_iSup_sl2SubmoduleOfRoot (I : LieIdeal K L) :
       rw [sl2SubmoduleOfRoot_eq_sup]
       refine sup_le (sup_le ?_ ?_) ?_
       · exact hα
-      · apply I.rootSpace_le_of_apply_coroot_ne_zero hα
+      · refine I.rootSpace_le_of_apply_coroot_ne_zero (hαUnit := by checked_unit) hα ?_
         simp [Pi.neg_apply, root_apply_coroot (H.isNonZero_coe_root α)]
       · exact I.corootSubmodule_le hα
 
@@ -360,12 +362,12 @@ private theorem chi_not_in_q_aux (h_chi_not_in_q : ↑χ ∉ q) :
         apply Weight.ext; intro x; exact LinearMap.ext_iff.mp h x
       have hi_val : i.1 = χ := w_eq (by rw [← hi]; rfl)
       have hj_val : j.1 = α := w_eq (by rw [← hj]; rfl)
-      rw [hi_val, hj_val] at h_pairing_eq
+      simp only [hi_val, hj_val] at h_pairing_eq
       exact h_pairing_eq.symm
     have h_lie_eq_smul : ⁅(y : L), x_χ⁆ = χ y • x_χ := lie_eq_smul_of_mem_rootSpace hx_χ y
     have h_chi_h_zero : χ y = 0 := by
       obtain ⟨c, hc⟩ := Submodule.mem_span_singleton.mp <| by
-        rw [← coe_corootSpace_eq_span_singleton α, LieSubmodule.mem_toSubmodule]
+        rw [← coe_corootSpace_eq_span_singleton hα₀, LieSubmodule.mem_toSubmodule]
         exact hy
       rw [← hc, map_smul, h_chi_coroot_zero, smul_zero]
     have h_bracket_elem : ⁅x_χ, (y : L)⁆ = 0 := by

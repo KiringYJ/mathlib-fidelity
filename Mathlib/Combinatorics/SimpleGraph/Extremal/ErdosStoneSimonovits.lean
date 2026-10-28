@@ -134,7 +134,7 @@ lemma mul_le_card_filter_mul (hr_pos : 0 < r) (ht'_pos : 0 < t')
           mul_sub, ← add_sub_assoc, sub_add_cancel, sub_right_comm, ← mul_assoc, ← mul_rotate,
           mul_assoc, ← mul_sub, mul_add, mul_sub (#K.verts : ℝ) _ _, mul_one,
           sub_add_eq_add_sub, add_sub_assoc, add_sub_sub_cancel, K.card_verts, Nat.cast_mul,
-          mul_one_div, mul_div_cancel_left₀ (t' : ℝ) (mod_cast hr_pos.ne'), sub_add_sub_cancel]
+          mul_one_div₀, mul_div_cancel_left₀ (t' : ℝ), sub_add_sub_cancel]
     _ ≤ #K.verts * (G.minDegree - #K.verts) - (n - #K.verts) * (#K.verts - (t' - t)) :=
         sub_le_sub_right (mul_le_mul_of_nonneg_left
           (sub_le_sub_right hδ _) (#K.verts).cast_nonneg) _
@@ -189,34 +189,59 @@ theorem filter.pi.exists_le_card_fiber (hr_pos : 0 < r) (ht'_pos : 0 < t')
 end ErdosStone
 
 set_option backward.isDefEq.respectTransparency.types false in
-/-- If `G` has a minimal degree of at least `(1 - 1 / r + o(1)) * n`, then `G` contains a
-copy of a `completeEquipartiteGraph` in `r + 1` parts each of size `t`.
+/-- If `r ≠ 0` and `G` has a minimal degree of at least `(1 - 1 / r + o(1)) * n`, then `G`
+contains a copy of a `completeEquipartiteGraph` in `r + 1` parts each of size `t`.
 
 This is the minimal-degree version of the **Erdős-Stone theorem**. -/
 public theorem eventually_completeEquipartiteGraph_isContained_of_minDegree
-    {ε : ℝ} (hε : 0 < ε) (r t : ℕ) :
+    {ε : ℝ} (hε : 0 < ε) (r t : ℕ) (hr : r ≠ 0) :
     ∀ᶠ n in atTop, ∀ {G : SimpleGraph (Fin n)} [DecidableRel G.Adj],
       G.minDegree ≥ (1 - 1 / r + ε) * n
         → completeEquipartiteGraph (r + 1) t ⊑ G := by
-  rcases show (r = 0 ∨ t = 0) ∨ r ≠ 0 ∧ t ≠ 0 by tauto with h0 | ⟨hr_pos, ht_pos⟩
-  · rw [← Nat.le_zero_eq, ← @Nat.add_le_add_iff_right r 0 1, zero_add] at h0
-    rw [eventually_atTop]
+  rcases eq_or_ne t 0 with h0 | ht_pos
+  · rw [eventually_atTop]
     refine ⟨(r + 1) * t, fun n hn {G} _ _ ↦ ?_⟩
-    rw [completeEquipartiteGraph_eq_bot_iff.mpr h0, bot_isContained_iff_card_le,
+    rw [completeEquipartiteGraph_eq_bot_iff.mpr (.inr h0), bot_isContained_iff_card_le,
       card_prod, Fintype.card_fin, Fintype.card_fin, Fintype.card_fin]
     exact hn
-  · rw [← Nat.pos_iff_ne_zero] at hr_pos ht_pos
-    -- choose `ε'` to ensure `G.minDegree` is large enough
-    let ε' := 1 / (↑(r - 1) * r) + ε
-    have hε' : 0 < ε' := by positivity
+  · have hr_pos : 0 < r := Nat.pos_of_ne_zero hr
+    rw [← Nat.pos_iff_ne_zero] at ht_pos
     -- choose `t'` larger than `t / (r * ε)`
     let t' := ⌊t / (r * ε)⌋₊ + 1
     have ht_lt_rt'ε : t < r * t' * ε := by
       rw [mul_comm (r : ℝ) (t' : ℝ), mul_assoc, ← div_lt_iff₀ (by positivity), Nat.cast_add_one]
       exact Nat.lt_floor_add_one (t / (r * ε))
     have ht'_pos : 0 < t' := by positivity
-    have ⟨N', ih⟩ := eventually_atTop.mp <|
-      eventually_completeEquipartiteGraph_isContained_of_minDegree hε' (r - 1) t'
+    -- `G` contains a `completeEquipartiteGraph r t'` when `n` is large enough
+    have ⟨N', ih⟩ : ∃ N', ∀ n ≥ N', ∀ {G : SimpleGraph (Fin n)} [DecidableRel G.Adj],
+        G.minDegree ≥ (1 - 1 / r + ε) * n → completeEquipartiteGraph r t' ⊑ G := by
+      rcases eq_or_ne r 1 with hr_eq_1 | hr_ne_1
+      -- if `r = 1` then `completeEquipartiteGraph r t' = ⊥`
+      · refine ⟨t', fun n hn {G} _ _ ↦ ?_⟩
+        rw [completeEquipartiteGraph_eq_bot_iff.mpr (.inl hr_eq_1.le), bot_isContained_iff_card_le,
+          card_prod, Fintype.card_fin, Fintype.card_fin, hr_eq_1, one_mul, Fintype.card_fin]
+        exact hn
+      -- if `r > 1` then `G` satisfies the inductive hypothesis
+      · -- choose `ε'` to ensure `G.minDegree` is large enough
+        let ε' := 1 / (↑(r - 1) * r) + ε
+        have hε' : 0 < ε' := by positivity
+        have ⟨N', ih⟩ := eventually_atTop.mp <|
+          eventually_completeEquipartiteGraph_isContained_of_minDegree hε' (r - 1) t' (by omega)
+        refine ⟨N', fun n hn {G} _ hδ ↦ ?_⟩
+        have hr₁ : IsUnit ((r - 1 : ℕ) : ℝ) := (Nat.cast_ne_zero.mpr (by omega)).isUnit
+        have hr₀ : IsUnit (r : ℝ) := (Nat.cast_ne_zero.mpr hr).isUnit
+        have hsub : (1 / ↑(r - 1) - 1 / r : ℝ) = 1 / (↑(r - 1) * r) := by
+          have h1 : (r : ℝ) - ↑(r - 1) = 1 := by rw [Nat.cast_pred hr_pos, sub_sub_cancel]
+          rw [← one_div_mul_sub_mul_one_div_eq_one_div_add_one_div (ha := hr₁) (hb := hr₀), h1,
+            mul_one, one_div_mul_one_div₀]
+        have hδ' : G.minDegree ≥ (1 - 1 / ↑(r - 1) + ε') * n := by
+          have key : (1 - 1 / ↑(r - 1) + ε' : ℝ) = 1 - 1 / r + ε := by
+            simp only [ε', ← hsub]
+            ring
+          rw [key]
+          exact hδ
+        rw [← Nat.succ_pred_eq_of_pos hr_pos]
+        exact ih n hn hδ'
     -- choose `N` at least `(t'.choose t ^ r * t + r * t') * (t '- t) / (r * t' * ε - t)` to
     -- satisfy the pigeonhole principle
     let N := max (max 1 N') ⌈(t'.choose t ^ r * t + r * t') * (t' - t) / (r * t' * ε - t)⌉₊
@@ -237,35 +262,9 @@ public theorem eventually_completeEquipartiteGraph_isContained_of_minDegree
     have ht_lt_t' : t < t' := by
       rw [mul_comm (r : ℝ) (t' : ℝ), mul_assoc] at ht_lt_rt'ε
       exact_mod_cast ht_lt_rt'ε.trans_le (mul_le_of_le_one_right (mod_cast ht'_pos.le) hrε_lt_1.le)
-    -- identify a `completeEquipartiteGraph r t'` in `G` from the inductive hypothesis
-    replace ih : completeEquipartiteGraph r t' ⊑ G := by
-      rcases eq_or_ne r 1 with hr_eq_1 | hr_ne_1
-      -- if `r = 1` then `completeEquipartiteGraph r t' = ⊥`
-      · have h0 : r ≤ 1 ∨ t' = 0 := Or.inl hr_eq_1.le
-        rw [completeEquipartiteGraph_eq_bot_iff.mpr h0, bot_isContained_iff_card_le,
-          card_prod, Fintype.card_fin, Fintype.card_fin, hr_eq_1, one_mul, Fintype.card_fin]
-        apply hn.trans'
-        exact_mod_cast calc (t' : ℝ)
-          _ ≤ r * t' := le_mul_of_one_le_left (by positivity) (mod_cast hr_pos)
-          _ ≤ t'.choose t ^ r * t + r * t' := le_add_of_nonneg_left (by positivity)
-          _ ≤ (t'.choose t ^ r * t + r * t') * (t' - t) / (r * t' * ε - t) := by
-            rw [mul_div_assoc, le_mul_iff_one_le_right (by positivity),
-              one_le_div (sub_pos.mpr ht_lt_rt'ε), sub_le_sub_iff_right,
-              mul_comm (r : ℝ) (t' : ℝ),  mul_assoc, mul_le_iff_le_one_right (by positivity)]
-            exact hrε_lt_1.le
-          _ ≤ ⌈(t'.choose t ^ r * t + r * t') * (t' - t) / (r * t' * ε - t)⌉₊ := Nat.le_ceil _
-          _ ≤ N := Nat.cast_le.mpr (le_max_right _ _)
-      -- if `r > 1` then `G` satisfies the inductive hypothesis
-      · have hδ' := calc (G.minDegree : ℝ)
-          _ ≥ (1 - 1 / (r - 1) + (1 / (r - 1) - 1 / r) + ε) * n := by
-              rwa [← sub_add_sub_cancel _ (1 / (r - 1) : ℝ) _] at hδ
-          _ = (1 - 1 / ↑(r - 1) + ε') * n := by
-              rw [← one_div_mul_sub_mul_one_div_eq_one_div_add_one_div
-                (sub_ne_zero_of_ne (mod_cast hr_ne_1)) (mod_cast hr_pos.ne'),
-                sub_sub_cancel, mul_one, one_div_mul_one_div_rev, mul_comm (r : ℝ) _,
-                ← Nat.cast_pred hr_pos, add_assoc]
-        rw [← Nat.succ_pred_eq_of_pos hr_pos]
-        exact ih n (hn.trans' (le_max_of_le_left (le_max_right 1 N'))) hδ'
+    -- identify a `completeEquipartiteGraph r t'` in `G`
+    replace ih : completeEquipartiteGraph r t' ⊑ G :=
+      ih n (hn.trans' (le_max_of_le_left (le_max_right 1 N'))) hδ
     obtain ⟨K⟩ := completeEquipartiteGraph_isContained_iff.mp ih
     -- find `t` vertices not in `K` adjacent to `t` vertices in each `K.parts` using the
     -- pigeonhole principle

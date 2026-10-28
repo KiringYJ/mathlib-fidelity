@@ -491,42 +491,46 @@ section Field
 
 variable {K : Type*} [Field K] [Module K M] [Algebra R K] (D : Derivation R K M)
 
-theorem leibniz_inv (a : K) : D a⁻¹ = -a⁻¹ ^ 2 • D a := by
-  rcases eq_or_ne a 0 with (rfl | ha)
-  · simp
-  · exact D.leibniz_of_mul_eq_one (inv_mul_cancel₀ ha)
+theorem leibniz_inv (a : K) {ha : IsUnit a} : D a⁻¹ = -a⁻¹ ^ 2 • D a :=
+  D.leibniz_of_mul_eq_one inv_mul_cancel₀
 
-theorem leibniz_div (a b : K) : D (a / b) = b⁻¹ ^ 2 • (b • D a - a • D b) := by
-  simp only [div_eq_mul_inv, leibniz, leibniz_inv, inv_pow, neg_smul, smul_neg, smul_smul, add_comm,
-    sub_eq_add_neg, smul_add]
-  rw [← inv_mul_mul_self b⁻¹, inv_inv]
-  ring_nf
+theorem leibniz_div (a b : K) {hb : IsUnit b} : D (a / b) = b⁻¹ ^ 2 • (b • D a - a • D b) := by
+  have h : b⁻¹ ^ 2 * b = b⁻¹ := by rw [sq, mul_assoc, inv_mul_cancel₀, mul_one]
+  rw [div_eq_mul_inv₀, leibniz, leibniz_inv, neg_smul, smul_neg, smul_smul a, smul_sub,
+    smul_smul _ b, h, smul_smul _ a, mul_comm a, sub_eq_neg_add]
 
-theorem leibniz_div_const (a b : K) (h : D b = 0) : D (a / b) = b⁻¹ • D a := by
-  simp only [leibniz_div, inv_pow, h, smul_zero, sub_zero, smul_smul]
-  rw [← mul_self_mul_inv b⁻¹, inv_inv]
-  ring_nf
+theorem leibniz_div_const (a b : K) {hb : IsUnit b} (h : D b = 0) : D (a / b) = b⁻¹ • D a := by
+  rw [div_eq_mul_inv₀, leibniz, leibniz_inv, h, smul_zero, smul_zero, zero_add]
 
-lemma leibniz_zpow (a : K) (n : ℤ) : D (a ^ n) = n • a ^ (n - 1) • D a := by
-  by_cases hn : n = 0
-  · simp [hn]
-  by_cases ha : a = 0
-  · simp [ha, zero_zpow n hn]
-  rcases Int.natAbs_eq n with h | h
-  · rw [h]
-    simp only [zpow_natCast, leibniz_pow, natCast_zsmul]
-    rw [← zpow_natCast]
-    congr
-    lia
-  · rw [h, zpow_neg, zpow_natCast, leibniz_inv, leibniz_pow, inv_pow, ← pow_mul, ← zpow_natCast,
-      ← zpow_natCast, ← Nat.cast_smul_eq_nsmul K, ← Int.cast_smul_eq_zsmul K, smul_smul, smul_smul,
-      smul_smul]
-    trans (-n.natAbs * (a ^ ((n.natAbs - 1 : ℕ) : ℤ) / (a ^ ((n.natAbs * 2 : ℕ) : ℤ)))) • D a
-    · ring_nf
-    rw [← zpow_sub₀ ha]
-    congr 3
-    · norm_cast
-    lia
+/-- The Leibniz rule for integer powers. Its right-hand side contains `a ^ (n - 1)`, so `a` is
+nonzero unless `n` is positive. -/
+lemma leibniz_zpow (a : K) (n : ℤ) (ha : n ≤ 0 → a ≠ 0) :
+    D (Checked.zpow a n fun hn ↦ (ha hn.le).isUnit) =
+      n • Checked.zpow a (n - 1) (fun hn ↦ (ha (by lia)).isUnit) • D a := by
+  rcases lt_or_ge 0 n with hn | hn
+  · obtain ⟨m, rfl⟩ : ∃ m : ℕ, n = (m + 1 : ℕ) := ⟨(n - 1).toNat, by lia⟩
+    have e : ((m + 1 : ℕ) - 1 : ℤ) = m := by lia
+    simp only [e, zpow_natCast₀, leibniz_pow, natCast_zsmul, Nat.add_sub_cancel]
+  · have ha0 : a ≠ 0 := ha hn
+    obtain ⟨m, rfl⟩ : ∃ m : ℕ, n = -m := ⟨n.natAbs, by lia⟩
+    have hc : -(a ^ m)⁻¹ ^ 2 * (m : K) * a ^ (m - 1) =
+        ((-(m : ℤ) : ℤ) : K) * ((a ^ m)⁻¹ * a⁻¹) := by
+      rcases m with _ | k
+      · simp
+      · rw [Nat.add_sub_cancel]
+        push_cast
+        have key : (a ^ (k + 1))⁻¹ * a ^ k = a⁻¹ :=
+          eq_inv_of_mul_eq_one_left₀ (by rw [mul_assoc, ← pow_succ, inv_mul_cancel₀])
+        rw [← key]
+        ring
+    calc D (a ^ (-(m : ℤ)))
+        = D ((a ^ m)⁻¹) := by simp only [zpow_neg₀ ha0, zpow_natCast₀]
+      _ = (-(a ^ m)⁻¹ ^ 2 * (m : K) * a ^ (m - 1)) • D a := by
+          rw [leibniz_inv, leibniz_pow, ← Nat.cast_smul_eq_nsmul K, smul_smul, smul_smul]
+      _ = (((-(m : ℤ) : ℤ) : K) * ((a ^ m)⁻¹ * a⁻¹)) • D a := by rw [hc]
+      _ = (-(m : ℤ)) • a ^ (-(m : ℤ) - 1) • D a := by
+          rw [← smul_smul, Int.cast_smul_eq_zsmul]
+          simp only [zpow_sub_one₀ ha0, zpow_neg₀ ha0, zpow_natCast₀]
 
 end Field
 

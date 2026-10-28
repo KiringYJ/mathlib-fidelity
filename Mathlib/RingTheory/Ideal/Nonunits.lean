@@ -6,7 +6,7 @@ Authors: Kenny Lau, Chris Hughes, Mario Carneiro
 module
 
 public import Mathlib.RingTheory.Ideal.Maximal
-public import Mathlib.Algebra.GroupWithZero.CheckedHom
+public import Mathlib.Algebra.GroupWithZero.Units.Lemmas
 
 /-!
 # The set of non-invertible elements of a monoid
@@ -94,17 +94,17 @@ section Monoid
 variable [Monoid α] [SubmonoidClass C α] {S : C} {a : S}
 
 theorem checked_inv_mem_of_isUnit (ha : IsUnit a) :
-    Checked.inv (a : α) (ha.map (subtype <| ofClass S)) ∈ S := by
+    Checked.inv (a : α) (show IsUnit (a : α) from ha.map (subtype <| ofClass S)) ∈ S := by
   convert (Checked.inv a ha).property using 1
-  exact (Checked.map_inv (subtype <| ofClass S) a ha).symm
+  exact inv_eq_of_mul_eq_one_right₀ (map_mul_eq_one (subtype <| ofClass S) mul_inv_cancel₀)
 
 theorem isUnit_iff_exists_inv_mem :
     IsUnit a ↔ ∃ ha : IsUnit (a : α), Checked.inv (a : α) ha ∈ S where
   mp h := ⟨h.map (subtype <| ofClass S), checked_inv_mem_of_isUnit h⟩
   mpr h := by
     obtain ⟨ha, hm⟩ := h
-    exact ⟨⟨a, ⟨_, hm⟩, Subtype.ext (Checked.mul_inv_cancel (a : α) ha),
-      Subtype.ext (Checked.inv_mul_cancel (a : α) ha)⟩, rfl⟩
+    exact ⟨⟨a, ⟨_, hm⟩, Subtype.ext (mul_inv_cancel₀ (ha := ha)),
+      Subtype.ext (inv_mul_cancel₀ (ha := ha))⟩, rfl⟩
 
 theorem isUnit_iff_of_isUnit (ha : IsUnit (a : α)) :
     IsUnit a ↔ Checked.inv (a : α) ha ∈ S := by

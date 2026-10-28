@@ -81,6 +81,6 @@ noncomputable def DistribMulAction.toAddEquiv₀ {α : Type*} (β :
     Type*) [GroupWithZero α] [AddMonoid β]
     [DistribMulAction α β] (x : α) (hx : x ≠ 0) : β ≃+ β :=
   { DistribSMul.toAddMonoidHom β x with
-    invFun := fun b ↦ (Units.mk0 x hx)⁻¹ • b
-    left_inv := fun b ↦ inv_smul_smul₀ hx b
-    right_inv := fun b ↦ smul_inv_smul₀ hx b }
+    invFun := fun b ↦ x⁻¹ • b
+    left_inv := fun b ↦ inv_smul_smul₀ (ha := hx.isUnit) b
+    right_inv := fun b ↦ smul_inv_smul₀ (ha := hx.isUnit) b }

@@ -129,7 +129,7 @@ theorem maximalIdeal_isPrincipal_of_isDedekindDomain [IsLocalRing R] [IsDedekind
     · obtain ⟨y, e⟩ := IsIntegrallyClosed.algebraMap_eq_of_integral this
       refine (hb₂ (Ideal.mem_span_singleton'.mpr ⟨y, ?_⟩)).elim
       apply IsFractionRing.injective R K
-      rw [map_mul, e, div_mul_cancel₀ _ ha₃]
+      rw [map_mul, e, div_mul_cancel₀ _]
     · rw [Submodule.ne_bot_iff]; refine ⟨_, ⟨a, ha₁, rfl⟩, ?_⟩
       exact (IsFractionRing.to_map_eq_zero_iff (K := K)).not.mpr ha₂
     · apply Submodule.FG.map; exact IsNoetherian.noetherian _
@@ -139,12 +139,12 @@ theorem maximalIdeal_isPrincipal_of_isDedekindDomain [IsLocalRing R] [IsDedekind
       rintro m' ⟨m, hm, rfl : algebraMap R K m = m'⟩
       obtain ⟨k, hk⟩ := hb₃ m hm
       have hk' : x * algebraMap R K m = algebraMap R K k := by
-        rw [← mul_div_right_comm, ← map_mul, ← hk, map_mul, mul_div_cancel_right₀ _ ha₃]
+        rw [← mul_div_right_comm₀, ← map_mul, ← hk, map_mul, mul_div_cancel_right₀ _]
       exact ⟨k, le_maximalIdeal h ⟨_, ⟨_, hm, rfl⟩, hk'⟩, hk'.symm⟩
     obtain ⟨y, hy₁, hy₂⟩ : ∃ y ∈ maximalIdeal R, b * y = a := by
       rw [Ideal.eq_top_iff_one, Submodule.mem_comap] at this
       obtain ⟨_, ⟨y, hy, rfl⟩, hy' : x * algebraMap R K y = algebraMap R K 1⟩ := this
-      rw [map_one, ← mul_div_right_comm, div_eq_one_iff_eq ha₃, ← map_mul] at hy'
+      rw [map_one, ← mul_div_right_comm₀, div_eq_one_iff_eq, ← map_mul] at hy'
       exact ⟨y, hy, IsFractionRing.injective R K hy'⟩
     refine ⟨⟨y, ?_⟩⟩
     apply le_antisymm

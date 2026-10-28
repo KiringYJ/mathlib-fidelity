@@ -77,9 +77,31 @@ namespace FractionalIdeal
 
 open Ideal
 
-theorem exists_notMem_one_of_ne_bot [IsDedekindDomain A] {I : Ideal A} (hI0 : I ≠ ⊥)
-    (hI1 : I ≠ ⊤) : ∃ x ∈ (I⁻¹ : FractionalIdeal A⁰ K), x ∉ (1 : FractionalIdeal A⁰ K) :=
-  Set.not_subset.1 <| not_inv_le_one_of_ne_bot hI0 hI1
+/-- In a Dedekind domain that is not a field, the colon `{x | x I ⊆ 1}` of a nonzero proper
+ideal `I` has an element outside `1`. -/
+theorem exists_notMem_one_of_ne_bot [IsDedekindDomain A] {I : Ideal A}
+    {hI0 : (I : FractionalIdeal A⁰ K) ≠ 0} (hI1 : I ≠ ⊤) :
+    ∃ x ∈ colon 1 (I : FractionalIdeal A⁰ K) hI0, x ∉ (1 : FractionalIdeal A⁰ K) :=
+  Set.not_subset.1 <| not_one_colon_le_one_of_ne_bot hI1
+
+section IsDomain
+
+variable [IsDomain A]
+
+lemma le_inv_comm {I J : FractionalIdeal A⁰ K} {hI : IsUnit I} {hJ : IsUnit J} :
+    I ≤ J⁻¹ ↔ J ≤ I⁻¹ := by
+  rw [inv_eq_colon, inv_eq_colon, le_colon_iff_mul_le, le_colon_iff_mul_le, mul_comm]
+
+lemma inv_le_comm {I J : FractionalIdeal A⁰ K} {hI : IsUnit I} {hJ : IsUnit J} :
+    I⁻¹ ≤ J ↔ J⁻¹ ≤ I := by
+  simpa using le_inv_comm (A := A) (K := K) (hI := hI.inv₀) (hJ := hJ.inv₀)
+
+@[simp]
+theorem inv_le_inv_iff {I J : FractionalIdeal A⁰ K} {hI : IsUnit I} {hJ : IsUnit J} :
+    I⁻¹ ≤ J⁻¹ ↔ J ≤ I := by
+  rw [le_inv_comm (hI := hI.inv₀), inv_inv₀]
+
+end IsDomain
 
 end FractionalIdeal
 
@@ -206,23 +228,6 @@ theorem Associates.le_singleton_iff (x : A) (n : ℕ) (I : Ideal A) :
 
 variable {K}
 
-namespace FractionalIdeal
-
-lemma le_inv_comm {I J : FractionalIdeal A⁰ K} (hI : I ≠ 0) (hJ : J ≠ 0) :
-    I ≤ J⁻¹ ↔ J ≤ I⁻¹ := by
-  rw [inv_eq, inv_eq, le_div_iff_mul_le hI, le_div_iff_mul_le hJ, mul_comm]
-
-lemma inv_le_comm {I J : FractionalIdeal A⁰ K} (hI : I ≠ 0) (hJ : J ≠ 0) :
-    I⁻¹ ≤ J ↔ J⁻¹ ≤ I := by
-  simpa using le_inv_comm (A := A) (K := K) (inv_ne_zero hI) (inv_ne_zero hJ)
-
-@[simp]
-theorem inv_le_inv_iff {I J : FractionalIdeal A⁰ K} (hI : I ≠ 0) (hJ : J ≠ 0) :
-    I⁻¹ ≤ J⁻¹ ↔ J ≤ I := by
-  rw [le_inv_comm (inv_ne_zero hI) hJ, inv_inv]
-
-end FractionalIdeal
-
 namespace Ideal
 
 /-- Strengthening of `IsLocalization.exist_integer_multiples`:
@@ -240,7 +245,7 @@ theorem exist_integer_multiples_notMem {J : Ideal A} (hJ : J ≠ ⊤) {ι : Type
   -- We claim the multiplier `a` we're looking for is in `I⁻¹ \ (J / I)`.
   suffices ↑J / I < I⁻¹ by
     obtain ⟨_, a, hI, hpI⟩ := SetLike.lt_iff_le_and_exists.mp this
-    rw [mem_inv_iff hI0] at hI
+    rw [mem_inv_iff] at hI
     refine ⟨a, fun i hi => ?_, ?_⟩
     -- By definition, `a ∈ I⁻¹` multiplies elements of `I` into elements of `1`,
     -- in other words, `a * f i` is an integer.
@@ -248,14 +253,15 @@ theorem exist_integer_multiples_notMem {J : Ideal A} (hJ : J ≠ ⊤) {ι : Type
     · contrapose! hpI
       -- And if all `a`-multiples of `I` are an element of `J`,
       -- then `a` is actually an element of `J / I`, contradiction.
-      refine (mem_div_iff_of_ne_zero hI0).mpr fun y hy => Submodule.span_induction ?_ ?_ ?_ ?_ hy
+      rw [div_eq_colon, mem_colon_iff]
+      refine fun y hy => Submodule.span_induction ?_ ?_ ?_ ?_ hy
       · rintro _ ⟨i, hi, rfl⟩; exact hpI i hi
       · rw [mul_zero]; exact Submodule.zero_mem _
       · intro x y _ _ hx hy; rw [mul_add]; exact Submodule.add_mem _ hx hy
       · intro b x _ hx; rw [mul_smul_comm]; exact Submodule.smul_mem _ b hx
   -- To show the inclusion of `J / I` into `I⁻¹ = 1 / I`, note that `J < I`.
-  rw [div_eq_mul_inv]
-  refine mul_lt_of_lt_one_left (by simpa [pos_iff_ne_zero]) ?_
+  rw [div_eq_mul_inv₀]
+  refine mul_lt_of_lt_one_left (by simp [pos_iff_ne_zero]) ?_
   rw [← coeIdeal_top]
   -- And multiplying by `I⁻¹` is indeed strictly monotone.
   exact
@@ -494,6 +500,17 @@ structure HeightOneSpectrum where
   ne_bot : asIdeal ≠ ⊥
 
 attribute [instance] HeightOneSpectrum.isPrime
+
+/-! The rule below extends `checked_nonzero`, so that the inverse and the integer powers of the
+fractional ideal `(I : FractionalIdeal R⁰ K)` of an integral ideal `I` find their evidence from a
+local hypothesis `I ≠ ⊥`, and from `HeightOneSpectrum.ne_bot` when `I` is a point `v.asIdeal` of
+the height one spectrum. A local hypothesis is used first. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply FractionalIdeal.coeIdeal_ne_zero.mpr);
+        solve | assumption | exact IsDedekindDomain.HeightOneSpectrum.ne_bot _))
 
 variable (v : HeightOneSpectrum R) {R}
 

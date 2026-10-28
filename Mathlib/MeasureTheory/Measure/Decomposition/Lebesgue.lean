@@ -446,7 +446,7 @@ theorem singularPart_smul (μ ν : Measure α) (r : ℝ≥0) :
       ← haveLebesgueDecomposition_add μ ν, ENNReal.smul_def]
   · rw [singularPart, singularPart, dite_eq_right hl, dite_eq_right, smul_zero]
     refine fun hl' ↦ hl ?_
-    rw [← inv_smul_smul₀ hr μ]
+    rw [← inv_smul_smul₀ (ha := hr.isUnit) μ]
     infer_instance
 
 theorem singularPart_smul_right (μ ν : Measure α) (r : ℝ≥0) (hr : r ≠ 0) :
@@ -460,10 +460,10 @@ theorem singularPart_smul_right (μ ν : Measure α) (r : ℝ≥0) (hr : r ≠ 0
       convert! haveLebesgueDecomposition_add μ ν
       ext x
       simp only [Pi.smul_apply]
-      rw [← ENNReal.smul_def, smul_inv_smul₀ hr]
+      rw [← ENNReal.smul_def, smul_inv_smul₀ (ha := hr.isUnit)]
   · rw [singularPart, singularPart, dite_eq_right hl, dite_eq_right]
     refine fun hl' ↦ hl ?_
-    rw [← inv_smul_smul₀ hr ν]
+    rw [← inv_smul_smul₀ (ha := hr.isUnit) ν]
     infer_instance
 
 theorem singularPart_add (μ₁ μ₂ ν : Measure α) [HaveLebesgueDecomposition μ₁ ν]

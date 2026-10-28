@@ -300,8 +300,8 @@ lemma inv {f : 𝕜 → 𝕜'} (hf : MeromorphicAt f x) : MeromorphicAt f⁻¹ x
     · simp
     · replace hfg := congr_arg (·⁻¹) hfg
       simp only [smul_inv₀] at hfg
-      rw [inv_smul_eq_iff₀ (pow_ne_zero m (sub_ne_zero.mpr hz_ne)), smul_comm,
-        eq_inv_smul_iff₀ (pow_ne_zero n (sub_ne_zero.mpr hz_ne))] at hfg
+      rw [inv_smul_eq_iff₀ (ha := (pow_ne_zero m (sub_ne_zero.mpr hz_ne)).isUnit), smul_comm,
+        eq_inv_smul_iff₀ (ha := (pow_ne_zero n (sub_ne_zero.mpr hz_ne)).isUnit)] at hfg
       simp [pow_succ', mul_smul, hfg]
 
 @[simp]
@@ -412,7 +412,7 @@ lemma meromorphicAt_smul_iff_of_ne_zero {f : 𝕜 → E} (hg : AnalyticAt 𝕜 g
   refine ⟨fun hfg ↦ ?_, hg.meromorphicAt.smul⟩
   refine (hg.inv hg').meromorphicAt.smul hfg |>.congr ?_
   filter_upwards [(hg.continuousAt.mono_left nhdsWithin_le_nhds).eventually_ne hg'] with z hz
-  simp [inv_smul_smul₀ hz]
+  simp [inv_smul_smul₀ (ha := hz.isUnit)]
 
 lemma meromorphicAt_mul_iff_of_ne_zero {f : 𝕜 → 𝕜} (hg : AnalyticAt 𝕜 g x) (hg' : g x ≠ 0) :
     MeromorphicAt (g * f) x ↔ MeromorphicAt f x :=
@@ -424,7 +424,7 @@ theorem meromorphicAt_const_smul_iff_meromorphicAt {f : 𝕜 → E} {s : 𝕜} (
     MeromorphicAt (s • f) x ↔ MeromorphicAt f x := by
   constructor
   <;> intro hf
-  · rw [((eq_inv_smul_iff₀ hs).mpr rfl : f = s⁻¹ • s • f)]
+  · rw [((eq_inv_smul_iff₀ (ha := hs.isUnit)).mpr rfl : f = s⁻¹ • s • f)]
     fun_prop
   · fun_prop
 
@@ -459,7 +459,8 @@ lemma MeromorphicAt.comp_analyticAt {f : 𝕜' → F} {g : 𝕜 → 𝕜'}
       ((han.inv hne).pow r).smul (hr.restrictScalars.comp hg)
     refine ⟨n * r, this.congr ?_⟩
     filter_upwards [heq, han.continuousAt.tendsto.eventually_ne hne] with z hz hzne
-    simp only [j, inv_pow, Function.comp_apply, inv_smul_eq_iff₀ (pow_ne_zero r hzne)]
+    simp only [j, inv_pow, Function.comp_apply,
+      inv_smul_eq_iff₀ (ha := (pow_ne_zero r hzne).isUnit)]
     rw [hz, smul_comm, ← smul_assoc, pow_mul, smul_pow]
 
 lemma meromorphicAt_comp_iff_of_deriv_ne_zero [CompleteSpace 𝕜] [CharZero 𝕜] {f : 𝕜 → E}

@@ -23,10 +23,6 @@ assumptions on `p`. The `p`-adic valuations on `ℕ` and `ℤ` agree with that o
 The valuation induces a norm on `ℚ`. This norm is defined in
 `Mathlib/NumberTheory/Padics/PadicNorm.lean`.
 
-## Notation
-
-This file uses the local notation `/.` for `Rat.mk`.
-
 ## Implementation notes
 
 Much, but not all, of this file assumes that `p` is prime. This assumption is inferred automatically
@@ -228,16 +224,15 @@ variable {p : ℕ} [hp : Fact p.Prime]
 theorem finite_int_prime_iff {a : ℤ} : FiniteMultiplicity (p : ℤ) a ↔ a ≠ 0 := by
   simp [Int.finiteMultiplicity_iff, hp.1.ne_one]
 
-/-- A rewrite lemma for `padicValRat p q` when `q` is expressed in terms of `Rat.mk`. -/
-protected theorem defn (p : ℕ) [hp : Fact p.Prime] {q : ℚ} {n d : ℤ} (hqz : q ≠ 0)
-    (qdf : q = n /. d) :
+/-- A rewrite lemma for `padicValRat p q` when `q` is expressed as a quotient `n / d` of
+integers. -/
+protected theorem defn (p : ℕ) [hp : Fact p.Prime] {q : ℚ} {n d : ℤ} {hd : IsUnit (d : ℚ)}
+    (hqz : q ≠ 0) (qdf : q = n / d) :
     padicValRat p q =
-      multiplicity (p : ℤ) n (finite_int_prime_iff.2 (Rat.mk_num_ne_zero_of_ne_zero hqz qdf)) -
-        multiplicity (p : ℤ) d
-          (finite_int_prime_iff.2 (Rat.mk_denom_ne_zero_of_ne_zero hqz qdf)) := by
-  have hn : n ≠ 0 := Rat.mk_num_ne_zero_of_ne_zero hqz qdf
-  have hd : d ≠ 0 := Rat.mk_denom_ne_zero_of_ne_zero hqz qdf
-  obtain ⟨c, hc1, hc2⟩ := Rat.num_den_mk hd qdf
+      multiplicity (p : ℤ) n (finite_int_prime_iff.2 fun hn ↦ hqz (by simp [qdf, hn])) -
+        multiplicity (p : ℤ) d (finite_int_prime_iff.2 (Int.cast_ne_zero.1 hd.ne_zero)) := by
+  obtain ⟨c, hc1, hc2⟩ := Rat.exists_eq_mul_div_num_and_eq_mul_div_den n (hd := hd)
+  rw [← qdf] at hc1 hc2
   have hp' : Prime (p : ℤ) := Nat.prime_iff_prime_int.1 hp.1
   rw [padicValRat.multiplicity_sub_multiplicity hp.out.ne_one hqz]
   subst hc1 hc2
@@ -248,14 +243,16 @@ protected theorem defn (p : ℕ) [hp : Fact p.Prime] {q : ℚ} {n d : ℤ} (hqz 
 /-- A rewrite lemma for `padicValRat p (q * r)` with conditions `q ≠ 0`, `r ≠ 0`. -/
 protected theorem mul {q r : ℚ} (hq : q ≠ 0) (hr : r ≠ 0) :
     padicValRat p (q * r) = padicValRat p q + padicValRat p r := by
-  have : q * r = (q.num * r.num) /. (q.den * r.den) := by
-    rw [Rat.mul_eq_mkRat, Rat.mkRat_eq_divInt, Nat.cast_mul]
-  have hq' : q.num /. q.den ≠ 0 := by rwa [Rat.num_divInt_den]
-  have hr' : r.num /. r.den ≠ 0 := by rwa [Rat.num_divInt_den]
+  have hqr : q * r = ((q.num * r.num : ℤ) : ℚ) / ((q.den * r.den : ℤ) : ℚ) := by
+    rw [eq_div_iff]
+    push_cast
+    rw [mul_mul_mul_comm, Rat.mul_den_eq_num, Rat.mul_den_eq_num]
+  have hs (s : ℚ) : s = (s.num : ℚ) / ((s.den : ℤ) : ℚ) := by
+    rw [eq_div_iff, Int.cast_natCast, Rat.mul_den_eq_num]
   have hp' : Prime (p : ℤ) := Nat.prime_iff_prime_int.1 hp.1
-  rw [padicValRat.defn p (mul_ne_zero hq hr) this,
-    padicValRat.defn p hq (q.num_divInt_den).symm, padicValRat.defn p hr (r.num_divInt_den).symm,
-    multiplicity_mul hp', multiplicity_mul hp', Nat.cast_add, Nat.cast_add]
+  rw [padicValRat.defn p (mul_ne_zero hq hr) hqr, padicValRat.defn p hq (hs q),
+    padicValRat.defn p hr (hs r), multiplicity_mul hp', multiplicity_mul hp', Nat.cast_add,
+    Nat.cast_add]
   ring
 
 /-- A rewrite lemma for `padicValRat p (q^k)`. -/
@@ -275,11 +272,11 @@ protected theorem pow {q : ℚ} (hq : q ≠ 0) {k : ℕ} :
 /-- A rewrite lemma for `padicValRat p (q⁻¹)`. -/
 @[simp]
 protected theorem inv {q : ℚ} (hq : q ≠ 0) :
-    padicValRat p q⁻¹ (hq := inv_ne_zero hq) = -padicValRat p q := by
-  rw [eq_neg_iff_add_eq_zero, ← padicValRat.mul (inv_ne_zero hq) hq]
-  have e : padicValRat p (q⁻¹ * q) (hq := mul_ne_zero (inv_ne_zero hq) hq) =
-      padicValRat p 1 := by
-    simp only [inv_mul_cancel₀ hq]
+    padicValRat p q⁻¹ (hq := inv_ne_zero) = -padicValRat p q := by
+  have hq' : q⁻¹ ≠ 0 := inv_ne_zero
+  rw [eq_neg_iff_add_eq_zero, ← padicValRat.mul hq' hq]
+  have e : padicValRat p (q⁻¹ * q) (hq := mul_ne_zero hq' hq) = padicValRat p 1 := by
+    simp only [inv_mul_cancel₀]
   rw [e, padicValRat.one]
 
 @[simp]
@@ -289,36 +286,37 @@ protected theorem zpow {q : ℚ} (hq : q ≠ 0) {k : ℤ} :
   | nat k =>
     have e : padicValRat p (q ^ (k : ℤ)) (hq := zpow_ne_zero (k : ℤ) hq) =
         padicValRat p (q ^ k) (hq := pow_ne_zero k hq) := by
-      simp only [zpow_natCast]
+      simp only [zpow_natCast₀]
     rw [e, padicValRat.pow hq]
   | neg _ k =>
     have e : padicValRat p (q ^ (-(k : ℤ))) (hq := zpow_ne_zero (-(k : ℤ)) hq) =
-        padicValRat p (q ^ k)⁻¹ (hq := inv_ne_zero (pow_ne_zero k hq)) := by
-      simp only [zpow_neg, zpow_natCast]
+        padicValRat p (q ^ k)⁻¹ (hq := inv_ne_zero) := by
+      simp only [zpow_neg₀ hq, zpow_natCast₀]
     rw [e, padicValRat.inv (pow_ne_zero k hq), padicValRat.pow hq]
     ring
 
 /-- A rewrite lemma for `padicValRat p (q / r)` with conditions `q ≠ 0`, `r ≠ 0`. -/
 protected theorem div {q r : ℚ} (hq : q ≠ 0) (hr : r ≠ 0) :
-    padicValRat p (q / r) (hq := div_ne_zero hq hr) = padicValRat p q - padicValRat p r := by
-  have e : padicValRat p (q / r) (hq := div_ne_zero hq hr) =
-      padicValRat p (q * r⁻¹) (hq := mul_ne_zero hq (inv_ne_zero hr)) := by
-    simp only [div_eq_mul_inv]
-  rw [e, padicValRat.mul hq (inv_ne_zero hr), padicValRat.inv hr, sub_eq_add_neg]
+    padicValRat p (q / r) (hq := div_ne_zero hq) = padicValRat p q - padicValRat p r := by
+  have hr' : r⁻¹ ≠ 0 := inv_ne_zero
+  have e : padicValRat p (q / r) (hq := div_ne_zero hq) =
+      padicValRat p (q * r⁻¹) (hq := mul_ne_zero hq hr') := by
+    simp only [div_eq_mul_inv₀]
+  rw [e, padicValRat.mul hq hr', padicValRat.inv hr, sub_eq_add_neg]
 
 /-- A condition for `padicValRat p (n₁ / d₁) ≤ padicValRat p (n₂ / d₂)`, in terms of
 divisibility by `p^n`. -/
 theorem padicValRat_le_padicValRat_iff {n₁ n₂ d₁ d₂ : ℤ} (hn₁ : n₁ ≠ 0) (hn₂ : n₂ ≠ 0)
     (hd₁ : d₁ ≠ 0) (hd₂ : d₂ ≠ 0) :
-    padicValRat p (n₁ /. d₁) (hq := Rat.divInt_ne_zero_of_ne_zero hn₁ hd₁) ≤
-        padicValRat p (n₂ /. d₂) (hq := Rat.divInt_ne_zero_of_ne_zero hn₂ hd₂) ↔
+    padicValRat p (n₁ / d₁) (hq := div_ne_zero (Int.cast_ne_zero.2 hn₁)) ≤
+        padicValRat p (n₂ / d₂) (hq := div_ne_zero (Int.cast_ne_zero.2 hn₂)) ↔
       ∀ n : ℕ, (p : ℤ) ^ n ∣ n₁ * d₂ → (p : ℤ) ^ n ∣ n₂ * d₁ := by
   have hf1 : FiniteMultiplicity (p : ℤ) (n₁ * d₂) := finite_int_prime_iff.2 (mul_ne_zero hn₁ hd₂)
   have hf2 : FiniteMultiplicity (p : ℤ) (n₂ * d₁) := finite_int_prime_iff.2 (mul_ne_zero hn₂ hd₁)
   have hp' : Prime (p : ℤ) := Nat.prime_iff_prime_int.1 hp.1
-  rw [padicValRat.defn p (Rat.divInt_ne_zero_of_ne_zero hn₁ hd₁) rfl,
-    padicValRat.defn p (Rat.divInt_ne_zero_of_ne_zero hn₂ hd₂) rfl, sub_le_iff_le_add',
-    ← add_sub_assoc, le_sub_iff_add_le]
+  rw [padicValRat.defn p (q := (n₁ : ℚ) / d₁) (div_ne_zero (Int.cast_ne_zero.2 hn₁)) rfl,
+    padicValRat.defn p (q := (n₂ : ℚ) / d₂) (div_ne_zero (Int.cast_ne_zero.2 hn₂)) rfl,
+    sub_le_iff_le_add', ← add_sub_assoc, le_sub_iff_add_le]
   norm_cast
   rw [← multiplicity_mul hp' hf1, add_comm, ← multiplicity_mul hp' hf2,
     hf1.multiplicity_le_multiplicity_iff hf2]
@@ -332,18 +330,29 @@ theorem le_padicValRat_add_of_le {q r : ℚ} (hq : q ≠ 0) (hr : r ≠ 0) (hqr 
   have hqd : (q.den : ℤ) ≠ 0 := mod_cast Rat.den_nz _
   have hrn : r.num ≠ 0 := Rat.num_ne_zero.2 hr
   have hrd : (r.den : ℤ) ≠ 0 := mod_cast Rat.den_nz _
-  have hqreq : q + r = (q.num * r.den + q.den * r.num) /. (q.den * r.den) := Rat.add_num_den _ _
-  have hqrd : q.num * r.den + q.den * r.num ≠ 0 := Rat.mk_num_ne_zero_of_ne_zero hqr hqreq
-  have hq' : q = q.num /. q.den := q.num_divInt_den.symm
-  have hr' : r = r.num /. r.den := r.num_divInt_den.symm
-  have key : padicValRat p (q.num /. q.den) (hq := hq' ▸ hq) ≤
-      padicValRat p ((q.num * r.den + q.den * r.num) /. (q.den * r.den)) (hq := hqreq ▸ hqr) := by
+  have hqrd' : ((q.den * r.den : ℤ) : ℚ) ≠ 0 := mod_cast mul_ne_zero q.den_nz r.den_nz
+  have hqreq : q + r = ((q.num * r.den + q.den * r.num : ℤ) : ℚ) / ((q.den * r.den : ℤ) : ℚ) := by
+    rw [eq_div_iff]
+    push_cast
+    rw [add_mul, ← mul_assoc, Rat.mul_den_eq_num, mul_left_comm, Rat.mul_den_eq_num]
+  have hqrd : q.num * r.den + q.den * r.num ≠ 0 := by
+    have h0 := hqr
+    rw [hqreq] at h0
+    exact_mod_cast div_ne_zero_iff.1 h0
+  have hq' : q = (q.num : ℚ) / ((q.den : ℤ) : ℚ) := by
+    rw [eq_div_iff, Int.cast_natCast, Rat.mul_den_eq_num]
+  have key : padicValRat p ((q.num : ℚ) / ((q.den : ℤ) : ℚ))
+        (hq := div_ne_zero (Int.cast_ne_zero.2 hqn)) ≤
+      padicValRat p (((q.num * r.den + q.den * r.num : ℤ) : ℚ) / ((q.den * r.den : ℤ) : ℚ))
+        (hq := div_ne_zero (Int.cast_ne_zero.2 hqrd)) := by
     rw [padicValRat_le_padicValRat_iff hqn hqrd hqd (mul_ne_zero hqd hrd), ←
       emultiplicity_le_emultiplicity_iff, mul_left_comm,
       emultiplicity_mul (Nat.prime_iff_prime_int.1 hp.1), add_mul]
-    have h' : padicValRat p (q.num /. q.den) (hq := hq' ▸ hq) ≤
-        padicValRat p (r.num /. r.den) (hq := hr' ▸ hr) := by
-      convert h using 2 <;> simp
+    have h' : padicValRat p ((q.num : ℚ) / ((q.den : ℤ) : ℚ))
+          (hq := div_ne_zero (Int.cast_ne_zero.2 hqn)) ≤
+        padicValRat p ((r.num : ℚ) / ((r.den : ℤ) : ℚ))
+          (hq := div_ne_zero (Int.cast_ne_zero.2 hrn)) := by
+      convert h using 2 <;> simp [Rat.num_div_den]
     rw [padicValRat_le_padicValRat_iff hqn hrn hqd hrd, ←
       emultiplicity_le_emultiplicity_iff] at h'
     calc
@@ -395,8 +404,7 @@ lemma lt_add_of_lt {q r₁ r₂ : ℚ} (hq : q ≠ 0) (hr₁ : r₁ ≠ 0) (hr�
   lt_of_lt_of_le (lt_min hval₁ hval₂) (padicValRat.min_le_padicValRat_add hr₁ hr₂ hqr)
 
 lemma self_pow_inv (r : ℕ) :
-    padicValRat p ((p : ℚ) ^ r)⁻¹ (hq := inv_ne_zero (pow_ne_zero r (mod_cast hp.out.ne_zero))) =
-      -r := by
+    padicValRat p ((p : ℚ) ^ r)⁻¹ (hq := inv_ne_zero) = -r := by
   have hp0 : (p : ℚ) ≠ 0 := mod_cast hp.out.ne_zero
   rw [padicValRat.inv (pow_ne_zero r hp0), neg_inj, padicValRat.pow hp0]
   simp [padicValRat.self hp.out.one_lt]

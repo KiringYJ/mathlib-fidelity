@@ -548,7 +548,7 @@ variable [AddCommGroup E] [AddCommGroup F] [Module 𝕜 E] [Module 𝕜 F] {s : 
 /-- Alternative definition of set convexity, using division. -/
 theorem convex_iff_div :
     Convex 𝕜 s ↔ ∀ ⦃x⦄, x ∈ s → ∀ ⦃y⦄, y ∈ s →
-      ∀ ⦃a b : 𝕜⦄, 0 ≤ a → 0 ≤ b → 0 < a + b → (a / (a + b)) • x + (b / (a + b)) • y ∈ s :=
+      ∀ ⦃a b : 𝕜⦄, 0 ≤ a → 0 ≤ b → ∀ _ : 0 < a + b, (a / (a + b)) • x + (b / (a + b)) • y ∈ s :=
   forall₂_congr fun _ _ => starConvex_iff_div
 
 theorem Convex.mem_smul_of_zero_mem (h : Convex 𝕜 s) {x : E} (zero_mem : (0 : E) ∈ s) (hx : x ∈ s)

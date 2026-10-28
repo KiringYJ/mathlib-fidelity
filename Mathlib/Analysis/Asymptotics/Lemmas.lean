@@ -163,12 +163,17 @@ theorem isBigO_const_iff {c : F''} : (f'' =O[l] fun _x => c) ↔
   rcases eq_or_ne c 0 with (hc | hc)
   exacts [(hcf hc).trans_isBigO (isBigO_zero _ _), hf.isBigO_const hc]
 
+/-- The quotient `‖f x‖ / ‖g'' x‖` is taken on the subtype `{x // g'' x ≠ 0}` where it is defined,
+with the filter `comap Subtype.val l`. -/
 theorem isBigO_iff_isBoundedUnder_le_div (h : ∀ᶠ x in l, g'' x ≠ 0) :
-    f =O[l] g'' ↔ IsBoundedUnder (· ≤ ·) l fun x => ‖f x‖ / ‖g'' x‖ := by
-  simp only [isBigO_iff, IsBoundedUnder, IsBounded, eventually_map]
-  exact
-    exists_congr fun c =>
-      eventually_congr <| h.mono fun x hx => (div_le_iff₀ <| norm_pos_iff.2 hx).symm
+    f =O[l] g'' ↔ IsBoundedUnder (· ≤ ·) (comap Subtype.val l)
+      fun x : {x // g'' x ≠ 0} => Checked.div ‖f x‖ ‖g'' x‖ (norm_ne_zero_iff.mpr x.2).isUnit := by
+  simp only [isBigO_iff, IsBoundedUnder, IsBounded, eventually_map, eventually_comap]
+  refine exists_congr fun c => ⟨fun hc => hc.mono fun x hx y hy => ?_, fun hc => ?_⟩
+  · subst hy
+    exact (div_le_iff₀ (norm_pos_iff.2 y.2)).2 hx
+  · filter_upwards [hc, h] with x hx hgx
+    exact (div_le_iff₀ (norm_pos_iff.2 hgx)).1 (hx ⟨x, hgx⟩ rfl)
 
 /-- `(fun x ↦ c) =O[l] f` if and only if `f` is bounded away from zero. -/
 theorem isBigO_const_left_iff_pos_le_norm {c : E''} (hc : c ≠ 0) :
@@ -180,7 +185,7 @@ theorem isBigO_const_left_iff_pos_le_norm {c : E''} (hc : c ≠ 0) :
     exact hC.bound.mono fun x => (div_le_iff₀' hC₀).2
   · rintro ⟨b, hb₀, hb⟩
     refine IsBigO.of_bound (‖c‖ / b) (hb.mono fun x hx => ?_)
-    rw [div_mul_eq_mul_div, mul_div_assoc]
+    rw [div_mul_eq_mul_div₀, mul_div_assoc₀]
     exact le_mul_of_one_le_right (norm_nonneg _) ((one_le_div hb₀).2 hx)
 
 theorem IsBigO.trans_tendsto (hfg : f'' =O[l] g'') (hg : Tendsto g'' l (𝓝 0)) :
@@ -305,14 +310,14 @@ theorem IsBigO.smul_isLittleO (h₁ : k₁ =O[l] k₂) (h₂ : f' =o[l] g') :
   simp only [IsLittleO_def] at *
   intro c cpos
   rcases h₁.exists_pos with ⟨c', c'pos, hc'⟩
-  exact (hc'.smul (h₂ (div_pos cpos c'pos))).congr_const (mul_div_cancel₀ _ (ne_of_gt c'pos))
+  exact (hc'.smul (h₂ (div_pos cpos c'pos))).congr_const (mul_div_cancel₀ _)
 
 theorem IsLittleO.smul_isBigO (h₁ : k₁ =o[l] k₂) (h₂ : f' =O[l] g') :
     (fun x => k₁ x • f' x) =o[l] fun x => k₂ x • g' x := by
   simp only [IsLittleO_def] at *
   intro c cpos
   rcases h₂.exists_pos with ⟨c', c'pos, hc'⟩
-  exact ((h₁ (div_pos cpos c'pos)).smul hc').congr_const (div_mul_cancel₀ _ (ne_of_gt c'pos))
+  exact ((h₁ (div_pos cpos c'pos)).smul hc').congr_const (div_mul_cancel₀ _)
 
 theorem IsLittleO.smul (h₁ : k₁ =o[l] k₂) (h₂ : f' =o[l] g') :
     (fun x => k₁ x • f' x) =o[l] fun x => k₂ x • g' x :=
@@ -369,30 +374,54 @@ theorem IsLittleO.finsetProd {R 𝕜 : Type*} [SeminormedCommRing R] [NormedFiel
 
 end Prod
 
-/-! ### Relation between `f = o(g)` and `f / g → 0` -/
+/-! ### Relation between `f = o(g)` and `f / g → 0`
 
-theorem IsLittleO.tendsto_div_nhds_zero {f g : α → 𝕜} (h : f =o[l] g) :
-    Tendsto (fun x => f x / g x) l (𝓝 0) :=
-  (isLittleO_one_iff 𝕜).mp <| by
-    calc
-      (fun x => f x / g x) =o[l] fun x => g x / g x := by
-        simpa only [div_eq_mul_inv] using h.mul_isBigO (isBigO_refl _ _)
-      _ =O[l] fun _x => (1 : 𝕜) := isBigO_of_le _ fun x => by simp [div_self_le_one]
+The quotient `fun x ↦ f x / g x` is a function on the whole index type `α`, so the one-way lemmas
+take the invertibility of every value `g x` as evidence, unified from the terms. When `g` vanishes
+somewhere, apply them on the subtype `{x // g x ≠ 0}` with the filter `comap Subtype.val l`; the
+characterizations `isLittleO_iff_tendsto'` and `isLittleO_iff_tendsto` are stated that way. For a
+denominator that does not vanish, `Filter.tendsto_comap_val_iff` converts their subtype form to a
+function on `α`. -/
+
+theorem IsLittleO.tendsto_div_nhds_zero {f g : α → 𝕜} {hg : ∀ x, IsUnit (g x)} (h : f =o[l] g) :
+    Tendsto (fun x => Checked.div (f x) (g x) (hg x)) l (𝓝 0) := by
+  have h₁ := h.mul_isBigO (isBigO_refl (fun x => Checked.inv (g x) (hg x)) l)
+  exact (isLittleO_one_iff 𝕜).mp
+    (h₁.congr (fun x => (div_eq_mul_inv₀ _ _).symm) fun x => mul_inv_cancel₀)
 
 theorem IsLittleO.tendsto_inv_smul_nhds_zero [Module 𝕜 E'] [NormSMulClass 𝕜 E']
-    {f : α → E'} {g : α → 𝕜}
-    {l : Filter α} (h : f =o[l] g) : Tendsto (fun x => (g x)⁻¹ • f x) l (𝓝 0) := by
-  simpa only [div_eq_inv_mul, ← norm_inv, ← norm_smul, ← tendsto_zero_iff_norm_tendsto_zero] using
-    h.norm_norm.tendsto_div_nhds_zero
+    {f : α → E'} {g : α → 𝕜} {hg : ∀ x, IsUnit (g x)}
+    {l : Filter α} (h : f =o[l] g) :
+    Tendsto (fun x => Checked.inv (g x) (hg x) • f x) l (𝓝 0) := by
+  have hg' : ∀ x, IsUnit ‖g x‖ := fun x => (norm_ne_zero_iff.mpr (hg x).ne_zero).isUnit
+  have h₁ := h.norm_norm.tendsto_div_nhds_zero (hg := hg')
+  rw [tendsto_zero_iff_norm_tendsto_zero]
+  refine h₁.congr fun x => ?_
+  have hinv : ‖Checked.inv (g x) (hg x)‖ = Checked.inv ‖g x‖ (hg' x) := map_inv₀ normHom (g x)
+  rw [norm_smul, hinv, div_eq_inv_mul₀]
 
+/-- The quotient `f x / g x` is taken on the subtype `{x // g x ≠ 0}` where it is defined, with the
+filter `comap Subtype.val l`; at the zeros of `g`, the hypothesis `hgf` gives `f x = 0`. -/
 theorem isLittleO_iff_tendsto' {f g : α → 𝕜} (hgf : ∀ᶠ x in l, g x = 0 → f x = 0) :
-    f =o[l] g ↔ Tendsto (fun x => f x / g x) l (𝓝 0) :=
-  ⟨IsLittleO.tendsto_div_nhds_zero, fun h =>
-    (((isLittleO_one_iff _).mpr h).mul_isBigO (isBigO_refl g l)).congr'
-      (hgf.mono fun _x => div_mul_cancel_of_imp) (Eventually.of_forall fun _x => one_mul _)⟩
+    f =o[l] g ↔ Tendsto (fun x : {x // g x ≠ 0} => Checked.div (f x) (g x) x.2.isUnit)
+      (comap Subtype.val l) (𝓝 0) := by
+  refine ⟨fun h => (h.comp_tendsto tendsto_comap).tendsto_div_nhds_zero (hg := fun x => x.2.isUnit),
+    fun h => isLittleO_iff.2 fun c hc => ?_⟩
+  have h' := NormedAddGroup.tendsto_nhds_zero.1 h c hc
+  rw [eventually_comap] at h'
+  filter_upwards [h', hgf] with x hx hgfx
+  by_cases hgx : g x = 0
+  · simp [hgx, hgfx hgx]
+  · have hlt := hx ⟨x, hgx⟩ rfl
+    rw [show ‖f x / g x‖ = ‖f x‖ / ‖g x‖ from map_div₀ normHom (f x) (g x),
+      div_lt_iff₀ (norm_pos_iff.2 hgx)] at hlt
+    exact hlt.le
 
+/-- The quotient `f x / g x` is taken on the subtype `{x // g x ≠ 0}` where it is defined, with the
+filter `comap Subtype.val l`; at the zeros of `g`, the hypothesis `hgf` gives `f x = 0`. -/
 theorem isLittleO_iff_tendsto {f g : α → 𝕜} (hgf : ∀ x, g x = 0 → f x = 0) :
-    f =o[l] g ↔ Tendsto (fun x => f x / g x) l (𝓝 0) :=
+    f =o[l] g ↔ Tendsto (fun x : {x // g x ≠ 0} => Checked.div (f x) (g x) x.2.isUnit)
+      (comap Subtype.val l) (𝓝 0) :=
   isLittleO_iff_tendsto' (Eventually.of_forall hgf)
 
 alias ⟨_, isLittleO_of_tendsto'⟩ := isLittleO_iff_tendsto'
@@ -443,20 +472,24 @@ section div_tendsto_infty
 variable {𝕜 : Type*} [NormedField 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [OrderTopology 𝕜]
   {l : Filter α} {f g : α → 𝕜}
 
-theorem IsLittleO.of_tendsto_div_atTop (h : Tendsto (fun x ↦ g x / f x) l atTop) : f =o[l] g := by
+theorem IsLittleO.of_tendsto_div_atTop {hf : ∀ x, IsUnit (f x)}
+    (h : Tendsto (fun x ↦ Checked.div (g x) (f x) (hf x)) l atTop) : f =o[l] g := by
   apply Asymptotics.isLittleO_of_tendsto'
   · apply (Filter.Tendsto.eventually_ge_atTop h 1).mono
     intro x h h0
     simp only [h0, zero_div] at h
     grind
-  · convert! Tendsto.comp tendsto_inv_atTop_zero h
-    simp
+  · have h' : Tendsto (fun x : {x // g x ≠ 0} ↦ Checked.div (g x) (f x) (hf x))
+        (comap Subtype.val l) atTop := h.comp tendsto_comap
+    refine (h'.fun_inv_tendsto_atTop (h0 := fun x => x.2.isUnit.div₀ (hf x))).congr fun x => ?_
+    exact inv_div₀
 
-theorem IsLittleO.of_tendsto_div_atBot (h : Tendsto (fun x ↦ g x / f x) l atBot) : f =o[l] g := by
-  refine IsLittleO.of_neg_left (IsLittleO.of_tendsto_div_atTop ?_)
+theorem IsLittleO.of_tendsto_div_atBot {hf : ∀ x, IsUnit (f x)}
+    (h : Tendsto (fun x ↦ Checked.div (g x) (f x) (hf x)) l atBot) : f =o[l] g := by
+  refine IsLittleO.of_neg_left (IsLittleO.of_tendsto_div_atTop (hf := fun x => (hf x).neg) ?_)
   rw [← tendsto_neg_atBot_iff]
-  convert h
-  simp [div_neg_eq_neg_div]
+  convert h using 2 with x
+  simp [div_neg₀]
 
 end div_tendsto_infty
 
@@ -480,11 +513,21 @@ theorem isBigOWith_of_eq_mul {u v : α → R} (φ : α → R) (hφ : ∀ᶠ x in
 
 theorem isBigOWith_iff_exists_eq_mul (hc : 0 ≤ c) :
     IsBigOWith c l u v ↔ ∃ φ : α → 𝕜, (∀ᶠ x in l, ‖φ x‖ ≤ c) ∧ u =ᶠ[l] φ * v := by
+  classical
   constructor
   · intro h
-    use fun x => u x / v x
-    refine ⟨Eventually.mono h.bound fun y hy => ?_, h.eventually_mul_div_cancel.symm⟩
-    simpa using div_le_of_le_mul₀ (norm_nonneg _) hc hy
+    refine ⟨fun x => if hv : v x = 0 then 0 else u x / v x,
+      h.bound.mono fun y hy => ?_, h.bound.mono fun y hy => ?_⟩
+    · by_cases hv : v y = 0
+      · simp [hv, hc]
+      · dsimp only
+        rw [dite_eq_right hv, show ‖u y / v y‖ = ‖u y‖ / ‖v y‖ from map_div₀ normHom (u y) (v y),
+          div_le_iff₀ (norm_pos_iff.2 hv)]
+        exact hy
+    · by_cases hv : v y = 0
+      · have hu : u y = 0 := by simpa [hv] using hy
+        simp [hv, hu]
+      · simp [hv]
   · rintro ⟨φ, hφ, h⟩
     exact isBigOWith_of_eq_mul φ hφ h
 
@@ -506,8 +549,23 @@ alias ⟨IsBigO.exists_eq_mul, _⟩ := isBigO_iff_exists_eq_mul
 
 theorem isLittleO_iff_exists_eq_mul :
     u =o[l] v ↔ ∃ φ : α → 𝕜, Tendsto φ l (𝓝 0) ∧ u =ᶠ[l] φ * v := by
+  classical
   constructor
-  · exact fun h => ⟨fun x => u x / v x, h.tendsto_div_nhds_zero, h.eventually_mul_div_cancel.symm⟩
+  · intro h
+    refine ⟨fun x => if hv : v x = 0 then 0 else u x / v x, ?_, ?_⟩
+    · refine NormedAddGroup.tendsto_nhds_zero.2 fun ε hε => ?_
+      filter_upwards [h.bound (half_pos hε)] with y hy
+      by_cases hv : v y = 0
+      · simp [hv, hε]
+      · rw [dite_eq_right hv, show ‖u y / v y‖ = ‖u y‖ / ‖v y‖ from map_div₀ normHom (u y) (v y),
+          div_lt_iff₀ (norm_pos_iff.2 hv)]
+        calc ‖u y‖ ≤ ε / 2 * ‖v y‖ := hy
+          _ < ε * ‖v y‖ := mul_lt_mul_of_pos_right (half_lt_self hε) (norm_pos_iff.2 hv)
+    · filter_upwards [h.bound zero_lt_one] with y hy
+      by_cases hv : v y = 0
+      · have hu : u y = 0 := by simpa [hv] using hy
+        simp [hv, hu]
+      · simp [hv]
   · simp only [IsLittleO_def]
     rintro ⟨φ, hφ, huvφ⟩ c hpos
     rw [NormedAddGroup.tendsto_nhds_zero] at hφ
@@ -519,26 +577,40 @@ end ExistsMulEq
 
 /-! ### Miscellaneous lemmas -/
 
-theorem div_isBoundedUnder_of_isBigO {α : Type*} {l : Filter α} {f g : α → 𝕜} (h : f =O[l] g) :
-    IsBoundedUnder (· ≤ ·) l fun x => ‖f x / g x‖ := by
-  obtain ⟨c, h₀, hc⟩ := h.exists_nonneg
+theorem div_isBoundedUnder_of_isBigO {α : Type*} {l : Filter α} {f g : α → 𝕜}
+    {hg : ∀ x, IsUnit (g x)} (h : f =O[l] g) :
+    IsBoundedUnder (· ≤ ·) l fun x => ‖Checked.div (f x) (g x) (hg x)‖ := by
+  obtain ⟨c, -, hc⟩ := h.exists_nonneg
   refine ⟨c, eventually_map.2 (hc.bound.mono fun x hx => ?_)⟩
-  rw [norm_div]
-  exact div_le_of_le_mul₀ (norm_nonneg _) h₀ hx
+  have hgx : g x ≠ 0 := (hg x).ne_zero
+  dsimp only
+  rw [show ‖f x / g x‖ = ‖f x‖ / ‖g x‖ from map_div₀ normHom (f x) (g x),
+    div_le_iff₀ (norm_pos_iff.2 hgx)]
+  exact hx
 
+/-- The quotient `f x / g x` is taken on the subtype `{x // g x ≠ 0}` where it is defined, with the
+filter `comap Subtype.val l`; at the zeros of `g`, the hypothesis `hgf` gives `f x = 0`. -/
 theorem isBigO_iff_div_isBoundedUnder {α : Type*} {l : Filter α} {f g : α → 𝕜}
     (hgf : ∀ᶠ x in l, g x = 0 → f x = 0) :
-    f =O[l] g ↔ IsBoundedUnder (· ≤ ·) l fun x => ‖f x / g x‖ := by
-  refine ⟨div_isBoundedUnder_of_isBigO, fun h => ?_⟩
+    f =O[l] g ↔ IsBoundedUnder (· ≤ ·) (comap Subtype.val l)
+      fun x : {x // g x ≠ 0} => ‖Checked.div (f x) (g x) x.2.isUnit‖ := by
+  refine ⟨fun h => div_isBoundedUnder_of_isBigO (hg := fun x => x.2.isUnit)
+    (h.comp_tendsto tendsto_comap), fun h => ?_⟩
   obtain ⟨c, hc⟩ := h
-  simp only [eventually_map, norm_div] at hc
+  simp only [eventually_map, eventually_comap] at hc
   refine IsBigO.of_bound c (hc.mp <| hgf.mono fun x hx₁ hx₂ => ?_)
   by_cases hgx : g x = 0
   · simp [hx₁ hgx, hgx]
-  · exact (div_le_iff₀ (norm_pos_iff.2 hgx)).mp hx₂
+  · have hle := hx₂ ⟨x, hgx⟩ rfl
+    rw [show ‖f x / g x‖ = ‖f x‖ / ‖g x‖ from map_div₀ normHom (f x) (g x)] at hle
+    exact (div_le_iff₀ (norm_pos_iff.2 hgx)).mp hle
 
+/-- The quotient `f x / g x` is taken on the subtype `{x // g x ≠ 0}` where it is defined, with the
+filter `comap Subtype.val l`; at the zeros of `g`, the hypothesis `hgf` gives `f x = 0`. -/
 theorem isBigO_of_div_tendsto_nhds {α : Type*} {l : Filter α} {f g : α → 𝕜}
-    (hgf : ∀ᶠ x in l, g x = 0 → f x = 0) (c : 𝕜) (H : Filter.Tendsto (f / g) l (𝓝 c)) :
+    (hgf : ∀ᶠ x in l, g x = 0 → f x = 0) (c : 𝕜)
+    (H : Tendsto (fun x : {x // g x ≠ 0} => Checked.div (f x) (g x) x.2.isUnit)
+      (comap Subtype.val l) (𝓝 c)) :
     f =O[l] g :=
   (isBigO_iff_div_isBoundedUnder hgf).2 <| H.norm.isBoundedUnder_le
 
@@ -550,23 +622,24 @@ theorem IsLittleO.tendsto_zero_of_tendsto {u : α → E'} {v : α → 𝕜} {l :
   exact huv.trans_isBigO (hv.isBigO_one 𝕜)
 
 theorem isBigOWith_of_div_tendsto_nhds {C : ℝ} {a : 𝕜} {f g : α → 𝕜} {l : Filter α}
-    (h : Tendsto (fun x ↦ g x / f x) l (𝓝 a)) (hC : 0 < C) (ha : C⁻¹ < ‖a‖) :
+    {hf : ∀ x, IsUnit (f x)} (h : Tendsto (fun x ↦ Checked.div (g x) (f x) (hf x)) l (𝓝 a))
+    (hC : 0 < C) (ha : C⁻¹ < ‖a‖) :
     IsBigOWith C l f g := by
   simp only [IsBigOWith]
   apply (((continuous_norm.tendsto _).comp h).eventually_const_le ha).mono
   intro x hx
-  simp only [Function.comp_apply, norm_div] at hx
-  by_cases hf : f x = 0
-  · simp [hf] at hx
-    linarith
-  rw [le_div_iff₀ (by positivity)] at hx
-  field_simp at hx
+  simp only [Function.comp_apply] at hx
+  have hfx : f x ≠ 0 := (hf x).ne_zero
+  rw [show ‖g x / f x‖ = ‖g x‖ / ‖f x‖ from map_div₀ normHom (g x) (f x),
+    le_div_iff₀ (norm_pos_iff.2 hfx), inv_mul_le_iff₀ hC] at hx
   exact hx
 
 theorem isBigO_of_div_tendsto_nhds_of_ne_zero {l : Filter α} {f g : α → 𝕜}
-    {a : 𝕜} (h : Tendsto (fun x ↦ g x / f x) l (𝓝 a)) (ha : a ≠ 0) :
+    {a : 𝕜} {hf : ∀ x, IsUnit (f x)} (h : Tendsto (fun x ↦ Checked.div (g x) (f x) (hf x)) l (𝓝 a))
+    (ha : a ≠ 0) :
     f =O[l] g := by
-  obtain ⟨C, hC, ha⟩ : ∃ C, 0 < C ∧ C⁻¹ < ‖a‖ := ⟨‖a‖⁻¹ + 1, by positivity, by field_simp; simpa⟩
+  obtain ⟨C, hC, ha⟩ : ∃ (C : ℝ) (_ : 0 < C), C⁻¹ < ‖a‖ :=
+    ⟨‖a‖⁻¹ + 1, by positivity, inv_lt_of_inv_lt₀ (norm_pos_iff.2 ha) (lt_add_one _)⟩
   simp only [IsBigO]
   exact ⟨C, isBigOWith_of_div_tendsto_nhds h hC ha⟩
 
@@ -613,9 +686,9 @@ theorem IsBigOWith.right_le_sub_of_lt_one {f₁ f₂ : α → E'} (h : IsBigOWit
   IsBigOWith.of_bound <|
     mem_of_superset h.bound fun x hx => by
       simp only [mem_ofPred_eq] at hx ⊢
-      rw [mul_comm, one_div, ← div_eq_mul_inv, le_div_iff₀, mul_sub, mul_one, mul_comm]
-      · exact le_trans (sub_le_sub_left hx _) (norm_sub_norm_le _ _)
-      · exact sub_pos.2 hc
+      rw [mul_comm, one_div₀, ← div_eq_mul_inv₀, le_div_iff₀ (sub_pos.2 hc), mul_sub, mul_one,
+        mul_comm]
+      exact le_trans (sub_le_sub_left hx _) (norm_sub_norm_le _ _)
 
 theorem IsBigOWith.right_le_add_of_lt_one {f₁ f₂ : α → E'} (h : IsBigOWith c l f₁ f₂) (hc : c < 1) :
     IsBigOWith (1 / (1 - c)) l f₂ fun x => f₁ x + f₂ x :=
@@ -638,13 +711,20 @@ theorem IsLittleO.right_isBigO_add' {f₁ f₂ : α → E'} (h : f₁ =o[l] f₂
 `‖f x‖ ≤ C * ‖g x‖` whenever `g x ≠ 0`. -/
 theorem bound_of_isBigO_cofinite (h : f =O[cofinite] g'') :
     ∃ C > 0, ∀ ⦃x⦄, g'' x ≠ 0 → ‖f x‖ ≤ C * ‖g'' x‖ := by
+  classical
   rcases h.exists_pos with ⟨C, C₀, hC⟩
   rw [IsBigOWith_def, eventually_cofinite] at hC
-  rcases (hC.toFinset.image fun x => ‖f x‖ / ‖g'' x‖).exists_le with ⟨C', hC'⟩
-  have : ∀ x, C * ‖g'' x‖ < ‖f x‖ → ‖f x‖ / ‖g'' x‖ ≤ C' := by simpa using hC'
+  -- The ratio is only consulted where `g''` does not vanish.
+  rcases (hC.toFinset.image fun x => if hx : g'' x = 0 then (0 : ℝ) else ‖f x‖ / ‖g'' x‖).exists_le
+    with ⟨C', hC'⟩
+  have : ∀ x, C * ‖g'' x‖ < ‖f x‖ →
+      (if hx : g'' x = 0 then (0 : ℝ) else ‖f x‖ / ‖g'' x‖) ≤ C' := by simpa using hC'
   refine ⟨max C C', lt_max_iff.2 (Or.inl C₀), fun x h₀ => ?_⟩
   rw [max_mul_of_nonneg _ _ (norm_nonneg _), le_max_iff, or_iff_not_imp_left, not_le]
-  exact fun hx => (div_le_iff₀ (norm_pos_iff.2 h₀)).1 (this _ hx)
+  intro hx
+  have hr := this _ hx
+  rw [dite_eq_right h₀] at hr
+  exact (div_le_iff₀ (norm_pos_iff.2 h₀)).1 hr
 
 theorem isBigO_cofinite_iff (h : ∀ x, g'' x = 0 → f'' x = 0) :
     f'' =O[cofinite] g'' ↔ ∃ C, ∀ x, ‖f'' x‖ ≤ C * ‖g'' x‖ := by
@@ -715,20 +795,40 @@ theorem isBigO_atTop_iff_eventually_exists_pos {α : Type*}
     f =O[atTop] g ↔ ∀ᶠ n₀ in atTop, ∃ c > 0, ∀ n ≥ n₀, c * ‖f n‖ ≤ ‖g n‖ := by
   simp_rw [isBigO_iff'', ← exists_prop, Subtype.exists', exists_eventually_atTop]
 
+/-- The quotient `h x / f x` is taken on the subtype `{x // f x ≠ 0}` where it is defined, with the
+filter `comap Subtype.val l`. -/
 lemma isBigOWith_mul_iff_isBigOWith_div {f g h : α → 𝕜} {c : ℝ} (hf : ∀ᶠ x in l, f x ≠ 0) :
-    IsBigOWith c l (fun x ↦ f x * g x) h ↔ IsBigOWith c l g (fun x ↦ h x / f x) := by
-  rw [isBigOWith_iff, isBigOWith_iff]
-  refine ⟨fun h ↦ ?_, fun h ↦ ?_⟩ <;>
-  · refine h.congr <| Eventually.mp hf <| Eventually.of_forall fun x hx ↦ ?_
-    rw [norm_mul, norm_div, ← mul_div_assoc, le_div_iff₀' (norm_pos_iff.mpr hx)]
+    IsBigOWith c l (fun x ↦ f x * g x) h ↔
+      IsBigOWith c (comap Subtype.val l) (fun x : {x // f x ≠ 0} ↦ g x)
+        (fun x ↦ Checked.div (h x) (f x) x.2.isUnit) := by
+  rw [isBigOWith_iff, isBigOWith_iff, eventually_comap]
+  refine ⟨fun H ↦ H.mono fun x hx y hy ↦ ?_, fun H ↦ ?_⟩
+  · subst hy
+    have hy2 : f y ≠ 0 := y.2
+    rw [show ‖h y / f y‖ = ‖h y‖ / ‖f y‖ from map_div₀ normHom (h y) (f y), ← mul_div_assoc₀,
+      le_div_iff₀' (norm_pos_iff.mpr hy2), ← norm_mul]
+    exact hx
+  · filter_upwards [H, hf] with x hx hfx
+    have hle := hx ⟨x, hfx⟩ rfl
+    rw [show ‖h x / f x‖ = ‖h x‖ / ‖f x‖ from map_div₀ normHom (h x) (f x), ← mul_div_assoc₀,
+      le_div_iff₀' (norm_pos_iff.mpr hfx), ← norm_mul] at hle
+    exact hle
 
+/-- The quotient `h x / f x` is taken on the subtype `{x // f x ≠ 0}` where it is defined, with the
+filter `comap Subtype.val l`. -/
 lemma isBigO_mul_iff_isBigO_div {f g h : α → 𝕜} (hf : ∀ᶠ x in l, f x ≠ 0) :
-    (fun x ↦ f x * g x) =O[l] h ↔ g =O[l] (fun x ↦ h x / f x) := by
+    (fun x ↦ f x * g x) =O[l] h ↔
+      (fun x : {x // f x ≠ 0} ↦ g x) =O[comap Subtype.val l]
+        (fun x ↦ Checked.div (h x) (f x) x.2.isUnit) := by
   rw [isBigO_iff_isBigOWith, isBigO_iff_isBigOWith]
   simp [isBigOWith_mul_iff_isBigOWith_div hf]
 
+/-- The quotient `h x / f x` is taken on the subtype `{x // f x ≠ 0}` where it is defined, with the
+filter `comap Subtype.val l`. -/
 lemma isLittleO_mul_iff_isLittleO_div {f g h : α → 𝕜} (hf : ∀ᶠ x in l, f x ≠ 0) :
-    (fun x ↦ f x * g x) =o[l] h ↔ g =o[l] (fun x ↦ h x / f x) := by
+    (fun x ↦ f x * g x) =o[l] h ↔
+      (fun x : {x // f x ≠ 0} ↦ g x) =o[comap Subtype.val l]
+        (fun x ↦ Checked.div (h x) (f x) x.2.isUnit) := by
   rw [isLittleO_iff_forall_isBigOWith, isLittleO_iff_forall_isBigOWith]
   simp [isBigOWith_mul_iff_isBigOWith_div hf]
 
@@ -744,14 +844,24 @@ lemma isBigO_nat_atTop_induction {f : ℕ → E''} {g : ℕ → F''}
   rw [← eventually_forall_ge_atTop] at hrec
   obtain ⟨n₁, H₁, H₂⟩ := (eventually_ge_atTop n₀).and hrec |>.exists
   let ubounds := {C | ∀ m ∈ Finset.Icc n₀ n₁, ‖f m‖ ≤ C * ‖g m‖}
-  let C₁ := (Finset.Icc n₀ n₁).sup' (Finset.nonempty_Icc.mpr H₁) fun n => ‖f n‖ / ‖g n‖
+  classical
+  -- The ratio is only consulted where `g` does not vanish; where `g` vanishes, so does `f`.
+  have hr : ∀ m ∈ Finset.Icc n₀ n₁,
+      ‖f m‖ = (if hm : g m = 0 then (0 : ℝ) else ‖f m‖ / ‖g m‖) * ‖g m‖ := by
+    intro m hm
+    by_cases hm' : g m = 0
+    · simp [hm', h m (Finset.mem_Icc.1 hm).1 hm']
+    · rw [dite_eq_right hm', div_mul_cancel₀]
+  let C₁ := (Finset.Icc n₀ n₁).sup' (Finset.nonempty_Icc.mpr H₁)
+    fun n => if hn : g n = 0 then (0 : ℝ) else ‖f n‖ / ‖g n‖
   have C₁_mem : C₁ ∈ ubounds := by
     rw [Set.mem_ofPred]
     intro m hm
-    calc ‖f m‖ = (‖f m‖ / ‖g m‖) * ‖g m‖ := by by_cases hm' : g m = 0 <;> grind [norm_eq_zero]
+    calc ‖f m‖ = (if hm : g m = 0 then (0 : ℝ) else ‖f m‖ / ‖g m‖) * ‖g m‖ := hr m hm
       _ ≤ C₁ * ‖g m‖ := by
         gcongr
-        exact Finset.le_sup' (fun x => ‖f x‖ / ‖g x‖) (Finset.mem_def.mpr hm)
+        exact Finset.le_sup' (fun n => if hn : g n = 0 then (0 : ℝ) else ‖f n‖ / ‖g n‖)
+          (Finset.mem_def.mpr hm)
   refine ⟨max C₀ C₁, ?_⟩
   filter_upwards [eventually_ge_atTop n₁] with n hn
   induction n using Nat.strongRecOn with
@@ -871,7 +981,7 @@ variable [SeminormedAddGroup E] [Norm F]
 protected theorem isBigOWith_principal
     (hf : ContinuousOn f s) (hs : IsCompact s) (hc : ‖c‖ ≠ 0) :
     IsBigOWith (sSup (Norm.norm '' f '' s) / ‖c‖) (𝓟 s) f fun _ => c := by
-  rw [isBigOWith_principal, div_mul_cancel₀ _ hc]
+  rw [isBigOWith_principal, div_mul_cancel₀ _]
   exact fun x hx ↦ hs.image_of_continuousOn hf |>.image continuous_norm
    |>.isLUB_sSup (Set.image_nonempty.mpr <| Set.image_nonempty.mpr ⟨x, hx⟩)
    |>.left <| Set.mem_image_of_mem _ <| Set.mem_image_of_mem _ hx
@@ -886,22 +996,32 @@ section IsBigORev
 
 variable [NormedAddGroup E] [SeminormedAddGroup F]
 
+/-- The constant `‖c‖ / sInf (‖f ·‖ '' s)` exists because the infimum of the norms over the
+nonempty compact set `s` is attained, hence positive. -/
 protected theorem isBigOWith_rev_principal
-    (hf : ContinuousOn f s) (hs : IsCompact s) (hC : ∀ i ∈ s, f i ≠ 0) (c : F) :
-    IsBigOWith (‖c‖ / sInf (Norm.norm '' f '' s)) (𝓟 s) (fun _ => c) f := by
+    (hf : ContinuousOn f s) (hs : IsCompact s) (hne : s.Nonempty) (hC : ∀ i ∈ s, f i ≠ 0)
+    (c : F) :
+    IsBigOWith (Checked.div ‖c‖ (sInf (Norm.norm '' f '' s)) (by
+      obtain ⟨_, ⟨x, hx, rfl⟩, h⟩ :=
+        ((hs.image_of_continuousOn hf).image continuous_norm).sInf_mem ((hne.image f).image _)
+      rw [← h]
+      exact (norm_ne_zero_iff.mpr (hC x hx)).isUnit)) (𝓟 s) (fun _ => c) f := by
   refine isBigOWith_principal.mpr fun x hx ↦ ?_
-  rw [mul_comm_div]
+  rw [mul_comm_div₀]
   replace hs := hs.image_of_continuousOn hf |>.image continuous_norm
   have h_sInf := hs.isGLB_sInf <| Set.image_nonempty.mpr <| Set.image_nonempty.mpr ⟨x, hx⟩
-  refine le_mul_of_one_le_right (norm_nonneg c) <| (one_le_div ?_).mpr <|
+  obtain ⟨_, ⟨y, hy, hCy⟩, hnormCy⟩ := hs.sInf_mem h_sInf.nonempty
+  have hpos : 0 < sInf (Norm.norm '' f '' s) := by
+    rw [← hnormCy, ← hCy]
+    exact (norm_ne_zero_iff.mpr (hC y hy)).symm.lt_of_le (norm_nonneg _)
+  exact le_mul_of_one_le_right (norm_nonneg c) <| (one_le_div hpos).mpr <|
     h_sInf.1 <| Set.mem_image_of_mem _ <| Set.mem_image_of_mem _ hx
-  obtain ⟨_, ⟨x, hx, hCx⟩, hnormCx⟩ := hs.sInf_mem h_sInf.nonempty
-  rw [← hnormCx, ← hCx]
-  exact (norm_ne_zero_iff.mpr (hC x hx)).symm.lt_of_le (norm_nonneg _)
 
 protected theorem isBigO_rev_principal (hf : ContinuousOn f s)
-    (hs : IsCompact s) (hC : ∀ i ∈ s, f i ≠ 0) (c : F) : (fun _ => c) =O[𝓟 s] f :=
-  (hf.isBigOWith_rev_principal hs hC c).isBigO
+    (hs : IsCompact s) (hC : ∀ i ∈ s, f i ≠ 0) (c : F) : (fun _ => c) =O[𝓟 s] f := by
+  rcases s.eq_empty_or_nonempty with rfl | hne
+  · simp
+  · exact (hf.isBigOWith_rev_principal hs hne hC c).isBigO
 
 end IsBigORev
 

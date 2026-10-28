@@ -120,8 +120,12 @@ lemma aroots_quadratic_eq_pair_iff_of_ne_zero [CommRing T] [CommRing S] [IsDomai
 lemma roots_quadratic_eq_pair_iff_of_ne_zero' [Field R] {a b c x1 x2 : R} (ha : a ≠ 0) :
     (C a * X ^ 2 + C b * X + C c).roots = {x1, x2} ↔
       x1 + x2 = -b / a ∧ x1 * x2 = c / a := by
-  rw [roots_quadratic_eq_pair_iff_of_ne_zero ha]
-  grind
+  rw [roots_quadratic_eq_pair_iff_of_ne_zero ha, eq_div_iff, eq_div_iff]
+  constructor
+  · rintro ⟨h1, h2⟩
+    exact ⟨by rw [h1]; ring, by rw [h2]; ring⟩
+  · rintro ⟨h1, h2⟩
+    exact ⟨by rw [← neg_neg b, ← h1]; ring, by rw [← h2]; ring⟩
 
 /-- **Vieta's formula** for quadratics as an iff (`aroots, Field` version). -/
 lemma aroots_quadratic_eq_pair_iff_of_ne_zero' [CommRing T] [Field S] [Algebra T S] {a b c : T}

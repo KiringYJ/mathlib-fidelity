@@ -923,20 +923,16 @@ section GroupWithZero
 variable [GroupWithZero α] [Preorder α] [Preorder β] [MulAction α β]
 
 lemma inv_smul_le_iff_of_pos [PosSMulMono α β] [PosSMulReflectLE α β] (ha : 0 < a) :
-    (Units.mk0 a ha.ne')⁻¹ • b₁ ≤ b₂ ↔ b₁ ≤ a • b₂ := by
-  rw [← smul_le_smul_iff_of_pos_left ha, smul_inv_smul₀ ha.ne']
+    a⁻¹ • b₁ ≤ b₂ ↔ b₁ ≤ a • b₂ := by rw [← smul_le_smul_iff_of_pos_left ha, smul_inv_smul₀]
 
 lemma le_inv_smul_iff_of_pos [PosSMulMono α β] [PosSMulReflectLE α β] (ha : 0 < a) :
-    b₁ ≤ (Units.mk0 a ha.ne')⁻¹ • b₂ ↔ a • b₁ ≤ b₂ := by
-  rw [← smul_le_smul_iff_of_pos_left ha, smul_inv_smul₀ ha.ne']
+    b₁ ≤ a⁻¹ • b₂ ↔ a • b₁ ≤ b₂ := by rw [← smul_le_smul_iff_of_pos_left ha, smul_inv_smul₀]
 
 lemma inv_smul_lt_iff_of_pos [PosSMulStrictMono α β] [PosSMulReflectLT α β] (ha : 0 < a) :
-    (Units.mk0 a ha.ne')⁻¹ • b₁ < b₂ ↔ b₁ < a • b₂ := by
-  rw [← smul_lt_smul_iff_of_pos_left ha, smul_inv_smul₀ ha.ne']
+    a⁻¹ • b₁ < b₂ ↔ b₁ < a • b₂ := by rw [← smul_lt_smul_iff_of_pos_left ha, smul_inv_smul₀]
 
 lemma lt_inv_smul_iff_of_pos [PosSMulStrictMono α β] [PosSMulReflectLT α β] (ha : 0 < a) :
-    b₁ < (Units.mk0 a ha.ne')⁻¹ • b₂ ↔ a • b₁ < b₂ := by
-  rw [← smul_lt_smul_iff_of_pos_left ha, smul_inv_smul₀ ha.ne']
+    b₁ < a⁻¹ • b₂ ↔ a • b₁ < b₂ := by rw [← smul_lt_smul_iff_of_pos_left ha, smul_inv_smul₀]
 
 /-- Right scalar multiplication as an order isomorphism. -/
 @[simps!]

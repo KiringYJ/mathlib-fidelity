@@ -19,7 +19,8 @@ is the Riemann zeta function).
   `ζ` for this function is available by opening `ArithmeticFunction.zeta`.
 * `ArithmeticFunction.pmul` and `ArithmeticFunction.pdiv` are the pointwise multiplication and
   division on `ArithmeticFunction`s (for which `ζ` is the identity). These are not the same as
-  the multiplication instance defined by Dirichlet convolution.
+  the multiplication instance defined by Dirichlet convolution. The pointwise quotient `f / g`
+  is defined when every value of `g` at a positive integer is invertible.
 
 ## Tags
 
@@ -170,19 +171,23 @@ end Pmul
 
 section Pdiv
 
-/-- This is the pointwise division of `ArithmeticFunction`s. -/
-def pdiv [GroupWithZero R] (f g : ArithmeticFunction R) : ArithmeticFunction R :=
-  ⟨fun n => f n / g n, by simp only [map_zero, div_zero]⟩
+/-- This is the pointwise division of `ArithmeticFunction`s. The quotient `f n / g n` is taken at
+every positive integer `n`, so every such value of `g` must be invertible; the value at `0` is `0`,
+as for every arithmetic function. -/
+noncomputable def pdiv [GroupWithZero R] (f g : ArithmeticFunction R)
+    (hg : ∀ n, n ≠ 0 → IsUnit (g n)) : ArithmeticFunction R :=
+  ⟨fun n => if hn : n = 0 then 0 else Checked.div (f n) (g n) (hg n hn), dite_eq_left rfl⟩
 
 @[simp]
-theorem pdiv_apply [GroupWithZero R] (f g : ArithmeticFunction R) (n : ℕ) :
-    pdiv f g n = f n / g n := rfl
+theorem pdiv_apply [GroupWithZero R] (f g : ArithmeticFunction R) {hg : ∀ n, n ≠ 0 → IsUnit (g n)}
+    (n : ℕ) (hn : n ≠ 0) : pdiv f g hg n = Checked.div (f n) (g n) (hg n hn) :=
+  dite_eq_right hn
 
 /-- This result only holds for `DivisionSemiring`s instead of `GroupWithZero`s because zeta takes
 values in ℕ, and hence the coercion requires an `AddMonoidWithOne`. TODO: Generalise zeta -/
 @[simp]
-theorem pdiv_zeta [DivisionSemiring R] (f : ArithmeticFunction R) :
-    pdiv f zeta = f := by
+theorem pdiv_zeta [DivisionSemiring R] (f : ArithmeticFunction R)
+    {hζ : ∀ n, n ≠ 0 → IsUnit ((ζ : ArithmeticFunction R) n)} : pdiv f zeta hζ = f := by
   ext n
   cases n <;> simp
 
@@ -202,12 +207,17 @@ theorem pmul [CommSemiring R] {f g : ArithmeticFunction R} (hf : f.IsMultiplicat
     ring⟩
 
 @[arith_mult]
-theorem pdiv [CommGroupWithZero R] {f g : ArithmeticFunction R} (hf : IsMultiplicative f)
-    (hg : IsMultiplicative g) : IsMultiplicative (pdiv f g) :=
-  ⟨by simp [hf, hg], fun cop => by
-    simp only [pdiv_apply, map_mul_of_coprime hf cop, map_mul_of_coprime hg cop, div_eq_mul_inv,
-      mul_inv]
-    apply mul_mul_mul_comm ⟩
+theorem pdiv [CommGroupWithZero R] {f g : ArithmeticFunction R}
+    {hgUnit : ∀ n, n ≠ 0 → IsUnit (g n)} (hf : IsMultiplicative f) (hg : IsMultiplicative g) :
+    IsMultiplicative (pdiv f g hgUnit) :=
+  ⟨by simp [hf, hg], fun {m n} cop => by
+    rcases eq_or_ne m 0 with rfl | hm
+    · simp
+    rcases eq_or_ne n 0 with rfl | hn
+    · simp
+    rw [pdiv_apply _ _ _ (mul_ne_zero hm hn), pdiv_apply _ _ _ hm, pdiv_apply _ _ _ hn]
+    simp only [map_mul_of_coprime hf cop, map_mul_of_coprime hg cop]
+    exact div_mul_div_comm₀.symm⟩
 
 @[arith_mult]
 theorem ppow [CommSemiring R] {f : ArithmeticFunction R} (hf : f.IsMultiplicative)

@@ -358,37 +358,18 @@ variable [AddCommGroup E] [AddCommGroup F] [Module 𝕜 E] [Module 𝕜 F] {s : 
 theorem strictConvex_iff_div :
     StrictConvex 𝕜 s ↔
       s.Pairwise fun x y =>
-        ∀ ⦃a b : 𝕜⦄, (ha : 0 < a) → (hb : 0 < b) →
-          (a /ₚ Units.mk0 (a + b) (add_pos ha hb).ne') • x +
-            (b /ₚ Units.mk0 (a + b) (add_pos ha hb).ne') • y ∈ interior s := by
-  constructor
-  · intro h x hx y hy hxy a b ha hb
-    let u := Units.mk0 (a + b) (add_pos ha hb).ne'
-    have hu : (u : 𝕜) = a + b := rfl
-    have hsum : a /ₚ u + b /ₚ u = 1 := by
-      rw [Units.divp_add_divp_same]
-      change (a + b) /ₚ u = 1
-      rw [← hu]
-      exact divp_self u
-    exact h hx hy hxy (divp_pos ha (hu.symm ▸ add_pos ha hb))
-      (divp_pos hb (hu.symm ▸ add_pos ha hb)) hsum
-  · intro h x hx y hy hxy a b ha hb hab
-    let u := Units.mk0 (a + b) (add_pos ha hb).ne'
-    have hu : u = 1 := Units.ext hab
-    have hh := h hx hy hxy ha hb
-    change (a /ₚ u) • x + (b /ₚ u) • y ∈ interior s at hh
-    rw [hu] at hh
-    simpa only [divp_one] using hh
+        ∀ ⦃a b : 𝕜⦄ (_ : 0 < a) (_ : 0 < b), (a / (a + b)) • x + (b / (a + b)) • y ∈ interior s :=
+  ⟨fun h x hx y hy hxy a b ha hb ↦ h hx hy hxy (by positivity) (by positivity) (by
+      rw [← add_div]
+      exact div_self),
+    fun h x hx y hy hxy a b ha hb hab ↦ by
+      have h' := h hx hy hxy ha hb
+      simpa only [hab, div_one₀] using h'⟩
 
 theorem StrictConvex.mem_smul_of_zero_mem (hs : StrictConvex 𝕜 s) (zero_mem : (0 : E) ∈ s)
     (hx : x ∈ s) (hx₀ : x ≠ 0) {t : 𝕜} (ht : 1 < t) : x ∈ t • interior s := by
-  have ht0 : 0 < t := zero_lt_one.trans ht
-  let u := Units.mk0 t ht0.ne'
-  have hut : (u : 𝕜) = t := rfl
-  rw [mem_smul_set_iff_inv_smul_mem₀ ht0.ne']
-  exact hs.smul_mem_of_zero_mem zero_mem hx hx₀ ((Units.inv_pos u).2 (hut.symm ▸ ht0)) <| by
-    have h := (divp_lt_one (a := (1 : 𝕜)) (u := u) (hut.symm ▸ ht0)).2 (hut.symm ▸ ht)
-    simpa [divp] using h
+  rw [mem_smul_set_iff_inv_smul_mem₀ (by positivity)]
+  exact hs.smul_mem_of_zero_mem zero_mem hx hx₀ (by positivity) (inv_lt_one_of_one_lt₀ ht)
 
 end AddCommGroup
 

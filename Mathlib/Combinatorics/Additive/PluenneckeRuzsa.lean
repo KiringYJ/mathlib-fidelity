@@ -5,12 +5,14 @@ Authors: Yaël Dillies, George Shakan
 -/
 module
 
+public import Mathlib.Algebra.Group.Pointwise.Finset.Basic
 public import Mathlib.Algebra.Order.Field.Rat
-public import Mathlib.Algebra.Order.Field.Checked
+public import Mathlib.Algebra.Order.GroupWithZero.Basic
 public import Mathlib.Combinatorics.Enumerative.DoubleCounting
+public import Mathlib.Tactic.FieldSimp
 public import Mathlib.Tactic.GCongr
 public import Mathlib.Tactic.Positivity
-public import Mathlib.Algebra.Group.Pointwise.Finset.Basic
+public import Mathlib.Tactic.Ring
 
 /-!
 # The Plünnecke-Ruzsa inequality
@@ -164,12 +166,8 @@ attribute [local simp] nonempty_iff_ne_empty
 private lemma card_mul_ratio_le_iff (hA : A.Nonempty) (hB : B.Nonempty) :
     (#(A * C) / #A : ℚ≥0) ≤ #(B * C) / #B ↔
       #(A * C) * #B ≤ #(B * C) * #A := by
-  have h := divp_le_divp_iff_cross
-    (a := (#(A * C) : ℚ≥0)) (b := (#(B * C) : ℚ≥0))
-    (u := Units.mk0 (#A : ℚ≥0) (Nat.cast_ne_zero.mpr hA.card_ne_zero))
-    (v := Units.mk0 (#B : ℚ≥0) (Nat.cast_ne_zero.mpr hB.card_ne_zero))
-    (Nat.cast_pos.mpr hA.card_pos) (Nat.cast_pos.mpr hB.card_pos)
-  simpa only [Checked.div, Units.mk0, IsUnit.unit_spec, ← Nat.cast_mul, Nat.cast_le] using h
+  rw [div_le_div_iff₀ (by positivity) (by positivity)]
+  norm_cast
 
 /-- Minimize the ratio only over nonempty subsets, so every evaluated denominator is valid. -/
 @[to_additive]
@@ -264,7 +262,7 @@ private lemma card_mul_pow_le (hA : A.Nonempty)
       _ = (#(A * B) / #A) ^ (n + 1) * #A * #A := by
         let r : ℚ≥0 := #(A * B) / #A
         change (#(A * B) : ℚ≥0) * (r ^ n * #A) = r ^ (n + 1) * #A * #A
-        have hc : r * (#A : ℚ≥0) = #(A * B) := Checked.div_mul_cancel _ _ _
+        have hc : r * (#A : ℚ≥0) = #(A * B) := div_mul_cancel₀ _
         conv_lhs => lhs; rw [← hc]
         rw [pow_succ]
         ac_rfl

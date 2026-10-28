@@ -92,7 +92,8 @@ section Field
 variable {K : Type*} [Field K] {m : Matrix (Fin 2) (Fin 2) K}
 
 lemma sub_scalar_sq_eq_discr [NeZero (2 : K)] :
-    (m - scalar _ (m.trace / 2)) ^ 2 = scalar _ (m.discr / 4) := by
+    (m - scalar _ (m.trace / 2)) ^ 2 = scalar _ (Checked.div m.discr 4
+      (Ne.isUnit (by simpa [show (4 : K) = 2 ^ 2 by norm_num] using NeZero.ne (2 : K)))) := by
   simp only [scalar_apply, trace_fin_two, discr_fin_two, trace_fin_two,
     det_fin_two, sq, (by norm_num : (4 : K) = 2 * 2)]
   ext i j
@@ -135,8 +136,7 @@ lemma IsParabolic.hasEigenvalue_trace_div_two [NeZero (2 : K)] (hm : m.IsParabol
   have hdisc : m.trace ^ 2 = 4 * m.det := by
     simpa [discr_fin_two, sub_eq_zero] using hm.2
   field_simp
-  rw [hdisc]
-  ring
+  linear_combination (-2 : K) * hdisc
 
 /-- A scalar is an eigenvalue of a parabolic `2 × 2` matrix if and only if it is half the trace,
 when two is nonzero. -/
@@ -162,12 +162,12 @@ lemma isParabolic_iff_exists [NeZero (2 : K)] :
       rw [← sub_eq_iff_eq_add'] at hm
       simpa only [← hm, ← hb, ← map_sub, ← map_pow, ← map_zero (scalar (Fin 2)), scalar_inj,
         sq_eq_zero_iff] using hnsq
-    · suffices scalar (Fin 2) (m.discr / 4) = 0 by
+    · have h4 : (4 : K) ≠ 0 := by simpa [show (4 : K) = 2 ^ 2 by norm_num] using NeZero.ne _
+      suffices scalar (Fin 2) (m.discr / 4) = 0 by
         rw [← map_zero (scalar (Fin 2)), scalar_inj, div_eq_zero_iff] at this
-        have : (4 : K) ≠ 0 := by simpa [show (4 : K) = 2 ^ 2 by norm_num] using NeZero.ne _
-        tauto
+        exact this
       rw [← sub_scalar_sq_eq_discr, hm, trace_add, scalar_apply, trace_diagonal]
-      simp [mul_div_cancel_left₀ _ (NeZero.ne (2 : K)),
+      simp [mul_div_cancel_left₀ _,
         (Matrix.isNilpotent_trace_of_isNilpotent ⟨2, hnsq⟩).eq_zero, hnsq]
 
 end Field

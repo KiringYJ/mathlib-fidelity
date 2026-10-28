@@ -383,8 +383,8 @@ theorem map_le_lineMap_iff_slope_le_slope (hab : a < b) (h₀ : 0 < r) (h₁ : r
       slope f a c (left_ne_lineMap_of_lt hab h₀) ≤
         slope f c b (lineMap_ne_right_of_lt hab h₁) := by
   rw [map_le_lineMap_iff_slope_le_slope_left (mul_pos h₀ (sub_pos.2 hab)), ←
-    lineMap_slope_lineMap_slope_lineMap f a b r hab.ne
-      (lineMap_ne_right_of_lt hab h₁) (left_ne_lineMap_of_lt hab h₀),
+    lineMap_slope_lineMap_slope_lineMap f a b r
+      (hrb := lineMap_ne_right_of_lt hab h₁) (har := left_ne_lineMap_of_lt hab h₀) hab.ne,
     right_le_lineMap_iff_le h₁]
 
 /-- Given `c = lineMap a b r`, `a < c < b`, the point `(c, f c)` is non-strictly above the
@@ -418,12 +418,12 @@ end LinearOrderedField
 lemma slope_pos_iff {𝕜} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     {f : 𝕜 → 𝕜} {x₀ b : 𝕜} (hb : x₀ < b) :
     0 < slope f x₀ b hb.ne ↔ f x₀ < f b :=
-  slope_pos_iff_of_le hb.le hb.ne
+  slope_pos_iff_of_le hb.le (hne := hb.ne)
 
 lemma slope_pos_iff_gt {𝕜} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     {f : 𝕜 → 𝕜} {x₀ b : 𝕜} (hb : b < x₀) :
     0 < slope f x₀ b hb.ne' ↔ f b < f x₀ := by
-  rw [slope_comm f x₀ b hb.ne', slope_pos_iff hb]
+  rw [slope_comm f x₀ b (hab := hb.ne'), slope_pos_iff hb]
 
 lemma pos_of_slope_pos {𝕜} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     {f : 𝕜 → 𝕜} {x₀ b : 𝕜}

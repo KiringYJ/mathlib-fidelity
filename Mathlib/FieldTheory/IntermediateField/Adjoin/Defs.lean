@@ -41,7 +41,7 @@ theorem adjoin_toSubfield :
 
 variable {F S} in
 theorem mem_adjoin_iff_div {x : E} : x ∈ adjoin F S ↔
-    ∃ r ∈ Algebra.adjoin F S, ∃ s ∈ Algebra.adjoin F S, x = r / s := by
+    ∃ r ∈ Algebra.adjoin F S, ∃ s ∈ Algebra.adjoin F S, ∃ (_ : s ≠ 0), x = r / s := by
   simp_rw [adjoin, mem_mk, Subring.mem_toSubsemiring, Subfield.mem_toSubring,
     Subfield.mem_closure_iff, ← Algebra.adjoin_eq_ring_closure, Subalgebra.mem_toSubring, eq_comm]
 
@@ -73,7 +73,10 @@ instance : CompleteLattice (IntermediateField F E) where
   __ := GaloisInsertion.liftCompleteLattice IntermediateField.gi
   bot :=
     { toSubalgebra := ⊥
-      inv_mem' := by rintro x ⟨r, rfl⟩; exact ⟨r⁻¹, map_inv₀ _ _⟩ }
+      inv_mem' := by
+        rintro _ hx ⟨r, rfl⟩
+        have hr : r ≠ 0 := (map_ne_zero (algebraMap F E)).1 hx.ne_zero
+        exact ⟨r⁻¹, map_inv₀ _ _⟩ }
   bot_le x := (bot_le : ⊥ ≤ x.toSubalgebra)
 
 instance (K₁ K₂ : IntermediateField F E) : Algebra ↥(K₁ ⊓ K₂) K₁ :=
@@ -482,7 +485,7 @@ theorem adjoin_induction {s : Set E} {p : ∀ x ∈ adjoin F s, Prop}
     (mem : ∀ x hx, p x (subset_adjoin _ _ hx))
     (algebraMap : ∀ x, p (algebraMap F E x) (algebraMap_mem _ _))
     (add : ∀ x y hx hy, p x hx → p y hy → p (x + y) (add_mem hx hy))
-    (inv : ∀ x hx, p x hx → p x⁻¹ (inv_mem hx))
+    (inv : ∀ x hx (_ : x ≠ 0), p x hx → p x⁻¹ ((adjoin F s).inv_mem hx))
     (mul : ∀ x y hx hy, p x hx → p y hy → p (x * y) (mul_mem hx hy))
     {x} (h : x ∈ adjoin F s) : p x h :=
   Subfield.closure_induction
@@ -500,7 +503,12 @@ theorem adjoin_algHom_ext {s : Set E} ⦃φ₁ φ₂ : adjoin F s →ₐ[F] K⦄
     φ₁ = φ₂ :=
   AlgHom.ext fun ⟨x, hx⟩ ↦ adjoin_induction _ h (fun _ ↦ φ₂.commutes _ ▸ φ₁.commutes _)
     (fun _ _ _ _ h₁ h₂ ↦ by convert! congr_arg₂ (· + ·) h₁ h₂ <;> rw [← map_add] <;> rfl)
-    (fun _ _ ↦ eq_on_inv₀ _ _)
+    (fun x hx hx0 hφ ↦ by
+      have hxu : IsUnit (⟨x, hx⟩ : adjoin F s) := Ne.isUnit fun h ↦ hx0 (congrArg Subtype.val h)
+      have he : (⟨x⁻¹, (adjoin F s).inv_mem hx⟩ : adjoin F s) = (⟨x, hx⟩ : adjoin F s)⁻¹ :=
+        Subtype.ext ((adjoin F s).coe_inv ⟨x, hx⟩).symm
+      rw [he]
+      exact eq_on_inv₀ φ₁ φ₂ hφ)
     (fun _ _ _ _ h₁ h₂ ↦ by convert! congr_arg₂ (· * ·) h₁ h₂ <;> rw [← map_mul] <;> rfl)
     hx
 

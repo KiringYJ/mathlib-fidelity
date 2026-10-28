@@ -118,8 +118,8 @@ lemma ideal_trichotomy [DivisionRing K] (I : Ideal K[ε]) :
     have hr : fst r ≠ 0 := by
       contrapose hx0
       simp [hx0]
-    refine ⟨r⁻¹, ?_⟩
-    simp [TrivSqZeroExt.ext_iff, inv_mul_cancel₀ hr]
+    refine ⟨inl (fst r)⁻¹, ?_⟩
+    simp [TrivSqZeroExt.ext_iff, inv_mul_cancel₀]
   refine le_antisymm ?_ ?_ <;> intro x <;>
     simp_rw [Ideal.mem_span_singleton', (commute_eps_right _).eq, eq_comm, ← dvd_def]
   · intro hx
@@ -166,7 +166,7 @@ lemma exists_mul_left_or_mul_right [DivisionRing K] (a b : K[ε]) :
   · refine ⟨ε, Or.inr ?_⟩
     simp [hx]
   refine ⟨inl ((fst x)⁻¹ * fst y), ?_⟩
-  simp [← mul_assoc, mul_inv_cancel₀ hx]
+  simp [← mul_assoc, mul_inv_cancel₀]
 
 end Field
 

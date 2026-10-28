@@ -52,9 +52,7 @@ theorem convs'Aux_stable_step_of_terminated {s : Stream'.Seq <| Pair K}
     | some gp_head =>
       have : s.tail.TerminatedAt n := by
         simp only [Stream'.Seq.TerminatedAt, s.get?_tail, terminatedAt_n]
-      have := IH this
-      rw [convs'Aux] at this
-      simp [this, convs'Aux, s_head_eq]
+      rw [convs'Aux_succ_some s_head_eq, convs'Aux_succ_some s_head_eq, IH this]
 
 theorem convs'Aux_stable_of_terminated {s : Stream'.Seq <| Pair K} (n_le_m : n ≤ m)
     (terminatedAt_n : s.TerminatedAt n) : convs'Aux s m = convs'Aux s n := by
@@ -77,8 +75,9 @@ theorem dens_stable_of_terminated (n_le_m : n ≤ m) (terminatedAt_n : g.Termina
     g.dens m = g.dens n := by
   simp only [den_eq_conts_b, conts_stable_of_terminated n_le_m terminatedAt_n]
 
-theorem convs_stable_of_terminated (n_le_m : n ≤ m) (terminatedAt_n : g.TerminatedAt n) :
-    g.convs m = g.convs n := by
+theorem convs_stable_of_terminated {hB : IsUnit (g.dens m)} (n_le_m : n ≤ m)
+    (terminatedAt_n : g.TerminatedAt n) :
+    g.convs m = g.convs n (dens_stable_of_terminated n_le_m terminatedAt_n ▸ hB) := by
   simp only [convs, dens_stable_of_terminated n_le_m terminatedAt_n,
     nums_stable_of_terminated n_le_m terminatedAt_n]
 

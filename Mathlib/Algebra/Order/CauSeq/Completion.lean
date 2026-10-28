@@ -206,8 +206,9 @@ theorem mkUnit_eq {f g : CauSeq β abv} (hf : ¬LimZero f) (hg : ¬LimZero g)
     (h : f ≈ g) : mkUnit f hf = mkUnit g hg :=
   Units.ext (mk_eq.mpr h)
 
-@[simp] theorem inv_mk (f : CauSeq β abv) (hf : ¬LimZero f) :
-    (↑(mkUnit f hf)⁻¹ : Cauchy abv) = mk (inv f hf) := rfl
+@[simp] theorem inv_mk {f : CauSeq β abv} {h : IsUnit (mk f)} :
+    (mk f)⁻¹ = mk (inv f fun hl ↦ h.ne_zero (mk_eq_zero.mpr hl)) :=
+  inv_eq_val_inv_of_eq_val₀ (mkUnit f _) rfl
 
 theorem cau_seq_zero_ne_one : ¬(0 : CauSeq _ abv) ≈ 1 := fun h ↦
   have : LimZero (1 - 0 : CauSeq _ abv) := Setoid.symm h
@@ -216,48 +217,66 @@ theorem cau_seq_zero_ne_one : ¬(0 : CauSeq _ abv) ≈ 1 := fun h ↦
 
 theorem zero_ne_one : (0 : (Cauchy abv)) ≠ 1 := fun h => cau_seq_zero_ne_one <| mk_eq.1 h
 
-/-- The Cauchy completion forms a division ring. -/
+/-- A Cauchy completion of characteristic zero has a base of characteristic zero. -/
+theorem _root_.CharZero.of_cauchy [CharZero (Cauchy abv)] : CharZero β :=
+  CharZero.of_map_natCast (ofRat : β → Cauchy abv) ofRat_natCast
+
+private theorem smul_eq_ofRat_mul {γ : Type*} [SMul γ β] [IsScalarTower γ β β] (c : γ) (q : β)
+    (hc : ∀ b : β, c • b = q * b) (x : Cauchy abv) : c • x = ofRat q * x := by
+  induction x using Quotient.inductionOn with
+  | _ f =>
+    change c • mk f = mk (const abv q) * mk f
+    rw [mk_smul, mk_mul]
+    apply congrArg mk
+    ext n
+    exact hc (f n)
+
+/-- The Cauchy completion forms a division ring. In characteristic zero, its rational embeddings
+are the images of those of `β`, and its rational actions are the coefficientwise ones. -/
 noncomputable instance Cauchy.divisionRing : DivisionRing (Cauchy abv) where
   __ := Cauchy.ring
   __ := Cauchy.instNonTrivial
   isUnit_of_ne_zero {x} := Quotient.inductionOn x fun f hf ↦
     ⟨mkUnit f (fun h ↦ hf (mk_eq_zero.mpr h)), rfl⟩
+  nnratCastOfCharZero _ q :=
+    haveI := CharZero.of_cauchy (abv := abv)
+    ofRat q
+  nnratCastOfCharZero_mul_den _ q := by
+    have := CharZero.of_cauchy (abv := abv)
+    rw [← ofRat_natCast, ← ofRat_natCast, ← ofRat_mul, NNRat.cast_mul_den]
+  nnqsmulOfCharZero _ q x :=
+    haveI := CharZero.of_cauchy (abv := abv)
+    q • x
+  nnqsmulOfCharZero_eq_mul _ q x := by
+    have := CharZero.of_cauchy (abv := abv)
+    exact smul_eq_ofRat_mul q (q : β) (NNRat.smul_def q) x
+  ratCastOfCharZero _ q :=
+    haveI := CharZero.of_cauchy (abv := abv)
+    ofRat q
+  ratCastOfCharZero_mul_den _ q := by
+    have := CharZero.of_cauchy (abv := abv)
+    rw [← ofRat_natCast, ← ofRat_intCast, ← ofRat_mul, Rat.cast_mul_den]
+  qsmulOfCharZero _ q x :=
+    haveI := CharZero.of_cauchy (abv := abv)
+    q • x
+  qsmulOfCharZero_eq_mul _ q x := by
+    have := CharZero.of_cauchy (abv := abv)
+    exact smul_eq_ofRat_mul q (q : β) (Rat.smul_def q) x
 
-theorem ofRat_inv (x : βˣ) :
-    ofRat (↑x⁻¹ : β) =
-      (↑(Units.map (ofRatRingHom (abv := abv)).toMonoidHom x)⁻¹ : Cauchy abv) := rfl
+theorem ofRat_inv (x : β) {hx : IsUnit x} :
+    ofRat x⁻¹ = Checked.inv (ofRat x : Cauchy abv) (hx.map (ofRatRingHom (abv := abv))) :=
+  map_inv₀ (ofRatRingHom (abv := abv)) x
 
-lemma ofRat_div (x : β) (y : βˣ) :
-    ofRat (x /ₚ y) =
-      ofRat x /ₚ Units.map (ofRatRingHom (abv := abv)).toMonoidHom y := by
-  rw [divp, divp, ofRat_mul]
-  rfl
+lemma ofRat_div (x y : β) {hy : IsUnit y} :
+    ofRat (x / y) =
+      Checked.div (ofRat x) (ofRat y : Cauchy abv) (hy.map (ofRatRingHom (abv := abv))) :=
+  map_div₀ (ofRatRingHom (abv := abv)) x y
 
 @[simp, norm_cast] lemma ofRat_nnratCast [CharZero β] (q : ℚ≥0) :
-    ofRat (q : β) = (q : Cauchy abv) := map_nnratCast (ofRatRingHom (abv := abv)) q
+    ofRat (q : β) = (q : Cauchy abv) := rfl
 
 @[simp, norm_cast] lemma ofRat_ratCast [CharZero β] (q : ℚ) :
-    ofRat (q : β) = (q : Cauchy abv) := map_ratCast (ofRatRingHom (abv := abv)) q
-
-theorem nnrat_smul_def [CharZero β] (q : ℚ≥0) (x : Cauchy abv) :
-    q • x = (q : Cauchy abv) * x := by
-  induction x using Quotient.inductionOn with
-  | _ f =>
-    change q • mk f = (q : Cauchy abv) * mk f
-    rw [mk_smul, ← ofRat_nnratCast, ofRat, mk_mul]
-    apply congrArg mk
-    ext n
-    exact NNRat.smul_def q (f n)
-
-theorem rat_smul_def [CharZero β] (q : ℚ) (x : Cauchy abv) :
-    q • x = (q : Cauchy abv) * x := by
-  induction x using Quotient.inductionOn with
-  | _ f =>
-    change q • mk f = (q : Cauchy abv) * mk f
-    rw [mk_smul, ← ofRat_ratCast, ofRat, mk_mul]
-    apply congrArg mk
-    ext n
-    exact Rat.smul_def q (f n)
+    ofRat (q : β) = (q : Cauchy abv) := rfl
 
 /-- Show the first 10 items of a representative of this equivalence class of Cauchy sequences.
 
@@ -378,11 +397,8 @@ section
 variable {β : Type*} [DivisionRing β] {abv : β → α} [IsAbsoluteValue abv] [IsComplete β abv]
 
 theorem lim_inv {f : CauSeq β abv} (hf : ¬LimZero f) :
-    lim (inv f hf) =
-      (↑(Units.mk0 (lim f) (fun h ↦ hf ((lim_eq_zero_iff f).mp h)))⁻¹ : β) := by
-  apply (Units.inv_eq_of_mul_eq_one_left (u :=
-    Units.mk0 (lim f) (fun h ↦ hf ((lim_eq_zero_iff f).mp h))) ?_).symm
-  change lim (inv f hf) * lim f = 1
+    lim (inv f hf) = Checked.inv (lim f) (Ne.isUnit (mt (lim_eq_zero_iff f).mp hf)) := by
+  apply eq_inv_of_mul_eq_one_left₀
   rw [lim_mul_lim]
   exact (lim_eq_lim_of_equiv (CauSeq.inv_mul_cancel hf)).trans (lim_const 1)
 

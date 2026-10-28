@@ -154,18 +154,20 @@ theorem eq_iff_aeval_minpoly_eq_zero [IsDomain B] {C} [Ring C] [Algebra A C] [No
   eq_iff_aeval_eq_zero (irreducible h) (monic h)
 
 theorem eq_of_irreducible [Nontrivial B] {p : A[X]} (hp1 : Irreducible p)
-    (hp2 : Polynomial.aeval x p = 0) : p * C p.leadingCoeff⁻¹ = minpoly A x := by
+    (hp2 : Polynomial.aeval x p = 0) :
+    p * C (Checked.inv p.leadingCoeff (leadingCoeff_ne_zero.mpr hp1.ne_zero).isUnit) =
+      minpoly A x := by
   have : p.leadingCoeff ≠ 0 := leadingCoeff_ne_zero.mpr hp1.ne_zero
   apply eq_of_irreducible_of_monic
   · exact Associated.irreducible ⟨⟨C p.leadingCoeff⁻¹, C p.leadingCoeff,
-      by rwa [← C_mul, inv_mul_cancel₀, C_1], by rwa [← C_mul, mul_inv_cancel₀, C_1]⟩, rfl⟩ hp1
+      by rw [← C_mul, inv_mul_cancel₀, C_1], by rw [← C_mul, mul_inv_cancel₀, C_1]⟩, rfl⟩ hp1
   · rw [aeval_mul, hp2, zero_mul]
-  · rwa [Polynomial.Monic, leadingCoeff_mul, leadingCoeff_C, mul_inv_cancel₀]
+  · rw [Polynomial.Monic, leadingCoeff_mul, leadingCoeff_C, mul_inv_cancel₀]
 
 theorem Irreducible.eq_minpoly [Nontrivial B] {p : A[X]} (hi : Irreducible p)
     (hx : Polynomial.aeval x p = 0) : p = C p.leadingCoeff * minpoly A x := by
-  rw [← minpoly.eq_of_irreducible hi hx, mul_comm, mul_assoc, ← C_mul,
-    inv_mul_cancel₀ (leadingCoeff_ne_zero.mpr hi.ne_zero), C_1, mul_one]
+  rw [← minpoly.eq_of_irreducible hi hx, mul_comm, mul_assoc, ← C_mul, inv_mul_cancel₀, C_1,
+    mul_one]
 
 theorem _root_.Irreducible.dvd_iff_aeval_eq_zero [Nontrivial B] {p q : A[X]} (hi : Irreducible p)
     {b : B} (hfa : p.aeval b = 0) : q.aeval b = 0 ↔ p ∣ q := by

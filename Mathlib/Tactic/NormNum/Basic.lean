@@ -582,7 +582,7 @@ such that `norm_num` successfully recognises both `a` and `b`. -/
   let rib ← rb.inv dsα hb'
   let product ← ra.mul rib q(@DivisionSemiring.toSemiring $α $dsα)
   let hdiv : Q($checked = $a * Checked.inv $b $hb') :=
-    q(Checked.div_eq_mul_inv (hb := $hb') $a $b)
+    q(div_eq_mul_inv₀ (hb := $hb') $a $b)
   return product.eqTrans q(Eq.trans $he $hdiv)
 
 /-! ### Logic -/

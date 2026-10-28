@@ -51,8 +51,8 @@ theorem norm_iteratedDeriv_le_of_forall_mem_sphere_norm_le [CompleteSpace F] {c 
   have hq : iteratedDeriv n f c = n.factorial • (2 * π * I)⁻¹ •
     ∮ z in C(c, R), (z - c)⁻¹ ^ (n + 1) • f z := by
     have : (2 * π * I / n.factorial) ≠ 0 := by simp [Nat.factorial_ne_zero]
-    rw [← inv_smul_smul₀ this (iteratedDeriv n f c), inv_div, div_eq_inv_mul, mul_comm,
-      ← nsmul_eq_mul, smul_assoc]
+    rw [← inv_smul_smul₀ (ha := this.isUnit) (iteratedDeriv n f c), inv_div, div_eq_inv_mul,
+      mul_comm, ← nsmul_eq_mul, smul_assoc]
     simp [← DiffContOnCl.circleIntegral_one_div_sub_center_pow_smul hR n hf]
   calc
     ‖iteratedDeriv n f c‖ = ‖n.factorial • (2 * π * I)⁻¹ •

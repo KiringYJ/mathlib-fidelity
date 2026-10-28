@@ -38,7 +38,7 @@ instance (priority := 100) toMulDivCancelClass : MulDivCancelClass R where
     refine (eq_of_sub_eq_zero ?_).symm
     by_contra h
     have := mul_right_not_lt b h
-    rw [sub_mul, mul_comm (_ / _), sub_eq_iff_eq_add'.2 (div_add_mod (a * b) b).symm] at this
+    rw [sub_mul, mul_comm (_ / _ : R), sub_eq_iff_eq_add'.2 (div_add_mod (a * b) b).symm] at this
     exact this (mod_lt _ hb)
 
 theorem mod_eq_sub_mul_div {R : Type*} [EuclideanDomain R] (a b : R) : a % b = a - b * (a / b) :=
@@ -58,7 +58,7 @@ theorem mod_eq_zero {a b : R} : a % b = 0 ↔ b ∣ a :=
     have := Classical.dec
     by_cases b0 : b = 0
     · simp only [b0, zero_mul]
-    · rw [mul_div_cancel_left₀ _ b0]⟩
+    · rw [MulDivCancelClass.mul_div_cancel_left₀ _ b0]⟩
 
 @[simp]
 theorem mod_self (a : R) : a % a = 0 :=
@@ -78,27 +78,28 @@ theorem zero_mod (b : R) : 0 % b = 0 :=
 @[simp]
 theorem zero_div {a : R} : 0 / a = 0 :=
   by_cases (fun a0 : a = 0 => a0.symm ▸ div_zero 0) fun a0 => by
-    simpa only [zero_mul] using mul_div_cancel_right₀ 0 a0
+    simpa only [zero_mul] using MulDivCancelClass.mul_div_cancel_right₀ 0 a0
 
 @[simp]
 theorem div_self {a : R} (a0 : a ≠ 0) : a / a = 1 := by
-  simpa only [one_mul] using mul_div_cancel_right₀ 1 a0
+  simpa only [one_mul] using MulDivCancelClass.mul_div_cancel_right₀ 1 a0
 
 theorem eq_div_of_mul_eq_left {a b c : R} (hb : b ≠ 0) (h : a * b = c) : a = c / b := by
-  rw [← h, mul_div_cancel_right₀ _ hb]
+  rw [← h, MulDivCancelClass.mul_div_cancel_right₀ _ hb]
 
 theorem eq_div_of_mul_eq_right {a b c : R} (ha : a ≠ 0) (h : a * b = c) : b = c / a := by
-  rw [← h, mul_div_cancel_left₀ _ ha]
+  rw [← h, MulDivCancelClass.mul_div_cancel_left₀ _ ha]
 
 theorem mul_div_assoc (x : R) {y z : R} (h : z ∣ y) : x * y / z = x * (y / z) := by
   by_cases hz : z = 0
   · subst hz
     rw [div_zero, div_zero, mul_zero]
   rcases h with ⟨p, rfl⟩
-  rw [mul_div_cancel_left₀ _ hz, mul_left_comm, mul_div_cancel_left₀ _ hz]
+  rw [MulDivCancelClass.mul_div_cancel_left₀ _ hz, mul_left_comm,
+    MulDivCancelClass.mul_div_cancel_left₀ _ hz]
 
 protected theorem mul_div_cancel' {a b : R} (hb : b ≠ 0) (hab : b ∣ a) : b * (a / b) = a := by
-  rw [← mul_div_assoc _ hab, mul_div_cancel_left₀ _ hb]
+  rw [← mul_div_assoc _ hab, MulDivCancelClass.mul_div_cancel_left₀ _ hb]
 
 -- This generalizes `Int.div_one`, see note [simp-normal form]
 @[simp]
@@ -111,14 +112,15 @@ theorem div_dvd_of_dvd {p q : R} (hpq : q ∣ p) : p / q ∣ p := by
     rw [hpq]
     exact dvd_zero _
   use q
-  rw [mul_comm, ← EuclideanDomain.mul_div_assoc _ hpq, mul_comm, mul_div_cancel_right₀ _ hq]
+  rw [mul_comm, ← EuclideanDomain.mul_div_assoc _ hpq, mul_comm,
+    MulDivCancelClass.mul_div_cancel_right₀ _ hq]
 
 theorem dvd_div_of_mul_dvd {a b c : R} (h : a * b ∣ c) : b ∣ c / a := by
   rcases eq_or_ne a 0 with (rfl | ha)
   · simp only [div_zero, dvd_zero]
   rcases h with ⟨d, rfl⟩
   refine ⟨d, ?_⟩
-  rw [mul_assoc, mul_div_cancel_left₀ _ ha]
+  rw [mul_assoc, MulDivCancelClass.mul_div_cancel_left₀ _ ha]
 
 section GCD
 
@@ -214,7 +216,8 @@ instance (priority := 70) (R : Type*) [e : EuclideanDomain R] : IsDomain R :=
   haveI := Classical.decEq R
   have : NoZeroDivisors R :=
   { eq_zero_or_eq_zero_of_mul_eq_zero {a b} h :=
-      or_iff_not_and_not.2 fun h0 ↦ h0.1 <| by rw [← mul_div_cancel_right₀ a h0.2, h, zero_div] }
+      or_iff_not_and_not.2 fun h0 ↦ h0.1 <| by
+        rw [← MulDivCancelClass.mul_div_cancel_right₀ a h0.2, h, zero_div] }
   { e, NoZeroDivisors.to_isDomain R with }
 
 theorem div_pow {R : Type*} [EuclideanDomain R] {a b : R} {n : ℕ} (hab : b ∣ a) :
@@ -260,7 +263,7 @@ theorem lcm_dvd {x y z : R} (hxz : x ∣ z) (hyz : y ∣ z) : lcm x y ∣ z := b
     use p
     generalize gcd x y = g at hxy hs hp ⊢
     subst hs
-    rw [mul_left_comm, mul_div_cancel_left₀ _ hxy, ← mul_left_inj' hxy, hp]
+    rw [mul_left_comm, MulDivCancelClass.mul_div_cancel_left₀ _ hxy, ← mul_left_inj' hxy, hp]
     rw [← mul_assoc]
     simp only [mul_right_comm]
   rw [gcd_eq_gcd_ab, mul_add]
@@ -296,7 +299,7 @@ theorem lcm_eq_zero_iff {x y : R} : lcm x y = 0 ↔ x = 0 ∨ y = 0 := by
     · rcases gcd_dvd x y with ⟨⟨r, hr⟩, ⟨s, hs⟩⟩
       generalize gcd x y = g at hr hs hy hgxy ⊢
       subst hs
-      rw [mul_div_cancel_left₀ _ hgxy] at hy
+      rw [MulDivCancelClass.mul_div_cancel_left₀ _ hgxy] at hy
       rw [hy, mul_zero]
   rintro (hx | hy)
   · rw [hx, lcm_zero_left]
@@ -310,7 +313,7 @@ theorem gcd_mul_lcm (x y : R) : gcd x y * lcm x y = x * y := by
     rw [h.1, zero_mul]
   rcases gcd_dvd x y with ⟨⟨r, hr⟩, ⟨s, hs⟩⟩
   generalize gcd x y = g at h hr ⊢; subst hr
-  rw [mul_assoc, mul_div_cancel_left₀ _ h]
+  rw [mul_assoc, MulDivCancelClass.mul_div_cancel_left₀ _ h]
 
 end LCM
 
@@ -319,7 +322,8 @@ section Div
 theorem mul_div_mul_cancel {a b c : R} (ha : a ≠ 0) (hcb : c ∣ b) : a * b / (a * c) = b / c := by
   by_cases hc : c = 0; · simp [hc]
   refine eq_div_of_mul_eq_right hc (mul_left_cancel₀ ha ?_)
-  rw [← mul_assoc, ← mul_div_assoc _ (by gcongr), mul_div_cancel_left₀ _ (mul_ne_zero ha hc)]
+  rw [← mul_assoc, ← mul_div_assoc _ (by gcongr),
+    MulDivCancelClass.mul_div_cancel_left₀ _ (mul_ne_zero ha hc)]
 
 theorem mul_div_mul_comm_of_dvd_dvd {a b c d : R} (hac : c ∣ a) (hbd : d ∣ b) :
     a * b / (c * d) = a / c * (b / d) := by
@@ -327,8 +331,8 @@ theorem mul_div_mul_comm_of_dvd_dvd {a b c d : R} (hac : c ∣ a) (hbd : d ∣ b
   rcases eq_or_ne d 0 with (rfl | hd0); · simp
   obtain ⟨k1, rfl⟩ := hac
   obtain ⟨k2, rfl⟩ := hbd
-  rw [mul_div_cancel_left₀ _ hc0, mul_div_cancel_left₀ _ hd0, mul_mul_mul_comm,
-    mul_div_cancel_left₀ _ (mul_ne_zero hc0 hd0)]
+  rw [MulDivCancelClass.mul_div_cancel_left₀ _ hc0, MulDivCancelClass.mul_div_cancel_left₀ _ hd0,
+    mul_mul_mul_comm, MulDivCancelClass.mul_div_cancel_left₀ _ (mul_ne_zero hc0 hd0)]
 
 theorem add_mul_div_left (x y z : R) (h1 : y ≠ 0) (h2 : y ∣ x) : (x + y * z) / y = x / y + z := by
   rw [eq_comm]
@@ -395,7 +399,7 @@ theorem div_sub_div_of_dvd {x y z t : R} (h1 : y ≠ 0) (h2 : t ≠ 0) (h3 : y �
 theorem div_eq_iff_eq_mul_of_dvd (x y z : R) (h1 : y ≠ 0) (h2 : y ∣ x) :
     x / y = z ↔ x = y * z := by
   obtain ⟨a, ha⟩ := h2
-  rw [ha, mul_div_cancel_left₀ _ h1]
+  rw [ha, MulDivCancelClass.mul_div_cancel_left₀ _ h1]
   simp only [mul_eq_mul_left_iff, h1, or_false]
 
 theorem eq_div_iff_mul_eq_of_dvd (x y z : R) (h1 : z ≠ 0) (h2 : z ∣ y) :

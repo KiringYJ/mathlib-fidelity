@@ -36,14 +36,27 @@ instance (priority := 100) Invertible.toNeZero [MulZeroOneClass α] [Nontrivial 
 section GroupWithZero
 variable [GroupWithZero α]
 
-/-- A nonzero element has an inverse, obtained from its unit witness. -/
+/-- `a⁻¹` is an inverse of `a` if `a ≠ 0` -/
 @[instance_reducible]
 noncomputable def invertibleOfNonzero {a : α} (h : a ≠ 0) : Invertible a :=
-  ⟨↑(Units.mk0 a h)⁻¹, (Units.mk0 a h).inv_mul, (Units.mk0 a h).mul_inv⟩
+  ⟨a⁻¹, inv_mul_cancel₀, mul_inv_cancel₀⟩
 
-/-- The inverse supplied by `Invertible` agrees with inversion of the checked unit. -/
-theorem invOf_eq_mk0_inv (a : α) [Invertible a] :
-    ⅟a = (↑(Units.mk0 a (Invertible.ne_zero a))⁻¹ : α) :=
-  invOf_eq_right_inv (Units.mk0 a (Invertible.ne_zero a)).mul_inv
+@[simp]
+theorem invOf_eq_inv (a : α) [Invertible a] : ⅟a = a⁻¹ :=
+  invOf_eq_right_inv mul_inv_cancel₀
+
+/-- `a` is the inverse of `a⁻¹` -/
+instance invertibleInv {a : α} [Invertible a] : Invertible a⁻¹ :=
+  ⟨a, mul_inv_cancel₀, inv_mul_cancel₀⟩
+
+/-- `b / a` is the inverse of `a / b` -/
+@[instance_reducible]
+noncomputable def invertibleDiv (a b : α) [Invertible a] [Invertible b] : Invertible (a / b) :=
+  ⟨b / a, by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self],
+    by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self]⟩
+
+theorem invOf_div (a b : α) [Invertible a] [Invertible b] [Invertible (a / b)] :
+    ⅟(a / b) = b / a :=
+  invOf_eq_right_inv (by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self])
 
 end GroupWithZero

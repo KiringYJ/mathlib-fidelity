@@ -245,15 +245,17 @@ def circleEquivGen (hk : ∀ x : K, 1 + x ^ 2 ≠ 0) :
     K ≃ { p : K × K // p.1 ^ 2 + p.2 ^ 2 = 1 ∧ p.2 ≠ -1 } where
   toFun x :=
     ⟨⟨2 * x / (1 + x ^ 2), (1 - x ^ 2) / (1 + x ^ 2)⟩, by field [hk x], by
-      simp only [Ne, div_eq_iff (hk x), neg_mul, one_mul, neg_add, sub_eq_add_neg, add_left_inj]
+      simp only [Ne, div_eq_iff, neg_mul, one_mul, neg_add, sub_eq_add_neg, add_left_inj]
       simpa only [eq_neg_iff_add_eq_zero, one_pow] using hk 1⟩
-  invFun p := (p : K × K).1 / ((p : K × K).2 + 1)
+  invFun p := Checked.div (p : K × K).1 ((p : K × K).2 + 1)
+    (Ne.isUnit (mt eq_neg_of_add_eq_zero_left p.2.2))
   left_inv x := by
     have h2 : (1 + 1 : K) = 2 := by norm_num
     have h3 : (2 : K) ≠ 0 := by
       convert! hk 1
       rw [one_pow 2, h2]
     simp [field, hk x, h2, add_assoc, add_comm, add_sub_cancel, mul_comm]
+    ring
   right_inv := fun ⟨⟨x, y⟩, hxy, hy⟩ => by
     change x ^ 2 + y ^ 2 = 1 at hxy
     have h2 : y + 1 ≠ 0 := mt eq_neg_of_add_eq_zero_left hy
@@ -264,10 +266,14 @@ def circleEquivGen (hk : ∀ x : K, 1 + x ^ 2 ≠ 0) :
       convert! hk 1
       rw [one_pow 2]
       ring
+    have hx2 : x ^ 2 = 1 - y ^ 2 := by rw [← hxy]; ring
     simp only [Prod.mk_inj, Subtype.mk_eq_mk]
     constructor
     · simp [field, h3]
-    · grind
+      ring
+    · field_simp
+      rw [h3, hx2]
+      ring
 
 @[simp]
 theorem circleEquivGen_apply (hk : ∀ x : K, 1 + x ^ 2 ≠ 0) (x : K) :
@@ -277,7 +283,9 @@ theorem circleEquivGen_apply (hk : ∀ x : K, 1 + x ^ 2 ≠ 0) (x : K) :
 @[simp]
 theorem circleEquivGen_symm_apply (hk : ∀ x : K, 1 + x ^ 2 ≠ 0)
     (v : { p : K × K // p.1 ^ 2 + p.2 ^ 2 = 1 ∧ p.2 ≠ -1 }) :
-    (circleEquivGen hk).symm v = (v : K × K).1 / ((v : K × K).2 + 1) :=
+    (circleEquivGen hk).symm v =
+      Checked.div (v : K × K).1 ((v : K × K).2 + 1)
+        (Ne.isUnit (mt eq_neg_of_add_eq_zero_left v.2.2)) :=
   rfl
 
 end circleEquivGen
@@ -396,8 +404,11 @@ namespace PythagoreanTriple
 variable {x y z : ℤ} (h : PythagoreanTriple x y z)
 
 theorem isPrimitiveClassified_aux (hc : x.gcd y = 1) (hzpos : 0 < z) {m n : ℤ}
-    (hm2n2 : 0 < m ^ 2 + n ^ 2) (hv2 : (x : ℚ) / z = 2 * m * n / ((m : ℚ) ^ 2 + (n : ℚ) ^ 2))
-    (hw2 : (y : ℚ) / z = ((m : ℚ) ^ 2 - (n : ℚ) ^ 2) / ((m : ℚ) ^ 2 + (n : ℚ) ^ 2))
+    (hm2n2 : 0 < m ^ 2 + n ^ 2)
+    (hv2 : (x : ℚ) / z = Checked.div (2 * m * n : ℚ) ((m : ℚ) ^ 2 + (n : ℚ) ^ 2)
+      (Ne.isUnit (by exact_mod_cast hm2n2.ne')))
+    (hw2 : (y : ℚ) / z = Checked.div ((m : ℚ) ^ 2 - (n : ℚ) ^ 2) ((m : ℚ) ^ 2 + (n : ℚ) ^ 2)
+      (Ne.isUnit (by exact_mod_cast hm2n2.ne')))
     (H : Int.gcd (m ^ 2 - n ^ 2) (m ^ 2 + n ^ 2) = 1) (co : Int.gcd m n = 1)
     (pp : m % 2 = 0 ∧ n % 2 = 1 ∨ m % 2 = 1 ∧ n % 2 = 0) : h.IsPrimitiveClassified := by
   have hz : z ≠ 0 := ne_of_gt hzpos
@@ -409,8 +420,11 @@ theorem isPrimitiveClassified_aux (hc : x.gcd y = 1) (hzpos : 0 < z) {m n : ℤ}
   apply And.intro _ (And.intro co pp)
   right
   refine ⟨?_, h2.left⟩
-  rw [← Rat.intCast_inj, ← div_left_inj' (mt Rat.intCast_inj.mp hz), hv2, h2.right]
-  norm_cast
+  have hz' : (z : ℚ) ≠ 0 := Int.cast_ne_zero.2 hz
+  rw [← Rat.intCast_inj, ← div_left_inj' (hc := hz'.isUnit), hv2]
+  simp only [h2.right]
+  push_cast
+  rfl
 
 theorem isPrimitiveClassified_of_coprime_of_odd_of_pos (hc : Int.gcd x y = 1) (hyo : y % 2 = 1)
     (hzpos : 0 < z) : h.IsPrimitiveClassified := by
@@ -419,9 +433,11 @@ theorem isPrimitiveClassified_of_coprime_of_odd_of_pos (hc : Int.gcd x y = 1) (h
   let v := (x : ℚ) / z
   let w := (y : ℚ) / z
   have hq : v ^ 2 + w ^ 2 = 1 := by
-    simp [field, v, w]
-    simp only [sq]
-    norm_cast
+    have hxyz : (x : ℚ) ^ 2 + (y : ℚ) ^ 2 = (z : ℚ) ^ 2 := by
+      simp only [sq]
+      exact_mod_cast h.eq
+    simp only [v, w, div_pow₀]
+    rw [← add_div, hxyz, div_self]
   have hvz : v ≠ 0 := by simp [field, v, -mul_eq_zero, -div_eq_zero_iff, h0]
   have hw1 : w ≠ -1 := by
     contrapose hvz with hw1
@@ -446,18 +462,20 @@ theorem isPrimitiveClassified_of_coprime_of_odd_of_pos (hc : Int.gcd x y = 1) (h
     unfold m
     norm_cast
     apply Rat.den_nz q
+  have hq1 : 1 + q ^ 2 ≠ 0 := hQ q
+  have hnm1 : 1 + ((n : ℚ) / m) ^ 2 ≠ 0 := hQ _
   have hq2 : q = n / m := (Rat.num_div_den q).symm
   have hm2n2 : 0 < m ^ 2 + n ^ 2 := by positivity
   have hm2n20 : (m ^ 2 + n ^ 2 : ℚ) ≠ 0 := by positivity
   have hw2 : w = ((m : ℚ) ^ 2 - (n : ℚ) ^ 2) / ((m : ℚ) ^ 2 + (n : ℚ) ^ 2) := by
     calc
       w = (1 - q ^ 2) / (1 + q ^ 2) := by apply ht4.2
-      _ = (1 - (↑n / ↑m) ^ 2) / (1 + (↑n / ↑m) ^ 2) := by rw [hq2]
+      _ = (1 - (↑n / ↑m) ^ 2) / (1 + (↑n / ↑m) ^ 2) := by simp only [hq2]
       _ = _ := by field
   have hv2 : v = 2 * m * n / ((m : ℚ) ^ 2 + (n : ℚ) ^ 2) := by
     calc
       v = 2 * q / (1 + q ^ 2) := by apply ht4.1
-      _ = 2 * (n / m) / (1 + (↑n / ↑m) ^ 2) := by rw [hq2]
+      _ = 2 * (n / m) / (1 + (↑n / ↑m) ^ 2) := by simp only [hq2]
       _ = _ := by field
   have hnmcp : Int.gcd n m = 1 := q.reduced
   have hmncp : Int.gcd m n = 1 := by
@@ -488,11 +506,17 @@ theorem isPrimitiveClassified_of_coprime_of_odd_of_pos (hc : Int.gcd x y = 1) (h
           (m ^ 2 - n ^ 2) / 2 % 2 = 0 ∧ Int.gcd ((m ^ 2 - n ^ 2) / 2) ((m ^ 2 + n ^ 2) / 2) = 1 :=
       coprime_sq_sub_sq_sum_of_odd_odd hmncp hm2 hn2
     have h2 : y = (m ^ 2 - n ^ 2) / 2 ∧ z = (m ^ 2 + n ^ 2) / 2 := by
+      have e1 : (m ^ 2 - n ^ 2) / 2 * 2 = m ^ 2 - n ^ 2 := Int.ediv_mul_cancel h1.2.1
+      have e2 : (m ^ 2 + n ^ 2) / 2 * 2 = m ^ 2 + n ^ 2 := Int.ediv_mul_cancel h1.1
+      have key : (m ^ 2 - n ^ 2) * ((m ^ 2 + n ^ 2) / 2) =
+          (m ^ 2 - n ^ 2) / 2 * (m ^ 2 + n ^ 2) :=
+        calc (m ^ 2 - n ^ 2) * ((m ^ 2 + n ^ 2) / 2)
+            = (m ^ 2 - n ^ 2) / 2 * 2 * ((m ^ 2 + n ^ 2) / 2) := by rw [e1]
+          _ = (m ^ 2 - n ^ 2) / 2 * ((m ^ 2 + n ^ 2) / 2 * 2) := by ring
+          _ = (m ^ 2 - n ^ 2) / 2 * (m ^ 2 + n ^ 2) := by rw [e2]
       apply Rat.div_int_inj hzpos _ (h.coprime_of_coprime hc) h1.2.2.2
       · change w = _
-        rw [← Rat.divInt_eq_div, ← Rat.divInt_mul_right (by simp : (2 : ℤ) ≠ 0)]
-        rw [Int.ediv_mul_cancel h1.1, Int.ediv_mul_cancel h1.2.1, hw2, Rat.divInt_eq_div]
-        norm_cast
+        exact hw2.trans (div_eq_div_iff.2 (by exact_mod_cast key))
       · lia
     norm_num [h2.1, h1.2.2.1] at hyo
 

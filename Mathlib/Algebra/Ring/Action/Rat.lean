@@ -23,7 +23,7 @@ variable {R : Type*}
 namespace NNRat
 variable [DivisionSemiring R] [CharZero R]
 
-noncomputable instance (priority := 100) instDistribSMul : DistribSMul ℚ≥0 R where
+instance (priority := 100) instDistribSMul : DistribSMul ℚ≥0 R where
   smul_zero a := by rw [smul_def, mul_zero]
   smul_add a x y := by rw [smul_def, smul_def, smul_def, mul_add]
 
@@ -35,7 +35,7 @@ end NNRat
 namespace Rat
 variable [DivisionRing R] [CharZero R]
 
-noncomputable instance (priority := 100) instDistribSMul : DistribSMul ℚ R where
+instance (priority := 100) instDistribSMul : DistribSMul ℚ R where
   smul_zero a := by rw [smul_def, mul_zero]
   smul_add a x y := by rw [smul_def, smul_def, smul_def, mul_add]
 

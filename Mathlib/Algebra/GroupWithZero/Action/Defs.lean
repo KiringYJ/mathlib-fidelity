@@ -248,7 +248,28 @@ def MulActionWithZero.compHom (f : M₀' →*₀ M₀) : MulActionWithZero M₀'
 
 end MonoidWithZero
 
+section GroupWithZero
+variable [GroupWithZero G₀] [GroupWithZero G₀'] [MulActionWithZero G₀ G₀']
 
+/-- If `c • x` is invertible, then so is the scalar `c`. -/
+lemma isUnit_of_smul_isUnit_left {c : G₀} {x : G₀'} (h : IsUnit (c • x)) : IsUnit c :=
+  GroupWithZero.isUnit_of_ne_zero
+    (left_ne_zero_of_smul (left_ne_zero_of_mul_eq_one (mul_inv_cancel₀ (ha := h))))
+
+/-- If `c • x` is invertible, then so is `x`. -/
+lemma isUnit_of_smul_isUnit_right {c : G₀} {x : G₀'} (h : IsUnit (c • x)) : IsUnit x :=
+  GroupWithZero.isUnit_of_ne_zero
+    (right_ne_zero_of_smul (left_ne_zero_of_mul_eq_one (mul_inv_cancel₀ (ha := h))))
+
+variable [SMulCommClass G₀ G₀' G₀'] [IsScalarTower G₀ G₀' G₀']
+
+lemma smul_inv₀ (c : G₀) (x : G₀') {h : IsUnit (c • x)} :
+    (c • x)⁻¹ = Checked.inv c (isUnit_of_smul_isUnit_left h) •
+      Checked.inv x (isUnit_of_smul_isUnit_right h) := by
+  refine inv_eq_of_mul_eq_one_left₀ ?_
+  rw [smul_mul_smul_comm, inv_mul_cancel₀, inv_mul_cancel₀, one_smul]
+
+end GroupWithZero
 
 /-- Typeclass for scalar multiplication that preserves `0` and `+` on the right.
 
@@ -418,5 +439,26 @@ instance : SMulZeroClass α β where
   smul_zero g := by
     have h := smul_mul' g (0 : β) (g⁻¹ • (0 : β))
     simpa only [zero_mul, smul_inv_smul, mul_zero] using h
+
+end MulDistribMulAction
+
+section MulDistribMulAction
+variable [Monoid α] [Monoid β] [MulDistribMulAction α β]
+
+/-- A multiplicative action by monoid endomorphisms preserves invertible elements. -/
+lemma IsUnit.smul' (g : α) {x : β} (hx : IsUnit x) : IsUnit (g • x) := by
+  obtain ⟨u, rfl⟩ := hx
+  exact ⟨⟨g • ↑u, g • ↑u⁻¹, by rw [← smul_mul', Units.mul_inv, smul_one],
+    by rw [← smul_mul', Units.inv_mul, smul_one]⟩, rfl⟩
+
+/-- A version of `smul_inv'` for groups with zero. -/
+@[simp] theorem smul_inv₀' (g : α) (x : β) {hx : IsUnit x} :
+    g • x⁻¹ = Checked.inv (g • x) (hx.smul' g) := by
+  refine (inv_eq_of_mul_eq_one_right₀ ?_).symm
+  rw [← smul_mul', mul_inv_cancel₀, smul_one]
+
+theorem smul_div₀' (g : α) (x y : β) {hy : IsUnit y} :
+    g • (x / y) = Checked.div (g • x) (g • y) (hy.smul' g) := by
+  rw [div_eq_mul_inv₀, div_eq_mul_inv₀, smul_mul', smul_inv₀']
 
 end MulDistribMulAction

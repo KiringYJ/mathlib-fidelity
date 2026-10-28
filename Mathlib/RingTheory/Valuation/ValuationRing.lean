@@ -28,7 +28,7 @@ the image of `A` under `algebraMap A K` agrees with `(Valuation A K).integer`.
 
 We also provide the equivalence of the following notions for a domain `R` in `ValuationRing.TFAE`.
 1. `R` is a valuation ring.
-2. For each `x : FractionRing K`, either `x` or `x⁻¹` is in `R`.
+2. For each nonzero `x : FractionRing K`, either `x` or `x⁻¹` is in `R`.
 3. "divides" is a total relation on the elements of `R`.
 4. "contains" is a total relation on the ideals of `R`.
 5. `R` is a local bezout domain.
@@ -107,17 +107,6 @@ instance : Mul (ValueGroup A K) :=
         simp only [mul_smul, Algebra.smul_def, Units.smul_def]
         ring)
 
-instance : Inv (ValueGroup A K) :=
-  Inv.mk fun x =>
-    Quotient.liftOn' x (fun a => Quotient.mk'' a⁻¹)
-      (by
-        rintro _ a ⟨b, rfl⟩
-        apply Quotient.sound'
-        use b⁻¹
-        dsimp
-        rw [Units.smul_def, Units.smul_def, Algebra.smul_def, Algebra.smul_def, mul_inv,
-          map_units_inv])
-
 instance : Nontrivial (ValueGroup A K) where
   exists_pair_ne := ⟨0, 1, fun c => by
     obtain ⟨d, hd⟩ := Quotient.exact' c
@@ -164,24 +153,20 @@ noncomputable instance linearOrder : LinearOrder (ValueGroup A K) where
   le_total := ValuationRing.le_total _ _
   toDecidableLE := Classical.decRel _
 
-instance commGroupWithZero :
-    CommGroupWithZero (ValueGroup A K) :=
-  { mul_assoc := by rintro ⟨a⟩ ⟨b⟩ ⟨c⟩; apply Quotient.sound'; rw [mul_assoc]
-    one_mul := by rintro ⟨a⟩; apply Quotient.sound'; rw [one_mul]
-    mul_one := by rintro ⟨a⟩; apply Quotient.sound'; rw [mul_one]
-    mul_comm := by rintro ⟨a⟩ ⟨b⟩; apply Quotient.sound'; rw [mul_comm]
-    zero_mul := by rintro ⟨a⟩; apply Quotient.sound'; rw [zero_mul]
-    mul_zero := by rintro ⟨a⟩; apply Quotient.sound'; rw [mul_zero]
-    inv_zero := by apply Quotient.sound'; rw [inv_zero]
-    mul_inv_cancel := by
-      rintro ⟨a⟩ ha
-      apply Quotient.sound'
-      use 1
-      simp only [one_smul]
-      apply (mul_inv_cancel₀ _).symm
-      contrapose ha
-      rw [ha]
-      rfl }
+instance commMonoidWithZero : CommMonoidWithZero (ValueGroup A K) where
+  mul_assoc := by rintro ⟨a⟩ ⟨b⟩ ⟨c⟩; apply Quotient.sound'; rw [mul_assoc]
+  one_mul := by rintro ⟨a⟩; apply Quotient.sound'; rw [one_mul]
+  mul_one := by rintro ⟨a⟩; apply Quotient.sound'; rw [mul_one]
+  mul_comm := by rintro ⟨a⟩ ⟨b⟩; apply Quotient.sound'; rw [mul_comm]
+  zero_mul := by rintro ⟨a⟩; apply Quotient.sound'; rw [zero_mul]
+  mul_zero := by rintro ⟨a⟩; apply Quotient.sound'; rw [mul_zero]
+
+/-- The value group is a group with zero: the class of a nonzero `a : K` has inverse the class
+of `a⁻¹`. -/
+instance commGroupWithZero : CommGroupWithZero (ValueGroup A K) where
+  isUnit_of_ne_zero {x} := Quotient.inductionOn' x fun a ha ↦ by
+    have ha : a ≠ 0 := by rintro rfl; exact ha rfl
+    exact IsUnit.of_mul_eq_one (Quotient.mk'' a⁻¹) (Quotient.sound' ⟨1, by simp⟩)
 
 noncomputable instance linearOrderedCommGroupWithZero :
     LinearOrderedCommGroupWithZero (ValueGroup A K) where
@@ -216,13 +201,13 @@ noncomputable def valuation : Valuation K (ValueGroup A K) where
       rw [Algebra.smul_def]
       field_simp
       simp only [← map_mul, ← map_add]
-      congr 1; linear_combination h
+      congr 1; linear_combination ya * h
     · apply le_trans _ (le_max_right _ _)
       use c + 1
       rw [Algebra.smul_def]
       field_simp
       simp only [← map_mul, ← map_add]
-      congr 1; linear_combination h
+      congr 1; linear_combination yb * h
 
 theorem mem_integer_iff (x : K) : x ∈ (valuation A K).integer ↔ ∃ a : A, algebraMap A K a = x := by
   constructor
@@ -345,16 +330,18 @@ theorem unique_irreducible [PreValuationRing R] ⦃p q : R⦄ (hp : Irreducible 
 
 variable (R)
 
+/-- A domain is a valuation ring exactly when, for every nonzero element `x` of its fraction
+field, `x` or `x⁻¹` lies in it. -/
 theorem iff_isInteger_or_isInteger :
-    ValuationRing R ↔ ∀ x : K, IsLocalization.IsInteger R x ∨ IsLocalization.IsInteger R x⁻¹ := by
+    ValuationRing R ↔
+      ∀ (x : K) {hx : IsUnit x}, IsLocalization.IsInteger R x ∨ IsLocalization.IsInteger R x⁻¹ := by
   constructor
-  · intro H x
+  · intro H x hx
     obtain ⟨x : R, y, hy, rfl⟩ := IsFractionRing.div_surjective R x
-    have := (map_ne_zero_iff _ (IsFractionRing.injective R K)).mpr (nonZeroDivisors.ne_zero hy)
     obtain ⟨s, rfl | rfl⟩ := ValuationRing.cond x y
-    · exact Or.inr
-        ⟨s, eq_inv_of_mul_eq_one_left <| by rwa [mul_div, div_eq_one_iff_eq, map_mul, mul_comm]⟩
-    · exact Or.inl ⟨s, by rwa [eq_div_iff, map_mul, mul_comm]⟩
+    · exact Or.inr ⟨s, eq_inv_of_mul_eq_one_left₀ <| by
+        rw [mul_div₀, div_eq_one_iff_eq, map_mul, mul_comm]⟩
+    · exact Or.inl ⟨s, by rw [eq_div_iff, map_mul, mul_comm]⟩
   · intro H
     suffices PreValuationRing R from mk
     constructor
@@ -363,15 +350,16 @@ theorem iff_isInteger_or_isInteger :
     by_cases hb : b = 0; · subst hb; exact ⟨0, Or.inl <| mul_zero a⟩
     replace ha := (map_ne_zero_iff _ (IsFractionRing.injective R K)).mpr ha
     replace hb := (map_ne_zero_iff _ (IsFractionRing.injective R K)).mpr hb
-    obtain ⟨c, e⟩ | ⟨c, e⟩ := H (algebraMap R K a / algebraMap R K b)
-    · rw [eq_div_iff hb, ← map_mul, (IsFractionRing.injective R K).eq_iff, mul_comm] at e
+    have hab : IsUnit (algebraMap R K a / algebraMap R K b) := (div_ne_zero ha).isUnit
+    obtain ⟨c, e⟩ | ⟨c, e⟩ := H (algebraMap R K a / algebraMap R K b) (hx := hab)
+    · rw [eq_div_iff, ← map_mul, (IsFractionRing.injective R K).eq_iff, mul_comm] at e
       exact ⟨c, Or.inr e⟩
-    · rw [inv_div, eq_div_iff ha, ← map_mul, (IsFractionRing.injective R K).eq_iff, mul_comm c] at e
+    · rw [inv_div₀, eq_div_iff, ← map_mul, (IsFractionRing.injective R K).eq_iff, mul_comm c] at e
       exact ⟨c, Or.inl e⟩
 
 variable {K}
 
-theorem isInteger_or_isInteger [h : ValuationRing R] (x : K) :
+theorem isInteger_or_isInteger [h : ValuationRing R] (x : K) {hx : IsUnit x} :
     IsLocalization.IsInteger R x ∨ IsLocalization.IsInteger R x⁻¹ :=
   (iff_isInteger_or_isInteger R K).mp h x
 
@@ -409,7 +397,8 @@ theorem iff_local_bezout_domain : ValuationRing R ↔ IsLocalRing R ∧ IsBezout
 protected theorem TFAE (R : Type u) [CommRing R] [IsDomain R] :
     List.TFAE
       [ValuationRing R,
-        ∀ x : FractionRing R, IsLocalization.IsInteger R x ∨ IsLocalization.IsInteger R x⁻¹,
+        ∀ (x : FractionRing R) {hx : IsUnit x},
+          IsLocalization.IsInteger R x ∨ IsLocalization.IsInteger R x⁻¹,
         @Std.Total R (· ∣ ·), @Std.Total (Ideal R) (· ≤ ·), IsLocalRing R ∧ IsBezout R] := by
   tfae_have 1 ↔ 2 := iff_isInteger_or_isInteger R _
   tfae_have 1 ↔ 3 := iff_dvd_total
@@ -439,7 +428,7 @@ variable {𝒪 : Type u} {K : Type v} {Γ : Type w} [CommRing 𝒪] [Field K] [A
   [LinearOrderedCommGroupWithZero Γ]
 
 lemma _root_.isFractionRing_of_exists_eq_algebraMap_or_inv_eq_algebraMap_of_injective
-    (h : ∀ (x : K), ∃ a : 𝒪, x = algebraMap 𝒪 K a ∨ x⁻¹ = algebraMap 𝒪 K a)
+    (h : ∀ (x : K) {hx : IsUnit x}, ∃ a : 𝒪, x = algebraMap 𝒪 K a ∨ x⁻¹ = algebraMap 𝒪 K a)
     (hinj : Function.Injective (algebraMap 𝒪 K)) :
     IsFractionRing 𝒪 K := by
   have : IsDomain 𝒪 := hinj.isDomain
@@ -447,14 +436,14 @@ lemma _root_.isFractionRing_of_exists_eq_algebraMap_or_inv_eq_algebraMap_of_inje
   have := IsDomain.of_faithfulSMul 𝒪 K
   refine ⟨by simp, ?_, fun hab ↦ ⟨1, by simpa using hab⟩⟩
   intro x
-  obtain ⟨a, ha⟩ := h x
-  by_cases h0 : a = 0
-  · refine ⟨⟨0, 1⟩, by simpa [h0, eq_comm] using ha⟩
-  · have : algebraMap 𝒪 K a ≠ 0 := by simpa using h0
-    rw [inv_eq_iff_eq_inv, ← one_div, eq_div_iff this] at ha
-    cases ha with
-    | inl ha => exact ⟨⟨a, 1⟩, by simpa⟩
-    | inr ha => exact ⟨⟨1, ⟨a, mem_nonZeroDivisors_of_ne_zero h0⟩⟩, by simpa using ha⟩
+  rcases eq_or_ne x 0 with rfl | hx
+  · exact ⟨⟨0, 1⟩, by simp⟩
+  obtain ⟨a, ha | ha⟩ := h x (hx := hx.isUnit)
+  · exact ⟨⟨a, 1⟩, by simp [ha]⟩
+  · have h0 : a ≠ 0 := by
+      rintro rfl
+      exact inv_ne_zero (ha.trans (map_zero _))
+    exact ⟨⟨1, ⟨a, mem_nonZeroDivisors_of_ne_zero h0⟩⟩, by simp [← ha]⟩
 
 lemma _root_.Valuation.Integers.isFractionRing {v : Valuation K Γ} (hv : v.Integers 𝒪) :
     IsFractionRing 𝒪 K :=
@@ -484,10 +473,10 @@ instance instValuationRingInteger (v : Valuation K Γ) : ValuationRing v.integer
 
 theorem isFractionRing_iff [IsDomain 𝒪] [ValuationRing 𝒪] :
     IsFractionRing 𝒪 K ↔
-      (∀ (x : K), ∃ a : 𝒪, x = algebraMap 𝒪 K a ∨ x⁻¹ = algebraMap 𝒪 K a) ∧
+      (∀ (x : K) {hx : IsUnit x}, ∃ a : 𝒪, x = algebraMap 𝒪 K a ∨ x⁻¹ = algebraMap 𝒪 K a) ∧
         Function.Injective (algebraMap 𝒪 K) := by
-  refine ⟨fun h ↦ ⟨fun x ↦ ?_, IsFractionRing.injective _ _⟩, fun h ↦ ?_⟩
-  · obtain (⟨a, e⟩ | ⟨a, e⟩) := isInteger_or_isInteger 𝒪 x
+  refine ⟨fun h ↦ ⟨fun x {hx} ↦ ?_, IsFractionRing.injective _ _⟩, fun h ↦ ?_⟩
+  · obtain (⟨a, e⟩ | ⟨a, e⟩) := isInteger_or_isInteger 𝒪 x (hx := hx)
     exacts [⟨a, .inl e.symm⟩, ⟨a, .inr e.symm⟩]
   · exact isFractionRing_of_exists_eq_algebraMap_or_inv_eq_algebraMap_of_injective h.1 h.2
 

@@ -169,12 +169,17 @@ theorem generator_eq_exp_neg_one_of_mem_range (hπ : exp (-1) ∈ Set.range v) :
   · ext n
     simp_all only [Int.reduceNeg, exp_neg, Subgroup.mem_zpowers_iff, mem_valueGroup_iff_of_comm,
       ne_eq]
-    refine ⟨fun ⟨k, h⟩ ↦ ?_ , fun _ ↦ ⟨-WithZero.log n, by aesop⟩⟩
+    -- The value of an integer power of the unit `Units.mk0 x hx` is the integer power of `x`.
+    have val_zpow (x : ℤᵐ⁰) (hx : x ≠ 0) (k : ℤ) : (↑(Units.mk0 x hx ^ k) : ℤᵐ⁰) = x ^ k :=
+      ((GroupWithZero.isUnit_of_ne_zero hx).zpow_eq_val_unit_zpow k).symm
+    refine ⟨fun ⟨k, h⟩ ↦ ?_ ,
+      fun _ ↦ ⟨-WithZero.log n, Units.ext (by rw [val_zpow]; simp)⟩⟩
     rw [← h]
     have ⟨π, hπ⟩ := hπ
     cases k with
     | ofNat n => refine ⟨1, ?_, π ^ n, ?_⟩ <;> simp [hπ]
-    | negSucc n => refine ⟨π ^ (n + 1), ?_, 1, ?_⟩ <;> simp [hπ, Int.negSucc_eq, ← exp_add]
+    | negSucc n =>
+      refine ⟨π ^ (n + 1), ?_, 1, ?_⟩ <;> simp [hπ, val_zpow, Int.negSucc_eq, ← exp_add]
 
 /--
 The generator of a surjective discrete valuation in `ℤᵐ⁰` is equal to `exp (-1)`. -/
@@ -327,16 +332,19 @@ theorem IsUniformizer.of_associated {π₁ π₂ : K₀} (h1 : IsUniformizer v �
 /-- If two elements of `K₀` are uniformizers, then they are associated. -/
 theorem associated_of_isUniformizer {π₁ π₂ : K₀} (h1 : IsUniformizer v π₁)
     (h2 : IsUniformizer v π₂) : Associated π₁ π₂ := by
+  have hπ₁ : (π₁ : K) ≠ 0 := h1.ne_zero
   have hval : v ((π₁ : K)⁻¹ * π₂) = 1 := by
     simp [IsUniformizer.iff.mp h1, IsUniformizer.iff.mp h2]
   set p : v.integer := ⟨(π₁.1 : K)⁻¹ * π₂.1, (v.mem_integer_iff _).mpr (le_of_eq hval)⟩ with hp
   use ((Integers.isUnit_iff_valuation_eq_one (x := p) <| integer.integers v).mpr hval).unit
   apply_fun ((↑) : K₀ → K) using Subtype.val_injective
-  simp [hp, ← mul_assoc, mul_inv_cancel₀ h1.ne_zero]
+  simp [hp, ← mul_assoc, mul_inv_cancel₀]
 
 theorem exists_pow_Uniformizer {r : K₀} (hr : r ≠ 0) (π : Uniformizer v) :
     ∃ n : ℕ, ∃ u : K₀ˣ, r = (π.1 ^ n).1 * u.1 := by
   have hr₀ : v r ≠ 0 := by rw [ne_eq, zero_iff, Subring.coe_eq_zero_iff]; exact hr
+  have hπ : π.1.1 ≠ 0 := π.ne_zero
+  have hvπ : v π.1.1 ≠ 0 := π.2.val_ne_zero
   set vr : Γˣ := Units.mk0 (v r) hr₀ with hvr_def
   have hvr : vr ∈ (valueGroup (.ofClass v)) := by
     apply mem_valueGroup
@@ -347,25 +355,22 @@ theorem exists_pow_Uniformizer {r : K₀} (hr : r ≠ 0) (π : Uniformizer v) :
   have hm' : v π.val ^ m = v r := by
     rw [hvr_def] at hm
     rw [← Units.val_mk0 hr₀, ← hm]
-    simp [Units.val_zpow_eq_zpow_val, Units.val_mk0]
+    exact (GroupWithZero.isUnit_of_ne_zero hvπ).zpow_eq_val_unit_zpow m
   have hm₀ : 0 ≤ m := by
     rw [← zpow_le_one_iff_right_of_lt_one₀ π.2.val_pos π.2.val_lt_one, hm']
     exact r.2
-  obtain ⟨n, hn⟩ := Int.eq_ofNat_of_zero_le hm₀
+  obtain ⟨n, rfl⟩ := Int.eq_ofNat_of_zero_le hm₀
   use n
-  have hpow : v (π.1.1 ^ (-m) * r) = 1 := by
-    rw [map_mul, map_zpow₀, ← hm', zpow_neg, hm', inv_mul_cancel₀ hr₀]
-  set a : K₀ := ⟨π.1.1 ^ (-m) * r, by apply le_of_eq hpow⟩ with ha
-  have ha₀ : (↑a : K) ≠ 0 := by
-    simp only [zpow_neg, ne_eq, mul_eq_zero, inv_eq_zero, ZeroMemClass.coe_eq_zero, not_or, ha]
-    refine ⟨?_, hr⟩
-    rw [hn, zpow_natCast, pow_eq_zero_iff', not_and_or]
-    exact Or.inl π.ne_zero
+  have hpow : v (π.1.1 ^ (-(n : ℤ)) * r) = 1 := by
+    rw [map_mul, map_zpow₀, ← hm', zpow_neg₀ hvπ, inv_mul_cancel₀]
+  set a : K₀ := ⟨π.1.1 ^ (-(n : ℤ)) * r, by apply le_of_eq hpow⟩ with ha
+  have ha₀ : (↑a : K) ≠ 0 :=
+    mul_ne_zero (zpow_ne_zero _ hπ) (by exact_mod_cast hr)
   have h_unit_a : IsUnit a :=
     Integers.isUnit_of_one (integer.integers v) (isUnit_iff_ne_zero.mpr ha₀) hpow
   use h_unit_a.unit
-  rw [IsUnit.unit_spec, Subring.coe_pow, ha, ← mul_assoc, zpow_neg, hn, zpow_natCast,
-    mul_inv_cancel₀ (pow_ne_zero _ π.ne_zero), one_mul]
+  rw [IsUnit.unit_spec, Subring.coe_pow, ha, ← mul_assoc]
+  simp only [zpow_neg₀ hπ, zpow_natCast₀, mul_inv_cancel₀, one_mul]
 
 theorem Uniformizer.is_generator (π : Uniformizer v) :
     maximalIdeal v.valuationSubring = Ideal.span {π.1} := by

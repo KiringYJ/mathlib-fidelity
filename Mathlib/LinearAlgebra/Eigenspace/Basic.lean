@@ -259,11 +259,11 @@ set_option linter.style.whitespace false in -- manual alignment is not recognise
 lemma genEigenspace_div (f : End K V) (a b : K) (hb : b ≠ 0) :
     genEigenspace f (a / b) 1 = LinearMap.ker (b • f - a • 1) :=
   calc
-    genEigenspace f (a / b) 1 = genEigenspace f (b⁻¹ * a) 1 := by rw [div_eq_mul_inv, mul_comm]
+    genEigenspace f (a / b) 1 = genEigenspace f (b⁻¹ * a) 1 := by rw [div_eq_mul_inv₀, mul_comm]
     _ = LinearMap.ker (f - (b⁻¹ * a) • 1)     := by rw [genEigenspace_one]
     _ = LinearMap.ker (f - b⁻¹ • a • 1)       := by rw [smul_smul]
     _ = LinearMap.ker (b • (f - b⁻¹ • a • 1)) := by rw [LinearMap.ker_smul _ b hb]
-    _ = LinearMap.ker (b • f - a • 1)         := by rw [smul_sub, smul_inv_smul₀ hb]
+    _ = LinearMap.ker (b • f - a • 1)         := by rw [smul_sub, smul_inv_smul₀ (ha := hb.isUnit)]
 
 /-- The generalized eigenrange for a linear map `f`, a scalar `μ`, and an exponent `k ∈ ℕ∞`
 is the range of `(f - μ • id) ^ k` if `k` is a natural number,

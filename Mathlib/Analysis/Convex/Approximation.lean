@@ -73,17 +73,19 @@ lemma exists_affine_le_of_lt {x : E} {a : ℝ} (hx : x ∈ s) (hax : a < φ x) (
   obtain ⟨L, ⟨b, hLb⟩⟩ := geometric_hahn_banach_point_closed (𝕜 := 𝕜) hφcv.convex_re_epigraph
     (hφc.isClosed_re_epigraph hsc) (by simp [A, hax] : (x, ofReal a) ∉ A)
   let u := L.comp (.inl 𝕜 E 𝕜)
+  have hv (v : 𝕜) : v * L (0, 1) = L (0, v) := by rw [← smul_eq_mul, ← map_smul]; simp
+  have hine {w : E} (h : w ∈ s) : re (L (x, 0)) + re (L (0, 1)) * a
+    < re (L (w, 0)) + re (L (0, 1)) * φ w := by
+    have hw := hLb.1.trans (hLb.2 _ (by simp [A, h] : (w, ofReal (φ w)) ∈ A))
+    rw [← coprod_comp_inl_inr L] at hw
+    simpa [-coprod_comp_inl_inr, ← hv (ofReal a), ← hv (ofReal (φ w)), mul_comm a,
+      mul_comm (φ w)] using hw
+  have hL : 0 < re (L (0, 1)) :=
+    pos_of_right_mul_lt_le (lt_of_add_lt_add_left (hine hx)) hax.le
   let c := (re (L (0, 1)))⁻¹
+  have hc : 0 < c := inv_pos_of_pos hL
   refine ⟨- c • u, c * re (u x) + a, fun z => ?_, ?_⟩
-  · have hv (v : 𝕜) : v * L (0, 1) = L (0, v) := by rw [← smul_eq_mul, ← map_smul]; simp
-    have hine {w : E} (h : w ∈ s) : re (L (x, 0)) + re (L (0, 1)) * a
-      < re (L (w, 0)) + re (L (0, 1)) * φ w := by
-      have hw := hLb.1.trans (hLb.2 _ (by simp [A, h] : (w, ofReal (φ w)) ∈ A))
-      rw [← coprod_comp_inl_inr L] at hw
-      simpa [-coprod_comp_inl_inr, ← hv (ofReal a), ← hv (ofReal (φ w)), mul_comm a,
-        mul_comm (φ w)] using hw
-    have hc : 0 < c := inv_pos.2 (pos_of_right_mul_lt_le (lt_of_add_lt_add_left (hine hx)) hax.le)
-    simpa [smul_re, u, c, mul_add, ← mul_assoc, inv_mul_cancel₀ (ne_of_gt (inv_pos.1 hc))]
+  · simpa [smul_re, u, c, mul_add, ← mul_assoc, inv_mul_cancel₀]
       using mul_le_mul_of_nonneg_left (hine z.2).le hc.le
   · simp [u, c, smul_re]
 

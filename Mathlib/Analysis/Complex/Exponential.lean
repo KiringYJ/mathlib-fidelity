@@ -40,11 +40,12 @@ theorem isCauSeq_norm_exp (z : ℂ) :
   have hn0 : (0 : ℝ) < n := lt_of_le_of_lt (norm_nonneg _) hn
   IsCauSeq.series_ratio_test n (‖z‖ / n) (div_nonneg (norm_nonneg _) (le_of_lt hn0))
     (by rwa [div_lt_iff₀ hn0, one_mul]) fun m hm => by
-      rw [abs_norm, abs_norm, Nat.factorial_succ, pow_succ', mul_comm m.succ, Nat.cast_mul,
-        ← div_div, mul_div_assoc, mul_div_right_comm, Complex.norm_mul, Complex.norm_div,
-        norm_natCast]
+      rw [abs_norm, abs_norm]
+      simp only [Complex.norm_div, Complex.norm_pow, Complex.norm_natCast]
+      rw [div_mul_div_comm₀, div_le_div_iff₀ (by positivity) (by positivity), Nat.factorial_succ,
+        Nat.cast_mul, pow_succ']
       gcongr
-      exact le_trans hm (Nat.le_succ _)
+      exact_mod_cast le_trans hm (Nat.le_succ _)
 
 noncomputable section
 
@@ -114,16 +115,13 @@ theorem exp_add : exp (x + y) = exp x * exp y := by
           (y ^ (i - k) / (i - k).factorial) := by
     intro j
     refine Finset.sum_congr rfl fun m _ => ?_
-    rw [add_pow, div_eq_mul_inv, sum_mul]
+    rw [add_pow, div_eq_mul_inv₀, Finset.sum_mul]
     refine Finset.sum_congr rfl fun I hi => ?_
-    have h₁ : (m.choose I : ℂ) ≠ 0 :=
-      Nat.cast_ne_zero.2 (pos_iff_ne_zero.1 (Nat.choose_pos (Nat.le_of_lt_succ (mem_range.1 hi))))
-    have h₂ := Nat.choose_mul_factorial_mul_factorial (Nat.le_of_lt_succ <| Finset.mem_range.1 hi)
-    rw [← h₂, Nat.cast_mul, Nat.cast_mul, mul_inv, mul_inv]
-    simp only [mul_left_comm (m.choose I : ℂ), mul_assoc, mul_left_comm (m.choose I : ℂ)⁻¹,
-      mul_comm (m.choose I : ℂ)]
-    rw [inv_mul_cancel₀ h₁]
-    simp [div_eq_mul_inv, mul_assoc, mul_left_comm]
+    have h₂ : (m.choose I : ℂ) * I.factorial * (m - I).factorial = m.factorial := by
+      exact_mod_cast
+        Nat.choose_mul_factorial_mul_factorial (Nat.le_of_lt_succ <| Finset.mem_range.1 hi)
+    rw [div_mul_div_comm₀, ← div_eq_mul_inv₀, div_eq_div_iff, ← h₂]
+    ring
   simp_rw [exp, exp', lim_mul_lim]
   apply (lim_eq_lim_of_equiv _).symm
   simp only [hj]
@@ -150,7 +148,8 @@ lemma exp_nsmul (x : ℂ) (n : ℕ) : exp (n • x) = exp x ^ n :=
   @MonoidHom.map_pow (Multiplicative ℂ) ℂ _ _ expMonoidHom _ _
 
 /-- This is a useful version of `exp_nsmul` for q-expansions of modular forms. -/
-lemma exp_nsmul' (x a p : ℂ) (n : ℕ) : exp (a * n * x / p) = exp (a * x / p) ^ n := by
+lemma exp_nsmul' (x a p : ℂ) {hp : IsUnit p} (n : ℕ) :
+    exp (a * n * x / p) = exp (a * x / p) ^ n := by
   rw [← Complex.exp_nsmul]
   ring_nf
 
@@ -166,12 +165,12 @@ theorem exp_neg : exp (-x) = (exp x)⁻¹ := by
   rw [← mul_right_inj' (exp_ne_zero x), ← exp_add]; simp
 
 theorem exp_sub : exp (x - y) = exp x / exp y := by
-  simp [sub_eq_add_neg, exp_add, exp_neg, div_eq_mul_inv]
+  simp [sub_eq_add_neg, exp_add, exp_neg, div_eq_mul_inv₀]
 
 theorem exp_int_mul (z : ℂ) (n : ℤ) : Complex.exp (n * z) = Complex.exp z ^ n := by
   cases n
   · simp [exp_nat_mul]
-  · simp [exp_add, add_mul, pow_add, exp_neg, exp_nat_mul]
+  · simp only [Int.cast_negSucc, neg_mul, exp_neg, exp_nat_mul, zpow_negSucc₀, pow_succ]
 
 @[simp]
 theorem exp_conj : exp (conj x) = conj (exp x) := by
@@ -181,7 +180,7 @@ theorem exp_conj : exp (conj x) = conj (exp x) := by
   dsimp [exp', Function.comp_def, cauSeqConj]
   rw [map_sum (starRingEnd _)]
   refine sum_congr rfl fun n _ => ?_
-  rw [map_div₀, map_pow, ← ofReal_natCast, conj_ofReal]
+  simp only [map_div₀, map_pow, map_natCast]
 
 @[simp]
 theorem ofReal_exp_ofReal_re (x : ℝ) : ((exp x).re : ℂ) = exp x :=
@@ -241,7 +240,7 @@ nonrec theorem exp_neg : exp (-x) = (exp x)⁻¹ :=
   ofReal_injective <| by simp [exp_neg]
 
 theorem exp_sub : exp (x - y) = exp x / exp y := by
-  simp [sub_eq_add_neg, exp_add, exp_neg, div_eq_mul_inv]
+  simp [sub_eq_add_neg, exp_add, exp_neg, div_eq_mul_inv₀]
 
 open IsAbsoluteValue Nat
 
@@ -249,8 +248,7 @@ theorem sum_le_exp_of_nonneg {x : ℝ} (hx : 0 ≤ x) (n : ℕ) : ∑ i ∈ rang
   calc
     ∑ i ∈ range n, x ^ i / i ! ≤ lim (⟨_, isCauSeq_re (exp' x)⟩ : CauSeq ℝ abs) := by
       refine le_lim (CauSeq.le_of_exists ⟨n, fun j hj => ?_⟩)
-      simp only [exp', const_apply, re_sum]
-      norm_cast
+      simp only [exp', const_apply, re_sum, div_natCast_re, ← ofReal_pow, ofReal_re]
       gcongr
     _ = exp x := by rw [exp, Complex.exp, ← cauSeqRe, lim_re]
 
@@ -356,21 +354,27 @@ theorem sum_div_factorial_le {α : Type*} [Field α] [LinearOrder α] [IsStrictO
         refine sum_nbij' (· - n) (· + n) ?_ ?_ ?_ ?_ ?_ <;>
           simp +contextual [lt_tsub_iff_right, tsub_add_cancel_of_le]
     _ ≤ ∑ m ∈ range (j - n), ((n.factorial : α) * (n.succ : α) ^ m)⁻¹ := by
-      simp_rw [one_div]
+      simp_rw [one_div₀]
       gcongr
       rw [← Nat.cast_pow, ← Nat.cast_mul, Nat.cast_le, add_comm]
       exact Nat.factorial_mul_pow_le_factorial
     _ = (n.factorial : α)⁻¹ * ∑ m ∈ range (j - n), (n.succ : α)⁻¹ ^ m := by
-      simp [← mul_sum, mul_comm, inv_pow]
+      rw [mul_sum]
+      refine sum_congr rfl fun m _ => ?_
+      rw [mul_inv₀, inv_pow₀]
     _ = ((n.succ : α) - n.succ * (n.succ : α)⁻¹ ^ (j - n)) / (n.factorial * n) := by
-      have h₁ : (n.succ : α) ≠ 1 :=
-        @Nat.cast_one α _ ▸ mt Nat.cast_inj.1 (mt Nat.succ.inj (pos_iff_ne_zero.1 hn))
-      have h₂ : (n.succ : α) ≠ 0 := by positivity
-      have h₃ : (n.factorial * n : α) ≠ 0 := by positivity
-      have h₄ : (n.succ - 1 : α) = n := by simp
-      rw [geom_sum_inv h₁ h₂, eq_div_iff_mul_eq h₃, mul_comm _ (n.factorial * n : α),
-          ← mul_assoc (n.factorial⁻¹ : α), ← mul_inv_rev, h₄, ← mul_assoc (n.factorial * n : α),
-          mul_comm (n : α) n.factorial, mul_inv_cancel₀ h₃, one_mul, mul_comm]
+      have hgeom := geom_sum_mul ((n.succ : α)⁻¹) (j - n)
+      have hq : (n.succ : α) * (n.succ : α)⁻¹ = 1 := mul_inv_cancel₀
+      have hf : (n.factorial : α)⁻¹ * n.factorial = 1 := inv_mul_cancel₀
+      have hs : (n.succ : α) - (n + 1) = 0 := by rw [Nat.cast_succ, sub_self]
+      rw [eq_div_iff, mul_mul_mul_comm, hf, one_mul, ← sub_eq_zero]
+      calc (∑ m ∈ range (j - n), (n.succ : α)⁻¹ ^ m) * n -
+            (n.succ - n.succ * (n.succ : α)⁻¹ ^ (j - n))
+          = (∑ m ∈ range (j - n), (n.succ : α)⁻¹ ^ m) * ((n.succ : α) * (n.succ : α)⁻¹ - 1) -
+              (∑ m ∈ range (j - n), (n.succ : α)⁻¹ ^ m) * ((n.succ : α) - (n + 1)) -
+              n.succ * ((∑ m ∈ range (j - n), (n.succ : α)⁻¹ ^ m) * ((n.succ : α)⁻¹ - 1) -
+                ((n.succ : α)⁻¹ ^ (j - n) - 1)) := by ring
+        _ = 0 := by rw [hq, hs, hgeom]; ring
     _ ≤ n.succ / (n.factorial * n : α) := by gcongr; apply sub_le_self; positivity
 
 theorem exp_bound {x : ℂ} (hx : ‖x‖ ≤ 1) {n : ℕ} (hn : 0 < n) :
@@ -389,7 +393,7 @@ theorem exp_bound {x : ℂ} (hx : ‖x‖ ≤ 1) {n : ℕ} (hn : 0 < n) :
       = ‖∑ m ∈ range j with n ≤ m, (x ^ n * (x ^ (m - n) / m.factorial) : ℂ)‖ := by
       refine congr_arg norm (sum_congr rfl fun m hm => ?_)
       rw [mem_filter, mem_range] at hm
-      rw [← mul_div_assoc, ← pow_add, add_tsub_cancel_of_le hm.2]
+      rw [← mul_div_assoc₀, ← pow_add, add_tsub_cancel_of_le hm.2]
     _ ≤ ∑ m ∈ range j with n ≤ m, ‖x ^ n * (x ^ (m - n) / m.factorial)‖ :=
       IsAbsoluteValue.abv_sum norm ..
     _ ≤ ∑ m ∈ range j with n ≤ m, ‖x‖ ^ n * (1 / m.factorial) := by
@@ -425,17 +429,21 @@ theorem exp_bound' {x : ℂ} {n : ℕ} (hx : ‖x‖ / n.succ ≤ 1 / 2) :
     _ ≤ ‖x‖ ^ n / ↑n.factorial * 2 := ?_
   · gcongr
     exact mod_cast Nat.factorial_mul_pow_le_factorial
-  · simp only [pow_add, div_eq_inv_mul, mul_inv, mul_left_comm, mul_assoc]
+  · simp only [pow_add]
+    refine sum_congr rfl fun i _ => ?_
+    rw [div_mul_div_comm₀]
   · rw [← mul_sum]
     gcongr
-    simp_rw [← div_pow]
-    rw [geom_sum_eq, div_le_iff_of_neg]
-    · trans (-1 : ℝ)
-      · linarith
-      · simp only [neg_le_sub_iff_le_add, div_pow, Nat.cast_succ, le_add_iff_nonneg_left]
-        positivity
-    · linarith
-    · linarith
+    -- the sum is a geometric sum with ratio `‖x‖ / n.succ ≤ 1 / 2`
+    have hr : ∀ i, ‖x‖ ^ i / (n.succ : ℝ) ^ i = (‖x‖ / n.succ) ^ i := fun i =>
+      (div_pow₀ _ _ _).symm
+    simp only [hr]
+    have hr0 : 0 ≤ ‖x‖ / (n.succ : ℝ) := by positivity
+    have hS : 0 ≤ ∑ i ∈ range k, (‖x‖ / (n.succ : ℝ)) ^ i :=
+      sum_nonneg fun i _ => pow_nonneg hr0 i
+    have hgeom := geom_sum_mul (‖x‖ / (n.succ : ℝ)) k
+    have hrk : 0 ≤ (‖x‖ / (n.succ : ℝ)) ^ k := pow_nonneg hr0 k
+    nlinarith [mul_nonneg hS (sub_nonneg.2 hx)]
 
 theorem norm_exp_sub_one_le {x : ℂ} (hx : ‖x‖ ≤ 1) : ‖exp x - 1‖ ≤ 2 * ‖x‖ :=
   calc
@@ -492,7 +500,7 @@ lemma norm_exp_sub_sum_le_norm_mul_exp (x : ℂ) (n : ℕ) :
       = ‖∑ m ∈ Ico n j, (x ^ n * (x ^ (m - n) / m.factorial) : ℂ)‖ := by
       refine congr_arg norm (sum_congr rfl fun m hm => ?_)
       rw [mem_Ico] at hm
-      rw [← mul_div_assoc, ← pow_add, add_tsub_cancel_of_le hm.1]
+      rw [← mul_div_assoc₀, ← pow_add, add_tsub_cancel_of_le hm.1]
     _ ≤ ∑ m ∈ Ico n j, ‖x ^ n * (x ^ (m - n) / m.factorial)‖ :=
       IsAbsoluteValue.abv_sum norm ..
     _ ≤ ∑ m ∈ Ico n j, ‖x‖ ^ n * (‖x‖ ^ (m - n) / (m - n).factorial) := by
@@ -516,8 +524,12 @@ open Complex Finset
 nonrec theorem exp_bound {x : ℝ} (hx : |x| ≤ 1) {n : ℕ} (hn : 0 < n) :
     |exp x - ∑ m ∈ range n, x ^ m / m.factorial| ≤ |x| ^ n * (n.succ / (n.factorial * n)) := by
   have hxc : ‖(x : ℂ)‖ ≤ 1 := mod_cast hx
-  convert exp_bound hxc hn <;>
-  norm_cast
+  have h : ((exp x - ∑ m ∈ range n, x ^ m / m.factorial : ℝ) : ℂ) =
+      Complex.exp x - ∑ m ∈ range n, (x : ℂ) ^ m / m.factorial := by
+    simp only [Complex.ofReal_sub, Complex.ofReal_exp, Complex.ofReal_sum, Complex.ofReal_div,
+      Complex.ofReal_pow, Complex.ofReal_natCast]
+  rw [← Real.norm_eq_abs, ← Complex.norm_real, h, div_eq_mul_inv₀]
+  simpa only [Complex.norm_real, Real.norm_eq_abs] using exp_bound hxc hn
 
 theorem exp_bound' {x : ℝ} (h1 : 0 ≤ x) (h2 : x ≤ 1) {n : ℕ} (hn : 0 < n) :
     Real.exp x ≤ (∑ m ∈ Finset.range n, x ^ m / m.factorial) +
@@ -528,7 +540,7 @@ theorem exp_bound' {x : ℝ} (h1 : 0 ≤ x) (h2 : x ≤ 1) {n : ℕ} (hn : 0 < n
   rw [h3] at h'
   have h'' := (abs_sub_le_iff.1 h').1
   have t := sub_le_iff_le_add'.1 h''
-  simpa [mul_div_assoc] using t
+  simpa [mul_div_assoc₀] using t
 
 theorem abs_exp_sub_one_le {x : ℝ} (hx : |x| ≤ 1) : |exp x - 1| ≤ 2 * |x| := by
   have : ‖(x : ℂ)‖ ≤ 1 := mod_cast hx
@@ -551,9 +563,12 @@ theorem expNear_zero (x r) : expNear 0 x r = r := by simp [expNear]
 
 @[simp]
 theorem expNear_succ (n x r) : expNear (n + 1) x r = expNear n x (1 + x / (n + 1) * r) := by
-  simp [expNear, range_add_one, mul_add, add_left_comm, add_assoc, pow_succ, div_eq_mul_inv,
-    Nat.factorial]
-  ac_rfl
+  have h : x ^ (n + 1) / (n + 1).factorial = x ^ n / n.factorial * (x / (n + 1)) := by
+    rw [div_mul_div_comm₀, div_eq_div_iff, Nat.factorial_succ, Nat.cast_mul, Nat.cast_succ,
+      pow_succ]
+    ring
+  rw [expNear, expNear, sum_range_succ, h]
+  ring
 
 theorem expNear_sub (n x r₁ r₂) : expNear n x r₁ -
     expNear n x r₂ = x ^ n / n.factorial * (r₁ - r₂) := by
@@ -575,12 +590,20 @@ theorem exp_approx_succ {n} {x a₁ b₁ : ℝ} (m : ℕ) (e₁ : n + 1 = m) (a�
   convert!
     mul_le_mul_of_nonneg_left (a := |x| ^ n / ↑(Nat.factorial n)) (le_sub_iff_add_le'.1 e) ?_
       using 1
-  · simp [mul_add, pow_succ', div_eq_mul_inv, abs_mul, abs_inv, Nat.factorial]
-    ac_rfl
+  · have h₁ : |x| ^ (n + 1) / ((n + 1).factorial : ℝ) =
+        |x| ^ n / n.factorial * (|x| / (n + 1 : ℕ)) := by
+      rw [div_mul_div_comm₀, div_eq_div_iff, Nat.factorial_succ, Nat.cast_mul, pow_succ]
+      ring
+    rw [h₁]
+    simp only [abs_div, abs_pow, Nat.abs_cast]
+    push_cast
+    ring
   · simp [div_nonneg, abs_nonneg]
 
 theorem exp_approx_end' {n} {x a b : ℝ} (m : ℕ) (e₁ : n + 1 = m) (rm : ℝ) (er : ↑m = rm)
-    (h : |x| ≤ 1) (e : |1 - a| ≤ b - |x| / rm * ((rm + 1) / rm)) :
+    (h : |x| ≤ 1)
+    (e : haveI : rm ≠ 0 := er ▸ Nat.cast_ne_zero.2 (e₁ ▸ n.succ_ne_zero)
+      |1 - a| ≤ b - |x| / rm * ((rm + 1) / rm)) :
     |exp x - expNear n x a| ≤ |x| ^ n / n.factorial * b := by
   subst er
   exact exp_approx_succ _ e₁ _ _ (by simpa using e) (exp_approx_end _ _ _ e₁ h)
@@ -589,9 +612,11 @@ theorem exp_1_approx_succ_eq {n} {a₁ b₁ : ℝ} {m : ℕ} (en : n + 1 = m) {r
     (h : |exp 1 - expNear m 1 ((a₁ - 1) * rm)| ≤ |1| ^ m / m.factorial * (b₁ * rm)) :
     |exp 1 - expNear n 1 a₁| ≤ |1| ^ n / n.factorial * b₁ := by
   subst er
+  have hm : (m : ℝ) ≠ 0 := by norm_cast; lia
   refine exp_approx_succ _ en _ _ ?_ h
-  simp
-  field_simp [show (m : ℝ) ≠ 0 by norm_cast; lia]
+  have e₁ : 1 / (m : ℝ) * ((a₁ - 1) * m) = a₁ - 1 := by field_simp
+  have e₂ : |(1 : ℝ)| / m * (b₁ * m) = b₁ := by rw [abs_one]; field_simp
+  rw [e₁, e₂]
   simp
 
 theorem exp_approx_start (x a b : ℝ) (h : |exp x - expNear 0 x a| ≤ |x| ^ 0 / Nat.factorial 0 * b) :
@@ -603,13 +628,12 @@ theorem exp_bound_div_one_sub_of_interval' {x : ℝ} (h1 : 0 < x) (h2 : x < 1) :
     0 < x ^ 3 := by positivity
     _ = 1 - (1 + x + x ^ 2) * (1 - x) := by ring
   calc
-    exp x ≤ _ := exp_bound' h1.le h2.le zero_lt_three
+    exp x ≤ _ := exp_bound' h1.le h2.le (n := 3) (by norm_num)
     _ ≤ 1 + x + x ^ 2 := by
       -- Porting note: was `norm_num [Finset.sum] <;> nlinarith`
       -- This proof should be restored after the norm_num plugin for big operators is ported.
       -- (It may also need the positivity extensions in https://github.com/leanprover-community/mathlib4/pull/3907.)
-      rw [show 3 = 1 + 1 + 1 from rfl]
-      repeat rw [Finset.sum_range_succ]
+      simp only [Finset.sum_range_succ, Finset.sum_range_zero]
       norm_num [Nat.factorial]
       nlinarith
     _ < 1 / (1 - x) := by rw [lt_div_iff₀] <;> nlinarith
@@ -640,20 +664,19 @@ lemma one_sub_lt_exp_neg {x : ℝ} (hx : x ≠ 0) : 1 - x < exp (-x) :=
 lemma one_sub_le_exp_neg (x : ℝ) : 1 - x ≤ exp (-x) :=
   (sub_eq_neg_add _ _).trans_le <| add_one_le_exp _
 
-theorem one_sub_div_pow_le_exp_neg {n : ℕ} {t : ℝ} (ht' : t ≤ n) : (1 - t / n) ^ n ≤ exp (-t) := by
-  rcases eq_or_ne n 0 with (rfl | hn)
-  · simp
-    rwa [Nat.cast_zero] at ht'
+theorem one_sub_div_pow_le_exp_neg {n : ℕ} {t : ℝ} {hn : IsUnit (n : ℝ)} (ht' : t ≤ n) :
+    (1 - t / n) ^ n ≤ exp (-t) := by
   calc
     (1 - t / n) ^ n ≤ rexp (-(t / n)) ^ n := by
       gcongr
       · exact sub_nonneg.2 <| div_le_one_of_le₀ ht' n.cast_nonneg
       · exact one_sub_le_exp_neg _
-    _ = rexp (-t) := by rw [← Real.exp_nat_mul, mul_neg, mul_comm, div_mul_cancel₀]; positivity
+    _ = rexp (-t) := by rw [← Real.exp_nat_mul, mul_neg, mul_comm, div_mul_cancel₀]
 
-lemma one_add_inv_pow_le_exp {n : ℕ} : (1 + (n : ℝ)⁻¹) ^ n ≤ exp 1 := by
-  convert one_sub_div_pow_le_exp_neg (n := n) (t := -1) (by grind) using 1
-  · field
+lemma one_add_inv_pow_le_exp {n : ℕ} {hn : IsUnit (n : ℝ)} : (1 + (n : ℝ)⁻¹) ^ n ≤ exp 1 := by
+  convert one_sub_div_pow_le_exp_neg (n := n) (t := -1) (hn := hn) (by grind) using 1
+  · congr 1
+    ring
   · simp
 
 lemma le_inv_mul_exp (x : ℝ) {c : ℝ} (hc : 0 < c) : x ≤ c⁻¹ * exp (c * x) := by
@@ -664,9 +687,9 @@ lemma le_inv_mul_exp (x : ℝ) {c : ℝ} (hc : 0 < c) : x ≤ c⁻¹ * exp (c * 
 
 lemma exp_lt_two_add_div_two_sub {x : ℝ} (hx : 0 < x) (hx' : x < 2) :
     exp x < (2 + x) / (2 - x) := by calc
-  _ = exp (x / 2) ^ 2 := by grind [Real.exp_nat_mul (x / 2) 2]
+  _ = exp (x / 2) ^ 2 := by rw [← Real.exp_nat_mul, Nat.cast_ofNat, mul_div_cancel₀]
   _ ≤ _ := by
-    grw [Real.exp_bound' (x := x / 2) (by grind) (by grind) (n := 3) (by simp)]
+    grw [Real.exp_bound' (x := x / 2) (by positivity) (by linarith) (n := 3) (by simp)]
     apply Real.exp_nonneg
   _ < (2 + x) / (2 - x) := by
     rw [lt_div_iff₀ (by linarith), ← sub_pos]

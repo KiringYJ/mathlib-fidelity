@@ -66,8 +66,15 @@ def natDiv (m d prec : ℕ) : Interval Dyadic :=
   Interval.Icc lower upper
 
 theorem natDiv_eq_rat (m : ℕ) {d : ℕ} (prec : ℕ) (hd : 0 < d) :
-    natDiv m d prec = rat (mkRat m d) prec := by
-  rw [natDiv, rat]
+    natDiv m d prec = rat ((m : ℚ) / d) prec := by
+  -- The core dyadic API describes rational enclosures through the normalized fraction `mkRat`,
+  -- which agrees with the quotient for the nonzero denominator `d`.
+  have hq : (m : ℚ) / d = mkRat m d := by
+    rw [← Rat.normalize_eq_mkRat hd.ne']
+    have h := Rat.fraction_eq_div (m : ℤ) d hd.ne'
+    rw [Int.cast_natCast] at h
+    exact h.symm
+  rw [hq, natDiv, rat]
   congr 2 <;>
     simp [Rat.toDyadic_mkRat, Dyadic.toRat_ofIntWithPrec_eq_mkRat, Rat.mkRat_eq_iff,
       Int.shiftLeft_eq, Nat.shiftLeft_eq, hd.ne']
@@ -76,7 +83,8 @@ theorem natDiv_eq_rat (m : ℕ) {d : ℕ} (prec : ℕ) (hd : 0 < d) :
 theorem natDiv_mem (m : ℕ) {d : ℕ} (prec : ℕ) (hd : 0 < d) :
     (m : ℝ) / d ∈ natDiv m d prec := by
   rw [natDiv_eq_rat m prec hd]
-  simpa [Rat.cast_mkRat_of_ne_zero, hd.ne'] using ratCast_mem (mkRat m d) prec
+  have h := ratCast_mem ((m : ℚ) / d) prec
+  simpa only [Rat.cast_div, Rat.cast_natCast] using h
 
 /-- Enclose a scientific literal in a dyadic interval with precision `prec`. -/
 def scientific (m : ℕ) (s : Bool) (e prec : ℕ) : Interval Dyadic :=

@@ -43,23 +43,10 @@ instance [GroupWithZero G] [GroupWithZero H] (f : G →*₀ H) :
   isUnit_of_ne_zero {a} ha := by
     obtain ⟨y, hy⟩ := a.prop
     have hy0 : y ≠ 0 := by
-      intro h
-      apply ha
-      apply Subtype.ext
-      simpa [h] using hy.symm
-    let u := Units.mk0 y hy0
-    let v : MonoidHom.mrange f := ⟨f ↑u⁻¹, ↑u⁻¹, rfl⟩
-    refine ⟨⟨a, v, ?_, ?_⟩, rfl⟩
-    · apply Subtype.ext
-      change (a : H) * f ↑u⁻¹ = 1
-      rw [← hy, ← map_mul]
-      change f ((u : G) * ↑u⁻¹) = 1
-      rw [u.mul_inv, map_one]
-    · apply Subtype.ext
-      change f ↑u⁻¹ * (a : H) = 1
-      rw [← hy, ← map_mul]
-      change f (↑u⁻¹ * (u : G)) = 1
-      rw [u.inv_mul, map_one]
+      rintro rfl
+      exact ha (Subtype.ext (hy.symm.trans (map_zero f)))
+    have h : MonoidHom.mrangeRestrict (f : G →* H) y = a := Subtype.ext hy
+    exact h ▸ (Ne.isUnit hy0).map _
 
 instance [GroupWithZero G] [CommGroupWithZero H] (f : G →*₀ H) :
     CommGroupWithZero (MonoidHom.mrange f) where

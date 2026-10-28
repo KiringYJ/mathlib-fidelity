@@ -309,8 +309,9 @@ set_option linter.overlappingInstances false
 variable [IsDedekindDomain A] [IsDedekindDomain B]
 
 theorem one_le_extendedHom_iff (hI : I ≠ 0) : 1 ≤ extendedHom L B I ↔ 1 ≤ I := by
-  rw [← inv_le_inv_iff ((extendedHom_eq_zero_iff _ _).not.mpr hI) (by simp), inv_one, ← map_inv₀,
-    extendedHom_le_one_iff, inv_le_comm hI (by simp), inv_one]
+  rw [← inv_le_inv_iff (hI := Ne.isUnit ((extendedHom_eq_zero_iff _ _).not.mpr hI))
+      (hJ := isUnit_one), inv_one₀, ← map_inv₀ (extendedHom L B) I (ha := hI.isUnit),
+    extendedHom_le_one_iff, inv_le_comm (hI := hI.isUnit) (hJ := isUnit_one), inv_one₀]
 
 @[deprecated (since := "2026-04-16")] alias one_le_extendedHomₐ_iff := one_le_extendedHom_iff
 
@@ -328,8 +329,9 @@ theorem extendedHom_injective :
   · rwa [hI, map_zero, eq_comm, extendedHom_eq_zero_iff L B, eq_comm, ← hI] at h
   by_cases hJ : J = 0
   · rwa [hJ, map_zero, extendedHom_eq_zero_iff L B, ← hJ] at h
-  rwa [← mul_inv_eq_one₀ ((extendedHom_eq_zero_iff _ _).not.mpr hJ), ← map_inv₀, ← map_mul,
-    extendedHom_eq_one_iff _ _ (mul_ne_zero hI (inv_ne_zero hJ)), mul_inv_eq_one₀ hJ] at h
+  rwa [← mul_inv_eq_one₀ (hb := Ne.isUnit ((extendedHom_eq_zero_iff _ _).not.mpr hJ)),
+    ← map_inv₀ (extendedHom L B) J (ha := Ne.isUnit hJ), ← map_mul,
+    extendedHom_eq_one_iff _ _ (mul_ne_zero hI inv_ne_zero), mul_inv_eq_one₀] at h
 
 @[deprecated (since := "2026-04-16")] alias extendedHomₐ_injective := extendedHom_injective
 

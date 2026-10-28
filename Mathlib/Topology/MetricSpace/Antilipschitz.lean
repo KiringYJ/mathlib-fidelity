@@ -67,12 +67,12 @@ alias ⟨AntilipschitzWith.le_mul_dist, AntilipschitzWith.of_le_mul_dist⟩ :=
 
 namespace AntilipschitzWith
 
-theorem mul_le_nndist (hf : AntilipschitzWith K f) (x y : α) :
-    K⁻¹ * nndist x y ≤ nndist (f x) (f y) := by
-  simpa only [div_eq_inv_mul] using NNReal.div_le_of_le_mul' (hf.le_mul_nndist x y)
+theorem mul_le_nndist {hK : IsUnit K} (hf : AntilipschitzWith K f) (x y : α) :
+    K⁻¹ * nndist x y ≤ nndist (f x) (f y) :=
+  (inv_mul_le_iff₀ (pos_iff_ne_zero.2 hK.ne_zero)).2 (hf.le_mul_nndist x y)
 
-theorem mul_le_dist (hf : AntilipschitzWith K f) (x y : α) :
-    (K⁻¹ * dist x y : ℝ) ≤ dist (f x) (f y) := mod_cast hf.mul_le_nndist x y
+theorem mul_le_dist {hK : IsUnit K} (hf : AntilipschitzWith K f) (x y : α) :
+    (K⁻¹ * dist x y : ℝ) ≤ dist (f x) (f y) := mod_cast hf.mul_le_nndist (hK := hK) x y
 
 end AntilipschitzWith
 

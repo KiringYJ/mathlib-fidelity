@@ -349,33 +349,42 @@ section DivisionRing
 
 variable [DivisionRing R] (v : Valuation R Γ₀)
 
-instance : Div (WithVal v) where div x y := toVal _ (x.ofVal / y.ofVal)
-instance : Inv (WithVal v) where inv x := toVal _ x.ofVal⁻¹
-instance : Pow (WithVal v) ℤ where pow x z := toVal _ (x.ofVal ^ z)
-instance : NNRatCast (WithVal v) where nnratCast q := toVal _ q
-instance : RatCast (WithVal v) where ratCast q := toVal _ q
-
-@[simp] lemma toVal_div (x y : R) : toVal v (x / y) = toVal v x / toVal v y := rfl
-
-@[simp] lemma ofVal_div (x y : WithVal v) : ofVal (x / y) = ofVal x / ofVal y := rfl
-
-@[simp] lemma toVal_inv (x : R) : toVal v x⁻¹ = (toVal v x)⁻¹ := rfl
-
-@[simp] lemma ofVal_inv (x : WithVal v) : ofVal (x⁻¹) = (ofVal x)⁻¹ := rfl
-
-@[simp] lemma toVal_zpow (x : R) (z : ℤ) : toVal v (x ^ z) = (toVal v x) ^ z := rfl
-
-@[simp] lemma ofVal_zpow (x : WithVal v) (z : ℤ) : ofVal (x ^ z) = (ofVal x) ^ z := rfl
-
-@[simp] lemma toVal_nnratCast (q : ℚ≥0) : toVal v q = q := rfl
-
-@[simp] lemma ofVal_nnratCast (q : ℚ≥0) : ofVal (q : WithVal v) = q := rfl
-
-@[simp] lemma toVal_ratCast (q : ℚ) : toVal v q = q := rfl
-
-@[simp] lemma ofVal_ratCast (q : ℚ) : ofVal (q : WithVal v) = q := rfl
-
+/-- The division ring structure of `R` transported along `WithVal.equiv`. Its inverse, quotient
+and integer power are the checked operations of `WithVal v`, and in characteristic zero its
+rational casts are those of `R`. -/
 instance : DivisionRing (WithVal v) := fast_instance% (equiv v).divisionRing
+
+@[simp] lemma toVal_div (x y : R) {hy : IsUnit y} :
+    toVal v (x / y) = Checked.div (toVal v x) (toVal v y) (hy.map (equiv v).symm) :=
+  map_div₀ (equiv v).symm x y
+
+@[simp] lemma ofVal_div (x y : WithVal v) {hy : IsUnit y} :
+    ofVal (x / y) = Checked.div (ofVal x) (ofVal y) (hy.map (equiv v)) :=
+  map_div₀ (equiv v) x y
+
+@[simp] lemma toVal_inv (x : R) {hx : IsUnit x} :
+    toVal v x⁻¹ = Checked.inv (toVal v x) (hx.map (equiv v).symm) :=
+  map_inv₀ (equiv v).symm x
+
+@[simp] lemma ofVal_inv (x : WithVal v) {hx : IsUnit x} :
+    ofVal x⁻¹ = Checked.inv (ofVal x) (hx.map (equiv v)) :=
+  map_inv₀ (equiv v) x
+
+@[simp] lemma toVal_zpow (x : R) (z : ℤ) {h : z < 0 → IsUnit x} :
+    toVal v (x ^ z) = Checked.zpow (toVal v x) z (fun hz ↦ (h hz).map (equiv v).symm) :=
+  map_zpow₀ (equiv v).symm x z
+
+@[simp] lemma ofVal_zpow (x : WithVal v) (z : ℤ) {h : z < 0 → IsUnit x} :
+    ofVal (x ^ z) = Checked.zpow (ofVal x) z (fun hz ↦ (h hz).map (equiv v)) :=
+  map_zpow₀ (equiv v) x z
+
+@[simp] lemma toVal_nnratCast [CharZero R] (q : ℚ≥0) : toVal v q = q := rfl
+
+@[simp] lemma ofVal_nnratCast [CharZero R] (q : ℚ≥0) : ofVal (q : WithVal v) = q := rfl
+
+@[simp] lemma toVal_ratCast [CharZero R] (q : ℚ) : toVal v q = q := rfl
+
+@[simp] lemma ofVal_ratCast [CharZero R] (q : ℚ) : ofVal (q : WithVal v) = q := rfl
 
 end DivisionRing
 
@@ -383,13 +392,10 @@ section Field
 
 variable [Field R] (v : Valuation R Γ₀)
 
-instance : Field (WithVal v) := fast_instance% ofVal_injective v |>.field _
-  (ofVal_zero _) (ofVal_one _) (ofVal_add _) (ofVal_mul _) (ofVal_neg _) (ofVal_sub _)
-  (ofVal_inv _) (ofVal_div _)
-  (ofVal_smul _) (ofVal_smul _) (ofVal_smul _) (ofVal_smul _) (ofVal_pow _) (ofVal_zpow _)
-  (ofVal_natCast _) (ofVal_intCast _) (ofVal_nnratCast _) (ofVal_ratCast _)
+instance : Field (WithVal v) := fast_instance% (equiv v).field
 
 instance [NumberField R] : NumberField (WithVal v) where
+  to_finiteDimensional := .equiv (linearEquiv ℚ v).symm
 
 end Field
 
@@ -512,21 +518,20 @@ theorem IsEquiv.uniformContinuous_equiv [hval : Valued R Γ₀'] (hv : Valued.v 
     (Valued.hasBasis_nhds_zero _ _), true_and, forall_const]
   intro γ
   obtain ⟨r, s, hr₀, hs₀, hr⟩ := exists_div_eq_of_unit Valued.v γ
-  use .mk0 ((instValued v).v.restrict ((WithVal.equiv v).symm r) /
-    (instValued v).v.restrict ((WithVal.equiv v).symm s)) (by
+  have hs0' : 0 < Valued.v.restrict (toVal v s) := by
+    simp [restrict_pos_iff, h.pos_iff, ← hv, hs₀]
+  use .mk0 (Valued.v.restrict (toVal v r) / Valued.v.restrict (toVal v s)) (by
     simp [Valuation.restrict_def, restrict₀_eq_zero_iff, (eq_zero h (r := r)).ne, ← hv,
-      (eq_zero h (r := s)).ne, hr₀.ne', hs₀.ne'])
+      hr₀.ne'])
   intro x hx
   let y := (WithVal.equiv v) x
   have hy : toVal v y = x := rfl
-  have hs0' : 0 < Valued.v.restrict (toVal v s) := by
-    simp [restrict_pos_iff, h.pos_iff, ← hv, hs₀]
   have h' : v.restrict.IsEquiv w.restrict := h.restrict
   rw [← hr, equiv_apply, Set.mem_ofPred_eq, lt_div_iff₀ ((restrict_pos_iff Valued.v s).mpr hs₀), hv,
     ← map_mul, ← lt_def, ← ofVal_mul,
     ← hy, ← toVal_mul, ←  h'.orderRingIso_apply, ← h'.orderRingIso.lt_symm_apply]
   simp only [toVal_mul, orderRingIso_symm_apply, lt_def, ofVal_mul, restrict_lt_iff]
-  simp only [equiv_symm_apply, Units.val_mk0, Set.mem_ofPred_eq, lt_div_iff₀ hs0'] at hx
+  simp only [Units.val_mk0, Set.mem_ofPred_eq, lt_div_iff₀ hs0'] at hx
   rwa [← map_mul, restrict_lt_iff] at hx
 
 theorem IsEquiv.uniformContinuous_equiv_symm [hval : Valued R Γ₀'] (hv : Valued.v = w)
@@ -537,23 +542,22 @@ theorem IsEquiv.uniformContinuous_equiv_symm [hval : Valued R Γ₀'] (hv : Valu
   intro γ
   obtain ⟨r, s, hr₀, hs₀, hr⟩ := exists_div_eq_of_unit Valued.v γ
   have h' : w.restrict.IsEquiv v.restrict := h.restrict
-  use .mk0 ((Valued.v.restrict ((WithVal.equiv v) r)) /
-    (Valued.v.restrict ((WithVal.equiv v) s))) (by
-    simp only [equiv_apply, restrict_def, ne_eq, div_eq_zero_iff, restrict₀_eq_zero_iff, hv,
-      MonoidWithZeroHom.coe_ofClass, not_or, (eq_zero h (r := r.ofVal)).ne,
-      (eq_zero h (r := s.ofVal)).ne]
-    exact ⟨hr₀.ne', hs₀.ne'⟩)
+  have hs0' : 0 < Valued.v.restrict s.ofVal := by
+    rw [restrict_pos_iff, hv, h.pos_iff]
+    exact hs₀
+  use .mk0 (Valued.v.restrict r.ofVal / Valued.v.restrict s.ofVal) (by
+    simp only [restrict_def, ne_eq, div_eq_zero_iff, restrict₀_eq_zero_iff, hv,
+      MonoidWithZeroHom.coe_ofClass, (eq_zero h (r := r.ofVal)).ne]
+    exact hr₀.ne')
   intro x hx
   simp only [equiv_symm_apply, Set.mem_ofPred_eq]
-  simp only [equiv_apply, Units.val_mk0, Set.mem_ofPred_eq] at hx
-  rw [lt_div_iff₀, ← map_mul, restrict_lt_iff, hv, h.lt_iff_lt, map_mul] at hx
-  · rw [← hr, lt_div_iff₀ ((restrict_pos_iff Valued.v s).mpr hs₀), ← map_mul, ← lt_def,
-      ← h.orderRingIso_apply]
-    simp only [orderRingIso_apply, toVal_mul, lt_def, ofVal_mul, restrict_lt_iff]
-    rw [map_mul]
-    exact hx
-  · rw [restrict_pos_iff, hv, h.pos_iff]
-    exact hs₀
+  simp only [Units.val_mk0, Set.mem_ofPred_eq] at hx
+  rw [lt_div_iff₀ hs0', ← map_mul, restrict_lt_iff, hv, h.lt_iff_lt, map_mul] at hx
+  rw [← hr, lt_div_iff₀ ((restrict_pos_iff Valued.v s).mpr hs₀), ← map_mul, ← lt_def,
+    ← h.orderRingIso_apply]
+  simp only [orderRingIso_apply, toVal_mul, lt_def, ofVal_mul, restrict_lt_iff]
+  rw [map_mul]
+  exact hx
 
 lemma IsEquiv.uniformContinuous (h : v.IsEquiv w) :
     @UniformContinuous R R (Valued.mk' w).toUniformSpace (Valued.mk' v).toUniformSpace
@@ -606,19 +610,20 @@ def _root_.WithVal.uniformEquiv [Valued R Γ₀'] (hV : Valued.v = w) (h : v.IsE
 
 theorem exists_div_eq_of_surjective {K : Type*} [DivisionRing K] {Γ₀ : Type*}
     [LinearOrderedCommGroupWithZero Γ₀] {v : Valuation K Γ₀} (hv : Function.Surjective v)
-    (γ : Γ₀ˣ) : ∃ r s, 0 < v r ∧ 0 < v s ∧ v r / v s = γ := by
+    (γ : Γ₀ˣ) : ∃ (r s : K) (_ : 0 < v r) (_ : 0 < v s), v r / v s = γ := by
   obtain ⟨r, hr⟩ := hv γ
-  exact ⟨r, 1, by simp [hr]⟩
+  exact ⟨r, 1, by simp [hr], by simp, by simp [hr]⟩
 
 theorem restrict_exists_div_eq {K : Type*} [DivisionRing K] {Γ₀ : Type*}
     [LinearOrderedCommGroupWithZero Γ₀] (v : Valuation K Γ₀)
     (γ : (ValueGroup₀ (.ofClass v))ˣ) :
-    ∃ r s, 0 < v r ∧ 0 < v s ∧ v.restrict r / v.restrict s = γ.1 := by
+    ∃ (r s : K) (_ : 0 < v r) (hs : 0 < v s),
+      Checked.div (v.restrict r) (v.restrict s) ((v.restrict_pos_iff s).2 hs).ne'.isUnit =
+        γ.1 := by
   obtain ⟨r, hr⟩ := ValueGroup₀.restrict₀_surjective (.ofClass v) γ
-  exact ⟨r, 1, by
-    simp only [map_one, zero_lt_one, restrict_def, hr, div_one, and_self, and_true]
-    rw [← map_zero v]
-    simpa [← hr] using embedding_strictMono (WithZero.pos_iff_ne_zero.mpr (Units.ne_zero γ))⟩
+  refine ⟨r, 1, ?_, by simp, by simp [restrict_def, hr]⟩
+  rw [← map_zero v]
+  simpa [← hr] using embedding_strictMono (WithZero.pos_iff_ne_zero.mpr (Units.ne_zero γ))
 
 open UniformSpace.Completion in
 theorem IsEquiv.valuedCompletion_le_one_iff {K : Type*} [Field K] {v : Valuation K Γ₀}

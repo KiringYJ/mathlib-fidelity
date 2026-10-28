@@ -24,17 +24,17 @@ variable {α β : Type*}
 namespace Int
 
 /-- Exact integer division is preserved when the denominator is nonzero. -/
-@[simp]
+@[simp, norm_cast]
 theorem cast_div_charZero {k : Type*} [DivisionRing k] [CharZero k] {m n : ℤ}
     (n_dvd : n ∣ m) (hn : n ≠ 0) :
-    ((m / n : ℤ) : k) = (m : k) /ₚ Units.mk0 (n : k) (cast_ne_zero.mpr hn) :=
+    ((m / n : ℤ) : k) = m / n :=
   cast_div n_dvd (cast_ne_zero.mpr hn)
 
 -- Necessary for confluence with `ofNat_ediv` and `cast_div_charZero`.
-@[simp]
+@[simp, norm_cast]
 theorem cast_div_ofNat_charZero {k : Type*} [DivisionRing k] [CharZero k] {m n : ℕ}
     (n_dvd : n ∣ m) (hn : n ≠ 0) :
-    (((m : ℤ) / (n : ℤ) : ℤ) : k) = (m : k) /ₚ Units.mk0 (n : k) (Nat.cast_ne_zero.mpr hn) := by
+    (((m : ℤ) / (n : ℤ) : ℤ) : k) = m / n := by
   simpa only [cast_natCast] using
     (cast_div_charZero (k := k) (Int.ofNat_dvd.mpr n_dvd) (Int.ofNat_ne_zero.mpr hn))
 

@@ -142,29 +142,34 @@ namespace RecursionBase
 
 variable {k : Type*} [Field k] [IsAlgClosed k]
 
-theorem solution_pow (a₁ a₂ : 𝕎 k) : ∃ x : k, x ^ (p - 1) = a₂.coeff 0 / a₁.coeff 0 :=
+theorem solution_pow (a₁ a₂ : 𝕎 k) {ha₁ : IsUnit (a₁.coeff 0)} :
+    ∃ x : k, x ^ (p - 1) = a₂.coeff 0 / a₁.coeff 0 :=
   IsAlgClosed.exists_pow_nat_eq _ <| tsub_pos_of_lt hp.out.one_lt
 
-/-- The base case (0th coefficient) of our solution vector. -/
-def solution (a₁ a₂ : 𝕎 k) : k :=
-  Classical.choose <| solution_pow p a₁ a₂
+/-- The base case (0th coefficient) of our solution vector, defined when the 0th coefficient of
+`a₁` is nonzero. -/
+def solution (a₁ a₂ : 𝕎 k) (ha₁ : a₁.coeff 0 ≠ 0) : k :=
+  Classical.choose <| solution_pow p a₁ a₂ (ha₁ := ha₁.isUnit)
 
-theorem solution_spec (a₁ a₂ : 𝕎 k) : solution p a₁ a₂ ^ (p - 1) = a₂.coeff 0 / a₁.coeff 0 :=
-  Classical.choose_spec <| solution_pow p a₁ a₂
+theorem solution_spec (a₁ a₂ : 𝕎 k) (ha₁ : a₁.coeff 0 ≠ 0) :
+    solution p a₁ a₂ ha₁ ^ (p - 1) = a₂.coeff 0 / a₁.coeff 0 :=
+  Classical.choose_spec <| solution_pow p a₁ a₂ (ha₁ := ha₁.isUnit)
 
 theorem solution_nonzero {a₁ a₂ : 𝕎 k} (ha₁ : a₁.coeff 0 ≠ 0) (ha₂ : a₂.coeff 0 ≠ 0) :
-    solution p a₁ a₂ ≠ 0 := by
+    solution p a₁ a₂ ha₁ ≠ 0 := by
   intro h
-  have := solution_spec p a₁ a₂
+  have := solution_spec p a₁ a₂ ha₁
   rw [h, zero_pow] at this
-  · simpa [ha₁, ha₂] using _root_.div_eq_zero_iff.mp this.symm
+  · simpa [ha₂] using _root_.div_eq_zero_iff.mp this.symm
   · exact Nat.sub_ne_zero_of_lt hp.out.one_lt
 
 theorem solution_spec' {a₁ : 𝕎 k} (ha₁ : a₁.coeff 0 ≠ 0) (a₂ : 𝕎 k) :
-    solution p a₁ a₂ ^ p * a₁.coeff 0 = solution p a₁ a₂ * a₂.coeff 0 := by
-  have := solution_spec p a₁ a₂
-  have := Nat.exists_eq_succ_of_ne_zero hp.out.ne_zero
-  grind
+    solution p a₁ a₂ ha₁ ^ p * a₁.coeff 0 = solution p a₁ a₂ ha₁ * a₂.coeff 0 := by
+  have h := (_root_.eq_div_iff).mp (solution_spec p a₁ a₂ ha₁)
+  calc solution p a₁ a₂ ha₁ ^ p * a₁.coeff 0
+      = solution p a₁ a₂ ha₁ * (solution p a₁ a₂ ha₁ ^ (p - 1) * a₁.coeff 0) := by
+        rw [← mul_assoc, ← pow_succ', Nat.sub_add_cancel hp.out.one_lt.le]
+    _ = solution p a₁ a₂ ha₁ * a₂.coeff 0 := by rw [h]
 
 end RecursionBase
 
@@ -179,7 +184,7 @@ variable {k : Type*} [Field k] [CharP k p] [IsAlgClosed k]
 /-- Recursively defines the sequence of coefficients for `WittVector.frobeniusRotation`. -/
 noncomputable def frobeniusRotationCoeff {a₁ a₂ : 𝕎 k} (ha₁ : a₁.coeff 0 ≠ 0)
     (ha₂ : a₂.coeff 0 ≠ 0) : ℕ → k
-  | 0 => solution p a₁ a₂
+  | 0 => solution p a₁ a₂ ha₁
   | n + 1 => succNthVal p n a₁ a₂ (fun i => frobeniusRotationCoeff ha₁ ha₂ i.val) ha₁ ha₂
 
 /-- For nonzero `a₁` and `a₂`, `frobeniusRotation a₁ a₂` is a Witt vector that satisfies the
@@ -222,7 +227,8 @@ theorem exists_frobenius_solution_fractionRing_aux (m n : ℕ) (r' q' : 𝕎 k) 
     IsFractionRing.ringEquivOfRingEquiv (frobeniusEquiv p k)
           (algebraMap (𝕎 k) (FractionRing (𝕎 k)) b) *
         Localization.mk ((p : 𝕎 k) ^ m * r') ⟨(p : 𝕎 k) ^ n * q', hq⟩ =
-      (p : Localization (nonZeroDivisors (𝕎 k))) ^ (m - n : ℤ) *
+      Checked.zpow (p : Localization (nonZeroDivisors (𝕎 k))) (m - n : ℤ)
+          (fun _ ↦ (FractionRing.p_nonzero p k).isUnit) *
         algebraMap (𝕎 k) (FractionRing (𝕎 k)) b := by
   intro b
   have key : WittVector.frobenius b * r' = q' * b := by
@@ -233,12 +239,15 @@ theorem exists_frobenius_solution_fractionRing_aux (m n : ℕ) (r' q' : 𝕎 k) 
       (IsFractionRing.injective (𝕎 k) (FractionRing (𝕎 k))).ne hq'''
   simp_rw [zpow_sub₀ (FractionRing.p_nonzero p k), IsFractionRing.ringEquivOfRingEquiv_apply,
     IsLocalization.map_eq, RingHom.coe_coe, frobeniusEquiv_apply, FractionRing.mk_eq_div, map_mul,
-    map_pow, map_natCast, zpow_natCast, mul_div_mul_comm, mul_left_comm]
-  congr
-  simp_rw [← mul_div_assoc, div_eq_iff hq'', mul_comm (algebraMap _ _ b), ← map_mul, key]
+    map_pow, map_natCast, zpow_natCast₀]
+  rw [mul_div_mul_comm₀, mul_left_comm]
+  congr 1
+  rw [← mul_div_assoc₀, div_eq_iff, mul_comm (algebraMap _ _ b), ← map_mul, ← map_mul, key]
 
 theorem exists_frobenius_solution_fractionRing {a : FractionRing (𝕎 k)} (ha : a ≠ 0) :
-    ∃ᵉ (b ≠ 0) (m : ℤ), φ b * a = (p : FractionRing (𝕎 k)) ^ m * b := by
+    ∃ᵉ (b ≠ 0) (m : ℤ), φ b * a =
+      Checked.zpow (p : FractionRing (𝕎 k)) m (fun _ ↦ (FractionRing.p_nonzero p k).isUnit) *
+        b := by
   revert ha
   refine Localization.induction_on a ?_
   rintro ⟨r, q, hq⟩ hrq

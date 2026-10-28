@@ -60,7 +60,7 @@ variable {N : ℕ} [NeZero N]
 /-- The `AddMonoidHom` from `ZMod N` to `ℝ / ℤ` sending `j mod N` to `j / N mod 1`. -/
 noncomputable def toAddCircle : ZMod N →+ UnitAddCircle :=
   lift N ⟨AddMonoidHom.mk' (fun j ↦ ↑(j / N : ℝ)) (by simp [add_div]),
-    by simp [div_self (NeZero.ne _)]⟩
+    by simp⟩
 
 lemma toAddCircle_intCast (j : ℤ) :
     toAddCircle (j : ZMod N) = ↑(j / N : ℝ) := by
@@ -83,7 +83,7 @@ lemma toAddCircle_injective : Function.Injective (toAddCircle : ZMod N → _) :=
   intro x y hxy
   have : (0 : ℝ) < N := Nat.cast_pos.mpr (NeZero.pos _)
   rwa [toAddCircle_apply, toAddCircle_apply, AddCircle.coe_eq_coe_iff_of_mem_Ico,
-    div_left_inj' this.ne', Nat.cast_inj, (val_injective N).eq_iff] at hxy <;>
+    div_left_inj', Nat.cast_inj, (val_injective N).eq_iff] at hxy <;>
   exact ⟨by positivity, by simpa only [zero_add, div_lt_one this, Nat.cast_lt] using val_lt _⟩
 
 @[simp] lemma toAddCircle_inj {j k : ZMod N} : toAddCircle j = toAddCircle k ↔ j = k :=

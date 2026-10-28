@@ -62,7 +62,7 @@ lemma threeAPFree_frontier {𝕜 E : Type*} [Field 𝕜] [LinearOrder 𝕜] [IsS
     ThreeAPFree (frontier s) := by
   intro a ha b hb c hc habc
   obtain rfl : (1 / 2 : 𝕜) • a + (1 / 2 : 𝕜) • c = b := by
-    rwa [← smul_add, one_div, inv_smul_eq_iff₀ (show (2 : 𝕜) ≠ 0 by simp), two_smul]
+    rwa [← smul_add, one_div, inv_smul_eq_iff₀ (ha := (show (2 : 𝕜) ≠ 0 by simp).isUnit), two_smul]
   have :=
     hs₁.eq (hs₀.frontier_subset ha) (hs₀.frontier_subset hc) one_half_pos one_half_pos
       (add_halves _) hb.2

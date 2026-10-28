@@ -61,11 +61,12 @@ example [Monoid M] (x y z : M) (S : Submonoid M) (hxy : x * y ∈ S) (hz : z ∈
     z * (x * y) ∈ S := by
   aesop
 
-example [Field F] (S : Subfield F) (q : ℚ) : (q : F) ∈ S := by
+example [Field F] [CharZero F] (S : Subfield F) (q : ℚ) : (q : F) ∈ S := by
   aesop
 
-example [Field F] (S : Subfield F) : (1.2 : F) ∈ S := by
+example [Field F] [CharZero F] (S : Subfield F) : (1.2 : F) ∈ S := by
   aesop
 
-example [Field F] (S : Subfield F) (x : F) (hx : x ∈ S) : ((12e-100 : F) • x⁻¹) ∈ S := by
+example [Field F] [CharZero F] (S : Subfield F) (x : F) (hx : x ∈ S) (h0 : x ≠ 0) :
+    ((12e-100 : F) • x⁻¹) ∈ S := by
   aesop

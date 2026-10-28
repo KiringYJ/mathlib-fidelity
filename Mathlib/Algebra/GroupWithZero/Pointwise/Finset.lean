@@ -12,6 +12,9 @@ public import Mathlib.Algebra.Group.Pointwise.Finset.Basic
 # Pointwise operations of finsets in a group with zero
 
 This file proves properties of pointwise operations of finsets in a group with zero.
+
+A group with zero has no ambient inverse or division, so there is no pointwise inversion or
+division of its finsets. These operations exist for finsets of units, which form a group.
 -/
 
 public section
@@ -58,6 +61,5 @@ lemma Nonempty.zero_mul (hs : s.Nonempty) : 0 * s = 0 :=
   s.zero_mul_subset.antisymm <| by simpa [mem_mul] using! hs
 
 end MulZeroClass
-
 
 end Finset

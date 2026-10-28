@@ -34,140 +34,212 @@ open scoped Topology
 
 variable {α : Type*} {β : Type*} {ι : Type*}
 
-theorem NNRat.tendsto_inv_atTop_nhds_zero_nat : Tendsto (fun n : ℕ ↦ (n : ℚ≥0)⁻¹) atTop (𝓝 0) :=
-  tendsto_inv_atTop_zero.comp tendsto_natCast_atTop_atTop
+/-!
+### Quotients with a vanishing denominator
+
+A sequence such as `n ↦ (n : 𝕜)⁻¹` is defined only where its denominator is nonzero. Its limit is
+stated on that exact domain, the subtype `{n : ℕ // n ≠ 0}` (in general `{x // g x ≠ 0}`), with the
+filter `comap Subtype.val atTop` pulled back along the inclusion. Lemmas about a general quotient
+`fun x ↦ f x / g x` take the invertibility of every value `g x` as evidence; they apply to a
+quotient defined only where `g x ≠ 0` through the subtype `{x // g x ≠ 0}` and the filter
+`comap Subtype.val l`.
+-/
+
+/-- The nonzero natural numbers are unbounded, so `comap Subtype.val atTop` is nontrivial on
+them. -/
+instance Filter.comap_val_ne_zero_atTop_neBot :
+    (comap (Subtype.val : {n : ℕ // n ≠ 0} → ℕ) atTop).NeBot :=
+  atTop_neBot.comap_of_range_mem (by
+    rw [Subtype.range_coe_subtype]
+    exact eventually_ne_atTop 0)
+
+theorem NNRat.tendsto_inv_atTop_nhds_zero_nat :
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ((n : ℕ) : ℚ≥0)⁻¹) (comap Subtype.val atTop) (𝓝 0) :=
+  (tendsto_natCast_atTop_atTop.comp tendsto_comap).fun_inv_tendsto_atTop
+    (h0 := fun n : {n : ℕ // n ≠ 0} ↦ (Nat.cast_ne_zero.2 n.2).isUnit)
 
 theorem NNRat.tendsto_algebraMap_inv_atTop_nhds_zero_nat (𝕜 : Type*) [Semiring 𝕜]
     [Algebra ℚ≥0 𝕜] [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] :
-    Tendsto (algebraMap ℚ≥0 𝕜 ∘ fun n : ℕ ↦ (n : ℚ≥0)⁻¹) atTop (𝓝 0) := by
+    Tendsto (algebraMap ℚ≥0 𝕜 ∘ fun n : {n : ℕ // n ≠ 0} ↦ ((n : ℕ) : ℚ≥0)⁻¹)
+      (comap Subtype.val atTop) (𝓝 0) := by
   convert! (continuous_algebraMap ℚ≥0 𝕜).continuousAt.tendsto.comp tendsto_inv_atTop_nhds_zero_nat
   rw [map_zero]
 
 theorem tendsto_inv_atTop_nhds_zero_nat {𝕜 : Type*} [DivisionSemiring 𝕜] [CharZero 𝕜]
     [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] :
-    Tendsto (fun n : ℕ ↦ (n : 𝕜)⁻¹) atTop (𝓝 0) := by
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ((n : ℕ) : 𝕜)⁻¹) (comap Subtype.val atTop) (𝓝 0) := by
   convert! NNRat.tendsto_algebraMap_inv_atTop_nhds_zero_nat 𝕜
   simp
 
 theorem tendsto_const_div_atTop_nhds_zero_nat {𝕜 : Type*} [DivisionSemiring 𝕜] [CharZero 𝕜]
     [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] [ContinuousMul 𝕜] (C : 𝕜) :
-    Tendsto (fun n : ℕ ↦ C / n) atTop (𝓝 0) := by
-  simpa only [mul_zero, div_eq_mul_inv] using
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ C / ((n : ℕ) : 𝕜)) (comap Subtype.val atTop) (𝓝 0) := by
+  simpa only [mul_zero, div_eq_mul_inv₀] using
     (tendsto_const_nhds (x := C)).mul tendsto_inv_atTop_nhds_zero_nat
 
 theorem tendsto_one_div_atTop_nhds_zero_nat {𝕜 : Type*} [DivisionSemiring 𝕜] [CharZero 𝕜]
     [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] :
-    Tendsto (fun n : ℕ ↦ 1 / (n : 𝕜)) atTop (𝓝 0) := by
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ 1 / ((n : ℕ) : 𝕜)) (comap Subtype.val atTop) (𝓝 0) := by
   simp [tendsto_inv_atTop_nhds_zero_nat]
 
 theorem EReal.tendsto_const_div_atTop_nhds_zero_nat {C : EReal} (h : C ≠ ⊥) (h' : C ≠ ⊤) :
-    Tendsto (fun n : ℕ ↦ C / n) atTop (𝓝 0) := by
-  have : (fun n : ℕ ↦ C / n) = fun n : ℕ ↦ ((C.toReal / n : ℝ) : EReal) := by
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ C / ((n : ℕ) : EReal)) (comap Subtype.val atTop)
+      (𝓝 0) := by
+  have : (fun n : {n : ℕ // n ≠ 0} ↦ C / ((n : ℕ) : EReal)) =
+      fun n : {n : ℕ // n ≠ 0} ↦ ((C.toReal / ((n : ℕ) : ℝ) : ℝ) : EReal) := by
     ext n
-    nth_rw 1 [← coe_toReal h' h, ← coe_coe_eq_natCast n, ← coe_div C.toReal n]
+    rw [coe_div, coe_toReal h' h]
+    rfl
   rw [this, ← coe_zero, tendsto_coe]
   exact _root_.tendsto_const_div_atTop_nhds_zero_nat C.toReal
 
 theorem tendsto_one_div_add_atTop_nhds_zero_nat {𝕜 : Type*} [DivisionSemiring 𝕜] [CharZero 𝕜]
     [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] :
-    Tendsto (fun n : ℕ ↦ 1 / ((n : 𝕜) + 1)) atTop (𝓝 0) :=
-  suffices Tendsto (fun n : ℕ ↦ 1 / (↑(n + 1) : 𝕜)) atTop (𝓝 0) by simpa
-  (tendsto_add_atTop_iff_nat 1).2 tendsto_one_div_atTop_nhds_zero_nat
+    Tendsto (fun n : ℕ ↦ 1 / ((n : 𝕜) + 1)) atTop (𝓝 0) := by
+  have h : Tendsto (fun n : ℕ ↦ (⟨n + 1, n.succ_ne_zero⟩ : {n : ℕ // n ≠ 0})) atTop
+      (comap Subtype.val atTop) := tendsto_comap_iff.2 (tendsto_add_atTop_nat 1)
+  simpa [Function.comp_def] using (tendsto_one_div_atTop_nhds_zero_nat (𝕜 := 𝕜)).comp h
 
 theorem tendsto_algebraMap_inv_atTop_nhds_zero_nat {𝕜 : Type*} (A : Type*)
     [Semifield 𝕜] [CharZero 𝕜] [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜]
     [Semiring A] [Algebra 𝕜 A] [TopologicalSpace A] [ContinuousSMul 𝕜 A] :
-    Tendsto (algebraMap 𝕜 A ∘ fun n : ℕ ↦ (n : 𝕜)⁻¹) atTop (𝓝 0) := by
+    Tendsto (algebraMap 𝕜 A ∘ fun n : {n : ℕ // n ≠ 0} ↦ ((n : ℕ) : 𝕜)⁻¹)
+      (comap Subtype.val atTop) (𝓝 0) := by
   convert! (continuous_algebraMap 𝕜 A).continuousAt.tendsto.comp tendsto_inv_atTop_nhds_zero_nat
   rw [map_zero]
 
+/-- To compute a limit along `comap Subtype.val atTop` on a subtype of `ℕ`, it suffices to compute
+it on its nonzero indices. -/
+private lemma tendsto_comap_val_atTop_of_ne_zero {p : ℕ → Prop} {β : Type*}
+    {u : {n : ℕ // p n} → β} {l : Filter β}
+    (h : Tendsto (fun n : {n : ℕ // p n ∧ n ≠ 0} ↦ u ⟨n, n.2.1⟩) (comap Subtype.val atTop) l) :
+    Tendsto u (comap Subtype.val atTop) l := by
+  have hr : range (fun n : {n : ℕ // p n ∧ n ≠ 0} ↦ (⟨n, n.2.1⟩ : {n : ℕ // p n})) ∈
+      comap Subtype.val atTop := by
+    refine mem_of_superset (preimage_mem_comap (eventually_ne_atTop 0)) ?_
+    rintro ⟨n, hn⟩ (h0 : n ≠ 0)
+    exact ⟨⟨n, hn, h0⟩, rfl⟩
+  rw [← tendsto_comap'_iff hr, comap_comap]
+  exact h
+
+/-- On the nonzero indices of a subtype of `ℕ`, the inverses of the indices tend to `0`. -/
+private lemma tendsto_inv_atTop_nhds_zero_nat_of_ne_zero {𝕜 : Type*} [DivisionSemiring 𝕜]
+    [CharZero 𝕜] [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] {p : ℕ → Prop} :
+    Tendsto (fun n : {n : ℕ // p n ∧ n ≠ 0} ↦
+        Checked.inv ((n : ℕ) : 𝕜) (Nat.cast_ne_zero.2 n.2.2).isUnit)
+      (comap Subtype.val atTop) (𝓝 0) := by
+  have h : Tendsto (fun n : {n : ℕ // p n ∧ n ≠ 0} ↦ (⟨n, n.2.2⟩ : {n : ℕ // n ≠ 0}))
+      (comap Subtype.val atTop) (comap Subtype.val atTop) := by
+    rw [tendsto_comap_iff]
+    exact tendsto_comap
+  exact tendsto_inv_atTop_nhds_zero_nat.comp h
+
 /-- The limit of `n / (n + x)` is 1, for any constant `x` (valid in `ℝ` or any topological division
-algebra over `ℚ≥0`, e.g., `ℂ`). -/
+algebra over `ℚ≥0`, e.g., `ℂ`). The quotient is taken on the indices `n` with `n + x ≠ 0`. -/
 theorem tendsto_natCast_div_add_atTop {𝕜 : Type*} [DivisionSemiring 𝕜] [TopologicalSpace 𝕜]
     [CharZero 𝕜] [ContinuousSMul ℚ≥0 𝕜] [IsTopologicalSemiring 𝕜] [ContinuousInv₀ 𝕜] (x : 𝕜) :
-    Tendsto (fun n : ℕ ↦ (n : 𝕜) / (n + x)) atTop (𝓝 1) := by
-  convert! Tendsto.congr' ((eventually_ne_atTop 0).mp (Eventually.of_forall fun n hn ↦ _)) _
-  · exact fun n : ℕ ↦ 1 / (1 + x / n)
-  · simp [Nat.cast_ne_zero.mpr hn, add_div']
-  · have : 𝓝 (1 : 𝕜) = 𝓝 (1 / (1 + x * (0 : 𝕜))) := by
-      rw [mul_zero, add_zero, div_one]
-    rw [this]
-    refine tendsto_const_nhds.div (tendsto_const_nhds.add ?_) (by simp)
-    simp_rw [div_eq_mul_inv]
-    exact tendsto_const_nhds.mul tendsto_inv_atTop_nhds_zero_nat
+    Tendsto (fun n : {n : ℕ // (n : 𝕜) + x ≠ 0} ↦
+        Checked.div ((n : ℕ) : 𝕜) ((n : ℕ) + x) n.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 1) := by
+  refine tendsto_comap_val_atTop_of_ne_zero ?_
+  -- On the nonzero indices, `n / (n + x)` is the inverse of `1 + x * n⁻¹ = (n + x) * n⁻¹`.
+  have key : ∀ n : {n : ℕ // (n : 𝕜) + x ≠ 0 ∧ n ≠ 0},
+      1 + x * Checked.inv ((n : ℕ) : 𝕜) (Nat.cast_ne_zero.2 n.2.2).isUnit =
+        ((n : ℕ) + x) * Checked.inv ((n : ℕ) : 𝕜) (Nat.cast_ne_zero.2 n.2.2).isUnit :=
+    fun n ↦ by rw [add_mul, mul_inv_cancel₀]
+  have hu : ∀ n : {n : ℕ // (n : 𝕜) + x ≠ 0 ∧ n ≠ 0},
+      IsUnit (1 + x * Checked.inv ((n : ℕ) : 𝕜) (Nat.cast_ne_zero.2 n.2.2).isUnit) :=
+    fun n ↦ key n ▸ n.2.1.isUnit.mul (IsUnit.inv₀ _)
+  have hb : IsUnit (1 + x * 0 : 𝕜) := by simp
+  have hlim := (((tendsto_const_nhds (x := x)).mul
+    tendsto_inv_atTop_nhds_zero_nat_of_ne_zero).const_add (1 : 𝕜)).inv₀ (h0 := hu) (ha := hb)
+  convert hlim using 2 with n
+  · symm
+    apply inv_eq_of_mul_eq_one_right₀
+    rw [key n, div_eq_mul_inv₀, mul_assoc, ← mul_assoc (Checked.inv ((n : ℕ) : 𝕜) _),
+      inv_mul_cancel₀, one_mul, mul_inv_cancel₀]
+  · simp
 
+/-- The limit of `(a + c * k) / (b + d * k)` is `c / d` for `d ≠ 0`; the quotient is taken on the
+indices `k` with `b + d * k ≠ 0`. -/
 theorem tendsto_add_mul_div_add_mul_atTop_nhds {𝕜 : Type*} [Semifield 𝕜] [CharZero 𝕜]
     [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] [IsTopologicalSemiring 𝕜] [ContinuousInv₀ 𝕜]
     (a b c : 𝕜) {d : 𝕜} (hd : d ≠ 0) :
-    Tendsto (fun k : ℕ ↦ (a + c * k) / (b + d * k)) atTop (𝓝 (c / d)) := by
-  apply Filter.Tendsto.congr'
-  case f₁ => exact fun k ↦ (a * (↑k)⁻¹ + c) / (b * (↑k)⁻¹ + d)
-  · refine (eventually_ne_atTop 0).mp (Eventually.of_forall ?_)
-    intro h hx
-    dsimp
-    field (discharger := norm_cast)
-  · apply Filter.Tendsto.div _ _ hd
-    all_goals
-      apply zero_add (_ : 𝕜) ▸ Filter.Tendsto.add_const _ _
-      apply mul_zero (_ : 𝕜) ▸ Filter.Tendsto.const_mul _ _
-      exact tendsto_inv_atTop_nhds_zero_nat
+    Tendsto (fun k : {k : ℕ // b + d * k ≠ 0} ↦
+        Checked.div (a + c * (k : ℕ)) (b + d * (k : ℕ)) k.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 (c / d)) := by
+  refine tendsto_comap_val_atTop_of_ne_zero ?_
+  -- On the nonzero indices, divide the numerator and the denominator by `k`.
+  have key : ∀ (e f : 𝕜) (k : {k : ℕ // b + d * k ≠ 0 ∧ k ≠ 0}),
+      e * Checked.inv ((k : ℕ) : 𝕜) (Nat.cast_ne_zero.2 k.2.2).isUnit + f =
+        (e + f * (k : ℕ)) * Checked.inv ((k : ℕ) : 𝕜) (Nat.cast_ne_zero.2 k.2.2).isUnit :=
+    fun e f k ↦ by rw [add_mul, mul_assoc, mul_inv_cancel₀, mul_one]
+  have hu : ∀ k : {k : ℕ // b + d * k ≠ 0 ∧ k ≠ 0},
+      IsUnit (b * Checked.inv ((k : ℕ) : 𝕜) (Nat.cast_ne_zero.2 k.2.2).isUnit + d) :=
+    fun k ↦ key b d k ▸ k.2.1.isUnit.mul (IsUnit.inv₀ _)
+  have hinv := tendsto_inv_atTop_nhds_zero_nat_of_ne_zero (𝕜 := 𝕜) (p := fun k ↦ b + d * k ≠ 0)
+  have hb : IsUnit (b * 0 + d) := by simpa using hd.isUnit
+  have hlim := (((tendsto_const_nhds (x := a)).mul hinv).add_const c).div₀
+    (((tendsto_const_nhds (x := b)).mul hinv).add_const d) (h₀ := hu) (hb := hb)
+  convert hlim using 2 with k
+  · rw [_root_.eq_div_iff, key b d k, ← mul_assoc, div_mul_cancel₀, key a c k]
+  · simp
 
-/-- For any positive `m : ℕ`, `((n % m : ℕ) : ℝ) / (n : ℝ)` tends to `0` as `n` tends to `∞`. -/
+/-- For any positive `m : ℕ`, `((n % m : ℕ) : ℝ) / (n : ℝ)` tends to `0` as `n` tends to `∞`; the
+quotient is taken on the nonzero indices. -/
 theorem tendsto_mod_div_atTop_nhds_zero_nat {m : ℕ} (hm : 0 < m) :
-    Tendsto (fun n : ℕ => ((n % m : ℕ) : ℝ) / (n : ℝ)) atTop (𝓝 0) := by
-  have h0 : ∀ᶠ n : ℕ in atTop, 0 ≤ (fun n : ℕ => ((n % m : ℕ) : ℝ)) n := by aesop
-  exact tendsto_bdd_div_atTop_nhds_zero h0
-    (.of_forall (fun n ↦ cast_le.mpr (mod_lt n hm).le)) tendsto_natCast_atTop_atTop
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (((n : ℕ) % m : ℕ) : ℝ) / ((n : ℕ) : ℝ))
+      (comap Subtype.val atTop) (𝓝 0) :=
+  tendsto_bdd_div_atTop_nhds_zero
+    (h₀ := fun n : {n : ℕ // n ≠ 0} ↦ (Nat.cast_ne_zero.2 n.2).isUnit)
+    (.of_forall fun _ ↦ Nat.cast_nonneg _)
+    (.of_forall fun n ↦ cast_le.mpr (mod_lt n hm).le)
+    (tendsto_natCast_atTop_atTop.comp tendsto_comap)
 
-/-- If `a ≠ 0`, `(a * x + c)⁻¹` tends to `0` as `x` tends to `∞`. -/
+/-- If `a ≠ 0`, `(a * x + c)⁻¹` tends to `0` as `x` tends to `∞`; the inverse is taken where
+`a * x + c ≠ 0`. -/
 theorem tendsto_mul_add_inv_atTop_nhds_zero (a c : ℝ) (ha : a ≠ 0) :
-    Tendsto (fun x => (a * x + c)⁻¹) atTop (𝓝 0) := by
+    Tendsto (fun x : {x : ℝ // a * x + c ≠ 0} ↦ Checked.inv (a * x + c) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 0) := by
+  have h : Tendsto (fun x : {x : ℝ // a * x + c ≠ 0} ↦ (x : ℝ)) (comap Subtype.val atTop) atTop :=
+    tendsto_comap
   obtain ha' | ha' := lt_or_gt_of_ne ha
-  · exact tendsto_inv_atBot_zero.comp
-      (tendsto_atBot_add_const_right _ c (tendsto_id.const_mul_atTop_of_neg ha'))
-  · exact tendsto_inv_atTop_zero.comp
-      (tendsto_atTop_add_const_right _ c (tendsto_id.const_mul_atTop ha'))
-
-theorem Filter.EventuallyEq.div_mul_cancel {α G : Type*} [GroupWithZero G] {f g : α → G}
-    {l : Filter α} (hg : Tendsto g l (𝓟 {0}ᶜ)) : (fun x ↦ f x / g x * g x) =ᶠ[l] fun x ↦ f x := by
-  filter_upwards [hg.le_comap <| preimage_mem_comap (m := g) (mem_principal_self {0}ᶜ)] with x hx
-  simp_all
-
-/-- If `g` tends to `∞`, then eventually for all `x` we have `(f x / g x) * g x = f x`. -/
-theorem Filter.EventuallyEq.div_mul_cancel_atTop {α K : Type*}
-    [DivisionSemiring K] [LinearOrder K] [IsStrictOrderedRing K]
-    {f g : α → K} {l : Filter α} (hg : Tendsto g l atTop) :
-    (fun x ↦ f x / g x * g x) =ᶠ[l] fun x ↦ f x :=
-  div_mul_cancel <| hg.mono_right <| le_principal_iff.mpr <|
-    mem_of_superset (Ioi_mem_atTop 0) <| by simp
+  · exact (tendsto_atBot_add_const_right _ c (h.const_mul_atTop_of_neg ha')).fun_inv_tendsto_atBot
+      (h0 := fun x : {x : ℝ // a * x + c ≠ 0} ↦ x.2.isUnit)
+  · exact (tendsto_atTop_add_const_right _ c (h.const_mul_atTop ha')).fun_inv_tendsto_atTop
+      (h0 := fun x : {x : ℝ // a * x + c ≠ 0} ↦ x.2.isUnit)
 
 /-- If when `x` tends to `∞`, `g` tends to `∞` and `f x / g x` tends to a positive
   constant, then `f` tends to `∞`. -/
 theorem Filter.Tendsto.num {α K : Type*} [Field K] [LinearOrder K] [IsStrictOrderedRing K]
     [TopologicalSpace K] [OrderTopology K]
-    {f g : α → K} {l : Filter α} (hg : Tendsto g l atTop) {a : K} (ha : 0 < a)
-    (hlim : Tendsto (fun x => f x / g x) l (𝓝 a)) :
+    {f g : α → K} {hgUnit : ∀ x, IsUnit (g x)} {l : Filter α} (hg : Tendsto g l atTop) {a : K}
+    (ha : 0 < a) (hlim : Tendsto (fun x => Checked.div (f x) (g x) (hgUnit x)) l (𝓝 a)) :
     Tendsto f l atTop :=
-  (hlim.pos_mul_atTop ha hg).congr' (EventuallyEq.div_mul_cancel_atTop hg)
+  (hlim.pos_mul_atTop ha hg).congr fun x ↦ div_mul_cancel₀ (f x)
 
-/-- If when `x` tends to `∞`, `g` tends to `∞` and `f x / g x` tends to a positive
-  constant, then `f` tends to `∞`. -/
+/-- If when `x` tends to `∞`, `f` tends to `∞` and `f x / g x` tends to a positive
+  constant, then `g` tends to `∞`. -/
 theorem Filter.Tendsto.den {α K : Type*} [Field K] [LinearOrder K] [IsStrictOrderedRing K]
     [TopologicalSpace K] [OrderTopology K]
-    [ContinuousInv K] {f g : α → K} {l : Filter α} (hf : Tendsto f l atTop) {a : K} (ha : 0 < a)
-    (hlim : Tendsto (fun x => f x / g x) l (𝓝 a)) :
-    Tendsto g l atTop :=
-  have hlim' : Tendsto (fun x => g x / f x) l (𝓝 a⁻¹) := by
-    simp_rw [← inv_div (f _)]
-    exact Filter.Tendsto.inv (f := fun x => f x / g x) hlim
-  (hlim'.pos_mul_atTop (inv_pos_of_pos ha) hf).congr' (.div_mul_cancel_atTop hf)
+    {f g : α → K} {hgUnit : ∀ x, IsUnit (g x)} {l : Filter α} (hf : Tendsto f l atTop) {a : K}
+    (ha : 0 < a) (hlim : Tendsto (fun x => Checked.div (f x) (g x) (hgUnit x)) l (𝓝 a)) :
+    Tendsto g l atTop := by
+  have h2a : 0 < 2 * a := by positivity
+  refine tendsto_atTop_mono' l ?_ (hf.atTop_div_const h2a)
+  filter_upwards [hlim.eventually (gt_mem_nhds (by linarith : a < 2 * a)),
+    hlim.eventually (lt_mem_nhds ha), hf.eventually_gt_atTop 0] with x hx2 hx0 hf0
+  have hg0 : 0 < g x := (div_pos_iff_of_pos_left hf0).1 hx0
+  rw [div_le_iff₀ h2a]
+  rw [div_lt_iff₀ hg0] at hx2
+  linarith
 
 /-- If when `x` tends to `∞`, `f x / g x` tends to a positive constant, then `f` tends to `∞` if
   and only if `g` tends to `∞`. -/
 theorem Filter.Tendsto.num_atTop_iff_den_atTop {α K : Type*}
     [Field K] [LinearOrder K] [IsStrictOrderedRing K] [TopologicalSpace K]
-    [OrderTopology K] [ContinuousInv K] {f g : α → K} {l : Filter α} {a : K} (ha : 0 < a)
-    (hlim : Tendsto (fun x => f x / g x) l (𝓝 a)) :
+    [OrderTopology K] {f g : α → K} {hgUnit : ∀ x, IsUnit (g x)} {l : Filter α} {a : K}
+    (ha : 0 < a) (hlim : Tendsto (fun x => Checked.div (f x) (g x) (hgUnit x)) l (𝓝 a)) :
     Tendsto f l atTop ↔ Tendsto g l atTop :=
   ⟨fun hf ↦ hf.den ha hlim, fun hg ↦ hg.num ha hlim⟩
 
@@ -196,7 +268,8 @@ theorem tendsto_pow_atTop_nhds_zero_of_lt_one {𝕜 : Type*}
       simp [_root_.pow_succ, ← hr])
     (fun hr ↦
       have := (one_lt_inv₀ hr).2 h₂ |> tendsto_pow_atTop_atTop_of_one_lt
-      (tendsto_inv_atTop_zero.comp this).congr fun n ↦ by simp)
+      (this.fun_inv_tendsto_atTop (h0 := fun n ↦ hr.ne'.isUnit.inv₀.pow n)).congr
+        fun n ↦ by simp)
 
 @[simp] theorem tendsto_pow_atTop_nhds_zero_iff {𝕜 : Type*}
     [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [Archimedean 𝕜]
@@ -321,7 +394,13 @@ theorem hasSum_geometric_of_lt_one {r : ℝ} (h₁ : 0 ≤ r) (h₂ : r < 1) :
   have : Tendsto (fun n ↦ (r ^ n - 1) * (r - 1)⁻¹) atTop (𝓝 ((0 - 1) * (r - 1)⁻¹)) :=
     ((tendsto_pow_atTop_nhds_zero_of_lt_one h₁ h₂).sub tendsto_const_nhds).mul tendsto_const_nhds
   (hasSum_iff_tendsto_nat_of_nonneg (pow_nonneg h₁) _).mpr <| by
-    simp_all [neg_inv, geom_sum_eq, div_eq_mul_inv]
+    have hlim : (0 - 1) * (r - 1)⁻¹ = (1 - r)⁻¹ := by
+      rw [zero_sub, neg_one_mul, neg_inv₀]
+      simp only [neg_sub]
+    rw [← hlim]
+    refine this.congr fun n ↦ ?_
+    rw [geom_sum_eq ‹r ≠ 1›]
+    rfl
 
 theorem summable_geometric_of_lt_one {r : ℝ} (h₁ : 0 ≤ r) (h₂ : r < 1) :
     Summable fun n : ℕ ↦ r ^ n :=
@@ -352,19 +431,19 @@ theorem sum_geometric_two_le (n : ℕ) : (∑ i ∈ range n, (1 / (2 : ℝ)) ^ i
   convert! summable_geometric_two.sum_le_tsum (range n) (fun i _ ↦ this i)
   exact tsum_geometric_two.symm
 
-theorem tsum_geometric_inv_two : (∑' n : ℕ, (2 : ℝ)⁻¹ ^ n) = 2 :=
-  (inv_eq_one_div (2 : ℝ)).symm ▸ tsum_geometric_two
+theorem tsum_geometric_inv_two : (∑' n : ℕ, (2 : ℝ)⁻¹ ^ n) = 2 := by
+  simpa only [one_div₀] using tsum_geometric_two
 
 /-- The sum of `2⁻¹ ^ i` for `n ≤ i` equals `2 * 2⁻¹ ^ n`. -/
 theorem tsum_geometric_inv_two_ge (n : ℕ) :
     (∑' i, ite (n ≤ i) ((2 : ℝ)⁻¹ ^ i) 0) = 2 * 2⁻¹ ^ n := by
   have A : Summable fun i : ℕ ↦ ite (n ≤ i) ((2⁻¹ : ℝ) ^ i) 0 := by
-    simpa only [← piecewise_eq_indicator, one_div]
+    simpa only [← piecewise_eq_indicator, one_div₀]
       using! summable_geometric_two.indicator {i | n ≤ i}
   have B : ((Finset.range n).sum fun i : ℕ ↦ ite (n ≤ i) ((2⁻¹ : ℝ) ^ i) 0) = 0 :=
     Finset.sum_eq_zero fun i hi ↦
       ite_eq_right_iff.2 fun h ↦ (lt_irrefl _ ((Finset.mem_range.1 hi).trans_le h)).elim
-  simp [-inv_pow, ← Summable.sum_add_tsum_nat_add n A, B, pow_add, _root_.tsum_mul_right,
+  simp [-inv_pow₀, ← Summable.sum_add_tsum_nat_add n A, B, pow_add, _root_.tsum_mul_right,
     tsum_geometric_inv_two]
 
 theorem hasSum_geometric_two' (a : ℝ) : HasSum (fun n : ℕ ↦ a / 2 / 2 ^ n) a := by
@@ -372,7 +451,7 @@ theorem hasSum_geometric_two' (a : ℝ) : HasSum (fun n : ℕ ↦ a / 2 / 2 ^ n)
     HasSum.mul_left (a / 2)
       (hasSum_geometric_of_lt_one (le_of_lt one_half_pos) one_half_lt_one) using 1
   · funext n
-    simp only [one_div, inv_pow]
+    simp only [one_div₀, inv_pow₀]
     rfl
   · norm_num
 
@@ -386,7 +465,7 @@ theorem tsum_geometric_two' (a : ℝ) : ∑' n : ℕ, a / 2 / 2 ^ n = a :=
 theorem NNReal.hasSum_geometric {r : ℝ≥0} (hr : r < 1) : HasSum (fun n : ℕ ↦ r ^ n) (1 - r)⁻¹ := by
   apply NNReal.hasSum_coe.1
   push_cast
-  rw [NNReal.coe_sub (le_of_lt hr)]
+  simp only [NNReal.coe_sub (le_of_lt hr), NNReal.coe_one]
   exact hasSum_geometric_of_lt_one r.coe_nonneg hr
 
 theorem NNReal.summable_geometric {r : ℝ≥0} (hr : r < 1) : Summable fun n : ℕ ↦ r ^ n :=
@@ -405,7 +484,7 @@ theorem ENNReal.tsum_geometric (r : ℝ≥0∞) : ∑' n : ℕ, r ^ n = (1 - r)�
   · rcases ENNReal.lt_iff_exists_coe.1 hr with ⟨r, rfl, hr'⟩
     norm_cast at *
     convert! ENNReal.tsum_coe_eq (NNReal.hasSum_geometric hr)
-    rw [ENNReal.coe_inv <| ne_of_gt <| tsub_pos_iff_lt.2 hr, coe_sub, coe_one]
+    rw [ENNReal.coe_inv (hr := (ne_of_gt <| tsub_pos_iff_lt.2 hr).isUnit), coe_sub, coe_one]
   · rw [tsub_eq_zero_iff_le.mpr hr, ENNReal.inv_zero, ENNReal.tsum_eq_iSup_nat, iSup_eq_top]
     refine fun a ha ↦
       (ENNReal.exists_nat_gt (lt_top_iff_ne_top.1 ha)).imp fun n hn ↦ lt_of_lt_of_le hn ?_
@@ -520,8 +599,7 @@ include hr hu
 theorem aux_hasSum_of_le_geometric : HasSum (fun n : ℕ ↦ C * r ^ n) (C / (1 - r)) := by
   rcases sign_cases_of_C_mul_pow_nonneg fun n ↦ dist_nonneg.trans (hu n) with (rfl | ⟨_, r₀⟩)
   · simp [hasSum_zero]
-  · refine HasSum.mul_left C ?_
-    simpa using hasSum_geometric_of_lt_one r₀ hr
+  · exact (hasSum_geometric_of_lt_one r₀ hr).mul_left C
 
 variable (r C)
 
@@ -543,8 +621,8 @@ theorem dist_le_of_le_geometric_of_tendsto {a : α} (ha : Tendsto f atTop (𝓝 
     dist (f n) a ≤ C * r ^ n / (1 - r) := by
   have := aux_hasSum_of_le_geometric hr hu
   convert! dist_le_tsum_of_dist_le_of_tendsto _ hu ⟨_, this⟩ ha n
-  simp only [pow_add, mul_left_comm C, mul_div_right_comm]
-  rw [mul_comm]
+  simp only [pow_add, mul_left_comm C]
+  rw [mul_div_right_comm₀, mul_comm]
   exact (this.mul_left _).tsum_eq.symm
 
 end
@@ -567,9 +645,9 @@ theorem dist_le_of_le_geometric_two_of_tendsto₀ {a : α} (ha : Tendsto f atTop
 theorem dist_le_of_le_geometric_two_of_tendsto {a : α} (ha : Tendsto f atTop (𝓝 a)) (n : ℕ) :
     dist (f n) a ≤ C / 2 ^ n := by
   convert! dist_le_tsum_of_dist_le_of_tendsto _ hu₂ (summable_geometric_two' C) ha n
-  simp only [add_comm n, pow_add, ← div_div]
-  symm
-  exact ((hasSum_geometric_two' C).div_const _).tsum_eq
+  rw [← ((hasSum_geometric_two' C).div_const (2 ^ n)).tsum_eq]
+  congr 1 with m
+  simp only [add_comm n, pow_add, div_div₀, mul_assoc]
 
 end LeGeometric
 
@@ -581,8 +659,8 @@ theorem summable_one_div_pow_of_le {m : ℝ} {f : ℕ → ℕ} (hm : 1 < m) (fi 
     Summable fun i ↦ 1 / m ^ f i := by
   refine .of_nonneg_of_le (fun a ↦ by positivity) (fun a ↦ ?_)
       (summable_geometric_of_lt_one (one_div_nonneg.mpr (zero_le_one.trans hm.le))
-        ((one_div_lt (zero_lt_one.trans hm) zero_lt_one).mpr (one_div_one.le.trans_lt hm)))
-  rw [div_pow, one_pow]
+        ((one_div_lt (zero_lt_one.trans hm) zero_lt_one).mpr (one_div_one₀.le.trans_lt hm)))
+  rw [div_pow₀, one_pow]
   refine (one_div_le_one_div ?_ ?_).mpr (pow_right_mono₀ hm.le (fi a)) <;>
     exact pow_pos (zero_lt_one.trans hm) _
 
@@ -659,7 +737,7 @@ theorem exists_pos_tsum_mul_lt_of_countable {ε : ℝ≥0∞} (hε : ε ≠ 0) {
   have : ∀ i, 0 < max 1 (w i) := fun i ↦ zero_lt_one.trans_le (le_max_left _ _)
   refine ⟨fun i ↦ δ' i / max 1 (w i), fun i ↦ div_pos (Hpos _) (this i), ?_⟩
   refine lt_of_le_of_lt (ENNReal.tsum_le_tsum fun i ↦ ?_) Hsum
-  rw [coe_div (this i).ne']
+  rw [coe_div (hr := (this i).ne'.isUnit)]
   refine mul_le_of_le_div' ?_
   grw [← le_max_right]
 
@@ -674,27 +752,23 @@ theorem factorial_tendsto_atTop : Tendsto Nat.factorial atTop atTop :=
   tendsto_atTop_atTop_of_monotone (fun _ _ ↦ Nat.factorial_le) fun n ↦ ⟨n, n.self_le_factorial⟩
 
 theorem tendsto_factorial_div_pow_self_atTop :
-    Tendsto (fun n ↦ n ! / (n : ℝ) ^ n : ℕ → ℝ) atTop (𝓝 0) :=
-  tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds
-    (tendsto_const_div_atTop_nhds_zero_nat 1)
-    (Eventually.of_forall fun n ↦
-      div_nonneg (mod_cast n.factorial_pos.le)
-        (pow_nonneg (mod_cast n.zero_le) _))
-    (by
-      refine (eventually_gt_atTop 0).mono fun n hn ↦ ?_
-      rcases Nat.exists_eq_succ_of_ne_zero hn.ne.symm with ⟨k, rfl⟩
-      rw [factorial_eq_prod_range_add_one, pow_eq_prod_const, div_eq_mul_inv, ← inv_eq_one_div,
-        prod_natCast, Nat.cast_succ, ← Finset.prod_inv_distrib, ← prod_mul_distrib,
-        Finset.prod_range_succ']
-      simp only [one_mul, Nat.cast_add, zero_add, Nat.cast_one]
-      refine
-            mul_le_of_le_one_left (inv_nonneg.mpr <| mod_cast hn.le) (prod_le_one₀ ?_ ?_) <;>
-          intro x hx <;>
-        rw [Finset.mem_range] at hx
-      · positivity
-      · refine (div_le_one <| mod_cast hn).mpr ?_
-        norm_cast
-        lia)
+    Tendsto (fun n ↦ n ! / (n : ℝ) ^ n : ℕ → ℝ) atTop (𝓝 0) := by
+  -- On the nonzero indices, `n ! / n ^ n ≤ 1 / n`.
+  refine (tendsto_comap'_iff (i := (Subtype.val : {n : ℕ // n ≠ 0} → ℕ)) (by
+    rw [Subtype.range_coe_subtype]
+    exact eventually_ne_atTop 0)).1 ?_
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
+    (tendsto_const_div_atTop_nhds_zero_nat 1) (fun n ↦ by dsimp; positivity) fun n ↦ ?_
+  obtain ⟨n, hn⟩ := n
+  obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hn
+  have hk : (k + 1)! * (k + 1) ≤ (k + 1) ^ (k + 1) := by
+    rw [_root_.pow_succ]
+    refine Nat.mul_le_mul_right _ ?_
+    rw [← Nat.descFactorial_self, Nat.descFactorial_succ, Nat.add_sub_cancel_left, one_mul]
+    exact Nat.descFactorial_le_pow _ _
+  dsimp
+  rw [div_le_div_iff₀ (by positivity) (by positivity), one_mul]
+  exact_mod_cast hk
 
 /-!
 ### Ceil and floor
@@ -723,38 +797,55 @@ lemma tendsto_nat_floor_mul_atTop {α : Type _}
 variable {R : Type*} [TopologicalSpace R] [Field R] [LinearOrder R] [IsStrictOrderedRing R]
   [OrderTopology R] [FloorRing R]
 
+/-- The quotient `⌊a * x⌋₊ / x` tends to `a`; it is taken on the nonzero `x`. -/
 theorem tendsto_nat_floor_mul_div_atTop {a : R} (ha : 0 ≤ a) :
-    Tendsto (fun x ↦ (⌊a * x⌋₊ : R) / x) atTop (𝓝 a) := by
-  have A : Tendsto (fun x : R ↦ a - x⁻¹) atTop (𝓝 (a - 0)) :=
-    tendsto_const_nhds.sub tendsto_inv_atTop_zero
+    Tendsto (fun x : {x : R // x ≠ 0} ↦ Checked.div (⌊a * (x : R)⌋₊ : R) (x : R) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 a) := by
+  have hx : Tendsto (fun x : {x : R // x ≠ 0} ↦ (x : R)) (comap Subtype.val atTop) atTop :=
+    tendsto_comap
+  have A : Tendsto (fun x : {x : R // x ≠ 0} ↦ a - Checked.inv (x : R) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 (a - 0)) :=
+    tendsto_const_nhds.sub (hx.fun_inv_tendsto_atTop (h0 := fun x : {x : R // x ≠ 0} ↦ x.2.isUnit))
   rw [sub_zero] at A
   apply tendsto_of_tendsto_of_tendsto_of_le_of_le' A tendsto_const_nhds
-  · refine eventually_atTop.2 ⟨1, fun x hx ↦ ?_⟩
-    simp only [le_div_iff₀ (zero_lt_one.trans_le hx), _root_.sub_mul,
-      inv_mul_cancel₀ (zero_lt_one.trans_le hx).ne']
+  · filter_upwards [hx.eventually_ge_atTop 1] with x hx1
+    rw [le_div_iff₀ (zero_lt_one.trans_le hx1), _root_.sub_mul, inv_mul_cancel₀]
     have := Nat.lt_floor_add_one (a * x)
     linarith
-  · refine eventually_atTop.2 ⟨1, fun x hx ↦ ?_⟩
-    rw [div_le_iff₀ (zero_lt_one.trans_le hx)]
-    simp [Nat.floor_le (mul_nonneg ha (zero_le_one.trans hx))]
+  · filter_upwards [hx.eventually_ge_atTop 1] with x hx1
+    have hx0 : (0 : R) < x := zero_lt_one.trans_le hx1
+    rw [div_le_iff₀ hx0]
+    simp [Nat.floor_le (mul_nonneg ha hx0.le)]
 
-theorem tendsto_nat_floor_div_atTop : Tendsto (fun x ↦ (⌊x⌋₊ : R) / x) atTop (𝓝 1) := by
+/-- The quotient `⌊x⌋₊ / x` tends to `1`; it is taken on the nonzero `x`. -/
+theorem tendsto_nat_floor_div_atTop :
+    Tendsto (fun x : {x : R // x ≠ 0} ↦ Checked.div (⌊(x : R)⌋₊ : R) (x : R) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 1) := by
   simpa using tendsto_nat_floor_mul_div_atTop (zero_le_one' R)
 
+/-- The quotient `⌈a * x⌉₊ / x` tends to `a`; it is taken on the nonzero `x`. -/
 theorem tendsto_nat_ceil_mul_div_atTop {a : R} (ha : 0 ≤ a) :
-    Tendsto (fun x ↦ (⌈a * x⌉₊ : R) / x) atTop (𝓝 a) := by
-  have A : Tendsto (fun x : R ↦ a + x⁻¹) atTop (𝓝 (a + 0)) :=
-    tendsto_const_nhds.add tendsto_inv_atTop_zero
+    Tendsto (fun x : {x : R // x ≠ 0} ↦ Checked.div (⌈a * (x : R)⌉₊ : R) (x : R) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 a) := by
+  have hx : Tendsto (fun x : {x : R // x ≠ 0} ↦ (x : R)) (comap Subtype.val atTop) atTop :=
+    tendsto_comap
+  have A : Tendsto (fun x : {x : R // x ≠ 0} ↦ a + Checked.inv (x : R) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 (a + 0)) :=
+    tendsto_const_nhds.add (hx.fun_inv_tendsto_atTop (h0 := fun x : {x : R // x ≠ 0} ↦ x.2.isUnit))
   rw [add_zero] at A
   apply tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds A
-  · refine eventually_atTop.2 ⟨1, fun x hx ↦ ?_⟩
-    rw [le_div_iff₀ (zero_lt_one.trans_le hx)]
+  · filter_upwards [hx.eventually_ge_atTop 1] with x hx1
+    rw [le_div_iff₀ (zero_lt_one.trans_le hx1)]
     exact Nat.le_ceil _
-  · refine eventually_atTop.2 ⟨1, fun x hx ↦ ?_⟩
-    simp [div_le_iff₀ (zero_lt_one.trans_le hx), inv_mul_cancel₀ (zero_lt_one.trans_le hx).ne',
-      (Nat.ceil_lt_add_one (mul_nonneg ha (zero_le_one.trans hx))).le, add_mul]
+  · filter_upwards [hx.eventually_ge_atTop 1] with x hx1
+    have hx0 : (0 : R) < x := zero_lt_one.trans_le hx1
+    rw [div_le_iff₀ hx0, add_mul, inv_mul_cancel₀]
+    exact (Nat.ceil_lt_add_one (mul_nonneg ha hx0.le)).le
 
-theorem tendsto_nat_ceil_div_atTop : Tendsto (fun x ↦ (⌈x⌉₊ : R) / x) atTop (𝓝 1) := by
+/-- The quotient `⌈x⌉₊ / x` tends to `1`; it is taken on the nonzero `x`. -/
+theorem tendsto_nat_ceil_div_atTop :
+    Tendsto (fun x : {x : R // x ≠ 0} ↦ Checked.div (⌈(x : R)⌉₊ : R) (x : R) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 1) := by
   simpa using tendsto_nat_ceil_mul_div_atTop (zero_le_one' R)
 
 lemma Nat.tendsto_div_const_atTop {n : ℕ} (hn : n ≠ 0) : Tendsto (· / n) atTop atTop := by

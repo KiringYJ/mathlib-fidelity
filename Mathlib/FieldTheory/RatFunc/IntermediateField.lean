@@ -25,7 +25,7 @@ open IntermediateField algebraAdjoinAdjoin Polynomial Algebra
 variable (f : RatFunc K)
 
 theorem adjoin_X : K⟮(X : RatFunc K)⟯ = ⊤ :=
-  eq_top_iff.mpr fun g _ ↦ (mem_adjoin_simple_iff _ _).mpr ⟨g.num, g.denom, by simp⟩
+  eq_top_iff.mpr fun g _ ↦ (mem_adjoin_simple_iff _ _).mpr ⟨g.num, g.denom, by simp, by simp⟩
 
 theorem IntermediateField.adjoin_X (E : IntermediateField K (RatFunc K)) :
     E⟮(X : RatFunc K)⟯ = ⊤ := by

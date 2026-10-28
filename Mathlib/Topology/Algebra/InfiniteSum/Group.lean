@@ -432,10 +432,13 @@ section SeparatelyContinuousMul
 variable [SeparatelyContinuousMul K]
 
 open Finset in
+/-- The quotient by `∏ i ∈ s, f i` exists because every factor of that product is nonzero. -/
 lemma HasProd.congr_cofinite₀ {c : K} (hc : HasProd f c) {s : Finset α}
     (hs : ∀ a ∈ s, f a ≠ 0) (hs' : ∀ a ∉ s, f a = g a) :
-    HasProd g (c * ((∏ i ∈ s, g i) / ∏ i ∈ s, f i)) := by
+    HasProd g
+      (c * Checked.div (∏ i ∈ s, g i) (∏ i ∈ s, f i) (prod_ne_zero_iff.mpr hs).isUnit) := by
   classical
+  have hsf : IsUnit (∏ i ∈ s, f i) := (prod_ne_zero_iff.mpr hs).isUnit
   refine (Tendsto.mul_const ((∏ i ∈ s, g i) / ∏ i ∈ s, f i) hc).congr' ?_
   filter_upwards [eventually_ge_atTop s] with t ht
   calc (∏ i ∈ t, f i) * ((∏ i ∈ s, g i) / ∏ i ∈ s, f i)
@@ -443,14 +446,15 @@ lemma HasProd.congr_cofinite₀ {c : K} (hc : HasProd f c) {s : Finset α}
     conv_lhs => rw [← union_sdiff_of_subset ht, prod_union disjoint_sdiff,
       prod_congr rfl fun i hi ↦ hs' i (mem_sdiff.mp hi).2]
   _ = (∏ i ∈ s, g i) * ∏ i ∈ t \ s, g i := by
-    rw [← mul_div_assoc, ← div_mul_eq_mul_div, ← div_mul_eq_mul_div, div_self, one_mul, mul_comm]
-    exact prod_ne_zero_iff.mpr hs
+    rw [mul_comm (∏ i ∈ s, f i), mul_assoc, mul_div_cancel₀, mul_comm]
   _ = ∏ i ∈ t, g i := by
     rw [← prod_union disjoint_sdiff, union_sdiff_of_subset ht]
 
+/-- The quotient by `∏ i ∈ s, f i` exists because every factor of that product is nonzero. -/
 protected lemma Multipliable.tsum_congr_cofinite₀ [T2Space K] (hc : Multipliable f) {s : Finset α}
     (hs : ∀ a ∈ s, f a ≠ 0) (hs' : ∀ a ∉ s, f a = g a) :
-    ∏' i, g i = ((∏' i, f i) * ((∏ i ∈ s, g i) / ∏ i ∈ s, f i)) :=
+    ∏' i, g i = ((∏' i, f i) *
+      Checked.div (∏ i ∈ s, g i) (∏ i ∈ s, f i) (Finset.prod_ne_zero_iff.mpr hs).isUnit) :=
   (hc.hasProd.congr_cofinite₀ hs hs').tprod_eq
 
 set_option backward.isDefEq.respectTransparency false in
@@ -468,34 +472,42 @@ lemma Multipliable.congr_cofinite₀ (hf : Multipliable f) (hf' : ∀ a, f a ≠
 
 end SeparatelyContinuousMul
 
-theorem HasProd.inv₀ {a : K} [ContinuousInv₀ K] (h : HasProd f a L) (ha : a ≠ 0) :
-    HasProd (fun x ↦ (f x)⁻¹) a⁻¹ L := by
-  simp_rw [HasProd, Finset.prod_inv_distrib]
-  exact Tendsto.inv₀ h ha
+/-- The family of inverses `fun x ↦ (f x)⁻¹` exists when every `f x` is invertible. -/
+theorem HasProd.inv₀ {a : K} [ContinuousInv₀ K] {hf : ∀ x, IsUnit (f x)} (h : HasProd f a L)
+    (ha : a ≠ 0) : HasProd (fun x ↦ Checked.inv (f x) (hf x)) a⁻¹ L := by
+  have hs (s : Finset α) : IsUnit (∏ x ∈ s, f x) := IsUnit.prod_iff.2 fun x _ ↦ hf x
+  have key (s : Finset α) :
+      ∏ x ∈ s, Checked.inv (f x) (hf x) = Checked.inv (∏ x ∈ s, f x) (hs s) := by
+    rw [inv_eq_val_inv_of_eq_val₀ (∏ x ∈ s, (hf x).unit) (by simp [Units.coe_prod]),
+      ← Finset.prod_inv_distrib, Units.coe_prod]
+    rfl
+  simp_rw [HasProd, key]
+  exact Tendsto.inv₀ h (ha := ha.isUnit)
 
-theorem Multipliable.inv₀ [ContinuousInv₀ K] (h : Multipliable f L) (ne_zero : ∏'[L] x, f x ≠ 0) :
-    Multipliable (fun x ↦ (f x)⁻¹) L :=
+theorem Multipliable.inv₀ [ContinuousInv₀ K] {hf : ∀ x, IsUnit (f x)} (h : Multipliable f L)
+    (ne_zero : ∏'[L] x, f x ≠ 0) : Multipliable (fun x ↦ Checked.inv (f x) (hf x)) L :=
   h.hasProd.inv₀ ne_zero|>.multipliable
 
 theorem Multipliable.tprod_inv₀ [ContinuousInv₀ K] [T2Space K] [L.NeBot]
-    (h : Multipliable f L) (ne_zero : ∏'[L] x, f x ≠ 0) :
-    ∏'[L] x, (f x)⁻¹ = (∏'[L] x, f x )⁻¹ :=
+    {hf : ∀ x, IsUnit (f x)} (h : Multipliable f L) (ne_zero : ∏'[L] x, f x ≠ 0) :
+    ∏'[L] x, Checked.inv (f x) (hf x) = (∏'[L] x, f x )⁻¹ :=
   h.hasProd.inv₀ ne_zero|>.tprod_eq
 
 theorem HasProd.div₀ [ContinuousInv₀ K] [ContinuousMul K] {a b : K}
-    (hf : HasProd f a L) (hg : HasProd g b L) (hb : b ≠ 0) :
-    HasProd (fun x ↦ f x / g x) (a / b) L := by
-  simp only [div_eq_mul_inv]
+    {hgUnit : ∀ x, IsUnit (g x)} (hf : HasProd f a L) (hg : HasProd g b L) (hb : b ≠ 0) :
+    HasProd (fun x ↦ Checked.div (f x) (g x) (hgUnit x)) (a / b) L := by
+  simp only [div_eq_mul_inv₀]
   exact hf.mul <| hg.inv₀ hb
 
-theorem Multipliable.div₀ [ContinuousInv₀ K] [ContinuousMul K]
+theorem Multipliable.div₀ [ContinuousInv₀ K] [ContinuousMul K] {hgUnit : ∀ x, IsUnit (g x)}
     (hf : Multipliable f L) (hg : Multipliable g L) (ne_zero : ∏'[L] x, g x ≠ 0) :
-    Multipliable (fun x ↦ f x / g x) L :=
+    Multipliable (fun x ↦ Checked.div (f x) (g x) (hgUnit x)) L :=
   hf.hasProd.div₀ hg.hasProd ne_zero|>.multipliable
 
 theorem Multipliable.tprod_div₀ [ContinuousInv₀ K] [ContinuousMul K] [T2Space K] [L.NeBot]
+    {hgUnit : ∀ x, IsUnit (g x)}
     (hf : Multipliable f L) (hg : Multipliable g L) (ne_zero : ∏'[L] x, g x ≠ 0) :
-    (∏'[L] x, f x / g x) = (∏'[L] x, f x) / (∏'[L] x, g x) :=
+    (∏'[L] x, Checked.div (f x) (g x) (hgUnit x)) = (∏'[L] x, f x) / (∏'[L] x, g x) :=
   hf.hasProd.div₀ hg.hasProd ne_zero|>.tprod_eq
 
 end CommGroupWithZero

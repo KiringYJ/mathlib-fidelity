@@ -838,7 +838,7 @@ lemma wbtw_iff_of_le {x y z : R} (hxz : x ≤ z) : Wbtw R x y z ↔ x ≤ y ∧ 
   | inr hxz =>
     have hxz' : 0 < z - x := sub_pos.mpr hxz
     let r := (y - x) / (z - x)
-    have hy : y = r * (z - x) + x := by simp [r, hxz'.ne']
+    have hy : y = r * (z - x) + x := by simp [r]
     simp [hy, wbtw_mul_sub_add_iff, mul_nonneg_iff_of_pos_right hxz', ← le_sub_iff_add_le,
       mul_le_iff_le_one_left hxz', hxz.ne]
 
@@ -856,14 +856,14 @@ theorem wbtw_iff_left_eq_or_right_mem_image_Ici {x y z : P} :
     · rw [Set.mem_image]
       refine .inr ⟨r⁻¹, (one_le_inv₀ hr0').2 hr1, ?_⟩
       simp only [lineMap_apply, smul_smul, vadd_vsub]
-      rw [inv_mul_cancel₀ hr0'.ne', one_smul, vsub_vadd]
+      rw [inv_mul_cancel₀, one_smul, vsub_vadd]
     · simp
   · rcases h with (rfl | ⟨r, ⟨hr, rfl⟩⟩)
     · exact wbtw_self_left _ _ _
     · rw [Set.mem_Ici] at hr
       refine ⟨r⁻¹, ⟨inv_nonneg.2 (zero_le_one.trans hr), inv_le_one_of_one_le₀ hr⟩, ?_⟩
       simp only [lineMap_apply, smul_smul, vadd_vsub]
-      rw [inv_mul_cancel₀ (one_pos.trans_le hr).ne', one_smul, vsub_vadd]
+      rw [inv_mul_cancel₀, one_smul, vsub_vadd]
 
 theorem Wbtw.right_mem_image_Ici_of_left_ne {x y z : P} (h : Wbtw R x y z) (hne : x ≠ y) :
     z ∈ lineMap x y '' Set.Ici (1 : R) :=
@@ -932,9 +932,11 @@ lemma AffineSubspace.right_mem_of_wbtw {s : AffineSubspace R P} (hxyz : Wbtw R x
 
 theorem wbtw_smul_vadd_smul_vadd_of_nonneg_of_le (x : P) (v : V) {r₁ r₂ : R} (hr₁ : 0 ≤ r₁)
     (hr₂ : r₁ ≤ r₂) : Wbtw R x (r₁ • v +ᵥ x) (r₂ • v +ᵥ x) := by
-  refine ⟨r₁ / r₂, ⟨div_nonneg hr₁ (hr₁.trans hr₂), div_le_one_of_le₀ hr₂ (hr₁.trans hr₂)⟩, ?_⟩
-  by_cases h : r₁ = 0; · simp [h]
-  simp [lineMap_apply, smul_smul, ((hr₁.lt_of_ne' h).trans_le hr₂).ne.symm]
+  rcases hr₁.eq_or_lt with (rfl | hr₁')
+  · simp
+  have hr₂' : 0 < r₂ := hr₁'.trans_le hr₂
+  refine ⟨r₁ / r₂, ⟨div_nonneg hr₁ hr₂'.le, div_le_one_of_le₀ hr₂ hr₂'.le⟩, ?_⟩
+  simp [lineMap_apply, smul_smul]
 
 theorem wbtw_or_wbtw_smul_vadd_of_nonneg (x : P) (v : V) {r₁ r₂ : R} (hr₁ : 0 ≤ r₁) (hr₂ : 0 ≤ r₂) :
     Wbtw R x (r₁ • v +ᵥ x) (r₂ • v +ᵥ x) ∨ Wbtw R x (r₂ • v +ᵥ x) (r₁ • v +ᵥ x) := by
@@ -973,24 +975,22 @@ theorem Wbtw.trans_left_right {w x y z : P} (h₁ : Wbtw R w y z) (h₂ : Wbtw R
     Wbtw R x y z := by
   rcases h₁ with ⟨t₁, ht₁, rfl⟩
   rcases h₂ with ⟨t₂, ht₂, rfl⟩
+  rcases eq_or_ne (1 - t₂ * t₁) 0 with h | h
+  · rw [sub_eq_zero, eq_comm] at h
+    suffices t₁ = 1 by simp [this]
+    exact
+      eq_of_le_of_not_lt ht₁.2 fun ht₁lt =>
+        ((mul_le_of_le_one_left ht₁.1 ht₂.2).trans_lt ht₁lt).ne h
   refine
     ⟨(t₁ - t₂ * t₁) / (1 - t₂ * t₁),
       ⟨div_nonneg (sub_nonneg.2 (mul_le_of_le_one_left ht₁.1 ht₂.2))
           (by bound [ht₂.2, ht₁.1, ht₁.2]), by bound [ht₂.2, ht₁.1, ht₁.2]⟩,
       ?_⟩
   simp only [lineMap_apply, smul_smul, ← add_vadd, vsub_vadd_eq_vsub_sub, smul_sub, ← sub_smul,
-    ← add_smul, vadd_vsub, vadd_right_cancel_iff, div_mul_eq_mul_div, div_sub_div_same]
+    ← add_smul, vadd_vsub, vadd_right_cancel_iff, div_mul_eq_mul_div₀, div_sub_div_same]
   nth_rw 1 [← mul_one (t₁ - t₂ * t₁)]
-  rw [← mul_sub, mul_div_assoc]
-  by_cases h : 1 - t₂ * t₁ = 0
-  · rw [sub_eq_zero, eq_comm] at h
-    rw [h]
-    suffices t₁ = 1 by simp [this]
-    exact
-      eq_of_le_of_not_lt ht₁.2 fun ht₁lt =>
-        ((mul_le_of_le_one_left ht₁.1 ht₂.2).trans_lt ht₁lt).ne h
-  · rw [div_self h]
-    ring_nf
+  rw [← mul_sub, mul_div_assoc₀, div_self]
+  ring_nf
 
 theorem Wbtw.trans_right_left {w x y z : P} (h₁ : Wbtw R w x z) (h₂ : Wbtw R x y z) :
     Wbtw R w x y := by
@@ -1009,6 +1009,10 @@ theorem Wbtw.trans_expand_left {w x y z : P} (h₁ : Wbtw R w x y) (h₂ : Wbtw 
     (h_ne : x ≠ y) : Wbtw R w x z := by
   rcases h₁ with ⟨t₁, ht₁, hx⟩
   rcases h₂ with ⟨t₂, ht₂, hy⟩
+  have h_denom : 1 - t₁ + t₁ * t₂ ≠ 0 := by
+    contrapose h_ne
+    have h1 : t₁ = 1 := by nlinarith [ht₁.1, ht₁.2, ht₂.1, ht₂.2]
+    rw [← hx, h1, lineMap_apply_one]
   refine ⟨t₁ * t₂ / (1 - t₁ + t₁ * t₂), ?_, ?_⟩
   · constructor
     · apply div_nonneg (mul_nonneg ht₁.1 ht₂.1)
@@ -1016,13 +1020,9 @@ theorem Wbtw.trans_expand_left {w x y z : P} (h₁ : Wbtw R w x y) (h₂ : Wbtw 
     · apply div_le_one_of_le₀
       · grind
       · nlinarith [ht₁.1, ht₁.2, ht₂.1, ht₂.2]
-  have h_denom : 1 - t₁ + t₁ * t₂ ≠ 0 := by
-    contrapose h_ne
-    have h1 : t₁ = 1 := by nlinarith [ht₁.1, ht₁.2, ht₂.1, ht₂.2]
-    rw [← hx, h1, lineMap_apply_one]
   rw [← hy, lineMap_apply, lineMap_apply, eq_comm, eq_vadd_iff_vsub_eq] at hx
-  rw [lineMap_apply, eq_comm, eq_vadd_iff_vsub_eq, div_eq_mul_inv, mul_comm, mul_smul,
-    eq_inv_smul_iff₀ h_denom, add_smul, sub_smul, one_smul]
+  rw [lineMap_apply, eq_comm, eq_vadd_iff_vsub_eq, div_eq_mul_inv₀, mul_comm, mul_smul,
+    eq_inv_smul_iff₀, add_smul, sub_smul, one_smul]
   nth_rw 1 [hx]
   rw [← smul_sub, mul_smul, mul_smul, vsub_sub_vsub_cancel_right, vadd_vsub, ← smul_assoc,
     ← smul_assoc, ← smul_assoc, ← smul_add, vsub_add_vsub_cancel]
@@ -1079,7 +1079,7 @@ lemma wbtw_total_of_sameRay_vsub_left {x y z : P} (h : SameRay R (y -ᵥ x) (z -
     apply this r₂ r₁ hr₂ hr₁ h.symm (Std.le_of_not_ge hr)
   left
   refine ⟨r₂ / r₁, ⟨div_nonneg hr₂.le hr₁.le, div_le_one_of_le₀ hr hr₁.le⟩, ?_⟩
-  have h' : y = r₁⁻¹ • r₂ • (z -ᵥ x) +ᵥ x := by simp [← h, hr₁.ne']
+  have h' : y = r₁⁻¹ • r₂ • (z -ᵥ x) +ᵥ x := by simp [← h]
   simp only [lineMap_apply, h', vadd_vsub_assoc, smul_smul, eq_vadd_iff_vsub_eq, vsub_self,
     add_zero]
   ring_nf

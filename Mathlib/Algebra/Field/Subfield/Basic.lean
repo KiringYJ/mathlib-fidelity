@@ -74,26 +74,11 @@ namespace SubfieldClass
 
 variable {S : Type*} [SetLike S K] [SubfieldClass S K] [CharZero K]
 
-@[simp, aesop safe (rule_sets := [SetLike])]
-lemma ratCast_mem (s : S) (q : ℚ) : (q : K) ∈ s :=
-  rat_eval_mem s q (Nat.cast_ne_zero.mpr q.den_nz)
-
-@[simp, aesop safe (rule_sets := [SetLike])]
-lemma nnratCast_mem (s : S) (q : ℚ≥0) : (q : K) ∈ s :=
-  nnrat_eval_mem s q (Nat.cast_ne_zero.mpr q.den_ne_zero)
+@[simp, norm_cast]
+lemma coe_ratCast (s : S) (q : ℚ) : ((q : s) : K) = (q : K) := rfl
 
 @[simp, norm_cast]
-lemma coe_ratCast (s : S) (q : ℚ) : ((q : s) : K) = (q : K) := by
-  apply (Units.mul_left_inj (Units.mk0 (q.den : K) (Nat.cast_ne_zero.mpr q.den_nz))).mp
-  exact (congrArg Subtype.val (Rat.eval_mul_den (α := s) q (Nat.cast_ne_zero.mpr q.den_nz))).trans
-    (Rat.eval_mul_den (α := K) q (Nat.cast_ne_zero.mpr q.den_nz)).symm
-
-@[simp, norm_cast]
-lemma coe_nnratCast (s : S) (q : ℚ≥0) : ((q : s) : K) = (q : K) := by
-  apply (Units.mul_left_inj (Units.mk0 (q.den : K) (Nat.cast_ne_zero.mpr q.den_ne_zero))).mp
-  exact (congrArg Subtype.val
-    (NNRat.eval_mul_den (α := s) q (Nat.cast_ne_zero.mpr q.den_ne_zero))).trans
-    (NNRat.eval_mul_den (α := K) q (Nat.cast_ne_zero.mpr q.den_ne_zero)).symm
+lemma coe_nnratCast (s : S) (q : ℚ≥0) : ((q : s) : K) = (q : K) := rfl
 
 @[simp, aesop safe (rule_sets := [SetLike])]
 lemma ofScientific_mem (s : S) {b : Bool} {n m : ℕ} :
@@ -112,12 +97,10 @@ lemma nnqsmul_mem {s : S} (q : ℚ≥0) {x : K} (hx : x ∈ s) : q • x ∈ s :
   exact mul_mem (nnratCast_mem s q) hx
 
 @[simp, norm_cast]
-lemma coe_qsmul (s : S) (q : ℚ) (x : s) : ↑(q • x) = q • (x : K) := by
-  simp only [Rat.smul_def, MulMemClass.coe_mul, coe_ratCast]
+lemma coe_qsmul (s : S) (q : ℚ) (x : s) : ↑(q • x) = q • (x : K) := rfl
 
 @[simp, norm_cast]
-lemma coe_nnqsmul (s : S) (q : ℚ≥0) (x : s) : ↑(q • x) = q • (x : K) := by
-  simp only [NNRat.smul_def, MulMemClass.coe_mul, coe_nnratCast]
+lemma coe_nnqsmul (s : S) (q : ℚ≥0) (x : s) : ↑(q • x) = q • (x : K) := rfl
 
 end SubfieldClass
 
@@ -151,7 +134,7 @@ end DerivedFromSubfieldClass
 
 /-- The subfield of `K` containing all elements of `K`. -/
 instance : Top (Subfield K) :=
-  ⟨{ (⊤ : Subring K) with inv_mem' := fun u _ => Subring.mem_top (↑u⁻¹ : K) }⟩
+  ⟨{ (⊤ : Subring K) with inv_mem' := fun _ => Subring.mem_top _ }⟩
 
 instance : Inhabited (Subfield K) :=
   ⟨⊤⟩
@@ -176,7 +159,10 @@ variable (f : K →+* L)
 /-- The preimage of a subfield along a ring homomorphism is a subfield. -/
 def comap (s : Subfield L) : Subfield K :=
   { s.toSubring.comap f with
-    inv_mem' := fun u hu => s.inv_mem (u := Units.map (f : K →* L) u) hu }
+    inv_mem' := fun {x} {_} h =>
+      show f x⁻¹ ∈ s by
+        rw [map_inv₀ f]
+        exact s.inv_mem h }
 
 @[simp]
 theorem coe_comap (s : Subfield L) : (s.comap f : Set K) = f ⁻¹' s :=
@@ -197,15 +183,9 @@ theorem comap_comap (s : Subfield M) (g : L →+* M) (f : K →+* L) :
 def map (s : Subfield K) : Subfield L :=
   { s.toSubring.map f with
     inv_mem' := by
-      intro u hu
-      obtain ⟨x, hx, hxu⟩ := hu
-      have hx0 : x ≠ 0 := by
-        intro h
-        apply u.ne_zero
-        rw [← hxu, h, map_zero]
-      let v := Units.mk0 x hx0
-      have hv : Units.map (f : K →* L) v = u := Units.ext hxu
-      exact ⟨↑v⁻¹, s.inv_mem (u := v) hx, congrArg (fun w : Lˣ => (↑w⁻¹ : L)) hv⟩ }
+      rintro _ hy ⟨x, hx, rfl⟩
+      have hx0 : x ≠ 0 := fun h => hy.ne_zero (by rw [h, map_zero])
+      exact ⟨x⁻¹, s.inv_mem hx, map_inv₀ f x⟩ }
 
 @[simp, norm_cast]
 theorem coe_map : (s.map f : Set L) = f '' s :=
@@ -285,7 +265,7 @@ namespace Subfield
 instance : Min (Subfield K) :=
   ⟨fun s t =>
     { s.toSubring ⊓ t.toSubring with
-      inv_mem' := fun _ hx =>
+      inv_mem' := fun hx =>
         Subring.mem_inf.mpr
           ⟨s.inv_mem (Subring.mem_inf.mp hx).1, t.inv_mem (Subring.mem_inf.mp hx).2⟩ }⟩
 
@@ -301,7 +281,7 @@ instance : InfSet (Subfield K) :=
   ⟨fun S =>
     { sInf (Subfield.toSubring '' S) with
       inv_mem' := by
-        rintro x hx
+        rintro x _ hx
         apply Subring.mem_sInf.mpr
         rintro _ ⟨p, p_mem, rfl⟩
         exact p.inv_mem (Subring.mem_sInf.mp hx p.toSubring ⟨p, p_mem, rfl⟩) }⟩
@@ -388,7 +368,7 @@ theorem closure_induction {s : Set K} {p : ∀ x ∈ closure s, Prop}
     (mem : ∀ x hx, p x (subset_closure hx))
     (one : p 1 (one_mem _)) (add : ∀ x y hx hy, p x hx → p y hy → p (x + y) (add_mem hx hy))
     (neg : ∀ x hx, p x hx → p (-x) (neg_mem hx))
-    (inv : ∀ (u : Kˣ) hu, p (u : K) hu → p (↑u⁻¹ : K) ((closure s).inv_mem hu))
+    (inv : ∀ x hx (_ : x ≠ 0), p x hx → p x⁻¹ ((closure s).inv_mem hx))
     (mul : ∀ x y hx hy, p x hx → p y hy → p (x * y) (mul_mem hx hy))
     {x} (h : x ∈ closure s) : p x h :=
   letI : Subfield K :=
@@ -399,7 +379,7 @@ theorem closure_induction {s : Set K} {p : ∀ x ∈ closure s, Prop}
       zero_mem' := ⟨zero_mem _, by
         simp_rw [← @add_neg_cancel K _ 1]; exact add _ _ _ _ one (neg _ _ one)⟩
       neg_mem' := by rintro _ ⟨_, hx⟩; exact ⟨_, neg _ _ hx⟩
-      inv_mem' := by rintro _ ⟨_, hx⟩; exact ⟨_, inv _ _ hx⟩ }
+      inv_mem' := by rintro x hxU ⟨_, hx⟩; exact ⟨_, inv _ _ hxU.ne_zero hx⟩ }
   ((closure_le (t := this)).2 (fun x hx ↦ ⟨_, mem x hx⟩) h).2
 
 variable (K) in
@@ -469,7 +449,7 @@ theorem mem_iSup_of_directed {ι} [hι : Nonempty ι] {S : ι → Subfield K} (h
     {x : K} : (x ∈ ⨆ i, S i) ↔ ∃ i, x ∈ S i := by
   let s : Subfield K :=
     { __ := Subring.copy _ _ (Subring.coe_iSup_of_directed hS).symm
-      inv_mem' := fun _ hx ↦ have ⟨i, hi⟩ := Set.mem_iUnion.mp hx
+      inv_mem' := fun hx ↦ have ⟨i, hi⟩ := Set.mem_iUnion.mp hx
         Set.mem_iUnion.mpr ⟨i, (S i).inv_mem hi⟩ }
   have : iSup S = s := le_antisymm
     (iSup_le fun i ↦ le_iSup (fun i ↦ (S i : Set K)) i) (Set.iUnion_subset fun _ ↦ le_iSup S _)
@@ -533,9 +513,7 @@ variable {L : Type v} [Semiring L]
 the equalizer of f and g as a subfield of R -/
 def eqLocusField (f g : K →+* L) : Subfield K where
   __ := (f : K →+* L).eqLocus g
-  inv_mem' u hu :=
-    congrArg (fun w : Lˣ => (↑w⁻¹ : L))
-      (Units.ext hu : Units.map (f : K →* L) u = Units.map (g : K →* L) u)
+  inv_mem' := eq_on_inv₀ f g
   carrier := { x | f x = g x }
 
 @[simp]
@@ -622,42 +600,39 @@ theorem algebraMap_ofSubfield : algebraMap s K = s.subtype :=
 
 /-- The `Subfield` generated by a set in a field. -/
 private def commClosure (s : Set K) : Subfield K where
-  carrier := {z : K | ∃ x ∈ Subring.closure s, ∃ u : Kˣ, (u : K) ∈ Subring.closure s ∧ x /ₚ u = z}
-  zero_mem' := ⟨0, Subring.zero_mem _, 1, Subring.one_mem _, by simp [divp]⟩
-  one_mem' := ⟨1, Subring.one_mem _, 1, Subring.one_mem _, by simp [divp]⟩
+  carrier := {z : K | ∃ x ∈ Subring.closure s, ∃ y ∈ Subring.closure s, ∃ _ : y ≠ 0, x / y = z}
+  zero_mem' := ⟨0, Subring.zero_mem _, 1, Subring.one_mem _, one_ne_zero, zero_div _⟩
+  one_mem' := ⟨1, Subring.one_mem _, 1, Subring.one_mem _, one_ne_zero, div_self⟩
   neg_mem' {x} := by
-    rintro ⟨y, hy, u, hu, he⟩
-    exact ⟨-y, Subring.neg_mem _ hy, u, hu,
-      (Units.neg_divp y u).symm.trans (congrArg Neg.neg he)⟩
-  inv_mem' u := by
-    rintro ⟨x, hx, v, hv, he⟩
-    have hmul : x = (u : K) * v := (divp_eq_iff_mul_eq.mp he).symm
-    have hx0 : x ≠ 0 := hmul ▸ mul_ne_zero u.ne_zero v.ne_zero
-    let w := Units.mk0 x hx0
-    have hw : w = u * v := Units.ext hmul
-    refine ⟨v, hv, w, hx, ?_⟩
-    rw [hw, divp, mul_inv_rev, Units.val_mul]
-    simp [← mul_assoc]
-  add_mem' := by
-    rintro _ _ ⟨nx, hnx, dx, hdx, rfl⟩ ⟨ny, hny, dy, hdy, rfl⟩
-    exact ⟨nx * dy + dx * ny,
-      Subring.add_mem _ (Subring.mul_mem _ hnx hdy) (Subring.mul_mem _ hdx hny),
-      dx * dy, Subring.mul_mem _ hdx hdy, (Units.divp_add_divp nx ny dx dy).symm⟩
+    rintro ⟨y, hy, z, hz, hz0, x_eq⟩
+    exact ⟨-y, Subring.neg_mem _ hy, z, hz, hz0, x_eq ▸ neg_div₀ _ _⟩
+  inv_mem' := by
+    rintro x hx ⟨y, hy, z, hz, hz0, rfl⟩
+    have hy0 : y ≠ 0 := by
+      rintro rfl
+      exact hx.ne_zero (zero_div z)
+    exact ⟨z, hz, y, hy, hy0, (inv_div₀ (hb := hz0.isUnit)).symm⟩
+  add_mem' x_mem y_mem := by
+    obtain ⟨nx, hnx, dx, hdx, hx0, rfl⟩ := id x_mem
+    obtain ⟨ny, hny, dy, hdy, hy0, rfl⟩ := id y_mem
+    exact
+      ⟨nx * dy + dx * ny, Subring.add_mem _ (Subring.mul_mem _ hnx hdy) (Subring.mul_mem _ hdx hny),
+        dx * dy, Subring.mul_mem _ hdx hdy, mul_ne_zero hx0 hy0, (div_add_div nx ny).symm⟩
   mul_mem' := by
-    rintro _ _ ⟨nx, hnx, dx, hdx, rfl⟩ ⟨ny, hny, dy, hdy, rfl⟩
+    rintro _ _ ⟨nx, hnx, dx, hdx, hx0, rfl⟩ ⟨ny, hny, dy, hdy, hy0, rfl⟩
     exact ⟨nx * ny, Subring.mul_mem _ hnx hny, dx * dy, Subring.mul_mem _ hdx hdy,
-      (divp_mul_divp nx ny dx dy).symm⟩
+      mul_ne_zero hx0 hy0, (div_mul_div_comm₀ ..).symm⟩
 
 private theorem commClosure_eq_closure {s : Set K} : commClosure s = closure s :=
   le_antisymm
-    (fun _ ⟨_, hy, _, hz, eq⟩ ↦ eq ▸
-      (closure s).divp_mem (subring_closure_le s hy) (subring_closure_le s hz))
+    (fun _ ⟨_, hy, _, hz, hz0, eq⟩ ↦
+      eq ▸ (closure s).div_mem (hyUnit := hz0.isUnit) (subring_closure_le s hy)
+        (subring_closure_le s hz))
     (closure_le.mpr fun x hx ↦
-      ⟨x, Subring.subset_closure hx, 1, Subring.one_mem _, by simp [divp]⟩)
+      ⟨x, Subring.subset_closure hx, 1, Subring.one_mem _, one_ne_zero, div_one₀ x⟩)
 
 theorem mem_closure_iff {s : Set K} {x} :
-    x ∈ closure s ↔ ∃ y ∈ Subring.closure s,
-      ∃ u : Kˣ, (u : K) ∈ Subring.closure s ∧ y /ₚ u = x := by
+    x ∈ closure s ↔ ∃ y ∈ Subring.closure s, ∃ z ∈ Subring.closure s, ∃ _ : z ≠ 0, y / z = x := by
   rw [← commClosure_eq_closure]; rfl
 
 end Commutative

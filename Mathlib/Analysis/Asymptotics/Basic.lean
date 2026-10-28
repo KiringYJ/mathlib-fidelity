@@ -87,7 +87,7 @@ theorem IsBigO.exists_mem_basis {ι} {p : ι → Prop} {s : ι → Set α} (h : 
     simpa only [isBigOWith_iff, hb.eventually_iff, exists_prop] using h
 
 theorem isBigOWith_inv (hc : 0 < c) : IsBigOWith c⁻¹ l f g ↔ ∀ᶠ x in l, c * ‖f x‖ ≤ ‖g x‖ := by
-  simp only [IsBigOWith_def, ← div_eq_inv_mul, le_div_iff₀' hc]
+  simp only [IsBigOWith_def, le_inv_mul_iff₀ hc]
 
 -- We prove this lemma with strange assumptions to get two lemmas below automatically
 theorem isLittleO_iff_nat_mul_le_aux (h₀ : (∀ x, 0 ≤ ‖f x‖) ∨ ∀ x, 0 ≤ ‖g x‖) :
@@ -296,7 +296,7 @@ theorem IsLittleO.trans_isBigOWith (hfg : f =o[l] g) (hgk : IsBigOWith c l g k) 
   simp only [IsLittleO_def] at *
   intro c' c'pos
   have : 0 < c' / c := div_pos c'pos hc
-  exact ((hfg this).trans hgk this.le).congr_const (div_mul_cancel₀ _ hc.ne')
+  exact ((hfg this).trans hgk this.le).congr_const (div_mul_cancel₀ _)
 
 @[trans]
 theorem IsLittleO.trans_isBigO {f : α → E} {g : α → F} {k : α → G'} (hfg : f =o[l] g)
@@ -313,7 +313,7 @@ theorem IsBigOWith.trans_isLittleO (hfg : IsBigOWith c l f g) (hgk : g =o[l] k) 
   simp only [IsLittleO_def] at *
   intro c' c'pos
   have : 0 < c' / c := div_pos c'pos hc
-  exact (hfg.trans (hgk this) hc.le).congr_const (mul_div_cancel₀ _ hc.ne')
+  exact (hfg.trans (hgk this) hc.le).congr_const (mul_div_cancel₀ _)
 
 @[trans]
 theorem IsBigO.trans_isLittleO {f : α → E} {g : α → F'} {k : α → G} (hfg : f =O[l] g)
@@ -388,7 +388,7 @@ theorem IsLittleO.trans_le (hfg : f =o[l] g) (hgk : ∀ x, ‖g x‖ ≤ ‖k x�
 theorem isLittleO_irrefl' (h : ∃ᶠ x in l, ‖f' x‖ ≠ 0) : ¬f' =o[l] f' := by
   intro ho
   rcases ((ho.bound one_half_pos).and_frequently h).exists with ⟨x, hle, hne⟩
-  rw [one_div, ← div_eq_inv_mul] at hle
+  rw [one_div_mul_eq_div₀] at hle
   exact (half_lt_self (lt_of_le_of_ne (norm_nonneg _) hne.symm)).not_ge hle
 
 theorem isLittleO_irrefl (h : ∃ᶠ x in l, f'' x ≠ 0) : ¬f'' =o[l] f'' :=

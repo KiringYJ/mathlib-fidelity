@@ -41,7 +41,8 @@ theorem exists_partition_int (n : ℕ) {ε : ℝ} (hε : 0 < ε) {b : ℤ} (hb :
   have hfloor : ∀ i, 0 ≤ floor ((A i % b : ℤ) / abs b • ε : ℝ) :=
     fun _ ↦ floor_nonneg.mpr (div_nonneg (cast_nonneg (emod_nonneg _ hb)) hbε.le)
   refine ⟨fun i ↦ ⟨natAbs (floor ((A i % b : ℤ) / abs b • ε : ℝ)), ?_⟩, ?_⟩
-  · rw [← ofNat_lt, natAbs_of_nonneg (hfloor i), floor_lt, Algebra.smul_def, eq_intCast, ← div_div]
+  · rw [← ofNat_lt, natAbs_of_nonneg (hfloor i), floor_lt]
+    simp only [zsmul_eq_mul, div_mul_eq_div_div₀]
     apply lt_of_lt_of_le _ (Nat.le_ceil _)
     gcongr
     rw [div_lt_one hb', cast_lt]
@@ -51,14 +52,18 @@ theorem exists_partition_int (n : ℕ) {ε : ℝ} (hε : 0 < ε) {b : ℤ} (hb :
     congr_arg ((↑) : ℕ → ℤ) (Fin.mk_eq_mk.mp hi)
   rw [natAbs_of_nonneg (hfloor i₀), natAbs_of_nonneg (hfloor i₁)] at hi
   have hi := abs_sub_lt_one_of_floor_eq_floor hi
-  rw [abs_sub_comm, ← sub_div, abs_div, abs_of_nonneg hbε.le, div_lt_iff₀ hbε, one_mul] at hi
+  rw [abs_sub_comm, ← sub_div, abs_div, div_lt_iff₀ (abs_pos.2 hbε.ne'), one_mul,
+    abs_of_nonneg hbε.le] at hi
   rwa [Int.cast_abs, Int.cast_sub]
 
-/-- `abs : ℤ → ℤ` is an admissible absolute value. -/
+/-- `abs : ℤ → ℤ` is an admissible absolute value. The cardinality `⌈1 / ε⌉₊` is needed only for
+`0 < ε`; the field `card` is a function on all of `ℝ`, and it is `0` elsewhere. -/
 noncomputable def absIsAdmissible : IsAdmissible AbsoluteValue.abs :=
   { AbsoluteValue.abs_isEuclidean with
-    card := fun ε ↦ ⌈1 / ε⌉₊
-    exists_partition' := fun n _ hε _ hb ↦ exists_partition_int n hε hb }
+    card := fun ε ↦ if hε : 0 < ε then ⌈1 / ε⌉₊ else 0
+    exists_partition' := fun n _ hε _ hb A ↦ by
+      rw [dite_eq_left hε]
+      exact exists_partition_int n hε hb A }
 
 noncomputable instance : Inhabited (IsAdmissible AbsoluteValue.abs) :=
   ⟨absIsAdmissible⟩

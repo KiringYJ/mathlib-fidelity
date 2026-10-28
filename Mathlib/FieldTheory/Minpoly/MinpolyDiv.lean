@@ -194,8 +194,9 @@ variable {K}
 lemma sum_smul_minpolyDiv_eq_X_pow (E) [Field E] [Algebra K E] [IsAlgClosed E]
     [FiniteDimensional K L] [Algebra.IsSeparable K L]
     {x : L} (hxL : K[x] = ⊤) {r : ℕ} (hr : r < finrank K L) :
-    ∑ σ : L →ₐ[K] E, ((x ^ r / aeval x (derivative <| minpoly K x)) •
-      minpolyDiv K x).map σ = (X ^ r : E[X]) := by
+    ∑ σ : L →ₐ[K] E, (Checked.div (x ^ r) (aeval x (derivative <| minpoly K x))
+      ((Algebra.IsSeparable.isSeparable K x).aeval_derivative_ne_zero
+        (minpoly.aeval K x)).isUnit • minpolyDiv K x).map σ = (X ^ r : E[X]) := by
   classical
   rw [← sub_eq_zero]
   have : Function.Injective (fun σ : L →ₐ[K] E ↦ σ x) := fun _ _ h =>
@@ -206,8 +207,6 @@ lemma sum_smul_minpolyDiv_eq_X_pow (E) [Field E] [Algebra K E] [IsAlgClosed E]
       eval_smul, eval_map, eval₂_minpolyDiv_self, this.eq_iff, smul_eq_mul, mul_ite, mul_zero,
       Finset.sum_ite_eq', Finset.mem_univ, ite_true, eval_X_pow]
     rw [sub_eq_zero, div_mul_cancel₀]
-    rw [ne_eq, map_eq_zero_iff σ σ.toRingHom.injective]
-    exact (IsSeparable.isSeparable _ _).aeval_derivative_ne_zero (minpoly.aeval _ _)
   · refine (Polynomial.natDegree_sub_le _ _).trans_lt
       (max_lt ((Polynomial.natDegree_sum_le _ _).trans_lt ?_) ?_)
     · simp only [Polynomial.map_smul,

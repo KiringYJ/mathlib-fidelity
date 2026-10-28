@@ -40,11 +40,21 @@ p-adic, p adic, padic, norm, valuation
 @[expose] public section
 
 
+/-- A nonzero rational number has a positive `p`-adic valuation only if `1 < p`, since the
+valuation vanishes for `p = 0`. Hence the integer power `p ^ (-padicValRat p q)` in `ℚ` has a
+negative exponent only when `p` is invertible: this is the evidence of that power. -/
+theorem padicValRat.isUnit_natCast_of_neg_lt_zero {p : ℕ} {q : ℚ} {hp : p ≠ 1} {hq : q ≠ 0}
+    (h : -padicValRat p q hp hq < 0) : IsUnit (p : ℚ) := by
+  refine (Nat.cast_ne_zero.2 ?_).isUnit
+  rintro rfl
+  simp [padicValRat, padicValInt] at h
+
 /-- If `q ≠ 0`, the `p`-adic norm of a rational `q` is `p ^ (-padicValRat p q)`.
 If `q = 0`, the `p`-adic norm of `q` is `0`. For `p = 1`, where the valuation does not exist, every
 power of `p` is `1`, and so is the norm of `q ≠ 0`. -/
-def padicNorm (p : ℕ) (q : ℚ) : ℚ :=
-  if hq : q = 0 then 0 else if hp : p = 1 then 1 else (p : ℚ) ^ (-padicValRat p q hp hq)
+noncomputable def padicNorm (p : ℕ) (q : ℚ) : ℚ :=
+  if hq : q = 0 then 0 else if hp : p = 1 then 1 else
+    Checked.zpow (p : ℚ) (-padicValRat p q hp hq) padicValRat.isUnit_natCast_of_neg_lt_zero
 
 namespace padicNorm
 
@@ -55,7 +65,9 @@ variable {p : ℕ}
 /-- Unfolds the definition of the `p`-adic norm of `q` when `q ≠ 0` and `p ≠ 1`. -/
 @[simp]
 protected theorem eq_zpow_of_nonzero {q : ℚ} (hq : q ≠ 0) (hp : p ≠ 1 := by padic_val_tac) :
-    padicNorm p q = (p : ℚ) ^ (-padicValRat p q) := by simp [hq, hp, padicNorm]
+    padicNorm p q =
+      Checked.zpow (p : ℚ) (-padicValRat p q) padicValRat.isUnit_natCast_of_neg_lt_zero := by
+  simp [hq, hp, padicNorm]
 
 /-- The `p`-adic norm is nonnegative. -/
 protected theorem nonneg (q : ℚ) : 0 ≤ padicNorm p q := by
@@ -73,15 +85,15 @@ protected theorem zero : padicNorm p 0 = 0 := by simp [padicNorm]
 protected theorem one : padicNorm p 1 = 1 := by
   by_cases hp : p = 1
   · simp [padicNorm, hp]
-  · rw [padicNorm.eq_zpow_of_nonzero one_ne_zero hp, padicValRat.one]
+  · rw [padicNorm.eq_zpow_of_nonzero one_ne_zero hp]
     simp
 
 /-- The `p`-adic norm of `p` is `p⁻¹` if `p > 1`.
 
 See also `padicNorm.padicNorm_p_of_prime` for a version assuming `p` is prime. -/
 theorem padicNorm_p (hp : 1 < p) : padicNorm p p = (p : ℚ)⁻¹ := by
-  rw [padicNorm.eq_zpow_of_nonzero (by norm_cast; omega) (Nat.ne_of_gt hp), padicValRat.self hp]
-  simp
+  rw [padicNorm.eq_zpow_of_nonzero (by norm_cast; omega) (Nat.ne_of_gt hp)]
+  simp [padicValRat.self hp]
 
 /-- The `p`-adic norm of `p` is `p⁻¹` if `p` is prime.
 
@@ -94,8 +106,8 @@ theorem padicNorm_p_of_prime [Fact p.Prime] : padicNorm p p = (p : ℚ)⁻¹ :=
 theorem padicNorm_of_prime_of_ne {q : ℕ} [p_prime : Fact p.Prime] [q_prime : Fact q.Prime]
     (ne : p ≠ q) : padicNorm p q = 1 := by
   have hq : (q : ℚ) ≠ 0 := mod_cast q_prime.1.ne_zero
-  rw [padicNorm.eq_zpow_of_nonzero hq, padicValRat.of_nat, padicValNat_primes ne]
-  simp
+  rw [padicNorm.eq_zpow_of_nonzero hq]
+  simp [padicValNat_primes ne]
 
 /-- The `p`-adic norm of `p` is less than `1` if `1 < p`.
 
@@ -110,12 +122,14 @@ See also `padicNorm.padicNorm_p_lt_one` for a version assuming `1 < p`. -/
 theorem padicNorm_p_lt_one_of_prime [Fact p.Prime] : padicNorm p p < 1 :=
   padicNorm_p_lt_one <| Nat.Prime.one_lt Fact.out
 
-/-- `padicNorm p q` takes discrete values `p ^ -z` for `z : ℤ`. -/
+/-- `padicNorm p q` takes discrete values `p ^ -z` for `z : ℤ`; the power exists, that is, `p` is
+invertible if the exponent `-z` is negative. -/
 protected theorem values_discrete {q : ℚ} (hq : q ≠ 0) :
-    ∃ z : ℤ, padicNorm p q = (p : ℚ) ^ (-z) := by
+    ∃ (z : ℤ) (_ : -z < 0 → IsUnit (p : ℚ)), padicNorm p q = (p : ℚ) ^ (-z) := by
   by_cases hp : p = 1
-  · exact ⟨0, by simp [padicNorm, hq, hp]⟩
-  · exact ⟨padicValRat p q, padicNorm.eq_zpow_of_nonzero hq hp⟩
+  · exact ⟨0, by simp, by simp [padicNorm, hq, hp]⟩
+  · exact ⟨padicValRat p q, padicValRat.isUnit_natCast_of_neg_lt_zero,
+      padicNorm.eq_zpow_of_nonzero hq hp⟩
 
 /-- `padicNorm p` is symmetric. -/
 @[simp]
@@ -124,8 +138,8 @@ protected theorem neg (q : ℚ) : padicNorm p (-q) = padicNorm p q := by
   · simp [hq]
   by_cases hp : p = 1
   · simp [padicNorm, hq, hp]
-  · rw [padicNorm.eq_zpow_of_nonzero (neg_ne_zero.2 hq) hp, padicNorm.eq_zpow_of_nonzero hq hp,
-      padicValRat.neg]
+  · rw [padicNorm.eq_zpow_of_nonzero (neg_ne_zero.2 hq) hp, padicNorm.eq_zpow_of_nonzero hq hp]
+    simp only [padicValRat.neg]
 
 variable [hp : Fact p.Prime]
 
@@ -152,13 +166,15 @@ protected theorem mul (q r : ℚ) : padicNorm p (q * r) = padicNorm p q * padicN
     else by
       have : (p : ℚ) ≠ 0 := by simp [hp.1.ne_zero]
       rw [padicNorm.eq_zpow_of_nonzero (mul_ne_zero hq hr), padicNorm.eq_zpow_of_nonzero hq,
-        padicNorm.eq_zpow_of_nonzero hr, padicValRat.mul hq hr, neg_add, zpow_add₀ this]
+        padicNorm.eq_zpow_of_nonzero hr]
+      simp only [padicValRat.mul hq hr, neg_add, zpow_add₀ this]
 
 /-- The `p`-adic norm respects division. -/
 @[simp]
-protected theorem div (q r : ℚ) : padicNorm p (q / r) = padicNorm p q / padicNorm p r :=
-  if hr : r = 0 then by simp [hr]
-  else eq_div_of_mul_eq (padicNorm.nonzero hr) (by rw [← padicNorm.mul, div_mul_cancel₀ _ hr])
+protected theorem div (q r : ℚ) {hr : IsUnit r} :
+    padicNorm p (q / r) =
+      Checked.div (padicNorm p q) (padicNorm p r) (padicNorm.nonzero hr.ne_zero).isUnit :=
+  eq_div_of_mul_eq (by rw [← padicNorm.mul, div_mul_cancel₀])
 
 /-- The `p`-adic norm of an integer is at most `1`. -/
 protected theorem of_int (z : ℤ) : padicNorm p z ≤ 1 := by
@@ -227,7 +243,8 @@ theorem add_eq_max_of_ne {q r : ℚ} (hne : padicNorm p q ≠ padicNorm p r) :
 
 theorem dvd_iff_norm_le {n : ℕ} {z : ℤ} : ↑(p ^ n) ∣ z ↔ padicNorm p z ≤ (p : ℚ) ^ (-n : ℤ) := by
   by_cases hz : z = 0
-  · simp [hz]
+  · simp only [hz, dvd_zero, Int.cast_zero, padicNorm.zero, true_iff]
+    exact zpow_nonneg (Nat.cast_nonneg _) _
   have hz' : (z : ℚ) ≠ 0 := mod_cast hz
   rw [padicNorm.eq_zpow_of_nonzero hz', zpow_le_zpow_iff_right₀ (mod_cast hp.out.one_lt),
     neg_le_neg_iff, padicValRat.of_int, padicValInt.of_ne_one_ne_zero hp.out.ne_one hz]
@@ -238,24 +255,22 @@ theorem dvd_iff_norm_le {n : ℕ} {z : ℤ} : ↑(p ^ n) ∣ z ↔ padicNorm p z
 /-- The `p`-adic norm of an integer `m` is one iff `p` doesn't divide `m`. -/
 theorem int_eq_one_iff (m : ℤ) : padicNorm p m = 1 ↔ ¬(p : ℤ) ∣ m := by
   nth_rw 2 [← pow_one p]
-  simp only [dvd_iff_norm_le, Nat.cast_one, zpow_neg, zpow_one, not_le]
+  have hp₁ : 1 < (p : ℚ) := by norm_cast; exact Nat.Prime.one_lt (Fact.out : Nat.Prime p)
+  simp only [dvd_iff_norm_le, Nat.cast_one, not_le]
   constructor
   · intro h
-    rw [h, inv_lt_one₀] <;> norm_cast
-    · exact Nat.Prime.one_lt Fact.out
-    · exact Nat.Prime.pos Fact.out
+    rw [h]
+    exact zpow_lt_one_of_neg₀ hp₁ (by decide)
   · by_cases hm : m = 0
     · simp only [hm, Int.cast_zero, padicNorm.zero]
-      rw [inv_lt_zero, ← Nat.cast_zero, Nat.cast_lt]
       intro h
-      exact (Nat.not_lt_zero p h).elim
+      exact absurd h (zpow_pos (zero_lt_one.trans hp₁) _).not_gt
     · have hm' : (m : ℚ) ≠ 0 := mod_cast hm
-      rw [padicNorm.eq_zpow_of_nonzero hm']
-      have : 1 < (p : ℚ) := by norm_cast; exact Nat.Prime.one_lt (Fact.out : Nat.Prime p)
-      rw [← zpow_neg_one, zpow_lt_zpow_iff_right₀ this]
+      rw [padicNorm.eq_zpow_of_nonzero hm', zpow_lt_zpow_iff_right₀ hp₁]
       have : 0 ≤ padicValRat p m := by simp only [of_int, Nat.cast_nonneg]
       intro h
-      rw [← zpow_zero (p : ℚ), zpow_right_inj₀] <;> linarith
+      rw [← zpow_zero₀ (p : ℚ), zpow_right_inj₀ (zero_lt_one.trans hp₁) hp₁.ne']
+      linarith
 
 theorem int_lt_one_iff (m : ℤ) : padicNorm p m < 1 ↔ (p : ℤ) ∣ m := by
   rw [← not_iff_not, ← int_eq_one_iff, eq_iff_le_not_lt]

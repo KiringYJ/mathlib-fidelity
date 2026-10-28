@@ -220,8 +220,10 @@ namespace IsFaceOf
 theorem of_mem_of_add_mem_left (h₁ : F ≤ C) (h₂ : ∀ {x y : M}, x ∈ C → y ∈ C → x + y ∈ F → x ∈ F) :
     F.IsFaceOf C := by
   refine ⟨h₁, fun hx hy ha haxy ↦ ?_⟩
-  simpa [← smul_assoc, inv_mul_cancel₀ (ne_of_gt ha)] using smul_mem _
-    (inv_nonneg.mpr (le_of_lt ha)) <| h₂ (smul_mem _ (le_of_lt ha) hx) hy haxy
+  have hu : IsUnit _ := (ne_of_gt ha).isUnit
+  have := smul_mem F ((inv_nonneg (ha := hu)).mpr (le_of_lt ha))
+    (h₂ (smul_mem C (le_of_lt ha) hx) hy haxy)
+  rwa [smul_smul, inv_mul_cancel₀, one_smul] at this
 
 /-- The lineality space of a cone is a face. -/
 lemma lineal (C : PointedCone R M) : IsFaceOf C.lineal C := by

@@ -27,14 +27,16 @@ variable {𝕜 : Type*} [NormedDivisionRing 𝕜]
 /-- The tangent cone at a non-isolated point in dimension 1 is the whole space. -/
 theorem tangentConeAt_eq_univ {s : Set 𝕜} {x : 𝕜} (hx : AccPt x (𝓟 s)) :
     tangentConeAt 𝕜 s x = univ := by
+  classical
   refine eq_univ_of_forall fun y ↦ ?_
-  apply mem_tangentConeAt_of_frequently (𝓝[≠] x) (fun z ↦ y / (z - x)) (· - x)
+  -- The scaling `y / (z - x)` is needed only on the punctured neighborhood, where `z ≠ x`.
+  apply mem_tangentConeAt_of_frequently (𝓝[≠] x)
+    (fun z ↦ if h : z = x then 0 else y / (z - x)) (· - x)
   · exact Continuous.tendsto' (by fun_prop) _ _ (by simp) |>.mono_left inf_le_left
   · simpa [accPt_iff_frequently_nhdsNE] using hx
   · apply tendsto_nhds_of_eventually_eq
-    refine eventually_mem_nhdsWithin.mono fun z hz ↦ ?_
-    have : z - x ≠ 0 := by simpa [sub_eq_zero] using hz
-    simp [div_mul_cancel₀ _ this]
+    refine eventually_mem_nhdsWithin.mono fun z (hz : z ≠ x) ↦ ?_
+    simp [hz, div_mul_cancel₀]
 
 /-- In one dimension, a point is a point of unique differentiability of a set
 iff it is an accumulation point of the set. -/

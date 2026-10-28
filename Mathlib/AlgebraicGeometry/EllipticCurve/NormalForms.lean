@@ -244,11 +244,18 @@ theorem Δ_of_isShortNF_of_char_three : W.Δ = -W.a₄ ^ 3 := by
 
 variable (W : WeierstrassCurve F) [W.IsElliptic] [W.IsShortNF]
 
+/- Evidence rule: the discriminant of an elliptic curve in short normal form is
+`-16 * (4 * a₄ ^ 3 + 27 * a₆ ^ 2)` (`WeierstrassCurve.Δ_of_isShortNF`), so the factor
+`4 * a₄ ^ 3 + 27 * a₆ ^ 2` is a unit. -/
+local macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | (refine isUnit_of_mul_isUnit_right (x := -16) ?_
+       rw [← WeierstrassCurve.Δ_of_isShortNF]
+       apply WeierstrassCurve.isUnit_Δ))
+
 theorem j_of_isShortNF : W.j = 6912 * W.a₄ ^ 3 / (4 * W.a₄ ^ 3 + 27 * W.a₆ ^ 2) := by
-  have h := W.Δ'.ne_zero
-  rw [coe_Δ', Δ_of_isShortNF] at h
-  rw [j, Units.val_inv_eq_inv_val, ← div_eq_inv_mul, coe_Δ',
-    c₄_of_isShortNF, Δ_of_isShortNF, div_eq_div_iff h (right_ne_zero_of_mul h)]
+  rw [j_eq, inv_mul_eq_div₀, div_eq_div_iff, c₄_of_isShortNF, Δ_of_isShortNF]
   ring1
 
 @[simp]
@@ -345,21 +352,33 @@ theorem Δ_of_isCharThreeJNeZeroNF_of_char_three : W.Δ = -W.a₂ ^ 3 * W.a₆ :
   rw [Δ_of_isCharThreeJNeZeroNF]
   linear_combination (-21 * W.a₂ ^ 3 * W.a₆ - 144 * W.a₆ ^ 2) * CharP.cast_eq_zero R 3
 
+/-- For an elliptic curve in this normal form, `a₆` is a unit, since the discriminant is
+`-a₂ ^ 3 * a₆`. -/
+theorem isUnit_a₆_of_isCharThreeJNeZeroNF_of_char_three [W.IsElliptic] : IsUnit W.a₆ := by
+  have h := W.isUnit_Δ
+  rw [Δ_of_isCharThreeJNeZeroNF_of_char_three] at h
+  exact isUnit_of_mul_isUnit_right h
+
 variable (W : WeierstrassCurve F) [W.IsElliptic] [W.IsCharThreeJNeZeroNF] [CharP F 3]
+
+/- Evidence rule: `a₆` is a unit
+(`WeierstrassCurve.isUnit_a₆_of_isCharThreeJNeZeroNF_of_char_three`). -/
+local macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | apply WeierstrassCurve.isUnit_a₆_of_isCharThreeJNeZeroNF_of_char_three)
 
 @[simp]
 theorem j_of_isCharThreeJNeZeroNF_of_char_three : W.j = -W.a₂ ^ 3 / W.a₆ := by
-  have h := W.Δ'.ne_zero
-  rw [coe_Δ', Δ_of_isCharThreeJNeZeroNF_of_char_three] at h
-  rw [j, Units.val_inv_eq_inv_val, ← div_eq_inv_mul, coe_Δ',
-    c₄_of_isCharThreeJNeZeroNF_of_char_three, Δ_of_isCharThreeJNeZeroNF_of_char_three,
-    div_eq_div_iff h (right_ne_zero_of_mul h)]
+  rw [j_eq, inv_mul_eq_div₀, div_eq_div_iff, c₄_of_isCharThreeJNeZeroNF_of_char_three,
+    Δ_of_isCharThreeJNeZeroNF_of_char_three]
   ring1
 
 theorem j_ne_zero_of_isCharThreeJNeZeroNF_of_char_three : W.j ≠ 0 := by
   rw [j_of_isCharThreeJNeZeroNF_of_char_three, div_ne_zero_iff]
   have h := W.Δ'.ne_zero
-  rwa [coe_Δ', Δ_of_isCharThreeJNeZeroNF_of_char_three, mul_ne_zero_iff] at h
+  rw [coe_Δ', Δ_of_isCharThreeJNeZeroNF_of_char_three, mul_ne_zero_iff] at h
+  exact h.1
 
 end Quantity
 
@@ -411,38 +430,46 @@ there is an explicit change of variables of it to `WeierstrassCurve.IsCharThreeN
 `Y² = X³ + a₂X² + a₆` (`WeierstrassCurve.IsCharThreeJNeZeroNF`) or
 `Y² = X³ + a₄X + a₆` (`WeierstrassCurve.IsShortNF`).
 It is the composition of an explicit change of variables with
-`WeierstrassCurve.toShortNFOfCharThree`. -/
-def toCharThreeNF : VariableChange F :=
-  ⟨1, (W.toShortNFOfCharThree • W).a₄ /
-    (W.toShortNFOfCharThree • W).a₂, 0, 0⟩ * W.toShortNFOfCharThree
+`WeierstrassCurve.toShortNFOfCharThree`. The coefficient `a₂` of
+`WeierstrassCurve.toShortNFOfCharThree • W` is `b₂` (`WeierstrassCurve.toShortNFOfCharThree_a₂`).
+If it is nonzero, the explicit change of variables is the shift by `a₄ / a₂`, which removes `a₄`;
+otherwise the curve is already in short normal form and no further change is made. -/
+noncomputable def toCharThreeNF [DecidableEq F] : VariableChange F :=
+  if ha₂ : (W.toShortNFOfCharThree • W).a₂ = 0 then W.toShortNFOfCharThree else
+    ⟨1, (W.toShortNFOfCharThree • W).a₄ / (W.toShortNFOfCharThree • W).a₂, 0, 0⟩ *
+      W.toShortNFOfCharThree
 
-theorem toCharThreeNF_spec_of_b₂_ne_zero (hb₂ : W.b₂ ≠ 0) :
+theorem toCharThreeNF_spec_of_b₂_ne_zero [DecidableEq F] (hb₂ : W.b₂ ≠ 0) :
     (W.toCharThreeNF • W).IsCharThreeJNeZeroNF := by
   have h : (2 : F) * 2 = 1 := by linear_combination CharP.cast_eq_zero F 3
   let : Invertible (2 : F) := ⟨2, h, h⟩
-  rw [toCharThreeNF, mul_smul]
-  set W' := W.toShortNFOfCharThree • W
-  have : W'.IsCharNeTwoNF := W.toCharNeTwoNF_spec
-  constructor
-  · simp [variableChange_a₁]
-  · simp [variableChange_a₃]
-  · have ha₂ : W'.a₂ ≠ 0 := W.toShortNFOfCharThree_a₂ ▸ hb₂
-    simp [field, variableChange_a₄, -mul_eq_zero]
-    linear_combination (W'.a₄ * W'.a₂ ^ 2 + W'.a₄ ^ 2) * CharP.cast_eq_zero F 3
+  have key (W' : WeierstrassCurve F) [W'.IsCharNeTwoNF] (ha₂ : W'.a₂ ≠ 0) :
+      ((⟨1, W'.a₄ / W'.a₂, 0, 0⟩ : VariableChange F) • W').IsCharThreeJNeZeroNF := by
+    constructor
+    · simp [variableChange_a₁]
+    · simp [variableChange_a₃]
+    · simp [field, variableChange_a₄, -mul_eq_zero]
+      linear_combination W'.a₄ * W'.a₂ * (W'.a₂ ^ 2 + W'.a₄) * CharP.cast_eq_zero F 3
+  have ha₂ : (W.toShortNFOfCharThree • W).a₂ ≠ 0 := W.toShortNFOfCharThree_a₂ ▸ hb₂
+  have : (W.toShortNFOfCharThree • W).IsCharNeTwoNF := W.toCharNeTwoNF_spec
+  rw [toCharThreeNF, dite_eq_right ha₂, mul_smul]
+  exact key _ ha₂
 
-theorem toCharThreeNF_spec_of_b₂_eq_zero (hb₂ : W.b₂ = 0) : (W.toCharThreeNF • W).IsShortNF := by
-  rw [toCharThreeNF, toShortNFOfCharThree_a₂, hb₂, div_zero, ← VariableChange.one_def, one_mul]
+theorem toCharThreeNF_spec_of_b₂_eq_zero [DecidableEq F] (hb₂ : W.b₂ = 0) :
+    (W.toCharThreeNF • W).IsShortNF := by
+  rw [toCharThreeNF, dite_eq_left (W.toShortNFOfCharThree_a₂.trans hb₂)]
   exact W.toShortNFOfCharThree_spec hb₂
 
-instance toCharThreeNF_spec : (W.toCharThreeNF • W).IsCharThreeNF := by
+instance toCharThreeNF_spec [DecidableEq F] : (W.toCharThreeNF • W).IsCharThreeNF := by
   by_cases hb₂ : W.b₂ = 0
   · have := W.toCharThreeNF_spec_of_b₂_eq_zero hb₂
     infer_instance
   · have := W.toCharThreeNF_spec_of_b₂_ne_zero hb₂
     infer_instance
 
-theorem exists_variableChange_isCharThreeNF : ∃ C : VariableChange F, (C • W).IsCharThreeNF :=
-  ⟨_, W.toCharThreeNF_spec⟩
+theorem exists_variableChange_isCharThreeNF : ∃ C : VariableChange F, (C • W).IsCharThreeNF := by
+  classical
+  exact ⟨_, W.toCharThreeNF_spec⟩
 
 end VariableChange
 
@@ -527,18 +554,28 @@ theorem Δ_of_isCharTwoJNeZeroNF_of_char_two : W.Δ = W.a₆ := by
     b₆_of_isCharTwoJNeZeroNF_of_char_two, b₈_of_isCharTwoJNeZeroNF_of_char_two]
   linear_combination -W.a₆ * CharP.cast_eq_zero R 2
 
+/-- For an elliptic curve in this normal form, `a₆` is a unit, since it is the discriminant. -/
+theorem isUnit_a₆_of_isCharTwoJNeZeroNF_of_char_two [W.IsElliptic] : IsUnit W.a₆ :=
+  W.Δ_of_isCharTwoJNeZeroNF_of_char_two ▸ W.isUnit_Δ
+
 variable (W : WeierstrassCurve F) [W.IsElliptic] [W.IsCharTwoJNeZeroNF] [CharP F 2]
+
+/- Evidence rule: `a₆` is a unit
+(`WeierstrassCurve.isUnit_a₆_of_isCharTwoJNeZeroNF_of_char_two`). -/
+local macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | apply WeierstrassCurve.isUnit_a₆_of_isCharTwoJNeZeroNF_of_char_two)
 
 @[simp]
 theorem j_of_isCharTwoJNeZeroNF_of_char_two : W.j = 1 / W.a₆ := by
-  rw [j, Units.val_inv_eq_inv_val, ← div_eq_inv_mul, coe_Δ',
-    c₄_of_isCharTwoJNeZeroNF_of_char_two, Δ_of_isCharTwoJNeZeroNF_of_char_two, one_pow]
+  rw [j_eq, inv_mul_eq_div₀, div_eq_div_iff, c₄_of_isCharTwoJNeZeroNF_of_char_two,
+    Δ_of_isCharTwoJNeZeroNF_of_char_two]
+  ring1
 
 theorem j_ne_zero_of_isCharTwoJNeZeroNF_of_char_two : W.j ≠ 0 := by
   rw [j_of_isCharTwoJNeZeroNF_of_char_two, div_ne_zero_iff]
-  have h := W.Δ'.ne_zero
-  rw [coe_Δ', Δ_of_isCharTwoJNeZeroNF_of_char_two] at h
-  exact ⟨one_ne_zero, h⟩
+  exact one_ne_zero
 
 end Quantity
 
@@ -615,11 +652,18 @@ theorem Δ_of_isCharTwoJEqZeroNF_of_char_two : W.Δ = W.a₃ ^ 4 := by
 
 variable (W : WeierstrassCurve F) [W.IsElliptic] [W.IsCharTwoJEqZeroNF]
 
+/- Evidence rule: the discriminant of an elliptic curve in this normal form is
+`-(64 * a₄ ^ 3 + 27 * b₆ ^ 2)` (`WeierstrassCurve.Δ_of_isCharTwoJEqZeroNF`), so
+`64 * a₄ ^ 3 + 27 * b₆ ^ 2` is a unit. -/
+local macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | (refine (IsUnit.neg_iff _).mp ?_
+       rw [← WeierstrassCurve.Δ_of_isCharTwoJEqZeroNF]
+       apply WeierstrassCurve.isUnit_Δ))
+
 theorem j_of_isCharTwoJEqZeroNF : W.j = 110592 * W.a₄ ^ 3 / (64 * W.a₄ ^ 3 + 27 * W.b₆ ^ 2) := by
-  have h := W.Δ'.ne_zero
-  rw [coe_Δ', Δ_of_isCharTwoJEqZeroNF] at h
-  rw [j, Units.val_inv_eq_inv_val, ← div_eq_inv_mul, coe_Δ',
-    c₄_of_isCharTwoJEqZeroNF, Δ_of_isCharTwoJEqZeroNF, div_eq_div_iff h (neg_ne_zero.1 h)]
+  rw [j_eq, inv_mul_eq_div₀, div_eq_div_iff, c₄_of_isCharTwoJEqZeroNF, Δ_of_isCharTwoJEqZeroNF]
   ring1
 
 @[simp]
@@ -664,23 +708,24 @@ variable (W : WeierstrassCurve F)
 /-- For a `WeierstrassCurve` defined over a field of characteristic = 2,
 there is an explicit change of variables of it to `Y² + XY = X³ + a₂X² + a₆`
 (`WeierstrassCurve.IsCharTwoJNeZeroNF`) if its j ≠ 0. -/
-def toCharTwoJNeZeroNF (W : WeierstrassCurve F) (ha₁ : W.a₁ ≠ 0) : VariableChange F :=
+noncomputable def toCharTwoJNeZeroNF (W : WeierstrassCurve F) (ha₁ : W.a₁ ≠ 0) :
+    VariableChange F :=
   ⟨Units.mk0 _ ha₁, W.a₃ / W.a₁, 0, (W.a₁ ^ 2 * W.a₄ + W.a₃ ^ 2) / W.a₁ ^ 3⟩
 
 theorem toCharTwoJNeZeroNF_spec (ha₁ : W.a₁ ≠ 0) :
     (W.toCharTwoJNeZeroNF ha₁ • W).IsCharTwoJNeZeroNF := by
   constructor
-  · simp [toCharTwoJNeZeroNF, ha₁, variableChange_a₁]
-  · simp [field, toCharTwoJNeZeroNF, variableChange_a₃, -mul_eq_zero]
+  · simp [toCharTwoJNeZeroNF, variableChange_a₁]
+  · simp [field, toCharTwoJNeZeroNF, variableChange_a₃, Units.val_inv_eq_inv_val₀, -mul_eq_zero]
     linear_combination (W.a₃ * W.a₁ ^ 3 + W.a₁ ^ 2 * W.a₄ + W.a₃ ^ 2) * CharP.cast_eq_zero F 2
-  · simp [field, toCharTwoJNeZeroNF, variableChange_a₄, -mul_eq_zero]
-    linear_combination (W.a₃ ^ 2 + W.a₁ * W.a₃ * W.a₂) * CharP.cast_eq_zero F 2
+  · simp [field, toCharTwoJNeZeroNF, variableChange_a₄, Units.val_inv_eq_inv_val₀, -mul_eq_zero]
+    linear_combination W.a₁ ^ 4 * W.a₃ * (W.a₃ + W.a₁ * W.a₂) * CharP.cast_eq_zero F 2
 
 /-- For a `WeierstrassCurve` defined over a field of characteristic = 2,
 there is an explicit change of variables of it to `WeierstrassCurve.IsCharTwoNF`, that is,
 `Y² + XY = X³ + a₂X² + a₆` (`WeierstrassCurve.IsCharTwoJNeZeroNF`) or
 `Y² + a₃Y = X³ + a₄X + a₆` (`WeierstrassCurve.IsCharTwoJEqZeroNF`). -/
-def toCharTwoNF [DecidableEq F] : VariableChange F :=
+noncomputable def toCharTwoNF [DecidableEq F] : VariableChange F :=
   if ha₁ : W.a₁ = 0 then W.toCharTwoJEqZeroNF else W.toCharTwoJNeZeroNF ha₁
 
 instance toCharTwoNF_spec [DecidableEq F] : (W.toCharTwoNF • W).IsCharTwoNF := by

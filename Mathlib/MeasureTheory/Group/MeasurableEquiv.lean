@@ -65,14 +65,14 @@ theorem symm_smul (c : G) : (smul c : α ≃ᵐ α).symm = smul c⁻¹ :=
 
 /-- If a group with zero `G₀` acts on `α` by measurable maps, then each nonzero element `c : G₀`
 defines a measurable automorphism of `α` -/
-def smul₀ (c : G₀) (hc : c ≠ 0) : α ≃ᵐ α :=
+noncomputable def smul₀ (c : G₀) (hc : c ≠ 0) : α ≃ᵐ α :=
   MeasurableEquiv.smul (Units.mk0 c hc)
 
 @[simp] lemma coe_smul₀ {c : G₀} (hc : c ≠ 0) : ⇑(smul₀ c hc : α ≃ᵐ α) = (c • ·) := rfl
 
 @[simp]
 theorem symm_smul₀ {c : G₀} (hc : c ≠ 0) :
-    (smul₀ c hc : α ≃ᵐ α).symm = smul₀ c⁻¹ (inv_ne_zero hc) :=
+    (smul₀ c hc : α ≃ᵐ α).symm = smul₀ c⁻¹ inv_ne_zero :=
   ext rfl
 
 theorem _root_.measurableEmbedding_const_smul₀ {c : G₀} (hc : c ≠ 0) :
@@ -135,7 +135,7 @@ theorem toEquiv_mulRight (g : G) : (mulRight g).toEquiv = Equiv.mulRight g :=
 
 /-- If `G₀` is a group with zero with measurable multiplication, then left multiplication by a
 nonzero element `g : G₀` is a measurable automorphism of `G₀`. -/
-def mulLeft₀ (g : G₀) (hg : g ≠ 0) : G₀ ≃ᵐ G₀ :=
+noncomputable def mulLeft₀ (g : G₀) (hg : g ≠ 0) : G₀ ≃ᵐ G₀ :=
   smul₀ g hg
 
 theorem _root_.measurableEmbedding_mulLeft₀ {g : G₀} (hg : g ≠ 0) :
@@ -146,7 +146,7 @@ theorem _root_.measurableEmbedding_mulLeft₀ {g : G₀} (hg : g ≠ 0) :
 
 @[simp]
 theorem symm_mulLeft₀ {g : G₀} (hg : g ≠ 0) :
-    (mulLeft₀ g hg).symm = mulLeft₀ g⁻¹ (inv_ne_zero hg) :=
+    (mulLeft₀ g hg).symm = mulLeft₀ g⁻¹ inv_ne_zero :=
   ext rfl
 
 @[simp]
@@ -155,7 +155,7 @@ theorem toEquiv_mulLeft₀ {g : G₀} (hg : g ≠ 0) : (mulLeft₀ g hg).toEquiv
 
 /-- If `G₀` is a group with zero with measurable multiplication, then right multiplication by a
 nonzero element `g : G₀` is a measurable automorphism of `G₀`. -/
-def mulRight₀ (g : G₀) (hg : g ≠ 0) : G₀ ≃ᵐ G₀ where
+noncomputable def mulRight₀ (g : G₀) (hg : g ≠ 0) : G₀ ≃ᵐ G₀ where
   toEquiv := Equiv.mulRight₀ g hg
 
 theorem _root_.measurableEmbedding_mulRight₀ {g : G₀} (hg : g ≠ 0) :
@@ -168,7 +168,7 @@ theorem coe_mulRight₀ {g : G₀} (hg : g ≠ 0) : ⇑(mulRight₀ g hg) = fun 
 
 @[simp]
 theorem symm_mulRight₀ {g : G₀} (hg : g ≠ 0) :
-    (mulRight₀ g hg).symm = mulRight₀ g⁻¹ (inv_ne_zero hg) :=
+    (mulRight₀ g hg).symm = mulRight₀ g⁻¹ inv_ne_zero :=
   ext rfl
 
 @[simp]
@@ -177,7 +177,8 @@ theorem toEquiv_mulRight₀ {g : G₀} (hg : g ≠ 0) : (mulRight₀ g hg).toEqu
 
 end Mul
 
-/-- Inversion as a measurable automorphism of a group or group with zero. -/
+/-- Inversion as a measurable automorphism of a group, or of any type with a measurable
+involutive inverse. A group with zero has no total inverse. -/
 @[to_additive (attr := simps! -fullyApplied toEquiv apply)
     /-- Negation as a measurable automorphism of an additive group. -/]
 def inv (G) [SigmaAlgebra G] [InvolutiveInv G] [MeasurableInv G] : G ≃ᵐ G where

@@ -190,12 +190,17 @@ variable (A A' : Type*) [Ring A] [Ring A'] [Algebra ℚ A] [Algebra ℚ A']
 open Nat
 
 /-- Power series for the sine function at zero. -/
-def sin : PowerSeries A :=
-  mk fun n => if Even n then 0 else algebraMap ℚ A ((-1) ^ (n / 2) / n !)
+noncomputable def sin : PowerSeries A :=
+  mk fun n => if Even n then 0 else
+    algebraMap ℚ A
+      (Checked.div ((-1) ^ (n / 2)) (n ! : ℚ) (Nat.cast_ne_zero.2 n.factorial_ne_zero).isUnit)
 
 /-- Power series for the cosine function at zero. -/
-def cos : PowerSeries A :=
-  mk fun n => if Even n then algebraMap ℚ A ((-1) ^ (n / 2) / n !) else 0
+noncomputable def cos : PowerSeries A :=
+  mk fun n => if Even n then
+      algebraMap ℚ A
+        (Checked.div ((-1) ^ (n / 2)) (n ! : ℚ) (Nat.cast_ne_zero.2 n.factorial_ne_zero).isUnit)
+    else 0
 
 variable {A A'} (f : A →+* A')
 

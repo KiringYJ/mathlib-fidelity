@@ -188,11 +188,9 @@ end AddCommGroup
 noncomputable instance (priority := 100) divisibleByIntOfCharZero {𝕜}
     [DivisionRing 𝕜] [CharZero 𝕜] :
     DivisibleBy 𝕜 ℤ where
-  div q n hn := q /ₚ Units.mk0 (n : 𝕜) (Int.cast_ne_zero.mpr hn)
+  div q n hn := q / (n : 𝕜)
   div_cancel {n} q hn := by
-    rw [zsmul_eq_mul, (Int.cast_commute n _).eq]
-    simpa only [Units.val_mk0] using
-      divp_mul_cancel q (Units.mk0 (n : 𝕜) (Int.cast_ne_zero.mpr hn))
+    rw [zsmul_eq_mul, (Int.cast_commute n _).eq, div_mul_cancel₀ q]
 
 namespace Group
 

@@ -72,7 +72,7 @@ variable {f g : E → F} {p pf : FormalMultilinearSeries 𝕜 E F} {s t : Set E}
 while `f` is evaluated only at points of its actual domain `D`. -/
 structure HasFPowerSeriesOnBall {D : Type*} (f : D → F)
     (p : FormalMultilinearSeries 𝕜 E F) (x : D) (r : ℝ≥0∞)
-    (coord : D → E := by exact id) : Prop where
+    (coord : D → E := by exact _root_.id) : Prop where
   r_le : r ≤ p.radius
   r_pos : 0 < r
   hasSum : ∀ {y}, coord y - coord x ∈ Metric.eball (0 : E) r →
@@ -82,7 +82,7 @@ structure HasFPowerSeriesOnBall {D : Type*} (f : D → F)
 the centre as well as at the specified points of `s`. -/
 structure HasFPowerSeriesWithinOnBall {D : Type*} (f : D → F)
     (p : FormalMultilinearSeries 𝕜 E F) (s : Set D) (x : D) (r : ℝ≥0∞)
-    (coord : D → E := by exact id) : Prop where
+    (coord : D → E := by exact _root_.id) : Prop where
   /-- `p` converges on `ball 0 r` -/
   r_le : r ≤ p.radius
   /-- The radius of convergence is positive -/
@@ -93,12 +93,12 @@ structure HasFPowerSeriesWithinOnBall {D : Type*} (f : D → F)
 
 /-- A convergent power series expansion at a point of the actual function domain. -/
 def HasFPowerSeriesAt {D : Type*} (f : D → F) (p : FormalMultilinearSeries 𝕜 E F)
-    (x : D) (coord : D → E := by exact id) :=
+    (x : D) (coord : D → E := by exact _root_.id) :=
   ∃ r, HasFPowerSeriesOnBall f p x r coord
 
 /-- A convergent power series expansion within a subset of the function domain. -/
 def HasFPowerSeriesWithinAt {D : Type*} (f : D → F) (p : FormalMultilinearSeries 𝕜 E F)
-    (s : Set D) (x : D) (coord : D → E := by exact id) :=
+    (s : Set D) (x : D) (coord : D → E := by exact _root_.id) :=
   ∃ r, HasFPowerSeriesWithinOnBall f p s x r coord
 
 -- Teach the `bound` tactic that power series have positive radius
@@ -109,23 +109,23 @@ variable (𝕜)
 /-- Given a function `f : E → F`, we say that `f` is analytic at `x` if it admits a convergent power
 series expansion around `x`. -/
 @[fun_prop]
-def AnalyticAt {D : Type*} (f : D → F) (x : D) (coord : D → E := by exact id) :=
+def AnalyticAt {D : Type*} (f : D → F) (x : D) (coord : D → E := by exact _root_.id) :=
   ∃ p : FormalMultilinearSeries 𝕜 E F, HasFPowerSeriesAt f p x coord
 
 /-- `f` is analytic within `s` at `x` if it has a power series at `x` that converges on `𝓝[s] x` -/
 def AnalyticWithinAt {D : Type*} (f : D → F) (s : Set D) (x : D)
-    (coord : D → E := by exact id) : Prop :=
+    (coord : D → E := by exact _root_.id) : Prop :=
   ∃ p : FormalMultilinearSeries 𝕜 E F, HasFPowerSeriesWithinAt f p s x coord
 
 /-- Given a function `f : E → F`, we say that `f` is analytic on a set `s` if it is analytic around
 every point of `s`. -/
 @[fun_prop]
-def AnalyticOnNhd {D : Type*} (f : D → F) (s : Set D) (coord : D → E := by exact id) :=
+def AnalyticOnNhd {D : Type*} (f : D → F) (s : Set D) (coord : D → E := by exact _root_.id) :=
   ∀ x, x ∈ s → AnalyticAt 𝕜 f x coord
 
 /-- `f` is analytic within `s` if it is analytic within `s` at each point of `s`.  Note that
 this is weaker than `AnalyticOnNhd 𝕜 f s`, as `f` is allowed to be arbitrary outside `s`. -/
-def AnalyticOn {D : Type*} (f : D → F) (s : Set D) (coord : D → E := by exact id) : Prop :=
+def AnalyticOn {D : Type*} (f : D → F) (s : Set D) (coord : D → E := by exact _root_.id) : Prop :=
   ∀ x ∈ s, AnalyticWithinAt 𝕜 f s x coord
 
 /-!
@@ -830,13 +830,12 @@ theorem HasFPowerSeriesWithinOnBall.uniform_geometric_approx {r' : ℝ≥0}
       ∃ C > 0, ∀ y ∈ Metric.ball (0 : E) r', ∀ n, x + y ∈ insert x s →
       ‖f (x + y) - p.partialSum n y‖ ≤ C * a ^ n := by
   obtain ⟨a, ha, C, hC, hp⟩ : ∃ a ∈ Ioo (0 : ℝ) 1, ∃ C > 0, ∀ y ∈ Metric.ball (0 : E) r', ∀ n,
-      x + y ∈ insert x s → ‖f (x + y) - p.partialSum n y‖ ≤ C * (a * (‖y‖ / r')) ^ n :=
-    by
-      obtain ⟨a, ha, C, hC, hp⟩ := hf.uniform_geometric_approx' h
-      refine ⟨a, ha, C, hC, ?_⟩
-      intro y hy n hs
-      simpa only [add_sub_cancel_left] using
-        hp (x + y) (by simpa only [add_sub_cancel_left] using hy) n hs
+      x + y ∈ insert x s → ‖f (x + y) - p.partialSum n y‖ ≤ C * (a * (‖y‖ / r')) ^ n := by
+    obtain ⟨a, ha, C, hC, hp⟩ := hf.uniform_geometric_approx' h
+    refine ⟨a, ha, C, hC, ?_⟩
+    intro y hy n hs
+    simpa only [add_sub_cancel_left] using
+      hp (x + y) (by simpa only [add_sub_cancel_left] using hy) n hs
   refine ⟨a, ha, C, hC, fun y hy n ys => (hp y hy n ys).trans ?_⟩
   have yr' : ‖y‖ < r' := by rwa [ball_zero_eq] at hy
   have := ha.1.le -- needed to discharge a side goal on the next line
@@ -861,13 +860,12 @@ theorem HasFPowerSeriesWithinAt.isBigO_sub_partialSum_pow
   rcases hf with ⟨r, hf⟩
   rcases ENNReal.lt_iff_exists_nnreal_btwn.1 hf.r_pos with ⟨r', r'0, h⟩
   obtain ⟨a, -, C, -, hp⟩ : ∃ a ∈ Ioo (0 : ℝ) 1, ∃ C > 0, ∀ y ∈ Metric.ball (0 : E) r', ∀ n,
-      x + y ∈ insert x s → ‖f (x + y) - p.partialSum n y‖ ≤ C * (a * (‖y‖ / r')) ^ n :=
-    by
-      obtain ⟨a, ha, C, hC, hp⟩ := hf.uniform_geometric_approx' h
-      refine ⟨a, ha, C, hC, ?_⟩
-      intro y hy n hs
-      simpa only [add_sub_cancel_left] using
-        hp (x + y) (by simpa only [add_sub_cancel_left] using hy) n hs
+      x + y ∈ insert x s → ‖f (x + y) - p.partialSum n y‖ ≤ C * (a * (‖y‖ / r')) ^ n := by
+    obtain ⟨a, ha, C, hC, hp⟩ := hf.uniform_geometric_approx' h
+    refine ⟨a, ha, C, hC, ?_⟩
+    intro y hy n hs
+    simpa only [add_sub_cancel_left] using
+      hp (x + y) (by simpa only [add_sub_cancel_left] using hy) n hs
   refine isBigO_iff.2 ⟨C * (a / r') ^ n, ?_⟩
   replace r'0 : 0 < (r' : ℝ) := mod_cast r'0
   filter_upwards [inter_mem_nhdsWithin _ (Metric.ball_mem_nhds (0 : E) r'0)] with y hy

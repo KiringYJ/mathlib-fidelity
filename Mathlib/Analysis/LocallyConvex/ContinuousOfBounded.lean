@@ -59,7 +59,8 @@ def LinearMap.clmOfExistsBoundedImage [IsTopologicalAddGroup F] (f : E →ₛₗ
       calc
         x⁻¹ • V ⊆ x⁻¹ • f ⁻¹' f '' V := Set.smul_set_mono (Set.subset_preimage_image (⇑f) V)
         _ ⊆ x⁻¹ • f ⁻¹' (σ x • U) := Set.smul_set_mono (Set.preimage_mono h)
-        _ = f ⁻¹' U := by rw [x_ne.isUnit.preimage_smul_setₛₗ _, inv_smul_smul₀ x_ne _]
+        _ = f ⁻¹' U := by
+          rw [x_ne.isUnit.preimage_smul_setₛₗ _, inv_smul_smul₀ (ha := x_ne.isUnit) _]
     -- Using this inclusion, it suffices to show that `x⁻¹ • V` is in `𝓝 0`, which is trivial.
     grw [← this]
     rwa [set_smul_mem_nhds_zero_iff (inv_ne_zero x_ne)]⟩

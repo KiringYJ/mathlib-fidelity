@@ -218,26 +218,28 @@ theorem dickson_one_one_zmod_p (p : ℕ) [Fact p.Prime] : dickson 1 (1 : ZMod p)
   apply map_injective (ZMod.castHom (dvd_refl p) K) (RingHom.injective _)
   rw [map_dickson, Polynomial.map_pow, map_X]
   apply eq_of_infinite_eval_eq
-  -- The two polynomials agree on all `x` of the form `x = y + y⁻¹`.
-  apply @Set.Infinite.mono _ { x : K | ∃ y, x = y + y⁻¹ ∧ y ≠ 0 }
-  · rintro _ ⟨x, rfl, hx⟩
+  -- The two polynomials agree on all `x` of the form `x = y + y⁻¹` with `y ≠ 0`.
+  apply @Set.Infinite.mono _ { x : K | ∃ (y : K) (hy : y ≠ 0), x = y + y⁻¹ }
+  · rintro _ ⟨x, hx, rfl⟩
     simp only [eval_X, eval_pow, Set.mem_ofPred_eq, ZMod.cast_one', add_pow_char,
-      dickson_one_one_eval_add_inv _ _ (mul_inv_cancel₀ hx), ZMod.castHom_apply]
+      dickson_one_one_eval_add_inv _ _ (mul_inv_cancel₀ (ha := hx.isUnit)), ZMod.castHom_apply]
   -- Now we need to show that the set of such `x` is infinite.
   -- If the set is finite, then we will show that `K` is also finite.
   · intro h
     rw [← Set.infinite_univ_iff] at H
     apply H
     -- To each `x` of the form `x = y + y⁻¹`
-    -- we `bind` the set of `y` that solve the equation `x = y + y⁻¹`.
+    -- we `bind` the set of `y` that are zero or solve the equation `x = y + y⁻¹`.
     -- For every `x`, that set is finite (since it is governed by a quadratic equation).
     -- For the moment, we claim that all these sets together cover `K`.
     suffices (Set.univ : Set K) =
-        ⋃ x ∈ { x : K | ∃ y : K, x = y + y⁻¹ ∧ y ≠ 0 }, { y | x = y + y⁻¹ ∨ y = 0 }  by
+        ⋃ x ∈ { x : K | ∃ (y : K) (hy : y ≠ 0), x = y + y⁻¹ },
+          { y | ∀ hy : y ≠ 0, x = y + y⁻¹ } by
       rw [this]
       clear this
       refine h.biUnion fun x _ => ?_
-      -- The following quadratic polynomial has as solutions the `y` for which `x = y + y⁻¹`.
+      -- The following quadratic polynomial has as solutions the nonzero `y` for which
+      -- `x = y + y⁻¹`.
       let φ : K[X] := X ^ 2 - C x * X + 1
       have hφ : φ ≠ 0 := by
         intro H
@@ -251,20 +253,16 @@ theorem dickson_one_one_zmod_p (p : ℕ) [Fact p.Prime] : dickson 1 (1 : ZMod p)
           mem_roots hφ, IsRoot, eval_add, eval_sub, eval_pow, eval_mul, eval_X, eval_C, eval_one,
           Multiset.mem_singleton]
         by_cases hy : y = 0
-        · simp only [hy, or_true]
-        apply or_congr _ Iff.rfl
-        rw [← mul_left_inj' hy, eq_comm, ← sub_eq_zero, add_mul, inv_mul_cancel₀ hy]
+        · exact iff_of_true (fun h ↦ absurd hy h) (Or.inr hy)
+        rw [forall_prop_of_true hy, or_iff_left hy, ← mul_left_inj' hy, eq_comm, ← sub_eq_zero,
+          add_mul, inv_mul_cancel₀]
         apply eq_iff_eq_cancel_right.mpr
         ring
     -- Finally, we prove the claim that our finite union of finite sets covers all of `K`.
-    apply (Set.eq_univ_of_forall _).symm
-    intro x
-    simp only [exists_prop, Set.mem_iUnion, Ne, Set.mem_ofPred_eq]
+    refine (Set.eq_univ_of_forall fun x ↦ Set.mem_iUnion₂.2 ?_).symm
     by_cases hx : x = 0
-    · simp only [hx, and_true, inv_zero, or_true]
-      exact ⟨_, 1, rfl, one_ne_zero⟩
-    · simp only [hx, or_false, exists_eq_right]
-      exact ⟨_, rfl, hx⟩
+    · exact ⟨_, ⟨1, one_ne_zero, rfl⟩, fun h ↦ absurd hx h⟩
+    · exact ⟨x + x⁻¹, ⟨x, hx, rfl⟩, fun _ ↦ rfl⟩
 
 theorem dickson_one_one_charP (p : ℕ) [Fact p.Prime] [CharP R p] : dickson 1 (1 : R) p = X ^ p := by
   have h : (1 : R) = ZMod.castHom (dvd_refl p) R 1 := by

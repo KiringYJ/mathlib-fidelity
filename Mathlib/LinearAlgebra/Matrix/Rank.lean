@@ -425,22 +425,25 @@ theorem exists_rank_normal_form [Fintype m] [DecidableEq m] (M : Matrix m m R) :
       V * M * U = (fromBlocks 1 0 0 0).submatrix e e := by
   classical
   obtain ⟨L, L', D, hM0⟩ := Matrix.Pivot.exists_list_transvec_mul_diagonal_mul_list_transvec M
-  set E := fun i ↦ if D i = 0 then 1 else (D i)⁻¹ with E_def
+  set E := fun i ↦ if h : D i = 0 then 1 else (D i)⁻¹ with E_def
   set s : Finset m := .filter (fun i ↦ D i ≠ 0) .univ with s_def
   set V := diagonal E * (L.reverse.map (toMatrix ∘ .inv)).prod with V_def
   set U := (L'.reverse.map (toMatrix ∘ .inv)).prod with U_def
   have hUdet : IsUnit U.det := (isUnit_iff_isUnit_det _).1 <| isUnit_prod_comp_inverse _
   have hVdet : IsUnit V.det := by
     rw [V_def, det_mul, det_diagonal]
-    exact IsUnit.mk0 _ (Finset.prod_ne_zero_iff.2 (by grind)) |>.mul <|
+    refine IsUnit.mk0 _ (Finset.prod_ne_zero_iff.2 fun a _ ↦ ?_) |>.mul <|
       (isUnit_iff_isUnit_det _).1 (isUnit_prod_comp_inverse _)
+    simp only [E_def]
+    split_ifs
+    exacts [one_ne_zero, inv_ne_zero]
   have hM : V * M * U = diagonal (fun i ↦ if i ∈ s then 1 else 0) := by
     rw [V_def, U_def, hM0, mul_assoc, mul_assoc _ (L'.map _).prod, prod_mul_reverse_inv_prod,
       mul_one, ← mul_assoc, mul_assoc _ (L.reverse.map _).prod, reverse_inv_prod_mul_prod, mul_one]
     ext
-    simp only [E_def, mul_diagonal, diagonal_apply, ite_mul, one_mul, zero_mul, s_def,
+    simp only [E_def, mul_diagonal, diagonal_apply, ite_mul, dite_mul, one_mul, zero_mul, s_def,
       Finset.mem_filter, Finset.mem_univ, true_and, ite_not]
-    split_ifs with h1 h2 <;> first | rw [← h1, h2] | rw [← h1, inv_mul_cancel₀ h2] | rfl
+    split_ifs with h1 h2 <;> first | rw [← h1, h2] | rw [← h1, inv_mul_cancel₀] | rfl
   have hs : s.card = M.rank := by
     simp [← rank_mul_eq_right_of_isUnit_det V M hVdet, ← rank_mul_eq_left_of_isUnit_det U (V * M)
       hUdet, hM, rank_diagonal]

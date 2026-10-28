@@ -22,11 +22,15 @@ namespace GroupWithZero
 
 variable {α : Type*} [GroupWithZero α] {a b : α}
 
-/-- Conjugacy can be witnessed by a checked nonzero conjugating element. -/
-lemma isConj_iff_exists_mk0 : IsConj a b ↔
-    ∃ (c : α) (hc : c ≠ 0), c * a /ₚ Units.mk0 c hc = b := by
-  rw [IsConj, Units.exists0]
-  exact exists_congr fun c => exists_congr fun hc =>
-    (divp_eq_iff_mul_eq.trans eq_comm).symm
+@[simp] lemma isConj_iff₀ : IsConj a b ↔ ∃ (c : α) (_ : c ≠ 0), c * a * c⁻¹ = b := by
+  rw [IsConj, Units.exists_iff_ne_zero (p := (SemiconjBy · a b))]
+  refine exists_congr fun c => ⟨fun ⟨hc, h⟩ => ⟨hc, ?_⟩, fun ⟨hc, h⟩ => ⟨hc, ?_⟩⟩
+  · exact mul_inv_eq_iff_eq_mul₀.2 h
+  · exact mul_inv_eq_iff_eq_mul₀.1 h
+
+lemma conj_pow₀ {s : ℕ} {a d : α} {ha : IsUnit a} : (a⁻¹ * d * a) ^ s = a⁻¹ * d ^ s * a := by
+  have h := Units.conj_pow' ha.unit d s
+  rw [IsUnit.unit_spec] at h
+  exact h
 
 end GroupWithZero

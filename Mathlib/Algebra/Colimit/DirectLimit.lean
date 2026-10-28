@@ -9,7 +9,7 @@ public import Mathlib.Algebra.Module.LinearMap.Defs
 public import Mathlib.Algebra.Star.StarRingHom
 public import Mathlib.Algebra.Algebra.NonUnitalHom
 public import Mathlib.Algebra.Algebra.Pi
-public import Mathlib.Data.Rat.Cast.Defs
+public import Mathlib.Data.Rat.Cast.CharZero
 public import Mathlib.Order.DirectedInverseSystem
 public import Mathlib.Tactic.SuppressCompilation
 
@@ -25,6 +25,12 @@ The first 400 lines are boilerplate code that defines algebraic instances on `Di
 from magma (`Mul`) to `Field`. To make everything "hom-polymorphic", we work with `DirectedSystem`s
 of `FunLike`s rather than plain unbundled functions, and we use algebraic hom typeclasses
 (e.g. `LinearMapClass`, `RingHomClass`) everywhere.
+
+Groups with zero, division rings and fields carry no ambient inverse: their instances on
+`DirectLimit` only record that nonzero elements are units. Inverses, quotients and integer powers
+are the checked operations, computed in a component by `inv₀_def`, `div₀_def` and `zpow₀_def`
+(`isUnit_mk_iff` transfers the invertibility evidence). Rational casts exist when every component
+has characteristic zero, which the direct limit then inherits.
 
 In `Mathlib/Algebra/Colimit/Module.lean` and `Mathlib/Algebra/Colimit/Ring.lean`,
 `Module.DirectLimit`, `AddCommGroup.DirectLimit` and `Ring.DirectLimit`
@@ -235,6 +241,11 @@ theorem lift_npow (g : ∀ i, H i) (h) (x : DirectLimit G f) (n : ℕ) :
     DirectLimit.lift f (g ·) h (x ^ n) = DirectLimit.lift f (g ·) h x ^ n :=
   x.induction _ fun i x ↦ by simp_rw [npow_def, lift_def, map_pow (g i)]
 
+@[to_additive]
+theorem isUnit_lift (g : ∀ i, H i) (h) {x : DirectLimit G f} (hx : IsUnit x) :
+    IsUnit (DirectLimit.lift f (g ·) h x) :=
+  hx.map (⟨⟨DirectLimit.lift f (g ·) h, lift_one g h⟩, lift_mul g h⟩ : DirectLimit G f →* C)
+
 end Monoid
 
 @[to_additive] instance [∀ i, CommMonoid (G i)] [∀ i j h, MonoidHomClass (T h) (G i) (G j)] :
@@ -271,10 +282,12 @@ variable [∀ i j h, MonoidHomClass (T h) (G i) (G j)] [∀ i, MonoidHomClass (H
 
 @[to_additive] theorem inv_def (i x) : (⟦⟨i, x⟩⟧)⁻¹ = (⟦⟨i, x⁻¹⟩⟧ : DirectLimit G f) := rfl
 
-@[to_additive] theorem div_def (i x y) : ⟦⟨i, x⟩⟧ / ⟦⟨i, y⟩⟧ = (⟦⟨i, x / y⟩⟧ : DirectLimit G f) :=
+@[to_additive] theorem div_def (i x y) :
+    (⟦⟨i, x⟩⟧ : DirectLimit G f) / (⟦⟨i, y⟩⟧ : DirectLimit G f) = ⟦⟨i, x / y⟩⟧ :=
   map₂_def ..
 
-@[to_additive] theorem zpow_def (i x) (n : ℤ) : ⟦⟨i, x⟩⟧ ^ n = (⟦⟨i, x ^ n⟩⟧ : DirectLimit G f) :=
+@[to_additive] theorem zpow_def (i x) (n : ℤ) :
+    (⟦⟨i, x⟩⟧ : DirectLimit G f) ^ n = ⟦⟨i, x ^ n⟩⟧ :=
   rfl
 
 @[to_additive (attr := simp)]
@@ -340,45 +353,65 @@ variable [∀ i, GroupWithZero (G i)] [GroupWithZero C]
 variable [∀ i j h, MonoidWithZeroHomClass (T h) (G i) (G j)]
 variable [∀ i, MonoidWithZeroHomClass (H i) (G i) C]
 
+/-- A nonzero element of the direct limit is represented by a nonzero element of a component,
+whose inverse there represents its inverse. -/
 instance : GroupWithZero (DirectLimit G f) where
-  inv := map _ _ (fun _ ↦ (·⁻¹)) fun _ _ _ ↦ map_inv₀ _
-  div := map₂ _ _ _ (fun _ ↦ (· / ·)) fun _ _ _ ↦ map_div₀ _
-  zpow n := map _ _ (fun _ ↦ (· ^ n)) fun _ _ _ x ↦ map_zpow₀ _ x n
-  div_eq_mul_inv := DirectLimit.induction₂ _ fun i _ _ ↦ show map₂ .. = _ * map .. by
-    simp_rw [map₂_def, map_def, div_eq_mul_inv, mul_def]
-  zpow_zero' := DirectLimit.induction _ fun i _ ↦ by
-    simp_rw [HPow.hPow, Pow.pow, map_def, zpow_zero, one_def i]
-  zpow_succ' n := DirectLimit.induction _ fun i x ↦ by
-    simp_rw [HPow.hPow, Pow.pow, map_def, mul_def]; congr; apply DivInvMonoid.zpow_succ'
-  zpow_neg' n := DirectLimit.induction _ fun i x ↦ by
-    simp_rw [HPow.hPow, Pow.pow, map_def]; congr; apply DivInvMonoid.zpow_neg'
-  inv_zero := show ⟦_⟧ = ⟦_⟧ by simp_rw [inv_zero]
-  mul_inv_cancel := DirectLimit.induction _ fun i x ne ↦ by
+  isUnit_of_ne_zero {a} := by
+    induction a using DirectLimit.induction with | _ i x
+    intro ne
     have : x ≠ 0 := by rintro rfl; exact ne (zero_def i).symm
-    simp_rw [map_def, mul_def, mul_inv_cancel₀ this, one_def i]
+    exact ⟨⟨⟦⟨i, x⟩⟧, ⟦⟨i, x⁻¹⟩⟧, by rw [mul_def, mul_inv_cancel₀, one_def i],
+      by rw [mul_def, inv_mul_cancel₀, one_def i]⟩, rfl⟩
 
-theorem inv₀_def (i x) : (⟦⟨i, x⟩⟧)⁻¹ = (⟦⟨i, x⁻¹⟩⟧ : DirectLimit G f) := rfl
+theorem isUnit_mk_iff {i : ι} {x : G i} : IsUnit (⟦⟨i, x⟩⟧ : DirectLimit G f) ↔ IsUnit x := by
+  rw [isUnit_iff_ne_zero, isUnit_iff_ne_zero, Ne, Ne, not_iff_not]
+  constructor
+  · intro h
+    obtain ⟨j, hij, h⟩ := (exists_eq_zero _).mp h
+    exact (map_eq_zero _).mp h
+  · rintro rfl
+    exact (zero_def i).symm
 
-theorem div₀_def (i x y) : ⟦⟨i, x⟩⟧ / ⟦⟨i, y⟩⟧ = (⟦⟨i, x / y⟩⟧ : DirectLimit G f) :=
-  map₂_def ..
+theorem inv₀_def (i x) {hx : IsUnit (⟦⟨i, x⟩⟧ : DirectLimit G f)} :
+    (⟦⟨i, x⟩⟧ : DirectLimit G f)⁻¹ = ⟦⟨i, Checked.inv x (isUnit_mk_iff.mp hx)⟩⟧ :=
+  inv_eq_of_mul_eq_one_right₀ <| by rw [mul_def, mul_inv_cancel₀, one_def i]
 
-theorem zpow₀_def (i x) (n : ℤ) : ⟦⟨i, x⟩⟧ ^ n = (⟦⟨i, x ^ n⟩⟧ : DirectLimit G f) := rfl
+theorem div₀_def (i x y) {hy : IsUnit (⟦⟨i, y⟩⟧ : DirectLimit G f)} :
+    (⟦⟨i, x⟩⟧ : DirectLimit G f) / (⟦⟨i, y⟩⟧ : DirectLimit G f) =
+      ⟦⟨i, Checked.div x y (isUnit_mk_iff.mp hy)⟩⟧ := by
+  rw [div_eq_mul_inv₀, inv₀_def, mul_def, div_eq_mul_inv₀]
+
+theorem zpow₀_def (i x) (n : ℤ) {h : n < 0 → IsUnit (⟦⟨i, x⟩⟧ : DirectLimit G f)} :
+    (⟦⟨i, x⟩⟧ : DirectLimit G f) ^ n =
+      ⟦⟨i, Checked.zpow x n fun hn ↦ isUnit_mk_iff.mp (h hn)⟩⟧ := by
+  cases n with
+  | ofNat k => exact npow_def i x k
+  | negSucc k =>
+    rw [zpow_negSucc₀, zpow_negSucc₀]
+    exact inv_eq_of_mul_eq_one_right₀ <| by rw [npow_def, mul_def, mul_inv_cancel₀, one_def i]
 
 @[simp]
-theorem lift_inv₀ (g : ∀ i, H i) (h) (x : DirectLimit G f) :
-    DirectLimit.lift f (g ·) h (x⁻¹) = (DirectLimit.lift f (g ·) h x)⁻¹ :=
-  x.induction _ fun i x ↦ by simp_rw [inv₀_def, lift_def, map_inv₀ (g i)]
+theorem lift_inv₀ (g : ∀ i, H i) (h) (x : DirectLimit G f) {hx : IsUnit x} :
+    DirectLimit.lift f (g ·) h (x⁻¹) =
+      Checked.inv (DirectLimit.lift f (g ·) h x) (isUnit_lift g h hx) :=
+  eq_inv_of_mul_eq_one_right₀ <| by rw [← lift_mul, mul_inv_cancel₀, lift_one]
 
 @[simp]
-theorem lift_div₀ (g : ∀ i, H i) (h) (x y : DirectLimit G f) :
+theorem lift_div₀ (g : ∀ i, H i) (h) (x y : DirectLimit G f) {hy : IsUnit y} :
     DirectLimit.lift f (g ·) h (x / y) =
-      (DirectLimit.lift f (g ·) h x) / (DirectLimit.lift f (g ·) h y) :=
-  DirectLimit.induction₂ _ (fun i x y ↦ by simp_rw [div₀_def, lift_def, map_div₀ (g i)]) x y
+      Checked.div (DirectLimit.lift f (g ·) h x) (DirectLimit.lift f (g ·) h y)
+        (isUnit_lift g h hy) := by
+  rw [div_eq_mul_inv₀, lift_mul, lift_inv₀, div_eq_mul_inv₀]
 
 @[simp]
-theorem lift_zpow₀ (g : ∀ i, H i) (h) (x : DirectLimit G f) (z : ℤ) :
-    DirectLimit.lift f (g ·) h (x ^ z) = DirectLimit.lift f (g ·) h x ^ z :=
-  x.induction _ fun i x ↦ by simp_rw [zpow₀_def, lift_def, map_zpow₀ (g i)]
+theorem lift_zpow₀ (g : ∀ i, H i) (h) (x : DirectLimit G f) (z : ℤ) {hx : z < 0 → IsUnit x} :
+    DirectLimit.lift f (g ·) h (x ^ z) =
+      Checked.zpow (DirectLimit.lift f (g ·) h x) z fun hz ↦ isUnit_lift g h (hx hz) := by
+  cases z with
+  | ofNat k => exact lift_npow g h x k
+  | negSucc k =>
+    rw [zpow_negSucc₀, zpow_negSucc₀, lift_inv₀]
+    simp only [lift_npow]
 
 end GroupWithZero
 
@@ -399,6 +432,16 @@ instance : AddMonoidWithOne (DirectLimit G f) where
 theorem natCast_def [∀ i j h, OneHomClass (T h) (G i) (G j)] (n : ℕ) (i) :
     (n : DirectLimit G f) = ⟦⟨i, n⟩⟧ :=
   map₀_def _ _ (fun _ _ _ ↦ map_natCast' _ (map_one _) _) _
+
+instance [∀ i j h, OneHomClass (T h) (G i) (G j)] [∀ i, CharZero (G i)] :
+    CharZero (DirectLimit G f) where
+  cast_injective := by
+    intro m n eq
+    let ⟨i⟩ := ‹Nonempty ι›
+    rw [natCast_def m i, natCast_def n i] at eq
+    obtain ⟨j, hij, hij', eq⟩ := Quotient.eq.mp eq
+    rw [map_natCast' (f i j hij) (map_one _), map_natCast' (f i j hij') (map_one _)] at eq
+    exact Nat.cast_injective eq
 
 end AddMonoidWithOne
 
@@ -571,21 +614,23 @@ variable [∀ i j h, RingHomClass (T h) (G i) (G j)] [∀ i, RingHomClass (H i) 
 instance : DivisionSemiring (DirectLimit G f) where
   __ : GroupWithZero _ := inferInstance
   __ : Semiring _ := inferInstance
-  nnratCast q := map₀ _ fun _ ↦ q
-  nnratCast_def q := show ⟦_⟧ = ⟦_⟧ / ⟦_⟧ by simp_rw [div₀_def]; rw [NNRat.cast_def]
-  nnqsmul q := map _ _ (fun _ ↦ (q • ·)) fun _ _ _ x ↦ by
-    simp_rw [NNRat.smul_def, map_mul, map_nnratCast]
-  nnqsmul_def _ := DirectLimit.induction _ fun i x ↦ show ⟦_⟧ = map₀ .. * _ by
-    simp_rw [map₀_def _ _ (fun _ _ _ ↦ map_nnratCast _ _) i, mul_def, NNRat.smul_def]
+
+variable [∀ i, CharZero (G i)]
 
 theorem nnratCast_def (q : ℚ≥0) (i) : (q : DirectLimit G f) = ⟦⟨i, q⟩⟧ :=
-  map₀_def _ _ (fun _ _ _ ↦ map_nnratCast _ _) _
+  let φ : G i →+* DirectLimit G f :=
+    { toFun x := ⟦⟨i, x⟩⟧
+      map_one' := (one_def i).symm
+      map_mul' x y := (mul_def i x y).symm
+      map_zero' := (zero_def i).symm
+      map_add' x y := (add_def i x y).symm }
+  (map_nnratCast φ q).symm
 
 @[simp]
-theorem lift_nnratCast (g : ∀ i, H i) (h) (q : ℚ≥0) :
+theorem lift_nnratCast [CharZero C] (g : ∀ i, H i) (h) (q : ℚ≥0) :
     DirectLimit.lift f (g ·) h (q : DirectLimit G f) = (q : C) := by
   let ⟨i⟩ := ‹Nonempty ι›
-  rw [nnratCast_def, lift_def, map_nnratCast (g i)]
+  rw [nnratCast_def q i, lift_def, map_nnratCast (g i)]
 
 end DivisionSemiring
 
@@ -601,21 +646,23 @@ variable [∀ i j h, RingHomClass (T h) (G i) (G j)] [∀ i, RingHomClass (H i) 
 instance : DivisionRing (DirectLimit G f) where
   __ : DivisionSemiring _ := inferInstance
   __ : Ring _ := inferInstance
-  ratCast q := map₀ _ fun _ ↦ q
-  ratCast_def q := show ⟦_⟧ = ⟦_⟧ / ⟦_⟧ by simp_rw [div₀_def]; rw [Rat.cast_def]
-  qsmul q := map _ _ (fun _ ↦ (q • ·)) fun _ _ _ x ↦ by
-    simp_rw [Rat.smul_def, map_mul, map_ratCast]
-  qsmul_def _ := DirectLimit.induction _ fun i x ↦ show ⟦_⟧ = map₀ .. * _ by
-    simp_rw [map₀_def _ _ (fun _ _ _ ↦ map_ratCast _ _) i, mul_def, Rat.smul_def]
+
+variable [∀ i, CharZero (G i)]
 
 theorem ratCast_def (q : ℚ) (i) : (q : DirectLimit G f) = ⟦⟨i, q⟩⟧ :=
-  map₀_def _ _ (fun _ _ _ ↦ map_ratCast _ _) _
+  let φ : G i →+* DirectLimit G f :=
+    { toFun x := ⟦⟨i, x⟩⟧
+      map_one' := (one_def i).symm
+      map_mul' x y := (mul_def i x y).symm
+      map_zero' := (zero_def i).symm
+      map_add' x y := (add_def i x y).symm }
+  (map_ratCast φ q).symm
 
 @[simp]
-theorem lift_ratCast (g : ∀ i, H i) (h) (q : ℚ) :
+theorem lift_ratCast [CharZero C] (g : ∀ i, H i) (h) (q : ℚ) :
     DirectLimit.lift f (g ·) h (q : DirectLimit G f) = (q : C) := by
   let ⟨i⟩ := ‹Nonempty ι›
-  rw [ratCast_def, lift_def, map_ratCast (g i)]
+  rw [ratCast_def q i, lift_def, map_ratCast (g i)]
 
 end DivisionRing
 

@@ -123,3 +123,18 @@ instance charZero_ofNat {M} {n : ℕ} [n.AtLeastTwo] [AddMonoidWithOne M] [CharZ
   ⟨OfNat.ofNat_ne_zero n⟩
 
 end NeZero
+
+namespace CharZero
+
+variable {S : Type*} [AddMonoidWithOne R] [AddMonoidWithOne S]
+
+/-- A map that preserves natural casts reflects characteristic zero. -/
+theorem of_map_natCast [CharZero S] (f : R → S) (hf : ∀ n : ℕ, f n = n) : CharZero R :=
+  ⟨fun m n h => Nat.cast_injective (R := S) <| by rw [← hf m, ← hf n, h]⟩
+
+/-- An injective map that preserves natural casts transfers characteristic zero. -/
+theorem of_injective_map_natCast [CharZero R] (f : R → S) (hf : Function.Injective f)
+    (hn : ∀ n : ℕ, f n = n) : CharZero S :=
+  ⟨fun m n h => Nat.cast_injective (R := R) <| hf <| by rw [hn m, hn n, h]⟩
+
+end CharZero

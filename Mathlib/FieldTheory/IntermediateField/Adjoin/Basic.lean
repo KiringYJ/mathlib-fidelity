@@ -48,18 +48,18 @@ section AdjoinDef
 variable (F : Type*) [Field F] {E : Type*} [Field E] [Algebra F E] {S : Set E}
 
 theorem mem_adjoin_range_iff {ι : Type*} (i : ι → E) (x : E) :
-    x ∈ adjoin F (Set.range i) ↔ ∃ r s : MvPolynomial ι F,
+    x ∈ adjoin F (Set.range i) ↔ ∃ r s : MvPolynomial ι F, ∃ (_ : MvPolynomial.aeval i s ≠ 0),
       x = MvPolynomial.aeval i r / MvPolynomial.aeval i s := by
   simp_rw [mem_adjoin_iff_div, Algebra.adjoin_range_eq_range_aeval,
     AlgHom.mem_range, exists_exists_eq_and]
 
 theorem mem_adjoin_iff (x : E) :
-    x ∈ adjoin F S ↔ ∃ r s : MvPolynomial S F,
+    x ∈ adjoin F S ↔ ∃ r s : MvPolynomial S F, ∃ (_ : MvPolynomial.aeval Subtype.val s ≠ 0),
       x = MvPolynomial.aeval Subtype.val r / MvPolynomial.aeval Subtype.val s := by
   rw [← mem_adjoin_range_iff, Subtype.range_coe]
 
 theorem mem_adjoin_simple_iff {α : E} (x : E) :
-    x ∈ adjoin F {α} ↔ ∃ r s : F[X], x = aeval α r / aeval α s := by
+    x ∈ adjoin F {α} ↔ ∃ r s : F[X], ∃ (_ : aeval α s ≠ 0), x = aeval α r / aeval α s := by
   simp only [mem_adjoin_iff_div, Algebra.adjoin_singleton_eq_range_aeval,
     AlgHom.mem_range, exists_exists_eq_and]
 
@@ -115,7 +115,7 @@ theorem coe_iSup_of_directed [Nonempty ι] (dir : Directed (· ≤ ·) t) :
     ↑(iSup t) = ⋃ i, (t i : Set L) :=
   let M : IntermediateField K L :=
     { __ := Subalgebra.copy _ _ (Subalgebra.coe_iSup_of_directed dir).symm
-      inv_mem' := fun _ hx ↦ have ⟨i, hi⟩ := Set.mem_iUnion.mp hx
+      inv_mem' := fun hx ↦ have ⟨i, hi⟩ := Set.mem_iUnion.mp hx
         Set.mem_iUnion.mpr ⟨i, (t i).inv_mem hi⟩ }
   have : iSup t = M := le_antisymm
     (iSup_le fun i ↦ le_iSup (fun i ↦ (t i : Set L)) i) (Set.iUnion_subset fun _ ↦ le_iSup t _)
@@ -279,8 +279,10 @@ theorem adjoin_simple_mul_algebraMap (x : E) (y : F) (hy : y ≠ 0) :
   · rw [adjoin_le_iff, Set.singleton_subset_iff, SetLike.mem_coe]
     exact mul_mem (mem_adjoin_simple_self F x) (algebraMap_mem _ y)
   · rw [adjoin_simple_le_iff]
-    convert IntermediateField.div_mem _ (mem_adjoin_simple_self F _) (algebraMap_mem _ y)
-    rw [mul_div_cancel_right₀ x (by rwa [_root_.map_ne_zero])]
+    have hy' : algebraMap F E y ≠ 0 := by rwa [_root_.map_ne_zero]
+    convert IntermediateField.div_mem _ (hyUnit := hy'.isUnit) (mem_adjoin_simple_self F _)
+      (algebraMap_mem _ y)
+    rw [mul_div_cancel_right₀ x]
 
 end AdjoinDef
 
@@ -686,7 +688,8 @@ theorem _root_.Polynomial.irreducible_comp {f g : K[X]} (hfm : f.Monic) (hgm : g
     -- Needed to specialize `map_sub` to avoid a timeout https://github.com/leanprover-community/mathlib4/pull/8386
     rw [RingHom.map_sub, coeff_map, ← map_C, ← eq_C_of_natDegree_eq_zero e]
     apply hg (AdjoinRoot f)
-    rw [AdjoinRoot.minpoly_root hf.ne_zero, hfm, inv_one, map_one, mul_one]
+    rw [AdjoinRoot.minpoly_root hf.ne_zero]
+    simp only [hfm.leadingCoeff, inv_one₀, map_one, mul_one]
   have H₁ : f.comp g ≠ 0 := fun h ↦ by simpa [hf', hg', natDegree_comp] using congr_arg natDegree h
   have H₂ : ¬ IsUnit (f.comp g) := fun h ↦
     by simpa [hf', hg', natDegree_comp] using natDegree_eq_zero_of_isUnit h

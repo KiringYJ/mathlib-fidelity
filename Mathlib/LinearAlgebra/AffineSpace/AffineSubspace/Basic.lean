@@ -1036,7 +1036,8 @@ lemma affineSpan_pair_eq_of_mem_of_mem_of_ne {p₁ p₂ p₃ p₄ : P} (hp₁ : 
     simp_all
   have hr : (r₂ - r₁) • (p₄ -ᵥ p₃) = p₂ -ᵥ p₁ := by
     simp [sub_smul, hp₁, hp₂]
-  rw [← eq_inv_smul_iff₀ hr₀] at hr
+  replace hr : p₄ -ᵥ p₃ = (r₂ - r₁)⁻¹ • (p₂ -ᵥ p₁) := by
+    rw [← hr, smul_smul, inv_mul_cancel₀, one_smul]
   refine affineSpan_pair_le_of_mem_of_mem ?_ ?_
   · convert! smul_vsub_vadd_mem_affineSpan_pair (-r₁ * (r₂ - r₁)⁻¹) p₁ p₂
     simp [mul_smul, ← hr, hp₁]

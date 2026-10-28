@@ -499,7 +499,8 @@ variable [Field 𝕜] (p q : 𝕜)
 def equivAddCircle (hp : p ≠ 0) (hq : q ≠ 0) : AddCircle p ≃+ AddCircle q :=
   QuotientAddGroup.congr _ _ (AddAut.mulRight <| (Units.mk0 p hp)⁻¹ * Units.mk0 q hq) <| by
     rw [AddMonoidHom.map_zmultiples, AddMonoidHom.coe_coe, AddAut.mulRight_apply, Units.val_mul,
-      Units.val_mk0, Units.val_inv_eq_inv_val, Units.val_mk0, mul_inv_cancel_left₀ hp]
+      Units.val_mk0 hq]
+    exact congrArg _ ((Units.mk0 p hp).mul_inv_cancel_left q)
 
 @[simp]
 theorem equivAddCircle_apply_mk (hp : p ≠ 0) (hq : q ≠ 0) (x : 𝕜) :
@@ -544,13 +545,13 @@ theorem continuous_equivAddCircle (hp : p ≠ 0) (hq : q ≠ 0) :
 
 end
 
-lemma natCast_div_mul_eq_nsmul (r : 𝕜) (m : ℕ) :
+lemma natCast_div_mul_eq_nsmul {hq : IsUnit q} (r : 𝕜) (m : ℕ) :
     (↑(↑m / q * r) : AddCircle p) = m • (r / q : AddCircle p) := by
-  rw [mul_comm_div, ← nsmul_eq_mul, coe_nsmul]
+  rw [mul_comm_div₀, ← nsmul_eq_mul, coe_nsmul]
 
-lemma intCast_div_mul_eq_zsmul (r : 𝕜) (m : ℤ) :
+lemma intCast_div_mul_eq_zsmul {hq : IsUnit q} (r : 𝕜) (m : ℤ) :
     (↑(↑m / q * r) : AddCircle p) = m • (r / q : AddCircle p) := by
-  rw [mul_comm_div, ← zsmul_eq_mul, coe_zsmul]
+  rw [mul_comm_div₀, ← zsmul_eq_mul, coe_zsmul]
 
 variable [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [hp : Fact (0 < p)]
 
@@ -580,10 +581,10 @@ theorem addOrderOf_period_div {n : ℕ} (h : 0 < n) : addOrderOf ((p / n : 𝕜)
   rw [addOrderOf_eq_iff h]
   replace h : 0 < (n : 𝕜) := Nat.cast_pos.2 h
   refine ⟨?_, fun m hn h0 => ?_⟩ <;> simp only [Ne, ← coe_nsmul, nsmul_eq_mul]
-  · rw [mul_div_cancel₀ _ h.ne', coe_period]
+  · rw [mul_div_cancel₀ _, coe_period]
   rw [coe_eq_zero_of_pos_iff p hp.out (mul_pos (Nat.cast_pos.2 h0) <| div_pos hp.out h)]
   rintro ⟨k, hk⟩
-  rw [mul_div, eq_div_iff h.ne', nsmul_eq_mul, mul_right_comm, ← Nat.cast_mul,
+  rw [mul_div₀, eq_div_iff, nsmul_eq_mul, mul_right_comm, ← Nat.cast_mul,
     (mul_left_injective₀ hp.out.ne').eq_iff, Nat.cast_inj, mul_comm] at hk
   exact (Nat.le_of_dvd h0 ⟨_, hk.symm⟩).not_gt hn
 
@@ -605,15 +606,11 @@ theorem addOrderOf_div_of_gcd_eq_one' {m : ℤ} {n : ℕ} (hn : 0 < n) (h : m.na
   cases m
   · simp only [Int.ofNat_eq_natCast, Int.cast_natCast, Int.natAbs_natCast] at h ⊢
     exact addOrderOf_div_of_gcd_eq_one hn h
-  · simp only [Int.cast_negSucc, neg_div, neg_mul, coe_neg, addOrderOf_neg]
+  · simp only [Int.cast_negSucc, neg_div₀, neg_mul, coe_neg, addOrderOf_neg]
     exact addOrderOf_div_of_gcd_eq_one hn h
 
 theorem addOrderOf_coe_rat {q : ℚ} : addOrderOf (↑(↑q * p) : AddCircle p) = q.den := by
-  have : (↑(q.den : ℤ) : 𝕜) ≠ 0 := by
-    norm_cast
-    exact q.pos.ne.symm
-  rw [← q.num_divInt_den, Rat.cast_divInt_of_ne_zero _ this, Int.cast_natCast, Rat.num_divInt_den,
-    addOrderOf_div_of_gcd_eq_one' q.pos q.reduced]
+  rw [Rat.cast_def, addOrderOf_div_of_gcd_eq_one' q.pos q.reduced]
 
 protected theorem nsmul_eq_zero_iff {u : AddCircle p} {n : ℕ} (h : 0 < n) :
     n • u = 0 ↔ ∃ m < n, ↑(↑m / ↑n * p) = u := by
@@ -626,11 +623,11 @@ protected theorem nsmul_eq_zero_iff {u : AddCircle p} {n : ℕ} (h : 0 < n) :
   obtain ⟨a, ha⟩ := hk
   refine ⟨a.natMod n, Int.natMod_lt h.ne', ?_⟩
   have h0 : (n : 𝕜) ≠ 0 := Nat.cast_ne_zero.2 h.ne'
-  rw [nsmul_eq_mul, mul_comm, ← div_eq_iff h0, ← a.ediv_mul_add_emod n, add_smul, add_div,
-    zsmul_eq_mul, Int.cast_mul, Int.cast_natCast, mul_assoc, ← mul_div, mul_comm _ p,
-    mul_div_cancel_right₀ p h0] at ha
+  rw [nsmul_eq_mul, mul_comm, ← div_eq_iff (hb := h0.isUnit), ← a.ediv_mul_add_emod n, add_smul,
+    add_div, zsmul_eq_mul, Int.cast_mul, Int.cast_natCast, mul_assoc, ← mul_div₀, mul_comm _ p,
+    mul_div_cancel_right₀ p] at ha
   rw [← ha, coe_add, ← Int.cast_natCast, Int.natMod, Int.toNat_of_nonneg, zsmul_eq_mul,
-    mul_div_right_comm, eq_comm, add_eq_right, ← zsmul_eq_mul, coe_zsmul, coe_period, smul_zero]
+    mul_div_right_comm₀, eq_comm, add_eq_right, ← zsmul_eq_mul, coe_zsmul, coe_period, smul_zero]
   exact Int.emod_nonneg _ (by exact_mod_cast h.ne')
 
 theorem addOrderOf_eq_pos_iff {u : AddCircle p} {n : ℕ} (h : 0 < n) :
@@ -654,8 +651,7 @@ theorem exists_gcd_eq_one_of_isOfFinAddOrder {u : AddCircle p} (h : IsOfFinAddOr
 lemma not_isOfFinAddOrder_iff_forall_rat_ne_div {a : 𝕜} :
     ¬ IsOfFinAddOrder (a : AddCircle p) ↔ ∀ q : ℚ, (q : 𝕜) ≠ a / p := by
   simp +contextual [← QuotientAddGroup.mk_zsmul, mul_comm (Int.cast _), mem_zmultiples_iff,
-    eq_div_iff (Fact.out : 0 < p).ne', isOfFinAddOrder_iff_zsmul_eq_zero, Rat.forall, div_eq_iff,
-    div_mul_eq_mul_div]
+    eq_div_iff, isOfFinAddOrder_iff_zsmul_eq_zero, Rat.forall, div_eq_iff, div_mul_eq_mul_div₀]
   grind
 
 lemma isOfFinAddOrder_iff_exists_rat_eq_div {a : 𝕜} :

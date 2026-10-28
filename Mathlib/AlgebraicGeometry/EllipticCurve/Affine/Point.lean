@@ -321,13 +321,13 @@ lemma XYIdeal_neg_mul {x y : F} (h : W.Nonsingular x y) :
     refine
       ⟨C <| C W_X⁻¹ * -(X + C (2 * x + W.a₂)), C <| C <| W_X⁻¹ * W.a₁, 0, C <| C <| W_X⁻¹ * -1, ?_⟩
     rw [← mul_right_inj' <| C_ne_zero.mpr <| C_ne_zero.mpr hx]
-    simp only [W_X, mul_add, ← mul_assoc, ← C_mul, mul_inv_cancel₀ hx]
+    simp only [W_X, mul_add, ← mul_assoc, ← C_mul, mul_inv_cancel₀]
     C_simp
     ring1
   · let W_Y := 2 * y + W.a₁ * x + W.a₃
     refine ⟨0, C <| C W_Y⁻¹, C <| C <| W_Y⁻¹ * -1, 0, ?_⟩
     rw [negY, ← mul_right_inj' <| C_ne_zero.mpr <| C_ne_zero.mpr hy]
-    simp only [W_Y, mul_add, ← mul_assoc, ← C_mul, mul_inv_cancel₀ hy]
+    simp only [W_Y, mul_add, ← mul_assoc, ← C_mul, mul_inv_cancel₀]
     C_simp
     ring1
 
@@ -364,13 +364,13 @@ lemma XYIdeal_mul_XYIdeal [DecidableEq F] {x₁ x₂ y₁ y₂ : F}
         0, C (C y⁻¹) * (Y - W.negPolynomial), ?_⟩, by
       rw [map_add, map_one, map_mul <| mk W, AdjoinRoot.mk_self, mul_zero, add_zero]⟩
     rw [polynomial, negPolynomial, ← mul_right_inj' <| C_ne_zero.mpr <| C_ne_zero.mpr hxy]
-    simp only [y, mul_add, ← mul_assoc, ← C_mul, mul_inv_cancel₀ hxy]
+    simp only [y, mul_add, ← mul_assoc, ← C_mul, mul_inv_cancel₀]
     linear_combination (norm := (rw [b₂, b₄, negY]; C_simp; ring1))
       -4 * congr_arg C (congr_arg C <| (equation_iff ..).mp h₁)
   · replace hx := sub_ne_zero_of_ne hx
     refine ⟨_, ⟨⟨C <| C (x₁ - x₂)⁻¹, C <| C <| (x₁ - x₂)⁻¹ * -1, 0, ?_⟩, map_one _⟩⟩
     rw [← mul_right_inj' <| C_ne_zero.mpr <| C_ne_zero.mpr hx]
-    simp only [← mul_assoc, mul_add, ← C_mul, mul_inv_cancel₀ hx]
+    simp only [← mul_assoc, mul_add, ← C_mul, mul_inv_cancel₀]
     C_simp
     ring1
 
@@ -378,9 +378,10 @@ lemma XYIdeal_mul_XYIdeal [DecidableEq F] {x₁ x₂ y₁ y₂ : F}
 noncomputable def XYIdeal' {x y : F} (h : W.Nonsingular x y) :
     (FractionalIdeal W.CoordinateRing⁰ W.FunctionField)ˣ :=
   Units.mkOfMulEqOne (XYIdeal W x (C y)) (XYIdeal W x (C <| W.negY x y) *
-      (XIdeal W x : FractionalIdeal W.CoordinateRing⁰ W.FunctionField)⁻¹) <| by
-    rw [← mul_assoc, ← coeIdeal_mul, mul_comm <| XYIdeal W .., XYIdeal_neg_mul h, XIdeal,
-      FractionalIdeal.coe_ideal_span_singleton_mul_inv W.FunctionField <| XClass_ne_zero x]
+      Checked.inv (XIdeal W x : FractionalIdeal W.CoordinateRing⁰ W.FunctionField) (by
+        rw [XIdeal]
+        exact FractionalIdeal.isUnit_coeIdeal_span_singleton_iff.mpr <| XClass_ne_zero x)) <| by
+    rw [← mul_assoc, ← coeIdeal_mul, mul_comm <| XYIdeal W .., XYIdeal_neg_mul h, mul_inv_cancel₀]
 
 lemma XYIdeal'_eq {x y : F} (h : W.Nonsingular x y) :
     (XYIdeal' h : FractionalIdeal W.CoordinateRing⁰ W.FunctionField) = XYIdeal W x (C y) :=
@@ -672,16 +673,16 @@ variable [DecidableEq F] [DecidableEq K] [DecidableEq L]
 /-- The addition of two nonsingular points on a Weierstrass curve in affine coordinates.
 
 Given two nonsingular points `P` and `Q` in affine coordinates, use `P + Q` instead of `add P Q`. -/
-def add : W.Point → W.Point → W.Point
+noncomputable def add : W.Point → W.Point → W.Point
   | 0, P => P
   | P, 0 => P
   | some x₁ y₁ h₁, some x₂ y₂ h₂ =>
     if hxy : x₁ = x₂ ∧ y₁ = W.negY x₂ y₂ then 0 else some _ _ <| nonsingular_add h₁ h₂ hxy
 
-instance : Add W.Point :=
+noncomputable instance : Add W.Point :=
   ⟨add⟩
 
-instance : AddZeroClass W.Point where
+noncomputable instance : AddZeroClass W.Point where
   zero_add := by rintro (_ | _) <;> rfl
   add_zero := by rintro (_ | _) <;> rfl
 
@@ -755,9 +756,14 @@ theorem isRoot_twoTorsionPolynomial_iff (h2 : NeZero (2 : F)) (hΔ : W.Δ ≠ 0)
   · intro hroot
     rw [IsRoot.def, eval_toPoly_twoTorsionPolynomial, b₂, b₄, b₆] at hroot
     set y := (-W.a₁ * x - W.a₃) / 2
-    have heq : W.Equation x y := by grind [NeZero.out, equation_iff]
+    have hy : 2 * y = -W.a₁ * x - W.a₃ := mul_div_cancel₀ _
+    have heq : W.Equation x y := by
+      rw [equation_iff]
+      refine mul_left_cancel₀ (mul_ne_zero h2.out h2.out) ?_
+      linear_combination (2 * y + W.a₁ * x + W.a₃) * hy - hroot
     refine ⟨y, (equation_iff_nonsingular_of_Δ_ne_zero hΔ).mp heq, add_self_of_Y_eq ?_⟩
-    grind [negY]
+    rw [negY]
+    linear_combination hy
   · rintro ⟨y, hns, hP⟩
     exact isRoot_twoTorsionPolynomial_of_add_self hns hP
 
@@ -816,11 +822,11 @@ lemma toClass_injective : Function.Injective <| toClass (W := W) := by
   · exact zero_add 0
   · exact CoordinateRing.mk_XYIdeal'_neg_mul h
 
-instance : AddCommSemigroup W.Point where
+noncomputable instance : AddCommSemigroup W.Point where
   add_comm _ _ := toClass_injective <| by simp only [map_add, add_comm]
   add_assoc _ _ _ := toClass_injective <| by simp only [map_add, add_assoc]
 
-instance : AddCommGroup W.Point where
+noncomputable instance : AddCommGroup W.Point where
   nsmul := nsmulBinRec
   nsmul_succ := nsmulBinRec_succ
   zsmul := zsmulRec nsmulBinRec
@@ -940,8 +946,9 @@ variable [DecidableEq F]
 /-- We give an explicit expression for `xRep` of `P + P` when `2*P ≠ 0`. -/
 lemma xRep_add_self_of_Y_ne {x y : F} (h : W.Nonsingular x y) (hn : y ≠ W.negY x y) :
     (some x y h + some x y h).xRep =
-      ![(x ^ 4 - W.b₄ * x ^ 2 - 2 * W.b₆ * x - W.b₈) /
-        (4 * x ^ 3 + W.b₂ * x ^ 2 + 2 * W.b₄ * x + W.b₆), 1] := by
+      ![Checked.div (x ^ 4 - W.b₄ * x ^ 2 - 2 * W.b₆ * x - W.b₈)
+        (4 * x ^ 3 + W.b₂ * x ^ 2 + 2 * W.b₄ * x + W.b₆)
+        (Ne.isUnit <| (den_duplication_eq_zero_iff h.1).not.mpr hn), 1] := by
   simp only [add_self_of_Y_ne hn, ← addX_self_of_Y_ne h.1 hn, xRep_some]
 
 /-- We give an explicit expression for `xRep` of `P + P` when `P ≠ 0` and `2*P = 0`. -/

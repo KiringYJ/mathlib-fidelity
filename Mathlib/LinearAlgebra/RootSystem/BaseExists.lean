@@ -211,6 +211,8 @@ private lemma baseOf_root_eq_baseOf_coroot_aux
     let l (i : ι) := P.RootFormIn ℚ (P.rootSpanMem ℚ i) (P.rootSpanMem ℚ i)
     have hl (i : ι) : 0 < l i := by
       simpa only [l, ← posRootForm_eq] using RootPositiveForm.zero_lt_posForm_apply_root _ _
+    have hlj := hl j
+    have hlk := hl k
     refine ⟨l i / l j, by simp [hl], l i / l k, by simp [hl], ?_⟩
     simp only [P.coroot_eq_polarizationEquiv_apply_root, ← map_smul, ← map_add,
       P.PolarizationEquiv.injective.eq_iff] at contra
@@ -218,9 +220,9 @@ private lemma baseOf_root_eq_baseOf_coroot_aux
     have hll' (i : ι) : l i = l' i := P.algebraMap_rootFormIn ℚ _ _
     change (2 / l' i) • P.root i = (2 / l' j) • P.root j + (2 / l' k) • P.root k at contra
     replace contra := congr_arg ((2 / l' i)⁻¹ • ·) contra
-    have aux₁ : 2 / l' i ≠ 0 := by simpa using IsAnisotropic.rootForm_root_ne_zero i
-    have aux₂ (j : ι) : (2 / l' i)⁻¹ * (2 / l' j) = l i / l j := by ring_nf; simp [hll']
-    simp only [smul_add, smul_smul, inv_mul_cancel₀ aux₁, aux₂, one_smul] at contra
+    have aux (j : ι) (hj : 0 < l j) : (2 / l' i)⁻¹ * (2 / l' j) = l i / l j := by
+      ring_nf; simp [hll']
+    simp only [smul_add, smul_smul, aux _ (hl _), div_self, one_smul] at contra
     rw [contra]
     module
   have hjk {l : ι} (hl : 0 < g (P.coroot l)) :
@@ -292,10 +294,11 @@ lemma coroot_mem_or_neg_mem_closure_of_root (s : Set ι)
     AddSubmonoid.apply_ne_zero_of_mem_or_neg_mem_closure P.root (f : M →+ ℚ) s (by simp_all) i
       (P.ne_zero i) (by simp) (hsp i)
   have aux (i : ι) : ∃ q : ℚ, 0 < q ∧ q = 2 / P.RootForm (P.root i) (P.root i) := by
-    refine ⟨2 / P.RootFormIn ℚ (P.rootSpanMem ℚ i) (P.rootSpanMem ℚ i), ?_, ?_⟩
-    · simp only [Nat.ofNat_pos, div_pos_iff_of_pos_left, ← posRootForm_eq]
-      exact (P.posRootForm ℚ).zero_lt_posForm_apply_root i (P.rootSpanMem ℚ i).property
-    · simp [← P.algebraMap_rootFormIn ℚ (P.rootSpanMem ℚ i) (P.rootSpanMem ℚ i)]
+    have hi : 0 < P.RootFormIn ℚ (P.rootSpanMem ℚ i) (P.rootSpanMem ℚ i) := by
+      simpa only [← posRootForm_eq] using
+        (P.posRootForm ℚ).zero_lt_posForm_apply_root i (P.rootSpanMem ℚ i).property
+    refine ⟨2 / P.RootFormIn ℚ (P.rootSpanMem ℚ i) (P.rootSpanMem ℚ i), div_pos two_pos hi, ?_⟩
+    simp [← P.algebraMap_rootFormIn ℚ (P.rootSpanMem ℚ i) (P.rootSpanMem ℚ i)]
   let g : Dual ℚ N := f ∘ₗ (P.PolarizationEquiv.symm.restrictScalars ℚ).toLinearMap
   have hg₀ (i : ι) : g (P.coroot i) ≠ 0 := by
     obtain ⟨q, hq₀, hq⟩ := aux i

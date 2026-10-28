@@ -140,7 +140,6 @@ lemma IsSymm.polarization (x y : M) (hB : B.IsSymm) :
   simp only [map_add, LinearMap.add_apply]
   rw [hB.eq y x]
   ring_nf
-  rw [mul_assoc, inv_mul_cancel₀ two_ne_zero, mul_one]
 
 /-- A symmetric bilinear form is characterized by the values it takes on the diagonal. -/
 lemma ext_of_isSymm (hB : IsSymm B) (hC : IsSymm C)

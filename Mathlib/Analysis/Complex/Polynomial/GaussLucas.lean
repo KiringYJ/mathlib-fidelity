@@ -20,14 +20,20 @@ open scoped Polynomial ComplexConjugate
 
 namespace Polynomial
 
-/-- Given a polynomial `P` of positive degree and a root `z` of its derivative,
-`derivRootWeight P z w` gives the weight of a root `w` of `P` in a convex combination
-that is equal to `z`. -/
-noncomputable def derivRootWeight (P : ℂ[X]) (z w : ℂ) : ℝ :=
+/-- Given a nonzero polynomial `P` and a root `z` of its derivative, `derivRootWeight P z w` gives
+the weight of a root `w` of `P` in a convex combination of the roots that is equal to `z`. The
+weights are indexed by the roots: if `z` is not a root of `P`, it differs from every root `w`,
+which gives the quotient by `‖z - w‖ ^ 2` its evidence. -/
+noncomputable def derivRootWeight (P : ℂ[X]) {hP : P ≠ 0} (z : ℂ) (w : (P.roots hP).toFinset) :
+    ℝ :=
   if h : P.eval z = 0 then (Pi.single z 1 : ℂ → ℝ) w
-  else P.rootMultiplicity w (ne_zero_of_eval_ne_zero h) / ‖z - w‖ ^ 2
+  else
+    have : ‖z - w‖ ^ 2 ≠ 0 := pow_ne_zero 2 <| norm_ne_zero_iff.2 <| sub_ne_zero.2 fun hzw ↦
+      h <| by rw [hzw]; exact (mem_roots hP).1 (Multiset.mem_toFinset.1 w.2)
+    P.rootMultiplicity w hP / ‖z - w‖ ^ 2
 
-theorem derivRootWeight_nonneg (P : ℂ[X]) (z w : ℂ) : 0 ≤ derivRootWeight P z w := by
+theorem derivRootWeight_nonneg (P : ℂ[X]) {hP : P ≠ 0} (z : ℂ) (w : (P.roots hP).toFinset) :
+    0 ≤ derivRootWeight P z w := by
   simp only [derivRootWeight, Pi.single, Function.update_apply]
   split_ifs <;> first | positivity | simp
 
@@ -36,18 +42,22 @@ variable {P : ℂ[X]} {z : ℂ}
 /-- The sum of the weights `derivRootWeight P z w` of all the roots `w` of `P` is positive,
 provided that `P` is not a constant polynomial. -/
 theorem sum_derivRootWeight_pos (hP : 0 < degree P) (z : ℂ) :
-    0 < ∑ w ∈ P.roots.toFinset, derivRootWeight P z w := by
+    0 < ∑ w ∈ P.roots.toFinset.attach, derivRootWeight P z w := by
   have hP₀ : P ≠ 0 := by rintro rfl; simp at hP
   by_cases hPz : P.eval z = 0
-  · simp [derivRootWeight, hPz]
-  · simp only [derivRootWeight, dite_eq_right hPz]
+  · have hz : z ∈ (P.roots hP₀).toFinset := Multiset.mem_toFinset.2 ((mem_roots hP₀).2 hPz)
+    simp only [derivRootWeight, dif_pos hPz]
+    rw [Finset.sum_attach (P.roots hP₀).toFinset fun w ↦ (Pi.single z 1 : ℂ → ℝ) w]
+    simp [hz]
+  · simp only [derivRootWeight, dif_neg hPz]
     apply Finset.sum_pos
-    · intro w hw
-      apply div_pos (by simp_all)
-      suffices z ≠ w by simpa [sq_pos_iff, sub_eq_zero]
-      rintro rfl
-      simp_all
-    · rw [Multiset.toFinset_nonempty]
+    · intro w _
+      have hw : P.IsRoot w := (mem_roots hP₀).1 (Multiset.mem_toFinset.1 w.2)
+      have hzw : z - w ≠ 0 := sub_ne_zero.2 fun h ↦ hPz (h ▸ hw)
+      apply div_pos
+      · exact_mod_cast (rootMultiplicity_pos hP₀).2 hw
+      · positivity
+    · rw [Finset.attach_nonempty_iff, Multiset.toFinset_nonempty]
       apply Splits.roots_ne_zero (IsAlgClosed.splits _)
       rwa [← pos_iff_ne_zero, natDegree_pos_iff_degree_pos]
 
@@ -59,34 +69,44 @@ See also `rootSet_derivative_subset_convexHull_rootSet` below.
 -/
 theorem eq_centerMass_of_eval_derivative_eq_zero (hP : 0 < P.degree)
     (hz : P.derivative.eval z = 0) :
-    z = P.roots.toFinset.centerMass (P.derivRootWeight z) id := by
+    z = P.roots.toFinset.attach.centerMass (P.derivRootWeight z) (↑)
+      (sum_derivRootWeight_pos hP z).ne' := by
   have hP₀ : P ≠ 0 := ne_zero_of_degree_gt hP
-  set weight : ℂ → ℝ := P.derivRootWeight z
-  set s := P.roots.toFinset
-  suffices ∑ x ∈ s, weight x • (z - x) = 0 by calc
-    z = s.centerMass weight fun _ ↦ z := by
-      rw [Finset.centerMass, ← Finset.sum_smul, inv_smul_smul₀]
-      exact (sum_derivRootWeight_pos hP z).ne'
-    _ = s.centerMass weight (z - ·) + s.centerMass weight id := by
-      simp only [Finset.centerMass, ← smul_add, ← Finset.sum_add_distrib, id, sub_add_cancel]
-    _ = s.centerMass weight id := by
-      simp only [add_eq_right, Finset.centerMass, this, smul_zero]
+  set s := (P.roots hP₀).toFinset
+  set weight : s → ℝ := P.derivRootWeight z
+  have hw := (sum_derivRootWeight_pos hP z).ne'
+  suffices h : ∑ x ∈ s.attach, weight x • (z - ↑x) = 0 by
+    calc
+      z = s.attach.centerMass weight (Function.const _ z) hw := (Finset.centerMass_const hw z).symm
+      _ = s.attach.centerMass weight (fun x ↦ z - ↑x) hw + s.attach.centerMass weight (↑) hw := by
+        simp only [Finset.centerMass, Function.const_apply, ← smul_add, ← Finset.sum_add_distrib,
+          sub_add_cancel]
+      _ = s.attach.centerMass weight (↑) hw := by
+        simp only [Finset.centerMass, h, smul_zero, zero_add]
   by_cases hzP : P.eval z = 0
-  · simp only [weight, derivRootWeight, dite_eq_left hzP]
+  · simp only [weight, derivRootWeight, dif_pos hzP]
+    rw [Finset.sum_attach s fun x ↦ (Pi.single z 1 : ℂ → ℝ) x • (z - x)]
     rw [Finset.sum_eq_single z] <;> simp_all
+  have hne : ∀ x : ℂ, P.IsRoot x → z - x ≠ 0 := fun x hx ↦ sub_ne_zero.2 fun h ↦ hzP (h ▸ hx)
+  -- A total helper that agrees with `1 / (z - x)` at every root `x`; its value at `z` is unused.
+  let g : ℂ → ℂ := fun x ↦ if hx : z - x = 0 then 0 else Checked.div 1 (z - x) (Ne.isUnit hx)
+  have hdiv := (IsAlgClosed.splits P).eval_derivative_div_eval_of_ne_zero hzP
   calc
-    ∑ x ∈ s, weight x • (z - x) = conj (∑ x ∈ s, P.rootMultiplicity x • (1 / (z - x))) := by
-      simp only [map_sum, weight, derivRootWeight, dite_eq_right hzP]
-      refine Finset.sum_congr rfl fun x hx ↦ ?_
-      have : z - x ≠ 0 := by
-        rw [sub_ne_zero]
-        rintro rfl
-        simp_all [s]
+    ∑ x ∈ s.attach, weight x • (z - ↑x) = conj (∑ x ∈ s, (P.rootMultiplicity x hP₀ : ℂ) * g x) := by
+      rw [← Finset.sum_attach s fun x ↦ (P.rootMultiplicity x hP₀ : ℂ) * g x, map_sum]
+      refine Finset.sum_congr rfl fun x _ ↦ ?_
+      have hx : z - ↑x ≠ 0 := hne x ((mem_roots hP₀).1 (Multiset.mem_toFinset.1 x.2))
+      simp only [weight, derivRootWeight, dif_neg hzP, g, dif_neg hx]
       simp [← Complex.conj_mul', field]
-    _ = conj (P.roots.map fun x ↦ 1 / (z - x)).sum := by
-      simp only [Finset.sum_multiset_map_count, P.count_roots hP₀, s]
+    _ = conj (P.roots.map g).sum := by
+      rw [Finset.sum_multiset_map_count]
+      simp only [s, count_roots, nsmul_eq_mul]
     _ = 0 := by
-      rw [← (IsAlgClosed.splits _).eval_derivative_div_eval_of_ne_zero hzP]
+      have hmap : (P.roots hP₀).map g = (P.roots hP₀).attach.map fun r ↦
+          Checked.div 1 (z - r.1) (hne r.1 ((mem_roots hP₀).1 r.2)).isUnit := by
+        rw [← Multiset.attach_map_val' (P.roots hP₀) g]
+        exact Multiset.map_congr rfl fun r _ ↦ dif_neg (hne r.1 ((mem_roots hP₀).1 r.2))
+      rw [hmap, ← hdiv]
       simp [hz]
 
 /-- *Gauss-Lucas Theorem*: if $P$ is a nonconstant polynomial with complex coefficients,

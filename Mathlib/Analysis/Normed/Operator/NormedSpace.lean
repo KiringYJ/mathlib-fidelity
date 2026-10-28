@@ -141,7 +141,7 @@ theorem antilipschitz_of_comap_nhds_le [h : RingHomIsometric σ₁₂] (f : E �
   simp only [← map_zpow₀, h.1, ← map_smulₛₗ] at hlt hle
   calc
     ‖x‖ = ‖c ^ n‖⁻¹ * ‖c ^ n • x‖ := by
-      rwa [← norm_inv, ← norm_smul, inv_smul_smul₀ (zpow_ne_zero _ _)]
+      rwa [← norm_inv, ← norm_smul, inv_smul_smul₀ (ha := (zpow_ne_zero _ _).isUnit)]
     _ ≤ ‖c ^ n‖⁻¹ * 1 := by gcongr; exact (hε _ hlt).le
     _ ≤ ε⁻¹ * ‖c‖ * ‖f x‖ := by rwa [mul_one]
 

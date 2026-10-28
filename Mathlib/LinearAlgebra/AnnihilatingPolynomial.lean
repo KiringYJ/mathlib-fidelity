@@ -69,15 +69,16 @@ variable (𝕜)
 
 open Submodule
 
+open scoped Classical in
 /-- `annIdealGenerator 𝕜 a` is the monic generator of `annIdeal 𝕜 a`
 if one exists, otherwise `0`.
 
 Since `𝕜[X]` is a principal ideal domain there is a polynomial `g` such that
-`span 𝕜 {g} = annIdeal a`. This picks some generator.
-We prefer the monic generator of the ideal. -/
+`span 𝕜 {g} = annIdeal a`. This picks some generator and normalizes it: the normalization of a
+nonzero polynomial over a field is the monic polynomial `g * C g.leadingCoeff⁻¹`, and the
+normalization of `0` is `0`. -/
 noncomputable def annIdealGenerator (a : A) : 𝕜[X] :=
-  let g := IsPrincipal.generator <| annIdeal 𝕜 a
-  g * C g.leadingCoeff⁻¹
+  normalize (IsPrincipal.generator <| annIdeal 𝕜 a)
 
 section
 
@@ -85,8 +86,7 @@ variable {𝕜}
 
 @[simp]
 theorem annIdealGenerator_eq_zero_iff {a : A} : annIdealGenerator 𝕜 a = 0 ↔ annIdeal 𝕜 a = ⊥ := by
-  simp only [annIdealGenerator, mul_eq_zero, IsPrincipal.eq_bot_iff_generator_eq_zero,
-    Polynomial.C_eq_zero, inv_eq_zero, Polynomial.leadingCoeff_eq_zero, or_self_iff]
+  simp only [annIdealGenerator, normalize_eq_zero, IsPrincipal.eq_bot_iff_generator_eq_zero]
 
 end
 
@@ -94,14 +94,9 @@ end
 @[simp]
 theorem span_singleton_annIdealGenerator (a : A) :
     Ideal.span {annIdealGenerator 𝕜 a} = annIdeal 𝕜 a := by
-  by_cases h : annIdealGenerator 𝕜 a = 0
-  · rw [h, annIdealGenerator_eq_zero_iff.mp h, Set.singleton_zero, Ideal.span_zero]
-  · rw [annIdealGenerator, Ideal.span_singleton_mul_right_unit, Ideal.span_singleton_generator]
-    apply Polynomial.isUnit_C.mpr
-    apply IsUnit.mk0
-    apply inv_eq_zero.not.mpr
-    apply Polynomial.leadingCoeff_eq_zero.not.mpr
-    apply (mul_ne_zero_iff.mp h).1
+  classical
+  rw [annIdealGenerator, Ideal.span_singleton_eq_span_singleton.mpr (normalize_associated _),
+    Ideal.span_singleton_generator]
 
 /-- The annihilating ideal generator is a member of the annihilating ideal. -/
 theorem annIdealGenerator_mem (a : A) : annIdealGenerator 𝕜 a ∈ annIdeal 𝕜 a :=
@@ -113,8 +108,9 @@ theorem mem_iff_eq_smul_annIdealGenerator {p : 𝕜[X]} (a : A) :
 
 /-- The generator we chose for the annihilating ideal is monic when the ideal is non-zero. -/
 theorem monic_annIdealGenerator (a : A) (hg : annIdealGenerator 𝕜 a ≠ 0) :
-    Monic (annIdealGenerator 𝕜 a) :=
-  monic_mul_leadingCoeff_inv (mul_ne_zero_iff.mp hg).1
+    Monic (annIdealGenerator 𝕜 a) := by
+  classical
+  exact monic_normalize (hg ∘ normalize_eq_zero.mpr)
 
 /-! We are working toward showing the generator of the annihilating ideal
 in the field case is the minimal polynomial. We are going to use a uniqueness

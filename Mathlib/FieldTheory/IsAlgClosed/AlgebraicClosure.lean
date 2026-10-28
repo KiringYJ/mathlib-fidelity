@@ -151,20 +151,39 @@ attribute [local instance] Ideal.Quotient.field in
 instance instGroupWithZero : GroupWithZero (AlgebraicClosure k) :=
   inferInstanceAs <| GroupWithZero (_ ⧸ _)
 
+/-- The algebraic closure is a field. In characteristic zero, its rational casts are those of `k`
+followed by `algebraMap k`, and the actions of `ℚ≥0` and `ℚ` are the actions through `k`. -/
 instance instField : Field (AlgebraicClosure k) where
   __ := instCommRing _
   __ := instGroupWithZero _
-  nnqsmul := (· • ·)
-  qsmul := (· • ·)
-  nnratCast q := algebraMap k _ q
-  ratCast q := algebraMap k _ q
-  nnratCast_def q := by change algebraMap k _ _ = _; simp_rw [NNRat.cast_def, map_div₀, map_natCast]
-  ratCast_def q := by
-    change algebraMap k _ _ = _; rw [Rat.cast_def, map_div₀, map_intCast, map_natCast]
-  nnqsmul_def q x := Quotient.inductionOn x fun p ↦ congr_arg Quotient.mk'' <| by
-    ext; simp [MvPolynomial.algebraMap_eq, NNRat.smul_def]
-  qsmul_def q x := Quotient.inductionOn x fun p ↦ congr_arg Quotient.mk'' <| by
-    ext; simp [MvPolynomial.algebraMap_eq, Rat.smul_def]
+  nnratCastOfCharZero _ q :=
+    haveI := CharZero.of_map_natCast (algebraMap k (AlgebraicClosure k)) (map_natCast _)
+    algebraMap k _ q
+  nnratCastOfCharZero_mul_den _ q := by
+    have := CharZero.of_map_natCast (algebraMap k (AlgebraicClosure k)) (map_natCast _)
+    rw [← map_natCast (algebraMap k (AlgebraicClosure k)) q.den, ← map_mul, NNRat.cast_mul_den,
+      map_natCast]
+  nnqsmulOfCharZero _ q x :=
+    haveI := CharZero.of_map_natCast (algebraMap k (AlgebraicClosure k)) (map_natCast _)
+    q • x
+  nnqsmulOfCharZero_eq_mul _ q x := by
+    have := CharZero.of_map_natCast (algebraMap k (AlgebraicClosure k)) (map_natCast _)
+    exact Quotient.inductionOn x fun p ↦ congr_arg Quotient.mk'' <| by
+      ext; simp [MvPolynomial.algebraMap_eq, NNRat.smul_def]
+  ratCastOfCharZero _ q :=
+    haveI := CharZero.of_map_natCast (algebraMap k (AlgebraicClosure k)) (map_natCast _)
+    algebraMap k _ q
+  ratCastOfCharZero_mul_den _ q := by
+    have := CharZero.of_map_natCast (algebraMap k (AlgebraicClosure k)) (map_natCast _)
+    rw [← map_natCast (algebraMap k (AlgebraicClosure k)) q.den, ← map_mul, Rat.cast_mul_den,
+      map_intCast]
+  qsmulOfCharZero _ q x :=
+    haveI := CharZero.of_map_natCast (algebraMap k (AlgebraicClosure k)) (map_natCast _)
+    q • x
+  qsmulOfCharZero_eq_mul _ q x := by
+    have := CharZero.of_map_natCast (algebraMap k (AlgebraicClosure k)) (map_natCast _)
+    exact Quotient.inductionOn x fun p ↦ congr_arg Quotient.mk'' <| by
+      ext; simp [MvPolynomial.algebraMap_eq, Rat.smul_def]
 
 set_option backward.isDefEq.respectTransparency false in
 theorem Monics.map_eq_prod {f : Monics k} :

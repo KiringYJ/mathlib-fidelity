@@ -241,11 +241,20 @@ theorem Continuous.matrix_adjugate [Fintype n] [DecidableEq n] [CommRing R] [IsT
   continuous_matrix fun _j k =>
     (hA.matrix_transpose.matrix_updateCol k continuous_const).matrix_det
 
-/-- When `Ring.inverse` is continuous at the determinant (such as in a `NormedRing`, or a
-topological field), so is `Matrix.inv`. -/
+/-- When inversion of the invertible elements of `R` is continuous at the determinant of a matrix
+`A` with invertible determinant (such as in a `NormedRing`, or a topological field), so is the
+inverse of the matrices with invertible determinant at `A`. -/
 theorem continuousAt_matrix_inv [Fintype n] [DecidableEq n] [CommRing R] [IsTopologicalRing R]
-    (A : Matrix n n R) (h : ContinuousAt Ring.inverse A.det) : ContinuousAt Inv.inv A :=
-  (h.comp continuous_id.matrix_det.continuousAt).smul continuous_id.matrix_adjugate.continuousAt
+    (A : {A : Matrix n n R | IsUnit A.det})
+    (h : ContinuousAt (fun r : {r : R | IsUnit r} ↦ Checked.inv (r : R) r.2) ⟨A.1.det, A.2⟩) :
+    ContinuousAt (fun B : {B : Matrix n n R | IsUnit B.det} ↦
+      Checked.inv (B : Matrix n n R) ((isUnit_iff_isUnit_det _).2 B.2)) A := by
+  have hdet : Continuous fun B : {B : Matrix n n R | IsUnit B.det} ↦
+      (⟨B.1.det, B.2⟩ : {r : R | IsUnit r}) :=
+    (continuous_id.matrix_det.comp continuous_subtype_val).subtype_mk _
+  simp only [inv_def]
+  exact (h.comp hdet.continuousAt).smul
+    (continuous_id.matrix_adjugate.comp continuous_subtype_val).continuousAt
 
 namespace Topology
 

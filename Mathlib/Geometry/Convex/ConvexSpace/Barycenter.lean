@@ -22,11 +22,12 @@ variable {K M : Type*} [Field K] [CharZero K] [LinearOrder K] [IsStrictOrderedRi
 a nonempty finite subset `S` of `M`. -/
 @[simps -isSimp]
 noncomputable def subBarycenter (S : Finset M) (hS : S.Nonempty) : StdSimplex K M where
-  weights := S.sum (fun m ↦ .single m S.card⁻¹)
+  weights := S.sum (fun m ↦ .single m
+    (Checked.inv (S.card : K) (Nat.cast_ne_zero.2 hS.card_pos.ne').isUnit))
   nonneg := Finset.sum_nonneg (by simp)
   total := by
     rw [← Finsupp.sum_finsetSum_index (by simp) (by simp)]
-    simpa using IsUnit.mul_inv_cancel (Ne.isUnit (by simpa [← Finset.nonempty_iff_ne_empty]))
+    simp
 
 lemma subBarycenter_weights_apply_eq_zero
     (S : Finset M) (hS : S.Nonempty) (m : M) (hm : m ∉ S) :

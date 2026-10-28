@@ -123,7 +123,7 @@ lemma simple_iff_char_is_norm_one [CharZero k] [Fintype G] (V : FDRep k G) :
   constructor <;> intro h
   · symm; simpa [Nonempty.intro (Iso.refl V), inv_mul_eq_one₀] using char_orthonormal V V
   · have eq := V.scalar_product_char_eq_finrank_equivariant V
-    rw [h, inv_mul_cancel_of_invertible] at eq
+    rw [h, inv_mul_cancel₀] at eq
     rw [simple_iff_end_is_rank_one, ← Nat.cast_inj (R := k), ← eq, Nat.cast_one]
 
 end FDRep

@@ -24,79 +24,100 @@ open algebraMap Polynomial IntermediateField
 variable {R : Type*} [Field R] [Differential R] (a b : R)
 
 /--
-The logarithmic derivative of a is a′ / a.
+The logarithmic derivative `a′ / a` of a unit `a`.
 -/
-def logDeriv : R := a′ / a
-
-@[simp]
-lemma logDeriv_zero : logDeriv (0 : R) = 0 := by
-  simp [logDeriv]
+noncomputable def logDeriv (ha : IsUnit a := by checked_unit) : R := a′ / a
 
 @[simp]
 lemma logDeriv_one : logDeriv (1 : R) = 0 := by
   simp [logDeriv]
 
-lemma logDeriv_mul (ha : a ≠ 0) (hb : b ≠ 0) : logDeriv (a * b) = logDeriv a + logDeriv b := by
+lemma logDeriv_mul {hab : IsUnit (a * b)} : logDeriv (a * b) = logDeriv a + logDeriv b := by
+  have ha : IsUnit a := isUnit_of_mul_isUnit_left hab
+  have hb : IsUnit b := isUnit_of_mul_isUnit_right hab
   unfold logDeriv
-  simp [field]
+  rw [Derivation.leibniz, smul_eq_mul, smul_eq_mul]
+  field_simp
   ring
 
-lemma logDeriv_div (ha : a ≠ 0) (hb : b ≠ 0) : logDeriv (a / b) = logDeriv a - logDeriv b := by
+lemma logDeriv_div {hb : IsUnit b} {hab : IsUnit (a / b)} :
+    logDeriv (a / b) = logDeriv a - logDeriv b := by
+  have ha : IsUnit a := IsUnit.of_div₀ hab
   unfold logDeriv
-  simp [field, Derivation.leibniz_div]
+  rw [Derivation.leibniz_div]
+  simp only [smul_eq_mul]
+  field_simp
+  ring
 
 @[simp]
-lemma logDeriv_pow (n : ℕ) (a : R) : logDeriv (a ^ n) = n * logDeriv a := by
+lemma logDeriv_pow (n : ℕ) (a : R) {ha : IsUnit a} : logDeriv (a ^ n) = n * logDeriv a := by
   induction n with
   | zero => simp
   | succ n h2 =>
-    obtain rfl | hb := eq_or_ne a 0
-    · simp
-    · rw [Nat.cast_add, Nat.cast_one, add_mul, one_mul, ← h2, pow_succ, logDeriv_mul] <;>
-      simp [hb]
+    have : logDeriv (a ^ (n + 1)) = logDeriv (a ^ n * a) := by simp only [pow_succ]
+    rw [this, logDeriv_mul, h2, Nat.cast_add, Nat.cast_one, add_mul, one_mul]
 
-lemma logDeriv_eq_zero : logDeriv a = 0 ↔ a′ = 0 :=
-  ⟨fun h ↦ by simp only [logDeriv, _root_.div_eq_zero_iff] at h; rcases h with h|h <;> simp [h],
-  fun h ↦ by unfold logDeriv at *; simp [h]⟩
+lemma logDeriv_eq_zero {ha : IsUnit a} : logDeriv a = 0 ↔ a′ = 0 := by
+  simp [logDeriv]
 
+/-- The logarithmic derivative of a product is the sum of the logarithmic derivatives of its
+factors. The sum is taken over the elements of the multiset, each of which is nonzero. -/
 lemma logDeriv_multisetProd {ι : Type*} (s : Multiset ι) {f : ι → R} (h : ∀ x ∈ s, f x ≠ 0) :
-    logDeriv (s.map f).prod = (s.map fun x ↦ logDeriv (f x)).sum := by
-  induction s using Multiset.induction_on
-  · simp
-  · rename_i h₂
-    simp only [Multiset.map_cons, Multiset.sum_cons, Multiset.prod_cons]
-    rw [← h₂]
-    · apply logDeriv_mul
-      · simp [h]
-      · simp_all
-    · simp_all
+    logDeriv (s.map f).prod (Multiset.prod_ne_zero fun h0 ↦
+      have ⟨x, hx, e⟩ := Multiset.mem_map.1 h0; h x hx e).isUnit =
+      (s.attach.map fun x ↦ logDeriv (f x.1) (h x.1 x.2).isUnit).sum := by
+  induction s using Multiset.induction_on with
+  | empty => simp
+  | cons a s ih =>
+    have ha : f a ≠ 0 := h a (Multiset.mem_cons_self a s)
+    have hs : (s.map f).prod ≠ 0 := Multiset.prod_ne_zero fun h0 ↦
+      have ⟨x, hx, e⟩ := Multiset.mem_map.1 h0; h x (Multiset.mem_cons_of_mem hx) e
+    simp only [Multiset.map_cons, Multiset.prod_cons, Multiset.attach_cons, Multiset.sum_cons,
+      Multiset.map_map, Function.comp_def]
+    rw [logDeriv_mul, ih fun x hx ↦ h x (Multiset.mem_cons_of_mem hx)]
 
+/-- The logarithmic derivative of a product is the sum of the logarithmic derivatives of its
+factors. The sum is taken over the elements of `s`, each of which is nonzero. -/
 lemma logDeriv_prod (ι : Type*) (s : Finset ι) (f : ι → R) (h : ∀ x ∈ s, f x ≠ 0) :
-    logDeriv (∏ x ∈ s, f x) = ∑ x ∈ s, logDeriv (f x) := logDeriv_multisetProd _ h
-
-lemma logDeriv_prod_of_eq_zero (ι : Type*) (s : Finset ι) (f : ι → R) (h : ∀ x ∈ s, f x = 0) :
-    logDeriv (∏ x ∈ s, f x) = ∑ x ∈ s, logDeriv (f x) := by
-  unfold logDeriv
-  simp_all
+    logDeriv (∏ x ∈ s, f x) (Finset.prod_ne_zero_iff.2 h).isUnit =
+      ∑ x : s, logDeriv (f x) (h x x.2).isUnit := by
+  refine (logDeriv_multisetProd s.1 h).trans ?_
+  rw [Finset.sum_eq_multiset_sum, Finset.univ_eq_attach]
+  rfl
 
 lemma logDeriv_algebraMap {F K : Type*} [Field F] [Field K] [Differential F] [Differential K]
     [Algebra F K] [DifferentialAlgebra F K]
-    (a : F) : logDeriv (algebraMap F K a) = algebraMap F K (logDeriv a) := by
+    (a : F) {ha : IsUnit a} :
+    logDeriv (algebraMap F K a) (ha.map _) = algebraMap F K (logDeriv a) := by
   unfold logDeriv
   simp [deriv_algebraMap]
 
 @[norm_cast]
 lemma _root_.algebraMap.coe_logDeriv {F K : Type*} [Field F] [Field K] [Differential F]
     [Differential K] [Algebra F K] [DifferentialAlgebra F K]
-    (a : F) : logDeriv a = logDeriv (a : K) := (logDeriv_algebraMap a).symm
+    (a : F) {ha : IsUnit a} : logDeriv a = logDeriv (a : K) (ha.map _) :=
+  (logDeriv_algebraMap a).symm
 
 variable {F : Type*} [Field F] [Differential F] [CharZero F]
+
+omit [Differential F] in
+lemma aeval_root_derivative_ne_zero (p : F[X]) [Fact (Irreducible p)] [Fact p.Monic] :
+    aeval (AdjoinRoot.root p) (derivative p) ≠ 0 := by
+  rw [AdjoinRoot.aeval_eq, ne_eq, AdjoinRoot.mk_eq_zero]
+  have : 0 < p.natDegree := Irreducible.natDegree_pos (Fact.out)
+  apply not_dvd_of_natDegree_lt
+  · intro nh
+    simp_all
+  apply natDegree_derivative_lt
+  exact Nat.ne_zero_of_lt this
 
 noncomputable instance (p : F[X]) [Fact (Irreducible p)] [Fact p.Monic] :
     Differential (AdjoinRoot p) where
   deriv := Derivation.liftOfSurjective (f := (AdjoinRoot.mk p).toIntAlgHom) AdjoinRoot.mk_surjective
-    (d := implicitDeriv <| AdjoinRoot.modByMonicHom Fact.out <|
-      - (aeval (AdjoinRoot.root p) (mapCoeffs p)) / (aeval (AdjoinRoot.root p) (derivative p))) (by
+    (d := haveI := aeval_root_derivative_ne_zero p
+      implicitDeriv <| AdjoinRoot.modByMonicHom Fact.out <|
+        - (aeval (AdjoinRoot.root p) (mapCoeffs p)) / (aeval (AdjoinRoot.root p) (derivative p)))
+    (by
       rintro x hx
       simp_all only [RingHom.toIntAlgHom_apply, AdjoinRoot.mk_eq_zero]
       obtain ⟨q, rfl⟩ := hx
@@ -108,14 +129,7 @@ noncomputable instance (p : F[X]) [Fact (Irreducible p)] [Fact p.Monic] :
       simp only [AdjoinRoot.aeval_eq, Derivation.coe_add, Derivation.coe_smul, Pi.add_apply,
         Pi.smul_apply, Derivation.restrictScalars_apply, derivative'_apply, smul_eq_mul, map_add,
         map_mul, AdjoinRoot.mk_leftInverse Fact.out _]
-      rw [div_mul_cancel₀, add_neg_cancel]
-      simp only [ne_eq, AdjoinRoot.mk_eq_zero]
-      have : 0 < p.natDegree := Irreducible.natDegree_pos (Fact.out)
-      apply not_dvd_of_natDegree_lt
-      · intro nh
-        simp_all
-      apply natDegree_derivative_lt
-      exact Nat.ne_zero_of_lt this)
+      rw [div_mul_cancel₀, add_neg_cancel])
 
 set_option backward.isDefEq.respectTransparency false in
 instance (p : F[X]) [Fact (Irreducible p)] [Fact p.Monic] :

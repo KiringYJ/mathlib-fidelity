@@ -413,6 +413,7 @@ theorem tendstoLocallyUniformly_iff [TopologicalSpace α] (F : ι → α → G) 
     (p : Filter ι) (hu : IsTopologicalGroup.rightUniformSpace G = u) :
     TendstoLocallyUniformly F f p ↔
       ∀ u ∈ 𝓝 (1 : G), ∀ (x : α), ∃ t ∈ 𝓝 x, ∀ᶠ i in p, ∀ a ∈ t, F i a / f a ∈ u := by
+  rw [_root_.tendstoLocallyUniformly_iff]
   simp only [div_eq_mul_inv]
   exact hu ▸ ⟨fun h u hu => h _ ⟨u, hu, fun _ => id⟩, fun h _ ⟨u, hu, hv⟩ x =>
     Exists.imp (fun _ ⟨h, hp⟩ => ⟨h, mem_of_superset hp fun _ hi a ha => hv (hi a ha)⟩)
@@ -423,6 +424,7 @@ theorem tendstoLocallyUniformlyOn_iff [TopologicalSpace α] (F : ι → α → G
     (p : Filter ι) (s : Set α) (hu : IsTopologicalGroup.rightUniformSpace G = u) :
     TendstoLocallyUniformlyOn F f p s ↔
       ∀ u ∈ 𝓝 (1 : G), ∀ x ∈ s, ∃ t ∈ 𝓝[s] x, ∀ᶠ i in p, ∀ a ∈ t, F i a / f a ∈ u := by
+  rw [_root_.tendstoLocallyUniformlyOn_iff]
   simp only [div_eq_mul_inv]
   exact hu ▸ ⟨fun h u hu => h _ ⟨u, hu, fun _ => id⟩, fun h _ ⟨u, hu, hv⟩ x =>
     (Exists.imp fun _ ⟨h, hp⟩ => ⟨h, mem_of_superset hp fun _ hi a ha => hv (hi a ha)⟩) ∘

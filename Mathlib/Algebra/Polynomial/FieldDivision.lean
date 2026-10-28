@@ -326,7 +326,7 @@ theorem isUnit_iff_degree_eq_zero : IsUnit p ↔ degree p = 0 :=
     isUnit_iff_dvd_one.2
       ⟨C (coeff p 0)⁻¹, by
         conv in p => rw [eq_C_of_degree_le_zero this]
-        rw [← C_mul, mul_inv_cancel₀ hc, C_1]⟩⟩
+        rw [← C_mul, mul_inv_cancel₀, C_1]⟩⟩
 
 macro_rules
   | `(tactic| monic_core) => `(tactic|
@@ -378,11 +378,11 @@ theorem mod_def (hq : q ≠ 0) : p % q = p %ₘ (q * C (leadingCoeff q)⁻¹) :=
 
 theorem modByMonic_eq_mod (p : R[X]) (hq : Monic q) : p %ₘ q = p % q := by
   rw [mod_def hq.ne_zero]
-  simp only [Monic.def.1 hq, inv_one, mul_one, C_1]
+  simp only [Monic.def.1 hq, inv_one₀, mul_one, C_1]
 
 theorem divByMonic_eq_div (p : R[X]) (hq : Monic q) : p /ₘ q = p / q := by
   rw [div_def hq.ne_zero]
-  simp only [Monic.def.1 hq, inv_one, C_1, one_mul, mul_one]
+  simp only [Monic.def.1 hq, inv_one₀, C_1, one_mul, mul_one]
 
 theorem mod_X_sub_C_eq_C_eval (p : R[X]) (a : R) : p % (X - C a) = C (p.eval a) :=
   modByMonic_eq_mod p (monic_X_sub_C a) ▸ modByMonic_X_sub_C_eq_C_eval _ _
@@ -468,7 +468,7 @@ lemma natDegree_mod_lt [Field k] (p : k[X]) {q : k[X]} (hq : q.natDegree ≠ 0) 
   refine (natDegree_modByMonic_lt p (monic_mul_leadingCoeff_inv hq0) ?_).trans_le
     (natDegree_mul_C_le q q.leadingCoeff⁻¹)
   contrapose hq
-  rw [← natDegree_mul_C_eq_of_mul_eq_one ((inv_mul_eq_one₀ hq').mpr rfl)]
+  rw [← natDegree_mul_C_eq_of_mul_eq_one (a := q.leadingCoeff⁻¹) inv_mul_cancel₀]
   simp [hq]
 
 theorem degree_mod_lt (p : R[X]) {q : R[X]} (hq : q ≠ 0) : (p % q).degree < q.degree := by
@@ -567,15 +567,16 @@ theorem rootSet_prod [CommRing S] [IsDomain S] [Algebra R S] {ι : Type*} (f : �
   simp only [mem_rootSet, Set.mem_iUnion, map_prod, Finset.prod_eq_zero_iff, exists_prop]
 
 theorem roots_C_mul_X_sub_C (b : R) (ha : a ≠ 0) {h : C a * X - C b ≠ 0} :
-    (C a * X - C b).roots h = {a⁻¹ * b} := by
-  simp [roots_C_mul_X_sub_C_of_IsUnit b ⟨a, a⁻¹, mul_inv_cancel₀ ha, inv_mul_cancel₀ ha⟩]
+    (C a * X - C b).roots h = {a⁻¹ * b} :=
+  roots_C_mul_X_sub_C_of_IsUnit b ha.isUnit.unit
 
 theorem roots_C_mul_X_add_C (b : R) (ha : a ≠ 0) {h : C a * X + C b ≠ 0} :
-    (C a * X + C b).roots h = {-(a⁻¹ * b)} := by
-  simp [roots_C_mul_X_add_C_of_IsUnit b ⟨a, a⁻¹, mul_inv_cancel₀ ha, inv_mul_cancel₀ ha⟩]
+    (C a * X + C b).roots h = {-(a⁻¹ * b)} :=
+  roots_C_mul_X_add_C_of_IsUnit b ha.isUnit.unit
 
 theorem roots_degree_eq_one (h : degree p = 1) :
     haveI : p ≠ 0 := ne_zero_of_coeff_ne_zero (coeff_ne_zero_of_eq_degree h)
+    haveI : p.coeff 1 ≠ 0 := coeff_ne_zero_of_eq_degree h
     p.roots = {-((p.coeff 1)⁻¹ * p.coeff 0)} := by
   have hc : p.coeff 1 ≠ 0 := coeff_ne_zero_of_eq_degree h
   obtain ⟨a, b, e⟩ : ∃ a b, p = C a * X + C b :=
@@ -584,19 +585,22 @@ theorem roots_degree_eq_one (h : degree p = 1) :
   have ha : a ≠ 0 := by simpa using hc
   simp [roots_C_mul_X_add_C _ ha]
 
-theorem exists_root_of_degree_eq_one (h : degree p = 1) : ∃ x, IsRoot p x :=
-  ⟨-((p.coeff 1)⁻¹ * p.coeff 0), by
-    rw [← mem_roots (ne_zero_of_coeff_ne_zero (coeff_ne_zero_of_eq_degree h))]
-    simp [roots_degree_eq_one h]⟩
+theorem exists_root_of_degree_eq_one (h : degree p = 1) : ∃ x, IsRoot p x := by
+  have hc : p.coeff 1 ≠ 0 := coeff_ne_zero_of_eq_degree h
+  refine ⟨-((p.coeff 1)⁻¹ * p.coeff 0), ?_⟩
+  rw [← mem_roots (ne_zero_of_coeff_ne_zero hc)]
+  simp [roots_degree_eq_one h]
 
-theorem coeff_inv_units (u : R[X]ˣ) (n : ℕ) : ((↑u : R[X]).coeff n)⁻¹ = (↑u⁻¹ : R[X]).coeff n := by
-  rw [eq_C_of_degree_eq_zero (degree_coe_units u), eq_C_of_degree_eq_zero (degree_coe_units u⁻¹),
-    coeff_C, coeff_C, inv_eq_one_div]
-  split_ifs
-  · rw [div_eq_iff_mul_eq (coeff_coe_units_zero_ne_zero u), coeff_zero_eq_eval_zero,
-        coeff_zero_eq_eval_zero, ← eval_mul, ← Units.val_mul, inv_mul_cancel]
-    simp
-  · simp
+/-- The inverse of an invertible coefficient of a unit polynomial is the corresponding coefficient
+of its inverse. Only the constant coefficient of a unit polynomial over a field is invertible. -/
+theorem coeff_inv_units (u : R[X]ˣ) (n : ℕ) {hu : IsUnit ((↑u : R[X]).coeff n)} :
+    ((↑u : R[X]).coeff n)⁻¹ = (↑u⁻¹ : R[X]).coeff n := by
+  obtain rfl : n = 0 := by
+    by_contra hn
+    rw [eq_C_of_degree_eq_zero (degree_coe_units u), coeff_C_of_ne_zero hn] at hu
+    exact not_isUnit_zero hu
+  refine inv_eq_of_mul_eq_one_right₀ ?_
+  rw [coeff_zero_eq_eval_zero, coeff_zero_eq_eval_zero, ← eval_mul, Units.mul_inv, eval_one]
 
 theorem monic_normalize [DecidableEq R] (hp0 : p ≠ 0) : Monic (normalize p) := by
   rw [Ne, ← leadingCoeff_eq_zero, ← Ne, ← isUnit_iff_ne_zero] at hp0
@@ -607,57 +611,58 @@ theorem normalize_eq_self_iff_monic [DecidableEq R] {p : R[X]} (hp : p ≠ 0) :
     normalize p = p ↔ p.Monic :=
   ⟨fun h ↦ h ▸ monic_normalize hp, fun h ↦ Monic.normalize_eq_self h⟩
 
-theorem leadingCoeff_div (hpq : q.degree ≤ p.degree) :
+/-- The leading coefficient of a quotient. The quotient of the leading coefficients exists exactly
+when `q ≠ 0`. -/
+theorem leadingCoeff_div {hq : IsUnit q.leadingCoeff} (hpq : q.degree ≤ p.degree) :
     (p / q).leadingCoeff = p.leadingCoeff / q.leadingCoeff := by
-  by_cases hq : q = 0
-  · simp [hq]
-  rw [div_def hq, leadingCoeff_mul, leadingCoeff_C,
-    leadingCoeff_divByMonic_of_monic (monic_mul_leadingCoeff_inv hq) _, mul_comm,
-    div_eq_mul_inv]
-  rwa [degree_mul_leadingCoeff_inv q hq]
+  have hq0 : q ≠ 0 := leadingCoeff_ne_zero.mp hq.ne_zero
+  rw [div_def hq0, leadingCoeff_mul, leadingCoeff_C,
+    leadingCoeff_divByMonic_of_monic (monic_mul_leadingCoeff_inv hq0) _, mul_comm,
+    div_eq_mul_inv₀]
+  rwa [degree_mul_leadingCoeff_inv q hq0]
 
-theorem div_C_mul : p / (C a * q) = C a⁻¹ * (p / q) := by
-  by_cases ha : a = 0
-  · simp [ha]
+/-- Dividing by a scalar multiple `C a * q` with `a` invertible. -/
+theorem div_C_mul {ha : IsUnit a} : p / (C a * q) = C a⁻¹ * (p / q) := by
   rcases eq_or_ne q 0 with rfl | hq
   · simp
-  have haq : C a * q ≠ 0 := mul_ne_zero (C_ne_zero.2 ha) hq
+  have haq : C a * q ≠ 0 := mul_ne_zero (C_ne_zero.2 ha.ne_zero) hq
   rw [div_def haq, div_def hq]
-  simp only [leadingCoeff_mul, mul_inv, leadingCoeff_C, C.map_mul, mul_assoc]
+  simp only [leadingCoeff_mul, mul_inv₀, leadingCoeff_C, C.map_mul, mul_assoc]
   congr 3
-  rw [mul_left_comm q, ← mul_assoc, ← C.map_mul, mul_inv_cancel₀ ha, C.map_one, one_mul]
+  rw [mul_left_comm q, ← mul_assoc, ← C.map_mul, mul_inv_cancel₀, C.map_one, one_mul]
 
-lemma div_C : p / C a = p * C a⁻¹ := by
-  simpa [mul_comm] using div_C_mul (q := 1)
+lemma div_C {ha : IsUnit a} : p / C a = p * C a⁻¹ := by
+  simpa [mul_comm] using div_C_mul (p := p) (q := 1) (ha := ha)
 
-lemma C_div : C (a / b) = C a / C b := by
-  rw [div_C, ← C_mul, div_eq_mul_inv]
+lemma C_div {hb : IsUnit b} : C (a / b) = C a / C b := by
+  rw [div_C (ha := hb), ← C_mul, div_eq_mul_inv₀]
 
 theorem C_mul_dvd (ha : a ≠ 0) : C a * p ∣ q ↔ p ∣ q :=
   ⟨fun h => dvd_trans (dvd_mul_left _ _) h, fun ⟨r, hr⟩ =>
     ⟨C a⁻¹ * r, by
-      rw [mul_assoc, mul_left_comm p, ← mul_assoc, ← C.map_mul, mul_inv_cancel₀ ha, C.map_one,
+      rw [mul_assoc, mul_left_comm p, ← mul_assoc, ← C.map_mul, mul_inv_cancel₀, C.map_one,
         one_mul, hr]⟩⟩
 
 theorem dvd_C_mul (ha : a ≠ 0) : p ∣ Polynomial.C a * q ↔ p ∣ q :=
   ⟨fun ⟨r, hr⟩ =>
     ⟨C a⁻¹ * r, by
-      rw [mul_left_comm p, ← hr, ← mul_assoc, ← C.map_mul, inv_mul_cancel₀ ha, C.map_one,
+      rw [mul_left_comm p, ← hr, ← mul_assoc, ← C.map_mul, inv_mul_cancel₀, C.map_one,
         one_mul]⟩,
     fun h => dvd_trans h (dvd_mul_left _ _)⟩
 
 theorem coe_normUnit_of_ne_zero [DecidableEq R] (hp : p ≠ 0) :
     (normUnit p : R[X]) = C p.leadingCoeff⁻¹ := by
   have : p.leadingCoeff ≠ 0 := mt leadingCoeff_eq_zero.mp hp
-  simp [CommGroupWithZero.coe_normUnit _ this]
+  simp only [coe_normUnit, CommGroupWithZero.coe_normUnit _ this]
 
 theorem map_dvd_map' [Field k] (f : R →+* k) {x y : R[X]} : x.map f ∣ y.map f ↔ x ∣ y := by
   by_cases H : x = 0
   · rw [H, Polynomial.map_zero, zero_dvd_iff, zero_dvd_iff, Polynomial.map_eq_zero]
   · classical
     rw [← normalize_dvd_iff, ← @normalize_dvd_iff R[X], normalize_apply, normalize_apply,
-      coe_normUnit_of_ne_zero H, coe_normUnit_of_ne_zero (mt (Polynomial.map_eq_zero f).1 H),
-      leadingCoeff_map, ← map_inv₀ f, ← map_C, ← Polynomial.map_mul,
+      coe_normUnit_of_ne_zero H, coe_normUnit_of_ne_zero (mt (Polynomial.map_eq_zero f).1 H)]
+    simp only [leadingCoeff_map]
+    rw [← map_inv₀ f _ (ha := (leadingCoeff_ne_zero.2 H).isUnit), ← map_C, ← Polynomial.map_mul,
       map_dvd_map _ f.injective (monic_mul_leadingCoeff_inv H)]
 
 @[simp]
@@ -727,7 +732,7 @@ See also: `Polynomial.Monic.irreducible_iff_natDegree`.
 -/
 theorem irreducible_iff_degree_lt (p : R[X]) (hp0 : p ≠ 0) (hpu : ¬ IsUnit p) :
     Irreducible p ↔ ∀ q, q.degree ≤ ↑(natDegree p / 2) → q ∣ p → IsUnit q := by
-  rw [← irreducible_mul_leadingCoeff_inv,
+  rw [← irreducible_mul_leadingCoeff_inv (hp := (leadingCoeff_ne_zero.2 hp0).isUnit),
       (monic_mul_leadingCoeff_inv hp0).irreducible_iff_degree_lt]
   · simp [hp0, natDegree_mul_leadingCoeff_inv]
   · contrapose hpu
@@ -743,11 +748,11 @@ theorem irreducible_iff_lt_natDegree_lt {p : R[X]} (hp0 : p ≠ 0) (hpu : ¬ IsU
   have : p * C (leadingCoeff p)⁻¹ ≠ 1 := by
     contrapose hpu
     exact .of_mul_eq_one _ hpu
-  rw [← irreducible_mul_leadingCoeff_inv,
+  have hp : IsUnit p.leadingCoeff := (leadingCoeff_ne_zero.mpr hp0).isUnit
+  rw [← irreducible_mul_leadingCoeff_inv (hp := hp),
       (monic_mul_leadingCoeff_inv hp0).irreducible_iff_lt_natDegree_lt this,
       natDegree_mul_leadingCoeff_inv _ hp0]
-  simp only [IsUnit.dvd_mul_right
-    (isUnit_C.mpr (IsUnit.mk0 (leadingCoeff p)⁻¹ (inv_ne_zero (leadingCoeff_ne_zero.mpr hp0))))]
+  simp only [IsUnit.dvd_mul_right (isUnit_C.mpr hp.inv₀)]
 
 open UniqueFactorizationMonoid in
 /--
@@ -758,9 +763,10 @@ theorem leadingCoeff_mul_prod_normalizedFactors [DecidableEq R] (a : R[X]) :
     C a.leadingCoeff * (normalizedFactors a).prod = a := by
   by_cases ha : a = 0
   · simp [ha]
-  rw [prod_normalizedFactors_eq, normalize_apply, coe_normUnit, CommGroupWithZero.coe_normUnit,
-    mul_comm, mul_assoc, ← map_mul, inv_mul_cancel₀] <;>
-  simp_all
+  have hlc : a.leadingCoeff ≠ 0 := leadingCoeff_ne_zero.mpr ha
+  rw [prod_normalizedFactors_eq ha, normalize_apply, coe_normUnit,
+    CommGroupWithZero.coe_normUnit _ hlc, mul_comm, mul_assoc, ← map_mul]
+  simp
 
 open UniqueFactorizationMonoid in
 protected theorem mem_normalizedFactors_iff [DecidableEq R] (hq : q ≠ 0) :
@@ -775,7 +781,7 @@ theorem map_normalize [DecidableEq R] [Field S] [DecidableEq S] (f : R →+* S) 
     map f (normalize p) = normalize (map f p) := by
   by_cases hp : p = 0
   · simp [hp]
-  · simp [normalize_apply, Polynomial.map_mul, normUnit, hp]
+  · simp [normalize_apply, Polynomial.map_mul, normUnit, hp, Units.val_inv_eq_inv_val₀]
 
 theorem monic_mapAlg_iff [Semiring S] [Nontrivial S] [Algebra R S] {p : R[X]} :
     (mapAlg R S p).Monic ↔ p.Monic := by
@@ -785,9 +791,9 @@ theorem mod_eq_of_dvd_sub {p₁ p₂ q : R[X]} (h : q ∣ p₁ - p₂) : p₁ % 
   obtain rfl | hq := eq_or_ne q 0
   · simpa [sub_eq_zero] using h
   simp_rw [Polynomial.mod_def hq]
-  apply Polynomial.modByMonic_eq_of_dvd_sub (by simp [Polynomial.Monic.def, hq])
+  apply Polynomial.modByMonic_eq_of_dvd_sub (by simp [Polynomial.Monic.def])
   rw [mul_comm]
-  exact (Polynomial.C_mul_dvd (by simpa using hq)).mpr h
+  exact (Polynomial.C_mul_dvd (by simp)).mpr h
 
 end Field
 

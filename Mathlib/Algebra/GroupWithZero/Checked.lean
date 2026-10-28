@@ -8,18 +8,38 @@ module
 public meta import Lean.Elab.App
 public meta import Lean.Elab.BuiltinNotation
 public meta import Lean.Elab.Tactic.Omega
-public import Mathlib.Algebra.GroupWithZero.Units.Basic
+public import Mathlib.Algebra.GroupWithZero.NeZero
 
 /-!
 # Inversion and division with explicit invertibility
 
-`Checked.inv` and `Checked.div` operate on an ambient monoid element with evidence that the
-denominator is a unit. Their implementations use the group of units, without an ambient inverse
-operation or a value at an invalid denominator. `Checked.zpow` requires invertibility only for a
-negative exponent.
+This file implements the inverse, division and integer power of an element of a monoid
+together with evidence that the element is invertible. The operations use the group of units:
+there is no ambient inverse operation and no value at an invalid denominator. An integer power
+requires invertibility only for a negative exponent.
+
+These declarations implement the ordinary notation `a⁻¹`, `a / b` and `a ^ n` for monoids
+without an ambient inverse, such as groups with zero and fields; see
+`Mathlib.Algebra.GroupWithZero.Checked.Notation`. Their theorems use the ordinary notation and
+the established names, beginning in `Mathlib.Algebra.GroupWithZero.Inverse`.
 
 The default evidence tactics use local hypotheses, unit and nonzero closure, and simplification.
-They never assume that an arbitrary sum or a numeral in arbitrary characteristic is nonzero.
+A local hypothesis may also be applied: a pointwise hypothesis `∀ x, f x ≠ 0` or
+`∀ x ∈ s, IsUnit (f x)` gives the evidence at each point, and a function is invertible when all
+its values are. A difference `b - a` is nonzero when `a ≠ b`, `b ≠ a`, `a < b` or `b < a` is a
+hypothesis, a comparison with zero may come from a `Fact` instance, and an `Invertible` instance
+gives invertibility.
+Every alternative must close the goal (`solve`), and alternatives that compare the goal with a
+constant (`1`, a unit coercion) match only up to reducible and instance unfolding, so that a large
+closed term such as `↑(Finset.range 3000).card` is not evaluated and the evidence found has
+exactly the type of the goal.
+In characteristic zero, a natural or integer cast is nonzero when `omega` proves the number
+nonzero from the hypotheses, and a rational cast is nonzero when the rational number is. The
+rational rule applies only to a syntactic cast, so it does not loop on `ℚ` or `ℚ≥0`, whose casts
+are the identity. The tactics never assume that an arbitrary sum or a numeral in arbitrary
+characteristic is nonzero.
+Elaboration may already have assigned the evidence by unification with a term of the same
+proposition, as `convert` does; the tactics then succeed without further search.
 -/
 
 @[expose] public section
@@ -30,174 +50,111 @@ syntax (name := checkedNonzero) "checked_nonzero" : tactic
 macro_rules
   | `(tactic| checked_nonzero) => `(tactic|
       first
-      | assumption
-      | exact NeZero.ne _
-      | exact one_ne_zero
-      | exact $(Lean.mkIdent `Nat.cast_add_one_ne_zero) _
-      | (apply neg_ne_zero.mpr; checked_nonzero)
-      | exact Units.ne_zero _
-      | (apply ne_of_gt; assumption)
-      | (apply ne_of_lt; assumption)
-      | (apply mul_ne_zero <;> checked_nonzero)
-      | (apply pow_ne_zero <;> checked_nonzero)
-      | decide
-      | simp_all
-      | fail "a nonzero denominator proof is required")
+      | done
+      | (solve
+        | assumption
+        | ((with_reducible apply_assumption) <;> assumption)
+        | (apply $(Lean.mkIdent `IsUnit.ne_zero); assumption)
+        | exact NeZero.ne _
+        | (with_reducible_and_instances exact one_ne_zero)
+        | exact $(Lean.mkIdent `Nat.cast_add_one_ne_zero) _
+        | ((with_reducible apply $(Lean.mkIdent `neg_ne_zero.mpr)); checked_nonzero)
+        | (with_reducible_and_instances exact $(Lean.mkIdent `Units.ne_zero) _)
+        | (apply $(Lean.mkIdent `ne_of_gt);
+            first
+            | assumption
+            | exact $(Lean.mkIdent `Fact.out)
+            | ((with_reducible apply_assumption) <;> assumption))
+        | (apply $(Lean.mkIdent `ne_of_lt);
+            first
+            | assumption
+            | exact $(Lean.mkIdent `Fact.out)
+            | ((with_reducible apply_assumption) <;> assumption))
+        | ((with_reducible apply $(Lean.mkIdent `sub_ne_zero_of_ne));
+            first
+            | assumption
+            | exact Ne.symm ‹_›
+            | exact $(Lean.mkIdent `ne_of_gt) ‹_›
+            | exact $(Lean.mkIdent `ne_of_lt) ‹_›)
+        | ((with_reducible apply $(Lean.mkIdent `pow_ne_zero)) <;> checked_nonzero)
+        | ((with_reducible apply $(Lean.mkIdent `mul_ne_zero)) <;> checked_nonzero)
+        | (apply $(Lean.mkIdent `Nat.cast_ne_zero).mpr; omega)
+        | (apply $(Lean.mkIdent `Int.cast_ne_zero).mpr; omega)
+        | ((with_reducible apply $(Lean.mkIdent `Rat.cast_ne_zero).mpr); checked_nonzero)
+        | ((with_reducible apply $(Lean.mkIdent `NNRat.cast_ne_zero).mpr); checked_nonzero)
+        | (simp_all; done)
+        | decide
+        | fail "a nonzero denominator proof is required"))
 
-/-- Find invertibility without installing an ambient inverse operation. -/
+/-- Find invertibility without installing an ambient inverse operation.
+
+Besides local hypotheses and nonzero evidence in a group with zero, this uses closure under
+products, natural powers, inverses and quotients. The evidence carried by an inverse or a quotient
+is reused rather than requested again. Invertibility of a factor is recovered from a product or a
+quotient in a local hypothesis, and invertibility of a value `f i` from that of a function `f`.
+The closure rules match the goal reducibly: a power `x ^ 2` is not unfolded into a product, whose
+evidence would type-check only after unfolding the power. -/
 syntax (name := checkedUnit) "checked_unit" : tactic
 
 macro_rules
   | `(tactic| checked_unit) => `(tactic|
       first
-      | assumption
-      | exact Units.isUnit _
-      | exact isUnit_one
-      | (apply IsUnit.mul <;> checked_unit)
-      | (apply IsUnit.pow <;> checked_unit)
-      | (apply GroupWithZero.isUnit_of_ne_zero; checked_nonzero)
-      | fail "an invertibility proof is required")
+      | done
+      | (solve
+        | assumption
+        | ((with_reducible apply_assumption) <;> assumption)
+        | ((with_reducible apply $(Lean.mkIdent `IsUnit.inv₀)); done)
+        | ((with_reducible apply $(Lean.mkIdent `IsUnit.div₀)) <;> checked_unit)
+        | (with_reducible_and_instances exact $(Lean.mkIdent `Units.isUnit) _)
+        | (with_reducible_and_instances exact $(Lean.mkIdent `isUnit_one))
+        | ((with_reducible apply $(Lean.mkIdent `IsUnit.pow)) <;> checked_unit)
+        | ((with_reducible apply $(Lean.mkIdent `IsUnit.mul)) <;> checked_unit)
+        | ((with_reducible apply $(Lean.mkIdent `IsUnit.zpow₀)); checked_unit)
+        | (apply $(Lean.mkIdent `isUnit_of_mul_isUnit_left); assumption)
+        | (apply $(Lean.mkIdent `isUnit_of_mul_isUnit_right); assumption)
+        | (apply $(Lean.mkIdent `IsUnit.of_div₀); assumption)
+        | (apply $(Lean.mkIdent `IsUnit.apply); assumption)
+        | (with_reducible_and_instances exact $(Lean.mkIdent `isUnit_of_invertible) _)
+        | ((with_reducible apply $(Lean.mkIdent `Pi.isUnit_iff).2); intro; checked_unit)
+        | (apply GroupWithZero.isUnit_of_ne_zero; checked_nonzero)
+        | fail "an invertibility proof is required"))
 
-/-- Invertibility is needed only on the negative-exponent branch. -/
+/-- Invertibility is needed only on the negative-exponent branch. A local hypothesis of exactly
+this form is used directly, so that theorems can take it as evidence unified from the term. On
+that branch, local hypotheses of the form `n < 0 → IsUnit x` are specialized before searching. -/
 syntax (name := checkedPower) "checked_power" : tactic
 
 macro_rules
-  | `(tactic| checked_power) => `(tactic| (intro h; first | checked_unit | omega | simp_all))
+  | `(tactic| checked_power) => `(tactic|
+      first
+      | done
+      | (solve
+        | assumption
+        | (intro h; solve
+            | omega
+            | checked_unit
+            | (simp only [h, true_implies] at *; checked_unit)
+            | (simp_all; done))))
 
 namespace Checked
 
 variable {M : Type*} [Monoid M]
 
-/-- The inverse of an ambient element, with its exact invertibility obligation. -/
+/-- The inverse of an ambient element, with its exact invertibility obligation.
+Write it as `a⁻¹`. -/
 noncomputable def inv (a : M) (ha : IsUnit a := by checked_unit) : M :=
   ↑ha.unit⁻¹
 
-/-- Divide an arbitrary numerator by a denominator known to be a unit. -/
+/-- Divide an arbitrary numerator by a denominator known to be a unit. Write it as `a / b`. -/
 noncomputable def div (a b : M) (hb : IsUnit b := by checked_unit) : M :=
   a /ₚ hb.unit
 
-/-- Integer powers of an ambient element; only negative exponents require a unit. -/
+/-- Integer powers of an ambient element; only negative exponents require a unit.
+Write it as `a ^ n`. -/
 noncomputable def zpow (a : M) (n : Int)
     (ha : n < 0 → IsUnit a := by checked_power) : M :=
   match n with
   | .ofNat k => a ^ k
   | .negSucc k => ↑((ha (Int.negSucc_lt_zero k)).unit ^ (Int.negSucc k))
-
-@[simp] theorem mul_inv_cancel (a : M) (ha : IsUnit a) : a * inv a ha = 1 :=
-  ha.mul_val_inv
-
-@[simp] theorem inv_mul_cancel (a : M) (ha : IsUnit a) : inv a ha * a = 1 :=
-  ha.val_inv_mul
-
-@[simp] theorem div_mul_cancel (a b : M) (hb : IsUnit b) : div a b hb * b = a :=
-  divp_mul_cancel a hb.unit
-
-@[simp] theorem mul_div_cancel (a b : M) (hb : IsUnit b) : div (a * b) b hb = a :=
-  mul_divp_cancel a hb.unit
-
-@[simp] theorem isUnit_inv (a : M) (ha : IsUnit a) : IsUnit (inv a ha) :=
-  (ha.unit⁻¹).isUnit
-
-@[simp] theorem zpow_ofNat (a : M) (n : Nat) (ha) : zpow a (Int.ofNat n) ha = a ^ n :=
-  rfl
-
-@[simp] theorem zpow_zero (a : M) (ha) : zpow a 0 ha = 1 :=
-  pow_zero a
-
-section Algebra
-variable {a b : M} {ha : IsUnit a} {hb : IsUnit b}
-
-theorem div_eq_mul_inv (a b : M) {hb : IsUnit b} : div a b hb = a * inv b hb := rfl
-
-theorem eq_div_iff_mul_eq {a b c : M} {hc : IsUnit c} :
-    a = div b c hc ↔ a * c = b := by
-  simpa only [div, IsUnit.unit_spec] using
-    (_root_.eq_divp_iff_mul_eq (x := a) (y := b) (u := hc.unit))
-
-theorem div_eq_iff_mul_eq {a b c : M} {hc : IsUnit c} :
-    div a c hc = b ↔ b * c = a := by
-  simpa only [div, IsUnit.unit_spec] using
-    (_root_.divp_eq_iff_mul_eq (x := a) (y := b) (u := hc.unit))
-
-@[simp] theorem one_div (a : M) {ha : IsUnit a} : div 1 a ha = inv a ha := one_mul _
-
-@[simp] theorem div_one (a : M) {h : IsUnit (1 : M)} : div a 1 h = a := by
-  have hu : h.unit = (1 : Mˣ) := Units.ext h.unit_spec
-  simp only [div, hu, divp, inv_one, Units.val_one, mul_one]
-
-@[simp] theorem inv_one {h : IsUnit (1 : M)} : inv 1 h = 1 := by
-  simpa only [one_div] using (div_one (1 : M) (h := h))
-
-@[simp] theorem inv_inv (a : M) {ha : IsUnit a} {hi : IsUnit (inv a ha)} :
-    inv (inv a ha) hi = a := by
-  have hu : hi.unit = ha.unit⁻¹ := Units.ext rfl
-  change (↑hi.unit⁻¹ : M) = a
-  rw [hu, _root_.inv_inv, IsUnit.unit_spec]
-
-end Algebra
-
-section GroupWithZero
-variable {G : Type*} [GroupWithZero G] {a b : G} {ha : IsUnit a} {hb : IsUnit b}
-
-@[simp] theorem inv_ne_zero : inv a ha ≠ 0 := ha.unit⁻¹.ne_zero
-
-theorem div_ne_zero (h : a ≠ 0) : div a b hb ≠ 0 := (divp_ne_zero_iff hb.unit).mpr h
-
-end GroupWithZero
-
-section Monoid
-variable {M : Type*} [Monoid M]
-
-theorem zpow_congr {a b : M} (hab : a = b) (n : ℤ)
-    (ha : n < 0 → IsUnit a) (hb : n < 0 → IsUnit b) : zpow a n ha = zpow b n hb := by
-  cases hab
-  rfl
-
-theorem zpow_eq_unit (a : M) (n : ℤ) (ha : IsUnit a) (h : n < 0 → IsUnit a) :
-    zpow a n h = (↑(ha.unit ^ n) : M) := by
-  cases n with
-  | ofNat k =>
-    change a ^ k = (↑(ha.unit ^ (k : ℤ)) : M)
-    calc
-      _ = (↑(ha.unit ^ k) : M) := (Units.val_pow_eq_pow_val ha.unit k).symm
-      _ = _ := congrArg Units.val (_root_.zpow_natCast ha.unit k).symm
-  | negSucc k => rfl
-
-theorem zpow_negSucc (a : M) (k : ℕ) (h : Int.negSucc k < 0 → IsUnit a) :
-    zpow a (Int.negSucc k) h = inv a (h (Int.negSucc_lt_zero k)) ^ (k + 1) := by
-  simp only [zpow, _root_.zpow_negSucc, ← inv_pow, Units.val_pow_eq_pow_val, inv]
-
-@[simp] theorem zpow_one (n : ℤ) (h : n < 0 → IsUnit (1 : M)) : zpow (1 : M) n h = 1 := by
-  have hu : (isUnit_one : IsUnit (1 : M)).unit = 1 := Units.ext rfl
-  rw [zpow_eq_unit 1 n isUnit_one h, hu, one_zpow, Units.val_one]
-
-@[simp] theorem inv_inj {a b : M} {ha : IsUnit a} {hb : IsUnit b} :
-    inv a ha = inv b hb ↔ a = b := by
-  simpa only [inv, IsUnit.unit_spec] using
-    (Units.val_inv_inj (u₁ := ha.unit) (u₂ := hb.unit))
-
-
-end Monoid
-
-section GroupWithZero
-variable {M : Type*} [GroupWithZero M]
-
-theorem zpow_ne_zero {a : M} (ha : a ≠ 0) (n : ℤ) (h : n < 0 → IsUnit a) :
-    zpow a n h ≠ 0 := by
-  rw [zpow_eq_unit a n (GroupWithZero.isUnit_of_ne_zero ha) h]
-  exact Units.ne_zero _
-
-@[simp] theorem zpow_eq_zero_iff {a : M} {n : ℤ} (hn : n ≠ 0) (h : n < 0 → IsUnit a) :
-    zpow a n h = 0 ↔ a = 0 := by
-  cases n with
-  | ofNat k =>
-    have hk : k ≠ 0 := by intro hk; subst k; exact hn rfl
-    simpa only [zpow_ofNat] using (pow_eq_zero_iff hk : a ^ k = 0 ↔ a = 0)
-  | negSucc k =>
-    exact iff_of_false (zpow_ne_zero (h (Int.negSucc_lt_zero k)).ne_zero _ h)
-      (h (Int.negSucc_lt_zero k)).ne_zero
-
-end GroupWithZero
-
 
 end Checked

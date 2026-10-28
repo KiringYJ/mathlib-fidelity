@@ -21,9 +21,7 @@ namespace Rat
 variable {p q : ℚ}
 
 @[simp]
-theorem castHom_rat : castHom ℚ = RingHom.id ℚ := by
-  ext q
-  exact eval_rat q _
+theorem castHom_rat : castHom ℚ = RingHom.id ℚ := rfl
 
 section LinearOrderedField
 

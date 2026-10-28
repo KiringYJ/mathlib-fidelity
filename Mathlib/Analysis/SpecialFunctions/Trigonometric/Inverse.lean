@@ -257,18 +257,15 @@ theorem cos_arcsin (x : ℝ) : cos (arcsin x) = √(1 - x ^ 2) := by
     sqrt_mul_self (cos_arcsin_nonneg _)] at this
   rw [this, sin_arcsin hx₁ hx₂]
 
--- The junk values for `arcsin` and `sqrt` make this true even outside `[-1, 1]`.
-theorem tan_arcsin (x : ℝ) : tan (arcsin x) = x / √(1 - x ^ 2) := by
-  rw [tan_eq_sin_div_cos, cos_arcsin]
-  by_cases hx₁ : -1 ≤ x; swap
-  · have h : √(1 - x ^ 2) = 0 := sqrt_eq_zero_of_nonpos (by nlinarith)
-    rw [h]
-    simp
-  by_cases hx₂ : x ≤ 1; swap
-  · have h : √(1 - x ^ 2) = 0 := sqrt_eq_zero_of_nonpos (by nlinarith)
-    rw [h]
-    simp
-  rw [sin_arcsin hx₁ hx₂]
+/-- The tangent of `arcsin x`, where it is defined, that is, for `-1 < x < 1`. -/
+theorem tan_arcsin (x : ℝ) {h : cos (arcsin x) ≠ 0} :
+    tan (arcsin x) = Checked.div x (√(1 - x ^ 2)) (cos_arcsin x ▸ h).isUnit := by
+  have h' : √(1 - x ^ 2) ≠ 0 := cos_arcsin x ▸ h
+  have h1 : 0 < 1 - x ^ 2 := by
+    by_contra hneg
+    exact h' (sqrt_eq_zero_of_nonpos (not_lt.1 hneg))
+  rw [tan_eq_sin_div_cos]
+  simp only [cos_arcsin, sin_arcsin (by nlinarith) (by nlinarith)]
 
 /-- Inverse of the `cos` function, returns values in the range `0 ≤ arccos x` and `arccos x ≤ π`.
   It defaults to `π` on `(-∞, -1)` and to `0` to `(1, ∞)`. -/
@@ -385,9 +382,18 @@ theorem arccos_le_pi_div_four {x} : arccos x ≤ π / 4 ↔ √2 / 2 ≤ x := by
 theorem continuous_arccos : Continuous arccos :=
   continuous_const.sub continuous_arcsin
 
--- The junk values for `arccos` and `sqrt` make this true even outside `[-1, 1]`.
-theorem tan_arccos (x : ℝ) : tan (arccos x) = √(1 - x ^ 2) / x := by
-  rw [arccos, tan_pi_div_two_sub, tan_arcsin, inv_div]
+/-- The tangent of `arccos x`, where it is defined, that is, for `x ≠ 0`. The junk values of
+`arccos` and `sqrt` make this true even outside `[-1, 1]`. -/
+theorem tan_arccos (x : ℝ) {h : cos (arccos x) ≠ 0} :
+    tan (arccos x) = Checked.div (√(1 - x ^ 2)) x
+      (show x ≠ 0 from fun hx ↦ h (by rw [hx, arccos_zero, cos_pi_div_two])).isUnit := by
+  rw [tan_eq_sin_div_cos, sin_arccos]
+  by_cases hx : -1 ≤ x ∧ x ≤ 1
+  · simp only [cos_arccos hx.1 hx.2]
+  · have h0 : √(1 - x ^ 2) = 0 := by
+      refine sqrt_eq_zero_of_nonpos ?_
+      rcases not_and_or.1 hx with h1 | h1 <;> nlinarith [not_le.1 h1]
+    rw [h0, zero_div, zero_div]
 
 -- The junk values for `arccos` and `sqrt` make this true even for `1 < x`.
 theorem arccos_eq_arcsin {x : ℝ} (h : 0 ≤ x) : arccos x = arcsin (√(1 - x ^ 2)) :=

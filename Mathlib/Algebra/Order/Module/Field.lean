@@ -27,19 +27,15 @@ variable [Semifield 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [AddComm
 instance (priority := 100) PosSMulMono.toPosSMulReflectLE [MulAction 𝕜 G] [PosSMulMono 𝕜 G] :
     PosSMulReflectLE 𝕜 G where
   le_of_smul_le_smul_left _a ha b₁ b₂ h := by
-    let u := Units.mk0 _ ha.ne'
-    change (u : 𝕜) • b₁ ≤ (u : 𝕜) • b₂ at h
-    simpa only [smul_smul, Units.inv_mul, one_smul] using
-      smul_le_smul_of_nonneg_left h ((Units.inv_nonneg u).2 ha.le)
+    simpa only [smul_smul, inv_mul_cancel₀, one_smul] using
+      smul_le_smul_of_nonneg_left h (inv_pos_of_pos ha).le
 
 -- See note [lower instance priority]
 instance (priority := 100) PosSMulStrictMono.toPosSMulReflectLT [MulActionWithZero 𝕜 G]
     [PosSMulStrictMono 𝕜 G] : PosSMulReflectLT 𝕜 G :=
   .of_pos fun a ha b₁ b₂ h ↦ by
-    let u := Units.mk0 _ ha.ne'
-    change (u : 𝕜) • b₁ < (u : 𝕜) • b₂ at h
-    simpa only [smul_smul, Units.inv_mul, one_smul] using
-      smul_lt_smul_of_pos_left h ((Units.inv_pos u).2 ha)
+    simpa only [smul_smul, inv_mul_cancel₀, one_smul] using
+      smul_lt_smul_of_pos_left h (inv_pos_of_pos ha)
 
 end LinearOrderedSemifield
 
@@ -51,12 +47,12 @@ section PosSMulMono
 variable [PosSMulMono 𝕜 G]
 
 lemma inv_smul_le_iff_of_neg (h : a < 0) :
-    (Units.mk0 a h.ne)⁻¹ • b₁ ≤ b₂ ↔ a • b₂ ≤ b₁ := by
-  rw [← smul_le_smul_iff_of_neg_left h, smul_inv_smul₀ h.ne]
+    a⁻¹ • b₁ ≤ b₂ ↔ a • b₂ ≤ b₁ := by
+  rw [← smul_le_smul_iff_of_neg_left h, smul_inv_smul₀]
 
 lemma smul_inv_le_iff_of_neg (h : a < 0) :
-    b₁ ≤ (Units.mk0 a h.ne)⁻¹ • b₂ ↔ b₂ ≤ a • b₁ := by
-  rw [← smul_le_smul_iff_of_neg_left h, smul_inv_smul₀ h.ne]
+    b₁ ≤ a⁻¹ • b₂ ↔ b₂ ≤ a • b₁ := by
+  rw [← smul_le_smul_iff_of_neg_left h, smul_inv_smul₀]
 
 variable (G)
 
@@ -71,12 +67,12 @@ end PosSMulMono
 variable [PosSMulStrictMono 𝕜 G]
 
 lemma inv_smul_lt_iff_of_neg (h : a < 0) :
-    (Units.mk0 a h.ne)⁻¹ • b₁ < b₂ ↔ a • b₂ < b₁ := by
-  rw [← smul_lt_smul_iff_of_neg_left h, smul_inv_smul₀ h.ne]
+    a⁻¹ • b₁ < b₂ ↔ a • b₂ < b₁ := by
+  rw [← smul_lt_smul_iff_of_neg_left h, smul_inv_smul₀]
 
 lemma smul_inv_lt_iff_of_neg (h : a < 0) :
-    b₁ < (Units.mk0 a h.ne)⁻¹ • b₂ ↔ b₂ < a • b₁ := by
-  rw [← smul_lt_smul_iff_of_neg_left h, smul_inv_smul₀ h.ne]
+    b₁ < a⁻¹ • b₂ ↔ b₂ < a • b₁ := by
+  rw [← smul_lt_smul_iff_of_neg_left h, smul_inv_smul₀]
 
 end Field
 

@@ -77,7 +77,7 @@ lemma exists_mem_interior_convexHull_affineBasis (hs : s ∈ 𝓝 x) :
     exact add_pos_of_nonneg_of_pos this zero_lt_one
   set ε' : ℝ := ε / 2 / (cnorm + 1)
   have hε₀ : 0 < ε / 2 := half_pos hε
-  have hε' : 0 < ε' := Checked.div_pos hε₀ hc'
+  have hε' : 0 < ε' := div_pos hε₀ hc'
   set d : AffineBasis (Fin (finrank ℝ E + 1)) ℝ E := Units.mk0 ε' hε'.ne' • c
   have hdnorm : (range d : Set E) ⊆ closedBall 0 (ε / 2) := by
     simp only [range_subset_iff, mem_closedBall, dist_zero_right]
@@ -88,7 +88,7 @@ lemma exists_mem_interior_convexHull_affineBasis (hs : s ∈ 𝓝 x) :
       ‖d i‖ = ε' * ‖c i‖ := by
         simp [d, Units.smul_def, norm_smul, Real.norm_eq_abs, abs_of_pos hε']
       _ ≤ ε' * (cnorm + 1) := mul_le_mul_of_nonneg_left hci hε'.le
-      _ = ε / 2 := Checked.div_mul_cancel _ _ _
+      _ = ε / 2 := div_mul_cancel₀ _ _ _
   refine ⟨d, ?_, ?_⟩
   · simpa [d, Pi.smul_def, range_smul, interior_smul₀, convexHull_smul, zero_mem_smul_set_iff,
       hε'.ne']

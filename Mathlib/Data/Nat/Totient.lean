@@ -312,21 +312,26 @@ theorem totient_eq_div_primeFactors_mul (n : ℕ) :
     Nat.mul_div_assoc _ (prod_primeFactors_dvd n), mul_comm]
   exact prod_pos (fun p => pos_of_mem_primeFactors)
 
-/-- Euler's product formula for the totient function. -/
+/-- Euler's product formula for the totient function. The product is taken over the set
+`n.primeFactors`, on which the inverses `p⁻¹` are defined. -/
 theorem totient_eq_mul_prod_factors (n : ℕ) :
-    (φ n : ℚ) = n * ∏ p ∈ n.primeFactors, (1 - (p : ℚ)⁻¹) := by
+    (φ n : ℚ) = n * ∏ p : n.primeFactors, (1 - Checked.inv ((p : ℕ) : ℚ)
+      (cast_ne_zero.2 (pos_of_mem_primeFactors p.2).ne').isUnit) := by
   by_cases hn : n = 0
-  · simp [hn]
-  have hn' : (n : ℚ) ≠ 0 := by simp [hn]
+  · subst hn
+    simp
   have hpQ : (∏ p ∈ n.primeFactors, (p : ℚ)) ≠ 0 := by
     rw [← cast_prod, cast_ne_zero, ← zero_lt_iff, prod_primeFactors_prod_factorization]
     exact prod_pos fun p hp => pos_of_mem_primeFactors hp
-  simp only [totient_eq_div_primeFactors_mul n, prod_primeFactors_dvd n, cast_mul, cast_prod,
-    cast_div_charZero, mul_comm_div, mul_right_inj' hn', div_eq_iff hpQ, ← prod_mul_distrib]
-  refine prod_congr rfl fun p hp => ?_
-  have hp := pos_of_mem_primeFactorsList (List.mem_toFinset.mp hp)
-  have hp' : (p : ℚ) ≠ 0 := cast_ne_zero.mpr hp.ne.symm
-  rw [sub_mul, one_mul, mul_comm, mul_inv_cancel₀ hp', cast_pred hp]
+  have key : (φ n : ℚ) * ∏ p ∈ n.primeFactors, (p : ℚ) =
+      n * ∏ p ∈ n.primeFactors, ((p : ℚ) - 1) := by
+    rw [← prod_congr rfl fun p (hp : p ∈ n.primeFactors) =>
+      cast_pred (R := ℚ) (pos_of_mem_primeFactors hp), ← cast_prod, ← cast_prod, ← cast_mul,
+      ← cast_mul, totient_mul_prod_primeFactors]
+  refine mul_right_cancel₀ hpQ (key.trans ?_)
+  rw [mul_assoc, ← prod_coe_sort (s := n.primeFactors) (f := fun p : ℕ => (p : ℚ)),
+    ← prod_mul_distrib, ← prod_coe_sort (s := n.primeFactors) (f := fun p : ℕ => (p : ℚ) - 1)]
+  simp only [sub_mul, one_mul, inv_mul_cancel₀]
 
 theorem totient_gcd_mul_totient_mul (a b : ℕ) : φ (a.gcd b) * φ (a * b) = φ a * φ b * a.gcd b := by
   have shuffle :

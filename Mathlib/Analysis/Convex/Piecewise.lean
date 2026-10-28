@@ -43,26 +43,28 @@ theorem convexOn_univ_piecewise_Iic_of_antitoneOn_Iic_monotoneOn_Ici
     (hf : ConvexOn 𝕜 (Set.Iic e) f) (hg : ConvexOn 𝕜 (Set.Ici e) g)
     (h_anti : AntitoneOn f (Set.Iic e)) (h_mono : MonotoneOn g (Set.Ici e)) (h_eq : f e = g e) :
     ConvexOn 𝕜 Set.univ ((Set.Iic e).piecewise f g) := by
-  refine ⟨convex_univ, fun x _ y _ a b ha hb hab ↦ ?_⟩
+  refine convexOn_iff.2 ⟨convex_univ, fun x _ y _ a b ha hb hab ↦ ?_⟩
   obtain hx | hx := le_or_gt x e <;> obtain hy | hy := le_or_gt y e
   · have hc : a • x + b • y ≤ e := (Convex.combo_le_max x y ha hb hab).trans (max_le hx hy)
     rw [Set.piecewise_eq_of_mem (Set.Iic e) f g hx, Set.piecewise_eq_of_mem (Set.Iic e) f g hy,
       Set.piecewise_eq_of_mem (Set.Iic e) f g hc]
-    exact hf.2 hx hy ha hb hab
+    exact hf.map_combo_le hx hy ha hb hab
   · rw [Set.piecewise_eq_of_mem (Set.Iic e) f g hx,
       Set.piecewise_eq_of_notMem (Set.Iic e) f g (Set.notMem_Iic.mpr hy)]
     obtain hc | hc := le_or_gt (a • x + b • y) e
     · rw [Set.piecewise_eq_of_mem (Set.Iic e) f g hc]
       have hc' : a • x + b • e ≤ a • x + b • y := by gcongr
       trans a • f x + b • f e
-      · exact (h_anti (hc'.trans hc) hc hc').trans (hf.2 hx Set.self_mem_Iic ha hb hab)
+      · exact (h_anti (hc'.trans hc) hc hc').trans
+          (hf.map_combo_le hx Set.self_mem_Iic ha hb hab)
       · rw [h_eq]
         gcongr
         exact h_mono Set.self_mem_Ici hy.le hy.le
     · rw [Set.piecewise_eq_of_notMem (Set.Iic e) f g (Set.notMem_Iic.mpr hc)]
       have hc' : a • x + b • y ≤ a • e + b • y := by gcongr
       trans a • g e + b • g y
-      · exact (h_mono hc.le (hc.le.trans hc') hc').trans (hg.2 Set.self_mem_Ici hy.le ha hb hab)
+      · exact (h_mono hc.le (hc.le.trans hc') hc').trans
+          (hg.map_combo_le Set.self_mem_Ici hy.le ha hb hab)
       · rw [← h_eq]
         gcongr
         exact h_anti hx Set.self_mem_Iic hx
@@ -72,14 +74,16 @@ theorem convexOn_univ_piecewise_Iic_of_antitoneOn_Iic_monotoneOn_Ici
     · rw [Set.piecewise_eq_of_mem (Set.Iic e) f g hc]
       have hc' : a • e + b • y ≤ a • x + b • y := by gcongr
       trans a • f e + b • f y
-      · exact (h_anti (hc'.trans hc) hc hc').trans (hf.2 Set.self_mem_Iic hy ha hb hab)
+      · exact (h_anti (hc'.trans hc) hc hc').trans
+          (hf.map_combo_le Set.self_mem_Iic hy ha hb hab)
       · rw [h_eq]
         gcongr
         exact h_mono Set.self_mem_Ici hx.le hx.le
     · rw [Set.piecewise_eq_of_notMem (Set.Iic e) f g (Set.notMem_Iic.mpr hc)]
       have hc' : a • x + b • y ≤ a • x + b • e := by gcongr
       trans a • g x + b • g e
-      · exact (h_mono hc.le (hc.le.trans hc') hc').trans (hg.2 hx.le Set.self_mem_Ici ha hb hab)
+      · exact (h_mono hc.le (hc.le.trans hc') hc').trans
+          (hg.map_combo_le hx.le Set.self_mem_Ici ha hb hab)
       · rw [← h_eq]
         gcongr
         exact h_anti hy Set.self_mem_Iic hy
@@ -88,7 +92,7 @@ theorem convexOn_univ_piecewise_Iic_of_antitoneOn_Iic_monotoneOn_Ici
     rw [(Set.Iic e).piecewise_eq_of_notMem f g (Set.notMem_Iic.mpr hx),
       (Set.Iic e).piecewise_eq_of_notMem f g (Set.notMem_Iic.mpr hy),
       (Set.Iic e).piecewise_eq_of_notMem f g (Set.notMem_Iic.mpr hc)]
-    exact hg.2 hx.le hy.le ha hb hab
+    exact hg.map_combo_le hx.le hy.le ha hb hab
 
 /-- The piecewise function `(Set.Ici e).piecewise f g` of a function `f` increasing and convex on
 `Set.Ici e` and a function `g` decreasing and convex on `Set.Iic e`, such that `f e = g e`, is

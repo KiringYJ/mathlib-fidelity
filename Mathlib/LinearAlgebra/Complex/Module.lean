@@ -542,8 +542,7 @@ lemma Complex.coe_selfAdjointEquiv (z : selfAdjoint ℂ) :
 
 @[simp]
 lemma realPart_ofReal (r : ℝ) : (ℜ (r : ℂ) : ℂ) = r := by
-  rw [realPart_apply_coe, star_def, conj_ofReal, ← two_smul ℝ (r : ℂ)]
-  simp
+  rw [realPart_apply_coe, star_def, conj_ofReal, ← two_smul ℝ (r : ℂ), inv_smul_smul₀]
 
 @[simp]
 lemma imaginaryPart_ofReal (r : ℝ) : ℑ (r : ℂ) = 0 := by

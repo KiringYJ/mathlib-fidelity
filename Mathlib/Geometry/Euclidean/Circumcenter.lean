@@ -68,7 +68,7 @@ theorem existsUnique_dist_eq_of_insert {s : AffineSubspace ℝ P}
       |ycc₂ / y| * y = |ycc₂ / y| * |y| := by
         rw [abs_of_nonneg (show 0 ≤ y from dist_nonneg)]
       _ = |(ycc₂ / y) * y| := (abs_mul _ _).symm
-      _ = |ycc₂| := congrArg abs (Checked.div_mul_cancel _ _ _)
+      _ = |ycc₂| := congrArg abs (div_mul_cancel₀ _)
   let cc₂ := (ycc₂ / y) • (p -ᵥ orthogonalProjection s p : V) +ᵥ cc
   let cr₂ := √(cr * cr + ycc₂ * ycc₂)
   use ⟨cc₂, cr₂⟩
@@ -305,7 +305,8 @@ theorem circumcenter_eq_centroid (s : Simplex ℝ P 1) :
     s.circumcenter = s.centroid := by
   have hr :
     Set.Pairwise Set.univ fun i j : Fin 2 =>
-      dist (s.points i) s.centroid = dist (s.points j) s.centroid := by
+      dist (s.points i) (Finset.univ.centroid ℝ s.points (by simp)) =
+        dist (s.points j) (Finset.univ.centroid ℝ s.points (by simp)) := by
     intro i hi j hj hij
     rw [Finset.centroid_pair_fin, dist_eq_norm_vsub V (s.points i),
       dist_eq_norm_vsub V (s.points j), vsub_vadd_eq_vsub_sub, vsub_vadd_eq_vsub_sub, ←
@@ -588,7 +589,6 @@ theorem reflection_circumcenter_eq_affineCombination_of_pointsWithCircumcenter {
       (univ : Finset (PointsWithCircumcenterIndex n)).affineCombination ℝ s.pointsWithCircumcenter
         (reflectionCircumcenterWeightsWithCircumcenter i₁ i₂) := by
   have hc : #{i₁, i₂} = 2 := by simp [h]
-  have hinv : (↑(Units.mk0 (2 : ℝ) (by checked_nonzero))⁻¹ : ℝ) = (2 : ℝ)⁻¹ := rfl
   -- Making the next line a separate definition helps the elaborator:
   set W : AffineSubspace ℝ P := affineSpan ℝ (s.points '' {i₁, i₂})
   have h_faces :
@@ -597,7 +597,7 @@ theorem reflection_circumcenter_eq_affineCombination_of_pointsWithCircumcenter {
     apply eq_orthogonalProjection_of_eq_subspace
     simp [W]
   rw [reflection_apply', h_faces, s.orthogonalProjection_circumcenter hc,
-    circumcenter_eq_centroid, s.face_centroid_eq_centroid hc,
+    circumcenter_eq_centroid, Affine.Simplex.centroid, s.face_centroid_eq_centroid hc,
     centroid_eq_affineCombination_of_pointsWithCircumcenter s {i₁, i₂} (by simp),
     circumcenter_eq_affineCombination_of_pointsWithCircumcenter, ← @vsub_eq_zero_iff_eq V,
     affineCombination_vsub, weightedVSub_vadd_affineCombination, affineCombination_vsub,
@@ -607,7 +607,7 @@ theorem reflection_circumcenter_eq_affineCombination_of_pointsWithCircumcenter {
     Set.indicator_apply, Finset.centroidWeights_apply, Finset.mem_coe,
     Finset.mem_insert, Finset.mem_singleton, circumcenterWeightsWithCircumcenter,
     reflectionCircumcenterWeightsWithCircumcenter, ite_smul, zero_smul, sub_zero,
-    apply_ite₂ (· + ·), add_zero, ← add_smul, hc, Nat.cast_ofNat, hinv,
+    apply_ite₂ (· + ·), add_zero, ← add_smul, hc, Nat.cast_ofNat,
     zero_sub, neg_smul, sub_self, add_zero]
   convert! sum_const_zero
   norm_num

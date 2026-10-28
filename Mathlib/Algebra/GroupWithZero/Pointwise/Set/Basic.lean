@@ -13,6 +13,9 @@ public import Mathlib.Algebra.Group.Pointwise.Set.Basic
 
 This file proves properties of pointwise operations of sets in a group with zero.
 
+A group with zero has no ambient inverse or division, so there is no pointwise inversion or
+division of its sets. These operations exist for sets of units, which form a group.
+
 ## Tags
 
 set multiplication, set addition, pointwise addition, pointwise multiplication,
@@ -44,6 +47,5 @@ lemma Nonempty.zero_mul (hs : s.Nonempty) : 0 * s = 0 :=
   s.zero_mul_subset.antisymm <| by simpa [mem_mul] using! hs
 
 end MulZeroClass
-
 
 end Set

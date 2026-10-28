@@ -74,10 +74,10 @@ instance : DenselyOrdered { x // Irrational x } :=
     let ⟨z, hz, hxz, hzy⟩ := exists_irrational_btwn hlt
     ⟨⟨z, hz⟩, hxz, hzy⟩⟩
 
-theorem eventually_forall_le_dist_cast_div (hx : Irrational x) (n : ℕ) :
+theorem eventually_forall_le_dist_cast_div (hx : Irrational x) (n : ℕ) (hn : n ≠ 0) :
     ∀ᶠ ε : ℝ in 𝓝 0, ∀ m : ℤ, ε ≤ dist x (m / n) := by
   have A : IsClosed (range (fun m => (n : ℝ)⁻¹ * m : ℤ → ℝ)) :=
-    ((isClosedMap_smul₀ (n⁻¹ : ℝ)).comp Int.isClosedEmbedding_coe_real.isClosedMap).isClosed_range
+    ((isClosedMap_smul₀ (n : ℝ)⁻¹).comp Int.isClosedEmbedding_coe_real.isClosedMap).isClosed_range
   have B : x ∉ range (fun m => (n : ℝ)⁻¹ * m : ℤ → ℝ) := by
     rintro ⟨m, rfl⟩
     simp at hx
@@ -85,15 +85,18 @@ theorem eventually_forall_le_dist_cast_div (hx : Irrational x) (n : ℕ) :
   refine (ge_mem_nhds ε0).mono fun δ hδ m => not_lt.1 fun hlt => ?_
   rw [dist_comm] at hlt
   refine hε (ball_subset_ball hδ hlt) ⟨m, ?_⟩
-  simp [div_eq_inv_mul]
+  simp [div_eq_inv_mul₀]
 
 theorem eventually_forall_le_dist_cast_div_of_denom_le (hx : Irrational x) (n : ℕ) :
-    ∀ᶠ ε : ℝ in 𝓝 0, ∀ k ≤ n, ∀ (m : ℤ), ε ≤ dist x (m / k) :=
-  (finite_le_nat n).eventually_all.2 fun k _ => hx.eventually_forall_le_dist_cast_div k
+    ∀ᶠ ε : ℝ in 𝓝 0, ∀ k ≤ n, ∀ (_ : k ≠ 0) (m : ℤ), ε ≤ dist x (m / k) :=
+  (finite_le_nat n).eventually_all.2 fun k _ => by
+    rcases eq_or_ne k 0 with rfl | hk
+    · exact .of_forall fun _ hk => absurd rfl hk
+    · exact (hx.eventually_forall_le_dist_cast_div k hk).mono fun _ h _ => h
 
 theorem eventually_forall_le_dist_cast_rat_of_den_le (hx : Irrational x) (n : ℕ) :
     ∀ᶠ ε : ℝ in 𝓝 0, ∀ r : ℚ, r.den ≤ n → ε ≤ dist x r :=
   (hx.eventually_forall_le_dist_cast_div_of_denom_le n).mono fun ε H r hr => by
-    simpa only [Rat.cast_def] using H r.den hr r.num
+    simpa only [Rat.cast_def] using H r.den hr r.den_nz r.num
 
 end Irrational

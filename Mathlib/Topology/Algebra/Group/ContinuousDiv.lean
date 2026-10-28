@@ -28,12 +28,16 @@ theorem Filter.Tendsto.div_const' {c : G} {f : α → G} {l : Filter α} (h : Te
     (b : G) : Tendsto (f · / b) l (𝓝 (c / b)) :=
   h.div' tendsto_const_nhds
 
+/-- Division by a fixed invertible element preserves and reflects limits. This needs only
+continuity of right multiplication: in a monoid without an ambient division, the quotient by an
+invertible element is multiplication by its inverse. -/
 lemma Filter.tendsto_div_const_iff {G : Type*}
-    [GroupWithZero G] [TopologicalSpace G] [ContinuousDiv G]
-    {b : G} (hb : b ≠ 0) {c : G} {f : α → G} {l : Filter α} :
+    [Monoid G] [TopologicalSpace G] [SeparatelyContinuousMul G]
+    {b : G} {hb : IsUnit b} {c : G} {f : α → G} {l : Filter α} :
     Tendsto (f · / b) l (𝓝 (c / b)) ↔ Tendsto f l (𝓝 c) := by
-  refine ⟨fun h ↦ ?_, fun h ↦ Filter.Tendsto.div_const' h b⟩
-  convert! h.div_const' b⁻¹ with k <;> rw [← div_mul_eq_div_div_swap, inv_mul_cancel₀ hb, div_one]
+  refine ⟨fun h ↦ ?_, fun h ↦ ?_⟩
+  · simpa only [div_mul_cancel₀] using h.mul_const b
+  · simpa only [div_eq_mul_inv₀] using h.mul_const b⁻¹
 
 @[to_additive tendsto_sub_const_iff]
 lemma Filter.tendsto_div_const_iff' {G : Type*}

@@ -132,7 +132,8 @@ nonrec lemma smul_mem (C : PointedCone R E) (hr : 0 ≤ r) (hx : x ∈ C) : r �
 lemma smul_mem_iff {𝕜 M : Type*} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     [AddCommMonoid M] [Module 𝕜 M] (C : PointedCone 𝕜 M)
     {c : 𝕜} (hc : 0 < c) {x : M} : c • x ∈ C ↔ x ∈ C :=
-  ⟨fun h => inv_smul_smul₀ hc.ne' x ▸ C.smul_mem (inv_pos.2 hc).le h, C.smul_mem hc.le⟩
+  ⟨fun h => inv_smul_smul₀ (ha := hc.ne'.isUnit) x ▸ C.smul_mem (inv_pos.2 hc).le h,
+    C.smul_mem hc.le⟩
 
 /-- The `PointedCone` constructed from a pointed `ConvexCone`. -/
 def _root_.ConvexCone.toPointedCone (C : ConvexCone R E) (hC : C.Pointed) : PointedCone R E where

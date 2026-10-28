@@ -174,16 +174,22 @@ scoped instance (priority := 100) : ContinuousMul Γ₀ where
       exact (mul_lt_mul'' hx hy zero_le zero_le).trans_eq (mul_one γ)
     · rw [zero_mul, nhds_prod_eq, nhds_of_ne_zero hy, prod_pure, tendsto_map'_iff]
       refine (hasBasis_nhds_zero.tendsto_iff hasBasis_nhds_zero).2 fun γ hγ => ?_
-      refine ⟨γ / y, div_ne_zero hγ hy, fun x hx => ?_⟩
+      refine ⟨γ / y, div_ne_zero hγ, fun x hx => ?_⟩
       calc x * y < γ / y * y := mul_lt_mul_of_pos_right hx (zero_lt_iff.2 hy)
-      _ = γ := div_mul_cancel₀ _ hy
+      _ = γ := div_mul_cancel₀ _
     · have hy : y ≠ 0 := ((zero_lt_iff.mpr hx).trans_le hle).ne'
       rw [nhds_prod_eq, nhds_of_ne_zero hx, nhds_of_ne_zero hy, prod_pure_pure]
       exact pure_le_nhds (x * y)
 
-scoped instance (priority := 100) : ContinuousInv₀ Γ₀ :=
-  ⟨fun γ h => by
-    rw [ContinuousAt, nhds_of_ne_zero h]
-    exact pure_le_nhds γ⁻¹⟩
+/-- Inversion is continuous on the invertible elements, since each of them is isolated. -/
+scoped instance (priority := 100) : ContinuousInv₀ Γ₀ where
+  continuous_inv := continuous_iff_continuousAt.2 fun γ => by
+    refine tendsto_const_nhds.congr' ?_
+    have hγ : Subtype.val ⁻¹' {(γ : Γ₀)} ∈ 𝓝 γ := by
+      rw [nhds_subtype, nhds_of_ne_zero γ.property.ne_zero]
+      exact preimage_mem_comap (mem_pure.2 rfl)
+    filter_upwards [hγ] with x hx
+    obtain rfl := Subtype.ext hx
+    rfl
 
 end WithZeroTopology

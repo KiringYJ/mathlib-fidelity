@@ -79,11 +79,19 @@ theorem exists_eq_pow_of_odd (x : R) {n : ℕ} (hn : Odd n) : ∃ r, x = r ^ n :
   rcases exists_isRoot_of_odd_natDegree (f := X ^ n - C x) (by simp [hn]) with ⟨r, hr⟩
   exact ⟨r, by linear_combination - (by simpa using hr : r ^ n - x = 0)⟩
 
-theorem exists_eq_zpow_of_odd (x : R) {k : ℤ} (hk : Odd k) : ∃ r, x = r ^ k := by
+/-- Every element is a `k`-th power for an odd integer `k`. For a negative exponent, the element
+must be nonzero, and then the root is invertible. -/
+theorem exists_eq_zpow_of_odd (x : R) {k : ℤ} (hk : Odd k) (hx₀ : k < 0 → x ≠ 0) :
+    ∃ r, ∃ (_ : k < 0 → IsUnit r), x = r ^ k := by
   rcases k.eq_nat_or_neg with ⟨n, rfl | rfl⟩
-  · simpa using exists_eq_pow_of_odd x (by simpa using hk)
   · rcases exists_eq_pow_of_odd x (by simpa using hk) with ⟨r, hr⟩
-    exact ⟨r⁻¹, by simpa using hr⟩
+    exact ⟨r, fun h => absurd h (by omega), by simpa using hr⟩
+  · have hn : n ≠ 0 := by rintro rfl; simp at hk
+    rcases exists_eq_pow_of_odd x (by simpa using hk) with ⟨r, hr⟩
+    have hr₀ : r ≠ 0 := by
+      rintro rfl
+      exact hx₀ (by omega) (by simp [hr, hn])
+    exact ⟨r⁻¹, fun _ => hr₀.isUnit.inv₀, by simp [hr, zpow_neg₀ hr₀]⟩
 
 theorem exists_eq_pow_of_isSquare {x : R} (hx : IsSquare x) {n : ℕ} (hn : n ≠ 0) :
     ∃ r, x = r ^ n := by
@@ -97,12 +105,19 @@ theorem exists_eq_pow_of_isSquare {x : R} (hx : IsSquare x) {n : ℕ} (hn : n �
         exact ⟨r, by simp [hm, pow_add, ← hr, hs]⟩
     · exact exists_eq_pow_of_odd x odd
 
-theorem exists_eq_zpow_of_isSquare {x : R} (hx : IsSquare x) {k : ℤ} (hk : k ≠ 0) :
-    ∃ r, x = r ^ k := by
+/-- A square is a `k`-th power for a nonzero integer `k`. For a negative exponent, the square must
+be nonzero, and then the root is invertible. -/
+theorem exists_eq_zpow_of_isSquare {x : R} (hx : IsSquare x) {k : ℤ} (hk : k ≠ 0)
+    (hx₀ : k < 0 → x ≠ 0) : ∃ r, ∃ (_ : k < 0 → IsUnit r), x = r ^ k := by
   rcases k.eq_nat_or_neg with ⟨n, rfl | rfl⟩
-  · simpa using exists_eq_pow_of_isSquare hx (by simpa using hk)
   · rcases exists_eq_pow_of_isSquare hx (by simpa using hk) with ⟨r, hr⟩
-    exact ⟨r⁻¹, by simpa using hr⟩
+    exact ⟨r, fun h => absurd h (by omega), by simpa using hr⟩
+  · have hn : n ≠ 0 := by simpa using hk
+    rcases exists_eq_pow_of_isSquare hx hn with ⟨r, hr⟩
+    have hr₀ : r ≠ 0 := by
+      rintro rfl
+      exact hx₀ (by omega) (by simp [hr, hn])
+    exact ⟨r⁻¹, fun _ => hr₀.isUnit.inv₀, by simp [hr, zpow_neg₀ hr₀]⟩
 
 section LinearOrderedField
 
@@ -119,8 +134,11 @@ alias ⟨_root_.IsSquare.of_nonneg, _⟩ := nonneg_iff_isSquare
 theorem exists_eq_pow_of_nonneg {x : R} (hx : 0 ≤ x) {n : ℕ} (hn : n ≠ 0) : ∃ r, x = r ^ n :=
   exists_eq_pow_of_isSquare (.of_nonneg hx) hn
 
-theorem exists_eq_zpow_of_nonneg {x : R} (hx : 0 ≤ x) {k : ℤ} (hk : k ≠ 0) : ∃ r, x = r ^ k :=
-  exists_eq_zpow_of_isSquare (.of_nonneg hx) hk
+/-- A nonnegative element is a `k`-th power for a nonzero integer `k`. For a negative exponent, the
+element must be nonzero, and then the root is invertible. -/
+theorem exists_eq_zpow_of_nonneg {x : R} (hx : 0 ≤ x) {k : ℤ} (hk : k ≠ 0)
+    (hx₀ : k < 0 → x ≠ 0) : ∃ r, ∃ (_ : k < 0 → IsUnit r), x = r ^ k :=
+  exists_eq_zpow_of_isSquare (.of_nonneg hx) hk hx₀
 
 end LinearOrderedField
 

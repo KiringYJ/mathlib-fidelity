@@ -167,3 +167,26 @@ theorem Odd.neg_zpow (h : Odd n) (a : α) : (-a) ^ n = -a ^ n := by
 theorem Odd.neg_one_zpow (h : Odd n) : (-1 : α) ^ n = -1 := by rw [h.neg_zpow, one_zpow]
 
 end DivisionMonoid
+
+section Monoid
+
+variable {α : Type*} [Monoid α] [HasDistribNeg α] {n : ℤ}
+
+theorem Odd.neg_zpow₀ (hn : Odd n) (a : α) {h : n < 0 → IsUnit (-a)} :
+    (-a) ^ n = -Checked.zpow a n fun hneg ↦ (IsUnit.neg_iff a).mp (h hneg) := by
+  cases n with
+  | ofNat k => exact ((Int.odd_coe_nat k).mp hn).neg_pow a
+  | negSucc k =>
+    change Odd (-(↑(k + 1) : ℤ)) at hn
+    have hk : Odd (k + 1) := (Int.odd_coe_nat (k + 1)).mp (odd_neg.mp hn)
+    have ha : IsUnit a := (IsUnit.neg_iff a).mp (h (Int.negSucc_lt_zero k))
+    rw [zpow_negSucc₀, zpow_negSucc₀]
+    simp only [hk.neg_pow]
+    refine inv_eq_of_mul_eq_one_right₀ ?_
+    rw [neg_mul_neg, mul_inv_cancel₀]
+
+theorem Odd.neg_one_zpow₀ (hn : Odd n) :
+    Checked.zpow (-1 : α) n (fun _ ↦ isUnit_neg_one) = -1 := by
+  rw [hn.neg_zpow₀, one_zpow₀]
+
+end Monoid

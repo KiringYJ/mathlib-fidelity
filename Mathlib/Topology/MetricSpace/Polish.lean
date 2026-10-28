@@ -158,18 +158,38 @@ def CompleteCopy {α : Type*} [MetricSpace α] (s : Opens α) : Type _ := s
 
 namespace CompleteCopy
 
-/-- A distance on an open subset `s` of a metric space, designed to make it complete.  It is given
-by `dist' x y = dist x y + |1 / dist x sᶜ - 1 / dist y sᶜ|`, where the second term blows up close to
-the boundary to ensure that Cauchy sequences for `dist'` remain well inside `s`. -/
-instance instDist : Dist (CompleteCopy s) where
-  dist x y := dist x.1 y.1 + abs (1 / infDist x.1 sᶜ - 1 / infDist y.1 sᶜ)
+/-- A point of the open set `s` is at positive distance from the complement of `s`, if the
+complement is nonempty. -/
+theorem infDist_compl_pos (h : (sᶜ : Set α).Nonempty) (x : s) : 0 < infDist (x : α) sᶜ :=
+  (s.isOpen.isClosed_compl.notMem_iff_infDist_pos h).1 (by simp)
 
+open scoped Classical in
+/-- A distance on an open subset `s` of a metric space, designed to make it complete. If the
+complement `sᶜ` is nonempty, it is given by
+`dist' x y = dist x y + |1 / dist x sᶜ - 1 / dist y sᶜ|`, where the second term blows up close to
+the boundary to ensure that Cauchy sequences for `dist'` remain well inside `s`; the distances to
+`sᶜ` are positive since `s` is open. If `sᶜ` is empty, then `dist' = dist`. -/
+instance instDist : Dist (CompleteCopy s) where
+  dist x y := dist x.1 y.1 +
+    if h : (sᶜ : Set α).Nonempty then
+      |Checked.div 1 (infDist x.1 sᶜ) (infDist_compl_pos h x).ne'.isUnit -
+        Checked.div 1 (infDist y.1 sᶜ) (infDist_compl_pos h y).ne'.isUnit|
+    else 0
+
+open scoped Classical in
 theorem dist_eq (x y : CompleteCopy s) :
-    dist x y = dist x.1 y.1 + abs (1 / infDist x.1 sᶜ - 1 / infDist y.1 sᶜ) :=
+    dist x y = dist x.1 y.1 +
+      if h : (sᶜ : Set α).Nonempty then
+        |Checked.div 1 (infDist x.1 sᶜ) (infDist_compl_pos h x).ne'.isUnit -
+          Checked.div 1 (infDist y.1 sᶜ) (infDist_compl_pos h y).ne'.isUnit|
+      else 0 :=
   rfl
 
-theorem dist_val_le_dist (x y : CompleteCopy s) : dist x.1 y.1 ≤ dist x y :=
-  le_add_of_nonneg_right (abs_nonneg _)
+theorem dist_val_le_dist (x y : CompleteCopy s) : dist x.1 y.1 ≤ dist x y := by
+  rw [dist_eq]
+  split_ifs
+  · exact le_add_of_nonneg_right (abs_nonneg _)
+  · rw [add_zero]
 
 instance : TopologicalSpace (CompleteCopy s) := inferInstanceAs (TopologicalSpace s)
 instance [SecondCountableTopology α] : SecondCountableTopology (CompleteCopy s) :=
@@ -178,9 +198,10 @@ instance : T0Space (CompleteCopy s) := inferInstanceAs (T0Space s)
 
 /--
 A metric space structure on a subset `s` of a metric space, designed to make it complete
-if `s` is open. It is given by `dist' x y = dist x y + |1 / dist x sᶜ - 1 / dist y sᶜ|`, where the
-second term blows up close to the boundary to ensure that Cauchy sequences for `dist'` remain well
-inside `s`.
+if `s` is open. If `sᶜ` is nonempty, it is given by
+`dist' x y = dist x y + |1 / dist x sᶜ - 1 / dist y sᶜ|`, where the second term blows up close to
+the boundary to ensure that Cauchy sequences for `dist'` remain well inside `s`. If `sᶜ` is empty,
+then `dist' = dist`.
 
 This definition ensures the `TopologicalSpace` structure on
 `TopologicalSpace.Opens.CompleteCopy s` is definitionally equal to the original one.
@@ -188,27 +209,38 @@ This definition ensures the `TopologicalSpace` structure on
 instance instMetricSpace : MetricSpace (CompleteCopy s) := by
   refine @MetricSpace.ofT0PseudoMetricSpace (CompleteCopy s)
     (.ofDistTopology dist (fun _ ↦ ?_) (fun _ _ ↦ ?_) (fun x y z ↦ ?_) fun t ↦ ?_) _
-  · simp only [dist_eq, dist_self, one_div, sub_self, abs_zero, add_zero]
+  · simp [dist_eq]
   · simp only [dist_eq, dist_comm, abs_sub_comm]
-  · calc
-      dist x z = dist x.1 z.1 + |1 / infDist x.1 sᶜ - 1 / infDist z.1 sᶜ| := rfl
-      _ ≤ dist x.1 y.1 + dist y.1 z.1 + (|1 / infDist x.1 sᶜ - 1 / infDist y.1 sᶜ| +
-            |1 / infDist y.1 sᶜ - 1 / infDist z.1 sᶜ|) :=
-        add_le_add (dist_triangle _ _ _) (dist_triangle (1 / infDist _ _) _ _)
-      _ = dist x y + dist y z := add_add_add_comm ..
+  · rw [dist_eq, dist_eq, dist_eq]
+    split_ifs
+    · rw [add_add_add_comm]
+      exact add_le_add (dist_triangle _ _ _) (abs_sub_le _ _ _)
+    · simpa using dist_triangle x.1 y.1 z.1
   · refine ⟨fun h x hx ↦ ?_, fun h ↦ isOpen_iff_mem_nhds.2 fun x hx ↦ ?_⟩
     · rcases (Metric.isOpen_iff (α := s)).1 h x hx with ⟨ε, ε0, hε⟩
       exact ⟨ε, ε0, fun y hy ↦ hε <| (dist_comm _ _).trans_lt <| (dist_val_le_dist _ _).trans_lt hy⟩
     · rcases h x hx with ⟨ε, ε0, hε⟩
-      simp only [dist_eq, one_div] at hε
-      have : Tendsto (fun y : s ↦ dist x.1 y.1 + |(infDist x.1 sᶜ)⁻¹ - (infDist y.1 sᶜ)⁻¹|)
-          (𝓝 x) (𝓝 (dist x.1 x.1 + |(infDist x.1 sᶜ)⁻¹ - (infDist x.1 sᶜ)⁻¹|)) := by
-        refine (tendsto_const_nhds.dist continuous_subtype_val.continuousAt).add
-          (tendsto_const_nhds.sub <| ?_).abs
-        refine (continuousAt_inv_infDist_pt ?_).comp continuous_subtype_val.continuousAt
-        rw [s.isOpen.isClosed_compl.closure_eq, mem_compl_iff, not_not]
-        exact x.2
-      simp only [dist_self, sub_self, abs_zero, zero_add] at this
+      have : Tendsto (fun y : s ↦ dist (x : CompleteCopy s) (y : CompleteCopy s)) (𝓝 x) (𝓝 0) := by
+        have hd := (tendsto_const_nhds (x := x.1)).dist (continuous_subtype_val.continuousAt (x := x))
+        rw [dist_self] at hd
+        by_cases hs : (sᶜ : Set α).Nonempty
+        · -- The inverse of the distance to `sᶜ` is continuous on `s`.
+          let F : s → ℝ := fun y ↦ Checked.inv (infDist (y : α) sᶜ) (infDist_compl_pos hs y).ne'.isUnit
+          have hx' : x.1 ∉ closure (sᶜ : Set α) := by
+            rw [s.isOpen.isClosed_compl.closure_eq, mem_compl_iff, not_not]
+            exact x.2
+          have hc : Continuous fun y : s ↦
+              (⟨y.1, (infDist_compl_pos hs y).ne'⟩ : {y : α // infDist y sᶜ ≠ 0}) :=
+            continuous_subtype_val.subtype_mk _
+          have hF : ContinuousAt F x :=
+            ((continuousAt_inv_infDist_pt hs hx').comp (hc.continuousAt (x := x)) :)
+          have h2 := hd.add ((tendsto_const_nhds (x := F x)).sub hF).abs
+          rw [sub_self, abs_zero, add_zero] at h2
+          refine h2.congr fun y ↦ ?_
+          simp only [F, dist_eq, dite_eq_left hs, one_div₀]
+        · refine hd.congr fun y ↦ ?_
+          trace_state
+          simp only [dist_eq, dite_eq_right hs, add_zero]
       exact mem_of_superset (this <| gt_mem_nhds ε0) hε
 
 instance instCompleteSpace [CompleteSpace α] : CompleteSpace (CompleteCopy s) := by
@@ -220,26 +252,22 @@ instance instCompleteSpace [CompleteSpace α] : CompleteSpace (CompleteCopy s) :
   obtain ⟨x, xlim⟩ : ∃ x, Tendsto (fun n => (u n).1) atTop (𝓝 x) := cauchySeq_tendsto_of_complete A
   by_cases xs : x ∈ s
   · exact ⟨⟨x, xs⟩, tendsto_subtype_rng.2 xlim⟩
-  obtain ⟨C, hC⟩ : ∃ C, ∀ n, 1 / infDist (u n).1 sᶜ < C := by
-    refine ⟨(1 / 2) ^ 0 + 1 / infDist (u 0).1 sᶜ, fun n ↦ ?_⟩
-    rw [← sub_lt_iff_lt_add]
-    calc
-      _ ≤ |1 / infDist (u n).1 sᶜ - 1 / infDist (u 0).1 sᶜ| := le_abs_self _
-      _ = |1 / infDist (u 0).1 sᶜ - 1 / infDist (u n).1 sᶜ| := abs_sub_comm _ _
-      _ ≤ dist (u 0) (u n) := le_add_of_nonneg_left dist_nonneg
-      _ < (1 / 2) ^ 0 := hu 0 0 n le_rfl n.zero_le
-  have Cpos : 0 < C := lt_of_le_of_lt (div_nonneg zero_le_one infDist_nonneg) (hC 0)
-  have Hmem : ∀ {y}, y ∈ s ↔ 0 < infDist y sᶜ := fun {y} ↦ by
-    rw [← s.isOpen.isClosed_compl.notMem_iff_infDist_pos ⟨x, xs⟩]; exact not_not.symm
-  have I : ∀ n, 1 / C ≤ infDist (u n).1 sᶜ := fun n ↦ by
-    have : 0 < infDist (u n).1 sᶜ := Hmem.1 (u n).2
-    rw [div_le_iff₀' Cpos]
-    exact (div_le_iff₀ this).1 (hC n).le
-  have I' : 1 / C ≤ infDist x sᶜ :=
-    have : Tendsto (fun n => infDist (u n).1 sᶜ) atTop (𝓝 (infDist x sᶜ)) :=
-      ((continuous_infDist_pt (sᶜ : Set α)).tendsto x).comp xlim
-    ge_of_tendsto' this I
-  exact absurd (Hmem.2 <| lt_of_lt_of_le (div_pos one_pos Cpos) I') xs
+  -- The limit `x` lies in `sᶜ`. The distances from `u n` to `sᶜ` are bounded below, so `x` has
+  -- positive distance to `sᶜ`, a contradiction.
+  have hs : (sᶜ : Set α).Nonempty := ⟨x, xs⟩
+  have h0 : 0 < infDist (u 0).1 sᶜ := infDist_compl_pos hs (u 0)
+  obtain ⟨C, Cpos, I⟩ : ∃ C : ℝ, 0 < C ∧ ∀ n, 1 ≤ C * infDist (u n).1 sᶜ := by
+    refine ⟨1 + 1 / infDist (u 0).1 sᶜ, by positivity, fun n ↦ ?_⟩
+    have hn : 0 < infDist (u n).1 sᶜ := infDist_compl_pos hs (u n)
+    have hu0 := hu 0 0 n le_rfl n.zero_le
+    rw [dist_eq, dite_eq_left hs, pow_zero] at hu0
+    have h := (abs_sub_lt_iff.1 ((le_add_of_nonneg_left dist_nonneg).trans_lt hu0)).2
+    refine ((div_lt_iff₀ hn).1 ?_).le
+    linarith
+  have I' : 1 ≤ C * infDist x sᶜ :=
+    ge_of_tendsto' ((((continuous_infDist_pt (sᶜ : Set α)).tendsto x).comp xlim).const_mul C) I
+  have hx : 0 < infDist x sᶜ := pos_of_mul_pos_right (one_pos.trans_le I') Cpos.le
+  exact ((s.isOpen.isClosed_compl.notMem_iff_infDist_pos hs).2 hx xs).elim
 
 /-- An open subset of a Polish space is also Polish. -/
 theorem _root_.IsOpen.polishSpace {α : Type*} [TopologicalSpace α] [PolishSpace α] {s : Set α}

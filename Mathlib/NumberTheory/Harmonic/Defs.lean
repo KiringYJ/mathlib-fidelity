@@ -5,7 +5,7 @@ Authors: Koundinya Vajjha, Thomas Browning
 -/
 module
 
-public import Mathlib.Data.Rat.Defs
+public import Mathlib.Algebra.Ring.Rat
 public import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 
 /-!
@@ -20,7 +20,7 @@ This file defines the harmonic numbers.
 @[expose] public section
 
 /-- The nth-harmonic number defined as a finset sum of consecutive reciprocals. -/
-def harmonic : ℕ → ℚ := fun n => ∑ i ∈ Finset.range n, (↑(i + 1))⁻¹
+noncomputable def harmonic : ℕ → ℚ := fun n => ∑ i ∈ Finset.range n, (↑(i + 1))⁻¹
 
 @[simp]
 lemma harmonic_zero : harmonic 0 = 0 :=

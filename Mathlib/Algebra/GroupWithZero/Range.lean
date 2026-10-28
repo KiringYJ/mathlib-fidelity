@@ -184,13 +184,10 @@ lemma valueMonoid_eq_valueGroup : (valueMonoid f) = (valueGroup f).toSubmonoid :
   · simp only [union_subset_iff, subset_refl, true_and]
     intro u ⟨y, hy⟩
     have hy0 : y ≠ 0 := by
-      intro h
-      exact u⁻¹.ne_zero (by simpa [h] using hy.symm)
-    let v := Units.mk0 y hy0
-    have huv : Units.map f.toMonoidHom v = u⁻¹ := Units.ext hy
-    use (↑v⁻¹ : A)
-    change (↑(Units.map f.toMonoidHom v)⁻¹ : B) = (u : B)
-    rw [huv, inv_inv]
+      rintro rfl
+      exact u⁻¹.ne_zero (by simpa using hy.symm)
+    use y⁻¹
+    simp [hy, inv_eq_val_inv_of_eq_val₀ u⁻¹ rfl]
   · simp [Submonoid.closure_union]
 
 variable (f)
@@ -276,7 +273,7 @@ variable {r₁ s₁ r₂ s₂ : A}
 
 /-- The map sending a pair of nonzero `r s : A` to the element `(v r)⁻¹ * (v s)`
 of `ValueGroup₀ v`. -/
-def mk (r s : A) (hr : f r ≠ 0) (hs : f s ≠ 0) : valueGroup f :=
+noncomputable def mk (r s : A) (hr : f r ≠ 0) (hs : f s ≠ 0) : valueGroup f :=
     (⟨(.mk0 _ hr)⁻¹ * (.mk0 _ hs), mul_mem (inv_mem (mem_valueGroup _ (by simp)))
     (mem_valueGroup _ (by simp))⟩ : valueGroup f)
 
@@ -297,7 +294,7 @@ namespace ValueGroup₀
 
 /-- The map sending a pair of nonzero `r s : A` to the element `(v r)⁻¹ * (v s)`
 of `ValueGroup₀ v`. -/
-def mk [DecidablePred fun b : B ↦ b = 0] (r s : A) : ValueGroup₀ f :=
+noncomputable def mk [DecidablePred fun b : B ↦ b = 0] (r s : A) : ValueGroup₀ f :=
     if h : f r = 0 ∨ f s = 0 then 0 else
     valueGroup.mk f r s ((not_or.mp h).1) ((not_or.mp h).2)
 

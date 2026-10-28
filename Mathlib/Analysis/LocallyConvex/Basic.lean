@@ -191,7 +191,7 @@ theorem Balanced.smul_mono (hs : Balanced 𝕝 s) {a : 𝕝} (h : ‖a‖ ≤ �
   · rw [norm_zero, norm_le_zero_iff] at h
     simp only [h, ← image_smul, zero_smul, Subset.rfl]
   · calc
-      a • s = b • (b⁻¹ • a) • s := by rw [smul_assoc, smul_inv_smul₀ hb]
+      a • s = b • (b⁻¹ • a) • s := by rw [smul_assoc, smul_inv_smul₀ (ha := hb.isUnit)]
       _ ⊆ b • s := smul_set_mono <| hs _ <| by
         rw [norm_smul, norm_inv, ← div_eq_inv_mul]
         exact div_le_one_of_le₀ h (norm_nonneg _)
@@ -205,7 +205,7 @@ theorem Balanced.smul_mem_mono [SMulCommClass 𝕝 𝕜 E] (hs : Balanced 𝕝 s
         refine hs.smul_mem ?_ ha
         rw [norm_smul, norm_inv, ← div_eq_inv_mul]
         exact div_le_one_of_le₀ hba (norm_nonneg _)
-      (a⁻¹ • b) • a • x = b • x := by rw [smul_comm, smul_assoc, smul_inv_smul₀ ha₀]
+      (a⁻¹ • b) • a • x = b • x := by rw [smul_comm, smul_assoc, smul_inv_smul₀ (ha := ha₀.isUnit)]
 
 theorem Balanced.subset_smul (hs : Balanced 𝕜 s) (ha : 1 ≤ ‖a‖) : s ⊆ a • s := by
   rw [← @norm_one 𝕜] at ha; simpa using hs.smul_mono ha
@@ -280,7 +280,7 @@ theorem Absorbent.eq_univ_of_smulMemClass {V : S} (hV : Absorbent 𝕜 (V : Set 
   intro x
   obtain ⟨c, hc, hc'⟩ :=
     ((absorbent_iff_eventually_nhdsNE_zero.mp hV x).and eventually_mem_nhdsWithin).exists
-  rw [← inv_smul_smul₀ hc' x]
+  rw [← inv_smul_smul₀ (ha := hc'.isUnit) x]
   exact SMulMemClass.smul_mem c⁻¹ hc
 
 theorem Absorbent.submodule_eq_top {V : Submodule 𝕜 E} (hV : Absorbent 𝕜 (V : Set E)) :

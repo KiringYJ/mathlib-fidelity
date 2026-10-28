@@ -194,19 +194,36 @@ lemma prod_eq_prod_one_sub_of_mem_line_point_lineMap {t : Triangle k P} {r : Fin
       Finset.prod_eq_zero (i := i + 1) (by simp) (by simp [hri1])]
   · exact mul_left_cancel₀ hc hcr
 
+/-- If the lines of **Ceva's theorem** for a triangle concur and no dividing point is the first
+endpoint of its side (`r i ≠ 0`), then none is the second endpoint (`1 - r i ≠ 0`). These are the
+denominators of `prod_div_one_sub_eq_one_of_mem_line_point_lineMap`. -/
+lemma one_sub_ne_zero_of_mem_line_point_lineMap {t : Triangle k P} {r : Fin 3 → k}
+    (hr0 : ∀ i, r i ≠ 0) {p' : P} (hp' : ∀ i : Fin 3, p' ∈
+      affineSpan k {t.points i, AffineMap.lineMap (t.points (i + 1)) (t.points (i + 2)) (r i)})
+    (i : Fin 3) : 1 - r i ≠ 0 := by
+  have : Nontrivial k := ⟨⟨r i, 0, hr0 i⟩⟩
+  have h : ∏ j, (1 - r j) ≠ 0 :=
+    prod_eq_prod_one_sub_of_mem_line_point_lineMap hp' ▸ Finset.prod_ne_zero_iff.2 fun j _ ↦ hr0 j
+  exact Finset.prod_ne_zero_iff.1 h i (Finset.mem_univ i)
+
 end CommRing
 
 section Field
 
 variable [Field k] [AddCommGroup V] [Module k V] [AffineSpace V P]
 
-/-- **Ceva's theorem** for a triangle, expressed using division. -/
+/-- **Ceva's theorem** for a triangle, expressed using division. The denominators `1 - r i` are
+nonzero by `one_sub_ne_zero_of_mem_line_point_lineMap`. -/
 lemma prod_div_one_sub_eq_one_of_mem_line_point_lineMap {t : Triangle k P} {r : Fin 3 → k}
     (hr0 : ∀ i, r i ≠ 0) {p' : P} (hp' : ∀ i : Fin 3, p' ∈
       affineSpan k {t.points i, AffineMap.lineMap (t.points (i + 1)) (t.points (i + 2)) (r i)}) :
-    ∏ i, r i / (1 - r i) = 1 := by
-  rw [Finset.prod_div_distrib, ← prod_eq_prod_one_sub_of_mem_line_point_lineMap hp', div_self]
-  exact Finset.prod_ne_zero_iff.2 fun _ _ ↦ hr0 _
+    ∏ i, Checked.div (r i) (1 - r i)
+      (one_sub_ne_zero_of_mem_line_point_lineMap hr0 hp' i).isUnit = 1 := by
+  have hprod := prod_eq_prod_one_sub_of_mem_line_point_lineMap hp'
+  have hne : ∏ i, (1 - r i) ≠ 0 := hprod ▸ Finset.prod_ne_zero_iff.2 fun i _ ↦ hr0 i
+  apply mul_right_cancel₀ hne
+  rw [← Finset.prod_mul_distrib, one_mul, ← hprod]
+  exact Finset.prod_congr rfl fun i _ ↦ div_mul_cancel₀ (r i)
 
 end Field
 

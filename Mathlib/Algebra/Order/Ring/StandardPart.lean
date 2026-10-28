@@ -29,8 +29,8 @@ field, meaning we can uniquely embed it in the reals.
 The ordered ring homomorphism `ArchimedeanClass.stdPart : FiniteElement K →+*o ℝ` uses this unique
 embedding. Its input type excludes infinite elements, and its kernel consists of infinitesimals.
 Use the ordinary homomorphism laws for arithmetic on finite elements. Inverses are available for
-units of the ring of finite elements, via `map_units_inv`; finite elements need not form a field.
-This construction generalizes the standard part on `Hyperreal`.
+units of the ring of finite elements, via `Units.val_inv_eq_inv_val₀` and `map_inv₀`; finite
+elements need not form a field. This construction generalizes the standard part on `Hyperreal`.
 
 ## References
 
@@ -243,7 +243,7 @@ theorem mk_ratCast (q : ℚ) : mk (q : FiniteElement K) = q := by
   cases q with | div n d hd
   rw [← mul_left_inj' (c := ↑d) (mod_cast hd), ← map_natCast mk d, ← map_mul,
     ← FiniteElement.mk_natCast, FiniteElement.mk_mul_mk]
-  simp_all
+  simp_all [Rat.fraction_eq_div, div_mul_cancel₀]
 
 /-- An embedding from an Archimedean ring into `K` induces an embedding into
 `FiniteResidueField K`. -/

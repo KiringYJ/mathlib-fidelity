@@ -41,8 +41,8 @@ theorem birkhoffSum_ae_eq_of_ae_eq (hf : QuasiMeasurePreserving f μ μ) (hφ : 
 /-- If observables `φ` and `ψ` are `μ`-a.e. equal then the corresponding `birkhoffAverage` are
 `μ`-a.e. equal. -/
 theorem birkhoffAverage_ae_eq_of_ae_eq (R : Type*) [DivisionSemiring R] [Module R M]
-    (hf : QuasiMeasurePreserving f μ μ) (hφ : φ =ᵐ[μ] ψ) n :
-    birkhoffAverage R f φ n =ᵐ[μ] birkhoffAverage R f ψ n :=
+    (hf : QuasiMeasurePreserving f μ μ) (hφ : φ =ᵐ[μ] ψ) (n : ℕ) {hn : IsUnit (n : R)} :
+    birkhoffAverage R f φ n hn =ᵐ[μ] birkhoffAverage R f ψ n hn :=
   EventuallyEq.const_smul (birkhoffSum_ae_eq_of_ae_eq hf hφ n) (n : R)⁻¹
 
 end MeasureTheory.Measure.QuasiMeasurePreserving

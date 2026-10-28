@@ -498,31 +498,62 @@ lemma norm_eq_zero_iff_eq_zero {z : QuadraticAlgebra K a b} :
     · exfalso
       rw [← pow_two, sub_eq_zero, ← eq_sub_iff_add_eq] at hz
       apply Hab.out (-z.re / z.im)
-      grind
+      field_simp
+      rw [neg_sq, hz]
+      ring
   · intro hz
     simp [hz]
 
-@[simps] instance : NNRatCast (QuadraticAlgebra K a b) where nnratCast q := ⟨q, 0⟩
-@[simps] instance : RatCast (QuadraticAlgebra K a b) where ratCast q := ⟨q, 0⟩
+@[simps] instance [CharZero K] : NNRatCast (QuadraticAlgebra K a b) where nnratCast q := ⟨q, 0⟩
+@[simps] instance [CharZero K] : RatCast (QuadraticAlgebra K a b) where ratCast q := ⟨q, 0⟩
 
-@[simps -isSimp, simps!] instance : Inv (QuadraticAlgebra K a b) where inv z := (norm z)⁻¹ • star z
-@[simps -isSimp, simps!] instance : Div (QuadraticAlgebra K a b) where div w z := w * z⁻¹
+omit Hab in
+/-- In characteristic zero, the base field has characteristic zero as well. -/
+lemma charZero_of_charZero [CharZero (QuadraticAlgebra K a b)] : CharZero K :=
+  CharZero.of_map_natCast (fun r : K ↦ (⟨r, 0⟩ : QuadraticAlgebra K a b)) fun n ↦ by ext <;> simp
 
-/-- If `K` is a field and there is no `r : K` such that `r ^ 2 = a + b * r`,
-then `QuadraticAlgebra K a b` is a field. -/
-instance : Field (QuadraticAlgebra K a b) where
-  inv_zero := by ext <;> simp
-  mul_inv_cancel z hz := by
+/-- If `K` is a field and there is no `r : K` such that `r ^ 2 = a + b * r`, then
+`QuadraticAlgebra K a b` is a field: a nonzero `z` has the inverse `(norm z)⁻¹ • star z`. In
+characteristic zero, its rational embeddings are `q ↦ ⟨q, 0⟩` and the actions of `ℚ≥0` and `ℚ`
+are the componentwise ones. -/
+noncomputable instance : Field (QuadraticAlgebra K a b) where
+  isUnit_of_ne_zero {z} hz := by
     rw [ne_eq, ← norm_eq_zero_iff_eq_zero] at hz
-    simp only [inv_def, Algebra.mul_smul_comm]
-    rw [← C_mul_eq_smul, C_eq_algebraMap, ← algebraMap_norm_eq_mul_star, ← map_mul,
-      inv_mul_cancel₀ hz, map_one]
-  nnratCast_def q := by ext <;> simp [sq]; field_simp; simp [NNRat.cast_def]
-  ratCast_def q := by ext <;> simp [sq]; field_simp; simp [Rat.cast_def]
-  nnqsmul := (· • ·)
-  qsmul := (· • ·)
-  nnqsmul_def q x := by ext <;> simp [NNRat.smul_def]
-  qsmul_def q x := by ext <;> simp [Rat.smul_def]
+    refine IsUnit.of_mul_eq_one ((norm z)⁻¹ • star z) ?_
+    rw [Algebra.mul_smul_comm, ← C_mul_eq_smul, C_eq_algebraMap, ← algebraMap_norm_eq_mul_star,
+      ← map_mul, inv_mul_cancel₀, map_one]
+  nnratCastOfCharZero _ q :=
+    haveI := charZero_of_charZero (a := a) (b := b)
+    (q : QuadraticAlgebra K a b)
+  nnratCastOfCharZero_mul_den _ q := by
+    have := charZero_of_charZero (a := a) (b := b)
+    ext <;> simp [NNRat.cast_mul_den]
+  ratCastOfCharZero _ q :=
+    haveI := charZero_of_charZero (a := a) (b := b)
+    (q : QuadraticAlgebra K a b)
+  ratCastOfCharZero_mul_den _ q := by
+    have := charZero_of_charZero (a := a) (b := b)
+    ext <;> simp [Rat.cast_mul_den]
+  nnqsmulOfCharZero _ q z :=
+    haveI := charZero_of_charZero (a := a) (b := b)
+    q • z
+  nnqsmulOfCharZero_eq_mul _ q z := by
+    have := charZero_of_charZero (a := a) (b := b)
+    ext <;> simp [NNRat.smul_def]
+  qsmulOfCharZero _ q z :=
+    haveI := charZero_of_charZero (a := a) (b := b)
+    q • z
+  qsmulOfCharZero_eq_mul _ q z := by
+    have := charZero_of_charZero (a := a) (b := b)
+    ext <;> simp [Rat.smul_def]
+
+/-- The inverse of an invertible element of a quadratic field. -/
+lemma inv_def (z : QuadraticAlgebra K a b) {hz : IsUnit z} :
+    z⁻¹ =
+      Checked.inv (norm z) (Ne.isUnit (norm_eq_zero_iff_eq_zero.not.2 hz.ne_zero)) • star z := by
+  refine inv_eq_of_mul_eq_one_right₀ ?_
+  rw [Algebra.mul_smul_comm, ← C_mul_eq_smul, C_eq_algebraMap, ← algebraMap_norm_eq_mul_star,
+    ← map_mul, inv_mul_cancel₀, map_one]
 
 /-- When `b = 0`, the `Field` instance is inferable from `¬ IsSquare a` alone: it provides the
 no-root condition `∀ r, r ^ 2 ≠ a + 0 * r`. -/
@@ -530,7 +561,8 @@ instance {a : K} [Fact (¬ IsSquare a)] : Fact (∀ r : K, r ^ 2 ≠ a + 0 * r) 
   ⟨fun r hr ↦ Fact.out (p := ¬ IsSquare a) ⟨r, by simpa [sq] using hr.symm⟩⟩
 
 -- The `b = 0` bridge makes the `Field` instance inferable from `¬ IsSquare a` alone.
-example {a : K} [Fact (¬ IsSquare a)] : Field (QuadraticAlgebra K a 0) := inferInstance
+noncomputable example {a : K} [Fact (¬ IsSquare a)] : Field (QuadraticAlgebra K a 0) :=
+  inferInstance
 
 -- Over `ℚ`, the algebra structure of `QuadraticAlgebra.instAlgebra` and the one coming from the
 -- `Field` structure through `DivisionRing.toRatAlgebra` are the same instance.

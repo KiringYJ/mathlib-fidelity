@@ -874,104 +874,148 @@ theorem coe_sinOrderIso_apply (x : Icc (-(π / 2)) (π / 2)) : (sinOrderIso x : 
 theorem sinOrderIso_apply (x : Icc (-(π / 2)) (π / 2)) : sinOrderIso x = ⟨sin x, sin_mem_Icc x⟩ :=
   rfl
 
-@[simp]
-theorem tan_pi_div_four : tan (π / 4) = 1 := by
-  rw [tan_eq_sin_div_cos, cos_pi_div_four, sin_pi_div_four]
-  have h : √2 / 2 > 0 := by positivity
-  exact div_self (ne_of_gt h)
+/-- A tangent at a point where the sine does not vanish is nonzero. -/
+theorem tan_ne_zero_of_sin_ne_zero {x : ℝ} {hx : cos x ≠ 0} (h : sin x ≠ 0) : tan x hx ≠ 0 := by
+  rw [tan_eq_sin_div_cos]
+  exact div_ne_zero h
+
+/-- Two tangents agree when the sines and the cosines are proportional by the same factor. -/
+private theorem tan_eq_tan_of_eq_mul {x y c : ℝ} (hs : sin y = c * sin x) (hc : cos y = c * cos x)
+    {hy : cos y ≠ 0} {hx : cos x ≠ 0} : tan y hy = tan x hx := by
+  simp only [tan_eq_sin_div_cos, hs, hc]
+  exact mul_div_mul_left _ _
+
+/-- Two tangents are opposite when the sines are proportional with the opposite factor. -/
+private theorem tan_eq_neg_tan_of_eq_mul {x y c : ℝ} (hs : sin y = -(c * sin x))
+    (hc : cos y = c * cos x) {hy : cos y ≠ 0} {hx : cos x ≠ 0} : tan y hy = -tan x hx := by
+  simp only [tan_eq_sin_div_cos, hs, hc, neg_div₀]
+  rw [mul_div_mul_left]
 
 @[simp]
-theorem tan_pi_div_two : tan (π / 2) = 0 := by simp [tan_eq_sin_div_cos]
+theorem tan_pi_div_four : tan (π / 4) (by rw [cos_pi_div_four]; positivity) = 1 := by
+  simp only [tan_eq_sin_div_cos, cos_pi_div_four, sin_pi_div_four]
+  exact div_self
 
 @[simp]
-theorem tan_pi_div_six : tan (π / 6) = 1 / √3 := by
-  rw [tan_eq_sin_div_cos, sin_pi_div_six, cos_pi_div_six]
+theorem tan_pi_div_six : tan (π / 6) (by rw [cos_pi_div_six]; positivity) = 1 / √3 := by
+  simp only [tan_eq_sin_div_cos, sin_pi_div_six, cos_pi_div_six]
   ring
 
 @[simp]
-theorem tan_pi_div_three : tan (π / 3) = √3 := by
-  rw [tan_eq_sin_div_cos, sin_pi_div_three, cos_pi_div_three]
+theorem tan_pi_div_three : tan (π / 3) (by rw [cos_pi_div_three]; norm_num) = √3 := by
+  simp only [tan_eq_sin_div_cos, sin_pi_div_three, cos_pi_div_three]
   ring
 
-theorem tan_pos_of_pos_of_lt_pi_div_two {x : ℝ} (h0x : 0 < x) (hxp : x < π / 2) : 0 < tan x := by
+theorem tan_pos_of_pos_of_lt_pi_div_two {x : ℝ} (h0x : 0 < x) (hxp : x < π / 2) :
+    0 < tan x (cos_pos_of_mem_Ioo ⟨by linarith [pi_pos], hxp⟩).ne' := by
   rw [tan_eq_sin_div_cos]
   exact div_pos (sin_pos_of_pos_of_lt_pi h0x (by linarith)) (cos_pos_of_mem_Ioo ⟨by linarith, hxp⟩)
 
-theorem tan_nonneg_of_nonneg_of_le_pi_div_two {x : ℝ} (h0x : 0 ≤ x) (hxp : x ≤ π / 2) : 0 ≤ tan x :=
-  match lt_or_eq_of_le h0x, lt_or_eq_of_le hxp with
-  | Or.inl hx0, Or.inl hxp => le_of_lt (tan_pos_of_pos_of_lt_pi_div_two hx0 hxp)
-  | Or.inl _, Or.inr hxp => by simp [hxp, tan_eq_sin_div_cos]
-  | Or.inr hx0, _ => by simp [hx0.symm]
+theorem tan_nonneg_of_nonneg_of_le_pi_div_two {x : ℝ} (h0x : 0 ≤ x) (hxp : x < π / 2) :
+    0 ≤ tan x (cos_pos_of_mem_Ioo ⟨by linarith [pi_pos], hxp⟩).ne' := by
+  rw [tan_eq_sin_div_cos]
+  exact div_nonneg (sin_nonneg_of_nonneg_of_le_pi h0x (by linarith))
+    (cos_pos_of_mem_Ioo ⟨by linarith, hxp⟩).le
 
-theorem tan_neg_of_neg_of_pi_div_two_lt {x : ℝ} (hx0 : x < 0) (hpx : -(π / 2) < x) : tan x < 0 :=
-  neg_pos.1 (tan_neg x ▸ tan_pos_of_pos_of_lt_pi_div_two (by linarith) (by linarith [pi_pos]))
+theorem tan_neg_of_neg_of_pi_div_two_lt {x : ℝ} (hx0 : x < 0) (hpx : -(π / 2) < x) :
+    tan x (cos_pos_of_mem_Ioo ⟨hpx, by linarith [pi_pos]⟩).ne' < 0 := by
+  rw [tan_eq_sin_div_cos]
+  exact div_neg_of_neg_of_pos (sin_neg_of_neg_of_neg_pi_lt hx0 (by linarith))
+    (cos_pos_of_mem_Ioo ⟨hpx, by linarith⟩)
 
-theorem tan_nonpos_of_nonpos_of_neg_pi_div_two_le {x : ℝ} (hx0 : x ≤ 0) (hpx : -(π / 2) ≤ x) :
-    tan x ≤ 0 :=
-  neg_nonneg.1 (tan_neg x ▸ tan_nonneg_of_nonneg_of_le_pi_div_two (by linarith) (by linarith))
+theorem tan_nonpos_of_nonpos_of_neg_pi_div_two_le {x : ℝ} (hx0 : x ≤ 0) (hpx : -(π / 2) < x) :
+    tan x (cos_pos_of_mem_Ioo ⟨hpx, by linarith [pi_pos]⟩).ne' ≤ 0 := by
+  rw [tan_eq_sin_div_cos]
+  exact div_nonpos_of_nonpos_of_nonneg (sin_nonpos_of_nonpos_of_neg_pi_le hx0 (by linarith))
+    (cos_pos_of_mem_Ioo ⟨hpx, by linarith⟩).le
 
-theorem strictMonoOn_tan : StrictMonoOn tan (Ioo (-(π / 2)) (π / 2)) := by
-  rintro x hx y hy hlt
-  rw [tan_eq_sin_div_cos, tan_eq_sin_div_cos,
-    div_lt_div_iff₀ (cos_pos_of_mem_Ioo hx) (cos_pos_of_mem_Ioo hy), mul_comm, ← sub_pos, ← sin_sub]
+/-- The tangent is strictly monotone on `(-(π / 2), π / 2)`, as a function on that interval. -/
+theorem strictMonoOn_tan :
+    StrictMono fun x : Ioo (-(π / 2)) (π / 2) ↦ tan x (cos_pos_of_mem_Ioo x.2).ne' := by
+  rintro ⟨x, hx⟩ ⟨y, hy⟩ (hlt : x < y)
+  simp only [tan_eq_sin_div_cos]
+  rw [div_lt_div_iff₀ (cos_pos_of_mem_Ioo hx) (cos_pos_of_mem_Ioo hy), mul_comm, ← sub_pos,
+    ← sin_sub]
   exact sin_pos_of_pos_of_lt_pi (sub_pos.2 hlt) <| by linarith [hx.1, hy.2]
 
 theorem tan_lt_tan_of_lt_of_lt_pi_div_two {x y : ℝ} (hx₁ : -(π / 2) < x) (hy₂ : y < π / 2)
-    (hxy : x < y) : tan x < tan y :=
-  strictMonoOn_tan ⟨hx₁, hxy.trans hy₂⟩ ⟨hx₁.trans hxy, hy₂⟩ hxy
+    (hxy : x < y) :
+    tan x (cos_pos_of_mem_Ioo ⟨hx₁, hxy.trans hy₂⟩).ne' <
+      tan y (cos_pos_of_mem_Ioo ⟨hx₁.trans hxy, hy₂⟩).ne' :=
+  strictMonoOn_tan (a := ⟨x, hx₁, hxy.trans hy₂⟩) (b := ⟨y, hx₁.trans hxy, hy₂⟩) hxy
 
 theorem tan_lt_tan_of_nonneg_of_lt_pi_div_two {x y : ℝ} (hx₁ : 0 ≤ x) (hy₂ : y < π / 2)
-    (hxy : x < y) : tan x < tan y :=
-  tan_lt_tan_of_lt_of_lt_pi_div_two (by linarith) hy₂ hxy
+    (hxy : x < y) :
+    tan x (cos_pos_of_mem_Ioo ⟨by linarith [pi_pos], hxy.trans hy₂⟩).ne' <
+      tan y (cos_pos_of_mem_Ioo ⟨by linarith [pi_pos], hy₂⟩).ne' :=
+  tan_lt_tan_of_lt_of_lt_pi_div_two (by linarith [pi_pos]) hy₂ hxy
 
-theorem injOn_tan : InjOn tan (Ioo (-(π / 2)) (π / 2)) :=
-  strictMonoOn_tan.injOn
+/-- The tangent is injective on `(-(π / 2), π / 2)`, as a function on that interval. -/
+theorem injOn_tan :
+    Function.Injective fun x : Ioo (-(π / 2)) (π / 2) ↦ tan x (cos_pos_of_mem_Ioo x.2).ne' :=
+  strictMonoOn_tan.injective
 
 theorem tan_inj_of_lt_of_lt_pi_div_two {x y : ℝ} (hx₁ : -(π / 2) < x) (hx₂ : x < π / 2)
-    (hy₁ : -(π / 2) < y) (hy₂ : y < π / 2) (hxy : tan x = tan y) : x = y :=
-  injOn_tan ⟨hx₁, hx₂⟩ ⟨hy₁, hy₂⟩ hxy
-
-theorem tan_periodic : Function.Periodic tan π := by
-  simpa only [Function.Periodic, tan_eq_sin_div_cos] using! sin_antiperiodic.div cos_antiperiodic
+    (hy₁ : -(π / 2) < y) (hy₂ : y < π / 2)
+    (hxy : tan x (cos_pos_of_mem_Ioo ⟨hx₁, hx₂⟩).ne' = tan y (cos_pos_of_mem_Ioo ⟨hy₁, hy₂⟩).ne') :
+    x = y :=
+  congrArg Subtype.val (@injOn_tan ⟨x, hx₁, hx₂⟩ ⟨y, hy₁, hy₂⟩ hxy)
 
 @[simp]
-theorem tan_pi : tan π = 0 := by rw [tan_periodic.eq, tan_zero]
+theorem tan_pi : tan π (by rw [cos_pi]; norm_num) = 0 := by
+  rw [tan_eq_sin_div_cos, sin_pi, zero_div]
 
-theorem tan_add_pi (x : ℝ) : tan (x + π) = tan x :=
-  tan_periodic x
+theorem tan_add_pi (x : ℝ) {h : cos (x + π) ≠ 0} :
+    tan (x + π) h = tan x fun hx ↦ h (by rw [cos_add_pi, hx, neg_zero]) :=
+  tan_eq_tan_of_eq_mul (c := -1) (by rw [sin_add_pi, neg_one_mul])
+    (by rw [cos_add_pi, neg_one_mul])
 
-theorem tan_sub_pi (x : ℝ) : tan (x - π) = tan x :=
-  tan_periodic.sub_eq x
+theorem tan_sub_pi (x : ℝ) {h : cos (x - π) ≠ 0} :
+    tan (x - π) h = tan x fun hx ↦ h (by rw [cos_sub_pi, hx, neg_zero]) :=
+  tan_eq_tan_of_eq_mul (c := -1) (by rw [sin_sub_pi, neg_one_mul])
+    (by rw [cos_sub_pi, neg_one_mul])
 
-theorem tan_pi_sub (x : ℝ) : tan (π - x) = -tan x :=
-  tan_neg x ▸ tan_periodic.sub_eq'
+theorem tan_pi_sub (x : ℝ) {h : cos (π - x) ≠ 0} :
+    tan (π - x) h = -tan x fun hx ↦ h (by rw [cos_pi_sub, hx, neg_zero]) :=
+  tan_eq_neg_tan_of_eq_mul (c := -1) (by rw [sin_pi_sub, neg_one_mul, neg_neg])
+    (by rw [cos_pi_sub, neg_one_mul])
 
-theorem tan_pi_div_two_sub (x : ℝ) : tan (π / 2 - x) = (tan x)⁻¹ := by
-  rw [tan_eq_sin_div_cos, tan_eq_sin_div_cos, inv_div, sin_pi_div_two_sub, cos_pi_div_two_sub]
+theorem tan_pi_div_two_sub (x : ℝ) {h : cos (π / 2 - x) ≠ 0} (hx : cos x ≠ 0) :
+    tan (π / 2 - x) h =
+      Checked.inv (tan x hx) (tan_ne_zero_of_sin_ne_zero (cos_pi_div_two_sub x ▸ h)).isUnit := by
+  simp only [tan_eq_sin_div_cos, inv_div₀, sin_pi_div_two_sub, cos_pi_div_two_sub]
 
-theorem tan_nat_mul_pi (n : ℕ) : tan (n * π) = 0 :=
-  tan_zero ▸ tan_periodic.nat_mul_eq n
+theorem tan_nat_mul_pi (n : ℕ) :
+    tan (n * π) (by rw [cos_nat_mul_pi]; exact pow_ne_zero _ (by norm_num)) = 0 := by
+  rw [tan_eq_sin_div_cos, sin_nat_mul_pi, zero_div]
 
-theorem tan_int_mul_pi (n : ℤ) : tan (n * π) = 0 :=
-  tan_zero ▸ tan_periodic.int_mul_eq n
+theorem tan_int_mul_pi (n : ℤ) :
+    tan (n * π) (by rw [cos_int_mul_pi]; exact zpow_ne_zero n (by norm_num)) = 0 := by
+  rw [tan_eq_sin_div_cos, sin_int_mul_pi, zero_div]
 
-theorem tan_add_nat_mul_pi (x : ℝ) (n : ℕ) : tan (x + n * π) = tan x :=
-  tan_periodic.nat_mul n x
+theorem tan_add_nat_mul_pi (x : ℝ) (n : ℕ) {h : cos (x + n * π) ≠ 0} :
+    tan (x + n * π) h = tan x fun hx ↦ h (by rw [cos_add_nat_mul_pi, hx, mul_zero]) :=
+  tan_eq_tan_of_eq_mul (sin_add_nat_mul_pi x n) (cos_add_nat_mul_pi x n)
 
-theorem tan_add_int_mul_pi (x : ℝ) (n : ℤ) : tan (x + n * π) = tan x :=
-  tan_periodic.int_mul n x
+theorem tan_add_int_mul_pi (x : ℝ) (n : ℤ) {h : cos (x + n * π) ≠ 0} :
+    tan (x + n * π) h = tan x fun hx ↦ h (by rw [cos_add_int_mul_pi, hx, mul_zero]) :=
+  tan_eq_tan_of_eq_mul (sin_add_int_mul_pi x n) (cos_add_int_mul_pi x n)
 
-theorem tan_sub_nat_mul_pi (x : ℝ) (n : ℕ) : tan (x - n * π) = tan x :=
-  tan_periodic.sub_nat_mul_eq n
+theorem tan_sub_nat_mul_pi (x : ℝ) (n : ℕ) {h : cos (x - n * π) ≠ 0} :
+    tan (x - n * π) h = tan x fun hx ↦ h (by rw [cos_sub_nat_mul_pi, hx, mul_zero]) :=
+  tan_eq_tan_of_eq_mul (sin_sub_nat_mul_pi x n) (cos_sub_nat_mul_pi x n)
 
-theorem tan_sub_int_mul_pi (x : ℝ) (n : ℤ) : tan (x - n * π) = tan x :=
-  tan_periodic.sub_int_mul_eq n
+theorem tan_sub_int_mul_pi (x : ℝ) (n : ℤ) {h : cos (x - n * π) ≠ 0} :
+    tan (x - n * π) h = tan x fun hx ↦ h (by rw [cos_sub_int_mul_pi, hx, mul_zero]) :=
+  tan_eq_tan_of_eq_mul (sin_sub_int_mul_pi x n) (cos_sub_int_mul_pi x n)
 
-theorem tan_nat_mul_pi_sub (x : ℝ) (n : ℕ) : tan (n * π - x) = -tan x :=
-  tan_neg x ▸ tan_periodic.nat_mul_sub_eq n
+theorem tan_nat_mul_pi_sub (x : ℝ) (n : ℕ) {h : cos (n * π - x) ≠ 0} :
+    tan (n * π - x) h = -tan x fun hx ↦ h (by rw [cos_nat_mul_pi_sub, hx, mul_zero]) :=
+  tan_eq_neg_tan_of_eq_mul (sin_nat_mul_pi_sub x n) (cos_nat_mul_pi_sub x n)
 
-theorem tan_int_mul_pi_sub (x : ℝ) (n : ℤ) : tan (n * π - x) = -tan x :=
-  tan_neg x ▸ tan_periodic.int_mul_sub_eq n
+theorem tan_int_mul_pi_sub (x : ℝ) (n : ℤ) {h : cos (n * π - x) ≠ 0} :
+    tan (n * π - x) h = -tan x fun hx ↦ h (by rw [cos_int_mul_pi_sub, hx, mul_zero]) :=
+  tan_eq_neg_tan_of_eq_mul (sin_int_mul_pi_sub x n) (cos_int_mul_pi_sub x n)
 
 theorem tendsto_sin_pi_div_two : Tendsto sin (𝓝[<] (π / 2)) (𝓝 1) := by
   convert! continuous_sin.continuousWithinAt.tendsto
@@ -984,11 +1028,17 @@ theorem tendsto_cos_pi_div_two : Tendsto cos (𝓝[<] (π / 2)) (𝓝[>] 0) := b
   · filter_upwards [Ioo_mem_nhdsLT (neg_lt_self pi_div_two_pos)] with x hx
     exact cos_pos_of_mem_Ioo hx
 
-theorem tendsto_tan_pi_div_two : Tendsto tan (𝓝[<] (π / 2)) atTop := by
-  convert!
-    tendsto_cos_pi_div_two.inv_tendsto_nhdsGT_zero.atTop_mul_pos zero_lt_one
-      tendsto_sin_pi_div_two using 1
-  simp only [Pi.inv_apply, ← div_eq_inv_mul, ← tan_eq_sin_div_cos]
+/-- The tangent tends to `+∞` at `π / 2` from the left, as a function on its domain. -/
+theorem tendsto_tan_pi_div_two :
+    Tendsto (fun x : {x : ℝ // cos x ≠ 0} ↦ tan x x.2) (comap Subtype.val (𝓝[<] (π / 2)))
+      atTop := by
+  have hcos : Tendsto (fun x : {x : ℝ // cos x ≠ 0} ↦ ((Units.mk0 (cos x) x.2 : ℝˣ) : ℝ))
+      (comap Subtype.val (𝓝[<] (π / 2))) (𝓝[>] 0) :=
+    tendsto_cos_pi_div_two.comp tendsto_comap
+  refine (hcos.inv_tendsto_nhdsGT_zero.atTop_mul_pos zero_lt_one
+    (tendsto_sin_pi_div_two.comp tendsto_comap)).congr fun x ↦ ?_
+  rw [tan_eq_sin_div_cos, div_eq_inv_mul₀]
+  rfl
 
 theorem tendsto_sin_neg_pi_div_two : Tendsto sin (𝓝[>] (-(π / 2))) (𝓝 (-1)) := by
   convert! continuous_sin.continuousWithinAt.tendsto using 2
@@ -1001,11 +1051,17 @@ theorem tendsto_cos_neg_pi_div_two : Tendsto cos (𝓝[>] (-(π / 2))) (𝓝[>] 
   · filter_upwards [Ioo_mem_nhdsGT (neg_lt_self pi_div_two_pos)] with x hx
     exact cos_pos_of_mem_Ioo hx
 
-theorem tendsto_tan_neg_pi_div_two : Tendsto tan (𝓝[>] (-(π / 2))) atBot := by
-  convert!
-    tendsto_cos_neg_pi_div_two.inv_tendsto_nhdsGT_zero.atTop_mul_neg (by simp)
-      tendsto_sin_neg_pi_div_two using 1
-  simp only [Pi.inv_apply, ← div_eq_inv_mul, ← tan_eq_sin_div_cos]
+/-- The tangent tends to `-∞` at `-(π / 2)` from the right, as a function on its domain. -/
+theorem tendsto_tan_neg_pi_div_two :
+    Tendsto (fun x : {x : ℝ // cos x ≠ 0} ↦ tan x x.2) (comap Subtype.val (𝓝[>] (-(π / 2))))
+      atBot := by
+  have hcos : Tendsto (fun x : {x : ℝ // cos x ≠ 0} ↦ ((Units.mk0 (cos x) x.2 : ℝˣ) : ℝ))
+      (comap Subtype.val (𝓝[>] (-(π / 2)))) (𝓝[>] 0) :=
+    tendsto_cos_neg_pi_div_two.comp tendsto_comap
+  refine (hcos.inv_tendsto_nhdsGT_zero.atTop_mul_neg (by simp)
+    (tendsto_sin_neg_pi_div_two.comp tendsto_comap)).congr fun x ↦ ?_
+  rw [tan_eq_sin_div_cos, div_eq_inv_mul₀]
+  rfl
 
 end Real
 
@@ -1162,44 +1218,84 @@ theorem cos_sub_pi_div_two (x : ℂ) : cos (x - π / 2) = sin x := by simp [sub_
 theorem cos_pi_div_two_sub (x : ℂ) : cos (π / 2 - x) = sin x := by
   rw [← cos_neg, neg_sub, cos_sub_pi_div_two]
 
-theorem tan_periodic : Function.Periodic tan π := by
-  simpa only [tan_eq_sin_div_cos] using! sin_antiperiodic.div cos_antiperiodic
+/-- A tangent at a point where the sine does not vanish is nonzero. -/
+theorem tan_ne_zero_of_sin_ne_zero {x : ℂ} {hx : cos x ≠ 0} (h : sin x ≠ 0) : tan x hx ≠ 0 :=
+  div_ne_zero h
 
-theorem tan_add_pi (x : ℂ) : tan (x + π) = tan x :=
-  tan_periodic x
+/-- Two tangents agree when the sines and the cosines are proportional by the same factor. -/
+private theorem tan_eq_tan_of_eq_mul {x y c : ℂ} (hs : sin y = c * sin x) (hc : cos y = c * cos x)
+    {hy : cos y ≠ 0} {hx : cos x ≠ 0} : tan y hy = tan x hx := by
+  simp only [tan_eq_sin_div_cos, hs, hc]
+  exact mul_div_mul_left _ _
 
-theorem tan_sub_pi (x : ℂ) : tan (x - π) = tan x :=
-  tan_periodic.sub_eq x
+/-- Two tangents are opposite when the sines are proportional with the opposite factor. -/
+private theorem tan_eq_neg_tan_of_eq_mul {x y c : ℂ} (hs : sin y = -(c * sin x))
+    (hc : cos y = c * cos x) {hy : cos y ≠ 0} {hx : cos x ≠ 0} : tan y hy = -tan x hx := by
+  simp only [tan_eq_sin_div_cos, hs, hc, neg_div₀]
+  rw [mul_div_mul_left]
 
-theorem tan_pi_sub (x : ℂ) : tan (π - x) = -tan x :=
-  tan_neg x ▸ tan_periodic.sub_eq'
+theorem tan_add_pi (x : ℂ) {h : cos (x + π) ≠ 0} :
+    tan (x + π) h = tan x fun hx ↦ h (by rw [cos_add_pi, hx, neg_zero]) :=
+  tan_eq_tan_of_eq_mul (c := -1) (by rw [sin_add_pi, neg_one_mul])
+    (by rw [cos_add_pi, neg_one_mul])
 
-theorem tan_pi_div_two_sub (x : ℂ) : tan (π / 2 - x) = (tan x)⁻¹ := by
-  rw [tan_eq_sin_div_cos, tan_eq_sin_div_cos, inv_div, sin_pi_div_two_sub, cos_pi_div_two_sub]
+theorem tan_sub_pi (x : ℂ) {h : cos (x - π) ≠ 0} :
+    tan (x - π) h = tan x fun hx ↦ h (by rw [cos_sub_pi, hx, neg_zero]) :=
+  tan_eq_tan_of_eq_mul (c := -1) (by rw [sin_sub_pi, neg_one_mul])
+    (by rw [cos_sub_pi, neg_one_mul])
 
-theorem tan_nat_mul_pi (n : ℕ) : tan (n * π) = 0 :=
-  tan_zero ▸ tan_periodic.nat_mul_eq n
+theorem tan_pi_sub (x : ℂ) {h : cos (π - x) ≠ 0} :
+    tan (π - x) h = -tan x fun hx ↦ h (by rw [cos_pi_sub, hx, neg_zero]) :=
+  tan_eq_neg_tan_of_eq_mul (c := -1) (by rw [sin_pi_sub, neg_one_mul, neg_neg])
+    (by rw [cos_pi_sub, neg_one_mul])
 
-theorem tan_int_mul_pi (n : ℤ) : tan (n * π) = 0 :=
-  tan_zero ▸ tan_periodic.int_mul_eq n
+theorem tan_pi_div_two_sub (x : ℂ) {h : cos (π / 2 - x) ≠ 0} (hx : cos x ≠ 0) :
+    tan (π / 2 - x) h =
+      Checked.inv (tan x hx) (tan_ne_zero_of_sin_ne_zero (cos_pi_div_two_sub x ▸ h)).isUnit := by
+  simp only [tan_eq_sin_div_cos, inv_div₀, sin_pi_div_two_sub, cos_pi_div_two_sub]
 
-theorem tan_add_nat_mul_pi (x : ℂ) (n : ℕ) : tan (x + n * π) = tan x :=
-  tan_periodic.nat_mul n x
+theorem tan_nat_mul_pi (n : ℕ) :
+    tan (n * π) (by
+      rw [← ofReal_natCast, ← ofReal_mul, ← ofReal_cos, Real.cos_nat_mul_pi]; norm_num) = 0 := by
+  rw [tan_eq_sin_div_cos, sin_nat_mul_pi, zero_div]
 
-theorem tan_add_int_mul_pi (x : ℂ) (n : ℤ) : tan (x + n * π) = tan x :=
-  tan_periodic.int_mul n x
+theorem tan_int_mul_pi (n : ℤ) :
+    tan (n * π) (by
+      rw [← ofReal_intCast, ← ofReal_mul, ← ofReal_cos, Real.cos_int_mul_pi, ofReal_ne_zero]
+      exact zpow_ne_zero n (by norm_num)) = 0 := by
+  rw [tan_eq_sin_div_cos, sin_int_mul_pi, zero_div]
 
-theorem tan_sub_nat_mul_pi (x : ℂ) (n : ℕ) : tan (x - n * π) = tan x :=
-  tan_periodic.sub_nat_mul_eq n
+theorem tan_add_nat_mul_pi (x : ℂ) (n : ℕ) {h : cos (x + n * π) ≠ 0} :
+    tan (x + n * π) h =
+      tan x fun hx ↦ h (by rw [cos_antiperiodic.add_nat_mul_eq n, hx, mul_zero]) :=
+  tan_eq_tan_of_eq_mul (sin_antiperiodic.add_nat_mul_eq n) (cos_antiperiodic.add_nat_mul_eq n)
 
-theorem tan_sub_int_mul_pi (x : ℂ) (n : ℤ) : tan (x - n * π) = tan x :=
-  tan_periodic.sub_int_mul_eq n
+theorem tan_add_int_mul_pi (x : ℂ) (n : ℤ) {h : cos (x + n * π) ≠ 0} :
+    tan (x + n * π) h =
+      tan x fun hx ↦ h (by rw [cos_antiperiodic.add_int_mul_eq n, hx, mul_zero]) :=
+  tan_eq_tan_of_eq_mul (sin_antiperiodic.add_int_mul_eq n) (cos_antiperiodic.add_int_mul_eq n)
 
-theorem tan_nat_mul_pi_sub (x : ℂ) (n : ℕ) : tan (n * π - x) = -tan x :=
-  tan_neg x ▸ tan_periodic.nat_mul_sub_eq n
+theorem tan_sub_nat_mul_pi (x : ℂ) (n : ℕ) {h : cos (x - n * π) ≠ 0} :
+    tan (x - n * π) h =
+      tan x fun hx ↦ h (by rw [cos_antiperiodic.sub_nat_mul_eq n, hx, mul_zero]) :=
+  tan_eq_tan_of_eq_mul (sin_antiperiodic.sub_nat_mul_eq n) (cos_antiperiodic.sub_nat_mul_eq n)
 
-theorem tan_int_mul_pi_sub (x : ℂ) (n : ℤ) : tan (n * π - x) = -tan x :=
-  tan_neg x ▸ tan_periodic.int_mul_sub_eq n
+theorem tan_sub_int_mul_pi (x : ℂ) (n : ℤ) {h : cos (x - n * π) ≠ 0} :
+    tan (x - n * π) h =
+      tan x fun hx ↦ h (by rw [cos_antiperiodic.sub_int_mul_eq n, hx, mul_zero]) :=
+  tan_eq_tan_of_eq_mul (sin_antiperiodic.sub_int_mul_eq n) (cos_antiperiodic.sub_int_mul_eq n)
+
+theorem tan_nat_mul_pi_sub (x : ℂ) (n : ℕ) {h : cos (n * π - x) ≠ 0} :
+    tan (n * π - x) h =
+      -tan x fun hx ↦ h (by rw [cos_antiperiodic.nat_mul_sub_eq n, cos_neg, hx, mul_zero]) :=
+  tan_eq_neg_tan_of_eq_mul (by rw [sin_antiperiodic.nat_mul_sub_eq n, sin_neg, mul_neg])
+    (by rw [cos_antiperiodic.nat_mul_sub_eq n, cos_neg])
+
+theorem tan_int_mul_pi_sub (x : ℂ) (n : ℤ) {h : cos (n * π - x) ≠ 0} :
+    tan (n * π - x) h =
+      -tan x fun hx ↦ h (by rw [cos_antiperiodic.int_mul_sub_eq n, cos_neg, hx, mul_zero]) :=
+  tan_eq_neg_tan_of_eq_mul (by rw [sin_antiperiodic.int_mul_sub_eq n, sin_neg, mul_neg])
+    (by rw [cos_antiperiodic.int_mul_sub_eq n, cos_neg])
 
 theorem exp_antiperiodic : Function.Antiperiodic exp (π * I) := by simp [exp_add, exp_mul_I]
 
@@ -1297,15 +1393,14 @@ theorem cosh_periodic : Function.Periodic cosh (2 * π * I) := by
 theorem cosh_sub_pi_mul_I (z : ℂ) : cosh (z - π * I) = -cosh z :=
   cosh_antiperiodic.sub_eq z
 
-theorem tanh_periodic : Function.Periodic tanh (π * I) := by
-  simp [tanh_eq_sinh_div_cosh]
+@[simp]
+theorem tanh_add_pi_mul_I (z : ℂ) {h : cosh (z + π * I) ≠ 0} :
+    tanh (z + π * I) h = tanh z fun hz ↦ h (by rw [cosh_add_pi_mul_I, hz, neg_zero]) := by
+  simp only [tanh_eq_sinh_div_cosh, sinh_add_pi_mul_I, cosh_add_pi_mul_I, neg_div_neg_eq₀]
 
 @[simp]
-theorem tanh_add_pi_mul_I (z : ℂ) : tanh (z + π * I) = tanh z :=
-  tanh_periodic z
-
-@[simp]
-theorem tanh_sub_pi_mul_I (z : ℂ) : tanh (z - π * I) = tanh z :=
-  tanh_periodic.sub_eq z
+theorem tanh_sub_pi_mul_I (z : ℂ) {h : cosh (z - π * I) ≠ 0} :
+    tanh (z - π * I) h = tanh z fun hz ↦ h (by rw [cosh_sub_pi_mul_I, hz, neg_zero]) := by
+  simp only [tanh_eq_sinh_div_cosh, sinh_sub_pi_mul_I, cosh_sub_pi_mul_I, neg_div_neg_eq₀]
 
 end Complex

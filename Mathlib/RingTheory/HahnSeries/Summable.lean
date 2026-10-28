@@ -863,48 +863,87 @@ end IsDomain
 
 section Field
 
+/-- Hahn series of characteristic zero have coefficients of characteristic zero. -/
+theorem _root_.CharZero.of_hahnSeries {Γ R : Type*} [Zero Γ] [PartialOrder Γ]
+    [AddCommMonoidWithOne R] [CharZero R⟦Γ⟧] : CharZero R :=
+  CharZero.of_map_natCast (single (0 : Γ) : R → R⟦Γ⟧) single_zero_natCast
+
+/-- Hahn series with coefficients of characteristic zero have characteristic zero. -/
+instance instCharZero {Γ R : Type*} [Zero Γ] [PartialOrder Γ] [AddCommMonoidWithOne R]
+    [CharZero R] : CharZero R⟦Γ⟧ where
+  cast_injective m n h := Nat.cast_injective (R := R) <| by
+    simpa [← single_zero_natCast] using congrArg (fun x : R⟦Γ⟧ ↦ x.coeff 0) h
+
 variable [AddCommGroup Γ] [LinearOrder Γ] [IsOrderedAddMonoid Γ] [Field R]
 
-@[simps -isSimp inv]
-instance : DivInvMonoid R⟦Γ⟧ where
-  inv x :=
-    single (-x.order) (x.leadingCoeff)⁻¹ *
-      (SummableFamily.powers <| 1 - single (-x.order) (x.leadingCoeff)⁻¹ * x).hsum
-
-@[simp]
-theorem inv_single (a : Γ) (r : R) : (single a r)⁻¹ = single (-a) r⁻¹ := by
-  obtain rfl | hr := eq_or_ne r 0
-  · simp [inv_def]
-  · simp [inv_def, hr]
-
-@[simp]
-theorem single_div_single (a b : Γ) (r s : R) :
-    single a r / single b s = single (a - b) (r / s) := by
-  rw [div_eq_mul_inv, sub_eq_add_neg, div_eq_mul_inv, inv_single, single_mul_single]
-
+/-- Hahn series over a field with exponents in a linearly ordered group form a field: a nonzero
+series is invertible because its leading coefficient is (`HahnSeries.isUnit_iff`). In
+characteristic zero, its rational embeddings are the coefficientwise ones `single 0 q`, and its
+rational actions are the coefficientwise ones. -/
 instance instField : Field R⟦Γ⟧ where
-  inv_zero := by simp [inv_def]
-  mul_inv_cancel x x0 := by
-    have h :=
-      SummableFamily.one_sub_self_mul_hsum_powers
-        (unit_aux x (inv_mul_cancel₀ (leadingCoeff_ne_zero.mpr x0)) _ (neg_add_cancel x.order))
-    rw [sub_sub_cancel] at h
-    rw [inv_def, ← mul_assoc, mul_comm x, h]
-  nnqsmul := (· • ·)
-  qsmul := (· • ·)
-  nnqsmul_def q x := by ext; simp [← single_zero_nnratCast, NNRat.smul_def]
-  qsmul_def q x := by ext; simp [← single_zero_ratCast, Rat.smul_def]
-  nnratCast_def q := by
-    simp [← single_zero_nnratCast, ← single_zero_natCast, NNRat.cast_def]
-  ratCast_def q := by
-    simp [← single_zero_ratCast, ← single_zero_intCast, ← single_zero_natCast, Rat.cast_def]
+  isUnit_of_ne_zero hx := isUnit_iff.mpr (leadingCoeff_ne_zero.mpr hx).isUnit
+  nnratCastOfCharZero _ q :=
+    haveI := CharZero.of_hahnSeries (Γ := Γ) (R := R)
+    (q : R⟦Γ⟧)
+  nnratCastOfCharZero_mul_den _ q := by
+    have := CharZero.of_hahnSeries (Γ := Γ) (R := R)
+    rw [← single_zero_nnratCast, ← single_zero_natCast, ← single_zero_natCast, single_mul_single,
+      add_zero, NNRat.cast_mul_den]
+  nnqsmulOfCharZero _ q x :=
+    haveI := CharZero.of_hahnSeries (Γ := Γ) (R := R)
+    q • x
+  nnqsmulOfCharZero_eq_mul _ q x := by
+    have := CharZero.of_hahnSeries (Γ := Γ) (R := R)
+    ext
+    simp [← single_zero_nnratCast, NNRat.smul_def]
+  ratCastOfCharZero _ q :=
+    haveI := CharZero.of_hahnSeries (Γ := Γ) (R := R)
+    (q : R⟦Γ⟧)
+  ratCastOfCharZero_mul_den _ q := by
+    have := CharZero.of_hahnSeries (Γ := Γ) (R := R)
+    rw [← single_zero_ratCast, ← single_zero_natCast, ← single_zero_intCast, single_mul_single,
+      add_zero, Rat.cast_mul_den]
+  qsmulOfCharZero _ q x :=
+    haveI := CharZero.of_hahnSeries (Γ := Γ) (R := R)
+    q • x
+  qsmulOfCharZero_eq_mul _ q x := by
+    have := CharZero.of_hahnSeries (Γ := Γ) (R := R)
+    ext
+    simp [← single_zero_ratCast, Rat.smul_def]
 
-example : (instSMul : SMul NNRat R⟦Γ⟧) = NNRat.smulDivisionSemiring := rfl
-example : (instSMul : SMul ℚ R⟦Γ⟧) = Rat.smulDivisionRing := rfl
+/-- The inverse of a nonzero Hahn series `x`: with `c` the inverse of its leading coefficient and
+`y = single (-x.order) c`, it is `y` times the sum of the powers of `1 - y * x`. -/
+theorem inv_def (x : R⟦Γ⟧) {hx : IsUnit x} :
+    x⁻¹ = single (-x.order) (x.leadingCoeff)⁻¹ *
+      (SummableFamily.powers <| 1 - single (-x.order) (x.leadingCoeff)⁻¹ * x).hsum := by
+  refine inv_eq_of_mul_eq_one_right₀ ?_
+  have h := SummableFamily.one_sub_self_mul_hsum_powers
+    (unit_aux x (inv_mul_cancel₀ (ha := isUnit_iff.mp hx)) _ (neg_add_cancel x.order))
+  rw [sub_sub_cancel] at h
+  rw [← mul_assoc, mul_comm x, h]
 
-theorem single_zero_ofScientific (m e s) :
-    single (0 : Γ) (OfScientific.ofScientific m e s : R) = OfScientific.ofScientific m e s := by
-  simpa using single_zero_ratCast (Γ := Γ) (R := R) (OfScientific.ofScientific m e s)
+example [CharZero R] [CharZero R⟦Γ⟧] :
+    (instNNRatCast : NNRatCast R⟦Γ⟧) = DivisionSemiring.toNNRatCast := rfl
+example [CharZero R] [CharZero R⟦Γ⟧] : (instRatCast : RatCast R⟦Γ⟧) = DivisionRing.toRatCast := rfl
+example [CharZero R] [CharZero R⟦Γ⟧] :
+    (instSMul : SMul NNRat R⟦Γ⟧) = DivisionSemiring.toNNQSMul := rfl
+example [CharZero R] [CharZero R⟦Γ⟧] : (instSMul : SMul ℚ R⟦Γ⟧) = DivisionRing.toQSMul := rfl
+
+@[simp]
+theorem inv_single (a : Γ) (r : R) {h : IsUnit (single a r)} :
+    (single a r)⁻¹ = single (-a) r⁻¹ := by
+  refine inv_eq_of_mul_eq_one_left₀ ?_
+  rw [single_mul_single, neg_add_cancel, inv_mul_cancel₀, single_zero_one]
+
+@[simp]
+theorem single_div_single (a b : Γ) (r s : R) {h : IsUnit (single b s)} :
+    single a r / single b s = single (a - b) (r / s) := by
+  rw [div_eq_mul_inv₀, inv_single, single_mul_single, ← sub_eq_add_neg, ← div_eq_mul_inv₀]
+
+omit [IsOrderedAddMonoid Γ] in
+theorem single_zero_ofScientific [CharZero R] (m e s) :
+    single (0 : Γ) (OfScientific.ofScientific m e s : R) = OfScientific.ofScientific m e s :=
+  rfl
 
 end Field
 

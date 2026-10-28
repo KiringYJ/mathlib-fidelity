@@ -85,10 +85,10 @@ theorem sqrt_mul (x y : ℝ≥0) : sqrt (x * y) = sqrt x * sqrt y := by
 noncomputable def sqrtHom : ℝ≥0 →*₀ ℝ≥0 :=
   ⟨⟨sqrt, sqrt_zero⟩, sqrt_one, sqrt_mul⟩
 
-theorem sqrt_inv (x : ℝ≥0) : sqrt x⁻¹ = (sqrt x)⁻¹ :=
+theorem sqrt_inv (x : ℝ≥0) {hx : IsUnit x} : sqrt x⁻¹ = (sqrt x)⁻¹ :=
   map_inv₀ sqrtHom x
 
-theorem sqrt_div (x y : ℝ≥0) : sqrt (x / y) = sqrt x / sqrt y :=
+theorem sqrt_div (x y : ℝ≥0) {hy : IsUnit y} : sqrt (x / y) = sqrt x / sqrt y :=
   map_div₀ sqrtHom x y
 
 @[continuity, fun_prop]
@@ -356,11 +356,15 @@ namespace Real
 lemma one_lt_sqrt_two : 1 < √2 := by rw [← Real.sqrt_one]; gcongr; simp
 
 lemma sqrt_two_lt_three_halves : √2 < 3 / 2 := by
-  rw [← sq_lt_sq₀ (by positivity) (by positivity)]
-  grind
+  rw [← sq_lt_sq₀ (by positivity) (by positivity), sq_sqrt (by norm_num)]
+  norm_num
 
-lemma inv_sqrt_two_sub_one : (√2 - 1)⁻¹ = √2 + 1 := by
-  grind
+lemma inv_sqrt_two_sub_one :
+    Checked.inv (√2 - 1) (sub_pos.2 one_lt_sqrt_two).ne'.isUnit = √2 + 1 :=
+  inv_eq_of_mul_eq_one_right₀ <| by
+    ring_nf
+    rw [sq_sqrt (by norm_num)]
+    norm_num
 
 @[simp]
 theorem sqrt_mul {x : ℝ} (hx : 0 ≤ x) (y : ℝ) : √(x * y) = √x * √y := by
@@ -370,27 +374,29 @@ theorem sqrt_mul {x : ℝ} (hx : 0 ≤ x) (y : ℝ) : √(x * y) = √x * √y :
 theorem sqrt_mul' (x) {y : ℝ} (hy : 0 ≤ y) : √(x * y) = √x * √y := by
   rw [mul_comm, sqrt_mul hy, mul_comm]
 
+/-- The square root of the inverse of a positive number. For `x < 0`, `√x` vanishes and has no
+inverse. -/
 @[simp]
-theorem sqrt_inv (x : ℝ) : √x⁻¹ = (√x)⁻¹ := by
-  rw [Real.sqrt, Real.toNNReal_inv, NNReal.sqrt_inv, NNReal.coe_inv, Real.sqrt]
+theorem sqrt_inv (x : ℝ) (hx : 0 < x) : √x⁻¹ = (√x)⁻¹ :=
+  Eq.symm <| inv_eq_of_mul_eq_one_right₀ <| by rw [← sqrt_mul hx.le, mul_inv_cancel₀, sqrt_one]
 
+/-- The square root of a quotient by a positive number. For `y < 0`, `√y` vanishes and the right
+side does not exist. -/
 @[simp]
-theorem sqrt_div {x : ℝ} (hx : 0 ≤ x) (y : ℝ) : √(x / y) = √x / √y := by
-  rw [division_def, sqrt_mul hx, sqrt_inv, division_def]
-
-@[simp]
-theorem sqrt_div' (x) {y : ℝ} (hy : 0 ≤ y) : √(x / y) = √x / √y := by
-  rw [division_def, sqrt_mul' x (inv_nonneg.2 hy), sqrt_inv, division_def]
+theorem sqrt_div (x : ℝ) {y : ℝ} (hy : 0 < y) : √(x / y) = √x / √y := by
+  rw [div_eq_mul_inv₀, sqrt_mul' x (inv_nonneg.2 hy.le), sqrt_inv y hy, div_eq_mul_inv₀]
 
 variable {x y : ℝ}
 
 @[simp]
-theorem div_sqrt : x / √x = √x := by
-  grind
+theorem div_sqrt {hx : IsUnit √x} : x / √x = √x := by
+  have hx₀ : 0 ≤ x := le_of_lt (sqrt_ne_zero'.mp hx.ne_zero)
+  rw [div_eq_iff, mul_self_sqrt hx₀]
 
-theorem sqrt_div_self' : √x / x = 1 / √x := by rw [← div_sqrt, one_div_div, div_sqrt]
+theorem sqrt_div_self' (hx : 0 < x) : √x / x = 1 / √x := by
+  rw [div_eq_div_iff, one_mul, mul_self_sqrt hx.le]
 
-theorem sqrt_div_self : √x / x = (√x)⁻¹ := by rw [sqrt_div_self', one_div]
+theorem sqrt_div_self (hx : 0 < x) : √x / x = (√x)⁻¹ := by rw [sqrt_div_self' hx, one_div₀]
 
 theorem lt_sqrt (hx : 0 ≤ x) : x < √y ↔ x ^ 2 < y := by
   rw [← sqrt_lt_sqrt_iff (sq_nonneg _), sqrt_sq hx]

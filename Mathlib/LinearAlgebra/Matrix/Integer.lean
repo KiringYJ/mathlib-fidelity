@@ -66,6 +66,8 @@ protected def num (A : Matrix m n ℚ) : Matrix m n ℤ := ((A.den : ℚ) • A)
 lemma den_ne_zero (A : Matrix m n ℚ) : A.den ≠ 0 := by
   simp [Matrix.den, Finset.lcm_eq_zero_iff]
 
+instance (A : Matrix m n ℚ) : NeZero A.den := ⟨A.den_ne_zero⟩
+
 lemma num_eq_zero_iff (A : Matrix m n ℚ) : A.num = 0 ↔ A = 0 := by
   simp [Matrix.num, ← ext_iff, A.den_ne_zero]
 
@@ -76,14 +78,13 @@ lemma den_dvd_iff {A : Matrix m n ℚ} {r : ℕ} :
 lemma num_div_den (A : Matrix m n ℚ) (i : m) (j : n) :
     A.num i j / A.den = A i j := by
   obtain ⟨k, hk⟩ := den_dvd_iff.mp (dvd_refl A.den) i j
-  rw [Matrix.num, map_apply, smul_apply, smul_eq_mul, mul_comm,
-    div_eq_iff <| Nat.cast_ne_zero.mpr A.den_ne_zero, hk, Nat.cast_mul, ← mul_assoc,
-    Rat.mul_den_eq_num, ← Int.cast_natCast k, ← Int.cast_mul, Rat.num_intCast]
+  rw [Matrix.num, map_apply, smul_apply, smul_eq_mul, mul_comm, div_eq_iff, hk, Nat.cast_mul,
+    ← mul_assoc, Rat.mul_den_eq_num, ← Int.cast_natCast k, ← Int.cast_mul, Rat.num_intCast]
 
 lemma inv_denom_smul_num (A : Matrix m n ℚ) :
     (A.den⁻¹ : ℚ) • A.num.map (↑) = A := by
   ext
-  simp [← Matrix.num_div_den A, div_eq_inv_mul]
+  simp [← Matrix.num_div_den A, div_eq_inv_mul₀]
 
 @[simp]
 lemma den_neg (A : Matrix m n ℚ) : (-A).den = A.den :=

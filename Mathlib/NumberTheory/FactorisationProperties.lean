@@ -73,8 +73,9 @@ deriving Decidable
 def Weird (n : ℕ) : Prop := Abundant n ∧ ¬ Pseudoperfect n
 deriving Decidable
 
-/-- `abundancyIndex n` is the sum of the divisors of `n` divided by `n`. -/
-def abundancyIndex (n : ℕ) : ℚ := (∑ i ∈ n.divisors, i) / (n : ℚ)
+/-- `abundancyIndex n hn` is the sum of the divisors of a positive natural number `n` divided by
+`n`. -/
+noncomputable def abundancyIndex (n : ℕ) (hn : n ≠ 0) : ℚ := (∑ i ∈ n.divisors, i) / (n : ℚ)
 
 theorem not_pseudoperfect_iff_forall :
     ¬ Pseudoperfect n ↔ n = 0 ∨ ∀ s ⊆ properDivisors n, ∑ i ∈ s, i ≠ n := by
@@ -194,17 +195,17 @@ theorem infinite_odd_deficient : {n : ℕ | Odd n ∧ n.Deficient}.Infinite := b
 theorem abundant_iff_sum_divisors : Abundant n ↔ 2 * n < ∑ i ∈ n.divisors, i := by
   grind [Abundant, sum_divisors_eq_sum_properDivisors_add_self]
 
-theorem abundant_iff_two_lt_abundancyIndex : Abundant n ↔ 2 < n.abundancyIndex := by
-  by_cases h : n = 0
-  · simp [h, Abundant, abundancyIndex]
-  · rw [abundant_iff_sum_divisors, abundancyIndex, lt_div_iff₀ (by positivity)]
-    norm_cast
+theorem abundant_iff_two_lt_abundancyIndex (hn : n ≠ 0) :
+    Abundant n ↔ 2 < n.abundancyIndex hn := by
+  rw [abundant_iff_sum_divisors, abundancyIndex, lt_div_iff₀ (by positivity)]
+  norm_cast
 
 theorem abundancyIndex_le_of_dvd (hn : n ≠ 0) (hd : m ∣ n) :
-    m.abundancyIndex ≤ n.abundancyIndex := by
-  obtain ⟨k, hk⟩ := hd
+    m.abundancyIndex (ne_zero_of_dvd_ne_zero hn hd) ≤ n.abundancyIndex hn := by
+  obtain ⟨k, rfl⟩ := hd
   have hk0 : k ≠ 0 := by grind
-  rw [abundancyIndex, abundancyIndex, hk, cast_mul, div_mul_eq_div_div_swap]
+  simp only [abundancyIndex, cast_mul]
+  rw [div_mul_eq_div_div_swap₀]
   refine div_le_div_of_nonneg_right ?_ m.cast_nonneg
   rw [le_div_iff₀ (by grind [cast_pos]), ← cast_mul, cast_le, sum_mul]
   exact (sum_image (f := fun i ↦ i) (mul_left_injective₀ hk0).injOn).symm.trans_le

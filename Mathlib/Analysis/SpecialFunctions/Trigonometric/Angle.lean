@@ -655,66 +655,78 @@ theorem abs_cos_eq_abs_sin_of_two_zsmul_add_two_zsmul_eq_pi {θ ψ : Angle}
   simp_rw [two_zsmul, ← two_nsmul] at h
   exact abs_cos_eq_abs_sin_of_two_nsmul_add_two_nsmul_eq_pi h
 
-/-- The tangent of a `Real.Angle`. -/
-def tan (θ : Angle) : ℝ :=
+/-- The tangent of a `Real.Angle`, defined where `cos θ ≠ 0`. -/
+def tan (θ : Angle) (h : cos θ ≠ 0 := by checked_nonzero) : ℝ :=
   sin θ / cos θ
 
-theorem tan_eq_sin_div_cos (θ : Angle) : tan θ = sin θ / cos θ :=
+theorem tan_eq_sin_div_cos (θ : Angle) {h : cos θ ≠ 0} : tan θ = sin θ / cos θ :=
   rfl
 
 @[simp]
-theorem tan_coe (x : ℝ) : tan (x : Angle) = Real.tan x := by
-  rw [tan, sin_coe, cos_coe, Real.tan_eq_sin_div_cos]
+theorem tan_coe (x : ℝ) {h : cos (x : Angle) ≠ 0} :
+    tan (x : Angle) = Real.tan x (cos_coe x ▸ h) := by
+  rw [tan_eq_sin_div_cos, Real.tan_eq_sin_div_cos]
+  simp only [sin_coe, cos_coe]
 
 @[simp]
-theorem tan_zero : tan (0 : Angle) = 0 := by rw [← coe_zero, tan_coe, Real.tan_zero]
+theorem tan_zero : tan (0 : Angle) (by rw [cos_zero]; norm_num) = 0 := by
+  rw [tan_eq_sin_div_cos, sin_zero, zero_div]
 
-theorem tan_coe_pi : tan (π : Angle) = 0 := by rw [tan_coe, Real.tan_pi]
-
-theorem tan_periodic : Function.Periodic tan (π : Angle) := by
-  intro θ
-  induction θ using Real.Angle.induction_on
-  rw [← coe_add, tan_coe, tan_coe]
-  exact Real.tan_periodic _
+theorem tan_coe_pi : tan (π : Angle) (by rw [cos_coe_pi]; norm_num) = 0 := by
+  rw [tan_eq_sin_div_cos, sin_coe_pi, zero_div]
 
 @[simp]
-theorem tan_add_pi (θ : Angle) : tan (θ + π) = tan θ :=
-  tan_periodic θ
+theorem tan_add_pi (θ : Angle) {h : cos (θ + π) ≠ 0} :
+    tan (θ + π) = tan θ fun hθ ↦ h (by rw [cos_add_pi, hθ, neg_zero]) := by
+  simp only [tan_eq_sin_div_cos, sin_add_pi, cos_add_pi, neg_div_neg_eq₀]
 
 @[simp]
-theorem tan_sub_pi (θ : Angle) : tan (θ - π) = tan θ :=
-  tan_periodic.sub_eq θ
+theorem tan_sub_pi (θ : Angle) {h : cos (θ - π) ≠ 0} :
+    tan (θ - π) = tan θ fun hθ ↦ h (by rw [cos_sub_pi, hθ, neg_zero]) := by
+  simp only [tan_eq_sin_div_cos, sin_sub_pi, cos_sub_pi, neg_div_neg_eq₀]
 
 @[simp]
-theorem tan_toReal (θ : Angle) : Real.tan θ.toReal = tan θ := by
-  conv_rhs => rw [← coe_toReal θ, tan_coe]
+theorem tan_toReal (θ : Angle) {h : Real.cos θ.toReal ≠ 0} :
+    Real.tan θ.toReal = tan θ (cos_toReal θ ▸ h) := by
+  rw [tan_eq_sin_div_cos, Real.tan_eq_sin_div_cos]
+  simp only [sin_toReal, cos_toReal]
 
-theorem tan_eq_of_two_nsmul_eq {θ ψ : Angle} (h : (2 : ℕ) • θ = (2 : ℕ) • ψ) : tan θ = tan ψ := by
-  rw [two_nsmul_eq_iff] at h
-  rcases h with (rfl | rfl)
+theorem tan_eq_of_two_nsmul_eq {θ ψ : Angle} {hθ : cos θ ≠ 0} (h : (2 : ℕ) • θ = (2 : ℕ) • ψ) :
+    tan θ = tan ψ fun hψ ↦ hθ <| abs_eq_zero.1 <| by
+      rw [abs_cos_eq_of_two_nsmul_eq h, hψ, abs_zero] := by
+  obtain rfl | rfl := two_nsmul_eq_iff.1 h
   · rfl
-  · exact tan_add_pi _
+  · exact (tan_add_pi _).symm
 
-theorem tan_eq_of_two_zsmul_eq {θ ψ : Angle} (h : (2 : ℤ) • θ = (2 : ℤ) • ψ) : tan θ = tan ψ := by
-  simp_rw [two_zsmul, ← two_nsmul] at h
-  exact tan_eq_of_two_nsmul_eq h
+theorem tan_eq_of_two_zsmul_eq {θ ψ : Angle} {hθ : cos θ ≠ 0} (h : (2 : ℤ) • θ = (2 : ℤ) • ψ) :
+    tan θ = tan ψ fun hψ ↦ hθ <| abs_eq_zero.1 <| by
+      rw [abs_cos_eq_of_two_zsmul_eq h, hψ, abs_zero] :=
+  tan_eq_of_two_nsmul_eq (by simpa only [two_zsmul, ← two_nsmul] using h)
 
-theorem tan_eq_inv_of_two_nsmul_add_two_nsmul_eq_pi {θ ψ : Angle}
-    (h : (2 : ℕ) • θ + (2 : ℕ) • ψ = π) : tan ψ = (tan θ)⁻¹ := by
-  induction θ using Real.Angle.induction_on
-  induction ψ using Real.Angle.induction_on
-  rw [← smul_add, ← coe_add, ← coe_nsmul, two_nsmul, ← two_mul, angle_eq_iff_two_pi_dvd_sub] at h
-  rcases h with ⟨k, h⟩
-  rw [sub_eq_iff_eq_add, ← mul_inv_cancel_left₀ two_ne_zero π, mul_assoc, ← mul_add,
-    mul_right_inj' (two_ne_zero' ℝ), ← eq_sub_iff_add_eq', mul_inv_cancel_left₀ two_ne_zero π,
-    inv_mul_eq_div, mul_comm] at h
-  rw [tan_coe, tan_coe, ← tan_pi_div_two_sub, h, add_sub_assoc, add_comm]
-  exact Real.tan_periodic.int_mul _ _
+/-- If `2 • θ + 2 • ψ = π` and the tangent of `ψ` is defined, then the tangent of `θ`, where it is
+defined, is invertible. -/
+theorem isUnit_tan_of_two_nsmul_add_two_nsmul_eq_pi {θ ψ : Angle} (hψ : cos ψ ≠ 0)
+    (h : (2 : ℕ) • θ + (2 : ℕ) • ψ = π) (hθ : cos θ ≠ 0) : IsUnit (tan θ hθ) := by
+  have hs : sin θ ≠ 0 := fun hs ↦ hψ <| abs_eq_zero.1 <| by
+    rw [abs_cos_eq_abs_sin_of_two_nsmul_add_two_nsmul_eq_pi (θ := ψ) (ψ := θ)
+      (by rwa [add_comm]), hs, abs_zero]
+  rw [tan_eq_sin_div_cos]
+  exact (div_ne_zero hs).isUnit
 
-theorem tan_eq_inv_of_two_zsmul_add_two_zsmul_eq_pi {θ ψ : Angle}
-    (h : (2 : ℤ) • θ + (2 : ℤ) • ψ = π) : tan ψ = (tan θ)⁻¹ := by
-  simp_rw [two_zsmul, ← two_nsmul] at h
-  exact tan_eq_inv_of_two_nsmul_add_two_nsmul_eq_pi h
+theorem tan_eq_inv_of_two_nsmul_add_two_nsmul_eq_pi {θ ψ : Angle} {hψ : cos ψ ≠ 0}
+    (h : (2 : ℕ) • θ + (2 : ℕ) • ψ = π) (hθ : cos θ ≠ 0) :
+    tan ψ = Checked.inv (tan θ) (isUnit_tan_of_two_nsmul_add_two_nsmul_eq_pi hψ h hθ) := by
+  refine (inv_eq_of_mul_eq_one_right₀ ?_).symm
+  have hc : cos (θ + ψ) = 0 := cos_eq_zero_iff.2 (two_nsmul_eq_pi_iff.1 (by rwa [nsmul_add]))
+  rw [cos_add, sub_eq_zero] at hc
+  rw [tan_eq_sin_div_cos, tan_eq_sin_div_cos, div_mul_div_comm₀, ← hc]
+  exact div_self
+
+theorem tan_eq_inv_of_two_zsmul_add_two_zsmul_eq_pi {θ ψ : Angle} {hψ : cos ψ ≠ 0}
+    (h : (2 : ℤ) • θ + (2 : ℤ) • ψ = π) (hθ : cos θ ≠ 0) :
+    tan ψ = Checked.inv (tan θ) (isUnit_tan_of_two_nsmul_add_two_nsmul_eq_pi hψ
+      (by simpa only [two_zsmul, ← two_nsmul] using h) hθ) :=
+  tan_eq_inv_of_two_nsmul_add_two_nsmul_eq_pi (by simpa only [two_zsmul, ← two_nsmul] using h) hθ
 
 /-- The sign of a `Real.Angle` is `0` if the angle is `0` or `π`, `1` if the angle is strictly
 between `0` and `π` and `-1` is the angle is strictly between `-π` and `0`. It is defined as the

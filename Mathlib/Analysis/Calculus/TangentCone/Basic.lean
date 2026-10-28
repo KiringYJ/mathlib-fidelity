@@ -193,10 +193,15 @@ theorem mem_tangentConeAt_of_add_smul_mem {α : Type*} {l : Filter α} [l.NeBot]
     (hc₀ : Tendsto c l (𝓝[≠] 0)) (hmem : ∀ᶠ n in l, x + c n • y ∈ s) :
     y ∈ tangentConeAt 𝕜 s x := by
   rw [tendsto_nhdsWithin_iff] at hc₀
-  refine mem_tangentConeAt_of_seq l c⁻¹ (c · • y) ?_ hmem ?_
-  · simpa using hc₀.1.smul (tendsto_const_nhds (x := y))
-  · refine tendsto_nhds_of_eventually_eq <| hc₀.2.mono fun n hn ↦ ?_
-    simp_all
+  /- The inverse scalars `(c n)⁻¹` exist on the indices where `c n ≠ 0`, which form a set of `l`;
+  we restrict `l` to these indices. -/
+  have : (comap ((↑) : {n // c n ≠ 0} → α) l).NeBot :=
+    NeBot.comap_of_range_mem ‹_› <| by rw [Subtype.range_coe_subtype]; exact hc₀.2
+  refine mem_tangentConeAt_of_seq (comap ((↑) : {n // c n ≠ 0} → α) l)
+    (fun n ↦ Checked.inv (c n.1) n.2.isUnit) (fun n ↦ c n.1 • y) ?_ (hmem.comap _) ?_
+  · simpa using (hc₀.1.comp tendsto_comap).smul_const y
+  · simp only [inv_smul_smul₀]
+    exact tendsto_const_nhds
 
 variable [(𝓝[≠] (0 : 𝕜)).NeBot]
 

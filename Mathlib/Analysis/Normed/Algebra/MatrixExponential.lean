@@ -173,72 +173,28 @@ section NormedComm
 variable [Fintype m] [DecidableEq m]
   [NormedCommRing 𝔸] [NormedAlgebra ℚ 𝔸] [CompleteSpace 𝔸]
 
-/-- The matrix exponential bundled as a unit. -/
-noncomputable def expUnit (A : Matrix m m 𝔸) : (Matrix m m 𝔸)ˣ :=
-  (isUnit_exp A).unit
-
-@[simp, norm_cast]
-theorem coe_expUnit (A : Matrix m m 𝔸) : (expUnit A : Matrix m m 𝔸) = exp A :=
-  (isUnit_exp A).unit_spec
-
-theorem coe_expUnit_inv (A : Matrix m m 𝔸) :
-    (↑(expUnit A)⁻¹ : Matrix m m 𝔸) =
-      Matrix.nonsingularInverse (exp A)
-        (Matrix.isUnit_iff_isUnit_det _ |>.mp (isUnit_exp A)) := by
-  apply Matrix.right_inv_eq_right_inv
-  · simpa only [Units.val_mul, Units.val_one, coe_expUnit] using
-      congr_arg Units.val (mul_inv_cancel (expUnit A))
-  · exact Matrix.mul_nonsingularInverse _ _
-
 set_option backward.isDefEq.respectTransparency false in
-theorem exp_neg (A : Matrix m m 𝔸) :
-    exp (-A) = Matrix.nonsingularInverse (exp A)
-      (Matrix.isUnit_iff_isUnit_det _ |>.mp (isUnit_exp A)) := by
-  symm
-  apply Matrix.nonsingularInverse_eq_rightInverse
-  rw [← exp_add_of_commute (Commute.refl A).neg_right, add_neg, exp_zero]
+theorem exp_neg (A : Matrix m m 𝔸) : exp (-A) = Checked.inv (exp A) (isUnit_exp A) := by
+  refine eq_inv_of_mul_eq_one_left₀ ?_
+  rw [← exp_add_of_commute (Commute.refl A).neg_left, neg_add_cancel, exp_zero]
 
-theorem exp_neg_nsmul (n : ℕ) (A : Matrix m m 𝔸) :
-    exp (-(n • A)) = Matrix.nonsingularInverse (exp (n • A))
-      (Matrix.isUnit_iff_isUnit_det _ |>.mp (isUnit_exp (n • A))) :=
-  exp_neg (n • A)
-
-/-- Integer scalar multiplication exponentiates to integer powers in the unit group. -/
 theorem exp_zsmul (z : ℤ) (A : Matrix m m 𝔸) :
-    exp (z • A) = (↑(expUnit A ^ z) : Matrix m m 𝔸) := by
+    exp (z • A) = Checked.zpow (exp A) z (fun _ ↦ isUnit_exp A) := by
   obtain ⟨n, rfl | rfl⟩ := z.eq_nat_or_neg
-  · simp only [natCast_zsmul, exp_nsmul, zpow_natCast, Units.val_pow_eq_pow_val,
-      coe_expUnit]
-  · have hu : expUnit (n • A) = expUnit A ^ n := by
-      apply Units.ext
-      simp only [coe_expUnit, exp_nsmul, Units.val_pow_eq_pow_val]
-    rw [neg_smul, natCast_zsmul, exp_neg_nsmul, ← coe_expUnit_inv, hu, zpow_neg_natCast]
+  · rw [zpow_natCast₀, natCast_zsmul, exp_nsmul]
+  · have hu := isUnit_exp A
+    rw [neg_smul, natCast_zsmul, exp_neg, hu.zpow_eq_val_unit_zpow, zpow_neg, zpow_natCast,
+      Units.val_inv_eq_inv_val₀]
+    congr 1
+    rw [Units.val_pow_eq_pow_val, hu.unit_spec, exp_nsmul]
 
 theorem exp_conj (U : Matrix m m 𝔸) (A : Matrix m m 𝔸) (hy : IsUnit U) :
-    exp (U * A * Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy)) =
-      U * exp A * Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy) := by
-  let u := hy.unit
-  have hu : (u : Matrix m m 𝔸) = U := hy.unit_spec
-  have hinv : (↑u⁻¹ : Matrix m m 𝔸) =
-      Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy) := by
-    apply Matrix.right_inv_eq_right_inv
-    · simpa only [Units.val_mul, Units.val_one, hu] using congr_arg Units.val (mul_inv_cancel u)
-    · exact Matrix.mul_nonsingularInverse _ _
-  rw [← hu, ← hinv]
-  exact exp_units_conj u A
+    exp (U * A * U⁻¹) = U * exp A * U⁻¹ := by
+  simpa only [Units.val_inv_eq_inv_val₀, IsUnit.unit_spec] using exp_units_conj hy.unit A
 
 theorem exp_conj' (U : Matrix m m 𝔸) (A : Matrix m m 𝔸) (hy : IsUnit U) :
-    exp (Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy) * A * U) =
-      Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy) * exp A * U := by
-  let u := hy.unit
-  have hu : (u : Matrix m m 𝔸) = U := hy.unit_spec
-  have hinv : (↑u⁻¹ : Matrix m m 𝔸) =
-      Matrix.nonsingularInverse U (Matrix.isUnit_iff_isUnit_det U |>.mp hy) := by
-    apply Matrix.right_inv_eq_right_inv
-    · simpa only [Units.val_mul, Units.val_one, hu] using congr_arg Units.val (mul_inv_cancel u)
-    · exact Matrix.mul_nonsingularInverse _ _
-  rw [← hu, ← hinv]
-  exact exp_units_conj' u A
+    exp (U⁻¹ * A * U) = U⁻¹ * exp A * U := by
+  simpa only [Units.val_inv_eq_inv_val₀, IsUnit.unit_spec] using exp_units_conj' hy.unit A
 
 end NormedComm
 

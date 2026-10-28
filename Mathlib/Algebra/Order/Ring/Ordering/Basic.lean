@@ -55,11 +55,10 @@ theorem unitsInv_mem {a : Rˣ} (ha : ↑a ∈ P) : ↑a⁻¹ ∈ P := by
   simp_all
 
 @[aesop unsafe 90% apply (rule_sets := [SetLike])]
-theorem inv_mem {F : Type*} [Field F] {P : RingPreordering F} {a : F} (ha : a ∈ P) :
-    a⁻¹ ∈ P := by
-  have mem : a * (a⁻¹ * a⁻¹) ∈ P := by aesop
-  field_simp at mem
-  simp_all
+theorem inv_mem {F : Type*} [Field F] {P : RingPreordering F} {a : F} {haUnit : IsUnit a}
+    (ha : a ∈ P) : a⁻¹ ∈ P := by
+  have mem : a * (a⁻¹ * a⁻¹) ∈ P := mul_mem ha (P.mul_self_mem a⁻¹)
+  rwa [← mul_assoc, mul_inv_cancel₀, one_mul] at mem
 
 @[aesop unsafe 80% apply (rule_sets := [SetLike])]
 theorem mem_of_isSumSq {x : R} (hx : IsSumSq x) : x ∈ P := by
@@ -150,9 +149,9 @@ variable {F : Type*} [Field F] (P : RingPreordering F)
 variable {P} in
 @[aesop unsafe 70% apply]
 protected theorem eq_zero_of_mem_of_neg_mem {x} (h : x ∈ P) (h2 : -x ∈ P) : x = 0 := by
-  by_contra
-  have mem : -x * x⁻¹ ∈ P := by aesop (erase simp neg_mul)
-  field_simp at mem
+  by_contra hx
+  have mem : -x * x⁻¹ ∈ P := mul_mem h2 (inv_mem h)
+  rw [neg_mul, mul_inv_cancel₀] at mem
   exact RingPreordering.neg_one_notMem P mem
 
 theorem supportAddSubgroup_eq_bot : P.supportAddSubgroup = ⊥ := by

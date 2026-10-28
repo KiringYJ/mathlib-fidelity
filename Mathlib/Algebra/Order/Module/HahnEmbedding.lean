@@ -589,7 +589,7 @@ theorem eval_smul [IsOrderedAddMonoid R] [Archimedean R] (k : K) (x : M) :
     obtain ⟨y, hy⟩ := h
     use k⁻¹ • y
     have heq : (k⁻¹ • y).val - x = k⁻¹ • (y.val - k • x) := by
-      simp [smul_sub, smul_smul, inv_mul_cancel₀ hk]
+      simp [smul_sub, smul_smul, inv_mul_cancel₀]
     exact heq ▸ Submodule.smul_mem _ _ hy
   simp [f.evalCoeff_eq_zero h, f.evalCoeff_eq_zero h']
 

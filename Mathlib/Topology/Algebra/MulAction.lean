@@ -316,7 +316,7 @@ theorem Set.univ_smul_nhds_zero {s : Set X} (hs : s ∈ 𝓝 0) : (univ : Set G�
     with ⟨c, hc₀, hc⟩
   simp only [mem_compl_iff, mem_singleton_iff] at hc₀
   simp only [mem_smul, mem_univ, true_and]
-  exact ⟨c⁻¹, c • x, hc, inv_smul_smul₀ hc₀ _⟩
+  exact ⟨c⁻¹, c • x, hc, inv_smul_smul₀ (ha := Ne.isUnit hc₀) _⟩
 
 @[simp]
 theorem Filter.top_smul_nhds_zero : (⊤ : Filter G₀) • 𝓝 (0 : X) = ⊤ := by

@@ -112,7 +112,7 @@ theorem hahn_decomposition (μ ν : Measure α) [IsFiniteMeasure μ] [IsFiniteMe
       calc
         γ + (γ - 2 * (1 / 2) ^ m + (1 / 2) ^ (n + 1)) =
             γ + (γ - 2 * (1 / 2) ^ m + ((1 / 2) ^ n - (1 / 2) ^ (n + 1))) := by
-          rw [pow_succ, mul_one_div, _root_.sub_half]
+          rw [pow_succ, mul_one_div₀, _root_.sub_half]
         _ = γ - (1 / 2) ^ (n + 1) + (γ - 2 * (1 / 2) ^ m + (1 / 2) ^ n) := by
           simp only [sub_eq_add_neg]; abel
         _ ≤ d (e (n + 1)) + d (f m n) := add_le_add (le_of_lt <| he₂ _) ih

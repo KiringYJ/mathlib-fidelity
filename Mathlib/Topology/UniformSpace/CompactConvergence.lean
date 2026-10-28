@@ -110,7 +110,8 @@ theorem tendsto_iff_forall_isCompact_tendstoUniformlyOn
     -- Consider a compact set `K`
     intro h K hK
     -- Since `K` is compact, it suffices to prove locally uniform convergence
-    rw [← tendstoLocallyUniformlyOn_iff_tendstoUniformlyOn_of_compact hK]
+    rw [← tendstoLocallyUniformlyOn_iff_tendstoUniformlyOn_of_compact hK,
+      tendstoLocallyUniformlyOn_iff]
     -- Now choose an entourage `U` in the codomain and a point `x ∈ K`.
     intro U hU x _
     -- Choose an open symmetric entourage `V` such that `V ○ V ⊆ U`.
@@ -253,7 +254,8 @@ The right-to-left implication holds in any topological space,
 see `ContinuousMap.tendsto_of_tendstoLocallyUniformly`. -/
 theorem tendsto_iff_tendstoLocallyUniformly [WeaklyLocallyCompactSpace α] :
     Tendsto F p (𝓝 f) ↔ TendstoLocallyUniformly (fun i a => F i a) f p := by
-  refine ⟨fun h V hV x ↦ ?_, tendsto_of_tendstoLocallyUniformly⟩
+  refine ⟨fun h ↦ tendstoLocallyUniformly_iff.2 fun V hV x ↦ ?_,
+    tendsto_of_tendstoLocallyUniformly⟩
   rw [tendsto_iff_forall_isCompact_tendstoUniformlyOn] at h
   obtain ⟨n, hn₁, hn₂⟩ := exists_compact_mem_nhds x
   exact ⟨n, hn₂, h n hn₁ V hV⟩

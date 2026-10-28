@@ -14,6 +14,8 @@ public import Mathlib.Tactic.FieldSimp
 public import Mathlib.Tactic.Positivity
 public import Mathlib.Algebra.BigOperators.Group.Finset.Powerset
 
+import Mathlib.Tactic.Ring
+
 /-!
 # The Ahlswede-Zhang identity
 
@@ -23,9 +25,13 @@ This file proves the Ahlswede-Zhang identity, which is a nontrivial relation bet
 term.
 
 For a set family `𝒜` over a ground set of size `n`, the Ahlswede-Zhang identity states that the sum
-of `|⋂ B ∈ 𝒜, B ⊆ A, B|/(|A| * n.choose |A|)` over all sets `A` is exactly `1`. This implies the LYM
-inequality since for an antichain `𝒜` and every `A ∈ 𝒜` we have
+of `|⋂ B ∈ 𝒜, B ⊆ A, B|/(|A| * n.choose |A|)` over all nonempty sets `A` is exactly `1`. This
+implies the LYM inequality since for an antichain `𝒜` and every `A ∈ 𝒜` we have
 `|⋂ B ∈ 𝒜, B ⊆ A, B|/(|A| * n.choose |A|) = 1 / n.choose |A|`.
+
+The weight `1 / (|A| * n.choose |A|)` exists exactly when `A` is nonempty, and the weight
+`1 / ((n - |A|) * n.choose |A|)` of the dual sum exactly when `A` is not the whole ground set, so
+the two sums are indexed by these subtypes.
 
 ## Main declarations
 
@@ -47,55 +53,128 @@ inequality since for an antichain `𝒜` and every `A ∈ 𝒜` we have
 @[expose] public section
 
 section
+variable {α : Type*} [Fintype α]
+
+open Finset Fintype Nat
+
+/-- A sum over the elements satisfying `p` is the sum over all elements of the summand extended
+by zero. -/
+private lemma sum_subtype_eq_sum_dite {ι : Type*} [Fintype ι] (p : ι → Prop) [DecidablePred p]
+    (f : ∀ i, p i → ℚ) :
+    ∑ i : {i // p i}, f i i.2 = ∑ i, if h : p i then f i h else 0 := by
+  rw [← Fintype.sum_subtype_add_sum_subtype p (fun i ↦ if h : p i then f i h else 0)]
+  have h₁ : ∀ i : {i // p i}, (if h : p i.1 then f i.1 h else 0) = f i.1 i.2 :=
+    fun i ↦ dite_eq_left i.2
+  have h₂ : ∀ i : {i // ¬p i}, (if h : p i.1 then f i.1 h else 0) = 0 :=
+    fun i ↦ dite_eq_right i.2
+  simp only [h₁, h₂, Finset.sum_const_zero, add_zero]
+
+private lemma isUnit_choose_card (s : Finset α) : IsUnit ((card α).choose #s : ℚ) :=
+  (Nat.cast_ne_zero.2 (choose_pos (card_le_univ s)).ne').isUnit
+
+private lemma isUnit_card_mul_choose {s : Finset α} (hs : s.Nonempty) :
+    IsUnit ((#s : ℚ) * (card α).choose #s) :=
+  (mul_ne_zero (Nat.cast_ne_zero.2 hs.card_ne_zero)
+    (Nat.cast_ne_zero.2 (choose_pos (card_le_univ s)).ne')).isUnit
+
+private lemma isUnit_card_sub_mul_choose {s : Finset α} (hs : s ≠ univ) :
+    IsUnit (((card α : ℚ) - #s) * (card α).choose #s) :=
+  (mul_ne_zero (sub_ne_zero_of_ne (Nat.cast_lt.2 ((card_lt_iff_ne_univ s).2 hs)).ne')
+    (Nat.cast_ne_zero.2 (choose_pos (card_le_univ s)).ne')).isUnit
+
+end
+
+section
 variable (α : Type*) [Fintype α] [Nonempty α] {m n : ℕ}
 
 open Finset Fintype Nat
 
 private lemma binomial_sum_eq (h : n < m) :
-    ∑ i ∈ range (n + 1), (n.choose i * (m - n) / ((m - i) * m.choose i) : ℚ) = 1 := by
-  set f : ℕ → ℚ := fun i ↦ n.choose i * (m.choose i : ℚ)⁻¹ with hf
-  suffices ∀ i ∈ range (n + 1), f i - f (i + 1) = n.choose i * (m - n) / ((m - i) * m.choose i) by
-    rw [← sum_congr rfl this, sum_range_sub', hf]
-    simp [choose_zero_right]
-  intro i h₁
-  rw [mem_range] at h₁
-  have h₁ := le_of_lt_succ h₁
-  have h₂ := h₁.trans_lt h
-  have h₃ := h₂.le
-  have hi₄ : (i + 1 : ℚ) ≠ 0 := i.cast_add_one_ne_zero
-  have := congr_arg ((↑) : ℕ → ℚ) (choose_succ_right_eq m i)
-  push_cast at this
-  dsimp [f, hf]
-  rw [(eq_mul_inv_iff_mul_eq₀ hi₄).mpr this]
-  have := congr_arg ((↑) : ℕ → ℚ) (choose_succ_right_eq n i)
-  push_cast at this
-  rw [(eq_mul_inv_iff_mul_eq₀ hi₄).mpr this]
-  have : (m - i : ℚ) ≠ 0 := sub_ne_zero_of_ne (cast_lt.mpr h₂).ne'
-  have : (m.choose i : ℚ) ≠ 0 := cast_ne_zero.2 (choose_pos h₂.le).ne'
-  simp [field, *]
+    ∑ i ∈ range (n + 1), (if hi : i < m then (n.choose i : ℚ) *
+      Checked.div ((m : ℚ) - n) ((m - i) * m.choose i)
+        (mul_ne_zero (sub_ne_zero_of_ne (Nat.cast_lt.2 hi).ne')
+          (Nat.cast_ne_zero.2 (choose_pos hi.le).ne')).isUnit else 0) = 1 := by
+  -- The ratios `n.choose i / m.choose i` for `i ≤ m` telescope.
+  set f : ℕ → ℚ := fun i ↦ if hi : i ≤ m then
+    Checked.div (n.choose i : ℚ) (m.choose i) (Nat.cast_ne_zero.2 (choose_pos hi).ne').isUnit
+    else 0 with hf
+  have key : ∀ i ∈ range (n + 1), (if hi : i < m then (n.choose i : ℚ) *
+      Checked.div ((m : ℚ) - n) ((m - i) * m.choose i)
+        (mul_ne_zero (sub_ne_zero_of_ne (Nat.cast_lt.2 hi).ne')
+          (Nat.cast_ne_zero.2 (choose_pos hi.le).ne')).isUnit else 0) = f i - f (i + 1) := by
+    intro i hi
+    have hin : i ≤ n := mem_range_succ_iff.1 hi
+    have him : i < m := hin.trans_lt h
+    simp only [hf, dite_eq_left him, dite_eq_left him.le, dite_eq_left (Nat.succ_le_of_lt him)]
+    have hm₀ : (m.choose i : ℚ) ≠ 0 := Nat.cast_ne_zero.2 (choose_pos him.le).ne'
+    have hm₁ : (m.choose (i + 1) : ℚ) ≠ 0 :=
+      Nat.cast_ne_zero.2 (choose_pos (Nat.succ_le_of_lt him)).ne'
+    have hmi : (m : ℚ) - i ≠ 0 := sub_ne_zero_of_ne (Nat.cast_lt.2 him).ne'
+    have hi₁ : (i : ℚ) + 1 ≠ 0 := i.cast_add_one_ne_zero
+    have em := congr_arg ((↑) : ℕ → ℚ) (choose_succ_right_eq m i)
+    have en := congr_arg ((↑) : ℕ → ℚ) (choose_succ_right_eq n i)
+    push_cast [Nat.cast_sub him.le, Nat.cast_sub hin] at em en
+    have hX : (n.choose (i + 1) : ℚ) = n.choose i * (n - i) / (i + 1) := by
+      rw [eq_div_iff]; exact en
+    have hY : (m.choose (i + 1) : ℚ) = m.choose i * (m - i) / (i + 1) := by
+      rw [eq_div_iff]; exact em
+    simp only [hX, hY]
+    field_simp
+    ring
+  rw [Finset.sum_congr rfl key, sum_range_sub']
+  simp [hf, Nat.succ_le_of_lt h]
 
-set_option backward.isDefEq.respectTransparency false in
-private lemma Fintype.sum_div_mul_card_choose_card :
-    ∑ s : Finset α, (card α / ((card α - #s) * (card α).choose #s) : ℚ) =
-      card α * ∑ k ∈ range (card α), (↑k)⁻¹ + 1 := by
-  rw [← powerset_univ, powerset_card_disjiUnion, sum_disjiUnion]
-  have : ∀ {x : ℕ}, ∀ s ∈ powersetCard x (univ : Finset α),
-    (card α / ((card α - #s) * (card α).choose #s) : ℚ) =
-      card α / ((card α - x) * (card α).choose x) := by
-    intro n s hs
-    rw [mem_powersetCard_univ.1 hs]
-  simp_rw [Finset.sum_congr rfl this, sum_const, card_powersetCard, card_univ, nsmul_eq_mul,
-    mul_div, mul_comm, ← mul_div]
-  rw [← mul_sum, ← mul_inv_cancel₀ (cast_ne_zero.mpr card_ne_zero : (card α : ℚ) ≠ 0), ← mul_add,
-    add_comm _ ((card α)⁻¹ : ℚ), ← sum_insert (f := fun x : ℕ ↦ (x⁻¹ : ℚ)) notMem_range_self,
-    ← range_add_one]
-  have (n) (hn : n ∈ range (card α + 1)) :
-      ((card α).choose n / ((card α - n) * (card α).choose n) : ℚ) = (card α - n : ℚ)⁻¹ := by
-    rw [div_mul_cancel_right₀]
-    exact cast_ne_zero.2 (choose_pos <| mem_range_succ_iff.1 hn).ne'
-  simp only [Finset.sum_congr rfl this, mul_eq_mul_left_iff, cast_eq_zero]
-  convert! Or.inl <| sum_range_reflect _ _ with a ha
-  rw [add_tsub_cancel_right, cast_sub (mem_range_succ_iff.mp ha)]
+private lemma Fintype.sum_div_mul_card_choose_card [DecidableEq α] :
+    ∑ s : {s : Finset α // s ≠ univ}, Checked.div (card α : ℚ)
+      ((card α - #s.1) * (card α).choose #s.1) (isUnit_card_sub_mul_choose s.2) =
+      card α * ∑ k ∈ range (card α - 1), ((k : ℚ) + 1)⁻¹ + 1 := by
+  rw [sum_subtype_eq_sum_dite (· ≠ univ) fun s hs ↦ Checked.div (card α : ℚ)
+      ((card α - #s) * (card α).choose #s) (isUnit_card_sub_mul_choose hs), ← powerset_univ,
+    sum_powerset, card_univ]
+  -- Each layer of sets of the same size `j < card α` contributes `card α / (card α - j)`.
+  have hlayer : ∀ j ∈ range (card α + 1), ∑ t ∈ powersetCard j (univ : Finset α),
+      (if hs : t ≠ univ then Checked.div (card α : ℚ) ((card α - #t) * (card α).choose #t)
+        (isUnit_card_sub_mul_choose hs) else 0) =
+      if hj : j < card α then Checked.div (card α : ℚ) ((card α : ℚ) - j)
+        (sub_ne_zero_of_ne (Nat.cast_lt.2 hj).ne').isUnit else 0 := by
+    intro j hj
+    split_ifs with hjn
+    · have hc : ∀ t ∈ powersetCard j (univ : Finset α),
+          (if hs : t ≠ univ then Checked.div (card α : ℚ) ((card α - #t) * (card α).choose #t)
+            (isUnit_card_sub_mul_choose hs) else 0) =
+          Checked.div (card α : ℚ) ((card α - j) * (card α).choose j)
+            (mul_ne_zero (sub_ne_zero_of_ne (Nat.cast_lt.2 hjn).ne')
+              (Nat.cast_ne_zero.2 (choose_pos hjn.le).ne')).isUnit := by
+        intro t ht
+        have htj : #t = j := mem_powersetCard_univ.1 ht
+        rw [dite_eq_left ((card_lt_iff_ne_univ t).1 (htj ▸ hjn))]
+        simp only [htj]
+      rw [Finset.sum_congr rfl hc, sum_const, card_powersetCard, card_univ, nsmul_eq_mul, mul_div₀,
+        mul_comm ((card α).choose j : ℚ), mul_div_mul_right]
+    · have hjn' : j = card α := le_antisymm (mem_range_succ_iff.1 hj) (not_lt.1 hjn)
+      refine Finset.sum_eq_zero fun t ht ↦ ?_
+      have htu : t = univ := (card_eq_iff_eq_univ t).1 ((mem_powersetCard_univ.1 ht).trans hjn')
+      exact dite_eq_right (not_not.2 htu)
+  rw [Finset.sum_congr rfl hlayer, sum_range_succ, dite_eq_right (lt_irrefl _), add_zero,
+    ← sum_range_reflect]
+  have hrefl : ∀ j ∈ range (card α), (if hj : card α - 1 - j < card α then
+      Checked.div (card α : ℚ) ((card α : ℚ) - ↑(card α - 1 - j))
+        (sub_ne_zero_of_ne (Nat.cast_lt.2 hj).ne').isUnit else 0) =
+      (card α : ℚ) * ((j : ℚ) + 1)⁻¹ := by
+    intro j hj
+    have hjn : j < card α := mem_range.1 hj
+    rw [dite_eq_left (by omega)]
+    have e : (card α : ℚ) - ↑(card α - 1 - j) = (j : ℚ) + 1 := by
+      rw [← Nat.cast_sub (by omega), show card α - (card α - 1 - j) = j + 1 by omega]
+      push_cast
+      rfl
+    simp only [e]
+    rw [div_eq_mul_inv₀]
+  rw [Finset.sum_congr rfl hrefl, ← mul_sum]
+  obtain ⟨k, hk⟩ : ∃ k, card α = k + 1 := Nat.exists_eq_succ_of_ne_zero card_ne_zero
+  rw [hk, Nat.add_sub_cancel, sum_range_succ, mul_add]
+  push_cast
+  rw [mul_inv_cancel₀]
 
 end
 
@@ -343,69 +422,100 @@ open Fintype Nat
 namespace AhlswedeZhang
 variable {α : Type*} [Fintype α] [DecidableEq α] {𝒜 : Finset (Finset α)} {s : Finset α}
 
-/-- Weighted sum of the size of the truncated infima of a set family. Relevant to the
-Ahlswede-Zhang identity. -/
-def infSum (𝒜 : Finset (Finset α)) : ℚ :=
-  ∑ s, #(truncatedInf 𝒜 s) / (#s * (card α).choose #s)
+/-- Weighted sum of the size of the truncated infima of a set family, over the nonempty finsets
+`s`, whose weights `1 / (#s * (card α).choose #s)` exist. Relevant to the Ahlswede-Zhang
+identity. -/
+noncomputable def infSum (𝒜 : Finset (Finset α)) : ℚ :=
+  ∑ s : {s : Finset α // s.Nonempty}, Checked.div (#(truncatedInf 𝒜 s.1) : ℚ)
+    (#s.1 * (card α).choose #s.1) (by exact isUnit_card_mul_choose s.2)
 
-/-- Weighted sum of the size of the truncated suprema of a set family. Relevant to the
-Ahlswede-Zhang identity. -/
-def supSum (𝒜 : Finset (Finset α)) : ℚ :=
-  ∑ s, #(truncatedSup 𝒜 s) / ((card α - #s) * (card α).choose #s)
+/-- Weighted sum of the size of the truncated suprema of a set family, over the finsets `s ≠ univ`,
+whose weights `1 / ((card α - #s) * (card α).choose #s)` exist. Relevant to the Ahlswede-Zhang
+identity. -/
+noncomputable def supSum (𝒜 : Finset (Finset α)) : ℚ :=
+  ∑ s : {s : Finset α // s ≠ univ}, Checked.div (#(truncatedSup 𝒜 s.1) : ℚ)
+    ((card α - #s.1) * (card α).choose #s.1) (by exact isUnit_card_sub_mul_choose s.2)
 
 lemma supSum_union_add_supSum_infs (𝒜 ℬ : Finset (Finset α)) :
     supSum (𝒜 ∪ ℬ) + supSum (𝒜 ⊼ ℬ) = supSum 𝒜 + supSum ℬ := by
   unfold supSum
-  rw [← sum_add_distrib, ← sum_add_distrib, Finset.sum_congr rfl fun s _ ↦ _]
-  simp_rw [← add_div, ← Nat.cast_add, card_truncatedSup_union_add_card_truncatedSup_infs]
-  simp
+  rw [← sum_add_distrib, ← sum_add_distrib]
+  refine Finset.sum_congr rfl fun s _ ↦ ?_
+  rw [← add_div, ← add_div, ← Nat.cast_add, ← Nat.cast_add,
+    card_truncatedSup_union_add_card_truncatedSup_infs]
 
 lemma infSum_union_add_infSum_sups (𝒜 ℬ : Finset (Finset α)) :
     infSum (𝒜 ∪ ℬ) + infSum (𝒜 ⊻ ℬ) = infSum 𝒜 + infSum ℬ := by
   unfold infSum
-  rw [← sum_add_distrib, ← sum_add_distrib, Finset.sum_congr rfl fun s _ ↦ _]
-  simp_rw [← add_div, ← Nat.cast_add, card_truncatedInf_union_add_card_truncatedInf_sups]
-  simp
+  rw [← sum_add_distrib, ← sum_add_distrib]
+  refine Finset.sum_congr rfl fun s _ ↦ ?_
+  rw [← add_div, ← add_div, ← Nat.cast_add, ← Nat.cast_add,
+    card_truncatedInf_union_add_card_truncatedInf_sups]
 
 lemma IsAntichain.le_infSum (h𝒜 : IsAntichain (· ⊆ ·) (𝒜 : Set (Finset α))) (h𝒜₀ : ∅ ∉ 𝒜) :
-    ∑ s ∈ 𝒜, ((card α).choose #s : ℚ)⁻¹ ≤ infSum 𝒜 := by
+    ∑ s ∈ 𝒜, Checked.inv ((card α).choose #s : ℚ) (by exact isUnit_choose_card s) ≤
+      infSum 𝒜 := by
+  unfold infSum
+  rw [sum_subtype_eq_sum_dite Finset.Nonempty fun s hs ↦ Checked.div (#(truncatedInf 𝒜 s) : ℚ)
+    (#s * (card α).choose #s) (isUnit_card_mul_choose hs)]
   calc
-    _ = ∑ s ∈ 𝒜, #(truncatedInf 𝒜 s) / (#s * (card α).choose #s : ℚ) := ?_
-    _ ≤ _ := sum_le_univ_sum_of_nonneg fun s ↦ by positivity
-  refine sum_congr rfl fun s hs ↦ ?_
-  rw [truncatedInf_of_isAntichain h𝒜 hs, div_mul_cancel_left₀]
-  have := (nonempty_iff_ne_empty.2 <| ne_of_mem_of_not_mem hs h𝒜₀).card_pos
-  positivity
+    _ = ∑ s ∈ 𝒜, if hs : s.Nonempty then Checked.div (#(truncatedInf 𝒜 s) : ℚ)
+          (#s * (card α).choose #s) (isUnit_card_mul_choose hs) else 0 := ?_
+    _ ≤ _ := sum_le_univ_sum_of_nonneg fun s ↦ by split_ifs <;> positivity
+  refine Finset.sum_congr rfl fun s hs ↦ ?_
+  rw [dite_eq_left (nonempty_iff_ne_empty.2 <| ne_of_mem_of_not_mem hs h𝒜₀)]
+  simp only [truncatedInf_of_isAntichain h𝒜 hs]
+  rw [div_mul_cancel_left₀]
 
 variable [Nonempty α]
 
 @[simp] lemma supSum_singleton (hs : s ≠ univ) :
-    supSum ({s} : Finset (Finset α)) = card α * ∑ k ∈ range (card α), (k : ℚ)⁻¹ := by
-  have : ∀ t : Finset α,
-    (card α - #(truncatedSup {s} t) : ℚ) / ((card α - #t) * (card α).choose #t) =
-    if t ⊆ s then (card α - #s : ℚ) / ((card α - #t) * (card α).choose #t) else 0 := by
-    rintro t
-    simp_rw [truncatedSup_singleton]
-    split_ifs <;> simp
-  simp_rw [← sub_eq_of_eq_add (Fintype.sum_div_mul_card_choose_card α), eq_sub_iff_add_eq,
-    ← eq_sub_iff_add_eq', supSum, ← sum_sub_distrib, ← sub_div]
-  rw [sum_congr rfl fun t _ ↦ this t, sum_ite, sum_const_zero, add_zero, filter_subset_univ,
-    sum_powerset, ← binomial_sum_eq ((card_lt_iff_ne_univ _).2 hs), eq_comm]
-  refine sum_congr rfl fun n _ ↦ ?_
-  rw [mul_div_assoc, ← nsmul_eq_mul]
-  exact sum_powersetCard n s fun m ↦ (card α - #s : ℚ) / ((card α - m) * (card α).choose m)
+    supSum ({s} : Finset (Finset α)) = card α * ∑ k ∈ range (card α - 1), ((k : ℚ) + 1)⁻¹ := by
+  have hsn : #s < card α := (card_lt_iff_ne_univ s).2 hs
+  rw [← add_left_inj (1 : ℚ), ← Fintype.sum_div_mul_card_choose_card α, eq_comm,
+    ← sub_eq_iff_eq_add', supSum, ← sum_sub_distrib]
+  simp_rw [← sub_div]
+  rw [sum_subtype_eq_sum_dite (· ≠ univ) fun t ht ↦ Checked.div
+      ((card α : ℚ) - #(truncatedSup {s} t)) ((card α - #t) * (card α).choose #t)
+      (isUnit_card_sub_mul_choose ht),
+    ← sum_subset (subset_univ s.powerset) fun t _ ht ↦ ?_, sum_powerset]
+  · rw [← binomial_sum_eq hsn]
+    refine Finset.sum_congr rfl fun i hi ↦ ?_
+    have hin : i < card α := (mem_range_succ_iff.1 hi).trans_lt hsn
+    rw [dite_eq_left hin]
+    have hc : ∀ t ∈ powersetCard i s, (if ht : t ≠ univ then Checked.div
+        ((card α : ℚ) - #(truncatedSup {s} t)) ((card α - #t) * (card α).choose #t)
+        (isUnit_card_sub_mul_choose ht) else 0) =
+        Checked.div ((card α : ℚ) - #s) ((card α - i) * (card α).choose i)
+          (mul_ne_zero (sub_ne_zero_of_ne (Nat.cast_lt.2 hin).ne')
+            (Nat.cast_ne_zero.2 (choose_pos hin.le).ne')).isUnit := by
+      intro t ht
+      obtain ⟨hts, hti⟩ := mem_powersetCard.1 ht
+      rw [dite_eq_left ((card_lt_iff_ne_univ t).1 (hti ▸ hin)), truncatedSup_singleton,
+        ite_eq_left hts]
+      simp only [hti]
+    rw [Finset.sum_congr rfl hc, sum_const, card_powersetCard, nsmul_eq_mul]
+  · rw [mem_powerset] at ht
+    split_ifs with htu
+    · rw [truncatedSup_singleton, ite_eq_right ht, top_eq_univ, card_univ, sub_self, zero_div]
+    · rfl
 
 /-- The **Ahlswede-Zhang Identity**. -/
 lemma infSum_compls_add_supSum (𝒜 : Finset (Finset α)) :
-    infSum 𝒜ᶜˢ + supSum 𝒜 = card α * ∑ k ∈ range (card α), (k : ℚ)⁻¹ + 1 := by
+    infSum 𝒜ᶜˢ + supSum 𝒜 = card α * ∑ k ∈ range (card α - 1), ((k : ℚ) + 1)⁻¹ + 1 := by
+  rw [← Fintype.sum_div_mul_card_choose_card α]
   unfold infSum supSum
-  rw [← @map_univ_of_surjective (Finset α) _ _ _ ⟨compl, compl_injective⟩ compl_surjective, sum_map]
-  simp only [Function.Embedding.coeFn_mk, univ_map_embedding, ← compl_truncatedSup,
-    ← sum_add_distrib, card_compl, cast_sub (card_le_univ _), choose_symm (card_le_univ _),
-    ← add_div, sub_add_cancel, Fintype.sum_div_mul_card_choose_card]
+  let e : {t : Finset α // t ≠ univ} ≃ {s : Finset α // s.Nonempty} :=
+    (compl_involutive.toPerm _).subtypeEquiv fun t ↦ by
+      simp [Function.Involutive.coe_toPerm, ← compl_ne_univ_iff_nonempty]
+  rw [← e.sum_comp, ← sum_add_distrib]
+  refine Finset.sum_congr rfl fun t _ ↦ ?_
+  simp only [e, Equiv.subtypeEquiv_apply, Function.Involutive.coe_toPerm, ← compl_truncatedSup,
+    card_compl, Nat.cast_sub (card_le_univ _), choose_symm (card_le_univ _)]
+  rw [← add_div, sub_add_cancel]
 
 lemma supSum_of_univ_notMem (h𝒜₁ : 𝒜.Nonempty) (h𝒜₂ : univ ∉ 𝒜) :
-    supSum 𝒜 = card α * ∑ k ∈ range (card α), (k : ℚ)⁻¹ := by
+    supSum 𝒜 = card α * ∑ k ∈ range (card α - 1), ((k : ℚ) + 1)⁻¹ := by
   set m := 𝒜.card with hm
   clear_value m
   induction m using Nat.strongRecOn generalizing 𝒜 with | ind m ih => _

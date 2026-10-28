@@ -65,90 +65,62 @@ variable [NormedDivisionRing α] {a b : α}
 instance (priority := 900) NormedDivisionRing.to_normOneClass : NormOneClass α :=
   ⟨mul_left_cancel₀ (mt norm_eq_zero.1 (one_ne_zero' α)) <| by rw [← norm_mul, mul_one, mul_one]⟩
 
-@[simp]
-theorem norm_div (a : α) (b : αˣ) :
-    ‖a /ₚ b‖ = ‖a‖ /ₚ Units.map normHom.toMonoidHom b :=
-  map_divp normHom.toMonoidHom a b
+/-! The evidence search `checked_nonzero` also uses that the norm of a nonzero element is nonzero,
+so that the norm of an invertible element can be inverted. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply norm_ne_zero_iff.mpr); checked_nonzero)
+    | ((with_reducible apply nnnorm_ne_zero_iff.mpr); checked_nonzero))
 
 @[simp]
-theorem nnnorm_div (a : α) (b : αˣ) :
-    ‖a /ₚ b‖₊ = ‖a‖₊ /ₚ Units.map nnnormHom.toMonoidHom b :=
-  map_divp nnnormHom.toMonoidHom a b
+theorem norm_div (a b : α) {hb : IsUnit b} : ‖a / b‖ = ‖a‖ / ‖b‖ :=
+  map_div₀ (normHom : α →*₀ ℝ) a b
 
 @[simp]
-theorem norm_inv (a : αˣ) :
-    ‖(↑a⁻¹ : α)‖ = (↑(Units.mk0 ‖(a : α)‖ (norm_ne_zero_iff.mpr a.ne_zero))⁻¹ : ℝ) := by
-  have h : Units.map normHom.toMonoidHom a =
-      Units.mk0 ‖(a : α)‖ (norm_ne_zero_iff.mpr a.ne_zero) := Units.ext rfl
-  rw [← h]
-  rfl
+theorem nnnorm_div (a b : α) {hb : IsUnit b} : ‖a / b‖₊ = ‖a‖₊ / ‖b‖₊ :=
+  map_div₀ (nnnormHom : α →*₀ ℝ≥0) a b
 
 @[simp]
-theorem nnnorm_inv (a : αˣ) :
-    ‖(↑a⁻¹ : α)‖₊ =
-      (↑(Units.mk0 ‖(a : α)‖₊ (nnnorm_ne_zero_iff.mpr a.ne_zero))⁻¹ : ℝ≥0) := by
-  have h : Units.map nnnormHom.toMonoidHom a =
-      Units.mk0 ‖(a : α)‖₊ (nnnorm_ne_zero_iff.mpr a.ne_zero) := Units.ext rfl
-  rw [← h]
-  rfl
+theorem norm_inv (a : α) {ha : IsUnit a} : ‖a⁻¹‖ = ‖a‖⁻¹ :=
+  map_inv₀ (normHom : α →*₀ ℝ) a
 
 @[simp]
-lemma enorm_inv (a : αˣ) : ‖(↑a⁻¹ : α)‖ₑ = ‖(a : α)‖ₑ⁻¹ := by
-  apply ENNReal.eq_inv_of_mul_eq_one_left
-  rw [← enorm_mul, Units.inv_mul, enorm_one]
+theorem nnnorm_inv (a : α) {ha : IsUnit a} : ‖a⁻¹‖₊ = ‖a‖₊⁻¹ :=
+  map_inv₀ (nnnormHom : α →*₀ ℝ≥0) a
 
 @[simp]
-theorem norm_zpow (a : α) (n : ℤ) (ha : n < 0 → IsUnit a) :
-    ‖Checked.zpow a n ha‖ =
-      Checked.zpow ‖a‖ n (fun hn => (ha hn).map normHom.toMonoidHom) := by
-  cases n with
-  | ofNat n => exact norm_pow a n
-  | negSucc n =>
-    change ‖(↑((ha (Int.negSucc_lt_zero n)).unit ^ Int.negSucc n) : α)‖ = _
-    have h : Units.map normHom.toMonoidHom (ha (Int.negSucc_lt_zero n)).unit =
-        ((ha (Int.negSucc_lt_zero n)).map normHom.toMonoidHom).unit := Units.ext rfl
-    change (↑(Units.map normHom.toMonoidHom
-      ((ha (Int.negSucc_lt_zero n)).unit ^ Int.negSucc n)) : ℝ) = _
-    rw [map_zpow, h]
-    rfl
+lemma enorm_inv {a : α} {ha : IsUnit a} : ‖a⁻¹‖ₑ = ‖a‖ₑ⁻¹ :=
+  ENNReal.eq_inv_of_mul_eq_one_left <| by rw [← enorm_mul, inv_mul_cancel₀, enorm_one]
 
 @[simp]
-theorem nnnorm_zpow (a : α) (n : ℤ) (ha : n < 0 → IsUnit a) :
-    ‖Checked.zpow a n ha‖₊ =
-      Checked.zpow ‖a‖₊ n (fun hn => (ha hn).map nnnormHom.toMonoidHom) := by
-  cases n with
-  | ofNat n => exact nnnorm_pow a n
-  | negSucc n =>
-    have h : Units.map nnnormHom.toMonoidHom (ha (Int.negSucc_lt_zero n)).unit =
-        ((ha (Int.negSucc_lt_zero n)).map nnnormHom.toMonoidHom).unit := Units.ext rfl
-    change (↑(Units.map nnnormHom.toMonoidHom
-      ((ha (Int.negSucc_lt_zero n)).unit ^ Int.negSucc n)) : ℝ≥0) = _
-    rw [map_zpow, h]
-    rfl
+theorem norm_zpow (a : α) (n : ℤ) {h : n < 0 → IsUnit a} : ‖a ^ n‖ = ‖a‖ ^ n :=
+  map_zpow₀ (normHom : α →*₀ ℝ) a n
 
-theorem dist_inv_inv₀ (z w : αˣ) :
-    dist (↑z⁻¹ : α) ↑w⁻¹ = dist (z : α) w /ₚ
-      (Units.map normHom.toMonoidHom z * Units.map normHom.toMonoidHom w) := by
-  simp only [dist_eq_norm, Units.inv_sub_inv', norm_mul, divp, mul_inv_rev,
-    Units.val_mul, Units.coe_map_inv]
-  rw [norm_sub_rev (z : α) w]
-  ac_rfl
+@[simp]
+theorem nnnorm_zpow (a : α) (n : ℤ) {h : n < 0 → IsUnit a} : ‖a ^ n‖₊ = ‖a‖₊ ^ n :=
+  map_zpow₀ (nnnormHom : α →*₀ ℝ≥0) a n
 
-theorem nndist_inv_inv₀ (z w : αˣ) :
-    nndist (↑z⁻¹ : α) ↑w⁻¹ = nndist (z : α) w /ₚ
-      (Units.map nnnormHom.toMonoidHom z * Units.map nnnormHom.toMonoidHom w) := by
-  apply NNReal.eq
-  exact dist_inv_inv₀ z w
+theorem dist_inv_inv₀ {z w : α} {hz : IsUnit z} {hw : IsUnit w} :
+    dist z⁻¹ w⁻¹ = dist z w / (‖z‖ * ‖w‖) := by
+  rw [dist_eq_norm, inv_sub_inv', norm_mul, norm_mul, norm_inv, norm_inv, mul_comm ‖z‖⁻¹,
+    mul_assoc, dist_eq_norm', div_eq_mul_inv₀, mul_inv₀]
 
-lemma norm_commutator_sub_one_le (a b : αˣ) :
-    ‖(a : α) * b * ↑a⁻¹ * ↑b⁻¹ - 1‖ ≤
-      2 * ‖(↑a⁻¹ : α)‖ * ‖(↑b⁻¹ : α)‖ * ‖(a : α) - 1‖ * ‖(b : α) - 1‖ :=
-  norm_commutator_units_sub_one_le a b
+theorem nndist_inv_inv₀ {z w : α} {hz : IsUnit z} {hw : IsUnit w} :
+    nndist z⁻¹ w⁻¹ = nndist z w / (‖z‖₊ * ‖w‖₊) :=
+  NNReal.eq <| by
+    simp only [NNReal.coe_div, NNReal.coe_mul, coe_nnnorm, coe_nndist, dist_inv_inv₀]
 
-lemma nnnorm_commutator_sub_one_le (a b : αˣ) :
-    ‖(a : α) * b * ↑a⁻¹ * ↑b⁻¹ - 1‖₊ ≤
-      2 * ‖(↑a⁻¹ : α)‖₊ * ‖(↑b⁻¹ : α)‖₊ * ‖(a : α) - 1‖₊ * ‖(b : α) - 1‖₊ :=
-  nnnorm_commutator_units_sub_one_le a b
+lemma norm_commutator_sub_one_le {ha : IsUnit a} {hb : IsUnit b} :
+    ‖a * b * a⁻¹ * b⁻¹ - 1‖ ≤ 2 * ‖a‖⁻¹ * ‖b‖⁻¹ * ‖a - 1‖ * ‖b - 1‖ := by
+  rw [← norm_inv a (ha := ha), ← norm_inv b (ha := hb)]
+  exact norm_commutator_units_sub_one_le ha.unit hb.unit
+
+lemma nnnorm_commutator_sub_one_le {ha : IsUnit a} {hb : IsUnit b} :
+    ‖a * b * a⁻¹ * b⁻¹ - 1‖₊ ≤ 2 * ‖a‖₊⁻¹ * ‖b‖₊⁻¹ * ‖a - 1‖₊ * ‖b - 1‖₊ := by
+  rw [← nnnorm_inv a (ha := ha), ← nnnorm_inv b (ha := hb)]
+  exact nnnorm_commutator_units_sub_one_le ha.unit hb.unit
 
 namespace NormedDivisionRing
 
@@ -166,14 +138,11 @@ lemma norm_eq_one_iff_ne_zero_of_discrete {x : 𝕜} : ‖x‖ = 1 ↔ x ≠ 0 :
     wlog! h : ‖x‖ < 1 generalizing 𝕜 with H
     · rcases h.eq_or_lt with h | h
       · rw [h]
-      let u := Units.mk0 x hx
-      have hu : ‖x‖ * ‖(↑u⁻¹ : 𝕜)‖ = 1 := by
-        rw [← norm_mul, show x * (↑u⁻¹ : 𝕜) = 1 from u.mul_inv, norm_one]
-      have hi : ‖(↑u⁻¹ : 𝕜)‖ < 1 := by
-        apply (mul_lt_mul_left (norm_pos_iff.mpr hx)).mp
-        simpa only [hu, mul_one] using h
-      have hi1 : ‖(↑u⁻¹ : 𝕜)‖ = 1 := H (u⁻¹).ne_zero h' hi
-      simpa only [hi1, mul_one] using hu
+      have hi : ‖x⁻¹‖ < 1 := by
+        rw [norm_inv]
+        exact inv_lt_one_of_one_lt₀ h
+      have hi1 : ‖x⁻¹‖ = 1 := H inv_ne_zero h' hi
+      rwa [norm_inv, inv_eq_one₀] at hi1
     obtain ⟨k, hk⟩ : ∃ k : ℕ, ‖x‖ ^ k < ε := exists_pow_lt_of_lt_one εpos h
     rw [← norm_pow] at hk
     specialize h' _ hk
@@ -268,17 +237,11 @@ theorem exists_lt_enorm {r : ℝ≥0∞} (hr : r ≠ ∞) : ∃ x : α, r < ‖x
   exact mod_cast exists_lt_nnnorm α r
 
 theorem exists_norm_lt {r : ℝ} (hr : 0 < r) : ∃ x : α, 0 < ‖x‖ ∧ ‖x‖ < r := by
-  let u := Units.mk0 r hr.ne'
-  obtain ⟨w, hw⟩ := exists_lt_norm α (↑u⁻¹ : ℝ)
-  have hwpos : 0 < ‖w‖ := ((Units.inv_pos u).mpr hr).trans hw
-  let v := Units.mk0 w (norm_pos_iff.mp hwpos)
-  refine ⟨↑v⁻¹, norm_pos_iff.mpr (v⁻¹).ne_zero, ?_⟩
-  apply (mul_lt_mul_left hwpos).mp
-  have hprod : ‖w‖ * ‖(↑v⁻¹ : α)‖ = 1 := by
-    rw [← norm_mul, show w * (↑v⁻¹ : α) = 1 from v.mul_inv, norm_one]
-  rw [hprod]
-  simpa only [show (↑u⁻¹ : ℝ) * r = 1 from u.inv_mul] using
-    mul_lt_mul_of_pos_right hw hr
+  obtain ⟨w, hw⟩ := exists_lt_norm α r⁻¹
+  have hw₀ : 0 < ‖w‖ := (inv_pos_of_pos hr).trans hw
+  have hw' : w ≠ 0 := norm_pos_iff.mp hw₀
+  refine ⟨w⁻¹, ?_, ?_⟩ <;> rw [norm_inv]
+  exacts [inv_pos_of_pos hw₀, (inv_lt_comm₀ hr hw₀).mp hw]
 
 theorem exists_nnnorm_lt {r : ℝ≥0} (hr : 0 < r) : ∃ x : α, 0 < ‖x‖₊ ∧ ‖x‖₊ < r :=
   exists_norm_lt α hr
@@ -348,19 +311,16 @@ def NontriviallyNormedField.ofNormNeOne {𝕜 : Type*} [h' : NormedField 𝕜]
   non_trivial := by
     rcases h with ⟨x, hx, hx1⟩
     rcases hx1.lt_or_gt with hlt | hlt
-    · let u := Units.mk0 x hx
-      refine ⟨↑u⁻¹, ?_⟩
-      apply (mul_lt_mul_left (norm_pos_iff.mpr hx)).mp
-      have hu : ‖x‖ * ‖(↑u⁻¹ : 𝕜)‖ = 1 := by
-        rw [← norm_mul, show x * (↑u⁻¹ : 𝕜) = 1 from u.mul_inv, norm_one]
-      simpa only [mul_one, hu] using hlt
+    · use x⁻¹
+      rw [norm_inv]
+      exact (one_lt_inv₀ (norm_pos_iff.2 hx)).2 hlt
     · exact ⟨x, hlt⟩
 
-noncomputable instance Real.normedField : NormedField ℝ :=
+instance Real.normedField : NormedField ℝ :=
   { Real.normedAddCommGroup, Real.instField with
     norm_mul := abs_mul }
 
-noncomputable instance Real.denselyNormedField : DenselyNormedField ℝ where
+instance Real.denselyNormedField : DenselyNormedField ℝ where
   lt_norm_lt _ _ h₀ hr :=
     let ⟨x, h⟩ := exists_between hr
     ⟨x, by rwa [Real.norm_eq_abs, abs_of_nonneg (h₀.trans h.1.le)]⟩

@@ -258,12 +258,12 @@ theorem zpow_neg {α : Type*} [Monoid α] {a : α} {b : ℤ} {nb : ℕ}
   · subst nb
     have hb : b = 0 := pb.out.trans rfl
     subst b
-    simp only [Checked.zpow_zero, pow_zero, Checked.inv_one]
+    simp only [zpow_zero₀, pow_zero, inv_one₀]
   · have hb : b < 0 := by
       rw [pb.out, Int.cast_negOfNat]
       omega
     let hu := h hb
-    rw [Checked.zpow_eq_unit a b hu h]
+    rw [hu.zpow_eq_val_unit_zpow b]
     have hp : (zpow_neg_isUnit h pb).unit = hu.unit ^ nb := Units.ext (by
       simp only [IsUnit.unit_spec, Units.val_pow_eq_pow_val])
     change (↑(hu.unit ^ b) : α) = ↑(zpow_neg_isUnit h pb).unit⁻¹

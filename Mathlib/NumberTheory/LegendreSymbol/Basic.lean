@@ -218,7 +218,7 @@ theorem eq_one_of_sq_sub_mul_sq_eq_zero {p : ℕ} [Fact p.Prime] {a : ℤ} (ha :
   apply_fun (· * y⁻¹ ^ 2) at hxy
   simp only [zero_mul] at hxy
   rw [(by ring : (x ^ 2 - ↑a * y ^ 2) * y⁻¹ ^ 2 = (x * y⁻¹) ^ 2 - a * (y * y⁻¹) ^ 2),
-    mul_inv_cancel₀ hy, one_pow, mul_one, sub_eq_zero, pow_two] at hxy
+    mul_inv_cancel₀, one_pow, mul_one, sub_eq_zero, pow_two] at hxy
   exact (eq_one_iff p ha).mpr ⟨x * y⁻¹, hxy.symm⟩
 
 /-- The Legendre symbol `legendreSym p a = 1` if there is a solution in `ℤ/pℤ`
@@ -292,9 +292,7 @@ theorem mod_four_ne_three_of_sq_eq_neg_one {y : ZMod p} (hy : y ^ 2 = -1) : p % 
 theorem mod_four_ne_three_of_sq_eq_neg_sq' {x y : ZMod p} (hy : y ≠ 0) (hxy : x ^ 2 = -y ^ 2) :
     p % 4 ≠ 3 :=
   @mod_four_ne_three_of_sq_eq_neg_one p _ (x / y)
-    (by
-      apply_fun fun z => z / y ^ 2 at hxy
-      rwa [neg_div, ← div_pow, ← div_pow, div_self hy, one_pow] at hxy)
+    (by rw [div_pow₀, hxy, neg_div₀, div_self])
 
 theorem mod_four_ne_three_of_sq_eq_neg_sq {x y : ZMod p} (hx : x ≠ 0) (hxy : x ^ 2 = -y ^ 2) :
     p % 4 ≠ 3 :=

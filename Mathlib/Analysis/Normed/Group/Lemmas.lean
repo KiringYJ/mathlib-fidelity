@@ -58,7 +58,7 @@ lemma Subgroup.dense_of_infDist_le {G : Type*} [SeminormedGroup G]
     calc ε * ‖y⁻¹ * g‖
       _ = ε * dist g y := by rw [dist_eq_norm_inv_mul']
       _ < ε * (ε⁻¹ * infDist g H) := by gcongr
-      _ = infDist g (H : Set G) := by rw [← mul_assoc, mul_inv_cancel₀ h1.ne', one_mul]
+      _ = infDist g (H : Set G) := by rw [← mul_assoc, mul_inv_cancel₀, one_mul]
   have : dist g (y * z) < infDist g (H : Set G) := by
     rwa [dist_eq_norm_inv_mul, ← mul_assoc, ← inv_inv (g⁻¹ * y),
       ← SeminormedGroup.dist_eq (g⁻¹ * y)⁻¹ z, mul_inv_rev, inv_inv]

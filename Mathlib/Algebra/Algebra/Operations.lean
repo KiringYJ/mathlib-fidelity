@@ -579,8 +579,8 @@ lemma span_singleton_mul {x : A} {p : Submodule R A} :
 lemma mem_smul_iff_inv_mul_mem {S} [DivisionSemiring S] [Algebra R S] {x : S} {p : Submodule R S}
     {y : S} (hx : x ≠ 0) : y ∈ x • p ↔ x⁻¹ * y ∈ p := by
   constructor
-  · rintro ⟨a, ha : a ∈ p, rfl⟩; simpa [inv_mul_cancel_left₀ hx]
-  · exact fun h ↦ ⟨_, h, by simp [mul_inv_cancel_left₀ hx]⟩
+  · rintro ⟨a, ha : a ∈ p, rfl⟩; simpa [inv_mul_cancel_left₀]
+  · exact fun h ↦ ⟨_, h, by simp [mul_inv_cancel_left₀]⟩
 
 lemma mul_mem_smul_iff {S} [Ring S] [Algebra R S] {x : S} {p : Submodule R S} {y : S}
     (hx : x ∈ nonZeroDivisors S) :

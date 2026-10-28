@@ -45,7 +45,7 @@ theorem tendsto_mul_pow_div_factorial_sub_atTop (a c : K) (d : ℕ) :
   all_goals
     intro ε hε
     filter_upwards [eventually_mul_pow_lt_factorial_sub (a * ε⁻¹) c d] with n h
-    rw [mul_right_comm, ← div_eq_mul_inv] at h
+    rw [mul_right_comm, ← div_eq_mul_inv₀] at h
   · rw [div_lt_iff_of_neg hε] at h
     rwa [lt_div_iff₀' (Nat.cast_pos.mpr (Nat.factorial_pos _))]
   · rw [div_lt_iff₀ hε] at h

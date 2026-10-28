@@ -661,13 +661,13 @@ theorem div_to_int : ∀ n d, ((n / d : ZNum) : ℤ) = n / d
   | pos n, pos d => (Num.cast_toZNum _).trans <| by rw [← Num.to_nat_to_int]; simp
   | pos n, neg d => (Num.cast_toZNumNeg _).trans <| by rw [← Num.to_nat_to_int]; simp
   | neg n, pos d =>
-    show -_ = -_ / ↑d by
+    show -_ = -_ / (d : ℤ) by
       rw [n.to_int_eq_succ_pred, d.to_int_eq_succ_pred, ← PosNum.to_nat_to_int, Num.succ'_to_nat,
         Num.div_to_nat]
       change -[n.pred' / ↑d+1] = -[n.pred' / (d.pred' + 1)+1]
       rw [d.to_nat_eq_succ_pred]
   | neg n, neg d =>
-    show ↑(PosNum.pred' n / Num.pos d).succ' = -_ / -↑d by
+    show ((PosNum.pred' n / Num.pos d).succ' : ℤ) = -_ / -(d : ℤ) by
       rw [n.to_int_eq_succ_pred, d.to_int_eq_succ_pred, ← PosNum.to_nat_to_int, Num.succ'_to_nat,
         Num.div_to_nat]
       change (Nat.succ (_ / d) : ℤ) = Nat.succ (n.pred' / (d.pred' + 1))

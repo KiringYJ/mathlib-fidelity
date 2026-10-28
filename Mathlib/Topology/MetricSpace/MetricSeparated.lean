@@ -83,7 +83,7 @@ lemma IsSeparated.image_antilipschitz {ε K₁ : ℝ≥0} {f : X → Y}
   rintro x' ⟨x, hx, rfl⟩ y' ⟨y, hy, rfl⟩ hne
   have hmul : (↑ε : ℝ≥0∞) < edist (f x) (f y) * ↑K₁ :=
     lt_of_lt_of_le (hs hx hy (by grind)) (by rw [mul_comm]; exact hf x y)
-  exact ENNReal.coe_div hK₁.ne' ▸ ENNReal.div_lt_of_lt_mul hmul
+  exact (ENNReal.coe_div (hr := hK₁.ne'.isUnit)) ▸ ENNReal.div_lt_of_lt_mul hmul
 
 /-!
 ### Metric separated pairs of sets

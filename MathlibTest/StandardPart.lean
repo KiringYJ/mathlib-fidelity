@@ -56,13 +56,14 @@ example :
   mk_sub_pos_iff coeRingHom (x := FiniteElement.mk ε archimedeanClassMk_epsilon_pos.le)
 
 example (u : (FiniteElement ℝ*)ˣ) :
-    stdPart (↑u⁻¹ : FiniteElement ℝ*) = (stdPart (u : FiniteElement ℝ*))⁻¹ :=
-  map_units_inv stdPart u
+    stdPart (↑u⁻¹ : FiniteElement ℝ*) =
+      Checked.inv (stdPart (u : FiniteElement ℝ*)) (u.isUnit.map stdPart) := by
+  rw [Units.val_inv_eq_inv_val₀, map_inv₀]
 
 example (x : FiniteElement ℝ*) (u : (FiniteElement ℝ*)ˣ) :
     stdPart (x * (↑u⁻¹ : FiniteElement ℝ*)) =
-      stdPart x / stdPart (u : FiniteElement ℝ*) := by
-  rw [div_eq_mul_inv, map_mul, map_units_inv]
+      Checked.div (stdPart x) (stdPart (u : FiniteElement ℝ*)) (u.isUnit.map stdPart) := by
+  rw [Units.val_inv_eq_inv_val₀, map_mul, map_inv₀, div_eq_mul_inv₀]
 
 example (u : (FiniteElement ℝ*)ˣ) : stdPart (u : FiniteElement ℝ*) ≠ 0 :=
   stdPart_ne_zero_iff_isUnit.mpr u.isUnit

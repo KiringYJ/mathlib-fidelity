@@ -262,8 +262,10 @@ instance (priority := 100) charZero_rclike : CharZero K :=
   (RingHom.charZero_iff (algebraMap ℝ K).injective).1 inferInstance
 
 @[rclike_simps, norm_cast]
-lemma ofReal_expect {α : Type*} (s : Finset α) (f : α → ℝ) : 𝔼 i ∈ s, f i = 𝔼 i ∈ s, (f i : K) :=
-  map_expect (algebraMap ..) ..
+lemma ofReal_expect {α : Type*} (s : Finset α) (f : α → ℝ)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    𝔼 i ∈ s, f i = 𝔼 i ∈ s, (f i : K) :=
+  map_expect (algebraMap ℝ K) f s hs
 
 @[norm_cast]
 lemma ofReal_balance {ι : Type*} [Fintype ι] (f : ι → ℝ) (i : ι) :
@@ -343,10 +345,10 @@ theorem add_conj (z : K) : z + conj z = 2 * re z :=
     _ = 2 * re z := by rw [add_add_sub_cancel, two_mul]
 
 theorem re_eq_add_conj (z : K) : ↑(re z) = (z + conj z) / 2 := by
-  rw [add_conj, mul_div_cancel_left₀ (re z : K) two_ne_zero]
+  rw [add_conj, mul_div_cancel_left₀ (re z : K)]
 
 theorem im_eq_conj_sub (z : K) : ↑(im z) = I * (conj z - z) / 2 := by
-  rw [← neg_inj, ← ofReal_neg, ← I_mul_re, re_eq_add_conj, map_mul, conj_I, ← neg_div, ← mul_neg,
+  rw [← neg_inj, ← ofReal_neg, ← I_mul_re, re_eq_add_conj, map_mul, conj_I, ← neg_div₀, ← mul_neg,
     neg_sub, mul_sub, neg_mul, sub_eq_add_neg]
 
 open List in
@@ -467,8 +469,9 @@ theorem mul_conj (z : K) : z * conj z = ‖z‖ ^ 2 := by
 
 theorem conj_mul (z : K) : conj z * z = ‖z‖ ^ 2 := by rw [mul_comm, mul_conj]
 
-lemma inv_eq_conj {z : Kˣ} (hz : ‖(z : K)‖ = 1) : (↑z⁻¹ : K) = conj (z : K) :=
-  Units.mul_eq_one_iff_inv_eq.mp <| by simp_rw [mul_conj, hz, one_pow, algebraMap.coe_one]
+lemma inv_eq_conj (hz : ‖z‖ = 1) :
+    Checked.inv z (ne_zero_of_norm_ne_zero (hz.trans_ne one_ne_zero)).isUnit = conj z :=
+  inv_eq_of_mul_eq_one_left₀ <| by simp_rw [conj_mul, hz, algebraMap.coe_one, one_pow]
 
 theorem normSq_sub (z w : K) : normSq (z - w) = normSq z + normSq w - 2 * re (z * conj w) := by
   simp only [normSq_add, sub_eq_add_neg, map_neg, mul_neg, normSq_neg, map_neg]
@@ -476,115 +479,95 @@ theorem normSq_sub (z w : K) : normSq (z - w) = normSq z + normSq w - 2 * re (z 
 theorem sqrt_normSq_eq_norm {z : K} : √(normSq z) = ‖z‖ := by
   rw [normSq_eq_def', Real.sqrt_sq (norm_nonneg _)]
 
-/-! ### Inversion -/
+/-! ### Inversion
 
-@[norm_cast]
-theorem ofReal_inv (r : ℝˣ) : ((↑r⁻¹ : ℝ) : K) =
-    (↑(Units.map (algebraMap ℝ K).toMonoidHom r)⁻¹ : K) := rfl
+The evidence search `checked_nonzero` also uses that the coercion of a nonzero real number and the
+norm square of a nonzero element are nonzero. -/
 
-theorem inv_def (z : Kˣ) : (↑z⁻¹ : K) = conj (z : K) *
-    ((↑(Units.map normSq.toMonoidHom z)⁻¹ : ℝ) : K) := by
-  apply Units.mul_eq_one_iff_inv_eq.mp
-  rw [← mul_assoc, mul_conj, ← normSq_eq_def', ← ofReal_mul,
-    show normSq (z : K) * (↑(Units.map normSq.toMonoidHom z)⁻¹ : ℝ) = 1 from
-      (Units.map normSq.toMonoidHom z).mul_inv, ofReal_one]
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply RCLike.ofReal_ne_zero.mpr); checked_nonzero)
+    | ((with_reducible apply RCLike.normSq_eq_zero.not.mpr); checked_nonzero))
+
+@[rclike_simps, norm_cast]
+theorem ofReal_inv (r : ℝ) {hr : IsUnit r} : ((r⁻¹ : ℝ) : K) = (r : K)⁻¹ :=
+  map_inv₀ (algebraMap ℝ K) r
+
+theorem inv_def (z : K) {hz : IsUnit z} : z⁻¹ = conj z * ((‖z‖ ^ 2)⁻¹ : ℝ) :=
+  inv_eq_of_mul_eq_one_right₀ <| by
+    rw [← mul_assoc, mul_conj, ← ofReal_pow, ← ofReal_mul, mul_inv_cancel₀, ofReal_one]
 
 @[simp, rclike_simps]
-theorem inv_re (z : Kˣ) : re (↑z⁻¹ : K) = re (z : K) /ₚ Units.map normSq.toMonoidHom z := by
-  rw [inv_def]
-  simp only [mul_re, conj_re, ofReal_re, ofReal_im, mul_zero, sub_zero, divp]
+theorem inv_re (z : K) {hz : IsUnit z} : re z⁻¹ = re z / normSq z := by
+  rw [inv_def, mul_comm, re_ofReal_mul, conj_re, div_eq_inv_mul₀]
+  simp only [normSq_eq_def']
 
 @[simp, rclike_simps]
-theorem inv_im (z : Kˣ) : im (↑z⁻¹ : K) = -im (z : K) /ₚ Units.map normSq.toMonoidHom z := by
-  rw [inv_def]
-  simp only [mul_im, conj_im, ofReal_re, ofReal_im, mul_zero, zero_add, divp]
+theorem inv_im (z : K) {hz : IsUnit z} : im z⁻¹ = -im z / normSq z := by
+  rw [inv_def, mul_comm, im_ofReal_mul, conj_im, div_eq_inv_mul₀]
+  simp only [normSq_eq_def']
 
-theorem div_re (z : K) (w : Kˣ) :
-    re (z /ₚ w) = re z * re (w : K) /ₚ Units.map normSq.toMonoidHom w +
-      im z * im (w : K) /ₚ Units.map normSq.toMonoidHom w := by
-  simp only [divp, mul_re, inv_re, inv_im, neg_mul, mul_neg, sub_neg_eq_add, mul_assoc]
+theorem div_re (z w : K) {hw : IsUnit w} :
+    re (z / w) = re z * re w / normSq w + im z * im w / normSq w := by
+  simp only [div_eq_mul_inv₀, mul_assoc, sub_eq_add_neg, neg_mul, mul_neg, neg_neg,
+    rclike_simps]
 
-theorem div_im (z : K) (w : Kˣ) :
-    im (z /ₚ w) = im z * re (w : K) /ₚ Units.map normSq.toMonoidHom w -
-      re z * im (w : K) /ₚ Units.map normSq.toMonoidHom w := by
-  simp only [divp, mul_im, inv_re, inv_im, neg_mul, mul_neg, sub_eq_add_neg, mul_assoc, add_comm]
+theorem div_im (z w : K) {hw : IsUnit w} :
+    im (z / w) = im z * re w / normSq w - re z * im w / normSq w := by
+  simp only [div_eq_mul_inv₀, mul_assoc, sub_eq_add_neg, add_comm, neg_mul, mul_neg,
+    rclike_simps]
 
-theorem conj_inv (x : Kˣ) : conj (↑x⁻¹ : K) =
-    (↑(Units.map (starRingEnd K).toMonoidHom x)⁻¹ : K) := rfl
+-- Not `@[simp]` since `simp` can prove this
+@[rclike_simps]
+theorem conj_inv (x : K) {hx : IsUnit x} : conj x⁻¹ = (conj x)⁻¹ :=
+  star_inv₀ x
 
-lemma conj_div (x : K) (y : Kˣ) : conj (x /ₚ y) =
-    conj x /ₚ Units.map (starRingEnd K).toMonoidHom y :=
-  map_divp (starRingEnd K).toMonoidHom x y
+lemma conj_div (x y : K) {hy : IsUnit y} : conj (x / y) = conj x / conj y :=
+  map_div₀ (starRingEnd K) x y
 
 --TODO: Do we rather want the map as an explicit definition?
 lemma exists_norm_eq_mul_self (x : K) : ∃ c, ‖c‖ = 1 ∧ ↑‖x‖ = c * x := by
   obtain rfl | hx := eq_or_ne x 0
   · exact ⟨1, by simp⟩
-  · let u := Units.mk0 x hx
-    refine ⟨(‖x‖ : K) /ₚ u, ?_, ?_⟩
-    · rw [divp, norm_mul, norm_ofReal, abs_of_nonneg (norm_nonneg x), ← norm_mul]
-      change ‖(u : K) * ↑u⁻¹‖ = 1
-      rw [Units.mul_inv, norm_one]
-    · exact (divp_mul_cancel (‖x‖ : K) u).symm
+  · exact ⟨‖x‖ / x, by simp⟩
 
 lemma exists_norm_mul_eq_self (x : K) : ∃ c, ‖c‖ = 1 ∧ c * ‖x‖ = x := by
   obtain rfl | hx := eq_or_ne x 0
   · exact ⟨1, by simp⟩
-  · let u := Units.mk0 ‖x‖ (norm_ne_zero_iff.mpr hx)
-    let v := Units.map (algebraMap ℝ K).toMonoidHom u
-    refine ⟨x /ₚ v, ?_, divp_mul_cancel x v⟩
-    have hp : 0 < (↑u⁻¹ : ℝ) := (Units.inv_pos u).mpr (norm_pos_iff.mpr hx)
-    change ‖x * ((↑u⁻¹ : ℝ) : K)‖ = 1
-    rw [norm_mul, norm_ofReal, abs_of_pos hp]
-    exact u.mul_inv
+  · exact ⟨x / ‖x‖, by simp⟩
 
 @[rclike_simps, norm_cast]
-theorem ofReal_div (r : ℝ) (s : ℝˣ) : ((r /ₚ s : ℝ) : K) =
-    (r : K) /ₚ Units.map (algebraMap ℝ K).toMonoidHom s :=
-  map_divp (algebraMap ℝ K).toMonoidHom r s
+theorem ofReal_div (r s : ℝ) {hs : IsUnit s} : ((r / s : ℝ) : K) = r / s :=
+  map_div₀ (algebraMap ℝ K) r s
 
-theorem div_re_ofReal {z : K} (r : ℝˣ) :
-    re (z /ₚ Units.map (algebraMap ℝ K).toMonoidHom r) = re z /ₚ r := by
-  change re (z * ((↑r⁻¹ : ℝ) : K)) = re z * (↑r⁻¹ : ℝ)
-  rw [mul_comm, re_ofReal_mul, mul_comm]
+theorem div_re_ofReal {z : K} {r : ℝ} {hr : IsUnit (r : K)} : re (z / r) = re z / r := by
+  rw [div_eq_inv_mul₀, div_eq_inv_mul₀, ← ofReal_inv, re_ofReal_mul]
 
 @[rclike_simps, norm_cast]
-theorem ofReal_zpow (r : ℝ) (n : ℤ) (hr : n < 0 → IsUnit r) :
-    ((Checked.zpow r n hr : ℝ) : K) =
-      Checked.zpow (r : K) n (fun hn ↦ (hr hn).map (algebraMap ℝ K)) := by
-  cases n with
-  | ofNat n => exact ofReal_pow r n
-  | negSucc n =>
-    have hu : Units.map (algebraMap ℝ K).toMonoidHom (hr (Int.negSucc_lt_zero n)).unit =
-        ((hr (Int.negSucc_lt_zero n)).map (algebraMap ℝ K)).unit := Units.ext rfl
-    change (↑(Units.map (algebraMap ℝ K).toMonoidHom
-      ((hr (Int.negSucc_lt_zero n)).unit ^ Int.negSucc n)) : K) = _
-    rw [map_zpow, hu]
-    rfl
+theorem ofReal_zpow (r : ℝ) (n : ℤ) {h : n < 0 → IsUnit r} : ((r ^ n : ℝ) : K) = (r : K) ^ n :=
+  map_zpow₀ (algebraMap ℝ K) r n
 
 theorem I_mul_I_of_nonzero : (I : K) ≠ 0 → (I : K) * I = -1 :=
   I_mul_I_ax.resolve_left
 
 @[simp, rclike_simps]
-theorem inv_I (hI : (I : K) ≠ 0) : (↑(Units.mk0 I hI)⁻¹ : K) = -I := by
-  apply Units.mul_eq_one_iff_inv_eq.mp
-  simp only [Units.val_mk0, mul_neg, I_mul_I_of_nonzero hI, neg_neg]
+theorem inv_I {hI : IsUnit (I : K)} : (I : K)⁻¹ = -I :=
+  inv_eq_of_mul_eq_one_right₀ <| by rw [mul_neg, I_mul_I_of_nonzero hI.ne_zero, neg_neg]
 
 @[simp, rclike_simps]
-theorem div_I (z : K) (hI : (I : K) ≠ 0) : z /ₚ Units.mk0 I hI = -(z * I) := by
-  rw [divp, inv_I, mul_neg]
+theorem div_I (z : K) {hI : IsUnit (I : K)} : z / I = -(z * I) := by
+  rw [div_eq_mul_inv₀, inv_I, mul_neg]
 
+-- Not `@[simp]` since `simp` can prove this.
 @[rclike_simps]
-theorem normSq_inv (z : Kˣ) : normSq (↑z⁻¹ : K) =
-    (↑(Units.mk0 (normSq (z : K)) (normSq_eq_zero.not.mpr z.ne_zero))⁻¹ : ℝ) := by
-  have hu : Units.map normSq.toMonoidHom z =
-      Units.mk0 (normSq (z : K)) (normSq_eq_zero.not.mpr z.ne_zero) := Units.ext rfl
-  rw [← hu]
-  rfl
+theorem normSq_inv (z : K) {hz : IsUnit z} : normSq z⁻¹ = (normSq z)⁻¹ :=
+  map_inv₀ normSq z
 
+-- Not `@[simp]` since `simp` can prove this.
 @[rclike_simps]
-theorem normSq_div (z : K) (w : Kˣ) : normSq (z /ₚ w) =
-    normSq z /ₚ Units.map normSq.toMonoidHom w := map_divp normSq.toMonoidHom z w
+theorem normSq_div (z w : K) {hw : IsUnit w} : normSq (z / w) = normSq z / normSq w :=
+  map_div₀ normSq z w
 
 @[simp 1100, rclike_simps]
 theorem norm_conj (z : K) : ‖conj z‖ = ‖z‖ := by simp only [← sqrt_normSq_eq_norm, normSq_conj]
@@ -743,30 +726,13 @@ theorem im_eq_zero_of_le {a : K} (h : ‖a‖ ≤ re a) : im a = 0 := by
 theorem re_eq_self_of_le {a : K} (h : ‖a‖ ≤ re a) : (re a : K) = a := by
   rw [← conj_eq_iff_re, conj_eq_iff_im, im_eq_zero_of_le h]
 
-theorem abs_re_div_norm_le_one (z : Kˣ) :
-    |re (z : K) /ₚ Units.map normHom.toMonoidHom z| ≤ 1 := by
-  have hp : 0 < (↑(Units.map normHom.toMonoidHom z) : ℝ) := norm_pos_iff.mpr z.ne_zero
-  apply abs_le.mpr
-  constructor
-  · apply (le_divp_iff hp).mpr
-    change -1 * ‖(z : K)‖ ≤ re (z : K)
-    simpa only [neg_one_mul] using (abs_le.mp (abs_re_le_norm (z : K))).1
-  · apply (divp_le_iff hp).mpr
-    change re (z : K) ≤ 1 * ‖(z : K)‖
-    simpa only [one_mul] using re_le_norm (z : K)
+theorem abs_re_div_norm_le_one (z : K) {hz : IsUnit ‖z‖} : |re z / ‖z‖| ≤ 1 := by
+  rw [abs_div]
+  exact div_le_one_of_le₀ ((abs_re_le_norm z).trans (le_abs_self _)) (abs_nonneg _)
 
-theorem abs_im_div_norm_le_one (z : Kˣ) :
-    |im (z : K) /ₚ Units.map normHom.toMonoidHom z| ≤ 1 := by
-  have hp : 0 < (↑(Units.map normHom.toMonoidHom z) : ℝ) := norm_pos_iff.mpr z.ne_zero
-  apply abs_le.mpr
-  constructor
-  · apply (le_divp_iff hp).mpr
-    change -1 * ‖(z : K)‖ ≤ im (z : K)
-    simpa only [neg_one_mul] using (abs_le.mp (abs_im_le_norm (z : K))).1
-  · apply (divp_le_iff hp).mpr
-    change im (z : K) ≤ 1 * ‖(z : K)‖
-    simpa only [one_mul] using im_le_norm (z : K)
-
+theorem abs_im_div_norm_le_one (z : K) {hz : IsUnit ‖z‖} : |im z / ‖z‖| ≤ 1 := by
+  rw [abs_div]
+  exact div_le_one_of_le₀ ((abs_im_le_norm z).trans (le_abs_self _)) (abs_nonneg _)
 
 theorem norm_I_of_ne_zero (hI : (I : K) ≠ 0) : ‖(I : K)‖ = 1 := by
   rw [← mul_self_inj_of_nonneg (norm_nonneg I) zero_le_one, one_mul, ← norm_mul,
@@ -866,8 +832,10 @@ lemma nnnorm_nnqsmul (q : ℚ≥0) (x : E) : ‖q • x‖₊ = q • ‖x‖₊
   simpa [NNRat.cast_smul_eq_nnqsmul] using! nnnorm_smul (q : K) x
 
 @[bound]
-lemma norm_expect_le {ι : Type*} {s : Finset ι} {f : ι → E} : ‖𝔼 i ∈ s, f i‖ ≤ 𝔼 i ∈ s, ‖f i‖ :=
-  Finset.le_expect_of_subadditive norm_zero norm_add_le fun _ _ ↦ by rw [norm_nnqsmul K]
+lemma norm_expect_le {ι : Type*} {s : Finset ι} {f : ι → E}
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    ‖𝔼 i ∈ s, f i‖ ≤ 𝔼 i ∈ s, ‖f i‖ :=
+  Finset.le_expect_of_subadditive norm_add_le (fun _ _ _ ↦ by rw [norm_nnqsmul K]) hs
 
 end NormedField
 
@@ -961,18 +929,15 @@ lemma re_le_re {x y : K} (h : x ≤ y) : re x ≤ re y := by
 lemma re_monotone : Monotone (re : K → ℝ) :=
   fun _ _ => re_le_re
 
-protected lemma inv_pos_of_pos {z : Kˣ} (hz : 0 < (z : K)) : 0 < (↑z⁻¹ : K) := by
-  obtain ⟨x, hx, hx'⟩ := pos_iff_exists_ofReal.mp hz
-  let u := Units.mk0 x hx.ne'
-  have hu : z = Units.map (algebraMap ℝ K).toMonoidHom u := Units.ext hx'.symm
-  rw [hu]
-  change 0 < ((↑u⁻¹ : ℝ) : K)
-  rw [ofReal_pos]
-  exact (Units.inv_pos u).mpr hx
+protected lemma inv_pos_of_pos (hz : 0 < z) : 0 < z⁻¹ := by
+  obtain ⟨x, hx, rfl⟩ := pos_iff_exists_ofReal.mp hz
+  rw [← ofReal_inv x (hr := hx.ne'.isUnit), ofReal_pos]
+  exact inv_pos_of_pos hx
 
-protected lemma inv_pos {z : Kˣ} : 0 < (↑z⁻¹ : K) ↔ 0 < (z : K) := by
+protected lemma inv_pos {hz : IsUnit z} : 0 < z⁻¹ ↔ 0 < z := by
   refine ⟨fun h => ?_, fun h => RCLike.inv_pos_of_pos h⟩
-  simpa only [inv_inv] using RCLike.inv_pos_of_pos (z := z⁻¹) h
+  rw [← inv_inv₀ z]
+  exact RCLike.inv_pos_of_pos h
 
 /-- With `z ≤ w` iff `w - z` is real and nonnegative, `ℝ` and `ℂ` are star ordered rings.
 (That is, a star ring in which the nonnegative elements are those of the form `star z * z`.)
@@ -1328,18 +1293,13 @@ namespace AddChar
 variable {G : Type*} [Finite G]
 
 lemma inv_apply_eq_conj [AddLeftCancelMonoid G] (ψ : AddChar G K) (x : G) :
-    (↑(Units.mk0 (ψ x) (norm_ne_zero_iff.mp (by rw [norm_apply]; exact one_ne_zero)))⁻¹ : K) =
+    Checked.inv (ψ x) (ne_zero_of_norm_ne_zero ((norm_apply ψ x).trans_ne one_ne_zero)).isUnit =
       conj (ψ x) :=
-  RCLike.inv_eq_conj (by simpa only [Units.val_mk0] using norm_apply ψ x)
+  RCLike.inv_eq_conj (norm_apply _ _)
 
 lemma map_neg_eq_conj [AddCommGroup G] (ψ : AddChar G K) (x : G) : ψ (-x) = conj (ψ x) := by
-  have hx : ψ x ≠ 0 := norm_ne_zero_iff.mp (by rw [norm_apply]; exact one_ne_zero)
-  let u := Units.mk0 (ψ x) hx
-  calc
-    ψ (-x) = (↑u⁻¹ : K) := Units.mul_eq_one_iff_eq_inv.mp <| by
-      change ψ (-x) * ψ x = 1
-      rw [← map_add_eq_mul, neg_add_cancel, map_zero_eq_one]
-    _ = conj (ψ x) := RCLike.inv_eq_conj (by simpa only [Units.val_mk0] using norm_apply ψ x)
+  rw [← inv_apply_eq_conj, ← mul_eq_one_iff_eq_inv₀, ← map_add_eq_mul, neg_add_cancel,
+    map_zero_eq_one]
 
 end AddChar
 

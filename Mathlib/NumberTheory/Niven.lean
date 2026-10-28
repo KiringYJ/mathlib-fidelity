@@ -83,9 +83,12 @@ theorem isAlgebraic_sin_rat_mul_pi (q : ℚ) : IsAlgebraic ℤ <| sin <| q * π 
 theorem isAlgebraic_cos_rat_mul_pi (q : ℚ) : IsAlgebraic ℤ <| cos <| q * π :=
   .of_mul (by simp) (isAlgebraic_algebraMap _) (isIntegral_two_mul_cos_rat_mul_pi q).isAlgebraic
 
-/-- `tan(q * π)` for `q : ℚ` is algebraic over `ℤ`, using the complex `tan` function. -/
-theorem isAlgebraic_tan_rat_mul_pi (q : ℚ) : IsAlgebraic ℤ <| tan <| q * π :=
-  (isAlgebraic_sin_rat_mul_pi q).mul (isAlgebraic_cos_rat_mul_pi q).inv
+/-- `tan(q * π)` for `q : ℚ` with `cos(q * π) ≠ 0` is algebraic over `ℤ`, using the complex `tan`
+function. -/
+theorem isAlgebraic_tan_rat_mul_pi (q : ℚ) (h : cos (q * π) ≠ 0) :
+    IsAlgebraic ℤ <| tan <| q * π := by
+  rw [tan_eq_sin_div_cos, div_eq_mul_inv₀]
+  exact (isAlgebraic_sin_rat_mul_pi q).mul (isAlgebraic_cos_rat_mul_pi q).inv
 
 end Complex
 
@@ -109,10 +112,13 @@ theorem isAlgebraic_sin_rat_mul_pi (q : ℚ) : IsAlgebraic ℤ <| sin <| q * π 
 theorem isAlgebraic_cos_rat_mul_pi (q : ℚ) : IsAlgebraic ℤ <| cos <| q * π :=
   .of_mul (by simp) (isAlgebraic_algebraMap _) (isIntegral_two_mul_cos_rat_mul_pi q).isAlgebraic
 
-/-- `tan(q * π)` for `q : ℚ` is algebraic over `ℤ`, using the real `tan` function. -/
-theorem isAlgebraic_tan_rat_mul_pi (q : ℚ) : IsAlgebraic ℤ <| tan <| q * π :=
+/-- `tan(q * π)` for `q : ℚ` with `cos(q * π) ≠ 0` is algebraic over `ℤ`, using the real `tan`
+function. -/
+theorem isAlgebraic_tan_rat_mul_pi (q : ℚ) (h : cos (q * π) ≠ 0) :
+    IsAlgebraic ℤ <| tan <| q * π :=
   isAlgebraic_algebraMap_iff (A := ℂ) RCLike.ofReal_injective |>.mp <| by
-    simp [Complex.isAlgebraic_tan_rat_mul_pi]
+    have h' : Complex.cos (q * π) ≠ 0 := by exact_mod_cast h
+    simpa using Complex.isAlgebraic_tan_rat_mul_pi q h'
 
 end Real
 

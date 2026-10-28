@@ -60,7 +60,7 @@ and remainder of the division `f / g`.
 For example, `div_prod_eq_quo_add_sum_rem_div` has the conclusion
 ```
 ∃ q r, (∀ i ∈ s, (r i).degree < (g i).degree) ∧
-  ↑f / ∏ i ∈ s, ↑(g i) = ↑q + ∑ i ∈ s, ↑(r i) / ↑(g i)
+  ↑f / ∏ i ∈ s, ↑(g i) = ↑q + ∑ i : s, ↑(r i) / ↑(g i)
 ```
 The name of the lemma only shows the final equality, and in order we have
 `/` (`div`), `∏` (`prod`), `=` (`eq`), `q` (`quo`),
@@ -75,7 +75,7 @@ and referred to as `quo` in the name of the lemma and the variables `rᵢ` are c
 and referred to as `rem` in the name of the lemma.
 For example, `quo_add_sum_rem_div_unique` has the conclusion
 ```
-↑q₁ + ∑ i ∈ s, ↑(r₁ i) / ↑(g i) = ↑q₂ + ∑ i ∈ s, ↑(r₂ i) / ↑(g i)) →
+↑q₁ + ∑ i : s, ↑(r₁ i) / ↑(g i) = ↑q₂ + ∑ i : s, ↑(r₂ i) / ↑(g i)) →
   q₁ = q₂ ∧ ∀ i ∈ s, r₁ i = r₂ i
 ```
 The name of the lemmas shows one side of the equality hypothesis (the other is the same),
@@ -420,6 +420,12 @@ section Field
 
 variable (K : Type*) [Field K] [Algebra R[X] K] [FaithfulSMul R[X] K]
 
+/-- A monic polynomial is invertible in a field containing the polynomial ring. -/
+theorem Monic.isUnit_algebraMap {g : R[X]} (hg : g.Monic) : IsUnit (algebraMap R[X] K g) := by
+  have : Nontrivial R[X] := Module.nontrivial R[X] K
+  have : Nontrivial R := Module.nontrivial R R[X]
+  exact Ne.isUnit (by simpa using hg.ne_zero)
+
 section NDenominators
 
 open algebraMap
@@ -428,46 +434,75 @@ open algebraMap
 Then a fraction of the form `f / ∏ i ∈ s, g i` evaluated in a field `K` containing `R[X]`
 can be rewritten as `q + ∑ i ∈ s, r i / g i`, where
 `degree (r i) < degree (g i)`, provided that the `g i` are monic and pairwise coprime.
+The quotients `r i / g i` are taken only for `i ∈ s`, so the sum is indexed by `s` itself.
 See `quo_add_sum_rem_div_unique` for the uniqueness of this representation. -/
 theorem div_prod_eq_quo_add_sum_rem_div (f : R[X]) {ι : Type*} {g : ι → R[X]} {s : Finset ι}
     (hg : ∀ i ∈ s, (g i).Monic) (hcop : Set.Pairwise ↑s fun i j => IsCoprime (g i) (g j)) :
     ∃ (q : R[X]) (r : ι → R[X]),
       (∀ i ∈ s, (r i).degree < (g i).degree) ∧
-        ((↑f : K) / ∏ i ∈ s, ↑(g i)) = ↑q + ∑ i ∈ s, (r i : K) / (g i : K) := by
+        Checked.div (↑f : K) (∏ i ∈ s, ↑(g i))
+            (IsUnit.prod_iff.2 fun i hi ↦ (hg i hi).isUnit_algebraMap K) =
+          ↑q + ∑ i : s, Checked.div (r i : K) (g i : K) ((hg i i.2).isUnit_algebraMap K) := by
+  classical
   have : Nontrivial R :=
     have : Nontrivial R[X] := Module.nontrivial R[X] K
     Module.nontrivial R R[X]
-  have hgi (i : ι) (hi : i ∈ s) : (algebraMap R[X] K (g i))⁻¹ * algebraMap R[X] K (g i) = 1 :=
-    inv_mul_cancel₀ (by simpa using (hg i hi).ne_zero)
+  have hgK (i : ι) (hi : i ∈ s) : IsUnit (algebraMap R[X] K (g i)) :=
+    (hg i hi).isUnit_algebraMap K
+  let gi (i : ι) : K :=
+    if hi : i ∈ s then Checked.inv (algebraMap R[X] K (g i)) (hgK i hi) else 0
+  have hgi (i : ι) (hi : i ∈ s) : gi i * algebraMap R[X] K (g i) = 1 := by
+    simp only [gi, hi, ↓reduceDIte, inv_mul_cancel₀]
   obtain ⟨q, r, hr, hf⟩ := mul_prod_pow_inverse_eq_quo_add_sum_rem_mul_pow_inverse
     f hg hcop (fun _ => 1) hgi
   refine ⟨q, fun i => r i 0, fun i hi => hr i hi 0, ?_⟩
-  simp_rw [Fin.sum_univ_one, Fin.val_zero, zero_add, pow_one, Finset.prod_inv_distrib] at hf
-  simp_rw [Algebra.cast, div_eq_mul_inv]
+  simp_rw [Fin.sum_univ_one, Fin.val_zero, zero_add, pow_one] at hf
+  have hprod : Checked.inv (∏ i ∈ s, algebraMap R[X] K (g i)) (IsUnit.prod_iff.2 hgK) =
+      ∏ i ∈ s, gi i := by
+    refine inv_eq_of_mul_eq_one_right₀ ?_
+    rw [← Finset.prod_mul_distrib, Finset.prod_congr rfl fun i hi ↦ (mul_comm _ _).trans (hgi i hi),
+      Finset.prod_const_one]
+  have hsum : ∑ i : s, Checked.div (algebraMap R[X] K (r i 0)) (algebraMap R[X] K (g i))
+      (hgK i i.2) = ∑ i ∈ s, algebraMap R[X] K (r i 0) * gi i := by
+    rw [← Finset.sum_coe_sort s]
+    refine Fintype.sum_congr _ _ fun i ↦ ?_
+    simp only [gi, i.2, ↓reduceDIte, div_eq_mul_inv₀]
+  simp only [Algebra.cast]
+  rw [div_eq_mul_inv₀, hprod, hsum]
   exact hf
 
 /-- Let `R` be an integral domain and `f : R[X]`. Let `s` be a finite index set.
 Then a fraction of the form `f / ∏ i ∈ s, g i` evaluated in a field `K` containing `R[X]`
 can be rewritten as `q + ∑ i ∈ s, r i / g i` in at most one way, where
 `degree (r i) < degree (g i)`, provided that the `g i` are monic and pairwise coprime.
+The quotients `r i / g i` are taken only for `i ∈ s`, so the sums are indexed by `s` itself.
 See `div_prod_eq_quo_add_sum_rem_div` for the existence of such a representation. -/
 theorem quo_add_sum_rem_div_unique {ι : Type*} {g : ι → R[X]} {s : Finset ι}
     (hg : ∀ i ∈ s, (g i).Monic) (hcop : Set.Pairwise ↑s fun i j => IsCoprime (g i) (g j))
     {q₁ q₂ : R[X]} {r₁ r₂ : ι → R[X]}
     (hr₁ : ∀ i ∈ s, (r₁ i).degree < (g i).degree)
     (hr₂ : ∀ i ∈ s, (r₂ i).degree < (g i).degree)
-    (hf : ↑q₁ + ∑ i ∈ s, (r₁ i : K) / (g i : K) = ↑q₂ + ∑ i ∈ s, (r₂ i : K) / (g i : K)) :
+    (hf : ↑q₁ + ∑ i : s, Checked.div (r₁ i : K) (g i : K) ((hg i i.2).isUnit_algebraMap K) =
+      ↑q₂ + ∑ i : s, Checked.div (r₂ i : K) (g i : K) ((hg i i.2).isUnit_algebraMap K)) :
     q₁ = q₂ ∧ ∀ i ∈ s, r₁ i = r₂ i := by
-  have : Nontrivial R :=
-    have : Nontrivial R[X] := Module.nontrivial R[X] K
-    Module.nontrivial R R[X]
-  have hgi (i : ι) (hi : i ∈ s) : (algebraMap R[X] K (g i))⁻¹ * algebraMap R[X] K (g i) = 1 :=
-    inv_mul_cancel₀ (by simpa using (hg i hi).ne_zero)
+  classical
+  have hgK (i : ι) (hi : i ∈ s) : IsUnit (algebraMap R[X] K (g i)) :=
+    (hg i hi).isUnit_algebraMap K
+  let gi (i : ι) : K :=
+    if hi : i ∈ s then Checked.inv (algebraMap R[X] K (g i)) (hgK i hi) else 0
+  have hgi (i : ι) (hi : i ∈ s) : gi i * algebraMap R[X] K (g i) = 1 := by
+    simp only [gi, hi, ↓reduceDIte, inv_mul_cancel₀]
+  have hsum (r : ι → R[X]) : ∑ i : s, Checked.div (algebraMap R[X] K (r i))
+      (algebraMap R[X] K (g i)) (hgK i i.2) = ∑ i ∈ s, algebraMap R[X] K (r i) * gi i := by
+    rw [← Finset.sum_coe_sort s]
+    refine Fintype.sum_congr _ _ fun i ↦ ?_
+    simp only [gi, i.2, ↓reduceDIte, div_eq_mul_inv₀]
   refine (quo_add_sum_rem_mul_pow_inverse_unique (n := fun _ => 1)
       hg hcop hgi (fun i hi _ => hr₁ i hi) (fun i hi _ => hr₂ i hi) ?_).imp_right
       fun h i hi => congrFun (h i hi) 0
-  simp_rw [Fin.sum_univ_one, Fin.val_zero, zero_add, pow_one, ← div_eq_mul_inv]
-  exact hf
+  simp_rw [Fin.sum_univ_one, Fin.val_zero, zero_add, pow_one]
+  simp only [Algebra.cast] at hf
+  rwa [hsum r₁, hsum r₂] at hf
 
 end NDenominators
 
@@ -481,16 +516,28 @@ Then `∃ q, r₁, r₂ : R[X]` such that `f / (g₁ * g₂) = q + r₁ / g₁ +
 See `quo_add_rem_div_add_rem_div_unique` for the uniqueness of this representation. -/
 theorem div_eq_quo_add_rem_div_add_rem_div (f : R[X]) {g₁ g₂ : R[X]} (hg₁ : g₁.Monic)
     (hg₂ : g₂.Monic) (hcoprime : IsCoprime g₁ g₂) :
+    haveI := hg₁.isUnit_algebraMap K
+    haveI := hg₂.isUnit_algebraMap K
     ∃ q r₁ r₂ : R[X],
       r₁.degree < g₁.degree ∧
         r₂.degree < g₂.degree ∧ (f : K) / (↑g₁ * ↑g₂) = ↑q + ↑r₁ / ↑g₁ + ↑r₂ / ↑g₂ := by
+  have : Nontrivial R :=
+    have : Nontrivial R[X] := Module.nontrivial R[X] K
+    Module.nontrivial R R[X]
   let g : Bool → R[X] := Bool.rec g₂ g₁
   have hg (i : Bool) (_ : i ∈ Finset.univ) : (g i).Monic := Bool.rec hg₂ hg₁ i
   have hcoprime : Set.Pairwise (Finset.univ : Finset Bool) fun i j => IsCoprime (g i) (g j) := by
     simp [g, Set.pairwise_insert, hcoprime, hcoprime.symm]
-  obtain ⟨q, r, hr, hf⟩ := div_prod_eq_quo_add_sum_rem_div K f hg hcoprime
-  refine ⟨q, r true, r false, hr true (Finset.mem_univ true), hr false (Finset.mem_univ false), ?_⟩
-  simpa [g, add_assoc] using hf
+  have hgK (i : Bool) : IsUnit (algebraMap R[X] K (g i)) :=
+    (hg i (Finset.mem_univ i)).isUnit_algebraMap K
+  obtain ⟨q, r, hr, hf⟩ := mul_prod_pow_inverse_eq_quo_add_sum_rem_mul_pow_inverse f hg hcoprime
+    (fun _ => 1) (gi := fun i ↦ Checked.inv _ (hgK i)) fun _ _ ↦ inv_mul_cancel₀
+  refine ⟨q, r true 0, r false 0, hr true (Finset.mem_univ true) 0,
+    hr false (Finset.mem_univ false) 0, ?_⟩
+  simp only [Fintype.prod_bool, Fintype.sum_bool, Fin.sum_univ_one, Fin.val_zero, zero_add,
+    pow_one, g] at hf
+  simp only [Algebra.cast, div_eq_mul_inv₀, mul_inv₀]
+  rw [hf, add_assoc]
 
 /-- Let `R` be an integral domain and `f, g₁, g₂ : R[X]`. Let `g₁` and `g₂` be monic and coprime.
 Then the representation of `f / (g₁ * g₂)` as `q + r₁ / g₁ + r₂ / g₂` for `q r₁ r₂ : R[X]` and
@@ -501,7 +548,10 @@ theorem quo_add_rem_div_add_rem_div_unique {g₁ g₂ : R[X]} (hg₁ : g₁.Moni
     {q₁ q₂ r₁₁ r₁₂ r₂₁ r₂₂ : R[X]}
     (hr₁₁ : r₁₁.degree < g₁.degree) (hr₁₂ : r₁₂.degree < g₁.degree)
     (hr₂₁ : r₂₁.degree < g₂.degree) (hr₂₂ : r₂₂.degree < g₂.degree)
-    (hf : (↑q₁ + ↑r₁₁ / ↑g₁ + ↑r₂₁ / ↑g₂ : K) = ↑q₂ + ↑r₁₂ / ↑g₁ + ↑r₂₂ / ↑g₂) :
+    (hf :
+      haveI := hg₁.isUnit_algebraMap K
+      haveI := hg₂.isUnit_algebraMap K
+      (↑q₁ + ↑r₁₁ / ↑g₁ + ↑r₂₁ / ↑g₂ : K) = ↑q₂ + ↑r₁₂ / ↑g₁ + ↑r₂₂ / ↑g₂) :
     q₁ = q₂ ∧ r₁₁ = r₁₂ ∧ r₂₁ = r₂₂ := by
   let g : Bool → R[X] := Bool.rec g₂ g₁
   let r₁ : Bool → R[X] := Bool.rec r₂₁ r₁₁
@@ -511,9 +561,15 @@ theorem quo_add_rem_div_add_rem_div_unique {g₁ g₂ : R[X]} (hg₁ : g₁.Moni
     simp [g, Set.pairwise_insert, hcoprime, hcoprime.symm]
   have hr₁ (i : Bool) (_ : i ∈ Finset.univ) : (r₁ i).degree < (g i).degree := Bool.rec hr₂₁ hr₁₁ i
   have hr₂ (i : Bool) (_ : i ∈ Finset.univ) : (r₂ i).degree < (g i).degree := Bool.rec hr₂₂ hr₁₂ i
-  refine (quo_add_sum_rem_div_unique K hg hcoprime hr₁ hr₂ ?_).imp_right fun h =>
-    ⟨h true (Finset.mem_univ true), h false (Finset.mem_univ false)⟩
-  simpa [g, r₁, r₂, add_assoc] using hf
+  have hgK (i : Bool) : IsUnit (algebraMap R[X] K (g i)) :=
+    (hg i (Finset.mem_univ i)).isUnit_algebraMap K
+  refine (quo_add_sum_rem_mul_pow_inverse_unique (n := fun _ => 1)
+      (gi := fun i ↦ Checked.inv _ (hgK i)) hg hcoprime (fun _ _ ↦ inv_mul_cancel₀)
+      (fun i hi _ => hr₁ i hi) (fun i hi _ => hr₂ i hi) ?_).imp_right fun h =>
+    ⟨congrFun (h true (Finset.mem_univ true)) 0, congrFun (h false (Finset.mem_univ false)) 0⟩
+  simp only [Fintype.sum_bool, Fin.sum_univ_one, Fin.val_zero, zero_add, pow_one, g, r₁, r₂]
+  simp only [Algebra.cast, div_eq_mul_inv₀] at hf
+  rwa [← add_assoc, ← add_assoc]
 
 end TwoDenominators
 

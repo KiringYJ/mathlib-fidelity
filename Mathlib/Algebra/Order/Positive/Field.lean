@@ -22,23 +22,28 @@ variable {K : Type*} [Field K] [LinearOrder K] [IsStrictOrderedRing K]
 
 namespace Positive
 
-instance Subtype.inv : Inv { x : K // 0 < x } := ⟨fun x => ⟨x⁻¹, inv_pos.2 x.2⟩⟩
+/-- Every positive element is invertible, and its inverse is positive. -/
+noncomputable instance Subtype.inv : Inv { x : K // 0 < x } :=
+  ⟨fun x => ⟨Checked.inv (x : K) x.2.ne'.isUnit, inv_pos_of_pos x.2⟩⟩
 
 @[simp]
-theorem coe_inv (x : { x : K // 0 < x }) : ↑x⁻¹ = (x⁻¹ : K) :=
+theorem coe_inv (x : { x : K // 0 < x }) : ↑x⁻¹ = Checked.inv (x : K) x.2.ne'.isUnit :=
   rfl
 
-instance : Pow { x : K // 0 < x } ℤ :=
-  ⟨fun x n => ⟨(x : K) ^ n, zpow_pos x.2 _⟩⟩
+noncomputable instance : Pow { x : K // 0 < x } ℤ :=
+  ⟨fun x n => ⟨Checked.zpow (x : K) n fun _ => x.2.ne'.isUnit, zpow_pos x.2 _⟩⟩
 
 @[simp]
-theorem coe_zpow (x : { x : K // 0 < x }) (n : ℤ) : ↑(x ^ n) = (x : K) ^ n :=
+theorem coe_zpow (x : { x : K // 0 < x }) (n : ℤ) :
+    ↑(x ^ n) = Checked.zpow (x : K) n fun _ => x.2.ne'.isUnit :=
   rfl
 
-instance : CommGroup { x : K // 0 < x } where
-  inv_mul_cancel a := Subtype.ext <| inv_mul_cancel₀ a.2.ne'
-  zpow_zero' x := Subtype.ext <| zpow_zero _
-  zpow_succ' n x := Subtype.ext <| DivInvMonoid.zpow_succ' _ _
-  zpow_neg' n x := Subtype.ext <| DivInvMonoid.zpow_neg' _ _
+noncomputable instance : CommGroup { x : K // 0 < x } where
+  inv_mul_cancel a := Subtype.ext <| inv_mul_cancel₀
+  zpow_zero' x := Subtype.ext <| zpow_zero₀ _
+  zpow_succ' n x := Subtype.ext <| by
+    simp only [coe_zpow, val_mul, zpow_natCast₀, pow_succ]
+  zpow_neg' n x := Subtype.ext <| by
+    simp only [coe_zpow, coe_inv, zpow_negSucc₀, zpow_natCast₀]
 
 end Positive

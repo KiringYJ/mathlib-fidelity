@@ -86,18 +86,19 @@ theorem exists_algebraMap_quot_eq_of_mem_quot [P.IsMaximal]
     ∃ a, (algebraMap S (Sₚ ⧸ P.map (algebraMap S Sₚ))) a = x := by
   obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
   obtain ⟨x, s, rfl⟩ := IsLocalization.exists_mk'_eq (algebraMapSubmonoid S p.primeCompl) x
+  have h₁ : s.1 ∉ P := (Set.disjoint_left.mp <| disjoint_primeCompl_of_liesOver P p) s.prop
+  have hs₀ : Ideal.Quotient.mk P s ≠ 0 := Quotient.eq_zero_iff_mem.not.mpr h₁
   obtain ⟨s', hs⟩ := Ideal.Quotient.mk_surjective (I := P) (Ideal.Quotient.mk P s)⁻¹
   simp only [IsScalarTower.algebraMap_eq S Sₚ (Sₚ ⧸ _), Quotient.algebraMap_eq, RingHom.comp_apply]
   use x * s'
   rw [← sub_eq_zero, ← map_sub, Quotient.eq_zero_iff_mem]
   have h₀ : (P.map (algebraMap S Sₚ)).IsPrime := isPrime_map_of_liesOver S p Sₚ P
-  have h₁ : s.1 ∉ P := (Set.disjoint_left.mp <| disjoint_primeCompl_of_liesOver P p) s.prop
   have h₂ : algebraMap S Sₚ s ∉ Ideal.map (algebraMap S Sₚ) P := by
     rwa [← mem_comap, comap_map_eq_self_of_isMaximal _ h₀.ne_top]
   refine (h₀.mem_or_mem ?_).resolve_left h₂
   rw [mul_sub, mul_mk'_eq_mk'_of_mul, mk'_mul_cancel_left, ← map_mul, ← map_sub, ← mem_comap,
     comap_map_eq_self_of_isMaximal _ IsPrime.ne_top', ← Ideal.Quotient.eq, map_mul, map_mul, hs,
-    mul_comm, inv_mul_cancel_right₀ (Quotient.eq_zero_iff_mem.not.mpr h₁)]
+    mul_comm, inv_mul_cancel_right₀]
 
 /--
 The isomorphism `S ⧸ P ≃+* Sₚ ⧸ P·Sₚ`, where `Sₚ` is the localization of `S` at the (image) of
@@ -123,7 +124,9 @@ theorem equivQuotientMapOfIsMaximal_apply_mk [P.IsMaximal] (x : S) :
 theorem equivQuotientMapOfIsMaximal_symm_apply_mk [P.IsMaximal] (x : S)
     (s : algebraMapSubmonoid S p.primeCompl) :
     (equivQuotientMapOfIsMaximal p Sₚ P).symm (Ideal.Quotient.mk _ (mk' _ x s)) =
-      (Ideal.Quotient.mk _ x) * (Ideal.Quotient.mk _ s.val)⁻¹ := by
+      (Ideal.Quotient.mk _ x) * Checked.inv (Ideal.Quotient.mk P s.val)
+        (Ne.isUnit <| Quotient.eq_zero_iff_mem.not.mpr
+          ((Set.disjoint_left.mp <| disjoint_primeCompl_of_liesOver P p) s.prop)) := by
   have : (Ideal.map (algebraMap S Sₚ) P).IsPrime := isPrime_map_of_liesOver S p Sₚ P
   have h₁ : Ideal.Quotient.mk P ↑s ≠ 0 :=
     Quotient.eq_zero_iff_mem.not.mpr <|
@@ -131,7 +134,7 @@ theorem equivQuotientMapOfIsMaximal_symm_apply_mk [P.IsMaximal] (x : S)
   have h₂ : equivQuotientMapOfIsMaximal p Sₚ P (Ideal.Quotient.mk P ↑s) ≠ 0 := by
     rwa [RingEquiv.map_ne_zero_iff]
   rw [RingEquiv.symm_apply_eq, ← mul_left_inj' h₂, map_mul, mul_assoc, ← map_mul,
-    inv_mul_cancel₀ h₁, map_one, mul_one, equivQuotientMapOfIsMaximal_apply_mk,
+    inv_mul_cancel₀, map_one, mul_one, equivQuotientMapOfIsMaximal_apply_mk,
     ← map_mul, mk'_spec, Quotient.mk_algebraMap, equivQuotientMapOfIsMaximal_apply_mk,
     Quotient.mk_algebraMap]
 

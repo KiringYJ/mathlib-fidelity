@@ -213,12 +213,19 @@ theorem arg_I : arg I = π / 2 := by simp [arg]
 @[simp]
 theorem arg_neg_I : arg (-I) = -(π / 2) := by simp [arg]
 
+theorem cos_arg_ne_zero_of_re_ne_zero {x : ℂ} (hx : x.re ≠ 0) : Real.cos (arg x) ≠ 0 := by
+  have h : x ≠ 0 := fun h ↦ hx (by rw [h, zero_re])
+  rw [cos_arg h]
+  exact div_ne_zero hx
+
+/-- The tangent of the argument, where the real part does not vanish. -/
 @[simp]
-theorem tan_arg (x : ℂ) : Real.tan (arg x) = x.im / x.re := by
-  by_cases h : x = 0
-  · simp only [h, zero_div, Complex.zero_im, Complex.arg_zero, Real.tan_zero, Complex.zero_re]
-  rw [Real.tan_eq_sin_div_cos, sin_arg, cos_arg h,
-    div_div_div_cancel_right₀ (norm_ne_zero_iff.mpr h)]
+theorem tan_arg (x : ℂ) (hx : x.re ≠ 0) :
+    Real.tan (arg x) (cos_arg_ne_zero_of_re_ne_zero hx) = x.im / x.re := by
+  have h : x ≠ 0 := fun h ↦ hx (by rw [h, zero_re])
+  rw [Real.tan_eq_sin_div_cos]
+  simp only [sin_arg, cos_arg h]
+  exact div_div_div_cancel_right₀ _ _
 
 theorem arg_ofReal_of_nonneg {x : ℝ} (hx : 0 ≤ x) : arg x = 0 := by simp [arg, hx]
 

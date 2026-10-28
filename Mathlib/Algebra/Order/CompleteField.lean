@@ -79,7 +79,7 @@ variable [Field α] [LinearOrder α]
 
 section DivisionRing
 
-variable (β) [DivisionRing β] {a a₁ a₂ : α} {b : β} {q : ℚ}
+variable (β) [DivisionRing β] [CharZero α] [CharZero β] {a a₁ a₂ : α} {b : β} {q : ℚ}
 
 /-- The lower cut of rationals inside a linear ordered field that are less than a given element of
 another linear ordered field. -/
@@ -93,7 +93,7 @@ variable {β}
 @[simp]
 theorem mem_cutMap_iff : b ∈ cutMap β a ↔ ∃ q : ℚ, (q : α) < a ∧ (q : β) = b := Iff.rfl
 
-theorem coe_mem_cutMap_iff [CharZero β] : (q : β) ∈ cutMap β a ↔ (q : α) < a :=
+theorem coe_mem_cutMap_iff : (q : β) ∈ cutMap β a ↔ (q : α) < a :=
   Rat.cast_injective.mem_set_image
 
 theorem cutMap_self (a : α) : cutMap α a = Iio a ∩ range (Rat.cast : ℚ → α) := by
@@ -110,7 +110,7 @@ theorem cutMap_coe (q : ℚ) : cutMap β (q : α) = Rat.cast '' {r : ℚ | (r : 
 variable [Archimedean α]
 
 omit [LinearOrder β] [IsStrictOrderedRing β] in
-theorem cutMap_nonempty (a : α) : (cutMap β a).Nonempty :=
+theorem cutMap_nonempty [CharZero β] (a : α) : (cutMap β a).Nonempty :=
   Nonempty.image _ <| exists_rat_lt a
 
 theorem cutMap_bddAbove (a : α) : BddAbove (cutMap β a) := by
@@ -235,7 +235,7 @@ theorem exists_mem_cutMap_mul_self_of_lt_inducedMap_mul_self (ha : 0 < a) (b : �
     (hba : b < inducedMap α β a * inducedMap α β a) : ∃ c ∈ cutMap β (a * a), b < c := by
   obtain hb | hb := lt_or_ge b 0
   · refine ⟨0, ?_, hb⟩
-    rw [← Rat.cast_zero, coe_mem_cutMap_iff, Rat.cast_zero]
+    rw [← Rat.cast_zero (α := β), coe_mem_cutMap_iff, Rat.cast_zero]
     exact mul_self_pos.2 ha.ne'
   obtain ⟨q, hq, hbq, hqa⟩ := exists_rat_pow_btwn two_ne_zero hba (hb.trans_lt hba)
   rw [← cast_pow] at hbq

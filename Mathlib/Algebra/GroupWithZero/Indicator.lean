@@ -7,7 +7,7 @@ module
 
 public import Mathlib.Algebra.Group.Pi.Basic
 public import Mathlib.Algebra.Group.Support
-public import Mathlib.Algebra.GroupWithZero.Units.Basic
+public import Mathlib.Algebra.GroupWithZero.Basic
 public import Mathlib.Algebra.Notation.Indicator
 
 /-!
@@ -20,7 +20,7 @@ assert_not_exists Ring
 
 open Set
 
-variable {ι κ G₀ M₀ R : Type*}
+variable {ι κ M₀ R : Type*}
 
 namespace Set
 section MulZeroClass
@@ -137,11 +137,12 @@ variable [MonoidWithZero M₀] [IsReduced M₀] {n : ℕ}
 end MonoidWithZero
 
 section MonoidWithZero
-variable [MonoidWithZero G₀]
+variable [MonoidWithZero M₀]
 
-@[simp] lemma support_divp (f : ι → G₀) (u : ι → G₀ˣ) :
-    support (fun a ↦ f a /ₚ u a) = support f :=
-  Set.ext fun a ↦ divp_ne_zero_iff (u a)
+/-- Dividing by a function whose values are invertible does not change the support. -/
+@[simp] lemma support_div (f g : ι → M₀) {hg : ∀ i, IsUnit (g i)} :
+    support (fun a ↦ Checked.div (f a) (g a) (hg a)) = support f :=
+  Set.ext fun _ ↦ div_ne_zero_iff
 
 end MonoidWithZero
 

@@ -49,9 +49,10 @@ lemma map_eq_one_of_forall_lt [MulArchimedean Γ₀] {v : Valuation K Γ₀} {r 
   · simpa [Units.ext_iff] using H
   · rw [← inv_lt_one'] at H
     obtain ⟨k, hk⟩ := exists_pow_lt H r
-    specialize h (x ^ (-k : ℤ)) (by simp [hx])
-    simp only [zpow_neg, zpow_natCast, map_inv₀, map_pow] at h
-    simp [← Units.val_lt_val, h.not_gt, inv_pow] at hk
+    have hx0 : x ≠ 0 := v.ne_zero_iff.mp hx
+    specialize h (x ^ k)⁻¹ (by simp)
+    simp only [map_inv₀, map_pow] at h
+    simp [← Units.val_lt_val, h.not_gt, inv_pow, Units.val_inv_eq_inv_val₀] at hk
 
 /-- The basis of open subgroups for the topology on a ring determined by a valuation. -/
 theorem subgroups_basis :
@@ -88,13 +89,13 @@ theorem subgroups_basis :
       · set u : (ValueGroup₀ (.ofClass v))ˣ := Units.mk0 ((restrict₀ (.ofClass v)) x)
           (by simp [restrict₀_apply]; aesop) with hu_def
         have hu : ValueGroup₀.embedding u⁻¹.1 = γx⁻¹ := by
-          simp [restrict₀_apply, embedding_apply, hu_def, Hx]
+          simp [restrict₀_apply, embedding_apply, hu_def, Hx, Units.val_inv_eq_inv_val₀]
         use u⁻¹ * γ
         rintro y (vy_lt : v y < ValueGroup₀.embedding (u⁻¹ * γ).1)
         simp only [coe_ltAddSubgroup, preimage_ofPred_eq, mem_ofPred_eq]
         rw [Valuation.map_mul, Hx, mul_comm]
         rw [Units.val_mul, mul_comm, map_mul, hu] at vy_lt
-        simpa using mul_inv_lt_of_lt_mul₀ vy_lt
+        simpa [Units.val_inv_eq_inv_val₀] using mul_inv_lt_of_lt_mul₀ vy_lt
     rightMul := by
       rintro x γ
       rcases GroupWithZero.eq_zero_or_unit (v x) with (Hx | ⟨γx, Hx⟩)
@@ -105,12 +106,12 @@ theorem subgroups_basis :
       · set u : (ValueGroup₀ (.ofClass v))ˣ := Units.mk0 ((restrict₀ (.ofClass v)) x)
           (by simp [restrict₀_apply]; aesop) with hu_def
         have hu : ValueGroup₀.embedding u⁻¹.1 = γx⁻¹ := by simp [restrict₀_apply, embedding_apply,
-          hu_def, Hx]
+          hu_def, Hx, Units.val_inv_eq_inv_val₀]
         use u⁻¹ * γ
         rintro y (vy_lt : v y < ValueGroup₀.embedding (u⁻¹ * γ).1)
         simp only [coe_ltAddSubgroup, preimage_ofPred_eq, mem_ofPred_eq, Valuation.map_mul, Hx]
         rw [Units.val_mul, mul_comm, map_mul, hu] at vy_lt
-        simpa using mul_inv_lt_of_lt_mul₀ vy_lt }
+        simpa [Units.val_inv_eq_inv_val₀] using mul_inv_lt_of_lt_mul₀ vy_lt }
 
 end Valuation
 

@@ -195,7 +195,7 @@ theorem hasEigenvalue_or_mem_resolventSet (hT : IsCompactOperator T) (hμ : μ �
     intro m n hmn
     let u : X := μ⁻¹ • (S (f n) - S (f m) + μ • f n)
     have hu : μ • (f m - u) = T (f m) - T (f n) := by
-      rw [smul_sub, smul_inv_smul₀ hμ]
+      rw [smul_sub, smul_inv_smul₀ (ha := hμ.isUnit)]
       simp [S]
       linear_combination (norm := module)
     have : u ∈ ((S : End 𝕜 X) ^ (m + 1)).range := by

@@ -66,19 +66,22 @@ lemma LocallyLipschitzOn.exists_lipschitzOnWith_of_compact {f : α → β} {s : 
     exact ⟨ε, hε, K, hf.mono hε'⟩
   choose ε hε K hf using hf
   /- We also have constants `K' x hx` for all `x ∈ s` such that `edist (f x) (f y) ≤ K' * edist x y`
-  for all `y ∈ s` outside of `ball x (ε x hx)`, by continuity of
-  `fun y ↦ dist (f x) (f y) / dist x y` on the compact set `s.diff (ball x (ε x hx))`. -/
+  for all `y ∈ s` outside of `ball x (ε x hx)`: by continuity, `fun y ↦ dist (f x) (f y)` is
+  bounded by some `M` on the compact set `s.diff (ball x (ε x hx))`, where `ε x hx ≤ dist x y`, so
+  `K' = M / ε x hx` works. -/
   have (x) (hx : x ∈ s) : ∃ K' : ℝ≥0, ∀ y ∈ s.diff (ball x (ε x hx)),
       edist (f x) (f y) ≤ K' * edist x y := by
-    let ⟨K', hK'⟩ := (hs.diff isOpen_ball).bddAbove_image
-      (f := fun y ↦ dist (f x) (f y) / dist x y) <| .div (.mono (by fun_prop) s.sdiff_subset)
-        (by fun_prop) fun y hy ↦ ((hε x hx).trans_le <| not_lt.1 <| dist_comm x y ▸ hy.2).ne'
-    refine ⟨.mk (K' ⊔ 0) le_sup_right, fun y hy ↦ ?_⟩
-    simp_rw [edist_nndist, ← ENNReal.coe_mul, ENNReal.coe_le_coe]
-    refine (div_le_iff₀ ?_).1 ?_
-    · exact NNReal.coe_pos.1 <| coe_nndist x y ▸
-        ((hε x hx).trans_le <| not_lt.1 <| dist_comm x y ▸ hy.2)
-    · simp [← NNReal.coe_le_coe, (mem_upperBounds.1 hK') _ <| mem_image_of_mem _ hy]
+    have hεx := hε x hx
+    let ⟨M, hM⟩ := (hs.diff (isOpen_ball (x := x) (ε := ε x hx))).bddAbove_image
+      (f := fun y ↦ dist (f x) (f y)) (.mono (by fun_prop) s.sdiff_subset)
+    refine ⟨.mk ((M ⊔ 0) / ε x hx) (div_nonneg le_sup_right hεx.le), fun y hy ↦ ?_⟩
+    simp_rw [edist_nndist, ← ENNReal.coe_mul, ENNReal.coe_le_coe, ← NNReal.coe_le_coe,
+      NNReal.coe_mul, coe_nndist, NNReal.coe_mk]
+    calc dist (f x) (f y) ≤ M ⊔ 0 := le_sup_of_le_left <| hM <| mem_image_of_mem _ hy
+      _ = (M ⊔ 0) / ε x hx * ε x hx := (div_mul_cancel₀ _).symm
+      _ ≤ (M ⊔ 0) / ε x hx * dist x y := by
+        gcongr
+        exact dist_comm x y ▸ not_lt.1 hy.2
   choose K' hK' using this
   /- By compactness of `s`, there exists some finite set `t` such that the balls of radius
   `ε x hx / 2` around all `x ∈ t` cover `s`. -/

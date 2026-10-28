@@ -772,7 +772,8 @@ theorem norm_const_smul (hp : p ≠ 0) {c : 𝕜} (f : lp E p) : ‖c • f‖ =
   · simp
   refine le_antisymm (norm_const_smul_le hp c f) ?_
   have := mul_le_mul_of_nonneg_left (norm_const_smul_le hp c⁻¹ (c • f)) (norm_nonneg c)
-  rwa [inv_smul_smul₀ hc, norm_inv, mul_inv_cancel_left₀ (norm_ne_zero_iff.mpr hc)] at this
+  rwa [inv_smul_smul₀ (ha := hc.isUnit), norm_inv,
+    mul_inv_cancel_left₀ (norm_ne_zero_iff.mpr hc)] at this
 
 end DivisionRing
 

@@ -225,16 +225,17 @@ variable [ExistsAddOfLE K]
 another `y` greater than one. This is the same as `exists_mem_Ioc_zpow`,
 but with ≤ and < the other way around. -/
 theorem exists_mem_Ico_zpow (hx : 0 < x) (hy : 1 < y) : ∃ n : ℤ, x ∈ Ico (y ^ n) (y ^ (n + 1)) := by
+  have hy₀ : 0 < y := zero_lt_one.trans hy
   have he : ∃ m : ℤ, y ^ m ≤ x := by
     obtain ⟨N, hN⟩ := pow_unbounded_of_one_lt x⁻¹ hy
     use -N
-    rw [zpow_neg y ↑N, zpow_natCast]
-    exact ((inv_lt_comm₀ hx (lt_trans (inv_pos.2 hx) hN)).1 hN).le
-  have hb : ∃ b : ℤ, ∀ m, y ^ m ≤ x → m ≤ b := by
+    rw [zpow_neg₀ hy₀.ne' (N : ℤ)]
+    exact ((inv_lt_comm₀ hx (pow_pos hy₀ N)).1 hN).le
+  have hb : ∃ b : ℤ, ∀ m : ℤ, y ^ m ≤ x → m ≤ b := by
     obtain ⟨M, hM⟩ := pow_unbounded_of_one_lt x hy
     refine ⟨M, fun m hm ↦ ?_⟩
     contrapose! hM
-    rw [← zpow_natCast]
+    rw [← zpow_natCast₀]
     exact le_trans (zpow_le_zpow_right₀ hy.le hM.le) hm
   obtain ⟨n, hn₁, hn₂⟩ := Int.exists_greatest_of_bdd hb he
   exact ⟨n, hn₁, lt_of_not_ge fun hge => (Int.lt_succ _).not_ge (hn₂ _ hge)⟩
@@ -243,10 +244,11 @@ theorem exists_mem_Ico_zpow (hx : 0 < x) (hy : 1 < y) : ∃ n : ℤ, x ∈ Ico (
 another `y` greater than one. This is the same as `exists_mem_Ico_zpow`,
 but with ≤ and < the other way around. -/
 theorem exists_mem_Ioc_zpow (hx : 0 < x) (hy : 1 < y) : ∃ n : ℤ, x ∈ Ioc (y ^ n) (y ^ (n + 1)) :=
-  let ⟨m, hle, hlt⟩ := exists_mem_Ico_zpow (inv_pos.2 hx) hy
+  let ⟨m, hle, hlt⟩ := exists_mem_Ico_zpow (inv_pos_of_pos hx) hy
   have hyp : 0 < y := lt_trans zero_lt_one hy
-  ⟨-(m + 1), by rwa [zpow_neg, inv_lt_comm₀ (zpow_pos hyp _) hx], by
-    rwa [neg_add, neg_add_cancel_right, zpow_neg, le_inv_comm₀ hx (zpow_pos hyp _)]⟩
+  ⟨-(m + 1), by rwa [zpow_neg₀ hyp.ne', inv_lt_comm₀ (zpow_pos hyp _) hx], by
+    simpa only [neg_add, neg_add_cancel_right, zpow_neg₀ hyp.ne',
+      le_inv_comm₀ hx (zpow_pos hyp m)] using hle⟩
 
 /-- For any `y < 1` and any positive `x`, there exists `n : ℕ` with `y ^ n < x`. -/
 theorem exists_pow_lt_of_lt_one (hx : 0 < x) (hy : y < 1) : ∃ n : ℕ, y ^ n < x := by
@@ -255,17 +257,17 @@ theorem exists_pow_lt_of_lt_one (hx : 0 < x) (hy : y < 1) : ∃ n : ℕ, y ^ n <
     simp only [pow_one]
     exact y_pos.trans_lt hx
   rcases pow_unbounded_of_one_lt x⁻¹ ((one_lt_inv₀ y_pos).2 hy) with ⟨q, hq⟩
-  exact ⟨q, by rwa [inv_pow, inv_lt_inv₀ hx (pow_pos y_pos _)] at hq⟩
+  exact ⟨q, by rwa [inv_pow₀, inv_lt_inv₀ hx (pow_pos y_pos _)] at hq⟩
 
 /-- Given `x` and `y` between `0` and `1`, `x` is between two successive powers of `y`.
 This is the same as `exists_nat_pow_near`, but for elements between `0` and `1` -/
 theorem exists_nat_pow_near_of_lt_one (xpos : 0 < x) (hx : x ≤ 1) (ypos : 0 < y) (hy : y < 1) :
     ∃ n : ℕ, y ^ (n + 1) < x ∧ x ≤ y ^ n := by
-  rcases exists_nat_pow_near (one_le_inv_iff₀.2 ⟨xpos, hx⟩) (one_lt_inv_iff₀.2 ⟨ypos, hy⟩) with
-    ⟨n, hn, h'n⟩
+  rcases exists_nat_pow_near ((one_le_inv_iff₀ (ha := xpos.ne'.isUnit)).2 ⟨xpos, hx⟩)
+    ((one_lt_inv_iff₀ (ha := ypos.ne'.isUnit)).2 ⟨ypos, hy⟩) with ⟨n, hn, h'n⟩
   refine ⟨n, ?_, ?_⟩
-  · rwa [inv_pow, inv_lt_inv₀ xpos (pow_pos ypos _)] at h'n
-  · rwa [inv_pow, inv_le_inv₀ (pow_pos ypos _) xpos] at hn
+  · rwa [inv_pow₀, inv_lt_inv₀ xpos (pow_pos ypos _)] at h'n
+  · rwa [inv_pow₀, inv_le_inv₀ (pow_pos ypos _) xpos] at hn
 
 /-- If `a < b * c`, `0 < b ≤ 1` and `0 < c < 1`, then there is a power `c ^ n` with `n : ℕ`
 strictly between `a` and `b`. -/
@@ -295,14 +297,16 @@ lemma exists_zpow_btwn_of_lt_mul {a b c : K} (h : a < b * c) (hb₀ : 0 < b) (hc
       exact ⟨n, mod_cast hn⟩
     · rcases lt_or_ge a 1 with ha₁ | ha₁
       · refine ⟨0, ?_⟩
-        rw [zpow_zero]
+        rw [zpow_zero₀]
         exact ⟨ha₁, hb₁⟩
       · have : b⁻¹ < a⁻¹ * c := by rwa [lt_inv_mul_iff₀' ha, inv_mul_lt_iff₀ hb₀]
         obtain ⟨n, hn₁, hn₂⟩ :=
           exists_pow_btwn_of_lt_mul this (inv_pos_of_pos ha) (inv_le_one_of_one_le₀ ha₁) hc₀ hc₁
         refine ⟨-n, ?_, ?_⟩
-        · rwa [lt_inv_comm₀ (pow_pos hc₀ n) ha, ← zpow_natCast, ← zpow_neg] at hn₂
-        · rwa [inv_lt_comm₀ hb₀ (pow_pos hc₀ n), ← zpow_natCast, ← zpow_neg] at hn₁
+        · rw [zpow_neg₀ hc₀.ne']
+          exact (lt_inv_comm₀ (pow_pos hc₀ n) ha).1 hn₂
+        · rw [zpow_neg₀ hc₀.ne']
+          exact (inv_lt_comm₀ (pow_pos hc₀ n) hb₀).2 hn₁
 
 end LinearOrderedSemifield
 
@@ -367,11 +371,12 @@ theorem exists_div_btwn {x y : K} {n : ℕ} (h : x < y) (nh : (y - x)⁻¹ < n) 
   refine ⟨(lt_div_iff₀ n0').2 <| (lt_iff_lt_of_le_iff_le (zh _)).1 (lt_add_one _), ?_⟩
   rw [Int.cast_add, Int.cast_one]
   grw [(zh _).1 le_rfl]
-  rwa [← lt_sub_iff_add_lt', ← sub_mul, ← div_lt_iff₀' (sub_pos.2 h), one_div]
+  rwa [← lt_sub_iff_add_lt', ← sub_mul, ← div_lt_iff₀' (sub_pos.2 h), one_div₀]
 
 theorem exists_rat_btwn {x y : K} (h : x < y) : ∃ q : ℚ, x < q ∧ q < y := by
   obtain ⟨n, nh⟩ := exists_nat_gt (y - x)⁻¹
   obtain ⟨z, zh, zh'⟩ := exists_div_btwn h nh
+  have hn : 0 < n := by exact_mod_cast (inv_pos_of_pos (sub_pos.2 h)).trans nh
   refine ⟨(z : ℚ) / n, ?_, ?_⟩ <;> simpa
 
 theorem exists_rat_mem_uIoo {x y : K} (h : x ≠ y) : ∃ q : ℚ, ↑q ∈ Set.uIoo x y :=

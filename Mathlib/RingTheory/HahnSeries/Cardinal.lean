@@ -130,17 +130,18 @@ theorem cardSupp_hsum_powers_le [AddCommMonoid Γ] [IsOrderedCancelAddMonoid Γ]
   · exact cardSupp_pow_le ..
   · cases i <;> simp
 
-theorem cardSupp_inv_le [AddCommGroup Γ] [IsOrderedAddMonoid Γ] [Field R] (x : R⟦Γ⟧) :
-    x⁻¹.cardSupp ≤ max ℵ₀ x.cardSupp := by
-  obtain rfl | hx := eq_or_ne x 0; · simp
+theorem cardSupp_inv_le [AddCommGroup Γ] [IsOrderedAddMonoid Γ] [Field R] (x : R⟦Γ⟧)
+    {hx : IsUnit x} : x⁻¹.cardSupp ≤ max ℵ₀ x.cardSupp := by
+  rw [inv_def]
   apply (cardSupp_single_mul_le ..).trans (cardSupp_hsum_powers_le ..) |>.trans
   gcongr
   refine (cardSupp_single_mul_le _ (-x.order) x.leadingCoeff⁻¹).trans' <| cardSupp_mono fun _ ↦ ?_
   aesop (add simp [coeff_single_mul])
 
-theorem cardSupp_div_le [AddCommGroup Γ] [IsOrderedAddMonoid Γ] [Field R] (x y : R⟦Γ⟧) :
-    (x / y).cardSupp ≤ x.cardSupp * max ℵ₀ y.cardSupp :=
-  (cardSupp_mul_le ..).trans <| mul_le_mul_right (cardSupp_inv_le y) _
+theorem cardSupp_div_le [AddCommGroup Γ] [IsOrderedAddMonoid Γ] [Field R] (x y : R⟦Γ⟧)
+    {hy : IsUnit y} : (x / y).cardSupp ≤ x.cardSupp * max ℵ₀ y.cardSupp := by
+  rw [div_eq_mul_inv₀]
+  exact (cardSupp_mul_le ..).trans <| mul_le_mul_right (cardSupp_inv_le y) _
 
 end LinearOrder
 
@@ -205,7 +206,7 @@ variable (Γ R) in
 /-- The `κ`-bounded subfield of Hahn series with less than `κ` terms. -/
 @[simps!]
 def cardSuppLTSubfield : Subfield R⟦Γ⟧ where
-  inv_mem' _ _ := (cardSupp_inv_le _).trans_lt <| by simpa [hκ.out]
+  inv_mem' _ := (cardSupp_inv_le _).trans_lt <| by simpa [hκ.out]
   __ := have : Fact (ℵ₀ ≤ κ) := ⟨hκ.out.le⟩; cardSuppLTSubring Γ R κ
 
 @[simp]

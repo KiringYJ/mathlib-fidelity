@@ -264,7 +264,7 @@ lemma FarFromTriangleFree.lt_half (hε : G.FarFromTriangleFree ε) : ε < 2⁻¹
     _ ≤ #G.edgeFinset := by simpa using hε.le_card_edgeFinset (by simp)
     _ ≤ (Fintype.card α).choose 2 := by gcongr; exact card_edgeFinset_le_card_choose_two
     _ < 2⁻¹ * Fintype.card α ^ 2 := by
-      simpa [← div_eq_inv_mul] using Nat.choose_lt_pow_div (by positivity) le_rfl
+      simpa [← div_eq_inv_mul₀] using Nat.choose_lt_pow_div (by positivity) le_rfl
 
 lemma FarFromTriangleFree.lt_one (hG : G.FarFromTriangleFree ε) : ε < 1 :=
   hG.lt_half.trans two_inv_lt_one

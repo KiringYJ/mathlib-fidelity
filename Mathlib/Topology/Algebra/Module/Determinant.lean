@@ -40,9 +40,22 @@ end ContinuousLinearMap
 
 namespace ContinuousLinearEquiv
 
+variable {R : Type*} [CommRing R] {M : Type*} [TopologicalSpace M] [AddCommGroup M] [Module R M]
+
+/-- The determinant of a continuous linear equivalence is a unit. -/
+theorem isUnit_det (A : M ≃L[R] M) : IsUnit (A : M →L[R] M).det :=
+  LinearEquiv.isUnit_det' A.toLinearEquiv
+
+/- Evidence rule: the determinant of a continuous linear equivalence is a unit, so
+`(A : M →L[R] M).det⁻¹` needs no explicit evidence. -/
+macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | with_reducible_and_instances exact ContinuousLinearEquiv.isUnit_det _)
+
+/-- The determinant of `A.symm` is the inverse of that of `A`. -/
 @[simp]
-theorem det_coe_symm {R : Type*} [Field R] {M : Type*} [TopologicalSpace M] [AddCommGroup M]
-    [Module R M] (A : M ≃L[R] M) : (A.symm : M →L[R] M).det = (A : M →L[R] M).det⁻¹ :=
+theorem det_coe_symm (A : M ≃L[R] M) : (A.symm : M →L[R] M).det = (A : M →L[R] M).det⁻¹ :=
   LinearEquiv.det_coe_symm A.toLinearEquiv
 
 end ContinuousLinearEquiv

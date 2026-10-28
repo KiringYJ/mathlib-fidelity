@@ -42,7 +42,7 @@ variable [DivisionRing α]
 
 private noncomputable def inverse? (x : closure s) : Option (closure s) := by
   classical
-  exact if hx : x ≠ 0 then some (↑(Units.mk0 x hx)⁻¹ : closure s) else none
+  exact if hx : x ≠ 0 then some x⁻¹ else none
 
 private noncomputable def operate? :
     (Σ n, Operands s n → Option (closure s)) → Option (closure s)
@@ -82,21 +82,12 @@ private lemma exists_eval?_eq_some (a : closure s) : ∃ w, eval? s w = some a :
     rw [eval?_mk]
     simp only [operate?, hwx]
     exact congrArg some (Subtype.ext rfl)
-  · rintro u hu ⟨wx, hwx⟩
+  · rintro x hx hx0 ⟨wx, hwx⟩
     refine ⟨WType.mk (.inl 3) (fun _ ↦ wx), ?_⟩
+    have hxs : (⟨x, hx⟩ : closure s) ≠ 0 := fun h ↦ hx0 (congrArg Subtype.val h)
     rw [eval?_mk]
-    simp only [operate?, hwx]
-    let xu : closure s := ⟨u, hu⟩
-    change inverse? s xu = some _
-    have hxu : xu ≠ 0 := fun h ↦ u.ne_zero (congrArg Subtype.val h)
-    let us : (closure s)ˣ :=
-      ⟨xu, ⟨↑u⁻¹, (closure s).inv_mem hu⟩, Subtype.ext u.mul_inv, Subtype.ext u.inv_mul⟩
-    have hmk : Units.mk0 xu hxu = us := Units.ext rfl
-    have hinv : (↑(Units.mk0 xu hxu)⁻¹ : closure s) =
-        ⟨↑u⁻¹, (closure s).inv_mem hu⟩ := by
-      rw [hmk]
-      rfl
-    simpa [inverse?, hxu] using congrArg some hinv
+    simp only [operate?, hwx, Option.bind_some, inverse?, dite_eq_left hxs]
+    exact congrArg some (Subtype.ext (Subfield.coe_inv _ _))
   · rintro x y _ _ ⟨wx, hwx⟩ ⟨wy, hwy⟩
     exact ⟨WType.mk (.inl 1) (Bool.rec wx wy), by
       rw [eval?_mk]

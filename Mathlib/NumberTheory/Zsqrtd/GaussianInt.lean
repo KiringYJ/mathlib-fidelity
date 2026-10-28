@@ -157,45 +157,77 @@ theorem natAbs_norm_eq (x : ℤ[i]) :
   rw [abs_norm (by simp)]
   simp [Zsqrtd.norm]
 
-instance : Div ℤ[i] :=
+/-- The Euclidean quotient of Gaussian integers. For `y ≠ 0`, `x / y` rounds both coordinates of
+the complex quotient `x / y = x * star y / norm y` to the nearest integer; `x / 0 = 0` is the
+Euclidean-domain convention for a zero divisor. -/
+noncomputable instance : Div ℤ[i] :=
   ⟨fun x y =>
-    let n := (norm y : ℚ)⁻¹
-    let c := star y
-    ⟨round ((x * c).re * n : ℚ), round ((x * c).im * n : ℚ)⟩⟩
+    if hy : norm y = 0 then 0
+    else ⟨round (Checked.div ((x * star y).re : ℚ) (norm y) (Int.cast_ne_zero.mpr hy).isUnit),
+      round (Checked.div ((x * star y).im : ℚ) (norm y) (Int.cast_ne_zero.mpr hy).isUnit)⟩⟩
 
-theorem div_def (x y : ℤ[i]) :
-    x / y = ⟨round ((x * star y).re / norm y : ℚ), round ((x * star y).im / norm y : ℚ)⟩ :=
-  show Zsqrtd.mk _ _ = _ by simp [div_eq_mul_inv]
+theorem div_def (x y : ℤ[i]) (hy : y ≠ 0) :
+    x / y = ⟨round (Checked.div ((x * star y).re : ℚ) (norm y)
+        (Int.cast_ne_zero.mpr (mt norm_eq_zero.mp hy)).isUnit),
+      round (Checked.div ((x * star y).im : ℚ) (norm y)
+        (Int.cast_ne_zero.mpr (mt norm_eq_zero.mp hy)).isUnit)⟩ :=
+  dite_eq_right (mt norm_eq_zero.mp hy)
 
-theorem toComplex_re_div (x y : ℤ[i]) : ((x / y : ℤ[i]) : ℂ).re = round (x / y : ℂ).re := by
-  rw [div_def, ← @Rat.round_cast ℝ _ _]
-  simp [-Rat.round_cast, mul_assoc, div_eq_mul_inv, add_mul]
+/-- The coordinates of the complex quotient of two Gaussian integers. -/
+private theorem toComplex_div_re_im {x y : ℤ[i]} (hy : (y : ℂ) ≠ 0) (hN : (norm y : ℝ) ≠ 0) :
+    (x / y : ℂ).re = ((x * star y).re : ℝ) / norm y ∧
+      (x / y : ℂ).im = ((x * star y).im : ℝ) / norm y := by
+  have hw : (x / y : ℂ) * y = x := div_mul_cancel₀ _
+  have h1 := congrArg Complex.re hw
+  have h2 := congrArg Complex.im hw
+  simp only [Complex.mul_re, Complex.mul_im] at h1 h2
+  simp only [Zsqrtd.re_mul, Zsqrtd.im_mul, Zsqrtd.re_star, Zsqrtd.im_star, Zsqrtd.norm_def]
+    at hN ⊢
+  push_cast at hN ⊢
+  simp only [intCast_re, intCast_im] at hN ⊢
+  constructor <;>
+  · rw [eq_div_iff, ← h1, ← h2]
+    ring
 
-theorem toComplex_im_div (x y : ℤ[i]) : ((x / y : ℤ[i]) : ℂ).im = round (x / y : ℂ).im := by
-  rw [div_def, ← @Rat.round_cast ℝ _ _, ← @Rat.round_cast ℝ _ _]
-  simp [-Rat.round_cast, mul_assoc, div_eq_mul_inv, add_mul]
+theorem toComplex_re_div (x y : ℤ[i]) (hy : y ≠ 0) :
+    ((x / y : ℤ[i]) : ℂ).re =
+      round (Checked.div (x : ℂ) y (Ne.isUnit (mt toComplex_eq_zero.mp hy))).re := by
+  have hN : (norm y : ℝ) ≠ 0 := Int.cast_ne_zero.mpr (mt norm_eq_zero.mp hy)
+  rw [div_def x y hy, re_toComplex, (toComplex_div_re_im (mt toComplex_eq_zero.mp hy) hN).1,
+    ← Rat.round_cast (α := ℝ)]
+  push_cast
+  rfl
+
+theorem toComplex_im_div (x y : ℤ[i]) (hy : y ≠ 0) :
+    ((x / y : ℤ[i]) : ℂ).im =
+      round (Checked.div (x : ℂ) y (Ne.isUnit (mt toComplex_eq_zero.mp hy))).im := by
+  have hN : (norm y : ℝ) ≠ 0 := Int.cast_ne_zero.mpr (mt norm_eq_zero.mp hy)
+  rw [div_def x y hy, im_toComplex, (toComplex_div_re_im (mt toComplex_eq_zero.mp hy) hN).2,
+    ← Rat.round_cast (α := ℝ)]
+  push_cast
+  rfl
 
 theorem normSq_le_normSq_of_re_le_of_im_le {x y : ℂ} (hre : |x.re| ≤ |y.re|)
     (him : |x.im| ≤ |y.im|) : normSq x ≤ normSq y := by
   simp only [normSq_apply]
   nlinarith [sq_le_sq.mpr hre, sq_le_sq.mpr him]
 
-theorem normSq_div_sub_div_lt_one (x y : ℤ[i]) :
-    Complex.normSq ((x / y : ℂ) - ((x / y : ℤ[i]) : ℂ)) < 1 :=
+theorem normSq_div_sub_div_lt_one (x y : ℤ[i]) (hy : y ≠ 0) :
+    Complex.normSq (Checked.div (x : ℂ) y (Ne.isUnit (mt toComplex_eq_zero.mp hy)) -
+      ((x / y : ℤ[i]) : ℂ)) < 1 := by
+  have hy' : (y : ℂ) ≠ 0 := mt toComplex_eq_zero.mp hy
+  have h2 : |(1 / 2 : ℝ)| = 1 / 2 := abs_of_nonneg (by norm_num)
   calc
     Complex.normSq ((x / y : ℂ) - ((x / y : ℤ[i]) : ℂ))
-    _ = Complex.normSq
-      ((x / y : ℂ).re - ((x / y : ℤ[i]) : ℂ).re + ((x / y : ℂ).im - ((x / y : ℤ[i]) : ℂ).im) *
-        I : ℂ) :=
-      congr_arg _ <| by apply Complex.ext <;> simp
-    _ ≤ Complex.normSq (1 / 2 + 1 / 2 * I) := by
-      have : |(2⁻¹ : ℝ)| = 2⁻¹ := abs_of_nonneg (by simp)
-      exact normSq_le_normSq_of_re_le_of_im_le
-        (by rw [toComplex_re_div]; simp [normSq, this]; simpa using abs_sub_round (x / y : ℂ).re)
-        (by rw [toComplex_im_div]; simp [normSq, this]; simpa using abs_sub_round (x / y : ℂ).im)
-    _ < 1 := by simp [normSq]; norm_num
+    _ ≤ Complex.normSq ⟨1 / 2, 1 / 2⟩ := by
+      refine normSq_le_normSq_of_re_le_of_im_le ?_ ?_
+      · rw [Complex.sub_re, toComplex_re_div x y hy]
+        exact (abs_sub_round _).trans_eq h2.symm
+      · rw [Complex.sub_im, toComplex_im_div x y hy]
+        exact (abs_sub_round _).trans_eq h2.symm
+    _ < 1 := by rw [Complex.normSq_apply]; norm_num
 
-instance : Mod ℤ[i] :=
+noncomputable instance : Mod ℤ[i] :=
   ⟨fun x y => x - y * (x / y)⟩
 
 theorem mod_def (x y : ℤ[i]) : x % y = x - y * (x / y) :=
@@ -207,9 +239,9 @@ theorem norm_mod_lt (x : ℤ[i]) {y : ℤ[i]} (hy : y ≠ 0) : (x % y).norm < y.
     calc
       ↑(Zsqrtd.norm (x % y)) = Complex.normSq (x - y * (x / y : ℤ[i]) : ℂ) := by simp [mod_def]
       _ = Complex.normSq (y : ℂ) * Complex.normSq (x / y - (x / y : ℤ[i]) : ℂ) := by
-        rw [← normSq_mul, mul_sub, mul_div_cancel₀ _ this]
+        rw [← normSq_mul, mul_sub, mul_div_cancel₀ _]
       _ < Complex.normSq (y : ℂ) * 1 :=
-        (mul_lt_mul_of_pos_left (normSq_div_sub_div_lt_one _ _) (normSq_pos.2 this))
+        (mul_lt_mul_of_pos_left (normSq_div_sub_div_lt_one _ _ hy) (normSq_pos.2 this))
       _ = Zsqrtd.norm y := by simp
 
 theorem natAbs_norm_mod_lt (x : ℤ[i]) {y : ℤ[i]} (hy : y ≠ 0) :
@@ -226,12 +258,12 @@ theorem norm_le_norm_mul_left (x : ℤ[i]) {y : ℤ[i]} (hy : y ≠ 0) :
 instance instNontrivial : Nontrivial ℤ[i] :=
   ⟨⟨0, 1, by decide⟩⟩
 
-instance : EuclideanDomain ℤ[i] :=
+noncomputable instance : EuclideanDomain ℤ[i] :=
   { GaussianInt.instCommRing,
     GaussianInt.instNontrivial with
     quotient := (· / ·)
     remainder := (· % ·)
-    quotient_zero := by simp [div_def]; rfl
+    quotient_zero _ := dite_eq_left (norm_eq_zero.2 rfl)
     quotient_mul_add_remainder_eq := fun _ _ => by simp [mod_def]
     r := _
     r_wellFounded := (measure (Int.natAbs ∘ norm)).wf

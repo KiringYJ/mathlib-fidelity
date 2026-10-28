@@ -247,11 +247,17 @@ theorem prod_eq_iff_prod_pow_moebius_eq [CommGroup R] {f g : ℕ → R} :
       ∀ n > 0, ∏ x ∈ n.divisorsAntidiagonal, g x.snd ^ μ x.fst = f n :=
   @sum_eq_iff_sum_smul_moebius_eq (Additive R) _ _ _
 
-/-- Möbius inversion for functions to a `CommGroupWithZero`. -/
+/-- Möbius inversion for functions to a `CommGroupWithZero`.
+
+The product runs over the divisor antidiagonal as a type: the integer power `g x.snd ^ μ x.fst`
+takes the invertibility of `g x.snd` from `0 < x.snd`, which holds on the antidiagonal of a
+positive number. -/
 theorem prod_eq_iff_prod_pow_moebius_eq_of_nonzero [CommGroupWithZero R] {f g : ℕ → R}
     (hf : ∀ n : ℕ, 0 < n → f n ≠ 0) (hg : ∀ n : ℕ, 0 < n → g n ≠ 0) :
     (∀ n > 0, ∏ i ∈ n.divisors, f i = g n) ↔
-      ∀ n > 0, ∏ x ∈ n.divisorsAntidiagonal, g x.snd ^ μ x.fst = f n := by
+      ∀ n > 0, ∏ x : n.divisorsAntidiagonal, Checked.zpow (g x.1.snd) (μ x.1.fst)
+        (fun _ ↦ (hg _ (pos_of_mem_divisors (snd_mem_divisors_of_mem_antidiagonal x.2))).isUnit) =
+        f n := by
   refine
       Iff.trans
         (Iff.trans (forall_congr' fun n => ?_)
@@ -265,10 +271,11 @@ theorem prod_eq_iff_prod_pow_moebius_eq_of_nonzero [CommGroupWithZero R] {f g : 
     intro x hx
     rw [dite_eq_left (pos_of_mem_divisors hx), Units.coeHom_apply, Units.val_mk0]
   · rw [dite_eq_left hn, ← Units.val_inj, ← Units.coeHom_apply, map_prod, Units.val_mk0,
-      prod_congr rfl _]
-    intro x hx
-    rw [dite_eq_left (pos_of_mem_divisors (snd_mem_divisors_of_mem_antidiagonal hx)),
-      Units.coeHom_apply, Units.val_zpow_eq_zpow_val, Units.val_mk0]
+      ← prod_coe_sort n.divisorsAntidiagonal]
+    refine (Fintype.prod_congr _ _ fun x => ?_).congr_left
+    rw [dite_eq_left (pos_of_mem_divisors (snd_mem_divisors_of_mem_antidiagonal x.2)),
+      Units.coeHom_apply]
+    exact (IsUnit.zpow_eq_val_unit_zpow _ _).symm
 
 /-- Möbius inversion for functions to an `AddCommGroup`, where the equalities only hold on a
 well-behaved set. -/
@@ -329,12 +336,18 @@ theorem prod_eq_iff_prod_pow_moebius_eq_on [CommGroup R] {f g : ℕ → R}
   @sum_eq_iff_sum_smul_moebius_eq_on (Additive R) _ _ _ s hs
 
 /-- Möbius inversion for functions to a `CommGroupWithZero`, where the equalities only hold on
-a well-behaved set. -/
+a well-behaved set.
+
+The product runs over the divisor antidiagonal as a type: the integer power `g x.snd ^ μ x.fst`
+takes the invertibility of `g x.snd` from `0 < x.snd`, which holds on the antidiagonal of a
+positive number. -/
 theorem prod_eq_iff_prod_pow_moebius_eq_on_of_nonzero [CommGroupWithZero R]
     (s : Set ℕ) (hs : ∀ m n, m ∣ n → n ∈ s → m ∈ s) {f g : ℕ → R}
     (hf : ∀ n > 0, f n ≠ 0) (hg : ∀ n > 0, g n ≠ 0) :
     (∀ n > 0, n ∈ s → (∏ i ∈ n.divisors, f i) = g n) ↔
-      ∀ n > 0, n ∈ s → (∏ x ∈ n.divisorsAntidiagonal, g x.snd ^ μ x.fst) = f n := by
+      ∀ n > 0, n ∈ s → (∏ x : n.divisorsAntidiagonal, Checked.zpow (g x.1.snd) (μ x.1.fst)
+        (fun _ ↦ (hg _ (pos_of_mem_divisors (snd_mem_divisors_of_mem_antidiagonal x.2))).isUnit)) =
+        f n := by
   refine
       Iff.trans
         (Iff.trans (forall_congr' fun n => ?_)
@@ -348,10 +361,12 @@ theorem prod_eq_iff_prod_pow_moebius_eq_on_of_nonzero [CommGroupWithZero R]
       prod_congr rfl _]
     intro x hx
     rw [dite_eq_left (pos_of_mem_divisors hx), Units.coeHom_apply, Units.val_mk0]
-  · rw [dite_eq_left hn, ← Units.val_inj, ← Units.coeHom_apply, map_prod, Units.val_mk0,
-      prod_congr rfl _]
-    intro x hx
-    rw [dite_eq_left (pos_of_mem_divisors (snd_mem_divisors_of_mem_antidiagonal hx)),
-      Units.coeHom_apply, Units.val_zpow_eq_zpow_val, Units.val_mk0]
+  · refine imp_congr_right fun _ => ?_
+    rw [dite_eq_left hn, ← Units.val_inj, ← Units.coeHom_apply, map_prod, Units.val_mk0,
+      ← prod_coe_sort n.divisorsAntidiagonal]
+    refine (Fintype.prod_congr _ _ fun x => ?_).congr_left
+    rw [dite_eq_left (pos_of_mem_divisors (snd_mem_divisors_of_mem_antidiagonal x.2)),
+      Units.coeHom_apply]
+    exact (IsUnit.zpow_eq_val_unit_zpow _ _).symm
 
 end ArithmeticFunction

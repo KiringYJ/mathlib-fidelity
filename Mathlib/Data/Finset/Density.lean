@@ -70,9 +70,8 @@ lemma dens_card_cast_ne_zero : (Fintype.card α : ℚ≥0) ≠ 0 :=
 private lemma card_cast_pos : (0 : ℚ≥0) < Fintype.card α :=
   Nat.cast_pos.mpr Fintype.card_pos
 
-lemma dens_eq_card_div_card (s : Finset α) :
-    dens s = (s.card : ℚ≥0) /ₚ Units.mk0 (Fintype.card α : ℚ≥0)
-      (dens_card_cast_ne_zero (α := α)) := NNRat.divNat_eq_divp _ _ _
+lemma dens_eq_card_div_card (s : Finset α) : dens s = s.card / Fintype.card α :=
+  NNRat.divNat_eq_div _ _ _
 
 @[simp] lemma dens_mul_card (s : Finset α) : s.dens * Fintype.card α = s.card :=
   NNRat.divNat_mul_den _ _ _
@@ -84,14 +83,10 @@ lemma dens_eq_card_div_card (s : Finset α) :
   apply mul_right_cancel₀ (dens_card_cast_ne_zero (α := α))
   simp only [dens_mul_card, card_empty, Nat.cast_zero, zero_mul]
 
-@[simp] lemma dens_singleton (a : α) :
-    dens ({a} : Finset α) = (1 : ℚ≥0) /ₚ
-      Units.mk0 (Fintype.card α : ℚ≥0) (dens_card_cast_ne_zero (α := α)) := by
-  simp only [dens_eq_card_div_card, card_singleton, Nat.cast_one]
+@[simp] lemma dens_singleton (a : α) : dens ({a} : Finset α) = (Fintype.card α : ℚ≥0)⁻¹ := by
+  simp only [dens_eq_card_div_card, card_singleton, Nat.cast_one, one_div₀]
 
-@[simp] lemma dens_cons (h : a ∉ s) :
-    (s.cons a h).dens = dens s + (1 : ℚ≥0) /ₚ
-      Units.mk0 (Fintype.card α : ℚ≥0) (dens_card_cast_ne_zero (α := α)) := by
+@[simp] lemma dens_cons (h : a ∉ s) : (s.cons a h).dens = dens s + (Fintype.card α : ℚ≥0)⁻¹ := by
   have he : (s.cons a h).dens = dens s + dens ({a} : Finset α) := by
     apply mul_right_cancel₀ (dens_card_cast_ne_zero (α := α))
     simp only [add_mul, dens_mul_card, card_cons, card_singleton, Nat.cast_add, Nat.cast_one]
@@ -115,6 +110,14 @@ lemma dens_ne_zero : dens s ≠ 0 ↔ s.Nonempty :=
 
 protected alias ⟨_, Nonempty.dens_pos⟩ := dens_pos
 protected alias ⟨_, Nonempty.dens_ne_zero⟩ := dens_ne_zero
+
+/-! The evidence search `checked_nonzero` uses that a nonempty finset has nonzero density, so that
+`s.dens⁻¹` finds its evidence from a hypothesis `s.Nonempty`. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply Finset.Nonempty.dens_ne_zero); assumption))
 
 @[gcongr] lemma dens_le_dens (h : s ⊆ t) : dens s ≤ dens t := by
   apply (mul_le_mul_iff_of_pos_right (card_cast_pos (α := α))).mp
@@ -158,10 +161,8 @@ variable [Semifield 𝕜] [CharZero 𝕜]
   have h := congrArg (fun q : ℚ≥0 => (q : 𝕜)) (dens_mul_card s)
   simpa only [NNRat.cast_mul, NNRat.cast_natCast] using h
 
-@[simp] lemma nnratCast_dens (s : Finset α) :
-    (s.dens : 𝕜) = (s.card : 𝕜) /ₚ Units.mk0 (Fintype.card α : 𝕜)
-      (Nat.cast_ne_zero.mpr Fintype.card_ne_zero) :=
-  eq_divp_iff_mul_eq.mpr (nnratCast_dens_mul_natCast_card s)
+@[norm_cast] lemma nnratCast_dens (s : Finset α) : (s.dens : 𝕜) = s.card / Fintype.card α :=
+  eq_div_iff.mpr (nnratCast_dens_mul_natCast_card s)
 
 end Semifield
 

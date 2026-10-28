@@ -70,17 +70,19 @@ theorem catalan_succ' (n : ℕ) :
 theorem catalan_one : catalan 1 = 1 := by simp [catalan_succ]
 
 /-- A helper sequence that can be used to prove the equality of the recursive and the explicit
-definition using a telescoping sum argument. -/
-private def gosperCatalan (n j : ℕ) : ℚ :=
+definition using a telescoping sum argument. It is defined for `n ≠ 0`, where its denominator
+`2 * n * (n + 1)` does not vanish. -/
+private noncomputable def gosperCatalan (n : ℕ) [NeZero n] (j : ℕ) : ℚ :=
   Nat.centralBinom j * Nat.centralBinom (n - j) * (2 * j - n) / (2 * n * (n + 1))
 
 private theorem gosper_trick {n i : ℕ} (h : i ≤ n) :
     gosperCatalan (n + 1) (i + 1) - gosperCatalan (n + 1) i =
-      Nat.centralBinom i / (i + 1) * Nat.centralBinom (n - i) / (n - i + 1) := by
+      Checked.div (Nat.centralBinom i / (i + 1) * Nat.centralBinom (n - i) : ℚ) (n - i + 1)
+        (Ne.isUnit (by norm_cast)) := by
   have l₁ : (i : ℚ) + 1 ≠ 0 := by norm_cast
   have l₂ : (n : ℚ) - i + 1 ≠ 0 := by norm_cast
-  have h₁ := (mul_div_cancel_left₀ (↑(Nat.centralBinom (i + 1))) l₁).symm
-  have h₂ := (mul_div_cancel_left₀ (↑(Nat.centralBinom (n - i + 1))) l₂).symm
+  have h₁ := (mul_div_cancel_left₀ ((i + 1).centralBinom : ℚ) (ha := l₁.isUnit)).symm
+  have h₂ := (mul_div_cancel_left₀ ((n - i + 1).centralBinom : ℚ) (ha := l₂.isUnit)).symm
   have h₃ : ((i : ℚ) + 1) * (i + 1).centralBinom = 2 * (2 * i + 1) * i.centralBinom :=
     mod_cast Nat.succ_mul_centralBinom_succ i
   have h₄ :
@@ -94,30 +96,31 @@ private theorem gosper_trick {n i : ℕ} (h : i ≤ n) :
   field
 
 private theorem gosper_catalan_sub_eq_central_binom_div (n : ℕ) : gosperCatalan (n + 1) (n + 1) -
-    gosperCatalan (n + 1) 0 = Nat.centralBinom (n + 1) / (n + 2) := by
+    gosperCatalan (n + 1) 0 =
+      Checked.div ((n + 1).centralBinom : ℚ) (n + 2) (Ne.isUnit (by norm_cast)) := by
   simp only [gosperCatalan, tsub_self, Nat.centralBinom_zero, Nat.cast_one, mul_one, Nat.cast_add,
     Nat.sub_zero, one_mul, Nat.cast_zero, mul_zero, zero_sub, neg_add_rev]
   field
 
 theorem catalan_eq_centralBinom_div (n : ℕ) : catalan n = n.centralBinom / (n + 1) := by
   suffices (catalan n : ℚ) = Nat.centralBinom n / (n + 1) by
-    have h := Nat.succ_dvd_centralBinom n
-    exact mod_cast this
+    rw [eq_div_iff] at this
+    exact (Nat.div_eq_of_eq_mul_left n.succ_pos (mod_cast this.symm)).symm
   induction n using Nat.caseStrongRecOn with
   | zero => simp
   | ind d hd =>
     simp_rw [catalan_succ, Nat.cast_sum, Nat.cast_mul]
     trans (∑ i : Fin d.succ, Nat.centralBinom i / (i + 1) *
-                            (Nat.centralBinom (d - i) / (d - i + 1)) : ℚ)
+                            (Nat.centralBinom (d - i) / ((d - i : ℕ) + 1)) : ℚ)
     · congr
       ext1 x
       have m_le_d : x.val ≤ d := by lia
       have d_minus_x_le_d : (d - x.val) ≤ d := tsub_le_self
       rw [hd _ m_le_d, hd _ d_minus_x_le_d]
-      norm_cast
     · trans (∑ i : Fin d.succ, (gosperCatalan (d + 1) (i + 1) - gosperCatalan (d + 1) i))
       · refine sum_congr rfl fun i _ => ?_
-        rw [gosper_trick i.is_le, mul_div]
+        rw [gosper_trick i.is_le, mul_div₀]
+        simp only [Nat.cast_sub i.is_le]
       · rw [← sum_range fun i => gosperCatalan (d + 1) (i + 1) - gosperCatalan (d + 1) i,
             sum_range_sub, Nat.succ_eq_add_one]
         rw [gosper_catalan_sub_eq_central_binom_div d]

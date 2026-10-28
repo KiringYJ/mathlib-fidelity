@@ -223,7 +223,7 @@ protected theorem UniformSpace.metrizable_uniformity (X : Type*) [UniformSpace X
     refine PseudoMetricSpace.le_two_mul_dist_ofPreNNDist _ _ _ fun x₁ x₂ x₃ x₄ => ?_
     by_cases H : ∃ n, (x₁, x₄) ∉ U n
     · refine (dite_eq_left H).trans_le ?_
-      rw [← div_le_iff₀' zero_lt_two, ← mul_one_div (_ ^ _), ← pow_succ]
+      rw [← div_le_iff₀' zero_lt_two, ← mul_one_div₀ (_ ^ _), ← pow_succ]
       simp only [le_max_iff, hle_d, ← not_and_or]
       rintro ⟨h₁₂, h₂₃, h₃₄⟩
       refine Nat.find_spec H (hU_comp (lt_add_one <| Nat.find H) ?_)
@@ -239,8 +239,11 @@ protected theorem UniformSpace.metrizable_uniformity (X : Type*) [UniformSpace X
     rw [mem_ofPred_eq] at hx
     contrapose! hx
     refine le_trans ?_ ((div_le_iff₀' zero_lt_two).2 (hd_le x.1 x.2))
-    rwa [← NNReal.coe_two, ← NNReal.coe_div, ← NNReal.coe_pow, NNReal.coe_le_coe, pow_succ,
-      mul_one_div, div_le_iff₀ zero_lt_two, div_mul_cancel₀ _ two_ne_zero, hle_d]
+    have key : (1 / 2 : ℝ≥0) ^ (n + 1) ≤ d x.1 x.2 / 2 := by
+      rw [pow_succ, mul_one_div₀, div_le_iff₀ zero_lt_two, div_mul_cancel₀, hle_d]
+      exact hx
+    have := NNReal.coe_le_coe.2 key
+    simpa only [NNReal.coe_pow, NNReal.coe_div, NNReal.coe_two] using this
 
 /-- A `PseudoMetricSpace` instance compatible with a given `UniformSpace` structure. -/
 -- see note [reducible non-instances]

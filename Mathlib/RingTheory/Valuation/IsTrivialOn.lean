@@ -74,8 +74,8 @@ If `y : K` is such that `y ≠ 0` and `v y ≠ 1`, then it is transcendental ove
 theorem Valuation.transcendental_of_ne_one (y : K) (h0 : y ≠ 0) (hy : v y ≠ 1) :
     Transcendental A y := by
   wlog! hlt : 1 < v y generalizing y
-  · rw [Transcendental, ← IsAlgebraic.inv_iff]
-    apply this _ (by simpa) (by simpa)
+  · rw [Transcendental, ← IsAlgebraic.inv_iff (hx := h0.isUnit)]
+    apply this _ inv_ne_zero (by rwa [Valuation.map_inv, ne_eq, inv_eq_one₀])
     rw [← val_lt_one_iff _ h0]
     exact lt_of_le_of_ne hlt hy
   simp_all only [ne_eq, Transcendental]

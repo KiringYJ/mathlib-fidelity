@@ -76,8 +76,10 @@ protected theorem norm_mul (z w : ℂ) : ‖z * w‖ = ‖z‖ * ‖w‖ := by
   rw [norm_def, norm_def, norm_def, normSq_mul, Real.sqrt_mul (normSq_nonneg _)]
 
 @[simp 1100]
-protected theorem norm_div (z w : ℂ) : ‖z / w‖ = ‖z‖ / ‖w‖ := by
-  rw [norm_def, norm_def, norm_def, normSq_div, Real.sqrt_div (normSq_nonneg _)]
+protected theorem norm_div (z w : ℂ) {hw : IsUnit w} : ‖z / w‖ = ‖z‖ / ‖w‖ := by
+  have hw' : 0 < normSq w := normSq_pos.2 hw.ne_zero
+  simp only [norm_def]
+  rw [normSq_div, Real.sqrt_div _ hw']
 
 instance isAbsoluteValueNorm : IsAbsoluteValue (‖·‖ : ℂ → ℝ) where
   abv_nonneg' := norm_nonneg
@@ -88,7 +90,7 @@ instance isAbsoluteValueNorm : IsAbsoluteValue (‖·‖ : ℂ → ℝ) where
 protected theorem norm_pow (z : ℂ) (n : ℕ) : ‖z ^ n‖ = ‖z‖ ^ n :=
   map_pow isAbsoluteValueNorm.abvHom _ _
 
-protected theorem norm_zpow (z : ℂ) (n : ℤ) : ‖z ^ n‖ = ‖z‖ ^ n :=
+protected theorem norm_zpow (z : ℂ) (n : ℤ) {h : n < 0 → IsUnit z} : ‖z ^ n‖ = ‖z‖ ^ n :=
   map_zpow₀ isAbsoluteValueNorm.abvHom _ _
 
 protected theorem norm_prod {ι : Type*} (s : Finset ι) (f : ι → ℂ) :
@@ -221,15 +223,13 @@ theorem norm_le_sqrt_two_mul_max (z : ℂ) : ‖z‖ ≤ √2 * max |z.re| |z.im
     _ = √2 * m := by
       rw [← two_mul, Real.sqrt_mul, Real.sqrt_sq] <;> positivity
 
-theorem abs_re_div_norm_le_one (z : ℂ) : |z.re / ‖z‖| ≤ 1 :=
-  if hz : z = 0 then by simp [hz, zero_le_one]
-  else by
-    simp_rw [abs_div, abs_norm, div_le_iff₀ (norm_pos_iff.mpr hz), one_mul, abs_re_le_norm]
+theorem abs_re_div_norm_le_one (z : ℂ) {hz : IsUnit ‖z‖} : |z.re / ‖z‖| ≤ 1 := by
+  have hz' : 0 < ‖z‖ := (norm_nonneg z).lt_of_ne hz.ne_zero.symm
+  simp_rw [abs_div, abs_norm, div_le_iff₀ hz', one_mul, abs_re_le_norm]
 
-theorem abs_im_div_norm_le_one (z : ℂ) : |z.im / ‖z‖| ≤ 1 :=
-  if hz : z = 0 then by simp [hz, zero_le_one]
-  else by
-    simp_rw [_root_.abs_div, abs_norm, div_le_iff₀ (norm_pos_iff.mpr hz), one_mul, abs_im_le_norm]
+theorem abs_im_div_norm_le_one (z : ℂ) {hz : IsUnit ‖z‖} : |z.im / ‖z‖| ≤ 1 := by
+  have hz' : 0 < ‖z‖ := (norm_nonneg z).lt_of_ne hz.ne_zero.symm
+  simp_rw [_root_.abs_div, abs_norm, div_le_iff₀ hz', one_mul, abs_im_le_norm]
 
 theorem dist_eq (z w : ℂ) : dist z w = ‖z - w‖ := dist_eq_norm _ _
 
@@ -283,11 +283,11 @@ theorem isCauSeq_im (f : CauSeq ℂ (‖·‖)) : IsCauSeq abs fun n ↦ (f n).i
     simpa only [← ofReal_sub, norm_real, sub_re, sub_im] using (abs_im_le_norm _).trans_lt <| H _ ij
 
 /-- The real part of a complex Cauchy sequence, as a real Cauchy sequence. -/
-noncomputable def cauSeqRe (f : CauSeq ℂ (‖·‖)) : CauSeq ℝ abs :=
+def cauSeqRe (f : CauSeq ℂ (‖·‖)) : CauSeq ℝ abs :=
   ⟨_, isCauSeq_re f⟩
 
 /-- The imaginary part of a complex Cauchy sequence, as a real Cauchy sequence. -/
-noncomputable def cauSeqIm (f : CauSeq ℂ (‖·‖)) : CauSeq ℝ abs :=
+def cauSeqIm (f : CauSeq ℂ (‖·‖)) : CauSeq ℝ abs :=
   ⟨_, isCauSeq_im f⟩
 
 theorem isCauSeq_norm {f : ℕ → ℂ} (hf : IsCauSeq (‖·‖) f) :
@@ -337,7 +337,7 @@ theorem isCauSeq_conj (f : CauSeq ℂ (‖·‖)) :
     simp_rw [← map_sub, norm_conj]; exact hi j hj⟩
 
 /-- The complex conjugate of a complex Cauchy sequence, as a complex Cauchy sequence. -/
-noncomputable def cauSeqConj (f : CauSeq ℂ (‖·‖)) : CauSeq ℂ (‖·‖) :=
+def cauSeqConj (f : CauSeq ℂ (‖·‖)) : CauSeq ℂ (‖·‖) :=
   ⟨_, isCauSeq_conj f⟩
 
 set_option backward.isDefEq.respectTransparency false in

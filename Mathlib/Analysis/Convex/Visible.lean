@@ -105,14 +105,14 @@ lemma IsVisible.of_convexHull_of_pos {ι : Type*} {t : Finset ι} {a : ι → V}
       have :
         w i • a i + (1 - w i) • ∑ j ∈ t.erase i, (w j / (1 - w i)) • a j = ∑ j ∈ t, w j • a j := by
         rw [smul_sum]
-        simp_rw [smul_smul, mul_div_cancel₀ _ hwi.ne']
+        simp_rw [smul_smul, mul_div_cancel₀ _]
         exact add_sum_erase _ (fun i ↦ w i • a i) hi
       simp_rw [lineMap_apply_module, ← this]
       match_scalars <;> field
     refine (convex_convexHull _ _).mem_of_wbtw this hε <| (convex_convexHull _ _).sum_mem ?_ ?_ ?_
     · intro j hj
       positivity [hw₀ j <| erase_subset _ _ hj]
-    · rw [← sum_div, sum_erase_eq_sub hi, hw₁, div_self hwi.ne']
+    · rw [← sum_div, sum_erase_eq_sub hi, hw₁, div_self]
     · exact fun j hj ↦ subset_convexHull _ _ <| ha _ <| erase_subset _ _ hj
   · exact lt_add_of_pos_left _ <| by positivity
 

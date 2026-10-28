@@ -341,7 +341,7 @@ theorem meromorphicNFAt_const_smul_iff_meromorphicNFAt {s : 𝕜} (hs : s ≠ 0)
     MeromorphicNFAt (s • f) x ↔ MeromorphicNFAt f x := by
   constructor
   <;> intro hf
-  · rw [((eq_inv_smul_iff₀ hs).mpr rfl : f = s⁻¹ • s • f)]
+  · rw [((eq_inv_smul_iff₀ (ha := hs.isUnit)).mpr rfl : f = s⁻¹ • s • f)]
     fun_prop
   · fun_prop
 

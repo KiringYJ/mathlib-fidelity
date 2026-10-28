@@ -62,8 +62,9 @@ theorem exists_primitive_element_of_finite_top [Finite E] : ∃ α : E, F⟮α�
   · rw [hx]
     exact F⟮α.val⟯.zero_mem
   · obtain ⟨n, hn⟩ := Set.mem_range.mp (hα (Units.mk0 x hx))
-    rw [show x = α ^ n by norm_cast; rw [hn, Units.val_mk0]]
-    exact zpow_mem (mem_adjoin_simple_self F (E := E) ↑α) n
+    have h := SubfieldClass.zpow_mem (mem_adjoin_simple_self F (E := E) ↑α) n
+      (h := fun _ ↦ α.isUnit)
+    rwa [α.isUnit.zpow_eq_val_unit_zpow, IsUnit.unit_of_val_units, hn, Units.val_mk0] at h
 
 /-- Primitive element theorem for finite-dimensional extension of a finite field. -/
 theorem exists_primitive_element_of_finite_bot [Finite F] [FiniteDimensional F E] :
@@ -82,17 +83,20 @@ variable {F : Type*} [Field F] [Infinite F] {E : Type*} [Field E] (ϕ : F →+* 
 
 set_option backward.isDefEq.respectTransparency.types false in
 theorem primitive_element_inf_aux_exists_c (f g : F[X]) (hf : f ≠ 0) (hg : g ≠ 0) :
-    ∃ c : F, ∀ α' ∈ (f.map ϕ).roots, ∀ β' ∈ (g.map ϕ).roots, -(α' - α) / (β' - β) ≠ ϕ c := by
+    ∃ c : F, ∀ α' ∈ (f.map ϕ).roots, ∀ β' ∈ (g.map ϕ).roots, ∀ (_ : β' ≠ β),
+      -(α' - α) / (β' - β) ≠ ϕ c := by
   let sf := (f.map ϕ).roots
   let sg := (g.map ϕ).roots
   classical
-  let s := (sf.bind fun α' => sg.map fun β' => -(α' - α) / (β' - β)).toFinset
+  let s := (sf.bind fun α' => sg.map fun β' =>
+    if h : β' = β then 0 else Checked.div (-(α' - α)) (β' - β) (sub_ne_zero.2 h).isUnit).toFinset
   let s' := s.preimage ϕ fun x _ y _ h => ϕ.injective h
   obtain ⟨c, hc⟩ := Infinite.exists_notMem_finset s'
   simp_rw [s', s, Finset.mem_preimage, Multiset.mem_toFinset, Multiset.mem_bind, Multiset.mem_map]
     at hc
   push Not at hc
-  exact ⟨c, hc⟩
+  refine ⟨c, fun α' hα' β' hβ' hne ↦ ?_⟩
+  simpa only [hne, ↓reduceDIte] using hc α' hα' β' hβ'
 
 variable (F)
 variable [Algebra F E]
@@ -129,9 +133,14 @@ theorem primitive_element_inf_aux [Algebra.IsSeparable F E] : ∃ γ : E, F⟮α
   have h_ne_zero : h ≠ 0 :=
     mt EuclideanDomain.gcd_eq_zero_iff.mp (not_and.mpr fun _ => map_g_ne_zero)
   suffices p_linear : p.map (algebraMap F⟮γ⟯ E) = C h.leadingCoeff * (X - C β) by
+    have hlc : h.leadingCoeff ≠ 0 := mt leadingCoeff_eq_zero.mp h_ne_zero
+    have hp1 : p.coeff 1 ≠ 0 := by
+      intro hp1
+      apply hlc
+      simpa [hp1, coeff_C] using (congr_arg (coeff · 1) p_linear).symm
     have finale : β = algebraMap F⟮γ⟯ E (-p.coeff 0 / p.coeff 1) := by
       simp [map_div₀, map_neg, ← coeff_map, ← coeff_map, p_linear,
-        mul_sub, coeff_C, mul_div_cancel_left₀ β (mt leadingCoeff_eq_zero.mp h_ne_zero)]
+        mul_sub, coeff_C, mul_div_cancel_left₀ β]
     rw [finale]
     exact Subtype.mem (-p.coeff 0 / p.coeff 1)
   have h_sep : h.Separable := separable_gcd_right _ (.map (Algebra.IsSeparable.isSeparable F β))
@@ -155,8 +164,8 @@ theorem primitive_element_inf_aux [Algebra.IsSeparable F E] : ∃ γ : E, F⟮α
       rw [mem_roots_map (minpoly.ne_zero hβ), ← eval₂_map]
       exact root_right_of_root_gcd hx)
     by_contra a
-    apply hc
-    apply (div_eq_iff (sub_ne_zero.mpr a)).mpr
+    apply hc a
+    apply div_eq_iff.mpr
     simp only [γ, Algebra.smul_def, map_add, map_mul, RingHom.comp_apply]
     ring
   rw [← eq_X_sub_C_of_separable_of_root_eq h_sep h_root h_splits h_roots]
@@ -185,7 +194,7 @@ private theorem primitive_element_inf_aux_of_finite_intermediateField
     have β_in_K := sub_mem αxβ_in_K αyβ_in_K
     rw [show (α + x • β) - (α + y • β) = (x - y) • β by rw [sub_smul]; abel1] at β_in_K
     replace β_in_K := smul_mem _ β_in_K (x := (x - y)⁻¹)
-    rw [smul_smul, inv_mul_eq_div, div_self (sub_ne_zero.2 hneq), one_smul] at β_in_K
+    rw [smul_smul, inv_mul_cancel₀, one_smul] at β_in_K
     have α_in_K : α ∈ F⟮α + x • β⟯ := by
       convert! ← sub_mem αxβ_in_K (smul_mem _ β_in_K)
       apply add_sub_cancel_right
@@ -246,13 +255,11 @@ theorem isAlgebraic_of_adjoin_eq_adjoin {α : E} {m n : ℕ} (hneq : m ≠ n)
     obtain ⟨y, h⟩ := mem_bot.1 (heq.symm ▸ mem_adjoin_simple_self F (α ^ n))
     refine ⟨X ^ n - C y, X_pow_sub_C_ne_zero hmn y, ?_⟩
     simp only [map_sub, map_pow, aeval_X, aeval_C, h, sub_self]
-  obtain ⟨r, s, h⟩ := (mem_adjoin_simple_iff F _).1 (heq ▸ mem_adjoin_simple_self F (α ^ m))
-  by_cases hzero : aeval (α ^ n) s = 0
-  · simp only [hzero, div_zero, pow_eq_zero_iff hm] at h
-    exact h.symm ▸ isAlgebraic_zero
+  obtain ⟨r, s, hzero, h⟩ :=
+    (mem_adjoin_simple_iff F _).1 (heq ▸ mem_adjoin_simple_self F (α ^ m))
   replace hm : 0 < m := Nat.pos_of_ne_zero hm
-  rw [eq_div_iff hzero, ← sub_eq_zero] at h
-  replace hzero : s ≠ 0 := by rintro rfl; simp only [map_zero, not_true_eq_false] at hzero
+  rw [eq_div_iff, ← sub_eq_zero] at h
+  replace hzero : s ≠ 0 := by rintro rfl; exact hzero (map_zero _)
   let f : F[X] := X ^ m * expand F n s - expand F n r
   refine ⟨f, ?_, ?_⟩
   · have : f.coeff (n * s.natDegree + m) ≠ 0 := by

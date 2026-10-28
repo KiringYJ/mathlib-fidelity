@@ -333,41 +333,52 @@ variable {R} {r : ℕ} (M : Matrix (Fin r ⊕ Unit) (Fin r ⊕ Unit) 𝕜)
 open Unit Sum TransvectionStruct
 
 /-- A list of transvections such that multiplying on the left with these transvections will replace
-the last column with zeroes. -/
-def listTransvecCol : List (Matrix (Fin r ⊕ Unit) (Fin r ⊕ Unit) 𝕜) :=
+the last column with zeroes. Its coefficients are quotients by the last diagonal entry, which is
+therefore required to be nonzero. -/
+noncomputable def listTransvecCol (hM : M (inr unit) (inr unit) ≠ 0) :
+    List (Matrix (Fin r ⊕ Unit) (Fin r ⊕ Unit) 𝕜) :=
   List.ofFn fun i : Fin r =>
     transvection (inl i) (inr unit) <| -M (inl i) (inr unit) / M (inr unit) (inr unit)
 
 /-- A list of transvections such that multiplying on the right with these transvections will replace
-the last row with zeroes. -/
-def listTransvecRow : List (Matrix (Fin r ⊕ Unit) (Fin r ⊕ Unit) 𝕜) :=
+the last row with zeroes. Its coefficients are quotients by the last diagonal entry, which is
+therefore required to be nonzero. -/
+noncomputable def listTransvecRow (hM : M (inr unit) (inr unit) ≠ 0) :
+    List (Matrix (Fin r ⊕ Unit) (Fin r ⊕ Unit) 𝕜) :=
   List.ofFn fun i : Fin r =>
     transvection (inr unit) (inl i) <| -M (inr unit) (inl i) / M (inr unit) (inr unit)
 
 @[simp]
-theorem length_listTransvecCol : (listTransvecCol M).length = r := by simp [listTransvecCol]
+theorem length_listTransvecCol {hM : M (inr unit) (inr unit) ≠ 0} :
+    (listTransvecCol M hM).length = r := by
+  simp [listTransvecCol]
 
-theorem listTransvecCol_getElem {i : ℕ} (h : i < (listTransvecCol M).length) :
-    (listTransvecCol M)[i] =
-      letI i' : Fin r := ⟨i, length_listTransvecCol M ▸ h⟩
+theorem listTransvecCol_getElem {hM : M (inr unit) (inr unit) ≠ 0} {i : ℕ}
+    (h : i < (listTransvecCol M hM).length) :
+    (listTransvecCol M hM)[i] =
+      letI i' : Fin r := ⟨i, length_listTransvecCol M (hM := hM) ▸ h⟩
       transvection (inl i') (inr unit) <| -M (inl i') (inr unit) / M (inr unit) (inr unit) := by
   simp [listTransvecCol]
 
 @[simp]
-theorem length_listTransvecRow : (listTransvecRow M).length = r := by simp [listTransvecRow]
+theorem length_listTransvecRow {hM : M (inr unit) (inr unit) ≠ 0} :
+    (listTransvecRow M hM).length = r := by
+  simp [listTransvecRow]
 
-theorem listTransvecRow_getElem {i : ℕ} (h : i < (listTransvecRow M).length) :
-    (listTransvecRow M)[i] =
-      letI i' : Fin r := ⟨i, length_listTransvecRow M ▸ h⟩
+theorem listTransvecRow_getElem {hM : M (inr unit) (inr unit) ≠ 0} {i : ℕ}
+    (h : i < (listTransvecRow M hM).length) :
+    (listTransvecRow M hM)[i] =
+      letI i' : Fin r := ⟨i, length_listTransvecRow M (hM := hM) ▸ h⟩
       transvection (inr unit) (inl i') <| -M (inr unit) (inl i') / M (inr unit) (inr unit) := by
   simp [listTransvecRow]
 
 /-- Multiplying by some of the matrices in `listTransvecCol M` does not change the last row. -/
-theorem listTransvecCol_mul_last_row_drop (i : Fin r ⊕ Unit) {k : ℕ} (hk : k ≤ r) :
-    (((listTransvecCol M).drop k).prod * M) (inr unit) i = M (inr unit) i := by
+theorem listTransvecCol_mul_last_row_drop {hM : M (inr unit) (inr unit) ≠ 0} (i : Fin r ⊕ Unit)
+    {k : ℕ} (hk : k ≤ r) :
+    (((listTransvecCol M hM).drop k).prod * M) (inr unit) i = M (inr unit) i := by
   induction hk using Nat.decreasingInduction with
   | of_succ n hn IH =>
-    have hn' : n < (listTransvecCol M).length := by simpa [listTransvecCol] using hn
+    have hn' : n < (listTransvecCol M hM).length := by simpa [listTransvecCol] using hn
     rw [List.drop_eq_getElem_cons hn']
     simpa [listTransvecCol, Matrix.mul_assoc]
   | self =>
@@ -375,28 +386,28 @@ theorem listTransvecCol_mul_last_row_drop (i : Fin r ⊕ Unit) {k : ℕ} (hk : k
       Matrix.one_mul]
 
 /-- Multiplying by all the matrices in `listTransvecCol M` does not change the last row. -/
-theorem listTransvecCol_mul_last_row (i : Fin r ⊕ Unit) :
-    ((listTransvecCol M).prod * M) (inr unit) i = M (inr unit) i := by
-  simpa using listTransvecCol_mul_last_row_drop M i zero_le
+theorem listTransvecCol_mul_last_row {hM : M (inr unit) (inr unit) ≠ 0} (i : Fin r ⊕ Unit) :
+    ((listTransvecCol M hM).prod * M) (inr unit) i = M (inr unit) i := by
+  simpa using listTransvecCol_mul_last_row_drop M (hM := hM) i zero_le
 
 /-- Multiplying by all the matrices in `listTransvecCol M` kills all the coefficients in the
 last column but the last one. -/
 theorem listTransvecCol_mul_last_col (hM : M (inr unit) (inr unit) ≠ 0) (i : Fin r) :
-    ((listTransvecCol M).prod * M) (inl i) (inr unit) = 0 := by
+    ((listTransvecCol M hM).prod * M) (inl i) (inr unit) = 0 := by
   suffices H :
     ∀ k : ℕ,
       k ≤ r →
-        (((listTransvecCol M).drop k).prod * M) (inl i) (inr unit) =
+        (((listTransvecCol M hM).drop k).prod * M) (inl i) (inr unit) =
           if k ≤ i then 0 else M (inl i) (inr unit) by
     simpa [List.drop] using H 0
   intro k hk
   induction hk using Nat.decreasingInduction with
   | of_succ n hn IH =>
-    have hn' : n < (listTransvecCol M).length := by simpa [listTransvecCol] using hn
+    have hn' : n < (listTransvecCol M hM).length := by simpa [listTransvecCol] using hn
     let n' : Fin r := ⟨n, hn⟩
     rw [List.drop_eq_getElem_cons hn']
     have A :
-      (listTransvecCol M)[n] =
+      (listTransvecCol M hM)[n] =
         transvection (inl n') (inr unit) (-M (inl n') (inr unit) / M (inr unit) (inr unit)) := by
       simp [n', listTransvecCol]
     simp only [Matrix.mul_assoc, A, List.prod_cons]
@@ -406,7 +417,7 @@ theorem listTransvecCol_mul_last_col (hM : M (inr unit) (inr unit) ≠ 0) (i : F
         simp only [n', Fin.mk_eq_mk] at h
         simp [h]
       simp only [h, transvection_mul_apply_same, IH, ← hni, add_le_iff_nonpos_right,
-          listTransvecCol_mul_last_row_drop _ _ hn]
+          listTransvecCol_mul_last_row_drop _ (hM := hM) _ hn]
       simp [field]
     · have hni : n ≠ i := by
         rintro rfl
@@ -426,15 +437,16 @@ theorem listTransvecCol_mul_last_col (hM : M (inr unit) (inr unit) ≠ 0) (i : F
     simpa only [not_le] using i.2
 
 /-- Multiplying by some of the matrices in `listTransvecRow M` does not change the last column. -/
-theorem mul_listTransvecRow_last_col_take (i : Fin r ⊕ Unit) {k : ℕ} (hk : k ≤ r) :
-    (M * ((listTransvecRow M).take k).prod) i (inr unit) = M i (inr unit) := by
+theorem mul_listTransvecRow_last_col_take {hM : M (inr unit) (inr unit) ≠ 0} (i : Fin r ⊕ Unit)
+    {k : ℕ} (hk : k ≤ r) :
+    (M * ((listTransvecRow M hM).take k).prod) i (inr unit) = M i (inr unit) := by
   induction k with
   | zero => simp only [Matrix.mul_one, List.prod_nil, List.take, Matrix.mul_one]
   | succ k IH =>
     have hkr : k < r := hk
     let k' : Fin r := ⟨k, hkr⟩
     have :
-      (listTransvecRow M)[k]? =
+      (listTransvecRow M hM)[k]? =
         ↑(transvection (inr Unit.unit) (inl k')
             (-M (inr Unit.unit) (inl k') / M (inr Unit.unit) (inr Unit.unit))) := by
       simp only [k', listTransvecRow, hkr, dite_eq_left, List.getElem?_ofFn]
@@ -444,23 +456,23 @@ theorem mul_listTransvecRow_last_col_take (i : Fin r ⊕ Unit) {k : ℕ} (hk : k
     simp only [Ne, not_false_iff, reduceCtorEq]
 
 /-- Multiplying by all the matrices in `listTransvecRow M` does not change the last column. -/
-theorem mul_listTransvecRow_last_col (i : Fin r ⊕ Unit) :
-    (M * (listTransvecRow M).prod) i (inr unit) = M i (inr unit) := by
-  have A : (listTransvecRow M).length = r := by simp [listTransvecRow]
-  rw [← List.take_length (l := listTransvecRow M), A]
-  simpa using mul_listTransvecRow_last_col_take M i le_rfl
+theorem mul_listTransvecRow_last_col {hM : M (inr unit) (inr unit) ≠ 0} (i : Fin r ⊕ Unit) :
+    (M * (listTransvecRow M hM).prod) i (inr unit) = M i (inr unit) := by
+  have A : (listTransvecRow M hM).length = r := by simp [listTransvecRow]
+  rw [← List.take_length (l := listTransvecRow M hM), A]
+  simpa using mul_listTransvecRow_last_col_take M (hM := hM) i le_rfl
 
 /-- Multiplying by all the matrices in `listTransvecRow M` kills all the coefficients in the
 last row but the last one. -/
 theorem mul_listTransvecRow_last_row (hM : M (inr unit) (inr unit) ≠ 0) (i : Fin r) :
-    (M * (listTransvecRow M).prod) (inr unit) (inl i) = 0 := by
+    (M * (listTransvecRow M hM).prod) (inr unit) (inl i) = 0 := by
   suffices H :
     ∀ k : ℕ,
       k ≤ r →
-        (M * ((listTransvecRow M).take k).prod) (inr unit) (inl i) =
+        (M * ((listTransvecRow M hM).take k).prod) (inr unit) (inl i) =
           if k ≤ i then M (inr unit) (inl i) else 0 by
-    have A : (listTransvecRow M).length = r := by simp [listTransvecRow]
-    rw [← List.take_length (l := listTransvecRow M), A]
+    have A : (listTransvecRow M hM).length = r := by simp [listTransvecRow]
+    rw [← List.take_length (l := listTransvecRow M hM), A]
     have : ¬r ≤ i := by simp
     simpa only [this, ite_eq_right_iff] using! H r le_rfl
   intro k hk
@@ -470,7 +482,7 @@ theorem mul_listTransvecRow_last_row (hM : M (inr unit) (inr unit) ≠ 0) (i : F
     have hnr : n < r := hk
     let n' : Fin r := ⟨n, hnr⟩
     have A :
-      (listTransvecRow M)[n]? =
+      (listTransvecRow M hM)[n]? =
         ↑(transvection (inr unit) (inl n')
         (-M (inr unit) (inl n') / M (inr unit) (inr unit))) := by
       simp only [n', listTransvecRow, hnr, dite_eq_left, List.getElem?_ofFn]
@@ -483,7 +495,8 @@ theorem mul_listTransvecRow_last_row (hM : M (inr unit) (inr unit) ≠ 0) (i : F
         simp only [h]
       have : ¬n.succ ≤ i := by simp only [← hni, n.lt_succ_self, not_le]
       simp only [h, mul_transvection_apply_same, ite_false,
-        mul_listTransvecRow_last_col_take _ _ hnr.le, hni.le, this, ite_true, IH hnr.le]
+        mul_listTransvecRow_last_col_take _ (hM := hM) _ hnr.le, hni.le, this, ite_true,
+        IH hnr.le]
       field
     · have hni : n ≠ i := by
         rintro rfl
@@ -501,29 +514,31 @@ theorem mul_listTransvecRow_last_row (hM : M (inr unit) (inr unit) ≠ 0) (i : F
 all the coefficients in the last row but the last one. -/
 theorem listTransvecCol_mul_mul_listTransvecRow_last_col (hM : M (inr unit) (inr unit) ≠ 0)
     (i : Fin r) :
-    ((listTransvecCol M).prod * M * (listTransvecRow M).prod) (inr unit) (inl i) = 0 := by
-  have : listTransvecRow M = listTransvecRow ((listTransvecCol M).prod * M) := by
+    ((listTransvecCol M hM).prod * M * (listTransvecRow M hM).prod) (inr unit) (inl i) = 0 := by
+  have hM' : ((listTransvecCol M hM).prod * M) (inr unit) (inr unit) ≠ 0 := by
+    simpa [listTransvecCol_mul_last_row] using hM
+  have : listTransvecRow M hM = listTransvecRow ((listTransvecCol M hM).prod * M) hM' := by
     simp [listTransvecRow, listTransvecCol_mul_last_row]
   rw [this]
-  apply mul_listTransvecRow_last_row
-  simpa [listTransvecCol_mul_last_row] using hM
+  exact mul_listTransvecRow_last_row _ hM' i
 
 /-- Multiplying by all the matrices either in `listTransvecCol M` and `listTransvecRow M` kills
 all the coefficients in the last column but the last one. -/
 theorem listTransvecCol_mul_mul_listTransvecRow_last_row (hM : M (inr unit) (inr unit) ≠ 0)
     (i : Fin r) :
-    ((listTransvecCol M).prod * M * (listTransvecRow M).prod) (inl i) (inr unit) = 0 := by
-  have : listTransvecCol M = listTransvecCol (M * (listTransvecRow M).prod) := by
+    ((listTransvecCol M hM).prod * M * (listTransvecRow M hM).prod) (inl i) (inr unit) = 0 := by
+  have hM' : (M * (listTransvecRow M hM).prod) (inr unit) (inr unit) ≠ 0 := by
+    simpa [mul_listTransvecRow_last_col] using hM
+  have : listTransvecCol M hM = listTransvecCol (M * (listTransvecRow M hM).prod) hM' := by
     simp [listTransvecCol, mul_listTransvecRow_last_col]
   rw [this, Matrix.mul_assoc]
-  apply listTransvecCol_mul_last_col
-  simpa [mul_listTransvecRow_last_col] using hM
+  exact listTransvecCol_mul_last_col _ hM' i
 
 /-- Multiplying by all the matrices either in `listTransvecCol M` and `listTransvecRow M` turns
 the matrix in block-diagonal form. -/
 theorem isTwoBlockDiagonal_listTransvecCol_mul_mul_listTransvecRow
     (hM : M (inr unit) (inr unit) ≠ 0) :
-    IsTwoBlockDiagonal ((listTransvecCol M).prod * M * (listTransvecRow M).prod) := by
+    IsTwoBlockDiagonal ((listTransvecCol M hM).prod * M * (listTransvecRow M hM).prod) := by
   constructor
   · ext i j
     have : j = unit := by simp only
@@ -544,8 +559,10 @@ theorem exists_isTwoBlockDiagonal_of_ne_zero (hM : M (inr unit) (inr unit) ≠ 0
     List.ofFn fun i : Fin r =>
       ⟨inr unit, inl i, by simp, -M (inr unit) (inl i) / M (inr unit) (inr unit)⟩
   refine ⟨L, L', ?_⟩
-  have A : L.map toMatrix = listTransvecCol M := by simp [L, listTransvecCol, Function.comp_def]
-  have B : L'.map toMatrix = listTransvecRow M := by simp [L', listTransvecRow, Function.comp_def]
+  have A : L.map toMatrix = listTransvecCol M hM := by
+    simp [L, listTransvecCol, Function.comp_def]
+  have B : L'.map toMatrix = listTransvecRow M hM := by
+    simp [L', listTransvecRow, Function.comp_def]
   rw [A, B]
   exact isTwoBlockDiagonal_listTransvecCol_mul_mul_listTransvecRow M hM
 

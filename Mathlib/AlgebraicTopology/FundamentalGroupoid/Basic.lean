@@ -44,10 +44,14 @@ def reflTransSymmAux (x : I × I) : ℝ :=
 
 @[continuity, fun_prop]
 theorem continuous_reflTransSymmAux : Continuous reflTransSymmAux :=
+  -- `grind` treats the quotient `1 / 2` as an atom, so it is given its defining equation.
+  have h : (1 / 2 : ℝ) * 2 = 1 := by norm_num
   continuous_if_le (by fun_prop) (by fun_prop) (by fun_prop) (by fun_prop) (by grind)
 
 theorem reflTransSymmAux_mem_I (x : I × I) : reflTransSymmAux x ∈ I := by
   dsimp only [reflTransSymmAux]
+  -- `grind` treats the quotient `1 / 2` as an atom, so it is given its defining equation.
+  have h : (1 / 2 : ℝ) * 2 = 1 := by norm_num
   split_ifs
   · constructor
     · apply mul_nonneg <;> grind
@@ -87,6 +91,8 @@ def transReflReparamAux (t : I) : ℝ :=
 
 @[continuity, fun_prop]
 theorem continuous_transReflReparamAux : Continuous transReflReparamAux :=
+  -- `grind` treats the quotient `1 / 2` as an atom, so it is given its defining equation.
+  have h : (1 / 2 : ℝ) * 2 = 1 := by norm_num
   continuous_if_le (by fun_prop) (by fun_prop) (by fun_prop) (by fun_prop) (by grind)
 
 theorem transReflReparamAux_mem_I (t : I) : transReflReparamAux t ∈ I := by
@@ -130,6 +136,10 @@ def transAssocReparamAux (t : I) : ℝ :=
 
 @[continuity, fun_prop]
 theorem continuous_transAssocReparamAux : Continuous transAssocReparamAux :=
+  -- `grind` treats the quotients `1 / 2` and `1 / 4` as atoms, so it is given their defining
+  -- equations.
+  have h₂ : (1 / 2 : ℝ) * 2 = 1 := by norm_num
+  have h₄ : (1 / 4 : ℝ) * 4 = 1 := by norm_num
   continuous_if_le (by fun_prop) (by fun_prop) (by fun_prop)
     (continuous_if_le (by fun_prop) (by fun_prop) (by fun_prop) (by fun_prop)
       (by grind)).continuousOn (by grind)
@@ -150,6 +160,10 @@ theorem trans_assoc_reparam {x₀ x₁ x₂ x₃ : X} (p : Path x₀ x₁) (q : 
         (fun t => ⟨transAssocReparamAux t, transAssocReparamAux_mem_I t⟩) (by fun_prop)
         (Subtype.ext transAssocReparamAux_zero) (Subtype.ext transAssocReparamAux_one) := by
   ext x
+  -- `grind` treats the quotients `1 / 2` and `1 / 4` as atoms, so it is given their defining
+  -- equations.
+  have h₂ : (1 / 2 : ℝ) * 2 = 1 := by norm_num
+  have h₄ : (1 / 4 : ℝ) * 4 = 1 := by norm_num
   simp only [transAssocReparamAux, Path.trans_apply, Function.comp_apply, Path.coe_reparam]
   split_ifs
   iterate 12 grind

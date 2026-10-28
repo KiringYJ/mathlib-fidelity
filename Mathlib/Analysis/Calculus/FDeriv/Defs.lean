@@ -116,7 +116,7 @@ This definition is designed to be specialized
 -/
 @[mk_iff hasFDerivAtFilter_iff_isLittleOTVS]
 structure HasFDerivAtFilter {D : Type*} (f : D → F) (f' : E →L[𝕜] F)
-    (L : Filter (D × D)) (coord : D → E := by exact id) : Prop where
+    (L : Filter (D × D)) (coord : D → E := by exact _root_.id) : Prop where
   of_isLittleOTVS ::
     isLittleOTVS :
       (fun p ↦ f p.1 - f p.2 - f' (coord p.1 - coord p.2)) =o[𝕜; L]
@@ -137,14 +137,14 @@ theorem HasFDerivAtFilter.comp_tendsto {D D' : Type*} {f : D → F}
 inside `s`. Identity coordinates give the ordinary within-set derivative. -/
 @[fun_prop]
 def HasFDerivWithinAt {D : Type*} [TopologicalSpace D] (f : D → F)
-    (f' : E →L[𝕜] F) (s : Set D) (x : D) (coord : D → E := by exact id) :=
+    (f' : E →L[𝕜] F) (s : Set D) (x : D) (coord : D → E := by exact _root_.id) :=
   HasFDerivAtFilter f f' (𝓝[s] x ×ˢ pure x) coord
 
 /-- A function `f` has the continuous linear map `f'` as derivative at `x` if
 `f x' = f x + f' (coord x' - coord x) + o (coord x' - coord x)` as `x'` tends to `x`. -/
 @[fun_prop]
 def HasFDerivAt {D : Type*} [TopologicalSpace D] (f : D → F)
-    (f' : E →L[𝕜] F) (x : D) (coord : D → E := by exact id) :=
+    (f' : E →L[𝕜] F) (x : D) (coord : D → E := by exact _root_.id) :=
   HasFDerivAtFilter f f' (𝓝 x ×ˢ pure x) coord
 
 /-- A function `f` has derivative `f'` at `a` in the sense of *strict differentiability*
@@ -154,7 +154,7 @@ e.g., by the inverse function theorem. Any `C^1` function on a vector space over
 differentiable but this definition works, e.g., for vector spaces over `p`-adic numbers. -/
 @[fun_prop]
 def HasStrictFDerivAt {D : Type*} [TopologicalSpace D] (f : D → F)
-    (f' : E →L[𝕜] F) (x : D) (coord : D → E := by exact id) :=
+    (f' : E →L[𝕜] F) (x : D) (coord : D → E := by exact _root_.id) :=
   HasFDerivAtFilter f f' (𝓝 (x, x)) coord
 
 variable (𝕜)
@@ -163,21 +163,21 @@ variable (𝕜)
 there (possibly non-unique). -/
 @[fun_prop]
 def DifferentiableWithinAt {D : Type*} [TopologicalSpace D] (f : D → F)
-    (s : Set D) (x : D) (coord : D → E := by exact id) :=
+    (s : Set D) (x : D) (coord : D → E := by exact _root_.id) :=
   ∃ f' : E →L[𝕜] F, HasFDerivWithinAt f f' s x coord
 
 /-- A function `f` is differentiable at a point `x` if it admits a derivative there (possibly
 non-unique). -/
 @[fun_prop]
 def DifferentiableAt {D : Type*} [TopologicalSpace D] (f : D → F)
-    (x : D) (coord : D → E := by exact id) :=
+    (x : D) (coord : D → E := by exact _root_.id) :=
   ∃ f' : E →L[𝕜] F, HasFDerivAt f f' x coord
 
 open scoped Classical in
 /-- If `f` has a derivative at `x` within `s`, then `fderivWithin 𝕜 f s x` is such a derivative.
 Otherwise, it is set to `0`. We also set it to be zero, if zero is one of possible derivatives. -/
 irreducible_def fderivWithin {D : Type*} [TopologicalSpace D] (f : D → F)
-    (s : Set D) (x : D) (coord : D → E := by exact id) : E →L[𝕜] F :=
+    (s : Set D) (x : D) (coord : D → E := by exact _root_.id) : E →L[𝕜] F :=
   if HasFDerivWithinAt f (0 : E →L[𝕜] F) s x coord
     then 0
   else if h : DifferentiableWithinAt 𝕜 f s x coord
@@ -187,19 +187,19 @@ irreducible_def fderivWithin {D : Type*} [TopologicalSpace D] (f : D → F)
 /-- If `f` has a derivative at `x`, then `fderiv 𝕜 f x` is such a derivative. Otherwise, it is
 set to `0`. -/
 irreducible_def fderiv {D : Type*} [TopologicalSpace D] (f : D → F)
-    (x : D) (coord : D → E := by exact id) : E →L[𝕜] F :=
+    (x : D) (coord : D → E := by exact _root_.id) : E →L[𝕜] F :=
   fderivWithin 𝕜 f univ x coord
 
 /-- `DifferentiableOn 𝕜 f s` means that `f` is differentiable within `s` at any point of `s`. -/
 @[fun_prop]
 def DifferentiableOn {D : Type*} [TopologicalSpace D] (f : D → F)
-    (s : Set D) (coord : D → E := by exact id) :=
+    (s : Set D) (coord : D → E := by exact _root_.id) :=
   ∀ x ∈ s, DifferentiableWithinAt 𝕜 f s x coord
 
 /-- `Differentiable 𝕜 f` means that `f` is differentiable at any point. -/
 @[fun_prop]
 def Differentiable {D : Type*} [TopologicalSpace D] (f : D → F)
-    (coord : D → E := by exact id) :=
+    (coord : D → E := by exact _root_.id) :=
   ∀ x, DifferentiableAt 𝕜 f x coord
 
 variable {𝕜}

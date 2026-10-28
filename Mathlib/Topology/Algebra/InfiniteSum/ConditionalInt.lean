@@ -172,14 +172,14 @@ lemma _root_.Summable.tendsto_zero_of_even_summable_symmetricIcc {F : Type*} [No
   have := hL.sub (hL.comp (tendsto_atTop_add_const_right _ (-1) tendsto_id))
   simp only [id_eq, Int.reduceNeg, Function.comp_apply, sub_self, ← sub_eq_add_neg] at this
   rw [tendsto_zero_iff_norm_tendsto_zero] at this
-  refine (mul_zero (_ : ℝ) ▸ this.const_mul 2⁻¹).congr' ?_
+  refine (mul_zero (_ : ℝ) ▸ this.const_mul (2 : ℝ)⁻¹).congr' ?_
   filter_upwards [eventually_ge_atTop 1] with x hx
   have : Finset.Icc (-x) x = Icc (-(x - 1)) (x - 1) ∪ {-x, x} := by
     lift x to ℕ using by positivity
     convert! Finset.Icc_succ_succ (x - 1) (x - 1) <;> grind
   rw [this, Finset.sum_union, Finset.sum_insert, Finset.sum_singleton,
     hs x, add_comm, add_sub_cancel_right, ← two_zsmul, norm_smul, Int.norm_eq_abs,
-    Int.cast_two, abs_two, inv_mul_cancel_left₀ two_ne_zero] <;>
+    Int.cast_two, abs_two, inv_mul_cancel_left₀] <;>
   · simp only [disjoint_iff_ne, mem_insert, mem_singleton, mem_Icc]
     omega
 

@@ -40,9 +40,6 @@ multiplicative character
 
 @[expose] public section
 
-open scoped Ring
-
-
 /-!
 ### Definitions related to multiplicative characters
 
@@ -284,52 +281,46 @@ protected theorem mul_one (χ : MulChar R R') : χ * 1 = χ := by
   ext
   simp only [mul_one, Pi.mul_apply, MulChar.coeToFun_mul, MulChar.one_apply_coe]
 
-/-- The inverse of a multiplicative character. We define it as `inverse ∘ χ`. -/
+/-- The inverse of a multiplicative character: its value at a unit `a` is the inverse of `χ a`,
+and it vanishes on non-units. It corresponds to the inverse homomorphism of unit groups under
+`MulChar.equivToUnitHom`. -/
 noncomputable def inv (χ : MulChar R R') : MulChar R R' :=
-  { MonoidWithZero.inverse.toMonoidHom.comp χ.toMonoidHom with
-    toFun := fun a => MonoidWithZero.inverse (χ a)
-    map_nonunit' := fun a ha => by simp [map_nonunit _ ha] }
+  ofUnitHom χ.toUnitHom⁻¹
 
 noncomputable instance hasInv : Inv (MulChar R R') :=
   ⟨inv⟩
 
-/-- The inverse of a multiplicative character `χ`, applied to `a`, is the inverse of `χ a`. -/
-theorem inv_apply_eq_inv (χ : MulChar R R') (a : R) : χ⁻¹ a = (χ a)⁻¹ʳ :=
-  Eq.refl <| inv χ a
+/-- The inverse of a multiplicative character `χ`, applied to `a`, is the inverse of `χ a`
+whenever `χ a` is invertible. -/
+theorem inv_apply_eq_inv (χ : MulChar R R') (a : R) {ha : IsUnit (χ a)} : χ⁻¹ a = (χ a)⁻¹ := by
+  nontriviality R'
+  obtain ⟨u, rfl⟩ := apply_ne_zero_iff.mp ha.ne_zero
+  rw [inv_eq_val_inv_of_eq_val₀ (χ.toUnitHom u) (coe_toUnitHom χ u).symm]
+  exact ofUnitHom_coe χ.toUnitHom⁻¹ u
 
-/-- The inverse of a multiplicative character `χ`, applied to `a`, is the inverse of `χ a`.
-Variant when the target is a field -/
-theorem inv_apply_eq_inv' {R' : Type*} [CommGroupWithZero R'] (χ : MulChar R R') (a : R) :
-    χ⁻¹ a = (χ a)⁻¹ :=
-  (inv_apply_eq_inv χ a).trans <| Ring.inverse_eq_inv (χ a)
+/-- The inverse of a multiplicative character `χ`, applied to `a`, is the inverse of `χ a`
+whenever `χ a` is invertible. Variant when the target is a field -/
+theorem inv_apply_eq_inv' {R' : Type*} [CommGroupWithZero R'] (χ : MulChar R R') (a : R)
+    {ha : IsUnit (χ a)} : χ⁻¹ a = (χ a)⁻¹ :=
+  inv_apply_eq_inv χ a
 
-/-- When the domain has a zero, then the inverse of a multiplicative character `χ`,
-applied to `a`, is `χ` applied to the inverse of `a`. -/
-theorem inv_apply {R : Type*} [CommMonoidWithZero R] (χ : MulChar R R') (a : R) :
-    χ⁻¹ a = χ a⁻¹ʳ := by
-  by_cases ha : IsUnit a
-  · rw [inv_apply_eq_inv]
-    have h := IsUnit.map χ ha
-    apply_fun (χ a * ·) using IsUnit.mul_right_injective h
-    dsimp only
-    rw [Ring.mul_inverse_cancel _ h, ← map_mul, Ring.mul_inverse_cancel _ ha, map_one]
-  · revert ha
-    nontriviality R
-    intro ha
-    -- `nontriviality R` by itself doesn't do it
-    rw [map_nonunit _ ha, Ring.inverse_non_unit a ha, MulChar.map_zero χ]
+/-- The inverse of a multiplicative character `χ`, applied to a unit `a`, is `χ` applied to the
+inverse of `a`. -/
+theorem inv_apply (χ : MulChar R R') (a : R) {ha : IsUnit a} : χ⁻¹ a = χ a⁻¹ := by
+  rw [inv_apply_eq_inv χ a (ha := ha.map χ)]
+  exact inv_eq_of_mul_eq_one_right₀ (by rw [← map_mul, mul_inv_cancel₀, map_one])
 
-/-- When the domain has a zero, then the inverse of a multiplicative character `χ`,
-applied to `a`, is `χ` applied to the inverse of `a`. -/
-theorem inv_apply' {R : Type*} [CommGroupWithZero R] (χ : MulChar R R') (a : R) : χ⁻¹ a = χ a⁻¹ :=
-  (inv_apply χ a).trans <| congr_arg _ (Ring.inverse_eq_inv a)
+/-- When the domain is a group with zero, the inverse of a multiplicative character `χ`,
+applied to a nonzero `a`, is `χ` applied to the inverse of `a`. -/
+theorem inv_apply' {R : Type*} [CommGroupWithZero R] (χ : MulChar R R') (a : R)
+    {ha : IsUnit a} : χ⁻¹ a = χ a⁻¹ :=
+  inv_apply χ a
 
 /-- The product of a character with its inverse is the trivial character. -/
 theorem inv_mul (χ : MulChar R R') : χ⁻¹ * χ = 1 := by
   ext x
-  rw [coeToFun_mul, Pi.mul_apply, inv_apply_eq_inv]
-  simp only [Ring.inverse_mul_cancel _ (IsUnit.map χ x.isUnit)]
-  rw [one_apply_coe]
+  rw [coeToFun_mul, Pi.mul_apply, inv_apply_eq_inv χ x (ha := x.isUnit.map χ), inv_mul_cancel₀,
+    one_apply_coe]
 
 /-- The commutative group structure on `MulChar R R'`. -/
 noncomputable instance commGroup : CommGroup (MulChar R R') where
@@ -461,10 +452,12 @@ lemma ringHomComp_one (f : R' →+* R'') : (1 : MulChar R R').ringHomComp f = 1 
   ext1
   simp only [MulChar.ringHomComp_apply, MulChar.one_apply_coe, map_one]
 
-lemma ringHomComp_inv {R : Type*} [CommMonoidWithZero R] (χ : MulChar R R') (f : R' →+* R'') :
+lemma ringHomComp_inv (χ : MulChar R R') (f : R' →+* R'') :
     (χ.ringHomComp f)⁻¹ = χ⁻¹.ringHomComp f := by
-  ext1
-  simp only [inv_apply, Ring.inverse_unit, ringHomComp_apply]
+  ext1 a
+  rw [inv_apply_eq_inv (χ.ringHomComp f) a (ha := a.isUnit.map _), ringHomComp_apply χ⁻¹ f,
+    inv_apply_eq_inv χ a (ha := a.isUnit.map χ)]
+  exact inv_eq_of_mul_eq_one_right₀ (map_mul_eq_one f mul_inv_cancel₀)
 
 lemma ringHomComp_mul (χ φ : MulChar R R') (f : R' →+* R'') :
     (χ * φ).ringHomComp f = χ.ringHomComp f * φ.ringHomComp f := by
@@ -489,11 +482,13 @@ lemma ringHomComp_zpow (χ : MulChar R R') (f : R' →+* R'') (n : ℤ) :
   ((ringHomCompHom f).map_zpow χ n).symm
 
 /-- If `a` is a unit and `n : ℤ`, then `(χ ^ n) a = χ (a ^ n)`. -/
-theorem zpow_apply_coe {R : Type*} [CommGroupWithZero R] {R' : Type*} [CommRing R']
-    (χ : MulChar R R') (n : ℤ) (a : Rˣ) : (χ ^ n) a = χ (a ^ n : Rˣ) := by
+theorem zpow_apply_coe (χ : MulChar R R') (n : ℤ) (a : Rˣ) : (χ ^ n) a = χ (a ^ n : Rˣ) := by
   obtain ⟨m, rfl | rfl⟩ := Int.eq_nat_or_neg n
   · simp [pow_apply_coe]
-  · simp [pow_apply_coe, inv_apply', ← inv_pow]
+  · simp only [zpow_neg, zpow_natCast]
+    rw [inv_apply_eq_inv (χ ^ m) a (ha := a.isUnit.map _)]
+    refine inv_eq_of_mul_eq_one_right₀ ?_
+    rw [pow_apply_coe, ← map_pow, ← map_mul, ← Units.val_pow_eq_pow_val, Units.mul_inv, map_one]
 
 lemma injective_ringHomComp {f : R' →+* R''} (hf : Function.Injective f) :
     Function.Injective (ringHomComp (R := R) · f) := by
@@ -519,13 +514,14 @@ theorem IsQuadratic.comp {χ : MulChar R R'} (hχ : χ.IsQuadratic) (f : R' →+
 /-- The inverse of a quadratic character is itself. → -/
 theorem IsQuadratic.inv {χ : MulChar R R'} (hχ : χ.IsQuadratic) : χ⁻¹ = χ := by
   ext x
-  rw [inv_apply_eq_inv]
-  rcases hχ x with (h₀ | h₁ | h₂)
-  · rw [h₀, Ring.inverse_zero]
-  · rw [h₁, Ring.inverse_one]
-  · -- Porting note (#11573): was `by norm_cast`
-    have : (-1 : R') = (-1 : R'ˣ) := by norm_cast; simp
-    rw [h₂, this, Ring.inverse_unit (-1 : R'ˣ), inv_neg, inv_one]
+  have hx : IsUnit (χ x) := x.isUnit.map χ
+  rw [inv_apply_eq_inv χ x (ha := hx)]
+  refine inv_eq_of_mul_eq_one_right₀ ?_
+  rcases hχ x with (h | h | h) <;> rw [h] at hx ⊢
+  · rw [mul_zero]
+    exact isUnit_zero_iff.mp hx
+  · rw [mul_one]
+  · rw [neg_one_mul, neg_neg]
 
 /-- The square of a quadratic character is the trivial character. -/
 theorem IsQuadratic.sq_eq_one {χ : MulChar R R'} (hχ : χ.IsQuadratic) : χ ^ 2 = 1 := by

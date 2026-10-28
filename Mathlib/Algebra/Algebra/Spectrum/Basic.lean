@@ -179,7 +179,8 @@ theorem units_smul_resolvent {r : Rˣ} {s : R} {a : A}
     r • resolvent a ⟨s, h⟩ =
       resolvent (r⁻¹ • a) ⟨r⁻¹ • s, units_smul_mem_resolventSet r h⟩ := by
   have h' : IsUnit (r • algebraMap R A (r⁻¹ • s) - a) := by
-    simpa only [Algebra.algebraMap_eq_smul_one, smul_assoc, smul_inv_smul] using h
+    simpa only [Algebra.algebraMap_eq_smul_one, smul_assoc, smul_inv_smul] using
+      mem_resolventSet_iff.mp h
   have hu : (units_smul_mem_resolventSet r h).unit = h'.subInvSMul := Units.ext rfl
   have hu' : h'.unit = h.unit := by
     apply Units.ext
@@ -189,7 +190,7 @@ theorem units_smul_resolvent {r : Rˣ} {s : R} {a : A}
 theorem units_smul_resolvent_self {r : Rˣ} {a : A}
     (h : (r : R) ∈ resolventSet R a) :
     r • resolvent a ⟨(r : R), h⟩ =
-      resolvent (r⁻¹ • a) ⟨1, by
+      resolvent (r⁻¹ • a) ⟨(1 : R), by
         simpa only [Units.smul_def, smul_eq_mul, Units.inv_mul] using
           units_smul_mem_resolventSet r h⟩ := by
   simpa only [Units.smul_def, smul_eq_mul, Units.inv_mul] using units_smul_resolvent (r := r) h
@@ -328,16 +329,14 @@ section ScalarSemifield
 variable {R : Type u} {A : Type v} [Semifield R] [Ring A] [Algebra R A]
 
 @[simp]
-lemma inv₀_mem_iff {r : R} {a : Aˣ} :
+lemma inv₀_mem_iff {r : R} {hr : IsUnit r} {a : Aˣ} :
     r⁻¹ ∈ spectrum R (a : A) ↔ r ∈ spectrum R (↑a⁻¹ : A) := by
-  obtain (rfl | hr) := eq_or_ne r 0
-  · simp
-  · lift r to Rˣ using hr.isUnit
-    simp [inv_mem_iff]
+  change ((hr.unit⁻¹ : Rˣ) : R) ∈ _ ↔ _
+  rw [inv_mem_iff, inv_inv, hr.unit_spec]
 
-lemma inv₀_mem_inv_iff {r : R} {a : Aˣ} :
+lemma inv₀_mem_inv_iff {r : R} {hr : IsUnit r} {a : Aˣ} :
     r⁻¹ ∈ spectrum R (↑a⁻¹ : A) ↔ r ∈ spectrum R (a : A) := by
-  simp
+  rw [inv₀_mem_iff, inv_inv]
 
 alias ⟨of_inv₀_mem, inv₀_mem⟩ := inv₀_mem_iff
 alias ⟨of_inv₀_mem_inv, inv₀_mem_inv⟩ := inv₀_mem_inv_iff
@@ -383,10 +382,6 @@ theorem nonzero_mul_comm (a b : A) : σ (a * b) \ {0} = σ (b * a) \ {0} := by
   rintro _ _ k ⟨k_mem, k_ne⟩
   change ((Units.mk0 k k_ne) : 𝕜) ∈ _ at k_mem
   exact ⟨unit_mem_mul_comm.mp k_mem, k_ne⟩
-
-protected theorem map_inv (a : Aˣ) : (σ (a : A))⁻¹ = σ (↑a⁻¹ : A) := by
-  ext
-  simp
 
 end ScalarField
 

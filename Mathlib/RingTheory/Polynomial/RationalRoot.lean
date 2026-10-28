@@ -127,7 +127,7 @@ theorem exists_integer_of_is_root_of_monic {p : A[X]} (hp : Monic p) {r : K} (hr
   · have d_ne_zero : algebraMap A K (den A r) ≠ 0 :=
       IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors (den A r).prop
     nth_rw 1 [← mk'_num_den' A r]
-    rw [div_eq_iff d_ne_zero, map_mul, mul_assoc, mul_comm ((algebraMap A K) inv),
+    rw [div_eq_iff, map_mul, mul_assoc, mul_comm ((algebraMap A K) inv),
       ← map_mul, ← h_inv, map_one, mul_one]
 
 namespace UniqueFactorizationMonoid

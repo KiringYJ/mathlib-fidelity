@@ -29,9 +29,8 @@ theorem initialZero_not_limZero : ¬LimZero initialZero := by
 
 example : initialZero 0 = 0 := rfl
 
-example (n : ℕ) : inv initialZero initialZero_not_limZero n ≠ 0 := by
-  rw [inv_apply]
-  exact Units.ne_zero _
+example (n : ℕ) : inv initialZero initialZero_not_limZero n ≠ 0 :=
+  CauSeq.inv_ne_zero initialZero_not_limZero n
 
 example : inv initialZero initialZero_not_limZero 0 * initialZero 0 = 0 := by
   rw [show initialZero 0 = 0 from rfl, mul_zero]
@@ -52,13 +51,11 @@ example :
       ↑(Completion.mkUnit initialZero initialZero_not_limZero)⁻¹ = 1 :=
   (Completion.mkUnit initialZero initialZero_not_limZero).mul_inv
 
-example (u : ℝˣ) :
-    (↑u⁻¹ : ℝ).cauchy =
-      (↑(Units.map Real.ringEquivCauchy.toMonoidHom u)⁻¹ : Completion.Cauchy (abs : ℚ → ℚ)) :=
-  Real.cauchy_inv u
+example (x : ℝ) (hx : x ≠ 0) : (x⁻¹ : ℝ).cauchy * x.cauchy = 1 := by
+  rw [Real.cauchy_inv, inv_mul_cancel₀]
 
 example {x : ℝ} (hx : x ≠ 0) : x * Checked.inv x = 1 :=
-  Checked.mul_inv_cancel _ (GroupWithZero.isUnit_of_ne_zero hx)
+  mul_inv_cancel₀
 
 example (u : ℝˣ) : u ^ (-1 : Int) = u⁻¹ := zpow_neg_one u
 

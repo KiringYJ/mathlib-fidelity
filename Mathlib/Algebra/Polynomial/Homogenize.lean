@@ -230,7 +230,7 @@ lemma eval_homogenize {p : K[X]} {n : ℕ} (hn : p.natDegree ≤ n) (x : Fin 2 �
     Finset.Nat.sum_antidiagonal_eq_sum_range_succ_mk, Finset.sum_mul, MvPolynomial.eval_sum]
   refine Finset.sum_congr rfl fun k hk ↦ ?_
   rw [MvPolynomial.eval_monomial, Finsupp.update_eq_add_single, Finsupp.prod_add_index',
-    Finsupp.prod_single_index, Finsupp.prod_single_index, pow_sub₀]
+    Finsupp.prod_single_index, Finsupp.prod_single_index, pow_sub₀, div_pow₀]
   · ring
   all_goals simp_all [pow_add]
 
@@ -269,6 +269,7 @@ lemma eval_X_toTupleMvPolynomial_zero_eq (p : R[X]) :
   simp [toTupleMvPolynomial]
 
 lemma eval_eq_div_eval_toTupleMvPolynomial {R : Type*} [Field R] (p : R[X]) (x : R) :
+    haveI : IsUnit ((p.toTupleMvPolynomial 1).eval ![x, 1]) := by simp [toTupleMvPolynomial]
     p.eval x =
       (p.toTupleMvPolynomial 0).eval ![x, 1] / (p.toTupleMvPolynomial 1).eval ![x, 1] := by
   simp [toTupleMvPolynomial, eval_homogenize]

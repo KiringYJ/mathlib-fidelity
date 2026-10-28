@@ -168,20 +168,20 @@ theorem scaleRoots_aeval_eq_zero [Algebra R A] {p : R[X]} {a : A} {r : R} (ha : 
   · apply Algebra.commutes
   · intros; rw [Commute, SemiconjBy, ← map_mul, ← map_mul, mul_comm]
 
-theorem scaleRoots_eval₂_eq_zero_of_eval₂_div_eq_zero {p : S[X]} {f : S →+* K}
-    (hf : Function.Injective f) {r s : S} (hr : eval₂ f (f r / f s) p = 0)
-    (hs : s ∈ nonZeroDivisors S) : eval₂ f (f r) (scaleRoots p s) = 0 := by
+/-- If `f r / f s` is a root of `p`, then `f r` is a root of `scaleRoots p s`. The quotient
+requires `f s` to be invertible; no further hypothesis on `f` or `s` is needed. -/
+theorem scaleRoots_eval₂_eq_zero_of_eval₂_div_eq_zero {p : S[X]} {f : S →+* K} {r s : S}
+    {hs : IsUnit (f s)} (hr : eval₂ f (f r / f s) p = 0) :
+    eval₂ f (f r) (scaleRoots p s) = 0 := by
   -- if we don't specify the type with `(_ : S)`, the proof is much slower
   nontriviality S using Subsingleton.eq_zero (α := S)
   convert! @scaleRoots_eval₂_eq_zero _ _ _ _ p f _ s hr
-  rw [← mul_div_assoc, mul_comm, mul_div_cancel_right₀]
-  exact map_ne_zero_of_mem_nonZeroDivisors _ hf hs
+  rw [mul_comm, div_mul_cancel₀]
 
-theorem scaleRoots_aeval_eq_zero_of_aeval_div_eq_zero [Algebra R K]
-    (inj : Function.Injective (algebraMap R K)) {p : R[X]} {r s : R}
-    (hr : aeval (algebraMap R K r / algebraMap R K s) p = 0) (hs : s ∈ nonZeroDivisors R) :
+theorem scaleRoots_aeval_eq_zero_of_aeval_div_eq_zero [Algebra R K] {p : R[X]} {r s : R}
+    {hs : IsUnit (algebraMap R K s)} (hr : aeval (algebraMap R K r / algebraMap R K s) p = 0) :
     aeval (algebraMap R K r) (scaleRoots p s) = 0 :=
-  scaleRoots_eval₂_eq_zero_of_eval₂_div_eq_zero inj hr hs
+  scaleRoots_eval₂_eq_zero_of_eval₂_div_eq_zero hr
 
 @[simp]
 lemma scaleRoots_mul (p : R[X]) (r s) :

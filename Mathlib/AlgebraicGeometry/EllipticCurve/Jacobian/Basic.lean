@@ -213,23 +213,24 @@ lemma not_equiv_of_Y_ne {P Q : Fin 3 → R} (hy : P y * Q z ^ 3 ≠ Q y * P z ^ 
 lemma equiv_of_X_eq_of_Y_eq {P Q : Fin 3 → F} (hPz : P z ≠ 0) (hQz : Q z ≠ 0)
     (hx : P x * Q z ^ 2 = Q x * P z ^ 2) (hy : P y * Q z ^ 3 = Q y * P z ^ 3) : P ≈ Q := by
   use Units.mk0 _ hPz / Units.mk0 _ hQz
-  simp only [Units.smul_def, smul_fin3, Units.val_div_eq_div_val, Units.val_mk0, div_pow, mul_comm,
-    mul_div, ← hx, ← hy, mul_div_cancel_right₀ _ <| pow_ne_zero _ hQz, mul_div_cancel_right₀ _ hQz,
-    fin3_def]
+  simp only [Units.smul_def, smul_fin3, val_div_eq_divp, divp_mk0, Units.val_mk0, div_pow₀,
+    mul_comm, mul_div₀, ← hx, ← hy, mul_div_cancel_right₀, fin3_def]
 
 lemma equiv_some_of_Z_ne_zero {P : Fin 3 → F} (hPz : P z ≠ 0) :
     P ≈ ![P x / P z ^ 2, P y / P z ^ 3, 1] :=
+  have h₂ : P z ^ 2 / P z ^ 2 = 1 := div_self
+  have h₃ : P z ^ 3 / P z ^ 3 = 1 := div_self
   equiv_of_X_eq_of_Y_eq hPz one_ne_zero
-    (by linear_combination (norm := (matrix_simp; ring1)) -P x * div_self (pow_ne_zero 2 hPz))
-    (by linear_combination (norm := (matrix_simp; ring1)) -P y * div_self (pow_ne_zero 3 hPz))
+    (by linear_combination (norm := (matrix_simp; ring1)) -P x * h₂)
+    (by linear_combination (norm := (matrix_simp; ring1)) -P y * h₃)
 
 lemma X_eq_iff {P Q : Fin 3 → F} (hPz : P z ≠ 0) (hQz : Q z ≠ 0) :
     P x * Q z ^ 2 = Q x * P z ^ 2 ↔ P x / P z ^ 2 = Q x / Q z ^ 2 :=
-  (div_eq_div_iff (pow_ne_zero 2 hPz) (pow_ne_zero 2 hQz)).symm
+  div_eq_div_iff.symm
 
 lemma Y_eq_iff {P Q : Fin 3 → F} (hPz : P z ≠ 0) (hQz : Q z ≠ 0) :
     P y * Q z ^ 3 = Q y * P z ^ 3 ↔ P y / P z ^ 3 = Q y / Q z ^ 3 :=
-  (div_eq_div_iff (pow_ne_zero 3 hPz) (pow_ne_zero 3 hQz)).symm
+  div_eq_div_iff.symm
 
 /-! ## Weierstrass equations in Jacobian coordinates -/
 
@@ -251,10 +252,14 @@ lemma eval_polynomial (P : Fin 3 → R) : eval P W'.polynomial =
 
 lemma eval_polynomial_of_Z_ne_zero {P : Fin 3 → F} (hPz : P z ≠ 0) : eval P W.polynomial / P z ^ 6 =
     W.toAffine.polynomial.evalEval (P x / P z ^ 2) (P y / P z ^ 3) := by
+  have h₁ : P z / P z = 1 := div_self
+  have h₂ : P z ^ 2 / P z ^ 2 = 1 := div_self
+  have h₃ : P z ^ 3 / P z ^ 3 = 1 := div_self
+  have h₄ : P z ^ 4 / P z ^ 4 = 1 := div_self
+  have h₆ : P z ^ 6 / P z ^ 6 = 1 := div_self
   linear_combination (norm := (rw [eval_polynomial, Affine.evalEval_polynomial]; ring1))
-    W.a₁ * P x * P y / P z ^ 5 * div_self hPz + W.a₃ * P y / P z ^ 3 * div_self (pow_ne_zero 3 hPz)
-      - W.a₂ * P x ^ 2 / P z ^ 4 * div_self (pow_ne_zero 2 hPz)
-      - W.a₄ * P x / P z ^ 2 * div_self (pow_ne_zero 4 hPz) - W.a₆ * div_self (pow_ne_zero 6 hPz)
+    W.a₁ * P x * P y / P z ^ 5 * h₁ + W.a₃ * P y / P z ^ 3 * h₃ - W.a₂ * P x ^ 2 / P z ^ 4 * h₂
+      - W.a₄ * P x / P z ^ 2 * h₄ - W.a₆ * h₆
 
 variable (W') in
 /-- The proposition that a Jacobian point representative `(x, y, z)` lies in a Weierstrass curve
@@ -315,9 +320,11 @@ lemma eval_polynomialX (P : Fin 3 → R) : eval P W'.polynomialX =
 lemma eval_polynomialX_of_Z_ne_zero {P : Fin 3 → F} (hPz : P z ≠ 0) :
     eval P W.polynomialX / P z ^ 4 =
       W.toAffine.polynomialX.evalEval (P x / P z ^ 2) (P y / P z ^ 3) := by
+  have h₁ : P z / P z = 1 := div_self
+  have h₂ : P z ^ 2 / P z ^ 2 = 1 := div_self
+  have h₄ : P z ^ 4 / P z ^ 4 = 1 := div_self
   linear_combination (norm := (rw [eval_polynomialX, Affine.evalEval_polynomialX]; ring1))
-    W.a₁ * P y / P z ^ 3 * div_self hPz - 2 * W.a₂ * P x / P z ^ 2 * div_self (pow_ne_zero 2 hPz)
-      - W.a₄ * div_self (pow_ne_zero 4 hPz)
+    W.a₁ * P y / P z ^ 3 * h₁ - 2 * W.a₂ * P x / P z ^ 2 * h₂ - W.a₄ * h₄
 
 variable (W') in
 /-- The partial derivative `W_Y(X, Y, Z)` with respect to `Y` of the polynomial `W(X, Y, Z)`
@@ -338,8 +345,10 @@ lemma eval_polynomialY (P : Fin 3 → R) :
 lemma eval_polynomialY_of_Z_ne_zero {P : Fin 3 → F} (hPz : P z ≠ 0) :
     eval P W.polynomialY / P z ^ 3 =
       W.toAffine.polynomialY.evalEval (P x / P z ^ 2) (P y / P z ^ 3) := by
+  have h₁ : P z / P z = 1 := div_self
+  have h₃ : P z ^ 3 / P z ^ 3 = 1 := div_self
   linear_combination (norm := (rw [eval_polynomialY, Affine.evalEval_polynomialY]; ring1))
-    W.a₁ * P x / P z ^ 2 * div_self hPz + W.a₃ * div_self (pow_ne_zero 3 hPz)
+    W.a₁ * P x / P z ^ 2 * h₁ + W.a₃ * h₃
 
 variable (W') in
 /-- The partial derivative `W_Z(X, Y, Z)` with respect to `Z` of the polynomial `W(X, Y, Z)`
@@ -425,8 +434,8 @@ lemma nonsingular_of_Z_ne_zero {P : Fin 3 → F} (hPz : P z ≠ 0) :
 lemma nonsingular_iff_of_Z_ne_zero {P : Fin 3 → F} (hPz : P z ≠ 0) :
     W.Nonsingular P ↔ W.Equation P ∧ (eval P W.polynomialX ≠ 0 ∨ eval P W.polynomialY ≠ 0) := by
   rw [nonsingular_of_Z_ne_zero hPz, Affine.Nonsingular, ← equation_of_Z_ne_zero hPz,
-    ← eval_polynomialX_of_Z_ne_zero hPz, div_ne_zero_iff, and_iff_left <| pow_ne_zero 4 hPz,
-    ← eval_polynomialY_of_Z_ne_zero hPz, div_ne_zero_iff, and_iff_left <| pow_ne_zero 3 hPz]
+    ← eval_polynomialX_of_Z_ne_zero hPz, div_ne_zero_iff, ← eval_polynomialY_of_Z_ne_zero hPz,
+    div_ne_zero_iff]
 
 lemma X_ne_zero_of_Z_eq_zero [NoZeroDivisors R] {P : Fin 3 → R} (hP : W'.Nonsingular P)
     (hPz : P z = 0) : P x ≠ 0 := by
@@ -456,14 +465,14 @@ lemma equiv_of_Z_eq_zero {P Q : Fin 3 → F} (hP : W.Nonsingular P) (hQ : W.Nons
   have hQy : IsUnit <| Q y := isUnit_Y_of_Z_eq_zero hQ hQz
   simp only [nonsingular_of_Z_eq_zero, equation_of_Z_eq_zero, hPz, hQz] at hP hQ
   use (hPy.unit / hPx.unit) * (hQx.unit / hQy.unit)
-  simp only [Units.smul_def, smul_fin3, Units.val_mul, Units.val_div_eq_div_val, IsUnit.unit_spec,
-    mul_pow, div_pow, hQz, mul_zero]
+  simp only [Units.smul_def, smul_fin3, Units.val_mul, val_div_eq_divp, divp,
+    Units.val_inv_eq_inv_val₀, IsUnit.unit_spec, hQz, mul_zero]
   conv_rhs => rw [← fin3_def P, hPz]
   congr! 2
-  · rw [hP.left, pow_succ, (hPx.pow 2).mul_div_cancel_left, hQ.left, pow_succ _ 2,
-      (hQx.pow 2).div_mul_cancel_left, hQx.inv_mul_cancel_right]
-  · rw [← hP.left, pow_succ, (hPy.pow 2).mul_div_cancel_left, ← hQ.left, pow_succ _ 2,
-      (hQy.pow 2).div_mul_cancel_left, hQy.inv_mul_cancel_right]
+  · field_simp
+    linear_combination Q x ^ 3 * hP.left - P x ^ 3 * hQ.left
+  · field_simp
+    linear_combination P y * Q y * (Q x ^ 3 * hP.left - P x ^ 3 * hQ.left)
 
 lemma equiv_zero_of_Z_eq_zero {P : Fin 3 → F} (hP : W.Nonsingular P) (hPz : P z = 0) :
     P ≈ ![1, 1, 0] :=

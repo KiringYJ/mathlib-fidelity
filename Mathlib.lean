@@ -318,7 +318,6 @@ public import Mathlib.Algebra.Exact
 public import Mathlib.Algebra.Exact.Basic
 public import Mathlib.Algebra.Exact.Sequence
 public import Mathlib.Algebra.Expr
-public import Mathlib.Algebra.Field.Action.ConjAct
 public import Mathlib.Algebra.Field.Basic
 public import Mathlib.Algebra.Field.Defs
 public import Mathlib.Algebra.Field.Equiv
@@ -534,7 +533,7 @@ public import Mathlib.Algebra.GroupWithZero.Associated
 public import Mathlib.Algebra.GroupWithZero.Basic
 public import Mathlib.Algebra.GroupWithZero.Center
 public import Mathlib.Algebra.GroupWithZero.Checked
-public import Mathlib.Algebra.GroupWithZero.CheckedHom
+public import Mathlib.Algebra.GroupWithZero.Checked.Notation
 public import Mathlib.Algebra.GroupWithZero.Commute
 public import Mathlib.Algebra.GroupWithZero.Conj
 public import Mathlib.Algebra.GroupWithZero.Defs
@@ -544,6 +543,7 @@ public import Mathlib.Algebra.GroupWithZero.Hom
 public import Mathlib.Algebra.GroupWithZero.Idempotent
 public import Mathlib.Algebra.GroupWithZero.Indicator
 public import Mathlib.Algebra.GroupWithZero.InjSurj
+public import Mathlib.Algebra.GroupWithZero.Inverse
 public import Mathlib.Algebra.GroupWithZero.Invertible
 public import Mathlib.Algebra.GroupWithZero.Nat
 public import Mathlib.Algebra.GroupWithZero.NeZero
@@ -973,9 +973,7 @@ public import Mathlib.Algebra.Order.CompleteField
 public import Mathlib.Algebra.Order.Disjointed
 public import Mathlib.Algebra.Order.Field.Basic
 public import Mathlib.Algebra.Order.Field.Canonical
-public import Mathlib.Algebra.Order.Field.Checked
 public import Mathlib.Algebra.Order.Field.GeomSum
-public import Mathlib.Algebra.Order.Field.Halves
 public import Mathlib.Algebra.Order.Field.Pi
 public import Mathlib.Algebra.Order.Field.Pointwise
 public import Mathlib.Algebra.Order.Field.Power
@@ -8540,7 +8538,6 @@ public import Mathlib.Util.AssertNoSorry
 public import Mathlib.Util.AtLocation
 public import Mathlib.Util.AtomM
 public import Mathlib.Util.AtomM.Recurse
-public import Mathlib.Util.CheckedOperations
 public import Mathlib.Util.CodeActions
 public import Mathlib.Util.CodeActions.BinderPlicity
 public import Mathlib.Util.CompileInductive

@@ -257,9 +257,9 @@ open scoped Ring in
 theorem roots_comp_C_mul_X_add_C (p : R[X]) (a b : R) (ha : IsUnit a)
     {h : p.comp (C a * X + C b) ≠ 0} :
     (p.comp (C a * X + C b)).roots h =
-      (p.roots (ne_zero_of_comp_ne_zero h)).map (fun x ↦ a⁻¹ʳ * (x - b)) := by
+      (p.roots (ne_zero_of_comp_ne_zero h)).map (fun x ↦ a⁻¹ * (x - b)) := by
   conv_rhs => rw [← p.map_roots_comp_C_mul_X_add_C a b ha (h := h)]
-  simp [← mul_assoc, Ring.inverse_mul_cancel a ha]
+  simp [← mul_assoc, inv_mul_cancel₀]
 
 @[simp]
 theorem roots_comp_neg_X (p : R[X]) {h : p.comp (-X) ≠ 0} :

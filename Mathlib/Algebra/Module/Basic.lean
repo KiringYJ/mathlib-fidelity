@@ -42,8 +42,9 @@ theorem invOf_two_smul_add_invOf_two_smul (R) [Semiring R] [AddCommMonoid M] [Mo
 theorem map_inv_natCast_smul [AddCommMonoid M] [AddCommMonoid M₂] {F : Type*} [FunLike F M M₂]
     [AddMonoidHomClass F M M₂] (f : F) (R S : Type*)
     [Semiring R] [Semiring S] [Module R M] [Module S M₂] (n : ℕ)
-    (hR : IsUnit (n : R)) (hS : IsUnit (n : S)) (x : M) :
-    f (hR.unit⁻¹ • x) = hS.unit⁻¹ • f x := by
+    {hR : IsUnit (n : R)} {hS : IsUnit (n : S)} (x : M) :
+    f ((n : R)⁻¹ • x) = (n : S)⁻¹ • f x := by
+  change f (hR.unit⁻¹ • x) = hS.unit⁻¹ • f x
   apply MulAction.injective hS.unit
   calc
     hS.unit • f (hR.unit⁻¹ • x) = (n : S) • f (hR.unit⁻¹ • x) := rfl
@@ -53,8 +54,9 @@ theorem map_inv_natCast_smul [AddCommMonoid M] [AddCommMonoid M₂] {F : Type*} 
 
 theorem map_inv_intCast_smul [AddCommGroup M] [AddCommGroup M₂] {F : Type*} [FunLike F M M₂]
     [AddMonoidHomClass F M M₂] (f : F) (R S : Type*) [Ring R] [Ring S] [Module R M]
-    [Module S M₂] (z : ℤ) (hR : IsUnit (z : R)) (hS : IsUnit (z : S)) (x : M) :
-    f (hR.unit⁻¹ • x) = hS.unit⁻¹ • f x := by
+    [Module S M₂] (z : ℤ) {hR : IsUnit (z : R)} {hS : IsUnit (z : S)} (x : M) :
+    f ((z : R)⁻¹ • x) = (z : S)⁻¹ • f x := by
+  change f (hR.unit⁻¹ • x) = hS.unit⁻¹ • f x
   apply MulAction.injective hS.unit
   calc
     hS.unit • f (hR.unit⁻¹ • x) = (z : S) • f (hR.unit⁻¹ • x) := rfl
@@ -65,28 +67,28 @@ theorem map_inv_intCast_smul [AddCommGroup M] [AddCommGroup M₂] {F : Type*} [F
 /-- Scalar multiplications agree on inverses of natural numbers that are units in both semirings. -/
 theorem inv_natCast_smul_eq {E : Type*} (R S : Type*) [AddCommMonoid E] [Semiring R]
     [Semiring S] [Module R E] [Module S E] (n : ℕ)
-    (hR : IsUnit (n : R)) (hS : IsUnit (n : S)) (x : E) :
-    hR.unit⁻¹ • x = hS.unit⁻¹ • x :=
-  map_inv_natCast_smul (AddMonoidHom.id E) R S n hR hS x
+    {hR : IsUnit (n : R)} {hS : IsUnit (n : S)} (x : E) :
+    (n : R)⁻¹ • x = (n : S)⁻¹ • x :=
+  map_inv_natCast_smul (AddMonoidHom.id E) R S n x
 
 /-- Scalar multiplications agree on inverses of integers that are units in both rings. -/
 theorem inv_intCast_smul_eq {E : Type*} (R S : Type*) [AddCommGroup E] [Ring R]
     [Ring S] [Module R E] [Module S E] (n : ℤ)
-    (hR : IsUnit (n : R)) (hS : IsUnit (n : S)) (x : E) :
-    hR.unit⁻¹ • x = hS.unit⁻¹ • x :=
-  map_inv_intCast_smul (AddMonoidHom.id E) R S n hR hS x
+    {hR : IsUnit (n : R)} {hS : IsUnit (n : S)} (x : E) :
+    (n : R)⁻¹ • x = (n : S)⁻¹ • x :=
+  map_inv_intCast_smul (AddMonoidHom.id E) R S n x
 
 /-- A distributive action commutes with the inverse action of an invertible natural scalar. -/
 theorem inv_natCast_smul_comm {α E : Type*} (R : Type*) [AddCommMonoid E] [Semiring R]
-    [Module R E] [DistribSMul α E] (n : ℕ) (hn : IsUnit (n : R)) (s : α) (x : E) :
-    hn.unit⁻¹ • s • x = s • hn.unit⁻¹ • x :=
-  (map_inv_natCast_smul (DistribSMul.toAddMonoidHom E s) R R n hn hn x).symm
+    [Module R E] [DistribSMul α E] (n : ℕ) {hn : IsUnit (n : R)} (s : α) (x : E) :
+    (n : R)⁻¹ • s • x = s • (n : R)⁻¹ • x :=
+  (map_inv_natCast_smul (DistribSMul.toAddMonoidHom E s) R R n x).symm
 
 /-- A distributive action commutes with the inverse action of an invertible integer scalar. -/
 theorem inv_intCast_smul_comm {α E : Type*} (R : Type*) [AddCommGroup E] [Ring R]
-    [Module R E] [DistribSMul α E] (n : ℤ) (hn : IsUnit (n : R)) (s : α) (x : E) :
-    hn.unit⁻¹ • s • x = s • hn.unit⁻¹ • x :=
-  (map_inv_intCast_smul (DistribSMul.toAddMonoidHom E s) R R n hn hn x).symm
+    [Module R E] [DistribSMul α E] (n : ℤ) {hn : IsUnit (n : R)} (s : α) (x : E) :
+    (n : R)⁻¹ • s • x = s • (n : R)⁻¹ • x :=
+  (map_inv_intCast_smul (DistribSMul.toAddMonoidHom E s) R R n x).symm
 
 namespace Function
 

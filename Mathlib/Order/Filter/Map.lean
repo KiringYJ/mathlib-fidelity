@@ -128,6 +128,39 @@ theorem compl_mem_comap : sᶜ ∈ comap f l ↔ (f '' s)ᶜ ∈ l := by rw [mem
 
 end Comap
 
+/-! ### Pulling back along the inclusion of a subtype
+
+When `p` holds eventually along `l`, the filter `comap Subtype.val l` on `Subtype p` sees the same
+eventual behaviour as `l`. A quotient `f x / g x` is defined only where `g x` is invertible, so it
+is a function on such a subtype; these lemmas transfer its eventual properties and limits. -/
+
+section ComapVal
+
+variable {l : Filter α} {p q : α → Prop}
+
+/-- Where `p` holds eventually along `l`, a property holds eventually along `comap Subtype.val l`
+on `Subtype p` exactly when it holds eventually along `l`. -/
+theorem eventually_comap_val_iff (hp : ∀ᶠ x in l, p x) :
+    (∀ᶠ x : Subtype p in comap Subtype.val l, q x) ↔ ∀ᶠ x in l, q x := by
+  rw [eventually_comap]
+  refine ⟨fun h ↦ ?_, fun h ↦ h.mono fun _ hx _ hy ↦ hy ▸ hx⟩
+  filter_upwards [hp, h] with x hx h
+  exact h ⟨x, hx⟩ rfl
+
+/-- Where `p` holds eventually along `l`, a property holds frequently along
+`comap Subtype.val l` on `Subtype p` exactly when it holds frequently along `l`. -/
+theorem frequently_comap_val_iff (hp : ∀ᶠ x in l, p x) :
+    (∃ᶠ x : Subtype p in comap Subtype.val l, q x) ↔ ∃ᶠ x in l, q x :=
+  not_congr (eventually_comap_val_iff (q := fun x ↦ ¬q x) hp)
+
+/-- A function on the subtype `{x // p x}`, with the filter `comap Subtype.val l`, tends to `L`
+exactly when the function on `α` does, provided `p` holds eventually along `l`. -/
+theorem tendsto_comap_val_iff (hp : ∀ᶠ x in l, p x) {F : α → β} {L : Filter β} :
+    Tendsto (fun x : Subtype p ↦ F x) (comap Subtype.val l) L ↔ Tendsto F l L :=
+  forall₂_congr fun s _ ↦ eventually_comap_val_iff (q := fun x ↦ F x ∈ s) hp
+
+end ComapVal
+
 
 instance : LawfulFunctor (Filter : Type u → Type u) where
   id_map _ := map_id

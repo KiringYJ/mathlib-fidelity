@@ -136,9 +136,10 @@ theorem dvd_of_le (hv : Integers v O) {x y : O}
       hx.symm ▸ dvd_zero y)
     fun hy : algebraMap O F y ≠ 0 =>
     have : v ((algebraMap O F y)⁻¹ * algebraMap O F x) ≤ 1 := by
-      grw [← v.map_one, ← inv_mul_cancel₀ hy, v.map_mul, v.map_mul, h]
+      grw [← v.map_one, ← inv_mul_cancel₀ (ha := hy.isUnit), v.map_mul, v.map_mul, h]
     let ⟨z, hz⟩ := hv.3 this
-    ⟨z, hv.1 <| ((algebraMap O F).map_mul y z).symm ▸ hz.symm ▸ (mul_inv_cancel_left₀ hy _).symm⟩
+    ⟨z, hv.1 <| ((algebraMap O F).map_mul y z).symm ▸ hz.symm ▸
+      (mul_inv_cancel_left₀ (ha := hy.isUnit) _).symm⟩
 
 theorem dvd_iff_le (hv : Integers v O) {x y : O} :
     x ∣ y ↔ v (algebraMap O F y) ≤ v (algebraMap O F x) :=
@@ -192,7 +193,7 @@ theorem dvdNotUnit_iff_lt (hv : Integers v O) {x y : O} :
   refine one_le_of_le_mul_left₀ ?_ hdu
   simp [hv.valuation_pos_iff_ne_zero, hx0]
 
-theorem eq_algebraMap_or_inv_eq_algebraMap (hv : Integers v O) (x : F) :
+theorem eq_algebraMap_or_inv_eq_algebraMap (hv : Integers v O) (x : F) {hx : IsUnit x} :
     ∃ a : O, x = algebraMap O F a ∨ x⁻¹ = algebraMap O F a := by
   rcases val_le_one_or_val_inv_le_one v x with h | h <;>
   obtain ⟨a, ha⟩ := exists_of_le_one hv h
@@ -363,7 +364,7 @@ lemma leSubmodule_v_le_of_mem {K : Type*} [Field K] (v : Valuation K Γ₀)
   · simp
   intro y hy
   have : v ((y : K) / x) ≤ 1 := by simp [div_le_one_of_le₀ hy]
-  simpa [Subring.smul_def, div_mul_cancel₀ _ hx0] using S.smul_mem ⟨_, this⟩ hx
+  simpa [Subring.smul_def, div_mul_cancel₀] using S.smul_mem ⟨_, this⟩ hx
 
 lemma ltSubmodule_v_le_of_mem {K : Type*} [Field K] {v : Valuation K Γ₀}
     {S : Submodule v.integer K} {x : K} (hx : x ∈ S) (hxv : v x ≠ 0) :
@@ -447,7 +448,7 @@ lemma leIdeal_v_le_of_mem {K : Type*} [Field K] (v : Valuation K Γ₀)
   intro y hy
   have : v ((y : K) / x) ≤ 1 := by simpa using div_le_one_of_le₀ hy zero_le
   convert! I.smul_mem ⟨_, this⟩ hx using 1
-  simp [Subtype.ext_iff, div_mul_cancel₀ _ (ZeroMemClass.coe_eq_zero.not.mpr hx0)]
+  simp [Subtype.ext_iff, div_mul_cancel₀]
 
 lemma ltIdeal_v_le_of_mem {K : Type*} [Field K] {v : Valuation K Γ₀}
     {I : Ideal v.integer} {x : v.integer} (hx : x ∈ I) (hxv : v (x : K) ≠ 0) :

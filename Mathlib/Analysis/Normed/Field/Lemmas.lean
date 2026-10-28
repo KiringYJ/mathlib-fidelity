@@ -39,14 +39,14 @@ variable [NormedDivisionRing α]
 /-- Multiplication by a nonzero element `a` on the left
 as a `DilationEquiv` of a normed division ring. -/
 @[simps!]
-def DilationEquiv.mulLeft (a : α) (ha : a ≠ 0) : α ≃ᵈ α where
+noncomputable def DilationEquiv.mulLeft (a : α) (ha : a ≠ 0) : α ≃ᵈ α where
   __ := Dilation.mulLeft a ha
   toEquiv := Equiv.mulLeft₀ a ha
 
 /-- Multiplication by a nonzero element `a` on the right
 as a `DilationEquiv` of a normed division ring. -/
 @[simps!]
-def DilationEquiv.mulRight (a : α) (ha : a ≠ 0) : α ≃ᵈ α where
+noncomputable def DilationEquiv.mulRight (a : α) (ha : a ≠ 0) : α ≃ᵈ α where
   __ := Dilation.mulRight a ha
   toEquiv := Equiv.mulRight₀ a ha
 
@@ -81,14 +81,14 @@ lemma inv_cobounded₀ :
   have hb : (cobounded α).HasBasis
       (fun u : ℝˣ ↦ 0 < (u : ℝ)) (fun u ↦ {x | (u : ℝ) < ‖x‖}) :=
     (atTop_basis_Ioi' (0 : ℝ)).cobounded_of_norm.to_hasBasis
-      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Subset.rfl⟩)
-      (fun u hu ↦ ⟨(u : ℝ), hu, Subset.rfl⟩)
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Set.Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : ℝ), hu, Set.Subset.rfl⟩)
   have hn : (𝓝[≠] (0 : α)).HasBasis
       (fun u : ℝˣ ↦ 0 < (u : ℝ)) (fun u ↦ {x | 0 < ‖x‖ ∧ ‖x‖ < (u : ℝ)}) := by
     rw [← comap_norm_nhdsGT_zero]
     exact ((nhdsGT_basis (0 : ℝ)).comap norm).to_hasBasis
-      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Subset.rfl⟩)
-      (fun u hu ↦ ⟨(u : ℝ), hu, Subset.rfl⟩)
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Set.Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : ℝ), hu, Set.Subset.rfl⟩)
   apply (((hb.comap (fun u : αˣ ↦ (u : α))).map
     (fun u : αˣ ↦ (↑u⁻¹ : α))).comp_surjective
       (inv_surjective : Function.Surjective (Inv.inv : ℝˣ → ℝˣ))).eq_of_same_basis
@@ -101,14 +101,17 @@ lemma inv_cobounded₀ :
     constructor
     · rintro ⟨v, hv, rfl⟩
       refine ⟨norm_pos_iff.mpr (v⁻¹).ne_zero, ?_⟩
-      simpa only [inv_inv] using
-        (Units.inv_lt_inv (u := Units.map normHom.toMonoidHom v) (v := u⁻¹)
-          (norm_pos_iff.mpr v.ne_zero) ((Units.inv_pos u).mpr hu)).mpr hv
+      change ‖(↑v⁻¹ : α)‖ < u
+      rw [Units.val_inv_eq_inv_val₀ v, norm_inv, inv_lt_comm₀ (norm_pos_iff.mpr v.ne_zero) hu,
+        ← Units.val_inv_eq_inv_val₀]
+      exact hv
     · intro hy
-      let v := Units.mk0 y (norm_pos_iff.mp hy.1)
-      refine ⟨v⁻¹, ?_, by simp [v]⟩
-      exact (Units.inv_lt_inv (u := u) (v := Units.map normHom.toMonoidHom v)
-        hu hy.1).mpr hy.2
+      have hy₀ : y ≠ 0 := norm_pos_iff.mp hy.1
+      refine ⟨(Units.mk0 y hy₀)⁻¹, ?_, by simp⟩
+      change (↑u⁻¹ : ℝ) < ‖(↑(Units.mk0 y hy₀)⁻¹ : α)‖
+      rw [Units.val_inv_eq_inv_val₀, Units.val_inv_eq_inv_val₀, norm_inv]
+      simp only [Units.val_mk0]
+      exact (inv_lt_inv₀ hu hy.1).mpr hy.2
 
 @[simp]
 lemma inv_nhdsNE_zero :
@@ -117,14 +120,14 @@ lemma inv_nhdsNE_zero :
   have hb : (cobounded α).HasBasis
       (fun u : ℝˣ ↦ 0 < (u : ℝ)) (fun u ↦ {x | (u : ℝ) < ‖x‖}) :=
     (atTop_basis_Ioi' (0 : ℝ)).cobounded_of_norm.to_hasBasis
-      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Subset.rfl⟩)
-      (fun u hu ↦ ⟨(u : ℝ), hu, Subset.rfl⟩)
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Set.Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : ℝ), hu, Set.Subset.rfl⟩)
   have hn : (𝓝[≠] (0 : α)).HasBasis
       (fun u : ℝˣ ↦ 0 < (u : ℝ)) (fun u ↦ {x | 0 < ‖x‖ ∧ ‖x‖ < (u : ℝ)}) := by
     rw [← comap_norm_nhdsGT_zero]
     exact ((nhdsGT_basis (0 : ℝ)).comap norm).to_hasBasis
-      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Subset.rfl⟩)
-      (fun u hu ↦ ⟨(u : ℝ), hu, Subset.rfl⟩)
+      (fun a ha ↦ ⟨Units.mk0 a ha.ne', ha, Set.Subset.rfl⟩)
+      (fun u hu ↦ ⟨(u : ℝ), hu, Set.Subset.rfl⟩)
   apply (((hn.comap (fun u : αˣ ↦ (u : α))).map
     (fun u : αˣ ↦ (↑u⁻¹ : α))).comp_surjective
       (inv_surjective : Function.Surjective (Inv.inv : ℝˣ → ℝˣ))).eq_of_same_basis
@@ -136,15 +139,18 @@ lemma inv_nhdsNE_zero :
     symm
     constructor
     · rintro ⟨v, hv, rfl⟩
-      simpa only [inv_inv] using
-        (Units.inv_lt_inv (u := u⁻¹) (v := Units.map normHom.toMonoidHom v)
-          ((Units.inv_pos u).mpr hu) hv.1).mpr hv.2
+      change (u : ℝ) < ‖(↑v⁻¹ : α)‖
+      rw [Units.val_inv_eq_inv_val₀ v, norm_inv, lt_inv_comm₀ hu hv.1,
+        ← Units.val_inv_eq_inv_val₀]
+      exact hv.2
     · intro hy
       have hypos : 0 < ‖y‖ := hu.trans hy
-      let v := Units.mk0 y (norm_pos_iff.mp hypos)
-      refine ⟨v⁻¹, ⟨norm_pos_iff.mpr (v⁻¹).ne_zero, ?_⟩, by simp [v]⟩
-      exact (Units.inv_lt_inv (u := Units.map normHom.toMonoidHom v) (v := u)
-        hypos hu).mpr hy
+      have hy₀ : y ≠ 0 := norm_pos_iff.mp hypos
+      refine ⟨(Units.mk0 y hy₀)⁻¹, ⟨norm_pos_iff.mpr (Units.mk0 y hy₀)⁻¹.ne_zero, ?_⟩, by simp⟩
+      change ‖(↑(Units.mk0 y hy₀)⁻¹ : α)‖ < (↑u⁻¹ : ℝ)
+      rw [Units.val_inv_eq_inv_val₀, Units.val_inv_eq_inv_val₀, norm_inv]
+      simp only [Units.val_mk0]
+      exact (inv_lt_inv₀ hypos hu).mpr hy
 
 lemma tendsto_inv₀_cobounded' :
     Tendsto (fun u : αˣ ↦ (↑u⁻¹ : α))
@@ -167,7 +173,7 @@ end Filter
 inversion is uniformly continuous for the ambient subspace uniformity. -/
 theorem uniformContinuousOn_inv₀ {s : Set {x : α | IsUnit x}}
     (hs : (Subtype.val '' s)ᶜ ∈ 𝓝 0) :
-    UniformContinuousOn (fun x : {x : α | IsUnit x} ↦ (↑x.property.unit⁻¹ : α)) s := by
+    UniformContinuousOn (fun x : {x : α | IsUnit x} ↦ Checked.inv (x : α) x.2) s := by
   rw [Metric.uniformContinuousOn_iff_le]
   intro ε hε
   rcases NormedAddGroup.nhds_zero_basis_norm_lt.mem_iff.mp hs with ⟨r, hr₀, hr⟩
@@ -175,11 +181,10 @@ theorem uniformContinuousOn_inv₀ {s : Set {x : α | IsUnit x}}
   refine ⟨ε * r ^ 2, by positivity, fun x hx y hy hxy ↦ ?_⟩
   have hxnorm : r ≤ ‖x.val‖ := hr (Set.mem_image_of_mem Subtype.val hx)
   have hynorm : r ≤ ‖y.val‖ := hr (Set.mem_image_of_mem Subtype.val hy)
-  have hpos : 0 < (↑(Units.map normHom.toMonoidHom x.property.unit *
-      Units.map normHom.toMonoidHom y.property.unit) : ℝ) :=
-    mul_pos (hr₀.trans_le hxnorm) (hr₀.trans_le hynorm)
-  rw [dist_inv_inv₀, divp_le_iff hpos]
-  change dist (x : α) y ≤ ε * (‖x.val‖ * ‖y.val‖)
+  have hpos : 0 < ‖x.val‖ * ‖y.val‖ := mul_pos (hr₀.trans_le hxnorm) (hr₀.trans_le hynorm)
+  have h : dist (Checked.inv (x : α) x.2) (Checked.inv (y : α) y.2) =
+      dist x.val y.val / (‖x.val‖ * ‖y.val‖) := dist_inv_inv₀
+  rw [h, div_le_iff₀ hpos]
   exact hxy.trans (by
     rw [pow_two]
     exact mul_le_mul_of_nonneg_left
@@ -189,7 +194,7 @@ theorem UniformContinuousOn.inv₀ {X : Type*} [UniformSpace X]
     {f : X → {x : α | IsUnit x}} {s : Set X}
     (hf : UniformContinuousOn (fun x ↦ (f x).val) s)
     (hf₀ : ((fun x ↦ (f x).val) '' s)ᶜ ∈ 𝓝 0) :
-    UniformContinuousOn (fun x ↦ (↑(f x).property.unit⁻¹ : α)) s := by
+    UniformContinuousOn (fun x ↦ Checked.inv (f x : α) (f x).2) s := by
   have hsub : UniformContinuousOn f s := by
     rw [uniformContinuousOn_iff_restrict]
     exact hf.restrict.subtype_mk (fun x ↦ (f x.val).property)
@@ -199,7 +204,7 @@ theorem UniformContinuousOn.inv₀ {X : Type*} [UniformSpace X]
 theorem UniformContinuous.inv₀ {X : Type*} [UniformSpace X]
     {f : X → {x : α | IsUnit x}} (hf : UniformContinuous (fun x ↦ (f x).val))
     (hf₀ : (Set.range (fun x ↦ (f x).val))ᶜ ∈ 𝓝 0) :
-    UniformContinuous (fun x ↦ (↑(f x).property.unit⁻¹ : α)) := by
+    UniformContinuous (fun x ↦ Checked.inv (f x : α) (f x).2) := by
   rw [← uniformContinuousOn_univ]
   exact hf.uniformContinuousOn.inv₀ (by simpa only [Set.image_univ] using hf₀)
 
@@ -211,8 +216,10 @@ theorem TendstoLocallyUniformlyOn.inv₀_of_disjoint {X ι : Type*} [Topological
     (hF : TendstoLocallyUniformlyOn F f l s)
     (hf : ∀ x ∈ s, Disjoint (map f (𝓝[s] x)) (𝓝 0)) :
     TendstoLocallyUniformlyOn (fun i (y : {y : {x : X | IsUnit (f x)} | IsUnit (F i y.val)}) ↦
-        (↑y.property.unit⁻¹ : α))
-      (fun y : {x : X | IsUnit (f x)} ↦ (↑y.property.unit⁻¹ : α)) l (Subtype.val ⁻¹' s) (fun i ↦ Function.Embedding.subtype (fun y : {x : X | IsUnit (f x)} ↦ IsUnit (F i y.val))) := by
+        Checked.inv (F i y.val.val) y.2)
+      (fun y : {x : X | IsUnit (f x)} ↦ Checked.inv (f y.val) y.2) l (Subtype.val ⁻¹' s)
+      (fun i ↦ Function.Embedding.subtype
+        (fun y : {x : X | IsUnit (f x)} ↦ IsUnit (F i y.val))) := by
   intro u hu x hx
   obtain ⟨ε, hε, hεu⟩ := Metric.mem_uniformity_dist.mp hu
   rcases basis_sets _ |>.map _ |>.disjoint_iff nhds_basis_ball |>.mp (hf x.val hx) with
@@ -221,7 +228,7 @@ theorem TendstoLocallyUniformlyOn.inv₀_of_disjoint {X ι : Type*} [Topological
     have hnot := Set.disjoint_left.mp hr (Set.mem_image_of_mem f hy)
     simpa only [Metric.mem_ball, dist_zero_right, not_lt] using hnot
   have hδ : 0 < min (r / 2) (ε * (r / 2) ^ 2) := by positivity
-  obtain ⟨v, hv, H⟩ := (tendstoLocallyUniformlyOn_iff.mp hF)
+  obtain ⟨v, hv, H⟩ := (_root_.tendstoLocallyUniformlyOn_iff.mp hF)
     {q : α × α | dist q.1 q.2 < min (r / 2) (ε * (r / 2) ^ 2)}
     (Metric.dist_mem_uniformity hδ) x.val hx
   have hval : Tendsto (Subtype.val : {x : X | IsUnit (f x)} → X)
@@ -240,14 +247,15 @@ theorem TendstoLocallyUniformlyOn.inv₀_of_disjoint {X ι : Type*} [Topological
     exact ⟨⟨y, isUnit_iff_ne_zero.mpr (norm_pos_iff.mp ((half_pos hr₀).trans (hFbound y hy)))⟩, rfl⟩
   · intro y hy
     apply hεu
-    change dist (↑y.val.property.unit⁻¹ : α) ↑y.property.unit⁻¹ < ε
+    change dist (Checked.inv (f y.val.val) y.val.2) (Checked.inv (F i y.val.val) y.2) < ε
     have hfy : r ≤ ‖f y.val.val‖ := hfbound y.val.val hy.1
     have hFy : r / 2 < ‖F i y.val.val‖ := hFbound y.val hy
-    have hp : 0 < (↑(Units.map normHom.toMonoidHom y.val.property.unit *
-        Units.map normHom.toMonoidHom y.property.unit) : ℝ) :=
+    have hp : 0 < ‖f y.val.val‖ * ‖F i y.val.val‖ :=
       mul_pos (hr₀.trans_le hfy) ((half_pos hr₀).trans hFy)
-    rw [dist_inv_inv₀, divp_lt_iff hp]
-    change dist (f y.val.val) (F i y.val.val) < ε * (‖f y.val.val‖ * ‖F i y.val.val‖)
+    have h : dist (Checked.inv (f y.val.val) y.val.2) (Checked.inv (F i y.val.val) y.2) =
+        dist (f y.val.val) (F i y.val.val) / (‖f y.val.val‖ * ‖F i y.val.val‖) :=
+      dist_inv_inv₀
+    rw [h, div_lt_iff₀ hp]
     apply ((hi y.val.val hy.2).trans_le (min_le_right _ _)).trans_le
     apply mul_le_mul_of_nonneg_left _ hε.le
     rw [pow_two]
@@ -258,8 +266,10 @@ theorem TendstoLocallyUniformly.inv₀_of_disjoint {X ι : Type*} [TopologicalSp
     (hF : TendstoLocallyUniformly F f l)
     (hf : ∀ x, Disjoint (map f (𝓝 x)) (𝓝 0)) :
     TendstoLocallyUniformly (fun i (y : {y : {x : X | IsUnit (f x)} | IsUnit (F i y.val)}) ↦
-        (↑y.property.unit⁻¹ : α))
-      (fun y : {x : X | IsUnit (f x)} ↦ (↑y.property.unit⁻¹ : α)) l (fun i ↦ Function.Embedding.subtype (fun y : {x : X | IsUnit (f x)} ↦ IsUnit (F i y.val))) := by
+        Checked.inv (F i y.val.val) y.2)
+      (fun y : {x : X | IsUnit (f x)} ↦ Checked.inv (f y.val) y.2) l
+      (fun i ↦ Function.Embedding.subtype
+        (fun y : {x : X | IsUnit (f x)} ↦ IsUnit (F i y.val))) := by
   rw [← tendstoLocallyUniformlyOn_univ]
   simpa only [Set.preimage_univ] using hF.tendstoLocallyUniformlyOn.inv₀_of_disjoint
     (s := Set.univ) (by simpa only [nhdsWithin_univ] using fun x _ => hf x)
@@ -269,42 +279,43 @@ theorem TendstoLocallyUniformlyOn.inv₀ {X ι : Type*} [TopologicalSpace X]
     (hF : TendstoLocallyUniformlyOn F f l s) (hf : ContinuousOn f s)
     (hf₀ : ∀ x ∈ s, f x ≠ 0) :
     TendstoLocallyUniformlyOn (fun i (y : {y : {x : X | IsUnit (f x)} | IsUnit (F i y.val)}) ↦
-        (↑y.property.unit⁻¹ : α))
-      (fun y : {x : X | IsUnit (f x)} ↦ (↑y.property.unit⁻¹ : α)) l (Subtype.val ⁻¹' s) (fun i ↦ Function.Embedding.subtype (fun y : {x : X | IsUnit (f x)} ↦ IsUnit (F i y.val))) :=
+        Checked.inv (F i y.val.val) y.2)
+      (fun y : {x : X | IsUnit (f x)} ↦ Checked.inv (f y.val) y.2) l (Subtype.val ⁻¹' s)
+      (fun i ↦ Function.Embedding.subtype (fun y : {x : X | IsUnit (f x)} ↦ IsUnit (F i y.val))) :=
   hF.inv₀_of_disjoint fun x hx ↦ disjoint_nhds_nhds.2 (hf₀ x hx) |>.mono_left (hf x hx)
 
 theorem TendstoLocallyUniformly.inv₀ {X ι : Type*} [TopologicalSpace X]
     {F : ι → X → α} {f : X → α} {l : Filter ι}
     (hF : TendstoLocallyUniformly F f l) (hf : Continuous f) (hf₀ : ∀ x, f x ≠ 0) :
     TendstoLocallyUniformly (fun i (y : {y : {x : X | IsUnit (f x)} | IsUnit (F i y.val)}) ↦
-        (↑y.property.unit⁻¹ : α))
-      (fun y : {x : X | IsUnit (f x)} ↦ (↑y.property.unit⁻¹ : α)) l (fun i ↦ Function.Embedding.subtype (fun y : {x : X | IsUnit (f x)} ↦ IsUnit (F i y.val))) :=
+        Checked.inv (F i y.val.val) y.2)
+      (fun y : {x : X | IsUnit (f x)} ↦ Checked.inv (f y.val) y.2) l
+      (fun i ↦ Function.Embedding.subtype (fun y : {x : X | IsUnit (f x)} ↦ IsUnit (F i y.val))) :=
   hF.inv₀_of_disjoint fun x ↦ disjoint_nhds_nhds.2 (hf₀ x) |>.mono_left (hf.tendsto x)
 
 -- see Note [lower instance priority]
 instance (priority := 100) NormedDivisionRing.to_continuousInv₀ : ContinuousInv₀ α where
-  continuous_inv := by
-    rw [continuous_iff_continuousAt]
-    intro x
-    apply tendsto_iff_norm_sub_tendsto_zero.mpr
-    have hn := (continuous_subtype_val.tendsto x).norm
-    have hi : Tendsto
-        (fun y : {y : α | IsUnit y} ↦ ‖(↑y.property.unit⁻¹ : α)‖)
-        (𝓝 x) (𝓝 ‖(↑x.property.unit⁻¹ : α)‖) := by
-      simpa only [IsUnit.unit_of_val_units, Units.coe_map_inv] using
-        hn.inv₀ (fun y ↦ (Units.map normHom.toMonoidHom y.property.unit).isUnit)
-          (Units.map normHom.toMonoidHom x.property.unit).isUnit
-    have hs := ((continuous_subtype_val.tendsto x).const_sub x.val).norm
-    simpa only [Units.inv_sub_inv', norm_mul, sub_self, norm_zero, mul_zero, zero_mul] using
-      (hi.mul hs).mul_const ‖(↑x.property.unit⁻¹ : α)‖
+  continuous_inv := continuous_iff_continuousAt.mpr fun x ↦ by
+    have hx : 0 < ‖(x : α)‖ := norm_pos_iff.mpr x.2.ne_zero
+    refine (uniformContinuousOn_inv₀
+      (s := Subtype.val ⁻¹' Metric.closedBall (x : α) (‖(x : α)‖ / 2)) ?_).continuousOn
+      |>.continuousAt ?_
+    · refine mem_of_superset (Metric.isClosed_closedBall.isOpen_compl.mem_nhds ?_)
+        (Set.compl_subset_compl.mpr (Set.image_preimage_subset _ _))
+      simpa only [Set.mem_compl_iff, Metric.mem_closedBall, dist_zero_left, not_le] using
+        half_lt_self hx
+    · exact continuous_subtype_val.continuousAt.preimage_mem_nhds
+        (Metric.closedBall_mem_nhds _ (half_pos hx))
 
 theorem TendstoLocallyUniformlyOn.div₀ {X ι : Type*} [TopologicalSpace X]
     {s : Set X} {F G : ι → X → α} {f g : X → α} {l : Filter ι}
     (hF : TendstoLocallyUniformlyOn F f l s) (hG : TendstoLocallyUniformlyOn G g l s)
     (hf : ContinuousOn f s) (hg : ContinuousOn g s) (hg₀ : ∀ x ∈ s, g x ≠ 0) :
     TendstoLocallyUniformlyOn (fun i (y : {y : {x : X | IsUnit (g x)} | IsUnit (G i y.val)}) ↦
-        F i y.val.val /ₚ y.property.unit)
-      (fun y : {x : X | IsUnit (g x)} ↦ f y.val /ₚ y.property.unit) l (Subtype.val ⁻¹' s) (fun i ↦ Function.Embedding.subtype (fun y : {x : X | IsUnit (g x)} ↦ IsUnit (G i y.val))) := by
+        Checked.div (F i y.val.val) (G i y.val.val) y.2)
+      (fun y : {x : X | IsUnit (g x)} ↦ Checked.div (f y.val) (g y.val) y.2) l (Subtype.val ⁻¹' s)
+      (fun i ↦ Function.Embedding.subtype
+        (fun y : {x : X | IsUnit (g x)} ↦ IsUnit (G i y.val))) := by
   rw [tendstoLocallyUniformlyOn_iff_domain]
   intro x hx
   have hinv := tendstoLocallyUniformlyOn_iff_domain.mp (hG.inv₀ hg hg₀) x hx
@@ -323,11 +334,14 @@ theorem TendstoLocallyUniformlyOn.div₀ {X ι : Type*} [TopologicalSpace X]
     (hF.comp_tendsto tendsto_fst).tendsto_comp (hf x.val hx) hx tendsto_snd
   have hGjoint : Tendsto (fun q : ι × X ↦ G q.1 q.2) (l ×ˢ 𝓝[s] x.val) (𝓝 (g x.val)) :=
     (hG.comp_tendsto tendsto_fst).tendsto_comp (hg x.val hx) hx tendsto_snd
-  have hfamily := (hFjoint.comp hmap).div (hGjoint.comp hmap)
-    (fun q : Σ i, D i ↦ q.2.property) x.property
-  have hlimit := ((hf x.val hx).tendsto.comp (tendsto_snd.comp hmap)).div
-    ((hg x.val hx).tendsto.comp (tendsto_snd.comp hmap))
-    (fun q : Σ i, D i ↦ q.2.val.property) x.property
+  have hinv₀ := (ContinuousInv₀.continuous_inv (G₀ := α)).tendsto ⟨g x.val, x.2⟩
+  have hfamily := (hFjoint.comp hmap).mul (hinv₀.comp (tendsto_subtype_rng.mpr
+    (hGjoint.comp hmap) : Tendsto (fun q : Σ i, D i ↦
+      (⟨G q.1 q.2.val.val, q.2.2⟩ : {y : α | IsUnit y})) L (𝓝 ⟨g x.val, x.2⟩)))
+  have hlimit := ((hf x.val hx).tendsto.comp (tendsto_snd.comp hmap)).mul
+    (hinv₀.comp (tendsto_subtype_rng.mpr ((hg x.val hx).tendsto.comp (tendsto_snd.comp hmap)) :
+      Tendsto (fun q : Σ i, D i ↦ (⟨g q.2.val.val, q.2.val.2⟩ : {y : α | IsUnit y})) L
+        (𝓝 ⟨g x.val, x.2⟩)))
   exact (hlimit.prodMk_nhds hfamily).mono_right (nhds_le_uniformity _)
 
 theorem TendstoLocallyUniformly.div₀ {X ι : Type*} [TopologicalSpace X]
@@ -335,8 +349,10 @@ theorem TendstoLocallyUniformly.div₀ {X ι : Type*} [TopologicalSpace X]
     (hF : TendstoLocallyUniformly F f l) (hG : TendstoLocallyUniformly G g l)
     (hf : Continuous f) (hg : Continuous g) (hg₀ : ∀ x, g x ≠ 0) :
     TendstoLocallyUniformly (fun i (y : {y : {x : X | IsUnit (g x)} | IsUnit (G i y.val)}) ↦
-        F i y.val.val /ₚ y.property.unit)
-      (fun y : {x : X | IsUnit (g x)} ↦ f y.val /ₚ y.property.unit) l (fun i ↦ Function.Embedding.subtype (fun y : {x : X | IsUnit (g x)} ↦ IsUnit (G i y.val))) := by
+        Checked.div (F i y.val.val) (G i y.val.val) y.2)
+      (fun y : {x : X | IsUnit (g x)} ↦ Checked.div (f y.val) (g y.val) y.2) l
+      (fun i ↦ Function.Embedding.subtype
+        (fun y : {x : X | IsUnit (g x)} ↦ IsUnit (G i y.val))) := by
   rw [← tendstoLocallyUniformlyOn_univ]
   simpa only [Set.preimage_univ] using
     hF.tendstoLocallyUniformlyOn.div₀ hG.tendstoLocallyUniformlyOn hf.continuousOn hg.continuousOn
@@ -412,7 +428,7 @@ protected lemma not_tendsto_zpow_zero (hn : n < 0) (a : 𝕜) :
   have hrange : Set.range (fun u : 𝕜ˣ ↦ (u : 𝕜)) ∈ 𝓝[≠] (0 : 𝕜) := by
     filter_upwards [self_mem_nhdsWithin] with y hy
     exact ⟨Units.mk0 y hy, rfl⟩
-  haveI : NeBot (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) (𝓝[≠] (0 : 𝕜))) :=
+  have : NeBot (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) (𝓝[≠] (0 : 𝕜))) :=
     (inferInstance : NeBot (𝓝[≠] (0 : 𝕜))).comap_of_range_mem hrange
   exact (tendsto_zpow_nhdsNE_zero_cobounded hn).not_tendsto
     (Metric.disjoint_nhds_cobounded a).symm
@@ -426,12 +442,12 @@ protected lemma not_tendsto_inv_zero (a : 𝕜) :
 end NontriviallyNormedField
 end NormedField
 
-instance Rat.instNormedField : NormedField ℚ where
+noncomputable instance Rat.instNormedField : NormedField ℚ where
   __ := instField
   __ := instNormedAddCommGroup
   norm_mul a b := by simp only [norm, Rat.cast_mul, abs_mul]
 
-instance Rat.instDenselyNormedField : DenselyNormedField ℚ where
+noncomputable instance Rat.instDenselyNormedField : DenselyNormedField ℚ where
   lt_norm_lt r₁ r₂ h₀ hr :=
     let ⟨q, h⟩ := exists_rat_btwn hr
     ⟨q, by rwa [← Rat.norm_cast_real, Real.norm_eq_abs, abs_of_pos (h₀.trans_lt h.1)]⟩
@@ -449,15 +465,16 @@ lemma NormedField.completeSpace_iff_isComplete_closedBall {K : Type*} [NormedFie
   obtain ⟨k, hk⟩ := hu.norm_bddAbove
   have kpos : 0 ≤ k := (_root_.norm_nonneg (u 0)).trans (hk (by simp))
   obtain ⟨x, hx⟩ := NormedField.exists_lt_norm K k
-  let v := Units.mk0 x (norm_pos_iff.mp (kpos.trans_lt hx))
-  have hu' : CauchySeq ((fun y ↦ y /ₚ v) ∘ u) := (uniformContinuous_div_const' v).comp_cauchySeq hu
-  have hb : ∀ n, ((fun y ↦ y /ₚ v) ∘ u) n ∈ Metric.closedBall 0 1 := by
+  have hx' : x ≠ 0 := norm_pos_iff.mp (kpos.trans_lt hx)
+  have hu' : CauchySeq ((· / x) ∘ u) :=
+    (uniformContinuous_div_const' hx'.isUnit.unit).comp_cauchySeq hu
+  have hb : ∀ n, ((· / x) ∘ u) n ∈ Metric.closedBall 0 1 := by
     intro
     simp only [Function.comp_apply, Metric.mem_closedBall, dist_zero_right, norm_div]
-    rw [divp_le_one (kpos.trans_lt hx)]
+    rw [div_le_one (kpos.trans_lt hx)]
     exact hx.le.trans' (hk (by simp))
   obtain ⟨a, -, ha'⟩ := cauchySeq_tendsto_of_isComplete h hb hu'
   refine ⟨a * x, (((continuous_mul_const x).tendsto a).comp ha').congr ?_⟩
-  simp only [Function.comp_def, divp_mul_cancel]
+  simp [div_mul_cancel₀]
 
 end Complete

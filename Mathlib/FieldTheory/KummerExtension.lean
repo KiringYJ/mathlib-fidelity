@@ -243,14 +243,14 @@ def AdjoinRootXPowSubCEquivToRootsOfUnity [NeZero n] (σ : K[n√a] ≃ₐ[K] K[
   letI : IsDomain K[n√a] := inferInstance
   letI := Classical.decEq K
   (rootsOfUnityEquivOfPrimitiveRoots (n := n) (algebraMap K K[n√a]).injective hζ).symm
-    (rootsOfUnity.mkOfPowEq (if a = 0 then 1 else σ (root _) / root _) (by
+    (rootsOfUnity.mkOfPowEq (if h : a = 0 then 1 else
+      Checked.div (σ (root _)) (root _) (root_X_pow_sub_C_ne_zero' (NeZero.pos n) h).isUnit) (by
     -- The if is needed in case `n = 1` and `a = 0` and `K[n√a] = K`.
     split
     · exact one_pow _
-    rw [div_pow, ← map_pow]
+    rw [div_pow₀, ← map_pow]
     simp only [root_X_pow_sub_C_pow, ← AdjoinRoot.algebraMap_eq, AlgEquiv.commutes]
-    rw [div_self]
-    rwa [Ne, map_eq_zero_iff _ (algebraMap K _).injective]))
+    rw [div_self]))
 
 /-- The equivalence between the roots of unity of `K` and `Gal(K[ⁿ√a]/K)`. -/
 noncomputable
@@ -273,7 +273,7 @@ def autAdjoinRootXPowSubCEquiv [NeZero n] :
     · obtain rfl := not_imp_not.mp (fun hn ↦ ne_zero_of_irreducible_X_pow_sub_C' hn H) h
       have : (η : Kˣ) = 1 := (pow_one _).symm.trans η.prop
       simp only [this, Units.val_one, map_one]
-    · exact mul_div_cancel_right₀ _ (root_X_pow_sub_C_ne_zero' (NeZero.pos n) h)
+    · exact mul_div_cancel_right₀ _
   right_inv := by
     intro e
     have := Fact.mk H
@@ -287,7 +287,7 @@ def autAdjoinRootXPowSubCEquiv [NeZero n] :
     · obtain rfl := not_imp_not.mp (fun hn ↦ ne_zero_of_irreducible_X_pow_sub_C' hn H) h
       rw [(pow_one _).symm.trans (root_X_pow_sub_C_pow 1 a), one_mul,
         ← AdjoinRoot.algebraMap_eq, AlgEquiv.commutes]
-    · refine div_mul_cancel₀ _ (root_X_pow_sub_C_ne_zero' (NeZero.pos n) h)
+    · exact div_mul_cancel₀ _
 
 lemma autAdjoinRootXPowSubCEquiv_root [NeZero n] (η) :
     autAdjoinRootXPowSubCEquiv hζ H η (root _) = ((η : Kˣ) : K) • root _ :=
@@ -299,11 +299,11 @@ lemma autAdjoinRootXPowSubCEquiv_symm_smul [NeZero n] (σ) :
   simp only [autAdjoinRootXPowSubCEquiv, OneHom.toFun_eq_coe, MonoidHom.toOneHom_coe,
     MulEquiv.symm_mk, MulEquiv.coe_mk, Equiv.coe_fn_symm_mk, AdjoinRootXPowSubCEquivToRootsOfUnity,
     AdjoinRoot.algebraMap_eq, rootsOfUnity.mkOfPowEq, Units.smul_def, Algebra.smul_def,
-    rootsOfUnityEquivOfPrimitiveRoots_symm_apply, Units.val_ofPowEqOne, ite_mul, one_mul]
+    rootsOfUnityEquivOfPrimitiveRoots_symm_apply, Units.val_ofPowEqOne]
   simp_rw [← root_X_pow_sub_C_eq_zero_iff H]
   split_ifs with h
-  · rw [h, map_zero]
-  · rw [div_mul_cancel₀ _ h]
+  · rw [h, map_zero, one_mul]
+  · rw [div_mul_cancel₀ _]
 
 end AdjoinRoot
 
@@ -432,19 +432,21 @@ def autEquivZmod [NeZero n] {ζ : K} (hζ : IsPrimitiveRoot ζ n) :
     Gal(L/K) ≃* Multiplicative (ZMod n) :=
   haveI hn := ne_zero_of_irreducible_X_pow_sub_C H
   (autEquivRootsOfUnity ⟨ζ, hζ⟩ H L).trans
-    ((MulEquiv.subgroupCongr (IsPrimitiveRoot.zpowers_eq (hζ.isUnit_unit' hn)).symm).trans
-        (hζ.isUnit_unit' hn).zmodEquivZPowers.symm.toMultiplicativeRight)
+    ((MulEquiv.subgroupCongr (IsPrimitiveRoot.zpowers_eq (hζ.isUnit_unit hn)).symm).trans
+        (hζ.isUnit_unit hn).zmodEquivZPowers.symm.toMultiplicativeRight)
 
 include hα in
 lemma autEquivZmod_symm_apply_intCast [NeZero n] {ζ : K} (hζ : IsPrimitiveRoot ζ n) (m : ℤ) :
-    (autEquivZmod H L hζ).symm (Multiplicative.ofAdd (m : ZMod n)) α = ζ ^ m • α := by
+    (autEquivZmod H L hζ).symm (Multiplicative.ofAdd (m : ZMod n)) α =
+      Checked.zpow ζ m (fun _ ↦ hζ.isUnit (NeZero.ne n)) • α := by
   rw [← autEquivRootsOfUnity_smul ⟨ζ, hζ⟩ H L hα]
-  simp [MulEquiv.subgroupCongr_symm_apply, Subgroup.smul_def, Units.smul_def, autEquivZmod]
+  simp [MulEquiv.subgroupCongr_symm_apply, Subgroup.smul_def, Units.smul_def, autEquivZmod,
+    ← IsUnit.zpow_eq_val_unit_zpow]
 
 include hα in
 lemma autEquivZmod_symm_apply_natCast [NeZero n] {ζ : K} (hζ : IsPrimitiveRoot ζ n) (m : ℕ) :
     (autEquivZmod H L hζ).symm (Multiplicative.ofAdd (m : ZMod n)) α = ζ ^ m • α := by
-  simpa only [Int.cast_natCast, zpow_natCast] using autEquivZmod_symm_apply_intCast H L hα hζ m
+  simpa only [Int.cast_natCast, zpow_natCast₀] using autEquivZmod_symm_apply_intCast H L hα hζ m
 
 include hζ H in
 lemma isCyclic_of_isSplittingField_X_pow_sub_C [NeZero n] : IsCyclic Gal(L/K) :=

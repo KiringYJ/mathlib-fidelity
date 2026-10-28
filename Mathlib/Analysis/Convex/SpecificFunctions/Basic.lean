@@ -112,12 +112,12 @@ theorem one_add_mul_self_lt_rpow_one_add {s : ℝ} (hs : -1 ≤ s) (hs' : s ≠ 
   · rw [← div_lt_iff₀ hp', ← div_lt_div_right_of_neg hs']
     convert! strictConcaveOn_log_Ioi.secant_strict_mono (zero_lt_one' ℝ) hs2 hs1 hs4 hs3 _ using 1
     · rw [add_sub_cancel_left, log_one, sub_zero]
-    · rw [add_sub_cancel_left, div_div, log_one, sub_zero]
+    · rw [add_sub_cancel_left, div_div₀, log_one, sub_zero]
     · gcongr
       exact mul_lt_of_one_lt_left hs' hp
   · rw [← div_lt_iff₀ hp', ← div_lt_div_iff_of_pos_right hs']
     convert! strictConcaveOn_log_Ioi.secant_strict_mono (zero_lt_one' ℝ) hs1 hs2 hs3 hs4 _ using 1
-    · rw [add_sub_cancel_left, div_div, log_one, sub_zero]
+    · rw [add_sub_cancel_left, div_div₀, log_one, sub_zero]
     · rw [add_sub_cancel_left, log_one, sub_zero]
     · gcongr
       exact lt_mul_of_one_lt_left hs' hp
@@ -152,14 +152,14 @@ theorem rpow_one_add_lt_one_add_mul_self {s : ℝ} (hs : -1 ≤ s) (hs' : s ≠ 
   rcases lt_or_gt_of_ne hs' with hs' | hs'
   · rw [← lt_div_iff₀ hp1, ← div_lt_div_right_of_neg hs']
     convert! strictConcaveOn_log_Ioi.secant_strict_mono (zero_lt_one' ℝ) hs1 hs2 hs3 hs4 _ using 1
-    · rw [add_sub_cancel_left, div_div, log_one, sub_zero]
+    · rw [add_sub_cancel_left, div_div₀, log_one, sub_zero]
     · rw [add_sub_cancel_left, log_one, sub_zero]
     · gcongr
       exact lt_mul_of_lt_one_left hs' hp2
   · rw [← lt_div_iff₀ hp1, ← div_lt_div_iff_of_pos_right hs']
     convert! strictConcaveOn_log_Ioi.secant_strict_mono (zero_lt_one' ℝ) hs2 hs1 hs4 hs3 _ using 1
     · rw [add_sub_cancel_left, log_one, sub_zero]
-    · rw [add_sub_cancel_left, div_div, log_one, sub_zero]
+    · rw [add_sub_cancel_left, div_div₀, log_one, sub_zero]
     · gcongr
       exact mul_lt_of_lt_one_left hs' hp2
 
@@ -215,14 +215,14 @@ theorem convexOn_rpow_left {b : ℝ} (hb : 0 < b) : ConvexOn ℝ Set.univ (fun (
   simp [Real.rpow_def_of_pos hb]
 
 theorem strictConcaveOn_log_Iio : StrictConcaveOn ℝ (Iio 0) log := by
-  refine ⟨convex_Iio _, ?_⟩
+  refine strictConcaveOn_iff.2 ⟨convex_Iio _, ?_⟩
   intro x (hx : x < 0) y (hy : y < 0) hxy a b ha hb hab
   have hx' : 0 < -x := by linarith
   have hy' : 0 < -y := by linarith
   have hxy' : -x ≠ -y := by contrapose hxy; linarith
   calc
     a • log x + b • log y = a • log (-x) + b • log (-y) := by simp_rw [log_neg_eq_log]
-    _ < log (a • -x + b • -y) := strictConcaveOn_log_Ioi.2 hx' hy' hxy' ha hb hab
+    _ < log (a • -x + b • -y) := strictConcaveOn_log_Ioi.lt_map_combo hx' hy' hxy' ha hb hab
     _ = log (-(a • x + b • y)) := by congr 1; simp only [smul_eq_mul]; ring
     _ = _ := by rw [log_neg_eq_log]
 
@@ -234,7 +234,8 @@ lemma exp_mul_le_cosh_add_mul_sinh {t : ℝ} (ht : |t| ≤ 1) (x : ℝ) :
   calc
     _ = exp ((1 + t) / 2 * x + (1 - t) / 2 * (-x)) := by ring_nf
     _ ≤ (1 + t) / 2 * exp x + (1 - t) / 2 * exp (-x) :=
-        convexOn_exp.2 (Set.mem_univ _) (Set.mem_univ _) (by linarith) (by linarith) <| by ring
+        convexOn_exp.map_combo_le (Set.mem_univ _) (Set.mem_univ _) (by linarith) (by linarith) <|
+          by ring
     _ = _ := by rw [cosh_eq, sinh_eq]; ring
 
 end Real

@@ -151,6 +151,14 @@ theorem ratio_ne_zero [DilationClass F α β] (f : F) : ratio f ≠ 0 := by
 theorem ratio_pos [DilationClass F α β] (f : F) : 0 < ratio f :=
   (ratio_ne_zero f).bot_lt
 
+/-! The evidence search `checked_nonzero` uses that the ratio of a dilation is nonzero, so that
+`(ratio f)⁻¹` and quotients by `ratio f` find their evidence. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | exact Dilation.ratio_ne_zero _)
+
 @[simp]
 theorem edist_eq [DilationClass F α β] (f : F) (x y : α) :
     edist (f x) (f y) = ratio f * edist x y := by
@@ -256,9 +264,9 @@ lemma _root_.Isometry.toDilation_ratio {f : α → β} {hf : Isometry f} : ratio
 theorem lipschitz : LipschitzWith (ratio f) (f : α → β) := fun x y => (edist_eq f x y).le
 
 theorem antilipschitz : AntilipschitzWith (ratio f)⁻¹ (f : α → β) := fun x y => by
-  have hr : ratio f ≠ 0 := ratio_ne_zero f
-  exact mod_cast
-    (ENNReal.mul_le_iff_le_inv (ENNReal.coe_ne_zero.2 hr) ENNReal.coe_ne_top).1 (edist_eq f x y).ge
+  rw [ENNReal.coe_inv]
+  exact (ENNReal.mul_le_iff_le_inv (ENNReal.coe_ne_zero.2 (ratio_ne_zero f))
+    ENNReal.coe_ne_top).1 (edist_eq f x y).ge
 
 /-- A dilation from an emetric space is injective -/
 protected theorem injective {α : Type*} [EMetricSpace α] [FunLike F α β] [DilationClass F α β]
@@ -386,8 +394,8 @@ theorem toContinuous : Continuous (f : α → β) :=
 theorem ediam_image (s : Set α) : ediam ((f : α → β) '' s) = ratio f * ediam s := by
   refine ((lipschitz f).ediam_image_le s).antisymm ?_
   apply ENNReal.mul_le_of_le_div'
-  rw [div_eq_mul_inv, mul_comm, ← ENNReal.coe_inv]
-  exacts [(antilipschitz f).le_mul_ediam_image s, ratio_ne_zero f]
+  rw [div_eq_mul_inv, mul_comm, ← ENNReal.coe_inv (hr := (ratio_ne_zero f).isUnit)]
+  exact (antilipschitz f).le_mul_ediam_image s
 
 /-- A dilation scales the diameter of the range by `ratio f`. -/
 theorem ediam_range : ediam (range (f : α → β)) = ratio f * ediam (univ : Set α) := by

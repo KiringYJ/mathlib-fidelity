@@ -88,8 +88,8 @@ alias ⟨_, of_exists_pairwise_edist_eq⟩ := similar_iff_exists_pairwise_edist_
 
 @[symm] protected lemma symm (h : v₁ ∼ v₂) : v₂ ∼ v₁ := by
   rcases h with ⟨r, hr, h⟩
-  refine ⟨r⁻¹, inv_ne_zero hr, fun _ _ => ?_⟩
-  rw [ENNReal.coe_inv hr, ← ENNReal.div_eq_inv_mul, ENNReal.eq_div_iff _ ENNReal.coe_ne_top, h]
+  refine ⟨r⁻¹, inv_ne_zero, fun _ _ => ?_⟩
+  rw [ENNReal.coe_inv, ← ENNReal.div_eq_inv_mul, ENNReal.eq_div_iff _ ENNReal.coe_ne_top, h]
   norm_cast
 
 lemma _root_.similar_comm : v₁ ∼ v₂ ↔ v₂ ∼ v₁ := ⟨Similar.symm, Similar.symm⟩
@@ -321,7 +321,7 @@ theorem similar_of_dist_mul_eq_dist_mul_eq (h_ne : dist a b ≠ 0) (h_ne' : dist
   refine ⟨hr_pos, ?_⟩
   intro i j hij
   fin_cases i <;> fin_cases j <;> try {rw [dist_self, dist_self, mul_zero]}
-  all_goals simp; grind [dist_comm]
+  all_goals simp [hr] <;> field_simp <;> grind [dist_comm]
 
 alias similar_of_side_side := similar_of_dist_mul_eq_dist_mul_eq
 

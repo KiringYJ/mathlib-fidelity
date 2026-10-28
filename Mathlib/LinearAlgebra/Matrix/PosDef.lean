@@ -333,34 +333,20 @@ protected lemma pow [StarOrderedRing R] [DecidableEq n]
     rw [pow_succ, pow_succ']
     simpa only [hM.isHermitian.eq] using (hM.pow k).mul_mul_conjTranspose_same M
 
-protected lemma nonsingularInverse [DecidableEq n] {M : Matrix n n R'}
-    (hM : M.PosSemidef) (h : IsUnit M.det) : (Matrix.nonsingularInverse M h).PosSemidef := by
-  have := (conjTranspose_mul_mul_same hM (Matrix.nonsingularInverse M h)).conjTranspose
-  rwa [mul_nonsingularInverse_cancel_right _ _ h, conjTranspose_conjTranspose] at this
+protected lemma inv [DecidableEq n] {M : Matrix n n R'} {hMUnit : IsUnit M}
+    (hM : M.PosSemidef) : M⁻¹.PosSemidef := by
+  have := (conjTranspose_mul_mul_same hM M⁻¹).conjTranspose
+  rwa [mul_nonsing_inv_cancel_right, conjTranspose_conjTranspose] at this
 
-/-- Integer powers of a positive semidefinite invertible matrix remain positive semidefinite.
-The power is formed in the unit group, so negative exponents retain their exact domain. For every
-natural exponent, including singular matrices, use `Matrix.PosSemidef.pow`. -/
-protected lemma zpow [StarOrderedRing R'] [DecidableEq n] {M : Matrix n n R'}
-    (hM : M.PosSemidef) (h : IsUnit M.det) (z : ℤ) :
-    (↑(Matrix.unitOfIsUnitDet M h ^ z) : Matrix n n R').PosSemidef := by
+/-- Integer powers of a positive semidefinite matrix are positive semidefinite. Only a negative
+exponent requires the matrix to be invertible. -/
+protected lemma zpow [StarOrderedRing R'] [DecidableEq n] {M : Matrix n n R'} (z : ℤ)
+    {hz : z < 0 → IsUnit M} (hM : M.PosSemidef) : (M ^ z).PosSemidef := by
   cases z with
-  | ofNat k =>
-      simpa only [zpow_natCast, Units.val_pow_eq_pow_val, coe_unitOfIsUnitDet] using hM.pow k
+  | ofNat k => exact hM.pow k
   | negSucc k =>
-      let hk : IsUnit (M ^ (k + 1)).det := by
-        rw [det_pow]
-        exact h.pow _
-      have hinv :
-          (↑((Matrix.unitOfIsUnitDet M h ^ (k + 1))⁻¹) : Matrix n n R') =
-            Matrix.nonsingularInverse (M ^ (k + 1)) hk := by
-        apply Matrix.right_inv_eq_right_inv
-        · simpa only [Units.val_mul, Units.val_one, Units.val_pow_eq_pow_val,
-            coe_unitOfIsUnitDet] using
-              congr_arg Units.val (mul_inv_cancel (Matrix.unitOfIsUnitDet M h ^ (k + 1)))
-        · exact Matrix.mul_nonsingularInverse _ _
-      rw [zpow_negSucc, hinv]
-      exact (hM.pow (k + 1)).nonsingularInverse hk
+    rw [zpow_negSucc₀]
+    exact (hM.pow (k + 1)).inv
 
 lemma trace_nonneg [AddLeftMono R] {A : Matrix n n R} (hA : A.PosSemidef) : 0 ≤ A.trace :=
   Fintype.sum_nonneg fun _ ↦ hA.diag_nonneg
@@ -576,23 +562,18 @@ theorem isUnit [DecidableEq n] {M : Matrix n n K} (hM : M.PosDef) : IsUnit M := 
     exact ⟨a - b, by simp [sub_eq_zero, ha, mulVec_sub]⟩
   simpa [ha2] using hM.dotProduct_mulVec_pos ha
 
-protected theorem nonsingularInverse [DecidableEq n] {M : Matrix n n K} (hM : M.PosDef) :
-    (Matrix.nonsingularInverse M (Matrix.isUnit_iff_isUnit_det M |>.mp hM.isUnit)).PosDef := by
-  let hdet := Matrix.isUnit_iff_isUnit_det M |>.mp hM.isUnit
-  have := hM.mul_mul_conjTranspose_same (B := Matrix.nonsingularInverse M hdet) ?_
+/-- The inverse of a positive definite matrix, which is invertible, is positive definite. -/
+protected theorem inv [DecidableEq n] {M : Matrix n n K} (hM : M.PosDef) :
+    (Checked.inv M hM.isUnit).PosDef := by
+  have hMUnit : IsUnit M := hM.isUnit
+  have := hM.mul_mul_conjTranspose_same (B := M⁻¹) ?_
   · simpa using this.conjTranspose
-  · exact Matrix.vecMul_injective_iff_isUnit.2 <|
-      Matrix.isUnit_iff_isUnit_det _ |>.2 <| Matrix.isUnit_det_nonsingularInverse M hdet
+  · exact Matrix.vecMul_injective_iff_isUnit.2 hMUnit.inv₀
 
 @[simp]
-theorem _root_.Matrix.posDef_nonsingularInverse_iff [DecidableEq n] {M : Matrix n n K}
-    (h : IsUnit M.det) : (Matrix.nonsingularInverse M h).PosDef ↔ M.PosDef := by
-  constructor
-  · intro hInv
-    simpa only [Matrix.nonsingularInverse_nonsingularInverse] using hInv.nonsingularInverse
-  · exact fun hM ↦ by
-      simpa only [Subsingleton.elim h (Matrix.isUnit_iff_isUnit_det M |>.mp hM.isUnit)] using
-        hM.nonsingularInverse
+theorem _root_.Matrix.posDef_inv_iff [DecidableEq n] {M : Matrix n n K} {hM : IsUnit M} :
+    M⁻¹.PosDef ↔ M.PosDef :=
+  ⟨fun h => by simpa using h.inv, fun h => h.inv⟩
 
 end Field
 
@@ -634,9 +615,8 @@ theorem fromBlocks₁₁ [DecidableEq m] {A : Matrix m m R'}
     (B : Matrix m n R') (D : Matrix n n R') (hA : A.PosDef) [Invertible A] :
     (fromBlocks A B Bᴴ D).PosSemidef ↔ (D - Bᴴ * ⅟A * B).PosSemidef := by
   have := Fintype.ofFinite n
-  let hdet := isUnit_det_of_invertible A
-  have hinv : ⅟A = nonsingularInverse A hdet := invOf_eq_nonsingularInverse
-  rw [posSemidef_iff_dotProduct_mulVec, IsHermitian.fromBlocks₁₁ _ _ hA.1 hdet, ← hinv]
+  rw [posSemidef_iff_dotProduct_mulVec,
+    IsHermitian.fromBlocks₁₁ _ _ hA.1 (isUnit_det_of_invertible A), ← invOf_eq_nonsing_inv A]
   constructor
   · refine fun h => .of_dotProduct_mulVec_nonneg h.1 fun x => ?_
     have := h.2 (-((⅟A * B) *ᵥ x) ⊕ᵥ x)

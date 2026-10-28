@@ -58,10 +58,10 @@ protected theorem isOpen : IsOpen { x : R | IsUnit x } := by
   rw [Metric.isOpen_iff]
   rintro _ ⟨x, rfl⟩
   have hp : 0 < ‖(↑x⁻¹ : R)‖ + 1 := by positivity
-  refine ⟨(‖(↑x⁻¹ : R)‖ + 1)⁻¹, Checked.inv_pos.mpr hp, fun y hy ↦ ?_⟩
+  refine ⟨(‖(↑x⁻¹ : R)‖ + 1)⁻¹, inv_pos.mpr hp, fun y hy ↦ ?_⟩
   rw [mem_ball_iff_norm] at hy
   have hy' : ‖y - (x : R)‖ * (‖(↑x⁻¹ : R)‖ + 1) < 1 :=
-    (Checked.lt_div_iff hp).mp (by simpa only [Checked.one_div] using hy)
+    (lt_div_iff₀ hp).mp (by simpa only [one_div₀] using hy)
   exact (x.ofNearby y (by nlinarith [norm_nonneg (y - (x : R))])).isUnit
 
 protected theorem nhds (x : Rˣ) : { x : R | IsUnit x } ∈ 𝓝 (x : R) :=
@@ -205,16 +205,16 @@ theorem inverse_continuous :
   have hp : 0 < 2 * c + 1 := by positivity
   have hq : 0 < 2 * c ^ 2 + 1 := by positivity
   refine ⟨min ((2 * c + 1)⁻¹) (ε / (2 * c ^ 2 + 1)),
-    lt_min (Checked.inv_pos.mpr hp) (Checked.div_pos hε hq), ?_⟩
+    lt_min (inv_pos.mpr hp) (div_pos hε hq), ?_⟩
   intro y hy
   change dist (y : R) (x : R) < _ at hy
   rw [dist_eq_norm] at hy
   have hy₁ := lt_of_lt_of_le hy (min_le_left _ _)
   have hy₂ := lt_of_lt_of_le hy (min_le_right _ _)
   have hsmall : c * ‖(y : R) - x‖ ≤ (1 / 2 : ℝ) := by
-    have := (Checked.lt_div_iff hp).mp (by simpa only [Checked.one_div] using hy₁)
+    have := (lt_div_iff₀ hp).mp (by simpa only [one_div₀] using hy₁)
     nlinarith [norm_nonneg ((y : R) - x)]
-  have hε' := (Checked.lt_div_iff hq).mp hy₂
+  have hε' := (lt_div_iff₀ hq).mp hy₂
   have hbound := inverse_sub_norm_le x.property.unit y.property.unit (by
     simpa only [IsUnit.unit_spec] using hsmall)
   rw [dist_eq_norm]

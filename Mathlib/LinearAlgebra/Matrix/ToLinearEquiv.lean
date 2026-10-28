@@ -84,13 +84,13 @@ noncomputable def toLinearEquiv [DecidableEq n] (A : Matrix n n R) (hA : IsUnit 
     M ≃ₗ[R] M where
   __ := toLin b b A
   toFun := toLin b b A
-  invFun := toLin b b (nonsingularInverse A hA)
+  invFun := toLin b b A⁻¹
   left_inv x := by
-    simp_rw [← LinearMap.comp_apply, ← Matrix.toLin_mul b b b, Matrix.nonsingularInverse_mul _ hA,
-      toLin_one, LinearMap.id_apply]
+    simp_rw [← LinearMap.comp_apply, ← Matrix.toLin_mul b b b, inv_mul_cancel₀, toLin_one,
+      LinearMap.id_apply]
   right_inv x := by
-    simp_rw [← LinearMap.comp_apply, ← Matrix.toLin_mul b b b, Matrix.mul_nonsingularInverse _ hA,
-      toLin_one, LinearMap.id_apply]
+    simp_rw [← LinearMap.comp_apply, ← Matrix.toLin_mul b b b, mul_inv_cancel₀, toLin_one,
+      LinearMap.id_apply]
 
 theorem ker_toLin_eq_bot [DecidableEq n] (A : Matrix n n R) (hA : IsUnit A.det) :
     LinearMap.ker (toLin b b A) = ⊥ :=

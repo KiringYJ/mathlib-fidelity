@@ -206,10 +206,10 @@ theorem exp_smul {G : Type*} [Monoid G] [MulSemiringAction G A]
 theorem isNilpotent_exp_sub_one {a : A} (ha : IsNilpotent a) : IsNilpotent (exp a ha - 1) := by
   nontriviality A
   rw [exp, ← Nat.sub_add_cancel (pos_nilpotencyClass ha), Finset.sum_range_succ']
-  simp only [Nat.succ_eq_add_one, zero_add, Nat.factorial_zero, Nat.cast_one, inv_one, pow_zero,
+  simp only [Nat.succ_eq_add_one, zero_add, Nat.factorial_zero, Nat.cast_one, inv_one₀, pow_zero,
     one_smul, add_sub_cancel_right]
   apply Commute.isNilpotent_sum fun _ _ ↦ smul (pow_of_pos ha <| by positivity) _
-  simp [Nat.factorial_ne_zero]
+  simp
 
 end IsNilpotent
 

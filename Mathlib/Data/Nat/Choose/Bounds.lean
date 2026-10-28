@@ -5,7 +5,7 @@ Authors: Yaël Dillies, Eric Rodriguez
 -/
 module
 
-public import Mathlib.Algebra.Order.Field.Checked
+public import Mathlib.Algebra.Order.GroupWithZero.Basic
 public import Mathlib.Algebra.Field.Defs
 public import Mathlib.Algebra.Order.Ring.Defs
 public import Mathlib.Data.Nat.Cast.Order.Basic
@@ -35,13 +35,13 @@ namespace Nat
 attribute [local simp] factorial_ne_zero
 
 theorem choose_le_pow_div (r n : ℕ) : (n.choose r : α) ≤ (n ^ r : α) / r ! := by
-  rw [Checked.le_div_iff ((Nat.cast_pos'.mpr r.factorial_pos : (0 : α) < r !)), mul_comm]
+  rw [le_div_iff₀ ((Nat.cast_pos'.mpr r.factorial_pos : (0 : α) < r !)), mul_comm]
   norm_cast
   rw [← Nat.descFactorial_eq_factorial_mul_choose]
   exact n.descFactorial_le_pow r
 
 lemma choose_lt_pow_div (hn : n ≠ 0) (hk : 2 ≤ k) : (n.choose k : α) < (n ^ k : α) / k ! := by
-  rw [Checked.lt_div_iff ((Nat.cast_pos'.mpr k.factorial_pos : (0 : α) < k !)), mul_comm]
+  rw [lt_div_iff₀ ((Nat.cast_pos'.mpr k.factorial_pos : (0 : α) < k !)), mul_comm]
   norm_cast
   rw [← Nat.descFactorial_eq_factorial_mul_choose]
   exact descFactorial_lt_pow hn hk
@@ -72,7 +72,7 @@ theorem choose_le_sub_pow (n k : ℕ) : n.choose k ≤ (n + 1 - k) ^ k := by
 
 -- horrific casting is due to ℕ-subtraction
 theorem pow_le_choose (r n : ℕ) : ((n + 1 - r : ℕ) ^ r : α) / r ! ≤ n.choose r := by
-  rw [Checked.div_le_iff ((Nat.cast_pos'.mpr r.factorial_pos : (0 : α) < r !)), mul_comm]
+  rw [div_le_iff₀ ((Nat.cast_pos'.mpr r.factorial_pos : (0 : α) < r !)), mul_comm]
   norm_cast
   rw [← Nat.descFactorial_eq_factorial_mul_choose]
   exact n.pow_sub_le_descFactorial r

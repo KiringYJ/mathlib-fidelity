@@ -5,10 +5,13 @@ Authors: Heather Macbeth, Arend Mellendijk, Michael Rothgang
 -/
 module
 
+public import Mathlib.Algebra.BigOperators.Group.List.Basic
+public import Mathlib.Algebra.Field.Defs  -- shake: keep (Qq dependency)
 public import Mathlib.Algebra.GroupWithZero.Checked
 public import Mathlib.Algebra.Order.GroupWithZero.Basic
-public import Mathlib.Algebra.Order.Ring.Unbundled.Basic
 public import Mathlib.Algebra.Order.Ring.Defs
+public import Mathlib.Algebra.Order.Ring.Unbundled.Basic
+public import Mathlib.Algebra.Ring.Int.Parity -- shake: keep (Qq dependency)
 public import Mathlib.Algebra.Ring.Units
 public meta import Mathlib.Util.Qq
 
@@ -50,6 +53,10 @@ variable [CommMonoid M]
 
 theorem normalize_atom (a : M) : a = a /ₚ (1 : Mˣ) := (divp_one a).symm
 
+/-- A normalized fraction is displayed as the checked quotient by the value of its unit. -/
+theorem divp_eq_div_val (a : M) (u : Mˣ) : a /ₚ u = Checked.div a (u : M) u.isUnit := by
+  rw [Checked.div, IsUnit.unit_of_val_units]
+
 theorem normalize_mul {a b na nb : M} {u v : Mˣ}
     (ha : a = na /ₚ u) (hb : b = nb /ₚ v) :
     a * b = (na * nb) /ₚ (u * v) := by
@@ -65,7 +72,7 @@ theorem normalize_inv {a n : M} {u : Mˣ} (ha : IsUnit a) (h : a = n /ₚ u) :
     Checked.inv a ha = (u : M) /ₚ numeratorUnit a n u ha h := by
   apply eq_divp_iff_mul_eq.mpr
   change Checked.inv a ha * n = u
-  rw [← eq_divp_iff_mul_eq.mp h, ← mul_assoc, Checked.inv_mul_cancel, one_mul]
+  rw [← eq_divp_iff_mul_eq.mp h, ← mul_assoc, inv_mul_cancel₀, one_mul]
 
 theorem normalize_div {a b na nb : M} {u v : Mˣ} (hb : IsUnit b)
     (ha' : a = na /ₚ u) (hb' : b = nb /ₚ v) :
@@ -76,7 +83,7 @@ theorem normalize_div {a b na nb : M} {u v : Mˣ} (hb : IsUnit b)
   calc
     Checked.div a b hb * ((u : M) * (b * v)) =
         (Checked.div a b hb * b) * u * v := by ac_rfl
-    _ = a * u * v := by rw [Checked.div_mul_cancel]
+    _ = a * u * v := by rw [div_mul_cancel₀]
     _ = na * v := by rw [eq_divp_iff_mul_eq.mp ha']
 
 theorem normalize_divp {a na nb : M} {u v w : Mˣ}

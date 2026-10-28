@@ -154,8 +154,9 @@ theorem isAlgebraic_intCast [Nontrivial R] (n : ℤ) : IsAlgebraic R (n : A) := 
   rw [← map_intCast (algebraMap R A)]
   exact isAlgebraic_algebraMap (Int.cast n)
 
-theorem isAlgebraic_ratCast (R : Type u) {A : Type v} [DivisionRing A] [Field R] [Algebra R A]
-    (n : ℚ) : IsAlgebraic R (n : A) := by
+theorem isAlgebraic_ratCast (R : Type u) {A : Type v} [DivisionRing A] [CharZero A] [Field R]
+    [Algebra R A] (n : ℚ) : IsAlgebraic R (n : A) := by
+  have : CharZero R := (algebraMap R A).charZero
   rw [← map_ratCast (algebraMap R A)]
   exact isAlgebraic_algebraMap (Rat.cast n)
 
@@ -387,11 +388,10 @@ lemma IsAlgebraic.invOf_iff {x : S} [Invertible x] :
     IsAlgebraic R (⅟x) ↔ IsAlgebraic R x :=
   ⟨IsAlgebraic.invOf, IsAlgebraic.invOf⟩
 
-lemma IsAlgebraic.inv_iff {K} [Field K] [Algebra R K] {x : K} :
+lemma IsAlgebraic.inv_iff {K} [Field K] [Algebra R K] {x : K} {hx : IsUnit x} :
     IsAlgebraic R (x⁻¹) ↔ IsAlgebraic R x := by
-  by_cases hx : x = 0
-  · simp [hx]
-  let := invertibleOfNonzero hx
+  let := hx.invertible
+  rw [← invOf_eq_inv x]
   exact IsAlgebraic.invOf_iff (R := R) (x := x)
 
 alias ⟨_, IsAlgebraic.inv⟩ := IsAlgebraic.inv_iff
@@ -661,35 +661,39 @@ section Field
 
 variable {K L : Type*} [Field K] [Field L] [Algebra K L] (A : Subalgebra K L)
 
-theorem inv_eq_of_aeval_divX_ne_zero {x : L} {p : K[X]} (aeval_ne : aeval x (divX p) ≠ 0) :
-    x⁻¹ = aeval x (divX p) / (aeval x p - algebraMap _ _ (p.coeff 0)) := by
-  rw [inv_eq_iff_eq_inv, inv_div, eq_comm, div_eq_iff, sub_eq_iff_eq_add, mul_comm]
-  conv_lhs => rw [← divX_mul_X_add p]
-  · rw [map_add, map_mul, aeval_X, aeval_C]
-  · exact aeval_ne
+theorem inv_eq_of_aeval_divX_ne_zero {x : L} {hx : IsUnit x} {p : K[X]}
+    (aeval_ne : aeval x (divX p) ≠ 0) :
+    x⁻¹ = Checked.div (aeval x (divX p)) (aeval x p - algebraMap _ _ (p.coeff 0)) (by
+      rw [← congrArg (aeval x) (divX_mul_X_add p), map_add, map_mul, aeval_X, aeval_C,
+        add_sub_cancel_right]
+      exact aeval_ne.isUnit.mul hx) := by
+  rw [eq_div_iff, ← congrArg (aeval x) (divX_mul_X_add p), map_add, map_mul, aeval_X, aeval_C,
+    add_sub_cancel_right, mul_comm, mul_assoc, mul_inv_cancel₀, mul_one]
 
 theorem inv_eq_of_root_of_coeff_zero_ne_zero {x : L} {p : K[X]} (aeval_eq : aeval x p = 0)
-    (coeff_zero_ne : p.coeff 0 ≠ 0) : x⁻¹ = -(aeval x (divX p) / algebraMap _ _ (p.coeff 0)) := by
-  convert!
-    inv_eq_of_aeval_divX_ne_zero (p := p) (L := L)
-      (mt (fun h => (algebraMap K L).injective ?_) coeff_zero_ne) using 1
-  · rw [aeval_eq, zero_sub, div_neg]
-  rw [RingHom.map_zero]
-  convert! aeval_eq
-  conv_rhs => rw [← divX_mul_X_add p]
-  rw [map_add, map_mul, h, zero_mul, zero_add, aeval_C]
+    (coeff_zero_ne : p.coeff 0 ≠ 0) :
+    Checked.inv x (Ne.isUnit fun hx ↦ coeff_zero_ne <| by
+        simpa [hx, ← coeff_zero_eq_aeval_zero'] using aeval_eq) =
+      -(aeval x (divX p) / algebraMap _ _ (p.coeff 0)) := by
+  have aeval_ne : aeval x (divX p) ≠ 0 := by
+    refine fun h ↦ coeff_zero_ne <| (map_eq_zero (algebraMap K L)).1 ?_
+    rw [← aeval_eq]
+    conv_rhs => rw [← divX_mul_X_add p]
+    rw [map_add, map_mul, h, zero_mul, zero_add, aeval_C]
+  rw [inv_eq_of_aeval_divX_ne_zero aeval_ne]
+  simp only [aeval_eq, zero_sub, div_neg₀]
 
 theorem Subalgebra.inv_mem_of_root_of_coeff_zero_ne_zero {x : A} {p : K[X]}
-    (aeval_eq : aeval x p = 0) (coeff_zero_ne : p.coeff 0 ≠ 0) : (x⁻¹ : L) ∈ A := by
-  suffices (x⁻¹ : L) = (-p.coeff 0)⁻¹ • aeval x (divX p) by
-    rw [this]
-    exact A.smul_mem (aeval x _).2 _
+    (aeval_eq : aeval x p = 0) (coeff_zero_ne : p.coeff 0 ≠ 0) :
+    Checked.inv (x : L) (Ne.isUnit fun hx ↦ coeff_zero_ne <| by
+        simpa [A.coe_eq_zero.1 hx, ← coeff_zero_eq_aeval_zero'] using aeval_eq) ∈ A := by
   have : aeval (x : L) p = 0 := by rw [Subalgebra.aeval_coe, aeval_eq, Subalgebra.coe_zero]
-  rw [inv_eq_of_root_of_coeff_zero_ne_zero this coeff_zero_ne, div_eq_inv_mul, Algebra.smul_def,
-    aeval_coe, map_inv₀, map_neg, inv_neg, neg_mul]
+  rw [inv_eq_of_root_of_coeff_zero_ne_zero this coeff_zero_ne]
+  convert A.smul_mem (aeval x (divX p)).2 (-p.coeff 0)⁻¹ using 1
+  rw [div_eq_inv_mul₀, Algebra.smul_def, aeval_coe, inv_neg₀, map_neg, map_inv₀, neg_mul]
 
-theorem Subalgebra.inv_mem_of_algebraic {x : A} (hx : IsAlgebraic K (x : L)) :
-    (x⁻¹ : L) ∈ A := by
+theorem Subalgebra.inv_mem_of_algebraic {x : A} {hxUnit : IsUnit (x : L)}
+    (hx : IsAlgebraic K (x : L)) : (x⁻¹ : L) ∈ A := by
   obtain ⟨p, ne_zero, aeval_eq⟩ := hx
   rw [Subalgebra.aeval_coe, Subalgebra.coe_eq_zero] at aeval_eq
   revert ne_zero aeval_eq
@@ -703,16 +707,16 @@ theorem Subalgebra.inv_mem_of_algebraic {x : A} (hx : IsAlgebraic K (x : L)) :
     rw [map_mul, aeval_X, mul_eq_zero] at aeval_eq
     rcases aeval_eq with aeval_eq | x_eq
     · exact ih hp aeval_eq
-    · rw [x_eq, Subalgebra.coe_zero, inv_zero]
-      exact A.zero_mem
+    · exact absurd (A.coe_eq_zero.2 x_eq) hxUnit.ne_zero
 
 /-- In an algebraic extension L/K, an intermediate subalgebra is a field. -/
 @[stacks 0BID]
 theorem Subalgebra.isField_of_algebraic [Algebra.IsAlgebraic K L] : IsField A :=
   { show Nontrivial A by infer_instance, Subalgebra.toCommRing A with
     mul_inv_cancel := fun {a} ha =>
-      ⟨⟨a⁻¹, A.inv_mem_of_algebraic (Algebra.IsAlgebraic.isAlgebraic (a : L))⟩,
-        Subtype.ext (mul_inv_cancel₀ (mt (Subalgebra.coe_eq_zero _).mp ha))⟩ }
+      have ha' : (a : L) ≠ 0 := mt (Subalgebra.coe_eq_zero _).mp ha
+      ⟨⟨(a : L)⁻¹, A.inv_mem_of_algebraic (Algebra.IsAlgebraic.isAlgebraic (a : L))⟩,
+        Subtype.ext mul_inv_cancel₀⟩ }
 
 end Field
 

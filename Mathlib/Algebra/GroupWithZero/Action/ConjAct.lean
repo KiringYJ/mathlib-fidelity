@@ -10,19 +10,21 @@ public import Mathlib.GroupTheory.GroupAction.ConjAct
 
 /-!
 # Conjugation action of a group with zero on itself
+
+A group with zero has no ambient inverse, so conjugation by `0` is not defined. Conjugation by the
+nonzero elements is the action of `ConjAct G₀ˣ` on `G₀`; see `ConjAct.unitsMulDistribMulAction`
+and `ConjAct.units_smul_def`.
 -/
 
 public section
 
 assert_not_exists Ring
 
-variable {α G₀ : Type*}
+variable {G₀ : Type*}
 
 namespace ConjAct
 variable [GroupWithZero G₀]
 
 instance : GroupWithZero (ConjAct G₀) := inferInstanceAs <| GroupWithZero G₀
 
--- Conjugation acts through `ConjAct G₀ˣ` on `G₀`, using the existing
--- `ConjAct.unitsMulDistribMulAction` and `ConjAct.units_smul_def`.
 end ConjAct

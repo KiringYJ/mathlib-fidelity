@@ -134,7 +134,8 @@ def skewAdjointMatricesLieSubalgebraEquiv (P : Matrix n n R) (h : Invertible P) 
 
 theorem skewAdjointMatricesLieSubalgebraEquiv_apply (P : Matrix n n R) (h : Invertible P)
     (A : skewAdjointMatricesLieSubalgebra J) :
-    ↑(skewAdjointMatricesLieSubalgebraEquiv J P h A) = P⁻¹ * A * P := by
+    ↑(skewAdjointMatricesLieSubalgebraEquiv J P h A) =
+      Checked.inv P (@isUnit_of_invertible _ _ P h) * A * P := by
   simp [skewAdjointMatricesLieSubalgebraEquiv]
 
 /-- An equivalence of matrix algebras commuting with the transpose endomorphisms restricts to an

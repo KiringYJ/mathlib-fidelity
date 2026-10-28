@@ -22,11 +22,12 @@ and `MvPowerSeries.mul_invOfUnit` proves that `φ * invOfUnit φ u = 1`.
 The construction of the power series `invOfUnit` is done by writing that
 relation and solving and for its coefficients by induction.
 
-Over a field, all power series `φ` have an “inverse” `MvPowerSeries.inv φ`,
-which is `0` if and only if the constant coefficient of `φ` is zero
-(by `MvPowerSeries.inv_eq_zero`),
-and `MvPowerSeries.mul_inv_cancel` asserts the equality `φ * φ⁻¹ = 1` when
-the constant coefficient of `φ` is nonzero.
+A power series is invertible exactly when its constant coefficient is
+(`MvPowerSeries.isUnit_iff_constantCoeff`); over a field, exactly when its constant coefficient
+is nonzero. The inverse `φ⁻¹` of an invertible power series is its inverse as a unit, with the
+general inverse lemmas such as `mul_inv_cancel₀`; `MvPowerSeries.invOfUnit_eq'` identifies it with
+`invOfUnit` and `MvPowerSeries.coeff_inv` computes its coefficients. A power series whose constant
+coefficient is not invertible has no inverse.
 
 Instances are defined:
 
@@ -58,10 +59,8 @@ variable [Ring R]
 The inverse of a multivariate formal power series is defined by
 well-founded recursion on the coefficients of the inverse.
 -/
-/-- Auxiliary definition that unifies
-the totalised inverse formal power series `(_)⁻¹` and
-the inverse formal power series that depends on
-an inverse of the constant coefficient `invOfUnit`. -/
+/-- Auxiliary definition for `invOfUnit`: the power series with constant coefficient `a` whose
+higher coefficients satisfy the recursion of an inverse of `φ` with constant coefficient `a`. -/
 protected noncomputable def inv.aux (a : R) (φ : MvPowerSeries σ R) : MvPowerSeries σ R
   | n =>
     letI := Classical.decEq σ
@@ -181,118 +180,76 @@ theorem map.isLocalHom : IsLocalHom (map (σ := σ) f) :=
 
 end IsLocalRing
 
+section Inverse
+
+/-! ### The inverse of an invertible power series
+
+A power series is invertible exactly when its constant coefficient is
+(`MvPowerSeries.isUnit_iff_constantCoeff`), so over a field exactly when its constant coefficient
+is nonzero. Its inverse `φ⁻¹` is its inverse in the group of units of the ring of power series:
+`MvPowerSeries.invOfUnit_eq'` identifies it with `invOfUnit`, and `MvPowerSeries.coeff_inv`
+computes its coefficients. The rule below extends `checked_unit`, so that `φ⁻¹` finds its evidence
+from the invertibility of the constant coefficient, for example from `constantCoeff φ ≠ 0` over a
+field. -/
+
+macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply MvPowerSeries.isUnit_iff_constantCoeff.mpr); checked_unit))
+
+section Ring
+
+variable [Ring R]
+
+/-- The power series `invOfUnit φ u` is the inverse of `φ` when `u` is its constant coefficient. -/
+@[simp]
+theorem invOfUnit_eq' (φ : MvPowerSeries σ R) (u : Rˣ) (h : constantCoeff φ = u) :
+    invOfUnit φ u = Checked.inv φ (isUnit_iff_constantCoeff.mpr (h ▸ u.isUnit)) :=
+  (inv_eq_of_mul_eq_one_right₀ (mul_invOfUnit φ u h)).symm
+
+theorem coeff_inv [DecidableEq σ] (n : σ →₀ ℕ) (φ : MvPowerSeries σ R) {hφ : IsUnit φ} :
+    coeff n φ⁻¹ =
+      if n = 0 then Checked.inv (constantCoeff φ) (isUnit_constantCoeff φ hφ)
+      else
+        -Checked.inv (constantCoeff φ) (isUnit_constantCoeff φ hφ) *
+          ∑ x ∈ antidiagonal n, if x.2 < n then coeff x.1 φ * coeff x.2 φ⁻¹ else 0 := by
+  rw [← invOfUnit_eq' φ (isUnit_constantCoeff φ hφ).unit
+    (isUnit_constantCoeff φ hφ).unit_spec.symm]
+  exact coeff_invOfUnit n φ _
+
+end Ring
+
+section CommRing
+
+variable [CommRing R]
+
+/-- A scalar multiple `r • φ` of a power series is invertible exactly when `r` and `φ` are. -/
+theorem isUnit_smul_iff {r : R} {φ : MvPowerSeries σ R} :
+    IsUnit (r • φ) ↔ IsUnit r ∧ IsUnit φ := by
+  rw [isUnit_iff_constantCoeff, isUnit_iff_constantCoeff (φ := φ), constantCoeff_smul,
+    smul_eq_mul, IsUnit.mul_iff]
+
+@[simp]
+theorem smul_inv (r : R) (φ : MvPowerSeries σ R) {h : IsUnit (r • φ)} :
+    (r • φ)⁻¹ =
+      Checked.inv r (isUnit_smul_iff.mp h).1 • Checked.inv φ (isUnit_smul_iff.mp h).2 := by
+  refine inv_eq_of_mul_eq_one_left₀ ?_
+  rw [smul_mul_smul_comm, inv_mul_cancel₀, inv_mul_cancel₀, one_smul]
+
+end CommRing
+
 section Field
 
-open MvPowerSeries
-
 variable {k : Type*} [Field k]
-
-/-- The inverse `1/f` of a multivariable power series `f` over a field -/
-protected def inv (φ : MvPowerSeries σ k) : MvPowerSeries σ k :=
-  inv.aux (constantCoeff φ)⁻¹ φ
-
-instance : Inv (MvPowerSeries σ k) :=
-  ⟨MvPowerSeries.inv⟩
-
-theorem coeff_inv [DecidableEq σ] (n : σ →₀ ℕ) (φ : MvPowerSeries σ k) :
-    coeff n φ⁻¹ =
-      if n = 0 then (constantCoeff φ)⁻¹
-      else
-        -(constantCoeff φ)⁻¹ *
-          ∑ x ∈ antidiagonal n, if x.2 < n then coeff x.1 φ * coeff x.2 φ⁻¹ else 0 :=
-  coeff_inv_aux n _ φ
-
-@[simp]
-theorem constantCoeff_inv (φ : MvPowerSeries σ k) :
-    constantCoeff φ⁻¹ = (constantCoeff φ)⁻¹ := by
-  classical
-  rw [← coeff_zero_eq_constantCoeff_apply, coeff_inv, ite_eq_left rfl]
-
-protected theorem inv_eq_zero {φ : MvPowerSeries σ k} : φ⁻¹ = 0 ↔ constantCoeff φ = 0 :=
-  ⟨fun h => by simpa using congr_arg constantCoeff h, fun h =>
-    ext fun n => by
-      classical
-      rw [coeff_inv]
-      split_ifs <;>
-        simp only [h, map_zero, zero_mul, inv_zero, neg_zero]⟩
-
-@[simp]
-theorem zero_inv : (0 : MvPowerSeries σ k)⁻¹ = 0 := by
-  rw [MvPowerSeries.inv_eq_zero, constantCoeff_zero]
 
 @[simp]
 theorem invOfUnit_eq (φ : MvPowerSeries σ k) (h : constantCoeff φ ≠ 0) :
     invOfUnit φ (Units.mk0 _ h) = φ⁻¹ :=
-  rfl
-
-@[simp]
-theorem invOfUnit_eq' (φ : MvPowerSeries σ k) (u : Units k) (h : constantCoeff φ = u) :
-    invOfUnit φ u = φ⁻¹ := by
-  rw [← invOfUnit_eq φ (h.symm ▸ u.ne_zero)]
-  apply congrArg (invOfUnit φ)
-  rw [Units.ext_iff]
-  exact h.symm
-
-@[simp]
-protected theorem mul_inv_cancel (φ : MvPowerSeries σ k) (h : constantCoeff φ ≠ 0) :
-    φ * φ⁻¹ = 1 := by rw [← invOfUnit_eq φ h, mul_invOfUnit φ (Units.mk0 _ h) rfl]
-
-@[simp]
-protected theorem inv_mul_cancel (φ : MvPowerSeries σ k) (h : constantCoeff φ ≠ 0) :
-    φ⁻¹ * φ = 1 := by rw [mul_comm, φ.mul_inv_cancel h]
-
-protected theorem eq_mul_inv_iff_mul_eq {φ₁ φ₂ φ₃ : MvPowerSeries σ k}
-    (h : constantCoeff φ₃ ≠ 0) : φ₁ = φ₂ * φ₃⁻¹ ↔ φ₁ * φ₃ = φ₂ :=
-  ⟨fun k => by simp [k, mul_assoc, MvPowerSeries.inv_mul_cancel _ h], fun k => by
-    simp [← k, mul_assoc, MvPowerSeries.mul_inv_cancel _ h]⟩
-
-protected theorem eq_inv_iff_mul_eq_one {φ ψ : MvPowerSeries σ k} (h : constantCoeff ψ ≠ 0) :
-    φ = ψ⁻¹ ↔ φ * ψ = 1 := by rw [← MvPowerSeries.eq_mul_inv_iff_mul_eq h, one_mul]
-
-protected theorem inv_eq_iff_mul_eq_one {φ ψ : MvPowerSeries σ k} (h : constantCoeff ψ ≠ 0) :
-    ψ⁻¹ = φ ↔ φ * ψ = 1 := by rw [eq_comm, MvPowerSeries.eq_inv_iff_mul_eq_one h]
-
-@[simp]
-protected theorem mul_inv_rev (φ ψ : MvPowerSeries σ k) :
-    (φ * ψ)⁻¹ = ψ⁻¹ * φ⁻¹ := by
-  by_cases h : constantCoeff (φ * ψ) = 0
-  · rw [MvPowerSeries.inv_eq_zero.mpr h]
-    simp only [map_mul, mul_eq_zero] at h
-    -- we don't have `NoZeroDivisors (MvPowerSeries σ k)` yet,
-    rcases h with h | h <;> simp [MvPowerSeries.inv_eq_zero.mpr h]
-  · rw [MvPowerSeries.inv_eq_iff_mul_eq_one h]
-    simp only [not_or, map_mul, mul_eq_zero] at h
-    rw [← mul_assoc, mul_assoc _⁻¹, MvPowerSeries.inv_mul_cancel _ h.left, mul_one,
-      MvPowerSeries.inv_mul_cancel _ h.right]
-
-instance : InvOneClass (MvPowerSeries σ k) :=
-  { (inferInstance : One (MvPowerSeries σ k)),
-    (inferInstance : Inv (MvPowerSeries σ k)) with
-    inv_one := by
-      rw [MvPowerSeries.inv_eq_iff_mul_eq_one, mul_one]
-      simp }
-
-@[simp]
-protected theorem inv_pow (φ : MvPowerSeries σ k) : ∀ n : ℕ, φ⁻¹ ^ n = (φ ^ n)⁻¹
-  | 0 => by rw [pow_zero, pow_zero, inv_one]
-  | n + 1 => by rw [pow_succ', pow_succ, MvPowerSeries.inv_pow, MvPowerSeries.mul_inv_rev]
-
-@[simp]
-theorem C_inv (r : k) : (C (σ := σ) r)⁻¹ = C r⁻¹ := by
-  rcases eq_or_ne r 0 with (rfl | hr)
-  · simp
-  rw [MvPowerSeries.inv_eq_iff_mul_eq_one, ← map_mul, inv_mul_cancel₀ hr, map_one]
-  simpa using hr
-
-@[simp]
-theorem X_inv (s : σ) : (X s : MvPowerSeries σ k)⁻¹ = 0 := by
-  rw [MvPowerSeries.inv_eq_zero, constantCoeff_X]
-
-@[simp]
-theorem smul_inv (r : k) (φ : MvPowerSeries σ k) : (r • φ)⁻¹ = r⁻¹ • φ⁻¹ := by
-  simp [smul_eq_C_mul, mul_comm]
+  invOfUnit_eq' φ _ rfl
 
 end Field
+
+end Inverse
 
 end MvPowerSeries
 

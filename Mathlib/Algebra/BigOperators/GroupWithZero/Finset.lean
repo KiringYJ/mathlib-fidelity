@@ -77,6 +77,25 @@ lemma prod_boole : ∏ i, (ite (p i) 1 0 : M₀) = ite (∀ i, p i) 1 0 := by si
 
 end Fintype
 
+namespace Finset
+variable {M : Type*} [CommMonoid M] {s : Finset ι}
+
+/-- The product of the inverses of invertible elements is the inverse of their product. -/
+theorem prod_inv_distrib₀ (f : ι → M) {hf : ∀ i, IsUnit (f i)} :
+    ∏ i ∈ s, Checked.inv (f i) (hf i) =
+      Checked.inv (∏ i ∈ s, f i) (IsUnit.prod_iff.2 fun i _ ↦ hf i) :=
+  Eq.symm <| inv_eq_of_mul_eq_one_right₀ <| by
+    rw [← prod_mul_distrib]
+    exact prod_eq_one fun i _ ↦ mul_inv_cancel₀
+
+/-- The product of quotients by invertible elements is the quotient of the products. -/
+theorem prod_div_distrib₀ (f g : ι → M) {hg : ∀ i, IsUnit (g i)} :
+    ∏ i ∈ s, Checked.div (f i) (g i) (hg i) =
+      Checked.div (∏ i ∈ s, f i) (∏ i ∈ s, g i) (IsUnit.prod_iff.2 fun i _ ↦ hg i) := by
+  simp only [div_eq_mul_inv₀, prod_mul_distrib, prod_inv_distrib₀ g (hf := hg)]
+
+end Finset
+
 set_option backward.isDefEq.respectTransparency false in
 lemma Units.mk0_prod [CommGroupWithZero G₀] (s : Finset ι) (f : ι → G₀) (h) :
     Units.mk0 (∏ i ∈ s, f i) h =

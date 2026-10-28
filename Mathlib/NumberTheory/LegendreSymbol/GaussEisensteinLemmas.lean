@@ -46,14 +46,14 @@ theorem Ico_map_valMinAbs_natAbs_eq_Ico_map_id (p : ℕ) [hp : Fact p.Prime] (a 
     intro b hb
     refine ⟨(b / a : ZMod p).valMinAbs.natAbs, mem_Ico.mpr ⟨?_, ?_⟩, ?_⟩
     · apply Nat.pos_of_ne_zero
-      simp only [div_eq_mul_inv, hap, CharP.cast_eq_zero_iff (ZMod p) p, hpe hb, not_false_iff,
-        valMinAbs_eq_zero, inv_eq_zero, Int.natAbs_eq_zero, Ne, _root_.mul_eq_zero, or_self_iff]
+      simp only [Int.natAbs_eq_zero, valMinAbs_eq_zero, Ne, div_eq_zero_iff,
+        CharP.cast_eq_zero_iff (ZMod p) p, hpe hb, not_false_iff]
     · apply lt_succ_of_le; apply natAbs_valMinAbs_le
     · rw [natCast_natAbs_valMinAbs]
       split_ifs
-      · rw [mul_div_cancel₀ _ hap, valMinAbs_def_pos, val_cast_of_lt (hep hb),
+      · rw [mul_div_cancel₀ _, valMinAbs_def_pos, val_cast_of_lt (hep hb),
           ite_eq_left (le_of_lt_succ (mem_Ico.1 hb).2), Int.natAbs_natCast]
-      · rw [mul_neg, mul_div_cancel₀ _ hap, natAbs_valMinAbs_neg, valMinAbs_def_pos,
+      · rw [mul_neg, mul_div_cancel₀ _, natAbs_valMinAbs_neg, valMinAbs_def_pos,
           val_cast_of_lt (hep hb), ite_eq_left (le_of_lt_succ (mem_Ico.1 hb).2), Int.natAbs_natCast]
   exact Multiset.map_eq_map_of_bij_of_nodup _ _ (Finset.nodup _) (Finset.nodup _)
     (fun x _ => (a * x : ZMod p).valMinAbs.natAbs) hmem

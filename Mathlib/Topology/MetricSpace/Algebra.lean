@@ -141,7 +141,7 @@ theorem Bornology.IsBounded.uniformContinuousOn_smul {s : Set (α × β)} (hs : 
   dsimp at hab hxy h ⊢
   grw [dist_triangle _ (a • y), dist_pair_smul, dist_smul_pair, hab.1, hxy.2, h.2, h.1]
   field_simp
-  norm_num1
+  exact le_of_eq (by ring)
 
 -- see Note [lower instance priority]
 /-- The typeclass `IsBoundedSMul` on a metric-space scalar action implies continuity of the

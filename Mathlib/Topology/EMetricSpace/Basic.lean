@@ -121,6 +121,7 @@ theorem tendstoLocallyUniformlyOn_iff {ι : Type*} [TopologicalSpace β] {F : ι
     {p : Filter ι} {s : Set β} :
     TendstoLocallyUniformlyOn F f p s ↔
       ∀ ε > 0, ∀ x ∈ s, ∃ t ∈ 𝓝[s] x, ∀ᶠ n in p, ∀ y ∈ t, edist (f y) (F n y) < ε := by
+  rw [_root_.tendstoLocallyUniformlyOn_iff]
   refine ⟨fun H ε hε => H _ (edist_mem_uniformity hε), fun H u hu x hx => ?_⟩
   rcases mem_uniformity_edist.1 hu with ⟨ε, εpos, hε⟩
   rcases H ε εpos x hx with ⟨t, ht, Ht⟩

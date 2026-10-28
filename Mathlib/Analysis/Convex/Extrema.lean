@@ -48,7 +48,7 @@ theorem IsMinOn.of_isLocalMinOn_of_convexOn_Icc {f : ℝ → β} {a b : ℝ} (a_
   calc
     ya • f a + yc • f a = f a := by rw [← add_smul, yac, one_smul]
     _ ≤ f (ya * a + yc * c) := hfy
-    _ ≤ ya • f a + yc • f c := h_conv.2 (left_mem_Icc.2 a_lt_b.le) hc ya₀ yc₀.le yac
+    _ ≤ ya • f a + yc • f c := h_conv.map_combo_le (left_mem_Icc.2 a_lt_b.le) hc ya₀ yc₀.le yac
 
 /-- A local minimum of a convex function is a global minimum, restricted to a set `s`.
 -/
@@ -61,7 +61,7 @@ theorem IsMinOn.of_isLocalMinOn_of_convexOn {f : E → β} {a : E} (a_in_s : a �
   have hgc : Continuous g := AffineMap.lineMap_continuous
   have h_maps : MapsTo g (Icc 0 1) s := by
     simpa only [g, mapsTo_iff_image_subset, ← segment_eq_image_lineMap]
-      using h_conv.1.segment_subset a_in_s x_in_s
+      using h_conv.convex.segment_subset a_in_s x_in_s
   have fg_local_min_on : IsLocalMinOn (f ∘ g) (Icc 0 1) 0 := by
     rw [← hg0] at h_localmin
     exact h_localmin.comp_continuousOn h_maps hgc.continuousOn (left_mem_Icc.2 zero_le_one)

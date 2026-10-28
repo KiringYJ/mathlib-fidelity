@@ -6,13 +6,17 @@ Authors: Eric Wieser
 module
 
 public import Mathlib.Algebra.GroupWithZero.Defs
+public import Mathlib.Algebra.GroupWithZero.Inverse
 public import Mathlib.Algebra.Group.Hom.Defs
 public import Mathlib.Algebra.Group.Pi.Basic
+public import Mathlib.Algebra.Group.Pi.Units
 
 /-!
 # Pi instances for groups with zero
 
 This file defines monoid with zero, group with zero, and related structure instances for pi types.
+It also computes inverses, quotients and integer powers of functions pointwise: a function into
+monoids is invertible exactly when all its values are (`Pi.isUnit_iff`).
 -/
 
 @[expose] public section
@@ -73,5 +77,24 @@ instance commMonoidWithZero [∀ i, CommMonoidWithZero (α i)] : CommMonoidWithZ
 instance semigroupWithZero [∀ i, SemigroupWithZero (α i)] : SemigroupWithZero (∀ i, α i) where
   __ := semigroup
   __ := mulZeroClass
+
+section Checked
+variable [∀ i, Monoid (α i)]
+
+theorem inv_apply₀ (f : ∀ i, α i) {hf : IsUnit f} (i : ι) :
+    f⁻¹ i = Checked.inv (f i) (hf.apply i) :=
+  hf.val_inv_apply i
+
+theorem div_apply₀ (f g : ∀ i, α i) {hg : IsUnit g} (i : ι) :
+    (f / g) i = Checked.div (f i) (g i) (hg.apply i) :=
+  congrArg (f i * ·) (hg.val_inv_apply i)
+
+theorem zpow_apply₀ (f : ∀ i, α i) (n : ℤ) {h : n < 0 → IsUnit f} (i : ι) :
+    (f ^ n) i = Checked.zpow (f i) n fun hn ↦ (h hn).apply i := by
+  cases n with
+  | ofNat k => exact pow_apply f k i
+  | negSucc k => simp only [zpow_negSucc₀, inv_apply₀, pow_apply]
+
+end Checked
 
 end Pi

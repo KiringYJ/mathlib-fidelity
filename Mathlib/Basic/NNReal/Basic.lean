@@ -90,7 +90,9 @@ lemma toReal_finsuppProd (f : ι →₀ M) (g : ι → M → ℝ≥0) :
     f.prod g = f.prod (fun i m ↦ toReal (g i m)) := map_finsuppProd toRealHom ..
 
 @[simp, norm_cast]
-lemma coe_expect (s : Finset ι) (f : ι → ℝ≥0) : 𝔼 i ∈ s, f i = 𝔼 i ∈ s, (f i : ℝ) :=
+lemma coe_expect (s : Finset ι) (f : ι → ℝ≥0)
+    (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty) :
+    𝔼 i ∈ s, f i = 𝔼 i ∈ s, (f i : ℝ) :=
   map_expect toRealHom ..
 
 theorem _root_.Real.toNNReal_sum_of_nonneg (hf : ∀ i ∈ s, 0 ≤ f i) :
@@ -120,8 +122,8 @@ theorem finset_sup_mul {α} (s : Finset α) (f : α → ℝ≥0) (r : ℝ≥0) :
     s.sup f * r = s.sup fun a => f a * r :=
   Finset.apply_sup_eq_sup_comp (· * r) (fun x y => NNReal.sup_mul x y r) (zero_mul r)
 
-theorem finset_sup_div {α} {f : α → ℝ≥0} {s : Finset α} (r : ℝ≥0) :
-    s.sup f / r = s.sup fun a => f a / r := by simp only [div_eq_inv_mul, mul_finset_sup]
+theorem finset_sup_div {α} {f : α → ℝ≥0} {s : Finset α} (r : ℝ≥0) {hr : IsUnit r} :
+    s.sup f / r = s.sup fun a => f a / r := by simp only [div_eq_inv_mul₀, mul_finset_sup]
 
 section Set
 
@@ -147,7 +149,7 @@ typeclass. For lemmas about subtraction and addition see lemmas about `OrderedSu
 `Mathlib/Algebra/Order/Sub/Basic.lean`. See also `mul_tsub` and `tsub_mul`.
 -/
 
-theorem sub_div (a b c : ℝ≥0) : (a - b) / c = a / c - b / c :=
+theorem sub_div (a b c : ℝ≥0) {hc : IsUnit c} : (a - b) / c = a / c - b / c :=
   tsub_div _ _ _
 
 /-- This lemma is needed for the `norm_cast` simp set. Outside of this use case `Nat.coe_sub`
@@ -179,8 +181,8 @@ theorem iSup_mul (f : ι → ℝ≥0) (a : ℝ≥0) : (⨆ i, f i) * a = ⨆ i, 
   rw [mul_comm, mul_iSup]
   simp_rw [mul_comm]
 
-theorem iSup_div (f : ι → ℝ≥0) (a : ℝ≥0) : (⨆ i, f i) / a = ⨆ i, f i / a := by
-  simp only [div_eq_mul_inv, iSup_mul]
+theorem iSup_div (f : ι → ℝ≥0) (a : ℝ≥0) {ha : IsUnit a} : (⨆ i, f i) / a = ⨆ i, f i / a := by
+  simp only [div_eq_mul_inv₀, iSup_mul]
 
 theorem mul_iSup_le {a : ℝ≥0} {g : ℝ≥0} {h : ι → ℝ≥0} (H : ∀ j, g * h j ≤ a) : g * iSup h ≤ a := by
   rw [mul_iSup]

@@ -393,17 +393,16 @@ variable [AddCommGroup E] [Module 𝕜 E] {x : E} {s : Set E}
 
 /-- Alternative definition of star-convexity, using division. -/
 theorem starConvex_iff_div : StarConvex 𝕜 x s ↔ ∀ ⦃y⦄, y ∈ s →
-    ∀ ⦃a b : 𝕜⦄, 0 ≤ a → 0 ≤ b → 0 < a + b → (a / (a + b)) • x + (b / (a + b)) • y ∈ s :=
+    ∀ ⦃a b : 𝕜⦄, 0 ≤ a → 0 ≤ b → ∀ _ : 0 < a + b, (a / (a + b)) • x + (b / (a + b)) • y ∈ s :=
   ⟨fun h y hy a b ha hb hab => by
     apply h hy
     · positivity
     · positivity
     · rw [← add_div]
-      exact div_self hab.ne',
+      exact div_self,
   fun h y hy a b ha hb hab => by
-    have h' := h hy ha hb
-    rw [hab, div_one, div_one] at h'
-    exact h' zero_lt_one⟩
+    have h' := h hy ha hb (hab ▸ zero_lt_one)
+    simpa only [hab, div_one₀] using h'⟩
 
 theorem StarConvex.mem_smul (hs : StarConvex 𝕜 0 s) (hx : x ∈ s) {t : 𝕜} (ht : 1 ≤ t) :
     x ∈ t • s := by

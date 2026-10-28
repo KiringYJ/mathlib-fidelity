@@ -237,8 +237,8 @@ protected theorem continuous (f : NormedAddGroupHom V₁ V₂) : Continuous f :=
 instance : ContinuousMapClass (NormedAddGroupHom V₁ V₂) V₁ V₂ where
   map_continuous := fun f => f.continuous
 
-theorem ratio_le_opNorm (x : V₁) : ‖f x‖ / ‖x‖ ≤ ‖f‖ :=
-  div_le_of_le_mul₀ (norm_nonneg _) f.opNorm_nonneg (le_opNorm _ _)
+theorem ratio_le_opNorm (x : V₁) {hx : IsUnit ‖x‖} : ‖f x‖ / ‖x‖ ≤ ‖f‖ :=
+  (div_le_iff₀ ((norm_nonneg x).lt_of_ne hx.ne_zero.symm)).2 (le_opNorm _ _)
 
 /-- If one controls the norm of every `f x`, then one controls the norm of `f`. -/
 theorem opNorm_le_bound {M : ℝ} (hMp : 0 ≤ M) (hM : ∀ x, ‖f x‖ ≤ M * ‖x‖) : ‖f‖ ≤ M :=
@@ -368,8 +368,8 @@ theorem norm_id_le : ‖(id V : NormedAddGroupHom V V)‖ ≤ 1 :=
 theorem norm_id [NontrivialTopology V] : ‖id V‖ = 1 :=
   le_antisymm (norm_id_le V) <| by
     let ⟨x, hx⟩ := exists_norm_ne_zero V
-    have := (id V).ratio_le_opNorm x
-    rwa [id_apply, div_self hx] at this
+    have := (id V).ratio_le_opNorm x (hx := hx.isUnit)
+    rwa [id_apply, div_self] at this
 
 theorem coe_id : (NormedAddGroupHom.id V : V → V) = _root_.id :=
   rfl

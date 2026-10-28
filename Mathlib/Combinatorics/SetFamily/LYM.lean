@@ -89,13 +89,17 @@ theorem local_lubell_yamamoto_meshalkin_inequality_mul (h𝒜 : (𝒜 : Set (Fin
 alias card_mul_le_card_shadow_mul := local_lubell_yamamoto_meshalkin_inequality_mul
 
 /-- The downward **local LYM inequality**. `𝒜` takes up less of `α^(r)` (the finsets of card `r`)
-than `∂𝒜` takes up of `α^(r - 1)`. -/
-theorem local_lubell_yamamoto_meshalkin_inequality_div (hr : r ≠ 0)
+than `∂𝒜` takes up of `α^(r - 1)`.
+
+The proportion of `α^(r)` is defined when this layer is nonempty, that is, when `r ≤ card α`;
+then the layer `α^(r - 1)` is nonempty as well. -/
+theorem local_lubell_yamamoto_meshalkin_inequality_div
+    {hb : IsUnit ((Fintype.card α).choose r : 𝕜)} (hr : r ≠ 0)
     (h𝒜 : (𝒜 : Set (Finset α)).Sized r) : (#𝒜 : 𝕜) / (Fintype.card α).choose r
-    ≤ #(∂ 𝒜) / (Fintype.card α).choose (r - 1) := by
-  obtain hr' | hr' := lt_or_ge (Fintype.card α) r
-  · rw [choose_eq_zero_of_lt hr', cast_zero, div_zero]
-    exact div_nonneg (cast_nonneg _) (cast_nonneg _)
+    ≤ Checked.div (#(∂ 𝒜) : 𝕜) ((Fintype.card α).choose (r - 1))
+      (Nat.cast_ne_zero.2 <| choose_ne_zero <| (r.sub_le 1).trans <|
+        choose_ne_zero_iff.1 <| Nat.cast_ne_zero.1 hb.ne_zero).isUnit := by
+  have hr' : r ≤ Fintype.card α := choose_ne_zero_iff.1 <| Nat.cast_ne_zero.1 hb.ne_zero
   replace h𝒜 := local_lubell_yamamoto_meshalkin_inequality_mul h𝒜
   rw [div_le_div_iff₀] <;> norm_cast
   · rcases r with - | r
@@ -170,23 +174,27 @@ theorem IsAntichain.disjoint_slice_shadow_falling {m n : ℕ}
     rintro rfl
     exact notMem_erase _ _ (hst ha)
 
-/-- A bound on any top part of the sum in LYM in terms of the size of `falling k 𝒜`. -/
+/-- A bound on any top part of the sum in LYM in terms of the size of `falling k 𝒜`. The layers
+`α^(card α - r)` are nonempty, so all their proportions are defined. -/
 theorem le_card_falling_div_choose [Fintype α] (hk : k ≤ Fintype.card α)
     (h𝒜 : IsAntichain (· ⊆ ·) (𝒜 : Set (Finset α))) :
     (∑ r ∈ range (k + 1),
-        (#(𝒜 # (Fintype.card α - r)) : 𝕜) / (Fintype.card α).choose (Fintype.card α - r)) ≤
-      (falling (Fintype.card α - k) 𝒜).card / (Fintype.card α).choose (Fintype.card α - k) := by
+        Checked.div (#(𝒜 # (Fintype.card α - r)) : 𝕜)
+          ((Fintype.card α).choose (Fintype.card α - r))
+          (Nat.cast_ne_zero.2 <| choose_ne_zero <| Nat.sub_le _ _).isUnit) ≤
+      Checked.div ((falling (Fintype.card α - k) 𝒜).card : 𝕜)
+        ((Fintype.card α).choose (Fintype.card α - k))
+        (Nat.cast_ne_zero.2 <| choose_ne_zero <| Nat.sub_le _ _).isUnit := by
   induction k with
   | zero =>
-    simp only [cast_one, cast_le, sum_singleton, div_one, choose_self, range_one,
-      zero_add, range_one, sum_singleton,
-      choose_self, cast_one, div_one, cast_le, tsub_zero]
+    simp only [zero_add, range_one, sum_singleton, tsub_zero, choose_self, cast_one, div_one₀,
+      cast_le]
     exact card_le_card (slice_subset_falling _ _)
   | succ k ih =>
     rw [sum_range_succ, ← slice_union_shadow_falling_succ,
       card_union_of_disjoint (IsAntichain.disjoint_slice_shadow_falling h𝒜),
-      cast_add, _root_.add_div, add_comm]
-    rw [← tsub_tsub, tsub_add_cancel_of_le (le_tsub_of_add_le_left hk)]
+      cast_add, add_div, add_comm]
+    simp only [← tsub_tsub, tsub_add_cancel_of_le (le_tsub_of_add_le_left hk)]
     grw [ih <| le_of_succ_le hk, local_lubell_yamamoto_meshalkin_inequality_div
       (tsub_pos_iff_lt.2 <| Nat.succ_le_iff.1 hk).ne' <| sized_falling _ _]
 
@@ -197,18 +205,31 @@ variable [Fintype α] {𝒜 : Finset (Finset α)}
 /-- The **Lubell-Yamamoto-Meshalkin inequality**, also known as the **LYM inequality**.
 
 If `𝒜` is an antichain, then the sum of the proportion of elements it takes from each layer is less
-than `1`. -/
+than `1`. The proportion of the layer `α^(r)` is a quotient by `(card α).choose r`, which is taken
+on the set `range (card α + 1)` of cardinalities whose layers are nonempty; the sum is indexed by
+this set. -/
 theorem lubell_yamamoto_meshalkin_inequality_sum_card_div_choose
     (h𝒜 : IsAntichain (· ⊆ ·) (𝒜 : Set (Finset α))) :
-    ∑ r ∈ range (Fintype.card α + 1), (#(𝒜 # r) / (Fintype.card α).choose r : 𝕜) ≤ 1 := by
+    ∑ r : range (Fintype.card α + 1), Checked.div (#(𝒜 # r) : 𝕜) ((Fintype.card α).choose r)
+      (Nat.cast_ne_zero.2 <| choose_ne_zero <| Nat.le_of_lt_succ <| mem_range.1 r.2).isUnit
+      ≤ 1 := by
   classical
-    rw [← sum_flip]
-    refine (le_card_falling_div_choose le_rfl h𝒜).trans ?_
-    rw [div_le_iff₀] <;> norm_cast
-    · simpa only [Nat.sub_self, one_mul, Nat.choose_zero_right, falling] using
-        Set.Sized.card_le (sized_falling 0 𝒜)
-    · rw [tsub_self, choose_zero_right]
-      exact zero_lt_one
+  let G (r : ℕ) : 𝕜 := Checked.div (#(𝒜 # (Fintype.card α - r)) : 𝕜)
+    ((Fintype.card α).choose (Fintype.card α - r))
+    (Nat.cast_ne_zero.2 <| choose_ne_zero <| Nat.sub_le _ _).isUnit
+  calc
+    _ = ∑ r : range (Fintype.card α + 1), G (Fintype.card α - r) := by
+      refine sum_congr rfl fun r _ ↦ ?_
+      simp only [G, Nat.sub_sub_self (Nat.le_of_lt_succ <| mem_range.1 r.2)]
+    _ = ∑ r ∈ range (Fintype.card α + 1), G r :=
+      (sum_coe_sort _ fun r ↦ G (Fintype.card α - r)).trans (sum_flip G)
+    _ ≤ _ := le_card_falling_div_choose le_rfl h𝒜
+    _ ≤ 1 := by
+      rw [div_le_iff₀] <;> norm_cast
+      · simpa only [Nat.sub_self, one_mul, Nat.choose_zero_right, falling] using
+          Set.Sized.card_le (sized_falling 0 𝒜)
+      · rw [tsub_self, choose_zero_right]
+        exact zero_lt_one
 
 @[inherit_doc lubell_yamamoto_meshalkin_inequality_sum_card_div_choose]
 alias sum_card_slice_div_choose_le_one := lubell_yamamoto_meshalkin_inequality_sum_card_div_choose
@@ -218,13 +239,22 @@ alias sum_card_slice_div_choose_le_one := lubell_yamamoto_meshalkin_inequality_s
 If `𝒜` is an antichain, then the sum of `(#α.choose #s)⁻¹` over `s ∈ 𝒜` is less than `1`. -/
 theorem lubell_yamamoto_meshalkin_inequality_sum_inv_choose
     (h𝒜 : IsAntichain (· ⊆ ·) (SetLike.coe 𝒜)) :
-    ∑ s ∈ 𝒜, ((Fintype.card α).choose #s : 𝕜)⁻¹ ≤ 1 := by
+    ∑ s ∈ 𝒜, Checked.inv ((Fintype.card α).choose #s : 𝕜)
+      (Nat.cast_ne_zero.2 <| choose_ne_zero s.card_le_univ).isUnit ≤ 1 := by
+  classical
+  have hc (r : range (Fintype.card α + 1)) : IsUnit ((Fintype.card α).choose r : 𝕜) :=
+    (Nat.cast_ne_zero.2 <| choose_ne_zero <| Nat.le_of_lt_succ <| mem_range.1 r.2).isUnit
+  let g (s : Finset α) : range (Fintype.card α + 1) :=
+    ⟨#s, mem_range.2 <| Nat.lt_succ_of_le s.card_le_univ⟩
   calc
-    _ = ∑ r ∈ range (Fintype.card α + 1),
-        ∑ s ∈ 𝒜 with #s = r, ((Fintype.card α).choose r : 𝕜)⁻¹ := by
-      rw [sum_fiberwise_of_maps_to']; simp [card_le_univ]
-    _ = ∑ r ∈ range (Fintype.card α + 1), (#(𝒜 # r) / (Fintype.card α).choose r : 𝕜) := by
-      simp [slice, div_eq_mul_inv]
+    _ = ∑ r : range (Fintype.card α + 1),
+          ∑ s ∈ 𝒜 with g s = r, Checked.inv ((Fintype.card α).choose r : 𝕜) (hc r) :=
+      (sum_fiberwise' 𝒜 g fun r ↦ Checked.inv _ (hc r)).symm
+    _ = ∑ r : range (Fintype.card α + 1),
+          Checked.div (#(𝒜 # r) : 𝕜) ((Fintype.card α).choose r) (hc r) := by
+      refine sum_congr rfl fun r _ ↦ ?_
+      have : {s ∈ 𝒜 | g s = r} = 𝒜 # r := by ext s; simp [g, mem_slice, Subtype.ext_iff]
+      rw [sum_const, this, nsmul_eq_mul, div_eq_mul_inv₀]
     _ ≤ 1 := lubell_yamamoto_meshalkin_inequality_sum_card_div_choose h𝒜
 
 /-! ### Sperner's theorem -/
@@ -235,13 +265,11 @@ theorem _root_.IsAntichain.sperner (h𝒜 : IsAntichain (· ⊆ ·) (SetLike.coe
     #𝒜 ≤ (Fintype.card α).choose (Fintype.card α / 2) := by
   have : 0 < ((Fintype.card α).choose (Fintype.card α / 2) : ℚ≥0) :=
     Nat.cast_pos.2 <| choose_pos (Nat.div_le_self _ _)
-  have h := calc
-    ∑ s ∈ 𝒜, ((Fintype.card α).choose (Fintype.card α / 2) : ℚ≥0)⁻¹
-    _ ≤ ∑ s ∈ 𝒜, ((Fintype.card α).choose #s : ℚ≥0)⁻¹ := by
-      gcongr with s hs
-      · exact mod_cast choose_pos s.card_le_univ
-      · exact choose_le_middle _ _
-    _ ≤ 1 := lubell_yamamoto_meshalkin_inequality_sum_inv_choose h𝒜
+  have h : ∑ s ∈ 𝒜, ((Fintype.card α).choose (Fintype.card α / 2) : ℚ≥0)⁻¹ ≤ 1 := by
+    refine le_trans ?_ (lubell_yamamoto_meshalkin_inequality_sum_inv_choose h𝒜)
+    gcongr with s hs
+    · exact mod_cast choose_pos s.card_le_univ
+    · exact choose_le_middle _ _
   simpa [mul_inv_le_iff₀' this] using h
 
 end LYM

@@ -167,15 +167,16 @@ variable {𝔸 𝔸' : Type*} [NormedRing 𝔸] [NormedCommRing 𝔸'] [NormedAl
   {a b : E → 𝔸} {a' b' : E →L[𝕜] 𝔸} {c d : E → 𝔸'} {c' d' : E →L[𝕜] 𝔸'}
 
 @[to_fun (attr := fun_prop)]
-theorem HasStrictFDerivAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → 𝔸} {coord : D → E} {x : D} (ha : HasStrictFDerivAt a a' x coord)
-    (hb : HasStrictFDerivAt b b' x coord)
+theorem HasStrictFDerivAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → 𝔸} {coord : D → E}
+    {x : D} (ha : HasStrictFDerivAt a a' x coord) (hb : HasStrictFDerivAt b b' x coord)
     (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
     HasStrictFDerivAt (a * b) (a x • b' + a' <• b x) x coord :=
   ((ContinuousLinearMap.mul 𝕜 𝔸).isBoundedBilinearMap.hasStrictFDerivAt (a x, b x)).comp x
     (ha.prodMk hb) hcoord
 
 @[to_fun (attr := fun_prop)]
-theorem HasStrictFDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸'} {coord : D → E} {x : D} (hc : HasStrictFDerivAt c c' x coord) (hd : HasStrictFDerivAt d d' x coord)
+theorem HasStrictFDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸'} {coord : D → E}
+    {x : D} (hc : HasStrictFDerivAt c c' x coord) (hd : HasStrictFDerivAt d d' x coord)
     (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
     HasStrictFDerivAt (c * d) (c x • d' + d x • c') x coord := by
   convert! hc.mul' hd hcoord
@@ -183,7 +184,9 @@ theorem HasStrictFDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸
   apply mul_comm
 
 @[to_fun (attr := fun_prop)]
-theorem HasFDerivWithinAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → 𝔸} {coord : D → E} {x : D} {s : Set D} (ha : HasFDerivWithinAt a a' s x coord) (hb : HasFDerivWithinAt b b' s x coord)
+theorem HasFDerivWithinAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → 𝔸} {coord : D → E}
+    {x : D} {s : Set D} (ha : HasFDerivWithinAt a a' s x coord)
+    (hb : HasFDerivWithinAt b b' s x coord)
     (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id) :
     HasFDerivWithinAt (a * b) (a x • b' + a' <• b x) s x coord := by
   -- `by exact` to solve unification issues.
@@ -191,7 +194,9 @@ theorem HasFDerivWithinAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → �
     (a x, b x)).comp_hasFDerivWithinAt x (ha.prodMk hb) hcoord
 
 @[to_fun (attr := fun_prop)]
-theorem HasFDerivWithinAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸'} {coord : D → E} {x : D} {s : Set D} (hc : HasFDerivWithinAt c c' s x coord) (hd : HasFDerivWithinAt d d' s x coord)
+theorem HasFDerivWithinAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸'} {coord : D → E}
+    {x : D} {s : Set D} (hc : HasFDerivWithinAt c c' s x coord)
+    (hd : HasFDerivWithinAt d d' s x coord)
     (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id) :
     HasFDerivWithinAt (c * d) (c x • d' + d x • c') s x coord := by
   convert! hc.mul' hd hcoord
@@ -199,7 +204,8 @@ theorem HasFDerivWithinAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸
   apply mul_comm
 
 @[to_fun (attr := fun_prop)]
-theorem HasFDerivAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → 𝔸} {coord : D → E} {x : D} (ha : HasFDerivAt a a' x coord) (hb : HasFDerivAt b b' x coord)
+theorem HasFDerivAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → 𝔸} {coord : D → E} {x : D}
+    (ha : HasFDerivAt a a' x coord) (hb : HasFDerivAt b b' x coord)
     (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
     HasFDerivAt (a * b) (a x • b' + a' <• b x) x coord := by
   -- `by exact` to solve unification issues.
@@ -207,7 +213,8 @@ theorem HasFDerivAt.mul' {D : Type*} [TopologicalSpace D] {a b : D → 𝔸} {co
     (a x, b x)).comp x (ha.prodMk hb) hcoord
 
 @[to_fun (attr := fun_prop)]
-theorem HasFDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸'} {coord : D → E} {x : D} (hc : HasFDerivAt c c' x coord) (hd : HasFDerivAt d d' x coord)
+theorem HasFDerivAt.mul {D : Type*} [TopologicalSpace D] {c d : D → 𝔸'} {coord : D → E} {x : D}
+    (hc : HasFDerivAt c c' x coord) (hd : HasFDerivAt d d' x coord)
     (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
     HasFDerivAt (c * d) (c x • d' + d x • c') x coord := by
   convert! hc.mul' hd hcoord
@@ -750,10 +757,12 @@ theorem hasStrictFDerivAt_inv' (x : Rˣ) :
 variable {h : E → R} {z : E} {S : Set E}
 
 @[fun_prop]
-theorem HasFDerivWithinAt.inv {h' : E →L[𝕜] R} (hf : HasFDerivWithinAt h h' S z) (hz : IsUnit (h z)) :
+theorem HasFDerivWithinAt.inv {h' : E →L[𝕜] R} (hf : HasFDerivWithinAt h h' S z)
+    (hz : IsUnit (h z)) :
     HasFDerivWithinAt
       (fun y : {y : E | IsUnit (h y)} ↦ (↑y.property.unit⁻¹ : R))
-      ((-mulLeftRight 𝕜 R ↑hz.unit⁻¹ ↑hz.unit⁻¹).comp h') (Subtype.val ⁻¹' S) ⟨z, hz⟩ (fun y ↦ (y : E)) := by
+      ((-mulLeftRight 𝕜 R ↑hz.unit⁻¹ ↑hz.unit⁻¹).comp h') (Subtype.val ⁻¹' S) ⟨z, hz⟩
+      (fun y ↦ (y : E)) := by
   let D := {y : E | IsUnit (h y)}
   let q : D → Rˣ := fun y ↦ y.property.unit
   have hrestricted :

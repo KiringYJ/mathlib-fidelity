@@ -38,9 +38,7 @@ theorem cast_neg_natCast {R} [DivisionRing R] (n : ℕ) : ((-n : ℤ) : R) = -n 
 
 @[simp]
 theorem cast_div [DivisionRing α] {m n : ℤ} (n_dvd : n ∣ m) (hn : (n : α) ≠ 0) :
-    ((m / n : ℤ) : α) = (m : α) /ₚ Units.mk0 (n : α) hn := by
-  apply eq_divp_iff_mul_eq.mpr
-  change ((m / n : ℤ) : α) * (n : α) = (m : α)
-  rw [← Int.cast_mul, Int.ediv_mul_cancel n_dvd]
+    ((m / n : ℤ) : α) = m / n := by
+  rw [eq_div_iff, ← Int.cast_mul, Int.ediv_mul_cancel n_dvd]
 
 end Int

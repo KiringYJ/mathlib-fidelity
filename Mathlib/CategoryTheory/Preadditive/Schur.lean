@@ -58,22 +58,14 @@ theorem isIso_iff_nonzero [HasKernels C] {X Y : C} [Simple X] [Simple Y] (f : X 
     simp only [← IsIso.hom_inv_id f, h, zero_comp],
    fun w => isIso_of_hom_simple w⟩
 
-open scoped Classical in
 /-- In any preadditive category with kernels,
-the endomorphisms of a simple object form a division ring. -/
+the endomorphisms of a simple object form a division ring: by Schur's lemma, a nonzero
+endomorphism is an isomorphism. -/
 noncomputable instance [HasKernels C] {X : C} [Simple X] : DivisionRing (End X) where
-  inv f := if h : f = 0 then 0 else haveI := isIso_of_hom_simple h; inv f
   exists_pair_ne := ⟨𝟙 X, 0, id_nonzero _⟩
-  inv_zero := dite_eq_left rfl
-  mul_inv_cancel f hf := by
-    dsimp
-    rw [dite_eq_right hf]
-    have := isIso_of_hom_simple hf
-    exact IsIso.inv_hom_id f
-  nnqsmul := _
-  nnqsmul_def := fun _ _ => rfl
-  qsmul := _
-  qsmul_def := fun _ _ => rfl
+  isUnit_of_ne_zero {f} hf :=
+    haveI := isIso_of_hom_simple hf
+    ⟨⟨f, inv f, IsIso.inv_hom_id f, IsIso.hom_inv_id f⟩, rfl⟩
 
 open Module
 

@@ -30,15 +30,14 @@ noncomputable def toEuclideanDomain : EuclideanDomain K := by
   classical
   exact
     { toCommRing := toCommRing
-      quotient := fun a b => if hb : b = 0 then 0 else a /ₚ Units.mk0 b hb
+      quotient := fun a b => if hb : b = 0 then 0 else a / b
       remainder := fun a b => if b = 0 then a else 0
       quotient_zero := fun a => by simp
       quotient_mul_add_remainder_eq := fun a b => by
         by_cases hb : b = 0
         · simp [hb]
         · simp only [dite_eq_right hb, ite_eq_right hb, add_zero]
-          rw [mul_comm]
-          simpa only [Units.val_mk0] using divp_mul_cancel a (Units.mk0 b hb)
+          exact mul_div_cancel₀ a
       r := fun a b => a = 0 ∧ b ≠ 0
       r_wellFounded :=
         WellFounded.intro fun _ =>
@@ -54,9 +53,9 @@ protected theorem mod_eq (a b : K) : a % b = if b = 0 then a else 0 := by
   classical
   rfl
 
-/-- Euclidean quotient agrees with unit division for a nonzero divisor. -/
-protected theorem quotient_eq_divp (a : K) {b : K} (hb : b ≠ 0) :
-    EuclideanDomain.quotient a b = a /ₚ Units.mk0 b hb := by
+/-- Euclidean quotient agrees with field division for a nonzero divisor. -/
+protected theorem quotient_eq_div (a : K) {b : K} (hb : b ≠ 0) :
+    EuclideanDomain.quotient a b = a / b := by
   classical
   exact dite_eq_right hb
 

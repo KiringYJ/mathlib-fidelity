@@ -666,8 +666,7 @@ theorem uniformity_basis_dist :
 /-- Given `f : β → ℝ`, if `f` sends `{i | p i}` to a set of positive numbers
 accumulating to zero, then `f i`-neighborhoods of the diagonal form a basis of `𝓤 α`.
 
-For specific bases see `uniformity_basis_dist`, `uniformity_basis_dist_inv_nat_succ`,
-and `uniformity_basis_dist_inv_nat_pos`. -/
+For specific bases see `uniformity_basis_dist` and `uniformity_basis_dist_inv_nat_succ`. -/
 protected theorem mk_uniformity_basis {β : Type*} {p : β → Prop} {f : β → ℝ}
     (hf₀ : ∀ i, p i → 0 < f i) (hf : ∀ ⦃ε⦄, 0 < ε → ∃ i, p i ∧ f i ≤ ε) :
     (𝓤 α).HasBasis p fun i => { p : α × α | dist p.1 p.2 < f i } := by
@@ -688,12 +687,6 @@ theorem uniformity_basis_dist_inv_nat_succ :
     (𝓤 α).HasBasis (fun _ => True) fun n : ℕ => { p : α × α | dist p.1 p.2 < 1 / (↑n + 1) } :=
   Metric.mk_uniformity_basis (fun n _ => div_pos zero_lt_one <| Nat.cast_add_one_pos n) fun _ε ε0 =>
     (exists_nat_one_div_lt ε0).imp fun _n hn => ⟨trivial, le_of_lt hn⟩
-
-theorem uniformity_basis_dist_inv_nat_pos :
-    (𝓤 α).HasBasis (fun n : ℕ => 0 < n) fun n : ℕ => { p : α × α | dist p.1 p.2 < 1 / ↑n } :=
-  Metric.mk_uniformity_basis (fun _ hn => div_pos zero_lt_one <| Nat.cast_pos.2 hn) fun _ ε0 =>
-    let ⟨n, hn⟩ := exists_nat_one_div_lt ε0
-    ⟨n + 1, Nat.succ_pos n, mod_cast hn.le⟩
 
 theorem uniformity_basis_dist_pow {r : ℝ} (h0 : 0 < r) (h1 : r < 1) :
     (𝓤 α).HasBasis (fun _ : ℕ => True) fun n : ℕ => { p : α × α | dist p.1 p.2 < r ^ n } :=
@@ -734,12 +727,6 @@ theorem uniformity_basis_dist_le_inv_nat_succ :
     (𝓤 α).HasBasis (fun _ => True) fun n : ℕ => { p : α × α | dist p.1 p.2 ≤ 1 / (↑n + 1) } :=
   Metric.mk_uniformity_basis_le (fun n _ => div_pos zero_lt_one <| Nat.cast_add_one_pos n)
     fun _ε ε0 => (exists_nat_one_div_lt ε0).imp fun _n hn => ⟨trivial, hn.le⟩
-
-theorem uniformity_basis_dist_le_inv_nat_pos :
-    (𝓤 α).HasBasis (fun n : ℕ => 0 < n) fun n : ℕ => { p : α × α | dist p.1 p.2 ≤ 1 / ↑n } :=
-  Metric.mk_uniformity_basis_le (fun n hn => div_pos zero_lt_one <| Nat.cast_pos.2 hn) fun _ε ε0 =>
-    let ⟨n, hn⟩ := exists_nat_one_div_lt ε0
-    ⟨n + 1, n.succ_pos, by simpa using hn.le⟩
 
 theorem uniformity_basis_dist_le_pow {r : ℝ} (h0 : 0 < r) (h1 : r < 1) :
     (𝓤 α).HasBasis (fun _ : ℕ => True) fun n : ℕ => { p : α × α | dist p.1 p.2 ≤ r ^ n } :=
@@ -813,17 +800,9 @@ theorem nhds_basis_ball_inv_nat_succ :
     (𝓝 x).HasBasis (fun _ => True) fun n : ℕ => ball x (1 / (↑n + 1)) :=
   nhds_basis_uniformity uniformity_basis_dist_inv_nat_succ
 
-theorem nhds_basis_ball_inv_nat_pos :
-    (𝓝 x).HasBasis (fun n => 0 < n) fun n : ℕ => ball x (1 / ↑n) :=
-  nhds_basis_uniformity uniformity_basis_dist_inv_nat_pos
-
 theorem nhds_basis_closedBall_inv_nat_succ :
     (𝓝 x).HasBasis (fun _ => True) fun n : ℕ => closedBall x (1 / (↑n + 1)) :=
   nhds_basis_uniformity uniformity_basis_dist_le_inv_nat_succ
-
-theorem nhds_basis_closedBall_inv_nat_pos :
-    (𝓝 x).HasBasis (fun n => 0 < n) fun n : ℕ => closedBall x (1 / ↑n) :=
-  nhds_basis_uniformity uniformity_basis_dist_le_inv_nat_pos
 
 theorem nhds_basis_ball_pow {r : ℝ} (h0 : 0 < r) (h1 : r < 1) :
     (𝓝 x).HasBasis (fun _ => True) fun n : ℕ => ball x (r ^ n) :=

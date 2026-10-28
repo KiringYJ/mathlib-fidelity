@@ -75,10 +75,9 @@ protected theorem ext {e e' : X ≃ᵈ Y} (h : ∀ x, e x = e' x) : e = e' :=
 def symm (e : X ≃ᵈ Y) : Y ≃ᵈ X where
   toEquiv := e.1.symm
   edist_eq' := by
-    refine ⟨(ratio e)⁻¹, inv_ne_zero <| ratio_ne_zero e, e.surjective.forall₂.2 fun x y ↦ ?_⟩
+    refine ⟨(ratio e)⁻¹, inv_ne_zero, e.surjective.forall₂.2 fun x y ↦ ?_⟩
     simp_rw [Equiv.toFun_as_coe, Equiv.symm_apply_apply, coe_toEquiv, edist_eq]
-    rw [← mul_assoc, ← ENNReal.coe_mul, inv_mul_cancel₀ (ratio_ne_zero e),
-      ENNReal.coe_one, one_mul]
+    rw [← mul_assoc, ← ENNReal.coe_mul, inv_mul_cancel₀, ENNReal.coe_one, one_mul]
 
 @[simp] theorem symm_symm (e : X ≃ᵈ Y) : e.symm.symm = e := rfl
 
@@ -140,7 +139,7 @@ theorem ratio_trans (e : X ≃ᵈ Y) (e' : Y ≃ᵈ Z) : ratio (e.trans e') = ra
 
 @[simp]
 theorem ratio_symm (e : X ≃ᵈ Y) : ratio e.symm = (ratio e)⁻¹ :=
-  eq_inv_of_mul_eq_one_left <| by rw [← ratio_trans, symm_trans_self, ratio_refl]
+  eq_inv_of_mul_eq_one_left₀ <| by rw [← ratio_trans, symm_trans_self, ratio_refl]
 
 instance : Group (X ≃ᵈ X) where
   mul e e' := e'.trans e
@@ -173,8 +172,10 @@ theorem ratio_pow (e : X ≃ᵈ X) (n : ℕ) : ratio (e ^ n) = ratio e ^ n :=
   ratioHom.map_pow _ _
 
 @[simp]
-theorem ratio_zpow (e : X ≃ᵈ X) (n : ℤ) : ratio (e ^ n) = ratio e ^ n :=
-  ratioHom.map_zpow _ _
+theorem ratio_zpow (e : X ≃ᵈ X) (n : ℤ) : ratio (e ^ n) = ratio e ^ n := by
+  cases n with
+  | ofNat k => simp only [Int.ofNat_eq_natCast, zpow_natCast, zpow_natCast₀, ratio_pow]
+  | negSucc k => simp only [zpow_negSucc, ratio_inv, ratio_pow, zpow_negSucc₀]
 
 /-- `DilationEquiv.toEquiv` as a monoid homomorphism. -/
 @[simps]

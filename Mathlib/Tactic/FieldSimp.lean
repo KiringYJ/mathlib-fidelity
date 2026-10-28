@@ -48,7 +48,8 @@ private def atom (iM : Q(CommGroupWithZero $M)) (e : Q($M)) : Normalized iM e :=
 /-- Erase unit-witness bookkeeping from the displayed arithmetic while retaining its proof. -/
 private def simplifyWitnesses (r : Simp.Result) : MetaM Simp.Result := do
   r.mkEqTrans (← simpOnlyNames [``Units.val_mul, ``Units.val_one,
-    ``Units.val_pow_eq_pow_val, ``numeratorUnit_val, ``mul_one, ``one_mul, ``divp_one] r.expr)
+    ``Units.val_pow_eq_pow_val, ``numeratorUnit_val, ``mul_one, ``one_mul, ``divp_one,
+    ``div_one₀] r.expr)
 
 /-- Normalize a field expression while retaining the original denominator certificates. -/
 partial def normalize (iM : Q(CommGroupWithZero $M)) (e : Q($M)) :
@@ -78,7 +79,7 @@ partial def normalize (iM : Q(CommGroupWithZero $M)) (e : Q($M)) :
       have k : Q(ℕ) := mkRawNatLit k
       haveI' : $r =Q Int.ofNat $k := ⟨⟩
       return ⟨q($n ^ $k), q($u ^ $k),
-        q(Eq.trans (Checked.zpow_ofNat $a $k $ha) (normalize_pow $p $k)), true⟩
+        q(Eq.trans (zpow_natCast₀ $a $k) (normalize_pow $p $k)), true⟩
     | .negSucc k =>
       have k : Q(ℕ) := mkRawNatLit k
       haveI' : $r =Q Int.negSucc $k := ⟨⟩
@@ -103,11 +104,12 @@ partial def normalize (iM : Q(CommGroupWithZero $M)) (e : Q($M)) :
     let args := e.getAppArgs
     let fn := e.getAppFn
     if fn.isConstOf ``HAdd.hAdd && args.size == 6 then
-      let _sM : Q(CommSemiring $M) ← synthInstanceQ q(CommSemiring $M)
+      -- Without a compatible commutative semiring structure, the sum is an atom.
+      let .some _sM ← trySynthInstanceQ q(CommSemiring $M) | return atom iM e
       have a : Q($M) := args[4]!
       have b : Q($M) := args[5]!
       assertInstancesCommute
-      guard (← isDefEq e q($a + $b))
+      unless ← isDefEq e q($a + $b) do return atom iM e
       haveI' : $e =Q $a + $b := ⟨⟩
       let ⟨na, u, pa, ca⟩ ← normalize iM a
       let ⟨nb, v, pb, cb⟩ ← normalize iM b
@@ -116,11 +118,13 @@ partial def normalize (iM : Q(CommGroupWithZero $M)) (e : Q($M)) :
       return ⟨q($na * ($v : $M) + $nb * ($u : $M)), q($u * $v),
         p, true⟩
     else if fn.isConstOf ``HSub.hSub && args.size == 6 then
-      let _rM : Q(CommRing $M) ← synthInstanceQ q(CommRing $M)
+      -- A subtraction that is not ring subtraction, such as truncated subtraction in `ℝ≥0`, is an
+      -- atom.
+      let .some _rM ← trySynthInstanceQ q(CommRing $M) | return atom iM e
       have a : Q($M) := args[4]!
       have b : Q($M) := args[5]!
       assertInstancesCommute
-      guard (← isDefEq e q($a - $b))
+      unless ← isDefEq e q($a - $b) do return atom iM e
       haveI' : $e =Q $a - $b := ⟨⟩
       let ⟨na, u, pa, ca⟩ ← normalize iM a
       let ⟨nb, v, pb, cb⟩ ← normalize iM b
@@ -129,10 +133,10 @@ partial def normalize (iM : Q(CommGroupWithZero $M)) (e : Q($M)) :
       return ⟨q($na * ($v : $M) - $nb * ($u : $M)), q($u * $v),
         p, true⟩
     else if fn.isConstOf ``Neg.neg && args.size == 3 then
-      let _rM : Q(Ring $M) ← synthInstanceQ q(Ring $M)
+      let .some _rM ← trySynthInstanceQ q(Ring $M) | return atom iM e
       have a : Q($M) := args[2]!
       assertInstancesCommute
-      guard (← isDefEq e q(-$a))
+      unless ← isDefEq e q(-$a) do return atom iM e
       haveI' : $e =Q -$a := ⟨⟩
       let ⟨n, u, p, c⟩ ← normalize iM a
       if !c then return atom iM e
@@ -146,11 +150,12 @@ def reduceExpr (_disch : ∀ {u : Level} (type : Q(Sort u)), MetaM Q($type))
     (e : Expr) : AtomM Simp.Result := do
   let ⟨_, M, e⟩ ← inferTypeQ' e
   let iM : Q(CommGroupWithZero $M) ← synthInstanceQ q(CommGroupWithZero $M)
-  let r ← normalize iM e
-  guard r.changed
+  let ⟨n, d, p, changed⟩ ← normalize iM e
+  guard changed
+  -- The result is the ordinary quotient by the value of the denominator unit.
   let result : Simp.Result := {
-    expr := q($(r.numerator) /ₚ $(r.denominator))
-    proof? := some r.eqProof
+    expr := q(Checked.div $n ($d : $M) (Units.isUnit $d))
+    proof? := some q(($p).trans (divp_eq_div_val $n $d))
   }
   simplifyWitnesses result
 

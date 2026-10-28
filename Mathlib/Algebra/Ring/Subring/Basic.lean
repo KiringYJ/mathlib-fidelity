@@ -415,7 +415,7 @@ section DivisionRing
 
 variable {K : Type u} [DivisionRing K]
 
-instance instField : Field (center K) where
+noncomputable instance instField : Field (center K) where
   __ := (inferInstance : CommRing (center K))
   exists_pair_ne := ⟨0, 1, fun h => zero_ne_one (congrArg (fun a : center K => (a : K)) h)⟩
   isUnit_of_ne_zero {a} ha := by
@@ -429,12 +429,13 @@ instance instField : Field (center K) where
     exact Set.units_inv_mem_center (a := u) a.property
 
 @[simp]
-theorem center.coe_inv {R : Type*} [Ring R] (u : (center R)ˣ) :
-    (u.inv : R) = (Units.map (center R).subtype.toMonoidHom u).inv := rfl
+theorem center.coe_inv (a : center K) {ha : IsUnit a} : ((a⁻¹ : center K) : K) = (a : K)⁻¹ :=
+  Eq.symm <| inv_eq_of_mul_eq_one_right₀ <| map_mul_eq_one (center K).subtype mul_inv_cancel₀
 
 @[simp]
-theorem center.coe_div {R : Type*} [Ring R] (a : center R) (u : (center R)ˣ) :
-    ((a /ₚ u : center R) : R) = (a : R) /ₚ Units.map (center R).subtype.toMonoidHom u := rfl
+theorem center.coe_div (a b : center K) {hb : IsUnit b} :
+    ((a / b : center K) : K) = (a : K) / (b : K) := by
+  rw [div_eq_mul_inv₀, Subring.coe_mul, center.coe_inv, div_eq_mul_inv₀]
 
 end DivisionRing
 

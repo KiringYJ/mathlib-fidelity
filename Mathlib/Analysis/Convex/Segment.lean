@@ -376,27 +376,30 @@ section LinearOrderedSemifield
 variable [Semifield 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [AddCommGroup E] [Module 𝕜 E]
   {x y z : E}
 
+/-- `x` lies on the closed segment iff it is the combination of `y` and `z` with weights
+`a / (a + b)` and `b / (a + b)` for some `a, b ≥ 0` with `0 < a + b`. -/
 theorem mem_segment_iff_div :
     x ∈ [y -[𝕜] z] ↔
-      ∃ a b : 𝕜, 0 ≤ a ∧ 0 ≤ b ∧ 0 < a + b ∧ (a / (a + b)) • y + (b / (a + b)) • z = x := by
+      ∃ a b : 𝕜, 0 ≤ a ∧ 0 ≤ b ∧ ∃ _ : 0 < a + b, (a / (a + b)) • y + (b / (a + b)) • z = x := by
   constructor
   · rintro ⟨a, b, ha, hb, hab, rfl⟩
-    use a, b, ha, hb
-    simp [*]
+    refine ⟨a, b, ha, hb, hab ▸ zero_lt_one, ?_⟩
+    simp only [hab, div_one₀]
   · rintro ⟨a, b, ha, hb, hab, rfl⟩
     refine ⟨a / (a + b), b / (a + b), by positivity, by positivity, ?_, rfl⟩
-    rw [← add_div, div_self hab.ne']
+    rw [← add_div, div_self]
 
+/-- `x` lies on the open segment iff it is the combination of `y` and `z` with weights
+`a / (a + b)` and `b / (a + b)` for some `a, b > 0`. -/
 theorem mem_openSegment_iff_div : x ∈ openSegment 𝕜 y z ↔
-    ∃ a b : 𝕜, 0 < a ∧ 0 < b ∧ (a / (a + b)) • y + (b / (a + b)) • z = x := by
+    ∃ (a b : 𝕜) (_ : 0 < a) (_ : 0 < b), (a / (a + b)) • y + (b / (a + b)) • z = x := by
   constructor
   · rintro ⟨a, b, ha, hb, hab, rfl⟩
-    use a, b, ha, hb
-    rw [hab, div_one, div_one]
+    refine ⟨a, b, ha, hb, ?_⟩
+    simp only [hab, div_one₀]
   · rintro ⟨a, b, ha, hb, rfl⟩
-    have hab : 0 < a + b := add_pos' ha hb
     refine ⟨a / (a + b), b / (a + b), by positivity, by positivity, ?_, rfl⟩
-    rw [← add_div, div_self hab.ne']
+    rw [← add_div, div_self]
 
 end LinearOrderedSemifield
 
@@ -427,7 +430,7 @@ theorem openSegment_subset_union (x y : E) {z : E} (hz : z ∈ range (lineMap x 
     left
     have hc : 0 < c := h₀.trans hac
     refine ⟨a / c, ⟨div_pos h₀ hc, (div_lt_one hc).2 hac⟩, ?_⟩
-    simp only [← homothety_eq_lineMap, ← homothety_mul_apply, div_mul_cancel₀ _ hc.ne']
+    simp only [← homothety_eq_lineMap, ← homothety_mul_apply, div_mul_cancel₀]
   · left
     rfl
   · right
@@ -438,7 +441,7 @@ theorem openSegment_subset_union (x y : E) {z : E} (hz : z ∈ range (lineMap x 
       ⟨(a - c) / (1 - c), ⟨div_pos (sub_pos.2 hca) hc, (div_lt_one hc).2 <| sub_lt_sub_right h₁ _⟩,
         ?_⟩
     simp only [← homothety_eq_lineMap, ← homothety_mul_apply, sub_mul, one_mul,
-      div_mul_cancel₀ _ hc.ne', sub_sub_sub_cancel_right]
+      div_mul_cancel₀, sub_sub_sub_cancel_right]
 
 end LinearOrderedField
 
@@ -523,9 +526,9 @@ theorem Icc_subset_segment : Icc x y ⊆ [x -[𝕜] y] := by
   rw [← sub_nonneg] at hxz hyz
   rw [← sub_pos] at h
   refine ⟨(y - z) / (y - x), (z - x) / (y - x), div_nonneg hyz h.le, div_nonneg hxz h.le, ?_, ?_⟩
-  · rw [← add_div, sub_add_sub_cancel, div_self h.ne']
-  · rw [smul_eq_mul, smul_eq_mul, ← mul_div_right_comm, ← mul_div_right_comm, ← add_div,
-      div_eq_iff h.ne', add_comm, sub_mul, sub_mul, mul_comm x, sub_add_sub_cancel, mul_sub]
+  · rw [← add_div, sub_add_sub_cancel, div_self]
+  · rw [smul_eq_mul, smul_eq_mul, ← mul_div_right_comm₀, ← mul_div_right_comm₀, ← add_div,
+      div_eq_iff, add_comm, sub_mul, sub_mul, mul_comm x, sub_add_sub_cancel, mul_sub]
 
 @[simp]
 theorem segment_eq_Icc (h : x ≤ y) : [x -[𝕜] y] = Icc x y :=

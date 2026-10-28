@@ -84,7 +84,7 @@ set_option backward.isDefEq.respectTransparency.types false in
 M to `WithZero (Mˣ ×ₗ Nˣ)`, which is the linearly ordered group with zero that can be identified
 as their product. -/
 @[simps!]
-nonrec def inl : α →*₀o WithZero (αˣ ×ₗ βˣ) where
+noncomputable nonrec def inl : α →*₀o WithZero (αˣ ×ₗ βˣ) where
   __ := (WithZero.map' (toLexMulEquiv ..).toMonoidHom).comp (inl α β)
   monotone' := by simpa using (WithZero.map'_mono (Prod.Lex.toLex_mono)).comp inl_mono
 
@@ -95,7 +95,7 @@ set_option backward.isDefEq.respectTransparency.types false in
 N to `WithZero (Mˣ ×ₗ Nˣ)`, which is the linearly ordered group with zero that can be identified
 as their product. -/
 @[simps!]
-nonrec def inr : β →*₀o WithZero (αˣ ×ₗ βˣ) where
+noncomputable nonrec def inr : β →*₀o WithZero (αˣ ×ₗ βˣ) where
   __ := (WithZero.map' (toLexMulEquiv ..).toMonoidHom).comp (inr α β)
   monotone' := by simpa using (WithZero.map'_mono (Prod.Lex.toLex_mono)).comp inr_mono
 

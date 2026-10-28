@@ -7,7 +7,7 @@ module
 
 public meta import Mathlib.Data.Ineq
 public import Mathlib.Algebra.Field.Defs
-public import Mathlib.Algebra.Order.Field.Checked
+public import Mathlib.Algebra.Order.GroupWithZero.Basic
 public import Mathlib.Algebra.Order.Module.Defs
 public import Mathlib.Data.Ineq
 public meta import Mathlib.Tactic.ToAdditive
@@ -132,17 +132,17 @@ theorem div_eq_const [Div α] (p : a = b) (c : α) : a / c = b / c := p ▸ rfl
 theorem div_le_const [Semifield α] [LinearOrder α] [IsStrictOrderedRing α]
     (p : b ≤ c) {a : α} (ha : 0 ≤ a) (hu : IsUnit a) :
     Checked.div b a hu ≤ Checked.div c a hu :=
-  Checked.div_le_div_of_nonneg_right p ha
+  div_le_div_of_nonneg_right p ha
 
 theorem div_lt_const [Semifield α] [LinearOrder α] [IsStrictOrderedRing α]
     (p : b < c) {a : α} (ha : 0 < a) (hu : IsUnit a) :
     Checked.div b a hu < Checked.div c a hu :=
-  Checked.div_lt_div_of_pos_right p ha
+  div_lt_div_of_pos_right p ha
 
 theorem div_lt_const_weak [Semifield α] [LinearOrder α] [IsStrictOrderedRing α]
     (p : b < c) {a : α} (ha : 0 ≤ a) (hu : IsUnit a) :
     Checked.div b a hu ≤ Checked.div c a hu :=
-  Checked.div_le_div_of_nonneg_right p.le ha
+  div_le_div_of_nonneg_right p.le ha
 
 /-! ### Lemmas constructing the reduction of a goal to a specified built-up hypothesis -/
 

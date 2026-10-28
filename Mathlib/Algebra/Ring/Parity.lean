@@ -419,6 +419,34 @@ lemma neg_one_zpow_eq_ite : (-1 : α) ^ n = if Even n then 1 else -1 := by
 
 end DivisionMonoid
 
+/-! In a monoid without an ambient inverse, `a ^ n` for `n : ℤ` is defined when `n` is nonnegative
+or `a` is invertible, and `-a` is invertible exactly when `a` is. -/
+
+section Monoid
+variable [Monoid α] [HasDistribNeg α] {n : ℤ}
+
+lemma Even.neg_zpow₀ (hn : Even n) (a : α) {h : n < 0 → IsUnit (-a)} :
+    (-a) ^ n = Checked.zpow a n fun hneg ↦ (IsUnit.neg_iff a).mp (h hneg) := by
+  cases n with
+  | ofNat k => exact ((Int.even_coe_nat k).mp hn).neg_pow a
+  | negSucc k =>
+    change Even (-(↑(k + 1) : ℤ)) at hn
+    have hk : Even (k + 1) := (Int.even_coe_nat (k + 1)).mp (even_neg.mp hn)
+    rw [zpow_negSucc₀, zpow_negSucc₀]
+    simp only [hk.neg_pow]
+
+lemma Even.neg_one_zpow₀ (hn : Even n) :
+    Checked.zpow (-1 : α) n (fun _ ↦ isUnit_neg_one) = 1 := by
+  rw [hn.neg_zpow₀, one_zpow₀]
+
+lemma neg_one_zpow_eq_ite₀ :
+    Checked.zpow (-1 : α) n (fun _ ↦ isUnit_neg_one) = if Even n then 1 else -1 := by
+  have hu : isUnit_neg_one.unit = (-1 : αˣ) := Units.ext (by simp)
+  rw [isUnit_neg_one.zpow_eq_val_unit_zpow, hu, neg_one_zpow_eq_ite]
+  split_ifs <;> simp
+
+end Monoid
+
 section CharTwo
 
 -- We state the following theorems in terms of the slightly more general `2 = 0` hypothesis.

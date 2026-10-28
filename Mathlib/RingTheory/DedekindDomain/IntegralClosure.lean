@@ -137,8 +137,8 @@ theorem FiniteDimensional.exists_is_basis_integral :
     invFun := fun x => (algebraMap A L y)⁻¹ * x
     left_inv := ?_
     right_inv := ?_}, ?_⟩
-  · intro x; simp only [inv_mul_cancel_left₀ hy']
-  · intro x; simp only [mul_inv_cancel_left₀ hy']
+  · intro x; simp only [inv_mul_cancel_left₀]
+  · intro x; simp only [mul_inv_cancel_left₀]
   · rintro ⟨x', hx'⟩
     simp only [Algebra.smul_def, Finset.mem_image, Finset.mem_univ,
       true_and] at his'

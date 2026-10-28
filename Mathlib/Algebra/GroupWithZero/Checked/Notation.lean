@@ -10,7 +10,12 @@ public import Mathlib.Algebra.GroupWithZero.Checked
 public import Mathlib.Data.Rat.Init
 
 /-!
-# Checked operations in the ordinary coercion protocol
+# Ordinary notation for inversion and division by invertible elements
+
+In a monoid without an ambient inverse, such as a group with zero or a field, `a⁻¹`, `a / b` and
+`a ^ n` for an integer `n` elaborate to the operations of `Mathlib.Algebra.GroupWithZero.Checked`,
+with invertibility evidence found by `checked_unit`. The same operations are displayed with this
+ordinary notation.
 
 The operator-tree algorithm follows the pinned official Lean elaborator in Lean/Elab/Extra.lean.
 Coercions are chosen for the complete expression before inverse, division, or integer-power
@@ -26,9 +31,14 @@ open Lean Meta Elab Term
 
 private partial def selectedCarrier (carrier : Expr) : TermElabM Bool := do
   let carrier ← instantiateMVars carrier
-  -- Preserve named carriers while looking up instances registered on those names.
+  -- Preserve named carriers while looking up instances registered on those names. The query may
+  -- fail, for example when `GroupWithZero` is not visible from a public declaration; the carrier
+  -- is then not selected.
   if !carrier.hasExprMVar then
-    if (← synthInstance? (← mkAppM ``GroupWithZero #[carrier])).isSome then return true
+    let selected ← try
+        pure (← synthInstance? (← mkAppM ``GroupWithZero #[carrier])).isSome
+      catch _ => pure false
+    if selected then return true
   let reduced ← whnf carrier
   if reduced.isConstOf ``Rat then return true
   match reduced with
@@ -97,18 +107,18 @@ where
           withPushMacroExpansionStack s s' do
             return .macroExpansion macroName s s' (← go s')
         | none => processLeaf s
-
+  -- Binary operators keep both operand trees, except the acted-on side of an action.
   processBinOp (ref : Syntax) (kind : BinOpKind) (f lhs rhs : Syntax) := do
     let some f ← resolveId? f | throwUnknownConstantAt f f.getId
     -- treat corresponding argument as leaf for `leftact/rightact`
     let lhs ← if kind == .leftact then processLeaf lhs else go lhs
     let rhs ← if kind == .rightact then processLeaf rhs else go rhs
     return .binop ref kind f lhs rhs
-
+  -- Unary operators keep their operand tree.
   processUnOp (ref : Syntax) (f arg : Syntax) := do
     let some f ← resolveId? f | throwUnknownConstantAt f f.getId
     return .unop ref f (← go arg)
-
+  -- Leaves are elaborated without an expected type, as in the official elaborator.
   processLeaf (s : Syntax) := do
     let e ← elabTerm s none
     let info ← getResetInfoTrees
@@ -186,8 +196,26 @@ private def checkedApp (name : Name) (args : Array Expr) : TermElabM Expr := do
   elabAppArgs (← mkConstWithFreshMVarLevels name) #[] (args.map Arg.expr)
     none (explicit := false) (ellipsis := false) (resultIsOutParamSupport := false)
 
+/-- Whether an instance exists. A query that is stuck on metavariables counts as absent; it must
+not escape as an internal exception. -/
 private def hasInstance (name : Name) (args : Array Expr) : TermElabM Bool := do
-  return (← synthInstance? (← mkAppM name args)).isSome
+  try
+    return (← synthInstance? (← mkAppM name args)).isSome
+  catch _ =>
+    return false
+
+/-- The type of an operand of a checked operation can still be a metavariable, for instance the
+output type of a power whose exponent type is pending a default instance. When the operator tree
+has a known uniform type that is a checked carrier, the operand has that type, as the homogeneous
+instance would eventually require. -/
+private def alignOperandType (maxType? : Option Expr) (type : Expr) : TermElabM Expr := do
+  let type ← instantiateMVars type
+  unless type.hasExprMVar do return type
+  let some maxType := maxType? | return type
+  let maxType ← instantiateMVars maxType
+  if maxType.hasExprMVar then return type
+  unless ← selectedCarrier maxType do return type
+  if ← isDefEqGuarded type maxType then instantiateMVars type else return type
 
 /-- Recover supplied unit data after coercion insertion. Every recovered value is checked
 against the original expression, including the monoid instance used by its operations. -/
@@ -217,11 +245,20 @@ private partial def recoverUnit? (value : Expr) : TermElabM (Option Expr) := do
   let reduced ← withReducible <| whnf value
   if reduced != value then recover reduced else return none
 
-private def mkBinOp (lazy : Bool) (f : Expr) (lhs rhs : Expr) : TermElabM Expr := do
-  let lhsType ← instantiateMVars (← inferType lhs)
-  let rhsType ← instantiateMVars (← inferType rhs)
+private def mkBinOp (maxType? : Option Expr) (lazy : Bool) (f : Expr) (lhs rhs : Expr) :
+    TermElabM Expr := do
+  let mut lhsType ← instantiateMVars (← inferType lhs)
+  let mut rhsType ← instantiateMVars (← inferType rhs)
   if f.isConstOf ``HDiv.hDiv then
-    if lhsType.hasExprMVar || rhsType.hasExprMVar then tryPostpone
+    lhsType ← alignOperandType maxType? lhsType
+    rhsType ← alignOperandType maxType? rhsType
+    -- An operand type with its own division, such as `ℕ`, `ℤ` or a group whose type still has a
+    -- placeholder, decides the operation, so a pending type need not postpone the quotient.
+    let ambient (type : Expr) : TermElabM Bool := do
+      return !(← selectedCarrier type) && (← hasInstance ``HDiv #[type, type, type])
+    if (lhsType.hasExprMVar || rhsType.hasExprMVar) && !(← ambient lhsType) &&
+        !(← ambient rhsType) then
+      tryPostpone
     if ← isDefEqGuarded lhsType rhsType then
       if (← selectedCarrier rhsType) ||
           (!(← hasInstance ``HDiv #[lhsType, rhsType, lhsType]) &&
@@ -230,7 +267,10 @@ private def mkBinOp (lazy : Bool) (f : Expr) (lhs rhs : Expr) : TermElabM Expr :
           return ← mkAppM ``divp #[lhs, u]
         return ← checkedApp ``Checked.div #[lhs, rhs]
   if f.isConstOf ``HPow.hPow && (← whnf rhsType).isConstOf ``Int then
-    if lhsType.hasExprMVar then tryPostpone
+    lhsType ← alignOperandType maxType? lhsType
+    -- A base type with a placeholder postpones the power unless it already has its own integer
+    -- powers, as a group of permutations of a pending subtype has.
+    if lhsType.hasExprMVar && !(← hasInstance ``Pow #[lhsType, rhsType]) then tryPostpone
     if (← selectedCarrier lhsType) ||
         (!(← hasInstance ``Pow #[lhsType, rhsType]) &&
           (← hasInstance ``Monoid #[lhsType])) then
@@ -243,10 +283,10 @@ private def mkBinOp (lazy : Bool) (f : Expr) (lhs rhs : Expr) : TermElabM Expr :
   elabAppArgs f #[] #[Arg.expr lhs, Arg.expr rhs] none
     (explicit := false) (ellipsis := false) (resultIsOutParamSupport := false)
 
-private def mkUnOp (f : Expr) (arg : Expr) : TermElabM Expr := do
+private def mkUnOp (maxType? : Option Expr) (f : Expr) (arg : Expr) : TermElabM Expr := do
   if f.isConstOf ``Inv.inv then
-    let carrier ← instantiateMVars (← inferType arg)
-    if carrier.hasExprMVar then tryPostpone
+    let carrier ← alignOperandType maxType? (← inferType arg)
+    if carrier.hasExprMVar && !(← hasInstance ``Inv #[carrier]) then tryPostpone
     if (← selectedCarrier carrier) ||
         (!(← hasInstance ``Inv #[carrier]) && (← hasInstance ``Monoid #[carrier])) then
       if let some u ← recoverUnit? arg then
@@ -255,23 +295,26 @@ private def mkUnOp (f : Expr) (arg : Expr) : TermElabM Expr := do
   elabAppArgs f #[] #[Arg.expr arg] none
     (explicit := false) (ellipsis := false) (resultIsOutParamSupport := false)
 
-private def toExprCore (t : Tree) : TermElabM Expr := do
+/-- Construct the expression of an operator tree. `maxType?` is the uniform type of the tree,
+when the analysis determined one; it resolves pending operand types of checked operations. -/
+private def toExprCore (t : Tree) (maxType? : Option Expr) : TermElabM Expr := do
   match t with
   | .term _ trees e =>
     modifyInfoState (fun s => { s with trees := s.trees ++ trees }); return e
   | .binop ref kind f lhs rhs =>
     withRef ref <|
       withTermInfoContext' .anonymous ref do
-        mkBinOp (kind == .lazy) f (← toExprCore lhs) (← toExprCore rhs)
+        mkBinOp maxType? (kind == .lazy) f (← toExprCore lhs maxType?)
+          (← toExprCore rhs maxType?)
   | .unop ref f arg =>
     withRef ref <|
       withTermInfoContext' .anonymous ref do
-        mkUnOp f (← toExprCore arg)
+        mkUnOp maxType? f (← toExprCore arg maxType?)
   | .macroExpansion macroName stx stx' nested =>
     withRef stx <|
       withTermInfoContext' macroName stx <|
         withMacroExpansion stx stx' <|
-          toExprCore nested
+          toExprCore nested maxType?
 
 /--
 Auxiliary function to decide whether we should coerce `f`'s argument to `maxType` or not.
@@ -378,7 +421,7 @@ mutual
           return .binop ref kind f (← go lhs f true false) (← go rhs f false false)
         else
           let r ← withRef ref do
-            mkBinOp (kind == .lazy) f (← toExpr lhs none) (← toExpr rhs none)
+            mkBinOp none (kind == .lazy) f (← toExpr lhs none) (← toExpr rhs none)
           let infoTrees ← getResetInfoTrees
           return .term ref infoTrees r
       | .unop ref f arg =>
@@ -405,10 +448,10 @@ mutual
     trace[Elab.binop] "hasUncomparable: {r.hasUncomparable}, \
       hasUnknown: {r.hasUnknown}, maxType: {r.max?}"
     if r.hasUncomparable || r.max?.isNone then
-      let result ← toExprCore tree
+      let result ← toExprCore tree none
       ensureHasType expectedType? result
     else
-      let result ← toExprCore (← applyCoe tree r.max?.get! (isPred := false))
+      let result ← toExprCore (← applyCoe tree r.max?.get! (isPred := false)) r.max?
       unless r.hasUnknown do
         -- Record the resulting maxType calculation.
         -- We can do this when all the types are known, since in this case `hasUncomparable` is
@@ -495,8 +538,8 @@ def elabBinRelCore (noProp : Bool) (stx : Syntax)
       hasUnknown: {r.hasUnknown}, maxType: {r.max?}"
     if r.hasUncomparable || r.max?.isNone then
       -- Use default elaboration strategy + `toBoolIfNecessary`
-      let lhs ← toExprCore lhs
-      let rhs ← toExprCore rhs
+      let lhs ← toExprCore lhs none
+      let rhs ← toExprCore rhs none
       let lhs ← withRef lhsStx <| toBoolIfNecessary lhs
       let rhs ← withRef rhsStx <| toBoolIfNecessary rhs
       let lhsType ← inferType lhs
@@ -509,7 +552,7 @@ def elabBinRelCore (noProp : Bool) (stx : Syntax)
       if noProp then
         if (← withNewMCtxDepth <| isDefEq maxType (mkSort Level.zero)) then
           maxType := Lean.mkConst ``Bool
-      let result ← toExprCore (← applyCoe tree maxType (isPred := true))
+      let result ← toExprCore (← applyCoe tree maxType (isPred := true)) (some maxType)
       trace[Elab.binrel] "result: {result}"
       return result
   | none   => throwUnknownConstantAt stx[1] stx[1].getId
@@ -526,7 +569,65 @@ where
 
 @[term_elab Lean.Parser.Term.binrel_no_prop] def elabBinRelNoProp : TermElab := elabBinRelCore true
 
+/-- The elaboration target of `a⁻¹`. It is a leaf of any surrounding operator tree, as in the
+official elaborator, where `⁻¹` is ordinary notation for `Inv.inv`. -/
+syntax (name := checkedInv) "checked_inv% " term:max : term
+
 macro_rules
-  | `($a⁻¹) => `(unop% Inv.inv $a)
+  | `($a⁻¹) => `(checked_inv% $a)
+
+/-- Elaborate `a⁻¹`. The operand is elaborated against the expected type, as for
+`Inv.inv : α → α`. The checked inverse is used exactly when the operand's type is a checked
+carrier or a monoid without an ambient inverse; supplied unit data gives the inverse unit. -/
+@[term_elab checkedInv] def elabCheckedInv : TermElab := fun stx expectedType? => do
+  match stx with
+  | `(checked_inv% $a) =>
+    let expected? ← match expectedType? with
+      | some type => do
+        let type ← instantiateMVars type
+        pure (if type.hasExprMVar then none else some type)
+      | none => pure none
+    let arg ← match expected? with
+      | some type => elabTermEnsuringType a type
+      | none => elabTerm a none
+    -- A known expected type is the carrier: the operand was checked against it, and its own
+    -- inferred type may only unfold to it, as for a type defined by `def`.
+    let carrier ← match expected? with
+      | some type => pure type
+      | none => instantiateMVars (← inferType arg)
+    if carrier.hasExprMVar && !(← hasInstance ``Inv #[carrier]) then tryPostpone
+    if !carrier.hasExprMVar then
+      if (← selectedCarrier carrier) ||
+          (!(← hasInstance ``Inv #[carrier]) && (← hasInstance ``Monoid #[carrier])) then
+        if let some u ← recoverUnit? arg then
+          return ← mkAppM ``Units.val #[← mkAppM ``Inv.inv #[u]]
+        return ← elabAppArgs (mkApp (← mkConstWithFreshMVarLevels ``Checked.inv) carrier) #[]
+          #[Arg.expr arg] none (explicit := false) (ellipsis := false)
+          (resultIsOutParamSupport := false)
+      return ← elabAppArgs (mkApp (← mkConstWithFreshMVarLevels ``Inv.inv) carrier) #[]
+        #[Arg.expr arg] expectedType? (explicit := false) (ellipsis := false)
+        (resultIsOutParamSupport := false)
+    elabAppArgs (← mkConstWithFreshMVarLevels ``Inv.inv) #[] #[Arg.expr arg] expectedType?
+      (explicit := false) (ellipsis := false) (resultIsOutParamSupport := false)
+  | _ => throwUnsupportedSyntax
 
 end Checked.Elab.Op
+
+namespace Checked.Delab
+
+/-- Display a checked inverse as `a⁻¹`. -/
+@[app_unexpander Checked.inv] def unexpandInv : Lean.PrettyPrinter.Unexpander
+  | `($_ $a $_) => `($a⁻¹)
+  | _ => throw ()
+
+/-- Display checked division as `a / b`. -/
+@[app_unexpander Checked.div] def unexpandDiv : Lean.PrettyPrinter.Unexpander
+  | `($_ $a $b $_) => `($a / $b)
+  | _ => throw ()
+
+/-- Display a checked integer power as `a ^ n`. -/
+@[app_unexpander Checked.zpow] def unexpandZPow : Lean.PrettyPrinter.Unexpander
+  | `($_ $a $n $_) => `($a ^ $n)
+  | _ => throw ()
+
+end Checked.Delab

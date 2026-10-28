@@ -232,6 +232,20 @@ theorem coe_unitsWithZeroEquiv_eq_units_val (γ : (WithZero α)ˣ) :
     ↑(unitsWithZeroEquiv γ) = γ.val := by
   simp only [WithZero.unitsWithZeroEquiv, MulEquiv.coe_mk, Equiv.coe_fn_mk, WithZero.coe_unzero]
 
+@[simp, norm_cast] lemma coe_inv (a : α) : ((a⁻¹ : α) : WithZero α) = (↑a : WithZero α)⁻¹ := by
+  refine (inv_eq_of_mul_eq_one_right₀ ?_).symm
+  rw [← coe_mul, mul_inv_cancel, coe_one]
+
+@[norm_cast] lemma coe_div (a b : α) : ↑(a / b : α) = (a / b : WithZero α) := by
+  rw [div_eq_mul_inv, coe_mul, coe_inv, div_eq_mul_inv₀]
+
+@[simp, norm_cast] lemma coe_zpow (a : α) (n : ℤ) : ↑(a ^ n) = (↑a : WithZero α) ^ n := by
+  have ha : IsUnit (↑a : WithZero α) := (unitsWithZeroEquiv.symm a).isUnit
+  rw [ha.zpow_eq_val_unit_zpow n]
+  have : ha.unit = unitsWithZeroEquiv.symm a := Units.ext ha.unit_spec
+  rw [this, ← map_zpow]
+  rfl
+
 /-- Any group with zero is isomorphic to adjoining `0` to the units of itself. -/
 @[simps]
 noncomputable def withZeroUnitsEquiv {G : Type*} [GroupWithZero G]
@@ -371,28 +385,41 @@ def logEquiv : (Gᵐ⁰)ˣ ≃ G := unitsWithZeroEquiv.toEquiv.trans Multiplicat
 
 lemma logEquiv_unitsMk0 (x : Gᵐ⁰) (hx) : logEquiv (.mk0 x hx) = log x := logEquiv_apply _
 
-/-- Subtraction corresponds to division in the group of nonzero exponential values. -/
-@[simp] lemma expEquiv_sub (a b : G) : expEquiv (a - b) = expEquiv a / expEquiv b := by
-  apply Units.ext
-  change exp (a - b) = exp a * exp (-b)
-  rw [sub_eq_add_neg, exp_add]
+@[simp] lemma inv_exp (a : G) : (exp a)⁻¹ = exp (-a) :=
+  inv_eq_of_mul_eq_one_right₀ <| by rw [← exp_add, add_neg_cancel, exp_zero]
 
-@[simp] lemma expEquiv_neg (a : G) : expEquiv (-a) = (expEquiv a)⁻¹ := Units.ext rfl
+-- This is deliberately not a `simp` lemma: the group structure on `Gᵐ⁰` interacts much worse with
+-- the order relation than the one on `G`, so `exp (-a)` is a better normal form than `(exp a)⁻¹`.
+-- The `simp` lemma pushing `⁻¹` inside `exp` is `WithZero.inv_exp` above.
+lemma exp_neg (a : G) : exp (-a) = (exp a)⁻¹ := (inv_exp a).symm
 
-@[simp] lemma logEquiv_inv (x : (Gᵐ⁰)ˣ) : logEquiv x⁻¹ = -logEquiv x := by
-  obtain ⟨a, rfl⟩ := expEquiv.surjective x
-  rw [← expEquiv_neg]
-  exact expEquiv.left_inv (-a) |>.trans (congr_arg Neg.neg (expEquiv.left_inv a).symm)
+@[simp] lemma exp_sub (a b : G) : exp (a - b) = exp a / exp b := by
+  rw [sub_eq_add_neg, exp_add, exp_neg, div_eq_mul_inv₀]
 
-@[simp] lemma expEquiv_zsmul (n : ℤ) (a : G) :
-    expEquiv (n • a) = expEquiv a ^ n :=
-  map_zpow unitsWithZeroEquiv.symm (Multiplicative.ofAdd a) n
+@[simp]
+lemma log_div {x y : Gᵐ⁰} (hx : x ≠ 0) {hy : IsUnit y} : log (x / y) = log x - log y := by
+  lift x to Multiplicative G using hx
+  lift y to Multiplicative G using hy.ne_zero
+  rw [← coe_div]
+  rfl
 
-@[simp] lemma logEquiv_zpow (x : (Gᵐ⁰)ˣ) (n : ℤ) :
-    logEquiv (x ^ n) = n • logEquiv x := by
-  obtain ⟨a, rfl⟩ := expEquiv.surjective x
-  rw [← expEquiv_zsmul]
-  exact expEquiv.left_inv (n • a) |>.trans (congr_arg (n • ·) (expEquiv.left_inv a).symm)
+@[simp]
+lemma log_inv (x : Gᵐ⁰) {hx : IsUnit x} : log x⁻¹ = -log x := by
+  lift x to Multiplicative G using hx.ne_zero
+  rw [← coe_inv]
+  rfl
+
+@[simp ←] lemma exp_zsmul (n : ℤ) (a : G) : exp (n • a) = exp a ^ n := by
+  rw [exp_eq_coe_ofAdd (n • a), ofAdd_zsmul, coe_zpow]
+  rfl
+
+@[simp]
+lemma log_zpow (x : Gᵐ⁰) (n : ℤ) {h : n < 0 → IsUnit x} : log (x ^ n) = n • log x := by
+  cases n with
+  | ofNat k => simp [log_pow]
+  | negSucc k =>
+    rw [zpow_negSucc₀, log_inv, log_pow]
+    simp
 
 end AddGroup
 end WithZero

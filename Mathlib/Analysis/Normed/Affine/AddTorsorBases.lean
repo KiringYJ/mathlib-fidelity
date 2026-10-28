@@ -87,14 +87,13 @@ theorem IsOpen.exists_between_affineIndependent_span_eq_top {s u : Set P} (hu : 
   obtain ⟨t, ht₁, ht₂, ht₃⟩ := exists_subset_affineIndependent_affineSpan_eq_top h
   have hdist (y : P) (hy : y ∉ s) : 0 < dist y q :=
     dist_pos.mpr (ne_of_mem_of_not_mem hq hy).symm
-  let r (y : P) (hy : y ∉ s) : ℝ :=
-    Checked.div ε (dist y q) (GroupWithZero.isUnit_of_ne_zero (hdist y hy).ne')
-  have hr (y : P) (hy : y ∉ s) : 0 < r y hy := Checked.div_pos ε0 (hdist y hy)
+  let r (y : P) (hy : y ∉ s) : ℝ := ε / dist y q
+  have hr (y : P) (hy : y ∉ s) : 0 < r y hy := div_pos ε0 (hdist y hy)
   have hf (y : P) (hy : y ∉ s) : lineMap q y (r y hy) ∈ u := by
     apply hεu
     rw [Metric.mem_closedBall, lineMap_apply, dist_vadd_left, norm_smul, Real.norm_eq_abs,
       abs_of_pos (hr y hy), ← dist_eq_norm_vsub V y q]
-    exact (Checked.div_mul_cancel ε (dist y q) _).le
+    exact (div_mul_cancel₀ ε).le
   classical
   let w : t → ℝˣ := fun p =>
     if hp : (p : P) ∈ s then 1 else Units.mk0 (r p hp) (hr p hp).ne'
@@ -137,11 +136,8 @@ theorem AffineBasis.centroid_mem_interior_convexHull {ι} [Fintype ι] (b : Affi
   rw [b.interior_convexHull]
   change ∀ i, 0 < b.coord i (Finset.univ.centroid ℝ b hs)
   intro i
-  rw [b.coord_apply_centroid (Finset.mem_univ i) hs]
-  apply (Units.inv_pos _).mpr
-  simpa only [Units.val_mk0] using
-    (Nat.cast_pos.mpr (Finset.card_pos.mpr Finset.univ_nonempty) :
-      (0 : ℝ) < (Finset.univ : Finset ι).card)
+  rw [b.coord_apply_centroid (Finset.mem_univ i)]
+  exact inv_pos_of_pos (Nat.cast_pos.mpr (Finset.card_pos.mpr Finset.univ_nonempty))
 
 theorem interior_convexHull_nonempty_iff_affineSpan_eq_top [FiniteDimensional ℝ V] {s : Set V} :
     (interior (convexHull ℝ s)).Nonempty ↔ affineSpan ℝ s = ⊤ := by

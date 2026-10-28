@@ -32,7 +32,8 @@ contains a unique prime field: it is the smallest field contained in `K`.
 public section
 
 instance : Subsingleton (Subfield ℚ) :=
-  subsingleton_of_top_le_bot fun x _ ↦ by simpa using SubfieldClass.ratCast_mem (⊥ : Subfield ℚ) x
+  subsingleton_of_top_le_bot fun x _ ↦ by
+    simpa only [Rat.cast_def, Rat.num_div_den] using SubfieldClass.ratCast_mem (⊥ : Subfield ℚ) x
 
 instance (p : ℕ) [hp : Fact (Nat.Prime p)] : Subsingleton (Subfield (ZMod p)) :=
   subsingleton_of_top_le_bot fun x _ ↦ by simpa using natCast_mem (⊥ : Subfield (ZMod p)) x.val

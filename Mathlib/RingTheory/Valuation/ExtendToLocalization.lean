@@ -52,10 +52,10 @@ noncomputable def Valuation.extendToLocalization : Valuation B Γ :=
 
 @[simp]
 theorem Valuation.extendToLocalization_mk' (x : A) (y : S) :
-    (v.extendToLocalization hS B) (IsLocalization.mk' _ x y) = v x * (v y)⁻¹ :=
-  (Submonoid.LocalizationMap.lift_mk' _ _ _ _).trans (by
-    simp [IsUnit.coe_liftRight (v.toMonoidWithZeroHom.domRestrict S)
-      (fun y ↦ isUnit_iff_ne_zero.2 (hS y.2)) y])
+    (v.extendToLocalization hS B) (IsLocalization.mk' _ x y) =
+      v x * Checked.inv (v y) (isUnit_iff_ne_zero.2 (hS y.2)) :=
+  (Submonoid.LocalizationMap.lift_mk' _ _ _ _).trans <| congrArg (v x * ·)
+    (inv_eq_val_inv_of_eq_val₀ _ (IsUnit.coe_liftRight _ _ y).symm).symm
 
 @[simp]
 theorem Valuation.extendToLocalization_apply_map_apply (a : A) :

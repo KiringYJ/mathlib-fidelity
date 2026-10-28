@@ -725,7 +725,7 @@ lemma AnalyticWithinAt.zpow_nonneg {f : E → 𝕝} {z : E} {s : Set E} {n : ℤ
     AnalyticWithinAt 𝕜
       (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) s z := by
   lift n to ℕ using hn
-  simpa only [Checked.zpow_ofNat, Pi.pow_apply] using hf.pow n
+  simpa only [zpow_natCast₀, Pi.pow_apply] using hf.pow n
 
 /-- Nonnegative integer powers of an analytic function are analytic, including at its zeros. -/
 lemma AnalyticAt.zpow_nonneg {f : E → 𝕝} {z : E} {n : ℤ}
@@ -733,7 +733,7 @@ lemma AnalyticAt.zpow_nonneg {f : E → 𝕝} {z : E} {n : ℤ}
     AnalyticAt 𝕜
       (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) z := by
   lift n to ℕ using hn
-  simpa only [Checked.zpow_ofNat, Pi.pow_apply] using hf.pow n
+  simpa only [zpow_natCast₀, Pi.pow_apply] using hf.pow n
 
 /-- Nonnegative integer powers of an analytic function are analytic, including at its zeros. -/
 lemma AnalyticOn.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ}
@@ -741,7 +741,7 @@ lemma AnalyticOn.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ}
     AnalyticOn 𝕜
       (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) s := by
   lift n to ℕ using hn
-  simpa only [Checked.zpow_ofNat, Pi.pow_apply] using hf.pow n
+  simpa only [zpow_natCast₀, Pi.pow_apply] using hf.pow n
 
 /-- Nonnegative integer powers of an analytic function are analytic, including at its zeros. -/
 lemma AnalyticOnNhd.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ}
@@ -749,7 +749,7 @@ lemma AnalyticOnNhd.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ}
     AnalyticOnNhd 𝕜
       (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) s := by
   lift n to ℕ using hn
-  simpa only [Checked.zpow_ofNat, Pi.pow_apply] using hf.pow n
+  simpa only [zpow_natCast₀, Pi.pow_apply] using hf.pow n
 
 /-!
 ### Composition with a linear map

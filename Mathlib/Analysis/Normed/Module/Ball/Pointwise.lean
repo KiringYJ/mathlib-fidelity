@@ -45,8 +45,8 @@ theorem ediam_smul₀ (c : 𝕜) (s : Set E) : ediam (c • s) = ‖c‖₊ • 
     · simp
     simp [zero_smul_set hs, ← Set.singleton_zero]
   · have := (lipschitzWith_smul c⁻¹).ediam_image_le (c • s)
-    rwa [← smul_eq_mul, ← ENNReal.smul_def, Set.image_smul, inv_smul_smul₀ hc s, nnnorm_inv,
-      le_inv_smul_iff_of_pos (nnnorm_pos.2 hc)] at this
+    rwa [← smul_eq_mul, ← ENNReal.smul_def, Set.image_smul, inv_smul_smul₀ (ha := hc.isUnit) s,
+      nnnorm_inv, le_inv_smul_iff_of_pos (nnnorm_pos.2 hc)] at this
 
 theorem diam_smul₀ (c : 𝕜) (x : Set E) : diam (c • x) = ‖c‖ * diam x := by
   simp_rw [diam, ediam_smul₀, ENNReal.toReal_smul, NNReal.smul_def, coe_nnnorm, smul_eq_mul]
@@ -55,7 +55,7 @@ theorem infEDist_smul₀ {c : 𝕜} (hc : c ≠ 0) (s : Set E) (x : E) :
     infEDist (c • x) (c • s) = ‖c‖₊ • infEDist x s := by
   simp_rw [infEDist]
   have : Function.Surjective ((c • ·) : E → E) :=
-    Function.RightInverse.surjective (smul_inv_smul₀ hc)
+    Function.RightInverse.surjective (smul_inv_smul₀ (ha := hc.isUnit))
   trans ⨅ (y) (_ : y ∈ s), ‖c‖₊ • edist x y
   · refine (this.iInf_congr _ fun y => ?_).symm
     simp_rw [smul_mem_smul_set_iff₀ hc, edist_smul₀]
@@ -79,7 +79,7 @@ variable [SeminormedAddCommGroup E] [NormedSpace 𝕜 E]
 theorem smul_ball {c : 𝕜} (hc : c ≠ 0) (x : E) (r : ℝ) : c • ball x r = ball (c • x) (‖c‖ * r) := by
   ext y
   rw [mem_smul_set_iff_inv_smul_mem₀ hc]
-  conv_lhs => rw [← inv_smul_smul₀ hc x]
+  conv_lhs => rw [← inv_smul_smul₀ (ha := hc.isUnit) x]
   simp [← div_eq_inv_mul, div_lt_iff₀ (norm_pos_iff.2 hc), mul_comm _ r, dist_smul₀]
 
 theorem smul_unitBall {c : 𝕜} (hc : c ≠ 0) : c • ball (0 : E) (1 : ℝ) = ball (0 : E) ‖c‖ := by
@@ -89,7 +89,7 @@ theorem smul_sphere' {c : 𝕜} (hc : c ≠ 0) (x : E) (r : ℝ) :
     c • sphere x r = sphere (c • x) (‖c‖ * r) := by
   ext y
   rw [mem_smul_set_iff_inv_smul_mem₀ hc]
-  conv_lhs => rw [← inv_smul_smul₀ hc x]
+  conv_lhs => rw [← inv_smul_smul₀ (ha := hc.isUnit) x]
   simp only [mem_sphere, dist_smul₀, norm_inv, ← div_eq_inv_mul, div_eq_iff (norm_pos_iff.2 hc).ne',
     mul_comm r]
 

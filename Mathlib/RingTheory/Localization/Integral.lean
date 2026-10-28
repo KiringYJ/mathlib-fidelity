@@ -472,7 +472,7 @@ theorem isAlgebraic_iff' [Field K] [IsDomain R] [Algebra R K] [Algebra S K]
     rw [IsFractionRing.isAlgebraic_iff R (FractionRing R) K, isAlgebraic_iff_isIntegral]
     obtain ⟨a : S, b, ha, rfl⟩ := div_surjective S x
     obtain ⟨f, hf₁, hf₂⟩ := h b
-    rw [div_eq_mul_inv]
+    rw [div_eq_mul_inv₀]
     refine .mul ?_ (.inv ?_) <;> exact isAlgebraic_iff_isIntegral.mp <|
       (h _).algebraMap.extendScalars (FaithfulSMul.algebraMap_injective R _)
   · intro h x
@@ -510,10 +510,17 @@ theorem ideal_span_singleton_map_subset {L : Type*} [IsDomain R] [IsDomain S] [F
     rw [Algebra.smul_def, mul_comm _ y, mul_comm _ y'] at yz_eq
     exact IsLocalization.mk'_eq_of_eq (by rw [mul_comm _ y, mul_comm _ y', yz_eq])
   suffices hy : algebraMap S L (a * y) ∈ Submodule.span K ((algebraMap S L) '' b) by
-    rw [mk_yz_eq, IsFractionRing.mk'_eq_div, ← IsScalarTower.algebraMap_apply,
-      IsScalarTower.algebraMap_apply R K L, div_eq_mul_inv, ← mul_assoc, mul_comm, ← map_inv₀, ←
-      Algebra.smul_def, ← map_mul]
-    exact (Submodule.span K _).smul_mem _ hy
+    have hz : algebraMap R K z ≠ 0 := fun h ↦ hz0 <| inj <| by
+      rw [IsScalarTower.algebraMap_apply R K L, h, map_zero, map_zero]
+    have hd : algebraMap S L ↑(⟨algebraMap R S z, hz0'⟩ : S⁰) =
+        algebraMap K L (algebraMap R K z) := by
+      rw [← IsScalarTower.algebraMap_apply, IsScalarTower.algebraMap_apply R K L]
+    rw [SetLike.mem_coe]
+    convert (Submodule.span K _).smul_mem (algebraMap R K z)⁻¹ hy using 1
+    rw [mk_yz_eq, IsFractionRing.mk'_eq_div, Algebra.smul_def, map_inv₀, map_mul]
+    simp only [hd]
+    rw [div_eq_mul_inv₀]
+    ring
   refine Submodule.span_subset_span R K _ ?_
   rw [Submodule.span_algebraMap_image_of_tower]
   -- Note: https://github.com/leanprover-community/mathlib4/pull/8386 had to specify the value of `f` here:

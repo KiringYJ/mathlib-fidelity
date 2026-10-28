@@ -26,6 +26,10 @@ Between two finsets of vertices,
 * `Rel.edgeDensity`: Edge density of a relation.
 * `SimpleGraph.interedges`: Finset of edges of a graph.
 * `SimpleGraph.edgeDensity`: Edge density of a graph.
+
+The edge density of `s` and `t` divides by `#s * #t`, so it exists only when both finsets are
+nonempty. The definitions take both nonemptiness proofs, which are found in the local context by
+default.
 -/
 
 @[expose] public section
@@ -48,8 +52,12 @@ variable [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
 /-- Finset of edges of a relation between two finsets of vertices. -/
 def interedges (s : Finset α) (t : Finset β) : Finset (α × β) := {e ∈ s ×ˢ t | r e.1 e.2}
 
-/-- Edge density of a relation between two finsets of vertices. -/
-def edgeDensity (s : Finset α) (t : Finset β) : ℚ := #(interedges r s t) / (#s * #t)
+/-- Edge density of a relation between two nonempty finsets of vertices. -/
+noncomputable def edgeDensity (s : Finset α) (t : Finset β)
+    (hs : s.Nonempty := by first | assumption | fail "edge density needs a nonempty left set")
+    (ht : t.Nonempty := by first | assumption | fail "edge density needs a nonempty right set") :
+    ℚ :=
+  #(interedges r s t) / (#s * #t)
 
 variable {r}
 
@@ -122,10 +130,12 @@ theorem card_interedges_le_mul (s : Finset α) (t : Finset β) :
     #(interedges r s t) ≤ #s * #t :=
   (card_filter_le _ _).trans (card_product _ _).le
 
-theorem edgeDensity_nonneg (s : Finset α) (t : Finset β) : 0 ≤ edgeDensity r s t := by
+theorem edgeDensity_nonneg (s : Finset α) (t : Finset β) (hs : s.Nonempty) (ht : t.Nonempty) :
+    0 ≤ edgeDensity r s t := by
   apply div_nonneg <;> exact mod_cast Nat.zero_le _
 
-theorem edgeDensity_le_one (s : Finset α) (t : Finset β) : edgeDensity r s t ≤ 1 := by
+theorem edgeDensity_le_one (s : Finset α) (t : Finset β) (hs : s.Nonempty) (ht : t.Nonempty) :
+    edgeDensity r s t ≤ 1 := by
   apply div_le_one_of_le₀
   · exact mod_cast card_interedges_le_mul r s t
   · exact mod_cast Nat.zero_le _
@@ -133,16 +143,7 @@ theorem edgeDensity_le_one (s : Finset α) (t : Finset β) : edgeDensity r s t �
 theorem edgeDensity_add_edgeDensity_compl (hs : s.Nonempty) (ht : t.Nonempty) :
     edgeDensity r s t + edgeDensity (fun x y ↦ ¬r x y) s t = 1 := by
   rw [edgeDensity, edgeDensity, ← add_div, div_eq_one_iff_eq]
-  · exact mod_cast card_interedges_add_card_interedges_compl r s t
-  · exact mod_cast (mul_pos hs.card_pos ht.card_pos).ne'
-
-@[simp]
-theorem edgeDensity_empty_left (t : Finset β) : edgeDensity r ∅ t = 0 := by
-  rw [edgeDensity, Finset.card_empty, Nat.cast_zero, zero_mul, div_zero]
-
-@[simp]
-theorem edgeDensity_empty_right (s : Finset α) : edgeDensity r s ∅ = 0 := by
-  rw [edgeDensity, Finset.card_empty, Nat.cast_zero, mul_zero, div_zero]
+  exact mod_cast card_interedges_add_card_interedges_compl r s t
 
 theorem card_interedges_finpartition_left [DecidableEq α] (P : Finpartition s) (t : Finset β) :
     #(interedges r s t) = ∑ a ∈ P.parts, #(interedges r a t) := by
@@ -167,17 +168,20 @@ theorem card_interedges_finpartition [DecidableEq α] [DecidableEq β] (P : Finp
 
 theorem mul_edgeDensity_le_edgeDensity (hs : s₂ ⊆ s₁) (ht : t₂ ⊆ t₁) (hs₂ : s₂.Nonempty)
     (ht₂ : t₂.Nonempty) :
-    (#s₂ : ℚ) / #s₁ * (#t₂ / #t₁) * edgeDensity r s₂ t₂ ≤ edgeDensity r s₁ t₁ := by
-  have hst : (#s₂ : ℚ) * #t₂ ≠ 0 := by simp [hs₂.ne_empty, ht₂.ne_empty]
-  rw [edgeDensity, edgeDensity, div_mul_div_comm, mul_comm, div_mul_div_cancel₀ hst]
+    Checked.div (#s₂ : ℚ) #s₁ (by have := hs₂.mono hs; checked_unit) *
+        Checked.div (#t₂ : ℚ) #t₁ (by have := ht₂.mono ht; checked_unit) * edgeDensity r s₂ t₂ ≤
+      edgeDensity r s₁ t₁ (hs₂.mono hs) (ht₂.mono ht) := by
+  rw [edgeDensity, edgeDensity, div_mul_div_comm₀, mul_comm, div_mul_div_cancel₀]
   gcongr
   exact interedges_mono hs ht
 
 theorem edgeDensity_sub_edgeDensity_le_one_sub_mul (hs : s₂ ⊆ s₁) (ht : t₂ ⊆ t₁) (hs₂ : s₂.Nonempty)
     (ht₂ : t₂.Nonempty) :
-    edgeDensity r s₂ t₂ - edgeDensity r s₁ t₁ ≤ 1 - #s₂ / #s₁ * (#t₂ / #t₁) := by
+    edgeDensity r s₂ t₂ - edgeDensity r s₁ t₁ (hs₂.mono hs) (ht₂.mono ht) ≤
+      1 - Checked.div (#s₂ : ℚ) #s₁ (by have := hs₂.mono hs; checked_unit) *
+        Checked.div (#t₂ : ℚ) #t₁ (by have := ht₂.mono ht; checked_unit) := by
   refine (sub_le_sub_left (mul_edgeDensity_le_edgeDensity r hs ht hs₂ ht₂) _).trans ?_
-  refine le_trans ?_ (mul_le_of_le_one_right ?_ (edgeDensity_le_one r s₂ t₂))
+  refine le_trans ?_ (mul_le_of_le_one_right ?_ (edgeDensity_le_one r s₂ t₂ hs₂ ht₂))
   · rw [sub_mul, one_mul]
   refine sub_nonneg_of_le ((mul_le_of_le_one_left ?_ ?_).trans ?_)
   · apply div_nonneg <;> exact mod_cast Nat.zero_le _
@@ -186,29 +190,24 @@ theorem edgeDensity_sub_edgeDensity_le_one_sub_mul (hs : s₂ ⊆ s₁) (ht : t�
 
 theorem abs_edgeDensity_sub_edgeDensity_le_one_sub_mul (hs : s₂ ⊆ s₁) (ht : t₂ ⊆ t₁)
     (hs₂ : s₂.Nonempty) (ht₂ : t₂.Nonempty) :
-    |edgeDensity r s₂ t₂ - edgeDensity r s₁ t₁| ≤ 1 - #s₂ / #s₁ * (#t₂ / #t₁) := by
+    |edgeDensity r s₂ t₂ - edgeDensity r s₁ t₁ (hs₂.mono hs) (ht₂.mono ht)| ≤
+      1 - Checked.div (#s₂ : ℚ) #s₁ (by have := hs₂.mono hs; checked_unit) *
+        Checked.div (#t₂ : ℚ) #t₁ (by have := ht₂.mono ht; checked_unit) := by
+  have hs₁ := hs₂.mono hs
+  have ht₁ := ht₂.mono ht
   refine abs_sub_le_iff.2 ⟨edgeDensity_sub_edgeDensity_le_one_sub_mul r hs ht hs₂ ht₂, ?_⟩
   rw [← add_sub_cancel_right (edgeDensity r s₁ t₁) (edgeDensity (fun x y ↦ ¬r x y) s₁ t₁),
     ← add_sub_cancel_right (edgeDensity r s₂ t₂) (edgeDensity (fun x y ↦ ¬r x y) s₂ t₂),
-    edgeDensity_add_edgeDensity_compl _ (hs₂.mono hs) (ht₂.mono ht),
+    edgeDensity_add_edgeDensity_compl _ hs₁ ht₁,
     edgeDensity_add_edgeDensity_compl _ hs₂ ht₂, sub_sub_sub_cancel_left]
   exact edgeDensity_sub_edgeDensity_le_one_sub_mul _ hs ht hs₂ ht₂
 
 theorem abs_edgeDensity_sub_edgeDensity_le_two_mul_sub_sq (hs : s₂ ⊆ s₁) (ht : t₂ ⊆ t₁)
-    (hδ₀ : 0 ≤ δ) (hδ₁ : δ < 1) (hs₂ : (1 - δ) * #s₁ ≤ #s₂)
-    (ht₂ : (1 - δ) * #t₁ ≤ #t₂) :
-    |(edgeDensity r s₂ t₂ : 𝕜) - edgeDensity r s₁ t₁| ≤ 2 * δ - δ ^ 2 := by
-  have hδ' : 0 ≤ 2 * δ - δ ^ 2 := by
-    rw [sub_nonneg, sq]
-    gcongr
-    exact hδ₁.le.trans (by simp)
+    (hδ₁ : δ < 1) (hs₂ : (1 - δ) * #s₁ ≤ #s₂) (ht₂ : (1 - δ) * #t₁ ≤ #t₂)
+    (hs₂' : s₂.Nonempty) (ht₂' : t₂.Nonempty) :
+    |(edgeDensity r s₂ t₂ : 𝕜) - edgeDensity r s₁ t₁ (hs₂'.mono hs) (ht₂'.mono ht)| ≤
+      2 * δ - δ ^ 2 := by
   rw [← sub_pos] at hδ₁
-  obtain rfl | hs₂' := s₂.eq_empty_or_nonempty
-  · rw [Finset.card_empty, Nat.cast_zero] at hs₂
-    simpa [edgeDensity, (nonpos_of_mul_nonpos_right hs₂ hδ₁).antisymm (Nat.cast_nonneg _)] using hδ'
-  obtain rfl | ht₂' := t₂.eq_empty_or_nonempty
-  · rw [Finset.card_empty, Nat.cast_zero] at ht₂
-    simpa [edgeDensity, (nonpos_of_mul_nonpos_right ht₂ hδ₁).antisymm (Nat.cast_nonneg _)] using hδ'
   have hr : 2 * δ - δ ^ 2 = 1 - (1 - δ) * (1 - δ) := by ring
   rw [hr]
   norm_cast
@@ -223,19 +222,23 @@ theorem abs_edgeDensity_sub_edgeDensity_le_two_mul_sub_sq (hs : s₂ ⊆ s₁) (
   · refine (le_div_iff₀ ?_).2 ht₂
     exact mod_cast h₂.card_pos
 
-/-- If `s₂ ⊆ s₁`, `t₂ ⊆ t₁` and they take up all but a `δ`-proportion, then the difference in edge
-densities is at most `2 * δ`. -/
-theorem abs_edgeDensity_sub_edgeDensity_le_two_mul (hs : s₂ ⊆ s₁) (ht : t₂ ⊆ t₁) (hδ : 0 ≤ δ)
-    (hscard : (1 - δ) * #s₁ ≤ #s₂) (htcard : (1 - δ) * #t₁ ≤ #t₂) :
-    |(edgeDensity r s₂ t₂ : 𝕜) - edgeDensity r s₁ t₁| ≤ 2 * δ := by
+/-- If `s₂ ⊆ s₁`, `t₂ ⊆ t₁` are nonempty and they take up all but a `δ`-proportion, then the
+difference in edge densities is at most `2 * δ`. -/
+theorem abs_edgeDensity_sub_edgeDensity_le_two_mul (hs : s₂ ⊆ s₁) (ht : t₂ ⊆ t₁)
+    (hscard : (1 - δ) * #s₁ ≤ #s₂) (htcard : (1 - δ) * #t₁ ≤ #t₂) (hs₂ : s₂.Nonempty)
+    (ht₂ : t₂.Nonempty) :
+    |(edgeDensity r s₂ t₂ : 𝕜) - edgeDensity r s₁ t₁ (hs₂.mono hs) (ht₂.mono ht)| ≤ 2 * δ := by
   rcases lt_or_ge δ 1 with h | h
-  · exact (abs_edgeDensity_sub_edgeDensity_le_two_mul_sub_sq r hs ht hδ h hscard htcard).trans
-      ((sub_le_self_iff _).2 <| sq_nonneg δ)
+  · exact (abs_edgeDensity_sub_edgeDensity_le_two_mul_sub_sq r hs ht h hscard htcard hs₂
+      ht₂).trans ((sub_le_self_iff _).2 <| sq_nonneg δ)
   rw [two_mul]
-  refine (abs_sub _ _).trans (add_le_add (le_trans ?_ h) (le_trans ?_ h)) <;>
-    · rw [abs_of_nonneg]
-      · exact mod_cast edgeDensity_le_one r _ _
-      · exact mod_cast edgeDensity_nonneg r _ _
+  refine (abs_sub _ _).trans (add_le_add (le_trans ?_ h) (le_trans ?_ h))
+  · rw [abs_of_nonneg]
+    · exact mod_cast edgeDensity_le_one r _ _ hs₂ ht₂
+    · exact mod_cast edgeDensity_nonneg r _ _ hs₂ ht₂
+  · rw [abs_of_nonneg]
+    · exact mod_cast edgeDensity_le_one r _ _ (hs₂.mono hs) (ht₂.mono ht)
+    · exact mod_cast edgeDensity_nonneg r _ _ (hs₂.mono hs) (ht₂.mono ht)
 
 end Asymmetric
 
@@ -259,9 +262,10 @@ theorem card_interedges_comm [Std.Symm r] (s t : Finset α) :
     (fun _ _ _ _ h ↦ Prod.swap_injective h) fun x h ↦
     ⟨x.swap, swap_mem_interedges_iff.mpr h, x.swap_swap⟩
 
-theorem edgeDensity_comm [Std.Symm r] (s t : Finset α) :
+theorem edgeDensity_comm [Std.Symm r] (s t : Finset α) (hs : s.Nonempty) (ht : t.Nonempty) :
     edgeDensity r s t = edgeDensity r t s := by
-  rw [edgeDensity, mul_comm, card_interedges_comm, edgeDensity]
+  rw [edgeDensity, edgeDensity, card_interedges_comm]
+  simp only [mul_comm]
 
 end Symmetric
 
@@ -280,15 +284,19 @@ variable (G : SimpleGraph α) [DecidableRel G.Adj] {s s₁ s₂ t t₁ t₂ : Fi
 def interedges (s t : Finset α) : Finset (α × α) :=
   Rel.interedges G.Adj s t
 
-/-- Density of edges of a graph between two finsets of vertices. -/
-def edgeDensity : Finset α → Finset α → ℚ :=
-  Rel.edgeDensity G.Adj
+/-- Density of edges of a graph between two nonempty finsets of vertices. -/
+noncomputable def edgeDensity (s t : Finset α)
+    (hs : s.Nonempty := by first | assumption | fail "edge density needs a nonempty left set")
+    (ht : t.Nonempty := by first | assumption | fail "edge density needs a nonempty right set") :
+    ℚ :=
+  Rel.edgeDensity G.Adj s t hs ht
 
 lemma interedges_def (s t : Finset α) : G.interedges s t = {e ∈ s ×ˢ t | G.Adj e.1 e.2} := rfl
 
-lemma edgeDensity_def (s t : Finset α) : G.edgeDensity s t = #(G.interedges s t) / (#s * #t) := rfl
+lemma edgeDensity_def (s t : Finset α) (hs : s.Nonempty) (ht : t.Nonempty) :
+    G.edgeDensity s t = #(G.interedges s t) / (#s * #t) := rfl
 
-theorem card_interedges_div_card (s t : Finset α) :
+theorem card_interedges_div_card (s t : Finset α) (hs : s.Nonempty) (ht : t.Nonempty) :
     (#(G.interedges s t) : ℚ) / (#s * #t) = G.edgeDensity s t :=
   rfl
 
@@ -343,27 +351,20 @@ theorem card_interedges_add_card_interedges_compl (h : Disjoint s t) :
 theorem edgeDensity_add_edgeDensity_compl (hs : s.Nonempty) (ht : t.Nonempty) (h : Disjoint s t) :
     G.edgeDensity s t + Gᶜ.edgeDensity s t = 1 := by
   rw [edgeDensity_def, edgeDensity_def, ← add_div, div_eq_one_iff_eq]
-  · exact mod_cast card_interedges_add_card_interedges_compl _ h
-  · positivity
+  exact mod_cast card_interedges_add_card_interedges_compl _ h
 
 end DecidableEq
 
 theorem card_interedges_le_mul (s t : Finset α) : #(G.interedges s t) ≤ #s * #t :=
   Rel.card_interedges_le_mul _ _ _
 
-theorem edgeDensity_nonneg (s t : Finset α) : 0 ≤ G.edgeDensity s t :=
-  Rel.edgeDensity_nonneg _ _ _
+theorem edgeDensity_nonneg (s t : Finset α) (hs : s.Nonempty) (ht : t.Nonempty) :
+    0 ≤ G.edgeDensity s t :=
+  Rel.edgeDensity_nonneg _ _ _ hs ht
 
-theorem edgeDensity_le_one (s t : Finset α) : G.edgeDensity s t ≤ 1 :=
-  Rel.edgeDensity_le_one _ _ _
-
-@[simp]
-theorem edgeDensity_empty_left (t : Finset α) : G.edgeDensity ∅ t = 0 :=
-  Rel.edgeDensity_empty_left _ _
-
-@[simp]
-theorem edgeDensity_empty_right (s : Finset α) : G.edgeDensity s ∅ = 0 :=
-  Rel.edgeDensity_empty_right _ _
+theorem edgeDensity_le_one (s t : Finset α) (hs : s.Nonempty) (ht : t.Nonempty) :
+    G.edgeDensity s t ≤ 1 :=
+  Rel.edgeDensity_le_one _ _ _ hs ht
 
 @[simp]
 theorem swap_mem_interedges_iff {x : α × α} : x.swap ∈ G.interedges s t ↔ x ∈ G.interedges t s :=
@@ -374,9 +375,10 @@ theorem mk_mem_interedges_comm : (a, b) ∈ G.interedges s t ↔ (b, a) ∈ G.in
   have := G.symm
   Rel.mk_mem_interedges_comm
 
-theorem edgeDensity_comm (s t : Finset α) : G.edgeDensity s t = G.edgeDensity t s :=
+theorem edgeDensity_comm (s t : Finset α) (hs : s.Nonempty) (ht : t.Nonempty) :
+    G.edgeDensity s t = G.edgeDensity t s :=
   have := G.symm
-  Rel.edgeDensity_comm s t
+  Rel.edgeDensity_comm s t hs ht
 
 end SimpleGraph
 

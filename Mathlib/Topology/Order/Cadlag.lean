@@ -71,22 +71,44 @@ lemma IsRightContinuous.div' [Div Y] [ContinuousDiv Y]
     IsRightContinuous (f / g) :=
   hf.continuous_comp₂ hg continuous_div'
 
-@[to_fun (attr := to_dual)]
+/-- The quotient of two right-continuous functions is right-continuous; the quotient `f / g`
+exists when `g` is invertible. -/
+@[to_dual /-- The quotient of two left-continuous functions is left-continuous; the quotient
+`f / g` exists when `g` is invertible. -/]
 lemma IsRightContinuous.div [GroupWithZero Y] [ContinuousInv₀ Y] [ContinuousMul Y]
-    (hf : IsRightContinuous f) (hg : IsRightContinuous g) (h : ∀ x, g x ≠ 0) :
+    {h : IsUnit g} (hf : IsRightContinuous f) (hg : IsRightContinuous g) :
     IsRightContinuous (f / g) :=
-  fun x ↦ (hf x).div (hg x) (h x)
+  fun x ↦ (hf x).div (hg x)
+
+/-- The quotient of two right-continuous functions is right-continuous where it is defined: the
+denominator takes invertible values. -/
+@[to_dual /-- The quotient of two left-continuous functions is left-continuous where it is defined:
+the denominator takes invertible values. -/]
+lemma IsRightContinuous.fun_div [GroupWithZero Y] [ContinuousInv₀ Y] [ContinuousMul Y]
+    {h : ∀ x, IsUnit (g x)} (hf : IsRightContinuous f) (hg : IsRightContinuous g) :
+    IsRightContinuous (fun x ↦ Checked.div (f x) (g x) (h x)) :=
+  fun x ↦ (hf x).div₀ (hg x)
 
 @[to_additive (attr := to_fun (attr := to_dual))]
 lemma IsRightContinuous.inv [Inv Y] [ContinuousInv Y] (hf : IsRightContinuous f) :
     IsRightContinuous (f⁻¹) :=
   hf.continuous_comp continuous_inv
 
-@[to_fun (attr := to_dual)]
-lemma IsRightContinuous.inv₀ [Zero Y] [Inv Y] [ContinuousInv₀ Y]
-    (hf : IsRightContinuous f) (h : ∀ x, f x ≠ 0) :
-    IsRightContinuous (f⁻¹) :=
-  fun x ↦ (hf x).inv₀ (h x)
+/-- The inverse of a right-continuous function is right-continuous; the inverse `f⁻¹` exists when
+`f` is invertible. -/
+@[to_dual /-- The inverse of a left-continuous function is left-continuous; the inverse `f⁻¹`
+exists when `f` is invertible. -/]
+lemma IsRightContinuous.inv₀ [Monoid Y] [ContinuousInv₀ Y] {h : IsUnit f}
+    (hf : IsRightContinuous f) : IsRightContinuous f⁻¹ :=
+  fun x ↦ (hf x).inv₀
+
+/-- The inverse of a right-continuous function is right-continuous where it is defined: the
+function takes invertible values. -/
+@[to_dual /-- The inverse of a left-continuous function is left-continuous where it is defined: the
+function takes invertible values. -/]
+lemma IsRightContinuous.fun_inv₀ [Monoid Y] [ContinuousInv₀ Y] {h : ∀ x, IsUnit (f x)}
+    (hf : IsRightContinuous f) : IsRightContinuous (fun x ↦ Checked.inv (f x) (h x)) :=
+  fun x ↦ (hf x).fun_inv₀
 
 @[to_fun (attr := to_dual (attr := to_additive))]
 lemma IsRightContinuous.const_smul {R : Type*} [SMul R Y] [ContinuousConstSMul R Y] (c : R)

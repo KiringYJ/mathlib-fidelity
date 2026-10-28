@@ -78,6 +78,14 @@ instance [P.IsAnisotropic] : P.flip.IsAnisotropic where
   rootForm_root_ne_zero := IsAnisotropic.corootForm_coroot_ne_zero
   corootForm_coroot_ne_zero := IsAnisotropic.rootForm_root_ne_zero (P := P)
 
+/- Evidence rules: in an anisotropic root pairing, the root form does not vanish on a root and the
+coroot form does not vanish on a coroot. -/
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | (with_reducible apply RootPairing.IsAnisotropic.rootForm_root_ne_zero)
+    | (with_reducible apply RootPairing.IsAnisotropic.corootForm_coroot_ne_zero))
+
 lemma isAnisotropic_of_isValuedIn (S : Type*)
     [CommRing S] [LinearOrder S] [IsStrictOrderedRing S]
     [Algebra S R] [FaithfulSMul S R] [P.IsValuedIn S] :
@@ -372,7 +380,7 @@ lemma coroot_eq_polarizationEquiv_apply_root (i : ι) :
     P.coroot i = (2 / P.RootForm (P.root i) (P.root i)) • P.PolarizationEquiv (P.root i) := by
   have h₀ := IsAnisotropic.rootForm_root_ne_zero (P := P) i
   rw [polarizationEquiv_apply, ← (smul_right_injective N h₀).eq_iff, P.rootForm_self_smul_coroot i,
-    smul_smul, mul_div_cancel₀ _ h₀]
+    smul_smul, mul_div_cancel₀ _]
   norm_cast
 
 lemma polarizationEquiv_symm_apply_coroot {i : ι} :
@@ -385,7 +393,7 @@ private lemma linearIndepOn_coroot_iff_aux {s : Set ι} (h : LinearIndepOn R P.r
     LinearIndepOn R P.coroot s := by
   obtain ⟨f, hf⟩ : ∃ f : s → Rˣ, ∀ i : s, P.coroot i = f i • P.PolarizationEquiv (P.root i) :=
     ⟨fun i ↦ Units.mk0 (2 / P.RootForm (P.root i) (P.root i))
-      (by simp [two_ne_zero, IsAnisotropic.rootForm_root_ne_zero]),
+      (by simp [two_ne_zero]),
      fun i ↦ by simp [coroot_eq_polarizationEquiv_apply_root]⟩
   have : s.domRestrict P.coroot = P.PolarizationEquiv.toLinearMap ∘ (f • s.domRestrict P.root) := by
     ext; simp [hf, polarizationEquiv_apply]

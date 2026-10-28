@@ -284,7 +284,7 @@ theorem StrictConvexOn.ae_eq_const_or_map_average_lt [IsFiniteMeasure μ] (hg : 
   calc
     g ((a • ⨍ x in t, f x ∂μ) + b • ⨍ x in tᶜ, f x ∂μ) <
         a * g (⨍ x in t, f x ∂μ) + b * g (⨍ x in tᶜ, f x ∂μ) :=
-      hg.2 (this h₀).1 (this h₀').1 hne ha hb hab
+      hg.map_combo_lt (this h₀).1 (this h₀').1 hne ha hb hab
     _ ≤ (a * ⨍ x in t, g (f x) ∂μ) + b * ⨍ x in tᶜ, g (f x) ∂μ := by
       gcongr
       exacts [(this h₀).2, (this h₀').2]
@@ -308,9 +308,9 @@ theorem ae_eq_const_or_norm_average_lt_of_norm_le_const [StrictConvexSpace ℝ E
     simp only [average_congr this, Pi.zero_apply, average_zero]
     exact Or.inl this
   by_cases hfi : Integrable f μ; swap
-  · simp [average_eq, integral_undef hfi, hC0]
+  · simp [average_eq', integral_smul_measure, integral_undef hfi, hC0]
   rcases (le_top : μ univ ≤ ∞).eq_or_lt with hμt | hμt
-  · simp [average_eq, measureReal_def, hμt, hC0]
+  · simp [average_eq', integral_smul_measure, hμt, hC0]
   have : IsFiniteMeasure μ := ⟨hμt⟩
   replace h_le : ∀ᵐ x ∂μ, f x ∈ closedBall (0 : E) C := by simpa only [mem_closedBall_zero_iff]
   simpa only [interior_closedBall _ hC0.ne', mem_ball_zero_iff] using
@@ -327,8 +327,8 @@ theorem ae_eq_const_or_norm_integral_lt_of_norm_le_const [StrictConvexSpace ℝ 
   have hμ : 0 < μ.real univ := by
     simp [measureReal_def, ENNReal.toReal_pos_iff, pos_iff_ne_zero, h₀, measure_lt_top]
   refine (ae_eq_const_or_norm_average_lt_of_norm_le_const h_le).imp_right fun H => ?_
-  rwa [average_eq, norm_smul, norm_inv, Real.norm_eq_abs, abs_of_pos hμ, ← div_eq_inv_mul,
-    div_lt_iff₀' hμ] at H
+  rw [← measure_smul_average μ f, norm_smul, Real.norm_eq_abs, abs_of_pos hμ]
+  exact mul_lt_mul_of_pos_left H hμ
 
 /-- If `E` is a strictly convex normed space and `f : α → E` is a function such that `‖f x‖ ≤ C`
 a.e. on a set `t` of finite measure, then either this function is a.e. equal to its average value on

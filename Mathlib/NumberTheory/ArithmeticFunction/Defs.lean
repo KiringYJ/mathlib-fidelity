@@ -472,7 +472,7 @@ theorem prod_primeFactors [CommMonoidWithZero R] {f : ArithmeticFunction R}
 theorem map_div_of_coprime [GroupWithZero R] {f : ArithmeticFunction R}
     (hf : IsMultiplicative f) {l d : ℕ} (hdl : d ∣ l) (hl : (l / d).Coprime d) (hd : f d ≠ 0) :
     f (l / d) = f l / f d := by
-  apply (div_eq_of_eq_mul hd ..).symm
+  apply (div_eq_of_eq_mul ..).symm
   rw [← hf.right hl, Nat.div_mul_cancel hdl]
 
 @[arith_mult]
@@ -603,12 +603,12 @@ theorem lcm_apply_mul_gcd_apply [CommMonoidWithZero R] {f : ArithmeticFunction R
 theorem map_gcd [CommGroupWithZero R] {f : ArithmeticFunction R}
     (hf : f.IsMultiplicative) {x y : ℕ} (hf_lcm : f (x.lcm y) ≠ 0) :
     f (x.gcd y) = f x * f y / f (x.lcm y) := by
-  rw [← hf.lcm_apply_mul_gcd_apply, mul_div_cancel_left₀ _ hf_lcm]
+  rw [← hf.lcm_apply_mul_gcd_apply, mul_div_cancel_left₀]
 
 theorem map_lcm [CommGroupWithZero R] {f : ArithmeticFunction R}
     (hf : f.IsMultiplicative) {x y : ℕ} (hf_gcd : f (x.gcd y) ≠ 0) :
     f (x.lcm y) = f x * f y / f (x.gcd y) := by
-  rw [← hf.lcm_apply_mul_gcd_apply, mul_div_cancel_right₀ _ hf_gcd]
+  rw [← hf.lcm_apply_mul_gcd_apply, mul_div_cancel_right₀]
 
 theorem eq_zero_of_squarefree_of_dvd_eq_zero [MonoidWithZero R] {f : ArithmeticFunction R}
     (hf : IsMultiplicative f) {m n : ℕ} (hn : Squarefree n) (hmn : m ∣ n)

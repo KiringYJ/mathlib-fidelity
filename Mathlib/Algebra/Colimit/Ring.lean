@@ -314,40 +314,21 @@ instance nontrivial [DirectedSystem G (f' · · ·)] :
 
 theorem exists_inv {p : Ring.DirectLimit G f} : p ≠ 0 → ∃ y, p * y = 1 :=
   Ring.DirectLimit.induction_on p fun i x H ↦
+    have hx : x ≠ 0 := fun h ↦ H <| by rw [h, (Ring.DirectLimit.of _ _ _).map_zero]
     ⟨Ring.DirectLimit.of G f i x⁻¹, by
-      rw [← (Ring.DirectLimit.of _ _ _).map_mul,
-        mul_inv_cancel₀ fun h : x = 0 ↦ H <| by rw [h, (Ring.DirectLimit.of _ _ _).map_zero],
+      rw [← (Ring.DirectLimit.of _ _ _).map_mul, mul_inv_cancel₀,
         (Ring.DirectLimit.of _ _ _).map_one]⟩
 
-section
-
-
-open scoped Classical in
-/-- Noncomputable multiplicative inverse in a direct limit of fields. -/
-noncomputable def inv (p : Ring.DirectLimit G f) : Ring.DirectLimit G f :=
-  if H : p = 0 then 0 else Classical.choose (DirectLimit.exists_inv G f H)
-
-protected theorem mul_inv_cancel {p : Ring.DirectLimit G f} (hp : p ≠ 0) : p * inv G f p = 1 := by
-  rw [inv, dite_eq_right hp, Classical.choose_spec (DirectLimit.exists_inv G f hp)]
-
-protected theorem inv_mul_cancel {p : Ring.DirectLimit G f} (hp : p ≠ 0) : inv G f p * p = 1 := by
-  rw [_root_.mul_comm, DirectLimit.mul_inv_cancel G f hp]
-
-/-- Noncomputable field structure on the direct limit of fields.
+/-- Noncomputable field structure on the direct limit of fields: a nonzero element is the image
+of a nonzero element of some `G i`, whose inverse maps to an inverse.
 See note [reducible non-instances]. -/
 protected noncomputable abbrev field [DirectedSystem G (f' · · ·)] :
     Field (Ring.DirectLimit G (f' · · ·)) where
   -- This used to include the parent CommRing and Nontrivial instances,
   -- but leaving them implicit avoids a very expensive (2-3 minutes!) eta expansion.
-  inv := inv G (f' · · ·)
-  mul_inv_cancel := fun _ ↦ DirectLimit.mul_inv_cancel G (f' · · ·)
-  inv_zero := dite_eq_left rfl
-  nnqsmul := _
-  nnqsmul_def _ _ := rfl
-  qsmul := _
-  qsmul_def _ _ := rfl
-
-end
+  isUnit_of_ne_zero {p} hp :=
+    have ⟨y, hy⟩ := DirectLimit.exists_inv G (f' · · ·) hp
+    IsUnit.of_mul_eq_one y hy
 
 end DirectLimit
 

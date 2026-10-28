@@ -946,7 +946,8 @@ theorem isSeparable_sub {x y : E} (hx : IsSeparable F x) (hy : IsSeparable F y) 
     (subset_adjoin F _ (.inr rfl))
 
 /-- If `x` is a separable element, then `x⁻¹` is also a separable element. -/
-theorem isSeparable_inv {x : E} (hx : IsSeparable F x) : IsSeparable F x⁻¹ :=
+theorem isSeparable_inv {x : E} {hxUnit : IsUnit x} (hx : IsSeparable F x) :
+    IsSeparable F x⁻¹ :=
   haveI := (isSeparable_adjoin_simple_iff_isSeparable F E).2 hx
   isSeparable_of_mem_isSeparable F E <| F⟮x⟯.inv_mem <| mem_adjoin_simple_self F x
 

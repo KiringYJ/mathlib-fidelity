@@ -141,7 +141,7 @@ def mk' (A : Matrix n n R) (_ : Invertible (Matrix.det A)) : GL n R :=
 /-- Given a matrix with unit determinant, we get an element of `GL n R`. -/
 @[simps! val]
 noncomputable def mk'' (A : Matrix n n R) (h : IsUnit (Matrix.det A)) : GL n R :=
-  unitOfIsUnitDet A h
+  nonsingInvUnit A h
 
 /-- Given a matrix with non-zero determinant over a field, we get an element of `GL n K`. -/
 @[simps! val]
@@ -168,10 +168,9 @@ theorem coe_mul : ↑(A * B) = (↑A : Matrix n n R) * (↑B : Matrix n n R) :=
 theorem coe_one : ↑(1 : GL n R) = (1 : Matrix n n R) :=
   rfl
 
-theorem coe_inv : ↑A⁻¹ = nonsingularInverse (↑A : Matrix n n R) (isUnits_det_units A) := by
-  apply right_inv_eq_left_inv
-  · simpa only [Units.val_mul, Units.val_one] using congr_arg Units.val (mul_inv_cancel A)
-  · exact nonsingularInverse_mul _ _
+/-- The inverse in `GL n R` is the inverse of the matrix, which is a unit. -/
+theorem coe_inv : ↑A⁻¹ = Checked.inv (↑A : Matrix n n R) A.isUnit :=
+  Units.val_inv_eq_inv_val₀ A
 
 @[simp]
 theorem coe_toLin : (toLin A : (n → R) →ₗ[R] n → R) = Matrix.mulVecLin A :=
@@ -235,14 +234,14 @@ lemma map_inv_mul_map (g : GL n R) : map f g⁻¹ * map f g = 1 := by
 @[simp]
 lemma coe_map_mul_map_inv (g : GL n R) : g.val.map f * (↑g⁻¹ : Matrix n n R).map f = 1 := by
   rw [← Matrix.map_mul]
-  simpa only [Units.val_mul, Units.val_one, Matrix.map_one] using
-    congr_arg (Matrix.map f) (congr_arg Units.val (mul_inv_cancel g))
+  simpa only [Units.val_mul, Units.val_one, Matrix.map_one, map_zero, map_one] using
+    congr_arg (·.map f) (congr_arg Units.val (mul_inv_cancel g))
 
 @[simp]
 lemma coe_map_inv_mul_map (g : GL n R) : (↑g⁻¹ : Matrix n n R).map f * g.val.map f = 1 := by
   rw [← Matrix.map_mul]
-  simpa only [Units.val_mul, Units.val_one, Matrix.map_one] using
-    congr_arg (Matrix.map f) (congr_arg Units.val (inv_mul_cancel g))
+  simpa only [Units.val_mul, Units.val_one, Matrix.map_one, map_zero, map_one] using
+    congr_arg (·.map f) (congr_arg Units.val (inv_mul_cancel g))
 
 lemma map_scalar (u : Rˣ) : map f (scalar n u) = scalar n (Units.map f u) := by
   ext

@@ -300,8 +300,10 @@ theorem exists_subset_restrict_nonpos (hi : s i < 0) :
     · exact le_of_lt Nat.one_div_pos_of_nat
     · exact le_of_lt (restrictNonposSeq_lt n (hn' n))
   have h₃ : Tendsto (fun n => (bdd n : ℝ) + 1) atTop atTop := by
-    simp only [one_div] at h₃'
-    exact Summable.tendsto_atTop_of_pos h₃' fun n => Nat.cast_add_one_pos (bdd n)
+    refine Summable.tendsto_atTop_of_pos (fun n => Nat.cast_add_one_pos (bdd n)) ?_
+    convert h₃' using 1
+    funext n
+    rw [Pi.inv_apply₀, one_div₀]
   have h₄ : Tendsto (fun n => (bdd n : ℝ)) atTop atTop := by
     convert! atTop.tendsto_atTop_add_const_right (-1) h₃; simp
   have A_meas : MeasurableSet A :=
@@ -310,7 +312,7 @@ theorem exists_subset_restrict_nonpos (hi : s i < 0) :
   by_contra hnn
   rw [restrict_le_restrict_iff _ _ A_meas] at hnn; push Not at hnn
   obtain ⟨E, hE₁, hE₂, hE₃⟩ := hnn
-  have : ∃ k, 1 ≤ bdd k ∧ 1 / (bdd k : ℝ) < s E := by
+  have : ∃ (k : ℕ) (_ : 1 ≤ bdd k), 1 / (bdd k : ℝ) < s E := by
     rw [tendsto_atTop_atTop] at h₄
     obtain ⟨k, hk⟩ := h₄ (max (1 / s E + 1) 1)
     refine ⟨k, ?_, ?_⟩
@@ -318,7 +320,7 @@ theorem exists_subset_restrict_nonpos (hi : s i < 0) :
       norm_cast at hle
     · have : 1 / s E < bdd k := by
         linarith only [le_of_max_le_left (hk k le_rfl)]
-      rw [one_div] at this ⊢
+      rw [one_div₀] at this ⊢
       exact inv_lt_of_inv_lt₀ hE₃ this
   obtain ⟨k, hk₁, hk₂⟩ := this
   have hA' : A ⊆ i \ ⋃ l ≤ k, restrictNonposSeq s i l :=

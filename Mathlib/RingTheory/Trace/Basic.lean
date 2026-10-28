@@ -156,8 +156,6 @@ variable [Algebra R L] [Algebra L F] [Algebra R F] [IsScalarTower R L F]
 
 open Polynomial
 
-attribute [-instance] Field.toEuclideanDomain
-
 theorem Algebra.isIntegral_trace [FiniteDimensional L F] {x : F} (hx : IsIntegral R x) :
     IsIntegral R (Algebra.trace L F x) := by
   have hx' : IsIntegral L x := hx.tower_top
@@ -608,7 +606,9 @@ with `f` being the minimal polynomial of `x` and `f / (X - x) = ∑ aᵢxⁱ`.
 -/
 lemma Module.Basis.traceDual_powerBasis_eq (pb : PowerBasis K L) (i) :
     pb.basis.traceDual i =
-      (minpolyDiv K pb.gen).coeff i / aeval pb.gen (derivative <| minpoly K pb.gen) := by
+      Checked.div ((minpolyDiv K pb.gen).coeff i) (aeval pb.gen (derivative <| minpoly K pb.gen))
+        ((Algebra.IsSeparable.isSeparable K pb.gen).aeval_derivative_ne_zero
+          (minpoly.aeval K pb.gen)).isUnit := by
   revert i
   rw [← funext_iff, Basis.traceDual_eq_iff]
   intro i j

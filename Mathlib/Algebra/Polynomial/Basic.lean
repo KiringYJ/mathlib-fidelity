@@ -1182,7 +1182,7 @@ theorem noZeroDivisors_iff : NoZeroDivisors R[X] ↔ NoZeroDivisors R where
 end Semiring
 
 section DivisionSemiring
-variable [DivisionSemiring R]
+variable [DivisionSemiring R] [CharZero R]
 
 lemma nnqsmul_eq_C_mul (q : ℚ≥0) (f : R[X]) : q • f = Polynomial.C (q : R) * f := by
   rw [← NNRat.smul_one_eq_cast, ← Polynomial.smul_C, C_1, smul_one_mul]
@@ -1191,7 +1191,7 @@ end DivisionSemiring
 
 section DivisionRing
 
-variable [DivisionRing R]
+variable [DivisionRing R] [CharZero R]
 
 theorem qsmul_eq_C_mul (a : ℚ) (f : R[X]) : a • f = Polynomial.C (a : R) * f := by
   rw [← Rat.smul_one_eq_cast, ← Polynomial.smul_C, C_1, smul_one_mul]

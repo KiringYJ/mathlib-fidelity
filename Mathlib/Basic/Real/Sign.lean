@@ -94,20 +94,18 @@ theorem sign_mul_pos_of_ne_zero (r : ℝ) (hr : r ≠ 0) : 0 < sign r * r := by
   exact sign_eq_zero_iff.mp hs0
 
 @[simp]
-theorem inv_sign (r : ℝ) : (sign r)⁻¹ = sign r := by
+theorem inv_sign (r : ℝ) {hr : IsUnit (sign r)} : (sign r)⁻¹ = sign r := by
+  refine inv_eq_of_mul_eq_one_right₀ ?_
   obtain hn | hz | hp := sign_apply_eq r
-  · rw [hn]
-    simp
-  · rw [hz]
-    exact inv_zero
-  · rw [hp]
-    exact inv_one
+  · rw [hn, neg_one_mul, neg_neg]
+  · exact absurd (hz ▸ hr) not_isUnit_zero
+  · rw [hp, one_mul]
 
 @[simp]
-theorem sign_inv (r : ℝ) : sign r⁻¹ = sign r := by
+theorem sign_inv (r : ℝ) {hr : IsUnit r} : sign r⁻¹ = sign r := by
   obtain hn | rfl | hp := lt_trichotomy r (0 : ℝ)
-  · rw [sign_of_neg hn, sign_of_neg (inv_lt_zero.mpr hn)]
-  · rw [sign_zero, inv_zero, sign_zero]
-  · rw [sign_of_pos hp, sign_of_pos (inv_pos.mpr hp)]
+  · rw [sign_of_neg hn, sign_of_neg (inv_lt_zero.mpr hn : r⁻¹ < 0)]
+  · exact absurd hr not_isUnit_zero
+  · rw [sign_of_pos hp, sign_of_pos (inv_pos_of_pos hp)]
 
 end Real

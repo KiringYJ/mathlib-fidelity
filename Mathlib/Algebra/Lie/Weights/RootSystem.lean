@@ -391,24 +391,20 @@ lemma eq_neg_or_eq_of_eq_smul (hβ : β.IsNonZero) (k : K) (h : (β : H → K) =
   · cases hβ (by rwa [zero_smul] at h)
   · exact .inr (by ext; rw [h, one_smul])
 
-/-- The reflection of a root along another. -/
-def reflectRoot (α β : Weight K H L) : Weight K H L where
+/-- The reflection of a weight `β` along a root `α`, that is, along a nonzero weight. -/
+def reflectRoot (α β : Weight K H L) (hα : α.IsNonZero) : Weight K H L where
   toFun := β - β (coroot α) • α
   genWeightSpace_ne_bot' := by
-    by_cases hα : α.IsZero
-    · simpa [hα.eq] using β.genWeightSpace_ne_bot
     rw [sub_eq_neg_add, apply_coroot_eq_cast α β hα, ← neg_smul, ← Int.cast_neg,
       Int.cast_smul_eq_zsmul, rootSpace_zsmul_add_ne_bot_iff α β hα]
     lia
 
-lemma reflectRoot_isNonZero (α β : Weight K H L) (hβ : β.IsNonZero) :
-    (reflectRoot α β).IsNonZero := by
+lemma reflectRoot_isNonZero (α β : Weight K H L) (hα : α.IsNonZero) (hβ : β.IsNonZero) :
+    (reflectRoot α β hα).IsNonZero := by
   intro e
   have : β (coroot α) = 0 := by
-    by_cases hα : α.IsZero
-    · simp [coroot_eq_zero_iff.mpr hα]
     simpa [root_apply_coroot hα, mul_two] using congr_fun (sub_eq_zero.mp e) (coroot α)
-  have : reflectRoot α β = β := by ext; simp [reflectRoot, this]
+  have : reflectRoot α β hα = β := by ext; simp [reflectRoot, this]
   exact hβ (this ▸ e)
 
 variable (H)
@@ -422,13 +418,16 @@ def rootSystem :
     { toFun := (↑)
       inj' := by
         intro α β h; ext x; simpa using LinearMap.congr_fun h x }
-    { toFun := coroot ∘ (↑)
-      inj' := by rintro ⟨α, hα⟩ ⟨β, hβ⟩ h; simpa using h }
+    { toFun := fun α ↦ coroot α.1
+      inj' := by
+        rintro ⟨α, hα⟩ ⟨β, hβ⟩ h
+        simpa using (coroot_eq_iff (by simpa using hα) (by simpa using hβ)).mp h }
     (fun ⟨α, hα⟩ ↦ by simpa using root_apply_coroot <| by simpa using hα)
     (by
       rintro ⟨α, hα⟩ - ⟨⟨β, hβ⟩, rfl⟩
-      simpa using
-        ⟨reflectRoot α β, by simpa using reflectRoot_isNonZero α β <| by simpa using hβ, rfl⟩)
+      replace hα : α.IsNonZero := by simpa using hα
+      simpa using ⟨reflectRoot α β hα,
+        by simpa using reflectRoot_isNonZero α β hα <| by simpa using hβ, rfl⟩)
     (by convert! span_weight_isNonZero_eq_top K L H; ext; simp)
 
 instance : (rootSystem H).IsRootSystem :=
@@ -452,9 +451,11 @@ open LieSubmodule in
 @[simp]
 lemma biSup_corootSpace_eq_top :
     ⨆ α : Weight K H L, ⨆ (_ : α.IsNonZero), corootSpace α = ⊤ := by
-  simp only [← toSubmodule_inj, top_toSubmodule, iSup_toSubmodule,
-    ← RootPairing.IsRootSystem.span_coroot_eq_top (P := rootSystem H),
-    coe_corootSpace_eq_span_singleton, Submodule.iSup_span]
+  have h (α : Weight K H L) : ⨆ (_ : α.IsNonZero), (corootSpace α).toSubmodule =
+      ⨆ (hα : α.IsNonZero), K ∙ coroot α :=
+    iSup_congr fun hα ↦ coe_corootSpace_eq_span_singleton hα
+  simp only [← toSubmodule_inj, top_toSubmodule, iSup_toSubmodule, h,
+    ← RootPairing.IsRootSystem.span_coroot_eq_top (P := rootSystem H), Submodule.iSup_span]
   congr
   ext α
   simp [eq_comm]

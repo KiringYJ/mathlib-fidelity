@@ -39,32 +39,36 @@ variable [Algebra F K] [DifferentialAlgebra F K]
 
 /--
 We say that a differential field extension `K / F` is Liouville if, whenever an element `a ∈ F` can
-be written as `a = v + ∑ cᵢ * logDeriv uᵢ` for `v, cᵢ, uᵢ ∈ K` and `cᵢ` constant, it can also be
-written in that way with `v, cᵢ, uᵢ ∈ F`.
+be written as `a = ∑ cᵢ * logDeriv uᵢ + v′` for `v, cᵢ, uᵢ ∈ K` with `cᵢ` constant and `uᵢ` nonzero,
+it can also be written in that way with `v, cᵢ, uᵢ ∈ F`.
 -/
 class IsLiouville : Prop where
   isLiouville (a : F) (ι : Type) [Fintype ι] (c : ι → F) (hc : ∀ x, (c x)′ = 0)
-    (u : ι → K) (v : K) (h : a = ∑ x, c x * logDeriv (u x) + v′) :
+    (u : ι → K) (hu : ∀ x, u x ≠ 0) (v : K)
+    (h : a = ∑ x, c x * logDeriv (u x) (hu x).isUnit + v′) :
     ∃ (ι₀ : Type) (_ : Fintype ι₀) (c₀ : ι₀ → F) (_ : ∀ x, (c₀ x)′ = 0)
-      (u₀ : ι₀ → F) (v₀ : F), a = ∑ x, c₀ x * logDeriv (u₀ x) + v₀′
+      (u₀ : ι₀ → F) (hu₀ : ∀ x, u₀ x ≠ 0) (v₀ : F),
+      a = ∑ x, c₀ x * logDeriv (u₀ x) (hu₀ x).isUnit + v₀′
 
 instance IsLiouville.rfl : IsLiouville F F where
   isLiouville (a : F) (ι : Type) [Fintype ι] (c : ι → F) (hc : ∀ x, (c x)′ = 0)
-      (u : ι → F) (v : F) (h : a = ∑ x, c x * logDeriv (u x) + v′) :=
-    ⟨ι, _, c, hc, u, v, h⟩
+      (u : ι → F) (hu : ∀ x, u x ≠ 0) (v : F)
+      (h : a = ∑ x, c x * logDeriv (u x) (hu x).isUnit + v′) :=
+    ⟨ι, _, c, hc, u, hu, v, h⟩
 
 lemma IsLiouville.trans {A : Type*} [Field A] [Algebra K A] [Algebra F A]
     [Differential A] [IsScalarTower F K A] [Differential.ContainConstants F K]
     (inst1 : IsLiouville F K) (inst2 : IsLiouville K A) : IsLiouville F A where
   isLiouville (a : F) (ι : Type) [Fintype ι] (c : ι → F) (hc : ∀ x, (c x)′ = 0)
-      (u : ι → A) (v : A) (h : a = ∑ x, c x * logDeriv (u x) + v′) := by
-    obtain ⟨ι₀, _, c₀, hc₀, u₀, v₀, h₀⟩ := inst2.isLiouville (a : K) ι
+      (u : ι → A) (hu : ∀ x, u x ≠ 0) (v : A)
+      (h : a = ∑ x, c x * logDeriv (u x) (hu x).isUnit + v′) := by
+    obtain ⟨ι₀, _, c₀, hc₀, u₀, hu₀, v₀, h₀⟩ := inst2.isLiouville (a : K) ι
         ((↑) ∘ c)
         (fun _ ↦ by simp only [Function.comp_apply, ← coe_deriv, coe_eq_zero_iff, hc])
-        ((↑) ∘ u) v (by simpa only [Function.comp_apply, ← IsScalarTower.algebraMap_apply])
+        u hu v (by simpa only [Function.comp_apply, ← IsScalarTower.algebraMap_apply])
     have hc (x : ι₀) := mem_range_of_deriv_eq_zero F (hc₀ x)
     choose c₀ hc using hc
-    apply inst1.isLiouville a ι₀ c₀ _ u₀ v₀
+    apply inst1.isLiouville a ι₀ c₀ _ u₀ hu₀ v₀
     · rw [h₀]
       simp [hc]
     · intro
@@ -88,8 +92,9 @@ instance (B : IntermediateField F K)
     [FiniteDimensional F B] [inst : IsLiouville F K] :
     IsLiouville F B where
   isLiouville (a : F) (ι : Type) [Fintype ι] (c : ι → F) (hc : ∀ x, (c x)′ = 0)
-      (u : ι → B) (v : B) (h : a = ∑ x, c x * logDeriv (u x) + v′) := by
-    apply inst.isLiouville a ι c hc (B.val ∘ u) (B.val v)
+      (u : ι → B) (hu : ∀ x, u x ≠ 0) (v : B)
+      (h : a = ∑ x, c x * logDeriv (u x) (hu x).isUnit + v′) := by
+    apply inst.isLiouville a ι c hc (B.val ∘ u) (fun x ↦ by simpa using hu x) (B.val v)
     dsimp only [coe_val, Function.comp_apply]
     conv =>
       rhs
@@ -97,7 +102,7 @@ instance (B : IntermediateField F K)
       · rhs
         intro x
         rhs
-        apply logDeriv_algebraMap (u x)
+        apply logDeriv_algebraMap (u x) (ha := (hu x).isUnit)
       · apply (deriv_algebraMap v)
     simp_rw [IsScalarTower.algebraMap_apply F B K]
     norm_cast
@@ -111,8 +116,9 @@ lemma IsLiouville.equiv {K' : Type*} [Field K'] [Differential K'] [Algebra F K']
     [DifferentialAlgebra F K'] [Algebra.IsAlgebraic F K']
     [inst : IsLiouville F K] (e : K ≃ₐ[F] K') : IsLiouville F K' where
   isLiouville (a : F) (ι : Type) [Fintype ι] (c : ι → F) (hc : ∀ x, (c x)′ = 0)
-      (u : ι → K') (v : K') (h : a = ∑ x, c x * logDeriv (u x) + v′) := by
-    apply inst.isLiouville a ι c hc (e.symm ∘ u) (e.symm v)
+      (u : ι → K') (hu : ∀ x, u x ≠ 0) (v : K')
+      (h : a = ∑ x, c x * logDeriv (u x) (hu x).isUnit + v′) := by
+    apply inst.isLiouville a ι c hc (e.symm ∘ u) (fun x ↦ by simpa using hu x) (e.symm v)
     apply_fun e.symm at h
     simpa [AlgEquiv.commutes, map_add, map_sum, map_mul, logDeriv, algEquiv_deriv'] using h
 
@@ -123,7 +129,8 @@ This is private because it's generalized by all finite-dimensional extensions be
 private local instance isLiouville_of_finiteDimensional_galois [FiniteDimensional F K]
     [IsGalois F K] : IsLiouville F K where
   isLiouville (a : F) (ι : Type) [Fintype ι] (c : ι → F) (hc : ∀ x, (c x)′ = 0)
-      (u : ι → K) (v : K) (h : a = ∑ x, c x * logDeriv (u x) + v′) := by
+      (u : ι → K) (hu : ∀ x, u x ≠ 0) (v : K)
+      (h : a = ∑ x, c x * logDeriv (u x) (hu x).isUnit + v′) := by
     have : CharZero K := charZero_of_injective_algebraMap
       (FaithfulSMul.algebraMap_injective F K)
     -- We sum `e x` over all isomorphisms `e : K ≃ₐ[F] K`.
@@ -144,6 +151,11 @@ private local instance isLiouville_of_finiteDimensional_galois [FiniteDimensiona
     simp_rw [ffb, IntermediateField.mem_bot, Set.mem_range] at this
     -- Therefore they are all in `F`. We use `choose` to get their values in `F`.
     choose u₀ hu₀ using this
+    have hσ (σ : K ≃ₐ[F] K) (i : ι) : σ (u i) ≠ 0 := by simpa using hu i
+    have hu₀' (i : ι) : u₀ i ≠ 0 := by
+      refine ne_zero_of_map (f := algebraMap F K) ?_
+      rw [hu₀ i]
+      exact prod_ne_zero_iff.2 fun σ _ ↦ hσ σ i
     -- We do almost the same thing for `v₁`, just with sum instead of product.
     let v₁ := (∑ x : (K ≃ₐ[F] K), x v) / (Fintype.card ((K ≃ₐ[F] K)))
     have : v₁ ∈ fixedField (⊤ : Subgroup (K ≃ₐ[F] K)) := by
@@ -155,7 +167,7 @@ private local instance isLiouville_of_finiteDimensional_galois [FiniteDimensiona
       simp
     rw [ffb, IntermediateField.mem_bot] at this
     obtain ⟨v₀, hv₀⟩ := this
-    exists ι, inferInstance, c₀, ?_, u₀, v₀
+    exists ι, inferInstance, c₀, ?_, u₀, hu₀', v₀
     · -- We need to prove that all `c₀` are constants.
       -- This is true because they are the division of a constant by
       -- a natural number (which is also constant)
@@ -167,19 +179,19 @@ private local instance isLiouville_of_finiteDimensional_galois [FiniteDimensiona
         exact FaithfulSMul.algebraMap_injective F K
       simp only [map_add, map_sum, map_mul, ← logDeriv_algebraMap, hu₀, ← deriv_algebraMap, hv₀]
       unfold u₁ v₁ c₀
-      clear c₀ u₁ u₀ hu₀ v₁ v₀ hv₀
+      clear c₀ v₁ v₀ hv₀
       push_cast
-      rw [Derivation.leibniz_div_const, smul_eq_mul, inv_mul_eq_div]
+      rw [Derivation.leibniz_div_const, smul_eq_mul, inv_mul_eq_div₀]
       case h => simp
-      simp only [map_sum, div_mul_eq_mul_div]
+      simp only [map_sum, div_mul_eq_mul_div₀]
       rw [← sum_div, ← add_div]
       field_simp
       -- Here we rewrite logDeriv (∏ x : K ≃ₐ[F] K, x (u i)) to ∑ x : K ≃ₐ[F] K, logDeriv (x (u i))
       conv =>
         enter [2, 1, 2, i, 2]
-        equals ∑ x : K ≃ₐ[F] K, logDeriv (x (u i)) =>
-          by_cases h : u i = 0 <;>
-          simp [logDeriv_prod, h]
+        equals ∑ σ : K ≃ₐ[F] K, logDeriv (σ (u i)) (hσ σ i).isUnit =>
+          rw [logDeriv_prod _ _ _ fun σ _ ↦ hσ σ i]
+          exact sum_coe_sort univ fun σ ↦ logDeriv (σ (u i)) (hσ σ i).isUnit
       simp_rw [mul_sum]
       rw [sum_comm, ← sum_add_distrib]
       trans ∑ _ : (K ≃ₐ[F] K), a

@@ -150,12 +150,12 @@ namespace unitInterval
 /-- `qRight` is analogous to the function `Q` defined on p. 475 of [serre1951] that helps proving
 continuity of `delayReflRight`. -/
 def qRight (p : I × I) : I :=
-  Set.projIcc 0 1 zero_le_one (2 * p.1 / (1 + p.2))
+  Set.projIcc 0 1 zero_le_one (Checked.div (2 * p.1) (1 + p.2) (add_pos zero_lt_one).ne'.isUnit)
 
 @[fun_prop]
 theorem continuous_qRight : Continuous qRight :=
   continuous_projIcc.comp <|
-    Continuous.div (by fun_prop) (by fun_prop) fun _ ↦ (add_pos zero_lt_one).ne'
+    Continuous.div₀ (h₀ := fun _ ↦ (add_pos zero_lt_one).ne'.isUnit) (by fun_prop) (by fun_prop)
 
 theorem qRight_zero_left (θ : I) : qRight (0, θ) = 0 :=
   Set.projIcc_of_le_left _ <| by simp only [coe_zero, mul_zero, zero_div, le_refl]
@@ -170,7 +170,7 @@ theorem qRight_one_left (θ : I) : qRight (1, θ) = 1 :=
 
 theorem qRight_zero_right (t : I) :
     (qRight (t, 0) : ℝ) = if (t : ℝ) ≤ 1 / 2 then (2 : ℝ) * t else 1 := by
-  simp only [qRight, coe_zero, add_zero, div_one]
+  simp only [qRight, coe_zero, add_zero, div_one₀]
   split_ifs
   · rw [Set.projIcc_of_mem _ ((mul_pos_mem_iff zero_lt_two).2 _)]
     refine ⟨t.2.1, ?_⟩

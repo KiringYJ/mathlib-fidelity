@@ -25,9 +25,10 @@ public section
 universe u
 
 /-- Define a `Field` structure on a Type by proving a minimal set of axioms.
-Note that this uses the default definitions for `npow`, `nsmul`, `zsmul` and `sub`.
+Note that this uses the default definitions for `npow`, `nsmul`, `zsmul` and `sub`, and the
+default rational embeddings and actions in characteristic zero, which are noncomputable.
 See note [reducible non-instances]. -/
-abbrev Field.ofMinimalAxioms (K : Type u)
+noncomputable abbrev Field.ofMinimalAxioms (K : Type u)
     [Add K] [Mul K] [Neg K] [Zero K] [One K]
     (add_assoc : ∀ a b c : K, a + b + c = a + (b + c))
     (zero_add : ∀ a : K, 0 + a = a)

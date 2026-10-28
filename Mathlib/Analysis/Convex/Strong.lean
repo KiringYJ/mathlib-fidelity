@@ -51,10 +51,10 @@ def UniformConcaveOn (s : Set E) (φ : ℝ → ℝ) (f : E → ℝ) : Prop :=
     a • f x + b • f y + a * b * φ ‖x - y‖ ≤ f (a • x + b • y)
 
 @[simp] lemma uniformConvexOn_zero : UniformConvexOn s 0 f ↔ ConvexOn ℝ s f := by
-  simp [UniformConvexOn, ConvexOn]
+  simp [UniformConvexOn, convexOn_iff]
 
 @[simp] lemma uniformConcaveOn_zero : UniformConcaveOn s 0 f ↔ ConcaveOn ℝ s f := by
-  simp [UniformConcaveOn, ConcaveOn]
+  simp [UniformConcaveOn, concaveOn_iff]
 
 protected alias ⟨_, ConvexOn.uniformConvexOn_zero⟩ := uniformConvexOn_zero
 protected alias ⟨_, ConcaveOn.uniformConcaveOn_zero⟩ := uniformConcaveOn_zero
@@ -73,15 +73,15 @@ lemma UniformConcaveOn.concaveOn (hf : UniformConcaveOn s φ f) (hφ : 0 ≤ φ)
 
 lemma UniformConvexOn.strictConvexOn (hf : UniformConvexOn s φ f) (hφ : ∀ r, r ≠ 0 → 0 < φ r) :
     StrictConvexOn ℝ s f := by
-  refine ⟨hf.1, fun x hx y hy hxy a b ha hb hab ↦ (hf.2 hx hy ha.le hb.le hab).trans_lt <|
-    sub_lt_self _ ?_⟩
+  refine strictConvexOn_iff.2 ⟨hf.1, fun x hx y hy hxy a b ha hb hab ↦
+    (hf.2 hx hy ha.le hb.le hab).trans_lt <| sub_lt_self _ ?_⟩
   rw [← sub_ne_zero, ← norm_pos_iff] at hxy
   positivity [hφ _ hxy.ne']
 
 lemma UniformConcaveOn.strictConcaveOn (hf : UniformConcaveOn s φ f) (hφ : ∀ r, r ≠ 0 → 0 < φ r) :
     StrictConcaveOn ℝ s f := by
-  refine ⟨hf.1, fun x hx y hy hxy a b ha hb hab ↦ (hf.2 hx hy ha.le hb.le hab).trans_lt' <|
-    lt_add_of_pos_right _ ?_⟩
+  refine strictConcaveOn_iff.2 ⟨hf.1, fun x hx y hy hxy a b ha hb hab ↦
+    (hf.2 hx hy ha.le hb.le hab).trans_lt' <| lt_add_of_pos_right _ ?_⟩
   rw [← sub_ne_zero, ← norm_pos_iff] at hxy
   positivity [hφ _ hxy.ne']
 
@@ -163,15 +163,17 @@ private lemma aux_add (ha : 0 ≤ a) (hb : 0 ≤ b) (hab : a + b = 1) :
     a * (f x + m / (2 : ℝ) * ‖x‖ ^ 2) + b * (f y + m / (2 : ℝ) * ‖y‖ ^ 2) -
       m / (2 : ℝ) * ‖a • x + b • y‖ ^ 2
       = a * f x + b * f y + m / (2 : ℝ) * a * b * ‖x - y‖ ^ 2 := by
-  simpa [neg_div] using! aux_sub (E := E) (m := -m) ha hb hab
+  simpa [neg_div₀] using! aux_sub (E := E) (m := -m) ha hb hab
 
 lemma strongConvexOn_iff_convex :
     StrongConvexOn s m f ↔ ConvexOn ℝ s fun x ↦ f x - m / (2 : ℝ) * ‖x‖ ^ 2 := by
+  rw [convexOn_iff]
   refine and_congr_right fun _ ↦ forall₄_congr fun x _ y _ ↦ forall₅_congr fun a b ha hb hab ↦ ?_
   simp_rw [sub_le_iff_le_add, smul_eq_mul, aux_sub ha hb hab, mul_assoc, mul_left_comm]
 
 lemma strongConcaveOn_iff_convex :
     StrongConcaveOn s m f ↔ ConcaveOn ℝ s fun x ↦ f x + m / (2 : ℝ) * ‖x‖ ^ 2 := by
+  rw [concaveOn_iff]
   refine and_congr_right fun _ ↦ forall₄_congr fun x _ y _ ↦ forall₅_congr fun a b ha hb hab ↦ ?_
   simp_rw [← sub_le_iff_le_add, smul_eq_mul, aux_add ha hb hab, mul_assoc, mul_left_comm]
 

@@ -203,8 +203,8 @@ inductive IsNNRat [Semiring α] (a : α) (num : ℕ) (denom : ℕ) : Prop
 A "raw nnrat cast" is an expression of the form:
 
 * `(Nat.rawCast lit : α)` where `lit` is a raw natural number literal
-* `(NNRat.rawCast n d : α)` where `n` is a raw nat literal, `d` is a raw nat literal, and `d` is not
-  `1` or `0`.
+* `(NNRat.rawCast n d hd : α)` where `n` is a raw nat literal, `d` is a raw nat literal, `d` is not
+  `1` or `0`, and `hd` is the evidence that `(d : α) ≠ 0`.
 
 This representation is used by tactics like `ring` to decrease the number of typeclass arguments
 required in each use of a number literal at type `α`.
@@ -212,17 +212,18 @@ required in each use of a number literal at type `α`.
 @[simp]
 noncomputable def _root_.NNRat.rawCast [DivisionSemiring α]
     (n : ℕ) (d : ℕ) (hd : (d : α) ≠ 0) : α :=
-  n /ₚ Units.mk0 (d : α) hd
+  n / d
 
 /--
 A "raw rat cast" is an expression of the form:
 
 * `(Nat.rawCast lit : α)` where `lit` is a raw natural number literal
 * `(Int.rawCast (Int.negOfNat lit) : α)` where `lit` is a nonzero raw natural number literal
-* `(NNRat.rawCast n d : α)` where `n` is a raw nat literal, `d` is a raw nat literal, and `d` is not
-  `1` or `0`.
-* `(Rat.rawCast (Int.negOfNat n) d : α)` where `n` is a raw nat literal,
-  `d` is a raw nat literal, `n` is not `0`, and `d` is not `1` or `0`.
+* `(NNRat.rawCast n d hd : α)` where `n` is a raw nat literal, `d` is a raw nat literal, `d` is not
+  `1` or `0`, and `hd` is the evidence that `(d : α) ≠ 0`.
+* `(Rat.rawCast (Int.negOfNat n) d hd : α)` where `n` is a raw nat literal,
+  `d` is a raw nat literal, `n` is not `0`, `d` is not `1` or `0`, and `hd` is the evidence that
+  `(d : α) ≠ 0`.
 
 This representation is used by tactics like `ring` to decrease the number of typeclass arguments
 required in each use of a number literal at type `α`.
@@ -230,7 +231,7 @@ required in each use of a number literal at type `α`.
 @[simp]
 noncomputable def _root_.Rat.rawCast [DivisionRing α]
     (n : ℤ) (d : ℕ) (hd : (d : α) ≠ 0) : α :=
-  n /ₚ Units.mk0 (d : α) hd
+  n / d
 
 theorem IsNNRat.to_isNat {α} [Semiring α] : ∀ {a : α} {n}, IsNNRat a (n) (nat_lit 1) → IsNat a n
   | _, num, ⟨inv, rfl⟩ => have := @invertibleOne α _; ⟨by simp⟩
@@ -261,41 +262,53 @@ theorem IsRat.den_nz {α} [DivisionRing α] {a n d} : IsRat (a : α) n d → (d 
       let _ := inv
       exact Invertible.ne_zero (d : α)
 
+/-- The invertibility evidence for the denominator of an `IsNNRat`, transported along an equation
+with another expression for the denominator. It makes the quotient `n' / d'` well formed. -/
+theorem IsNNRat.isUnit_of_den_eq {α} [DivisionSemiring α] {a n d} {d' : α}
+    (h : IsNNRat (a : α) n d) (hd : (d : α) = d') : IsUnit d' :=
+  hd ▸ GroupWithZero.isUnit_of_ne_zero h.den_nz
+
+/-- The invertibility evidence for the denominator of an `IsRat`, transported along an equation
+with another expression for the denominator. It makes the quotient `n' / d'` well formed. -/
+theorem IsRat.isUnit_of_den_eq {α} [DivisionRing α] {a n d} {d' : α}
+    (h : IsRat (a : α) n d) (hd : (d : α) = d') : IsUnit d' :=
+  hd ▸ GroupWithZero.isUnit_of_ne_zero h.den_nz
+
 theorem IsNNRat.to_raw_eq {n d : ℕ} [DivisionSemiring α] :
     ∀ {a} (h : IsNNRat (a : α) n d), a = NNRat.rawCast n d h.den_nz
   | _, ⟨inv, rfl⟩ => by
       let _ := inv
-      simp [NNRat.rawCast, divp, ← invOf_eq_mk0_inv]
+      simp [NNRat.rawCast, div_eq_mul_inv₀]
 
 theorem IsRat.to_raw_eq {n : ℤ} {d : ℕ} [DivisionRing α] :
     ∀ {a} (h : IsRat (a : α) n d), a = Rat.rawCast n d h.den_nz
   | _, ⟨inv, rfl⟩ => by
       let _ := inv
-      simp [Rat.rawCast, divp, ← invOf_eq_mk0_inv]
+      simp [Rat.rawCast, div_eq_mul_inv₀]
 
 theorem IsRat.neg_to_eq {α} [DivisionRing α] {n d} {a n' d' : α}
     (h : IsRat a (.negOfNat n) d) (hn : n = n') (hd : d = d') :
-    a = -(n' /ₚ Units.mk0 d' (by subst d'; exact h.den_nz)) := by
+    a = -Checked.div n' d' (h.isUnit_of_den_eq hd) := by
   subst n' d'
   rcases h with ⟨inv, rfl⟩
   let _ := inv
-  simp [divp, ← invOf_eq_mk0_inv]
+  simp [div_eq_mul_inv₀]
 
 theorem IsNNRat.to_eq {α} [DivisionSemiring α] {n d} {a n' d' : α}
     (h : IsNNRat a n d) (hn : n = n') (hd : d = d') :
-    a = n' /ₚ Units.mk0 d' (by subst d'; exact h.den_nz) := by
+    a = Checked.div n' d' (h.isUnit_of_den_eq hd) := by
   subst n' d'
   exact h.to_raw_eq
 
 theorem IsNNRat.of_raw (α) [DivisionSemiring α] (n : ℕ) (d : ℕ)
     (h : (d : α) ≠ 0) : IsNNRat (NNRat.rawCast n d h : α) n d :=
   have := invertibleOfNonzero h
-  ⟨this, by simp [NNRat.rawCast, divp, ← invOf_eq_mk0_inv]⟩
+  ⟨this, by simp [NNRat.rawCast, div_eq_mul_inv₀]⟩
 
 theorem IsRat.of_raw (α) [DivisionRing α] (n : ℤ) (d : ℕ)
     (h : (d : α) ≠ 0) : IsRat (Rat.rawCast n d h : α) n d :=
   have := invertibleOfNonzero h
-  ⟨this, by simp [Rat.rawCast, divp, ← invOf_eq_mk0_inv]⟩
+  ⟨this, by simp [Rat.rawCast, div_eq_mul_inv₀]⟩
 
 meta section
 
@@ -544,7 +557,11 @@ def Result.ofRawRat {α : Q(Type u)} (q : ℚ) (e : Q($α)) (hyp : Option Expr :
     let hyp : Q(($d : $α) ≠ 0) := hyp.getD sourceHyp
     .isNegNNRat dα q n d (q(IsRat.of_raw $α (.negOfNat $n) $d $hyp) : Expr)
 
-/-- Convert a `Result` to a `Simp.Result`. -/
+/-- Convert a `Result` to a `Simp.Result`.
+
+A quotient `n' / d'` carries the evidence that `d'` is a unit, so renormalizing a normalized
+fraction yields a term that differs from it by proof arguments only. Such a fraction is returned
+unchanged, because `simp` detects a fixed point by structural equality of terms. -/
 def Result.toSimpResult {α : Q(Type u)} {e : Q($α)} : Result e → MetaM Simp.Result
   | r@(.isBool ..) => let ⟨expr, proof?⟩ := r.toRawEq; pure { expr, proof? }
   | .isNat sα lit p => do
@@ -553,9 +570,18 @@ def Result.toSimpResult {α : Q(Type u)} {e : Q($α)} : Result e → MetaM Simp.
   | .isNegNat _rα lit p => do
     let ⟨a', pa'⟩ ← mkOfNat α q(AddCommMonoidWithOne.toAddMonoidWithOne) lit
     return { expr := q(-$a'), proof? := q(IsInt.neg_to_eq $p $pa') }
-  | r@(.isNNRat ..) | r@(.isNegNNRat ..) =>
-    let ⟨expr, proof⟩ := r.toRawEq
-    pure { expr, proof? := proof }
+  | .isNNRat _ _ n d p => do
+    let ⟨n', pn'⟩ ← mkOfNat α q(AddCommMonoidWithOne.toAddMonoidWithOne) n
+    let ⟨d', pd'⟩ ← mkOfNat α q(AddCommMonoidWithOne.toAddMonoidWithOne) d
+    let expr : Q($α) := q(Checked.div $n' $d' (IsNNRat.isUnit_of_den_eq $p $pd'))
+    if ← withNewMCtxDepth <| withReducible <| isDefEq e expr then return { expr := e }
+    return { expr, proof? := q(IsNNRat.to_eq $p $pn' $pd') }
+  | .isNegNNRat _ _ n d p => do
+    let ⟨n', pn'⟩ ← mkOfNat α q(AddCommMonoidWithOne.toAddMonoidWithOne) n
+    let ⟨d', pd'⟩ ← mkOfNat α q(AddCommMonoidWithOne.toAddMonoidWithOne) d
+    let expr : Q($α) := q(-Checked.div $n' $d' (IsRat.isUnit_of_den_eq $p $pd'))
+    if ← withNewMCtxDepth <| withReducible <| isDefEq e expr then return { expr := e }
+    return { expr, proof? := q(IsRat.neg_to_eq $p $pn' $pd') }
 
 /-- Given `Mathlib.Meta.NormNum.Result.isBool p b`, this is the type of `p`.
   Note that `BoolResult p b` is definitionally equal to `Expr`, and if you write `match b with ...`,

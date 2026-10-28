@@ -46,17 +46,11 @@ theorem not_disjoint_segment_convexHull_triple {p q u v x y z : E} (hz : z ∈ s
     exact ⟨q, right_mem_segment _ _ _, subset_convexHull _ _ <| by simp⟩
   obtain ⟨au, bu, hau, hbu, habu, rfl⟩ := hu
   have hab : 0 < az * av + bz * au := by positivity
-  let ud := Units.mk0 (az * av + bz * au) hab.ne'
-  have hud : (ud : 𝕜) = az * av + bz * au := rfl
-  have hudpos : 0 < (ud : 𝕜) := hud.symm ▸ hab
-  refine ⟨(az * av /ₚ ud) • (au • x + bu • p) +
-    (bz * au /ₚ ud) • (av • y + bv • q), ⟨_, _, ?_, ?_, ?_, rfl⟩, ?_⟩
-  · exact (divp_pos (mul_pos haz' hav') hudpos).le
-  · exact divp_nonneg (mul_nonneg hbz hau) hudpos.le
-  · rw [Units.divp_add_divp_same]
-    change (az * av + bz * au) /ₚ ud = 1
-    rw [← hud]
-    exact divp_self ud
+  refine ⟨(az * av / (az * av + bz * au)) • (au • x + bu • p) +
+    (bz * au / (az * av + bz * au)) • (av • y + bv • q), ⟨_, _, ?_, ?_, ?_, rfl⟩, ?_⟩
+  · positivity
+  · positivity
+  · rw [← add_div, div_self]
   classical
     let w : Fin 3 → 𝕜 := ![az * av * bu, bz * au * bv, au * av]
     let z : Fin 3 → E := ![p, q, az • x + bz • y]
@@ -70,18 +64,14 @@ theorem not_disjoint_segment_convexHull_triple {p q u v x y z : E} (hz : z ∈ s
       trans az * av * bu + (bz * au * bv + au * av)
       · simp [w, Fin.sum_univ_succ]
       linear_combination (au * bv - 1 * au) * habz + (-(1 * az * au) + au) * habv + az * av * habu
-    have hwsum : ∑ i, w i ≠ 0 := hw.trans_ne hab.ne'
     have hz : ∀ i, z i ∈ ({p, q, az • x + bz • y} : Set E) := fun i => by fin_cases i <;> simp [z]
     convert!
       (Finset.centerMass_mem_convexHull (Finset.univ : Finset (Fin 3)) (fun i _ => hw₀ i)
-          (by rw [hw]; exact hab) fun i _ => hz i)
+          (by rwa [hw]) fun i _ => hz i :
+        Finset.univ.centerMass w z _ ∈ _)
     rw [Finset.centerMass]
-    let us := Units.mk0 (∑ i, w i) hwsum
-    change _ = (↑us⁻¹ : 𝕜) • ∑ i, w i • z i
-    have hus : us = ud := Units.ext hw
-    rw [hus]
-    simp only [divp]
-    trans (↑ud⁻¹ : 𝕜) •
+    simp only [hw]
+    trans (az * av + bz * au)⁻¹ •
       ((az * av * bu) • p + ((bz * au * bv) • q + (au * av) • (az • x + bz • y)))
     · module
     congr 3

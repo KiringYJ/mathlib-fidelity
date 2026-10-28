@@ -29,35 +29,23 @@ theorem ratSqrt_le_realSqrt (x : ℕ) {prec : ℕ} (h : 0 < prec) :
   simpa only [Rat.cast_nonneg] using ratSqrt_nonneg _ _ h
 
 theorem realSqrt_lt_ratSqrt_add_inv_prec (x : ℕ) {prec : ℕ} (h : 0 < prec) :
-    √x < (ratSqrt x prec h : ℝ) +
-      (1 : ℝ) /ₚ Units.mk0 (prec : ℝ) (Nat.cast_ne_zero.mpr h.ne') := by
-  let uq := Units.mk0 (prec : ℚ) (Nat.cast_ne_zero.mpr h.ne')
-  let ur := Units.mk0 (prec : ℝ) (Nat.cast_ne_zero.mpr h.ne')
-  have hmap : Units.map (Rat.castHom ℝ).toMonoidHom uq = ur := by
-    apply Units.ext
-    change ((prec : ℚ) : ℝ) = (prec : ℝ)
-    exact Rat.cast_natCast _
-  have hc : (((1 : ℚ) /ₚ uq : ℚ) : ℝ) = (1 : ℝ) /ₚ ur := by
-    rw [Rat.cast_divp, Rat.cast_one, hmap]
-  have hq := lt_ratSqrt_add_inv_prec_sq (x := x) h
-  have hr : (x : ℝ) < ↑((x.ratSqrt prec h + (1 : ℚ) /ₚ uq) ^ 2 : ℚ) := by
-    exact_mod_cast hq
-  have hs := Real.sqrt_lt_sqrt (by simp) hr
-  rw [Rat.cast_pow, Real.sqrt_sq] at hs
-  · simpa only [Rat.cast_add, hc] using hs
-  · rw [Rat.cast_add, hc]
-    exact add_nonneg (by simpa only [Rat.cast_nonneg] using ratSqrt_nonneg x prec h)
-      (divp_nonneg zero_le_one (by change (0 : ℝ) ≤ prec; exact Nat.cast_nonneg _))
+    √x < ratSqrt x prec h + 1 / prec := by
+  have hp : (0 : ℝ) < prec := Nat.cast_pos.mpr h
+  have hr : ((ratSqrt x prec h : ℚ) : ℝ) * prec = ((x * prec ^ 2).sqrt : ℝ) := by
+    exact_mod_cast ratSqrt_mul_prec x prec h
+  have hpos : (0 : ℝ) < ratSqrt x prec h + 1 / prec :=
+    add_pos_of_nonneg_of_pos (by exact_mod_cast ratSqrt_nonneg x prec h) (by positivity)
+  rw [Real.sqrt_lt' hpos]
+  apply (mul_lt_mul_iff_of_pos_right (pow_pos hp 2)).mp
+  rw [← mul_pow, add_mul, hr, one_div_mul_cancel]
+  exact_mod_cast lt_succ_sqrt' (x * prec ^ 2)
 
 theorem realSqrt_mem_Ico (x : ℕ) {prec : ℕ} (h : 0 < prec) :
-    √x ∈ Set.Ico (ratSqrt x prec h : ℝ)
-      ((ratSqrt x prec h : ℝ) +
-        (1 : ℝ) /ₚ Units.mk0 (prec : ℝ) (Nat.cast_ne_zero.mpr h.ne')) :=
+    √x ∈ Set.Ico (ratSqrt x prec h : ℝ) (ratSqrt x prec h + 1 / prec : ℝ) :=
   ⟨ratSqrt_le_realSqrt x h, realSqrt_lt_ratSqrt_add_inv_prec x h⟩
 
 theorem ratSqrt_mem_Ioc (x : ℕ) {prec : ℕ} (h : 0 < prec) :
-    (ratSqrt x prec h : ℝ) ∈ Set.Ioc
-      (√x - (1 : ℝ) /ₚ Units.mk0 (prec : ℝ) (Nat.cast_ne_zero.mpr h.ne')) √x := by
+    (ratSqrt x prec h : ℝ) ∈ Set.Ioc (√x - 1 / prec) √x := by
   constructor
   · exact sub_lt_iff_lt_add.mpr (realSqrt_lt_ratSqrt_add_inv_prec x h)
   · exact ratSqrt_le_realSqrt x h

@@ -23,7 +23,7 @@ section Examples
 /-- The matrix $[a, -b; b, a]$ (inspired by multiplication by a complex number); it is an element of
 $GL_2(R)$ if `a ^ 2 + b ^ 2` is nonzero. -/
 @[simps! -fullyApplied val]
-def planeConformalMatrix {R} [Field R] (a b : R) (hab : a ^ 2 + b ^ 2 ≠ 0) :
+noncomputable def planeConformalMatrix {R} [Field R] (a b : R) (hab : a ^ 2 + b ^ 2 ≠ 0) :
     Matrix.GeneralLinearGroup (Fin 2) R :=
   GeneralLinearGroup.mkOfDetNeZero !![a, -b; b, a] (by simpa [det_fin_two, sq] using hab)
 

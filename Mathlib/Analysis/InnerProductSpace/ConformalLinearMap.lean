@@ -42,4 +42,4 @@ theorem isConformalMap_iff (f : E →L[ℝ] F) :
     · simp only [real_inner_smul_left, real_inner_smul_right, huv, mul_assoc,
         inv_mul_cancel_left₀ hc.ne', LinearMap.smul_apply, ContinuousLinearMap.coe_coe]
     · ext1 x
-      exact (smul_inv_smul₀ hc.ne' (f x)).symm
+      exact (smul_inv_smul₀ (ha := hc.ne'.isUnit) (f x)).symm

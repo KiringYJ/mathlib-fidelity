@@ -105,7 +105,7 @@ variable [Fintype ι] (b₂ : AffineBasis ι k P)
 
 /-- A change of basis formula for barycentric coordinates.
 
-See also `AffineBasis.toMatrix_nonsingularInverse_vecMul_toMatrix`. -/
+See also `AffineBasis.toMatrix_inv_vecMul_toMatrix`. -/
 @[simp]
 theorem toMatrix_vecMul_coords (x : P) : b₂.coords x ᵥ* b.toMatrix b₂ = b.coords x := by
   ext j
@@ -149,22 +149,15 @@ variable (b b₂ : AffineBasis ι k P)
 
 See also `AffineBasis.toMatrix_vecMul_coords`. -/
 @[simp]
-theorem toMatrix_nonsingularInverse_vecMul_toMatrix (x : P) :
-    b.coords x ᵥ* Matrix.nonsingularInverse (b.toMatrix b₂)
-      (Matrix.isUnit_iff_isUnit_det _ |>.mp (b.isUnit_toMatrix b₂)) = b₂.coords x := by
-  have hu := b.isUnit_toMatrix b₂
-  rw [Matrix.isUnit_iff_isUnit_det] at hu
-  rw [← b.toMatrix_vecMul_coords b₂, Matrix.vecMul_vecMul,
-    Matrix.mul_nonsingularInverse _ hu, Matrix.vecMul_one]
+theorem toMatrix_inv_vecMul_toMatrix (x : P) :
+    b.coords x ᵥ* Checked.inv (b.toMatrix b₂) (b.isUnit_toMatrix b₂) = b₂.coords x := by
+  rw [← b.toMatrix_vecMul_coords b₂, Matrix.vecMul_vecMul, mul_inv_cancel₀, Matrix.vecMul_one]
 
 /-- If we fix a background affine basis `b`, then for any other basis `b₂`, we can characterise
 the barycentric coordinates provided by `b₂` in terms of determinants relative to `b`. -/
 theorem det_smul_coords_eq_cramer_coords (x : P) :
     (b.toMatrix b₂).det • b₂.coords x = (b.toMatrix b₂)ᵀ.cramer (b.coords x) := by
-  have hu := b.isUnit_toMatrix b₂
-  rw [Matrix.isUnit_iff_isUnit_det] at hu
-  rw [← b.toMatrix_nonsingularInverse_vecMul_toMatrix,
-    Matrix.det_smul_vecMul_nonsingularInverse_eq_cramer_transpose _ _ hu]
+  rw [← b.toMatrix_inv_vecMul_toMatrix, Matrix.det_smul_inv_vecMul_eq_cramer_transpose]
 
 end CommRing
 

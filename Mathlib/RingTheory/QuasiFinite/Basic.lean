@@ -218,13 +218,16 @@ lemma of_isLocalization (M : Submonoid S) [IsLocalization M T] [QuasiFinite R S]
       ← top_le_iff, ← TensorProduct.span_tmul_eq_top, Submodule.span_le]
     rintro _ ⟨p, s, rfl⟩
     obtain ⟨s, t, rfl⟩ := IsLocalization.exists_mk'_eq M s
+    -- If `t` vanishes in the residue field, the fiber is zero and any element is a preimage.
+    by_cases ht : algebraMap _ P.ResidueField t.1 = 0
+    · refine ⟨0, ((IsLocalization.map_units T t).map
+        Algebra.TensorProduct.includeRight).mul_left_injective ?_⟩
+      simp [ht]
     use s • p / algebraMap _ _ t.1
     apply ((IsLocalization.map_units T t).map
       Algebra.TensorProduct.includeRight).mul_left_injective
-    by_cases ht : algebraMap _ P.ResidueField t.1 = 0
-    · simp [ht]
     trans (s • p) ⊗ₜ[S] 1
-    · simp [div_mul_cancel₀ _ ht]
+    · simp [div_mul_cancel₀]
     · dsimp; simp [Algebra.algebraMap_eq_smul_one, smul_tmul]
   trans R S T
 

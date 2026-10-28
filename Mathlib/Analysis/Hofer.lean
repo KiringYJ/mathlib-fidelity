@@ -34,7 +34,7 @@ theorem hofer {X : Type*} [MetricSpace X] [CompleteSpace X] (x : X) (ε : ℝ) (
   by_contra! H
   have reformulation : ∀ (x') (k : ℕ), ε * ϕ x ≤ ε / 2 ^ k * ϕ x' ↔ 2 ^ k * ϕ x ≤ ϕ x' := by
     intro x' k
-    rw [div_mul_eq_mul_div, le_div_iff₀, mul_assoc, mul_le_mul_iff_right₀ ε_pos, mul_comm]
+    rw [div_mul_eq_mul_div₀, le_div_iff₀, mul_assoc, mul_le_mul_iff_right₀ ε_pos, mul_comm]
     positivity
   -- Now let's specialize to `ε/2^k`
   replace H : ∀ k : ℕ, ∀ x', d x' x ≤ 2 * ε ∧ 2 ^ k * ϕ x ≤ ϕ x' →
@@ -79,7 +79,7 @@ theorem hofer {X : Type*} [MetricSpace X] [CompleteSpace X] (x : X) (ε : ℝ) (
   -- Hence u is Cauchy
   have cauchy_u : CauchySeq u := by
     refine cauchySeq_of_le_geometric _ ε one_half_lt_one fun n => ?_
-    simpa only [one_div, inv_pow] using! key₁ n
+    simpa only [div_eq_mul_inv₀, one_mul, inv_pow₀] using! key₁ n
   -- So u converges to some y
   obtain ⟨y, limy⟩ : ∃ y, Tendsto u atTop (𝓝 y) := CompleteSpace.complete cauchy_u
   -- And ϕ ∘ u goes to +∞

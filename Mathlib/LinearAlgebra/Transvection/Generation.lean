@@ -241,7 +241,7 @@ theorem mem_transvections_pow_mul_dilatransvections_of_fixedReduce_eq_one
         obtain ⟨u, hu⟩ := this
         obtain ⟨f, hfu, hf⟩ := Submodule.exists_dual_map_eq_bot_of_notMem hu inferInstance
         let v := (f u)⁻¹ • u
-        have hv : f v = 1 := by simp [v, inv_mul_cancel₀ hfu]
+        have hv : f v = 1 := by simp [v, inv_mul_cancel₀]
         exact ⟨f, v, by rwa [LinearMap.le_ker_iff_map], hv⟩
       obtain ⟨f, v, hf, hv⟩ := this
       -- We have chosen `f` and `v`.
@@ -333,11 +333,11 @@ private theorem exists_dual_of_fixedReduce_ne_smul
     simp only [Submodule.span_singleton_eq_span_singleton]
     use (Ne.isUnit hfu).unit
     simp [v_def, _root_.map_smul, Units.smul_isUnit, smul_sub,
-      ← mul_smul, mul_inv_cancel₀ hfu]
+      ← mul_smul, mul_inv_cancel₀]
   rw [← hspan, ← le_ker_iff_map] at hf
   refine ⟨f, v, ?_, hf,
-    by simp only [_root_.map_smul, smul_eq_mul, v_def, inv_mul_cancel₀ hfu]⟩
-  rw [← LinearIndependent.pair_smul_smul_iff (Ne.isUnit hfu).inv (Ne.isUnit hfu).inv] at hu
+    by simp only [_root_.map_smul, smul_eq_mul, v_def, inv_mul_cancel₀]⟩
+  rw [← LinearIndependent.pair_smul_smul_iff (Ne.isUnit hfu).inv₀ (Ne.isUnit hfu).inv₀] at hu
   simpa only [← LinearMap.map_smul, ← LinearEquiv.map_smul, ← v_def] using hu
 
 variable {e} in
@@ -406,7 +406,8 @@ private theorem not_forall_fixedReduce_eq_smul {f g : Dual K V} {v : V} {a b : K
     have h2 : c • x ∈ e.fixedSubmodule ⊔ K ∙ (e v - v) ⊔ K ∙ v := by
       rw [show c • x = g (e x) • (v - e v) - (g (e x) • (v - e v) - c • x) by abel]
       exact Submodule.sub_mem _ (mem_sup_left (mem_sup_right h1)) (hle (key x))
-    simpa [smul_smul, inv_mul_cancel₀ hc0] using Submodule.smul_mem _ c⁻¹ h2
+    have h3 := Submodule.smul_mem _ c⁻¹ h2
+    simpa [smul_smul, inv_mul_cancel₀] using h3
 
 /-- If an element `e : V ≃ₗ[K] V` is such that `e.fixedReduce`
 is not a homothety, then `e` is the product of at

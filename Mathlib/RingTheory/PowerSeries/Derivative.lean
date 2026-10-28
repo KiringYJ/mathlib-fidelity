@@ -122,12 +122,11 @@ theorem derivative_invOf [CommRing R] (f : R⟦X⟧) [Invertible f] :
     d⁄dX ⅟f = -⅟f ^ 2 * d⁄dX f :=
   MvPowerSeries.pderiv_invOf f
 
-/-
-The following theorem is stated only in the case that `R` is a field. This is because
-there is currently no instance of `Inv R⟦X⟧` for more general base rings `R`.
--/
-
-@[simp] theorem derivative_inv' [Field R] (f : R⟦X⟧) : d⁄dX f⁻¹ = -f⁻¹ ^ 2 * d⁄dX f :=
+/-- The derivative of the inverse of an invertible power series. A power series is invertible
+exactly when its constant coefficient is (`PowerSeries.isUnit_iff_constantCoeff`), so over a field
+exactly when its constant coefficient is nonzero. -/
+@[simp] theorem derivative_inv' [CommRing R] (f : R⟦X⟧) {hf : IsUnit f} :
+    d⁄dX f⁻¹ = -f⁻¹ ^ 2 * d⁄dX f :=
   MvPowerSeries.pderiv_inv' f
 
 /-- Chain rule for polynomials viewed as power series.  Use `derivative_subst` instead. -/

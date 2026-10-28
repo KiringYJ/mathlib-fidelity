@@ -120,8 +120,9 @@ theorem eps_pos (hPε : 100 ≤ (4 : ℝ) ^ #P.parts * ε ^ 5) : 0 < ε :=
   (Odd.pow_pos_iff (by decide)).mp (eps_pow_five_pos hPε)
 
 theorem hundred_div_ε_pow_five_le_m [Nonempty α] (hPα : #P.parts * 16 ^ #P.parts ≤ card α)
-    (hPε : 100 ≤ (4 : ℝ) ^ #P.parts * ε ^ 5) : 100 / ε ^ 5 ≤ m :=
-  (div_le_of_le_mul₀ (eps_pow_five_pos hPε).le (by positivity) hPε).trans <| by
+    (hPε : 100 ≤ (4 : ℝ) ^ #P.parts * ε ^ 5) :
+    Checked.div 100 (ε ^ 5) (pow_pos (eps_pos hPε) 5).ne'.isUnit ≤ m :=
+  ((div_le_iff₀ (pow_pos (eps_pos hPε) 5)).2 hPε).trans <| by
     norm_cast
     rwa [Nat.le_div_iff_mul_le (stepBound_pos (P.parts_nonempty <|
       univ_nonempty.ne_empty).card_pos), stepBound, mul_left_comm, ← mul_pow]
@@ -163,17 +164,18 @@ theorem pow_mul_m_le_card_part (hP : P.IsEquipartition) (hu : u ∈ P.parts) :
 variable (P ε) (l : ℕ)
 
 /-- Auxiliary function for Szemerédi's regularity lemma. The size of the partition by which we start
-blowing. -/
-noncomputable def initialBound : ℕ :=
+blowing. Its formula divides by `ε ^ 5`, so it is defined for `ε ≠ 0`; the evidence is found by
+`checked_nonzero` from the context. -/
+noncomputable def initialBound (hε : ε ≠ 0 := by checked_nonzero) : ℕ :=
   max 7 <| max l <| ⌊log (100 / ε ^ 5) / log 4⌋₊ + 1
 
-theorem le_initialBound : l ≤ initialBound ε l :=
+theorem le_initialBound {hε : ε ≠ 0} : l ≤ initialBound ε l :=
   (le_max_left _ _).trans <| le_max_right _ _
 
-theorem seven_le_initialBound : 7 ≤ initialBound ε l :=
+theorem seven_le_initialBound {hε : ε ≠ 0} : 7 ≤ initialBound ε l :=
   le_max_left _ _
 
-theorem initialBound_pos : 0 < initialBound ε l :=
+theorem initialBound_pos {hε : ε ≠ 0} : 0 < initialBound ε l :=
   Nat.succ_pos'.trans_le <| seven_le_initialBound _ _
 
 theorem hundred_lt_pow_initialBound_mul {ε : ℝ} (hε : 0 < ε) (l : ℕ) :
@@ -186,50 +188,52 @@ theorem hundred_lt_pow_initialBound_mul {ε : ℝ} (hε : 0 < ε) (l : ℕ) :
   · exact div_pos (by simp) (pow_pos hε 5)
 
 /-- An explicit bound on the size of the equipartition whose existence is given by Szemerédi's
-regularity lemma. -/
-noncomputable def bound : ℕ :=
+regularity lemma. Like `SzemerediRegularity.initialBound`, it is defined for `ε ≠ 0`. -/
+noncomputable def bound (hε : ε ≠ 0 := by checked_nonzero) : ℕ :=
   (stepBound^[⌊4 / ε ^ 5⌋₊] <| initialBound ε l) *
     16 ^ (stepBound^[⌊4 / ε ^ 5⌋₊] <| initialBound ε l)
 
-theorem initialBound_le_bound : initialBound ε l ≤ bound ε l :=
+theorem initialBound_le_bound {hε : ε ≠ 0} : initialBound ε l ≤ bound ε l :=
   (id_le_iterate_of_id_le le_stepBound _ _).trans <| Nat.le_mul_of_pos_right _ <| by positivity
 
-theorem le_bound : l ≤ bound ε l :=
+theorem le_bound {hε : ε ≠ 0} : l ≤ bound ε l :=
   (le_initialBound ε l).trans <| initialBound_le_bound ε l
 
-theorem bound_pos : 0 < bound ε l :=
+theorem bound_pos {hε : ε ≠ 0} : 0 < bound ε l :=
   (initialBound_pos ε l).trans_le <| initialBound_le_bound ε l
 
 variable {ι 𝕜 : Type*} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] {s t : Finset ι} {x : 𝕜}
 
-theorem mul_sq_le_sum_sq (hst : s ⊆ t) (f : ι → 𝕜) (hs : x ^ 2 ≤ ((∑ i ∈ s, f i) / #s) ^ 2)
-    (hs' : (#s : 𝕜) ≠ 0) : (#s : 𝕜) * x ^ 2 ≤ ∑ i ∈ t, f i ^ 2 := calc
+theorem mul_sq_le_sum_sq {hsUnit : IsUnit (#s : 𝕜)} (hst : s ⊆ t) (f : ι → 𝕜)
+    (hs : x ^ 2 ≤ ((∑ i ∈ s, f i) / #s) ^ 2) : (#s : 𝕜) * x ^ 2 ≤ ∑ i ∈ t, f i ^ 2 := calc
   _ ≤ (#s : 𝕜) * ((∑ i ∈ s, f i ^ 2) / #s) := by
     gcongr
     exact hs.trans sum_div_card_sq_le_sum_sq_div_card
-  _ = ∑ i ∈ s, f i ^ 2 := mul_div_cancel₀ _ hs'
+  _ = ∑ i ∈ s, f i ^ 2 := mul_div_cancel₀ _
   _ ≤ ∑ i ∈ t, f i ^ 2 := by gcongr
 
-theorem add_div_le_sum_sq_div_card (hst : s ⊆ t) (f : ι → 𝕜) (d : 𝕜) (hx : 0 ≤ x)
+theorem add_div_le_sum_sq_div_card {hsUnit : IsUnit (#s : 𝕜)} {htUnit : IsUnit (#t : 𝕜)}
+    (hst : s ⊆ t) (f : ι → 𝕜) (d : 𝕜) (hx : 0 ≤ x)
     (hs : x ≤ |(∑ i ∈ s, f i) / #s - (∑ i ∈ t, f i) / #t|) (ht : d ≤ ((∑ i ∈ t, f i) / #t) ^ 2) :
     d + #s / #t * x ^ 2 ≤ (∑ i ∈ t, f i ^ 2) / #t := by
-  obtain hscard | hscard := ((#s).cast_nonneg : (0 : 𝕜) ≤ #s).eq_or_lt
-  · simpa [← hscard] using ht.trans sum_div_card_sq_le_sum_sq_div_card
+  have hs' : s.Nonempty := card_pos.1 <| Nat.pos_of_ne_zero fun h ↦ by simp [h] at hsUnit
+  have hscard : (0 : 𝕜) < #s := by positivity
   have htcard : (0 : 𝕜) < #t := hscard.trans_le (Nat.cast_le.2 (card_le_card hst))
   have h₁ : x ^ 2 ≤ ((∑ i ∈ s, f i) / #s - (∑ i ∈ t, f i) / #t) ^ 2 :=
     sq_le_sq.2 (by rwa [abs_of_nonneg hx])
   have h₂ : x ^ 2 ≤ ((∑ i ∈ s, (f i - (∑ j ∈ t, f j) / #t)) / #s) ^ 2 := by
     apply h₁.trans
-    rw [sum_sub_distrib, sum_const, nsmul_eq_mul, sub_div, mul_div_cancel_left₀ _ hscard.ne']
+    rw [sum_sub_distrib, sum_const, nsmul_eq_mul, sub_div, mul_div_cancel_left₀]
   grw [ht]
-  rw [← mul_div_right_comm, le_div_iff₀ htcard, add_mul, div_mul_cancel₀ _ htcard.ne']
-  have h₃ := mul_sq_le_sum_sq hst (fun i => (f i - (∑ j ∈ t, f j) / #t)) h₂ hscard.ne'
+  rw [← mul_div_right_comm₀, le_div_iff₀ htcard, add_mul, div_mul_cancel₀]
+  have h₃ := mul_sq_le_sum_sq hst (fun i => (f i - (∑ j ∈ t, f j) / #t)) h₂
   grw [h₃]
-  simp only [sub_div' htcard.ne', div_pow, ← sum_div, ← mul_div_right_comm _ (#t : 𝕜), ← add_div,
-    div_le_iff₀ (sq_pos_of_ne_zero htcard.ne'), sub_sq, sum_add_distrib, sum_const,
-    sum_sub_distrib, mul_pow, ← sum_mul, nsmul_eq_mul, two_mul]
-  ring_nf
-  rfl
+  apply le_of_eq
+  have hμ : ∑ i ∈ t, f i = #t * ((∑ i ∈ t, f i) / #t) := (mul_div_cancel₀ _).symm
+  generalize (∑ i ∈ t, f i) / #t = μ at hμ ⊢
+  simp only [sub_sq, sum_add_distrib, sum_sub_distrib, ← sum_mul, ← mul_sum, sum_const,
+    nsmul_eq_mul, hμ]
+  ring
 
 end SzemerediRegularity
 
@@ -238,28 +242,28 @@ namespace Mathlib.Meta.Positivity
 open Lean.Meta Qq
 
 /-- Extension for the `positivity` tactic: `SzemerediRegularity.initialBound` is always positive. -/
-@[positivity SzemerediRegularity.initialBound _ _]
+@[positivity SzemerediRegularity.initialBound _ _ _]
 meta def evalInitialBound : PositivityExt where eval {u α} _ pα? e :=
   match pα? with | none => pure .none | some _ => do
   match u, α, e with
-  | 0, ~q(ℕ), ~q(SzemerediRegularity.initialBound $ε $l) =>
+  | 0, ~q(ℕ), ~q(SzemerediRegularity.initialBound $ε $l $hε) =>
     assertInstancesCommute
-    pure (.positive q(SzemerediRegularity.initialBound_pos $ε $l))
+    pure (.positive q(@SzemerediRegularity.initialBound_pos $ε $l $hε))
   | _, _, _ => throwError "not initialBound"
 
 
-example (ε : ℝ) (l : ℕ) : 0 < SzemerediRegularity.initialBound ε l := by positivity
+example (ε : ℝ) (hε : 0 < ε) (l : ℕ) : 0 < SzemerediRegularity.initialBound ε l := by positivity
 
 /-- Extension for the `positivity` tactic: `SzemerediRegularity.bound` is always positive. -/
-@[positivity SzemerediRegularity.bound _ _]
+@[positivity SzemerediRegularity.bound _ _ _]
 meta def evalBound : PositivityExt where eval {u α} _ pα? e :=
   match pα? with | none => pure .none | some _ => do
   match u, α, e with
-  | 0, ~q(ℕ), ~q(SzemerediRegularity.bound $ε $l) =>
+  | 0, ~q(ℕ), ~q(SzemerediRegularity.bound $ε $l $hε) =>
     assertInstancesCommute
-    pure (.positive q(SzemerediRegularity.bound_pos $ε $l))
+    pure (.positive q(@SzemerediRegularity.bound_pos $ε $l $hε))
   | _, _, _ => throwError "not bound"
 
-example (ε : ℝ) (l : ℕ) : 0 < SzemerediRegularity.bound ε l := by positivity
+example (ε : ℝ) (hε : 0 < ε) (l : ℕ) : 0 < SzemerediRegularity.bound ε l := by positivity
 
 end Mathlib.Meta.Positivity

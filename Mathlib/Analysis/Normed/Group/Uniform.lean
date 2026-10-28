@@ -155,8 +155,8 @@ theorem antilipschitzWith_iff_exists_mul_le_norm' [MonoidHomClass 𝓕 E F] {f :
   refine ⟨fun ⟨K, hK⟩ ↦ ⟨(K + 1)⁻¹, by positivity, fun x ↦ ?_⟩, fun ⟨c, hc0, hc⟩ ↦
     ⟨.mk c⁻¹ (by positivity), MonoidHomClass.antilipschitz_of_bound f fun x ↦ ?_⟩⟩
   · grw [hK.le_mul_norm' (map_one f), ← mul_assoc]
-    exact mul_le_of_le_one_left (norm_nonneg' (f x)) (by simp [field])
-  · grw [← hc, NNReal.coe_mk, inv_mul_cancel_left₀ hc0.ne']
+    exact mul_le_of_le_one_left (norm_nonneg' (f x)) ((inv_mul_le_iff₀ (by positivity)).2 (by simp))
+  · grw [← hc, NNReal.coe_mk, inv_mul_cancel_left₀]
 
 @[to_additive AntilipschitzWith.le_mul_nnnorm]
 theorem AntilipschitzWith.le_mul_nnnorm' {f : E → F} {K : ℝ≥0} (h : AntilipschitzWith K f)
@@ -342,12 +342,15 @@ lemma LocallyLipschitz.div (hf : LocallyLipschitz f) (hg : LocallyLipschitz g) :
 
 namespace AntilipschitzWith
 
-@[to_additive]
-theorem mul_lipschitzWith (hf : AntilipschitzWith Kf f) (hg : LipschitzWith Kg g) (hK : Kg < Kf⁻¹) :
-    AntilipschitzWith (Kf⁻¹ - Kg)⁻¹ fun x => f x * g x := by
+/-- If `f` is antilipschitz with a nonzero constant `Kf` and `g` is Lipschitz with a constant
+`Kg < Kf⁻¹`, then `f * g` is antilipschitz with constant `(Kf⁻¹ - Kg)⁻¹`. -/
+@[to_additive /-- If `f` is antilipschitz with a nonzero constant `Kf` and `g` is Lipschitz with a
+constant `Kg < Kf⁻¹`, then `f + g` is antilipschitz with constant `(Kf⁻¹ - Kg)⁻¹`. -/]
+theorem mul_lipschitzWith {hKf : IsUnit Kf} (hf : AntilipschitzWith Kf f) (hg : LipschitzWith Kg g)
+    (hK : Kg < Kf⁻¹) : AntilipschitzWith (Kf⁻¹ - Kg)⁻¹ fun x => f x * g x := by
   let : PseudoMetricSpace α := PseudoEMetricSpace.toPseudoMetricSpace hf.edist_ne_top
   refine AntilipschitzWith.of_le_mul_dist fun x y => ?_
-  rw [NNReal.coe_inv, ← _root_.div_eq_inv_mul]
+  rw [NNReal.coe_inv, ← div_eq_inv_mul₀]
   rw [le_div_iff₀ (NNReal.coe_pos.2 <| tsub_pos_iff_lt.2 hK)]
   rw [mul_comm, NNReal.coe_sub hK.le, sub_mul]
   calc
@@ -356,8 +359,8 @@ theorem mul_lipschitzWith (hf : AntilipschitzWith Kf f) (hg : LipschitzWith Kg g
     _ ≤ _ := le_trans (le_abs_self _) (abs_dist_sub_le_dist_mul_mul _ _ _ _)
 
 @[to_additive]
-theorem mul_div_lipschitzWith (hf : AntilipschitzWith Kf f) (hg : LipschitzWith Kg (g / f))
-    (hK : Kg < Kf⁻¹) : AntilipschitzWith (Kf⁻¹ - Kg)⁻¹ g := by
+theorem mul_div_lipschitzWith {hKf : IsUnit Kf} (hf : AntilipschitzWith Kf f)
+    (hg : LipschitzWith Kg (g / f)) (hK : Kg < Kf⁻¹) : AntilipschitzWith (Kf⁻¹ - Kg)⁻¹ g := by
   simpa only [Pi.div_apply, mul_div_cancel] using hf.mul_lipschitzWith hg hK
 
 @[to_additive le_mul_norm_sub]

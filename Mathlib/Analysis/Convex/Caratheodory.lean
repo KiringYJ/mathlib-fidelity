@@ -61,16 +61,16 @@ theorem mem_convexHull_erase [DecidableEq E] {t : Finset E} (h : ¬AffineIndepen
   replace gpos := exists_pos_of_sum_zero_of_exists_nonzero g gsum gpos
   clear h
   let s := {z ∈ t | 0 < g z}
-  obtain ⟨i₀, mem, w⟩ : ∃ i₀ ∈ s, ∀ i ∈ s, f i₀ / g i₀ ≤ f i / g i := by
-    apply s.exists_min_image fun z => f z / g z
-    obtain ⟨x, hx, hgx⟩ : ∃ x ∈ t, 0 < g x := gpos
-    exact ⟨x, mem_filter.mpr ⟨hx, hgx⟩⟩
-  have hg : 0 < g i₀ := by
-    rw [mem_filter] at mem
-    exact mem.2
+  have hs : ∀ z ∈ s, 0 < g z := fun z hz => (mem_filter.mp hz).2
+  -- Minimize `f z / g z` over `s`, where the denominator `g z` is positive.
+  obtain ⟨⟨i₀, mem⟩, -, w⟩ := s.attach.exists_min_image
+    (fun z => Checked.div (f z) (g z) (hs z.1 z.2).ne'.isUnit) (by
+      obtain ⟨x, hx, hgx⟩ : ∃ x ∈ t, 0 < g x := gpos
+      exact ⟨⟨x, mem_filter.mpr ⟨hx, hgx⟩⟩, mem_attach _ _⟩)
+  have hg : 0 < g i₀ := hs i₀ mem
   have hi₀ : i₀ ∈ t := filter_subset _ _ mem
   let k : E → 𝕜 := fun z => f z - f i₀ / g i₀ * g z
-  have hk : k i₀ = 0 := by simp [k, ne_of_gt hg]
+  have hk : k i₀ = 0 := by simp [k]
   have ksum : ∑ e ∈ t.erase i₀, k e = 1 := by
     calc
       ∑ e ∈ t.erase i₀, k e = ∑ e ∈ t, k e := by
@@ -81,24 +81,22 @@ theorem mem_convexHull_erase [DecidableEq E] {t : Finset E} (h : ¬AffineIndepen
   · simp only [k, and_imp, sub_nonneg, mem_erase, Ne]
     intro e _ het
     by_cases hes : e ∈ s
-    · have hge : 0 < g e := by
-        rw [mem_filter] at hes
-        exact hes.2
+    · have hge : 0 < g e := hs e hes
       rw [← le_div_iff₀ hge]
-      exact w _ hes
+      exact w ⟨e, hes⟩ (mem_attach _ _)
     · calc
         _ ≤ 0 := by
           apply mul_nonpos_of_nonneg_of_nonpos
           · apply div_nonneg (fpos i₀ (mem_of_subset (filter_subset _ t) mem)) (le_of_lt hg)
           · simpa only [s, mem_filter, het, true_and, not_lt] using hes
         _ ≤ f e := fpos e het
-  · rw [Subtype.coe_mk, centerMass_eq_of_sum_1 _ id ksum]
+  · rw [centerMass_eq_of_sum_1 _ id ksum, centerMass_eq_of_sum_1 _ id fsum]
     calc
-      ∑ e ∈ t.erase i₀, k e • e = ∑ e ∈ t, k e • e := sum_erase _ (by rw [hk, zero_smul])
+      ∑ e ∈ t.erase i₀, k e • id e = ∑ e ∈ t, k e • e := sum_erase _ (by rw [hk, zero_smul])
       _ = ∑ e ∈ t, (f e - f i₀ / g i₀ * g e) • e := rfl
-      _ = t.centerMass f id := by
+      _ = ∑ e ∈ t, f e • id e := by
         simp only [sub_smul, mul_smul, sum_sub_distrib, ← smul_sum, gcombo, smul_zero, sub_zero,
-          centerMass, fsum, inv_one, one_smul, id]
+          id]
 
 variable {s : Set E} {x : E}
 

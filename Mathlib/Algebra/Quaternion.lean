@@ -1057,6 +1057,34 @@ theorem normSq_add (a b : ℍ[R]) : normSq (a + b) = normSq a + normSq b + 2 * (
     _ = normSq a + normSq b + 2 * (a * star b).re := by
       rw [← re_add, ← star_mul_star a b, self_add_star', re_coe]
 
+section Inverse
+
+/-! The inverse, quotient and integer powers of quaternions are those of the monoid `ℍ[R]`: they
+are defined exactly at the invertible quaternions, whose norm squares are invertible in `R`
+because `normSq` is multiplicative. -/
+
+/-- The inverse of an invertible quaternion is its conjugate divided by its norm square. -/
+theorem inv_def {ha : IsUnit a} : a⁻¹ = Checked.inv (normSq a) (ha.map normSq) • star a :=
+  inv_eq_of_mul_eq_one_right₀ <| by
+    rw [Algebra.mul_smul_comm, self_mul_star, smul_coe, inv_mul_cancel₀, coe_one]
+
+theorem normSq_inv {ha : IsUnit a} : normSq a⁻¹ = Checked.inv (normSq a) (ha.map normSq) :=
+  Eq.symm <| inv_eq_of_mul_eq_one_right₀ <| map_mul_eq_one normSq mul_inv_cancel₀
+
+theorem normSq_div {hb : IsUnit b} :
+    normSq (a / b) = Checked.div (normSq a) (normSq b) (hb.map normSq) := by
+  rw [div_eq_mul_inv₀, map_mul, normSq_inv, div_eq_mul_inv₀]
+
+theorem normSq_zpow (z : ℤ) {h : z < 0 → IsUnit a} :
+    normSq (a ^ z) = Checked.zpow (normSq a) z (fun hz => (h hz).map normSq) := by
+  cases z with
+  | ofNat k => exact map_pow normSq a k
+  | negSucc k =>
+    rw [zpow_negSucc₀, zpow_negSucc₀, normSq_inv]
+    simp only [map_pow]
+
+end Inverse
+
 end Quaternion
 
 namespace Quaternion
@@ -1108,7 +1136,13 @@ end LinearOrderedCommRing
 
 section Field
 
-variable [Field R] (a b : ℍ[R])
+variable [Field R]
+
+section CharZero
+
+/-! Rational casts exist in characteristic zero. -/
+
+variable [CharZero R]
 
 instance instNNRatCast : NNRatCast ℍ[R] where nnratCast q := (q : R)
 instance instRatCast : RatCast ℍ[R] where ratCast q := (q : R)
@@ -1143,48 +1177,63 @@ variable (m : ℕ) (s : Bool) (e : ℕ)
 
 end ofScientific
 
-variable [LinearOrder R] [IsStrictOrderedRing R] (a b : ℍ[R])
+end CharZero
 
-@[simps -isSimp]
-instance instInv : Inv ℍ[R] where
-  inv a := (normSq a)⁻¹ • star a
+variable [LinearOrder R] [IsStrictOrderedRing R]
 
+/-- Over a linearly ordered field the norm square is anisotropic, so every nonzero quaternion is
+invertible, with inverse `(normSq a)⁻¹ • star a` (`Quaternion.inv_def`). -/
 instance instGroupWithZero : GroupWithZero ℍ[R] where
-  inv_zero := by rw [inv_def, star_zero, smul_zero]
-  mul_inv_cancel a ha := by
-    rw [inv_def, Algebra.mul_smul_comm (normSq a)⁻¹ a (star a), self_mul_star, smul_coe,
-      inv_mul_cancel₀ (normSq_ne_zero.2 ha), coe_one]
+  isUnit_of_ne_zero {a} ha := by
+    have hn : IsUnit (normSq a) := (normSq_ne_zero.2 ha).isUnit
+    refine ⟨⟨a, (normSq a)⁻¹ • star a, ?_, ?_⟩, rfl⟩
+    · rw [Algebra.mul_smul_comm, self_mul_star, smul_coe, inv_mul_cancel₀, coe_one]
+    · rw [Algebra.smul_mul_assoc, star_mul_self, smul_coe, inv_mul_cancel₀, coe_one]
+
+/-! The coercion `R → ℍ[R]` is `algebraMap R ℍ[R]` (`Quaternion.algebraMap_def`), so it sends
+units to units. The evidence on the right-hand sides below is transported along that equation so
+that its type mentions the coercion itself. -/
 
 @[norm_cast, simp]
-theorem coe_inv (x : R) : ((x⁻¹ : R) : ℍ[R]) = (↑x)⁻¹ :=
+theorem coe_inv (x : R) {hx : IsUnit x} :
+    ((x⁻¹ : R) : ℍ[R]) =
+      Checked.inv (x : ℍ[R]) (algebraMap_def (R := R) ▸ hx.map (algebraMap R ℍ[R])) :=
   map_inv₀ (algebraMap R ℍ[R]) _
 
 @[norm_cast, simp]
-theorem coe_div (x y : R) : ((x / y : R) : ℍ[R]) = x / y :=
+theorem coe_div (x y : R) {hy : IsUnit y} :
+    ((x / y : R) : ℍ[R]) =
+      Checked.div (x : ℍ[R]) (y : ℍ[R]) (algebraMap_def (R := R) ▸ hy.map (algebraMap R ℍ[R])) :=
   map_div₀ (algebraMap R ℍ[R]) x y
 
 @[norm_cast, simp]
-theorem coe_zpow (x : R) (z : ℤ) : ((x ^ z : R) : ℍ[R]) = (x : ℍ[R]) ^ z :=
+theorem coe_zpow (x : R) (z : ℤ) {h : z < 0 → IsUnit x} :
+    ((x ^ z : R) : ℍ[R]) = Checked.zpow (x : ℍ[R]) z
+      (fun hz => algebraMap_def (R := R) ▸ (h hz).map (algebraMap R ℍ[R])) :=
   map_zpow₀ (algebraMap R ℍ[R]) x z
 
+/-- The rational casts and actions of the division ring `ℍ[R]` are the coefficientwise ones.
+The actions are spelled through the actions `DivisionSemiring.toNNQSMul` and
+`DivisionRing.toQSMul` of `R`, which keeps the instance computable. -/
 instance instDivisionRing : DivisionRing ℍ[R] where
   __ := QuaternionAlgebra.instRing
   __ := Quaternion.instGroupWithZero
-  nnqsmul := (· • ·)
-  qsmul := (· • ·)
-  nnratCast_def _ := by rw [← coe_nnratCast, NNRat.cast_def, coe_div, coe_natCast, coe_natCast]
-  ratCast_def _ := by rw [← coe_ratCast, Rat.cast_def, coe_div, coe_intCast, coe_natCast]
-  nnqsmul_def _ _ := by rw [← coe_nnratCast, coe_mul_eq_smul]; ext <;> exact NNRat.smul_def ..
-  qsmul_def _ _ := by rw [← coe_ratCast, coe_mul_eq_smul]; ext <;> exact Rat.smul_def ..
-
-theorem normSq_inv : normSq a⁻¹ = (normSq a)⁻¹ :=
-  map_inv₀ normSq _
-
-theorem normSq_div : normSq (a / b) = normSq a / normSq b :=
-  map_div₀ normSq a b
-
-theorem normSq_zpow (z : ℤ) : normSq (a ^ z) = normSq a ^ z :=
-  map_zpow₀ normSq a z
+  nnratCastOfCharZero _ q := (q : ℍ[R])
+  nnratCastOfCharZero_mul_den _ q := by
+    rw [← coe_nnratCast, ← coe_natCast, ← coe_natCast, ← coe_mul, NNRat.cast_mul_den]
+  nnqsmulOfCharZero _ q a :=
+    letI : SMul ℚ≥0 R := DivisionSemiring.toNNQSMul
+    q • a
+  nnqsmulOfCharZero_eq_mul _ q a := by
+    rw [← coe_nnratCast, coe_mul_eq_smul]; ext <;> exact NNRat.smul_def ..
+  ratCastOfCharZero _ q := (q : ℍ[R])
+  ratCastOfCharZero_mul_den _ q := by
+    rw [← coe_ratCast, ← coe_natCast, ← coe_intCast, ← coe_mul, Rat.cast_mul_den]
+  qsmulOfCharZero _ q a :=
+    letI : SMul ℚ R := DivisionRing.toQSMul
+    q • a
+  qsmulOfCharZero_eq_mul _ q a := by
+    rw [← coe_ratCast, coe_mul_eq_smul]; ext <;> exact Rat.smul_def ..
 
 end Field
 

@@ -26,11 +26,7 @@ open scoped BigOperators Pointwise NNRat
 
 variable {ι α R : Type*}
 
-set_option quotPrecheck false in
-local notation a " /ℚ " q =>
-  (((Units.mk0 (q : ℚ≥0) (by
-    apply Nat.cast_ne_zero.mpr
-    assumption))⁻¹ : ℚ≥0ˣ) : ℚ≥0) • a
+local notation a " /ℚ " q => (q : ℚ≥0)⁻¹ • a
 
 namespace Finset
 section OrderedAddCommMonoid
@@ -126,12 +122,10 @@ variable [AddCommMonoid α] [PartialOrder α] [IsOrderedCancelAddMonoid α] [Mod
 
 lemma expect_lt_expect (hs : s.Nonempty) (hfg : ∀ i ∈ s, f i ≤ g i)
     (hfg' : ∃ i ∈ s, f i < g i) :
-    𝔼 i ∈ s, f i < 𝔼 i ∈ s, g i :=
-  by
-    rw [expect_def, expect_def]
-    exact smul_lt_smul_of_pos_left (sum_lt_sum hfg hfg')
-      ((Units.inv_pos (Units.mk0 (#s : ℚ≥0) (Nat.cast_ne_zero.mpr hs.card_ne_zero))).2
-        (show (0 : ℚ≥0) < (#s : ℚ≥0) by exact_mod_cast hs.card_pos))
+    𝔼 i ∈ s, f i < 𝔼 i ∈ s, g i := by
+  rw [expect_def, expect_def]
+  exact smul_lt_smul_of_pos_left (sum_lt_sum hfg hfg')
+    (inv_pos_of_pos (show (0 : ℚ≥0) < (#s : ℚ≥0) by exact_mod_cast hs.card_pos))
 
 lemma expect_lt (hs : s.Nonempty) (hle : ∀ x ∈ s, f x ≤ a) (hlt : ∃ x ∈ s, f x < a) :
     𝔼 i ∈ s, f i < a := by
@@ -147,12 +141,10 @@ lemma expect_pos' (hs : s.Nonempty) (h : ∀ i ∈ s, 0 ≤ f i)
     (hpos : ∃ i ∈ s, 0 < f i) : 0 < 𝔼 i ∈ s, f i :=
   (expect_const_zero _ hs).symm.trans_lt <| expect_lt_expect hs h hpos
 
-lemma expect_pos (hf : ∀ i ∈ s, 0 < f i) (hs : s.Nonempty) : 0 < 𝔼 i ∈ s, f i :=
-  by
-    rw [expect_def]
-    exact smul_pos ((Units.inv_pos (Units.mk0 (#s : ℚ≥0)
-      (Nat.cast_ne_zero.mpr hs.card_ne_zero))).2
-        (show (0 : ℚ≥0) < (#s : ℚ≥0) by exact_mod_cast hs.card_pos)) (sum_pos hf hs)
+lemma expect_pos (hf : ∀ i ∈ s, 0 < f i) (hs : s.Nonempty) : 0 < 𝔼 i ∈ s, f i := by
+  rw [expect_def]
+  exact smul_pos (inv_pos_of_pos (show (0 : ℚ≥0) < (#s : ℚ≥0) by exact_mod_cast hs.card_pos))
+    (sum_pos hf hs)
 
 end OrderedCancelAddCommMonoid
 
@@ -208,7 +200,7 @@ variable [CommSemiring R] [LinearOrder R] [IsStrictOrderedRing R] [ExistsAddOfLE
 /-- **Cauchy-Schwarz inequality** in terms of `Finset.expect`. -/
 lemma expect_mul_sq_le_sq_mul_sq (s : Finset ι) (f g : ι → R) (hs : s.Nonempty) :
     (𝔼 i ∈ s, f i * g i) ^ 2 ≤ (𝔼 i ∈ s, f i ^ 2) * 𝔼 i ∈ s, g i ^ 2 := by
-  simp only [expect_def, smul_pow, inv_pow, smul_mul_smul_comm, ← sq]
+  simp only [expect_def, smul_pow, smul_mul_smul_comm, ← sq]
   gcongr
   exact sum_mul_sq_le_sq_mul_sq ..
 

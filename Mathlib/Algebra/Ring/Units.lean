@@ -142,11 +142,6 @@ end RingHom
 
 namespace Units
 
-/-- Addition of inverse values, without a commutativity assumption. -/
-theorem inv_add_inv' [Semiring R] (u v : Rˣ) :
-    (↑u⁻¹ : R) + ↑v⁻¹ = ↑u⁻¹ * (↑u + ↑v) * ↑v⁻¹ := by
-  simp [mul_add, add_mul, add_comm]
-
 /-- Subtraction of inverse values, without a commutativity assumption. -/
 theorem inv_sub_inv' [Ring R] (u v : Rˣ) :
     (↑u⁻¹ : R) - ↑v⁻¹ = ↑u⁻¹ * (↑v - ↑u) * ↑v⁻¹ := by
@@ -164,46 +159,4 @@ theorem inv_sub_inv_remainder [Ring R] (x u v : Rˣ) :
   rw [Units.inv_sub_inv' u v, ← neg_sub (↑u : R) ↑v, mul_neg, neg_mul]
   exact neg_add_eq_sub _ _
 
-/-- Adding inverse values in a commutative semiring. -/
-theorem inv_add_inv [CommSemiring R] (u v : Rˣ) :
-    (↑u⁻¹ : R) + ↑v⁻¹ = ((u : R) + v) /ₚ (u * v) := by
-  simpa only [divp, one_mul, mul_one, add_comm] using divp_add_divp (1 : R) 1 u v
-
-/-- Subtracting inverse values in a commutative ring. -/
-theorem inv_sub_inv [CommRing R] (u v : Rˣ) :
-    (↑u⁻¹ : R) - ↑v⁻¹ = ((v : R) - u) /ₚ (u * v) := by
-  simpa only [divp, one_mul, mul_one] using divp_sub_divp (1 : R) 1 u v
-
 end Units
-
-/-- Addition of fractions whose unit denominators commute with the relevant factors. -/
-protected theorem Commute.divp_add_divp [Semiring R] {a c : R} {u v : Rˣ}
-    (huc : Commute (u : R) c) (huv : Commute (u : R) (v : R)) :
-    a /ₚ u + c /ₚ v = (a * v + u * c) /ₚ (u * v) := by
-  apply eq_divp_iff_mul_eq.mpr
-  change (a /ₚ u + c /ₚ v) * ((u : R) * v) = _
-  have hc : Commute (u : R) (c /ₚ v) := huc.mul_right huv.units_inv_right
-  rw [add_mul, ← mul_assoc, divp_mul_cancel, ← mul_assoc,
-    ← hc.eq, mul_assoc, divp_mul_cancel]
-
-/-- Subtraction of fractions whose unit denominators commute with the relevant factors. -/
-protected theorem Commute.divp_sub_divp [Ring R] {a c : R} {u v : Rˣ}
-    (huc : Commute (u : R) c) (huv : Commute (u : R) (v : R)) :
-    a /ₚ u - c /ₚ v = (a * v - u * c) /ₚ (u * v) := by
-  have hneg : Commute (u : R) (-c) := by
-    change (u : R) * -c = -c * u
-    rw [mul_neg, neg_mul, huc.eq]
-  simpa only [mul_neg, ← Units.neg_divp, ← sub_eq_add_neg] using
-    hneg.divp_add_divp (a := a) huv
-
-protected theorem Commute.units_inv_add_inv [Semiring R] {u v : Rˣ}
-    (huv : Commute (u : R) (v : R)) :
-    (↑u⁻¹ : R) + ↑v⁻¹ = ((u : R) + v) /ₚ (u * v) := by
-  simpa only [divp, one_mul, mul_one, add_comm] using
-    (Commute.one_right (u : R)).divp_add_divp (a := (1 : R)) huv
-
-protected theorem Commute.units_inv_sub_inv [Ring R] {u v : Rˣ}
-    (huv : Commute (u : R) (v : R)) :
-    (↑u⁻¹ : R) - ↑v⁻¹ = ((v : R) - u) /ₚ (u * v) := by
-  simpa only [divp, one_mul, mul_one] using
-    (Commute.one_right (u : R)).divp_sub_divp (a := (1 : R)) huv

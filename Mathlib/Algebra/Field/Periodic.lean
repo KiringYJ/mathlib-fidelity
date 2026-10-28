@@ -42,21 +42,37 @@ namespace Function
 
 /-! ### Periodicity -/
 
-protected theorem Periodic.const_mul [Semiring α] (h : Periodic f c) (a : αˣ) :
-    Periodic (fun x => f ((a : α) * x)) ((↑a⁻¹ : α) * c) := fun x => by
-  simpa only [mul_add, ← mul_assoc, Units.mul_inv, one_mul] using h ((a : α) * x)
+protected theorem Periodic.const_smul₀ [AddMonoid α] [Monoid γ] [DistribMulAction γ α]
+    (h : Periodic f c) (a : γ) {ha : IsUnit a} : Periodic (fun x => f (a • x)) (a⁻¹ • c) :=
+  fun x => by simpa only [smul_add, smul_inv_smul₀] using h (a • x)
 
-theorem Periodic.const_inv_mul [Semiring α] (h : Periodic f c) (a : αˣ) :
-    Periodic (fun x => f ((↑a⁻¹ : α) * x)) ((a : α) * c) := by
-  simpa only [inv_inv] using h.const_mul a⁻¹
+protected theorem Periodic.const_mul [Semiring α] (h : Periodic f c) (a : α) {ha : IsUnit a} :
+    Periodic (fun x => f (a * x)) (a⁻¹ * c) :=
+  Periodic.const_smul₀ h a
 
-theorem Periodic.mul_const [Semiring α] (h : Periodic f c) (a : αˣ) :
-    Periodic (fun x => f (x * (a : α))) (c /ₚ a) := fun x => by
-  simpa only [add_mul, divp_mul_cancel] using h (x * (a : α))
+theorem Periodic.const_inv_smul₀ [AddMonoid α] [Monoid γ] [DistribMulAction γ α]
+    (h : Periodic f c) (a : γ) {ha : IsUnit a} : Periodic (fun x => f (a⁻¹ • x)) (a • c) :=
+  fun x => by simpa only [smul_add, inv_smul_smul₀] using h (a⁻¹ • x)
 
-theorem Periodic.div_const [Semiring α] (h : Periodic f c) (a : αˣ) :
-    Periodic (fun x => f (x /ₚ a)) (c * (a : α)) := fun x => by
-  simpa only [divp, add_mul, Units.mul_inv_cancel_right] using h (x /ₚ a)
+theorem Periodic.const_inv_mul [Semiring α] (h : Periodic f c) (a : α) {ha : IsUnit a} :
+    Periodic (fun x => f (a⁻¹ * x)) (a * c) :=
+  h.const_inv_smul₀ a
+
+theorem Periodic.mul_const [Semiring α] (h : Periodic f c) (a : α) {ha : IsUnit a} :
+    Periodic (fun x => f (x * a)) (c * a⁻¹) :=
+  fun x => by simpa only [add_mul, inv_mul_cancel_right₀] using h (x * a)
+
+theorem Periodic.mul_const' [Semiring α] (h : Periodic f c) (a : α) {ha : IsUnit a} :
+    Periodic (fun x => f (x * a)) (c / a) :=
+  fun x => by simpa only [add_mul, div_mul_cancel₀] using h (x * a)
+
+theorem Periodic.mul_const_inv [Semiring α] (h : Periodic f c) (a : α) {ha : IsUnit a} :
+    Periodic (fun x => f (x * a⁻¹)) (c * a) :=
+  fun x => by simpa only [add_mul, mul_inv_cancel_right₀] using h (x * a⁻¹)
+
+theorem Periodic.div_const [Semiring α] (h : Periodic f c) (a : α) {ha : IsUnit a} :
+    Periodic (fun x => f (x / a)) (c * a) :=
+  fun x => by simpa only [add_div, mul_div_cancel_right₀] using h (x / a)
 
 /-- If a function `f` is `Periodic` with positive period `c`, then for all `x` there exists some
   `y ∈ Ico 0 c` such that `f x = f y`. -/
@@ -120,21 +136,39 @@ theorem Antiperiodic.nat_mul_sub_eq [NonAssocRing α] [Ring β] (h : Antiperiodi
   simpa only [nsmul_eq_mul, zsmul_eq_mul, Int.cast_pow, Int.cast_neg,
     Int.cast_one] using h.nsmul_sub_eq n
 
-theorem Antiperiodic.const_mul [Semiring α] [Neg β] (h : Antiperiodic f c) (a : αˣ) :
-    Antiperiodic (fun x => f ((a : α) * x)) ((↑a⁻¹ : α) * c) := fun x => by
-  simpa only [mul_add, ← mul_assoc, Units.mul_inv, one_mul] using h ((a : α) * x)
+theorem Antiperiodic.const_smul₀ [AddMonoid α] [Neg β] [Monoid γ] [DistribMulAction γ α]
+    (h : Antiperiodic f c) {a : γ} {ha : IsUnit a} :
+    Antiperiodic (fun x => f (a • x)) (a⁻¹ • c) :=
+  fun x => by simpa only [smul_add, smul_inv_smul₀] using h (a • x)
 
-theorem Antiperiodic.const_inv_mul [Semiring α] [Neg β] (h : Antiperiodic f c) (a : αˣ) :
-    Antiperiodic (fun x => f ((↑a⁻¹ : α) * x)) ((a : α) * c) := by
-  simpa only [inv_inv] using h.const_mul a⁻¹
+theorem Antiperiodic.const_mul [Semiring α] [Neg β] (h : Antiperiodic f c) {a : α}
+    {ha : IsUnit a} : Antiperiodic (fun x => f (a * x)) (a⁻¹ * c) :=
+  h.const_smul₀ (a := a)
 
-theorem Antiperiodic.mul_const [Semiring α] [Neg β] (h : Antiperiodic f c) (a : αˣ) :
-    Antiperiodic (fun x => f (x * (a : α))) (c /ₚ a) := fun x => by
-  simpa only [add_mul, divp_mul_cancel] using h (x * (a : α))
+theorem Antiperiodic.const_inv_smul₀ [AddMonoid α] [Neg β] [Monoid γ] [DistribMulAction γ α]
+    (h : Antiperiodic f c) {a : γ} {ha : IsUnit a} :
+    Antiperiodic (fun x => f (a⁻¹ • x)) (a • c) :=
+  fun x => by simpa only [smul_add, inv_smul_smul₀] using h (a⁻¹ • x)
 
-theorem Antiperiodic.div_const [Semiring α] [Neg β] (h : Antiperiodic f c) (a : αˣ) :
-    Antiperiodic (fun x => f (x /ₚ a)) (c * (a : α)) := fun x => by
-  simpa only [divp, add_mul, Units.mul_inv_cancel_right] using h (x /ₚ a)
+theorem Antiperiodic.const_inv_mul [Semiring α] [Neg β] (h : Antiperiodic f c) {a : α}
+    {ha : IsUnit a} : Antiperiodic (fun x => f (a⁻¹ * x)) (a * c) :=
+  h.const_inv_smul₀ (a := a)
+
+theorem Antiperiodic.mul_const [Semiring α] [Neg β] (h : Antiperiodic f c) {a : α}
+    {ha : IsUnit a} : Antiperiodic (fun x => f (x * a)) (c * a⁻¹) :=
+  fun x => by simpa only [add_mul, inv_mul_cancel_right₀] using h (x * a)
+
+theorem Antiperiodic.mul_const' [Semiring α] [Neg β] (h : Antiperiodic f c) {a : α}
+    {ha : IsUnit a} : Antiperiodic (fun x => f (x * a)) (c / a) :=
+  fun x => by simpa only [add_mul, div_mul_cancel₀] using h (x * a)
+
+theorem Antiperiodic.mul_const_inv [Semiring α] [Neg β] (h : Antiperiodic f c) {a : α}
+    {ha : IsUnit a} : Antiperiodic (fun x => f (x * a⁻¹)) (c * a) :=
+  fun x => by simpa only [add_mul, mul_inv_cancel_right₀] using h (x * a⁻¹)
+
+theorem Antiperiodic.div_inv [Semiring α] [Neg β] (h : Antiperiodic f c) {a : α}
+    {ha : IsUnit a} : Antiperiodic (fun x => f (x / a)) (c * a) :=
+  fun x => by simpa only [add_div, mul_div_cancel_right₀] using h (x / a)
 
 end Function
 

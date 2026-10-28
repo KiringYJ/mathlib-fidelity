@@ -166,8 +166,9 @@ theorem map_frobeniusPoly (n : ℕ) :
   rw [← C_eq_coe_nat]
   simp only [← map_pow, ← C_mul]
   rw [C_inj]
-  simp only [invOf_eq_inv, eq_intCast, inv_pow, Int.cast_natCast, Nat.cast_mul, Int.cast_mul]
-  rw [Rat.natCast_div _ _ (map_frobeniusPoly.key₁ p (n - i) j hj)]
+  simp only [invOf_eq_inv, eq_intCast, Int.cast_natCast, Nat.cast_mul, Int.cast_mul]
+  rw [Rat.natCast_div _ _ (hb := (Nat.cast_ne_zero.2 (pow_ne_zero _ hp.1.ne_zero)).isUnit)
+    (map_frobeniusPoly.key₁ p (n - i) j hj)]
   push_cast
   linear_combination (norm := skip) -p / p ^ n / p ^ (n - i - v p (j + 1))
     * (p ^ (n - i)).choose (j + 1) * congr((p : ℚ) ^ $(map_frobeniusPoly.key₂ p hi.le hj))

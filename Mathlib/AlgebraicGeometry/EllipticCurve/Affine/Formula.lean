@@ -138,6 +138,18 @@ lemma Y_eq_of_Y_ne {x₁ x₂ y₁ y₂ : F} (h₁ : W.Equation x₁ y₁) (h₂
     (hy : y₁ ≠ W.negY x₂ y₂) : y₁ = y₂ :=
   (Y_eq_of_X_eq h₁ h₂ hx).resolve_right hy
 
+/-- If `(x₁, y₁)` and `(x₂, y₂)` lie on `W` with `x₁ = x₂` and `y₁ ≠ -y₂ - a₁x₂ - a₃`, then the
+partial derivative `W_Y` does not vanish at `(x₁, y₁)`, so the tangent there is not vertical. -/
+lemma evalEval_polynomialY_ne_zero_of_Y_ne {x₁ x₂ y₁ y₂ : F} (h₁ : W.Equation x₁ y₁)
+    (h₂ : W.Equation x₂ y₂) (hx : x₁ = x₂) (hy : y₁ ≠ W.negY x₂ y₂) :
+    W.polynomialY.evalEval x₁ y₁ ≠ 0 := by
+  obtain rfl := hx
+  obtain rfl := Y_eq_of_Y_ne h₁ h₂ rfl hy
+  rw [evalEval_polynomialY]
+  contrapose! hy
+  rw [negY]
+  linear_combination hy
+
 lemma equation_neg (x y : R) : W'.Equation x (W'.negY x y) ↔ W'.Equation x y := by
   rw [equation_iff, equation_iff, negY]
   congr! 1
@@ -167,42 +179,47 @@ variable (W) in
 Weierstrass curve `W`.
 
 If `x₁ ≠ x₂`, then this line is the secant of `W` through `(x₁, y₁)` and `(x₂, y₂)`, and has slope
-`(y₁ - y₂) / (x₁ - x₂)`. Otherwise, if `y₁ ≠ -y₁ - a₁x₁ - a₃`, then this line is the tangent of `W`
-at `(x₁, y₁) = (x₂, y₂)`, and has slope `(3x₁² + 2a₂x₁ + a₄ - a₁y₁) / (2y₁ + a₁x₁ + a₃)`. Otherwise,
-this line is vertical, in which case this returns the value `0`.
+`(y₁ - y₂) / (x₁ - x₂)`. Otherwise, if `y₁ ≠ -y₂ - a₁x₂ - a₃`, then this line is the tangent of `W`
+at `(x₁, y₁) = (x₂, y₂)`, and has slope `(3x₁² + 2a₂x₁ + a₄ - a₁y₁) / (y₁ - (-y₂ - a₁x₂ - a₃))`.
+The denominator `y₁ - (-y₂ - a₁x₂ - a₃)` of this quotient is nonzero by the case condition, and when
+both points lie on `W` it agrees with the denominator `y₁ - (-y₁ - a₁x₁ - a₃) = 2y₁ + a₁x₁ + a₃` of
+the slope of the tangent at `(x₁, y₁)`. Otherwise, this line is vertical, in which case this returns
+the value `0`.
 
 This depends on `W`, and has argument order: `x₁`, `x₂`, `y₁`, `y₂`. -/
-def slope (x₁ x₂ y₁ y₂ : F) : F :=
-  if x₁ = x₂ then if y₁ = W.negY x₂ y₂ then 0
-    else (3 * x₁ ^ 2 + 2 * W.a₂ * x₁ + W.a₄ - W.a₁ * y₁) / (y₁ - W.negY x₁ y₁)
+noncomputable def slope (x₁ x₂ y₁ y₂ : F) : F :=
+  if hx : x₁ = x₂ then if hy : y₁ = W.negY x₂ y₂ then 0
+    else (3 * x₁ ^ 2 + 2 * W.a₂ * x₁ + W.a₄ - W.a₁ * y₁) / (y₁ - W.negY x₂ y₂)
   else (y₁ - y₂) / (x₁ - x₂)
 
 @[simp]
 lemma slope_of_Y_eq {x₁ x₂ y₁ y₂ : F} (hx : x₁ = x₂) (hy : y₁ = W.negY x₂ y₂) :
     W.slope x₁ x₂ y₁ y₂ = 0 := by
-  rw [slope, ite_eq_left hx, ite_eq_left hy]
+  rw [slope, dite_eq_left hx, dite_eq_left hy]
 
 @[simp]
 lemma slope_of_Y_ne' {x₂ y₁ y₂ : F} (hy : ¬y₁ = -y₂ - W.a₁ * x₂ - W.a₃) :
     W.slope x₂ x₂ y₁ y₂ =
-      (3 * x₂ ^ 2 + 2 * W.a₂ * x₂ + W.a₄ - W.a₁ * y₁) / (y₁ - (-y₁ - W.a₁ * x₂ - W.a₃)) := by
+      (3 * x₂ ^ 2 + 2 * W.a₂ * x₂ + W.a₄ - W.a₁ * y₁) / (y₁ - (-y₂ - W.a₁ * x₂ - W.a₃)) := by
   simp [slope, hy]
 
 lemma slope_of_Y_ne {x₁ x₂ y₁ y₂ : F} (hx : x₁ = x₂) (hy : y₁ ≠ W.negY x₂ y₂) :
     W.slope x₁ x₂ y₁ y₂ =
-      (3 * x₁ ^ 2 + 2 * W.a₂ * x₁ + W.a₄ - W.a₁ * y₁) / (y₁ - W.negY x₁ y₁) := by
-  simp_all
+      (3 * x₁ ^ 2 + 2 * W.a₂ * x₁ + W.a₄ - W.a₁ * y₁) / (y₁ - W.negY x₂ y₂) := by
+  rw [slope, dite_eq_left hx, dite_eq_right hy]
 
 @[simp]
 lemma slope_of_X_ne {x₁ x₂ y₁ y₂ : F} (hx : x₁ ≠ x₂) :
     W.slope x₁ x₂ y₁ y₂ = (y₁ - y₂) / (x₁ - x₂) := by
-  rw [slope, ite_eq_right hx]
+  rw [slope, dite_eq_right hx]
 
-lemma slope_of_Y_ne_eq_evalEval {x₁ x₂ y₁ y₂ : F} (hx : x₁ = x₂) (hy : y₁ ≠ W.negY x₂ y₂) :
-    W.slope x₁ x₂ y₁ y₂ = -W.polynomialX.evalEval x₁ y₁ / W.polynomialY.evalEval x₁ y₁ := by
+lemma slope_of_Y_ne_eq_evalEval {x₁ x₂ y₁ y₂ : F} (h₁ : W.Equation x₁ y₁) (h₂ : W.Equation x₂ y₂)
+    (hx : x₁ = x₂) (hy : y₁ ≠ W.negY x₂ y₂) :
+    W.slope x₁ x₂ y₁ y₂ = Checked.div (-W.polynomialX.evalEval x₁ y₁)
+      (W.polynomialY.evalEval x₁ y₁) (evalEval_polynomialY_ne_zero_of_Y_ne h₁ h₂ hx hy).isUnit := by
   rw [slope_of_Y_ne hx hy, evalEval_polynomialX, neg_sub]
   congr 1
-  rw [negY, evalEval_polynomialY]
+  rw [evalEval_polynomialY, ← Y_eq_of_Y_ne h₁ h₂ hx hy, ← hx, negY]
   ring1
 
 end slope
@@ -285,9 +302,21 @@ lemma addPolynomial_slope {x₁ x₂ y₁ y₂ : F} (h₁ : W.Equation x₁ y₁
       ring1
     · linear_combination (norm := (simp [field]; ring1)) -h₁
   · rw [equation_iff] at h₁ h₂
+    have hℓ : (y₁ - y₂) / (x₁ - x₂) * (x₁ - x₂) = y₁ - y₂ := div_mul_cancel₀ _
     rw [slope_of_X_ne hx]
+    generalize (y₁ - y₂) / (x₁ - x₂) = ℓ at hℓ ⊢
+    have hx' : x₁ - x₂ ≠ 0 := sub_ne_zero_of_ne hx
+    -- the cubic vanishes at `x₁` by `h₁`, and at `x₂` by `h₂`, since `ℓ(x₂ - x₁) + y₁ = y₂` by `hℓ`
     simp only [addX]
-    grind
+    ext
+    · rfl
+    · ring1
+    · refine mul_left_cancel₀ hx' ?_
+      linear_combination -h₁ + h₂
+        - (2 * y₂ + W.a₁ * x₂ + W.a₃ - (ℓ * (x₁ - x₂) - (y₁ - y₂))) * hℓ
+    · refine mul_left_cancel₀ hx' ?_
+      linear_combination x₂ * h₁ - x₁ * h₂
+        + x₁ * (2 * y₂ + W.a₁ * x₂ + W.a₃ - (ℓ * (x₁ - x₂) - (y₁ - y₂))) * hℓ
 
 lemma C_addPolynomial_slope {x₁ x₂ y₁ y₂ : F} (h₁ : W.Equation x₁ y₁) (h₂ : W.Equation x₂ y₂)
     (hxy : ¬(x₁ = x₂ ∧ y₁ = W.negY x₂ y₂)) : C (W.addPolynomial x₁ y₁ <| W.slope x₁ x₂ y₁ y₂) =
@@ -344,8 +373,8 @@ lemma nonsingular_negAdd {x₁ x₂ y₁ y₂ : F} (h₁ : W.Nonsingular x₁ y�
     · by_cases hx : x₁ = x₂
       · subst hx
         contradiction
-      · rwa [negAddY, ← neg_sub, mul_neg, hx₂, slope_of_X_ne hx,
-          div_mul_cancel₀ _ <| sub_ne_zero_of_ne hx, neg_sub, sub_add_cancel]
+      · rwa [negAddY, ← neg_sub, mul_neg, hx₂, slope_of_X_ne hx, div_mul_cancel₀, neg_sub,
+          sub_add_cancel]
     · apply nonsingular_negAdd_of_eval_derivative_ne_zero <| equation_negAdd h₁.left h₂.left hxy
       rw [derivative_addPolynomial_slope h₁.left h₂.left hxy]
       eval_simp
@@ -382,7 +411,7 @@ lemma addY_sub_negY_addY {x₁ x₂ : F} (y₁ y₂ : F) (hx : x₁ ≠ x₂) :
     let y₃ := W.addY x₁ x₂ y₁ (W.slope x₁ x₂ y₁ y₂)
     y₃ - W.negY x₃ y₃ =
       ((y₂ - W.negY x₂ y₂) * (x₁ - x₃) - (y₁ - W.negY x₁ y₁) * (x₂ - x₃)) / (x₂ - x₁) := by
-  simp_rw [addY, negY, eq_div_iff (sub_ne_zero.mpr hx.symm)]
+  simp_rw [addY, negY, eq_div_iff]
   linear_combination (norm := ring1) 2 * cyclic_sum_Y_mul_X_sub_X y₁ y₂ hx
 
 /-- The explicit formula for the `x`-coordinate of `P + Q` when `P ≠ ±Q`. -/
@@ -390,7 +419,9 @@ lemma addX_of_X_ne {x₁ y₁ x₂ y₂ : F} (hn : x₁ ≠ x₂) :
      W.addX x₁ x₂ (W.slope x₁ x₂ y₁ y₂) =
        ((y₁ - y₂) ^ 2 + W.a₁ * (y₁ - y₂) * (x₁ - x₂) - (W.a₂ + x₁ + x₂) * (x₁ - x₂) ^2) /
          (x₁ - x₂) ^ 2 := by
-  grind only [addX, slope]
+  rw [slope_of_X_ne hn, addX]
+  field_simp
+  ring
 
 /-!
 ### Some statements about the numerator and denominator of the x-coordinate of 2*P
@@ -430,33 +461,36 @@ lemma den_duplication_ne_zero_or_num_duplication_ne_zero {x y : F} (h : W.Nonsin
   rw [equation_iff x y] at h₁
   by_cases H : 2 * y + W.a₁ * x + W.a₃ = 0
   · right
-    replace h₂ : W.a₁ * y ≠ 3 * x ^ 2 + 2 * W.a₂ * x + W.a₄ := by grind
+    replace h₂ : W.a₁ * y ≠ 3 * x ^ 2 + 2 * W.a₂ * x + W.a₄ :=
+      h₂.resolve_right <| not_not.mpr <| by linear_combination H
     contrapose! h₂
     rw [b₄, b₆, b₈] at h₂
-    grobner
+    -- `W_X² = N - (a₁² + 4a₂ + 8x)W(x, y) + (a₁W_X + (a₂ + 2x)W_Y)W_Y`, where `N` is the numerator
+    linear_combination (exp := 2) h₂ - (W.a₁ ^ 2 + 4 * W.a₂ + 8 * x) * h₁
+      + (W.a₁ * (W.a₁ * y - (3 * x ^ 2 + 2 * W.a₂ * x + W.a₄))
+        + (W.a₂ + 2 * x) * (2 * y + W.a₁ * x + W.a₃)) * H
   · left
     clear h₂
     contrapose! H
     rw [b₂, b₄, b₆] at H
-    grobner
+    linear_combination (exp := 2) H + 4 * h₁
 
 /-- The explicit duplication formula for the `x`-coordinate when `2*P ≠ 0`. -/
 lemma addX_self_of_Y_ne {x y : F} (h : W.Equation x y) (hn : y ≠ W.negY x y) :
     W.addX x x (W.slope x x y y) =
-      (x ^ 4 - W.b₄ * x ^ 2 - 2 * W.b₆ * x - W.b₈) /
-        (4 * x ^ 3 + W.b₂ * x ^ 2 + 2 * W.b₄ * x + W.b₆) := by
-  have aux {a b c : F} (h : a ≠ 0) : a ^ 2 * (b * (c / a)) = a * b * c := by field
-  have hn' := (den_duplication_eq_zero_iff h).not.mpr hn
-  refine mul_left_cancel₀ hn' ?_
-  have hn'' : 2 * y + W.a₁ * x + W.a₃ ≠ 0 := by
-    rw [den_duplication_eq h] at hn'
-    grind
-  rw [mul_div_cancel₀ _ hn', addX, sub_sub, sub_sub, mul_sub, mul_add]
-  simp only [slope, ↓reduceIte, hn]
-  rw [negY, show y - (-y - W.a₁ * x - W.a₃) = 2 * y + W.a₁ * x + W.a₃ by ring, div_pow]
-  nth_rewrite 1 2 [den_duplication_eq h]
-  rw [mul_div_cancel₀ _ <| pow_ne_zero 2 hn'', aux hn'', b₂, b₄, b₆, b₈]
-  linear_combination -W.a₁ ^ 2 * (W.equation_iff x y).mp h
+      Checked.div (x ^ 4 - W.b₄ * x ^ 2 - 2 * W.b₆ * x - W.b₈)
+        (4 * x ^ 3 + W.b₂ * x ^ 2 + 2 * W.b₄ * x + W.b₆)
+        (Ne.isUnit <| (den_duplication_eq_zero_iff h).not.mpr hn) := by
+  have hℓ : (3 * x ^ 2 + 2 * W.a₂ * x + W.a₄ - W.a₁ * y) / (y - W.negY x y) * (y - W.negY x y) =
+      3 * x ^ 2 + 2 * W.a₂ * x + W.a₄ - W.a₁ * y :=
+    div_mul_cancel₀ _
+  rw [eq_div_iff, slope_of_Y_ne rfl hn]
+  generalize (3 * x ^ 2 + 2 * W.a₂ * x + W.a₄ - W.a₁ * y) / (y - W.negY x y) = ℓ at hℓ ⊢
+  rw [negY] at hℓ
+  rw [addX, b₂, b₄, b₆, b₈]
+  -- by `hℓ`, both sides differ by `-(2ℓ + a₁)²W(x, y)`, which vanishes by `h`
+  linear_combination -(2 * ℓ + W.a₁) ^ 2 * (W.equation_iff x y).mp h
+    + (3 * x ^ 2 + 2 * W.a₂ * x + W.a₄ - W.a₁ * y + (ℓ + W.a₁) * (2 * y + W.a₁ * x + W.a₃)) * hℓ
 
 end slope
 
@@ -499,7 +533,8 @@ lemma map_slope [DecidableEq F] [DecidableEq K] (f : F →+* K) (x₁ x₂ y₁ 
   · by_cases hy : y₁ = W.negY x₂ y₂
     · rw [slope_of_Y_eq (congr_arg f hx) <| by rw [hy, map_negY], slope_of_Y_eq hx hy, map_zero]
     · rw [slope_of_Y_ne (congr_arg f hx) <| map_negY f x₂ y₂ ▸ fun h => hy <| f.injective h,
-        map_negY, slope_of_Y_ne hx hy]
+        slope_of_Y_ne hx hy]
+      simp only [map_negY]
       map_simp
   · rw [slope_of_X_ne fun h => hx <| f.injective h, slope_of_X_ne hx]
     map_simp

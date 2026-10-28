@@ -188,6 +188,7 @@ If every nonconstant polynomial over `k` has a root, then `k` is algebraically c
 theorem of_exists_root (H : ∀ p : k[X], p.Monic → Irreducible p → ∃ x, p.eval x = 0) :
     IsAlgClosed k := by
   replace H (p : k[X]) (hp : Irreducible p) : ∃ x, p.eval x = 0 := by
+    have hlc : leadingCoeff p ≠ 0 := leadingCoeff_ne_zero.mpr hp.ne_zero
     obtain ⟨x, hx⟩ := H (p * C (leadingCoeff p)⁻¹) (monic_mul_leadingCoeff_inv hp.ne_zero)
       (irreducible_mul_leadingCoeff_inv.mpr hp)
     exact ⟨x, by simpa [hp.ne_zero] using hx⟩

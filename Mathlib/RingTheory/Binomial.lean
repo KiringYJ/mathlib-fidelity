@@ -482,7 +482,6 @@ end
 theorem choose_eq_smul [Field R] [CharZero R] {a : R} {n : ℕ} :
     Ring.choose a n = (n.factorial : R)⁻¹ • (descPochhammer ℤ n).smeval a := by
   rw [Ring.descPochhammer_eq_factorial_smul_choose, ← Nat.cast_smul_eq_nsmul R, inv_smul_smul₀]
-  simpa using Nat.factorial_ne_zero n
 
 open Finset
 

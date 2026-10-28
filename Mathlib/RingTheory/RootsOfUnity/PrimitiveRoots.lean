@@ -122,6 +122,14 @@ theorem pow_eq_one_iff_dvd (h : IsPrimitiveRoot ζ k) (l : ℕ) : ζ ^ l = 1 ↔
 theorem isUnit (h : IsPrimitiveRoot ζ k) (h0 : k ≠ 0) : IsUnit ζ :=
   .of_mul_eq_one (ζ ^ (k - 1)) <| by rw [← pow_succ', Nat.sub_one_add_one h0, h.pow_eq_one]
 
+/- Evidence rule: an element that a local hypothesis states to be a primitive root of unity of
+nonzero order (from a hypothesis or a `NeZero` instance) is a unit. -/
+macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply IsPrimitiveRoot.isUnit); assumption;
+        first | assumption | exact NeZero.ne _))
+
 theorem isOfFinOrder (h : IsPrimitiveRoot ζ k) (h0 : k ≠ 0) : IsOfFinOrder ζ :=
   ⟨k, Nat.ne_zero_iff_zero_lt.mp h0, (isPeriodicPt_mul_iff_pow_eq_one _).mpr h.pow_eq_one⟩
 

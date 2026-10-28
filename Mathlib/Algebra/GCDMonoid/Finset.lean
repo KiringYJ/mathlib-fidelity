@@ -259,7 +259,7 @@ then the `gcd` of `(f i) / d` is equal to `1`. -/
 lemma gcd_div_eq_one (his : i ∈ s) (hfi : f i ≠ 0) : s.gcd (fun j ↦ f j / s.gcd f) = 1 := by
   obtain ⟨g, he, hg⟩ := Finset.extract_gcd f ⟨i, his⟩
   refine (Finset.gcd_congr rfl fun a ha ↦ ?_).trans hg
-  rw [he a ha, mul_div_cancel_left₀]
+  rw [he a ha, MulDivCancelClass.mul_div_cancel_left₀]
   exact mt Finset.gcd_eq_zero_iff.1 fun h ↦ hfi <| h i his
 
 lemma gcd_div_id_eq_one {s : Finset α} {a : α} (has : a ∈ s) (ha : a ≠ 0) :

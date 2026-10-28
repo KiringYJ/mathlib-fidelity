@@ -47,14 +47,14 @@ namespace PowerSeries
 variable (A : Type*) [CommRing A] [Algebra ℚ A]
 
 /-- Power series for `log(1 + X) = X - X²/2 + X³/3 - ⋯`. -/
-def log : PowerSeries A :=
-  mk fun n ↦ if n = 0 then 0 else algebraMap ℚ A ((-1 : ℚ) ^ (n + 1) / n)
+noncomputable def log : PowerSeries A :=
+  mk fun n ↦ if h : n = 0 then 0 else algebraMap ℚ A ((-1 : ℚ) ^ (n + 1) / n)
 
 variable {A}
 
 @[simp]
 theorem coeff_log (n : ℕ) :
-    coeff n (log A) = if n = 0 then 0 else algebraMap ℚ A ((-1 : ℚ) ^ (n + 1) / n) :=
+    coeff n (log A) = if h : n = 0 then 0 else algebraMap ℚ A ((-1 : ℚ) ^ (n + 1) / n) :=
   coeff_mk _ _
 
 @[simp]
@@ -74,9 +74,11 @@ theorem order_log [Nontrivial A] : (log A).order = 1 :=
 /-- The derivative of `log(1+X)` is the geometric series `1 - X + X² - X³ + ⋯ = 1/(1+X)`. -/
 theorem derivative_log : d⁄dX (log A) = mk fun n ↦ (-1 : A) ^ n := by
   ext n
-  have : (n + 1) = algebraMap ℚ A (n + 1) := by simp
-  rw [coeff_derivative, coeff_log, coeff_mk]
-  grind
+  have : (n + 1 : A) = algebraMap ℚ A (n + 1) := by simp
+  rw [coeff_derivative, coeff_log, coeff_mk, dite_eq_right n.succ_ne_zero, this, ← map_mul]
+  simp only [Nat.cast_add, Nat.cast_one]
+  rw [div_mul_cancel₀]
+  simp [pow_succ]
 
 @[deprecated (since := "2026-08-29")] alias deriv_log := derivative_log
 

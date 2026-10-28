@@ -189,8 +189,8 @@ def ringEquivCauchy : ℝ ≃+* CauSeq.Completion.Cauchy (abs : ℚ → ℚ) :=
 /-! Extra instances to short-circuit type class resolution.
 
 These short-circuits have an additional property of ensuring that a computable path is found; if
-`Field ℝ` is found first, then decaying it to these typeclasses would result in a `noncomputable`
-version of them. -/
+a noncomputable instance of a richer class, such as `RCLike ℝ`, is found first, then decaying it
+to these typeclasses would result in a `noncomputable` version of them. -/
 
 instance instRing : Ring ℝ := by infer_instance
 
@@ -231,8 +231,10 @@ instance instNontrivial : Nontrivial ℝ where
     (by simpa only [cauchy_zero, cauchy_one] using congrArg cauchy h)⟩
 
 /-- Every nonzero real number is a unit, transported from its Cauchy-completion representative.
-This supplies the field property without an inverse operation on all real numbers. -/
-noncomputable instance instField : Field ℝ where
+This supplies the field property without an inverse operation on all real numbers. The embeddings
+of `ℚ≥0` and `ℚ` are the computable embeddings as constant Cauchy sequences, and the rational
+actions are multiplication by the embedded scalars. -/
+instance instField : Field ℝ where
   __ := commRing
   __ := instNontrivial
   isUnit_of_ne_zero {x} hx := by
@@ -240,6 +242,16 @@ noncomputable instance instField : Field ℝ where
     obtain ⟨u, hu⟩ := GroupWithZero.isUnit_of_ne_zero hc
     refine ⟨Units.map ringEquivCauchy.symm.toMonoidHom u, ?_⟩
     exact ext_cauchy hu
+  nnratCastOfCharZero _ q := ⟨ofRat (q : ℚ)⟩
+  nnratCastOfCharZero_mul_den _ q := by
+    rw [← ofCauchy_natCast, ← ofCauchy_natCast, ← ofCauchy_mul, ← ofRat_natCast,
+      ← ofRat_natCast, ← ofRat_mul]
+    congr 2
+    exact_mod_cast NNRat.mul_den_eq_num q
+  ratCastOfCharZero _ q := ⟨ofRat q⟩
+  ratCastOfCharZero_mul_den _ q := by
+    rw [← ofCauchy_natCast, ← ofCauchy_intCast, ← ofCauchy_mul, ← ofRat_natCast,
+      ← ofRat_intCast, ← ofRat_mul, Rat.mul_den_eq_num]
 
 instance instCharZero : CharZero ℝ where
   cast_injective m n h := Nat.cast_injective (R := Cauchy (abs : ℚ → ℚ)) <| by
@@ -257,18 +269,25 @@ lemma cauchy_nnratCast (q : ℚ≥0) : (q : ℝ).cauchy = q :=
 lemma cauchy_ratCast (q : ℚ) : (q : ℝ).cauchy = q :=
   map_ratCast ringEquivCauchy q
 
-theorem ofCauchy_inv (u : (Cauchy (abs : ℚ → ℚ))ˣ) :
-    (⟨(↑u⁻¹ : Cauchy (abs : ℚ → ℚ))⟩ : ℝ) =
-      (↑(Units.map ringEquivCauchy.symm.toMonoidHom u)⁻¹ : ℝ) := rfl
+/-- The real number of an invertible Cauchy representative is invertible. -/
+theorem isUnit_ofCauchy {f : Cauchy (abs : ℚ → ℚ)} (hf : IsUnit f) : IsUnit (⟨f⟩ : ℝ) :=
+  hf.map ringEquivCauchy.symm
 
-theorem cauchy_inv (u : ℝˣ) :
-    (↑u⁻¹ : ℝ).cauchy =
-      (↑(Units.map ringEquivCauchy.toMonoidHom u)⁻¹ : Cauchy (abs : ℚ → ℚ)) := rfl
+/-- The Cauchy representative of an invertible real number is invertible. -/
+theorem isUnit_cauchy {x : ℝ} (hx : IsUnit x) : IsUnit x.cauchy :=
+  hx.map ringEquivCauchy
 
-lemma ofCauchy_div (f : Cauchy (abs : ℚ → ℚ)) (g : (Cauchy (abs : ℚ → ℚ))ˣ) :
-    (⟨f /ₚ g⟩ : ℝ) = (⟨f⟩ : ℝ) /ₚ Units.map ringEquivCauchy.symm.toMonoidHom g := by
-  rw [divp, divp, ofCauchy_mul]
-  rfl
+theorem ofCauchy_inv {f : Cauchy (abs : ℚ → ℚ)} {hf : IsUnit f} :
+    (⟨f⁻¹⟩ : ℝ) = Checked.inv (⟨f⟩ : ℝ) (isUnit_ofCauchy hf) :=
+  map_inv₀ ringEquivCauchy.symm f
+
+theorem cauchy_inv (f : ℝ) {hf : IsUnit f} :
+    (f⁻¹ : ℝ).cauchy = Checked.inv f.cauchy (isUnit_cauchy hf) :=
+  map_inv₀ ringEquivCauchy f
+
+lemma ofCauchy_div (f g : Cauchy (abs : ℚ → ℚ)) {hg : IsUnit g} :
+    (⟨f / g⟩ : ℝ) = Checked.div (⟨f⟩ : ℝ) (⟨g⟩ : ℝ) (isUnit_ofCauchy hg) :=
+  map_div₀ ringEquivCauchy.symm f g
 
 instance : Inhabited ℝ :=
   ⟨0⟩
@@ -499,7 +518,7 @@ noncomputable instance linearOrder : LinearOrder ℝ :=
 instance : IsDomain ℝ := IsStrictOrderedRing.isDomain
 
 -- Extra instances to short-circuit type class resolution
-noncomputable instance : DivisionRing ℝ := by infer_instance
+instance : DivisionRing ℝ := by infer_instance
 
 noncomputable instance decidableLT (a b : ℝ) : Decidable (a < b) := by infer_instance
 

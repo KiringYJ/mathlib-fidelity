@@ -75,7 +75,9 @@ lemma arithGeom_eq (ha : a ≠ 1) (n : ℕ) :
     arithGeom a b u₀ n = a ^ n * (u₀ - (b / (1 - a))) + b / (1 - a) := by
   induction n with
   | zero => simp
-  | succ n hn => unfold arithGeom; grind
+  | succ n hn =>
+    rw [arithGeom_succ, hn]
+    field
 
 lemma arithGeom_eq' (ha : a ≠ 1) :
     arithGeom a b u₀ = fun n ↦ a ^ n * (u₀ - (b / (1 - a))) + b / (1 - a) := by
@@ -89,8 +91,8 @@ lemma arithGeom_same_eq_mul_div' (ha : a ≠ 1) (n : ℕ) :
 
 lemma arithGeom_same_eq_mul_div (ha : a ≠ 1) (n : ℕ) :
     arithGeom a b b n = b * (a ^ (n + 1) - 1) / (a - 1) := by
-  rw [arithGeom_same_eq_mul_div' ha n, ← neg_sub _ a, div_neg,
-    ← neg_sub _ (a ^ (n + 1)), mul_neg, neg_div, neg_neg]
+  rw [arithGeom_same_eq_mul_div' ha n, div_eq_div_iff]
+  ring
 
 lemma arithGeom_zero_eq_mul_div' (ha : a ≠ 1) (n : ℕ) :
     arithGeom a b 0 n = b * (1 - a ^ n) / (1 - a) := by
@@ -99,8 +101,8 @@ lemma arithGeom_zero_eq_mul_div' (ha : a ≠ 1) (n : ℕ) :
 
 lemma arithGeom_zero_eq_mul_div (ha : a ≠ 1) (n : ℕ) :
     arithGeom a b 0 n = b * (a ^ n - 1) / (a - 1) := by
-  rw [arithGeom_zero_eq_mul_div' ha n, ← neg_sub _ a, div_neg, ← neg_sub _ (a ^ n), mul_neg,
-    neg_div, neg_neg]
+  rw [arithGeom_zero_eq_mul_div' ha n, div_eq_div_iff]
+  ring
 
 variable [LinearOrder R] [IsStrictOrderedRing R]
 
@@ -110,7 +112,7 @@ lemma div_lt_arithGeom (ha_pos : 0 < a) (ha_ne : a ≠ 1) (h0 : b / (1 - a) < u�
   | zero => exact h0
   | succ n hn =>
     calc b / (1 - a)
-    _ = a * (b / (1 - a)) + b := by grind
+    _ = a * (b / (1 - a)) + b := by field
     _ < a * arithGeom a b u₀ n + b := by gcongr
 
 lemma arithGeom_strictMono (ha : 1 < a) (h0 : b / (1 - a) < u₀) :

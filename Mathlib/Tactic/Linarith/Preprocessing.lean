@@ -228,15 +228,17 @@ def normalizeDenominatorsLHS (h lhs : Expr) : MetaM Expr := do
     throw e
 
 /--
-`cancelDenoms pf` assumes `pf` is a proof of `t R 0`. If `t` contains the division symbol `/`,
-it tries to scale `t` to cancel out division by numerals.
+`cancelDenoms pf` assumes `pf` is a proof of `t R 0`. If `t` contains the division symbol `/`
+(an ambient division or a checked quotient or inverse), it tries to scale `t` to cancel out division
+by numerals.
 -/
 def cancelDenoms : Preprocessor where
   description := "cancel denominators"
   transform := fun pf => (do
       let (_, lhs) ← parseCompAndExpr (← inferType pf)
       guard <| lhs.containsConst <| fun n =>
-        n = ``HDiv.hDiv || n = ``Div.div || n = ``Inv.inv || n == ``OfScientific.ofScientific
+        n = ``HDiv.hDiv || n = ``Div.div || n = ``Inv.inv || n == ``OfScientific.ofScientific ||
+          n = `Checked.div || n = `Checked.inv
       pure [← normalizeDenominatorsLHS pf lhs])
     <|> return [pf]
 end cancelDenoms

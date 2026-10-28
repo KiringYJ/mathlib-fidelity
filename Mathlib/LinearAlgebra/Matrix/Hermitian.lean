@@ -350,33 +350,24 @@ section CommRing
 
 variable [CommRing α] [StarRing α]
 
-theorem IsHermitian.nonsingularInverse [Fintype m] [DecidableEq m] {A : Matrix m m α}
-    (hA : A.IsHermitian) (h : IsUnit A.det) : (Matrix.nonsingularInverse A h).IsHermitian := by
-  simp [IsHermitian, conjTranspose_nonsingularInverse, hA.eq]
+theorem IsHermitian.inv [Fintype m] [DecidableEq m] {A : Matrix m m α} {hAUnit : IsUnit A}
+    (hA : A.IsHermitian) : A⁻¹.IsHermitian := by
+  rw [IsHermitian, conjTranspose_nonsing_inv]
+  simp only [hA.eq]
 
-/-- Integer powers of a Hermitian determinant-unit matrix remain Hermitian. The power is formed in
-the matrix unit group, which supplies the inverse needed by negative exponents. Natural powers do
-not require this hypothesis and are covered by `Matrix.IsHermitian.pow`. -/
-theorem IsHermitian.zpow [Fintype m] [DecidableEq m] {A : Matrix m m α}
-    (hA : A.IsHermitian) (h : IsUnit A.det) (z : ℤ) :
-    (↑(Matrix.unitOfIsUnitDet A h ^ z) : Matrix m m α).IsHermitian := by
-  cases z with
-  | ofNat k =>
-      simpa only [zpow_natCast, Units.val_pow_eq_pow_val, coe_unitOfIsUnitDet] using hA.pow k
+theorem isHermitian_inv [Fintype m] [DecidableEq m] (A : Matrix m m α) {hA : IsUnit A} :
+    A⁻¹.IsHermitian ↔ A.IsHermitian :=
+  ⟨fun h => by simpa using h.inv (hAUnit := hA.inv₀), IsHermitian.inv⟩
+
+/-- Integer powers of a Hermitian matrix are Hermitian. Only a negative exponent requires the
+matrix to be invertible. -/
+theorem IsHermitian.zpow [Fintype m] [DecidableEq m] {A : Matrix m m α} (k : ℤ)
+    {hk : k < 0 → IsUnit A} (hA : A.IsHermitian) : (A ^ k).IsHermitian := by
+  cases k with
+  | ofNat k => exact hA.pow k
   | negSucc k =>
-      let hk : IsUnit (A ^ (k + 1)).det := by
-        rw [det_pow]
-        exact h.pow _
-      have hinv :
-          (↑((Matrix.unitOfIsUnitDet A h ^ (k + 1))⁻¹) : Matrix m m α) =
-            Matrix.nonsingularInverse (A ^ (k + 1)) hk := by
-        apply Matrix.right_inv_eq_right_inv
-        · simpa only [Units.val_mul, Units.val_one, Units.val_pow_eq_pow_val,
-            coe_unitOfIsUnitDet] using
-              congr_arg Units.val (mul_inv_cancel (Matrix.unitOfIsUnitDet A h ^ (k + 1)))
-        · exact Matrix.mul_nonsingularInverse _ _
-      rw [zpow_negSucc, hinv]
-      exact (hA.pow (k + 1)).nonsingularInverse hk
+    rw [zpow_negSucc₀]
+    exact (hA.pow (k + 1)).inv
 
 @[simp]
 theorem isHermitian_invOf [Fintype m] [DecidableEq m] (A : Matrix m m α)
@@ -399,7 +390,7 @@ theorem schur_complement_eq₁₁ [Fintype m] [DecidableEq m] [Fintype n] {A : M
         (star y) ᵥ* (D - Bᴴ * ⅟A * B) ⬝ᵥ y := by
   simp [Function.star_sumElim, vecMul_fromBlocks, add_vecMul,
     dotProduct_mulVec, vecMul_sub, Matrix.mul_assoc, hA.eq,
-    conjTranspose_invOf, star_mulVec]
+    conjTranspose_invOf, star_mulVec, Matrix.mul_invOf_cancel_left]
   abel
 
 theorem schur_complement_eq₂₂ [Fintype m] [Fintype n] [DecidableEq n] (A : Matrix m m α)
@@ -410,25 +401,22 @@ theorem schur_complement_eq₂₂ [Fintype m] [Fintype n] [DecidableEq n] (A : M
         (star x) ᵥ* (A - B * ⅟D * Bᴴ) ⬝ᵥ x := by
   simp [Function.star_sumElim, vecMul_fromBlocks, add_vecMul,
     dotProduct_mulVec, vecMul_sub, Matrix.mul_assoc, hD.eq,
-    conjTranspose_invOf, star_mulVec]
+    conjTranspose_invOf, star_mulVec, Matrix.mul_invOf_cancel_left]
   abel
 
 namespace IsHermitian
 
 theorem fromBlocks₁₁ [Fintype m] [DecidableEq m] {A : Matrix m m α} (B : Matrix m n α)
     (D : Matrix n n α) (hA : A.IsHermitian) (h : IsUnit A.det) :
-    (Matrix.fromBlocks A B Bᴴ D).IsHermitian ↔
-      (D - Bᴴ * Matrix.nonsingularInverse A h * B).IsHermitian := by
-  have hBAB : (Bᴴ * Matrix.nonsingularInverse A h * B).IsHermitian :=
-    isHermitian_conjTranspose_mul_mul _ (hA.nonsingularInverse h)
+    (Matrix.fromBlocks A B Bᴴ D).IsHermitian ↔ (D - Bᴴ * A⁻¹ * B).IsHermitian := by
+  have hBAB : (Bᴴ * A⁻¹ * B).IsHermitian := isHermitian_conjTranspose_mul_mul _ hA.inv
   rw [isHermitian_fromBlocks_iff]
   exact ⟨fun h ↦ h.2.2.2.sub hBAB, fun h ↦ ⟨hA, rfl, conjTranspose_conjTranspose B,
     sub_add_cancel D _ ▸ h.add hBAB⟩⟩
 
 theorem fromBlocks₂₂ [Fintype n] [DecidableEq n] (A : Matrix m m α) (B : Matrix m n α)
     {D : Matrix n n α} (hD : D.IsHermitian) (h : IsUnit D.det) :
-    (Matrix.fromBlocks A B Bᴴ D).IsHermitian ↔
-      (A - B * Matrix.nonsingularInverse D h * Bᴴ).IsHermitian := by
+    (Matrix.fromBlocks A B Bᴴ D).IsHermitian ↔ (A - B * D⁻¹ * Bᴴ).IsHermitian := by
   rw [← isHermitian_submatrix_equiv (Equiv.sumComm n m), Equiv.sumComm_apply,
     fromBlocks_submatrix_sum_swap_sum_swap]
   convert! IsHermitian.fromBlocks₁₁ _ _ hD h <;> simp

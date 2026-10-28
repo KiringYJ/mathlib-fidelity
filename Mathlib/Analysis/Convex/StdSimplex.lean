@@ -447,31 +447,20 @@ variable {𝕜 : Type*} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing �
 /-- The barycenter of a standard simplex is the center of mass of
 the set of vertices (equally weighted). -/
 @[deprecated StdSimplex.barycenter (since := "2026-08-29")]
-noncomputable def barycenter (h : (Fintype.card X : 𝕜) ≠ 0) : stdSimplex 𝕜 X :=
-  ⟨fun _ => (↑(Units.mk0 (Fintype.card X : 𝕜) h)⁻¹ : 𝕜), by
-    constructor
-    · intro x
-      exact (Units.inv_nonneg _).2 (Nat.cast_nonneg _)
-    · simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
-      change (↑(Units.mk0 (Fintype.card X : 𝕜) h) : 𝕜) *
-        (↑(Units.mk0 (Fintype.card X : 𝕜) h)⁻¹ : 𝕜) = 1
-      exact Units.mul_inv _⟩
+noncomputable def barycenter : stdSimplex 𝕜 X :=
+  ⟨fun _ => (Fintype.card X : 𝕜)⁻¹, by simp [stdSimplex]⟩
 
-/-- The barycenter of a standard simplex has the inverse of its cardinal unit at each index. -/
+/-- The barycenter of a standard simplex has coordinates `(Fintype.card X)⁻¹` at each index. -/
 @[simp, deprecated StdSimplex.weights_barycenter_apply (since := "2026-08-29")]
-omit [Nonempty X] in
-theorem barycenter_apply (h : (Fintype.card X : 𝕜) ≠ 0) (x : X) :
-    (barycenter h : stdSimplex 𝕜 X).val x =
-      (↑(Units.mk0 (Fintype.card X : 𝕜) h)⁻¹ : 𝕜) := rfl
+theorem barycenter_apply (x : X) :
+    (barycenter : stdSimplex 𝕜 X).val x = (Fintype.card X : 𝕜)⁻¹ := rfl
 
 /-- The barycenter equals the (equal weight) center of mass of vertices (`Finset.centerMass`). -/
 @[deprecated "no replacement" (since := "2026-08-29")]
-omit [Nonempty X] in
-theorem barycenter_eq_centerMass [DecidableEq X] (h : (Fintype.card X : 𝕜) ≠ 0) :
-    (barycenter h : stdSimplex 𝕜 X).val =
-      Finset.centerMass Finset.univ (fun _ => (1 : 𝕜)) (fun i => Pi.single i 1)
-        (by simpa only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one] using h) := by
-  funext x
+theorem barycenter_eq_centerMass [DecidableEq X] :
+    (barycenter : stdSimplex 𝕜 X).val =
+      Finset.centerMass Finset.univ (fun _ => (1 : 𝕜)) (fun i => Pi.single i 1) (by simp) := by
+  ext x
   simp [barycenter, Finset.centerMass, Pi.smul_apply, Finset.sum_apply, Pi.single_apply]
 
 end Barycenter

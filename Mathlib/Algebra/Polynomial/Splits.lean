@@ -535,7 +535,7 @@ theorem Splits.of_natDegree_le_one {f : R[X]} (hf : natDegree f ≤ 1) : Splits 
   obtain ⟨a, b, rfl⟩ := exists_eq_X_add_C_of_natDegree_le_one hf
   by_cases ha : a = 0
   · simp_all
-  · rw [← mul_inv_cancel_left₀ ha b, C_mul, ← mul_add]
+  · rw [← mul_inv_cancel_left₀ (ha := Ne.isUnit ha) b, C_mul, ← mul_add]
     exact (X_add_C (a⁻¹ * b)).C_mul a
 
 theorem Splits.of_natDegree_eq_one {f : R[X]} (hf : natDegree f = 1) : Splits f :=
@@ -660,10 +660,10 @@ theorem splits_iff_comp_splits_of_natDegree_eq_one {f g : R[X]} (hg : g.natDegre
   have ha : a ≠ 0 := by contrapose! hg; simp [hg]
   have : f = (f.comp (C a * X + C b)).comp ((C a⁻¹ * (X - C b))) := by
     simp only [comp_assoc, add_comp, mul_comp, C_comp, X_comp]
-    rw [← mul_assoc, ← C_mul, mul_inv_cancel₀ ha, C_1, one_mul, sub_add_cancel, comp_X]
+    rw [← mul_assoc, ← C_mul, mul_inv_cancel₀, C_1, one_mul, sub_add_cancel, comp_X]
   rw [this]
   refine Splits.comp_of_natDegree_le_one hf ?_
-  rw [natDegree_C_mul (mt inv_eq_zero.mp ha), natDegree_X_sub_C]
+  rw [natDegree_C_mul inv_ne_zero, natDegree_X_sub_C]
 
 theorem splits_iff_comp_splits_of_degree_eq_one {f g : R[X]} (hg : g.degree = 1) :
     f.Splits ↔ (f.comp g).Splits :=
@@ -678,23 +678,33 @@ theorem Splits.natDegree_eq_one_of_irreducible {f : R[X]} (hf : Splits f)
     (h : Irreducible f) : natDegree f = 1 :=
   natDegree_eq_of_degree_eq_some (hf.degree_eq_one_of_irreducible h)
 
+/-- At a point `x` that is not a root of a split polynomial `f`, the derivative of `f` is `f x`
+times the sum of `1 / (x - z)` over the roots `z` of `f`. The sum runs over the roots themselves:
+a root differs from `x`, which gives the quotient's evidence. -/
 theorem Splits.eval_derivative_eq_eval_mul_sum (hf : Splits f) {x : R} (hx : f.eval x ≠ 0) :
     haveI := ne_zero_of_eval_ne_zero hx
-    f.derivative.eval x = f.eval x * (f.roots.map fun z ↦ 1 / (x - z)).sum := by
+    f.derivative.eval x = f.eval x * (f.roots.attach.map fun z ↦
+      Checked.div 1 (x - z.1) (sub_ne_zero.2 fun h ↦ hx <| by
+        rw [h]; exact (mem_roots this).1 z.2).isUnit).sum := by
   classical
   have hf0 := ne_zero_of_eval_ne_zero hx
-  simp only [hf.eval_derivative hf0, hf.eval_eq_prod_roots hf0, ← Multiset.sum_map_mul_left,
-    mul_assoc]
-  refine congr_arg Multiset.sum (Multiset.map_congr rfl fun z hz ↦ ?_)
-  rw [← Multiset.prod_map_erase hz, mul_one_div, mul_div_cancel_left₀]
-  rw [sub_ne_zero]
-  rintro rfl
-  exact hx ((mem_roots hf0).1 hz)
+  rw [hf.eval_derivative hf0, ← Multiset.sum_map_mul_left, ← Multiset.sum_map_mul_left,
+    ← Multiset.attach_map_val' f.roots]
+  refine congr_arg Multiset.sum (Multiset.map_congr rfl fun z _ ↦ ?_)
+  have hz : x - z.1 ≠ 0 := sub_ne_zero.2 fun h ↦ hx (by rw [h]; exact (mem_roots hf0).1 z.2)
+  simp only [hf.eval_eq_prod_roots hf0]
+  rw [← Multiset.prod_map_erase z.2]
+  field_simp
+  ring
 
+/-- The logarithmic derivative of a split polynomial at a point `x` that is not a root is the
+sum of `1 / (x - z)` over its roots `z`. -/
 theorem Splits.eval_derivative_div_eval_of_ne_zero (hf : Splits f) {x : R} (hx : f.eval x ≠ 0) :
     haveI := ne_zero_of_eval_ne_zero hx
-    f.derivative.eval x / f.eval x = (f.roots.map fun z ↦ 1 / (x - z)).sum := by
-  rw [hf.eval_derivative_eq_eval_mul_sum hx, mul_div_cancel_left₀ _ hx]
+    f.derivative.eval x / f.eval x = (f.roots.attach.map fun z ↦
+      Checked.div 1 (x - z.1) (sub_ne_zero.2 fun h ↦ hx <| by
+        rw [h]; exact (mem_roots this).1 z.2).isUnit).sum := by
+  rw [hf.eval_derivative_eq_eval_mul_sum hx, mul_div_cancel_left₀]
 
 theorem Splits.mem_subfield_of_isRoot (F : Subfield R) {f : F[X]} (hf : Splits f) (hf0 : f ≠ 0)
     {x : R} (hx : (f.map F.subtype).IsRoot x) : x ∈ F := by

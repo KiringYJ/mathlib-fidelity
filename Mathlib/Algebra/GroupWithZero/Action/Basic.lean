@@ -6,7 +6,6 @@ Authors: Chris Hughes, Yury Kudryashov
 module
 
 public import Mathlib.Algebra.Group.Action.End
-public import Mathlib.Algebra.Group.Action.Units
 public import Mathlib.Algebra.GroupWithZero.Action.Defs
 public import Mathlib.Algebra.Group.Action.Prod
 public import Mathlib.Algebra.GroupWithZero.Prod
@@ -105,21 +104,17 @@ lemma IsUnit.smul_sub_iff_sub_inv_smul [Group G] [Monoid R] [AddGroup R] [Distri
     IsUnit (r • (1 : R) - a) ↔ IsUnit (1 - r⁻¹ • a) := by
   rw [← isUnit_smul_iff r (1 - r⁻¹ • a), smul_sub, smul_inv_smul]
 
-/-- Scale both parts of a quotient by units using compatible multiplicative scalar actions. -/
-theorem div_smul_divp_comm [Group G] [Monoid G₀] [MulAction G G₀]
-    [IsScalarTower G G₀ G₀] [SMulCommClass G G₀ G₀] (g h : G) (a : G₀) (u : G₀ˣ) :
-    (g / h) • (a /ₚ u) = (g • a) /ₚ (h • u) := by
-  change (g / h) • (a * ↑u⁻¹) = (g • a) * (h⁻¹ • (↑u⁻¹ : G₀))
-  rw [smul_mul_smul_comm, div_eq_mul_inv]
+theorem div_smul_div_comm [Group G] [Monoid G₀] [MulAction G G₀]
+    [IsScalarTower G G₀ G₀] [SMulCommClass G G₀ G₀] (g h : G) (a b : G₀) {hb : IsUnit b} :
+    (g / h) • (a / b) = Checked.div (g • a) (h • b) (hb.smul h) := by
+  have hu : (hb.smul h).unit = h • hb.unit := Units.ext rfl
+  change (g / h) • (a * ↑hb.unit⁻¹) = (g • a) * ↑(hb.smul h).unit⁻¹
+  rw [hu, Units.smul_inv, Units.val_smul, smul_mul_smul_comm, div_eq_mul_inv]
 
-section MulDistribMulAction
-variable [Monoid G] [Monoid G₀] [MulDistribMulAction G G₀]
-
-attribute [local instance] Units.mulDistribMulActionRight
-
-/-- Multiplicative scalar actions preserve mixed division by units. -/
-@[simp] theorem smul_divp (g : G) (a : G₀) (u : G₀ˣ) :
-    g • (a /ₚ u) = (g • a) /ₚ (g • u) :=
-  smul_mul' g a ↑u⁻¹
-
-end MulDistribMulAction
+@[simp] theorem smul_zpow₀' [Monoid G] [Monoid G₀] [MulDistribMulAction G G₀]
+    (g : G) (x : G₀) (n : ℤ) {h : n < 0 → IsUnit x} :
+    g • (x ^ n) = Checked.zpow (g • x) n fun hn ↦ (h hn).smul' g := by
+  cases n with
+  | ofNat k => exact smul_pow' g x k
+  | negSucc k =>
+    simp only [zpow_negSucc₀, smul_inv₀', smul_pow']

@@ -6,7 +6,6 @@ Authors: Frédéric Dupuis
 module
 
 public import Mathlib.Algebra.Group.Subgroup.Defs
-public import Mathlib.Algebra.GroupWithZero.CheckedHom
 public import Mathlib.Algebra.Module.Defs
 public import Mathlib.Algebra.Star.Rat
 
@@ -230,6 +229,19 @@ theorem invOf_iff (x : R) [Invertible x] : IsSelfAdjoint ⅟x ↔ IsSelfAdjoint 
 
 alias ⟨_, invOf⟩ := invOf_iff
 
+@[aesop safe apply]
+theorem inv₀ {x : R} {hxUnit : IsUnit x} (hx : IsSelfAdjoint x) : IsSelfAdjoint x⁻¹ := by
+  simp only [isSelfAdjoint_iff, star_inv₀, hx.star_eq]
+
+@[simp]
+theorem inv₀_iff (x : R) {hxUnit : IsUnit x} : IsSelfAdjoint x⁻¹ ↔ IsSelfAdjoint x := by
+  simp only [isSelfAdjoint_iff, star_inv₀, inv_inj₀]
+
+@[aesop safe apply]
+theorem zpow₀ {x : R} (hx : IsSelfAdjoint x) (n : ℤ) {hxUnit : n < 0 → IsUnit x} :
+    IsSelfAdjoint (x ^ n) := by
+  simp only [isSelfAdjoint_iff, star_zpow₀, hx.star_eq]
+
 @[grind =]
 lemma _root_.IsUnit.isSelfAdjoint_conjugate_iff {a u : R} (hu : IsUnit u) :
     IsSelfAdjoint (u * a * star u) ↔ IsSelfAdjoint a := by
@@ -243,8 +255,6 @@ lemma _root_.IsUnit.isSelfAdjoint_conjugate_iff' {a u : R} (hu : IsUnit u) :
 end Monoid
 
 section Semiring
-
-open Ring
 
 variable [NonAssocSemiring R] [StarRing R]
 
@@ -304,27 +314,6 @@ theorem zpow {x : R} (hx : IsSelfAdjoint x) (n : ℤ) : IsSelfAdjoint (x ^ n) :=
 
 end Group
 
-section GroupWithZero
-
-variable [Monoid R] [StarMul R]
-
-@[aesop safe apply]
-theorem inv₀ {x : R} (hx : IsSelfAdjoint x) (hu : IsUnit x) :
-    IsSelfAdjoint (Checked.inv x hu) := by
-  simp only [isSelfAdjoint_iff, star_checked_inv, hx.star_eq]
-
-@[simp]
-theorem inv₀_iff (x : R) (hu : IsUnit x) :
-    IsSelfAdjoint (Checked.inv x hu) ↔ IsSelfAdjoint x := by
-  simp only [isSelfAdjoint_iff, star_checked_inv, Checked.inv_inj]
-
-@[aesop safe apply]
-theorem zpow₀ {x : R} (hx : IsSelfAdjoint x) (n : ℤ) (hu : n < 0 → IsUnit x) :
-    IsSelfAdjoint (Checked.zpow x n hu) := by
-  simp only [isSelfAdjoint_iff, star_checked_zpow, hx.star_eq]
-
-end GroupWithZero
-
 @[simp]
 protected lemma nnratCast [DivisionSemiring R] [CharZero R] [StarRing R] (q : ℚ≥0) :
     IsSelfAdjoint (q : R) :=
@@ -340,15 +329,15 @@ protected theorem ratCast (x : ℚ) : IsSelfAdjoint (x : R) :=
 
 end DivisionRing
 
-section Semifield
+section CommMonoid
 
-variable [Semifield R] [StarRing R]
+variable [CommMonoid R] [StarMul R]
 
-theorem div {x y : R} (hx : IsSelfAdjoint x) (hy : IsSelfAdjoint y) (hu : IsUnit y) :
-    IsSelfAdjoint (Checked.div x y hu) := by
-  simp only [isSelfAdjoint_iff, star_checked_div, hx.star_eq, hy.star_eq]
+theorem div {x y : R} {hyUnit : IsUnit y} (hx : IsSelfAdjoint x) (hy : IsSelfAdjoint y) :
+    IsSelfAdjoint (x / y) := by
+  simp only [isSelfAdjoint_iff, star_div₀, hx.star_eq, hy.star_eq]
 
-end Semifield
+end CommMonoid
 
 section SMul
 
@@ -488,52 +477,81 @@ section Field
 
 variable [Field R] [StarRing R]
 
+/-- A field whose self-adjoint elements have characteristic zero has characteristic zero. -/
+theorem _root_.CharZero.of_selfAdjoint [CharZero (selfAdjoint R)] : CharZero R :=
+  CharZero.of_injective_map_natCast (Subtype.val : selfAdjoint R → R) Subtype.val_injective
+    fun _ => rfl
+
 /-- A nonzero self-adjoint scalar has a self-adjoint inverse. No ambient inverse
-operation is added to the subtype. -/
+operation is added to the subtype. In characteristic zero, the rational embeddings and actions
+are those of `R`. -/
 instance instField : Field (selfAdjoint R) where
   toCommRing := inferInstance
   exists_pair_ne := exists_pair_ne (selfAdjoint R)
   isUnit_of_ne_zero {a} ha := by
     have haR : (a : R) ≠ 0 := fun h => ha (Subtype.ext h)
-    let hu := GroupWithZero.isUnit_of_ne_zero haR
-    let b : selfAdjoint R := ⟨Checked.inv (a : R) hu, a.prop.inv₀ hu⟩
-    refine ⟨⟨a, b, ?_, ?_⟩, rfl⟩
-    · exact Subtype.ext (Checked.mul_inv_cancel (a : R) hu)
-    · exact Subtype.ext (Checked.inv_mul_cancel (a : R) hu)
+    have hu : IsUnit (a : R) := GroupWithZero.isUnit_of_ne_zero haR
+    refine ⟨⟨a, ⟨(a : R)⁻¹, a.prop.inv₀⟩, ?_, ?_⟩, rfl⟩
+    · exact Subtype.ext (mul_inv_cancel₀ (ha := hu))
+    · exact Subtype.ext (inv_mul_cancel₀ (ha := hu))
+  nnratCastOfCharZero _ q :=
+    haveI := CharZero.of_selfAdjoint (R := R)
+    ⟨q, .nnratCast q⟩
+  nnratCastOfCharZero_mul_den _ q :=
+    haveI := CharZero.of_selfAdjoint (R := R)
+    Subtype.ext (NNRat.cast_mul_den q)
+  nnqsmulOfCharZero _ q x :=
+    haveI := CharZero.of_selfAdjoint (R := R)
+    ⟨q • (x : R), by rw [NNRat.smul_def]; exact (IsSelfAdjoint.nnratCast q).mul x.prop⟩
+  nnqsmulOfCharZero_eq_mul _ q x :=
+    haveI := CharZero.of_selfAdjoint (R := R)
+    Subtype.ext (NNRat.smul_def q (x : R))
+  ratCastOfCharZero _ q :=
+    haveI := CharZero.of_selfAdjoint (R := R)
+    ⟨q, .ratCast q⟩
+  ratCastOfCharZero_mul_den _ q :=
+    haveI := CharZero.of_selfAdjoint (R := R)
+    Subtype.ext (Rat.cast_mul_den q)
+  qsmulOfCharZero _ q x :=
+    haveI := CharZero.of_selfAdjoint (R := R)
+    ⟨q • (x : R), by rw [Rat.smul_def]; exact (IsSelfAdjoint.ratCast q).mul x.prop⟩
+  qsmulOfCharZero_eq_mul _ q x :=
+    haveI := CharZero.of_selfAdjoint (R := R)
+    Subtype.ext (Rat.smul_def q (x : R))
+
+/-- The value of an invertible self-adjoint element is invertible. -/
+theorem isUnit_val {x : selfAdjoint R} (hx : IsUnit x) : IsUnit (x : R) :=
+  hx.map coeRingHom.toMonoidHom
+
+/- Evidence rule: the value of an invertible self-adjoint element is invertible. -/
+macro_rules | `(tactic| checked_unit) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply selfAdjoint.isUnit_val); checked_unit))
 
 @[simp, norm_cast]
-theorem val_inv (x : selfAdjoint R) (hx : IsUnit x) :
-    (↑(Checked.inv x hx) : R) =
-      Checked.inv (x : R) (hx.map coeRingHom.toMonoidHom) :=
-  Checked.map_inv coeRingHom.toMonoidHom x hx
+theorem val_inv (x : selfAdjoint R) {hx : IsUnit x} : (↑x⁻¹ : R) = (x : R)⁻¹ :=
+  map_inv₀ coeRingHom.toMonoidHom x
 
 @[simp, norm_cast]
-theorem val_div (x y : selfAdjoint R) (hy : IsUnit y) :
-    (↑(Checked.div x y hy) : R) =
-      Checked.div (x : R) (y : R) (hy.map coeRingHom.toMonoidHom) :=
-  Checked.map_div coeRingHom.toMonoidHom x y hy
+theorem val_div (x y : selfAdjoint R) {hy : IsUnit y} : (↑(x / y) : R) = x / y :=
+  map_div₀ coeRingHom.toMonoidHom x y
 
 @[simp, norm_cast]
-theorem val_zpow (x : selfAdjoint R) (z : ℤ) (hx : z < 0 → IsUnit x) :
-    (↑(Checked.zpow x z hx) : R) =
-      Checked.zpow (x : R) z (fun hz => (hx hz).map coeRingHom.toMonoidHom) :=
-  Checked.map_zpow coeRingHom.toMonoidHom x z hx
+theorem val_zpow (x : selfAdjoint R) (z : ℤ) {hx : z < 0 → IsUnit x} :
+    (↑(x ^ z) : R) = (x : R) ^ z :=
+  map_zpow₀ coeRingHom.toMonoidHom x z
 
 variable [CharZero R]
 
-@[simp, norm_cast] lemma val_nnratCast (q : ℚ≥0) :
-    ((q : selfAdjoint R) : R) = (q : R) := map_nnratCast coeRingHom q
+@[simp, norm_cast] lemma val_nnratCast (q : ℚ≥0) : (q : selfAdjoint R) = (q : R) := rfl
 
-@[simp, norm_cast] lemma val_ratCast (q : ℚ) :
-    ((q : selfAdjoint R) : R) = (q : R) := map_ratCast coeRingHom q
+@[simp, norm_cast] lemma val_ratCast (q : ℚ) : (q : selfAdjoint R) = (q : R) := rfl
 
-@[simp, norm_cast] lemma val_nnqsmul (q : ℚ≥0) (x : selfAdjoint R) :
-    (↑(q • x) : R) = q • (x : R) := by
-  simp only [NNRat.smul_def, val_mul, val_nnratCast]
+@[simp, norm_cast] lemma val_nnqsmul (q : ℚ≥0) (x : selfAdjoint R) : ↑(q • x) = q • (x : R) :=
+  rfl
 
-@[simp, norm_cast] lemma val_qsmul (q : ℚ) (x : selfAdjoint R) :
-    (↑(q • x) : R) = q • (x : R) := by
-  simp only [Rat.smul_def, val_mul, val_ratCast]
+@[simp, norm_cast] lemma val_qsmul (q : ℚ) (x : selfAdjoint R) : ↑(q • x) = q • (x : R) := rfl
 
 end Field
 

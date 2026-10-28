@@ -586,12 +586,16 @@ theorem _root_.IsClosed.notMem_iff_infDist_pos (h : IsClosed s) (hs : s.Nonempty
     x ∉ s ↔ 0 < infDist x s := by
   simp [h.mem_iff_infDist_zero hs, infDist_nonneg.lt_iff_ne']
 
-theorem continuousAt_inv_infDist_pt (h : x ∉ closure s) :
-    ContinuousAt (fun x ↦ (infDist x s)⁻¹) x := by
-  rcases s.eq_empty_or_nonempty with (rfl | hs)
-  · simp only [infDist_empty, continuousAt_const]
-  · refine (continuous_infDist_pt s).continuousAt.inv₀ ?_
-    rwa [Ne, ← mem_closure_iff_infDist_zero hs]
+/-- The inverse of the distance to a nonempty set `s` is continuous at every point outside the
+closure of `s`. The inverse is taken on its domain, the points whose distance to `s` does not
+vanish. -/
+theorem continuousAt_inv_infDist_pt (hs : s.Nonempty) (h : x ∉ closure s) :
+    ContinuousAt (fun y : {y : α // infDist y s ≠ 0} ↦ Checked.inv (infDist (y : α) s) y.2.isUnit)
+      ⟨x, ((infDist_pos_iff_notMem_closure hs).1 h).ne'⟩ := by
+  have hc : Continuous fun y : {y : α // infDist y s ≠ 0} ↦
+      (⟨infDist (y : α) s, y.2.isUnit⟩ : {r : ℝ | IsUnit r}) :=
+    ((continuous_infDist_pt s).comp continuous_subtype_val).subtype_mk _
+  exact (continuousAt_inv₀ _).comp hc.continuousAt
 
 /-- The infimum distance is invariant under isometries. -/
 theorem infDist_image (hΦ : Isometry Φ) : infDist (Φ x) (Φ '' t) = infDist x t := by

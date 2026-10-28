@@ -385,7 +385,7 @@ def divRadical (a : E) : E := a / radical a
 
 theorem radical_mul_divRadical : radical a * divRadical a = a := by
   rw [divRadical, ← EuclideanDomain.mul_div_assoc _ radical_dvd_self,
-    mul_div_cancel_left₀ _ radical_ne_zero]
+    MulDivCancelClass.mul_div_cancel_left₀ _ radical_ne_zero]
 
 theorem divRadical_mul_radical : divRadical a * radical a = a := by
   rw [mul_comm]

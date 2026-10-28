@@ -6,9 +6,10 @@ Authors: Ching-Tsun Chou, Chris Wong, Yaël Dillies
 module
 
 public import Mathlib.Data.Finset.Density
-public import Mathlib.Data.Fintype.Prod
 public import Mathlib.Data.Fintype.Perm
+public import Mathlib.Data.Fintype.Prod
 public import Mathlib.Data.Nat.Choose.Basic
+public import Mathlib.Data.Nat.Choose.Cast
 
 /-!
 # The Katona circle method
@@ -109,18 +110,18 @@ def prefixedEquiv (s : Finset X) : prefixed s ≃ Numbering s × Numbering ↑(s
 lemma card_prefixed (s : Finset X) : #(prefixed s) = (#s)! * (card X - #s)! := by
   simpa [-mem_prefixed] using Fintype.card_congr (prefixedEquiv s)
 
+/- Evidence for `((card X).choose #s : ℚ≥0)⁻¹`: the binomial coefficient is positive. -/
+local macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply Nat.cast_ne_zero.mpr);
+        exact (Nat.choose_pos (Finset.card_le_univ _)).ne'))
+
 @[simp]
-lemma dens_prefixed (s : Finset X) : (prefixed s).dens =
-    (((Units.mk0 ((card X).choose #s : ℚ≥0)
-      (Nat.cast_ne_zero.mpr (Nat.choose_pos s.card_le_univ).ne'))⁻¹ : ℚ≥0ˣ) : ℚ≥0) := by
-  have hc : ((card X).choose #s : ℚ≥0) ≠ 0 :=
-    Nat.cast_ne_zero.mpr (Nat.choose_pos s.card_le_univ).ne'
-  apply mul_left_cancel₀ hc
-  have hi := (Units.mk0 ((card X).choose #s : ℚ≥0) hc).mul_inv
-  change ((card X).choose #s : ℚ≥0) * (prefixed s).dens =
-    ((card X).choose #s : ℚ≥0) * (((Units.mk0 _ hc)⁻¹ : ℚ≥0ˣ) : ℚ≥0)
-  simp only [Units.val_mk0] at hi
-  rw [hi]
+lemma dens_prefixed (s : Finset X) : (prefixed s).dens = ((card X).choose #s : ℚ≥0)⁻¹ := by
+  apply mul_left_cancel₀ (Nat.cast_ne_zero.mpr (Nat.choose_pos s.card_le_univ).ne' :
+    ((card X).choose #s : ℚ≥0) ≠ 0)
+  rw [mul_inv_cancel₀]
   apply mul_right_cancel₀ (dens_card_cast_ne_zero (α := Numbering X))
   rw [mul_assoc, dens_mul_card, one_mul, card_prefixed, card_numbering]
   exact_mod_cast (by simpa only [Nat.mul_assoc] using

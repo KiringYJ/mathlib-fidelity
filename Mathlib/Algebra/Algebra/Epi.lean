@@ -65,11 +65,11 @@ instance (R A : Type*) [CommRing R] [IsDomain R] [Field A] [Algebra R A] [IsFrac
   set f := algebraMap R A with hf
   replace hb : f b ≠ 0 := by aesop
   calc 1 ⊗ₜ[R] (f a / f b)
-       = 1 ⊗ₜ[R] (a • (1 / f b)) := by rw [← smul_div_assoc, algebraMap_eq_smul_one a]
+       = 1 ⊗ₜ[R] (a • (1 / f b)) := by simp only [smul_def, ← hf, mul_one_div₀]
      _ = f a ⊗ₜ[R] (1 / f b) := by rw [← smul_tmul, algebraMap_eq_smul_one a]
-     _ = (b • (f a / f b)) ⊗ₜ[R] (1 / f b) := by rw [smul_def, mul_div_cancel₀ _ hb]
+     _ = (b • (f a / f b)) ⊗ₜ[R] (1 / f b) := by rw [smul_def, mul_div_cancel₀]
      _ = (f a / f b) ⊗ₜ[R] (b • (1 / f b)) := by rw [smul_tmul]
-     _ = (f a / f b) ⊗ₜ[R] 1 := by rw [smul_def, mul_div_cancel₀ _ hb]
+     _ = (f a / f b) ⊗ₜ[R] 1 := by rw [smul_def, mul_div_cancel₀]
 
 section Ring
 

@@ -46,8 +46,8 @@ theorem one_mem : (1 : ℝ) ∈ I :=
 theorem mul_mem {x y : ℝ} (hx : x ∈ I) (hy : y ∈ I) : x * y ∈ I :=
   ⟨mul_nonneg hx.1 hy.1, (mul_le_of_le_one_left hy.1 hx.2).trans hy.2⟩
 
-theorem div_mem {x y : ℝ} (hx : 0 ≤ x) (hy : 0 ≤ y) (hxy : x ≤ y) : x / y ∈ I :=
-  ⟨div_nonneg hx hy, div_le_one_of_le₀ hxy hy⟩
+theorem div_mem {x y : ℝ} (hx : 0 ≤ x) (hy : 0 < y) (hxy : x ≤ y) : x / y ∈ I :=
+  ⟨div_nonneg hx hy.le, div_le_one_of_le₀ hxy hy.le⟩
 
 theorem fract_mem (x : ℝ) : fract x ∈ I :=
   ⟨fract_nonneg _, (fract_lt_one _).le⟩
@@ -362,10 +362,11 @@ theorem continuous_convexComb_prod {a b : ℝ} :
 
 /--
 Helper definition for `convexComb_assoc`, giving one of the coefficients appearing
-when we reassociate a convex combination.
+when we reassociate a convex combination. The coefficient `s * (1 - t) / (1 - s * t)` is defined
+when `s * t ≠ 1`, that is, unless `s = t = 1`.
 -/
-abbrev convexComb_assoc_coeff₁ (s t : unitInterval) : unitInterval :=
-  ⟨s * (1 - t) / (1 - s * t),
+abbrev convexComb_assoc_coeff₁ (s t : unitInterval) (hst : s * t ≠ 1) : unitInterval :=
+  ⟨Checked.div (s * (1 - t)) (1 - s * t) (sub_ne_zero.2 (coe_ne_one.2 hst).symm).isUnit,
     by
       apply div_nonneg
       · nlinarith [s.2.1, t.2.2]
@@ -381,26 +382,14 @@ when we reassociate a convex combination.
 -/
 abbrev convexComb_assoc_coeff₂ (s t : unitInterval) : unitInterval := s * t
 
-theorem convexComb_assoc {a b : ℝ} (x y z : Icc a b) (s t : unitInterval) :
+theorem convexComb_assoc {a b : ℝ} (x y z : Icc a b) (s t : unitInterval) (hst : s * t ≠ 1) :
     convexComb x (convexComb y z t) s =
-      convexComb (convexComb x y (convexComb_assoc_coeff₁ s t)) z
+      convexComb (convexComb x y (convexComb_assoc_coeff₁ s t hst)) z
         (convexComb_assoc_coeff₂ s t) := by
+  have : (1 - s * t : ℝ) ≠ 0 := sub_ne_zero.2 (coe_ne_one.2 hst).symm
   simp only [convexComb, coe_mul, Subtype.mk.injEq]
-  by_cases hs : (s : ℝ) = 1
-  · simp only [hs]
-    by_cases ht : (t : ℝ) = 1
-    · simp [ht]
-    · have : (1 - t : ℝ) ≠ 0 := by grind
-      field_simp
-      simp
-  · by_cases ht : (t : ℝ) = 1
-    · simp [ht]
-    · have : (1 - s * t : ℝ) ≠ 0 := by
-        intro h
-        have : 1 ≤ (t : ℝ) := by nlinarith [s.2.2, t.2.1]
-        grind
-      field_simp
-      ring_nf
+  field_simp
+  ring_nf
 
 /--
 Helper definition for `convexComb_assoc'`, giving one of the coefficients appearing
@@ -411,55 +400,48 @@ abbrev convexComb_assoc_coeff₁' (s t : unitInterval) : unitInterval :=
 
 /--
 Helper definition for `convexComb_assoc'`, giving one of the coefficients appearing
-when we reassociate a convex combination in the reverse direction.
+when we reassociate a convex combination in the reverse direction. It is defined when
+`unitInterval.symm t * unitInterval.symm s ≠ 1`, that is, unless `s = t = 0`.
 -/
-abbrev convexComb_assoc_coeff₂' (s t : unitInterval) : unitInterval :=
-  unitInterval.symm (convexComb_assoc_coeff₁ (unitInterval.symm t) (unitInterval.symm s))
+abbrev convexComb_assoc_coeff₂' (s t : unitInterval)
+    (hst : unitInterval.symm t * unitInterval.symm s ≠ 1) : unitInterval :=
+  unitInterval.symm (convexComb_assoc_coeff₁ (unitInterval.symm t) (unitInterval.symm s) hst)
 
-theorem convexComb_assoc' {a b : ℝ} (x y z : Icc a b) (s t : unitInterval) :
+theorem convexComb_assoc' {a b : ℝ} (x y z : Icc a b) (s t : unitInterval)
+    (hst : unitInterval.symm t * unitInterval.symm s ≠ 1) :
     convexComb (convexComb x y s) z t =
-      convexComb x (convexComb y z (convexComb_assoc_coeff₂' s t))
+      convexComb x (convexComb y z (convexComb_assoc_coeff₂' s t hst))
         (convexComb_assoc_coeff₁' s t) := by
-  rw [← convexComb_symm, ← convexComb_symm y x, convexComb_assoc, ← convexComb_symm x,
-    ← convexComb_symm z y]
+  rw [← convexComb_symm, ← convexComb_symm y x, convexComb_assoc _ _ _ _ _ hst,
+    ← convexComb_symm x, ← convexComb_symm z y]
   rw [convexComb_assoc_coeff₁', convexComb_assoc_coeff₂', unitInterval.symm_symm]
 
 set_option backward.privateInPublic true in
-private theorem eq_convexComb.zero_le {a b : ℝ} {x y z : Icc a b} (hxy : x ≤ y) (hyz : y ≤ z) :
-    0 ≤ ((y - x) / (z - x) : ℝ) := by
-  by_cases h : (z - x : ℝ) = 0
-  · simp_all
-  · replace hxy : (x : ℝ) ≤ (y : ℝ) := hxy
-    replace hyz : (y : ℝ) ≤ (z : ℝ) := hyz
-    apply div_nonneg <;> grind
+private theorem eq_convexComb.zero_le {a b : ℝ} {x y z : Icc a b} (hxy : x ≤ y) (hxz : x < z) :
+    0 ≤ ((y - x) / (z - x) : ℝ) :=
+  div_nonneg (sub_nonneg.2 (Subtype.coe_le_coe.2 hxy))
+    (sub_nonneg.2 (Subtype.coe_le_coe.2 hxz.le))
 
 set_option backward.privateInPublic true in
-private theorem eq_convexComb.le_one {a b : ℝ} {x y z : Icc a b} (hxy : x ≤ y) (hyz : y ≤ z) :
-    ((y - x) / (z - x) : ℝ) ≤ 1 := by
-  by_cases h : (z - x : ℝ) = 0
-  · simp_all
-  · replace hxy : (x : ℝ) ≤ (y : ℝ) := hxy
-    replace hyz : (y : ℝ) ≤ (z : ℝ) := hyz
-    apply div_le_one_of_le₀ <;> grind
+private theorem eq_convexComb.le_one {a b : ℝ} {x y z : Icc a b} (hyz : y ≤ z) (hxz : x < z) :
+    ((y - x) / (z - x) : ℝ) ≤ 1 :=
+  div_le_one_of_le₀ (sub_le_sub_right (Subtype.coe_le_coe.2 hyz) _)
+    (sub_nonneg.2 (Subtype.coe_le_coe.2 hxz.le))
 
 set_option backward.privateInPublic true in
 set_option backward.privateInPublic.warn false in
 /--
-A point between two points in a closed interval
+A point between two distinct points in a closed interval
 can be expressed as a convex combination of them.
 -/
-theorem eq_convexComb {a b : ℝ} {x y z : Icc a b} (hxy : x ≤ y) (hyz : y ≤ z) :
+theorem eq_convexComb {a b : ℝ} {x y z : Icc a b} (hxy : x ≤ y) (hyz : y ≤ z) (hxz : x < z) :
     y = convexComb x z ⟨((y - x) / (z - x)),
-          eq_convexComb.zero_le hxy hyz, eq_convexComb.le_one hxy hyz⟩ := by
+          eq_convexComb.zero_le hxy hxz, eq_convexComb.le_one hyz hxz⟩ := by
   ext
   simp only [coe_convexComb]
-  by_cases h : (z - x : ℝ) = 0
-  · simp_all only [div_zero, sub_zero, one_mul, zero_mul, add_zero]
-    replace hxy : (x : ℝ) ≤ (y : ℝ) := hxy
-    replace hyz : (y : ℝ) ≤ (z : ℝ) := hyz
-    linarith
-  · field_simp
-    ring_nf
+  have : (z - x : ℝ) ≠ 0 := (sub_pos.2 (Subtype.coe_lt_coe.2 hxz)).ne'
+  field_simp
+  ring_nf
 
 end Set.Icc
 

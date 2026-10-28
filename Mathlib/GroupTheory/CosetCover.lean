@@ -26,10 +26,11 @@ $$ G = ⋃_{i = 1}^n C_i g_i. $$
   the index of (at least) one of these subgroups does not exceed $n$.
 
 * `Subgroup.one_le_sum_inv_index_of_leftCoset_cover` :
-  the sum of the inverses of the indexes of the $C_i$ is greater than or equal to 1.
+  the sum of the inverses of the indexes of the $C_i$ of finite index is greater than or equal
+  to 1.
 
 * `Subgroup.pairwiseDisjoint_leftCoset_cover_of_sum_inv_index_eq_one`
-  If the sum of the inverses of the indexes of the subgroups $C_i$ is equal to 1,
+  If the sum of the inverses of the indexes of the subgroups $C_i$ of finite index is equal to 1,
   then the cosets of the subgroups of finite index are pairwise disjoint.
 
 A corollary of `Subgroup.exists_finiteIndex_of_leftCoset_cover` is:
@@ -216,9 +217,12 @@ theorem exists_finiteIndex_of_leftCoset_cover : ∃ k ∈ s, (H k).FiniteIndex :
 theorem leftCoset_cover_filter_FiniteIndex_aux
     [DecidablePred (FiniteIndex : Subgroup G → Prop)] :
     (⋃ k ∈ s.filter (fun i => (H i).FiniteIndex), g k • (H k : Set G) = Set.univ) ∧
-      (1 ≤ ∑ i ∈ s, ((H i).index : ℚ)⁻¹) ∧
-      (∑ i ∈ s, ((H i).index : ℚ)⁻¹ = 1 → Set.PairwiseDisjoint
-        (s.filter (fun i => (H i).FiniteIndex)) (fun i ↦ g i • (H i : Set G))) := by
+      (1 ≤ ∑ i : s.filter (fun i => (H i).FiniteIndex), Checked.inv ((H i).index : ℚ)
+        (Nat.cast_ne_zero.mpr (Finset.mem_filter.mp i.2).2.index_ne_zero).isUnit) ∧
+      (∑ i : s.filter (fun i => (H i).FiniteIndex), Checked.inv ((H i).index : ℚ)
+          (Nat.cast_ne_zero.mpr (Finset.mem_filter.mp i.2).2.index_ne_zero).isUnit = 1 →
+        Set.PairwiseDisjoint (s.filter (fun i => (H i).FiniteIndex))
+          (fun i ↦ g i • (H i : Set G))) := by
   classical
   let D := ⨅ k ∈ s.filter (fun i => (H i).FiniteIndex), H k
   -- `D`, as the finite intersection of subgroups of finite index, also has finite index.
@@ -260,18 +264,25 @@ theorem leftCoset_cover_filter_FiniteIndex_aux
   -- The result follows by restoring the original cosets of subgroups of finite index
   -- from the cosets of `D` into which they have been decomposed.
   have hHD (i) : ¬(H i).FiniteIndex → H i ≠ D := fun hfi hD' => (hD' ▸ hfi) hD
-  have hdensity : ∑ i ∈ s, ((H i).index : ℚ)⁻¹ =
-      (Finset.univ.filter (K · = D)).card * (D.index : ℚ)⁻¹ := by
-    rw [eq_mul_inv_iff_mul_eq₀ (Nat.cast_ne_zero.mpr hD.index_ne_zero), Finset.sum_mul,
-      ← Finset.sum_attach, eq_comm, Finset.card_filter, Nat.cast_sum, ← Finset.univ_sigma_univ,
-      Finset.sum_sigma, Finset.sum_coe_sort_eq_attach]
+  -- A subgroup `H i` of finite index is the union of `D.relIndex (H i)` of the cosets of `D` in
+  -- the new covering; a subgroup of infinite index contributes none of them.
+  have hcard : ∑ i ∈ s.filter (fun i => (H i).FiniteIndex), D.relIndex (H i) =
+      (Finset.univ.filter (K · = D)).card := by
+    rw [Finset.sum_filter, ← Finset.sum_coe_sort s, Finset.card_filter,
+      ← Finset.univ_sigma_univ, Finset.sum_sigma]
     refine Finset.sum_congr rfl fun i _ => ?_
     by_cases hfi : (H i).FiniteIndex
-    · rw [← relIndex_mul_index (hD_le i.2 hfi), Nat.cast_mul, mul_comm,
-        mul_inv_cancel_right₀ (Nat.cast_ne_zero.mpr hfi.index_ne_zero)]
-      simpa [K, hfi] using! (ht i.1 i.2 hfi).1.card_left
-    · rw [of_not_not (FiniteIndex.mk.mt hfi), Nat.cast_zero, inv_zero, zero_mul]
-      simpa [K, hfi] using! hHD i hfi
+    · simpa [K, hfi, relIndex] using! (ht i.1 i.2 hfi).1.card_left.symm
+    · simpa [K, hfi] using! hHD i hfi
+  have hDunit : IsUnit (D.index : ℚ) := (Nat.cast_ne_zero.mpr hD.index_ne_zero).isUnit
+  have hdensity : ∑ i : s.filter (fun i => (H i).FiniteIndex), Checked.inv ((H i).index : ℚ)
+        (Nat.cast_ne_zero.mpr (Finset.mem_filter.mp i.2).2.index_ne_zero).isUnit =
+      (Finset.univ.filter (K · = D)).card * (D.index : ℚ)⁻¹ := by
+    rw [eq_mul_inv_iff_mul_eq₀, Finset.sum_mul, ← hcard, Nat.cast_sum,
+      ← Finset.sum_coe_sort (s.filter fun i => (H i).FiniteIndex)]
+    refine Fintype.sum_congr _ _ fun i => ?_
+    have hi := Finset.mem_filter.mp i.2
+    rw [← relIndex_mul_index (hD_le hi.1 hi.2), Nat.cast_mul, mul_comm, mul_inv_cancel_right₀]
   refine ⟨?_, ?_, ?_⟩
   · rw [← hcovers', Set.iUnion_sigma, Set.iUnion_subtype]
     refine Set.iUnion_congr fun i => ?_
@@ -282,11 +293,9 @@ theorem leftCoset_cover_filter_FiniteIndex_aux
         f, K, hHD, ← (ht i hi _).2, hfi]
   · rw [hdensity]
     refine le_of_mul_le_mul_right ?_ (Nat.cast_pos.mpr (Nat.pos_of_ne_zero hD.index_ne_zero))
-    rw [one_mul, mul_assoc, inv_mul_cancel₀ (Nat.cast_ne_zero.mpr hD.index_ne_zero), mul_one,
-      Nat.cast_le]
+    rw [one_mul, mul_assoc, inv_mul_cancel₀, mul_one, Nat.cast_le]
     exact index_le_of_leftCoset_cover_const hcovers'
-  · rw [hdensity, mul_inv_eq_one₀ (Nat.cast_ne_zero.mpr hD.index_ne_zero),
-      Nat.cast_inj, Finset.coe_filter]
+  · rw [hdensity, mul_inv_eq_one₀, Nat.cast_inj, Finset.coe_filter]
     intro h i hi j hj hij c hi' hj' x hx
     have hdisjoint := pairwiseDisjoint_leftCoset_cover_const_of_index_eq hcovers' h.symm
     -- We know the `f k • K k` are pairwise disjoint and need to prove that the `g i • H i` are.
@@ -318,24 +327,34 @@ theorem leftCoset_cover_filter_FiniteIndex
   (leftCoset_cover_filter_FiniteIndex_aux hcovers).1
 
 /-- Let the group `G` be the union of finitely many left cosets `g i • H i`. Then the
-sum of the inverses of the indexes of the subgroups `H i` is greater than or equal to 1. -/
+sum of the inverses of the indexes of the subgroups `H i` of finite index is greater than or
+equal to 1. The sum runs over the indices `i ∈ s` with `(H i).FiniteIndex`, as a type, which
+supplies the invertibility of `(H i).index`. -/
 @[to_additive one_le_sum_inv_index_of_leftCoset_cover /-- Let the additive group `G` be the union
 of finitely many left cosets `g i +ᵥ H i`. Then the sum of the inverses of the indexes of the
-additive subgroups `H i` is greater than or equal to 1. -/]
-theorem one_le_sum_inv_index_of_leftCoset_cover :
-    1 ≤ ∑ i ∈ s, ((H i).index : ℚ)⁻¹ :=
-  have := Classical.decPred (FiniteIndex : Subgroup G → Prop)
+additive subgroups `H i` of finite index is greater than or equal to 1. The sum runs over the
+indices `i ∈ s` with `(H i).FiniteIndex`, as a type, which supplies the invertibility of
+`(H i).index`. -/]
+theorem one_le_sum_inv_index_of_leftCoset_cover
+    [DecidablePred (FiniteIndex : Subgroup G → Prop)] :
+    1 ≤ ∑ i : s.filter (fun i => (H i).FiniteIndex), Checked.inv ((H i).index : ℚ)
+      (Nat.cast_ne_zero.mpr (Finset.mem_filter.mp i.2).2.index_ne_zero).isUnit :=
   (leftCoset_cover_filter_FiniteIndex_aux hcovers).2.1
 
 /-- Let the group `G` be the union of finitely many left cosets `g i • H i`.
-If the sum of the inverses of the indexes of the subgroups `H i` is equal to 1,
-then the cosets of the subgroups of finite index are pairwise disjoint. -/
+If the sum of the inverses of the indexes of the subgroups `H i` of finite index is equal to 1,
+then the cosets of the subgroups of finite index are pairwise disjoint. The sum runs over the
+indices `i ∈ s` with `(H i).FiniteIndex`, as a type, which supplies the invertibility of
+`(H i).index`. -/
 @[to_additive /-- Let the additive group `G` be the union of finitely many left cosets `g i +ᵥ H i`.
-If the sum of the inverses of the indexes of the additive subgroups `H i` is equal to 1,
-then the cosets of the additive subgroups of finite index are pairwise disjoint. -/]
+If the sum of the inverses of the indexes of the additive subgroups `H i` of finite index is equal
+to 1, then the cosets of the additive subgroups of finite index are pairwise disjoint. The sum
+runs over the indices `i ∈ s` with `(H i).FiniteIndex`, as a type, which supplies the
+invertibility of `(H i).index`. -/]
 theorem pairwiseDisjoint_leftCoset_cover_of_sum_inv_index_eq_one
     [DecidablePred (FiniteIndex : Subgroup G → Prop)] :
-    ∑ i ∈ s, ((H i).index : ℚ)⁻¹ = 1 →
+    ∑ i : s.filter (fun i => (H i).FiniteIndex), Checked.inv ((H i).index : ℚ)
+        (Nat.cast_ne_zero.mpr (Finset.mem_filter.mp i.2).2.index_ne_zero).isUnit = 1 →
       Set.PairwiseDisjoint (s.filter (fun i => (H i).FiniteIndex))
         (fun i ↦ g i • (H i : Set G)) :=
   (leftCoset_cover_filter_FiniteIndex_aux hcovers).2.2
@@ -348,20 +367,23 @@ If a finite family of cosets of additive subgroups covers the additive group, th
 of these additive subgroups has index not exceeding the number of cosets. -/]
 theorem exists_index_le_card_of_leftCoset_cover :
     ∃ i ∈ s, (H i).FiniteIndex ∧ (H i).index ≤ s.card := by
+  have := Classical.decPred (FiniteIndex : Subgroup G → Prop)
   by_contra! h
   apply (one_le_sum_inv_index_of_leftCoset_cover hcovers).not_gt
-  cases s.eq_empty_or_nonempty with
-  | inl hs => simp only [hs, Finset.sum_empty, zero_lt_one]
-  | inr hs =>
-  have hs' : 0 < s.card := hs.card_pos
-  have hlt : ∀ i ∈ s, ((H i).index : ℚ)⁻¹ < (s.card : ℚ)⁻¹ := fun i hi ↦ by
-    cases eq_or_ne (H i).index 0 with
-    | inl hindex =>
-      rwa [hindex, Nat.cast_zero, inv_zero, inv_pos, Nat.cast_pos]
-    | inr hindex =>
-      exact inv_strictAnti₀ (by exact_mod_cast hs') (by exact_mod_cast h i hi ⟨hindex⟩)
-  apply (Finset.sum_lt_sum_of_nonempty hs hlt).trans_eq
-  rw [Finset.sum_const, nsmul_eq_mul, mul_inv_cancel₀ (Nat.cast_ne_zero.mpr hs'.ne')]
+  obtain ⟨j, hj, hjfi⟩ := exists_finiteIndex_of_leftCoset_cover hcovers
+  have hs : 0 < (s.card : ℚ) := Nat.cast_pos.mpr (Finset.card_pos.mpr ⟨j, hj⟩)
+  calc ∑ i : s.filter (fun i => (H i).FiniteIndex), Checked.inv ((H i).index : ℚ)
+        (Nat.cast_ne_zero.mpr (Finset.mem_filter.mp i.2).2.index_ne_zero).isUnit
+      < ∑ _i : s.filter (fun i => (H i).FiniteIndex), (s.card : ℚ)⁻¹ := by
+        refine Finset.sum_lt_sum_of_nonempty
+          ⟨⟨j, Finset.mem_filter.mpr ⟨hj, hjfi⟩⟩, Finset.mem_univ _⟩ fun i _ => ?_
+        have hi := Finset.mem_filter.mp i.2
+        exact inv_strictAnti₀ hs (by exact_mod_cast h i hi.1 hi.2)
+    _ ≤ (s.card : ℚ) * (s.card : ℚ)⁻¹ := by
+        rw [Finset.sum_const, Finset.card_univ, Fintype.card_coe, nsmul_eq_mul]
+        exact mul_le_mul_of_nonneg_right (by exact_mod_cast Finset.card_filter_le _ _)
+          (inv_nonneg.2 hs.le)
+    _ = 1 := mul_inv_cancel₀
 
 end
 

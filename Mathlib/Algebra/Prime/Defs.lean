@@ -120,6 +120,14 @@ theorem not_irreducible_zero [MonoidWithZero M] : ¬Irreducible (0 : M)
 theorem Irreducible.ne_zero [MonoidWithZero M] : ∀ {p : M}, Irreducible p → p ≠ 0
   | _, hp, rfl => not_irreducible_zero hp
 
+/- Evidence rules: an element that a local hypothesis states to be prime or irreducible is
+nonzero. -/
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | (apply Irreducible.ne_zero; assumption)
+    | (apply Prime.ne_zero; assumption))
+
 /-- If `p` and `q` are irreducible, then `p ∣ q` implies `q ∣ p`. -/
 theorem Irreducible.dvd_symm [Monoid M] {p q : M} (hp : Irreducible p) (hq : Irreducible q) :
     p ∣ q → q ∣ p := by

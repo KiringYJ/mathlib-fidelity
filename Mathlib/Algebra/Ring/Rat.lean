@@ -84,14 +84,10 @@ theorem fraction_mul_den (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
       simp only [fraction, mul_assoc]
     _ = (n : ℚ) := by rw [mul_den_eq_num]; exact hn'.symm
 
-theorem fraction_eq_divp (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
-    fraction n d hd = (n : ℚ) /ₚ Units.mk0 (d : ℚ) (Nat.cast_ne_zero.mpr hd) :=
-  eq_divp_iff_mul_eq.mpr (fraction_mul_den n d hd)
+theorem fraction_eq_div (n : ℤ) (d : ℕ) (hd : d ≠ 0) : fraction n d hd = n / d :=
+  eq_div_iff.mpr (fraction_mul_den n d hd)
 
-/-- Reconstruct a rational using its denominator as a unit. -/
-lemma num_div_den (r : ℚ) :
-    (r.num : ℚ) /ₚ Units.mk0 (r.den : ℚ) (by exact_mod_cast r.den_nz) = r := by
-  apply divp_eq_iff_mul_eq.mpr
-  exact mul_den_eq_num r
+lemma num_div_den (r : ℚ) : (r.num : ℚ) / (r.den : ℚ) = r :=
+  div_eq_iff.mpr (mul_den_eq_num r).symm
 
 end Rat

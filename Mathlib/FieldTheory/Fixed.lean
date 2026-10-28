@@ -51,7 +51,11 @@ def FixedBy.subfield : Subfield F where
   neg_mem' hx := (smul_neg m _).trans <| congr_arg _ hx
   one_mem' := smul_one m
   mul_mem' hx hy := (smul_mul' m _ _).trans <| congr_arg₂ _ hx hy
-  inv_mem' x hx := (smul_inv'' m x).trans <| congr_arg _ hx
+  inv_mem' {x} {_} hx := by
+    change m • x = x at hx
+    change m • x⁻¹ = x⁻¹
+    rw [smul_inv'']
+    simp only [hx]
 
 @[simp]
 theorem FixedBy.subfield_mem_iff (x : F) :

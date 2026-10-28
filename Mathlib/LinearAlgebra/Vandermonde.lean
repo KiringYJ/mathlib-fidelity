@@ -133,7 +133,7 @@ theorem rectVandermonde_apply_zero_right {α : Type*} {v w : α → R} {i : α} 
 theorem projVandermonde_apply_of_ne_zero
     {v w : Fin (n + 1) → K} {i j : Fin (n + 1)} (hw : w i ≠ 0) :
     projVandermonde v w i j = (v i) ^ j.1 * (w i) ^ n / (w i) ^ j.1 := by
-  rw [projVandermonde_apply, eq_div_iff (by simp [hw]), mul_assoc, ← pow_add, rev_add_cast]
+  rw [projVandermonde_apply, eq_div_iff, mul_assoc, ← pow_add, rev_add_cast]
 
 theorem projVandermonde_apply_zero_right {v w : Fin (n + 1) → R} {i : Fin (n + 1)} (hw : w i = 0) :
     projVandermonde v w i = Pi.single (Fin.last n) ((v i) ^ n) := by
@@ -191,14 +191,17 @@ private theorem det_projVandermonde_of_field (v w : Fin n → K) :
     simp only [Nat.succ_eq_add_one, coe_ofNat_eq_mod, Nat.zero_mod,
       pow_zero, show W 0 0 = w 0 ^ n by simp [W, projVandermonde_apply], one_mul, hr]
     field_simp
-    simp only [Finset.prod_div_distrib, Finset.prod_const, Finset.card_fin, Function.comp_apply]
+    simp only [Finset.prod_div_distrib₀ (hg := fun _ ↦ h0.isUnit), Finset.prod_const,
+      Finset.card_fin, Function.comp_apply]
     field_simp
     simp only [prod_univ_succ, Ioi_zero_eq_map, Finset.prod_map, coe_succEmb, prod_Ioi_succ]
+    ring
   intro j _ hj0
   obtain ⟨j, rfl⟩ := j.eq_succ_of_ne_zero hj0
   rw [mul_eq_zero, mul_eq_zero]
   refine .inl (.inr ?_)
   simp only [of_apply, projVandermonde_apply_of_ne_zero h0, val_succ, val_castSucc, cons_succ, W, r]
+  field_simp
   ring
 
 /-- The formula for the determinant of a projective Vandermonde matrix. -/

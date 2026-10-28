@@ -196,14 +196,12 @@ theorem abs_sub_round (x : α) : |x - round x| ≤ 1 / 2 := by
   have := lt_floor_add_one (x + 1 / 2)
   constructor <;> linarith
 
-theorem abs_sub_round_div_natCast_eq {m n : ℕ} :
+theorem abs_sub_round_div_natCast_eq {m n : ℕ} {hn : IsUnit (n : α)} :
     |(m : α) / n - round ((m : α) / n)| = ↑(min (m % n) (n - m % n)) / n := by
-  rcases n.eq_zero_or_pos with (rfl | hn)
-  · simp
-  have hn' : 0 < (n : α) := by
-    norm_cast
+  have hn₀ : 0 < n := Nat.pos_of_ne_zero (Nat.cast_ne_zero.mp hn.ne_zero)
+  have hn' : 0 < (n : α) := by exact_mod_cast hn₀
   rw [abs_sub_round_eq_min, Nat.cast_min, ← min_div_div_right hn'.le,
-    fract_div_natCast_eq_div_natCast_mod, Nat.cast_sub (m.mod_lt hn).le, sub_div, div_self hn'.ne']
+    fract_div_natCast_eq_div_natCast_mod, Nat.cast_sub (m.mod_lt hn₀).le, sub_div, div_self]
 
 @[bound]
 theorem sub_half_lt_round (x : α) : x - 1 / 2 < round x := by
@@ -226,6 +224,6 @@ variable [Field α] [LinearOrder α] [IsStrictOrderedRing α]
 variable [FunLike F α β] [RingHomClass F α β] {a : α}
 
 theorem map_round (f : F) (hf : StrictMono f) (a : α) : round (f a) = round a := by
-  simp_rw [round_eq, ← map_floor _ hf, map_add, one_div, map_inv₀, map_ofNat]
+  simp_rw [round_eq, ← map_floor _ hf, map_add, one_div₀, map_inv₀, map_ofNat]
 
 end Int

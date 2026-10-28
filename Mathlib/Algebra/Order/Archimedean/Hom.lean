@@ -32,6 +32,8 @@ instance OrderRingHom.subsingleton [IsStrictOrderedRing β] [Archimedean β] :
     wlog h : f x < g x with h₂
     · exact h₂ g f x (Ne.symm h') (h'.lt_or_gt.resolve_left h)
     obtain ⟨q, hf, hg⟩ := exists_rat_btwn h
+    -- The ring homomorphism `f` preserves natural casts, so `α` inherits characteristic zero.
+    have : CharZero α := CharZero.of_map_natCast f (map_natCast f)
     rw [← map_ratCast f] at hf
     rw [← map_ratCast g] at hg
     exact

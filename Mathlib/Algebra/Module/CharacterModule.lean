@@ -155,16 +155,13 @@ end module
 -/
 protected abbrev int : Type := CharacterModule ℤ
 
-/-- Given `n : ℕ`, the map `m ↦ m / n`. -/
-protected abbrev int.divByNat (n : ℕ) : CharacterModule.int :=
+/-- Given a nonzero `n : ℕ`, the map `m ↦ m / n`. -/
+protected noncomputable abbrev int.divByNat (n : ℕ) (hn : n ≠ 0) : CharacterModule.int :=
   LinearMap.toSpanSingleton ℤ _ (QuotientAddGroup.mk (n : ℚ)⁻¹) |>.toAddMonoidHom
 
-protected lemma int.divByNat_self (n : ℕ) :
-    int.divByNat n n = 0 := by
-  obtain rfl | h0 := eq_or_ne n 0
-  · apply map_zero
-  exact (AddCircle.coe_eq_zero_iff _).mpr
-    ⟨1, by simp [mul_inv_cancel₀ (Nat.cast_ne_zero (R := ℚ).mpr h0)]⟩
+protected lemma int.divByNat_self (n : ℕ) (hn : n ≠ 0) :
+    int.divByNat n hn n = 0 :=
+  (AddCircle.coe_eq_zero_iff _).mpr ⟨1, by simp [mul_inv_cancel₀]⟩
 
 variable {A}
 
@@ -195,11 +192,11 @@ does not exist, `c` is defined by `m • a ↦ m / 2`.
 noncomputable def ofSpanSingleton (a : A) : CharacterModule (ℤ ∙ a) :=
   let l : ℤ ⧸ Ideal.span {(addOrderOf a : ℤ)} →ₗ[ℤ] AddCircle (1 : ℚ) :=
     Submodule.liftQSpanSingleton _
-      (CharacterModule.int.divByNat <|
-        if addOrderOf a = 0 then 2 else addOrderOf a).toIntLinearMap <| by
+      (CharacterModule.int.divByNat (if addOrderOf a = 0 then 2 else addOrderOf a)
+        (by split_ifs with h <;> simp [h])).toIntLinearMap <| by
         split_ifs with h
-        · rw [h, Nat.cast_zero, map_zero]
-        · apply CharacterModule.int.divByNat_self
+        · simp only [h, Nat.cast_zero, map_zero]
+        · exact CharacterModule.int.divByNat_self _ h
   l ∘ₗ intSpanEquivQuotAddOrderOf a |>.toAddMonoidHom
 
 lemma eq_zero_of_ofSpanSingleton_apply_self (a : A)
@@ -210,11 +207,10 @@ lemma eq_zero_of_ofSpanSingleton_apply_self (a : A)
     AddCircle.coe_eq_zero_iff] at h
   rcases h with ⟨n, hn⟩
   apply_fun Rat.den at hn
-  rw [zsmul_one, Rat.den_intCast, Rat.inv_natCast_den_of_pos] at hn
-  · split_ifs at hn
-    · cases hn
-    · rwa [eq_comm, AddMonoid.addOrderOf_eq_one_iff] at hn
-  · grind
+  rw [zsmul_one, Rat.den_intCast, Rat.inv_natCast_den] at hn
+  split_ifs at hn
+  · cases hn
+  · rwa [eq_comm, AddMonoid.addOrderOf_eq_one_iff] at hn
 
 lemma exists_character_apply_ne_zero_of_ne_zero {a : A} (ne_zero : a ≠ 0) :
     ∃ (c : CharacterModule A), c a ≠ 0 :=

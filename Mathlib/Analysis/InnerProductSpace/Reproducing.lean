@@ -525,7 +525,7 @@ theorem posSemidef_norm_sq_smul_kernel_sub_outerKernel (f : OfKernel K) :
   by_cases hf : f = 0
   · simp [hf, Matrix.PosSemidef.zero]
   have hp : (‖f‖ ^ 2 : 𝕜) ≠ 0 := by simpa
-  rw [← smul_inv_smul₀ hp (outerKernel 𝕜 f), ← smul_sub]
+  rw [← smul_inv_smul₀ (ha := hp.isUnit) (outerKernel 𝕜 f), ← smul_sub]
   refine Matrix.PosSemidef.smul ?_ (by simp)
   simpa [kernel_span_singleton, kernel_orthogonal] using posSemidef_kernel (𝕜 ∙ f)ᗮ
 

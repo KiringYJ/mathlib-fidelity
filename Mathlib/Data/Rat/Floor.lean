@@ -11,7 +11,7 @@ public import Mathlib.Data.Rat.Lemmas
 public import Mathlib.Tactic.FieldSimp
 public import Mathlib.Tactic.Ring
 public meta import Mathlib.Algebra.Order.Round
-public meta import Mathlib.Util.CheckedOperations
+public meta import Mathlib.Algebra.GroupWithZero.Checked.Notation
 
 /-!
 # Floor Function for Rational Numbers
@@ -53,47 +53,41 @@ protected theorem ceil_def' (q : ℚ) : ⌈q⌉ = -(-q.num / ↑q.den) := by
   rw [Rat.floor_def', num_neg_eq_neg_num, den_neg_eq_den]
 
 
-theorem floor_fraction (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
-    ⌊Rat.fraction n d hd⌋ = n / (↑d : ℤ) := by
+@[norm_cast]
+theorem floor_intCast_div_natCast (n : ℤ) (d : ℕ) {hd : IsUnit (d : ℚ)} :
+    ⌊(↑n / ↑d : ℚ)⌋ = n / (↑d : ℤ) := by
   rw [Rat.floor_def']
-  set q := Rat.fraction n d hd with q_eq
+  have hd₀ : 0 < d := Nat.pos_of_ne_zero (Nat.cast_ne_zero.mp hd.ne_zero)
+  set q := (n : ℚ) / d with q_eq
   obtain ⟨c, n_eq_c_mul_num, d_eq_c_mul_denom⟩ : ∃ c, n = c * q.num ∧ (d : ℤ) = c * q.den := by
-    obtain ⟨c, _, hn, hden⟩ := Rat.normalize_num_den' n d hd
-    exact ⟨c, by simpa [q_eq, Rat.fraction, mul_comm] using hn,
-      by exact_mod_cast (by simpa [q_eq, Rat.fraction, mul_comm] using hden)⟩
+    rw [q_eq]
+    exact mod_cast Rat.exists_eq_mul_div_num_and_eq_mul_div_den n (d := d) (hd := by simpa using hd)
   rw [n_eq_c_mul_num, d_eq_c_mul_denom]
   refine (Int.mul_ediv_mul_of_pos _ _ <| pos_of_mul_pos_left ?_ <| Int.natCast_nonneg q.den).symm
-  rw [← d_eq_c_mul_denom]
-  exact_mod_cast Nat.pos_of_ne_zero hd
+  rwa [← d_eq_c_mul_denom, Int.natCast_pos]
 
-/-- The fractional part of a checked fraction is represented by the integer remainder. -/
-theorem fract_fraction (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
-    fract (Rat.fraction n d hd) = Rat.fraction (n % (d : ℤ)) d hd := by
-  apply mul_right_cancel₀ (Nat.cast_ne_zero.mpr hd : (d : ℚ) ≠ 0)
-  rw [fract, floor_fraction, sub_mul, fraction_mul_den, fraction_mul_den]
-  simp only [Int.emod_def, Int.cast_sub, Int.cast_mul, Int.cast_natCast, mul_comm]
-
-theorem ceil_fraction (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
-    ⌈Rat.fraction n d hd⌉ = -((-n) / (↑d : ℤ)) := by
+@[norm_cast]
+theorem ceil_intCast_div_natCast (n : ℤ) (d : ℕ) {hd : IsUnit (d : ℚ)} :
+    ⌈(↑n / ↑d : ℚ)⌉ = -((-n) / (↑d : ℤ)) := by
   conv_lhs => rw [← neg_neg ⌈_⌉, ← floor_neg]
-  have hneg : -Rat.fraction n d hd = Rat.fraction (-n) d hd := by
-    simp [Rat.fraction, Rat.neg_normalize]
-  rw [hneg, floor_fraction]
+  rw [← neg_div₀, ← Int.cast_neg, floor_intCast_div_natCast]
 
 @[norm_cast]
-theorem floor_fraction_nat (n d : ℕ) (hd : d ≠ 0) : ⌊Rat.fraction n d hd⌋ = n / d :=
-  floor_fraction n d hd
+theorem floor_natCast_div_natCast (n d : ℕ) {hd : IsUnit (d : ℚ)} :
+    ⌊(↑n / ↑d : ℚ)⌋ = n / d :=
+  floor_intCast_div_natCast n d
 
 @[norm_cast]
-theorem ceil_fraction_nat (n d : ℕ) (hd : d ≠ 0) : ⌈Rat.fraction n d hd⌉ = -((-n) / d) :=
-  ceil_fraction n d hd
+theorem ceil_natCast_div_natCast (n d : ℕ) {hd : IsUnit (d : ℚ)} :
+    ⌈(↑n / ↑d : ℚ)⌉ = -((-n) / d) :=
+  ceil_intCast_div_natCast n d
 
 @[norm_cast]
-theorem natFloor_fraction (n d : ℕ) (hd : d ≠ 0) : ⌊Rat.fraction n d hd⌋₊ = n / d := by
-  rw [← Int.ofNat_inj, Int.natCast_floor_eq_floor
-    (Rat.fraction_nonneg (Int.natCast_nonneg n) d hd)]
+theorem natFloor_natCast_div_natCast (n d : ℕ) {hd : IsUnit (d : ℚ)} :
+    ⌊(↑n / ↑d : ℚ)⌋₊ = n / d := by
+  rw [← Int.ofNat_inj, Int.natCast_floor_eq_floor (by positivity)]
   push_cast
-  exact floor_fraction n d hd
+  exact floor_intCast_div_natCast n d
 
 @[simp, norm_cast]
 theorem floor_cast (x : ℚ) : ⌊(x : α)⌋ = ⌊x⌋ :=
@@ -105,12 +99,7 @@ theorem ceil_cast (x : ℚ) : ⌈(x : α)⌉ = ⌈x⌉ := by
 
 @[simp, norm_cast]
 theorem round_cast (x : ℚ) : round (x : α) = round x := by
-  have hhalf : ((1 / 2 : ℚ) : α) = 1 / 2 := by
-    apply Checked.eq_div_iff_mul_eq.mpr
-    have hc := congrArg (fun q : ℚ ↦ (q : α))
-      (Checked.div_mul_cancel (1 : ℚ) 2 (by checked_unit))
-    simpa only [cast_mul, cast_ofNat, cast_one] using hc
-  have : ((x + 1 / 2 : ℚ) : α) = x + 1 / 2 := by rw [cast_add, hhalf]
+  have : ((x + 1 / 2 : ℚ) : α) = x + 1 / 2 := by simp
   rw [round_eq, round_eq, ← this, floor_cast]
 
 @[simp, norm_cast]
@@ -130,30 +119,30 @@ section NormNum
 
 open Mathlib.Meta.NormNum Qq
 
-theorem _root_.Mathlib.Meta.NormNum.IsNNRat.eq_cast_fraction
-    (r : α) (n d : ℕ) (h : IsNNRat r n d)
-    (hd : d ≠ 0) : r = (Rat.fraction n d hd : α) := by
+theorem _root_.Mathlib.Meta.NormNum.IsNNRat.eq_cast_fraction {K : Type*} [DivisionRing K]
+    [CharZero K] (r : K) (n d : ℕ) (h : IsNNRat r n d)
+    (hd : d ≠ 0) : r = (Rat.fraction n d hd : K) := by
   apply mul_left_injective₀ h.den_nz
-  change r * (d : α) = (Rat.fraction n d hd : α) * (d : α)
+  change r * (d : K) = (Rat.fraction n d hd : K) * (d : K)
   rw [h.to_raw_eq, NNRat.rawCast]
   calc
-    (n : α) /ₚ Units.mk0 (d : α) h.den_nz * (d : α) = (n : α) :=
+    (n : K) /ₚ Units.mk0 (d : K) h.den_nz * (d : K) = (n : K) :=
       divp_mul_cancel _ _
-    _ = (Rat.fraction n d hd : α) * (d : α) := by
-      have hc := congrArg (fun q : ℚ => (q : α)) (Rat.fraction_mul_den n d hd)
+    _ = (Rat.fraction n d hd : K) * (d : K) := by
+      have hc := congrArg (fun q : ℚ => (q : K)) (Rat.fraction_mul_den n d hd)
       simpa using hc.symm
 
-theorem _root_.Mathlib.Meta.NormNum.IsRat.eq_cast_fraction
-    (r : α) (n : ℤ) (d : ℕ) (h : IsRat r n d)
-    (hd : d ≠ 0) : r = (Rat.fraction n d hd : α) := by
+theorem _root_.Mathlib.Meta.NormNum.IsRat.eq_cast_fraction {K : Type*} [DivisionRing K]
+    [CharZero K] (r : K) (n : ℤ) (d : ℕ) (h : IsRat r n d)
+    (hd : d ≠ 0) : r = (Rat.fraction n d hd : K) := by
   apply mul_left_injective₀ h.den_nz
-  change r * (d : α) = (Rat.fraction n d hd : α) * (d : α)
+  change r * (d : K) = (Rat.fraction n d hd : K) * (d : K)
   rw [h.to_raw_eq, Rat.rawCast]
   calc
-    (n : α) /ₚ Units.mk0 (d : α) h.den_nz * (d : α) = (n : α) :=
+    (n : K) /ₚ Units.mk0 (d : K) h.den_nz * (d : K) = (n : K) :=
       divp_mul_cancel _ _
-    _ = (Rat.fraction n d hd : α) * (d : α) := by
-      have hc := congrArg (fun q : ℚ => (q : α)) (Rat.fraction_mul_den n d hd)
+    _ = (Rat.fraction n d hd : K) * (d : K) := by
+      have hc := congrArg (fun q : ℚ => (q : K)) (Rat.fraction_mul_den n d hd)
       simpa using hc.symm
 
 theorem isNat_intFloor {R} [Ring R] [LinearOrder R] [IsStrictOrderedRing R] [FloorRing R]
@@ -169,8 +158,8 @@ theorem isNat_intFloor_ofIsNNRat (r : α) (n : ℕ) (d : ℕ) :
   intro h
   have hd : d ≠ 0 := fun hd => h.den_nz (by simp [hd])
   constructor
-  rw [h.eq_cast_fraction r n d hd, floor_cast, floor_fraction]
-  exact Int.ofNat_ediv_ofNat.symm
+  rw [h.eq_cast_fraction r n d hd, floor_cast, fraction_eq_div, floor_intCast_div_natCast]
+  exact Int.ofNat_ediv_ofNat
 
 theorem isInt_intFloor_ofIsRat_neg (r : α) (n : ℕ) (d : ℕ) :
     IsRat r (.negOfNat n) d → IsInt ⌊r⌋ (.negOfNat (-(-n / d) : ℤ).toNat) := by
@@ -180,7 +169,8 @@ theorem isInt_intFloor_ofIsRat_neg (r : α) (n : ℕ) (d : ℕ) :
     Int.ediv_nonpos_of_nonpos_of_neg (neg_nonpos.mpr (Int.natCast_nonneg n))
       (Int.natCast_pos.mpr (Nat.pos_of_ne_zero hd))
   constructor
-  rw [h.eq_cast_fraction r (.negOfNat n) d hd, floor_cast, floor_fraction]
+  rw [h.eq_cast_fraction r (.negOfNat n) d hd, floor_cast, fraction_eq_div,
+    floor_intCast_div_natCast]
   simp only [Int.cast_id, Int.negOfNat_eq, Int.ofNat_eq_natCast,
     Int.natCast_toNat_eq_self.mpr (neg_nonneg.mpr hq), neg_neg]
 
@@ -232,7 +222,7 @@ theorem isNat_intCeil_ofIsNNRat (r : α) (n : ℕ) (d : ℕ) :
     Int.ediv_nonpos_of_nonpos_of_neg (neg_nonpos.mpr (Int.natCast_nonneg n))
       (Int.natCast_pos.mpr (Nat.pos_of_ne_zero hd))
   constructor
-  rw [h.eq_cast_fraction r n d hd, ceil_cast, ceil_fraction]
+  rw [h.eq_cast_fraction r n d hd, ceil_cast, fraction_eq_div, ceil_intCast_div_natCast]
   exact (Int.natCast_toNat_eq_self.mpr (neg_nonneg.mpr hq)).symm
 
 theorem isInt_intCeil_ofIsRat_neg (r : α) (n : ℕ) (d : ℕ) :
@@ -240,7 +230,8 @@ theorem isInt_intCeil_ofIsRat_neg (r : α) (n : ℕ) (d : ℕ) :
   intro h
   have hd : d ≠ 0 := fun hd => h.den_nz (by simp [hd])
   constructor
-  rw [h.eq_cast_fraction r (.negOfNat n) d hd, ceil_cast, ceil_fraction]
+  rw [h.eq_cast_fraction r (.negOfNat n) d hd, ceil_cast, fraction_eq_div,
+    ceil_intCast_div_natCast]
   norm_num [Int.negOfNat_eq]
 
 /-- `norm_num` extension for `Int.ceil` -/
@@ -284,20 +275,18 @@ theorem isNat_intFract_of_isInt (r : R) (m : ℤ) : IsInt r m → IsNat (Int.fra
 theorem isNNRat_intFract_of_isNNRat (r : α) (n d : ℕ) :
     IsNNRat r n d → IsNNRat (Int.fract r) (n % d) d := by
   intro h
-  have hd : d ≠ 0 := fun hd => h.den_nz (by simp [hd])
-  rw [h.eq_cast_fraction r n d hd, ← cast_fract, fract_fraction, ← Int.natCast_mod]
-  have hraw := IsNNRat.of_raw α (n % d) d h.den_nz
-  rw [← hraw.eq_cast_fraction _ _ _ hd]
-  exact hraw
+  have hd : (d : α) ≠ 0 := h.den_nz
+  have hraw : IsNNRat ((n % d : ℕ) / (d : α)) (n % d) d := IsNNRat.of_raw α (n % d) d hd
+  rwa [h.to_eq rfl rfl, fract_div_natCast_eq_div_natCast_mod]
 
 theorem isRat_intFract_of_isRat_negOfNat (r : α) (n d : ℕ) :
     IsRat r (negOfNat n) d → IsRat (Int.fract r) (-n % d) d := by
   intro h
-  have hd : d ≠ 0 := fun hd => h.den_nz (by simp [hd])
-  rw [h.eq_cast_fraction r (.negOfNat n) d hd, ← cast_fract, fract_fraction]
-  simp only [Int.negOfNat_eq, Int.ofNat_eq_natCast]
-  have hraw := IsRat.of_raw α (-(n : ℤ) % d) d h.den_nz
-  rw [← hraw.eq_cast_fraction _ _ _ hd]
+  have hd : (d : α) ≠ 0 := h.den_nz
+  have hraw : IsRat (((-n % d : ℤ) : α) / (d : α)) (-n % d) d := IsRat.of_raw α (-n % d) d hd
+  rw [h.to_raw_eq, show (Rat.rawCast (negOfNat n) d h.den_nz : α) =
+    ((negOfNat n : ℤ) : α) / (d : α) from rfl, fract_div_intCast_eq_div_intCast_mod]
+  -- `Int.negOfNat n` and `-↑n` agree definitionally.
   exact hraw
 
 /-- `norm_num` extension for `Int.fract` -/
@@ -400,15 +389,14 @@ end NormNum
 
 end Rat
 
-theorem Int.mod_nat_eq_sub_mul_floor_fraction {n : ℤ} {d : ℕ} (hd : d ≠ 0) :
-    n % d = n - d * ⌊Rat.fraction n d hd⌋ := by
-  rw [Int.emod_def, Rat.floor_fraction]
+theorem Int.mod_nat_eq_sub_mul_floor_rat_div {n : ℤ} {d : ℕ} {hd : IsUnit (d : ℚ)} :
+    n % d = n - d * ⌊(n : ℚ) / d⌋ := by
+  rw [Int.emod_def, Rat.floor_intCast_div_natCast]
 
-theorem Nat.coprime_sub_mul_floor_fraction_of_coprime {n d : ℕ} (hd : d ≠ 0)
+theorem Nat.coprime_sub_mul_floor_rat_div_of_coprime {n d : ℕ} {hd : IsUnit (d : ℚ)}
     (n_coprime_d : n.Coprime d) :
-    ((n : ℤ) - d * ⌊Rat.fraction n d hd⌋).natAbs.Coprime d := by
-  have : (n : ℤ) % d = n - d * ⌊Rat.fraction n d hd⌋ :=
-    Int.mod_nat_eq_sub_mul_floor_fraction hd
+    ((n : ℤ) - d * ⌊(n : ℚ) / d⌋).natAbs.Coprime d := by
+  have : (n : ℤ) % d = n - d * ⌊(n : ℚ) / d⌋ := Int.mod_nat_eq_sub_mul_floor_rat_div
   rw [← this]
   have : d.Coprime n := n_coprime_d.symm
   rwa [Nat.Coprime, Nat.gcd_rec] at this
@@ -436,14 +424,10 @@ theorem num_lt_succ_floor_mul_den (q : ℚ) : q.num < (⌊q⌋ + 1) * q.den := b
     rwa [lt_sub_iff_add_lt]
   exact mul_pos this (by exact mod_cast q.pos)
 
-theorem fract_reciprocal_num_lt_num_of_pos {q : ℚ} (q_pos : 0 < q) :
-    (fract (Rat.reciprocal q q_pos.ne')).num < q.num := by
+theorem fract_inv_num_lt_num_of_pos {q : ℚ} (q_pos : 0 < q) : (fract q⁻¹).num < q.num := by
   have hnum : 0 < q.num := Rat.num_pos.mpr q_pos
-  have hden : (Rat.reciprocal q q_pos.ne').den = q.num.natAbs := by
-    simp [Rat.reciprocal, Rat.fractionInt, Int.sign_eq_one_of_pos hnum,
-      Rat.normalize_eq, q.reduced.symm.gcd_eq_one]
-  have h := num_lt_succ_floor_mul_den (Rat.reciprocal q q_pos.ne')
+  have h := num_lt_succ_floor_mul_den q⁻¹
   rw [add_mul, one_mul, ← sub_lt_iff_lt_add', ← num_intFract] at h
-  simpa only [hden, Int.natAbs_of_nonneg hnum.le] using h
+  simpa only [den_inv_of_ne_zero, Int.natAbs_of_nonneg hnum.le] using h
 
 end Rat

@@ -87,19 +87,32 @@ theorem _root_.Filter.Tendsto.const_vadd_asymptoticNhds {f : α → P} {v : V} (
 variable [TopologicalSpace k] [OrderTopology k] [IsStrictOrderedRing k]
   [IsTopologicalAddGroup V] [ContinuousSMul k V]
 
+/-- The inverse, extended by `0` at `0`, tends to `0` at `+∞`; its value at `0` does not matter
+since the filter eventually avoids `0`. -/
+private lemma tendsto_dite_inv_atTop_zero :
+    Tendsto (fun c : k ↦ if h : c = 0 then 0 else c⁻¹) atTop (𝓝 0) := by
+  have hrange : Set.range (Subtype.val : {x : k | IsUnit x} → k) ∈ (atTop : Filter k) :=
+    mem_of_superset (Ioi_mem_atTop 0) fun y hy ↦ ⟨⟨y, (ne_of_gt hy).isUnit⟩, rfl⟩
+  rw [← tendsto_comap'_iff hrange]
+  refine tendsto_inv_atTop_zero.congr fun x ↦ ?_
+  simp [x.2.ne_zero]
+
 theorem asymptoticNhds_eq_smul (v : V) : asymptoticNhds k V v = atTop (α := k) • 𝓝 v := by
   unfold asymptoticNhds
   apply le_antisymm
   · refine iSup_le fun u => ?_
     simp_rw [vadd_eq_add, add_pure, ← map₂_smul, map_map₂, ← map_prod_eq_map₂]
     have : (fun x : k × V => x.1 • x.2 + u) =ᶠ[atTop ×ˢ 𝓝 v]
-        (Function.uncurry (· • ·)) ∘ (fun x : k × V => (x.1, x.2 + x.1⁻¹ • u)) := by
+        (Function.uncurry (· • ·)) ∘
+          (fun x : k × V => (x.1, x.2 + (if h : x.1 = 0 then 0 else x.1⁻¹) • u)) := by
       filter_upwards [tendsto_fst.eventually (eventually_ne_atTop 0)] with _ h
       simp [h]
     rw [map_congr this, ← map_map]
     apply map_mono
-    have : Tendsto (fun x : k × V => (x.1, x.2 + x.1⁻¹ • u)) (atTop ×ˢ 𝓝 v) _ :=
-      tendsto_fst.prodMk <| tendsto_snd.add <| tendsto_fst.inv_tendsto_atTop.smul_const u
+    have : Tendsto (fun x : k × V => (x.1, x.2 + (if h : x.1 = 0 then 0 else x.1⁻¹) • u))
+        (atTop ×ˢ 𝓝 v) _ :=
+      tendsto_fst.prodMk <| tendsto_snd.add <|
+        (tendsto_dite_inv_atTop_zero.comp tendsto_fst).smul_const u
     simpa
   · apply (le_iSup _ 0).trans'
     simp
@@ -118,13 +131,13 @@ private theorem asymptoticNhds_zero' : asymptoticNhds k V (0 : V) = ⊤ := by
   intro v
   rw [← map_const (f := atTop (α := k))]
   have : (fun _ => v) =ᶠ[atTop (α := k)]
-      (Function.uncurry (· • ·)) ∘ (fun c => (c, c⁻¹ • v)) := by
+      (Function.uncurry (· • ·)) ∘ (fun c => (c, (if h : c = 0 then 0 else c⁻¹) • v)) := by
     filter_upwards [eventually_ne_atTop 0] with _ h
     simp [h]
   rw [map_congr this, ← map_map, asymptoticNhds_eq_smul, ← map₂_smul, ← map_prod_eq_map₂]
   apply map_mono
-  have : Tendsto (fun c => (c, c⁻¹ • v)) (atTop (α := k)) _ :=
-    tendsto_id.prodMk <| tendsto_inv_atTop_zero.smul_const v
+  have : Tendsto (fun c => (c, (if h : c = 0 then 0 else c⁻¹) • v)) (atTop (α := k)) _ :=
+    tendsto_id.prodMk <| tendsto_dite_inv_atTop_zero.smul_const v
   simpa
 
 @[simp]
@@ -273,7 +286,7 @@ theorem asymptoticCone_eq_closure_of_forall_smul_mem {s : Set V}
   filter_upwards [tendsto_fst.eventually (eventually_gt_atTop 0)] with ⟨c, u⟩ hc
   refine ⟨fun hu => ?_, hs c hc u⟩
   specialize hs c⁻¹ (inv_pos_of_pos hc) (c • u) hu
-  rwa [inv_smul_smul₀ hc.ne'] at hs
+  rwa [inv_smul_smul₀ (ha := hc.ne'.isUnit)] at hs
 
 theorem asymptoticCone_submodule {s : Submodule k V} : asymptoticCone k (s : Set V) = closure s :=
   asymptoticCone_eq_closure_of_forall_smul_mem fun _ _ _ h => s.smul_mem _ h

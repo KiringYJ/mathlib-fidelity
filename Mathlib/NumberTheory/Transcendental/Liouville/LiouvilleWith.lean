@@ -301,16 +301,20 @@ theorem frequently_exists_num (hx : Liouville x) (n : ℕ) :
   by_contra! H
   simp only [eventually_atTop] at H
   rcases H with ⟨N, hN⟩
-  have : ∀ b > (1 : ℕ), ∀ᶠ m : ℕ in atTop, ∀ a : ℤ, 1 / (b : ℝ) ^ m ≤ |x - a / b| := by
+  have : ∀ (b : ℕ) (_ : 1 < b), ∀ᶠ m : ℕ in atTop, ∀ a : ℤ, 1 / (b : ℝ) ^ m ≤ |x - a / b| := by
     intro b hb
     replace hb : (1 : ℝ) < b := Nat.one_lt_cast.2 hb
     have H : Tendsto (fun m => 1 / (b : ℝ) ^ m : ℕ → ℝ) atTop (𝓝 0) := by
       simp only [one_div]
       exact tendsto_inv_atTop_zero.comp (tendsto_pow_atTop_atTop_of_one_lt hb)
-    refine (H.eventually (hx.irrational.eventually_forall_le_dist_cast_div b)).mono ?_
+    refine (H.eventually (hx.irrational.eventually_forall_le_dist_cast_div b
+      (Nat.cast_ne_zero.1 (zero_lt_one.trans hb).ne'))).mono ?_
     exact fun m hm a => hm a
-  have : ∀ᶠ m : ℕ in atTop, ∀ b < N, 1 < b → ∀ a : ℤ, 1 / (b : ℝ) ^ m ≤ |x - a / b| :=
-    (finite_lt_nat N).eventually_all.2 fun b _hb => eventually_imp_distrib_left.2 (this b)
+  have : ∀ᶠ m : ℕ in atTop, ∀ b < N, ∀ (_ : 1 < b) (a : ℤ), 1 / (b : ℝ) ^ m ≤ |x - a / b| :=
+    (finite_lt_nat N).eventually_all.2 fun b _hb => by
+      by_cases h : 1 < b
+      · exact (this b h).mono fun _ hm _ a => hm a
+      · exact .of_forall fun _ h' => absurd h' h
   rcases (this.and (eventually_ge_atTop n)).exists with ⟨m, hm, hnm⟩
   rcases hx m with ⟨a, b, hb, hne, hlt⟩
   lift b to ℕ using zero_le_one.trans hb.le; norm_cast at hb; push_cast at hne hlt

@@ -6,13 +6,12 @@ Authors: Eric Rodriguez
 module
 
 public import Mathlib.Algebra.GroupWithZero.Units.Lemmas
-public import Mathlib.Algebra.GroupWithZero.CheckedHom
 public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Mathlib.Algebra.Order.Ring.Cast
 public import Mathlib.Basic.Sign.Defs
 public import Mathlib.Data.Fintype.BigOperators
 public import Mathlib.Algebra.Ring.Int.Parity
-public import Mathlib.Util.CheckedOperations
+public import Mathlib.Algebra.GroupWithZero.Checked.Notation
 
 /-!
 # Sign function
@@ -50,7 +49,7 @@ theorem zpow_eq_pow_natAbs (s : SignType) (z : ℤ) (h : z < 0 → IsUnit s) :
   cases z with
   | ofNat n => rfl
   | negSucc n =>
-    rw [Checked.zpow_negSucc, checked_inv_eq_self]
+    rw [zpow_negSucc₀, checked_inv_eq_self]
     rfl
 
 theorem zpow_odd (s : SignType) {z : ℤ} (hz : Odd z)
@@ -94,7 +93,7 @@ theorem range_eq {α} (f : SignType → α) : Set.range f = {f zero, f neg, f po
     (h : k < 0 → IsUnit a) :
     (↑(Checked.zpow a k h) : α) =
       Checked.zpow (a : α) k (fun hk => (h hk).map SignType.castHom) :=
-  Checked.map_zpow (SignType.castHom (α := α)).toMonoidHom a k h
+  map_zpow₀ (SignType.castHom (α := α)).toMonoidHom a k
 
 end SignType
 

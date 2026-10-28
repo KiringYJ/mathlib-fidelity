@@ -603,9 +603,41 @@ theorem Continuous.aemeasurable2 [SecondCountableTopologyEither α β]
     AEMeasurable (fun a => c (f a) (g a)) μ :=
   h.measurable.comp_aemeasurable (hf.prodMk hg)
 
-instance (priority := 100) ContinuousInv₀.measurableInv [GroupWithZero γ] [T1Space γ]
-    [ContinuousInv₀ γ] : MeasurableInv γ :=
-  ⟨measurable_of_continuousOn_compl_singleton 0 continuousOn_inv₀⟩
+/-- Inversion is measurable on the invertible elements, the exact domain of the inverse, of a
+monoid whose inversion is continuous there. -/
+theorem measurable_inv₀ [Monoid γ] [ContinuousInv₀ γ] :
+    Measurable fun x : {x : γ | IsUnit x} ↦ Checked.inv (x : γ) x.2 :=
+  ContinuousInv₀.continuous_inv.measurable
+
+/-- The inverses of a measurable family of invertible elements form a measurable family. -/
+@[fun_prop]
+theorem Measurable.inv₀ [Monoid γ] [ContinuousInv₀ γ] {f : δ → γ} {hf : ∀ x, IsUnit (f x)}
+    (h : Measurable f) : Measurable fun x ↦ Checked.inv (f x) (hf x) :=
+  measurable_inv₀.comp (h.subtype_mk (h := hf))
+
+/-- The inverses of an almost everywhere measurable family of invertible elements form an almost
+everywhere measurable family. -/
+@[fun_prop]
+theorem AEMeasurable.inv₀ [Monoid γ] [ContinuousInv₀ γ] {f : δ → γ} {hf : ∀ x, IsUnit (f x)}
+    {μ : Measure δ} (h : AEMeasurable f μ) :
+    AEMeasurable (fun x ↦ Checked.inv (f x) (hf x)) μ :=
+  measurable_inv₀.comp_aemeasurable (h.subtype_mk (hfs := hf))
+
+/-- The quotients of measurable families, with invertible denominators, form a measurable
+family. -/
+@[fun_prop]
+theorem Measurable.div₀ [Monoid γ] [ContinuousInv₀ γ] [MeasurableMul₂ γ] {f g : δ → γ}
+    {hgUnit : ∀ x, IsUnit (g x)} (hf : Measurable f) (hg : Measurable g) :
+    Measurable fun x ↦ Checked.div (f x) (g x) (hgUnit x) :=
+  hf.mul (hg.inv₀ (hf := hgUnit))
+
+/-- The quotients of almost everywhere measurable families, with invertible denominators, form an
+almost everywhere measurable family. -/
+@[fun_prop]
+theorem AEMeasurable.div₀ [Monoid γ] [ContinuousInv₀ γ] [MeasurableMul₂ γ] {f g : δ → γ}
+    {hgUnit : ∀ x, IsUnit (g x)} {μ : Measure δ} (hf : AEMeasurable f μ)
+    (hg : AEMeasurable g μ) : AEMeasurable (fun x ↦ Checked.div (f x) (g x) (hgUnit x)) μ :=
+  hf.mul (hg.inv₀ (hf := hgUnit))
 
 @[to_additive]
 instance (priority := 100) ContinuousMul.measurableMul₂ [SecondCountableTopology γ] [Mul γ]

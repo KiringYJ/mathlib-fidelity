@@ -157,6 +157,22 @@ theorem nu_lt_one_of_dvd_prodPrimes {d : ℕ} (hdP : d ∣ s.prodPrimes) (hd_ne_
     _ = 1 := by
       simp
 
+/-- The factors `1 - ν p` over the prime factors of a divisor of `P` have a positive product. -/
+theorem prod_primeFactors_one_sub_nu_pos {d : ℕ} (hd : d ∣ s.prodPrimes) :
+    0 < ∏ p ∈ d.primeFactors, (1 - s.nu p) :=
+  prod_pos fun p hp ↦ sub_pos.2 <| s.nu_lt_one_of_prime p (prime_of_mem_primeFactors hp)
+    ((dvd_of_mem_primeFactors hp).trans hd)
+
+/-! The evidence search `checked_nonzero` uses that `ν` and the product of the factors `1 - ν p`
+do not vanish on the divisors of `P`: a hypothesis `hd : d ∣ s.prodPrimes` gives the evidence for
+`(s.nu d)⁻¹` and for a quotient by `∏ p ∈ d.primeFactors, (1 - s.nu p)`. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | (apply BoundingSieve.nu_ne_zero; assumption)
+    | exact (BoundingSieve.prod_primeFactors_one_sub_nu_pos ‹_›).ne')
+
 /-- The weight of all the elements that are a multiple of `d`. -/
 @[simp]
 def multSum (d : ℕ) : ℝ := ∑ n ∈ s.support, if d ∣ n then s.weights n else 0
@@ -272,91 +288,143 @@ variable {s : BoundingSieve}
 
 /-- These are the terms that appear in the sum `S` in the main term of the fundamental theorem.
 
-$$S = \sum_{l \mid P, l \le \sqrt{y}} g(l)$$ -/
-def selbergTerms : ArithmeticFunction ℝ :=
-  s.nu.pmul (.prodPrimeFactors fun p ↦  (1 - s.nu p)⁻¹)
+$$S = \sum_{l \mid P, l \le \sqrt{y}} g(l)$$
 
-theorem selbergTerms_apply (d : ℕ) :
-    s.selbergTerms d = s.nu d * ∏ p ∈ d.primeFactors, (1 - s.nu p)⁻¹ := by
-  unfold selbergTerms
-  by_cases h : d = 0
-  · simp [h]
-  rw [ArithmeticFunction.pmul_apply, ArithmeticFunction.prodPrimeFactors_apply h]
+The term $g(d) = \nu(d) / \prod_{p \mid d} (1 - \nu(p))$ is defined for the divisors `d` of `P`,
+whose prime factors `p` satisfy `0 < ν p < 1`; the sieve does not constrain `ν` at other primes. -/
+def selbergTerms (d : ℕ) (hd : d ∣ s.prodPrimes) : ℝ :=
+  s.nu d / ∏ p ∈ d.primeFactors, (1 - s.nu p)
+
+theorem selbergTerms_apply (d : ℕ) {hd : d ∣ s.prodPrimes} :
+    s.selbergTerms d hd = s.nu d / ∏ p ∈ d.primeFactors, (1 - s.nu p) :=
+  rfl
 
 /-! Now follow some important identities involving `selbergTerms` -/
 
-theorem selbergTerms_pos {l : ℕ} (hl : l ∣ s.prodPrimes) : 0 < s.selbergTerms l := by
-  rw [selbergTerms_apply]
-  refine mul_pos (nu_pos_of_dvd_prodPrimes hl) <| prod_pos fun p hp ↦ ?_
-  rw [inv_pos]
-  have hp_prime : p.Prime := prime_of_mem_primeFactors hp
-  have hp_dvd : p ∣ s.prodPrimes := (Nat.dvd_of_mem_primeFactors hp).trans hl
-  linarith only [s.nu_lt_one_of_prime p hp_prime hp_dvd]
+theorem selbergTerms_pos {l : ℕ} {hl : l ∣ s.prodPrimes} : 0 < s.selbergTerms l hl :=
+  div_pos (nu_pos_of_dvd_prodPrimes hl) (prod_primeFactors_one_sub_nu_pos hl)
 
-theorem selbergTerms_isMultiplicative : ArithmeticFunction.IsMultiplicative s.selbergTerms := by
-  unfold selbergTerms
-  arith_mult
+/-! The evidence search `checked_nonzero` uses that the Selberg terms are positive: the inverse
+`(s.selbergTerms l hl)⁻¹` finds its evidence. -/
 
-theorem inv_selbergTerms_eq_sum_divisors_moebius_nu {l : ℕ} (hl : Squarefree l)
-    (hnu_nonzero : s.nu l ≠ 0) :
-    (s.selbergTerms l)⁻¹ = ∑ ⟨d, e⟩ ∈ l.divisorsAntidiagonal, (μ d) * (s.nu e)⁻¹ := by
-  simp only [selbergTerms_apply, mul_inv, inv_inv,
-    Finset.prod_inv_distrib, s.nu_mult.prodPrimeFactors_one_sub_of_squarefree _ hl, mul_sum]
-  rw [← Nat.sum_divisorsAntidiagonal fun i _ : ℕ ↦ (s.nu l)⁻¹ * (↑(μ i) * s.nu i)]
-  congr! 1 with ⟨d, e⟩ hd
-  obtain ⟨rfl, -⟩ : d * e = l ∧ _ := by simpa using hd
-  obtain ⟨hde, -⟩ : d.Coprime e ∧ _ := by simpa only [squarefree_mul_iff] using hl
-  obtain ⟨hd0, he0⟩ : ¬s.nu d = 0 ∧ ¬s.nu e = 0 := by simp_all [s.nu_mult.map_mul_of_coprime hde]
-  simp [field, s.nu_mult.map_mul_of_coprime hde, mul_assoc]
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | exact (BoundingSieve.selbergTerms_pos).ne')
+
+theorem selbergTerms_one : s.selbergTerms 1 (one_dvd _) = 1 := by
+  simp [selbergTerms_apply, s.nu_mult.map_one]
+
+/-- The Selberg terms are multiplicative on the divisors of `P`. -/
+theorem selbergTerms_mul {m n : ℕ} {hmn : m * n ∣ s.prodPrimes} :
+    s.selbergTerms (m * n) hmn =
+      s.selbergTerms m (dvd_of_mul_right_dvd hmn) *
+        s.selbergTerms n (dvd_of_mul_left_dvd hmn) := by
+  have hcop : m.Coprime n := coprime_of_squarefree_mul (squarefree_of_dvd_prodPrimes hmn)
+  simp only [selbergTerms_apply, s.nu_mult.map_mul_of_coprime hcop, hcop.primeFactors_mul,
+    prod_union hcop.disjoint_primeFactors]
+  exact div_mul_div_comm₀.symm
+
+theorem inv_selbergTerms_eq_sum_divisors_moebius_nu {l : ℕ} {hl : l ∣ s.prodPrimes} :
+    (s.selbergTerms l hl)⁻¹ = ∑ x : l.divisorsAntidiagonal, μ x.1.1 *
+      Checked.inv (s.nu x.1.2) (nu_ne_zero <|
+        (dvd_of_mem_divisors <| snd_mem_divisors_of_mem_antidiagonal x.2).trans hl).isUnit := by
+  have hl_sq : Squarefree l := squarefree_of_dvd_prodPrimes hl
+  calc (s.selbergTerms l hl)⁻¹
+      = ∑ d ∈ l.divisors, (μ d : ℝ) * s.nu d * (s.nu l)⁻¹ := by
+        simp only [selbergTerms_apply, inv_div₀,
+          s.nu_mult.prodPrimeFactors_one_sub_of_squarefree _ hl_sq]
+        rw [div_eq_mul_inv₀, sum_mul]
+    _ = ∑ x ∈ l.divisorsAntidiagonal, (μ x.1 : ℝ) * s.nu x.1 * (s.nu l)⁻¹ :=
+        (Nat.sum_divisorsAntidiagonal fun d _ ↦ (μ d : ℝ) * s.nu d * (s.nu l)⁻¹).symm
+    _ = _ := by
+        rw [← sum_coe_sort l.divisorsAntidiagonal]
+        refine Fintype.sum_congr _ _ fun x ↦ ?_
+        obtain ⟨hde, -⟩ := Nat.mem_divisorsAntidiagonal.1 x.2
+        have hcop : (x.1.1).Coprime x.1.2 :=
+          coprime_of_squarefree_mul (by rw [hde]; exact hl_sq)
+        have hνl : s.nu l = s.nu x.1.1 * s.nu x.1.2 := by
+          rw [← s.nu_mult.map_mul_of_coprime hcop, hde]
+        rw [mul_assoc]
+        congr 1
+        simp only [hνl]
+        field_simp
 
 theorem nu_inv_eq_sum_divisors_inv_selbergTerms {d : ℕ} (hdP : d ∣ s.prodPrimes) :
-    (s.nu d)⁻¹ = ∑ l ∈ divisors s.prodPrimes, if l ∣ d then (s.selbergTerms l)⁻¹ else 0 := by
-  rw [eq_comm, ← sum_filter, Nat.divisors_filter_dvd_of_dvd prodPrimes_ne_zero hdP]
+    (s.nu d)⁻¹ = ∑ l ∈ divisors s.prodPrimes,
+      if hl : l ∣ d then (s.selbergTerms l (hl.trans hdP))⁻¹ else 0 := by
+  -- Möbius inversion on the divisors of `P`; outside them, the extensions take the value `0`.
+  let f : ℕ → ℝ := fun l ↦ if hl : l ∣ s.prodPrimes then (s.selbergTerms l hl)⁻¹ else 0
+  let g : ℕ → ℝ := fun n ↦ if hn : n ∣ s.prodPrimes then (s.nu n)⁻¹ else 0
+  have hfg : ∀ n > 0, n ∈ {n | n ∣ s.prodPrimes} → ∑ i ∈ n.divisors, f i = g n := by
+    refine (sum_eq_iff_sum_mul_moebius_eq_on _ fun _ _ ↦ Nat.dvd_trans).mpr fun n _ hn ↦ ?_
+    have hnP : n ∣ s.prodPrimes := hn
+    simp only [f, dite_eq_left hnP, inv_selbergTerms_eq_sum_divisors_moebius_nu]
+    rw [← sum_coe_sort n.divisorsAntidiagonal]
+    refine Fintype.sum_congr _ _ fun x ↦ ?_
+    have he : x.1.2 ∣ s.prodPrimes :=
+      (dvd_of_mem_divisors <| snd_mem_divisors_of_mem_antidiagonal x.2).trans hnP
+    simp only [g, dite_eq_left he]
   have hd_pos : 0 < d := Nat.pos_of_ne_zero <| ne_zero_of_dvd_ne_zero prodPrimes_ne_zero hdP
-  revert hdP; revert d
-  apply (ArithmeticFunction.sum_eq_iff_sum_mul_moebius_eq_on _ (fun _ _ ↦ Nat.dvd_trans)).mpr
-  intro l _ hlP
-  exact inv_selbergTerms_eq_sum_divisors_moebius_nu
-    (Squarefree.squarefree_of_dvd hlP s.prodPrimes_squarefree)
-    (ne_of_gt <| nu_pos_of_dvd_prodPrimes hlP) |>.symm
+  have hd := hfg d hd_pos hdP
+  simp only [g, dite_eq_left hdP] at hd
+  rw [← hd, ← divisors_filter_dvd_of_dvd prodPrimes_ne_zero hdP, sum_filter]
+  refine sum_congr rfl fun l _ ↦ ?_
+  split_ifs with hl
+  · simp only [f, dite_eq_left (hl.trans hdP)]
+  · rfl
 
 theorem sum_divisors_selbergTerms_eq_selbergTerms_mul_nu_inv {d : ℕ} (hd : d ∣ s.prodPrimes) :
-    (∑ l ∈ divisors s.prodPrimes, if l ∣ d then s.selbergTerms l else 0) =
-      s.selbergTerms d * (s.nu d)⁻¹ := by
-  calc
-    (∑ l ∈ divisors s.prodPrimes, if l ∣ d then s.selbergTerms l else 0) =
-        ∑ l ∈ divisors s.prodPrimes, if l ∣ d then s.selbergTerms (d / l) else 0 := by
-      simp_rw [← sum_filter, Nat.divisors_filter_dvd_of_dvd prodPrimes_ne_zero hd,
-        sum_div_divisors d s.selbergTerms]
-    _ = s.selbergTerms d *
-          ∑ l ∈ divisors s.prodPrimes, if l ∣ d then (s.selbergTerms l)⁻¹ else 0 := by
-      simp_rw [← sum_filter, mul_sum]
-      congr! 1 with l hl
-      simp only [mem_filter, mem_divisors, ne_eq] at hl
-      rw [selbergTerms_isMultiplicative.map_div_of_coprime hl.2]
-      · ring
-      · apply coprime_of_squarefree_mul <|
-          (Nat.div_mul_cancel hl.2).symm ▸ (squarefree_of_dvd_prodPrimes hd)
-      · exact (selbergTerms_pos hl.1.1).ne'
-    _ = s.selbergTerms d * (s.nu d)⁻¹ := by rw [← nu_inv_eq_sum_divisors_inv_selbergTerms hd]
+    (∑ l ∈ divisors s.prodPrimes, if hl : l ∣ d then s.selbergTerms l (hl.trans hd) else 0) =
+      s.selbergTerms d hd * (s.nu d)⁻¹ := by
+  -- The Selberg terms and their inverses, extended by `0` outside the divisors of `P`.
+  let g : ℕ → ℝ := fun l ↦ if hl : l ∣ s.prodPrimes then s.selbergTerms l hl else 0
+  let gInv : ℕ → ℝ := fun l ↦ if hl : l ∣ s.prodPrimes then (s.selbergTerms l hl)⁻¹ else 0
+  have hg : (∑ l ∈ divisors s.prodPrimes,
+      if hl : l ∣ d then s.selbergTerms l (hl.trans hd) else 0) = ∑ l ∈ d.divisors, g l := by
+    rw [← divisors_filter_dvd_of_dvd prodPrimes_ne_zero hd, sum_filter]
+    refine sum_congr rfl fun l _ ↦ ?_
+    split_ifs with hl
+    · simp only [g, dite_eq_left (hl.trans hd)]
+    · rfl
+  have hgInv : (∑ l ∈ divisors s.prodPrimes,
+      if hl : l ∣ d then (s.selbergTerms l (hl.trans hd))⁻¹ else 0) =
+        ∑ l ∈ d.divisors, gInv l := by
+    rw [← divisors_filter_dvd_of_dvd prodPrimes_ne_zero hd, sum_filter]
+    refine sum_congr rfl fun l _ ↦ ?_
+    split_ifs with hl
+    · simp only [gInv, dite_eq_left (hl.trans hd)]
+    · rfl
+  rw [hg, ← sum_div_divisors d g, nu_inv_eq_sum_divisors_inv_selbergTerms hd, hgInv, mul_sum]
+  refine sum_congr rfl fun l hl ↦ ?_
+  have hld : l ∣ d := dvd_of_mem_divisors hl
+  have hdl : d / l ∣ d := Nat.div_dvd_of_dvd hld
+  have hmul := selbergTerms_mul (s := s) (m := l) (n := d / l)
+    (hmn := by rw [Nat.mul_div_cancel' hld]; exact hd)
+  simp only [Nat.mul_div_cancel' hld] at hmul
+  simp only [g, gInv, dite_eq_left (hld.trans hd), dite_eq_left (hdl.trans hd), hmul]
+  rw [mul_comm (s.selbergTerms l _), mul_assoc, mul_inv_cancel₀, mul_one]
 
 end SelbergTerms
 
 section QuadForm
 
 /-- The main sum we get from Λ² coefficients is a quadratic form. Used to prove the Selberg sieve
-  identity by choosing weights that maximize this sum. -/
+  identity by choosing weights that maximize this sum. The sums run over the divisors of `P`
+  themselves, where `ν` does not vanish. -/
 theorem mainSum_lambdaSquared_eq_sum_sum_mul (w : ℕ → ℝ) :
     s.mainSum (lambdaSquared w) =
-      ∑ d1 ∈ divisors s.prodPrimes, ∑ d2 ∈ divisors s.prodPrimes,
-        s.nu d1 * w d1 * s.nu d2 * w d2 * (s.nu (d1.gcd d2))⁻¹ := by
+      ∑ d1 : divisors s.prodPrimes, ∑ d2 : divisors s.prodPrimes,
+        s.nu d1 * w d1 * s.nu d2 * w d2 * Checked.inv (s.nu (Nat.gcd d1 d2))
+          (nu_ne_zero <| (Nat.gcd_dvd_left _ _).trans (dvd_of_mem_divisors d1.2)).isUnit := by
   calc mainSum (lambdaSquared w)
       = ∑ d ∈ divisors s.prodPrimes, ∑ d1 ∈ divisors d, ∑ d2 ∈ divisors d,
           if d = d1.lcm d2 then w d1 * w d2 * s.nu d else 0 := ?caseA
     _ = ∑ d ∈ divisors s.prodPrimes, ∑ d1 ∈ divisors s.prodPrimes, ∑ d2 ∈ divisors s.prodPrimes,
           if d = d1.lcm d2 then w d1 * w d2 * s.nu d else 0 := sum_divisors_lambda_sq_larger_sum _ _
     _ = ∑ d1 ∈ divisors s.prodPrimes, ∑ d2 ∈ divisors s.prodPrimes,
-          s.nu d1 * w d1 * s.nu d2 * w d2 * (s.nu (d1.gcd d2))⁻¹ := ?caseB
+          w d1 * w d2 * s.nu (d1.lcm d2) := ?caseB
+    _ = _ := ?caseC
   case caseA =>
     simp [mainSum, lambdaSquared, sum_mul]
   case caseB =>
@@ -365,40 +433,58 @@ theorem mainSum_lambdaSquared_eq_sum_sum_mul (w : ℕ → ℝ) :
     have h : d1.lcm d2 ∣ s.prodPrimes :=
       Nat.lcm_dvd_iff.mpr ⟨dvd_of_mem_divisors hd1, dvd_of_mem_divisors hd2⟩
     rw [sum_ite_eq_of_mem' (divisors s.prodPrimes) (d1.lcm d2) _
-      (mem_divisors.mpr ⟨h, prodPrimes_ne_zero⟩), s.nu_mult.map_lcm]
-    · ring
-    refine (nu_pos_of_dvd_prodPrimes ?_).ne'
-    exact (Nat.gcd_dvd_left d1 d2).trans (dvd_of_mem_divisors hd1)
+      (mem_divisors.mpr ⟨h, prodPrimes_ne_zero⟩)]
+  case caseC =>
+    rw [← sum_coe_sort (divisors s.prodPrimes)]
+    refine Fintype.sum_congr _ _ fun d1 ↦ ?_
+    rw [← sum_coe_sort (divisors s.prodPrimes)]
+    refine Fintype.sum_congr _ _ fun d2 ↦ ?_
+    rw [s.nu_mult.map_lcm (nu_ne_zero <| (Nat.gcd_dvd_left _ _).trans (dvd_of_mem_divisors d1.2)),
+      div_eq_mul_inv₀]
+    ring
 
 /-- The main sum we get from Λ² coefficients can be written as a diagonalized quadratic form with
-  eigenvalues given by `1/selbergTerms` -/
+  eigenvalues given by `1/selbergTerms`. The outer sum runs over the divisors of `P` themselves,
+  where the Selberg terms are defined. -/
 theorem mainSum_lambdaSquared_eq_sum_mul_sum_sq (w : ℕ → ℝ) :
     s.mainSum (lambdaSquared w) =
-      ∑ l ∈ divisors s.prodPrimes, (s.selbergTerms l)⁻¹ *
-        (∑ d ∈ divisors s.prodPrimes, if l ∣ d then s.nu d * w d else 0) ^ 2 := by
+      ∑ l : divisors s.prodPrimes, (s.selbergTerms l (dvd_of_mem_divisors l.2))⁻¹ *
+        (∑ d ∈ divisors s.prodPrimes, if (l : ℕ) ∣ d then s.nu d * w d else 0) ^ 2 := by
+  -- The inverses of the Selberg terms, extended by `0` outside the divisors of `P`.
+  let G : ℕ → ℝ := fun l ↦ if hl : l ∣ s.prodPrimes then (s.selbergTerms l hl)⁻¹ else 0
   calc mainSum (lambdaSquared w) =
     ∑ d1 ∈ divisors s.prodPrimes, ∑ d2 ∈ divisors s.prodPrimes, (∑ l ∈ divisors s.prodPrimes,
-      if l ∣ d1.gcd d2 then (s.selbergTerms l)⁻¹ * (s.nu d1 * w d1) * (s.nu d2 * w d2) else 0) :=
+      if l ∣ d1.gcd d2 then G l * (s.nu d1 * w d1) * (s.nu d2 * w d2) else 0) :=
         ?caseA
     _ = ∑ l ∈ divisors s.prodPrimes, ∑ d1 ∈ divisors s.prodPrimes, ∑ d2 ∈ divisors s.prodPrimes,
-      if l ∣ Nat.gcd d1 d2 then (s.selbergTerms l)⁻¹ * (s.nu d1 * w d1) * (s.nu d2 * w d2) else 0 :=
+      if l ∣ Nat.gcd d1 d2 then G l * (s.nu d1 * w d1) * (s.nu d2 * w d2) else 0 :=
         ?caseB
     _ = ∑ l ∈ divisors s.prodPrimes,
-      (s.selbergTerms l)⁻¹ * (∑ d ∈ divisors s.prodPrimes, if l ∣ d then s.nu d * w d else 0) ^ 2 :=
+      G l * (∑ d ∈ divisors s.prodPrimes, if l ∣ d then s.nu d * w d else 0) ^ 2 :=
         ?caseC
+    _ = _ := ?caseD
   case caseA =>
-    rw [mainSum_lambdaSquared_eq_sum_sum_mul w]
-    congr! 2 with d1 hd1 d2 hd2
-    have hgcd_dvd : d1.gcd d2 ∣ s.prodPrimes :=
-      (Nat.gcd_dvd_left d1 d2).trans (dvd_of_mem_divisors hd1)
-    simp_rw [nu_inv_eq_sum_divisors_inv_selbergTerms hgcd_dvd, ← sum_filter, mul_sum]
-    congr with l
-    ring
+    rw [mainSum_lambdaSquared_eq_sum_sum_mul w, ← sum_coe_sort (divisors s.prodPrimes)]
+    refine Fintype.sum_congr _ _ fun d1 ↦ ?_
+    rw [← sum_coe_sort (divisors s.prodPrimes)]
+    refine Fintype.sum_congr _ _ fun d2 ↦ ?_
+    have hgcd_dvd : Nat.gcd d1 d2 ∣ s.prodPrimes :=
+      (Nat.gcd_dvd_left _ _).trans (dvd_of_mem_divisors d1.2)
+    rw [nu_inv_eq_sum_divisors_inv_selbergTerms hgcd_dvd, mul_sum]
+    refine sum_congr rfl fun l _ ↦ ?_
+    split_ifs with hl
+    · simp only [G, dite_eq_left (hl.trans hgcd_dvd)]
+      ring
+    · rw [mul_zero]
   case caseB =>
     rw [eq_comm, sum_comm, sum_congr rfl fun _ _ ↦ sum_comm]
   case caseC =>
     simp_rw [← sum_filter, sq, sum_mul, mul_sum, sum_filter, ite_sum_zero,
-      ← ite_and, dvd_gcd_iff, mul_assoc]
+      ← ite_and, Nat.dvd_gcd_iff, mul_assoc]
+  case caseD =>
+    rw [← sum_coe_sort (divisors s.prodPrimes)]
+    refine Fintype.sum_congr _ _ fun l ↦ ?_
+    simp only [G, dite_eq_left (dvd_of_mem_divisors l.2)]
 
 end QuadForm
 

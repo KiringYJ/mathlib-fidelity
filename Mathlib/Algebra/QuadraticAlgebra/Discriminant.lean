@@ -199,7 +199,9 @@ theorem isField_iff_not_isSquare_discr [NeZero (2 : K)] {a b : K} :
 
 -- The general bridge makes the `Field` instance inferable from `¬ IsSquare (discr a b)`
 -- if `2 ≠ 0` in the field.
-example {a b : ℚ} [Fact (¬ IsSquare (discr a b))] : Field (QuadraticAlgebra ℚ a b) := inferInstance
+noncomputable example {a b : ℚ} [Fact (¬ IsSquare (discr a b))] :
+    Field (QuadraticAlgebra ℚ a b) :=
+  inferInstance
 
 end field
 

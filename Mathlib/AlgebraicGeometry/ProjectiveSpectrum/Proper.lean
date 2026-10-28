@@ -258,7 +258,7 @@ theorem valuativeCriterion_existence_aux
     suffices valuation O K (φ (Away.mk 𝒜 (hxdi j) _ _ H) /
           φ (Away.isLocalizationElem (hxdi j) (hxdi i₀)) ^ a) ≤ 1 by
       convert! this
-      rw [eq_div_iff (pow_ne_zero _ hunit.ne_zero), ← hφ'1, ← hφ'1, RingHom.comp_apply,
+      rw [eq_div_iff, ← hφ'1, ← hφ'1, RingHom.comp_apply,
         ← map_pow, ← map_mul]
       congr
       ext

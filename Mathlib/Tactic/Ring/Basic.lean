@@ -96,15 +96,11 @@ theorem cast_neg {n : ℕ} {R} [Ring R] {a : R} :
 
 theorem cast_nnrat {n : ℕ} {d : ℕ} {R} [DivisionSemiring R] {a : R} :
     (h : IsNNRat a n d) → a = NNRat.rawCast n d h.den_nz + 0
-  | ⟨inv, e⟩ => by
-      let _ := inv
-      simp [e, NNRat.rawCast, divp, ← invOf_eq_mk0_inv]
+  | h => by rw [add_zero]; exact h.to_raw_eq
 
 theorem cast_rat {n : ℤ} {d : ℕ} {R} [DivisionRing R] {a : R} :
     (h : IsRat a n d) → a = Rat.rawCast n d h.den_nz + 0
-  | ⟨inv, e⟩ => by
-      let _ := inv
-      simp [e, Rat.rawCast, divp, ← invOf_eq_mk0_inv]
+  | h => by rw [add_zero]; exact h.to_raw_eq
 
 end
 
@@ -132,8 +128,10 @@ end
 * `e = 0` if `norm_num` returns `IsNat e 0`
 * `e = Nat.rawCast n + 0` if `norm_num` returns `IsNat e n`
 * `e = Int.rawCast n + 0` if `norm_num` returns `IsInt e n`
-* `e = NNRat.rawCast n d + 0` if `norm_num` returns `IsNNRat e n d`
-* `e = Rat.rawCast n d + 0` if `norm_num` returns `IsRat e n d`
+* `e = NNRat.rawCast n d hd + 0` if `norm_num` returns `IsNNRat e n d`, where `hd` is the evidence
+  `IsNNRat.den_nz` that the denominator is nonzero
+* `e = Rat.rawCast n d hd + 0` if `norm_num` returns `IsRat e n d`, where `hd` is the evidence
+  `IsRat.den_nz` that the denominator is nonzero
 -/
 def evalCast {α : Q(Type u)} (sα : Q(CommSemiring $α)) {e : Q($α)} :
     NormNum.Result e → Option (Result (ExSum sα) e)

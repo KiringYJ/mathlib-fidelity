@@ -258,25 +258,43 @@ def algEquivSplittingFieldAux (f : K[X]) : SplittingField f ≃ₐ[K] SplittingF
 
 instance instGroupWithZero : GroupWithZero (SplittingField f) :=
   let e := algEquivSplittingFieldAux f
-  { inv := fun a ↦ e.symm (e a)⁻¹
-    inv_zero := by simp
-    mul_inv_cancel := fun a ha ↦ e.injective <| by simp [EmbeddingLike.map_ne_zero_iff.2 ha]
+  { isUnit_of_ne_zero := fun {a} ha ↦ by
+      simpa using (Ne.isUnit (EmbeddingLike.map_ne_zero_iff.2 ha : e a ≠ 0)).map e.symm
     __ := e.surjective.nontrivial }
 
+/-- The splitting field is a field. In characteristic zero, its rational casts are those of `K`
+followed by `algebraMap K`, and the actions of `ℚ≥0` and `ℚ` are the actions through `K`. -/
 instance instField : Field (SplittingField f) where
   __ := (inferInstance : CommRing (SplittingField f))
   __ := instGroupWithZero f
-  nnratCast q := algebraMap K _ q
-  ratCast q := algebraMap K _ q
-  nnqsmul := (· • ·)
-  qsmul := (· • ·)
-  nnratCast_def q := by change algebraMap K _ _ = _; simp_rw [NNRat.cast_def, map_div₀, map_natCast]
-  ratCast_def q := by
-    change algebraMap K _ _ = _; rw [Rat.cast_def, map_div₀, map_intCast, map_natCast]
-  nnqsmul_def q x := Quotient.inductionOn x fun p ↦ congr_arg Quotient.mk'' <| by
-    ext; simp [MvPolynomial.algebraMap_eq, NNRat.smul_def]
-  qsmul_def q x := Quotient.inductionOn x fun p ↦ congr_arg Quotient.mk'' <| by
-    ext; simp [MvPolynomial.algebraMap_eq, Rat.smul_def]
+  nnratCastOfCharZero _ q :=
+    haveI := CharZero.of_map_natCast (algebraMap K (SplittingField f)) (map_natCast _)
+    algebraMap K _ q
+  nnratCastOfCharZero_mul_den _ q := by
+    have := CharZero.of_map_natCast (algebraMap K (SplittingField f)) (map_natCast _)
+    rw [← map_natCast (algebraMap K (SplittingField f)) q.den, ← map_mul, NNRat.cast_mul_den,
+      map_natCast]
+  nnqsmulOfCharZero _ q x :=
+    haveI := CharZero.of_map_natCast (algebraMap K (SplittingField f)) (map_natCast _)
+    q • x
+  nnqsmulOfCharZero_eq_mul _ q x := by
+    have := CharZero.of_map_natCast (algebraMap K (SplittingField f)) (map_natCast _)
+    exact Quotient.inductionOn x fun p ↦ congr_arg Quotient.mk'' <| by
+      ext; simp [MvPolynomial.algebraMap_eq, NNRat.smul_def]
+  ratCastOfCharZero _ q :=
+    haveI := CharZero.of_map_natCast (algebraMap K (SplittingField f)) (map_natCast _)
+    algebraMap K _ q
+  ratCastOfCharZero_mul_den _ q := by
+    have := CharZero.of_map_natCast (algebraMap K (SplittingField f)) (map_natCast _)
+    rw [← map_natCast (algebraMap K (SplittingField f)) q.den, ← map_mul, Rat.cast_mul_den,
+      map_intCast]
+  qsmulOfCharZero _ q x :=
+    haveI := CharZero.of_map_natCast (algebraMap K (SplittingField f)) (map_natCast _)
+    q • x
+  qsmulOfCharZero_eq_mul _ q x := by
+    have := CharZero.of_map_natCast (algebraMap K (SplittingField f)) (map_natCast _)
+    exact Quotient.inductionOn x fun p ↦ congr_arg Quotient.mk'' <| by
+      ext; simp [MvPolynomial.algebraMap_eq, Rat.smul_def]
 
 instance instCharZero [CharZero K] : CharZero (SplittingField f) :=
   charZero_of_injective_algebraMap (algebraMap K _).injective

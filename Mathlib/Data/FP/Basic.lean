@@ -249,7 +249,9 @@ unsafe def div (mode : RMode) : Float → Float → Float
   | finite s₁ e₁ m₁ v₁, finite s₂ e₂ m₂ v₂ =>
     let f₁ := finite s₁ e₁ m₁ v₁
     let f₂ := finite s₂ e₂ m₂ v₂
-    if f₂.isZero then inf (xor s₁ s₂) else ofRat mode (toRat f₁ rfl / toRat f₂ rfl)
+    -- A finite float has rational value zero exactly when it is `isZero`.
+    if h : toRat f₂ rfl = 0 then inf (xor s₁ s₂)
+    else ofRat mode (Rat.quotient (toRat f₁ rfl) (toRat f₂ rfl) h)
 
 end Float
 

@@ -52,7 +52,7 @@ end Rat
 
 @[norm_cast, simp]
 theorem Nat.dist_cast_rat (x y : ℕ) : dist (x : ℚ) y = dist x y := by
-  rw [← Nat.dist_cast_real, ← Rat.dist_cast]; congr
+  rw [← Nat.dist_cast_real, ← Rat.dist_cast, Rat.cast_natCast, Rat.cast_natCast]
 
 theorem Nat.isUniformEmbedding_coe_rat : IsUniformEmbedding ((↑) : ℕ → ℚ) :=
   isUniformEmbedding_bot_of_pairwise_le_dist zero_lt_one <| by simpa using Nat.pairwise_one_le_dist
@@ -62,7 +62,7 @@ theorem Nat.isClosedEmbedding_coe_rat : IsClosedEmbedding ((↑) : ℕ → ℚ) 
 
 @[norm_cast, simp]
 theorem Int.dist_cast_rat (x y : ℤ) : dist (x : ℚ) y = dist x y := by
-  rw [← Int.dist_cast_real, ← Rat.dist_cast]; congr
+  rw [← Int.dist_cast_real, ← Rat.dist_cast, Rat.cast_intCast, Rat.cast_intCast]
 
 theorem Int.isUniformEmbedding_coe_rat : IsUniformEmbedding ((↑) : ℤ → ℚ) :=
   isUniformEmbedding_bot_of_pairwise_le_dist zero_lt_one <| by simpa using Int.pairwise_one_le_dist
@@ -130,7 +130,9 @@ instance : ContinuousInv₀ ℚ≥0 := inferInstance
 
 -- Special case of `IsBoundedSMul.continuousSMul` but this shortcut instance reduces dependencies
 instance : ContinuousSMul ℚ ℝ where
-  continuous_smul := continuous_induced_dom.fst'.smul (M := ℝ) (X := ℝ) continuous_snd
+  continuous_smul := by
+    simp only [Rat.smul_def]
+    exact (Rat.continuous_coe_real.comp continuous_fst).mul continuous_snd
 
 instance {R : Type*} [TopologicalSpace R] [MulAction ℚ R] [MulAction ℚ≥0 R] [IsScalarTower ℚ≥0 ℚ R]
     [ContinuousSMul ℚ R] : ContinuousSMul ℚ≥0 R where

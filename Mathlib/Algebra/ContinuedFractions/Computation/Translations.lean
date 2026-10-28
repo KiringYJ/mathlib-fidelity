@@ -69,7 +69,7 @@ variable {n : ℕ}
 theorem stream_eq_none_of_fr_eq_zero {ifp_n : IntFractPair K}
     (stream_nth_eq : IntFractPair.stream v n = some ifp_n) (nth_fr_eq_zero : ifp_n.fr = 0) :
     IntFractPair.stream v (n + 1) = none := by
-  grind [IntFractPair.stream]
+  simp [IntFractPair.stream, stream_nth_eq, nth_fr_eq_zero]
 
 /-- Gives a recurrence to compute the `n + 1`th value of the sequence of integer and fractional
 parts of a value in case of termination.
@@ -87,8 +87,17 @@ theorem succ_nth_stream_eq_some_iff {ifp_succ_n : IntFractPair K} :
     IntFractPair.stream v (n + 1) = some ifp_succ_n ↔
       ∃ ifp_n : IntFractPair K,
         IntFractPair.stream v n = some ifp_n ∧
-          ifp_n.fr ≠ 0 ∧ IntFractPair.of ifp_n.fr⁻¹ = ifp_succ_n := by
-  simp [IntFractPair.stream, ite_eq_iff, Option.bind_eq_some_iff]
+          ∃ _ : ifp_n.fr ≠ 0, IntFractPair.of ifp_n.fr⁻¹ = ifp_succ_n := by
+  simp [IntFractPair.stream, dite_eq_iff, Option.bind_eq_some_iff]
+
+/-- The fractional part at a position that is followed by another entry of the stream is
+nonzero. -/
+theorem fr_ne_zero_of_succ_stream_eq_some {ifp_n ifp_succ_n : IntFractPair K}
+    (stream_nth_eq : IntFractPair.stream v n = some ifp_n)
+    (stream_succ_nth_eq : IntFractPair.stream v (n + 1) = some ifp_succ_n) : ifp_n.fr ≠ 0 := by
+  obtain ⟨ifp_n', stream_nth_eq', hfr, -⟩ := succ_nth_stream_eq_some_iff.mp stream_succ_nth_eq
+  obtain rfl : ifp_n = ifp_n' := by injection stream_nth_eq.symm.trans stream_nth_eq'
+  exact hfr
 
 /-- An easier to use version of one direction of
 `GenContFract.IntFractPair.succ_nth_stream_eq_some_iff`. -/
@@ -109,12 +118,13 @@ theorem stream_succ_of_int [IsStrictOrderedRing K] (a : ℤ) (n : ℕ) :
 theorem exists_succ_nth_stream_of_fr_zero {ifp_succ_n : IntFractPair K}
     (stream_succ_nth_eq : IntFractPair.stream v (n + 1) = some ifp_succ_n)
     (succ_nth_fr_eq_zero : ifp_succ_n.fr = 0) :
-    ∃ ifp_n : IntFractPair K, IntFractPair.stream v n = some ifp_n ∧ ifp_n.fr⁻¹ = ⌊ifp_n.fr⁻¹⌋ := by
+    ∃ ifp_n : IntFractPair K, IntFractPair.stream v n = some ifp_n ∧
+      ∃ _ : ifp_n.fr ≠ 0, ifp_n.fr⁻¹ = ⌊ifp_n.fr⁻¹⌋ := by
   -- get the witness from `succ_nth_stream_eq_some_iff` and prove that it has the additional
   -- properties
   rcases succ_nth_stream_eq_some_iff.mp stream_succ_nth_eq with
-    ⟨ifp_n, seq_nth_eq, _, rfl⟩
-  refine ⟨ifp_n, seq_nth_eq, ?_⟩
+    ⟨ifp_n, seq_nth_eq, hfr, rfl⟩
+  refine ⟨ifp_n, seq_nth_eq, hfr, ?_⟩
   simpa only [IntFractPair.of, Int.fract, sub_eq_zero] using succ_nth_fr_eq_zero
 
 /-- A recurrence relation that expresses the `(n+1)`th term of the stream of `IntFractPair`s
@@ -126,7 +136,8 @@ theorem stream_succ (h : Int.fract v ≠ 0) (n : ℕ) :
   induction n with
   | zero =>
     have H : (IntFractPair.of v).fr = Int.fract v := by simp [IntFractPair.of]
-    rw [stream_zero, stream_succ_of_some (stream_zero v) (ne_of_eq_of_ne H h), H]
+    rw [stream_zero, stream_succ_of_some (stream_zero v) (ne_of_eq_of_ne H h)]
+    simp only [H]
   | succ n ih =>
     rcases eq_or_ne (IntFractPair.stream (Int.fract v)⁻¹ n) none with hnone | hsome
     · rw [hnone] at ih
@@ -274,14 +285,12 @@ theorem of_s_of_int (a : ℤ) : (of (a : K)).s = Stream'.Seq.nil :=
 
 variable {K} (v)
 
+omit [IsStrictOrderedRing K] in
 /-- Recurrence for the `GenContFract.of` an element `v` of `K` in terms of that of the inverse of
-the fractional part of `v`.
+the fractional part of `v`, which exists when `v` is not an integer.
 -/
-theorem of_s_succ (n : ℕ) : (of v).s.get? (n + 1) = (of (fract v)⁻¹).s.get? n := by
-  rcases eq_or_ne (fract v) 0 with h | h
-  · obtain ⟨a, rfl⟩ : ∃ a : ℤ, v = a := ⟨⌊v⌋, eq_of_sub_eq_zero h⟩
-    rw [fract_intCast, inv_zero, of_s_of_int, ← cast_zero, of_s_of_int,
-      Stream'.Seq.get?_nil, Stream'.Seq.get?_nil]
+theorem of_s_succ (h : fract v ≠ 0) (n : ℕ) :
+    (of v).s.get? (n + 1) = (of (fract v)⁻¹).s.get? n := by
   rcases eq_or_ne ((of (fract v)⁻¹).s.get? n) none with h₁ | h₁
   · rwa [h₁, ← terminatedAt_iff_s_none,
       of_terminatedAt_n_iff_succ_nth_intFractPair_stream_eq_none, stream_succ h, ←
@@ -292,37 +301,45 @@ theorem of_s_succ (n : ℕ) : (of v).s.get? (n + 1) = (of (fract v)⁻¹).s.get?
     rw [← stream_succ h] at hp'₁
     rw [Hp, get?_of_eq_some_of_succ_get?_intFractPair_stream hp'₁]
 
+omit [IsStrictOrderedRing K] in
 /-- This expresses the tail of the coefficient sequence of the `GenContFract.of` an element `v` of
-`K` as the coefficient sequence of that of the inverse of the fractional part of `v`.
+`K` as the coefficient sequence of that of the inverse of the fractional part of `v`, which exists
+when `v` is not an integer.
 -/
-theorem of_s_tail : (of v).s.tail = (of (fract v)⁻¹).s :=
-  Stream'.Seq.ext fun n => Stream'.Seq.get?_tail (of v).s n ▸ of_s_succ v n
+theorem of_s_tail (h : fract v ≠ 0) : (of v).s.tail = (of (fract v)⁻¹).s :=
+  Stream'.Seq.ext fun n => Stream'.Seq.get?_tail (of v).s n ▸ of_s_succ v h n
 
 variable (K) (n)
 
 /-- If `a` is an integer, then the `convs'` of its continued fraction expansion
 are all equal to `a`.
 -/
-theorem convs'_of_int (a : ℤ) : (of (a : K)).convs' n = a := by
+theorem convs'_of_int (a : ℤ) : (of (a : K)).convs' n = some (a : K) := by
   induction n with
   | zero => simp only [zeroth_conv'_eq_h, of_h_eq_floor, floor_intCast]
   | succ =>
-    rw [convs', of_h_eq_floor, floor_intCast, add_eq_left]
-    exact convs'Aux_succ_none ((of_s_of_int K a).symm ▸ Stream'.Seq.get?_nil 0) _
+    rw [convs', of_h_eq_floor, floor_intCast,
+      convs'Aux_succ_none ((of_s_of_int K a).symm ▸ Stream'.Seq.get?_nil 0) _]
+    simp
 
 variable {K}
 
+omit [IsStrictOrderedRing K] in
+open scoped Classical in
 /-- The recurrence relation for the `convs'` of the continued fraction expansion
-of an element `v` of `K` in terms of the convergents of the inverse of its fractional part.
+of an element `v` of `K` that is not an integer, in terms of the convergents of the inverse of its
+fractional part: the evaluation is defined when the inner one has a value that is a unit.
 -/
-theorem convs'_succ :
-    (of v).convs' (n + 1) = ⌊v⌋ + 1 / (of (fract v)⁻¹).convs' n := by
-  rcases eq_or_ne (fract v) 0 with h | h
-  · obtain ⟨a, rfl⟩ : ∃ a : ℤ, v = a := ⟨⌊v⌋, eq_of_sub_eq_zero h⟩
-    rw [convs'_of_int, fract_intCast, inv_zero, ← cast_zero, convs'_of_int, cast_zero,
-      div_zero, add_zero, floor_intCast]
-  · rw [convs', of_h_eq_floor, add_right_inj, convs'Aux_succ_some (of_s_head h)]
-    exact congr_arg (1 / ·) (by rw [convs', of_h_eq_floor, add_right_inj, of_s_tail])
+theorem convs'_succ (h : fract v ≠ 0) :
+    (of v).convs' (n + 1) = ((of (fract v)⁻¹).convs' n).bind fun c ↦
+      if hc : IsUnit c then some (⌊v⌋ + 1 / c) else none := by
+  rw [convs', of_h_eq_floor, convs'Aux_succ_some (of_s_head h), convs', of_h_eq_floor,
+    of_s_tail v h]
+  rcases convs'Aux (of (fract v)⁻¹).s n with _ | t
+  · rfl
+  · by_cases hc : IsUnit ((⌊(fract v)⁻¹⌋ : K) + t)
+    · simp only [Option.bind_some, Option.map_some, dite_eq_left hc]
+    · simp only [Option.bind_some, Option.map_some, dite_eq_right hc, Option.map_none]
 
 end Values
 

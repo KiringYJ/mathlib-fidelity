@@ -47,8 +47,9 @@ lemma isUltrametricDist_of_forall_norm_add_one_le_max_norm_one
   rcases eq_or_ne y 0 with rfl | hy
   · simpa only [add_zero] using le_max_left _ _
   · have p : 0 < ‖y‖ := norm_pos_iff.mpr hy
-    simpa only [div_add_one hy, norm_div, div_le_iff₀ p, max_mul_of_nonneg _ _ p.le, one_mul,
-      div_mul_cancel₀ _ p.ne'] using h (x / y)
+    have hxy := h (x / y)
+    simpa only [div_add_one, norm_div, div_le_iff₀ p, max_mul_of_nonneg _ _ p.le, one_mul,
+      div_mul_cancel₀] using hxy
 
 lemma isUltrametricDist_of_forall_norm_add_one_of_norm_le_one
     (h : ∀ x : R, ‖x‖ ≤ 1 → ‖x + 1‖ ≤ 1) : IsUltrametricDist R := by
@@ -56,8 +57,8 @@ lemma isUltrametricDist_of_forall_norm_add_one_of_norm_le_one
   rcases le_or_gt ‖x‖ 1 with H | H
   · exact (h _ H).trans (le_max_right _ _)
   · suffices ‖x + 1‖ ≤ ‖x‖ from this.trans (le_max_left _ _)
-    rw [← div_le_one (by positivity), ← norm_div, add_div,
-      div_self (by simpa using H.trans' zero_lt_one), add_comm]
+    have hx : x ≠ 0 := by simpa using H.trans' zero_lt_one
+    rw [← div_le_one (by positivity), ← norm_div (hb := hx.isUnit), add_div, div_self, add_comm]
     apply h
     simp [inv_le_one_iff₀, H.le]
 
@@ -87,7 +88,7 @@ lemma isUltrametricDist_of_forall_pow_norm_le_nsmul_pow_max_one_norm
     apply_mod_cast Real.exists_natCast_add_one_lt_pow_of_one_lt
     rwa [one_lt_div (by positivity)]
   -- and we rearrange again to get `(m + 1) • max 1 ‖x‖ ^ m < a ^ m`
-  rw [div_pow, lt_div_iff₀ (by positivity), ← nsmul_eq_mul] at hm
+  rw [div_pow₀, lt_div_iff₀ (by positivity), ← nsmul_eq_mul] at hm
   -- which squeezes down to get our `‖x + 1‖ ≤ a` using our to-be-proven hypothesis of
   -- `‖x + 1‖ ^ m ≤ (m + 1) • max 1 ‖x‖ ^ m`, so we're done
   -- we can distribute powers into the right term of `max`

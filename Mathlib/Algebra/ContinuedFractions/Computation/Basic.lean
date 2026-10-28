@@ -139,11 +139,11 @@ For example, let `(v : ℚ) := 3.4`. The process goes as follows:
 - `stream v 2 = some ⟨⌊0.5⁻¹⌋, 0.5⁻¹ - ⌊0.5⁻¹⌋⟩ = some ⟨⌊2⌋, 2 - ⌊2⌋⟩ = some ⟨2, 0⟩`
 - `stream v n = none`, for `n ≥ 3`
 -/
-protected def stream (v : K) : Stream' <| Option (IntFractPair K)
+protected noncomputable def stream (v : K) : Stream' <| Option (IntFractPair K)
   | 0 => some (IntFractPair.of v)
   | n + 1 =>
     (IntFractPair.stream v n).bind fun ap_n =>
-      if ap_n.fr = 0 then none else some (IntFractPair.of ap_n.fr⁻¹)
+      if h : ap_n.fr = 0 then none else some (IntFractPair.of ap_n.fr⁻¹)
 
 /-- Shows that `IntFractPair.stream` has the sequence property, that is once we return `none` at
 position `n`, we also return `none` at `n + 1`.
@@ -161,7 +161,7 @@ This is just an intermediate representation and users should not (need to) direc
 it. The setup of rewriting/simplification lemmas that make the definitions easy to use is done in
 `Mathlib/Algebra/ContinuedFractions/Computation/Translations.lean`.
 -/
-protected def seq1 (v : K) : Stream'.Seq1 <| IntFractPair K :=
+protected noncomputable def seq1 (v : K) : Stream'.Seq1 <| IntFractPair K :=
   ⟨IntFractPair.of v, -- the head
     -- take the tail of `IntFractPair.stream` since the first element is already in the head
     Stream'.Seq.tail
@@ -182,7 +182,8 @@ process stops when the fractional part `v - ⌊v⌋` hits 0 at some step.
 The implementation uses `IntFractPair.stream` to obtain the partial denominators of the continued
 fraction. Refer to said function for more details about the computation process.
 -/
-protected def of [DivisionRing K] [LinearOrder K] [FloorRing K] (v : K) : GenContFract K :=
+protected noncomputable def of [DivisionRing K] [LinearOrder K] [FloorRing K] (v : K) :
+    GenContFract K :=
   let ⟨h, s⟩ := IntFractPair.seq1 v -- get the sequence of integer and fractional parts.
   ⟨h.b, -- the head is just the first integer part
     s.map fun p => ⟨1, p.b⟩⟩ -- the sequence consists of the remaining integer parts as the partial

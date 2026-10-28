@@ -174,34 +174,36 @@ instance (priority := 100) IsAdicComplete.henselianRing (R : Type*) [CommRing R]
     intro f _ a₀ h₁ h₂
     classical
       let f' := derivative f
+      -- `f'.eval b` is a unit whenever `b` has the same residue as `a₀` modulo `I`, and the
+      -- Newton step sending `b` to `b - f(b)/f'(b)` preserves this residue.
+      have hunit : ∀ b, b ≡ a₀ [SMOD I] → IsUnit (f'.eval b) := by
+        intro b hb
+        have := isLocalHom_of_le_jacobson_bot I (IsAdicComplete.le_jacobson_bot I)
+        apply IsUnit.of_map (Ideal.Quotient.mk I)
+        convert! h₂ using 1
+        exact SModEq.def.mp (hb.eval _)
+      have hstep : ∀ b (hb : b ≡ a₀ [SMOD I]),
+          b - f.eval b * Checked.inv (f'.eval b) (hunit b hb) ≡ a₀ [SMOD I] := by
+        intro b hb
+        rw [sub_eq_add_neg, ← add_zero a₀]
+        refine hb.add ?_
+        rw [SModEq.zero, Ideal.neg_mem_iff]
+        refine I.mul_mem_right _ ?_
+        rw [← SModEq.zero] at h₁ ⊢
+        exact (hb.eval f).trans h₁
       -- we define a sequence `c n` by starting at `a₀` and then continually
-      -- applying the function sending `b` to `b - f(b)/f'(b)` (Newton's method).
-      -- Note that `f'.eval b` is a unit, because `b` has the same residue as `a₀` modulo `I`.
-      let c : ℕ → R := fun n => Nat.recOn n a₀ fun _ b => b - f.eval b * (f'.eval b)⁻¹ʳ
-      have hc : ∀ n, c (n + 1) = c n - f.eval (c n) * (f'.eval (c n))⁻¹ʳ := by
-        intro n
-        simp only [c]
+      -- applying the Newton step (Newton's method).
+      let c' : ℕ → {b : R // b ≡ a₀ [SMOD I]} := fun n => Nat.recOn n ⟨a₀, rfl⟩ fun _ b =>
+        ⟨b.1 - f.eval b.1 * Checked.inv (f'.eval b.1) (hunit b.1 b.2), hstep b.1 b.2⟩
+      let c : ℕ → R := fun n => (c' n).1
       -- we now spend some time determining properties of the sequence `c : ℕ → R`
       -- `hc_mod`: for every `n`, we have `c n ≡ a₀ [SMOD I]`
       -- `hf'c`  : for every `n`, `f'.eval (c n)` is a unit
       -- `hfcI`  : for every `n`, `f.eval (c n)` is contained in `I ^ (n+1)`
-      have hc_mod : ∀ n, c n ≡ a₀ [SMOD I] := by
-        intro n
-        induction n with
-        | zero => rfl
-        | succ n ih => ?_
-        rw [hc, sub_eq_add_neg, ← add_zero a₀]
-        refine ih.add ?_
-        rw [SModEq.zero, Ideal.neg_mem_iff]
-        refine I.mul_mem_right _ ?_
-        rw [← SModEq.zero] at h₁ ⊢
-        exact (ih.eval f).trans h₁
-      have hf'c : ∀ n, IsUnit (f'.eval (c n)) := by
-        intro n
-        have := isLocalHom_of_le_jacobson_bot I (IsAdicComplete.le_jacobson_bot I)
-        apply IsUnit.of_map (Ideal.Quotient.mk I)
-        convert! h₂ using 1
-        exact SModEq.def.mp ((hc_mod n).eval _)
+      have hc_mod : ∀ n, c n ≡ a₀ [SMOD I] := fun n => (c' n).2
+      have hf'c : ∀ n, IsUnit (f'.eval (c n)) := fun n => hunit _ (hc_mod n)
+      have hc : ∀ n, c (n + 1) = c n - f.eval (c n) * Checked.inv (f'.eval (c n)) (hf'c n) :=
+        fun _ => rfl
       have hfcI : ∀ n, f.eval (c n) ∈ I ^ (n + 1) := by
         intro n
         induction n with
@@ -217,7 +219,7 @@ instance (priority := 100) IsAdicComplete.henselianRing (R : Type*) [CommRing R]
         refine Ideal.add_mem _ ?_ ?_
         · rw [← one_add_one_eq_two, Finset.sum_range_succ, Finset.range_one, Finset.sum_singleton,
             taylor_coeff_zero, taylor_coeff_one, pow_zero, pow_one, mul_one, mul_neg,
-            mul_left_comm, Ring.mul_inverse_cancel _ (hf'c n), mul_one, add_neg_cancel]
+            mul_left_comm, mul_inv_cancel₀, mul_one, add_neg_cancel]
           exact Ideal.zero_mem _
         · refine Submodule.sum_mem _ ?_
           simp only [Finset.mem_Ico]

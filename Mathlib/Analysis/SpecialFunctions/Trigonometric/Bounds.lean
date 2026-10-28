@@ -179,40 +179,29 @@ theorem deriv_tan_sub_id (x : ℝ) (h : cos x ≠ 0) :
 
 /-- For all `0 < x < π/2` we have `x < tan x`.
 
-This is proved by checking that the function `tan x - x` vanishes
-at zero and has non-negative derivative. -/
-theorem lt_tan {x : ℝ} (h1 : 0 < x) (h2 : x < π / 2) : x < tan x := by
-  let U := Ico 0 (π / 2)
-  have intU : interior U = Ioo 0 (π / 2) := interior_Ico
-  have half_pi_pos : 0 < π / 2 := div_pos pi_pos two_pos
-  have cos_pos {y : ℝ} (hy : y ∈ U) : 0 < cos y := by
-    exact cos_pos_of_mem_Ioo (Ico_subset_Ioo_left (neg_lt_zero.mpr half_pi_pos) hy)
-  have sin_pos {y : ℝ} (hy : y ∈ interior U) : 0 < sin y := by
-    rw [intU] at hy
-    exact sin_pos_of_mem_Ioo (Ioo_subset_Ioo_right (div_le_self pi_pos.le one_le_two) hy)
-  have tan_cts_U : ContinuousOn tan U := by
-    apply ContinuousOn.mono continuousOn_tan
-    intro z hz
-    simp only [mem_ofPred_eq]
-    exact (cos_pos hz).ne'
-  have tan_minus_id_cts : ContinuousOn (fun y : ℝ => tan y - y) U := tan_cts_U.sub continuousOn_id
-  have deriv_pos (y : ℝ) (hy : y ∈ interior U) : 0 < deriv (fun y' : ℝ => tan y' - y') y := by
-    have := cos_pos (interior_subset hy)
-    simp only [deriv_tan_sub_id y this.ne', one_div, gt_iff_lt, sub_pos]
-    norm_cast
-    have bd2 : cos y ^ 2 < 1 := by
-      apply lt_of_le_of_ne y.cos_sq_le_one
-      rw [cos_sq']
-      simpa only [Ne, sub_eq_self, sq_eq_zero_iff] using (sin_pos hy).ne'
-    rwa [lt_inv_comm₀, inv_one]
-    · exact zero_lt_one
-    simpa only [sq, mul_self_pos] using this.ne'
-  have mono := strictMonoOn_of_deriv_pos (convex_Ico 0 (π / 2)) tan_minus_id_cts deriv_pos
-  have zero_in_U : (0 : ℝ) ∈ U := by rwa [left_mem_Ico]
-  have x_in_U : x ∈ U := ⟨h1.le, h2⟩
-  simpa only [tan_zero, sub_zero, sub_pos] using mono zero_in_U x_in_U h1
+This is proved by checking that the function `sin x - x * cos x` vanishes at zero and has positive
+derivative `x * sin x` on `(0, π / 2)`. -/
+theorem lt_tan {x : ℝ} (h1 : 0 < x) (h2 : x < π / 2) :
+    x < tan x (cos_pos_of_mem_Ioo ⟨by linarith [pi_pos], h2⟩).ne' := by
+  have hcos : 0 < cos x := cos_pos_of_mem_Ioo ⟨by linarith [pi_pos], h2⟩
+  rw [tan_eq_sin_div_cos, lt_div_iff₀ hcos]
+  let g : ℝ → ℝ := fun y ↦ sin y - y * cos y
+  have hg (y : ℝ) : HasDerivAt g (y * sin y) y := by
+    convert (hasDerivAt_sin y).sub ((hasDerivAt_id y).mul (hasDerivAt_cos y)) using 1
+    simp only [id]
+    ring
+  have mono : StrictMonoOn g (Ico 0 (π / 2)) := by
+    refine strictMonoOn_of_deriv_pos (convex_Ico 0 (π / 2))
+      (continuous_sin.sub (continuous_id.mul continuous_cos)).continuousOn fun y hy ↦ ?_
+    rw [interior_Ico] at hy
+    rw [(hg y).deriv]
+    exact mul_pos hy.1 (sin_pos_of_pos_of_lt_pi hy.1 (by linarith [hy.2, pi_pos]))
+  have := mono ⟨le_rfl, by linarith [pi_pos]⟩ ⟨h1.le, h2⟩ h1
+  simp only [g, sin_zero, zero_mul, sub_zero] at this
+  linarith
 
-theorem le_tan {x : ℝ} (h1 : 0 ≤ x) (h2 : x < π / 2) : x ≤ tan x := by
+theorem le_tan {x : ℝ} (h1 : 0 ≤ x) (h2 : x < π / 2) :
+    x ≤ tan x (cos_pos_of_mem_Ioo ⟨by linarith [pi_pos], h2⟩).ne' := by
   rcases eq_or_lt_of_le h1 with (rfl | h1')
   · rw [tan_zero]
   · exact le_of_lt (lt_tan h1' h2)
@@ -258,7 +247,7 @@ theorem cos_lt_one_div_sqrt_sq_add_one {x : ℝ} (hx1 : -(3 * π / 2) ≤ x) (hx
       abs_of_nonneg (one_div_nonneg.mpr (sqrt_nonneg _)), ← sq_lt_sq, div_pow, one_pow,
       sq_sqrt hy3.le, lt_one_div (pow_pos hy4 _) hy3, ← inv_one_add_tan_sq hy4.ne', one_div,
       inv_inv, add_comm, add_lt_add_iff_left, sq_lt_sq, abs_of_pos hy1,
-      abs_of_nonneg (tan_nonneg_of_nonneg_of_le_pi_div_two hy1.le hy2'.le)]
+      abs_of_nonneg (tan_nonneg_of_nonneg_of_le_pi_div_two hy1.le hy2')]
     exact Real.lt_tan hy1 hy2'
   · -- Easy case : `π / 2 ≤ y ≤ 3 * π / 2`
     refine lt_of_le_of_lt ?_ (one_div_pos.mpr <| sqrt_pos_of_pos hy3)

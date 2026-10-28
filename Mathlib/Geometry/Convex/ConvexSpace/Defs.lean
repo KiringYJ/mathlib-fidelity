@@ -335,15 +335,17 @@ private lemma restrict_ne_zero_aux {w : StdSimplex K X} {p : X → Prop} [Decida
 assuming at least one non-zero weight subsists. -/
 def restrict (w : StdSimplex K X) (s : Set X) (hs : ∃ x ∈ s, w.weights x ≠ 0) : StdSimplex K X where
   weights := open scoped Classical in
-    ((w.weights.filter (· ∈ s)).sum fun x k ↦ k)⁻¹ • w.weights.filter (· ∈ s)
+    Checked.inv ((w.weights.filter (· ∈ s)).sum fun x k ↦ k)
+      (by classical exact (restrict_ne_zero_aux hs).isUnit) • w.weights.filter (· ∈ s)
   nonneg := by
     classical
     exact smul_nonneg (inv_nonneg.2 restrict_nonneg_aux) fun _ ↦ by simp [filter_apply, apply_ite]
-  total := by classical simp [sum_smul_index, ← mul_sum, restrict_ne_zero_aux hs]
+  total := by classical simp [sum_smul_index, ← mul_sum]
 
 lemma weights_restrict (w : StdSimplex K X) (s : Set X) (hs) [DecidablePred (· ∈ s)] :
     (w.restrict s hs).weights =
-      ((w.weights.filter (· ∈ s)).sum fun _x k ↦ k)⁻¹ • w.weights.filter (· ∈ s) := by
+      Checked.inv ((w.weights.filter (· ∈ s)).sum fun _x k ↦ k)
+        (by exact (restrict_ne_zero_aux hs).isUnit) • w.weights.filter (· ∈ s) := by
   simp [restrict]; congr
 
 variable [IsDomain K]
@@ -351,10 +353,7 @@ variable [IsDomain K]
 @[simp]
 lemma support_weights_restrict (w : StdSimplex K X) (s : Set X) (hs) [DecidablePred (· ∈ s)] :
     (w.restrict s hs).weights.support = w.weights.support.filter (· ∈ s) := by
-  have : (w.weights.filter (· ∈ s)).sum (fun x k ↦ k) ≠ 0 :=
-    (sum_pos (by simp +contextual [lt_iff_le_and_ne, eq_comm]) <| by
-      simpa [ne_iff, filter_apply]).ne'
-  rw [weights_restrict, support_smul_eq (by convert inv_ne_zero this)]
+  rw [weights_restrict, support_smul_eq inv_ne_zero]
   simp
 
 @[simp] lemma restrict_singleton (w : StdSimplex K X) (x : X) (hx) :
@@ -455,8 +454,7 @@ lemma convexCombPair_restrict_restrict_compl (w : StdSimplex K I) (s : Set I) (h
       (by exact restrict_nonneg_aux) (by exact restrict_nonneg_aux) (by simp)
       (w.restrict s hs) (w.restrict sᶜ hs') = w := by
   ext : 1
-  simp only [Set.mem_compl_iff] at hs'
-  simp [weights_restrict, smul_inv_smul₀, restrict_ne_zero_aux, hs, hs']
+  simp [weights_restrict, smul_smul]
 
 end StdSimplex
 

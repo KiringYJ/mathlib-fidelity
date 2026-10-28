@@ -469,31 +469,38 @@ section Field
 
 variable [Field K] (p : ℕ) [Fact p.Prime] [CharP K p]
 
-instance instInv : Inv (PerfectClosure K p) :=
-  ⟨Quot.lift (fun x : ℕ × K => Quot.mk (R K p) (x.1, x.2⁻¹)) fun x y (H : R K p x y) =>
-      match x, y, H with
-      | _, _, R.intro n x =>
-        Quot.sound <| by
-          simp only [frobenius_def]
-          rw [← inv_pow]
-          apply R.intro⟩
+theorem mk_eq_zero_iff (x : ℕ × K) : mk K p x = 0 ↔ x.2 = 0 := by
+  rw [zero_def, eq_iff, iterate_zero_apply, iterate_map_zero]
+
+/-- The perfect closure of a field of prime characteristic does not have characteristic zero. -/
+theorem not_charZero : ¬CharZero (PerfectClosure K p) := fun h =>
+  (Fact.out : p.Prime).ne_zero
+    (h.cast_injective ((CharP.cast_eq_zero (PerfectClosure K p) p).trans Nat.cast_zero.symm))
+
+/-- The perfect closure of a field is a division ring. Its characteristic is not zero, so it has no
+rational embedding. -/
+instance instDivisionRing : DivisionRing (PerfectClosure K p) where
+  isUnit_of_ne_zero {e} := induction_on e fun ⟨m, x⟩ H ↦ by
+    have hx : x ≠ 0 := fun hx ↦ H ((mk_eq_zero_iff K p _).2 hx)
+    refine IsUnit.of_mul_eq_one (mk K p (m, x⁻¹)) ?_
+    rw [mk_mul_mk, one_def, eq_iff]
+    simp only [iterate_zero_apply, iterate_map_one, ← iterate_map_mul, mul_inv_cancel₀]
+  nnratCastOfCharZero h := (not_charZero K p h).elim
+  nnratCastOfCharZero_mul_den h := (not_charZero K p h).elim
+  nnqsmulOfCharZero h := (not_charZero K p h).elim
+  nnqsmulOfCharZero_eq_mul h := (not_charZero K p h).elim
+  ratCastOfCharZero h := (not_charZero K p h).elim
+  ratCastOfCharZero_mul_den h := (not_charZero K p h).elim
+  qsmulOfCharZero h := (not_charZero K p h).elim
+  qsmulOfCharZero_eq_mul h := (not_charZero K p h).elim
 
 @[simp]
-theorem mk_inv (x : ℕ × K) : (mk K p x)⁻¹ = mk K p (x.1, x.2⁻¹) :=
-  rfl
-
-instance instDivisionRing : DivisionRing (PerfectClosure K p) where
-  mul_inv_cancel e := induction_on e fun ⟨m, x⟩ H ↦ by
-    have := mt (eq_iff _ _ _ _).2 H
-    rw [mk_inv, mk_mul_mk]
-    refine (eq_iff K p _ _).2 ?_
-    simp only [iterate_map_one, iterate_map_zero, iterate_zero_apply, ← iterate_map_mul] at this ⊢
-    rw [mul_inv_cancel₀ this, iterate_map_one]
-  inv_zero := congr_arg (Quot.mk (R K p)) (by rw [inv_zero])
-  nnqsmul := _
-  nnqsmul_def := fun _ _ => rfl
-  qsmul := _
-  qsmul_def := fun _ _ => rfl
+theorem mk_inv (x : ℕ × K) {hx : IsUnit (mk K p x)} :
+    (mk K p x)⁻¹ = mk K p (x.1,
+      Checked.inv x.2 (Ne.isUnit fun h ↦ hx.ne_zero ((mk_eq_zero_iff K p x).2 h))) := by
+  refine inv_eq_of_mul_eq_one_right₀ ?_
+  rw [mk_mul_mk, one_def, eq_iff]
+  simp only [iterate_zero_apply, iterate_map_one, ← iterate_map_mul, mul_inv_cancel₀]
 
 instance instField : Field (PerfectClosure K p) :=
   { (inferInstance : DivisionRing (PerfectClosure K p)),

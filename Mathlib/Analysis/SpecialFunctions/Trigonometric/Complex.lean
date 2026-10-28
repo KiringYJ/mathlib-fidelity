@@ -58,28 +58,14 @@ theorem sin_eq_zero_iff {θ : ℂ} : sin θ = 0 ↔ ∃ k : ℤ, θ = k * π := 
 theorem sin_ne_zero_iff {θ : ℂ} : sin θ ≠ 0 ↔ ∀ k : ℤ, θ ≠ k * π := by
   contrapose!; exact sin_eq_zero_iff
 
-/-- The tangent of a complex number is equal to zero
-iff this number is equal to `k * π / 2` for an integer `k`.
+/-- The tangent of a complex number at which it is defined is zero iff the number is an integer
+multiple of `π`. -/
+theorem tan_eq_zero_iff {θ : ℂ} {hθ : cos θ ≠ 0} : tan θ = 0 ↔ ∃ k : ℤ, k * π = θ := by
+  simp only [tan_eq_sin_div_cos, div_eq_zero_iff, sin_eq_zero_iff]
+  simp [eq_comm]
 
-Note that this lemma takes into account that we use zero as the junk value for division by zero.
-See also `Complex.tan_eq_zero_iff'`. -/
-theorem tan_eq_zero_iff {θ : ℂ} : tan θ = 0 ↔ ∃ k : ℤ, k * π / 2 = θ := by
-  rw [tan, div_eq_zero_iff, ← mul_eq_zero, ← mul_right_inj' two_ne_zero, mul_zero,
-    ← mul_assoc, ← sin_two_mul, sin_eq_zero_iff]
-  simp [field, mul_comm, eq_comm]
-
-theorem tan_ne_zero_iff {θ : ℂ} : tan θ ≠ 0 ↔ ∀ k : ℤ, (k * π / 2 : ℂ) ≠ θ := by
-  contrapose!; exact tan_eq_zero_iff
-
-theorem tan_int_mul_pi_div_two (n : ℤ) : tan (n * π / 2) = 0 :=
-  tan_eq_zero_iff.mpr (by use n)
-
-/-- If the tangent of a complex number is well-defined,
-then it is equal to zero iff the number is equal to `k * π` for an integer `k`.
-
-See also `Complex.tan_eq_zero_iff` for a version that takes into account junk values of `θ`. -/
-theorem tan_eq_zero_iff' {θ : ℂ} (hθ : cos θ ≠ 0) : tan θ = 0 ↔ ∃ k : ℤ, k * π = θ := by
-  simp only [tan, hθ, div_eq_zero_iff, sin_eq_zero_iff]; simp [eq_comm]
+theorem tan_ne_zero_iff {θ : ℂ} {hθ : cos θ ≠ 0} : tan θ ≠ 0 ↔ ∀ k : ℤ, (k * π : ℂ) ≠ θ := by
+  rw [Ne, tan_eq_zero_iff, not_exists]
 
 theorem cos_eq_cos_iff {x y : ℂ} : cos x = cos y ↔ ∃ k : ℤ, y = 2 * k * π + x ∨ y = 2 * k * π - x :=
   calc
@@ -115,110 +101,128 @@ theorem sin_eq_neg_one_iff {x : ℂ} : sin x = -1 ↔ ∃ k : ℤ, -(π / 2) + k
   rw [← neg_eq_iff_eq_neg, ← cos_add_pi_div_two, cos_eq_one_iff]
   simp only [← sub_eq_neg_add, sub_eq_iff_eq_add]
 
-theorem tan_add {x y : ℂ}
-    (h : ((∀ k : ℤ, x ≠ (2 * k + 1) * π / 2) ∧ ∀ l : ℤ, y ≠ (2 * l + 1) * π / 2) ∨
-      (∃ k : ℤ, x = (2 * k + 1) * π / 2) ∧ ∃ l : ℤ, y = (2 * l + 1) * π / 2) :
-    tan (x + y) = (tan x + tan y) / (1 - tan x * tan y) := by
-  rcases h with (⟨h1, h2⟩ | ⟨⟨k, rfl⟩, ⟨l, rfl⟩⟩)
-  · rw [tan, sin_add, cos_add, ←
-      div_div_div_cancel_right₀ (mul_ne_zero (cos_ne_zero_iff.mpr h1) (cos_ne_zero_iff.mpr h2)),
-      add_div, sub_div]
-    simp only [← div_mul_div_comm, tan, mul_one, one_mul, div_self (cos_ne_zero_iff.mpr h1),
-      div_self (cos_ne_zero_iff.mpr h2)]
-  · have t := tan_int_mul_pi_div_two
-    obtain ⟨hx, hy, hxy⟩ := t (2 * k + 1), t (2 * l + 1), t (2 * k + 1 + (2 * l + 1))
-    simp only [Int.cast_add, Int.cast_two, Int.cast_mul, Int.cast_one] at hx hy hxy
-    rw [hx, hy, add_zero, zero_div, mul_div_assoc, mul_div_assoc, ←
-      add_mul (2 * (k : ℂ) + 1) (2 * l + 1) (π / 2), ← mul_div_assoc, hxy]
-
-theorem tan_add' {x y : ℂ}
-    (h : (∀ k : ℤ, x ≠ (2 * k + 1) * π / 2) ∧ ∀ l : ℤ, y ≠ (2 * l + 1) * π / 2) :
-    tan (x + y) = (tan x + tan y) / (1 - tan x * tan y) :=
-  tan_add (Or.inl h)
-
-theorem tan_sub {x y : ℂ}
-    (h : ((∀ k : ℤ, x ≠ (2 * k + 1) * π / 2) ∧ ∀ l : ℤ, y ≠ (2 * l + 1) * π / 2) ∨
-      (∃ k : ℤ, x = (2 * k + 1) * π / 2) ∧ ∃ l : ℤ, y = (2 * l + 1) * π / 2) :
-    tan (x - y) = (tan x - tan y) / (1 + tan x * tan y) := by
-  have := tan_add (x := x) (y := -y) <| by
-    rcases h with ⟨x_ne, minus_y_ne⟩ | ⟨x_eq, minus_y_eq⟩
-    · refine .inl ⟨x_ne, fun l => ?_⟩
-      rw [Ne, neg_eq_iff_eq_neg]
-      convert! minus_y_ne (-l - 1) using 2
-      push_cast
-      ring
-    · refine .inr ⟨x_eq, ?_⟩
-      rcases minus_y_eq with ⟨l, rfl⟩
-      use -l - 1
-      push_cast
-      ring
-  rw [tan_neg] at this
-  convert! this using 2
+/-- The cosine of a sum in terms of the tangents of the summands. -/
+theorem cos_add_eq_mul_one_sub_tan_mul_tan {x y : ℂ} (hx : cos x ≠ 0) (hy : cos y ≠ 0) :
+    cos (x + y) = cos x * cos y * (1 - tan x * tan y) := by
+  rw [cos_add, ← tan_mul_cos hx, ← tan_mul_cos hy]
   ring
 
-theorem tan_sub' {x y : ℂ}
-    (h : (∀ k : ℤ, x ≠ (2 * k + 1) * π / 2) ∧ ∀ l : ℤ, y ≠ (2 * l + 1) * π / 2) :
-    tan (x - y) = (tan x - tan y) / (1 + tan x * tan y) :=
-  tan_sub (Or.inl h)
+/-- The cosine of a difference in terms of the tangents of the terms. -/
+theorem cos_sub_eq_mul_one_add_tan_mul_tan {x y : ℂ} (hx : cos x ≠ 0) (hy : cos y ≠ 0) :
+    cos (x - y) = cos x * cos y * (1 + tan x * tan y) := by
+  rw [cos_sub, ← tan_mul_cos hx, ← tan_mul_cos hy]
+  ring
 
-theorem tan_two_mul {z : ℂ} : tan (2 * z) = (2 : ℂ) * tan z / ((1 : ℂ) - tan z ^ 2) := by
-  by_cases! h : ∀ k : ℤ, z ≠ (2 * k + 1) * π / 2
-  · rw [two_mul, two_mul, sq, tan_add (Or.inl ⟨h, h⟩)]
-  · rw [two_mul, two_mul, sq, tan_add (Or.inr ⟨h, h⟩)]
+theorem one_sub_tan_mul_tan_ne_zero {x y : ℂ} (hx : cos x ≠ 0) (hy : cos y ≠ 0)
+    (hxy : cos (x + y) ≠ 0) : 1 - tan x * tan y ≠ 0 :=
+  right_ne_zero_of_mul (cos_add_eq_mul_one_sub_tan_mul_tan hx hy ▸ hxy)
 
-theorem tan_add_mul_I {x y : ℂ}
-    (h :
-      ((∀ k : ℤ, x ≠ (2 * k + 1) * π / 2) ∧ ∀ l : ℤ, y * I ≠ (2 * l + 1) * π / 2) ∨
-        (∃ k : ℤ, x = (2 * k + 1) * π / 2) ∧ ∃ l : ℤ, y * I = (2 * l + 1) * π / 2) :
-    tan (x + y * I) = (tan x + tanh y * I) / (1 - tan x * tanh y * I) := by
-  rw [tan_add h, tan_mul_I, mul_assoc]
+theorem one_add_tan_mul_tan_ne_zero {x y : ℂ} (hx : cos x ≠ 0) (hy : cos y ≠ 0)
+    (hxy : cos (x - y) ≠ 0) : 1 + tan x * tan y ≠ 0 :=
+  right_ne_zero_of_mul (cos_sub_eq_mul_one_add_tan_mul_tan hx hy ▸ hxy)
 
-theorem tan_eq {z : ℂ}
-    (h :
-      ((∀ k : ℤ, (z.re : ℂ) ≠ (2 * k + 1) * π / 2) ∧
-          ∀ l : ℤ, (z.im : ℂ) * I ≠ (2 * l + 1) * π / 2) ∨
-        (∃ k : ℤ, (z.re : ℂ) = (2 * k + 1) * π / 2) ∧
-          ∃ l : ℤ, (z.im : ℂ) * I = (2 * l + 1) * π / 2) :
-    tan z = (tan z.re + tanh z.im * I) / (1 - tan z.re * tanh z.im * I) := by
-  convert! tan_add_mul_I h; exact (re_add_im z).symm
+theorem one_sub_tan_sq_ne_zero {z : ℂ} (hz : cos z ≠ 0) (h : cos (2 * z) ≠ 0) :
+    1 - tan z ^ 2 ≠ 0 := by
+  rw [sq]
+  exact one_sub_tan_mul_tan_ne_zero hz hz (two_mul z ▸ h)
 
-/-- `tan x` takes the junk value `0` when `cos x = 0` -/
-lemma tan_eq_zero_of_cos_eq_zero {x} (h : cos x = 0) : tan x = 0 := by
-  obtain ⟨k, hxk⟩ := cos_eq_zero_iff.mp h
-  exact tan_eq_zero_iff.mpr ⟨2 * k + 1, by simp [hxk]⟩
+/-! The rule below extends `checked_nonzero`: the denominators of the addition formulas for the
+tangent are nonzero where the tangent of the sum or difference is defined. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | (apply Complex.one_sub_tan_mul_tan_ne_zero <;> assumption)
+    | (apply Complex.one_add_tan_mul_tan_ne_zero <;> assumption)
+    | (apply Complex.one_sub_tan_sq_ne_zero <;> assumption))
+
+/-- The addition formula for the tangent, where the tangents of `x`, `y` and `x + y` are
+defined. -/
+theorem tan_add {x y : ℂ} (hx : cos x ≠ 0) (hy : cos y ≠ 0) {hxy : cos (x + y) ≠ 0} :
+    tan (x + y) = (tan x + tan y) / (1 - tan x * tan y) := by
+  rw [eq_div_iff_mul_eq]
+  refine mul_right_cancel₀ (mul_ne_zero hx hy) ?_
+  calc tan (x + y) * (1 - tan x * tan y) * (cos x * cos y) = tan (x + y) * cos (x + y) := by
+        rw [cos_add_eq_mul_one_sub_tan_mul_tan hx hy]; ring
+    _ = (tan x + tan y) * (cos x * cos y) := by
+        rw [tan_mul_cos, sin_add, ← tan_mul_cos hx, ← tan_mul_cos hy]; ring
+
+/-- The subtraction formula for the tangent, where the tangents of `x`, `y` and `x - y` are
+defined. -/
+theorem tan_sub {x y : ℂ} (hx : cos x ≠ 0) (hy : cos y ≠ 0) {hxy : cos (x - y) ≠ 0} :
+    tan (x - y) = (tan x - tan y) / (1 + tan x * tan y) := by
+  rw [eq_div_iff_mul_eq]
+  refine mul_right_cancel₀ (mul_ne_zero hx hy) ?_
+  calc tan (x - y) * (1 + tan x * tan y) * (cos x * cos y) = tan (x - y) * cos (x - y) := by
+        rw [cos_sub_eq_mul_one_add_tan_mul_tan hx hy]; ring
+    _ = (tan x - tan y) * (cos x * cos y) := by
+        rw [tan_mul_cos, sin_sub, ← tan_mul_cos hx, ← tan_mul_cos hy]; ring
+
+theorem tan_two_mul {z : ℂ} {h : cos (2 * z) ≠ 0} (hz : cos z ≠ 0) :
+    tan (2 * z) = 2 * tan z / (1 - tan z ^ 2) := by
+  have := tan_add hz hz (hxy := two_mul z ▸ h)
+  simp only [two_mul, sq] at this ⊢
+  exact this
+
+theorem tan_add_mul_I {x y : ℂ} (hx : cos x ≠ 0) (hy : cosh y ≠ 0) {h : cos (x + y * I) ≠ 0} :
+    tan (x + y * I) =
+      Checked.div (tan x + tanh y * I) (1 - tan x * tanh y * I) (by
+        have := one_sub_tan_mul_tan_ne_zero (y := y * I) hx (cos_mul_I y ▸ hy) h
+        rw [tan_mul_I, ← mul_assoc] at this
+        exact this.isUnit) := by
+  rw [tan_add (y := y * I) hx (cos_mul_I y ▸ hy) (hxy := h)]
+  simp only [tan_mul_I, mul_assoc]
+
+theorem tan_eq {z : ℂ} {hz : cos z ≠ 0} (hre : cos (z.re : ℂ) ≠ 0) :
+    tan z =
+      Checked.div (tan z.re + tanh z.im * I) (1 - tan z.re * tanh z.im * I) (by
+        have := one_sub_tan_mul_tan_ne_zero (y := z.im * I) hre
+          (cos_mul_I z.im ▸ cosh_ofReal_ne_zero z.im)
+          (by rwa [re_add_im])
+        rw [tan_mul_I, ← mul_assoc] at this
+        exact this.isUnit) := by
+  have := tan_add_mul_I (x := z.re) (y := z.im) hre (cosh_ofReal_ne_zero z.im)
+    (h := by rwa [re_add_im])
+  simp only [re_add_im] at this
+  exact this
 
 -- tangent half-angle substitution formulas
 
-theorem cos_eq_two_mul_tan_half_div_one_sub_tan_half_sq (x : ℂ) (h : cos x ≠ -1) :
-    cos x = (1 - tan (x / 2) ^ 2) / (1 + tan (x / 2) ^ 2) := by
-  conv_lhs => rw [← mul_div_cancel₀ x two_ne_zero, cos_two_mul']
-  have : cos (x / 2) ≠ 0 := by grind [cos_ne_zero_iff, cos_eq_neg_one_iff]
-  rw [div_eq_mul_inv (1 - tan (x / 2) ^ 2) (1 + tan (x / 2) ^ 2), inv_one_add_tan_sq this,
-    ← tan_mul_cos this]
+theorem cos_half_ne_zero_of_cos_ne_neg_one {x : ℂ} (h : cos x ≠ -1) : cos (x / 2) ≠ 0 := by
+  intro h0
+  apply h
+  rw [show x = 2 * (x / 2) by ring, cos_two_mul, h0]
   ring
 
-/-- `tan (x / 2)` takes the junk value `0` when `sin x = 0` so this always holds. -/
-theorem sin_eq_two_mul_tan_half_div_one_add_tan_half_sq (x : ℂ) :
-    sin x = (2 * tan (x / 2)) / (1 + tan (x / 2) ^ 2) := by
-  conv_lhs => rw [← mul_div_cancel₀ x two_ne_zero, sin_two_mul]
-  by_cases h : cos (x / 2) = 0
-  · simp [h, tan_eq_zero_of_cos_eq_zero]
-  · rw [div_eq_mul_inv (2 * tan (x / 2)) (1 + tan (x / 2) ^ 2), inv_one_add_tan_sq h,
-      ← tan_mul_cos h]
-    ring
+theorem cos_eq_two_mul_tan_half_div_one_sub_tan_half_sq (x : ℂ) (h : cos x ≠ -1) :
+    cos x = (1 - tan (x / 2) (cos_half_ne_zero_of_cos_ne_neg_one h) ^ 2) /
+      (1 + tan (x / 2) (cos_half_ne_zero_of_cos_ne_neg_one h) ^ 2) := by
+  have hc := cos_half_ne_zero_of_cos_ne_neg_one h
+  rw [div_eq_mul_inv₀, inv_one_add_tan_sq hc]
+  conv_lhs => rw [show x = 2 * (x / 2) by ring, cos_two_mul', ← tan_mul_cos hc]
+  ring
 
-theorem tan_eq_one_sub_tan_half_sq_div_one_add_tan_half_sq (x : ℂ) :
-    tan x = (2 * tan (x / 2)) / (1 - tan (x / 2) ^ 2) := by
-  conv_lhs => rw [← mul_div_cancel₀ x two_ne_zero, tan_two_mul]
+theorem sin_eq_two_mul_tan_half_div_one_add_tan_half_sq (x : ℂ) (h : cos (x / 2) ≠ 0) :
+    sin x = (2 * tan (x / 2)) / (1 + tan (x / 2) ^ 2) := by
+  rw [div_eq_mul_inv₀, inv_one_add_tan_sq h]
+  conv_lhs => rw [show x = 2 * (x / 2) by ring, sin_two_mul, ← tan_mul_cos h]
+  ring
+
+theorem tan_eq_one_sub_tan_half_sq_div_one_add_tan_half_sq (x : ℂ) {hx : cos x ≠ 0}
+    (h : cos (x / 2) ≠ 0) :
+    tan x = Checked.div (2 * tan (x / 2)) (1 - tan (x / 2) ^ 2)
+      (one_sub_tan_sq_ne_zero h (by rwa [mul_div_cancel₀])).isUnit := by
+  have := tan_two_mul (z := x / 2) (h := by rwa [mul_div_cancel₀]) h
+  simp only [mul_div_cancel₀] at this
+  exact this
 
 open scoped Topology
 
-theorem continuousOn_tan : ContinuousOn tan {x | cos x ≠ 0} :=
-  continuousOn_sin.div continuousOn_cos fun _x => id
-
+/-- The tangent is continuous on its domain. -/
 @[continuity]
-theorem continuous_tan : Continuous fun x : {x | cos x ≠ 0} => tan x :=
-  continuousOn_iff_continuous_domRestrict.1 continuousOn_tan
+theorem continuous_tan : Continuous fun x : {x : ℂ // cos x ≠ 0} ↦ tan x x.2 :=
+  (continuous_sin.comp continuous_subtype_val).div (continuous_cos.comp continuous_subtype_val)
+    fun x ↦ x.2.isUnit
 
 theorem cos_eq_iff_quadratic {z w : ℂ} :
     cos z = w ↔ exp (z * I) ^ 2 - 2 * w * exp (z * I) + 1 = 0 := by
@@ -267,10 +271,16 @@ theorem sin_mul_sum_sin (n : ℕ) (a b : ℂ) :
       simp_rw [cos_neg, sum_range_sub (fun i ↦ cos (a * (i - 1 / 2) + b)), cos_sub_cos]
       ring_nf
 
+theorem sin_half_ne_zero_of_ne {a : ℂ} (h : ∀ k : ℤ, a ≠ k * (2 * π)) : sin (a / 2) ≠ 0 :=
+  sin_ne_zero_iff.2 fun k hk ↦ h k <| by
+    calc a = 2 * (a / 2) := (mul_div_cancel₀ a).symm
+      _ = k * (2 * π) := by rw [hk]; ring
+
 theorem sum_sin (n : ℕ) {a : ℂ} (h : ∀ k : ℤ, a ≠ k * (2 * π)) (b : ℂ) :
-    ∑ i ∈ range n, sin (a * i + b) = sin (n * a / 2) * sin ((n - 1) * a / 2 + b) / sin (a / 2) := by
-  rw [← sin_mul_sum_sin]
-  grind [sin_ne_zero_iff]
+    ∑ i ∈ range n, sin (a * i + b) =
+      Checked.div (sin (n * a / 2) * sin ((n - 1) * a / 2 + b)) (sin (a / 2))
+        (sin_half_ne_zero_of_ne h).isUnit := by
+  rw [eq_div_iff_mul_eq, mul_comm _ (sin (a / 2)), sin_mul_sum_sin]
 
 theorem sin_mul_sum_cos (n : ℕ) (a b : ℂ) :
     sin (a / 2) * ∑ i ∈ range n, cos (a * i + b) = sin (n * a / 2) * cos ((n - 1) * a / 2 + b) := by
@@ -288,9 +298,10 @@ theorem sin_mul_sum_cos (n : ℕ) (a b : ℂ) :
       ring_nf
 
 theorem sum_cos (n : ℕ) {a : ℂ} (h : ∀ k : ℤ, a ≠ k * (2 * π)) (b : ℂ) :
-    ∑ i ∈ range n, cos (a * i + b) = sin (n * a / 2) * cos ((n - 1) * a / 2 + b) / sin (a / 2) := by
-  rw [← sin_mul_sum_cos]
-  grind [sin_ne_zero_iff]
+    ∑ i ∈ range n, cos (a * i + b) =
+      Checked.div (sin (n * a / 2) * cos ((n - 1) * a / 2 + b)) (sin (a / 2))
+        (sin_half_ne_zero_of_ne h).isUnit := by
+  rw [eq_div_iff_mul_eq, mul_comm _ (sin (a / 2)), sin_mul_sum_cos]
 
 end Complex
 
@@ -345,51 +356,92 @@ lemma abs_sin_eq_one_iff {x : ℝ} :
     · exact .inl ⟨n, by grind⟩
     · exact .inr ⟨n + 1, by grind⟩
 
-theorem tan_eq_zero_iff {θ : ℝ} : tan θ = 0 ↔ ∃ k : ℤ, k * π / 2 = θ :=
-  mod_cast @Complex.tan_eq_zero_iff θ
+/-- The tangent of a real number at which it is defined is zero iff the number is an integer
+multiple of `π`. -/
+theorem tan_eq_zero_iff {θ : ℝ} {hθ : cos θ ≠ 0} : tan θ = 0 ↔ ∃ k : ℤ, k * π = θ := by
+  rw [tan_eq_sin_div_cos, div_eq_zero_iff, sin_eq_zero_iff]
 
-theorem tan_eq_zero_iff' {θ : ℝ} (hθ : cos θ ≠ 0) : tan θ = 0 ↔ ∃ k : ℤ, k * π = θ := by
-  revert hθ
-  exact_mod_cast @Complex.tan_eq_zero_iff' θ
+theorem tan_ne_zero_iff {θ : ℝ} {hθ : cos θ ≠ 0} : tan θ ≠ 0 ↔ ∀ k : ℤ, k * π ≠ θ := by
+  rw [Ne, tan_eq_zero_iff, not_exists]
 
-theorem tan_ne_zero_iff {θ : ℝ} : tan θ ≠ 0 ↔ ∀ k : ℤ, k * π / 2 ≠ θ :=
-  mod_cast @Complex.tan_ne_zero_iff θ
+/-- The cosine of a sum in terms of the tangents of the summands. -/
+theorem cos_add_eq_mul_one_sub_tan_mul_tan {x y : ℝ} (hx : cos x ≠ 0) (hy : cos y ≠ 0) :
+    cos (x + y) = cos x * cos y * (1 - tan x * tan y) := by
+  rw [cos_add, ← tan_mul_cos hx, ← tan_mul_cos hy]
+  ring
 
-/-- `tan x` takes the junk value `0` when `cos x = 0` -/
-lemma tan_eq_zero_of_cos_eq_zero {x} (h : cos x = 0) : tan x = 0 :=
-  mod_cast @Complex.tan_eq_zero_of_cos_eq_zero x (mod_cast h)
+/-- The cosine of a difference in terms of the tangents of the terms. -/
+theorem cos_sub_eq_mul_one_add_tan_mul_tan {x y : ℝ} (hx : cos x ≠ 0) (hy : cos y ≠ 0) :
+    cos (x - y) = cos x * cos y * (1 + tan x * tan y) := by
+  rw [cos_sub, ← tan_mul_cos hx, ← tan_mul_cos hy]
+  ring
+
+theorem one_sub_tan_mul_tan_ne_zero {x y : ℝ} (hx : cos x ≠ 0) (hy : cos y ≠ 0)
+    (hxy : cos (x + y) ≠ 0) : 1 - tan x * tan y ≠ 0 :=
+  right_ne_zero_of_mul (cos_add_eq_mul_one_sub_tan_mul_tan hx hy ▸ hxy)
+
+theorem one_add_tan_mul_tan_ne_zero {x y : ℝ} (hx : cos x ≠ 0) (hy : cos y ≠ 0)
+    (hxy : cos (x - y) ≠ 0) : 1 + tan x * tan y ≠ 0 :=
+  right_ne_zero_of_mul (cos_sub_eq_mul_one_add_tan_mul_tan hx hy ▸ hxy)
+
+theorem one_sub_tan_sq_ne_zero {z : ℝ} (hz : cos z ≠ 0) (h : cos (2 * z) ≠ 0) :
+    1 - tan z ^ 2 ≠ 0 := by
+  rw [sq]
+  exact one_sub_tan_mul_tan_ne_zero hz hz (two_mul z ▸ h)
+
+/-! The rule below extends `checked_nonzero`: the denominators of the addition formulas for the
+real tangent are nonzero where the tangent of the sum or difference is defined. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | (apply Real.one_sub_tan_mul_tan_ne_zero <;> assumption)
+    | (apply Real.one_add_tan_mul_tan_ne_zero <;> assumption)
+    | (apply Real.one_sub_tan_sq_ne_zero <;> assumption))
 
 -- tangent half-angle substitution formulas
 
+theorem cos_half_ne_zero_of_cos_ne_neg_one {x : ℝ} (h : cos x ≠ -1) : cos (x / 2) ≠ 0 := by
+  intro h0
+  apply h
+  rw [show x = 2 * (x / 2) by ring, cos_two_mul, h0]
+  ring
+
 theorem cos_eq_two_mul_tan_half_div_one_sub_tan_half_sq (x : ℝ) (h : cos x ≠ -1) :
-    cos x = (1 - tan (x / 2) ^ 2) / (1 + tan (x / 2) ^ 2) :=
-  mod_cast @Complex.cos_eq_two_mul_tan_half_div_one_sub_tan_half_sq x (mod_cast h)
+    cos x = (1 - tan (x / 2) (cos_half_ne_zero_of_cos_ne_neg_one h) ^ 2) /
+      (1 + tan (x / 2) (cos_half_ne_zero_of_cos_ne_neg_one h) ^ 2) := by
+  have hc := cos_half_ne_zero_of_cos_ne_neg_one h
+  rw [div_eq_mul_inv₀, inv_one_add_tan_sq hc]
+  conv_lhs => rw [show x = 2 * (x / 2) by ring, cos_two_mul', ← tan_mul_cos hc]
+  ring
 
-/-- `tan (x / 2)` takes the junk value `0` when `sin x = 0` so this always holds. -/
-theorem sin_eq_two_mul_tan_half_div_one_add_tan_half_sq (x : ℝ) :
-    sin x = (2 * tan (x / 2)) / (1 + tan (x / 2) ^ 2) :=
-  mod_cast @Complex.sin_eq_two_mul_tan_half_div_one_add_tan_half_sq x
-
-theorem tan_eq_one_sub_tan_half_sq_div_one_add_tan_half_sq (x : ℝ) :
-    tan x = (2 * tan (x / 2)) / (1 - tan (x / 2) ^ 2) :=
-  mod_cast @Complex.tan_eq_one_sub_tan_half_sq_div_one_add_tan_half_sq x
+theorem sin_eq_two_mul_tan_half_div_one_add_tan_half_sq (x : ℝ) (h : cos (x / 2) ≠ 0) :
+    sin x = (2 * tan (x / 2)) / (1 + tan (x / 2) ^ 2) := by
+  rw [div_eq_mul_inv₀, inv_one_add_tan_sq h]
+  conv_lhs => rw [show x = 2 * (x / 2) by ring, sin_two_mul, ← tan_mul_cos h]
+  ring
 
 theorem sin_mul_sum_sin (n : ℕ) (a b : ℝ) :
     sin (a / 2) * ∑ i ∈ range n, sin (a * i + b) = sin (n * a / 2) * sin ((n - 1) * a / 2 + b) := by
   exact_mod_cast congr($(Complex.sin_mul_sum_sin n a b).re)
 
+theorem sin_half_ne_zero_of_ne {a : ℝ} (h : ∀ k : ℤ, a ≠ k * (2 * π)) : sin (a / 2) ≠ 0 :=
+  sin_ne_zero_iff.2 fun k hk ↦ h k <| by linarith
+
 theorem sum_sin (n : ℕ) {a : ℝ} (h : ∀ k : ℤ, a ≠ k * (2 * π)) (b : ℝ) :
-    ∑ i ∈ range n, sin (a * i + b) = sin (n * a / 2) * sin ((n - 1) * a / 2 + b) / sin (a / 2) := by
-  have h := Complex.sum_sin n (a := a) (by exact_mod_cast h) b
-  exact_mod_cast congr($(h).re)
+    ∑ i ∈ range n, sin (a * i + b) =
+      Checked.div (sin (n * a / 2) * sin ((n - 1) * a / 2 + b)) (sin (a / 2))
+        (sin_half_ne_zero_of_ne h).isUnit := by
+  rw [eq_div_iff_mul_eq, mul_comm _ (sin (a / 2)), sin_mul_sum_sin]
 
 theorem sin_mul_sum_cos (n : ℕ) (a b : ℝ) :
     sin (a / 2) * ∑ i ∈ range n, cos (a * i + b) = sin (n * a / 2) * cos ((n - 1) * a / 2 + b) := by
   exact_mod_cast congr($(Complex.sin_mul_sum_cos n a b).re)
 
 theorem sum_cos (n : ℕ) {a : ℝ} (h : ∀ k : ℤ, a ≠ k * (2 * π)) (b : ℝ) :
-    ∑ i ∈ range n, cos (a * i + b) = sin (n * a / 2) * cos ((n - 1) * a / 2 + b) / sin (a / 2) := by
-  have h := Complex.sum_cos n (a := a) (by exact_mod_cast h) b
-  exact_mod_cast congr($(h).re)
+    ∑ i ∈ range n, cos (a * i + b) =
+      Checked.div (sin (n * a / 2) * cos ((n - 1) * a / 2 + b)) (sin (a / 2))
+        (sin_half_ne_zero_of_ne h).isUnit := by
+  rw [eq_div_iff_mul_eq, mul_comm _ (sin (a / 2)), sin_mul_sum_cos]
 
 end Real

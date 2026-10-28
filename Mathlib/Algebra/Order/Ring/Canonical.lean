@@ -83,6 +83,14 @@ protected lemma mul_lt_mul_of_lt_of_lt
 
 end CanonicallyOrderedAdd
 
+/- Evidence rule: a truncated difference `b - a` is nonzero when a local hypothesis gives
+`a < b`. -/
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply ne_of_gt); (with_reducible_and_instances apply tsub_pos_of_lt);
+        assumption))
+
 section Sub
 
 section NonUnitalNonAssocSemiring

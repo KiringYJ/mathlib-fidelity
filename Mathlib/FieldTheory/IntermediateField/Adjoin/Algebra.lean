@@ -56,20 +56,22 @@ scoped instance : FaithfulSMul (Algebra.adjoin F S) (adjoin F S) :=
   Subalgebra.inclusion.faithfulSMul (algebra_adjoin_le_adjoin F S)
 
 scoped instance : IsFractionRing (Algebra.adjoin F S) (adjoin F S) :=
-  .of_field _ _ fun ⟨_, h⟩ ↦ have ⟨x, hx, y, hy, eq⟩ := mem_adjoin_iff_div.mp h
-    ⟨⟨x, hx⟩, ⟨y, hy⟩, Subtype.ext eq⟩
+  .of_field _ _ fun ⟨_, h⟩ ↦ have ⟨x, hx, y, hy, hy0, eq⟩ := mem_adjoin_iff_div.mp h
+    ⟨⟨x, hx⟩, ⟨y, hy⟩, ne_of_apply_ne Subtype.val hy0,
+      Subtype.ext <| by rw [IntermediateField.coe_div]; exact eq⟩
 
 scoped instance : Algebra.IsAlgebraic (Algebra.adjoin F S) (adjoin F S) :=
   IsLocalization.isAlgebraic _ (nonZeroDivisors (Algebra.adjoin F S))
 
 end algebraAdjoinAdjoin
 
-theorem adjoin_eq_algebra_adjoin (inv_mem : ∀ x ∈ Algebra.adjoin F S, x⁻¹ ∈ Algebra.adjoin F S) :
+theorem adjoin_eq_algebra_adjoin
+    (inv_mem : ∀ (x : E) {hx : IsUnit x}, x ∈ Algebra.adjoin F S → x⁻¹ ∈ Algebra.adjoin F S) :
     (adjoin F S).toSubalgebra = Algebra.adjoin F S :=
   le_antisymm
     (show adjoin F S ≤
         { Algebra.adjoin F S with
-          inv_mem' := inv_mem }
+          inv_mem' := inv_mem _ }
       from adjoin_le_iff.mpr Algebra.subset_adjoin)
     (algebra_adjoin_le_adjoin _ _)
 
@@ -106,9 +108,9 @@ lemma fg_top_iff :
     obtain ⟨x, s, rfl⟩ := IsLocalization.exists_mk'_eq (Algebra.EssFiniteType.submonoid F E) x
     have hs : s.1.1 ≠ 0 := (IsLocalization.map_units E s).ne_zero
     have H : IsLocalization.mk' E x s = x / s := by
-      simp [IsLocalization.mk'_eq_iff_eq_mul, hs]
+      simp [IsLocalization.mk'_eq_iff_eq_mul]
     rw [H]
-    exact div_mem (IntermediateField.algebra_adjoin_le_adjoin _ _ x.2)
+    exact SubfieldClass.div_mem (IntermediateField.algebra_adjoin_le_adjoin _ _ x.2)
       (IntermediateField.algebra_adjoin_le_adjoin _ _ s.1.2)
 
 variable (F E) in

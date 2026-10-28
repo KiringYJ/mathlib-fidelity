@@ -542,24 +542,24 @@ theorem Algebra.dvd_algebraMap_intNorm_self (x : B) : x ∣ algebraMap A B (intN
     refine ⟨y, ?_⟩
     apply FaithfulSMul.algebraMap_injective B L
     rw [← algebraMap_apply, map_mul, hy, mul_inv_cancel_left₀]
-    exact (map_ne_zero_iff _ (FaithfulSMul.algebraMap_injective B L)).mpr hx
   rw [← isIntegral_algHom_iff (toAlgHom A L E)
     (FaithfulSMul.algebraMap_injective L E), coe_toAlgHom', map_mul, map_inv₀,
-    algebraMap_apply A K L, algebraMap_intNorm (L := L), ← algebraMap_apply, ← algebraMap_apply,
-    norm_eq_prod_roots _ (Algebra.IsIntegral.isIntegral _) (IsAlgClosed.splits _),
-    ← Multiset.prod_erase
-    (a := algebraMap B E x)]
+    algebraMap_apply A K L, algebraMap_intNorm (L := L)]
+  -- The inverse carries invertibility evidence for its argument, so the argument is rewritten
+  -- with `simp`, which transports the evidence.
+  simp only [← IsScalarTower.algebraMap_apply]
+  rw [norm_eq_prod_roots _ (Algebra.IsIntegral.isIntegral _) (IsAlgClosed.splits _),
+    ← Multiset.prod_erase (a := algebraMap B E x)]
   · have := IsTorsionFree.trans_faithfulSMul B L E
     rw [mul_pow, ← mul_pow_sub_one (Nat.pos_iff_ne_zero.1 Module.finrank_pos) (algebraMap B E x),
       mul_assoc, inv_mul_cancel_left₀]
-    · refine IsIntegral.mul (IsIntegral.pow ?_ _)
-        (IsIntegral.pow (IsIntegral.multiset_prod (fun a ha ↦ ⟨minpoly A x, minpoly.monic
-          (IsIntegral.isIntegral x), ?_⟩)) _)
-      · exact isIntegral_algebraMap_iff.mpr (IsIntegral.isIntegral x)
-      · replace ha := Multiset.erase_subset _ _ ha
-        suffices (aeval a) ((minpoly A x).map (algebraMap A K)) = 0 by simpa
-        rw [← minpoly.isIntegrallyClosed_eq_field_fractions K L (IsIntegral.isIntegral x)]
-        exact mem_aroots.mp ha
-    · exact (map_ne_zero_iff _ (FaithfulSMul.algebraMap_injective B E)).mpr hx
+    refine IsIntegral.mul (IsIntegral.pow ?_ _)
+      (IsIntegral.pow (IsIntegral.multiset_prod (fun a ha ↦ ⟨minpoly A x, minpoly.monic
+        (IsIntegral.isIntegral x), ?_⟩)) _)
+    · exact isIntegral_algebraMap_iff.mpr (IsIntegral.isIntegral x)
+    · replace ha := Multiset.erase_subset _ _ ha
+      suffices (aeval a) ((minpoly A x).map (algebraMap A K)) = 0 by simpa
+      rw [← minpoly.isIntegrallyClosed_eq_field_fractions K L (IsIntegral.isIntegral x)]
+      exact mem_aroots.mp ha
   · rw [mem_aroots]
     simp [algebraMap_apply B L E, aeval_algebraMap_apply]

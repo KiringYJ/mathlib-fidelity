@@ -56,11 +56,10 @@ def Fintype.groupWithZeroOfCancel (M : Type*) [MonoidWithZero M] [IsLeftCancelMu
     [DecidableEq M] [Fintype M] [Nontrivial M] : GroupWithZero M :=
   { ‹Nontrivial M›,
     ‹MonoidWithZero M› with
-    inv := fun a => if h : a = 0 then 0 else Fintype.bijInv (mul_right_bijective_of_finite₀ h) 1
-    mul_inv_cancel := fun a ha => by
-      simp only [dite_eq_right ha]
-      exact Fintype.rightInverse_bijInv _ _
-    inv_zero := by simp }
+    isUnit_of_ne_zero := fun {a} ha =>
+      have hb : a * Fintype.bijInv (mul_right_bijective_of_finite₀ ha) 1 = 1 :=
+        Fintype.rightInverse_bijInv _ _
+      ⟨⟨a, _, hb, mul_eq_one_symm hb⟩, rfl⟩ }
 
 theorem exists_eq_pow_of_mul_eq_pow_of_coprime {R : Type*} [CommSemiring R]
     [GCDMonoid R] [Subsingleton Rˣ] {a b c : R} {n : ℕ} (cp : IsCoprime a b) (h : a * b = c ^ n) :
@@ -92,16 +91,21 @@ variable {R : Type*} {G : Type*}
 section Ring
 
 /-- Every finite domain is a division ring. More generally, they are fields; this can be found in
-`Mathlib/RingTheory/LittleWedderburn.lean`. -/
+`Mathlib/RingTheory/LittleWedderburn.lean`. A finite ring does not have characteristic zero, so
+the division ring has no rational embedding. -/
 @[instance_reducible]
 def Fintype.divisionRingOfIsDomain (R : Type*) [Ring R] [IsDomain R] [DecidableEq R] [Fintype R] :
-    DivisionRing R where
-  __ := (‹Ring R› :) -- this also works without the `( :)`, but it's slightly slow
-  __ := Fintype.groupWithZeroOfCancel R
-  nnqsmul := _
-  nnqsmul_def := fun _ _ => rfl
-  qsmul := _
-  qsmul_def := fun _ _ => rfl
+    DivisionRing R :=
+  have hR : ¬CharZero R := fun h ↦ not_injective_infinite_finite _ (@Nat.cast_injective R _ h)
+  { (‹Ring R› :), Fintype.groupWithZeroOfCancel R with
+    nnratCastOfCharZero h := (hR h).elim
+    nnratCastOfCharZero_mul_den h := (hR h).elim
+    nnqsmulOfCharZero h := (hR h).elim
+    nnqsmulOfCharZero_eq_mul h := (hR h).elim
+    ratCastOfCharZero h := (hR h).elim
+    ratCastOfCharZero_mul_den h := (hR h).elim
+    qsmulOfCharZero h := (hR h).elim
+    qsmulOfCharZero_eq_mul h := (hR h).elim }
 
 /-- Every finite commutative domain is a field. More generally, commutativity is not required: this
 can be found in `Mathlib/RingTheory/LittleWedderburn.lean`. -/
@@ -165,15 +169,15 @@ namespace Polynomial
 variable (K : Type*) [Field K] [Algebra R[X] K] [IsFractionRing R[X] K]
 
 theorem div_eq_quo_add_rem_div (f : R[X]) {g : R[X]} (hg : g.Monic) :
+    haveI : algebraMap R[X] K g ≠ 0 :=
+      (map_ne_zero_iff _ (IsFractionRing.injective R[X] K)).mpr hg.ne_zero
     ∃ q r : R[X], r.degree < g.degree ∧
       (algebraMap R[X] K f) / (algebraMap R[X] K g) =
         algebraMap R[X] K q + (algebraMap R[X] K r) / (algebraMap R[X] K g) := by
   refine ⟨f /ₘ g, f %ₘ g, ?_, ?_⟩
   · exact degree_modByMonic_lt _ hg
-  · have hg' : algebraMap R[X] K g ≠ 0 :=
-      (map_ne_zero_iff _ (IsFractionRing.injective R[X] K)).mpr (Monic.ne_zero hg)
-    field_simp
-    rw [add_comm, ← map_mul, ← map_add, modByMonic_add_div]
+  · conv_lhs => rw [← modByMonic_add_div f hg]
+    rw [map_add, map_mul, add_div, mul_div_cancel_left₀, add_comm]
 
 end Polynomial
 

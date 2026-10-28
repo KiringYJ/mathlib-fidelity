@@ -372,6 +372,14 @@ private lemma card_mul_eq_mul_card_of_injOn_opSMul {H : Subgroup G} [Fintype H]
     simpa [eq_inv_mul_iff_mul_eq.2 h, mul_assoc] using mul_mem (inv_mem hh₂) hh₁
   simp_all
 
+/- Evidence for the denominator `K - ψ` below: the conjugate `ψ` of the golden ratio is negative,
+and a hypothesis gives `1 < K`. -/
+local macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | ((with_reducible apply sub_ne_zero_of_ne); apply ne_of_gt;
+        exact Real.goldenConj_neg.trans (zero_lt_one.trans ‹_›)))
+
 open goldenRatio in
 /-- If `A` has doubling `K` strictly less than `φ`, then `A * A⁻¹` is covered by
 at most a constant number of cosets of a finite subgroup of `G`. -/
@@ -412,9 +420,7 @@ theorem doubling_lt_golden_ratio (hK₁ : 1 < K) (hKφ : K < φ)
           (#Z : ℝ)
       _ = (Fintype.card H / #S : ℝ)⁻¹ := by simp [← card_H_mul_card_Z]
       _ ≤ (((φ - K) * (K - ψ) / ((2 - K) * K) * #S) / #S)⁻¹ := by gcongr
-      _ = (2 - K) * K / ((φ - K) * (K - ψ)) := by
-        have : (#S : ℝ) ≠ 0 := by positivity
-        simp [this]
+      _ = (2 - K) * K / ((φ - K) * (K - ψ)) := by simp
   -- Write `r(z)` the number of representations of `z ∈ S` as `x * y⁻¹` for `x, y ∈ A`.
   let r z : ℕ := A.convolution A⁻¹ z
   -- `r` is invariant under inverses.
@@ -464,7 +470,7 @@ theorem doubling_lt_golden_ratio (hK₁ : 1 < K) (hKφ : K < φ)
     -- Now, we are done.
     calc
           (φ - K) * (K - ψ) / ((2 - K) * K) * #S
-      _ = (φ - K) * (K - ψ) * #S / ((2 - K) * K) := div_mul_eq_mul_div ..
+      _ = (φ - K) * (K - ψ) * #S / ((2 - K) * K) := div_mul_eq_mul_div₀ ..
       _ ≤ (2 - K) * K * l / ((2 - K) * K) := by
         have := Real.goldenRatio_mul_goldenConj
         have := Real.goldenRatio_add_goldenConj

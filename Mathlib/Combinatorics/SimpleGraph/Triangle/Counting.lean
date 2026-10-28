@@ -15,6 +15,10 @@ public import Mathlib.Tactic.Linarith
 
 In this file, we prove the triangle counting lemma.
 
+Edge densities and uniformity exist only between nonempty finsets of vertices, so the finsets in
+the statements are nonempty; their nonemptiness is unified from the density and uniformity
+hypotheses.
+
 ## References
 
 [Yaël Dillies, Bhavik Mehta, *Formalising Szemerédi’s Regularity Lemma in Lean*][srl_itp]
@@ -28,11 +32,14 @@ attribute [-instance] decidableEq_of_subsingleton
 open Finset Fintype
 
 variable {α : Type*} (G : SimpleGraph α) [DecidableRel G.Adj] {ε : ℝ} {s t u : Finset α}
+  {hs : s.Nonempty} {ht : t.Nonempty} {hu : u.Nonempty}
 
 namespace SimpleGraph
 
-/-- The vertices of `s` whose density in `t` is `ε` less than expected. -/
-private noncomputable def badVertices (ε : ℝ) (s t : Finset α) : Finset α :=
+/-- The vertices of `s` whose density in `t` is `ε` less than expected. The edge density of `s`
+and `t` exists because both are nonempty. -/
+private noncomputable def badVertices (ε : ℝ) (s t : Finset α) (hs : s.Nonempty := by assumption)
+    (ht : t.Nonempty := by assumption) : Finset α :=
   {x ∈ s | #{y ∈ t | G.Adj x y} < (G.edgeDensity s t - ε) * #t}
 
 private lemma card_interedges_badVertices_le :
@@ -44,23 +51,25 @@ private lemma card_interedges_badVertices_le :
   simp_rw [Nat.cast_sum, card_map, ← nsmul_eq_mul, smul_mul_assoc, mul_comm (#t : ℝ)]
   exact sum_le_card_nsmul _ _ _ fun x hx ↦ (mem_filter.1 hx).2.le
 
-private lemma edgeDensity_badVertices_le (hε : 0 ≤ ε) (dst : 2 * ε ≤ G.edgeDensity s t) :
+private lemma edgeDensity_badVertices_le {hB : (badVertices G ε s t).Nonempty} :
     G.edgeDensity (badVertices G ε s t) t ≤ G.edgeDensity s t - ε := by
   rw [edgeDensity_def]
   push_cast
-  refine div_le_of_le_mul₀ (by positivity) (sub_nonneg_of_le <| by linarith) ?_
-  rw [mul_comm]
+  rw [div_le_iff₀ (by positivity), mul_comm]
   exact G.card_interedges_badVertices_le
 
 private lemma card_badVertices_le (dst : 2 * ε ≤ G.edgeDensity s t) (hst : G.IsUniform ε s t) :
     #(badVertices G ε s t) ≤ #s * ε := by
   have hε : ε ≤ 1 := (le_mul_of_one_le_left hst.pos.le (by simp)).trans
-    (dst.trans <| mod_cast edgeDensity_le_one _ _ _)
+    (dst.trans <| mod_cast G.edgeDensity_le_one _ _ hs ht)
   by_contra! h
+  have hB : (badVertices G ε s t).Nonempty := by
+    rw [← card_pos, ← Nat.cast_pos (α := ℝ)]
+    exact (mul_nonneg (Nat.cast_nonneg _) hst.pos.le).trans_lt h
   have : |(G.edgeDensity (badVertices G ε s t) t - G.edgeDensity s t : ℝ)| < ε :=
-    hst (filter_subset _ _) Subset.rfl h.le (mul_le_of_le_one_right (Nat.cast_nonneg _) hε)
+    hst (filter_subset _ _) Subset.rfl h.le (mul_le_of_le_one_right (Nat.cast_nonneg _) hε) hB ht
   rw [abs_sub_lt_iff] at this
-  linarith [G.edgeDensity_badVertices_le hst.pos.le dst]
+  linarith [G.edgeDensity_badVertices_le (ε := ε) (hB := hB)]
 
 /-- A subset of the triangles constructed in a weird way to make them easy to count. -/
 private lemma triangle_split_helper [DecidableEq α] :
@@ -82,24 +91,30 @@ private lemma good_vertices_triangle_card [DecidableEq α] (dst : 2 * ε ≤ G.e
   rw [← or_and_left, and_or_left] at hx
   simp only [false_or, and_not_self, mul_comm (_ - _)] at hx
   obtain ⟨-, hxY, hsu⟩ := hx
+  have hε := utu.pos
   have hY : #t * ε ≤ #{y ∈ t | G.Adj x y} := by
     refine le_trans ?_ hxY; gcongr; linarith
   have hZ : #u * ε ≤ #{y ∈ u | G.Adj x y} := by
     refine le_trans ?_ hsu; gcongr; linarith
+  have hY' : {y ∈ t | G.Adj x y}.Nonempty := by
+    rw [← card_pos, ← Nat.cast_pos (α := ℝ)]
+    exact hY.trans_lt' (by positivity)
+  have hZ' : {y ∈ u | G.Adj x y}.Nonempty := by
+    rw [← card_pos, ← Nat.cast_pos (α := ℝ)]
+    exact hZ.trans_lt' (by positivity)
   rw [card_image_of_injective _ (Prod.mk_right_injective _)]
-  have := utu (filter_subset (G.Adj x) _) (filter_subset (G.Adj x) _) hY hZ
+  have := utu (filter_subset (G.Adj x) _) (filter_subset (G.Adj x) _) hY hZ hY' hZ'
   have : ε ≤ G.edgeDensity {y ∈ t | G.Adj x y} {y ∈ u | G.Adj x y} := by
     rw [abs_sub_lt_iff] at this; linarith
   rw [edgeDensity_def] at this
   push_cast at this
-  have hε := utu.pos.le
-  refine le_trans ?_ (mul_le_of_le_div₀ (Nat.cast_nonneg _) (by positivity) this)
+  refine le_trans ?_ ((le_div_iff₀ (by positivity)).1 this)
   refine Eq.trans_le ?_
-    (mul_le_mul_of_nonneg_left (mul_le_mul hY hZ (by positivity) (by positivity)) hε)
+    (mul_le_mul_of_nonneg_left (mul_le_mul hY hZ (by positivity) (by positivity)) hε.le)
   ring
 
-/-- The **Triangle Counting Lemma**. If `G` is a graph and `s`, `t`, `u` are sets of vertices such
-that each pair is `ε`-uniform and `2 * ε`-dense, then a proportion of at least
+/-- The **Triangle Counting Lemma**. If `G` is a graph and `s`, `t`, `u` are nonempty sets of
+vertices such that each pair is `ε`-uniform and `2 * ε`-dense, then a proportion of at least
 `(1 - 2 * ε) * ε ^ 3` of the triples `(a, b, c) ∈ s × t × u` are triangles. -/
 lemma triangle_counting'
     (dst : 2 * ε ≤ G.edgeDensity s t) (hst : G.IsUniform ε s t)
@@ -145,8 +160,8 @@ private lemma triple_eq_triple_of_mem (hst : Disjoint s t) (hsu : Disjoint s u) 
 
 variable [Fintype α]
 
-/-- The **Triangle Counting Lemma**. If `G` is a graph and `s`, `t`, `u` are disjoint sets of
-vertices such that each pair is `ε`-uniform and `2 * ε`-dense, then `G` contains at least
+/-- The **Triangle Counting Lemma**. If `G` is a graph and `s`, `t`, `u` are disjoint nonempty
+sets of vertices such that each pair is `ε`-uniform and `2 * ε`-dense, then `G` contains at least
 `(1 - 2 * ε) * ε ^ 3 * |s| * |t| * |u|` triangles. -/
 lemma triangle_counting
     (dst : 2 * ε ≤ G.edgeDensity s t) (ust : G.IsUniform ε s t) (hst : Disjoint s t)

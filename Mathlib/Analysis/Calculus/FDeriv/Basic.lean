@@ -236,8 +236,8 @@ nonrec theorem HasFDerivAtFilter.mono {D : Type*} {f : D → F} {coord : D → E
     HasFDerivAtFilter f f' L₁ coord :=
   .of_isLittleOTVS <| h.isLittleOTVS.mono hst
 
-theorem HasFDerivWithinAt.mono_of_mem_nhdsWithin {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
-    {x : D} {s t : Set D}
+theorem HasFDerivWithinAt.mono_of_mem_nhdsWithin {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → E} {x : D} {s t : Set D}
     (h : HasFDerivWithinAt f f' t x coord) (hst : t ∈ 𝓝[s] x) :
     HasFDerivWithinAt f f' s x coord :=
   h.mono <| prod_mono_left _ (nhdsWithin_le_iff.mpr hst)
@@ -258,8 +258,8 @@ theorem HasFDerivAt.hasFDerivWithinAt {D : Type*} [TopologicalSpace D] {f : D �
   h.hasFDerivAtFilter <| prod_mono_left _ nhdsWithin_le_nhds
 
 @[fun_prop]
-theorem HasFDerivWithinAt.differentiableWithinAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
-    {x : D} {s : Set D} (h : HasFDerivWithinAt f f' s x coord) :
+theorem HasFDerivWithinAt.differentiableWithinAt {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → E} {x : D} {s : Set D} (h : HasFDerivWithinAt f f' s x coord) :
     DifferentiableWithinAt 𝕜 f s x coord :=
   ⟨f', h⟩
 
@@ -269,13 +269,14 @@ theorem HasFDerivAt.differentiableAt {D : Type*} [TopologicalSpace D] {f : D →
   ⟨f', h⟩
 
 @[simp]
-theorem hasFDerivWithinAt_univ {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D} : HasFDerivWithinAt f f' univ x coord ↔ HasFDerivAt f f' x coord := by
+theorem hasFDerivWithinAt_univ {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+    {x : D} : HasFDerivWithinAt f f' univ x coord ↔ HasFDerivAt f f' x coord := by
   simp only [HasFDerivWithinAt, nhdsWithin_univ, HasFDerivAt]
 
 alias ⟨HasFDerivWithinAt.hasFDerivAt_of_univ, _⟩ := hasFDerivWithinAt_univ
 
-theorem differentiableWithinAt_univ {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D} :
-    DifferentiableWithinAt 𝕜 f univ x coord ↔ DifferentiableAt 𝕜 f x coord := by
+theorem differentiableWithinAt_univ {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+    {x : D} : DifferentiableWithinAt 𝕜 f univ x coord ↔ DifferentiableAt 𝕜 f x coord := by
   simp only [DifferentiableWithinAt, hasFDerivWithinAt_univ, DifferentiableAt]
 
 theorem fderiv_zero_of_not_differentiableAt (h : ¬DifferentiableAt 𝕜 f x) : fderiv 𝕜 f x = 0 := by
@@ -367,8 +368,8 @@ theorem DifferentiableWithinAt.of_subsingleton [T1Space E] (h : s.Subsingleton) 
   .of_finite h.finite
 
 @[fun_prop]
-protected theorem HasStrictFDerivAt.hasFDerivAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
-    {x : D} (hf : HasStrictFDerivAt f f' x coord) :
+protected theorem HasStrictFDerivAt.hasFDerivAt {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → E} {x : D} (hf : HasStrictFDerivAt f f' x coord) :
     HasFDerivAt f f' x coord :=
   .of_isLittleOTVS <| by
     simpa only using! hf.isLittleOTVS.comp_tendsto (tendsto_id.prodMk_nhds tendsto_const_nhds)
@@ -436,13 +437,15 @@ theorem fderivWithin_zero_of_not_uniqueDiffWithinAt {f : 𝕜 → F} {x : 𝕜} 
     (h : ¬UniqueDiffWithinAt 𝕜 s x) : fderivWithin 𝕜 f s x = 0 :=
   fderivWithin_zero_of_not_accPt <| mt AccPt.uniqueDiffWithinAt h
 
-theorem DifferentiableWithinAt.hasFDerivWithinAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D} {s : Set D} (h : DifferentiableWithinAt 𝕜 f s x coord) :
+theorem DifferentiableWithinAt.hasFDerivWithinAt {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → E} {x : D} {s : Set D} (h : DifferentiableWithinAt 𝕜 f s x coord) :
     HasFDerivWithinAt f (fderivWithin 𝕜 f s x coord) s x coord := by
   simp only [fderivWithin, dite_eq_left h]
   split_ifs with h₀
   exacts [h₀, Classical.choose_spec h]
 
-theorem DifferentiableAt.hasFDerivAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D} (h : DifferentiableAt 𝕜 f x coord) :
+theorem DifferentiableAt.hasFDerivAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+    {x : D} (h : DifferentiableAt 𝕜 f x coord) :
     HasFDerivAt f (fderiv 𝕜 f x coord) x coord := by
   rw [fderiv, ← hasFDerivWithinAt_univ]
   rw [← differentiableWithinAt_univ] at h

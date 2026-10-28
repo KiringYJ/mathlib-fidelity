@@ -29,10 +29,14 @@ which implies one is sent to zero and the completion ring is trivial.
 
 The main definition is `CompletableTopField` which packages the assumptions as a Prop-valued
 type class and the main results are the instances `UniformSpace.Completion.instField` and
-`IsTopologicalDivisionRing (UniformSpace.Completion K)`.  The inverse of the completion,
-`UniformSpace.Completion.instInvCompletion`, exists for a completable field whose inversion is
-continuous away from zero: it is the unique continuous extension of inversion away from zero, with
-`0⁻¹ = 0` as in every field.
+`IsTopologicalDivisionRing (UniformSpace.Completion K)`.
+
+Inversion is defined on the nonzero elements only. A filter without a cluster point at `0` is
+supported on them, so its image under `x ↦ x⁻¹` is the image of its restriction to the
+invertible elements. The inverse of a nonzero element `x` of the completion is the limit of the
+inverses of the nonzero elements of `K` near `x`, and inversion is continuous on the nonzero
+elements of the completion (`ContinuousInv₀`). These constructions use the topological ring
+structure of `K`, but not the continuity of inversion on `K`.
 -/
 
 @[expose] public section
@@ -52,9 +56,23 @@ the mapping x ↦ x⁻¹ of every Cauchy filter (with respect to the additive un
 which does not have a cluster point at 0 is a Cauchy filter
 (with respect to the additive uniform structure). This ensures the completion is
 a field.
--/
+
+A filter without a cluster point at `0` is supported on the invertible elements, where the
+inverse is defined, so its image under the inverse is the image of its restriction
+`comap Subtype.val F` to the invertible elements. -/
 class CompletableTopField : Prop extends T0Space K where
-  nice : ∀ F : Filter K, Cauchy F → 𝓝 0 ⊓ F = ⊥ → Cauchy (map (fun x => x⁻¹) F)
+  nice : ∀ F : Filter K, Cauchy F → 𝓝 0 ⊓ F = ⊥ →
+    Cauchy (map (fun x : {x : K | IsUnit x} ↦ Checked.inv (x : K) x.2)
+      (Filter.comap Subtype.val F))
+
+variable {K} in
+/-- A filter without a cluster point at `0` is supported on the invertible elements. -/
+private theorem setOf_isUnit_mem_of_inf_eq_bot {F : Filter K} (hF : 𝓝 0 ⊓ F = ⊥) :
+    {x : K | IsUnit x} ∈ F := by
+  obtain ⟨U, hU, V, hV, hUV⟩ := inf_eq_bot_iff.mp hF
+  refine mem_of_superset hV fun x hx ↦ Ne.isUnit fun h ↦ ?_
+  have h0 : (0 : K) ∈ U ∩ V := ⟨mem_of_mem_nhds hU, h ▸ hx⟩
+  rwa [hUV] at h0
 
 namespace UniformSpace
 
@@ -65,150 +83,116 @@ instance (priority := 100) [T0Space K] : Nontrivial (hat K) :=
 
 variable {K}
 
-/-- The extension of inversion to the completion of a field by continuity, which defines the inverse
-of the completion away from zero.  Its value at zero is not specified in general, so it is used
-only in proofs about `Inv (hat K)`.  It is an abbreviation so that the body of
-`instInvCompletion`, which cannot mention a private declaration, agrees with it at reducible
-transparency.  Since it is reducible, a lemma about it must not carry `@[fun_prop]` or `@[simp]`,
-which would index the lemma under `IsDenseInducing.extend`. -/
-private abbrev hatInv : hat K → hat K :=
-  isDenseInducing_coe.extend fun x : K => (↑x⁻¹ : hat K)
-
-private theorem continuous_hatInv [CompletableTopField K] {x : hat K} (h : x ≠ 0) :
-    ContinuousAt hatInv x := by
-  refine isDenseInducing_coe.continuousAt_extend ?_
-  apply mem_of_superset (compl_singleton_mem_nhds h)
-  intro y y_ne
-  rw [mem_compl_singleton_iff] at y_ne
-  apply CompleteSpace.complete
-  have : (fun (x : K) => (↑x⁻¹ : hat K)) =
-      ((fun (y : K) => (↑y : hat K)) ∘ (fun (x : K) => (x⁻¹ : K))) := by
-    simp [Function.comp_def]
-  rw [this, ← Filter.map_map]
-  apply Cauchy.map _ (Completion.uniformContinuous_coe K)
-  apply CompletableTopField.nice
-  · have := isDenseInducing_coe.comap_nhds_neBot y
+/-- The inverses of the invertible elements of `K` near a nonzero element of the completion
+converge in the completion. -/
+private theorem exists_tendsto_coe_inv [CompletableTopField K] {x : hat K} (hx : x ≠ 0) :
+    ∃ y : hat K, Tendsto (fun z : {z : K | IsUnit z} ↦ ((Checked.inv (z : K) z.2 : K) : hat K))
+      (Filter.comap Subtype.val (Filter.comap (↑) (𝓝 x))) (𝓝 y) := by
+  have hF : Cauchy (Filter.comap ((↑) : K → hat K) (𝓝 x)) := by
+    have := isDenseInducing_coe.comap_nhds_neBot x
     apply cauchy_nhds.comap
     rw [Completion.comap_coe_eq_uniformity]
-  · have eq_bot : 𝓝 (0 : hat K) ⊓ 𝓝 y = ⊥ := by
+  have h0 : 𝓝 0 ⊓ Filter.comap ((↑) : K → hat K) (𝓝 x) = ⊥ := by
+    have eq_bot : 𝓝 (0 : hat K) ⊓ 𝓝 x = ⊥ := by
       by_contra h
-      exact y_ne (eq_of_nhds_neBot <| neBot_iff.mpr h).symm
+      exact hx (eq_of_nhds_neBot <| neBot_iff.mpr h).symm
     rw [isDenseInducing_coe.nhds_eq_comap (0 : K), ← Filter.comap_inf]
     norm_cast
     rw [eq_bot]
     exact comap_bot
+  obtain ⟨y, hy⟩ :=
+    CompleteSpace.complete ((CompletableTopField.nice _ hF h0).map (uniformContinuous_coe K))
+  exact ⟨y, by rwa [Filter.map_map] at hy⟩
 
-open scoped Classical in
-/-- The inverse on the completion of a completable field whose inversion is continuous away from
-zero: the unique continuous extension of the inverse of `K` away from zero
-(`UniformSpace.Completion.coe_inv` and the `ContinuousInv₀` instance), with `0⁻¹ = 0` as in every
-field. -/
-@[nolint unusedArguments]
-instance instInvCompletion [ContinuousInv₀ K] [CompletableTopField K] : Inv (hat K) :=
-  ⟨fun x => if x = 0 then 0 else isDenseInducing_coe.extend (fun y : K => (↑y⁻¹ : hat K)) x⟩
+section Ring
 
-section ContinuousInv₀
+variable [IsTopologicalRing K] [IsUniformAddGroup K]
 
-variable [ContinuousInv₀ K]
+/-- The inverse of the image of an element of a separated field is the image of its inverse. The
+completion is then nontrivial, so an element whose image is invertible is nonzero. -/
+@[norm_cast]
+theorem coe_inv [T0Space K] (x : K) {hx : IsUnit (x : hat K)} :
+    (x : hat K)⁻¹ =
+      ((Checked.inv x (Ne.isUnit fun h ↦ hx.ne_zero (h ▸ coe_zero)) : K) : hat K) :=
+  inv_eq_of_mul_eq_one_right₀ (by rw [← coe_mul, mul_inv_cancel₀, coe_one])
 
-private theorem hatInv_extends {x : K} (h : x ≠ 0) : hatInv (x : hat K) = ↑(x⁻¹ : K) :=
-  isDenseInducing_coe.extend_eq_at ((continuous_coe K).continuousAt.comp (continuousAt_inv₀ h))
+/-- A limit of the inverses of the invertible elements of `K` near a nonzero element `x` of the
+completion is an inverse of `x`. -/
+private theorem mul_eq_one_of_tendsto {x y : hat K} (hx : x ≠ 0)
+    (hy : Tendsto (fun z : {z : K | IsUnit z} ↦ ((Checked.inv (z : K) z.2 : K) : hat K))
+      (Filter.comap Subtype.val (Filter.comap (↑) (𝓝 x))) (𝓝 y)) :
+    x * y = 1 := by
+  have : NeBot (Filter.comap (Subtype.val : {z : K | IsUnit z} → K)
+      (Filter.comap ((↑) : K → hat K) (𝓝 x))) := by
+    refine (isDenseInducing_coe.comap_nhds_neBot x).comap_of_range_mem ?_
+    rw [Subtype.range_val]
+    refine Filter.mem_comap.mpr
+      ⟨{0}ᶜ, compl_singleton_mem_nhds hx, fun z hz ↦ Ne.isUnit fun h ↦ hz ?_⟩
+    rw [mem_singleton_iff, h, coe_zero]
+  have hval : Tendsto (fun z : {z : K | IsUnit z} ↦ ((z : K) : hat K))
+      (Filter.comap Subtype.val (Filter.comap (↑) (𝓝 x))) (𝓝 x) :=
+    (tendsto_comap (f := ((↑) : K → hat K))).comp tendsto_comap
+  have hone : Tendsto (fun _ : {z : K | IsUnit z} ↦ (1 : hat K))
+      (Filter.comap Subtype.val (Filter.comap (↑) (𝓝 x))) (𝓝 (x * y)) :=
+    (hval.mul hy).congr fun z ↦ by rw [← coe_mul, mul_inv_cancel₀, coe_one]
+  exact tendsto_nhds_unique hone tendsto_const_nhds
 
 variable [CompletableTopField K]
 
-@[norm_cast]
-theorem coe_inv (x : K) : (x : hat K)⁻¹ = ((x⁻¹ : K) : hat K) := by
-  by_cases h : x = 0
-  · rw [h, inv_zero]
-    dsimp [Inv.inv]
-    norm_cast
-    simp
-  · conv_lhs => dsimp [Inv.inv]
-    rw [ite_eq_right]
-    · exact hatInv_extends h
-    · exact fun H => h (isDenseEmbedding_coe.injective H)
+/-- The inverse of an invertible element `x` of the completion is the limit of the inverses of
+the invertible elements of `K` near `x`. -/
+private theorem tendsto_coe_inv {x : hat K} (hx : IsUnit x) :
+    Tendsto (fun z : {z : K | IsUnit z} ↦ ((Checked.inv (z : K) z.2 : K) : hat K))
+      (Filter.comap Subtype.val (Filter.comap (↑) (𝓝 x))) (𝓝 x⁻¹) := by
+  obtain ⟨y, hy⟩ := exists_tendsto_coe_inv hx.ne_zero
+  rwa [inv_eq_of_mul_eq_one_right₀ (mul_eq_one_of_tendsto hx.ne_zero hy)]
 
-/-- The inverse of the completion is continuous away from zero. -/
-instance : ContinuousInv₀ (hat K) where
-  continuousAt_inv₀ x x_ne := by
-    have : { y | hatInv y = y⁻¹ } ∈ 𝓝 x :=
-      haveI : {(0 : hat K)}ᶜ ⊆ { y : hat K | hatInv y = y⁻¹ } := by
-        intro y y_ne
-        rw [mem_compl_singleton_iff] at y_ne
-        dsimp [Inv.inv]
-        rw [ite_eq_right y_ne]
-      mem_of_superset (compl_singleton_mem_nhds x_ne) this
-    exact ContinuousAt.congr (continuous_hatInv x_ne) this
-
-end ContinuousInv₀
-
-variable [IsTopologicalDivisionRing K] [CompletableTopField K] [IsUniformAddGroup K]
-
-private theorem mul_hatInv_cancel {x : hat K} (x_ne : x ≠ 0) : x * hatInv x = 1 := by
-  have : T1Space (hat K) := T2Space.t1Space
-  let f := fun x : hat K => x * hatInv x
-  let c := (fun (x : K) => (x : hat K))
-  change f x = 1
-  have cont : ContinuousAt f x := continuousAt_id.mul (continuous_hatInv x_ne)
-  have clo : x ∈ closure (c '' {0}ᶜ) := by
-    have := isDenseInducing_coe.dense x
-    rw [← image_univ, show (univ : Set K) = {0} ∪ {0}ᶜ from (union_compl_self _).symm,
-      image_union] at this
-    apply mem_closure_of_mem_closure_union this
-    rw [image_singleton]
-    exact compl_singleton_mem_nhds x_ne
-  have fxclo : f x ∈ closure (f '' c '' {0}ᶜ) := mem_closure_image cont clo
-  have : f '' c '' {0}ᶜ ⊆ {1} := by
-    rw [image_image]
-    rintro _ ⟨z, z_ne, rfl⟩
-    rw [mem_singleton_iff]
-    rw [mem_compl_singleton_iff] at z_ne
-    dsimp [f]
-    rw [hatInv_extends z_ne, ← coe_mul]
-    rw [mul_inv_cancel₀ z_ne, coe_one]
-  replace fxclo := closure_mono this fxclo
-  rwa [closure_singleton, mem_singleton_iff] at fxclo
-
+/-- The completion of a completable topological field is a field. The inverse of a nonzero
+element `x` is the limit of the inverses of the nonzero elements of `K` near `x`. -/
 instance instField : Field (hat K) where
-  mul_inv_cancel := fun x x_ne => by simp only [Inv.inv, ite_eq_right x_ne, mul_hatInv_cancel x_ne]
-  inv_zero := by simp only [Inv.inv, ite_true]
-  -- TODO: use a better defeq
-  nnqsmul := _
-  nnqsmul_def := fun _ _ => rfl
-  qsmul := _
-  qsmul_def := fun _ _ => rfl
+  isUnit_of_ne_zero {x} hx := by
+    obtain ⟨y, hy⟩ := exists_tendsto_coe_inv hx
+    exact isUnit_iff_exists_inv.mpr ⟨y, mul_eq_one_of_tendsto hx hy⟩
+
+/-- Inversion on the completion is continuous on the invertible elements: it is the extension by
+continuity of inversion on the invertible elements of `K`, which are dense among them. -/
+instance : ContinuousInv₀ (hat K) where
+  continuous_inv := by
+    let j : {z : K | IsUnit z} → {x : hat K | IsUnit x} := fun z ↦ ⟨z, z.2.map coeRingHom⟩
+    have hrange : range j = Subtype.val ⁻¹' range ((↑) : K → hat K) := by
+      ext u
+      refine ⟨fun ⟨z, hz⟩ ↦ ⟨z, congrArg Subtype.val hz⟩, fun ⟨z, hz⟩ ↦ ?_⟩
+      refine ⟨⟨z, Ne.isUnit fun h ↦ u.2.ne_zero ?_⟩, Subtype.ext hz⟩
+      rw [← hz, h, coe_zero]
+    have hopen : IsOpen {x : hat K | IsUnit x} := by
+      simpa only [isUnit_iff_ne_zero] using isOpen_ne
+    have hj : IsDenseInducing j :=
+      ⟨IsInducing.subtypeVal.of_comp_iff.mp
+          ((isUniformInducing_coe K).isInducing.comp IsInducing.subtypeVal),
+        by rw [DenseRange, hrange]; exact denseRange_coe.preimage hopen.isOpenMap_subtype_val⟩
+    have h (u : {x : hat K | IsUnit x}) :
+        Tendsto (fun z : {z : K | IsUnit z} ↦ ((Checked.inv (z : K) z.2 : K) : hat K))
+          (Filter.comap j (𝓝 u)) (𝓝 (Units.val (u.2.unit⁻¹) : hat K)) := by
+      have := tendsto_coe_inv u.2
+      rw [Filter.comap_comap] at this
+      rwa [nhds_subtype, Filter.comap_comap]
+    have heq : (fun u : {x : hat K | IsUnit x} ↦ (Units.val (u.2.unit⁻¹) : hat K)) =
+        hj.extend fun z ↦ ((Checked.inv (z : K) z.2 : K) : hat K) :=
+      funext fun u ↦ (hj.extend_eq_of_tendsto (h u)).symm
+    change Continuous fun u : {x : hat K | IsUnit x} ↦ (Units.val (u.2.unit⁻¹) : hat K)
+    rw [heq]
+    exact hj.continuous_extend fun u ↦ ⟨_, h u⟩
 
 instance : IsTopologicalDivisionRing (hat K) :=
   { Completion.topologicalRing with }
+
+end Ring
 
 end Completion
 
 end UniformSpace
 
-variable (L : Type*) [Field L] [UniformSpace L] [CompletableTopField L]
-
-instance Subfield.completableTopField (K : Subfield L) : CompletableTopField K where
-  nice F F_cau inf_F := by
-    let i : K →+* L := K.subtype
-    have hi : IsUniformInducing i := isUniformEmbedding_subtype_val.isUniformInducing
-    rw [← hi.cauchy_map_iff] at F_cau ⊢
-    rw [map_comm (show (i ∘ fun x => x⁻¹) = (fun x => x⁻¹) ∘ i by ext; rfl)]
-    apply CompletableTopField.nice _ F_cau
-    rw [← Filter.push_pull', ← map_zero i, ← hi.isInducing.nhds_eq_comap, inf_F, Filter.map_bot]
-
-instance (priority := 100) completableTopField_of_complete (L : Type*) [Field L] [UniformSpace L]
-    [IsTopologicalDivisionRing L] [T0Space L] [CompleteSpace L] : CompletableTopField L where
-  nice F cau_F hF := by
-    have : NeBot F := cau_F.1
-    rcases CompleteSpace.complete cau_F with ⟨x, hx⟩
-    have hx' : x ≠ 0 := by
-      rintro rfl
-      rw [inf_eq_right.mpr hx] at hF
-      exact cau_F.1.ne hF
-    exact Filter.Tendsto.cauchy_map <|
-      calc
-        map (fun x => x⁻¹) F ≤ map (fun x => x⁻¹) (𝓝 x) := map_mono hx
-        _ ≤ 𝓝 x⁻¹ := continuousAt_inv₀ hx'
+section UniformInducing
 
 variable {α β : Type*} [Field β] [b : UniformSpace β] [CompletableTopField β]
   [Field α]
@@ -220,9 +204,45 @@ theorem IsUniformInducing.completableTopField
     {f : α →+* β} (hf : IsUniformInducing f) :
     CompletableTopField α := by
   refine CompletableTopField.mk (fun F F_cau inf_F => ?_)
-  rw [← IsUniformInducing.cauchy_map_iff hf] at F_cau ⊢
-  have h_comm : (f ∘ fun x => x⁻¹) = (fun x => x⁻¹) ∘ f := by
-    ext; simp only [Function.comp_apply, map_inv₀]
-  rw [Filter.map_comm h_comm]
-  apply CompletableTopField.nice _ F_cau
-  rw [← Filter.push_pull', ← map_zero f, ← hf.isInducing.nhds_eq_comap, inf_F, Filter.map_bot]
+  have inf_F' : 𝓝 0 ⊓ map f F = ⊥ := by
+    rw [← Filter.push_pull', ← map_zero f, ← hf.isInducing.nhds_eq_comap, inf_F,
+      Filter.map_bot]
+  have : NeBot (Filter.comap Subtype.val F) := F_cau.1.comap_of_range_mem <| by
+    rw [Subtype.range_val]
+    exact setOf_isUnit_mem_of_inf_eq_bot inf_F
+  -- `f` maps the invertible elements of `α` to invertible elements of `β`, and commutes with
+  -- inversion there.
+  let k : {x : α | IsUnit x} → {y : β | IsUnit y} := fun x ↦ ⟨f x, x.2.map f⟩
+  have hk : Tendsto k (Filter.comap Subtype.val F) (Filter.comap Subtype.val (map f F)) :=
+    tendsto_comap_iff.mpr (tendsto_map.comp tendsto_comap)
+  have hinv : (f ∘ fun x : {x : α | IsUnit x} ↦ Checked.inv (x : α) x.2) =
+      (fun y : {y : β | IsUnit y} ↦ Checked.inv (y : β) y.2) ∘ k :=
+    funext fun x ↦ map_inv₀ f (x : α)
+  rw [← hf.cauchy_map_iff, Filter.map_map, hinv, ← Filter.map_map]
+  exact (CompletableTopField.nice _ (F_cau.map hf.uniformContinuous) inf_F').mono'
+    ((this.map _).map _) (map_mono hk)
+
+end UniformInducing
+
+variable (L : Type*) [Field L] [UniformSpace L] [CompletableTopField L]
+
+instance Subfield.completableTopField (K : Subfield L) : CompletableTopField K :=
+  IsUniformInducing.completableTopField (f := K.subtype)
+    isUniformEmbedding_subtype_val.isUniformInducing
+
+instance (priority := 100) completableTopField_of_complete (L : Type*) [Field L] [UniformSpace L]
+    [IsTopologicalDivisionRing L] [T0Space L] [CompleteSpace L] : CompletableTopField L where
+  nice F cau_F hF := by
+    have : NeBot F := cau_F.1
+    rcases CompleteSpace.complete cau_F with ⟨x, hx⟩
+    have hx' : x ≠ 0 := by
+      rintro rfl
+      rw [inf_eq_right.mpr hx] at hF
+      exact cau_F.1.ne hF
+    have : NeBot (Filter.comap Subtype.val F) := this.comap_of_range_mem <| by
+      rw [Subtype.range_val]
+      exact setOf_isUnit_mem_of_inf_eq_bot hF
+    refine Filter.Tendsto.cauchy_map
+      ((continuousAt_inv₀ (⟨x, hx'.isUnit⟩ : {x : L | IsUnit x})).tendsto.mono_left ?_)
+    rw [nhds_subtype]
+    exact Filter.comap_mono hx

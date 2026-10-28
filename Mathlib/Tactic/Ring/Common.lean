@@ -62,6 +62,11 @@ but not as nice to read. To remedy this, the user-facing normalization calls `ri
 
 Subtraction cancels out identical terms. Checked division is normalized only after its denominator
 comes with exact `IsUnit` evidence; the tactic does not synthesize or cancel that obligation.
+The checked inverse of a monomial is the product of the checked inverses of its factors, each of
+which is invertible because the monomial is. The inverse of `x ^ e` is `(x⁻¹) ^ e` when `e` is
+known to be positive, since this makes `x` invertible. When `e` may be `0`, as for a variable
+exponent, the base need not be invertible and `(x ^ e)⁻¹` is an atom. The inverse of a sum with
+several terms is an atom as well, and `a * a⁻¹` is not simplified to `1`.
 
 Multiplication of powers can be simplified a little bit further:
 `2 ^ n * 2 ^ n = 4 ^ n := by ring` could be implemented
@@ -1102,6 +1107,32 @@ def evalAtom (e : Q($α)) : AtomM (Result (ExSum bt sα) e) := do
 theorem isUnit_add_zero {R} [Semifield R] {a : R} : IsUnit (a + 0) → IsUnit a := by
   simp
 
+theorem isUnit_mul_left {R} [Semifield R] {a b : R} (h : IsUnit (a * b)) : IsUnit a :=
+  (IsUnit.mul_iff.mp h).1
+
+theorem isUnit_mul_right {R} [Semifield R] {a b : R} (h : IsUnit (a * b)) : IsUnit b :=
+  (IsUnit.mul_iff.mp h).2
+
+/-- If a positive power of `a` is a unit, then so is `a`. This fails for a power whose exponent
+may be `0`, so the exponent has to come with a proof of positivity. -/
+theorem isUnit_of_isUnit_pow {R} [Semifield R] {a : R} {n : ℕ} (hn : 0 < n)
+    (h : IsUnit (a ^ n)) : IsUnit a :=
+  (isUnit_pow_iff hn.ne').mp h
+
+theorem inv_pow_pf {R} [Semifield R] {a b c : R} {n : ℕ} {h : IsUnit (a ^ n)} {h' : IsUnit a}
+    (_ : Checked.inv a h' = b) (_ : b ^ n * (nat_lit 1).rawCast = c) :
+    Checked.inv (a ^ n) h = c := by
+  subst_vars
+  have h1 : (nat_lit 1).rawCast = (1 : R) := by simp [Nat.rawCast]
+  rw [h1, _root_.mul_one, inv_pow₀]
+
+theorem inv_mul {R} [Semifield R] {a₁ a₃ b₁ b₃ c : R} {ha : IsUnit (a₁ * a₃)}
+    {h₁ : IsUnit a₁} {h₃ : IsUnit a₃}
+    (_ : Checked.inv a₁ h₁ = b₁) (_ : Checked.inv a₃ h₃ = b₃) (_ : b₃ * b₁ = c) :
+    Checked.inv (a₁ * a₃) ha = c := by
+  subst_vars
+  rw [mul_inv₀, mul_comm]
+
 theorem inv_single {R} [Semifield R] {a b : R} {ha : IsUnit (a + 0)} {ha' : IsUnit a}
     (_ : Checked.inv a ha' = b) : Checked.inv (a + 0) ha = b + 0 := by
   subst_vars
@@ -1120,34 +1151,76 @@ def evalInvAtom (a : Q($α)) (ha : Q(IsUnit $a)) :
   let (i, ⟨b', _⟩) ← addAtomQ q(Checked.inv $a $ha)
   pure ⟨b', ExBase.atom i, q(Eq.refl $b')⟩
 
-/-- Inverts a polynomial `va` to get a normalized result polynomial.
+/-- Applies checked inversion to a polynomial to get an atom, embedded as a monomial. -/
+def evalInvAtomProd (a : Q($α)) (ha : Q(IsUnit $a)) :
+    AtomM (Result (ExProd bt sα) q(Checked.inv $a $ha)) := do
+  let ⟨_, vc, pc⟩ ← evalInvAtom a ha
+  let ⟨_, one, pf⟩ := rcℕ.one
+  let ⟨_, vc', pc'⟩ := vc.toProd rc (ExProdNat.const (one))
+  pure ⟨_, vc', q($pc' ▸ toProd_pf $pc $pf)⟩
 
- * a checked inverse of a constant is delegated to the coefficient normalizer;
- * otherwise the checked inverse is retained as an atom.
+mutual
+
+/-- Inverts a base `va` to get a normalized result base.
+
+* `Checked.inv x` is a new atom if `x` is an atom
+* `Checked.inv (m + 0) = Checked.inv m + 0` is computed using `ExProd.evalInv`
+* `Checked.inv s` is a new atom if `s` is any other sum
 -/
-def ExProd.evalInv {a : Q($α)} (ha : Q(IsUnit $a)) (va : ExProd bt sα a) :
+partial def ExBase.evalInv {a : Q($α)} (ha : Q(IsUnit $a)) (va : ExBase bt sα a) :
+    AtomM (Result (ExBase bt sα) q(Checked.inv $a $ha)) :=
+  Lean.Core.checkSystem decl_name%.toString *>
+  match va with
+  | .atom _ => evalInvAtom a ha
+  | .sum (.add (a := a') va' .zero) => do
+    assumeInstancesCommute
+    let ha' : Q(IsUnit $a') := q(isUnit_add_zero $ha)
+    let ⟨_, vb, pb⟩ ← ExProd.evalInv ha' va'
+    pure ⟨_, .sum vb.toSum, (q(inv_single (ha := $ha) (ha' := $ha') $pb) : Expr)⟩
+  | .sum _ => evalInvAtom a ha
+
+/-- Inverts a monomial `va` to get a normalized result monomial.
+
+* `Checked.inv c` is delegated to the coefficient normalizer if `c` is a constant
+* `Checked.inv (x ^ e * b) = Checked.inv b * Checked.inv (x ^ e)`, where both factors are
+  invertible because their product is
+* `Checked.inv (x ^ e) = (Checked.inv x) ^ e` if `0 < e`, in which case `x` is invertible, and
+  `Checked.inv x` is computed using `ExBase.evalInv`
+* `Checked.inv (x ^ e)` is a new atom if `e` is not known to be positive, since then `x` need not
+  be invertible
+-/
+partial def ExProd.evalInv {a : Q($α)} (ha : Q(IsUnit $a)) (va : ExProd bt sα a) :
     AtomM (Result (ExProd bt sα) q(Checked.inv $a $ha)) :=
   Lean.Core.checkSystem decl_name%.toString *>
   match va with
   | .const c => do
     match ← rc.inv q($dsα) ha c with
     | some ⟨_, vd, pd⟩ => pure ⟨_, .const vd, q($pd)⟩
-    | none =>
-      let ⟨_, vc, pc⟩ ← evalInvAtom a ha
-      let ⟨_, one, pf⟩ := rcℕ.one
-      let ⟨_, vc', pc'⟩ := vc.toProd rc (ExProdNat.const (one))
-      pure ⟨_, vc', q($pc' ▸ toProd_pf $pc $pf)⟩
-  | .mul (x := x) (e := e) (b := b) .. => do
-      haveI' : $a =Q $x ^ $e * $b := ⟨⟩
-      let ⟨_, vc, pc⟩ ← evalInvAtom q($x ^ $e * $b) ha
-      let ⟨_, one, pf⟩ := rcℕ.one
-      let ⟨_, vc', pc'⟩ := vc.toProd rc (ExProdNat.const one)
-      pure ⟨_, vc', q($pc' ▸ toProd_pf $pc $pf)⟩
+    | none => evalInvAtomProd rc rcℕ a ha
+  | .mul (x := x) (e := e) (b := b) vx ve vb => do
+    haveI' : $a =Q $x ^ $e * $b := ⟨⟩
+    assumeInstancesCommute
+    let hxe : Q(IsUnit ($x ^ $e)) := q(isUnit_mul_left $ha)
+    let hb : Q(IsUnit $b) := q(isUnit_mul_right $ha)
+    let rf : Result (ExProd bt sα) q(Checked.inv ($x ^ $e) $hxe) ←
+      match ve.evalPos with
+      | some hn => do
+        let hx : Q(IsUnit $x) := q(isUnit_of_isUnit_pow $hn $hxe)
+        let ⟨_, vx', px'⟩ ← ExBase.evalInv hx vx
+        let ⟨_, vf, pf⟩ := vx'.toProd rc ve
+        pure ⟨_, vf, q(inv_pow_pf (h := $hxe) (h' := $hx) $px' $pf)⟩
+      | none => evalInvAtomProd rc rcℕ q($x ^ $e) hxe
+    let ⟨_, vf, pf⟩ := rf
+    let ⟨_, vb', pb⟩ ← ExProd.evalInv hb vb
+    let ⟨c, vc, pc⟩ ← evalMulProd rc rcℕ vb' vf
+    pure ⟨c, vc, q(inv_mul (ha := $ha) $pf $pb $pc)⟩
+
+end
 
 /-- Inverts a polynomial `va` to get a normalized result polynomial.
 
- * a checked inverse of one monomial delegates to `ExProd.evalInv`;
- * otherwise the checked inverse is retained as an atom.
+* `Checked.inv (m + 0) = Checked.inv m + 0` is computed using `ExProd.evalInv`
+* `Checked.inv s` is a new atom if `s` is any other polynomial
 -/
 def ExSum.evalInv {a : Q($α)} (ha : Q(IsUnit $a)) (va : ExSum bt sα a) :
     AtomM (Result (ExSum bt sα) q(Checked.inv $a $ha)) :=
@@ -1259,6 +1332,23 @@ def isAtomOrDerivable
 
 end
 
+/-- The evidence that `checked_unit` finds for an inverse can have an inferred type that is only
+definitionally equal to the declared one: `Units.isUnit _ : IsUnit ↑_` for `IsUnit a⁻¹`. Quotation
+patterns match reducibly, so ascribe the declared type to the evidence of `Checked.inv` and
+`Checked.div` before matching. -/
+def ascribeEvidence {u : Lean.Level} {α : Q(Type u)} (e : Q($α)) : MetaM Q($α) := do
+  let args := e.getAppArgs
+  match e.getAppFn with
+  | .const ``Checked.inv us =>
+    if args.size != 4 then return e
+    let ty := Lean.mkApp3 (.const ``IsUnit us) args[0]! args[1]! args[2]!
+    return Lean.mkAppN e.getAppFn (args.set! 3 (← mkExpectedTypeHint args[3]! ty))
+  | .const ``Checked.div us =>
+    if args.size != 5 then return e
+    let ty := Lean.mkApp3 (.const ``IsUnit us) args[0]! args[1]! args[3]!
+    return Lean.mkAppN e.getAppFn (args.set! 4 (← mkExpectedTypeHint args[4]! ty))
+  | _ => return e
+
 variable (rcℕ : RingCompute btℕ sℕ) in
 
 /--
@@ -1327,7 +1417,10 @@ partial def eval  {u : Lean.Level}
       let ⟨c, vc, p⟩ ← evalSub rc rcℕ rα va vb
       pure ⟨c, vc, q(sub_congr $pa $pb $p)⟩
     | _ => els
-  | ``Checked.inv, _, some dsα => match e with
+  | ``Checked.inv, _, some dsα => do
+    let e' ← ascribeEvidence e
+    have : $e =Q $e' := ⟨⟩
+    match e' with
     | ~q(Checked.inv $a $ha) =>
       let ⟨a', va, pa⟩ ← eval rc c a
       assumeInstancesCommute
@@ -1335,7 +1428,10 @@ partial def eval  {u : Lean.Level}
       let ⟨b, vb, p⟩ ← ExSum.evalInv (rc := rc) (rcℕ := rcℕ) (dsα := dsα) ha' va
       pure ⟨b, vb, q(inv_congr (ha := $ha) (ha' := $ha') $pa $p)⟩
     | _ => els
-  | ``Checked.div, _, some dsα => match e with
+  | ``Checked.div, _, some dsα => do
+    let e' ← ascribeEvidence e
+    have : $e =Q $e' := ⟨⟩
+    match e' with
     | ~q(Checked.div $a $b $hb) => do
       let ⟨_, va, pa⟩ ← eval rc c a
       let ⟨b', vb, pb⟩ ← eval rc c b

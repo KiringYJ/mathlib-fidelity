@@ -25,6 +25,10 @@ of convergence, and some properties of the map sending a contracting map to its 
   in `Metric.eball x ∞`;
 * `fixedPoint` : the unique fixed point of a contracting map on a complete nonempty metric space.
 
+The evidence search `checked_nonzero` uses a hypothesis `hf : ContractingWith K f` on a metric
+space to find the evidence for real quotients by `1 - K`, such as the estimate
+`dist x (fixedPoint f hf) ≤ dist x (f x) / (1 - K)`.
+
 ## Tags
 
 contracting map, fixed point, Banach fixed point theorem
@@ -238,6 +242,12 @@ variable [MetricSpace α] {K : ℝ≥0} {f : α → α}
 
 theorem one_sub_K_pos (hf : ContractingWith K f) : (0 : ℝ) < 1 - K :=
   sub_pos.2 hf.1
+
+/-- A hypothesis `hf : ContractingWith K f` gives the evidence for quotients by `1 - K`. -/
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | (apply ne_of_gt; apply sub_pos_of_lt; apply NNReal.coe_lt_one.2; apply And.left; assumption))
 
 section
 variable (hf : ContractingWith K f)

@@ -46,16 +46,14 @@ open scoped goldenRatio
 
 /-- The inverse of the golden ratio is the opposite of its conjugate. -/
 theorem inv_goldenRatio : φ⁻¹ = -ψ := by
-  grind
-
-/-- The opposite of the golden ratio is the inverse of its conjugate. -/
-theorem inv_goldenConj : ψ⁻¹ = -φ := by
-  rw [inv_eq_iff_eq_inv, ← neg_inv, ← neg_eq_iff_eq_neg]
-  exact inv_goldenRatio.symm
+  refine inv_eq_of_mul_eq_one_right₀ ?_
+  calc φ * -ψ = (√5 ^ 2 - 1) / 4 := by ring
+    _ = 1 := by rw [sq_sqrt (by norm_num)]; norm_num
 
 @[simp]
 theorem goldenRatio_mul_goldenConj : φ * ψ = -1 := by
-  grind
+  calc φ * ψ = (1 - √5 ^ 2) / 4 := by ring
+    _ = -1 := by rw [sq_sqrt (by norm_num)]; norm_num
 
 @[simp]
 theorem goldenConj_mul_goldenRatio : ψ * φ = -1 := by
@@ -76,16 +74,19 @@ theorem one_sub_goldenRatio : 1 - ψ = φ := by
 @[simp]
 theorem goldenRatio_sub_goldenConj : φ - ψ = √5 := by ring
 
-theorem goldenRatio_pow_sub_goldenRatio_pow (n : ℕ) : φ ^ (n + 2) - φ ^ (n + 1) = φ ^ n := by
-  grind
-
 @[simp 1200]
 theorem goldenRatio_sq : φ ^ 2 = φ + 1 := by
-  grind
+  calc φ ^ 2 = (1 + 2 * √5 + √5 ^ 2) / 4 := by ring
+    _ = φ + 1 := by rw [sq_sqrt (by norm_num)]; ring
 
 @[simp 1200]
 theorem goldenConj_sq : ψ ^ 2 = ψ + 1 := by
-  grind
+  calc ψ ^ 2 = (1 - 2 * √5 + √5 ^ 2) / 4 := by ring
+    _ = ψ + 1 := by rw [sq_sqrt (by norm_num)]; ring
+
+theorem goldenRatio_pow_sub_goldenRatio_pow (n : ℕ) : φ ^ (n + 2) - φ ^ (n + 1) = φ ^ n := by
+  calc φ ^ (n + 2) - φ ^ (n + 1) = φ ^ n * (φ ^ 2 - φ) := by ring
+    _ = φ ^ n := by rw [goldenRatio_sq]; ring
 
 theorem goldenRatio_pos : 0 < φ :=
   mul_pos (by apply add_pos <;> norm_num) <| inv_pos.2 zero_lt_two
@@ -107,6 +108,19 @@ theorem goldenConj_neg : ψ < 0 := by
 theorem goldenConj_ne_zero : ψ ≠ 0 :=
   ne_of_lt goldenConj_neg
 
+/-! The rule below extends `checked_nonzero`: the conjugate of the golden ratio is nonzero, so
+`ψ⁻¹`, `x / ψ` and `ψ ^ n` with `n : ℤ` find their evidence. -/
+
+macro_rules | `(tactic| checked_nonzero) => `(tactic|
+    solve
+    | assumption
+    | exact Real.goldenConj_ne_zero)
+
+/-- The opposite of the golden ratio is the inverse of its conjugate. -/
+theorem inv_goldenConj : ψ⁻¹ = -φ := by
+  refine inv_eq_of_mul_eq_one_right₀ ?_
+  rw [mul_neg, goldenConj_mul_goldenRatio, neg_neg]
+
 theorem neg_one_lt_goldenConj : -1 < ψ := by
   rw [neg_lt, ← inv_goldenRatio]
   exact inv_lt_one_of_one_lt₀ one_lt_goldenRatio
@@ -119,18 +133,16 @@ theorem neg_one_lt_goldenConj : -1 < ψ := by
 /-- The golden ratio is irrational. -/
 theorem goldenRatio_irrational : Irrational φ := by
   have := Nat.Prime.irrational_sqrt (show Nat.Prime 5 by norm_num)
-  have := this.ratCast_add 1
-  convert! this.ratCast_mul (show (0.5 : ℚ) ≠ 0 by norm_num)
-  simp
-  ring
+  have := (this.ratCast_add 1).div_natCast two_ne_zero
+  convert! this using 1
+  norm_num
 
 /-- The conjugate of the golden ratio is irrational. -/
 theorem goldenConj_irrational : Irrational ψ := by
   have := Nat.Prime.irrational_sqrt (show Nat.Prime 5 by norm_num)
-  have := this.ratCast_sub 1
-  convert! this.ratCast_mul (show (0.5 : ℚ) ≠ 0 by norm_num)
-  simp
-  ring
+  have := (this.ratCast_sub 1).div_natCast two_ne_zero
+  convert! this using 1
+  norm_num
 
 /-!
 ## Links with Fibonacci sequence
@@ -202,23 +214,32 @@ theorem coe_fib_eq : ∀ n, (Nat.fib n : ℝ) = (φ ^ n - ψ ^ n) / √5 := by
 theorem coe_intFib_eq (n : ℤ) : (Int.fib n : ℝ) = (φ ^ n - ψ ^ n) / √5 := by
   obtain ⟨n, (rfl | rfl)⟩ := n.eq_nat_or_neg
   · exact coe_fib_eq n
-  · simp only [Int.fib_neg, Int.even_coe_nat, Int.fib_natCast, Int.cast_ite, Int.cast_neg,
-      Int.cast_natCast, zpow_neg, zpow_natCast, ← inv_pow, inv_goldenRatio, inv_goldenConj,
-      ← neg_one_mul ψ, ← neg_one_mul φ, mul_pow, neg_one_pow_eq_ite]
-    grind [coe_fib_eq]
+  · have hφ : φ ^ (-(n : ℤ)) = (-ψ) ^ n := by
+      rw [zpow_neg₀ goldenRatio_ne_zero]
+      refine inv_eq_of_mul_eq_one_right₀ ?_
+      rw [zpow_natCast₀, ← mul_pow, mul_neg, goldenRatio_mul_goldenConj, neg_neg, one_pow]
+    have hψ : ψ ^ (-(n : ℤ)) = (-φ) ^ n := by
+      rw [zpow_neg₀ goldenConj_ne_zero]
+      refine inv_eq_of_mul_eq_one_right₀ ?_
+      rw [zpow_natCast₀, ← mul_pow, mul_neg, goldenConj_mul_goldenRatio, neg_neg, one_pow]
+    rw [hφ, hψ, Int.fib_neg_natCast]
+    push_cast
+    rw [coe_fib_eq, neg_pow ψ, neg_pow φ]
+    ring
 
 /-- Relationship between the Fibonacci Sequence, the golden ratio, and its conjugate's exponents. -/
 theorem fib_succ_sub_goldenRatio_mul_fib (n : ℕ) : Nat.fib (n + 1) - φ * Nat.fib n = ψ ^ n := by
-  repeat rw [coe_fib_eq]
-  rw [mul_div, div_sub_div_same, mul_sub, ← pow_succ']
-  ring_nf
-  have nz : √5 ≠ 0 := by norm_num
-  rw [← (mul_inv_cancel₀ nz).symm, one_mul]
+  rw [coe_fib_eq, coe_fib_eq, mul_div₀, div_sub_div_same, div_eq_iff,
+    ← goldenRatio_sub_goldenConj]
+  ring
 
 /-- Relationship between the Fibonacci Sequence, the conjugate of the golden ratio,
 and its exponents. -/
 lemma goldenConj_mul_fib_succ_add_fib (n : ℕ) : ψ * Nat.fib (n + 1) + Nat.fib n = ψ ^ (n + 1) := by
-  grind [fib_succ_sub_goldenRatio_mul_fib]
+  rw [show ψ * (Nat.fib (n + 1) : ℝ) + Nat.fib n =
+      ψ * (Nat.fib (n + 1) - φ * Nat.fib n) + (φ * ψ + 1) * Nat.fib n by ring,
+    fib_succ_sub_goldenRatio_mul_fib, goldenRatio_mul_goldenConj]
+  ring
 
 /-- Relationship between the Fibonacci Sequence, the golden ratio, and its exponents. -/
 lemma goldenRatio_mul_fib_succ_add_fib (n : ℕ) : φ * Nat.fib (n + 1) + Nat.fib n = φ ^ (n + 1) := by
@@ -235,6 +256,10 @@ lemma goldenRatio_mul_fib_succ_add_fib (n : ℕ) : φ * Nat.fib (n + 1) + Nat.fi
 /-- Relationship between the Fibonacci Sequence, exponents of the golden ratio,
 and its conjugate. -/
 theorem fib_succ_sub_goldenConj_mul_fib (n : ℕ) : Nat.fib (n + 1) - ψ * Nat.fib n = φ ^ n := by
-  grind [goldenRatio_mul_fib_succ_add_fib]
+  apply mul_left_cancel₀ goldenRatio_ne_zero
+  rw [show φ * ((Nat.fib (n + 1) : ℝ) - ψ * Nat.fib n) =
+      φ * Nat.fib (n + 1) + Nat.fib n - (φ * ψ + 1) * Nat.fib n by ring,
+    goldenRatio_mul_fib_succ_add_fib, goldenRatio_mul_goldenConj]
+  ring
 
 end Real

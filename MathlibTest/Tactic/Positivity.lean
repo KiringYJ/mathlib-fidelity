@@ -351,9 +351,9 @@ example [Semifield α] [LinearOrder α] [IsStrictOrderedRing α]
 example [Field α] [LinearOrder α] [IsStrictOrderedRing α]
     (a : α) : 0 ≤ a ^ (18 : ℤ) := by positivity
 example [Field α] [LinearOrder α] [IsStrictOrderedRing α]
-    (a : α) : 0 ≤ a ^ (-34 : ℤ) := by positivity
+    (a : α) {h : (-34 : ℤ) < 0 → IsUnit a} : 0 ≤ a ^ (-34 : ℤ) := by positivity
 example [Semifield α] [LinearOrder α] [IsStrictOrderedRing α]
-    {a : α} {n : ℤ} (ha : 0 ≤ a) : 0 ≤ a ^ n := by positivity
+    {a : α} {n : ℤ} {h : n < 0 → IsUnit a} (ha : 0 ≤ a) : 0 ≤ a ^ n := by positivity
 example [Semifield α] [LinearOrder α] [IsStrictOrderedRing α]
     {a : α} {n : ℤ} (ha : 0 < a) : 0 < a ^ n := by positivity
 

@@ -12,8 +12,8 @@ public import Mathlib.Tactic.Abel
 
 A few of the `Invertible` lemmas generalize to multiplication of rectangular matrices.
 
-For lemmas about the matrix inverse in terms of the determinant and adjugate, see
-`Matrix.nonsingularInverse` in `Mathlib/LinearAlgebra/Matrix/NonsingularInverse.lean`.
+For lemmas about the matrix inverse `A⁻¹` in terms of the determinant and adjugate, see
+`Matrix.inv_def` in `Mathlib/LinearAlgebra/Matrix/NonsingularInverse.lean`.
 
 ## Main results
 

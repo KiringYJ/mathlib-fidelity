@@ -101,9 +101,9 @@ theorem isDomain_iff_prime : IsDomain (R ⧸ I) ↔ I.IsPrime := by
 
 set_option backward.isDefEq.respectTransparency false in
 variable {I} in
-theorem exists_inv [hI : I.IsMaximal] :
-    ∀ {a : R ⧸ I}, a ≠ 0 → ∃ b : R ⧸ I, a * b = 1 := by
-  apply exists_right_inv_of_exists_left_inv
+/-- Every nonzero element of the quotient by a maximal ideal has a left inverse. -/
+theorem exists_left_inv [hI : I.IsMaximal] :
+    ∀ {a : R ⧸ I}, a ≠ 0 → ∃ b : R ⧸ I, b * a = 1 := by
   rintro ⟨a⟩ h
   rcases hI.exists_inv (mt eq_zero_iff_mem.2 h) with ⟨b, c, hc, abc⟩
   refine ⟨mk _ b, Quot.sound ?_⟩
@@ -111,35 +111,32 @@ theorem exists_inv [hI : I.IsMaximal] :
   rw [← eq_sub_iff_add_eq'] at abc
   rwa [abc, ← neg_mem_iff (G := R) (H := I), neg_sub] at hc
 
-open scoped Classical in
+variable {I} in
+theorem exists_inv [hI : I.IsMaximal] :
+    ∀ {a : R ⧸ I}, a ≠ 0 → ∃ b : R ⧸ I, a * b = 1 :=
+  exists_right_inv_of_exists_left_inv fun _ => exists_left_inv
+
 /-- The quotient by a maximal ideal is a group with zero. This is a `def` rather than `instance`,
-since users will have computable inverses in some applications.
+since the maximality of the ideal is not found by instance search in general.
 
 See note [reducible non-instances]. -/
-protected noncomputable abbrev groupWithZero [hI : I.IsMaximal] :
+protected abbrev groupWithZero [hI : I.IsMaximal] :
     GroupWithZero (R ⧸ I) := fast_instance%
-  { inv := fun a => if ha : a = 0 then 0 else Classical.choose (exists_inv ha)
-    mul_inv_cancel := fun a (ha : a ≠ 0) =>
-      show a * dite _ _ _ = _ by rw [dite_eq_right ha]; exact Classical.choose_spec (exists_inv ha)
-    inv_zero := dite_eq_left rfl
-    __ := Quotient.nontrivial_iff.mpr hI.out.1 }
+  { __ := Quotient.nontrivial_iff.mpr hI.out.1
+    isUnit_of_ne_zero := isUnit_of_exists_left_inv fun _ => exists_left_inv }
 
 /-- The quotient by a two-sided ideal that is maximal as a left ideal is a division ring.
 This is a `def` rather than `instance`, since users
-will have computable inverses (and `qsmul`, `ratCast`) in some applications.
+will have a computable rational embedding in some applications.
 
 See note [reducible non-instances]. -/
 protected noncomputable abbrev divisionRing [I.IsMaximal] : DivisionRing (R ⧸ I) := fast_instance%
   { __ := ring _
-    __ := Quotient.groupWithZero _
-    nnqsmul := _
-    nnqsmul_def _ _ := rfl
-    qsmul := _
-    qsmul_def _ _ := rfl }
+    __ := Quotient.groupWithZero _ }
 
 /-- The quotient of a commutative ring by a maximal ideal is a field.
 This is a `def` rather than `instance`, since users
-will have computable inverses (and `qsmul`, `ratCast`) in some applications.
+will have a computable rational embedding in some applications.
 
 See note [reducible non-instances]. -/
 protected noncomputable abbrev field {R} [CommRing R] (I : Ideal R) [I.IsMaximal] :

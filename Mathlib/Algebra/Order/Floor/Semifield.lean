@@ -31,20 +31,17 @@ namespace Nat
 section LinearOrderedSemifield
 variable [Semifield K] [LinearOrder K] [IsStrictOrderedRing K] [FloorSemiring K]
 
-theorem floor_div_natCast (a : K) (n : ℕ) : ⌊a / n⌋₊ = ⌊a⌋₊ / n := by
-  obtain rfl | hn := n.eq_zero_or_pos
-  · simp
-  nth_rw 2 [← div_mul_cancel₀ (a := a) (b := ↑n) (by positivity)]
-  rw [mul_cast_floor_div_cancel (Nat.ne_zero_of_lt hn)]
+theorem floor_div_natCast (a : K) (n : ℕ) {hn : IsUnit (n : K)} : ⌊a / n⌋₊ = ⌊a⌋₊ / n := by
+  nth_rw 2 [← div_mul_cancel₀ a (hb := hn)]
+  rw [mul_cast_floor_div_cancel (Nat.cast_ne_zero.mp hn.ne_zero)]
 
 theorem floor_div_ofNat (a : K) (n : ℕ) [n.AtLeastTwo] :
     ⌊a / ofNat(n)⌋₊ = ⌊a⌋₊ / ofNat(n) :=
   floor_div_natCast a n
 
 /-- Natural division is the floor of field division. -/
-theorem floor_div_eq_div (m n : ℕ) : ⌊(m : K) / n⌋₊ = m / n := by
-  convert! floor_div_natCast (m : K) n
-  rw [m.floor_natCast]
+theorem floor_div_eq_div (m n : ℕ) {hn : IsUnit (n : K)} : ⌊(m : K) / n⌋₊ = m / n := by
+  rw [floor_div_natCast, floor_natCast]
 
 end LinearOrderedSemifield
 
@@ -67,19 +64,18 @@ lemma ceil_lt_mul (hb : 1 < b) (hba : ⌈(b - 1)⁻¹⌉₊ / b < a) : ⌈a⌉�
   · rw [← sub_pos] at hb
     calc
       ⌈a⌉₊ < a + 1 := ceil_lt_add_one <| hba.trans' <| by positivity
-      _ = a + (b - 1) * (b - 1)⁻¹ := by rw [mul_inv_cancel₀]; positivity
+      _ = a + (b - 1) * (b - 1)⁻¹ := by rw [mul_inv_cancel₀]
       _ ≤ a + (b - 1) * a := by gcongr
       _ = b * a := by rw [sub_one_mul, add_sub_cancel]
 
 lemma ceil_le_mul (hb : 1 < b) (hba : ⌈(b - 1)⁻¹⌉₊ / b ≤ a) : ⌈a⌉₊ ≤ b * a := by
   obtain rfl | hba := hba.eq_or_lt
   · rw [mul_div_cancel₀, cast_le, ceil_le]
-    · exact _root_.div_le_self (by positivity) hb.le
-    · positivity
+    exact _root_.div_le_self (by positivity) hb.le
   · exact (ceil_lt_mul hb hba).le
 
 lemma div_two_lt_floor (ha : 1 ≤ a) : a / 2 < ⌊a⌋₊ := by
-  rw [div_eq_inv_mul]; refine mul_lt_floor ?_ ?_ ?_ <;> norm_num; assumption
+  rw [div_eq_inv_mul₀]; refine mul_lt_floor ?_ ?_ ?_ <;> norm_num; assumption
 
 lemma ceil_lt_two_mul (ha : 2⁻¹ < a) : ⌈a⌉₊ < 2 * a :=
   ceil_lt_mul one_lt_two (by norm_num at ha ⊢; exact ha)

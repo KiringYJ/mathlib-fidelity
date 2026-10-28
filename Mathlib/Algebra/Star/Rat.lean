@@ -45,8 +45,12 @@ theorem star_ratEval [DivisionRing R] [StarRing R] (q : ℚ)
 
 @[simp, norm_cast]
 lemma star_nnratCast [DivisionSemiring R] [CharZero R] [StarRing R] (q : ℚ≥0) :
-    star (q : R) = q := star_nnratEval q (Nat.cast_ne_zero.mpr q.den_ne_zero)
+    star (q : R) = q := by
+  rw [NNRat.cast_eq_eval q (Nat.cast_ne_zero.mpr q.den_ne_zero)]
+  exact star_nnratEval q _
 
 @[simp, norm_cast]
 theorem star_ratCast [DivisionRing R] [CharZero R] [StarRing R] (q : ℚ) :
-    star (q : R) = q := star_ratEval q (Nat.cast_ne_zero.mpr q.den_nz)
+    star (q : R) = q := by
+  rw [Rat.cast_eq_eval q (Nat.cast_ne_zero.mpr q.den_nz)]
+  exact star_ratEval q _

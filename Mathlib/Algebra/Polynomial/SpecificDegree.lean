@@ -52,8 +52,8 @@ theorem irreducible_iff_roots_eq_zero_of_degree_le_three
   have hm := monic_mul_leadingCoeff_inv hp0
   have key : (p * C (leadingCoeff p)⁻¹).roots hm.ne_zero = p.roots hp0 := by
     simp only [mul_comm p, roots_C_mul]
-  rw [← irreducible_mul_leadingCoeff_inv, hm.irreducible_iff_roots_eq_zero_of_degree_le_three,
-    key]
+  rw [← irreducible_mul_leadingCoeff_inv (hp := (leadingCoeff_ne_zero.2 hp0).isUnit),
+    hm.irreducible_iff_roots_eq_zero_of_degree_le_three, key]
   · rwa [natDegree_mul_leadingCoeff_inv _ hp0]
   · rwa [natDegree_mul_leadingCoeff_inv _ hp0]
 

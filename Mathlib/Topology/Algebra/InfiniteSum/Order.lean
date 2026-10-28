@@ -383,11 +383,19 @@ protected theorem Multipliable.abs_tprod (hf : Multipliable f) : |∏' i, f i| =
 end LinearOrderedCommRing
 
 theorem Summable.tendsto_atTop_of_pos [Field α] [LinearOrder α] [IsStrictOrderedRing α]
-    [TopologicalSpace α] [OrderTopology α]
-    {f : ℕ → α} (hf : Summable f⁻¹) (hf' : ∀ n, 0 < f n) : Tendsto f atTop atTop :=
-  inv_inv f ▸ Filter.Tendsto.inv_tendsto_nhdsGT_zero <|
-    tendsto_nhdsWithin_of_tendsto_nhds_of_eventually_within _ hf.tendsto_atTop_zero <|
-      Eventually.of_forall fun _ ↦ inv_pos.2 (hf' _)
+    [TopologicalSpace α] [OrderTopology α] {f : ℕ → α} (hf' : ∀ n, 0 < f n)
+    (hf : Summable (Checked.inv f (Pi.isUnit_iff.2 fun n ↦ (hf' n).ne'.isUnit))) :
+    Tendsto f atTop atTop := by
+  /- `f n` is the inverse of the unit `(f n)⁻¹`, and these units tend to `0` from the right. -/
+  let u : ℕ → αˣ := fun n ↦ (hf' n).ne'.isUnit.unit⁻¹
+  have hu : Tendsto (fun n ↦ (u n : α)) atTop (nhdsWithin 0 (Set.Ioi 0)) := by
+    refine tendsto_nhdsWithin_of_tendsto_nhds_of_eventually_within _ ?_
+      (Eventually.of_forall fun n ↦ inv_pos_of_pos (hf' n))
+    convert hf.tendsto_atTop_zero using 1
+    ext n
+    exact (Pi.inv_apply₀ f n).symm
+  simpa only [← Units.val_inv_eq_inv_val₀, u, inv_inv, IsUnit.unit_spec] using
+    hu.fun_inv_tendsto_nhdsGT_zero (h0 := fun n ↦ (u n).isUnit)
 
 namespace Mathlib.Meta.Positivity
 

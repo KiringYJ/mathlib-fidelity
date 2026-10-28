@@ -132,12 +132,11 @@ lemma fermatLastTheoremWith_nat_int_rat_tfae (n : ℕ) :
     rw [← Rat.num_ne_zero] at ha hb hc
     refine h (a.num * b.den * c.den) (a.den * b.num * c.den) (a.den * b.den * c.num)
       (by positivity) (by positivity) (by positivity) ?_
-    have : (a.den * b.den * c.den : ℚ) ^ n ≠ 0 := by positivity
-    refine Int.cast_injective <| (div_left_inj' this).1 ?_
+    apply Int.cast_injective (α := ℚ)
     push_cast
-    simp only [add_div, ← div_pow, mul_div_mul_comm, div_self (by positivity : (a.den : ℚ) ≠ 0),
-      div_self (by positivity : (b.den : ℚ) ≠ 0), div_self (by positivity : (c.den : ℚ) ≠ 0),
-      one_mul, mul_one, Rat.num_div_den, habc]
+    rw [← Rat.mul_den_eq_num a, ← Rat.mul_den_eq_num b, ← Rat.mul_den_eq_num c]
+    simp only [mul_pow, ← habc]
+    ring
   tfae_have 3 → 1
   | h, a, b, c => mod_cast h a b c
   tfae_finish

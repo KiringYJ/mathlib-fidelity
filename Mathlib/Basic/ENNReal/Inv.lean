@@ -56,38 +56,27 @@ protected theorem div_right_comm : a / b / c = a / c / b := by
   bot_unique <| le_of_forall_gt_imp_ge_of_dense fun a (h : 0 < a) => sInf_le <| by
     simp [*, h.ne', top_mul]
 
-theorem coe_inv_le : (↑r⁻¹ : ℝ≥0∞) ≤ (↑r)⁻¹ :=
-  le_sInf fun b (hb : 1 ≤ ↑r * b) =>
-    coe_le_iff.2 <| by
-      rintro b rfl
-      apply NNReal.inv_le_of_le_mul
-      rwa [← coe_mul, ← coe_one, coe_le_coe] at hb
-
+/-- The inverse of an invertible element of `ℝ≥0` is its inverse in `ℝ≥0∞`. -/
 @[simp, norm_cast]
-theorem coe_inv (hr : r ≠ 0) : (↑r⁻¹ : ℝ≥0∞) = (↑r)⁻¹ :=
-  coe_inv_le.antisymm <| sInf_le <| mem_ofPred.2 <| by rw [← coe_mul, mul_inv_cancel₀ hr, coe_one]
-
-@[simp, norm_cast]
-theorem coe_inv' [NeZero r] : (↑r⁻¹ : ℝ≥0∞) = (↑r)⁻¹ := coe_inv (NeZero.ne r)
+theorem coe_inv {hr : IsUnit r} : (↑r⁻¹ : ℝ≥0∞) = (↑r)⁻¹ := by
+  refine le_antisymm (le_sInf fun b (hb : 1 ≤ ↑r * b) => coe_le_iff.2 ?_) <|
+    sInf_le <| mem_ofPred.2 <| by rw [← coe_mul, mul_inv_cancel₀, coe_one]
+  rintro b rfl
+  rw [← coe_mul, ← coe_one, coe_le_coe] at hb
+  exact NNReal.inv_le.2 hb
 
 @[norm_cast]
-theorem coe_inv_two : ((2⁻¹ : ℝ≥0) : ℝ≥0∞) = 2⁻¹ := by rw [coe_inv _root_.two_ne_zero, coe_two]
+theorem coe_inv_two : ((2⁻¹ : ℝ≥0) : ℝ≥0∞) = 2⁻¹ := by rw [coe_inv, coe_two]
 
 @[simp, norm_cast]
-theorem coe_div (hr : r ≠ 0) : (↑(p / r) : ℝ≥0∞) = p / r := by
-  rw [div_eq_mul_inv, div_eq_mul_inv, coe_mul, coe_inv hr]
-
-@[simp, norm_cast]
-theorem coe_div' [NeZero r] : (↑(p / r) : ℝ≥0∞) = p / r := coe_div (NeZero.ne r)
-
-lemma coe_div_le : ↑(p / r) ≤ (p / r : ℝ≥0∞) := by
-  simpa only [div_eq_mul_inv, coe_mul] using _root_.mul_le_mul_right coe_inv_le _
+theorem coe_div {hr : IsUnit r} : (↑(p / r) : ℝ≥0∞) = p / r := by
+  rw [div_eq_mul_inv₀, div_eq_mul_inv, coe_mul, coe_inv]
 
 theorem div_zero (h : a ≠ 0) : a / 0 = ∞ := by simp [div_eq_mul_inv, h]
 
 instance : DivInvOneMonoid ℝ≥0∞ :=
   { (inferInstance : DivInvMonoid ℝ≥0∞) with
-    inv_one := by simpa only [coe_inv one_ne_zero, coe_one] using coe_inj.2 inv_one }
+    inv_one := by simpa only [coe_inv, coe_one] using coe_inj.2 (inv_one₀ (M := ℝ≥0)) }
 
 protected theorem inv_pow : ∀ {a : ℝ≥0∞} {n : ℕ}, (a ^ n)⁻¹ = a⁻¹ ^ n
   | _, 0 => by simp only [pow_zero, inv_one]
@@ -96,13 +85,13 @@ protected theorem inv_pow : ∀ {a : ℝ≥0∞} {n : ℕ}, (a ^ n)⁻¹ = a⁻�
     rcases eq_or_ne a 0 with (rfl | ha)
     · simp [top_pow]
     · have := pow_ne_zero (n + 1) ha
-      norm_cast
-      rw [inv_pow]
+      rw [← coe_pow, ← coe_inv (hr := this.isUnit), ← coe_inv (hr := ha.isUnit), ← coe_pow,
+        inv_pow₀]
 
 protected theorem mul_inv_cancel (h0 : a ≠ 0) (ht : a ≠ ∞) : a * a⁻¹ = 1 := by
   lift a to ℝ≥0 using ht
-  norm_cast at h0; norm_cast
-  exact mul_inv_cancel₀ h0
+  norm_cast at h0
+  rw [← coe_inv (hr := Ne.isUnit h0), ← coe_mul, mul_inv_cancel₀, coe_one]
 
 protected theorem inv_mul_cancel (h0 : a ≠ 0) (ht : a ≠ ∞) : a⁻¹ * a = 1 :=
   mul_comm a a⁻¹ ▸ ENNReal.mul_inv_cancel h0 ht
@@ -195,7 +184,12 @@ protected theorem mul_div_right_comm : a * b / c = a / c * b := by
 
 instance : InvolutiveInv ℝ≥0∞ where
   inv_inv a := by
-    by_cases a = 0 <;> cases a <;> simp_all [-coe_inv, (coe_inv _).symm]
+    cases a with
+    | top => simp
+    | coe r =>
+      rcases eq_or_ne r 0 with rfl | hr
+      · simp
+      · rw [← coe_inv (hr := hr.isUnit), ← coe_inv (hr := hr.isUnit.inv₀), inv_inv₀]
 
 @[simp] protected lemma inv_eq_one : a⁻¹ = 1 ↔ a = 1 := by rw [← inv_inj, inv_inv, inv_one]
 
@@ -251,8 +245,17 @@ protected theorem mul_inv {a b : ℝ≥0∞} (ha : a ≠ 0 ∨ b ≠ ∞) (hb : 
   case top =>
     simp_all only [Ne, top_ne_zero, not_false_eq_true, coe_ne_top, or_self, not_true_eq_false,
       coe_eq_zero, false_or, top_mul, inv_top, zero_mul]
-  grind [_=_ coe_mul, coe_zero, inv_zero, = mul_inv, coe_ne_top, ENNReal.inv_eq_zero,
-    =_ coe_inv, zero_mul, = mul_eq_zero, mul_top, mul_zero, top_mul]
+  rename_i b a
+  rcases eq_or_ne a 0 with rfl | ha'
+  · rcases eq_or_ne b 0 with rfl | hb'
+    · simp
+    · rw [coe_zero, zero_mul, inv_zero, ← coe_inv (hr := hb'.isUnit),
+        top_mul (coe_ne_zero.2 (inv_ne_zero (ha := hb'.isUnit)))]
+  rcases eq_or_ne b 0 with rfl | hb'
+  · rw [coe_zero, mul_zero, inv_zero, ← coe_inv (hr := ha'.isUnit),
+      mul_top (coe_ne_zero.2 (inv_ne_zero (ha := ha'.isUnit)))]
+  rw [← coe_mul, ← coe_inv (hr := ha'.isUnit), ← coe_inv (hr := hb'.isUnit),
+    ← coe_inv (hr := (mul_ne_zero ha' hb').isUnit), ← coe_mul, mul_inv₀]
 
 protected theorem inv_div {a b : ℝ≥0∞} (htop : b ≠ ∞ ∨ a ≠ ∞) (hzero : b ≠ 0 ∨ a ≠ 0) :
     (a / b)⁻¹ = b / a := by
@@ -284,8 +287,8 @@ theorem inv_strictAnti : StrictAnti (Inv.inv : ℝ≥0∞ → ℝ≥0∞) := by
   cases b; · simp
   rw [coe_lt_coe] at h
   rcases eq_or_ne a 0 with (rfl | ha); · simp [h]
-  rw [← coe_inv h.ne_bot, ← coe_inv ha, coe_lt_coe]
-  exact NNReal.inv_lt_inv ha h
+  rw [← coe_inv (hr := h.ne_bot.isUnit), ← coe_inv (hr := ha.isUnit), coe_lt_coe]
+  exact NNReal.inv_lt_inv h
 
 @[simp]
 protected theorem inv_lt_inv : a⁻¹ < b⁻¹ ↔ b < a :=
@@ -570,8 +573,8 @@ protected theorem one_half_lt_one : (2⁻¹ : ℝ≥0∞) < 1 :=
 protected theorem half_lt_self (hz : a ≠ 0) (ht : a ≠ ∞) : a / 2 < a := by
   lift a to ℝ≥0 using ht
   rw [coe_ne_zero] at hz
-  rw [← coe_two, ← coe_div, coe_lt_coe]
-  exacts [NNReal.half_lt_self hz, two_ne_zero' _]
+  rw [← coe_two, ← coe_div (hr := (two_ne_zero' ℝ≥0).isUnit), coe_lt_coe]
+  exact NNReal.half_lt_self hz
 
 protected theorem half_le_self : a / 2 ≤ a :=
   le_add_self.trans_eq <| ENNReal.add_halves _
@@ -666,7 +669,7 @@ theorem exists_nat_pos_inv_mul_lt (ha : a ≠ ∞) (hb : b ≠ 0) :
 theorem exists_nnreal_pos_mul_lt (ha : a ≠ ∞) (hb : b ≠ 0) : ∃ n > 0, ↑(n : ℝ≥0) * a < b := by
   rcases exists_nat_pos_inv_mul_lt ha hb with ⟨n, npos : 0 < n, hn⟩
   use (n : ℝ≥0)⁻¹
-  simp [*, npos.ne']
+  simp [*]
 
 theorem exists_inv_two_pow_lt (ha : a ≠ 0) : ∃ n : ℕ, 2⁻¹ ^ n < a := by
   rcases exists_inv_nat_lt ha with ⟨n, hn⟩
@@ -676,11 +679,10 @@ theorem exists_inv_two_pow_lt (ha : a ≠ 0) : ∃ n : ℕ, 2⁻¹ ^ n < a := by
   exact n.lt_two_pow_self
 
 @[simp, norm_cast]
-theorem coe_zpow (hr : r ≠ 0) (n : ℤ) : (↑(r ^ n) : ℝ≥0∞) = (r : ℝ≥0∞) ^ n := by
+theorem coe_zpow (n : ℤ) {h : n < 0 → IsUnit r} : (↑(r ^ n) : ℝ≥0∞) = (r : ℝ≥0∞) ^ n := by
   rcases n with n | n
-  · simp only [Int.ofNat_eq_natCast, coe_pow, zpow_natCast]
-  · have : r ^ n.succ ≠ 0 := pow_ne_zero (n + 1) hr
-    simp only [zpow_negSucc, coe_inv this, coe_pow]
+  · simp only [Int.ofNat_eq_natCast, zpow_natCast₀, coe_pow, zpow_natCast]
+  · rw [zpow_negSucc₀, coe_inv, coe_pow, zpow_negSucc]
 
 lemma zero_zpow_def (n : ℤ) : (0 : ℝ≥0∞) ^ n = if n = 0 then 1 else if 0 < n then 0 else ⊤ := by
   obtain ((_ | n) | n) := n <;> simp [-Nat.cast_add, -Int.natCast_add]
@@ -712,8 +714,8 @@ theorem exists_mem_Ico_zpow {x y : ℝ≥0∞} (hx : x ≠ 0) (h'x : x ≠ ∞) 
     refine NNReal.exists_mem_Ico_zpow ?_ (one_lt_coe_iff.1 hy)
     simpa only [Ne, coe_eq_zero] using hx
   refine ⟨n, ?_, ?_⟩
-  · rwa [← ENNReal.coe_zpow A, ENNReal.coe_le_coe]
-  · rwa [← ENNReal.coe_zpow A, ENNReal.coe_lt_coe]
+  · rwa [← ENNReal.coe_zpow (h := fun _ ↦ A.isUnit), ENNReal.coe_le_coe]
+  · rwa [← ENNReal.coe_zpow (h := fun _ ↦ A.isUnit), ENNReal.coe_lt_coe]
 
 theorem exists_mem_Ioc_zpow {x y : ℝ≥0∞} (hx : x ≠ 0) (h'x : x ≠ ∞) (hy : 1 < y) (h'y : y ≠ ⊤) :
     ∃ n : ℤ, x ∈ Ioc (y ^ n) (y ^ (n + 1)) := by
@@ -724,8 +726,8 @@ theorem exists_mem_Ioc_zpow {x y : ℝ≥0∞} (hx : x ≠ 0) (h'x : x ≠ ∞) 
     refine NNReal.exists_mem_Ioc_zpow ?_ (one_lt_coe_iff.1 hy)
     simpa only [Ne, coe_eq_zero] using hx
   refine ⟨n, ?_, ?_⟩
-  · rwa [← ENNReal.coe_zpow A, ENNReal.coe_lt_coe]
-  · rwa [← ENNReal.coe_zpow A, ENNReal.coe_le_coe]
+  · rwa [← ENNReal.coe_zpow (h := fun _ ↦ A.isUnit), ENNReal.coe_lt_coe]
+  · rwa [← ENNReal.coe_zpow (h := fun _ ↦ A.isUnit), ENNReal.coe_le_coe]
 
 theorem Ioo_zero_top_eq_iUnion_Ico_zpow {y : ℝ≥0∞} (hy : 1 < y) (h'y : y ≠ ⊤) :
     Ioo (0 : ℝ≥0∞) (∞ : ℝ≥0∞) = ⋃ n : ℤ, Ico (y ^ n) (y ^ (n + 1)) := by
@@ -761,7 +763,7 @@ protected theorem zpow_add {x : ℝ≥0∞} (hx : x ≠ 0) (h'x : x ≠ ∞) (m 
     x ^ (m + n) = x ^ m * x ^ n := by
   lift x to ℝ≥0 using h'x
   replace hx : x ≠ 0 := by simpa only [Ne, coe_eq_zero] using hx
-  simp only [← coe_zpow hx, zpow_add₀ hx, coe_mul]
+  simp only [← coe_zpow (h := fun _ ↦ hx.isUnit), zpow_add₀ hx, coe_mul]
 
 protected theorem zpow_neg (x : ℝ≥0∞) (m : ℤ) : x ^ (-m) = (x ^ m)⁻¹ := by
   obtain hx₀ | hx₀ := eq_or_ne x 0
@@ -941,39 +943,40 @@ lemma smul_sSup {R} [SMul R ℝ≥0∞] [IsScalarTower R ℝ≥0∞ ℝ≥0∞] 
 
 @[simp]
 theorem ofReal_inv_of_pos {x : ℝ} (hx : 0 < x) : ENNReal.ofReal x⁻¹ = (ENNReal.ofReal x)⁻¹ := by
-  rw [ENNReal.ofReal, ENNReal.ofReal, ← @coe_inv (Real.toNNReal x) (by simp [hx]), coe_inj,
-    ← Real.toNNReal_inv]
+  rw [ENNReal.ofReal, ENNReal.ofReal, ← coe_inv (hr := (Real.toNNReal_pos.2 hx).ne'.isUnit),
+    coe_inj, Real.toNNReal_inv hx]
 
-theorem ofReal_inv_le {x : ℝ} : ENNReal.ofReal x⁻¹ ≤ (ENNReal.ofReal x)⁻¹ := by
-  obtain hx | hx := lt_or_ge 0 x
-  · simp [ofReal_inv_of_pos hx]
-  · simp [ofReal_of_nonpos hx]
-
-theorem ofReal_div_le {x y : ℝ} (hy : 0 ≤ y) :
-    ENNReal.ofReal (x / y) ≤ ENNReal.ofReal x / ENNReal.ofReal y := by
-  simp_rw [div_eq_mul_inv, ofReal_mul' (inv_nonneg.2 hy)]
-  gcongr
-  exact ofReal_inv_le
+theorem ofReal_inv_le {x : ℝ} {hx : IsUnit x} : ENNReal.ofReal x⁻¹ ≤ (ENNReal.ofReal x)⁻¹ := by
+  obtain hx' | hx' := lt_or_ge 0 x
+  · simp [ofReal_inv_of_pos hx']
+  · simp [ofReal_of_nonpos hx']
 
 theorem ofReal_div_of_pos {x y : ℝ} (hy : 0 < y) :
     ENNReal.ofReal (x / y) = ENNReal.ofReal x / ENNReal.ofReal y := by
-  rw [div_eq_mul_inv, div_eq_mul_inv, ofReal_mul' (inv_nonneg.2 hy.le), ofReal_inv_of_pos hy]
+  rw [div_eq_mul_inv₀, div_eq_mul_inv, ofReal_mul' (inv_nonneg.2 hy.le), ofReal_inv_of_pos hy]
 
-@[simp] theorem toNNReal_inv (a : ℝ≥0∞) : a⁻¹.toNNReal = a.toNNReal⁻¹ := by
+/-- The inverse commutes with `toNNReal` exactly where `a.toNNReal` is invertible, that is, for
+`a ≠ 0` and `a ≠ ∞`. -/
+@[simp] theorem toNNReal_inv (a : ℝ≥0∞) {ha : IsUnit a.toNNReal} :
+    a⁻¹.toNNReal = a.toNNReal⁻¹ := by
   cases a with
-  | top => simp
+  | top => simp at ha
   | coe a =>
-    rcases eq_or_ne a 0 with (rfl | ha); · simp
-    rw [← coe_inv ha, toNNReal_coe, toNNReal_coe]
+    have ha' : IsUnit a := ha
+    rw [← coe_inv (hr := ha'), toNNReal_coe]
+    rfl
 
-@[simp] theorem toNNReal_div (a b : ℝ≥0∞) : (a / b).toNNReal = a.toNNReal / b.toNNReal := by
-  rw [div_eq_mul_inv, toNNReal_mul, toNNReal_inv, div_eq_mul_inv]
+@[simp] theorem toNNReal_div (a b : ℝ≥0∞) {hb : IsUnit b.toNNReal} :
+    (a / b).toNNReal = a.toNNReal / b.toNNReal := by
+  rw [div_eq_mul_inv, toNNReal_mul, toNNReal_inv b (ha := hb), div_eq_mul_inv₀]
 
-@[simp] theorem toReal_inv (a : ℝ≥0∞) : a⁻¹.toReal = a.toReal⁻¹ := by
-  simp only [ENNReal.toReal, toNNReal_inv, NNReal.coe_inv]
+@[simp] theorem toReal_inv (a : ℝ≥0∞) {ha : IsUnit a.toReal} : a⁻¹.toReal = a.toReal⁻¹ := by
+  have ha' : IsUnit a.toNNReal := (NNReal.coe_ne_zero.1 ha.ne_zero).isUnit
+  simp only [ENNReal.toReal, toNNReal_inv a (ha := ha'), NNReal.coe_inv]
 
-@[simp] theorem toReal_div (a b : ℝ≥0∞) : (a / b).toReal = a.toReal / b.toReal := by
-  rw [div_eq_mul_inv, toReal_mul, toReal_inv, div_eq_mul_inv]
+@[simp] theorem toReal_div (a b : ℝ≥0∞) {hb : IsUnit b.toReal} :
+    (a / b).toReal = a.toReal / b.toReal := by
+  rw [div_eq_mul_inv, toReal_mul, toReal_inv b (ha := hb), div_eq_mul_inv₀]
 
 end Inv
 end ENNReal

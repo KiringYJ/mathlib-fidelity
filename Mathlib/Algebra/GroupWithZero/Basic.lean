@@ -5,11 +5,13 @@ Authors: Johan Commelin
 -/
 module
 
+public import Batteries.Tactic.SeqFocus
 public import Mathlib.Algebra.Group.Basic
+public import Mathlib.Algebra.Group.SelfInv
+public import Mathlib.Algebra.GroupWithZero.Inverse
 public import Mathlib.Algebra.GroupWithZero.NeZero
 public import Mathlib.Basic.Unique
 public import Mathlib.Tactic.Conv
-public import Batteries.Tactic.SeqFocus
 
 /-!
 # Groups with an adjoined zero element
@@ -273,6 +275,20 @@ theorem exists_right_inv_of_exists_left_inv {α} [MonoidWithZero α]
   obtain ⟨c, hc⟩ := h b (left_ne_zero_of_mul <| hb.trans_ne one_ne_zero)
   refine ⟨b, ?_⟩
   conv_lhs => rw [← one_mul (a * b), ← hc, mul_assoc, ← mul_assoc b, hb, one_mul, hc]
+
+/-- If every nonzero element of a monoid with zero has a left inverse, then every nonzero element
+is a unit: its left inverse is also a right inverse. -/
+theorem isUnit_of_exists_left_inv {α} [MonoidWithZero α]
+    (h : ∀ a : α, a ≠ 0 → ∃ b : α, b * a = 1) {a : α} (ha : a ≠ 0) : IsUnit a := by
+  obtain ⟨b, hb⟩ := h a ha
+  have hb0 : b ≠ 0 := by
+    rintro rfl
+    rw [zero_mul] at hb
+    exact ha (by rw [← mul_one a, ← hb, mul_zero])
+  obtain ⟨c, hc⟩ := h b hb0
+  have hab : a * b = 1 := by
+    conv_lhs => rw [← one_mul (a * b), ← hc, mul_assoc, ← mul_assoc b, hb, one_mul, hc]
+  exact ⟨⟨a, b, hab, hb⟩, rfl⟩
 
 end MonoidWithZero
 

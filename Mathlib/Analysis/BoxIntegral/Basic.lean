@@ -333,7 +333,7 @@ theorem Integrable.smul (hf : Integrable I l f vol) (c : ℝ) : Integrable I l (
 
 theorem Integrable.of_smul {c : ℝ} (hf : Integrable I l (c • f) vol) (hc : c ≠ 0) :
     Integrable I l f vol := by
-  simpa [inv_smul_smul₀ hc] using hf.smul c⁻¹
+  simpa [inv_smul_smul₀ (ha := hc.isUnit)] using hf.smul c⁻¹
 
 @[simp]
 theorem integral_smul (c : ℝ) : integral I l (fun x => c • f x) vol = c • integral I l f vol := by

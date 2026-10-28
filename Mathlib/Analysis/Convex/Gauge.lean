@@ -275,7 +275,7 @@ theorem gauge_smul_of_nonneg [MulActionWithZero α E] [IsScalarTower α ℝ (Set
     simp_rw [mem_Ioi] at hr ⊢
     rw [← mem_smul_set_iff_inv_smul_mem₀ hr.ne'] at hx
     have := smul_pos (inv_pos.2 ha') hr
-    refine ⟨a⁻¹ • r, ⟨this, ?_⟩, smul_inv_smul₀ ha'.ne' _⟩
+    refine ⟨a⁻¹ • r, ⟨this, ?_⟩, smul_inv_smul₀ (ha := ha'.ne'.isUnit) _⟩
     rwa [← mem_smul_set_iff_inv_smul_mem₀ this.ne', smul_assoc,
       mem_smul_set_iff_inv_smul_mem₀ (inv_ne_zero ha'.ne'), inv_inv]
   · rintro ⟨r, ⟨hr, hx⟩, rfl⟩
@@ -299,8 +299,8 @@ theorem gauge_smul_left_of_nonneg [MulActionWithZero α E] [SMulCommClass α ℝ
   constructor
   · rintro ⟨hr, y, hy, h⟩
     simp_rw [mem_Ioi] at hr ⊢
-    refine ⟨a • r, ⟨smul_pos ha' hr, ?_⟩, inv_smul_smul₀ ha'.ne' _⟩
-    rwa [smul_inv₀, smul_assoc, ← h, inv_smul_smul₀ ha'.ne']
+    refine ⟨a • r, ⟨smul_pos ha' hr, ?_⟩, inv_smul_smul₀ (ha := ha'.ne'.isUnit) _⟩
+    rwa [smul_inv₀, smul_assoc, ← h, inv_smul_smul₀ (ha := ha'.ne'.isUnit)]
   · rintro ⟨r, ⟨hr, hx⟩, rfl⟩
     rw [mem_Ioi] at hr ⊢
     refine ⟨smul_pos (inv_pos.2 ha') hr, r⁻¹ • x, hx, ?_⟩
@@ -352,7 +352,7 @@ theorem comap_gauge_nhds_zero_le (ha : Absorbent ℝ s) (hb : Bornology.IsVonNBo
   rcases exists_lt_of_gauge_lt ha hx with ⟨c, hc₀, hcr, y, hy, rfl⟩
   have hrc := (lt_inv_comm₀ hr₀ hc₀).2 hcr
   rcases hr c⁻¹ (hrc.le.trans (le_abs_self _)) hy with ⟨z, hz, rfl⟩
-  simpa only [smul_inv_smul₀ hc₀.ne']
+  simpa only [smul_inv_smul₀ (ha := hc₀.ne'.isUnit)]
 
 variable [T1Space E]
 
@@ -542,7 +542,7 @@ protected theorem Seminorm.gauge_ball (p : Seminorm ℝ E) : gauge (p.ball 0 1) 
     by_contra h
     have hpx : 0 < p x := (apply_nonneg _ _).lt_of_ne h
     have hpx₂ : 0 < 2 * p x := mul_pos zero_lt_two hpx
-    refine hp.subset ⟨hpx₂, (2 * p x)⁻¹ • x, ?_, smul_inv_smul₀ hpx₂.ne' _⟩
+    refine hp.subset ⟨hpx₂, (2 * p x)⁻¹ • x, ?_, smul_inv_smul₀ (ha := hpx₂.ne'.isUnit) _⟩
     rw [p.mem_ball_zero, map_smul_eq_mul, Real.norm_eq_abs, abs_of_pos (inv_pos.2 hpx₂),
       inv_mul_lt_iff₀ hpx₂, mul_one]
     exact lt_mul_of_one_lt_left hpx one_lt_two
@@ -552,7 +552,7 @@ protected theorem Seminorm.gauge_ball (p : Seminorm ℝ E) : gauge (p.ball 0 1) 
     rw [map_smul_eq_mul, Real.norm_eq_abs, abs_of_pos hr]
     exact mul_le_of_le_one_right hr.le hy.le
   · have hpε : 0 < p x + ε := by positivity
-    refine hr ⟨hpε, (p x + ε)⁻¹ • x, ?_, smul_inv_smul₀ hpε.ne' _⟩
+    refine hr ⟨hpε, (p x + ε)⁻¹ • x, ?_, smul_inv_smul₀ (ha := hpε.ne'.isUnit) _⟩
     rw [p.mem_ball_zero, map_smul_eq_mul, Real.norm_eq_abs, abs_of_pos (inv_pos.2 hpε),
       inv_mul_lt_iff₀ hpε, mul_one]
     exact lt_add_of_pos_right _ hε

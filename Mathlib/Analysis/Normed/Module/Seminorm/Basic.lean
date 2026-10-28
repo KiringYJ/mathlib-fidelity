@@ -441,8 +441,8 @@ noncomputable instance instInf : Min (Seminorm 𝕜 E) where
           map_smul_eq_mul q, smul_sub]
         refine
           Function.Surjective.iInf_congr ((a⁻¹ • ·) : E → E)
-            (fun u => ⟨a • u, inv_smul_smul₀ ha u⟩) fun u => ?_
-        rw [smul_inv_smul₀ ha] }
+            (fun u => ⟨a • u, inv_smul_smul₀ (ha := ha.isUnit) u⟩) fun u => ?_
+        rw [smul_inv_smul₀ (ha := ha.isUnit)] }
 
 @[simp]
 theorem inf_apply (p q : Seminorm 𝕜 E) (x : E) : (p ⊓ q) x = ⨅ u : E, p u + q (x - u) :=
@@ -965,14 +965,14 @@ theorem smul_ball_preimage (p : Seminorm 𝕜 E) (y : E) (r : ℝ) (a : 𝕜) (h
     (a • ·) ⁻¹' p.ball y r = p.ball (a⁻¹ • y) (r / ‖a‖) :=
   Set.ext fun _ => by
     rw [mem_preimage, mem_ball, mem_ball, lt_div_iff₀ (norm_pos_iff.mpr ha), mul_comm, ←
-      map_smul_eq_mul p, smul_sub, smul_inv_smul₀ ha]
+      map_smul_eq_mul p, smul_sub, smul_inv_smul₀ (ha := ha.isUnit)]
 
 @[simp]
 theorem smul_closedBall_preimage (p : Seminorm 𝕜 E) (y : E) (r : ℝ) (a : 𝕜) (ha : a ≠ 0) :
     (a • ·) ⁻¹' p.closedBall y r = p.closedBall (a⁻¹ • y) (r / ‖a‖) :=
   Set.ext fun _ => by
     rw [mem_preimage, mem_closedBall, mem_closedBall, le_div_iff₀ (norm_pos_iff.mpr ha), mul_comm, ←
-      map_smul_eq_mul p, smul_sub, smul_inv_smul₀ ha]
+      map_smul_eq_mul p, smul_sub, smul_inv_smul₀ (ha := ha.isUnit)]
 
 end NormedDivisionRing
 
