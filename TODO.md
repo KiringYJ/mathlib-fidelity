@@ -3858,10 +3858,11 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     - `Analysis/Asymptotics/Theta.lean`: give `IsTheta.inv`, `isTheta_inv`, `IsTheta.div`,
       `IsTheta.zpow`, and `isTheta_of_div_tendsto_nhds_ne_zero` their exact operation domains,
       using local/eventual domains where appropriate; update `IsBigO.inv_rev` and cancellation.
-    - `Analysis/Normed/Module/RCLike/Real.lean`: put `inv_norm_smul_mem_unitClosedBall` on its
-      exact normalization domain `‖x‖ ≠ 0`; handle the zero-norm boundary separately without
-      evaluating its reciprocal. Remove the retired `div_self_le_one` use. In `exists_norm_eq`,
-      pass the nonzero norm evidence already obtained to the current cancellation API.
+    - [x] `Analysis/Normed/Module/RCLike/Real.lean`: normalization now takes implicit evidence
+      for its exact domain `‖x‖ ≠ 0`, and `exists_norm_eq` uses the canonical cancellation API.
+      The module and `MathlibTest/NormedNormalizationDomain.lean` pass their scoped build;
+      exact diagnostics reject using `x ≠ 0` alone in a seminormed space. All 16 environment
+      linters and the semantic/proof operator audits pass (2026-10-30).
     - `MeasureTheory/Function/StronglyMeasurable/Basic.lean`: repair `approxBounded`'s quotient
       at zero norm and its convergence/bound lemmas. Give `inv₀`, `div₀`, and `div` their exact
       input domains and construct admissible approximant denominators: indicator restrictions

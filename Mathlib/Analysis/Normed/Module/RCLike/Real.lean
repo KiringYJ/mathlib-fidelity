@@ -37,10 +37,9 @@ section Seminormed
 
 variable {E : Type*} [SeminormedAddCommGroup E] [NormedSpace ℝ E]
 
-theorem inv_norm_smul_mem_unitClosedBall (x : E) :
+theorem inv_norm_smul_mem_unitClosedBall (x : E) {hx : IsUnit ‖x‖} :
     ‖x‖⁻¹ • x ∈ closedBall (0 : E) 1 := by
-  simp only [mem_closedBall_zero_iff, norm_smul, norm_inv, norm_norm, ← div_eq_inv_mul,
-    div_self_le_one]
+  simp only [mem_closedBall_zero_iff, norm_smul, norm_inv, norm_norm, inv_mul_cancel₀, le_refl]
 
 theorem norm_smul_of_nonneg {t : ℝ} (ht : 0 ≤ t) (x : E) : ‖t • x‖ = t * ‖x‖ := by
   rw [norm_smul, Real.norm_eq_abs, abs_of_nonneg ht]
@@ -108,7 +107,7 @@ variable (E)
 theorem exists_norm_eq {c : ℝ} (hc : 0 ≤ c) : ∃ x : E, ‖x‖ = c := by
   rcases exists_norm_ne_zero E with ⟨x, hx⟩
   use c • ‖x‖⁻¹ • x
-  simp [norm_smul, Real.norm_of_nonneg hc, inv_mul_cancel₀ hx]
+  simp [norm_smul, Real.norm_of_nonneg hc, inv_mul_cancel₀ (ha := hx.isUnit)]
 
 @[simp]
 theorem range_norm : range (norm : E → ℝ) = Ici 0 :=
