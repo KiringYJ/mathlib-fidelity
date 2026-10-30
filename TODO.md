@@ -3823,20 +3823,72 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     review found no remaining issue in this repair. `lake exe mk_all --check` passes. The
     supplemental lexical inventory remains at 42 occurrences in 12 files; it does not certify
     the rest of the library.
-  - The broader differential/log-derivative, Lie-coroot, bound, and positivity test probe reaches
-    three failing dependency roots, leaving the positivity test blocked.
-    In `Analysis/LocallyConvex/Basic.lean`, repair
-    `absorbs_iff_eventually_nhdsNE_zero` and `absorbent_nhds_zero` across the unit-filter
-    formulation of inversion, use the canonical checked quotient rewrite in
-    `Balanced.smul_mono` and `Balanced.smul_mem_mono`, and extract an actual nonzero proof from
-    complement membership in `Absorbent.eq_univ_of_smulMemClass`.
-    In `Analysis/Normed/Module/Basic.lean`, reconcile `normedAlgebraRat`'s computability with
-    `DivisionRing.toRatAlgebra`. In `MeasureTheory/Constructions/Polish/Basic.lean`, repair
-    the unresolved geometric-decay base in `measurablySeparable_range_of_disjoint`'s
-    `exists_pow_lt_of_lt_one` call. These are required downstream ports; the migration remains open.
+  - The broader differential/log-derivative, Lie-coroot, bound, and positivity test probe reached
+    three failing dependency roots: `Analysis/LocallyConvex/Basic.lean`,
+    `Analysis/Normed/Module/Basic.lean`, and `MeasureTheory/Constructions/Polish/Basic.lean`.
+    These are repaired in the continuation below; positivity remains an open acceptance target.
   - The scoped text-style command still fails solely on the two inherited tooling items in the
     final acceptance task (`OperatorPolicy`'s header-linter import and the undocumented inventory
     script). The full-library build, aggregate tests and final acceptance gates remain open.
+
+  **Continuation, 2026-10-30: local convexity and rational algebra dependencies.** The three
+  dependency roots above now build. `absorbs_iff_eventually_nhdsNE_zero` transports explicitly
+  between nonzero ambient scalars and the unit-filter formulation of inversion.
+  `Balanced.smul_mono` and `Balanced.smul_mem_mono` use the canonical checked quotient identity;
+  `absorbent_nhds_zero` uses scalar continuity on the punctured neighborhood; and
+  `Absorbent.eq_univ_of_smulMemClass` extracts nonzero evidence from complement membership.
+  `normedAlgebraRat` is noncomputable because its existing `DivisionRing.toRatAlgebra` is,
+  without changing the supplied rational cast or action. The geometric-decay lemma in
+  `measurablySeparable_range_of_disjoint` explicitly selects the base `(1 / 2 : ℝ)`.
+  All statements and domains are preserved; this is another repair within the unfinished migration.
+
+  - The final scoped `lake build` passes all four targets (2088 jobs): the three repaired modules
+    and `MathlibTest.InstanceDiamonds.Algebra.Field.RationalData`. The modules pass all 16 enabled
+    environment linters, including the semantic operator-fidelity linter, and their separate
+    proof-dependency reports find no retired operators. Independent source review found no
+    remaining issue in this repair. `lake exe mk_all --check` passes, and the supplemental lexical
+    inventory remains at 42 occurrences in 12 files. The existing four unused-simp warnings in
+    `Analysis/Normed/Module/Basic.lean` remain, as do the two inherited text-style tooling failures.
+  - The positivity dependency probe passes the three repaired roots but fails in eight further
+    modules. The next required ports are:
+
+    - `Analysis/CStarAlgebra/Basic.lean`: supply the zero-product argument in
+      `IsStarProjection.norm_le` after `grind` fails on `‖e‖ * (‖e‖ - 1) = 0`.
+    - `Analysis/Asymptotics/Theta.lean`: give `IsTheta.inv`, `isTheta_inv`, `IsTheta.div`,
+      `IsTheta.zpow`, and `isTheta_of_div_tendsto_nhds_ne_zero` their exact operation domains,
+      using local/eventual domains where appropriate; update `IsBigO.inv_rev` and cancellation.
+    - `Analysis/Normed/Module/RCLike/Real.lean`: put `inv_norm_smul_mem_unitClosedBall` on its
+      exact normalization domain `‖x‖ ≠ 0`; handle the zero-norm boundary separately without
+      evaluating its reciprocal. Remove the retired `div_self_le_one` use. In `exists_norm_eq`,
+      pass the nonzero norm evidence already obtained to the current cancellation API.
+    - `MeasureTheory/Function/StronglyMeasurable/Basic.lean`: repair `approxBounded`'s quotient
+      at zero norm and its convergence/bound lemmas. Give `inv₀`, `div₀`, and `div` their exact
+      input domains and construct admissible approximant denominators: indicator restrictions
+      introduce zeros, so nonvanishing of the limiting function does not certify them.
+    - `Analysis/Normed/Affine/AddTorsor.lean`: repair the checked real/NNReal coercions in the
+      `nndist_*midpoint*` lemmas, the algebra in `dist_midpoint_midpoint_le'` and
+      `antilipschitzWith_lineMap`, and `DilationEquiv.smulTorsor`'s computability annotation.
+      Preserve the existing invertible-two and distinct-point hypotheses.
+    - `Analysis/SpecificLimits/Normed.lean`: port the local-domain filters in the power-limit
+      and ratio-test families, including `tendsto_const_div_pow`, the two
+      `AbsoluteValue.tendsto_div_one_add_pow_*` lemmas, and
+      `summable_of_ratio_test_tendsto_lt_one`/`not_summable_of_ratio_test_tendsto_gt_one`.
+      Supply `1 - ξ` invertibility in the geometric-series family; replace the obsolete
+      `Units.val_pow` calls in its weighted variants and repair
+      `hasSum_sq_mul_geometric_of_norm_lt_one'`. Recheck the power-series, factorial, and
+      bounded-scalar limit proofs after those statement and algebra ports.
+    - `Analysis/Normed/Module/Seminorm/Basic.lean`: port the checked cancellation in `ofSMulLE`,
+      `ball_norm_mul_subset`, `smul_ball_zero`, and `smul_closedBall_zero`, and the coordinate
+      domain of `convexOn`. Propagate the sign/unit evidence in `rescale_to_shell_zpow`.
+      In `rescale_to_shell`, bind the witness's nonzero evidence dependently before using its
+      reciprocal; a conjunction alone does not supply it. Then repair `bound_of_shell`.
+    - `MeasureTheory/Measure/Haar/Basic.lean`: give `haar.prehaar`'s quotient by `index K₀ U`
+      its exact admissible domain, prove admissibility in the positive-compact/open-neighborhood
+      construction, and propagate it through `prehaar_*`, `clPrehaar`, content, measure, and
+      additive translations. The later `to_additive` failures follow the malformed construction.
+
+    Fix operation definitions and statements before cascading proof errors. These eight roots do
+    not exhaust the remaining migration; no complete-library acceptance pass is claimed.
 
   Remaining tasks, in dependency order:
 

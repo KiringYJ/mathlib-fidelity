@@ -364,7 +364,8 @@ normed algebra over the rationals.
 
 Phrased another way, if `𝕜` is a normed algebra over the reals, then `AlgebraRat` respects that
 norm. -/
-instance normedAlgebraRat {𝕜} [NormedDivisionRing 𝕜] [CharZero 𝕜] [NormedAlgebra ℝ 𝕜] :
+noncomputable instance normedAlgebraRat {𝕜} [NormedDivisionRing 𝕜] [CharZero 𝕜]
+    [NormedAlgebra ℝ 𝕜] :
     NormedAlgebra ℚ 𝕜 where
   norm_smul_le q x := by
     rw [← smul_one_smul ℝ q x, Rat.smul_one_eq_cast, norm_smul, Rat.norm_cast_real]

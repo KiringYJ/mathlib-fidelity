@@ -488,7 +488,7 @@ theorem measurablySeparable_range_of_disjoint [T2Space α] [SigmaAlgebra α]
     apply Metric.mem_nhds_iff.1
     exact hg.continuousAt.preimage_mem_nhds (v_open.mem_nhds yv)
   obtain ⟨n, hn⟩ : ∃ n : ℕ, (1 / 2 : ℝ) ^ n < min εx εy :=
-    exists_pow_lt_of_lt_one (lt_min εxpos εypos) (by norm_num)
+    exists_pow_lt_of_lt_one (y := (1 / 2 : ℝ)) (lt_min εxpos εypos) (by norm_num)
   -- for large enough `n`, these open sets separate the images of long cylinders around `x` and `y`
   have B : MeasurablySeparable (f '' cylinder x n) (g '' cylinder y n) := by
     refine ⟨u, ?_, ?_, u_open.measurableSet⟩

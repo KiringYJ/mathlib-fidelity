@@ -161,7 +161,15 @@ variable [NormedDivisionRing 𝕜] [AddCommGroup E] [Module 𝕜 E] {s t : Set E
 
 theorem absorbs_iff_eventually_nhdsNE_zero :
     Absorbs 𝕜 s t ↔ ∀ᶠ c : 𝕜 in 𝓝[≠] 0, MapsTo (c • ·) t s := by
-  rw [absorbs_iff_eventually_cobounded_mapsTo, ← Filter.inv_cobounded₀]; rfl
+  rw [absorbs_iff_eventually_cobounded_mapsTo, ← Filter.inv_cobounded₀,
+    Filter.eventually_map, Filter.eventually_comap]
+  refine Filter.eventually_congr <| Filter.Eventually.of_forall fun c ↦ ?_
+  constructor
+  · intro h u hu
+    subst c
+    simpa only [Units.val_inv_eq_inv_val₀] using h u.ne_zero
+  · intro h hc
+    simpa only [Units.val_inv_eq_inv_val₀, Units.val_mk0] using h (Units.mk0 c hc) rfl
 
 alias ⟨Absorbs.eventually_nhdsNE_zero, _⟩ := absorbs_iff_eventually_nhdsNE_zero
 
@@ -193,7 +201,7 @@ theorem Balanced.smul_mono (hs : Balanced 𝕝 s) {a : 𝕝} (h : ‖a‖ ≤ �
   · calc
       a • s = b • (b⁻¹ • a) • s := by rw [smul_assoc, smul_inv_smul₀ (ha := hb.isUnit)]
       _ ⊆ b • s := smul_set_mono <| hs _ <| by
-        rw [norm_smul, norm_inv, ← div_eq_inv_mul]
+        rw [norm_smul, norm_inv, ← div_eq_inv_mul₀]
         exact div_le_one_of_le₀ h (norm_nonneg _)
 
 theorem Balanced.smul_mem_mono [SMulCommClass 𝕝 𝕜 E] (hs : Balanced 𝕝 s) {b : 𝕝}
@@ -203,7 +211,7 @@ theorem Balanced.smul_mem_mono [SMulCommClass 𝕝 𝕜 E] (hs : Balanced 𝕝 s
   · calc
       (a⁻¹ • b) • a • x ∈ s := by
         refine hs.smul_mem ?_ ha
-        rw [norm_smul, norm_inv, ← div_eq_inv_mul]
+        rw [norm_smul, norm_inv, ← div_eq_inv_mul₀]
         exact div_le_one_of_le₀ hba (norm_nonneg _)
       (a⁻¹ • b) • a • x = b • x := by rw [smul_comm, smul_assoc, smul_inv_smul₀ (ha := ha₀.isUnit)]
 
@@ -233,7 +241,8 @@ variable [TopologicalSpace E] [ContinuousSMul 𝕜 E]
 
 /-- Every neighbourhood of the origin is absorbent. -/
 theorem absorbent_nhds_zero (hA : A ∈ 𝓝 (0 : E)) : Absorbent 𝕜 A :=
-  absorbent_iff_inv_smul.2 fun _ ↦ Filter.tendsto_inv₀_cobounded.zero_smul_const _ hA
+  absorbent_iff_eventually_nhdsNE_zero.2 fun x ↦
+    (Filter.tendsto_id.mono_left inf_le_left).zero_smul_const x hA
 
 /-- The union of `{0}` with the interior of a balanced set is balanced. -/
 theorem Balanced.zero_insert_interior (hA : Balanced 𝕜 A) :
@@ -280,7 +289,8 @@ theorem Absorbent.eq_univ_of_smulMemClass {V : S} (hV : Absorbent 𝕜 (V : Set 
   intro x
   obtain ⟨c, hc, hc'⟩ :=
     ((absorbent_iff_eventually_nhdsNE_zero.mp hV x).and eventually_mem_nhdsWithin).exists
-  rw [← inv_smul_smul₀ (ha := hc'.isUnit) x]
+  have hc₀ : c ≠ 0 := by simpa only [mem_compl_iff, mem_singleton_iff] using hc'
+  rw [← inv_smul_smul₀ (ha := hc₀.isUnit) x]
   exact SMulMemClass.smul_mem c⁻¹ hc
 
 theorem Absorbent.submodule_eq_top {V : Submodule 𝕜 E} (hV : Absorbent 𝕜 (V : Set E)) :
