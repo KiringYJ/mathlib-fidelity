@@ -56,19 +56,40 @@ instance [Algebra T R] [Algebra.IsSeparable T R] :
     Algebra.IsSeparable T (WithAbs v) :=
   AlgEquiv.Algebra.isSeparable (algEquiv T v).symm
 
-@[simp] lemma toAbs_div (x y : R) : toAbs v (x / y) = toAbs v x / toAbs v y := rfl
-@[simp] lemma ofAbs_div (x y : WithAbs v) : ofAbs (x / y) = ofAbs x / ofAbs y := rfl
+@[simp] lemma toAbs_div (x y : R) {hy : IsUnit y} :
+    toAbs v (x / y) = Checked.div (toAbs v x) (toAbs v y)
+      (hy.map (equiv v).symm.toMonoidHom) :=
+  map_div₀ (equiv v).symm x y
+@[simp] lemma ofAbs_div (x y : WithAbs v) {hy : IsUnit y} :
+    ofAbs (x / y) = Checked.div (ofAbs x) (ofAbs y) (hy.map (equiv v).toMonoidHom) :=
+  map_div₀ (equiv v) x y
 
-@[simp] lemma toAbs_inv (x : R) : toAbs v x⁻¹ = (toAbs v x)⁻¹ := rfl
-@[simp] lemma ofAbs_inv (x : WithAbs v) : ofAbs (x⁻¹) = (ofAbs x)⁻¹ := rfl
+@[simp] lemma toAbs_inv (x : R) {hx : IsUnit x} :
+    toAbs v x⁻¹ = Checked.inv (toAbs v x) (hx.map (equiv v).symm.toMonoidHom) :=
+  map_inv₀ (equiv v).symm x
+@[simp] lemma ofAbs_inv (x : WithAbs v) {hx : IsUnit x} :
+    ofAbs x⁻¹ = Checked.inv (ofAbs x) (hx.map (equiv v).toMonoidHom) :=
+  map_inv₀ (equiv v) x
 
 /- Note that `AbsoluteValue.tendsto_div_one_add_pow_nhds_one` would follow from the below
 result if `WithAbs v` had a topology for general value rings `S`. Currently `WithAbs v` only has
 a topology when `S = ℝ`. -/
 theorem tendsto_one_div_one_add_pow_nhds_one {v : AbsoluteValue R ℝ} {a : R} (ha : v a < 1) :
-    Filter.atTop.Tendsto (fun n ↦ (equiv v).symm (1 / (1 + a ^ n))) (𝓝 1) := by
-  simpa using! inv_one (G := WithAbs v) ▸ (tendsto_inv_iff₀ one_ne_zero).2
-    (tendsto_iff_norm_sub_tendsto_zero.2 <| by simpa using! ha)
+    Filter.Tendsto (fun n : {n : ℕ // 1 + a ^ n ≠ 0} ↦
+      (equiv v).symm (Checked.div 1 (1 + a ^ n.1) n.2.isUnit))
+      (Filter.comap Subtype.val Filter.atTop) (𝓝 1) := by
+  have hp : Filter.Tendsto (fun n : ℕ => (equiv v).symm (a ^ n)) Filter.atTop (𝓝 0) := by
+    apply tendsto_zero_iff_norm_tendsto_zero.mpr
+    change Filter.Tendsto (fun n : ℕ => v (a ^ n)) Filter.atTop (𝓝 0)
+    simpa only [map_pow] using
+      tendsto_pow_atTop_nhds_zero_of_lt_one (v.nonneg a) ha
+  have hs : Filter.Tendsto
+      (fun n : {n : ℕ // 1 + a ^ n ≠ 0} => (equiv v).symm (1 + a ^ n.1))
+      (Filter.comap Subtype.val Filter.atTop) (𝓝 1) := by
+    simpa only [map_add, map_one, add_zero, Function.comp_def] using!
+      (hp.comp Filter.tendsto_comap).const_add 1
+  simpa only [map_div₀, map_inv₀, map_one, one_div₀, inv_one₀] using!
+    hs.inv₀ (ha := isUnit_one) (h0 := fun n => n.2.isUnit.map (equiv v).symm.toMonoidHom)
 
 end Field
 
@@ -125,13 +146,14 @@ noncomputable def algebraOfLiesOver : Algebra v.Completion w.Completion :=
 
 instance : letI := algebraOfLiesOver v w
     IsScalarTower K v.Completion w.Completion :=
-  let := algebraOfLiesOver v w
-  IsScalarTower.of_algebraMap_eq fun x ↦ (UniformSpace.Completion.mapRingHom_coe
-    (WithAbs.isometry_map v w).continuous (WithAbs.toAbs v x)).symm
+  letI := algebraOfLiesOver v w
+  IsScalarTower.of_algebraMap_eq (R := K) (S := v.Completion) (A := w.Completion) fun x ↦
+    (UniformSpace.Completion.mapRingHom_coe
+      (WithAbs.isometry_map v w).continuous (WithAbs.toAbs v x)).symm
 
 instance : letI := algebraOfLiesOver v w
     ContinuousSMul v.Completion w.Completion :=
-  let := algebraOfLiesOver v w
+  letI := algebraOfLiesOver v w
   continuousSMul_of_algebraMap v.Completion w.Completion
     (UniformSpace.Completion.isometry_mapRingHom (WithAbs.isometry_map v w)).continuous
 
