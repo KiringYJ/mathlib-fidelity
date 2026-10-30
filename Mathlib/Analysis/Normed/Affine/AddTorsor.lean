@@ -150,7 +150,9 @@ theorem dist_left_midpoint (p₁ p₂ : P) : dist p₁ (midpoint 𝕜 p₁ p₂)
 @[simp]
 theorem nndist_left_midpoint (p₁ p₂ : P) :
     nndist p₁ (midpoint 𝕜 p₁ p₂) = ‖(2 : 𝕜)‖₊⁻¹ * nndist p₁ p₂ :=
-  NNReal.eq <| dist_left_midpoint _ _
+  NNReal.eq <| by
+    simpa only [NNReal.coe_mul, NNReal.coe_inv, coe_nnnorm, coe_nndist] using
+      dist_left_midpoint (𝕜 := 𝕜) p₁ p₂
 
 @[simp]
 theorem dist_midpoint_left (p₁ p₂ : P) : dist (midpoint 𝕜 p₁ p₂) p₁ = ‖(2 : 𝕜)‖⁻¹ * dist p₁ p₂ := by
@@ -159,7 +161,9 @@ theorem dist_midpoint_left (p₁ p₂ : P) : dist (midpoint 𝕜 p₁ p₂) p₁
 @[simp]
 theorem nndist_midpoint_left (p₁ p₂ : P) :
     nndist (midpoint 𝕜 p₁ p₂) p₁ = ‖(2 : 𝕜)‖₊⁻¹ * nndist p₁ p₂ :=
-  NNReal.eq <| dist_midpoint_left _ _
+  NNReal.eq <| by
+    simpa only [NNReal.coe_mul, NNReal.coe_inv, coe_nnnorm, coe_nndist] using
+      dist_midpoint_left (𝕜 := 𝕜) p₁ p₂
 
 @[simp]
 theorem dist_midpoint_right (p₁ p₂ : P) :
@@ -169,7 +173,9 @@ theorem dist_midpoint_right (p₁ p₂ : P) :
 @[simp]
 theorem nndist_midpoint_right (p₁ p₂ : P) :
     nndist (midpoint 𝕜 p₁ p₂) p₂ = ‖(2 : 𝕜)‖₊⁻¹ * nndist p₁ p₂ :=
-  NNReal.eq <| dist_midpoint_right _ _
+  NNReal.eq <| by
+    simpa only [NNReal.coe_mul, NNReal.coe_inv, coe_nnnorm, coe_nndist] using
+      dist_midpoint_right (𝕜 := 𝕜) p₁ p₂
 
 @[simp]
 theorem dist_right_midpoint (p₁ p₂ : P) :
@@ -179,7 +185,9 @@ theorem dist_right_midpoint (p₁ p₂ : P) :
 @[simp]
 theorem nndist_right_midpoint (p₁ p₂ : P) :
     nndist p₂ (midpoint 𝕜 p₁ p₂) = ‖(2 : 𝕜)‖₊⁻¹ * nndist p₁ p₂ :=
-  NNReal.eq <| dist_right_midpoint _ _
+  NNReal.eq <| by
+    simpa only [NNReal.coe_mul, NNReal.coe_inv, coe_nnnorm, coe_nndist] using
+      dist_right_midpoint (𝕜 := 𝕜) p₁ p₂
 
 /-- The midpoint of the segment AB is the same distance from A as it is from B. -/
 theorem dist_left_midpoint_eq_dist_right_midpoint (p₁ p₂ : P) :
@@ -189,12 +197,14 @@ theorem dist_left_midpoint_eq_dist_right_midpoint (p₁ p₂ : P) :
 theorem dist_midpoint_midpoint_le' (p₁ p₂ p₃ p₄ : P) :
     dist (midpoint 𝕜 p₁ p₂) (midpoint 𝕜 p₃ p₄) ≤ (dist p₁ p₃ + dist p₂ p₄) / ‖(2 : 𝕜)‖ := by
   rw [dist_eq_norm_vsub V, dist_eq_norm_vsub V, dist_eq_norm_vsub V, midpoint_vsub_midpoint]
-  rw [midpoint_eq_smul_add, norm_smul, invOf_eq_inv, norm_inv, ← div_eq_inv_mul]
+  rw [midpoint_eq_smul_add, norm_smul, invOf_eq_inv, norm_inv, ← div_eq_inv_mul₀]
   grw [norm_add_le]
 
 theorem nndist_midpoint_midpoint_le' (p₁ p₂ p₃ p₄ : P) :
-    nndist (midpoint 𝕜 p₁ p₂) (midpoint 𝕜 p₃ p₄) ≤ (nndist p₁ p₃ + nndist p₂ p₄) / ‖(2 : 𝕜)‖₊ :=
-  dist_midpoint_midpoint_le' _ _ _ _
+    nndist (midpoint 𝕜 p₁ p₂) (midpoint 𝕜 p₃ p₄) ≤ (nndist p₁ p₃ + nndist p₂ p₄) / ‖(2 : 𝕜)‖₊ := by
+  apply NNReal.coe_le_coe.1
+  simpa only [NNReal.coe_div, NNReal.coe_add, coe_nnnorm, coe_nndist] using
+    dist_midpoint_midpoint_le' (𝕜 := 𝕜) p₁ p₂ p₃ p₄
 
 end invertibleTwo
 
@@ -220,8 +230,8 @@ theorem dist_right_pointReflection (p q : P) :
 theorem antilipschitzWith_lineMap {p₁ p₂ : Q} (h : p₁ ≠ p₂) :
     AntilipschitzWith (nndist p₁ p₂)⁻¹ (lineMap p₁ p₂ : 𝕜 → Q) :=
   AntilipschitzWith.of_le_mul_dist fun c₁ c₂ => by
-    rw [dist_lineMap_lineMap, NNReal.coe_inv, ← dist_nndist, mul_left_comm,
-      inv_mul_cancel₀ (dist_ne_zero.2 h), mul_one]
+    simp only [dist_lineMap_lineMap, NNReal.coe_inv, coe_nndist]
+    rw [mul_left_comm, inv_mul_cancel₀, mul_one]
 
 end NormedSpace
 
@@ -232,8 +242,10 @@ theorem dist_midpoint_midpoint_le (p₁ p₂ p₃ p₄ : V) :
   simpa using dist_midpoint_midpoint_le' (𝕜 := ℝ) p₁ p₂ p₃ p₄
 
 theorem nndist_midpoint_midpoint_le (p₁ p₂ p₃ p₄ : V) :
-    nndist (midpoint ℝ p₁ p₂) (midpoint ℝ p₃ p₄) ≤ (nndist p₁ p₃ + nndist p₂ p₄) / 2 :=
-  dist_midpoint_midpoint_le _ _ _ _
+    nndist (midpoint ℝ p₁ p₂) (midpoint ℝ p₃ p₄) ≤ (nndist p₁ p₃ + nndist p₂ p₄) / 2 := by
+  apply NNReal.coe_le_coe.1
+  simpa only [NNReal.coe_div, NNReal.coe_add, NNReal.coe_ofNat, coe_nndist] using
+    dist_midpoint_midpoint_le p₁ p₂ p₃ p₄
 
 /-- A continuous map between two normed affine spaces is an affine map provided that
 it sends midpoints to midpoints. -/
@@ -259,7 +271,7 @@ variable [Module 𝕜 E] [NormSMulClass 𝕜 E] {P : Type*} [PseudoMetricSpace P
 /-- Scaling by an element `k` of the scalar ring as a `DilationEquiv` with ratio `‖k‖₊`, mapping
 from a normed space to a normed torsor over that space sending `0` to `c`. -/
 @[simps]
-def DilationEquiv.smulTorsor (c : P) {k : 𝕜} (hk : k ≠ 0) : E ≃ᵈ P where
+noncomputable def DilationEquiv.smulTorsor (c : P) {k : 𝕜} (hk : k ≠ 0) : E ≃ᵈ P where
   toFun := (k • · +ᵥ c)
   invFun := k⁻¹ • (· -ᵥ c)
   left_inv x := by simp [inv_smul_smul₀ (ha := hk.isUnit)]

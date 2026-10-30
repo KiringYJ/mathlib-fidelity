@@ -3866,10 +3866,11 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
       at zero norm and its convergence/bound lemmas. Give `inv₀`, `div₀`, and `div` their exact
       input domains and construct admissible approximant denominators: indicator restrictions
       introduce zeros, so nonvanishing of the limiting function does not certify them.
-    - `Analysis/Normed/Affine/AddTorsor.lean`: repair the checked real/NNReal coercions in the
-      `nndist_*midpoint*` lemmas, the algebra in `dist_midpoint_midpoint_le'` and
-      `antilipschitzWith_lineMap`, and `DilationEquiv.smulTorsor`'s computability annotation.
-      Preserve the existing invertible-two and distinct-point hypotheses.
+    - [x] `Analysis/Normed/Affine/AddTorsor.lean`: checked real/NNReal coercions, midpoint
+      estimates, line-map cancellation, and `DilationEquiv.smulTorsor`'s computability annotation
+      are repaired. Existing invertible-two and distinct-point hypotheses are preserved. The
+      module passes its scoped build, all 16 environment linters, and semantic/proof operator
+      audits (2026-10-30).
     - `Analysis/SpecificLimits/Normed.lean`: port the local-domain filters in the power-limit
       and ratio-test families, including `tendsto_const_div_pow`, the two
       `AbsoluteValue.tendsto_div_one_add_pow_*` lemmas, and
