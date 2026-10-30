@@ -137,13 +137,14 @@ theorem antilipschitz_of_comap_nhds_le [h : RingHomIsometric σ₁₂] (f : E �
     exact norm_zero.trans_le (mul_nonneg (NNReal.coe_nonneg _) (norm_nonneg _))
   have hc₀ : c ≠ 0 := norm_pos_iff.1 (one_pos.trans hc)
   rw [← h.1] at hc
-  rcases rescale_to_shell_zpow hc ε0 hx with ⟨n, -, hlt, -, hle⟩
-  simp only [← map_zpow₀, h.1, ← map_smulₛₗ] at hlt hle
+  rcases rescale_to_shell_zpow hc ε0 hx with ⟨n, hn, hlt, -, hle⟩
+  have hcn : c ^ n ≠ 0 := zpow_ne_zero n hc₀
+  simp only [← map_zpow₀ σ₁₂ c n (h := fun _ => hc₀.isUnit), h.1, ← map_smulₛₗ] at hlt hle
   calc
     ‖x‖ = ‖c ^ n‖⁻¹ * ‖c ^ n • x‖ := by
-      rwa [← norm_inv, ← norm_smul, inv_smul_smul₀ (ha := (zpow_ne_zero _ _).isUnit)]
+      rw [← norm_inv (c ^ n) (ha := hcn.isUnit), ← norm_smul, inv_smul_smul₀]
     _ ≤ ‖c ^ n‖⁻¹ * 1 := by gcongr; exact (hε _ hlt).le
-    _ ≤ ε⁻¹ * ‖c‖ * ‖f x‖ := by rwa [mul_one]
+    _ ≤ ε⁻¹ * ‖c‖ * ‖f x‖ := by simpa only [mul_one, NNReal.coe_inv] using hle
 
 end LinearMap
 

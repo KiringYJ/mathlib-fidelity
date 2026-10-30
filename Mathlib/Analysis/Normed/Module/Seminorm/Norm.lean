@@ -73,7 +73,8 @@ theorem balanced_closedBall_zero : Balanced 𝕜 (Metric.closedBall (0 : E) r) :
 moved by scalar multiplication to any shell of width `‖c‖`. Also recap information on the norm of
 the rescaling element that shows up in applications. -/
 lemma rescale_to_shell_semi_normed_zpow (hc : 1 < ‖c‖) (εpos : 0 < ε) (hx : ‖x‖ ≠ 0) :
-    ∃ n : ℤ, c ^ n ≠ 0 ∧ ‖c ^ n • x‖ < ε ∧ (ε / ‖c‖ ≤ ‖c ^ n • x‖) ∧
+    have hc₀ : c ≠ 0 := norm_pos_iff.mp (zero_lt_one.trans hc)
+    ∃ n : ℤ, ∃ hn : c ^ n ≠ 0, ‖c ^ n • x‖ < ε ∧ (ε / ‖c‖ ≤ ‖c ^ n • x‖) ∧
       (‖c ^ n‖⁻¹ ≤ ε⁻¹ * ‖c‖ * ‖x‖) :=
   (normSeminorm 𝕜 E).rescale_to_shell_zpow hc εpos hx
 
@@ -81,7 +82,7 @@ lemma rescale_to_shell_semi_normed_zpow (hc : 1 < ‖c‖) (εpos : 0 < ε) (hx 
 moved by scalar multiplication to any shell of width `‖c‖`. Also recap information on the norm of
 the rescaling element that shows up in applications. -/
 lemma rescale_to_shell_semi_normed (hc : 1 < ‖c‖) (εpos : 0 < ε) (hx : ‖x‖ ≠ 0) :
-    ∃ d : 𝕜, d ≠ 0 ∧ ‖d • x‖ < ε ∧ (ε / ‖c‖ ≤ ‖d • x‖) ∧ (‖d‖⁻¹ ≤ ε⁻¹ * ‖c‖ * ‖x‖) :=
+    ∃ d : 𝕜, ∃ hd : d ≠ 0, ‖d • x‖ < ε ∧ (ε / ‖c‖ ≤ ‖d • x‖) ∧ (‖d‖⁻¹ ≤ ε⁻¹ * ‖c‖ * ‖x‖) :=
   (normSeminorm 𝕜 E).rescale_to_shell hc εpos hx
 
 end Seminormed
@@ -92,7 +93,8 @@ variable [NormedAddCommGroup E] [NormedSpace 𝕜 E]
 variable {r : ℝ} {x : E} {c : 𝕜} {ε : ℝ}
 
 lemma rescale_to_shell_zpow (hc : 1 < ‖c‖) (εpos : 0 < ε) (hx : x ≠ 0) :
-    ∃ n : ℤ, c ^ n ≠ 0 ∧ ‖c ^ n • x‖ < ε ∧ (ε / ‖c‖ ≤ ‖c ^ n • x‖) ∧
+    have hc₀ : c ≠ 0 := norm_pos_iff.mp (zero_lt_one.trans hc)
+    ∃ n : ℤ, ∃ hn : c ^ n ≠ 0, ‖c ^ n • x‖ < ε ∧ (ε / ‖c‖ ≤ ‖c ^ n • x‖) ∧
       (‖c ^ n‖⁻¹ ≤ ε⁻¹ * ‖c‖ * ‖x‖) :=
   rescale_to_shell_semi_normed_zpow hc εpos (norm_ne_zero_iff.mpr hx)
 
@@ -100,7 +102,7 @@ lemma rescale_to_shell_zpow (hc : 1 < ‖c‖) (εpos : 0 < ε) (hx : x ≠ 0) :
 to any shell of width `‖c‖`. Also recap information on the norm of the rescaling element that shows
 up in applications. -/
 lemma rescale_to_shell (hc : 1 < ‖c‖) (εpos : 0 < ε) (hx : x ≠ 0) :
-    ∃ d : 𝕜, d ≠ 0 ∧ ‖d • x‖ < ε ∧ (ε / ‖c‖ ≤ ‖d • x‖) ∧ (‖d‖⁻¹ ≤ ε⁻¹ * ‖c‖ * ‖x‖) :=
+    ∃ d : 𝕜, ∃ hd : d ≠ 0, ‖d • x‖ < ε ∧ (ε / ‖c‖ ≤ ‖d • x‖) ∧ (‖d‖⁻¹ ≤ ε⁻¹ * ‖c‖ * ‖x‖) :=
   rescale_to_shell_semi_normed hc εpos (norm_ne_zero_iff.mpr hx)
 
 end Normed

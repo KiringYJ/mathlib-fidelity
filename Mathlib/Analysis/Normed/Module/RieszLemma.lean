@@ -89,6 +89,7 @@ and require `R > ‖c‖` for some `c : 𝕜` with norm `> 1`.
 theorem riesz_lemma_of_norm_lt {c : 𝕜} (hc : 1 < ‖c‖) {R : ℝ} (hR : ‖c‖ < R) {F : Subspace 𝕜 E}
     (hFc : IsClosed (F : Set E)) (hF : ∃ x : E, x ∉ F) :
     ∃ x₀ : E, ‖x₀‖ ≤ R ∧ ∀ y ∈ F, 1 ≤ ‖x₀ - y‖ := by
+  have hc₀ : c ≠ 0 := norm_pos_iff.mp (zero_lt_one.trans hc)
   have Rpos : 0 < R := (norm_nonneg _).trans_lt hR
   have : ‖c‖ / R < 1 := by
     rw [div_lt_iff₀ Rpos]
@@ -96,11 +97,11 @@ theorem riesz_lemma_of_norm_lt {c : 𝕜} (hc : 1 < ‖c‖) {R : ℝ} (hR : ‖
   rcases riesz_lemma hFc hF this with ⟨x, xF, hx⟩
   have x0 : x ≠ 0 := fun H => by simp [H] at xF
   obtain ⟨d, d0, dxlt, ledx, -⟩ :
-    ∃ d : 𝕜, d ≠ 0 ∧ ‖d • x‖ < R ∧ R / ‖c‖ ≤ ‖d • x‖ ∧ ‖d‖⁻¹ ≤ R⁻¹ * ‖c‖ * ‖x‖ :=
+    ∃ d : 𝕜, ∃ hd : d ≠ 0, ‖d • x‖ < R ∧ R / ‖c‖ ≤ ‖d • x‖ ∧ ‖d‖⁻¹ ≤ R⁻¹ * ‖c‖ * ‖x‖ :=
     rescale_to_shell hc Rpos x0
   refine ⟨d • x, dxlt.le, fun y hy => ?_⟩
   set y' := d⁻¹ • y
-  have yy' : y = d • y' := by simp [y', smul_smul, mul_inv_cancel₀ d0]
+  have yy' : y = d • y' := by simp [y', smul_inv_smul₀]
   calc
     1 = ‖c‖ / R * (R / ‖c‖) := by field
     _ ≤ ‖c‖ / R * ‖d • x‖ := by gcongr
@@ -132,10 +133,9 @@ theorem riesz_lemma_of_lt_one {𝕜 : Type*} [RCLike 𝕜]
   have hx₀' : x₀ ≠ 0 := by rintro rfl; simp at hx₀
   refine ⟨(‖x₀‖⁻¹ : 𝕜) • x₀, ?_, norm_smul_inv_norm hx₀', ?_⟩
   · rwa [Submodule.smul_mem_iff]
-    simpa
+    simp
   intro y hy
   have h₂ : ‖(‖x₀‖ : 𝕜)⁻¹ • (x₀ - (‖x₀‖ : 𝕜) • y)‖ = ‖x₀‖⁻¹ * ‖x₀ - (‖x₀‖ : 𝕜) • y‖ := by
-    rw [norm_smul, norm_inv, norm_algebraMap', norm_norm]
+    simp only [norm_smul, norm_inv, norm_algebraMap', norm_norm]
   have h₁ := h ((‖x₀‖ : 𝕜) • y) (F.smul_mem _ hy)
   rwa [← le_inv_mul_iff₀' (by simpa), ← h₂, smul_sub, inv_smul_smul₀] at h₁
-  simpa using hx₀'

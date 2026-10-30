@@ -89,12 +89,11 @@ def Seminorm.ofSMulLE [NormedField 𝕜] [AddCommGroup E] [Module 𝕜 E] (f : E
     refine le_antisymm (smul_le r x) ?_
     by_cases h : r = 0
     · simp [h, map_zero]
-    rw [← mul_le_mul_iff_right₀ (inv_pos.mpr (norm_pos_iff.mpr h))]
-    rw [inv_mul_cancel_left₀ (norm_ne_zero_iff.mpr h)]
-    specialize smul_le r⁻¹ (r • x)
-    rw [norm_inv] at smul_le
-    convert! smul_le
-    simp [h]
+    calc
+      ‖r‖ * f x = ‖r‖ * f (r⁻¹ • r • x) := by rw [inv_smul_smul₀]
+      _ ≤ ‖r‖ * (‖r⁻¹‖ * f (r • x)) :=
+        mul_le_mul_of_nonneg_left (smul_le r⁻¹ (r • x)) (norm_nonneg r)
+      _ = f (r • x) := by rw [norm_inv, mul_inv_cancel_left₀]
 
 end Of
 
@@ -903,16 +902,15 @@ theorem ball_norm_mul_subset {p : Seminorm 𝕜 E} {k : 𝕜} {r : ℝ} :
   · intro x
     rw [Set.mem_smul_set, Seminorm.mem_ball_zero]
     refine fun hx => ⟨k⁻¹ • x, ?_, ?_⟩
-    · rwa [Seminorm.mem_ball_zero, map_smul_eq_mul, norm_inv, ←
-        mul_lt_mul_iff_right₀ <| norm_pos_iff.mpr hk, ← mul_assoc, ← div_eq_mul_inv ‖k‖ ‖k‖,
-        div_self (ne_of_gt <| norm_pos_iff.mpr hk), one_mul]
-    rw [← smul_assoc, smul_eq_mul, ← div_eq_mul_inv, div_self hk, one_smul]
+    · rwa [Seminorm.mem_ball_zero, map_smul_eq_mul, norm_inv,
+        inv_mul_lt_iff₀ (norm_pos_iff.mpr hk)]
+    exact smul_inv_smul₀ x
 
 theorem smul_ball_zero {p : Seminorm 𝕜 E} {k : 𝕜} {r : ℝ} (hk : k ≠ 0) :
     k • p.ball 0 r = p.ball 0 (‖k‖ * r) := by
   ext
   rw [mem_smul_set_iff_inv_smul_mem₀ hk, p.mem_ball_zero, p.mem_ball_zero, map_smul_eq_mul,
-    norm_inv, ← div_eq_inv_mul, div_lt_iff₀ (norm_pos_iff.2 hk), mul_comm]
+    norm_inv, inv_mul_lt_iff₀ (norm_pos_iff.2 hk)]
 
 theorem smul_closedBall_subset {p : Seminorm 𝕜 E} {k : 𝕜} {r : ℝ} :
     k • p.closedBall 0 r ⊆ p.closedBall 0 (‖k‖ * r) := by
@@ -928,7 +926,7 @@ theorem smul_closedBall_zero {p : Seminorm 𝕜 E} {k : 𝕜} {r : ℝ} (hk : 0 
   rw [Set.mem_smul_set, Seminorm.mem_closedBall_zero]
   refine fun hx => ⟨k⁻¹ • x, ?_, ?_⟩
   · rwa [Seminorm.mem_closedBall_zero, map_smul_eq_mul, norm_inv, inv_mul_le_iff₀ hk]
-  rw [← smul_assoc, smul_eq_mul, ← div_eq_mul_inv, div_self (norm_pos_iff.mp hk), one_smul]
+  exact smul_inv_smul₀ x
 
 theorem ball_zero_absorbs_ball_zero (p : Seminorm 𝕜 E) {r₁ r₂ : ℝ} (hr₁ : 0 < r₁) :
     Absorbs 𝕜 (p.ball 0 r₁) (p.ball 0 r₂) := by
@@ -1001,7 +999,7 @@ variable [SMul ℝ E] [IsScalarTower ℝ 𝕜 E] (p : Seminorm 𝕜 E)
 
 /-- A seminorm is convex. Also see `convexOn_norm`. -/
 protected theorem convexOn : ConvexOn ℝ univ p := by
-  refine ⟨convex_univ, fun x _ y _ a b ha hb _ => ?_⟩
+  refine convexOn_iff.2 ⟨convex_univ, fun x _ y _ a b ha hb _ => ?_⟩
   calc
     p (a • x + b • y) ≤ p (a • x) + p (b • y) := map_add_le_add p _ _
     _ = ‖a • (1 : 𝕜)‖ * p x + ‖b • (1 : 𝕜)‖ * p y := by
@@ -1232,27 +1230,33 @@ If there is a scalar `c` with `‖c‖>1`, then any `x` such that `p x ≠ 0` ca
 moved by scalar multiplication to any `p`-shell of width `‖c‖`. Also recap information on the
 value of `p` on the rescaling element that shows up in applications. -/
 lemma rescale_to_shell_zpow (p : Seminorm 𝕜 E) {c : 𝕜} (hc : 1 < ‖c‖) {ε : ℝ}
-    (εpos : 0 < ε) {x : E} (hx : p x ≠ 0) : ∃ n : ℤ, c ^ n ≠ 0 ∧
+    (εpos : 0 < ε) {x : E} (hx : p x ≠ 0) :
+    have hc₀ : c ≠ 0 := norm_pos_iff.mp (zero_lt_one.trans hc)
+    ∃ n : ℤ, ∃ hn : c ^ n ≠ 0,
     p (c ^ n • x) < ε ∧ (ε / ‖c‖ ≤ p (c ^ n • x)) ∧ (‖c ^ n‖⁻¹ ≤ ε⁻¹ * ‖c‖ * p x) := by
+  dsimp only
+  have hc₀ : c ≠ 0 := norm_pos_iff.mp (zero_lt_one.trans hc)
   have xεpos : 0 < (p x) / ε := by positivity
   rcases exists_mem_Ico_zpow xεpos hc with ⟨n, hn⟩
   have cpos : 0 < ‖c‖ := by positivity
   have cnpos : 0 < ‖c ^ (n + 1)‖ := by rw [norm_zpow]; exact xεpos.trans hn.2
-  refine ⟨-(n + 1), ?_, ?_, ?_, ?_⟩
-  · show c ^ (-(n + 1)) ≠ 0; exact zpow_ne_zero _ (norm_pos_iff.1 cpos)
-  · show p ((c ^ (-(n + 1))) • x) < ε
-    rw [map_smul_eq_mul, zpow_neg, norm_inv, ← div_eq_inv_mul, div_lt_iff₀ cnpos, mul_comm,
+  have hcn : c ^ (-(n + 1)) ≠ 0 := zpow_ne_zero _ hc₀
+  refine ⟨-(n + 1), hcn, ?_, ?_, ?_⟩
+  · change p ((c ^ (-(n + 1))) • x) < ε
+    rw [map_smul_eq_mul, zpow_neg₀ hc₀, norm_inv, ← div_eq_inv_mul₀, div_lt_iff₀ cnpos, mul_comm,
         norm_zpow]
     exact (div_lt_iff₀ εpos).1 (hn.2)
-  · show ε / ‖c‖ ≤ p (c ^ (-(n + 1)) • x)
-    rw [zpow_neg, div_le_iff₀ cpos, map_smul_eq_mul, norm_inv, norm_zpow, zpow_add₀ (ne_of_gt cpos),
-        zpow_one, mul_inv_rev, mul_comm, ← mul_assoc, ← mul_assoc, mul_inv_cancel₀ (ne_of_gt cpos),
-        one_mul, ← div_eq_inv_mul, le_div_iff₀ (zpow_pos cpos _), mul_comm]
+  · change ε / ‖c‖ ≤ p (c ^ (-(n + 1)) • x)
+    rw [zpow_neg₀ hc₀, div_le_iff₀ cpos, map_smul_eq_mul, norm_inv]
+    simp only [norm_zpow, zpow_add₀ (ne_of_gt cpos), zpow_one₀, mul_inv_rev₀]
+    rw [mul_comm, ← mul_assoc, ← mul_assoc, mul_inv_cancel₀, one_mul,
+      ← div_eq_inv_mul₀, le_div_iff₀ (zpow_pos cpos _), mul_comm]
     exact (le_div_iff₀ εpos).1 hn.1
-  · show ‖(c ^ (-(n + 1)))‖⁻¹ ≤ ε⁻¹ * ‖c‖ * p x
+  · change ‖(c ^ (-(n + 1)))‖⁻¹ ≤ ε⁻¹ * ‖c‖ * p x
     have : ε⁻¹ * ‖c‖ * p x = ε⁻¹ * p x * ‖c‖ := by ring
-    rw [zpow_neg, norm_inv, inv_inv, norm_zpow, zpow_add₀ (ne_of_gt cpos), zpow_one, this,
-        ← div_eq_inv_mul]
+    simp only [zpow_neg₀ hc₀, norm_inv, inv_inv₀, norm_zpow,
+      zpow_add₀ (ne_of_gt cpos), zpow_one₀]
+    rw [this, ← div_eq_inv_mul₀]
     gcongr; exact hn.1
 
 /-- Let `p` be a seminorm on a vector space over a `NormedField`.
@@ -1261,7 +1265,7 @@ moved by scalar multiplication to any `p`-shell of width `‖c‖`. Also recap i
 value of `p` on the rescaling element that shows up in applications. -/
 lemma rescale_to_shell (p : Seminorm 𝕜 E) {c : 𝕜} (hc : 1 < ‖c‖) {ε : ℝ} (εpos : 0 < ε) {x : E}
     (hx : p x ≠ 0) :
-    ∃ d : 𝕜, d ≠ 0 ∧ p (d • x) < ε ∧ (ε / ‖c‖ ≤ p (d • x)) ∧ (‖d‖⁻¹ ≤ ε⁻¹ * ‖c‖ * p x) :=
+    ∃ d : 𝕜, ∃ hd : d ≠ 0, p (d • x) < ε ∧ (ε / ‖c‖ ≤ p (d • x)) ∧ (‖d‖⁻¹ ≤ ε⁻¹ * ‖c‖ * p x) :=
 let ⟨_, hn⟩ := p.rescale_to_shell_zpow hc εpos hx; ⟨_, hn⟩
 
 /-- Let `p` and `q` be two seminorms on a vector space over a `NontriviallyNormedField`.

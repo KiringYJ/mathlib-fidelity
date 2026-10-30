@@ -3883,11 +3883,12 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
       `Units.val_pow` calls in its weighted variants and repair
       `hasSum_sq_mul_geometric_of_norm_lt_one'`. Recheck the power-series, factorial, and
       bounded-scalar limit proofs after those statement and algebra ports.
-    - `Analysis/Normed/Module/Seminorm/Basic.lean`: port the checked cancellation in `ofSMulLE`,
-      `ball_norm_mul_subset`, `smul_ball_zero`, and `smul_closedBall_zero`, and the coordinate
-      domain of `convexOn`. Propagate the sign/unit evidence in `rescale_to_shell_zpow`.
-      In `rescale_to_shell`, bind the witness's nonzero evidence dependently before using its
-      reciprocal; a conjunction alone does not supply it. Then repair `bound_of_shell`.
+    - [x] `Analysis/Normed/Module/Seminorm/{Basic,Norm}.lean`: checked scalar ball/cancellation
+      and coordinate convexity proofs pass. Shell witnesses bind their nonzero proof before any
+      reciprocal, with normed/seminormed wrappers and the explicit Riesz/linear-operator consumers
+      ported. These four modules pass coherent scoped builds, all 16 module linters, semantic/proof
+      operator audits, and independent review (2026-10-30). Separate multilinear proof ports and
+      the full-library migration acceptance gates remain open.
     - [x] `MeasureTheory/Measure/Haar/Basic.lean`: `haar.prehaar` now requires exactly
       `index K₀ U ≠ 0`, and `clPrehaar` ranges over admissible neighborhoods. The positive-compact
       construction supplies the evidence; content, measure, and additive translations all build.
