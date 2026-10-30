@@ -99,25 +99,31 @@ theorem index_empty {V : Set G} : index ∅ V = 0 := by simp [index]
 
 variable [TopologicalSpace G]
 
-/-- `prehaar K₀ U K` is a weighted version of the index, defined as `(K : U)/(K₀ : U)`.
+/-- `prehaar K₀ U hU K` is a weighted version of the index, defined as `(K : U)/(K₀ : U)`.
+  Its exact domain is `index K₀ U ≠ 0`, supplied by `hU`.
   In the applications `K₀` is compact with non-empty interior, `U` is open containing `1`,
   and `K` is any compact set.
-  The argument `K` is a (bundled) compact set, so that we can consider `prehaar K₀ U` as an
+  The argument `K` is a (bundled) compact set, so that we can consider `prehaar K₀ U hU` as an
   element of `haarProduct` (below). -/
 @[to_additive /-- additive version of `MeasureTheory.Measure.haar.prehaar` -/]
-noncomputable def prehaar (K₀ U : Set G) (K : Compacts G) : ℝ :=
-  (index (K : Set G) U : ℝ) / index K₀ U
+noncomputable def prehaar (K₀ U : Set G) (hU : index K₀ U ≠ 0)
+    (K : Compacts G) : ℝ := by
+  have : (index K₀ U : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hU
+  exact (index (K : Set G) U : ℝ) / index K₀ U
 
 @[to_additive]
-theorem prehaar_empty (K₀ : PositiveCompacts G) {U : Set G} : prehaar (K₀ : Set G) U ⊥ = 0 := by
+theorem prehaar_empty (K₀ : Set G) {U : Set G} {hU : index K₀ U ≠ 0} :
+    prehaar K₀ U hU ⊥ = 0 := by
   rw [prehaar, Compacts.coe_bot, index_empty, Nat.cast_zero, zero_div]
 
 @[to_additive]
-theorem prehaar_nonneg (K₀ : PositiveCompacts G) {U : Set G} (K : Compacts G) :
-    0 ≤ prehaar (K₀ : Set G) U K := by apply div_nonneg <;> norm_cast <;> apply zero_le
+theorem prehaar_nonneg (K₀ : Set G) {U : Set G} {hU : index K₀ U ≠ 0}
+    (K : Compacts G) :
+    0 ≤ prehaar K₀ U hU K := by apply div_nonneg <;> norm_cast <;> apply zero_le
 
 /-- `haarProduct K₀` is the product of intervals `[0, (K : K₀)]`, for all compact sets `K`.
-  For all `U`, we can show that `prehaar K₀ U ∈ haarProduct K₀`. -/
+  For `K₀` positive compact and `U` with nonempty interior,
+  `prehaar K₀ U hU ∈ haarProduct K₀`. -/
 @[to_additive /-- additive version of `MeasureTheory.Measure.haar.haarProduct` -/]
 def haarProduct (K₀ : Set G) : Set (Compacts G → ℝ) :=
   pi univ fun K => Icc 0 <| index (K : Set G) K₀
@@ -127,14 +133,15 @@ theorem mem_prehaar_empty {K₀ : Set G} {f : Compacts G → ℝ} :
     f ∈ haarProduct K₀ ↔ ∀ K : Compacts G, f K ∈ Icc (0 : ℝ) (index (K : Set G) K₀) := by
   simp only [haarProduct, Set.pi, forall_prop_of_true, mem_univ, mem_ofPred_eq]
 
-/-- The closure of the collection of elements of the form `prehaar K₀ U`,
-  for `U` open neighbourhoods of `1`, contained in `V`. The closure is taken in the space
-  `compacts G → ℝ`, with the topology of pointwise convergence.
+/-- The closure of the collection of elements of the form `prehaar K₀ U hU`,
+  for admissible `U` open neighbourhoods of `1`, contained in `V`. The closure is taken
+  in the space `Compacts G → ℝ`, with the topology of pointwise convergence.
   We show that the intersection of all these sets is nonempty, and the Haar measure
   on compact sets is defined to be an element in the closure of this intersection. -/
 @[to_additive /-- additive version of `MeasureTheory.Measure.haar.clPrehaar` -/]
 def clPrehaar (K₀ : Set G) (V : OpenNhdsOf (1 : G)) : Set (Compacts G → ℝ) :=
-  closure <| prehaar K₀ '' { U : Set G | U ⊆ V.1 ∧ IsOpen U ∧ (1 : G) ∈ U }
+  closure <| (fun U : {U : Set G // index K₀ U ≠ 0} => prehaar K₀ U.1 U.2) ''
+    { U | U.1 ⊆ V.1 ∧ IsOpen U.1 ∧ (1 : G) ∈ U.1 }
 
 variable [IsTopologicalGroup G]
 
@@ -263,53 +270,64 @@ theorem is_left_invariant_index {K : Set G} (hK : IsCompact K) (g : G) {V : Set 
 
 
 @[to_additive add_prehaar_le_addIndex]
-theorem prehaar_le_index (K₀ : PositiveCompacts G) {U : Set G} (K : Compacts G)
-    (hU : (interior U).Nonempty) : prehaar (K₀ : Set G) U K ≤ index (K : Set G) K₀ := by
+theorem prehaar_le_index (K₀ : PositiveCompacts G) {U : Set G}
+    {hU₀ : index (K₀ : Set G) U ≠ 0} (K : Compacts G)
+    (hU : (interior U).Nonempty) : prehaar (K₀ : Set G) U hU₀ K ≤ index (K : Set G) K₀ := by
   unfold prehaar; rw [div_le_iff₀] <;> norm_cast
   · apply le_index_mul K₀ K hU
   · exact index_pos K₀ hU
 
 @[to_additive]
-theorem prehaar_pos (K₀ : PositiveCompacts G) {U : Set G} (hU : (interior U).Nonempty) {K : Set G}
-    (h1K : IsCompact K) (h2K : (interior K).Nonempty) : 0 < prehaar (K₀ : Set G) U ⟨K, h1K⟩ := by
+theorem prehaar_pos (K₀ : Set G) {U : Set G}
+    {hU₀ : index K₀ U ≠ 0} (hU : (interior U).Nonempty) {K : Set G}
+    (h1K : IsCompact K) (h2K : (interior K).Nonempty) :
+    0 < prehaar (K₀ : Set G) U hU₀ ⟨K, h1K⟩ := by
   apply div_pos <;> norm_cast
   · apply index_pos ⟨⟨K, h1K⟩, h2K⟩ hU
-  · exact index_pos K₀ hU
+  · exact Nat.pos_of_ne_zero hU₀
 
 @[to_additive]
-theorem prehaar_mono {K₀ : PositiveCompacts G} {U : Set G} (hU : (interior U).Nonempty)
+theorem prehaar_mono {K₀ : Set G} {U : Set G}
+    {hU₀ : index K₀ U ≠ 0} (hU : (interior U).Nonempty)
     {K₁ K₂ : Compacts G} (h : (K₁ : Set G) ⊆ K₂.1) :
-    prehaar (K₀ : Set G) U K₁ ≤ prehaar (K₀ : Set G) U K₂ := by
+    prehaar (K₀ : Set G) U hU₀ K₁ ≤ prehaar (K₀ : Set G) U hU₀ K₂ := by
   simp only [prehaar]; rw [div_le_div_iff_of_pos_right]
   · exact mod_cast index_mono K₂.2 h hU
-  · exact mod_cast index_pos K₀ hU
+  · exact mod_cast Nat.pos_of_ne_zero hU₀
+
+omit [IsTopologicalGroup G] in
+@[to_additive]
+theorem prehaar_self {K₀ : Compacts G} {U : Set G} {hU₀ : index (K₀ : Set G) U ≠ 0} :
+    prehaar (K₀ : Set G) U hU₀ K₀ = 1 :=
+  div_self
 
 @[to_additive]
-theorem prehaar_self {K₀ : PositiveCompacts G} {U : Set G} (hU : (interior U).Nonempty) :
-    prehaar (K₀ : Set G) U K₀.toCompacts = 1 :=
-  div_self <| ne_of_gt <| mod_cast index_pos K₀ hU
-
-@[to_additive]
-theorem prehaar_sup_le {K₀ : PositiveCompacts G} {U : Set G} (K₁ K₂ : Compacts G)
+theorem prehaar_sup_le {K₀ : Set G} {U : Set G}
+    {hU₀ : index K₀ U ≠ 0} (K₁ K₂ : Compacts G)
     (hU : (interior U).Nonempty) :
-    prehaar (K₀ : Set G) U (K₁ ⊔ K₂) ≤ prehaar (K₀ : Set G) U K₁ + prehaar (K₀ : Set G) U K₂ := by
+    prehaar (K₀ : Set G) U hU₀ (K₁ ⊔ K₂) ≤
+      prehaar (K₀ : Set G) U hU₀ K₁ + prehaar (K₀ : Set G) U hU₀ K₂ := by
   simp only [prehaar]; rw [← add_div, div_le_div_iff_of_pos_right]
   · exact mod_cast index_union_le K₁ K₂ hU
-  · exact mod_cast index_pos K₀ hU
+  · exact mod_cast Nat.pos_of_ne_zero hU₀
 
 @[to_additive]
-theorem prehaar_sup_eq {K₀ : PositiveCompacts G} {U : Set G} {K₁ K₂ : Compacts G}
+theorem prehaar_sup_eq {K₀ : Set G} {U : Set G}
+    {hU₀ : index K₀ U ≠ 0} {K₁ K₂ : Compacts G}
     (hU : (interior U).Nonempty) (h : Disjoint (K₁.1 * U⁻¹) (K₂.1 * U⁻¹)) :
-    prehaar (K₀ : Set G) U (K₁ ⊔ K₂) = prehaar (K₀ : Set G) U K₁ + prehaar (K₀ : Set G) U K₂ := by
+    prehaar (K₀ : Set G) U hU₀ (K₁ ⊔ K₂) =
+      prehaar (K₀ : Set G) U hU₀ K₁ + prehaar (K₀ : Set G) U hU₀ K₂ := by
   simp only [prehaar]; rw [← add_div]
   -- Porting note: Here was `congr`, but `to_additive` failed to generate a theorem.
   refine congr_arg (fun x : ℝ => x / index K₀ U) ?_
   exact mod_cast index_union_eq K₁ K₂ hU h
 
 @[to_additive]
-theorem is_left_invariant_prehaar {K₀ : PositiveCompacts G} {U : Set G} (hU : (interior U).Nonempty)
+theorem is_left_invariant_prehaar {K₀ : Set G} {U : Set G}
+    {hU₀ : index K₀ U ≠ 0} (hU : (interior U).Nonempty)
     (g : G) (K : Compacts G) :
-    prehaar (K₀ : Set G) U (K.map _ <| continuous_const_mul g) = prehaar (K₀ : Set G) U K := by
+    prehaar (K₀ : Set G) U hU₀ (K.map _ <| continuous_const_mul g) =
+      prehaar (K₀ : Set G) U hU₀ K := by
   simp only [prehaar, Compacts.coe_map, is_left_invariant_index K.isCompact _ hU]
 
 /-!
@@ -317,9 +335,13 @@ theorem is_left_invariant_prehaar {K₀ : PositiveCompacts G} {U : Set G} (hU : 
 -/
 
 @[to_additive]
-theorem prehaar_mem_haarProduct (K₀ : PositiveCompacts G) {U : Set G} (hU : (interior U).Nonempty) :
-    prehaar (K₀ : Set G) U ∈ haarProduct (K₀ : Set G) := by
-    rintro ⟨K, hK⟩ _; rw [mem_Icc]; exact ⟨prehaar_nonneg K₀ _, prehaar_le_index K₀ _ hU⟩
+theorem prehaar_mem_haarProduct (K₀ : PositiveCompacts G) {U : Set G}
+    {hU₀ : index (K₀ : Set G) U ≠ 0} (hU : (interior U).Nonempty) :
+    prehaar (K₀ : Set G) U hU₀ ∈ haarProduct (K₀ : Set G) := by
+  rintro ⟨K, hK⟩ _
+  rw [mem_Icc]
+  exact ⟨prehaar_nonneg (K₀ : Set G) (hU := hU₀) _,
+    prehaar_le_index K₀ (hU₀ := hU₀) _ hU⟩
 
 @[to_additive]
 theorem nonempty_iInter_clPrehaar (K₀ : PositiveCompacts G) :
@@ -330,18 +352,21 @@ theorem nonempty_iInter_clPrehaar (K₀ : PositiveCompacts G) :
   let V₀ := ⋂ V ∈ t, (V : OpenNhdsOf (1 : G)).carrier
   have h1V₀ : IsOpen V₀ := isOpen_biInter_finset <| by rintro ⟨⟨V, hV₁⟩, hV₂⟩ _; exact hV₁
   have h2V₀ : (1 : G) ∈ V₀ := by simp only [V₀, mem_iInter]; rintro ⟨⟨V, hV₁⟩, hV₂⟩ _; exact hV₂
-  refine ⟨prehaar K₀ V₀, ?_⟩
+  have hV₀ : (interior V₀).Nonempty := by
+    rw [h1V₀.interior_eq]; exact ⟨1, h2V₀⟩
+  have hV₀ne := (index_pos K₀ hV₀).ne'
+  refine ⟨prehaar K₀ V₀ hV₀ne, ?_⟩
   constructor
-  · apply prehaar_mem_haarProduct K₀; use 1; rwa [h1V₀.interior_eq]
+  · exact prehaar_mem_haarProduct K₀ hV₀
   · simp only [mem_iInter]; rintro ⟨V, hV⟩ h2V; apply subset_closure
-    apply mem_image_of_mem; rw [mem_ofPred_eq]
+    refine ⟨⟨V₀, hV₀ne⟩, ?_, rfl⟩; rw [mem_ofPred_eq]
     exact ⟨Subset.trans (iInter_subset _ ⟨V, hV⟩) (iInter_subset _ h2V), h1V₀, h2V₀⟩
 
 /-!
 ### Lemmas about `chaar`
 -/
 
-/-- This is the "limit" of `prehaar K₀ U K` as `U` becomes a smaller and smaller open
+/-- This is the "limit" of `prehaar K₀ U hU K` as `U` becomes a smaller and smaller open
   neighborhood of `(1 : G)`. More precisely, it is defined to be an arbitrary element
   in the intersection of all the sets `clPrehaar K₀ V` in `haarProduct K₀`.
   This is roughly equal to the Haar measure on compact sets,
@@ -372,7 +397,7 @@ theorem chaar_empty (K₀ : PositiveCompacts G) : chaar K₀ ⊥ = 0 := by
   change chaar K₀ ∈ eval ⁻¹' {(0 : ℝ)}
   apply mem_of_subset_of_mem _ (chaar_mem_clPrehaar K₀ ⊤)
   unfold clPrehaar; rw [IsClosed.closure_subset_iff]
-  · rintro _ ⟨U, _, rfl⟩; apply prehaar_empty
+  · rintro _ ⟨⟨U, hU₀⟩, _, rfl⟩; apply prehaar_empty
   · apply continuous_iff_isClosed.mp this; exact isClosed_singleton
 
 @[to_additive addCHaar_self]
@@ -382,8 +407,7 @@ theorem chaar_self (K₀ : PositiveCompacts G) : chaar K₀ K₀.toCompacts = 1 
   change chaar K₀ ∈ eval ⁻¹' {(1 : ℝ)}
   apply mem_of_subset_of_mem _ (chaar_mem_clPrehaar K₀ ⊤)
   unfold clPrehaar; rw [IsClosed.closure_subset_iff]
-  · rintro _ ⟨U, ⟨_, h2U, h3U⟩, rfl⟩; apply prehaar_self
-    rw [h2U.interior_eq]; exact ⟨1, h3U⟩
+  · rintro _ ⟨⟨U, hU₀⟩, _, rfl⟩; exact prehaar_self
   · apply continuous_iff_isClosed.mp this; exact isClosed_singleton
 
 @[to_additive addCHaar_mono]
@@ -394,7 +418,7 @@ theorem chaar_mono {K₀ : PositiveCompacts G} {K₁ K₂ : Compacts G} (h : (K�
   rw [← sub_nonneg]; change chaar K₀ ∈ eval ⁻¹' Ici (0 : ℝ)
   apply mem_of_subset_of_mem _ (chaar_mem_clPrehaar K₀ ⊤)
   unfold clPrehaar; rw [IsClosed.closure_subset_iff]
-  · rintro _ ⟨U, ⟨_, h2U, h3U⟩, rfl⟩; simp only [eval, mem_preimage, mem_Ici, sub_nonneg]
+  · rintro _ ⟨⟨U, hU₀⟩, ⟨_, h2U, h3U⟩, rfl⟩; simp only [eval, mem_preimage, mem_Ici, sub_nonneg]
     apply prehaar_mono _ h; rw [h2U.interior_eq]; exact ⟨1, h3U⟩
   · apply continuous_iff_isClosed.mp this; exact isClosed_Ici
 
@@ -407,7 +431,7 @@ theorem chaar_sup_le {K₀ : PositiveCompacts G} (K₁ K₂ : Compacts G) :
   rw [← sub_nonneg]; change chaar K₀ ∈ eval ⁻¹' Ici (0 : ℝ)
   apply mem_of_subset_of_mem _ (chaar_mem_clPrehaar K₀ ⊤)
   unfold clPrehaar; rw [IsClosed.closure_subset_iff]
-  · rintro _ ⟨U, ⟨_, h2U, h3U⟩, rfl⟩; simp only [eval, mem_preimage, mem_Ici, sub_nonneg]
+  · rintro _ ⟨⟨U, hU₀⟩, ⟨_, h2U, h3U⟩, rfl⟩; simp only [eval, mem_preimage, mem_Ici, sub_nonneg]
     apply prehaar_sup_le; rw [h2U.interior_eq]; exact ⟨1, h3U⟩
   · apply continuous_iff_isClosed.mp this; exact isClosed_Ici
 
@@ -434,7 +458,7 @@ theorem chaar_sup_eq {K₀ : PositiveCompacts G}
         ⟨⟨V⁻¹, (h2V₁.inter h2V₂).preimage continuous_inv⟩, by
           simp only [V, mem_inv, inv_one, h3V₁, h3V₂, mem_inter_iff, true_and]⟩)
   unfold clPrehaar; rw [IsClosed.closure_subset_iff]
-  · rintro _ ⟨U, ⟨h1U, h2U, h3U⟩, rfl⟩
+  · rintro _ ⟨⟨U, hU₀⟩, ⟨h1U, h2U, h3U⟩, rfl⟩
     simp only [eval, mem_preimage, sub_eq_zero, mem_singleton_iff]; rw [eq_comm]
     apply prehaar_sup_eq
     · rw [h2U.interior_eq]; exact ⟨1, h3U⟩
@@ -453,7 +477,7 @@ theorem is_left_invariant_chaar {K₀ : PositiveCompacts G} (g : G) (K : Compact
   rw [← sub_eq_zero]; change chaar K₀ ∈ eval ⁻¹' {(0 : ℝ)}
   apply mem_of_subset_of_mem _ (chaar_mem_clPrehaar K₀ ⊤)
   unfold clPrehaar; rw [IsClosed.closure_subset_iff]
-  · rintro _ ⟨U, ⟨_, h2U, h3U⟩, rfl⟩
+  · rintro _ ⟨⟨U, hU₀⟩, ⟨_, h2U, h3U⟩, rfl⟩
     simp only [eval, mem_singleton_iff, mem_preimage, sub_eq_zero]
     apply is_left_invariant_prehaar; rw [h2U.interior_eq]; exact ⟨1, h3U⟩
   · apply continuous_iff_isClosed.mp this; exact isClosed_singleton

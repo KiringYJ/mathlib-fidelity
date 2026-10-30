@@ -3885,10 +3885,12 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
       domain of `convexOn`. Propagate the sign/unit evidence in `rescale_to_shell_zpow`.
       In `rescale_to_shell`, bind the witness's nonzero evidence dependently before using its
       reciprocal; a conjunction alone does not supply it. Then repair `bound_of_shell`.
-    - `MeasureTheory/Measure/Haar/Basic.lean`: give `haar.prehaar`'s quotient by `index K₀ U`
-      its exact admissible domain, prove admissibility in the positive-compact/open-neighborhood
-      construction, and propagate it through `prehaar_*`, `clPrehaar`, content, measure, and
-      additive translations. The later `to_additive` failures follow the malformed construction.
+    - [x] `MeasureTheory/Measure/Haar/Basic.lean`: `haar.prehaar` now requires exactly
+      `index K₀ U ≠ 0`, and `clPrehaar` ranges over admissible neighborhoods. The positive-compact
+      construction supplies the evidence; content, measure, and additive translations all build.
+      Five ratio lemmas retain arbitrary normalization sets instead of unnecessary positive
+      compactness. The module and `MathlibTest/HaarPrehaarDomain.lean` pass their scoped build
+      (1884 jobs), all 16 module linters, and semantic/proof operator audits (2026-10-30).
 
     Fix operation definitions and statements before cascading proof errors. These eight roots do
     not exhaust the remaining migration; no complete-library acceptance pass is claimed.
