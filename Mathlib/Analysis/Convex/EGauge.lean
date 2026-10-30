@@ -112,7 +112,7 @@ variable {𝕜 : Type*} [NormedDivisionRing 𝕜] {E : Type*} [AddCommGroup E] [
 
 See also `egauge_le_of_smul_mem`. -/
 lemma egauge_le_of_smul_mem_of_ne (h : c • x ∈ s) (hc : c ≠ 0) : egauge 𝕜 s x ≤ (‖c‖₊⁻¹ : ℝ≥0) := by
-  rw [← nnnorm_inv]
+  rw [← nnnorm_inv c (ha := hc.isUnit)]
   exact egauge_le_of_mem_smul <| (mem_inv_smul_set_iff₀ hc _ _).2 h
 
 /-- If `c • x ∈ s`, then `egauge 𝕜 s x` is at most `‖c‖ₑ⁻¹`.
@@ -121,7 +121,7 @@ See also `egauge_le_of_smul_mem_of_ne`. -/
 lemma egauge_le_of_smul_mem (h : c • x ∈ s) : egauge 𝕜 s x ≤ ‖c‖ₑ⁻¹ := by
   rcases eq_or_ne c 0 with rfl | hc
   · simp
-  · exact (egauge_le_of_smul_mem_of_ne h hc).trans ENNReal.coe_inv_le
+  · simpa only [ENNReal.coe_inv, enorm_eq_nnnorm] using egauge_le_of_smul_mem_of_ne h hc
 
 lemma mem_smul_of_egauge_lt (hs : Balanced 𝕜 s) (hc : egauge 𝕜 s x < ‖c‖ₑ) : x ∈ c • s :=
   let ⟨a, hxa, ha⟩ := egauge_lt_iff.1 hc
@@ -186,7 +186,7 @@ lemma egauge_smul_left (hc : c ≠ 0) (s : Set E) (x : E) :
   rw [ENNReal.le_div_iff_mul_le (by simp [*]) (by simp)]
   calc
     egauge 𝕜 (c • s) x * ‖c‖ₑ = egauge 𝕜 (c • s) x / ‖c⁻¹‖ₑ := by
-      rw [enorm_inv (by simpa), div_eq_mul_inv, inv_inv]
+      rw [enorm_inv, div_eq_mul_inv, inv_inv]
     _ ≤ egauge 𝕜 (c⁻¹ • c • s) x := le_egauge_smul_left _ _ _
     _ = egauge 𝕜 s x := by rw [inv_smul_smul₀ (ha := hc.isUnit)]
 
@@ -196,10 +196,12 @@ lemma le_egauge_smul_right (c : 𝕜) (s : Set E) (x : E) :
   rintro a ⟨y, hy, hxy⟩
   rcases eq_or_ne c 0 with rfl | hc
   · simp
-  · refine ENNReal.mul_le_of_le_div' <| le_trans ?_ ENNReal.coe_div_le
-    rw [div_eq_inv_mul, ← nnnorm_inv, ← nnnorm_mul]
-    refine egauge_le_of_mem_smul ⟨y, hy, ?_⟩
-    simp only [mul_smul, hxy, inv_smul_smul₀ (ha := hc.isUnit)]
+  · apply ENNReal.mul_le_of_le_div'
+    calc
+      egauge 𝕜 s x ≤ ‖c⁻¹ * a‖ₑ := by
+        refine egauge_le_of_mem_smul ⟨y, hy, ?_⟩
+        simp only [mul_smul, hxy, inv_smul_smul₀ (ha := hc.isUnit)]
+      _ = ‖a‖ₑ / ‖c‖ₑ := by rw [enorm_mul, enorm_inv, ENNReal.div_eq_inv_mul]
 
 lemma egauge_smul_right (h : c = 0 → s.Nonempty) (x : E) :
     egauge 𝕜 s (c • x) = ‖c‖ₑ * egauge 𝕜 s x := by
@@ -207,7 +209,7 @@ lemma egauge_smul_right (h : c = 0 → s.Nonempty) (x : E) :
   rcases eq_or_ne c 0 with rfl | hc
   · simp [egauge_zero_right _ (h rfl)]
   · rw [mul_comm, ← ENNReal.div_le_iff_le_mul (.inl <| by simpa) (.inl enorm_ne_top),
-      ENNReal.div_eq_inv_mul, ← enorm_inv (by simpa)]
+      ENNReal.div_eq_inv_mul, ← enorm_inv (ha := hc.isUnit)]
     refine (le_egauge_smul_right _ _ _).trans_eq ?_
     rw [inv_smul_smul₀ (ha := hc.isUnit)]
 
@@ -350,8 +352,12 @@ lemma egauge_ball_le_of_one_lt_norm (hc : 1 < ‖c‖) (h₀ : r ≠ 0 ∨ ‖x�
       calc
         egauge 𝕜 (ball 0 r) x ≤ ↑(‖a‖₊⁻¹) :=
           egauge_le_of_smul_mem_of_ne (mem_ball_zero_iff.2 har) ha₀
-        _ ≤ ↑(‖c‖₊ * ‖x‖₊ / r) := by rwa [ENNReal.coe_le_coe, div_eq_inv_mul, ← mul_assoc]
-        _ ≤ ‖c‖ₑ * ‖x‖ₑ / r := ENNReal.coe_div_le.trans <| by simp [ENNReal.coe_mul, enorm]
+        _ ≤ ↑(‖c‖₊ * ‖x‖₊ / r) := by
+          rw [ENNReal.coe_le_coe, div_eq_inv_mul₀, ← mul_assoc]
+          apply NNReal.coe_le_coe.mp
+          convert! hainv using 1 <;> simp only [NNReal.coe_inv, NNReal.coe_mul, coe_nnnorm]
+          congr 2
+        _ = ‖c‖ₑ * ‖x‖ₑ / r := by simp only [ENNReal.coe_div, ENNReal.coe_mul, enorm_eq_nnnorm]
 
 lemma egauge_ball_one_le_of_one_lt_norm (hc : 1 < ‖c‖) (x : E) :
     egauge 𝕜 (ball 0 1) x ≤ ‖c‖ₑ * ‖x‖ₑ := by

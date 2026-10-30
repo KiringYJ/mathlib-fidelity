@@ -24,8 +24,8 @@ induces the equivalence of seminorms and locally convex topological vector space
 ## Main declarations
 
 For a real vector space,
-* `gauge`: Aka Minkowski functional. `gauge s x` is the least (actually, an infimum) `r` such
-  that `x ∈ r • s`.
+* `gauge`: Aka Minkowski functional. On its finite domain, `gauge s x` is the infimum of
+  positive `r` such that `x ∈ r • s`; this infimum need not be attained.
 * `gaugeSeminorm`: The Minkowski functional as a seminorm, when `s` is symmetric, convex and
   absorbent.
 
@@ -51,8 +51,10 @@ section AddCommGroup
 
 variable [AddCommGroup E] [Module ℝ E]
 
-/-- The Minkowski functional. Given a set `s` in a real vector space, `gauge s` is the functional
-which sends `x : E` to the smallest `r : ℝ` such that `x` is in `s` scaled by `r`. -/
+/-- The real-valued Minkowski functional on its finite domain: the infimum of the positive
+scalars `r` such that `x ∈ r • s`, provided this set is nonempty. The infimum need not be attained.
+The implementation retains the inherited empty real-infimum convention outside this domain;
+that unsupported case is tracked separately in `TODO.md`. -/
 def gauge (s : Set E) (x : E) : ℝ :=
   sInf { r : ℝ | 0 < r ∧ x ∈ r • s }
 
@@ -63,12 +65,21 @@ theorem gauge_def : gauge s x = sInf ({ r ∈ Set.Ioi (0 : ℝ) | x ∈ r • s 
 
 /-- An alternative definition of the gauge using scalar multiplication on the element rather than on
 the set. -/
-theorem gauge_def' : gauge s x = sInf {r ∈ Set.Ioi (0 : ℝ) | r⁻¹ • x ∈ s} := by
+theorem gauge_def' : gauge s x = sInf {r : ℝ | ∃ hr : 0 < r,
+    Checked.inv r hr.ne'.isUnit • x ∈ s} := by
   congrm sInf {r | ?_}
-  exact and_congr_right fun hr => mem_smul_set_iff_inv_smul_mem₀ hr.ne' _ _
+  exact ⟨fun ⟨hr, hx⟩ => ⟨hr, (mem_smul_set_iff_inv_smul_mem₀ hr.ne' _ _).mp hx⟩,
+    fun ⟨hr, hx⟩ => ⟨hr, (mem_smul_set_iff_inv_smul_mem₀ hr.ne' _ _).mpr hx⟩⟩
 
 private theorem bddBelow_gauge_set : BddBelow { r : ℝ | 0 < r ∧ x ∈ r • s } :=
   ⟨0, fun _ hr => hr.1.le⟩
+
+/-- On its exact finite domain, the real gauge is the greatest lower bound of the
+positive dilation parameters. Nonemptiness excludes the separate real-infimum empty-set
+convention; absorbent sets supply this witness at every point. -/
+theorem isGLB_gauge (h : {r : ℝ | 0 < r ∧ x ∈ r • s}.Nonempty) :
+    IsGLB {r : ℝ | 0 < r ∧ x ∈ r • s} (gauge s x) :=
+  isGLB_csInf h bddBelow_gauge_set
 
 /-- If the given subset is `Absorbent` then the set we take an infimum over in `gauge` is nonempty,
 which is useful for proving many properties about the gauge. -/
@@ -92,23 +103,29 @@ but, the real infimum of the empty set in Lean being defined as `0`, it holds un
 theorem gauge_zero : gauge s 0 = 0 := by
   rw [gauge_def']
   by_cases h : (0 : E) ∈ s
-  · simp only [smul_zero, sep_true, h, csInf_Ioi]
-  · simp only [smul_zero, sep_false, h, Real.sInf_empty]
+  · simp only [smul_zero, h, exists_prop, and_true]
+    exact csInf_Ioi
+  · simp [smul_zero, h, Real.sInf_empty]
 
 @[simp]
 theorem gauge_zero' : gauge (0 : Set E) = 0 := by
   ext x
-  rw [gauge_def']
   obtain rfl | hx := eq_or_ne x 0
-  · simp only [csInf_Ioi, mem_zero, Pi.zero_apply, sep_true, smul_zero]
-  · simp only [mem_zero, Pi.zero_apply, inv_eq_zero, smul_eq_zero]
-    convert! Real.sInf_empty
-    exact eq_empty_iff_forall_notMem.2 fun r hr => hr.2.elim (ne_of_gt hr.1) hx
+  · exact gauge_zero
+  rw [gauge_def']
+  have he : {r : ℝ | ∃ hr : 0 < r, Checked.inv r hr.ne'.isUnit • x ∈ (0 : Set E)} = ∅ := by
+    ext r
+    simp only [mem_ofPred_eq, mem_empty_iff_false, iff_false]
+    rintro ⟨hr, h⟩
+    have h' : r⁻¹ • x = 0 := h
+    exact hx ((smul_eq_zero.mp h').resolve_left inv_ne_zero)
+  rw [he, Real.sInf_empty]
+  rfl
 
 @[simp]
 theorem gauge_empty : gauge (∅ : Set E) = 0 := by
   ext
-  simp only [gauge_def', Real.sInf_empty, mem_empty_iff_false, Pi.zero_apply, sep_false]
+  simp [gauge_def', Real.sInf_empty]
 
 theorem gauge_of_subset_zero (h : s ⊆ 0) : gauge s = 0 := by
   obtain rfl | rfl := subset_singleton_iff_eq.1 h
@@ -131,7 +148,7 @@ theorem gauge_neg_set_eq_gauge_neg (x : E) : gauge (-s) x = gauge s (-x) := by
 theorem gauge_le_of_mem (ha : 0 ≤ a) (hx : x ∈ a • s) : gauge s x ≤ a := by
   obtain rfl | ha' := ha.eq_or_lt
   · rw [mem_singleton_iff.1 (zero_smul_set_subset _ hx), gauge_zero]
-  · exact csInf_le bddBelow_gauge_set ⟨ha', hx⟩
+  · exact (isGLB_gauge ⟨a, ha', hx⟩).1 ⟨ha', hx⟩
 
 theorem setOfPred_gauge_le_eq (hs₁ : Convex ℝ s) (hs₀ : (0 : E) ∈ s) (hs₂ : Absorbent ℝ s)
     (ha : 0 ≤ a) : { x | gauge s x ≤ a } = ⋂ (r : ℝ) (_ : a < r), r • s := by
@@ -141,12 +158,14 @@ theorem setOfPred_gauge_le_eq (hs₁ : Convex ℝ s) (hs₀ : (0 : E) ∈ s) (hs
   · have hr' := ha.trans_lt hr
     rw [mem_smul_set_iff_inv_smul_mem₀ hr'.ne']
     obtain ⟨δ, δ_pos, hδr, hδ⟩ := exists_lt_of_gauge_lt hs₂ (h.trans_lt hr)
-    suffices (r⁻¹ * δ) • δ⁻¹ • x ∈ s by rwa [smul_smul, mul_inv_cancel_right₀ δ_pos.ne'] at this
+    suffices (r⁻¹ * δ) • δ⁻¹ • x ∈ s by rwa [smul_smul, mul_inv_cancel_right₀] at this
     rw [mem_smul_set_iff_inv_smul_mem₀ δ_pos.ne'] at hδ
     refine hs₁.smul_mem_of_zero_mem hs₀ hδ ⟨by positivity, ?_⟩
     rw [inv_mul_le_iff₀ hr', mul_one]
     exact hδr.le
-  · linarith [gauge_le_of_mem (by linarith) <| h (a + ε / 2) (by linarith)]
+  · exact (gauge_le_of_mem (add_nonneg ha (half_pos hε).le)
+      (h (a + ε / 2) (lt_add_of_pos_right _ (half_pos hε)))).trans_lt
+      (by simpa [add_comm] using add_lt_add_left (half_lt_self hε) a)
 
 @[deprecated (since := "2026-07-09")]
 alias setOf_gauge_le_eq := setOfPred_gauge_le_eq
@@ -248,10 +267,10 @@ theorem le_gauge_of_notMem (hs₀ : StarConvex ℝ 0 s) (hs₂ : Absorbs ℝ s {
   refine not_lt.1 fun hba => hx ?_
   have ha := hb.trans hba
   refine ⟨(a⁻¹ * b) • x, hs₀ hx' (by positivity) ?_, ?_⟩
-  · rw [← div_eq_inv_mul]
+  · rw [← div_eq_inv_mul₀]
     exact div_le_one_of_le₀ hba.le ha.le
   · dsimp only
-    rw [← mul_smul, mul_inv_cancel_left₀ ha.ne']
+    rw [← mul_smul, mul_inv_cancel_left₀]
 
 theorem one_le_gauge_of_notMem (hs₁ : StarConvex ℝ 0 s) (hs₂ : Absorbs ℝ s {x}) (hx : x ∉ s) :
     1 ≤ gauge s x :=
@@ -269,17 +288,15 @@ theorem gauge_smul_of_nonneg [MulActionWithZero α E] [IsScalarTower α ℝ (Set
   rw [gauge_def', gauge_def', ← Real.sInf_smul_of_nonneg ha]
   congr 1
   ext r
-  simp_rw [Set.mem_smul_set, Set.mem_sep_iff]
+  simp_rw [Set.mem_smul_set, Set.mem_ofPred_eq]
   constructor
   · rintro ⟨hr, hx⟩
-    simp_rw [mem_Ioi] at hr ⊢
     rw [← mem_smul_set_iff_inv_smul_mem₀ hr.ne'] at hx
-    have := smul_pos (inv_pos.2 ha') hr
+    have : 0 < a⁻¹ • r := smul_pos (inv_pos.mpr ha') hr
     refine ⟨a⁻¹ • r, ⟨this, ?_⟩, smul_inv_smul₀ (ha := ha'.ne'.isUnit) _⟩
     rwa [← mem_smul_set_iff_inv_smul_mem₀ this.ne', smul_assoc,
-      mem_smul_set_iff_inv_smul_mem₀ (inv_ne_zero ha'.ne'), inv_inv]
+      mem_smul_set_iff_inv_smul_mem₀ (inv_ne_zero), inv_inv₀]
   · rintro ⟨r, ⟨hr, hx⟩, rfl⟩
-    rw [mem_Ioi] at hr ⊢
     rw [← mem_smul_set_iff_inv_smul_mem₀ hr.ne'] at hx
     have := smul_pos ha' hr
     refine ⟨this, ?_⟩
@@ -287,27 +304,25 @@ theorem gauge_smul_of_nonneg [MulActionWithZero α E] [IsScalarTower α ℝ (Set
     exact smul_mem_smul_set hx
 
 theorem gauge_smul_left_of_nonneg [MulActionWithZero α E] [SMulCommClass α ℝ ℝ]
-    [IsScalarTower α ℝ ℝ] [IsScalarTower α ℝ E] {s : Set E} {a : α} (ha : 0 ≤ a) :
+    [IsScalarTower α ℝ ℝ] [IsScalarTower α ℝ E] {s : Set E} {a : α} (ha : 0 ≤ a)
+    {haUnit : IsUnit a} :
     gauge (a • s) = a⁻¹ • gauge s := by
-  obtain rfl | ha' := ha.eq_or_lt
-  · rw [inv_zero, zero_smul, gauge_of_subset_zero (zero_smul_set_subset _)]
+  have ha' : 0 < a := lt_of_le_of_ne ha haUnit.ne_zero.symm
   ext x
   rw [gauge_def', Pi.smul_apply, gauge_def', ← Real.sInf_smul_of_nonneg (inv_nonneg.2 ha)]
   congr 1
   ext r
-  simp_rw [Set.mem_smul_set, Set.mem_sep_iff]
+  simp_rw [Set.mem_smul_set, Set.mem_ofPred_eq]
   constructor
   · rintro ⟨hr, y, hy, h⟩
-    simp_rw [mem_Ioi] at hr ⊢
     refine ⟨a • r, ⟨smul_pos ha' hr, ?_⟩, inv_smul_smul₀ (ha := ha'.ne'.isUnit) _⟩
     rwa [smul_inv₀, smul_assoc, ← h, inv_smul_smul₀ (ha := ha'.ne'.isUnit)]
   · rintro ⟨r, ⟨hr, hx⟩, rfl⟩
-    rw [mem_Ioi] at hr ⊢
     refine ⟨smul_pos (inv_pos.2 ha') hr, r⁻¹ • x, hx, ?_⟩
-    rw [smul_inv₀, smul_assoc, inv_inv]
+    rw [smul_inv₀, smul_assoc, inv_inv₀]
 
 theorem gauge_smul_left [Module α E] [SMulCommClass α ℝ ℝ] [IsScalarTower α ℝ ℝ]
-    [IsScalarTower α ℝ E] {s : Set E} (symmetric : ∀ x ∈ s, -x ∈ s) (a : α) :
+    [IsScalarTower α ℝ E] {s : Set E} (symmetric : ∀ x ∈ s, -x ∈ s) (a : α) {haUnit : IsUnit a} :
     gauge (a • s) = |a|⁻¹ • gauge s := by
   rw [← gauge_smul_left_of_nonneg (abs_nonneg a)]
   obtain h | h := abs_choice a
@@ -377,14 +392,16 @@ variable [TopologicalSpace E] [ContinuousSMul ℝ E]
 open Filter in
 theorem interior_subset_gauge_lt_one (s : Set E) : interior s ⊆ { x | gauge s x < 1 } := by
   intro x hx
-  have H₁ : Tendsto (fun r : ℝ ↦ r⁻¹ • x) (𝓝[<] 1) (𝓝 ((1 : ℝ)⁻¹ • x)) :=
-    ((tendsto_id.inv₀ one_ne_zero).smul tendsto_const_nhds).mono_left inf_le_left
-  rw [inv_one, one_smul] at H₁
-  have H₂ : ∀ᶠ r in 𝓝[<] (1 : ℝ), x ∈ r • s ∧ 0 < r ∧ r < 1 := by
-    filter_upwards [H₁ (mem_interior_iff_mem_nhds.1 hx), Ioo_mem_nhdsLT one_pos] with r h₁ h₂
-    exact ⟨(mem_smul_set_iff_inv_smul_mem₀ h₂.1.ne' _ _).2 h₁, h₂⟩
-  rcases H₂.exists with ⟨r, hxr, hr₀, hr₁⟩
-  exact (gauge_le_of_mem hr₀.le hxr).trans_lt hr₁
+  have H₁ : Tendsto (fun r : ℝ ↦ r • x) (𝓝[>] 1) (𝓝 x) := by
+    have h : ContinuousWithinAt (fun r : ℝ ↦ r • x) (Ioi 1) 1 :=
+      (continuous_id.smul continuous_const).continuousWithinAt
+    simpa only [ContinuousWithinAt, one_smul] using h
+  have H₂ : ∀ᶠ r in 𝓝[>] (1 : ℝ), r • x ∈ s ∧ 1 < r :=
+    Filter.Eventually.and (H₁ (mem_interior_iff_mem_nhds.1 hx)) self_mem_nhdsWithin
+  obtain ⟨r, hrx, hr⟩ := H₂.exists
+  have hr0 : 0 < r := zero_lt_one.trans hr
+  have hmem : x ∈ r⁻¹ • s := ⟨r • x, hrx, inv_smul_smul₀ x⟩
+  exact (gauge_le_of_mem (inv_nonneg.mpr hr0.le) hmem).trans_lt (inv_lt_one_of_one_lt₀ hr)
 
 theorem setOfPred_gauge_lt_one_eq_self_of_isOpen (hs₁ : Convex ℝ s) (hs₀ : (0 : E) ∈ s)
     (hs₂ : IsOpen s) : { x | gauge s x < 1 } = s := by
@@ -572,38 +589,48 @@ open Metric
 theorem gauge_unit_ball (x : E) : gauge (ball (0 : E) 1) x = ‖x‖ := by
   rw [← ball_normSeminorm ℝ, Seminorm.gauge_ball, coe_normSeminorm]
 
-theorem gauge_ball (hr : 0 ≤ r) (x : E) : gauge (ball (0 : E) r) x = ‖x‖ / r := by
-  rcases hr.eq_or_lt with rfl | hr
-  · simp
-  · rw [← smul_unitBall_of_pos hr, gauge_smul_left, Pi.smul_apply, gauge_unit_ball, smul_eq_mul,
-    abs_of_nonneg hr.le, div_eq_inv_mul]
-    simp_rw [mem_ball_zero_iff, norm_neg]
-    exact fun _ => id
+theorem gauge_ball (hr : 0 ≤ r) (x : E) {hrUnit : IsUnit r} :
+    gauge (ball (0 : E) r) x = ‖x‖ / r := by
+  have hr' : 0 < r := lt_of_le_of_ne hr hrUnit.ne_zero.symm
+  rw [← smul_unitBall_of_pos hr', gauge_smul_left (haUnit := hrUnit), Pi.smul_apply,
+    gauge_unit_ball, smul_eq_mul]
+  · simp [abs_of_nonneg hr, div_eq_inv_mul₀]
+  simp_rw [mem_ball_zero_iff, norm_neg]
+  exact fun _ => id
 
 @[simp]
 theorem gauge_closure_zero : gauge (closure (0 : Set E)) = 0 := funext fun x ↦ by
-  simp only [← singleton_zero, gauge_def', mem_closure_zero_iff_norm, norm_smul, mul_eq_zero,
-    norm_eq_zero, inv_eq_zero]
-  rcases (norm_nonneg x).eq_or_lt' with hx | hx
-  · convert! csInf_Ioi (a := (0 : ℝ))
-    exact Set.ext fun r ↦ and_iff_left (.inr hx)
-  · convert! Real.sInf_empty
-    exact eq_empty_of_forall_notMem fun r ⟨hr₀, hr⟩ ↦ hx.ne' <| hr.resolve_left hr₀.out.ne'
+  rw [← singleton_zero, gauge_def']
+  have he : {r : ℝ | ∃ hr : 0 < r, Checked.inv r hr.ne'.isUnit • x ∈ closure ({0} : Set E)} =
+      {r : ℝ | 0 < r ∧ ‖x‖ = 0} := by
+    ext r
+    simp only [mem_ofPred_eq]
+    constructor
+    · rintro ⟨hr, hx⟩
+      refine ⟨hr, ?_⟩
+      simpa only [mem_closure_zero_iff_norm, norm_smul, mul_eq_zero, norm_eq_zero,
+        inv_ne_zero, false_or] using hx
+    · rintro ⟨hr, hx⟩
+      refine ⟨hr, ?_⟩
+      simp only [mem_closure_zero_iff_norm, norm_smul, hx, mul_zero]
+  rw [he]
+  by_cases hx : ‖x‖ = 0
+  · simp only [hx, and_true, Pi.zero_apply]
+    have hset : {r : ℝ | 0 < r} = Ioi 0 := by ext r; simp
+    rw [hset, csInf_Ioi]
+  · simp [hx, Real.sInf_empty]
 
 @[simp]
-theorem gauge_closedBall (hr : 0 ≤ r) (x : E) : gauge (closedBall (0 : E) r) x = ‖x‖ / r := by
-  rcases hr.eq_or_lt with rfl | hr'
-  · rw [div_zero, closedBall_zero', singleton_zero, gauge_closure_zero]; rfl
-  · apply le_antisymm
-    · rw [← gauge_ball hr]
-      exact gauge_mono (absorbent_ball_zero hr') ball_subset_closedBall x
-    · suffices ∀ᶠ R in 𝓝[>] r, ‖x‖ / R ≤ gauge (closedBall 0 r) x by
-        refine le_of_tendsto ?_ this
-        exact tendsto_const_nhds.div inf_le_left hr'.ne'
-      filter_upwards [self_mem_nhdsWithin] with R hR
-      rw [← gauge_ball (hr.trans hR.out.le)]
-      refine gauge_mono ?_ (closedBall_subset_ball hR) _
-      exact (absorbent_ball_zero hr').mono ball_subset_closedBall
+theorem gauge_closedBall (hr : 0 ≤ r) (x : E) {hr0 : r ≠ 0} :
+    gauge (closedBall (0 : E) r) x = ‖x‖ / r := by
+  have hr' : 0 < r := lt_of_le_of_ne hr hr0.symm
+  apply le_antisymm
+  · rw [← gauge_ball hr]
+    exact gauge_mono (absorbent_ball_zero hr') ball_subset_closedBall x
+  · apply le_csInf ((absorbent_ball_zero hr').mono ball_subset_closedBall).gauge_set_nonempty
+    rintro b ⟨hb, y, hy, rfl⟩
+    rw [div_le_iff₀ hr', norm_smul, Real.norm_of_nonneg hb.le]
+    exact mul_le_mul_of_nonneg_left (mem_closedBall_zero_iff.mp hy) hb.le
 
 theorem mul_gauge_le_norm (hs : Metric.ball (0 : E) r ⊆ s) : r * gauge s x ≤ ‖x‖ := by
   obtain hr | hr := le_or_gt r 0
@@ -613,13 +640,17 @@ theorem mul_gauge_le_norm (hs : Metric.ball (0 : E) r ⊆ s) : r * gauge s x ≤
 
 theorem Convex.lipschitzWith_gauge {r : ℝ≥0} (hc : Convex ℝ s) (hr : 0 < r)
     (hs : Metric.ball (0 : E) r ⊆ s) : LipschitzWith r⁻¹ (gauge s) :=
+  have hrUnit : IsUnit (r : ℝ) := (show (r : ℝ) ≠ 0 by exact_mod_cast hr.ne').isUnit
   have : Absorbent ℝ (Metric.ball (0 : E) r) := absorbent_ball_zero hr
   LipschitzWith.of_le_add_mul _ fun x y =>
     calc
       gauge s x = gauge s (y + (x - y)) := by simp
       _ ≤ gauge s y + gauge s (x - y) := gauge_add_le hc (this.mono hs) _ _
-      _ ≤ gauge s y + ‖x - y‖ / r := by grw [gauge_mono this hs (x - y), gauge_ball]; positivity
-      _ = gauge s y + r⁻¹ * dist x y := by rw [dist_eq_norm, div_eq_inv_mul, NNReal.coe_inv]
+      _ ≤ gauge s y + ‖x - y‖ / r := by
+        have h := (gauge_mono this hs (x - y)).trans_eq
+          (gauge_ball r.2 (x - y) (hrUnit := hrUnit))
+        convert! add_le_add (le_refl (gauge s y)) h using 1
+      _ = gauge s y + r⁻¹ * dist x y := by rw [dist_eq_norm, div_eq_inv_mul₀, NNReal.coe_inv]
 
 theorem Convex.lipschitz_gauge (hc : Convex ℝ s) (h₀ : s ∈ 𝓝 (0 : E)) :
     ∃ K, LipschitzWith K (gauge s) :=
@@ -637,9 +668,10 @@ section Normed
 variable [NormedAddCommGroup E] [NormedSpace ℝ E] {s : Set E} {r : ℝ} {x : E}
 open Metric
 
-theorem le_gauge_of_subset_closedBall (hs : Absorbent ℝ s) (hr : 0 ≤ r) (hsr : s ⊆ closedBall 0 r) :
+theorem le_gauge_of_subset_closedBall (hs : Absorbent ℝ s) (hr : 0 ≤ r)
+    (hsr : s ⊆ closedBall 0 r) {hrUnit : IsUnit r} :
     ‖x‖ / r ≤ gauge s x := by
-  rw [← gauge_closedBall hr]
+  rw [← gauge_closedBall hr (hr0 := hrUnit.ne_zero)]
   exact gauge_mono hs hsr _
 
 end Normed
