@@ -199,28 +199,50 @@ theorem IsTheta.finsetProd {ι : Type*} {s : Finset ι} {f : ι → α → 𝕜}
     (h : ∀ i ∈ s, f i =Θ[l] g i) : (∏ i ∈ s, f i ·) =Θ[l] (∏ i ∈ s, g i ·) :=
   ⟨.finsetProd fun i hi ↦ (h i hi).isBigO, .finsetProd fun i hi ↦ (h i hi).symm.isBigO⟩
 
-theorem IsTheta.inv {f : α → 𝕜} {g : α → 𝕜'} (h : f =Θ[l] g) :
-    (fun x ↦ (f x)⁻¹) =Θ[l] fun x ↦ (g x)⁻¹ :=
-  ⟨h.2.inv_rev h.1.eq_zero_imp, h.1.inv_rev h.2.eq_zero_imp⟩
+/-- Restrict comparison to a domain, using `Subtype.val` and `comap Subtype.val l`
+for functions defined only on a subset. -/
+theorem IsTheta.comp_tendsto (h : f =Θ[l] g) {k : β → α} {l' : Filter β}
+    (hk : Tendsto k l' l) : (f ∘ k) =Θ[l'] (g ∘ k) :=
+  ⟨h.1.comp_tendsto hk, h.2.comp_tendsto hk⟩
+
+/-! The index type is the domain of the functions below. Local inverses and quotients
+use the subtype of their domain with `comap Subtype.val l`. No values outside that
+domain are chosen; `IsTheta.comp_tendsto` restricts an ambient comparison to it. -/
+
+theorem IsTheta.inv {f : α → 𝕜} {g : α → 𝕜'}
+    {hf : ∀ x, IsUnit (f x)} {hg : ∀ x, IsUnit (g x)} (h : f =Θ[l] g) :
+    (fun x ↦ Checked.inv (f x) (hf x)) =Θ[l] fun x ↦ Checked.inv (g x) (hg x) :=
+  ⟨h.2.inv_rev, h.1.inv_rev⟩
 
 @[simp]
-theorem isTheta_inv {f : α → 𝕜} {g : α → 𝕜'} :
-    ((fun x ↦ (f x)⁻¹) =Θ[l] fun x ↦ (g x)⁻¹) ↔ f =Θ[l] g :=
-  ⟨fun h ↦ by simpa only [inv_inv] using h.inv, IsTheta.inv⟩
+theorem isTheta_inv {f : α → 𝕜} {g : α → 𝕜'}
+    {hf : ∀ x, IsUnit (f x)} {hg : ∀ x, IsUnit (g x)} :
+    ((fun x ↦ Checked.inv (f x) (hf x)) =Θ[l]
+      fun x ↦ Checked.inv (g x) (hg x)) ↔ f =Θ[l] g :=
+  ⟨fun h ↦ by simpa only [inv_inv₀] using
+    (h.inv (hf := fun x ↦ (hf x).inv₀) (hg := fun x ↦ (hg x).inv₀)), IsTheta.inv⟩
 
-theorem IsTheta.div {f₁ f₂ : α → 𝕜} {g₁ g₂ : α → 𝕜'} (h₁ : f₁ =Θ[l] g₁) (h₂ : f₂ =Θ[l] g₂) :
-    (fun x ↦ f₁ x / f₂ x) =Θ[l] fun x ↦ g₁ x / g₂ x := by
-  simpa only [div_eq_mul_inv] using h₁.mul h₂.inv
+theorem IsTheta.div {f₁ f₂ : α → 𝕜} {g₁ g₂ : α → 𝕜'}
+    {hf₂ : ∀ x, IsUnit (f₂ x)} {hg₂ : ∀ x, IsUnit (g₂ x)}
+    (h₁ : f₁ =Θ[l] g₁) (h₂ : f₂ =Θ[l] g₂) :
+    (fun x ↦ Checked.div (f₁ x) (f₂ x) (hf₂ x)) =Θ[l]
+      fun x ↦ Checked.div (g₁ x) (g₂ x) (hg₂ x) := by
+  simpa only [div_eq_mul_inv₀] using h₁.mul (h₂.inv (hf := hf₂) (hg := hg₂))
 
 theorem IsTheta.pow {f : α → 𝕜} {g : α → 𝕜'} (h : f =Θ[l] g) (n : ℕ) :
     (fun x ↦ f x ^ n) =Θ[l] fun x ↦ g x ^ n :=
   ⟨h.1.pow n, h.2.pow n⟩
 
-theorem IsTheta.zpow {f : α → 𝕜} {g : α → 𝕜'} (h : f =Θ[l] g) (n : ℤ) :
-    (fun x ↦ f x ^ n) =Θ[l] fun x ↦ g x ^ n := by
-  cases n
-  · simpa only [Int.ofNat_eq_natCast, zpow_natCast] using h.pow _
-  · simpa only [zpow_negSucc] using (h.pow _).inv
+theorem IsTheta.zpow {f : α → 𝕜} {g : α → 𝕜'} (h : f =Θ[l] g) (n : ℤ)
+    {hf : ∀ x, n < 0 → IsUnit (f x)} {hg : ∀ x, n < 0 → IsUnit (g x)} :
+    (fun x ↦ Checked.zpow (f x) n (hf x)) =Θ[l]
+      fun x ↦ Checked.zpow (g x) n (hg x) := by
+  cases n with
+  | ofNat n => simpa only [Int.ofNat_eq_natCast, zpow_natCast₀] using h.pow n
+  | negSucc n =>
+    simpa only [zpow_negSucc₀] using (h.pow (n + 1)).inv
+      (hf := fun x ↦ (hf x (Int.negSucc_lt_zero n)).pow (n + 1))
+      (hg := fun x ↦ (hg x (Int.negSucc_lt_zero n)).pow (n + 1))
 
 theorem isTheta_const_const {c₁ : E''} {c₂ : F''} (h₁ : c₁ ≠ 0) (h₂ : c₂ ≠ 0) :
     (fun _ : α ↦ c₁) =Θ[l] fun _ ↦ c₂ :=
@@ -279,14 +301,20 @@ lemma IsLittleO.add_isTheta {f₁ f₂ : α → E'} {g : α → F}
     (ho : f₁ =o[l] g) (hΘ : f₂ =Θ[l] g) : (f₁ + f₂) =Θ[l] g :=
   add_comm f₁ f₂ ▸ hΘ.add_isLittleO ho
 
+/-- A nonzero quotient limit on the denominator's domain implies ambient Θ comparison
+when the numerator also vanishes at the omitted zeros of the denominator. -/
 theorem isTheta_of_div_tendsto_nhds_ne_zero {c : 𝕜} {f g : α → 𝕜}
-    (h : Tendsto (fun x ↦ g x / f x) l (𝓝 c)) (hc : c ≠ 0) :
+    (hfg : ∀ᶠ x in l, f x = 0 → g x = 0)
+    (h : Tendsto (fun x : {x // f x ≠ 0} ↦ Checked.div (g x) (f x) x.2.isUnit)
+      (comap Subtype.val l) (𝓝 c)) (hc : c ≠ 0) :
     f =Θ[l] g := by
-  refine ⟨isBigO_of_div_tendsto_nhds_of_ne_zero h hc,
-    isBigO_of_div_tendsto_nhds_of_ne_zero ?_ (inv_ne_zero hc)⟩
-  convert! h.inv₀ hc using 1
-  ext
-  simp
+  refine ⟨?_, isBigO_of_div_tendsto_nhds hfg c h⟩
+  obtain ⟨C, hC, hbound⟩ :=
+    (isBigO_of_div_tendsto_nhds_of_ne_zero (hf := fun x ↦ x.2.isUnit) h hc).exists_pos
+  refine IsBigO.of_bound C ((eventually_comap.mp hbound.bound).mono fun x hx ↦ ?_)
+  by_cases hfx : f x = 0
+  · simpa only [hfx, norm_zero] using mul_nonneg hC.le (norm_nonneg (g x))
+  · exact hx ⟨x, hfx⟩ rfl
 
 section
 

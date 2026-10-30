@@ -37,8 +37,8 @@ If `β` is a `NormedField` :
 
   `u ~[l] v ↔ ∃ (φ : α → β) (hφ : Tendsto φ l (𝓝 1)), u =ᶠ[l] φ * v`
 
-- Provided some non-vanishing hypothesis, this can be seen as `u ~[l] v ↔ Tendsto (u/v) l (𝓝 1)`
-  (see `isEquivalent_iff_tendsto_one`)
+- With eventual compatibility at zeros of `v`, equivalence means that `u/v` tends to `1`
+  on the domain `{x // v x ≠ 0}` (see `isEquivalent_iff_tendsto_one`).
 - For any constant `c`, `u ~[l] v` implies `Tendsto u l (𝓝 c) ↔ Tendsto v l (𝓝 c)`
   (see `IsEquivalent.tendsto_nhds_iff`)
 - `*` and `/` are compatible with `_ ~[l] _` (see `IsEquivalent.mul` and `IsEquivalent.div`)
@@ -201,27 +201,22 @@ theorem IsEquivalent.exists_eq_mul (huv : u ~[l] v) :
     ∃ (φ : α → β) (_ : Tendsto φ l (𝓝 1)), u =ᶠ[l] φ * v :=
   isEquivalent_iff_exists_eq_mul.mp huv
 
-theorem isEquivalent_of_tendsto_one (huv : Tendsto (u / v) l (𝓝 1)) :
-    u ~[l] v := by
-  suffices ∀ᶠ x in l, v x = 0 → u x = 0 by
-    rw [isEquivalent_iff_exists_eq_mul]
-    exact ⟨u / v, huv, this.mono fun x hz' ↦ (div_mul_cancel_of_imp hz').symm⟩
-  by_contra! h
-  replace h : ∃ᶠ t in l, (u / v) t = 0 := h.mono fun x ⟨hv, hu⟩ ↦ by simp [hv]
-  simpa using tendsto_nhds_unique_of_frequently_eq (b := 0) huv tendsto_const_nhds h
+/-- The quotient is evaluated only where `v` is nonzero. At the omitted zeros,
+asymptotic equivalence requires `u` to vanish as well. -/
+theorem isEquivalent_iff_tendsto_one (hz : ∀ᶠ x in l, v x = 0 → u x = 0) :
+    u ~[l] v ↔ Tendsto (fun x : {x // v x ≠ 0} ↦ Checked.div (u x) (v x) x.2.isUnit)
+      (comap Subtype.val l) (𝓝 1) := by
+  rw [IsEquivalent, isLittleO_iff_tendsto' (hz.mono fun x hx hv ↦ by
+    simp only [Pi.sub_apply, hx hv, hv, sub_self])]
+  simp only [Pi.sub_apply, sub_div, div_self]
+  exact tendsto_sub_nhds_zero_iff
 
-theorem isEquivalent_iff_tendsto_one (hz : ∀ᶠ x in l, v x ≠ 0) :
-    u ~[l] v ↔ Tendsto (u / v) l (𝓝 1) := by
-  constructor
-  · intro hequiv
-    have := hequiv.isLittleO.tendsto_div_nhds_zero
-    simp only [Pi.sub_apply, sub_div] at this
-    have key : Tendsto (fun x ↦ v x / v x) l (𝓝 1) :=
-      (tendsto_congr' <| hz.mono fun x hnz ↦ @div_self _ _ (v x) hnz).mpr tendsto_const_nhds
-    convert! this.add key
-    · simp
-    · simp
-  · exact isEquivalent_of_tendsto_one
+/-- A quotient tending to one on its domain gives asymptotic equivalence, including
+simultaneous zeros outside that domain. -/
+theorem isEquivalent_of_tendsto_one (hz : ∀ᶠ x in l, v x = 0 → u x = 0)
+    (huv : Tendsto (fun x : {x // v x ≠ 0} ↦ Checked.div (u x) (v x) x.2.isUnit)
+      (comap Subtype.val l) (𝓝 1)) : u ~[l] v :=
+  (isEquivalent_iff_tendsto_one hz).2 huv
 
 end NormedField
 
@@ -287,27 +282,38 @@ theorem IsEquivalent.finsetProd {s : Finset ι} {f g : ι → α → β} (h : �
     (∏ i ∈ s, f i ·) ~[l] (∏ i ∈ s, g i ·) :=
   multisetProd h
 
-protected theorem IsEquivalent.inv (huv : u ~[l] v) : u⁻¹ ~[l] v⁻¹ := by
-  rw [isEquivalent_iff_exists_eq_mul] at *
-  rcases huv with ⟨φ, hφ, h⟩
-  rw [← inv_one]
-  refine ⟨fun x ↦ (φ x)⁻¹, Tendsto.inv₀ hφ (by simp), ?_⟩
-  convert! h.fun_inv
-  simp [mul_comm]
+/-! Inverse and quotient functions are defined on the index type itself. For local
+operations, take that index type to be the domain subtype and pull back the filter. -/
 
-protected theorem IsEquivalent.div (htu : t ~[l] u) (hvw : v ~[l] w) :
-    t / v ~[l] u / w := by
-  simpa only [div_eq_mul_inv] using htu.mul hvw.inv
+protected theorem IsEquivalent.inv {hu : ∀ x, IsUnit (u x)} {hv : ∀ x, IsUnit (v x)}
+    (huv : u ~[l] v) :
+    (fun x ↦ Checked.inv (u x) (hu x)) ~[l] (fun x ↦ Checked.inv (v x) (hv x)) := by
+  have h := ((isBigO_refl (fun x ↦ Checked.inv (u x) (hu x)) l).mul_isLittleO
+    huv.symm.isLittleO).mul_isBigO
+      (isBigO_refl (fun x ↦ Checked.inv (v x) (hv x)) l)
+  simpa only [IsEquivalent, Pi.sub_apply, inv_mul_cancel₀, one_mul, ← inv_sub_inv'] using! h
+
+protected theorem IsEquivalent.div {hv : ∀ x, IsUnit (v x)} {hw : ∀ x, IsUnit (w x)}
+    (htu : t ~[l] u) (hvw : v ~[l] w) :
+    (fun x ↦ Checked.div (t x) (v x) (hv x)) ~[l]
+      (fun x ↦ Checked.div (u x) (w x) (hw x)) := by
+  simpa only [div_eq_mul_inv₀] using! htu.mul (hvw.inv (hu := hv) (hv := hw))
 
 protected theorem IsEquivalent.pow (h : t ~[l] u) (n : ℕ) : t ^ n ~[l] u ^ n := by
   induction n with
   | zero => simpa using IsEquivalent.refl
   | succ _ ih => simpa [pow_succ] using ih.mul h
 
-protected theorem IsEquivalent.zpow (h : t ~[l] u) (z : ℤ) : t ^ z ~[l] u ^ z := by
-  match z with
-  | Int.ofNat _ => simpa using h.pow _
-  | Int.negSucc _ => simpa using (h.pow _).inv
+protected theorem IsEquivalent.zpow (h : t ~[l] u) (z : ℤ)
+    {ht : ∀ x, z < 0 → IsUnit (t x)} {hu : ∀ x, z < 0 → IsUnit (u x)} :
+    (fun x ↦ Checked.zpow (t x) z (ht x)) ~[l]
+      (fun x ↦ Checked.zpow (u x) z (hu x)) := by
+  cases z with
+  | ofNat n => simpa only [Int.ofNat_eq_natCast, zpow_natCast₀] using! h.pow n
+  | negSucc n =>
+    simpa only [zpow_negSucc₀] using (h.pow (n + 1)).inv
+      (hu := fun x ↦ (ht x (Int.negSucc_lt_zero n)).pow (n + 1))
+      (hv := fun x ↦ (hu x (Int.negSucc_lt_zero n)).pow (n + 1))
 
 end mul_inv
 
