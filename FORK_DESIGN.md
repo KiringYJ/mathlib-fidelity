@@ -956,10 +956,10 @@ transitional totalized hierarchy. The requirements below define the work and
 its acceptance criteria; they do not claim that the migration has been
 implemented or that its concrete API has been validated.
 
-Implementation is currently paused at the user's requested 2026-10-28 checkpoint.
+Implementation resumed on 2026-10-30 after the user's requested 2026-10-28 checkpoint.
 The checkpoint commits preserve unfinished work. The inverse item in `TODO.md`
 records the remaining proof, consumer, audit, and verification obligations;
-the complete-delivery acceptance criteria still apply when work resumes.
+the complete-delivery acceptance criteria remain open.
 
 ### Inventory and mathematical contracts
 

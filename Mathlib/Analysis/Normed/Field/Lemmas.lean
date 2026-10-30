@@ -467,7 +467,7 @@ lemma NormedField.completeSpace_iff_isComplete_closedBall {K : Type*} [NormedFie
   obtain ⟨x, hx⟩ := NormedField.exists_lt_norm K k
   have hx' : x ≠ 0 := norm_pos_iff.mp (kpos.trans_lt hx)
   have hu' : CauchySeq ((· / x) ∘ u) :=
-    (uniformContinuous_div_const' hx'.isUnit.unit).comp_cauchySeq hu
+    (uniformContinuous_div_const' x).comp_cauchySeq hu
   have hb : ∀ n, ((· / x) ∘ u) n ∈ Metric.closedBall 0 1 := by
     intro
     simp only [Function.comp_apply, Metric.mem_closedBall, dist_zero_right, norm_div]

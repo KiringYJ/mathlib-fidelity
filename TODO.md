@@ -3793,11 +3793,10 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     `Topology/MetricSpace/Polish.lean` fails to identify the transported `CompleteCopy`
     distance in the two complement cases; and
     `Topology/MetricSpace/ThickenedIndicator.lean` still passes obsolete explicit evidence to
-    `ENNReal.coe_inv`, leaving its quotient estimate unfinished. Repair these first, then
-    resume the full graph and the blocked strict differential/log-derivative, Lie-coroot,
-    bound, and positivity tests. This is a known frontier, not an exhaustive list of all
-    downstream failures. The earlier `CheckedHom`, completion, and intermediate-field
-    failures in that probe are superseded by the successful final scoped build.
+    `ENNReal.coe_inv`, leaving its quotient estimate unfinished. These three roots were
+    subsequently repaired in the 2026-10-30 continuation below. This was a known frontier,
+    not an exhaustive list of downstream failures. The earlier `CheckedHom`, completion, and
+    intermediate-field failures in that probe are superseded by the successful final scoped build.
   - `lake exe mk_all --check`, `git diff --check`, and the whitespace/EOF/line-ending hooks
     pass. The final `lake exe lint-style` run still fails on the two inherited tooling items
     recorded in the final acceptance task below. The supplemental lexical operator scan finds
@@ -3806,6 +3805,38 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     `MathlibTest Archive Counterexamples Wanted`, `lake test`, `lake lint`, and full semantic
     and proof-provenance acceptance gates remain open. Do not promote the partial passes to
     completed migration status.
+
+  **Resumed 2026-10-30: normed-field and metric-space frontier.** The three failures above
+  were reproduced together before editing. The continuation preserves all statements and their
+  domains: `NormedField.completeSpace_iff_isComplete_closedBall` passes the ambient denominator
+  to `uniformContinuous_div_const'`, with its checked evidence supplied by the existing nonzero
+  proof; `TopologicalSpace.Opens.CompleteCopy.instMetricSpace` binds the continuity variable as
+  `CompleteCopy s` so that distance inference selects the constructed metric in both complement
+  cases; and `lipschitzWith_thickenedIndicator` matches `ENNReal.coe_inv`'s implicit evidence
+  against the existing positive-radius reciprocal. The debug trace is removed. This is a verified
+  consumer repair within the unfinished migration, not completion or a supported intermediate API.
+
+  - The final scoped `lake build` passes all six targets (2775 jobs): the three affected modules
+    and `MathlibTest.{DifferentialLogDerivStrict,LieCorootStrict,BoundCheckedDivision}`. The three
+    modules pass all 16 enabled environment linters, including the semantic operator-fidelity
+    linter. Their separate proof-dependency reports find no retired operators. Independent source
+    review found no remaining issue in this repair. `lake exe mk_all --check` passes. The
+    supplemental lexical inventory remains at 42 occurrences in 12 files; it does not certify
+    the rest of the library.
+  - The broader differential/log-derivative, Lie-coroot, bound, and positivity test probe reaches
+    three failing dependency roots, leaving the positivity test blocked.
+    In `Analysis/LocallyConvex/Basic.lean`, repair
+    `absorbs_iff_eventually_nhdsNE_zero` and `absorbent_nhds_zero` across the unit-filter
+    formulation of inversion, use the canonical checked quotient rewrite in
+    `Balanced.smul_mono` and `Balanced.smul_mem_mono`, and extract an actual nonzero proof from
+    complement membership in `Absorbent.eq_univ_of_smulMemClass`.
+    In `Analysis/Normed/Module/Basic.lean`, reconcile `normedAlgebraRat`'s computability with
+    `DivisionRing.toRatAlgebra`. In `MeasureTheory/Constructions/Polish/Basic.lean`, repair
+    the unresolved geometric-decay base in `measurablySeparable_range_of_disjoint`'s
+    `exists_pow_lt_of_lt_one` call. These are required downstream ports; the migration remains open.
+  - The scoped text-style command still fails solely on the two inherited tooling items in the
+    final acceptance task (`OperatorPolicy`'s header-linter import and the undocumented inventory
+    script). The full-library build, aggregate tests and final acceptance gates remain open.
 
   Remaining tasks, in dependency order:
 

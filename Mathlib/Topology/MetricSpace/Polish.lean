@@ -220,12 +220,14 @@ instance instMetricSpace : MetricSpace (CompleteCopy s) := by
     · rcases (Metric.isOpen_iff (α := s)).1 h x hx with ⟨ε, ε0, hε⟩
       exact ⟨ε, ε0, fun y hy ↦ hε <| (dist_comm _ _).trans_lt <| (dist_val_le_dist _ _).trans_lt hy⟩
     · rcases h x hx with ⟨ε, ε0, hε⟩
-      have : Tendsto (fun y : s ↦ dist (x : CompleteCopy s) (y : CompleteCopy s)) (𝓝 x) (𝓝 0) := by
-        have hd := (tendsto_const_nhds (x := x.1)).dist (continuous_subtype_val.continuousAt (x := x))
+      have : Tendsto (fun y : CompleteCopy s ↦ dist x y) (𝓝 x) (𝓝 0) := by
+        have hd := (tendsto_const_nhds (x := x.1)).dist
+          (continuous_subtype_val.continuousAt (x := x))
         rw [dist_self] at hd
         by_cases hs : (sᶜ : Set α).Nonempty
         · -- The inverse of the distance to `sᶜ` is continuous on `s`.
-          let F : s → ℝ := fun y ↦ Checked.inv (infDist (y : α) sᶜ) (infDist_compl_pos hs y).ne'.isUnit
+          let F : s → ℝ := fun y ↦
+            Checked.inv (infDist (y : α) sᶜ) (infDist_compl_pos hs y).ne'.isUnit
           have hx' : x.1 ∉ closure (sᶜ : Set α) := by
             rw [s.isOpen.isClosed_compl.closure_eq, mem_compl_iff, not_not]
             exact x.2
@@ -239,7 +241,6 @@ instance instMetricSpace : MetricSpace (CompleteCopy s) := by
           refine h2.congr fun y ↦ ?_
           simp only [F, dist_eq, dite_eq_left hs, one_div₀]
         · refine hd.congr fun y ↦ ?_
-          trace_state
           simp only [dist_eq, dite_eq_right hs, add_zero]
       exact mem_of_superset (this <| gt_mem_nhds ε0) hε
 
