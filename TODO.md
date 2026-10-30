@@ -3855,9 +3855,14 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     - [x] `Analysis/CStarAlgebra/Basic.lean`: `IsStarProjection.norm_le` now explicitly splits
       `‖e‖ * (‖e‖ - 1) = 0`, preserving its assumptions and conclusion. The module passes its
       scoped build, all 16 environment linters, and the semantic/proof operator audits (2026-10-30).
-    - `Analysis/Asymptotics/Theta.lean`: give `IsTheta.inv`, `isTheta_inv`, `IsTheta.div`,
-      `IsTheta.zpow`, and `isTheta_of_div_tendsto_nhds_ne_zero` their exact operation domains,
-      using local/eventual domains where appropriate; update `IsBigO.inv_rev` and cancellation.
+    - [x] `Analysis/Asymptotics/{Theta,AsymptoticEquivalent}.lean`: inverse and quotient
+      operations use their actual domains, with `comap Subtype.val` for local functions.
+      Quotient-limit characterizations retain eventual zero compatibility instead of requiring
+      eventual nonvanishing; simultaneous zeros and empty quotient domains remain valid.
+      Integer powers require units only for negative exponents. Both modules and their
+      `MathlibTest/{ThetaInverseDomain,AsymptoticEquivalentInverseDomain}.lean` regressions
+      pass scoped builds, all 16 module linters, and proof dependency reports (2026-10-30).
+      Higher asymptotic consumers remain part of the unfinished migration.
     - [x] `Analysis/Normed/Module/RCLike/Real.lean`: normalization now takes implicit evidence
       for its exact domain `‖x‖ ≠ 0`, and `exists_norm_eq` uses the canonical cancellation API.
       The module and `MathlibTest/NormedNormalizationDomain.lean` pass their scoped build;
@@ -3875,14 +3880,19 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
       are repaired. Existing invertible-two and distinct-point hypotheses are preserved. The
       module passes its scoped build, all 16 environment linters, and semantic/proof operator
       audits (2026-10-30).
-    - `Analysis/SpecificLimits/Normed.lean`: port the local-domain filters in the power-limit
-      and ratio-test families, including `tendsto_const_div_pow`, the two
-      `AbsoluteValue.tendsto_div_one_add_pow_*` lemmas, and
-      `summable_of_ratio_test_tendsto_lt_one`/`not_summable_of_ratio_test_tendsto_gt_one`.
-      Supply `1 - ξ` invertibility in the geometric-series family; replace the obsolete
-      `Units.val_pow` calls in its weighted variants and repair
-      `hasSum_sq_mul_geometric_of_norm_lt_one'`. Recheck the power-series, factorial, and
-      bounded-scalar limit proofs after those statement and algebra ports.
+    - [x] `Analysis/SpecificLimits/Normed.lean`: scalar ratio and power limits use their exact
+      denominator domains; the divergent ratio test retains frequent admissibility, while the
+      summability criterion retains its sufficient eventual-nonzero hypothesis. Geometric
+      series construct the unit `1 - ξ` from the norm bound. Weighted geometric, power-series,
+      factorial, and bounded-scalar proofs use the canonical checked laws. The module and
+      `MathlibTest/SpecificLimitsDomain.lean` pass scoped builds, all 16 module linters, and
+      proof dependency reports (2026-10-30). Tests cover the characteristic-two index-zero
+      denominator, the exponent-zero geometric term, and vacuous restricted ratio limits.
+    - [x] `Analysis/Normed/Field/WithAbs.lean`: checked inverses and quotients transport their
+      evidence through the field equivalence; the reciprocal power limit uses the actual
+      denominator subtype. Explicit scalar-tower parameters resolve inference without changing
+      the hierarchy. Scoped build, all 16 module linters, and proof dependency report pass
+      (2026-10-30); the absolute-value equivalence consumer has further separate proof ports.
     - [x] `Analysis/Normed/Module/Seminorm/{Basic,Norm}.lean`: checked scalar ball/cancellation
       and coordinate convexity proofs pass. Shell witnesses bind their nonzero proof before any
       reciprocal, with normed/seminormed wrappers and the explicit Riesz/linear-operator consumers
@@ -3947,6 +3957,12 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   - `Meromorphic/NormalForm.lean` and `Meromorphic/Basic.lean` still express reciprocal and negative
     powers as ambient functions at zeros. Restore their actual partial or germ domains, retaining
     the distinction between a pointwise inverse and a meromorphic continuation with poles.
+    For complex manifolds, the intrinsic object is a compatible section of local holomorphic
+    fractions, with a nonzero denominator germ; a denominator may vanish at the point.
+    Complex-valued evaluation belongs to the intrinsic regular locus. Meromorphic inversion
+    operates on germs or sections and is globally available when the section is not identically
+    zero on any connected component. A padded complex-valued representative is not itself this
+    intrinsic carrier; local cancellation must recover removable singularities such as `z / z` at zero.
   - The conditional-extrema task below still owns the unsupported empty real infimum in
     `Convex/Gauge.lean`: `gauge_zero`, `gauge_zero'`, `gauge_empty`, `gauge_of_subset_zero`, and
     `gauge_closure_zero` are not made mathematically faithful by removing an inverse. Actual
