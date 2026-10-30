@@ -3897,8 +3897,8 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
       and coordinate convexity proofs pass. Shell witnesses bind their nonzero proof before any
       reciprocal, with normed/seminormed wrappers and the explicit Riesz/linear-operator consumers
       ported. These four modules pass coherent scoped builds, all 16 module linters, semantic/proof
-      operator audits, and independent review (2026-10-30). Separate multilinear proof ports and
-      the full-library migration acceptance gates remain open.
+      operator audits, and independent review (2026-10-30). Multilinear and alternating ports
+      are recorded in the lower-dependency checkpoint below; full-library acceptance remains open.
     - [x] `MeasureTheory/Measure/Haar/Basic.lean`: `haar.prehaar` now requires exactly
       `index K₀ U ≠ 0`, and `clPrehaar` ranges over admissible neighborhoods. The positive-compact
       construction supplies the evidence; content, measure, and additive translations all build.
@@ -3919,18 +3919,44 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `MathlibTest/OperatorRatioDomain.lean` passes its exact-domain regression. Broader caller builds
   and the complete-library acceptance gate remain open.
 
-  - Preserve exact domains in the new dependency frontier:
-    `Topology/Algebra/Module/Multilinear/Bounded`, `Analysis/Normed/Module/Multilinear/Basic`,
-    `Analysis/Normed/Module/Alternating/Basic`, `Analysis/Asymptotics/AsymptoticEquivalent`,
-    `Analysis/Asymptotics/SpecificAsymptotics`, `Analysis/Normed/Group/AddCircle`,
-    `Analysis/Normed/Ring/Units`, `Analysis/Normed/Operator/Banach`,
-    `Topology/Algebra/Module/FiniteDimension`, `Analysis/Normed/Module/FiniteDimension`,
-    `Analysis/Normed/Module/HahnBanach`, `Analysis/InnerProductSpace/Basic`,
-    `Analysis/SpecialFunctions/Exp`, `Analysis/SpecialFunctions/Trigonometric/Basic`, and
-    `MeasureTheory/VectorMeasure/Variation/Basic`. In particular, empty multilinear index sets
-    retain product denominator `1`; period-zero circle norms retain their separate formula;
-    ratio limits on an empty admissible domain need the stated zero-compatibility or frequent
+  **Committed lower-dependency checkpoint, 2026-10-30.** Fourteen further modules pass their
+  scoped builds, all 16 enabled environment linters, and complete proof dependency reports:
+  `Convex/{Gauge,EGauge}`, `StronglyMeasurable/Lemmas`, `Normed/Module/Multilinear/Basic`,
+  `Normed/Module/Alternating/Basic`, `Topology/Algebra/Module/Multilinear/Bounded`,
+  `Normed/Group/AddCircle`, `Normed/Ring/Units`, `Normed/Operator/Banach`,
+  `Topology/Algebra/Module/FiniteDimension`, `Normed/Module/FiniteDimension`,
+  `Normed/Module/HahnBanach`, `InnerProductSpace/Basic`, and `VectorMeasure/Variation/Basic`
+  (analysis and measure-theory prefixes are omitted where unambiguous).
+  The multilinear proof report needed a bounded larger audit heartbeat budget; it then completed
+  without retired-operator dependencies. No production limit or linter was disabled.
+
+  - Multilinear normalized bounds require exactly a unit product of coordinate norms. Empty
+    index families retain denominator `1`, and unnormalized bounds still cover zero coordinates;
+    `MathlibTest/MultilinearRatioDomain.lean` checks these cases and exact rejection diagnostics.
+  - Inner-product normalization carries norm-product evidence, while the equality-case TFAE
+    binds its nonzero-vector coefficient dependently. Circle norm formulas retain their separate
+    zero-period formula and all-period bounds; only formulas using a reciprocal period restrict it.
+  - Finite real gauge quotients carry positive-radius evidence and use a nonempty-domain
+    greatest-lower-bound certificate. The separate empty real-infimum convention remains an
+    independent foundational obligation. Intrinsic ENNReal inverse at zero and infinity is retained.
+  - `Asymptotics/TVS` and `Calculus/FDeriv/{Defs,Basic}` also pass their scoped builds, all
+    16 module linters, and complete proof dependency reports. Normalized errors live on their
+    actual nonzero-displacement domains; the converse keeps eventual compatibility on collapsed
+    coordinate fibers. `MathlibTest/{TVSInverseDomain,DerivativeDomain}.lean` check empty domains,
+    incompatible fibers, genuine restrictions, zero initial scaling terms, and defaults that work
+    independently of caller namespaces and binder names.
+
+  These are internal checkpoints in the same unfinished migration. Higher asymptotic,
+  exponential, trigonometric, analytic, calculus, measure-theory, and number-theory consumers,
+  together with the complete-library acceptance matrix, remain open.
+
+  - Finish `Analysis/Asymptotics/SpecificAsymptotics`, `SpecialFunctions/{Exp,Trigonometric/Basic}`,
+    and their consumers. Restricted ratio limits need the stated zero compatibility or frequent
     admissibility conditions, according to their mathematical conclusion.
+  - The full factorial exponential series needs characteristic zero in its scalar field; a
+    positive-characteristic factorial eventually vanishes. Port the exact `expSeries` domain and
+    its direct callers, and use constructed exponential units in normed rings. This does not
+    certify the separately inherited exponential fallback outside its mathematical domain.
   - `MeasureTheory/VectorMeasure/WithDensityVec.lean` must normalize through an actual unit-valued
     representative under the norm-weighted measure, and prove the resulting identities almost
     everywhere. Nonvanishing under that measure does not justify a global reciprocal of `‖f x‖`.
