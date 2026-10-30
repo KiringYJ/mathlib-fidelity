@@ -178,11 +178,15 @@ theorem HasFDerivWithinAt.unique_of_isEmbedding {D : Type*} [TopologicalSpace D]
     (h₀ : HasFDerivWithinAt f f' s x coord) (h₁ : HasFDerivWithinAt f f₁' s x coord)
     (hcoord : IsEmbedding coord) (hxs : UniqueDiffWithinAt 𝕜 (coord '' s) (coord x)) :
     f' = f₁' := by
+  let : ContinuousNeg F := ⟨by
+    simpa only [neg_one_smul, Pi.neg_def, id_eq] using
+      (continuous_id.const_smul (-1 : 𝕜) : Continuous fun y : F ↦ (-1 : 𝕜) • y)⟩
+  let : IsTopologicalAddGroup F := { ‹ContinuousAdd F›, ‹ContinuousNeg F› with }
   let d : E →L[𝕜] F := f' - f₁'
   have hdiff : (fun y : D ↦ d (coord y - coord x)) =o[𝕜; 𝓝[s] x]
       (fun y ↦ coord y - coord x) := by
-    simpa only [d, ContinuousLinearMap.sub_apply, sub_sub_sub_cancel_left] using
-      h₁.isLittleOTVS.sub h₀.isLittleOTVS
+    simpa only [d, sub_apply, Pi.add_apply, Pi.neg_apply, ← sub_eq_add_neg, Pi.sub_def,
+      sub_sub_sub_cancel_left] using h₁.isLittleOTVS.add h₀.isLittleOTVS.neg_left
   have hambient : (fun y : E ↦ d (y - coord x)) =o[𝕜; 𝓝[coord '' s] (coord x)]
       (fun y ↦ y - coord x) := by
     rw [← hcoord.map_nhdsWithin_eq s x, isLittleOTVS_map]
@@ -190,10 +194,10 @@ theorem HasFDerivWithinAt.unique_of_isEmbedding {D : Type*} [TopologicalSpace D]
   have hzero : HasFDerivWithinAt (fun y : E ↦ d (y - coord x)) (0 : E →L[𝕜] F)
       (coord '' s) (coord x) := by
     apply HasFDerivWithinAt.of_isLittleOTVS
-    simpa only [sub_self, map_zero, ContinuousLinearMap.zero_apply, sub_zero] using hambient
+    simpa only [id_eq, sub_self, map_zero, zero_apply, sub_zero] using hambient
   have hself : HasFDerivWithinAt (fun y : E ↦ d (y - coord x)) d (coord '' s) (coord x) := by
     apply HasFDerivWithinAt.of_isLittleOTVS
-    simpa only [sub_self, map_zero, sub_zero, Pi.zero_apply] using
+    simpa only [id_eq, sub_self, map_zero, sub_zero, Pi.zero_def] using
       (IsLittleOTVS.zero (𝕜 := 𝕜) (fun y : E ↦ y - coord x) (𝓝[coord '' s] (coord x)))
   exact sub_eq_zero.mp (hxs.eq hself hzero)
 
@@ -211,7 +215,7 @@ ordinary uniqueness; this statement does not assert uniqueness on an arbitrary s
 theorem HasFDerivAt.unique {D : Type*} [TopologicalSpace D] {f : D → F}
     {coord : D → E} {x : D} (h₀ : HasFDerivAt f f' x coord)
     (h₁ : HasFDerivAt f f₁' x coord)
-    (hcoord : IsOpenEmbedding coord := by exact IsOpenEmbedding.id) : f' = f₁' :=
+    (hcoord : IsOpenEmbedding coord := by exact Topology.IsOpenEmbedding.id) : f' = f₁' :=
   h₀.unique_of_mem_nhds h₁ hcoord.isEmbedding
     (hcoord.isOpen_range.mem_nhds (mem_range_self x))
 
@@ -383,13 +387,22 @@ theorem HasFDerivAt.lim
     [ContinuousAdd E] [ContinuousSMul 𝕜 E] [ContinuousAdd F] [ContinuousSMul 𝕜 F]
     (hf : HasFDerivAt f f' x) (v : E) {α : Type*} {c : α → 𝕜} {l : Filter α}
     (hc : Tendsto (fun n => ‖c n‖) l atTop) :
-    Tendsto (fun n => c n • (f (x + (c n)⁻¹ • v) - f x)) l (𝓝 (f' v)) := by
+    Tendsto (fun n : {n // c n ≠ 0} ↦
+      c n • (f (x + Checked.inv (c n) n.2.isUnit • v) - f x))
+      (comap Subtype.val l) (𝓝 (f' v)) := by
   refine (hasFDerivWithinAt_univ.2 hf).lim ?_ (.of_forall fun _ ↦ mem_univ _) ?_
-  · rw [tendsto_norm_atTop_iff_cobounded] at hc
-    simpa using (tendsto_inv₀_cobounded.comp hc).smul (tendsto_const_nhds (x := v))
-  · refine tendsto_nhds_of_eventually_eq ?_
-    refine (eventually_ne_of_tendsto_norm_atTop hc (0 : 𝕜)).mono fun y hy => ?_
-    simp [hy]
+  · have hunits : Tendsto (fun n : {n // c n ≠ 0} ↦
+        n.2.isUnit.unit) (comap Subtype.val l)
+        (comap (fun u : 𝕜ˣ ↦ (u : 𝕜)) (Bornology.cobounded 𝕜)) := by
+      rw [tendsto_comap_iff]
+      simpa only [Function.comp_def, IsUnit.unit_spec] using
+        (tendsto_norm_atTop_iff_cobounded.mp hc).comp
+          (tendsto_comap (f := (Subtype.val : {n // c n ≠ 0} → α)))
+    simpa only [Function.comp_def, Checked.inv, zero_smul] using
+      (tendsto_inv₀_cobounded.comp hunits).smul (tendsto_const_nhds (x := v))
+  · simpa only [smul_smul, mul_inv_cancel₀, one_smul] using
+      (tendsto_const_nhds (x := v) : Tendsto (fun _ : {n // c n ≠ 0} ↦ v)
+        (comap Subtype.val l) (𝓝 v))
 
 theorem hasFDerivWithinAt_inter' (h : t ∈ 𝓝[s] x) :
     HasFDerivWithinAt f f' (s ∩ t) x ↔ HasFDerivWithinAt f f' s x := by
@@ -411,6 +424,23 @@ theorem HasFDerivWithinAt.hasFDerivAt (h : HasFDerivWithinAt f f' s x) (hs : s �
 theorem DifferentiableWithinAt.differentiableAt (h : DifferentiableWithinAt 𝕜 f s x)
     (hs : s ∈ 𝓝 x) : DifferentiableAt 𝕜 f x :=
   h.imp fun _ hf' => hf'.hasFDerivAt hs
+
+/-- A derivative of the restriction of a function to a neighborhood is a derivative of the
+original function. The original domain and its coordinates need no vector-space structure. -/
+theorem HasFDerivAt.of_restrict {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → E} {s : Set D} {x : s}
+    (h : HasFDerivAt (fun y : s ↦ f y) f' x (fun y ↦ coord y))
+    (hs : s ∈ 𝓝 (x : D)) : HasFDerivAt f f' (x : D) coord := by
+  rw [hasFDerivAt_iff_isLittleOTVS, ← map_nhds_subtype_coe_eq_nhds x.property hs,
+    isLittleOTVS_map]
+  exact h.isLittleOTVS
+
+/-- Differentiability can be checked after restricting the genuine function to a neighborhood. -/
+theorem DifferentiableAt.of_restrict {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → E} {s : Set D} {x : s}
+    (h : DifferentiableAt 𝕜 (fun y : s ↦ f y) x (fun y ↦ coord y))
+    (hs : s ∈ 𝓝 (x : D)) : DifferentiableAt 𝕜 f (x : D) coord :=
+  h.imp fun _ hf' ↦ hf'.of_restrict hs
 
 /-- If `x` is isolated in `s`, then `f` has any derivative at `x` within `s`,
 as this statement is empty. -/
@@ -475,7 +505,7 @@ protected theorem HasFDerivAt.fderiv
     [ContinuousAdd E] [ContinuousSMul 𝕜 E] [ContinuousAdd F] [ContinuousSMul 𝕜 F] [T2Space F]
     {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E} {x : D}
     (h : HasFDerivAt f f' x coord)
-    (hcoord : IsOpenEmbedding coord := by exact IsOpenEmbedding.id) :
+    (hcoord : IsOpenEmbedding coord := by exact Topology.IsOpenEmbedding.id) :
     fderiv 𝕜 f x coord = f' :=
   (h.unique h.differentiableAt.hasFDerivAt hcoord).symm
 
@@ -590,7 +620,7 @@ theorem fderivWithin_inter (ht : t ∈ 𝓝 x) : fderivWithin 𝕜 f (s ∩ t) x
   simp [fderivWithin, hasFDerivWithinAt_inter ht, DifferentiableWithinAt]
 
 theorem fderivWithin_of_mem_nhds (h : s ∈ 𝓝 x) : fderivWithin 𝕜 f s x = fderiv 𝕜 f x := by
-  rw [← fderivWithin_univ, ← univ_inter s, fderivWithin_inter h]
+  rw [fderiv, ← univ_inter s, fderivWithin_inter h]
 
 theorem fderivWithin_of_isOpen (hs : IsOpen s) (hx : x ∈ s) : fderivWithin 𝕜 f s x = fderiv 𝕜 f x :=
   fderivWithin_of_mem_nhds (hs.mem_nhds hx)
@@ -599,7 +629,7 @@ theorem fderivWithin_eq_fderiv
     [ContinuousAdd E] [ContinuousSMul 𝕜 E] [ContinuousAdd F] [ContinuousSMul 𝕜 F] [T2Space F]
     (hs : UniqueDiffWithinAt 𝕜 s x) (h : DifferentiableAt 𝕜 f x) :
     fderivWithin 𝕜 f s x = fderiv 𝕜 f x := by
-  rw [← fderivWithin_univ]
+  rw [fderiv]
   exact fderivWithin_subset (subset_univ _) hs h.differentiableWithinAt
 
 theorem fderiv_mem_iff {f : E → F} {s : Set (E →L[𝕜] F)} {x : E} : fderiv 𝕜 f x ∈ s ↔
@@ -704,9 +734,10 @@ section Continuous
 variable [ContinuousAdd E] [ContinuousSMul 𝕜 E] [ContinuousAdd F] [ContinuousSMul 𝕜 F]
 
 theorem HasFDerivAtFilter.tendsto_nhds {D : Type*} [TopologicalSpace D]
-    {f : D → F} {coord : D → E} {x : D} {L : Filter D} (hL : L ≤ 𝓝 x)
+    {f : D → F} {coord : D → E} {x : D} {L : Filter D} (_hL : L ≤ 𝓝 x)
     (h : HasFDerivAtFilter f f' (L ×ˢ pure x) coord)
-    (hcoord : Tendsto coord L (𝓝 (coord x)) := by exact tendsto_id'.mpr hL) :
+    (hcoord : Tendsto coord L (𝓝 (coord x)) := by
+      first | exact Filter.tendsto_id | exact Filter.tendsto_id'.mpr (by assumption)) :
     Tendsto f L (𝓝 (f x)) := by
   have : (f · - f x) =o[𝕜; L] (1 : D → 𝕜) := by
     refine h.isBigOTVS_sub |>.comp_tendsto prod_pure.ge |>.trans_isLittleOTVS ?_
@@ -882,23 +913,86 @@ variable {x x₀ : E}
 variable {s : Set E}
 variable {L : Filter (E × E)}
 
-theorem hasFDerivAtFilter_iff_tendsto :
-    HasFDerivAtFilter f f' L ↔
-      Tendsto (fun p => ‖p.1 - p.2‖⁻¹ * ‖f p.1 - f p.2 - f' (p.1 - p.2)‖) L (𝓝 0) := by
-  rw [hasFDerivAtFilter_iff_isLittleO, ← isLittleO_norm_left, ← isLittleO_norm_right,
-    isLittleO_iff_tendsto]
-  · simp [div_eq_inv_mul]
-  · simp +contextual [sub_eq_zero]
+/-- The normalized error is evaluated only at nonzero coordinate displacements. The hypothesis
+records the error at zero displacements; it is automatic for identity coordinates. -/
+theorem hasFDerivAtFilter_iff_tendsto {D : Type*} {f : D → F} {coord : D → E}
+    {L : Filter (D × D)}
+    (h₀ : ∀ᶠ p in L, coord p.1 = coord p.2 → f p.1 = f p.2 := by
+      exact Filter.Eventually.of_forall fun p h ↦ congrArg _ h) :
+    HasFDerivAtFilter f f' L coord ↔
+      Tendsto (fun p : {p : D × D // coord p.1 - coord p.2 ≠ 0} ↦
+        Checked.div ‖f p.1.1 - f p.1.2 - f' (coord p.1.1 - coord p.1.2)‖
+          ‖coord p.1.1 - coord p.1.2‖ (norm_ne_zero_iff.mpr p.2).isUnit)
+        (comap Subtype.val L) (𝓝 0) := by
+  rw [hasFDerivAtFilter_iff_isLittleO, ← isLittleO_norm_left, ← isLittleO_norm_right]
+  have hz : ∀ᶠ p in L, ‖coord p.1 - coord p.2‖ = 0 →
+      ‖f p.1 - f p.2 - f' (coord p.1 - coord p.2)‖ = 0 := by
+    filter_upwards [h₀] with p hp h
+    have hc : coord p.1 = coord p.2 := sub_eq_zero.mp (norm_eq_zero.mp h)
+    simp only [hc, hp hc, sub_self, map_zero, norm_zero]
+  refine (isLittleO_iff_tendsto' hz).trans ⟨?_, ?_⟩
+  · intro h
+    let q : {p : D × D // coord p.1 - coord p.2 ≠ 0} →
+        {p : D × D // ‖coord p.1 - coord p.2‖ ≠ 0} :=
+      fun p ↦ ⟨p, norm_ne_zero_iff.mpr p.2⟩
+    have hq : Tendsto q (comap Subtype.val L) (comap Subtype.val L) :=
+      tendsto_comap_iff.mpr tendsto_comap
+    exact (h.comp hq).congr fun p ↦ rfl
+  · intro h
+    let q : {p : D × D // ‖coord p.1 - coord p.2‖ ≠ 0} →
+        {p : D × D // coord p.1 - coord p.2 ≠ 0} :=
+      fun p ↦ ⟨p, norm_ne_zero_iff.mp p.2⟩
+    have hq : Tendsto q (comap Subtype.val L) (comap Subtype.val L) :=
+      tendsto_comap_iff.mpr tendsto_comap
+    exact (h.comp hq).congr fun p ↦ rfl
 
-theorem hasFDerivWithinAt_iff_tendsto :
-    HasFDerivWithinAt f f' s x ↔
-      Tendsto (fun x' => ‖x' - x‖⁻¹ * ‖f x' - f x - f' (x' - x)‖) (𝓝[s] x) (𝓝 0) := by
-  simp [HasFDerivWithinAt, hasFDerivAtFilter_iff_tendsto, Function.comp_def]
+/-- The within-set derivative is characterized by its normalized error on the actual
+nonzero-displacement domain, together with compatibility on coordinate fibers. -/
+theorem hasFDerivWithinAt_iff_tendsto {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → E} {s : Set D} {x : D}
+    (h₀ : ∀ᶠ y in 𝓝[s] x, coord y = coord x → f y = f x := by
+      exact Filter.Eventually.of_forall fun y h ↦ congrArg _ h) :
+    HasFDerivWithinAt f f' s x coord ↔
+      Tendsto (fun y : {y : D // coord y - coord x ≠ 0} ↦
+        Checked.div ‖f y - f x - f' (coord y - coord x)‖
+          ‖coord y - coord x‖ (norm_ne_zero_iff.mpr y.2).isUnit)
+        (comap Subtype.val (𝓝[s] x)) (𝓝 0) := by
+  rw [hasFDerivWithinAt_iff_isLittleO, ← isLittleO_norm_left, ← isLittleO_norm_right]
+  have hz : ∀ᶠ y in 𝓝[s] x, ‖coord y - coord x‖ = 0 →
+      ‖f y - f x - f' (coord y - coord x)‖ = 0 := by
+    filter_upwards [h₀] with y hy h
+    have hc : coord y = coord x := sub_eq_zero.mp (norm_eq_zero.mp h)
+    simp only [hc, hy hc, sub_self, map_zero, norm_zero]
+  refine (isLittleO_iff_tendsto' hz).trans ⟨?_, ?_⟩
+  · intro h
+    let q : {y : D // coord y - coord x ≠ 0} →
+        {y : D // ‖coord y - coord x‖ ≠ 0} :=
+      fun y ↦ ⟨y, norm_ne_zero_iff.mpr y.2⟩
+    have hq : Tendsto q (comap Subtype.val (𝓝[s] x))
+        (comap Subtype.val (𝓝[s] x)) := tendsto_comap_iff.mpr tendsto_comap
+    exact (h.comp hq).congr fun y ↦ rfl
+  · intro h
+    let q : {y : D // ‖coord y - coord x‖ ≠ 0} →
+        {y : D // coord y - coord x ≠ 0} :=
+      fun y ↦ ⟨y, norm_ne_zero_iff.mp y.2⟩
+    have hq : Tendsto q (comap Subtype.val (𝓝[s] x))
+        (comap Subtype.val (𝓝[s] x)) := tendsto_comap_iff.mpr tendsto_comap
+    exact (h.comp hq).congr fun y ↦ rfl
 
-theorem hasFDerivAt_iff_tendsto :
-    HasFDerivAt f f' x ↔
-      Tendsto (fun x' => ‖x' - x‖⁻¹ * ‖f x' - f x - f' (x' - x)‖) (𝓝 x) (𝓝 0) := by
-  rw [← hasFDerivWithinAt_univ, hasFDerivWithinAt_iff_tendsto, nhdsWithin_univ]
+/-- The normalized-error characterization uses only nonzero coordinate displacements and
+retains the required agreement of function values on zero-displacement fibers. -/
+theorem hasFDerivAt_iff_tendsto {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → E} {x : D}
+    (h₀ : ∀ᶠ y in 𝓝 x, coord y = coord x → f y = f x := by
+      exact Filter.Eventually.of_forall fun y h ↦ congrArg _ h) :
+    HasFDerivAt f f' x coord ↔
+      Tendsto (fun y : {y : D // coord y - coord x ≠ 0} ↦
+        Checked.div ‖f y - f x - f' (coord y - coord x)‖
+          ‖coord y - coord x‖ (norm_ne_zero_iff.mpr y.2).isUnit)
+        (comap Subtype.val (𝓝 x)) (𝓝 0) := by
+  simpa only [hasFDerivWithinAt_univ, nhdsWithin_univ] using
+    (hasFDerivWithinAt_iff_tendsto (f := f) (f' := f') (s := univ) (x := x)
+      (coord := coord) (by simpa only [nhdsWithin_univ] using h₀))
 
 theorem hasFDerivAt_iff_isLittleO_nhds_zero :
     HasFDerivAt f f' x ↔ (fun h : E => f (x + h) - f x - f' h) =o[𝓝 0] fun h => h := by
@@ -931,9 +1025,9 @@ theorem DifferentiableAt.isBigO_sub (h : DifferentiableAt 𝕜 f x₀) :
 theorem Asymptotics.IsBigO.hasFDerivWithinAt {n : ℕ}
     (h : f =O[𝓝[s] x₀] fun x => ‖x - x₀‖ ^ n) (hx₀ : x₀ ∈ s) (hn : 1 < n) :
     HasFDerivWithinAt f (0 : E →L[𝕜] F) s x₀ := by
-  simp_rw [hasFDerivWithinAt_iff_isLittleO,
-    h.eq_zero_of_norm_pow_within hx₀ hn.ne_bot, zero_apply, sub_zero,
-    h.trans_isLittleO ((isLittleO_pow_sub_sub x₀ hn).mono nhdsWithin_le_nhds)]
+  apply HasFDerivWithinAt.of_isLittleO
+  simpa only [id_eq, h.eq_zero_of_norm_pow_within hx₀ hn.ne_bot, zero_apply, sub_zero] using
+    h.trans_isLittleO ((isLittleO_pow_sub_sub x₀ hn).mono nhdsWithin_le_nhds)
 
 theorem Asymptotics.IsBigO.hasFDerivAt {x₀ : E} {n : ℕ} (h : f =O[𝓝 x₀] fun x => ‖x - x₀‖ ^ n)
     (hn : 1 < n) : HasFDerivAt f (0 : E →L[𝕜] F) x₀ := by

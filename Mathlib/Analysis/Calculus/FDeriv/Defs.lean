@@ -220,7 +220,8 @@ alias ⟨HasFDerivAt.isLittleOTVS, HasFDerivAt.of_isLittleOTVS⟩ := hasFDerivAt
 theorem hasFDerivWithinAt_iff_isLittleOTVS {D : Type*} [TopologicalSpace D]
     {f : D → F} {coord : D → E} {x : D} {s : Set D} :
     HasFDerivWithinAt f f' s x coord ↔
-      (fun x' ↦ f x' - f x - f' (coord x' - coord x)) =o[𝕜; 𝓝[s] x] (fun x' ↦ coord x' - coord x) := by
+      (fun x' ↦ f x' - f x - f' (coord x' - coord x)) =o[𝕜; 𝓝[s] x]
+        (fun x' ↦ coord x' - coord x) := by
   simp [HasFDerivWithinAt, hasFDerivAtFilter_iff_isLittleOTVS, Function.comp_def]
 
 alias ⟨HasFDerivWithinAt.isLittleOTVS, HasFDerivWithinAt.of_isLittleOTVS⟩ :=
@@ -231,7 +232,7 @@ theorem hasStrictFDerivAt_iff_isLittleOTVS {D : Type*} [TopologicalSpace D]
     HasStrictFDerivAt f f' x coord ↔
       (fun p ↦ f p.1 - f p.2 - f' (coord p.1 - coord p.2)) =o[𝕜; 𝓝 (x, x)]
         (fun p ↦ coord p.1 - coord p.2) :=
-  hasFDerivAtFilter_iff_isLittleOTVS ..
+  hasFDerivAtFilter_iff_isLittleOTVS f f' (𝓝 (x, x)) coord
 
 theorem fderivWithin_zero_of_not_differentiableWithinAt (h : ¬DifferentiableWithinAt 𝕜 f s x) :
     fderivWithin 𝕜 f s x = 0 := by
@@ -256,7 +257,7 @@ variable {f : E → F} {f' : E →L[𝕜] F} {s : Set E} {x : E}
 theorem hasFDerivAtFilter_iff_isLittleO {D : Type*} {f : D → F} {coord : D → E} {L : Filter (D × D)} :
     HasFDerivAtFilter f f' L coord ↔
       (fun p => f p.1 - f p.2 - f' (coord p.1 - coord p.2)) =o[L] fun p => coord p.1 - coord p.2 :=
-  (hasFDerivAtFilter_iff_isLittleOTVS ..).trans isLittleOTVS_iff_isLittleO
+  (hasFDerivAtFilter_iff_isLittleOTVS f f' L coord).trans isLittleOTVS_iff_isLittleO
 
 alias ⟨HasFDerivAtFilter.isLittleO, HasFDerivAtFilter.of_isLittleO⟩ :=
   hasFDerivAtFilter_iff_isLittleO
@@ -265,7 +266,8 @@ theorem hasFDerivAt_iff_isLittleO {D : Type*} [TopologicalSpace D]
     {f : D → F} {coord : D → E} {x : D} :
     HasFDerivAt f f' x coord ↔
       (fun x' ↦ f x' - f x - f' (coord x' - coord x)) =o[𝓝 x] (fun x' ↦ coord x' - coord x) :=
-  hasFDerivAt_iff_isLittleOTVS.trans isLittleOTVS_iff_isLittleO
+  (hasFDerivAt_iff_isLittleOTVS (f := f) (f' := f') (coord := coord) (x := x)).trans
+    isLittleOTVS_iff_isLittleO
 
 alias ⟨HasFDerivAt.isLittleO, HasFDerivAt.of_isLittleO⟩ := hasFDerivAt_iff_isLittleO
 
@@ -273,7 +275,8 @@ theorem hasFDerivWithinAt_iff_isLittleO {D : Type*} [TopologicalSpace D]
     {f : D → F} {coord : D → E} {x : D} {s : Set D} :
     HasFDerivWithinAt f f' s x coord ↔
       (fun x' ↦ f x' - f x - f' (coord x' - coord x)) =o[𝓝[s] x] (fun x' ↦ coord x' - coord x) :=
-  hasFDerivWithinAt_iff_isLittleOTVS.trans isLittleOTVS_iff_isLittleO
+  (hasFDerivWithinAt_iff_isLittleOTVS (f := f) (f' := f') (coord := coord) (x := x) (s := s)).trans
+    isLittleOTVS_iff_isLittleO
 
 alias ⟨HasFDerivWithinAt.isLittleO, HasFDerivWithinAt.of_isLittleO⟩ :=
   hasFDerivWithinAt_iff_isLittleO
@@ -283,7 +286,8 @@ theorem hasStrictFDerivAt_iff_isLittleO {D : Type*} [TopologicalSpace D]
     HasStrictFDerivAt f f' x coord ↔
       (fun p : D × D => f p.1 - f p.2 - f' (coord p.1 - coord p.2)) =o[𝓝 (x, x)]
         fun p : D × D => coord p.1 - coord p.2 :=
-  (hasStrictFDerivAt_iff_isLittleOTVS ..).trans isLittleOTVS_iff_isLittleO
+  (hasStrictFDerivAt_iff_isLittleOTVS (f := f) (f' := f') (coord := coord) (x := x)).trans
+    isLittleOTVS_iff_isLittleO
 
 alias ⟨HasStrictFDerivAt.isLittleO, HasStrictFDerivAt.of_isLittleO⟩ :=
   hasStrictFDerivAt_iff_isLittleO
