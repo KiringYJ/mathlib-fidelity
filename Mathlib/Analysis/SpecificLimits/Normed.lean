@@ -69,7 +69,8 @@ theorem isLittleO_pow_pow_of_lt_left {r₁ r₂ : ℝ} (h₁ : 0 ≤ r₁) (h₂
   have H : 0 < r₂ := h₁.trans_lt h₂
   (isLittleO_of_tendsto fun _ hn ↦ False.elim <| H.ne' <| eq_zero_of_pow_eq_zero hn) <|
     (tendsto_pow_atTop_nhds_zero_of_lt_one
-      (div_nonneg h₁ (h₁.trans h₂.le)) ((div_lt_one H).2 h₂)).congr fun _ ↦ div_pow _ _ _
+      (div_nonneg h₁ (h₁.trans h₂.le)) ((div_lt_one H).2 h₂)).comp tendsto_comap |>.congr
+        fun _ ↦ div_pow₀ _ _ _
 
 theorem isBigO_pow_pow_of_le_left {r₁ r₂ : ℝ} (h₁ : 0 ≤ r₁) (h₂ : r₁ ≤ r₂) :
     (fun n : ℕ ↦ r₁ ^ n) =O[atTop] fun n ↦ r₂ ^ n :=
@@ -160,7 +161,7 @@ theorem isLittleO_pow_const_const_pow_of_one_lt {R : Type*} [NormedRing R] (k : 
   intro n
   rw [mul_right_comm]
   refine n.norm_cast_le.trans (mul_le_mul_of_nonneg_right ?_ (norm_nonneg _))
-  simpa [_root_.div_eq_inv_mul, Real.norm_eq_abs, abs_of_nonneg h0] using n.cast_le_pow_div_sub h1
+  simpa [_root_.div_eq_inv_mul₀, Real.norm_eq_abs, abs_of_nonneg h0] using n.cast_le_pow_div_sub h1
 
 /-- For a real `r > 1` we have `n = o(r ^ n)` as `n → ∞`. -/
 theorem isLittleO_coe_const_pow_of_one_lt {R : Type*} [NormedRing R] {r : ℝ} (hr : 1 < r) :
@@ -178,7 +179,7 @@ theorem isLittleO_pow_const_mul_const_pow_const_pow_of_norm_lt {R : Type*} [Norm
   have A : (fun n ↦ n ^ k : ℕ → R) =o[atTop] fun n ↦ (r₂ / ‖r₁‖) ^ n :=
     isLittleO_pow_const_const_pow_of_one_lt k ((one_lt_div h0).2 h)
   suffices (fun n ↦ r₁ ^ n) =O[atTop] fun n ↦ ‖r₁‖ ^ n by
-    simpa [div_mul_cancel₀ _ (pow_pos h0 _).ne', div_pow] using A.mul_isBigO this
+    simpa [div_mul_cancel₀, div_pow₀] using A.mul_isBigO this
   exact .of_norm_eventuallyLE <| eventually_norm_pow_le r₁
 
 theorem tendsto_pow_const_div_const_pow_of_one_lt (k : ℕ) {r : ℝ} (hr : 1 < r) :
@@ -193,13 +194,17 @@ theorem tendsto_pow_const_mul_const_pow_of_abs_lt_one (k : ℕ) {r : ℝ} (hr : 
       (mem_atTop_sets.2 ⟨1, fun n hn ↦ by simp [zero_lt_one.trans_le hn |>.ne', h0]⟩)
   have hr' : 1 < |r|⁻¹ := (one_lt_inv₀ (abs_pos.2 h0)).2 hr
   rw [tendsto_zero_iff_norm_tendsto_zero]
-  simpa [div_eq_mul_inv] using tendsto_pow_const_div_const_pow_of_one_lt k hr'
+  simpa [div_eq_mul_inv₀, inv_inv₀] using tendsto_pow_const_div_const_pow_of_one_lt k hr'
 
 /-- For `k ≠ 0` and a constant `r` the function `r / n ^ k` tends to zero. -/
 lemma tendsto_const_div_pow (r : ℝ) (k : ℕ) (hk : k ≠ 0) :
-    Tendsto (fun n : ℕ => r / n ^ k) atTop (𝓝 0) := by
-  simpa using Filter.Tendsto.const_div_atTop (tendsto_natCast_atTop_atTop (R := ℝ).comp
-    (tendsto_pow_atTop hk)) r
+    Tendsto (fun n : {n : ℕ // n ≠ 0} => r / (n.1 : ℝ) ^ k)
+      (comap Subtype.val atTop) (𝓝 0) := by
+  simpa only [Function.comp_def, Nat.cast_pow] using Filter.Tendsto.const_div_atTop
+    (h₀ := fun n : {n : ℕ // n ≠ 0} =>
+      (Nat.cast_ne_zero.mpr (pow_ne_zero k n.2) : (↑(n.1 ^ k) : ℝ) ≠ 0).isUnit)
+    ((tendsto_natCast_atTop_atTop (R := ℝ)).comp
+      ((tendsto_pow_atTop hk).comp tendsto_comap)) r
 
 /-- If `0 ≤ r < 1`, then `n ^ k r ^ n` tends to zero for any natural `k`.
 This is a specialized version of `tendsto_pow_const_mul_const_pow_of_abs_lt_one`, singled out
@@ -245,26 +250,51 @@ lemma tendsto_pow_atTop_nhds_zero_iff_norm_lt_one {R : Type*} [SeminormedRing R]
 variable {R S : Type*} [Field R] [Field S] [LinearOrder S] {v w : AbsoluteValue R S}
   [TopologicalSpace S] [IsStrictOrderedRing S] [Archimedean S] [_i : OrderTopology S]
 
+omit [TopologicalSpace S] [Archimedean S] [OrderTopology S] in
+/-- A positive power whose absolute value is not one cannot be minus one. -/
+lemma AbsoluteValue.one_add_pow_ne_zero {v : AbsoluteValue R S} {a : R}
+    (ha : v a ≠ 1) {n : ℕ} (hn : n ≠ 0) : 1 + a ^ n ≠ 0 := by
+  intro he
+  have hp : v a ^ n = 1 := by
+    have := congrArg v (eq_neg_of_add_eq_zero_right he)
+    simpa using this
+  exact ha ((pow_eq_one_iff_of_nonneg (v.nonneg _) hn).mp hp)
+
 /-- `v (1 / (1 + a ^n))` tends to `1` for all `v : AbsoluteValue R S` for fields `R` and `S`,
-provided `v a < 1`. -/
+provided `v a < 1`, on the exact domain where `1 + a ^ n ≠ 0`. -/
 theorem AbsoluteValue.tendsto_div_one_add_pow_nhds_one {v : AbsoluteValue R S} {a : R}
-    (ha : v a < 1) : atTop.Tendsto (fun (n : ℕ) ↦ v (1 / (1 + a ^ n))) (𝓝 1) := by
+    (ha : v a < 1) :
+    Tendsto (fun n : {n : ℕ // 1 + a ^ n ≠ 0} ↦
+      v (Checked.div 1 (1 + a ^ n.1) n.2.isUnit)) (comap Subtype.val atTop) (𝓝 1) := by
   simp_rw [map_div₀ v, v.map_one]
-  apply one_div_one (G := S) ▸ Tendsto.div tendsto_const_nhds _ one_ne_zero
-  have h_add := (tendsto_pow_atTop_nhds_zero_of_lt_one (v.nonneg _) ha).const_add 1
-  have h_sub := (tendsto_pow_atTop_nhds_zero_of_lt_one (v.nonneg _) ha).const_sub 1
+  apply one_div_one₀ (M := S) ▸ Tendsto.div₀ tendsto_const_nhds
+  have hp : Tendsto (fun n : {n : ℕ // 1 + a ^ n ≠ 0} => v a ^ n.1)
+      (comap Subtype.val atTop) (𝓝 0) :=
+    (tendsto_pow_atTop_nhds_zero_of_lt_one (v.nonneg _) ha).comp tendsto_comap
+  have h_add := hp.const_add 1
+  have h_sub := hp.const_sub 1
   exact tendsto_of_tendsto_of_tendsto_of_le_of_le (by simpa using h_sub) (by simpa using h_add)
     (fun n ↦ le_trans (by simp) (v.le_add _ _))
     (fun n ↦ le_trans (v.add_le _ _) (by simp))
 
 /-- `v (1 / (1 + a ^n))` tends to `0` whenever `v : AbsoluteValue R S` for fields `R` and `S`,
-provided `1 < v a`. -/
+provided `1 < v a`, on the exact domain where `1 + a ^ n ≠ 0`. -/
 theorem AbsoluteValue.tendsto_div_one_add_pow_nhds_zero {v : AbsoluteValue R S} {a : R}
-    (ha : 1 < v a) : Filter.Tendsto (fun (n : ℕ) ↦ v (1 / (1 + a ^ n))) Filter.atTop (𝓝 0) := by
-  simp_rw [div_eq_mul_inv, one_mul, map_inv₀, fun n ↦ add_comm 1 (a ^ n)]
-  refine (tendsto_atTop_mono (fun n ↦ v.le_add _ _) ?_).inv_tendsto_atTop
-  simpa using (tendsto_atTop_add_right_of_le _ _ (tendsto_pow_atTop_atTop_of_one_lt ha)
-    (fun _ ↦ le_rfl)).congr fun n ↦ (sub_eq_add_neg (v a ^ n) 1).symm
+    (ha : 1 < v a) :
+    Tendsto (fun n : {n : ℕ // 1 + a ^ n ≠ 0} ↦
+      v (Checked.div 1 (1 + a ^ n.1) n.2.isUnit))
+      (comap Subtype.val atTop) (𝓝 0) := by
+  simp_rw [div_eq_mul_inv₀, one_mul, map_inv₀]
+  apply Filter.Tendsto.fun_inv_tendsto_atTop
+  have hp : Tendsto (fun n : {n : ℕ // 1 + a ^ n ≠ 0} => v a ^ n.1)
+      (comap Subtype.val atTop) atTop :=
+    (tendsto_pow_atTop_atTop_of_one_lt ha).comp tendsto_comap
+  have hs : Tendsto (fun n : {n : ℕ // 1 + a ^ n ≠ 0} => v a ^ n.1 - 1)
+      (comap Subtype.val atTop) atTop := by
+    simpa only [sub_eq_add_neg] using
+      (tendsto_atTop_add_right_of_le _ (-1) hp (fun _ => le_rfl))
+  refine tendsto_atTop_mono (fun n ↦ ?_) hs
+  simpa only [map_pow, map_one, add_comm] using v.le_add (a ^ n.1) 1
 
 /-! ### Geometric series -/
 
@@ -469,30 +499,48 @@ section Geometric
 
 variable {K : Type*} [NormedDivisionRing K] {ξ : K}
 
-theorem hasSum_geometric_of_norm_lt_one (h : ‖ξ‖ < 1) : HasSum (fun n : ℕ ↦ ξ ^ n) (1 - ξ)⁻¹ := by
+theorem hasSum_geometric_of_norm_lt_one (h : ‖ξ‖ < 1) :
+    HasSum (fun n : ℕ ↦ ξ ^ n) (Checked.inv (1 - ξ) (by
+      apply isUnit_iff_ne_zero.mpr
+      intro he
+      have : ξ = 1 := (sub_eq_zero.mp he).symm
+      simp [this] at h)) := by
   have xi_ne_one : ξ ≠ 1 := by
     contrapose! h
     simp [h]
   have A : Tendsto (fun n ↦ (ξ ^ n - 1) * (ξ - 1)⁻¹) atTop (𝓝 ((0 - 1) * (ξ - 1)⁻¹)) :=
     ((tendsto_pow_atTop_nhds_zero_of_norm_lt_one h).sub tendsto_const_nhds).mul tendsto_const_nhds
   rw [hasSum_iff_tendsto_nat_of_summable_norm]
-  · simpa [geom_sum_eq, xi_ne_one, neg_inv, div_eq_mul_inv] using A
+  · simpa [geom_sum_eq, xi_ne_one, neg_inv₀, div_eq_mul_inv₀] using A
   · simp [norm_pow, summable_geometric_of_lt_one (norm_nonneg _) h]
 
 instance : HasSummableGeomSeries K :=
   .of_summable_pow fun _ h ↦ (hasSum_geometric_of_norm_lt_one h).summable
 
-theorem tsum_geometric_of_norm_lt_one (h : ‖ξ‖ < 1) : ∑' n : ℕ, ξ ^ n = (1 - ξ)⁻¹ :=
+theorem tsum_geometric_of_norm_lt_one (h : ‖ξ‖ < 1) : ∑' n : ℕ, ξ ^ n = (Checked.inv (1 - ξ) (by
+      apply isUnit_iff_ne_zero.mpr
+      intro he
+      have : ξ = 1 := (sub_eq_zero.mp he).symm
+      simp [this] at h)) :=
   (hasSum_geometric_of_norm_lt_one h).tsum_eq
 
 theorem hasSum_geometric_of_abs_lt_one {r : ℝ} (h : |r| < 1) :
-    HasSum (fun n : ℕ ↦ r ^ n) (1 - r)⁻¹ :=
+    HasSum (fun n : ℕ ↦ r ^ n) (Checked.inv (1 - r) (by
+      apply isUnit_iff_ne_zero.mpr
+      intro he
+      have : r = 1 := (sub_eq_zero.mp he).symm
+      simp [this] at h)) :=
   hasSum_geometric_of_norm_lt_one h
 
 theorem summable_geometric_of_abs_lt_one {r : ℝ} (h : |r| < 1) : Summable fun n : ℕ ↦ r ^ n :=
   summable_geometric_of_norm_lt_one h
 
-theorem tsum_geometric_of_abs_lt_one {r : ℝ} (h : |r| < 1) : ∑' n : ℕ, r ^ n = (1 - r)⁻¹ :=
+theorem tsum_geometric_of_abs_lt_one {r : ℝ} (h : |r| < 1) :
+    ∑' n : ℕ, r ^ n = (Checked.inv (1 - r) (by
+      apply isUnit_iff_ne_zero.mpr
+      intro he
+      have : r = 1 := (sub_eq_zero.mp he).symm
+      simp [this] at h)) :=
   tsum_geometric_of_norm_lt_one h
 
 /-- A geometric series in a normed field is summable iff the norm of the common ratio is less than
@@ -582,7 +630,8 @@ lemma tsum_choose_mul_geometric_of_norm_lt_one' (k : ℕ) {r : R} (hr : ‖r‖ 
 
 lemma hasSum_choose_mul_geometric_of_norm_lt_one (k : ℕ) {r : 𝕜} (hr : ‖r‖ < 1) :
     HasSum (fun n ↦ (n + k).choose k * r ^ n) (1 /ₚ ((Units.oneSub r hr) ^ (k + 1))) := by
-  simpa [divp, inv_pow, Units.val_pow] using hasSum_choose_mul_geometric_of_norm_lt_one' k hr
+  simpa [divp, inv_pow, Units.val_pow_eq_pow_val] using
+    hasSum_choose_mul_geometric_of_norm_lt_one' k hr
 
 lemma tsum_choose_mul_geometric_of_norm_lt_one (k : ℕ) {r : 𝕜} (hr : ‖r‖ < 1) :
     ∑' n, (n + k).choose k * r ^ n = 1 /ₚ ((Units.oneSub r hr) ^ (k + 1)) :=
@@ -608,9 +657,11 @@ theorem hasSum_descFactorial_mul_geometric_of_norm_lt_one' (j : ℕ) {r : R} (h 
 /-- If `‖r‖ < 1`, then `∑' n : ℕ, n.descFactorial j * r ^ n = j ! * r ^ j / (1 - r) ^ (j + 1)`.
 
 This is the version in a general ring with summable geometric series. For a version in a field,
-using mixed division by the constructed unit, see `tsum_descFactorial_mul_geometric_of_norm_lt_one`. -/
+using mixed division by the constructed unit, see
+`tsum_descFactorial_mul_geometric_of_norm_lt_one`. -/
 theorem tsum_descFactorial_mul_geometric_of_norm_lt_one' (j : ℕ) {r : R} (h : ‖r‖ < 1) :
-    ∑' n : ℕ, n.descFactorial j * r ^ n = j.factorial * r ^ j * (↑(Units.oneSub r h)⁻¹ : R) ^ (j + 1) :=
+    ∑' n : ℕ, n.descFactorial j * r ^ n =
+      j.factorial * r ^ j * (↑(Units.oneSub r h)⁻¹ : R) ^ (j + 1) :=
   (hasSum_descFactorial_mul_geometric_of_norm_lt_one' j h).tsum_eq
 
 lemma summable_descFactorial_mul_geometric_of_norm_lt_one (j : ℕ) {r : R} (hr : ‖r‖ < 1) :
@@ -619,8 +670,10 @@ lemma summable_descFactorial_mul_geometric_of_norm_lt_one (j : ℕ) {r : R} (hr 
 
 /-- If `‖r‖ < 1`, then `∑' n : ℕ, n.descFactorial j * r ^ n = j ! * r ^ j / (1 - r) ^ (j + 1)`. -/
 theorem hasSum_descFactorial_mul_geometric_of_norm_lt_one (j : ℕ) {r : 𝕜} (hr : ‖r‖ < 1) :
-    HasSum (fun n : ℕ ↦ n.descFactorial j * r ^ n) (j.factorial * r ^ j /ₚ ((Units.oneSub r hr) ^ (j + 1))) := by
-  simpa [divp, inv_pow, Units.val_pow] using hasSum_descFactorial_mul_geometric_of_norm_lt_one' j hr
+    HasSum (fun n : ℕ ↦ n.descFactorial j * r ^ n)
+      (j.factorial * r ^ j /ₚ ((Units.oneSub r hr) ^ (j + 1))) := by
+  simpa [divp, inv_pow, Units.val_pow_eq_pow_val] using
+    hasSum_descFactorial_mul_geometric_of_norm_lt_one' j hr
 
 /-- If `‖r‖ < 1`, then `∑' n : ℕ, n.descFactorial j * r ^ n = j ! * r ^ j / (1 - r) ^ (j + 1)`. -/
 theorem tsum_descFactorial_mul_geometric_of_norm_lt_one (j : ℕ) {r : 𝕜} (hr : ‖r‖ < 1) :
@@ -664,7 +717,8 @@ theorem hasSum_pow_mul_geometric_of_norm_lt_one (k : ℕ) {r : 𝕜} (hr : ‖r�
     HasSum (fun n : ℕ ↦ n ^ k * r ^ n)
       (∑ j ∈ Finset.range (k + 1),
         stirlingSecond k j * j.factorial * r ^ j /ₚ ((Units.oneSub r hr) ^ (j + 1))) := by
-  simpa [divp, inv_pow, Units.val_pow] using hasSum_pow_mul_geometric_of_norm_lt_one' k hr
+  simpa [divp, inv_pow, Units.val_pow_eq_pow_val] using
+    hasSum_pow_mul_geometric_of_norm_lt_one' k hr
 
 /-- If `‖r‖ < 1`, then `∑' n : ℕ, n ^ k * r ^ n` is given by the finite sum
 `∑ j ∈ range (k + 1), S(k, j) * j ! * r ^ j / (1 - r) ^ (j + 1)`, where `S(k, j)` denotes the
@@ -693,7 +747,7 @@ theorem tsum_coe_mul_geometric_of_norm_lt_one' {r : 𝕜} (hr : ‖r‖ < 1) :
 /-- If `‖r‖ < 1`, then `∑' n : ℕ, n * r ^ n = r / (1 - r) ^ 2`. -/
 theorem hasSum_coe_mul_geometric_of_norm_lt_one {r : 𝕜} (hr : ‖r‖ < 1) :
     HasSum (fun n ↦ n * r ^ n : ℕ → 𝕜) (r /ₚ ((Units.oneSub r hr) ^ 2)) := by
-  simpa [divp, inv_pow, Units.val_pow] using hasSum_coe_mul_geometric_of_norm_lt_one' hr
+  simpa [divp, inv_pow, Units.val_pow_eq_pow_val] using hasSum_coe_mul_geometric_of_norm_lt_one' hr
 
 /-- If `‖r‖ < 1`, then `∑' n : ℕ, n * r ^ n = r / (1 - r) ^ 2`. -/
 theorem tsum_coe_mul_geometric_of_norm_lt_one {r : 𝕜} (hr : ‖r‖ < 1) :
@@ -708,8 +762,11 @@ theorem hasSum_sq_mul_geometric_of_norm_lt_one' {r : R} (h : ‖r‖ < 1) :
     HasSum (fun n : ℕ ↦ n ^ 2 * r ^ n) (r * (1 + r) * (↑(Units.oneSub r h)⁻¹ : R) ^ 3) := by
   have h1 : (↑(Units.oneSub r h)⁻¹ : R) ^ 2 = (1 - r) * (↑(Units.oneSub r h)⁻¹ : R) ^ 3 := by
     rw [pow_succ' _ 2, ← mul_assoc,
-      (Units.oneSub r h).mul_inv, one_mul]
-  have h2 : r * (1 + r) * (↑(Units.oneSub r h)⁻¹ : R) ^ 3 = r * (↑(Units.oneSub r h)⁻¹ : R) ^ 2 + 2 * r ^ 2 * (↑(Units.oneSub r h)⁻¹ : R) ^ 3 := by
+      show (1 - r) * (↑(Units.oneSub r h)⁻¹ : R) = 1 from
+        (Units.oneSub r h).mul_inv, one_mul]
+  have h2 : r * (1 + r) * (↑(Units.oneSub r h)⁻¹ : R) ^ 3 =
+      r * (↑(Units.oneSub r h)⁻¹ : R) ^ 2 +
+        2 * r ^ 2 * (↑(Units.oneSub r h)⁻¹ : R) ^ 3 := by
     rw [h1]
     noncomm_ring
   simpa [h2, Finset.sum_range_succ, stirlingSecond_one_right, stirlingSecond_self] using
@@ -726,7 +783,7 @@ theorem tsum_sq_mul_geometric_of_norm_lt_one' {r : R} (h : ‖r‖ < 1) :
 /-- If `‖r‖ < 1`, then `∑' n : ℕ, n ^ 2 * r ^ n = r * (1 + r) / (1 - r) ^ 3`. -/
 theorem hasSum_sq_mul_geometric_of_norm_lt_one {r : 𝕜} (hr : ‖r‖ < 1) :
     HasSum (fun n : ℕ ↦ n ^ 2 * r ^ n) (r * (1 + r) /ₚ ((Units.oneSub r hr) ^ 3)) := by
-  simpa [divp, inv_pow, Units.val_pow] using hasSum_sq_mul_geometric_of_norm_lt_one' hr
+  simpa [divp, inv_pow, Units.val_pow_eq_pow_val] using hasSum_sq_mul_geometric_of_norm_lt_one' hr
 
 /-- If `‖r‖ < 1`, then `∑' n : ℕ, n ^ 2 * r ^ n = r * (1 + r) / (1 - r) ^ 3`. -/
 theorem tsum_sq_mul_geometric_of_norm_lt_one {r : 𝕜} (hr : ‖r‖ < 1) :
@@ -833,11 +890,15 @@ theorem summable_of_ratio_norm_eventually_le {α : Type*} [SeminormedAddCommGrou
 
 theorem summable_of_ratio_test_tendsto_lt_one {α : Type*} [NormedAddCommGroup α] [CompleteSpace α]
     {f : ℕ → α} {l : ℝ} (hl₁ : l < 1) (hf : ∀ᶠ n in atTop, f n ≠ 0)
-    (h : Tendsto (fun n ↦ ‖f (n + 1)‖ / ‖f n‖) atTop (𝓝 l)) : Summable f := by
+    (h : Tendsto (fun n : {n : ℕ // ‖f n‖ ≠ 0} ↦ Checked.div ‖f (n.1 + 1)‖ ‖f n.1‖ n.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 l)) : Summable f := by
   rcases exists_between hl₁ with ⟨r, hr₀, hr₁⟩
   refine summable_of_ratio_norm_eventually_le hr₁ ?_
-  filter_upwards [h.eventually_le_const hr₀, hf] with _ _ h₁
-  rwa [← div_le_iff₀ (norm_pos_iff.mpr h₁)]
+  have he := h.eventually_le_const hr₀
+  rw [eventually_comap] at he
+  filter_upwards [he, hf] with n hn hfn
+  exact (div_le_iff₀ (norm_pos_iff.mpr hfn)).mp
+    (hn ⟨n, norm_ne_zero_iff.mpr hfn⟩ rfl)
 
 theorem not_summable_of_ratio_norm_eventually_ge {α : Type*} [SeminormedAddCommGroup α] {f : ℕ → α}
     {r : ℝ} (hr : 1 < r) (hf : ∃ᶠ n in atTop, ‖f n‖ ≠ 0)
@@ -858,16 +919,18 @@ theorem not_summable_of_ratio_norm_eventually_ge {α : Type*} [SeminormedAddComm
   · grind
 
 theorem not_summable_of_ratio_test_tendsto_gt_one {α : Type*} [SeminormedAddCommGroup α]
-    {f : ℕ → α} {l : ℝ} (hl : 1 < l) (h : Tendsto (fun n ↦ ‖f (n + 1)‖ / ‖f n‖) atTop (𝓝 l)) :
-    ¬Summable f := by
-  have key : ∀ᶠ n in atTop, ‖f n‖ ≠ 0 := by
-    filter_upwards [h.eventually_const_le hl] with _ hn hc
-    rw [hc, _root_.div_zero] at hn
-    linarith
+    {f : ℕ → α} {l : ℝ} (hl : 1 < l) (hf : ∃ᶠ n in atTop, ‖f n‖ ≠ 0)
+    (h : Tendsto (fun n : {n : ℕ // ‖f n‖ ≠ 0} ↦ Checked.div ‖f (n.1 + 1)‖ ‖f n.1‖ n.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 l)) : ¬Summable f := by
   rcases exists_between hl with ⟨r, hr₀, hr₁⟩
-  refine not_summable_of_ratio_norm_eventually_ge hr₀ key.frequently ?_
-  filter_upwards [h.eventually_const_le hr₁, key] with _ _ h₁
-  rwa [← le_div_iff₀ (lt_of_le_of_ne (norm_nonneg _) h₁.symm)]
+  refine not_summable_of_ratio_norm_eventually_ge hr₀ hf ?_
+  have he := h.eventually_const_le hr₁
+  rw [eventually_comap] at he
+  filter_upwards [he] with n hn
+  by_cases hfn : ‖f n‖ = 0
+  · simp only [hfn, mul_zero]; exact norm_nonneg _
+  · exact (le_div_iff₀ (lt_of_le_of_ne (norm_nonneg _) (Ne.symm hfn))).mp
+      (hn ⟨n, hfn⟩ rfl)
 
 section NormedDivisionRing
 
@@ -882,7 +945,7 @@ theorem summable_powerSeries_of_norm_lt {w z : α}
   rw [summable_iff_cauchySeq_finset]
   refine cauchySeq_finset_of_geometric_bound (r := ‖z‖ / ‖w‖) (C := C) ((div_lt_one hw).mpr hz)
     (fun n ↦ ?_)
-  rw [norm_mul, norm_pow, div_pow, ← mul_comm_div]
+  rw [norm_mul, norm_pow, div_pow₀, ← mul_comm_div₀]
   conv at hC => enter [n]; rw [norm_mul, norm_pow, ← _root_.le_div_iff₀ (by positivity)]
   gcongr
   exact hC n
@@ -1088,8 +1151,10 @@ theorem Real.summable_pow_div_factorial (x : ℝ) : Summable (fun n ↦ x ^ n / 
   intro n hn
   calc
     ‖x ^ (n + 1) / (n + 1)!‖ = ‖x‖ / (n + 1) * ‖x ^ n / (n !)‖ := by
-      rw [_root_.pow_succ', Nat.factorial_succ, Nat.cast_mul, ← _root_.div_mul_div_comm, norm_mul,
-        norm_div, Real.norm_natCast, Nat.cast_succ]
+      simp only [norm_div, norm_pow, Real.norm_natCast]
+      field_simp
+      simp only [pow_succ, Nat.factorial_succ, Nat.cast_mul, Nat.cast_add, Nat.cast_one]
+      ring
     _ ≤ ‖x‖ / (⌊‖x‖⌋₊ + 1) * ‖x ^ n / (n !)‖ := by gcongr
 
 section
@@ -1118,7 +1183,7 @@ lemma tendsto_zero_of_isBoundedUnder_smul_of_tendsto_cobounded {f : α → K} {g
     _ = ‖g x‖ := by simp
     _ ≤ c / ‖f x‖ := by rwa [norm_smul, ← le_div_iff₀' (by positivity)] at hfgc
     _ ≤ c / (c / ε) := by gcongr
-    _ = ε := div_div_cancel₀ hc0.ne'
+    _ = ε := div_div_cancel₀
 
 lemma tendsto_smul_congr_of_tendsto_left_cobounded_of_isBoundedUnder
     {f₁ f₂ : α → K} {g : α → R} {t : R} {l : Filter α}
