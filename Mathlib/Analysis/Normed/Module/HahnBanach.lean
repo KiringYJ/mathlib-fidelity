@@ -74,8 +74,8 @@ theorem exists_dual_vector (x : E) (h : ‖x‖ ≠ 0) : ∃ g : StrongDual 𝕜
     simp [-algebraMap_smul, hgx, ↓hg.left, hcx]
   refine ⟨g, le_antisymm ?_ ?_, hval⟩
   · simp only [hg.right, norm_smul, norm_algebraMap', norm_norm]
-    grw [coord.opNorm_le_bound (by positivity)
-      (fun y ↦ (homothety_inverse _ (by positivity) _ hhomothety y).le), mul_inv_cancel₀ h]
+    grw [coord.opNorm_le_bound (M := ‖x‖⁻¹) (by positivity)
+      (fun y ↦ (homothety_inverse _ (by positivity) _ hhomothety y).le), mul_inv_cancel₀]
   · have hle := g.le_opNorm x
     simp only [hval, norm_algebraMap', norm_norm] at hle
     exact one_le_of_le_mul_right₀ (by positivity) hle
