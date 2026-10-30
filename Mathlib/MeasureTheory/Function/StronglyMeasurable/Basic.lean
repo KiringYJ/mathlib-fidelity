@@ -168,43 +168,47 @@ protected theorem tendsto_approx {_ : SigmaAlgebra α} (hf : StronglyMeasurable 
     ∀ x, Tendsto (fun n => hf.approx n x) atTop (𝓝 (f x)) :=
   hf.choose_spec
 
-/-- Similar to `stronglyMeasurable.approx`, but enforces that the norm of every function in the
-sequence is less than `c` everywhere. If `‖f x‖ ≤ c` this sequence of simple functions verifies
-`Tendsto (fun n => hf.approxBounded n x) atTop (𝓝 (f x))`. -/
+/-- Similar to `stronglyMeasurable.approx`. In a seminormed real vector space, the norm of
+every function in the sequence is at most `max c 0` everywhere. In that setting, this is
+radial truncation: for positive `c`,
+it fixes the closed ball of radius `c` and scales vectors outside it to norm `c`.
+The denominator `max c ‖x‖` is strictly positive, including at zero-seminorm vectors.
+For nonpositive `c`, the truncation is the zero vector.
+If `‖f x‖ ≤ c` in a normed space, the sequence converges to `f x`. -/
 noncomputable def approxBounded {_ : SigmaAlgebra α} [Norm β] [SMul ℝ β]
     (hf : StronglyMeasurable f) (c : ℝ) : ℕ → SimpleFunc α β := fun n =>
-  (hf.approx n).map fun x => min 1 (c / ‖x‖) • x
+  (hf.approx n).map fun x =>
+    if hc : 0 < c then
+      Checked.div c (max c ‖x‖) (ne_of_gt (hc.trans_le (le_max_left _ _))).isUnit • x
+    else (0 : ℝ) • x
+
+/-- Positive-radius truncation fixes approximants inside the ball, even in a seminormed space. -/
+theorem approxBounded_eq_approx {β} {f : α → β} [SeminormedAddCommGroup β] [NormedSpace ℝ β]
+    {m : SigmaAlgebra α} (hf : StronglyMeasurable[m] f) {c : ℝ} (hc : 0 < c)
+    {n : ℕ} {x : α} (hx : ‖hf.approx n x‖ ≤ c) :
+    hf.approxBounded c n x = hf.approx n x := by
+  simp [approxBounded, hc, max_eq_left hx]
+
+/-- Nonpositive radii give the zero truncation. -/
+theorem approxBounded_of_nonpos {β} {f : α → β} [SeminormedAddCommGroup β] [NormedSpace ℝ β]
+    {m : SigmaAlgebra α} (hf : StronglyMeasurable[m] f) {c : ℝ} (hc : c ≤ 0) (n : ℕ) (x : α) :
+    hf.approxBounded c n x = 0 := by
+  simp [approxBounded, not_lt.mpr hc]
 
 theorem tendsto_approxBounded_of_norm_le {β} {f : α → β} [NormedAddCommGroup β] [NormedSpace ℝ β]
     {m : SigmaAlgebra α} (hf : StronglyMeasurable[m] f) {c : ℝ} {x : α} (hfx : ‖f x‖ ≤ c) :
     Tendsto (fun n => hf.approxBounded c n x) atTop (𝓝 (f x)) := by
-  have h_tendsto := hf.tendsto_approx x
-  simp only [StronglyMeasurable.approxBounded, SimpleFunc.coe_map, Function.comp_apply]
-  by_cases hfx0 : ‖f x‖ = 0
-  · rw [norm_eq_zero] at hfx0
-    rw [hfx0] at h_tendsto ⊢
-    have h_tendsto_norm : Tendsto (fun n => ‖hf.approx n x‖) atTop (𝓝 0) := by
-      convert! h_tendsto.norm
-      rw [norm_zero]
-    refine squeeze_zero_norm (fun n => ?_) h_tendsto_norm
-    calc
-      ‖min 1 (c / ‖hf.approx n x‖) • hf.approx n x‖ =
-          ‖min 1 (c / ‖hf.approx n x‖)‖ * ‖hf.approx n x‖ :=
-        norm_smul _ _
-      _ ≤ ‖(1 : ℝ)‖ * ‖hf.approx n x‖ := by
-        gcongr
-        rw [norm_one, Real.norm_of_nonneg]
-        · exact min_le_left _ _
-        · exact le_min zero_le_one (div_nonneg ((norm_nonneg _).trans hfx) (norm_nonneg _))
-      _ = ‖hf.approx n x‖ := by rw [norm_one, one_mul]
-  rw [← one_smul ℝ (f x)]
-  refine Tendsto.smul ?_ h_tendsto
-  have : min 1 (c / ‖f x‖) = 1 := by
-    rw [min_eq_left_iff, one_le_div (lt_of_le_of_ne (norm_nonneg _) (Ne.symm hfx0))]
-    exact hfx
-  nth_rw 2 [this.symm]
-  refine Tendsto.min tendsto_const_nhds ?_
-  exact Tendsto.div tendsto_const_nhds h_tendsto.norm hfx0
+  have hc : 0 ≤ c := (norm_nonneg _).trans hfx
+  by_cases hcpos : 0 < c
+  · have hu : ∀ y : β, IsUnit (max c ‖y‖) :=
+      fun y => (ne_of_gt (hcpos.trans_le (le_max_left _ _))).isUnit
+    have hcont := ((continuous_const : Continuous (fun _ : β => c)).div₀
+      (continuous_const.max continuous_norm) (h₀ := hu)).smul continuous_id
+    have hlim := hcont.continuousAt.tendsto.comp (hf.tendsto_approx x)
+    simpa [approxBounded, hcpos, max_eq_left hfx, Function.comp_def, Pi.smul_apply] using hlim
+  · have hc0 : c = 0 := le_antisymm (le_of_not_gt hcpos) hc
+    have hfx0 : f x = 0 := norm_eq_zero.mp (le_antisymm (hc0 ▸ hfx) (norm_nonneg _))
+    simp [approxBounded, hcpos, hfx0]
 
 theorem tendsto_approxBounded_ae {β} {f : α → β} [NormedAddCommGroup β] [NormedSpace ℝ β]
     {m m0 : SigmaAlgebra α} {μ : Measure α} (hf : StronglyMeasurable[m] f) {c : ℝ}
@@ -215,19 +219,21 @@ theorem tendsto_approxBounded_ae {β} {f : α → β} [NormedAddCommGroup β] [N
 theorem norm_approxBounded_le {β} {f : α → β} [SeminormedAddCommGroup β] [NormedSpace ℝ β]
     {m : SigmaAlgebra α} {c : ℝ} (hf : StronglyMeasurable[m] f) (hc : 0 ≤ c) (n : ℕ) (x : α) :
     ‖hf.approxBounded c n x‖ ≤ c := by
-  simp only [StronglyMeasurable.approxBounded, SimpleFunc.coe_map, Function.comp_apply]
-  refine (norm_smul_le _ _).trans ?_
-  by_cases h0 : ‖hf.approx n x‖ = 0
-  · simp only [h0, _root_.div_zero, min_eq_right, zero_le_one, norm_zero, mul_zero]
-    exact hc
-  rcases le_total ‖hf.approx n x‖ c with h | h
-  · rw [min_eq_left _]
-    · simpa only [norm_one, one_mul] using h
-    · rwa [one_le_div (lt_of_le_of_ne (norm_nonneg _) (Ne.symm h0))]
-  · rw [min_eq_right _]
-    · rw [norm_div, norm_norm, mul_comm, mul_div, div_eq_mul_inv, mul_comm, ← mul_assoc,
-        inv_mul_cancel₀ h0, one_mul, Real.norm_of_nonneg hc]
-    · rwa [div_le_one (lt_of_le_of_ne (norm_nonneg _) (Ne.symm h0))]
+  simp only [approxBounded, SimpleFunc.coe_map, Function.comp_apply]
+  split_ifs with hcpos
+  · have hd : 0 < max c ‖hf.approx n x‖ := hcpos.trans_le (le_max_left _ _)
+    rw [norm_smul, Real.norm_of_nonneg (div_nonneg hc hd.le)]
+    exact (mul_le_mul_of_nonneg_left (le_max_right _ _) (div_nonneg hc hd.le)).trans_eq
+      (div_mul_cancel₀ _)
+  · simpa using hc
+
+/-- The effective truncation radius is `max c 0`. -/
+theorem norm_approxBounded_le_max {β} {f : α → β} [SeminormedAddCommGroup β] [NormedSpace ℝ β]
+    {m : SigmaAlgebra α} (hf : StronglyMeasurable[m] f) (c : ℝ) (n : ℕ) (x : α) :
+    ‖hf.approxBounded c n x‖ ≤ max c 0 := by
+  rcases le_total 0 c with hc | hc
+  · exact (hf.norm_approxBounded_le hc n x).trans (le_max_left _ _)
+  · simp [hf.approxBounded_of_nonpos hc, max_eq_right hc]
 
 theorem _root_.stronglyMeasurable_bot_iff [Nonempty β] [T2Space β] :
     StronglyMeasurable[⊥] f ↔ ∃ c, f = fun _ => c := by
@@ -417,46 +423,47 @@ protected theorem inv [Inv β] [ContinuousInv β] (hf : StronglyMeasurable f) :
     StronglyMeasurable f⁻¹ :=
   ⟨fun n => (hf.approx n)⁻¹, fun x => (hf.tendsto_approx x).inv⟩
 
-@[to_fun (attr := fun_prop)]
-protected theorem inv₀ [GroupWithZero β] [ContinuousInv₀ β] [MetrizableSpace β]
-    (hf : StronglyMeasurable f) : StronglyMeasurable f⁻¹ := by
-  borelize β
-  refine ⟨fun n => ((hf.approx n).restrict {x | f x ≠ 0})⁻¹, fun x => ?_⟩
-  have : MeasurableSet {x | f x ≠ 0} := ((MeasurableSet.singleton 0).preimage hf.measurable).compl
-  by_cases h : f x = 0
-  · simp_all only [ne_eq, measurableSet_setOfPred, SimpleFunc.coe_inv, SimpleFunc.coe_restrict,
-      Pi.inv_apply, mem_ofPred_eq, not_true_eq_false, not_false_eq_true, indicator_of_notMem,
-      _root_.inv_zero]
-    exact tendsto_const_nhds
-  · simp_all only [ne_eq, measurableSet_setOfPred, SimpleFunc.coe_inv, SimpleFunc.coe_restrict,
-      Pi.inv_apply, mem_ofPred_eq, not_false_eq_true, indicator_of_mem]
-    apply (hf.tendsto_approx x).inv₀ h
-
 @[to_additive (attr := to_fun (attr := fun_prop)) sub]
 protected theorem div' [Div β] [ContinuousDiv β] (hf : StronglyMeasurable f)
     (hg : StronglyMeasurable g) : StronglyMeasurable (f / g) :=
   ⟨fun n => hf.approx n / hg.approx n, fun x => (hf.tendsto_approx x).div' (hg.tendsto_approx x)⟩
 
 @[fun_prop]
-theorem div₀ [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β] (hf : StronglyMeasurable f)
-    (hg : StronglyMeasurable g) (h₀ : ∀ (x : α), g x ≠ 0) : StronglyMeasurable (f / g) :=
-  ⟨fun n => hf.approx n / hg.approx n,
-    fun x => (hf.tendsto_approx x).div (hg.tendsto_approx x) (h₀ x)⟩
+theorem div₀ [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β]
+    {h0 : ∀ x, IsUnit (g x)} (hf : StronglyMeasurable f)
+    (hg : StronglyMeasurable g) :
+    StronglyMeasurable (fun x => Checked.div (f x) (g x) (h0 x)) := by
+  classical
+  by_cases hz : IsClosed ({0} : Set β)
+  · -- Approximate in the unit domain; no inverse is assigned to a zero approximant.
+    let r : β → {b : β | IsUnit b} := fun b =>
+      if hb : IsUnit b then ⟨b, hb⟩ else ⟨1, isUnit_one⟩
+    have hr : StronglyMeasurable (fun x => (⟨g x, h0 x⟩ : {b : β | IsUnit b})) := by
+      refine ⟨fun n => (hg.approx n).map r, fun x => ?_⟩
+      apply tendsto_subtype_rng.mpr
+      have he : ∀ᶠ n in atTop, hg.approx n x ≠ 0 :=
+        (hg.tendsto_approx x).eventually (hz.isOpen_compl.mem_nhds (h0 x).ne_zero)
+      apply (hg.tendsto_approx x).congr'
+      filter_upwards [he] with n hn
+      simp [r, hn]
+    have hi := ContinuousInv₀.continuous_inv.comp_stronglyMeasurable hr
+    simpa only [div_eq_mul_inv₀] using hf.fun_mul hi
+  · -- If zero is not closed, continuous multiplication makes constant zero converge everywhere.
+    have hn : ¬ closure ({0} : Set β) ⊆ {0} := by
+      simpa only [closure_subset_iff_isClosed] using hz
+    obtain ⟨a, ha, ha0⟩ := Set.not_subset.mp hn
+    have haunit : IsUnit a := (show a ≠ 0 from ha0).isUnit
+    have hlim : Tendsto (fun _ : ℕ => (0 : β)) atTop (𝓝 a) :=
+      tendsto_const_nhds.mono_right (specializes_iff_mem_closure.mpr ha)
+    refine ⟨fun _ => SimpleFunc.const α 0, fun x => ?_⟩
+    have h := hlim.mul_const (a⁻¹ * (f x / g x))
+    simpa only [zero_mul, ← mul_assoc, mul_inv_cancel₀, one_mul, SimpleFunc.const_apply] using h
 
-@[fun_prop]
-theorem div [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β] [MetrizableSpace β]
-    (hf : StronglyMeasurable f) (hg : StronglyMeasurable g) :
+theorem div [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β]
+    {h0 : IsUnit g} (hf : StronglyMeasurable f) (hg : StronglyMeasurable g) :
     StronglyMeasurable (f / g) := by
-  borelize β
-  refine ⟨fun n => hf.approx n / (hg.approx n).restrict {x | g x ≠ 0}, fun x => ?_⟩
-  have : MeasurableSet {x | g x ≠ 0} := ((MeasurableSet.singleton 0).preimage hg.measurable).compl
-  by_cases h : g x = 0
-  · simp_all only [ne_eq, SimpleFunc.coe_div, SimpleFunc.coe_restrict, Pi.div_apply, mem_ofPred_eq,
-      not_true_eq_false, not_false_eq_true, indicator_of_notMem, _root_.div_zero]
-    exact tendsto_const_nhds
-  · simp_all only [ne_eq, SimpleFunc.coe_div, SimpleFunc.coe_restrict,
-      Pi.div_apply, mem_ofPred_eq, not_false_eq_true, indicator_of_mem]
-    exact (hf.tendsto_approx x).div (hg.tendsto_approx x) h
+  rw [funext (Pi.div_apply₀ f g)]
+  exact hf.div₀ hg
 
 @[to_additive]
 theorem mul_iff_right [CommGroup β] [IsTopologicalGroup β] (hf : StronglyMeasurable f) :
@@ -784,6 +791,26 @@ theorem _root_.Embedding.comp_stronglyMeasurable_iff {m : SigmaAlgebra α} [Topo
     exact hG.measurableEmbedding.measurable_comp_iff.1 this
   · have : IsSeparable (g ⁻¹' range (g ∘ f)) := hg.isSeparable_preimage H.isSeparable_range
     rwa [range_comp, hg.injective.preimage_image] at this
+
+/-- Passing to a subtype preserves strong measurability in a pseudometrizable space. -/
+protected theorem subtype_mk {m : SigmaAlgebra α} [TopologicalSpace β]
+    [PseudoMetrizableSpace β] {p : β → Prop} (hf : StronglyMeasurable f) (h : ∀ x, p (f x)) :
+    StronglyMeasurable (fun x => (⟨f x, h x⟩ : Subtype p)) := by
+  let := pseudoMetrizableSpacePseudoMetric β
+  exact (Embedding.comp_stronglyMeasurable_iff IsEmbedding.subtypeVal).mp hf
+
+@[fun_prop]
+protected theorem fun_inv₀ {m : SigmaAlgebra α} [TopologicalSpace β] [Monoid β]
+    [ContinuousInv₀ β] [PseudoMetrizableSpace β] {h0 : ∀ x, IsUnit (f x)}
+    (hf : StronglyMeasurable f) :
+    StronglyMeasurable (fun x => Checked.inv (f x) (h0 x)) :=
+  ContinuousInv₀.continuous_inv.comp_stronglyMeasurable (hf.subtype_mk h0)
+
+protected theorem inv₀ {m : SigmaAlgebra α} [TopologicalSpace β] [Monoid β]
+    [ContinuousInv₀ β] [PseudoMetrizableSpace β] {h0 : IsUnit f}
+    (hf : StronglyMeasurable f) : StronglyMeasurable f⁻¹ := by
+  rw [funext (Pi.inv_apply₀ f)]
+  exact hf.fun_inv₀
 
 /-- A sequential limit of strongly measurable functions is strongly measurable. -/
 theorem _root_.stronglyMeasurable_of_tendsto {ι : Type*} {m : SigmaAlgebra α}

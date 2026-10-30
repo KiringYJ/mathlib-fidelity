@@ -316,10 +316,40 @@ protected theorem inv [Inv β] [ContinuousInv β] (hf : AEStronglyMeasurable[m] 
     AEStronglyMeasurable[m] f⁻¹ μ :=
   ⟨(hf.mk f)⁻¹, hf.stronglyMeasurable_mk.inv, hf.ae_eq_mk.inv⟩
 
-@[to_fun (attr := fun_prop)]
+/-- An almost-everywhere unit-valued function admits an everywhere unit-valued strongly
+measurable representative. Repairing the representative takes place before applying any
+operation whose domain consists of units. -/
+theorem exists_stronglyMeasurable_isUnit [GroupWithZero β] [MetrizableSpace β]
+    (hf : AEStronglyMeasurable[m] f μ) (h0 : ∀ᵐ x ∂μ, IsUnit (f x)) :
+    ∃ g : α → β, StronglyMeasurable[m] g ∧ (∀ x, IsUnit (g x)) ∧ f =ᵐ[μ] g := by
+  classical
+  borelize β
+  let g : α → β := fun x => if hf.mk f x = 0 then 1 else hf.mk f x
+  have hg : StronglyMeasurable[m] g :=
+    stronglyMeasurable_const.ite (hf.stronglyMeasurable_mk.measurable (measurableSet_singleton 0))
+      hf.stronglyMeasurable_mk
+  refine ⟨g, hg, ?_, ?_⟩
+  · intro x
+    dsimp [g]
+    split_ifs with h
+    · exact isUnit_one
+    · exact (show hf.mk f x ≠ 0 from h).isUnit
+  · filter_upwards [hf.ae_eq_mk, h0] with x hx hu
+    simp [g, ← hx, hu.ne_zero]
+
+@[fun_prop]
+theorem fun_inv₀ [GroupWithZero β] [ContinuousInv₀ β] [MetrizableSpace β]
+    {h0 : ∀ x, IsUnit (f x)} (hf : AEStronglyMeasurable[m] f μ) :
+    AEStronglyMeasurable[m] (fun x => Checked.inv (f x) (h0 x)) μ := by
+  obtain ⟨g, hg, hgu, hfg⟩ := hf.exists_stronglyMeasurable_isUnit (Eventually.of_forall h0)
+  refine ⟨fun x => Checked.inv (g x) (hgu x), hg.fun_inv₀, ?_⟩
+  filter_upwards [hfg] with x hx
+  simp only [hx]
+
 theorem inv₀ [GroupWithZero β] [ContinuousInv₀ β] [MetrizableSpace β]
-    (hf : AEStronglyMeasurable[m] f μ) : AEStronglyMeasurable[m] f⁻¹ μ :=
-  ⟨(hf.mk f)⁻¹, hf.stronglyMeasurable_mk.inv₀, hf.ae_eq_mk.inv⟩
+    {h0 : IsUnit f} (hf : AEStronglyMeasurable[m] f μ) : AEStronglyMeasurable[m] f⁻¹ μ := by
+  rw [funext (Pi.inv_apply₀ f)]
+  exact hf.fun_inv₀
 
 @[to_fun (attr := to_additive (attr := fun_prop))]
 protected theorem div [Group β] [IsTopologicalGroup β] (hf : AEStronglyMeasurable[m] f μ)
@@ -329,10 +359,9 @@ protected theorem div [Group β] [IsTopologicalGroup β] (hf : AEStronglyMeasura
 
 @[fun_prop]
 theorem div₀ [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β] [MetrizableSpace β]
-    (hf : AEStronglyMeasurable[m] f μ) (hg : AEStronglyMeasurable[m] g μ) :
-    AEStronglyMeasurable[m] (f / g) μ :=
-  ⟨hf.mk f / hg.mk g, hf.stronglyMeasurable_mk.div hg.stronglyMeasurable_mk,
-    hf.ae_eq_mk.div hg.ae_eq_mk⟩
+    {h0 : IsUnit g} (hf : AEStronglyMeasurable[m] f μ) (hg : AEStronglyMeasurable[m] g μ) :
+    AEStronglyMeasurable[m] (f / g) μ := by
+  simpa only [div_eq_mul_inv₀] using hf.mul hg.inv₀
 
 @[to_additive]
 theorem mul_iff_right [CommGroup β] [IsTopologicalGroup β] (hf : AEStronglyMeasurable[m] f μ) :
@@ -881,9 +910,11 @@ theorem _root_.aestronglyMeasurable_smul_iff₀ [TopologicalSpace G₀] [Continu
     [MetrizableSpace G₀] [ContinuousSMul G₀ β] {c : α → G₀}
     (hc : AEStronglyMeasurable c μ) (hc0 : ∀ᵐ x ∂μ, c x ≠ 0) :
     AEStronglyMeasurable (fun x => c x • f x) μ ↔ AEStronglyMeasurable f μ := by
-  refine ⟨fun h => (hc.fun_inv₀.fun_smul h).congr ?_, fun h => hc.fun_smul h⟩
-  filter_upwards [hc0] with x hx
-  simp [hx]
+  obtain ⟨d, hd, hdu, hcd⟩ := hc.exists_stronglyMeasurable_isUnit (hc0.mono fun _ hx => hx.isUnit)
+  refine ⟨fun h => ((hd.fun_inv₀ (h0 := hdu)).aestronglyMeasurable.fun_smul h).congr ?_,
+    fun h => hc.fun_smul h⟩
+  filter_upwards [hcd] with x hx
+  simp only [hx, inv_smul_smul₀]
 
 end MulAction
 

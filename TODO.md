@@ -3863,10 +3863,13 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
       The module and `MathlibTest/NormedNormalizationDomain.lean` pass their scoped build;
       exact diagnostics reject using `x ≠ 0` alone in a seminormed space. All 16 environment
       linters and the semantic/proof operator audits pass (2026-10-30).
-    - `MeasureTheory/Function/StronglyMeasurable/Basic.lean`: repair `approxBounded`'s quotient
-      at zero norm and its convergence/bound lemmas. Give `inv₀`, `div₀`, and `div` their exact
-      input domains and construct admissible approximant denominators: indicator restrictions
-      introduce zeros, so nonvanishing of the limiting function does not certify them.
+    - `MeasureTheory/Function/StronglyMeasurable/{Basic,AEStronglyMeasurable}.lean`: the root
+      operations now use actual unit domains and unit-valued representatives. Radial truncation
+      divides only by a positive cap denominator; `div₀` retains arbitrary topology and a.e.
+      scalar cancellation retains its a.e. premise and distinct sigma algebras. The two modules
+      and `MathlibTest/StronglyMeasurableInverseDomain.lean` pass scoped builds, all 16 module
+      linters, semantic/proof operator audits, and independent review (2026-10-30). Consumer
+      integration, including weighted vector-measure normalization below, remains unfinished.
     - [x] `Analysis/Normed/Affine/AddTorsor.lean`: checked real/NNReal coercions, midpoint
       estimates, line-map cancellation, and `DilationEquiv.smulTorsor`'s computability annotation
       are repaired. Existing invertible-two and distinct-point hypotheses are preserved. The
