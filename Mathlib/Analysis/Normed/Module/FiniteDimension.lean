@@ -308,7 +308,9 @@ protected theorem LinearIndependent.eventually {ι} [Finite ι] {f : ι → E}
     tendsto_finsetSum _ fun i _ =>
       Tendsto.norm <| ((continuous_apply i).tendsto _).sub tendsto_const_nhds
   simp only [sub_self, norm_zero, Finset.sum_const_zero] at this
-  refine (this.eventually (gt_mem_nhds <| inv_pos.2 K0)).mono fun g hg => ?_
+  have hK₀ : (0 : ℝ) < K := NNReal.coe_pos.mpr K0
+  have hε : (0 : ℝ) < (K : ℝ)⁻¹ := (inv_pos (ha := hK₀.ne'.isUnit)).mpr hK₀
+  refine (this.eventually (gt_mem_nhds hε)).mono fun g hg => ?_
   replace hg : ∑ i, ‖g i - f i‖₊ < K⁻¹ := by
     rw [← NNReal.coe_lt_coe]
     push_cast
