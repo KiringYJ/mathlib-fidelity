@@ -65,13 +65,11 @@ theorem norm_eq_of_zero {x : ℝ} : ‖(x : AddCircle (0 : ℝ))‖ = |x| := by
   ext y
   simp [eq_iff_sub_mem, sub_eq_zero]
 
-theorem norm_eq {x : ℝ} : ‖(x : AddCircle p)‖ = |x - round (p⁻¹ * x) * p| := by
+theorem norm_eq {hp : IsUnit p} {x : ℝ} : ‖(x : AddCircle p)‖ = |x - round (p⁻¹ * x) * p| := by
   suffices ∀ x : ℝ, ‖(x : AddCircle (1 : ℝ))‖ = |x - round x| by
-    rcases eq_or_ne p 0 with (rfl | hp)
-    · simp
     have hx := norm_coe_mul p x p⁻¹
-    rw [abs_inv, eq_inv_mul_iff_mul_eq₀ ((not_congr abs_eq_zero).mpr hp)] at hx
-    rw [← hx, inv_mul_cancel₀ hp, this, ← abs_mul, mul_sub, mul_inv_cancel_left₀ hp, mul_comm p]
+    rw [abs_inv, eq_inv_mul_iff_mul_eq₀] at hx
+    rw [← hx, inv_mul_cancel₀, this, ← abs_mul, mul_sub, mul_inv_cancel_left₀, mul_comm p]
   clear! x p
   intro x
   simp only [le_antisymm_iff, le_norm_iff, Real.norm_eq_abs]
@@ -89,20 +87,23 @@ theorem norm_eq' (hp : 0 < p) {x : ℝ} : ‖(x : AddCircle p)‖ = p * |p⁻¹ 
   conv_rhs =>
     congr
     rw [← abs_eq_self.mpr hp.le]
-  rw [← abs_mul, mul_sub, mul_inv_cancel_left₀ hp.ne.symm, norm_eq, mul_comm p]
+  rw [← abs_mul, mul_sub, mul_inv_cancel_left₀, norm_eq (hp := hp.ne'.isUnit), mul_comm p]
 
 theorem norm_le_half_period {x : AddCircle p} (hp : p ≠ 0) : ‖x‖ ≤ |p| / 2 := by
   obtain ⟨x⟩ := x
   change ‖(x : AddCircle p)‖ ≤ |p| / 2
-  rw [norm_eq, ← mul_le_mul_iff_right₀ (abs_pos.mpr (inv_ne_zero hp)), ← abs_mul, mul_sub,
-    mul_left_comm, ← mul_div_assoc, ← abs_mul, inv_mul_cancel₀ hp, mul_one, abs_one]
+  rw [norm_eq (hp := hp.isUnit),
+    ← mul_le_mul_iff_right₀ (abs_pos.mpr (inv_ne_zero (ha := hp.isUnit))), ← abs_mul, mul_sub,
+    mul_left_comm, ← mul_div_assoc₀, ← abs_mul, inv_mul_cancel₀, mul_one, abs_one]
   exact abs_sub_round (p⁻¹ * x)
 
 @[simp]
 theorem norm_half_period_eq : ‖(↑(p / 2) : AddCircle p)‖ = |p| / 2 := by
   rcases eq_or_ne p 0 with (rfl | hp); · simp
-  rw [norm_eq, ← mul_div_assoc, inv_mul_cancel₀ hp, one_div, round_two_inv, Int.cast_one,
-    one_mul, (by linarith : p / 2 - p = -(p / 2)), abs_neg, abs_div, abs_two]
+  rw [norm_eq (hp := hp.isUnit), ← mul_div_assoc₀, inv_mul_cancel₀, one_div₀, round_two_inv,
+    Int.cast_one,
+    one_mul, (by linarith : p / 2 - p = -(p / 2)), abs_neg, abs_div]
+  simp only [abs_two]
 
 theorem norm_coe_eq_abs_iff {x : ℝ} (hp : p ≠ 0) : ‖(x : AddCircle p)‖ = |x| ↔ |x| ≤ |p| / 2 := by
   refine ⟨fun hx => hx ▸ norm_le_half_period p hp, fun hx => ?_⟩
@@ -117,13 +118,13 @@ theorem norm_coe_eq_abs_iff {x : ℝ} (hp : p ≠ 0) : ‖(x : AddCircle p)‖ =
   intro p hp hx
   rcases eq_or_ne x (p / (2 : ℝ)) with (rfl | hx')
   · simp [abs_div]
-  suffices round (p⁻¹ * x) = 0 by simp [norm_eq, this]
+  suffices round (p⁻¹ * x) = 0 by simp [norm_eq (hp := hp.ne'.isUnit), this]
   rw [round_eq_zero_iff]
   obtain ⟨hx₁, hx₂⟩ := abs_le.mp hx
   replace hx₂ := Ne.lt_of_le hx' hx₂
   constructor
-  · rwa [le_inv_mul_iff₀ hp, mul_neg, ← mul_div_assoc, mul_one]
-  · rwa [inv_mul_lt_iff₀ hp, ← mul_div_assoc, mul_one]
+  · rwa [le_inv_mul_iff₀ hp, mul_neg, ← mul_div_assoc₀, mul_one]
+  · rwa [inv_mul_lt_iff₀ hp, ← mul_div_assoc₀, mul_one]
 
 open Metric
 
@@ -144,11 +145,11 @@ theorem coe_real_preimage_closedBall_eq_iUnion (x ε : ℝ) :
   · simp [iUnion_const]
   ext y
   simp only [dist_eq_norm, mem_preimage, mem_closedBall, zsmul_eq_mul, mem_iUnion, Real.norm_eq_abs,
-    ← QuotientAddGroup.mk_sub, norm_eq, ← sub_sub]
+    ← QuotientAddGroup.mk_sub, norm_eq (hp := hp.isUnit), ← sub_sub]
   refine ⟨fun h => ⟨round (p⁻¹ * (y - x)), h⟩, ?_⟩
   rintro ⟨n, hn⟩
-  rw [← mul_le_mul_iff_right₀ (abs_pos.mpr <| inv_ne_zero hp), ← abs_mul, mul_sub, mul_comm _ p,
-    inv_mul_cancel_left₀ hp] at hn ⊢
+  rw [← mul_le_mul_iff_right₀ (abs_pos.mpr <| inv_ne_zero (ha := hp.isUnit)), ← abs_mul,
+    mul_sub, mul_comm _ p, inv_mul_cancel_left₀] at hn ⊢
   exact (round_le (p⁻¹ * (y - x)) n).trans hn
 
 theorem coe_real_preimage_closedBall_inter_eq {x ε : ℝ} (s : Set ℝ)
@@ -189,18 +190,21 @@ section FiniteOrderPoints
 
 variable {p} [hp : Fact (0 < p)]
 
-theorem norm_div_natCast {m n : ℕ} :
+theorem norm_div_natCast {m n : ℕ} {hn : IsUnit (n : ℝ)} :
     ‖(↑(↑m / ↑n * p) : AddCircle p)‖ = p * (↑(min (m % n) (n - m % n)) / n) := by
-  have : p⁻¹ * (↑m / ↑n * p) = ↑m / ↑n := by rw [mul_comm _ p, inv_mul_cancel_left₀ hp.out.ne.symm]
+  have : p⁻¹ * (↑m / ↑n * p) = ↑m / ↑n := by rw [mul_comm _ p, inv_mul_cancel_left₀]
   rw [norm_eq' p hp.out, this, abs_sub_round_div_natCast_eq]
 
 theorem exists_norm_eq_of_isOfFinAddOrder {u : AddCircle p} (hu : IsOfFinAddOrder u) :
-    ∃ k : ℕ, ‖u‖ = p * (k / addOrderOf u) := by
+    ∃ k : ℕ, ‖u‖ = p * Checked.div (k : ℝ) (addOrderOf u : ℝ)
+      (Nat.cast_ne_zero.mpr (addOrderOf_pos_iff.mpr hu).ne').isUnit := by
   let n := addOrderOf u
+  have hn : IsUnit (n : ℝ) :=
+    (Nat.cast_ne_zero.mpr (addOrderOf_pos_iff.mpr hu).ne').isUnit
   change ∃ k : ℕ, ‖u‖ = p * (k / n)
   obtain ⟨m, -, -, hm⟩ := exists_gcd_eq_one_of_isOfFinAddOrder hu
   refine ⟨min (m % n) (n - m % n), ?_⟩
-  rw [← hm, norm_div_natCast]
+  rw [← hm, norm_div_natCast (hn := hn)]
 
 theorem le_add_order_smul_norm_of_isOfFinAddOrder {u : AddCircle p} (hu : IsOfFinAddOrder u)
     (hu' : u ≠ 0) : p ≤ addOrderOf u • ‖u‖ := by
@@ -209,7 +213,7 @@ theorem le_add_order_smul_norm_of_isOfFinAddOrder {u : AddCircle p} (hu : IsOfFi
     norm_cast
     exact (addOrderOf_pos_iff.mpr hu).ne'
   conv_lhs => rw [← mul_one p]
-  rw [hn, nsmul_eq_mul, ← mul_assoc, mul_comm _ p, mul_assoc, mul_div_cancel₀ _ hu,
+  rw [hn, nsmul_eq_mul, ← mul_assoc, mul_comm _ p, mul_assoc, mul_div_cancel₀ _,
     mul_le_mul_iff_right₀ hp.out, Nat.one_le_cast, Nat.one_le_iff_ne_zero]
   contrapose hu'
   simpa only [hu', Nat.cast_zero, zero_div, mul_zero, norm_eq_zero] using hn
@@ -220,6 +224,7 @@ end AddCircle
 
 namespace UnitAddCircle
 
-theorem norm_eq {x : ℝ} : ‖(x : UnitAddCircle)‖ = |x - round x| := by simp [AddCircle.norm_eq]
+theorem norm_eq {x : ℝ} : ‖(x : UnitAddCircle)‖ = |x - round x| := by
+  simp [AddCircle.norm_eq (hp := isUnit_one)]
 
 end UnitAddCircle
