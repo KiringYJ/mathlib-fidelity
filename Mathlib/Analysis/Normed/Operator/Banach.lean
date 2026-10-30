@@ -135,12 +135,17 @@ theorem exists_approx_preimage_norm_le (surj : Surjective f) :
     have J : ‖f (σ' d⁻¹ • x) - y‖ ≤ 1 / 2 * ‖y‖ :=
       calc
         ‖f (σ' d⁻¹ • x) - y‖ = ‖d⁻¹ • f x - (d⁻¹ * d) • y‖ := by
-          rwa [f.map_smulₛₗ _, inv_mul_cancel₀, one_smul, map_inv₀, map_inv₀,
+          simp only [f.map_smulₛₗ _, inv_mul_cancel₀, one_smul, map_inv₀,
             RingHomCompTriple.comp_apply, RingHom.id_apply]
         _ = ‖d⁻¹ • (f x - d • y)‖ := by rw [mul_smul, smul_sub]
         _ = ‖d‖⁻¹ * ‖f x - d • y‖ := by rw [norm_smul, norm_inv]
         _ ≤ ‖d‖⁻¹ * (2 * δ) := by gcongr
-        _ = 1 / 2 * ‖y‖ := by simp [δ, field]; norm_num
+        _ = 1 / 2 * ‖y‖ := by
+          dsimp only [δ]
+          rw [div_eq_mul_inv₀]
+          calc
+            _ = (‖d‖⁻¹ * ‖d‖) * (2 * (4 : ℝ)⁻¹) * ‖y‖ := by ring
+            _ = _ := by rw [inv_mul_cancel₀]; norm_num
     rw [← dist_eq_norm] at J
     have K : ‖σ' d⁻¹ • x‖ ≤ (ε / 2)⁻¹ * ‖c‖ * 2 * ↑n * ‖y‖ :=
       calc
@@ -218,8 +223,10 @@ theorem exists_preimage_norm_le (surj : Surjective f) :
     rw [tendsto_iff_norm_sub_tendsto_zero]
     simp only [sub_zero]
     refine squeeze_zero (fun _ => norm_nonneg _) hnle ?_
-    rw [← zero_mul ‖y‖]
-    refine (_root_.tendsto_pow_atTop_nhds_zero_of_lt_one ?_ ?_).mul tendsto_const_nhds <;> norm_num
+    simpa only [zero_mul] using
+      (_root_.tendsto_pow_atTop_nhds_zero_of_lt_one
+        (show (0 : ℝ) ≤ 1 / 2 by norm_num) (by norm_num)).mul
+        (tendsto_const_nhds (x := ‖y‖))
   have feq : f x = y - 0 := tendsto_nhds_unique L₁ L₂
   rw [sub_zero] at feq
   exact ⟨x, feq, x_ineq⟩
@@ -244,7 +251,7 @@ protected theorem isOpenMap (surj : Surjective f) : IsOpenMap f := by
       _ < C * (ε / C) := by
         apply mul_lt_mul_of_pos_left _ Cpos
         rwa [mem_ball, dist_eq_norm] at hz
-      _ = ε := mul_div_cancel₀ _ (ne_of_gt Cpos)
+      _ = ε := mul_div_cancel₀ _
   exact Set.mem_image_of_mem _ (hε this)
 
 theorem isQuotientMap (surj : Surjective f) : IsQuotientMap f :=
