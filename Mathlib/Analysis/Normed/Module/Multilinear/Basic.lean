@@ -157,7 +157,9 @@ see `bound_of_shell_of_continuous` below. -/
 theorem bound_of_shell_of_norm_map_coord_zero (f : MultilinearMap 𝕜 E G)
     (hf₀ : ∀ {m i}, ‖m i‖ = 0 → ‖f m‖ = 0)
     {ε : ι → ℝ} {C : ℝ} (hε : ∀ i, 0 < ε i) {c : ι → 𝕜} (hc : ∀ i, 1 < ‖c i‖)
-    (hf : ∀ m : ∀ i, E i, (∀ i, ε i / ‖c i‖ ≤ ‖m i‖) → (∀ i, ‖m i‖ < ε i) → ‖f m‖ ≤ C * ∏ i, ‖m i‖)
+    (hf : ∀ m : ∀ i, E i,
+      (∀ i, Checked.div (ε i) ‖c i‖ (zero_lt_one.trans (hc i)).ne'.isUnit ≤ ‖m i‖) →
+      (∀ i, ‖m i‖ < ε i) → ‖f m‖ ≤ C * ∏ i, ‖m i‖)
     (m : ∀ i, E i) : ‖f m‖ ≤ C * ∏ i, ‖m i‖ := by
   by_cases! hm : ∃ i, ‖m i‖ = 0
   · rcases hm with ⟨i, hi⟩
@@ -172,7 +174,9 @@ the inequality `‖f m‖ ≤ C * ∏ i, ‖m i‖` on a shell `ε i / ‖c i‖
 numbers `ε i` and elements `c i : 𝕜`, `1 < ‖c i‖`, then it satisfies this inequality for all `m`. -/
 theorem bound_of_shell_of_continuous (f : MultilinearMap 𝕜 E G) (hfc : Continuous f)
     {ε : ι → ℝ} {C : ℝ} (hε : ∀ i, 0 < ε i) {c : ι → 𝕜} (hc : ∀ i, 1 < ‖c i‖)
-    (hf : ∀ m : ∀ i, E i, (∀ i, ε i / ‖c i‖ ≤ ‖m i‖) → (∀ i, ‖m i‖ < ε i) → ‖f m‖ ≤ C * ∏ i, ‖m i‖)
+    (hf : ∀ m : ∀ i, E i,
+      (∀ i, Checked.div (ε i) ‖c i‖ (zero_lt_one.trans (hc i)).ne'.isUnit ≤ ‖m i‖) →
+      (∀ i, ‖m i‖ < ε i) → ‖f m‖ ≤ C * ∏ i, ‖m i‖)
     (m : ∀ i, E i) : ‖f m‖ ≤ C * ∏ i, ‖m i‖ :=
   bound_of_shell_of_norm_map_coord_zero f (norm_map_coord_zero f hfc) hε hc hf m
 
@@ -193,7 +197,9 @@ theorem exists_bound_of_continuous (f : MultilinearMap 𝕜 E G) (hf : Continuou
   refine ⟨_, this, ?_⟩
   refine f.bound_of_shell_of_continuous hf (fun _ => ε0) (fun _ => hc) fun m hcm hm => ?_
   refine (hε m ((pi_norm_lt_iff ε0).2 hm)).le.trans ?_
-  rw [← div_le_iff₀' this, one_div, ← inv_pow, inv_div, Fintype.card, ← prod_const]
+  rw [← div_le_iff₀' this, one_div₀,
+    ← inv_pow₀ _ (ha := (div_pos (zero_lt_one.trans hc) ε0).ne'.isUnit),
+    inv_div₀, Fintype.card, ← prod_const]
   gcongr
   apply hcm
 
@@ -403,9 +409,11 @@ theorem le_of_opNorm_le {f : ContinuousMultilinearMap 𝕜 E G} {C : ℝ} (h : �
     ‖f m‖ ≤ C * ∏ i, ‖m i‖ :=
   le_mul_prod_of_opNorm_le_of_le h fun _ ↦ le_rfl
 
-theorem ratio_le_opNorm (f : ContinuousMultilinearMap 𝕜 E G) (m : ∀ i, E i) :
-    (‖f m‖ / ∏ i, ‖m i‖) ≤ ‖f‖ :=
-  div_le_of_le_mul₀ (by positivity) (opNorm_nonneg _) (f.le_opNorm m)
+theorem ratio_le_opNorm (f : ContinuousMultilinearMap 𝕜 E G) (m : ∀ i, E i)
+    {hm : IsUnit (∏ i, ‖m i‖)} : (‖f m‖ / ∏ i, ‖m i‖) ≤ ‖f‖ := by
+  have hpos : 0 < ∏ i, ‖m i‖ :=
+    lt_of_le_of_ne (Finset.prod_nonneg fun i _ => norm_nonneg (m i)) hm.ne_zero.symm
+  exact (div_le_iff₀ hpos).mpr (f.le_opNorm m)
 
 /-- The image of the unit ball under a continuous multilinear map is bounded. -/
 theorem unit_le_opNorm (f : ContinuousMultilinearMap 𝕜 E G) {m : ∀ i, E i} (h : ‖m‖ ≤ 1) :
@@ -470,7 +478,7 @@ lemma uniformity_eq_seminorm :
     calc
       ‖f x‖ ≤ 1 := hf _ <| (pi_norm_le_iff_of_nonneg (norm_nonneg c)).2 fun i ↦ (hx i).le
       _ = ∏ i : ι, 1 := by simp
-      _ ≤ ∏ i, ‖x i‖ := by gcongr with i; simpa only [div_self hc₀.ne'] using hcx i
+      _ ≤ ∏ i, ‖x i‖ := by gcongr with i; simpa only [div_self] using hcx i
       _ = 1 * ∏ i, ‖x i‖ := (one_mul _).symm
   · rcases (NormedSpace.isVonNBounded_iff' _).1 hs with ⟨ε, hε⟩
     rcases exists_pos_mul_lt hr (ε ^ Fintype.card ι) with ⟨δ, hδ₀, hδ⟩
@@ -718,16 +726,14 @@ theorem norm_mkPiAlgebra_of_empty [IsEmpty ι] :
     ‖ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι A‖ = ‖(1 : A)‖ := by
   apply le_antisymm
   · apply opNorm_le_bound <;> simp
-  · convert! ratio_le_opNorm (ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι A) fun _ => 1
-    simp
+  · simpa using (ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι A).le_opNorm (fun _ => 1)
 
 @[simp]
 theorem norm_mkPiAlgebra [NormOneClass A] : ‖ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι A‖ = 1 := by
   cases isEmpty_or_nonempty ι
   · simp [norm_mkPiAlgebra_of_empty]
   · refine le_antisymm norm_mkPiAlgebra_le ?_
-    convert! ratio_le_opNorm (ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι A) fun _ => 1
-    simp
+    simpa using (ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι A).le_opNorm (fun _ => 1)
 
 end
 
@@ -753,8 +759,7 @@ theorem norm_mkPiAlgebraFin_zero : ‖ContinuousMultilinearMap.mkPiAlgebraFin �
   refine le_antisymm ?_ ?_
   · refine opNorm_le_bound (norm_nonneg (1 : A)) ?_
     simp
-  · convert! ratio_le_opNorm (ContinuousMultilinearMap.mkPiAlgebraFin 𝕜 0 A) fun _ => (1 : A)
-    simp
+  · simpa using (ContinuousMultilinearMap.mkPiAlgebraFin 𝕜 0 A).le_opNorm (fun _ => 1)
 
 theorem norm_mkPiAlgebraFin_le :
     ‖ContinuousMultilinearMap.mkPiAlgebraFin 𝕜 n A‖ ≤ max 1 ‖(1 : A)‖ := by
@@ -769,9 +774,8 @@ theorem norm_mkPiAlgebraFin [NormOneClass A] :
   · rw [norm_mkPiAlgebraFin_zero]
     simp
   · refine le_antisymm norm_mkPiAlgebraFin_succ_le ?_
-    refine le_of_eq_of_le ?_ <|
-      ratio_le_opNorm (ContinuousMultilinearMap.mkPiAlgebraFin 𝕜 (Nat.succ _) A) fun _ => 1
-    simp
+    simpa using (ContinuousMultilinearMap.mkPiAlgebraFin 𝕜 (Nat.succ _) A).le_opNorm
+      (fun _ => 1)
 
 end
 
@@ -787,7 +791,7 @@ theorem nnnorm_smulRight (f : ContinuousMultilinearMap 𝕜 E 𝕜) (z : G) :
     · simp [hz]
     rw [← le_div_iff₀ hz, opNNNorm_le_iff]
     intro m
-    rw [div_mul_eq_mul_div, le_div_iff₀ hz]
+    rw [div_mul_eq_mul_div₀, le_div_iff₀ hz]
     refine le_trans ?_ ((f.smulRight z).le_opNNNorm m)
     rw [smulRight_apply, nnnorm_smul]
 
@@ -991,7 +995,11 @@ variable (𝕜 E G G') in
 `G →L[𝕜] ContinuousMultilinearMap 𝕜 E G'` and `ContinuousMultilinearMap 𝕜 E (G →L[𝕜] G')` -/
 def flipMultilinearEquiv : (G →L[𝕜] ContinuousMultilinearMap 𝕜 E G') ≃L[𝕜]
     ContinuousMultilinearMap 𝕜 E (G →L[𝕜] G') := by
-  refine (flipMultilinearEquivₗ 𝕜 E G G').toContinuousLinearEquivOfBounds 1 1 ?_ ?_
+  refine LinearEquiv.toContinuousLinearEquivOfBounds
+    (E := G →L[𝕜] ContinuousMultilinearMap 𝕜 E G')
+    (F := ContinuousMultilinearMap 𝕜 E (G →L[𝕜] G'))
+    (σ := RingHom.id 𝕜) (σ₂₁ := RingHom.id 𝕜)
+    (flipMultilinearEquivₗ 𝕜 E G G') 1 1 ?_ ?_
   · intro f
     suffices ‖f.flipMultilinear‖ ≤ ‖f‖ by simpa
     apply MultilinearMap.mkContinuous_norm_le
@@ -1285,7 +1293,9 @@ namespace MultilinearMap
 and elements `c i : 𝕜`, `1 < ‖c i‖`, then it satisfies this inequality for all `m`. -/
 theorem bound_of_shell (f : MultilinearMap 𝕜 E G) {ε : ι → ℝ} {C : ℝ} {c : ι → 𝕜}
     (hε : ∀ i, 0 < ε i) (hc : ∀ i, 1 < ‖c i‖)
-    (hf : ∀ m : ∀ i, E i, (∀ i, ε i / ‖c i‖ ≤ ‖m i‖) → (∀ i, ‖m i‖ < ε i) → ‖f m‖ ≤ C * ∏ i, ‖m i‖)
+    (hf : ∀ m : ∀ i, E i,
+      (∀ i, Checked.div (ε i) ‖c i‖ (zero_lt_one.trans (hc i)).ne'.isUnit ≤ ‖m i‖) →
+      (∀ i, ‖m i‖ < ε i) → ‖f m‖ ≤ C * ∏ i, ‖m i‖)
     (m : ∀ i, E i) : ‖f m‖ ≤ C * ∏ i, ‖m i‖ :=
   bound_of_shell_of_norm_map_coord_zero f
     (fun h ↦ by rw [map_coord_zero f _ (norm_eq_zero.1 h), norm_zero]) hε hc hf m

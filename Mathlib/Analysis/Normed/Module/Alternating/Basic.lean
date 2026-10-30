@@ -92,7 +92,9 @@ see lemma `bound_of_shell_of_continuous` below. -/
 theorem bound_of_shell_of_norm_map_coord_zero (f : E [⋀^ι]→ₗ[𝕜] F)
     (hf₀ : ∀ {m i}, ‖m i‖ = 0 → ‖f m‖ = 0)
     {ε : ι → ℝ} {C : ℝ} (hε : ∀ i, 0 < ε i) {c : ι → 𝕜} (hc : ∀ i, 1 < ‖c i‖)
-    (hf : ∀ m : ι → E, (∀ i, ε i / ‖c i‖ ≤ ‖m i‖) → (∀ i, ‖m i‖ < ε i) → ‖f m‖ ≤ C * ∏ i, ‖m i‖)
+    (hf : ∀ m : ι → E,
+      (∀ i, Checked.div (ε i) ‖c i‖ (zero_lt_one.trans (hc i)).ne'.isUnit ≤ ‖m i‖) →
+      (∀ i, ‖m i‖ < ε i) → ‖f m‖ ≤ C * ∏ i, ‖m i‖)
     (m : ι → E) : ‖f m‖ ≤ C * ∏ i, ‖m i‖ :=
   f.1.bound_of_shell_of_norm_map_coord_zero hf₀ hε hc hf m
 
@@ -231,7 +233,8 @@ theorem le_opNorm_mul_pow_of_le {n} (f : E [⋀^Fin n]→L[𝕜] F) {m b} (hm : 
 theorem le_of_opNorm_le {C : ℝ} (h : ‖f‖ ≤ C) (m : ι → E) : ‖f m‖ ≤ C * ∏ i, ‖m i‖ :=
   f.1.le_of_opNorm_le h m
 
-theorem ratio_le_opNorm (f : E [⋀^ι]→L[𝕜] F) (m : ι → E) : ‖f m‖ / ∏ i, ‖m i‖ ≤ ‖f‖ :=
+theorem ratio_le_opNorm (f : E [⋀^ι]→L[𝕜] F) (m : ι → E)
+    {hm : IsUnit (∏ i, ‖m i‖)} : ‖f m‖ / ∏ i, ‖m i‖ ≤ ‖f‖ :=
   f.1.ratio_le_opNorm m
 
 /-- The image of the unit ball under a continuous alternating map is bounded. -/
@@ -504,9 +507,12 @@ variable (G) in
 def fderivCompContinuousLinearMapCLM (g : E →L[𝕜] F) :
     (F [⋀^ι]→L[𝕜] G) →L[𝕜] (E →L[𝕜] F) →L[𝕜] (E [⋀^ι]→L[𝕜] G) :=
   LinearMap.mkContinuous
-    { toFun := (fderivCompContinuousLinearMap · g)
-      map_add' f₁ f₂ := by ext; simp [Finset.sum_add_distrib]
-      map_smul' c f := by ext; simp [Finset.smul_sum] }
+    (E := F [⋀^ι]→L[𝕜] G) (F := (E →L[𝕜] F) →L[𝕜] E [⋀^ι]→L[𝕜] G)
+    (σ := RingHom.id 𝕜)
+    ({ toFun := (fderivCompContinuousLinearMap · g)
+       map_add' f₁ f₂ := by ext; simp [Finset.sum_add_distrib]
+       map_smul' c f := by ext; simp [Finset.smul_sum] } :
+      (F [⋀^ι]→L[𝕜] G) →ₗ[𝕜] (E →L[𝕜] F) →L[𝕜] E [⋀^ι]→L[𝕜] G)
     (Fintype.card ι * ‖g‖ ^ (Fintype.card ι - 1))
     fun f ↦ by
       refine ContinuousLinearMap.opNorm_le_bound _ (by positivity) fun dg ↦ ?_
@@ -647,7 +653,9 @@ namespace AlternatingMap
 and elements `c i : 𝕜`, `1 < ‖c i‖`, then it satisfies this inequality for all `m`. -/
 theorem bound_of_shell (f : F [⋀^ι]→ₗ[𝕜] E) {ε : ι → ℝ} {C : ℝ} {c : ι → 𝕜}
     (hε : ∀ i, 0 < ε i) (hc : ∀ i, 1 < ‖c i‖)
-    (hf : ∀ m : ι → F, (∀ i, ε i / ‖c i‖ ≤ ‖m i‖) → (∀ i, ‖m i‖ < ε i) → ‖f m‖ ≤ C * ∏ i, ‖m i‖)
+    (hf : ∀ m : ι → F,
+      (∀ i, Checked.div (ε i) ‖c i‖ (zero_lt_one.trans (hc i)).ne'.isUnit ≤ ‖m i‖) →
+      (∀ i, ‖m i‖ < ε i) → ‖f m‖ ≤ C * ∏ i, ‖m i‖)
     (m : ι → F) : ‖f m‖ ≤ C * ∏ i, ‖m i‖ :=
   f.1.bound_of_shell hε hc hf m
 
