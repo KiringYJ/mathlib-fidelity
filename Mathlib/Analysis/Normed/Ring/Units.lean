@@ -58,7 +58,7 @@ protected theorem isOpen : IsOpen { x : R | IsUnit x } := by
   rw [Metric.isOpen_iff]
   rintro _ ⟨x, rfl⟩
   have hp : 0 < ‖(↑x⁻¹ : R)‖ + 1 := by positivity
-  refine ⟨(‖(↑x⁻¹ : R)‖ + 1)⁻¹, inv_pos.mpr hp, fun y hy ↦ ?_⟩
+  refine ⟨(‖(↑x⁻¹ : R)‖ + 1)⁻¹, _root_.inv_pos.mpr hp, fun y hy ↦ ?_⟩
   rw [mem_ball_iff_norm] at hy
   have hy' : ‖y - (x : R)‖ * (‖(↑x⁻¹ : R)‖ + 1) < 1 :=
     (lt_div_iff₀ hp).mp (by simpa only [one_div₀] using hy)
@@ -91,13 +91,13 @@ theorem inverse_one_sub (t : R) (h : ‖t‖ < 1) :
     (↑(Units.oneSub t h)⁻¹ : R) = ∑' i : ℕ, t ^ i :=
   (geom_series_eq_inverse t h).symm
 
-/-- Recenter an inverse at another unit. Both arguments lie in the exact inverse domain. -/
 omit [HasSummableGeomSeries R] in
+/-- Recenter an inverse at another unit. Both arguments lie in the exact inverse domain. -/
 theorem inverse_add (x y : Rˣ) : (↑y⁻¹ : R) = ↑(x⁻¹ * y)⁻¹ * ↑x⁻¹ := by
   simp only [mul_inv_rev, inv_inv, Units.val_mul, mul_assoc, Units.mul_inv, mul_one]
 
-/-- The finite geometric expansion of an inverse is valid on the entire unit domain. -/
 omit [HasSummableGeomSeries R] in
+/-- The finite geometric expansion of an inverse is valid on the entire unit domain. -/
 theorem inverse_one_sub_nth_order (u : Rˣ) (n : ℕ) :
     (↑u⁻¹ : R) = (∑ i ∈ range n, (1 - (u : R)) ^ i) + (1 - (u : R)) ^ n * ↑u⁻¹ := by
   induction n with
@@ -115,8 +115,8 @@ theorem inverse_one_sub_nth_order' (n : ℕ) {t : R} (ht : ‖t‖ < 1) :
   simpa only [Units.val_oneSub, sub_sub_cancel] using
     inverse_one_sub_nth_order (Units.oneSub t ht) n
 
-/-- The finite inverse expansion about `x`, with displacement `y - x`. -/
 omit [HasSummableGeomSeries R] in
+/-- The finite inverse expansion about `x`, with displacement `y - x`. -/
 theorem inverse_add_nth_order (x y : Rˣ) (n : ℕ) :
     (↑y⁻¹ : R) =
       (∑ i ∈ range n, (-(↑x⁻¹ : R) * ((y : R) - x)) ^ i) * ↑x⁻¹ +
@@ -126,14 +126,14 @@ theorem inverse_add_nth_order (x y : Rˣ) (n : ℕ) :
   have h := congrArg (fun z : R ↦ z * ↑x⁻¹) (inverse_one_sub_nth_order (x⁻¹ * y) n)
   simpa only [add_mul, mul_assoc, ← inverse_add x y, ht] using h
 
-/-- Inverse values are locally bounded on units. -/
 omit [HasSummableGeomSeries R] in
+/-- Inverse values are locally bounded on units. -/
 theorem inverse_add_norm (x : Rˣ) :
     (fun y : Rˣ ↦ (↑y⁻¹ : R)) =O[𝓝 x] (fun _ ↦ (1 : ℝ)) :=
   (Units.continuous_coe_inv.tendsto x).isBigO_one ℝ
 
-/-- The remainder of the finite expansion is bounded by the corresponding displacement power. -/
 omit [HasSummableGeomSeries R] in
+/-- The remainder of the finite expansion is bounded by the corresponding displacement power. -/
 theorem inverse_add_norm_diff_nth_order (x : Rˣ) (n : ℕ) :
     (fun y : Rˣ ↦ (↑y⁻¹ : R) -
       (∑ i ∈ range n, (-(↑x⁻¹ : R) * ((y : R) - x)) ^ i) * ↑x⁻¹) =O[𝓝 x]
@@ -141,7 +141,7 @@ theorem inverse_add_norm_diff_nth_order (x : Rˣ) (n : ℕ) :
   have heq :
       (fun y : Rˣ ↦ (↑y⁻¹ : R) -
         (∑ i ∈ range n, (-(↑x⁻¹ : R) * ((y : R) - x)) ^ i) * ↑x⁻¹) =
-      (fun y ↦ (-(↑x⁻¹ : R) * ((y : R) - x)) ^ n * ↑y⁻¹) := by
+      (fun y : Rˣ ↦ (-(↑x⁻¹ : R) * ((y : R) - x)) ^ n * ↑y⁻¹) := by
     funext y
     exact sub_eq_iff_eq_add.mpr ((inverse_add_nth_order x y n).trans (add_comm _ _))
   rw [heq]
@@ -149,14 +149,14 @@ theorem inverse_add_norm_diff_nth_order (x : Rˣ) (n : ℕ) :
   simp only [mul_one, isBigO_norm_left]
   exact ((isBigO_refl _ _).norm_right.const_mul_left _).pow _
 
-/-- First-order control of inverse values on their unit domain. -/
 omit [HasSummableGeomSeries R] in
+/-- First-order control of inverse values on their unit domain. -/
 theorem inverse_add_norm_diff_first_order (x : Rˣ) :
     (fun y : Rˣ ↦ (↑y⁻¹ : R) - ↑x⁻¹) =O[𝓝 x] (fun y ↦ ‖(y : R) - x‖) := by
   simpa using inverse_add_norm_diff_nth_order x 1
 
-/-- Second-order control after subtracting the derivative of inversion. -/
 omit [HasSummableGeomSeries R] in
+/-- Second-order control after subtracting the derivative of inversion. -/
 theorem inverse_add_norm_diff_second_order (x : Rˣ) :
     (fun y : Rˣ ↦ (↑y⁻¹ : R) - ↑x⁻¹ + ↑x⁻¹ * ((y : R) - x) * ↑x⁻¹) =O[𝓝 x]
       (fun y ↦ ‖(y : R) - x‖ ^ 2) := by
@@ -164,8 +164,8 @@ theorem inverse_add_norm_diff_second_order (x : Rˣ) :
   simp only [sum_range_succ, sum_range_zero, zero_add, pow_zero, pow_one, add_mul, one_mul,
     ← sub_sub, neg_mul, sub_neg_eq_add]
 
-/-- A local estimate for inverse values, using only multiplication of units. -/
 omit [HasSummableGeomSeries R] in
+/-- A local estimate for inverse values, using only multiplication of units. -/
 theorem inverse_sub_norm_le (x y : Rˣ)
     (h : ‖(↑x⁻¹ : R)‖ * ‖(y : R) - x‖ ≤ (1 / 2 : ℝ)) :
     ‖(↑y⁻¹ : R) - ↑x⁻¹‖ ≤ 2 * ‖(↑x⁻¹ : R)‖ ^ 2 * ‖(y : R) - x‖ := by
@@ -183,7 +183,7 @@ theorem inverse_sub_norm_le (x y : Rˣ)
     calc
       ‖(↑y⁻¹ : R)‖ ≤ ‖(↑x⁻¹ : R)‖ + ‖(↑y⁻¹ : R) - ↑x⁻¹‖ := norm_le_norm_add_norm_sub' _ _
       _ ≤ ‖(↑x⁻¹ : R)‖ + ‖(↑y⁻¹ : R)‖ * ‖(y : R) - x‖ * ‖(↑x⁻¹ : R)‖ :=
-        add_le_add_left hdiff _
+        add_le_add le_rfl hdiff
       _ = _ := add_comm _ _
   have hmul := mul_le_mul_of_nonneg_left h (norm_nonneg (↑y⁻¹ : R))
   have hbound : ‖(↑y⁻¹ : R)‖ ≤ 2 * ‖(↑x⁻¹ : R)‖ := by nlinarith
@@ -191,9 +191,9 @@ theorem inverse_sub_norm_le (x y : Rˣ)
     (mul_nonneg (norm_nonneg ((y : R) - x)) (norm_nonneg (↑x⁻¹ : R)))
   nlinarith
 
+omit [HasSummableGeomSeries R] in
 /-- Inverse values are continuous on the subtype of invertible elements with its ambient topology.
 This proof does not extend inversion to nonunits or assume completeness of the ring. -/
-omit [HasSummableGeomSeries R] in
 theorem inverse_continuous :
     Continuous (fun x : {x : R | IsUnit x} ↦ (↑x.property.unit⁻¹ : R)) := by
   apply continuous_iff_continuousAt.2
@@ -205,14 +205,15 @@ theorem inverse_continuous :
   have hp : 0 < 2 * c + 1 := by positivity
   have hq : 0 < 2 * c ^ 2 + 1 := by positivity
   refine ⟨min ((2 * c + 1)⁻¹) (ε / (2 * c ^ 2 + 1)),
-    lt_min (inv_pos.mpr hp) (div_pos hε hq), ?_⟩
+    lt_min (_root_.inv_pos.mpr hp) (div_pos hε hq), ?_⟩
   intro y hy
   change dist (y : R) (x : R) < _ at hy
   rw [dist_eq_norm] at hy
   have hy₁ := lt_of_lt_of_le hy (min_le_left _ _)
   have hy₂ := lt_of_lt_of_le hy (min_le_right _ _)
   have hsmall : c * ‖(y : R) - x‖ ≤ (1 / 2 : ℝ) := by
-    have := (lt_div_iff₀ hp).mp (by simpa only [one_div₀] using hy₁)
+    have := (lt_div_iff₀ hp).mp
+      (show ‖(y : R) - x‖ < 1 / (2 * c + 1) by simpa only [one_div₀] using hy₁)
     nlinarith [norm_nonneg ((y : R) - x)]
   have hε' := (lt_div_iff₀ hq).mp hy₂
   have hbound := inverse_sub_norm_le x.property.unit y.property.unit (by
@@ -223,8 +224,8 @@ theorem inverse_continuous :
   dsimp only [c] at hε' ⊢
   nlinarith [norm_nonneg ((y : R) - x)]
 
-/-- Inverse values of `1 - t` are bounded near zero on their exact domain. -/
 omit [HasSummableGeomSeries R] in
+/-- Inverse values of `1 - t` are bounded near zero on their exact domain. -/
 theorem inverse_one_sub_norm :
     (fun t : {t : R | IsUnit (1 - t)} ↦ (↑t.property.unit⁻¹ : R)) =O[
       𝓝 (⟨0, by simpa using (isUnit_one : IsUnit (1 : R))⟩ : {t : R | IsUnit (1 - t)})]
@@ -234,8 +235,8 @@ theorem inverse_one_sub_norm :
     (continuous_const.sub continuous_subtype_val).subtype_mk fun t ↦ t.property
   exact ((inverse_continuous.comp hmap).tendsto _).isBigO_one ℝ
 
-/-- Inverse values are continuous at every point of their exact domain. -/
 omit [HasSummableGeomSeries R] in
+/-- Inverse values are continuous at every point of their exact domain. -/
 theorem inverse_continuousAt (x : Rˣ) :
     ContinuousAt (fun y : {y : R | IsUnit y} ↦ (↑y.property.unit⁻¹ : R))
       ⟨(x : R), x.isUnit⟩ :=
