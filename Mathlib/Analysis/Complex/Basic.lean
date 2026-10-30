@@ -356,7 +356,9 @@ theorem _root_.RCLike.ofReal_eq_complex_ofReal : (RCLike.ofReal : ℝ → ℂ) =
 lemma mul_conj' (z : ℂ) : z * conj z = ‖z‖ ^ 2 := RCLike.mul_conj z
 lemma conj_mul' (z : ℂ) : conj z * z = ‖z‖ ^ 2 := RCLike.conj_mul z
 
-lemma inv_eq_conj (hz : ‖z‖ = 1) : z⁻¹ = conj z := RCLike.inv_eq_conj hz
+lemma inv_eq_conj (hz : ‖z‖ = 1) :
+    Checked.inv z (ne_zero_of_norm_ne_zero (hz.trans_ne one_ne_zero)).isUnit = conj z :=
+  RCLike.inv_eq_conj hz
 
 lemma exists_norm_eq_mul_self (z : ℂ) : ∃ c, ‖c‖ = 1 ∧ ‖z‖ = c * z :=
   RCLike.exists_norm_eq_mul_self _
@@ -709,8 +711,9 @@ variable {A : Type*} [SeminormedAddCommGroup A] [StarAddMonoid A] [NormedSpace �
   [NormedStarGroup A]
 
 lemma realPart.norm_le (x : A) : ‖realPart x‖ ≤ ‖x‖ := by
-  rw [← inv_mul_cancel_left₀ two_ne_zero ‖x‖, ← AddSubgroup.norm_coe, realPart_apply_coe,
-    norm_smul, norm_inv, Real.norm_ofNat]
+  rw [← inv_mul_cancel_left₀ (ha := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit) ‖x‖,
+    ← AddSubgroup.norm_coe, realPart_apply_coe, norm_smul, norm_inv]
+  simp only [Real.norm_ofNat]
   gcongr
   exact norm_add_le _ _ |>.trans <| by simp [two_mul]
 
