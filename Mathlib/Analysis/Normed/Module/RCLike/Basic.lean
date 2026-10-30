@@ -45,17 +45,17 @@ variable [NormedSpace 𝕜 E]
 @[simp]
 theorem norm_smul_inv_norm {x : E} (hx : x ≠ 0) : ‖(‖x‖⁻¹ : 𝕜) • x‖ = 1 := by
   have : ‖x‖ ≠ 0 := by simp [hx]
-  simp [field, norm_smul]
+  simp [norm_smul]
 
 /-- Lemma to normalize a vector in a normed space `E` over either `ℂ` or `ℝ` to length `r`. -/
 theorem norm_smul_inv_norm' {r : ℝ} (r_nonneg : 0 ≤ r) {x : E} (hx : x ≠ 0) :
     ‖((r : 𝕜) * (‖x‖ : 𝕜)⁻¹) • x‖ = r := by
   have : ‖x‖ ≠ 0 := by simp [hx]
-  simp [field, norm_smul, r_nonneg, rclike_simps]
+  simp [norm_smul, r_nonneg, rclike_simps]
 
 theorem ContinuousLinearEquiv.coord_norm' {x : E} (h : x ≠ 0) :
     ‖(‖x‖ : 𝕜) • ContinuousLinearEquiv.coord 𝕜 x h‖ = 1 := by
-  simp only [norm_smul, RCLike.norm_coe_norm, coord_norm, mul_inv_cancel₀ (mt norm_eq_zero.mp h)]
+  simp only [norm_smul, RCLike.norm_coe_norm, coord_norm, mul_inv_cancel₀]
 
 theorem LinearMap.bound_of_sphere_bound {r : ℝ} (r_pos : 0 < r) (c : ℝ) (f : E →ₗ[𝕜] 𝕜)
     (h : ∀ z ∈ sphere (0 : E) r, ‖f z‖ ≤ c) (z : E) : ‖f z‖ ≤ c / r * ‖z‖ := by
@@ -71,10 +71,10 @@ theorem LinearMap.bound_of_sphere_bound {r : ℝ} (r_pos : 0 < r) (c : ℝ) (f :
   have r_ne_zero : (r : 𝕜) ≠ 0 := RCLike.ofReal_ne_zero.mpr r_pos.ne'
   have eq : f z = ‖z‖ / r * f z₁ := by
     rw [hz₁, map_smul, smul_eq_mul]
-    rw [← mul_assoc, ← mul_assoc, div_mul_cancel₀ _ r_ne_zero, mul_inv_cancel₀, one_mul]
-    simp only [z_zero, RCLike.ofReal_eq_zero, norm_eq_zero, Ne, not_false_iff]
-  rw [eq, norm_mul, norm_div, RCLike.norm_coe_norm, RCLike.norm_of_nonneg r_pos.le,
-    div_mul_eq_mul_div, div_mul_eq_mul_div, mul_comm]
+    rw [← mul_assoc, ← mul_assoc, div_mul_cancel₀, mul_inv_cancel₀, one_mul]
+  rw [eq, norm_mul, norm_div]
+  simp only [RCLike.norm_coe_norm, RCLike.norm_of_nonneg r_pos.le]
+  rw [div_mul_eq_mul_div₀, div_mul_eq_mul_div₀, mul_comm]
   apply div_le_div₀ _ _ r_pos rfl.ge
   · exact mul_nonneg ((norm_nonneg _).trans norm_f_z₁) (norm_nonneg z)
   apply mul_le_mul norm_f_z₁ rfl.le (norm_nonneg z) ((norm_nonneg _).trans norm_f_z₁)
@@ -109,7 +109,10 @@ lemma antilipschitz_of_bound_of_norm_one {𝓕 E F : Type*}
   AddMonoidHomClass.antilipschitz_of_bound f fun x ↦ by
     obtain rfl | hx := eq_or_ne x 0
     · simp
-    simpa [norm_smul, field] using h ((‖x‖⁻¹ : 𝕜) • x) (norm_smul_inv_norm hx)
+    have hxnorm : 0 < ‖x‖ := norm_pos_iff.mpr hx
+    have hnormalized := h ((‖x‖⁻¹ : 𝕜) • x) (norm_smul_inv_norm hx)
+    simpa [norm_smul, ← div_eq_inv_mul₀, ← mul_div_assoc₀, le_div_iff₀ hxnorm] using
+      hnormalized
 
 variable (𝕜)
 include 𝕜 in

@@ -388,6 +388,7 @@ theorem norm_orthogonalProjectionOnto (hK : K ≠ ⊥) :
   obtain ⟨x, hxK, hx_ne_zero⟩ := Submodule.exists_mem_ne_zero_of_ne_bot hK
   simpa [K.norm_orthogonalProjectionOnto_apply hxK, norm_eq_zero, hx_ne_zero]
     using K.orthogonalProjectionOnto.ratio_le_opNorm x
+      (hx := (norm_ne_zero_iff.mpr hx_ne_zero).isUnit)
 
 @[deprecated (since := "2026-05-05")]
 alias norm_orthogonalProjection := norm_orthogonalProjectionOnto

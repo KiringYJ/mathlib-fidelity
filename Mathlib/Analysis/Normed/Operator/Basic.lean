@@ -251,8 +251,8 @@ theorem opNorm_le_iff {f : E →SL[σ₁₂] F} {M : ℝ} (hMp : 0 ≤ M) :
     ‖f‖ ≤ M ↔ ∀ x, ‖f x‖ ≤ M * ‖x‖ :=
   ⟨f.le_of_opNorm_le, opNorm_le_bound f hMp⟩
 
-theorem ratio_le_opNorm : ‖f x‖ / ‖x‖ ≤ ‖f‖ :=
-  div_le_of_le_mul₀ (norm_nonneg _) f.opNorm_nonneg (le_opNorm _ _)
+theorem ratio_le_opNorm {hx : IsUnit ‖x‖} : ‖f x‖ / ‖x‖ ≤ ‖f‖ :=
+  (div_le_iff₀ ((norm_nonneg x).lt_of_ne hx.ne_zero.symm)).2 (le_opNorm _ _)
 
 /-- The image of the unit ball under a continuous linear map is bounded. -/
 theorem unit_le_opNorm : ‖x‖ ≤ 1 → ‖f x‖ ≤ ‖f‖ :=
@@ -297,18 +297,20 @@ theorem opNorm_le_of_shell' {f : E →SL[σ₁₂] F} {ε C : ℝ} (ε_pos : 0 <
   · refine opNorm_le_of_ball ε_pos hC fun x hx => hf x ?_ ?_
     · simp [h0]
     · rwa [ball_zero_eq] at hx
-  · rw [← inv_inv c, norm_inv, inv_lt_one₀ (norm_pos_iff.2 <| inv_ne_zero h0)] at hc
-    refine opNorm_le_of_shell ε_pos hC hc ?_
-    rwa [norm_inv, div_eq_mul_inv, inv_inv]
+  · have hc' : 1 < ‖c⁻¹‖ := by
+      rw [norm_inv]
+      exact (one_lt_inv₀ (norm_pos_iff.2 h0)).2 hc
+    refine opNorm_le_of_shell ε_pos hC hc' ?_
+    simpa only [norm_inv, div_eq_mul_inv₀, inv_inv₀] using hf
 
 /-- For a continuous real linear map `f`, if one controls the norm of every `f x`, `‖x‖ = 1`, then
 one controls the norm of `f`. -/
 theorem opNorm_le_of_unit_norm [NormedAlgebra ℝ 𝕜] {f : E →SL[σ₁₂] F} {C : ℝ}
     (hC : 0 ≤ C) (hf : ∀ x, ‖x‖ = 1 → ‖f x‖ ≤ C) : ‖f‖ ≤ C := by
   refine opNorm_le_bound' f hC fun x hx => ?_
-  have H₁ : ‖algebraMap _ 𝕜 ‖x‖⁻¹ • x‖ = 1 := by simp [norm_smul, inv_mul_cancel₀ hx]
+  have H₁ : ‖algebraMap _ 𝕜 ‖x‖⁻¹ • x‖ = 1 := by simp [norm_smul]
   have H₂ : ‖x‖⁻¹ * ‖f x‖ ≤ C := by simpa [norm_smul] using hf _ H₁
-  rwa [← div_eq_inv_mul, div_le_iff₀] at H₂
+  rwa [← div_eq_inv_mul₀, div_le_iff₀] at H₂
   exact (norm_nonneg x).lt_of_ne' hx
 
 /-- The operator norm satisfies the triangle inequality. -/
@@ -321,8 +323,8 @@ theorem opNorm_add_le : ‖f + g‖ ≤ ‖f‖ + ‖g‖ :=
 theorem norm_id [NontrivialTopology E] : ‖ContinuousLinearMap.id 𝕜 E‖ = 1 :=
   le_antisymm norm_id_le <| by
     let ⟨x, hx⟩ := exists_norm_ne_zero E
-    have := (ContinuousLinearMap.id 𝕜 E).ratio_le_opNorm x
-    rwa [id_apply, div_self hx] at this
+    have := (ContinuousLinearMap.id 𝕜 E).ratio_le_opNorm x (hx := hx.isUnit)
+    rwa [id_apply, div_self] at this
 
 instance normOneClass [NontrivialTopology E] : NormOneClass (E →L[𝕜] E) :=
   ⟨norm_id⟩

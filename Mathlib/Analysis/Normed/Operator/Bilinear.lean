@@ -399,7 +399,7 @@ theorem norm_smulRight_apply (c : StrongDual 𝕜 E) (f : Fₗ) : ‖smulRight c
     · simp [hf]
     · rw [← le_div_iff₀ hf]
       refine opNorm_le_bound _ (by positivity) fun x => ?_
-      rw [div_mul_eq_mul_div, le_div_iff₀ hf]
+      rw [div_mul_eq_mul_div₀, le_div_iff₀ hf]
       calc
         ‖c x‖ * ‖f‖ = ‖c x • f‖ := (norm_smul _ _).symm
         _ = ‖smulRight c f x‖ := rfl

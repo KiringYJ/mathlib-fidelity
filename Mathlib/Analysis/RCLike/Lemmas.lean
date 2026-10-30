@@ -90,6 +90,7 @@ namespace RCLike
 theorem reCLM_norm : ‖(reCLM : StrongDual ℝ K)‖ = 1 := by
   apply le_antisymm (LinearMap.mkContinuous_norm_le _ zero_le_one _)
   convert! ContinuousLinearMap.ratio_le_opNorm (reCLM : StrongDual ℝ K) (1 : K)
+    (hx := by simp)
   simp
 
 @[simp, rclike_simps]

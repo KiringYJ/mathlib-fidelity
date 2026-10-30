@@ -3902,6 +3902,13 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   **Further obligations found during the continuous 2026-10-30 continuation.** These remain
   part of the same unfinished migration; a scoped source check does not certify their callers.
 
+  The checked linear-operator norm estimates now carry the exact norm-denominator evidence;
+  scalar normalization and NNReal bridges in `Operator/{Basic,Bilinear,NNNorm}` and
+  `Module/RCLike/Basic` pass scoped builds, all 16 module linters, and semantic/proof operator
+  audits. The three named ratio callers are ported in source, and
+  `MathlibTest/OperatorRatioDomain.lean` passes its exact-domain regression. Broader caller builds
+  and the complete-library acceptance gate remain open.
+
   - Preserve exact domains in the new dependency frontier:
     `Topology/Algebra/Module/Multilinear/Bounded`, `Analysis/Normed/Module/Multilinear/Basic`,
     `Analysis/Normed/Module/Alternating/Basic`, `Analysis/Asymptotics/AsymptoticEquivalent`,
