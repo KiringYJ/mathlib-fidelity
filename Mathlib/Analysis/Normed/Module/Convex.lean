@@ -42,7 +42,7 @@ variable {s : Set E}
 /-- The norm on a real normed space is convex on any convex set. See also `Seminorm.convexOn`
 and `convexOn_univ_norm`. -/
 theorem convexOn_norm (hs : Convex ℝ s) : ConvexOn ℝ s norm :=
-  ⟨hs, fun x _ y _ a b ha hb _ =>
+  convexOn_iff.mpr ⟨hs, fun x _ y _ a b ha hb _ =>
     calc
       ‖a • x + b • y‖ ≤ ‖a • x‖ + ‖b • y‖ := norm_add_le _ _
       _ = a * ‖x‖ + b * ‖y‖ := by
@@ -107,7 +107,7 @@ theorem convexHull_sphere_eq_closedBall {F : Type*} [NormedAddCommGroup F] [Norm
   refine subset_antisymm (convexHull_min sphere_subset_closedBall (convex_closedBall 0 r))
     (fun x h ↦ mem_convexHull_iff.mpr fun U hU_sub hU ↦ ?_)
   have zero_mem : (0 : F) ∈ U := by
-    have _ : Invertible (2 : ℝ) := by use 2⁻¹ <;> grind
+    have _ : Invertible (2 : ℝ) := invertibleOfNonzero (by norm_num)
     obtain ⟨z, hz⟩ := NormedSpace.sphere_nonempty (E := F).mpr hr
     rw [← midpoint_self_neg (R := ℝ) (x := z)]
     exact Convex.midpoint_mem hU (hU_sub hz) <| hU_sub (by simp_all)
@@ -118,13 +118,13 @@ theorem convexHull_sphere_eq_closedBall {F : Type*} [NormedAddCommGroup F] [Norm
   set z := (r * ‖x‖⁻¹) • x with hz_def
   have hr₁ : r⁻¹ * ‖x‖ ≤ 1 := by
     simp only [mem_closedBall, dist_zero_right] at h
-    grw [h, inv_mul_le_one]
+    exact (inv_mul_le_one₀ (hr.lt_of_ne' hr₀)).2 h
   have hz : z ∈ U := by
     apply hU_sub
     simp_all [norm_smul]
   have := StarConvex.smul_mem (hU.starConvex zero_mem) hz (by positivity) hr₁
   rwa [hz_def, ← smul_assoc, smul_eq_mul, ← mul_assoc, mul_comm, mul_comm r⁻¹, mul_assoc _ r⁻¹,
-    inv_mul_cancel₀ hr₀, mul_one, inv_mul_cancel₀ (by simp_all), one_smul] at this
+    inv_mul_cancel₀, mul_one, inv_mul_cancel₀, one_smul] at this
 
 /-- Given a point `x` in the convex hull of `s` and a point `y`, there exists a point
 of `s` at distance at least `dist x y` from `y`. -/

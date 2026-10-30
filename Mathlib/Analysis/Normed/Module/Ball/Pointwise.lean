@@ -79,8 +79,9 @@ variable [SeminormedAddCommGroup E] [NormedSpace 𝕜 E]
 theorem smul_ball {c : 𝕜} (hc : c ≠ 0) (x : E) (r : ℝ) : c • ball x r = ball (c • x) (‖c‖ * r) := by
   ext y
   rw [mem_smul_set_iff_inv_smul_mem₀ hc]
+  simp only [mem_ball]
   conv_lhs => rw [← inv_smul_smul₀ (ha := hc.isUnit) x]
-  simp [← div_eq_inv_mul, div_lt_iff₀ (norm_pos_iff.2 hc), mul_comm _ r, dist_smul₀]
+  rw [dist_smul₀, norm_inv, ← div_eq_inv_mul₀, div_lt_iff₀ (norm_pos_iff.2 hc), mul_comm _ r]
 
 theorem smul_unitBall {c : 𝕜} (hc : c ≠ 0) : c • ball (0 : E) (1 : ℝ) = ball (0 : E) ‖c‖ := by
   rw [_root_.smul_ball hc, smul_zero, mul_one]
@@ -90,7 +91,7 @@ theorem smul_sphere' {c : 𝕜} (hc : c ≠ 0) (x : E) (r : ℝ) :
   ext y
   rw [mem_smul_set_iff_inv_smul_mem₀ hc]
   conv_lhs => rw [← inv_smul_smul₀ (ha := hc.isUnit) x]
-  simp only [mem_sphere, dist_smul₀, norm_inv, ← div_eq_inv_mul, div_eq_iff (norm_pos_iff.2 hc).ne',
+  simp only [mem_sphere, dist_smul₀, norm_inv, ← div_eq_inv_mul₀, div_eq_iff,
     mul_comm r]
 
 theorem smul_closedBall' {c : 𝕜} (hc : c ≠ 0) (x : E) (r : ℝ) :
@@ -161,9 +162,9 @@ theorem exists_dist_le_le (hδ : 0 ≤ δ) (hε : 0 ≤ ε) (h : dist x z ≤ ε
   have hεδ := add_pos_of_pos_of_nonneg hε' hδ
   refine (exists_dist_eq x z (div_nonneg hε <| add_nonneg hε hδ)
     (div_nonneg hδ <| add_nonneg hε hδ) <| by
-      rw [← add_div, div_self hεδ.ne']).imp
+      rw [← add_div _ _ _ (hc := hεδ.ne'.isUnit), div_self]).imp
     fun y hy => ?_
-  rw [hy.1, hy.2, div_mul_comm, div_mul_comm ε]
+  rw [hy.1, hy.2, div_mul_comm₀, div_mul_comm₀ (a := ε)]
   rw [← div_le_one hεδ] at h
   exact ⟨mul_le_of_le_one_left hδ h, mul_le_of_le_one_left hε h⟩
 
@@ -172,9 +173,9 @@ theorem exists_dist_le_lt (hδ : 0 ≤ δ) (hε : 0 < ε) (h : dist x z < ε + �
     ∃ y, dist x y ≤ δ ∧ dist y z < ε := by
   refine (exists_dist_eq x z (div_nonneg hε.le <| add_nonneg hε.le hδ)
     (div_nonneg hδ <| add_nonneg hε.le hδ) <| by
-      rw [← add_div, div_self (add_pos_of_pos_of_nonneg hε hδ).ne']).imp
+      rw [← add_div _ _ _ (hc := (add_pos_of_pos_of_nonneg hε hδ).ne'.isUnit), div_self]).imp
     fun y hy => ?_
-  rw [hy.1, hy.2, div_mul_comm, div_mul_comm ε]
+  rw [hy.1, hy.2, div_mul_comm₀, div_mul_comm₀ (a := ε)]
   rw [← div_lt_one (add_pos_of_pos_of_nonneg hε hδ)] at h
   exact ⟨mul_le_of_le_one_left hδ h.le, mul_lt_of_lt_one_left hε h⟩
 
@@ -190,9 +191,9 @@ theorem exists_dist_lt_lt (hδ : 0 < δ) (hε : 0 < ε) (h : dist x z < ε + δ)
     ∃ y, dist x y < δ ∧ dist y z < ε := by
   refine (exists_dist_eq x z (div_nonneg hε.le <| add_nonneg hε.le hδ.le)
     (div_nonneg hδ.le <| add_nonneg hε.le hδ.le) <| by
-      rw [← add_div, div_self (add_pos hε hδ).ne']).imp
+      rw [← add_div _ _ _ (hc := (add_pos hε hδ).ne'.isUnit), div_self]).imp
     fun y hy => ?_
-  rw [hy.1, hy.2, div_mul_comm, div_mul_comm ε]
+  rw [hy.1, hy.2, div_mul_comm₀, div_mul_comm₀ (a := ε)]
   rw [← div_lt_one (add_pos hε hδ)] at h
   exact ⟨mul_lt_of_lt_one_left hδ h, mul_lt_of_lt_one_left hε h⟩
 
