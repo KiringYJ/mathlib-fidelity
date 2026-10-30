@@ -540,7 +540,7 @@ theorem inner_eq_sum_norm_sq_div_four (x y : E) :
   rw [← re_add_im ⟪x, y⟫, re_inner_eq_norm_add_mul_self_sub_norm_sub_mul_self_div_four,
     im_inner_eq_norm_sub_i_smul_mul_self_sub_norm_add_i_smul_mul_self_div_four]
   push_cast
-  simp only [sq, ← mul_div_right_comm, ← add_div]
+  simp only [sq, ← mul_div_right_comm₀, ← add_div]
 
 /-- Polarization identity: The real inner product, in terms of the norm. -/
 theorem real_inner_eq_norm_add_mul_self_sub_norm_mul_self_sub_norm_mul_self_div_two (x y : F) :
@@ -616,9 +616,11 @@ theorem norm_sub_eq_norm_add {v w : E} (h : ⟪v, w⟫ = 0) : ‖w - v‖ = ‖w
 
 /-- The real inner product of two vectors, divided by the product of their
 norms, has absolute value at most 1. -/
-theorem abs_real_inner_div_norm_mul_norm_le_one (x y : F) : |⟪x, y⟫_ℝ / (‖x‖ * ‖y‖)| ≤ 1 := by
-  rw [abs_div, abs_mul, abs_norm, abs_norm]
-  exact div_le_one_of_le₀ (abs_real_inner_le_norm x y) (by positivity)
+theorem abs_real_inner_div_norm_mul_norm_le_one (x y : F) {hxy : IsUnit (‖x‖ * ‖y‖)} :
+    |⟪x, y⟫_ℝ / (‖x‖ * ‖y‖)| ≤ 1 := by
+  simp only [abs_div, abs_mul, abs_norm]
+  exact (div_le_one ((mul_nonneg (norm_nonneg x) (norm_nonneg y)).lt_of_ne' hxy.ne_zero)).2
+    (abs_real_inner_le_norm x y)
 
 /-- The inner product of a vector with a multiple of itself. -/
 theorem real_inner_smul_self_left (x : F) (r : ℝ) : ⟪r • x, x⟫_ℝ = r * (‖x‖ * ‖x‖) := by
@@ -639,8 +641,8 @@ theorem inner_sum_smul_sum_smul_of_sum_eq_zero {ι₁ : Type*} {s₁ : Finset ι
     real_inner_eq_norm_mul_self_add_norm_mul_self_sub_norm_sub_mul_self_div_two, ← div_sub_div_same,
     add_div, mul_sub_left_distrib, left_distrib, Finset.sum_sub_distrib,
     Finset.sum_add_distrib, ← Finset.mul_sum, ← Finset.sum_mul, h₁, h₂, zero_mul,
-    mul_zero, Finset.sum_const_zero, zero_add, zero_sub, Finset.mul_sum, neg_div,
-    Finset.sum_div, mul_div_assoc, mul_assoc]
+    mul_zero, Finset.sum_const_zero, zero_add, zero_sub, Finset.mul_sum, neg_div₀,
+    Finset.sum_div, mul_div_assoc₀, mul_assoc]
 
 /-- `⟪x, y⟫ = 0` if and only if `re ⟪c • x, y⟫ = 0` for every `c : 𝕜` -/
 theorem inner_eq_zero_iff_forall_re_inner_smul_left {x y : E} :
@@ -683,9 +685,10 @@ theorem norm_inner_div_norm_mul_norm_eq_one_of_ne_zero_of_ne_zero_mul {x : E} {r
     (hr : r ≠ 0) : ‖⟪x, r • x⟫‖ / (‖x‖ * ‖r • x‖) = 1 := by
   have hx' : ‖x‖ ≠ 0 := by simp [hx]
   have hr' : ‖r‖ ≠ 0 := by simp [hr]
-  rw [inner_smul_right, norm_mul, ← inner_self_re_eq_norm, inner_self_eq_norm_mul_norm, norm_smul]
-  rw [← mul_assoc, ← div_div, mul_div_cancel_right₀ _ hx', ← div_div, mul_comm,
-    mul_div_cancel_right₀ _ hr', div_self hx']
+  rw [inner_smul_right, norm_mul, ← inner_self_re_eq_norm, inner_self_eq_norm_mul_norm]
+  simp only [norm_smul]
+  rw [div_eq_iff]
+  ring
 
 /-- The inner product of a nonzero vector with a nonzero multiple of
 itself, divided by the product of their norms, has absolute value 1. -/
@@ -696,27 +699,33 @@ theorem abs_real_inner_div_norm_mul_norm_eq_one_of_ne_zero_of_ne_zero_mul {x : F
 /-- The inner product of a nonzero vector with a positive multiple of
 itself, divided by the product of their norms, has value 1. -/
 theorem real_inner_div_norm_mul_norm_eq_one_of_ne_zero_of_pos_mul {x : F} {r : ℝ} (hx : x ≠ 0)
-    (hr : 0 < r) : ⟪x, r • x⟫_ℝ / (‖x‖ * ‖r • x‖) = 1 := by
-  rw [real_inner_smul_self_right, norm_smul, Real.norm_eq_abs, ← mul_assoc ‖x‖, mul_comm _ |r|,
-    mul_assoc, abs_of_nonneg hr.le, div_self]
-  exact mul_ne_zero hr.ne' (mul_self_ne_zero.2 (norm_ne_zero_iff.2 hx))
+    (hr : 0 < r) :
+    Checked.div ⟪x, r • x⟫_ℝ (‖x‖ * ‖r • x‖)
+      ((norm_ne_zero_iff.mpr hx).isUnit.mul
+        (norm_ne_zero_iff.mpr (smul_ne_zero hr.ne' hx)).isUnit) = 1 := by
+  simp only [real_inner_smul_self_right, norm_smul, Real.norm_eq_abs, abs_of_nonneg hr.le]
+  rw [div_eq_iff]
+  ring
 
 /-- The inner product of a nonzero vector with a negative multiple of
 itself, divided by the product of their norms, has value -1. -/
 theorem real_inner_div_norm_mul_norm_eq_neg_one_of_ne_zero_of_neg_mul {x : F} {r : ℝ} (hx : x ≠ 0)
-    (hr : r < 0) : ⟪x, r • x⟫_ℝ / (‖x‖ * ‖r • x‖) = -1 := by
-  rw [real_inner_smul_self_right, norm_smul, Real.norm_eq_abs, ← mul_assoc ‖x‖, mul_comm _ |r|,
-    mul_assoc, abs_of_neg hr, neg_mul, div_neg_eq_neg_div, div_self]
-  exact mul_ne_zero hr.ne (mul_self_ne_zero.2 (norm_ne_zero_iff.2 hx))
+    (hr : r < 0) :
+    Checked.div ⟪x, r • x⟫_ℝ (‖x‖ * ‖r • x‖)
+      ((norm_ne_zero_iff.mpr hx).isUnit.mul
+        (norm_ne_zero_iff.mpr (smul_ne_zero hr.ne hx)).isUnit) = -1 := by
+  simp only [real_inner_smul_self_right, norm_smul, Real.norm_eq_abs, abs_of_neg hr]
+  rw [div_eq_iff]
+  ring
 
 variable (𝕜) in
 theorem norm_inner_eq_norm_tfae (x y : E) :
     List.TFAE [‖⟪x, y⟫‖ = ‖x‖ * ‖y‖,
-      x = 0 ∨ y = (⟪x, y⟫ / ⟪x, x⟫) • x,
+      ∀ hx : x ≠ 0, y = (⟪x, y⟫ / ⟪x, x⟫) • x,
       x = 0 ∨ ∃ r : 𝕜, y = r • x,
       x = 0 ∨ y ∈ 𝕜 ∙ x] := by
   tfae_have 1 → 2 := by
-    refine fun h => or_iff_not_imp_left.2 fun hx₀ => ?_
+    intro h hx₀
     have : ‖x‖ ^ 2 ≠ 0 := pow_ne_zero _ (norm_ne_zero_iff.2 hx₀)
     rw [← sq_eq_sq₀, mul_pow, ← mul_right_inj' this, eq_comm, ← sub_eq_zero, ← mul_sub] at h <;>
       try positivity
@@ -724,9 +733,12 @@ theorem norm_inner_eq_norm_tfae (x y : E) :
     let : InnerProductSpace.Core 𝕜 E := InnerProductSpace.toCore
     erw [← InnerProductSpace.Core.cauchy_schwarz_aux (𝕜 := 𝕜) (F := E)] at h
     rw [InnerProductSpace.Core.normSq_eq_zero, sub_eq_zero] at h
-    rw [div_eq_inv_mul, mul_smul, h, inv_smul_smul₀]
-    rwa [inner_self_ne_zero]
-  tfae_have 2 → 3 := fun h => h.imp_right fun h' => ⟨_, h'⟩
+    rw [div_eq_inv_mul₀, mul_smul, h, inv_smul_smul₀]
+  tfae_have 2 → 3 := by
+    intro h
+    by_cases hx : x = 0
+    · exact Or.inl hx
+    · exact Or.inr ⟨_, h hx⟩
   tfae_have 3 → 1 := by
     rintro (rfl | ⟨r, rfl⟩) <;>
     simp [inner_smul_right, norm_smul, inner_self_eq_norm_sq_to_K,
@@ -750,14 +762,20 @@ theorem norm_inner_eq_norm_iff {x y : E} (hx₀ : x ≠ 0) (hy₀ : y ≠ 0) :
 /-- The inner product of two vectors, divided by the product of their
 norms, has absolute value 1 if and only if they are nonzero and one is
 a multiple of the other. One form of equality case for Cauchy-Schwarz. -/
-theorem norm_inner_div_norm_mul_norm_eq_one_iff (x y : E) :
+theorem norm_inner_div_norm_mul_norm_eq_one_iff (x y : E)
+    {hxy : IsUnit ((‖x‖ : 𝕜) * ‖y‖)} :
     ‖⟪x, y⟫ / (‖x‖ * ‖y‖)‖ = 1 ↔ x ≠ 0 ∧ ∃ r : 𝕜, r ≠ 0 ∧ y = r • x := by
+  have hx₀ : x ≠ 0 := by
+    intro hx
+    simpa [hx] using hxy.ne_zero
+  have hy₀ : y ≠ 0 := by
+    intro hy
+    simpa [hy] using hxy.ne_zero
   constructor
   · intro h
-    have hx₀ : x ≠ 0 := fun h₀ => by simp [h₀] at h
-    have hy₀ : y ≠ 0 := fun h₀ => by simp [h₀] at h
-    refine ⟨hx₀, (norm_inner_eq_norm_iff hx₀ hy₀).1 <| eq_of_div_eq_one ?_⟩
-    simpa using h
+    have hnorm : ‖⟪x, y⟫‖ / (‖x‖ * ‖y‖) = 1 := by
+      simpa only [norm_div, norm_mul, norm_ofReal, abs_norm] using h
+    exact ⟨hx₀, (norm_inner_eq_norm_iff hx₀ hy₀).1 (div_eq_one_iff_eq.1 hnorm)⟩
   · rintro ⟨hx, ⟨r, ⟨hr, rfl⟩⟩⟩
     simp only [norm_div, norm_mul, norm_ofReal, abs_norm]
     exact norm_inner_div_norm_mul_norm_eq_one_of_ne_zero_of_ne_zero_mul hx hr
@@ -765,19 +783,22 @@ theorem norm_inner_div_norm_mul_norm_eq_one_iff (x y : E) :
 /-- The inner product of two vectors, divided by the product of their
 norms, has absolute value 1 if and only if they are nonzero and one is
 a multiple of the other. One form of equality case for Cauchy-Schwarz. -/
-theorem abs_real_inner_div_norm_mul_norm_eq_one_iff (x y : F) :
+theorem abs_real_inner_div_norm_mul_norm_eq_one_iff (x y : F)
+    {hxy : IsUnit (‖x‖ * ‖y‖)} :
     |⟪x, y⟫_ℝ / (‖x‖ * ‖y‖)| = 1 ↔ x ≠ 0 ∧ ∃ r : ℝ, r ≠ 0 ∧ y = r • x :=
-  @norm_inner_div_norm_mul_norm_eq_one_iff ℝ F _ _ _ x y
+  @norm_inner_div_norm_mul_norm_eq_one_iff ℝ F _ _ _ x y hxy
 
 theorem inner_eq_norm_mul_iff_div {x y : E} (h₀ : x ≠ 0) :
     ⟪x, y⟫ = (‖x‖ : 𝕜) * ‖y‖ ↔ (‖y‖ / ‖x‖ : 𝕜) • x = y := by
   have h₀' := h₀
   rw [← norm_ne_zero_iff, Ne, ← @ofReal_eq_zero 𝕜] at h₀'
   constructor <;> intro h
-  · have : x = 0 ∨ y = (⟪x, y⟫ / ⟪x, x⟫ : 𝕜) • x :=
-      ((norm_inner_eq_norm_tfae 𝕜 x y).out 1 2).1 (by simp [h])
-    rw [this.resolve_left h₀, h]
-    simp [norm_smul, mul_div_cancel_right₀ _ h₀']
+  · have hnorm : ‖⟪x, y⟫‖ = ‖x‖ * ‖y‖ := by simp [h]
+    have hcoeff : ∀ hx : x ≠ 0, y = (⟪x, y⟫ / ⟪x, x⟫ : 𝕜) • x :=
+      ((norm_inner_eq_norm_tfae 𝕜 x y).out 1 2).1 hnorm
+    have := hcoeff h₀
+    rw [this, h]
+    simp [norm_smul, mul_div_cancel_right₀]
   · conv_lhs => rw [← h, inner_smul_right, inner_self_eq_norm_sq_to_K]
     field
 
@@ -789,8 +810,7 @@ theorem inner_eq_norm_mul_iff {x y : E} :
     ⟪x, y⟫ = (‖x‖ : 𝕜) * ‖y‖ ↔ (‖y‖ : 𝕜) • x = (‖x‖ : 𝕜) • y := by
   rcases eq_or_ne x 0 with (rfl | h₀)
   · simp
-  · rw [inner_eq_norm_mul_iff_div h₀, div_eq_inv_mul, mul_smul, inv_smul_eq_iff₀]
-    rwa [Ne, ofReal_eq_zero, norm_eq_zero]
+  · rw [inner_eq_norm_mul_iff_div h₀, div_eq_inv_mul₀, mul_smul, inv_smul_eq_iff₀]
 
 /-- If the inner product of two vectors is equal to the product of their norms (i.e.,
 `⟪x, y⟫ = ‖x‖ * ‖y‖`), then the two vectors are nonnegative real multiples of each other. One form
@@ -802,24 +822,32 @@ theorem inner_eq_norm_mul_iff_real {x y : F} : ⟪x, y⟫_ℝ = ‖x‖ * ‖y�
 /-- The inner product of two vectors, divided by the product of their
 norms, has value 1 if and only if they are nonzero and one is
 a positive multiple of the other. -/
-theorem real_inner_div_norm_mul_norm_eq_one_iff (x y : F) :
+theorem real_inner_div_norm_mul_norm_eq_one_iff (x y : F)
+    {hxy : IsUnit (‖x‖ * ‖y‖)} :
     ⟪x, y⟫_ℝ / (‖x‖ * ‖y‖) = 1 ↔ x ≠ 0 ∧ ∃ r : ℝ, 0 < r ∧ y = r • x := by
+  have hx₀ : x ≠ 0 := by
+    intro hx
+    simpa [hx] using hxy.ne_zero
+  have hy₀ : y ≠ 0 := by
+    intro hy
+    simpa [hy] using hxy.ne_zero
   constructor
   · intro h
-    have hx₀ : x ≠ 0 := fun h₀ => by simp [h₀] at h
-    have hy₀ : y ≠ 0 := fun h₀ => by simp [h₀] at h
     refine ⟨hx₀, ‖y‖ / ‖x‖, div_pos (norm_pos_iff.2 hy₀) (norm_pos_iff.2 hx₀), ?_⟩
-    exact ((inner_eq_norm_mul_iff_div hx₀).1 (eq_of_div_eq_one h)).symm
+    exact ((inner_eq_norm_mul_iff_div hx₀).1 (div_eq_one_iff_eq.1 h)).symm
   · rintro ⟨hx, ⟨r, ⟨hr, rfl⟩⟩⟩
     exact real_inner_div_norm_mul_norm_eq_one_of_ne_zero_of_pos_mul hx hr
 
 /-- The inner product of two vectors, divided by the product of their
 norms, has value -1 if and only if they are nonzero and one is
 a negative multiple of the other. -/
-theorem real_inner_div_norm_mul_norm_eq_neg_one_iff (x y : F) :
+theorem real_inner_div_norm_mul_norm_eq_neg_one_iff (x y : F)
+    {hxy : IsUnit (‖x‖ * ‖y‖)} :
     ⟪x, y⟫_ℝ / (‖x‖ * ‖y‖) = -1 ↔ x ≠ 0 ∧ ∃ r : ℝ, r < 0 ∧ y = r • x := by
-  rw [← neg_eq_iff_eq_neg, ← neg_div, ← inner_neg_right, ← norm_neg y,
-    real_inner_div_norm_mul_norm_eq_one_iff, (@neg_surjective ℝ _).exists]
+  have hneg : IsUnit (‖x‖ * ‖-y‖) := by simpa only [norm_neg] using hxy
+  have heq := real_inner_div_norm_mul_norm_eq_one_iff x (-y) (hxy := hneg)
+  simp only [inner_neg_right, norm_neg, neg_div₀] at heq
+  rw [← neg_eq_iff_eq_neg, heq, (@neg_surjective ℝ _).exists]
   refine Iff.rfl.and (exists_congr fun r => ?_)
   rw [neg_pos, neg_smul, neg_inj]
 
