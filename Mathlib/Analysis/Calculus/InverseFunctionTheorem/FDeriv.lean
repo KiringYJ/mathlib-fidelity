@@ -88,24 +88,28 @@ theorem map_nhds_eq_of_surj [CompleteSpace E] [CompleteSpace F] {f : E → F} {f
     (hf : HasStrictFDerivAt f (f' : E →L[𝕜] F) a) (h : f'.range = ⊤) :
     map f (𝓝 a) = 𝓝 (f a) := by
   let f'symm := f'.nonlinearRightInverseOfSurjective h
-  set c : ℝ≥0 := f'symm.nnnorm⁻¹ / 2 with hc
-  have f'symm_pos : 0 < f'symm.nnnorm := f'.nonlinearRightInverseOfSurjective_nnnorm_pos h
-  have cpos : 0 < c := by simp [hc, inv_pos, f'symm_pos]
+  have hden : 0 < 2 * (f'symm.nnnorm + 1) := by positivity
+  let c : ℝ≥0 := Checked.div 1 (2 * (f'symm.nnnorm + 1)) hden.ne'.isUnit
+  have cpos : 0 < c := div_pos zero_lt_one hden
+  have hsmall : c * f'symm.nnnorm < 1 := by
+    dsimp only [c]
+    rw [div_mul_eq_mul_div₀, one_mul, div_lt_one hden]
+    exact (lt_add_of_pos_right _ zero_lt_one).trans_le
+      (le_mul_of_one_le_left (by positivity) (by norm_num))
   obtain ⟨s, s_nhds, hs⟩ : ∃ s ∈ 𝓝 a, ApproximatesLinearOn f f' s c :=
     hf.approximates_deriv_on_nhds (Or.inr cpos)
-  apply hs.map_nhds_eq f'symm s_nhds (Or.inr (NNReal.half_lt_self _))
-  simp [ne_of_gt f'symm_pos]
+  exact hs.map_nhds_eq f'symm s_nhds (Or.inr hsmall)
 
 variable {f : E → F} {f' : E ≃L[𝕜] F} {a : E}
 
 theorem approximates_deriv_on_open_nhds (hf : HasStrictFDerivAt f (f' : E →L[𝕜] F) a) :
     ∃ s : Set E, a ∈ s ∧ IsOpen s ∧
-      ApproximatesLinearOn f (f' : E →L[𝕜] F) s (‖(f'.symm : F →L[𝕜] E)‖₊⁻¹ / 2) := by
+      ApproximatesLinearOn f (f' : E →L[𝕜] F) s
+        (Checked.div 1 (2 * (‖(f'.symm : F →L[𝕜] E)‖₊ + 1))
+          (mul_pos zero_lt_two (by positivity)).ne'.isUnit) := by
   simp only [← and_assoc]
   refine ((nhds_basis_opens a).exists_iff fun s t => ApproximatesLinearOn.mono_set).1 ?_
-  exact
-    hf.approximates_deriv_on_nhds <|
-      f'.subsingleton_or_nnnorm_symm_pos.imp id fun hf' => half_pos <| inv_pos.2 hf'
+  exact hf.approximates_deriv_on_nhds (Or.inr (div_pos zero_lt_one (by positivity)))
 
 variable (f)
 variable [CompleteSpace E]
@@ -119,8 +123,13 @@ def toOpenPartialHomeomorph (hf : HasStrictFDerivAt f (f' : E →L[𝕜] F) a) :
     ApproximatesLinearOn.toOpenPartialHomeomorph f
     (Classical.choose hf.approximates_deriv_on_open_nhds)
     (Classical.choose_spec hf.approximates_deriv_on_open_nhds).2.2
-    (f'.subsingleton_or_nnnorm_symm_pos.imp id fun hf' =>
-      NNReal.half_lt_self <| ne_of_gt <| inv_pos.2 hf')
+    (by
+      have hden : 0 < 2 * (‖(f'.symm : F →L[𝕜] E)‖₊ + 1) := by positivity
+      change Checked.div 1 (2 * (‖(f'.symm : F →L[𝕜] E)‖₊ + 1)) hden.ne'.isUnit *
+        ‖(f'.symm : F →L[𝕜] E)‖₊ < 1
+      rw [div_mul_eq_mul_div₀, one_mul, div_lt_one hden]
+      exact (lt_add_of_pos_right _ zero_lt_one).trans_le
+        (le_mul_of_one_le_left (by positivity) (by norm_num)))
     (Classical.choose_spec hf.approximates_deriv_on_open_nhds).2.1
 
 variable {f}

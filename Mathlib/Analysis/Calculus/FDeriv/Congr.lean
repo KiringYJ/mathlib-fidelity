@@ -258,7 +258,8 @@ theorem fderivWithin_congr' (hs : EqOn f₁ f s) (hx : x ∈ s) :
   fderivWithin_congr hs (hs hx)
 
 theorem Filter.EventuallyEq.fderiv_eq (h : f₁ =ᶠ[𝓝 x] f) : fderiv 𝕜 f₁ x = fderiv 𝕜 f x := by
-  rw [← fderivWithin_univ, ← fderivWithin_univ, h.fderivWithin_eq_of_nhds]
+  simpa only [congrFun fderivWithin_univ x] using
+    (h.fderivWithin_eq_of_nhds (s := univ))
 
 protected theorem Filter.EventuallyEq.fderiv (h : f₁ =ᶠ[𝓝 x] f) : fderiv 𝕜 f₁ =ᶠ[𝓝 x] fderiv 𝕜 f :=
   h.eventuallyEq_nhds.mono fun _ h => h.fderiv_eq

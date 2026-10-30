@@ -3950,6 +3950,25 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   exponential, trigonometric, analytic, calculus, measure-theory, and number-theory consumers,
   together with the complete-library acceptance matrix, remain open.
 
+  **User-requested inverse-function checkpoint, 2026-10-30.** The quantitative inverse-function
+  core now uses product smallness `c * N < 1`, source radius `N * ε`, and target radius
+  `(1 - c * N) * ε`; it never takes the reciprocal of a possibly zero inverse-norm bound.
+  The antilipschitz bound is `N / (1 - c * N)`, and the local derivative proof chooses the
+  always-positive `1 / (2 * (N + 1))`. Arbitrary nonlinear right inverses retain the trivial
+  codomain disjunction because their stored bound need not be minimal. Actual inverse operator
+  norms need no such disjunction: a zero norm forces the zero-space case.
+
+  `InverseFunctionTheorem/{ApproximatesLinearOn,FDeriv,FiniteDimensional}` and the necessary
+  `FDeriv/Congr` evaluated-function rewrite are recorded together. The prospective commit,
+  with unrelated work temporarily stashed, passes its scoped build (2350 jobs).
+  All four production modules also pass the 16 enabled environment linters and complete
+  proof dependency reports without retired-operator findings.
+  `MathlibTest/ApproximatesLinearOnDomain.lean` covers zero inverse norms, a positive nonminimal
+  bound on a trivial codomain, the `c * N = 1` zero-radius case, and zero-radius source
+  surjectivity. Independent review accepted the core and these four boundary cases.
+  This is a stopping checkpoint at the user's request. The Jacobian caller, wider consumer
+  integration, uncommitted migration drafts, and full-library acceptance remain unfinished.
+
   - Finish `Analysis/Asymptotics/SpecificAsymptotics`, `SpecialFunctions/{Exp,Trigonometric/Basic}`,
     and their consumers. Restricted ratio limits need the stated zero compatibility or frequent
     admissibility conditions, according to their mathematical conclusion.
