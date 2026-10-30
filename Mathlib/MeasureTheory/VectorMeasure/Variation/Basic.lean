@@ -333,12 +333,12 @@ lemma variation_smul {𝕜 : Type*} [NormedField 𝕜] [NormedSpace 𝕜 V] {c :
   rcases eq_or_ne c 0 with rfl | hc
   · simp
   calc ‖c‖₊ • μ.variation
-  _ = ‖c‖₊ • (c⁻¹ • (c • μ)).variation := by simp [smul_smul, inv_mul_cancel₀ hc]
+  _ = ‖c‖₊ • (c⁻¹ • (c • μ)).variation := by simp [smul_smul, inv_mul_cancel₀]
   _ ≤ ‖c‖₊ • ‖c⁻¹‖₊ • (c • μ).variation := by
     gcongr
     exact variation_smul_le
   _ = (c • μ).variation := by
-    simp [smul_smul, mul_inv_cancel₀ (nnnorm_ne_zero_iff.mpr hc)]
+    simp [smul_smul, mul_inv_cancel₀]
 
 instance {𝕜 : Type*} [NormedField 𝕜] [NormedSpace 𝕜 V] {c : 𝕜} [IsFiniteMeasure μ.variation] :
     IsFiniteMeasure (c • μ).variation := by
