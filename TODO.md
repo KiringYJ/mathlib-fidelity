@@ -3895,6 +3895,62 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     Fix operation definitions and statements before cascading proof errors. These eight roots do
     not exhaust the remaining migration; no complete-library acceptance pass is claimed.
 
+  **Further obligations found during the continuous 2026-10-30 continuation.** These remain
+  part of the same unfinished migration; a scoped source check does not certify their callers.
+
+  - Preserve exact domains in the new dependency frontier:
+    `Topology/Algebra/Module/Multilinear/Bounded`, `Analysis/Normed/Module/Multilinear/Basic`,
+    `Analysis/Normed/Module/Alternating/Basic`, `Analysis/Asymptotics/AsymptoticEquivalent`,
+    `Analysis/Asymptotics/SpecificAsymptotics`, `Analysis/Normed/Group/AddCircle`,
+    `Analysis/Normed/Ring/Units`, `Analysis/Normed/Operator/Banach`,
+    `Topology/Algebra/Module/FiniteDimension`, `Analysis/Normed/Module/FiniteDimension`,
+    `Analysis/Normed/Module/HahnBanach`, `Analysis/InnerProductSpace/Basic`,
+    `Analysis/SpecialFunctions/Exp`, `Analysis/SpecialFunctions/Trigonometric/Basic`, and
+    `MeasureTheory/VectorMeasure/Variation/Basic`. In particular, empty multilinear index sets
+    retain product denominator `1`; period-zero circle norms retain their separate formula;
+    ratio limits on an empty admissible domain need the stated zero-compatibility or frequent
+    admissibility conditions, according to their mathematical conclusion.
+  - `MeasureTheory/VectorMeasure/WithDensityVec.lean` must normalize through an actual unit-valued
+    representative under the norm-weighted measure, and prove the resulting identities almost
+    everywhere. Nonvanishing under that measure does not justify a global reciprocal of `‖f x‖`.
+  - Construct the genuine entire reciprocal Gamma function and port
+    `Gamma/Beta.lean`'s `one_div_Gamma_eq_self_mul_one_div_Gamma_add_one` and
+    `differentiable_one_div_Gamma`, the completed Gamma factors in `Gamma/Deligne.lean`,
+    `Analysis/Meromorphic/Complex.lean`, and regularized hypergeometric coefficients. The zeros
+    at nonpositive integers are specifying properties of the independent entire function, not
+    values of field inversion at zero; see [DLMF 5.2](https://dlmf.nist.gov/5.2) and
+    [DLMF 5.8.2](https://dlmf.nist.gov/5.8.E2). Prove independence from Gamma's separately
+    deferred pole assignments. `OrdinaryHypergeometric.lean` has a distinct actual-domain issue:
+    factorial and Pochhammer denominators can vanish, especially in positive characteristic.
+  - Give `Log/Base.lean`'s `logb` the exact denominator domain `IsUnit (Real.log b)` and migrate
+    its reciprocal, continuity, limit, and named consumer families. Preserve any independently
+    justified negative-base content from the existing absolute logarithm; do not retain the
+    invalid-base fallback declarations. `Log/Monotone.lean` needs functions on actual interval
+    domains. The existing special-function foundation audit still governs the underlying log,
+    real/complex powers, and argument conventions.
+  - `Complex/Arg.lean`'s existing value at zero is an independently deferred substrate issue;
+    normalized-coordinate and quotient-germ formulas must use the nonzero domain. Likewise,
+    `Geometry/Euclidean/Angle/Unoriented/Basic.lean`'s angle at a zero-norm vector is not certified
+    by its documented fallback. Port the genuine angle domain and the affected `EuclideanGeometry`
+    triangle formulas without evaluating an undefined angle merely because its coefficient is zero.
+  - `Meromorphic/NormalForm.lean` and `Meromorphic/Basic.lean` still express reciprocal and negative
+    powers as ambient functions at zeros. Restore their actual partial or germ domains, retaining
+    the distinction between a pointwise inverse and a meromorphic continuation with poles.
+  - The conditional-extrema task below still owns the unsupported empty real infimum in
+    `Convex/Gauge.lean`: `gauge_zero`, `gauge_zero'`, `gauge_empty`, `gauge_of_subset_zero`, and
+    `gauge_closure_zero` are not made mathematically faithful by removing an inverse. Actual
+    finite-domain uses need the nonempty positive-dilation set and its greatest-lower-bound
+    certificate, with absorbency supplying a sufficient witness where appropriate.
+  - Finish carried-evidence discovery in `checked_unit`/`checked_nonzero`. The current search
+    misses the property of a subtype value through coercion, including
+    `fun x : {r : ℝ // r ≠ 0} => (x : ℝ)⁻¹` and normalized-coordinate quotients through `‖x‖`.
+    Preserve exact rejection diagnostics and local proof discovery; explicit use of the carried
+    proof in current ports is not closure of this quality-of-life obligation.
+  - The regularized hypergeometric coefficient repair does not certify
+    `FormalMultilinearSeries.sum` at a nonconvergent argument as analytic continuation. Keep the
+    actual convergence domain and the independent summation-foundation obligation explicit;
+    DLMF 16.2.5 specifies the scaled coefficients, not an arbitrary off-domain sum value.
+
   Remaining tasks, in dependency order:
 
   - [ ] **Restore the canonical family in every affected module.** Compare each module with
