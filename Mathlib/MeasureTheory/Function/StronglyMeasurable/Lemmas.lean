@@ -102,9 +102,17 @@ theorem aestronglyMeasurable_withDensity_iff {E : Type*} [NormedAddCommGroup E]
       simp only [Classical.not_not, mem_ofPred_eq, mem_compl_iff] at hx
       simp [hx]
   · rintro ⟨g', g'meas, hg'⟩
-    refine ⟨fun x => (f x : ℝ)⁻¹ • g' x, hf.coe_nnreal_real.inv.stronglyMeasurable.smul g'meas, ?_⟩
-    rw [EventuallyEq, ae_withDensity_iff hf.coe_nnreal_ennreal]
-    filter_upwards [hg'] with x hx h'x
-    rw [← hx, smul_smul, inv_mul_cancel₀, one_smul]
-    simp only [Ne, ENNReal.coe_eq_zero] at h'x
-    simpa only [NNReal.coe_eq_zero, Ne] using h'x
+    let ν := μ.withDensity (fun x => (f x : ℝ≥0∞))
+    have hfn : AEStronglyMeasurable (fun x => (f x : ℝ)) ν :=
+      hf.coe_nnreal_real.stronglyMeasurable.aestronglyMeasurable
+    have hunit : ∀ᵐ x ∂ν, IsUnit (f x : ℝ) := by
+      apply (ae_withDensity_iff hf.coe_nnreal_ennreal).mpr
+      filter_upwards with x hx
+      exact (show (f x : ℝ) ≠ 0 by simpa using hx).isUnit
+    obtain ⟨d, hd, hdu, heq⟩ := hfn.exists_stronglyMeasurable_isUnit hunit
+    refine ⟨fun x => Checked.inv (d x) (hdu x) • g' x,
+      (hd.fun_inv₀ (h0 := hdu)).fun_smul g'meas, ?_⟩
+    have hgν : (fun x => (f x : ℝ) • g x) =ᵐ[ν] g' :=
+      (withDensity_absolutelyContinuous _ _).ae_eq hg'
+    filter_upwards [heq, hgν] with x hx hgx
+    simp only [← hgx, hx, smul_smul, inv_mul_cancel₀, one_smul]
