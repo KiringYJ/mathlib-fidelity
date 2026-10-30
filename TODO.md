@@ -3849,11 +3849,12 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     remaining issue in this repair. `lake exe mk_all --check` passes, and the supplemental lexical
     inventory remains at 42 occurrences in 12 files. The existing four unused-simp warnings in
     `Analysis/Normed/Module/Basic.lean` remain, as do the two inherited text-style tooling failures.
-  - The positivity dependency probe passes the three repaired roots but fails in eight further
-    modules. The next required ports are:
+  - The positivity dependency probe passed the three repaired roots and exposed eight further
+    modules. Subsequent repairs and remaining ports are recorded below:
 
-    - `Analysis/CStarAlgebra/Basic.lean`: supply the zero-product argument in
-      `IsStarProjection.norm_le` after `grind` fails on `‖e‖ * (‖e‖ - 1) = 0`.
+    - [x] `Analysis/CStarAlgebra/Basic.lean`: `IsStarProjection.norm_le` now explicitly splits
+      `‖e‖ * (‖e‖ - 1) = 0`, preserving its assumptions and conclusion. The module passes its
+      scoped build, all 16 environment linters, and the semantic/proof operator audits (2026-10-30).
     - `Analysis/Asymptotics/Theta.lean`: give `IsTheta.inv`, `isTheta_inv`, `IsTheta.div`,
       `IsTheta.zpow`, and `isTheta_of_div_tendsto_nhds_ne_zero` their exact operation domains,
       using local/eventual domains where appropriate; update `IsBigO.inv_rev` and cancellation.

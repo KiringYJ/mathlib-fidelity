@@ -281,7 +281,11 @@ end SelfAdjoint
 
 theorem IsStarProjection.norm_le [NonUnitalNormedRing E] [StarRing E] [CStarRing E]
     (e : E) (he : IsStarProjection e) : ‖e‖ ≤ 1 := by
-  suffices ‖e‖ * (‖e‖ - 1) = 0 by grind [sub_eq_zero]
+  suffices ‖e‖ * (‖e‖ - 1) = 0 by
+    rcases mul_eq_zero.mp this with h | h
+    · rw [h]
+      exact zero_le_one
+    · exact (sub_eq_zero.mp h).le
   simp [mul_sub, ← CStarRing.norm_star_mul_self, he.isSelfAdjoint.star_eq, he.isIdempotentElem.eq]
 
 section starₗᵢ
