@@ -281,10 +281,16 @@ theorem hasDerivAtFilter_iff_isLittleO :
       (fun p => f p.1 - f p.2 - (p.1 - p.2) • f') =o[L] fun p => p.1 - p.2 :=
   hasFDerivAtFilter_iff_isLittleO ..
 
-theorem hasDerivAtFilter_iff_tendsto :
-    HasDerivAtFilter f f' L ↔
-      Tendsto (fun p ↦ ‖p.1 - p.2‖⁻¹ * ‖f p.1 - f p.2 - (p.1 - p.2) • f'‖) L (𝓝 0) :=
-  hasFDerivAtFilter_iff_tendsto
+theorem hasDerivAtFilter_iff_tendsto {D : Type*} {f : D → F} {coord : D → 𝕜}
+    {L : Filter (D × D)}
+    (h₀ : ∀ᶠ p in L, coord p.1 = coord p.2 → f p.1 = f p.2 := by
+      exact Filter.Eventually.of_forall fun p h ↦ congrArg _ h) :
+    HasDerivAtFilter f f' L coord ↔
+      Tendsto (fun p : {p : D × D // coord p.1 - coord p.2 ≠ 0} ↦
+        Checked.div ‖f p.1.1 - f p.1.2 - (coord p.1.1 - coord p.1.2) • f'‖
+          ‖coord p.1.1 - coord p.1.2‖ (norm_ne_zero_iff.mpr p.2).isUnit)
+        (comap Subtype.val L) (𝓝 0) :=
+  hasFDerivAtFilter_iff_tendsto h₀
 
 theorem hasDerivWithinAt_iff_isLittleO :
     HasDerivWithinAt f f' s x ↔
@@ -293,10 +299,16 @@ theorem hasDerivWithinAt_iff_isLittleO :
 
 alias ⟨HasDerivWithinAt.isLittleO, HasDerivWithinAt.of_isLittleO⟩ := hasDerivWithinAt_iff_isLittleO
 
-theorem hasDerivWithinAt_iff_tendsto :
-    HasDerivWithinAt f f' s x ↔
-      Tendsto (fun x' => ‖x' - x‖⁻¹ * ‖f x' - f x - (x' - x) • f'‖) (𝓝[s] x) (𝓝 0) :=
-  hasFDerivWithinAt_iff_tendsto
+theorem hasDerivWithinAt_iff_tendsto {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → 𝕜} {s : Set D} {x : D}
+    (h₀ : ∀ᶠ y in 𝓝[s] x, coord y = coord x → f y = f x := by
+      exact Filter.Eventually.of_forall fun y h ↦ congrArg _ h) :
+    HasDerivWithinAt f f' s x coord ↔
+      Tendsto (fun y : {y : D // coord y - coord x ≠ 0} ↦
+        Checked.div ‖f y - f x - (coord y - coord x) • f'‖
+          ‖coord y - coord x‖ (norm_ne_zero_iff.mpr y.2).isUnit)
+        (comap Subtype.val (𝓝[s] x)) (𝓝 0) :=
+  hasFDerivWithinAt_iff_tendsto h₀
 
 theorem hasDerivAt_iff_isLittleO :
     HasDerivAt f f' x ↔ (fun x' : 𝕜 => f x' - f x - (x' - x) • f') =o[𝓝 x] fun x' => x' - x :=
@@ -304,9 +316,16 @@ theorem hasDerivAt_iff_isLittleO :
 
 alias ⟨HasDerivAt.isLittleO, HasDerivAt.of_isLittleO⟩ := hasDerivAt_iff_isLittleO
 
-theorem hasDerivAt_iff_tendsto :
-    HasDerivAt f f' x ↔ Tendsto (fun x' => ‖x' - x‖⁻¹ * ‖f x' - f x - (x' - x) • f'‖) (𝓝 x) (𝓝 0) :=
-  hasFDerivAt_iff_tendsto
+theorem hasDerivAt_iff_tendsto {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → 𝕜} {x : D}
+    (h₀ : ∀ᶠ y in 𝓝 x, coord y = coord x → f y = f x := by
+      exact Filter.Eventually.of_forall fun y h ↦ congrArg _ h) :
+    HasDerivAt f f' x coord ↔
+      Tendsto (fun y : {y : D // coord y - coord x ≠ 0} ↦
+        Checked.div ‖f y - f x - (coord y - coord x) • f'‖
+          ‖coord y - coord x‖ (norm_ne_zero_iff.mpr y.2).isUnit)
+        (comap Subtype.val (𝓝 x)) (𝓝 0) :=
+  hasFDerivAt_iff_tendsto h₀
 
 theorem HasDerivAtFilter.isBigO_sub (h : HasDerivAtFilter f f' L) :
     (fun p => f p.1 - f p.2) =O[L] fun p => p.1 - p.2 :=
@@ -457,9 +476,9 @@ theorem HasDerivAt.deriv_of_mem_nhds {D : Type*} [TopologicalSpace D] {f : D →
 
 theorem HasDerivAt.deriv {D : Type*} [TopologicalSpace D] {f : D → F}
     {coord : D → 𝕜} {x : D} (h : HasDerivAt f f' x coord)
-    (hcoord : IsOpenEmbedding coord := by exact IsOpenEmbedding.id) :
+    (hcoord : IsOpenEmbedding coord := by exact Topology.IsOpenEmbedding.id) :
     deriv f x coord = f' := by
-  unfold deriv
+  unfold _root_.deriv
   rw [h.hasFDerivAt.fderiv hcoord]
   simp
 
@@ -535,7 +554,7 @@ theorem derivWithin_congr_set (h : s =ᶠ[𝓝 x] t) : derivWithin f s x = deriv
 theorem derivWithin_univ : derivWithin f univ = deriv f := by
   ext
   unfold derivWithin deriv
-  rw [fderivWithin_univ]
+  rw [fderiv]
 
 theorem derivWithin_inter (ht : t ∈ 𝓝 x) : derivWithin f (s ∩ t) x = derivWithin f s x := by
   unfold derivWithin
@@ -549,6 +568,7 @@ theorem derivWithin_of_isOpen (hs : IsOpen s) (hx : x ∈ s) : derivWithin f s x
 
 lemma deriv_eqOn {f' : 𝕜 → F} (hs : IsOpen s) (hf' : ∀ x ∈ s, HasDerivWithinAt f (f' x) s x) :
     s.EqOn (deriv f) f' := fun x hx ↦ by
+  change deriv f x = f' x
   rw [← derivWithin_of_isOpen hs hx, (hf' _ hx).derivWithin <| hs.uniqueDiffWithinAt hx]
 
 theorem deriv_mem_iff {f : 𝕜 → F} {s : Set F} {x : 𝕜} :
@@ -672,6 +692,7 @@ theorem derivWithin_congr (hs : EqOn f₁ f s) (hx : f₁ x = f x) :
 lemma Set.EqOn.deriv {f g : 𝕜 → F} {s : Set 𝕜} (hfg : s.EqOn f g) (hs : IsOpen s) :
     s.EqOn (deriv f) (deriv g) := by
   intro x hx
+  change _root_.deriv f x = _root_.deriv g x
   rw [← derivWithin_of_isOpen hs hx, ← derivWithin_of_isOpen hs hx]
   exact derivWithin_congr hfg (hfg hx)
 
@@ -886,7 +907,8 @@ theorem deriv_ofNat (n : ℕ) [OfNat F n] : deriv (ofNat(n) : 𝕜 → F) = 0 :=
 
 @[simp]
 theorem derivWithin_fun_const : derivWithin (fun _ => c) s = 0 := by
-  ext; simp [derivWithin]
+  ext
+  simp only [derivWithin, fderivWithin_const_apply, zero_apply, Pi.zero_apply]
 
 @[simp]
 theorem derivWithin_const : derivWithin (Function.const 𝕜 c) s = 0 :=

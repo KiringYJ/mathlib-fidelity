@@ -48,7 +48,8 @@ theorem HasDerivWithinAt.of_notMem_tsupport {s : Set 𝕜} (h : x ∉ tsupport f
 
 theorem deriv_of_notMem_tsupport (h : x ∉ tsupport f) : deriv f x = 0 := by
   rw [notMem_tsupport_iff_eventuallyEq] at h
-  simp [h.deriv_eq]
+  rw [h.deriv_eq]
+  exact deriv_const x 0
 
 theorem support_deriv_subset : support (deriv f) ⊆ tsupport f := fun x ↦ by
   rw [← not_imp_not, notMem_support]

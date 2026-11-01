@@ -3969,6 +3969,22 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   This is a stopping checkpoint at the user's request. The Jacobian caller, wider consumer
   integration, uncommitted migration drafts, and full-library acceptance remain unfinished.
 
+  **Scalar-derivative checkpoint, 2026-11-01.** The three normalized-error characterizations
+  in `Calculus/Deriv/Basic` now specialize the coordinate-domain Fréchet interface. Quotients
+  are evaluated only at nonzero coordinate displacements, with eventual agreement on equal
+  coordinate fibers retained as the necessary compatibility condition. Identity-coordinate
+  defaults work independently of caller namespaces and binder names. Constant-derivative and
+  support proofs in `FDeriv/Const` and `Deriv/Support` use evaluated-function equalities and
+  explicit identity coordinates without changing their mathematical hypotheses.
+
+  `MathlibTest/ScalarDerivativeDomain.lean` checks all three defaults, unit-valued source
+  domains, a concrete derivative-one coordinate map, incompatible collapsed fibers, and
+  compatible empty quotient domains. With unrelated drafts temporarily stashed, the prospective
+  commit passes its scoped build (1935 jobs), all 16 enabled environment linters on each of
+  the three production modules, and complete proof dependency reports without retired operators.
+  Independent review accepted this scope. Existing lambda-headed simp warnings remain;
+  wider calculus consumers and the complete inverse-migration acceptance matrix remain open.
+
   - Finish `Analysis/Asymptotics/SpecificAsymptotics`, `SpecialFunctions/{Exp,Trigonometric/Basic}`,
     and their consumers. Restricted ratio limits need the stated zero compatibility or frequent
     admissibility conditions, according to their mathematical conclusion.

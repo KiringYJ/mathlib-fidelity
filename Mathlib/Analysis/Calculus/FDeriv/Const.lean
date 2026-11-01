@@ -323,7 +323,8 @@ theorem differentiableOn_singleton : DifferentiableOn 𝕜 f {x} :=
 
 @[fun_prop]
 theorem Set.Subsingleton.differentiableOn (hs : s.Subsingleton) : DifferentiableOn 𝕜 f s :=
-  hs.induction_on differentiableOn_empty fun _ => differentiableOn_singleton
+  hs.induction_on (p := fun t => DifferentiableOn 𝕜 f t) differentiableOn_empty
+    fun _ => differentiableOn_singleton
 
 theorem hasFDerivAt_zero_of_eventually_const (c : F) (hf : f =ᶠ[𝓝 x] fun _ => c) :
     HasFDerivAt f (0 : E →L[𝕜] F) x :=
@@ -343,7 +344,7 @@ lemma differentiableWithinAt_of_fderivWithin_injective (hf : Injective (fderivWi
 /-- If `f : E → F` has injective differential at `x`, it is differentiable at `x`. -/
 lemma differentiableAt_of_fderiv_injective (hf : Injective (fderiv 𝕜 f x)) :
     DifferentiableAt 𝕜 f x := by
-  simp only [← differentiableWithinAt_univ, ← fderivWithin_univ] at hf ⊢
+  simp only [← differentiableWithinAt_univ, ← congrFun fderivWithin_univ x] at hf ⊢
   exact differentiableWithinAt_of_fderivWithin_injective hf
 
 theorem differentiableWithinAt_of_isInvertible_fderivWithin
@@ -374,7 +375,8 @@ theorem HasFDerivWithinAt.of_notMem_tsupport {s : Set E} {x : E} (h : x ∉ tsup
 
 theorem fderiv_of_notMem_tsupport (h : x ∉ tsupport f) : fderiv 𝕜 f x = 0 := by
   rw [notMem_tsupport_iff_eventuallyEq] at h
-  simp [h.fderiv_eq]
+  rw [h.fderiv_eq]
+  exact fderiv_const_apply (0 : F)
 
 theorem support_fderiv_subset : support (fderiv 𝕜 f) ⊆ tsupport f := fun x ↦ by
   rw [← not_imp_not, notMem_support]
@@ -383,7 +385,7 @@ theorem support_fderiv_subset : support (fderiv 𝕜 f) ⊆ tsupport f := fun x 
 theorem tsupport_fderiv_subset : tsupport (fderiv 𝕜 f) ⊆ tsupport f :=
   closure_minimal (support_fderiv_subset 𝕜) isClosed_closure
 
-theorem tsupport_fderiv_apply_subset (v : E) : tsupport (fderiv 𝕜 f · v) ⊆ tsupport f :=
+theorem tsupport_fderiv_apply_subset (v : E) : tsupport (fderiv 𝕜 f · id v) ⊆ tsupport f :=
   (tsupport_comp_subset (g := fun L : E →L[𝕜] F ↦ L v) rfl _).trans (tsupport_fderiv_subset 𝕜)
 
 protected theorem HasCompactSupport.fderiv (hf : HasCompactSupport f) :
@@ -391,7 +393,7 @@ protected theorem HasCompactSupport.fderiv (hf : HasCompactSupport f) :
   hf.mono' <| support_fderiv_subset 𝕜
 
 protected theorem HasCompactSupport.fderiv_apply (hf : HasCompactSupport f) (v : E) :
-    HasCompactSupport (fderiv 𝕜 f · v) :=
+    HasCompactSupport (fderiv 𝕜 f · id v) :=
   hf.of_isClosed_subset (isClosed_tsupport _) (tsupport_fderiv_apply_subset 𝕜 v)
 
 end Support
