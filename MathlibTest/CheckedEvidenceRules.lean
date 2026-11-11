@@ -3,6 +3,7 @@ module
 import Mathlib.Algebra.BigOperators.Field
 import Mathlib.Algebra.Order.Nonneg.Field
 import Mathlib.Algebra.Star.SelfAdjoint
+import Mathlib.Analysis.Normed.Field.Basic
 import Mathlib.Basic.NNReal.Defs
 import Mathlib.Data.Nat.Cast.Field
 import Mathlib.RingTheory.Localization.FractionRing
@@ -79,3 +80,87 @@ example {R : Type*} [Field R] [StarRing R] (x : selfAdjoint R) (hx : IsUnit x) :
   selfAdjoint.val_inv x
 
 end rules
+
+section carriedEvidence
+
+-- Equal carried propositions must not accumulate, including on repeated solver invocation.
+open Lean Meta Elab Tactic in
+example (P : Prop) (x y : {_n : ℕ // P}) : (x : ℕ) = x ∧ (y : ℕ) = y ∧ P := by
+  run_tac do
+    Checked.addSubtypeFacts
+    Checked.addSubtypeFacts
+    withMainContext do
+      let context ← getLCtx
+      let some proposition := context.findFromUserName? `P
+        | throwError "the proposition was not found in the local context"
+      let count ← context.foldlM (init := 0) fun (count : Nat) declaration => do
+        return if ← isDefEq declaration.type proposition.toExpr then count + 1 else count
+      unless count == 1 do
+        throwError "expected one carried proposition after repeated invocation, found {count}"
+  exact ⟨rfl, rfl, by assumption⟩
+
+-- The property is carried by the argument rather than named as a separate hypothesis.
+example (x : {r : ℝ // r ≠ 0}) : (x : ℝ) ≠ 0 := by checked_nonzero
+
+noncomputable example : {r : ℝ // r ≠ 0} → ℝ := fun x => (x : ℝ)⁻¹
+
+noncomputable example : {r : ℝ // r ≠ 0} → ℝ :=
+  (fun x : {r : ℝ // r ≠ 0} => (x : ℝ))⁻¹
+
+example (x : {r : ℝ // r ≠ 0}) : (x : ℝ) / ‖(x : ℝ)‖ * ‖(x : ℝ)‖ = x :=
+  div_mul_cancel₀ (x : ℝ)
+
+example (x : {r : ℝ // 0 < r}) : (x : ℝ)⁻¹ * x = 1 := inv_mul_cancel₀
+
+example {M : Type*} [Monoid M] (x : {r : M // IsUnit r}) :
+    (x : M)⁻¹ * x = 1 := inv_mul_cancel₀
+
+example (x y : {r : ℝ // r ≠ 0}) :
+    ((x : ℝ) * y)⁻¹ * ((x : ℝ) * y) = 1 := inv_mul_cancel₀
+
+example {K : Type*} [Field K] [CharZero K] : IsUnit (2 : K) := by checked_unit
+
+/--
+error: a nonzero denominator proof is required
+x y : ℝ
+hx : x ≠ 0
+hy : y ≠ 0
+⊢ x + y ≠ 0
+-/
+#guard_msgs in
+example (x y : ℝ) (hx : x ≠ 0) (hy : y ≠ 0) : x + y ≠ 0 := by
+  checked_nonzero
+
+/--
+error: a nonzero denominator proof is required
+K : Type
+inst✝ : Field K
+⊢ 2 ≠ 0
+-/
+#guard_msgs in
+example {K : Type} [Field K] : (2 : K) ≠ 0 := by
+  checked_nonzero
+
+/--
+error: an invertibility proof is required
+M : Type
+inst✝ : Monoid M
+x : M
+⊢ IsUnit x
+-/
+#guard_msgs in
+example {M : Type} [Monoid M] (x : M) : IsUnit x := by
+  checked_unit
+
+/--
+error: could not synthesize default value for parameter 'ha' using tactics
+---
+error: an invertibility proof is required
+x : { r // 0 ≤ r }
+h_carried✝ : 0 ≤ ↑x
+⊢ IsUnit ↑x
+-/
+#guard_msgs in
+noncomputable example (x : {r : ℝ // 0 ≤ r}) : ℝ := (x : ℝ)⁻¹
+
+end carriedEvidence

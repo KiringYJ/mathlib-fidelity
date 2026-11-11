@@ -4029,11 +4029,13 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     `gauge_closure_zero` are not made mathematically faithful by removing an inverse. Actual
     finite-domain uses need the nonempty positive-dilation set and its greatest-lower-bound
     certificate, with absorbency supplying a sufficient witness where appropriate.
-  - Finish carried-evidence discovery in `checked_unit`/`checked_nonzero`. The current search
-    misses the property of a subtype value through coercion, including
-    `fun x : {r : ℝ // r ≠ 0} => (x : ℝ)⁻¹` and normalized-coordinate quotients through `‖x‖`.
-    Preserve exact rejection diagnostics and local proof discovery; explicit use of the carried
-    proof in current ports is not closure of this quality-of-life obligation.
+  - Carried-evidence discovery in `checked_unit`/`checked_nonzero` now projects local subtype
+    properties before applying the existing evidence rules. This covers inverses through
+    subtype coercions, pointwise function inverses, and normalized-coordinate quotients through
+    norms. `MathlibTest/CheckedEvidenceRules.lean` checks these cases and exact rejection
+    diagnostics for unsupported sums, numerals in unknown characteristic, and missing units.
+    This is a scoped automation checkpoint within the unfinished inverse migration; it does not
+    certify the remaining consumers or the complete-library acceptance gates.
   - The regularized hypergeometric coefficient repair does not certify
     `FormalMultilinearSeries.sum` at a nonconvergent argument as analytic continuation. Keep the
     actual convergence domain and the independent summation-foundation obligation explicit;

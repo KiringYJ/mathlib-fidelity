@@ -29,6 +29,8 @@ A local hypothesis may also be applied: a pointwise hypothesis `∀ x, f x ≠ 0
 its values are. A difference `b - a` is nonzero when `a ≠ b`, `b ≠ a`, `a < b` or `b < a` is a
 hypothesis, a comparison with zero may come from a `Fact` instance, and an `Invertible` instance
 gives invertibility.
+The properties carried by local subtype values are made available to the same rules, including
+nonzeroness transported through a norm by simplification.
 Every alternative must close the goal (`solve`), and alternatives that compare the goal with a
 constant (`1`, a unit coercion) match only up to reducible and instance unfolding, so that a large
 closed term such as `↑(Finset.range 3000).card` is not evaluated and the evidence found has
@@ -44,6 +46,28 @@ proposition, as `convert` does; the tactics then succeed without further search.
 
 @[expose] public section
 
+open Lean Meta Elab Tactic in
+/-- Make the properties of local subtype values available without repeatedly adding them during
+recursive evidence search. This is a single pass over the local context, not recursive search
+through arbitrary structures. -/
+meta def Checked.addSubtypeFacts : TacticM Unit := withMainContext do
+  let mut goal ← getMainGoal
+  for decl in ← getLCtx do
+    if decl.isImplementationDetail then continue
+    let type ← withReducible <| whnf decl.type
+    unless type.isAppOfArity ``Subtype 2 do continue
+    let proof ← mkAppM ``Subtype.property #[decl.toExpr]
+    let property ← inferType proof
+    let alreadyDeclared ← goal.withContext do
+      (← getLCtx).findDeclM? fun localDecl => do
+        if ← withNewMCtxDepth <| withReducible <| isDefEq localDecl.type property then
+          return some ()
+        return none
+    if alreadyDeclared.isSome then continue
+    let (_, next) ← goal.note (← mkFreshUserName `h_carried) proof
+    goal := next
+  replaceMainGoal [goal]
+
 /-- Find a nonzero proof from the local context and standard closure facts. -/
 syntax (name := checkedNonzero) "checked_nonzero" : tactic
 
@@ -51,7 +75,7 @@ macro_rules
   | `(tactic| checked_nonzero) => `(tactic|
       first
       | done
-      | (solve
+      | ((run_tac Checked.addSubtypeFacts); solve
         | assumption
         | ((with_reducible apply_assumption) <;> assumption)
         | (apply $(Lean.mkIdent `IsUnit.ne_zero); assumption)
@@ -100,7 +124,7 @@ macro_rules
   | `(tactic| checked_unit) => `(tactic|
       first
       | done
-      | (solve
+      | ((run_tac Checked.addSubtypeFacts); solve
         | assumption
         | ((with_reducible apply_assumption) <;> assumption)
         | ((with_reducible apply $(Lean.mkIdent `IsUnit.inv₀)); done)
