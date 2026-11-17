@@ -69,6 +69,11 @@ theorem isNNRat_divNat : {a na n : ℕ} → {b nb d : ℕ} → IsNat a na → Is
       IsNNRat (NNRat.divNat a b hb) n d
   | _, _, _, _, _, _, ⟨rfl⟩, ⟨rfl⟩, _, _, h => h
 
+theorem isNNRat_of_divNat_eq {a b n d : ℕ} (hb : b ≠ 0) (hd : d ≠ 0)
+    (h : NNRat.divNat a b hb = NNRat.divNat n d hd) : IsNNRat (NNRat.divNat a b hb) n d := by
+  rw [h, NNRat.divNat_eq_div]
+  exact IsNNRat.of_raw ℚ≥0 n d (Nat.cast_ne_zero.mpr hd)
+
 /-- The `norm_num` extension which identifies expressions of the form `NNRat.divNat a b`,
 such that `norm_num` successfully recognises both `a` and `b`, and returns `a / b`. -/
 @[norm_num NNRat.divNat _ _ _]
@@ -76,13 +81,18 @@ def evalNNRatDivNat : NormNumExt where eval {u α} (e : Q(ℚ≥0)) : MetaM (Res
   let .app (.app (.app (.const ``NNRat.divNat _) (a : Q(ℕ))) (b : Q(ℕ)))
       (hb : Q($b ≠ 0)) ← whnfR e | failure
   haveI' : $e =Q NNRat.divNat $a $b $hb := ⟨⟩
-  let ra ← derive q($a)
   let ⟨na, pa⟩ ← deriveNat q($a) q(AddCommMonoidWithOne.toAddMonoidWithOne)
   let ⟨nb, pb⟩ ← deriveNat q($b) q(AddCommMonoidWithOne.toAddMonoidWithOne)
-  let hnb ← mkDecideProofQ q($nb ≠ 0)
-  let rab ← derive q(NNRat.divNat $na $nb $hnb)
-  let some ⟨q, n, d, p⟩ := rab.toNNRat' q(NNRat.instSemifield.toDivisionSemiring) | failure
-  return .isNNRat _ q n d q(isNNRat_divNat $pa $pb $hb $hnb $p)
+  let divisor := nb.natLit!
+  if hdivisor : divisor = 0 then failure else
+    let value := Rat.normalize (na.natLit! : ℤ) divisor hdivisor
+    have n : Q(ℕ) := Lean.mkRawNatLit value.num.natAbs
+    have d : Q(ℕ) := Lean.mkRawNatLit value.den
+    let hnb ← mkDecideProofQ q($nb ≠ 0)
+    let hd ← mkDecideProofQ q($d ≠ 0)
+    let h ← mkDecideProofQ q(NNRat.divNat $na $nb $hnb = NNRat.divNat $n $d $hd)
+    let p : Q(IsNNRat (NNRat.divNat $na $nb $hnb) $n $d) := q(isNNRat_of_divNat_eq $hnb $hd $h)
+    return .isNNRat _ value n d q(isNNRat_divNat $pa $pb $hb $hnb $p)
 
 theorem isNat_ratCast {R : Type*} [DivisionRing R] [CharZero R] : {q : ℚ} → {n : ℕ} →
     IsNat q n → IsNat (q : R) n
@@ -143,9 +153,9 @@ recognizes `q`, returning the cast of `q`. -/
 @[norm_num NNRat.cast _, NNRatCast.nnratCast _]
 def evalNNRatCast : NormNumExt where eval {u α} e := do
   let dα : Q(DivisionSemiring $α) ← inferDivisionSemiring α
-  let some (_cz : Q(CharZero $α)) ← inferCharZeroOfDivisionSemiring? dα | failure
+  let some (cz : Q(CharZero $α)) ← inferCharZeroOfDivisionSemiring? dα | failure
   let ~q(@NNRat.cast _ $nα' $a) := e | failure
-  guard <| ← matchesInstance nα' q(@DivisionSemiring.toNNRatCast _ $dα)
+  guard <| ← matchesInstance nα' q(@DivisionSemiring.toNNRatCast _ $dα $cz)
   match ← derive q($a) with
   | .isNat _ na pa =>
     assumeInstancesCommute

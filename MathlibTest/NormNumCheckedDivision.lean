@@ -5,6 +5,7 @@ Authors: Yi-Jing Tseng
 -/
 module
 
+public import Mathlib.Basic.Real.Basic
 public import Mathlib.Tactic.NormNum
 
 /-! Regression tests for exact-domain rational coefficient normalization. -/
@@ -22,4 +23,16 @@ example {K : Type*} [DivisionSemiring K] (h3 : (3 : K) ≠ 0) :
 
 example {K : Type*} [DivisionRing K] (h2 : (2 : K) ≠ 0) :
     (-3 : K) / 2 + 1 / 2 = -1 := by
+  norm_num
+
+example : NNRat.divNat (2 + 4) (2 ^ 3) (by decide) = (3 : ℚ≥0) / 4 := by
+  norm_num
+
+example : (NNRat.divNat (2 + 4) (2 ^ 3) (by decide) : ℝ) < 1 := by
+  norm_num
+
+example : (2.7182818286 : ℝ) = 13591409143 / 5000000000 := by
+  norm_num
+
+example : (2.7182818286 : ℝ) < 3 := by
   norm_num

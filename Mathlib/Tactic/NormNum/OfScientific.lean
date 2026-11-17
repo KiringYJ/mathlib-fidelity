@@ -5,7 +5,8 @@ Authors: Mario Carneiro, Thomas Murrills
 -/
 module
 
-public import Mathlib.Tactic.NormNum.Basic
+public import Mathlib.Tactic.NormNum.Inv
+public import Mathlib.Tactic.NormNum.Pow
 public import Mathlib.Data.Rat.Cast.CharZero
 public import Mathlib.Algebra.Order.Ring.Unbundled.Rat
 public import Mathlib.Tactic.Positivity.Basic
@@ -77,11 +78,11 @@ to rat casts if the scientific notation is inherited from the one for rationals.
   match b with
   | ~q(true) =>
     let hpow ← mkDecideProofQ q(10 ^ $exp ≠ 0)
-    let rme ← derive q(@NNRat.cast $α (@DivisionSemiring.toNNRatCast $α $dα $czα)
-      (NNRat.divNat $m (10 ^ $exp) $hpow))
-    let some ⟨q, n, d, p⟩ := rme.toNNRat' dα | failure
-    return .isNNRat dα q n d
-      q(@isNNRat_ofScientific_of_true $α $dα $czα $m $exp $n $d $hpow $p)
+    let rme ← derive q(NNRat.divNat $m (10 ^ $exp) $hpow)
+    let some ⟨value, n, d, p⟩ := rme.toNNRat' q(NNRat.instSemifield.toDivisionSemiring) | failure
+    let castProof := q(@isNNRat_nnratCast $α $dα $czα (NNRat.divNat $m (10 ^ $exp) $hpow) $n $d $p)
+    return .isNNRat dα value n d
+      q(@isNNRat_ofScientific_of_true $α $dα $czα $m $exp $n $d $hpow $castProof)
   | ~q(false) =>
     let ⟨nm, pm⟩ ← deriveNat m q(AddCommMonoidWithOne.toAddMonoidWithOne)
     let ⟨ne, pe⟩ ← deriveNat exp q(AddCommMonoidWithOne.toAddMonoidWithOne)
