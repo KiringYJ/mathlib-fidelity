@@ -116,7 +116,7 @@ lemma neg_of_Z_eq_zero [NoZeroDivisors R] {P : Fin 3 → R} (hP : W'.Equation P)
 
 lemma neg_of_Z_ne_zero {P : Fin 3 → F} (hPz : P z ≠ 0) :
     W.neg P = P z • ![P x / P z, W.toAffine.negY (P x / P z) (P y / P z), 1] := by
-  erw [neg, smul_fin3, mul_div_cancel₀ _ hPz, ← negY_of_Z_ne_zero hPz, mul_div_cancel₀ _ hPz,
+  erw [neg, smul_fin3, mul_div_cancel₀, ← negY_of_Z_ne_zero hPz, mul_div_cancel₀,
     mul_one]
 
 private lemma nonsingular_neg_of_Z_ne_zero {P : Fin 3 → F} (hP : W.Nonsingular P) (hPz : P z ≠ 0) :
@@ -447,7 +447,7 @@ lemma toAffine_of_Z_ne_zero {P : Fin 3 → F} (hP : W.Nonsingular P) (hPz : P z 
 
 lemma toAffine_some {X Y : F} (h : W.Nonsingular ![X, Y, 1]) :
     toAffine W ![X, Y, 1] = .some _ _ ((nonsingular_some ..).mp h) := by
-  simp only [toAffine_of_Z_ne_zero h one_ne_zero, fin3_def_ext, div_one]
+  simp only [toAffine_of_Z_ne_zero h one_ne_zero, fin3_def_ext, div_one₀]
 
 lemma toAffine_smul (P : Fin 3 → F) {u : F} (hu : IsUnit u) :
     toAffine W (u • P) = toAffine W P := by
@@ -456,7 +456,7 @@ lemma toAffine_smul (P : Fin 3 → F) {u : F} (hu : IsUnit u) :
     · rw [toAffine_of_Z_eq_zero <| mul_eq_zero_of_right u hPz, toAffine_of_Z_eq_zero hPz]
     · rw [toAffine_of_Z_ne_zero ((nonsingular_smul P hu).mpr hP) <| mul_ne_zero hu.ne_zero hPz,
         toAffine_of_Z_ne_zero hP hPz, Affine.Point.some.injEq]
-      simp only [smul_fin3_ext, mul_div_mul_left _ _ hu.ne_zero, and_self]
+      simp only [smul_fin3_ext, mul_div_mul_left, and_self]
   · rw [toAffine_of_singular <| hP.comp (nonsingular_smul P hu).mp, toAffine_of_singular hP]
 
 lemma toAffine_of_equiv {P Q : Fin 3 → F} (h : P ≈ Q) : toAffine W P = toAffine W Q := by

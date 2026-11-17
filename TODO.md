@@ -4322,6 +4322,11 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     does not certify the formulas or settle the computability changes. Rebuild the new strict
     differential/log-derivative, Lie-coroot, and rational-data instance-diamond tests together
     with their defining modules.
+    **Point-coordinate checkpoint, 2026-11-18.** `Jacobian/Point.lean`,
+    `Projective/Point.lean`, and `Affine/AddSubMap.lean` now obtain the infinity
+    quotient's unit evidence from nonsingularity and use canonical checked cancellation
+    for negation, scaling, affine normalization, and the duplication denominator.
+    The remaining elliptic consumers and complete-library acceptance gates are still open.
   - [ ] **Complete finite-ratio and convex consumers.** Recheck finite expectations, density,
     Sedrakyan, Pluennecke-Ruzsa, doubling constants, and `MathlibTest/ExpectDomain.lean` together.
     The checkpoint build of `Algebra/Order/BigOperators/Ring/Finset.lean` fails in

@@ -115,18 +115,16 @@ lemma neg_of_Z_eq_zero' {P : Fin 3 → R} (hPz : P z = 0) : W'.neg P = ![P x, -P
   rw [neg, negY_of_Z_eq_zero hPz, hPz]
 
 lemma neg_of_Z_eq_zero {P : Fin 3 → F} (hP : W.Nonsingular P) (hPz : P z = 0) :
-    W.neg P = -(P y / P x) • ![1, 1, 0] := by
-  have hX {n : ℕ} : IsUnit <| P x ^ n := (isUnit_X_of_Z_eq_zero hP hPz).pow n
-  erw [neg_of_Z_eq_zero' hPz, smul_fin3, neg_sq, div_pow, (equation_of_Z_eq_zero hPz).mp hP.left,
-    pow_succ, hX.mul_div_cancel_left, mul_one, Odd.neg_pow <| by decide, div_pow, pow_succ,
-    (equation_of_Z_eq_zero hPz).mp hP.left, hX.mul_div_cancel_left, mul_one, mul_zero]
+    W.neg P = -Checked.div (P y) (P x) (isUnit_X_of_Z_eq_zero hP hPz) • ![1, 1, 0] := by
+  erw [neg_of_Z_eq_zero' hPz, smul_fin3, neg_sq, div_pow₀, (equation_of_Z_eq_zero hPz).mp hP.left,
+    pow_succ, mul_div_cancel_left₀, mul_one, Odd.neg_pow <| by decide, div_pow₀, pow_succ,
+    (equation_of_Z_eq_zero hPz).mp hP.left, mul_div_cancel_left₀, mul_one, mul_zero]
 
 lemma neg_of_Z_ne_zero {P : Fin 3 → F} (hPz : P z ≠ 0) :
     W.neg P = P z • ![P x / P z ^ 2, W.toAffine.negY (P x / P z ^ 2) (P y / P z ^ 3), 1] := by
   rw [neg, smul_fin3]
   simp only [fin3_def_ext]
-  rw [mul_div_cancel₀ _ <| pow_ne_zero 2 hPz, ← negY_of_Z_ne_zero hPz,
-    mul_div_cancel₀ _ <| pow_ne_zero 3 hPz, mul_one]
+  rw [mul_div_cancel₀, ← negY_of_Z_ne_zero hPz, mul_div_cancel₀, mul_one]
 
 private lemma nonsingular_neg_of_Z_ne_zero {P : Fin 3 → F} (hP : W.Nonsingular P) (hPz : P z ≠ 0) :
     W.Nonsingular ![P x / P z ^ 2, W.toAffine.negY (P x / P z ^ 2) (P y / P z ^ 3), 1] :=
@@ -136,7 +134,8 @@ private lemma nonsingular_neg_of_Z_ne_zero {P : Fin 3 → F} (hP : W.Nonsingular
 lemma nonsingular_neg {P : Fin 3 → F} (hP : W.Nonsingular P) : W.Nonsingular <| W.neg P := by
   by_cases hPz : P z = 0
   · simp only [neg_of_Z_eq_zero hP hPz, nonsingular_smul _
-        ((isUnit_Y_of_Z_eq_zero hP hPz).div <| isUnit_X_of_Z_eq_zero hP hPz).neg, nonsingular_zero]
+        ((isUnit_Y_of_Z_eq_zero hP hPz).div₀ <| isUnit_X_of_Z_eq_zero hP hPz).neg,
+      nonsingular_zero]
   · simp only [neg_of_Z_ne_zero hPz, nonsingular_smul _ <| Ne.isUnit hPz,
       nonsingular_neg_of_Z_ne_zero hP hPz]
 
@@ -175,7 +174,7 @@ lemma negMap_eq (P : Fin 3 → R) : W'.negMap ⟦P⟧ = ⟦W'.neg P⟧ :=
 lemma negMap_of_Z_eq_zero {P : Fin 3 → F} (hP : W.Nonsingular P) (hPz : P z = 0) :
     W.negMap ⟦P⟧ = ⟦![1, 1, 0]⟧ := by
   rw [negMap_eq, neg_of_Z_eq_zero hP hPz,
-    smul_eq _ ((isUnit_Y_of_Z_eq_zero hP hPz).div <| isUnit_X_of_Z_eq_zero hP hPz).neg]
+    smul_eq _ ((isUnit_Y_of_Z_eq_zero hP hPz).div₀ <| isUnit_X_of_Z_eq_zero hP hPz).neg]
 
 lemma negMap_of_Z_ne_zero {P : Fin 3 → F} (hPz : P z ≠ 0) :
     W.negMap ⟦P⟧ = ⟦![P x / P z ^ 2, W.toAffine.negY (P x / P z ^ 2) (P y / P z ^ 3), 1]⟧ := by
@@ -463,7 +462,7 @@ lemma toAffine_of_Z_ne_zero {P : Fin 3 → F} (hP : W.Nonsingular P) (hPz : P z 
 
 lemma toAffine_some {X Y : F} (h : W.Nonsingular ![X, Y, 1]) :
     toAffine W ![X, Y, 1] = .some _ _ ((nonsingular_some ..).mp h) := by
-  simp only [toAffine_of_Z_ne_zero h one_ne_zero, fin3_def_ext, one_pow, div_one]
+  simp only [toAffine_of_Z_ne_zero h one_ne_zero, fin3_def_ext, one_pow, div_one₀]
 
 lemma toAffine_smul (P : Fin 3 → F) {u : F} (hu : IsUnit u) :
     toAffine W (u • P) = toAffine W P := by
@@ -472,7 +471,7 @@ lemma toAffine_smul (P : Fin 3 → F) {u : F} (hu : IsUnit u) :
     · rw [toAffine_of_Z_eq_zero <| mul_eq_zero_of_right u hPz, toAffine_of_Z_eq_zero hPz]
     · rw [toAffine_of_Z_ne_zero ((nonsingular_smul P hu).mpr hP) <| mul_ne_zero hu.ne_zero hPz,
         toAffine_of_Z_ne_zero hP hPz, Affine.Point.some.injEq]
-      simp only [smul_fin3_ext, mul_pow, mul_div_mul_left _ _ (hu.pow _).ne_zero, and_self]
+      simp only [smul_fin3_ext, mul_pow, mul_div_mul_left, and_self]
   · rw [toAffine_of_singular <| hP.comp (nonsingular_smul P hu).mp, toAffine_of_singular hP]
 
 lemma toAffine_of_equiv {P Q : Fin 3 → F} (h : P ≈ Q) : toAffine W P = toAffine W Q := by
@@ -483,7 +482,7 @@ lemma toAffine_neg {P : Fin 3 → F} (hP : W.Nonsingular P) :
     toAffine W (W.neg P) = -toAffine W P := by
   by_cases hPz : P z = 0
   · rw [neg_of_Z_eq_zero hP hPz,
-      toAffine_smul _ ((isUnit_Y_of_Z_eq_zero hP hPz).div <| isUnit_X_of_Z_eq_zero hP hPz).neg,
+      toAffine_smul _ ((isUnit_Y_of_Z_eq_zero hP hPz).div₀ <| isUnit_X_of_Z_eq_zero hP hPz).neg,
       toAffine_zero, toAffine_of_Z_eq_zero hPz, Affine.Point.neg_zero]
   · rw [neg_of_Z_ne_zero hPz, toAffine_smul _ <| Ne.isUnit hPz, toAffine_some <|
         (nonsingular_smul _ <| Ne.isUnit hPz).mp <| neg_of_Z_ne_zero hPz ▸ nonsingular_neg hP,

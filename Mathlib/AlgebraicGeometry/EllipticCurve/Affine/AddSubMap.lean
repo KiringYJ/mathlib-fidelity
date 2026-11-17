@@ -236,7 +236,7 @@ private lemma sym2x_add_self_zero (P : W.Point) :
       refine ⟨_, den_duplication_ne_zero_or_num_duplication_ne_zero h |>.neg_resolve_left H', ?_⟩
       simp
     · have H' := (den_duplication_eq_zero_iff h.1).not.mpr H
-      exact ⟨_, H', by simp [sym2x, xRep_add_self_of_Y_ne h H, mul_div_cancel₀ _ H']⟩
+      exact ⟨_, H', by simp [sym2x, xRep_add_self_of_Y_ne h H, mul_div_cancel₀]⟩
 
 /-- `sym2x (P + Q) (P - Q)` is equal, up to scaling by a nonzero constant, to `addSubMap W`
 applied to `sym2x P Q`. -/
