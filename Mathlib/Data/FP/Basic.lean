@@ -25,6 +25,26 @@ def Int.shift2 (a b : ℕ) : ℤ → ℕ × ℕ
   | Int.ofNat e => (a <<< e, b)
   | Int.negSucc e => (a, b <<< e.succ)
 
+/-- Binary scaling preserves a nonzero numerator. -/
+theorem Int.shift2_fst_ne_zero {a b : ℕ} (ha : a ≠ 0) (e : ℤ) :
+    (Int.shift2 a b e).1 ≠ 0 := by
+  cases e with
+  | ofNat e =>
+    change a <<< e ≠ 0
+    rw [Nat.shiftLeft_eq]
+    exact Nat.mul_ne_zero ha (Nat.ne_of_gt (Nat.two_pow_pos e))
+  | negSucc _ => exact ha
+
+/-- Binary scaling preserves a nonzero denominator. -/
+theorem Int.shift2_snd_ne_zero {a b : ℕ} (hb : b ≠ 0) (e : ℤ) :
+    (Int.shift2 a b e).2 ≠ 0 := by
+  cases e with
+  | ofNat _ => exact hb
+  | negSucc e =>
+    change b <<< e.succ ≠ 0
+    rw [Nat.shiftLeft_eq]
+    exact Nat.mul_ne_zero hb (Nat.ne_of_gt (Nat.two_pow_pos _))
+
 namespace FP
 
 @[nolint docBlame]
@@ -72,8 +92,8 @@ def Float.isFinite : Float → Bool
 @[nolint docBlame]
 def toRat : ∀ f : Float, f.isFinite → ℚ
   | Float.finite s e m _, _ =>
-    let (n, d) := Int.shift2 m 1 e
-    let r := mkRat n d
+    let nd := Int.shift2 m 1 e
+    let r := Rat.fraction nd.1 nd.2 (Int.shift2_snd_ne_zero (by decide) e)
     if s then -r else r
 
 theorem Float.Zero.valid : ValidFinite emin 0 :=
@@ -134,8 +154,8 @@ unsafe def ofPosRatDn (n : ℕ+) (d : ℕ+) : Float × Bool := by
   obtain ⟨d₁, n₁⟩ := Int.shift2 d.1 n.1 (e₁ + prec)
   let e₂ := if n₁ < d₁ then e₁ - 1 else e₁
   let e₃ := max e₂ emin
-  obtain ⟨d₂, n₂⟩ := Int.shift2 d.1 n.1 (e₃ + prec)
-  let r := mkRat n₂ d₂
+  let dn := Int.shift2 d.1 n.1 (e₃ + prec)
+  let r := Rat.fraction dn.2 dn.1 (Int.shift2_fst_ne_zero d.2.ne' (e₃ + prec))
   let m := r.floor
   refine (Float.finite Bool.false e₃ (Int.toNat m) ?_, r.den = 1)
   exact lcProof
