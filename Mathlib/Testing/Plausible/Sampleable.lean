@@ -29,7 +29,9 @@ section Shrinkers
 
 meta instance Rat.shrinkable : Shrinkable Rat where
   shrink r :=
-    (Shrinkable.shrink r.num).flatMap fun d => Nat.shrink r.den |>.map fun n => Rat.divInt d n
+    (Shrinkable.shrink r.num).flatMap fun d =>
+      Nat.shrink r.den |>.filterMap fun n =>
+        if hn : n = 0 then none else some (Rat.normalize d n hn)
 
 meta instance PNat.shrinkable : Shrinkable PNat where
   shrink m := Nat.shrink m.natPred |>.map Nat.succPNat
@@ -42,10 +44,11 @@ open SampleableExt
 
 meta instance Rat.Arbitrary : Arbitrary Rat where
   arbitrary := do
-    let d ← choose Int (-(← getSize)) (← getSize)
+    let size ← getSize
+    let d ← choose Int (-(size : Int)) size
       (le_trans (Int.neg_nonpos_of_nonneg (Int.natCast_nonneg _)) (Int.natCast_nonneg _))
-    let n ← choose Nat 0 (← getSize) (Nat.zero_le _)
-    return Rat.divInt d n
+    let n ← choose Nat 0 (size - 1) (Nat.zero_le _)
+    return Rat.normalize d (n + 1) (Nat.succ_ne_zero n)
 
 meta instance Rat.sampleableExt : SampleableExt Rat := by infer_instance
 
