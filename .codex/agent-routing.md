@@ -9,8 +9,9 @@ selecting a model or effort or dispatching a child; other runtimes ignore it.
 
 ## Tier binding
 
-User-selected operating policy, adopted on 2026-09-07: optimize Codex allowance
-per successfully completed, verified unit of work while accounting for both
+User-selected operating policy, adopted on 2026-09-07 and updated on 2026-11-18:
+optimize Codex allowance per successfully completed, verified unit of work while
+accounting for both
 engineering and research-level mathematics. These are working allocations,
 not a measured universal Pareto frontier. Do not turn general intelligence
 scores or coding benchmark dollars into research-math capability rankings or
@@ -25,11 +26,31 @@ outcomes and host-reported usage when available.
 
 | Tier | Model | Effort |
 | --- | --- | --- |
-| `peripheral` | `gpt-5.6-luna` | `max` |
-| `technical` | `gpt-5.6-sol` | `medium` |
-| `mixed` | `gpt-5.6-sol` | `high` |
-| `research-math` | `gpt-6-astra` | `medium` |
-| `critical-proof` | `gpt-6-astra` | `max` |
+| `peripheral` | `gpt-6.2-sol` | `low` |
+| `technical` | `gpt-6.2-sol` | `medium` |
+| `mixed` | `gpt-6.2-sol` | `high` |
+| `research-math` | `gpt-6.2-astra` | `medium` |
+| `critical-proof` | `gpt-6.2-astra` | `max` |
+
+## Workload-specific model choices
+
+Classify the stage first. The following choices apply within its tier.
+
+| Tier | Model | Effort | When to use it |
+| --- | --- | --- | --- |
+| `peripheral` | `gpt-6.1-terra` | `medium` | Visual review of PDFs, charts, screenshots, and layouts, routine browser or app operations, and writing or organizing documents from verified sources or an established argument. |
+| `mixed` | `gpt-6.2-astra` | `high` | Start here when correctness depends on an invariant shared by multiple subsystems, such as keeping writes consistent across concurrent retries. |
+
+Keep short lookups with the parent. Use the peripheral default for an independently
+useful batch of text extraction, mechanical edits, or existing test runs. Ordinary
+cross-file engineering uses the technical or mixed default. Route questions about
+whether a mathematical claim holds directly to `research-math` or `critical-proof`.
+
+Explicit user choices take precedence. Preserve the skill's instructions,
+independent reviews, and parent-bound sessions and authority. The active parent
+keeps its settings. If the runtime cannot honor a selection, report the recommended
+and actual settings separately. Evaluate these choices using verified outcomes,
+correction effort, elapsed time, and attributable host-reported usage.
 
 ## Dispatch
 

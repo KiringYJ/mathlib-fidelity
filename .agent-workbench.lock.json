@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-01T22:45:57Z",
+  "generatedAt": "2026-11-19T14:22:06Z",
   "source": {
     "repo": "KiringYJ/agent-workbench",
     "branch": "main",
     "requestedRef": "main",
-    "resolvedCommit": "0c11a24f19e705f1be1b4ca3c520fcf1045e3f38"
+    "resolvedCommit": "2065878fbcc9132be8d3170f0b6f540ea278e4ec"
   },
-  "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
+  "manifestDigest": "sha256:be2e710ac04451cfc8216c401db4d9418bc8540a103272a3cc56e0ebaa868736",
   "profile": "research",
   "syncMode": "full",
   "targets": {
@@ -21,24 +21,24 @@
   },
   "scopes": {
     "guide": {
-      "resolvedCommit": "0c11a24f19e705f1be1b4ca3c520fcf1045e3f38",
-      "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-10-01T22:45:57Z"
+      "resolvedCommit": "2065878fbcc9132be8d3170f0b6f540ea278e4ec",
+      "manifestDigest": "sha256:be2e710ac04451cfc8216c401db4d9418bc8540a103272a3cc56e0ebaa868736",
+      "lastReconciledAt": "2026-11-19T14:22:06Z"
     },
     "entrypoints": {
-      "resolvedCommit": "0c11a24f19e705f1be1b4ca3c520fcf1045e3f38",
-      "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-10-01T22:45:57Z"
+      "resolvedCommit": "2065878fbcc9132be8d3170f0b6f540ea278e4ec",
+      "manifestDigest": "sha256:be2e710ac04451cfc8216c401db4d9418bc8540a103272a3cc56e0ebaa868736",
+      "lastReconciledAt": "2026-11-19T14:22:06Z"
     },
     "portable_prompts": {
-      "resolvedCommit": "0c11a24f19e705f1be1b4ca3c520fcf1045e3f38",
-      "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-10-01T22:45:57Z"
+      "resolvedCommit": "2065878fbcc9132be8d3170f0b6f540ea278e4ec",
+      "manifestDigest": "sha256:be2e710ac04451cfc8216c401db4d9418bc8540a103272a3cc56e0ebaa868736",
+      "lastReconciledAt": "2026-11-19T14:22:06Z"
     },
     "portable_skills": {
-      "resolvedCommit": "0c11a24f19e705f1be1b4ca3c520fcf1045e3f38",
-      "manifestDigest": "sha256:eb064cf62aa7e01de592996eb69f836e4581f0bc6138ebd21d152e78fc251f28",
-      "lastReconciledAt": "2026-10-01T22:45:57Z"
+      "resolvedCommit": "2065878fbcc9132be8d3170f0b6f540ea278e4ec",
+      "manifestDigest": "sha256:be2e710ac04451cfc8216c401db4d9418bc8540a103272a3cc56e0ebaa868736",
+      "lastReconciledAt": "2026-11-19T14:22:06Z"
     }
   },
   "installedArtifacts": [
@@ -50,7 +50,7 @@
       "sourcePath": "templates/AI_AGENT_GUIDE.md.tpl",
       "outputPath": "AI_AGENT_GUIDE.md",
       "sourceChecksum": "sha256:15c765fdb2074ed57ed9d863a120f2f236a467e7ee542e16110b4a69294e6d00",
-      "lastAppliedOutputChecksum": "sha256:b740e1c86f1c3112f1dacf4f754fc2c359e25a82b519b255942b86628e5e4bc0",
+      "lastAppliedOutputChecksum": "sha256:c7e54f93d08953e4b3a2919fc5dfe267807d0b0d9fb030eb5098225f82ed2f74",
       "resourceManifest": [
         {
           "sourcePath": "guide/base.md",
@@ -70,7 +70,7 @@
         },
         {
           "sourcePath": "guide/security.md",
-          "sourceChecksum": "sha256:b411efdf94ca37adf4b2bef8c6898f9e2b02fd6be0b046ede8e922e19a26862d"
+          "sourceChecksum": "sha256:0d334d158d061ee863fa9bae822dc6cf57c143781fe564b575c5b31e88a1fa18"
         },
         {
           "sourcePath": "guide/testing.md",
@@ -82,7 +82,7 @@
         },
         {
           "sourcePath": "guide/workflows.md",
-          "sourceChecksum": "sha256:81e63708d0167525e1f71e4a6892439dd19765b9e700cb964fd025f01498b377"
+          "sourceChecksum": "sha256:9248fa0bcf747a3e1fe4b598d198b25dbabd7f00b984ff4fa78eae1c74b6f6af"
         },
         {
           "sourcePath": "guide/domains/research.md",
@@ -184,8 +184,8 @@
       "name": ".codex/agent-routing.md",
       "sourcePath": "templates/codex.agent-routing.md.tpl",
       "outputPath": ".codex/agent-routing.md",
-      "sourceChecksum": "sha256:d51110e2c18f9888f001ffa9874d3fabe5da34c5d6036dc1b573451239755dbd",
-      "lastAppliedOutputChecksum": "sha256:d51110e2c18f9888f001ffa9874d3fabe5da34c5d6036dc1b573451239755dbd",
+      "sourceChecksum": "sha256:7e764bf936851d6a07244012e95413e288283f8ac35aefa0178b07d9ceb4a8bd",
+      "lastAppliedOutputChecksum": "sha256:7e764bf936851d6a07244012e95413e288283f8ac35aefa0178b07d9ceb4a8bd",
       "resourceManifest": [],
       "markerVersion": "agent-workbench: managed platform-binding",
       "profile": "research",
@@ -408,8 +408,8 @@
       "name": "integrate-chatgpt-conversation",
       "sourcePath": "skills/integrate-chatgpt-conversation/SKILL.md",
       "outputPath": ".agents/skills/integrate-chatgpt-conversation/SKILL.md",
-      "sourceChecksum": "sha256:5966e442bc64ec6b535a1ea158c7f69a69d3f6648531b124f98a994452f7a45f",
-      "lastAppliedOutputChecksum": "sha256:5966e442bc64ec6b535a1ea158c7f69a69d3f6648531b124f98a994452f7a45f",
+      "sourceChecksum": "sha256:02d028c89bf1ecffaf74ce1f12946c009d65fc13c6dd17ef71a76ff0adcad69e",
+      "lastAppliedOutputChecksum": "sha256:02d028c89bf1ecffaf74ce1f12946c009d65fc13c6dd17ef71a76ff0adcad69e",
       "resourceManifest": [],
       "markerVersion": "agent-workbench: managed portable-skill",
       "profile": "research",
@@ -453,6 +453,26 @@
       "sourceChecksum": "sha256:f28bd1b86ee26f671516ced6da0e081e0a48a6112f639b14b0d9f3e844b69eec",
       "lastAppliedOutputChecksum": "sha256:f28bd1b86ee26f671516ced6da0e081e0a48a6112f639b14b0d9f3e844b69eec",
       "resourceManifest": [],
+      "markerVersion": "agent-workbench: managed portable-skill",
+      "profile": "research",
+      "managed": true
+    },
+    {
+      "id": "portable_skill:openai-api-credits",
+      "kind": "portable_skill",
+      "scope": "portable_skills",
+      "name": "openai-api-credits",
+      "sourcePath": "skills/openai-api-credits/SKILL.md",
+      "outputPath": ".agents/skills/openai-api-credits/SKILL.md",
+      "sourceChecksum": "sha256:d2503a8fa93f14a7195448027f090581f0c13999bb399b9d90be83b276cb91f8",
+      "lastAppliedOutputChecksum": "sha256:d2503a8fa93f14a7195448027f090581f0c13999bb399b9d90be83b276cb91f8",
+      "resourceManifest": [
+        {
+          "path": "scripts/Invoke-OpenAIResponses.ps1",
+          "sourceChecksum": "sha256:3e7f00a63d582de59670e1b5bf15dbcb2be8780e6bfa976388e33a26d2ff0e29",
+          "lastAppliedOutputChecksum": "sha256:3e7f00a63d582de59670e1b5bf15dbcb2be8780e6bfa976388e33a26d2ff0e29"
+        }
+      ],
       "markerVersion": "agent-workbench: managed portable-skill",
       "profile": "research",
       "managed": true
@@ -531,8 +551,8 @@
       "name": "integrate-chatgpt-conversation",
       "sourcePath": "skills/integrate-chatgpt-conversation/SKILL.md",
       "outputPath": ".claude/skills/integrate-chatgpt-conversation/SKILL.md",
-      "sourceChecksum": "sha256:5966e442bc64ec6b535a1ea158c7f69a69d3f6648531b124f98a994452f7a45f",
-      "lastAppliedOutputChecksum": "sha256:5966e442bc64ec6b535a1ea158c7f69a69d3f6648531b124f98a994452f7a45f",
+      "sourceChecksum": "sha256:02d028c89bf1ecffaf74ce1f12946c009d65fc13c6dd17ef71a76ff0adcad69e",
+      "lastAppliedOutputChecksum": "sha256:02d028c89bf1ecffaf74ce1f12946c009d65fc13c6dd17ef71a76ff0adcad69e",
       "resourceManifest": [],
       "markerVersion": "agent-workbench: managed portable-skill",
       "profile": "research",
@@ -576,6 +596,26 @@
       "sourceChecksum": "sha256:f28bd1b86ee26f671516ced6da0e081e0a48a6112f639b14b0d9f3e844b69eec",
       "lastAppliedOutputChecksum": "sha256:f28bd1b86ee26f671516ced6da0e081e0a48a6112f639b14b0d9f3e844b69eec",
       "resourceManifest": [],
+      "markerVersion": "agent-workbench: managed portable-skill",
+      "profile": "research",
+      "managed": true
+    },
+    {
+      "id": "portable_skill:openai-api-credits:claude",
+      "kind": "portable_skill",
+      "scope": "portable_skills",
+      "name": "openai-api-credits",
+      "sourcePath": "skills/openai-api-credits/SKILL.md",
+      "outputPath": ".claude/skills/openai-api-credits/SKILL.md",
+      "sourceChecksum": "sha256:d2503a8fa93f14a7195448027f090581f0c13999bb399b9d90be83b276cb91f8",
+      "lastAppliedOutputChecksum": "sha256:d2503a8fa93f14a7195448027f090581f0c13999bb399b9d90be83b276cb91f8",
+      "resourceManifest": [
+        {
+          "path": "scripts/Invoke-OpenAIResponses.ps1",
+          "sourceChecksum": "sha256:3e7f00a63d582de59670e1b5bf15dbcb2be8780e6bfa976388e33a26d2ff0e29",
+          "lastAppliedOutputChecksum": "sha256:3e7f00a63d582de59670e1b5bf15dbcb2be8780e6bfa976388e33a26d2ff0e29"
+        }
+      ],
       "markerVersion": "agent-workbench: managed portable-skill",
       "profile": "research",
       "managed": true

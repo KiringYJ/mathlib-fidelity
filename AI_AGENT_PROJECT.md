@@ -289,6 +289,26 @@ settles it. A suggestion declined for a stated reason is a decision, not
 remaining work; give the reason in the report. The final report points each
 remaining item to the commit that resolved it or to its `TODO.md` entry.
 
+## Using API credits
+
+Use the workbench `openai-api-credits` skill for useful read-only migration
+and TODO work when its PowerShell runner is available. Select the model
+and reasoning effort with the active routing instructions. Supply relevant
+Lean excerpts and exact Lake diagnostics, then verify accepted results with
+local Lean and Lake under the project's review and build rules.
+
+```powershell
+$mathlibRunner = '.agents/skills/openai-api-credits/scripts/Invoke-OpenAIResponses.ps1'
+& $mathlibRunner -ProjectRoot . -Prompt $mathlibPrompt -Model $selectedModel -ReasoningEffort $selectedEffort
+```
+
+The runner reads `CODEX_API_KEY` from the checkout's `.env`. Keep the file
+locally Git-ignored and keep the key out of prompts, output, logs, and Git.
+The subscription API grant covers Responses requests. The runner uses the
+saved ChatGPT CLI sign-in for a read-only run when the API reports
+`credit_balance_exhausted` or the key is absent. It surfaces other API errors.
+Desktop chat billing follows its own sign-in.
+
 ## Architecture
 
 - `Mathlib/` contains library modules.
