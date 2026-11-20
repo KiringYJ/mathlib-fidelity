@@ -58,7 +58,7 @@ jobs:
           tested_sha=$(git rev-parse HEAD)
           test "$tested_sha" = "$EXPECTED_SHA"
           {
-            printf 'Tested commit: `%s`\n\n' "$tested_sha"
+            printf "Tested commit: \`%s\`\n\n" "$tested_sha"
             printf 'For pull requests this is the GitHub merge commit, including the current base.\n'
           } >> "$GITHUB_STEP_SUMMARY"
 
