@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Run workflow lint on the commit being pushed to main."""
+
+from io import BytesIO
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+from tempfile import TemporaryDirectory
+from zipfile import ZipFile
+
+
+def lint_workflows(revision: str) -> int:
+    git_directory = Path(
+        subprocess.check_output(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], text=True
+        ).strip()
+    )
+    tool_path = os.pathsep.join(
+        (str(git_directory / "fidelity-ci" / "bin"), os.environ.get("PATH", os.defpath))
+    )
+    actionlint = shutil.which("actionlint", path=tool_path)
+    shellcheck = shutil.which("shellcheck", path=tool_path)
+    if actionlint is None or shellcheck is None:
+        print(
+            "Pushing to main requires actionlint and ShellCheck. See .github/CI.md.",
+            file=sys.stderr,
+        )
+        return 1
+
+    archive = subprocess.check_output(["git", "archive", "--format=zip", revision, ".github"])
+    with TemporaryDirectory(prefix="fidelity-workflows-") as directory:
+        with ZipFile(BytesIO(archive)) as snapshot:
+            snapshot.extractall(directory)
+        # actionlint uses the .git directory to locate the workflow root.
+        (Path(directory) / ".git").mkdir()
+        print(f"Checking workflows at {revision[:12]} with ShellCheck.", file=sys.stderr)
+        return subprocess.run(
+            [Path(actionlint).resolve(), "-shellcheck", str(Path(shellcheck).resolve())],
+            cwd=directory,
+        ).returncode
+
+
+def main() -> int:
+    for line in sys.stdin:
+        local_ref, local_revision, remote_ref, _ = line.split()
+        if remote_ref == "refs/heads/main" and local_ref != "(delete)":
+            return lint_workflows(local_revision)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -49,6 +49,26 @@ remain the separate accepted implementation tasks in
 Existing fidelity regression tests run as part of `MathlibTest`. Build and
 checker success do not by themselves certify mathematical statement fidelity.
 
+## Workflow lint before pushing
+
+Install the `pre-push` hook in each clone used to publish `main`. It runs
+`actionlint` with ShellCheck on the active workflows in the outgoing commit.
+A missing tool or a lint failure stops the push.
+
+The hook requires Python 3, actionlint, and ShellCheck. Use the actionlint version
+pinned in `workflows/actionlint.yml`. Put the linter executables on `PATH` or in
+`fidelity-ci/bin` under the directory returned by `git rev-parse --git-common-dir`.
+Run the following from the repository root in Bash, using Git Bash on Windows.
+
+```shell
+hook=$(git rev-parse --git-path hooks/pre-push)
+if test -e "$hook"; then
+  printf 'Integrate the workflow lint hook with the existing hook at %s\n' "$hook" >&2
+else
+  install -m 0755 .github/hooks/pre-push "$hook"
+fi
+```
+
 ## Revision and trust boundary
 
 Every checkout explicitly selects `github.sha` and disables credential
