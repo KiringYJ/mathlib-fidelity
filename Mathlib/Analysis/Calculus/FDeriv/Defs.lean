@@ -238,10 +238,13 @@ theorem fderivWithin_zero_of_not_differentiableWithinAt (h : ¬DifferentiableWit
     fderivWithin 𝕜 f s x = 0 := by
   simp [fderivWithin, h]
 
-@[simp]
 theorem fderivWithin_univ : fderivWithin 𝕜 f univ = fderiv 𝕜 f := by
   ext
   rw [fderiv]
+
+@[simp]
+theorem fderivWithin_univ_apply : fderivWithin 𝕜 f univ x = fderiv 𝕜 f x :=
+  congrFun fderivWithin_univ x
 
 end TVS
 

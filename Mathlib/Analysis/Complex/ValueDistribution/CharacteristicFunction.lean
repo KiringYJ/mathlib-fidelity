@@ -246,7 +246,6 @@ theorem characteristic_pow_zero {f : ℂ → ℂ} {n : ℕ} (hf : Meromorphic f)
 For natural numbers `n`, the characteristic function for the poles of `f ^ n` equals `n` times the
 characteristic function for the poles of `f`.
 -/
-@[simp]
 theorem characteristic_pow_top {f : ℂ → ℂ} {n : ℕ} (hf : Meromorphic f)
     {hf' : Meromorphic (f ^ n)} :
     characteristic (f ^ n) ⊤ hf' = n • characteristic f ⊤ hf := by
@@ -254,5 +253,12 @@ theorem characteristic_pow_top {f : ℂ → ℂ} {n : ℕ} (hf : Meromorphic f)
   have hp := congrFun (proximity_pow_top (n := n) hf (hf' := hf')) r
   have hc := congrFun (logCounting_pow_top (n := n) hf (hf' := hf')) r
   simpa only [characteristic, Pi.smul_apply, nsmul_add] using congrArg₂ (· + ·) hp hc
+
+/-- At a given radius, the pole characteristic of `f ^ n` is `n` times that of `f`. -/
+@[simp]
+theorem characteristic_pow_top_apply {f : ℂ → ℂ} {n : ℕ} (hf : Meromorphic f)
+    {hf' : Meromorphic (f ^ n)} (r : ℝ) :
+    characteristic (f ^ n) ⊤ hf' (r := r) = n • characteristic f ⊤ hf (r := r) :=
+  congrFun (characteristic_pow_top (n := n) hf (hf' := hf')) r
 
 end ValueDistribution

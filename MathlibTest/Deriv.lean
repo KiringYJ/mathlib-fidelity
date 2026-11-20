@@ -5,20 +5,16 @@ import Mathlib
 
 open Real
 
--- Pointwise forms of the simplification rules in identity coordinates.
-@[local simp] private theorem deriv_sin_id (x : ℝ) : deriv sin x id = cos x :=
-  congrFun Real.deriv_sin x
-
-@[local simp] private theorem deriv_exp_id (x : ℝ) : deriv exp x id = exp x :=
-  congrFun Real.deriv_exp x
-
 @[local simp] private theorem deriv_real_fun_pow (f : ℝ → ℝ) (x : ℝ)
     (hf : DifferentiableAt ℝ f x id) (n : ℕ) :
     deriv (fun y ↦ f y ^ n) x id = n * f x ^ (n - 1) * deriv f x id := by
   simpa only [Pi.pow_def] using deriv_pow hf n
 
-attribute [local simp] Real.deriv_cos deriv_id deriv_const deriv_const_add_id deriv_const_sub_id
-  deriv_const_mul_id deriv_const_mul_field deriv_mul_const_field
+attribute [local simp] deriv_const_add_id
+
+example : deriv Real.exp = Real.exp := by simp
+
+example (x : ℝ) : fderivWithin ℝ (0 : ℝ → ℝ) (Set.Ici 0) x = 0 := by simp
 
 example (x : ℝ) : deriv (fun x => cos x + 2 * sin x) x id = -sin x + 2 * cos x := by
   have h : DifferentiableAt ℝ (fun y ↦ (2 : ℝ) * sin y) x id := by fun_prop

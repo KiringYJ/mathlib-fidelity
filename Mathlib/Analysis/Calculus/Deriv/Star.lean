@@ -56,10 +56,10 @@ protected theorem derivWithin.star :
   · exact DFunLike.congr_fun (fderivWithin_star hxs) _
   · simp [derivWithin_zero_of_not_uniqueDiffWithinAt hxs]
 
+@[simp↓]
 protected theorem deriv.star : deriv (fun y => star (f y)) x = star (deriv f x) :=
   DFunLike.congr_fun fderiv_star _
 
-@[simp]
 protected theorem deriv.star' : (deriv fun y => star (f y)) = fun x => star (deriv f x) :=
   funext fun _ => deriv.star
 
@@ -125,7 +125,6 @@ lemma differentiableAt_conj_conj_iff {f : 𝕜 → 𝕜} :
   differentiableAt_star_conj_iff
 
 /-- The derivative of `star ∘ f ∘ conj` is `star ∘ deriv f ∘ conj`. -/
-@[simp]
 lemma deriv_star_conj {f : 𝕜 → F} :
     deriv (star ∘ f ∘ conj) = star ∘ deriv f ∘ conj := by
   ext z
@@ -134,9 +133,18 @@ lemma deriv_star_conj {f : 𝕜 → F} :
   · have := differentiableAt_star_conj_iff.not.2 hf
     simp_all [deriv_zero_of_not_differentiableAt]
 
+@[simp↓]
+lemma deriv_star_conj_apply {f : 𝕜 → F} :
+    deriv (star ∘ f ∘ conj) x = star (deriv f (conj x)) :=
+  congrFun deriv_star_conj x
+
 /-- The derivative of `conj ∘ f ∘ conj` is `conj ∘ deriv f ∘ conj`. -/
-@[simp]
 lemma deriv_conj_conj {f : 𝕜 → 𝕜} :
     deriv (conj ∘ f ∘ conj) = conj ∘ deriv f ∘ conj := deriv_star_conj
+
+@[simp↓]
+lemma deriv_conj_conj_apply {f : 𝕜 → 𝕜} :
+    deriv (conj ∘ f ∘ conj) x = conj (deriv f (conj x)) :=
+  congrFun deriv_conj_conj x
 
 end NontrivialStar

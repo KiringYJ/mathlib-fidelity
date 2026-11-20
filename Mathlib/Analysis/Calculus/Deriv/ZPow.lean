@@ -159,13 +159,13 @@ theorem differentiableOn_zpow (m : ℤ) (s : Set {x : 𝕜 // m < 0 → IsUnit x
       (fun y : {y : 𝕜 // m < 0 → IsUnit y} ↦ Checked.zpow y.val m y.property) s Subtype.val :=
   fun x _ ↦ differentiableWithinAt_zpow m x s
 
+@[simp]
 theorem deriv_zpow (m : ℤ) (x : {x : 𝕜 // m < 0 → IsUnit x}) :
     deriv (fun y : {y : 𝕜 // m < 0 → IsUnit y} ↦ Checked.zpow y.val m y.property) x Subtype.val =
       if hm : m = 0 then 0 else (m : 𝕜) * Checked.zpow x.val (m - 1)
         (fun h ↦ x.property (by omega)) :=
   (hasDerivAt_zpow m x).deriv (isOpen_zpow_domain m).isOpenEmbedding_subtypeVal
 
-@[simp]
 theorem deriv_zpow' (m : ℤ) :
     (fun x : {x : 𝕜 // m < 0 → IsUnit x} ↦
       deriv (fun y : {y : 𝕜 // m < 0 → IsUnit y} ↦ Checked.zpow y.val m y.property)

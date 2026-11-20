@@ -103,8 +103,11 @@ theorem differentiableAt_exp {x : ℂ} : DifferentiableAt 𝕜 exp x :=
   differentiable_exp x
 
 @[simp]
+theorem deriv_exp_apply (x : ℂ) : deriv exp x = exp x :=
+  (hasDerivAt_exp x).deriv
+
 theorem deriv_exp : deriv exp = exp :=
-  funext fun x => (hasDerivAt_exp x).deriv
+  funext deriv_exp_apply
 
 @[simp]
 theorem iter_deriv_exp : ∀ n : ℕ, deriv^[n] exp = exp
@@ -281,8 +284,11 @@ theorem differentiableAt_exp {x : ℝ} : DifferentiableAt ℝ exp x :=
   differentiable_exp x
 
 @[simp]
+theorem deriv_exp_apply (x : ℝ) : deriv exp x = exp x :=
+  (hasDerivAt_exp x).deriv
+
 theorem deriv_exp : deriv exp = exp :=
-  funext fun x => (hasDerivAt_exp x).deriv
+  funext deriv_exp_apply
 
 @[simp]
 theorem iter_deriv_exp : ∀ n : ℕ, deriv^[n] exp = exp

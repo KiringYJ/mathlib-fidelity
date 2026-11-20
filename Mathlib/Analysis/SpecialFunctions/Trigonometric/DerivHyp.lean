@@ -77,9 +77,13 @@ theorem analyticOnNhd_sinh {s : Set ℂ} : AnalyticOnNhd ℂ sinh s :=
 lemma analyticOn_sinh {s : Set ℂ} : AnalyticOn ℂ sinh s :=
   contDiff_sinh.contDiffOn.analyticOn
 
-@[simp, dlmf 4.34.E1]
+@[simp]
+theorem deriv_sinh_apply (x : ℂ) : deriv sinh x = cosh x :=
+  (hasDerivAt_sinh x).deriv
+
+@[dlmf 4.34.E1]
 theorem deriv_sinh : deriv sinh = cosh :=
-  funext fun x => (hasDerivAt_sinh x).deriv
+  funext deriv_sinh_apply
 
 /-- The complex hyperbolic cosine function is everywhere strictly differentiable, with the
 derivative `sinh x`. -/
@@ -123,9 +127,13 @@ theorem analyticOnNhd_cosh {s : Set ℂ} : AnalyticOnNhd ℂ cosh s :=
 lemma analyticOn_cosh {s : Set ℂ} : AnalyticOn ℂ cosh s :=
   contDiff_cosh.contDiffOn.analyticOn
 
-@[simp, dlmf 4.34.E2]
+@[simp]
+theorem deriv_cosh_apply (x : ℂ) : deriv cosh x = sinh x :=
+  (hasDerivAt_cosh x).deriv
+
+@[dlmf 4.34.E2]
 theorem deriv_cosh : deriv cosh = sinh :=
-  funext fun x => (hasDerivAt_cosh x).deriv
+  funext deriv_cosh_apply
 
 end Complex
 
@@ -342,8 +350,11 @@ lemma analyticOn_sinh {s : Set ℝ} : AnalyticOn ℝ sinh s :=
   contDiff_sinh.contDiffOn.analyticOn
 
 @[simp]
+theorem deriv_sinh_apply (x : ℝ) : deriv sinh x = cosh x :=
+  (hasDerivAt_sinh x).deriv
+
 theorem deriv_sinh : deriv sinh = cosh :=
-  funext fun x => (hasDerivAt_sinh x).deriv
+  funext deriv_sinh_apply
 
 theorem hasStrictDerivAt_cosh (x : ℝ) : HasStrictDerivAt cosh (sinh x) x :=
   (Complex.hasStrictDerivAt_cosh x).real_of_complex
@@ -381,8 +392,11 @@ lemma analyticOn_cosh {s : Set ℝ} : AnalyticOn ℝ cosh s :=
   contDiff_cosh.contDiffOn.analyticOn
 
 @[simp]
+theorem deriv_cosh_apply (x : ℝ) : deriv cosh x = sinh x :=
+  (hasDerivAt_cosh x).deriv
+
 theorem deriv_cosh : deriv cosh = sinh :=
-  funext fun x => (hasDerivAt_cosh x).deriv
+  funext deriv_cosh_apply
 
 /-- `sinh` is strictly monotone. -/
 theorem sinh_strictMono : StrictMono sinh :=

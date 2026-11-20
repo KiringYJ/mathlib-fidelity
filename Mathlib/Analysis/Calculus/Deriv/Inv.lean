@@ -56,11 +56,11 @@ theorem hasDerivWithinAt_inv (x : 𝕜ˣ) (s : Set 𝕜ˣ) :
   simpa only [neg_apply, ContinuousLinearMap.mulLeftRight_apply,
     mul_one, pow_two] using (hasFDerivAt_inv' (𝕜 := 𝕜) x).hasFDerivWithinAt.hasDerivWithinAt
 
+@[simp]
 theorem deriv_inv (x : 𝕜ˣ) :
     deriv (fun y : 𝕜ˣ ↦ (↑y⁻¹ : 𝕜)) x (fun y ↦ (y : 𝕜)) = -(↑x⁻¹ : 𝕜) ^ 2 :=
   (hasDerivAt_inv x).deriv Units.isOpenEmbedding_val
 
-@[simp]
 theorem deriv_inv' :
     (fun x : 𝕜ˣ ↦ deriv (fun y : 𝕜ˣ ↦ (↑y⁻¹ : 𝕜)) x (fun y ↦ (y : 𝕜))) =
       fun x : 𝕜ˣ ↦ -(↑x⁻¹ : 𝕜) ^ 2 :=

@@ -108,7 +108,7 @@ example (μ ν : FiniteMeasure Ω) (h : μ = ν) (hμ : μ ≠ 0) (hν : ν ≠ 
 
 example (μ : FiniteMeasure Ω) (hμ : μ ≠ 0) (s : Set Ω) :
     μ.mass * μ.normalize hμ s = μ s := by
-  simp [hμ]
+  simp
 
 example (μ : FiniteMeasure Ω) (hμ : μ ≠ 0) (f : Ω → ℝ) :
     ∫ x, f x ∂(μ.normalize hμ : Measure Ω) = (μ.mass : ℝ)⁻¹ * ∫ x, f x ∂(μ : Measure Ω) := by

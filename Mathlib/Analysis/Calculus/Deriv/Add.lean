@@ -113,10 +113,10 @@ theorem derivWithin_add_const (c : F) :
     derivWithin (fun y ↦ f y + c) s x = derivWithin f s x := by
   simp only [derivWithin, fderivWithin_add_const]
 
+@[simp]
 theorem deriv_add_const (c : F) : deriv (fun y ↦ f y + c) x = deriv f x := by
   simp only [deriv, fderiv_add_const]
 
-@[simp]
 theorem deriv_add_const' (c : F) : (deriv fun y ↦ f y + c) = deriv f :=
   funext fun _ ↦ deriv_add_const c
 
@@ -146,20 +146,20 @@ theorem hasDerivAt_const_add_iff (c : F) : HasDerivAt (c + f ·) f' x ↔ HasDer
 
 alias ⟨_, HasDerivAt.const_add⟩ := hasDerivAt_const_add_iff
 
+@[simp]
 theorem derivWithin_const_add (c : F) :
     derivWithin (c + f ·) s x = derivWithin f s x := by
   simp only [derivWithin, fderivWithin_const_add]
 
-@[simp]
 theorem derivWithin_const_add_fun (c : F) :
     derivWithin (c + f ·) = derivWithin f := by
   ext
   apply derivWithin_const_add
 
+@[simp]
 theorem deriv_const_add (c : F) : deriv (c + f ·) x = deriv f x := by
   simp only [deriv, fderiv_const_add]
 
-@[simp]
 theorem deriv_const_add' (c : F) : (deriv (c + f ·)) = deriv f :=
   funext fun _ ↦ deriv_const_add c
 
@@ -278,7 +278,13 @@ theorem derivWithin.neg : derivWithin (-f) s x = -derivWithin f s x := by
 theorem deriv.neg : deriv (-f) x = -deriv f x := by
   simp only [deriv, fderiv_neg, neg_apply]
 
-@[to_fun (attr := simp)]
+attribute [simp] deriv.neg
+
+@[simp]
+theorem deriv_fun_neg : deriv (fun y ↦ -f y) x = -deriv f x :=
+  deriv.fun_neg
+
+@[to_fun]
 theorem deriv.neg' : (deriv (-f)) = fun x ↦ -deriv f x :=
   funext fun _ ↦ deriv.neg
 
@@ -403,19 +409,19 @@ theorem hasDerivAt_sub_const_iff (c : F) : HasDerivAt (f · - c) f' x ↔ HasDer
 
 alias ⟨_, HasDerivAt.sub_const⟩ := hasDerivAt_sub_const_iff
 
+@[simp]
 theorem derivWithin_sub_const (c : F) :
     derivWithin (fun y ↦ f y - c) s x = derivWithin f s x := by
   simp only [derivWithin, fderivWithin_sub_const]
 
-@[simp]
 theorem derivWithin_sub_const_fun (c : F) : derivWithin (f · - c) = derivWithin f := by
   ext
   apply derivWithin_sub_const
 
+@[simp]
 theorem deriv_sub_const (c : F) : deriv (fun y ↦ f y - c) x = deriv f x := by
   simp only [deriv, fderiv_sub_const]
 
-@[simp]
 theorem deriv_sub_const_fun (c : F) : deriv (f · - c) = deriv f := by
   ext
   apply deriv_sub_const
@@ -441,11 +447,11 @@ theorem derivWithin_const_sub (c : F) :
   simp only [sub_eq_add_neg, derivWithin_const_add]
   exact derivWithin.neg (f := f)
 
+@[simp]
 theorem deriv_const_sub (c : F) : deriv (c - f ·) x = -deriv f x := by
   simp only [sub_eq_add_neg, deriv_const_add]
   exact deriv.neg (f := f)
 
-@[simp]
 theorem deriv_const_sub' (c : F) : deriv (c - f ·) = (-deriv f ·) :=
   funext fun _ => deriv_const_sub c
 

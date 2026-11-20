@@ -118,12 +118,12 @@ theorem hasDerivAt_inv_log (x : {x : ℝ // IsUnit (log x)}) :
   simpa only [div_eq_mul_inv₀, hpow] using!
     (hasDerivAt_log (hx := (log_ne_zero.mp x.2.ne_zero).1.isUnit)).inv x.2
 
+@[simp]
 theorem deriv_inv_log_apply (x : {x : ℝ // IsUnit (log x)}) :
     deriv (fun y : {x : ℝ // IsUnit (log x)} ↦ Checked.inv (log y.val) y.2) x Subtype.val =
       -(Checked.inv x.val (log_ne_zero.mp x.2.ne_zero).1.isUnit) / log x.val ^ 2 :=
   (hasDerivAt_inv_log x).deriv isOpen_log_unit.isOpenEmbedding_subtypeVal
 
-@[simp]
 theorem deriv_inv_log :
     (fun x : {x : ℝ // IsUnit (log x)} ↦
       deriv (fun y : {x : ℝ // IsUnit (log x)} ↦ Checked.inv (log y.val) y.2) x Subtype.val) =
@@ -181,12 +181,12 @@ theorem hasDerivAt_log_log (x : {x : ℝ // IsUnit (log x)}) :
   exact h.hasFDerivAt.comp_tendsto Subtype.val
     (continuous_subtype_val.continuousAt.tendsto.prodMap (tendsto_pure_pure ..))
 
+@[simp]
 theorem deriv_log_log_apply (x : {x : ℝ // IsUnit (log x)}) :
     deriv (fun y : {x : ℝ // IsUnit (log x)} ↦ log (log y.val)) x Subtype.val =
       Checked.inv x.val (log_ne_zero.mp x.2.ne_zero).1.isUnit / log x.val :=
   (hasDerivAt_log_log x).deriv isOpen_log_unit.isOpenEmbedding_subtypeVal
 
-@[simp]
 theorem deriv_log_log :
     (fun x : {x : ℝ // IsUnit (log x)} ↦
       deriv (fun y : {x : ℝ // IsUnit (log x)} ↦ log (log y.val)) x Subtype.val) =

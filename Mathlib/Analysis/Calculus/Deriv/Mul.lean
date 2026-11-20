@@ -337,6 +337,7 @@ theorem deriv_mul_const (hc : DifferentiableAt 𝕜 c x) (d : 𝔸) :
     deriv (fun y => c y * d) x = deriv c x * d :=
   (hc.hasDerivAt.mul_const d).deriv
 
+@[simp]
 theorem deriv_mul_const_field (v : 𝕜') : deriv (fun y => u y * v) x = deriv u x * v := by
   by_cases hu : DifferentiableAt 𝕜 u x
   · exact deriv_mul_const hu v
@@ -346,7 +347,6 @@ theorem deriv_mul_const_field (v : 𝕜') : deriv (fun y => u y * v) x = deriv u
     · refine deriv_zero_of_not_differentiableAt (mt (fun H => ?_) hu)
       simpa only [mul_inv_cancel_right₀ (hb := hd.isUnit)] using H.mul_const v⁻¹
 
-@[simp]
 theorem deriv_mul_const_field' (v : 𝕜') : (deriv fun x => u x * v) = fun x => deriv u x * v :=
   funext fun _ => deriv_mul_const_field v
 
@@ -389,10 +389,10 @@ theorem deriv_const_mul (c : 𝔸) (hd : DifferentiableAt 𝕜 d x) :
 
 /-- A variant of `deriv_const_mul` without differentiability assumption when the scalar
 multiplication is by division ring elements. -/
+@[simp]
 theorem deriv_const_mul_field (u : 𝕜') : deriv (fun y => u * v y) x = u * deriv v x :=
   deriv_fun_const_smul_field u v
 
-@[simp]
 theorem deriv_const_mul_field' (u : 𝕜') : (deriv fun x => u * v x) = fun x => u * deriv v x :=
   funext fun _ => deriv_const_mul_field u
 

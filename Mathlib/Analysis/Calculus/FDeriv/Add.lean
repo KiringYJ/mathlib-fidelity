@@ -144,7 +144,8 @@ lemma differentiableAt_smul_iff (c : R) [Invertible c] :
 `c` must be invertible, i.e. if `R` is a field. -/
 theorem fderiv_const_smul_of_invertible (c : R) [Invertible c] :
     fderiv 𝕜 (c • f) x = c • fderiv 𝕜 f x := by
-  simp [← congrFun fderivWithin_univ x, fderivWithin_const_smul_of_invertible]
+  simpa only [fderivWithin_univ_apply] using
+    fderivWithin_const_smul_of_invertible (𝕜 := 𝕜) (f := f) (x := x) c uniqueDiffWithinAt_univ
 
 end ConstSMul
 
@@ -658,7 +659,8 @@ theorem fderivWithin_neg (hxs : UniqueDiffWithinAt 𝕜 s x) :
 
 @[simp]
 theorem fderiv_fun_neg : fderiv 𝕜 (fun y => -f y) x = -fderiv 𝕜 f x := by
-  simp [← congrFun fderivWithin_univ x, fderivWithin_fun_neg]
+  simpa only [fderivWithin_univ_apply] using
+    fderivWithin_fun_neg (𝕜 := 𝕜) (f := f) (x := x) uniqueDiffWithinAt_univ
 
 /-- Version of `fderiv_neg` where the function is written `-f` instead of `fun y ↦ - f y`. -/
 theorem fderiv_neg : fderiv 𝕜 (-f) x = -fderiv 𝕜 f x :=
@@ -943,7 +945,8 @@ theorem fderivWithin_const_sub (hxs : UniqueDiffWithinAt 𝕜 s x) (c : F) :
   simp only [sub_eq_add_neg, fderivWithin_const_add, fderivWithin_fun_neg, hxs]
 
 theorem fderiv_const_sub (c : F) : fderiv 𝕜 (fun y => c - f y) x = -fderiv 𝕜 f x := by
-  simp [← congrFun fderivWithin_univ x, fderivWithin_const_sub]
+  simpa only [fderivWithin_univ_apply] using
+    fderivWithin_const_sub (𝕜 := 𝕜) (f := f) (x := x) uniqueDiffWithinAt_univ c
 
 end Sub
 
@@ -993,8 +996,8 @@ theorem differentiableAt_comp_add_right (a : E) :
 
 theorem fderiv_comp_add_right (a : E) :
     fderiv 𝕜 (fun x ↦ f (x + a)) x = fderiv 𝕜 f (x + a) := by
-  simp [← congrFun fderivWithin_univ x, fderivWithin_comp_add_right,
-    congrFun fderivWithin_univ (x + a)]
+  simpa only [Set.vadd_set_univ, fderivWithin_univ_apply] using
+    fderivWithin_comp_add_right (𝕜 := 𝕜) (f := f) (s := Set.univ) (x := x) a
 
 theorem hasFDerivAt_comp_add_left (a : E) :
     HasFDerivAt (fun x ↦ f (a + x)) f' x ↔ HasFDerivAt f f' (a + x) := by
@@ -1031,8 +1034,8 @@ theorem differentiableAt_comp_sub (a : E) :
 
 theorem fderiv_comp_sub (a : E) :
     fderiv 𝕜 (fun x ↦ f (x - a)) x = fderiv 𝕜 f (x - a) := by
-  simp [← congrFun fderivWithin_univ x, fderivWithin_comp_sub,
-    congrFun fderivWithin_univ (x - a)]
+  simpa only [Set.vadd_set_univ, fderivWithin_univ_apply] using
+    fderivWithin_comp_sub (𝕜 := 𝕜) (f := f) (s := Set.univ) (x := x) a
 
 end CompAdd
 

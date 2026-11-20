@@ -101,11 +101,16 @@ theorem intervalIntegrable_bernoulliFun (a b : ℝ) :
     IntervalIntegrable (bernoulliFun k) volume a b :=
   (continuous_bernoulliFun k).intervalIntegrable a b
 
-@[simp]
 theorem deriv_bernoulliFun :
     deriv (bernoulliFun k) = fun x ↦ k * bernoulliFun (k - 1) x := by
   ext x
   exact (hasDerivAt_bernoulliFun _ _).deriv
+
+/-- The derivative of the Bernoulli polynomial of index `k` at `x`. -/
+@[simp]
+theorem deriv_bernoulliFun_apply (x : ℝ) :
+    deriv (bernoulliFun k) x = k * bernoulliFun (k - 1) x :=
+  congrFun (deriv_bernoulliFun k) x
 
 theorem antideriv_bernoulliFun (k : ℕ) (x : ℝ) :
     HasDerivAt (fun x => bernoulliFun (k + 1) x / (k + 1)) (bernoulliFun k x) x := by

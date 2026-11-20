@@ -558,11 +558,13 @@ theorem derivWithin_congr_set' (y : 𝕜) (h : s =ᶠ[𝓝[{y}ᶜ] x] t) :
 theorem derivWithin_congr_set (h : s =ᶠ[𝓝 x] t) : derivWithin f s x = derivWithin f t x := by
   simp only [derivWithin, fderivWithin_congr_set h]
 
-@[simp]
 theorem derivWithin_univ : derivWithin f univ = deriv f := by
   ext
   unfold derivWithin deriv
   rw [fderiv]
+
+@[simp]
+theorem derivWithin_univ_apply : derivWithin f univ x = deriv f x := congrFun derivWithin_univ x
 
 theorem derivWithin_inter (ht : t ∈ 𝓝 x) : derivWithin f (s ∩ t) x = derivWithin f s x := by
   unfold derivWithin
@@ -787,15 +789,17 @@ theorem hasDerivAt_id' : HasDerivAt (fun x : 𝕜 => x) 1 x :=
 theorem hasStrictDerivAt_id : HasStrictDerivAt id 1 x :=
   hasDerivAtFilter_id _
 
+@[simp]
 theorem deriv_id : deriv id x = 1 :=
   HasDerivAt.deriv (hasDerivAt_id x)
 
 @[simp]
+theorem deriv_fun_id : deriv (fun y : 𝕜 => y) x = 1 := deriv_id x
+
 theorem deriv_id' : deriv (@id 𝕜) = fun _ => 1 :=
   funext deriv_id
 
 /-- Variant with `fun x => x` rather than `id` -/
-@[simp]
 theorem deriv_id'' : (deriv fun x : 𝕜 => x) = fun _ => 1 :=
   deriv_id'
 
@@ -890,55 +894,86 @@ theorem hasDerivAt_intCast [IntCast F] (z : ℤ) : HasDerivAt (z : 𝕜 → F) 0
 theorem hasDerivAt_ofNat (n : ℕ) [OfNat F n] : HasDerivAt (ofNat(n) : 𝕜 → F) 0 x :=
   hasDerivAt_const _ _
 
+@[simp]
 theorem deriv_const : deriv (fun _ => c) x = 0 :=
   HasDerivAt.deriv (hasDerivAt_const x c)
 
-@[simp]
 theorem deriv_const' : (deriv fun _ : 𝕜 => c) = fun _ => 0 :=
   funext fun x => deriv_const x c
 
-@[simp]
 theorem deriv_zero : deriv (0 : 𝕜 → F) = 0 := funext fun _ => deriv_const _ _
 
-@[simp]
 theorem deriv_one [One F] : deriv (1 : 𝕜 → F) = 0 := funext fun _ => deriv_const _ _
 
-@[simp]
 theorem deriv_natCast [NatCast F] (n : ℕ) : deriv (n : 𝕜 → F) = 0 := funext fun _ => deriv_const _ _
 
-@[simp]
 theorem deriv_intCast [IntCast F] (z : ℤ) : deriv (z : 𝕜 → F) = 0 := funext fun _ => deriv_const _ _
 
-@[simp low]
 theorem deriv_ofNat (n : ℕ) [OfNat F n] : deriv (ofNat(n) : 𝕜 → F) = 0 :=
   funext fun _ => deriv_const _ _
 
 @[simp]
+theorem deriv_zero_apply : deriv (0 : 𝕜 → F) x = 0 := deriv_const x _
+
+@[simp]
+theorem deriv_one_apply [One F] : deriv (1 : 𝕜 → F) x = 0 := deriv_const x _
+
+@[simp]
+theorem deriv_natCast_apply [NatCast F] (n : ℕ) : deriv (n : 𝕜 → F) x = 0 := deriv_const x _
+
+@[simp]
+theorem deriv_intCast_apply [IntCast F] (z : ℤ) : deriv (z : 𝕜 → F) x = 0 := deriv_const x _
+
+@[simp low]
+theorem deriv_ofNat_apply (n : ℕ) [OfNat F n] : deriv (ofNat(n) : 𝕜 → F) x = 0 := deriv_const x _
+
 theorem derivWithin_fun_const : derivWithin (fun _ => c) s = 0 := by
   ext
   simp only [derivWithin, fderivWithin_const_apply, zero_apply, Pi.zero_apply]
 
-@[simp]
 theorem derivWithin_const : derivWithin (Function.const 𝕜 c) s = 0 :=
   derivWithin_fun_const _ _
 
-@[simp]
 theorem derivWithin_zero : derivWithin (0 : 𝕜 → F) s = 0 := derivWithin_const _ _
 
-@[simp]
 theorem derivWithin_one [One F] : derivWithin (1 : 𝕜 → F) s = 0 := derivWithin_const _ _
 
-@[simp]
 theorem derivWithin_natCast [NatCast F] (n : ℕ) : derivWithin (n : 𝕜 → F) s = 0 :=
   derivWithin_const _ _
 
-@[simp]
 theorem derivWithin_intCast [IntCast F] (z : ℤ) : derivWithin (z : 𝕜 → F) s = 0 :=
   derivWithin_const _ _
 
-@[simp low]
 theorem derivWithin_ofNat (n : ℕ) [OfNat F n] : derivWithin (ofNat(n) : 𝕜 → F) s = 0 :=
   derivWithin_const _ _
+
+@[simp]
+theorem derivWithin_fun_const_apply : derivWithin (fun _ => c) s x = 0 :=
+  congrFun (derivWithin_fun_const (c := c) (s := s)) x
+
+@[simp]
+theorem derivWithin_const_apply : derivWithin (Function.const 𝕜 c) s x = 0 :=
+  derivWithin_fun_const_apply (c := c) (s := s) (x := x)
+
+@[simp]
+theorem derivWithin_zero_apply : derivWithin (0 : 𝕜 → F) s x = 0 :=
+  derivWithin_fun_const_apply (s := s) (x := x) _
+
+@[simp]
+theorem derivWithin_one_apply [One F] : derivWithin (1 : 𝕜 → F) s x = 0 :=
+  derivWithin_fun_const_apply (s := s) (x := x) _
+
+@[simp]
+theorem derivWithin_natCast_apply [NatCast F] (n : ℕ) : derivWithin (n : 𝕜 → F) s x = 0 :=
+  derivWithin_fun_const_apply (s := s) (x := x) _
+
+@[simp]
+theorem derivWithin_intCast_apply [IntCast F] (z : ℤ) : derivWithin (z : 𝕜 → F) s x = 0 :=
+  derivWithin_fun_const_apply (s := s) (x := x) _
+
+@[simp low]
+theorem derivWithin_ofNat_apply (n : ℕ) [OfNat F n] : derivWithin (ofNat(n) : 𝕜 → F) s x = 0 :=
+  derivWithin_fun_const_apply (s := s) (x := x) _
 
 end Const
 

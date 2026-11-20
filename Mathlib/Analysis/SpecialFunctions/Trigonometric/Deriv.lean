@@ -79,8 +79,11 @@ lemma analyticOn_sin {s : Set ℂ} : AnalyticOn ℂ sin s :=
   contDiff_sin.contDiffOn.analyticOn
 
 @[simp]
+theorem deriv_sin_apply (x : ℂ) : deriv sin x = cos x :=
+  (hasDerivAt_sin x).deriv
+
 theorem deriv_sin : deriv sin = cos :=
-  funext fun x => (hasDerivAt_sin x).deriv
+  funext deriv_sin_apply
 
 /-- The complex cosine function is everywhere strictly differentiable, with the derivative
 `-sin x`. -/
@@ -126,10 +129,10 @@ theorem analyticOnNhd_cos {s : Set ℂ} : AnalyticOnNhd ℂ cos s :=
 lemma analyticOn_cos {s : Set ℂ} : AnalyticOn ℂ cos s :=
   contDiff_cos.contDiffOn.analyticOn
 
+@[simp]
 theorem deriv_cos {x : ℂ} : deriv cos x = -sin x :=
   (hasDerivAt_cos x).deriv
 
-@[simp]
 theorem deriv_cos' : deriv cos = fun x => -sin x :=
   funext fun _ => deriv_cos
 
@@ -354,8 +357,11 @@ lemma analyticOn_sin {s : Set ℝ} : AnalyticOn ℝ sin s :=
   contDiff_sin.contDiffOn.analyticOn
 
 @[simp]
+theorem deriv_sin_apply (x : ℝ) : deriv sin x = cos x :=
+  (hasDerivAt_sin x).deriv
+
 theorem deriv_sin : deriv sin = cos :=
-  funext fun x => (hasDerivAt_sin x).deriv
+  funext deriv_sin_apply
 
 theorem hasStrictDerivAt_cos (x : ℝ) : HasStrictDerivAt cos (-sin x) x :=
   (Complex.hasStrictDerivAt_cos x).real_of_complex
@@ -392,10 +398,10 @@ theorem analyticOnNhd_cos {s : Set ℝ} : AnalyticOnNhd ℝ cos s :=
 lemma analyticOn_cos {s : Set ℝ} : AnalyticOn ℝ cos s :=
   contDiff_cos.contDiffOn.analyticOn
 
+@[simp]
 theorem deriv_cos : deriv cos x = -sin x :=
   (hasDerivAt_cos x).deriv
 
-@[simp]
 theorem deriv_cos' : deriv cos = fun x => -sin x :=
   funext fun _ => deriv_cos
 

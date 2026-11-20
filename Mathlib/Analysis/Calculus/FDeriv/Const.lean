@@ -183,62 +183,95 @@ theorem differentiableWithinAt_intCast [IntCast F] (z : ℤ) :
 theorem differentiableWithinAt_ofNat (n : ℕ) [OfNat F n] :
     DifferentiableWithinAt 𝕜 (ofNat(n) : E → F) s x := differentiableWithinAt_const _
 
+@[simp]
 theorem fderivWithin_const_apply (c : F) : fderivWithin 𝕜 (fun _ => c) s x = 0 := by
   rw [fderivWithin, ite_eq_left]
   apply hasFDerivWithinAt_const
 
-@[simp]
 theorem fderivWithin_fun_const (c : F) : fderivWithin 𝕜 (fun _ ↦ c) s = 0 := by
   ext
   rw [fderivWithin_const_apply, Pi.zero_apply]
 
-@[simp]
 theorem fderivWithin_const (c : F) : fderivWithin 𝕜 (Function.const E c) s = 0 :=
   fderivWithin_fun_const c
 
-@[simp]
 theorem fderivWithin_zero : fderivWithin 𝕜 (0 : E → F) s = 0 := fderivWithin_const _
 
-@[simp]
 theorem fderivWithin_one [One F] : fderivWithin 𝕜 (1 : E → F) s = 0 := fderivWithin_const _
 
-@[simp]
 theorem fderivWithin_natCast [NatCast F] (n : ℕ) : fderivWithin 𝕜 (n : E → F) s = 0 :=
   fderivWithin_const _
 
-@[simp]
 theorem fderivWithin_intCast [IntCast F] (z : ℤ) : fderivWithin 𝕜 (z : E → F) s = 0 :=
   fderivWithin_const _
 
-@[simp low]
 theorem fderivWithin_ofNat (n : ℕ) [OfNat F n] : fderivWithin 𝕜 (ofNat(n) : E → F) s = 0 :=
   fderivWithin_const _
 
+@[simp]
+theorem fderivWithin_const_apply' (c : F) : fderivWithin 𝕜 (Function.const E c) s x = 0 :=
+  fderivWithin_const_apply c
+
+@[simp]
+theorem fderivWithin_zero_apply : fderivWithin 𝕜 (0 : E → F) s x = 0 :=
+  fderivWithin_const_apply _
+
+@[simp]
+theorem fderivWithin_one_apply [One F] : fderivWithin 𝕜 (1 : E → F) s x = 0 :=
+  fderivWithin_const_apply _
+
+@[simp]
+theorem fderivWithin_natCast_apply [NatCast F] (n : ℕ) : fderivWithin 𝕜 (n : E → F) s x = 0 :=
+  fderivWithin_const_apply _
+
+@[simp]
+theorem fderivWithin_intCast_apply [IntCast F] (z : ℤ) : fderivWithin 𝕜 (z : E → F) s x = 0 :=
+  fderivWithin_const_apply _
+
+@[simp low]
+theorem fderivWithin_ofNat_apply (n : ℕ) [OfNat F n] :
+    fderivWithin 𝕜 (ofNat(n) : E → F) s x = 0 := fderivWithin_const_apply _
+
+@[simp]
 theorem fderiv_const_apply (c : F) : fderiv 𝕜 (fun _ => c) x = 0 := by
   rw [fderiv, fderivWithin_const_apply]
 
-@[simp]
 theorem fderiv_fun_const (c : F) : fderiv 𝕜 (fun _ : E => c) = 0 := by
   rw [← fderivWithin_univ, fderivWithin_fun_const]
 
-@[simp]
 theorem fderiv_const (c : F) : fderiv 𝕜 (Function.const E c) = 0 :=
   fderiv_fun_const c
 
-@[simp]
 theorem fderiv_zero : fderiv 𝕜 (0 : E → F) = 0 := fderiv_const _
 
-@[simp]
 theorem fderiv_one [One F] : fderiv 𝕜 (1 : E → F) = 0 := fderiv_const _
 
-@[simp]
 theorem fderiv_natCast [NatCast F] (n : ℕ) : fderiv 𝕜 (n : E → F) = 0 := fderiv_const _
 
-@[simp]
 theorem fderiv_intCast [IntCast F] (z : ℤ) : fderiv 𝕜 (z : E → F) = 0 := fderiv_const _
 
-@[simp low]
 theorem fderiv_ofNat (n : ℕ) [OfNat F n] : fderiv 𝕜 (ofNat(n) : E → F) = 0 := fderiv_const _
+
+@[simp]
+theorem fderiv_const_apply' (c : F) : fderiv 𝕜 (Function.const E c) x = 0 := fderiv_const_apply c
+
+@[simp]
+theorem fderiv_zero_apply : fderiv 𝕜 (0 : E → F) x = 0 := fderiv_const_apply _
+
+@[simp]
+theorem fderiv_one_apply [One F] : fderiv 𝕜 (1 : E → F) x = 0 := fderiv_const_apply _
+
+@[simp]
+theorem fderiv_natCast_apply [NatCast F] (n : ℕ) : fderiv 𝕜 (n : E → F) x = 0 :=
+  fderiv_const_apply _
+
+@[simp]
+theorem fderiv_intCast_apply [IntCast F] (z : ℤ) : fderiv 𝕜 (z : E → F) x = 0 :=
+  fderiv_const_apply _
+
+@[simp low]
+theorem fderiv_ofNat_apply (n : ℕ) [OfNat F n] : fderiv 𝕜 (ofNat(n) : E → F) x = 0 :=
+  fderiv_const_apply _
 
 @[simp, fun_prop]
 theorem differentiable_const (c : F) : Differentiable 𝕜 fun _ : E => c := fun _ =>
