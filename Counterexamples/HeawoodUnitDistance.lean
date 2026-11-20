@@ -109,6 +109,10 @@ lemma udMap_reflect (i : Fin 14) : udMap i.rev = !![1, 0; 0, -1].toEuclideanLin 
 lemma decompose_point (p : Plane) : p = !₂[p.proj 0, p.proj 1] := by
   ext i; match i with | 0 => simp | 1 => simp
 
+private lemma sq_add_sq_of_double {x y : ℝ} (h : (x * 2) ^ 2 + (y * 2) ^ 2 = 4) :
+    x ^ 2 + y ^ 2 = 1 := by
+  nlinarith only [h]
+
 /-- `udMap` is injective on indices `[0, 7, 10, 5, 2, 9]` because their x-coordinates
 strictly increase in that order. -/
 lemma injOn_udMap_sextet : Set.InjOn udMap ({0, 7, 10, 5, 2, 9} : Finset (Fin 14)) := by
@@ -125,8 +129,16 @@ lemma injOn_udMap_sextet : Set.InjOn udMap ({0, 7, 10, 5, 2, 9} : Finset (Fin 14
     rwa [← hci, this.injective h]
   rw [Fin.strictMono_iff_lt_succ]
   obtain ⟨lb, ub⟩ := root_bounds
-  simp [Fin.forall_fin_succ, f, udMap]
-  grind
+  have h₃ : ((-1 : ℝ) / 3) * 3 = -1 := div_mul_cancel₀ _
+  have h₁₆ : ((-5 : ℝ) / 16) * 16 = -5 := div_mul_cancel₀ _
+  have h_add : ((1 + c) / 2) * 2 = 1 + c := div_mul_cancel₀ _
+  have h_sub : ((1 - c) / 2) * 2 = 1 - c := div_mul_cancel₀ _
+  simp only [Fin.isValue, udMap, one_div₀, neg_sub, neg_add_rev, PiLp.proj_apply,
+    Matrix.cons_val_succ, Fin.forall_fin_succ, Fin.castSucc_zero, Matrix.cons_val_zero,
+    Fin.castSucc_succ, Nat.reduceAdd, Nat.ofNat_pos, div_pos_iff_of_pos_right,
+    Matrix.cons_val_fin_one, lt_self_iff_false, IsEmpty.forall_iff, and_true, f]
+  repeat' apply And.intro
+  all_goals linarith only [lb, ub, h₃, h₁₆, h_add, h_sub]
 
 /-- `udMap` is injective and thus can be used in a unit-distance embedding. -/
 theorem injective_udMap : udMap.Injective := by
@@ -199,12 +211,16 @@ noncomputable def unitDistEmbedding : heawoodGraph.UnitDistEmbedding Plane where
       rcases hk with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
       all_goals
         simp only [udMap, Fin.reduceAdd, Fin.isValue, dist_eq_one_iff]
+        apply sq_add_sq_of_double
+        simp only [sub_mul, add_mul, neg_mul, div_mul_cancel₀]
         grind [root_equation]
     · replace mk : k = 0 ∨ k = 2 ∨ k = 4 ∨ k = 6 ∨ k = 8 ∨ k = 10 ∨ k = 12 := by
         revert k; decide
       rcases mk with rfl | rfl | rfl | rfl | rfl | rfl | rfl
       all_goals
         simp only [udMap, Fin.reduceAdd, Fin.isValue, dist_eq_one_iff]
+        apply sq_add_sq_of_double
+        simp only [sub_mul, add_mul, neg_mul, div_mul_cancel₀]
         grind [root_equation]
 
 end Heawood

@@ -39,7 +39,8 @@ on each subinterval `[x, y]` differs from `f' x` by at most `η`. -/
 lemma exists_dist_slope_lt_pairwiseDisjoint_hasSum {f f' : ℝ → F} {d b η : ℝ}
     (hdb : d ≤ b) (hf : ∀ᵐ x, x ∈ Ioo d b → HasDerivAt f (f' x) x) (hη : 0 < η) :
     ∃ u : Set (ℝ × ℝ),
-      (∀ z ∈ u, (d < z.1 ∧ z.1 < z.2 ∧ z.2 < b) ∧ dist (slope f z.1 z.2) (f' z.1) < η) ∧
+      (∀ z ∈ u, (d < z.1 ∧ z.1 < z.2 ∧ z.2 < b) ∧
+        ∀ h : z.1 ≠ z.2, dist (slope f z.1 z.2 h) (f' z.1) < η) ∧
       u.PairwiseDisjoint (fun z ↦ Icc z.1 z.2) ∧
       HasSum (fun (z : u) ↦ z.val.2 - z.val.1) (b - d) := by
   -- Proof idea: Use `Vitali.exists_disjoint_covering_ae'` to get a Vitali cover of `[a, b]`
@@ -47,7 +48,8 @@ lemma exists_dist_slope_lt_pairwiseDisjoint_hasSum {f f' : ℝ → F} {d b η : 
   -- at most `η`.
   rcases hdb.eq_or_lt with rfl | hdb
   · exact ⟨∅, by simp⟩
-  let t := {z : ℝ × ℝ | (d < z.1 ∧ z.1 < z.2 ∧ z.2 < b) ∧ dist (slope f z.1 z.2) (f' z.1) < η}
+  let t := {z : ℝ × ℝ | (d < z.1 ∧ z.1 < z.2 ∧ z.2 < b) ∧
+    ∀ h : z.1 ≠ z.2, dist (slope f z.1 z.2 h) (f' z.1) < η}
   let s := {x ∈ Ioo d b | HasDerivAt f (f' x) x}
   obtain ⟨u, ⟨hu₁, hu₂, hu₃, hu₄⟩⟩ : ∃ u ⊆ t, u.Countable ∧
       u.PairwiseDisjoint (fun z ↦ Icc z.1 z.2) ∧ volume (s \ ⋃ z ∈ u, Icc z.1 z.2) = 0 := by
@@ -63,9 +65,9 @@ lemma exists_dist_slope_lt_pairwiseDisjoint_hasSum {f f' : ℝ → F} {d b η : 
     · simp [isClosed_Icc]
     · intro x hx
       apply Eventually.frequently
-      have := hasDerivAt_iff_tendsto_slope.mp hx.right
-      obtain ⟨δ, hδ₁, hδ₂⟩ := (Metric.tendsto_nhdsWithin_nhds).mp
-        (hasDerivAt_iff_tendsto_slope.mp hx.right) η hη
+      have hnear := (hasDerivAt_iff_tendsto_slope.mp hx.right).eventually
+        (Metric.ball_mem_nhds (f' x) hη)
+      obtain ⟨δ, hδ₁, hδ₂⟩ := Metric.mem_nhds_iff.1 (eventually_comap.1 hnear)
       have evn_bound {α : ℝ} (hα : 0 < α) : ∀ᶠ (ε : ℝ) in 𝓝[>] 0, ε < α := by
         rw [eventually_nhdsWithin_iff, eventually_nhds_iff]
         exact ⟨Ioo (-α) α, by grind, isOpen_Ioo, by grind⟩
@@ -75,7 +77,10 @@ lemma exists_dist_slope_lt_pairwiseDisjoint_hasSum {f f' : ℝ → F} {d b η : 
                       evn_bound (α := (b - x) / 2) (by simp [hx.left.right])]
         with ε hε₁ hε₂ hε₃ hε₄
       refine ⟨(x, x + ε), ⟨⟨hx.1.1, by linarith, by linarith⟩, ?_⟩, by simp, rfl⟩
-      exact hδ₂ (by grind) (by simp [abs_eq_self.mpr hε₁.le, hε₃])
+      intro hneq
+      have hball : x + ε ∈ Metric.ball x δ := by
+        simp [Metric.mem_ball, abs_of_pos hε₁, hε₃]
+      exact hδ₂ hball ⟨x + ε, hneq.symm⟩ rfl
   simp only [t, subset_def, mem_ofPred_eq] at hu₁
   refine ⟨u, ⟨hu₁, hu₃, ?_⟩⟩
   have : Countable u := by simp [hu₂]
@@ -199,21 +204,25 @@ theorem AbsolutelyContinuousOnInterval.const_of_ae_hasDerivAt_zero {f : ℝ → 
   have g_nonneg : 0 ≤ g := by intro; simp [g]
   have g_finsum_bound (s : Finset u) : ∑ z ∈ s, g z ≤ r := by
     have (z : u) (hz : z ∈ s) : g z ≤ r / (b - d) * (z.val.2 - z.val.1) := by
-      have slope_bound := hu₁ z (by simp) |>.right |>.le
-      have : 0 < z.val.2 - z.val.1 := by linarith [hu₁ z (by simp)]
-      grw [← slope_bound]
-      simp only [dist_eq_norm, slope, vsub_eq_sub, sub_zero, g, mul_comm]
-      nth_rw 1 [← Real.norm_of_nonneg this.le]
-      simp only [norm_smul, Real.norm_eq_abs, norm_inv]
-      field_simp
-      rw [norm_sub_rev]
+      obtain ⟨hz₁₂, hslope⟩ := hu₁ z z.2
+      have hne := hz₁₂.2.1.ne
+      have hlen := sub_pos.mpr hz₁₂.2.1
+      have hbound : ‖slope f z.val.1 z.val.2 hne‖ ≤ r / (b - d) := by
+        simpa only [dist_zero_right] using (hslope hne).le
+      calc
+        g z = ‖f z.val.2 - f z.val.1‖ := by
+          dsimp only [g]
+          rw [dist_eq_norm, norm_sub_rev]
+        _ = ‖slope f z.val.1 z.val.2 hne‖ * (z.val.2 - z.val.1) := by
+          simp only [slope, vsub_eq_sub, norm_smul, norm_inv, Real.norm_of_nonneg hlen.le]
+          rw [mul_comm ((z.val.2 - z.val.1)⁻¹), mul_assoc, inv_mul_cancel₀, mul_one]
+        _ ≤ _ := mul_le_mul_of_nonneg_right hbound hlen.le
     grw [Finset.sum_le_sum this]
     rw [← Finset.mul_sum]
     have : ∑ z ∈ s, (z.val.2 - z.val.1) ≤ b - d :=
       hu₃.tsum_eq ▸ Summable.sum_le_tsum _ (by grind) hu₃.summable
     grw [this]
-    field_simp
-    grind
+    rw [div_mul_cancel₀]
   have hu₄ := summable_of_sum_le g_nonneg g_finsum_bound |>.hasSum
   have g_sum_bound := Real.tsum_le_of_sum_le g_nonneg g_finsum_bound
   have := (hf.mono (by grind [uIcc_of_le])).dist_le_of_pairwiseDisjoint_hasSum hd.right

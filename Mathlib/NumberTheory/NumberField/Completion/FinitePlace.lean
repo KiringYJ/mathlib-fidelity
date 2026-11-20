@@ -422,7 +422,7 @@ variable {v} in
 lemma FinitePlace.two_le_norm_of_one_lt_norm (x : v.adicCompletion K) (h : 1 < ‖x‖) : 2 ≤ ‖x‖ := by
   rw [FinitePlace.norm_def, WithZeroMulInt.toNNReal_neg_apply (absNorm_ne_zero v) (by aesop)]
   apply (two_le_absNorm_nnreal v).trans
-  conv_lhs => rw [← zpow_one (v.asIdeal.absNorm : NNReal)]
+  conv_lhs => rw [← zpow_one₀ (v.asIdeal.absNorm : NNReal)]
   apply zpow_le_zpow_right₀ (one_lt_absNorm_nnreal v).le
   simpa [← Int.sub_one_lt_iff, sub_self, ← toAdd_one, Multiplicative.toAdd_lt,
     WithZero.lt_unzero_iff] using Valued.toNormedField.one_lt_norm_iff.1 h
@@ -434,7 +434,7 @@ lemma HeightOneSpectrum.embedding_mul_absNorm {x : R} (h_x_nezero : x ≠ 0) :
     WithZeroMulInt.toNNReal_neg_apply _ ((v.valuation K).ne_zero_iff.mpr
       ((FaithfulSMul.algebraMap_eq_zero_iff R K).not.2 h_x_nezero))]
   push_cast
-  rw [← zpow_natCast, ← zpow_add₀ <| mod_cast (zero_lt_one.trans (one_lt_absNorm_nnreal v)).ne']
+  rw [← zpow_natCast₀, ← zpow_add₀ <| mod_cast (zero_lt_one.trans (one_lt_absNorm_nnreal v)).ne']
   norm_cast
   rw [zpow_eq_one_iff_right₀ (Nat.cast_nonneg' _) (mod_cast (one_lt_absNorm_nnreal v).ne')]
   simp [valuation_of_algebraMap, intValuation_if_neg, h_x_nezero]
@@ -559,10 +559,14 @@ theorem hasFiniteMulSupport_int {x : 𝓞 K} (h_x_nezero : x ≠ 0) :
 theorem hasFiniteMulSupport {x : K} (h_x_nezero : x ≠ 0) :
     (fun w : FinitePlace K ↦ w x).HasFiniteMulSupport := by
   rcases IsFractionRing.div_surjective (𝓞 K) x with ⟨a, b, hb, rfl⟩
-  simp_all only [ne_eq, div_eq_zero_iff, FaithfulSMul.algebraMap_eq_zero_iff, not_or, map_div₀]
-  obtain ⟨ha, hb⟩ := h_x_nezero
-  simp_rw [← RingOfIntegers.coe_eq_algebraMap]
-  fun_prop
+  have ha : a ≠ 0 := by simpa only [ne_eq, div_eq_zero_iff,
+    FaithfulSMul.algebraMap_eq_zero_iff] using h_x_nezero
+  refine ((hasFiniteMulSupport_int ha).union
+    (hasFiniteMulSupport_int (nonZeroDivisors.ne_zero hb))).subset ?_
+  intro w hw
+  simp only [Function.mem_mulSupport, Set.mem_union] at hw ⊢
+  by_contra! h
+  exact hw (by simp [map_div₀, ← RingOfIntegers.coe_eq_algebraMap, h.1, h.2])
 
 @[deprecated (since := "2026-03-03")] alias mulSupport_finite := hasFiniteMulSupport
 
@@ -610,10 +614,13 @@ lemma equivHeightOneSpectrum_symm_apply_algebraMap
     FinitePlace.norm_embedding, HeightOneSpectrum.adicAbv_def]
   rw [← IsDedekindDomain.HeightOneSpectrum.valuation_liesOver L v, map_pow,
     Ideal.ramificationIdx'_eq_ramificationIdx v.1 w.1 v.ne_bot,
-    WithZeroMulInt.toNNReal_neg_apply _ (by simpa), WithZeroMulInt.toNNReal_neg_apply _ (by simpa),
-    ← Ideal.absNorm_pow_inertiaDeg v.1 w.1]
-  simp only [Nat.cast_pow, NNReal.coe_zpow, ← zpow_natCast, ← zpow_mul]
-  grind
+    WithZeroMulInt.toNNReal_neg_apply _ (by simpa), WithZeroMulInt.toNNReal_neg_apply _ (by simpa)]
+  simp only [← Ideal.absNorm_pow_inertiaDeg v.1 w.1, Nat.cast_pow, NNReal.coe_pow, NNReal.coe_zpow,
+    NNReal.coe_natCast, WithZero.toAdd_unzero_eq_log]
+  have hv : (v.asIdeal.absNorm : ℝ) ≠ 0 := by exact_mod_cast absNorm_ne_zero v
+  simp only [← zpow_natCast₀, ← zpow_mul₀ hv, Nat.cast_mul]
+  congr 1
+  ring
 
 lemma finprod_finitePlace_pow_multiplicity {I : Ideal (𝓞 K)} (hI : I ≠ ⊥) :
     ∏ᶠ v : FinitePlace K, v.maximalIdeal.asIdeal ^

@@ -88,7 +88,7 @@ lemma exists_mem_interior_convexHull_affineBasis (hs : s ∈ 𝓝 x) :
       ‖d i‖ = ε' * ‖c i‖ := by
         simp [d, Units.smul_def, norm_smul, Real.norm_eq_abs, abs_of_pos hε']
       _ ≤ ε' * (cnorm + 1) := mul_le_mul_of_nonneg_left hci hε'.le
-      _ = ε / 2 := div_mul_cancel₀ _ _ _
+      _ = ε / 2 := div_mul_cancel₀ _
   refine ⟨d, ?_, ?_⟩
   · simpa [d, Pi.smul_def, range_smul, interior_smul₀, convexHull_smul, zero_mem_smul_set_iff,
       hε'.ne']

@@ -87,7 +87,7 @@ theorem discriminant_eq_E₄_cube_sub_E₆_sq_graded :
   congr 1
   ext z
   change ModularForm.discriminant z = (1 / 1728 : ℂ) * (E₄ z ^ 3 - E₆ z ^ 2)
-  grind [discriminant_eq_E₄_cube_sub_E₆_sq z]
+  rw [one_div_mul_eq_div₀, discriminant_eq_E₄_cube_sub_E₆_sq]
 
 end ModularForm
 

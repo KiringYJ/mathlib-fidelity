@@ -632,17 +632,20 @@ theorem ContDiffWithinAt.fderivWithin'' {f : E → F → G} {g : E → F} {t : S
     refine hf'.congr_of_eventuallyEq_insert ?_
     filter_upwards [hv, ht]
     exact fun y hy h2y => (hvf' y hy).fderivWithin h2y
-  match m with
-  | ω =>
-    obtain rfl : n = ω := by simpa using hmn
-    obtain ⟨v, hv, -, f', hvf', hf'⟩ := hf.hasFDerivWithinAt_nhds (by simp) hg hgt
+  cases m using WithTop.recTopCoe with
+  | top =>
+    have htop : ω ≤ n := hmn
+    obtain rfl : n = ω := le_antisymm le_top htop
+    obtain ⟨v, hv, -, f', hvf', hf'⟩ := hf.hasFDerivWithinAt_nhds (by decide) hg hgt
     refine hf'.congr_of_eventuallyEq_insert ?_
     filter_upwards [hv, ht]
     exact fun y hy h2y => (hvf' y hy).fderivWithin h2y
-  | ∞ =>
-    rw [contDiffWithinAt_infty]
-    exact fun k ↦ this k (by exact_mod_cast le_top)
-  | (m : ℕ) => exact this _ le_rfl
+  | coe m =>
+    cases m using ENat.recTopCoe with
+    | top =>
+      exact contDiffWithinAt_infty.mpr fun k ↦ this k
+        (WithTop.coe_le_coe.mpr (show (k : ℕ∞) ≤ ⊤ from le_top))
+    | coe m => exact this m le_rfl
 
 /-- A special case of `ContDiffWithinAt.fderivWithin''` where we require that `s ⊆ g⁻¹(t)`. -/
 theorem ContDiffWithinAt.fderivWithin' {f : E → F → G} {g : E → F} {t : Set F}
@@ -668,7 +671,7 @@ theorem ContDiffWithinAt.fderivWithin_apply {f : E → F → G} {g k : E → F} 
     (hf : ContDiffWithinAt 𝕜 n (Function.uncurry f) (s ×ˢ t) (x₀, g x₀))
     (hg : ContDiffWithinAt 𝕜 m g s x₀) (hk : ContDiffWithinAt 𝕜 m k s x₀) (ht : UniqueDiffOn 𝕜 t)
     (hmn : m + 1 ≤ n) (hx₀ : x₀ ∈ s) (hst : s ⊆ g ⁻¹' t) :
-    ContDiffWithinAt 𝕜 m (fun x => fderivWithin 𝕜 (f x) t (g x) (k x)) s x₀ :=
+    ContDiffWithinAt 𝕜 m (fun x => fderivWithin 𝕜 (f x) t (g x) id (k x)) s x₀ :=
   (contDiff_fst.clm_apply contDiff_snd).contDiffAt.comp_contDiffWithinAt x₀
     ((hf.fderivWithin hg ht hmn hx₀ hst).prodMk hk)
 
@@ -685,7 +688,7 @@ theorem ContDiffWithinAt.fderivWithin_right_apply
     {f : F → G} {k : F → F} {s : Set F} {x₀ : F}
     (hf : ContDiffWithinAt 𝕜 n f s x₀) (hk : ContDiffWithinAt 𝕜 m k s x₀)
     (hs : UniqueDiffOn 𝕜 s) (hmn : m + 1 ≤ n) (hx₀s : x₀ ∈ s) :
-    ContDiffWithinAt 𝕜 m (fun x => fderivWithin 𝕜 f s x (k x)) s x₀ :=
+    ContDiffWithinAt 𝕜 m (fun x => fderivWithin 𝕜 f s x id (k x)) s x₀ :=
   ContDiffWithinAt.fderivWithin_apply
     (ContDiffWithinAt.comp (x₀, x₀) hf contDiffWithinAt_snd <| prod_subset_preimage_snd s s)
     contDiffWithinAt_id hk hs hmn hx₀s (by rw [preimage_id'])
@@ -709,10 +712,11 @@ theorem ContDiffWithinAt.iteratedFDerivWithin_right {i : ℕ} (hf : ContDiffWith
 protected theorem ContDiffAt.fderiv {f : E → F → G} {g : E → F}
     (hf : ContDiffAt 𝕜 n (Function.uncurry f) (x₀, g x₀)) (hg : ContDiffAt 𝕜 m g x₀)
     (hmn : m + 1 ≤ n) : ContDiffAt 𝕜 m (fun x => fderiv 𝕜 (f x) (g x)) x₀ := by
-  simp_rw [← fderivWithin_univ]
-  refine (ContDiffWithinAt.fderivWithin hf.contDiffWithinAt hg.contDiffWithinAt uniqueDiffOn_univ
-    hmn (mem_univ x₀) ?_).contDiffAt univ_mem
-  rw [preimage_univ]
+  have h := (ContDiffWithinAt.fderivWithin hf.contDiffWithinAt hg.contDiffWithinAt uniqueDiffOn_univ
+    hmn (mem_univ x₀) (mapsTo_univ _ _)).contDiffAt univ_mem
+  have hfun (x : E) : fderivWithin 𝕜 (f x) univ (g x) = fderiv 𝕜 (f x) (g x) :=
+    congrFun fderivWithin_univ (g x)
+  simpa only [hfun] using h
 
 @[fun_prop]
 protected theorem ContDiffAt.fderiv_succ {f : E → F → G} {g : E → F}
@@ -783,7 +787,7 @@ protected theorem Differentiable.fderiv_two {f : E → F → G} {g : E → F}
 /-- `x ↦ fderiv 𝕜 (f x) (g x) (k x)` is smooth. -/
 theorem ContDiff.fderiv_apply {f : E → F → G} {g k : E → F}
     (hf : ContDiff 𝕜 m <| Function.uncurry f) (hg : ContDiff 𝕜 n g) (hk : ContDiff 𝕜 n k)
-    (hnm : n + 1 ≤ m) : ContDiff 𝕜 n fun x => fderiv 𝕜 (f x) (g x) (k x) :=
+    (hnm : n + 1 ≤ m) : ContDiff 𝕜 n fun x => fderiv 𝕜 (f x) (g x) id (k x) :=
   (hf.fderiv hg hnm).clm_apply hk
 
 /-- The bundled derivative of a `C^{n+1}` function is `C^n`. -/
@@ -804,8 +808,8 @@ theorem ContDiffOn.continuousOn_fderivWithin_apply (hf : ContDiffOn 𝕜 n f s) 
 theorem ContDiff.contDiff_fderiv_apply {f : E → F} (hf : ContDiff 𝕜 n f) (hmn : m + 1 ≤ n) :
     ContDiff 𝕜 m fun p : E × E => (fderiv 𝕜 f p.1 : E →L[𝕜] F) p.2 := by
   rw [← contDiffOn_univ] at hf ⊢
-  rw [← fderivWithin_univ, ← univ_prod_univ]
-  exact contDiffOn_fderivWithin_apply hf uniqueDiffOn_univ hmn
+  have hfun (x : E) : fderivWithin 𝕜 f univ x = fderiv 𝕜 f x := congrFun fderivWithin_univ x
+  simpa only [hfun, univ_prod_univ] using contDiffOn_fderivWithin_apply hf uniqueDiffOn_univ hmn
 
 theorem ContDiffWithinAt.continuousWithinAt_fderivWithin
     (hf : ContDiffWithinAt 𝕜 n f s x) (hs : UniqueDiffOn 𝕜 s) (hn : n ≠ 0) (hx : x ∈ s) :

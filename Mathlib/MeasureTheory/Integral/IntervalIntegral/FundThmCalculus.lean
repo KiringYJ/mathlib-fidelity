@@ -637,8 +637,9 @@ If `f : ℝ → E` is integrable on `a..b` and `f x` has a finite limit `c` almo
 theorem integral_hasStrictDerivAt_of_tendsto_ae_left (hf : IntervalIntegrable f volume a b)
     (hmeas : StronglyMeasurableAtFilter f (𝓝 a)) (ha : Tendsto f (𝓝 a ⊓ ae volume) (𝓝 c)) :
     HasStrictDerivAt (fun u => ∫ x in u..b, f x) (-c) a := by
-  simpa only [← integral_symm] using
+  have hneg : HasStrictDerivAt (fun u ↦ -(∫ x in b..u, f x)) (-c) a id :=
     (integral_hasStrictDerivAt_of_tendsto_ae_right hf.symm hmeas ha).fun_neg
+  simpa only [← integral_symm] using hneg
 
 /-- **Fundamental theorem of calculus-1**, strict differentiability in the left endpoint.
 
@@ -647,7 +648,9 @@ derivative `-f a` at `a` in the sense of strict differentiability. -/
 theorem integral_hasStrictDerivAt_left (hf : IntervalIntegrable f volume a b)
     (hmeas : StronglyMeasurableAtFilter f (𝓝 a)) (ha : ContinuousAt f a) :
     HasStrictDerivAt (fun u => ∫ x in u..b, f x) (-f a) a := by
-  simpa only [← integral_symm] using (integral_hasStrictDerivAt_right hf.symm hmeas ha).fun_neg
+  have hneg : HasStrictDerivAt (fun u ↦ -(∫ x in b..u, f x)) (-f a) a id :=
+    (integral_hasStrictDerivAt_right hf.symm hmeas ha).fun_neg
+  simpa only [← integral_symm] using hneg
 
 /-- **Fundamental theorem of calculus-1**, strict differentiability in the right endpoint.
 
@@ -1027,10 +1030,14 @@ theorem sub_le_integral_of_hasDeriv_right_of_le_Ico (hab : a ≤ b)
     -- bound from above the increase of `g u - g a` on the right of `t`, using the derivative at `t`
     have I2 : ∀ᶠ u in 𝓝[>] t, g u - g t ≤ (u - t) * y := by
       have g'_lt_y : g' t < y := EReal.coe_lt_coe_iff.1 g'_lt_y'
-      filter_upwards [(hderiv t ⟨ht.2.1, ht.2.2⟩).limsup_slope_le' (notMem_Ioi.2 le_rfl) g'_lt_y,
-        self_mem_nhdsWithin] with u hu t_lt_u
-      have := mul_le_mul_of_nonneg_left hu.le (sub_pos.2 t_lt_u.out).le
-      rwa [← smul_eq_mul, sub_smul_slope] at this
+      have hmap : map (Subtype.val : Ioi t → ℝ) (comap Subtype.val (𝓝 t)) = 𝓝[>] t := by
+        rw [map_comap, Subtype.range_val, nhdsWithin]
+      rw [← hmap]
+      exact ((hderiv t ⟨ht.2.1, ht.2.2⟩).limsup_slope_le' self_notMem_Ioi g'_lt_y).mono
+        fun u hu ↦ by
+          have hpos : 0 ≤ (u : ℝ) - t := sub_nonneg.mpr u.2.le
+          have hbound := mul_le_mul_of_nonneg_left hu.le hpos
+          rwa [← smul_eq_mul, sub_smul_slope] at hbound
     -- combine the previous two bounds to show that `g u - g a` increases less quickly than
     -- `∫ x in a..u, G' x`.
     have I3 : ∀ᶠ u in 𝓝[>] t, g u - g t ≤ ∫ w in t..u, (G' w).toReal := by
@@ -1196,23 +1203,153 @@ theorem integral_deriv_eq_sub_uIoo
     rw [integral_symm, integral_eq_sub_of_hasDerivAt_of_le hab hcont
         (fun x hx => (hderiv x hx).hasDerivAt) hint.symm, neg_sub]
 
-/-- A variant of `intervalIntegral.integral_deriv_eq_sub`, the Fundamental theorem
-of calculus, involving integrating over the unit interval. -/
-lemma integral_unitInterval_deriv_eq_sub [RCLike 𝕜] [NormedSpace 𝕜 E] [IsScalarTower ℝ 𝕜 E]
-    {f f' : 𝕜 → E} {z₀ z₁ : 𝕜}
-    (hcont : ContinuousOn (fun t : ℝ ↦ f' (z₀ + t • z₁)) (Set.Icc 0 1))
-    (hderiv : ∀ t ∈ Set.Icc (0 : ℝ) 1, HasDerivAt f (f' (z₀ + t • z₁)) (z₀ + t • z₁)) :
-    z₁ • ∫ t in (0 : ℝ)..1, f' (z₀ + t • z₁) = f (z₀ + z₁) - f z₀ := by
-  let γ (t : ℝ) : 𝕜 := z₀ + t • z₁
-  have hint : IntervalIntegrable (z₁ • (f' ∘ γ)) MeasureTheory.volume 0 1 :=
-    (ContinuousOn.const_smul hcont z₁).intervalIntegrable_of_Icc zero_le_one
-  have hderiv' (t) (ht : t ∈ Set.uIcc (0 : ℝ) 1) : HasDerivAt (f ∘ γ) (z₁ • (f' ∘ γ) t) t := by
-    refine (hderiv t <| (Set.uIcc_of_le (α := ℝ) zero_le_one).symm ▸ ht).scomp t <| .const_add _ ?_
-    simp [hasDerivAt_iff_isLittleO, sub_smul]
-  convert! (integral_eq_sub_of_hasDerivAt hderiv' hint) using 1
-  · simp_rw [← integral_smul, Function.comp_apply, γ]
-  · simp only [γ, Function.comp_apply, one_smul, zero_smul, add_zero]
+/-- The integral from `a` to `b` of a function on the closed interval with those endpoints. -/
+noncomputable def integralSubtype {a b : ℝ} (f : [[a, b]] → E) : E :=
+  (if a ≤ b then (1 : ℝ) else -1) • (∫ x, f x ∂(volume.comap Subtype.val))
 
+/-- The oriented interval integral over the part of the interval belonging to the integrand's
+domain. -/
+noncomputable def integralSubtypeOn {s : Set ℝ} (f : s → E) (a b : ℝ) : E :=
+  (if a ≤ b then (1 : ℝ) else -1) •
+    (∫ x : ↥([[a, b]] ∩ s), f ⟨x.val, x.2.2⟩ ∂(volume.comap Subtype.val))
+
+omit [CompleteSpace E] in
+theorem integral_subtype_eq_integral (f : ℝ → E) :
+    integralSubtype (fun x : [[a, b]] ↦ f x.val) = ∫ x in a..b, f x := by
+  rw [integralSubtype, integral_subtype_comap measurableSet_uIcc f]
+  rcases le_or_gt a b with hab | hba
+  · rw [ite_eq_left hab, one_smul, uIcc_of_le hab, integral_Icc_eq_integral_Ioc, integral_of_le hab]
+  · rw [ite_eq_right hba.not_ge, neg_one_smul, uIcc_of_ge hba.le, integral_Icc_eq_integral_Ioc,
+      integral_symm, integral_of_le hba.le]
+
+omit [CompleteSpace E] in
+theorem integral_subtypeOn_eq_integral {s : Set ℝ} (hs : MeasurableSet s) (f : ℝ → E)
+    (h : ∀ᵐ x ∂volume.restrict [[a, b]], x ∈ s) :
+    integralSubtypeOn (fun x : s ↦ f x.val) a b = ∫ x in a..b, f x := by
+  have hset : [[a, b]] ∩ s =ᵐ[volume] [[a, b]] := by
+    filter_upwards [(ae_restrict_iff' measurableSet_uIcc).mp h] with x hx
+    exact propext (and_iff_left_of_imp hx)
+  rw [← integral_subtype_eq_integral f, integralSubtypeOn, integralSubtype,
+    integral_subtype_comap (measurableSet_uIcc.inter hs) f,
+    integral_subtype_comap measurableSet_uIcc f, Measure.restrict_congr_set hset]
+
+omit [NormedSpace ℝ E] [CompleteSpace E] in
+theorem integrable_subtype_uIcc {μ : Measure ℝ} [IsLocallyFiniteMeasure μ]
+    {f : [[a, b]] → E} (hf : Continuous f) : Integrable f (μ.comap Subtype.val) := by
+  let F : ℝ → E := Function.extend Subtype.val f 0
+  have hF (x : [[a, b]]) : F x.val = f x := Subtype.val_injective.extend_apply _ _ _
+  have hFc : ContinuousOn F [[a, b]] := by
+    rw [continuousOn_iff_continuous_domRestrict]
+    convert hf using 1
+    exact funext hF
+  exact ((integrableOn_iff_comap_subtypeVal measurableSet_uIcc).mp
+    hFc.integrableOn_uIcc).congr (Eventually.of_forall hF)
+
+/-- The fundamental theorem of calculus for a function defined on the closed interval itself.
+The integral of its coordinate derivative is oriented from `a` to `b`. -/
+theorem integral_subtype_uIcc_eq_sub_of_hasDerivAt {f f' : [[a, b]] → E}
+    (hcont : Continuous f)
+    (hderiv : ∀ x : [[a, b]], x.val ∈ Ioo (min a b) (max a b) →
+      HasDerivAt f (f' x) x Subtype.val)
+    (hint : Integrable f' (volume.comap Subtype.val)) :
+    integralSubtype f' =
+      f ⟨b, right_mem_uIcc⟩ - f ⟨a, left_mem_uIcc⟩ := by
+  let F : ℝ → E := Function.extend Subtype.val f 0
+  let G : ℝ → E := Function.extend Subtype.val f' 0
+  have hF (x : [[a, b]]) : F x.val = f x := Subtype.val_injective.extend_apply _ _ _
+  have hG (x : [[a, b]]) : G x.val = f' x := Subtype.val_injective.extend_apply _ _ _
+  have hFc : ContinuousOn F [[a, b]] := by
+    rw [continuousOn_iff_continuous_domRestrict]
+    convert hcont using 1
+    exact funext hF
+  have hGi : IntervalIntegrable G volume a b := by
+    rw [intervalIntegrable_iff']
+    exact (integrableOn_iff_comap_subtypeVal measurableSet_uIcc).mpr
+      (hint.congr (Eventually.of_forall fun x ↦ (hG x).symm))
+  have hFd (x : ℝ) (hx : x ∈ Ioo (min a b) (max a b)) : HasDerivAt F (G x) x := by
+    let t : [[a, b]] := ⟨x, ⟨hx.1.le, hx.2.le⟩⟩
+    have hh : HasFDerivAt (fun y : [[a, b]] ↦ F y.val)
+        (ContinuousLinearMap.toSpanSingleton ℝ (f' t)) t Subtype.val := by
+      simpa only [hF] using (hderiv t hx).hasFDerivAt
+    rw [show G x = f' t from hG t]
+    have hN : [[a, b]] ∈ 𝓝 t.val := Icc_mem_nhds hx.1 hx.2
+    simpa only [ContinuousLinearMap.toSpanSingleton_apply, one_smul] using
+      hasFDerivAt_iff_hasDerivAt.mp (hh.of_restrict (coord := id) (x := t) hN)
+  have hFTC : (∫ x in a..b, G x) = F b - F a :=
+    integral_eq_sub_of_hasDeriv_right hFc (fun x hx ↦ (hFd x hx).hasDerivWithinAt) hGi
+  rw [← show (fun x : [[a, b]] ↦ G x.val) = f' from funext hG, integral_subtype_eq_integral,
+    hFTC, hF ⟨b, right_mem_uIcc⟩, hF ⟨a, left_mem_uIcc⟩]
+
+/-- A variant of `intervalIntegral.integral_deriv_eq_sub`, the Fundamental theorem
+of calculus, integrating along a continuous path whose coordinates are affine in the unit interval.
+The function is defined on its actual domain; neither it nor the path needs an ambient extension. -/
+lemma integral_unitInterval_deriv_eq_sub [RCLike 𝕜] [NormedSpace 𝕜 E] [IsScalarTower ℝ 𝕜 E]
+    {D : Type*} [TopologicalSpace D] {f : D → E} {coord : D → 𝕜}
+    {f' : Set.Icc (0 : ℝ) 1 → E} {γ : Set.Icc (0 : ℝ) 1 → D} {z₀ z₁ : 𝕜}
+    (hcont : Continuous f')
+    (hderiv : ∀ t, HasDerivAt f (f' t) (γ t) coord)
+    (hpath : Continuous γ := by fun_prop)
+    (hcoord : ∀ t, coord (γ t) = z₀ + (t : ℝ) • z₁ := by intros; rfl) :
+    z₁ • ∫ t, f' t ∂(MeasureTheory.volume.comap Subtype.val) =
+      f (γ 1) - f (γ 0) := by
+  classical
+  have hline (t : ℝ) : HasDerivAt (fun t : ℝ ↦ z₀ + t • z₁) z₁ t := by
+    simp [hasDerivAt_iff_isLittleO, sub_smul]
+  have hcurve (t : Set.Icc (0 : ℝ) 1) :
+      HasDerivAt (f ∘ γ) (z₁ • f' t) t Subtype.val := by
+    have hinner : HasFDerivAt (coord ∘ γ) (ContinuousLinearMap.toSpanSingleton ℝ z₁)
+        t Subtype.val := by
+      have heq : coord ∘ γ = fun s : Set.Icc (0 : ℝ) 1 ↦ z₀ + (s : ℝ) • z₁ :=
+        funext hcoord
+      rw [heq]
+      exact (hline t).hasFDerivAt.comp_tendsto Subtype.val
+        (continuous_subtype_val.continuousAt.tendsto.prodMap (tendsto_pure_pure _ _))
+    have h := HasFDerivAtFilter.comp ((hderiv t).hasFDerivAt.restrictScalars ℝ) hinner
+      (hpath.continuousAt.tendsto.prodMap (tendsto_pure_pure _ _))
+    simpa using hasFDerivAt_iff_hasDerivAt.mp h
+  let g : ℝ → E := Function.extend Subtype.val f' 0
+  have hg (t : Set.Icc (0 : ℝ) 1) : g t = f' t :=
+    Subtype.val_injective.extend_apply _ _ _
+  have hgcont : ContinuousOn g (Set.Icc 0 1) := by
+    rw [continuousOn_iff_continuous_domRestrict]
+    convert! hcont using 1
+    exact funext hg
+  let F : ℝ → E := Function.extend Subtype.val (f ∘ γ) 0
+  have hF (t : Set.Icc (0 : ℝ) 1) : F t = f (γ t) :=
+    Subtype.val_injective.extend_apply _ _ _
+  have hFcont : ContinuousOn F (Set.Icc 0 1) := by
+    rw [continuousOn_iff_continuous_domRestrict]
+    have hc : Continuous (f ∘ γ) := continuous_iff_continuousAt.mpr fun t ↦
+      (hcurve t).hasFDerivAt.continuousAt continuous_subtype_val.continuousAt
+    convert! hc using 1
+    exact funext hF
+  have hint : IntervalIntegrable (z₁ • g) MeasureTheory.volume 0 1 :=
+    (ContinuousOn.const_smul hgcont z₁).intervalIntegrable_of_Icc zero_le_one
+  have hderiv' (t : ℝ) (ht : t ∈ Set.Ioo (0 : ℝ) 1) :
+      HasDerivAt F (z₁ • g t) t := by
+    have ht' : t ∈ Set.Icc (0 : ℝ) 1 := ⟨ht.1.le, ht.2.le⟩
+    have hrestriction : HasFDerivAt (fun s : Set.Icc (0 : ℝ) 1 ↦ F s)
+        (ContinuousLinearMap.toSpanSingleton ℝ (z₁ • f' ⟨t, ht'⟩))
+        ⟨t, ht'⟩ Subtype.val := by
+      rw [show (fun s : Set.Icc (0 : ℝ) 1 ↦ F s) = f ∘ γ from funext hF]
+      exact (hcurve ⟨t, ht'⟩).hasFDerivAt
+    rw [hg ⟨t, ht'⟩]
+    have hmem : Set.Icc (0 : ℝ) 1 ∈ 𝓝 t := Icc_mem_nhds ht.1 ht.2
+    have hF' : HasFDerivAt F (ContinuousLinearMap.toSpanSingleton ℝ (z₁ • f' ⟨t, ht'⟩)) t :=
+      HasFDerivAt.of_restrict (f := F) (x := ⟨t, ht'⟩) hrestriction hmem
+    simpa only [ContinuousLinearMap.toSpanSingleton_apply, one_smul] using hF'.hasDerivAt
+  calc
+    z₁ • ∫ t, f' t ∂(MeasureTheory.volume.comap Subtype.val) =
+        z₁ • ∫ t in Set.Icc (0 : ℝ) 1, g t := by
+      rw [← MeasureTheory.integral_subtype_comap measurableSet_Icc]
+      congr 1
+      exact MeasureTheory.integral_congr_ae <| Filter.Eventually.of_forall fun t ↦ (hg t).symm
+    _ = ∫ t in (0 : ℝ)..1, z₁ • g t := by
+      rw [MeasureTheory.integral_Icc_eq_integral_Ioc, ← integral_of_le zero_le_one, integral_smul]
+    _ = f (γ 1) - f (γ 0) := by
+      have h₁ : F 1 = f (γ 1) := hF (1 : Set.Icc (0 : ℝ) 1)
+      have h₀ : F 0 = f (γ 0) := hF (0 : Set.Icc (0 : ℝ) 1)
+      rw [integral_eq_sub_of_hasDerivAt_of_le zero_le_one hFcont hderiv' hint, h₁, h₀]
 /-!
 ### Automatic integrability for nonnegative derivatives
 -/

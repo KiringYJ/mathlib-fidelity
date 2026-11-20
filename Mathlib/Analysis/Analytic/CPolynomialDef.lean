@@ -72,8 +72,17 @@ theorem HasFiniteFPowerSeriesOnBall.mk' {f : E → F} {p : FormalMultilinearSeri
     HasFiniteFPowerSeriesOnBall f p x n r where
   r_le := p.radius_eq_top_of_eventually_eq_zero (Filter.eventually_atTop.mpr ⟨n, finite⟩) ▸ le_top
   r_pos := pos
-  hasSum hy := sum_eq _ hy ▸ hasSum_sum_of_ne_finset_zero fun m hm ↦ by
-    rw [Finset.mem_range, not_lt] at hm; rw [finite m hm]; rfl
+  hasSum {y} hy := by
+    have hsum : HasSum (fun m ↦ p m fun _ ↦ y - x)
+        (∑ i ∈ Finset.range n, p i fun _ ↦ y - x) :=
+      hasSum_sum_of_ne_finset_zero fun m hm ↦ by
+        rw [Finset.mem_range, not_lt] at hm
+        rw [finite m hm]
+        rfl
+    have heq : (∑ i ∈ Finset.range n, p i fun _ ↦ y - x) = f y := by
+      simpa only [add_sub_cancel] using
+        sum_eq (y - x) (by simpa only [id_eq] using hy)
+    simpa only [id_eq] using (heq ▸ hsum)
   finite := finite
 
 /-- Given a function `f : E → F`, a formal multilinear series `p` and `n : ℕ`, we say that
@@ -219,8 +228,12 @@ the `m`th partial sums of this power series at every point of the disk for `n �
 theorem HasFiniteFPowerSeriesOnBall.eq_partialSum
     (hf : HasFiniteFPowerSeriesOnBall f p x n r) :
     ∀ y ∈ Metric.eball (0 : E) r, ∀ m, n ≤ m →
-    f (x + y) = p.partialSum m y :=
-  fun y hy m hm ↦ (hf.hasSum hy).unique (hasSum_sum_of_ne_finset_zero
+    f (x + y) = p.partialSum m y := by
+  intro y hy m hm
+  have hsum := hf.hasSum (y := x + y)
+    (by simpa only [id_eq, add_sub_cancel_left] using hy)
+  simp only [id_eq, add_sub_cancel_left] at hsum
+  exact hsum.unique (hasSum_sum_of_ne_finset_zero
     (f := fun m => p m (fun _ => y)) (s := Finset.range m)
     (fun N hN => by simp only [Finset.mem_range, not_lt] at hN
                     rw [hf.finite _ (le_trans hm hN), zero_apply]))
@@ -250,11 +263,10 @@ theorem HasFiniteFPowerSeriesOnBall.bound_zero_of_eq_zero (hf : ∀ y ∈ Metric
   · rw [p.radius_eq_top_of_forall_image_add_eq_zero 0 (fun n ↦ by rw [add_zero]; exact hp n)]
     exact le_top
   · intro y hy
-    rw [hf (x + y)]
-    · convert! hasSum_zero
-      rw [hp, zero_apply]
-    · rwa [Metric.mem_eball, edist_eq_enorm_sub, add_comm, add_sub_cancel_right,
-        ← edist_zero_right, ← Metric.mem_eball]
+    simp only [id_eq] at hy ⊢
+    rw [hf y (by simpa only [Metric.mem_eball, edist_eq_enorm_sub, sub_zero] using hy)]
+    convert! hasSum_zero
+    rw [hp, zero_apply]
 
 /-- If `f` has a formal power series at `x` bounded by `0`, then `f` is equal to `0` in a
 neighborhood of `x`. -/
@@ -321,11 +333,12 @@ protected theorem FormalMultilinearSeries.hasFiniteFPowerSeriesOnBall_of_finite
   r_le := by rw [radius_eq_top_of_forall_image_add_eq_zero p n fun _ => hn _ (Nat.le_add_left _ _)]
   r_pos := zero_lt_top
   finite := hn
-  hasSum {y} _ := by rw [zero_add]; exact p.hasSum_of_finite hn y
+  hasSum {y} _ := by
+    simpa only [id_eq, sub_zero] using p.hasSum_of_finite hn y
 
 theorem HasFiniteFPowerSeriesOnBall.sum (h : HasFiniteFPowerSeriesOnBall f p x n r) {y : E}
     (hy : y ∈ Metric.eball (0 : E) r) : f (x + y) = p.sum y :=
-  (h.hasSum hy).tsum_eq.symm
+  h.toHasFPowerSeriesOnBall.sum hy
 
 /-- The sum of a finite power series is continuous. -/
 protected theorem FormalMultilinearSeries.continuousOn_of_finite
@@ -349,7 +362,7 @@ lemma changeOriginSeriesTerm_bound (p : FormalMultilinearSeries 𝕜 E F) {n : �
     (hn : ∀ (m : ℕ), n ≤ m → p m = 0) (k l : ℕ) {s : Finset (Fin (k + l))}
     (hs : s.card = l) (hkl : n ≤ k + l) :
     p.changeOriginSeriesTerm k l s hs = 0 := by
-  rw [changeOriginSeriesTerm, hn _ hkl, map_zero]
+  rw [changeOriginSeriesTerm, hn _ hkl, LinearIsometryEquiv.map_zero]
 
 /-- If `p` is a finite formal multilinear series, then so is `p.changeOriginSeries k` for every
 `k` in `ℕ`. More precisely, if `p m = 0` for `n ≤ m`, then `p.changeOriginSeries k m = 0` for
@@ -446,12 +459,17 @@ theorem HasFiniteFPowerSeriesOnBall.changeOrigin (hf : HasFiniteFPowerSeriesOnBa
   r_pos := by simp [h]
   finite _ hm := p.changeOrigin_finite_of_finite hf.finite hm
   hasSum {z} hz := by
-    have : f (x + y + z) =
-        FormalMultilinearSeries.sum (FormalMultilinearSeries.changeOrigin p y) z := by
-      rw [mem_eball_zero_iff, lt_tsub_iff_right, add_comm] at hz
-      rw [p.changeOrigin_eval_of_finite hf.finite, add_assoc, hf.sum]
-      exact mem_eball_zero_iff.2 ((enorm_add_le _ _).trans_lt hz)
-    rw [this]
+    simp only [id_eq] at hz ⊢
+    have hz' : ‖y‖ₑ + ‖z - (x + y)‖ₑ < r := by
+      simpa only [mem_eball_zero_iff, lt_tsub_iff_right, add_comm, enorm_eq_nnnorm] using hz
+    have hdist : z - x = y + (z - (x + y)) := by abel
+    have hsum : f z = (p.changeOrigin y).sum (z - (x + y)) := by
+      rw [p.changeOrigin_eval_of_finite hf.finite]
+      have hbase := hf.sum (y := z - x)
+        (mem_eball_zero_iff.2 (hdist ▸ (enorm_add_le _ _).trans_lt hz'))
+      simp only [add_sub_cancel] at hbase
+      simpa only [hdist] using hbase
+    rw [hsum]
     apply (p.changeOrigin y).hasSum_of_finite fun _ => p.changeOrigin_finite_of_finite hf.finite
 
 /-- If a function admits a finite power series expansion `p` on an open ball `B (x, r)`, then

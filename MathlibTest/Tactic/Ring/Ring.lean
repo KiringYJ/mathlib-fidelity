@@ -29,7 +29,7 @@ example (x y : ℝ) : (x + y) ^ 3 = x ^ 3 + y ^ 3 + 3 * (x * y ^ 2 + x ^ 2 * y) 
 example {α} [CommSemiring α] (x : α) : (x + 1) ^ 6 = (1 + x) ^ 6 := by ring
 example (n : ℕ) : (n / 2) + (n / 2) = 2 * (n / 2) := by ring
 example {α} [Field α] [CharZero α] (a : α) : a / 2 = a / 2 := by ring
-example {α} [Field α] [LinearOrder α] [IsStrictOrderedRing α] (a b c : α) :
+example {α} [Field α] [LinearOrder α] [IsStrictOrderedRing α] (a b c : α) (hb : IsUnit b) :
   a * (-c / b) * (-c / b) + -c + c = a * (c / b * (c / b)) := by ring
 example {α} [Field α] [LinearOrder α] [IsStrictOrderedRing α] (a b c : α) :
   b ^ 2 - 4 * c * a = -(4 * c * a) + b ^ 2 := by ring
@@ -60,15 +60,20 @@ section Rat
 variable [Field α]
 
 example (x : ℚ) : x / 2 + x / 2 = x := by ring
-example (x : α) : x / 2 = x / 2 := by ring1
-example : (1 + 1)⁻¹ = (2⁻¹ : α) := by ring1
-example (x : α) : x⁻¹ ^ 2 = (x ^ 2)⁻¹ := by ring1
-example (x : α) : x⁻¹ ^ 2 = (x ^ 2)⁻¹ := by ring1
-example (x y : α) : x * y⁻¹ = y⁻¹ * x := by ring1
+example (x : α) (h2 : IsUnit (2 : α)) : x / 2 = x / 2 := by ring1
+example (h2 : IsUnit (2 : α)) :
+    Checked.inv (1 + 1 : α) (by simpa only [one_add_one_eq_two] using h2) = (2⁻¹ : α) := by
+  ring1
+example (x : α) (hx : IsUnit x) : x⁻¹ ^ 2 = (x ^ 2)⁻¹ := by ring1
+example (x : α) (hx : IsUnit x) : x⁻¹ ^ 2 = (x ^ 2)⁻¹ := by ring1
+example (x y : α) (hy : IsUnit y) : x * y⁻¹ = y⁻¹ * x := by ring1
 
-example (x y : α) : (x^2 * y)⁻¹ = (y * x^2)⁻¹ := by ring1
-example (x y : α) : (x^2)⁻¹ / y = (y * x^2)⁻¹ := by ring1
-example (x y : α) : 3 / (x - x + y)⁻¹ = 3 * (x + y⁻¹ - x)⁻¹ := by ring1
+example (x y : α) (hx : IsUnit x) (hy : IsUnit y) : (x^2 * y)⁻¹ = (y * x^2)⁻¹ := by ring1
+example (x y : α) (hx : IsUnit x) (hy : IsUnit y) : (x^2)⁻¹ / y = (y * x^2)⁻¹ := by ring1
+example (x y : α) (hy : IsUnit y) :
+    3 / Checked.inv (x - x + y) (by simpa only [sub_self, zero_add] using hy) =
+      3 * Checked.inv (x + y⁻¹ - x) (by simpa only [add_sub_cancel_left] using hy.inv₀) := by
+  ring1
 
 variable [CharZero α]
 
@@ -79,7 +84,7 @@ end Rat
 
 example (A : ℕ) : (2 * A) ^ 2 = (2 * A) ^ 2 := by ring
 
-example (x y z : ℚ) (hx : x ≠ 0) (hy : y ≠ 0) :
+example (x y z : ℚ) (hx : x ≠ 0) (hy : y ≠ 0) (hz : z ≠ 0) :
     x / (y / z) + y ⁻¹ + 1 / (y * -x) = -1/ (x * y) + (x * z + 1) / y := by
   field_simp
   ring

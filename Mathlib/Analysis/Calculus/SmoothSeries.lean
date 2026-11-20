@@ -242,8 +242,9 @@ theorem contDiff_tsum (hf : ∀ i, ContDiff 𝕜 N (f i)) (hv : ∀ k : ℕ, (k 
       (ContDiff.differentiable_iteratedFDeriv (mod_cast hm)
         (hf n)).differentiableAt.hasFDerivAt
     refine differentiable_tsum (hv _ h'm) A fun n x => ?_
-    rw [fderiv_iteratedFDeriv, comp_apply, LinearIsometryEquiv.norm_map]
-    exact h'f _ _ _ h'm
+    have hd := congrFun (fderiv_iteratedFDeriv (𝕜 := 𝕜) (f := f n) (n := m)) x
+    rw [hd]
+    simpa only [comp_apply, LinearIsometryEquiv.norm_map] using h'f (m + 1) n x h'm
 
 /-- Consider a series of functions `∑' i, f i x`. Assume that each individual function `f i` is of
 class `C^N`, and moreover there is a uniform summable upper bound on the `k`-th derivative

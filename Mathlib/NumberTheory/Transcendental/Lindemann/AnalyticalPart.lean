@@ -33,7 +33,8 @@ theorem hasDerivAt_cexp_mul_sumIDeriv (p : ℂ[X]) (s : ℂ) (x : ℝ) :
       (s * (cexp (-(x • s)) * p.eval (x • s))) x := by
   have h₀ := (hasDerivAt_id' x).smul_const s
   have h₁ := h₀.fun_neg.cexp
-  have h₂ := ((sumIDeriv p).hasDerivAt (x • s)).comp x h₀
+  have h₂ := HasDerivAt.comp (h := fun y : ℝ ↦ y • s) (coord' := id) x
+    ((sumIDeriv p).hasDerivAt (x • s)) h₀
   convert! (h₁.mul h₂).fun_neg using 1
   nth_rw 1 [sumIDeriv_eq_self_add p]
   simp only [one_smul, eval_add, Function.comp_apply]
@@ -64,8 +65,8 @@ def P (f : ℂ[X]) (s : ℂ) :=
 
 theorem P_eq_integral_exp_mul_eval (f : ℂ[X]) (s : ℂ) :
     P f s = exp s * (s * ∫ x in 0..1, exp (-(x • s)) * f.eval (x • s)) := by
-  rw [integral_exp_mul_eval, mul_add, mul_neg, exp_neg, mul_inv_cancel_left₀ (exp_ne_zero s),
-    neg_add_eq_sub, P]
+  rw [integral_exp_mul_eval, mul_add, mul_neg, ← mul_assoc, ← exp_add, add_neg_cancel, exp_zero,
+    one_mul, neg_add_eq_sub, P]
 
 theorem P_algebraMap (f : ℤ[X]) (s : ℂ) :
     P (f.map <| algebraMap ℤ ℂ) s = exp s * f.sumIDeriv.eval 0 - f.sumIDeriv.aeval s := by

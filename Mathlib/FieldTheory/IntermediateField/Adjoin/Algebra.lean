@@ -108,7 +108,8 @@ lemma fg_top_iff :
     obtain ⟨x, s, rfl⟩ := IsLocalization.exists_mk'_eq (Algebra.EssFiniteType.submonoid F E) x
     have hs : s.1.1 ≠ 0 := (IsLocalization.map_units E s).ne_zero
     have H : IsLocalization.mk' E x s = x / s := by
-      simp [IsLocalization.mk'_eq_iff_eq_mul]
+      rw [IsLocalization.mk'_eq_iff_eq_mul]
+      exact (div_mul_cancel₀ (x : E) (hb := hs.isUnit)).symm
     rw [H]
     exact SubfieldClass.div_mem (IntermediateField.algebra_adjoin_le_adjoin _ _ x.2)
       (IntermediateField.algebra_adjoin_le_adjoin _ _ s.1.2)

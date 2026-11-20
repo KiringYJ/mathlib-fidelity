@@ -390,8 +390,12 @@ lemma coverEntropyEntourage_le_log_coverMincard_div (F_inv : MapsTo T F F) [U.Is
   have cv_mono : Monotone fun m ↦ (coverMincard T F (U ○ U) m).toENNReal :=
     fun _ _ k_m ↦ ENat.toENNReal_mono (coverMincard_monotone_time T F (U ○ U) k_m)
   have h := cv_mono.expGrowthSup_comp_mul n_pos
-  rw [mul_comm, ← div_eq_iff (natCast_ne_bot n) (natCast_ne_top n) (Nat.cast_ne_zero.2 n_pos)] at h
-  rw [coverEntropyEntourage, ← h]
+  have hdiv : (expGrowthSup fun m ↦ (coverMincard T F (U ○ U) (n * m)).toENNReal) / n =
+      coverEntropyEntourage T F (U ○ U) := by
+    apply div_eq_iff.mpr
+    rw [coverEntropyEntourage, mul_comm]
+    exact h
+  rw [← hdiv]
   apply monotone_div_right_of_nonneg n.cast_nonneg'
   rw [← expGrowthSup_pow]
   refine expGrowthSup_monotone fun m ↦ ?_
@@ -407,8 +411,8 @@ lemma IsDynCoverOf.coverEntropyEntourage_le_log_card_div (F_inv : MapsTo T F F) 
 
 lemma coverEntropyEntourage_le_coverEntropyInfEntourage (F_inv : MapsTo T F F) [U.IsSymm] :
     coverEntropyEntourage T F (U ○ U) ≤ coverEntropyInfEntourage T F U := by
-  refine (le_liminf_of_le) (eventually_atTop.2 ⟨1, fun m m_pos ↦ ?_⟩)
-  exact coverEntropyEntourage_le_log_coverMincard_div F_inv (Nat.one_le_iff_ne_zero.1 m_pos)
+  refine le_liminf_of_le isCobounded_ge_of_top (Eventually.of_forall fun m ↦ ?_)
+  exact coverEntropyEntourage_le_log_coverMincard_div F_inv m.property
 
 lemma coverEntropyEntourage_finite_of_isCompact_invariant [UniformSpace X]
     (F_comp : IsCompact F) (F_inv : MapsTo T F F) (U_uni : U ∈ 𝓤 X) :
@@ -417,8 +421,10 @@ lemma coverEntropyEntourage_finite_of_isCompact_invariant [UniformSpace X]
   obtain ⟨s, s_cover⟩ := exists_isDynCoverOf_of_isCompact_invariant F_comp F_inv V_uni 1
   apply (coverEntropyEntourage_antitone T F V_U).trans_lt
   apply (s_cover.coverEntropyEntourage_le_log_card_div F_inv one_ne_zero).trans_lt
-  rw [Nat.cast_one, div_one, log_lt_top_iff, ← ENat.toENNReal_top]
-  exact_mod_cast (ENat.natCast_ne_top (Finset.card s)).lt_top
+  have hcard : log (s.card : ℝ≥0∞) < ⊤ := by
+    rw [log_lt_top_iff, ← ENat.toENNReal_top]
+    exact_mod_cast (ENat.natCast_ne_top (Finset.card s)).lt_top
+  simpa only [Nat.cast_one, div_one₀] using hcard
 
 /-! ### Cover entropy -/
 

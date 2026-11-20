@@ -28,10 +28,11 @@ variable (𝕜 : Type*) {E F G : Type*} [NontriviallyNormedField 𝕜] [NormedAd
   [NormedAddCommGroup F] [NormedSpace 𝕜 E] [NormedSpace 𝕜 F] [NormedAddCommGroup G]
   [NormedSpace 𝕜 G] {f g : E → F} {s t : Set E} {x : E}
 
-/-- A predicate saying that a function is differentiable on a set and is continuous on its
-closure. This is a common assumption in complex analysis. -/
-structure DiffContOnCl (f : E → F) (s : Set E) : Prop where
-  protected differentiableOn : DifferentiableOn 𝕜 f s
+/-- A function on a topological domain is differentiable in the given coordinates on a set
+and continuous on its closure. The coordinates default to the identity for an ambient function. -/
+structure DiffContOnCl {D : Type*} [TopologicalSpace D] (f : D → F) (s : Set D)
+    (coord : D → E := by exact _root_.id) : Prop where
+  protected differentiableOn : DifferentiableOn 𝕜 f s coord
   protected continuousOn : ContinuousOn f (closure s)
 
 variable {𝕜}
@@ -114,9 +115,15 @@ theorem smul_const {𝕜' : Type*} [NontriviallyNormedField 𝕜'] [NormedAlgebr
     (y : F) : DiffContOnCl 𝕜 (fun x => c x • y) s :=
   hc.smul diffContOnCl_const
 
-theorem inv {f : E → 𝕜} (hf : DiffContOnCl 𝕜 f s) (h₀ : ∀ x ∈ closure s, f x ≠ 0) :
-    DiffContOnCl 𝕜 f⁻¹ s :=
-  ⟨(differentiableOn_inv.comp hf.1 fun _ hx => h₀ _ (subset_closure hx) :), hf.2.inv₀ h₀⟩
+/-- Inversion preserves differentiability and continuity on the closure in its unit domain. -/
+theorem inv {f : E → 𝕜} (hf : DiffContOnCl 𝕜 f s) :
+    DiffContOnCl 𝕜 (fun y : {y : E // IsUnit (f y)} ↦ Checked.inv (f y) y.property)
+      (Subtype.val ⁻¹' s) Subtype.val := by
+  refine ⟨fun y hy ↦ (hf.differentiableOn y hy).inv y.property, ?_⟩
+  have hm : MapsTo (Subtype.val : {y : E // IsUnit (f y)} → E) (Subtype.val ⁻¹' s) s :=
+    fun _ hy ↦ hy
+  exact (hf.continuousOn.comp continuous_subtype_val.continuousOn
+    (hm.closure_of_continuousOn continuous_subtype_val.continuousOn)).fun_inv₀
 
 end DiffContOnCl
 

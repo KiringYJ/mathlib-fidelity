@@ -15,8 +15,8 @@ import Mathlib.Algebra.Order.Interval.Set.Group
 
 This file shows that the collection of positive contractions (of norm strictly less than one)
 in a possibly non-unital C⋆-algebra form a directed set. The key step uses the continuous functional
-calculus applied with the functions `fun x : ℝ≥0, 1 - (1 + x)⁻¹` and `fun x : ℝ≥0, x * (1 - x)⁻¹`,
-which are inverses on the interval `{x : ℝ≥0 | x < 1}`.
+calculus applied to the homeomorphism from the nonnegative reals to the half-open interval
+`{x : ℝ≥0 | x < 1}` sending `x` to `1 - (1 + x)⁻¹`. Its inverse sends `y` to `y / (1 - y)`.
 
 In addition, this file defines `IsIncreasingApproximateUnit` to be a filter `l` that is an
 approximate unit contained in the closed unit ball of nonnegative elements. Every C⋆-algebra has
@@ -27,8 +27,7 @@ moreover, this filter is an increasing approximate unit.
 
 + `CFC.monotoneOn_one_sub_one_add_inv`: the function `f := fun x : ℝ≥0, 1 - (1 + x)⁻¹` is
   *operator monotone* on `Set.Ici (0 : A)` (i.e., `cfcₙ f` is monotone on `{x : A | 0 ≤ x}`).
-+ `Set.InvOn.one_sub_one_add_inv`: the functions `f := fun x : ℝ≥0, 1 - (1 + x)⁻¹` and
-  `g := fun x : ℝ≥0, x * (1 - x)⁻¹` are inverses on `{x : ℝ≥0 | x < 1}`.
++ `NNReal.homeomorphIioOne`: the homeomorphism used to lift positive strict contractions.
 + `CStarAlgebra.directedOn_nonneg_ball`: the set `{x : A | 0 ≤ x} ∩ Metric.ball 0 1` is directed.
 + `Filter.IsIncreasingApproximateUnit`: a filter `l` is an *increasing approximate unit* if it is an
   approximate unit contained in the closed unit ball of nonnegative elements.
@@ -47,6 +46,7 @@ local notation "σₙ" => quasispectrum
 local notation "σ" => spectrum
 
 open Unitization NNReal CStarAlgebra
+open scoped ContinuousMapZero
 
 variable [PartialOrder A] [StarOrderedRing A]
 
@@ -58,44 +58,79 @@ lemma CFC.monotoneOn_one_sub_one_add_inv :
   rw [← inr_le_inr_iff] at hab
   rw [← inr_nonneg_iff] at ha hb
   have h_cfc_one_sub (c : A⁺¹) (hc : 0 ≤ c := by cfc_tac) :
-      cfc (fun x : ℝ≥0 ↦ 1 - (1 + x)⁻¹) c = 1 - cfc (·⁻¹ : ℝ≥0 → ℝ≥0) (1 + c) := by
-    rw [cfc_tsub _ _ _ (fun x _ ↦ by simp) (hg := by fun_prop (disch := intro _ _; positivity)),
-      cfc_const_one ℝ≥0 c, cfc_comp' (·⁻¹) (1 + ·) c ?_, cfc_add .., cfc_const_one ℝ≥0 c,
-      cfc_id' ℝ≥0 c]
-    exact continuousOn_id.inv₀ (Set.forall_mem_image.mpr fun x _ ↦ by dsimp only [id]; positivity)
+      cfc (fun x : ℝ≥0 ↦ 1 - (1 + x)⁻¹) c =
+        1 - Checked.inv (1 + c) (show IsStrictlyPositive (1 + c) from by grind).isUnit := by
+    have hpos : IsStrictlyPositive (1 + c) := by grind
+    have h_inv : cfc (fun x : ℝ≥0 ↦ (1 + x)⁻¹) c = Checked.inv (1 + c) hpos.isUnit := by
+      have hadd : cfc (fun x : ℝ≥0 ↦ 1 + x) c = 1 + c := by
+        simpa only [id_eq, map_one, cfc_id' ℝ≥0 c] using cfc_const_add 1 (id : ℝ≥0 → ℝ≥0) c
+      rw [cfc_apply _ _ hc]
+      have hi := cfc_inv (fun x : ℝ≥0 ↦ 1 + x) c (fun x _ ↦ by positivity) (by fun_prop) hc
+      apply hi.trans
+      congr 1
+    rw [cfc_tsub _ _ _ (fun x _ ↦ by
+      have hx : (1 : ℝ≥0) ≤ 1 + x := le_add_of_nonneg_right bot_le
+      simpa only [inv_one₀] using inv_anti₀ (zero_lt_one : (0 : ℝ≥0) < 1) hx),
+      cfc_const_one ℝ≥0 c, h_inv]
   rw [h_cfc_one_sub (a : A⁺¹), h_cfc_one_sub (b : A⁺¹)]
-  gcongr
-  rw [← CFC.rpow_neg_one_eq_cfc_inv, ← CFC.rpow_neg_one_eq_cfc_inv]
-  exact rpow_neg_one_le_rpow_neg_one (by gcongr)
+  have hapos : IsStrictlyPositive (1 + (a : A⁺¹)) := by grind
+  have hbpos : IsStrictlyPositive (1 + (b : A⁺¹)) := by grind
+  apply sub_le_sub_left
+  simpa only [Units.val_inv_eq_inv_val₀, IsUnit.unit_spec] using
+    CStarAlgebra.inv_le_inv (a := hapos.isUnit.unit) (b := hbpos.isUnit.unit)
+      (by simpa only [IsUnit.unit_spec] using hapos.nonneg)
+      (by simpa only [IsUnit.unit_spec] using add_le_add_right hab (1 : A⁺¹))
 
+/-- The nonnegative reals are homeomorphic to the half-open unit interval by
+`x ↦ 1 - (1 + x)⁻¹`, with inverse `y ↦ y / (1 - y)`. -/
+noncomputable def NNReal.homeomorphIioOne : ℝ≥0 ≃ₜ Set.Iio (1 : ℝ≥0) where
+  toFun x := ⟨1 - (1 + x)⁻¹, tsub_lt_self (zero_lt_one : (0 : ℝ≥0) < 1)
+    (show (0 : ℝ≥0) < (1 + x)⁻¹ by positivity)⟩
+  invFun y := Checked.div (y : ℝ≥0) (1 - (y : ℝ≥0)) (tsub_pos_of_lt y.property).ne'.isUnit
+  left_inv x := by
+    have hle : (1 + x)⁻¹ ≤ 1 := inv_le_one_of_one_le₀ (le_add_of_nonneg_right bot_le)
+    apply div_eq_iff.mpr
+    rw [tsub_tsub_cancel_of_le hle]
+    apply tsub_eq_of_eq_add_rev
+    simpa only [add_mul, one_mul] using
+      (mul_inv_cancel₀ (a := 1 + x) (ha := (show 0 < 1 + x by positivity).ne'.isUnit)).symm
+  right_inv y := by
+    apply Subtype.ext
+    let d := Checked.div (y : ℝ≥0) (1 - (y : ℝ≥0)) (tsub_pos_of_lt y.property).ne'.isUnit
+    change 1 - (1 + d)⁻¹ = (y : ℝ≥0)
+    have h : (1 + d) * (1 - (y : ℝ≥0)) = 1 := by
+      rw [add_mul, one_mul, show d * (1 - (y : ℝ≥0)) = y from div_mul_cancel₀ _,
+        tsub_add_cancel_of_le y.property.le]
+    rw [inv_eq_of_mul_eq_one_right₀ h, tsub_tsub_cancel_of_le y.property.le]
+  continuous_toFun := (continuous_const.sub ((continuous_const.add continuous_id).fun_inv₀
+    (h0 := fun x : ℝ≥0 ↦ (show 0 < 1 + x by positivity).ne'.isUnit))).subtype_mk _
+  continuous_invFun := continuous_subtype_val.div₀ (continuous_const.sub continuous_subtype_val)
+    (h₀ := fun y ↦ (tsub_pos_of_lt y.property).ne'.isUnit)
+
+/-- Real continuous functional calculus on the nonnegative cone is monotone for
+`x ↦ 1 - (1 + x)⁻¹`. Each real quasispectral value here is nonnegative. -/
 lemma CFC.monotoneOn_one_sub_one_add_inv_real :
-    MonotoneOn (cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹)) (Set.Ici (0 : A)) := by
-  intro a (ha : 0 ≤ a) b (hb : 0 ≤ b) hab
-  calc _ = cfcₙ (fun x : ℝ≥0 => 1 - (1 + x)⁻¹) a := by
-          rw [cfcₙ_nnreal_eq_real _ _ ha]
-          congr! 1 with x hx
-          have hx' : 0 ≤ x := by grind
-          simp [hx']
-    _ ≤ cfcₙ (fun x : ℝ≥0 => 1 - (1 + x)⁻¹) b :=
-          CFC.monotoneOn_one_sub_one_add_inv ha hb hab
-    _ = cfcₙ (fun x : ℝ => 1 - (1 + x)⁻¹) b := by
-          rw [cfcₙ_nnreal_eq_real _ _ hb]
-          congr! 1 with x hx
-          have hx' : 0 ≤ x := by grind
-          simp [hx']
-
-lemma Set.InvOn.one_sub_one_add_inv : Set.InvOn (fun x ↦ 1 - (1 + x)⁻¹) (fun x ↦ x * (1 - x)⁻¹)
-    {x : ℝ≥0 | x < 1} {x : ℝ≥0 | x < 1} := by
-  have : (fun x : ℝ≥0 ↦ x * (1 + x)⁻¹) = fun x ↦ 1 - (1 + x)⁻¹ := by
-    ext x : 1
-    simp [field, mul_tsub]
-  rw [← this]
-  constructor <;> intro x (hx : x < 1)
-  · have : 0 < 1 - x := tsub_pos_of_lt hx
-    simp [field, tsub_add_cancel_of_le hx.le]
-  · simp [mul_assoc, ← mul_inv, mul_tsub]
-    field_simp
-    simp
+    Monotone (fun a : Set.Ici (0 : A) ↦
+      cfcₙHom (a := (a : A)) (IsSelfAdjoint.of_nonneg a.property)
+        (⟨⟨fun x : σₙ ℝ (a : A) ↦
+          ((homeomorphIioOne
+            ⟨x, quasispectrum_nonneg_of_nonneg _ a.property _ x.property⟩).val : ℝ),
+        NNReal.continuous_coe.comp ((continuous_subtype_val :
+          Continuous (Subtype.val : Set.Iio (1 : ℝ≥0) → ℝ≥0)).comp (homeomorphIioOne.continuous.comp
+            (continuous_subtype_val.subtype_mk _)))⟩,
+        by change (((1 : ℝ≥0) - (1 + 0)⁻¹ : ℝ≥0) : ℝ) = 0; simp⟩ : C(σₙ ℝ (a : A), ℝ)₀)) := by
+  intro a b hab
+  have he (c : Set.Ici (0 : A)) := cfcₙ_nnreal_eq_real
+    (fun x : ℝ≥0 ↦ 1 - (1 + x)⁻¹) (c : A) c.property
+  have hm := CFC.monotoneOn_one_sub_one_add_inv a.property b.property hab
+  rw [he a, he b] at hm
+  convert hm using 1 <;> symm <;> apply cfcₙ_apply_of_coe_eq <;> funext x
+  · dsimp [Set.domRestrict, homeomorphIioOne]
+    rw [Real.toNNReal_of_nonneg (quasispectrum_nonneg_of_nonneg _ a.property _ x.property)]
+    rfl
+  · dsimp [Set.domRestrict, homeomorphIioOne]
+    rw [Real.toNNReal_of_nonneg (quasispectrum_nonneg_of_nonneg _ b.property _ x.property)]
+    rfl
 
 lemma norm_cfcₙ_one_sub_one_add_inv_lt_one (a : A) :
     ‖cfcₙ (fun x : ℝ≥0 ↦ 1 - (1 + x)⁻¹) a‖ < 1 :=
@@ -104,33 +139,42 @@ lemma norm_cfcₙ_one_sub_one_add_inv_lt_one (a : A) :
 lemma CStarAlgebra.directedOn_nonneg_ball :
     DirectedOn (· ≤ ·) ({x : A | 0 ≤ x} ∩ Metric.ball 0 1) := by
   let f : ℝ≥0 → ℝ≥0 := fun x => 1 - (1 + x)⁻¹
-  let g : ℝ≥0 → ℝ≥0 := fun x => x * (1 - x)⁻¹
-  suffices ∀ a b : A, 0 ≤ a → 0 ≤ b → ‖a‖ < 1 → ‖b‖ < 1 →
-      a ≤ cfcₙ f (cfcₙ g a + cfcₙ g b) by
-    rintro a ⟨(ha₁ : 0 ≤ a), ha₂⟩ b ⟨(hb₁ : 0 ≤ b), hb₂⟩
-    simp only [Metric.mem_ball, dist_zero_right] at ha₂ hb₂
-    refine ⟨cfcₙ f (cfcₙ g a + cfcₙ g b), ⟨by simp, ?_⟩, ?_, ?_⟩
-    · simpa only [Metric.mem_ball, dist_zero_right] using norm_cfcₙ_one_sub_one_add_inv_lt_one _
-    · exact this a b ha₁ hb₁ ha₂ hb₂
-    · exact add_comm (cfcₙ g a) (cfcₙ g b) ▸ this b a hb₁ ha₁ hb₂ ha₂
-  rintro a b ha₁ - ha₂ -
-  calc
-    a = cfcₙ (f ∘ g) a := by
-      conv_lhs => rw [← cfcₙ_id ℝ≥0 a]
-      congr! 1 with x hx
-      exact (Set.InvOn.one_sub_one_add_inv.1 <|
-        lt_of_le_of_lt (le_nnnorm_of_mem_quasispectrum hx) ha₂).symm
-    _ = cfcₙ f (cfcₙ g a) := by
-      rw [cfcₙ_comp f g a ?_ (by simp [f, tsub_self]) ?_ (by simp [g]) ha₁]
-      · fun_prop (disch := intro _ _; positivity)
-      · have (x) (hx : x ∈ σₙ ℝ≥0 a) : 1 - x ≠ 0 := by
-          refine tsub_pos_of_lt ?_ |>.ne'
-          exact lt_of_le_of_lt (le_nnnorm_of_mem_quasispectrum hx) ha₂
-        fun_prop
-    _ ≤ cfcₙ f (cfcₙ g a + cfcₙ g b) := by
-      have hab' : cfcₙ g a ≤ cfcₙ g a + cfcₙ g b := le_add_of_nonneg_right cfcₙ_nonneg_of_predicate
-      exact CFC.monotoneOn_one_sub_one_add_inv cfcₙ_nonneg_of_predicate
-        (cfcₙ_nonneg_of_predicate.trans hab') hab'
+  have hf : Continuous f := continuous_subtype_val.comp homeomorphIioOne.continuous
+  have hf₀ : f 0 = 0 := by simp [f]
+  have lift_contraction (a : A) (ha : 0 ≤ a) (hn : ‖a‖ < 1) :
+      ∃ c : A, 0 ≤ c ∧ cfcₙ f c = a := by
+    have hlt (x : σₙ ℝ≥0 a) : (x : ℝ≥0) < 1 :=
+      lt_of_le_of_lt (le_nnnorm_of_mem_quasispectrum x.property) hn
+    let g : C(σₙ ℝ≥0 a, ℝ≥0)₀ :=
+      ⟨⟨fun x ↦ homeomorphIioOne.symm ⟨x, hlt x⟩,
+        homeomorphIioOne.symm.continuous.comp (continuous_subtype_val.subtype_mk hlt)⟩,
+        by change Checked.div 0 _ _ = 0; exact zero_div _⟩
+    let c := cfcₙHom ha g
+    have hc : 0 ≤ c := cfcₙHom_predicate ha g
+    refine ⟨c, hc, ?_⟩
+    have hmem (x : σₙ ℝ≥0 a) : g x ∈ σₙ ℝ≥0 c := by
+      rw [cfcₙHom_map_quasispectrum ha g]
+      exact ⟨x, rfl⟩
+    let g' : C(σₙ ℝ≥0 a, σₙ ℝ≥0 c)₀ :=
+      ⟨⟨fun x ↦ ⟨g x, hmem x⟩, g.continuous.subtype_mk hmem⟩, Subtype.ext (map_zero g)⟩
+    let φ : C(σₙ ℝ≥0 c, ℝ≥0)₀ := ⟨⟨_, hf.continuousOn.domRestrict⟩, hf₀⟩
+    rw [cfcₙ_apply f c hf.continuousOn hf₀ hc, ← cfcₙHom_comp ha g g' (fun _ ↦ rfl) φ]
+    apply Eq.trans _ (cfcₙHom_id (R := ℝ≥0) ha)
+    apply congrArg (cfcₙHom ha)
+    apply DFunLike.ext
+    intro x
+    exact congrArg (Subtype.val : Set.Iio (1 : ℝ≥0) → ℝ≥0)
+      (homeomorphIioOne.apply_symm_apply ⟨x, hlt x⟩)
+  rintro a ⟨(ha : 0 ≤ a), hna⟩ b ⟨(hb : 0 ≤ b), hnb⟩
+  simp only [Metric.mem_ball, dist_zero_right] at hna hnb
+  obtain ⟨c, hc, hca⟩ := lift_contraction a ha hna
+  obtain ⟨d, hd, hdb⟩ := lift_contraction b hb hnb
+  refine ⟨cfcₙ f (c + d), ⟨cfcₙ_nonneg_of_predicate, ?_⟩, ?_, ?_⟩
+  · simpa only [Metric.mem_ball, dist_zero_right] using norm_cfcₙ_one_sub_one_add_inv_lt_one (c + d)
+  · rw [← hca]
+    exact CFC.monotoneOn_one_sub_one_add_inv hc (add_nonneg hc hd) (le_add_of_nonneg_right hd)
+  · rw [← hdb]
+    exact CFC.monotoneOn_one_sub_one_add_inv hd (add_nonneg hc hd) (le_add_of_nonneg_left hc)
 
 section ApproximateUnit
 
@@ -288,7 +332,8 @@ private lemma tendsto_mul_right_approximateUnit (m : A) :
     rw [← continuousOn_univ]
     fun_prop (disch := intro _ _; positivity)
   have hg' : ContinuousOn (fun y ↦ (1 + ε⁻¹ ^ 2 • y)⁻¹) (spectrum ℝ≥0 m) :=
-    ContinuousOn.inv₀ (by fun_prop) fun _ _ ↦ by positivity
+    ContinuousOn.fun_inv₀ (h0 := fun y : ℝ≥0 ↦
+      (show 0 < 1 + ε⁻¹ ^ 2 • y by positivity).ne'.isUnit) (by fun_prop)
   have hx : x ∈ Set.Icc 0 1 := mem_Icc_iff_norm_le_one.mpr ⟨hx₀, hx₂⟩
   have hx' : x ∈ Set.Icc _ 1 := ⟨hx₁, hx.2⟩
   refine nnnorm_sub_mul_self_le m cfc_nonneg_of_predicate hx' ?_
@@ -297,7 +342,12 @@ private lemma tendsto_mul_right_approximateUnit (m : A) :
     rw [this]
     refine nnnorm_cfc_nnreal_le fun y hy ↦ ?_
     calc
-      y * (1 + ε⁻¹ ^ 2 • y)⁻¹ * y = y * ε ^ 2 * (y / (ε ^ 2 + y)) := by simp [field]
+      y * (1 + ε⁻¹ ^ 2 • y)⁻¹ * y = y * ε ^ 2 * (y / (ε ^ 2 + y)) := by
+        have h_inv : (1 + ε⁻¹ ^ 2 • y)⁻¹ = ε ^ 2 / (ε ^ 2 + y) := by
+          apply inv_eq_of_mul_eq_one_right₀
+          rw [← mul_div_assoc₀, div_eq_iff, one_mul, add_mul, one_mul, smul_eq_mul, inv_pow₀,
+            mul_right_comm _ y (ε ^ 2), inv_mul_cancel₀, one_mul]
+        rw [h_inv, ← mul_div_assoc₀, div_mul_eq_mul_div₀, mul_div_assoc₀]
       _ ≤ ε ^ 2 * 1 := by
         gcongr
         · apply mul_le_of_le_one_left'
@@ -305,7 +355,7 @@ private lemma tendsto_mul_right_approximateUnit (m : A) :
           rw [norm_le_one_iff_of_nonneg m hm₁, ← cfc_id' ℝ≥0 m, ← cfc_one (R := ℝ≥0) m,
             cfc_nnreal_le_iff _ _ _ (QuasispectrumRestricts.nnreal_of_nonneg hm₁)] at hm'
           exact hm' y hy
-        · exact div_le_one (by positivity) |>.mpr le_add_self
+        · exact div_le_one₀ (by positivity) |>.mpr le_add_self
       _ = ε ^ 2 := mul_one _
   rw [cfc_mul _ _ m (continuousOn_id' _ |>.fun_mul hg') (continuousOn_id' _),
     cfc_mul _ _ m (continuousOn_id' _) hg', cfc_id' .., hm₁.star_eq]

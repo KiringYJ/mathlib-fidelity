@@ -65,27 +65,35 @@ theorem W_eq_factorial_ratio (n : ℕ) :
     simp only [W, prod_range_zero, Nat.factorial_zero, mul_zero, pow_zero]
     norm_num
   | succ n IH =>
-    unfold W at IH ⊢
-    rw [prod_range_succ, IH, _root_.div_mul_div_comm, _root_.div_mul_div_comm]
-    refine (div_eq_div_iff ?_ ?_).mpr ?_
-    any_goals exact ne_of_gt (by positivity)
-    simp_rw [Nat.mul_succ, Nat.factorial_succ, pow_succ]
+    rw [W_succ, IH]
+    field_simp
+    simp_rw [Nat.mul_succ, Nat.factorial_succ, pow_add, pow_succ]
     push_cast
     ring_nf
 
 theorem W_eq_integral_sin_pow_div_integral_sin_pow (k : ℕ) : (π / 2)⁻¹ * W k =
-    (∫ x : ℝ in 0..π, sin x ^ (2 * k + 1)) / ∫ x : ℝ in 0..π, sin x ^ (2 * k) := by
-  rw [integral_sin_pow_even, integral_sin_pow_odd, mul_div_mul_comm, ← prod_div_distrib, inv_div]
-  simp_rw [div_div_div_comm, div_div_eq_mul_div, mul_div_assoc]
-  rfl
+    Checked.div (∫ x : ℝ in 0..π, sin x ^ (2 * k + 1))
+      (∫ x : ℝ in 0..π, sin x ^ (2 * k)) (integral_sin_pow_pos (2 * k)).ne'.isUnit := by
+  have hprod : W k * (∏ i ∈ range k, (2 * (i : ℝ) + 1) / (2 * i + 2)) =
+      ∏ i ∈ range k, (2 * (i : ℝ) + 2) / (2 * i + 3) := by
+    rw [W, ← prod_mul_distrib]
+    refine prod_congr rfl fun i _ ↦ ?_
+    field_simp
+  have hπ : (π / 2)⁻¹ * π = (2 : ℝ) := by
+    field_simp [pi_pos.ne']
+  apply eq_div_iff.mpr
+  rw [integral_sin_pow_odd, integral_sin_pow_even]
+  calc
+    _ = ((π / 2)⁻¹ * π) * (W k * (∏ i ∈ range k, (2 * (i : ℝ) + 1) / (2 * i + 2))) := by ring
+    _ = _ := by rw [hπ, hprod]
 
 theorem W_le (k : ℕ) : W k ≤ π / 2 := by
-  rw [← div_le_one pi_div_two_pos, div_eq_inv_mul]
+  rw [← div_le_one pi_div_two_pos, div_eq_inv_mul₀]
   rw [W_eq_integral_sin_pow_div_integral_sin_pow, div_le_one (integral_sin_pow_pos _)]
   apply integral_sin_pow_succ_le
 
 theorem le_W (k : ℕ) : ((2 : ℝ) * k + 1) / (2 * k + 2) * (π / 2) ≤ W k := by
-  rw [← le_div_iff₀ pi_div_two_pos, div_eq_inv_mul (W k) _]
+  rw [← le_div_iff₀ pi_div_two_pos, div_eq_inv_mul₀ (W k) _]
   rw [W_eq_integral_sin_pow_div_integral_sin_pow, le_div_iff₀ (integral_sin_pow_pos _)]
   convert! integral_sin_pow_succ_le (2 * k + 1)
   rw [integral_sin_pow (2 * k)]
@@ -98,11 +106,11 @@ theorem tendsto_W_nhds_pi_div_two : Tendsto W atTop (𝓝 <| π / 2) := by
   refine Tendsto.mul ?_ tendsto_const_nhds
   have h : ∀ n : ℕ, ((2 : ℝ) * n + 1) / (2 * n + 2) = 1 - 1 / (2 * n + 2) := by
     intro n
-    rw [sub_div' (ne_of_gt (add_pos_of_nonneg_of_pos (mul_nonneg
-      (two_pos : 0 < (2 : ℝ)).le (Nat.cast_nonneg _)) two_pos)), one_mul]
+    rw [sub_div', one_mul]
     congr 1; ring
   simp_rw [h]
-  refine (tendsto_const_nhds.div_atTop ?_).const_sub _
+  refine (tendsto_const_nhds.div_atTop (h₀ := fun n ↦
+    (show 0 < (2 : ℝ) * (n : ℕ) + 2 by positivity).ne'.isUnit) ?_).const_sub _
   refine Tendsto.atTop_add ?_ tendsto_const_nhds
   exact tendsto_natCast_atTop_atTop.const_mul_atTop two_pos
 

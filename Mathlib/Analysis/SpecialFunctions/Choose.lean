@@ -35,10 +35,15 @@ lemma isEquivalent_descFactorial (k : ℕ) :
   | succ k h =>
     simp_rw [descFactorial_succ, cast_mul, _root_.pow_succ']
     refine IsEquivalent.mul ?_ h
-    have hz : ∀ᶠ (x : ℕ) in atTop, (x : ℝ) ≠ 0 :=
-      eventually_atTop.mpr ⟨1, fun n hn ↦ ne_of_gt (mod_cast hn)⟩
-    rw [isEquivalent_iff_tendsto_one hz, ← tendsto_add_atTop_iff_nat k]
-    simpa using tendsto_natCast_div_add_atTop (k : ℝ)
+    have hnorm : Tendsto (fun n : ℕ ↦ ‖(n : ℝ)‖) atTop atTop :=
+      tendsto_natCast_atTop_atTop.congr' (by simp)
+    have hsub : (fun n : ℕ ↦ (n : ℝ) - k) ~[atTop] fun n ↦ (n : ℝ) := by
+      simpa only [sub_eq_add_neg] using
+        (IsEquivalent.refl.add_const_of_norm_tendsto_atTop hnorm (c := -(k : ℝ)))
+    apply hsub.congr_left
+    filter_upwards [eventually_ge_atTop k] with n hn
+    change (n : ℝ) - k = ((n - k : ℕ) : ℝ)
+    exact (Nat.cast_sub hn).symm
 
 /-- `n.choose k` is asymptotically equivalent to `n^k / k!`. -/
 theorem isEquivalent_choose (k : ℕ) :
@@ -53,5 +58,8 @@ theorem isEquivalent_choose (k : ℕ) :
 theorem isTheta_choose (k : ℕ) :
     (fun (n : ℕ) ↦ (n.choose k : ℝ)) =Θ[atTop] (fun (n : ℕ) ↦ (n ^ k : ℝ)) := by
   apply (isEquivalent_choose k).trans_isTheta
-  simp_rw [div_eq_mul_inv, mul_comm _ (_⁻¹)]
-  exact isTheta_rfl.const_mul_left <| inv_ne_zero (mod_cast k.factorial_ne_zero)
+  have hk : IsUnit (k.factorial : ℝ) := (Nat.cast_ne_zero.mpr k.factorial_ne_zero).isUnit
+  have ht : (fun n : ℕ ↦ Checked.inv (k.factorial : ℝ) hk * (n ^ k : ℝ)) =Θ[atTop]
+      (fun n : ℕ ↦ (n ^ k : ℝ)) :=
+    isTheta_rfl.const_mul_left (inv_ne_zero (ha := hk))
+  simpa only [div_eq_mul_inv₀, mul_comm] using ht

@@ -189,7 +189,7 @@ theorem approx_le_one (c : CU P) (n : ℕ) (x : X) : c.approx n x ≤ 1 := by
   induction n generalizing c with
   | zero => exact indicator_apply_le' (fun _ => le_rfl) fun _ => zero_le_one
   | succ n ihn =>
-    simp only [approx, midpoint_eq_smul_add, invOf_eq_inv, smul_eq_mul, ← div_eq_inv_mul]
+    simp only [approx, midpoint_eq_smul_add, invOf_eq_inv, smul_eq_mul, ← div_eq_inv_mul₀]
     have := add_le_add (ihn (left c)) (ihn (right c))
     norm_num at this
     exact Iff.mpr (div_le_one zero_lt_two) this
@@ -291,7 +291,7 @@ theorem continuous_lim (c : CU P) : Continuous c.lim := by
         c.right.lim_of_mem_C _ (c.left_U_subset_right_C hyl),
         c.right.lim_of_mem_C _ (c.left_U_subset_right_C hxl)]
       refine (dist_midpoint_midpoint_le _ _ _ _).trans ?_
-      rw [dist_self, add_zero, div_eq_inv_mul]
+      rw [dist_self, add_zero, div_eq_inv_mul₀]
       gcongr
     · replace hxl : x ∈ c.left.right.Cᶜ :=
         compl_subset_compl.2 c.left.right.subset hxl

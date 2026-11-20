@@ -433,7 +433,8 @@ lemma resultant_eq_prod_roots_sub
     · rw [natDegree_mul hg.ne_zero (by simpa [hg.ne_zero] using hf.ne_zero),
         natDegree_neg, add_comm]
   have hr₀ : f %ₘ g ≠ 0 := by simpa [modByMonic_eq_zero_iff_dvd, hg]
-  let r := C (f %ₘ g).leadingCoeff⁻¹ * (f %ₘ g)
+  let : Semiring K := (inferInstance : Field K).toDivisionRing.toSemiring
+  let r : K[X] := C (f %ₘ g).leadingCoeff⁻¹ * (f %ₘ g)
   have hrd : r.natDegree < g.natDegree := by
     simp [r, natDegree_C_mul, natDegree_modByMonic_lt _ hg (show g ≠ 1 by aesop)]
   have hr : r.Monic := by

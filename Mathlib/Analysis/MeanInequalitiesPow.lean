@@ -58,28 +58,41 @@ namespace Real
 theorem pow_arith_mean_le_arith_mean_pow (w z : ι → ℝ) (hw : ∀ i ∈ s, 0 ≤ w i)
     (hw' : ∑ i ∈ s, w i = 1) (hz : ∀ i ∈ s, 0 ≤ z i) (n : ℕ) :
     (∑ i ∈ s, w i * z i) ^ n ≤ ∑ i ∈ s, w i * z i ^ n :=
-  (convexOn_pow n).map_sum_le hw hw' hz
+  (convexOn_pow n).map_sum_le hw hw' hz (q := ∑ i ∈ s, w i * z i)
+    (sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (hz i hi))
 
 theorem pow_arith_mean_le_arith_mean_pow_of_even (w z : ι → ℝ) (hw : ∀ i ∈ s, 0 ≤ w i)
     (hw' : ∑ i ∈ s, w i = 1) {n : ℕ} (hn : Even n) :
     (∑ i ∈ s, w i * z i) ^ n ≤ ∑ i ∈ s, w i * z i ^ n :=
-  hn.convexOn_pow.map_sum_le hw hw' fun _ _ => Set.mem_univ _
+  hn.convexOn_pow.map_sum_le hw hw' (fun _ _ ↦ Set.mem_univ _)
+    (q := ∑ i ∈ s, w i * z i) (Set.mem_univ _)
 
 theorem zpow_arith_mean_le_arith_mean_zpow (w z : ι → ℝ) (hw : ∀ i ∈ s, 0 ≤ w i)
     (hw' : ∑ i ∈ s, w i = 1) (hz : ∀ i ∈ s, 0 < z i) (m : ℤ) :
-    (∑ i ∈ s, w i * z i) ^ m ≤ ∑ i ∈ s, w i * z i ^ m :=
-  (convexOn_zpow m).map_sum_le hw hw' hz
+    have hsum : 0 < ∑ i ∈ s, w i * z i := (convex_Ioi (0 : ℝ)).sum_mem hw hw' hz
+    Checked.zpow (∑ i ∈ s, w i * z i) m (fun _ ↦ hsum.ne'.isUnit) ≤
+      ∑ i : s, w i * Checked.zpow (z i) m (fun _ ↦ (hz i i.2).ne'.isUnit) := by
+  let Z : s → Set.Ioi (0 : ℝ) := fun i ↦ ⟨z i, hz i i.2⟩
+  let M : Set.Ioi (0 : ℝ) := ⟨∑ i ∈ s, w i * z i, (convex_Ioi (0 : ℝ)).sum_mem hw hw' hz⟩
+  have h := (convexOn_zpow (𝕜 := ℝ) m).map_sum_le (t := univ) (w := fun i : s ↦ w i)
+    (p := Z) (fun i _ ↦ hw i i.2) (by simpa only [sum_coe_sort] using hw')
+    (fun _ _ ↦ Set.mem_univ _) (q := M) (Set.mem_univ _)
+    (hcoord := by
+      change (∑ i ∈ s, w i * z i) = ∑ i : s, w i * z i
+      exact (sum_coe_sort s (fun i ↦ w i * z i)).symm)
+  simpa only [Z, M, smul_eq_mul] using h
 
 theorem rpow_arith_mean_le_arith_mean_rpow (w z : ι → ℝ) (hw : ∀ i ∈ s, 0 ≤ w i)
     (hw' : ∑ i ∈ s, w i = 1) (hz : ∀ i ∈ s, 0 ≤ z i) {p : ℝ} (hp : 1 ≤ p) :
     (∑ i ∈ s, w i * z i) ^ p ≤ ∑ i ∈ s, w i * z i ^ p :=
-  (convexOn_rpow hp).map_sum_le hw hw' hz
+  (convexOn_rpow hp).map_sum_le hw hw' hz (q := ∑ i ∈ s, w i * z i)
+    (sum_nonneg fun i hi ↦ mul_nonneg (hw i hi) (hz i hi))
 
 theorem arith_mean_le_rpow_mean (w z : ι → ℝ) (hw : ∀ i ∈ s, 0 ≤ w i) (hw' : ∑ i ∈ s, w i = 1)
     (hz : ∀ i ∈ s, 0 ≤ z i) {p : ℝ} (hp : 1 ≤ p) :
     ∑ i ∈ s, w i * z i ≤ (∑ i ∈ s, w i * z i ^ p) ^ (1 / p) := by
   have : 0 < p := by positivity
-  rw [← rpow_le_rpow_iff _ _ this, ← rpow_mul, one_div_mul_cancel (ne_of_gt this), rpow_one]
+  rw [← rpow_le_rpow_iff _ _ this, ← rpow_mul, one_div_mul_cancel, rpow_one]
   · exact rpow_arith_mean_le_arith_mean_rpow s w z hw hw' hz hp
   all_goals
     apply_rules [sum_nonneg, rpow_nonneg]
@@ -120,10 +133,9 @@ theorem rpow_add_le_mul_rpow_add_rpow (z₁ z₂ : ℝ≥0) {p : ℝ} (hp : 1 �
   · simp only [rpow_one, sub_self, rpow_zero, one_mul]; rfl
   convert!
     rpow_arith_mean_le_arith_mean2_rpow (1 / 2) (1 / 2) (2 * z₁) (2 * z₂) (add_halves 1) hp using 1
-  · simp only [one_div, inv_mul_cancel_left₀, Ne, two_ne_zero,
-      not_false_iff]
-  · have A : p - 1 ≠ 0 := ne_of_gt (sub_pos.2 h'p)
-    simp only [mul_rpow, rpow_sub' A, rpow_one]
+  · simp only [one_div₀, inv_mul_cancel_left₀]
+  · simp only [mul_rpow, rpow_sub' (2 : ℝ≥0) (y := p) (z := 1)
+      (hxz := by norm_num), rpow_one]
     ring
 
 /-- Weighted generalized mean inequality, version for sums over finite sets, with `ℝ≥0`-valued
@@ -146,40 +158,36 @@ theorem add_rpow_le_rpow_add {p : ℝ} (a b : ℝ≥0) (hp1 : 1 ≤ p) : a ^ p +
   by_cases h_zero : a + b = 0
   · simp [add_eq_zero.mp h_zero, hp_pos.ne']
   have h_nonzero : ¬(a = 0 ∧ b = 0) := by rwa [add_eq_zero] at h_zero
-  have h_add : a / (a + b) + b / (a + b) = 1 := by rw [← add_div, div_self h_zero]
+  have h_add : a / (a + b) + b / (a + b) = 1 := by rw [← add_div, div_self]
   have h := add_rpow_le_one_of_add_le_one (a / (a + b)) (b / (a + b)) h_add.le hp1
-  rw [div_rpow a (a + b), div_rpow b (a + b)] at h
+  simp only [div_rpow] at h
   have hab_0 : (a + b) ^ p ≠ 0 := by simp [h_nonzero]
-  have h_mul : (a + b) ^ p * (a ^ p / (a + b) ^ p + b ^ p / (a + b) ^ p) ≤ (a + b) ^ p := by
-    nth_rw 4 [← mul_one ((a + b) ^ p)]; gcongr
-  rwa [div_eq_mul_inv, div_eq_mul_inv, mul_add, mul_comm (a ^ p), mul_comm (b ^ p), ← mul_assoc, ←
-    mul_assoc, mul_inv_cancel₀ hab_0, one_mul, one_mul] at h_mul
+  have h_mul := mul_le_mul_of_nonneg_left h (show 0 ≤ (a + b) ^ p from bot_le)
+  simpa only [mul_add, mul_div_cancel₀, mul_one] using h_mul
 
 theorem rpow_add_rpow_le_add {p : ℝ} (a b : ℝ≥0) (hp1 : 1 ≤ p) :
     (a ^ p + b ^ p) ^ (1 / p) ≤ a + b := by
-  rw [one_div,
-    ← @NNReal.le_rpow_inv_iff _ _ p⁻¹ (by simp [lt_of_lt_of_le zero_lt_one hp1]), inv_inv]
+  rw [one_div₀, NNReal.rpow_inv_le_iff (zero_lt_one.trans_le hp1)]
   exact add_rpow_le_rpow_add _ _ hp1
 
 theorem rpow_add_rpow_le {p q : ℝ} (a b : ℝ≥0) (hp_pos : 0 < p) (hpq : p ≤ q) :
     (a ^ q + b ^ q) ^ (1 / q) ≤ (a ^ p + b ^ p) ^ (1 / p) := by
+  have hq_pos : 0 < q := hp_pos.trans_le hpq
   have h_rpow : ∀ a : ℝ≥0, a ^ q = (a ^ p) ^ (q / p) := fun a => by
-    rw [← NNReal.rpow_mul, div_eq_inv_mul, ← mul_assoc, mul_inv_cancel₀ hp_pos.ne.symm,
-      one_mul]
-  have h_rpow_add_rpow_le_add :
-    ((a ^ p) ^ (q / p) + (b ^ p) ^ (q / p)) ^ (1 / (q / p)) ≤ a ^ p + b ^ p := by
-    refine rpow_add_rpow_le_add (a ^ p) (b ^ p) ?_
-    rwa [one_le_div hp_pos]
-  rw [h_rpow a, h_rpow b, one_div p, NNReal.le_rpow_inv_iff hp_pos, ← NNReal.rpow_mul, mul_comm,
-    mul_one_div]
-  rwa [one_div_div] at h_rpow_add_rpow_le_add
+    rw [← NNReal.rpow_mul, mul_div_cancel₀]
+  have hmean := rpow_add_rpow_le_add (a ^ p) (b ^ p) ((one_le_div hp_pos).mpr hpq)
+  simp only [one_div₀]
+  rw [NNReal.le_rpow_inv_iff hp_pos, ← NNReal.rpow_mul]
+  have he : q⁻¹ * p = (q / p)⁻¹ := by rw [inv_div₀, div_eq_mul_inv₀, mul_comm]
+  rw [he, h_rpow a, h_rpow b]
+  simpa only [one_div₀] using hmean
 
 theorem rpow_add_le_add_rpow {p : ℝ} (a b : ℝ≥0) (hp : 0 ≤ p) (hp1 : p ≤ 1) :
     (a + b) ^ p ≤ a ^ p + b ^ p := by
   rcases hp.eq_or_lt with (rfl | hp_pos)
   · simp
   have h := rpow_add_rpow_le a b hp_pos hp1
-  rw [one_div_one, one_div] at h
+  rw [one_div_one₀, one_div₀] at h
   repeat' rw [NNReal.rpow_one] at h
   exact (NNReal.le_rpow_inv_iff hp_pos).mp h
 
@@ -293,52 +301,52 @@ theorem add_rpow_le_rpow_add {p : ℝ} (a b : ℝ≥0∞) (hp1 : 1 ≤ p) : a ^ 
 
 theorem rpow_add_rpow_le_add {p : ℝ} (a b : ℝ≥0∞) (hp1 : 1 ≤ p) :
     (a ^ p + b ^ p) ^ (1 / p) ≤ a + b := by
-  rw [one_div, ← @ENNReal.le_rpow_inv_iff _ _ p⁻¹ (by simp [lt_of_lt_of_le zero_lt_one hp1])]
-  rw [inv_inv]
+  rw [one_div₀, ENNReal.rpow_inv_le_iff (zero_lt_one.trans_le hp1)]
   exact add_rpow_le_rpow_add _ _ hp1
 
 theorem rpow_add_rpow_le {p q : ℝ} (a b : ℝ≥0∞) (hp_pos : 0 < p) (hpq : p ≤ q) :
     (a ^ q + b ^ q) ^ (1 / q) ≤ (a ^ p + b ^ p) ^ (1 / p) := by
+  have hq_pos : 0 < q := hp_pos.trans_le hpq
   have h_rpow : ∀ a : ℝ≥0∞, a ^ q = (a ^ p) ^ (q / p) := fun a => by
-    rw [← ENNReal.rpow_mul, mul_div_cancel₀ _ hp_pos.ne']
-  have h_rpow_add_rpow_le_add :
-    ((a ^ p) ^ (q / p) + (b ^ p) ^ (q / p)) ^ (1 / (q / p)) ≤ a ^ p + b ^ p := by
-    refine rpow_add_rpow_le_add (a ^ p) (b ^ p) ?_
-    rwa [one_le_div hp_pos]
-  rw [h_rpow a, h_rpow b, one_div p, ENNReal.le_rpow_inv_iff hp_pos, ← ENNReal.rpow_mul, mul_comm,
-    mul_one_div]
-  rwa [one_div_div] at h_rpow_add_rpow_le_add
+    rw [← ENNReal.rpow_mul, mul_div_cancel₀]
+  have hmean := rpow_add_rpow_le_add (a ^ p) (b ^ p) ((one_le_div hp_pos).mpr hpq)
+  simp only [one_div₀]
+  rw [ENNReal.le_rpow_inv_iff hp_pos, ← ENNReal.rpow_mul]
+  have he : q⁻¹ * p = (q / p)⁻¹ := by rw [inv_div₀, div_eq_mul_inv₀, mul_comm]
+  rw [he, h_rpow a, h_rpow b]
+  simpa only [one_div₀] using hmean
 
 theorem rpow_add_le_add_rpow {p : ℝ} (a b : ℝ≥0∞) (hp : 0 ≤ p) (hp1 : p ≤ 1) :
     (a + b) ^ p ≤ a ^ p + b ^ p := by
   rcases hp.eq_or_lt with (rfl | hp_pos)
   · simp
   have h := rpow_add_rpow_le a b hp_pos hp1
-  rw [one_div_one, one_div] at h
+  rw [one_div_one₀, one_div₀] at h
   repeat' rw [ENNReal.rpow_one] at h
   exact (ENNReal.le_rpow_inv_iff hp_pos).mp h
 
 /-- A constant for the inequality `‖f + g‖_{L^p} ≤ C * (‖f‖_{L^p} + ‖g‖_{L^p})`. It is equal to `1`
 for `p ≥ 1` or `p = 0`, and `2^(1/p-1)` in the more tricky interval `(0, 1)`. -/
 @[expose] noncomputable def LpAddConst (p : ℝ≥0∞) : ℝ≥0∞ :=
-  if p ∈ Set.Ioo (0 : ℝ≥0∞) 1 then (2 : ℝ≥0∞) ^ (1 / p.toReal - 1) else 1
+  if h : p ∈ Set.Ioo (0 : ℝ≥0∞) 1 then
+    (2 : ℝ≥0∞) ^ (Checked.div 1 p.toReal
+      (toReal_pos h.1.ne' (h.2.trans one_lt_top).ne).ne'.isUnit - 1)
+  else 1
 
 theorem LpAddConst_of_one_le {p : ℝ≥0∞} (hp : 1 ≤ p) : LpAddConst p = 1 := by
-  rw [LpAddConst, ite_eq_right]
+  rw [LpAddConst, dite_eq_right]
   intro h
   exact lt_irrefl _ (h.2.trans_le hp)
 
 theorem LpAddConst_zero : LpAddConst 0 = 1 := by
-  rw [LpAddConst, ite_eq_right]
+  rw [LpAddConst, dite_eq_right]
   intro h
   exact lt_irrefl _ h.1
 
 theorem LpAddConst_lt_top (p : ℝ≥0∞) : LpAddConst p < ∞ := by
   rw [LpAddConst]
   split_ifs with h
-  · apply ENNReal.rpow_lt_top_of_nonneg _ ENNReal.ofNat_ne_top
-    rw [one_div, sub_nonneg, ← ENNReal.toReal_inv, ← ENNReal.toReal_one]
-    exact ENNReal.toReal_mono (by simpa using h.1.ne') (ENNReal.one_le_inv.2 h.2.le)
+  · exact lt_top_iff_ne_top.mpr (rpow_ne_top_of_ne_zero (by norm_num) ofNat_ne_top)
   · exact ENNReal.one_lt_top
 
 theorem LpAddConst_ne_zero (p : ℝ≥0∞) : LpAddConst p ≠ 0 := by
@@ -355,23 +363,23 @@ theorem rpow_add_le_mul_rpow_add_rpow' (z₁ z₂ : ℝ≥0∞) {p : ℝ} (hp : 
       constructor
       · simp
       · rwa [ENNReal.inv_lt_one, one_lt_ofReal]
-    rw [show LpAddConst (ENNReal.ofReal p)⁻¹ =
-        (2 : ℝ≥0∞) ^ (1 / ((ENNReal.ofReal p)⁻¹).toReal - 1) by
-      rw [LpAddConst, ite_eq_left hmem]]
-    simp only [ENNReal.toReal_inv, div_inv_eq_mul, one_mul]
-    rw [ENNReal.toReal_ofReal hp]
+    have hpunit : IsUnit (ENNReal.ofReal p).toReal := by
+      simpa only [ENNReal.toReal_ofReal hp] using (zero_lt_one.trans h).ne'.isUnit
+    rw [LpAddConst, dite_eq_left hmem]
+    simp only [ENNReal.toReal_inv (ha := hpunit), one_div₀, inv_inv₀,
+      ENNReal.toReal_ofReal hp]
     exact rpow_add_le_mul_rpow_add_rpow _ _ h.le
   · have hp1 : p ≤ 1 := not_lt.mp h
     rw [LpAddConst_of_one_le (ENNReal.one_le_inv.mpr (ENNReal.ofReal_le_one.mpr hp1)), one_mul]
     exact rpow_add_le_add_rpow _ _ hp hp1
 
-/-- Variant of `ENNReal.rpow_add_le_mul_rpow_add_rpow'` with `p : ℝ≥0∞`. -/
-theorem rpow_add_le_mul_rpow_add_rpow'' (z₁ z₂ : ℝ≥0∞) {p : ℝ≥0∞} :
-    (z₁ + z₂) ^ p.toReal⁻¹ ≤
-      LpAddConst p * (z₁ ^ p.toReal⁻¹ + z₂ ^ p.toReal⁻¹) := by
-  by_cases p_zero : p = 0
-  · simp [p_zero, LpAddConst_zero]
-  convert rpow_add_le_mul_rpow_add_rpow' z₁ z₂ (p := p.toReal⁻¹) (by positivity)
-  rw [← ENNReal.toReal_inv, ENNReal.ofReal_toReal (by simpa), inv_inv]
+/-- Variant with a positive extended exponent parameter. The reciprocal is finite, including
+when `p = ∞`, whose reciprocal exponent is zero. The parameter `p = 0` has no finite reciprocal
+exponent and is excluded. -/
+theorem rpow_add_le_mul_rpow_add_rpow'' (z₁ z₂ : ℝ≥0∞) {p : ℝ≥0∞} (hp : p ≠ 0) :
+    (z₁ + z₂) ^ (p⁻¹).toReal ≤
+      LpAddConst p * (z₁ ^ (p⁻¹).toReal + z₂ ^ (p⁻¹).toReal) := by
+  have h := rpow_add_le_mul_rpow_add_rpow' z₁ z₂ (p := (p⁻¹).toReal) ENNReal.toReal_nonneg
+  simpa only [ENNReal.ofReal_toReal (ENNReal.inv_ne_top.mpr hp), inv_inv] using h
 
 end ENNReal

@@ -18,7 +18,9 @@ integration and with the Poisson kernel, respectively.
 
 public section
 
-open Complex MeasureTheory Metric Real Set
+open Complex MeasureTheory Metric Real Set Filter
+
+open scoped Topology
 
 variable
   {E : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E]
@@ -34,338 +36,457 @@ various versions of the Poisson Formula.
 /--
 The Herglotz-Riesz kernel of integration.
 -/
-noncomputable def herglotzRieszKernel (c w z : ℂ) : ℂ :=
-  ((z - c) + (w - c)) / ((z - c) - (w - c))
+noncomputable def herglotzRieszKernel (c w : ℂ) (z : ({w}ᶜ : Set ℂ)) : ℂ :=
+  Checked.div (z.val - c + (w - c)) (z.val - w)
+    (sub_ne_zero.mpr (mem_compl_singleton_iff.mp z.2)).isUnit
 
-lemma herglotzRieszKernel_def (c w z : ℂ) :
-    herglotzRieszKernel c w z = ((z - c) + (w - c)) / ((z - c) - (w - c)) := by rfl
+lemma herglotzRieszKernel_def (c w : ℂ) (z : ({w}ᶜ : Set ℂ)) :
+    herglotzRieszKernel c w z = (z.val - c + (w - c)) / (z.val - w) := by rw [herglotzRieszKernel]
 
-lemma herglotzRieszKernel_fun_def (c w : ℂ) :
-    herglotzRieszKernel c w = fun z ↦ ((z - c) + (w - c)) / ((z - c) - (w - c)) := by
-  ext z
-  exact herglotzRieszKernel_def c w z
+lemma herglotzRieszKernel_add_const (c w : ℂ) (z : ({w - c}ᶜ : Set ℂ)) :
+    herglotzRieszKernel c w ⟨z.val + c, by
+      exact mem_compl_singleton_iff.mpr fun h ↦ z.2 (eq_sub_iff_add_eq.mpr h)⟩ =
+        herglotzRieszKernel 0 (w - c) z := by
+  have hdiff : z.val + c - w = z.val - (w - c) := by abel
+  simp only [herglotzRieszKernel_def, add_sub_cancel_right, sub_zero, hdiff]
 
-lemma herglotzRieszKernel_add_const (c w z : ℂ) :
-    herglotzRieszKernel c w (z + c) = herglotzRieszKernel 0 (w - c) z := by
-  simp [herglotzRieszKernel_fun_def]
+/-- The Poisson kernel on the complement of its pole. -/
+noncomputable def poissonKernel (c w : ℂ) (z : ({w}ᶜ : Set ℂ)) : ℝ :=
+  Checked.div (‖z.val - c‖ ^ 2 - ‖w - c‖ ^ 2) (‖z.val - w‖ ^ 2)
+    ((norm_ne_zero_iff.mpr (sub_ne_zero.mpr (mem_compl_singleton_iff.mp z.2))).isUnit.pow 2)
 
-/--
-The Poisson kernel of integration.
--/
-noncomputable def poissonKernel (c w z : ℂ) : ℝ :=
-  (‖z - c‖ ^ 2 - ‖w - c‖ ^ 2) / ‖(z - c) - (w - c)‖ ^ 2
+lemma poissonKernel_def (c w : ℂ) (z : ({w}ᶜ : Set ℂ)) :
+    poissonKernel c w z = (‖z.val - c‖ ^ 2 - ‖w - c‖ ^ 2) / ‖z.val - w‖ ^ 2 := by rw [poissonKernel]
 
-lemma poissonKernel_def (c w z : ℂ) :
-    poissonKernel c w z = (‖z - c‖ ^ 2 - ‖w - c‖ ^ 2) / ‖(z - c) - (w - c)‖ ^ 2 := by rfl
-
-private lemma poissonKernel_eq_re_herglotzRieszKernel_aux {a b : ℂ} :
+private lemma poissonKernel_eq_re_herglotzRieszKernel_aux {a b : ℂ} (hab : a ≠ b) :
     ((a + b) / (a - b)).re = (‖a‖ ^ 2 - ‖b‖ ^ 2) / ‖a - b‖ ^ 2 := by
-  rw [div_re, normSq_eq_norm_sq (a - b), ← add_div, add_re, sub_re, add_im, sub_im]
-  calc ((a.re + b.re) * (a.re - b.re) + (a.im + b.im) * (a.im - b.im)) / ‖a - b‖ ^ 2
-    _ = ((a.re * a.re + a.im * a.im) - (b.re * b.re + b.im * b.im)) / ‖a - b‖ ^ 2 := by
-      congr! 1; ring
-    _ = (‖a‖ ^ 2 - ‖b‖ ^ 2) / ‖a - b‖ ^ 2 := by
-      simp [← normSq_apply, normSq_eq_norm_sq]
-
-/--
-Companion theorem to the Poisson Integral Formula: The real part of the Herglotz–Riesz kernel and
-the Poisson kernel agree on the path of integration.
--/
-lemma poissonKernel_eq_re_herglotzRieszKernel {c w : ℂ} :
-    poissonKernel c w = Complex.re ∘ herglotzRieszKernel c w := by
-  ext z
-  rw [Function.comp_apply, poissonKernel, herglotzRieszKernel,
-    poissonKernel_eq_re_herglotzRieszKernel_aux]
-
-private lemma re_herglotzRieszKernel_le_aux (φ θ r R : ℝ) (h₁ : 0 < r) (h₂ : r < R) :
-    ((R * exp (θ * I) + r * exp (φ * I)) / (R * exp (θ * I) - r * exp (φ * I))).re
-      ≤ (R + r) / (R - r) := by
-  rw [div_eq_mul_inv]
-  have h_cos : (R ^ 2 + r ^ 2 - 2 * R * r * Real.cos (θ - φ)) ≥ (R - r) ^ 2 := by
-    nlinarith [mul_pos h₁ (sub_pos.mpr h₂), Real.cos_le_one (θ - φ)]
-  have h_subst :
-      (R ^ 2 - r ^ 2) / (R ^ 2 + r ^ 2 - 2 * R * r * Real.cos (θ - φ)) ≤ (R + r) / (R - r) := by
-    rw [div_le_div_iff₀] <;> nlinarith [mul_pos h₁ (sub_pos.mpr h₂)]
-  convert h_subst
-  rw [← div_eq_mul_inv, poissonKernel_eq_re_herglotzRieszKernel_aux]
-  suffices (R * R * normSq (cexp (θ * I)) + r * r * normSq (cexp (φ * I)) -
-      2 * (R * Real.cos θ * (r * Real.cos φ) + R * Real.sin θ * (r * Real.sin φ))) =
-      (R ^ 2 + r ^ 2 - 2 * R * r * Real.cos (θ - φ)) by
-    rw [← this]; simp [← normSq_eq_norm_sq, Complex.normSq_sub]
-  simp [normSq_eq_norm_sq, Real.cos_sub]
+  rw [div_re, ← add_div, add_re, sub_re, add_im, sub_im]
+  simp only [normSq_eq_norm_sq]
+  congr 1
+  simp only [← normSq_eq_norm_sq, normSq_apply]
   ring
 
-/--
-Companion theorem to the Poisson Integral Formula: Upper estimate for the real part of the
-Herglotz-Riesz kernel.
--/
+/-- The real part of the Herglotz–Riesz kernel is the Poisson kernel. -/
+lemma poissonKernel_eq_re_herglotzRieszKernel {c w : ℂ} :
+    poissonKernel c w = Complex.re ∘ herglotzRieszKernel c w := by
+  funext z
+  have hz : z.val - c ≠ w - c := fun h ↦ z.2 (sub_left_inj.mp h)
+  have hdiff : z.val - c - (w - c) = z.val - w := by abel
+  simpa only [poissonKernel_def, herglotzRieszKernel_def, Function.comp_apply, hdiff] using
+    (poissonKernel_eq_re_herglotzRieszKernel_aux hz).symm
+
+/-- Upper estimate for the real part of the Herglotz–Riesz kernel. -/
 theorem re_herglotzRieszKernel_le {c z : ℂ} (hz : z ∈ sphere c R) (hw : w ∈ ball c R) :
-    ((z - c + (w - c)) / ((z - c) - (w - c))).re ≤ (R + ‖w - c‖) / (R - ‖w - c‖) := by
-  obtain ⟨η₀, rfl, η₂⟩ : 0 < R ∧ R = ‖z - c‖ ∧ z - c ≠ 0 := by
-    grind [ball_eq_empty, mem_sphere, dist_eq_norm, norm_pos_iff]
-  by_cases h₁w : ‖w - c‖ = 0
-  · aesop
-  simpa using re_herglotzRieszKernel_le_aux (w - c).arg (z - c).arg ‖w - c‖ ‖z - c‖
-    (by simpa using h₁w) (mem_ball_iff_norm.1 hw)
+    (herglotzRieszKernel c w ⟨z, sphere_disjoint_ball.ne_of_mem hz hw⟩).re ≤
+      Checked.div (R + ‖w - c‖) (R - ‖w - c‖)
+        (sub_pos.mpr (mem_ball_iff_norm.mp hw)).ne'.isUnit := by
+  have hr : ‖w - c‖ < R := mem_ball_iff_norm.mp hw
+  have hR : 0 < R := (norm_nonneg _).trans_lt hr
+  have hzR := mem_sphere_iff_norm.mp hz
+  have hsub : z - c - (w - c) = z - w := by abel
+  have hlow : R - ‖w - c‖ ≤ ‖z - w‖ := by
+    simpa only [hzR, hsub] using norm_sub_norm_le (z - c) (w - c)
+  have hpos : 0 < R - ‖w - c‖ := sub_pos.mpr hr
+  have hnorm : 0 < ‖z - w‖ := hpos.trans_le hlow
+  have hn : 0 ≤ R ^ 2 - ‖w - c‖ ^ 2 :=
+    sub_nonneg.mpr (pow_le_pow_left₀ (norm_nonneg _) hr.le 2)
+  let z' : ({w}ᶜ : Set ℂ) := ⟨z, sphere_disjoint_ball.ne_of_mem hz hw⟩
+  have hker : poissonKernel c w z' = (herglotzRieszKernel c w z').re :=
+    congrFun poissonKernel_eq_re_herglotzRieszKernel z'
+  rw [← hker, poissonKernel_def]
+  simp only [z', hzR]
+  calc
+    _ ≤ (R ^ 2 - ‖w - c‖ ^ 2) / (R - ‖w - c‖) ^ 2 :=
+      (div_le_div_iff₀ (pow_pos hnorm 2) (pow_pos hpos 2)).2
+        (mul_le_mul_of_nonneg_left (pow_le_pow_left₀ hpos.le hlow 2) hn)
+    _ = _ := by field_simp; ring
 
-private lemma le_re_herglotzRieszKernel_aux (θ φ r R : ℝ) (h₁ : 0 < r) (h₂ : r < R) :
-    (R - r) / (R + r)
-      ≤ ((R * exp (θ * I) + r * exp (φ * I)) / (R * exp (θ * I) - r * exp (φ * I))).re := by
-  rw [poissonKernel_eq_re_herglotzRieszKernel_aux]
-  simp only [Complex.norm_mul, norm_real, norm_eq_abs, norm_exp_ofReal_mul_I, mul_one, sq_abs,
-    sq_sub_sq]
-  field_simp [sub_pos.mpr h₂]
-  simp only [mul_comm I] -- make sure exponents are in the form `?angle * I` for the simplification
-  rw [div_le_div_iff₀ (by positivity [h₁.trans h₂]) ?hpos, ← normSq_eq_norm_sq, normSq_sub,
-    normSq_eq_norm_sq, normSq_eq_norm_sq]
-  case hpos => simpa [sq_pos_iff, sub_eq_zero] using
-    (mt <| congr_arg (‖·‖)) <| by simpa [abs_of_pos, h₁, h₁.trans h₂] using h₂.ne'
-  have key := calc
-    (-(R * cexp (θ * I) * (starRingEnd ℂ) (r * cexp (φ * I)))).re ≤ _ := re_le_norm _
-    _ ≤ R * r := by simp [abs_of_pos, h₁, h₁.trans h₂]
-  simpa using calc
-    R ^ 2 + r ^ 2 - 2 * (R * cexp (θ * I) * (starRingEnd ℂ) (r * cexp (φ * I))).re
-    _ ≤ R ^ 2 + r ^ 2 + 2 * (R * r) := by rw [sub_eq_add_neg, ← mul_neg, ← neg_re]; gcongr
-    _ = (R + r) * (R + r) := by ring
-
-/--
-Companion theorem to the Poisson Integral Formula: Lower estimate for the real part of the
-Herglotz-Riesz kernel.
--/
+/-- Lower estimate for the real part of the Herglotz–Riesz kernel. -/
 theorem le_re_herglotzRieszKernel {c z : ℂ} (hz : z ∈ sphere c R) (hw : w ∈ ball c R) :
-    (R - ‖w - c‖) / (R + ‖w - c‖) ≤ ((z - c + (w - c)) / ((z - c) - (w - c))).re := by
-  obtain ⟨η₀, rfl, η₂⟩ : 0 < R ∧ R = ‖z - c‖ ∧ z - c ≠ 0 := by
-    grind [ball_eq_empty, mem_sphere, dist_eq_norm, norm_pos_iff]
-  by_cases h₁w : ‖w - c‖ = 0
-  · aesop
-  simpa using le_re_herglotzRieszKernel_aux (z - c).arg (w - c).arg ‖w - c‖ ‖z - c‖
-    (by simpa using h₁w) (mem_ball_iff_norm.1 hw)
+    Checked.div (R - ‖w - c‖) (R + ‖w - c‖)
+        (add_pos_of_pos_of_nonneg ((norm_nonneg _).trans_lt (mem_ball_iff_norm.mp hw))
+          (norm_nonneg _)).ne'.isUnit ≤
+      (herglotzRieszKernel c w ⟨z, sphere_disjoint_ball.ne_of_mem hz hw⟩).re := by
+  have hr : ‖w - c‖ < R := mem_ball_iff_norm.mp hw
+  have hR : 0 < R := (norm_nonneg _).trans_lt hr
+  have hzR := mem_sphere_iff_norm.mp hz
+  have hsub : z - c - (w - c) = z - w := by abel
+  have hhigh : ‖z - w‖ ≤ R + ‖w - c‖ := by
+    simpa only [hzR, hsub] using norm_sub_le (z - c) (w - c)
+  have hpos : 0 < R + ‖w - c‖ := add_pos_of_pos_of_nonneg hR (norm_nonneg _)
+  have hnorm : 0 < ‖z - w‖ :=
+    norm_pos_iff.mpr (sub_ne_zero.mpr (sphere_disjoint_ball.ne_of_mem hz hw))
+  have hn : 0 ≤ R ^ 2 - ‖w - c‖ ^ 2 :=
+    sub_nonneg.mpr (pow_le_pow_left₀ (norm_nonneg _) hr.le 2)
+  let z' : ({w}ᶜ : Set ℂ) := ⟨z, sphere_disjoint_ball.ne_of_mem hz hw⟩
+  have hker : poissonKernel c w z' = (herglotzRieszKernel c w z').re :=
+    congrFun poissonKernel_eq_re_herglotzRieszKernel z'
+  rw [← hker, poissonKernel_def]
+  simp only [z', hzR]
+  calc
+    _ = (R ^ 2 - ‖w - c‖ ^ 2) / (R + ‖w - c‖) ^ 2 := by field_simp; ring
+    _ ≤ _ := (div_le_div_iff₀ (pow_pos hpos 2) (pow_pos hnorm 2)).2
+      (mul_le_mul_of_nonneg_left (pow_le_pow_left₀ hnorm.le hhigh 2) hn)
 
-/--
-The Herglotz–Riesz kernel `herglotzRieszKernel c w` is continuous on the circle `sphere c |R|`
-whenever `w` does not lie on the circle.
--/
-@[fun_prop] lemma continuousOn_herglotzRieszKernel_sphere (hw : w ∉ sphere c |R|) :
-    ContinuousOn (herglotzRieszKernel c w) (sphere c |R|) := by
-  apply ContinuousOn.div (by fun_prop) (by fun_prop)
-  intro z hz
-  rw [sub_sub_sub_cancel_right, sub_ne_zero]
-  rintro rfl
-  exact hw hz
+/-- The Herglotz–Riesz kernel is continuous away from its pole. -/
+@[fun_prop]
+lemma continuous_herglotzRieszKernel (c w : ℂ) : Continuous (herglotzRieszKernel c w) := by
+  exact ((continuous_subtype_val.sub continuous_const).add continuous_const).div₀
+    (continuous_subtype_val.sub continuous_const)
+    (h₀ := fun z ↦ (sub_ne_zero.mpr (mem_compl_singleton_iff.mp z.2)).isUnit)
 
-/--
-Taking real parts commutes with the Herglotz–Riesz kernel integral of a real-valued
-circle-integrable function.
--/
-theorem re_circleAverage_herglotzRieszKernel_smul {g : ℂ → ℝ}
-    (hg : CircleIntegrable g 0 R) (hw : w ∉ sphere 0 |R|) :
-    (circleAverage (fun ζ ↦ herglotzRieszKernel 0 w ζ • (g ζ : ℂ)) 0 R).re
-      = circleAverage ((Complex.re ∘ herglotzRieszKernel 0 w) • g) 0 R := by
-  have h₁ : CircleIntegrable (fun ζ ↦ (g ζ : ℂ)) 0 R := by
-    simp only [CircleIntegrable, intervalIntegrable_iff] at hg ⊢
-    exact Complex.ofRealCLM.integrable_comp hg
-  have h₂ : CircleIntegrable (fun ζ ↦ herglotzRieszKernel 0 w ζ • (g ζ : ℂ)) 0 R :=
-    h₁.continuousOn_smul (continuousOn_herglotzRieszKernel_sphere hw)
-  calc (circleAverage (fun ζ ↦ herglotzRieszKernel 0 w ζ • (g ζ : ℂ)) 0 R).re
-      = circleAverage (Complex.reCLM ∘ fun ζ ↦ herglotzRieszKernel 0 w ζ • (g ζ : ℂ)) 0 R :=
-        (Complex.reCLM.circleAverage_comp_comm h₂).symm
-    _ = circleAverage ((Complex.re ∘ herglotzRieszKernel 0 w) • g) 0 R := by
-        simp [Function.comp_def, Complex.mul_re, Pi.mul_def]
+private theorem circleAverageOn_sub_center_smul {c : ℂ} {R : ℝ}
+    (g : sphere c |R| → E) :
+    Real.circleAverageOn (fun z : sphere c |R| ↦ (z.val - c) • g z) =
+      (2 * π * I : ℂ)⁻¹ • circleIntegralOn
+        (fun z : sphere c (abs |R|) ↦ g ⟨z.val, by simpa only [abs_abs] using z.2⟩) c |R| := by
+  by_cases hR : R = 0
+  · subst R
+    rw [circleIntegralOn_sphere]
+    simp only [deriv_circleMap]
+    simp [circleAverageOn, circleMap_zero_radius, Function.const_apply]
+  · simpa only [inv_smul_smul₀] using
+      (Real.circleAverageOn_eq_circleIntegralOn
+        (f := fun z : sphere c |R| ↦ (z.val - c) • g z) hR)
 
-/-!
-## Integral Formulas
--/
-
--- Trigonometric identity used in the computation of
--- `DiffContOnCl.circleAverage_re_smul_on_ball_zero`.
-private lemma circleAverage_re_smul_on_ball_zero_aux {φ θ : ℝ} {r : ℝ} :
-    (R * exp (θ * I)) / (R * exp (θ * I) - r * exp (φ * I)) - (r * exp (θ * I))
-      / (r * exp (θ * I) - R * exp (φ * I))
-      = ((R * exp (θ * I) + r * exp (φ * I)) / (R * exp (θ * I) - r * exp (φ * I))).re := by
-  simp only [Complex.ext_iff, exp_ofReal_mul_I, add_re, sub_re, mul_re, div_re, ofReal_re,
-    I_re, I_im, add_im, sub_im, mul_im, div_im, ofReal_im, normSq_apply]
-  grind [Real.sin_sq]
-
--- Version of `DiffContOnCl.circleAverage_re_smul` in case where the center of the ball is zero.
-private lemma DiffContOnCl.circleAverage_re_smul_on_ball_zero [CompleteSpace E]
-    (hf : DiffContOnCl ℂ f (ball 0 R)) (hw : w ∈ ball 0 R) :
-    Real.circleAverage (fun z ↦ ((z + w) / (z - w)).re • f z) 0 R = f w := by
-  -- Trivial case: nonpositive radius
-  rcases le_or_gt R 0 with hR | hR
-  · simp_all [ball_eq_empty.2 hR]
-  -- Trivial case: w is at the center
-  obtain rfl | h₁w := eq_or_ne w 0
-  · refine (circleAverage_congr_sphere fun z hz ↦ ?_).trans (abs_of_pos hR ▸ hf |>.circleAverage)
-    rw [abs_of_pos hR] at hz
-    simp [div_self (a := z) (by aesop)]
-  -- General case: positive radius, w is not at the center
-  let W := R * exp (w.arg * I)
-  let q := ‖w‖ / R
-  have h₁q : 0 < q := by positivity
-  have h₂q : q < 1 := by simpa [← div_lt_one hR] using hw
-  -- Lemma used by automatisation tactics to ensure that quotients are non-zero.
-  have η₀ {x : ℂ} (h : ‖x‖ ≤ R) : q * x - W ≠ 0 := by
-    suffices ‖q * x‖ < ‖W‖ by grind
+private theorem poisson_reflected_denominator {c w y : ℂ} {R : ℝ}
+    (hw : w ∈ ball c R) (hy : y ∈ closedBall c R) :
+    IsUnit ((R : ℂ) ^ 2 - (starRingEnd ℂ) (w - c) * (y - c)) := by
+  have hω : ‖w - c‖ < R := mem_ball_iff_norm.mp hw
+  have hR := (norm_nonneg _).trans_lt hω
+  have hyR : ‖y - c‖ ≤ R := mem_closedBall_iff_norm.mp hy
+  have hlt : ‖(starRingEnd ℂ) (w - c) * (y - c)‖ < ‖(R : ℂ) ^ 2‖ := by
+    simp only [norm_mul, norm_conj, norm_pow, norm_real, Real.norm_eq_abs, abs_of_pos hR]
     calc
-      ‖q * x‖ = q * ‖x‖ := by simp [abs_of_pos h₁q]
-      _ ≤ q * R := by gcongr
-      _ < 1 * R := by gcongr
-      _ = ‖W‖ := by simp [W, abs_of_pos hR]
-  have h0 : ∮ (z : ℂ) in C(0, R), z⁻¹ • ((q * z) / (q * z - W)) • f z = 0 := calc
-    ∮ (z : ℂ) in C(0, R), z⁻¹ • ((q * z) / (q * z - W)) • f z
-    _ = ∮ (z : ℂ) in C(0, R), (q / (q * z - W)) • f z := by
-      apply circleIntegral.integral_congr hR.le fun z hz ↦ ?_
-      have hz : z ≠ 0 := by aesop
-      match_scalars
-      field
-    _ = 0 := by
-      apply DifferentiableOn.diffContOnCl ?_ |>.smul hf |>.circleIntegral_eq_zero hR.le
-      rw [closure_ball 0 hR.ne']
-      fun_prop (disch := aesop)
-  -- Main computation starts here
-  calc Real.circleAverage (fun z ↦ ((z + w) / (z - w)).re • f z) 0 R
-    _ = Real.circleAverage (fun z ↦ (z / (z - w) - (q • z) / (q • z - W)) • f z) 0 R := by
-      apply circleAverage_congr_sphere fun z hz ↦ ?_
-      have hzR : ‖z‖ = R := by simpa [abs_of_pos hR] using hz
-      match_scalars
-      simp only [q, W, real_smul, ofReal_div, coe_algebraMap]
-      rw [← norm_mul_exp_arg_mul_I w, ← norm_mul_exp_arg_mul_I z, hzR,
-        ← circleAverage_re_smul_on_ball_zero_aux, norm_mul_exp_arg_mul_I w]
-      field [hR.ne.symm]
-    _ = Real.circleAverage (fun z ↦ (z / (z - w)) • f z) 0 R
-        - Real.circleAverage (fun z ↦ ((q • z) / (q • z - W)) • f z) 0 R := by
-      simp_rw [sub_smul]
-      have h₁ : ∀ z ∈ sphere 0 R, z - w ≠ 0 := by aesop (add simp sub_eq_zero)
-      have h₃ : ContinuousOn f (sphere 0 R) :=
-        hf.2.mono <| sphere_subset_closedBall.trans_eq (closure_ball 0 hR.ne').symm
-      rw [circleAverage_fun_sub]
-      all_goals
-        apply ContinuousOn.circleIntegrable hR.le
-        fun_prop (disch := aesop)
-    _ = f w := by
-      rw [← abs_of_pos hR] at hw hf
-      simp [← hf.circleAverage_smul_div hw, circleAverage_eq_circleIntegral (ne_of_lt hR).symm, h0]
+      ‖w - c‖ * ‖y - c‖ ≤ ‖w - c‖ * R := mul_le_mul_of_nonneg_left hyR (norm_nonneg _)
+      _ < R ^ 2 := by simpa only [pow_two] using mul_lt_mul_of_pos_right hω hR
+  exact (sub_ne_zero.mpr (ne_of_apply_ne norm hlt.ne')).isUnit
 
-/--
-**Poisson integral formula** for ℂ-differentiable functions on arbitrary disks in the complex plane,
-formulated with the real part of the Herglotz–Riesz kernel of integration.
--/
+private theorem coe_re_herglotzRiesz_eq {a b : ℂ} {R : ℝ} (ha : ‖a‖ = R) (hab : a ≠ b)
+    (hq : IsUnit ((R : ℂ) ^ 2 - (starRingEnd ℂ) b * a)) :
+    ((((a + b) / (a - b)).re : ℝ) : ℂ) =
+      a / (a - b) + (starRingEnd ℂ) b * a / ((R : ℂ) ^ 2 - (starRingEnd ℂ) b * a) := by
+  have hbase : IsUnit (a - b) := (sub_ne_zero.mpr hab).isUnit
+  have hconj : IsUnit ((starRingEnd ℂ) a - (starRingEnd ℂ) b) := by
+    simpa only [map_sub] using hbase.map (starRingEnd ℂ)
+  have hstar (x : ℂ) : ((‖x‖ ^ 2 : ℝ) : ℂ) = x * (starRingEnd ℂ) x := by
+    simpa only [ofReal_pow] using (Complex.mul_conj' x).symm
+  have hR : a * (starRingEnd ℂ) a = (R : ℂ) ^ 2 := by
+    rw [← hstar, ha, ofReal_pow]
+  have hfac : (R : ℂ) ^ 2 - (starRingEnd ℂ) b * a =
+      a * ((starRingEnd ℂ) a - (starRingEnd ℂ) b) := by
+    rw [← hR, mul_sub, mul_comm a ((starRingEnd ℂ) b)]
+  have hunit : IsUnit a := isUnit_of_mul_isUnit_left (hfac ▸ hq)
+  rw [poissonKernel_eq_re_herglotzRieszKernel_aux hab, ofReal_div, ofReal_sub]
+  simp only [hstar, map_sub, hfac]
+  field_simp [hbase, hconj, hunit]
+  ring
+
+private lemma intervalIntegrable_smul_on_sphere {c : ℂ} {R : ℝ} (hf : CircleIntegrable f c |R|)
+    {k : sphere c |R| → ℂ} (hk : Continuous k) :
+    IntervalIntegrable (fun θ : ℝ ↦
+      k ⟨circleMap c |R| θ, circleMap_mem_sphere c (abs_nonneg R) θ⟩ • f (circleMap c |R| θ))
+      volume 0 (2 * π) :=
+  ((circleIntegrable_def _ _ _).mp hf).continuousOn_smul
+    (hk.comp ((continuous_circleMap c |R|).subtype_mk _)).continuousOn
+
+private lemma circleAverageOn_add {c : ℂ} {R : ℝ} {u v : sphere c |R| → E}
+    (hu : IntervalIntegrable (fun θ : ℝ ↦
+      u ⟨circleMap c |R| θ, circleMap_mem_sphere c (abs_nonneg R) θ⟩) volume 0 (2 * π))
+    (hv : IntervalIntegrable (fun θ : ℝ ↦
+      v ⟨circleMap c |R| θ, circleMap_mem_sphere c (abs_nonneg R) θ⟩) volume 0 (2 * π)) :
+    Real.circleAverageOn (fun z ↦ u z + v z) =
+      Real.circleAverageOn u + Real.circleAverageOn v := by
+  simp only [circleAverageOn, intervalIntegral.integral_add hu hv, smul_add]
+
+/-- The Poisson integral formula for the real part of the Herglotz–Riesz kernel. -/
 theorem DiffContOnCl.circleAverage_re_herglotzRieszKernel_smul [CompleteSpace E] {c : ℂ}
     (hf : DiffContOnCl ℂ f (ball c R)) (hw : w ∈ ball c R) :
-    Real.circleAverage ((re ∘ herglotzRieszKernel c w) • f) c R = f w := by
-  rcases le_or_gt R 0 with hR | hR
-  · simp_all [ball_eq_empty.2 hR]
-  have h₁g : DiffContOnCl ℂ (fun z ↦ f (z + c)) (ball 0 R) :=
-    hf.comp (DifferentiableOn.diffContOnCl <| by fun_prop) (by intro; aesop)
-  have h₂g : w - c ∈ ball 0 R := by simpa using mem_ball_iff_norm.1 hw
-  simpa [← circleAverage_map_add_const, herglotzRieszKernel_def]
-    using circleAverage_re_smul_on_ball_zero h₁g h₂g
+    Real.circleAverageOn (fun z : sphere c |R| ↦
+      (herglotzRieszKernel c w
+        ⟨z.val, mem_compl_singleton_iff.mpr
+          (sub_ne_zero.mp (isUnit_sub_of_mem_sphere_of_mem_ball hw z).ne_zero)⟩).re •
+        f z.val) = f w := by
+  have hR : 0 < R := pos_of_mem_ball hw
+  let q (z : ℂ) := (R : ℂ) ^ 2 - (starRingEnd ℂ) (w - c) * (z - c)
+  let U : Set ℂ := {z | IsUnit (q z)}
+  let u : ℂ → ℂ := Function.extend (Subtype.val : U → ℂ)
+    (fun z : U ↦ Checked.inv (q z.val) z.2) 0
+  have hu (z : ℂ) (hz : IsUnit (q z)) : u z = Checked.inv (q z) hz :=
+    Subtype.val_injective.extend_apply _ _ (⟨z, hz⟩ : U)
+  have hqd : Differentiable ℂ q := by
+    dsimp only [q]
+    fun_prop
+  have hud (z : ℂ) (hz : IsUnit (q z)) : DifferentiableAt ℂ u z := by
+    have hmem : U ∈ 𝓝 z :=
+      (hqd.continuous.continuousAt.eventually_ne hz.ne_zero).mono fun _ hy ↦ hy.isUnit
+    refine DifferentiableAt.of_restrict (s := U) (x := ⟨z, hz⟩) ?_ hmem
+    have hfun : (fun x : U ↦ u x.val) = fun x : U ↦ Checked.inv (q x.val) x.2 :=
+      funext fun x ↦ hu x.val x.2
+    rw [hfun]
+    exact (hqd z).inv hz
+  let g (z : ℂ) := ((starRingEnd ℂ) (w - c) * u z) • f z
+  have hgd : DiffContOnCl ℂ g (ball c R) := by
+    have hcoef : DifferentiableOn ℂ (fun z ↦ (starRingEnd ℂ) (w - c) * u z) (closure (ball c R)) :=
+      fun z hz ↦ by
+        have hc : DifferentiableAt ℂ (fun _ : ℂ ↦ (starRingEnd ℂ) (w - c)) z := by fun_prop
+        exact (hc.mul (hud z (poisson_reflected_denominator hw
+          (closure_ball_subset_closedBall hz)))).differentiableWithinAt
+    exact hcoef.diffContOnCl.smul hf
+  let S := sphere c |R|
+  let k (z : S) := Checked.div (z.val - c) (z.val - w)
+    (isUnit_sub_of_mem_sphere_of_mem_ball hw z)
+  let A (z : S) := k z • f z.val
+  let B (z : S) := (z.val - c) • g z.val
+  have hAc : Continuous k :=
+    (continuous_subtype_val.sub continuous_const).div₀
+      (continuous_subtype_val.sub continuous_const)
+  have hAcircle : Real.circleAverageOn A = f w := by
+    have hfAbs : DiffContOnCl ℂ f (ball c |R|) := by simpa only [abs_of_pos hR] using hf
+    have hwAbs : w ∈ ball c |R| := by simpa only [abs_of_pos hR] using hw
+    exact hfAbs.circleAverage_smul_div hwAbs
+  have hBcircle : Real.circleAverageOn B = 0 := by
+    rw [circleAverageOn_sub_center_smul (fun z : S ↦ g z.val), circleIntegralOn_sphere]
+    change (2 * π * I : ℂ)⁻¹ • circleIntegral g c |R| = 0
+    rw [abs_of_pos hR, hgd.circleIntegral_eq_zero hR.le, smul_zero]
+  have hsub : sphere c (abs |R|) ⊆ closedBall c R := by
+    rw [abs_abs, abs_of_pos hR]
+    exact sphere_subset_closedBall
+  have hfint : CircleIntegrable f c |R| := (hf.continuousOn_ball.mono hsub).circleIntegrable'
+  have hAint := intervalIntegrable_smul_on_sphere hfint hAc
+  have hBcont : ContinuousOn (fun z : ℂ ↦ (z - c) • g z) (sphere c (abs |R|)) :=
+    ((continuous_id.sub continuous_const).continuousOn).smul (hgd.continuousOn_ball.mono hsub)
+  have hBint : IntervalIntegrable
+      (fun θ : ℝ ↦ B ⟨circleMap c |R| θ, circleMap_mem_sphere c (abs_nonneg R) θ⟩)
+      volume 0 (2 * π) := by
+    exact hBcont.circleIntegrable' (R := |R|)
+  have hpoint (z : S) :
+      (herglotzRieszKernel c w
+        ⟨z.val, mem_compl_singleton_iff.mpr
+          (sub_ne_zero.mp (isUnit_sub_of_mem_sphere_of_mem_ball hw z).ne_zero)⟩).re •
+        f z.val = A z + B z := by
+    have hz : z.val ∈ closedBall c R := sphere_subset_closedBall (by
+      simpa only [S, abs_of_pos hR] using z.2)
+    have hq : IsUnit (q z.val) := poisson_reflected_denominator hw hz
+    have hne : z.val - c ≠ w - c := fun he ↦
+      (isUnit_sub_of_mem_sphere_of_mem_ball hw z).ne_zero
+        (sub_eq_zero.mpr (sub_left_inj.mp he))
+    have hznorm : ‖z.val - c‖ = R := by
+      simpa only [abs_of_pos hR] using mem_sphere_iff_norm.mp z.2
+    have hdiff : z.val - c - (w - c) = z.val - w := by abel
+    have halg := coe_re_herglotzRiesz_eq hznorm hne hq
+    rw [← Complex.coe_smul]
+    simp only [herglotzRieszKernel_def, hdiff] at halg ⊢
+    rw [halg, add_smul]
+    simp only [A, B, k, g, hu z.val hq, q, div_eq_mul_inv₀, smul_smul]
+    congr 1
+    rw [mul_assoc, mul_left_comm]
+  simp_rw [hpoint]
+  rw [circleAverageOn_add hAint hBint, hAcircle, hBcircle, add_zero]
 
-/--
-**Poisson integral formula** for ℂ-differentiable functions on arbitrary disks in the complex plane,
-formulated with the real part of the Herglotz–Riesz kernel of integration expanded.
--/
+/-- The Poisson integral formula with the Herglotz–Riesz kernel expanded. -/
 theorem DiffContOnCl.circleAverage_re_herglotzRieszKernel_smul' [CompleteSpace E] {c : ℂ}
     (hf : DiffContOnCl ℂ f (ball c R)) (hw : w ∈ ball c R) :
-    Real.circleAverage (fun z ↦ ((z - c + (w - c)) / ((z - c) - (w - c))).re • f z) c R = f w :=
-  hf.circleAverage_re_herglotzRieszKernel_smul hw
+    Real.circleAverageOn (fun z : sphere c |R| ↦
+      (Checked.div (z.val - c + (w - c)) (z.val - w)
+        (isUnit_sub_of_mem_sphere_of_mem_ball hw z)).re • f z.val) = f w := by
+  simpa only [herglotzRieszKernel_def] using hf.circleAverage_re_herglotzRieszKernel_smul hw
 
-/--
-**Poisson integral formula** for ℂ-differentiable functions on arbitrary disks in the complex plane,
-formulated with the Poisson kernel of integration.
--/
+/-- The Poisson integral formula for complex differentiable functions. -/
 theorem DiffContOnCl.circleAverage_poissonKernel_smul [CompleteSpace E] {c : ℂ}
     (hf : DiffContOnCl ℂ f (ball c R)) (hw : w ∈ ball c R) :
-    Real.circleAverage (poissonKernel c w • f) c R = f w := by
-  simp_rw [poissonKernel_eq_re_herglotzRieszKernel]
-  apply hf.circleAverage_re_herglotzRieszKernel_smul hw
+    Real.circleAverageOn (fun z : sphere c |R| ↦
+      poissonKernel c w ⟨z.val, mem_compl_singleton_iff.mpr
+          (sub_ne_zero.mp (isUnit_sub_of_mem_sphere_of_mem_ball hw z).ne_zero)⟩ •
+        f z.val) = f w := by
+  simpa only [poissonKernel_eq_re_herglotzRieszKernel, Function.comp_apply] using
+    hf.circleAverage_re_herglotzRieszKernel_smul hw
 
-/--
-**Poisson integral formula** for ℂ-differentiable functions on arbitrary disks in the complex plane,
-formulated with the Poisson kernel of integration expanded.
--/
+/-- The Poisson integral formula with the Poisson kernel expanded. -/
 theorem DiffContOnCl.circleAverage_poissonKernel_smul' [CompleteSpace E] {c : ℂ}
     (hf : DiffContOnCl ℂ f (ball c R)) (hw : w ∈ ball c R) :
-    Real.circleAverage (fun z ↦ ((‖z - c‖ ^ 2 - ‖w - c‖ ^ 2) / ‖(z - c) - (w - c)‖ ^ 2) • f z) c R
-      = f w := by
-  apply hf.circleAverage_poissonKernel_smul hw
+    Real.circleAverageOn (fun z : sphere c |R| ↦ Checked.div
+      (‖z.val - c‖ ^ 2 - ‖w - c‖ ^ 2) (‖z.val - w‖ ^ 2)
+      ((norm_ne_zero_iff.mpr (isUnit_sub_of_mem_sphere_of_mem_ball hw z).ne_zero).isUnit.pow 2)
+        • f z.val) = f w := by
+  simpa only [poissonKernel_def] using hf.circleAverage_poissonKernel_smul hw
 
-/-!
-## Derivative of the Herglotz–Riesz Kernel Integral
--/
+/-- Taking real parts commutes with the Herglotz–Riesz average of a real-valued function. -/
+theorem re_circleAverage_herglotzRieszKernel_smul {g : ℂ → ℝ}
+    (hg : CircleIntegrable g 0 |R|) (hw : w ∉ sphere 0 |R|) :
+    (Real.circleAverageOn (fun z : sphere (0 : ℂ) |R| ↦
+      herglotzRieszKernel 0 w ⟨z.val,
+        mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 hw)⟩ • (g z.val : ℂ))).re =
+      Real.circleAverageOn (fun z : sphere (0 : ℂ) |R| ↦
+        (herglotzRieszKernel 0 w ⟨z.val,
+          mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 hw)⟩).re • g z.val) := by
+  let k (z : sphere (0 : ℂ) |R|) :=
+    herglotzRieszKernel 0 w ⟨z.val, mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 hw)⟩
+  have hk : Continuous k := (continuous_herglotzRieszKernel 0 w).comp
+    (continuous_subtype_val.subtype_mk _)
+  have hg' : CircleIntegrable (fun z ↦ (g z : ℂ)) 0 |R| := by
+    simp only [CircleIntegrable, intervalIntegrable_iff] at hg ⊢
+    exact Complex.ofRealCLM.integrable_comp hg
+  have hi := intervalIntegrable_smul_on_sphere hg' hk
+  change Complex.reCLM (Real.circleAverageOn (fun z ↦ k z • (g z.val : ℂ))) =
+    Real.circleAverageOn (fun z ↦ (k z).re • g z.val)
+  simp only [Real.circleAverageOn, map_smul]
+  rw [← Complex.reCLM.intervalIntegral_comp_comm hi]
+  simp only [Complex.reCLM_apply, smul_eq_mul, Complex.mul_re,
+    Complex.ofReal_re, Complex.ofReal_im, mul_zero, sub_zero]
 
-/--
-**Derivative of the Herglotz–Riesz kernel integral**: if `f` is circle integrable and `w` does
-not lie on the circle, then `w ↦ circleAverage (fun ζ ↦ herglotzRieszKernel 0 w ζ • f ζ) 0 R`
-has derivative `circleAverage (fun ζ ↦ (2 * ζ / (ζ - w) ^ 2) • f ζ) 0 R` at `w`.
--/
-theorem hasDerivAt_circleAverage_herglotzRieszKernel_smul (hg : CircleIntegrable f 0 R)
-    (hw : w ∉ sphere 0 |R|) :
-    HasDerivAt (fun w ↦ circleAverage (fun ζ ↦ herglotzRieszKernel 0 w ζ • f ζ) 0 R)
-      (circleAverage (fun ζ ↦ (2 * ζ / (ζ - w) ^ 2) • f ζ) 0 R) w := by
-  obtain ⟨d, hd, hdist⟩ := exists_ball_forall_le_norm_circleMap_sub hw
-  have hgm : AEStronglyMeasurable (fun θ ↦ f (circleMap 0 R θ))
-      (volume.restrict (uIoc 0 (2 * π))) := (intervalIntegrable_iff.1 hg).aestronglyMeasurable
-  simp only [circleAverage_def]
-  apply HasDerivAt.const_smul
-  refine (intervalIntegral.hasDerivAt_integral_of_dominated_loc_of_deriv_le
-    (F' := fun x θ ↦ (2 * circleMap 0 R θ / (circleMap 0 R θ - x) ^ 2) • f (circleMap 0 R θ))
-    (bound := fun θ ↦ 2 * |R| * (d ^ 2)⁻¹ * ‖f (circleMap 0 R θ)‖)
-    (ball_mem_nhds w hd) ?meas1 ?int ?meas2 ?bound ?int_bound ?diff).2
-  -- Measurability of the integrand, for `x` near `w`
-  case meas1 =>
-    filter_upwards with x
-    apply AEStronglyMeasurable.smul _ hgm
+private lemma circleAverageOn_const_smul {c : ℂ} {R : ℝ}
+    (a : ℂ) (g : sphere c |R| → E) :
+    Real.circleAverageOn (fun z ↦ a • g z) = a • Real.circleAverageOn g := by
+  simp only [Real.circleAverageOn, intervalIntegral.integral_smul]
+  rw [smul_comm]
+
+private lemma circleAverageOn_herglotzRieszKernel_smul_eq_integral_sub
+    (hf : CircleIntegrable f 0 |R|) (hw : w ∉ sphere 0 |R|) :
+    Real.circleAverageOn (fun z : sphere (0 : ℂ) |R| ↦
+      herglotzRieszKernel 0 w ⟨z.val,
+        mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 hw)⟩ • f z.val) =
+    (2 * (2 * π * I)⁻¹ : ℂ) • circleIntegralOn (fun z : sphere (0 : ℂ) (abs |R|) ↦
+      Checked.inv (z.val - w) (sub_ne_zero.mpr (ne_of_mem_of_not_mem
+        (by simpa only [abs_abs] using z.2 : z.val ∈ sphere 0 |R|) hw)).isUnit • f z.val) 0 |R| -
+      Real.circleAverage f 0 R := by
+  let S := sphere (0 : ℂ) |R|
+  let k (z : S) := Checked.inv (z.val - w)
+    (sub_ne_zero.mpr (ne_of_mem_of_not_mem z.2 hw)).isUnit
+  let A (z : S) := z.val • k z • f z.val
+  have hkc : Continuous k := ((continuous_subtype_val.sub continuous_const)).fun_inv₀
+  have hai : IntervalIntegrable (fun θ : ℝ ↦
+      A ⟨circleMap 0 |R| θ, circleMap_mem_sphere 0 (abs_nonneg R) θ⟩)
+      volume 0 (2 * π) := by
+    simpa only [A, Pi.mul_apply, mul_smul] using
+      intervalIntegrable_smul_on_sphere hf (continuous_subtype_val.mul hkc)
+  have hH (z : S) : herglotzRieszKernel 0 w ⟨z.val,
+    mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 hw)⟩ =
+      Checked.div (2 * z.val) (z.val - w)
+        (sub_ne_zero.mpr (ne_of_mem_of_not_mem z.2 hw)).isUnit - 1 := by
+    have hunit : IsUnit (z.val - w) := (sub_ne_zero.mpr (ne_of_mem_of_not_mem z.2 hw)).isUnit
     simp only [herglotzRieszKernel_def, sub_zero]
-    exact Measurable.aestronglyMeasurable (by fun_prop)
-  -- Integrability of the integrand at `w`
-  case int =>
-    have h₁ : CircleIntegrable (herglotzRieszKernel 0 w • f) 0 R :=
-      hg.continuousOn_smul (continuousOn_herglotzRieszKernel_sphere hw)
-    simpa only [CircleIntegrable, Pi.smul_apply'] using h₁
-  -- Measurability of the differentiated integrand
-  case meas2 =>
-    exact (Measurable.aestronglyMeasurable (by fun_prop)).smul hgm
-  -- Uniform bound for the differentiated integrand near `w`
-  case bound =>
-    filter_upwards with θ _ x hx
-    have h₁ : ‖(2 : ℂ)‖ = 2 := by norm_num
-    rw [norm_smul, norm_div, norm_mul, norm_circleMap_zero, norm_pow, div_eq_mul_inv, h₁]
-    gcongr
-    exact hdist x hx θ
-  -- Integrability of the bound
-  case int_bound =>
-    exact (IntervalIntegrable.norm hg).const_mul _
-  -- Differentiability of the integrand in `x`, for `x` near `w`
-  case diff =>
-    filter_upwards with θ _ x hx
-    have h₁ : circleMap 0 R θ - x ≠ 0 := norm_pos_iff.mp (hd.trans_le (hdist x hx θ))
-    have h₂ : HasDerivAt (fun x ↦ herglotzRieszKernel 0 x (circleMap 0 R θ))
-        (2 * circleMap 0 R θ / (circleMap 0 R θ - x) ^ 2) x := by
-      have h₃ := ((hasDerivAt_id' x).const_add (circleMap 0 R θ)).div
-        ((hasDerivAt_id' x).const_sub (circleMap 0 R θ)) h₁
-      simpa [herglotzRieszKernel_def, sub_zero, sub_sub, ← two_mul, Pi.div_def] using h₃
-    exact h₂.smul_const (f (circleMap 0 R θ))
+    field_simp
+    ring
+  have hpoint (z : S) : herglotzRieszKernel 0 w ⟨z.val,
+    mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 hw)⟩ • f z.val =
+      (2 : ℂ) • A z - f z.val := by
+    simp only [hH, A, k, div_eq_mul_inv₀, sub_smul, one_smul, mul_smul]
+  have hsplit :
+      Real.circleAverageOn (fun z : S ↦ (2 : ℂ) • A z - f z.val) =
+        (2 : ℂ) • Real.circleAverageOn A - Real.circleAverage f 0 R := by
+    have hbi : IntervalIntegrable (fun θ : ℝ ↦ (2 : ℂ) •
+        A ⟨circleMap 0 |R| θ, circleMap_mem_sphere 0 (abs_nonneg R) θ⟩) volume 0 (2 * π) :=
+      hai.smul (2 : ℂ)
+    rw [← circleAverageOn_restrict (R := R) (c := 0)]
+    simp only [circleAverageOn]
+    rw [intervalIntegral.integral_sub hbi hf, smul_sub, intervalIntegral.integral_smul, smul_comm]
+  have hfun : (fun z : S ↦ herglotzRieszKernel 0 w ⟨z.val,
+    mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 hw)⟩ •
+      f z.val) = fun z : S ↦ (2 : ℂ) • A z - f z.val := funext hpoint
+  rw [hfun, hsplit]
+  have hA := circleAverageOn_sub_center_smul (fun z : S ↦ k z • f z.val)
+  simp only [sub_zero] at hA
+  rw [hA, smul_smul]
 
-/--
-The Herglotz–Riesz kernel integral of a circle-integrable function is differentiable in the pole
-parameter, throughout the complement of the circle.
--/
-theorem differentiableOn_circleAverage_herglotzRieszKernel_smul (hg : CircleIntegrable f 0 R) :
+/-- The derivative in the pole parameter is the circle average with the squared denominator. -/
+theorem hasDerivAt_circleAverage_herglotzRieszKernel_smul (hf : CircleIntegrable f 0 |R|)
+    (hw : w ∉ sphere 0 |R|) :
+    HasDerivAt (fun x : ((sphere (0 : ℂ) |R|)ᶜ : Set ℂ) ↦
+      Real.circleAverageOn (fun z : sphere (0 : ℂ) |R| ↦
+        herglotzRieszKernel 0 x.val ⟨z.val,
+          mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 x.2)⟩ • f z.val))
+      (Real.circleAverageOn (fun z : sphere (0 : ℂ) |R| ↦ Checked.div
+        (2 * z.val) ((z.val - w) ^ 2)
+        ((sub_ne_zero.mpr (ne_of_mem_of_not_mem z.2 hw)).isUnit.pow 2) • f z.val))
+      ⟨w, hw⟩ Subtype.val := by
+  let D : Set ℂ := (sphere (0 : ℂ) |R|)ᶜ
+  let D' : Set ℂ := (sphere (0 : ℂ) (abs |R|))ᶜ
+  let p (x : D) : D' := ⟨x.val, by simpa only [D', abs_abs] using x.2⟩
+  have hp : Continuous p := continuous_subtype_val.subtype_mk _
+  let G (x : D) := circleIntegralOn (fun z : sphere (0 : ℂ) (abs |R|) ↦
+    Checked.inv (z.val - x.val)
+      (sub_ne_zero.mpr (ne_of_mem_of_not_mem z.2 (p x).2)).isUnit • f z.val) 0 |R|
+  let L := circleIntegralOn (fun z : sphere (0 : ℂ) (abs |R|) ↦
+    Checked.zpow (z.val - w) (-2)
+      (fun _ ↦ (sub_ne_zero.mpr (ne_of_mem_of_not_mem z.2 (p ⟨w, hw⟩).2)).isUnit) • f z.val) 0 |R|
+  have hd : HasDerivAt G L (⟨w, hw⟩ : D) Subtype.val := by
+    have h := hasDerivAt_circleIntegral_sub_inv_smul hf (p ⟨w, hw⟩).2
+    apply hasDerivAt_iff_hasFDerivAt.mpr
+    simpa only [HasFDerivAt, G, L, p, Function.comp_def] using
+      h.hasFDerivAt.comp_tendsto p
+        (hp.continuousAt.tendsto.prodMap (Filter.tendsto_pure_pure ..))
+  let β : ℂ := 2 * (2 * π * I)⁻¹
+  have hG :
+      (fun x : D ↦ Real.circleAverageOn (fun z : sphere (0 : ℂ) |R| ↦
+        herglotzRieszKernel 0 x.val ⟨z.val,
+          mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 x.2)⟩ • f z.val)) =
+      fun x : D ↦ β • G x - Real.circleAverage f 0 R := by
+    funext x
+    exact circleAverageOn_herglotzRieszKernel_smul_eq_integral_sub hf x.2
+  have hL :
+      Real.circleAverageOn (fun z : sphere (0 : ℂ) |R| ↦ Checked.div
+        (2 * z.val) ((z.val - w) ^ 2)
+        ((sub_ne_zero.mpr (ne_of_mem_of_not_mem z.2 hw)).isUnit.pow 2) • f z.val) = β • L := by
+    simp_rw [div_eq_mul_inv₀, mul_smul]
+    rw [circleAverageOn_const_smul]
+    have hcenter := circleAverageOn_sub_center_smul (fun z : sphere (0 : ℂ) |R| ↦
+      Checked.inv ((z.val - w) ^ 2)
+        ((sub_ne_zero.mpr (ne_of_mem_of_not_mem z.2 hw)).isUnit.pow 2) • f z.val)
+    simp only [sub_zero] at hcenter
+    rw [hcenter, smul_smul]
+    dsimp only [β, L]
+    congr 2
+    funext z
+    have hu : IsUnit (z.val - w) :=
+      (sub_ne_zero.mpr (ne_of_mem_of_not_mem z.2 (p ⟨w, hw⟩).2)).isUnit
+    have hz : Checked.zpow (z.val - w) (-2) (fun _ ↦ hu) =
+        Checked.inv ((z.val - w) ^ 2) (hu.pow 2) := by
+      simpa only [zpow_ofNat₀] using zpow_neg₀ hu.ne_zero (2 : ℤ)
+    simp only [hz]
+  rw [hG, hL]
+  simpa only [Pi.smul_apply, Pi.sub_apply, smul_apply, ContinuousLinearMap.toSpanSingleton_apply,
+    one_smul] using
+    ((hd.hasFDerivAt.const_smul β).sub_const (Real.circleAverage f 0 R)).hasDerivAt
+
+/-- The Herglotz–Riesz average is differentiable off the integration circle. -/
+theorem differentiableOn_circleAverage_herglotzRieszKernel_smul (hf : CircleIntegrable f 0 |R|) :
     DifferentiableOn ℂ
-      (fun w ↦ circleAverage (fun ζ ↦ herglotzRieszKernel 0 w ζ • f ζ) 0 R)
-      (sphere (0 : ℂ) |R|)ᶜ :=
-  fun _ hw ↦ hasDerivAt_circleAverage_herglotzRieszKernel_smul hg hw
-    |>.differentiableAt.differentiableWithinAt
+      (fun x : ((sphere (0 : ℂ) |R|)ᶜ : Set ℂ) ↦
+        Real.circleAverageOn (fun z : sphere (0 : ℂ) |R| ↦
+          herglotzRieszKernel 0 x.val ⟨z.val,
+            mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 x.2)⟩ • f z.val))
+      univ Subtype.val :=
+  fun x _ ↦ (hasDerivAt_circleAverage_herglotzRieszKernel_smul hf x.2).hasFDerivAt
+    |>.hasFDerivWithinAt.differentiableWithinAt
 
-/--
-The Herglotz–Riesz kernel integral of a circle-integrable function is analytic in the pole
-parameter, throughout the complement of the circle.
--/
+/-- The Herglotz–Riesz average is analytic off the integration circle. -/
 theorem analyticOnNhd_circleAverage_herglotzRieszKernel_smul [CompleteSpace E]
-    (hg : CircleIntegrable f 0 R) :
+    (hf : CircleIntegrable f 0 |R|) :
     AnalyticOnNhd ℂ
-      (fun w ↦ circleAverage (fun ζ ↦ herglotzRieszKernel 0 w ζ • f ζ) 0 R)
-      (sphere (0 : ℂ) |R|)ᶜ :=
-  (differentiableOn_circleAverage_herglotzRieszKernel_smul hg).analyticOnNhd
-    isClosed_sphere.isOpen_compl
+      (fun x : ((sphere (0 : ℂ) |R|)ᶜ : Set ℂ) ↦
+        Real.circleAverageOn (fun z : sphere (0 : ℂ) |R| ↦
+          herglotzRieszKernel 0 x.val ⟨z.val,
+            mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 x.2)⟩ • f z.val))
+      univ Subtype.val := by
+  let D : Set ℂ := (sphere (0 : ℂ) |R|)ᶜ
+  let g (x : D) := Real.circleAverageOn (fun z : sphere (0 : ℂ) |R| ↦
+    herglotzRieszKernel 0 x.val ⟨z.val,
+      mem_compl_singleton_iff.mpr (ne_of_mem_of_not_mem z.2 x.2)⟩ • f z.val)
+  let G : ℂ → E := Function.extend (Subtype.val : D → ℂ) g 0
+  have heq : (fun x : D ↦ G x.val) = g :=
+    funext fun x ↦ Subtype.val_injective.extend_apply _ _ x
+  have hOpen : IsOpen D := isClosed_sphere.isOpen_compl
+  have hG : DifferentiableOn ℂ G D := by
+    intro x hx
+    have h := (hasDerivAt_circleAverage_herglotzRieszKernel_smul (f := f) hf hx).differentiableAt
+    simpa only [heq, id_eq] using
+      (DifferentiableAt.of_restrict (s := D) (x := (⟨x, hx⟩ : D)) (by rw [heq]; exact h)
+        (hOpen.mem_nhds hx)).differentiableWithinAt
+  intro x _
+  change AnalyticAt ℂ g x Subtype.val
+  rw [← heq]
+  exact (hG.analyticAt (hOpen.mem_nhds x.2)).comp_domain (g := Subtype.val) (x := x)
+
+
+end

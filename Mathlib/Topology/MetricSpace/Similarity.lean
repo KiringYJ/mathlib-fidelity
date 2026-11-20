@@ -203,6 +203,16 @@ end Similar
 
 end PseudoEMetricSpace
 
+/-- Distinct entries of a configuration in an extended metric space remain distinct under
+similarity. -/
+theorem Similar.ne_of_ne [EMetricSpace P₁] [PseudoEMetricSpace P₂] (h : Similar v₁ v₂)
+    {i j : ι} (hne : v₁ i ≠ v₁ j) : v₂ i ≠ v₂ j := by
+  obtain ⟨_, _, hd⟩ := h.exists_edist_eq
+  intro he
+  apply hne
+  apply eq_of_edist_eq_zero
+  simpa only [he, edist_self, mul_zero] using hd i j
+
 section PseudoMetricSpace
 
 variable [PseudoMetricSpace P₁] [PseudoMetricSpace P₂]

@@ -216,10 +216,10 @@ theorem exists_isIntegral (W : WeierstrassCurve K) :
     apply isIntegral_of_exists_lift R
     all_goals
       apply (mem_integer_iff _ _ _).mp
-      simp only [variableChange_def, Units.val_inv_eq_inv_val, Units.val_mk0, mul_zero, add_zero,
-        inv_pow, zero_mul, sub_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow]
+      simp only [variableChange_def, mul_zero, add_zero, zero_mul, sub_zero, ne_eq,
+        OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow]
       apply (Valuation.mem_integer_iff _ _).mpr
-      simp only [map_mul, map_inv₀, map_pow, ha]
+      simp only [map_mul, map_pow, Units.val_inv_eq_inv_val₀, Units.val_mk0, map_inv₀, ha, inv_pow₀]
       refine inv_mul_le_one_of_le₀ ?_ zero_le
       refine (hlmax _ (by simp [l₀, l])).trans ?_
     any_goals
@@ -244,7 +244,7 @@ lemma r_integral_of_u_integral : ∃ r : R, algebraMap R K r = CK.r := by
     C (u ^ 6 * (integralModel R W').b₆ + 2 * (integralModel R W).b₆) * X -
     C ((integralModel R W).b₈ - u ^ 8 * (integralModel R W').b₈), by monicity!, ?_⟩
   simp [map_ofNat, hu, ← hCK, integralModel_b₄_eq, integralModel_b₆_eq,
-    integralModel_b₈_eq, variableChange_b₆, variableChange_b₈]
+    integralModel_b₈_eq, variableChange_b₆, variableChange_b₈, ← mul_assoc, ← mul_pow]
   ring1
 
 lemma s_integral_of_u_integral : ∃ s : R, algebraMap R K s = CK.s := by
@@ -252,7 +252,7 @@ lemma s_integral_of_u_integral : ∃ s : R, algebraMap R K s = CK.s := by
   refine IsIntegrallyClosed.isIntegral_iff.mp ⟨X ^ 2 + C (integralModel R W).a₁ * X +
     C (u ^ 2 * (integralModel R W').a₂ - (integralModel R W).a₂ - 3 * r), by monicity!, ?_⟩
   simp [map_ofNat, hu, hr, ← hCK, integralModel_a₁_eq, integralModel_a₂_eq,
-    variableChange_a₂]
+    variableChange_a₂, ← mul_assoc, ← mul_pow]
   ring1
 
 lemma t_integral_of_u_integral : ∃ t : R, algebraMap R K t = CK.t := by
@@ -262,7 +262,7 @@ lemma t_integral_of_u_integral : ∃ t : R, algebraMap R K t = CK.t := by
     C (u ^ 6 * (integralModel R W').a₆ - (integralModel R W).a₆ - r * (integralModel R W).a₄
       - r ^ 2 * (integralModel R W).a₂ - r ^ 3), by monicity!, ?_⟩
   simp [hu, hr, ← hCK, integralModel_a₁_eq, integralModel_a₂_eq, integralModel_a₃_eq,
-    integralModel_a₄_eq, integralModel_a₆_eq, variableChange_a₆]
+    integralModel_a₄_eq, integralModel_a₆_eq, variableChange_a₆, ← mul_assoc, ← mul_pow]
   ring1
 
 /-- A variable change over the fraction field between integral Weierstrass equations descends to the
@@ -516,7 +516,7 @@ lemma discriminantValuationAux_variableChange_baseChange (W : WeierstrassCurve K
   apply Subtype.ext
   rw [discriminantValuationAux_eq_of_isIntegral, discriminantValuationAux_eq_of_isIntegral,
     variableChange_Δ,
-    map_mul, map_pow, Units.val_inv_eq_inv_val, map_inv₀]
+    map_mul, map_pow, Units.val_inv_eq_inv_val₀, map_inv₀]
   have : valuation K (maximalIdeal R) (algebraMap R K CR.u) = 1 :=
     ((maximalIdeal R).valuation_eq_one_iff_notMem (K := K)).mpr
       (IsLocalRing.notMem_maximalIdeal.mpr CR.u.isUnit)
@@ -561,8 +561,8 @@ lemma valuation_Δ_eq_of_isMinimal :
 elliptic curve has valuation one. -/
 lemma valuation_u_eq_one_of_isMinimal [W.IsElliptic] : valuation K (maximalIdeal R) C.u = 1 := by
   have h := valuation_Δ_eq_of_isMinimal R hC
-  rw [← hC, variableChange_Δ, map_mul, map_pow, Units.val_inv_eq_inv_val, map_inv₀,
-    mul_eq_right₀ ((Valuation.ne_zero_iff _).mpr W.isUnit_Δ.ne_zero), inv_pow, inv_eq_one] at h
+  rw [← hC, variableChange_Δ, map_mul, map_pow, Units.val_inv_eq_inv_val₀, map_inv₀,
+    mul_eq_right₀ ((Valuation.ne_zero_iff _).mpr W.isUnit_Δ.ne_zero), inv_pow₀, inv_eq_one₀] at h
   exact (pow_eq_one_iff_of_nonneg zero_le (by norm_num)).mp h
 
 /-- The `u` coefficient of a change of variables between two minimal Weierstrass equations of an
@@ -584,8 +584,8 @@ theorem variableChange_integral_of_isMinimal [W.IsElliptic] :
 valuation. -/
 lemma valuation_c₄_eq_of_isMinimal [W.IsElliptic] :
     valuation K (maximalIdeal R) W'.c₄ = valuation K (maximalIdeal R) W.c₄ := by
-  rw [← hC, variableChange_c₄, map_mul, map_pow, Units.val_inv_eq_inv_val, map_inv₀,
-    valuation_u_eq_one_of_isMinimal R hC, inv_one, one_pow, one_mul]
+  simp only [← hC, variableChange_c₄, map_mul, map_pow, Units.val_inv_eq_inv_val₀, map_inv₀,
+    valuation_u_eq_one_of_isMinimal R hC, inv_one₀, one_pow, one_mul]
 
 end VariableChange
 

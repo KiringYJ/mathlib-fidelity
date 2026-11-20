@@ -60,42 +60,33 @@ theorem ContinuousLinearMap.norm_iteratedFDerivWithin_le_of_bilinear_aux {Du Eu 
     apply B.le_opNorm₂
   | succ n IH =>
     have In : (n : ℕ∞ω) + 1 ≤ n.succ := by simp only [Nat.cast_succ, le_refl]
+    have hfgR : ContDiffOn 𝕜 n (fun y : Du ↦ fderivWithin 𝕜 g s y id) s :=
+      hg.fderivWithin hs In
+    have hfgL : ContDiffOn 𝕜 n (fun y : Du ↦ fderivWithin 𝕜 f s y id) s :=
+      hf.fderivWithin hs In
+    have hIR := IH (Eu := Eu) (Fu := Du →L[𝕜] Fu) (Gu := Du →L[𝕜] Gu) (B.precompR Du)
+      (hf.of_le (Nat.cast_le.2 (Nat.le_succ n))) hfgR
+    have hIL := IH (Eu := Du →L[𝕜] Eu) (Fu := Fu) (Gu := Du →L[𝕜] Gu) (B.precompL Du)
+      hfgL (hg.of_le (Nat.cast_le.2 (Nat.le_succ n)))
     have I1 :
         ‖iteratedFDerivWithin 𝕜 n (fun y : Du => B.precompR Du (f y) (fderivWithin 𝕜 g s y)) s x‖ ≤
           ‖B‖ * ∑ i ∈ Finset.range (n + 1), n.choose i * ‖iteratedFDerivWithin 𝕜 i f s x‖ *
             ‖iteratedFDerivWithin 𝕜 (n + 1 - i) g s x‖ := by
-      calc
-        ‖iteratedFDerivWithin 𝕜 n (fun y : Du => B.precompR Du (f y) (fderivWithin 𝕜 g s y)) s x‖ ≤
-            ‖B.precompR Du‖ * ∑ i ∈ Finset.range (n + 1),
-              n.choose i * ‖iteratedFDerivWithin 𝕜 i f s x‖ *
-                ‖iteratedFDerivWithin 𝕜 (n - i) (fderivWithin 𝕜 g s) s x‖ :=
-          IH _ (hf.of_le (Nat.cast_le.2 (Nat.le_succ n))) (hg.fderivWithin hs In)
-        _ ≤ ‖B‖ * ∑ i ∈ Finset.range (n + 1), n.choose i * ‖iteratedFDerivWithin 𝕜 i f s x‖ *
-              ‖iteratedFDerivWithin 𝕜 (n - i) (fderivWithin 𝕜 g s) s x‖ := by
-            gcongr; exact B.norm_precompR_le Du
-        _ = _ := by
-          congr 1
-          apply Finset.sum_congr rfl fun i hi => ?_
-          rw [Nat.succ_sub (Nat.lt_succ_iff.1 (Finset.mem_range.1 hi)),
-            ← norm_iteratedFDerivWithin_fderivWithin hs hx]
+      refine hIR.trans ((mul_le_mul_of_nonneg_right (B.norm_precompR_le Du) ?_).trans_eq ?_)
+      · exact Finset.sum_nonneg fun _ _ ↦ by positivity
+      · congr 1
+        apply Finset.sum_congr rfl fun i hi ↦ ?_
+        rw [Nat.succ_sub (Nat.lt_succ_iff.1 (Finset.mem_range.1 hi)),
+          ← norm_iteratedFDerivWithin_fderivWithin hs hx]
     have I2 :
         ‖iteratedFDerivWithin 𝕜 n (fun y : Du => B.precompL Du (fderivWithin 𝕜 f s y) (g y)) s x‖ ≤
         ‖B‖ * ∑ i ∈ Finset.range (n + 1), n.choose i * ‖iteratedFDerivWithin 𝕜 (i + 1) f s x‖ *
-          ‖iteratedFDerivWithin 𝕜 (n - i) g s x‖ :=
-      calc
-        ‖iteratedFDerivWithin 𝕜 n (fun y : Du => B.precompL Du (fderivWithin 𝕜 f s y) (g y)) s x‖ ≤
-            ‖B.precompL Du‖ * ∑ i ∈ Finset.range (n + 1),
-              n.choose i * ‖iteratedFDerivWithin 𝕜 i (fderivWithin 𝕜 f s) s x‖ *
-                ‖iteratedFDerivWithin 𝕜 (n - i) g s x‖ :=
-          IH _ (hf.fderivWithin hs In) (hg.of_le (Nat.cast_le.2 (Nat.le_succ n)))
-        _ ≤ ‖B‖ * ∑ i ∈ Finset.range (n + 1),
-            n.choose i * ‖iteratedFDerivWithin 𝕜 i (fderivWithin 𝕜 f s) s x‖ *
-              ‖iteratedFDerivWithin 𝕜 (n - i) g s x‖ := by
-          gcongr; exact B.norm_precompL_le Du
-        _ = _ := by
-          congr 1
-          apply Finset.sum_congr rfl fun i _ => ?_
-          rw [← norm_iteratedFDerivWithin_fderivWithin hs hx]
+          ‖iteratedFDerivWithin 𝕜 (n - i) g s x‖ := by
+      refine hIL.trans ((mul_le_mul_of_nonneg_right (B.norm_precompL_le Du) ?_).trans_eq ?_)
+      · exact Finset.sum_nonneg fun _ _ ↦ by positivity
+      · congr 1
+        apply Finset.sum_congr rfl fun i _ ↦ ?_
+        rw [← norm_iteratedFDerivWithin_fderivWithin hs hx]
     have J : iteratedFDerivWithin 𝕜 n
         (fun y : Du => fderivWithin 𝕜 (fun y : Du => B (f y) (g y)) s y) s x =
           iteratedFDerivWithin 𝕜 n (fun y => B.precompR Du (f y)
@@ -388,9 +379,8 @@ theorem norm_iteratedFDerivWithin_comp_le_aux {Fu Gu : Type u} [NormedAddCommGro
   -- reformulate `hD` as a bound for the derivatives of `f'`.
   have J : ∀ i, ‖iteratedFDerivWithin 𝕜 (n - i) (fderivWithin 𝕜 f s) s x‖ ≤ D ^ (n - i + 1) := by
     intro i
-    have : ‖iteratedFDerivWithin 𝕜 (n - i + 1) f s x‖ ≤ D ^ (n - i + 1) :=
-      hD (n - i + 1) (by simp) (Nat.succ_le_succ tsub_le_self)
-    simpa [iteratedFDerivWithin_succ_eq_comp_right hs hx]
+    rw [norm_iteratedFDerivWithin_fderivWithin hs hx]
+    exact hD (n - i + 1) (by simp) (Nat.succ_le_succ tsub_le_self)
   -- Now put these together: first, notice that we have to bound `D^n (g' ∘ f ⬝ f')`.
   calc
     ‖iteratedFDerivWithin 𝕜 (n + 1) (g ∘ f) s x‖ =
@@ -423,11 +413,11 @@ theorem norm_iteratedFDerivWithin_comp_le_aux {Fu Gu : Type u} [NormedAddCommGro
     _ = ∑ i ∈ Finset.range (n + 1),
         (n ! : ℝ) * ((i ! : ℝ)⁻¹ * i !) * C * (D ^ i * D ^ (n - i + 1)) * ((n - i)! : ℝ)⁻¹ := by
       congr! 1 with i hi
-      simp only [Nat.cast_choose ℝ (Finset.mem_range_succ_iff.1 hi), div_eq_inv_mul, mul_inv]
+      simp only [Nat.cast_choose ℝ (Finset.mem_range_succ_iff.1 hi), div_eq_inv_mul₀, mul_inv₀]
       ring
     _ = ∑ i ∈ Finset.range (n + 1), (n ! : ℝ) * 1 * C * D ^ (n + 1) * ((n - i)! : ℝ)⁻¹ := by
       congr! with i hi
-      · exact inv_mul_cancel₀ (by positivity)
+      · exact inv_mul_cancel₀
       · rw [← pow_add]
         congr 1
         rw [Nat.add_succ, Nat.succ_inj]

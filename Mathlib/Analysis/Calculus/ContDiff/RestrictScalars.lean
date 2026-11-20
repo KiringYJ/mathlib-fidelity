@@ -33,7 +33,8 @@ open scoped Topology
 lemma fderivWithin_restrictScalars_comp
     {φ : E → (ContinuousMultilinearMap 𝕜' (fun _ : Fin n ↦ E) F)}
     (h : DifferentiableWithinAt 𝕜' φ s x) (hs : UniqueDiffWithinAt 𝕜 s x) :
-    fderivWithin 𝕜 ((restrictScalars 𝕜) ∘ φ) s x
+    (fderivWithin 𝕜 ((restrictScalars 𝕜) ∘ φ) s x id :
+      E → ContinuousMultilinearMap 𝕜 (fun _ : Fin n ↦ E) F)
       = (restrictScalars 𝕜) ∘ ((fderivWithin 𝕜' φ s x).restrictScalars 𝕜) := by
   simp only [← restrictScalarsLinear_apply]
   rw [fderiv_comp_fderivWithin _ (by fun_prop) (h.restrictScalars 𝕜) hs, ContinuousLinearMap.fderiv]

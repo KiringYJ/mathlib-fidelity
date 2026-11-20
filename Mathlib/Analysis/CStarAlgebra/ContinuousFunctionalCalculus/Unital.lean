@@ -47,10 +47,9 @@ useful in a variety of settings, but perhaps the most important is the following
 Besides being a star algebra homomorphism sending the identity to `a`, the key property enjoyed
 by the continuous functional calculus is the *composition property*, which guarantees that
 `cfc (g ∘ f) a = cfc g (cfc f a)` under suitable hypotheses on `a`, `f` and `g`. Note that this
-theorem is nearly impossible to state nicely in terms of `cfcHom` (see `cfcHom_comp`). An
-additional advantage of the unbundled approach is that expressions like `fun x : R ↦ x⁻¹` are valid
-arguments to `cfc`, and a bundled continuous counterpart can only make sense when the spectrum of
-`a` does not contain zero and when we have an `⁻¹` operation on the domain.
+theorem has a bundled counterpart in `cfcHom_comp`. Partial scalar functions, including the
+reciprocal and negative integer powers, are instead supplied to `cfcHom` on the actual spectrum.
+For a reciprocal, the required nonvanishing holds on that spectrum; no value is assigned at zero.
 
 A reader familiar with C⋆-algebra theory may be somewhat surprised at the level of abstraction here.
 For instance, why not require `A` to be an actual C⋆-algebra? Why define separate continuous
@@ -779,13 +778,19 @@ variable [ContinuousInv₀ R] (f : R → R) (a : A)
 noncomputable def cfcUnits (hf' : ∀ x ∈ spectrum R a, f x ≠ 0)
     (hf : ContinuousOn f (spectrum R a) := by cfc_cont_tac) (ha : p a := by cfc_tac) : Aˣ where
   val := cfc f a
-  inv := cfc (fun x ↦ (f x)⁻¹) a
+  inv := cfcHom (R := R) (a := (a : A)) (p := p) ha ⟨fun x : spectrum R a ↦
+    Checked.inv (f x) (hf' x x.property).isUnit,
+    hf.domRestrict.fun_inv₀ (h0 := fun x : spectrum R a ↦ (hf' x x.property).isUnit)⟩
   val_inv := by
-    rw [← cfc_mul .., ← cfc_one R a]
-    exact cfc_congr fun _ _ ↦ by aesop
+    rw [cfc_apply f a ha hf, ← map_mul, ← map_one (cfcHom (R := R) (a := (a : A)) (p := p) ha)]
+    congr 1
+    ext x
+    exact mul_inv_cancel₀
   inv_val := by
-    rw [← cfc_mul .., ← cfc_one R a]
-    exact cfc_congr fun _ _ ↦ by aesop
+    rw [cfc_apply f a ha hf, ← map_mul, ← map_one (cfcHom (R := R) (a := (a : A)) (p := p) ha)]
+    congr 1
+    ext x
+    exact inv_mul_cancel₀
 
 lemma cfcUnits_pow (hf' : ∀ x ∈ spectrum R a, f x ≠ 0) (n : ℕ)
     (hf : ContinuousOn f (spectrum R a) := by cfc_cont_tac) (ha : p a := by cfc_tac) :
@@ -798,84 +803,134 @@ lemma cfcUnits_pow (hf' : ∀ x ∈ spectrum R a, f x ≠ 0) (n : ℕ)
 
 lemma cfc_inv (hf' : ∀ x ∈ spectrum R a, f x ≠ 0)
     (hf : ContinuousOn f (spectrum R a) := by cfc_cont_tac) (ha : p a := by cfc_tac) :
-    cfc (fun x ↦ (f x)⁻¹) a = (cfc f a)⁻¹ʳ := by
-  rw [← val_inv_cfcUnits f a hf', ← val_cfcUnits f a hf', Ring.inverse_unit]
+    cfcHom (R := R) (a := a) (p := p) ha
+      ⟨fun x : spectrum R a ↦ Checked.inv (f x) (hf' x x.property).isUnit,
+      hf.domRestrict.fun_inv₀ (h0 := fun x : spectrum R a ↦ (hf' x x.property).isUnit)⟩ =
+        Checked.inv (cfc f a) ((isUnit_cfc_iff f a hf ha).mpr hf') := by
+  exact (inv_eq_val_inv_of_eq_val₀ (cfcUnits f a hf' hf ha) rfl).symm
 
 lemma cfc_inv_id (a : Aˣ) (ha : p a := by cfc_tac) :
-    cfc (fun x ↦ x⁻¹ : R → R) (a : A) = a⁻¹ := by
-  rw [← Ring.inverse_unit]
-  convert! cfc_inv (id : R → R) (a : A) ?_
-  · exact (cfc_id R (a : A)).symm
-  · rintro x hx rfl
-    exact spectrum.zero_notMem R a.isUnit hx
+    cfcHom (R := R) (a := (a : A)) (p := p) ha ⟨fun x : spectrum R (a : A) ↦
+      Checked.inv (x : R) (spectrum.ne_zero_of_mem_of_unit x.property).isUnit,
+      continuous_subtype_val.fun_inv₀
+        (h0 := fun x : spectrum R (a : A) ↦
+          (spectrum.ne_zero_of_mem_of_unit x.property).isUnit)⟩ = ↑a⁻¹ := by
+  simpa only [id_eq, cfc_id' R (a : A), Units.val_inv_eq_inv_val₀] using
+    cfc_inv (id : R → R) (a : A)
+      (fun _ hx ↦ spectrum.ne_zero_of_mem_of_unit hx) continuousOn_id ha
 
-lemma cfc_ringInverse_id (ha_unit : IsUnit a) (ha : p a := by cfc_tac) :
-    cfc (fun x ↦ x⁻¹ : R → R) a = a⁻¹ʳ := by
-  rw [Ring.inverse_of_isUnit ha_unit]
-  change cfc (fun x ↦ x⁻¹ : R → R) (ha_unit.unit : A) = ha_unit.unit⁻¹
-  exact cfc_inv_id _ ha
+lemma cfc_inv_of_isUnit (ha_unit : IsUnit a) (ha : p a := by cfc_tac) :
+    cfcHom (R := R) (a := (a : A)) (p := p) ha ⟨fun x : spectrum R a ↦ Checked.inv (x : R)
+      (show (x : R) ≠ 0 from fun h ↦ spectrum.zero_notMem R ha_unit (h ▸ x.property)).isUnit,
+      continuous_subtype_val.fun_inv₀
+        (h0 := fun x : spectrum R a ↦ (show (x : R) ≠ 0 from
+          fun h ↦ spectrum.zero_notMem R ha_unit (h ▸ x.property)).isUnit)⟩ =
+        Checked.inv a ha_unit := by
+  simpa only [id_eq, cfc_id' R a] using
+    cfc_inv (id : R → R) a
+      (fun x hx h ↦ spectrum.zero_notMem R ha_unit (h ▸ hx)) continuousOn_id ha
 
 lemma cfc_map_div (f g : R → R) (a : A) (hg' : ∀ x ∈ spectrum R a, g x ≠ 0)
     (hf : ContinuousOn f (spectrum R a) := by cfc_cont_tac)
     (hg : ContinuousOn g (spectrum R a) := by cfc_cont_tac) (ha : p a := by cfc_tac) :
-    cfc (fun x ↦ f x / g x) a = cfc f a * (cfc g a)⁻¹ʳ := by
-  simp only [div_eq_mul_inv]
-  rw [cfc_mul .., cfc_inv g a hg']
+    cfcHom (R := R) (a := a) (p := p) ha
+      ⟨fun x : spectrum R a ↦ Checked.div (f x) (g x) (hg' x x.property).isUnit,
+      hf.domRestrict.mul (hg.domRestrict.fun_inv₀
+        (h0 := fun x : spectrum R a ↦ (hg' x x.property).isUnit))⟩ =
+      cfc f a * Checked.inv (cfc g a) ((isUnit_cfc_iff g a hg ha).mpr hg') := by
+  rw [← cfc_inv g a hg' hg ha, cfc_apply f a ha hf, ← map_mul]
+  congr 1
 
 section ContinuousOnInvSpectrum
--- TODO: this section should probably be moved to another file altogether
 
 variable {R A : Type*} [Semifield R] [Ring A] [TopologicalSpace R] [ContinuousInv₀ R]
 variable [Algebra R A]
 
 @[fun_prop]
-lemma Units.continuousOn_inv₀_spectrum (a : Aˣ) : ContinuousOn (· ⁻¹) (spectrum R (a : A)) :=
-  continuousOn_inv₀.mono <| by
-    simpa only [Set.subset_compl_singleton_iff] using spectrum.zero_notMem R a.isUnit
+lemma Units.continuous_inv_spectrum (a : Aˣ) :
+    Continuous (fun x : spectrum R (a : A) ↦
+      Checked.inv (x : R) (spectrum.ne_zero_of_mem_of_unit x.property).isUnit) :=
+  continuous_subtype_val.fun_inv₀
+    (h0 := fun x : spectrum R (a : A) ↦ (spectrum.ne_zero_of_mem_of_unit x.property).isUnit)
 
 @[fun_prop]
-lemma Units.continuousOn_zpow₀_spectrum [ContinuousMul R] (a : Aˣ) (n : ℤ) :
-    ContinuousOn (· ^ n) (spectrum R (a : A)) :=
-  (continuousOn_zpow₀ n).mono <| by
-    simpa only [Set.subset_compl_singleton_iff] using spectrum.zero_notMem R a.isUnit
+lemma Units.continuous_zpow_spectrum [ContinuousMul R] (a : Aˣ) (n : ℤ) :
+    Continuous (fun x : spectrum R (a : A) ↦ Checked.zpow (x : R) n
+      (fun _ ↦ (spectrum.ne_zero_of_mem_of_unit x.property).isUnit)) :=
+  continuous_subtype_val.zpow₀ n
+    (h0 := fun (x : spectrum R (a : A)) _ ↦ (spectrum.ne_zero_of_mem_of_unit x.property).isUnit)
 
 end ContinuousOnInvSpectrum
-
 lemma cfcUnits_zpow (hf' : ∀ x ∈ spectrum R a, f x ≠ 0) (n : ℤ)
     (hf : ContinuousOn f (spectrum R a) := by cfc_cont_tac) (ha : p a := by cfc_tac) :
-    (cfcUnits f a hf') ^ n =
-      cfcUnits (f ^ n) a (forall₂_imp (fun _ _ ↦ zpow_ne_zero n) hf')
-        (hf.zpow₀ n (forall₂_imp (fun _ _ ↦ Or.inl) hf')) := by
+    (↑((cfcUnits f a hf' hf ha) ^ n) : A) =
+      cfcHom (R := R) (a := (a : A)) (p := p) ha ⟨fun x : spectrum R a ↦ Checked.zpow (f x) n
+        (fun _ ↦ (hf' x x.property).isUnit),
+        (show Continuous (fun x : spectrum R a ↦ f x) from hf.domRestrict).zpow₀ n
+          (h0 := fun (x : spectrum R a) _ ↦ (hf' x x.property).isUnit)⟩ := by
   cases n with
-  | ofNat _ => simpa using! cfcUnits_pow f a hf' _
+  | ofNat n =>
+    erw [zpow_natCast, Units.val_pow_eq_pow_val, val_cfcUnits f a hf' hf ha,
+      cfc_apply f a ha hf, ← map_pow]
+    congr 1
   | negSucc n =>
-    simp only [zpow_negSucc, ← inv_pow]
-    ext
-    exact cfc_pow (hf := hf.inv₀ hf') .. |>.symm
+    simp only [zpow_negSucc, ← inv_pow, Units.val_pow_eq_pow_val, val_inv_cfcUnits]
+    rw [← map_pow]
+    congr 1
 
 lemma cfc_zpow (a : Aˣ) (n : ℤ) (ha : p a := by cfc_tac) :
-    cfc (fun x : R ↦ x ^ n) (a : A) = ↑(a ^ n) := by
-  cases n with
-  | ofNat n => simpa using cfc_pow_id (a : A) n
-  | negSucc n =>
-    simp only [zpow_negSucc, ← inv_pow, Units.val_pow_eq_pow_val]
-    have := cfc_pow (fun x ↦ x⁻¹ : R → R) (n + 1) (a : A)
-    exact this.trans <| congr($(cfc_inv_id a) ^ (n + 1))
-
+    cfcHom (R := R) (a := (a : A)) (p := p) ha ⟨fun x : spectrum R (a : A) ↦ Checked.zpow (x : R) n
+      (fun _ ↦ (spectrum.ne_zero_of_mem_of_unit x.property).isUnit),
+      a.continuous_zpow_spectrum n⟩ = ↑(a ^ n) := by
+  have hunit : cfcUnits (id : R → R) (a : A)
+      (fun _ hx ↦ spectrum.ne_zero_of_mem_of_unit hx) continuousOn_id ha = a :=
+    Units.ext (cfc_id R (a : A))
+  simpa only [hunit, id_eq] using
+    (cfcUnits_zpow (id : R → R) (a : A)
+      (fun _ hx ↦ spectrum.ne_zero_of_mem_of_unit hx) n continuousOn_id ha).symm
 variable [UniqueHom R A]
 
+omit [ContinuousInv₀ R] in
+/-- Composition with a function continuous on the mapped spectrum, without extending
+the inner function outside its original spectrum. -/
+lemma cfcHom_comp_cfc {a : A} (ha : p a) (g : C(spectrum R a, R)) (f : R → R)
+    (hf : ContinuousOn f (spectrum R (cfcHom (R := R) (a := (a : A)) (p := p) ha g))) :
+    cfcHom (R := R) (a := (a : A)) (p := p) ha ⟨f ∘ g, hf.comp_continuous g.continuous (fun x ↦ by
+      rw [cfcHom_map_spectrum]
+      exact ⟨x, rfl⟩)⟩ = cfc f (cfcHom (R := R) (a := (a : A)) (p := p) ha g) := by
+  rw [cfc_apply f (cfcHom (R := R) (a := (a : A)) (p := p) ha g) (cfcHom_predicate ha g) hf]
+  exact cfcHom_comp ha g
+    ⟨fun x ↦ ⟨g x, by rw [cfcHom_map_spectrum]; exact ⟨x, rfl⟩⟩,
+      g.continuous.subtype_mk (fun x ↦ by
+        rw [cfcHom_map_spectrum]
+        exact ⟨x, rfl⟩)⟩ (fun _ ↦ rfl) ⟨_, hf.domRestrict⟩
+
 lemma cfc_comp_inv (f : R → R) (a : Aˣ)
-    (hf : ContinuousOn f ((·⁻¹) '' (spectrum R (a : A))) := by cfc_cont_tac)
+    (hf : ContinuousOn f (spectrum R (↑a⁻¹ : A)) := by cfc_cont_tac)
     (ha : p a := by cfc_tac) :
-    cfc (fun x ↦ f x⁻¹) (a : A) = cfc f (↑a⁻¹ : A) := by
-  rw [cfc_comp' .., cfc_inv_id _]
+    cfcHom (R := R) (a := (a : A)) (p := p) ha ⟨fun x : spectrum R (a : A) ↦
+      f (Checked.inv (x : R) (spectrum.ne_zero_of_mem_of_unit x.property).isUnit),
+      hf.comp_continuous (a.continuous_inv_spectrum) (fun x ↦ by
+        rw [← cfc_inv_id (R := R) a ha, cfcHom_map_spectrum]
+        exact ⟨x, rfl⟩)⟩ = cfc f (↑a⁻¹ : A) := by
+  simpa only [cfc_inv_id, Function.comp_def, ContinuousMap.coe_mk] using cfcHom_comp_cfc ha
+    ⟨fun x : spectrum R (a : A) ↦
+      Checked.inv (x : R) (spectrum.ne_zero_of_mem_of_unit x.property).isUnit,
+      a.continuous_inv_spectrum⟩ f (by simpa only [cfc_inv_id] using hf)
 
 lemma cfc_comp_zpow (f : R → R) (n : ℤ) (a : Aˣ)
-    (hf : ContinuousOn f ((· ^ n) '' (spectrum R (a : A))) := by cfc_cont_tac)
+    (hf : ContinuousOn f (spectrum R (↑(a ^ n) : A)) := by cfc_cont_tac)
     (ha : p a := by cfc_tac) :
-    cfc (fun x ↦ f (x ^ n)) (a : A) = cfc f (↑(a ^ n) : A) := by
-  rw [cfc_comp' .., cfc_zpow a]
-
+    cfcHom (R := R) (a := (a : A)) (p := p) ha
+      ⟨fun x : spectrum R (a : A) ↦ f (Checked.zpow (x : R) n
+      (fun _ ↦ (spectrum.ne_zero_of_mem_of_unit x.property).isUnit)),
+      hf.comp_continuous (a.continuous_zpow_spectrum n) (fun x ↦ by
+        rw [← cfc_zpow (R := R) a n ha, cfcHom_map_spectrum]
+        exact ⟨x, rfl⟩)⟩ = cfc f (↑(a ^ n) : A) := by
+  simpa only [cfc_zpow, Function.comp_def, ContinuousMap.coe_mk] using cfcHom_comp_cfc ha
+    ⟨fun x : spectrum R (a : A) ↦ Checked.zpow (x : R) n
+      (fun _ ↦ (spectrum.ne_zero_of_mem_of_unit x.property).isUnit),
+      a.continuous_zpow_spectrum n⟩ f (by simpa only [cfc_zpow] using hf)
 end Inv
 
 section Neg
@@ -1035,7 +1090,7 @@ variable {A : Type*} [TopologicalSpace A] [Ring A] [StarRing A] [PartialOrder A]
   [Algebra ℝ≥0 A] [ContinuousFunctionalCalculus ℝ≥0 A (0 ≤ ·)]
 
 lemma CFC.inv_nonneg_of_nonneg (a : Aˣ) (ha : (0 : A) ≤ a := by cfc_tac) : (0 : A) ≤ a⁻¹ :=
-  cfc_inv_id (R := ℝ≥0) a ▸ cfc_predicate _ (a : A)
+  cfc_inv_id (R := ℝ≥0) a ▸ cfcHom_predicate ha _
 
 lemma CFC.inv_nonneg (a : Aˣ) : (0 : A) ≤ a⁻¹ ↔ (0 : A) ≤ a :=
   ⟨fun _ ↦ inv_inv a ▸ inv_nonneg_of_nonneg a⁻¹, fun _ ↦ inv_nonneg_of_nonneg a⟩

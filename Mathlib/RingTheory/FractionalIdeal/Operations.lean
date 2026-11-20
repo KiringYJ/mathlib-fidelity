@@ -398,7 +398,9 @@ theorem isFractional_div_of_ne_zero {I J : FractionalIdeal R₁⁰ K} (h : J ≠
 /-- The ideal quotient `(I : J) = {x | x J ⊆ I}` of fractional ideals by a nonzero `J`, that is,
 the submodule quotient `↑I / ↑J` (`FractionalIdeal.coe_colon`).
 
-The quotient by `0` would be all of `K`, which is not a fractional ideal unless `R₁` is a field.
+The zero-denominator submodule quotient is all of `K`. It is fractional precisely when `R₁` is
+a field, in which case it is the unit fractional ideal by surjectivity of the algebra map.
+The fractional ideal colon uses the nonzero domain over any integral base ring.
 When `J` is invertible, the colon is the quotient `I / J` of the monoid of fractional ideals
 (`FractionalIdeal.div_eq_colon`). -/
 def colon (I J : FractionalIdeal R₁⁰ K) (hJ : J ≠ 0) : FractionalIdeal R₁⁰ K :=

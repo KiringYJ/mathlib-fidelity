@@ -135,9 +135,9 @@ lemma mulEquivHaarChar_trans {φ ψ : G ≃ₜ* G} :
 
 @[to_additive]
 lemma mulEquivHaarChar_symm {φ : G ≃ₜ* G} :
-    mulEquivHaarChar φ.symm = (mulEquivHaarChar φ)⁻¹ := by
-  symm
-  apply inv_eq_of_mul_eq_one_right
+    mulEquivHaarChar φ.symm =
+      Checked.inv (mulEquivHaarChar φ) (mulEquivHaarChar_pos φ).ne'.isUnit := by
+  apply eq_inv_of_mul_eq_one_right₀
   simp [← mulEquivHaarChar_trans]
 
 open TopologicalSpace Set in

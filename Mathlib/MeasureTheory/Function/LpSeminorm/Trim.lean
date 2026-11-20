@@ -24,7 +24,8 @@ open scoped ENNReal
 variable {α ε : Type*} {m m0 : SigmaAlgebra α} {p : ℝ≥0∞} {q : ℝ} {μ : Measure α}
   [TopologicalSpace ε] [ContinuousENorm ε]
 
-theorem eLpNorm'_trim (hm : m ≤ m0) {f : α → ε} (hf : StronglyMeasurable[m] f) :
+theorem eLpNorm'_trim {hqUnit : IsUnit q} (hm : m ≤ m0) {f : α → ε}
+    (hf : StronglyMeasurable[m] f) :
     eLpNorm' f q (μ.trim hm) = eLpNorm' f q μ := by
   simp_rw [eLpNorm']
   congr 1
@@ -56,7 +57,8 @@ theorem eLpNorm_trim (hm : m ≤ m0) {f : α → ε} (hf : StronglyMeasurable[m]
   · simp [h0]
   by_cases h_top : p = ∞
   · simpa only [h_top, eLpNorm_exponent_top] using eLpNormEssSup_trim hm hf
-  simpa only [eLpNorm_eq_eLpNorm' h0 h_top] using eLpNorm'_trim hm hf
+  simpa only [eLpNorm_eq_eLpNorm' h0 h_top] using
+    eLpNorm'_trim (hqUnit := (ENNReal.toReal_pos h0 h_top).ne'.isUnit) hm hf
 
 theorem eLpNorm_trim_ae (hm : m ≤ m0) {f : α → ε} (hf : AEStronglyMeasurable[m] f (μ.trim hm)) :
     eLpNorm f p (μ.trim hm) = eLpNorm f p μ := by

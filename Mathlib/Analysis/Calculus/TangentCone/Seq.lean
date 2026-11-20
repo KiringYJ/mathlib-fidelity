@@ -58,11 +58,20 @@ the sequence `d` tends to 0 at infinity. -/
 theorem tangentConeAt.lim_zero {α : Type*} (l : Filter α) {c : α → 𝕜} {d : α → E} {y : E}
     (hc : Tendsto (fun n => ‖c n‖) l atTop) (hd : Tendsto (fun n => c n • d n) l (𝓝 y)) :
     Tendsto d l (𝓝 0) := by
-  have : ∀ᶠ n in l, (c n)⁻¹ • c n • d n = d n :=
-    (eventually_ne_of_tendsto_norm_atTop hc 0).mono fun n hn ↦
-      inv_smul_smul₀ (ha := hn.isUnit) (d n)
-  rw [tendsto_norm_atTop_iff_cobounded] at hc
-  simpa using Tendsto.congr' this <| (tendsto_inv₀_cobounded.comp hc).smul hd
+  have hne := eventually_ne_of_tendsto_norm_atTop hc 0
+  apply (tendsto_comap_val_iff hne).1
+  let D := {n : α // c n ≠ 0}
+  let u (n : D) : 𝕜ˣ := n.2.isUnit.unit
+  have hu : Tendsto u (comap Subtype.val l)
+      (comap (fun v : 𝕜ˣ ↦ (v : 𝕜)) (Bornology.cobounded 𝕜)) := by
+    rw [tendsto_comap_iff]
+    simpa only [Function.comp_def, u, IsUnit.unit_spec] using
+      (tendsto_norm_atTop_iff_cobounded.mp hc).comp
+        (tendsto_comap (f := (Subtype.val : D → α)))
+  have h := (tendsto_inv₀_cobounded.comp hu).smul (hd.comp tendsto_comap)
+  rw [zero_smul] at h
+  refine h.congr fun n ↦ ?_
+  simp only [Function.comp_def, u, Units.val_inv_eq_inv_val₀, IsUnit.unit_spec, inv_smul_smul₀]
 
 theorem mem_tangentConeAt_of_pow_smul (hr₀ : r ≠ 0) (hr : ‖r‖ < 1)
     (hs : ∀ᶠ n : ℕ in atTop, x + r ^ n • y ∈ s) :
@@ -116,7 +125,8 @@ theorem mem_tangentConeAt_iff_exists_seq_norm_tendsto_atTop {𝕜 E : Type*}
         rw [← lt_div_iff₀' (by positivity)]
         refine (hd n).trans_le ?_
         grw [hn]
-        · simp [mul_pow, div_eq_inv_mul]
+        · simp only [div_eq_mul_inv₀, one_mul, inv_pow₀, mul_pow, mul_inv₀]
+          exact le_rfl
         · norm_num1
     · rw [mem_tangentConeAt_iff_exists_seq]
       rintro ⟨c, d, hd₀, hds, hcd⟩
@@ -124,10 +134,19 @@ theorem mem_tangentConeAt_iff_exists_seq_norm_tendsto_atTop {𝕜 E : Type*}
       replace hd₀ := hd₀.norm
       have hd₀' : ∀ᶠ n in .atTop, d n ≠ 0 :=
         hcd.eventually_ne hy₀ |>.mono fun _ ↦ right_ne_zero_of_smul
-      replace hcd := hcd.norm
-      simp only [norm_smul, norm_zero, ← div_inv_eq_mul] at hd₀ hcd
-      refine .num ?_ (by simpa) hcd
-      rw [← inv_nhdsGT_zero (𝕜 := ℝ), ← Filter.comap_inv, Filter.tendsto_comap_iff]
-      simpa [Function.comp_def, tendsto_nhdsWithin_iff, hd₀] using hd₀'
+      let D := {n : ℕ // d n ≠ 0}
+      let l := comap (Subtype.val : D → ℕ) atTop
+      have hco : Tendsto (Subtype.val : D → ℕ) l atTop := tendsto_comap
+      have hp : Tendsto (fun n : D ↦ ‖d n‖) l (𝓝[>] (0 : ℝ)) := by
+        apply tendsto_nhdsWithin_of_tendsto_nhds_of_eventually_within
+        · simpa only [Function.comp_def, norm_zero] using hd₀.comp hco
+        · exact .of_forall fun n ↦ norm_pos_iff.mpr n.2
+      have hi := hp.fun_inv_tendsto_nhdsGT_zero
+        (h0 := fun n ↦ (norm_ne_zero_iff.mpr n.2).isUnit)
+      have hprod : Tendsto (fun n : D ↦ ‖c n‖ * ‖d n‖) l (𝓝 ‖y‖) := by
+        simpa only [Function.comp_def, norm_smul] using hcd.norm.comp hco
+      apply (tendsto_comap_val_iff hd₀').1
+      refine (hprod.pos_mul_atTop (norm_pos_iff.mpr hy₀) hi).congr fun n ↦ ?_
+      simp only [mul_assoc, mul_inv_cancel₀, mul_one]
   · rintro ⟨c, d, hc, hds, hcd⟩
     exact mem_tangentConeAt_of_seq atTop c d (tangentConeAt.lim_zero atTop hc hcd) hds hcd

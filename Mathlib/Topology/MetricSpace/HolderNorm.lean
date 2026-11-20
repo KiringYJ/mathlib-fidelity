@@ -275,7 +275,7 @@ lemma MemHolder.smul {𝕜} [SeminormedRing 𝕜] [Module 𝕜 Y] [IsBoundedSMul
 lemma MemHolder.smul_iff {𝕜} [SeminormedRing 𝕜] [Module 𝕜 Y] [NormSMulClass 𝕜 Y]
     {c : 𝕜} (hc : ‖c‖₊ ≠ 0) : MemHolder r (c • f) ↔ MemHolder r f := by
   refine ⟨fun ⟨h, hh⟩ => ⟨h * ‖c‖₊⁻¹, ?_⟩, .smul⟩
-  rw [← HolderWith.smul_iff _ hc, inv_mul_cancel_right₀ hc]
+  rw [← HolderWith.smul_iff _ hc, inv_mul_cancel_right₀]
   exact hh
 
 lemma MemHolder.nsmul [NormedSpace ℝ Y] (n : ℕ) (hf : MemHolder r f) :
@@ -305,9 +305,11 @@ lemma eHolderNorm_smul {α} [NormedRing α] [Module α Y] [NormSMulClass α Y] (
   by_cases hf : MemHolder r f
   · refine le_antisymm ((hf.holderWith.smul c).eHolderNorm_le.trans ?_) <| mul_le_of_le_div' ?_
     · rw [coe_mul, hf.coe_nnHolderNorm_eq_eHolderNorm, mul_comm]
-    · rw [← (hf.holderWith.smul c).memHolder.coe_nnHolderNorm_eq_eHolderNorm, ← coe_div hc]
+    · have hunit : IsUnit ‖c‖₊ := isUnit_iff_ne_zero.mpr hc
+      rw [← (hf.holderWith.smul c).memHolder.coe_nnHolderNorm_eq_eHolderNorm,
+        ← ENNReal.coe_div (hr := hunit)]
       refine HolderWith.eHolderNorm_le fun x₁ x₂ => ?_
-      rw [coe_div hc, ← ENNReal.mul_div_right_comm,
+      rw [ENNReal.coe_div (hr := hunit), ← ENNReal.mul_div_right_comm,
         ENNReal.le_div_iff_mul_le (Or.inl <| coe_ne_zero.2 hc) <| Or.inl coe_ne_top,
         mul_comm, ← smul_eq_mul, ← ENNReal.smul_def, ← edist_smul₀, ← Pi.smul_apply,
         ← Pi.smul_apply]

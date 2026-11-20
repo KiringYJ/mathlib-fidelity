@@ -127,12 +127,12 @@ lemma charFun_stdGaussian (t : E) :
   simp only [ofReal_zero, mul_zero, zero_mul, NNReal.coe_one, ofReal_one, one_mul,
     zero_sub]
   simp_rw [← exp_sum, Finset.sum_neg_distrib, ← Finset.sum_div, ← ofReal_pow,
-    ← ofReal_sum, (stdOrthonormalBasis ℝ E).sum_sq_inner_right, neg_div]
+    ← ofReal_sum, (stdOrthonormalBasis ℝ E).sum_sq_inner_right, neg_div₀]
 
 instance isGaussian_stdGaussian : IsGaussian (stdGaussian E) := by
   refine isGaussian_iff_gaussian_charFun.2 ⟨0, innerSL ℝ,
     LinearMap.BilinForm.isPosSemidef_iff.2 isPosSemidef_inner, ?_⟩
-  simp [charFun_stdGaussian, neg_div, innerSL_apply_apply ℝ]
+  simp [charFun_stdGaussian, neg_div₀, innerSL_apply_apply ℝ]
 
 @[simp]
 lemma integral_strongDual_stdGaussian (L : StrongDual ℝ E) : ∫ x, L x ∂(stdGaussian E) = 0 := by
@@ -140,13 +140,13 @@ lemma integral_strongDual_stdGaussian (L : StrongDual ℝ E) : ∫ x, L x ∂(st
 
 lemma charFunDual_stdGaussian (L : StrongDual ℝ E) :
     charFunDual (stdGaussian E) L = exp (- ‖L‖ ^ 2 / 2) := by
-  simp [IsGaussian.charFunDual_eq, variance_dual_stdGaussian, neg_div]
+  simp [IsGaussian.charFunDual_eq, variance_dual_stdGaussian, neg_div₀]
 
 lemma covarianceBilin_stdGaussian :
     covarianceBilin (stdGaussian E) = innerSL ℝ := by
   refine gaussian_charFun_congr 0 _ ?_ ?_ |>.2.symm
   · exact LinearMap.BilinForm.isPosSemidef_iff.2 isPosSemidef_inner
-  · simp [charFun_stdGaussian, neg_div, innerSL_apply_apply ℝ]
+  · simp [charFun_stdGaussian, neg_div₀, innerSL_apply_apply ℝ]
 
 lemma stdGaussian_map {F : Type*} [NormedAddCommGroup F] [InnerProductSpace ℝ F] [SigmaAlgebra F]
     [BorelSpace F] (f : E ≃ₗᵢ[ℝ] F) :
@@ -163,7 +163,7 @@ lemma map_pi_eq_stdGaussian :
   ext t
   simp_rw [charFun_stdGaussian, charFun_pi, charFun_gaussianReal, ← exp_sum, ← ofReal_pow,
     EuclideanSpace.real_norm_sq_eq]
-  simp [Finset.sum_div, neg_div]
+  simp [div_eq_mul_inv₀, Finset.sum_mul]
 
 /-- The definition of `stdGaussian` does not depend on the basis. -/
 lemma stdGaussian_eq_map_pi_orthonormalBasis (b : OrthonormalBasis ι ℝ E) :

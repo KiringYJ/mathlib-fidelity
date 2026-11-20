@@ -84,7 +84,7 @@ private lemma stolzCone_subset_stolzSet_aux' (s : ℝ) :
       _ ≤ √(1 - 2 * x + (1 + s ^ 2) * (1 / (1 + s ^ 2)) * x) := by gcongr
       _ = √(1 - x) := by congr 1; field
       _ ≤ 1 - x / 2 := by
-        simp_rw [sub_eq_add_neg, ← neg_div]
+        simp_rw [sub_eq_add_neg, ← neg_div₀]
         refine sqrt_one_add_le <| neg_le_neg_iff.mpr (hx₁.trans_le ?_).le
         rw [div_le_one (by positivity)]
         exact le_add_of_nonneg_right <| sq_nonneg s
@@ -146,15 +146,9 @@ lemma abel_aux (h : Tendsto (fun n ↦ ∑ i ∈ range n, f i) atTop (𝓝 l)) {
       enter [2, 2, i]
       rw [← add_mul, sub_add_sub_cancel]
     rwa [mul_zero, zero_add] at this
-  rw [← zero_mul (-1 / (z - 1))]
-  apply Tendsto.mul
-  · simpa only [neg_zero, neg_sub] using (tendsto_sub_nhds_zero_iff.mpr h).neg
-  · conv =>
-      enter [1, n]
-      rw [geom_sum_eq (by contrapose! hz; simp [hz]), sub_div, sub_eq_add_neg, ← neg_div]
-    rw [← zero_add (-1 / (z - 1)), ← zero_div (z - 1)]
-    apply Tendsto.add (Tendsto.div_const (tendsto_pow_atTop_nhds_zero_of_norm_lt_one hz) (z - 1))
-    simp only [zero_div, zero_add, tendsto_const_nhds_iff]
+  have hdiff : Tendsto (fun n ↦ l - s n) atTop (𝓝 0) := by
+    simpa only [s, neg_zero, neg_sub] using (tendsto_sub_nhds_zero_iff.mpr h).neg
+  simpa only [zero_mul] using hdiff.mul (hasSum_geometric_of_norm_lt_one hz).tendsto_sum_nat
 
 /-- **Abel's limit theorem**. Given a power series converging at 1, the corresponding function
 is continuous at 1 when approaching 1 within a fixed Stolz set. -/
@@ -228,11 +222,10 @@ theorem tendsto_tsum_powerSeries_nhdsWithin_stolzSet
         exact Summable.sum_le_tsum _ (fun _ _ ↦ by positivity)
           (summable_geometric_of_lt_one (by positivity) zn)
       _ = ‖1 - z‖ * (ε / 4 / M) / (1 - ‖z‖) := by
-        rw [tsum_geometric_of_lt_one (by positivity) zn, ← div_eq_mul_inv]
+        rw [tsum_geometric_of_lt_one (by positivity) zn, ← div_eq_mul_inv₀]
       _ < M * (1 - ‖z‖) * (ε / 4 / M) / (1 - ‖z‖) := by gcongr
       _ = _ := by
-        rw [← mul_rotate, mul_div_cancel_right₀ _ (by linarith only [zn]),
-          div_mul_cancel₀ _ (by linarith only [hM])]
+        rw [← mul_rotate, mul_div_cancel_right₀, div_mul_cancel₀]
   convert! add_lt_add S₁ S₂ using 1
   linarith only
 

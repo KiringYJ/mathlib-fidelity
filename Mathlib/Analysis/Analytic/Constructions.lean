@@ -77,15 +77,19 @@ section
 variable {f g : E → F} {pf pg : FormalMultilinearSeries 𝕜 E F} {s : Set E} {x : E} {r : ℝ≥0∞}
   {R : Type*} [NormedRing R] [Module R F] [IsBoundedSMul R F] [SMulCommClass 𝕜 R F] {c : R}
 
-theorem HasFPowerSeriesWithinOnBall.add (hf : HasFPowerSeriesWithinOnBall f pf s x r)
-    (hg : HasFPowerSeriesWithinOnBall g pg s x r) :
-    HasFPowerSeriesWithinOnBall (f + g) (pf + pg) s x r :=
+theorem HasFPowerSeriesWithinOnBall.add {D : Type*}
+    {coord : D → E} {f g : D → F} {s : Set D} {x : D}
+    (hf : HasFPowerSeriesWithinOnBall f pf s x r coord)
+    (hg : HasFPowerSeriesWithinOnBall g pg s x r coord) :
+    HasFPowerSeriesWithinOnBall (f + g) (pf + pg) s x r coord :=
   { r_le := le_trans (le_min_iff.2 ⟨hf.r_le, hg.r_le⟩) (pf.min_radius_le_radius_add pg)
     r_pos := hf.r_pos
     hasSum := fun hy h'y => (hf.hasSum hy h'y).add (hg.hasSum hy h'y) }
 
-theorem HasFPowerSeriesOnBall.add (hf : HasFPowerSeriesOnBall f pf x r)
-    (hg : HasFPowerSeriesOnBall g pg x r) : HasFPowerSeriesOnBall (f + g) (pf + pg) x r :=
+theorem HasFPowerSeriesOnBall.add {D : Type*} {coord : D → E} {f g : D → F} {x : D}
+    (hf : HasFPowerSeriesOnBall f pf x r coord)
+    (hg : HasFPowerSeriesOnBall g pg x r coord) :
+    HasFPowerSeriesOnBall (f + g) (pf + pg) x r coord :=
   { r_le := le_trans (le_min_iff.2 ⟨hf.r_le, hg.r_le⟩) (pf.min_radius_le_radius_add pg)
     r_pos := hf.r_pos
     hasSum := fun hy => (hf.hasSum hy).add (hg.hasSum hy) }
@@ -96,10 +100,13 @@ theorem HasFPowerSeriesWithinAt.add
   rcases (hf.eventually.and hg.eventually).exists with ⟨r, hr⟩
   exact ⟨r, hr.1.add hr.2⟩
 
-theorem HasFPowerSeriesAt.add (hf : HasFPowerSeriesAt f pf x) (hg : HasFPowerSeriesAt g pg x) :
-    HasFPowerSeriesAt (f + g) (pf + pg) x := by
-  rcases (hf.eventually.and hg.eventually).exists with ⟨r, hr⟩
-  exact ⟨r, hr.1.add hr.2⟩
+theorem HasFPowerSeriesAt.add {D : Type*} {coord : D → E} {f g : D → F} {x : D}
+    (hf : HasFPowerSeriesAt f pf x coord) (hg : HasFPowerSeriesAt g pg x coord) :
+    HasFPowerSeriesAt (f + g) (pf + pg) x coord := by
+  obtain ⟨rf, hf⟩ := hf
+  obtain ⟨rg, hg⟩ := hg
+  have hpos : 0 < min rf rg := lt_min hf.r_pos hg.r_pos
+  exact ⟨min rf rg, (hf.mono hpos (min_le_left _ _)).add (hg.mono hpos (min_le_right _ _))⟩
 
 theorem AnalyticWithinAt.add (hf : AnalyticWithinAt 𝕜 f s x) (hg : AnalyticWithinAt 𝕜 g s x) :
     AnalyticWithinAt 𝕜 (f + g) s x :=
@@ -108,8 +115,9 @@ theorem AnalyticWithinAt.add (hf : AnalyticWithinAt 𝕜 f s x) (hg : AnalyticWi
   (hpf.add hqf).analyticWithinAt
 
 @[to_fun (attr := fun_prop)]
-theorem AnalyticAt.add (hf : AnalyticAt 𝕜 f x) (hg : AnalyticAt 𝕜 g x) :
-    AnalyticAt 𝕜 (f + g) x :=
+theorem AnalyticAt.add {D : Type*} {coord : D → E} {f g : D → F} {x : D}
+    (hf : AnalyticAt 𝕜 f x coord) (hg : AnalyticAt 𝕜 g x coord) :
+    AnalyticAt 𝕜 (f + g) x coord :=
   let ⟨_, hpf⟩ := hf
   let ⟨_, hqf⟩ := hg
   (hpf.add hqf).analyticAt
@@ -123,16 +131,19 @@ theorem AnalyticOnNhd.add (hf : AnalyticOnNhd 𝕜 f s) (hg : AnalyticOnNhd 𝕜
     AnalyticOnNhd 𝕜 (f + g) s :=
   fun z hz => (hf z hz).add (hg z hz)
 
-theorem HasFPowerSeriesWithinOnBall.neg (hf : HasFPowerSeriesWithinOnBall f pf s x r) :
-    HasFPowerSeriesWithinOnBall (-f) (-pf) s x r :=
+theorem HasFPowerSeriesWithinOnBall.neg {D : Type*}
+    {coord : D → E} {f : D → F} {s : Set D} {x : D}
+    (hf : HasFPowerSeriesWithinOnBall f pf s x r coord) :
+    HasFPowerSeriesWithinOnBall (-f) (-pf) s x r coord :=
   { r_le := by
       rw [pf.radius_neg]
       exact hf.r_le
     r_pos := hf.r_pos
     hasSum := fun hy h'y => (hf.hasSum hy h'y).neg }
 
-theorem HasFPowerSeriesOnBall.neg (hf : HasFPowerSeriesOnBall f pf x r) :
-    HasFPowerSeriesOnBall (-f) (-pf) x r :=
+theorem HasFPowerSeriesOnBall.neg {D : Type*}
+    {coord : D → E} {f : D → F} {x : D} (hf : HasFPowerSeriesOnBall f pf x r coord) :
+    HasFPowerSeriesOnBall (-f) (-pf) x r coord :=
   { r_le := by
       rw [pf.radius_neg]
       exact hf.r_le
@@ -168,13 +179,18 @@ theorem AnalyticOn.neg (hf : AnalyticOn 𝕜 f s) : AnalyticOn 𝕜 (-f) s :=
 theorem AnalyticOnNhd.neg (hf : AnalyticOnNhd 𝕜 f s) : AnalyticOnNhd 𝕜 (-f) s :=
   fun z hz ↦ (hf z hz).neg
 
-theorem HasFPowerSeriesWithinOnBall.sub (hf : HasFPowerSeriesWithinOnBall f pf s x r)
-    (hg : HasFPowerSeriesWithinOnBall g pg s x r) :
-    HasFPowerSeriesWithinOnBall (f - g) (pf - pg) s x r := by
+theorem HasFPowerSeriesWithinOnBall.sub {D : Type*}
+    {coord : D → E} {f g : D → F} {s : Set D} {x : D}
+    (hf : HasFPowerSeriesWithinOnBall f pf s x r coord)
+    (hg : HasFPowerSeriesWithinOnBall g pg s x r coord) :
+    HasFPowerSeriesWithinOnBall (f - g) (pf - pg) s x r coord := by
   simpa only [sub_eq_add_neg] using hf.add hg.neg
 
-theorem HasFPowerSeriesOnBall.sub (hf : HasFPowerSeriesOnBall f pf x r)
-    (hg : HasFPowerSeriesOnBall g pg x r) : HasFPowerSeriesOnBall (f - g) (pf - pg) x r := by
+theorem HasFPowerSeriesOnBall.sub {D : Type*}
+    {coord : D → E} {f g : D → F} {x : D}
+    (hf : HasFPowerSeriesOnBall f pf x r coord)
+    (hg : HasFPowerSeriesOnBall g pg x r coord) :
+    HasFPowerSeriesOnBall (f - g) (pf - pg) x r coord := by
   simpa only [sub_eq_add_neg] using hf.add hg.neg
 
 theorem HasFPowerSeriesWithinAt.sub
@@ -182,18 +198,25 @@ theorem HasFPowerSeriesWithinAt.sub
     HasFPowerSeriesWithinAt (f - g) (pf - pg) s x := by
   simpa only [sub_eq_add_neg] using hf.add hg.neg
 
-theorem HasFPowerSeriesAt.sub (hf : HasFPowerSeriesAt f pf x) (hg : HasFPowerSeriesAt g pg x) :
-    HasFPowerSeriesAt (f - g) (pf - pg) x := by
-  simpa only [sub_eq_add_neg] using hf.add hg.neg
+theorem HasFPowerSeriesAt.sub {D : Type*} {coord : D → E} {f g : D → F} {x : D}
+    (hf : HasFPowerSeriesAt f pf x coord) (hg : HasFPowerSeriesAt g pg x coord) :
+    HasFPowerSeriesAt (f - g) (pf - pg) x coord := by
+  obtain ⟨rf, hf⟩ := hf
+  obtain ⟨rg, hg⟩ := hg
+  have hpos : 0 < min rf rg := lt_min hf.r_pos hg.r_pos
+  exact ⟨min rf rg, (hf.mono hpos (min_le_left _ _)).sub (hg.mono hpos (min_le_right _ _))⟩
 
 theorem AnalyticWithinAt.sub (hf : AnalyticWithinAt 𝕜 f s x) (hg : AnalyticWithinAt 𝕜 g s x) :
     AnalyticWithinAt 𝕜 (f - g) s x := by
   simpa only [sub_eq_add_neg] using hf.add hg.neg
 
 @[to_fun (attr := fun_prop)]
-theorem AnalyticAt.sub (hf : AnalyticAt 𝕜 f x) (hg : AnalyticAt 𝕜 g x) :
-    AnalyticAt 𝕜 (f - g) x := by
-  simpa only [sub_eq_add_neg] using hf.add hg.neg
+theorem AnalyticAt.sub {D : Type*} {coord : D → E} {f g : D → F} {x : D}
+    (hf : AnalyticAt 𝕜 f x coord) (hg : AnalyticAt 𝕜 g x coord) :
+    AnalyticAt 𝕜 (f - g) x coord :=
+  let ⟨_, hpf⟩ := hf
+  let ⟨_, hqf⟩ := hg
+  (hpf.sub hqf).analyticAt
 
 theorem AnalyticOn.sub (hf : AnalyticOn 𝕜 f s) (hg : AnalyticOn 𝕜 g s) :
     AnalyticOn 𝕜 (f - g) s :=
@@ -204,14 +227,18 @@ theorem AnalyticOnNhd.sub (hf : AnalyticOnNhd 𝕜 f s) (hg : AnalyticOnNhd 𝕜
     AnalyticOnNhd 𝕜 (f - g) s :=
   fun z hz => (hf z hz).sub (hg z hz)
 
-theorem HasFPowerSeriesWithinOnBall.const_smul (hf : HasFPowerSeriesWithinOnBall f pf s x r) :
-    HasFPowerSeriesWithinOnBall (c • f) (c • pf) s x r where
+theorem HasFPowerSeriesWithinOnBall.const_smul {D : Type*}
+    {coord : D → E} {f : D → F} {s : Set D} {x : D}
+    (hf : HasFPowerSeriesWithinOnBall f pf s x r coord) :
+    HasFPowerSeriesWithinOnBall (c • f) (c • pf) s x r coord where
   r_le := le_trans hf.r_le pf.radius_le_smul
   r_pos := hf.r_pos
   hasSum := fun hy h'y => (hf.hasSum hy h'y).const_smul _
 
-theorem HasFPowerSeriesOnBall.const_smul (hf : HasFPowerSeriesOnBall f pf x r) :
-    HasFPowerSeriesOnBall (c • f) (c • pf) x r where
+theorem HasFPowerSeriesOnBall.const_smul {D : Type*}
+    {coord : D → E} {f : D → F} {x : D}
+    (hf : HasFPowerSeriesOnBall f pf x r coord) :
+    HasFPowerSeriesOnBall (c • f) (c • pf) x r coord where
   r_le := le_trans hf.r_le pf.radius_le_smul
   r_pos := hf.r_pos
   hasSum := fun hy => (hf.hasSum hy).const_smul _
@@ -246,24 +273,24 @@ theorem AnalyticOnNhd.const_smul (hf : AnalyticOnNhd 𝕜 f s) : AnalyticOnNhd �
 
 lemma AnalyticWithinAt.div_const {f : E → 𝕝} (hf : AnalyticWithinAt 𝕜 f s x) {c : 𝕝ˣ} :
     AnalyticWithinAt 𝕜 (fun y ↦ f y /ₚ c) s x := by
-  simpa only [divp] using
+  simpa only [divp, Pi.smul_def, MulOpposite.smul_eq_mul_unop, MulOpposite.unop_op] using
     hf.const_smul (R := 𝕝ᵐᵒᵖ) (c := MulOpposite.op (↑c⁻¹ : 𝕝))
 
 @[fun_prop]
 lemma AnalyticAt.div_const {f : E → 𝕝} (hf : AnalyticAt 𝕜 f x) {c : 𝕝ˣ} :
     AnalyticAt 𝕜 (fun y ↦ f y /ₚ c) x := by
-  simpa only [divp] using
+  simpa only [divp, Pi.smul_def, MulOpposite.smul_eq_mul_unop, MulOpposite.unop_op] using
     hf.const_smul (R := 𝕝ᵐᵒᵖ) (c := MulOpposite.op (↑c⁻¹ : 𝕝))
 
 lemma AnalyticOn.div_const {f : E → 𝕝} (hf : AnalyticOn 𝕜 f s) {c : 𝕝ˣ} :
     AnalyticOn 𝕜 (fun y ↦ f y /ₚ c) s := by
-  simpa only [divp] using
+  simpa only [divp, Pi.smul_def, MulOpposite.smul_eq_mul_unop, MulOpposite.unop_op] using
     hf.const_smul (R := 𝕝ᵐᵒᵖ) (c := MulOpposite.op (↑c⁻¹ : 𝕝))
 
 @[fun_prop]
 lemma AnalyticOnNhd.div_const {f : E → 𝕝} (hf : AnalyticOnNhd 𝕜 f s) {c : 𝕝ˣ} :
     AnalyticOnNhd 𝕜 (fun y ↦ f y /ₚ c) s := by
-  simpa only [divp] using
+  simpa only [divp, Pi.smul_def, MulOpposite.smul_eq_mul_unop, MulOpposite.unop_op] using
     hf.const_smul (R := 𝕝ᵐᵒᵖ) (c := MulOpposite.op (↑c⁻¹ : 𝕝))
 
 end
@@ -300,9 +327,11 @@ lemma FormalMultilinearSeries.radius_prod_eq_min
     refine (max_le_add_of_nonneg (norm_nonneg _) (norm_nonneg _)).trans ?_
     apply Real.le_norm_self
 
-lemma HasFPowerSeriesWithinOnBall.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G} {r s : ℝ≥0∞} {t : Set D}
+lemma HasFPowerSeriesWithinOnBall.prod {D : Type*}
+    {coord : D → E} {e : D} {f : D → F} {g : D → G} {r s : ℝ≥0∞} {t : Set D}
     {p : FormalMultilinearSeries 𝕜 E F} {q : FormalMultilinearSeries 𝕜 E G}
-    (hf : HasFPowerSeriesWithinOnBall (coord := coord) f p t e r) (hg : HasFPowerSeriesWithinOnBall (coord := coord) g q t e s) :
+    (hf : HasFPowerSeriesWithinOnBall (coord := coord) f p t e r)
+    (hg : HasFPowerSeriesWithinOnBall (coord := coord) g q t e s) :
     HasFPowerSeriesWithinOnBall (coord := coord) (fun x ↦ (f x, g x)) (p.prod q) t e (min r s) where
   r_le := by
     rw [p.radius_prod_eq_min]
@@ -315,16 +344,20 @@ lemma HasFPowerSeriesWithinOnBall.prod {D : Type*} {coord : D → E} {e : D} {f 
     · exact Metric.mem_eball.mpr (lt_of_lt_of_le hy (min_le_left _ _))
     · exact Metric.mem_eball.mpr (lt_of_lt_of_le hy (min_le_right _ _))
 
-lemma HasFPowerSeriesOnBall.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G} {r s : ℝ≥0∞}
+lemma HasFPowerSeriesOnBall.prod {D : Type*}
+    {coord : D → E} {e : D} {f : D → F} {g : D → G} {r s : ℝ≥0∞}
     {p : FormalMultilinearSeries 𝕜 E F} {q : FormalMultilinearSeries 𝕜 E G}
-    (hf : HasFPowerSeriesOnBall (coord := coord) f p e r) (hg : HasFPowerSeriesOnBall (coord := coord) g q e s) :
+    (hf : HasFPowerSeriesOnBall (coord := coord) f p e r)
+    (hg : HasFPowerSeriesOnBall (coord := coord) g q e s) :
     HasFPowerSeriesOnBall (coord := coord) (fun x ↦ (f x, g x)) (p.prod q) e (min r s) := by
   rw [← hasFPowerSeriesWithinOnBall_univ] at hf hg ⊢
   exact hf.prod hg
 
-lemma HasFPowerSeriesWithinAt.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G} {s : Set D}
+lemma HasFPowerSeriesWithinAt.prod {D : Type*}
+    {coord : D → E} {e : D} {f : D → F} {g : D → G} {s : Set D}
     {p : FormalMultilinearSeries 𝕜 E F} {q : FormalMultilinearSeries 𝕜 E G}
-    (hf : HasFPowerSeriesWithinAt (coord := coord) f p s e) (hg : HasFPowerSeriesWithinAt (coord := coord) g q s e) :
+    (hf : HasFPowerSeriesWithinAt (coord := coord) f p s e)
+    (hg : HasFPowerSeriesWithinAt (coord := coord) g q s e) :
     HasFPowerSeriesWithinAt (coord := coord) (fun x ↦ (f x, g x)) (p.prod q) s e := by
   rcases hf with ⟨_, hf⟩
   rcases hg with ⟨_, hg⟩
@@ -332,7 +365,8 @@ lemma HasFPowerSeriesWithinAt.prod {D : Type*} {coord : D → E} {e : D} {f : D 
 
 lemma HasFPowerSeriesAt.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G}
     {p : FormalMultilinearSeries 𝕜 E F} {q : FormalMultilinearSeries 𝕜 E G}
-    (hf : HasFPowerSeriesAt (coord := coord) f p e) (hg : HasFPowerSeriesAt (coord := coord) g q e) :
+    (hf : HasFPowerSeriesAt (coord := coord) f p e)
+    (hg : HasFPowerSeriesAt (coord := coord) g q e) :
     HasFPowerSeriesAt (coord := coord) (fun x ↦ (f x, g x)) (p.prod q) e := by
   rcases hf with ⟨_, hf⟩
   rcases hg with ⟨_, hg⟩
@@ -340,7 +374,8 @@ lemma HasFPowerSeriesAt.prod {D : Type*} {coord : D → E} {e : D} {f : D → F}
 
 /-- The Cartesian product of analytic functions is analytic. -/
 lemma AnalyticWithinAt.prod {D : Type*} {coord : D → E} {e : D} {f : D → F} {g : D → G} {s : Set D}
-    (hf : AnalyticWithinAt (coord := coord) 𝕜 f s e) (hg : AnalyticWithinAt (coord := coord) 𝕜 g s e) :
+    (hf : AnalyticWithinAt (coord := coord) 𝕜 f s e)
+    (hg : AnalyticWithinAt (coord := coord) 𝕜 g s e) :
     AnalyticWithinAt (coord := coord) 𝕜 (fun x ↦ (f x, g x)) s e := by
   rcases hf with ⟨_, hf⟩
   rcases hg with ⟨_, hg⟩
@@ -725,7 +760,7 @@ lemma AnalyticWithinAt.zpow_nonneg {f : E → 𝕝} {z : E} {s : Set E} {n : ℤ
     AnalyticWithinAt 𝕜
       (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) s z := by
   lift n to ℕ using hn
-  simpa only [zpow_natCast₀, Pi.pow_apply] using hf.pow n
+  simpa only [zpow_natCast₀, Pi.pow_def] using hf.pow n
 
 /-- Nonnegative integer powers of an analytic function are analytic, including at its zeros. -/
 lemma AnalyticAt.zpow_nonneg {f : E → 𝕝} {z : E} {n : ℤ}
@@ -733,7 +768,7 @@ lemma AnalyticAt.zpow_nonneg {f : E → 𝕝} {z : E} {n : ℤ}
     AnalyticAt 𝕜
       (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) z := by
   lift n to ℕ using hn
-  simpa only [zpow_natCast₀, Pi.pow_apply] using hf.pow n
+  simpa only [zpow_natCast₀, Pi.pow_def] using hf.pow n
 
 /-- Nonnegative integer powers of an analytic function are analytic, including at its zeros. -/
 lemma AnalyticOn.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ}
@@ -741,7 +776,7 @@ lemma AnalyticOn.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ}
     AnalyticOn 𝕜
       (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) s := by
   lift n to ℕ using hn
-  simpa only [zpow_natCast₀, Pi.pow_apply] using hf.pow n
+  simpa only [zpow_natCast₀, Pi.pow_def] using hf.pow n
 
 /-- Nonnegative integer powers of an analytic function are analytic, including at its zeros. -/
 lemma AnalyticOnNhd.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ}
@@ -749,7 +784,7 @@ lemma AnalyticOnNhd.zpow_nonneg {f : E → 𝕝} {s : Set E} {n : ℤ}
     AnalyticOnNhd 𝕜
       (fun y ↦ Checked.zpow (f y) n (fun h ↦ (not_lt_of_ge hn h).elim)) s := by
   lift n to ℕ using hn
-  simpa only [zpow_natCast₀, Pi.pow_apply] using hf.pow n
+  simpa only [zpow_natCast₀, Pi.pow_def] using hf.pow n
 
 /-!
 ### Composition with a linear map
@@ -782,7 +817,7 @@ theorem HasFPowerSeriesWithinOnBall.compContinuousLinearMap
       simp only [Metric.eball, edist_zero_right, Set.mem_ofPred_eq] at hy2 ⊢
       exact lt_of_le_of_lt (ContinuousLinearMap.le_opENorm _ _) (mul_lt_of_lt_div' hy2)
     simpa only [FormalMultilinearSeries.compContinuousLinearMap_apply, map_sub,
-      Function.comp_def] using hf.hasSum hmem hsmall
+      Function.comp_def, id_eq] using hf.hasSum hmem hsmall
 
 theorem HasFPowerSeriesOnBall.compContinuousLinearMap (hf : HasFPowerSeriesOnBall f pf (u x) r) :
     HasFPowerSeriesOnBall (f ∘ u) (pf.compContinuousLinearMap u) x (r / ‖u‖ₑ) := by
@@ -829,42 +864,44 @@ section
 variable {𝕜' : Type*} [NontriviallyNormedField 𝕜'] [NormedAlgebra 𝕜 𝕜']
   [NormedSpace 𝕜' E] [IsScalarTower 𝕜 𝕜' E]
   [NormedSpace 𝕜' F] [IsScalarTower 𝕜 𝕜' F]
-  {f : E → F} {p : FormalMultilinearSeries 𝕜' E F} {x : E} {s : Set E} {r : ℝ≥0∞}
+  {D : Type*} {coord : D → E} {f : D → F} {p : FormalMultilinearSeries 𝕜' E F}
+  {x : D} {s : Set D} {r : ℝ≥0∞}
 
-lemma HasFPowerSeriesWithinOnBall.restrictScalars (hf : HasFPowerSeriesWithinOnBall f p s x r) :
-    HasFPowerSeriesWithinOnBall f (p.restrictScalars 𝕜) s x r :=
+lemma HasFPowerSeriesWithinOnBall.restrictScalars
+    (hf : HasFPowerSeriesWithinOnBall f p s x r coord) :
+    HasFPowerSeriesWithinOnBall f (p.restrictScalars 𝕜) s x r coord :=
   ⟨hf.r_le.trans (FormalMultilinearSeries.radius_le_of_le (fun n ↦ by simp)), hf.r_pos, hf.hasSum⟩
 
-lemma HasFPowerSeriesOnBall.restrictScalars (hf : HasFPowerSeriesOnBall f p x r) :
-    HasFPowerSeriesOnBall f (p.restrictScalars 𝕜) x r :=
+lemma HasFPowerSeriesOnBall.restrictScalars (hf : HasFPowerSeriesOnBall f p x r coord) :
+    HasFPowerSeriesOnBall f (p.restrictScalars 𝕜) x r coord :=
   ⟨hf.r_le.trans (FormalMultilinearSeries.radius_le_of_le (fun n ↦ by simp)), hf.r_pos, hf.hasSum⟩
 
-lemma HasFPowerSeriesWithinAt.restrictScalars (hf : HasFPowerSeriesWithinAt f p s x) :
-    HasFPowerSeriesWithinAt f (p.restrictScalars 𝕜) s x := by
+lemma HasFPowerSeriesWithinAt.restrictScalars (hf : HasFPowerSeriesWithinAt f p s x coord) :
+    HasFPowerSeriesWithinAt f (p.restrictScalars 𝕜) s x coord := by
   rcases hf with ⟨r, hr⟩
   exact ⟨r, hr.restrictScalars⟩
 
-lemma HasFPowerSeriesAt.restrictScalars (hf : HasFPowerSeriesAt f p x) :
-    HasFPowerSeriesAt f (p.restrictScalars 𝕜) x := by
+lemma HasFPowerSeriesAt.restrictScalars (hf : HasFPowerSeriesAt f p x coord) :
+    HasFPowerSeriesAt f (p.restrictScalars 𝕜) x coord := by
   rcases hf with ⟨r, hr⟩
   exact ⟨r, hr.restrictScalars⟩
 
-lemma AnalyticWithinAt.restrictScalars (hf : AnalyticWithinAt 𝕜' f s x) :
-    AnalyticWithinAt 𝕜 f s x := by
+lemma AnalyticWithinAt.restrictScalars (hf : AnalyticWithinAt 𝕜' f s x coord) :
+    AnalyticWithinAt 𝕜 f s x coord := by
   rcases hf with ⟨p, hp⟩
   exact ⟨p.restrictScalars 𝕜, hp.restrictScalars⟩
 
-lemma AnalyticAt.restrictScalars (hf : AnalyticAt 𝕜' f x) :
-    AnalyticAt 𝕜 f x := by
+lemma AnalyticAt.restrictScalars (hf : AnalyticAt 𝕜' f x coord) :
+    AnalyticAt 𝕜 f x coord := by
   rcases hf with ⟨p, hp⟩
   exact ⟨p.restrictScalars 𝕜, hp.restrictScalars⟩
 
-lemma AnalyticOn.restrictScalars (hf : AnalyticOn 𝕜' f s) :
-    AnalyticOn 𝕜 f s :=
+lemma AnalyticOn.restrictScalars (hf : AnalyticOn 𝕜' f s coord) :
+    AnalyticOn 𝕜 f s coord :=
   fun x hx ↦ (hf x hx).restrictScalars
 
-lemma AnalyticOnNhd.restrictScalars (hf : AnalyticOnNhd 𝕜' f s) :
-    AnalyticOnNhd 𝕜 f s :=
+lemma AnalyticOnNhd.restrictScalars (hf : AnalyticOnNhd 𝕜' f s coord) :
+    AnalyticOnNhd 𝕜 f s coord :=
   fun x hx ↦ (hf x hx).restrictScalars
 
 end
@@ -900,19 +937,24 @@ lemma one_le_formalMultilinearSeries_geometric_radius :
     1 ≤ (formalMultilinearSeries_geometric 𝕜 A).radius := by
   convert!
     formalMultilinearSeries_geometric_eq_ofScalars 𝕜 A ▸
-      FormalMultilinearSeries.inv_le_ofScalars_radius_of_tendsto A _ one_ne_zero (by simp)
+      FormalMultilinearSeries.inv_le_ofScalars_radius_of_tendsto (𝕜 := 𝕜) A
+        (fun _ : ℕ => (1 : 𝕜)) one_ne_zero
+        (by simpa using tendsto_const_nhds (x := (1 : ℝ)))
   simp
 
 lemma formalMultilinearSeries_geometric_radius [NormOneClass A] :
     (formalMultilinearSeries_geometric 𝕜 A).radius = 1 :=
   formalMultilinearSeries_geometric_eq_ofScalars 𝕜 A ▸
-    FormalMultilinearSeries.ofScalars_radius_eq_of_tendsto A _ one_ne_zero (by simp)
+    FormalMultilinearSeries.ofScalars_radius_eq_of_tendsto (𝕜 := 𝕜) A
+      (fun _ : ℕ => (1 : 𝕜)) one_ne_zero
+      (Filter.Eventually.of_forall (fun _ : ℕ => (one_ne_zero : (1 : 𝕜) ≠ 0))).frequently
+      (by simpa using tendsto_const_nhds (x := (1 : ℝ)))
 
 lemma hasFPowerSeriesOnBall_inverse_one_sub [HasSummableGeomSeries A] :
     HasFPowerSeriesOnBall
       (fun x : {x : A | IsUnit (1 - x)} ↦ (↑x.property.unit⁻¹ : A))
       (formalMultilinearSeries_geometric 𝕜 A)
-      ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩ 1 Subtype.val := by
+      ⟨0, by simp⟩ 1 Subtype.val := by
   constructor
   · exact one_le_formalMultilinearSeries_geometric_radius 𝕜 A
   · exact one_pos
@@ -927,7 +969,7 @@ lemma hasFPowerSeriesOnBall_inverse_one_sub [HasSummableGeomSeries A] :
 @[fun_prop]
 lemma analyticAt_inverse_one_sub [HasSummableGeomSeries A] :
     AnalyticAt 𝕜 (fun x : {x : A | IsUnit (1 - x)} ↦ (↑x.property.unit⁻¹ : A))
-      ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩ Subtype.val :=
+      ⟨0, by simp⟩ Subtype.val :=
   ⟨_, ⟨_, hasFPowerSeriesOnBall_inverse_one_sub 𝕜 A⟩⟩
 
 /-- The alternating geometric series `1 - x + x ^ 2 - ...` as a `FormalMultilinearSeries`. -/
@@ -958,13 +1000,17 @@ lemma one_le_alternatingGeometricSeries_radius [Nontrivial A] :
 
 lemma alternatingGeometricSeries_radius [NormOneClass A] :
     (alternatingGeometricSeries 𝕜 A).radius = 1 :=
-  FormalMultilinearSeries.ofScalars_radius_eq_of_tendsto A _ one_ne_zero (by simp)
+  FormalMultilinearSeries.ofScalars_radius_eq_of_tendsto (𝕜 := 𝕜) A
+    (fun n : ℕ => (-1 : 𝕜) ^ n) one_ne_zero
+    (Filter.Eventually.of_forall (fun n : ℕ => pow_ne_zero n (neg_ne_zero.mpr
+      (one_ne_zero : (1 : 𝕜) ≠ 0)))).frequently
+    (by simpa using tendsto_const_nhds (x := (1 : ℝ)))
 
 lemma hasFPowerSeriesOnBall_inverse_one_add [HasSummableGeomSeries A] [Nontrivial A] :
     HasFPowerSeriesOnBall
       (fun x : {x : A | IsUnit (1 + x)} ↦ (↑x.property.unit⁻¹ : A))
       (alternatingGeometricSeries 𝕜 A)
-      ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩ 1 Subtype.val := by
+      ⟨0, by simp⟩ 1 Subtype.val := by
   constructor
   · exact one_le_alternatingGeometricSeries_radius 𝕜 A
   · exact one_pos
@@ -977,13 +1023,13 @@ lemma hasFPowerSeriesOnBall_inverse_one_add [HasSummableGeomSeries A] [Nontrivia
       simp only [IsUnit.unit_spec, Units.oneSub, sub_neg_eq_add]
     simpa [sub_zero, hu, alternatingGeometricSeries_eq_formalMultilinearSeries_geometric_comp_neg,
       FormalMultilinearSeries.compContinuousLinearMap_apply, formalMultilinearSeries_geometric,
-      ContinuousMultilinearMap.mkPiAlgebraFin_apply] using
+      ContinuousMultilinearMap.mkPiAlgebraFin_apply, Function.comp_def] using
       hasSum_geom_series_inverse (-(y : A)) hy'
 
 @[fun_prop]
 lemma analyticAt_inverse_one_add [HasSummableGeomSeries A] [Nontrivial A] :
     AnalyticAt 𝕜 (fun x : {x : A | IsUnit (1 + x)} ↦ (↑x.property.unit⁻¹ : A))
-      ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩ Subtype.val :=
+      ⟨0, by simp⟩ Subtype.val :=
   ⟨_, ⟨_, hasFPowerSeriesOnBall_inverse_one_add 𝕜 A⟩⟩
 
 end Geometric
@@ -993,12 +1039,14 @@ end Geometric
 lemma analyticAt_inverse [HasSummableGeomSeries A] (z : Aˣ) :
     AnalyticAt 𝕜 (fun y : Aˣ ↦ (↑y⁻¹ : A)) z Units.val := by
   let g : Aˣ → {a : A | IsUnit (1 - a)} := fun y ↦
-    ⟨1 - (↑z⁻¹ : A) * y, by simpa only [sub_sub_cancel] using (z⁻¹ * y).isUnit⟩
+    ⟨1 - (↑z⁻¹ : A) * y, by
+      simpa only [Set.mem_ofPred_eq, _root_.sub_sub_cancel, Units.val_mul]
+        using (z⁻¹ * y).isUnit⟩
   have h3 : AnalyticAt 𝕜 (fun y : Aˣ ↦ 1 - (↑z⁻¹ : A) * y) z Units.val :=
     (analyticAt_const.sub (analyticAt_const.mul analyticAt_id)).comp_domain (g := Units.val)
   have hg : AnalyticAt 𝕜
       (fun a : {a : A | IsUnit (1 - a)} ↦ (↑a.property.unit⁻¹ : A)) (g z) Subtype.val := by
-    have hz : g z = ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩ := by
+    have hz : g z = ⟨0, by simp⟩ := by
       apply Subtype.ext
       simp [g]
     rw [hz]
@@ -1011,9 +1059,9 @@ lemma analyticAt_inverse [HasSummableGeomSeries A] (z : Aˣ) :
     funext y
     have hu : (g y).property.unit = z⁻¹ * y := by
       apply Units.ext
-      simp only [IsUnit.unit_spec, g, sub_sub_cancel, Units.val_mul]
+      simp only [IsUnit.unit_spec, g, _root_.sub_sub_cancel, Units.val_mul]
     simp only [hu, mul_inv_rev, inv_inv, Units.val_mul, mul_assoc, Units.mul_inv, mul_one]
-  simpa only [Function.comp_def, heq] using h
+  simpa only [Function.comp_def, Pi.mul_apply, id_eq, heq] using h
 
 lemma analyticOnNhd_inverse [HasSummableGeomSeries A] :
     AnalyticOnNhd 𝕜 (fun y : Aˣ ↦ (↑y⁻¹ : A)) Set.univ Units.val :=
@@ -1024,14 +1072,14 @@ lemma hasFPowerSeriesOnBall_inv_one_sub :
     HasFPowerSeriesOnBall
       (fun x : {x : 𝕝 | IsUnit (1 - x)} ↦ (↑x.property.unit⁻¹ : 𝕝))
       (formalMultilinearSeries_geometric 𝕜 𝕝)
-      ⟨0, by simpa using (isUnit_one : IsUnit (1 : 𝕝))⟩ 1 Subtype.val :=
+      ⟨0, by simp⟩ 1 Subtype.val :=
   hasFPowerSeriesOnBall_inverse_one_sub 𝕜 𝕝
 
 variable (𝕝) in
 @[fun_prop]
 lemma analyticAt_inv_one_sub :
     AnalyticAt 𝕜 (fun x : {x : 𝕝 | IsUnit (1 - x)} ↦ (↑x.property.unit⁻¹ : 𝕝))
-      ⟨0, by simpa using (isUnit_one : IsUnit (1 : 𝕝))⟩ Subtype.val :=
+      ⟨0, by simp⟩ Subtype.val :=
   analyticAt_inverse_one_sub 𝕜 𝕝
 
 variable (𝕜 𝕝) in
@@ -1039,14 +1087,14 @@ lemma hasFPowerSeriesOnBall_inv_one_add :
     HasFPowerSeriesOnBall
       (fun x : {x : 𝕝 | IsUnit (1 + x)} ↦ (↑x.property.unit⁻¹ : 𝕝))
       (alternatingGeometricSeries 𝕜 𝕝)
-      ⟨0, by simpa using (isUnit_one : IsUnit (1 : 𝕝))⟩ 1 Subtype.val :=
+      ⟨0, by simp⟩ 1 Subtype.val :=
   hasFPowerSeriesOnBall_inverse_one_add 𝕜 𝕝
 
 variable (𝕝) in
 @[fun_prop]
 lemma analyticAt_inv_one_add :
     AnalyticAt 𝕜 (fun x : {x : 𝕝 | IsUnit (1 + x)} ↦ (↑x.property.unit⁻¹ : 𝕝))
-      ⟨0, by simpa using (isUnit_one : IsUnit (1 : 𝕝))⟩ Subtype.val :=
+      ⟨0, by simp⟩ Subtype.val :=
   analyticAt_inverse_one_add 𝕜 𝕝
 
 /-- The inverse of a normed field extension is analytic on its units. -/
@@ -1086,6 +1134,22 @@ theorem AnalyticAt.inv {f : E → 𝕝} {x : E}
     (f := fun y : {y : E | IsUnit (f y)} ↦ y.property.unit) h
     Topology.IsEmbedding.subtypeVal Units.isOpenEmbedding_val.isEmbedding
 
+/-- An analytic function that is a unit at the center has an analytic reciprocal germ there. -/
+theorem AnalyticAt.exists_mul_eq_one {f : E → 𝕝} {x : E}
+    (hf : AnalyticAt 𝕜 f x) (hu : IsUnit (f x)) :
+    ∃ g : E → 𝕝, AnalyticAt 𝕜 g x ∧ ∀ᶠ y in 𝓝 x, f y * g y = 1 := by
+  let V := {y : E | IsUnit (f y)}
+  let k : V → 𝕝 := fun y ↦ ↑y.property.unit⁻¹
+  let g : E → 𝕝 := Function.extend Subtype.val k 0
+  have hg (y : V) : g y = k y := Subtype.val_injective.extend_apply _ _ y
+  have hV : V ∈ 𝓝 x := hf.continuousAt.eventually (Units.isOpen.mem_nhds hu)
+  refine ⟨g, AnalyticAt.of_comp_domain (coord := Subtype.val) (x := (⟨x, hu⟩ : V)) ?_ ?_, ?_⟩
+  · simpa only [Function.comp_def, hg, k] using hf.inv hu
+  · simpa only [Subtype.range_coe] using hV
+  · filter_upwards [hV] with y hy
+    rw [show g y = k ⟨y, hy⟩ from hg ⟨y, hy⟩]
+    exact hy.unit.val_inv
+
 theorem AnalyticOn.inv {f : E → 𝕝} {s : Set E} (fa : AnalyticOn 𝕜 f s) :
     AnalyticOn 𝕜 (fun y : {y : E | IsUnit (f y)} ↦ (↑y.property.unit⁻¹ : 𝕝))
       (Subtype.val ⁻¹' s) Subtype.val :=
@@ -1104,19 +1168,24 @@ lemma AnalyticWithinAt.zpow {f : E → 𝕝} {z : E} {s : Set E} {n : ℤ}
       (Subtype.val ⁻¹' s) ⟨z, hz⟩ Subtype.val := by
   cases n with
   | ofNat n =>
-    simpa only [Checked.zpow, Function.comp_def, Pi.pow_apply] using
-      (hf.pow n).comp_domain
-        (g := (Subtype.val : {y : E | (n : ℤ) < 0 → IsUnit (f y)} → E)) (fun _ hy => hy)
+    have hp : AnalyticWithinAt 𝕜 (fun y ↦ f y ^ n) s z := by
+      simpa only [Pi.pow_def] using hf.pow n
+    simpa only [Checked.zpow, Function.comp_def, id_eq] using
+      hp.comp_domain (x := ⟨z, hz⟩)
+        (g := (Subtype.val : {y : E | Int.ofNat n < 0 → IsUnit (f y)} → E))
+        (t := Subtype.val ⁻¹' s) (fun _ hy => hy)
   | negSucc n =>
     let g : {y : E | Int.negSucc n < 0 → IsUnit (f y)} →
         {y : E | IsUnit (f y ^ (n + 1))} := fun y ↦
       ⟨y.val, (y.property (Int.negSucc_lt_zero n)).pow (n + 1)⟩
-    have h := ((hf.pow (n + 1)).inv ((hz (Int.negSucc_lt_zero n)).pow (n + 1))).comp_domain
-      (g := g) (fun _ hy => hy)
+    have hp : AnalyticWithinAt 𝕜 (fun y ↦ f y ^ (n + 1)) s z := by
+      simpa only [Pi.pow_def] using hf.pow (n + 1)
+    have h := (hp.inv ((hz (Int.negSucc_lt_zero n)).pow (n + 1))).comp_domain
+      (g := g) (x := ⟨z, hz⟩) (t := Subtype.val ⁻¹' s) (fun _ hy => hy)
     have hu (y : {y : E | Int.negSucc n < 0 → IsUnit (f y)}) :
         (g y).property.unit = (y.property (Int.negSucc_lt_zero n)).unit ^ (n + 1) :=
       Units.ext rfl
-    simpa only [Checked.zpow, zpow_negSucc, Function.comp_def, hu, g] using h
+    simpa only [Checked.zpow, zpow_negSucc, Function.comp_def, hu, g, Set.preimage] using h
 
 /-- Integer powers of an analytic function are analytic on the exact exponent-dependent domain. -/
 lemma AnalyticAt.zpow {f : E → 𝕝} {z : E} {n : ℤ}
@@ -1126,19 +1195,23 @@ lemma AnalyticAt.zpow {f : E → 𝕝} {z : E} {n : ℤ}
       ⟨z, hz⟩ Subtype.val := by
   cases n with
   | ofNat n =>
-    simpa only [Checked.zpow, Function.comp_def, Pi.pow_apply] using
-      (hf.pow n).comp_domain
-        (g := (Subtype.val : {y : E | (n : ℤ) < 0 → IsUnit (f y)} → E))
+    have hp : AnalyticAt 𝕜 (fun y ↦ f y ^ n) z := by
+      simpa only [Pi.pow_def] using hf.pow n
+    simpa only [Checked.zpow, Function.comp_def, id_eq] using
+      hp.comp_domain (x := ⟨z, hz⟩)
+        (g := (Subtype.val : {y : E | Int.ofNat n < 0 → IsUnit (f y)} → E))
   | negSucc n =>
     let g : {y : E | Int.negSucc n < 0 → IsUnit (f y)} →
         {y : E | IsUnit (f y ^ (n + 1))} := fun y ↦
       ⟨y.val, (y.property (Int.negSucc_lt_zero n)).pow (n + 1)⟩
-    have h := ((hf.pow (n + 1)).inv ((hz (Int.negSucc_lt_zero n)).pow (n + 1))).comp_domain
-      (g := g)
+    have hp : AnalyticAt 𝕜 (fun y ↦ f y ^ (n + 1)) z := by
+      simpa only [Pi.pow_def] using hf.pow (n + 1)
+    have h := (hp.inv ((hz (Int.negSucc_lt_zero n)).pow (n + 1))).comp_domain
+      (g := g) (x := ⟨z, hz⟩)
     have hu (y : {y : E | Int.negSucc n < 0 → IsUnit (f y)}) :
         (g y).property.unit = (y.property (Int.negSucc_lt_zero n)).unit ^ (n + 1) :=
       Units.ext rfl
-    simpa only [Checked.zpow, zpow_negSucc, Function.comp_def, hu, g] using h
+    simpa only [Checked.zpow, zpow_negSucc, Function.comp_def, hu, g, Set.preimage] using h
 
 lemma AnalyticOn.zpow {f : E → 𝕝} {s : Set E} {n : ℤ} (hf : AnalyticOn 𝕜 f s) :
     AnalyticOn 𝕜
@@ -1166,7 +1239,8 @@ theorem analyticAt_iff_analytic_fun_smul [Module 𝕝 F] [IsBoundedSMul 𝕝 F] 
       Topology.IsEmbedding.subtypeVal
     apply AnalyticAt.of_comp_domain (coord := (Subtype.val : {y : E | IsUnit (f y)} → E))
       (x := ⟨z, hz⟩)
-    · simpa only [Function.comp_def, Pi.smul_apply, smul_smul, IsUnit.val_inv_mul, one_smul] using hlocal
+    · simpa only [Function.comp_def, Pi.smul_def', smul_smul, IsUnit.val_inv_mul, one_smul]
+        using hlocal
     · rw [Subtype.range_val]
       exact h₁f.continuousAt.preimage_mem_nhds (Units.isOpen.mem_nhds hz)
 
@@ -1351,7 +1425,7 @@ theorem HasFPowerSeriesWithinOnBall.unshift (hf : HasFPowerSeriesWithinOnBall f 
     intro y hy h'y
     apply HasSum.zero_add
     simp only [FormalMultilinearSeries.unshift, Nat.succ_eq_add_one,
-      continuousMultilinearCurryRightEquiv_symm_apply', add_sub_cancel_left]
+      continuousMultilinearCurryRightEquiv_symm_apply']
     exact (ContinuousLinearMap.apply 𝕜 F (y - x)).hasSum (hf.hasSum hy h'y)
 
 theorem HasFPowerSeriesOnBall.unshift (hf : HasFPowerSeriesOnBall f pf x r) :
@@ -1364,7 +1438,7 @@ theorem HasFPowerSeriesOnBall.unshift (hf : HasFPowerSeriesOnBall f pf x r) :
     intro y hy
     apply HasSum.zero_add
     simp only [FormalMultilinearSeries.unshift, Nat.succ_eq_add_one,
-      continuousMultilinearCurryRightEquiv_symm_apply', add_sub_cancel_left]
+      continuousMultilinearCurryRightEquiv_symm_apply']
     exact (ContinuousLinearMap.apply 𝕜 F (y - x)).hasSum (hf.hasSum hy)
 
 theorem HasFPowerSeriesWithinAt.unshift (hf : HasFPowerSeriesWithinAt f pf s x) :

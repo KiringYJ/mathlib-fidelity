@@ -65,7 +65,8 @@ private lemma concatFn_injective_of_isUniquelyDecodable {S : Finset (List α)}
   have := List.ofFn_injective (h _ _ (by simp) (by simp) hflat)
   exact Subtype.ext (congrArg (fun f => f i) this)
 
-private lemma sum_pow_length_filter_eq_le_card_mul [Fintype α] {T : Finset (List α)} {s : ℕ} :
+private lemma sum_pow_length_filter_eq_le_card_mul [Fintype α] [Nonempty α]
+    {T : Finset (List α)} {s : ℕ} :
     (∑ x ∈ T.filter (fun x => x.length = s), (1 / (Fintype.card α : ℝ)) ^ x.length)
       ≤ ((Fintype.card α) ^ s) * (1 / Fintype.card α) ^ s := by
   calc
@@ -120,7 +121,7 @@ private lemma kraft_mcmillan_inequality_aux {S : Finset (List α)} [Fintype α] 
     _ = ∑ w, (1 / D) ^ (concatFn w).length := by
       apply Fintype.sum_congr
       intro w
-      simpa [concatFn_length] using Finset.prod_pow_eq_pow_sum Finset.univ _ _
+      rw [concatFn_length, Finset.prod_pow_eq_pow_sum]
     -- Unique decodability makes `concatFn` injective, so these concatenations are distinct;
     -- we can reindex the sum by the set `T` of words.
     _ = ∑ x ∈ T, (1 / D) ^ x.length :=
@@ -140,8 +141,8 @@ private lemma kraft_mcmillan_inequality_aux {S : Finset (List α)} [Fintype α] 
 
 open Filter
 
-/-- **Kraft-McMillan Inequality**: If `S` is a finite uniquely decodable code,
-then `Σ D^{-|w|} ≤ 1`. -/
+/-- **Kraft-McMillan Inequality**: If `S` is a finite uniquely decodable code over a nonempty
+alphabet of size `D`, then `Σ D^{-|w|} ≤ 1`. -/
 public theorem IsUniquelyDecodable.finsetSum_one_div_card_pow_length_le_one
     {S : Finset (List α)} [Fintype α] [Nonempty α]
     (h : IsUniquelyDecodable (S : Set (List α))) :
@@ -150,10 +151,13 @@ public theorem IsUniquelyDecodable.finsetSum_one_div_card_pow_length_le_one
   contrapose! h_kraft
   let K := ∑ w ∈ S, (1 / (Fintype.card α : ℝ)) ^ w.length
   let maxLen : ℕ := S.sup List.length
+  have hK : 1 < K := h_kraft
+  have hK_pos : 0 < K := zero_lt_one.trans hK
   have hAbs : |1 / K| < 1 := by
-    grw [abs_of_pos (by positivity), div_lt_one] <;> grind
+    rw [abs_of_pos (one_div_pos.mpr hK_pos), div_lt_one hK_pos]
+    exact hK
   have : Tendsto (fun r : ℕ => r * maxLen / K ^ r) atTop (nhds 0) := by
-    simpa [mul_left_comm, mul_div_assoc] using!
+    simpa [div_eq_mul_inv₀, mul_assoc, mul_left_comm, mul_comm] using
       (tendsto_self_mul_const_pow_of_abs_lt_one hAbs).const_mul (maxLen : ℝ)
   obtain ⟨r, hr⟩ := eventually_atTop.mp <| this.eventually <| gt_mem_nhds zero_lt_one
   refine ⟨r + 1, by linarith, ?_⟩

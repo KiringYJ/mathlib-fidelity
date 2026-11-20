@@ -26,18 +26,26 @@ namespace UpperHalfPlane
 
 variable {g : GL (Fin 2) ℝ} {f : ℍ → ℂ} (k : ℤ)
 
+private lemma exists_norm_slash_factor (hg : g 1 0 = 0) :
+    ∃ c : ℝ, ∀ z, ‖(f ∣[k] g) z‖ = ‖f (g • z)‖ * c := by
+  have hd : g 1 1 ≠ 0 := fun h ↦ g.det_ne_zero (by simp [Matrix.det_fin_two, hg, h])
+  let c := Checked.zpow |g.val.det| (k - 1) (fun _ ↦ (abs_ne_zero.mpr g.det_ne_zero).isUnit) *
+    Checked.zpow |g 1 1| (-k) (fun _ ↦ (abs_ne_zero.mpr hd).isUnit)
+  exact ⟨c, fun z ↦ by simp [ModularForm.slash_def, denom, hg, mul_assoc, c]⟩
+
 lemma IsZeroAtImInfty.slash (hg : g 1 0 = 0) (hf : IsZeroAtImInfty f) :
     IsZeroAtImInfty (f ∣[k] g) := by
   rw [IsZeroAtImInfty, ZeroAtFilter, tendsto_zero_iff_norm_tendsto_zero] at hf ⊢
-  simpa [ModularForm.slash_def, denom, hg, mul_assoc]
-    using (hf.comp <| tendsto_smul_atImInfty hg).mul_const _
+  obtain ⟨c, hc⟩ := exists_norm_slash_factor (f := f) k hg
+  simpa only [hc, Function.comp_apply, zero_mul]
+    using! (hf.comp <| tendsto_smul_atImInfty hg).mul_const c
 
 lemma IsBoundedAtImInfty.slash (hg : g 1 0 = 0) (hf : IsBoundedAtImInfty f) :
     IsBoundedAtImInfty (f ∣[k] g) := by
   rw [IsBoundedAtImInfty, BoundedAtFilter, ← Asymptotics.isBigO_norm_left] at hf ⊢
-  suffices (fun x ↦ (‖g.det.val ^ (k - 1)‖ * ‖g 1 1 ^ (-k)‖) * ‖f (g • x)‖) =O[atImInfty] 1 by
-    simpa [ModularForm.slash_def, denom, hg, mul_assoc, mul_comm ‖f _‖]
-  apply (hf.comp_tendsto (tendsto_smul_atImInfty hg)).const_mul_left
+  obtain ⟨c, hc⟩ := exists_norm_slash_factor (f := f) k hg
+  simpa only [hc, Function.comp_apply, Pi.one_comp, mul_comm c]
+    using! (hf.comp_tendsto (tendsto_smul_atImInfty hg)).const_mul_left c
 
 end UpperHalfPlane
 

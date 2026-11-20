@@ -113,7 +113,8 @@ variable [ContinuousSMul 𝕜 F]
 
 /-- `f` has the derivative `f'` along the filter `L`.
 
-That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)` where `(x', x)` converges along the filter `L`.
+That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)`
+where `(x', x)` converges along the filter `L`.
 -/
 def HasDerivAtFilter {D : Type*} (f : D → F) (f' : F) (L : Filter (D × D))
     (coord : D → 𝕜 := by exact _root_.id) :=
@@ -121,7 +122,8 @@ def HasDerivAtFilter {D : Type*} (f : D → F) (f' : F) (L : Filter (D × D))
 
 /-- `f` has the derivative `f'` at the point `x` within the subset `s`.
 
-That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)` where `x'` converges to `x` inside `s`.
+That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)`
+where `x'` converges to `x` inside `s`.
 -/
 def HasDerivWithinAt {D : Type*} [TopologicalSpace D] (f : D → F) (f' : F)
     (s : Set D) (x : D) (coord : D → 𝕜 := by exact _root_.id) :=
@@ -129,7 +131,8 @@ def HasDerivWithinAt {D : Type*} [TopologicalSpace D] (f : D → F) (f' : F)
 
 /-- `f` has the derivative `f'` at the point `x`.
 
-That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)` where `x'` converges to `x`.
+That is, `f x' = f x + (coord x' - coord x) • f' + o(coord x' - coord x)`
+where `x'` converges to `x`.
 -/
 def HasDerivAt {D : Type*} [TopologicalSpace D] (f : D → F) (f' : F)
     (x : D) (coord : D → 𝕜 := by exact _root_.id) :=
@@ -327,11 +330,14 @@ theorem hasDerivAt_iff_tendsto {D : Type*} [TopologicalSpace D] {f : D → F}
         (comap Subtype.val (𝓝 x)) (𝓝 0) :=
   hasFDerivAt_iff_tendsto h₀
 
-theorem HasDerivAtFilter.isBigO_sub (h : HasDerivAtFilter f f' L) :
-    (fun p => f p.1 - f p.2) =O[L] fun p => p.1 - p.2 :=
+theorem HasDerivAtFilter.isBigO_sub {D : Type*} {f : D → F} {coord : D → 𝕜}
+    {L : Filter (D × D)} (h : HasDerivAtFilter f f' L coord) :
+    (fun p => f p.1 - f p.2) =O[L] fun p => coord p.1 - coord p.2 :=
   HasFDerivAtFilter.isBigO_sub h
 
-theorem HasDerivAt.isBigO_sub (h : HasDerivAt f f' x) : (f · - f x) =O[𝓝 x] (· - x) :=
+theorem HasDerivAt.isBigO_sub {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → 𝕜} {x : D} (h : HasDerivAt f f' x coord) :
+    (fun y ↦ f y - f x) =O[𝓝 x] (fun y ↦ coord y - coord x) :=
   h.hasFDerivAt.isBigO_sub
 
 /-- This theorem holds for any T2 TVS, see `isClosedEmbedding_smul_left`,
@@ -416,11 +422,13 @@ theorem HasDerivAt.hasDerivAtFilter (h : HasDerivAt f f' x) (hL : L ≤ 𝓝 x �
 theorem HasDerivAt.hasDerivWithinAt (h : HasDerivAt f f' x) : HasDerivWithinAt f f' s x :=
   HasFDerivAt.hasFDerivWithinAt h
 
-theorem HasDerivWithinAt.differentiableWithinAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → 𝕜} {x : D} {s : Set D} (h : HasDerivWithinAt f f' s x coord) :
+theorem HasDerivWithinAt.differentiableWithinAt {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → 𝕜} {x : D} {s : Set D} (h : HasDerivWithinAt f f' s x coord) :
     DifferentiableWithinAt 𝕜 f s x coord :=
   HasFDerivWithinAt.differentiableWithinAt h
 
-theorem HasDerivAt.differentiableAt {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → 𝕜} {x : D} (h : HasDerivAt f f' x coord) : DifferentiableAt 𝕜 f x coord :=
+theorem HasDerivAt.differentiableAt {D : Type*} [TopologicalSpace D] {f : D → F}
+    {coord : D → 𝕜} {x : D} (h : HasDerivAt f f' x coord) : DifferentiableAt 𝕜 f x coord :=
   HasFDerivAt.differentiableAt h
 
 @[simp]

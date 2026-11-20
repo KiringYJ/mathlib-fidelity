@@ -46,15 +46,16 @@ lemma absNorm_differentIdeal : (differentIdeal ℤ 𝒪).absNorm = (discr K).nat
     (FaithfulSMul.algebraMap_injective 𝒪 K) (differentIdeal ℤ 𝒪)]
   refine (AddSubgroup.relIndex_comap (IsLocalization.coeSubmodule K
     (differentIdeal ℤ 𝒪)).toAddSubgroup (algebraMap 𝒪 K).toAddMonoidHom ⊤).trans ?_
-  have hD := differentIdeal_ne_bot (A := ℤ) (B := 𝒪)
+  have hMul : FractionalIdeal.dual ℤ ℚ (1 : FractionalIdeal 𝒪⁰ K) *
+      (differentIdeal ℤ 𝒪 : FractionalIdeal 𝒪⁰ K) = 1 := by
+    rw [coeIdeal_differentIdeal (K := ℚ), mul_inv_cancel₀]
   have := FractionalIdeal.quotientEquiv (R := 𝒪) (K := K) 1 (differentIdeal ℤ 𝒪)
-    ((differentIdeal ℤ 𝒪 : FractionalIdeal 𝒪⁰ K))⁻¹ 1 (by simp) FractionalIdeal.coeIdeal_le_one
-    (le_inv_of_le_inv₀ (hb := isUnit_one) (by simp [pos_iff_ne_zero, hD])
-      (by simpa using FractionalIdeal.coeIdeal_le_one)) one_ne_zero one_ne_zero
+    (FractionalIdeal.dual ℤ ℚ 1) 1 (by simpa only [one_mul] using hMul.symm)
+    FractionalIdeal.coeIdeal_le_one (FractionalIdeal.one_le_dual_one ℤ ℚ (L := K) (B := 𝒪))
+    one_ne_zero one_ne_zero
   have := Nat.card_congr this.toEquiv
   refine this.trans ?_
   rw [FractionalIdeal.coe_one]
-  simp only [coeIdeal_differentIdeal (K := ℚ), inv_inv₀]
   let b := integralBasis K
   let b' := (Algebra.traceForm ℚ K).dualBasis (traceForm_nondegenerate ℚ K) b
   have hb : Submodule.span ℤ (Set.range b) = (1 : Submodule 𝒪 K).restrictScalars ℤ := by

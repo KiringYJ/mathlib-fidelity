@@ -114,7 +114,7 @@ lemma excenterWeightsUnnorm_ne_zero (signs : Finset (Fin (n + 1))) (i : Fin (n +
   rw [excenterWeightsUnnorm]
   refine mul_ne_zero ?_ ?_
   · grind
-  · simp [(s.height_pos i).ne']
+  · simp
 
 /-- Whether an excenter exists with a given choice of signs: the sum of the unnormalized weights is
 nonzero. By `exists_forall_signedInfDist_eq_iff_excenterExists_and_eq_excenter`, this holds
@@ -170,10 +170,9 @@ lemma sum_excenterWeightsUnnorm_empty_pos : 0 < ∑ i, s.excenterWeightsUnnorm �
 /-- The normalized weights of the vertices in an affine combination that gives the excenter with
 signs determined by the given set of indices. They are defined when that excenter exists, and then
 they sum to 1. -/
-@[nolint unusedArguments]
-def excenterWeights (signs : Finset (Fin (n + 1))) (_h : s.ExcenterExists signs) :
+def excenterWeights (signs : Finset (Fin (n + 1))) (h : s.ExcenterExists signs) :
     Fin (n + 1) → ℝ :=
-  (∑ i, s.excenterWeightsUnnorm signs i)⁻¹ • s.excenterWeightsUnnorm signs
+  Checked.inv (∑ i, s.excenterWeightsUnnorm signs i) (Ne.isUnit h) • s.excenterWeightsUnnorm signs
 
 lemma excenterWeights_reindex (e : Fin (n + 1) ≃ Fin (m + 1)) (signs : Finset (Fin (m + 1)))
     (h : (s.reindex e).ExcenterExists signs) :
@@ -204,18 +203,18 @@ lemma ExcenterExists.excenterWeights_ne_zero {signs : Finset (Fin (n + 1))}
   rw [excenterWeights]
   refine mul_ne_zero ?_ (s.excenterWeightsUnnorm_ne_zero _ _)
   rw [ExcenterExists] at h
-  simp [h]
+  simp
 
 @[simp] lemma excenterWeights_compl {signs : Finset (Fin (n + 1))}
     (h : s.ExcenterExists signsᶜ) :
     s.excenterWeights signsᶜ h = s.excenterWeights signs (s.excenterExists_compl.1 h) := by
-  simp [excenterWeights, inv_neg]
+  simp [excenterWeights]
 
 variable {s} in
 lemma ExcenterExists.sum_excenterWeights_eq_one {signs : Finset (Fin (n + 1))}
     (h : s.ExcenterExists signs) : ∑ i, s.excenterWeights signs h i = 1 := by
   simp_rw [excenterWeights, Pi.smul_apply, smul_eq_mul, ← Finset.mul_sum]
-  exact inv_mul_cancel₀ h
+  exact inv_mul_cancel₀
 
 lemma excenterWeights_empty_pos (i : Fin (n + 1)) :
     0 < s.excenterWeights ∅ s.excenterExists_empty i := by
@@ -263,8 +262,8 @@ lemma sum_inv_height_sq_smul_vsub_eq_zero :
     · exact ⟨0, hj.2.symm, rfl⟩
   · rw [inner_smul_right, inner_smul_right, inner_vsub_vsub_altitudeFoot_eq_height_sq _ hi,
       ← neg_vsub_eq_vsub_rev, inner_neg_left, inner_vsub_vsub_altitudeFoot_eq_height_sq _ hi.symm,
-      mul_neg, inv_pow]
-    simp [height]
+      mul_neg]
+    simp only [inv_pow₀, inv_mul_cancel₀, neg_add_cancel]
 
 /-- The inverse of the distance from one vertex to the opposite face, expressed as a sum of
 multiples of that quantity for the other vertices. The multipliers, expressed here in terms of
@@ -283,8 +282,7 @@ lemma inv_height_eq_sum_mul_inv_dist (i : Fin (n + 1)) :
   rw [Finset.sum_neg_distrib, sub_neg_eq_add, Finset.filter_ne',
     Finset.sum_erase_eq_sub (Finset.mem_univ _), real_inner_self_eq_norm_mul_norm,
     ← dist_eq_norm_vsub]
-  simp only [height, ne_eq, mul_eq_zero, dist_eq_zero, ne_altitudeFoot, or_self,
-    not_false_eq_true, div_self, one_mul, add_sub_cancel]
+  simp only [height, div_self, one_mul, add_sub_cancel]
   have h := s.sum_inv_height_sq_smul_vsub_eq_zero
   apply_fun fun v ↦ (s.height i)⁻¹ * ⟪s.points i -ᵥ s.altitudeFoot i, v⟫ at h
   rw [inner_sum, Finset.mul_sum] at h
@@ -373,7 +371,7 @@ lemma excenterWeights_empty_lt_inv_two [n.AtLeastTwo] (i : Fin (n + 1)) :
   replace h : (s.height i)⁻¹ / ∑ i, (s.height i)⁻¹ < 2⁻¹ := by
     rwa [sum_add_sum_compl, ← lt_inv_mul_iff₀ zero_lt_two, ← div_lt_iff₀ (by positivity)] at h
   convert! h
-  simp [excenterWeights, excenterWeightsUnnorm, div_eq_inv_mul]
+  simp [excenterWeights, excenterWeightsUnnorm, div_eq_inv_mul₀]
 
 open Lean Elab Tactic in
 /-- The default discharger for the hypothesis `s.ExcenterExists signs` of
@@ -578,7 +576,9 @@ lemma incenter_eq_affineCombination :
       Finset.univ.affineCombination ℝ s.points (s.excenterWeights ∅ s.excenterExists_empty) :=
   rfl
 
-lemma inradius_eq_abs_inv_sum : s.inradius = |(∑ i, s.excenterWeightsUnnorm ∅ i)⁻¹| :=
+lemma inradius_eq_abs_inv_sum :
+    s.inradius = |Checked.inv (∑ i, s.excenterWeightsUnnorm ∅ i)
+      (Ne.isUnit s.excenterExists_empty)| :=
   rfl
 
 lemma exradius_nonneg (signs : Finset (Fin (n + 1))) (h : s.ExcenterExists signs) :
@@ -588,7 +588,7 @@ lemma exradius_nonneg (signs : Finset (Fin (n + 1))) (h : s.ExcenterExists signs
 variable {s} in
 lemma ExcenterExists.exradius_pos {signs : Finset (Fin (n + 1))} (h : s.ExcenterExists signs) :
     0 < s.exradius signs :=
-  abs_pos.2 (inv_ne_zero h)
+  abs_pos.2 inv_ne_zero
 
 lemma inradius_pos : 0 < s.inradius :=
   s.excenterExists_empty.exradius_pos
@@ -633,7 +633,7 @@ lemma ExcenterExists.signedInfDist_excenter_eq_mul_sum_inv {signs : Finset (Fin 
     signedInfDist_affineCombination _ _ h.sum_excenterWeights_eq_one, excenterWeights,
     Pi.smul_apply, ← dist_eq_norm_vsub, excenterWeightsUnnorm]
   rw [← altitudeFoot, ← height]
-  simp [(s.height_pos i).ne']
+  simp
 
 variable {s} in
 lemma ExcenterExists.sign_signedInfDist_excenter {signs : Finset (Fin (n + 1))}
@@ -735,15 +735,16 @@ lemma ExcenterExists.excenterWeights_eq_excenterWeights_iff {signs₁ signs₂ :
     simp_rw [excenterWeights, Pi.smul_apply, smul_eq_mul, sign_mul] at hi
     have hn₁ : ∑ i, s.excenterWeightsUnnorm signs₁ i ≠ 0 := h₁
     have hn₂ : ∑ i, s.excenterWeightsUnnorm signs₂ i ≠ 0 := h₂
-    rcases sign_eq_sign_or_eq_neg (inv_ne_zero hn₁) (inv_ne_zero hn₂) with hs | hs
-    · simp only [hs, mul_eq_mul_left_iff, sign_eq_zero_iff, inv_eq_zero, hn₂, or_false] at hi
+    rcases sign_eq_sign_or_eq_neg (inv_ne_zero (ha := hn₁.isUnit))
+        (inv_ne_zero (ha := hn₂.isUnit)) with hs | hs
+    · simp only [hs, mul_eq_mul_left_iff, sign_eq_zero_iff, inv_ne_zero, or_false] at hi
       simp only [excenterWeightsUnnorm, sign_mul, inv_pos, height_pos, sign_pos, mul_one] at hi
       left
       ext i
       replace hi := hi i
       split_ifs at hi <;> simp_all
     · simp_rw [hs, neg_mul, ← mul_neg, mul_eq_mul_left_iff] at hi
-      simp only [sign_eq_zero_iff, inv_eq_zero, hn₂, or_false] at hi
+      simp only [sign_eq_zero_iff, inv_ne_zero, or_false] at hi
       simp only [excenterWeightsUnnorm, sign_mul, inv_pos, height_pos, sign_pos, mul_one] at hi
       right
       ext i
@@ -907,7 +908,7 @@ lemma ExcenterExists.signedInfDist_excenter {signs : Finset (Fin (n + 1))}
       SignType.sign (∑ j, s.excenterWeightsUnnorm signs j) * (s.exradius signs) := by
   rw [h.signedInfDist_excenter_eq_mul_sum_inv, mul_assoc, exradius_eq_abs_inv_sum]
   congr
-  rw [← mul_eq_one_iff_inv_eq₀ h, ← mul_assoc, self_mul_sign, ← abs_mul, mul_inv_cancel₀ h, abs_one]
+  rw [← mul_eq_one_iff_inv_eq₀, ← mul_assoc, self_mul_sign, ← abs_mul, mul_inv_cancel₀, abs_one]
 
 /-- The signed distance between the incenter and its projection in the plane of each face is the
 inradius.
@@ -1027,15 +1028,16 @@ lemma exists_forall_signedInfDist_eq_iff_excenterExists_and_eq_excenter {p : P}
       simp_rw [excenterWeightsUnnorm]
       intro i
       replace h' := h' i
-      rw [← height, ← eq_div_iff (s.height_pos i).ne'] at h'
-      rw [h', mul_comm, div_eq_mul_inv, mul_assoc, height, altitudeFoot, orthogonalProjectionSpan]
+      rw [← height, ← eq_div_iff (hb := (s.height_pos i).ne'.isUnit)] at h'
+      rw [h', div_eq_mul_inv₀]
+      ring
     have hr : r * ∑ i, s.excenterWeightsUnnorm signs i = 1 := by
       simp_rw [h'', ← Finset.mul_sum] at h1
       exact h1
     have he : s.ExcenterExists signs := right_ne_zero_of_mul_eq_one hr
     have hw : w = s.excenterWeights signs he := by
       ext j
-      rw [h'', eq_inv_of_mul_eq_one_left hr]
+      rw [h'', eq_inv_of_mul_eq_one_left₀ (hb := Ne.isUnit he) hr]
       simp [excenterWeights]
     subst hw
     exact ⟨he, rfl⟩
@@ -1325,10 +1327,9 @@ lemma ExcenterExists.touchpoint_ne_point [Nat.AtLeastTwo n] {signs : Finset (Fin
   have he' := congr(SignType.sign ($he k))
   rw [Pi.single_eq_of_ne hkj, sign_zero, eq_comm, h.sign_touchpointWeights hki.symm,
     sign_eq_zero_iff, excenterWeights] at he'
-  rw [ExcenterExists] at h
-  simp only [Pi.smul_apply, smul_eq_mul, mul_eq_zero, inv_eq_zero, h, false_or] at he'
+  simp only [Pi.smul_apply, smul_eq_mul, mul_eq_zero, inv_ne_zero, false_or] at he'
   rw [excenterWeightsUnnorm] at he'
-  by_cases hk : k ∈ signs <;> simp [hk, (s.height_pos k).ne'] at he'
+  by_cases hk : k ∈ signs <;> simp [hk] at he'
 
 lemma touchpoint_empty_ne_point [Nat.AtLeastTwo n] (i j : Fin (n + 1)) :
     s.touchpoint ∅ i ≠ s.points j :=

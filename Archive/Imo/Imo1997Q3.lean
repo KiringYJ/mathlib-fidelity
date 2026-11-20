@@ -53,11 +53,17 @@ def S (x : Fin n → ℝ) (p : Perm (Fin n)) : ℝ :=
 
 lemma sign_eq_of_abs_sub_le {a b c : ℝ} (ha : c / 2 < |a|) (hb : c / 2 < |b|) (hc : 0 < c)
     (hs : |a - b| ≤ c) : sign a = sign b := by
+  have ha₂ : c < |a| + |a| := by simpa only [add_halves] using add_lt_add ha ha
+  have hb₂ : c < |b| + |b| := by simpa only [add_halves] using add_lt_add hb hb
+  clear ha hb
   obtain ha' | rfl | ha' := lt_trichotomy 0 a <;> obtain hb' | rfl | hb' := lt_trichotomy 0 b <;>
   simp_all <;> grind
 
 lemma lt_abs_add_of_sign_eq {a b c : ℝ} (ha : c / 2 < |a|) (hb : c / 2 < |b|) (hc : 0 < c)
     (hs : sign a = sign b) : c < |a + b| := by
+  have ha₂ : c < |a| + |a| := by simpa only [add_halves] using add_lt_add ha ha
+  have hb₂ : c < |b| + |b| := by simpa only [add_halves] using add_lt_add hb hb
+  clear ha hb
   obtain ha' | rfl | ha' := lt_trichotomy 0 a <;> obtain hb' | rfl | hb' := lt_trichotomy 0 b <;>
   simp_all <;> grind
 

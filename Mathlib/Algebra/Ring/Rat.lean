@@ -87,6 +87,21 @@ theorem fraction_mul_den (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
 theorem fraction_eq_div (n : ℤ) (d : ℕ) (hd : d ≠ 0) : fraction n d hd = n / d :=
   eq_div_iff.mpr (fraction_mul_den n d hd)
 
+/-- A checked fraction with an integer denominator satisfies its signed numerator equation. -/
+theorem fractionInt_mul_den (n d : ℤ) (hd : d ≠ 0) :
+    fractionInt n d hd * (d : ℚ) = (n : ℚ) := by
+  have hs : (d.sign : ℚ) ≠ 0 := fun h ↦
+    hd (Int.sign_eq_zero_iff_zero.mp (intCast_injective (h.trans Int.cast_zero.symm)))
+  apply mul_right_cancel₀ hs
+  rw [mul_assoc, ← Int.cast_mul d d.sign, Int.mul_sign_self, Int.cast_natCast]
+  change fraction (d.sign * n) d.natAbs (Int.natAbs_ne_zero.mpr hd) *
+      (d.natAbs : ℚ) = (n : ℚ) * (d.sign : ℚ)
+  rw [fraction_mul_den, Int.cast_mul, mul_comm]
+
+theorem fractionInt_eq_div (n d : ℤ) (hd : d ≠ 0) :
+    fractionInt n d hd = (n : ℚ) / (d : ℚ) :=
+  eq_div_iff.mpr (fractionInt_mul_den n d hd)
+
 lemma num_div_den (r : ℚ) : (r.num : ℚ) / (r.den : ℚ) = r :=
   div_eq_iff.mpr (mul_den_eq_num r).symm
 

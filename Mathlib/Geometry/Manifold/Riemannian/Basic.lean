@@ -142,16 +142,16 @@ lemma enorm_tangentSpace_vectorSpace {x : F} {v : TangentSpace% x} :
 open MeasureTheory
 
 lemma lintegral_fderiv_lineMap_eq_edist {x y : E} :
-    ∫⁻ t in Icc 0 1, ‖fderivWithin ℝ (ContinuousAffineMap.lineMap (R := ℝ) x y) (Icc 0 1) t 1‖ₑ
-      = edist x y := by
+    (∫⁻ t in Icc 0 1,
+      ‖fderivWithin ℝ (ContinuousAffineMap.lineMap (R := ℝ) x y) (Icc 0 1) t id 1‖ₑ) =
+      edist x y := by
   have : edist x y = ∫⁻ t in Icc (0 : ℝ) 1, ‖y - x‖ₑ := by
     simp [edist_comm x y, edist_eq_enorm_sub]
   rw [this]
   apply setLIntegral_congr_fun measurableSet_Icc (fun z hz ↦ ?_)
-  rw [show y - x = fderiv ℝ (ContinuousAffineMap.lineMap (R := ℝ) x y) z 1 by simp]
-  congr
-  exact fderivWithin_eq_fderiv (uniqueDiffOn_Icc zero_lt_one _ hz)
-    (ContinuousAffineMap.differentiableAt _)
+  rw [fderivWithin_eq_fderiv (uniqueDiffOn_Icc zero_lt_one z hz)
+    (ContinuousAffineMap.differentiableAt _)]
+  simp
 
 /-- An inner product vector space is a Riemannian manifold, i.e., the distance between two points
 is the infimum of the lengths of paths between these points. -/
@@ -486,7 +486,7 @@ lemma setOfPred_riemannianEDist_lt_subset_nhds [RegularSpace M] {x : M} {s : Set
     _ < C * (r / C) := by
       gcongr
       · exact ENNReal.coe_ne_top
-      · exact hγ.trans_eq (ENNReal.coe_div C_pos.ne')
+      · exact hγ.trans_eq (ENNReal.coe_div (hr := C_pos.ne'.isUnit))
     _ = r := (ENNReal.eq_div_iff (by simpa using C_pos.ne') ENNReal.coe_ne_top).mp rfl
   have : γ' t₁ ∈ (extChartAt I x).symm ⁻¹' v := by
     apply hr

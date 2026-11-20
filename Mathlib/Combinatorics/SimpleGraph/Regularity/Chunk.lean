@@ -508,7 +508,6 @@ private theorem eps_le_card_star_div [Nonempty α] (hPα : #P.parts * 16 ^ #P.pa
       exact pow_mul_m_le_card_part hP hU
     _ = #(star hP G ε hU V) / ↑4 ^ #P.parts * ((m + 1) * (1 - (↑m)⁻¹) / m) := by
       field_simp
-      ring
     _ ≤ #(star hP G ε hU V) / ↑4 ^ #P.parts * 1 := by
       gcongr
       rw [div_le_one hm₀]

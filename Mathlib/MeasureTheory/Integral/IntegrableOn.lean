@@ -622,7 +622,7 @@ private theorem integrableAtFilter_smul_iff' {𝕜 : Type*} [NormedField 𝕜] [
     IntegrableAtFilter (c • f) l μ ↔ IntegrableAtFilter f l μ := by
   refine ⟨fun hf ↦ ?_, fun h ↦ h.smul c⟩
   convert! hf.smul c⁻¹
-  simp [← smul_assoc, inv_mul_cancel₀ hc]
+  simp [← smul_assoc]
 
 theorem integrableAtFilter_smul_iff {𝕜 : Type*} [NormedField 𝕜] [NormedSpace 𝕜 E]
     {f : α → E} (c : 𝕜) :

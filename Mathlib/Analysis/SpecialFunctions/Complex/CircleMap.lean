@@ -95,21 +95,27 @@ lemma circleMap_zero_mul (R₁ R₂ θ₁ θ₂ : ℝ) :
   simp only [circleMap_zero, ofReal_mul, ofReal_add, add_mul, Complex.exp_add]
   ring
 
-lemma circleMap_zero_div (R₁ R₂ θ₁ θ₂ : ℝ) :
-    (circleMap 0 R₁ θ₁) / (circleMap 0 R₂ θ₂) = circleMap 0 (R₁ / R₂) (θ₁ - θ₂) := by
-  simp only [circleMap_zero, ofReal_div, ofReal_sub, sub_mul, Complex.exp_sub]
+lemma circleMap_zero_div (R₁ R₂ θ₁ θ₂ : ℝ) {hR₂ : IsUnit R₂} :
+    Checked.div (circleMap 0 R₁ θ₁) (circleMap 0 R₂ θ₂)
+      (circleMap_ne_center hR₂.ne_zero).isUnit = circleMap 0 (R₁ / R₂) (θ₁ - θ₂) := by
+  simp only [circleMap_zero, ofReal_sub, sub_mul, Complex.exp_sub,
+    div_eq_mul_inv₀, mul_inv_rev₀, ofReal_mul, ofReal_inv]
   ring
 
-lemma circleMap_zero_inv (R θ : ℝ) : (circleMap 0 R θ)⁻¹ = circleMap 0 R⁻¹ (-θ) := by
-  simp [circleMap_zero, Complex.exp_neg, mul_comm]
+lemma circleMap_zero_inv (R θ : ℝ) {hR : IsUnit R} :
+    Checked.inv (circleMap 0 R θ) (circleMap_ne_center hR.ne_zero).isUnit =
+      circleMap 0 R⁻¹ (-θ) := by
+  simp [circleMap_zero, Complex.exp_neg, mul_inv_rev₀, mul_comm]
 
 lemma circleMap_zero_pow (n : ℕ) (R θ : ℝ) :
     (circleMap 0 R θ) ^ n = circleMap 0 (R ^ n) (n * θ) := by
   simp [circleMap_zero, mul_pow, ← Complex.exp_nat_mul, ← mul_assoc]
 
-lemma circleMap_zero_zpow (n : ℤ) (R θ : ℝ) :
-    (circleMap 0 R θ) ^ n = circleMap 0 (R ^ n) (n * θ) := by
-  simp [circleMap_zero, mul_zpow, ← exp_int_mul, ← mul_assoc]
+lemma circleMap_zero_zpow (n : ℤ) (R θ : ℝ) {hR : n < 0 → IsUnit R} :
+    Checked.zpow (circleMap 0 R θ) n
+      (fun hn ↦ (circleMap_ne_center (hR hn).ne_zero).isUnit) =
+      circleMap 0 (Checked.zpow R n hR) (n * θ) := by
+  simp [circleMap_zero, mul_zpow₀, ← exp_int_mul, ← mul_assoc]
 
 lemma conj_circleMap_zero (r θ : ℝ) :
     conj (circleMap 0 r θ) = circleMap 0 r (-θ) := by

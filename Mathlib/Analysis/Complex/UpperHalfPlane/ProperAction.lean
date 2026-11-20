@@ -38,16 +38,6 @@ lemma continuous_toSL2R : Continuous toSL2R := by
   simp only [Function.comp_def, coe_toSL2R]
   fun_prop (disch := grind [im_pos])
 
-/-- The action of `SL(2, ℝ)` on `ℍ` is jointly continuous. -/
-instance instContinuousSMulSL2R : ContinuousSMul SL(2, ℝ) ℍ where
-  continuous_smul := by
-    suffices ∀ (g : SL(2, ℝ)) (τ : ℍ),
-        ContinuousAt (fun ⟨h, z⟩ ↦ (h 0 0 * (z : ℂ) + h 0 1) / (h 1 0 * z + h 1 1)) (g, τ) by
-      simpa [continuous_induced_rng, continuous_iff_continuousAt, Function.comp_def,
-        coe_specialLinearGroup_apply]
-    intro g τ
-    fun_prop (disch := exact denom_ne_zero g τ)
-
 open Topology in
 lemma σ_eventuallyEq (g : GL (Fin 2) ℝ) : σ =ᶠ[𝓝 g] fun _ ↦ σ g := by
   by_cases hg : 0 < g.det.val
@@ -66,7 +56,16 @@ instance instContinuousSMulGL2R : ContinuousSMul (GL (Fin 2) ℝ) ℍ := by
     Prod.forall]
   refine fun g τ ↦ .congr ?_ (f := fun x ↦ (σ g) (num x.1 x.2 / denom x.1 x.2))
     (by filter_upwards [(σ_eventuallyEq g).prod_inl_nhds _] using by simp +contextual)
-  fun_prop (disch := apply denom_ne_zero)
+  fun_prop
+
+/-- The action of `SL(2, ℝ)` on `ℍ` is jointly continuous. -/
+instance instContinuousSMulSL2R : ContinuousSMul SL(2, ℝ) ℍ where
+  continuous_smul := by
+    have hg : Continuous (Matrix.SpecialLinearGroup.mapGL ℝ : SL(2, ℝ) → GL (Fin 2) ℝ) :=
+      Matrix.SpecialLinearGroup.continuous_mapGL
+    have h : Continuous (fun p : SL(2, ℝ) × ℍ ↦ Matrix.SpecialLinearGroup.mapGL ℝ p.1 • p.2) :=
+      (hg.comp continuous_fst).smul continuous_snd
+    exact h
 
 section proper_orbit_map
 

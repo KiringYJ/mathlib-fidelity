@@ -32,8 +32,9 @@ theorem intervalIntegrable_pow : IntervalIntegrable (fun x => x ^ n) μ a b :=
   (continuous_pow n).intervalIntegrable a b
 
 theorem intervalIntegrable_zpow {n : ℤ} (h : 0 ≤ n ∨ (0 : ℝ) ∉ [[a, b]]) :
-    IntervalIntegrable (fun x => x ^ n) μ a b :=
-  (continuousOn_id.zpow₀ n fun _ hx => h.symm.imp (ne_of_mem_of_not_mem hx) id).intervalIntegrable
+    Integrable (fun x : [[a, b]] ↦ Checked.zpow x.val n fun hn ↦
+      (ne_of_mem_of_not_mem x.2 (h.resolve_left hn.not_ge)).isUnit) (μ.comap Subtype.val) :=
+  integrable_subtype_uIcc (continuous_subtype_val.zpow₀ n)
 
 /-- See `intervalIntegrable_rpow'` for a version with a weaker hypothesis on `r`, but assuming the
 measure is volume. -/
@@ -46,18 +47,22 @@ theorem intervalIntegrable_rpow {r : ℝ} (h : 0 ≤ r ∨ (0 : ℝ) ∉ [[a, b]
 stronger hypothesis on `r`. -/
 theorem intervalIntegrable_rpow' {r : ℝ} (h : -1 < r) :
     IntervalIntegrable (fun x => x ^ r) volume a b := by
+  have hr : IsUnit (r + 1) := (show 0 < r + 1 by linarith).ne'.isUnit
   suffices ∀ c : ℝ, IntervalIntegrable (fun x => x ^ r) volume 0 c by
     exact IntervalIntegrable.trans (this a).symm (this b)
   have : ∀ c : ℝ, 0 ≤ c → IntervalIntegrable (fun x => x ^ r) volume 0 c := by
     intro c hc
     rw [intervalIntegrable_iff, uIoc_of_le hc]
-    have hderiv : ∀ x ∈ Ioo 0 c, HasDerivAt (fun x : ℝ => x ^ (r + 1) / (r + 1)) (x ^ r) x := by
+    have hderiv : ∀ x ∈ Ioo 0 c,
+        HasDerivAt (fun x : ℝ ↦ Checked.div (x ^ (r + 1)) (r + 1) hr) (x ^ r) x := by
       intro x hx
-      convert! (Real.hasDerivAt_rpow_const (p := r + 1) (Or.inl hx.1.ne')).div_const (r + 1) using 1
-      simp [(by linarith : r + 1 ≠ 0)]
+      simpa only [add_sub_cancel_right, mul_div_cancel_left₀] using
+        (Real.hasDerivAt_rpow_const (p := r + 1) (Or.inl hx.1.ne')).div_const (r + 1) (hd := hr)
     apply integrableOn_deriv_of_nonneg _ hderiv
     · intro x hx; apply rpow_nonneg hx.1.le
-    · refine (continuousOn_id.rpow_const ?_).div_const _; intro x _; right; linarith
+    · simp only [div_eq_mul_inv₀]
+      refine (continuousOn_id.rpow_const ?_).mul_const _
+      exact fun _ _ ↦ Or.inr (by linarith)
   intro c; rcases le_total 0 c with (hc | hc)
   · exact this c hc
   · rw [IntervalIntegrable.iff_comp_neg, neg_zero]
@@ -80,15 +85,29 @@ lemma integrableOn_Ioo_rpow_iff {s t : ℝ} (ht : 0 < t) :
   have I : 0 < min 1 t := lt_min zero_lt_one ht
   have H' : IntegrableOn (fun x ↦ x ^ s) (Ioo 0 (min 1 t)) :=
     H.mono (Set.Ioo_subset_Ioo le_rfl (min_le_right _ _)) le_rfl
-  have : IntegrableOn (fun x ↦ x⁻¹) (Ioo 0 (min 1 t)) := by
-    apply H'.mono' measurable_inv.aestronglyMeasurable
-    filter_upwards [ae_restrict_mem measurableSet_Ioo] with x hx
-    simp only [norm_inv, Real.norm_eq_abs, abs_of_nonneg (le_of_lt hx.1)]
-    rwa [← Real.rpow_neg_one x, Real.rpow_le_rpow_left_iff_of_base_lt_one hx.1]
-    exact lt_of_lt_of_le hx.2 (min_le_left _ _)
-  have : IntervalIntegrable (fun x ↦ x⁻¹) volume 0 (min 1 t) := by
-    rwa [intervalIntegrable_iff_integrableOn_Ioo_of_le I.le]
-  simp [intervalIntegrable_inv_iff, I.ne] at this
+  let S : Set ℝ := [[(0 : ℝ), min 1 t]] \ {0}
+  have hS : S = Ioc 0 (min 1 t) := by
+    rw [show S = [[(0 : ℝ), min 1 t]] \ {0} from rfl, uIcc_of_le I.le, Icc_sdiff_left]
+  have hs : MeasurableSet S := hS.symm ▸ measurableSet_Ioc
+  have hx₀ (x : S) : 0 < x.val := (hS ▸ x.2 : x.val ∈ Ioc 0 (min 1 t)).1
+  have hx₁ (x : S) : x.val ≤ 1 :=
+    (hS ▸ x.2 : x.val ∈ Ioc 0 (min 1 t)).2.trans (min_le_left _ _)
+  have hpow : Integrable (fun x : S ↦ x.val ^ s) (volume.comap Subtype.val) := by
+    apply (integrableOn_iff_comap_subtypeVal (f := fun y : ℝ ↦ y ^ s) (μ := volume) hs).mp
+    rwa [hS, integrableOn_Ioc_iff_integrableOn_Ioo]
+  have hinv : Integrable (fun x : S ↦ Checked.inv x.val (Ne.isUnit x.2.2))
+      (volume.comap Subtype.val) := by
+    apply hpow.mono' (continuous_subtype_val.fun_inv₀ (h0 := fun x : S ↦
+      Ne.isUnit x.2.2)).aestronglyMeasurable
+    filter_upwards [] with x
+    calc
+      ‖Checked.inv x.val (Ne.isUnit x.2.2)‖ = Checked.inv x.val (Ne.isUnit x.2.2) := by
+        simp only [norm_inv, norm_of_nonneg (hx₀ x).le]
+      _ = x.val ^ (-1 : ℝ) := (Real.rpow_neg_one x.val (hx := Ne.isUnit x.2.2)).symm
+      _ ≤ x.val ^ s := rpow_le_rpow_of_exponent_ge (hx₀ x) (hx₁ x) h
+  apply ((intervalIntegrable_inv_iff.mp hinv).resolve_left I.ne)
+  rw [uIcc_of_le I.le]
+  exact ⟨le_rfl, I.le⟩
 
 /-- See `intervalIntegrable_cpow'` for a version with a weaker hypothesis on `r`, but assuming the
 measure is volume. -/
@@ -190,13 +209,17 @@ theorem intervalIntegrable_id : IntervalIntegrable (fun x => x) μ a b :=
   continuous_id.intervalIntegrable a b
 
 theorem intervalIntegrable_one_div (h : ∀ x : ℝ, x ∈ [[a, b]] → f x ≠ 0)
-    (hf : ContinuousOn f [[a, b]]) : IntervalIntegrable (fun x => 1 / f x) μ a b :=
-  (continuousOn_const.div hf h).intervalIntegrable
+    (hf : ContinuousOn f [[a, b]]) :
+    Integrable (fun x : [[a, b]] ↦ Checked.div 1 (f x.val) (h x x.2).isUnit)
+      (μ.comap Subtype.val) :=
+  integrable_subtype_uIcc (continuous_const.div₀ (continuousOn_iff_continuous_domRestrict.mp hf))
 
 @[simp]
 theorem intervalIntegrable_inv (h : ∀ x : ℝ, x ∈ [[a, b]] → f x ≠ 0)
-    (hf : ContinuousOn f [[a, b]]) : IntervalIntegrable (fun x => (f x)⁻¹) μ a b := by
-  simpa only [one_div] using intervalIntegrable_one_div h hf
+    (hf : ContinuousOn f [[a, b]]) :
+    Integrable (fun x : [[a, b]] ↦ Checked.inv (f x.val) (h x x.2).isUnit)
+      (μ.comap Subtype.val) := by
+  simpa only [one_div₀] using intervalIntegrable_one_div (μ := μ) h hf
 
 @[simp]
 theorem intervalIntegrable_sin : IntervalIntegrable sin μ a b :=
@@ -256,11 +279,12 @@ theorem intervalIntegrable_log' : IntervalIntegrable log volume a b := by
 theorem intervalIntegrable_one_div_one_add_sq :
     IntervalIntegrable (fun x : ℝ => 1 / (↑1 + x ^ 2)) μ a b := by
   apply Continuous.intervalIntegrable
-  fun_prop (discharger := intro; nlinarith)
+  exact continuous_const.div₀ (by fun_prop)
 
 @[simp]
 theorem intervalIntegrable_inv_one_add_sq :
-    IntervalIntegrable (fun x : ℝ => (↑1 + x ^ 2)⁻¹) μ a b := by
-  simp [← one_div, intervalIntegrable_one_div_one_add_sq]
+    IntervalIntegrable (fun x : ℝ ↦
+      Checked.inv (1 + x ^ 2) (show 0 < 1 + x ^ 2 by positivity).ne'.isUnit) μ a b := by
+  simpa only [one_div₀] using (intervalIntegrable_one_div_one_add_sq (μ := μ) (a := a) (b := b))
 
 end intervalIntegral

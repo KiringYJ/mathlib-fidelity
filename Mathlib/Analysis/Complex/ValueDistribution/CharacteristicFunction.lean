@@ -56,9 +56,9 @@ characteristic function for the poles is evaluated as `(characteristic f ⊤) r`
 -/
 noncomputable def characteristic (hf : Meromorphic f := by fun_prop_default)
     (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a := by
-      value_distribution_frequently_ne) :
-    ℝ → ℝ :=
-  proximity f a hf ha + logCounting f a hf ha
+      value_distribution_frequently_ne) (r : ℝ)
+    (hr : r = 0 → (f 0 : WithTop E) ≠ a := by value_distribution_radius) : ℝ :=
+  proximity f a hf ha r hr + logCounting f a hf ha r
 
 /-!
 ## Elementary Properties
@@ -72,7 +72,7 @@ theorem characteristic_congr_codiscrete {r : ℝ} (hfg : f =ᶠ[codiscrete ℂ] 
     {hf : Meromorphic f} {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a} :
     characteristic f a hf ha r = characteristic g a (hf.congr_codiscrete hfg)
       (frequently_coe_ne_of_eventuallyEq_codiscrete hfg ha) r := by
-  simp only [characteristic, Pi.add_apply, proximity_congr_codiscrete hfg hr,
+  simp only [characteristic, proximity_congr_codiscrete hfg hr,
     logCounting_congr_codiscrete hfg]
 
 /--
@@ -85,14 +85,21 @@ lemma characteristic_sub_characteristic_eq_proximity_sub_proximity (h : Meromorp
     characteristic f ⊤ h - characteristic (f · - a₀) ⊤ h' =
       proximity f ⊤ h - proximity (f · - a₀) ⊤ h' := by
   have e : logCounting (f · - a₀) ⊤ h' = logCounting f ⊤ h := logCounting_sub_const h
-  rw [characteristic, characteristic, e, add_sub_add_right_eq_sub]
+  ext r
+  change (_ + logCounting f ⊤ h _ r) - (_ + logCounting (f · - a₀) ⊤ h' _ r) = _
+  rw [e, add_sub_add_right_eq_sub]
+  rfl
 
 /--
 The characteristic function is even.
 -/
 theorem characteristic_even {hf : Meromorphic f}
     {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a} :
-    (characteristic f a hf ha).Even := proximity_even.add logCounting_even
+    ∀ r (hr : r = 0 → (f 0 : WithTop E) ≠ a),
+      characteristic f a hf ha (-r) (fun e ↦ hr (neg_eq_zero.mp e)) =
+        characteristic f a hf ha r hr := by
+  intro r hr
+  rw [characteristic, characteristic, proximity_even r hr, logCounting_even r]
 
 /--
 For `1 ≤ r`, the characteristic function is non-negative.
@@ -100,15 +107,17 @@ For `1 ≤ r`, the characteristic function is non-negative.
 theorem characteristic_nonneg {r : ℝ} {hf : Meromorphic f}
     {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a} (hr : 1 ≤ r) :
     0 ≤ characteristic f a hf ha r :=
-  add_nonneg (proximity_nonneg r) (logCounting_nonneg hr)
+  add_nonneg (proximity_nonneg r (fun e ↦ (by linarith : r ≠ 0) e |>.elim)) (logCounting_nonneg hr)
 
 /--
 The characteristic function is asymptotically non-negative.
 -/
 theorem characteristic_eventually_nonneg {hf : Meromorphic f}
     {ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop E) ≠ a} :
-    0 ≤ᶠ[Filter.atTop] characteristic f a hf ha := by
-  filter_upwards [Filter.eventually_ge_atTop 1] using fun _ hr ↦ by simp [characteristic_nonneg hr]
+    ∀ᶠ r : ℝ in Filter.atTop,
+      ∀ hr : r = 0 → (f 0 : WithTop E) ≠ a, 0 ≤ characteristic f a hf ha r hr := by
+  filter_upwards [Filter.eventually_ge_atTop 1] with r hr _
+  exact characteristic_nonneg hr
 
 /-!
 ## Behaviour under Arithmetic Operations
@@ -125,7 +134,7 @@ theorem characteristic_sum_top_le {α : Type*} (s : Finset α) (f : α → ℂ �
   have h₁ := proximity_sum_top_le s f hf r
   have h₂ := logCounting_sum_top_le s f hf hr
   simp only [Pi.add_apply, Finset.sum_apply] at h₁
-  simp only [characteristic, Pi.add_apply, Finset.sum_add_distrib]
+  simp only [characteristic, Finset.sum_add_distrib]
   linarith
 
 /--
@@ -151,7 +160,7 @@ theorem characteristic_add_top_le {f₁ f₂ : ℂ → E} {r : ℝ} (h₁f₁ : 
   have h₁ := proximity_add_top_le h₁f₁ h₁f₂ r
   have h₂ := logCounting_add_top_le h₁f₁ h₁f₂ hr
   simp only [Pi.add_apply] at h₁ h₂
-  simp only [characteristic, Pi.add_apply]
+  simp only [characteristic]
   linarith
 
 /--
@@ -174,10 +183,12 @@ theorem characteristic_mul_zero_le {f₁ f₂ : ℂ → ℂ} {r : ℝ} (hr : 1 �
     (h₁f₂ : Meromorphic f₂) (h₂f₂ : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f₂ w : WithTop ℂ) ≠ 0)
     {h : ∀ z, ∃ᶠ w in 𝓝[≠] z, ((f₁ * f₂) w : WithTop ℂ) ≠ 0} :
     characteristic (f₁ * f₂) 0 (h₁f₁.mul h₁f₂) h r ≤
-      (characteristic f₁ 0 h₁f₁ h₂f₁ + characteristic f₂ 0 h₁f₂ h₂f₂) r := by
-  simp only [characteristic, Pi.add_apply]
+      characteristic f₁ 0 h₁f₁ h₂f₁ r + characteristic f₂ 0 h₁f₂ h₂f₂ r := by
+  simp only [characteristic]
   rw [add_add_add_comm]
-  exact add_le_add (proximity_mul_zero_le h₁f₁ h₂f₁ h₁f₂ h₂f₂ r)
+  exact add_le_add
+    (proximity_mul_zero_le h₁f₁ h₂f₁ h₁f₂ h₂f₂ r
+      (fun e ↦ (by linarith : r ≠ 0) e |>.elim) (fun e ↦ (by linarith : r ≠ 0) e |>.elim))
     (logCounting_mul_zero_le hr h₁f₁ h₂f₁ h₁f₂ h₂f₂)
 
 /--
@@ -188,10 +199,11 @@ theorem characteristic_mul_zero_eventuallyLE {f₁ f₂ : ℂ → ℂ}
     (h₁f₁ : Meromorphic f₁) (h₂f₁ : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f₁ w : WithTop ℂ) ≠ 0)
     (h₁f₂ : Meromorphic f₂) (h₂f₂ : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f₂ w : WithTop ℂ) ≠ 0)
     {h : ∀ z, ∃ᶠ w in 𝓝[≠] z, ((f₁ * f₂) w : WithTop ℂ) ≠ 0} :
-    characteristic (f₁ * f₂) 0 (h₁f₁.mul h₁f₂) h
-      ≤ᶠ[Filter.atTop] characteristic f₁ 0 h₁f₁ h₂f₁ + characteristic f₂ 0 h₁f₂ h₂f₂ := by
-  filter_upwards [Filter.eventually_ge_atTop 1]
-    using fun _ hr ↦ characteristic_mul_zero_le hr h₁f₁ h₂f₁ h₁f₂ h₂f₂
+    ∀ᶠ r : ℝ in Filter.atTop, ∀ hr : r ≠ 0,
+      characteristic (f₁ * f₂) 0 (h₁f₁.mul h₁f₂) h r ≤
+        characteristic f₁ 0 h₁f₁ h₂f₁ r + characteristic f₂ 0 h₁f₂ h₂f₂ r := by
+  filter_upwards [Filter.eventually_ge_atTop 1] with r hr _
+  exact characteristic_mul_zero_le hr h₁f₁ h₂f₁ h₁f₂ h₂f₂
 
 /--
 For `1 ≤ r`, the characteristic function for the poles of `f * g` is less than or equal to the sum
@@ -222,10 +234,13 @@ characteristic counting function for the zeros of `f`.
 -/
 theorem characteristic_pow_zero {f : ℂ → ℂ} {n : ℕ} (hf : Meromorphic f)
     (ha : ∀ z, ∃ᶠ w in 𝓝[≠] z, (f w : WithTop ℂ) ≠ 0) {hf' : Meromorphic (f ^ n)}
-    {ha' : ∀ z, ∃ᶠ w in 𝓝[≠] z, ((f ^ n) w : WithTop ℂ) ≠ 0} :
-    characteristic (f ^ n) 0 hf' ha' = n • characteristic f 0 hf ha := by
-  rw [characteristic, characteristic, logCounting_pow_zero hf ha, proximity_pow_zero hf ha,
-    smul_add]
+    {ha' : ∀ z, ∃ᶠ w in 𝓝[≠] z, ((f ^ n) w : WithTop ℂ) ≠ 0} (r : ℝ)
+    (hr : r = 0 → f 0 ≠ 0) :
+    characteristic (f ^ n) 0 hf' ha' r
+        (fun e ↦ WithTop.coe_injective.ne_iff.mpr (pow_ne_zero _ (hr e))) =
+      n * characteristic f 0 hf ha r (fun e ↦ WithTop.coe_injective.ne_iff.mpr (hr e)) := by
+  rw [characteristic, characteristic, proximity_pow_zero hf ha r hr, logCounting_pow_zero hf ha]
+  simp [mul_add, nsmul_eq_mul]
 
 /--
 For natural numbers `n`, the characteristic function for the poles of `f ^ n` equals `n` times the
@@ -235,6 +250,9 @@ characteristic function for the poles of `f`.
 theorem characteristic_pow_top {f : ℂ → ℂ} {n : ℕ} (hf : Meromorphic f)
     {hf' : Meromorphic (f ^ n)} :
     characteristic (f ^ n) ⊤ hf' = n • characteristic f ⊤ hf := by
-  rw [characteristic, characteristic, logCounting_pow_top hf, proximity_pow_top hf, smul_add]
+  ext r
+  have hp := congrFun (proximity_pow_top (n := n) hf (hf' := hf')) r
+  have hc := congrFun (logCounting_pow_top (n := n) hf (hf' := hf')) r
+  simpa only [characteristic, Pi.smul_apply, nsmul_add] using congrArg₂ (· + ·) hp hc
 
 end ValueDistribution

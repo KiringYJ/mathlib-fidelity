@@ -191,31 +191,39 @@ def Submonoid.unitSphere (𝕜 : Type*) [SeminormedRing 𝕜] [NormMulClass 𝕜
     simp [*]
   one_mem' := mem_sphere_zero_iff_norm.2 norm_one
 
+noncomputable section
+
 instance Metric.unitSphere.instInv [NormedDivisionRing 𝕜] : Inv (sphere (0 : 𝕜) 1) where
-  inv x := ⟨x⁻¹, mem_sphere_zero_iff_norm.2 <| by
-    rw [norm_inv, mem_sphere_zero_iff_norm.1 x.coe_prop, inv_one]⟩
+  inv x := ⟨Checked.inv (x : 𝕜) (ne_zero_of_mem_unit_sphere x).isUnit,
+    mem_sphere_zero_iff_norm.2 <| by
+      simpa only [mem_sphere_zero_iff_norm.1 x.coe_prop, inv_one₀] using
+        norm_inv (x : 𝕜) (ha := (ne_zero_of_mem_unit_sphere x).isUnit)⟩
 
 @[simp, norm_cast]
 theorem Metric.unitSphere.coe_inv [NormedDivisionRing 𝕜] (x : sphere (0 : 𝕜) 1) :
-    ↑x⁻¹ = (x⁻¹ : 𝕜) :=
+    ↑x⁻¹ = Checked.inv (x : 𝕜) (ne_zero_of_mem_unit_sphere x).isUnit :=
   rfl
 
 instance Metric.unitSphere.instDiv [NormedDivisionRing 𝕜] : Div (sphere (0 : 𝕜) 1) where
-  div x y := .mk (x / y) <| mem_sphere_zero_iff_norm.2 <| by
-    rw [norm_div, mem_sphere_zero_iff_norm.1 x.2, mem_sphere_zero_iff_norm.1 y.coe_prop, div_one]
+  div x y := .mk (Checked.div (x : 𝕜) (y : 𝕜) (ne_zero_of_mem_unit_sphere y).isUnit) <|
+    mem_sphere_zero_iff_norm.2 <| by
+      simpa only [mem_sphere_zero_iff_norm.1 x.2, mem_sphere_zero_iff_norm.1 y.coe_prop,
+        div_one₀] using norm_div (x : 𝕜) (y : 𝕜) (hb := (ne_zero_of_mem_unit_sphere y).isUnit)
 
 @[simp, norm_cast]
 protected theorem Metric.unitSphere.coe_div [NormedDivisionRing 𝕜] (x y : sphere (0 : 𝕜) 1) :
-    ↑(x / y) = (x / y : 𝕜) :=
+    ↑(x / y) = Checked.div (x : 𝕜) (y : 𝕜) (ne_zero_of_mem_unit_sphere y).isUnit :=
   rfl
 
 instance Metric.unitSphere.instZPow [NormedDivisionRing 𝕜] : Pow (sphere (0 : 𝕜) 1) ℤ where
-  pow x n := .mk ((x : 𝕜) ^ n) <| by
-    rw [mem_sphere_zero_iff_norm, norm_zpow, mem_sphere_zero_iff_norm.1 x.coe_prop, one_zpow]
+  pow x n := .mk (Checked.zpow (x : 𝕜) n (fun _ ↦ (ne_zero_of_mem_unit_sphere x).isUnit)) <| by
+    apply mem_sphere_zero_iff_norm.2
+    simpa only [mem_sphere_zero_iff_norm.1 x.coe_prop, one_zpow₀] using
+      norm_zpow (x : 𝕜) n (h := fun _ ↦ (ne_zero_of_mem_unit_sphere x).isUnit)
 
 @[simp, norm_cast]
 theorem Metric.unitSphere.coe_zpow [NormedDivisionRing 𝕜] (x : sphere (0 : 𝕜) 1) (n : ℤ) :
-    ↑(x ^ n) = (x : 𝕜) ^ n :=
+    ↑(x ^ n) = Checked.zpow (x : 𝕜) n (fun _ ↦ (ne_zero_of_mem_unit_sphere x).isUnit) :=
   rfl
 
 instance Metric.unitSphere.instMonoid [SeminormedRing 𝕜] [NormMulClass 𝕜] [NormOneClass 𝕜] :
@@ -258,9 +266,17 @@ theorem unitSphereToUnits_injective [NormedDivisionRing 𝕜] :
 instance Metric.unitSphere.instGroup [NormedDivisionRing 𝕜] : Group (sphere (0 : 𝕜) 1) :=
   fast_instance% unitSphereToUnits_injective.group (unitSphereToUnits 𝕜) (Units.ext rfl)
     (fun _x _y => Units.ext rfl)
-    (fun _x => Units.ext rfl) (fun _x _y => Units.ext <| div_eq_mul_inv _ _)
+    (fun _x => Units.ext rfl) (fun x y => Units.ext <| by
+      change Checked.div (x : 𝕜) (y : 𝕜) _ = (x : 𝕜) * ↑((unitSphereToUnits 𝕜 y)⁻¹)
+      rw [div_eq_mul_inv₀]
+      exact congrArg ((x : 𝕜) * ·)
+        (inv_eq_val_inv_of_eq_val₀ (b := (y : 𝕜)) (unitSphereToUnits 𝕜 y) rfl))
     (fun x n => Units.ext (Units.val_pow_eq_pow_val (unitSphereToUnits 𝕜 x) n).symm) fun x n =>
-    Units.ext (Units.val_zpow_eq_zpow_val (unitSphereToUnits 𝕜 x) n).symm
+    Units.ext <| by
+      change Checked.zpow (x : 𝕜) n _ = ↑((unitSphereToUnits 𝕜 x) ^ n)
+      rw [(ne_zero_of_mem_unit_sphere x).isUnit.zpow_eq_val_unit_zpow]
+      apply congrArg (fun u : 𝕜ˣ ↦ (↑(u ^ n) : 𝕜))
+      exact Units.ext rfl
 
 instance Metric.sphere.instHasDistribNeg [SeminormedRing 𝕜] [NormMulClass 𝕜] [NormOneClass 𝕜] :
     HasDistribNeg (sphere (0 : 𝕜) 1) :=
@@ -272,6 +288,9 @@ instance Metric.sphere.instContinuousMul [SeminormedRing 𝕜] [NormMulClass �
 
 instance Metric.sphere.instIsTopologicalGroup [NormedDivisionRing 𝕜] :
     IsTopologicalGroup (sphere (0 : 𝕜) 1) where
-  continuous_inv := (continuous_subtype_val.inv₀ ne_zero_of_mem_unit_sphere).subtype_mk _
+  continuous_mul := continuous_mul
+  continuous_inv := (continuous_subtype_val.fun_inv₀
+    (h0 := fun x ↦ (ne_zero_of_mem_unit_sphere x).isUnit)).subtype_mk _
 
 instance Metric.sphere.instCommGroup [NormedField 𝕜] : CommGroup (sphere (0 : 𝕜) 1) where
+  mul_comm := mul_comm

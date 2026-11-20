@@ -71,12 +71,10 @@ private lemma charTwoParabolic_hasEigenvalue_one :
   simp [charTwoParabolic, Matrix.trace_fin_two, Matrix.det_fin_two]
   decide
 
-example :
-    ¬Module.End.HasEigenvalue charTwoParabolic.toLin' (charTwoParabolic.trace / 2) := by
+example : ¬Module.End.HasEigenvalue charTwoParabolic.toLin' 0 := by
   rw [Module.End.hasEigenvalue_iff_isRoot_charpoly, Matrix.charpoly_toLin',
     Matrix.charpoly_fin_two, Polynomial.IsRoot.def]
   simp [charTwoParabolic, Matrix.trace_fin_two, Matrix.det_fin_two]
-  native_decide
 
 example {μ : ZMod 2} (hμ : Module.End.HasEigenvalue charTwoParabolic.toLin' μ) :
     μ = 1 :=

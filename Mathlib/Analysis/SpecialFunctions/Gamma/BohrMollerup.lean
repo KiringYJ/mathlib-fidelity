@@ -105,7 +105,7 @@ theorem Gamma_mul_add_mul_le_rpow_Gamma_mul_rpow_Gamma {s t a b : ℝ} (hs : 0 <
       rw [← rpow_add hx, hab']; congr 1; ring
     rw [A, B]
     ring
-  · rw [one_div_one_div, one_div_one_div]
+  · rw [one_div_one_div₀ (ha := ha.ne'.isUnit), one_div_one_div₀ (ha := hb.ne'.isUnit)]
     congr 2 <;> exact setIntegral_congr_fun measurableSet_Ioi fun x hx => fpow (by assumption) _ hx
 
 theorem convexOn_log_Gamma : ConvexOn ℝ (Ioi 0) (log ∘ Gamma) := by
@@ -170,9 +170,11 @@ theorem f_add_nat_le (hf_conv : ConvexOn ℝ (Ioi 0) f)
     f (n + x) ≤ f n + x * log n := by
   have hn' : 0 < (n : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
   have : f n + x * log n = (1 - x) * f n + x * f (n + 1) := by rw [hf_feq hn']; ring
-  rw [this, (by ring : (n : ℝ) + x = (1 - x) * n + x * (n + 1))]
+  rw [this]
+  have hz : (n : ℝ) + x ∈ Ioi 0 := add_pos hn' hx
   simpa only [smul_eq_mul] using
     hf_conv.2 hn' (by linarith : 0 < (n + 1 : ℝ)) (by linarith : 0 ≤ 1 - x) hx.le (by linarith)
+      hz (by simp only [id_eq, smul_eq_mul]; ring)
 
 /-- Linear lower bound for `f (x + n)` on unit interval -/
 theorem f_add_nat_ge (hf_conv : ConvexOn ℝ (Ioi 0) f)
@@ -182,10 +184,13 @@ theorem f_add_nat_ge (hf_conv : ConvexOn ℝ (Ioi 0) f)
   have c :=
     (convexOn_iff_slope_mono_adjacent.mp <| hf_conv).2 npos (by linarith : 0 < (n : ℝ) + x)
       (by linarith : (n : ℝ) - 1 < (n : ℝ)) (by linarith)
-  rw [add_sub_cancel_left, sub_sub_cancel, div_one] at c
+  have hn' : 0 < (n : ℝ) - (n - 1) := by linarith
+  have hx' : 0 < (n : ℝ) + x - n := by linarith
+  have hc := (div_le_div_iff₀ hn' hx').mp c
+  rw [add_sub_cancel_left, sub_sub_cancel, mul_one] at hc
   have : f (↑n - 1) = f n - log (↑n - 1) := by
     rw [eq_sub_iff_add_eq, ← hf_feq npos, sub_add_cancel]
-  rwa [this, le_div_iff₀ hx, sub_sub_cancel, le_sub_iff_add_le, mul_comm _ x, add_comm] at c
+  rwa [this, sub_sub_cancel, le_sub_iff_add_le, mul_comm _ x, add_comm] at hc
 
 theorem logGammaSeq_add_one (x : ℝ) (n : ℕ) :
     logGammaSeq (x + 1) n = logGammaSeq x (n + 1) + log x - (x + 1) * (log (n + 1) - log n) := by
@@ -340,11 +345,11 @@ theorem Gamma_three_div_two_lt_one : Gamma (3 / 2) < 1 := by
     log_mul A.ne' (Gamma_pos_of_pos A).ne', ← le_sub_iff_add_le',
     log_le_iff_le_exp (Gamma_pos_of_pos A)] at this
   refine this.trans_lt (exp_lt_one_iff.mpr ?_)
-  rw [mul_comm, ← mul_div_assoc, div_sub' two_ne_zero]
+  rw [mul_comm, ← mul_div_assoc₀, div_sub']
   refine div_neg_of_neg_of_pos ?_ two_pos
-  rw [sub_neg, mul_one, ← Nat.cast_two, ← log_pow, ← exp_lt_exp, Nat.cast_two, exp_log two_pos,
-      exp_log] <;>
-    norm_num
+  rw [sub_neg, mul_one]
+  have h : log (2 : ℝ) < log ((3 / 2 : ℝ) ^ (2 : ℕ)) := log_lt_log two_pos (by norm_num)
+  simpa only [log_pow, Nat.cast_ofNat] using h
 
 theorem Gamma_strictAntiOn_Ioc : StrictAntiOn Gamma (Ioc 0 1) :=
   convexOn_Gamma.strictAntiOn (by simp) (by norm_num) <|
@@ -390,12 +395,12 @@ def doublingGamma (s : ℝ) : ℝ :=
 theorem doublingGamma_add_one (s : ℝ) (hs : s ≠ 0) :
     doublingGamma (s + 1) = s * doublingGamma s := by
   rw [doublingGamma, doublingGamma, (by abel : s + 1 - 1 = s - 1 + 1), add_div, add_assoc,
-    add_halves (1 : ℝ), Gamma_add_one (div_ne_zero hs two_ne_zero), rpow_add two_pos, rpow_one]
+    add_halves (1 : ℝ), Gamma_add_one (div_ne_zero hs), rpow_add two_pos, rpow_one]
   ring
 
 theorem doublingGamma_one : doublingGamma 1 = 1 := by
   simp_rw [doublingGamma, Gamma_one_half_eq, add_halves (1 : ℝ), sub_self, Gamma_one, mul_one,
-    rpow_zero, mul_one, div_self (sqrt_ne_zero'.mpr pi_pos)]
+    rpow_zero, mul_one, div_self]
 
 theorem log_doublingGamma_eq :
     EqOn (log ∘ doublingGamma)
@@ -407,7 +412,8 @@ theorem log_doublingGamma_eq :
   have h3 : Gamma (s / 2 + 1 / 2) ≠ 0 :=
     (Gamma_pos_of_pos <| add_pos (div_pos hs two_pos) one_half_pos).ne'
   have h4 : (2 : ℝ) ^ (s - 1) ≠ 0 := (rpow_pos_of_pos two_pos _).ne'
-  rw [Function.comp_apply, doublingGamma, log_div (mul_ne_zero (mul_ne_zero h2 h3) h4) h1,
+  rw [Function.comp_apply, doublingGamma, log_div (mul_ne_zero (mul_ne_zero h2 h3) h4)
+      (hy := h1.isUnit),
     log_mul (mul_ne_zero h2 h3) h4, log_mul h2 h3, log_rpow two_pos, log_mul two_ne_zero h1]
   ring_nf
 
@@ -419,7 +425,7 @@ theorem doublingGamma_log_convex_Ioi : ConvexOn ℝ (Ioi (0 : ℝ)) (log ∘ dou
     · simpa only [zero_div] using! (preimage_const_mul_Ioi₀ (0 : ℝ) one_half_pos).symm
     · ext1 x
       simp only [LinearMap.coe_toAffineMap, Function.comp_apply, DistribSMul.toLinearMap_apply]
-      rw [smul_eq_mul, mul_comm, mul_one_div]
+      rw [smul_eq_mul, mul_comm, mul_one_div₀]
   · refine ConvexOn.subset ?_ (Ioi_subset_Ioi <| neg_one_lt_zero.le) (convex_Ioi _)
     convert!
       convexOn_log_Gamma.comp_affineMap
@@ -427,10 +433,10 @@ theorem doublingGamma_log_convex_Ioi : ConvexOn ℝ (Ioi (0 : ℝ)) (log ∘ dou
           AffineMap.const ℝ ℝ (1 / 2 : ℝ)) using 1
     · change Ioi (-1 : ℝ) = ((fun x : ℝ => x + 1 / 2) ∘ fun x : ℝ => (1 / 2 : ℝ) * x) ⁻¹' Ioi 0
       rw [preimage_comp, preimage_add_const_Ioi, zero_sub,
-        preimage_const_mul_Ioi₀ (_ : ℝ) one_half_pos, neg_div, div_self (@one_half_pos ℝ _).ne']
+        preimage_const_mul_Ioi₀ (_ : ℝ) one_half_pos, neg_div₀, div_self]
     · ext1 x
       change log (Gamma (x / 2 + 1 / 2)) = log (Gamma ((1 / 2 : ℝ) • x + 1 / 2))
-      rw [smul_eq_mul, mul_comm, mul_one_div]
+      rw [smul_eq_mul, mul_comm, mul_one_div₀]
   · simpa only [mul_comm _ (log _)] using!
       (convexOn_id (convex_Ioi (0 : ℝ))).smul (log_pos one_lt_two).le
 
@@ -446,9 +452,10 @@ we shall later prove this for all `s` as `Real.Gamma_mul_Gamma_add_half` (supers
 but this result is needed as an intermediate step. -/
 theorem Gamma_mul_Gamma_add_half_of_pos {s : ℝ} (hs : 0 < s) :
     Gamma s * Gamma (s + 1 / 2) = Gamma (2 * s) * 2 ^ (1 - 2 * s) * √π := by
+  have hpow : IsUnit ((2 : ℝ) ^ (2 * s - 1)) := (rpow_pos_of_pos two_pos _).ne'.isUnit
   rw [← doublingGamma_eq_Gamma (mul_pos two_pos hs), doublingGamma,
-    mul_div_cancel_left₀ _ (two_ne_zero' ℝ), (by abel : 1 - 2 * s = -(2 * s - 1)),
-    rpow_neg zero_le_two]
+    mul_div_cancel_left₀, (by abel : 1 - 2 * s = -(2 * s - 1)),
+    rpow_neg zero_le_two _ (hxy := hpow)]
   field
 
 end Doubling

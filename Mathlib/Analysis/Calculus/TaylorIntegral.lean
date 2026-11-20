@@ -35,11 +35,10 @@ variable [NontriviallyNormedField 𝕜] [NormedSpace 𝕜 E] [NormedSpace 𝕜 F
 variable {f : E → F} {x y : E} {t : 𝕜} {n : ℕ}
 
 theorem DifferentiableAt.deriv_comp_add_smul (hf : DifferentiableAt 𝕜 f (x + t • y)) :
-    deriv (fun (s : 𝕜) ↦ f (x + s • y)) t = fderiv 𝕜 f (x + t • y) y := by
-  have hg : Differentiable 𝕜 (fun (s : 𝕜) ↦ (x + s • y)) := by fun_prop
-  convert fderiv_comp_deriv t hf hg.differentiableAt
-  · simp
-  · simpa using (deriv_smul_const (x := t) differentiableAt_id y).symm
+    deriv (fun (s : 𝕜) ↦ f (x + s • y)) t = fderiv 𝕜 f (x + t • y) id y := by
+  have hline : HasDerivAt (fun s : 𝕜 ↦ x + s • y) y t := by
+    simpa only [one_smul] using ((hasDerivAt_id' t).smul_const y).const_add x
+  exact (hf.hasFDerivAt.comp_hasDerivAt t hline).deriv
 
 theorem ContDiffAt.deriv_fderiv_add_smul (hf : ContDiffAt 𝕜 (n + 1) f (x + t • y)) :
     deriv (fun (s : 𝕜) ↦ iteratedFDeriv 𝕜 n f (x + s • y) (fun _ ↦ y)) t =
@@ -74,12 +73,11 @@ theorem map_add_eq_sum_add_integral_iteratedFDeriv (hf : ∀ (t : ℝ) (_ht : t 
   induction n with
   | zero =>
     -- The base case follows from the fundamental theorem of calculus
-    have h_eq : Set.EqOn (fun t ↦ (fderiv ℝ f (x + t • y)) y) (deriv fun (s : ℝ) ↦ f (x + s • y))
+    have h_eq : Set.EqOn (fun t ↦ fderiv ℝ f (x + t • y) id y) (deriv fun (s : ℝ) ↦ f (x + s • y))
         (Set.uIcc 0 1) := by
       intro t ht
-      rw [DifferentiableAt.deriv_comp_add_smul]
-      exact (hf t ht).differentiableAt (by simp)
-    simp only [zero_add, Finset.range_one, Finset.sum_singleton, factorial_zero, cast_one, inv_one,
+      exact ((hf t ht).differentiableAt (by simp)).deriv_comp_add_smul.symm
+    simp only [zero_add, Finset.range_one, Finset.sum_singleton, factorial_zero, cast_one, inv_one₀,
       iteratedFDeriv_zero_apply, one_smul, pow_zero, reduceAdd, iteratedFDeriv_one_apply]
     rw [← sub_eq_iff_eq_add', Eq.comm, intervalIntegral.integral_congr h_eq]
     have hf' : ∀ (t : ℝ) (ht : t ∈ Set.uIcc 0 1), DifferentiableAt ℝ (fun s ↦ f (x + s • y)) t :=
@@ -108,10 +106,16 @@ theorem map_add_eq_sum_add_integral_iteratedFDeriv (hf : ∀ (t : ℝ) (_ht : t 
       unfold u
       have : (-((n ! : ℝ)⁻¹ * (1 - t) ^ n)) =
           ((n + 1) ! : ℝ)⁻¹ * ((n + 1) * (1 - t) ^ n * (-1)) := by
-        field_simp
-        congr 1
-        rw [Nat.factorial_succ]
-        grind
+        have hfac : ((n + 1)! : ℝ) = ((n : ℝ) + 1) * (n ! : ℝ) := by
+          simp [Nat.factorial_succ]
+        have hn : (n ! : ℝ) ≠ 0 := by exact_mod_cast Nat.factorial_ne_zero n
+        have hcoef : ((n + 1)! : ℝ)⁻¹ * ((n : ℝ) + 1) = (n ! : ℝ)⁻¹ := by
+          apply (mul_left_inj' hn).1
+          calc
+            _ = ((n + 1)! : ℝ)⁻¹ * (((n : ℝ) + 1) * (n ! : ℝ)) := by ring
+            _ = 1 := by rw [← hfac, inv_mul_cancel₀]
+            _ = _ := inv_mul_cancel₀.symm
+        linear_combination (1 - t) ^ n * hcoef
       rw [this]
       apply HasDerivAt.const_mul
       convert ((hasDerivAt_id t).const_sub 1).pow (n + 1)

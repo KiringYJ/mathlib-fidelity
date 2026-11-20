@@ -37,22 +37,20 @@ theorem contraction_of_isPowMul_of_boundedWrt {F : Type*} {α : outParam (Type*)
     [FunLike F α ℝ] [RingSeminormClass F α ℝ] {β : Type*} [Ring β] (nα : F) {nβ : β → ℝ}
     (hβ : IsPowMul nβ) {f : α →+* β} (hf : f.IsBoundedWrt nα nβ) (x : α) : nβ (f x) ≤ nα x := by
   obtain ⟨C, hC0, hC⟩ := hf
-  have hlim : Tendsto (fun n : ℕ => C ^ (1 / (n : ℝ)) * nα x) atTop (𝓝 (nα x)) := by
+  have hlim : Tendsto (fun n : ℕ => C ^ (1 / ((n : ℝ) + 1)) * nα x) atTop (𝓝 (nα x)) := by
     nth_rewrite 2 [← one_mul (nα x)]
     exact ((rpow_zero C ▸ ContinuousAt.tendsto (continuousAt_const_rpow (ne_of_gt hC0))).comp
-      (tendsto_const_div_atTop_nhds_zero_nat 1)).mul tendsto_const_nhds
+      tendsto_one_div_add_atTop_nhds_zero_nat).mul tendsto_const_nhds
   apply ge_of_tendsto hlim
-  simp only [eventually_atTop]
-  use 1
-  intro n hn
-  have h : (C ^ (1 / n : ℝ)) ^ n = C := by
-    have hn0 : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (ne_of_gt hn)
-    rw [← rpow_natCast, ← rpow_mul hC0.le, one_div, inv_mul_cancel₀ hn0, rpow_one]
-  apply le_of_pow_le_pow_left₀ (ne_of_gt hn) (by positivity)
-  · rw [mul_pow, h, ← hβ _ hn, ← map_pow]
-    apply le_trans (hC (x ^ n))
+  refine Eventually.of_forall fun n ↦ ?_
+  have h : (C ^ (1 / ((n : ℝ) + 1))) ^ (n + 1) = C := by
+    rw [← rpow_natCast, ← rpow_mul hC0.le, Nat.cast_add, Nat.cast_one, one_div₀, inv_mul_cancel₀,
+      rpow_one]
+  apply le_of_pow_le_pow_left₀ n.succ_ne_zero (by positivity)
+  · rw [mul_pow, h, ← hβ _ n.succ_pos, ← map_pow]
+    apply le_trans (hC (x ^ (n + 1)))
     rw [mul_le_mul_iff_right₀ hC0]
-    exact map_pow_le_pow _ _ (Nat.one_le_iff_ne_zero.mp hn)
+    exact map_pow_le_pow _ _ n.succ_ne_zero
 
 /-- Given a bounded `f : α →+* β` between seminormed rings, is the seminorm on `β` is
   power-multiplicative, then `f` is a contraction. -/

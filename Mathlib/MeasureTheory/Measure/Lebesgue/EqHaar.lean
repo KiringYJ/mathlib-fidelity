@@ -194,7 +194,7 @@ theorem addHaar_submodule {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     simpa only [sub_eq_zero, Ne] using (pow_right_strictAnti₀ cpos cone).injective.ne hmn.symm
   have : x ∈ s := by
     convert! s.smul_mem (c ^ n - c ^ m)⁻¹ A
-    rw [smul_smul, inv_mul_cancel₀ H, one_smul]
+    rw [smul_smul, inv_mul_cancel₀, one_smul]
   exact hx this
 
 /-- A strict affine subspace has measure zero. -/
@@ -241,12 +241,15 @@ theorem map_linearMap_addHaar_eq_smul_addHaar {f : E →ₗ[ℝ] E} (hf : Linear
   -- next line is to avoid `g` getting reduced by `simp`.
   obtain ⟨g, hg⟩ : ∃ g, g = (e : E →ₗ[ℝ] ι → ℝ).comp (f.comp (e.symm : (ι → ℝ) →ₗ[ℝ] E)) := ⟨_, rfl⟩
   have gdet : LinearMap.det g = LinearMap.det f := by rw [hg]; exact LinearMap.det_conj f e
-  rw [← gdet] at hf ⊢
+  have hg₀ : LinearMap.det g ≠ 0 := by simpa only [gdet] using hf
+  have hg_inv : (LinearMap.det g)⁻¹ = (LinearMap.det f)⁻¹ := by
+    apply inv_eq_of_mul_eq_one_right₀
+    rw [gdet, mul_inv_cancel₀]
   have fg : f = (e.symm : (ι → ℝ) →ₗ[ℝ] E).comp (g.comp (e : E →ₗ[ℝ] ι → ℝ)) := by
     ext x
     simp only [LinearEquiv.coe_coe, Function.comp_apply, LinearMap.coe_comp,
       LinearEquiv.symm_apply_apply, hg]
-  simp only [fg, LinearEquiv.coe_coe, LinearMap.coe_comp]
+  conv_lhs => simp only [fg, LinearEquiv.coe_coe, LinearMap.coe_comp]
   have Ce : Continuous e := (e : E →ₗ[ℝ] ι → ℝ).continuous_of_finiteDimensional
   have Cg : Continuous g := LinearMap.continuous_of_finiteDimensional g
   have Cesymm : Continuous e.symm := (e.symm : (ι → ℝ) →ₗ[ℝ] E).continuous_of_finiteDimensional
@@ -256,7 +259,7 @@ theorem map_linearMap_addHaar_eq_smul_addHaar {f : E →ₗ[ℝ] E} (hf : Linear
     (e : E ≃+ (ι → ℝ)).isAddHaarMeasure_map μ Ce Cesymm
   have ecomp : e.symm ∘ e = id := by
     ext x; simp only [id, Function.comp_apply, LinearEquiv.symm_apply_apply]
-  rw [map_linearMap_addHaar_pi_eq_smul_addHaar hf (map e μ Ce.measurable.aemeasurable),
+  rw [map_linearMap_addHaar_pi_eq_smul_addHaar hg₀ (map e μ Ce.measurable.aemeasurable),
     Measure.map_smul _ Cesymm.measurable.aemeasurable,
     map_map Ce.measurable.aemeasurable Cesymm.measurable.aemeasurable]
   have hmap : map (e.symm ∘ e) μ (by fun_prop) = μ := by
@@ -264,7 +267,7 @@ theorem map_linearMap_addHaar_eq_smul_addHaar {f : E →ₗ[ℝ] E} (hf : Linear
       map (e.symm ∘ e) μ (by fun_prop) = map id μ measurable_id.aemeasurable := by
         apply Measure.map_congr (ae_of_all μ fun x ↦ by simp) (by fun_prop)
       _ = μ := Measure.map_id
-  rw [hmap]
+  rw [hmap, hg_inv]
 
 /-- The preimage of a set `s` under a linear map `f` with nonzero determinant has measure
 equal to `μ s` times the absolute value of the inverse of the determinant of `f`. -/
@@ -379,7 +382,11 @@ theorem addHaar_preimage_smul {r : ℝ} (hr : r ≠ 0) (s : Set E) :
 theorem addHaar_smul (r : ℝ) (s : Set E) :
     μ (r • s) = ENNReal.ofReal (abs (r ^ finrank ℝ E)) * μ s := by
   rcases ne_or_eq r 0 with (h | rfl)
-  · rw [← preimage_smul_inv₀ h, addHaar_preimage_smul μ (inv_ne_zero h), inv_pow, inv_inv]
+  · rw [← preimage_smul_inv₀ h, addHaar_preimage_smul μ (inv_ne_zero (ha := h.isUnit))]
+    have he : (r⁻¹ ^ finrank ℝ E)⁻¹ = r ^ finrank ℝ E := by
+      apply inv_eq_of_mul_eq_one_right₀
+      rw [inv_pow₀, inv_mul_cancel₀]
+    rw [he]
   rcases eq_empty_or_nonempty s with (rfl | hs)
   · simp only [measure_empty, mul_zero, smul_set_empty]
   rw [zero_smul_set hs, ← singleton_zero]
@@ -684,13 +691,14 @@ theorem tendsto_addHaar_inter_smul_zero_of_density_zero_aux2 (s : Set E) (x : E)
     Tendsto (fun r : ℝ => μ (s ∩ ({x} + r • t)) / μ ({x} + r • u)) (𝓝[>] 0) (𝓝 0) := by
   set t' := R⁻¹ • t with ht'
   set u' := R⁻¹ • u with hu'
+  have hR_inv : 0 < R⁻¹ := inv_pos_of_pos Rpos
   have A : Tendsto (fun r : ℝ => μ (s ∩ ({x} + r • t')) / μ ({x} + r • u')) (𝓝[>] 0) (𝓝 0) := by
     apply tendsto_addHaar_inter_smul_zero_of_density_zero_aux1 μ s x h t' u'
-    · simp only [u', h'u, (pow_pos Rpos _).ne', abs_nonpos_iff, addHaar_smul, not_false_iff,
-        ENNReal.ofReal_eq_zero, inv_eq_zero, inv_pow, Ne, or_self_iff, mul_eq_zero]
+    · rw [hu', addHaar_smul]
+      exact mul_ne_zero (ENNReal.ofReal_pos.mpr (abs_pos.mpr (pow_pos hR_inv _).ne')).ne' h'u
     · refine (smul_set_mono t_bound).trans_eq ?_
       rw [smul_closedBall _ _ Rpos.le, smul_zero, Real.norm_of_nonneg (inv_nonneg.2 Rpos.le),
-        inv_mul_cancel₀ Rpos.ne']
+        inv_mul_cancel₀]
   have B : Tendsto (fun r : ℝ => R * r) (𝓝[>] 0) (𝓝[>] (R * 0)) := by
     apply tendsto_nhdsWithin_of_tendsto_nhds_of_eventually_within
     · exact (tendsto_const_nhds.mul tendsto_id).mono_left nhdsWithin_le_nhds
@@ -703,9 +711,9 @@ theorem tendsto_addHaar_inter_smul_zero_of_density_zero_aux2 (s : Set E) (x : E)
   filter_upwards [self_mem_nhdsWithin]
   rintro r -
   have T : (R * r) • t' = r • t := by
-    rw [mul_comm, ht', smul_smul, mul_assoc, mul_inv_cancel₀ Rpos.ne', mul_one]
+    rw [mul_comm, ht', smul_smul, mul_assoc, mul_inv_cancel₀, mul_one]
   have U : (R * r) • u' = r • u := by
-    rw [mul_comm, hu', smul_smul, mul_assoc, mul_inv_cancel₀ Rpos.ne', mul_one]
+    rw [mul_comm, hu', smul_smul, mul_assoc, mul_inv_cancel₀, mul_one]
   dsimp
   rw [T, U]
 

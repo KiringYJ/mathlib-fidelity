@@ -178,7 +178,6 @@ lemma dblU_smul (P : Fin 3 → F) {hP : IsUnit (P z)} (u : F) (hu : u ≠ 0) :
     W.dblU (u • P) (hu.isUnit.mul hP) = u ^ 4 * W.dblU P := by
   simp only [dblU_eq, smul_fin3_ext]
   field_simp
-  ring
 
 lemma dblU_ne_zero_of_Y_eq {P Q : Fin 3 → F} (hP : W.Nonsingular P) (hPz : P z ≠ 0) (hQz : Q z ≠ 0)
     (hx : P x * Q z = Q x * P z) (hy : P y * Q z = Q y * P z) (hy' : P y * Q z = W.negY Q * P z) :
@@ -390,7 +389,6 @@ private lemma toAffine_negAddY_of_eq {P : Fin 3 → F} (hPz : P z ≠ 0) {n d : 
           - P x * P z * d ^ 2) + P y * P z ^ 2 * d ^ 3) / P z ^ 2 / (P z * d ^ 3) := by
   rw [Affine.negAddY, toAffine_addX_of_eq hPz hd]
   simp [field]
-  ring1
 
 lemma negDblY_of_Z_ne_zero [DecidableEq F] {P Q : Fin 3 → F} (hP : W.Equation P) (hQ : W.Equation Q)
     (hPz : P z ≠ 0) (hQz : Q z ≠ 0) (hx : P x * Q z = Q x * P z) (hy : P y * Q z ≠ W.negY Q * P z) :
@@ -489,7 +487,6 @@ lemma addU_smul (P Q : Fin 3 → F) {h : IsUnit (P z * Q z)} (u v : F) (hu : u �
       (hv.isUnit.mul (isUnit_of_mul_isUnit_right h))) = (u * v) ^ 2 * addU P Q := by
   simp only [addU, smul_fin3_ext]
   field_simp
-  ring
 
 lemma addU_ne_zero_of_Y_ne {P Q : Fin 3 → F} (hPz : P z ≠ 0) (hQz : Q z ≠ 0)
     (hy : P y * Q z ≠ Q y * P z) : addU P Q ≠ 0 :=
@@ -619,7 +616,6 @@ private lemma toAffine_addX_of_ne {P Q : Fin 3 → F} (hPz : P z ≠ 0) (hQz : Q
       (n ^ 2 * P z * Q z + W.a₁ * n * P z * Q z * d - W.a₂ * P z * Q z * d ^ 2 - P x * Q z * d ^ 2
         - Q x * P z * d ^ 2) * d / (P z * Q z) ^ 2 / (d ^ 3 / (P z * Q z)) := by
   simp [field]
-  ring1
 
 lemma addX_of_Z_ne_zero [DecidableEq F] {P Q : Fin 3 → F} (hP : W.Equation P) (hQ : W.Equation Q)
     (hPz : P z ≠ 0) (hQz : Q z ≠ 0) (hx : P x * Q z ≠ Q x * P z) :
@@ -702,7 +698,6 @@ private lemma toAffine_negAddY_of_ne {P Q : Fin 3 → F} (hPz : P z ≠ 0) (hQz 
         / (P z * Q z) ^ 2 / (d ^ 3 / (P z * Q z)) := by
   rw [Affine.negAddY, toAffine_addX_of_ne hPz hQz hd]
   simp [field]
-  ring1
 
 lemma negAddY_of_Z_ne_zero [DecidableEq F] {P Q : Fin 3 → F} (hP : W.Equation P) (hQ : W.Equation Q)
     (hPz : P z ≠ 0) (hQz : Q z ≠ 0) (hx : P x * Q z ≠ Q x * P z) :

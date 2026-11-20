@@ -84,7 +84,7 @@ theorem extDerivWithin_apply_vectorField
     (hω : DifferentiableWithinAt 𝕜 ω s x) (hV : ∀ i, DifferentiableWithinAt 𝕜 (V i) s x)
     (hsx : UniqueDiffWithinAt 𝕜 s x) :
     extDerivWithin ω s x (V · x) =
-      (∑ i, (-1) ^ i.val • fderivWithin 𝕜 (fun x ↦ ω x (i.removeNth (V · x))) s x (V i x)) -
+      (∑ i, (-1) ^ i.val • fderivWithin 𝕜 (fun x ↦ ω x (i.removeNth (V · x))) s x id (V i x)) -
         ∑ i : Fin (n + 1), ∑ j ≥ i,
           (-1) ^ (i + j : ℕ) •
             ω x (Matrix.vecCons (lieBracketWithin 𝕜 (V i.castSucc) (V j.succ) s x)
@@ -143,12 +143,12 @@ which changes the sign before the sum from `+` to `-`.
 theorem extDeriv_apply_vectorField {ω : E → E [⋀^Fin (n + 1)]→L[𝕜] F} {V : Fin (n + 2) → E → E}
     (hω : DifferentiableAt 𝕜 ω x) (hV : ∀ i, DifferentiableAt 𝕜 (V i) x) :
     extDeriv ω x (V · x) =
-      (∑ i, (-1) ^ i.val • fderiv 𝕜 (fun x ↦ ω x (i.removeNth (V · x))) x (V i x)) -
+      (∑ i, (-1) ^ i.val • fderiv 𝕜 (fun x ↦ ω x (i.removeNth (V · x))) x id (V i x)) -
         ∑ i : Fin (n + 1), ∑ j ≥ i,
           (-1) ^ (i + j : ℕ) •
             ω x (Matrix.vecCons (lieBracket 𝕜 (V i.castSucc) (V j.succ) x)
               (j.removeNth <| i.castSucc.removeNth (V · x))) := by
-  simp only [← differentiableWithinAt_univ, ← extDerivWithin_univ, ← fderivWithin_univ,
+  simp only [← differentiableWithinAt_univ, ← extDerivWithin_univ, ← congrFun fderivWithin_univ x,
     ← lieBracketWithin_univ] at *
   exact extDerivWithin_apply_vectorField hω hV (by simp)
 
@@ -166,7 +166,7 @@ theorem extDerivWithin_apply_vectorField_of_pairwise_commute
     (hsx : UniqueDiffWithinAt 𝕜 s x)
     (hcomm : Pairwise fun i j ↦ lieBracketWithin 𝕜 (V i) (V j) s x = 0) :
     extDerivWithin ω s x (V · x) =
-      (∑ i, (-1) ^ i.val • fderivWithin 𝕜 (fun x ↦ ω x (i.removeNth (V · x))) s x (V i x)) := by
+      (∑ i, (-1) ^ i.val • fderivWithin 𝕜 (fun x ↦ ω x (i.removeNth (V · x))) s x id (V i x)) := by
   cases n with
   | zero =>
     simp [extDerivWithin_apply, fderivWithin_continuousAlternatingMap_apply_const_apply,
@@ -190,7 +190,7 @@ theorem extDeriv_apply_vectorField_of_pairwise_commute
     (hω : DifferentiableAt 𝕜 ω x) (hV : ∀ i, DifferentiableAt 𝕜 (V i) x)
     (hcomm : Pairwise fun i j ↦ lieBracket 𝕜 (V i) (V j) x = 0) :
     extDeriv ω x (V · x) =
-      (∑ i, (-1) ^ i.val • fderiv 𝕜 (fun x ↦ ω x (i.removeNth (V · x))) x (V i x)) := by
+      (∑ i, (-1) ^ i.val • fderiv 𝕜 (fun x ↦ ω x (i.removeNth (V · x))) x id (V i x)) := by
   simp only [← differentiableWithinAt_univ, ← lieBracketWithin_univ, ← extDerivWithin_univ,
-    ← fderivWithin_univ] at *
+    ← congrFun fderivWithin_univ x] at *
   exact extDerivWithin_apply_vectorField_of_pairwise_commute hω hV (by simp) hcomm

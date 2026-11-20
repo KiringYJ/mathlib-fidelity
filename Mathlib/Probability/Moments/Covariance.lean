@@ -145,13 +145,13 @@ lemma covariance_mul_const_left (c : ℝ) : cov[fun ω ↦ X ω * c, Y; μ] = co
 lemma covariance_mul_const_right (c : ℝ) : cov[X, fun ω ↦ Y ω * c; μ] = cov[X, Y; μ] * c := by
   simp [mul_comm, covariance_const_mul_right]
 
-lemma covariance_fun_div_left (c : ℝ) :
+lemma covariance_fun_div_left (c : ℝ) {hc : IsUnit c} :
     cov[fun ω ↦ X ω / c, Y; μ] = cov[X, Y; μ] / c := by
-  simp_rw [← inv_mul_eq_div, covariance_const_mul_left]
+  simp_rw [div_eq_inv_mul₀, covariance_const_mul_left]
 
-lemma covariance_fun_div_right (c : ℝ) :
+lemma covariance_fun_div_right (c : ℝ) {hc : IsUnit c} :
     cov[X, fun ω ↦ Y ω / c; μ] = cov[X, Y; μ] / c := by
-  simp_rw [← inv_mul_eq_div, covariance_const_mul_right]
+  simp_rw [div_eq_inv_mul₀, covariance_const_mul_right]
 
 @[simp]
 lemma covariance_neg_left : cov[-X, Y; μ] = -cov[X, Y; μ] := by

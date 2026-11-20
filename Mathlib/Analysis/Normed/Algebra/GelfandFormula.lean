@@ -42,7 +42,7 @@ material proven here gets used in contexts that have nothing to do with complex 
 variable {𝕜 A : Type*}
 
 open scoped NNReal Topology Ring
-open Filter ENNReal
+open Filter ENNReal Topology Bornology
 
 namespace spectrum
 
@@ -54,7 +54,7 @@ theorem hasDerivAt_resolvent_const_left {a : A} (k : resolventSet 𝕜 a) :
     HasDerivAt (resolvent a) (-resolvent a k ^ 2) k Subtype.val := by
   have H₂ : HasDerivAt (fun k => algebraMap 𝕜 A k - a) 1 k.val := by
     simpa using (Algebra.linearMap 𝕜 A).hasDerivAt.sub_const a
-  simpa [resolvent, sq] using (H₂.hasFDerivAt.inv k.property).hasDerivAt
+  simpa [resolventSet, resolvent, sq] using! (H₂.hasFDerivAt.inv k.property).hasDerivAt
 
 @[deprecated (since := "2026-03-26")]
 alias hasDerivAt_resolvent := hasDerivAt_resolvent_const_left
@@ -65,18 +65,26 @@ theorem hasFDerivAt_resolvent {a : A} {k : 𝕜} (hk : k ∈ resolventSet 𝕜 a
       (((ContinuousLinearMap.mulLeftRight 𝕜 A) (resolvent a ⟨k, hk⟩)) (resolvent a ⟨k, hk⟩))
       ⟨a, hk⟩ Subtype.val := by
   have H₂ : HasFDerivAt (fun a => algebraMap 𝕜 A k - a) (- .id 𝕜 A) a := by
-    simpa using (hasFDerivAt_const _ a).sub (hasFDerivAt_id a)
-  simpa [resolvent] using H₂.inv hk
+    simpa only [Pi.sub_def, id_eq, zero_sub] using! (hasFDerivAt_const _ a).sub (hasFDerivAt_id a)
+  simpa [resolventSet, resolvent] using! H₂.inv hk
 
 end NonTriviallyNormedField
 
 theorem hasDerivAt_resolvent_const_right [NontriviallyNormedField 𝕜] [NontriviallyNormedField A]
-    [NormedAlgebra 𝕜 A] [CompleteSpace A] {a : A} {k : 𝕜} (hk : k ∈ resolventSet 𝕜 a) :
+    [NormedAlgebra 𝕜 A] {a : A} {k : 𝕜} (hk : k ∈ resolventSet 𝕜 a) :
     HasDerivAt
       (fun b : {b : A | k ∈ resolventSet 𝕜 b} ↦ resolvent b.val ⟨k, b.property⟩)
       (resolvent a ⟨k, hk⟩ ^ 2) ⟨a, hk⟩ Subtype.val := by
-  convert! hasFDerivAt_resolvent (𝕜 := A) hk |>.hasDerivAt
-  simp [resolvent, pow_two]
+  have hd : HasDerivAt (fun b : A ↦ algebraMap 𝕜 A k - b) (-1) a := by
+    simpa only [zero_sub, id_eq] using! (hasDerivAt_id a).const_sub (algebraMap 𝕜 A k)
+  simpa [resolventSet, resolvent, pow_two] using! (hd.hasFDerivAt.inv hk).hasDerivAt
+
+private theorem isUnit_one_sub_smul_of_mem_closedBall [NontriviallyNormedField 𝕜] [NormedRing A]
+    [NormedAlgebra 𝕜 A] {a : A} {r : ℝ≥0} {z : 𝕜}
+    (hr : (r : ℝ≥0∞) < (spectralRadius 𝕜 a)⁻¹) (hz : z ∈ Metric.closedBall 0 r) :
+    IsUnit (1 - z • a) := by
+  refine isUnit_one_sub_smul_of_lt_inv_radius (lt_of_le_of_lt (coe_mono ?_) hr)
+  exact_mod_cast mem_closedBall_zero_iff.mp hz
 
 open ENNReal in
 /-- In a Banach algebra `A` over `𝕜`, for `a : A` the function `fun z ↦ (1 - z • a)⁻¹` is
@@ -87,14 +95,9 @@ theorem differentiableOn_inverse_one_sub_smul [NontriviallyNormedField 𝕜] [No
     DifferentiableOn 𝕜
       (fun z : {z : 𝕜 | IsUnit (1 - z • a)} ↦ (↑z.property.unit⁻¹ : A))
       (Subtype.val ⁻¹' Metric.closedBall 0 r) Subtype.val := by
-  intro z z_mem
-  apply DifferentiableAt.differentiableWithinAt
-  have hu : IsUnit (1 - z.val • a) := by
-    refine isUnit_one_sub_smul_of_lt_inv_radius (lt_of_le_of_lt (coe_mono ?_) hr)
-    simpa only [norm_toNNReal, Real.toNNReal_coe] using
-      Real.toNNReal_mono (mem_closedBall_zero_iff.mp z_mem)
-  have H₁ : Differentiable 𝕜 fun w : 𝕜 => 1 - w • a := (differentiable_id.smul_const a).const_sub 1
-  exact H₁.differentiableAt.inv hu
+  have hd : Differentiable 𝕜 fun w : 𝕜 ↦ 1 - w • a := (differentiable_id.smul_const a).const_sub 1
+  exact fun _ hz ↦ hd.differentiableAt.differentiableWithinAt.inv
+    (isUnit_one_sub_smul_of_mem_closedBall hr hz)
 
 section Complex
 
@@ -103,26 +106,30 @@ variable [NormedRing A] [NormedAlgebra ℂ A] [CompleteSpace A]
 open ContinuousMultilinearMap in
 /-- The `limsup` relationship for the spectral radius used to prove `spectrum.gelfand_formula`. -/
 theorem limsup_pow_nnnorm_pow_one_div_le_spectralRadius (a : A) :
-    limsup (fun n : ℕ => (‖a ^ n‖₊ : ℝ≥0∞) ^ (1 / n : ℝ)) atTop ≤ spectralRadius ℂ a := by
+    limsup (fun n : {n : ℕ // n ≠ 0} ↦
+      (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ))
+      (comap Subtype.val atTop) ≤ spectralRadius ℂ a := by
   refine ENNReal.inv_le_inv.mp (le_of_forall_pos_nnreal_lt fun r r_pos r_lt => ?_)
-  simp_rw [inv_limsup, ← one_div]
+  simp_rw [inv_limsup]
   let p : FormalMultilinearSeries ℂ ℂ A := fun n =>
     ContinuousMultilinearMap.mkPiRing ℂ (Fin n) (a ^ n)
   suffices h : (r : ℝ≥0∞) ≤ p.radius by
-    convert! h
-    simp only [p, p.radius_eq_liminf, ← norm_toNNReal, norm_mkPiRing]
-    congr
-    ext n
-    rw [norm_toNNReal, ENNReal.coe_rpow_def ‖a ^ n‖₊ (1 / n : ℝ), ite_eq_right]
-    exact fun ha => (lt_self_iff_false _).mp
-      (ha.2.trans_le (one_div_nonneg.mpr n.cast_nonneg : 0 ≤ (1 / n : ℝ)))
-  have H₁ := (differentiableOn_inverse_one_sub_smul r_lt).hasFPowerSeriesOnBall r_pos
-  exact ((hasFPowerSeriesOnBall_inverse_one_sub_smul ℂ a).exchange_radius H₁).r_le
+    simpa only [p.radius_eq_liminf, p, ← norm_toNNReal, norm_mkPiRing] using h
+  let c : {z : ℂ | IsUnit (1 - z • a)} := ⟨0, by simp⟩
+  have hD : Metric.closedBall (0 : ℂ) r ⊆ {z | IsUnit (1 - z • a)} :=
+    fun _ hz ↦ isUnit_one_sub_smul_of_mem_closedBall r_lt hz
+  obtain ⟨q, hq⟩ := (differentiableOn_inverse_one_sub_smul r_lt).exists_hasFPowerSeriesOnBall
+    (c := c) r_pos IsEmbedding.subtypeVal (fun z hz ↦ ⟨⟨z, hD hz⟩, rfl⟩)
+  apply ((hasFPowerSeriesOnBall_inverse_one_sub_smul ℂ a).exchange_radius hq ?_).r_le
+  filter_upwards [Metric.closedBall_mem_nhds (0 : ℂ) (show 0 < (r : ℝ) from r_pos)] with z hz
+  exact ⟨⟨z, hD hz⟩, rfl⟩
 
 /-- **Gelfand's formula**: Given an element `a : A` of a complex Banach algebra, the
 `spectralRadius` of `a` is the limit of the sequence `‖a ^ n‖₊ ^ (1 / n)`. -/
 theorem pow_nnnorm_pow_one_div_tendsto_nhds_spectralRadius (a : A) :
-    Tendsto (fun n : ℕ => (‖a ^ n‖₊ : ℝ≥0∞) ^ (1 / n : ℝ)) atTop (𝓝 (spectralRadius ℂ a)) :=
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦
+      (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ))
+      (comap Subtype.val atTop) (𝓝 (spectralRadius ℂ a)) :=
   tendsto_of_le_liminf_of_limsup_le (spectralRadius_le_liminf_pow_nnnorm_pow_one_div ℂ a)
     (limsup_pow_nnnorm_pow_one_div_le_spectralRadius a)
 
@@ -133,7 +140,8 @@ instead of `nnnorm`. -/
 /-- **Gelfand's formula**: Given an element `a : A` of a complex Banach algebra, the
 `spectralRadius` of `a` is the limit of the sequence `‖a ^ n‖₊ ^ (1 / n)`. -/
 theorem pow_norm_pow_one_div_tendsto_nhds_spectralRadius (a : A) :
-    Tendsto (fun n : ℕ => ENNReal.ofReal (‖a ^ n‖ ^ (1 / n : ℝ))) atTop
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ENNReal.ofReal (‖a ^ (n : ℕ)‖ ^ (1 / (n : ℕ) : ℝ)))
+      (comap Subtype.val atTop)
       (𝓝 (spectralRadius ℂ a)) := by
   convert! pow_nnnorm_pow_one_div_tendsto_nhds_spectralRadius a using 1
   ext1
@@ -163,7 +171,7 @@ protected theorem nonempty (a : A) : (spectrum ℂ a).Nonempty := by
   have H₃ := H₁.apply_eq_of_tendsto_cocompact 0 <| by
     simpa [Metric.cobounded_eq_cocompact] using
       (resolvent_tendsto_cobounded a (𝕜 := ℂ)).comp H₂
-  exact not_isUnit_zero <| H₃ ▸ isUnit_resolvent (lift 0)
+  exact (isUnit_resolvent (lift 0)).ne_zero H₃
 
 /-- In a complex Banach algebra, the spectral radius is always attained by some element of the
 spectrum. -/

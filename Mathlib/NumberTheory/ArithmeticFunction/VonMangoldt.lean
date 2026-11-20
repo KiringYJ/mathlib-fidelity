@@ -149,7 +149,7 @@ theorem sum_moebius_mul_log_eq {n : ℕ} : (∑ d ∈ n.divisors, (μ d : ℝ) *
       rw [cast_ne_zero]
       rintro rfl
       exact hn (by simpa using mn)
-    rw [Nat.cast_div mn this, Real.log_div (cast_ne_zero.2 hn) this, neg_sub, mul_sub]
+    rw [Nat.cast_div mn this, Real.log_div (cast_ne_zero.2 hn), neg_sub, mul_sub]
   rw [this, sum_sub_distrib, ← sum_mul, ← Int.cast_sum, ← coe_mul_zeta_apply, eq_comm, sub_eq_self,
     moebius_mul_coe_zeta]
   rcases eq_or_ne n 1 with (hn | hn) <;> simp [hn]

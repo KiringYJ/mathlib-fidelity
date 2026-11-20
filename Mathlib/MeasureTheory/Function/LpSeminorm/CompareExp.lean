@@ -31,10 +31,12 @@ variable {α ε ε' : Type*} {m : SigmaAlgebra α} {μ : Measure α} {f : α →
 
 theorem eLpNorm'_le_eLpNorm'_mul_rpow_measure_univ {p q : ℝ} (hp0_lt : 0 < p) (hpq : p ≤ q)
     (hf : AEStronglyMeasurable f μ) :
-    eLpNorm' f p μ ≤ eLpNorm' f q μ * μ Set.univ ^ (1 / p - 1 / q) := by
+    eLpNorm' f p μ ≤ eLpNorm' f q μ (hp0_lt.trans_le hpq).ne'.isUnit *
+      μ Set.univ ^ (1 / p - Checked.div 1 q (hp0_lt.trans_le hpq).ne'.isUnit) := by
   have hq0_lt : 0 < q := lt_of_lt_of_le hp0_lt hpq
   by_cases hpq_eq : p = q
-  · rw [hpq_eq, sub_self, ENNReal.rpow_zero, mul_one]
+  · subst p
+    simp
   have hpq : p < q := lt_of_le_of_ne hpq hpq_eq
   let g := fun _ : α => (1 : ℝ≥0∞)
   have h_rw : (∫⁻ a, ‖f a‖ₑ ^ p ∂μ) = ∫⁻ a, (‖f a‖ₑ * g a) ^ p ∂μ :=
@@ -42,6 +44,7 @@ theorem eLpNorm'_le_eLpNorm'_mul_rpow_measure_univ {p q : ℝ} (hp0_lt : 0 < p) 
   repeat' rw [eLpNorm'_eq_lintegral_enorm]
   rw [h_rw]
   let r := p * q / (q - p)
+  have hr : IsUnit r := by dsimp [r]; checked_unit
   have hpqr : 1 / p = 1 / q + 1 / r := by simp [field]
   calc
     (∫⁻ a : α, (‖f a‖ₑ * g a) ^ p ∂μ) ^ (1 / p) ≤
@@ -57,35 +60,37 @@ theorem eLpNorm'_le_eLpNormEssSup_mul_rpow_measure_univ {q : ℝ} (hq_pos : 0 < 
     have h_nnnorm_le_eLpNorm_ess_sup := enorm_ae_le_eLpNormEssSup f μ
     exact h_nnnorm_le_eLpNorm_ess_sup.mono fun x hx => by gcongr
   rw [eLpNorm', ← ENNReal.rpow_one (eLpNormEssSup f μ)]
-  nth_rw 2 [← mul_inv_cancel₀ (ne_of_lt hq_pos).symm]
-  rw [ENNReal.rpow_mul, one_div, ← ENNReal.mul_rpow_of_nonneg _ _ (by simp [hq_pos.le] : 0 ≤ q⁻¹)]
+  nth_rw 2 [← mul_inv_cancel₀ (ha := hq_pos.ne'.isUnit)]
+  rw [ENNReal.rpow_mul, one_div₀, ← ENNReal.mul_rpow_of_nonneg _ _ (by simp [hq_pos.le] : 0 ≤ q⁻¹)]
   gcongr
   rwa [lintegral_const] at h_le
 
 theorem eLpNorm_le_eLpNorm_mul_rpow_measure_univ {p q : ℝ≥0∞} (hpq : p ≤ q)
     (hf : AEStronglyMeasurable f μ) :
-    eLpNorm f p μ ≤ eLpNorm f q μ * μ Set.univ ^ (1 / p.toReal - 1 / q.toReal) := by
+    eLpNorm f p μ ≤ eLpNorm f q μ * μ Set.univ ^ ((1 / p).toReal - (1 / q).toReal) := by
   obtain rfl | hp0 := eq_or_ne p 0
   · simp
   have hq0_lt : 0 < q := hp0.pos.trans_le hpq
   obtain rfl | hq_top := eq_or_ne q ∞
-  · simp only [_root_.div_zero, one_div, ENNReal.toReal_top, sub_zero]
+  · simp only [ENNReal.div_top, ENNReal.toReal_zero, sub_zero]
     obtain rfl | hp_top := eq_or_ne p ∞
     · simp
     rw [eLpNorm_eq_eLpNorm' hp0 hp_top]
     have hp_pos : 0 < p.toReal := ENNReal.toReal_pos hp0 hp_top
-    refine (eLpNorm'_le_eLpNormEssSup_mul_rpow_measure_univ hp_pos).trans (le_of_eq ?_)
-    congr
-    exact one_div _
+    simpa [ENNReal.toReal_inv (ha := hp_pos.ne'.isUnit)] using
+      eLpNorm'_le_eLpNormEssSup_mul_rpow_measure_univ (f := f) (μ := μ) hp_pos
   have hp_lt_top : p < ∞ := hpq.trans_lt (lt_top_iff_ne_top.mpr hq_top)
   have hp_pos : 0 < p.toReal := ENNReal.toReal_pos hp0 hp_lt_top.ne
   rw [eLpNorm_eq_eLpNorm' hp0 hp_lt_top.ne, eLpNorm_eq_eLpNorm' hq0_lt.ne.symm hq_top]
   have hpq_real : p.toReal ≤ q.toReal := ENNReal.toReal_mono hq_top hpq
-  exact eLpNorm'_le_eLpNorm'_mul_rpow_measure_univ hp_pos hpq_real hf
+  have hq_pos := ENNReal.toReal_pos hq0_lt.ne' hq_top
+  simpa [ENNReal.toReal_inv (ha := hp_pos.ne'.isUnit),
+    ENNReal.toReal_inv (ha := hq_pos.ne'.isUnit)] using
+    eLpNorm'_le_eLpNorm'_mul_rpow_measure_univ hp_pos hpq_real hf
 
 theorem eLpNorm'_le_eLpNorm'_of_exponent_le {p q : ℝ} (hp0_lt : 0 < p)
     (hpq : p ≤ q) (μ : Measure α) [IsProbabilityMeasure μ] (hf : AEStronglyMeasurable f μ) :
-    eLpNorm' f p μ ≤ eLpNorm' f q μ := by
+    eLpNorm' f p μ ≤ eLpNorm' f q μ (hp0_lt.trans_le hpq).ne'.isUnit := by
   have h_le_μ := eLpNorm'_le_eLpNorm'_mul_rpow_measure_univ hp0_lt hpq hf
   rwa [measure_univ, ENNReal.one_rpow, mul_one] at h_le_μ
 
@@ -97,12 +102,11 @@ theorem eLpNorm_le_eLpNorm_of_exponent_le {p q : ℝ≥0∞} (hpq : p ≤ q) [Is
     (hf : AEStronglyMeasurable f μ) : eLpNorm f p μ ≤ eLpNorm f q μ :=
   (eLpNorm_le_eLpNorm_mul_rpow_measure_univ hpq hf).trans (le_of_eq (by simp [measure_univ]))
 
-theorem eLpNorm'_lt_top_of_eLpNorm'_lt_top_of_exponent_le {p q : ℝ} [IsFiniteMeasure μ]
+theorem eLpNorm'_lt_top_of_eLpNorm'_lt_top_of_exponent_le {p q : ℝ}
+    {hpUnit : IsUnit p} {hqUnit : IsUnit q} [IsFiniteMeasure μ]
     (hf : AEStronglyMeasurable f μ) (hfq_lt_top : eLpNorm' f q μ < ∞) (hp_nonneg : 0 ≤ p)
     (hpq : p ≤ q) : eLpNorm' f p μ < ∞ := by
-  rcases le_or_gt p 0 with hp_nonpos | hp_pos
-  · rw [le_antisymm hp_nonpos hp_nonneg]
-    simp
+  have hp_pos : 0 < p := lt_of_le_of_ne hp_nonneg hpUnit.ne_zero.symm
   have hq_pos : 0 < q := lt_of_lt_of_le hp_pos hpq
   calc
     eLpNorm' f p μ ≤ eLpNorm' f q μ * μ Set.univ ^ (1 / p - 1 / q) :=
@@ -110,7 +114,7 @@ theorem eLpNorm'_lt_top_of_eLpNorm'_lt_top_of_exponent_le {p q : ℝ} [IsFiniteM
     _ < ∞ := by
       rw [ENNReal.mul_lt_top_iff]
       refine Or.inl ⟨hfq_lt_top, ENNReal.rpow_lt_top_of_nonneg ?_ (by finiteness)⟩
-      rwa [le_sub_comm, sub_zero, one_div, one_div, inv_le_inv₀ hq_pos hp_pos]
+      rwa [le_sub_comm, sub_zero, one_div₀, one_div₀, inv_le_inv₀ hq_pos hp_pos]
 
 theorem MemLp.mono_exponent {p q : ℝ≥0∞} [IsFiniteMeasure μ] (hfq : MemLp f q μ)
     (hpq : p ≤ q) : MemLp f p μ := by
@@ -138,7 +142,8 @@ theorem MemLp.mono_exponent {p q : ℝ≥0∞} [IsFiniteMeasure μ] (hfq : MemLp
   have hpq_real : p.toReal ≤ q.toReal := ENNReal.toReal_mono hq_top hpq
   rw [eLpNorm_eq_eLpNorm' hp0 hp_top]
   rw [eLpNorm_eq_eLpNorm' hq0 hq_top] at hfq_lt_top
-  exact eLpNorm'_lt_top_of_eLpNorm'_lt_top_of_exponent_le hfq_m hfq_lt_top hp_pos.le hpq_real
+  exact eLpNorm'_lt_top_of_eLpNorm'_lt_top_of_exponent_le
+    (hpUnit := hp_pos.ne'.isUnit) hfq_m hfq_lt_top hp_pos.le hpq_real
 
 /-- If a function is supported on a finite-measure set and belongs to `ℒ^p`, then it belongs to
 `ℒ^q` for any `q ≤ p`. -/
@@ -181,7 +186,7 @@ theorem eLpNorm_le_eLpNorm_top_mul_eLpNorm (p : ℝ≥0∞) (f : α → E) {g : 
     exact ENNReal.essSup_mul_le (‖f ·‖ₑ) (‖g ·‖ₑ)
   obtain ⟨hp₁, hp₂⟩ := ENNReal.toReal_pos_iff.mp hp
   simp_rw [eLpNorm_eq_lintegral_rpow_enorm_toReal hp₁.ne' hp₂.ne, eLpNorm_exponent_top,
-    eLpNormEssSup, one_div, ENNReal.rpow_inv_le_iff hp, enorm_mul, enorm_norm]
+    eLpNormEssSup, one_div₀, ENNReal.rpow_inv_le_iff hp, enorm_mul, enorm_norm]
   rw [ENNReal.mul_rpow_of_nonneg (hz := hp.le), ENNReal.rpow_inv_rpow hp.ne',
     ← lintegral_const_mul'' _ (by fun_prop)]
   simp only [← ENNReal.mul_rpow_of_nonneg (hz := hp.le)]
@@ -205,8 +210,11 @@ theorem eLpNorm_le_eLpNorm_mul_eLpNorm_top (p : ℝ≥0∞) {f : α → E} (hf :
 theorem eLpNorm'_le_eLpNorm'_mul_eLpNorm' {p q r : ℝ} (hf : AEStronglyMeasurable f μ)
     (hg : AEStronglyMeasurable g μ) (b : E → F → G) (c : ℝ≥0)
     (h : ∀ᵐ x ∂μ, ‖b (f x) (g x)‖₊ ≤ c * ‖f x‖₊ * ‖g x‖₊) (hro_lt : 0 < r) (hrp : r < p)
-    (hpqr : 1 / r = 1 / p + 1 / q) :
-    eLpNorm' (fun x => b (f x) (g x)) r μ ≤ c * eLpNorm' f p μ * eLpNorm' g q μ := by
+    {hqUnit : IsUnit q}
+    (hpqr : 1 / r = Checked.div 1 p (hro_lt.trans hrp).ne'.isUnit + 1 / q) :
+    eLpNorm' (fun x => b (f x) (g x)) r μ ≤
+      c * eLpNorm' f p μ (hro_lt.trans hrp).ne'.isUnit * eLpNorm' g q μ := by
+  have hp : 0 < p := hro_lt.trans hrp
   calc
     eLpNorm' (fun x => b (f x) (g x)) r μ
       ≤ eLpNorm' (fun x ↦ (c : ℝ) • ‖f x‖ * ‖g x‖) r μ := by
@@ -240,11 +248,10 @@ theorem eLpNorm_le_eLpNorm_mul_eLpNorm_of_nnnorm {p q r : ℝ≥0∞}
     exact this ▸ eLpNorm_le_eLpNorm_mul_eLpNorm_top p hf g b c h
   obtain ⟨hp₁, hp₂⟩ := ENNReal.toReal_pos_iff.mp hp
   obtain ⟨hq₁, hq₂⟩ := ENNReal.toReal_pos_iff.mp hq
+  have hreal := ENNReal.HolderTriple.toReal r hp hq
   have hpqr' : 1 / r.toReal = 1 / p.toReal + 1 / q.toReal := by
-    have := congr(ENNReal.toReal $(hpqr))
-    rw [ENNReal.toReal_add (by simpa using hp₁.ne') (by simpa using hq₁.ne')] at this
-    simpa
-  have hr : 0 < r.toReal := one_div_pos.mp <| by rw [hpqr']; positivity
+    simpa only [one_div₀] using hreal.inv_add_inv_eq_inv.symm
+  have hr : 0 < r.toReal := hreal.pos'
   obtain ⟨hr₁, hr₂⟩ := ENNReal.toReal_pos_iff.mp hr
   have hrp : r.toReal < p.toReal := lt_of_one_div_lt_one_div hp <|
     hpqr' ▸ lt_add_of_pos_right _ (by positivity)
@@ -311,7 +318,9 @@ theorem eLpNorm_smul_le_eLpNorm_mul_eLpNorm_top (p : ℝ≥0∞) (f : α → E) 
 
 theorem eLpNorm'_smul_le_mul_eLpNorm' {p q r : ℝ} {f : α → E} (hf : AEStronglyMeasurable f μ)
     {φ : α → 𝕜} (hφ : AEStronglyMeasurable φ μ) (hp0_lt : 0 < p) (hpq : p < q)
-    (hpqr : 1 / p = 1 / q + 1 / r) : eLpNorm' (φ • f) p μ ≤ eLpNorm' φ q μ * eLpNorm' f r μ := by
+    {hrUnit : IsUnit r}
+    (hpqr : 1 / p = Checked.div 1 q (hp0_lt.trans hpq).ne'.isUnit + 1 / r) :
+    eLpNorm' (φ • f) p μ ≤ eLpNorm' φ q μ (hp0_lt.trans hpq).ne'.isUnit * eLpNorm' f r μ := by
   simpa using! eLpNorm'_le_eLpNorm'_mul_eLpNorm' hφ hf (· • ·) 1
     (.of_forall fun _ => by simpa using! nnnorm_smul_le _ _)
     hp0_lt hpq hpqr

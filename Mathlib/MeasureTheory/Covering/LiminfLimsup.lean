@@ -141,7 +141,7 @@ theorem blimsup_cthickening_ae_le_of_eventually_mul_le_aux (p : ℕ → Prop) {s
   replace hB : ↑C⁻¹ * μ (B j) ≠ ∞ := by finiteness
   obtain ⟨hj₁ : Disjoint (b j) (W ∩ B j), hj₂ : μ (B j) ≤ C * μ (b j)⟩ := hj₀
   replace hj₂ : ↑C⁻¹ * μ (B j) ≤ μ (b j) := by
-    rw [ENNReal.coe_inv hC, ← ENNReal.div_eq_inv_mul]
+    rw [ENNReal.coe_inv (hr := hC.isUnit), ← ENNReal.div_eq_inv_mul]
     exact ENNReal.div_le_of_le_mul' hj₂
   have hj₃ : ↑C⁻¹ * μ (B j) + μ (W ∩ B j) ≤ μ (B j) := by
     grw [hj₂]
@@ -199,7 +199,7 @@ theorem blimsup_cthickening_mul_ae_eq (p : ℕ → Prop) (s : ℕ → Set α) {M
       convert! TendstoNhdsWithinIoi.const_mul hM hr <;> simp only [mul_zero]
     refine eventuallySubset_antisymm_iff.mpr ⟨?_, ?_⟩
     · exact blimsup_cthickening_ae_le_of_eventually_mul_le μ p (inv_pos.mpr hM) hr'
-        (Eventually.of_forall fun i => by rw [inv_mul_cancel_left₀ hM.ne' (r i)])
+        (Eventually.of_forall fun i => by rw [inv_mul_cancel_left₀ (ha := hM.ne'.isUnit) (r i)])
     · exact blimsup_cthickening_ae_le_of_eventually_mul_le μ p hM hr
         (Eventually.of_forall fun i => le_refl _)
   let r' : ℕ → ℝ := fun i => if 0 < r i then r i else 1 / ((i : ℝ) + 1)
@@ -208,7 +208,7 @@ theorem blimsup_cthickening_mul_ae_eq (p : ℕ → Prop) (s : ℕ → Set α) {M
       ⟨Tendsto.if' hr tendsto_one_div_add_atTop_nhds_zero_nat, Eventually.of_forall fun i => ?_⟩
     by_cases hi : 0 < r i
     · simp [r', hi]
-    · simp only [r', hi, one_div, mem_Ioi, ite_false, inv_pos]; positivity
+    · simp only [r', hi, mem_Ioi, ite_false]; positivity
   have h₀ : ∀ i, p i ∧ 0 < r i → cthickening (r i) (s i) = cthickening (r' i) (s i) := by
     grind
   have h₁ : ∀ i, p i ∧ 0 < r i → cthickening (M * r i) (s i) = cthickening (M * r' i) (s i) := by

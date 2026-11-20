@@ -449,19 +449,24 @@ open scoped ArithmeticFunction.Moebius
   using Möbius inversion. -/
 theorem cyclotomic_eq_prod_X_pow_sub_one_pow_moebius {n : ℕ} (R : Type*) [CommRing R]
     [IsDomain R] : algebraMap _ (RatFunc R) (cyclotomic n R) =
-      ∏ i ∈ n.divisorsAntidiagonal, algebraMap R[X] _ (X ^ i.snd - 1) ^ μ i.fst := by
+      ∏ i : n.divisorsAntidiagonal, Checked.zpow
+        (algebraMap R[X] _ (X ^ i.1.snd - 1)) (μ i.1.fst) (fun _ ↦
+          (IsFractionRing.to_map_eq_zero_iff.ne.mpr
+            ((monic_X_pow_sub_C 1 (Nat.right_ne_zero_of_mem_divisorsAntidiagonal i.2)).ne_zero :
+              X ^ i.1.snd - 1 ≠ (0 : R[X]))).isUnit) := by
   rcases n.eq_zero_or_pos with (rfl | hpos)
-  · simp
+  · simp [Finset.attach_eq_empty_iff.mpr Nat.divisorsAntidiagonal_zero]
   have h : ∀ n : ℕ, 0 < n → (∏ i ∈ Nat.divisors n, algebraMap _ (RatFunc R) (cyclotomic i R)) =
       algebraMap _ _ (X ^ n - 1 : R[X]) := by
     intro n hn
     rw [← prod_cyclotomic_eq_X_pow_sub_one hn R, map_prod]
-  rw [(prod_eq_iff_prod_pow_moebius_eq_of_nonzero (fun n hn => _) fun n hn => _).1 h n hpos] <;>
-    simp_rw [Ne, IsFractionRing.to_map_eq_zero_iff]
-  · simp [cyclotomic_ne_zero]
-  · intro n hn
-    apply Monic.ne_zero
-    apply monic_X_pow_sub_C _ (ne_of_gt hn)
+  have hf (n : ℕ) (hn : 0 < n) :
+      algebraMap R[X] (RatFunc R) (cyclotomic n R) ≠ 0 :=
+    IsFractionRing.to_map_eq_zero_iff.ne.mpr (cyclotomic_ne_zero n R)
+  have hg (n : ℕ) (hn : 0 < n) :
+      algebraMap R[X] (RatFunc R) (X ^ n - 1) ≠ 0 :=
+    IsFractionRing.to_map_eq_zero_iff.ne.mpr (monic_X_pow_sub_C 1 hn.ne').ne_zero
+  exact ((prod_eq_iff_prod_pow_moebius_eq_of_nonzero hf hg).mp h n hpos).symm
 
 end ArithmeticFunction
 
@@ -648,8 +653,8 @@ private theorem _root_.IsPrimitiveRoot.pow_sub_pow_eq_prod_sub_mul_field {K : Ty
   convert!
     congr_arg (eval (x / y) · * y ^ card (nthRootsFinset n (1 : K))) <|
       X_pow_sub_one_eq_prod hpos h using 1
-  · simp [sub_mul, div_pow, hy, h.card_nthRootsFinset]
-  · simp [eval_prod, prod_mul_pow_card, sub_mul, hy]
+  · simp [sub_mul, h.card_nthRootsFinset]
+  · simp [eval_prod, prod_mul_pow_card, sub_mul]
 
 variable [IsDomain R]
 

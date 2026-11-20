@@ -5,43 +5,63 @@ import Mathlib
 
 open Real
 
-example (x : ℝ) : deriv (fun x => cos x + 2 * sin x) x = -sin x + 2 * cos x := by
-  simp
+-- Pointwise forms of the simplification rules in identity coordinates.
+@[local simp] private theorem deriv_sin_id (x : ℝ) : deriv sin x id = cos x :=
+  congrFun Real.deriv_sin x
+
+@[local simp] private theorem deriv_exp_id (x : ℝ) : deriv exp x id = exp x :=
+  congrFun Real.deriv_exp x
+
+@[local simp] private theorem deriv_real_fun_pow (f : ℝ → ℝ) (x : ℝ)
+    (hf : DifferentiableAt ℝ f x id) (n : ℕ) :
+    deriv (fun y ↦ f y ^ n) x id = n * f x ^ (n - 1) * deriv f x id := by
+  simpa only [Pi.pow_def] using deriv_pow hf n
+
+attribute [local simp] Real.deriv_cos deriv_id deriv_const deriv_const_add_id deriv_const_sub_id
+  deriv_const_mul_id deriv_const_mul_field deriv_mul_const_field
+
+example (x : ℝ) : deriv (fun x => cos x + 2 * sin x) x id = -sin x + 2 * cos x := by
+  have h : DifferentiableAt ℝ (fun y ↦ (2 : ℝ) * sin y) x id := by fun_prop
+  simp [h]
 
 example (x : ℝ) :
-    deriv (fun x ↦ cos (sin x) * exp x) x = (cos (sin x) - sin (sin x) * cos x) * exp x := by
-  simp; ring
-
-example (x : ℝ) : deriv (HAdd.hAdd 3) x = 1 := by
-  simp
-
-example (x : ℝ) : deriv (HSub.hSub 3) x = -1 := by
-  simp
-
-example (x : ℝ) : deriv (HMul.hMul 3) x = 3 := by
-  simp
-
-example (x : ℝ) : deriv (HDiv.hDiv 3) x = -3 / x ^ 2 := by
-  simp
-
-example (x : ℝ) : deriv (HPow.hPow 3) x = log 3 * 3 ^ x := by
-  simp
-
-example {x : ℝ} : deriv (fun x => (3 + x) * 2) x = 2 := by
-  simp
-
-example {x : ℝ} : deriv (fun x => (3 - x) * 2) x = -2 := by
-  simp
-
-example {x : ℝ} : deriv (fun x => (3 * x) * 2) x = 6 := by
+    deriv (fun x ↦ cos (sin x) * exp x) x id = (cos (sin x) - sin (sin x) * cos x) * exp x := by
   simp
   ring
 
-example {x : ℝ} : deriv (fun x => (3 / x) * 2) x = -6 / x ^ 2 := by
+example (x : ℝ) : deriv (HAdd.hAdd (3 : ℝ)) x id = 1 := by
+  simp
+
+example (x : ℝ) : deriv (HSub.hSub (3 : ℝ)) x id = -1 := by
+  simp
+
+example (x : ℝ) : deriv (HMul.hMul (3 : ℝ)) x id = 3 := by
+  simp
+
+example (x : ℝˣ) :
+    deriv (fun y : ℝˣ ↦ 3 /ₚ y) x (fun y ↦ (y : ℝ)) = -3 /ₚ (x ^ 2) := by
+  simp
+
+example (x : ℝ) : deriv (HPow.hPow (3 : ℝ)) x id = log 3 * 3 ^ x := by
+  simp
+
+example {x : ℝ} : deriv (fun x => (3 + x) * 2) x id = 2 := by
+  simp
+
+example {x : ℝ} : deriv (fun x => (3 - x) * 2) x id = -2 := by
+  simp
+
+example {x : ℝ} : deriv (fun x => (3 * x) * 2) x id = 6 := by
   simp
   ring
 
-example {x : ℝ} : deriv (fun x => (3 ^ x : ℝ) * 2) x = 2 * Real.log 3 * 3 ^ x := by
+example (x : ℝˣ) :
+    deriv (fun y : ℝˣ ↦ (3 /ₚ y) * 2) x (fun y ↦ (y : ℝ)) = -6 /ₚ (x ^ 2) := by
+  have h := (((hasDerivAt_inv x).const_mul (3 : ℝ)).mul_const 2).deriv Units.isOpenEmbedding_val
+  simp only [divp, ← inv_pow, Units.val_pow_eq_pow_val, h]
+  ring
+
+example {x : ℝ} : deriv (fun x => (3 ^ x : ℝ) * 2) x id = 2 * Real.log 3 * 3 ^ x := by
   simp
   ring
 
@@ -49,11 +69,12 @@ example {x : ℝ} : deriv (fun x => (3 ^ x : ℝ) * 2) x = 2 * Real.log 3 * 3 ^ 
 `maxDischargeDepth`. -/
 
 example (x : ℝ) :
-    deriv (fun x ↦ sin (sin (sin x)) + sin x) x =
+    deriv (fun x ↦ sin (sin (sin x)) + sin x) x id =
     cos (sin (sin x)) * (cos (sin x) * cos x) + cos x := by
   simp (maxDischargeDepth := 3)
 
 example (x : ℝ) :
-    deriv (fun x ↦ sin (sin (sin x)) ^ 10 + sin x) x =
+    deriv (fun x ↦ sin (sin (sin x)) ^ 10 + sin x) x id =
     10 * sin (sin (sin x)) ^ 9 * (cos (sin (sin x)) * (cos (sin x) * cos x)) + cos x := by
-  simp (maxDischargeDepth := 4)
+  have h : DifferentiableAt ℝ (fun y ↦ sin (sin (sin y)) ^ (10 : ℕ)) x id := by fun_prop
+  simp (maxDischargeDepth := 4) [h]

@@ -191,10 +191,19 @@ example {a b : ℤ} (h : a + 1 = b) : a + 1 + 0 = b := by
   simp
   nlinarith
 
+private theorem isUnit_one_add_div {K : Type*} [Field K] {y z : K} (hz : 1 - z ≠ 0)
+    (h : z = y) : IsUnit (1 + Checked.div y (1 - z) hz.isUnit) := by
+  subst z
+  have hmul : (1 + Checked.div y (1 - y) hz.isUnit) * (1 - y) = 1 := by
+    rw [add_mul, div_mul_cancel₀, one_mul]
+    ring
+  exact isUnit_of_mul_isUnit_left (hmul.symm ▸ isUnit_one)
+
 -- Test that `field_simp` is accepted as a follower of `simp`.
 #guard_msgs in
 example {K : Type*} [Field K] (x y z : K) (hy : 1 - y ≠ 0) (h : z = y) :
-    x / (1 - y) / (1 + y / (1 - z)) = x := by
+    Checked.div (x / (1 - y)) (1 + Checked.div y (1 - z) (h.symm ▸ hy).isUnit)
+      (isUnit_one_add_div (h.symm ▸ hy) h) = x := by
   simp [h]
   field_simp
   simp
@@ -229,7 +238,8 @@ example {a b : ℝ≥0∞} (ha : a = 0) (hb : b = a) : a + b + 3 < ∞ := by
 -- `field_simp` is a rigidifier
 #guard_msgs in
 example {K : Type*} [Field K] (x y z : K) (hy : 1 - y ≠ 0) (h : x = z) (h' : (1 - y + y) = 1) :
-    x / (1 - y) / (1 + y / (1 - y)) = z := by
+    Checked.div (x / (1 - y)) (1 + Checked.div y (1 - y) hy.isUnit)
+      (isUnit_one_add_div hy rfl) = z := by
   field_simp
   rw [h', one_mul, h]
 

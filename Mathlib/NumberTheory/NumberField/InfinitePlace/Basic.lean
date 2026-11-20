@@ -576,7 +576,7 @@ variable {K : Type*} [Field K] {v w : InfinitePlace K}
 
 set_option backward.isDefEq.respectTransparency.types false in
 @[simp]
-protected theorem map_ratCast (v : InfinitePlace K) (x : ℚ) : v x = ‖x‖ := by
+protected theorem map_ratCast [CharZero K] (v : InfinitePlace K) (x : ℚ) : v x = ‖x‖ := by
   rcases v with ⟨_, _⟩
   aesop (add simp [coe_apply])
 

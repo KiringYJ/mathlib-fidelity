@@ -7,6 +7,7 @@ module
 
 public import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL1
 public import Mathlib.MeasureTheory.Function.LpSpace.InfiniteSum
+public import Mathlib.MeasureTheory.Integral.Average
 public import Mathlib.Order.Filter.Germ.Representative
 public import Mathlib.Tactic.CrossRefAttribute
 
@@ -356,15 +357,16 @@ theorem isCondExp_const (c : E) : IsCondExp m μ (fun _ ↦ c) fun _ ↦ c :=
 measure is the constant function equal to its mean. For an infinite measure it exists only for
 functions with integral zero. -/
 theorem isCondExp_bot [IsFiniteMeasure μ] (hf : Integrable f μ) :
-    IsCondExp ⊥ μ f fun _ ↦ (μ.real Set.univ)⁻¹ • ∫ x, f x ∂μ := by
+    IsCondExp ⊥ μ f fun _ ↦ ⨍ x, f x ∂μ := by
   refine ⟨aestronglyMeasurable_const, fun _ _ _ ↦ integrableOn_const, fun s hs _ ↦ ?_⟩
   rcases SigmaAlgebra.mem_bot_iff.mp hs with rfl | rfl
   · simp
-  rw [setIntegral_univ, setIntegral_univ, integral_const, smul_smul]
+  rw [setIntegral_univ, setIntegral_univ, integral_const]
   rcases eq_zero_or_neZero μ with rfl | hμ
-  · simp
-  rw [mul_inv_cancel₀ (by simp [measureReal_def, ENNReal.toReal_eq_zero_iff,
-    measure_ne_top μ Set.univ, NeZero.ne μ]), one_smul]
+  · simp [average]
+  have hreal : μ.real Set.univ ≠ 0 := by
+    simp [measureReal_def, ENNReal.toReal_eq_zero_iff, measure_ne_top μ Set.univ, NeZero.ne μ]
+  rw [average_eq (hμ := hreal.isUnit), smul_smul, mul_inv_cancel₀, one_smul]
 
 omit [NormedSpace ℝ E] [CompleteSpace E] in
 /-- An integrable, almost everywhere `m`-strongly measurable function vanishes almost everywhere
@@ -668,9 +670,9 @@ theorem smul [NormedSpace 𝕜 E] [SMulCommClass ℝ 𝕜 E] (h : HasUniqueCondE
   exists_isCondExp := let ⟨g, hg⟩ := h.exists_isCondExp; ⟨c • g, hg.smul c⟩
   ae_eq_of_isCondExp g₁ g₂ h₁ h₂ := by
     have h_inv {g : α → E} (hg : IsCondExp m μ (c • f) g) : IsCondExp m μ f (c⁻¹ • g) := by
-      simpa [smul_smul, inv_mul_cancel₀ hc] using hg.smul c⁻¹
+      simpa only [smul_smul, inv_mul_cancel₀ (ha := hc.isUnit), one_smul] using hg.smul c⁻¹
     filter_upwards [h.ae_eq_of_isCondExp (h_inv h₁) (h_inv h₂)] with x hx
-    exact smul_right_injective E (inv_ne_zero hc) hx
+    exact smul_right_injective E (inv_ne_zero (ha := hc.isUnit)) hx
 
 end HasUniqueCondExp
 

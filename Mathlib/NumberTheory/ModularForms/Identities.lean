@@ -46,7 +46,8 @@ theorem T_zpow_width_invariant (N : ℕ) (k n : ℤ) (f : SlashInvariantForm (Ga
 
 set_option backward.isDefEq.respectTransparency.types false in
 lemma slash_S_apply (f : ℍ → ℂ) (k : ℤ) (z : ℍ) :
-    (f ∣[k] ModularGroup.S) z = f (.mk _ z.im_inv_neg_coe_pos) * z ^ (-k) := by
+    (f ∣[k] ModularGroup.S) z = f (.mk _ z.im_inv_neg_coe_pos) *
+      Checked.zpow (z : ℂ) (-k) (fun _ ↦ z.ne_zero.isUnit) := by
   rw [SL_slash_apply, modular_S_smul]
   simp [ModularGroup.S, denom]
 

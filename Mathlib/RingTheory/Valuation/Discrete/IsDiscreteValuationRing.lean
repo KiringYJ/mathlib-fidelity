@@ -57,7 +57,10 @@ instance isRankOneDiscrete :
     · apply mem_valueGroup
       use π
       simp [v]
-    · simpa [hπ] using not_eq_of_beq_eq_false rfl
+    · intro h
+      have hval : v π = 1 := congrArg Units.val h
+      rw [hπ, ← WithZero.coe_one, WithZero.coe_inj, ofAdd_eq_one] at hval
+      exact Int.neg_ne_zero.mpr one_ne_zero hval
   infer_instance
 
 variable {A K}
@@ -75,33 +78,24 @@ theorem exists_lift_of_le_one {x : K} (H : ((maximalIdeal A).valuation K) x ≤ 
   · rw [← h_frac] at H
     obtain ⟨n, u, rfl⟩ := eq_unit_mul_pow_irreducible ha hπ
     obtain ⟨m, w, rfl⟩ := eq_unit_mul_pow_irreducible (nonZeroDivisors.ne_zero hb) hπ
-    replace hb := (mul_mem_nonZeroDivisors.mp hb).2
-    rw [mul_comm (w : A) _, map_mul _ (u : A) _, map_mul _ _ (w : A), div_eq_mul_inv, mul_assoc,
-      Valuation.map_mul, Integers.one_of_isUnit' u.isUnit (valuation_le_one _), one_mul,
-      mul_inv, ← mul_assoc, Valuation.map_mul, map_mul, map_inv₀, map_inv₀,
-      Integers.one_of_isUnit' w.isUnit (valuation_le_one _), inv_one, mul_one, ← div_eq_mul_inv,
-      ← map_div₀, ← IsFractionRing.mk'_mk_eq_div hb,
-      valuation_of_mk', map_pow, map_pow] at H
+    have hbK := IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors (K := K) hb
+    have hden := ((maximalIdeal A).valuation K).pos_iff.mpr hbK
+    rw [map_div₀, div_le_iff₀ hden, one_mul] at H
+    have hu := Integers.one_of_isUnit' u.isUnit (valuation_le_one (K := K) (maximalIdeal A))
+    have hw := Integers.one_of_isUnit' w.isUnit (valuation_le_one (K := K) (maximalIdeal A))
+    simp only [valuation_of_algebraMap, map_mul, map_pow] at H
+    rw [← valuation_of_algebraMap (K := K) _ (u : A),
+      ← valuation_of_algebraMap (K := K) _ (w : A), hu, hw, one_mul, one_mul] at H
     have h_mn : m ≤ n := by
       have v_π_lt_one := (intValuation_lt_one_iff_dvd (maximalIdeal A) π).mpr
           (dvd_of_eq ((irreducible_iff_uniformizer _).mp hπ))
-      have v_π_ne_zero : (maximalIdeal A).intValuation π ≠ 0 := intValuation_ne_zero _ _ hπ.ne_zero
-      zify
-      rw [← WithZero.coe_one, div_eq_mul_inv, ← zpow_natCast, ← zpow_natCast, ← ofAdd_zero,
-        ← zpow_neg, ← zpow_add₀ v_π_ne_zero, ← sub_eq_add_neg] at H
-      rwa [← sub_nonneg, ← zpow_le_one_iff_right_of_lt_one₀ (zero_lt_iff.mpr v_π_ne_zero)
-        v_π_lt_one]
+      have v_π_pos := zero_lt_iff.mpr ((maximalIdeal A).intValuation_ne_zero π hπ.ne_zero)
+      exact (pow_le_pow_iff_right_of_lt_one₀ v_π_pos v_π_lt_one).mp H
     use u * π ^ (n - m) * w.2
-    simp only [← h_frac, Units.inv_eq_val_inv, _root_.map_mul, _root_.map_pow, map_units_inv,
-      mul_assoc, mul_div_assoc ((algebraMap A _) ↑u) _ _]
+    rw [← h_frac, eq_div_iff, ← map_mul]
     congr 1
-    rw [div_eq_mul_inv, mul_inv, mul_comm ((algebraMap A _) ↑w)⁻¹ _, ←
-      mul_assoc _ _ ((algebraMap A _) ↑w)⁻¹]
-    congr
-    rw [pow_sub₀ _ _ h_mn]
-    apply IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors
-    rw [mem_nonZeroDivisors_iff_ne_zero]
-    exact hπ.ne_zero
+    rw [mul_assoc _ (w.2) _, ← mul_assoc (w.2) _, w.inv_val, one_mul,
+      mul_assoc, pow_sub_mul_pow π h_mn]
 
 lemma mker_valuation_eq_isUnitSubmonoid :
     MonoidHom.mker ((IsDiscreteValuationRing.maximalIdeal A).valuation K) =
@@ -152,14 +146,14 @@ noncomputable def equivValuationSubring :
 
 lemma intValuation_maximalIdeal (x : A) :
     (maximalIdeal A).intValuation x =
-      (ENat.recTopCoe 0 (WithZero.coe <| Multiplicative.ofAdd <| Nat.cast · ) (addVal A x))⁻¹ := by
+      ENat.recTopCoe 0 (fun n ↦ WithZero.exp (-(n : ℤ))) (addVal A x) := by
   by_cases hx : x = 0
   · simp [hx]
   obtain ⟨ϖ, hϖ⟩ := exists_irreducible A
   obtain ⟨n, u, rfl⟩ := eq_unit_mul_pow_irreducible hx hϖ
   have : (maximalIdeal A).intValuation ↑u = 1 := by simp [maximalIdeal]
   simp [(maximalIdeal A).intValuation_singleton hϖ.ne_zero
-    hϖ.maximalIdeal_eq, hϖ, this, ← WithZero.exp_eq_coe_ofAdd]
+    hϖ.maximalIdeal_eq, hϖ, this]
 
 end IsDiscreteValuationRing
 

@@ -71,17 +71,21 @@ theorem zero_rpow_def (y : ℝ) : (0 : ℝ≥0) ^ y = if y = 0 then 1 else 0 := 
 theorem rpow_one (x : ℝ≥0) : x ^ (1 : ℝ) = x :=
   NNReal.eq <| Real.rpow_one _
 
-lemma rpow_neg (x : ℝ≥0) (y : ℝ) : x ^ (-y) = (x ^ y)⁻¹ :=
-  NNReal.eq <| Real.rpow_neg x.2 _
+lemma rpow_neg (x : ℝ≥0) (y : ℝ) {hxy : IsUnit (x ^ y)} : x ^ (-y) = (x ^ y)⁻¹ := by
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_inv] using!
+    Real.rpow_neg x.2 y (hxy := hxy.map NNReal.toRealHom)
 
 @[simp, norm_cast]
 lemma rpow_natCast (x : ℝ≥0) (n : ℕ) : x ^ (n : ℝ) = x ^ n :=
-  NNReal.eq <| by simpa only [coe_rpow, coe_pow] using Real.rpow_natCast x n
+  NNReal.eq <| by simpa only [coe_rpow, NNReal.coe_pow] using Real.rpow_natCast x n
 
 @[simp, norm_cast]
-lemma rpow_intCast (x : ℝ≥0) (n : ℤ) : x ^ (n : ℝ) = x ^ n := by
-  cases n <;> simp only [Int.ofNat_eq_natCast, Int.cast_natCast, rpow_natCast, zpow_natCast,
-    Int.cast_negSucc, rpow_neg, zpow_negSucc]
+lemma rpow_intCast (x : ℝ≥0) (n : ℤ) {h : n < 0 → x ≠ 0} :
+    x ^ (n : ℝ) = Checked.zpow x n (fun hn => (h hn).isUnit) := by
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_zpow] using
+    Real.rpow_intCast x n (h := fun hn => NNReal.coe_ne_zero.mpr (h hn))
 
 @[simp]
 theorem one_rpow (x : ℝ) : (1 : ℝ≥0) ^ x = 1 :=
@@ -94,28 +98,46 @@ theorem rpow_add' (h : y + z ≠ 0) (x : ℝ≥0) : x ^ (y + z) = x ^ y * x ^ z 
   NNReal.eq <| Real.rpow_add' x.2 h
 
 lemma rpow_add_intCast (hx : x ≠ 0) (y : ℝ) (n : ℤ) : x ^ (y + n) = x ^ y * x ^ n := by
-  ext; exact Real.rpow_add_intCast (mod_cast hx) _ _
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_mul, NNReal.coe_zpow] using
+    Real.rpow_add_intCast (x := (x : ℝ)) (by simpa using hx) y n
 
 lemma rpow_add_natCast (hx : x ≠ 0) (y : ℝ) (n : ℕ) : x ^ (y + n) = x ^ y * x ^ n := by
   ext; exact Real.rpow_add_natCast (mod_cast hx) _ _
 
-lemma rpow_sub_intCast (hx : x ≠ 0) (y : ℝ) (n : ℕ) : x ^ (y - n) = x ^ y / x ^ n := by
-  ext; exact Real.rpow_sub_intCast (mod_cast hx) _ _
+lemma rpow_sub_intCast (hx : x ≠ 0) (y : ℝ) (n : ℤ) : x ^ (y - n) = x ^ y / x ^ n := by
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_div, NNReal.coe_zpow] using
+    Real.rpow_sub_intCast (x := (x : ℝ)) (by simpa using hx) y n
 
 lemma rpow_sub_natCast (hx : x ≠ 0) (y : ℝ) (n : ℕ) : x ^ (y - n) = x ^ y / x ^ n := by
-  ext; exact Real.rpow_sub_natCast (mod_cast hx) _ _
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_div, NNReal.coe_pow] using
+    Real.rpow_sub_natCast (x := (x : ℝ)) (by simpa using hx) y n
 
-lemma rpow_add_intCast' {n : ℤ} (h : y + n ≠ 0) (x : ℝ≥0) : x ^ (y + n) = x ^ y * x ^ n := by
-  ext; exact Real.rpow_add_intCast' (mod_cast x.2) h
+lemma rpow_add_intCast' {n : ℤ} (h : y + n ≠ 0) (x : ℝ≥0)
+    {hx : n < 0 → IsUnit x} : x ^ (y + n) = x ^ y * x ^ n := by
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_mul, NNReal.coe_zpow] using!
+    Real.rpow_add_intCast' x.2 h (hx₀ := fun hn => (hx hn).map NNReal.toRealHom)
 
 lemma rpow_add_natCast' {n : ℕ} (h : y + n ≠ 0) (x : ℝ≥0) : x ^ (y + n) = x ^ y * x ^ n := by
   ext; exact Real.rpow_add_natCast' (mod_cast x.2) h
 
-lemma rpow_sub_intCast' {n : ℤ} (h : y - n ≠ 0) (x : ℝ≥0) : x ^ (y - n) = x ^ y / x ^ n := by
-  ext; exact Real.rpow_sub_intCast' (mod_cast x.2) h
+lemma rpow_sub_intCast' {n : ℤ} (x : ℝ≥0) {hx : n < 0 → IsUnit x}
+    {hxn : IsUnit (x ^ n)} : x ^ (y - n) = x ^ y / x ^ n := by
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_div, NNReal.coe_zpow] using!
+    Real.rpow_sub_intCast' (y := y) (n := n) x.2
+      (hx₀ := fun hn => (hx hn).map NNReal.toRealHom)
+      (hxn := by simpa only [NNReal.coe_toRealHom, NNReal.coe_zpow] using! hxn.map NNReal.toRealHom)
 
-lemma rpow_sub_natCast' {n : ℕ} (h : y - n ≠ 0) (x : ℝ≥0) : x ^ (y - n) = x ^ y / x ^ n := by
-  ext; exact Real.rpow_sub_natCast' (mod_cast x.2) h
+lemma rpow_sub_natCast' {n : ℕ} (x : ℝ≥0) {hxn : IsUnit (x ^ n)} :
+    x ^ (y - n) = x ^ y / x ^ n := by
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_div, NNReal.coe_pow] using!
+    Real.rpow_sub_natCast' (y := y) (n := n) x.2
+      (hxn := by simpa only [NNReal.coe_toRealHom, NNReal.coe_pow] using! hxn.map NNReal.toRealHom)
 
 lemma rpow_add_one (hx : x ≠ 0) (y : ℝ) : x ^ (y + 1) = x ^ y * x := by
   simpa using rpow_add_natCast hx y 1
@@ -146,25 +168,32 @@ lemma rpow_natCast_mul (x : ℝ≥0) (n : ℕ) (z : ℝ) : x ^ (n * z) = (x ^ n)
 lemma rpow_mul_natCast (x : ℝ≥0) (y : ℝ) (n : ℕ) : x ^ (y * n) = (x ^ y) ^ n := by
   rw [rpow_mul, rpow_natCast]
 
-lemma rpow_intCast_mul (x : ℝ≥0) (n : ℤ) (z : ℝ) : x ^ (n * z) = (x ^ n) ^ z := by
-  rw [rpow_mul, rpow_intCast]
+lemma rpow_intCast_mul (x : ℝ≥0) (n : ℤ) (z : ℝ) {h : n < 0 → IsUnit x} :
+    x ^ (n * z) = (x ^ n) ^ z := by
+  rw [rpow_mul, rpow_intCast (h := fun hn => (h hn).ne_zero)]
 
-lemma rpow_mul_intCast (x : ℝ≥0) (y : ℝ) (n : ℤ) : x ^ (y * n) = (x ^ y) ^ n := by
-  rw [rpow_mul, rpow_intCast]
+lemma rpow_mul_intCast (x : ℝ≥0) (y : ℝ) (n : ℤ) {h : n < 0 → IsUnit (x ^ y)} :
+    x ^ (y * n) = (x ^ y) ^ n := by
+  rw [rpow_mul, rpow_intCast (h := fun hn => (h hn).ne_zero)]
 
-theorem rpow_neg_one (x : ℝ≥0) : x ^ (-1 : ℝ) = x⁻¹ := by simp [rpow_neg]
+theorem rpow_neg_one (x : ℝ≥0) {hx : IsUnit x} : x ^ (-1 : ℝ) = x⁻¹ := by
+  simpa using rpow_neg x 1 (hxy := by simpa using hx)
 
-theorem rpow_sub {x : ℝ≥0} (hx : x ≠ 0) (y z : ℝ) : x ^ (y - z) = x ^ y / x ^ z :=
-  NNReal.eq <| Real.rpow_sub ((NNReal.coe_pos.trans pos_iff_ne_zero).mpr hx) y z
+theorem rpow_sub {x : ℝ≥0} (hx : x ≠ 0) (y z : ℝ) : x ^ (y - z) = x ^ y / x ^ z := by
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_div] using
+    Real.rpow_sub ((NNReal.coe_pos.trans pos_iff_ne_zero).mpr hx) y z
 
-theorem rpow_sub' (h : y - z ≠ 0) (x : ℝ≥0) : x ^ (y - z) = x ^ y / x ^ z :=
-  NNReal.eq <| Real.rpow_sub' x.2 h
+theorem rpow_sub' (x : ℝ≥0) {hxz : IsUnit (x ^ z)} : x ^ (y - z) = x ^ y / x ^ z := by
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_div] using! Real.rpow_sub' x.2 (y := y) (z := z)
+    (hxz := hxz.map NNReal.toRealHom)
 
-lemma rpow_sub_one' (h : y - 1 ≠ 0) (x : ℝ≥0) : x ^ (y - 1) = x ^ y / x := by
-  rw [rpow_sub' h, rpow_one]
+lemma rpow_sub_one' (x : ℝ≥0) {hx : IsUnit x} : x ^ (y - 1) = x ^ y / x := by
+  simpa only [rpow_one] using rpow_sub' x (y := y) (z := 1) (hxz := by simpa using hx)
 
-lemma rpow_one_sub' (h : 1 - y ≠ 0) (x : ℝ≥0) : x ^ (1 - y) = x / x ^ y := by
-  rw [rpow_sub' h, rpow_one]
+lemma rpow_one_sub' (x : ℝ≥0) {hxy : IsUnit (x ^ y)} : x ^ (1 - y) = x / x ^ y := by
+  rw [rpow_sub', rpow_one]
 
 theorem rpow_inv_rpow_self {y : ℝ} (hy : y ≠ 0) (x : ℝ≥0) : (x ^ y) ^ (1 / y) = x := by
   rw [← rpow_mul]
@@ -176,11 +205,14 @@ theorem rpow_self_rpow_inv {y : ℝ} (hy : y ≠ 0) (x : ℝ≥0) : (x ^ (1 / y)
   field_simp
   simp
 
-theorem inv_rpow (x : ℝ≥0) (y : ℝ) : x⁻¹ ^ y = (x ^ y)⁻¹ :=
-  NNReal.eq <| Real.inv_rpow x.2 y
+theorem inv_rpow (x : ℝ≥0) (y : ℝ) {hx : IsUnit x} : x⁻¹ ^ y = (x ^ y)⁻¹ := by
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_inv] using! Real.inv_rpow x.2 y (hx₀ := hx.map NNReal.toRealHom)
 
-theorem div_rpow (x y : ℝ≥0) (z : ℝ) : (x / y) ^ z = x ^ z / y ^ z :=
-  NNReal.eq <| Real.div_rpow x.2 y.2 z
+theorem div_rpow (x y : ℝ≥0) (z : ℝ) {hy : IsUnit y} : (x / y) ^ z = x ^ z / y ^ z := by
+  apply NNReal.eq
+  simpa only [coe_rpow, NNReal.coe_div] using!
+    Real.div_rpow x.2 y.2 z (hy₀ := hy.map NNReal.toRealHom)
 
 theorem sqrt_eq_rpow (x : ℝ≥0) : sqrt x = x ^ (1 / (2 : ℝ)) := by
   refine NNReal.eq ?_
@@ -275,10 +307,10 @@ theorem rpow_le_rpow_iff {x y : ℝ≥0} {z : ℝ} (hz : 0 < z) : x ^ z ≤ y ^ 
   Real.rpow_le_rpow_iff x.2 y.2 hz
 
 theorem le_rpow_inv_iff {x y : ℝ≥0} {z : ℝ} (hz : 0 < z) : x ≤ y ^ z⁻¹ ↔ x ^ z ≤ y := by
-  rw [← rpow_le_rpow_iff hz, ← one_div, rpow_self_rpow_inv hz.ne']
+  rw [← rpow_le_rpow_iff hz, ← one_div₀, rpow_self_rpow_inv hz.ne']
 
 theorem rpow_inv_le_iff {x y : ℝ≥0} {z : ℝ} (hz : 0 < z) : x ^ z⁻¹ ≤ y ↔ x ≤ y ^ z := by
-  rw [← rpow_le_rpow_iff hz, ← one_div, rpow_self_rpow_inv hz.ne']
+  rw [← rpow_le_rpow_iff hz, ← one_div₀, rpow_self_rpow_inv hz.ne']
 
 theorem lt_rpow_inv_iff {x y : ℝ≥0} {z : ℝ} (hz : 0 < z) : x < y ^ z⁻¹ ↔ x ^ z < y := by
   simp only [← not_le, rpow_inv_le_iff hz]
@@ -351,7 +383,8 @@ theorem rpow_pos {p : ℝ} {x : ℝ≥0} (hx_pos : 0 < x) : 0 < x ^ p := by
   rcases lt_trichotomy (0 : ℝ) p with (hp_pos | rfl | hp_neg)
   · exact rpow_pos_of_nonneg hp_pos
   · simp only [zero_lt_one, rpow_zero]
-  · rw [← neg_neg p, rpow_neg, inv_pos]
+  · have hu : IsUnit (x ^ (-p)) := (rpow_pos_of_nonneg (neg_pos.mpr hp_neg)).ne'.isUnit
+    rw [← neg_neg p, rpow_neg x (-p) (hxy := hu), inv_pos]
     exact rpow_pos_of_nonneg (neg_pos.mpr hp_neg)
 
 theorem rpow_lt_one {x : ℝ≥0} {z : ℝ} (hx1 : x < 1) (hz : 0 < z) : x ^ z < 1 :=
@@ -394,7 +427,7 @@ theorem rpow_eq_rpow_iff {x y : ℝ≥0} {z : ℝ} (hz : z ≠ 0) : x ^ z = y ^ 
   (rpow_left_injective hz).eq_iff
 
 theorem rpow_left_surjective {x : ℝ} (hx : x ≠ 0) : Function.Surjective fun y : ℝ≥0 => y ^ x :=
-  fun y => ⟨y ^ x⁻¹, by simp_rw [← rpow_mul, inv_mul_cancel₀ hx, rpow_one]⟩
+  fun y => ⟨y ^ x⁻¹, by simp_rw [← rpow_mul, inv_mul_cancel₀, rpow_one]⟩
 
 theorem rpow_left_bijective {x : ℝ} (hx : x ≠ 0) : Function.Bijective fun y : ℝ≥0 => y ^ x :=
   ⟨rpow_left_injective hx, rpow_left_surjective hx⟩
@@ -419,24 +452,17 @@ lemma rpow_eq_left_iff {y : ℝ} : x ^ y = x ↔ x = 1 ∨ y = 1 ∨ (x = 0 ∧ 
   simpa [or_left_comm] using rpow_eq_rpow_right_iff (x := x) (y := y) (z := 1)
 
 theorem eq_rpow_inv_iff {x y : ℝ≥0} {z : ℝ} (hz : z ≠ 0) : x = y ^ z⁻¹ ↔ x ^ z = y := by
-  rw [← rpow_eq_rpow_iff hz, ← one_div, rpow_self_rpow_inv hz]
+  rw [← rpow_eq_rpow_iff hz, ← one_div₀, rpow_self_rpow_inv hz]
 
 theorem rpow_inv_eq_iff {x y : ℝ≥0} {z : ℝ} (hz : z ≠ 0) : x ^ z⁻¹ = y ↔ x = y ^ z := by
-  rw [← rpow_eq_rpow_iff hz, ← one_div, rpow_self_rpow_inv hz]
+  rw [← rpow_eq_rpow_iff hz, ← one_div₀, rpow_self_rpow_inv hz]
 
 @[simp] lemma rpow_rpow_inv {y : ℝ} (hy : y ≠ 0) (x : ℝ≥0) : (x ^ y) ^ y⁻¹ = x := by
-  rw [← rpow_mul, mul_inv_cancel₀ hy, rpow_one]
+  rw [← rpow_mul, mul_inv_cancel₀, rpow_one]
 
 @[simp] lemma rpow_inv_rpow {y : ℝ} (hy : y ≠ 0) (x : ℝ≥0) : (x ^ y⁻¹) ^ y = x := by
-  rw [← rpow_mul, inv_mul_cancel₀ hy, rpow_one]
+  rw [← rpow_mul, inv_mul_cancel₀, rpow_one]
 
-@[simp]
-lemma rpow_rpow_inv_eq_iff {y : ℝ} : (x ^ y) ^ y⁻¹ = x ↔ y ≠ 0 ∨ x = 1 := by
-  grind only [rpow_rpow_inv, rpow_zero]
-
-@[simp]
-lemma rpow_inv_rpow_eq_iff {y : ℝ} : (x ^ y⁻¹) ^ y = x ↔ y ≠ 0 ∨ x = 1 := by
-  grind [rpow_rpow_inv_eq_iff]
 
 theorem pow_rpow_inv_natCast (x : ℝ≥0) {n : ℕ} (hn : n ≠ 0) : (x ^ n) ^ (n⁻¹ : ℝ) = x := by
   rw [← NNReal.coe_inj, coe_rpow, NNReal.coe_pow]
@@ -465,11 +491,11 @@ def orderIsoRpow (y : ℝ) (hy : 0 < y) : ℝ≥0 ≃o ℝ≥0 :=
   (strictMono_rpow_of_pos hy).orderIsoOfRightInverse (fun x => x ^ y) (fun x => x ^ (1 / y))
     fun x => by
       dsimp
-      rw [← rpow_mul, one_div_mul_cancel hy.ne.symm, rpow_one]
+      rw [← rpow_mul, one_div_mul_cancel, rpow_one]
 
 theorem orderIsoRpow_symm_eq (y : ℝ) (hy : 0 < y) :
     (orderIsoRpow y hy).symm = orderIsoRpow (1 / y) (one_div_pos.2 hy) := by
-  simp only [orderIsoRpow, one_div_one_div]; rfl
+  simp only [orderIsoRpow, one_div_one_div₀]; rfl
 
 theorem _root_.Real.nnnorm_rpow_of_nonneg {x y : ℝ} (hx : 0 ≤ x) : ‖x ^ y‖₊ = ‖x‖₊ ^ y := by
   ext; exact Real.norm_rpow_of_nonneg hx
@@ -659,7 +685,11 @@ theorem rpow_neg (x : ℝ≥0∞) (y : ℝ) : x ^ (-y) = (x ^ y)⁻¹ := by
     · rcases lt_trichotomy y 0 with (H | H | H) <;>
         simp [h, zero_rpow_of_pos, zero_rpow_of_neg, H, neg_pos.mpr]
     · have A : x ^ y ≠ 0 := by simp [h]
-      simp [← coe_rpow_of_ne_zero h, ← coe_inv A, NNReal.rpow_neg]
+      calc
+        (x : ℝ≥0∞) ^ (-y) = ↑(x ^ (-y)) := (coe_rpow_of_ne_zero h (-y)).symm
+        _ = ↑((x ^ y)⁻¹) := congrArg ((↑) : ℝ≥0 → ℝ≥0∞)
+          (NNReal.rpow_neg x y (hxy := A.isUnit))
+        _ = ((x : ℝ≥0∞) ^ y)⁻¹ := by rw [coe_inv, coe_rpow_of_ne_zero h]
 
 theorem rpow_sub {x : ℝ≥0∞} (y z : ℝ) (hx : x ≠ 0) (h'x : x ≠ ⊤) : x ^ (y - z) = x ^ y / x ^ z := by
   rw [sub_eq_add_neg, rpow_add _ _ hx h'x, rpow_neg, div_eq_mul_inv]
@@ -788,11 +818,11 @@ def orderIsoRpow (y : ℝ) (hy : 0 < y) : ℝ≥0∞ ≃o ℝ≥0∞ :=
   (strictMono_rpow_of_pos hy).orderIsoOfRightInverse (fun x => x ^ y) (fun x => x ^ (1 / y))
     fun x => by
     dsimp
-    rw [← rpow_mul, one_div_mul_cancel hy.ne.symm, rpow_one]
+    rw [← rpow_mul, one_div_mul_cancel, rpow_one]
 
 theorem orderIsoRpow_symm_apply (y : ℝ) (hy : 0 < y) :
     (orderIsoRpow y hy).symm = orderIsoRpow (1 / y) (one_div_pos.2 hy) := by
-  simp only [orderIsoRpow, one_div_one_div]
+  simp only [orderIsoRpow, one_div_one_div₀]
   rfl
 
 @[gcongr] theorem rpow_le_rpow {x y : ℝ≥0∞} {z : ℝ} (h₁ : x ≤ y) (h₂ : 0 ≤ z) : x ^ z ≤ y ^ z :=
@@ -814,7 +844,7 @@ lemma max_rpow {x y : ℝ≥0∞} {p : ℝ} (hp : 0 ≤ p) : max x y ^ p = max (
 
 theorem le_rpow_inv_iff {x y : ℝ≥0∞} {z : ℝ} (hz : 0 < z) : x ≤ y ^ z⁻¹ ↔ x ^ z ≤ y := by
   nth_rw 1 [← rpow_one x]
-  nth_rw 1 [← @mul_inv_cancel₀ _ _ z hz.ne']
+  nth_rw 1 [← mul_inv_cancel₀ (ha := hz.ne'.isUnit)]
   rw [rpow_mul, @rpow_le_rpow_iff _ _ z⁻¹ (by simp [hz])]
 
 theorem rpow_inv_lt_iff {x y : ℝ≥0∞} {z : ℝ} (hz : 0 < z) : x ^ z⁻¹ < y ↔ x < y ^ z := by
@@ -822,12 +852,12 @@ theorem rpow_inv_lt_iff {x y : ℝ≥0∞} {z : ℝ} (hz : 0 < z) : x ^ z⁻¹ <
 
 theorem lt_rpow_inv_iff {x y : ℝ≥0∞} {z : ℝ} (hz : 0 < z) : x < y ^ z⁻¹ ↔ x ^ z < y := by
   nth_rw 1 [← rpow_one x]
-  nth_rw 1 [← @mul_inv_cancel₀ _ _ z (ne_of_lt hz).symm]
+  nth_rw 1 [← mul_inv_cancel₀ (ha := hz.ne'.isUnit)]
   rw [rpow_mul, @rpow_lt_rpow_iff _ _ z⁻¹ (by simp [hz])]
 
 theorem rpow_inv_le_iff {x y : ℝ≥0∞} {z : ℝ} (hz : 0 < z) : x ^ z⁻¹ ≤ y ↔ x ≤ y ^ z := by
   nth_rw 1 [← ENNReal.rpow_one y]
-  nth_rw 1 [← @mul_inv_cancel₀ _ _ z hz.ne.symm]
+  nth_rw 1 [← mul_inv_cancel₀ (ha := hz.ne'.isUnit)]
   rw [ENNReal.rpow_mul, ENNReal.rpow_le_rpow_iff (inv_pos.2 hz)]
 
 @[gcongr]
@@ -972,24 +1002,17 @@ theorem ofReal_rpow_of_nonneg {x p : ℝ} (hx_nonneg : 0 ≤ x) (hp_nonneg : 0 �
   exact ofReal_rpow_of_pos (hx_nonneg.lt_of_ne hx0.symm)
 
 @[simp] lemma rpow_rpow_inv {y : ℝ} (hy : y ≠ 0) (x : ℝ≥0∞) : (x ^ y) ^ y⁻¹ = x := by
-  rw [← rpow_mul, mul_inv_cancel₀ hy, rpow_one]
+  rw [← rpow_mul, mul_inv_cancel₀, rpow_one]
 
 @[simp] lemma rpow_inv_rpow {y : ℝ} (hy : y ≠ 0) (x : ℝ≥0∞) : (x ^ y⁻¹) ^ y = x := by
-  rw [← rpow_mul, inv_mul_cancel₀ hy, rpow_one]
+  rw [← rpow_mul, inv_mul_cancel₀, rpow_one]
 
-@[simp]
-lemma rpow_rpow_inv_eq_iff {x : ℝ≥0∞} {y : ℝ} : (x ^ y) ^ y⁻¹ = x ↔ y ≠ 0 ∨ x = 1 := by
-  grind [rpow_zero, rpow_rpow_inv]
-
-@[simp]
-lemma rpow_inv_rpow_eq_iff {x : ℝ≥0∞} {y : ℝ} : (x ^ y⁻¹) ^ y = x ↔ y ≠ 0 ∨ x = 1 := by
-  grind [rpow_rpow_inv_eq_iff]
 
 lemma pow_rpow_inv_natCast {n : ℕ} (hn : n ≠ 0) (x : ℝ≥0∞) : (x ^ n) ^ (n⁻¹ : ℝ) = x := by
-  rw [← rpow_natCast, ← rpow_mul, mul_inv_cancel₀ (by positivity), rpow_one]
+  rw [← rpow_natCast, ← rpow_mul, mul_inv_cancel₀, rpow_one]
 
 lemma rpow_inv_natCast_pow {n : ℕ} (hn : n ≠ 0) (x : ℝ≥0∞) : (x ^ (n⁻¹ : ℝ)) ^ n = x := by
-  rw [← rpow_natCast, ← rpow_mul, inv_mul_cancel₀ (by positivity), rpow_one]
+  rw [← rpow_natCast, ← rpow_mul, inv_mul_cancel₀, rpow_one]
 
 lemma rpow_natCast_mul (x : ℝ≥0∞) (n : ℕ) (z : ℝ) : x ^ (n * z) = (x ^ n) ^ z := by
   rw [rpow_mul, rpow_natCast]
@@ -1191,9 +1214,12 @@ theorem IsNat.nnreal_rpow_eq_nnreal_pow {b : ℝ} {n : ℕ} (h : IsNat b n) (a :
     a ^ b = a ^ n := by
   rw [h.1, NNReal.rpow_natCast]
 
-theorem IsInt.nnreal_rpow_eq_inv_nnreal_pow {b : ℝ} {n : ℕ} (h : IsInt b (.negOfNat n)) (a : ℝ≥0) :
-    a ^ b = (a ^ n)⁻¹ := by
-  rw [h.1, NNReal.rpow_intCast, Int.negOfNat_eq, zpow_neg, Int.ofNat_eq_natCast, zpow_natCast]
+theorem IsInt.nnreal_rpow_eq_inv_nnreal_pow {b : ℝ} {n : ℕ} (h : IsInt b (.negOfNat n))
+    (a : ℝ≥0) {ha : IsUnit (a ^ n)} : a ^ b = (a ^ n)⁻¹ := by
+  apply NNReal.eq
+  simpa only [NNReal.coe_rpow, NNReal.coe_inv, NNReal.coe_pow] using
+    IsInt.rpow_eq_inv_pow h (a : ℝ)
+      (ha := by simpa only [NNReal.coe_toRealHom, NNReal.coe_pow] using ha.map NNReal.toRealHom)
 
 theorem IsNat.nnreal_rpow_isNNRat {a : ℝ≥0} {b : ℝ} {m n d r : ℕ} (ha : IsNat a m)
     (hb : IsNNRat b n d) (k : ℕ) (hr : r ^ d = k) (l : ℕ) (hm : m ^ n = l) (hkl : k = l) :
@@ -1201,21 +1227,26 @@ theorem IsNat.nnreal_rpow_isNNRat {a : ℝ≥0} {b : ℝ} {m n d r : ℕ} (ha : 
   rcases ha with ⟨rfl⟩
   constructor
   have : d ≠ 0 := mod_cast hb.den_nz
-  rw [hb.to_eq rfl rfl, div_eq_mul_inv, NNReal.rpow_natCast_mul, ← Nat.cast_pow, hm, ← hkl, ← hr,
+  rw [hb.to_eq rfl rfl, div_eq_mul_inv₀, NNReal.rpow_natCast_mul, ← Nat.cast_pow, hm, ← hkl, ← hr,
     Nat.cast_pow, NNReal.pow_rpow_inv_natCast]
   positivity
 
 theorem IsNNRat.nnreal_rpow_isNNRat (a : ℝ≥0) (b : ℝ) (na da : ℕ) (ha : IsNNRat a na da)
     (nr dr : ℕ) (hnum : IsNat ((na : ℝ≥0) ^ b) nr) (hden : IsNat ((da : ℝ≥0) ^ b) dr) :
     IsNNRat (a ^ b) nr dr := by
+  have hdr : (dr : ℝ≥0) ≠ 0 := by simp [← hden.1, ha.den_nz]
   suffices IsNNRat (nr / dr : ℝ≥0) nr dr by
     simpa [ha.to_eq, NNReal.div_rpow, hnum.1, hden.1]
-  apply IsNNRat.of_raw
-  simp [← hden.1, ha.den_nz]
+  exact IsNNRat.of_raw ℝ≥0 nr dr hdr
 
 theorem nnreal_rpow_isRat_eq_inv_nnreal_rpow (a : ℝ≥0) (b : ℝ) (n d : ℕ)
-    (hb : IsRat b (Int.negOfNat n) d) : a ^ b = (a⁻¹) ^ (n / d : ℝ) := by
-  rw [NNReal.inv_rpow, ← NNReal.rpow_neg, hb.neg_to_eq rfl rfl]
+    (hb : IsRat b (Int.negOfNat n) d) {ha : IsUnit a} :
+    a ^ b = (a⁻¹) ^ Checked.div (n : ℝ) (d : ℝ) hb.den_nz.isUnit := by
+  rw [NNReal.inv_rpow, ← NNReal.rpow_neg]
+  exact congrArg (fun t : ℝ => a ^ t) (hb.neg_to_eq rfl rfl)
+
+theorem isNat_nnreal_rpow_zero {a : ℝ≥0} {b : ℝ} (ha : a = 0) (hb : b ≠ 0) :
+    IsNat (a ^ b) 0 := ⟨by simp [ha, NNReal.zero_rpow hb]⟩
 
 open Lean
 
@@ -1254,9 +1285,17 @@ meta def evalNNRealRPow : NormNumExt where eval {u αR} e := do
     | .isNat sβ nb pb =>
       assumeInstancesCommute
       return .eqTrans q(IsNat.nnreal_rpow_eq_nnreal_pow $pb _) (← derive q($a ^ $nb))
-    | .isNegNat sβ nb pb =>
+    | .isNegNat sβ nb pb => do
       assumeInstancesCommute
-      return .eqTrans q(IsInt.nnreal_rpow_eq_inv_nnreal_pow $pb _) (← derive q(($a ^ $nb)⁻¹))
+      match ← deriveBool q($a = 0) with
+      | ⟨true, ha⟩ =>
+        let ⟨true, hb⟩ ← deriveBool q($b ≠ 0) | failure
+        return .isNat q(inferInstance) q(nat_lit 0) q(isNat_nnreal_rpow_zero $ha $hb)
+      | ⟨false, _⟩ =>
+        let ⟨true, hp⟩ ← deriveBool q($a ^ $nb ≠ 0) | failure
+        let hu : Q(IsUnit ($a ^ $nb)) := q(($hp).isUnit)
+        return .eqTrans q(IsInt.nnreal_rpow_eq_inv_nnreal_pow $pb $a (ha := $hu))
+          (← derive q(Checked.inv ($a ^ $nb) $hu))
     | .isNNRat _ qb nb db pb => do
       assumeInstancesCommute
       match ← derive a with
@@ -1269,13 +1308,21 @@ meta def evalNNRealRPow : NormNumExt where eval {u αR} e := do
           proveIsNatNNRealRPowIsNNRat q(Nat.rawCast $na) na q(IsNat.of_raw _ _) b nb db pb
         let ⟨rden, erden, pden⟩ ←
           proveIsNatNNRealRPowIsNNRat q(Nat.rawCast $da) da q(IsNat.of_raw _ _) b nb db pb
-        return .isNNRat q(inferInstance) (rnum / rden) ernum erden
+        if hden : rden = 0 then failure else
+        return .isNNRat q(inferInstance) (Rat.normalize rnum rden hden) ernum erden
           q(IsNNRat.nnreal_rpow_isNNRat $a $b $na $da $pa $ernum $erden $pnum $pden)
       | _ => failure
     | .isNegNNRat _ qb nb db pb => do
-      let r ← derive q(($a⁻¹) ^ ($nb / $db : ℝ))
       assumeInstancesCommute
-      return .eqTrans q(nnreal_rpow_isRat_eq_inv_nnreal_rpow $a $b $nb $db $pb) r
+      match ← deriveBool q($a = 0) with
+      | ⟨true, ha⟩ =>
+        let ⟨true, hb⟩ ← deriveBool q($b ≠ 0) | failure
+        return .isNat q(inferInstance) q(nat_lit 0) q(isNat_nnreal_rpow_zero $ha $hb)
+      | ⟨false, ha⟩ =>
+        let hu : Q(IsUnit $a) := q((show $a ≠ 0 from $ha).isUnit)
+        let hd : Q(IsUnit ($db : ℝ)) := q((IsRat.den_nz $pb).isUnit)
+        let r ← derive q((Checked.inv $a $hu) ^ Checked.div ($nb : ℝ) ($db : ℝ) $hd)
+        return .eqTrans q(nnreal_rpow_isRat_eq_inv_nnreal_rpow $a $b $nb $db $pb (ha := $hu)) r
     | _ => failure
   | _ => failure
 

@@ -166,7 +166,7 @@ def toDual : E ≃ₗᵢ⋆[𝕜] StrongDual 𝕜 E :=
           sub_eq_zero.mp h₃.symm
         calc
           ⟪(ℓ z† / ⟪z, z⟫) • z, x⟫ = ℓ z / ⟪z, z⟫ * ⟪z, x⟫ := by simp [inner_smul_left]
-          _ = ℓ z * ⟪z, x⟫ / ⟪z, z⟫ := by rw [← div_mul_eq_mul_div]
+          _ = ℓ z * ⟪z, x⟫ / ⟪z, z⟫ := by rw [div_mul_eq_mul_div₀]
           _ = ℓ x * ⟪z, z⟫ / ⟪z, z⟫ := by rw [h₂]
           _ = ℓ x := by have : ⟪z, z⟫ ≠ 0 := inner_self_ne_zero.mpr z_ne_0; field)
 

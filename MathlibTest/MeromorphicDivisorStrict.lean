@@ -42,9 +42,9 @@ but is expected to have type
   Function.locallyFinsuppWithin univ ℤ
 -/
 #guard_msgs in
-noncomputable example (f : ℂ → ℂ) (hf : MeromorphicOn f univ) :
+noncomputable example (f : ℂ → ℂ) (hf : MeromorphicOn f (univ : Set ℂ)) :
     Function.locallyFinsuppWithin (univ : Set ℂ) ℤ :=
-  divisor f univ
+  divisor f univ (coord := _root_.id) (hf := hf)
 
 /-! The zero function has infinite order and hence no divisor, but it has a pole divisor. -/
 
@@ -75,22 +75,22 @@ formed. -/
 /--
 error: could not synthesize default value for parameter 'hf' using tactics
 ---
-error: `fun_prop` was unable to prove `MeromorphicOn f univ`
+error: `fun_prop` was unable to prove `MeromorphicOn f univ id`
 
 Issues:
-  No theorems found for `f` in order to prove `MeromorphicOn (fun a => f a) univ`
+  No theorems found for `f` in order to prove `MeromorphicOn (fun a => f a) univ id`
 -/
 #guard_msgs in
 noncomputable example (f : ℂ → ℂ) : Function.locallyFinsuppWithin (univ : Set ℂ) ℤ :=
-  poleDivisor f univ
+  poleDivisor f univ (coord := _root_.id)
 
 /--
 error: could not synthesize default value for parameter 'hf' using tactics
 ---
-error: `fun_prop` was unable to prove `Meromorphic f`
+error: `fun_prop` was unable to prove `Meromorphic f id`
 
 Issues:
-  No theorems found for `f` in order to prove `Meromorphic fun a => f a`
+  No theorems found for `f` in order to prove `Meromorphic (fun a => f a) id`
 -/
 #guard_msgs in
 noncomputable example (f : ℂ → ℂ) : ℝ → ℝ := logCounting f ⊤
@@ -99,7 +99,7 @@ noncomputable example (f : ℂ → ℂ) : ℝ → ℝ := logCounting f ⊤
 supplies the remaining proof by default. -/
 
 example {f : ℂ → ℂ} (hf : Meromorphic f) :
-    logCounting f ⊤ = (poleDivisor f univ).logCounting :=
+    logCounting f ⊤ = (poleDivisor f univ hf.meromorphicOn).logCounting :=
   logCounting_top hf
 
 example {f : ℂ → ℂ} (hf : Meromorphic f) : (logCounting f ⊤) 0 = 0 :=
@@ -112,7 +112,7 @@ error: could not synthesize default value for parameter 'ha' using tactics
 ---
 error: the function must take the value on no punctured neighborhood; only for ⊤ is this supplied by default
 f : ℂ → ℂ
-hf : Meromorphic f
+hf : Meromorphic f id
 a : ℂ
 ⊢ ∀ (z : ℂ), ∃ᶠ (w : ℂ) in nhdsWithin z {z}ᶜ, ↑(f w) ≠ ↑a
 -/
@@ -124,12 +124,12 @@ error: could not synthesize default value for parameter 'ha' using tactics
 ---
 error: the function must take the value on no punctured neighborhood; only for ⊤ is this supplied by default
 f : ℂ → ℂ
-hf : Meromorphic f
+hf : Meromorphic f id
 a : ℂ
 ⊢ ∀ (z : ℂ), ∃ᶠ (w : ℂ) in nhdsWithin z {z}ᶜ, ↑(f w) ≠ ↑a
 -/
 #guard_msgs in
-noncomputable example {f : ℂ → ℂ} (hf : Meromorphic f) (a : ℂ) : ℝ → ℝ := characteristic f a
+noncomputable example {f : ℂ → ℂ} (hf : Meromorphic f) (a : ℂ) : ℝ := characteristic f a hf (r := 1)
 
 example {f : ℂ → ℂ} {z a : ℂ} (hf : MeromorphicAt f z) :
     (∃ᶠ w in nhdsWithin z {z}ᶜ, (f w : WithTop ℂ) ≠ a) ↔ meromorphicOrderAt (f · - a) z ≠ ⊤ :=

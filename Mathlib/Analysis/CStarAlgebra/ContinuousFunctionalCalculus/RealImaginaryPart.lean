@@ -26,8 +26,7 @@ lemma cfcₙ_re_id (a : A) (ha : IsStarNormal a := by cfc_tac) :
     cfcₙ (re · : ℂ → ℂ) a = ℜ a := by
   conv_rhs => rw [realPart_apply_coe, ← cfcₙ_id' ℂ a, ← cfcₙ_star, ← cfcₙ_add .., ← cfcₙ_smul ..]
   congr! 1 with x hx
-  rw [Complex.re_eq_add_conj, ← smul_one_smul ℂ 2⁻¹]
-  simp [div_eq_inv_mul]
+  exact (Complex.coe_realPart x).symm.trans (realPart_apply_coe x)
 
 lemma cfcₙ_im_id (a : A) (ha : IsStarNormal a := by cfc_tac) :
     cfcₙ (im · : ℂ → ℂ) a = ℑ a := by
@@ -107,8 +106,7 @@ lemma cfc_re_id (a : A) (hp : IsStarNormal a := by cfc_tac) :
     cfc (re · : ℂ → ℂ) a = ℜ a := by
   conv_rhs => rw [realPart_apply_coe, ← cfc_id' ℂ a, ← cfc_star, ← cfc_add .., ← cfc_smul ..]
   congr! 1 with x hx
-  rw [Complex.re_eq_add_conj, ← smul_one_smul ℂ 2⁻¹]
-  simp [div_eq_inv_mul]
+  exact (Complex.coe_realPart x).symm.trans (realPart_apply_coe x)
 
 lemma cfc_im_id (a : A) (hp : IsStarNormal a := by cfc_tac) :
     cfc (im · : ℂ → ℂ) a = ℑ a := by

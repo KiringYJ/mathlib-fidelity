@@ -39,6 +39,10 @@ def IsGood (x A : ℝ) : Prop :=
 
 variable {x A : ℝ}
 
+private theorem eq_iff_mul_sqrt_two_eq (u v : ℝ) :
+    u = v ↔ u * sqrt 2 = v * sqrt 2 :=
+  ⟨congrArg (· * sqrt 2), mul_right_cancel₀ (by positivity)⟩
+
 theorem isGood_iff : IsGood x A ↔
     sqrt (2 * x - 1) + 1 + |sqrt (2 * x - 1) - 1| = A * sqrt 2 ∧ 1 / 2 ≤ x := by
   cases le_or_gt (1 / 2) x with
@@ -48,10 +52,12 @@ theorem isGood_iff : IsGood x A ↔
       rw [add_sq, sq_sqrt hx']; field
     have h₂ : x - sqrt (2 * x - 1) = (sqrt (2 * x - 1) - 1) ^ 2 / 2 := by
       rw [sub_sq, sq_sqrt hx']; field
-    simp only [IsGood, *, div_nonneg (sq_nonneg _) (zero_le_two (α := ℝ)), sqrt_div (sq_nonneg _),
-      and_true]
-    rw [sqrt_sq, sqrt_sq_eq_abs] <;> [skip; positivity]
-    field_simp
+    have hs (y : ℝ) : sqrt (y ^ 2 / 2) * sqrt 2 = |y| := by
+      rw [← sqrt_mul' _ zero_le_two, show y ^ 2 / 2 * 2 = y ^ 2 by ring, sqrt_sq_eq_abs]
+    simp only [IsGood, hx, hx', h₁, h₂,
+      div_nonneg (sq_nonneg _) (zero_le_two (α := ℝ)), and_true]
+    rw [eq_iff_mul_sqrt_two_eq _ A, add_mul, hs, hs,
+      abs_of_nonneg (show 0 ≤ sqrt (2 * x - 1) + 1 by positivity)]
   | inr hx =>
     have : 2 * x - 1 < 0 := by linarith
     simp only [IsGood, this.not_ge, hx.not_ge]; simp
@@ -65,16 +71,16 @@ theorem isGood_iff_eq_sqrt_two (hx : x ∈ Icc (1 / 2) 1) : IsGood x A ↔ A = s
   have : sqrt (2 * x - 1) ≤ 1 := sqrt_two_mul_sub_one_le_one.2 hx.2
   simp only [isGood_iff, hx.1, abs_sub_comm _ (1 : ℝ), abs_of_nonneg (sub_nonneg.2 this), and_true]
   suffices 2 = A * sqrt 2 ↔ A = sqrt 2 by convert this; ring
-  rw [← div_eq_iff, div_sqrt, eq_comm]
-  positivity
+  rw [eq_iff_mul_sqrt_two_eq A (sqrt 2), mul_self_sqrt zero_le_two, eq_comm]
 
 theorem isGood_iff_eq_sqrt (hx : 1 < x) : IsGood x A ↔ A = sqrt (4 * x - 2) := by
   have h₁ : 1 < sqrt (2 * x - 1) := by simpa only [← not_le, sqrt_two_mul_sub_one_le_one] using hx
   have h₂ : 1 / 2 ≤ x := by linarith
   simp only [isGood_iff, h₂, abs_of_pos (sub_pos.2 h₁), add_add_sub_cancel, and_true]
-  rw [← mul_two, ← div_eq_iff (by positivity), mul_div_assoc, div_sqrt, ← sqrt_mul' _ zero_le_two,
-    eq_comm]
-  ring_nf
+  have hm : sqrt (4 * x - 2) * sqrt 2 = sqrt (2 * x - 1) * 2 := by
+    rw [show 4 * x - 2 = (2 * x - 1) * 2 by ring, sqrt_mul' _ zero_le_two,
+      mul_assoc, mul_self_sqrt zero_le_two]
+  rw [← mul_two, eq_iff_mul_sqrt_two_eq A (sqrt (4 * x - 2)), hm, eq_comm]
 
 theorem IsGood.sqrt_two_lt_of_one_lt (h : IsGood x A) (hx : 1 < x) : sqrt 2 < A := by
   rw [(isGood_iff_eq_sqrt hx).1 h]

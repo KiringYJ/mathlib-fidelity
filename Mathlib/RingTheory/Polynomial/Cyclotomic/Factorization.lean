@@ -87,15 +87,16 @@ private theorem natDegree_of_dvd_cyclotomic_of_irreducible_of_monic (hP : P ∣ 
 theorem natDegree_of_dvd_cyclotomic_of_irreducible (hP : P ∣ cyclotomic n K)
     (hPirr : Irreducible P) : P.natDegree = orderOf (unitOfCoprime _ (hn.pow_left f)) := by
   obtain ⟨A, hA⟩ := hP
+  have hlead := leadingCoeff_ne_zero.mpr hPirr.ne_zero
   have hQ : P * C P.leadingCoeff⁻¹ ∣ cyclotomic n K := by
     refine ⟨A * C P.leadingCoeff, ?_⟩
     calc
       _ = P * A := hA
       _ = P * (C P.leadingCoeff⁻¹ * C P.leadingCoeff) * A := by
-        simp [← C_mul, leadingCoeff_ne_zero.mpr hPirr.ne_zero]
+        simp [← C_mul]
       _ = _ := by ring
-  simpa [← natDegree_mul_leadingCoeff_self_inv P] using
-    natDegree_of_dvd_cyclotomic_of_irreducible_of_monic hK hn hQ
+  rw [← natDegree_mul_leadingCoeff_self_inv P (hp := hlead.isUnit)]
+  exact natDegree_of_dvd_cyclotomic_of_irreducible_of_monic hK hn hQ
     (irreducible_mul_leadingCoeff_inv.mpr hPirr) (monic_mul_leadingCoeff_inv hPirr.ne_zero)
 
 open UniqueFactorizationMonoid in

@@ -280,9 +280,12 @@ lemma norm_eq_csSup (v : E) :
     ‖v‖ = sSup { ‖⟪w, v⟫_A‖ | (w : E) (_ : ‖w‖ ≤ 1) } := by
   let instNACG : NormedAddCommGroup E := NormedAddCommGroup.ofCore (normedSpaceCore A)
   let instNS : NormedSpace ℂ E := .ofCore (normedSpaceCore A)
-  refine Eq.symm <| IsGreatest.csSup_eq ⟨⟨‖v‖⁻¹ • v, ?_, ?_⟩, ?_⟩
-  · simpa only [norm_smul, norm_inv, norm_norm] using inv_mul_le_one_of_le₀ le_rfl (by positivity)
-  · simp [norm_smul, ← norm_sq_eq, pow_two, ← mul_assoc]
+  refine Eq.symm <| IsGreatest.csSup_eq ⟨?_, ?_⟩
+  · obtain rfl | hv := eq_or_ne v 0
+    · exact ⟨0, by simp, by simp⟩
+    · refine ⟨‖v‖⁻¹ • v, ?_, ?_⟩
+      · simp only [norm_smul, norm_inv, norm_norm, inv_mul_cancel₀, le_rfl]
+      · simp [norm_smul, ← norm_sq_eq, pow_two, ← mul_assoc]
   · rintro - ⟨w, hw, rfl⟩
     calc _ ≤ ‖w‖ * ‖v‖ := norm_inner_le E
       _ ≤ 1 * ‖v‖ := by gcongr

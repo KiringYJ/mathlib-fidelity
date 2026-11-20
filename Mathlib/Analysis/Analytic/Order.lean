@@ -245,7 +245,8 @@ theorem AnalyticAt.analyticOrderAt_deriv_add_one {x : 𝕜} (hf : AnalyticAt �
     simp only [analyticOrderAt_eq_top, sub_eq_zero] at h ⊢
     obtain ⟨U, hUf, hUo, hUx⟩ := eventually_nhds_iff.mp h
     filter_upwards [hUo.mem_nhds hUx] with y hy
-    simp [(eventuallyEq_of_mem (hUo.mem_nhds hy) hUf).deriv_eq]
+    rw [(eventuallyEq_of_mem (hUo.mem_nhds hy) hUf).deriv_eq]
+    exact deriv_const y (f x)
   | coe r =>
     have hrne : r ≠ 0 := by
       intro hr
@@ -261,8 +262,13 @@ theorem AnalyticAt.analyticOrderAt_deriv_add_one {x : 𝕜} (hf : AnalyticAt �
     have : ∀ y ∈ U, deriv f y =
         (y - x) ^ (s + 1) • deriv F y + (s + 1) • (y - x) ^ s • F y := by
       intro y hy
+      have hp : deriv (fun z : 𝕜 ↦ (z - x) ^ (s + 1)) y =
+          (↑(s + 1) : 𝕜) * (y - x) ^ s := by
+        change deriv (fun z : 𝕜 ↦ (z - x) ^ (s + 1)) y (fun z ↦ z) = _
+        simpa only [id_eq, Nat.add_sub_cancel, mul_one] using
+          (((hasDerivAt_id y).sub_const x).fun_pow (s + 1)).deriv
       rw [EventuallyEq.deriv_eq (eventually_of_mem (hUo.mem_nhds hy) (fun u hu ↦ (hUf u hu).1)),
-        deriv_add_const, deriv_fun_smul (by fun_prop) (hUf y hy).2.differentiableAt]
+        deriv_add_const, deriv_fun_smul (by fun_prop) (hUf y hy).2.differentiableAt, hp]
       simp [mul_smul, add_smul, Nat.cast_smul_eq_nsmul]
     have hsum : deriv f =ᶠ[𝓝 x] ((fun y : 𝕜 ↦ (y - x) ^ (s + 1) • deriv F y) +
         (fun y : 𝕜 ↦ (s + 1) • (y - x) ^ s • F y)) :=
@@ -302,9 +308,12 @@ theorem AnalyticAt.analyticOrderAt_sub_eq_one_of_deriv_ne_zero {x : 𝕜} (hf : 
       simp_all
     · contrapose! hf'
       simp_rw [sub_eq_iff_eq_add] at hfF
+      have hp : deriv (fun z : 𝕜 ↦ (z - x) ^ r) x = 0 := by
+        change deriv (fun z : 𝕜 ↦ (z - x) ^ r) x (fun z ↦ z) = _
+        simpa only [id_eq, sub_self, zero_pow (by omega : r - 1 ≠ 0), mul_zero,
+          zero_mul] using (((hasDerivAt_id x).sub_const x).fun_pow r).deriv
       rw [EventuallyEq.deriv_eq hfF, deriv_add_const, deriv_fun_smul (by fun_prop) (by fun_prop),
-        deriv_fun_pow (by fun_prop), sub_self, zero_pow (by lia), zero_pow (by lia),
-        mul_zero, zero_mul, zero_smul, zero_smul, add_zero]
+        hp, sub_self, zero_pow (by omega : r ≠ 0), zero_smul, zero_smul, add_zero]
 
 /-- At a zero with nonvanishing derivative, the analytic order is 1.
 This is a variant of `analyticOrderAt_sub_eq_one_of_deriv_ne_zero` with `f z₀ = 0`
@@ -375,6 +384,7 @@ lemma AnalyticAt.exists_eventuallyEq_sum_add_pow_mul [CharZero 𝕜] [CompleteSp
   have : AnalyticAt 𝕜
       (fun z : 𝕜 ↦ ∑ i ∈ .range n, (z ^ i / i.factorial) • iteratedDeriv i f 0) 0 := by
     refine Finset.analyticAt_fun_sum _ fun i hi ↦ ?_
+    simp only [div_eq_mul_inv₀]
     fun_prop
   convert! (natCast_le_analyticOrderAt (hf.fun_sub this)).mp ?_
   · simp
@@ -383,7 +393,10 @@ lemma AnalyticAt.exists_eventuallyEq_sum_add_pow_mul [CharZero 𝕜] [CompleteSp
     rw [iteratedDeriv_fun_sub (AnalyticAt.contDiffAt <| by fun_prop) this.contDiffAt]
     simp (disch := fun_prop) only [iteratedDeriv_fun_sum, iteratedDeriv_smul_const,
       iteratedDeriv_div_const, iteratedDeriv_fun_pow_zero]
-    simp [ite_div, Finset.sum_ite_eq_of_mem _ _ _ (Finset.mem_range.mpr hi)]
+    rw [Finset.sum_eq_single_of_mem i (Finset.mem_range.mpr hi)]
+    · simp
+    · intro j _ hji
+      simp [hji.symm]
 
 attribute [local simp] Nat.factorial_ne_zero in
 /-- A version of **Taylor's theorem** for analytic functions in one variable, with the error
@@ -398,16 +411,17 @@ lemma AnalyticAt.exists_eq_sum_add_pow_mul [CharZero 𝕜] [CompleteSpace E]
   classical
   obtain ⟨F, hFa, hF⟩ := hf.exists_eventuallyEq_sum_add_pow_mul n
   obtain ⟨U, hU0, hU'⟩ := by rwa [eventually_iff_exists_mem] at hF
-  refine ⟨fun z ↦ if z ∈ U then F z else (z ^ n)⁻¹ • (f z
+  have hz₀ : (0 : 𝕜) ∈ U := mem_of_mem_nhds hU0
+  refine ⟨fun z ↦ if hz : z ∈ U then F z else
+    Checked.inv (z ^ n) (pow_ne_zero (a := z) n (fun hzero ↦
+      hz (by simpa only [hzero] using hz₀))).isUnit • (f z
       - (∑ i ∈ .range n, (z ^ i / i.factorial) • iteratedDeriv i f 0)), ?_, fun z ↦ ?_⟩
   · exact hFa.congr (by filter_upwards [hU0] using by simp +contextual)
   · by_cases hz : z ∈ U
     · simpa [hz] using hU' z hz
-    · simp only [ite_eq_right hz]
+    · simp only [dite_eq_right hz]
       rw [smul_inv_smul₀]
-      · module
-      · contrapose hz
-        exact (pow_eq_zero_iff'.mp hz).1 ▸ mem_of_mem_nhds hU0
+      module
 
 variable [CharZero 𝕜] [CompleteSpace E] {z₀ : 𝕜} {f : 𝕜 → E}
   (hf : AnalyticAt 𝕜 f z₀) (hzero : f z₀ = 0)
@@ -516,25 +530,28 @@ section comp
 variable {f : 𝕜 → E} {g : 𝕜 → 𝕜} {z₀ : 𝕜}
 
 /-- Analytic order of a composition of analytic functions. -/
-lemma AnalyticAt.analyticOrderAt_comp (hf : AnalyticAt 𝕜 f (g z₀)) (hg : AnalyticAt 𝕜 g z₀) :
-    analyticOrderAt (f ∘ g) z₀ (hf.comp hg) =
+lemma AnalyticAt.analyticOrderAt_comp (hf : AnalyticAt 𝕜 f (g z₀) id)
+    (hg : AnalyticAt 𝕜 g z₀ id) :
+    analyticOrderAt (f ∘ g) z₀ (hf.comp (coord' := id) (f := g) (by simpa using hg)) =
       analyticOrderAt f (g z₀) hf *
         analyticOrderAt (g · - g z₀) z₀ (hg.fun_sub analyticAt_const) := by
+  have hcomp : AnalyticAt 𝕜 (f ∘ g) z₀ :=
+    hf.comp (coord' := id) (f := g) (by simpa using hg)
   have hg' : AnalyticAt 𝕜 (g · - g z₀) z₀ := hg.fun_sub analyticAt_const
   by_cases hg_nc : EventuallyConst g (𝓝 z₀)
   · -- If `g` is eventually constant, both sides are either `⊤` or `0`.
     have h₁ := (eventuallyConst_iff_analyticOrderAt_sub_eq_top hg).mp hg_nc
-    have h₂ := (eventuallyConst_iff_analyticOrderAt_sub_eq_top (hf.comp hg)).mp (hg_nc.comp f)
+    have h₂ := (eventuallyConst_iff_analyticOrderAt_sub_eq_top hcomp).mp (hg_nc.comp f)
     rw [h₁]
     by_cases hf' : f (g z₀) = 0
     · rw [ENat.mul_top (hf.analyticOrderAt_ne_zero.mpr hf')]
-      exact (analyticOrderAt_sub_apply_of_eq_zero (hf.comp hg) hf').symm.trans h₂
+      exact (analyticOrderAt_sub_apply_of_eq_zero hcomp hf').symm.trans h₂
     · rw [hf.analyticOrderAt_eq_zero.mpr hf', zero_mul]
-      exact (hf.comp hg).analyticOrderAt_eq_zero.mpr hf'
+      exact hcomp.analyticOrderAt_eq_zero.mpr hf'
   by_cases hf' : analyticOrderAt f (g z₀) hf = ⊤
   · -- If `f` is eventually constant but `g` is not, we have `⊤ = ⊤ * (non-zero thing)`
-    have h₁ : analyticOrderAt (f ∘ g) z₀ (hf.comp hg) = ⊤ :=
-      (analyticOrderAt_eq_top (hf.comp hg)).mpr
+    have h₁ : analyticOrderAt (f ∘ g) z₀ hcomp = ⊤ :=
+      (analyticOrderAt_eq_top hcomp).mpr
         (EventuallyEq.comp_tendsto ((analyticOrderAt_eq_top hf).mp hf') hg.continuousAt)
     have h₂ : analyticOrderAt (g · - g z₀) z₀ hg' ≠ 0 := by
       rw [AnalyticAt.analyticOrderAt_ne_zero]
@@ -544,7 +561,7 @@ lemma AnalyticAt.analyticOrderAt_comp (hf : AnalyticAt 𝕜 f (g z₀)) (hg : An
     rw [eventuallyConst_iff_analyticOrderAt_sub_eq_top hg] at hg_nc
     obtain ⟨r, hr⟩ := ENat.ne_top_iff_exists.mp hf'
     obtain ⟨s, hs⟩ := ENat.ne_top_iff_exists.mp hg_nc
-    rw [← hr, ← hs, ← ENat.natCast_mul, (hf.comp hg).analyticOrderAt_eq_natCast]
+    rw [← hr, ← hs, ← ENat.natCast_mul, hcomp.analyticOrderAt_eq_natCast]
     rw [Eq.comm, hf.analyticOrderAt_eq_natCast] at hr
     rcases hr with ⟨F, hFa, hFne, hfF⟩
     rw [Eq.comm, AnalyticAt.analyticOrderAt_eq_natCast] at hs
@@ -557,9 +574,11 @@ lemma AnalyticAt.analyticOrderAt_comp (hf : AnalyticAt 𝕜 f (g z₀)) (hg : An
 
 /-- If `f` is analytic at `g z₀`, `g` is analytic at `z₀`, and `g' z₀ ≠ 0`, then the analytic order
 of `f ∘ g` at `z₀` is the analytic order of `f` at `g z₀`. -/
-lemma analyticOrderAt_comp_of_deriv_ne_zero (hf : AnalyticAt 𝕜 f (g z₀)) (hg : AnalyticAt 𝕜 g z₀)
+lemma analyticOrderAt_comp_of_deriv_ne_zero (hf : AnalyticAt 𝕜 f (g z₀) id)
+    (hg : AnalyticAt 𝕜 g z₀ id)
     (hg' : deriv g z₀ ≠ 0) :
-    analyticOrderAt (f ∘ g) z₀ (hf.comp hg) = analyticOrderAt f (g z₀) hf := by
+    analyticOrderAt (f ∘ g) z₀ (hf.comp (coord' := id) (f := g) (by simpa using hg)) =
+      analyticOrderAt f (g z₀) hf := by
   rw [hf.analyticOrderAt_comp hg, hg.analyticOrderAt_sub_eq_one_of_deriv_ne_zero hg', mul_one]
 
 end comp

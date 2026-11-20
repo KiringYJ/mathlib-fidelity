@@ -229,13 +229,15 @@ theorem deriv_const_smul (c : R) (hf : DifferentiableAt 𝕜 f x) :
 multiplication is by division ring elements. -/
 lemma deriv_fun_const_smul_field (c : 𝕝) (f : 𝕜 → F) :
     deriv (fun y ↦ c • f y) x = c • deriv f x := by
-  simp only [← derivWithin_univ, derivWithin_fun_const_smul_field]
+  rw [← congrFun (derivWithin_univ (f := fun y ↦ c • f y)) x,
+    ← congrFun (derivWithin_univ (f := f)) x]
+  exact derivWithin_fun_const_smul_field (f := f) (s := univ) (x := x) c
 
 /-- A variant of `deriv_const_smul` without differentiability assumption when the scalar
 multiplication is by division ring elements. -/
 lemma deriv_const_smul_field (c : 𝕝) (f : 𝕜 → F) :
-    deriv (c • f) x = c • deriv f x := by
-  simp only [← derivWithin_univ, derivWithin_const_smul_field]
+    deriv (c • f) x = c • deriv f x :=
+  deriv_fun_const_smul_field c f
 
 end ConstSMul
 
@@ -290,23 +292,26 @@ theorem deriv_mul (hc : DifferentiableAt 𝕜 c x) (hd : DifferentiableAt 𝕜 d
     deriv (c * d) x = deriv c x * d x + c x * deriv d x :=
   (hc.hasDerivAt.mul hd.hasDerivAt).deriv
 
-theorem HasDerivWithinAt.mul_const (hc : HasDerivWithinAt c c' s x) (d : 𝔸) :
-    HasDerivWithinAt (fun y => c y * d) (c' * d) s x := by
-  convert! hc.mul (hasDerivWithinAt_const x s d) using 1
-  rw [mul_zero, add_zero]
+theorem HasDerivWithinAt.mul_const {D : Type*} [TopologicalSpace D]
+    {c : D → 𝔸} {coord : D → 𝕜} {x : D} {s : Set D}
+    (hc : HasDerivWithinAt c c' s x coord) (d : 𝔸) :
+    HasDerivWithinAt (fun y => c y * d) (c' * d) s x coord := by
+  simpa using (hc.hasFDerivWithinAt.mul_const' d).hasDerivWithinAt
 
-theorem HasDerivAt.mul_const (hc : HasDerivAt c c' x) (d : 𝔸) :
-    HasDerivAt (fun y => c y * d) (c' * d) x := by
-  rw [← hasDerivWithinAt_univ] at *
-  exact hc.mul_const d
+theorem HasDerivAt.mul_const {D : Type*} [TopologicalSpace D]
+    {c : D → 𝔸} {coord : D → 𝕜} {x : D}
+    (hc : HasDerivAt c c' x coord) (d : 𝔸) :
+    HasDerivAt (fun y => c y * d) (c' * d) x coord := by
+  simpa using (hc.hasFDerivAt.mul_const' d).hasDerivAt
 
 theorem hasDerivAt_mul_const (c : 𝕜) : HasDerivAt (fun x => x * c) c x := by
   simpa only [one_mul] using (hasDerivAt_id' x).mul_const c
 
-theorem HasStrictDerivAt.mul_const (hc : HasStrictDerivAt c c' x) (d : 𝔸) :
-    HasStrictDerivAt (fun y => c y * d) (c' * d) x := by
-  convert! hc.mul (hasStrictDerivAt_const x d) using 1
-  rw [mul_zero, add_zero]
+theorem HasStrictDerivAt.mul_const {D : Type*} [TopologicalSpace D]
+    {c : D → 𝔸} {coord : D → 𝕜} {x : D}
+    (hc : HasStrictDerivAt c c' x coord) (d : 𝔸) :
+    HasStrictDerivAt (fun y => c y * d) (c' * d) x coord := by
+  simpa using (hc.hasStrictFDerivAt.mul_const' d).hasStrictDerivAt
 
 theorem derivWithin_mul_const (hc : DifferentiableWithinAt 𝕜 c s x) (d : 𝔸) :
     derivWithin (fun y => c y * d) s x = derivWithin c s x * d := by
@@ -319,10 +324,13 @@ lemma derivWithin_mul_const_field (u : 𝕜') :
   by_cases hv : DifferentiableWithinAt 𝕜 v s x
   · rw [derivWithin_mul_const hv u]
   by_cases hu : u = 0
-  · simp [hu]
+  · simpa only [hu, mul_zero, Pi.zero_apply] using
+      congrFun (derivWithin_fun_const (𝕜 := 𝕜) s (0 : 𝕜')) x
   rw [derivWithin_zero_of_not_differentiableWithinAt hv, zero_mul,
       derivWithin_zero_of_not_differentiableWithinAt]
-  have : v = fun x ↦ (v x * u) * u⁻¹ := by ext; simp [hu]
+  have : v = fun y ↦ (v y * u) * u⁻¹ := by
+    funext y
+    exact (mul_inv_cancel_right₀ (hb := isUnit_iff_ne_zero.mpr hu) (v y)).symm
   exact fun h_diff ↦ hv <| this ▸ h_diff.mul_const _
 
 theorem deriv_mul_const (hc : DifferentiableAt 𝕜 c x) (d : 𝔸) :
@@ -336,29 +344,32 @@ theorem deriv_mul_const_field (v : 𝕜') : deriv (fun y => u y * v) x = deriv u
     rcases eq_or_ne v 0 with (rfl | hd)
     · simp only [mul_zero, deriv_const]
     · refine deriv_zero_of_not_differentiableAt (mt (fun H => ?_) hu)
-      simpa only [mul_inv_cancel_right₀ hd] using H.mul_const v⁻¹
+      simpa only [mul_inv_cancel_right₀ (hb := hd.isUnit)] using H.mul_const v⁻¹
 
 @[simp]
 theorem deriv_mul_const_field' (v : 𝕜') : (deriv fun x => u x * v) = fun x => deriv u x * v :=
   funext fun _ => deriv_mul_const_field v
 
-theorem HasDerivWithinAt.const_mul (c : 𝔸) (hd : HasDerivWithinAt d d' s x) :
-    HasDerivWithinAt (fun y => c * d y) (c * d') s x := by
-  convert! (hasDerivWithinAt_const x s c).mul hd using 1
-  rw [zero_mul, zero_add]
+theorem HasDerivWithinAt.const_mul {D : Type*} [TopologicalSpace D]
+    {d : D → 𝔸} {coord : D → 𝕜} {x : D} {s : Set D}
+    (c : 𝔸) (hd : HasDerivWithinAt d d' s x coord) :
+    HasDerivWithinAt (fun y => c * d y) (c * d') s x coord := by
+  simpa using (hd.hasFDerivWithinAt.const_mul c).hasDerivWithinAt
 
-theorem HasDerivAt.const_mul (c : 𝔸) (hd : HasDerivAt d d' x) :
-    HasDerivAt (fun y => c * d y) (c * d') x := by
-  rw [← hasDerivWithinAt_univ] at *
-  exact hd.const_mul c
+theorem HasDerivAt.const_mul {D : Type*} [TopologicalSpace D]
+    {d : D → 𝔸} {coord : D → 𝕜} {x : D}
+    (c : 𝔸) (hd : HasDerivAt d d' x coord) :
+    HasDerivAt (fun y => c * d y) (c * d') x coord := by
+  simpa using (hd.hasFDerivAt.const_mul c).hasDerivAt
 
 theorem hasDerivAt_const_mul (c : 𝕜) : HasDerivAt (fun y => c * y) c x := by
   simpa only [mul_one] using (hasDerivAt_id' x).const_mul c
 
-theorem HasStrictDerivAt.const_mul (c : 𝔸) (hd : HasStrictDerivAt d d' x) :
-    HasStrictDerivAt (fun y => c * d y) (c * d') x := by
-  convert! (hasStrictDerivAt_const _ _).mul hd using 1
-  rw [zero_mul, zero_add]
+theorem HasStrictDerivAt.const_mul {D : Type*} [TopologicalSpace D]
+    {d : D → 𝔸} {coord : D → 𝕜} {x : D}
+    (c : 𝔸) (hd : HasStrictDerivAt d d' x coord) :
+    HasStrictDerivAt (fun y => c * d y) (c * d') x coord := by
+  simpa using (hd.hasStrictFDerivAt.const_mul c).hasStrictDerivAt
 
 theorem derivWithin_const_mul (c : 𝔸) (hd : DifferentiableWithinAt 𝕜 d s x) :
     derivWithin (fun y => c * d y) s x = c * derivWithin d s x := by
@@ -378,17 +389,17 @@ theorem deriv_const_mul (c : 𝔸) (hd : DifferentiableAt 𝕜 d x) :
 
 /-- A variant of `deriv_const_mul` without differentiability assumption when the scalar
 multiplication is by division ring elements. -/
-theorem deriv_const_mul_field (u : 𝕜') : deriv (fun y => u * v y) x = u * deriv v x := by
-  simpa only [← derivWithin_univ] using derivWithin_const_mul_field u
+theorem deriv_const_mul_field (u : 𝕜') : deriv (fun y => u * v y) x = u * deriv v x :=
+  deriv_fun_const_smul_field u v
 
 @[simp]
 theorem deriv_const_mul_field' (u : 𝕜') : (deriv fun x => u * v x) = fun x => u * deriv v x :=
   funext fun _ => deriv_const_mul_field u
 
-theorem deriv_const_mul_id (c : 𝕜) : deriv (fun y => c * y) x = c := by
-  simp only [deriv_const_mul c differentiableAt_fun_id, deriv_id'', mul_one]
-
 @[simp]
+theorem deriv_const_mul_id (c : 𝕜) : deriv (fun y => c * y) x = c :=
+  (hasDerivAt_const_mul c).deriv
+
 theorem deriv_const_mul_id' (c : 𝕜) : deriv (fun x => c * x) = fun _ => c :=
   funext fun _ => by simp only [deriv_const_mul_id]
 
@@ -548,43 +559,52 @@ section Div
 
 variable {𝕜' : Type*} [NormedDivisionRing 𝕜'] [NormedAlgebra 𝕜 𝕜'] {c : 𝕜 → 𝕜'} {c' : 𝕜'}
 
-theorem HasDerivAt.div_const (hc : HasDerivAt c c' x) (d : 𝕜') :
-    HasDerivAt (fun x => c x / d) (c' / d) x := by
-  simpa only [div_eq_mul_inv] using hc.mul_const d⁻¹
+section Domain
 
-theorem HasDerivWithinAt.div_const (hc : HasDerivWithinAt c c' s x) (d : 𝕜') :
-    HasDerivWithinAt (fun x => c x / d) (c' / d) s x := by
-  simpa only [div_eq_mul_inv] using hc.mul_const d⁻¹
+variable {D : Type*} [TopologicalSpace D] {c : D → 𝕜'} {coord : D → 𝕜}
+  {x : D} {s : Set D}
 
-theorem HasStrictDerivAt.div_const (hc : HasStrictDerivAt c c' x) (d : 𝕜') :
-    HasStrictDerivAt (fun x => c x / d) (c' / d) x := by
-  simpa only [div_eq_mul_inv] using hc.mul_const d⁻¹
+theorem HasDerivAt.div_const (hc : HasDerivAt c c' x coord) (d : 𝕜') {hd : IsUnit d} :
+    HasDerivAt (fun x => c x / d) (c' / d) x coord := by
+  simpa only [div_eq_mul_inv₀] using hc.mul_const d⁻¹
 
-@[fun_prop]
-theorem DifferentiableWithinAt.div_const (hc : DifferentiableWithinAt 𝕜 c s x) (d : 𝕜') :
-    DifferentiableWithinAt 𝕜 (fun x => c x / d) s x :=
-  (hc.hasDerivWithinAt.div_const _).differentiableWithinAt
+theorem HasDerivWithinAt.div_const (hc : HasDerivWithinAt c c' s x coord) (d : 𝕜') {hd : IsUnit d} :
+    HasDerivWithinAt (fun x => c x / d) (c' / d) s x coord := by
+  simpa only [div_eq_mul_inv₀] using hc.mul_const d⁻¹
 
-@[simp, fun_prop]
-theorem DifferentiableAt.div_const (hc : DifferentiableAt 𝕜 c x) (d : 𝕜') :
-    DifferentiableAt 𝕜 (fun x => c x / d) x :=
-  (hc.hasDerivAt.div_const _).differentiableAt
+theorem HasStrictDerivAt.div_const (hc : HasStrictDerivAt c c' x coord) (d : 𝕜') {hd : IsUnit d} :
+    HasStrictDerivAt (fun x => c x / d) (c' / d) x coord := by
+  simpa only [div_eq_mul_inv₀] using hc.mul_const d⁻¹
 
 @[fun_prop]
-theorem DifferentiableOn.div_const (hc : DifferentiableOn 𝕜 c s) (d : 𝕜') :
-    DifferentiableOn 𝕜 (fun x => c x / d) s := fun x hx => (hc x hx).div_const d
+theorem DifferentiableWithinAt.div_const (hc : DifferentiableWithinAt 𝕜 c s x coord)
+    (d : 𝕜') {hd : IsUnit d} :
+    DifferentiableWithinAt 𝕜 (fun x => c x / d) s x coord :=
+  (hc.hasFDerivWithinAt.hasDerivWithinAt.div_const d).differentiableWithinAt
 
 @[simp, fun_prop]
-theorem Differentiable.div_const (hc : Differentiable 𝕜 c) (d : 𝕜') :
-    Differentiable 𝕜 fun x => c x / d := fun x => (hc x).div_const d
+theorem DifferentiableAt.div_const (hc : DifferentiableAt 𝕜 c x coord) (d : 𝕜') {hd : IsUnit d} :
+    DifferentiableAt 𝕜 (fun x => c x / d) x coord :=
+  (hc.hasFDerivAt.hasDerivAt.div_const d).differentiableAt
 
-theorem derivWithin_div_const (c : 𝕜 → 𝕜') (d : 𝕜') :
+@[fun_prop]
+theorem DifferentiableOn.div_const (hc : DifferentiableOn 𝕜 c s coord) (d : 𝕜') {hd : IsUnit d} :
+    DifferentiableOn 𝕜 (fun x => c x / d) s coord := fun x hx => (hc x hx).div_const d
+
+@[simp, fun_prop]
+theorem Differentiable.div_const (hc : Differentiable 𝕜 c coord) (d : 𝕜') {hd : IsUnit d} :
+    Differentiable 𝕜 (fun x => c x / d) coord := fun x => (hc x).div_const d
+
+end Domain
+
+theorem derivWithin_div_const (c : 𝕜 → 𝕜') (d : 𝕜') {hd : IsUnit d} :
     derivWithin (fun x => c x / d) s x = derivWithin c s x / d := by
-  simp [div_eq_mul_inv, derivWithin_mul_const_field]
+  simp [div_eq_mul_inv₀, derivWithin_mul_const_field]
 
 @[simp]
-theorem deriv_div_const (d : 𝕜') : deriv (fun x => c x / d) x = deriv c x / d := by
-  simp only [div_eq_mul_inv, deriv_mul_const_field]
+theorem deriv_div_const (d : 𝕜') {hd : IsUnit d} :
+    deriv (fun x => c x / d) x = deriv c x / d := by
+  simp only [div_eq_mul_inv₀, deriv_mul_const_field]
 
 end Div
 
@@ -639,13 +659,14 @@ theorem HasDerivAt.clm_apply (hc : HasDerivAt c c' x) (hu : HasDerivAt u u' x) :
 
 theorem derivWithin_clm_apply (hc : DifferentiableWithinAt 𝕜 c s x)
     (hu : DifferentiableWithinAt 𝕜 u s x) :
-    derivWithin (fun y => (c y) (u y)) s x = derivWithin c s x (u x) + c x (derivWithin u s x) := by
+    derivWithin (fun y => (c y) (u y)) s x =
+      derivWithin c s x id (u x) + c x (derivWithin u s x) := by
   by_cases hsx : UniqueDiffWithinAt 𝕜 s x
   · exact (hc.hasDerivWithinAt.clm_apply hu.hasDerivWithinAt).derivWithin hsx
   · simp [derivWithin_zero_of_not_uniqueDiffWithinAt hsx]
 
 theorem deriv_clm_apply (hc : DifferentiableAt 𝕜 c x) (hu : DifferentiableAt 𝕜 u x) :
-    deriv (fun y => (c y) (u y)) x = deriv c x (u x) + c x (deriv u x) :=
+    deriv (fun y => (c y) (u y)) x = deriv c x id (u x) + c x (deriv u x) :=
   (hc.hasDerivAt.clm_apply hu.hasDerivAt).deriv
 
 end CLMCompApply

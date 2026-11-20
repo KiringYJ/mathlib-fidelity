@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yi-Jing Tseng
 -/
 module
+import Mathlib.Algebra.Field.ZMod
 import Mathlib.Data.Rat.Cast.Defs
 
 example {K : Type*} [DivisionRing K] (h2 : (2 : K) ≠ 0) :
@@ -49,3 +50,17 @@ example {K : Type*} [DivisionRing K] (h3 : (Nat.cast 3 : K) = 0)
   exact (Rat.eval_natCast (α := K) 3 hd).trans h3
 
 example : Rat.quotient 0 3 (by decide +kernel) = 0 := by decide +kernel
+
+section CharacteristicFive
+
+local instance : Fact (Nat.Prime 5) := ⟨by decide⟩
+
+example : Rat.eval (Rat.fractionInt 6 (-4) (by decide)) (by decide) = (1 : ZMod 5) := by
+  rw [Rat.eval_fractionInt 6 (-4) (by decide) (by decide : ((-4 : ℤ) : ZMod 5) ≠ 0)]
+  exact div_eq_of_eq_mul (by decide)
+
+example : Rat.eval (Rat.fraction 6 4 (by decide)) (by decide) = (4 : ZMod 5) := by
+  rw [Rat.eval_fraction 6 4 (by decide) (by decide : (4 : ZMod 5) ≠ 0)]
+  exact div_eq_of_eq_mul (by decide)
+
+end CharacteristicFive

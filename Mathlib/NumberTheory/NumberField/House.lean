@@ -272,8 +272,14 @@ private abbrev c₂ := max 1 (c K) * (supOfBasis K)
 private theorem c₂_nonneg : 0 ≤ c₂ K :=
   mul_nonneg (le_trans zero_le_one (le_max_left ..)) (supOfBasis_nonneg _)
 
+private theorem siegel_denominator_pos (hpq : p < q) : 0 < (q - p : ℝ) :=
+  sub_pos.mpr (by exact_mod_cast hpq)
+
+private abbrev siegelExponent (hpq : p < q) : ℝ :=
+  Checked.div (p : ℝ) (q - p) (siegel_denominator_pos hpq).ne'.isUnit
+
 variable [Fintype α] (cardα : Fintype.card α = p) (Apos : 0 ≤ A)
-  (hxbound : ‖x‖ ≤ (q * finrank ℚ K * ‖asiegel K a‖) ^ ((p : ℝ) / (q - p)))
+  (hxbound : ‖x‖ ≤ (q * finrank ℚ K * ‖asiegel K a‖) ^ siegelExponent hpq)
 
 include habs Apos in
 private theorem asiegel_remark : ‖asiegel K a‖ ≤ c₂ K * A := by
@@ -313,19 +319,19 @@ private def c₁ := finrank ℚ K * c₂ K
 
 include habs Apos hxbound hpq in
 private theorem house_le_bound : ∀ l, house (ξ K x l).1 ≤ (c₁ K) *
-    ((c₁ K * q * A) ^ ((p : ℝ) / (q - p))) := by
+    ((c₁ K * q * A) ^ siegelExponent hpq) := by
   let h := finrank ℚ K
   intro l
   have H₀ : 0 ≤ NumberField.house.supOfBasis K := supOfBasis_nonneg _
-  have H₁ : 0 < (q - p : ℝ) := sub_pos.mpr <| mod_cast hpq
+  have H₁ : 0 ≤ siegelExponent hpq := div_nonneg (Nat.cast_nonneg p) (siegel_denominator_pos hpq).le
   calc _ = house (algebraMap (𝓞 K) K (∑ r, (x (l, r)) * ((newBasis K) r))) := rfl
        _ ≤ ∑ r, house (((algebraMap (𝓞 K) K) (x (l, r))) *
         ((algebraMap (𝓞 K) K) ((newBasis K) r))) := ?_
        _ ≤ ∑ r, ‖x (l, r)‖ * house ((algebraMap (𝓞 K) K) ((newBasis K) r)) := ?_
        _ ≤ ∑ r, ‖x (l, r)‖ * (supOfBasis K) := ?_
-       _ ≤ ∑ _r : K →+* ℂ, ((↑q * h * ‖asiegel K a‖) ^ ((p : ℝ) / (q - p))) * supOfBasis K := ?_
-       _ ≤ h * (c₂ K) * ((q * c₁ K * A) ^ ((p : ℝ) / (q - p))) := ?_
-       _ ≤ c₁ K * ((c₁ K * ↑q * A) ^ ((p : ℝ) / (q - p))) := ?_
+       _ ≤ ∑ _r : K →+* ℂ, ((↑q * h * ‖asiegel K a‖) ^ siegelExponent hpq) * supOfBasis K := ?_
+       _ ≤ h * (c₂ K) * ((q * c₁ K * A) ^ siegelExponent hpq) := ?_
+       _ ≤ c₁ K * ((c₁ K * ↑q * A) ^ siegelExponent hpq) := ?_
   · simp_rw [← map_mul, map_sum]; apply house_sum_le_sum_house
   · gcongr with r _; convert! house_mul_le ..
     simp only [map_intCast, house_intCast, Int.cast_abs, Int.norm_eq_abs]
@@ -348,7 +354,8 @@ include hpq h0p cardα cardβ ha habs in
 non-trivial underdetermined system of linear equations with algebraic integer coefficients. -/
 theorem exists_ne_zero_int_vec_house_le :
     ∃ (ξ : β → 𝓞 K), ξ ≠ 0 ∧ a *ᵥ ξ = 0 ∧
-    ∀ l, house (ξ l).1 ≤ c₁ K * ((c₁ K * q * A) ^ ((p : ℝ) / (q - p))) := by
+    ∀ l, house (ξ l).1 ≤ c₁ K * ((c₁ K * q * A) ^
+      Checked.div (p : ℝ) (q - p) (siegel_denominator_pos hpq).ne'.isUnit) := by
   let h := finrank ℚ K
   have hphqh : p * h < q * h := by gcongr; exact finrank_pos
   have h0ph : 0 < p * h := by rw [mul_pos_iff]; constructor; exact ⟨h0p, finrank_pos⟩
@@ -360,7 +367,13 @@ theorem exists_ne_zero_int_vec_house_le :
     Int.Matrix.exists_ne_zero_int_vec_norm_le' (asiegel K a)
       (by rwa [hfinp, hfinq]) (by rwa [hfinp]) (asiegel_ne_0 K a ha)
   simp only [hfinp, hfinq, Nat.cast_mul] at hmulvec0 hxbound
-  rw [← sub_mul, mul_div_mul_right _ _ (mod_cast finrank_pos.ne')] at hxbound
+  have hdim : 0 < (q : ℝ) * h - (p : ℝ) * h := sub_pos.mpr (by exact_mod_cast hphqh)
+  have hexponent :
+      Checked.div ((p : ℝ) * h) ((q : ℝ) * h - (p : ℝ) * h) hdim.ne'.isUnit =
+        siegelExponent hpq := by
+    rw [div_eq_div_iff]
+    ring
+  rw [hexponent] at hxbound
   have Apos : 0 ≤ A := by
     have ⟨k⟩ := Fintype.card_pos_iff.1 (cardα ▸ h0p)
     have ⟨l⟩ := Fintype.card_pos_iff.1 (cardβ ▸ h0p.trans hpq)

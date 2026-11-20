@@ -58,3 +58,15 @@ example : (1 / 27 : ℝ≥0) ^ (-1 / 3 : ℝ) = 3 := by norm_num1
 example : (0 : ℝ≥0) ^ (0 : ℝ) = 1 := by norm_num1
 example : (0 : ℝ≥0) ^ (1 / 3 : ℝ) = 0 := by norm_num1
 example : (0 : ℝ≥0) ^ (-1 / 3 : ℝ) = 0 := by norm_num1
+
+-- Other `norm_num` extensions consume the raw natural-number literal in this result.
+open Lean Qq Mathlib.Meta.NormNum in
+run_meta do
+  let check {α : Q(Type)} (e : Q($α)) : MetaM Unit := do
+    match ← derive e with
+    | .isNat _ (.lit (.natVal 0)) _ => pure ()
+    | _ => throwError "expected a raw zero literal for {e}"
+  check q((0 : ℝ) ^ (-1 / 3 : ℝ))
+  check q((0 : ℝ) ^ (-3 : ℝ))
+  check q((0 : ℝ≥0) ^ (-1 / 3 : ℝ))
+  check q((0 : ℝ≥0) ^ (-3 : ℝ))

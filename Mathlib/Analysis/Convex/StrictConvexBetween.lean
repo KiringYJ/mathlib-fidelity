@@ -130,8 +130,8 @@ lemma eq_lineMap_of_dist_eq_mul_of_dist_eq_mul (hxy : dist x y = r * dist x z)
 lemma eq_midpoint_of_dist_eq_half (hx : dist x y = dist x z / 2) (hy : dist y z = dist x z / 2) :
     y = midpoint ℝ x z := by
   apply eq_lineMap_of_dist_eq_mul_of_dist_eq_mul
-  · rwa [invOf_eq_inv, ← div_eq_inv_mul]
-  · rwa [invOf_eq_inv, ← one_div, sub_half, one_div, ← div_eq_inv_mul]
+  · rwa [invOf_eq_inv, ← div_eq_inv_mul₀]
+  · rwa [invOf_eq_inv, ← one_div₀, sub_half, one_div₀, ← div_eq_inv_mul₀]
 
 namespace Isometry
 
@@ -143,9 +143,9 @@ noncomputable def affineIsometryOfStrictConvexSpace (hi : Isometry f) : PF →�
       (fun x y => by
         apply eq_midpoint_of_dist_eq_half
         · rw [hi.dist_eq, hi.dist_eq]
-          simp only [dist_left_midpoint, Real.norm_of_nonneg zero_le_two, div_eq_inv_mul]
+          simp only [dist_left_midpoint, Real.norm_of_nonneg zero_le_two, div_eq_inv_mul₀]
         · rw [hi.dist_eq, hi.dist_eq]
-          simp only [dist_midpoint_right, Real.norm_of_nonneg zero_le_two, div_eq_inv_mul])
+          simp only [dist_midpoint_right, Real.norm_of_nonneg zero_le_two, div_eq_inv_mul₀])
       hi.continuous with
     norm_map := fun x => by simp [AffineMap.ofMapMidpoint, ← dist_eq_norm_vsub E, hi.dist_eq] }
 

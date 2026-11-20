@@ -109,7 +109,55 @@ theorem common_denominator_right {a n : M} {v : Mˣ} (ha : a = n /ₚ v) (u : M�
 theorem square_denominator {a n c : M} (h : a * c = n) :
     a * c ^ 2 = n * c := by rw [pow_two, ← mul_assoc, h]
 
+/-- Move an already collected factor to the front of a product. -/
+theorem collect_mul_left (x : M) {a b c : M} (h : a * b = c) : (x * a) * b = x * c := by
+  rw [mul_assoc, h]
+
+theorem collect_mul_right (x : M) {a b c : M} (h : a * b = c) : a * (x * b) = x * c := by
+  rw [mul_left_comm, h]
+
+theorem collect_mul_pow (x : M) (i j : ℕ) {a b c : M} (h : a * b = c) :
+    (x ^ i * a) * (x ^ j * b) = x ^ (i + j) * c := by
+  rw [pow_add, ← h]
+  ac_rfl
+
+theorem collect_pow (x : M) (i k : ℕ) {a b : M} (h : a ^ k = b) :
+    (x ^ i * a) ^ k = x ^ (i * k) * b := by
+  rw [mul_pow, pow_mul, h]
+
+theorem collect_atom (a : M) : a = a ^ (1 : ℕ) * 1 := by simp
+
+/-- Removing a common factor preserves the fraction. The remaining denominator's unit proof
+comes from the original unit and its factorization. -/
+theorem display_reduced {e n a b c : M} {u : Mˣ} (p : e = n /ₚ u) (hn : n = a * c)
+    (hu : (u : M) = b * c) :
+    e = Checked.div a b (IsUnit.mul_iff.mp (hu ▸ u.isUnit)).1 := by
+  apply p.trans
+  symm
+  apply eq_divp_iff_mul_eq.mpr
+  let z := Checked.div a b (IsUnit.mul_iff.mp (hu ▸ u.isUnit)).1
+  calc
+    z * (u : M) = z * (b * c) := congrArg (z * ·) hu
+    _ = n := by dsimp only [z]; rw [← mul_assoc, div_mul_cancel₀, hn]
+
+theorem unit_of_power_factor (x r : M) (k : ℕ) (h : IsUnit (x ^ (k + 1) * r)) : IsUnit x :=
+  isUnit_of_mul_isUnit_left (by simpa only [pow_succ', mul_assoc] using h)
+
+theorem cancel_common_eq {x y a b c : M} (hc : IsUnit c) (hx : x = a * c) (hy : y = b * c) :
+    (x = y) = (a = b) := by rw [hx, hy]; exact propext hc.mul_left_inj
+
 end CommMonoid
+
+theorem collect_add [CommSemiring M] {a b x y c : M} (ha : a = x * c) (hb : b = y * c) :
+    a + b = (x + y) * c := by rw [ha, hb, add_mul]
+
+theorem collect_sub [CommRing M] {a b x y c : M} (ha : a = x * c) (hb : b = y * c) :
+    a - b = (x - y) * c := by rw [ha, hb, sub_mul]
+
+theorem collect_neg [Ring M] {a x : M} (h : a = x) : -a = (-1) * x := by rw [h, neg_one_mul]
+
+theorem display_mul_assoc [Semigroup M] (a b c : M) : a * (b * c) = a * b * c :=
+  (mul_assoc a b c).symm
 
 theorem normalize_add [CommSemiring M] {a b na nb : M} {u v : Mˣ}
     (ha : a = na /ₚ u) (hb : b = nb /ₚ v) :
@@ -130,6 +178,22 @@ theorem checked_zpow_negSucc [Monoid M] (a : M) (k : ℕ)
       Checked.inv a (ha (Int.negSucc_lt_zero _)) ^ (k + 1) := by
   simp only [Checked.zpow, zpow_negSucc, Checked.inv]
   rw [← inv_pow, Units.val_pow_eq_pow_val]
+
+theorem unit_even_power_pos [CommRing M] [LinearOrder M] [IsStrictOrderedRing M] {x : M}
+    (h : IsUnit x) (k : ℕ) : 0 < x ^ (2 * k) := by
+  rw [pow_mul]
+  exact pow_pos (unit_sq_pos h.unit) _
+
+theorem positive_mul_one [MulOneClass M] [Zero M] [LT M] {x : M} (hx : 0 < x) : 0 < x * 1 := by
+  rwa [mul_one]
+
+theorem cancel_common_le [MonoidWithZero M] [PartialOrder M] [MulPosMono M] [MulPosReflectLE M]
+    {x y a b c : M} (hc : 0 < c) (hx : x = a * c) (hy : y = b * c) :
+    (x ≤ y) = (a ≤ b) := by rw [hx, hy]; exact propext (mul_le_mul_iff_of_pos_right hc)
+
+theorem cancel_common_lt [MonoidWithZero M] [PartialOrder M] [MulPosStrictMono M]
+    [MulPosReflectLT M] {x y a b c : M} (hc : 0 < c) (hx : x = a * c) (hy : y = b * c) :
+    (x < y) = (a < b) := by rw [hx, hy]; exact propext (mul_lt_mul_iff_of_pos_right hc)
 
 theorem clear_le [MonoidWithZero M] [PartialOrder M] [MulPosMono M] [MulPosReflectLE M]
     {a b c na nb : M} (hc : 0 < c) (ha : a * c = na) (hb : b * c = nb) :

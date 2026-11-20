@@ -90,10 +90,10 @@ theorem taylorWithinEval_succ (f : ℝ → E) (n : ℕ) (s : Set ℝ) (x₀ x : 
   simp_rw [taylorWithinEval, taylorWithin_succ, map_add, PolynomialModule.comp_eval]
   congr
   simp only [Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C,
-    PolynomialModule.eval_single, mul_inv_rev]
+    PolynomialModule.eval_single]
   dsimp only [taylorCoeffWithin]
-  rw [← mul_smul, mul_comm, Nat.factorial_succ, Nat.cast_mul, Nat.cast_add, Nat.cast_one,
-    mul_inv_rev]
+  rw [← mul_smul, mul_comm]
+  simp only [Nat.factorial_succ, Nat.cast_mul, Nat.cast_add, Nat.cast_one]
 
 /-- The Taylor polynomial of order zero evaluates to `f x`. -/
 @[simp]
@@ -179,7 +179,7 @@ theorem hasDerivWithinAt_taylorWithinEval {f : ℝ → E} {x y : ℝ} {n : ℕ} 
     UniqueDiffWithinAt.mono_nhds (hs_unique _ (h hy)) (nhdsWithin_le_iff.mpr hs')
   induction n with
   | zero =>
-    simp only [taylor_within_zero_eval, Nat.factorial_zero, Nat.cast_one, inv_one, pow_zero,
+    simp only [taylor_within_zero_eval, Nat.factorial_zero, Nat.cast_one, inv_one₀, pow_zero,
       mul_one, zero_add, one_smul]
     simp only [iteratedDerivWithin_zero] at hf'
     rw [iteratedDerivWithin_one]
@@ -267,25 +267,31 @@ theorem taylor_isLittleO_univ {f : ℝ → E} {x₀ : ℝ} {n : ℕ} (hf : ContD
 /-- **Taylor's theorem** as a limit. -/
 theorem taylor_tendsto {f : ℝ → E} {x₀ : ℝ} {n : ℕ} {s : Set ℝ}
     (hs : Convex ℝ s) (hx₀s : x₀ ∈ s) (hf : ContDiffOn ℝ n f s) :
-    Filter.Tendsto (fun x ↦ ((x - x₀) ^ n)⁻¹ • (f x - taylorWithinEval f n s x₀ x))
-      (𝓝[s] x₀) (𝓝 0) := by
-  have h_isLittleO := (taylor_isLittleO hs hx₀s hf).norm_norm
-  rw [Asymptotics.isLittleO_iff_tendsto] at h_isLittleO
-  · rw [tendsto_zero_iff_norm_tendsto_zero]
-    simpa [norm_smul, div_eq_inv_mul] using h_isLittleO
-  · simp only [norm_pow, Real.norm_eq_abs, pow_eq_zero_iff', abs_eq_zero, ne_eq, norm_eq_zero,
-      and_imp]
-    intro x hx
-    rw [sub_eq_zero] at hx
-    simp [hx]
+    Filter.Tendsto (fun x : {x : ℝ // IsUnit ((x - x₀) ^ n)} ↦
+      Checked.inv ((x.val - x₀) ^ n) x.property • (f x - taylorWithinEval f n s x₀ x))
+      (Filter.comap Subtype.val (𝓝[s] x₀)) (𝓝 0) := by
+  let D := {x : ℝ // IsUnit ((x - x₀) ^ n)}
+  have hcoe : Filter.Tendsto (Subtype.val : D → ℝ)
+      (Filter.comap Subtype.val (𝓝[s] x₀)) (𝓝[s] x₀) :=
+    Filter.tendsto_comap
+  rw [Metric.tendsto_nhds]
+  intro ε hε
+  have he := Asymptotics.isLittleO_iff.1 (taylor_isLittleO hs hx₀s hf) (half_pos hε)
+  filter_upwards [hcoe.eventually he] with x hx
+  rw [dist_zero_right, norm_smul]
+  calc
+    _ ≤ ‖Checked.inv ((x.val - x₀) ^ n) x.property‖ * (ε / 2 * ‖(x.val - x₀) ^ n‖) :=
+      mul_le_mul_of_nonneg_left hx (norm_nonneg _)
+    _ = ε / 2 := by rw [mul_left_comm, ← norm_mul, inv_mul_cancel₀, norm_one, mul_one]
+    _ < ε := half_lt_self hε
 
 /-- **Taylor's theorem** as a limit. -/
 theorem Real.taylor_tendsto {f : ℝ → ℝ} {x₀ : ℝ} {n : ℕ} {s : Set ℝ}
     (hs : Convex ℝ s) (hx₀s : x₀ ∈ s) (hf : ContDiffOn ℝ n f s) :
-    Filter.Tendsto (fun x ↦ (f x - taylorWithinEval f n s x₀ x) / (x - x₀) ^ n)
-      (𝓝[s] x₀) (𝓝 0) := by
-  convert _root_.taylor_tendsto hs hx₀s hf with x
-  simp [div_eq_inv_mul]
+    Filter.Tendsto (fun x : {x : ℝ // IsUnit ((x - x₀) ^ n)} ↦
+      Checked.div (f x - taylorWithinEval f n s x₀ x) ((x.val - x₀) ^ n) x.property)
+      (Filter.comap Subtype.val (𝓝[s] x₀)) (𝓝 0) := by
+  simpa only [smul_eq_mul, div_eq_inv_mul₀] using (_root_.taylor_tendsto hs hx₀s hf)
 
 
 /-! ### Taylor's theorem with mean value type remainder estimate -/
@@ -304,8 +310,10 @@ theorem taylor_mean_remainder {f : ℝ → ℝ} {g g' : ℝ → ℝ} {x x₀ : �
     (gcont : ContinuousOn g (uIcc x₀ x))
     (gdiff : ∀ x_1 : ℝ, x_1 ∈ uIoo x₀ x → HasDerivAt g (g' x_1) x_1)
     (g'_ne : ∀ x_1 : ℝ, x_1 ∈ uIoo x₀ x → g' x_1 ≠ 0) :
-    ∃ x' ∈ uIoo x₀ x, f x - taylorWithinEval f n (uIcc x₀ x) x₀ x = ((x - x') ^ n / n ! *
-      (g x - g x₀) / g' x') • iteratedDerivWithin (n + 1) f (uIcc x₀ x) x' := by
+    ∃ (x' : ℝ) (hx' : x' ∈ uIoo x₀ x),
+      f x - taylorWithinEval f n (uIcc x₀ x) x₀ x =
+        Checked.div ((x - x') ^ n / n ! * (g x - g x₀)) (g' x') (g'_ne x' hx').isUnit •
+          iteratedDerivWithin (n + 1) f (uIcc x₀ x) x' := by
   have hx₁ : min x₀ x < max x₀ x := by grind
   -- We apply the mean value theorem
   rcases exists_ratio_hasDerivAt_eq_ratio_slope (fun t => taylorWithinEval f n (uIcc x₀ x) t x)
@@ -313,9 +321,19 @@ theorem taylor_mean_remainder {f : ℝ → ℝ} {g g' : ℝ → ℝ} {x x₀ : �
       (continuousOn_taylorWithinEval (uniqueDiffOn_Icc hx₁) hf)
       (fun _ hy => taylorWithinEval_hasDerivAt_Ioo x hx₁ hy hf hf')
     g g' gcont gdiff with ⟨y, hy, h⟩
-  use y, hy
-  -- The rest is simplifications and trivial calculations
-  grind [uIoo, smul_eq_mul, taylorWithinEval_self]
+  have hy' : y ∈ uIoo x₀ x := hy
+  refine ⟨y, hy', ?_⟩
+  simp only [smul_eq_mul]
+  apply mul_right_cancel₀ (g'_ne y hy')
+  rw [mul_right_comm, div_mul_cancel₀]
+  simp only [div_eq_mul_inv₀]
+  rcases lt_or_gt_of_ne hx with hlt | hlt
+  · simp only [min_eq_left hlt.le, max_eq_right hlt.le, smul_eq_mul,
+      taylorWithinEval_self] at h
+    linear_combination -h
+  · simp only [min_eq_right hlt.le, max_eq_left hlt.le, smul_eq_mul,
+      taylorWithinEval_self] at h
+    linear_combination h
 
 -- see https://github.com/leanprover-community/mathlib4/issues/29041
 set_option linter.unusedSimpArgs false in
@@ -341,8 +359,9 @@ theorem taylor_mean_remainder_lagrange {f : ℝ → ℝ} {x x₀ : ℝ} {n : ℕ
     ⟨y, hy, h⟩
   use y, hy
   simp only [sub_self, zero_pow, Ne, Nat.succ_ne_zero, not_false_iff, zero_sub, mul_neg] at h
-  rw [h, neg_div, ← div_neg, neg_mul, neg_neg]
-  simp [field, xy_ne y hy, Nat.factorial]
+  rw [h]
+  simp only [smul_eq_mul, Nat.factorial_succ, Nat.cast_mul, Nat.cast_add, Nat.cast_one]
+  field_simp [xy_ne y hy]
 
 /-- A corollary of Taylor's theorem with the Lagrange form of the remainder. -/
 lemma taylor_mean_remainder_lagrange_iteratedDeriv {f : ℝ → ℝ} {x x₀ : ℝ} {n : ℕ} (hx : x₀ ≠ x)
@@ -405,7 +424,7 @@ theorem taylor_mean_remainder_bound {f : ℝ → E} {a b C x : ℝ} {n : ℕ} (h
     rintro y ⟨hay, hyx⟩
     rw [norm_smul, Real.norm_eq_abs]
     gcongr
-    · rw [abs_mul, abs_pow, abs_inv, Nat.abs_cast]
+    · simp only [abs_mul, abs_pow, abs_inv, Nat.abs_cast]
       gcongr
     -- Estimate the iterated derivative by `C`
     · exact hC y ⟨hay, hyx.le.trans hx.2⟩
@@ -465,40 +484,49 @@ theorem taylor_integral_remainder_aux [NormedAddCommGroup F] [NormedSpace ℝ F]
   · simp
   induction n with
   | zero =>
-    simp only [taylor_within_zero_eval, pow_zero, Nat.factorial_zero, Nat.cast_one, ne_eq,
-      one_ne_zero, not_false_eq_true, div_self, zero_add, iteratedDerivWithin_one, one_smul]
+    simp only [taylor_within_zero_eval, pow_zero, Nat.factorial_zero, Nat.cast_one,
+      div_self, zero_add, iteratedDerivWithin_one, one_smul]
     simp only [nonpos_iff_eq_zero, sub_self, deriv_div_const, forall_eq, pow_zero,
-      Nat.factorial_zero, Nat.cast_one, ne_eq, one_ne_zero, not_false_eq_true, div_self,
-      iteratedDerivWithin_zero, one_smul, deriv_const', div_one, zero_smul,
-      intervalIntegral.integral_zero, sub_zero] at hf
+      Nat.factorial_zero, Nat.cast_one, div_self,
+      iteratedDerivWithin_zero, one_smul] at hf
+    have hconst (t : ℝ) : deriv (fun _ : ℝ ↦ (1 : ℝ)) t = 0 :=
+      (hasDerivAt_const t 1).deriv
+    simp only [hconst, zero_div, zero_smul, intervalIntegral.integral_zero, sub_zero] at hf
     rw [← hf]
     refine intervalIntegral.integral_congr_uIoo fun _ ⟨h1, h2⟩ => ?_
     rw [← derivWithin_of_mem_nhds <| Icc_mem_nhds h1 h2]
     rfl
   | succ n ih =>
-    specialize ih (by grind)
-    simp only [taylorWithinEval_succ, mul_inv_rev]
-    rw [sub_add_eq_sub_sub, ih]
-    simp only [Nat.factorial, Nat.succ_eq_add_one, Nat.cast_mul, Nat.cast_add, Nat.cast_one]
-    have := hf (n + 1) (by rfl)
-    convert! this.symm using 1
-    · simp only [sub_self, ne_eq, Nat.add_eq_zero_iff, one_ne_zero, and_false, not_false_eq_true,
-        zero_pow, zero_div, zero_smul, zero_sub, deriv_div_const, Nat.factorial]
-      apply fun (a b c d : F) (_ : b = c) (_ : a = -d) ↦ show a - b = -c - d by grind
-      · grind
-      · rw [← intervalIntegral.integral_neg]
-        congr
-        ext t
-        rw [deriv_fun_pow (by fun_prop), deriv_const_sub, deriv_id'', ← neg_smul]
-        congr
-        field_simp
-        grind
-    · refine intervalIntegral.integral_congr_uIoo fun _ ⟨h1, h2⟩ => ?_
-      rw [iteratedDerivWithin_succ]
-      congr
-      · rw [Nat.factorial, Nat.cast_mul, Nat.succ_eq_add_one, Nat.cast_add, Nat.cast_one]
-      · rw [← derivWithin_of_mem_nhds <| Icc_mem_nhds h1 h2]
-        rfl
+    specialize ih (fun k hk ↦ hf k (by omega))
+    let p (t : ℝ) : ℝ := (x - t) ^ (n + 1) / (n + 1)!
+    let v := iteratedDerivWithin (n + 1) f [[x₀, x]]
+    have hp (t : ℝ) : p t = (((n + 1 : ℝ) * n !)⁻¹ * (x - t) ^ (n + 1)) := by
+      simp only [p, div_eq_inv_mul₀, Nat.factorial_succ, Nat.cast_mul, Nat.cast_add, Nat.cast_one]
+    have hpx : p x = 0 := by simp [p]
+    have hd (t : ℝ) : deriv p t = -((x - t) ^ n / n !) := by
+      have hfact : IsUnit ((n + 1)! : ℝ) :=
+        (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero _)).isUnit
+      have hderiv := ((monomial_has_deriv_aux t x n).div_const _ (hd := hfact)).deriv
+      change deriv p t = _ at hderiv
+      rw [hderiv, neg_mul, neg_div₀]
+      simp only [Nat.factorial_succ, Nat.cast_mul, Nat.cast_add, Nat.cast_one, mul_div_mul_left]
+    have hpb : (∫ t in x₀..x, p t • deriv v t) =
+        p x • v x - p x₀ • v x₀ - ∫ t in x₀..x, deriv p t • v t :=
+      hf (n + 1) le_rfl
+    rw [taylorWithinEval_succ, sub_add_eq_sub_sub, ih, ← hp x₀]
+    calc
+      _ = ∫ t in x₀..x, p t • deriv v t := by
+        rw [hpb]
+        simp only [hpx, zero_smul, zero_sub, hd, neg_smul, intervalIntegral.integral_neg,
+          sub_neg_eq_add]
+        abel
+      _ = _ := by
+        refine intervalIntegral.integral_congr_uIoo fun t ⟨h₁, h₂⟩ ↦ ?_
+        change p t • deriv v t = p t • iteratedDerivWithin (n + 1 + 1) f [[x₀, x]] t
+        have hsucc := congrFun (iteratedDerivWithin_succ (n := n + 1) (f := f)
+          (s := [[x₀, x]])) t
+        rw [hsucc]
+        exact congrArg (p t • ·) (derivWithin_of_mem_nhds (f := v) (Icc_mem_nhds h₁ h₂)).symm
 
 /-- **Taylor's theorem** with the Integral form of the remainder.
 

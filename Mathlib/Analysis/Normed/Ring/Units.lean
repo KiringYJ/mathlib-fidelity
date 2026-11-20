@@ -228,7 +228,7 @@ omit [HasSummableGeomSeries R] in
 /-- Inverse values of `1 - t` are bounded near zero on their exact domain. -/
 theorem inverse_one_sub_norm :
     (fun t : {t : R | IsUnit (1 - t)} ↦ (↑t.property.unit⁻¹ : R)) =O[
-      𝓝 (⟨0, by simpa using (isUnit_one : IsUnit (1 : R))⟩ : {t : R | IsUnit (1 - t)})]
+      𝓝 (⟨0, by simp⟩ : {t : R | IsUnit (1 - t)})]
       (fun _ ↦ (1 : ℝ)) := by
   have hmap : Continuous (fun t : {t : R | IsUnit (1 - t)} ↦
       (⟨1 - t.val, t.property⟩ : {x : R | IsUnit x})) :=

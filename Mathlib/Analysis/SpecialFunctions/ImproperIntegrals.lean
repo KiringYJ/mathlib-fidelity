@@ -85,17 +85,24 @@ theorem integrableOn_exp_mul_Iic {a : ℝ} (ha : 0 < a) (c : ℝ) :
   simpa [Complex.norm_exp] using! this
 
 theorem integral_exp_mul_complex_Ioi {a : ℂ} (ha : a.re < 0) (c : ℝ) :
-    ∫ x : ℝ in Set.Ioi c, Complex.exp (a * x) = - Complex.exp (a * c) / a := by
+    (∫ x : ℝ in Set.Ioi c, Complex.exp (a * x)) =
+      Checked.div (-Complex.exp (a * c)) a (show a ≠ 0 by
+        intro he
+        simp [he] at ha).isUnit := by
+  have ha0 : a ≠ 0 := by
+    intro he
+    simp [he] at ha
   refine tendsto_nhds_unique (intervalIntegral_tendsto_integral_Ioi c
     (integrableOn_exp_mul_complex_Ioi ha c) tendsto_id) ?_
-  simp_rw [integral_exp_mul_complex (c := a) (by aesop), id_eq]
+  simp_rw [integral_exp_mul_complex (c := a) ha0, id_eq]
   suffices Tendsto (fun x : ℝ ↦ Complex.exp (a * x)) atTop (𝓝 0) by
-    simpa using this.sub_const _ |>.div_const _
+    simpa using (this.sub_const _).div_const₀ _ (hy := ha0.isUnit)
   simpa [Complex.tendsto_exp_nhds_zero_iff] using tendsto_const_nhds.neg_mul_atTop ha tendsto_id
 
 theorem integral_exp_mul_complex_Iic {a : ℂ} (ha : 0 < a.re) (c : ℝ) :
-    ∫ x : ℝ in Set.Iic c, Complex.exp (a * x) = Complex.exp (a * c) / a := by
-  simpa [neg_mul, ← mul_neg, ← Complex.ofReal_neg,
+    (∫ x : ℝ in Set.Iic c, Complex.exp (a * x)) =
+      Checked.div (Complex.exp (a * c)) a (Complex.ne_zero_of_re_pos ha).isUnit := by
+  simpa [neg_mul, ← mul_neg, ← Complex.ofReal_neg, div_neg₀, neg_div₀,
     integral_comp_neg_Ioi (f := fun x : ℝ ↦ Complex.exp (a * x))]
     using integral_exp_mul_complex_Ioi (a := -a) (by simpa) (-c)
 
@@ -108,21 +115,25 @@ theorem integral_exp_mul_Ioi {a : ℝ} (ha : a < 0) (c : ℝ) :
 
 theorem integral_exp_mul_Iic {a : ℝ} (ha : 0 < a) (c : ℝ) :
     ∫ x : ℝ in Set.Iic c, Real.exp (a * x) = Real.exp (a * c) / a := by
-  simpa [neg_mul, ← mul_neg, integral_comp_neg_Ioi (f := fun x : ℝ ↦ Real.exp (a * x))]
+  simpa [neg_mul, ← mul_neg, div_neg₀, neg_div₀,
+    integral_comp_neg_Ioi (f := fun x : ℝ ↦ Real.exp (a * x))]
     using integral_exp_mul_Ioi (a := -a) (by simpa) (-c)
 
 /-- If `-m < c`, then `(fun t : ℝ ↦ (t + m) ^ a)` is integrable on `(c, ∞)` for all `a < -1`. -/
 theorem integrableOn_add_rpow_Ioi_of_lt {a c m : ℝ} (ha : a < -1) (hc : -m < c) :
     IntegrableOn (fun (x : ℝ) ↦ (x + m) ^ a) (Ioi c) := by
+  have h₀ : IsUnit (a + 1) := (show a + 1 ≠ 0 by linarith).isUnit
   have hd : ∀ x ∈ Ici c, HasDerivAt (fun t ↦ (t + m) ^ (a + 1) / (a + 1)) ((x + m) ^ a) x := by
     intro x hx
-    convert! (((hasDerivAt_id _).add_const _).rpow_const _).div_const _ using 1
-    · simp [show a + 1 ≠ 0 by linarith]
-    left; linarith [mem_Ici.mp hx, id_eq x]
-  have ht : Tendsto (fun t ↦ ((t + m) ^ (a + 1)) / (a + 1)) atTop (nhds (0 / (a + 1))) := by
-    rw [← neg_neg (a + 1)]
-    exact (tendsto_rpow_neg_atTop (by linarith)).comp
-      (tendsto_atTop_add_const_right _ m tendsto_id) |>.div_const _
+    have hx' : x + m ≠ 0 := by linarith [mem_Ici.mp hx]
+    simpa [mul_div_cancel_left₀, add_sub_cancel_right] using
+      ((((hasDerivAt_id x).add_const m).rpow_const (p := a + 1) (.inl hx')).div_const (a + 1)
+        (hd := h₀))
+  have ht : Tendsto (fun t ↦ (t + m) ^ (a + 1) / (a + 1)) atTop (𝓝 (0 / (a + 1))) := by
+    apply Tendsto.div_const₀
+    refine (show Tendsto (fun t : ℝ ↦ t ^ (a + 1)) atTop (𝓝 0) from ?_).comp
+      (tendsto_atTop_add_const_right _ m tendsto_id)
+    simpa only [neg_neg] using tendsto_rpow_neg_atTop (by linarith : 0 < -(a + 1))
   exact integrableOn_Ioi_deriv_of_nonneg' hd
     (fun t ht ↦ rpow_nonneg (by linarith [mem_Ioi.mp ht]) a) ht
 
@@ -138,14 +149,24 @@ theorem integrableOn_Ioi_rpow_iff {s t : ℝ} (ht : 0 < t) :
   intro H
   have H' : IntegrableOn (fun x ↦ x ^ s) (Ioi (max 1 t)) :=
     H.mono (Set.Ioi_subset_Ioi (le_max_right _ _)) le_rfl
-  have : IntegrableOn (fun x ↦ x⁻¹) (Ioi (max 1 t)) := by
-    apply H'.mono' measurable_inv.aestronglyMeasurable
-    filter_upwards [ae_restrict_mem measurableSet_Ioi] with x hx
-    have x_one : 1 ≤ x := ((le_max_left _ _).trans_lt (mem_Ioi.1 hx)).le
-    simp only [norm_inv, Real.norm_eq_abs, abs_of_nonneg (zero_le_one.trans x_one)]
-    rw [← Real.rpow_neg_one x]
-    exact Real.rpow_le_rpow_of_exponent_le x_one h
-  exact not_integrableOn_Ioi_inv this
+  let S : Set ℝ := Ioi (max 1 t) \ {0}
+  have hS : S = Ioi (max 1 t) := by
+    refine sdiff_eq_left.mpr (disjoint_singleton_right.mpr ?_)
+    exact notMem_Ioi.mpr (zero_le_one.trans (le_max_left _ _))
+  have hs : MeasurableSet S := hS.symm ▸ measurableSet_Ioi
+  have hone (x : S) : 1 ≤ x.val := (le_max_left _ _).trans (mem_Ioi.mp x.2.1).le
+  have hpow : Integrable (fun x : S ↦ x.val ^ s) (volume.comap Subtype.val) :=
+    (integrableOn_iff_comap_subtypeVal (f := fun t : ℝ ↦ t ^ s) (μ := volume) hs).mp
+      (hS.symm ▸ H')
+  apply not_integrableOn_Ioi_inv (a := max 1 t)
+  apply hpow.mono' (continuous_subtype_val.fun_inv₀ (h0 := fun x : S ↦
+    Ne.isUnit x.2.2)).aestronglyMeasurable
+  filter_upwards [] with x
+  calc
+    ‖Checked.inv x.val (Ne.isUnit x.2.2)‖ = Checked.inv x.val (Ne.isUnit x.2.2) := by
+      simp only [norm_inv, norm_of_nonneg (zero_le_one.trans (hone x))]
+    _ = x.val ^ (-1 : ℝ) := (Real.rpow_neg_one x.val (hx := Ne.isUnit x.2.2)).symm
+    _ ≤ x.val ^ s := rpow_le_rpow_of_exponent_le (hone x) h
 
 theorem integrableAtFilter_rpow_atTop_iff {s : ℝ} :
     IntegrableAtFilter (fun x : ℝ ↦ x ^ s) atTop ↔ s < -1 := by
@@ -176,16 +197,19 @@ theorem setIntegral_Ioi_zero_rpow (s : ℝ) : ∫ x in Ioi (0 : ℝ), x ^ s = 0 
   MeasureTheory.integral_undef (not_integrableOn_Ioi_rpow s)
 
 theorem integral_Ioi_rpow_of_lt {a : ℝ} (ha : a < -1) {c : ℝ} (hc : 0 < c) :
-    ∫ t : ℝ in Ioi c, t ^ a = -c ^ (a + 1) / (a + 1) := by
+    ∫ t : ℝ in Ioi c, t ^ a =
+      Checked.div (-c ^ (a + 1)) (a + 1) (show a + 1 ≠ 0 by linarith).isUnit := by
+  have h₀ : IsUnit (a + 1) := (show a + 1 ≠ 0 by linarith).isUnit
   have hd : ∀ x ∈ Ici c, HasDerivAt (fun t => t ^ (a + 1) / (a + 1)) (x ^ a) x := by
     intro x hx
-    convert! (hasDerivAt_rpow_const (p := a + 1) (Or.inl (hc.trans_le hx).ne')).div_const _ using 1
-    simp [show a + 1 ≠ 0 from ne_of_lt (by linarith), mul_comm]
+    simpa [mul_div_cancel_left₀] using
+      (hasDerivAt_rpow_const (p := a + 1) (Or.inl (hc.trans_le hx).ne')).div_const
+        (a + 1) (hd := h₀)
   have ht : Tendsto (fun t => t ^ (a + 1) / (a + 1)) atTop (𝓝 (0 / (a + 1))) := by
-    apply Tendsto.div_const
+    apply Tendsto.div_const₀
     simpa only [neg_neg] using tendsto_rpow_neg_atTop (by linarith : 0 < -(a + 1))
   convert! integral_Ioi_of_hasDerivAt_of_tendsto' hd (integrableOn_Ioi_rpow_of_lt ha hc) ht using 1
-  simp only [neg_div, zero_div, zero_sub]
+  simp only [neg_div₀, zero_div, zero_sub]
 
 theorem integrableOn_Ioi_norm_cpow_of_lt {a : ℂ} (ha : a.re < -1) {c : ℝ} (hc : 0 < c) :
     IntegrableOn (fun t : ℝ ↦ ‖(t : ℂ) ^ a‖) (Ioi c) := by
@@ -223,8 +247,10 @@ theorem integrableOn_Ioi_deriv_ofReal_cpow {s : ℂ} {t : ℝ} (ht : 0 < t) (hs 
 
 theorem integrableOn_Ioi_deriv_norm_ofReal_cpow {s : ℂ} {t : ℝ} (ht : 0 < t) (hs : s.re ≤ 0) :
     IntegrableOn (deriv fun x : ℝ ↦ ‖(x : ℂ) ^ s‖) (Set.Ioi t) := by
-  rw [integrableOn_congr_fun (fun x hx ↦ by
-    rw [deriv_norm_ofReal_cpow _ (ht.trans hx)]) measurableSet_Ioi]
+  have heq : EqOn (deriv fun x : ℝ ↦ ‖(x : ℂ) ^ s‖)
+      (fun x : ℝ ↦ s.re * x ^ (s.re - 1)) (Ioi t) :=
+    fun _ hx ↦ deriv_norm_ofReal_cpow s (ht.trans hx)
+  rw [integrableOn_congr_fun heq measurableSet_Ioi]
   obtain hs | hs := eq_or_lt_of_le hs
   · simp_rw [hs, zero_mul]
     exact integrableOn_zero
@@ -249,7 +275,17 @@ theorem setIntegral_Ioi_zero_cpow (s : ℂ) : ∫ x in Ioi (0 : ℝ), (x : ℂ) 
   MeasureTheory.integral_undef (not_integrableOn_Ioi_cpow s)
 
 theorem integral_Ioi_cpow_of_lt {a : ℂ} (ha : a.re < -1) {c : ℝ} (hc : 0 < c) :
-    (∫ t : ℝ in Ioi c, (t : ℂ) ^ a) = -(c : ℂ) ^ (a + 1) / (a + 1) := by
+    (∫ t : ℝ in Ioi c, (t : ℂ) ^ a) =
+      Checked.div (-(c : ℂ) ^ (a + 1)) (a + 1) (show a + 1 ≠ 0 by
+        intro h
+        have hre := congrArg Complex.re h
+        simp only [Complex.add_re, Complex.one_re, Complex.zero_re] at hre
+        linarith).isUnit := by
+  have h₀ : IsUnit (a + 1) := (show a + 1 ≠ 0 by
+    intro h
+    have hre := congrArg Complex.re h
+    simp only [Complex.add_re, Complex.one_re, Complex.zero_re] at hre
+    linarith).isUnit
   refine
     tendsto_nhds_unique
       (intervalIntegral_tendsto_integral_Ioi c (integrableOn_Ioi_cpow_of_lt ha hc) tendsto_id) ?_
@@ -257,89 +293,164 @@ theorem integral_Ioi_cpow_of_lt {a : ℂ} (ha : a.re < -1) {c : ℝ} (hc : 0 < c
     Tendsto (fun x : ℝ => ((x : ℂ) ^ (a + 1) - (c : ℂ) ^ (a + 1)) / (a + 1)) atTop
       (𝓝 <| -c ^ (a + 1) / (a + 1)) by
     refine this.congr' ((eventually_gt_atTop 0).mp (Eventually.of_forall fun x hx => ?_))
-    dsimp only
-    rw [integral_cpow, id]
-    refine Or.inr ⟨?_, notMem_uIcc_of_lt hc hx⟩
-    apply_fun Complex.re
-    rw [Complex.neg_re, Complex.one_re]
-    exact ha.ne
+    have ha' : a ≠ -1 := fun h ↦ ha.ne (by
+      simpa only [Complex.neg_re, Complex.one_re] using congrArg Complex.re h)
+    exact (integral_cpow (a := c) (b := x) (r := a)
+      (Or.inr ⟨ha', notMem_uIcc_of_lt hc hx⟩)).symm
   simp_rw [← zero_sub, sub_div]
-  refine (Tendsto.div_const ?_ _).sub_const _
+  refine (Tendsto.div_const₀ ?_ _ (hy := h₀)).sub_const _
   rw [tendsto_zero_iff_norm_tendsto_zero]
   refine
     (tendsto_rpow_neg_atTop (by linarith : 0 < -(a.re + 1))).congr'
       ((eventually_gt_atTop 0).mp (Eventually.of_forall fun x hx => ?_))
   simp_rw [neg_neg, Complex.norm_cpow_eq_rpow_re_of_pos hx, Complex.add_re, Complex.one_re]
 
-theorem integrable_inv_one_add_sq : Integrable fun (x : ℝ) ↦ (1 + x ^ 2)⁻¹ := by
-  suffices Integrable fun (x : ℝ) ↦ (1 + ‖x‖ ^ 2) ^ ((-2 : ℝ) / 2) by simpa [rpow_neg_one]
+theorem integrable_inv_one_add_sq : Integrable fun (x : ℝ) ↦
+    Checked.inv (1 + x ^ 2) (show 0 < 1 + x ^ 2 by positivity).ne'.isUnit := by
+  suffices h : Integrable fun (x : ℝ) ↦ (1 + ‖x‖ ^ 2) ^ ((-2 : ℝ) / 2) by
+    refine h.congr (Eventually.of_forall fun x ↦ ?_)
+    dsimp only
+    rw [show (-2 : ℝ) / 2 = -1 by norm_num, Real.norm_eq_abs, sq_abs]
+    exact rpow_neg_one _ (hx := (show 0 < 1 + x ^ 2 by positivity).ne'.isUnit)
   exact integrable_rpow_neg_one_add_norm_sq (by simp)
 
 @[simp]
 theorem integral_Iic_inv_one_add_sq {i : ℝ} :
-    ∫ (x : ℝ) in Set.Iic i, (1 + x ^ 2)⁻¹ = arctan i + (π / 2) :=
+    ∫ (x : ℝ) in Set.Iic i, Checked.inv (1 + x ^ 2)
+      (show 0 < 1 + x ^ 2 by positivity).ne'.isUnit = arctan i + (π / 2) :=
   integral_Iic_of_hasDerivAt_of_tendsto' (fun x _ => hasDerivAt_arctan' x)
     integrable_inv_one_add_sq.integrableOn (tendsto_nhds_of_tendsto_nhdsWithin tendsto_arctan_atBot)
     |>.trans (sub_neg_eq_add _ _)
 
 @[simp]
 theorem integral_Ioi_inv_one_add_sq {i : ℝ} :
-    ∫ (x : ℝ) in Set.Ioi i, (1 + x ^ 2)⁻¹ = (π / 2) - arctan i :=
+    ∫ (x : ℝ) in Set.Ioi i, Checked.inv (1 + x ^ 2)
+      (show 0 < 1 + x ^ 2 by positivity).ne'.isUnit = (π / 2) - arctan i :=
   integral_Ioi_of_hasDerivAt_of_tendsto' (fun x _ => hasDerivAt_arctan' x)
     integrable_inv_one_add_sq.integrableOn (tendsto_nhds_of_tendsto_nhdsWithin tendsto_arctan_atTop)
 
 @[simp]
-theorem integral_univ_inv_one_add_sq : ∫ (x : ℝ), (1 + x ^ 2)⁻¹ = π :=
+theorem integral_univ_inv_one_add_sq :
+    ∫ (x : ℝ), Checked.inv (1 + x ^ 2) (show 0 < 1 + x ^ 2 by positivity).ne'.isUnit = π :=
   (by ring : π = (π / 2) - (-(π / 2))) ▸ integral_of_hasDerivAt_of_tendsto hasDerivAt_arctan'
     integrable_inv_one_add_sq (tendsto_nhds_of_tendsto_nhdsWithin tendsto_arctan_atBot)
     (tendsto_nhds_of_tendsto_nhdsWithin tendsto_arctan_atTop)
 
 theorem integrable_inv_one_add_mul_sq {b : ℝ} (hb : b ≠ 0) :
-    Integrable fun x ↦ (1 + (b * x) ^ 2)⁻¹ :=
-  (integrable_inv_one_add_sq.comp_mul_left' hb).congr (by simp)
+    Integrable fun x ↦ Checked.inv (1 + (b * x) ^ 2)
+      (show 0 < 1 + (b * x) ^ 2 by positivity).ne'.isUnit :=
+  integrable_inv_one_add_sq.comp_mul_left' hb
 
 @[simp]
-theorem integral_univ_inv_one_add_mul_sq (b : ℝ) :
-    ∫ x, (1 + (b * x) ^ 2)⁻¹ = π / |b| := by
-  rw [Measure.integral_comp_mul_left (fun x ↦ (1 + x ^ 2)⁻¹) b, integral_univ_inv_one_add_sq]
-  simp [div_eq_inv_mul]
+theorem integral_univ_inv_one_add_mul_sq (b : ℝ) {hb : b ≠ 0} :
+    ∫ x, Checked.inv (1 + (b * x) ^ 2)
+      (show 0 < 1 + (b * x) ^ 2 by positivity).ne'.isUnit =
+        Checked.div π |b| (abs_ne_zero.mpr hb).isUnit := by
+  rw [Measure.integral_comp_mul_left (fun x ↦ Checked.inv (1 + x ^ 2)
+    (show 0 < 1 + x ^ 2 by positivity).ne'.isUnit) b (ha := hb.isUnit),
+    integral_univ_inv_one_add_sq]
+  simp [div_eq_inv_mul₀]
+
+private theorem inv_mul_one_add_log_sq (b : ℝ) (t : Ioi (0 : ℝ)) :
+    Checked.inv (t.val * (1 + (b * log t.val) ^ 2))
+        (mul_ne_zero t.2.ne' (show 0 < 1 + (b * log t.val) ^ 2 by positivity).ne').isUnit =
+      Checked.inv t.val t.2.ne'.isUnit •
+        Checked.inv (1 + (b * log t.val) ^ 2)
+          (show 0 < 1 + (b * log t.val) ^ 2 by positivity).ne'.isUnit := by
+  rw [mul_inv_rev₀, smul_eq_mul, mul_comm]
 
 theorem integrableOn_Ioi_zero_inv_mul_one_add_log_sq {b : ℝ} (hb : b ≠ 0) :
-    IntegrableOn (fun t ↦ (t * (1 + (b * log t) ^ 2))⁻¹) (Ioi 0) := by
-  have : (fun t ↦ (t * (1 + (b * log t) ^ 2))⁻¹) = fun t ↦ t⁻¹ • (1 + (b * log t) ^ 2)⁻¹ := by
-    ext; simp [mul_comm]
-  rw [this, integrableOn_comp_log_Ioi_zero (fun u ↦ (1 + (b * u) ^ 2)⁻¹)]
-  exact integrable_inv_one_add_mul_sq hb
+    Integrable (fun t : Ioi (0 : ℝ) ↦
+      Checked.inv (t.val * (1 + (b * log t.val) ^ 2))
+        (mul_ne_zero t.2.ne' (show 0 < 1 + (b * log t.val) ^ 2 by positivity).ne').isUnit)
+      (volume.comap Subtype.val) := by
+  simp_rw [inv_mul_one_add_log_sq]
+  exact (integrableOn_comp_log_Ioi_zero (fun u ↦ Checked.inv (1 + (b * u) ^ 2)
+    (show 0 < 1 + (b * u) ^ 2 by positivity).ne'.isUnit)).mpr
+    (integrable_inv_one_add_mul_sq hb)
 
-/-- The total mass of the log-Cauchy density on `Ioi 0`.
+/-- The mass of the log-Cauchy density on the positive half-line for a nonzero scale. -/
+theorem integral_Ioi_zero_inv_mul_one_add_log_sq (b : ℝ) {hb : IsUnit b} :
+    (∫ t : Ioi (0 : ℝ),
+      Checked.inv (t.val * (1 + (b * log t.val) ^ 2))
+        (mul_ne_zero t.2.ne' (show 0 < 1 + (b * log t.val) ^ 2 by positivity).ne').isUnit
+          ∂(volume.comap Subtype.val)) = π / |b| := by
+  simp_rw [inv_mul_one_add_log_sq]
+  exact (integral_comp_log_Ioi_zero (fun u ↦ Checked.inv (1 + (b * u) ^ 2)
+    (show 0 < 1 + (b * u) ^ 2 by positivity).ne'.isUnit)).trans
+    (integral_univ_inv_one_add_mul_sq b (hb := hb.ne_zero))
 
-This is not `@[simp]`: `simp` rewrites the left-hand side with `mul_inv_rev`. -/
-theorem integral_Ioi_zero_inv_mul_one_add_log_sq (b : ℝ) :
-    ∫ t in Ioi 0, (t * (1 + (b * log t) ^ 2))⁻¹ = π / |b| := by
-  have : (fun t ↦ (t * (1 + (b * log t) ^ 2))⁻¹) = fun t ↦ t⁻¹ • (1 + (b * log t) ^ 2)⁻¹ := by
-    ext; simp [mul_comm]
-  rw [this, integral_comp_log_Ioi_zero (fun u ↦ (1 + (b * u) ^ 2)⁻¹),
-    integral_univ_inv_one_add_mul_sq b]
+private theorem integrable_integral_inv_div_log_sq_Ioi {c : ℝ} (hc : 1 < c) :
+    let g (t : Ioi c) :=
+      Checked.div (Checked.inv t.val (zero_lt_one.trans (hc.trans t.2)).ne'.isUnit)
+        (log t.val ^ 2) ((log_pos (hc.trans t.2)).ne'.isUnit.pow 2)
+    Integrable g (volume.comap Subtype.val) ∧
+      (∫ t, g t ∂(volume.comap Subtype.val)) = Checked.inv (log c) (log_pos hc).ne'.isUnit := by
+  let D := Ioi (1 : ℝ)
+  have h₀ (t : D) : IsUnit t.val := (zero_lt_one.trans t.2).ne'.isUnit
+  have hl (t : D) : IsUnit (log t.val) := (log_pos t.2).ne'.isUnit
+  let f (t : D) := -(Checked.inv (log t.val) (hl t))
+  let g (t : D) := Checked.div (Checked.inv t.val (h₀ t)) (log t.val ^ 2) ((hl t).pow 2)
+  let F : ℝ → ℝ := Function.extend Subtype.val f 0
+  let G : ℝ → ℝ := Function.extend Subtype.val g 0
+  have hF (t : D) : F t.val = f t := Subtype.val_injective.extend_apply _ _ _
+  have hG (t : D) : G t.val = g t := Subtype.val_injective.extend_apply _ _ _
+  let j (t : D) : {x : ℝ // IsUnit (log x)} := ⟨t.val, hl t⟩
+  have hj : Continuous j := continuous_subtype_val.subtype_mk hl
+  have hd (t : D) : HasDerivAt f (g t) t Subtype.val := by
+    let J (x : D) := Checked.inv (log x.val) (hl x)
+    have hJ : HasDerivAt J (-g t) t Subtype.val := by
+      change HasDerivAtFilter J (-g t) (𝓝 t ×ˢ pure t) (fun x : D ↦ x.val)
+      simpa only [J, g, j, Function.comp_def, ContinuousLinearMap.toSpanSingleton_apply,
+        one_smul, neg_div₀] using
+        ((Real.hasDerivAt_inv_log (j t)).hasFDerivAt.comp_tendsto j
+          (hj.continuousAt.tendsto.prodMap (tendsto_pure_pure ..))).hasDerivAtFilter
+    simpa only [f, J, Function.comp_def, neg_mul, one_mul, neg_neg] using
+      (hasDerivAt_neg (J t)).comp (h := J) (coord' := id) t hJ continuousAt_subtype_val
+  have hderiv (t : ℝ) (ht : t ∈ Ici c) : HasDerivAt F (G t) t := by
+    let x : D := ⟨t, hc.trans_le ht⟩
+    have hd' : HasFDerivAt (fun y : D ↦ F y.val)
+        (ContinuousLinearMap.toSpanSingleton ℝ (g x)) x Subtype.val := by
+      simpa only [hF] using (hd x).hasFDerivAt
+    rw [show G t = g x from hG x]
+    have hN : D ∈ 𝓝 x.val := Ioi_mem_nhds x.2
+    simpa only [ContinuousLinearMap.toSpanSingleton_apply, one_smul] using
+      hasFDerivAt_iff_hasDerivAt.mp (hd'.of_restrict (coord := id) (x := x) hN)
+  have hGpos (t : ℝ) (ht : t ∈ Ioi c) : 0 ≤ G t := by
+    let x : D := ⟨t, hc.trans ht⟩
+    rw [show G t = g x from hG x]
+    exact div_nonneg (inv_nonneg.mpr (zero_lt_one.trans x.2).le) (sq_nonneg _)
+  have hlim : Tendsto F atTop (𝓝 0) := by
+    have hlog : Tendsto (fun t : D ↦ log t.val) (comap Subtype.val atTop) atTop :=
+      tendsto_log_atTop.comp tendsto_comap
+    apply (tendsto_comap_val_iff (Ioi_mem_atTop (1 : ℝ))).mp
+    change Tendsto (fun t : D ↦ F t.val) (comap Subtype.val atTop) (𝓝 0)
+    have h := (hlog.fun_inv_tendsto_atTop (h0 := hl)).neg
+    simpa only [neg_zero] using h.congr (fun t ↦ (hF t).symm)
+  have hi := integrableOn_Ioi_deriv_of_nonneg' hderiv hGpos hlim
+  have he := integral_Ioi_of_hasDerivAt_of_nonneg' hderiv hGpos hlim
+  refine ⟨?_, ?_⟩
+  · exact ((integrableOn_iff_comap_subtypeVal measurableSet_Ioi).mp hi).congr
+      (Eventually.of_forall fun t ↦ hG ⟨t.val, hc.trans t.2⟩)
+  · calc
+      _ = ∫ t in Ioi c, G t := by
+        rw [← integral_subtype_comap measurableSet_Ioi G]
+        exact integral_congr_ae (Eventually.of_forall fun t ↦ (hG ⟨t.val, hc.trans t.2⟩).symm)
+      _ = 0 - F c := he
+      _ = _ := by rw [show F c = f ⟨c, hc⟩ from hF ⟨c, hc⟩]; simp [f]
 
 @[simp]
 theorem integrableOn_inv_div_log_sq_Ioi {c : ℝ} (hc : 1 < c) :
-    IntegrableOn (fun t ↦ t⁻¹ / (log t) ^ 2) (.Ioi c) volume := by
-  apply integrableOn_Ioi_deriv_of_nonneg' _ _ tendsto_log_atTop.inv_tendsto_atTop.neg
-  · intro t _
-    convert! (hasDerivAt_inv_log (by grind : t ≠ 0) (by grind) (by grind)).neg using 1
-    field
-  · intro t _
-    have : 0 < t := by grind
-    positivity
+    Integrable (fun t : Ioi c ↦
+      Checked.div (Checked.inv t.val (zero_lt_one.trans (hc.trans t.2)).ne'.isUnit)
+        (log t.val ^ 2) ((log_pos (hc.trans t.2)).ne'.isUnit.pow 2))
+      (volume.comap Subtype.val) :=
+  (integrable_integral_inv_div_log_sq_Ioi hc).1
 
 @[simp]
 theorem integral_inv_div_log_sq_Ioi {c : ℝ} (hc : 1 < c) :
-    ∫ (t : ℝ) in .Ioi c, t⁻¹ / (log t) ^ 2 = (log c)⁻¹ := by
-  convert! integral_Ioi_of_hasDerivAt_of_tendsto' (m := 0) (f := fun t ↦ -(log t)⁻¹) ?_
-    (integrableOn_inv_div_log_sq_Ioi hc) ?_ using 1
-  · simp
-  · intro t _
-    convert! (hasDerivAt_inv_log (by grind : t ≠ 0) (by grind) (by grind)).neg using 1
-    field
-  convert! tendsto_log_atTop.inv_tendsto_atTop.neg using 1
-  simp
+    (∫ t : Ioi c,
+      Checked.div (Checked.inv t.val (zero_lt_one.trans (hc.trans t.2)).ne'.isUnit)
+        (log t.val ^ 2) ((log_pos (hc.trans t.2)).ne'.isUnit.pow 2)
+          ∂(volume.comap Subtype.val)) = Checked.inv (log c) (log_pos hc).ne'.isUnit :=
+  (integrable_integral_inv_div_log_sq_Ioi hc).2

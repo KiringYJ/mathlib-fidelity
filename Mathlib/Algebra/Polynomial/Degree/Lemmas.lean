@@ -488,7 +488,7 @@ theorem natDegree_mul_leadingCoeff_self_inv (p : K[X]) {hp : IsUnit (leadingCoef
   natDegree_eq_of_degree_eq (degree_mul_leadingCoeff_self_inv _)
 
 -- `simp` normal form of `degree_mul_leadingCoeff_self_inv`
-@[simp] lemma degree_add_degree_leadingCoeff_inv (p : K[X]) {hp : IsUnit (leadingCoeff p)} :
+lemma degree_add_degree_leadingCoeff_inv (p : K[X]) {hp : IsUnit (leadingCoeff p)} :
     degree p + degree (C (leadingCoeff p)⁻¹) = degree p := by
   rw [← degree_mul, degree_mul_leadingCoeff_self_inv]
 

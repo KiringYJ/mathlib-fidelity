@@ -104,7 +104,9 @@ lemma HasTemperateGrowth.of_fderiv {f : E → F}
   · exact ⟨k, C, fun x ↦ by simpa using h x⟩
   · rcases h'f.2 m with ⟨k', C', h'⟩
     refine ⟨k', C', ?_⟩
-    simpa [iteratedFDeriv_succ_eq_comp_right] using h'
+    intro x
+    rw [iteratedFDeriv_succ_eq_comp_right, Function.comp_apply, LinearIsometryEquiv.norm_map]
+    exact h' x
 
 @[fun_prop]
 lemma HasTemperateGrowth.zero :
@@ -293,8 +295,7 @@ end Multiplication
 lemma _root_.ContinuousLinearMap.hasTemperateGrowth (f : E →L[ℝ] F) :
     Function.HasTemperateGrowth f := by
   apply Function.HasTemperateGrowth.of_fderiv ?_ f.differentiable (k := 1) (C := ‖f‖) (fun x ↦ ?_)
-  · have : fderiv ℝ f = fun _ ↦ f := by ext1 v; simp only [ContinuousLinearMap.fderiv]
-    simp [this]
+  · simp
   · exact (f.le_opNorm x).trans (by simp [mul_add])
 
 @[fun_prop]
@@ -338,7 +339,7 @@ theorem hasTemperateGrowth_one_add_norm_sq_rpow (r : ℝ) :
     exact lt_add_of_lt_add_left (c := 0) (by norm_num) (by positivity)
   have hdiff : ContDiffOn ℝ ∞ (fun x ↦ x ^ r) t :=
     contDiffOn_fun_id.rpow_const_of_ne fun x hx ↦ (lt_trans (by norm_num) hx).ne'
-  have hunique : UniqueDiffOn ℝ t := (isOpen_lt' (1 / 2)).uniqueDiffOn
+  have hunique : UniqueDiffOn ℝ t := (isOpen_lt' (1 / 2 : ℝ)).uniqueDiffOn
   apply HasTemperateGrowth.comp' ht hunique hdiff _ (by fun_prop)
   -- The remaining part of the proof is proving that `x ↦ x ^ r` has temperate growth on `t`.
   -- This could be generalized to `t := {y : ℝ | ε < y}` for any `0 < ε < 1` if necessary.
@@ -349,9 +350,9 @@ theorem hasTemperateGrowth_one_add_norm_sq_rpow (r : ℝ) :
   obtain ⟨k, hk⟩ := exists_nat_ge (max r <| (N - r) * Real.log 2 / (Real.log (3 / 2)))
   have hk₁ : r ≤ k := le_sup_left.trans hk
   have hk₂ : Real.log 2 * (N - r) ≤ (Real.log (3 / 2)) * k := by
-    have := le_sup_right.trans hk
-    field_simp at this
-    grind
+    have hlog : 0 < Real.log (3 / 2) := Real.log_pos (by norm_num)
+    simpa only [mul_comm ((N : ℝ) - r) (Real.log 2)] using
+      (div_le_iff₀' hlog).mp (le_sup_right.trans hk)
   use k, ∑ k ∈ Finset.range (N + 1), ‖Polynomial.eval r (descPochhammer ℝ k)‖, by positivity
   intro n hn x hx
   have : ContDiffAt ℝ n (fun x ↦ x ^ r) x :=
@@ -383,10 +384,11 @@ theorem hasTemperateGrowth_one_add_norm_sq_rpow (r : ℝ) :
       congr
       simpa using hx''.le
     _ ≤ (2 : ℝ) ^ (n - r) := by
-      simp only [one_div, Set.mem_ofPred_eq, t] at hx
-      rw [Real.rpow_neg_eq_inv_rpow]
-      gcongr
-      exact ((inv_lt_comm₀ hx'' (by norm_num)).mpr hx).le
+      have hhalf : (2 : ℝ)⁻¹ < x := by
+        simpa only [div_eq_mul_inv₀, one_mul] using hx'
+      rw [Real.rpow_neg_eq_inv_rpow _ _ (hx := hx''.ne'.isUnit)]
+      exact Real.rpow_le_rpow (by positivity)
+        ((inv_lt_comm₀ hx'' (by norm_num : 0 < (2 : ℝ))).mpr hhalf).le h.le
     _ = Real.exp (Real.log 2 * (n - r)) := by
       rw [Real.rpow_def_of_pos]
       norm_num
@@ -399,7 +401,8 @@ theorem hasTemperateGrowth_one_add_norm_sq_rpow (r : ℝ) :
       norm_num
     _ ≤ _ := by
       gcongr
-      grind
+      rw [abs_of_pos hx'']
+      linarith only [hx']
 
 end Function
 
@@ -515,8 +518,14 @@ lemma _root_.pow_mul_le_of_le_of_pow_mul_le {C₁ C₂ : ℝ} {k l : ℕ} {x f :
     x ^ k * f ≤ 2 ^ l * (C₁ + C₂) * (1 + x) ^ (- (l : ℝ)) := by
   have : 0 ≤ C₂ := le_trans (by positivity) h₂
   have : 2 ^ l * (C₁ + C₂) * (1 + x) ^ (- (l : ℝ)) = ((1 + x) / 2) ^ (-(l : ℝ)) * (C₁ + C₂) := by
-    rw [Real.div_rpow (by positivity) zero_le_two]
-    simp [div_eq_inv_mul, ← Real.rpow_neg_one, ← Real.rpow_mul]
+    have hden : IsUnit ((2 : ℝ) ^ (-(l : ℝ))) := (Real.rpow_pos_of_pos (by norm_num) _).ne'.isUnit
+    have hscale : Checked.div ((1 + x) ^ (-(l : ℝ))) ((2 : ℝ) ^ (-(l : ℝ))) hden =
+        (2 : ℝ) ^ l * (1 + x) ^ (-(l : ℝ)) := by
+      have hpow : IsUnit ((2 : ℝ) ^ (l : ℝ)) := (Real.rpow_pos_of_pos (by norm_num) _).ne'.isUnit
+      apply (div_eq_iff (hb := hden)).2
+      rw [← Real.rpow_natCast (2 : ℝ) l, Real.rpow_neg zero_le_two (l : ℝ) (hxy := hpow),
+        mul_right_comm, mul_inv_cancel₀, one_mul]
+    rw [Real.div_rpow (by positivity) zero_le_two, hscale]
     ring
   rw [this]
   rcases le_total x 1 with h'x | h'x

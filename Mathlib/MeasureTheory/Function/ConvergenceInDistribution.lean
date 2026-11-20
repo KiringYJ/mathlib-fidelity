@@ -223,8 +223,9 @@ lemma tendstoInDistribution_of_tendstoInMeasure_sub {X : ι → Ω'' → E}
   suffices ∀ ε > 0, ∀ᶠ n in l,
       |∫ ω, F ω ∂(μ''.map (Y n) (hY n)) - ∫ ω, F ω ∂(μ'.map Z hZ)| < L * ε by
     intro ε hε
-    convert! this (ε / L) (by positivity)
-    field_simp
+    have hL' : 0 < (L : ℝ) := by exact_mod_cast hL
+    have h_scale : (L : ℝ) * (ε / L) = ε := mul_div_cancel₀ (hb := hL'.ne'.isUnit) ε
+    simpa only [h_scale] using this (ε / L) (by positivity)
   intro ε hε
   -- We cut the difference into three pieces, two of which are small by the convergence assumptions
   have h_le n : |∫ ω, F ω ∂(μ''.map (Y n) (hY n)) - ∫ ω, F ω ∂(μ'.map Z hZ)|
@@ -296,7 +297,7 @@ lemma tendstoInDistribution_of_tendstoInMeasure_sub {X : ι → Ω'' → E}
         (𝓝 (L * ε / 2 + M * 0 + 0)) by
       simpa
     refine (Tendsto.add ?_ (Tendsto.const_mul _ ?_)).add ?_
-    · rw [mul_div_assoc]
+    · rw [mul_div_assoc₀]
       exact tendsto_const_nhds
     · simp only [tendstoInMeasure_iff_measureReal_norm, Pi.zero_apply, sub_zero] at hXY
       exact hXY (ε / 2) (by positivity)

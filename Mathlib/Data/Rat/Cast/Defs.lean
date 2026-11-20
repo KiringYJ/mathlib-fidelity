@@ -60,6 +60,30 @@ private theorem eval_normalize_mul (n : ℤ) (d : ℕ) (hd : d ≠ 0)
       rw [mul_assoc]
     _ = (n : α) := by rw [eval_mul_den]; exact hncast.symm
 
+/-- Evaluating a natural-denominator fraction gives the checked quotient of its original terms. -/
+theorem eval_fraction (n : ℤ) (d : ℕ) (hd : d ≠ 0) (h : (d : α) ≠ 0) :
+    eval (fraction n d hd) (normalize_den_ne_zero n d hd h) = (n : α) / (d : α) :=
+  eq_div_of_mul_eq (eval_normalize_mul n d hd (normalize_den_ne_zero n d hd h))
+
+private theorem sign_natAbs_cast_ne_zero (d : ℤ) (h : (d : α) ≠ 0) :
+    (d.sign : α) ≠ 0 ∧ (d.natAbs : α) ≠ 0 :=
+  mul_ne_zero_iff.mp (by rwa [← Int.cast_natCast, ← Int.cast_mul, Int.sign_mul_natAbs])
+
+/-- Normalizing a signed fraction preserves nonvanishing of its denominator in the target. -/
+theorem fractionInt_den_ne_zero (n d : ℤ) (hd : d ≠ 0) (h : (d : α) ≠ 0) :
+    ((fractionInt n d hd).den : α) ≠ 0 :=
+  normalize_den_ne_zero _ _ _ (sign_natAbs_cast_ne_zero d h).2
+
+/-- Evaluating a signed fraction gives the checked quotient of its original terms. -/
+theorem eval_fractionInt (n d : ℤ) (hd : d ≠ 0) (h : (d : α) ≠ 0) :
+    eval (fractionInt n d hd) (fractionInt_den_ne_zero n d hd h) = (n : α) / (d : α) := by
+  apply eq_div_of_mul_eq
+  apply mul_right_cancel₀ (sign_natAbs_cast_ne_zero d h).1
+  have hsign : (d : α) * (d.sign : α) = (d.natAbs : α) := by
+    rw [← Int.cast_mul, Int.mul_comm d d.sign, Int.sign_mul_self_eq_natAbs, Int.cast_natCast]
+  rw [mul_assoc, hsign, ← Int.cast_mul, Int.mul_comm n d.sign]
+  exact eval_normalize_mul (d.sign * n) d.natAbs _ (fractionInt_den_ne_zero n d hd h)
+
 theorem add_den_ne_zero (a b : ℚ) (ha : (a.den : α) ≠ 0) (hb : (b.den : α) ≠ 0) :
     ((a + b).den : α) ≠ 0 := by
   rw [Rat.add_def]
@@ -132,29 +156,37 @@ theorem eval_pow (q : ℚ) (hq : (q.den : α) ≠ 0) (n : ℕ)
     simp only [Rat.pow_succ] at hp ⊢
     rw [eval_mul _ _ (pow_den_ne_zero q hq n) hq, ih, pow_succ]
 
+/-- The reduced denominator of a reciprocal is the absolute value of the original numerator. -/
+theorem den_reciprocal (q : ℚ) (hq : q ≠ 0) : (reciprocal q hq).den = q.num.natAbs := by
+  rw [← inv_eq_of_mul_eq_one_left₀ (hb := hq.isUnit) (Rat.reciprocal_mul q hq),
+    Rat.den_inv_of_ne_zero]
+
 theorem reciprocal_den_ne_zero (q : ℚ) (hq : q ≠ 0) (hd : (q.den : α) ≠ 0)
     (hv : eval q hd ≠ 0) : ((reciprocal q hq).den : α) ≠ 0 := by
   have hnum : (q.num : α) ≠ 0 := by
     rw [← eval_mul_den q hd]
     exact mul_ne_zero hv hd
-  unfold reciprocal fractionInt
-  apply normalize_den_ne_zero
+  rw [den_reciprocal]
   by_cases h : 0 ≤ q.num
   · rw [← Int.cast_natCast, Int.natAbs_of_nonneg h]
     exact hnum
   · rw [← Int.cast_natCast, Int.ofNat_natAbs_of_nonpos (le_of_not_ge h), Int.cast_neg]
     exact neg_ne_zero.mpr hnum
 
-/-- Evaluation commutes with reciprocal only on the domain of the original operand. -/
-theorem eval_reciprocal (q : ℚ) (hq : q ≠ 0) (hd : (q.den : α) ≠ 0)
-    (hi : ((reciprocal q hq).den : α) ≠ 0) (hv : eval q hd ≠ 0) :
-    eval (reciprocal q hq) hi = (eval q hd)⁻¹ := by
+/-- The evaluations of a reciprocal and its operand multiply to one on their common domain. -/
+theorem eval_reciprocal_mul (q : ℚ) (hq : q ≠ 0) (hd : (q.den : α) ≠ 0)
+    (hi : ((reciprocal q hq).den : α) ≠ 0) : eval (reciprocal q hq) hi * eval q hd = 1 := by
   have he := eval_mul (reciprocal q hq) q hi hd (mul_den_ne_zero _ _ hi hd)
   simp only [Rat.reciprocal_mul] at he
-  have he' : eval (reciprocal q hq) hi * eval q hd = 1 :=
-    he.symm.trans ((eval_natCast (α := α) 1 _).trans Nat.cast_one)
-  apply mul_right_cancel₀ hv
-  exact he'.trans inv_mul_cancel₀.symm
+  exact he.symm.trans ((eval_natCast (α := α) 1 _).trans Nat.cast_one)
+
+/-- Evaluation commutes with reciprocal when both reduced denominators remain nonzero. -/
+theorem eval_reciprocal (q : ℚ) (hq : q ≠ 0) (hd : (q.den : α) ≠ 0)
+    (hi : ((reciprocal q hq).den : α) ≠ 0) :
+    eval (reciprocal q hq) hi =
+      Checked.inv (eval q hd)
+        (right_ne_zero_of_mul_eq_one (eval_reciprocal_mul q hq hd hi)).isUnit :=
+  (inv_eq_of_mul_eq_one_left₀ (eval_reciprocal_mul q hq hd hi)).symm
 
 theorem quotient_den_ne_zero (a b : ℚ) (hb : b ≠ 0)
     (ha : (a.den : α) ≠ 0) (hd : (b.den : α) ≠ 0) (hv : eval b hd ≠ 0) :
@@ -168,7 +200,7 @@ theorem eval_quotient (a b : ℚ) (hb : b ≠ 0)
   change ((a * reciprocal b hb).den : α) ≠ 0 at hr
   change eval (a * reciprocal b hb) hr = _
   rw [eval_mul _ _ ha (reciprocal_den_ne_zero b hb hd hv),
-    eval_reciprocal b hb hd (reciprocal_den_ne_zero b hb hd hv) hv, div_eq_mul_inv₀]
+    eval_reciprocal b hb hd (reciprocal_den_ne_zero b hb hd hv), div_eq_mul_inv₀]
 
 @[simp] theorem eval_rat (q : ℚ) (hd : (q.den : ℚ) ≠ 0) : eval q hd = q := by
   apply mul_right_cancel₀ hd
@@ -269,16 +301,19 @@ theorem eval_pow (q : ℚ≥0) (hq : (q.den : α) ≠ 0) (n : ℕ)
     simp only [pow_succ] at hp ⊢
     rw [eval_mul _ _ (pow_den_ne_zero q hq n) hq, ih]
 
-/-- Evaluation commutes with the inverse where the image of the operand is nonzero. -/
-theorem eval_inv (q : ℚ≥0) {hq : IsUnit q} (hd : (q.den : α) ≠ 0)
-    (hi : ((q⁻¹).den : α) ≠ 0) (hv : eval q hd ≠ 0) :
-    eval q⁻¹ hi = (eval q hd)⁻¹ := by
+/-- The evaluations of an inverse and its operand multiply to one on their common domain. -/
+theorem eval_inv_mul (q : ℚ≥0) {hq : IsUnit q} (hd : (q.den : α) ≠ 0)
+    (hi : ((q⁻¹).den : α) ≠ 0) : eval q⁻¹ hi * eval q hd = 1 := by
   have he := eval_mul q⁻¹ q hi hd (mul_den_ne_zero _ _ hi hd)
   simp only [inv_mul_cancel₀] at he
-  have he' : eval q⁻¹ hi * eval q hd = 1 :=
-    he.symm.trans ((eval_natCast (α := α) 1 _).trans Nat.cast_one)
-  apply mul_right_cancel₀ hv
-  exact he'.trans inv_mul_cancel₀.symm
+  exact he.symm.trans ((eval_natCast (α := α) 1 _).trans Nat.cast_one)
+
+/-- Evaluation commutes with inverse when both reduced denominators remain nonzero. -/
+theorem eval_inv (q : ℚ≥0) {hq : IsUnit q} (hd : (q.den : α) ≠ 0)
+    (hi : ((q⁻¹).den : α) ≠ 0) :
+    eval q⁻¹ hi =
+      Checked.inv (eval q hd) (right_ne_zero_of_mul_eq_one (eval_inv_mul q hd hi)).isUnit :=
+  (inv_eq_of_mul_eq_one_left₀ (eval_inv_mul q hd hi)).symm
 
 @[simp] theorem eval_nnrat (q : ℚ≥0) (hd : (q.den : ℚ≥0) ≠ 0) : eval q hd = q := by
   apply mul_right_cancel₀ hd

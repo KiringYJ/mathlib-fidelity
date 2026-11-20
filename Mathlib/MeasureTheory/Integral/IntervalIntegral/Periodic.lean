@@ -408,7 +408,7 @@ theorem sInf_add_zsmul_le_integral_of_pos (h_int : IntervalIntegrable g MeasureS
   let h'_int := hg.intervalIntegrable₀ hT.ne' h_int
   let ε := Int.fract (t / T) * T
   conv_rhs =>
-    rw [← Int.fract_div_mul_self_add_zsmul_eq T t hT.ne',
+    rw [← Int.fract_div_mul_self_add_zsmul_eq T t (ha := hT.ne'.isUnit),
       ← integral_add_adjacent_intervals (h'_int 0 ε) (h'_int _ _)]
   rw [hg.intervalIntegral_add_zsmul_eq ⌊t / T⌋ ε (hg.intervalIntegrable₀ hT.ne' h_int),
     hg.intervalIntegral_add_eq ε 0, zero_add, add_le_add_iff_right]
@@ -425,7 +425,7 @@ theorem integral_le_sSup_add_zsmul_of_pos (h_int : IntervalIntegrable g MeasureS
   let h'_int := hg.intervalIntegrable₀ hT.ne' h_int
   let ε := Int.fract (t / T) * T
   conv_lhs =>
-    rw [← Int.fract_div_mul_self_add_zsmul_eq T t hT.ne', ←
+    rw [← Int.fract_div_mul_self_add_zsmul_eq T t (ha := hT.ne'.isUnit), ←
       integral_add_adjacent_intervals (h'_int 0 ε) (h'_int _ _)]
   rw [hg.intervalIntegral_add_zsmul_eq ⌊t / T⌋ ε h'_int, hg.intervalIntegral_add_eq ε 0, zero_add,
     add_le_add_iff_right]

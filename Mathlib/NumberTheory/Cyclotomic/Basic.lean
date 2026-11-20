@@ -231,7 +231,7 @@ theorem of_union_of_dvd (h : ∃ s ∈ S, s ≠ 0 ∧ n ∣ s) [H : IsCyclotomic
       refine ⟨ζ ^ x, ?_⟩
       have h_xnz : x ≠ 0 := Nat.ne_zero_of_mul_ne_zero_right hm'
       have := hζ.pow_of_dvd h_xnz (dvd_mul_left x s)
-      rwa [mul_div_cancel_right₀ _ h_xnz] at this
+      rwa [Nat.mul_div_cancel _ (Nat.pos_of_ne_zero h_xnz)] at this
   · refine _root_.eq_top_iff.2 ?_
     rw [← ((iff_adjoin_eq_top S A B).1 H).2]
     refine adjoin_mono fun x hx ↦ ?_
@@ -587,9 +587,9 @@ theorem isGalois [IsCyclotomicExtension S K L] : IsGalois K L := by
   | mul x y hx hy ihx ihy =>
     rw [map_mul]
     exact mul_mem ihx ihy
-  | inv x hx ihx =>
+  | inv x hx hne ihx =>
     rw [map_inv₀]
-    exact inv_mem ihx
+    exact IntermediateField.inv_mem _ ihx
 
 /-- Cyclotomic extensions are abelian. -/
 theorem isAbelianGalois [IsCyclotomicExtension S K L] :

@@ -39,21 +39,29 @@ lemma petersson_continuous (k : ℤ) {f f' : ℍ → ℂ} (hf : Continuous f) (h
 
 lemma petersson_slash (k : ℤ) (f f' : ℍ → ℂ) (g : GL (Fin 2) ℝ) (τ : ℍ) :
     petersson k (f ∣[k] g) (f' ∣[k] g) τ =
-      |g.det.val| ^ (k - 2) * σ g (petersson k f f' (g • τ)) := by
-  set D := |g.det.val|
-  have hD : (D : ℂ) ≠ 0 := mod_cast abs_ne_zero.mpr g.det_ne_zero
-  set j := denom g τ
+      Checked.zpow (↑|g.det.val| : ℂ) (k - 2)
+        (fun _ ↦ (abs_ne_zero.mpr g.det.ne_zero).isUnit.map Complex.ofRealHom) *
+        σ g (petersson k f f' (g • τ)) := by
+  set D := |g.det.val| with hDdef
+  have hD : (D : ℂ) ≠ 0 := Complex.ofReal_ne_zero.mpr (abs_ne_zero.mpr g.det.ne_zero)
+  set j := denom g τ with hjdef
+  have hj : j ≠ 0 := denom_ne_zero g τ
+  have hjSq : (j.normSq : ℂ) ≠ 0 :=
+    Complex.ofReal_ne_zero.mpr (Complex.normSq_pos.mpr hj).ne'
+  have hτ : (τ.im : ℂ) ≠ 0 := Complex.ofReal_ne_zero.mpr τ.im_ne_zero
   calc petersson k (f ∣[k] g) (f' ∣[k] g) τ
   _ = D ^ (k - 2 + k) * conj (σ g (f (g • τ))) * σ g (f' (g • τ))
       * (τ.im ^ k * j.normSq ^ (-k)) := by
     simp [Complex.normSq_eq_conj_mul_self, (by abel : k - 2 + k = (k - 1) + (k - 1)), petersson,
-      zpow_add₀ hD, mul_zpow, ModularForm.slash_def, -Matrix.GeneralLinearGroup.val_det_apply]
+      zpow_add₀ hD, mul_zpow₀, ModularForm.slash_apply, ← hDdef, ← hjdef,
+      -Matrix.GeneralLinearGroup.val_det_apply]
     ring
   _ = D ^ (k - 2) * (conj (σ g (f (g • τ))) * σ g (f' (g • τ)) * (D * τ.im / j.normSq) ^ k) := by
-    rw [div_zpow, mul_zpow, zpow_neg, div_eq_mul_inv, zpow_add₀ hD]
+    rw [div_zpow₀, mul_zpow₀, zpow_neg₀ hjSq, div_eq_mul_inv₀, zpow_add₀ hD]
     ring
   _ = D ^ (k - 2) * (conj (σ g (f (g • τ))) * σ g (f' (g • τ)) * (im (g • τ)) ^ k) := by
-    rw [im_smul_eq_div_normSq, Complex.ofReal_div, Complex.ofReal_mul]
+    simp only [im_smul_eq_div_normSq, Complex.ofReal_div, Complex.ofReal_mul, D, j,
+      Matrix.GeneralLinearGroup.val_det_apply]
   _ = D ^ (k - 2) * σ g (petersson k f f' (g • τ)) := by simp [petersson, σ_conj]
 
 lemma petersson_slash_SL (k : ℤ) (f f' : ℍ → ℂ) (g : SL(2, ℤ)) (τ : ℍ) :
@@ -64,7 +72,8 @@ lemma petersson_slash_SL (k : ℤ) (f f' : ℍ → ℂ) (g : SL(2, ℤ)) (τ : �
 
 lemma petersson_symm (k : ℤ) (f f' : ℍ → ℂ) (τ : ℍ) :
     petersson k f' f τ = conj (petersson k f f' τ) := by
-  simp [petersson, mul_comm]
+  simp only [petersson, map_mul, Complex.conj_conj, map_zpow₀, Complex.conj_ofReal]
+  ring
 
 lemma petersson_norm_symm (k : ℤ) (f f' : ℍ → ℂ) (τ : ℍ) :
     ‖petersson k f' f τ‖ = ‖petersson k f f' τ‖ := by
@@ -80,8 +89,10 @@ lemma SlashInvariantFormClass.norm_petersson_smul {k g τ} {Γ : Subgroup (GL (F
     [Γ.HasDetPlusMinusOne] [SlashInvariantFormClass F Γ k] {f : F}
     [SlashInvariantFormClass F' Γ k] {f' : F'} (hg : g ∈ Γ) :
     ‖petersson k f f' (g • τ)‖ = ‖petersson k f f' τ‖ := by
-  conv_rhs => rw [← slash_action_eq f _ hg, ← slash_action_eq f' _ hg, petersson_slash,
-    Subgroup.HasDetPlusMinusOne.abs_det hg, Complex.ofReal_one, one_zpow, one_mul, norm_σ]
+  conv_rhs =>
+    rw [← slash_action_eq f _ hg, ← slash_action_eq f' _ hg, petersson_slash]
+    simp only [Subgroup.HasDetPlusMinusOne.abs_det hg, Complex.ofReal_one, one_zpow₀, one_mul,
+      norm_σ]
 
 lemma SlashInvariantFormClass.petersson_smul {k g τ} {Γ : Subgroup (GL (Fin 2) ℝ)} [Γ.HasDetOne]
     [SlashInvariantFormClass F Γ k] {f : F} [SlashInvariantFormClass F' Γ k] {f' : F'}
@@ -110,9 +121,11 @@ lemma petersson_exp_decay_left {f : F} (h_bd : IsZeroAtImInfty f) (f' : F') :
   conv_rhs => enter [τ]; rw [← one_mul (Real.exp _)]
   have hf' : IsBoundedAtImInfty f' := ModularFormClass.bdd_at_infty f'
   refine hf'.norm_left.mul ((hbf.norm_left.mul <| isBigO_refl _ _).trans ?_)
-  refine IsBigO.comp_tendsto (f := fun t : ℝ ↦ Real.exp (-b * t) * t ^ k)
-     (g := fun t : ℝ ↦ Real.exp (-a * t)) ?_ tendsto_comap
-  simpa using (isLittleO_exp_mul_rpow_of_lt k (neg_lt_neg ha')).isBigO
+  have h := ((isLittleO_exp_mul_rpow_of_lt (k : ℝ) (neg_lt_neg ha')).isBigO).comp_tendsto
+    (tendsto_comap : Tendsto im atImInfty atTop)
+  have hpow (τ : ℍ) : τ.im ^ (k : ℝ) = τ.im ^ k :=
+    Real.rpow_intCast _ _ (h := fun _ => τ.im_ne_zero)
+  exact h.congr_left fun τ ↦ congrArg (Real.exp (-b * τ.im) * ·) (hpow τ)
 
 /-- If `f, f'` are modular forms and `f'` is zero at infinity, then `petersson k f f'` has
 exponentially rapid decay at infinity. -/

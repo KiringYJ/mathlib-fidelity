@@ -53,7 +53,6 @@ namespace ModularForm
 
 local notation "Δ" => discriminant
 
-local notation "𝕢" => Periodic.qParam
 
 section auxiliary
 
@@ -65,60 +64,188 @@ lemma csqrt_pow_24_eq {z : ℂ} (hz : z ≠ 0) : sqrt z ^ 24 = z ^ 12 := by
 lemma csqrt_I_pow_24 : sqrt I ^ 24 = 1 := by
   rw [csqrt_pow_24_eq I_ne_zero, show 12 = 4 * 3 by lia, pow_mul, I_pow_four, one_pow]
 
+private def etaS (z : ℍ) : ℂ := η ((ModularGroup.S • z : ℍ) : ℂ)
+
+private lemma etaS_ne_zero (z : ℍ) : etaS z ≠ 0 := eta_ne_zero (ModularGroup.S • z).2
+
+private def sqrtMulEta (z : ℍ) : ℂ := sqrt z * η z
+
+private lemma hasDerivAt_coe (z : ℍ) :
+    HasDerivAt ((↑) : ℍ → ℂ) (1 : ℂ) z ((↑) : ℍ → ℂ) := by
+  have h := (hasDerivAt_id (z : ℂ)).hasFDerivAt.comp_tendsto ((↑) : ℍ → ℂ)
+    (continuous_coe.continuousAt.tendsto.prodMap (tendsto_pure_pure ..))
+  simpa only [Function.id_comp, ContinuousLinearMap.toSpanSingleton_apply, one_smul]
+    using! hasFDerivAt_iff_hasDerivAt.mp h
+
+private lemma hasDerivAt_coe_S (z : ℍ) :
+    HasDerivAt (fun w : ℍ ↦ (↑(ModularGroup.S • w) : ℂ))
+      (Checked.inv ((z : ℂ) ^ 2) (z.ne_zero.isUnit.pow 2)) z ((↑) : ℍ → ℂ) := by
+  let g : GL (Fin 2) ℝ := ModularGroup.S
+  have hdet : g.val.det = 1 :=
+    (Matrix.SpecialLinearGroup.map (Int.castRingHom ℝ) ModularGroup.S).property
+  have hg : 0 < g.val.det := hdet ▸ one_pos
+  have h := (hasStrictDerivAt_smul hg z).hasDerivAt.comp z (hasDerivAt_coe z)
+    continuous_coe.continuousAt
+  simpa only [Function.comp_def, ofComplex_apply, mul_one, hdet, Complex.ofReal_one, g,
+    ModularGroup.denom_S, one_div₀] using! h
+
+private lemma hasDerivAt_etaS (z : ℍ) :
+    HasDerivAt etaS
+      (deriv η (↑(ModularGroup.S • z) : ℂ) *
+        Checked.inv ((z : ℂ) ^ 2) (z.ne_zero.isUnit.pow 2)) z ((↑) : ℍ → ℂ) :=
+  (differentiableAt_eta_of_mem_upperHalfPlaneSet (ModularGroup.S • z).2).hasDerivAt.comp
+    (coord' := id) (h := fun w : ℍ ↦ (↑(ModularGroup.S • w) : ℂ)) z
+    (hasDerivAt_coe_S z) continuous_coe.continuousAt
+
+private lemma csqrt_sq_eq (z : ℂ) : sqrt z ^ 2 = z := by
+  by_cases hz : z = 0
+  · simp [hz]
+  rw [sqrt_eq_exp hz, ← exp_nat_mul, show (2 : ℕ) * (log z / 2) = log z by
+    push_cast
+    field_simp, exp_log hz]
+
+private lemma csqrt_ne_zero (z : ℍ) : sqrt z ≠ 0 := by
+  intro h
+  exact z.ne_zero (by simpa only [h, zero_pow (by decide : 2 ≠ 0)] using (csqrt_sq_eq z).symm)
+
+private lemma sqrtMulEta_ne_zero (z : ℍ) : sqrtMulEta z ≠ 0 :=
+  mul_ne_zero (csqrt_ne_zero z) (eta_ne_zero z.2)
+
+private lemma hasDerivAt_sqrtMulEta (z : ℍ) :
+    HasDerivAt sqrtMulEta (deriv sqrt (z : ℂ) * η z + sqrt z * deriv η (z : ℂ)) z
+      ((↑) : ℍ → ℂ) := by
+  have h := ((differentiableAt_sqrt (mem_slitPlane z)).hasDerivAt.mul
+    (differentiableAt_eta_of_mem_upperHalfPlaneSet z.2).hasDerivAt).comp z
+      (hasDerivAt_coe z) continuous_coe.continuousAt
+  simpa only [sqrtMulEta, Function.comp_def, Pi.mul_apply, mul_one] using! h
+
 lemma logDeriv_eta_comp_div_eq (z : ℍ) :
-    logDeriv (η ∘ (-1 / ·)) z = ((z : ℂ) ^ (2 : ℤ))⁻¹ * logDeriv η (-z)⁻¹ := by
-  simp only [neg_div, one_div, inv_neg]
-  rw [logDeriv_comp, mul_comm]
-  · simp [zpow_ofNat]
-  · exact differentiableAt_eta_of_mem_upperHalfPlaneSet (by grind [im_pnat_div_pos 1 z])
-  · fun_prop (disch := exact z.ne_zero)
+    logDeriv etaS z ((↑) : ℍ → ℂ)
+      ((hasDerivAt_etaS z).existsUnique_hasDerivAt isOpenEmbedding_coe)
+      (etaS_ne_zero z).isUnit =
+      Checked.inv ((z : ℂ) ^ 2) (z.ne_zero.isUnit.pow 2) *
+        logDeriv η (↑(ModularGroup.S • z) : ℂ) id
+          (differentiableAt_eta_of_mem_upperHalfPlaneSet
+            (ModularGroup.S • z).2).existsUnique_hasDerivAt
+          (eta_ne_zero (ModularGroup.S • z).2).isUnit := by
+  rw [logDeriv_eq (hasDerivAt_etaS z), logDeriv_apply]
+  simp only [etaS, div_eq_mul_inv₀]
+  ring
+
+private lemma logDeriv_sqrt_eq (z : ℍ) :
+    logDeriv sqrt (z : ℂ) id (differentiableAt_sqrt (mem_slitPlane z)).existsUnique_hasDerivAt
+      (csqrt_ne_zero z).isUnit = Checked.div 1 (2 * (z : ℂ))
+        ((by norm_num : (2 : ℂ) ≠ 0).isUnit.mul z.ne_zero.isUnit) := by
+  have h := ((differentiableAt_sqrt (mem_slitPlane z)).hasDerivAt.pow 2)
+  have he : sqrt ^ 2 = id := funext csqrt_sq_eq
+  rw [he] at h
+  have hd : 2 * sqrt z * deriv sqrt (z : ℂ) = 1 := by
+    simpa only [Nat.cast_ofNat, Nat.reduceSub, pow_one] using h.deriv.symm.trans
+      (hasDerivAt_id (z : ℂ)).deriv
+  rw [logDeriv_apply]
+  apply div_eq_div_iff.mpr
+  rw [show 2 * (z : ℂ) = 2 * sqrt z ^ 2 by rw [csqrt_sq_eq]]
+  linear_combination sqrt z * hd
+
+private lemma logDeriv_sqrtMulEta_eq (z : ℍ) :
+    logDeriv sqrtMulEta z ((↑) : ℍ → ℂ)
+      ((hasDerivAt_sqrtMulEta z).existsUnique_hasDerivAt isOpenEmbedding_coe)
+      (sqrtMulEta_ne_zero z).isUnit =
+      Checked.div 1 (2 * (z : ℂ))
+        ((by norm_num : (2 : ℂ) ≠ 0).isUnit.mul z.ne_zero.isUnit) +
+      (π * I / 12) * EisensteinSeries.E2 z := by
+  have hs := differentiableAt_sqrt (mem_slitPlane z)
+  have hη := differentiableAt_eta_of_mem_upperHalfPlaneSet z.2
+  have h := logDeriv_mul (z : ℂ) (hf := (csqrt_ne_zero z).isUnit)
+    (hg := (eta_ne_zero z.2).isUnit) hs hη
+  calc
+    _ = logDeriv (sqrt * η) (z : ℂ) id (hs.hasDerivAt.mul hη.hasDerivAt).existsUnique_hasDerivAt
+          ((csqrt_ne_zero z).isUnit.mul (eta_ne_zero z.2).isUnit) :=
+      (logDeriv_eq (hasDerivAt_sqrtMulEta z)).trans
+        (logDeriv_eq (hs.hasDerivAt.mul hη.hasDerivAt)).symm
+    _ = _ := h.trans (congrArg₂ (· + ·) (logDeriv_sqrt_eq z) (logDeriv_eta_eq_E2 z))
 
 open EisensteinSeries in
 lemma logDeriv_eta_comp_eq_logDeriv_csqrt_eta (z : ℍ) :
-    logDeriv (η ∘ (-1 / ·)) z = logDeriv (sqrt * η) z := by
-  rw [logDeriv_eta_comp_div_eq z,
-      logDeriv_mul _ (by simp [sqrt, ne_zero z]) (eta_ne_zero z.2)
-      (differentiableAt_sqrt (mem_slitPlane z))
-      (differentiableAt_eta_of_mem_upperHalfPlaneSet z.2), logDeriv_apply sqrt]
-  have hE2 := congrFun (E2_slash_action ModularGroup.S) z
-  simp only [one_div, SL_slash_def, modular_S_smul, ModularGroup.denom_S,
-    Int.reduceNeg, zpow_neg, riemannZeta_two, mul_inv_rev, inv_div, Pi.sub_apply, Pi.smul_apply,
-    D2, ModularGroup.denom_S, smul_eq_mul] at hE2
-  rw [deriv_sqrt (mem_slitPlane z), div_eq_mul_inv, logDeriv_eta_eq_E2 z,
-    logDeriv_eta_eq_E2 (.mk _ z.im_inv_neg_coe_pos), ← mul_assoc, mul_comm, ← mul_assoc, hE2, sqrt,
-    show ModularGroup.S 1 0 = 1 by simp [ModularGroup.S]]
-  transitivity 1 / z / 2 + π * I / 12 * E2 z
-  · field_simp
-    grind [I_sq]
-  · rw [div_mul_eq_mul_div₀ _ _ (2 : ℂ), neg_div, cpow_neg, ← mul_inv, ← cpow_add _ _ z.ne_zero]
-    norm_num
+    logDeriv etaS z ((↑) : ℍ → ℂ)
+      ((hasDerivAt_etaS z).existsUnique_hasDerivAt isOpenEmbedding_coe)
+      (etaS_ne_zero z).isUnit =
+    logDeriv sqrtMulEta z ((↑) : ℍ → ℂ)
+      ((hasDerivAt_sqrtMulEta z).existsUnique_hasDerivAt isOpenEmbedding_coe)
+      (sqrtMulEta_ne_zero z).isUnit := by
+  have hζ := isUnit_two_mul_riemannZeta_two
+  have hz := z.ne_zero.isUnit
+  have hE2 : E2 (ModularGroup.S • z) * ((z : ℂ) ^ 2)⁻¹ =
+      E2 z - (1 / (2 * riemannZeta 2)) * (2 * π * I / (z : ℂ)) := by
+    simpa only [SL_slash_apply, ModularGroup.denom_S, Int.reduceNeg, zpow_neg₀ z.ne_zero,
+      zpow_ofNat₀, D2_S, Pi.sub_apply, Pi.smul_apply, smul_eq_mul] using
+      congrFun (E2_slash_action ModularGroup.S) z
+  have hp : (π : ℂ) ≠ 0 := ofReal_ne_zero.mpr Real.pi_ne_zero
+  have htwo : IsUnit (2 * (z : ℂ)) := (by norm_num : (2 : ℂ) ≠ 0).isUnit.mul hz
+  have hcor : (π * I / 12) * ((1 / (2 * riemannZeta 2)) * (2 * π * I / (z : ℂ))) =
+      -Checked.div 1 (2 * (z : ℂ)) htwo := by
+    simp only [riemannZeta_two]
+    field_simp
+    ring_nf
+    simp [I_sq]
+  rw [logDeriv_eta_comp_div_eq, logDeriv_eta_eq_E2, logDeriv_sqrtMulEta_eq]
+  calc
+    _ = (π * I / 12) * (E2 (ModularGroup.S • z) * ((z : ℂ) ^ 2)⁻¹) := by ac_rfl
+    _ = _ := by rw [hE2, mul_sub, hcor, sub_neg_eq_add, add_comm]
 
-lemma eta_comp_eqOn_const_mul_csqrt_eta :
-    ∃ c : ℂ, c ≠ 0 ∧ upperHalfPlaneSet.EqOn (η ∘ (fun z : ℂ ↦ -1 / z)) (c • (sqrt * η)) := by
-  rw [← logDeriv_eqOn_iff]
-  · exact fun z hz ↦ logDeriv_eta_comp_eq_logDeriv_csqrt_eta ⟨z, hz⟩
-  · apply DifferentiableOn.comp (t := upperHalfPlaneSet)
-    · exact fun x hx ↦ (differentiableAt_eta_of_mem_upperHalfPlaneSet hx).differentiableWithinAt
-    · exact DifferentiableOn.div (by fun_prop) (by fun_prop)
-        (fun x hx ↦ ne_zero (⟨x, hx⟩ : ℍ))
-    · exact fun y hy ↦ by grind [im_pnat_div_pos 1 (⟨y, hy⟩ : ℍ)]
-  · exact fun x hx ↦ ((differentiableAt_sqrt (mem_slitPlane ⟨x, hx⟩)).mul
-     (differentiableAt_eta_of_mem_upperHalfPlaneSet hx)).differentiableWithinAt
-  · exact isOpen_upperHalfPlaneSet
-  · exact Convex.isPreconnected (convex_halfSpace_im_gt 0)
-  · exact fun x hx ↦ mul_ne_zero (by simp [sqrt, ne_zero ⟨x, hx⟩]) (eta_ne_zero hx)
-  · exact fun x hx ↦ eta_ne_zero (by grind [im_pnat_div_pos 1 ⟨x, hx⟩])
+private lemma eta_comp_eq_const_mul_csqrt_eta :
+    ∃ c : ℂ, c ≠ 0 ∧ ∀ z : ℍ, etaS z = c * sqrtMulEta z := by
+  let q (z : ℍ) : ℂ := Checked.div (etaS z) (sqrtMulEta z) (sqrtMulEta_ne_zero z).isUnit
+  let u (z : ℍ) : ℂˣ := (sqrtMulEta_ne_zero z).isUnit.unit
+  have hu : ((↑) : ℂˣ → ℂ) ∘ u = sqrtMulEta :=
+    funext fun z ↦ (sqrtMulEta_ne_zero z).isUnit.unit_spec
+  have hq (z : ℍ) : HasDerivAt q 0 z ((↑) : ℍ → ℂ) := by
+    let a := deriv η (↑(ModularGroup.S • z) : ℂ) *
+      Checked.inv ((z : ℂ) ^ 2) (z.ne_zero.isUnit.pow 2)
+    let b := deriv sqrt (z : ℂ) * η z + sqrt z * deriv η (z : ℂ)
+    have ha : HasDerivAt etaS a z ((↑) : ℍ → ℂ) := hasDerivAt_etaS z
+    have hb : HasDerivAt sqrtMulEta b z ((↑) : ℍ → ℂ) := hasDerivAt_sqrtMulEta z
+    have hbu : HasDerivAt (((↑) : ℂˣ → ℂ) ∘ u) b z ((↑) : ℍ → ℂ) := hu.symm ▸ hb
+    have hi := (hasDerivAt_inv (u z)).comp z hbu continuous_coe.continuousAt
+      Units.isOpenEmbedding_val.isEmbedding
+    have h := ha.mul hi continuous_coe.continuousAt
+    have hLog := logDeriv_eta_comp_eq_logDeriv_csqrt_eta z
+    rw [logDeriv_eq ha, logDeriv_eq hb] at hLog
+    have hcross : a * sqrtMulEta z = etaS z * b :=
+      (div_eq_div_iff.mp hLog).trans (mul_comm _ _)
+    have hu₀ : IsUnit (sqrtMulEta z) := (sqrtMulEta_ne_zero z).isUnit
+    have hzero : a * (↑(u z)⁻¹ : ℂ) + etaS z * (-(↑(u z)⁻¹ : ℂ) ^ 2 * b) = 0 := by
+      change a * (sqrtMulEta z)⁻¹ + etaS z * (-(sqrtMulEta z)⁻¹ ^ 2 * b) = 0
+      calc
+        _ = (a * sqrtMulEta z - etaS z * b) * (sqrtMulEta z)⁻¹ ^ 2 := by
+          field_simp
+          ring
+        _ = _ := by rw [hcross, sub_self, zero_mul]
+    exact hzero ▸ h
+  have hconn : IsPreconnected (Set.univ : Set ℍ) := by
+    apply isOpenEmbedding_coe.isEmbedding.isInducing.isPreconnected_image.mp
+    simpa only [Set.image_univ, range_coe] using (convex_halfSpace_im_gt (0 : ℝ)).isPreconnected
+  obtain ⟨c, hc⟩ := isOpen_univ.exists_is_const_of_deriv_eq_zero hconn
+    (fun z _ ↦ (hq z).hasFDerivAt.hasFDerivWithinAt.differentiableWithinAt)
+    (fun z _ ↦ (hq z).deriv isOpenEmbedding_coe) isOpenEmbedding_coe
+  let i : ℍ := ⟨I, by simp⟩
+  have hi : IsUnit (q i) :=
+    (eta_ne_zero (ModularGroup.S • i).2).isUnit.div₀ (sqrtMulEta_ne_zero i).isUnit
+  refine ⟨c, hc i (Set.mem_univ _) ▸ hi.ne_zero, fun z ↦ ?_⟩
+  exact div_eq_iff.mp (hc z (Set.mem_univ _))
 
 end auxiliary
 
 public section
 
 /-- The discriminant expressed as a q-expansion: `Δ(z) = q * ∏' (1 - q ^ (n + 1)) ^ 24`. -/
-lemma discriminant_eq_q_prod (z : ℍ) : Δ z = 𝕢 1 z * ∏' n, (1 - eta_q n z) ^ 24 := by
+lemma discriminant_eq_q_prod (z : ℍ) :
+    Δ z = Function.Periodic.qParam 1 z * ∏' n, (1 - eta_q n z) ^ 24 := by
   simp only [discriminant, eta, mul_pow]
   congr
   · simp [Periodic.qParam, ← exp_nsmul, nsmul_eq_mul, Nat.cast_ofNat]
-    grind
+    congr 1
+    field_simp
   · exact ((multipliableLocallyUniformlyOn_eta.multipliable z.2).tprod_pow _).symm
 
 /-- The modular discriminant is non-vanishing on the upper half-plane. -/
@@ -129,30 +256,38 @@ set_option backward.isDefEq.respectTransparency.types false in
 /-- The discriminant is invariant under `T : z ↦ z + 1`, i.e., `Δ(z + 1) = Δ(z)`. -/
 lemma discriminant_T_invariant : (Δ ∣[(12 : ℤ)] ModularGroup.T) = Δ := by
   ext z
-  rw [SL_slash_apply, denom, modular_T_smul, ModularGroup.T]
+  rw [SL_slash_apply, modular_T_smul]
+  simp only [ModularGroup.denom_apply, ModularGroup.T]
   simp [discriminant_eq_q_prod, eta_q, Periodic.qParam, ← exp_periodic (2 * π * I * z)]
   ring_nf
 
 /-- The transformation formula for `η` under `S : z ↦ -1 / z`: we have
 `η(-1 / z) = (√I)⁻¹ · √z · η(z)` on the upper half-plane. -/
-lemma eta_comp_eq_csqrt_I_inv : upperHalfPlaneSet.EqOn
-    (η ∘ (-1 / ·)) ((sqrt I)⁻¹ • (sqrt * η)) := by
-  obtain ⟨z, hz, h⟩ := eta_comp_eqOn_const_mul_csqrt_eta
-  have h3 : η I = z * sqrt I * η I := by simpa [← mul_assoc] using h (show I ∈ _ by simp)
-  grind [sqrt, eta_ne_zero (show 0 < I.im by simp)]
+lemma eta_comp_eq_csqrt_I_inv (z : ℍ) : η ((ModularGroup.S • z : ℍ) : ℂ) =
+    Checked.inv (sqrt I) (by rw [sqrt_eq_exp I_ne_zero]; exact (exp_ne_zero _).isUnit) *
+      (sqrt z * η z) := by
+  obtain ⟨c, _, hc⟩ := eta_comp_eq_const_mul_csqrt_eta
+  let i : ℍ := ⟨I, by simp⟩
+  have hi : ModularGroup.S • i = i := by
+    rw [modular_S_smul i]
+    apply UpperHalfPlane.ext
+    simp [i, inv_neg₀, inv_I]
+  have hci : c * sqrt I = 1 := by
+    apply mul_right_cancel₀ (eta_ne_zero i.2)
+    simpa only [etaS, sqrtMulEta, hi, i, mul_assoc, one_mul] using (hc i).symm
+  have hc' : c = Checked.inv (sqrt I) (csqrt_ne_zero i).isUnit :=
+    (inv_eq_of_mul_eq_one_left₀ hci).symm
+  exact (hc z).trans (congrArg (· * sqrtMulEta z) hc')
 
 set_option backward.isDefEq.respectTransparency.types false in
 /-- The discriminant satisfies the modular transformation for `S : z ↦ -1 / z`:
 we have `Δ(-1 / z) = z ^ 12 · Δ(z)`. -/
 lemma discriminant_S_invariant : (Δ ∣[(12 : ℤ)] ModularGroup.S) = Δ := by
   ext z
-  suffices η (-(↑z)⁻¹) ^ 24 * ((z : ℂ) ^ 12)⁻¹ = η z ^ 24 by
-    rw [SL_slash_apply, UpperHalfPlane.modular_S_smul]
-    simpa [denom, ModularGroup.S]
-  have he : η (-(↑z)⁻¹) = (sqrt I)⁻¹ * (sqrt z * η z) := by
-    simpa [neg_div] using eta_comp_eq_csqrt_I_inv z.2
-  simp only [he, mul_pow, mul_pow, inv_pow, csqrt_I_pow_24, csqrt_pow_24_eq (ne_zero z)]
-  field_simp [z.ne_zero]
+  simp only [SL_slash_apply, ModularGroup.denom_S, zpow_neg₀ z.ne_zero, zpow_ofNat₀]
+  simp only [discriminant, eta_comp_eq_csqrt_I_inv z, mul_pow, inv_pow₀, csqrt_I_pow_24,
+    inv_one₀, one_mul, csqrt_pow_24_eq z.ne_zero]
+  rw [mul_comm ((z : ℂ) ^ 12), mul_assoc, mul_inv_cancel₀, mul_one]
 
 lemma tendsto_atImInfty_tprod_one_sub_eta_q_pow :
     Tendsto (fun x : ℍ ↦ ∏' (n : ℕ), (1 - eta_q n x) ^ 24) atImInfty (𝓝 1) := by
@@ -167,7 +302,7 @@ lemma tendsto_atImInfty_tprod_one_sub_eta_q_pow :
     filter_upwards [Metric.ball_mem_nhds (0 : ℂ) (by norm_num : (0 : ℝ) < 1 / 2)] with q hq k
     exact pow_le_pow_left₀ (norm_nonneg _) (mem_ball_zero_iff.mp hq).le _
   have := (htprod.comp (UpperHalfPlane.qParam_tendsto_atImInfty zero_lt_one)).pow 24
-  simp only [Periodic.qParam, ofReal_one, div_one, comp_apply, one_pow, eta_q] at *
+  simp only [Periodic.qParam, ofReal_one, comp_apply, one_pow, eta_q] at *
   convert! this using 2 with τ
   rw [Multipliable.tprod_pow]
   apply (multipliableLocallyUniformlyOn_eta.multipliable τ.2).congr
@@ -188,13 +323,16 @@ lemma exp_isBigO_discriminant : (fun τ ↦ Real.exp (-2 * π * τ.im)) =O[atImI
     (Metric.ball_mem_nhds 1 (by norm_num : (0 : ℝ) < 1/2))
   filter_upwards [hprod] with τ hτ
   rw [discriminant_eq_q_prod, norm_mul, Real.norm_of_nonneg (Real.exp_pos _).le]
-  have hq_norm : ‖𝕢 1 τ‖ = Real.exp (-2 * π * τ.im) := by simp [Periodic.qParam, Complex.norm_exp]
+  have hq_norm : ‖Function.Periodic.qParam 1 τ‖ = Real.exp (-2 * π * τ.im) := by
+    simp [Periodic.qParam, Complex.norm_exp]
   rw [← hq_norm]
   have hprod_bound : 1 / 2 ≤ ‖∏' n, (1 - eta_q n τ) ^ 24‖ := by
     have hsub : ‖∏' n, (1 - eta_q n τ) ^ 24 - 1‖ < 1 / 2 := by rwa [Complex.dist_eq] at hτ
     have h1 := norm_sub_norm_le 1 (∏' n, (1 - eta_q n τ) ^ 24)
-    grind [norm_one, norm_sub_rev]
-  linarith [norm_nonneg (𝕢 1 τ), mul_le_mul_of_nonneg_left hprod_bound (norm_nonneg (𝕢 1 τ))]
+    rw [norm_one, norm_sub_rev] at h1
+    linarith
+  linarith [norm_nonneg (Function.Periodic.qParam 1 τ),
+    mul_le_mul_of_nonneg_left hprod_bound (norm_nonneg (Function.Periodic.qParam 1 τ))]
 
 /-- The cusp function of the discriminant equals `q * ∏' n, (1 - q^(n+1))^24`
 on the open unit disc. -/
@@ -206,7 +344,7 @@ lemma discriminant_cuspFunction_eqOn : Set.EqOn (cuspFunction 1 Δ)
       discriminant_isZeroAtImInfty.zero_at_infty_comp_ofComplex
   · have him := Periodic.im_invQParam_pos_of_norm_lt_one one_pos
       (by simpa [dist_zero_right] using hq) hq0
-    simp [cuspFunction, Periodic.cuspFunction_eq_of_nonzero 1 _ hq0,
+    simp [cuspFunction, Periodic.cuspFunction_eq_of_nonzero 1 _ one_ne_zero hq0,
       ofComplex_apply_of_im_pos him, discriminant_eq_q_prod ⟨_, him⟩,
       Periodic.qParam_right_inv one_ne_zero hq0, eta_q]
 

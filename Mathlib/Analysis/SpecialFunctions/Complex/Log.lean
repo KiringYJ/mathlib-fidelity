@@ -39,10 +39,10 @@ theorem neg_pi_lt_log_im (x : ℂ) : -π < (log x).im := by simp only [log_im, n
 theorem log_im_le_pi (x : ℂ) : (log x).im ≤ π := by simp only [log_im, arg_le_pi]
 
 theorem exp_log {x : ℂ} (hx : x ≠ 0) : exp (log x) = x := by
-  rw [log, exp_add_mul_I, ← ofReal_sin, sin_arg, ← ofReal_cos, cos_arg hx, ← ofReal_exp,
+  rw [log, exp_add_mul_I, ← ofReal_sin, sin_arg (hx := (norm_ne_zero_iff.mpr hx).isUnit),
+    ← ofReal_cos, cos_arg hx, ← ofReal_exp,
     Real.exp_log (norm_pos_iff.mpr hx), mul_add, ofReal_div, ofReal_div,
-    mul_div_cancel₀ _ (ofReal_ne_zero.2 <| norm_ne_zero_iff.mpr hx), ← mul_assoc,
-    mul_div_cancel₀ _ (ofReal_ne_zero.2 <| norm_ne_zero_iff.mpr hx), re_add_im]
+    mul_div_cancel₀, ← mul_assoc, mul_div_cancel₀, re_add_im]
 
 @[simp]
 theorem range_exp : Set.range exp = {0}ᶜ :=
@@ -105,8 +105,8 @@ theorem log_zero : log 0 = 0 := by simp [log]
 @[simp]
 theorem log_one : log 1 = 0 := by simp [log]
 
-/-- This holds true for all `x : ℂ` because of the junk values `0 / 0 = 0` and `log 0 = 0`. -/
-@[simp] lemma log_div_self (x : ℂ) : log (x / x) = 0 := by simp [log]
+/-- The logarithm of the quotient of an invertible complex number by itself is zero. -/
+lemma log_div_self (x : ℂ) {hx : IsUnit x} : log (x / x) = 0 := by simp
 
 theorem log_neg_one : log (-1) = π * I := by simp [log]
 
@@ -123,9 +123,9 @@ theorem log_conj_eq_ite (x : ℂ) : log (conj x) = if x.arg = π then log x else
 theorem log_conj (x : ℂ) (h : x.arg ≠ π) : log (conj x) = conj (log x) := by
   rw [log_conj_eq_ite, ite_eq_right h]
 
-theorem log_inv_eq_ite (x : ℂ) : log x⁻¹ = if x.arg = π then -conj (log x) else -log x := by
-  by_cases hx : x = 0
-  · simp [hx]
+theorem log_inv_eq_ite (x : ℂ) {hx₀ : IsUnit x} :
+    log x⁻¹ = if x.arg = π then -conj (log x) else -log x := by
+  have hx : x ≠ 0 := hx₀.ne_zero
   rw [inv_def, log_mul_ofReal, Real.log_inv, ofReal_neg, ← sub_eq_neg_add, log_conj_eq_ite]
   · simp_rw [log, map_add, map_mul, conj_ofReal, conj_I, normSq_eq_norm_sq, Real.log_pow,
       Nat.cast_two, ofReal_mul, neg_add, mul_neg, neg_neg]
@@ -134,7 +134,7 @@ theorem log_inv_eq_ite (x : ℂ) : log x⁻¹ = if x.arg = π then -conj (log x)
   · rwa [inv_pos, Complex.normSq_pos]
   · rwa [map_ne_zero]
 
-theorem log_inv (x : ℂ) (hx : x.arg ≠ π) : log x⁻¹ = -log x := by
+theorem log_inv (x : ℂ) {hx₀ : IsUnit x} (hx : x.arg ≠ π) : log x⁻¹ = -log x := by
   rw [log_inv_eq_ite, ite_eq_right hx]
 
 theorem two_pi_I_ne_zero : (2 * π * I : ℂ) ≠ 0 := by simp [Real.pi_ne_zero, I_ne_zero]
@@ -161,13 +161,14 @@ theorem exp_eq_one_iff_of_im_nonneg {x : ℂ} (hx : 0 ≤ x.im) :
 theorem exp_two_pi_mul_I_mul_div_eq_one_iff {k N : ℕ} (hN : N ≠ 0) :
     exp (2 * π * I * k / N) = 1 ↔ N ∣ k := by
   rw [exp_eq_one_iff]
-  conv in _ = _ => rw [← mul_comm (2 * π * I), mul_div_assoc, mul_right_inj' (by simp)]
+  conv in _ = _ => rw [← mul_comm (2 * π * I), mul_div_assoc₀, mul_right_inj' (by simp)]
   field_simp [Nat.cast_ne_zero.mpr hN]
   norm_cast
-  simp [← dvd_def, Int.ofNat_dvd]
+  rw [← Int.ofNat_dvd]
+  simp only [dvd_def, mul_comm]
 
 theorem exp_eq_exp_iff_exp_sub_eq_one {x y : ℂ} : exp x = exp y ↔ exp (x - y) = 1 := by
-  rw [exp_sub, div_eq_one_iff_eq (exp_ne_zero _)]
+  rw [exp_sub, div_eq_one_iff_eq]
 
 theorem exp_eq_exp_iff_exists_int {x y : ℂ} : exp x = exp y ↔ ∃ n : ℤ, x = y + n * (2 * π * I) := by
   simp only [exp_eq_exp_iff_exp_sub_eq_one, exp_eq_one_iff, sub_eq_iff_eq_add']

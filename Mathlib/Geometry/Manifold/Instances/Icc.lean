@@ -225,9 +225,9 @@ lemma mfderiv_subtypeVal_Icc_one (z : Icc x y) :
     apply mfderivWithin_congr_of_mem _ z.2
     intro z hz
     simp [projIcc_of_mem h.out.le hz]
-  rw [← mfderivWithin_comp_projIcc_one, A]
-  simp only [id_eq, mfderivWithin_eq_fderivWithin]
-  rw [fderivWithin_id (uniqueDiffOn_Icc h.out _ z.2)]
+  have huniq : UniqueMDiffAt[Icc x y] (z : ℝ) :=
+    (uniqueDiffOn_Icc h.out _ z.2).uniqueMDiffWithinAt
+  rw [← mfderivWithin_comp_projIcc_one, A, mfderivWithin_id huniq]
   rfl
 
 @[deprecated (since := "2026-07-22")]

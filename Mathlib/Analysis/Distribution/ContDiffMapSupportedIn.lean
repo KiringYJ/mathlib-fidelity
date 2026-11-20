@@ -408,7 +408,7 @@ noncomputable def fderivLM (hk : k + 1 ≤ n := by regularity_le) :
 
 @[simp]
 lemma fderivLM_apply (hk : k + 1 ≤ n) (f : 𝓓^{n}_{K}(E, F)) :
-    fderivLM 𝕜 n k hk f = fderiv ℝ f :=
+    (fderivLM 𝕜 n k hk f : E → E →L[ℝ] F) = fun x ↦ fderiv ℝ f x id :=
   rfl
 
 lemma fderivLM_eq_of_scalars (𝕜' : Type*) [NontriviallyNormedField 𝕜']
@@ -858,7 +858,7 @@ noncomputable def fderivCLM (hk : k + 1 ≤ n := by regularity_le) :
 
 @[simp]
 lemma fderivCLM_apply (hk : k + 1 ≤ n) (f : 𝓓^{n}_{K}(E, F)) :
-    fderivCLM 𝕜 n k hk f = fderiv ℝ f :=
+    (fderivCLM 𝕜 n k hk f : E → E →L[ℝ] F) = fun x ↦ fderiv ℝ f x id :=
   rfl
 
 lemma fderivCLM_eq_of_scalars (𝕜' : Type*) [NontriviallyNormedField 𝕜']

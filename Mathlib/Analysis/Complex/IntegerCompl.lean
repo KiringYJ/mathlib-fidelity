@@ -60,9 +60,10 @@ lemma upperHalfPlane_inter_integerComplement :
   exact fun z hz ↦ UpperHalfPlane.coe_mem_integerComplement ⟨z, hz⟩
 
 lemma _root_.UpperHalfPlane.int_div_mem_integerComplement (z : ℍ) {n : ℤ} (hn : n ≠ 0) :
-    n / (z : ℂ) ∈ ℂ_ℤ := by
+    Checked.div (n : ℂ) (z : ℂ) z.ne_zero.isUnit ∈ ℂ_ℤ := by
   rintro ⟨_, hm⟩
-  have : (n / (z : ℂ)).im ≠ 0 := by simp [div_im, z.ne_zero, hn, z.im_ne_zero]
+  have hz := z.ne_zero.isUnit
+  have : (n / (z : ℂ)).im ≠ 0 := by simp [div_im, hn, z.im_ne_zero]
   simpa [← hm]
 
 end Complex

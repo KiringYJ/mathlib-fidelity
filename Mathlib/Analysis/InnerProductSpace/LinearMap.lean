@@ -391,9 +391,13 @@ theorem exists_of_rankOne_eq_rankOne {a c : F} {b d : H}
       simp_rw [h₂, h₃, inner_smul_right, smul_smul]; ring_nf
   have h₅ : ⟪d, b⟫_𝕜 ≠ 0 := fun h ↦ by simp [h, hb] at h₄
   have h₆ : c ≠ 0 := fun h ↦ by simp [h, ha] at h₃
-  refine ⟨_, ‖c‖ ^ 2 / ‖a‖ ^ 2, div_ne_zero h₅ <| by simpa, ?_, h₃, by simpa using h₄⟩
-  simp_rw [← ofReal_pow, ← ofReal_div, pos_iff (K := 𝕜), ofReal_re, ofReal_im, and_true]
-  exact div_pos (by simpa [sq_pos_iff]) (by simpa [sq_pos_iff])
+  have hb' : ⟪b, b⟫_𝕜 ≠ 0 := inner_self_ne_zero.mpr hb
+  have ha' : ‖a‖ ≠ 0 := norm_ne_zero_iff.mpr ha
+  refine ⟨⟪d, b⟫_𝕜 / ⟪b, b⟫_𝕜, ((‖c‖ ^ 2 / ‖a‖ ^ 2 : ℝ) : 𝕜), div_ne_zero h₅,
+    ?_, h₃, ?_⟩
+  · exact ofReal_pos.mpr
+      (div_pos (pow_pos (norm_pos_iff.mpr h₆) 2) (pow_pos (norm_pos_iff.mpr ha) 2))
+  · simpa only [ofReal_div, ofReal_pow, inner_self_eq_norm_sq_to_K] using h₄
 
 end Normed
 
@@ -411,8 +415,8 @@ theorem opNorm_le_of_re_inner_le {T : E →L[𝕜] F} {C : ℝ} (hC : 0 ≤ C)
   refine opNorm_le_of_unit_norm hC fun x hx ↦ ?_
   by_cases hTx : ‖T x‖ = 0
   · rwa [hTx]
-  · specialize h x (((‖T x‖⁻¹ : ℝ) : 𝕜) • T x) hx (by simp [norm_smul, hTx])
+  · specialize h x (((‖T x‖⁻¹ : ℝ) : 𝕜) • T x) hx (by simp [norm_smul])
     rwa [inner_smul_right, re_ofReal_mul, ← norm_sq_eq_re_inner,
-      inv_mul_eq_div, sq, mul_self_div_self] at h
+      sq, inv_mul_cancel_left₀] at h
 
 end ContinuousLinearMap

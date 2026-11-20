@@ -273,11 +273,11 @@ theorem iteratedFDerivWithin_neg_apply {f : E → F} (hu : UniqueDiffOn 𝕜 s) 
   | succ i hi =>
     calc
       iteratedFDerivWithin 𝕜 (i + 1) (-f) s x h =
-          fderivWithin 𝕜 (iteratedFDerivWithin 𝕜 i (-f) s) s x (h 0) (Fin.tail h) :=
+          fderivWithin 𝕜 (iteratedFDerivWithin 𝕜 i (-f) s) s x id (h 0) (Fin.tail h) :=
         iteratedFDerivWithin_succ_apply_left _
-      _ = fderivWithin 𝕜 (-iteratedFDerivWithin 𝕜 i f s) s x (h 0) (Fin.tail h) := by
+      _ = fderivWithin 𝕜 (-iteratedFDerivWithin 𝕜 i f s) s x id (h 0) (Fin.tail h) := by
         rw [fderivWithin_congr' (@hi) hx, Pi.neg_def]
-      _ = -(fderivWithin 𝕜 (iteratedFDerivWithin 𝕜 i f s) s) x (h 0) (Fin.tail h) := by
+      _ = -(fderivWithin 𝕜 (iteratedFDerivWithin 𝕜 i f s) s x id (h 0) (Fin.tail h)) := by
         rw [fderivWithin_neg (hu x hx), neg_apply, neg_apply]
       _ = -(iteratedFDerivWithin 𝕜 (i + 1) f s) x h := by
         rw [iteratedFDerivWithin_succ_apply_left]
@@ -517,22 +517,24 @@ theorem ContDiffOn.pow {f : E → 𝔸} (hf : ContDiffOn 𝕜 n f s) (m : ℕ) :
     ContDiffOn 𝕜 n (fun y => f y ^ m) s := fun y hy => (hf y hy).pow m
 
 @[fun_prop]
-theorem ContDiffWithinAt.div_const {f : E → 𝕜'} {n} (hf : ContDiffWithinAt 𝕜 n f s x) (c : 𝕜') :
+theorem ContDiffWithinAt.div_const {f : E → 𝕜'} {n} (hf : ContDiffWithinAt 𝕜 n f s x)
+    (c : 𝕜') {hc : IsUnit c} :
     ContDiffWithinAt 𝕜 n (fun x => f x / c) s x := by
-  simpa only [div_eq_mul_inv] using hf.mul contDiffWithinAt_const
+  simpa only [div_eq_mul_inv₀] using hf.mul contDiffWithinAt_const
 
 @[fun_prop]
-nonrec theorem ContDiffAt.div_const {f : E → 𝕜'} {n} (hf : ContDiffAt 𝕜 n f x) (c : 𝕜') :
+nonrec theorem ContDiffAt.div_const {f : E → 𝕜'} {n} (hf : ContDiffAt 𝕜 n f x)
+    (c : 𝕜') {hc : IsUnit c} :
     ContDiffAt 𝕜 n (fun x => f x / c) x :=
-  hf.div_const c
+  hf.div_const c (hc := hc)
 
 @[fun_prop]
-theorem ContDiffOn.div_const {f : E → 𝕜'} {n} (hf : ContDiffOn 𝕜 n f s) (c : 𝕜') :
-    ContDiffOn 𝕜 n (fun x => f x / c) s := fun x hx => (hf x hx).div_const c
+theorem ContDiffOn.div_const {f : E → 𝕜'} {n} (hf : ContDiffOn 𝕜 n f s) (c : 𝕜') {hc : IsUnit c} :
+    ContDiffOn 𝕜 n (fun x => f x / c) s := fun x hx => (hf x hx).div_const c (hc := hc)
 
 @[fun_prop]
-theorem ContDiff.div_const {f : E → 𝕜'} {n} (hf : ContDiff 𝕜 n f) (c : 𝕜') :
-    ContDiff 𝕜 n fun x => f x / c := by simpa only [div_eq_mul_inv] using hf.mul contDiff_const
+theorem ContDiff.div_const {f : E → 𝕜'} {n} (hf : ContDiff 𝕜 n f) (c : 𝕜') {hc : IsUnit c} :
+    ContDiff 𝕜 n fun x => f x / c := by simpa only [div_eq_mul_inv₀] using hf.mul contDiff_const
 
 
 end MulProd
@@ -684,12 +686,13 @@ theorem iteratedFDeriv_comp_const_smul (a : 𝕜) (hf : ContDiff 𝕜 i f) :
     rw [iteratedFDeriv_succ_eq_comp_left, iteratedFDeriv_succ_eq_comp_left]
     simp only [Nat.succ_eq_add_one, Nat.cast_add, Nat.cast_one, self_le_add_right, hf.of_le, hi,
       comp_apply, continuousMultilinearCurryLeftEquiv_symm_apply, smul_apply]
-    rw [fderiv_fun_const_smul, fderiv_comp_smul, smul_smul, ← pow_succ]
-    · simp
-    rw [← Function.comp_def (g := (a • ·))]
-    apply DifferentiableAt.comp
-    · exact hf.contDiffAt.differentiableAt_iteratedFDeriv (Nat.cast_lt.2 i.lt_succ_self)
-    · exact differentiableAt_id.const_smul _
+    have hd : DifferentiableAt 𝕜 (fun x ↦ iteratedFDeriv 𝕜 i f (a • x)) v := by
+      rw [← Function.comp_def (g := (a • ·))]
+      apply DifferentiableAt.comp
+      · exact hf.contDiffAt.differentiableAt_iteratedFDeriv (Nat.cast_lt.2 i.lt_succ_self)
+      · exact differentiableAt_id.const_smul _
+    rw [fderiv_fun_const_smul hd, fderiv_comp_smul, smul_smul, ← pow_succ]
+    simp
 
 end ConstSMul
 
@@ -766,69 +769,110 @@ variable {R : Type*} [NormedRing R] [NormedAlgebra 𝕜 R]
 
 open NormedRing Ring
 
-/-- In a complete normed algebra, the operation of inversion is `C^n`, for all `n`, at each
-invertible element, as it is analytic. -/
-@[fun_prop]
-theorem contDiffAt_ringInverse [HasSummableGeomSeries R] (x : Rˣ) :
-    ContDiffAt 𝕜 n Ring.inverse (x : R) := by
-  have := AnalyticOnNhd.contDiffOn (analyticOnNhd_inverse (𝕜 := 𝕜) (A := R)) (n := n)
-    Units.isOpen.uniqueDiffOn x x.isUnit
-  exact this.contDiffAt (Units.isOpen.mem_nhds x.isUnit)
+/-- An ambient function agreeing with inversion on the units of a normed algebra is smooth
+at each unit. The hypothesis only specifies its values on the invertibility domain. -/
+theorem contDiffAt_ringInverse [HasSummableGeomSeries R] (x : Rˣ) {g : R → R}
+    (hg : ∀ y : Rˣ, g y = ↑y⁻¹) : ContDiffAt 𝕜 n g (x : R) := by
+  have hU : IsOpen (Set.range (Units.val : Rˣ → R)) := Units.isOpenEmbedding_val.isOpen_range
+  have h : AnalyticOnNhd 𝕜 g (Set.range (Units.val : Rˣ → R)) := by
+    rintro _ ⟨y, rfl⟩
+    have he : (fun y : Rˣ ↦ (↑y⁻¹ : R)) = g ∘ Units.val := funext fun y ↦ (hg y).symm
+    have ha := analyticAt_inverse (𝕜 := 𝕜) (A := R) y
+    rw [he] at ha
+    exact ha.of_comp_domain (hU.mem_nhds ⟨y, rfl⟩)
+  exact (h.contDiffOn hU.uniqueDiffOn).contDiffAt (hU.mem_nhds ⟨x, rfl⟩)
 
 variable {𝕜' : Type*} [NormedField 𝕜'] [NormedAlgebra 𝕜 𝕜']
 
-@[fun_prop]
-theorem contDiffAt_inv {x : 𝕜'} (hx : x ≠ 0) {n} : ContDiffAt 𝕜 n Inv.inv x := by
-  simpa only [Ring.inverse_eq_inv'] using! contDiffAt_ringInverse 𝕜 (Units.mk0 x hx)
+/-- A function agreeing with inversion on the units of a normed field is smooth at each unit. -/
+theorem contDiffAt_inv (x : 𝕜'ˣ) {g : 𝕜' → 𝕜'} (hg : ∀ y : 𝕜'ˣ, g y = ↑y⁻¹) :
+    ContDiffAt 𝕜 n g (x : 𝕜') :=
+  contDiffAt_ringInverse 𝕜 x hg
 
-@[fun_prop]
-theorem contDiffOn_inv {n} : ContDiffOn 𝕜 n (Inv.inv : 𝕜' → 𝕜') {0}ᶜ := fun _ hx =>
-  (contDiffAt_inv 𝕜 hx).contDiffWithinAt
+/-- A function agreeing with inversion on the units of a normed field is smooth there. -/
+theorem contDiffOn_inv {g : 𝕜' → 𝕜'} (hg : ∀ y : 𝕜'ˣ, g y = ↑y⁻¹) :
+    ContDiffOn 𝕜 n g {x | IsUnit x} :=
+  fun _ hx ↦ (contDiffAt_inv 𝕜 hx.unit hg).contDiffWithinAt
 
 variable {𝕜}
 
-@[to_fun (attr := fun_prop)]
-theorem ContDiffWithinAt.inv {f : E → 𝕜'} {n} (hf : ContDiffWithinAt 𝕜 n f s x) (hx : f x ≠ 0) :
-    ContDiffWithinAt 𝕜 n f⁻¹ s x :=
-  (contDiffAt_inv 𝕜 hx).comp_contDiffWithinAt x hf
+/-- A function agreeing with the checked inverse of a smooth function near the point is smooth
+there. The neighborhood includes the base point. -/
+theorem ContDiffWithinAt.inv {f g : E → 𝕜'} (hf : ContDiffWithinAt 𝕜 n f s x)
+    (hg : ∀ᶠ y in 𝓝[insert x s] x, ∃ hy : IsUnit (f y), g y = Checked.inv (f y) hy) :
+    ContDiffWithinAt 𝕜 n g s x := by
+  classical
+  obtain ⟨hx, _⟩ := mem_of_mem_nhdsWithin (mem_insert x s) hg
+  let I (u : 𝕜') := if hu : IsUnit u then Checked.inv u hu else 0
+  have hI : ContDiffAt 𝕜 n I (f x) := by
+    have he : ∀ y : 𝕜'ˣ, I y = ↑y⁻¹ := by
+      intro y
+      simp only [I, dite_eq_left y.isUnit, Units.val_inv_eq_inv_val₀]
+    simpa only [IsUnit.unit_spec] using contDiffAt_inv 𝕜 hx.unit he
+  refine (hI.comp_contDiffWithinAt x hf).congr_of_eventuallyEq_insert ?_
+  filter_upwards [hg] with y hy
+  obtain ⟨hu, he⟩ := hy
+  simpa only [Function.comp_apply, I, dite_eq_left hu] using he
 
-@[to_fun (attr := fun_prop)]
-theorem ContDiffOn.inv {f : E → 𝕜'} (hf : ContDiffOn 𝕜 n f s) (h : ∀ x ∈ s, f x ≠ 0) :
-    ContDiffOn 𝕜 n f⁻¹ s := fun x hx => (hf.contDiffWithinAt hx).inv (h x hx)
+/-- A function agreeing with the checked reciprocal of a smooth function on a set is smooth
+on that set. -/
+theorem ContDiffOn.inv {f g : E → 𝕜'} (hf : ContDiffOn 𝕜 n f s)
+    (hg : ∀ y ∈ s, ∃ hy : IsUnit (f y), g y = Checked.inv (f y) hy) :
+    ContDiffOn 𝕜 n g s := by
+  intro x hx
+  apply (hf x hx).inv
+  rw [insert_eq_of_mem hx]
+  filter_upwards [self_mem_nhdsWithin] with y hy using hg y hy
 
-@[to_fun (attr := fun_prop)]
-nonrec theorem ContDiffAt.inv {f : E → 𝕜'} (hf : ContDiffAt 𝕜 n f x) (hx : f x ≠ 0) :
-    ContDiffAt 𝕜 n f⁻¹ x :=
-  hf.inv hx
+theorem ContDiffAt.inv {f g : E → 𝕜'} (hf : ContDiffAt 𝕜 n f x)
+    (hg : ∀ᶠ y in 𝓝 x, ∃ hy : IsUnit (f y), g y = Checked.inv (f y) hy) :
+    ContDiffAt 𝕜 n g x := by
+  apply ContDiffWithinAt.inv hf
+  simpa only [insert_eq_of_mem (mem_univ x), nhdsWithin_univ] using hg
 
-@[to_fun (attr := fun_prop)]
-theorem ContDiff.inv {f : E → 𝕜'} (hf : ContDiff 𝕜 n f) (h : ∀ x, f x ≠ 0) :
-    ContDiff 𝕜 n f⁻¹ := by
-  rw [contDiff_iff_contDiffAt]; exact fun x => hf.contDiffAt.inv (h x)
+@[fun_prop]
+theorem ContDiff.inv {f : E → 𝕜'} (hf : ContDiff 𝕜 n f) {h : ∀ x, IsUnit (f x)} :
+    ContDiff 𝕜 n (fun x ↦ Checked.inv (f x) (h x)) :=
+  contDiff_iff_contDiffAt.mpr fun _ ↦ hf.contDiffAt.inv (.of_forall fun y ↦ ⟨h y, rfl⟩)
 
--- TODO: generalize to `f g : E → 𝕜'`
-@[to_fun (attr := fun_prop)]
-theorem ContDiffWithinAt.div {f g : E → 𝕜} {n} (hf : ContDiffWithinAt 𝕜 n f s x)
-    (hg : ContDiffWithinAt 𝕜 n g s x) (hx : g x ≠ 0) :
-    ContDiffWithinAt 𝕜 n (f / g) s x := by
-  change ContDiffWithinAt 𝕜 n (fun x => f x / g x) s x
-  simpa only [div_eq_mul_inv] using hf.mul (hg.fun_inv hx)
+/-- A local representative of a checked quotient of two smooth functions is smooth. -/
+theorem ContDiffWithinAt.div {f g q : E → 𝕜'} (hf : ContDiffWithinAt 𝕜 n f s x)
+    (hg : ContDiffWithinAt 𝕜 n g s x)
+    (hq : ∀ᶠ y in 𝓝[insert x s] x, ∃ hy : IsUnit (g y), q y = Checked.div (f y) (g y) hy) :
+    ContDiffWithinAt 𝕜 n q s x := by
+  classical
+  let I (y : E) := if hy : IsUnit (g y) then Checked.inv (g y) hy else 0
+  have hI : ContDiffWithinAt 𝕜 n I s x := by
+    apply hg.inv
+    filter_upwards [hq] with y hy
+    obtain ⟨hu, _⟩ := hy
+    exact ⟨hu, dite_eq_left hu⟩
+  apply (hf.mul hI).congr_of_eventuallyEq_insert
+  filter_upwards [hq] with y hy
+  obtain ⟨hu, eq⟩ := hy
+  simpa only [Pi.mul_apply, I, dite_eq_left hu, div_eq_mul_inv₀] using eq
 
-@[to_fun (attr := fun_prop)]
-theorem ContDiffOn.div {f g : E → 𝕜} {n} (hf : ContDiffOn 𝕜 n f s)
-    (hg : ContDiffOn 𝕜 n g s) (h₀ : ∀ x ∈ s, g x ≠ 0) : ContDiffOn 𝕜 n (f / g) s := fun x hx =>
-  (hf x hx).div (hg x hx) (h₀ x hx)
+/-- A function agreeing with a checked quotient of two smooth functions on a set is smooth
+on that set. -/
+theorem ContDiffOn.div {f g q : E → 𝕜'} (hf : ContDiffOn 𝕜 n f s)
+    (hg : ContDiffOn 𝕜 n g s)
+    (hq : ∀ y ∈ s, ∃ hy : IsUnit (g y), q y = Checked.div (f y) (g y) hy) :
+    ContDiffOn 𝕜 n q s := by
+  intro x hx
+  apply (hf x hx).div (hg x hx)
+  rw [insert_eq_of_mem hx]
+  filter_upwards [self_mem_nhdsWithin] with y hy using hq y hy
 
-@[to_fun (attr := fun_prop)]
-nonrec theorem ContDiffAt.div {f g : E → 𝕜} {n} (hf : ContDiffAt 𝕜 n f x)
-    (hg : ContDiffAt 𝕜 n g x) (hx : g x ≠ 0) : ContDiffAt 𝕜 n (f / g) x :=
-  hf.div hg hx
+theorem ContDiffAt.div {f g q : E → 𝕜'} (hf : ContDiffAt 𝕜 n f x) (hg : ContDiffAt 𝕜 n g x)
+    (hq : ∀ᶠ y in 𝓝 x, ∃ hy : IsUnit (g y), q y = Checked.div (f y) (g y) hy) :
+    ContDiffAt 𝕜 n q x := by
+  apply ContDiffWithinAt.div hf hg
+  simpa only [insert_eq_of_mem (mem_univ x), nhdsWithin_univ] using hq
 
-@[to_fun (attr := fun_prop)]
-theorem ContDiff.div {f g : E → 𝕜} {n} (hf : ContDiff 𝕜 n f) (hg : ContDiff 𝕜 n g)
-    (h0 : ∀ x, g x ≠ 0) : ContDiff 𝕜 n (f / g) := by
-  simp only [contDiff_iff_contDiffAt] at *
-  exact fun x => (hf x).div (hg x) (h0 x)
+@[fun_prop]
+theorem ContDiff.div {f g : E → 𝕜'} (hf : ContDiff 𝕜 n f) (hg : ContDiff 𝕜 n g)
+    {h : ∀ x, IsUnit (g x)} : ContDiff 𝕜 n (fun x ↦ Checked.div (f x) (g x) (h x)) :=
+  hf.mul (hg.inv (h := h))
 
 end AlgebraInverse
 
@@ -838,32 +882,43 @@ section MapInverse
 
 open ContinuousLinearMap
 
-/-- At a continuous linear equivalence `e : E ≃L[𝕜] F` between Banach spaces, the operation of
-inversion is `C^n`, for all `n`. -/
-@[fun_prop]
-theorem contDiffAt_map_inverse [CompleteSpace E] (e : E ≃L[𝕜] F) :
-    ContDiffAt 𝕜 n inverse (e : E →L[𝕜] F) := by
+/-- A function agreeing with inversion on the continuous linear equivalences is smooth there. -/
+theorem contDiffAt_map_inverse [CompleteSpace E] (e : E ≃L[𝕜] F)
+    {g : (E →L[𝕜] F) → F →L[𝕜] E} (hg : ∀ u : E ≃L[𝕜] F, g u = u.symm) :
+    ContDiffAt 𝕜 n g (e : E →L[𝕜] F) := by
+  classical
   nontriviality E
-  -- first, we use the lemma `inverse_eq_ringInverse` to rewrite in terms of `Ring.inverse` in the
-  -- ring `E →L[𝕜] E`
-  let O₁ : (E →L[𝕜] E) → F →L[𝕜] E := fun f => f.comp (e.symm : F →L[𝕜] E)
-  let O₂ : (E →L[𝕜] F) → E →L[𝕜] E := fun f => (e.symm : F →L[𝕜] E).comp f
-  have : ContinuousLinearMap.inverse = O₁ ∘ Ring.inverse ∘ O₂ := funext (inverse_eq_ringInverse e)
-  rw [this]
-  -- `O₁` and `O₂` are `ContDiff`,
-  -- so we reduce to proving that `Ring.inverse` is `ContDiff`
+  let O₁ : (E →L[𝕜] E) → F →L[𝕜] E := fun f ↦ f.comp (e.symm : F →L[𝕜] E)
+  let O₂ : (E →L[𝕜] F) → E →L[𝕜] E := fun f ↦ (e.symm : F →L[𝕜] E).comp f
+  let I (f : E →L[𝕜] E) := if hf : IsUnit f then Checked.inv f hf else 0
   have h₁ : ContDiff 𝕜 n O₁ := contDiff_id.clm_comp contDiff_const
   have h₂ : ContDiff 𝕜 n O₂ := contDiff_const.clm_comp contDiff_id
-  refine h₁.contDiffAt.comp _ (ContDiffAt.comp _ ?_ h₂.contDiffAt)
-  convert! contDiffAt_ringInverse 𝕜 (1 : (E →L[𝕜] E)ˣ)
-  simp [O₂, one_def]
+  have hI : ContDiffAt 𝕜 n I (O₂ e) := by
+    have he : ∀ y : (E →L[𝕜] E)ˣ, I y = ↑y⁻¹ := by
+      intro y
+      simp only [I, dite_eq_left y.isUnit, Units.val_inv_eq_inv_val₀]
+    simpa [O₂, one_def] using contDiffAt_ringInverse 𝕜 (1 : (E →L[𝕜] E)ˣ) he
+  refine (h₁.contDiffAt.comp _ (hI.comp _ h₂.contDiffAt)).congr_of_eventuallyEq ?_
+  filter_upwards [e.nhds] with f hf
+  obtain ⟨u, rfl⟩ := hf
+  have hu : IsUnit (O₂ (u : E →L[𝕜] F)) := (u.trans e.symm).toUnit.isUnit
+  rw [hg, Function.comp_apply, Function.comp_apply]
+  simp only [I, dite_eq_left hu]
+  have hinv : Checked.inv (O₂ (u : E →L[𝕜] F)) hu =
+      ((u.trans e.symm).symm : E →L[𝕜] E) :=
+    (Units.val_inv_eq_inv_val₀ (u.trans e.symm).toUnit).symm
+  rw [hinv]
+  ext y
+  change u.symm y = u.symm (e (e.symm y))
+  rw [e.apply_symm_apply]
 
-/-- At an invertible map `e : M →L[R] M₂` between Banach spaces, the operation of
-inversion is `C^n`, for all `n`. -/
+/-- At an invertible map, every function agreeing with inversion on the invertibility domain
+is smooth. -/
 theorem ContinuousLinearMap.IsInvertible.contDiffAt_map_inverse [CompleteSpace E] {e : E →L[𝕜] F}
-    (he : e.IsInvertible) : ContDiffAt 𝕜 n inverse e := by
+    (he : e.IsInvertible) {g : (E →L[𝕜] F) → F →L[𝕜] E}
+    (hg : ∀ u : E ≃L[𝕜] F, g u = u.symm) : ContDiffAt 𝕜 n g e := by
   rcases he with ⟨M, rfl⟩
-  exact _root_.contDiffAt_map_inverse M
+  exact _root_.contDiffAt_map_inverse M hg
 
 end MapInverse
 
@@ -901,7 +956,17 @@ theorem OpenPartialHomeomorph.contDiffAt_symm [CompleteSpace E] (f : OpenPartial
       have eq_f₀' : f' (f.symm a) = f₀' := (hff' (f.symm a) (mem_of_mem_nhds hu)).unique hf₀'
       -- This follows by a bootstrapping formula expressing the derivative as a
       -- function of `f` itself
-      refine ⟨inverse ∘ f' ∘ f.symm, ?_, ?_⟩
+      classical
+      let I (v : E →L[𝕜] F) : F →L[𝕜] E :=
+        if hv : v.IsInvertible then (Classical.choose hv).symm else 0
+      have hI : ∀ e : E ≃L[𝕜] F, I e = e.symm := by
+        intro e
+        have he : Classical.choose (isInvertible_equiv (f := e)) = e := by
+          ext x
+          exact congrArg (fun v : E →L[𝕜] F => v x) (Classical.choose_spec
+            (isInvertible_equiv (f := e)))
+        simp only [I, dite_eq_left isInvertible_equiv, he]
+      refine ⟨I ∘ f' ∘ f.symm, ?_, ?_⟩
       · -- We first check that the derivative of `f` is that formula
         have h_nhds : { y : E | ∃ e : E ≃L[𝕜] F, ↑e = f' y } ∈ 𝓝 (f.symm a) := by
           have hf₀' := f₀'.nhds
@@ -918,12 +983,12 @@ theorem OpenPartialHomeomorph.contDiffAt_symm [CompleteSpace E] (f : OpenPartial
           rw [he]
           exact hff' (f.symm x) hxu
         convert! f.hasFDerivAt_symm hx.1 h_deriv
-        simp [← he]
+        rw [Function.comp_apply, Function.comp_apply, ← he, hI]
       · -- Then we check that the formula, being a composition of `ContDiff` pieces, is
         -- itself `ContDiff`
-        have h_deriv₁ : ContDiffAt 𝕜 n inverse (f' (f.symm a)) := by
+        have h_deriv₁ : ContDiffAt 𝕜 n I (f' (f.symm a)) := by
           rw [eq_f₀']
-          exact contDiffAt_map_inverse _
+          exact contDiffAt_map_inverse _ hI
         have h_deriv₂ : ContDiffAt 𝕜 n f.symm a := by
           refine IH (hf.of_le ?_)
           norm_cast
@@ -1021,9 +1086,10 @@ theorem HasFTaylorSeriesUpToOn.restrictScalars {n : ℕ∞ω}
     (h : HasFTaylorSeriesUpToOn n f p' s) :
     HasFTaylorSeriesUpToOn n f (fun x => (p' x).restrictScalars 𝕜) s where
   zero_eq x hx := h.zero_eq x hx
-  fderivWithin m hm x hx :=
-    ((ContinuousMultilinearMap.restrictScalarsLinear 𝕜).hasFDerivAt.comp_hasFDerivWithinAt x <|
-        (h.fderivWithin m hm x hx).restrictScalars 𝕜 :)
+  fderivWithin m hm x hx := by
+    let L : (E [×m]→L[𝕜'] F) →L[𝕜] (E [×m]→L[𝕜] F) :=
+      (ContinuousMultilinearMap.restrictScalarsₗᵢ 𝕜).toContinuousLinearMap
+    exact L.hasFDerivAt.comp_hasFDerivWithinAt x ((h.fderivWithin m hm x hx).restrictScalars 𝕜)
   cont m hm := ContinuousMultilinearMap.continuous_restrictScalars.comp_continuousOn (h.cont m hm)
 
 theorem ContDiffWithinAt.restrict_scalars (h : ContDiffWithinAt 𝕜' n f s x) :

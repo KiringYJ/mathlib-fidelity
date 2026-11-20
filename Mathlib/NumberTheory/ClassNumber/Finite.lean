@@ -145,6 +145,8 @@ The value of `cardM` is not at all optimal: for specific choices of `R`,
 the minimum cardinality can be exponentially smaller.
 -/
 noncomputable def cardM : ℕ :=
+  have hdim : (Fintype.card ι : ℝ) ≠ 0 := by
+    exact_mod_cast (Fintype.card_pos_iff.mpr bS.index_nonempty).ne'
   adm.card (normBound abv bS ^ (-1 / Fintype.card ι : ℝ)) ^ Fintype.card ι
 
 variable [Infinite R]
@@ -192,17 +194,15 @@ theorem exists_mem_finsetApprox (a : S) {b} (hb : b ≠ (0 : R)) :
       ∃ r ∈ finsetApprox bS adm, abv (Algebra.norm R (r • a - b • q)) <
       abv (Algebra.norm R (algebraMap R S b)) := by
   have dim_pos := Fintype.card_pos_iff.mpr bS.index_nonempty
+  have hdim : (Fintype.card ι : ℝ) ≠ 0 := by exact_mod_cast dim_pos.ne'
   set ε : ℝ := normBound abv bS ^ (-1 / Fintype.card ι : ℝ) with ε_eq
   have hε : 0 < ε := Real.rpow_pos_of_pos (Int.cast_pos.mpr (normBound_pos abv bS)) _
   have ε_le : (normBound abv bS : ℝ) * (abv b • ε) ^ (Fintype.card ι : ℝ)
                 ≤ abv b ^ (Fintype.card ι : ℝ) := by
-    have := normBound_pos abv bS
-    have := abv.nonneg b
-    rw [ε_eq, Algebra.smul_def, eq_intCast, mul_rpow, ← rpow_mul, div_mul_cancel₀, rpow_neg_one,
-      mul_left_comm, mul_inv_cancel₀, mul_one, rpow_natCast] <;>
-      try norm_cast; lia
-    · exact Int.cast_nonneg this
-    · linarith
+    have hB : 0 < (normBound abv bS : ℝ) := Int.cast_pos.mpr (normBound_pos abv bS)
+    rw [ε_eq, Algebra.smul_def, eq_intCast, mul_rpow (Int.cast_nonneg (abv.nonneg b)) hε.le,
+      ← rpow_mul hB.le, div_mul_cancel₀, rpow_neg_one _ (hx := hB.ne'.isUnit),
+      mul_left_comm, mul_inv_cancel₀, mul_one]
   set μ : Fin (cardM bS adm).succ ↪ R := distinctElems bS adm
   let s : ι →₀ R := bS.repr a
   have s_eq : ∀ i, s i = bS.repr a i := fun i => rfl

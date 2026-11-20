@@ -532,6 +532,57 @@ end Int
 
 section PNat
 
+/-- Nonzero integers are the disjoint union of their positive and negative parts,
+each indexed by the positive natural numbers. -/
+def Equiv.intNeZeroEquivPNatSumPNat : {n : ℤ // n ≠ 0} ≃ ℕ+ ⊕ ℕ+ where
+  toFun n := match n with
+    | ⟨Int.ofNat m, hm⟩ => Sum.inl ⟨m, Nat.pos_of_ne_zero (by intro h; apply hm; subst m; rfl)⟩
+    | ⟨Int.negSucc m, _⟩ => Sum.inr (Nat.succPNat m)
+  invFun := Sum.elim (fun n ↦ ⟨(n : ℕ), by exact_mod_cast (ne_of_gt n.pos)⟩)
+    (fun n ↦ ⟨-((n : ℕ) : ℤ), neg_ne_zero.mpr (by exact_mod_cast (ne_of_gt n.pos))⟩)
+  left_inv := by rintro ⟨n, hn⟩; cases n <;> rfl
+  right_inv := by
+    rintro (⟨n, hn⟩ | ⟨n, hn⟩)
+    · rfl
+    · cases n with
+      | zero => simp at hn
+      | succ n => rfl
+
+/-- Pairing positive and negative indices preserves a product over the nonzero integers.
+No value at zero is needed, and no convergence of the separate half-products is assumed. -/
+@[to_additive /-- Pairing positive and negative indices preserves a sum over the nonzero integers.
+No value at zero is needed, and no convergence of the separate half-series is assumed. -/]
+lemma HasProd.int_pos_mul_neg
+    {f : {n : ℤ // n ≠ 0} → M} {a : M} (hf : HasProd f a) :
+    HasProd (fun n : ℕ+ ↦ f ⟨(n : ℕ), by exact_mod_cast (ne_of_gt n.pos)⟩ *
+      f ⟨-((n : ℕ) : ℤ), neg_ne_zero.mpr (by exact_mod_cast (ne_of_gt n.pos))⟩) a := by
+  classical
+  let pos : ℕ+ → {n : ℤ // n ≠ 0} := fun n ↦ ⟨(n : ℕ), by exact_mod_cast (ne_of_gt n.pos)⟩
+  let neg : ℕ+ → {n : ℤ // n ≠ 0} := fun n ↦
+    ⟨-((n : ℕ) : ℤ), neg_ne_zero.mpr (by exact_mod_cast (ne_of_gt n.pos))⟩
+  have he := Equiv.intNeZeroEquivPNatSumPNat.symm.hasProd_iff.mpr hf
+  have heq : f ∘ Equiv.intNeZeroEquivPNatSumPNat.symm = Sum.elim (f ∘ pos) (f ∘ neg) := by
+    funext n
+    cases n <;> rfl
+  rw [heq] at he
+  apply he.hasProd_of_prod_eq
+  intro u
+  refine ⟨u.toLeft ∪ u.toRight, ?_⟩
+  intro v hv
+  refine ⟨v.disjSum v, ?_, ?_⟩
+  · intro z hz
+    cases z with
+    | inl n =>
+      apply Finset.inl_mem_disjSum.mpr
+      exact hv (Finset.mem_union_left _ (Finset.mem_toLeft.mpr hz))
+    | inr n =>
+      apply Finset.inr_mem_disjSum.mpr
+      exact hv (Finset.mem_union_right _ (Finset.mem_toRight.mpr hz))
+  · simp only [Finset.prod_disjSum, Function.comp_def, Sum.elim_inl, Sum.elim_inr,
+      Finset.prod_mul_distrib, pos, neg]
+
+
+
 @[to_additive]
 theorem multipliable_pnat_iff_multipliable_succ {f : ℕ → M} :
     Multipliable (fun x : ℕ+ ↦ f x) ↔ Multipliable fun x ↦ f (x + 1) :=

@@ -295,12 +295,17 @@ lemma martingale_densityProcess (hκν : fst κ ≤ ν) [IsFiniteKernel ν]
   ⟨stronglyAdapted_densityProcess κ ν a hs, fun _ _ h ↦ isCondExp_densityProcess hκν h a hs,
     fun n ↦ integrable_densityProcess hκν n a hs⟩
 
+private lemma ennreal_div_zero_toReal (x : ℝ≥0∞) : (x / 0).toReal = 0 := by
+  rcases eq_or_ne x 0 with rfl | hx
+  · rw [ENNReal.zero_div, ENNReal.toReal_zero]
+  · rw [ENNReal.div_zero hx, ENNReal.toReal_top]
+
 lemma densityProcess_mono_set (hκν : fst κ ≤ ν) (n : ℕ) (a : α) (x : γ)
     {s s' : Set β} (h : s ⊆ s') :
     densityProcess κ ν n a x s ≤ densityProcess κ ν n a x s' := by
   unfold densityProcess
   obtain h₀ | h₀ := eq_or_ne (ν a (countablePartitionSet n x)) 0
-  · simp [h₀]
+  · simp only [h₀, ennreal_div_zero_toReal, le_refl]
   · gcongr
     simp only [ne_eq, ENNReal.div_eq_top, h₀, and_false, false_or, not_and, not_not]
     exact eq_top_mono (meas_countablePartitionSet_le_of_fst_le hκν n a x s')
@@ -310,8 +315,7 @@ lemma densityProcess_mono_kernel_left {κ' : Kernel α (γ × β)} (hκκ' : κ 
     densityProcess κ ν n a x s ≤ densityProcess κ' ν n a x s := by
   unfold densityProcess
   by_cases h0 : ν a (countablePartitionSet n x) = 0
-  · rw [h0, toReal_div, toReal_div]
-    simp
+  · simp only [h0, ennreal_div_zero_toReal, le_refl]
   have h_le : κ' a (countablePartitionSet n x ×ˢ s) ≤ ν a (countablePartitionSet n x) :=
     meas_countablePartitionSet_le_of_fst_le hκ'ν n a x s
   gcongr
@@ -345,8 +349,8 @@ lemma tendsto_densityProcess_atTop_empty_of_antitone (κ : Kernel α (γ × β))
       (𝓝 (densityProcess κ ν n a x ∅)) := by
   simp_rw [densityProcess]
   by_cases h0 : ν a (countablePartitionSet n x) = 0
-  · simp_rw [h0, toReal_div]
-    simp
+  · simp only [h0, ennreal_div_zero_toReal]
+    exact tendsto_const_nhds
   refine (tendsto_toReal ?_).comp ?_
   · rw [ne_eq, div_eq_top]
     simp
@@ -638,10 +642,7 @@ lemma densityProcess_fst_univ [IsFiniteKernel κ] (n : ℕ) (a : α) (x : γ) :
       = if fst κ a (countablePartitionSet n x) = 0 then 0 else 1 := by
   rw [densityProcess]
   split_ifs with h
-  · simp only [h]
-    by_cases h' : κ a (countablePartitionSet n x ×ˢ univ) = 0
-    · simp [h']
-    · simp
+  · simp only [h, ennreal_div_zero_toReal]
   · rw [fst_apply' _ _ (measurableSet_countablePartitionSet _ _)]
     have : countablePartitionSet n x ×ˢ univ = {p : γ × β | p.1 ∈ countablePartitionSet n x} := by
       ext x

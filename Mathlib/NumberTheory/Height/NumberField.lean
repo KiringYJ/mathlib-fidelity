@@ -139,7 +139,9 @@ noncomputable def absMulHeight₁ {K : Type*} [Field K] [CharZero K] (x : K)
     (hx : IsIntegral ℚ x) : ℝ :=
   haveI : FiniteDimensional ℚ ℚ⟮x⟯ := adjoin.finiteDimensional hx
   haveI : NumberField ℚ⟮x⟯ := {}
-  (Height.mulHeight₁ (AdjoinSimple.gen ℚ x)) ^ (Module.finrank ℚ ℚ⟮x⟯ : ℝ)⁻¹
+  (Height.mulHeight₁ (AdjoinSimple.gen ℚ x)) ^
+    Checked.inv (Module.finrank ℚ ℚ⟮x⟯ : ℝ)
+      (Nat.cast_ne_zero.mpr Module.finrank_pos.ne').isUnit
 
 /-- The absolute logarithmic height of an element algebraic over `ℚ` in a field of
 characteristic zero, defined as the logarithm of its absolute multiplicative height. -/
@@ -219,14 +221,24 @@ private lemma absNorm_mul_finprod_finitePlace_eq_one_aux [Nonempty ι] (hx : ∀
     simp only [map_pow, Nat.cast_pow]
     exact hasFiniteMulSupport_fun_pow_multiplicity hx' fun v ↦ (v.absNorm : ℝ)
   refine finprod_eq_one_of_forall_eq_one fun v ↦ ?_
-  have hn := absNorm_eq_zero_iff.not.mpr v.maximalIdeal.ne_bot
-  have h {m : ℕ} : (0 : ℝ) < ↑(absNorm v.maximalIdeal.asIdeal ^ m) := by positivity
-  rw [multiplicity_iSup _ H, map_pow, mul_eq_one_iff_inv_eq₀ h.ne',
-    map_iInf_of_monotone (fun _ ↦ multiplicity ..) (pow_right_monotone <| by lia),
-    map_iInf_of_monotone _ Nat.mono_cast,
-    map_iInf_of_antitoneOn antitoneOn_inv_pos fun _ ↦ Set.mem_ofPred.mpr h]
+  let N : ℝ := absNorm v.maximalIdeal.asIdeal
+  have hN : 1 ≤ N := by
+    change (1 : ℝ) ≤ (absNorm v.maximalIdeal.asIdeal : ℝ)
+    exact_mod_cast Nat.one_le_iff_ne_zero.mpr (absNorm_eq_zero_iff.not.mpr v.maximalIdeal.ne_bot)
+  have hNpos : 0 < N := zero_lt_one.trans_le hN
+  let d (i : ι) := multiplicity v.maximalIdeal.asIdeal (span {x i})
+    (v.maximalIdeal.finiteMultiplicity (H i))
+  let g (m : ℕ) := Checked.inv (N ^ m) (hNpos.ne'.isUnit.pow m)
+  have hg : Antitone g := fun i j hij ↦
+    (inv_le_inv₀ (pow_pos hNpos j) (pow_pos hNpos i)).mpr (pow_le_pow_right₀ hN hij)
+  rw [multiplicity_iSup _ H, map_pow, Nat.cast_pow]
+  change N ^ (⨅ i, d i) * (⨆ i, v (x i)) = 1
+  rw [mul_eq_one_iff_inv_eq₀ (ha := hNpos.ne'.isUnit.pow _)]
+  change g (⨅ i, d i) = ⨆ i, v (x i)
+  rw [map_iInf_of_antitone d hg]
   refine iSup_congr fun i ↦ ?_
-  rw [← mul_eq_one_iff_inv_eq₀ h.ne', mul_comm, Nat.cast_pow]
+  change Checked.inv (N ^ d i) (hNpos.ne'.isUnit.pow _) = v (x i)
+  rw [← mul_eq_one_iff_inv_eq₀, mul_comm]
   exact apply_mul_absNorm_pow_eq_one v (hx i)
 
 -- TODO: Generalize the following to integral closures of `ℤ` in `K` in place of `𝓞 K`.
@@ -346,7 +358,8 @@ lemma exists_nat_le_mulHeight₁ (x : K) :
   refine ⟨n, hn, ?_, ha₁ ▸ a.isIntegral_coe⟩
   rw [← totalWeight_eq_finrank] at ha₂
   have hv (i : Fin 2) : (![a, n] i : K) = ![(a : K), n] i := by fin_cases i <;> rfl
-  rw [← mul_div_cancel_left₀ x (mod_cast hn : (n : K) ≠ 0), ha₁, mulHeight₁_div_eq_mulHeight,
+  have hnK : IsUnit (n : K) := (Nat.cast_ne_zero.mpr hn).isUnit
+  rw [← mul_div_cancel_left₀ x (ha := hnK), ha₁, mulHeight₁_div_eq_mulHeight,
     mulHeight_eq (by simp [hn])]
   refine le_of_mul_le_mul_left ?_ (show (0 : ℝ) < n ^ (totalWeight K - 1) by positivity)
   have : n ^ (totalWeight K - 1) * ∏ᶠ (v : FinitePlace K), ⨆ i, v (![(a : K), n] i) = 1 := by
@@ -429,18 +442,23 @@ This is a stepping stone for the proof of the next result, which is strictly str
 private lemma finite_setOfPred_isIntegral_nat_mul_and_mulHeight₁_le {n : ℕ} (hn : n ≠ 0) (B : ℝ) :
     {x : K | IsIntegral ℤ (n * x) ∧ mulHeight₁ x ≤ B}.Finite := by
   have hn' : (n : K) ≠ 0 := mod_cast hn
-  suffices Set.BijOn (fun a : 𝓞 K ↦ (a / n : K)) {a | mulHeight ![(a : K), n] ≤ B}
+  let f (a : 𝓞 K) := Checked.div (a : K) (n : K) hn'.isUnit
+  suffices Set.BijOn f {a | mulHeight ![(a : K), n] ≤ B}
       {x | IsIntegral ℤ (n * x) ∧ mulHeight₁ x ≤ B} from
     this.finite_iff_finite.mp <| finite_setOfPred_mulHeight_nat_le hn B
   refine .mk (fun a ha ↦ ?_) (fun a _ b _ h ↦ ?_) fun x ⟨hx₁, hx₂⟩ ↦ ?_
   · simp only [Set.mem_ofPred_eq] at ha ⊢
-    rw [mul_div_cancel₀ (a : K) hn', mulHeight₁_div_eq_mulHeight]
+    rw [show (n : K) * f a = a from mul_div_cancel₀ (a : K) (hb := hn'.isUnit),
+      show mulHeight₁ (f a) = mulHeight ![(a : K), n] from mulHeight₁_div_eq_mulHeight _ _]
     exact ⟨a.isIntegral_coe, ha⟩
-  · rwa [div_left_inj' hn', RingOfIntegers.eq_iff] at h
+  · dsimp only [f] at h
+    rwa [div_left_inj' (hc := hn'.isUnit), RingOfIntegers.eq_iff] at h
   · simp only [Set.mem_ofPred_eq, Set.mem_image]
     obtain ⟨a, ha⟩ : ∃ a : 𝓞 K, n * x = a := ⟨⟨_, hx₁⟩, rfl⟩
-    refine ⟨a, ?_, (EuclideanDomain.eq_div_of_mul_eq_right hn' ha).symm⟩
-    rwa [← ha, ← mulHeight₁_div_eq_mulHeight, mul_div_cancel_left₀ x hn']
+    have hfa : f a = x := (div_eq_iff_mul_eq).mpr ((mul_comm x (n : K)).trans ha)
+    refine ⟨a, ?_, hfa⟩
+    rwa [← mulHeight₁_div_eq_mulHeight (hy := hn'.isUnit), ← show f a =
+      Checked.div (a : K) (n : K) hn'.isUnit from rfl, hfa]
 
 variable (K) in
 /-- A number field `K` satisfies the **Northcott property**:

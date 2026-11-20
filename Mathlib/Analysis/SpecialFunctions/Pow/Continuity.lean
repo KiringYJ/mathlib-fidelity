@@ -304,7 +304,7 @@ theorem continuousAt_cpow_zero_of_re_pos {z : ℂ} (hz : 0 < z.re) :
   have hz₀ : z ≠ 0 := ne_of_apply_ne re hz.ne'
   rw [ContinuousAt, zero_cpow hz₀, tendsto_zero_iff_norm_tendsto_zero]
   refine squeeze_zero (fun _ => norm_nonneg _) (fun _ => norm_cpow_le _ _) ?_
-  simp only [div_eq_mul_inv, ← Real.exp_neg]
+  simp only [div_eq_mul_inv₀, ← Real.exp_neg]
   refine Tendsto.zero_mul_isBoundedUnder_le ?_ ?_
   · convert!
     (continuous_fst.norm.tendsto ((0 : ℂ), z)).rpow ((continuous_re.comp continuous_snd).tendsto _)
@@ -396,11 +396,11 @@ theorem continuousAt_rpow {x : ℝ≥0} {y : ℝ} (h : x ≠ 0 ∨ 0 < y) :
   · fun_prop
 
 theorem eventually_pow_one_div_le (x : ℝ≥0) {y : ℝ≥0} (hy : 1 < y) :
-    ∀ᶠ n : ℕ in atTop, x ^ (1 / n : ℝ) ≤ y := by
+    ∀ᶠ n : {n : ℕ // n ≠ 0} in comap Subtype.val atTop, x ^ (1 / (n : ℕ) : ℝ) ≤ y := by
   obtain ⟨m, hm⟩ := add_one_pow_unbounded_of_pos x (tsub_pos_of_lt hy)
   rw [tsub_add_cancel_of_le hy.le] at hm
-  refine eventually_atTop.2 ⟨m + 1, fun n hn => ?_⟩
-  simp only [one_div]
+  filter_upwards [tendsto_comap.eventually (eventually_ge_atTop (m + 1))] with n hn
+  simp only [one_div₀]
   simpa only [NNReal.rpow_inv_le_iff (Nat.cast_pos.2 <| m.succ_pos.trans_le hn),
     NNReal.rpow_natCast] using hm.le.trans (pow_right_mono₀ hy.le (m.le_succ.trans hn))
 
@@ -446,14 +446,14 @@ end NNReal
 namespace ENNReal
 
 theorem eventually_pow_one_div_le {x : ℝ≥0∞} (hx : x ≠ ∞) {y : ℝ≥0∞} (hy : 1 < y) :
-    ∀ᶠ n : ℕ in atTop, x ^ (1 / n : ℝ) ≤ y := by
+    ∀ᶠ n : {n : ℕ // n ≠ 0} in comap Subtype.val atTop, x ^ (1 / (n : ℕ) : ℝ) ≤ y := by
   lift x to ℝ≥0 using hx
   by_cases h : y = ∞
   · exact Eventually.of_forall fun n => h.symm ▸ le_top
   · lift y to ℝ≥0 using h
     have := NNReal.eventually_pow_one_div_le x (mod_cast hy : 1 < y)
     refine this.congr (Eventually.of_forall fun n => ?_)
-    rw [← coe_rpow_of_nonneg x (by positivity : 0 ≤ (1 / n : ℝ)), coe_le_coe]
+    rw [← coe_rpow_of_nonneg x (by positivity : 0 ≤ (1 / (n : ℕ) : ℝ)), coe_le_coe]
 
 private theorem continuousAt_rpow_const_of_pos {x : ℝ≥0∞} {y : ℝ} (h : 0 < y) :
     ContinuousAt (fun a : ℝ≥0∞ => a ^ y) x := by

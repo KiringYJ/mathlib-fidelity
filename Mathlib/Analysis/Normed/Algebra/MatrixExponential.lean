@@ -176,7 +176,7 @@ variable [Fintype m] [DecidableEq m]
 set_option backward.isDefEq.respectTransparency false in
 theorem exp_neg (A : Matrix m m 𝔸) : exp (-A) = Checked.inv (exp A) (isUnit_exp A) := by
   refine eq_inv_of_mul_eq_one_left₀ ?_
-  rw [← exp_add_of_commute (Commute.refl A).neg_left, neg_add_cancel, exp_zero]
+  rw [← exp_add_of_commute (-A) A (Commute.refl A).neg_left, neg_add_cancel, exp_zero]
 
 theorem exp_zsmul (z : ℤ) (A : Matrix m m 𝔸) :
     exp (z • A) = Checked.zpow (exp A) z (fun _ ↦ isUnit_exp A) := by

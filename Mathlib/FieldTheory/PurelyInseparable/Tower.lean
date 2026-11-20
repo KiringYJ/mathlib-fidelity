@@ -287,7 +287,7 @@ theorem Polynomial.Separable.map_irreducible_of_isPurelyInseparable {f : F[X]} (
   obtain ⟨x, hx⟩ := IsAlgClosed.exists_aeval_eq_zero K f
     (natDegree_pos_iff_degree_pos.1 hirr.natDegree_pos).ne'
   have ha : Associated f (minpoly F x) := by
-    have := isUnit_C.2 (leadingCoeff_ne_zero.2 hirr.ne_zero).isUnit.inv
+    have := isUnit_C.2 (leadingCoeff_ne_zero.2 hirr.ne_zero).isUnit.inv₀
     exact ⟨this.unit, by rw [IsUnit.unit_spec, minpoly.eq_of_irreducible hirr hx]⟩
   have ha' : Associated (f.map (algebraMap F E)) ((minpoly F x).map (algebraMap F E)) :=
     ha.map (mapRingHom (algebraMap F E)).toMonoidHom

@@ -85,18 +85,22 @@ theorem isLittleO_exp_neg_mul_sq_cocompact {a : ℂ} (ha : 0 < a.re) (s : ℝ) :
 negative definite quadratic form. -/
 theorem Complex.tsum_exp_neg_quadratic {a : ℂ} (ha : 0 < a.re) (b : ℂ) :
     (∑' n : ℤ, cexp (-π * a * n ^ 2 + 2 * π * b * n)) =
-      1 / a ^ (1 / 2 : ℂ) * ∑' n : ℤ, cexp (-π / a * (n + I * b) ^ 2) := by
+      Checked.div 1 (a ^ (1 / 2 : ℂ))
+        (cpow_ne_zero_iff.2 (Or.inl (ne_zero_of_re_pos ha))).isUnit *
+        ∑' n : ℤ,
+          cexp (Checked.div (-π : ℂ) a (ne_zero_of_re_pos ha).isUnit * (n + I * b) ^ 2) := by
+  have ha' : IsUnit a := (ne_zero_of_re_pos ha).isUnit
+  have h_half : IsUnit (a ^ (1 / 2 : ℂ)) :=
+    (cpow_ne_zero_iff.2 (Or.inl ha'.ne_zero)).isUnit
   let f : ℝ → ℂ := fun x ↦ cexp (-π * a * x ^ 2 + 2 * π * b * x)
-  have hFf : 𝓕 f = fun x : ℝ ↦ 1 / a ^ (1 / 2 : ℂ) * cexp (-π / a * (x + I * b) ^ 2) :=
-    fourier_gaussian_pi' ha b
+  have hFf : 𝓕 f = fun x : ℝ ↦
+      1 / a ^ (1 / 2 : ℂ) * cexp (-π / a * (x + I * b) ^ 2) := fourier_gaussian_pi' ha b
   have h1 : 0 < (π * a).re := by
     rw [re_ofReal_mul]
     exact mul_pos pi_pos ha
   have h2 : 0 < (π / a).re := by
-    rw [div_eq_mul_inv, re_ofReal_mul, inv_re]
-    refine mul_pos pi_pos (div_pos ha <| normSq_pos.mpr ?_)
-    contrapose! ha
-    rw [ha, zero_re]
+    rw [div_eq_mul_inv₀, re_ofReal_mul, inv_re]
+    exact mul_pos pi_pos (div_pos ha (normSq_pos.mpr ha'.ne_zero))
   have f_bd : f =O[cocompact ℝ] (fun x => |x| ^ (-2 : ℝ)) := by
     convert! (cexp_neg_quadratic_isLittleO_abs_rpow_cocompact ?_ _ (-2)).isBigO
     rwa [neg_mul, neg_re, neg_lt_zero]
@@ -109,14 +113,16 @@ theorem Complex.tsum_exp_neg_quadratic {a : ℂ} (ha : 0 < a.re) (b : ℂ) :
     conv => enter [2, x]; rw [Complex.exp_add, ← mul_assoc _ _ (Complex.exp _), mul_comm]
     refine ((cexp_neg_quadratic_isLittleO_abs_rpow_cocompact
       ?_ (-2 * π * I * b / a) (-2)).isBigO.const_mul_left _).const_mul_left _
-    rwa [neg_div, neg_re, neg_lt_zero]
+    rwa [neg_div₀, neg_re, neg_lt_zero]
   convert! Real.tsum_eq_tsum_fourier_of_rpow_decay (by fun_prop) one_lt_two f_bd Ff_bd 0 using 1
   · simp only [f, zero_add, ofReal_intCast]
   · simp [← tsum_mul_left, hFf]
 
 theorem Complex.tsum_exp_neg_mul_int_sq {a : ℂ} (ha : 0 < a.re) :
     (∑' n : ℤ, cexp (-π * a * (n : ℂ) ^ 2)) =
-      1 / a ^ (1 / 2 : ℂ) * ∑' n : ℤ, cexp (-π / a * (n : ℂ) ^ 2) := by
+      Checked.div 1 (a ^ (1 / 2 : ℂ))
+        (cpow_ne_zero_iff.2 (Or.inl (ne_zero_of_re_pos ha))).isUnit *
+        ∑' n : ℤ, cexp (Checked.div (-π : ℂ) a (ne_zero_of_re_pos ha).isUnit * (n : ℂ) ^ 2) := by
   simpa only [mul_zero, zero_mul, add_zero] using Complex.tsum_exp_neg_quadratic ha 0
 
 theorem Real.tsum_exp_neg_mul_int_sq {a : ℝ} (ha : 0 < a) :

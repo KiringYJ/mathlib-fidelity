@@ -18,6 +18,8 @@ public section
 
 open SeminormedAddGroup IsUniformAddGroup Filter
 
+open scoped Topology
+
 variable {F : Type*} [NormedField F]
 
 instance NormedField.instCompletableTopField : CompletableTopField F where

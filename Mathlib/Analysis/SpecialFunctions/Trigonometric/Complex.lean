@@ -32,8 +32,8 @@ open scoped Real
 
 theorem cos_eq_zero_iff {θ : ℂ} : cos θ = 0 ↔ ∃ k : ℤ, θ = (2 * k + 1) * π / 2 := by
   have h : (exp (θ * I) + exp (-θ * I)) / 2 = 0 ↔ exp (2 * θ * I) = -1 := by
-    rw [@div_eq_iff _ _ (exp (θ * I) + exp (-θ * I)) 2 0 two_ne_zero, zero_mul,
-      add_eq_zero_iff_eq_neg, neg_eq_neg_one_mul, ← div_eq_iff (exp_ne_zero _), ← exp_sub]
+    rw [div_eq_iff, zero_mul, add_eq_zero_iff_eq_neg, neg_eq_neg_one_mul,
+      ← div_eq_iff (hb := (exp_ne_zero (-θ * I)).isUnit), ← exp_sub]
     ring_nf
   rw [cos, h, ← exp_pi_mul_I, exp_eq_exp_iff_exists_int, mul_right_comm]
   refine exists_congr fun x => ?_
@@ -221,8 +221,8 @@ open scoped Topology
 /-- The tangent is continuous on its domain. -/
 @[continuity]
 theorem continuous_tan : Continuous fun x : {x : ℂ // cos x ≠ 0} ↦ tan x x.2 :=
-  (continuous_sin.comp continuous_subtype_val).div (continuous_cos.comp continuous_subtype_val)
-    fun x ↦ x.2.isUnit
+  (continuous_sin.comp continuous_subtype_val).div₀
+    (h₀ := fun x ↦ x.2.isUnit) (continuous_cos.comp continuous_subtype_val)
 
 theorem cos_eq_iff_quadratic {z w : ℂ} :
     cos z = w ↔ exp (z * I) ^ 2 - 2 * w * exp (z * I) + 1 = 0 := by
@@ -239,7 +239,7 @@ theorem cos_surjective : Function.Surjective cos := by
     rintro rfl
     simp only [zero_add, one_ne_zero, mul_zero] at hw
   refine ⟨log w / I, cos_eq_iff_quadratic.2 ?_⟩
-  rw [div_mul_cancel₀ _ I_ne_zero, exp_log w₀]
+  rw [div_mul_cancel₀, exp_log w₀]
   convert! hw using 1
   ring
 
@@ -310,11 +310,15 @@ namespace Real
 open scoped Real
 open Finset
 
-theorem cos_eq_zero_iff {θ : ℝ} : cos θ = 0 ↔ ∃ k : ℤ, θ = (2 * k + 1) * π / 2 :=
-  mod_cast @Complex.cos_eq_zero_iff θ
+theorem cos_eq_zero_iff {θ : ℝ} : cos θ = 0 ↔ ∃ k : ℤ, θ = (2 * k + 1) * π / 2 := by
+  have h := @Complex.cos_eq_zero_iff θ
+  norm_cast at h
+  simpa only [← Complex.ofReal_ofNat 2,
+    ← Complex.ofReal_div _ 2 (hs := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit),
+    Complex.ofReal_inj, Int.cast_add, Int.cast_mul, Int.cast_ofNat, Int.cast_one] using h
 
-theorem cos_ne_zero_iff {θ : ℝ} : cos θ ≠ 0 ↔ ∀ k : ℤ, θ ≠ (2 * k + 1) * π / 2 :=
-  mod_cast @Complex.cos_ne_zero_iff θ
+theorem cos_ne_zero_iff {θ : ℝ} : cos θ ≠ 0 ↔ ∀ k : ℤ, θ ≠ (2 * k + 1) * π / 2 := by
+  simpa only [not_exists] using (cos_eq_zero_iff (θ := θ)).not
 
 theorem cos_eq_cos_iff {x y : ℝ} : cos x = cos y ↔ ∃ k : ℤ, y = 2 * k * π + x ∨ y = 2 * k * π - x :=
   mod_cast @Complex.cos_eq_cos_iff x y
@@ -338,11 +342,21 @@ lemma abs_cos_eq_one_iff {x : ℝ} :
     · exact .inl ⟨n, by grind⟩
     · exact .inr ⟨n, by grind⟩
 
-theorem sin_eq_one_iff {x : ℝ} : sin x = 1 ↔ ∃ k : ℤ, π / 2 + k * (2 * π) = x :=
-  mod_cast @Complex.sin_eq_one_iff x
+theorem sin_eq_one_iff {x : ℝ} : sin x = 1 ↔ ∃ k : ℤ, π / 2 + k * (2 * π) = x := by
+  have h := @Complex.sin_eq_one_iff x
+  norm_cast at h
+  simpa only [← Complex.ofReal_ofNat 2,
+    ← Complex.ofReal_div _ 2 (hs := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit),
+    ← Complex.ofReal_add, Complex.ofReal_inj, Int.cast_add, Int.cast_mul, Int.cast_ofNat,
+    Int.cast_one] using h
 
-theorem sin_eq_neg_one_iff {x : ℝ} : sin x = -1 ↔ ∃ k : ℤ, -(π / 2) + k * (2 * π) = x :=
-  mod_cast @Complex.sin_eq_neg_one_iff x
+theorem sin_eq_neg_one_iff {x : ℝ} : sin x = -1 ↔ ∃ k : ℤ, -(π / 2) + k * (2 * π) = x := by
+  have h := @Complex.sin_eq_neg_one_iff x
+  norm_cast at h
+  simpa only [← Complex.ofReal_ofNat 2,
+    ← Complex.ofReal_div _ 2 (hs := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit),
+    ← Complex.ofReal_neg, ← Complex.ofReal_add, Complex.ofReal_inj, Int.cast_add, Int.cast_mul,
+    Int.cast_ofNat, Int.cast_one, Int.cast_negSucc, Nat.cast_zero, Nat.cast_one, zero_add] using h
 
 lemma abs_sin_eq_one_iff {x : ℝ} :
     |sin x| = 1 ↔ ∃ k : ℤ, π / 2 + k * π = x := by
@@ -350,11 +364,11 @@ lemma abs_sin_eq_one_iff {x : ℝ} :
   constructor
   · rintro (⟨n, h⟩ | ⟨n, h⟩)
     · exact ⟨2 * n, by grind⟩
-    · exact ⟨-1 + n * 2, by grind⟩
+    · exact ⟨-1 + n * 2, by push_cast at h ⊢; nlinarith [show 2 * (π / 2) = π by ring]⟩
   · rintro (⟨n, h⟩)
     obtain (⟨n, rfl⟩ | ⟨n, rfl⟩) := n.even_or_odd
     · exact .inl ⟨n, by grind⟩
-    · exact .inr ⟨n + 1, by grind⟩
+    · exact .inr ⟨n + 1, by push_cast at h ⊢; nlinarith [show 2 * (π / 2) = π by ring]⟩
 
 /-- The tangent of a real number at which it is defined is zero iff the number is an integer
 multiple of `π`. -/
@@ -423,7 +437,13 @@ theorem sin_eq_two_mul_tan_half_div_one_add_tan_half_sq (x : ℝ) (h : cos (x / 
 
 theorem sin_mul_sum_sin (n : ℕ) (a b : ℝ) :
     sin (a / 2) * ∑ i ∈ range n, sin (a * i + b) = sin (n * a / 2) * sin ((n - 1) * a / 2 + b) := by
-  exact_mod_cast congr($(Complex.sin_mul_sum_sin n a b).re)
+  have h := Complex.sin_mul_sum_sin n a b
+  norm_cast at h
+  have h' := congrArg Complex.re h
+  simpa only [← Complex.ofReal_ofNat 2,
+    ← Complex.ofReal_div _ 2 (hs := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit),
+    ← Complex.ofReal_sin, ← Complex.ofReal_add, ← Complex.ofReal_mul, Complex.ofReal_re,
+    Int.cast_subNatNat, Nat.cast_one] using h'
 
 theorem sin_half_ne_zero_of_ne {a : ℝ} (h : ∀ k : ℤ, a ≠ k * (2 * π)) : sin (a / 2) ≠ 0 :=
   sin_ne_zero_iff.2 fun k hk ↦ h k <| by linarith
@@ -436,7 +456,13 @@ theorem sum_sin (n : ℕ) {a : ℝ} (h : ∀ k : ℤ, a ≠ k * (2 * π)) (b : �
 
 theorem sin_mul_sum_cos (n : ℕ) (a b : ℝ) :
     sin (a / 2) * ∑ i ∈ range n, cos (a * i + b) = sin (n * a / 2) * cos ((n - 1) * a / 2 + b) := by
-  exact_mod_cast congr($(Complex.sin_mul_sum_cos n a b).re)
+  have h := Complex.sin_mul_sum_cos n a b
+  norm_cast at h
+  have h' := congrArg Complex.re h
+  simpa only [← Complex.ofReal_ofNat 2,
+    ← Complex.ofReal_div _ 2 (hs := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit),
+    ← Complex.ofReal_sin, ← Complex.ofReal_cos, ← Complex.ofReal_add, ← Complex.ofReal_mul,
+    Complex.ofReal_re, Int.cast_subNatNat, Nat.cast_one] using h'
 
 theorem sum_cos (n : ℕ) {a : ℝ} (h : ∀ k : ℤ, a ≠ k * (2 * π)) (b : ℝ) :
     ∑ i ∈ range n, cos (a * i + b) =

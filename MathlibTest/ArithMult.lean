@@ -20,8 +20,9 @@ example : IsMultiplicative μ := by arith_mult
 
 example : IsMultiplicative (ζ * ζ) := by arith_mult
 
-example {R : Type*} [Field R] (f : ArithmeticFunction R) (hf : IsMultiplicative f) :
-    IsMultiplicative ((ζ : ArithmeticFunction R).pdiv f) := by arith_mult
+example {R : Type*} [Field R] (f : ArithmeticFunction R) (hf : IsMultiplicative f)
+    (hu : ∀ n, n ≠ 0 → IsUnit (f n)) :
+    IsMultiplicative ((ζ : ArithmeticFunction R).pdiv f hu) := by arith_mult
 
 example (f g : ArithmeticFunction R) (hf : IsMultiplicative f) :
     IsMultiplicative (prodPrimeFactors g |>.pmul f) := by arith_mult

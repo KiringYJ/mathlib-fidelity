@@ -426,6 +426,12 @@ variable [AdmissibleAbsValues K] [Finite ι]
 
 open AdmissibleAbsValues
 
+omit [Finite ι] [Fintype ι'] in
+private lemma evaluationFactor_pos [Finite ι'] [Nonempty ι'] (q : ι × ι' → MvPolynomial ι K) :
+    0 < (Nat.card ι' : ℝ) ^ totalWeight K * max (mulHeightBound q) 1 :=
+  mul_pos (pow_pos (Nat.cast_pos.mpr Nat.card_pos) _)
+    (zero_lt_one.trans_le (le_max_right _ _))
+
 /-- If
 * `p : ι' → MvPolynomial ι K` is a family of polynomials (which in practice will be homogeneous
   of the same degree `N`),
@@ -434,16 +440,28 @@ open AdmissibleAbsValues
   `∑ j, (q (k, j)).eval x * (p j).eval x = (x k) ^ (M + N)`,
 
 then the multiplicative height of `fun j ↦ (p j).eval x` is bounded below by an (explicit) positive
-constant depending only on `q` times the `N`th power of the multiplicative height of `x`. -/
+constant depending only on `q` times the `N`th power of the multiplicative height of `x`,
+provided the denominator of that constant is nonzero. -/
 theorem mulHeight_eval_ge {M N : ℕ} {q : ι × ι' → MvPolynomial ι K}
     (hq : ∀ a, (q a).IsHomogeneous M) (p : ι' → MvPolynomial ι K) {x : ι → K}
-    (h : ∀ k, ∑ j, (q (k, j)).eval x * (p j).eval x = (x k) ^ (M + N)) :
-    (Nat.card ι' ^ totalWeight K * max (mulHeightBound q) 1)⁻¹ * mulHeight x ^ N ≤
-      mulHeight (fun j ↦ (p j).eval x) := by
+    (h : ∀ k, ∑ j, (q (k, j)).eval x * (p j).eval x = (x k) ^ (M + N))
+    {hc : IsUnit ((Nat.card ι' : ℝ) ^ totalWeight K * max (mulHeightBound q) 1)} :
+    Checked.inv ((Nat.card ι' : ℝ) ^ totalWeight K * max (mulHeightBound q) 1) hc *
+      mulHeight x ^ N ≤ mulHeight (fun j ↦ (p j).eval x) := by
   rcases isEmpty_or_nonempty ι'
-  · simp [show q = 0 from Subsingleton.elim .., max_mulHeightBound_zero_one_eq_one K ι (ι × ι'),
-      mulHeight_eval_ge_aux p h]
-    grind [zero_pow_eq]
+  · have he : (Nat.card ι' : ℝ) ^ totalWeight K * max (mulHeightBound q) 1 =
+        (0 : ℝ) ^ totalWeight K := by
+      simp [show q = 0 from Subsingleton.elim ..,
+        max_mulHeightBound_zero_one_eq_one K ι (ι × ι')]
+    have hw : totalWeight K = 0 := by
+      by_contra hw
+      exact hc.ne_zero (he.trans (zero_pow hw))
+    have hi : Checked.inv _ hc = (1 : ℝ) := by
+      apply mul_right_cancel₀ hc.ne_zero
+      rw [inv_mul_cancel₀, one_mul, he, hw, pow_zero]
+    have hz : (fun j ↦ (p j).eval x) = (0 : ι' → K) := Subsingleton.elim _ _
+    rw [hz]
+    simp only [hi, mulHeight_eval_ge_aux p h, mulHeight_zero, one_pow, one_mul, le_rfl]
   -- case `ι'` nonempty
   let q' : ι × ι' → K := fun a ↦ (q a).eval x
   have H : mulHeight x ^ (M + N) ≤
@@ -451,8 +469,8 @@ theorem mulHeight_eval_ge {M N : ℕ} {q : ι × ι' → MvPolynomial ι K}
     rw [← mulHeight_pow x (M + N)]
     have : x ^ (M + N) = fun k ↦ ∑ j, (q (k, j)).eval x * (p j).eval x := funext fun k ↦ (h k).symm
     simpa [this] using mulHeight_linearMap_apply_le q' _
-  rw [inv_mul_le_iff₀ ?hC, ← mul_le_mul_iff_left₀ (by positivity : 0 < mulHeight x ^ M)]
-  case hC => exact mul_pos (mod_cast Nat.one_le_pow _ _ Nat.card_pos) <| by positivity
+  rw [inv_mul_le_iff₀ (evaluationFactor_pos q),
+    ← mul_le_mul_iff_left₀ (by positivity : 0 < mulHeight x ^ M)]
   rw [← pow_add, add_comm]
   grw [H, mulHeight_eval_le hq x]
   exact Eq.le (by ring)
@@ -475,8 +493,10 @@ theorem mulHeight_eval_ge' {M N : ℕ} {q : ι × ι' → MvPolynomial ι K}
       C * mulHeight x ^ N ≤ mulHeight (fun j ↦ (p j).eval x) := by
   rcases isEmpty_or_nonempty ι'
   · exact ⟨1, zero_lt_one, fun p _ h ↦ by simp [mulHeight_eval_ge_aux p h]⟩
-  have : 0 < Nat.card ι' := Nat.card_pos
-  exact ⟨_, by positivity, mulHeight_eval_ge hq⟩
+  have hc := evaluationFactor_pos q
+  refine ⟨Checked.inv _ hc.ne'.isUnit, inv_pos.mpr hc, ?_⟩
+  intro p x h
+  exact mulHeight_eval_ge hq p h (hc := hc.ne'.isUnit)
 
 open Real in
 /-- If
@@ -497,9 +517,11 @@ theorem logHeight_eval_ge {M N : ℕ} {q : ι × ι' → MvPolynomial ι K}
   rcases isEmpty_or_nonempty ι'
   · simp [show q = 0 from Subsingleton.elim .., mulHeight_eval_ge_aux p h,
       max_mulHeightBound_zero_one_eq_one K ι (ι × ι')]
-  have : (Nat.card ι' : ℝ) ^ totalWeight K ≠ 0 := by simp
-  pull (disch := first | assumption | positivity) log
-  exact (log_le_log <| by positivity) <| mulHeight_eval_ge hq p h
+  have hc := evaluationFactor_pos q
+  have hi : 0 < Checked.inv _ hc.ne'.isUnit := inv_pos.mpr hc
+  have hx := pow_pos (mulHeight_pos x) N
+  have he := log_le_log (mul_pos hi hx) (mulHeight_eval_ge hq p h (hc := hc.ne'.isUnit))
+  simpa only [log_mul hi.ne' hx.ne', log_inv, log_pow] using he
 
 /-- If
 * `p : ι' → MvPolynomial ι K` is a family of polynomials (which in practice will be homogeneous

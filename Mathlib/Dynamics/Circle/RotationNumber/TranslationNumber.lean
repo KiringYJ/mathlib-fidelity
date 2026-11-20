@@ -634,7 +634,7 @@ theorem translationNumber_eq_of_dist_bounded {f g : CircleDeg1Lift} (C : ℝ)
 
 @[simp]
 theorem translationNumber_one : τ 1 = 0 :=
-  translationNumber_eq_of_tendsto₀ _ <| by simpa using tendsto_const_nhds
+  translationNumber_eq_of_tendsto₀ _ <| by simp
 
 theorem translationNumber_eq_of_semiconjBy {f g₁ g₂ : CircleDeg1Lift} (H : SemiconjBy f g₁ g₂) :
     τ g₁ = τ g₂ :=

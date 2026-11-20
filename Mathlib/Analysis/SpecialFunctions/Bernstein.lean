@@ -95,15 +95,16 @@ We now give a slight reformulation of `bernsteinPolynomial.variance`.
 
 namespace bernstein
 
-/-- Send `k : Fin (n+1)` to the equally spaced points `k/n` in the unit interval.
+/-- For a positive degree, send `k : Fin (n+1)` to the equally spaced points `k/n`
+in the unit interval.
 -/
-def z {n : ℕ} (k : Fin (n + 1)) : I :=
+def z {n : ℕ} (k : Fin (n + 1)) (hn : n ≠ 0 := by checked_nonzero) : I :=
   ⟨(k : ℝ) / n, by simp [div_nonneg, div_le_one_of_le₀, k.is_le]⟩
 
 local postfix:90 "/ₙ" => z
 
-@[simp] lemma z_zero {n : ℕ} : (0 : Fin (n + 1))/ₙ = 0 := by simp [z]
-@[simp] lemma z_last {n : ℕ} (hn : n ≠ 0) : .last n/ₙ = 1 := by simp [z, hn]
+@[simp] lemma z_zero {n : ℕ} {hn : n ≠ 0} : z (0 : Fin (n + 1)) hn = 0 := by simp [z]
+@[simp] lemma z_last {n : ℕ} (hn : n ≠ 0) : .last n/ₙ = 1 := by simp [z]
 
 @[simp]
 theorem probability (n : ℕ) (x : I) : (∑ k : Fin (n + 1), bernstein n k x) = 1 := by
@@ -117,11 +118,12 @@ theorem variance {n : ℕ} (hn : n ≠ 0) (x : I) :
   · simp only [z, bernstein_apply, nsmul_eq_mul, bernsteinPolynomial, Finset.sum_range, map_sum,
       Polynomial.coe_aeval_eq_eval, Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_sub,
       Polynomial.eval_natCast, Polynomial.eval_X, Polynomial.eval_one]
+    rw [Finset.sum_div]
+    apply Finset.sum_congr rfl
+    intro k hk
     field_simp
-    rw [← Finset.sum_div]
-    field
   · simp
-    field
+    field_simp
 
 end bernstein
 
@@ -135,8 +137,8 @@ variable {E : Type*} [AddCommGroup E] [TopologicalSpace E] [IsTopologicalAddGrou
 /-- The `n`-th approximation of a continuous function on `[0,1]` by Bernstein polynomials,
 given by `∑ k, bernstein n k x • f (k/n)`.
 -/
-def bernsteinApproximation (n : ℕ) (f : C(I, E)) : C(I, E) :=
-  ∑ k : Fin (n + 1), bernstein n k • .const _ (f k/ₙ)
+def bernsteinApproximation (n : {n : ℕ // n ≠ 0}) (f : C(I, E)) : C(I, E) :=
+  ∑ k : Fin (n.1 + 1), bernstein n.1 k • .const _ (f k/ₙ)
 
 /-!
 We now set up some of the basic machinery of the proof that the Bernstein approximations
@@ -154,17 +156,17 @@ We show that if `k ∉ S`, then `1 ≤ δ^-2 * (x - k/n)^2`.
 
 namespace bernsteinApproximation
 
-theorem apply (n : ℕ) (f : C(I, E)) (x : I) :
-    bernsteinApproximation n f x = ∑ k : Fin (n + 1), bernstein n k x • f k/ₙ := by
+theorem apply (n : {n : ℕ // n ≠ 0}) (f : C(I, E)) (x : I) :
+    bernsteinApproximation n f x = ∑ k : Fin (n.1 + 1), bernstein n.1 k x • f k/ₙ := by
   simp [bernsteinApproximation]
 
 @[simp]
-theorem apply_zero (n : ℕ) (f : C(I, E)) : bernsteinApproximation n f 0 = f 0 := by
+theorem apply_zero (n : {n : ℕ // n ≠ 0}) (f : C(I, E)) : bernsteinApproximation n f 0 = f 0 := by
   simp [apply, Fin.sum_univ_succ, bernstein_apply, z]
 
 @[simp]
-theorem apply_one {n : ℕ} (hn : n ≠ 0) (f : C(I, E)) : bernsteinApproximation n f 1 = f 1 := by
-  simp [apply, Fin.sum_univ_castSucc, bernstein_apply, hn, Nat.sub_eq_zero_iff_le]
+theorem apply_one (n : {n : ℕ // n ≠ 0}) (f : C(I, E)) : bernsteinApproximation n f 1 = f 1 := by
+  simp [apply, Fin.sum_univ_castSucc, bernstein_apply, Nat.sub_eq_zero_iff_le]
 
 end bernsteinApproximation
 
@@ -180,7 +182,8 @@ This is the proof given in [Richard Beals' *Analysis, an introduction*][beals-an
 and reproduced on wikipedia.
 -/
 theorem bernsteinApproximation_uniform [LocallyConvexSpace ℝ E] (f : C(I, E)) :
-    Tendsto (fun n : ℕ => bernsteinApproximation n f) atTop (𝓝 f) := by
+    Tendsto (fun n : {n : ℕ // n ≠ 0} => bernsteinApproximation n f)
+      (comap Subtype.val atTop) (𝓝 f) := by
   let : UniformSpace E := IsTopologicalAddGroup.rightUniformSpace E
   have : IsUniformAddGroup E := isUniformAddGroup_of_addCommGroup
   /- Topology on a locally convex TVS is given by a family of seminorms `‖x‖_U = gauge U x`,
@@ -188,7 +191,8 @@ theorem bernsteinApproximation_uniform [LocallyConvexSpace ℝ E] (f : C(I, E)) 
   and are the open unit balls for the corresponding seminorms.
   For technical reasons, we neither assume `U`s to be open, nor symmetric. -/
   suffices ∀ U ∈ 𝓝 (0 : E), Convex ℝ U →
-      ∀ᶠ n in atTop, ∀ x : I, gauge U (bernsteinApproximation n f x - f x) < 1 by
+      ∀ᶠ n in comap Subtype.val atTop, ∀ x : I,
+        gauge U (bernsteinApproximation n f x - f x) < 1 by
     rw [(LocallyConvexSpace.convex_basis_zero ℝ E).uniformity_of_nhds_zero_swapped
       |>.compactConvergenceUniformity_of_compact |> nhds_basis_uniformity |>.tendsto_right_iff]
     rintro U ⟨hU₀, hcU⟩
@@ -209,22 +213,23 @@ theorem bernsteinApproximation_uniform [LocallyConvexSpace ℝ E] (f : C(I, E)) 
     have := CompactSpace.uniformContinuous_of_continuous (map_continuous f)
     rw [Metric.uniformity_basis_dist.uniformContinuous_iff
       (basis_sets _).uniformity_of_nhds_zero_swapped] at this
-    exact this {z | gauge U z < 1 / 2} <| tendsto_gauge_nhds_zero hU₀
-      |>.eventually_lt_const <| by positivity
+    have hhalf : {z | gauge U z < (1 / 2 : ℝ)} ∈ 𝓝 (0 : E) :=
+      (tendsto_gauge_nhds_zero hU₀).eventually_lt_const (by norm_num)
+    exact this _ hhalf
   -- Take `n ≠ 0` such that `C / δ ^ 2 / n < 1 / 2`.
   have nhds_zero := tendsto_const_div_atTop_nhds_zero_nat (C / δ ^ 2)
-  filter_upwards [nhds_zero.eventually_lt_const (half_pos one_pos), eventually_ne_atTop 0]
-    with n nh hn₀ x
+  filter_upwards [nhds_zero.eventually_lt_const (half_pos one_pos)] with n nh x
+  have hn₀ := n.2
   -- The idea is to split up the sum over `k` into two sets,
   -- `S`, where `x - k/n < δ`, and its complement.
-  set S : Finset (Fin (n + 1)) := {k : Fin (n + 1) | dist k/ₙ x < δ}
+  set S : Finset (Fin (n.1 + 1)) := {k : Fin (n.1 + 1) | dist k/ₙ x < δ}
   calc
     gauge U (bernsteinApproximation n f x - f x)
-      = gauge U (∑ k : Fin (n + 1), bernstein n k x • (f k/ₙ - f x)) := by
+      = gauge U (∑ k : Fin (n.1 + 1), bernstein n.1 k x • (f k/ₙ - f x)) := by
       simp [bernsteinApproximation.apply, smul_sub, ← Finset.sum_smul]
-    _ ≤ ∑ k : Fin (n + 1), gauge U (bernstein n k x • (f k/ₙ - f x)) :=
+    _ ≤ ∑ k : Fin (n.1 + 1), gauge U (bernstein n.1 k x • (f k/ₙ - f x)) :=
       gauge_sum_le hUc (absorbent_nhds_zero hU₀) _ _
-    _ = ∑ k : Fin (n + 1), bernstein n k x * gauge U (f k/ₙ - f x) := by
+    _ = ∑ k : Fin (n.1 + 1), bernstein n.1 k x * gauge U (f k/ₙ - f x) := by
       simp only [gauge_smul_of_nonneg, bernstein_nonneg, smul_eq_mul]
     _ = (∑ k ∈ S, bernstein n k x * gauge U (f k/ₙ - f x)) +
           ∑ k ∈ Sᶜ, bernstein n k x * gauge U (f k/ₙ - f x) :=
@@ -242,7 +247,7 @@ theorem bernsteinApproximation_uniform [LocallyConvexSpace ℝ E] (f : C(I, E)) 
       _ = 1 / 2 * ∑ k ∈ S, bernstein n k x := by rw [mul_comm, Finset.sum_mul]
       -- In this step we increase the sum over `S` back to a sum over all of `Fin (n+1)`,
       -- so that we can use `bernstein.probability`.
-      _ ≤ 1 / 2 * ∑ k : Fin (n + 1), bernstein n k x := by gcongr; exact S.subset_univ
+      _ ≤ 1 / 2 * ∑ k : Fin (n.1 + 1), bernstein n.1 k x := by gcongr; exact S.subset_univ
       _ = 1 / 2 := by rw [bernstein.probability, mul_one]
   · -- We now turn to working on `Sᶜ`: we control the difference term just using `C`,
     -- and then insert a `(x - k/n)^2 / δ^2` factor
@@ -260,10 +265,10 @@ theorem bernsteinApproximation_uniform [LocallyConvexSpace ℝ E] (f : C(I, E)) 
         simpa [one_le_div₀, hδ₀, sq_le_sq, S, abs_of_pos, ← Real.dist_eq, dist_comm (x : ℝ)]
           using! hk
       -- Again enlarging the sum from `Sᶜ` to all of `Fin (n+1)`
-      _ ≤ C * ∑ k : Fin (n + 1), ((x : ℝ) - k/ₙ) ^ 2 / δ ^ 2 * bernstein n k x := by
+      _ ≤ C * ∑ k : Fin (n.1 + 1), ((x : ℝ) - k/ₙ) ^ 2 / δ ^ 2 * bernstein n.1 k x := by
         gcongr; exact Sᶜ.subset_univ
-      _ = C * (∑ k : Fin (n + 1), ((x : ℝ) - k/ₙ) ^ 2 * bernstein n k x) / δ ^ 2 := by
-        simp only [← mul_div_right_comm, ← mul_div_assoc, ← Finset.sum_div]
+      _ = C * (∑ k : Fin (n.1 + 1), ((x : ℝ) - k/ₙ) ^ 2 * bernstein n.1 k x) / δ ^ 2 := by
+        simp only [← mul_div_right_comm₀, ← mul_div_assoc₀, ← Finset.sum_div]
       -- `bernstein.variance` and `x ∈ [0,1]` gives the uniform bound
       _ = C / δ ^ 2 * x * (1 - x) / n := by rw [variance hn₀]; ring
       _ ≤ C / δ ^ 2 * 1 * 1 / n := by gcongr <;> unit_interval

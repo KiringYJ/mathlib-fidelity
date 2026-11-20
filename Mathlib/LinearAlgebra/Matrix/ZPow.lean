@@ -9,14 +9,11 @@ public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 public import Mathlib.LinearAlgebra.Matrix.Symmetric
 
 /-!
-# Integer powers of invertible square matrices
+# Integer powers of square matrices
 
-Integer powers of a square matrix are defined on the unit group `(Matrix n n R)ˣ`. Negative powers
-therefore carry invertibility in their type. There is no integer-power operation on every square
-matrix and no singular-matrix fallback.
-
-The group API supplies the usual laws for integer powers. This file records the matrix-specific
-interaction with the determinant.
+The unit group `(Matrix n n R)ˣ` supplies the usual group laws for integer powers. For powers of
+an ambient matrix, `Checked.zpow` requires invertibility at negative exponents. This file records
+the interaction of integer powers with determinants, transposition, and symmetry.
 -/
 
 public section
@@ -40,5 +37,30 @@ theorem det_coe_units_zpow (A : (Matrix n n R)ˣ) (z : ℤ) :
 theorem coe_units_zpow_ne_zero [Nonempty n] [Nontrivial R]
     (A : (Matrix n n R)ˣ) (z : ℤ) : (↑(A ^ z) : Matrix n n R) ≠ 0 :=
   (A ^ z).ne_zero
+
+@[simp]
+theorem transpose_zpow (A : Matrix n n R) (z : ℤ) {hz : z < 0 → IsUnit A} :
+    (A ^ z)ᵀ = Aᵀ ^ z := by
+  cases z with
+  | ofNat k => exact transpose_pow A k
+  | negSucc k => simp only [zpow_negSucc₀, transpose_nonsing_inv, transpose_pow]
+
+@[simp]
+theorem conjTranspose_zpow [StarRing R] (A : Matrix n n R) (z : ℤ)
+    {hz : z < 0 → IsUnit A} :
+    (A ^ z)ᴴ = Aᴴ ^ z := by
+  cases z with
+  | ofNat k => exact conjTranspose_pow A k
+  | negSucc k => simp only [zpow_negSucc₀, conjTranspose_nonsing_inv, conjTranspose_pow]
+
+/-- Integer powers of a symmetric matrix are symmetric, with invertibility required for a
+negative exponent. -/
+theorem IsSymm.zpow {A : Matrix n n R} (hA : A.IsSymm) (z : ℤ) {hz : z < 0 → IsUnit A} :
+    (A ^ z).IsSymm := by
+  cases z with
+  | ofNat k => exact hA.pow k
+  | negSucc k =>
+    rw [zpow_negSucc₀]
+    exact (hA.pow (k + 1)).inv
 
 end Matrix

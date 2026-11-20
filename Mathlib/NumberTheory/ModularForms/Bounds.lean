@@ -58,7 +58,8 @@ lemma exists_bound_fundamental_domain_of_isBigO
       Real.norm_of_nonneg (_ : ℍ).im_pos.le] at hy
   -- Extract a bound for the rest of `𝒟` using continuity and compactness.
   have hfm : ContinuousOn (fun τ ↦ ‖f τ‖ / (im τ) ^ t) (truncatedFundamentalDomain y) := by
-    apply (hf_cont.norm.div ?_ fun τ ↦ by positivity).continuousOn
+    apply (hf_cont.norm.div₀
+      (h₀ := fun τ ↦ (Real.rpow_pos_of_pos τ.im_pos t).ne'.isUnit) ?_).continuousOn
     exact continuous_im.rpow_const fun τ ↦ .inl τ.im_ne_zero
   obtain ⟨E, hE⟩ : ∃ E, ∀ τ ∈ truncatedFundamentalDomain y, ‖f τ‖ / (im τ) ^ t ≤ E := by
     simpa [norm_mul, norm_norm, Real.norm_rpow_of_nonneg (_ : ℍ).im_pos.le,
@@ -94,7 +95,8 @@ lemma exists_bound_of_invariant_of_isBigO {f : ℍ → E} (hf_cont : Continuous 
     exact le_trans (by positivity) hF𝒟
   -- It remains to show `(g • τ).im ≤ max τ.im (1 / τ.im)`.
   -- We split into two cases depending whether `c = g 1 0` is zero.
-  rw [im_smul_eq_div_normSq, denom_apply]
+  rw [im_smul_eq_div_normSq]
+  have hden := normSq_denom_pos (mapGL ℝ g) τ.im_ne_zero
   by_cases hg : g 1 0 = 0
   · -- If `c = 0`, then `(g • τ).im = τ.im / d ^ 2` and `d ^ 2 ≥ 1`.
     -- (In fact `d = ±1`, but we do not need this stronger statement).
@@ -102,17 +104,22 @@ lemma exists_bound_of_invariant_of_isBigO {f : ℍ → E} (hf_cont : Continuous 
       simpa only [Matrix.det_fin_two, hg, hg', mul_zero, mul_zero, sub_zero] using g.det_coe
     have : (1 : ℝ) ≤ g 1 1 ^ 2 := mod_cast (one_le_sq_iff_one_le_abs _).mpr (Int.one_le_abs this)
     refine le_trans ?_ <| le_max_left _ _
-    rw [show Complex.normSq ((g 1 0) * τ + (g 1 1)) = (g 1 1) ^ 2 by simp [hg, sq]]
-    simpa [field] using inv_le_one_of_one_le₀ this
+    apply (div_le_iff₀ hden).2
+    apply le_mul_of_one_le_right τ.im_pos.le
+    unfold UpperHalfPlane.denom
+    change 1 ≤ Complex.normSq ((g 1 0 : ℂ) * ↑τ + (g 1 1 : ℂ))
+    simpa [hg, sq] using this
   · -- If `c ≠ 0`, then `1 ≤ c ^ 2`, so
     -- `(g • τ).im = τ.im / (c ^ 2 * τ.im ^ 2 +  ...) ≤ 1 / τ.im`.
     refine le_trans ?_ <| le_max_right _ _
+    have hc : (1 : ℝ) ≤ g 1 0 ^ 2 := mod_cast (one_le_sq_iff_one_le_abs _).mpr (Int.one_le_abs hg)
+    have hs : τ.im ^ 2 ≤ Complex.normSq (denom g τ) := by
+      calc
+        _ ≤ (g 1 0 : ℝ) ^ 2 * τ.im ^ 2 := le_mul_of_one_le_left (sq_nonneg _) hc
+        _ = ((g 1 0 : ℝ) * τ.im) ^ 2 := (mul_pow _ _ _).symm
+        _ ≤ _ := c_mul_im_sq_le_normSq_denom (g := mapGL ℝ g) (z := τ)
     rw [show 1 / τ.im = τ.im / τ.im ^ 2 by field_simp]
     gcongr
-    rw [show Complex.normSq ((g 1 0) * τ + (g 1 1)) =
-      ((g 1 0) * τ.re + (g 1 1)) ^ 2 + (g 1 0) ^ 2 * τ.im ^ 2 by simp [Complex.normSq_apply]; ring]
-    have : (1 : ℝ) ≤ g 1 0 ^ 2 := mod_cast (one_le_sq_iff_one_le_abs _).mpr (Int.one_le_abs hg)
-    nlinarith
 
 /-- A function on `ℍ` which is invariant under a finite-index subgroup of `SL(2, ℤ)`, and satisfies
 an `O((im τ) ^ t)` bound at all cusps for some `0 ≤ t`, is in fact uniformly bounded by a multiple
@@ -182,14 +189,19 @@ lemma ModularFormClass.exists_petersson_le {k : ℤ} (hk : 0 ≤ k) (Γ : Subgro
     [Γ.IsArithmetic] {F F' : Type*} (f : F) (f' : F')
     [FunLike F ℍ ℂ] [FunLike F' ℍ ℂ] [ModularFormClass F Γ k] [ModularFormClass F' Γ k] :
     ∃ C, ∀ τ, ‖petersson k f f' τ‖ ≤ C * max τ.im (1 / τ.im) ^ k := by
-  conv => enter [1, C, τ, 1]; rw [← norm_norm]
-  refine mod_cast ModularGroup.exists_bound_of_subgroup_invariant_of_isArithmetic_of_isBigO
+  have hpow (τ : ℍ) : τ.im ^ (k : ℝ) = τ.im ^ k :=
+    Real.rpow_intCast _ _ (h := fun _ ↦ τ.im_ne_zero)
+  have hinfty (g : SL(2, ℤ)) : (fun τ ↦ ‖petersson k f f' (g • τ)‖) =O[atImInfty]
+      fun τ ↦ τ.im ^ (k : ℝ) := by
+    simp_rw [← UpperHalfPlane.petersson_slash_SL, hpow]
+    simpa [petersson, Real.norm_of_nonneg (_ : ℍ).im_pos.le]
+      using (bdd_at_infty_slash f g).norm_left.mul (bdd_at_infty_slash f' g).norm_left
+        |>.mul (isBigO_refl ..)
+  obtain ⟨C, hC⟩ := ModularGroup.exists_bound_of_subgroup_invariant_of_isArithmetic_of_isBigO
     (show Continuous (‖petersson k f f' ·‖) by fun_prop) (mod_cast hk : 0 ≤ (k : ℝ))
-    (fun g ↦ ?_) (fun g hg τ ↦ SlashInvariantFormClass.norm_petersson_smul hg)
-  simp_rw [← UpperHalfPlane.petersson_slash_SL, Real.rpow_intCast]
-  simpa [petersson, Real.norm_of_nonneg (_ : ℍ).im_pos.le]
-    using (bdd_at_infty_slash f g).norm_left.mul (bdd_at_infty_slash f' g).norm_left
-      |>.mul (isBigO_refl ..)
+    (Γ := Γ) hinfty (fun g hg τ ↦ SlashInvariantFormClass.norm_petersson_smul hg)
+  refine ⟨C, fun τ ↦ ?_⟩
+  simpa only [norm_norm, Real.rpow_intCast (h := fun hneg ↦ (not_lt_of_ge hk hneg).elim)] using hC τ
 
 open ConjAct Pointwise in
 /-- If `f` is a cusp form and `f'` a modular form, then `petersson k f f'` is bounded. -/
@@ -221,25 +233,40 @@ lemma CuspFormClass.exists_bound {k : ℤ} {Γ : Subgroup (GL (Fin 2) ℝ)} [Γ.
     {F : Type*} [FunLike F ℍ ℂ] [CuspFormClass F Γ k] (f : F) :
     ∃ C, ∀ τ, ‖f τ‖ ≤ C / τ.im ^ (k / 2 : ℝ) := by
   obtain ⟨C, hC⟩ := petersson_bounded_left k Γ f f
-  refine ⟨C.sqrt, fun τ ↦ (le_div_iff₀ (by positivity)).mpr (Real.le_sqrt_of_sq_le ?_)⟩
-  simpa [petersson, sq, abs_of_pos τ.im_pos, ← Real.rpow_mul_natCast τ.im_pos.le, field] using hC τ
+  refine ⟨C.sqrt, fun τ ↦ ?_⟩
+  specialize hC τ
+  have hpow : (τ.im ^ ((k : ℝ) / 2)) ^ 2 = τ.im ^ k := by
+    rw [← Real.rpow_mul_natCast τ.im_pos.le,
+      show (k : ℝ) / 2 * (↑(2 : ℕ) : ℝ) = (k : ℝ) by push_cast; ring,
+      Real.rpow_intCast (h := fun _ ↦ τ.im_ne_zero)]
+  rw [← sq_le_sq₀ (by positivity) (by positivity), div_pow₀,
+    Real.sq_sqrt ((norm_nonneg _).trans hC)]
+  rw [le_div_iff₀ (by positivity), hpow]
+  simpa only [petersson, norm_mul, Complex.norm_conj, norm_zpow, Complex.norm_real,
+    Real.norm_of_nonneg τ.im_pos.le, pow_two] using hC
 
 /-- The `n`-th `q`-expansion coefficient is an exponentially rescaled Fourier coefficient of the
 restriction of the function to a horizontal line. -/
 lemma UpperHalfPlane.qExpansion_coeff_eq_exp_mul_fourierCoeffOn {f : ℍ → ℂ} {h : ℝ} (hh : 0 < h)
     (hfper : Function.Periodic (f ∘ ofComplex) h) (hfhol : MDiff f)
     (hfbdd : IsBoundedAtImInfty f) {y : ℝ} (hy : 0 < y) (n : ℕ) :
-    (qExpansion h f).coeff n = Real.exp (2 * π * n * y / h) *
+    (qExpansion h f hh.ne').coeff n = Real.exp (2 * π * n * y / h) *
       fourierCoeffOn hh (fun x : ℝ ↦ f ⟨x + y * UpperHalfPlane.I, by simpa using hy⟩) n := by
-  have hq (u : ℝ) : (1 / 𝕢 h (u + y * UpperHalfPlane.I) ^ n : ℂ) =
+  letI : Fact (0 < h) := ⟨hh⟩
+  have hq (u : ℝ) :
+      Checked.div 1 (𝕢 h (u + y * UpperHalfPlane.I) hh.ne' ^ n)
+        ((Function.Periodic.qParam_ne_zero (u + y * UpperHalfPlane.I) hh.ne').isUnit.pow n) =
       ↑(Real.exp (2 * π * n * y / h)) * fourier (-(n : ℤ)) (u : AddCircle h) := by
-    push_cast [fourier_coe_apply, Function.Periodic.qParam, one_div, ← Complex.exp_nat_mul,
-      ← Complex.exp_neg, ← Complex.exp_add]
-    grind [Complex.I_sq]
+    simp only [fourier_coe_apply, Function.Periodic.qParam, ← Complex.exp_nat_mul, one_div₀,
+      ← Complex.exp_neg, Complex.ofReal_exp, ← Complex.exp_add]
+    congr 1
+    push_cast
+    have hunit : IsUnit (h : ℂ) := (Complex.ofReal_ne_zero.mpr hh.ne').isUnit
+    field_simp <;> ring_nf <;> simp only [Complex.I_sq] <;> ring
   rw [qExpansion_coeff_eq_intervalIntegral hh hfper hfhol hfbdd n hy,
     fourierCoeffOn_eq_integral, sub_zero]
   simp_rw [hq, mul_assoc, intervalIntegral.integral_const_mul]
-  simp [mul_left_comm]
+  simp [mul_left_comm, smul_eq_mul, Complex.real_smul, Complex.ofReal_div, Complex.ofReal_inv]
 
 /-- The negative-index Fourier coefficients of the restriction of `f` to a horizontal line vanish:
 up to a constant, the `-(n + 1)`-th coefficient is the constant term of the `q`-expansion of
@@ -249,26 +276,28 @@ lemma UpperHalfPlane.fourierCoeffOn_neg_eq_zero {f : ℍ → ℂ} {h : ℝ} (hh 
     (hfbdd : IsBoundedAtImInfty f) {y : ℝ} (hy : 0 < y) (n : ℕ) :
     fourierCoeffOn hh (fun x : ℝ ↦ f ⟨x + y * UpperHalfPlane.I, by simpa using hy⟩)
       (-(n + 1 : ℕ) : ℤ) = 0 := by
+  letI : Fact (0 < h) := ⟨hh⟩
+  have hunit : IsUnit (h : ℂ) := (Complex.ofReal_ne_zero.mpr hh.ne').isUnit
   -- Up to a constant, this is the constant term of the `q`-expansion of `g = 𝕢 ^ (n + 1) * f`,
   -- which vanishes since `g` tends to `0` at `I∞`.
-  let g (τ : ℍ) := 𝕢 h τ ^ (n + 1) * f τ
+  let g (τ : ℍ) := 𝕢 h τ hh.ne' ^ (n + 1) * f τ
   have hgper : Function.Periodic (g ∘ ofComplex) h := fun z ↦ by
     rcases le_or_gt z.im 0 with hz | hz
     · simp [g, ofComplex_apply_of_im_nonpos hz,
         ofComplex_apply_of_im_nonpos (by simpa using hz : (z + h).im ≤ 0)]
-    · have := hfper z
+    · have hper := hfper z
       simp only [Function.comp_apply, ofComplex_apply_of_im_pos hz,
-        ofComplex_apply_of_im_pos (by simpa using hz : 0 < (z + h).im), g, coe_mk] at this ⊢
-      rw [this, Function.Periodic.qParam, Function.Periodic.qParam, mul_add, add_div,
-        mul_div_cancel_right₀ _ (Complex.ofReal_ne_zero.mpr hh.ne'), Complex.exp_add,
+        ofComplex_apply_of_im_pos (by simpa using hz : 0 < (z + h).im), g, coe_mk] at hper ⊢
+      rw [hper, Function.Periodic.qParam, Function.Periodic.qParam, mul_add, add_div,
+        mul_div_cancel_right₀ (hb := hunit), Complex.exp_add,
         Complex.exp_two_pi_mul_I, mul_one]
-  have hghol : MDiff g := ((Function.Periodic.differentiable_qParam.mdifferentiable.comp
+  have hghol : MDiff g := (((Function.Periodic.differentiable_qParam hh.ne').mdifferentiable.comp
     mdifferentiable_coe).pow _).mul hfhol
   have hgzero : IsZeroAtImInfty g :=
     (by simpa using (qParam_tendsto_atImInfty hh).pow (n + 1) :
-      Tendsto (fun τ : ℍ ↦ 𝕢 h τ ^ (n + 1)) atImInfty (𝓝 0)).zero_mul_isBoundedUnder_le
+      Tendsto (fun τ : ℍ ↦ 𝕢 h τ hh.ne' ^ (n + 1)) atImInfty (𝓝 0)).zero_mul_isBoundedUnder_le
       hfbdd.isBoundedUnder_le
-  have h0 : (qExpansion h g).coeff 0 = 0 := by
+  have h0 : (qExpansion h g hh.ne').coeff 0 = 0 := by
     rw [qExpansion_coeff_zero hh (analyticAt_cuspFunction_zero hh hgper hghol
       hgzero.isBoundedAtImInfty) hgper, hgzero.valueAtInfty_eq_zero]
   have hint : ∫ u in 0..h, g (⟨u + y * I, by simpa using hy⟩) = 0 := by
@@ -282,7 +311,7 @@ lemma UpperHalfPlane.fourierCoeffOn_neg_eq_zero {f : ℍ → ℂ} {h : ℝ} (hh 
       ← Complex.exp_nat_mul, Complex.ofReal_exp, ← mul_assoc, ← Complex.exp_add]
     congr 2
     push_cast
-    grind [Complex.I_sq]
+    field_simp <;> ring_nf <;> simp only [Complex.I_sq] <;> ring
   rw [fourierCoeffOn_eq_integral, sub_zero]
   simp only [key, intervalIntegral.integral_const_mul, hint, mul_zero, smul_zero]
 
@@ -292,7 +321,7 @@ along the horizontal line `im τ = y`. -/
 lemma UpperHalfPlane.hasSum_norm_sq_qExpansion_coeff_mul_exp {f : ℍ → ℂ} {h : ℝ} (hh : 0 < h)
     (hfper : Function.Periodic (f ∘ ofComplex) h) (hfhol : MDiff f)
     (hfbdd : IsBoundedAtImInfty f) {y : ℝ} (hy : 0 < y) :
-    HasSum (fun n : ℕ ↦ ‖(qExpansion h f).coeff n‖ ^ 2 * Real.exp (-(4 * π * n * y / h)))
+    HasSum (fun n : ℕ ↦ ‖(qExpansion h f hh.ne').coeff n‖ ^ 2 * Real.exp (-(4 * π * n * y / h)))
       (h⁻¹ * ∫ x in 0..h, ‖f ⟨x + y * UpperHalfPlane.I, by simpa using hy⟩‖ ^ 2) := by
   let g : ℝ → ℂ := fun x ↦ f ⟨x + y * UpperHalfPlane.I, by simpa using hy⟩
   have hg : Continuous g := by fun_prop
@@ -324,7 +353,7 @@ lemma UpperHalfPlane.sum_range_norm_sq_qExpansion_coeff_mul_exp_le {f : ℍ → 
     (hfper : Function.Periodic (f ∘ ofComplex) h) (hfhol : MDiff f)
     (hfbdd : IsBoundedAtImInfty f) {y : ℝ} (hy : 0 < y) (M : ℕ) :
     ∑ n ∈ Finset.range M,
-        ‖(qExpansion h f).coeff n‖ ^ 2 * Real.exp (-(4 * π * n * y / h)) ≤
+        ‖(qExpansion h f hh.ne').coeff n‖ ^ 2 * Real.exp (-(4 * π * n * y / h)) ≤
       h⁻¹ * ∫ x in 0..h,
         ‖f ⟨x + y * UpperHalfPlane.I, by simpa using hy⟩‖ ^ 2 :=
   sum_le_hasSum _ (fun _ _ ↦ by positivity)
@@ -337,7 +366,7 @@ terms of the integral of `‖f‖ ^ 2` along a horizontal line.
 lemma UpperHalfPlane.sum_range_norm_sq_qExpansion_coeff_le {f : ℍ → ℂ} {h : ℝ} (hh : 0 < h)
     (hfper : Function.Periodic (f ∘ ofComplex) h) (hfhol : MDiff f)
     (hfbdd : IsBoundedAtImInfty f) {y : ℝ} (hy : 0 < y) (M : ℕ) :
-    ∑ n ∈ Finset.range M, ‖(qExpansion h f).coeff n‖ ^ 2 ≤
+    ∑ n ∈ Finset.range M, ‖(qExpansion h f hh.ne').coeff n‖ ^ 2 ≤
       Real.exp (4 * π * M * y / h) * (h⁻¹ * ∫ x in 0..h,
           ‖f ⟨x + y * UpperHalfPlane.I, by simpa using hy⟩‖ ^ 2) := by
   rw [← mul_inv_le_iff₀' (Real.exp_pos _), ← Real.exp_neg, Finset.sum_mul]
@@ -353,38 +382,49 @@ lemma CuspFormClass.exists_sum_range_norm_sq_qExpansion_coeff_le_of_mem_strictPe
     {k : ℕ} {Γ : Subgroup (GL (Fin 2) ℝ)} [Γ.IsArithmetic]
     {F : Type*} [FunLike F ℍ ℂ] [CuspFormClass F Γ (k : ℤ)] (f : F)
     {h : ℝ} (hh : 0 < h) (hΓ : h ∈ Γ.strictPeriods) :
-    ∃ C, ∀ M, ∑ n ∈ .range M, ‖(qExpansion h f).coeff n‖ ^ 2 ≤ C * M ^ k := by
+    ∃ C, ∀ M, ∑ n ∈ .range M, ‖(qExpansion h f hh.ne').coeff n‖ ^ 2 ≤ C * M ^ k := by
   -- Squaring Hecke's bound gives a uniform bound for `‖f τ‖² * (im τ) ^ k`.
   obtain ⟨B, hB⟩ := CuspFormClass.exists_bound f
   have hC (τ : ℍ) : ‖f τ‖ ^ 2 * τ.im ^ k ≤ B ^ 2 := by
-    simpa [field, ← Real.rpow_mul_natCast τ.im_pos.le]
-      using pow_le_pow_left₀ (norm_nonneg _) (hB τ) 2
+    have hpow : (τ.im ^ (((k : ℤ) : ℝ) / 2)) ^ 2 = τ.im ^ k := by
+      rw [← Real.rpow_mul_natCast τ.im_pos.le,
+        show ((k : ℤ) : ℝ) / 2 * (↑(2 : ℕ) : ℝ) = (k : ℝ) by push_cast; ring,
+        Real.rpow_natCast]
+    have hB₂ := pow_le_pow_left₀ (norm_nonneg _) (hB τ) 2
+    rw [div_pow₀, hpow, le_div_iff₀ (pow_pos τ.im_pos _)] at hB₂
+    exact hB₂
   refine ⟨Real.exp (4 * π / h) * B ^ 2, fun M ↦ ?_⟩
   -- The empty partial sum is immediate, so assume from now on that `M` is positive.
   rcases M.eq_zero_or_pos with rfl | hM
   · positivity
   -- On the horizontal line of height `1 / M`, Hecke's bound is at most `B² * M ^ k`.
-  have hy : (0 : ℝ) < 1 / M := by positivity
-  have key (τ : ℍ) (hτ : τ.im = 1 / M) : ‖f τ‖ ^ 2 ≤ B ^ 2 * M ^ k :=
-    (div_le_iff₀ (by positivity)).mp (by simpa only [hτ, one_div_pow, mul_one_div] using hC τ)
+  have hM₀ : 0 < (M : ℝ) := by exact_mod_cast hM
+  let y : ℝ := Checked.div 1 (M : ℝ) hM₀.ne'.isUnit
+  have hy : 0 < y := div_pos zero_lt_one hM₀
+  have key (τ : ℍ) (hτ : τ.im = y) : ‖f τ‖ ^ 2 ≤ B ^ 2 * M ^ k := by
+    apply (div_le_iff₀ (pow_pos hM₀ k)).mp
+    simpa only [hτ, y, div_pow₀, one_pow, one_div₀, div_eq_mul_inv₀] using hC τ
   -- Integrating this over a period gives a bound for the integral of `‖f‖ ^ 2`
-  have hint₀ : ∫ x in 0..h, ‖f ⟨x + (1 / M : ℝ) * UpperHalfPlane.I, by simpa using hy⟩‖ ^ 2 ≤
+  have hint₀ : ∫ x in 0..h, ‖f ⟨x + y * UpperHalfPlane.I, by simpa using hy⟩‖ ^ 2 ≤
       ∫ x in 0..h, B ^ 2 * M ^ k :=
     intervalIntegral.integral_mono_on hh.le (Continuous.intervalIntegrable (by fun_prop) 0 h)
       intervalIntegrable_const fun x _ ↦ key _ (by simp)
+  have hexp : 4 * π * M * y / h = 4 * π / h := by
+    dsimp only [y]
+    field_simp
   -- The result follows by combining this bound with the Bessel estimate for the norm square of the
   -- `q`-expansion coefficients in terms of the integral
   grw [sum_range_norm_sq_qExpansion_coeff_le hh
     (SlashInvariantFormClass.periodic_comp_ofComplex f hΓ) (ModularFormClass.holo f)
     (ModularFormClass.bdd_at_infty f) hy M, hint₀]
-  simp [field, hM.ne']
+  simp [hexp, field, intervalIntegral.integral_const, smul_eq_mul, mul_assoc]
 
 /-- **Mean-square bound** for q-expansion coefficients of a cusp form: the sum of the squared
 norms of the first `M` coefficients is bounded by a constant multiple of `M ^ k`. -/
 lemma CuspFormClass.exists_sum_range_norm_sq_qExpansion_coeff_le
     {k : ℕ} {Γ : Subgroup (GL (Fin 2) ℝ)} [Γ.IsArithmetic]
     {F : Type*} [FunLike F ℍ ℂ] [CuspFormClass F Γ (k : ℤ)] (f : F) :
-    ∃ C, ∀ M, ∑ n ∈ .range M, ‖(qExpansion Γ.strictWidthInfty f).coeff n‖ ^ 2 ≤ C * M ^ k :=
+    ∃ C, ∀ M, ∑ n ∈ .range M, ‖(qExpansion Γ.strictWidthInfty f Γ.strictWidthInfty_pos.ne').coeff n‖ ^ 2 ≤ C * M ^ k :=
   -- Work with the natural period at infinity, which is positive for an arithmetic subgroup.
   exists_sum_range_norm_sq_qExpansion_coeff_le_of_mem_strictPeriods f Γ.strictWidthInfty_pos
     Γ.strictWidthInfty_mem_strictPeriods
@@ -394,7 +434,7 @@ the squared norms of the first `M` coefficients is `O(M ^ k)`. -/
 lemma CuspFormClass.sum_range_norm_sq_qExpansion_coeff_isBigO
     {k : ℕ} {Γ : Subgroup (GL (Fin 2) ℝ)} [Γ.IsArithmetic]
     {F : Type*} [FunLike F ℍ ℂ] [CuspFormClass F Γ (k : ℤ)] (f : F) :
-    (fun M : ℕ ↦ ∑ n ∈ .range M, ‖(qExpansion Γ.strictWidthInfty f).coeff n‖ ^ 2)
+    (fun M : ℕ ↦ ∑ n ∈ .range M, ‖(qExpansion Γ.strictWidthInfty f Γ.strictWidthInfty_pos.ne').coeff n‖ ^ 2)
       =O[atTop] fun M ↦ (M : ℝ) ^ k := by
   obtain ⟨C, hC⟩ := CuspFormClass.exists_sum_range_norm_sq_qExpansion_coeff_le f
   exact isBigO_of_le' (c := C) _ fun M ↦ by
@@ -408,22 +448,24 @@ lemma ModularFormClass.exists_bound {k : ℤ} (hk : 0 ≤ k) {Γ : Subgroup (GL 
     [Γ.IsArithmetic] {F : Type*} [FunLike F ℍ ℂ] [ModularFormClass F Γ k] (f : F) :
     ∃ C, ∀ τ, ‖f τ‖ ≤ C * (max 1 (1 / (τ.im) ^ k)) := by
   obtain ⟨C, hC⟩ := ModularFormClass.exists_petersson_le hk Γ f f
-  refine ⟨C.sqrt, fun τ ↦ (div_le_iff₀ (by positivity)).mp (Real.le_sqrt_of_sq_le ?_)⟩
+  refine ⟨C.sqrt, fun τ ↦ ?_⟩
   lift k to ℕ using hk
   specialize hC τ
+  have hC' : 0 ≤ C := le_trans (by positivity) <| (div_le_iff₀ (by positivity)).mpr hC
   have h : 0 < ‖(τ.im : ℂ) ^ (k : ℤ)‖ := mod_cast norm_pos_iff.mpr (pow_ne_zero _ τ.im_ne_zero)
-  rw [petersson, norm_mul, norm_mul, Complex.norm_conj, ← sq, ← le_div_iff₀ h, mul_div_assoc] at hC
-  rw [div_pow, div_le_iff₀ (by positivity)]
+  rw [petersson, norm_mul, norm_mul, Complex.norm_conj, ← sq, ← le_div_iff₀ h,
+    div_mul_eq_mul_div_assoc₀] at hC
+  rw [← sq_le_sq₀ (by positivity) (by positivity), mul_pow, sq_sqrt hC']
   refine hC.trans (congrArg (C * ·) ?_).le
   -- remains to show `(max τ.im (1 / τ.im)) ^ k / ‖τ.im ^ k‖ = (max 1 (1 / τ.im ^ k)) ^ 2`,
-  -- which is easier after lifting to `NNReal`
-  generalize h : τ.im = t
-  have ht : 0 < t := h ▸ τ.im_pos
-  lift t to NNReal using ht.le
-  rw [← coe_nnnorm]
-  norm_cast at ⊢ ht
-  rw [(pow_left_mono k).map_max, (pow_left_mono 2).map_max, ← max_div_div_right (by positivity)]
-  congr <;> simp [field, ht.ne']
+  -- by distributing the positive powers and the division over the maxima.
+  simp only [zpow_natCast₀, norm_pow, Complex.norm_real, Real.norm_of_nonneg τ.im_pos.le]
+  have h₁ : 0 ≤ (1 : ℝ) / τ.im := by positivity
+  have h₂ : 0 ≤ (1 : ℝ) / τ.im ^ k := by positivity
+  rw [(pow_left_monotoneOn (n := k)).map_max τ.im_pos.le h₁,
+    (pow_left_monotoneOn (n := 2)).map_max zero_le_one h₂,
+    ← max_div_div_right (by positivity)]
+  simp only [div_pow₀, one_pow, div_self, div_div₀, ← pow_two]
 
 open Complex ModularFormClass
 
@@ -433,7 +475,8 @@ This will get used twice over, once for cusp forms (with `e = k / 2`) and once f
 lemma qExpansion_coeff_isBigO_of_norm_isBigO {k : ℤ} {Γ : Subgroup (GL (Fin 2) ℝ)}
     [Γ.IsArithmetic] {F : Type*} [FunLike F ℍ ℂ] [ModularFormClass F Γ k] (f : F) (e : ℝ)
     (hF : IsBigO (comap UpperHalfPlane.im (𝓝 0)) f (fun τ ↦ τ.im ^ (-e))) :
-    (fun n ↦ (qExpansion Γ.strictWidthInfty f).coeff n) =O[atTop] fun n ↦ (n : ℝ) ^ e := by
+    (fun n ↦ (qExpansion Γ.strictWidthInfty f Γ.strictWidthInfty_pos.ne').coeff n)
+      =O[atTop] fun n ↦ (n : ℝ) ^ e := by
   let h := Γ.strictWidthInfty
   have hh : 0 < h := Γ.strictWidthInfty_pos_iff.mpr Fact.out
   have : NeZero h := ⟨hh.ne'⟩
@@ -441,26 +484,51 @@ lemma qExpansion_coeff_isBigO_of_norm_isBigO {k : ℤ} {Γ : Subgroup (GL (Fin 2
   obtain ⟨C, Cpos, hC⟩ := hF.exists_pos
   rw [isBigO_iff]
   rw [IsBigOWith, eventually_comap] at hC
-  use (1 / Real.exp (-2 * π / h)) * C
-  filter_upwards [eventually_gt_atTop 0,
-    (tendsto_inv_atTop_zero.comp tendsto_natCast_atTop_atTop).eventually hC] with n hn hn'
-  rw [ModularFormClass.qExpansion_coeff_eq_intervalIntegral (t := 1 / n) f hh hΓ _ (by positivity),
+  use (1 / Real.exp (-2 * Real.pi / ↑h)) * C
+  rw [← eventually_comap_val_iff (eventually_ne_atTop (0 : ℕ))]
+  filter_upwards [(tendsto_one_div_atTop_nhds_zero_nat (𝕜 := ℝ)).eventually hC] with n hn'
+  have hn : 0 < (n : ℕ) := Nat.pos_of_ne_zero n.2
+  let t : ℝ := 1 / ((n : ℕ) : ℝ)
+  have ht : 0 < t := by dsimp [t]; positivity
+  let z (x : ℝ) : ℂ := x + (t : ℂ) * I
+  have hz_im (x : ℝ) : (z x).im = t := by simp [z]
+  let τ (x : ℝ) : ℍ := ⟨z x, (hz_im x).symm ▸ ht⟩
+  have him (x : ℝ) : (τ x).im = t := hz_im x
+  rw [ModularFormClass.qExpansion_coeff_eq_intervalIntegral (t := t) f hh hΓ _ ht,
     ← intervalIntegral.integral_const_mul]
-  simp only [ofReal_div, ofReal_one, ofReal_natCast]
   refine intervalIntegral.norm_integral_le_integral_norm (by positivity) |>.trans ?_
-  let F (x : ℝ) : ℝ := ‖1 / ↑h * (1 / 𝕢 h ((x : ℂ) + 1 / n * I) ^ n
-      * f ⟨(x : ℂ) + 1 / n * Complex.I, by simp [hn]⟩)‖
+  let q (x : ℝ) : ℂ := Function.Periodic.qParam h (z x) hh.ne'
+  have hq (x : ℝ) : IsUnit (q x ^ (n : ℕ)) :=
+    (Function.Periodic.qParam_ne_zero (z x) hh.ne').isUnit.pow n
+  let F (x : ℝ) : ℝ :=
+    ‖1 / (h : ℂ) * (Checked.div 1 (q x ^ (n : ℕ)) (hq x) * f (τ x))‖
   have hne : ‖(n : ℝ) ^ e‖ = n ^ e := Real.norm_of_nonneg (by positivity)
-  have (x : ℝ) : F x ≤ 1 / h * (1 / Real.exp (-2 * π / h)) * (C * n ^ e) := by
-    simp only [F, norm_mul, norm_div, norm_real, norm_one, norm_pow, mul_assoc]
-    rw [Real.norm_of_nonneg hh.le, Function.Periodic.norm_qParam, ← Real.exp_nat_mul]
+  have ht_pow : ‖t ^ (-e)‖ = (n : ℝ) ^ e := by
+    rw [Real.norm_of_nonneg (Real.rpow_nonneg ht.le _)]
+    dsimp only [t]
+    have hn_unit : IsUnit ((n : ℕ) : ℝ) := (Nat.cast_ne_zero.2 n.2).isUnit
+    rw [one_div₀, Real.rpow_neg_eq_inv_rpow (hx := hn_unit.inv₀), inv_inv₀]
+  have hwidth : ‖(1 : ℂ) / (h : ℂ)‖ = (1 : ℝ) / h := by
+    simp only [Complex.norm_div, norm_one, norm_real, Real.norm_of_nonneg hh.le]
+  have hq_norm (x : ℝ) : ‖q x ^ (n : ℕ)‖ = Real.exp (-2 * Real.pi / h) := by
+    dsimp only [q]
+    rw [norm_pow, Function.Periodic.norm_qParam (h := h) (z x) hh.ne', hz_im, ← Real.exp_nat_mul]
+    congr 1
+    dsimp only [t]
+    field_simp
+  have (x : ℝ) : F x ≤ 1 / h * (1 / Real.exp (-2 * Real.pi / ↑h)) * (C * n ^ e) := by
+    have hbound : ‖f (τ x)‖ ≤ C * (n : ℝ) ^ e := by
+      simpa only [him, ht_pow] using hn' (τ x) (him x)
+    dsimp only [F]
+    rw [norm_mul, norm_mul, hwidth]
+    simp only [Complex.norm_div, norm_one, hq_norm, mul_assoc]
     gcongr
-    · simp [field]
-    · grw [hn' _ (by simp [← UpperHalfPlane.coe_im])]
-      simp [← UpperHalfPlane.coe_im, Real.rpow_neg_eq_inv_rpow, hne]
   refine (intervalIntegral.integral_mono (by positivity) ?_ ?_ this).trans (le_of_eq ?_)
-  · apply Continuous.intervalIntegrable
-    fun_prop (disch := simp [Function.Periodic.qParam_ne_zero])
+  · have hz_cont : Continuous z := by unfold z; fun_prop
+    have hτ_cont : Continuous τ := hz_cont.upperHalfPlaneMk _
+    have hq_cont : Continuous q := (Function.Periodic.continuous_qParam hh.ne').comp hz_cont
+    exact (continuous_const.mul ((continuous_const.div₀ (h₀ := hq) (hq_cont.pow _)).mul
+      ((holo f).continuous.comp hτ_cont))).norm.intervalIntegrable ..
   · exact continuous_const.intervalIntegrable ..
   · simp [field, intervalIntegral.integral_const, hne]
 
@@ -473,15 +541,19 @@ levels -- but is much easier to prove than the optimal result.
 See `CuspFormClass.qExpansion_isBigO` for a sharper bound assuming `f` is cuspidal. -/
 lemma ModularFormClass.qExpansion_isBigO {k : ℤ} (hk : 0 ≤ k) {Γ : Subgroup (GL (Fin 2) ℝ)}
     [Γ.IsArithmetic] {F : Type*} [FunLike F ℍ ℂ] [ModularFormClass F Γ k] (f : F) :
-    (fun n ↦ (qExpansion Γ.strictWidthInfty f).coeff n) =O[atTop] fun n ↦ (n : ℝ) ^ k := by
-  simp only [← Real.rpow_intCast]
+    (fun n ↦ (qExpansion Γ.strictWidthInfty f Γ.strictWidthInfty_pos.ne').coeff n)
+      =O[atTop] fun n ↦ (n : ℝ) ^ k := by
+  simp only [← Real.rpow_intCast (h := fun hneg ↦ (not_lt_of_ge hk hneg).elim)]
   apply qExpansion_coeff_isBigO_of_norm_isBigO
   obtain ⟨C, hC⟩ := exists_bound hk f
-  simp_rw [IsBigO, ← Int.cast_neg, Real.rpow_intCast, IsBigOWith, eventually_comap]
+  have hpow (τ : ℍ) : τ.im ^ (-(k : ℝ)) = 1 / τ.im ^ k := by
+    rw [← Int.cast_neg, Real.rpow_intCast (h := fun _ ↦ τ.im_ne_zero),
+      zpow_neg₀ τ.im_ne_zero, one_div₀]
+  simp_rw [IsBigO, hpow, IsBigOWith, eventually_comap]
   use C
   filter_upwards [eventually_le_nhds zero_lt_one] with _ hτ τ rfl
   refine (hC τ).trans (le_of_eq ?_)
-  rw [max_eq_right, zpow_neg, Real.norm_of_nonneg (by positivity), one_div]
+  rw [max_eq_right, Real.norm_of_nonneg (by positivity)]
   exact one_le_one_div (by positivity) (zpow_le_one₀ τ.im_pos hτ hk)
 
 /-- **Hecke's bound** for the coefficients of a cusp form: if `f` is a weight `k` modular form for
@@ -491,9 +563,9 @@ This is not optimal -- the optimal exponent is `(k - 1) / 2 + ε` for any `0 < �
 congruence levels -- but is much easier to prove than the optimal result. -/
 lemma CuspFormClass.qExpansion_isBigO {k : ℤ} {Γ : Subgroup (GL (Fin 2) ℝ)}
     [Γ.IsArithmetic] {F : Type*} [FunLike F ℍ ℂ] [CuspFormClass F Γ k] (f : F) :
-    (fun n ↦ (UpperHalfPlane.qExpansion Γ.strictWidthInfty f).coeff n)
+    (fun n ↦ (UpperHalfPlane.qExpansion Γ.strictWidthInfty f Γ.strictWidthInfty_pos.ne').coeff n)
       =O[atTop] fun n ↦ (n : ℝ) ^ ((k : ℝ) / 2) := by
   apply qExpansion_coeff_isBigO_of_norm_isBigO
   obtain ⟨C, hC⟩ := exists_bound f
   refine isBigO_of_le' (c := C) _ fun τ ↦ (hC τ).trans (of_eq ?_)
-  rw [Real.norm_of_nonneg (by positivity), Real.rpow_neg τ.im_pos.le, div_eq_mul_inv]
+  rw [Real.norm_of_nonneg (by positivity), Real.rpow_neg τ.im_pos.le, div_eq_mul_inv₀]

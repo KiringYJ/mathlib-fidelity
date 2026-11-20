@@ -893,9 +893,7 @@ noncomputable def withDensitySMulLI {f : α → ℝ≥0} (f_meas : Measurable f)
       simpa only [Ne, ENNReal.coe_eq_zero] using hx
   norm_map' := by
     intro u
-    simp only [eLpNorm, LinearMap.coe_mk, AddHom.coe_mk,
-      one_ne_zero, ENNReal.one_ne_top, ENNReal.toReal_one, ite_false, eLpNorm', ENNReal.rpow_one,
-      _root_.div_one, Lp.norm_def]
+    simp only [LinearMap.coe_mk, AddHom.coe_mk, Lp.norm_def, eLpNorm_one_eq_lintegral_enorm]
     rw [lintegral_withDensity_eq_lintegral_mul_non_measurable _ f_meas.coe_nnreal_ennreal
         (Filter.Eventually.of_forall fun x => ENNReal.coe_lt_top)]
     congr 1
@@ -1093,8 +1091,8 @@ section NormedDivisionRing
 variable {𝕜 : Type*} [NormedDivisionRing 𝕜] {f : α → 𝕜}
 
 @[fun_prop]
-theorem Integrable.div_const {f : α → 𝕜} (h : Integrable f μ) (c : 𝕜) :
-    Integrable (fun x => f x / c) μ := by simp_rw [div_eq_mul_inv, h.mul_const]
+theorem Integrable.div_const {f : α → 𝕜} (h : Integrable f μ) (c : 𝕜) {hc : IsUnit c} :
+    Integrable (fun x => f x / c) μ := by simpa only [div_eq_mul_inv₀] using h.mul_const c⁻¹
 
 end NormedDivisionRing
 

@@ -73,7 +73,7 @@ open Complex in
 lemma star_eq_inv (χ : MulChar R ℂ) : star χ = χ⁻¹ := by
   cases nonempty_fintype Rˣ
   ext1 a
-  simp only [inv_apply_eq_inv']
+  rw [star_apply, inv_apply_eq_inv χ a (ha := a.isUnit.map χ)]
   exact (inv_eq_conj <| norm_eq_one_of_mem_rootsOfUnity <| χ.apply_mem_rootsOfUnity a).symm
 
 lemma star_apply' (χ : MulChar R ℂ) (a : R) : star (χ a) = χ⁻¹ a := by

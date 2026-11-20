@@ -168,16 +168,19 @@ variable {X 𝕜 : Type*} [RCLike 𝕜] [TopologicalSpace X]
 /-- An auxiliary lemma used in the proof of `ContinuousMap.idealOfSet_ofIdeal_eq_closure` which may
 be useful on its own. -/
 theorem exists_mul_le_one_eqOn_ge (f : C(X, ℝ≥0)) {c : ℝ≥0} (hc : 0 < c) :
-    ∃ g : C(X, ℝ≥0), (∀ x : X, (g * f) x ≤ 1) ∧ {x : X | c ≤ f x}.EqOn (g * f) 1 :=
-  ⟨{  toFun := (f ⊔ const X c)⁻¹
-      continuous_toFun :=
-        ((map_continuous f).sup <| map_continuous _).inv₀ fun _ => (hc.trans_le le_sup_right).ne' },
-    fun x =>
-    (inv_mul_le_iff₀ (hc.trans_le le_sup_right)).mpr ((mul_one (f x ⊔ c)).symm ▸ le_sup_left),
-    fun x hx => by
-    simpa only [coe_const, mul_apply, coe_mk, Pi.inv_apply, Pi.sup_apply,
-      Function.const_apply, sup_eq_left.mpr (Set.mem_ofPred.mp hx), ne_eq, Pi.one_apply]
-      using inv_mul_cancel₀ (hc.trans_le hx).ne' ⟩
+    ∃ g : C(X, ℝ≥0), (∀ x : X, (g * f) x ≤ 1) ∧ {x : X | c ≤ f x}.EqOn (g * f) 1 := by
+  have hpos (x : X) : 0 < f x ⊔ c := hc.trans_le le_sup_right
+  have hu (x : X) : IsUnit (f x ⊔ c) := (hpos x).ne'.isUnit
+  have hcont : Continuous fun x ↦ f x ⊔ c := (map_continuous f).sup continuous_const
+  refine ⟨⟨fun x ↦ Checked.inv (f x ⊔ c) (hu x), hcont.fun_inv₀⟩, ?_, ?_⟩
+  · intro x
+    exact (inv_mul_le_iff₀ (hpos x)).mpr ((mul_one (f x ⊔ c)).symm ▸ le_sup_left)
+  · intro x hx
+    change Checked.inv (f x ⊔ c) (hu x) * f x = 1
+    calc
+      _ = Checked.inv (f x ⊔ c) (hu x) * (f x ⊔ c) :=
+        congrArg (Checked.inv (f x ⊔ c) (hu x) * ·) (sup_eq_left.mpr hx).symm
+      _ = 1 := inv_mul_cancel₀
 
 variable [CompactSpace X] [T2Space X]
 

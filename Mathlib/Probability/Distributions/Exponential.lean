@@ -62,7 +62,7 @@ def exponentialPDF (r : ℝ) (hr : 0 < r) (x : ℝ) : ℝ≥0∞ :=
 lemma exponentialPDF_eq {r : ℝ} (hr : 0 < r) (x : ℝ) :
     exponentialPDF r hr x = ENNReal.ofReal (if 0 ≤ x then r * exp (-(r * x)) else 0) := by
   rw [exponentialPDF, exponentialPDFReal, gammaPDFReal]
-  simp only [rpow_one, Gamma_one, div_one, sub_self, rpow_zero, mul_one]
+  simp only [rpow_one, Gamma_one, div_one₀, sub_self, rpow_zero, mul_one]
 
 lemma exponentialPDF_of_neg {r x : ℝ} (hr : 0 < r) (hx : x < 0) : exponentialPDF r hr x = 0 :=
   gammaPDF_of_neg zero_lt_one hr hx

@@ -90,11 +90,13 @@ theorem slash_action_eqn [SlashInvariantFormClass F Γ k] (f : F) (γ) (hγ : γ
 
 theorem slash_action_eqn' {k : ℤ} [Γ.HasDetOne] [SlashInvariantFormClass F Γ k]
     (f : F) {γ} (hγ : γ ∈ Γ) (z : ℍ) :
-    f (γ • z) = (γ 1 0 * z + γ 1 1) ^ k * f z := by
-  have : f (γ • z) = f z * denom γ z ^ k := by
-    simpa [slash_def, σ, mul_inv_eq_iff_eq_mul₀ (zpow_ne_zero _ (denom_ne_zero _ _)),
-      Subgroup.HasDetOne.det_eq hγ] using congr_fun (slash_action_eqn f γ hγ) z
-  rw [this, denom, mul_comm]
+    f (γ • z) = Checked.zpow (((γ 1 0 : ℝ) : ℂ) * (z : ℂ) + ((γ 1 1 : ℝ) : ℂ)) k
+      (fun _ ↦ isUnit_denom γ z) * f z := by
+  have hd := isUnit_denom γ z
+  have h : f (γ • z) * denom γ z ^ (-k) = f z := by
+    simpa [slash_def, σ, Subgroup.HasDetOne.det_eq hγ] using congr_fun (slash_action_eqn f γ hγ) z
+  rw [zpow_neg₀ hd.ne_zero, mul_inv_eq_iff_eq_mul₀ (hb := hd.zpow₀ k)] at h
+  exact h.trans (mul_comm _ _)
 
 /-- Every `SlashInvariantForm` `f` satisfies ` f (γ • z) = (denom γ z) ^ k * f z`. -/
 theorem slash_action_eqn'' {k : ℤ} [Γ.HasDetOne] [SlashInvariantFormClass F Γ k]
@@ -106,7 +108,8 @@ theorem slash_action_eqn'' {k : ℤ} [Γ.HasDetOne] [SlashInvariantFormClass F �
 theorem slash_action_eqn_SL'' {k : ℤ} {Γ : Subgroup SL(2, ℤ)} [SlashInvariantFormClass F Γ k]
     (f : F) {γ} (hγ : γ ∈ Γ) (z : ℍ) :
     f (γ • z) = (denom γ z) ^ k * f z :=
-  SlashInvariantForm.slash_action_eqn' f (by simpa using hγ) z
+  SlashInvariantForm.slash_action_eqn' (Γ := Γ.map (Matrix.SpecialLinearGroup.mapGL ℝ)) f
+    ⟨γ, hγ, rfl⟩ z
 
 
 instance [SlashInvariantFormClass F Γ k] : CoeTC F (SlashInvariantForm Γ k) :=

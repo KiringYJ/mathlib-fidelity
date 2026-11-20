@@ -198,8 +198,15 @@ theorem isLittleO_pow_mul_exp {b₁ b₂ : ℝ} (hl : IsExpCmpFilter l) (hb : b�
 integer `b₁ < b₂`, we have
 `(fun z ↦ z ^ a₁ * exp (b₁ * z)) =o[l] (fun z ↦ z ^ a₂ * exp (b₂ * z))`. -/
 theorem isLittleO_zpow_mul_exp {b₁ b₂ : ℝ} (hl : IsExpCmpFilter l) (hb : b₁ < b₂) (m n : ℤ) :
-    (fun z => z ^ m * exp (b₁ * z)) =o[l] fun z => z ^ n * exp (b₂ * z) := by
-  simpa only [cpow_intCast] using hl.isLittleO_cpow_mul_exp hb m n
+    (fun z : {z : ℂ // (m < 0 ∨ n < 0) → IsUnit z} ↦
+      Checked.zpow z.val m (fun hm ↦ z.property (.inl hm)) * exp (b₁ * z.val))
+      =o[comap Subtype.val l] fun z ↦
+        Checked.zpow z.val n (fun hn ↦ z.property (.inr hn)) * exp (b₂ * z.val) := by
+  have hval : Tendsto (Subtype.val : {z : ℂ // (m < 0 ∨ n < 0) → IsUnit z} → ℂ)
+      (comap Subtype.val l) l := tendsto_comap
+  refine ((hl.isLittleO_cpow_mul_exp hb m n).comp_tendsto hval).congr (fun z ↦ ?_) (fun z ↦ ?_)
+  · rw [Function.comp_apply, cpow_intCast _ _ (h := fun hm ↦ (z.property (.inl hm)).ne_zero)]
+  · rw [Function.comp_apply, cpow_intCast _ _ (h := fun hn ↦ (z.property (.inr hn)).ne_zero)]
 
 end IsExpCmpFilter
 

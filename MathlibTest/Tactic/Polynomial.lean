@@ -43,7 +43,9 @@ example : Polynomial.map (algebraMap R A) (C r₁ * X) = C a₁ * X := by
   guard_target = C ((algebraMap R A) r₁) * X = C a₁ * X
   apply sorryPolynomialTest
 
-example {P : ℚ[X] → Prop} (h : P (X ^ 2 + X + C 4⁻¹)) : P ((X + C 2⁻¹) ^ 2) := by
+example {P : ℚ[X] → Prop}
+    (h : P (X ^ 2 + X + C (Checked.inv (4 : ℚ) (by exact (by decide : (4 : ℚ) ≠ 0).isUnit)))) :
+    P ((X + C (Checked.inv (2 : ℚ) (by exact (by decide : (2 : ℚ) ≠ 0).isUnit))) ^ 2) := by
   polynomial_nf at h ⊢
   exact h
 

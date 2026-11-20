@@ -171,7 +171,8 @@ theorem neg_rotation (θ : Real.Angle) (x : V) : -o.rotation θ x = o.rotation (
 @[simp]
 theorem neg_rotation_neg_pi_div_two (x : V) :
     -o.rotation (-π / 2 : ℝ) x = o.rotation (π / 2 : ℝ) x := by
-  rw [neg_rotation, ← Real.Angle.coe_add, neg_div, ← sub_eq_add_neg, sub_half]
+  have h : π + -π / (2 : ℝ) = π / 2 := by ring
+  rw [neg_rotation, ← Real.Angle.coe_add, h]
 
 /-- Negating a rotation by π / 2 is equivalent to rotation by -π / 2. -/
 theorem neg_rotation_pi_div_two (x : V) : -o.rotation (π / 2 : ℝ) x = o.rotation (-π / 2 : ℝ) x :=
@@ -284,7 +285,7 @@ theorem oangle_eq_iff_eq_norm_div_norm_smul_rotation_of_ne_zero {x y : V} (hx : 
   · rintro rfl
     rw [← map_smul, ← o.oangle_smul_left_of_pos x y hp, eq_comm,
       rotation_oangle_eq_iff_norm_eq, norm_smul, Real.norm_of_nonneg hp.le,
-      div_mul_cancel₀ _ (norm_ne_zero_iff.2 hx)]
+      div_mul_cancel₀ _ (hb := (norm_ne_zero_iff.2 hx).isUnit)]
   · intro hye
     rw [hye, o.oangle_smul_right_of_pos _ _ hp, o.oangle_rotation_self_right hx]
 
@@ -304,13 +305,19 @@ is the first rotated by `θ` and scaled by the ratio of the norms, or `θ` and a
 vectors are zero. -/
 theorem oangle_eq_iff_eq_norm_div_norm_smul_rotation_or_eq_zero {x y : V} (θ : Real.Angle) :
     o.oangle x y = θ ↔
-      x ≠ 0 ∧ y ≠ 0 ∧ y = (‖y‖ / ‖x‖) • o.rotation θ x ∨ θ = 0 ∧ (x = 0 ∨ y = 0) := by
+      (∃ hx : x ≠ 0, y ≠ 0 ∧
+        y = Checked.div ‖y‖ ‖x‖ (norm_ne_zero_iff.2 hx).isUnit • o.rotation θ x) ∨
+        θ = 0 ∧ (x = 0 ∨ y = 0) := by
   by_cases hx : x = 0
   · simp [hx, eq_comm]
   · by_cases hy : y = 0
     · simp [hy, eq_comm]
     · rw [o.oangle_eq_iff_eq_norm_div_norm_smul_rotation_of_ne_zero hx hy]
-      simp [hx, hy]
+      exact ⟨fun h ↦ Or.inl ⟨hx, hy, h⟩, fun h ↦ by
+        rcases h with ⟨_, _, h⟩ | ⟨_, h | h⟩
+        · exact h
+        · exact (hx h).elim
+        · exact (hy h).elim⟩
 
 /-- The angle between two vectors is `θ` if and only if they are nonzero and the second vector
 is the first rotated by `θ` and scaled by a positive real, or `θ` and at least one of the

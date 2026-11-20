@@ -51,14 +51,12 @@ open Real MeasureTheory
 private lemma monotoneOn_nnrpow_Ioo {p : ℝ≥0} (hp : p ∈ Ioo 0 1) :
     MonotoneOn (fun a : A => a ^ p) (Ici 0) := by
   obtain ⟨μ, hμ⟩ := CFC.exists_measure_nnrpow_eq_integral_cfcₙ_rpowIntegrand₀₁ A hp
-  have h₃' : (Ici 0).EqOn (fun a : A => a ^ p)
-      (fun a : A => ∫ t in Ioi 0, cfcₙ (rpowIntegrand₀₁ p t) a ∂μ) :=
-    fun a ha => (hμ a ha).2
-  refine MonotoneOn.congr ?_ h₃'.symm
-  refine integral_monotoneOn_of_integrand_ae ?_ fun a ha => (hμ a ha).1
-  filter_upwards [ae_restrict_mem measurableSet_Ioi] with t ht
-  exact monotoneOn_cfcₙ_rpowIntegrand₀₁ hp ht
-
+  intro a ha b hb hab
+  change a ^ p ≤ b ^ p
+  rw [(hμ a ha).2, (hμ b hb).2]
+  apply integral_mono_ae (hμ a ha).1 (hμ b hb).1
+  exact .of_forall fun t ↦ monotone_cfcₙ_rpowIntegrand₀₁ (p : ℝ) t
+    (a := ⟨a, ha⟩) (b := ⟨b, hb⟩) hab
 /-- `a ↦ a ^ p` is operator monotone for `p ∈ [0,1]`. -/
 lemma monotone_nnrpow {p : ℝ≥0} (hp : p ∈ Icc 0 1) :
     Monotone (fun a : A => a ^ p) := by
@@ -93,14 +91,20 @@ lemma sqrt_le_sqrt (a b : A) (hab : a ≤ b) : sqrt a ≤ sqrt b :=
 private lemma concaveOn_nnrpow_Ioo {p : ℝ≥0} (hp : p ∈ Ioo 0 1) :
     ConcaveOn ℝ (Ici (0 : A)) (fun a : A => a ^ p) := by
   obtain ⟨μ, hμ⟩ := CFC.exists_measure_nnrpow_eq_integral_cfcₙ_rpowIntegrand₀₁ A hp
-  have h₃' : (Ici 0).EqOn (fun a : A => a ^ p)
-      (fun a : A => ∫ t in Ioi 0, cfcₙ (rpowIntegrand₀₁ p t) a ∂μ) :=
-    fun a ha => (hμ a ha).2
-  refine ConcaveOn.congr ?_ h₃'.symm
-  refine integral_concaveOn_of_integrand_ae (convex_Ici _) ?_ fun a ha => (hμ a ha).1
-  filter_upwards [ae_restrict_mem measurableSet_Ioi] with t ht
-  exact concaveOn_cfcₙ_rpowIntegrand₀₁ hp ht
-
+  have heq : (Ici 0).EqOn (fun a : A ↦ a ^ p)
+      (fun a : A ↦ ∫ t, cfcₙ (NNReal.rpowIntegrand₀₁ p t) a ∂μ) :=
+    fun a ha ↦ (hμ a ha).2
+  refine ConcaveOn.congr ?_ heq.symm
+  refine integral_concaveOn_of_integrand_ae (convex_Ici _) ?_ fun a ha ↦ (hμ a ha).1
+  apply Filter.Eventually.of_forall
+  intro t
+  apply concaveOn_iff.mpr
+  refine ⟨convex_Ici _, ?_⟩
+  intro x hx y hy a b ha hb hab
+  exact (concaveOn_cfcₙ_rpowIntegrand₀₁ (A := A) (p : ℝ) t).2
+    (x := ⟨x, hx⟩) (y := ⟨y, hy⟩) (by trivial) (by trivial) ha hb hab
+    (z := ⟨a • x + b • y, add_nonneg (smul_nonneg ha hx) (smul_nonneg hb hy)⟩)
+    (by trivial) rfl
 /-- `a ↦ a ^ p` is operator concave for `p ∈ [0,1]`. -/
 lemma concaveOn_nnrpow {p : ℝ≥0} (hp : p ∈ Icc 0 1) :
     ConcaveOn ℝ (Ici (0 : A)) (fun a : A => a ^ p) := by

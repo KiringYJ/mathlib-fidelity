@@ -33,7 +33,7 @@ theorem eLpNorm'_le_nnreal_smul_eLpNorm'_of_ae_le_mul {f : α → F} {g : α →
   simp_rw [eLpNorm'_eq_lintegral_enorm]
   rw [← ENNReal.rpow_le_rpow_iff hp, ENNReal.smul_def, smul_eq_mul,
     ENNReal.mul_rpow_of_nonneg _ _ hp.le]
-  simp_rw [← ENNReal.rpow_mul, one_div, inv_mul_cancel₀ hp.ne', ENNReal.rpow_one, enorm,
+  simp_rw [← ENNReal.rpow_mul, one_div₀, inv_mul_cancel₀, ENNReal.rpow_one, enorm,
     ← ENNReal.coe_rpow_of_nonneg _ hp.le, ← lintegral_const_mul' _ _ ENNReal.coe_ne_top,
     ← ENNReal.coe_mul]
   apply lintegral_mono_ae
@@ -48,7 +48,7 @@ theorem eLpNorm'_le_nnreal_smul_eLpNorm'_of_ae_le_mul' {f : α → ε} {g : α �
   simp_rw [eLpNorm'_eq_lintegral_enorm]
   rw [← ENNReal.rpow_le_rpow_iff hp, ENNReal.smul_def, smul_eq_mul,
     ENNReal.mul_rpow_of_nonneg _ _ hp.le]
-  simp_rw [← ENNReal.rpow_mul, one_div, inv_mul_cancel₀ hp.ne', ENNReal.rpow_one,
+  simp_rw [← ENNReal.rpow_mul, one_div₀, inv_mul_cancel₀, ENNReal.rpow_one,
     ← ENNReal.coe_rpow_of_nonneg _ hp.le, ← lintegral_const_mul' _ _ ENNReal.coe_ne_top]
   apply lintegral_mono_ae
   have aux (x) : (↑c) ^ p * ‖g x‖ₑ ^ p = (↑c * ‖g x‖ₑ) ^ p := by
@@ -68,7 +68,7 @@ theorem eLpNorm'_le_mul_eLpNorm'_of_ae_le_mul {f : α → ε} {c : ℝ≥0∞} {
   by_cases hc : c = ⊤
   · by_cases hg' : eLpNorm' g p μ = 0
     · have : ∀ᵐ (x : α) ∂μ, ‖g x‖ₑ = 0 := by
-        simp only [eLpNorm'_eq_lintegral_enorm, one_div, ENNReal.rpow_eq_zero_iff, inv_pos, hp,
+        simp only [eLpNorm'_eq_lintegral_enorm, one_div₀, ENNReal.rpow_eq_zero_iff, inv_pos, hp,
           and_true, inv_neg'', hp', and_false, or_false] at hg'
         rw [MeasureTheory.lintegral_eq_zero_iff' (by fun_prop)] at hg'
         exact hg'.mono fun x hx ↦ by simpa [hp, hp'] using hx
@@ -78,7 +78,7 @@ theorem eLpNorm'_le_mul_eLpNorm'_of_ae_le_mul {f : α → ε} {c : ℝ≥0∞} {
   have : c ^ p ≠ ⊤ := by simp [hp.le, hc]
   simp_rw [eLpNorm'_eq_lintegral_enorm]
   rw [← ENNReal.rpow_le_rpow_iff hp, ENNReal.mul_rpow_of_nonneg _ _ hp.le]
-  simp_rw [← ENNReal.rpow_mul, one_div, inv_mul_cancel₀ hp.ne', ENNReal.rpow_one,
+  simp_rw [← ENNReal.rpow_mul, one_div₀, inv_mul_cancel₀, ENNReal.rpow_one,
     ← lintegral_const_mul' _ _ this]
   apply lintegral_mono_ae
   have aux (x) : (↑c) ^ p * ‖g x‖ₑ ^ p = (↑c * ‖g x‖ₑ) ^ p := by
@@ -169,7 +169,7 @@ theorem eLpNorm_le_mul_eLpNorm_of_ae_le_mul'' {f : α → ε} {c : ℝ≥0∞} {
     eLpNorm f p μ ≤ c * eLpNorm g p μ := by
   by_cases h₀ : p = 0
   · simp [h₀]
-  simp only [eLpNorm, h₀, ↓reduceIte, mul_ite]
+  simp only [eLpNorm, h₀, ↓reduceDIte]
   by_cases hp' : p = ⊤
   · simpa [hp'] using eLpNormEssSup_le_nnreal_smul_eLpNormEssSup_of_ae_le_mul' h
   · simpa [hp'] using eLpNorm'_le_mul_eLpNorm'_of_ae_le_mul hg h (ENNReal.toReal_pos h₀ hp')
@@ -201,11 +201,11 @@ end Monotonicity
 
 theorem le_eLpNorm_of_bddBelow (hp : p ≠ 0) (hp' : p ≠ ∞) {f : α → F} (C : ℝ≥0) {s : Set α}
     (hs : MeasurableSet s) (hf : ∀ᵐ x ∂μ, x ∈ s → C ≤ ‖f x‖₊) :
-    C • μ s ^ (1 / p.toReal) ≤ eLpNorm f p μ := by
+    C • μ s ^ Checked.div 1 p.toReal (ENNReal.toReal_pos hp hp').ne'.isUnit ≤ eLpNorm f p μ := by
   rw [ENNReal.smul_def, smul_eq_mul, eLpNorm_eq_lintegral_rpow_enorm_toReal hp hp',
-    one_div, ENNReal.le_rpow_inv_iff (ENNReal.toReal_pos hp hp'),
+    one_div₀, ENNReal.le_rpow_inv_iff (ENNReal.toReal_pos hp hp'),
     ENNReal.mul_rpow_of_nonneg _ _ ENNReal.toReal_nonneg, ← ENNReal.rpow_mul,
-    inv_mul_cancel₀ (ENNReal.toReal_pos hp hp').ne', ENNReal.rpow_one, ← setLIntegral_const,
+    inv_mul_cancel₀, ENNReal.rpow_one, ← setLIntegral_const,
     ← lintegral_indicator hs]
   refine lintegral_mono_ae ?_
   filter_upwards [hf] with x hx

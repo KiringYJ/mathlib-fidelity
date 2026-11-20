@@ -442,6 +442,8 @@ instance inhabitedPrimes : Inhabited Primes :=
 instance coeNat : Coe Nat.Primes ℕ :=
   ⟨Subtype.val⟩
 
+instance (p : Primes) : NeZero (p : ℕ) := ⟨p.property.ne_zero⟩
+
 theorem coe_nat_injective : Function.Injective ((↑) : Nat.Primes → ℕ) :=
   Subtype.coe_injective
 

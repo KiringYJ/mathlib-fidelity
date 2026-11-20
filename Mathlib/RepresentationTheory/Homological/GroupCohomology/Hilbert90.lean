@@ -133,30 +133,29 @@ that `N_{L/K}(x) = 1`, and a generator `g` of `Gal(L/K)`, there exists `y : Lˣ`
 such that `y/g y = x`. -/
 theorem exists_div_of_norm_eq_one (hg : ∀ x, x ∈ Subgroup.zpowers g) {x : L}
     (hx : Algebra.norm K x = 1) : ∃ y : Lˣ, y / g y = x := by
-  suffices H : ∀ x, Algebra.norm K x = 1 → ∃ y : Lˣ, g y / y = x by
-    have hxinv : Algebra.norm K x⁻¹ = 1 := by simp [Algebra.norm_inv, hx]
-    obtain ⟨y, hy⟩ := H _ hxinv
-    use y
-    rw [IsUnit.div_eq_iff y.isUnit] at hy
-    rw [hy]
-    field_simp
-  intro x hx
-  let xu : Lˣ := (Algebra.norm_ne_zero_iff.1 <| hx ▸ zero_ne_one.symm).isUnit.unit
-  have hx' : algebraMap K L (Algebra.norm K (xu : L)) = _ := congrArg (algebraMap K L) hx
+  have hx₀ : x ≠ 0 := Algebra.norm_ne_zero_iff.1 (by rw [hx]; exact one_ne_zero)
+  let xu : Lˣ := Units.mk0 x hx₀
+  have hx' : algebraMap K L (Algebra.norm K (xu : L)) = algebraMap K L 1 :=
+    congrArg (algebraMap K L) hx
   rw [← norm_ofAlgebraAutOnUnits_eq xu, map_one] at hx'
   have := FiniteCyclicGroup.groupCohomologyπOdd_eq_zero_iff (ofAlgebraAutOnUnits K L) g hg
     1 (by simp) ⟨toAdditive.symm <| ofMul xu, by simp_all⟩
   rcases this.1 (Subsingleton.elim (α := groupCohomology.H1 (Rep.ofAlgebraAutOnUnits K L)) _ _)
     with ⟨y, hy⟩
-  use toMul <| toAdditive y
-  have := Units.ext_iff.1 congr(toMul <| toAdditive $hy)
-  simp only [sub_hom, hom_id,
-    Representation.IntertwiningMap.sub_toLinearMap, Representation.IntertwiningMap.toLinearMap_id,
-    LinearMap.sub_apply, Representation.IntertwiningMap.coe_toLinearMap, applyAsHom_apply,
-    LinearMap.id_coe, id_eq,
-    toAdditive_symm_apply, toAdditive_apply, toMul_ofMul, IsUnit.unit_spec, xu] at this
-  rw [← this, toMul_sub]
-  simp
+  let v : Lˣ := toMul (toAdditive y)
+  let σ : Lˣ →* Lˣ := Units.map (g : L →* L)
+  have hv : σ v / v = xu := by
+    have he := congr(toMul <| toAdditive $hy)
+    simp only [sub_hom, hom_id, Representation.IntertwiningMap.sub_toLinearMap,
+      Representation.IntertwiningMap.toLinearMap_id, LinearMap.sub_apply,
+      Representation.IntertwiningMap.coe_toLinearMap, applyAsHom_apply,
+      LinearMap.id_coe, id_eq, toAdditive_symm_apply, toAdditive_apply, toMul_ofMul] at he
+    change toMul (ofMul (σ v) - ofMul v) = xu at he
+    rwa [toMul_sub, toMul_ofMul, toMul_ofMul] at he
+  refine ⟨v⁻¹, div_eq_iff_mul_eq.mpr ?_⟩
+  have hmul : xu * σ (v⁻¹) = v⁻¹ := by
+    rw [← hv, map_inv, div_eq_mul_inv, mul_right_comm, mul_inv_cancel, one_mul]
+  exact congrArg (fun u : Lˣ ↦ (u : L)) hmul
 
 variable {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] [Algebra A L] [Algebra A K]
 variable [Algebra B L] [IsScalarTower A B L] [IsScalarTower A K L] [IsFractionRing A K] [IsDomain A]
@@ -176,7 +175,6 @@ lemma exists_mul_galRestrict_of_norm_eq_one (hg : ∀ x, x ∈ Subgroup.zpowers 
     exact (algebraMap K L).injective.comp (IsFractionRing.injective A K)
   have : IsLocalization (Algebra.algebraMapSubmonoid B A⁰) L :=
     IsIntegralClosure.isLocalization A K L B
-  let η' : Lˣ := Units.mk0 (algebraMap B L η) (fun h ↦ by simp [h] at hη)
   obtain ⟨ε, hε⟩ := exists_div_of_norm_eq_one hg hη
   obtain ⟨a, b, h⟩ := IsLocalization.exists_mk'_eq (Algebra.algebraMapSubmonoid B A⁰) ε.1
   obtain ⟨t, ht, ht'⟩ := b.prop
@@ -184,21 +182,15 @@ lemma exists_mul_galRestrict_of_norm_eq_one (hg : ∀ x, x ∈ Subgroup.zpowers 
     rw [Algebra.smul_def, IsScalarTower.algebraMap_apply A B L, ht', IsLocalization.mk'_spec']
   refine ⟨a, ?_, ?_⟩
   · rintro rfl
-    simp only [IsLocalization.mk'_zero, _root_.map_zero, div_zero, ← h] at hε
-    rw [← hε, Algebra.norm_zero] at hη
-    exact zero_ne_one hη
-  · replace hε := hε.symm
-    rw [← h, eq_div_iff_mul_eq] at hε
-    · replace hε := congr_arg (t • ·) hε
-      rw [Algebra.smul_def, mul_left_comm, ← Algebra.smul_def t, ← g.toAlgHom_apply,
-        ← AlgHom.map_smul_of_tower, this] at hε
-      apply IsIntegralClosure.algebraMap_injective B A L
-      rw [map_mul, ← hε]
-      congr 1
-      exact algebraMap_galRestrictHom_apply A K L B g a
-    · intro e
-      rw [(map_eq_zero _).mp e, zero_div] at hε
-      rw [hε, Algebra.norm_zero] at hη
-      exact zero_ne_one hη
+    exact ε.ne_zero (by simpa only [IsLocalization.mk'_zero] using h.symm)
+  · have hmul := div_eq_iff_mul_eq.mp hε
+    rw [← h] at hmul
+    replace hmul := congrArg (t • ·) hmul
+    rw [Algebra.smul_def, mul_left_comm, ← Algebra.smul_def t, ← g.toAlgHom_apply,
+      ← AlgHom.map_smul_of_tower, this] at hmul
+    apply IsIntegralClosure.algebraMap_injective B A L
+    rw [map_mul, ← hmul]
+    congr 1
+    exact algebraMap_galRestrictHom_apply A K L B g a
 
 end groupCohomology

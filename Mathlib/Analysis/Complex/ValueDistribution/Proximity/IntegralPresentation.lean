@@ -175,7 +175,7 @@ theorem circleAverage_circleAverage_eq_proximity_top (h : Meromorphic f) :
       rw [MeasureTheory.intervalIntegral_intervalIntegral_swap]
       exact Cartan.integrableOn_cartanKernel h
     _ = (2 * π)⁻¹ * ∫ β in 0..2 * π, ((2 * π)⁻¹ * ∫ α in 0..2 * π, F α β) := by
-      simp [mul_comm, mul_left_comm, mul_assoc]
+      simp [mul_comm, mul_left_comm]
     _ = (2 * π)⁻¹ * ∫ β in 0..2 * π, log⁺ ‖f (circleMap 0 R β)‖ := by
       congr 1
       apply intervalIntegral.integral_congr

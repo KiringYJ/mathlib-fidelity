@@ -23,35 +23,47 @@ open Set
 
 namespace Real
 
+-- Outside the open interval, arcsin is locally constant except at the two endpoints,
+-- where its derivative is undefined and `deriv` has its usual value zero.
+set_option quotPrecheck false in
+local notation "arcsinDerivative" => (fun x : ℝ ↦
+  if hx : x ∈ Ioo (-1 : ℝ) 1 then
+    Checked.div 1 √(1 - x ^ 2)
+      (sqrt_pos.mpr (sub_pos.mpr ((sq_lt_one_iff_abs_lt_one x).mpr (abs_lt.mpr hx)))).ne'.isUnit
+  else 0)
+
 section Arcsin
 
 theorem deriv_arcsin_aux {x : ℝ} (h₁ : x ≠ -1) (h₂ : x ≠ 1) :
-    HasStrictDerivAt arcsin (1 / √(1 - x ^ 2)) x ∧ ContDiffAt ℝ ω arcsin x := by
+    HasStrictDerivAt arcsin (arcsinDerivative x) x ∧ ContDiffAt ℝ ω arcsin x := by
   rcases h₁.lt_or_gt with h₁ | h₁
-  · have : 1 - x ^ 2 < 0 := by nlinarith [h₁]
-    rw [sqrt_eq_zero'.2 this.le, div_zero]
+  · simp only [dite_eq_right (show x ∉ Ioo (-1 : ℝ) 1 from fun hx ↦ h₁.not_gt hx.1)]
     have : arcsin =ᶠ[𝓝 x] fun _ => -(π / 2) :=
       (gt_mem_nhds h₁).mono fun y hy => arcsin_of_le_neg_one hy.le
     exact ⟨(hasStrictDerivAt_const x _).congr_of_eventuallyEq this.symm,
       contDiffAt_const.congr_of_eventuallyEq this⟩
   rcases h₂.lt_or_gt with h₂ | h₂
   · have : 0 < √(1 - x ^ 2) := sqrt_pos.2 (by nlinarith [h₁, h₂])
-    simp only [← cos_arcsin, one_div] at this ⊢
-    exact ⟨sinPartialHomeomorph.hasStrictDerivAt_symm ⟨h₁, h₂⟩ this.ne' (hasStrictDerivAt_sin _),
-      sinPartialHomeomorph.contDiffAt_symm_deriv this.ne' ⟨h₁, h₂⟩ (hasDerivAt_sin _)
-        contDiff_sin.contDiffAt⟩
-  · have : 1 - x ^ 2 < 0 := by nlinarith [h₂]
-    rw [sqrt_eq_zero'.2 this.le, div_zero]
+    have hx : x ∈ Ioo (-1 : ℝ) 1 := ⟨h₁, h₂⟩
+    have hc : cos (arcsin x) ≠ 0 := cos_arcsin x ▸ this.ne'
+    have hd := sinPartialHomeomorph.hasStrictDerivAt_symm hx hc (hasStrictDerivAt_sin _)
+    refine ⟨?_, sinPartialHomeomorph.contDiffAt_symm_deriv hc hx (hasDerivAt_sin _)
+      contDiff_sin.contDiffAt⟩
+    simp only [dite_eq_left hx, one_div₀]
+    convert hd using 1
+    · rfl
+    · exact inv_inj₀.mpr (cos_arcsin x).symm
+  · simp only [dite_eq_right (show x ∉ Ioo (-1 : ℝ) 1 from fun hx ↦ h₂.not_gt hx.2)]
     have : arcsin =ᶠ[𝓝 x] fun _ => π / 2 := (lt_mem_nhds h₂).mono fun y hy => arcsin_of_one_le hy.le
     exact ⟨(hasStrictDerivAt_const x _).congr_of_eventuallyEq this.symm,
       contDiffAt_const.congr_of_eventuallyEq this⟩
 
 theorem hasStrictDerivAt_arcsin {x : ℝ} (h₁ : x ≠ -1) (h₂ : x ≠ 1) :
-    HasStrictDerivAt arcsin (1 / √(1 - x ^ 2)) x :=
+    HasStrictDerivAt arcsin (arcsinDerivative x) x :=
   (deriv_arcsin_aux h₁ h₂).1
 
 theorem hasDerivAt_arcsin {x : ℝ} (h₁ : x ≠ -1) (h₂ : x ≠ 1) :
-    HasDerivAt arcsin (1 / √(1 - x ^ 2)) x :=
+    HasDerivAt arcsin (arcsinDerivative x) x :=
   (hasStrictDerivAt_arcsin h₁ h₂).hasDerivAt
 
 theorem contDiffAt_arcsin {x : ℝ} (h₁ : x ≠ -1) (h₂ : x ≠ 1) {n : ℕ∞ω} :
@@ -59,14 +71,14 @@ theorem contDiffAt_arcsin {x : ℝ} (h₁ : x ≠ -1) (h₂ : x ≠ 1) {n : ℕ�
   (deriv_arcsin_aux h₁ h₂).2.of_le le_top
 
 theorem hasDerivWithinAt_arcsin_Ici {x : ℝ} (h : x ≠ -1) :
-    HasDerivWithinAt arcsin (1 / √(1 - x ^ 2)) (Ici x) x := by
+    HasDerivWithinAt arcsin (arcsinDerivative x) (Ici x) x := by
   rcases eq_or_ne x 1 with (rfl | h')
   · convert! (hasDerivWithinAt_const (1 : ℝ) _ (π / 2)).congr _ _ <;>
       simp +contextual [arcsin_of_one_le]
   · exact (hasDerivAt_arcsin h h').hasDerivWithinAt
 
 theorem hasDerivWithinAt_arcsin_Iic {x : ℝ} (h : x ≠ 1) :
-    HasDerivWithinAt arcsin (1 / √(1 - x ^ 2)) (Iic x) x := by
+    HasDerivWithinAt arcsin (arcsinDerivative x) (Iic x) x := by
   rcases em (x = -1) with (rfl | h')
   · convert! (hasDerivWithinAt_const (-1 : ℝ) _ (-(π / 2))).congr _ _ <;>
       simp +contextual [arcsin_of_le_neg_one]
@@ -94,8 +106,7 @@ theorem differentiableAt_arcsin {x : ℝ} : DifferentiableAt ℝ arcsin x ↔ x 
     fun h => (hasDerivAt_arcsin h.1 h.2).differentiableAt⟩
 
 @[simp]
-theorem deriv_arcsin : deriv arcsin = fun x => 1 / √(1 - x ^ 2) := by
-  funext x
+theorem deriv_arcsin (x : ℝ) : deriv arcsin x = arcsinDerivative x := by
   by_cases h : x ≠ -1 ∧ x ≠ 1
   · exact (hasDerivAt_arcsin h.1 h.2).deriv
   · rw [deriv_zero_of_not_differentiableAt (mt differentiableAt_arcsin.1 h)]
@@ -120,11 +131,11 @@ end Arcsin
 section Arccos
 
 theorem hasStrictDerivAt_arccos {x : ℝ} (h₁ : x ≠ -1) (h₂ : x ≠ 1) :
-    HasStrictDerivAt arccos (-(1 / √(1 - x ^ 2))) x :=
+    HasStrictDerivAt arccos (-(arcsinDerivative x)) x :=
   (hasStrictDerivAt_arcsin h₁ h₂).const_sub (π / 2)
 
 theorem hasDerivAt_arccos {x : ℝ} (h₁ : x ≠ -1) (h₂ : x ≠ 1) :
-    HasDerivAt arccos (-(1 / √(1 - x ^ 2))) x :=
+    HasDerivAt arccos (-(arcsinDerivative x)) x :=
   (hasDerivAt_arcsin h₁ h₂).const_sub (π / 2)
 
 theorem contDiffAt_arccos {x : ℝ} (h₁ : x ≠ -1) (h₂ : x ≠ 1) {n : ℕ∞ω} :
@@ -132,11 +143,11 @@ theorem contDiffAt_arccos {x : ℝ} (h₁ : x ≠ -1) (h₂ : x ≠ 1) {n : ℕ�
   contDiffAt_const.sub (contDiffAt_arcsin h₁ h₂)
 
 theorem hasDerivWithinAt_arccos_Ici {x : ℝ} (h : x ≠ -1) :
-    HasDerivWithinAt arccos (-(1 / √(1 - x ^ 2))) (Ici x) x :=
+    HasDerivWithinAt arccos (-(arcsinDerivative x)) (Ici x) x :=
   (hasDerivWithinAt_arcsin_Ici h).const_sub _
 
 theorem hasDerivWithinAt_arccos_Iic {x : ℝ} (h : x ≠ 1) :
-    HasDerivWithinAt arccos (-(1 / √(1 - x ^ 2))) (Iic x) x :=
+    HasDerivWithinAt arccos (-(arcsinDerivative x)) (Iic x) x :=
   (hasDerivWithinAt_arcsin_Iic h).const_sub _
 
 theorem differentiableWithinAt_arccos_Ici {x : ℝ} :
@@ -151,8 +162,8 @@ theorem differentiableAt_arccos {x : ℝ} : DifferentiableAt ℝ arccos x ↔ x 
   (differentiableAt_const _).sub_iff_right.trans differentiableAt_arcsin
 
 @[simp]
-theorem deriv_arccos : deriv arccos = fun x => -(1 / √(1 - x ^ 2)) :=
-  funext fun x => (deriv_const_sub _).trans <| by simp only [deriv_arcsin]
+theorem deriv_arccos (x : ℝ) : deriv arccos x = -(arcsinDerivative x) :=
+  (deriv_const_sub _).trans (congrArg Neg.neg (deriv_arcsin x))
 
 theorem differentiableOn_arccos : DifferentiableOn ℝ arccos {-1, 1}ᶜ :=
   differentiableOn_arcsin.const_sub _

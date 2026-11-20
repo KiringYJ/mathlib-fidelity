@@ -86,8 +86,10 @@ lemma eLpNormEssSup_indicator_const_eq (s : Set α) (c : ε) (hμs : μ s ≠ 0)
   rw [Set.mem_ofPred_eq, Set.indicator_of_mem hx_mem]
 
 lemma eLpNorm_indicator_const₀ (hs : NullMeasurableSet s μ) (hp : p ≠ 0) (hp_top : p ≠ ∞) :
-    eLpNorm (s.indicator fun _ => c) p μ = ‖c‖ₑ * μ s ^ (1 / p.toReal) :=
+    eLpNorm (s.indicator fun _ => c) p μ = ‖c‖ₑ * μ s ^ (1 / p).toReal := by
   have hp_pos : 0 < p.toReal := ENNReal.toReal_pos hp hp_top
+  have hpUnit : IsUnit p.toReal := hp_pos.ne'.isUnit
+  rw [show (1 / p).toReal = 1 / p.toReal by simp [ENNReal.toReal_inv (ha := hpUnit)]]
   calc
     eLpNorm (s.indicator fun _ => c) p μ
       = (∫⁻ x, (‖(s.indicator fun _ ↦ c) x‖ₑ ^ p.toReal) ∂μ) ^ (1 / p.toReal) :=
@@ -98,35 +100,33 @@ lemma eLpNorm_indicator_const₀ (hs : NullMeasurableSet s μ) (hp : p ≠ 0) (h
       simp [hp_pos]
     _ = ‖c‖ₑ * μ s ^ (1 / p.toReal) := by
       rw [lintegral_indicator_const₀ hs, ENNReal.mul_rpow_of_nonneg, ← ENNReal.rpow_mul,
-        mul_one_div_cancel hp_pos.ne', ENNReal.rpow_one]
+        mul_one_div_cancel, ENNReal.rpow_one]
       positivity
 
 lemma eLpNorm_indicator_const (hs : MeasurableSet s) (hp : p ≠ 0) (hp_top : p ≠ ∞) :
-    eLpNorm (s.indicator fun _ => c) p μ = ‖c‖ₑ * μ s ^ (1 / p.toReal) :=
+    eLpNorm (s.indicator fun _ => c) p μ = ‖c‖ₑ * μ s ^ (1 / p).toReal :=
   eLpNorm_indicator_const₀ hs.nullMeasurableSet hp hp_top
 
 lemma eLpNorm_indicator_const' (hs : MeasurableSet s) (hμs : μ s ≠ 0) (hp : p ≠ 0) :
-    eLpNorm (s.indicator fun _ => c) p μ = ‖c‖ₑ * μ s ^ (1 / p.toReal) := by
+    eLpNorm (s.indicator fun _ => c) p μ = ‖c‖ₑ * μ s ^ (1 / p).toReal := by
   by_cases hp_top : p = ∞
   · simp [hp_top, eLpNormEssSup_indicator_const_eq s c hμs]
   · exact eLpNorm_indicator_const hs hp hp_top
 
 variable (c) in
 lemma eLpNorm_indicator_const_le (p : ℝ≥0∞) :
-    eLpNorm (s.indicator fun _ => c) p μ ≤ ‖c‖ₑ * μ s ^ (1 / p.toReal) := by
+    eLpNorm (s.indicator fun _ => c) p μ ≤ ‖c‖ₑ * μ s ^ (1 / p).toReal := by
   obtain rfl | hp := eq_or_ne p 0
   · simp
   obtain rfl | h'p := eq_or_ne p ∞
-  · simp only [eLpNorm_exponent_top, ENNReal.toReal_top, _root_.div_zero, ENNReal.rpow_zero,
-      mul_one]
-    exact eLpNormEssSup_indicator_const_le _ _
+  · simpa using eLpNormEssSup_indicator_const_le s c
   let t := toMeasurable μ s
   calc
     eLpNorm (s.indicator fun _ => c) p μ ≤ eLpNorm (t.indicator fun _ ↦ c) p μ :=
       eLpNorm_mono_enorm (enorm_indicator_le_of_subset (subset_toMeasurable _ _) _)
-    _ = ‖c‖ₑ * μ t ^ (1 / p.toReal) :=
+    _ = ‖c‖ₑ * μ t ^ (1 / p).toReal :=
       eLpNorm_indicator_const (measurableSet_toMeasurable ..) hp h'p
-    _ = ‖c‖ₑ * μ s ^ (1 / p.toReal) := by rw [measure_toMeasurable]
+    _ = ‖c‖ₑ * μ s ^ (1 / p).toReal := by rw [measure_toMeasurable]
 
 lemma MemLp.indicator {f : α → ε} (hs : MeasurableSet s) (hf : MemLp f p μ) :
     MemLp (s.indicator f) p μ :=
@@ -182,7 +182,7 @@ protected lemma MemLp.piecewise {f : α → ε} [DecidablePred (· ∈ s)] {g} (
 theorem eLpNorm_indicator_sub_le_of_dist_bdd {β : Type*} [NormedAddCommGroup β]
     (μ : Measure α := by volume_tac) (hp' : p ≠ ∞) (hs : MeasurableSet s)
     {f g : α → β} {c : ℝ} (hc : 0 ≤ c) (hf : ∀ x ∈ s, dist (f x) (g x) ≤ c) :
-    eLpNorm (s.indicator (f - g)) p μ ≤ ENNReal.ofReal c * μ s ^ (1 / p.toReal) := by
+    eLpNorm (s.indicator (f - g)) p μ ≤ ENNReal.ofReal c * μ s ^ (1 / p).toReal := by
   by_cases hp : p = 0
   · simp [hp]
   have : ∀ x, ‖s.indicator (f - g) x‖ ≤ ‖s.indicator (fun _ => c) x‖ := by
@@ -198,7 +198,7 @@ theorem eLpNorm_indicator_sub_le_of_dist_bdd {β : Type*} [NormedAddCommGroup β
 theorem eLpNorm_sub_le_of_dist_bdd {β : Type*} [NormedAddCommGroup β]
     (μ : Measure α := by volume_tac) (hp : p ≠ ⊤) (hs : MeasurableSet s) {c : ℝ} (hc : 0 ≤ c)
     {f g : α → β} (h : ∀ x, dist (f x) (g x) ≤ c) (hs₁ : f.support ⊆ s) (hs₂ : g.support ⊆ s) :
-    eLpNorm (f - g) p μ ≤ ENNReal.ofReal c * μ s ^ (1 / p.toReal) := by
+    eLpNorm (f - g) p μ ≤ ENNReal.ofReal c * μ s ^ (1 / p).toReal := by
   have hs₃ : s.indicator (f - g) = f - g := by
     rw [Set.indicator_eq_self]
     exact (Function.support_sub _ _).trans (Set.union_subset hs₁ hs₂)
@@ -222,7 +222,7 @@ theorem MemLp.exists_eLpNorm_indicator_compl_lt {β : Type*} [NormedAddCommGroup
       · simp [*]
     refine ⟨s, hsm, hs, ?_⟩
     rwa [eLpNorm_indicator_eq_eLpNorm_restrict hsm.compl,
-      eLpNorm_eq_lintegral_rpow_enorm_toReal hp₀ hp_top, one_div, ENNReal.rpow_inv_lt_iff]
+      eLpNorm_eq_lintegral_rpow_enorm_toReal hp₀ hp_top, one_div₀, ENNReal.rpow_inv_lt_iff]
     simp [ENNReal.toReal_pos, *]
 
 end UnifTight

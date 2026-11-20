@@ -73,9 +73,11 @@ theorem lintegral_rpow_eq_lintegral_meas_le_mul
   have key := lintegral_comp_eq_lintegral_meas_le_mul μ f_nn f_mble g_intble g_nn
   rw [← key, ← lintegral_const_mul'' (ENNReal.ofReal p)] <;> simp_rw [obs]
   · congr with ω
-    rw [← ENNReal.ofReal_mul p_pos.le, mul_div_cancel₀ (f ω ^ p) p_pos.ne.symm]
+    rw [← ENNReal.ofReal_mul p_pos.le, mul_div_cancel₀]
   · have aux := (measurable_const (a := p)).aemeasurable (μ := μ)
-    exact measurable_id.ennreal_ofReal.comp_aemeasurable <| (f_mble.pow aux).div_const p
+    apply measurable_id.ennreal_ofReal.comp_aemeasurable
+    change AEMeasurable (fun ω ↦ f ω ^ p * ↑(p_pos.ne'.isUnit.unit⁻¹)) μ
+    exact (f_mble.pow aux).mul_const _
 
 end Layercake
 

@@ -79,8 +79,8 @@ private lemma aux₀
         exact subset_inter ((hf₁ _ <| hε' n).trans interior_subset_closure) <| hf₀ _ <| hε' n
     have := hε' n
     rw [Real.volume_pi_closedBall, Real.volume_pi_closedBall, ← ENNReal.ofReal_div_of_pos,
-      ← div_pow, mul_div_mul_left _ _ (two_ne_zero' ℝ), div_right_comm, div_self, one_div]
-  all_goals positivity
+      ← div_pow₀, mul_div_mul_left, div_right_comm₀, div_self, one_div₀]
+  all_goals first | positivity | exact (hε' _).ne' | exact isUnit_iff_ne_zero.2 (by positivity)
 
 /-- If we can fit a small ball inside a set `sᶜ` intersected with any neighborhood of `x`, then the
 density of `s` near `x` is not `1`.
@@ -114,11 +114,14 @@ private lemma aux₁
     have := hε' n
     rw [measure_sdiff (hf₀ _ _) _ ((Real.volume_pi_closedBall _ _).trans_ne ENNReal.ofReal_ne_top),
       Real.volume_pi_closedBall, Real.volume_pi_closedBall, ENNReal.sub_div fun _ _ ↦ _,
-      ENNReal.div_self _ ENNReal.ofReal_ne_top, ← ENNReal.ofReal_div_of_pos, ← div_pow,
-      mul_div_mul_left _ _ (two_ne_zero' ℝ), div_right_comm, div_self, one_div]
-  all_goals try positivity
-  · simp_all
-  · exact measurableSet_closedBall.nullMeasurableSet
+      ENNReal.div_self _ ENNReal.ofReal_ne_top, ← ENNReal.ofReal_div_of_pos, ← div_pow₀,
+      mul_div_mul_left, div_right_comm₀, div_self, one_div₀]
+  all_goals first
+    | positivity
+    | exact (hε' _).ne'
+    | exact isUnit_iff_ne_zero.2 (by positivity)
+    | exact measurableSet_closedBall.nullMeasurableSet
+    | intro _ _; exact (ENNReal.ofReal_pos.mpr (by positivity)).ne'
 
 theorem IsUpperSet.null_frontier (hs : IsUpperSet s) : volume (frontier s) = 0 := by
   refine measure_mono_null (fun x hx ↦ ?_)

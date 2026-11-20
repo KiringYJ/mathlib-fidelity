@@ -294,9 +294,9 @@ theorem integral_const_mul {L : Type*} [RCLike L] (r : L) (f : α → L) :
 theorem integral_mul_const {L : Type*} [RCLike L] (r : L) (f : α → L) :
     ∫ a, f a * r ∂μ = (∫ a, f a ∂μ) * r := by simp only [mul_comm, integral_const_mul r f]
 
-theorem integral_div {L : Type*} [RCLike L] (r : L) (f : α → L) :
+theorem integral_div {L : Type*} [RCLike L] (r : L) (f : α → L) {hr : IsUnit r} :
     ∫ a, f a / r ∂μ = (∫ a, f a ∂μ) / r := by
-  simpa only [← div_eq_mul_inv] using integral_mul_const r⁻¹ f
+  simp only [div_eq_mul_inv₀, integral_mul_const]
 
 theorem integral_congr_ae {f g : α → G} (h : f =ᵐ[μ] g) : ∫ a, f a ∂μ = ∫ a, g a ∂μ := by
   simp only [integral_eq_setToFun]
@@ -664,18 +664,16 @@ lemma integral_convexOn_of_integrand_ae {β : Type*} [AddCommMonoid β]
     [Module ℝ β] {f : α → β → E} {s : Set β} (hs : Convex ℝ s)
     (hf_conv : ∀ᵐ x ∂μ, ConvexOn ℝ s (f x)) (hf_int : ∀ a ∈ s, Integrable (f · a) μ) :
     ConvexOn ℝ s (fun b => ∫ x, f x b ∂μ) := by
-  refine ⟨hs, ?_⟩
+  refine convexOn_iff.2 ⟨hs, ?_⟩
   intro a ha b hb p q hp hq hpq
   calc ∫ x, f x (p • a + q • b) ∂μ ≤ ∫ x, p • f x a + q • f x b ∂μ := by
                   refine integral_mono_ae ?lhs ?rhs ?ae_le
                   case lhs =>
-                    refine hf_int _ ?_
-                    rw [convex_iff_add_mem] at hs
-                    exact hs ha hb hp hq hpq
+                    exact hf_int _ (hs ha hb hp hq hpq)
                   case rhs => fun_prop (disch := aesop)
                   case ae_le =>
                     filter_upwards [hf_conv] with x hx
-                    exact hx.2 ha hb hp hq hpq
+                    exact hx.map_combo_le ha hb hp hq hpq
             _ = ∫ x, p • f x a ∂μ + ∫ x, q • f x b ∂μ := by
                   apply integral_add
                   all_goals fun_prop (disch := aesop)
@@ -904,8 +902,7 @@ section NormedAddCommGroup
 variable {H : Type*} [NormedAddCommGroup H]
 
 theorem L1.norm_eq_integral_norm (f : α →₁[μ] H) : ‖f‖ = ∫ a, ‖f a‖ ∂μ := by
-  simp only [eLpNorm, eLpNorm'_eq_lintegral_enorm, ENNReal.toReal_one, ENNReal.rpow_one,
-    Lp.norm_def, ite_false, ENNReal.one_ne_top, one_ne_zero, _root_.div_one]
+  rw [Lp.norm_def, eLpNorm_one_eq_lintegral_enorm]
   rw [integral_eq_lintegral_of_nonneg_ae (Eventually.of_forall (by simp [norm_nonneg]))
       (Lp.aestronglyMeasurable f).norm]
   simp
@@ -921,10 +918,12 @@ theorem L1.norm_of_fun_eq_integral_norm {f : α → H} (hf : Integrable f μ) :
 
 theorem MemLp.eLpNorm_eq_integral_rpow_norm {f : α → H} {p : ℝ≥0∞} (hp1 : p ≠ 0) (hp2 : p ≠ ∞)
     (hf : MemLp f p μ) :
-    eLpNorm f p μ = ENNReal.ofReal ((∫ a, ‖f a‖ ^ p.toReal ∂μ) ^ p.toReal⁻¹) := by
+    eLpNorm f p μ = ENNReal.ofReal ((∫ a, ‖f a‖ ^ p.toReal ∂μ) ^ (1 / p).toReal) := by
+  have hpUnit : IsUnit p.toReal := (ENNReal.toReal_pos hp1 hp2).ne'.isUnit
   have A : ∫⁻ a : α, ENNReal.ofReal (‖f a‖ ^ p.toReal) ∂μ = ∫⁻ a : α, ‖f a‖ₑ ^ p.toReal ∂μ := by
     simp_rw [← ofReal_rpow_of_nonneg (norm_nonneg _) toReal_nonneg, ofReal_norm]
-  simp only [eLpNorm_eq_lintegral_rpow_enorm_toReal hp1 hp2, one_div]
+  simp only [eLpNorm_eq_lintegral_rpow_enorm_toReal hp1 hp2,
+    one_div, ENNReal.toReal_inv (ha := hpUnit), one_div₀]
   rw [integral_eq_lintegral_of_nonneg_ae]; rotate_left
   · exact ae_of_all _ fun x => by positivity
   · exact (hf.aestronglyMeasurable.norm.aemeasurable.pow_const _).aestronglyMeasurable
@@ -1180,13 +1179,13 @@ theorem integral_mul_norm_le_Lp_mul_Lq {E} [NormedAddCommGroup E] {f g : α → 
   · refine ENNReal.mul_ne_top ?_ ?_
     · convert! hf.eLpNorm_ne_top
       rw [eLpNorm_eq_lintegral_rpow_enorm_toReal]
-      · rw [ENNReal.toReal_ofReal hpq.nonneg]
+      · simp only [ENNReal.toReal_ofReal hpq.nonneg]
       · rw [Ne, ENNReal.ofReal_eq_zero, not_le]
         exact hpq.pos
       · finiteness
     · convert! hg.eLpNorm_ne_top
       rw [eLpNorm_eq_lintegral_rpow_enorm_toReal]
-      · rw [ENNReal.toReal_ofReal hpq.symm.nonneg]
+      · simp only [ENNReal.toReal_ofReal hpq.symm.nonneg]
       · rw [Ne, ENNReal.ofReal_eq_zero, not_le]
         exact hpq.symm.pos
       · finiteness
@@ -1342,7 +1341,7 @@ theorem eLpNorm_one_le_of_le {r : ℝ≥0} (hfint : Integrable f μ) (hfint' : 0
   rw [MemLp.eLpNorm_eq_integral_rpow_norm one_ne_zero ENNReal.one_ne_top
       (memLp_one_iff_integrable.2 hfint),
     ENNReal.ofReal_le_iff_le_toReal (by finiteness)]
-  simp_rw [ENNReal.toReal_one, _root_.inv_one, Real.rpow_one, Real.norm_eq_abs, ←
+  simp_rw [one_div_one, ENNReal.toReal_one, Real.rpow_one, Real.norm_eq_abs, ←
     max_zero_add_max_neg_zero_eq_abs_self, ← Real.coe_toNNReal']
   rw [integral_add hfint.real_toNNReal]
   · simp only [Real.coe_toNNReal', ENNReal.toReal_mul, ENNReal.coe_toReal,

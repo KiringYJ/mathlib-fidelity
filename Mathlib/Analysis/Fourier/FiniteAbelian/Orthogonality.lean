@@ -33,7 +33,8 @@ section Semifield
 variable [Fintype G] [Semifield R] [CharZero R] {ψ : AddChar G R}
 
 lemma expect_eq_ite (ψ : AddChar G R) : 𝔼 a, ψ a = if ψ = 0 then 1 else 0 := by
-  simp [Fintype.expect_eq_sum_div_card, sum_eq_ite, ite_div]
+  rw [Fintype.expect_eq_sum_div_card, sum_eq_ite]
+  split_ifs <;> simp
 
 lemma expect_eq_zero_iff_ne_zero : 𝔼 x, ψ x = 0 ↔ ψ ≠ 0 := by
   rw [expect_eq_ite, one_ne_zero.ite_eq_right_iff]
@@ -62,8 +63,8 @@ lemma wInner_cWeight_eq_boole [Fintype G] (ψ₁ ψ₂ : AddChar G R) :
   split_ifs with h
   · rw [h, wInner_cWeight_self]
   have : ψ₂ * ψ₁⁻¹ ≠ 1 := by rwa [Ne, mul_inv_eq_one, eq_comm]
-  simp_rw [wInner_cWeight_eq_expect, RCLike.inner_apply, ← inv_apply_eq_conj]
-  simpa [map_neg_eq_inv] using expect_eq_zero_iff_ne_zero.2 this
+  simp_rw [wInner_cWeight_eq_expect, RCLike.inner_apply, ← map_neg_eq_conj]
+  simpa using expect_eq_zero_iff_ne_zero.2 this
 
 lemma wInner_cWeight_eq_zero_iff_ne [Fintype G] : ⟪(ψ₁ : G → R), ψ₂⟫ₙ_[R] = 0 ↔ ψ₁ ≠ ψ₂ := by
   rw [wInner_cWeight_eq_boole, one_ne_zero.ite_eq_right_iff]

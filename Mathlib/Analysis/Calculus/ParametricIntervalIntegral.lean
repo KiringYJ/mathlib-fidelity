@@ -95,20 +95,27 @@ assuming `F x₀` is integrable, `x ↦ F x a` is differentiable on a neighborho
 (with a neighborhood independent of `a`) with derivative uniformly bounded by an integrable
 function, and `F x` is ae-measurable for `x` in a possibly smaller neighborhood of `x₀`. -/
 nonrec theorem hasDerivAt_integral_of_dominated_loc_of_deriv_le
-    {F : 𝕜 → ℝ → E} {F' : 𝕜 → ℝ → E} {x₀ : 𝕜} {s : Set 𝕜}
+    {D : Type*} [TopologicalSpace D] {coord : D → 𝕜}
+    {F F' : D → ℝ → E} {x₀ : D} {s : Set D}
     (hs : s ∈ 𝓝 x₀) (hF_meas : ∀ᶠ x in 𝓝 x₀, AEStronglyMeasurable (F x) (μ.restrict (Ι a b)))
     (hF_int : IntervalIntegrable (F x₀) μ a b)
     (hF'_meas : AEStronglyMeasurable (F' x₀) (μ.restrict (Ι a b)))
     (h_bound : ∀ᵐ t ∂μ, t ∈ Ι a b → ∀ x ∈ s, ‖F' x t‖ ≤ bound t)
     (bound_integrable : IntervalIntegrable bound μ a b)
-    (h_diff : ∀ᵐ t ∂μ, t ∈ Ι a b → ∀ x ∈ s, HasDerivAt (fun x => F x t) (F' x t) x) :
+    (h_diff : ∀ᵐ t ∂μ, t ∈ Ι a b → ∀ x ∈ s, HasDerivAt (fun x => F x t) (F' x t) x coord)
+    (hcoord : Topology.IsOpenEmbedding coord := by exact Topology.IsOpenEmbedding.id) :
     IntervalIntegrable (F' x₀) μ a b ∧
-      HasDerivAt (fun x => ∫ t in a..b, F x t ∂μ) (∫ t in a..b, F' x₀ t ∂μ) x₀ := by
+      HasDerivAt (fun x => ∫ t in a..b, F x t ∂μ) (∫ t in a..b, F' x₀ t ∂μ) x₀ coord := by
   rw [← ae_restrict_iff' measurableSet_uIoc] at h_bound h_diff
   simp only [intervalIntegrable_iff] at hF_int bound_integrable ⊢
   simp only [intervalIntegral_eq_integral_uIoc]
   have := hasDerivAt_integral_of_dominated_loc_of_deriv_le hs hF_meas hF_int hF'_meas h_bound
-    bound_integrable h_diff
-  exact ⟨this.1, this.2.const_smul _⟩
+    bound_integrable h_diff hcoord
+  refine ⟨this.1, ?_⟩
+  let sign : ℝ := if a ≤ b then 1 else -1
+  have hfun : sign • (fun x : D ↦ ∫ t in Ι a b, F x t ∂μ) =
+      (fun x : D ↦ sign • ∫ t in Ι a b, F x t ∂μ) := rfl
+  simpa only [hfun, sign, smul_apply, ContinuousLinearMap.toSpanSingleton_apply, one_smul] using
+    (this.2.hasFDerivAt.const_smul sign).hasDerivAt
 
 end intervalIntegral

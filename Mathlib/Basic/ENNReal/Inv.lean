@@ -957,7 +957,7 @@ theorem ofReal_div_of_pos {x y : ℝ} (hy : 0 < y) :
 
 /-- The inverse commutes with `toNNReal` exactly where `a.toNNReal` is invertible, that is, for
 `a ≠ 0` and `a ≠ ∞`. -/
-@[simp] theorem toNNReal_inv (a : ℝ≥0∞) {ha : IsUnit a.toNNReal} :
+theorem toNNReal_inv (a : ℝ≥0∞) {ha : IsUnit a.toNNReal} :
     a⁻¹.toNNReal = a.toNNReal⁻¹ := by
   cases a with
   | top => simp at ha
@@ -966,17 +966,37 @@ theorem ofReal_div_of_pos {x y : ℝ} (hy : 0 < y) :
     rw [← coe_inv (hr := ha'), toNNReal_coe]
     rfl
 
-@[simp] theorem toNNReal_div (a b : ℝ≥0∞) {hb : IsUnit b.toNNReal} :
+theorem toNNReal_div (a b : ℝ≥0∞) {hb : IsUnit b.toNNReal} :
     (a / b).toNNReal = a.toNNReal / b.toNNReal := by
   rw [div_eq_mul_inv, toNNReal_mul, toNNReal_inv b (ha := hb), div_eq_mul_inv₀]
 
-@[simp] theorem toReal_inv (a : ℝ≥0∞) {ha : IsUnit a.toReal} : a⁻¹.toReal = a.toReal⁻¹ := by
+theorem toReal_inv (a : ℝ≥0∞) {ha : IsUnit a.toReal} : a⁻¹.toReal = a.toReal⁻¹ := by
   have ha' : IsUnit a.toNNReal := (NNReal.coe_ne_zero.1 ha.ne_zero).isUnit
   simp only [ENNReal.toReal, toNNReal_inv a (ha := ha'), NNReal.coe_inv]
 
-@[simp] theorem toReal_div (a b : ℝ≥0∞) {hb : IsUnit b.toReal} :
+theorem toReal_div (a b : ℝ≥0∞) {hb : IsUnit b.toReal} :
     (a / b).toReal = a.toReal / b.toReal := by
   rw [div_eq_mul_inv, toReal_mul, toReal_inv b (ha := hb), div_eq_mul_inv₀]
+
+/-- Projecting a finite nonzero input's inverse to `ℝ≥0` gives its checked inverse. -/
+@[simp] theorem toNNReal_inv_of_toNNReal_ne_zero (a : ℝ≥0∞) (ha : a.toNNReal ≠ 0) :
+    a⁻¹.toNNReal = Checked.inv a.toNNReal ha.isUnit :=
+  toNNReal_inv a (ha := ha.isUnit)
+
+/-- `toNNReal` takes a quotient with a finite nonzero denominator to checked division. -/
+@[simp] theorem toNNReal_div_of_toNNReal_ne_zero (a b : ℝ≥0∞) (hb : b.toNNReal ≠ 0) :
+    (a / b).toNNReal = Checked.div a.toNNReal b.toNNReal hb.isUnit :=
+  toNNReal_div a b (hb := hb.isUnit)
+
+/-- Projecting a finite nonzero input's inverse to `ℝ` gives its checked inverse. -/
+@[simp] theorem toReal_inv_of_toReal_ne_zero (a : ℝ≥0∞) (ha : a.toReal ≠ 0) :
+    a⁻¹.toReal = Checked.inv a.toReal ha.isUnit :=
+  toReal_inv a (ha := ha.isUnit)
+
+/-- `toReal` takes a quotient with a finite nonzero denominator to checked division. -/
+@[simp] theorem toReal_div_of_toReal_ne_zero (a b : ℝ≥0∞) (hb : b.toReal ≠ 0) :
+    (a / b).toReal = Checked.div a.toReal b.toReal hb.isUnit :=
+  toReal_div a b (hb := hb.isUnit)
 
 end Inv
 end ENNReal

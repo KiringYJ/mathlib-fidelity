@@ -165,8 +165,11 @@ variable {𝕜 E F : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [NormedSpace �
 
 @[simp]
 theorem curveIntegralFun_refl (ω : E → E →L[𝕜] F) (a : E) : curveIntegralFun ω (.refl a) = 0 := by
-  ext
-  simp [curveIntegralFun, ← Function.const_def]
+  let : NormedSpace ℝ E := .restrictScalars ℝ 𝕜 E
+  funext t
+  have hd : derivWithin (fun _ : ℝ ↦ a) I t = 0 :=
+    congrFun (derivWithin_const (s := I) (c := a)) t
+  simp [curveIntegralFun, ← Function.const_def, hd]
 
 @[simp]
 theorem curveIntegral_refl (ω : E → E →L[𝕜] F) (a : E) : ∫ᶜ x in .refl a, ω x = 0 := by
@@ -258,7 +261,7 @@ theorem CurveIntegrable.intervalIntegrable_curveIntegralFun_trans_left
     (h : CurveIntegrable ω γab) (γbc : Path b c) :
     IntervalIntegrable (curveIntegralFun ω (γab.trans γbc)) volume 0 (1 / 2) := by
   refine .congr_ae ?_ (curveIntegralFun_trans_aeeq_left _ _ _).symm
-  simpa [ofNat_smul_eq_nsmul] using! h.comp_mul_left.smul (2 : 𝕜)
+  simpa [ofNat_smul_eq_nsmul] using! (h.comp_mul_left (c := 2)).smul (2 : 𝕜)
 
 theorem CurveIntegrable.intervalIntegrable_curveIntegralFun_trans_right
     (γab : Path a b) (h : CurveIntegrable ω γbc) :
@@ -526,6 +529,7 @@ theorem HasFDerivWithinAt.curveIntegral_segment_source' (hs : Convex ℝ s)
   filter_upwards [Metric.ball_mem_nhds _ hδ₀] with b hb hbs
   have hsub : [a -[ℝ] b] ⊆ ball a δ ∩ s :=
     ((convex_ball _ _).inter hs).segment_subset (by simp [*]) (by simp [*])
+  simp only [id_eq]
   rw [← curveIntegral_segment_const, ← curveIntegral_fun_sub]
   · refine norm_curveIntegral_segment_le fun z hz ↦ ?_
     simpa [dist_eq_norm] using (hδ (hsub hz)).2

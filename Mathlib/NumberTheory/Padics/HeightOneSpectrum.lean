@@ -143,13 +143,14 @@ noncomputable def withValEquiv (v : HeightOneSpectrum R) :
 
 /-- The continuous `ℚ`-algebra isomorphism between `v.adicCompletion ℚ` and `ℚ_[primesEquiv v]`. -/
 noncomputable def adicCompletion.padicEquiv (v : HeightOneSpectrum R) :
-    v.adicCompletion ℚ ≃A[ℚ] ℚ_[primesEquiv v] where
-  __ := (IsDedekindDomain.HeightOneSpectrum.adicCompletion.equiv ℚ v).trans <|
+    v.adicCompletion ℚ ≃A[ℚ] ℚ_[primesEquiv v] :=
+  let e := (IsDedekindDomain.HeightOneSpectrum.adicCompletion.equiv ℚ v).trans <|
     (mapRingEquiv _ (withValEquiv v).continuous
       (withValEquiv v).symm.continuous).trans Padic.withValRingEquiv
-  __ := ((IsDedekindDomain.HeightOneSpectrum.adicCompletion.uniformEquiv ℚ v).trans <|
-    (mapEquiv (withValEquiv v)).trans Padic.withValUniformEquiv).toHomeomorph
-  commutes' := by simp
+  { __ := e
+    __ := ((IsDedekindDomain.HeightOneSpectrum.adicCompletion.uniformEquiv ℚ v).trans <|
+      (mapEquiv (withValEquiv v)).trans Padic.withValUniformEquiv).toHomeomorph
+    commutes' := e.toRingHom.map_rat_algebraMap }
 
 /-- The continuous `ℤ`-algebra isomorphism between `v.adicCompletionIntegers ℚ` and
 `ℤ_[primesEquiv v]`. -/

@@ -24,6 +24,20 @@ elab "test_field_simp" : tactic => do
 
 set_option linter.unusedVariables false
 
+private theorem isUnit_one_add_div_one_sub {K : Type*} [Field K] {y : K} (hy : 1 - y ≠ 0) :
+    IsUnit (1 + y / (1 - y)) := by
+  apply IsUnit.mk0 _
+  intro hz
+  have h := congrArg (· * (1 - y)) hz
+  rw [add_mul, one_mul, div_mul_cancel₀, zero_mul, sub_add_cancel] at h
+  exact one_ne_zero h
+
+private theorem isUnit_add_sq_div {a b : ℚ} (h : a + b + 1 ≠ 0) (hb : b + 1 ≠ 0) :
+    IsUnit (a + (b + 1) ^ 2 / (b + 1)) := by
+  have he : (b + 1) ^ 2 / (b + 1) = b + 1 := div_eq_iff.mpr (pow_two _)
+  rw [he, ← add_assoc]
+  exact h.isUnit
+
 /-! ## Documenting "field_simp normal form" -/
 section
 
@@ -65,45 +79,49 @@ example : P (x ^ 3 * x ^ 42) := by test_field_simp
 
 /-- info: P (x ^ k * x ^ 2) -/
 #guard_msgs in
-example {k : ℤ} : P (x ^ k * x ^ 2) := by test_field_simp
+example {k : ℤ} (hk : k < 0 → IsUnit x) : P (x ^ k * x ^ 2) := by test_field_simp
 
 /-- info: P (1 / x ^ 3) -/
 #guard_msgs in
-example : P (x ^ (-1 : ℤ) * x ^ (-2 : ℤ)) := by test_field_simp
+example (hx : IsUnit x) : P (x ^ (-1 : ℤ) * x ^ (-2 : ℤ)) := by test_field_simp
 
--- Cancellation: if x could be zero, we cannot cancel x * x⁻¹.
+-- Forming the original reciprocal requires evidence, even when the factors would cancel.
+example (x : ℚ) : True := by
+  fail_if_success have := (x / x : ℚ)
+  fail_if_success have := (x⁻¹ : ℚ)
+  trivial
 
 /-- info: P (1 / x) -/
 #guard_msgs in
-example : P (x⁻¹) := by test_field_simp
+example (hx : IsUnit x) : P (x⁻¹) := by test_field_simp
 
-/-- info: P (x / x) -/
+/-- info: P 1 -/
 #guard_msgs in
-example : P (x * x⁻¹) := by test_field_simp
+example (hx : IsUnit x) : P (x * x⁻¹) := by test_field_simp
 
-/-- info: P (x / x) -/
+/-- info: P 1 -/
 #guard_msgs in
-example : P (x⁻¹ * x) := by test_field_simp
-
-/-- info: P x -/
-#guard_msgs in
-example : P (x * x * x⁻¹) := by test_field_simp
-
-/-- info: P (x / x) -/
-#guard_msgs in
-example : P (x / x) := by test_field_simp
+example (hx : IsUnit x) : P (x⁻¹ * x) := by test_field_simp
 
 /-- info: P x -/
 #guard_msgs in
-example : P (x ^ 2 * x⁻¹) := by test_field_simp
+example (hx : IsUnit x) : P (x * x * x⁻¹) := by test_field_simp
+
+/-- info: P 1 -/
+#guard_msgs in
+example (hx : IsUnit x) : P (x / x) := by test_field_simp
+
+/-- info: P x -/
+#guard_msgs in
+example (hx : IsUnit x) : P (x ^ 2 * x⁻¹) := by test_field_simp
 
 /-- info: P (x ^ 2) -/
 #guard_msgs in
-example : P (x ^ 3 * x⁻¹) := by test_field_simp
+example (hx : IsUnit x) : P (x ^ 3 * x⁻¹) := by test_field_simp
 
 /-- info: P (1 / x ^ 3) -/
 #guard_msgs in
-example : P (x / x ^ 4) := by test_field_simp
+example (hx : IsUnit x) : P (x / x ^ 4) := by test_field_simp
 
 /-- info: P (x ^ 6) -/
 #guard_msgs in
@@ -111,19 +129,19 @@ example : P ((x ^ (2:ℤ)) ^ 3) := by test_field_simp
 
 /-- info: P (1 / x ^ 6) -/
 #guard_msgs in
-example : P ((x ^ (-2:ℤ)) ^ 3) := by test_field_simp
+example (hx : IsUnit x) : P ((x ^ (-2:ℤ)) ^ 3) := by test_field_simp
 
--- Even if we cannot cancel, we can simplify the exponent.
+-- A certificate for a negative power also justifies cancellation with a positive power.
 
-/-- info: P (x / x) -/
+/-- info: P 1 -/
 #guard_msgs in
-example : P (x ^ 2 * x ^ (-2 : ℤ)) := by test_field_simp
+example (hx : IsUnit x) : P (x ^ 2 * x ^ (-2 : ℤ)) := by test_field_simp
 
-/-- info: P (x / x) -/
+/-- info: P 1 -/
 #guard_msgs in
-example : P (x ^ (-37 : ℤ) * x ^ 37) := by test_field_simp
+example (hx : IsUnit x) : P (x ^ (-37 : ℤ) * x ^ 37) := by test_field_simp
 
--- If x is non-zero, we do cancel.
+-- A nonzero hypothesis on a field element supplies its unit certificate.
 
 /-- info: P 1 -/
 #guard_msgs in
@@ -179,6 +197,12 @@ example : P ((2 - 2) * x) := by test_field_simp
 #guard_msgs in
 example {a : Nat} : P (a* x - a * x) := by test_field_simp
 
+-- The denominator itself certifies that both factors are units.
+example (hd : IsUnit (x * y)) (h : P (Checked.div 1 y (IsUnit.mul_iff.mp hd).2)) :
+    P (Checked.div x (x * y) hd) := by
+  field_simp
+  exact h
+
 /-! ### Two atoms -/
 
 /-- error: `field_simp` made no progress on the goal -/
@@ -191,11 +215,11 @@ example : P (x * y) := by test_field_simp
 
 /-- info: P (1 / (x * y)) -/
 #guard_msgs in
-example : P ((x * y)⁻¹) := by test_field_simp
+example (hd : IsUnit (x * y)) : P ((x * y)⁻¹) := by test_field_simp
 
-/-- info: P (x * y / (x * y)) -/
+/-- info: P 1 -/
 #guard_msgs in
-example : P ((x * y) / (y * x)) := by test_field_simp
+example (hx : IsUnit x) (hy : IsUnit y) : P ((x * y) / (y * x)) := by test_field_simp
 
 /-- info: P (x * y * (1 + 1)) -/
 #guard_msgs in
@@ -205,9 +229,9 @@ example : P (x * y + y * x) := by test_field_simp
 #guard_msgs in
 example : P (x * y + x * 1) := by test_field_simp
 
-/-- info: P (x * y / (x * y)) -/
+/-- info: P 1 -/
 #guard_msgs in
-example : P ((x * y) * (y * x)⁻¹) := by test_field_simp
+example (hx : IsUnit x) (hy : IsUnit y) : P ((x * y) * (y * x)⁻¹) := by test_field_simp
 
 /-- info: P y -/
 #guard_msgs in
@@ -219,19 +243,19 @@ example : P (y * (y + x) ^ (0:ℤ) * y) := by test_field_simp
 
 /-- info: P (x / y) -/
 #guard_msgs in
-example : P (x / y) := by test_field_simp
+example (hy : IsUnit y) : P (x / y) := by test_field_simp
 
 /-- info: P (-(x / y)) -/
 #guard_msgs in
-example : P (x / -y) := by test_field_simp
+example (hy : IsUnit y) : P (x / -y) := by test_field_simp
 
 /-- info: P (-(x / y)) -/
 #guard_msgs in
-example : P (-x / y) := by test_field_simp
+example (hy : IsUnit y) : P (-x / y) := by test_field_simp
 
-/-- info: P ((x + (x + 1) * y / (y + 1)) / (x + 1)) -/
+/-- info: P ((x * (y + 1) + (x + 1) * y) / ((x + 1) * (y + 1))) -/
 #guard_msgs in
-example (hx : x + 1 ≠ 0) : P (x / (x + 1) + y / (y + 1)) := by test_field_simp
+example (hx : x + 1 ≠ 0) (hy : y + 1 ≠ 0) : P (x / (x + 1) + y / (y + 1)) := by test_field_simp
 
 /-- info: P ((x * (y + 1) + (x + 1) * y) / ((x + 1) * (y + 1))) -/
 #guard_msgs in
@@ -239,27 +263,27 @@ example (hx : 0 < x + 1) (hy : 0 < y + 1) : P (x / (x + 1) + y / (y + 1)) := by 
 
 /-- info: P (x ^ 2 / y) -/
 #guard_msgs in
-example : P (x / (y / x)) := by test_field_simp
+example (hx : IsUnit x) (hy : IsUnit y) : P (x / (y / x)) := by test_field_simp
 
 /-- info: P (x ^ 2 * y ^ 3) -/
 #guard_msgs in
-example : P (x / (y ^ (-3:ℤ) / x)) := by test_field_simp
+example (hx : IsUnit x) (hy : IsUnit y) : P (x / (y ^ (-3:ℤ) / x)) := by test_field_simp
 
 /-- info: P (x ^ 2 * y ^ 3) -/
 #guard_msgs in
-example : P ((x / y ^ (-3:ℤ)) * x) := by test_field_simp
+example (hy : IsUnit y) : P ((x / y ^ (-3:ℤ)) * x) := by test_field_simp
 
 /-- info: P (x ^ 3 * y ^ 4) -/
 #guard_msgs in
 example : P (x ^ 1 * y * x ^ 2 * y ^ 3) := by test_field_simp
 
-/-- info: P (x ^ 3 * y / y) -/
+/-- info: P (x ^ 3) -/
 #guard_msgs in
-example : P (x ^ 1 * y * x ^ 2 * y⁻¹) := by test_field_simp
+example (hy : IsUnit y) : P (x ^ 1 * y * x ^ 2 * y⁻¹) := by test_field_simp
 
 /-- info: P (1 / y) -/
 #guard_msgs in
-example (hx : x ≠ 0) : P (x / (x * y)) := by test_field_simp
+example (hx : x ≠ 0) (hy : IsUnit y) : P (x / (x * y)) := by test_field_simp
 
 /-- info: P 1 -/
 #guard_msgs in
@@ -275,10 +299,13 @@ example (hy : y ≠ 0) : P (x ^ 1 * y * x ^ 2 * y⁻¹) := by test_field_simp
 
 /-- info: P (x / (1 - y + y)) -/
 #guard_msgs in
-example (hy : 1 - y ≠ 0): P (x / (1 - y) / (1 + y / (1 - y))) := by test_field_simp
+example (hy : 1 - y ≠ 0) :
+    P (Checked.div (x / (1 - y)) (1 + y / (1 - y)) (isUnit_one_add_div_one_sub hy)) := by
+  test_field_simp
 
 -- test `conv` tactic
-example (hy : 1 - y ≠ 0) : P (x / (1 - y) / (1 + y / (1 - y))) := by
+example (hy : 1 - y ≠ 0) :
+    P (Checked.div (x / (1 - y)) (1 + y / (1 - y)) (isUnit_one_add_div_one_sub hy)) := by
   conv => enter [1]; field_simp
   guard_target = P (x / (1 - y + y))
   exact test_sorry
@@ -295,11 +322,11 @@ example : P (x * y + x * z) := by test_field_simp
 
 /-- info: P (1 / (y + z)) -/
 #guard_msgs in
-example (hx : x ≠ 0) : P (x / (x * y + x * z))  := by test_field_simp
+example (hx : x ≠ 0) (hd : IsUnit (x * y + x * z)) : P (x / (x * y + x * z))  := by test_field_simp
 
-/-- info: P (x / (x * (y + z))) -/
+/-- info: P (1 / (y + z)) -/
 #guard_msgs in
-example : P (x / (x * y + x * z))  := by test_field_simp
+example (hd : IsUnit (x * y + x * z)) : P (x / (x * y + x * z))  := by test_field_simp
 
 /-! ### Constants and addition/subtraction -/
 
@@ -368,6 +395,16 @@ example : P (x * y + x * id y) := by test_field_simp
 
 end
 
+-- Elaboration can wrap a comparison in metadata. Preserve its explicitly supplied relation.
+open Lean Meta Elab Tactic Mathlib.Tactic in
+example {K : Type*} [Field K] (cmp : LE K) (a b : K) (h : @LE.le K cmp (a ^ 2) b) :
+    @LE.le K cmp (a * a) b := by
+  run_tac liftMetaTactic1 fun g ↦ do
+    let t := Term.mkNoImplicitLambdaAnnotation (← g.getType)
+    let r ← AtomM.run .reducible <| FieldSimp.reduceProp (fun _ ↦ failure) t
+    g.replaceTargetEq r.expr (← r.getProof)
+  exact h
+
 /-! ## Cancel denominators from equalities -/
 
 /-! ### Finishing tactic
@@ -394,13 +431,14 @@ example {K : Type*} [Field K] (a b c d x y : K) (hx : x ≠ 0) (hy : y ≠ 0) :
   field
 
 -- example from the `field` docstring
-example {a b : ℚ} (ha : a ≠ 0) : a / (a * b) - 1 / b = 0 := by field
+example {a b : ℚ} (ha : a ≠ 0) (hb : b ≠ 0) : a / (a * b) - 1 / b = 0 := by field
 
-example {x : ℚ} : x ^ 2 * x⁻¹ = x := by field
+example {x : ℚ} (hx : x ≠ 0) : x ^ 2 * x⁻¹ = x := by field
 
 -- example from `field` docstring
 example {K : Type*} [Field K] (hK : ∀ x : K, x ^ 2 + 1 ≠ 0) (x : K) :
-    1 / (x ^ 2 + 1) + x ^ 2 / (x ^ 2 + 1) = 1 := by
+    Checked.div 1 (x ^ 2 + 1) (hK x).isUnit +
+      Checked.div (x ^ 2) (x ^ 2 + 1) (hK x).isUnit = 1 := by
   field [hK]
 
 -- testing that mdata is cleared before parsing goal
@@ -444,13 +482,17 @@ info: Try this:
 error: unsolved goals
 a b : ℚ
 f : ℚ → ℚ
+ha : a ≠ 0
+hb : b ≠ 0
 ⊢ f (a * b) * (1 - 1) = 0
 -/
 #guard_msgs in
-example (a b : ℚ) (f : ℚ → ℚ) : f (a ^ 2 * b / a) - f (b ^ 2 * a / b) = 0 := by field
+example (a b : ℚ) (f : ℚ → ℚ) (ha : a ≠ 0) (hb : b ≠ 0) :
+    f (a ^ 2 * b / a) - f (b ^ 2 * a / b) = 0 := by field
 
 -- (Compare with the example above: this is out of scope for `field`.)
-example (a b : ℚ) (f : ℚ → ℚ) : f (a ^ 2 * b / a) - f (b ^ 2 * a / b) = 0 := by
+example (a b : ℚ) (f : ℚ → ℚ) (ha : a ≠ 0) (hb : b ≠ 0) :
+    f (a ^ 2 * b / a) - f (b ^ 2 * a / b) = 0 := by
   field_simp
   ring1
 
@@ -461,25 +503,25 @@ example {K : Type*} [Semifield K] (x y : K) (hy : y + 1 ≠ 0) : 2 * x / (y + 1)
   guard_target = 2 * x = x * (y + 1)
   exact test_sorry
 
-example {K : Type*} [Semifield K] (x y : K) : 2 * x / (y + 1) = x := by
+example {K : Type*} [Semifield K] (x y : K) (hu : IsUnit (y + 1)) : 2 * x / (y + 1) = x := by
   have hy : y + 1 ≠ 0 := test_sorry -- test mdata, context updating, etc
   field_simp
   guard_target = 2 * x = x * (y + 1)
   exact test_sorry
 
-example {x y z w : ℚ} (h : x / y = z / w) (hy : y ≠ 0) (hw : w ≠ 0) : True := by
+example {x y z w : ℚ} (hy : y ≠ 0) (hw : w ≠ 0) (h : x / y = z / w) : True := by
   field_simp at h
   guard_hyp h : x * w = y * z
   exact trivial
 
 example {K : Type*} [Field K] (x y z : K) (hy : 1 - y ≠ 0) :
-    x / (1 - y) / (1 + y / (1 - y)) = z := by
+    Checked.div (x / (1 - y)) (1 + y / (1 - y)) (isUnit_one_add_div_one_sub hy) = z := by
   field_simp
   guard_target = x = (1 - y + y) * z
   exact test_sorry
 
 example {K : Type*} [Field K] (x y z : K) (hy : 1 - y ≠ 0) :
-    x / (1 - y) / (1 + y / (1 - y)) = z := by
+    Checked.div (x / (1 - y)) (1 + y / (1 - y)) (isUnit_one_add_div_one_sub hy) = z := by
   simp [field]
   guard_target = x = z
   exact test_sorry
@@ -562,24 +604,17 @@ example {K : Type*} [Field K] {x : K} (hx : x ^ 5 = 1) (hx0 : x ≠ 0) (hx1 : x 
 
 section
 
--- TODO (new implementation): do we want `field_simp` to reduce this to `⊢ x * y = z * y ^ 2`?
--- Or perhaps to `⊢ x / y / y = z / y`?
-example {x y z : ℚ} : x / y ^ 2 = z / y := by
+-- The checked quotient supplies the validity needed for both equivalent clearings.
+example {x y z : ℚ} (hy : y ≠ 0) : x / y ^ 2 = z / y := by
   field_simp
-  guard_target = x / y ^ 2 = z / y
+  guard_target = x = y * z
   exact test_sorry
 
--- why the first idea could work
-example {x y z : ℚ} : (x / y ^ 2 = z / y) ↔ (x * y = z * y ^ 2) := by
-  obtain rfl | hy := eq_or_ne y 0
-  · simp
-  field_simp
+example {x y z : ℚ} (hy : y ≠ 0) : (x / y ^ 2 = z / y) ↔ (x * y = z * y ^ 2) := by
+  constructor <;> intro h <;> field_simp at h ⊢ <;> assumption
 
--- why the second idea could work
-example {x y z : ℚ} : (x / y ^ 2 = z / y) ↔ (x / y / y = z / y) := by
-  obtain rfl | hy := eq_or_ne y 0
-  · simp
-  ring_nf
+example {x y z : ℚ} (hy : y ≠ 0) : (x / y ^ 2 = z / y) ↔ (x / y / y = z / y) := by
+  field_simp
 
 end
 
@@ -620,80 +655,50 @@ end
 section
 
 -- This example is used in the `field` docstring.
-example {a b : ℚ} (H : b + a ≠ 0) : a / (a + b) + b / (b + a) = 1 := by
+example {a b : ℚ} (H : b + a ≠ 0) :
+    Checked.div a (a + b) (add_comm b a ▸ H.isUnit) + b / (b + a) = 1 := by
   ring_nf at *
   field
 
-/--
-info: Try this:
-  [apply] field_simp
----
-error: unsolved goals
-a b : ℚ
-H : b + a ≠ 0
-⊢ (a + b) / (a + b) = 1
--/
-#guard_msgs in
-example {a b : ℚ} (H : b + a ≠ 0) : a / (a + b) + b / (b + a) = 1 := by
+#guard_msgs (drop info) in
+example {a b : ℚ} (H : b + a ≠ 0) :
+    Checked.div a (a + b) (add_comm b a ▸ H.isUnit) + b / (b + a) = 1 := by
   ring_nf
   field
 
-/--
-info: Try this:
-  [apply] field_simp
----
-error: unsolved goals
-a b : ℚ
-H : b + a ≠ 0
-⊢ a * (b + a) / (a + b) + b = b + a
--/
-#guard_msgs in
-example {a b : ℚ} (H : b + a ≠ 0) : a / (a + b) + b / (b + a) = 1 := by
+#guard_msgs (drop info) in
+example {a b : ℚ} (H : b + a ≠ 0) :
+    Checked.div a (a + b) (add_comm b a ▸ H.isUnit) + b / (b + a) = 1 := by
   field
 
-example {a b : ℚ} (H : a + b + 1 ≠ 0) :
-    a / (a + (b + 1) ^ 2 / (b + 1)) + (b + 1) / (b + a + 1) = 1 := by
+example {a b : ℚ} (H : a + b + 1 ≠ 0) (hb : b + 1 ≠ 0) :
+    Checked.div a (a + (b + 1) ^ 2 / (b + 1)) (isUnit_add_sq_div H hb) +
+      Checked.div (b + 1) (b + a + 1) (by simpa only [add_comm a b] using H.isUnit) = 1 := by
   field_simp
   ring_nf at *
-  field
 
-/--
-info: Try this:
-  [apply] field_simp
----
-error: unsolved goals
-a b : ℚ
-H : 1 + a + b ≠ 0
-⊢ a * (1 + a + b) / (a + b * 2 / (1 + b) + b ^ 2 / (1 + b) + 1 / (1 + b)) + b + 1 = 1 + a + b
--/
-#guard_msgs in
-example {a b : ℚ} (H : a + b + 1 ≠ 0) :
-    a / (a + (b + 1) ^ 2 / (b + 1)) + (b + 1) / (b + a + 1) = 1 := by
+#guard_msgs (drop info) in
+example {a b : ℚ} (H : a + b + 1 ≠ 0) (hb : b + 1 ≠ 0) :
+    Checked.div a (a + (b + 1) ^ 2 / (b + 1)) (isUnit_add_sq_div H hb) +
+      Checked.div (b + 1) (b + a + 1) (by simpa only [add_comm a b] using H.isUnit) = 1 := by
   ring_nf at *
   field
 
-/--
-info: Try this:
-  [apply] field_simp
----
-error: unsolved goals
-a b : ℚ
-H : a + b + 1 ≠ 0
-⊢ a / (a + (b + 1)) + (b + 1) / (b + a + 1) = 1
--/
-#guard_msgs in
-example {a b : ℚ} (H : a + b + 1 ≠ 0) :
-    a / (a + (b + 1) ^ 2 / (b + 1)) + (b + 1) / (b + a + 1) = 1 := by
+#guard_msgs (drop info) in
+example {a b : ℚ} (H : a + b + 1 ≠ 0) (hb : b + 1 ≠ 0) :
+    Checked.div a (a + (b + 1) ^ 2 / (b + 1)) (isUnit_add_sq_div H hb) +
+      Checked.div (b + 1) (b + a + 1) (by simpa only [add_comm a b] using H.isUnit) = 1 := by
   field
 
 end
 
-/-! From PluenneckeRuzsa: new `field_simp` doesn't handle variable exponents -/
+/-! Clear a unit denominator under a symbolic natural power without evaluating its exponent. -/
 
 example (x y : ℚ≥0) (n : ℕ) (hx : x ≠ 0) : y * ((y / x) ^ n * x) = (y / x) ^ (n + 1) * x * x := by
   field_simp
-  guard_target =  y * (y / x) ^ n = x * (y / x) ^ (n + 1)
-  exact test_sorry
+  guard_target = y * x ^ (n + 1) * y ^ n = x * x ^ n * y ^ (n + 1)
+  simp only [pow_succ]
+  ring
 
 example (x y : ℚ≥0) (n : ℕ) (hx : x ≠ 0) : y * ((y / x) ^ n * x) = (y / x) ^ (n + 1) * x * x := by
   simp [field, pow_add]
@@ -714,16 +719,21 @@ example (x : ℚ) (h₀ : x ≠ 0) :
 
 example {x y : ℚ} (h : x + y ≠ 0) : x / (x + y) + y / (x + y) = 1 := by field_simp
 example {x : ℚ} (hx : x ≠ 0) : x * x⁻¹ = 1 := by field_simp
-example {x : ℚ} : x ^ 2 * x⁻¹ = x := by field_simp
+example {x : ℚ} (hx : x ≠ 0) : x ^ 2 * x⁻¹ = x := by field_simp
 
 /-! TODO: cancel denominators from disequalities and inequalities -/
 
 -- example (hx : x ≠ 0) (h : x ^ 2 * x⁻¹ ≠ x) : True := by field_simp at h
 
+-- An unknown-sign factor cannot be canceled from an inequality.
+example (x y c : ℝ) (hc : c ≠ 0) (h : x * c ≤ y * c) : x / c ≤ y / c := by
+  field_simp
+  simpa only [mul_comm c] using h
+
 /-! ## Tactic operating recursively -/
 
 example {x y : ℚ} (hx : y ≠ 0) {f : ℚ → ℚ} (hf : ∀ t, f t ≠ 0) :
-    f (x * y / y) / f (x / y * y) = 1 := by
+    Checked.div (f (x * y / y)) (f (x / y * y)) (hf _).isUnit = 1 := by
   field_simp [hf]
 
 -- test for consistent atom ordering across subterms
@@ -731,8 +741,8 @@ example {x y : ℚ} (hx : y ≠ 0) {f : ℚ → ℚ} (hf : ∀ t, f t ≠ 0) :
     f (y * x * y / y) / f (x * y / y * y) = 1 := by
   field_simp [hf]
 
-example {x y z : ℚ} (hx : y ≠ 0) {f : ℚ → ℚ} (hf : ∀ t, f t ≠ 0) :
-    f (y * x / (y ^ 2 / z)) / f (z / (y / x)) = 1 := by
+example {x y z : ℚ} (hx : x ≠ 0) (hy : y ≠ 0) (hz : z ≠ 0) {f : ℚ → ℚ} (hf : ∀ t, f t ≠ 0) :
+    Checked.div (f (y * x / (y ^ 2 / z))) (f (z / (y / x))) (hf _).isUnit = 1 := by
   field_simp [hf]
 
 open Finset in
@@ -776,7 +786,7 @@ example (x : ℚ) (h₀ : x ≠ 0) :
   field_simp (discharger := simp; assumption)
   ring
 
-/-- warning: Custom `field_simp` dischargers do not make use of the `field_simp` arguments list -/
+/-- warning: Custom field_simp dischargers do not use the arguments list -/
 #guard_msgs in
 example (x : ℚ) (h₀ : x ≠ 0) :
     (4 / x)⁻¹ * ((3 * x ^ 3) / x) ^ 2 * ((1 / (2 * x))⁻¹) ^ 3 = 18 * x ^ 8 := by
@@ -797,7 +807,8 @@ variable {K : Type*} [Field K] [LinearOrder K] [IsStrictOrderedRing K]
 -- mimic discharger
 example  (hK : ∀ ξ : K, ξ + 1 ≠ 0) (x : K) : |x + 1| ≠ 0 := by simp [hK x]
 
-example  (hK : ∀ ξ : K, ξ + 1 ≠ 0) (x : K) : 1 / |x + 1| = 5 := by
+example (hK : ∀ ξ : K, ξ + 1 ≠ 0) (x : K) :
+    Checked.div 1 |x + 1| (abs_ne_zero.mpr (hK x)).isUnit = 5 := by
   field_simp [hK x]
   guard_target = 1 = |x + 1| * 5
   exact test_sorry
@@ -817,13 +828,15 @@ inst✝¹ : LinearOrder K
 inst✝ : IsStrictOrderedRing K
 hK : ∀ (ξ : K), 0 < ξ + 1
 x : K
-⊢ 1 / (x + 1) = 5
+⊢ 1 = (x + 1) * 5
 -/
 #guard_msgs in
-example (hK : ∀ ξ : K, 0 < ξ + 1) (x : K) : 1 / (x + 1) = 5 := by field_simp [hK x]
+example (hK : ∀ ξ : K, 0 < ξ + 1) (x : K) :
+    Checked.div 1 (x + 1) (hK x).ne'.isUnit = 5 := by field_simp [hK x]
 
 -- works when the hypothesis is brought out for use by `positivity`
-example (hK : ∀ ξ : K, 0 < ξ + 1) (x : K) : 1 / (x + 1) = 5 := by
+example (hK : ∀ ξ : K, 0 < ξ + 1) (x : K) :
+    Checked.div 1 (x + 1) (hK x).ne'.isUnit = 5 := by
   have := hK x
   field_simp
   guard_target = 1 = (x + 1) * 5
@@ -852,13 +865,19 @@ Such behaviour can be invoked in the new implementation by running `simp` with t
 simprocs and a discharger.
 -/
 
-example (m n : ℕ) (h : m ≤ n) (hm : (2:ℚ) < n - m) : (n:ℚ) / (n - m) = 1 / ↑(n - m) * n := by
+example (m n : ℕ) (h : m ≤ n) (hm : (2 : ℚ) < n - m) :
+    (n : ℚ) / (n - m) = (Checked.div 1 ((n - m : ℕ) : ℚ) (by
+    rw [Nat.cast_sub h]
+    exact (lt_trans (by norm_num) hm).ne'.isUnit)) * n := by
   simp [field]
-  guard_target = (n:ℚ) = ↑n * (↑n - ↑m) / ↑(n - m)
-  exact test_sorry
+  guard_target = ((n - m : ℕ) : ℚ) = (n : ℚ) - m ∨ n = 0
+  exact Or.inl (Nat.cast_sub h)
 
-example (m n : ℕ) (h : m ≤ n) (hm : (2:ℚ) < n - m) : (n:ℚ) / (n - m) = 1 / ↑(n - m) * n := by
-  simp (disch := assumption) [field]
+example (m n : ℕ) (h : m ≤ n) (hm : (2 : ℚ) < n - m) :
+    (n : ℚ) / (n - m) = (Checked.div 1 ((n - m : ℕ) : ℚ) (by
+    rw [Nat.cast_sub h]
+    exact (lt_trans (by norm_num) hm).ne'.isUnit)) * n := by
+  simp (disch := assumption) [field, div_eq_inv_mul₀]
 
 /-! ### Non-confluence issues
 
@@ -867,32 +886,26 @@ of any Mathlib simp-lemmas, otherwise we can get infinite loops.  -/
 
 -- Mathlib simp-lemmas `neg_mul` and `mul_neg`
 example {K : Type*} [Field K] {a b c x : K} : -(c * a * x) + -b = 7 := by
-  simp [field]
+  simp [field, mul_assoc]
   fail_if_success rw [neg_mul]
   fail_if_success rw [mul_neg]
   exact test_sorry
 
 -- Mathlib simp-lemma `one_div`
-example (a b : ℚ) : a * b⁻¹ = 7 := by
+example (a b : ℚ) (hb : b ≠ 0) : a * b⁻¹ = 7 := by
   simp [field]
   fail_if_success rw [one_div]
   exact test_sorry
 
 -- Mathlib simp-lemma `mul_inv_rev`
 -- from `Analysis.SpecialFunctions.Stirling`
-example (m n : ℚ) : (m * n)⁻¹ = 7 := by
+example (m n : ℚ) (h : IsUnit (m * n)) : (m * n)⁻¹ = 7 := by
   simp [field]
   fail_if_success rw [mul_inv_rev]
   exact test_sorry
 
--- undiagnosed non-confluence
--- from `LinearAlgebra.QuadraticForm.Real`
-/--
-error: Tactic `simp` failed with a nested error:
-maximum recursion depth has been reached
-use `set_option maxRecDepth <num>` to increase limit
-use `set_option diagnostics true` to get diagnostic information
--/
+-- A dependent conditional with an opaque branch terminates without rewriting.
+/-- error: `simp` made no progress -/
 #guard_msgs in
 example {t : ℚ} (ht : t ≠ 0) (a : ∀ t, t ≠ 0 → ℚ) : (if h : t = 0 then 1 else a t h) = 1 := by
   simp only [field]
@@ -950,7 +963,8 @@ end CommRing
 
 /-! ## Algebraic structures weaker than `Field` -/
 
-example {K : Type} [CommGroupWithZero K] {x y : K} : y / x * x ^ 3 * y ^ 3 = x ^ 2 * y ^ 5 / y := by
+example {K : Type} [CommGroupWithZero K] {x y : K} (hx : x ≠ 0) (hy : y ≠ 0) :
+    y / x * x ^ 3 * y ^ 3 = x ^ 2 * y ^ 5 / y := by
   field_simp
 
 example {K : Type} [Semifield K] {x y : K} (h : x + y ≠ 0) : x / (x + y) + y / (x + y) = 1 := by
@@ -961,37 +975,36 @@ example {K : Type} [Semifield K] {x y : K} (h : x + y ≠ 0) : x / (x + y) + y /
 -- `field_simp` assumes commutativity: in its absence, it does nothing.
 /-- error: `field_simp` made no progress on the goal -/
 #guard_msgs in
-example {K : Type*} [DivisionRing K] {n' x : K} (h : n' ≠ 0) (h' : n' + x ≠ 0) :
+example {K : Type*} [DivisionRing K] {n' x : K} (h : n' ≠ 0) (h' : n' + x ≠ 0)
+    (hd : IsUnit (1 + x / n')) :
     1 / (1 + x / n') = n' / (n' + x) := by
   field_simp
 
 -- For comparison: the same test passes when working over a field.
-example {K : Type*} [Field K] {n' x : K} (hn : n' ≠ 0) :
-    1 / (1 + x / n') = n' / (n' + x) := by
+example {K : Type*} [Field K] {n' x : K} (hn : n' ≠ 0) (hd : IsUnit (1 + x / n'))
+    (hs : n' + x ≠ 0) : 1 / (1 + x / n') = n' / (n' + x) := by
   field_simp
 
 /-! ## Contextual rewrites in subexpressions -/
 
 -- Ensure that the discharger has access to changes in the local context, and that the simp cache
 -- does not attempt to reuse the proof in an invalid context.
-example (x : ℚ) : (if x ≠ 0 then x / x else x / x) = 1 := by
+example (x : ℚ) : (if h : x ≠ 0 then Checked.div x x h.isUnit else 7) = 1 := by
   field_simp
-  guard_target = (if x ≠ 0 then 1 else x / x) = 1
+  guard_target = dite (x ≠ 0) (fun _ ↦ (1 : ℚ)) (fun _ ↦ 7) = 1
   exact test_sorry
 
-example (x : ℚ) : (if x = 0 then x / x else x / x) = 1 := by
+example (x : ℚ) : (if h : x = 0 then 7 else Checked.div x x (show x ≠ 0 from h).isUnit) = 1 := by
   field_simp
-  guard_target = (if x = 0 then x / x else 1) = 1
+  guard_target = dite (x = 0) (fun _ ↦ (7 : ℚ)) (fun _ ↦ 1) = 1
   exact test_sorry
 
 /- Test whether the discharger has access to implication hypotheses. -/
-example (x : ℚ) : (x ≠ 0 → x / x = 1) := by
+example (x : ℚ) : ∀ hx : x ≠ 0, Checked.div x x hx.isUnit = 1 := by
+  intro hx
   field_simp
-  guard_target = (x ≠ 0 → True)
-  exact test_sorry
 
-/- Ensure that the `x = 0` hypothesis isn't used by `simp` to substitute. -/
-example (x : ℚ) : (x = 0 → x / x = 1) := by
-  field_simp
-  guard_target = (x = 0 → x / x = 1)
-  exact test_sorry
+-- The zero branch cannot synthesize the original denominator certificate.
+example (x : ℚ) (hx : x = 0) : True := by
+  fail_if_success have := (x / x : ℚ)
+  trivial

@@ -37,19 +37,17 @@ lemma LSeries.abscissaOfAbsConv_sub_le (f g : ℕ → ℂ) :
     abscissaOfAbsConv (f - g) ≤ max (abscissaOfAbsConv f) (abscissaOfAbsConv g) :=
   abscissaOfAbsConv_binop_le LSeriesSummable.sub f g
 
-private
-lemma cpow_mul_div_cpow_eq_div_div_cpow (m n : ℕ) (z : ℂ) (x : ℝ) :
-    (n + 1) ^ (x : ℂ) * (z / m ^ (x : ℂ)) = z / (m / (n + 1)) ^ (x : ℂ) := by
-  have Hn : (0 : ℝ) ≤ (n + 1 : ℝ)⁻¹ := by positivity
-  rw [← mul_div_assoc, mul_comm, div_eq_mul_inv z, mul_div_assoc]
-  congr
-  simp_rw [div_eq_mul_inv]
-  rw [show (n + 1 : ℂ)⁻¹ = (n + 1 : ℝ)⁻¹ by simp,
-    show (n + 1 : ℂ) = (n + 1 : ℝ) by norm_cast, show (m : ℂ) = (m : ℝ) by norm_cast,
-    mul_cpow_ofReal_nonneg m.cast_nonneg Hn, mul_inv, mul_comm]
-  congr
-  rw [← cpow_neg, show (-x : ℂ) = (-1 : ℝ) * x by simp, cpow_mul_ofReal_nonneg Hn,
-    Real.rpow_neg_one, inv_inv]
+private lemma cpow_mul_term_eq_rpow_ratio {m n : ℕ} (hm : 0 < m) (f : ℕ → ℂ) (x : ℝ) :
+    (n + 1) ^ (x : ℂ) * term f x m =
+      f m * ↑((Checked.div (n + 1 : ℝ) m (Nat.cast_ne_zero.mpr hm.ne').isUnit) ^ x) := by
+  have hunit : IsUnit (m : ℝ) := (Nat.cast_ne_zero.mpr hm.ne').isUnit
+  have hnum : (0 : ℝ) ≤ n + 1 := by positivity
+  have hden : (0 : ℝ) ≤ m := Nat.cast_nonneg _
+  have hratio : (0 : ℝ) ≤ Checked.div (n + 1 : ℝ) m hunit := div_nonneg hnum hden
+  rw [ofReal_cpow hratio, ofReal_div, div_cpow_ofReal_nonneg hnum hden _ (hb₀ := hunit),
+    term_of_ne_zero hm.ne']
+  simp only [ofReal_add, ofReal_natCast, ofReal_one, ← mul_div_assoc₀]
+  rw [mul_comm (f m)]
 
 open Filter Real in
 /-- If the coefficients `f m` of an L-series are zero for `m ≤ n` and the L-series converges
@@ -60,13 +58,16 @@ lemma LSeries.tendsto_cpow_mul_atTop {f : ℕ → ℂ} {n : ℕ} (h : ∀ m ≤ 
   obtain ⟨y, hay, hyt⟩ := exists_between ha
   lift y to ℝ using ⟨hyt.ne, ((OrderBot.bot_le _).trans_lt hay).ne'⟩
   -- `F x m` is the `m`th term of `(n+1)^x * LSeries f x`, except that `F x (n+1) = 0`
-  let F := fun (x : ℝ) ↦ {m | n + 1 < m}.indicator (fun m ↦ f m / (m / (n + 1) : ℂ) ^ (x : ℂ))
+  let F (x : ℝ) (m : ℕ) : ℂ := if hm : n + 1 < m then
+    f m * ↑((Checked.div (n + 1 : ℝ) m
+      (Nat.cast_ne_zero.mpr (n.zero_lt_succ.trans hm).ne').isUnit) ^ x) else 0
   have hF₀ (x : ℝ) {m : ℕ} (hm : m ≤ n + 1) : F x m = 0 := by simp [F, not_lt_of_ge hm]
   have hF (x : ℝ) {m : ℕ} (hm : m ≠ n + 1) : F x m = ((n + 1) ^ (x : ℂ)) * term f x m := by
     rcases lt_trichotomy m (n + 1) with H | rfl | H
     · simp [Nat.not_lt_of_gt H, term, h m <| Nat.lt_succ_iff.mp H, F]
     · exact (hm rfl).elim
-    · simp [H, term, (n.zero_lt_succ.trans H).ne', F, cpow_mul_div_cpow_eq_div_div_cpow]
+    · simpa only [F, dite_eq_left H] using
+        (cpow_mul_term_eq_rpow_ratio (n := n) (n.zero_lt_succ.trans H) f x).symm
   have hs {x : ℝ} (hx : x ≥ y) : Summable fun m ↦ (n + 1) ^ (x : ℂ) * term f x m := by
     refine (summable_mul_left_iff <| natCast_add_one_cpow_ne_zero n _).mpr <|
        LSeriesSummable_of_abscissaOfAbsConv_lt_re ?_
@@ -92,30 +93,27 @@ lemma LSeries.tendsto_cpow_mul_atTop {f : ℕ → ℂ} {n : ℕ} (h : ∀ m ≤ 
     · simp [hm, hF₀ _ hm]
   have hc (k : ℕ) : Tendsto (F · k) atTop (nhds 0) := by
     rcases lt_or_ge (n + 1) k with H | H
-    · have H₀ : (0 : ℝ) ≤ k / (n + 1) := by positivity
-      have H₀' : (0 : ℝ) ≤ (n + 1) / k := by positivity
-      have H₁ : (k / (n + 1) : ℂ) = (k / (n + 1) : ℝ) := by push_cast; rfl
-      have H₂ : (n + 1) / k < (1 : ℝ) :=
-        (div_lt_one <| mod_cast n.succ_pos.trans H).mpr <| mod_cast H
-      simp only [Set.mem_ofPred_eq, H, Set.indicator_of_mem, F]
-      conv =>
-        enter [1, x]
-        rw [div_eq_mul_inv, H₁, ← ofReal_cpow H₀, ← ofReal_inv, ← Real.inv_rpow H₀, inv_div]
-      conv => enter [3, 1]; rw [← mul_zero (f k)]
-      exact
-        (tendsto_rpow_atTop_of_base_lt_one _ (neg_one_lt_zero.trans_le H₀') H₂).ofReal.const_mul _
+    · have hk : (0 : ℝ) < k := Nat.cast_pos.mpr (n.zero_lt_succ.trans H)
+      let r := Checked.div (n + 1 : ℝ) k hk.ne'.isUnit
+      have hr₀ : 0 < r := div_pos (by positivity) hk
+      have hr₁ : r < 1 := (div_lt_one hk).mpr (by exact_mod_cast H)
+      simpa only [F, dite_eq_left H, ofReal_zero, mul_zero] using
+        ((tendsto_rpow_atTop_of_base_lt_one r (neg_one_lt_zero.trans hr₀) hr₁).ofReal.const_mul
+          (f k))
     · simp [hF₀ _ H]
   rw [show (0 : ℂ) = tsum (fun _ : ℕ ↦ 0) from tsum_zero.symm]
   refine tendsto_tsum_of_dominated_convergence hys.norm hc <| eventually_iff.mpr ?_
   filter_upwards [mem_atTop y] with y' hy' k
   -- it remains to show that `‖F y' k‖ ≤ ‖F y k‖` (for `y' ≥ y`)
   rcases lt_or_ge (n + 1) k with H | H
-  · simp only [Set.mem_ofPred_eq, H, Set.indicator_of_mem, norm_div, norm_cpow_real,
-      Complex.norm_natCast, F]
-    rw [← Nat.cast_one, ← Nat.cast_add, Complex.norm_natCast]
-    have hkn : 1 ≤ (k / (n + 1 :) : ℝ) :=
-      (one_le_div (by positivity)).mpr <| mod_cast Nat.le_of_succ_le H
-    gcongr
+  · have hk : (0 : ℝ) < k := Nat.cast_pos.mpr (n.zero_lt_succ.trans H)
+    let r := Checked.div (n + 1 : ℝ) k hk.ne'.isUnit
+    have hr₀ : 0 < r := div_pos (by positivity) hk
+    have hr₁ : r ≤ 1 := (div_le_one hk).mpr (by exact_mod_cast H.le)
+    simp only [F, dite_eq_left H]
+    change ‖f k * ((r ^ y' : ℝ) : ℂ)‖ ≤ ‖f k * ((r ^ y : ℝ) : ℂ)‖
+    simp only [norm_mul, Complex.norm_of_nonneg (Real.rpow_nonneg hr₀.le _)]
+    exact mul_le_mul_of_nonneg_left (Real.rpow_le_rpow_of_exponent_ge hr₀ hr₁ hy') (norm_nonneg _)
   · simp [hF₀ _ H]
 
 open Filter in

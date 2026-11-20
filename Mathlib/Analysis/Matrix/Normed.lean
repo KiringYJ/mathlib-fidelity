@@ -418,20 +418,20 @@ section
 variable [NormedDivisionRing α] [NormedAlgebra ℝ α]
 
 /-- Auxiliary construction; an element of norm 1 such that `a * unitOf a = ‖a‖`. -/
-private def unitOf (a : α) : α := by classical exact if a = 0 then 1 else ‖a‖ • a⁻¹
+private def unitOf (a : α) : α := by classical exact if ha : a = 0 then 1 else ‖a‖ • a⁻¹
 
 private theorem norm_unitOf (a : α) : ‖unitOf a‖₊ = 1 := by
   rw [unitOf]
   split_ifs with h
   · simp
   · rw [← nnnorm_eq_zero] at h
-    rw [nnnorm_smul, nnnorm_inv, nnnorm_norm, mul_inv_cancel₀ h]
+    rw [nnnorm_smul, nnnorm_inv, nnnorm_norm, mul_inv_cancel₀]
 
 private theorem mul_unitOf (a : α) : a * unitOf a = algebraMap _ _ (‖a‖₊ : ℝ) := by
   simp only [unitOf, coe_nnnorm]
   split_ifs with h
   · simp [h]
-  · rw [mul_smul_comm, mul_inv_cancel₀ h, Algebra.algebraMap_eq_smul_one]
+  · rw [mul_smul_comm, mul_inv_cancel₀, Algebra.algebraMap_eq_smul_one]
 
 end
 
@@ -649,7 +649,7 @@ theorem frobenius_nnnorm_mul (A : Matrix l m α) (B : Matrix m n α) : ‖A * B�
   rw [← NNReal.mul_rpow, @Finset.sum_comm _ _ m, Finset.sum_mul_sum]
   gcongr with i _ j
   rw [← NNReal.rpow_le_rpow_iff one_half_pos, ← NNReal.rpow_mul,
-    mul_div_cancel₀ (1 : ℝ) two_ne_zero, NNReal.rpow_one, NNReal.mul_rpow]
+    mul_div_cancel₀ (1 : ℝ), NNReal.rpow_one, NNReal.mul_rpow]
   simpa only [PiLp.toLp_apply, PiLp.inner_apply, RCLike.inner_apply', starRingEnd_apply,
     Pi.nnnorm_def, PiLp.nnnorm_eq_of_L2, star_star, nnnorm_star, NNReal.sqrt_eq_rpow,
     NNReal.rpow_two] using nnnorm_inner_le_nnnorm (𝕜 := α) (toLp 2 (star <| A i ·)) (toLp 2 (B · j))

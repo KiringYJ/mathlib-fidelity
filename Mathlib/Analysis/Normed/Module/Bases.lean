@@ -486,6 +486,7 @@ def basis : SchauderBasis 𝕜 X :=
   let coeff := basisCoeff D
   have hcoeff : ∀ n x, (succSub D.P n) x = coeff n x • D.e n := fun n x ↦
     (basisCoeff_spec D n x).symm
+  have he_norm (n : ℕ) : ‖D.e n‖ ≠ 0 := norm_ne_zero_iff.mpr (D.e_ne_zero n)
   { basis := D.e
     coord := fun n ↦ LinearMap.mkContinuous
       { toFun := coeff n
@@ -496,7 +497,7 @@ def basis : SchauderBasis 𝕜 X :=
           rw [smul_eq_mul, ← smul_smul, ← hcoeff, ← hcoeff, map_smul] }
       (‖succSub D.P n‖ / ‖D.e n‖)
       (fun x ↦ by
-        rw [div_mul_eq_mul_div, le_div_iff₀ (norm_pos_iff.mpr (D.e_ne_zero n))]
+        rw [div_mul_eq_mul_div₀, le_div_iff₀ (norm_pos_iff.mpr (D.e_ne_zero n))]
         calc ‖coeff n x‖ * ‖D.e n‖ = ‖coeff n x • D.e n‖ := (norm_smul _ _).symm
           _ = ‖(succSub D.P n) x‖ := by rw [hcoeff]
           _ ≤ ‖succSub D.P n‖ * ‖x‖ := ContinuousLinearMap.le_opNorm _ _)

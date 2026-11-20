@@ -369,7 +369,7 @@ theorem mem_Lp_of_ae_bound [IsFiniteMeasure μ] {f : α →ₘ[μ] E} (C : ℝ) 
   mem_Lp_iff_memLp.2 <| MemLp.of_bound f.aestronglyMeasurable _ hfC
 
 theorem nnnorm_le_of_ae_bound [IsFiniteMeasure μ] {f : Lp E p μ} {C : ℝ≥0}
-    (hfC : ∀ᵐ x ∂μ, ‖f x‖₊ ≤ C) : ‖f‖₊ ≤ measureUnivNNReal μ ^ p.toReal⁻¹ * C := by
+    (hfC : ∀ᵐ x ∂μ, ‖f x‖₊ ≤ C) : ‖f‖₊ ≤ measureUnivNNReal μ ^ (1 / p).toReal * C := by
   by_cases hμ : μ = 0
   · simp [hμ, nnnorm_def]
   rw [← ENNReal.coe_le_coe, nnnorm_def, ENNReal.coe_toNNReal (eLpNorm_ne_top _)]
@@ -378,7 +378,7 @@ theorem nnnorm_le_of_ae_bound [IsFiniteMeasure μ] {f : Lp E p μ} {C : ℝ≥0}
     ENNReal.coe_mul, mul_comm, ENNReal.smul_def, smul_eq_mul]
 
 theorem norm_le_of_ae_bound [IsFiniteMeasure μ] {f : Lp E p μ} {C : ℝ} (hC : 0 ≤ C)
-    (hfC : ∀ᵐ x ∂μ, ‖f x‖ ≤ C) : ‖f‖ ≤ measureUnivNNReal μ ^ p.toReal⁻¹ * C := by
+    (hfC : ∀ᵐ x ∂μ, ‖f x‖ ≤ C) : ‖f‖ ≤ measureUnivNNReal μ ^ (1 / p).toReal * C := by
   lift C to ℝ≥0 using hC
   have := nnnorm_le_of_ae_bound hfC
   rwa [← NNReal.coe_le_coe, NNReal.coe_mul, NNReal.coe_rpow] at this
@@ -516,25 +516,25 @@ theorem MemLp.norm_rpow_div {f : α → E} (hf : MemLp f p μ) (q : ℝ≥0∞) 
 
 theorem memLp_enorm_rpow_iff {q : ℝ≥0∞} {f : α → ε} (hf : AEStronglyMeasurable f μ) (q_zero : q ≠ 0)
     (q_top : q ≠ ∞) : MemLp (‖f ·‖ₑ ^ q.toReal) (p / q) μ ↔ MemLp f p μ := by
+  have hqUnit : IsUnit q.toReal := (ENNReal.toReal_ne_zero.mpr ⟨q_zero, q_top⟩).isUnit
   refine ⟨fun h => ?_, fun h => h.enorm_rpow_div q⟩
   apply (memLp_enorm_iff hf).1
   convert! h.enorm_rpow_div q⁻¹ using 1
   · ext x
-    have : q.toReal * q.toReal⁻¹ = 1 :=
-      CommGroupWithZero.mul_inv_cancel q.toReal <| ENNReal.toReal_ne_zero.mpr ⟨q_zero, q_top⟩
-    simp [← ENNReal.rpow_mul, this, ENNReal.rpow_one]
+    simp [← ENNReal.rpow_mul, ENNReal.toReal_inv (ha := hqUnit)]
   · rw [div_eq_mul_inv, inv_inv, div_eq_mul_inv, mul_assoc, ENNReal.inv_mul_cancel q_zero q_top,
       mul_one]
 
 theorem memLp_norm_rpow_iff {q : ℝ≥0∞} {f : α → E} (hf : AEStronglyMeasurable f μ) (q_zero : q ≠ 0)
     (q_top : q ≠ ∞) : MemLp (fun x : α => ‖f x‖ ^ q.toReal) (p / q) μ ↔ MemLp f p μ := by
+  have hqUnit : IsUnit q.toReal := (ENNReal.toReal_ne_zero.mpr ⟨q_zero, q_top⟩).isUnit
   refine ⟨fun h => ?_, fun h => h.norm_rpow_div q⟩
   apply (memLp_norm_iff hf).1
   convert! h.norm_rpow_div q⁻¹ using 1
   · ext x
     rw [Real.norm_eq_abs, Real.abs_rpow_of_nonneg (norm_nonneg _), ← Real.rpow_mul (abs_nonneg _),
-      ENNReal.toReal_inv, mul_inv_cancel₀, abs_of_nonneg (norm_nonneg _), Real.rpow_one]
-    simp [ENNReal.toReal_eq_zero_iff, q_zero, q_top]
+      ENNReal.toReal_inv (ha := hqUnit), mul_inv_cancel₀, abs_of_nonneg (norm_nonneg _),
+      Real.rpow_one]
   · rw [div_eq_mul_inv, inv_inv, div_eq_mul_inv, mul_assoc, ENNReal.inv_mul_cancel q_zero q_top,
       mul_one]
 
@@ -869,8 +869,9 @@ def compLpL₂ [Fact (1 ≤ p)] (B : G →L[𝕜] E →L[𝕜] F) :
     compLpL₂ p μ B g f = (B g).compLp f := rfl
 
 theorem norm_compLpL₂_le [Fact (1 ≤ p)] (B : G →L[𝕜] E →L[𝕜] F) :
-    ‖B.compLpL₂ p μ‖ ≤ ‖B‖ :=
-  LinearMap.mkContinuous₂_norm_le _ (norm_nonneg _) _
+    ‖B.compLpL₂ p μ‖ ≤ ‖B‖ := by
+  unfold compLpL₂
+  exact LinearMap.mkContinuous₂_norm_le _ (norm_nonneg B) _
 
 end Bilinear
 
@@ -991,9 +992,13 @@ namespace MeasureTheory.Lp
 
 /-- A version of **Markov's inequality** with elements of Lp. -/
 lemma pow_mul_meas_ge_le_enorm (f : Lp E p μ) (hp_ne_zero : p ≠ 0) (hp_ne_top : p ≠ ∞) (ε : ℝ≥0∞) :
-    (ε * μ {x | ε ≤ ‖f x‖ₑ ^ p.toReal}) ^ (1 / p.toReal) ≤ ENNReal.ofReal ‖f‖ :=
-  (ENNReal.ofReal_toReal (eLpNorm_ne_top f)).symm ▸
-    pow_mul_meas_ge_le_eLpNorm μ hp_ne_zero hp_ne_top (Lp.aestronglyMeasurable f) ε
+    (ε * μ {x | ε ≤ ‖f x‖ₑ ^ p.toReal}) ^ (1 / p).toReal ≤ ENNReal.ofReal ‖f‖ := by
+  have hpUnit : IsUnit p.toReal := (ENNReal.toReal_pos hp_ne_zero hp_ne_top).ne'.isUnit
+  have h : (ε * μ {x | ε ≤ ‖f x‖ₑ ^ p.toReal}) ^ (1 / p.toReal) ≤
+      ENNReal.ofReal ‖f‖ :=
+    (ENNReal.ofReal_toReal (eLpNorm_ne_top f)).symm ▸
+      pow_mul_meas_ge_le_eLpNorm μ hp_ne_zero hp_ne_top (Lp.aestronglyMeasurable f) ε
+  simpa only [one_div, ENNReal.toReal_inv (ha := hpUnit), one_div₀] using h
 
 /-- A version of **Markov's inequality** with elements of Lp. -/
 lemma mul_meas_ge_le_pow_enorm (f : Lp E p μ) (hp_ne_zero : p ≠ 0) (hp_ne_top : p ≠ ∞) (ε : ℝ≥0∞) :

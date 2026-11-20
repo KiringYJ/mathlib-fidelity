@@ -201,13 +201,13 @@ noncomputable def valuation : Valuation K (ValueGroup A K) where
       rw [Algebra.smul_def]
       field_simp
       simp only [← map_mul, ← map_add]
-      congr 1; linear_combination ya * h
+      congr 1; linear_combination h
     · apply le_trans _ (le_max_right _ _)
       use c + 1
       rw [Algebra.smul_def]
       field_simp
       simp only [← map_mul, ← map_add]
-      congr 1; linear_combination yb * h
+      congr 1; linear_combination h
 
 theorem mem_integer_iff (x : K) : x ∈ (valuation A K).integer ↔ ∃ a : A, algebraMap A K a = x := by
   constructor

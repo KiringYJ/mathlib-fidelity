@@ -117,6 +117,5 @@ lemma completeSpace_of_completeSpace_Lp [hp : Fact (1 ≤ p)]
   apply tendsto_nhds_of_cauchySeq_of_subseq hu hns.tendsto_atTop
   convert xlim.const_smul (f x)⁻¹ with n
   rw [smul_smul, inv_mul_cancel₀, one_smul, Function.comp]
-  exact hx
 
 end MeasureTheory

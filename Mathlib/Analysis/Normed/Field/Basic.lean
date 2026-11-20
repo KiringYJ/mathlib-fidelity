@@ -359,7 +359,7 @@ See note [reducible non-instances] -/
 abbrev NormedField.induced [Field R] [NormedField S] [NonUnitalRingHomClass F R S] (f : F)
     (hf : Function.Injective f) : NormedField R :=
   fast_instance% { NormedDivisionRing.induced R S f hf with
-    mul_comm := mul_comm }
+    toField := ‹Field R› }
 
 end Induced
 

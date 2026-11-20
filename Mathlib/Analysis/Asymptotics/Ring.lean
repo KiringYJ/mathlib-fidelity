@@ -245,4 +245,30 @@ theorem IsLittleO.inv_rev {f : α → 𝕜} {g : α → 𝕜'} {hf : ∀ x, IsUn
     (fun x => Checked.inv (g x) (hg x)) =o[l] fun x => Checked.inv (f x) (hf x) :=
   IsLittleO.of_isBigOWith fun _c hc => (h.def' hc).inv_rev
 
+section
+
+variable {u v : α → 𝕜}
+
+/-- A function bounded by a constant multiple of `v` is eventually a pointwise multiple of `v`.
+At nonzero values of `v`, the factor is the quotient by `v`. -/
+theorem IsBigOWith.eventually_exists_mul_eq (h : IsBigOWith c l u v) :
+    ∀ᶠ x in l, ∃ q : 𝕜, q * v x = u x := by
+  filter_upwards [h.bound] with x hx
+  by_cases hv : v x = 0
+  · have hu : u x = 0 := norm_eq_zero.mp <|
+      le_antisymm (by simpa [hv] using hx) (norm_nonneg _)
+    exact ⟨0, by rw [zero_mul, hu]⟩
+  · have hUnit : IsUnit (v x) := isUnit_iff_ne_zero.mpr hv
+    exact ⟨Checked.div (u x) (v x) hUnit, div_mul_cancel₀ _⟩
+
+/-- If `u = O(v)`, then `u` is eventually a pointwise multiple of `v`. -/
+theorem IsBigO.eventually_exists_mul_eq (h : u =O[l] v) : ∀ᶠ x in l, ∃ q : 𝕜, q * v x = u x :=
+  h.isBigOWith.choose_spec.eventually_exists_mul_eq
+
+/-- If `u = o(v)`, then `u` is eventually a pointwise multiple of `v`. -/
+theorem IsLittleO.eventually_exists_mul_eq (h : u =o[l] v) : ∀ᶠ x in l, ∃ q : 𝕜, q * v x = u x :=
+  h.isBigO.eventually_exists_mul_eq
+
+end
+
 end Asymptotics

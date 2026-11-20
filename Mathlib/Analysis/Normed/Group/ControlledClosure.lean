@@ -58,12 +58,13 @@ theorem controlled_closure_of_complete {f : NormedAddGroupHom G H} {K : AddSubgr
     `b` ensures `s` is Cauchy. -/
   set s : ℕ → G := fun n => ∑ k ∈ range (n + 1), u k
   have : CauchySeq s := by
-    apply NormedAddCommGroup.cauchy_series_of_le_geometric'' (by simp) one_half_lt_one
+    apply NormedAddCommGroup.cauchy_series_of_le_geometric'' (C := ε * ‖h‖ / 2) (N := 1)
+      (by simp) one_half_lt_one
     · rintro n (hn : n ≥ 1)
       calc
         ‖u n‖ ≤ C * ‖v n‖ := hnorm_u n
         _ ≤ C * b n := by gcongr; exact (hv _ <| Nat.succ_le_iff.mp hn).le
-        _ = (1 / 2) ^ n * (ε * ‖h‖ / 2) := by simp [b, mul_div_cancel₀ _ hC.ne.symm]
+        _ = (1 / 2) ^ n * (ε * ‖h‖ / 2) := by simp only [b, mul_div_cancel₀]
         _ = ε * ‖h‖ / 2 * (1 / 2) ^ n := mul_comm _ _
   -- We now show that the limit `g` of `s` is the desired preimage.
   obtain ⟨g : G, hg⟩ := cauchySeq_tendsto_of_complete this
@@ -93,9 +94,9 @@ theorem controlled_closure_of_complete {f : NormedAddGroupHom G H} {K : AddSubgr
     have : (∑ k ∈ range (n + 1), C * b k) ≤ ε * ‖h‖ :=
       calc (∑ k ∈ range (n + 1), C * b k)
         _ = (∑ k ∈ range (n + 1), (1 / 2 : ℝ) ^ k) * (ε * ‖h‖ / 2) := by
-          simp only [b, mul_div_cancel₀ _ hC.ne.symm, ← sum_mul]
+          simp only [b, mul_div_cancel₀, ← sum_mul]
         _ ≤ 2 * (ε * ‖h‖ / 2) := by gcongr; apply sum_geometric_two_le
-        _ = ε * ‖h‖ := mul_div_cancel₀ _ two_ne_zero
+        _ = ε * ‖h‖ := mul_div_cancel₀ _
     calc
       ‖s n‖ ≤ ∑ k ∈ range (n + 1), ‖u k‖ := norm_sum_le _ _
       _ = (∑ k ∈ range n, ‖u (k + 1)‖) + ‖u 0‖ := sum_range_succ' _ _

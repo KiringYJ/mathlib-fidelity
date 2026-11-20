@@ -418,7 +418,7 @@ theorem wSameSide_iff_exists_left {s : AffineSubspace R P} {x y p₁ : P} (h : p
       exact SameRay.zero_right _
     · refine Or.inr ⟨(r₁ / r₂) • (p₁ -ᵥ p₁') +ᵥ p₂', s.smul_vsub_vadd_mem _ h hp₁' hp₂',
         Or.inr (Or.inr ⟨r₁, r₂, hr₁, hr₂, ?_⟩)⟩
-      rw [vsub_vadd_eq_vsub_sub, smul_sub, ← hr, smul_smul, mul_div_cancel₀ _ hr₂.ne.symm,
+      rw [vsub_vadd_eq_vsub_sub, smul_sub, ← hr, smul_smul, mul_div_cancel₀ _,
         ← smul_sub, vsub_sub_vsub_cancel_right]
   · rintro (h' | ⟨h₁, h₂, h₃⟩)
     · exact wSameSide_of_left_mem y h'
@@ -704,7 +704,7 @@ theorem setOfPred_wSameSide_eq_image2 {s : AffineSubspace R P} {x p : P} (hx : x
       refine ⟨0, le_rfl, p₂, hp₂, ?_⟩
       simp [h]
     · refine ⟨r₁ / r₂, (div_pos hr₁ hr₂).le, p₂, hp₂, ?_⟩
-      rw [div_eq_inv_mul, ← smul_smul, h, smul_smul, inv_mul_cancel₀ hr₂.ne.symm, one_smul,
+      rw [div_eq_inv_mul₀, ← smul_smul, h, smul_smul, inv_mul_cancel₀, one_smul,
         vsub_vadd]
   · rintro ⟨t, ht, p', hp', rfl⟩
     exact wSameSide_smul_vsub_vadd_right x hp hp' ht
@@ -724,7 +724,7 @@ theorem setOfPred_sSameSide_eq_image2 {s : AffineSubspace R P} {x p : P} (hx : x
     · rw [vsub_eq_zero_iff_eq] at h
       exact False.elim (hy (h.symm ▸ hp₂))
     · refine ⟨r₁ / r₂, div_pos hr₁ hr₂, p₂, hp₂, ?_⟩
-      rw [div_eq_inv_mul, ← smul_smul, h, smul_smul, inv_mul_cancel₀ hr₂.ne.symm, one_smul,
+      rw [div_eq_inv_mul₀, ← smul_smul, h, smul_smul, inv_mul_cancel₀, one_smul,
         vsub_vadd]
   · rintro ⟨t, ht, p', hp', rfl⟩
     exact sSameSide_smul_vsub_vadd_right hx hp hp' ht
@@ -745,8 +745,8 @@ theorem setOfPred_wOppSide_eq_image2 {s : AffineSubspace R P} {x p : P} (hx : x 
       refine ⟨0, le_rfl, p₂, hp₂, ?_⟩
       simp [h]
     · refine ⟨-r₁ / r₂, (div_neg_of_neg_of_pos (Left.neg_neg_iff.2 hr₁) hr₂).le, p₂, hp₂, ?_⟩
-      rw [div_eq_inv_mul, ← smul_smul, neg_smul, h, smul_neg, smul_smul,
-        inv_mul_cancel₀ hr₂.ne.symm, one_smul, neg_vsub_eq_vsub_rev, vsub_vadd]
+      rw [div_eq_inv_mul₀, ← smul_smul, neg_smul, h, smul_neg, smul_smul,
+        inv_mul_cancel₀, one_smul, neg_vsub_eq_vsub_rev, vsub_vadd]
   · rintro ⟨t, ht, p', hp', rfl⟩
     exact wOppSide_smul_vsub_vadd_right x hp hp' ht
 
@@ -765,8 +765,8 @@ theorem setOfPred_sOppSide_eq_image2 {s : AffineSubspace R P} {x p : P} (hx : x 
     · rw [vsub_eq_zero_iff_eq] at h
       exact False.elim (hy (h ▸ hp₂))
     · refine ⟨-r₁ / r₂, div_neg_of_neg_of_pos (Left.neg_neg_iff.2 hr₁) hr₂, p₂, hp₂, ?_⟩
-      rw [div_eq_inv_mul, ← smul_smul, neg_smul, h, smul_neg, smul_smul,
-        inv_mul_cancel₀ hr₂.ne.symm, one_smul, neg_vsub_eq_vsub_rev, vsub_vadd]
+      rw [div_eq_inv_mul₀, ← smul_smul, neg_smul, h, smul_neg, smul_smul,
+        inv_mul_cancel₀, one_smul, neg_vsub_eq_vsub_rev, vsub_vadd]
   · rintro ⟨t, ht, p', hp', rfl⟩
     exact sOppSide_smul_vsub_vadd_right hx hp hp' ht
 
@@ -925,7 +925,7 @@ lemma sSameSide_affineSpan_faceOpposite_of_sign_eq {w₁ w₂ : Fin (n + 1) → 
   let w₃ : Fin (n + 1) → R :=
     w₂ - w₂ i • (w₁ i)⁻¹ • (w₁ - Pi.single j 1)
   have hw₃1 : ∑ k, w₃ k = 1 := by simp [w₃, hw₂, ← Finset.mul_sum, hw₁]
-  have hw₃i : w₃ i = 0 := by simp [w₃, hj.symm, h0]
+  have hw₃i : w₃ i = 0 := by simp [w₃, hj.symm]
   refine ⟨Finset.univ.affineCombination R s.points w₃,
     (s.affineCombination_mem_affineSpan_faceOpposite_iff hw₃1).2 hw₃i, ?_⟩
   simp only [w₃, Finset.affineCombination_vsub, sub_sub_cancel, smul_smul, map_smul,
@@ -943,8 +943,8 @@ lemma sOppSide_affineSpan_faceOpposite_of_pos_of_neg {w₁ w₂ : Fin (n + 1) �
     (affineSpan R (Set.range (s.faceOpposite i).points)).SOppSide
       (Finset.univ.affineCombination R s.points w₁)
       (Finset.univ.affineCombination R s.points w₂) := by
-  let w₃ : Fin (n + 1) → R := lineMap w₁ w₂ (w₁ i / (w₁ i - w₂ i))
   have hp : 0 < w₁ i - w₂ i := by grind
+  let w₃ : Fin (n + 1) → R := lineMap w₁ w₂ (w₁ i / (w₁ i - w₂ i))
   have hw₃ : ∑ j, w₃ j = 1 := by
     simp [w₃, lineMap_apply, Finset.sum_add_distrib, ← Finset.mul_sum, hw₁, hw₂]
   have h : Sbtw R w₁ w₃ w₂ := sbtw_lineMap_iff.2
@@ -960,7 +960,7 @@ lemma sOppSide_affineSpan_faceOpposite_of_pos_of_neg {w₁ w₂ : Fin (n + 1) �
     ((s.affineCombination_mem_affineSpan_faceOpposite_iff hw₃).2 ?_)
   simp only [lineMap_apply, vsub_eq_sub, vadd_eq_add, Pi.add_apply, Pi.smul_apply, Pi.sub_apply,
     smul_eq_mul, w₃]
-  rw [← neg_sub (w₁ i) (w₂ i), mul_neg, div_mul_cancel₀ _ hp.ne']
+  rw [← neg_sub (w₁ i) (w₂ i), mul_neg, div_mul_cancel₀]
   simp
 
 lemma sSameSide_affineSpan_faceOpposite_iff {w₁ w₂ : Fin (n + 1) → R} (hw₁ : ∑ j, w₁ j = 1)

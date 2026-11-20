@@ -205,7 +205,7 @@ protected theorem UniformSpace.metrizable_uniformity (X : Type*) [UniformSpace X
     refine Iff.trans ?_ hB.inseparable_iff_uniformity.symm
     simp only [d, true_imp_iff]
     split_ifs with h
-    · simp [h, pow_eq_zero_iff']
+    · simp [h]
     · simpa only [not_exists, Classical.not_not, eq_self_iff_true, true_iff] using h
   have hd_symm x y : d x y = d y x := by simp only [d, (U _).comm]
   have hr : (1 / 2 : ℝ≥0) ∈ Ioo (0 : ℝ≥0) 1 := ⟨half_pos one_pos, NNReal.half_lt_self one_ne_zero⟩

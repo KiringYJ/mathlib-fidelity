@@ -16,10 +16,8 @@ through the center to a hyperplane, and vice versa. More precisely, it maps a sp
 `y ≠ c` and radius `dist y c` to the hyperplane
 `AffineSubspace.perpBisector c (EuclideanGeometry.inversion c R y)`.
 
-The exact statements are a little more complicated because `EuclideanGeometry.inversion c R` sends
-the center to itself, not to a point at infinity.
-
-We also prove that the inversion sends an affine subspace passing through the center to itself.
+The set equalities are on the complement of the center. Inversion also preserves the punctured
+affine subspaces through the center.
 
 ## Keywords
 
@@ -36,57 +34,60 @@ variable {V P : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricS
 
 namespace EuclideanGeometry
 
--- see https://github.com/leanprover-community/mathlib4/issues/29041
-set_option linter.unusedSimpArgs false in
 /-- The inversion with center `c` and radius `R` maps a sphere passing through the center to a
 hyperplane. -/
 theorem inversion_mem_perpBisector_inversion_iff (hR : R ≠ 0) (hx : x ≠ c) (hy : y ≠ c) :
-    inversion c R x ∈ perpBisector c (inversion c R y) ↔ dist x y = dist y c := by
+    inversion c R x hx ∈ perpBisector c (inversion c R y hy) ↔ dist x y = dist y c := by
+  have hdx : dist x c ≠ 0 := dist_ne_zero.2 hx
+  have hdy : dist y c ≠ 0 := dist_ne_zero.2 hy
   rw [mem_perpBisector_iff_dist_eq, dist_inversion_inversion hx hy, dist_inversion_center]
-  simp [field, eq_comm, ↓hx, ↓hy]
-
-/-- The inversion with center `c` and radius `R` maps a sphere passing through the center to a
-hyperplane. -/
-theorem inversion_mem_perpBisector_inversion_iff' (hR : R ≠ 0) (hy : y ≠ c) :
-    inversion c R x ∈ perpBisector c (inversion c R y) ↔ dist x y = dist y c ∧ x ≠ c := by
-  rcases eq_or_ne x c with rfl | hx
-  · simp [*]
-  · simp [inversion_mem_perpBisector_inversion_iff hR hx hy, hx]
+  rw [div_mul_eq_mul_div₀, div_eq_div_iff]
+  rw [show R ^ 2 * (dist x c * dist y c) =
+    (R ^ 2 * dist y c) * dist x c by ring, mul_left_inj' hdx,
+    mul_right_inj' (pow_ne_zero 2 hR)]
+  exact eq_comm
 
 theorem preimage_inversion_perpBisector_inversion (hR : R ≠ 0) (hy : y ≠ c) :
-    inversion c R ⁻¹' perpBisector c (inversion c R y) = sphere y (dist y c) \ {c} :=
-  Set.ext fun _ ↦ inversion_mem_perpBisector_inversion_iff' hR hy
+    inversionEquiv c hR ⁻¹' (Subtype.val ⁻¹' (perpBisector c (inversion c R y hy) : Set P)) =
+      Subtype.val ⁻¹' sphere y (dist y c) :=
+  Set.ext fun x ↦ inversion_mem_perpBisector_inversion_iff hR x.2 hy
 
 theorem preimage_inversion_perpBisector (hR : R ≠ 0) (hy : y ≠ c) :
-    inversion c R ⁻¹' perpBisector c y = sphere (inversion c R y) (R ^ 2 / dist y c) \ {c} := by
-  rw [← dist_inversion_center, ← preimage_inversion_perpBisector_inversion hR,
-    inversion_inversion] <;> simp [*]
+    inversionEquiv c hR ⁻¹' (Subtype.val ⁻¹' (perpBisector c y : Set P)) =
+      Subtype.val ⁻¹' sphere (inversion c R y hy) (R ^ 2 / dist y c) := by
+  rw [← dist_inversion_center c y R (hx := hy),
+    ← preimage_inversion_perpBisector_inversion hR (inversion_ne_center (hx := hy) hR),
+    inversion_inversion c hR y (hx := hy)]
 
 theorem image_inversion_perpBisector (hR : R ≠ 0) (hy : y ≠ c) :
-    inversion c R '' perpBisector c y = sphere (inversion c R y) (R ^ 2 / dist y c) \ {c} := by
-  rw [image_eq_preimage_of_inverse (inversion_involutive _ hR) (inversion_involutive _ hR),
-    preimage_inversion_perpBisector hR hy]
+    inversionEquiv c hR '' (Subtype.val ⁻¹' (perpBisector c y : Set P)) =
+      Subtype.val ⁻¹' sphere (inversion c R y hy) (R ^ 2 / dist y c) := by
+  rw [Equiv.image_eq_preimage_symm, inversionEquiv_symm, preimage_inversion_perpBisector hR hy]
 
 theorem preimage_inversion_sphere_dist_center (hR : R ≠ 0) (hy : y ≠ c) :
-    inversion c R ⁻¹' sphere y (dist y c) =
-      insert c (perpBisector c (inversion c R y) : Set P) := by
-  ext x
-  rcases eq_or_ne x c with rfl | hx; · simp [dist_comm]
-  rw [mem_preimage, mem_sphere, ← inversion_mem_perpBisector_inversion_iff hR] <;> simp [*]
+    inversionEquiv c hR ⁻¹' (Subtype.val ⁻¹' sphere y (dist y c)) =
+      Subtype.val ⁻¹' (perpBisector c (inversion c R y hy) : Set P) := by
+  rw [← preimage_inversion_perpBisector_inversion hR hy, ← preimage_comp]
+  simp only [(inversion_involutive c hR).comp_self, preimage_id]
 
 theorem image_inversion_sphere_dist_center (hR : R ≠ 0) (hy : y ≠ c) :
-    inversion c R '' sphere y (dist y c) = insert c (perpBisector c (inversion c R y) : Set P) := by
-  rw [image_eq_preimage_of_inverse (inversion_involutive _ hR) (inversion_involutive _ hR),
+    inversionEquiv c hR '' (Subtype.val ⁻¹' sphere y (dist y c)) =
+      Subtype.val ⁻¹' (perpBisector c (inversion c R y hy) : Set P) := by
+  rw [Equiv.image_eq_preimage_symm, inversionEquiv_symm,
     preimage_inversion_sphere_dist_center hR hy]
 
-/-- Inversion sends an affine subspace passing through the center to itself. -/
+/-- Inversion maps the punctured part of an affine subspace through the center into that
+subspace. -/
 theorem mapsTo_inversion_affineSubspace_of_mem {p : AffineSubspace ℝ P} (hp : c ∈ p) :
-    MapsTo (inversion c R) p p := fun _ ↦ AffineMap.lineMap_mem _ hp
+    MapsTo (fun x : {x : P // x ≠ c} ↦ inversion c R x x.2) (Subtype.val ⁻¹' (p : Set P)) p :=
+  fun _ ↦ AffineMap.lineMap_mem _ hp
 
-/-- Inversion sends an affine subspace passing through the center to itself. -/
+/-- Inversion fixes the punctured part of an affine subspace through the center as a set. -/
 theorem image_inversion_affineSubspace_of_mem {p : AffineSubspace ℝ P} (hR : R ≠ 0) (hp : c ∈ p) :
-    inversion c R '' p = p :=
-  (mapsTo_inversion_affineSubspace_of_mem hp).image_subset.antisymm fun x hx ↦
-    ⟨inversion c R x, mapsTo_inversion_affineSubspace_of_mem hp hx, inversion_inversion _ hR _⟩
+    inversionEquiv c hR '' (Subtype.val ⁻¹' (p : Set P)) = Subtype.val ⁻¹' (p : Set P) := by
+  have hm : MapsTo (inversionEquiv c hR) (Subtype.val ⁻¹' (p : Set P))
+      (Subtype.val ⁻¹' (p : Set P)) := mapsTo_inversion_affineSubspace_of_mem hp
+  exact hm.image_subset.antisymm fun x hx ↦
+    ⟨inversionEquiv c hR x, hm hx, inversion_involutive c hR x⟩
 
 end EuclideanGeometry

@@ -1876,6 +1876,7 @@ public import Mathlib.Analysis.Calculus.LocalExtr.LineDeriv
 public import Mathlib.Analysis.Calculus.LocalExtr.Polynomial
 public import Mathlib.Analysis.Calculus.LocalExtr.Rolle
 public import Mathlib.Analysis.Calculus.LogDeriv
+public import Mathlib.Analysis.Calculus.LogDeriv.Basic
 public import Mathlib.Analysis.Calculus.LogDerivUniformlyOn
 public import Mathlib.Analysis.Calculus.MeanValue
 public import Mathlib.Analysis.Calculus.Monotone
@@ -1958,6 +1959,7 @@ public import Mathlib.Analysis.Complex.UpperHalfPlane.Measure
 public import Mathlib.Analysis.Complex.UpperHalfPlane.Metric
 public import Mathlib.Analysis.Complex.UpperHalfPlane.MoebiusAction
 public import Mathlib.Analysis.Complex.UpperHalfPlane.ProperAction
+public import Mathlib.Analysis.Complex.UpperHalfPlane.QParam
 public import Mathlib.Analysis.Complex.UpperHalfPlane.Topology
 public import Mathlib.Analysis.Complex.ValueDistribution.Cartan
 public import Mathlib.Analysis.Complex.ValueDistribution.CharacteristicFunction
@@ -2153,13 +2155,17 @@ public import Mathlib.Analysis.MellinInversion
 public import Mathlib.Analysis.MellinTransform
 public import Mathlib.Analysis.Meromorphic.Basic
 public import Mathlib.Analysis.Meromorphic.Complex
+public import Mathlib.Analysis.Meromorphic.Defs
 public import Mathlib.Analysis.Meromorphic.Divisor
 public import Mathlib.Analysis.Meromorphic.FactorizedRational
+public import Mathlib.Analysis.Meromorphic.Germ
+public import Mathlib.Analysis.Meromorphic.GermOrder
 public import Mathlib.Analysis.Meromorphic.IsolatedZeros
 public import Mathlib.Analysis.Meromorphic.LogDeriv
 public import Mathlib.Analysis.Meromorphic.NormalForm
 public import Mathlib.Analysis.Meromorphic.Order
 public import Mathlib.Analysis.Meromorphic.RCLike
+public import Mathlib.Analysis.Meromorphic.Section
 public import Mathlib.Analysis.Meromorphic.TrailingCoefficient
 public import Mathlib.Analysis.Normed.Affine.AddTorsor
 public import Mathlib.Analysis.Normed.Affine.AddTorsorBases

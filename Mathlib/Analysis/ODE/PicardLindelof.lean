@@ -322,7 +322,7 @@ lemma dist_comp_iterate_next_le (hf : IsPicardLindelof f t₀ x₀ a r L K)
       hf.lipschitzOnWith t.1 t.2 |>.dist_le_mul
         _ (FunSpace.mem_closedBall hf.mul_max_le) _ (FunSpace.mem_closedBall hf.mul_max_le)
     _ ≤ K ^ (n + 1) * |t - t₀.1| ^ n / n ! * dist α β := by
-      rw [pow_succ', mul_assoc, mul_div_assoc, mul_assoc]
+      rw [pow_succ', mul_assoc, mul_div_assoc₀, mul_assoc]
       gcongr
       rwa [← mul_pow]
 
@@ -356,8 +356,12 @@ lemma dist_iterate_next_apply_le (hf : IsPicardLindelof f t₀ x₀ a r L K)
         rw [← intervalIntegral.abs_intervalIntegral_eq, intervalIntegral.integral_mul_const,
           intervalIntegral.integral_div, intervalIntegral.integral_const_mul, abs_mul, abs_div,
           abs_mul, intervalIntegral.abs_intervalIntegral_eq, integral_pow_abs_sub_uIoc, abs_div,
-          abs_pow, abs_pow, abs_dist, NNReal.abs_eq, abs_abs, mul_div, div_div, ← abs_mul,
-          ← Nat.cast_succ, ← Nat.cast_mul, ← Nat.factorial_succ, Nat.abs_cast, ← mul_pow]
+          abs_pow, abs_pow, abs_dist, NNReal.abs_eq, abs_abs, ← mul_div_assoc₀, div_div₀, ← mul_pow]
+        have hfac : ((n + 1)! : ℝ) = ((n : ℝ) + 1) * n ! := by
+          rw [Nat.factorial_succ, Nat.cast_mul, Nat.cast_succ]
+        simp only [abs_of_nonneg (show 0 ≤ (n : ℝ) + 1 by positivity),
+          abs_of_nonneg (show 0 ≤ (n ! : ℝ) by positivity), hfac]
+        exact le_rfl
 
 /-- The `n`-th iterate of `next` is Lipschitz continuous with respect to `FunSpace`, with constant
 $(K \max(t_{\mathrm{max}}, t_{\mathrm{min}})^n / n!$. -/
@@ -450,7 +454,10 @@ lemma exists_forall_closedBall_funSpace_dist_le_mul [CompleteSpace E]
       (α β : FunSpace t₀ x₀ r L) (_ : IsFixedPt (next hf hx) α) (_ : IsFixedPt (next hf hy) β),
       dist α β ≤ L' * dist x y := by
   obtain ⟨m, C, h⟩ := exists_contractingWith_iterate_next hf
-  let L' := (∑ i ∈ Finset.range m, (K * max (tmax - t₀) (t₀ - tmin)) ^ i / i !) * (1 - C)⁻¹
+  have hC : (C : ℝ) < 1 := by
+    exact_mod_cast (h x₀ (mem_closedBall_self r.coe_nonneg)).1
+  let L' := (∑ i ∈ Finset.range m, (K * max (tmax - t₀) (t₀ - tmin)) ^ i / i !) *
+    Checked.inv (1 - (C : ℝ)) (sub_pos.mpr hC).ne'.isUnit
   have hL' : 0 ≤ L' := by
     have : 0 ≤ max (tmax - t₀) (t₀ - tmin) := le_max_of_le_left <| sub_nonneg_of_le t₀.2.2
     positivity
@@ -465,7 +472,6 @@ lemma exists_forall_closedBall_funSpace_dist_le_mul [CompleteSpace E]
     apply Filter.Tendsto.mul_const
     apply Filter.Tendsto.const_mul
     convert! hasSum_geometric_of_lt_one C.2 (h y hy).1 |>.tendsto_sum_nat
-    simp [NNReal.coe_sub <| le_of_lt (h y hy).1, NNReal.coe_one]
 
 end
 
@@ -703,7 +709,8 @@ lemma of_contDiffAt_one [NormedSpace ℝ E]
   apply of_time_independent hb <|
     hl.mono <| subset_trans (closedBall_subset_ball (half_lt_self ha)) has
   simp [ε, field]
-  norm_num
+  ring_nf
+  exact le_rfl
 
 end
 

@@ -145,7 +145,7 @@ lemma IsTangentAt.eq_orthRadius_of_finrank_add_one_eq {s : Sphere P} {as : Affin
     ht.le_orthRadius
 
 lemma IsTangentAt.mem_polar_of_mem {s : Sphere P} {p₁ p₂ : P} {as : AffineSubspace ℝ P}
-    (h : s.IsTangentAt p₂ as) (hp₁ : p₁ ∈ as) : p₂ ∈ s.polar p₁ :=
+    {hp : p₁ ≠ s.center} (h : s.IsTangentAt p₂ as) (hp₁ : p₁ ∈ as) : p₂ ∈ s.polar p₁ hp :=
   mem_polar_of_mem_of_mem_orthRadius h.mem_sphere (SetLike.le_def.1 h.le_orthRadius hp₁)
 
 /-- The affine subspace `as` is tangent to the sphere `s` at some point. -/
@@ -298,7 +298,7 @@ lemma isTangent_of_mem_tangentsFrom {as : AffineSubspace ℝ P} {s : Sphere P} {
   isTangent_of_mem_tangentSet h.1
 
 lemma tangentsFrom_eq_image_orthRadius_inter_polar {s : Sphere P} {p : P} (hp : p ≠ s.center) :
-    s.tangentsFrom p = s.orthRadius '' (s ∩ s.polar p) := by
+    s.tangentsFrom p = s.orthRadius '' (s ∩ s.polar p hp) := by
   ext as
   rw [tangentsFrom, tangentSet, Set.mem_ofPred, Set.image_inter s.orthRadius_injective,
     Set.mem_inter_iff, and_congr_right_iff]
@@ -307,7 +307,8 @@ lemma tangentsFrom_eq_image_orthRadius_inter_polar {s : Sphere P} {p : P} (hp : 
   exact mem_orthRadius_iff_mem_polar_of_mem hp hp₂
 
 lemma orthRadius_mem_tangentsFrom_iff_mem_and_mem_polar {s : Sphere P} {p₁ p₂ : P}
-    (hp₁ : p₁ ≠ s.center) : s.orthRadius p₂ ∈ s.tangentsFrom p₁ ↔ p₂ ∈ s ∧ p₂ ∈ s.polar p₁ := by
+    (hp₁ : p₁ ≠ s.center) :
+    s.orthRadius p₂ ∈ s.tangentsFrom p₁ ↔ p₂ ∈ s ∧ p₂ ∈ s.polar p₁ hp₁ := by
   rw [tangentsFrom_eq_image_orthRadius_inter_polar hp₁, s.orthRadius_injective.mem_set_image]
   simp
 
@@ -330,7 +331,8 @@ lemma tangentsFrom_eq_singleton_orthRadius_of_mem {s : Sphere P} {p : P} (hp : p
     rintro rfl
     simp_all
   rw [tangentsFrom_eq_image_orthRadius_inter_polar hpc,
-    (polar_eq_orthRadius_self_iff (radius_nonneg_of_mem hp)).2 (.inl hp), ← Set.image_singleton]
+    (polar_eq_orthRadius_self_iff (hp := hpc) (radius_nonneg_of_mem hp)).2 hp,
+    ← Set.image_singleton]
   congr
   ext p'
   simp only [Set.mem_inter_iff, Metric.mem_sphere, mem_coe', SetLike.mem_coe, Set.mem_singleton_iff]
@@ -490,18 +492,19 @@ lemma isExtTangent_iff_dist_center {s₁ s₂ : Sphere P} : s₁.IsExtTangent s�
   · rcases h with ⟨p, h₁, h₂, h⟩
     exact ⟨radius_nonneg_of_mem h₁, radius_nonneg_of_mem h₂⟩
   · rintro ⟨h, h₁, h₂⟩
-    refine ⟨AffineMap.lineMap s₁.center s₂.center (s₁.radius / (s₁.radius + s₂.radius)), ?_⟩
     by_cases h0 : s₁.radius + s₂.radius = 0
-    · simp only [h0, div_zero, AffineMap.lineMap_apply_zero, isExtTangentAt_center_iff, mem_sphere]
-      exact ⟨by linarith, by linarith⟩
-    · refine ⟨?_, ?_, ?_⟩
+    · refine ⟨s₁.center, isExtTangentAt_center_iff.mpr ⟨by linarith, ?_⟩⟩
+      rw [mem_sphere, h, h0]
+      linarith
+    · have hsum : s₁.radius + s₂.radius ≠ 0 := h0
+      refine ⟨AffineMap.lineMap s₁.center s₂.center (s₁.radius / (s₁.radius + s₂.radius)),
+        ?_, ?_, ?_⟩
       · simp only [mem_sphere, dist_lineMap_left, norm_div, Real.norm_eq_abs, h, abs_of_nonneg h₁,
           abs_of_nonneg (add_nonneg h₁ h₂)]
         field
       · simp only [mem_sphere, dist_lineMap_right, Real.norm_eq_abs, h]
-        rw [one_sub_div h0, add_sub_cancel_left, abs_div, abs_of_nonneg h₂,
-          abs_of_nonneg (add_nonneg h₁ h₂)]
-        field
+        rw [one_sub_div (hb := hsum.isUnit), add_sub_cancel_left,
+          abs_of_nonneg (div_nonneg h₂ (add_nonneg h₁ h₂)), div_mul_cancel₀]
       · simp only [wbtw_lineMap_iff]
         refine .inr ⟨?_, ?_⟩
         · positivity
@@ -530,8 +533,9 @@ lemma isIntTangent_iff_dist_center [Nontrivial V] {s₁ s₂ : Sphere P} : s₁.
         exact h0 h.symm
       refine ⟨AffineMap.lineMap s₂.center s₁.center (s₂.radius / (s₂.radius - s₁.radius)),
               ?_, ?_, ?_⟩
-      · simp only [mem_sphere, dist_lineMap_right, Real.norm_eq_abs, h, one_sub_div hr0, abs_div,
-          sub_sub_cancel_left, abs_neg, abs_of_nonneg h₁, ha]
+      · simp only [mem_sphere, dist_lineMap_right, Real.norm_eq_abs, h,
+          one_sub_div (hb := hr0.isUnit), abs_div, sub_sub_cancel_left, abs_neg,
+          abs_of_nonneg h₁, ha]
         field
       · simp only [mem_sphere, dist_lineMap_left, norm_div, Real.norm_eq_abs, h, ha,
           abs_of_nonneg h₂]

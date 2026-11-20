@@ -57,13 +57,19 @@ noncomputable example : ℚ := newtonMap (X ^ 2 + 1 : ℚ[X]) (0 : ℚ)
 
 /-! A Newton step where the derivative is a unit. -/
 
+private lemma coe_inv_of_value_two (u : ℚˣ) (hu : (u : ℚ) = 2) :
+    (↑u⁻¹ : ℚ) = (2 : ℚ)⁻¹ := by
+  have h : u = Units.mk0 (2 : ℚ) two_ne_zero := Units.ext hu
+  rw [h]
+  exact Units.val_inv_eq_inv_val₀ _
+
 private lemma isUnit_derivative_one :
     IsUnit (aeval (1 : ℚ) (derivative (X ^ 2 - 2 : ℚ[X]))) := by
   simp
 
 example : newtonMap (X ^ 2 - 2 : ℚ[X]) (1 : ℚ) isUnit_derivative_one = 3 / 2 := by
-  rw [newtonMap_apply, Units.val_inv_eq_inv_val, IsUnit.unit_spec]
-  simp
+  have h : aeval (1 : ℚ) (derivative (X ^ 2 - 2 : ℚ[X])) = 2 := by simp; norm_num
+  rw [newtonMap_apply, coe_inv_of_value_two _ ((IsUnit.unit_spec _).trans h)]
   norm_num
 
 /-! A unit derivative need not survive a step: the step of `X ^ 2 + 1` from `1` reaches `0`, where
@@ -74,7 +80,8 @@ private lemma isUnit_derivative_one' :
   simp
 
 example : newtonMap (X ^ 2 + 1 : ℚ[X]) (1 : ℚ) isUnit_derivative_one' = 0 := by
-  rw [newtonMap_apply, Units.val_inv_eq_inv_val, IsUnit.unit_spec]
+  have h : aeval (1 : ℚ) (derivative (X ^ 2 + 1 : ℚ[X])) = 2 := by simp; norm_num
+  rw [newtonMap_apply, coe_inv_of_value_two _ ((IsUnit.unit_spec _).trans h)]
   norm_num
 
 /-! Fixed points of the Newton step are exactly the roots. -/

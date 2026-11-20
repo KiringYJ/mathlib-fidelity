@@ -212,7 +212,7 @@ lemma eventually_norm_symmL_trivializationAt_self_comp_lt (x : B) {r : ℝ} (hr 
     _ = δ * C * g' x w w + g' y w w := by
       rw [← hgx]; rfl
   have : (1 - δ * C) * g' x w w ≤ g' y w w := by linarith
-  rw [← (le_div_iff₀' (lt_of_le_of_lt (by positivity) hδ)), div_eq_inv_mul] at this
+  rw [← (le_div_iff₀' (lt_of_le_of_lt (by positivity) hδ)), div_eq_inv_mul₀] at this
   grw [this]
   gcongr
   · rw [← hgy, ← hg, real_inner_self_eq_norm_sq]

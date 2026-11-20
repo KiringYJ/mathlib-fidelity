@@ -90,12 +90,12 @@ lemma isCompact_closedBall (γ : ValueGroupWithZero K) : IsCompact { x | valuati
   simp_rw [← (valuation K).restrict_le_iff] at H ⊢
   convert!
     (hs'.of_isClosed_subset (Valued.isClosed_closedBall K _) H).image
-      (Homeomorph.mulLeft₀ (γ / r) (by simp [hr, div_eq_zero_iff, hγ])).continuous using 1
+      (Homeomorph.mulLeft₀ (γ / r) (by simp [div_eq_zero_iff, hγ])).continuous using 1
   refine .trans ?_ (Equiv.image_eq_preimage_symm _ _).symm
   ext x
   simp only [Set.mem_ofPred_eq, Homeomorph.coe_symm_toEquiv, Homeomorph.mulLeft₀_symm_apply,
-    inv_div, Set.preimage_ofPred_eq, map_mul, map_div₀, Valuation.restrict_le_iff]
-  rw [div_mul_eq_mul_div, div_le_iff₀ (by simp [hγ])]
+    inv_div₀, Set.preimage_ofPred_eq, map_mul, map_div₀, Valuation.restrict_le_iff]
+  rw [div_mul_eq_mul_div₀, div_le_iff₀ (by simp [hγ])]
   simp only [IsValuativeTopology.v_eq_valuation, ← map_mul, Valuation.restrict_le_iff]
   simp [hr]
 

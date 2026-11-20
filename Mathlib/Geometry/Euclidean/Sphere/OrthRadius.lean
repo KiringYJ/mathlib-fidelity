@@ -279,15 +279,15 @@ lemma inter_orthRadius_eq_empty_iff {s : Sphere P} {p : P} :
           intro v'
           obtain ⟨c', rfl⟩ := hv v'
           refine ⟨c' / c, ?_⟩
-          simp [← hc, smul_smul, hc0]
+          simp [← hc, smul_smul]
         simp only [hnf, hn, or_self, iff_false, ← Set.nonempty_iff_ne_empty]
         rw [ne_eq, ← Submodule.orthogonal_eq_bot_iff] at hb
         obtain ⟨v, hvm, hv0⟩ := Submodule.exists_mem_ne_zero_of_ne_bot hb
         refine ⟨(√(s.radius ^ 2 - (dist p s.center) ^ 2) / ‖v‖) • v +ᵥ p, ?_⟩
         rw [vadd_mem_inter_orthRadius_iff_norm_sq (dist_nonneg.trans_lt h).le
           (Submodule.smul_mem _ _ hvm)]
-        rw [norm_smul, norm_div, norm_norm, div_mul_cancel₀ _ (norm_ne_zero_iff.2 hv0)]
-        simp only [Real.norm_eq_abs, sq_abs]
+        rw [norm_smul, Real.norm_of_nonneg (div_nonneg (Real.sqrt_nonneg _) (norm_nonneg _)),
+          div_mul_cancel₀]
         refine Real.sq_sqrt ?_
         rw [sub_nonneg, sq_le_sq, abs_of_nonneg dist_nonneg]
         exact h.le.trans (le_abs_self _)
@@ -354,9 +354,9 @@ lemma inter_orthRadius_eq_of_dist_le_radius [hf2 : Fact (Module.finrank ℝ V = 
   convert!
     inter_orthRadius_eq_of_dist_le_radius_of_norm_eq_one hp hpc (v := ‖v‖⁻¹ • v)
       (Submodule.smul_mem _ _ hv) ?_ using 2
-  · simp [div_eq_mul_inv, smul_smul]
-  · simp [div_eq_mul_inv, smul_smul]
-  · simp [norm_smul, norm_ne_zero_iff.2 hv0]
+  · simp [div_eq_mul_inv₀, smul_smul]
+  · simp [div_eq_mul_inv₀, smul_smul]
+  · simp [norm_smul]
 
 /-- In 2D, the line defined by `s.orthRadius p` intersects `s` at exactly two points so long as `p`
 lies strictly within `s` and not at its center. -/
@@ -367,15 +367,16 @@ lemma ncard_inter_orthRadius_eq_two_of_dist_lt_radius [hf2 : Fact (Module.finran
   simp only [hf2.out, Nat.reduceEqDiff, finrank_eq_one_iff'] at hf
   obtain ⟨v, hv0, hv⟩ := hf
   replace hv0 : (v : V) ≠ 0 := by simpa using hv0
+  have hn : ‖(v : V)‖ ≠ 0 := norm_ne_zero_iff.mpr hv0
   rw [inter_orthRadius_eq_of_dist_le_radius hp.le hpc (by simpa using v.property) hv0,
-    Submodule.norm_coe, neg_smul, Set.ncard_pair]
+    neg_smul, Set.ncard_pair]
   rw [ne_eq, vadd_right_cancel_iff, ← add_eq_zero_iff_eq_neg, ← two_smul ℝ,
-    smul_eq_zero_iff_right two_ne_zero, smul_eq_zero_iff_left hv0, div_eq_iff, zero_mul]
-  · have hvp : 0 < √(s.radius ^ 2 - dist p s.center ^ 2) := by
-      rw [Real.sqrt_pos, sub_pos, sq_lt_sq, abs_of_nonneg dist_nonneg]
-      exact lt_abs.2 (.inl hp)
-    exact hvp.ne'
-  · simpa using hv0
+    smul_eq_zero_iff_right two_ne_zero, smul_eq_zero_iff_left hv0,
+    div_eq_iff (hb := hn.isUnit), zero_mul]
+  have hvp : 0 < √(s.radius ^ 2 - dist p s.center ^ 2) := by
+    rw [Real.sqrt_pos, sub_pos, sq_lt_sq, abs_of_nonneg dist_nonneg]
+    exact lt_abs.2 (.inl hp)
+  exact hvp.ne'
 
 lemma ncard_inter_orthRadius_le_two [hf2 : Fact (Module.finrank ℝ V = 2)]
     {s : Sphere P} {p : P} (hpc : p ≠ s.center) : (s ∩ s.orthRadius p : Set P).ncard ≤ 2 := by

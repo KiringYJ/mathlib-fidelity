@@ -21,7 +21,7 @@ this condition holds.
 ## Main Definitions
 
 * `seminormFromBounded'` : the real-valued function sending `x ∈ R` to the supremum of
-  `f(x*y)/f(y)`, where `y` runs over the elements of `R`.
+  `f(x*y)/f(y)` over the elements `y` with `f y ≠ 0`.
 * `seminormFromBounded` : the function `seminormFromBounded'` as a `RingSeminorm` on `R`.
 * `normFromBounded` :`seminormFromBounded' f` as a `RingNorm` on `R`, provided that `f` is
   nonnegative, multiplicatively bounded and subadditive, that it preserves `0` and negation, and
@@ -54,11 +54,29 @@ variable {R : Type _} [CommRing R] (f : R → ℝ) {c : ℝ}
 
 section seminormFromBounded
 
-/-- The real-valued function sending `x ∈ R` to the supremum of  `f(x*y)/f(y)`, where `y` runs over
-the elements of `R`. -/
-def seminormFromBounded' : R → ℝ := fun x ↦ iSup fun y : R ↦ f (x * y) / f y
+/-- The real-valued function sending `x ∈ R` to the supremum of `f(x*y)/f(y)` over
+the elements `y` with `f y ≠ 0`. The empty supremum gives the zero seminorm when `f = 0`. -/
+def seminormFromBounded' : R → ℝ := fun x ↦
+  ⨆ y : {y : R // f y ≠ 0}, Checked.div (f (x * y)) (f y) y.2.isUnit
 
 variable {f}
+
+private theorem seminormFromBounded_le_of_forall {x : R} {b : ℝ} (hb : 0 ≤ b)
+    (hle : ∀ y : {y : R // f y ≠ 0}, Checked.div (f (x * y)) (f y) y.2.isUnit ≤ b) :
+    seminormFromBounded' f x ≤ b := by
+  rw [seminormFromBounded']
+  rcases isEmpty_or_nonempty {y : R // f y ≠ 0} with _ | _
+  · rwa [Real.iSup_of_isEmpty]
+  · exact ciSup_le hle
+
+private theorem seminormFromBounded_nonneg_of_bddAbove (f_nonneg : 0 ≤ f) (x : R)
+    (hbdd : BddAbove (Set.range fun y : {y : R // f y ≠ 0} ↦
+      Checked.div (f (x * y)) (f y) y.2.isUnit)) : 0 ≤ seminormFromBounded' f x := by
+  rw [seminormFromBounded']
+  rcases isEmpty_or_nonempty {y : R // f y ≠ 0} with _ | h
+  · rw [Real.iSup_of_isEmpty]
+  · obtain ⟨y⟩ := h
+    exact le_ciSup_of_le hbdd y (div_nonneg (f_nonneg _) (f_nonneg _))
 
 /-- If `f : R → ℝ` is a nonzero, nonnegative, multiplicatively bounded function, then `f 1 ≠ 0`. -/
 theorem map_one_ne_zero (f_ne_zero : f ≠ 0) (f_nonneg : 0 ≤ f)
@@ -88,44 +106,40 @@ theorem map_mul_zero_of_map_zero (f_nonneg : 0 ≤ f)
 
 /-- `seminormFromBounded' f` preserves `0`. -/
 theorem seminormFromBounded_zero (f_zero : f 0 = 0) : seminormFromBounded' f (0 : R) = 0 := by
-  simp_rw [seminormFromBounded', zero_mul, f_zero, zero_div, ciSup_const]
+  simp [seminormFromBounded', f_zero]
 
 theorem seminormFromBounded_aux (f_nonneg : 0 ≤ f)
     (f_mul : ∀ x y : R, f (x * y) ≤ c * f x * f y) (x : R) : 0 ≤ c * f x := by
   rcases (f_nonneg x).eq_or_lt' with hx | hx
   · simp [hx]
   · change 0 < f x at hx
-    have hc : 0 ≤ c := by
-      specialize f_mul x 1
-      rw [mul_one, show c * f x * f 1 = c * f 1 * f x by ring, le_mul_iff_one_le_left hx] at f_mul
-      replace f_nonneg : 0 ≤ f 1 := f_nonneg 1
-      rcases f_nonneg.eq_or_lt' with h1 | h1
-      · linarith [show (1 : ℝ) ≤ 0 by simpa [h1] using f_mul]
-      · rw [← div_le_iff₀ h1] at f_mul
-        linarith [one_div_pos.mpr h1]
-    positivity
+    by_contra! h
+    have hle : f x ≤ c * f x * f 1 := by simpa only [mul_one] using f_mul x 1
+    exact hx.not_ge (hle.trans (mul_nonpos_of_nonpos_of_nonneg h.le (f_nonneg 1)))
 
 /-- If `f : R → ℝ` is a nonnegative, multiplicatively bounded function, then for every `x : R`,
-  the image of `y ↦ f (x * y) / f y` is bounded above. -/
+  the image of `y ↦ f (x * y) / f y` over `y` with `f y ≠ 0` is bounded above. -/
 theorem seminormFromBounded_bddAbove_range (f_nonneg : 0 ≤ f)
     (f_mul : ∀ x y : R, f (x * y) ≤ c * f x * f y) (x : R) :
-    BddAbove (Set.range fun y ↦ f (x * y) / f y) := by
+    BddAbove (Set.range fun y : {y : R // f y ≠ 0} ↦
+      Checked.div (f (x * y)) (f y) y.2.isUnit) := by
   use c * f x
   rintro r ⟨y, rfl⟩
-  rcases (f_nonneg y).eq_or_lt' with hy0 | hy0
-  · simpa [hy0] using seminormFromBounded_aux f_nonneg f_mul x
-  · simpa [div_le_iff₀ hy0] using f_mul x y
+  exact (div_le_iff₀ (lt_of_le_of_ne' (f_nonneg _) y.2)).2 (f_mul x y)
+
+private theorem le_seminormFromBounded (f_nonneg : 0 ≤ f)
+    (f_mul : ∀ x y : R, f (x * y) ≤ c * f x * f y) (x : R) (y : {y : R // f y ≠ 0}) :
+    Checked.div (f (x * y)) (f y) y.2.isUnit ≤ seminormFromBounded' f x :=
+  le_ciSup (seminormFromBounded_bddAbove_range f_nonneg f_mul x) y
 
 /-- If `f : R → ℝ` is a nonnegative, multiplicatively bounded function, then for every `x : R`,
   `seminormFromBounded' f x` is bounded above by some multiple of `f x`. -/
 theorem seminormFromBounded_le (f_nonneg : 0 ≤ f)
     (f_mul : ∀ x y : R, f (x * y) ≤ c * f x * f y) (x : R) :
     seminormFromBounded' f x ≤ c * f x := by
-  refine ciSup_le (fun y ↦ ?_)
-  rcases (f_nonneg y).eq_or_lt' with hy | hy
-  · simpa [hy] using seminormFromBounded_aux f_nonneg f_mul x
-  · rw [div_le_iff₀ hy]
-    apply f_mul
+  apply seminormFromBounded_le_of_forall (seminormFromBounded_aux f_nonneg f_mul x)
+  intro y
+  exact (div_le_iff₀ (lt_of_le_of_ne' (f_nonneg _) y.2)).2 (f_mul x y)
 
 /-- If `f : R → ℝ` is a nonnegative, multiplicatively bounded function, then for every `x : R`,
   `f x ≤ f 1 * seminormFromBounded' f x`. -/
@@ -138,16 +152,15 @@ theorem seminormFromBounded_ge (f_nonneg : 0 ≤ f)
     have hx0 : f x = 0 := f_mul.antisymm (f_nonneg _)
     rw [hx0, h1, zero_mul]
   · rw [mul_comm, ← div_le_iff₀ (lt_of_le_of_ne' (f_nonneg _) h1)]
-    conv_lhs => rw [← mul_one x]
-    exact le_ciSup (seminormFromBounded_bddAbove_range f_nonneg f_mul x) (1 : R)
+    simpa only [mul_one] using le_seminormFromBounded f_nonneg f_mul x ⟨1, h1⟩
 
 /-- If `f : R → ℝ` is a nonnegative, multiplicatively bounded function, then
   `seminormFromBounded' f` is nonnegative. -/
 theorem seminormFromBounded_nonneg (f_nonneg : 0 ≤ f)
     (f_mul : ∀ x y : R, f (x * y) ≤ c * f x * f y) :
     0 ≤ seminormFromBounded' f := fun x ↦
-  le_csSup_of_le (seminormFromBounded_bddAbove_range f_nonneg f_mul x) ⟨1, rfl⟩
-    (div_nonneg (f_nonneg _) (f_nonneg _))
+  seminormFromBounded_nonneg_of_bddAbove f_nonneg x
+    (seminormFromBounded_bddAbove_range f_nonneg f_mul x)
 
 /-- If `f : R → ℝ` is a nonnegative, multiplicatively bounded function, then
   `seminormFromBounded' f x = 0` if and only if `f x = 0`. -/
@@ -166,60 +179,40 @@ theorem seminormFromBounded_eq_zero_iff (f_nonneg : 0 ≤ f)
 /-- If `f` is invariant under negation of `x`, then so is `seminormFromBounded'`. -/
 theorem seminormFromBounded_neg (f_neg : ∀ x : R, f (-x) = f x) (x : R) :
     seminormFromBounded' f (-x) = seminormFromBounded' f x := by
-  suffices ⨆ y, f (-x * y) / f y = ⨆ y, f (x * y) / f y by simpa only [seminormFromBounded']
-  congr
-  ext y
-  rw [neg_mul, f_neg]
+  simp [seminormFromBounded', neg_mul, f_neg]
 
 /-- If `f : R → ℝ` is a nonnegative, multiplicatively bounded function, then
   `seminormFromBounded' f` is submultiplicative. -/
 theorem seminormFromBounded_mul (f_nonneg : 0 ≤ f)
     (f_mul : ∀ x y : R, f (x * y) ≤ c * f x * f y) (x y : R) :
     seminormFromBounded' f (x * y) ≤ seminormFromBounded' f x * seminormFromBounded' f y := by
-  apply ciSup_le
-  by_cases hy : seminormFromBounded' f y = 0
-  · rw [seminormFromBounded_eq_zero_iff f_nonneg f_mul] at hy
-    intro z
-    rw [mul_comm x y, mul_assoc, map_mul_zero_of_map_zero f_nonneg f_mul hy (x * z), zero_div]
-    exact mul_nonneg (seminormFromBounded_nonneg f_nonneg f_mul x)
-      (seminormFromBounded_nonneg f_nonneg f_mul y)
-  · intro z
-    rw [← div_le_iff₀ (lt_of_le_of_ne' (seminormFromBounded_nonneg f_nonneg f_mul _) hy)]
-    apply le_ciSup_of_le (seminormFromBounded_bddAbove_range f_nonneg f_mul x) z
-    rw [div_le_iff₀ (lt_of_le_of_ne' (seminormFromBounded_nonneg f_nonneg f_mul _) hy),
-      div_mul_eq_mul_div]
-    by_cases hz : f z = 0
-    · have hxyz : f (z * (x * y)) = 0 := map_mul_zero_of_map_zero f_nonneg f_mul hz _
-      simp_rw [mul_comm, hxyz, zero_div]
-      exact div_nonneg (mul_nonneg (seminormFromBounded_nonneg f_nonneg f_mul y) (f_nonneg _))
-        (f_nonneg _)
-    · rw [div_le_div_iff_of_pos_right (lt_of_le_of_ne' (f_nonneg _) hz), mul_comm (f (x * z))]
-      by_cases hxz : f (x * z) = 0
-      · rw [mul_comm x y, mul_assoc, mul_comm y, map_mul_zero_of_map_zero f_nonneg f_mul hxz y]
-        exact mul_nonneg (seminormFromBounded_nonneg f_nonneg f_mul y) (f_nonneg _)
-      · rw [← div_le_iff₀ (lt_of_le_of_ne' (f_nonneg _) hxz)]
-        apply le_ciSup_of_le (seminormFromBounded_bddAbove_range f_nonneg f_mul y) (x * z)
-        rw [div_le_div_iff_of_pos_right (lt_of_le_of_ne' (f_nonneg _) hxz), mul_comm x y, mul_assoc]
+  have hnonneg := seminormFromBounded_nonneg f_nonneg f_mul
+  apply seminormFromBounded_le_of_forall (mul_nonneg (hnonneg x) (hnonneg y))
+  intro z
+  have hz := lt_of_le_of_ne' (f_nonneg _) z.2
+  rw [div_le_iff₀ hz, mul_right_comm x y (z : R)]
+  by_cases hxz : f (x * z) = 0
+  · rw [map_mul_zero_of_map_zero f_nonneg f_mul hxz y]
+    exact mul_nonneg (mul_nonneg (hnonneg x) (hnonneg y)) (f_nonneg _)
+  · have hx := (div_le_iff₀ hz).1 (le_seminormFromBounded f_nonneg f_mul x z)
+    have hy := (div_le_iff₀ (lt_of_le_of_ne' (f_nonneg _) hxz)).1
+      (le_seminormFromBounded f_nonneg f_mul y ⟨x * z, hxz⟩)
+    calc
+      f ((x * z) * y) = f (y * (x * z)) := by rw [mul_comm]
+      _ ≤ seminormFromBounded' f y * f (x * z) := hy
+      _ ≤ seminormFromBounded' f y * (seminormFromBounded' f x * f z) :=
+        mul_le_mul_of_nonneg_left hx (hnonneg y)
+      _ = _ := by rw [← mul_assoc, mul_comm (seminormFromBounded' f y)]
 
 /-- If `f : R → ℝ` is a nonzero, nonnegative, multiplicatively bounded function, then
   `seminormFromBounded' f 1 = 1`. -/
 theorem seminormFromBounded_one (f_ne_zero : f ≠ 0) (f_nonneg : 0 ≤ f)
     (f_mul : ∀ x y : R, f (x * y) ≤ c * f x * f y) :
     seminormFromBounded' f 1 = 1 := by
-  simp_rw [seminormFromBounded', one_mul]
   apply le_antisymm
-  · refine ciSup_le (fun x ↦ ?_)
-    by_cases hx : f x = 0
-    · rw [hx, div_zero]; exact zero_le_one
-    · rw [div_self hx]
-  · rw [← div_self (map_one_ne_zero f_ne_zero f_nonneg f_mul)]
-    have h_bdd : BddAbove (Set.range fun y ↦ f y / f y) := by
-      use (1 : ℝ)
-      rintro r ⟨y, rfl⟩
-      by_cases hy : f y = 0
-      · simp only [hy, div_zero, zero_le_one]
-      · simp only [div_self hy, le_refl]
-    exact le_ciSup h_bdd (1 : R)
+  · exact seminormFromBounded_le_of_forall zero_le_one (fun y ↦ by simp)
+  · simpa using
+      le_seminormFromBounded f_nonneg f_mul 1 ⟨1, map_one_ne_zero f_ne_zero f_nonneg f_mul⟩
 
 /-- If `f : R → ℝ` is a nonnegative, multiplicatively bounded function, then
   `seminormFromBounded' f 1 ≤ 1`. -/
@@ -228,9 +221,10 @@ theorem seminormFromBounded_one_le (f_nonneg : 0 ≤ f)
     seminormFromBounded' f 1 ≤ 1 := by
   by_cases! f_ne_zero : f ≠ 0
   · exact le_of_eq (seminormFromBounded_one f_ne_zero f_nonneg f_mul)
-  · simp_rw [seminormFromBounded', one_mul]
-    refine ciSup_le (fun _ ↦ ?_)
-    simp only [f_ne_zero, Pi.zero_apply, div_zero, zero_le_one]
+  · subst f
+    have : IsEmpty {y : R // (0 : R → ℝ) y ≠ 0} := ⟨fun y ↦ y.2 rfl⟩
+    rw [seminormFromBounded', Real.iSup_of_isEmpty]
+    exact zero_le_one
 
 /-- If `f : R → ℝ` is a nonnegative, multiplicatively bounded, subadditive function, then
   `seminormFromBounded' f` is subadditive. -/
@@ -238,15 +232,14 @@ theorem seminormFromBounded_add (f_nonneg : 0 ≤ f)
     (f_mul : ∀ x y : R, f (x * y) ≤ c * f x * f y)
     (f_add : ∀ a b, f (a + b) ≤ f a + f b) (x y : R) :
     seminormFromBounded' f (x + y) ≤ seminormFromBounded' f x + seminormFromBounded' f y := by
-  refine ciSup_le (fun z ↦ ?_)
-  suffices hf : f ((x + y) * z) / f z ≤ f (x * z) / f z + f (y * z) / f z by
-    exact le_trans hf (add_le_add
-      (le_ciSup_of_le (seminormFromBounded_bddAbove_range f_nonneg f_mul x) z (le_refl _))
-      (le_ciSup_of_le (seminormFromBounded_bddAbove_range f_nonneg f_mul y) z (le_refl _)))
-  by_cases hz : f z = 0
-  · simp only [hz, div_zero, zero_add, le_refl]
-  · rw [← add_div, div_le_div_iff_of_pos_right (lt_of_le_of_ne' (f_nonneg _) hz), add_mul]
-    exact f_add _ _
+  have hnonneg := seminormFromBounded_nonneg f_nonneg f_mul
+  apply seminormFromBounded_le_of_forall (add_nonneg (hnonneg x) (hnonneg y))
+  intro z
+  have hz := lt_of_le_of_ne' (f_nonneg _) z.2
+  refine le_trans ?_ (add_le_add
+    (le_seminormFromBounded f_nonneg f_mul x z) (le_seminormFromBounded f_nonneg f_mul y z))
+  rw [← add_div, div_le_div_iff_of_pos_right hz, add_mul]
+  exact f_add _ _
 
 set_option linter.style.whitespace false in -- manual alignment is not recognised
 /-- `seminormFromBounded'` is a ring seminorm on `R`. -/
@@ -264,69 +257,57 @@ def seminormFromBounded (f_zero : f 0 = 0) (f_nonneg : 0 ≤ f)
 theorem seminormFromBounded_isNonarchimedean (f_nonneg : 0 ≤ f)
     (f_mul : ∀ x y : R, f (x * y) ≤ c * f x * f y)
     (hna : IsNonarchimedean f) : IsNonarchimedean (seminormFromBounded' f) := by
-  refine fun x y ↦ ciSup_le (fun z ↦ ?_)
-  rw [le_max_iff]
-  suffices hf : f ((x + y) * z) / f z ≤ f (x * z) / f z ∨ f ((x + y) * z) / f z ≤ f (y * z) / f z by
-    rcases hf with hfx | hfy
-    · exact Or.inl <| le_ciSup_of_le (seminormFromBounded_bddAbove_range f_nonneg f_mul x) z hfx
-    · exact Or.inr <| le_ciSup_of_le (seminormFromBounded_bddAbove_range f_nonneg f_mul y) z hfy
-  by_cases hz : f z = 0
-  · simp only [hz, div_zero, le_refl, or_self_iff]
-  · rw [div_le_div_iff_of_pos_right (lt_of_le_of_ne' (f_nonneg _) hz),
-      div_le_div_iff_of_pos_right (lt_of_le_of_ne' (f_nonneg _) hz), add_mul, ← le_max_iff]
-    exact hna _ _
+  intro x y
+  apply seminormFromBounded_le_of_forall
+    ((seminormFromBounded_nonneg f_nonneg f_mul x).trans (le_max_left _ _))
+  intro z
+  have hz := lt_of_le_of_ne' (f_nonneg _) z.2
+  have h := le_max_iff.mp (hna (x * z) (y * z))
+  rw [add_mul]
+  rcases h with h | h
+  · exact le_max_of_le_left (((div_le_div_iff_of_pos_right hz).2 h).trans
+      (le_seminormFromBounded f_nonneg f_mul x z))
+  · exact le_max_of_le_right (((div_le_div_iff_of_pos_right hz).2 h).trans
+      (le_seminormFromBounded f_nonneg f_mul y z))
 
 /-- If `f : R → ℝ` is a nonnegative, multiplicatively bounded function and `x : R` is
   multiplicative for `f`, then `seminormFromBounded' f x = f x`. -/
 theorem seminormFromBounded_of_mul_apply (f_nonneg : 0 ≤ f)
     (f_mul : ∀ x y : R, f (x * y) ≤ c * f x * f y) {x : R}
     (hx : ∀ y : R, f (x * y) = f x * f y) : seminormFromBounded' f x = f x := by
-  simp_rw [seminormFromBounded', hx, ← mul_div_assoc']
   apply le_antisymm
-  · refine ciSup_le (fun x ↦ ?_)
-    by_cases hx : f x = 0
-    · rw [hx, div_zero, mul_zero]; exact f_nonneg _
-    · rw [div_self hx, mul_one]
-  · by_cases! f_ne_zero : f ≠ 0
-    · conv_lhs => rw [← mul_one (f x)]
-      rw [← div_self (map_one_ne_zero f_ne_zero f_nonneg f_mul)]
-      have h_bdd : BddAbove (Set.range fun y ↦ f x * (f y / f y)) := by
-        use f x
-        rintro r ⟨y, rfl⟩
-        by_cases hy0 : f y = 0
-        · simp only [hy0, div_zero, mul_zero]; exact f_nonneg _
-        · simp only [div_self hy0, mul_one, le_refl]
-      exact le_ciSup h_bdd (1 : R)
-    · simp_rw [f_ne_zero, Pi.zero_apply, zero_div, zero_mul, ciSup_const]; rfl
+  · exact seminormFromBounded_le_of_forall (f_nonneg _) (fun y ↦ by simp [hx])
+  · by_cases hf : f = 0
+    · simpa only [hf, Pi.zero_apply] using seminormFromBounded_nonneg f_nonneg f_mul x
+    · simpa only [hx, mul_div_cancel_right₀] using
+        le_seminormFromBounded f_nonneg f_mul x ⟨1, map_one_ne_zero hf f_nonneg f_mul⟩
 
 /-- If `f : R → ℝ` is a nonnegative function and `x : R` is submultiplicative for `f`, then
   `seminormFromBounded' f x = f x`. -/
 theorem seminormFromBounded_of_mul_le (f_nonneg : 0 ≤ f) {x : R}
     (hx : ∀ y : R, f (x * y) ≤ f x * f y) (h_one : f 1 ≤ 1) : seminormFromBounded' f x = f x := by
-  simp_rw [seminormFromBounded']
+  have hle (y : {y : R // f y ≠ 0}) : Checked.div (f (x * y)) (f y) y.2.isUnit ≤ f x :=
+    (div_le_iff₀ (lt_of_le_of_ne' (f_nonneg _) y.2)).2 (hx y)
+  have hbdd : BddAbove (Set.range fun y : {y : R // f y ≠ 0} ↦
+      Checked.div (f (x * y)) (f y) y.2.isUnit) := by
+    use f x
+    rintro _ ⟨y, rfl⟩
+    exact hle y
   apply le_antisymm
-  · refine ciSup_le (fun y ↦ ?_)
-    by_cases hy : f y = 0
-    · rw [hy, div_zero]; exact f_nonneg _
-    · rw [div_le_iff₀ (lt_of_le_of_ne' (f_nonneg _) hy)]; exact hx _
-  · have h_bdd : BddAbove (Set.range fun y ↦ f (x * y) / f y) := by
-      use f x
-      rintro r ⟨y, rfl⟩
-      by_cases hy0 : f y = 0
-      · simp only [hy0, div_zero]
-        exact f_nonneg _
-      · rw [← mul_one (f x), ← div_self hy0, ← mul_div_assoc,
-          div_le_iff₀ (lt_of_le_of_ne' (f_nonneg _) hy0), mul_div_assoc, div_self hy0, mul_one]
-        exact hx y
-    convert! le_ciSup h_bdd (1 : R)
-    by_cases h0 : f x = 0
-    · rw [mul_one, h0, zero_div]
+  · exact seminormFromBounded_le_of_forall (f_nonneg _) hle
+  · by_cases h0 : f x = 0
+    · rw [h0]
+      exact seminormFromBounded_nonneg_of_bddAbove f_nonneg x hbdd
     · have heq : f 1 = 1 := by
         apply h_one.antisymm
-        specialize hx 1
-        rw [mul_one, le_mul_iff_one_le_right (lt_of_le_of_ne (f_nonneg _) (Ne.symm h0))] at hx
-        exact hx
-      rw [heq, mul_one, div_one]
+        simpa only [mul_one, le_mul_iff_one_le_right (lt_of_le_of_ne' (f_nonneg _) h0)]
+          using hx 1
+      have h1 : f 1 ≠ 0 := heq.trans_ne one_ne_zero
+      have hquot : Checked.div (f x) (f 1) h1.isUnit = f x := by
+        apply div_eq_iff.2
+        rw [heq, mul_one]
+      simpa only [seminormFromBounded', mul_one, hquot] using
+        le_ciSup hbdd (⟨1, h1⟩ : {y : R // f y ≠ 0})
 
 /-- If `f : R → ℝ` is a nonzero, nonnegative, multiplicatively bounded function, then
   `seminormFromBounded' f` is nonzero. -/
@@ -381,7 +362,7 @@ theorem seminormFromBounded_of_mul_is_mul (f_nonneg : 0 ≤ f)
     (hx : ∀ y : R, f (x * y) = f x * f y) (y : R) :
     seminormFromBounded' f (x * y) = seminormFromBounded' f x * seminormFromBounded' f y := by
   rw [seminormFromBounded_of_mul_apply f_nonneg f_mul hx]
-  simp only [seminormFromBounded', mul_assoc, hx, mul_div_assoc,
+  simp only [seminormFromBounded', mul_assoc, hx, mul_div_assoc₀,
     Real.mul_iSup_of_nonneg (f_nonneg _)]
 
 end seminormFromBounded

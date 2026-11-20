@@ -30,8 +30,17 @@ open Topology Filter Set Real
 
 namespace TopologistsSineCurve
 
-/-- The topologist's sine curve, i.e. the graph of `y = sin (x⁻¹)` for `0 < x`. -/
-noncomputable def S : Set (ℝ × ℝ) := (fun x ↦ (x, sin x⁻¹)) '' Ioi 0
+/-- The ordinate of the sine curve at a positive abscissa. -/
+noncomputable def ordinate (x : Ioi (0 : ℝ)) : ℝ :=
+  sin (Checked.inv (x : ℝ) (show 0 < (x : ℝ) from x.property).ne'.isUnit)
+
+private lemma continuous_ordinate : Continuous ordinate :=
+  continuous_sin.comp <| continuous_subtype_val.fun_inv₀ (h0 := fun (x : Ioi (0 : ℝ)) ↦
+    (show 0 < (x : ℝ) from x.property).ne'.isUnit)
+
+/-- The positive branch of the topologist's sine curve. -/
+noncomputable def S : Set (ℝ × ℝ) :=
+  range (fun x : Ioi (0 : ℝ) ↦ ((x : ℝ), ordinate x))
 
 /-- The vertical line segment `{ (0, y) | -1 ≤ y ≤ 1 }`, which is the set of limit points of `S`
 not contained in `S` itself. -/
@@ -40,21 +49,32 @@ def Z : Set (ℝ × ℝ) := (fun y ↦ (0, y)) '' Icc (-1) 1
 /-- The union of `S` and `Z` (which we will show is the closure of `S`). -/
 noncomputable def T : Set (ℝ × ℝ) := S ∪ Z
 
-/-- A sequence of `x`-values tending to 0 at which the sine curve has a given `y`-coordinate. -/
-noncomputable def xSeq (y : ℝ) (k : ℕ) := 1 / (arcsin y + (k + 1) * (2 * π))
+/-- The sine phase at height `y` after `k + 1` full periods. -/
+noncomputable def phase (y : ℝ) (k : ℕ) : ℝ :=
+  arcsin y + ((k : ℝ) + 1) * (2 * π)
 
-lemma xSeq_pos (y : ℝ) (k : ℕ) : 0 < xSeq y k := by
-  rw [xSeq, one_div_pos]
-  nlinarith [pi_pos, neg_pi_div_two_le_arcsin y]
+private lemma phase_pos (y : ℝ) (k : ℕ) : 0 < phase y k := by
+  unfold phase
+  nlinarith [pi_pos, neg_pi_div_two_le_arcsin y,
+    mul_nonneg (Nat.cast_nonneg k : (0 : ℝ) ≤ k) pi_pos.le]
 
-lemma sin_inv_xSeq {y : ℝ} (hy : y ∈ Icc (-1) 1) (k : ℕ) : sin (xSeq y k)⁻¹ = y := by
-  simpa [xSeq, -Nat.cast_add, ← Nat.cast_succ] using sin_arcsin' hy
+/-- A sequence of abscissae tending to zero with the prescribed ordinate. -/
+noncomputable def xSeq (y : ℝ) (k : ℕ) : ℝ :=
+  Checked.inv (phase y k) (by exact (phase_pos y k).ne'.isUnit)
+
+lemma xSeq_pos (y : ℝ) (k : ℕ) : 0 < xSeq y k := inv_pos.mpr (phase_pos y k)
+
+lemma sin_inv_xSeq {y : ℝ} (hy : y ∈ Icc (-1) 1) (k : ℕ) :
+    ordinate ⟨xSeq y k, xSeq_pos y k⟩ = y := by
+  simpa [ordinate, xSeq, phase, -Nat.cast_add, ← Nat.cast_succ] using sin_arcsin' hy
 
 lemma xSeq_tendsto (y : ℝ) : Tendsto (xSeq y) atTop (𝓝 0) := by
-  refine .comp (g := fun k : ℝ ↦ 1 / (arcsin y + (k + 1) * (2 * π))) ?_ tendsto_natCast_atTop_atTop
-  simp only [div_eq_mul_inv, show 𝓝 0 = 𝓝 (1 * (0 : ℝ)) by simp]
-  refine (tendsto_inv_atTop_zero.comp <| tendsto_atTop_add_const_left _ _ ?_).const_mul _
-  exact (tendsto_atTop_add_const_right _ _ tendsto_id).atTop_mul_const (by positivity)
+  have hd : Tendsto (phase y) atTop atTop :=
+    tendsto_atTop_add_const_left _ _ <|
+      (tendsto_atTop_add_const_right _ _ tendsto_natCast_atTop_atTop).atTop_mul_const
+        (show 0 < 2 * π by positivity)
+  unfold xSeq
+  exact hd.fun_inv_tendsto_atTop (h0 := fun k ↦ (phase_pos y k).ne'.isUnit)
 
 /-!
 ## `T` is closed
@@ -63,41 +83,31 @@ lemma xSeq_tendsto (y : ℝ) : Tendsto (xSeq y) atTop (𝓝 0) := by
 /-- The closure of the topologist's sine curve `S` is the set `T`. -/
 lemma closure_S : closure S = T := by
   ext ⟨x, y⟩
-  -- Use sequential characterization of closure.
   simp only [mem_closure_iff_seq_limit, Prod.tendsto_iff]
   constructor
-  · -- Show that if a sequence in `S` has a limit in `ℝ ^ 2`, the limit must be in `T`.
-    rintro ⟨f, hf_mem, hf_lim⟩
-    have x_nonneg : 0 ≤ x := by
-      refine isClosed_Ici.mem_of_tendsto hf_lim.1 (.of_forall fun n ↦ ?_)
-      obtain ⟨y, hy⟩ := hf_mem n
-      simpa [← hy.2] using le_of_lt hy.1
-    -- Case split on whether limit point `(x, y)` has `x = 0`.
-    rcases x_nonneg.eq_or_lt with rfl | h
-    · -- If the limit has `x = 0`, show `y`-coord must be in `[-1, 1]` using closedness
-      right
-      simp only [Z, mem_image, Prod.mk.injEq, true_and, exists_eq_right]
-      refine isClosed_Icc.mem_of_tendsto hf_lim.2 (.of_forall fun n ↦ ?_)
-      obtain ⟨y, hy⟩ := hf_mem n
-      simpa only [Function.comp_apply, ← hy.2] using sin_mem_Icc ..
-    · -- If the limit has `0 < x`, show `y`-coord must be `sin x⁻¹` using continuity
-      refine .inl ⟨x, h, ?_⟩
-      simp only [Prod.mk.injEq, true_and]
-      have : ContinuousAt (fun x ↦ sin x⁻¹) x :=
-        continuous_sin.continuousAt.comp <| continuousAt_inv₀ h.ne'
-      refine tendsto_nhds_unique_of_forall (this.tendsto.comp hf_lim.1) hf_lim.2 fun n ↦ ?_
-      obtain ⟨y, hy⟩ := hf_mem n
-      simp [← hy.2]
-  · -- Show that every `p ∈ T` is the limit of a sequence in `S`.
-    rintro (hz | ⟨z, hz⟩)
-    · -- Point is in `S`: use constant sequence
-      exact ⟨_, fun _ ↦ hz, tendsto_const_nhds, tendsto_const_nhds⟩
-    · -- Point is in `Z`: use sequence from `xSeq`
-      simp only [Prod.mk.injEq] at hz
+  · rintro ⟨f, hf_mem, hf_lim⟩
+    change ∀ n, ∃ u : Ioi (0 : ℝ), ((u : ℝ), ordinate u) = f n at hf_mem
+    choose u hu using hf_mem
+    have h₁ : Tendsto (fun n ↦ (u n : ℝ)) atTop (𝓝 x) := by
+      simpa only [Function.comp_def, ← hu] using hf_lim.1
+    have h₂ : Tendsto (fun n ↦ ordinate (u n)) atTop (𝓝 y) := by
+      simpa only [Function.comp_def, ← hu] using hf_lim.2
+    have hx : 0 ≤ x :=
+      isClosed_Ici.mem_of_tendsto h₁ (.of_forall fun n ↦ (show 0 < (u n : ℝ) from (u n).2).le)
+    rcases hx.eq_or_lt with rfl | hx
+    · right
+      exact ⟨y, isClosed_Icc.mem_of_tendsto h₂ (.of_forall fun _ ↦ sin_mem_Icc _), rfl⟩
+    · left
+      let v : Ioi (0 : ℝ) := ⟨x, mem_Ioi.mpr hx⟩
+      have huv : Tendsto u atTop (𝓝 v) := tendsto_subtype_rng.mpr h₁
+      refine ⟨v, Prod.ext rfl ?_⟩
+      exact tendsto_nhds_unique (continuous_ordinate.continuousAt.tendsto.comp huv) h₂
+  · rintro (hz | ⟨z, hz⟩)
+    · exact ⟨_, fun _ ↦ hz, tendsto_const_nhds, tendsto_const_nhds⟩
+    · simp only [Prod.mk.injEq] at hz
       rcases hz with ⟨hz, ⟨rfl, rfl⟩⟩
-      refine ⟨fun n ↦ (xSeq z n, z), fun n ↦ ⟨_, xSeq_pos z n, ?_⟩, xSeq_tendsto z,
-        tendsto_const_nhds⟩
-      simpa using sin_inv_xSeq hz n
+      refine ⟨fun n ↦ (xSeq z n, z), fun n ↦ ?_, xSeq_tendsto z, tendsto_const_nhds⟩
+      exact ⟨⟨xSeq z n, xSeq_pos z n⟩, Prod.ext rfl (sin_inv_xSeq hz n)⟩
 
 lemma isClosed_T : IsClosed T := by simpa only [← closure_S] using isClosed_closure
 
@@ -109,8 +119,8 @@ lemma isClosed_T : IsClosed T := by simpa only [← closure_S] using isClosed_cl
 is a continuous image of the positive real line). -/
 theorem isConnected_T : IsConnected T := by
   rw [← closure_S]
-  refine (isConnected_Ioi.image _ <| continuousOn_id.prodMk ?_).closure
-  fun_prop (discharger := grind)
+  have : ConnectedSpace (Ioi (0 : ℝ)) := isConnected_iff_connectedSpace.mp isConnected_Ioi
+  exact (isConnected_range (continuous_subtype_val.prodMk continuous_ordinate)).closure
 
 /-!
 ## `T` is not path-connected
@@ -123,7 +133,7 @@ lemma zero_mem_T : (0, 0) ∈ T := by
 /-- A point in the `body` of the topologist's sine curve. -/
 noncomputable def w : ℝ × ℝ := (1, sin 1⁻¹)
 
-lemma w_mem_T : w ∈ T := .inl ⟨1, ⟨zero_lt_one' ℝ, rfl⟩⟩
+lemma w_mem_T : w ∈ T := .inl ⟨⟨1, mem_Ioi.2 zero_lt_one⟩, rfl⟩
 
 private lemma norm_ge_abs_snd {a b : ℝ} : |b| ≤ ‖(a, b)‖ := by simp
 
@@ -140,18 +150,17 @@ private lemma exists_unitInterval_gt {t₀ : unitInterval} (ht₀ : t₀ < 1) {�
   rw [Subtype.dist_eq, dist_comm, dist_eq, abs_of_nonneg (by linarith)]
   linarith
 
-private lemma mem_S_of_x_pos {p : ℝ × ℝ} (hx : 0 < p.1) (hT : p ∈ T) : p.2 = sin (p.1)⁻¹ := by
-  obtain ⟨x, -, hx⟩ : p ∈ S := by
-    cases hT with
-    | inl hT => trivial
-    | inr hZ => obtain ⟨y, ⟨-, rfl⟩⟩ := hZ; exact (lt_irrefl _ hx).elim
-  simp [← hx]
+private lemma mem_S_of_x_pos {p : ℝ × ℝ} (hx : 0 < p.1) (hT : p ∈ T) :
+    p.2 = ordinate ⟨p.1, hx⟩ := by
+  rcases hT with ⟨u, rfl⟩ | ⟨y, _, rfl⟩
+  · rfl
+  · exact (lt_irrefl (0 : ℝ) hx).elim
 
-/-- For any `0 < a` and any `y ∈ Icc (-1) 1`, we can find `x ∈ Ioc a 0` with `sin x⁻¹ = y`. -/
+/-- Every height in the segment occurs at an abscissa in `Ioc 0 a`. -/
 lemma exists_mem_Ioc_of_y {y : ℝ} (hy : y ∈ Icc (-1) 1) {a : ℝ} (ha : 0 < a) :
-    ∃ x ∈ Ioc 0 a, sin x⁻¹ = y := by
+    ∃ (x : ℝ) (hx : x ∈ Ioc 0 a), ordinate ⟨x, hx.1⟩ = y := by
   obtain ⟨N, h_dist⟩ := (Metric.tendsto_nhds.mp (xSeq_tendsto y) (a / 2) (by positivity)).exists
-  refine ⟨xSeq y N, ⟨xSeq_pos y N, ?_⟩, sin_inv_xSeq hy _⟩
+  refine ⟨xSeq y N, ⟨xSeq_pos y N, ?_⟩, sin_inv_xSeq hy N⟩
   rw [dist_eq, sub_zero, abs_of_pos (xSeq_pos _ N)] at h_dist
   linarith
 
@@ -180,11 +189,12 @@ theorem not_isPathConnected_T : ¬ IsPathConnected T := by
     linarith
   let a := (p t₁).1
   have ha : 0 < a := by
-    obtain ⟨x, hxI, hx_eq⟩ : p t₁ ∈ S := by
+    obtain ⟨x, hx_eq⟩ : p t₁ ∈ S := by
       refine (h_pathConn.somePath_mem t₁).elim id fun ⟨y, hy⟩ ↦ ?_
       have : (p t₁).1 = 0 := by simp only [p, ← hy.2]
       exact ((show t₁ ≤ t₀ from le_sSup this).not_gt ht₁.1).elim
-    simpa only [a, ← hx_eq] using! hxI
+    have he : (x : ℝ) = a := congrArg Prod.fst hx_eq
+    exact he ▸ (show 0 < (x : ℝ) from x.property)
   have intervalAZeroSubOfT₀T₁Xcoord : Icc 0 a ⊆ (fun t ↦ (p t).1) '' Icc t₀ t₁ :=
     (isPreconnected_Icc.image _ <| xcoord_pathContinuous.continuousOn).Icc_subset
       (show 0 ∈ (fun t ↦ (p t).1) '' Icc t₀ t₁ from ⟨t₀, ⟨le_rfl, ht₁.1.le⟩, ‹_›⟩)
@@ -194,8 +204,10 @@ theorem not_isPathConnected_T : ¬ IsPathConnected T := by
     -- first find a `t ∈ [t₀, t₁]` with this property
     obtain ⟨x, hx, hx'⟩ := exists_mem_Ioc_of_y hy ha
     obtain ⟨t, ht⟩ : ∃ t ∈ Icc t₀ t₁, (p t).1 = x := intervalAZeroSubOfT₀T₁Xcoord ⟨hx.1.le, hx.2⟩
-    have hp : (p t).2 = sin (p t).1⁻¹ := mem_S_of_x_pos (ht.2 ▸ hx.1) (h_pathConn.somePath_mem t)
-    refine ⟨t, ?_, by rw [← hx', hp, ht.2]⟩
+    have hpos : 0 < (p t).1 := by simpa only [ht.2] using hx.1
+    have e : (⟨(p t).1, hpos⟩ : Ioi (0 : ℝ)) = ⟨x, hx.1⟩ := Subtype.ext ht.2
+    refine ⟨t, ?_, (mem_S_of_x_pos hpos (h_pathConn.somePath_mem t)).trans
+      ((congrArg ordinate e).trans hx')⟩
     calc -- now show `t ∈ Icc t₀ t₁` implies `dist t t₀ < δ`
     dist t t₀ ≤ dist t₁ t₀ := dist_right_le_of_mem_uIcc (Icc_subset_uIcc' ht.1)
     _ = dist t₀ t₁ := by rw [dist_comm]

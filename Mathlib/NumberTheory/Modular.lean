@@ -133,23 +133,10 @@ theorem tendsto_normSq_coprime_pair :
     rw [ofReal_intCast, ofReal_intCast]
   rw [this]
   have hf : LinearMap.ker f = ⊥ := by
-    let g : ℂ →ₗ[ℝ] Fin 2 → ℝ :=
-      LinearMap.pi ![imLm, imLm.comp ((z : ℂ) • ((conjAe : ℂ →ₐ[ℝ] ℂ) : ℂ →ₗ[ℝ] ℂ))]
-    suffices ((z : ℂ).im⁻¹ • g).comp f = LinearMap.id by exact LinearMap.ker_eq_bot_of_inverse this
-    apply LinearMap.ext
-    intro c
-    have hz : (z : ℂ).im ≠ 0 := z.2.ne'
-    rw [LinearMap.comp_apply, LinearMap.smul_apply, LinearMap.id_apply]
-    ext i
-    dsimp only [Pi.smul_apply, LinearMap.pi_apply, smul_eq_mul]
-    fin_cases i
-    · change (z : ℂ).im⁻¹ * (f c).im = c 0
-      rw [f_def, add_im, im_ofReal_mul, ofReal_im, add_zero, mul_left_comm, inv_mul_cancel₀ hz,
-        mul_one]
-    · change (z : ℂ).im⁻¹ * ((z : ℂ) * conj (f c)).im = c 1
-      rw [f_def, map_add, map_mul, mul_add, mul_left_comm, mul_conj, conj_ofReal,
-        conj_ofReal, ← ofReal_mul, add_im, ofReal_im, zero_add, inv_mul_eq_iff_eq_mul₀ hz]
-      simp only [ofReal_im, ofReal_re, mul_im, zero_add, mul_zero]
+    rw [LinearMap.ker_eq_bot']
+    intro c hc
+    by_contra hne
+    exact linear_ne_zero z hne (by simpa only [f_def] using hc)
   have hf' : IsClosedEmbedding f := f.isClosedEmbedding_of_injective hf
   have h₂ : Tendsto (fun p : Fin 2 → ℤ => ((↑) : ℤ → ℝ) ∘ p) cofinite (cocompact _) := by
     convert! Tendsto.pi_map_coprodᵢ fun _ => Int.tendsto_coe_cofinite
@@ -169,6 +156,12 @@ def lcRow0 (p : Fin 2 → ℤ) : Matrix (Fin 2) (Fin 2) ℝ →ₗ[ℝ] ℝ :=
 theorem lcRow0_apply (p : Fin 2 → ℤ) (g : Matrix (Fin 2) (Fin 2) ℝ) :
     lcRow0 p g = p 0 * g 0 0 + p 1 * g 0 1 :=
   rfl
+
+private theorem coprime_pair_linear_ne_zero {p : Fin 2 → ℤ}
+    (hp : IsCoprime (p 0) (p 1)) : (p 0 : ℂ) * z + p 1 ≠ 0 := by
+  have hne : ((↑) : ℤ → ℝ) ∘ p ≠ 0 := fun h ↦
+    hp.ne_zero (by ext i; simpa using congr_fun h i)
+  simpa using linear_ne_zero z hne
 
 /-- Linear map sending the matrix [a, b; c, d] to the matrix [ac₀ + bd₀, - ad₀ + bc₀; c, d], for
 some fixed `(c₀, d₀)`. -/
@@ -233,17 +226,24 @@ theorem tendsto_lcRow0 {cd : Fin 2 → ℤ} (hcd : IsCoprime (cd 0) (cd 1)) :
   which does not need to be decomposed depending on whether `c = 0`. -/
 theorem smul_eq_lcRow0_add {p : Fin 2 → ℤ} (hp : IsCoprime (p 0) (p 1)) (hg : g 1 = p) :
     ↑(g • z) =
-      (lcRow0 p ↑(g : SL(2, ℝ)) : ℂ) / ((p 0 : ℂ) ^ 2 + (p 1 : ℂ) ^ 2) +
-        ((p 1 : ℂ) * z - p 0) / (((p 0 : ℂ) ^ 2 + (p 1 : ℂ) ^ 2) * (p 0 * z + p 1)) := by
+      Checked.div (lcRow0 p ↑(g : SL(2, ℝ)) : ℂ) ((p 0 : ℂ) ^ 2 + (p 1 : ℂ) ^ 2)
+        (by exact (show (p 0 : ℂ) ^ 2 + (p 1 : ℂ) ^ 2 ≠ 0 from
+          mod_cast hp.sq_add_sq_ne_zero).isUnit) +
+        Checked.div ((p 1 : ℂ) * z - p 0)
+          (((p 0 : ℂ) ^ 2 + (p 1 : ℂ) ^ 2) * (p 0 * z + p 1))
+          (by
+            have hsq : (p 0 : ℂ) ^ 2 + (p 1 : ℂ) ^ 2 ≠ 0 := mod_cast hp.sq_add_sq_ne_zero
+            exact hsq.isUnit.mul (coprime_pair_linear_ne_zero z hp).isUnit) := by
   have nonZ1 : (p 0 : ℂ) ^ 2 + (p 1 : ℂ) ^ 2 ≠ 0 := mod_cast hp.sq_add_sq_ne_zero
-  have : ((↑) : ℤ → ℝ) ∘ p ≠ 0 := fun h => hp.ne_zero (by ext i; simpa using congr_fun h i)
-  have nonZ2 : (p 0 : ℂ) * z + p 1 ≠ 0 := by simpa using linear_ne_zero z this
+  have nonZ2 := coprime_pair_linear_ne_zero z hp
   subst hg
   rw [coe_specialLinearGroup_apply]
-  replace nonZ2 : z * (g 1 0 : ℂ) + g 1 1 ≠ 0 := by convert! nonZ2 using 1; ring
   have H := congr(Int.cast (R := ℂ) $(det_fin_two g))
   simp at H
-  simp [field]
+  simp only [lcRow0_apply, map_apply_coe, RingHom.mapMatrix_apply, Matrix.map_apply,
+    Int.coe_castRingHom, eq_intCast (algebraMap ℤ ℝ), ofReal_add, ofReal_mul, ofReal_intCast]
+  rw [div_eq_iff, add_mul, div_mul_eq_mul_div₀, div_mul_eq_div_div₀, div_mul_cancel₀,
+    ← add_div, eq_div_iff]
   linear_combination -((z : ℂ) * (g 1 1 : ℂ) - g 1 0) * H
 
 set_option backward.isDefEq.respectTransparency false in
@@ -254,9 +254,10 @@ theorem tendsto_abs_re_smul {p : Fin 2 → ℤ} (hp : IsCoprime (p 0) (p 1)) :
     Tendsto (fun g : (fun g : SL(2, ℤ) => g 1) ⁻¹' {p} => ((g : SL(2, ℤ)) • z).re) cofinite
       (cocompact ℝ)
     by exact tendsto_norm_cocompact_atTop.comp this
-  have : ((p 0 : ℝ) ^ 2 + (p 1 : ℝ) ^ 2)⁻¹ ≠ 0 := by
-    apply inv_ne_zero
-    exact mod_cast hp.sq_add_sq_ne_zero
+  have hsq : (p 0 : ℝ) ^ 2 + (p 1 : ℝ) ^ 2 ≠ 0 := mod_cast hp.sq_add_sq_ne_zero
+  have hsq' : (p 0 : ℂ) ^ 2 + (p 1 : ℂ) ^ 2 ≠ 0 := mod_cast hp.sq_add_sq_ne_zero
+  have hlin := coprime_pair_linear_ne_zero z hp
+  have : ((p 0 : ℝ) ^ 2 + (p 1 : ℝ) ^ 2)⁻¹ ≠ 0 := inv_ne_zero
   let f := Homeomorph.mulRight₀ _ this
   let ff := Homeomorph.addRight
     (((p 1 : ℂ) * z - p 0) / (((p 0 : ℂ) ^ 2 + (p 1 : ℂ) ^ 2) * (p 0 * z + p 1))).re
@@ -265,7 +266,11 @@ theorem tendsto_abs_re_smul {p : Fin 2 → ℤ} (hp : IsCoprime (p 0) (p 1)) :
     ((g : SL(2, ℤ)) • z).re =
       lcRow0 p ↑(↑g : SL(2, ℝ)) / ((p 0 : ℝ) ^ 2 + (p 1 : ℝ) ^ 2) +
         Complex.re (((p 1 : ℂ) * z - p 0) / (((p 0 : ℂ) ^ 2 + (p 1 : ℂ) ^ 2) * (p 0 * z + p 1)))
-  exact mod_cast congr_arg Complex.re (smul_eq_lcRow0_add z hp g.2)
+  have hcast := Complex.ofReal_div (lcRow0 p ↑(↑g : SL(2, ℝ)))
+    ((p 0 : ℝ) ^ 2 + (p 1 : ℝ) ^ 2) (hs := hsq.isUnit)
+  simp only [ofReal_add, ofReal_pow, ofReal_intCast] at hcast
+  simpa only [add_re, ← hcast, ofReal_re, coe_re] using
+    congr_arg Complex.re (smul_eq_lcRow0_add z hp g.2)
 
 end TendstoLemmas
 
@@ -357,11 +362,12 @@ theorem normSq_S_smul_lt_one (h : 1 < normSq z) : normSq ↑(S • z) < 1 := by
 /-- If `|z| < 1`, then applying `S` strictly decreases `im`. -/
 theorem im_lt_im_S_smul (h : normSq z < 1) : z.im < (S • z).im := by
   rw [ModularGroup.im_smul_eq_div_normSq]
+  have hnorm : normSq (z : ℂ) ≠ 0 := z.normSq_pos.ne'
   have : z.im < z.im / normSq (z : ℂ) := by
     have imz : 0 < z.im := im_pos z
     apply (lt_div_iff₀ z.normSq_pos).mpr
     nlinarith
-  simpa [denom, coe_S, SpecialLinearGroup.toGL]
+  simpa only [denom_S] using this
 
 /-- The standard (closed) fundamental domain of the action of `SL(2,ℤ)` on `ℍ`. -/
 def fd : Set ℍ :=
@@ -432,8 +438,7 @@ theorem exists_smul_mem_fd (z : ℍ) : ∃ g : SL(2, ℤ), g • z ∈ 𝒟 := b
   -- `g` has same max im property as `g₀`
   have hg₀' : ∀ g' : SL(2, ℤ), (g' • z).im ≤ (g • z).im := by
     have hg'' : (g • z).im = (g₀ • z).im := by
-      rw [ModularGroup.im_smul_eq_div_normSq, ModularGroup.im_smul_eq_div_normSq,
-        denom_apply, denom_apply, hg]
+      simp only [ModularGroup.im_smul_eq_div_normSq, denom_apply, hg]
     simpa only [hg''] using hg₀
   constructor
   · -- Claim: `1 ≤ ⇑norm_sq ↑(g • z)`. If not, then `S•g•z` has larger imaginary part
@@ -476,8 +481,10 @@ theorem abs_c_le_one (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) : |g 1 0| ≤ 1 :
       (pow_four_le_pow_two_of_pow_two_le (z.c_mul_im_sq_le_normSq_denom g)) (sq_nonneg _)
   calc
     9 * c ^ 4 ≤ c ^ 4 * z.im ^ 2 * (g • z).im ^ 2 * 16 := by linarith
-    _ = c ^ 4 * z.im ^ 4 / normSq (denom g z) ^ 2 * 16 := by grind [im_smul_eq_div_normSq]
-    _ ≤ 16 := by rw [← mul_pow]; linarith
+    _ = (c * z.im) ^ 4 / normSq (denom g z) ^ 2 * 16 := by
+      simp only [im_smul_eq_div_normSq, div_pow₀, ← mul_div_assoc₀]
+      congr 2; ring
+    _ ≤ 16 := by linarith
 
 /-- Classify cases when `z ∈ 𝒟` and `g • z ∈ 𝒟` such that `c = 0`. -/
 private lemma cases_c_zero (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) (hc : g 1 0 = 0) :
@@ -542,8 +549,8 @@ private lemma cases_c_one_d_zero (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) (hg' 
     fin_cases i <;> fin_cases j <;> tauto
   rw [hg', mul_smul] at hg
   have hSre : re (S • z) = -z.re := by
-    rw [modular_S_smul, ← coe_re, coe_mk, inv_re, normSq_eq_norm_sq, norm_neg, hz', one_pow,
-      div_one, neg_re, coe_re]
+    simp only [modular_S_smul, ← coe_re, inv_re, normSq_eq_norm_sq, norm_neg, hz',
+      one_pow, div_one₀, neg_re]
   have := hg.2
   rw [← coe_re, coe_T_zpow_smul_eq, add_re, intCast_re, add_comm, coe_re, hSre] at this
   have := (abs_sub_abs_le_abs_add _ _).trans this
@@ -564,6 +571,11 @@ private lemma cases_c_one_d_zero (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) (hg' 
       rcases hzre with hzre | hzre <;> [norm_num [hzre] at this; skip]
       rw [h, zpow_neg_one] at hg'
       exact .inr <| .inl ⟨hg', eq_of_re_of_norm (by norm_num [hzre, ρ]) (by rw [hz', norm_ρ])⟩
+
+private lemma S_smul_ρ_eq_T_smul_ρ : S • ρ = T • ρ := by
+  rw [UpperHalfPlane.ext_iff, modular_S_smul, modular_T_smul, coe_mk, coe_vadd, ofReal_one,
+    ← mul_eq_one_iff_inv_eq₀]
+  linear_combination -ρ_sq
 
 private lemma case_c_one_d_one (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) (hg' : ‖denom g z‖ ≤ 1)
     (hc : g 1 0 = 1) (hd : g 1 1 = 1) :
@@ -587,18 +599,14 @@ private lemma case_c_one_d_one (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) (hg' : 
     · rw [norm_def, hnorm, norm_ρ, Real.sqrt_one]
   refine ⟨?_, hρ⟩
   have hSTρ : (S * T) • ρ = ρ := by
-    rw [mul_smul, ← SL_neg_smul S, ← S_inv, inv_smul_eq_iff, eq_comm, UpperHalfPlane.ext_iff,
-      modular_S_smul, modular_T_smul, UpperHalfPlane.coe_mk, coe_vadd,
-      ← mul_one (_ : ℂ)⁻¹, inv_mul_eq_iff_eq_mul₀ (neg_ne_zero.mpr ρ.ne_zero)]
-    grind [ρ_sq, ofReal_one]
+    rw [mul_smul, ← S_smul_ρ_eq_T_smul_ρ, ← SL_neg_smul S (S • ρ), ← S_inv, inv_smul_smul]
   rw [hgeq, hρ, mul_assoc, mul_smul, hSTρ] at hg
   suffices g 0 0 = 0 ∨ g 0 0 = 1 by rcases this with h | h <;> simp [h]
   have hgzre := hg.2
-  simp only [Fin.isValue, ρ, neg_div, one_div, ← coe_re, coe_T_zpow_smul_eq, add_re, intCast_re,
-    abs_le, le_add_iff_nonneg_right, Int.cast_nonneg_iff, neg_add_le_iff_le_add,
-    show (2⁻¹ : ℝ) + 2⁻¹ = 1 by norm_num] at hgzre
-  rw [← Int.cast_one (R := ℝ), Int.cast_le] at hgzre
-  grind
+  rw [re_T_zpow_smul, show ρ.re = -1 / 2 from rfl, abs_le] at hgzre
+  have hlo : (0 : ℤ) ≤ g 0 0 := by exact_mod_cast (show (0 : ℝ) ≤ g 0 0 by linarith [hgzre.1])
+  have hhi : g 0 0 ≤ (1 : ℤ) := by exact_mod_cast (show (g 0 0 : ℝ) ≤ 1 by linarith [hgzre.2])
+  omega
 
 private lemma case_c_one_d_neg_one (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) (hg' : ‖denom g z‖ ≤ 1)
     (hc : g 1 0 = 1) (hd : g 1 1 = -1) :
@@ -635,24 +643,19 @@ private lemma case_c_one_d_neg_one (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) (hg
         one_pow]
   refine ⟨?_, hρ⟩
   rw [hgeq, hρ, mul_assoc, mul_smul] at hg
-  have : S • ρ = T • ρ := by
-    rw [UpperHalfPlane.ext_iff, modular_S_smul, modular_T_smul, UpperHalfPlane.coe_mk,
-      coe_vadd, ← mul_one (_ : ℂ)⁻¹, inv_mul_eq_iff_eq_mul₀ (neg_ne_zero.mpr ρ.ne_zero)]
-    grind [ρ_sq, ofReal_one]
   have : (S * T⁻¹) • ((1 : ℝ) +ᵥ ρ) = (1 : ℝ) +ᵥ ρ := by
     rw [mul_smul, ← SL_neg_smul S, ← S_inv, inv_smul_eq_iff, ← zpow_neg_one,
     modular_T_zpow_smul, Int.cast_neg, Int.cast_one, neg_vadd_vadd,
-    ← inv_smul_eq_iff, S_inv, SL_neg_smul, this, modular_T_smul]
+    ← inv_smul_eq_iff, S_inv, SL_neg_smul, S_smul_ρ_eq_T_smul_ρ, modular_T_smul]
   rw [this] at hg
   rw [hgeq]
   suffices g 0 0 = 0 ∨ g 0 0 = -1 by rcases this with h | h <;> simp [h]
-  have : (-1 : ℝ) ≤ g 0 0 ∧ g 0 0 ≤ 0 := by
-    simpa only [ρ, neg_div, one_div, ← coe_re, coe_T_zpow_smul_eq, coe_vadd, add_re, ofReal_re,
-      show 1 + (-2⁻¹ : ℝ) = 2⁻¹ by norm_num, intCast_re, abs_le, ← sub_le_iff_le_add',
-      show (-2⁻¹ : ℝ) - (2⁻¹ : ℝ) = -1 by norm_num, add_le_iff_nonpos_right, Int.cast_nonpos] using
-      hg.2
-  rw [← Int.cast_one, ← Int.cast_neg, Int.cast_le] at this
-  grind
+  have hre : ((1 : ℝ) +ᵥ ρ).re = 1 / 2 := by norm_num [← coe_re, coe_vadd, ρ]
+  have hgzre := hg.2
+  rw [re_T_zpow_smul, hre, abs_le] at hgzre
+  have hlo : (-1 : ℤ) ≤ g 0 0 := by exact_mod_cast (show (-1 : ℝ) ≤ g 0 0 by linarith [hgzre.1])
+  have hhi : g 0 0 ≤ (0 : ℤ) := by exact_mod_cast (show (g 0 0 : ℝ) ≤ 0 by linarith [hgzre.2])
+  omega
 
 set_option backward.isDefEq.respectTransparency false in
 private lemma serreTheorem_im_eq (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) : (g • z).im = z.im := by
@@ -670,7 +673,7 @@ private lemma serreTheorem_im_eq (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) : (g 
   · rcases cases_c_zero hz hg hc with h | h | h | h <;>
     rcases h with ⟨(rfl | rfl), -⟩ <;>
     simp only [← zpow_neg_one, im_T_zpow_smul, im_T_smul, one_smul, SL_neg_smul]
-  · rw [im_smul_eq_div_normSq, div_eq_iff (normSq_denom_pos _ z.im_ne_zero).ne',
+  · rw [im_smul_eq_div_normSq, div_eq_iff,
     eq_comm, mul_eq_left₀ z.im_ne_zero]
     rcases Int.abs_le_one_iff.mp (cases_d_of_c_eq_one hz hden hc) with hd | hd | hd
     · rcases cases_c_one_d_zero hz hg hden hc hd with
@@ -707,7 +710,7 @@ lemma cases_of_mem_fd_smul_mem_fd (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) :
   wlog hc : 0 ≤ g 1 0
   · simpa [neg_eq_iff_eq_neg, or_comm] using @this (-g) z hz (by simpa using hg)
       (by simpa using him) (by simpa using (not_le.mp hc).le)
-  rw [im_smul_eq_div_normSq, div_eq_iff (normSq_denom_pos _ z.im_ne_zero).ne',
+  rw [im_smul_eq_div_normSq, div_eq_iff,
     eq_comm, mul_eq_left₀ z.im_ne_zero, normSq_eq_norm_sq,
     pow_eq_one_iff_of_nonneg (norm_nonneg _) two_ne_zero] at him
   have hc : g 1 0 = 0 ∨ g 1 0 = 1 := by grind [abs_c_le_one hz hg]
@@ -729,10 +732,13 @@ lemma stabilizer_of_ne (hz : z ∈ 𝒟) (hg : g • z = z)
   have : (z : ℂ) ≠ -I := by grind [neg_im, coe_I, Complex.I_im, z.coe_im_pos]
   have : S • z ≠ z := by
     contrapose hzI
-    rw [UpperHalfPlane.ext_iff, modular_S_smul, coe_mk, ← mul_one (_ : ℂ)⁻¹,
-      inv_mul_eq_iff_eq_mul₀ (neg_ne_zero.mpr z.ne_zero), neg_mul, ← neg_eq_iff_eq_neg, ← I_sq,
-      ← sq, sq_eq_sq_iff_eq_or_eq_neg, ← coe_I, ← UpperHalfPlane.ext_iff] at hzI
-    grind
+    rw [UpperHalfPlane.ext_iff, modular_S_smul, coe_mk, ← mul_eq_one_iff_inv_eq₀, neg_mul] at hzI
+    have hsq : (z : ℂ) ^ 2 = Complex.I ^ 2 := by
+      rw [I_sq]
+      linear_combination -hzI
+    rcases sq_eq_sq_iff_eq_or_eq_neg.mp hsq with h | h
+    · exact UpperHalfPlane.ext h
+    · contradiction
   all_goals grind [cases_of_mem_fd_smul_mem_fd hz (hg ▸ hz), SL_neg_smul]
 
 lemma stabilizer_I : g • I = I ↔ g ∈ ({1, -1, S, -S} : Finset SL(2, ℤ)) := by
@@ -846,7 +852,10 @@ lemma isClosed_coe_fd : IsClosed ((↑) '' 𝒟 : Set ℂ) := by
   convert! this using 1
   ext x
   refine ⟨fun ⟨him, hre, hnorm⟩ ↦ ⟨him.le, hre, hnorm⟩, fun ⟨him, hre, hnorm⟩ ↦ ⟨?_, hre, hnorm⟩⟩
-  exact him.lt_of_ne' <| by grind [abs_re_eq_norm]
+  apply him.lt_of_ne'
+  intro him'
+  rw [← abs_re_eq_norm.mpr him'] at hre
+  exact (show (1 : ℝ) / 2 < 1 by norm_num).not_ge (hre.trans hnorm)
 
 /--
 The points on the fundamental domain that aren't on the bottom "arc"

@@ -44,7 +44,6 @@ theorem cos_sum_equiv {x : ℝ} :
 
 theorem alt_equiv {x : ℝ} : ProblemEquation x ↔ altFormula x = 0 := by
   rw [ProblemEquation, ← cos_sum_equiv, div_eq_zero_iff, sub_eq_zero]
-  norm_num
 
 theorem finding_zeros {x : ℝ} : altFormula x = 0 ↔ cos x ^ 2 = 1 / 2 ∨ cos (3 * x) = 0 := by
   simp only [altFormula, mul_assoc, mul_eq_zero, sub_eq_zero]
@@ -61,7 +60,7 @@ Now we can solve for `x` using basic-ish trigonometry.
 -/
 theorem solve_cos2_half {x : ℝ} : cos x ^ 2 = 1 / 2 ↔ ∃ k : ℤ, x = (2 * ↑k + 1) * π / 4 := by
   rw [cos_sq]
-  simp only [add_eq_left, div_eq_zero_iff, OfNat.ofNat_ne_zero, or_false]
+  simp only [add_eq_left, div_eq_zero_iff]
   rw [cos_eq_zero_iff]
   constructor <;>
     · rintro ⟨k, h⟩

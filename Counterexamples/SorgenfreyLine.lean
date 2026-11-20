@@ -92,9 +92,9 @@ theorem nhds_basis_Ico_inv_pnat (a : ℝₗ) :
   refine (nhds_basis_Ico a).to_hasBasis (fun b hb => ?_) fun n hn =>
     ⟨_, lt_add_of_pos_right _ (inv_pos.2 <| Nat.cast_pos.2 n.pos), Subset.rfl⟩
   rcases exists_nat_one_div_lt (sub_pos.2 hb) with ⟨k, hk⟩
-  rw [one_div] at hk
-  rw [← Nat.cast_add_one] at hk
-  exact ⟨k.succPNat, trivial, Ico_subset_Ico_right (le_sub_iff_add_le'.1 hk.le)⟩
+  have hc : ((k.succPNat : ℕ) : ℝₗ) = (k : ℝₗ) + 1 := Nat.cast_succ k
+  refine ⟨k.succPNat, trivial, Ico_subset_Ico_right (le_sub_iff_add_le'.1 ?_)⟩
+  simpa only [hc, one_div₀] using hk.le
 
 theorem nhds_countable_basis_Ico_inv_pnat (a : ℝₗ) :
     (𝓝 a).HasCountableBasis (fun _ : ℕ+ => True) fun n => Ico a (a + (n : ℝₗ)⁻¹) :=

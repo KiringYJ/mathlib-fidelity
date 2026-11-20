@@ -227,7 +227,7 @@ lemma eq_zero_of_neg_one_mem [Γ.HasDetOne] (h_neg_one : -1 ∈ Γ) (hk : Odd k)
     (f : ModularForm Γ k) : f = 0 := by
   ext z
   have hf := slash_action_eqn'' f h_neg_one z
-  rw [neg_smul, one_smul, denom_neg, denom_one, hk.neg_one_zpow] at hf
+  simp only [neg_smul, one_smul, denom_neg, denom_one, hk.neg_one_zpow₀] at hf
   have h2 : (2 : ℂ) * f z = 0 := by linear_combination hf
   exact (mul_eq_zero.mp h2).resolve_left (by norm_num)
 
@@ -327,8 +327,10 @@ def mul {k_1 k_2 : ℤ} [Γ.HasDetPlusMinusOne] (f : ModularForm Γ k_1) (g : Mo
 @[simps! -fullyApplied] def const (x : ℂ) [Γ.HasDetOne] : ModularForm Γ 0 where
   toSlashInvariantForm := .const x
   holo' _ := mdifferentiableAt_const
-  bdd_at_cusps' hc g hg := by simpa only [coe_const, slash_def, SlashInvariantForm.toFun_eq_coe,
-      Function.const_apply, neg_zero, zpow_zero] using! atImInfty.const_boundedAtFilter _
+  bdd_at_cusps' hc g hg := by
+    simp only [coe_const, slash_def, SlashInvariantForm.toFun_eq_coe, Function.const_apply,
+      neg_zero, zpow_zero₀, mul_one]
+    exact atImInfty.const_boundedAtFilter _
 
 @[simp]
 lemma const_apply [Γ.HasDetOne] (x : ℂ) (τ : ℍ) : (const x : ModularForm Γ 0) τ = x := rfl
@@ -337,8 +339,10 @@ lemma const_apply [Γ.HasDetOne] (x : ℂ) (τ : ℍ) : (const x : ModularForm �
 @[simps! -fullyApplied coe] def constℝ (x : ℝ) [Γ.HasDetPlusMinusOne] : ModularForm Γ 0 where
   toSlashInvariantForm := .constℝ x
   holo' _ := mdifferentiableAt_const
-  bdd_at_cusps' hc g hg := by simpa only [coe_constℝ, slash_def, SlashInvariantForm.toFun_eq_coe,
-      Function.const_apply, neg_zero, zpow_zero] using! atImInfty.const_boundedAtFilter _
+  bdd_at_cusps' hc g hg := by
+    simp only [coe_constℝ, slash_def, SlashInvariantForm.toFun_eq_coe, Function.const_apply,
+      neg_zero, zpow_zero₀, mul_one]
+    exact atImInfty.const_boundedAtFilter _
 
 @[simp]
 lemma constℝ_apply [Γ.HasDetPlusMinusOne] (x : ℝ) (τ : ℍ) :

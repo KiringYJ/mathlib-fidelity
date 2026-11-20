@@ -87,11 +87,11 @@ lemma mem_Ico_one_of_mem_Ioo (h : α ∈ Set.Ioo 0 2) : α ∈ Set.Ico 1 2 := by
   · rw [Int.floor_eq_iff]
     constructor
     · rw [Int.cast_one]
-      calc 1 ≤ α⁻¹ * α := by simp [h0.ne']
+      calc 1 ≤ α⁻¹ * α := by simp
         _ ≤ ⌈α⁻¹⌉₊ * α := by gcongr; exact Nat.le_ceil α⁻¹
     · calc ⌈α⁻¹⌉₊ * α
         _ < (α⁻¹ + 1) * α := by gcongr; exact Nat.ceil_lt_add_one (inv_nonneg.2 h0.le)
-        _ = 1 + α := by field
+        _ = 1 + α := by rw [add_mul, inv_mul_cancel₀, one_mul]
         _ ≤ (1 : ℕ) + 1 := by gcongr; norm_cast
   · apply Finset.sum_eq_zero
     intro x hx
@@ -99,7 +99,7 @@ lemma mem_Ico_one_of_mem_Ioo (h : α ∈ Set.Ioo 0 2) : α ∈ Set.Ico 1 2 := by
     refine ⟨by positivity, ?_⟩
     rw [Finset.mem_Ico, Nat.lt_ceil] at hx
     calc x * α < α⁻¹ * α := by gcongr; exact hx.2
-      _ = 1 := by simp [h0.ne']
+      _ = 1 := by simp
 
 lemma mem_Ico_n_of_mem_Ioo (h : α ∈ Set.Ioo 0 2) {n : ℕ} (hn : 0 < n) :
     α ∈ Set.Ico ((2 * n - 1) / n : ℝ) 2 := by
@@ -108,7 +108,7 @@ lemma mem_Ico_n_of_mem_Ioo (h : α ∈ Set.Ioo 0 2) {n : ℕ} (hn : 0 < n) :
   | base =>
     obtain ⟨h1, h2⟩ := hc.mem_Ico_one_of_mem_Ioo h
     simp only [Finset.Icc_self, Finset.sum_singleton, Nat.cast_one, one_mul, one_pow,
-               Int.floor_eq_iff, Int.cast_one, mul_one, div_one, Set.mem_Ico, tsub_le_iff_right]
+               Int.floor_eq_iff, Int.cast_one, mul_one, div_one₀, Set.mem_Ico]
     exact ⟨⟨h1, by linarith⟩, by linarith, h2⟩
   | succ k kpos hk =>
     rcases hk with ⟨hks, hkl, hk2⟩
@@ -118,14 +118,15 @@ lemma mem_Ico_n_of_mem_Ioo (h : α ∈ Set.Ioo 0 2) {n : ℕ} (hn : 0 < n) :
         rw [Finset.mem_Icc]
         lia
       rw [← insert_Icc_right_eq_Icc_add_one (Nat.le_add_left 1 k), sum_insert hn11, hks]
+    have hα1 : (1 : ℝ) ≤ α := (hc.mem_Ico_one_of_mem_Ioo h).1
     specialize hc (k + 1) k.succ_pos
     rw [hs] at hc ⊢
     have hkl' : 2 * k ≤ ⌊(k + 1 : ℕ) * α⌋ := by
+      have hkR : (0 : ℝ) < (k : ℝ) := Nat.cast_pos.mpr kpos
+      have hmul := (div_le_iff₀ hkR).mp hkl
       rw [Int.le_floor]
-      calc ((2 * k : ℤ) : ℝ) = ((2 * k : ℤ) : ℝ) + 0 := (add_zero _).symm
-        _ ≤ ((2 * k : ℤ) : ℝ) + (k - 1) / k := by gcongr; norm_cast; positivity
-        _ = (k + 1 : ℕ) * ((2 * (k : ℕ) - 1) / ((k : ℕ) : ℝ)) := by simp [field]; ring
-        _ ≤ (k + 1 : ℕ) * α := by gcongr
+      push_cast
+      nlinarith only [hmul, hα1]
     have hk2' : ⌊(k + 1 : ℕ) * α⌋ < (k + 1 : ℕ) * 2 := by
       rw [Int.floor_lt]
       push_cast
@@ -153,13 +154,14 @@ end Condition
 
 lemma not_condition_of_mem_Ioo {α : ℝ} (h : α ∈ Set.Ioo 0 2) : ¬Condition α := by
   intro hc
+  have hgap : (0 : ℝ) < 2 - α := sub_pos.mpr h.2
   let n : ℕ := ⌊(2 - α)⁻¹⌋₊ + 1
   have hn : 0 < n := by lia
   have hna := (hc.mem_Ico_n_of_mem_Ioo h hn).1
   rcases h with ⟨-, h2⟩
   have hna' : 2 - (n : ℝ)⁻¹ ≤ α := by
     convert! hna using 1
-    field
+    field_simp
   rw [sub_eq_add_neg, ← le_sub_iff_add_le', neg_le, neg_sub] at hna'
   rw [le_inv_comm₀ (by linarith) (mod_cast hn), ← not_lt] at hna'
   apply hna'

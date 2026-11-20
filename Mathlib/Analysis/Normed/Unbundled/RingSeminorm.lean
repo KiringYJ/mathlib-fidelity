@@ -163,8 +163,8 @@ section CommRing
 
 variable [CommRing R] (p : RingSeminorm R)
 
-theorem exists_index_pow_le (hna : IsNonarchimedean p) (x y : R) (n : ℕ) :
-    ∃ (m : ℕ), m < n + 1 ∧ p ((x + y) ^ (n : ℕ)) ^ (1 / (n : ℝ)) ≤
+theorem exists_index_pow_le (hna : IsNonarchimedean p) (x y : R) (n : ℕ+) :
+    ∃ (m : ℕ), m < (n : ℕ) + 1 ∧ p ((x + y) ^ (n : ℕ)) ^ (1 / (n : ℝ)) ≤
       (p (x ^ m) * p (y ^ (n - m : ℕ))) ^ (1 / (n : ℝ)) := by
   obtain ⟨m, hm_lt, hm⟩ := hna.add_pow_le x y n (map_mul_le_mul p)
   exact ⟨m, hm_lt, by gcongr⟩
@@ -200,13 +200,14 @@ variable [Ring R] (p : RingSeminorm R)
 
 open Filter Nat Real
 
-/-- If `f` is a ring seminorm on `R` with `f 1 ≤ 1` and `s : ℕ → ℕ` is bounded by `n`, then
+/-- If `f` is a ring seminorm on `R` with `f 1 ≤ 1` and `s : ℕ+ → ℕ` is bounded by its index, then
   `f (x ^ s (ψ n)) ^ (1 / (ψ n : ℝ))` is eventually bounded. -/
-theorem isBoundedUnder (hp : p 1 ≤ 1) {s : ℕ → ℕ} (hs_le : ∀ n : ℕ, s n ≤ n) {x : R} (ψ : ℕ → ℕ) :
+theorem isBoundedUnder (hp : p 1 ≤ 1) {s : ℕ+ → ℕ} (hs_le : ∀ n : ℕ+, s n ≤ n)
+    {x : R} (ψ : ℕ → ℕ+) :
     IsBoundedUnder LE.le atTop fun n : ℕ => p (x ^ s (ψ n)) ^ (1 / (ψ n : ℝ)) := by
-  have h_le : ∀ m : ℕ, p (x ^ s (ψ m)) ^ (1 / (ψ m : ℝ)) ≤ p x ^ ((s (ψ m) : ℝ) / (ψ m : ℝ)) := by
-    intro m
-    rw [← mul_one_div (s (ψ m) : ℝ), rpow_mul (apply_nonneg p x), rpow_natCast]
+  have h_le (m : ℕ) :
+      p (x ^ s (ψ m)) ^ (1 / (ψ m : ℝ)) ≤ p x ^ ((s (ψ m) : ℝ) / (ψ m : ℝ)) := by
+    rw [← mul_one_div₀ (s (ψ m) : ℝ), rpow_mul (apply_nonneg p x), rpow_natCast]
     grw [map_pow_le_pow' hp x]
   apply isBoundedUnder_of
   cases le_or_gt (p x) 1 with
@@ -420,7 +421,8 @@ def RingSeminorm.toRingNorm {K : Type*} [Field K] (f : RingSeminorm K) (hnt : f 
       obtain ⟨c, hc⟩ := RingSeminorm.ne_zero_iff.mp hnt
       by_contra hn0
       have hc0 : f c = 0 := by
-        rw [← mul_one c, ← mul_inv_cancel₀ hn0, ← mul_assoc, mul_comm c, mul_assoc]
+        rw [← mul_one c, ← mul_inv_cancel₀ (ha := Ne.isUnit hn0), ← mul_assoc,
+          mul_comm c, mul_assoc]
         exact
           le_antisymm
             (le_trans (map_mul_le_mul f _ _)

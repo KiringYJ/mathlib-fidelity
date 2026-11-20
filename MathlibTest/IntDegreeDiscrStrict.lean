@@ -33,8 +33,8 @@ example (K : Type*) [Field K] : RatFunc.intDegree (RatFunc.X : RatFunc K) RatFun
   RatFunc.intDegree_X
 
 example (K : Type*) [Field K] (x : RatFunc K) (hx : x ≠ 0) :
-    x⁻¹.intDegree (inv_ne_zero hx) = -x.intDegree :=
-  RatFunc.intDegree_inv hx
+    x⁻¹.intDegree (inv_ne_zero (ha := hx.isUnit)) = -x.intDegree :=
+  RatFunc.intDegree_inv (hx := hx.isUnit)
 
 /-! The discriminant of a polynomial of positive degree. -/
 

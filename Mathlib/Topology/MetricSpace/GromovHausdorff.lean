@@ -715,12 +715,7 @@ instance : SecondCountableTopology GHSpace := by
       calc
         |dist x y - dist (Ψ x) (Ψ y)|
         _ = ε * (ε⁻¹ * |dist x y - dist (Ψ x) (Ψ y)|) := by
-            #adaptation_note /-- Before https://github.com/leanprover/lean4/pull/13166
-            (replacing grind's canonicalizer with a type-directed normalizer), `grind` closed
-            this goal. It is not yet clear whether this is due to defeq abuse in Mathlib or a
-            problem in the new canonicalizer; a minimization would help. The original proof was:
-            `grind` -/
-            field_simp
+          rw [← mul_assoc, mul_inv_cancel₀, one_mul]
         _ ≤ ε * 1 := by gcongr
         _ = ε := mul_one _
   calc
@@ -877,7 +872,7 @@ theorem totallyBounded {t : Set GHSpace} {C : ℝ} {u : ℕ → ℝ} {K : ℕ �
           _ ≤ 1 := le_of_lt (abs_sub_lt_one_of_floor_eq_floor this)
       calc
         |dist x y - dist (Ψ x) (Ψ y)| = ε * ε⁻¹ * |dist x y - dist (Ψ x) (Ψ y)| := by
-          rw [mul_inv_cancel₀ (ne_of_gt εpos), one_mul]
+          rw [mul_inv_cancel₀, one_mul]
         _ = ε * (|ε⁻¹| * |dist x y - dist (Ψ x) (Ψ y)|) := by
           rw [abs_of_nonneg (le_of_lt (inv_pos.2 εpos)), mul_assoc]
         _ ≤ ε * 1 := mul_le_mul_of_nonneg_left I (le_of_lt εpos)
@@ -885,7 +880,7 @@ theorem totallyBounded {t : Set GHSpace} {C : ℝ} {u : ℕ → ℝ} {K : ℕ �
   calc
     dist p q = ghDist p.Rep q.Rep := dist_ghDist p q
     _ ≤ ε + ε / 2 + ε := main
-    _ = δ / 2 := by simp only [ε, one_div]; ring
+    _ = δ / 2 := by simp only [ε]; ring
     _ < δ := half_lt_self δpos
 
 section Complete

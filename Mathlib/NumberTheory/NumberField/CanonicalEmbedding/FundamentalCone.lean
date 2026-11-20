@@ -98,12 +98,14 @@ variable [NumberField K] {K}
 `{c • x | c ∈ ℝ, c ≠ 0}` if `norm x ≠ 0`, see `logMap_real_smul`. -/
 def logMap (x : mixedSpace K) : logSpace K := fun w ↦
   mult w.val * (Real.log (normAtPlace w.val x) -
-    Real.log (mixedEmbedding.norm x) * (finrank ℚ K : ℝ)⁻¹)
+    Real.log (mixedEmbedding.norm x) *
+      Checked.inv (finrank ℚ K : ℝ) (Nat.cast_ne_zero.mpr finrank_pos.ne').isUnit)
 
 @[simp]
 theorem logMap_apply (x : mixedSpace K) (w : {w : InfinitePlace K // w ≠ w₀}) :
     logMap x w = mult w.val * (Real.log (normAtPlace w.val x) -
-      Real.log (mixedEmbedding.norm x) * (finrank ℚ K : ℝ)⁻¹) := rfl
+      Real.log (mixedEmbedding.norm x) *
+        Checked.inv (finrank ℚ K : ℝ) (Nat.cast_ne_zero.mpr finrank_pos.ne').isUnit) := rfl
 
 @[simp]
 theorem logMap_zero : logMap (0 : mixedSpace K) = 0 := by
@@ -149,7 +151,7 @@ theorem logMap_real (c : ℝ) :
     logMap (c • (1 : mixedSpace K)) = 0 := by
   ext
   rw [logMap_apply, normAtPlace_smul, norm_smul, map_one, map_one, mul_one, mul_one, Real.log_pow,
-    mul_comm (finrank ℚ K : ℝ) _, mul_assoc, mul_inv_cancel₀ (Nat.cast_ne_zero.mpr finrank_pos.ne'),
+    mul_comm (finrank ℚ K : ℝ) _, mul_assoc, mul_inv_cancel₀,
     mul_one, sub_self, mul_zero, Pi.zero_apply]
 
 theorem logMap_real_smul (hx : mixedEmbedding.norm x ≠ 0) {c : ℝ} (hc : c ≠ 0) :
@@ -222,7 +224,7 @@ theorem smul_mem_of_mem (hx : x ∈ fundamentalCone K) (hc : c ≠ 0) :
 theorem smul_mem_iff_mem (hc : c ≠ 0) :
     c • x ∈ fundamentalCone K ↔ x ∈ fundamentalCone K := by
   refine ⟨fun h ↦ ?_, fun h ↦ smul_mem_of_mem h hc⟩
-  convert! smul_mem_of_mem h (inv_ne_zero hc)
+  convert! smul_mem_of_mem h (inv_ne_zero (ha := hc.isUnit))
   rw [eq_inv_smul_iff₀ (ha := hc.isUnit)]
 
 set_option backward.isDefEq.respectTransparency.types false in

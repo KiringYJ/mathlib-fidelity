@@ -118,8 +118,12 @@ $$
 $$
 tends to `δ` as $s \to 1^+$. -/
 @[expose] def HasDirichletDensity (δ : ℝ) : Prop :=
-  Tendsto (fun s : ℝ ↦ S.primeIdealZetaSum s /
-    primeIdealZetaSum (univ : Set (HeightOneSpectrum (𝓞 K))) s) (𝓝[>] 1) (𝓝 δ)
+  Tendsto (fun s : Ioi (1 : ℝ) ↦ Checked.div (S.primeIdealZetaSum s)
+    (primeIdealZetaSum (univ : Set (HeightOneSpectrum (𝓞 K))) s)
+    (primeIdealZetaSum_univ_pos K s.2).ne'.isUnit) (comap Subtype.val (𝓝[>] 1)) (𝓝 δ)
+
+local instance : NeBot (comap (Subtype.val : Ioi (1 : ℝ) → ℝ) (𝓝[>] 1)) :=
+  comap_coe_neBot_of_le_principal inf_le_right
 
 variable {S}
 
@@ -169,9 +173,7 @@ theorem hasDirichletDensity_empty :
 /-- The set of all nonzero prime ideals has Dirichlet density `1`. -/
 theorem hasDirichletDensity_univ :
     HasDirichletDensity (univ : Set (HeightOneSpectrum (𝓞 K))) 1 := by
-  apply tendsto_const_nhds.congr'
-  filter_upwards [self_mem_nhdsWithin] with s hs
-  exact (div_self (primeIdealZetaSum_univ_pos K hs).ne').symm
+  exact tendsto_const_nhds.congr fun _ ↦ div_self.symm
 
 /-- The Dirichlet density is nonnegative. -/
 theorem HasDirichletDensity.nonneg {δ : ℝ} (h : S.HasDirichletDensity δ) :
@@ -182,11 +184,10 @@ theorem HasDirichletDensity.nonneg {δ : ℝ} (h : S.HasDirichletDensity δ) :
 /-- The Dirichlet density is at most `1`. -/
 theorem HasDirichletDensity.le_one {δ : ℝ} (h : S.HasDirichletDensity δ) :
     δ ≤ 1 := by
-  refine le_of_tendsto h ?_
-  filter_upwards [self_mem_nhdsWithin] with s hs
-  apply (div_le_one (primeIdealZetaSum_univ_pos K hs)).mpr
+  refine le_of_tendsto h (Eventually.of_forall fun s ↦ ?_)
+  apply (div_le_one₀ (primeIdealZetaSum_univ_pos K s.2)).mpr
   rw [primeIdealZetaSum_def, primeIdealZetaSum_def,
-    tsum_univ fun 𝔭 : HeightOneSpectrum (𝓞 K) ↦ (𝔭.asIdeal.absNorm : ℝ) ^ (-s)]
-  exact (summable_primeIdealZeta K hs).tsum_subtype_le _ S (fun _ ↦ by positivity)
+    tsum_univ fun 𝔭 : HeightOneSpectrum (𝓞 K) ↦ (𝔭.asIdeal.absNorm : ℝ) ^ (-(s : ℝ))]
+  exact (summable_primeIdealZeta K s.2).tsum_subtype_le _ S (fun _ ↦ by positivity)
 
 end NumberField.Set

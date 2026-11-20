@@ -70,9 +70,11 @@ variable {𝕜' : Type*} [NontriviallyNormedField 𝕜'] [NormedAlgebra 𝕜 �
   [IsScalarTower 𝕜 𝕜' F] {s' t' : Set 𝕜'} {h : 𝕜 → 𝕜'} {h₂ : 𝕜' → 𝕜'} {h' h₂' : 𝕜'}
   {g₁ : 𝕜' → F} {g₁' : F} {L' : Filter (𝕜' × 𝕜')} {y : 𝕜'} (x)
 
-theorem HasDerivAtFilter.scomp (hg : HasDerivAtFilter g₁ g₁' L')
-    (hh : HasDerivAtFilter h h' L) (hL : Tendsto (Prod.map h h) L L') :
-    HasDerivAtFilter (g₁ ∘ h) (h' • g₁') L := by
+theorem HasDerivAtFilter.scomp {D D' : Type*} {g : D' → F} {h : D → D'} {g' : F}
+    {coord : D → 𝕜} {coord' : D' → 𝕜'} {L : Filter (D × D)} {L' : Filter (D' × D')}
+    (hg : HasDerivAtFilter g g' L' coord')
+    (hh : HasDerivAtFilter (coord' ∘ h) h' L coord) (hL : Tendsto (Prod.map h h) L L') :
+    HasDerivAtFilter (g ∘ h) (h' • g') L coord := by
   simpa using ((hg.hasFDerivAtFilter.restrictScalars 𝕜).comp hh hL).hasDerivAtFilter
 
 theorem HasDerivWithinAt.scomp_hasDerivAt (hg : HasDerivWithinAt g₁ g₁' s' (h x))
@@ -85,11 +87,18 @@ theorem HasDerivWithinAt.scomp_hasDerivAt_of_eq (hg : HasDerivWithinAt g₁ g₁
     HasDerivAt (g₁ ∘ h) (h' • g₁') x := by
   rw [hy] at hg; exact hg.scomp_hasDerivAt x hh hs
 
-theorem HasDerivWithinAt.scomp (hg : HasDerivWithinAt g₁ g₁' t' (h x))
-    (hh : HasDerivWithinAt h h' s x) (hst : MapsTo h s t') :
-    HasDerivWithinAt (g₁ ∘ h) (h' • g₁') s x :=
-  HasDerivAtFilter.scomp hg hh <| hh.continuousWithinAt.tendsto_nhdsWithin hst |>.prodMap <|
-    tendsto_pure_pure ..
+theorem HasDerivWithinAt.scomp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {g : D' → F} {h : D → D'} {g' : F} {s : Set D} {t : Set D'}
+    {coord : D → 𝕜} {coord' : D' → 𝕜'} (x : D)
+    (hg : HasDerivWithinAt g g' t (h x) coord')
+    (hh : HasDerivWithinAt (coord' ∘ h) h' s x coord) (hst : MapsTo h s t)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    HasDerivWithinAt (g ∘ h) (h' • g') s x coord := by
+  have hcont : ContinuousWithinAt h s x :=
+    hcoord'.isInducing.continuousWithinAt_iff.2 (hh.hasFDerivWithinAt.continuousWithinAt hcoord)
+  exact HasDerivAtFilter.scomp hg hh
+    ((hcont.tendsto_nhdsWithin hst).prodMap (tendsto_pure_pure ..))
 
 theorem HasDerivWithinAt.scomp_of_eq (hg : HasDerivWithinAt g₁ g₁' t' y)
     (hh : HasDerivWithinAt h h' s x) (hst : MapsTo h s t') (hy : y = h x) :
@@ -97,9 +106,15 @@ theorem HasDerivWithinAt.scomp_of_eq (hg : HasDerivWithinAt g₁ g₁' t' y)
   rw [hy] at hg; exact hg.scomp x hh hst
 
 /-- The chain rule. -/
-theorem HasDerivAt.scomp (hg : HasDerivAt g₁ g₁' (h x)) (hh : HasDerivAt h h' x) :
-    HasDerivAt (g₁ ∘ h) (h' • g₁') x :=
-  HasDerivAtFilter.scomp hg hh <| hh.continuousAt.tendsto.prodMap <| tendsto_pure_pure _ _
+theorem HasDerivAt.scomp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {g : D' → F} {h : D → D'} {g' : F} {coord : D → 𝕜} {coord' : D' → 𝕜'} (x : D)
+    (hg : HasDerivAt g g' (h x) coord') (hh : HasDerivAt (coord' ∘ h) h' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    HasDerivAt (g ∘ h) (h' • g') x coord := by
+  have hcont : ContinuousAt h x :=
+    hcoord'.isInducing.continuousAt_iff.2 (hh.hasFDerivAt.continuousAt hcoord)
+  exact HasDerivAtFilter.scomp hg hh (hcont.tendsto.prodMap (tendsto_pure_pure ..))
 
 /-- The chain rule. -/
 theorem HasDerivAt.scomp_of_eq
@@ -107,19 +122,31 @@ theorem HasDerivAt.scomp_of_eq
     HasDerivAt (g₁ ∘ h) (h' • g₁') x := by
   rw [hy] at hg; exact hg.scomp x hh
 
-theorem HasStrictDerivAt.scomp (hg : HasStrictDerivAt g₁ g₁' (h x)) (hh : HasStrictDerivAt h h' x) :
-    HasStrictDerivAt (g₁ ∘ h) (h' • g₁') x :=
-  HasDerivAtFilter.scomp hg hh <|
-    hh.hasStrictFDerivAt.continuousAt.prodMap hh.hasStrictFDerivAt.continuousAt
+theorem HasStrictDerivAt.scomp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {g : D' → F} {h : D → D'} {g' : F} {coord : D → 𝕜} {coord' : D' → 𝕜'} (x : D)
+    (hg : HasStrictDerivAt g g' (h x) coord') (hh : HasStrictDerivAt (coord' ∘ h) h' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    HasStrictDerivAt (g ∘ h) (h' • g') x coord := by
+  have hcont : ContinuousAt h x :=
+    hcoord'.isInducing.continuousAt_iff.2 (hh.hasStrictFDerivAt.continuousAt hcoord)
+  exact HasDerivAtFilter.scomp hg hh (hcont.tendsto.prodMap_nhds hcont.tendsto)
 
 theorem HasStrictDerivAt.scomp_of_eq
     (hg : HasStrictDerivAt g₁ g₁' y) (hh : HasStrictDerivAt h h' x) (hy : y = h x) :
     HasStrictDerivAt (g₁ ∘ h) (h' • g₁') x := by
   rw [hy] at hg; exact hg.scomp x hh
 
-theorem HasDerivAt.scomp_hasDerivWithinAt (hg : HasDerivAt g₁ g₁' (h x))
-    (hh : HasDerivWithinAt h h' s x) : HasDerivWithinAt (g₁ ∘ h) (h' • g₁') s x :=
-  HasDerivWithinAt.scomp x hg.hasDerivWithinAt hh (mapsTo_univ _ _)
+theorem HasDerivAt.scomp_hasDerivWithinAt {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {g : D' → F} {h : D → D'} {g' : F} {s : Set D} {coord : D → 𝕜} {coord' : D' → 𝕜'} (x : D)
+    (hg : HasDerivAt g g' (h x) coord') (hh : HasDerivWithinAt (coord' ∘ h) h' s x coord)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    HasDerivWithinAt (g ∘ h) (h' • g') s x coord := by
+  have hwithin := hg.hasFDerivAt.hasFDerivWithinAt (s := Set.univ)
+  have hg' : HasDerivWithinAt g g' Set.univ (h x) coord' := by
+    simpa only [ContinuousLinearMap.toSpanSingleton_apply, one_smul] using hwithin.hasDerivWithinAt
+  exact hg'.scomp x hh (mapsTo_univ _ _) hcoord hcoord'
 
 theorem HasDerivAt.scomp_hasDerivWithinAt_of_eq (hg : HasDerivAt g₁ g₁' y)
     (hh : HasDerivWithinAt h h' s x) (hy : y = h x) :
@@ -212,11 +239,13 @@ theorem HasDerivWithinAt.comp_hasFDerivAt_of_eq {f : E → 𝕜'} {f' : E →L[�
 
 /-! ### Derivative of the composition of two scalar functions -/
 
-theorem HasDerivAtFilter.comp (hh₂ : HasDerivAtFilter h₂ h₂' L')
-    (hh : HasDerivAtFilter h h' L) (hL : Tendsto (Prod.map h h) L L') :
-    HasDerivAtFilter (h₂ ∘ h) (h₂' * h') L := by
+theorem HasDerivAtFilter.comp {D D' : Type*} {g : D' → 𝕜'} {h : D → D'} {g' : 𝕜'}
+    {coord : D → 𝕜} {coord' : D' → 𝕜'} {L : Filter (D × D)} {L' : Filter (D' × D')}
+    (hg : HasDerivAtFilter g g' L' coord')
+    (hh : HasDerivAtFilter (coord' ∘ h) h' L coord) (hL : Tendsto (Prod.map h h) L L') :
+    HasDerivAtFilter (g ∘ h) (g' * h') L coord := by
   rw [mul_comm]
-  exact hh₂.scomp hh hL
+  exact hg.scomp hh hL
 
 @[deprecated HasDerivAtFilter.comp (since := "2026-07-17")]
 theorem HasDerivAtFilter.comp_of_eq {L : Filter 𝕜} {L' : Filter 𝕜'}
@@ -225,11 +254,16 @@ theorem HasDerivAtFilter.comp_of_eq {L : Filter 𝕜} {L' : Filter 𝕜'}
     HasDerivAtFilter (h₂ ∘ h) (h₂' * h') (L ×ˢ pure x) :=
   hh₂.comp hh <| hL.prodMap <| by simp [hy]
 
-theorem HasDerivWithinAt.comp (hh₂ : HasDerivWithinAt h₂ h₂' s' (h x))
-    (hh : HasDerivWithinAt h h' s x) (hst : MapsTo h s s') :
-    HasDerivWithinAt (h₂ ∘ h) (h₂' * h') s x := by
+theorem HasDerivWithinAt.comp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {g : D' → 𝕜'} {h : D → D'} {g' : 𝕜'} {s : Set D} {t : Set D'}
+    {coord : D → 𝕜} {coord' : D' → 𝕜'} (x : D)
+    (hg : HasDerivWithinAt g g' t (h x) coord')
+    (hh : HasDerivWithinAt (coord' ∘ h) h' s x coord) (hst : MapsTo h s t)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    HasDerivWithinAt (g ∘ h) (g' * h') s x coord := by
   rw [mul_comm]
-  exact hh₂.scomp x hh hst
+  exact hg.scomp x hh hst hcoord hcoord'
 
 theorem HasDerivWithinAt.comp_of_eq (hh₂ : HasDerivWithinAt h₂ h₂' s' y)
     (hh : HasDerivWithinAt h h' s x) (hst : MapsTo h s s') (hy : y = h x) :
@@ -240,9 +274,14 @@ theorem HasDerivWithinAt.comp_of_eq (hh₂ : HasDerivWithinAt h₂ h₂' s' y)
 
 Note that the function `h₂` is a function on an algebra. If you are looking for the chain rule
 with `h₂` taking values in a vector space, use `HasDerivAt.scomp`. -/
-theorem HasDerivAt.comp (hh₂ : HasDerivAt h₂ h₂' (h x)) (hh : HasDerivAt h h' x) :
-    HasDerivAt (h₂ ∘ h) (h₂' * h') x :=
-  HasDerivAtFilter.comp hh₂ hh <| hh.continuousAt.tendsto.prodMap <| tendsto_pure_pure _ _
+theorem HasDerivAt.comp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {g : D' → 𝕜'} {h : D → D'} {g' : 𝕜'} {coord : D → 𝕜} {coord' : D' → 𝕜'} (x : D)
+    (hg : HasDerivAt g g' (h x) coord') (hh : HasDerivAt (coord' ∘ h) h' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    HasDerivAt (g ∘ h) (g' * h') x coord := by
+  rw [mul_comm]
+  exact hg.scomp x hh hcoord hcoord'
 
 /-- The chain rule.
 
@@ -253,19 +292,28 @@ theorem HasDerivAt.comp_of_eq
     HasDerivAt (h₂ ∘ h) (h₂' * h') x := by
   rw [hy] at hh₂; exact hh₂.comp x hh
 
-theorem HasStrictDerivAt.comp (hh₂ : HasStrictDerivAt h₂ h₂' (h x)) (hh : HasStrictDerivAt h h' x) :
-    HasStrictDerivAt (h₂ ∘ h) (h₂' * h') x := by
+theorem HasStrictDerivAt.comp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {g : D' → 𝕜'} {h : D → D'} {g' : 𝕜'} {coord : D → 𝕜} {coord' : D' → 𝕜'} (x : D)
+    (hg : HasStrictDerivAt g g' (h x) coord') (hh : HasStrictDerivAt (coord' ∘ h) h' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    HasStrictDerivAt (g ∘ h) (g' * h') x coord := by
   rw [mul_comm]
-  exact hh₂.scomp x hh
+  exact hg.scomp x hh hcoord hcoord'
 
 theorem HasStrictDerivAt.comp_of_eq
     (hh₂ : HasStrictDerivAt h₂ h₂' y) (hh : HasStrictDerivAt h h' x) (hy : y = h x) :
     HasStrictDerivAt (h₂ ∘ h) (h₂' * h') x := by
   rw [hy] at hh₂; exact hh₂.comp x hh
 
-theorem HasDerivAt.comp_hasDerivWithinAt (hh₂ : HasDerivAt h₂ h₂' (h x))
-    (hh : HasDerivWithinAt h h' s x) : HasDerivWithinAt (h₂ ∘ h) (h₂' * h') s x :=
-  hh₂.hasDerivWithinAt.comp x hh (mapsTo_univ _ _)
+theorem HasDerivAt.comp_hasDerivWithinAt {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+    {g : D' → 𝕜'} {h : D → D'} {g' : 𝕜'} {s : Set D} {coord : D → 𝕜} {coord' : D' → 𝕜'} (x : D)
+    (hg : HasDerivAt g g' (h x) coord') (hh : HasDerivWithinAt (coord' ∘ h) h' s x coord)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id)
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    HasDerivWithinAt (g ∘ h) (g' * h') s x coord := by
+  rw [mul_comm]
+  exact hg.scomp_hasDerivWithinAt x hh hcoord hcoord'
 
 theorem HasDerivAt.comp_hasDerivWithinAt_of_eq (hh₂ : HasDerivAt h₂ h₂' y)
     (hh : HasDerivWithinAt h h' s x) (hy : y = h x) :

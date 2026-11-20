@@ -39,7 +39,7 @@ theorem polynomialFunctions_closure_eq_top' : (polynomialFunctions I).topologica
   apply Subalgebra.sum_mem
   rintro i -
   rw [← SetLike.mem_coe, polynomialFunctions_coe]
-  use bernsteinPolynomial ℝ n i * .C (f (bernstein.z i))
+  use bernsteinPolynomial ℝ n.1 i * .C (f (bernstein.z i n.2))
   ext
   simp [bernstein]
 

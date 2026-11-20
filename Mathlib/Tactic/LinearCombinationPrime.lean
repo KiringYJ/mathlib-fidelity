@@ -67,6 +67,17 @@ inductive Expanded
   /-- A value, equivalently a proof of `c = c`. -/
   | const (c : Syntax.Term)
 
+private def checkedUnitEquality (p : Term) : TermElabM Term := do
+  let proof ← withSynthesize <| Term.elabTerm p none
+  let some (α, lhs, rhs) := (← whnfR (← inferType proof)).eq?
+    | throwErrorAt p "an equality is required"
+  let α ← α.toSyntax
+  let lhs ← lhs.toSyntax
+  let rhs ← rhs.toSyntax
+  let proof ← proof.toSyntax
+  `(let h : IsUnit $lhs := by checked_unit
+    (Subtype.ext $proof : (⟨$lhs, h⟩ : {x : $α // IsUnit x}) = ⟨$rhs, $proof ▸ h⟩))
+
 /--
 Performs macro expansion of a linear combination expression,
 using `+`/`-`/`*`/`/` on equations and values.
@@ -107,13 +118,33 @@ partial def expandLinearCombo (ty : Expr) (stx : Syntax.Term) : TermElabM Expand
   | `($e⁻¹) => do
     match ← expandLinearCombo ty e with
     | .const c => .const <$> `($c⁻¹)
-    | .proof p => .proof <$> ``(inv_pf $p)
+    | .proof p => do
+      if (← synthInstance? (← mkAppM ``Inv #[ty])).isSome then
+        return .proof (← ``(inv_pf $p))
+      let α ← ty.toSyntax
+      let h ← checkedUnitEquality p
+      .proof <$> ``(congrArg (fun u : {x : $α // IsUnit x} ↦
+        Checked.inv (Subtype.val u) (Subtype.property u)) $h)
   | `($e₁ / $e₂) => do
     match ← expandLinearCombo ty e₁, ← expandLinearCombo ty e₂ with
     | .const c₁, .const c₂ => .const <$> ``($c₁ / $c₂)
-    | .proof p₁, .const c₂ => .proof <$> ``(pf_div_c $p₁ $c₂)
-    | .const c₁, .proof p₂ => .proof <$> ``(c_div_pf $p₂ $c₁)
-    | .proof p₁, .proof p₂ => .proof <$> ``(div_pf $p₁ $p₂)
+    | .proof p₁, .const c₂ => do
+      let α ← ty.toSyntax
+      .proof <$> ``(congrArg (fun x : $α ↦ x / $c₂) $p₁)
+    | .const c₁, .proof p₂ => do
+      if (← synthInstance? (← mkAppM ``Div #[ty])).isSome then
+        return .proof (← ``(c_div_pf $p₂ $c₁))
+      let α ← ty.toSyntax
+      let h₂ ← checkedUnitEquality p₂
+      .proof <$> ``(congrArg (fun u : {x : $α // IsUnit x} ↦
+        Checked.div $c₁ (Subtype.val u) (Subtype.property u)) $h₂)
+    | .proof p₁, .proof p₂ => do
+      if (← synthInstance? (← mkAppM ``Div #[ty])).isSome then
+        return .proof (← ``(div_pf $p₁ $p₂))
+      let α ← ty.toSyntax
+      let h₂ ← checkedUnitEquality p₂
+      .proof <$> ``(congrArg₂ (fun x (u : {x : $α // IsUnit x}) ↦
+        Checked.div x (Subtype.val u) (Subtype.property u)) $p₁ $h₂)
   | e =>
     -- We have the expected type from the goal, so we can fully synthesize this leaf node.
     withSynthesize do

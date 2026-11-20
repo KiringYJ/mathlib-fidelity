@@ -53,9 +53,10 @@ theorem neg_mulExpNegMulSq_neg (ε x : ℝ) : - mulExpNegMulSq ε (-x) = mulExpN
 
 theorem mulExpNegMulSq_one_le_one (x : ℝ) : mulExpNegMulSq 1 x ≤ 1 := by
   simp only [mulExpNegMulSq, one_mul]
-  rw [← le_div_iff₀ (exp_pos (-(x * x))), exp_neg, div_inv_eq_mul, one_mul]
-  apply le_trans _ (add_one_le_exp (x * x))
-  nlinarith
+  have hx : x ≤ exp (x * x) := le_trans (by nlinarith) (add_one_le_exp (x * x))
+  calc
+    _ ≤ exp (x * x) * exp (-(x * x)) := mul_le_mul_of_nonneg_right hx (exp_pos _).le
+    _ = 1 := by rw [← exp_add, add_neg_cancel, exp_zero]
 
 theorem neg_one_le_mulExpNegMulSq_one (x : ℝ) : -1 ≤ mulExpNegMulSq 1 x := by
   rw [← neg_mulExpNegMulSq_neg, neg_le_neg_iff]
@@ -104,10 +105,12 @@ theorem norm_deriv_mulExpNegMulSq_le_one (hε : 0 < ε) (x : ℝ) :
   have hynonneg : 0 ≤ y := by
     rw [hy, mul_assoc]
     exact mul_nonneg hε.le (mul_self_nonneg x)
-  apply mul_le_of_le_inv_mul₀ (zero_le_one' ℝ) (exp_nonneg _)
-  simp only [← exp_neg (-y), neg_neg, mul_one, abs_le, neg_le_sub_iff_le_add, tsub_le_iff_right]
-  refine ⟨le_trans two_mul_le_exp ((le_add_iff_nonneg_left (exp y)).mpr zero_le_one), ?_⟩
-  exact le_trans (one_le_exp hynonneg) (le_add_of_nonneg_right (by simp [hynonneg]))
+  have htwo : 2 * y ≤ exp y := two_mul_le_exp
+  have habs : |1 - 2 * y| ≤ exp y := abs_le.mpr
+    ⟨by linarith, by linarith [one_le_exp hynonneg]⟩
+  calc
+    _ ≤ exp (-y) * exp y := mul_le_mul_of_nonneg_left habs (exp_pos _).le
+    _ = 1 := by rw [← exp_add, neg_add_cancel, exp_zero]
 
 theorem nnnorm_deriv_mulExpNegMulSq_le_one (hε : 0 < ε) (x : ℝ) :
     ‖deriv (mulExpNegMulSq ε) x‖₊ ≤ 1 := by
@@ -122,7 +125,9 @@ theorem lipschitzWith_one_mulExpNegMulSq (hε : 0 < ε) :
 
 theorem mulExpNegMulSq_eq_sqrt_mul_mulExpNegMulSq_one (hε : 0 < ε) (x : ℝ) :
     mulExpNegMulSq ε x = (√ε)⁻¹ * mulExpNegMulSq 1 (sqrt ε * x) := by
-  grind [mulExpNegMulSq]
+  have hx : (√ε * x) * (√ε * x) = ε * x * x := by
+    rw [mul_mul_mul_comm, mul_self_sqrt hε.le, mul_assoc]
+  simp only [mulExpNegMulSq, one_mul, hx, ← mul_assoc, inv_mul_cancel₀]
 
 /-- For fixed `ε > 0`, the mapping `x ↦ mulExpNegMulSq ε x` is bounded by `(√ε)⁻¹`. -/
 theorem abs_mulExpNegMulSq_le (hε : 0 < ε) {x : ℝ} : |mulExpNegMulSq ε x| ≤ (√ε)⁻¹ := by

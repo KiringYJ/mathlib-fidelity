@@ -83,13 +83,18 @@ noncomputable section
 
 variable {k : ℤ} (f : ℍ → ℂ)
 
+private theorem isUnit_abs_det (g : GL (Fin 2) ℝ) : IsUnit |g.det.val| :=
+  (abs_ne_zero.mpr g.det.ne_zero).isUnit
+
 section privateSlash
 
 set_option backward.privateInPublic true in
 /-- The weight `k` action of `GL (Fin 2) ℝ` on functions `f : ℍ → ℂ`. Invoking this directly is
 deprecated; it should always be used via the `SlashAction` instance. -/
 private def privateSlash (k : ℤ) (γ : GL (Fin 2) ℝ) (f : ℍ → ℂ) (x : ℍ) : ℂ :=
-  σ γ (f (γ • x)) * |γ.det.val| ^ (k - 1) * UpperHalfPlane.denom γ x ^ (-k)
+  σ γ (f (γ • x)) *
+    Checked.zpow (↑|γ.det.val| : ℂ) (k - 1) (fun _ ↦ (isUnit_abs_det γ).map Complex.ofRealHom) *
+    Checked.zpow (denom γ x) (-k) (fun _ ↦ isUnit_denom γ x)
 
 -- Why is `noncomputable` flag needed here, when we're in a noncomputable section already?
 -- temporary notation until the instance is built
@@ -99,15 +104,19 @@ set_option backward.privateInPublic true in
 private theorem slash_mul (k : ℤ) (A B : GL (Fin 2) ℝ) (f : ℍ → ℂ) :
     f ∣[k] (A * B) = (f ∣[k] A) ∣[k] B := by
   ext1 τ
+  have hA := (isUnit_abs_det A).map Complex.ofRealHom
+  have hB := (isUnit_abs_det B).map Complex.ofRealHom
+  have hAB := (isUnit_abs_det (A * B)).map Complex.ofRealHom
   calc σ (A * B) (f ((A * B) • τ)) * |(A * B).det.val| ^ (k - 1) * denom (A * B) τ ^ (-k)
   _ = σ B (σ A (f (A • B • τ))) * (|A.det.val| ^ (k - 1) * |B.det.val| ^ (k - 1)) *
       (((σ B) (denom A ↑(B • τ) ^ (-k))) * denom B τ ^ (-k)) := by
-    rw [σ_mul_comm, σ_mul, denom_cocycle_σ, mul_zpow, mul_smul, map_mul, Units.val_mul,
-      abs_mul, ofReal_mul, mul_zpow, map_zpow₀]
+    rw [σ_mul_comm, σ_mul, mul_smul]
+    simp only [denom_cocycle_σ, map_mul, Units.val_mul, abs_mul, ofReal_mul, map_zpow₀]
+    rw [mul_zpow₀, mul_zpow₀]
   _ = σ B (σ A (f (A • B • τ)) * |A.det.val| ^ (k - 1) * (denom A ↑(B • τ) ^ (-k)))
         * |B.det.val| ^ (k - 1) * denom B τ ^ (-k) := by
-     rw [map_mul, map_zpow₀, map_mul, map_zpow₀, σ_ofReal]
-     ring
+    simp only [map_mul, map_zpow₀, σ_ofReal]
+    ring
   _ = ((f ∣[k] A) ∣[k] B) τ := rfl
 
 set_option backward.privateInPublic true in
@@ -137,11 +146,13 @@ instance : SlashAction ℤ (GL (Fin 2) ℝ) (ℍ → ℂ) where
 end privateSlash
 
 theorem slash_def (g : GL (Fin 2) ℝ) :
-    f ∣[k] g = fun τ ↦ σ g (f (g • τ)) * |g.det.val| ^ (k - 1) * denom g τ ^ (-k) :=
+    f ∣[k] g = fun τ ↦ σ g (f (g • τ)) * Checked.zpow (↑|g.det.val| : ℂ) (k - 1)
+        (fun _ ↦ by exact (isUnit_abs_det g).map Complex.ofRealHom) * denom g τ ^ (-k) :=
   rfl
 
 theorem slash_apply (g : GL (Fin 2) ℝ) (τ : ℍ) :
-    (f ∣[k] g) τ = σ g (f (g • τ)) * |g.det.val| ^ (k - 1) * denom g τ ^ (-k) :=
+    (f ∣[k] g) τ = σ g (f (g • τ)) * Checked.zpow (↑|g.det.val| : ℂ) (k - 1)
+        (fun _ ↦ by exact (isUnit_abs_det g).map Complex.ofRealHom) * denom g τ ^ (-k) :=
   rfl
 
 theorem smul_slash (k : ℤ) (A : GL (Fin 2) ℝ) (f : ℍ → ℂ) (c : ℂ) :
@@ -188,12 +199,12 @@ theorem is_invariant_one' (A : SL(2, ℤ)) : (1 : ℍ → ℂ) ∣[(0 : ℤ)] (A
   if for every matrix `γ ∈ Γ` we have `f(γ • z)= (c*z+d)^k f(z)` where `γ= ![![a, b], ![c, d]]`,
   and it acts on `ℍ` via Möbius transformations. -/
 theorem slash_action_eq'_iff (k : ℤ) (f : ℍ → ℂ) (γ : SL(2, ℤ)) (z : ℍ) :
-    (f ∣[k] γ) z = f z ↔ f (γ • z) = ((γ 1 0 : ℂ) * z + (γ 1 1 : ℂ)) ^ k * f z := by
-  simp only [SL_slash_apply]
-  convert! inv_mul_eq_iff_eq_mul₀ (G₀ := ℂ) _ using 2
-  · simp only [mul_comm (f _), denom, zpow_neg]
-    rfl
-  · exact zpow_ne_zero k (denom_ne_zero γ z)
+    (f ∣[k] γ) z = f z ↔ f (γ • z) =
+      Checked.zpow ((γ 1 0 : ℂ) * z + (γ 1 1 : ℂ)) k
+        (fun _ ↦ isUnit_denom γ z) * f z := by
+  have hγ := isUnit_denom (γ : GL (Fin 2) ℝ) z
+  rw [SL_slash_apply, zpow_neg₀ hγ.ne_zero, mul_comm (f (γ • z))]
+  exact inv_mul_eq_iff_eq_mul₀
 
 theorem mul_slash (k1 k2 : ℤ) (A : GL (Fin 2) ℝ) (f g : ℍ → ℂ) :
     (f * g) ∣[k1 + k2] A = |(A.det : ℝ)| • (f ∣[k1] A * g ∣[k2] A) := by
@@ -201,9 +212,9 @@ theorem mul_slash (k1 k2 : ℤ) (A : GL (Fin 2) ℝ) (f g : ℍ → ℂ) :
   simp only [slash_apply, Pi.mul_apply, Pi.smul_apply, real_smul, map_mul, neg_add,
     zpow_add₀ (denom_ne_zero _ x)]
   set d := (↑|A.det.val| : ℂ)
+  have hd : IsUnit d := (isUnit_abs_det A).map Complex.ofRealHom
   have h1 : d ^ (k1 + k2 - 1) = d * d ^ (k1 - 1) * d ^ (k2 - 1) := by
-    have : d ≠ 0 := ofReal_ne_zero.mpr <| abs_ne_zero.mpr <| NeZero.ne _
-    rw [← zpow_one_add₀ this, ← zpow_add₀ this]
+    rw [← zpow_one_add₀ hd.ne_zero, ← zpow_add₀ hd.ne_zero]
     ring_nf
   rw [h1]
   ring
@@ -212,22 +223,33 @@ theorem mul_slash_SL2 (k1 k2 : ℤ) (A : SL(2, ℤ)) (f g : ℍ → ℂ) :
     (f * g) ∣[k1 + k2] A = f ∣[k1] A * g ∣[k2] A := by
   simp [SL_slash, mul_slash]
 
-theorem div_slash_SL2 (k1 k2 : ℤ) (A : SL(2, ℤ)) (f g : ℍ → ℂ) :
-    (f / g) ∣[k1 - k2] A = f ∣[k1] A / g ∣[k2] A := by
-  ext τ
-  simp [SL_slash_apply, zpow_sub₀ (denom_ne_zero A τ)]
-  grind
+theorem isUnit_slash_SL2 (k : ℤ) (A : SL(2, ℤ)) {g : ℍ → ℂ} (hg : IsUnit g) :
+    IsUnit (g ∣[k] A) := by
+  rw [Pi.isUnit_iff] at hg ⊢
+  intro τ
+  rw [SL_slash_apply]
+  exact (hg (A • τ)).mul ((isUnit_denom A τ).zpow₀ (-k))
+
+theorem div_slash_SL2 (k1 k2 : ℤ) (A : SL(2, ℤ)) (f g : ℍ → ℂ) {hg : IsUnit g} :
+    (f / g) ∣[k1 - k2] A =
+      Checked.div (f ∣[k1] A) (g ∣[k2] A) (isUnit_slash_SL2 k2 A hg) := by
+  have h := mul_slash_SL2 (k1 - k2) k2 A (f / g) g
+  rw [div_mul_cancel₀, sub_add_cancel] at h
+  exact eq_div_iff.mpr h.symm
 
 open Finset
 
 lemma prod_slash_sum_weights {ι : Type*} {k : ι → ℤ} {g : GL (Fin 2) ℝ} {f : ι → ℍ → ℂ}
     {s : Finset ι} :
-    (∏ i ∈ s, f i) ∣[∑ i ∈ s, k i] g = |g.det.val| ^ (#s - 1 : ℤ) • (∏ i ∈ s, f i ∣[k i] g) := by
+    (∏ i ∈ s, f i) ∣[∑ i ∈ s, k i] g =
+      Checked.zpow |g.det.val| (#s - 1 : ℤ) (fun _ ↦ by exact isUnit_abs_det g) •
+        (∏ i ∈ s, f i ∣[k i] g) := by
   classical
+  have hg := isUnit_abs_det g
   induction s using Finset.induction_on with
   | empty =>
-    simp only [sum_empty, prod_empty, Matrix.GeneralLinearGroup.val_det_apply, card_empty,
-      CharP.cast_eq_zero, zero_sub, Int.reduceNeg, zpow_neg, zpow_one]
+    simp only [sum_empty, prod_empty, card_empty, CharP.cast_eq_zero, zero_sub, Int.reduceNeg,
+      zpow_neg₀ hg.ne_zero, zpow_one₀]
     ext _
     simp [slash_apply]
   | insert i t hi IH =>
@@ -237,14 +259,14 @@ lemma prod_slash_sum_weights {ι : Type*} {k : ι → ℤ} {g : GL (Fin 2) ℝ} 
     show ∑ i ∈ insert i t, k i = (k i) + ∑ i ∈ t, k i by grind, mul_slash, IH, mul_smul_comm,
       ← mul_smul]
     congr 1
-    nth_rw 2 [show (#t : ℤ) = 1 + (#t - 1) by grind]
-    rw [zpow_add', zpow_one]
-    left
-    exact abs_ne_zero.mpr (Matrix.GeneralLinearGroup.det_ne_zero g)
+    have ht' : 1 + (#t - 1 : ℤ) = #t := by omega
+    simpa only [ht'] using (zpow_one_add₀ hg.ne_zero ((#t : ℤ) - 1)).symm
 
 lemma prod_slash {ι : Type*} {k : ℤ} {g : GL (Fin 2) ℝ} {f : ι → ℍ → ℂ}
     {s : Finset ι} :
-    (∏ i ∈ s, f i) ∣[k * #s] g = |g.det.val| ^ (#s - 1 : ℤ) • (∏ i ∈ s, f i ∣[k] g) := by
+    (∏ i ∈ s, f i) ∣[k * #s] g =
+      Checked.zpow |g.det.val| (#s - 1 : ℤ) (fun _ ↦ by exact isUnit_abs_det g) •
+        (∏ i ∈ s, f i ∣[k] g) := by
   have : k * (#s) = ∑ i ∈ s, k := by
     rw [Finset.sum_const, nsmul_eq_mul']
   rw [this]

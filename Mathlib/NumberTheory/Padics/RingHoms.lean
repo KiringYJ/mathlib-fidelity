@@ -84,11 +84,11 @@ theorem norm_sub_modPart_aux (r : ℚ) (h : ‖(r : ℚ_[p])‖ ≤ 1) :
     ↑p ∣ r.num - r.num * r.den.gcdA p % p * ↑r.den := by
   rw [← ZMod.intCast_zmod_eq_zero_iff_dvd]
   simp only [Int.cast_natCast, Int.cast_mul, Int.cast_sub]
-  have := congr_arg (fun x => x % p : ℤ → ZMod p) (gcd_eq_gcd_ab r.den p)
-  simp only [Int.cast_natCast, CharP.cast_eq_zero, EuclideanDomain.mod_zero, Int.cast_add,
-    Int.cast_mul, zero_mul, add_zero] at this
+  have hbezout := congr_arg (fun x : ℤ ↦ (x : ZMod p)) (gcd_eq_gcd_ab r.den p)
+  simp only [Int.cast_natCast, CharP.cast_eq_zero, Int.cast_add,
+    Int.cast_mul, zero_mul, add_zero] at hbezout
   push_cast
-  rw [mul_right_comm, mul_assoc, ← this]
+  rw [mul_right_comm, mul_assoc, ← hbezout]
   suffices rdcp : r.den.Coprime p by
     rw [rdcp.gcd_eq_one]
     simp only [mul_one, cast_one, sub_self]
@@ -762,7 +762,7 @@ lemma toZModPow_ofIntSeq_of_pow_dvd_sub
   obtain ⟨e, he⟩ := Ideal.mem_span_singleton.mp (PadicInt.appr_spec n x)
   rw [sub_eq_iff_eq_add] at he
   obtain ⟨N, hN⟩ := padicNormE.defn s (ε := p ^ (-n : ℤ))
-    (by simp only [zpow_neg, zpow_natCast, inv_pos]; exact_mod_cast Nat.pos_of_neZero _)
+    (zpow_pos (by exact_mod_cast Nat.pos_of_neZero p) _)
   replace hN := hN (N + n) (Nat.le_add_right N n)
   rw [← hs, he, ← Rat.cast_lt (K := ℝ)] at hN
   push_cast at hN
@@ -772,7 +772,8 @@ lemma toZModPow_ofIntSeq_of_pow_dvd_sub
     by_contra! H
     have H' : ‖(p ^ n * e : ℚ_[p])‖ < ‖(((x.appr n) - f (N + n) : ℤ) : ℚ_[p])‖ := by
       refine LE.le.trans_lt ?_ H
-      simpa using mul_le_mul_of_nonneg le_rfl e.2 (show 0 ≤ (↑p ^ n)⁻¹ by simp) zero_le_one
+      rw [norm_mul, Padic.norm_p_pow]
+      exact mul_le_of_le_one_right (zpow_pos (by exact_mod_cast Nat.pos_of_neZero p) _).le e.2
     rw [Padic.add_eq_max_of_ne H'.ne, sup_eq_right.mpr H'.le] at hN
     exact lt_asymm hN H
   rw [Padic.norm_int_le_pow_iff_dvd, ← Nat.cast_pow,

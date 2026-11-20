@@ -41,11 +41,13 @@ lemma valuation_eq_valuation_X_zpow_intDegree_of_one_lt_valuation_X {f : RatFunc
   induction f using RatFunc.induction_on with
   | f p q hq =>
     have hp : p ≠ 0 := by contrapose hf; simp [hf]
-    rw [intDegree_div (algebraMap_ne_zero hp) (algebraMap_ne_zero hq), v.map_div,
-      zpow_sub₀ (ne_zero_of_lt hlt), intDegree_polynomial hp, intDegree_polynomial hq]
-    simp_rw [zpow_natCast, ← coePolynomial_eq_algebraMap]
-    rw [valuation_eq_valuation_X_pow_natDegree_of_one_lt_valuation_X _ hlt hp,
-      valuation_eq_valuation_X_pow_natDegree_of_one_lt_valuation_X _ hlt hq]
+    have hX : IsUnit (v X) := (lt_trans zero_lt_one hlt).ne'.isUnit
+    rw [hX.zpow_eq_val_unit_zpow, intDegree_div (algebraMap_ne_zero hp),
+      intDegree_polynomial hp, intDegree_polynomial hq, ← hX.zpow_eq_val_unit_zpow,
+      zpow_sub₀ hX.ne_zero, v.map_div]
+    have hval {s : K[X]} (hs : s ≠ 0) : v (algebraMap K[X] (RatFunc K) s) = v X ^ s.natDegree :=
+      valuation_eq_valuation_X_pow_natDegree_of_one_lt_valuation_X _ hlt hs
+    simp only [hval hp, hval hq, zpow_natCast₀]
 
 variable [DecidableEq (RatFunc K)]
 
@@ -67,12 +69,12 @@ lemma setOfPred_polynomial_valuation_lt_one_and_ne_zero_nonempty [v.IsNontrivial
     (hle : v RatFunc.X ≤ 1) : {p : K[X] | v p < 1 ∧ p ≠ 0}.Nonempty := by
   obtain ⟨w, h0, h1⟩ := IsNontrivial.exists_lt_one (v := v)
   induction w using RatFunc.induction_on with
-  | f p q =>
-    simp only [ne_eq, _root_.div_eq_zero_iff, FaithfulSMul.algebraMap_eq_zero_iff, not_or,
+  | f p q hq =>
+    simp only [ne_eq, _root_.div_eq_zero_iff, FaithfulSMul.algebraMap_eq_zero_iff,
       map_div₀] at *
     have hor : ¬v ↑p = 1 ∨ ¬v ↑q = 1 := by rw [← not_and_or]; aesop
     suffices ∀ r : K[X], v (↑r) ≠ 1 → r ≠ 0 → {p : K[X] | v ↑p < 1 ∧ ¬p = 0}.Nonempty by
-      exact Or.elim hor (fun hp ↦ this p hp h0.1) (fun hq ↦ this q hq h0.2)
+      exact Or.elim hor (fun hp ↦ this p hp h0) (fun h ↦ this q h hq)
     exact fun r hr hr0 ↦ ⟨r, lt_iff_le_and_ne.mpr
       ⟨Polynomial.valuation_le_one_of_valuation_X_le_one _ hle r, hr⟩, hr0⟩
 
@@ -177,13 +179,14 @@ lemma valuation_eq_valuation_uniformizingPolynomial_pow_of_valuation_X_le_one {p
       using mul_lt_one_of_lt_of_le hπ.1 <| (q / π).valuation_le_one_of_valuation_X_le_one _ hle
 
 lemma exists_zpow_uniformizingPolynomial {f : RatFunc K} (hf : f ≠ 0) :
+    have hπ : v πᵥ ≠ 0 := by simpa using uniformizingPolynomial_ne_zero hle
     ∃ (z : ℤ), v f = v πᵥ ^ z := by
   have h0 : v πᵥ ≠ 0 := by simpa using uniformizingPolynomial_ne_zero hle
   induction f using RatFunc.induction_on with
   | f p q hq =>
     use (Associates.mk (Pᵥ).asIdeal).count (Associates.mk (Ideal.span {p})).factors -
       (Associates.mk (Pᵥ).asIdeal).count (Associates.mk (Ideal.span {q})).factors
-    simp only [map_div₀, map_pow, zpow_sub₀ h0, zpow_natCast,
+    simp only [map_div₀, map_pow, zpow_sub₀ h0, zpow_natCast₀,
       valuation_eq_valuation_uniformizingPolynomial_pow_of_valuation_X_le_one hle hq,
       valuation_eq_valuation_uniformizingPolynomial_pow_of_valuation_X_le_one hle
         (p := p) (by aesop)]
@@ -200,15 +203,18 @@ lemma uniformizingPolynomial_isUniformizer [hv : IsRankOneDiscrete v] :
     simp only [coePolynomial_eq_algebraMap, MonoidWithZeroHom.mem_valueGroup_iff_of_comm, ne_eq,
       map_eq_zero, Subgroup.mem_zpowers_iff]
     refine ⟨fun ⟨k, hk⟩ ↦ ?_, fun ⟨a, ha, b, hab⟩ ↦ ?_⟩
-    · use 1, one_ne_zero, πᵥ ^ k
-      simp only [← Units.val_inj, Units.val_zpow_eq_zpow_val] at hk
-      simp [← hk]
+    · have hπ : (πᵥ : RatFunc K) ≠ 0 := algebraMap_ne_zero (uniformizingPolynomial_ne_zero hle)
+      refine ⟨1, one_ne_zero, (πᵥ : RatFunc K) ^ k, ?_⟩
+      change v 1 * (γ : Γ) = v _
+      rw [map_one, one_mul, map_zpow₀]
+      exact (congrArg Units.val hk).symm.trans (h0.isUnit.zpow_eq_val_unit_zpow k).symm
     · obtain ⟨ka, hka⟩ := exists_zpow_uniformizingPolynomial hle ha
       obtain ⟨kb, hkb⟩ := exists_zpow_uniformizingPolynomial hle (f := b) (by aesop)
       rw [MonoidWithZeroHom.coe_ofClass, hka, hkb] at hab
-      use kb - ka
-      have : v ↑πᵥ ^ ka ≠ 0 := zpow_ne_zero _ h0
-      simp [zpow_sub, ← Units.val_inj, ← coePolynomial_eq_algebraMap, field, ← hab]
+      refine ⟨kb - ka, Units.ext ?_⟩
+      refine (h0.isUnit.zpow_eq_val_unit_zpow (kb - ka)).symm.trans ?_
+      rw [zpow_sub₀ h0, div_eq_iff]
+      simpa only [mul_comm] using hab.symm
 
 lemma valuation_isEquiv_valuationIdeal_adic_of_valuation_X_le_one :
     v.IsEquiv ((Pᵥ).valuation (RatFunc K)) := by
@@ -222,10 +228,10 @@ lemma valuation_isEquiv_valuationIdeal_adic_of_valuation_X_le_one :
       have h0lt : 0 < v (algebraMap K[X] (RatFunc K) πᵥ) := by
         simp [pos_of_ne_zero, ne_zero_iff v, uniformizingPolynomial_ne_zero hle]
       simp only [map_div₀, valuation_of_algebraMap, intValuation_def, exp_neg, ite_eq_right hp0,
-        ite_eq_right hq0, div_inv_eq_mul,
+        ite_eq_right hq0,
         valuation_eq_valuation_uniformizingPolynomial_pow_of_valuation_X_le_one hle hp0,
         valuation_eq_valuation_uniformizingPolynomial_pow_of_valuation_X_le_one hle hq0]
-      simp_all [div_le_one₀, ← exp_add, (pow_le_pow_iff_right_of_lt_one₀ h0lt
+      simp_all [div_le_one₀, (pow_le_pow_iff_right_of_lt_one₀ h0lt
         (valuation_uniformizingPolynomial_lt_one hle))]
 
 end Associates

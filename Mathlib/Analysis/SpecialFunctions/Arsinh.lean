@@ -65,9 +65,10 @@ theorem arsinh_zero : arsinh 0 = 0 := by simp [arsinh]
 
 @[simp]
 theorem arsinh_neg (x : ℝ) : arsinh (-x) = -arsinh x := by
-  rw [← exp_eq_exp, exp_arsinh, exp_neg, exp_arsinh]
-  apply eq_inv_of_mul_eq_one_left
-  rw [neg_sq, neg_add_eq_sub, add_comm x, mul_comm, ← sq_sub_sq, sq_sqrt, add_sub_cancel_right]
+  rw [← exp_eq_exp, exp_neg]
+  apply eq_inv_of_mul_eq_one_left₀
+  rw [exp_arsinh, exp_arsinh, neg_sq, neg_add_eq_sub, add_comm x, mul_comm, ← sq_sub_sq,
+    sq_sqrt, add_sub_cancel_right]
   exact add_nonneg zero_le_one (sq_nonneg _)
 
 /-- `arsinh` is the right inverse of `sinh`. -/
@@ -81,7 +82,7 @@ theorem cosh_arsinh (x : ℝ) : cosh (arsinh x) = √(1 + x ^ 2) := by
 
 @[simp]
 theorem tanh_arsinh (x : ℝ) : tanh (arsinh x) = x / √(1 + x ^ 2) := by
-  rw [tanh_eq_sinh_div_cosh, sinh_arsinh, cosh_arsinh]
+  rw [tanh_eq_sinh_div_cosh, div_eq_div_iff, sinh_arsinh, cosh_arsinh]
 
 /-- `sinh` is surjective, `∀ b, ∃ a, sinh a = b`. In this case, we use `a = arsinh b`. -/
 theorem sinh_surjective : Surjective sinh :=

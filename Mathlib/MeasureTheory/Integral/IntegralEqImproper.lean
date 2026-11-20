@@ -1130,7 +1130,7 @@ theorem integral_comp_rpow_Ioi (g : ℝ → E) {p : ℝ} (hp : p ≠ 0) :
   have a : (· ^ p) '' (Ioi 0) = Ioi (0 : ℝ) := by
     ext1 x; rw [mem_image]; constructor
     · rintro ⟨y, hy, rfl⟩; exact rpow_pos_of_pos hy p
-    · exact fun hx ↦ ⟨x ^ (1 / p), rpow_pos_of_pos hx _, by simp [← rpow_mul (le_of_lt hx), hp]⟩
+    · exact fun hx ↦ ⟨x ^ (1 / p), rpow_pos_of_pos hx _, by simp [← rpow_mul (le_of_lt hx)]⟩
   have := integral_image_eq_integral_abs_deriv_smul measurableSet_Ioi
     (fun x hx ↦ (hasDerivAt_rpow_const (Or.inl (mem_Ioi.mp hx).ne')).hasDerivWithinAt)
     ((rpow_left_injOn hp).mono (by grind)) g
@@ -1148,7 +1148,7 @@ theorem integral_comp_rpow_Ioi_of_pos' {g : ℝ → E} {p : ℝ} (hp : 0 < p) {c
   have : Ioi c = (· ^ p) '' Ioi (c ^ p⁻¹) := by
     rw [(continuous_rpow_const hp.le).continuousOn.image_Ioi_of_strictMonoOn
           ((strictMonoOn_rpow_Ici_of_exponent_pos hp).mono (by grind)) (tendsto_rpow_atTop hp)]
-    simp [← rpow_mul hc, hp.ne.symm]
+    simp [← rpow_mul hc]
   rw [this, integral_image_eq_integral_abs_deriv_smul (measurableSet_Ioi (a := c ^ p⁻¹))
       (fun _ _ ↦ (hasDerivAt_rpow_const (by grind)).hasDerivWithinAt)
       ((rpow_left_injOn hp.ne.symm).mono (Set.Ioi_subset_Ici (by positivity)))]
@@ -1188,36 +1188,77 @@ theorem integrable_comp_exp (g : ℝ → E) :
 
 /-- Substitution `y = log x` in integrals over `Ioi a` -/
 theorem integral_comp_log_Ioi (g : ℝ → E) {a : ℝ} (ha : 0 < a) :
-    ∫ x in Ioi a, x⁻¹ • g (log x) = ∫ y in Ioi (log a), g y := by
-  simpa [exp_log ha] using (integral_comp_exp_Ioi (fun x ↦ x⁻¹ • g (log x)) (log a)).symm
+    ∫ x : Ioi a, Checked.inv (x : ℝ) (ha.trans x.2).ne'.isUnit • g (log x)
+      ∂(volume.comap Subtype.val) = ∫ y in Ioi (log a), g y := by
+  let f (x : ℝ) : E := if hx : 0 < x then Checked.inv x hx.ne'.isUnit • g (log x) else 0
+  calc
+    _ = ∫ x in Ioi a, f x := by
+      rw [← integral_subtype_comap measurableSet_Ioi f]
+      congr 1
+      funext x
+      simp only [f, dite_eq_left (ha.trans x.2)]
+    _ = _ := by
+      simpa only [f, exp_log ha, dite_eq_left (exp_pos _), log_exp, smul_smul, mul_inv_cancel₀,
+        one_smul] using (integral_comp_exp_Ioi f (log a)).symm
 
 theorem integrableOn_comp_log_Ioi (g : ℝ → E) {a : ℝ} (ha : 0 < a) :
-    IntegrableOn (fun x ↦ x⁻¹ • g (log x)) (Ioi a) ↔ IntegrableOn g (Ioi (log a)) := by
-  symm
-  simpa  [exp_log ha] using integrableOn_comp_exp_Ioi (fun x ↦ x⁻¹ • g (log x)) (log a)
+    Integrable (fun x : Ioi a ↦ Checked.inv (x : ℝ) (ha.trans x.2).ne'.isUnit • g (log x))
+      (volume.comap Subtype.val) ↔ IntegrableOn g (Ioi (log a)) := by
+  let f (x : ℝ) : E := if hx : 0 < x then Checked.inv x hx.ne'.isUnit • g (log x) else 0
+  calc
+    _ ↔ IntegrableOn f (Ioi a) := by
+      rw [integrableOn_iff_comap_subtypeVal measurableSet_Ioi]
+      apply integrable_congr
+      refine Eventually.of_forall fun x ↦ ?_
+      simp only [Function.comp_apply, f, dite_eq_left (ha.trans x.2)]
+    _ ↔ _ := by
+      simpa only [f, exp_log ha, dite_eq_left (exp_pos _), log_exp, smul_smul, mul_inv_cancel₀,
+        one_smul] using (integrableOn_comp_exp_Ioi f (log a)).symm
 
 /-- Substitution `y = log x` in integrals over `Ioi 0`. -/
 theorem integral_comp_log_Ioi_zero (g : ℝ → E) :
-    ∫ x in Ioi 0, x⁻¹ • g (log x) = ∫ y, g y := by
-  simpa using (integral_comp_exp (fun x ↦ x⁻¹ • g (log x))).symm
+    ∫ x : Ioi (0 : ℝ), Checked.inv (x : ℝ) x.2.ne'.isUnit • g (log x)
+      ∂(volume.comap Subtype.val) = ∫ y, g y := by
+  let f (x : ℝ) : E := if hx : 0 < x then Checked.inv x hx.ne'.isUnit • g (log x) else 0
+  calc
+    _ = ∫ x in Ioi 0, f x := by
+      rw [← integral_subtype_comap measurableSet_Ioi f]
+      congr 1
+      funext x
+      have hx : 0 < (x : ℝ) := x.2
+      simp only [f, dite_eq_left hx]
+    _ = _ := by
+      simpa only [f, dite_eq_left (exp_pos _), log_exp, smul_smul, mul_inv_cancel₀, one_smul]
+        using (integral_comp_exp f).symm
 
 theorem integrableOn_comp_log_Ioi_zero (g : ℝ → E) :
-    IntegrableOn (fun x ↦ x⁻¹ • g (log x)) (Ioi 0) ↔ Integrable g := by
-  simpa using (integrable_comp_exp (fun x ↦ x⁻¹ • g (log x))).symm
+    Integrable (fun x : Ioi (0 : ℝ) ↦ Checked.inv (x : ℝ) x.2.ne'.isUnit • g (log x))
+      (volume.comap Subtype.val) ↔ Integrable g := by
+  let f (x : ℝ) : E := if hx : 0 < x then Checked.inv x hx.ne'.isUnit • g (log x) else 0
+  calc
+    _ ↔ IntegrableOn f (Ioi 0) := by
+      rw [integrableOn_iff_comap_subtypeVal measurableSet_Ioi]
+      apply integrable_congr
+      refine Eventually.of_forall fun x ↦ ?_
+      have hx : 0 < (x : ℝ) := x.2
+      simp only [Function.comp_apply, f, dite_eq_left hx]
+    _ ↔ _ := by
+      simpa only [f, dite_eq_left (exp_pos _), log_exp, smul_smul, mul_inv_cancel₀, one_smul]
+        using (integrable_comp_exp f).symm
 
 theorem integral_comp_mul_left_Ioi (g : ℝ → E) (a : ℝ) {b : ℝ} (hb : 0 < b) :
     ∫ x in Ioi a, g (b * x) = b⁻¹ • ∫ x in Ioi (b * a), g x := by
   have : ∀ c : ℝ, MeasurableSet (Ioi c) := fun c => measurableSet_Ioi
   rw [← integral_indicator (this _), ← integral_indicator (this _),
-    ← abs_of_pos (inv_pos.mpr hb), ← Measure.integral_comp_mul_left]
+    ← abs_of_pos (inv_pos.mpr hb), ← Measure.integral_comp_mul_left _ b (ha := hb.ne'.isUnit)]
   congr
   ext1 x
-  rw [← indicator_comp_right, preimage_const_mul_Ioi₀ _ hb, mul_div_cancel_left₀ _ hb.ne',
+  rw [← indicator_comp_right, preimage_const_mul_Ioi₀ _ hb, mul_div_cancel_left₀,
     Function.comp_def]
 
 theorem integral_comp_mul_left_Ioi' (g : ℝ → E) (a : ℝ) {b : ℝ} (hb : 0 < b) :
     b • ∫ x in Ioi a, g (b * x) = ∫ x in Ioi (b * a), g x := by
-  simp [integral_comp_mul_left_Ioi g a hb, smul_smul, mul_inv_cancel₀ hb.ne']
+  simp [integral_comp_mul_left_Ioi g a hb, smul_smul]
 
 theorem integral_comp_mul_right_Ioi (g : ℝ → E) (a : ℝ) {b : ℝ} (hb : 0 < b) :
     ∫ x in Ioi a, g (x * b) = b⁻¹ • ∫ x in Ioi (a * b), g x := by
@@ -1225,7 +1266,7 @@ theorem integral_comp_mul_right_Ioi (g : ℝ → E) (a : ℝ) {b : ℝ} (hb : 0 
 
 theorem integral_comp_mul_right_Ioi' (g : ℝ → E) (a : ℝ) {b : ℝ} (hb : 0 < b) :
     b • ∫ x in Ioi a, g (x * b) = ∫ x in Ioi (a * b), g x := by
-  simp [integral_comp_mul_right_Ioi g a hb, smul_smul, mul_inv_cancel₀ hb.ne']
+  simp [integral_comp_mul_right_Ioi g a hb, smul_smul]
 
 end IoiChangeVariables
 
@@ -1243,19 +1284,13 @@ theorem integrableOn_Ioi_comp_rpow_iff [NormedSpace ℝ E] (f : ℝ → E) {p : 
   let S := Ioi (0 : ℝ)
   have a1 : ∀ x : ℝ, x ∈ S → HasDerivWithinAt (fun t : ℝ => t ^ p) (p * x ^ (p - 1)) S x :=
     fun x hx => (hasDerivAt_rpow_const (Or.inl (mem_Ioi.mp hx).ne')).hasDerivWithinAt
-  have a2 : InjOn (fun x : ℝ => x ^ p) S := by
-    rcases lt_or_gt_of_ne hp with (h | h)
-    · apply StrictAntiOn.injOn
-      intro x hx y hy hxy
-      rw [← inv_lt_inv₀ (rpow_pos_of_pos hx p) (rpow_pos_of_pos hy p), ← rpow_neg (le_of_lt hx), ←
-        rpow_neg (le_of_lt hy)]
-      exact rpow_lt_rpow (le_of_lt hx) hxy (neg_pos.mpr h)
-    exact StrictMonoOn.injOn fun x hx y _hy hxy => rpow_lt_rpow (mem_Ioi.mp hx).le hxy h
+  have a2 : InjOn (fun x : ℝ => x ^ p) S :=
+    (rpow_left_injOn hp).mono Ioi_subset_Ici_self
   have a3 : (fun t : ℝ => t ^ p) '' S = S := by
     ext1 x; rw [mem_image]; constructor
     · rintro ⟨y, hy, rfl⟩; exact rpow_pos_of_pos hy p
     · intro hx; refine ⟨x ^ (1 / p), rpow_pos_of_pos hx _, ?_⟩
-      rw [← rpow_mul (le_of_lt hx), one_div_mul_cancel hp, rpow_one]
+      rw [← rpow_mul (le_of_lt hx), one_div_mul_cancel, rpow_one]
   have := integrableOn_image_iff_integrableOn_abs_deriv_smul measurableSet_Ioi a1 a2 f
   rw [a3] at this
   rw [this]
@@ -1276,7 +1311,7 @@ theorem integrableOn_Ioi_comp_mul_left_iff (f : ℝ → E) (c : ℝ) {a : ℝ} (
   convert! integrable_comp_mul_left_iff ((Ioi (a * c)).indicator f) ha.ne' using 2
   ext1 x
   rw [← indicator_comp_right, preimage_const_mul_Ioi₀ _ ha, mul_comm a c,
-    mul_div_cancel_right₀ _ ha.ne', Function.comp_def]
+    mul_div_cancel_right₀, Function.comp_def]
 
 theorem integrableOn_Ioi_comp_mul_right_iff (f : ℝ → E) (c : ℝ) {a : ℝ} (ha : 0 < a) :
     IntegrableOn (fun x => f (x * a)) (Ioi c) ↔ IntegrableOn f (Ioi <| c * a) := by

@@ -54,7 +54,7 @@ theorem tendsto_nhds_opNorm (f : A →P[ℂ] ℂ) {l : Filter A} (hl : l.IsIncre
     filter_upwards [hl.eventually_norm] using f.toContinuousLinearMap.unit_le_opNorm
   have h2 : ∀ᶠ x in l, ‖f.toContinuousLinearMap‖ - ε ≤ ‖f x‖ := by
     obtain ⟨a, ha1, ha2⟩ := f.toContinuousLinearMap.exists_lt_apply_of_lt_opNorm
-      (r := ‖f.toContinuousLinearMap‖ - ε / 2) (by grind)
+      (r := ‖f.toContinuousLinearMap‖ - ε / 2) (sub_lt_self _ (half_pos hε))
     have h3 : ∀ᶠ x in l, ‖f (x * a)‖ ^ 2 ≤ ‖f x‖ * ‖f.toContinuousLinearMap‖ := by
       filter_upwards [hl.eventually_nonneg, hl.eventually_norm] with x hx1 hx2
       have : ‖f (star x * x)‖ ≤ ‖f x‖ := by
@@ -92,7 +92,10 @@ private lemma im_apply_eq_zero_of_tendsto_nhds_opNorm {l : Filter A}
   suffices ∀ (t : ℝ), ‖f a + I * t * ‖f‖‖ ^ 2 ≤ ‖f‖ ^ 2 * (‖a‖ ^ 2 + t ^ 2) by
     contrapose! this
     refine ⟨(‖f‖ ^ 2 * ‖a‖ ^ 2 - ‖f a‖ ^ 2 + 1) / (2 * (f a).im * ‖f‖), ?_⟩
-    simp [normSq, ← normSq_eq_norm_sq, -ofReal_div]; field_simp; grind
+    have himsq := sq_pos_of_ne_zero this
+    simp [normSq, ← normSq_eq_norm_sq, -ofReal_div]
+    field_simp
+    nlinarith only [himsq]
   intro t
   suffices (fun x ↦ ‖f (a + (I * t) • x)‖ ^ 2) ≤ᶠ[l]
         (fun x ↦ ‖f‖ ^ 2 * (‖a‖ ^ 2 + t ^ 2 + |t| * ‖a * x - x * a‖)) by
@@ -125,7 +128,7 @@ theorem monotone_iff_tendsto_nhds_opNorm {l : Filter A} (hl : l.IsIncreasingAppr
   filter_upwards [hl.eventually_nonneg, hl.eventually_norm] with y hy hy2
   grw [← map_sub, f.le_opNorm, CStarAlgebra.norm_sub_le_max_of_nonneg hy
     (by simp [smul_nonneg, ha]), hy2]
-  simp [norm_smul, ha0]
+  simp [norm_smul]
 
 theorem monotone_iff_opNorm_eq_map_one {A : Type*} [CStarAlgebra A] [PartialOrder A]
     [StarOrderedRing A] {f : A →L[ℂ] ℂ} : Monotone f ↔ ‖f‖ = f 1 := by

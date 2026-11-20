@@ -272,6 +272,7 @@ noncomputable def leviCivitaAuxInner (x : M) : ℝ :=
   - ⟪Z, VectorField.mlieBracket I Y X⟫ x
   + ⟪X, VectorField.mlieBracket I Z Y⟫ x) / 2
 
+omit [FiniteDimensional ℝ E] in
 /-- `leviCivitaAuxInner` is tensorial with respect to its first argument. -/
 theorem tensorialAt_leviCivitaAuxInner₁
     (x : M) (hY : MDiffAt (T% Y) x) (hZ : MDiffAt (T% Z) x) :
@@ -286,6 +287,7 @@ theorem tensorialAt_leviCivitaAuxInner₁
       mvfderiv_fun_add, inner_add_left, inner_add_right]
     ring
 
+omit [FiniteDimensional ℝ E] in
 /-- `leviCivitaAuxInner` is tensorial with respect to its third argument. -/
 theorem tensorialAt_leviCivitaAuxInner₃
     (x : M) (hY : MDiffAt (T% Y) x) (hX : MDiffAt (T% X) x) :

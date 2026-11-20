@@ -45,17 +45,21 @@ theorem gl_smul_eq_iff_num_eq :
   rw [← (σ g).injective.eq_iff]
   simp [UpperHalfPlane.ext_iff, coe_smul, div_eq_iff]
 
+/-- The lower-right entry of an invertible upper triangular matrix is nonzero. -/
+theorem gl_d_ne_zero_of_c_eq_zero (hc : g 1 0 = 0) : g 1 1 ≠ 0 := by
+  intro hd
+  simpa [Matrix.det_fin_two, hc, hd] using g.det_ne_zero
+
 /-- If `g` is an upper triangular matrix with trace zero,
 then `g` fixes the vertical line `re z = b / (2 * d)`. -/
 theorem gl_smul_eq_self_iff_re_eq (htrace : g.val.trace = 0) (hc : g 1 0 = 0) :
-    g • z = z ↔ z.re = g 0 1 / (2 * g 1 1) := by
+    g • z = z ↔ z.re = Checked.div (g 0 1) (2 * g 1 1)
+      (mul_ne_zero two_ne_zero (gl_d_ne_zero_of_c_eq_zero hc)).isUnit := by
   rw [Matrix.trace_fin_two, add_eq_zero_iff_eq_neg] at htrace
-  have h₀ : g 1 1 ≠ 0 := by
-    intro h₀
-    simpa [Matrix.det_fin_two, hc, h₀] using g.det_ne_zero
+  have h₀ := gl_d_ne_zero_of_c_eq_zero hc
   have h : g.val.det < 0 := by simp [Matrix.det_fin_two, *]
   simp [gl_smul_eq_iff_num_eq, Complex.ext_iff, htrace, hc, num, denom, σ, h.not_gt, mul_comm,
-    eq_div_iff, h₀]
+    eq_div_iff]
   grind
 
 /-- If `g` is an orientation reversing matrix with trace zero and `c ≠ 0`,
@@ -67,10 +71,22 @@ theorem gl_smul_eq_self_iff_dist_sq_eq (h : g.val.det < 0) (htrace : g.val.trace
     (hc : g 1 0 ≠ 0) :
     g • z = z ↔ dist (z : ℂ) (-g 1 1 / g 1 0) ^ 2 = (-g.val.det) / g 1 0 ^ 2 := by
   rw [Matrix.trace_fin_two, ← eq_neg_iff_add_eq_zero] at htrace
-  rw [eq_div_iff (by positivity), dist_eq_norm, ← Complex.normSq_eq_norm_sq, Complex.normSq_apply,
+  rw [eq_div_iff, dist_eq_norm, ← Complex.normSq_eq_norm_sq, Complex.normSq_apply,
     gl_smul_eq_iff_num_eq, σ, g.val_det_apply, ite_eq_right h.not_gt]
-  simp [num, denom, Complex.ext_iff, htrace, Matrix.det_fin_two, field]
-  grind
+  simp only [num, Fin.isValue, htrace, Complex.ofReal_neg, neg_mul, Complex.conjCAE_apply, denom,
+    Complex.ext_iff, Complex.add_re, Complex.neg_re, Complex.mul_re, Complex.ofReal_re, coe_re,
+    Complex.ofReal_im, coe_im, zero_mul, sub_zero, Complex.conj_re, Complex.conj_im, Complex.add_im,
+    Complex.mul_im, add_zero, sub_neg_eq_add, Complex.neg_im, Complex.sub_re, Complex.div_ofReal_re,
+    Complex.sub_im, Complex.div_ofReal_im, neg_zero, zero_div, pow_two, det_fin_two, neg_sub,
+    fieldEq]
+  constructor
+  · rintro ⟨hr, _⟩
+    linear_combination -g 1 0 * hr
+  · intro hr
+    constructor
+    · apply mul_right_injective₀ hc
+      linear_combination -hr
+    · ring
 
 /-- If `g` is an orientation reversing matrix with trace zero and `c ≠ 0`,
 then its action on the upper half plane has a half-circle of fixed points.
@@ -79,7 +95,10 @@ theorem gl_smul_eq_self_iff_dist_eq (h : g.val.det < 0) (htrace : g.val.trace = 
     (hc : g 1 0 ≠ 0) :
     g • z = z ↔ dist (z : ℂ) (-g 1 1 / g 1 0) = √(-g.val.det) / |g 1 0| := by
   rw [gl_smul_eq_self_iff_dist_sq_eq h htrace hc, eq_comm, ← Real.sqrt_eq_iff_eq_sq, eq_comm,
-    Real.sqrt_div', Real.sqrt_sq_eq_abs] <;> positivity [neg_pos.mpr h]
+    Real.sqrt_div _ (sq_pos_of_ne_zero hc)]
+  · simp only [Real.sqrt_sq_eq_abs]
+  · positivity [neg_pos.mpr h]
+  · exact dist_nonneg
 
 /-- An orientation-reversing isometry of the hyperbolic plane has a fixed point
 iff the corresponding matrix has zero trace. -/
@@ -87,16 +106,21 @@ theorem exists_gl_smul_eq_self_iff_trace_eq_zero (h : g.val.det < 0) :
     (∃ z : ℍ, g • z = z) ↔ g.val.trace = 0 := by
   constructor
   · rintro ⟨z, hz⟩
-    linear_combination
-      (norm := { simp [σ, h.not_gt, num, denom, z.im_ne_zero, Matrix.trace_fin_two, field] })
-      congr($(gl_smul_eq_iff_num_eq.mp hz).im / z.im)
+    have him := congrArg Complex.im (gl_smul_eq_iff_num_eq.mp hz)
+    simp [σ, h.not_gt, num, denom] at him
+    rw [Matrix.trace_fin_two]
+    apply (mul_eq_zero.mp ?_).resolve_right z.im_ne_zero
+    linear_combination him
   · intro hadd
     by_cases hc : g 1 0 = 0
-    · use ⟨⟨g 0 1 / (2 * g 1 1), 1⟩, one_pos⟩
+    · have hd := gl_d_ne_zero_of_c_eq_zero hc
+      use ⟨⟨g 0 1 / (2 * g 1 1), 1⟩, one_pos⟩
       simp [gl_smul_eq_self_iff_re_eq, *]
-    · use ⟨⟨-g 1 1 / g 1 0, √(-g.val.det) / |g 1 0|⟩, by simp [*]⟩
+    · have hc' : g 1 0 ≠ 0 := hc
+      use ⟨⟨Checked.div (-g 1 1) (g 1 0) hc'.isUnit, √(-g.val.det) / |g 1 0|⟩, by
+        exact div_pos (Real.sqrt_pos_of_pos (neg_pos.mpr h)) (abs_pos.mpr hc)⟩
       simp [gl_smul_eq_self_iff_dist_sq_eq, *, dist_eq_norm, ← Complex.normSq_eq_norm_sq,
-        Complex.normSq_apply, ← pow_two, div_pow, h.le]
+        Complex.normSq_apply, ← pow_two, h.le]
 
 /-- If `g` is an orientation-preserving map,
 then the fixed points of its action on the upper half-plane
@@ -133,20 +157,27 @@ theorem isElliptic_of_exists_smul_eq_self (h : 0 < g.val.det) (hgc : g ∉ Subgr
     simp [discrim, Matrix.discr_fin_two, Matrix.trace_fin_two, Matrix.det_fin_two]
     ring
   rw [gl_smul_eq_self_iff_quadratic h, quadratic_eq_zero_iff (mod_cast hc) hd] at hz
-  norm_cast at hz
-  simp only [z.ne_ofReal, false_or] at hz
+  simp only [← Complex.ofReal_neg, ← Complex.ofReal_sub, ← Complex.ofReal_add,
+    ← Complex.ofReal_ofNat, ← Complex.ofReal_mul] at hz
+  rcases hz with hz | hz <;>
+    exact z.im_ne_zero (by simpa [Complex.div_im] using congrArg Complex.im hz)
 
 /-- The unique fixed point of an orientation-preserving elliptic matrix acting on `ℍ`. -/
 def fixedPt (g : GL (Fin 2) ℝ) (hell : g.IsElliptic) : ℍ :=
-  ⟨(g 0 0 - g 1 1) / (2 * g 1 0) + .I * (√(-g.val.discr) / (2 * |g 1 0|)), by
-    simpa [div_pos, Complex.div_re, Complex.div_im, hell.c_ne_zero]⟩
+  have hc := hell.c_ne_zero
+  ⟨⟨(g 0 0 - g 1 1) / (2 * g 1 0), √(-g.val.discr) / (2 * |g 1 0|)⟩, by
+    exact div_pos (Real.sqrt_pos_of_pos (neg_pos.mpr hell)) (mul_pos two_pos (abs_pos.mpr hc))⟩
 
 @[simp]
 theorem fixedPt_neg (hg : (-g).IsElliptic) :
     fixedPt (-g) hg = fixedPt g (isElliptic_neg_iff.mp hg) := by
-  ext
-  simp [fixedPt, Matrix.discr_fin_two, Matrix.det_neg]
-  ring
+  apply ext_re_im
+  · simp only [fixedPt, Fin.isValue, Units.val_neg, Matrix.neg_apply, sub_neg_eq_add, mul_neg,
+      div_neg₀, abs_neg, mk_re]
+    rw [← neg_div₀]
+    congr 1
+    ring
+  · simp [fixedPt, Matrix.discr_fin_two, Matrix.det_neg]
 
 /-- The action of an elliptic orientation preserving matrix on `ℍ`
 has a unique fixed point given by `fixedPt`. -/
@@ -163,7 +194,13 @@ theorem gl_smul_eq_self_iff_eq_fixedPt (hpos : 0 < g.val.det) (hell : g.IsEllipt
   rw [gl_smul_eq_self_iff_quadratic hpos, quadratic_eq_zero_iff (mod_cast hell.c_ne_zero)
     (hd.trans (pow_two _))]
   rw [or_iff_left]
-  · simp [fixedPt, UpperHalfPlane.ext_iff, abs_of_pos hc, field]
+  · have he : (fixedPt g hell : ℂ) =
+        ((g 0 0 : ℂ) - g 1 1 + .I * √(-g.val.discr)) / (2 * (g 1 0 : ℂ)) := by
+      have hcu : IsUnit (2 * (g 1 0 : ℂ)) :=
+        (mul_ne_zero two_ne_zero (by exact_mod_cast hc.ne')).isUnit
+      rw [eq_div_iff]
+      apply Complex.ext <;> simp [fixedPt, abs_of_pos hc]
+    simp [UpperHalfPlane.ext_iff, he, neg_sub]
   · intro h
     refine z.im_pos.not_ge ?_
     rw [← coe_im, h]
@@ -194,7 +231,8 @@ theorem forall_smul_eq_self_iff_mem_center {g : GL (Fin 2) ℝ} :
         rw [gl_smul_eq_self_iff_re_eq ha hc] at hg
         simp_all
       · have : 0 < 1 + √(-g.val.det) / |g 1 0| := by simp [add_pos, *]
-        specialize hg ⟨⟨-g 1 1 / g 1 0, 1 + √(-g.val.det) / |g 1 0|⟩, this⟩
+        specialize hg ⟨⟨Checked.div (-g 1 1) (g 1 0) hc.isUnit, 1 + √(-g.val.det) / |g 1 0|⟩,
+          this⟩
         simp [gl_smul_eq_self_iff_dist_eq hlt ha hc, Complex.dist_eq_re_im, Real.sqrt_sq this.le]
           at hg
     · have := isElliptic_of_exists_smul_eq_self hgt hgc ⟨.I, hg _⟩

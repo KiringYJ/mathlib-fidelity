@@ -50,7 +50,7 @@ theorem posLog_def : log⁺ = max 0 (log ·) := rfl
 -/
 
 /-- Presentation of `log` in terms of its positive part. -/
-theorem posLog_sub_posLog_inv : log⁺ x - log⁺ x⁻¹ = log x := by
+theorem posLog_sub_posLog_inv {hx : IsUnit x} : log⁺ x - log⁺ x⁻¹ = log x := by
   rw [posLog_apply, posLog_apply, log_inv]
   by_cases! h : 0 ≤ log x
   · simp [h]
@@ -105,8 +105,11 @@ theorem log_of_nat_eq_posLog {n : ℕ} : log⁺ n = log n := by
   · simp [posLog_eq_log, Nat.one_le_iff_ne_zero.2 hn]
 
 /-- Presentation of `|log|` in terms of the positive part of the logarithm. -/
-theorem abs_log_eq_posLog_add_posLog_inv (x : ℝ) : |log x| = log⁺ x + log⁺ x⁻¹ := by
-  grind [half_mul_log_add_log_abs (x := x), log_inv x ▸ half_mul_log_add_log_abs (x := x⁻¹)]
+theorem abs_log_eq_posLog_add_posLog_inv (x : ℝ) {hx : IsUnit x} :
+    |log x| = log⁺ x + log⁺ x⁻¹ := by
+  rw [← half_mul_log_add_log_abs (x := x), ← half_mul_log_add_log_abs (x := x⁻¹),
+    log_inv, abs_neg]
+  ring
 
 /-- The function `log⁺` equals `log (max 1 _)` for non-negative real numbers. -/
 theorem posLog_eq_log_max_one (hx : 0 ≤ x) : log⁺ x = log (max 1 x) := by

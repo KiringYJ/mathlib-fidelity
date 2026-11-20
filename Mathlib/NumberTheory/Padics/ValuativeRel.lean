@@ -56,7 +56,8 @@ instance : IsValuativeTopology ℚ_[p] := by
   · -- A metric ball `‖·‖ < ε` contains the valuation ball of radius `v (p ^ n)` for large `n`.
     intro ⟨ε, hε, hball⟩
     obtain ⟨n, hn⟩ := exists_pow_lt_of_lt_one hε (inv_lt_one_of_one_lt₀ h1p)
-    have hnorm : ‖(p : ℚ_[p]) ^ n‖ < ε := by simpa [norm_pow, norm_p] using hn
+    have hnorm : ‖(p : ℚ_[p]) ^ n‖ < ε := by
+      simpa [norm_pow, norm_p, zpow_neg₀ (by positivity : (p : ℝ) ≠ 0)] using hn
     refine ⟨Units.mk0 (mulValuation.restrict (p ^ n)) ?_,
       fun z hz ↦ hball (mem_ball_zero_iff.mpr ?_)⟩
     · exact (ne_zero_iff _).mpr (pow_ne_zero _ (Nat.cast_ne_zero.mpr hp.out.ne_zero))

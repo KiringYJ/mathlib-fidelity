@@ -254,7 +254,6 @@ theorem hasFDerivAt_convolution_right_with_param {g : P → G → E'} {s : Set P
       HasFDerivAt (fun x : P × G => L (f a) (g x.1 (x.2 - a)))
         ((L (f a)).comp (g' (x.fst, x.snd - a))) x := by
     filter_upwards with a x hx
-    apply (L _).hasFDerivAt.comp x
     have N : s ×ˢ univ ∈ 𝓝 (x.1, x.2 - a) := by
       apply A'
       apply h₀ε
@@ -267,7 +266,12 @@ theorem hasFDerivAt_convolution_right_with_param {g : P → G → E'} {s : Set P
         ext x <;> simp only [Pi.sub_apply, _root_.id, Prod.fst_sub, sub_zero, Prod.snd_sub]
       rw [this]
       exact (hasFDerivAt_id x).sub_const (0, a)
-    exact Z.comp x Z'
+    have hL : HasFDerivAt (fun y : E' ↦ L (f a) y) (L (f a)) (g x.1 (x.2 - a)) :=
+      (L (f a)).hasFDerivAt
+    have hcomp := hL.comp (D' := E') (f := fun q : P × G ↦ g q.1 (q.2 - a)) x
+      (Z.comp (D' := P × G) (f := fun q : P × G ↦ (q.1, q.2 - a)) x Z')
+    rw [ContinuousLinearMap.comp_id] at hcomp
+    exact hcomp
   exact hasFDerivAt_integral_of_dominated_of_fderiv_le (ball_mem_nhds _ δpos) I1 I2 I3 I4 I5 I6
 
 /-- The convolution `f * g` is `C^n` when `f` is locally integrable and `g` is `C^n` and compactly

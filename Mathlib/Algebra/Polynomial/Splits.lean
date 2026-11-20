@@ -695,7 +695,6 @@ theorem Splits.eval_derivative_eq_eval_mul_sum (hf : Splits f) {x : R} (hx : f.e
   simp only [hf.eval_eq_prod_roots hf0]
   rw [← Multiset.prod_map_erase z.2]
   field_simp
-  ring
 
 /-- The logarithmic derivative of a split polynomial at a point `x` that is not a root is the
 sum of `1 / (x - z)` over its roots `z`. -/

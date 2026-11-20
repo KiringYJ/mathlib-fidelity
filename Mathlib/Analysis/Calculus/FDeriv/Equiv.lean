@@ -136,7 +136,7 @@ theorem comp_fderivWithin {f : G → E} {s : Set G} {x : G} (hxs : UniqueDiffWit
 
 theorem comp_fderiv {f : G → E} {x : G} :
     fderiv 𝕜 (iso ∘ f) x = (iso : E →L[𝕜] F).comp (fderiv 𝕜 f x) := by
-  rw [← fderivWithin_univ, ← fderivWithin_univ]
+  rw [← congrFun fderivWithin_univ x, ← congrFun fderivWithin_univ x]
   exact iso.comp_fderivWithin uniqueDiffWithinAt_univ
 
 lemma _root_.fderivWithin_continuousLinearEquiv_comp (L : G ≃L[𝕜] G') (f : E → (F →L[𝕜] G))
@@ -227,7 +227,8 @@ theorem comp_right_fderivWithin {f : F → G} {s : Set F} {x : E}
 
 theorem comp_right_fderiv {f : F → G} {x : E} :
     fderiv 𝕜 (f ∘ iso) x = (fderiv 𝕜 f (iso x)).comp (iso : E →L[𝕜] F) := by
-  rw [← fderivWithin_univ, ← fderivWithin_univ, ← iso.comp_right_fderivWithin, preimage_univ]
+  rw [← congrFun fderivWithin_univ x, ← congrFun fderivWithin_univ (iso x),
+    ← iso.comp_right_fderivWithin, preimage_univ]
   exact uniqueDiffWithinAt_univ
 
 end ContinuousLinearEquiv
@@ -376,16 +377,22 @@ variable {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
 variable {f : E → F} {f' : E →L[ℝ] F} {x : E}
 
 theorem has_fderiv_at_filter_real_equiv {L : Filter E} :
-    Tendsto (fun x' : E => ‖x' - x‖⁻¹ * ‖f x' - f x - f' (x' - x)‖) L (𝓝 0) ↔
-      Tendsto (fun x' : E => ‖x' - x‖⁻¹ • (f x' - f x - f' (x' - x))) L (𝓝 0) := by
+    Tendsto (fun x' : {x' : E // x' ≠ x} =>
+      Checked.inv ‖x'.val - x‖ (norm_ne_zero_iff.mpr (sub_ne_zero.mpr x'.property)).isUnit *
+        ‖f x' - f x - f' (x'.val - x)‖) (comap Subtype.val L) (𝓝 0) ↔
+      Tendsto (fun x' : {x' : E // x' ≠ x} =>
+        Checked.inv ‖x'.val - x‖ (norm_ne_zero_iff.mpr (sub_ne_zero.mpr x'.property)).isUnit •
+          (f x' - f x - f' (x'.val - x))) (comap Subtype.val L) (𝓝 0) := by
   symm
   rw [tendsto_iff_norm_sub_tendsto_zero]
   refine tendsto_congr fun x' => ?_
   simp [norm_smul]
 
 theorem HasFDerivAt.lim_real (hf : HasFDerivAt f f' x) (v : E) :
-    Tendsto (fun c : ℝ => c • (f (x + c⁻¹ • v) - f x)) atTop (𝓝 (f' v)) := by
-  apply hf.lim v
+    Tendsto (fun c : {c : ℝ // c ≠ 0} =>
+      c.val • (f (x + Checked.inv c.val c.property.isUnit • v) - f x))
+      (comap Subtype.val atTop) (𝓝 (f' v)) := by
+  apply hf.lim v (c := _root_.id)
   rw [tendsto_atTop_atTop]
   exact fun b => ⟨b, fun a ha => le_trans ha (le_abs_self _)⟩
 
@@ -459,7 +466,7 @@ protected theorem UniqueDiffWithinAt.smul_iff
     {G : Type*} [GroupWithZero G] [DistribMulAction G E] [ContinuousConstSMul G E]
     [SMulCommClass G 𝕜 E] {c : G} (hc : c ≠ 0) :
     UniqueDiffWithinAt 𝕜 (c • s) (c • x) ↔ UniqueDiffWithinAt 𝕜 s x :=
-  ⟨fun h ↦ by simpa [hc] using h.smul (inv_ne_zero hc), (.smul · hc)⟩
+  ⟨fun h ↦ by simpa [hc] using h.smul (inv_ne_zero (ha := hc.isUnit)), (.smul · hc)⟩
 
 end TangentCone
 
@@ -490,20 +497,22 @@ set_option backward.isDefEq.respectTransparency false in
 theorem fderivWithin_comp_smul_eq_fderivWithin_smul (c : 𝕜) :
     fderivWithin 𝕜 (f <| c • ·) s x = fderivWithin 𝕜 (c • f) (c • s) (c • x) := by
   rcases eq_or_ne c 0 with rfl | hc
-  · simp
+  · simp [fderivWithin_const_apply, congrFun fderivWithin_zero (0 : E)]
   · classical
     simp only [fderivWithin, DifferentiableWithinAt, hasFDerivWithinAt_comp_smul_iff_smul hc]
 
 theorem fderivWithin_comp_smul (c : 𝕜) (hs : UniqueDiffWithinAt 𝕜 s x) :
     fderivWithin 𝕜 (f <| c • ·) s x = c • fderivWithin 𝕜 f (c • s) (c • x) := by
   rcases eq_or_ne c 0 with rfl | hc
-  · simp
+  · simp [fderivWithin_const_apply]
   · rw [fderivWithin_comp_smul_eq_fderivWithin_smul, fderivWithin_const_smul_field]
     exact hs.smul hc
 
 theorem fderiv_comp_smul (c : 𝕜) : fderiv 𝕜 (f <| c • ·) x = c • fderiv 𝕜 f (c • x) := by
-  rw [← fderivWithin_univ, fderivWithin_comp_smul _ uniqueDiffWithinAt_univ]
-  rcases eq_or_ne c 0 with rfl | hc <;> simp [smul_set_univ₀, *]
+  rw [← congrFun fderivWithin_univ x, fderivWithin_comp_smul _ uniqueDiffWithinAt_univ]
+  rcases eq_or_ne c 0 with rfl | hc
+  · simp
+  · rw [smul_set_univ₀ hc, congrFun fderivWithin_univ (c • x)]
 
 theorem fderivWithin_comp_neg {f : 𝕜 → F} {s : Set 𝕜} {x : 𝕜} :
     fderivWithin 𝕜 (fun a => f (-a)) s x = -fderivWithin 𝕜 f (-s) (-x) := by

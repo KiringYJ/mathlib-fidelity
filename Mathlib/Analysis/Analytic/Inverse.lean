@@ -745,6 +745,7 @@ theorem radius_rightInv_pos_of_radius_pos
         calc
           r * S n ≤ r * ((I + 1) * a) := by gcongr
           _ ≤ 1 / 2 := by rwa [← mul_assoc]
+      have hden : 0 < 1 - r * S n := by linarith only [rSn]
       calc
         S (n + 1) ≤ I * a + I * C * ∑ k ∈ Ico 2 (n + 1), (r * S n) ^ k :=
           radius_rightInv_pos_of_radius_pos_aux2 In p s hs rpos.le apos.le Cpos.le ple
@@ -830,7 +831,9 @@ lemma HasFPowerSeriesAt.tendsto_partialSum_prod_of_comp
           have := le_trans (le_of_lt hy) (min_le_right _ _)
           rwa [enorm_le_coe, ← NNReal.coe_le_coe, coe_nnnorm] at this
     apply HasSum.of_sigma (fun b ↦ hasSum_fintype _) ?_ cau
-    simpa [FormalMultilinearSeries.comp] using h0.hasSum hy0
+    simpa only [FormalMultilinearSeries.comp, _root_.sum_apply,
+      _root_.id_eq, add_sub_cancel_left] using
+      h0.hasSum (y := x + y) (by simpa only [_root_.id_eq, add_sub_cancel_left] using hy0)
   have B : Tendsto (fun (n : ℕ × ℕ) => ∑ i ∈ compPartialSumTarget 0 n.1 n.2,
       q.compAlongComposition p i.2 fun _j => y) atTop (𝓝 (f (x + y))) := by
     apply Tendsto.comp A compPartialSumTarget_tendsto_prod_atTop
@@ -923,8 +926,7 @@ theorem OpenPartialHomeomorph.hasFPowerSeriesAt_symm (f : OpenPartialHomeomorph 
   rcases EMetric.mem_nhds_iff.1 F with ⟨ρ, ρ_pos, hρ⟩
   refine ⟨min ρ (p.leftInv r hr a).radius, min_le_right _ _,
     lt_min ρ_pos (radius_leftInv_pos_of_radius_pos h.radius_pos), fun {y} hy ↦ ?_⟩
-  have : y + f a ∈ Metric.eball (f a) ρ := by
-    simp only [Metric.mem_eball, edist_eq_enorm_sub, sub_zero, lt_min_iff,
-      add_sub_cancel_right] at hy ⊢
+  have : y ∈ Metric.eball (f a) ρ := by
+    simp only [_root_.id_eq, Metric.mem_eball, edist_eq_enorm_sub, sub_zero, lt_min_iff] at hy ⊢
     exact hy.1
-  simpa [add_comm] using! hρ this
+  simpa only [_root_.id_eq, Set.mem_ofPred_eq] using hρ this

@@ -29,12 +29,14 @@ namespace Complex
 theorem isOpenMap_exp : IsOpenMap exp :=
   isOpenMap_of_hasStrictDerivAt hasStrictDerivAt_exp exp_ne_zero
 
-theorem hasStrictDerivAt_log {x : ℂ} (h : x ∈ slitPlane) : HasStrictDerivAt log x⁻¹ x :=
+theorem hasStrictDerivAt_log {x : ℂ} (h : x ∈ slitPlane) :
+    HasStrictDerivAt log (Checked.inv x (slitPlane_ne_zero h).isUnit) x :=
   have h0 : x ≠ 0 := slitPlane_ne_zero h
   expOpenPartialHomeomorph.hasStrictDerivAt_symm h h0 <| by
     simpa [exp_log h0] using! hasStrictDerivAt_exp (log x)
 
-lemma hasDerivAt_log {z : ℂ} (hz : z ∈ slitPlane) : HasDerivAt log z⁻¹ z :=
+lemma hasDerivAt_log {z : ℂ} (hz : z ∈ slitPlane) :
+    HasDerivAt log (Checked.inv z (slitPlane_ne_zero hz).isUnit) z :=
   HasStrictDerivAt.hasDerivAt <| hasStrictDerivAt_log hz
 
 @[fun_prop]
@@ -43,14 +45,15 @@ lemma differentiableAt_log {z : ℂ} (hz : z ∈ slitPlane) : DifferentiableAt �
 
 @[fun_prop]
 theorem hasStrictFDerivAt_log_real {x : ℂ} (h : x ∈ slitPlane) :
-    HasStrictFDerivAt log (x⁻¹ • (1 : ℂ →L[ℝ] ℂ)) x :=
+    HasStrictFDerivAt log (Checked.inv x (slitPlane_ne_zero h).isUnit • (1 : ℂ →L[ℝ] ℂ)) x :=
   (hasStrictDerivAt_log h).complexToReal_fderiv
 
 theorem contDiffAt_log {x : ℂ} (h : x ∈ slitPlane) {n : WithTop ℕ∞} : ContDiffAt ℂ n log x :=
   expOpenPartialHomeomorph.contDiffAt_symm_deriv (exp_ne_zero <| log x) h (hasDerivAt_exp _)
     contDiff_exp.contDiffAt
 
-theorem deriv_log {x : ℂ} (h : x ∈ slitPlane) : deriv log x = x⁻¹ :=
+theorem deriv_log {x : ℂ} (h : x ∈ slitPlane) :
+    deriv log x = Checked.inv x (slitPlane_ne_zero h).isUnit :=
   (hasDerivAt_log h).deriv
 
 end Complex
@@ -65,28 +68,38 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E]
 
 theorem HasStrictFDerivAt.clog {f : E → ℂ} {f' : StrongDual ℂ E} {x : E}
     (h₁ : HasStrictFDerivAt f f' x) (h₂ : f x ∈ slitPlane) :
-    HasStrictFDerivAt (fun t => log (f t)) ((f x)⁻¹ • f') x :=
+    HasStrictFDerivAt (fun t => log (f t))
+      (Checked.inv (f x) (slitPlane_ne_zero h₂).isUnit • f') x :=
   (hasStrictDerivAt_log h₂).comp_hasStrictFDerivAt x h₁
 
 theorem HasStrictDerivAt.clog {f : ℂ → ℂ} {f' x : ℂ} (h₁ : HasStrictDerivAt f f' x)
-    (h₂ : f x ∈ slitPlane) : HasStrictDerivAt (fun t => log (f t)) (f' / f x) x := by
-  rw [div_eq_inv_mul]; exact (hasStrictDerivAt_log h₂).comp x h₁
+    (h₂ : f x ∈ slitPlane) :
+    HasStrictDerivAt (fun t => log (f t))
+      (Checked.div f' (f x) (slitPlane_ne_zero h₂).isUnit) x := by
+  rw [div_eq_inv_mul₀]
+  exact (hasStrictDerivAt_log h₂).comp x h₁
 
 theorem HasStrictDerivAt.clog_real {f : ℝ → ℂ} {x : ℝ} {f' : ℂ} (h₁ : HasStrictDerivAt f f' x)
-    (h₂ : f x ∈ slitPlane) : HasStrictDerivAt (fun t => log (f t)) (f' / f x) x := by
-  simpa only [div_eq_inv_mul] using! (hasStrictFDerivAt_log_real h₂).comp_hasStrictDerivAt x h₁
+    (h₂ : f x ∈ slitPlane) :
+    HasStrictDerivAt (fun t => log (f t))
+      (Checked.div f' (f x) (slitPlane_ne_zero h₂).isUnit) x := by
+  simpa only [div_eq_inv_mul₀] using! (hasStrictFDerivAt_log_real h₂).comp_hasStrictDerivAt x h₁
 
 theorem HasFDerivAt.clog {f : E → ℂ} {f' : StrongDual ℂ E} {x : E} (h₁ : HasFDerivAt f f' x)
-    (h₂ : f x ∈ slitPlane) : HasFDerivAt (fun t => log (f t)) ((f x)⁻¹ • f') x :=
+    (h₂ : f x ∈ slitPlane) :
+    HasFDerivAt (fun t => log (f t)) (Checked.inv (f x) (slitPlane_ne_zero h₂).isUnit • f') x :=
   (hasStrictDerivAt_log h₂).hasDerivAt.comp_hasFDerivAt x h₁
 
 theorem HasDerivAt.clog {f : ℂ → ℂ} {f' x : ℂ} (h₁ : HasDerivAt f f' x)
-    (h₂ : f x ∈ slitPlane) : HasDerivAt (fun t => log (f t)) (f' / f x) x := by
-  rw [div_eq_inv_mul]; exact (hasStrictDerivAt_log h₂).hasDerivAt.comp x h₁
+    (h₂ : f x ∈ slitPlane) :
+    HasDerivAt (fun t => log (f t)) (Checked.div f' (f x) (slitPlane_ne_zero h₂).isUnit) x := by
+  rw [div_eq_inv_mul₀]
+  exact (hasStrictDerivAt_log h₂).hasDerivAt.comp x h₁
 
 theorem HasDerivAt.clog_real {f : ℝ → ℂ} {x : ℝ} {f' : ℂ} (h₁ : HasDerivAt f f' x)
-    (h₂ : f x ∈ slitPlane) : HasDerivAt (fun t => log (f t)) (f' / f x) x := by
-  simpa only [div_eq_inv_mul] using!
+    (h₂ : f x ∈ slitPlane) :
+    HasDerivAt (fun t => log (f t)) (Checked.div f' (f x) (slitPlane_ne_zero h₂).isUnit) x := by
+  simpa only [div_eq_inv_mul₀] using!
     (hasStrictFDerivAt_log_real h₂).hasFDerivAt.comp_hasDerivAt x h₁
 
 theorem DifferentiableAt.clog {f : E → ℂ} {x : E} (h₁ : DifferentiableAt ℂ f x)
@@ -95,18 +108,22 @@ theorem DifferentiableAt.clog {f : E → ℂ} {x : E} (h₁ : DifferentiableAt �
 
 theorem HasFDerivWithinAt.clog {f : E → ℂ} {f' : StrongDual ℂ E} {s : Set E} {x : E}
     (h₁ : HasFDerivWithinAt f f' s x) (h₂ : f x ∈ slitPlane) :
-    HasFDerivWithinAt (fun t => log (f t)) ((f x)⁻¹ • f') s x :=
+    HasFDerivWithinAt (fun t => log (f t))
+      (Checked.inv (f x) (slitPlane_ne_zero h₂).isUnit • f') s x :=
   (hasStrictDerivAt_log h₂).hasDerivAt.comp_hasFDerivWithinAt x h₁
 
 theorem HasDerivWithinAt.clog {f : ℂ → ℂ} {f' x : ℂ} {s : Set ℂ} (h₁ : HasDerivWithinAt f f' s x)
-    (h₂ : f x ∈ slitPlane) : HasDerivWithinAt (fun t => log (f t)) (f' / f x) s x := by
-  rw [div_eq_inv_mul]
+    (h₂ : f x ∈ slitPlane) :
+    HasDerivWithinAt (fun t => log (f t))
+      (Checked.div f' (f x) (slitPlane_ne_zero h₂).isUnit) s x := by
+  rw [div_eq_inv_mul₀]
   exact (hasStrictDerivAt_log h₂).hasDerivAt.comp_hasDerivWithinAt x h₁
 
 theorem HasDerivWithinAt.clog_real {f : ℝ → ℂ} {s : Set ℝ} {x : ℝ} {f' : ℂ}
     (h₁ : HasDerivWithinAt f f' s x) (h₂ : f x ∈ slitPlane) :
-    HasDerivWithinAt (fun t => log (f t)) (f' / f x) s x := by
-  simpa only [div_eq_inv_mul] using!
+    HasDerivWithinAt (fun t => log (f t))
+      (Checked.div f' (f x) (slitPlane_ne_zero h₂).isUnit) s x := by
+  simpa only [div_eq_inv_mul₀] using!
     (hasStrictFDerivAt_log_real h₂).hasFDerivAt.comp_hasDerivWithinAt x h₁
 
 theorem DifferentiableWithinAt.clog {f : E → ℂ} {s : Set E} {x : E}
@@ -125,9 +142,9 @@ theorem Differentiable.clog {f : E → ℂ} (h₁ : Differentiable ℂ f)
 /-- The derivative of `log ∘ f` is the logarithmic derivative provided `f` is differentiable and
 we are on the slitPlane. -/
 lemma Complex.deriv_log_comp_eq_logDeriv {f : ℂ → ℂ} {x : ℂ} (h₁ : DifferentiableAt ℂ f x)
-    (h₂ : f x ∈ Complex.slitPlane) : deriv (Complex.log ∘ f) x = logDeriv f x := by
-  have A := (HasDerivAt.clog h₁.hasDerivAt h₂).deriv
-  rw [← h₁.hasDerivAt.deriv] at A
-  simp only [logDeriv, Pi.div_apply, ← A, Function.comp_def]
+    (h₂ : f x ∈ Complex.slitPlane) :
+    deriv (Complex.log ∘ f) x =
+      logDeriv f x id h₁.existsUnique_hasDerivAt (slitPlane_ne_zero h₂).isUnit :=
+  (h₁.hasDerivAt.clog h₂).deriv.trans (logDeriv_eq h₁.hasDerivAt).symm
 
 end LogDeriv

@@ -45,10 +45,10 @@ open Real Finset
 $$
 \sum_{i=0}^\infty\frac{1}{m^{i!}}.
 $$
-The series converges only for `1 < m`. However, there is no restriction on `m`, since,
-if the series does not converge, then the sum of the series is defined to be zero.
+The base `m` is nonzero. The series converges for `1 < m`. If the series does not converge,
+its sum is defined to be zero.
 -/
-def liouvilleNumber (m : ℝ) : ℝ :=
+def liouvilleNumber (m : ℝ) {hm : IsUnit m} : ℝ :=
   ∑' i : ℕ, 1 / m ^ i !
 
 namespace LiouvilleNumber
@@ -59,7 +59,7 @@ $$
 \sum_{i=0}^k\frac{1}{m^{i!}}.
 $$
 -/
-def partialSum (m : ℝ) (k : ℕ) : ℝ :=
+def partialSum (m : ℝ) {hm : IsUnit m} (k : ℕ) : ℝ :=
   ∑ i ∈ range (k + 1), 1 / m ^ i !
 
 /-- `LiouvilleNumber.remainder` is the sum of the series of the terms in `liouvilleNumber m`
@@ -68,7 +68,7 @@ $$
 \sum_{i=k+1}^\infty\frac{1}{m^{i!}}.
 $$
 -/
-def remainder (m : ℝ) (k : ℕ) : ℝ :=
+def remainder (m : ℝ) {hm : IsUnit m} (k : ℕ) : ℝ :=
   ∑' i, 1 / m ^ (i + (k + 1))!
 
 /-!
@@ -83,16 +83,18 @@ theorem remainder_summable {m : ℝ} (hm : 1 < m) (k : ℕ) :
     Summable fun i : ℕ => 1 / m ^ (i + (k + 1))! := by
   convert! (summable_nat_add_iff (k + 1)).2 (LiouvilleNumber.summable hm)
 
-theorem remainder_pos {m : ℝ} (hm : 1 < m) (k : ℕ) : 0 < remainder m k :=
+theorem remainder_pos {m : ℝ} (hm : 1 < m) (k : ℕ) :
+    0 < remainder m (hm := (zero_lt_one.trans hm).ne'.isUnit) k :=
   (remainder_summable hm k).tsum_pos (fun _ => by positivity) 0 (by positivity)
 
-theorem partialSum_succ (m : ℝ) (n : ℕ) :
-    partialSum m (n + 1) = partialSum m n + 1 / m ^ (n + 1)! :=
+theorem partialSum_succ (m : ℝ) {hm : IsUnit m} (n : ℕ) :
+    partialSum m (hm := hm) (n + 1) = partialSum m (hm := hm) n + 1 / m ^ (n + 1)! :=
   sum_range_succ _ _
 
 /-- Split the sum defining a Liouville number into the first `k` terms and the rest. -/
 theorem partialSum_add_remainder {m : ℝ} (hm : 1 < m) (k : ℕ) :
-    partialSum m k + remainder m k = liouvilleNumber m :=
+    letI hm' := (zero_lt_one.trans hm).ne'.isUnit
+    partialSum m (hm := hm') k + remainder m (hm := hm') k = liouvilleNumber m (hm := hm') :=
   (LiouvilleNumber.summable hm).sum_add_tsum_nat_add _
 
 /-! We now prove two useful inequalities, before collecting everything together. -/
@@ -102,10 +104,13 @@ theorem partialSum_add_remainder {m : ℝ} (hm : 1 < m) (k : ℕ) :
 stronger than the estimate `LiouvilleNumber.remainder_lt` below. However, the latter estimate is
 more useful for the proof. -/
 theorem remainder_lt' (n : ℕ) {m : ℝ} (m1 : 1 < m) :
-    remainder m n < (1 - 1 / m)⁻¹ * (1 / m ^ (n + 1)!) :=
+    letI hm := (zero_lt_one.trans m1).ne'.isUnit
+    letI hi := (sub_pos.mpr ((div_lt_one (zero_lt_one.trans m1)).mpr m1)).ne'.isUnit
+    remainder m (hm := hm) n < Checked.inv (1 - 1 / m) hi * (1 / m ^ (n + 1)!) :=
   -- two useful inequalities
   have m0 : 0 < m := zero_lt_one.trans m1
   have mi : 1 / m < 1 := (div_lt_one m0).mpr m1
+  have hi : IsUnit (1 - 1 / m) := (sub_pos.mpr mi).ne'.isUnit
   -- to show the strict inequality between these series, we prove that:
   calc
     (∑' i, 1 / m ^ (i + (n + 1))!) < ∑' i, 1 / m ^ (i + (n + 1)!) :=
@@ -121,24 +126,32 @@ theorem remainder_lt' (n : ℕ) {m : ℝ} (m1 : 1 < m) :
         (summable_one_div_pow_of_le m1 fun _ => le_self_add)
     -- split the sum in the exponent and massage
     _ = ∑' i : ℕ, (1 / m) ^ i * (1 / m ^ (n + 1)!) := by
-      simp only [pow_add, one_div, mul_inv, inv_pow]
+      congr 1
+      funext i
+      rw [div_pow₀, one_pow, div_mul_div_comm₀, one_mul]
+      simp only [pow_add]
     -- factor the constant `(1 / m ^ (n + 1)!)` out of the series
     _ = (∑' i, (1 / m) ^ i) * (1 / m ^ (n + 1)!) := tsum_mul_right
     -- the series is the geometric series
     _ = (1 - 1 / m)⁻¹ * (1 / m ^ (n + 1)!) := by rw [tsum_geometric_of_lt_one (by positivity) mi]
 
 theorem aux_calc (n : ℕ) {m : ℝ} (hm : 2 ≤ m) :
-    (1 - 1 / m)⁻¹ * (1 / m ^ (n + 1)!) ≤ 1 / (m ^ n !) ^ n :=
+    letI hpos : 0 < m := (zero_lt_two : (0 : ℝ) < 2).trans_le hm
+    letI hi := (sub_pos.mpr ((div_lt_one hpos).mpr (one_lt_two.trans_le hm))).ne'.isUnit
+    Checked.inv (1 - 1 / m) hi * (1 / m ^ (n + 1)!) ≤ 1 / (m ^ n !) ^ n :=
+  have hpos : 0 < m := (zero_lt_two : (0 : ℝ) < 2).trans_le hm
+  have hi : IsUnit (1 - 1 / m) :=
+    (sub_pos.mpr ((div_lt_one hpos).mpr (one_lt_two.trans_le hm))).ne'.isUnit
   calc
     (1 - 1 / m)⁻¹ * (1 / m ^ (n + 1)!) ≤ 2 * (1 / m ^ (n + 1)!) := by
       -- the second factors coincide (and are non-negative),
       -- the first factors satisfy the inequality `sub_one_div_inv_le_two`
       gcongr; exact sub_one_div_inv_le_two hm
-    _ = 2 / m ^ (n + 1)! := mul_one_div 2 _
-    _ = 2 / m ^ (n ! * (n + 1)) := (congr_arg (2 / ·) (congr_arg (Pow.pow m) (mul_comm _ _)))
+    _ = 2 / m ^ (n + 1)! := mul_one_div₀ 2 _
+    _ = 2 / m ^ (n ! * (n + 1)) := by simp only [Nat.factorial_succ, mul_comm (n + 1)]
     _ ≤ 1 / (m ^ n !) ^ n := by
       -- Clear denominators and massage*
-      rw [← pow_mul, div_le_div_iff₀, one_mul, mul_add_one, pow_add, mul_comm 2]
+      rw [div_le_div_iff₀, ← pow_mul, one_mul, mul_add_one, pow_add, mul_comm 2]
       · gcongr
         -- `2 ≤ m ^ n!` is a consequence of monotonicity of exponentiation at `2 ≤ m`.
         exact hm.trans <| le_self_pow₀ (one_le_two.trans hm) <| by positivity
@@ -147,7 +160,8 @@ theorem aux_calc (n : ℕ) {m : ℝ} (hm : 2 ≤ m) :
 /-- An upper estimate on the remainder. This estimate works with `m ∈ ℝ` satisfying `2 ≤ m` and is
 weaker than the estimate `LiouvilleNumber.remainder_lt'` above. However, this estimate is
 more useful for the proof. -/
-theorem remainder_lt (n : ℕ) {m : ℝ} (m2 : 2 ≤ m) : remainder m n < 1 / (m ^ n !) ^ n :=
+theorem remainder_lt (n : ℕ) {m : ℝ} (m2 : 2 ≤ m) :
+    remainder m (hm := (zero_lt_two.trans_le m2).ne'.isUnit) n < 1 / (m ^ n !) ^ n :=
   (remainder_lt' n <| one_lt_two.trans_le m2).trans_le (aux_calc _ m2)
 
 /-! Starting from here, we specialize to the case in which `m` is a natural number. -/
@@ -156,10 +170,12 @@ theorem remainder_lt (n : ℕ) {m : ℝ} (m2 : 2 ≤ m) : remainder m n < 1 / (m
 /-- The sum of the `k` initial terms of the Liouville number to base `m` is a ratio of natural
 numbers where the denominator is `m ^ k!`. -/
 theorem partialSum_eq_rat {m : ℕ} (hm : 0 < m) (k : ℕ) :
-    ∃ p : ℕ, partialSum m k = p / ((m ^ k ! :) : ℝ) := by
+    ∃ p : ℕ, partialSum m (hm := (Nat.cast_pos.mpr hm : (0 : ℝ) < m).ne'.isUnit) k =
+      p / ((m ^ k ! :) : ℝ) := by
   induction k with
-  | zero => exact ⟨1, by rw [partialSum, range_one, sum_singleton, Nat.cast_one, Nat.factorial,
-      pow_one, pow_one]⟩
+  | zero =>
+    exact ⟨1, by simp only [partialSum, Nat.zero_add, range_one, sum_singleton, Nat.cast_one,
+      Nat.factorial_zero, pow_one]⟩
   | succ k h =>
     rcases h with ⟨p_k, h_k⟩
     use p_k * m ^ ((k + 1)! - k !) + 1
@@ -167,13 +183,14 @@ theorem partialSum_eq_rat {m : ℕ} (hm : 0 < m) (k : ℕ) :
     · norm_cast
       rw [add_mul, one_mul, Nat.factorial_succ, add_mul, one_mul, add_tsub_cancel_right, pow_add]
       simp [mul_assoc]
-    all_goals positivity
 
 end LiouvilleNumber
 
 open LiouvilleNumber
 
-theorem liouville_liouvilleNumber {m : ℕ} (hm : 2 ≤ m) : Liouville (liouvilleNumber m) := by
+theorem liouville_liouvilleNumber {m : ℕ} (hm : 2 ≤ m) :
+    Liouville (liouvilleNumber m (hm := (Nat.cast_pos.mpr (zero_lt_two.trans_le hm) :
+      (0 : ℝ) < m).ne'.isUnit)) := by
   -- two useful inequalities
   have mZ1 : 1 < (m : ℤ) := by norm_cast
   have m1 : 1 < (m : ℝ) := by norm_cast
@@ -182,12 +199,13 @@ theorem liouville_liouvilleNumber {m : ℕ} (hm : 2 ≤ m) : Liouville (liouvill
   rcases partialSum_eq_rat (zero_lt_two.trans_le hm) n with ⟨p, hp⟩
   refine ⟨p, m ^ n !, one_lt_pow₀ mZ1 n.factorial_ne_zero, ?_⟩
   push_cast
-  rw [Nat.cast_pow] at hp
+  simp only [Nat.cast_pow] at hp
   -- separate out the sum of the first `n` terms and the rest
   rw [← partialSum_add_remainder m1 n, ← hp]
   have hpos := remainder_pos m1 n
   simpa [abs_of_pos hpos, hpos.ne'] using @remainder_lt n m (by assumption_mod_cast)
 
 theorem transcendental_liouvilleNumber {m : ℕ} (hm : 2 ≤ m) :
-    Transcendental ℤ (liouvilleNumber m) :=
+    Transcendental ℤ (liouvilleNumber m (hm := (Nat.cast_pos.mpr (zero_lt_two.trans_le hm) :
+      (0 : ℝ) < m).ne'.isUnit)) :=
   (liouville_liouvilleNumber hm).transcendental

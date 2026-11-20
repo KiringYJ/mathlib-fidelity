@@ -144,7 +144,7 @@ instance (W) [AddCommGroup W] [TopologicalSpace W] [Module R W] [Nontrivial W]
 lemma exists_eq_one {x : V} (hx : x ≠ 0) :
     ∃ f : StrongDual R V, f x = 1 := by
   rcases exists_ne_zero (R := R) hx with ⟨f, hf⟩
-  exact ⟨(f x)⁻¹ • f, inv_mul_cancel₀ hf⟩
+  exact ⟨(f x)⁻¹ • f, inv_mul_cancel₀⟩
 
 theorem exists_eq_one_ne_zero_of_ne_zero_pair {x y : V} (hx : x ≠ 0) (hy : y ≠ 0) :
     ∃ f : StrongDual R V, f x = 1 ∧ f y ≠ 0 := by
@@ -153,7 +153,7 @@ theorem exists_eq_one_ne_zero_of_ne_zero_pair {x y : V} (hx : x ≠ 0) (hy : y �
   · exact ⟨u, ux, uy⟩
   obtain ⟨v, vy⟩ : ∃ v : StrongDual R V, v y = 1 := exists_eq_one hy
   rcases ne_or_eq (v x) 0 with vx | vx
-  · exact ⟨(v x)⁻¹ • v, inv_mul_cancel₀ vx, show (v x)⁻¹ * v y ≠ 0 by simp [vx, vy]⟩
+  · exact ⟨(v x)⁻¹ • v, inv_mul_cancel₀, show (v x)⁻¹ * v y ≠ 0 by simp [vy]⟩
   · exact ⟨u + v, by simp [ux, vx], by simp [uy, vy]⟩
 
 variable [IsTopologicalAddGroup V] [ContinuousSMul R V]
@@ -213,14 +213,14 @@ theorem exists_continuousLinearEquiv_apply_eq
       simp only [RingHom.id_apply, smul_eq_mul,
         -- Note: https://github.com/leanprover-community/mathlib4/pull/8386 had to change `map_smulₛₗ` into `map_smulₛₗ _`
         map_add, map_smulₛₗ _, map_sub, Gx, mul_sub, mul_one, add_sub_cancel]
-      rw [mul_comm (G z), ← mul_assoc, inv_mul_cancel₀ Gy]
+      rw [mul_comm (G z), ← mul_assoc, inv_mul_cancel₀]
       simp only [smul_sub, one_mul]
       abel
     right_inv := fun z ↦ by
         -- Note: https://github.com/leanprover-community/mathlib4/pull/8386 had to change `map_smulₛₗ` into `map_smulₛₗ _`
       simp only [map_add, map_smulₛₗ _, map_mul, map_inv₀, RingHom.id_apply, map_sub, Gx,
         smul_eq_mul, mul_sub, mul_one]
-      rw [mul_comm _ (G y), ← mul_assoc, mul_inv_cancel₀ Gy]
+      rw [mul_comm _ (G y), ← mul_assoc, mul_inv_cancel₀]
       simp only [smul_sub, one_mul, add_sub_cancel]
       abel }
   exact ⟨A, show x + G x • (y - x) = y by simp [Gx]⟩

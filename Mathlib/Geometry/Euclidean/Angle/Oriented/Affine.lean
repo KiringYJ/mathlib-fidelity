@@ -371,12 +371,20 @@ theorem two_mul_angle_eq_two_pi_sub_abs_two_zsmul_oangle_toReal {p₁ p₂ p₃ 
 /-- If the sign of the oriented angle at `p` between two points is zero, either one of the points
 equals `p` or the unoriented angle is 0 or π. -/
 theorem eq_zero_or_angle_eq_zero_or_pi_of_sign_oangle_eq_zero {p p₁ p₂ : P}
-    (h : (∡ p₁ p p₂).sign = 0) : p₁ = p ∨ p₂ = p ∨ ∠ p₁ p p₂ = 0 ∨ ∠ p₁ p p₂ = π := by
-  convert! o.eq_zero_or_angle_eq_zero_or_pi_of_sign_oangle_eq_zero h <;> simp
+    (h : (∡ p₁ p p₂).sign = 0) :
+    p₁ = p ∨ p₂ = p ∨ ∃ (hp₁ : p₁ ≠ p) (hp₂ : p₂ ≠ p),
+      angle p₁ p p₂ hp₁ hp₂ = 0 ∨ angle p₁ p p₂ hp₁ hp₂ = π := by
+  rcases o.eq_zero_or_angle_eq_zero_or_pi_of_sign_oangle_eq_zero h with
+    h₁ | h₂ | ⟨h₁, h₂, hangle⟩
+  · exact Or.inl (Classical.not_not.mp fun hn ↦ vsub_ne_zero.2 hn h₁)
+  · exact Or.inr (Or.inl (Classical.not_not.mp fun hn ↦ vsub_ne_zero.2 hn h₂))
+  · exact Or.inr (Or.inr ⟨vsub_ne_zero.1 h₁, vsub_ne_zero.1 h₂, hangle⟩)
 
 /-- If two unoriented angles are equal, and the signs of the corresponding oriented angles are
-equal, then the oriented angles are equal (even in degenerate cases). -/
-theorem oangle_eq_of_angle_eq_of_sign_eq {p₁ p₂ p₃ p₄ p₅ p₆ : P} (h : ∠ p₁ p₂ p₃ = ∠ p₄ p₅ p₆)
+equal, then the oriented angles are equal. -/
+theorem oangle_eq_of_angle_eq_of_sign_eq {p₁ p₂ p₃ p₄ p₅ p₆ : P}
+    {hp₁ : p₁ ≠ p₂} {hp₃ : p₃ ≠ p₂} {hp₄ : p₄ ≠ p₅} {hp₆ : p₆ ≠ p₅}
+    (h : ∠ p₁ p₂ p₃ = ∠ p₄ p₅ p₆)
     (hs : (∡ p₁ p₂ p₃).sign = (∡ p₄ p₅ p₆).sign) : ∡ p₁ p₂ p₃ = ∡ p₄ p₅ p₆ :=
   o.oangle_eq_of_angle_eq_of_sign_eq h hs
 
@@ -388,9 +396,10 @@ theorem angle_eq_iff_oangle_eq_of_sign_eq {p₁ p₂ p₃ p₄ p₅ p₆ : P} (h
   o.angle_eq_iff_oangle_eq_of_sign_eq (vsub_ne_zero.2 hp₁) (vsub_ne_zero.2 hp₃) (vsub_ne_zero.2 hp₄)
     (vsub_ne_zero.2 hp₆) hs
 
-/-- The oriented angle are equal or opposite if the unoriented angles are equal. -/
-theorem oangle_eq_or_eq_neg_of_angle_eq {p₁ p₂ p₃ p₄ p₅ p₆ : P} (h : ∠ p₁ p₂ p₃ = ∠ p₄ p₅ p₆)
-    (h1 : p₂ ≠ p₁) (h2 : p₂ ≠ p₃) (h3 : p₅ ≠ p₄) (h4 : p₅ ≠ p₆) :
+/-- The oriented angles are equal or opposite if the unoriented angles are equal. -/
+theorem oangle_eq_or_eq_neg_of_angle_eq {p₁ p₂ p₃ p₄ p₅ p₆ : P}
+    (h1 : p₂ ≠ p₁) (h2 : p₂ ≠ p₃) (h3 : p₅ ≠ p₄) (h4 : p₅ ≠ p₆)
+    (h : angle p₁ p₂ p₃ h1.symm h2.symm = angle p₄ p₅ p₆ h3.symm h4.symm) :
     ∡ p₁ p₂ p₃ = ∡ p₄ p₅ p₆ ∨ ∡ p₁ p₂ p₃ = - ∡ p₄ p₅ p₆ := by
   have h_1 := EuclideanGeometry.oangle_eq_angle_or_eq_neg_angle h1.symm h2.symm
   have h_2 := EuclideanGeometry.oangle_eq_angle_or_eq_neg_angle h3.symm h4.symm
@@ -405,9 +414,9 @@ theorem oangle_eq_or_eq_neg_of_angle_eq {p₁ p₂ p₃ p₄ p₅ p₆ : P} (h :
     rw [h₁, h₂, h]
 
 /-- If two unoriented angles are equal, and the signs of the corresponding oriented angles are
-negations of each other, then the oriented angles are negations of each other (even in degenerate
-cases). -/
+negations of each other, then the oriented angles are negations of each other. -/
 lemma oangle_eq_neg_of_angle_eq_of_sign_eq_neg {p₁ p₂ p₃ p₄ p₅ p₆ : P}
+    {hp₁ : p₁ ≠ p₂} {hp₃ : p₃ ≠ p₂} {hp₄ : p₄ ≠ p₅} {hp₆ : p₆ ≠ p₅}
     (h : ∠ p₁ p₂ p₃ = ∠ p₄ p₅ p₆) (hs : (∡ p₁ p₂ p₃).sign = -(∡ p₄ p₅ p₆).sign) :
     ∡ p₁ p₂ p₃ = -∡ p₄ p₅ p₆ :=
   o.oangle_eq_neg_of_angle_eq_of_sign_eq_neg h hs
@@ -423,13 +432,15 @@ lemma angle_eq_iff_oangle_eq_neg_of_sign_eq_neg {p₁ p₂ p₃ p₄ p₅ p₆ :
 /-- The oriented angle between three points equals the unoriented angle if the sign is
 positive. -/
 theorem oangle_eq_angle_of_sign_eq_one {p₁ p₂ p₃ : P} (h : (∡ p₁ p₂ p₃).sign = 1) :
-    ∡ p₁ p₂ p₃ = ∠ p₁ p₂ p₃ :=
+    ∡ p₁ p₂ p₃ = angle p₁ p₂ p₃ (left_ne_of_oangle_sign_eq_one h)
+      (right_ne_of_oangle_sign_eq_one h) :=
   o.oangle_eq_angle_of_sign_eq_one h
 
 /-- The oriented angle between three points equals minus the unoriented angle if the sign is
 negative. -/
 theorem oangle_eq_neg_angle_of_sign_eq_neg_one {p₁ p₂ p₃ : P} (h : (∡ p₁ p₂ p₃).sign = -1) :
-    ∡ p₁ p₂ p₃ = -∠ p₁ p₂ p₃ :=
+    ∡ p₁ p₂ p₃ = -angle p₁ p₂ p₃ (left_ne_of_oangle_sign_eq_neg_one h)
+      (right_ne_of_oangle_sign_eq_neg_one h) :=
   o.oangle_eq_neg_angle_of_sign_eq_neg_one h
 
 /-- The unoriented angle at `p` between two points not equal to `p` is zero if and only if the
@@ -439,32 +450,39 @@ theorem oangle_eq_zero_iff_angle_eq_zero {p p₁ p₂ : P} (hp₁ : p₁ ≠ p) 
   o.oangle_eq_zero_iff_angle_eq_zero (vsub_ne_zero.2 hp₁) (vsub_ne_zero.2 hp₂)
 
 /-- The oriented angle between three points is `π` if and only if the unoriented angle is `π`. -/
-theorem oangle_eq_pi_iff_angle_eq_pi {p₁ p₂ p₃ : P} : ∡ p₁ p₂ p₃ = π ↔ ∠ p₁ p₂ p₃ = π :=
+theorem oangle_eq_pi_iff_angle_eq_pi {p₁ p₂ p₃ : P} {hp₁ : p₁ ≠ p₂} {hp₃ : p₃ ≠ p₂} :
+    ∡ p₁ p₂ p₃ = π ↔ ∠ p₁ p₂ p₃ = π :=
   o.oangle_eq_pi_iff_angle_eq_pi
 
 /-- If the oriented angle between three points is `π / 2`, so is the unoriented angle. -/
 theorem angle_eq_pi_div_two_of_oangle_eq_pi_div_two {p₁ p₂ p₃ : P} (h : ∡ p₁ p₂ p₃ = ↑(π / 2)) :
-    ∠ p₁ p₂ p₃ = π / 2 := by
+    angle p₁ p₂ p₃ (left_ne_of_oangle_eq_pi_div_two h) (right_ne_of_oangle_eq_pi_div_two h) =
+      π / 2 := by
   rw [angle, ← InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two]
   exact o.inner_eq_zero_of_oangle_eq_pi_div_two h
 
 /-- If the oriented angle between three points is `π / 2`, so is the unoriented angle
 (reversed). -/
 theorem angle_rev_eq_pi_div_two_of_oangle_eq_pi_div_two {p₁ p₂ p₃ : P} (h : ∡ p₁ p₂ p₃ = ↑(π / 2)) :
-    ∠ p₃ p₂ p₁ = π / 2 := by
+    angle p₃ p₂ p₁ (right_ne_of_oangle_eq_pi_div_two h) (left_ne_of_oangle_eq_pi_div_two h) =
+      π / 2 := by
   rw [angle_comm]
   exact angle_eq_pi_div_two_of_oangle_eq_pi_div_two h
 
 /-- If the oriented angle between three points is `-π / 2`, the unoriented angle is `π / 2`. -/
 theorem angle_eq_pi_div_two_of_oangle_eq_neg_pi_div_two {p₁ p₂ p₃ : P}
-    (h : ∡ p₁ p₂ p₃ = ↑(-π / 2)) : ∠ p₁ p₂ p₃ = π / 2 := by
+    (h : ∡ p₁ p₂ p₃ = ↑(-π / 2)) :
+    angle p₁ p₂ p₃ (left_ne_of_oangle_eq_neg_pi_div_two h)
+      (right_ne_of_oangle_eq_neg_pi_div_two h) = π / 2 := by
   rw [angle, ← InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two]
   exact o.inner_eq_zero_of_oangle_eq_neg_pi_div_two h
 
 /-- If the oriented angle between three points is `-π / 2`, the unoriented angle (reversed) is
 `π / 2`. -/
 theorem angle_rev_eq_pi_div_two_of_oangle_eq_neg_pi_div_two {p₁ p₂ p₃ : P}
-    (h : ∡ p₁ p₂ p₃ = ↑(-π / 2)) : ∠ p₃ p₂ p₁ = π / 2 := by
+    (h : ∡ p₁ p₂ p₃ = ↑(-π / 2)) :
+    angle p₃ p₂ p₁ (right_ne_of_oangle_eq_neg_pi_div_two h)
+      (left_ne_of_oangle_eq_neg_pi_div_two h) = π / 2 := by
   rw [angle_comm]
   exact angle_eq_pi_div_two_of_oangle_eq_neg_pi_div_two h
 
@@ -492,7 +510,12 @@ theorem oangle_rotate_sign (p₁ p₂ p₃ : P) : (∡ p₂ p₃ p₁).sign = (�
 /-- The oriented angle between three points is π if and only if the second point is strictly
 between the other two. -/
 theorem oangle_eq_pi_iff_sbtw {p₁ p₂ p₃ : P} : ∡ p₁ p₂ p₃ = π ↔ Sbtw ℝ p₁ p₂ p₃ := by
-  rw [oangle_eq_pi_iff_angle_eq_pi, angle_eq_pi_iff_sbtw]
+  refine ⟨fun h ↦ ?_, fun h ↦ ?_⟩
+  · have hp₁ := left_ne_of_oangle_eq_pi h
+    have hp₃ := right_ne_of_oangle_eq_pi h
+    exact angle_eq_pi_iff_sbtw.mp ((oangle_eq_pi_iff_angle_eq_pi (hp₁ := hp₁) (hp₃ := hp₃)).mp h)
+  · exact (oangle_eq_pi_iff_angle_eq_pi (hp₁ := h.ne_left.symm) (hp₃ := h.ne_right.symm)).mpr
+      h.angle₁₂₃_eq_pi
 
 /-- If the second of three points is strictly between the other two, the oriented angle at that
 point is π. -/
@@ -862,10 +885,12 @@ theorem _root_.AffineSubspace.SOppSide.oangle_sign_eq_neg {s : AffineSubspace �
 /-- The unoriented angles at `p₂` between `p₁` and `p₃`, and between `p₃` and `p₄`, are equal if
 and only if the oriented angles are equal (`p₃` lies on the angle bisector) or one of `p₁` and `p₄`
 is weakly between `p₂` and the other. -/
-lemma angle_eq_iff_oangle_eq_or_wbtw {p₁ p₂ p₃ p₄ : P} (hp₁ : p₁ ≠ p₂) (hp₄ : p₄ ≠ p₂) :
+lemma angle_eq_iff_oangle_eq_or_wbtw {p₁ p₂ p₃ p₄ : P} (hp₁ : p₁ ≠ p₂) {hp₃ : p₃ ≠ p₂}
+    (hp₄ : p₄ ≠ p₂) :
     ∠ p₁ p₂ p₃ = ∠ p₃ p₂ p₄ ↔ ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄ ∨ Wbtw ℝ p₂ p₁ p₄ ∨ Wbtw ℝ p₂ p₄ p₁ := by
   simp_rw [angle, oangle,
-    o.angle_eq_iff_oangle_eq_or_sameRay (vsub_ne_zero.2 hp₁) (vsub_ne_zero.2 hp₄)]
+    o.angle_eq_iff_oangle_eq_or_sameRay (vsub_ne_zero.2 hp₁)
+      (hy := vsub_ne_zero.2 hp₃) (vsub_ne_zero.2 hp₄)]
   apply or_congr_right
   refine ⟨fun h ↦ ?_, fun h ↦ ?_⟩
   · obtain ⟨r, hr, he⟩ := h.exists_pos_left (vsub_ne_zero.2 hp₁) (vsub_ne_zero.2 hp₄)
@@ -880,7 +905,10 @@ lemma angle_eq_iff_oangle_eq_or_wbtw {p₁ p₂ p₃ p₄ : P} (hp₁ : p₁ ≠
 `p₁ p₂`, then the unoriented angle `∠ p₁ p₂ p₃` is half `∠ p₁ p₂ p₄`. -/
 lemma angle_eq_angle_div_two_of_oangle_eq_of_sSameSide {p₁ p₂ p₃ p₄ : P} (h₁₂ : p₁ ≠ p₂)
     (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄) (hs : (affineSpan ℝ {p₁, p₂}).SSameSide p₃ p₄) :
-    ∠ p₁ p₂ p₃ = ∠ p₁ p₂ p₄ / 2 := by
+    angle p₁ p₂ p₃ h₁₂
+        (ne_of_mem_of_not_mem (right_mem_affineSpan_pair _ _ _) hs.left_notMem).symm =
+      angle p₁ p₂ p₄ h₁₂
+        (ne_of_mem_of_not_mem (right_mem_affineSpan_pair _ _ _) hs.right_notMem).symm / 2 := by
   have h₃₂ : p₃ ≠ p₂ := by
     rintro rfl
     exact hs.left_notMem (right_mem_affineSpan_pair _ _ _)
@@ -892,7 +920,7 @@ lemma angle_eq_angle_div_two_of_oangle_eq_of_sSameSide {p₁ p₂ p₃ p₄ : P}
     rw [angle_eq_abs_oangle_toReal h₁₂ h₃₂, angle_eq_abs_oangle_toReal h₁₂ h₄₂, this, abs_div]
     simp
   have hadd := oangle_add h₁₂ h₃₂ h₄₂
-  rw [div_left_inj' (by norm_num), ← hadd]
+  rw [div_left_inj', ← hadd]
   have h : ∡ p₁ p₂ p₃ ≠ π := fun h ↦ hs.left_notMem ((oangle_eq_zero_or_eq_pi_iff_collinear.1
     (.inr h)).mem_affineSpan_of_mem_of_ne (by grind) (by grind) (by grind) h₁₂)
   refine (Real.Angle.toReal_add_eq_toReal_add_toReal h (ha ▸ h) (.inr ?_)).symm
@@ -903,7 +931,10 @@ lemma angle_eq_angle_div_two_of_oangle_eq_of_sSameSide {p₁ p₂ p₃ p₄ : P}
 `p₁ p₂`, then the unoriented angle `∠ p₁ p₂ p₃` is `π` minus half `∠ p₁ p₂ p₄`. -/
 lemma angle_eq_pi_sub_angle_div_two_of_oangle_eq_of_sOppSide {p₁ p₂ p₃ p₄ : P} (h₁₂ : p₁ ≠ p₂)
     (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄) (hs : (affineSpan ℝ {p₁, p₂}).SOppSide p₃ p₄) :
-    ∠ p₁ p₂ p₃ = π - ∠ p₁ p₂ p₄ / 2 := by
+    angle p₁ p₂ p₃ h₁₂
+        (ne_of_mem_of_not_mem (right_mem_affineSpan_pair _ _ _) hs.left_notMem).symm =
+      π - angle p₁ p₂ p₄ h₁₂
+        (ne_of_mem_of_not_mem (right_mem_affineSpan_pair _ _ _) hs.right_notMem).symm / 2 := by
   have h₃₂ : p₃ ≠ p₂ := by
     rintro rfl
     exact hs.left_notMem (right_mem_affineSpan_pair _ _ _)
@@ -917,7 +948,7 @@ lemma angle_eq_pi_sub_angle_div_two_of_oangle_eq_of_sOppSide {p₁ p₂ p₃ p�
   have hs' : (affineSpan ℝ {p₁, p₂}).SOppSide p₃ (AffineEquiv.pointReflection ℝ p₂ p₃) :=
     AffineSubspace.sOppSide_pointReflection (right_mem_affineSpan_pair _ _ _) (hs.left_notMem)
   obtain h := angle_eq_angle_div_two_of_oangle_eq_of_sSameSide h₁₂ ha' (hs'.symm.trans hs)
-  rw [angle_pointReflection_right] at h
+  rw [angle_pointReflection_right (hp₁p₂ := h₁₂) (hp₃p₂ := h₃₂)] at h
   linear_combination -h
 
 /-- If `p₃` bisects the angle `∡ p₁ p₂ p₄` externally, and `p₃` and `p₄` lie on the same side of
@@ -925,7 +956,10 @@ the line `p₁ p₂`, then the unoriented angle `∠ p₁ p₂ p₃` is half `�
 lemma angle_eq_angle_add_pi_div_two_of_oangle_eq_add_pi_of_sSameSide {p₁ p₂ p₃ p₄ : P}
     (h₁₂ : p₁ ≠ p₂) (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄ + π)
     (hs : (affineSpan ℝ {p₁, p₂}).SSameSide p₃ p₄) :
-    ∠ p₁ p₂ p₃ = (∠ p₁ p₂ p₄ + π) / 2 := by
+    angle p₁ p₂ p₃ h₁₂
+        (ne_of_mem_of_not_mem (right_mem_affineSpan_pair _ _ _) hs.left_notMem).symm =
+      (angle p₁ p₂ p₄ h₁₂
+        (ne_of_mem_of_not_mem (right_mem_affineSpan_pair _ _ _) hs.right_notMem).symm + π) / 2 := by
   have h₃₂ : p₃ ≠ p₂ := by
     rintro rfl
     exact hs.left_notMem (right_mem_affineSpan_pair _ _ _)
@@ -938,7 +972,7 @@ lemma angle_eq_angle_add_pi_div_two_of_oangle_eq_add_pi_of_sSameSide {p₁ p₂ 
   have hs' : (affineSpan ℝ {p₁, p₂}).SOppSide p₄ (AffineEquiv.pointReflection ℝ p₂ p₄) :=
     AffineSubspace.sOppSide_pointReflection (right_mem_affineSpan_pair _ _ _) (hs.right_notMem)
   obtain h := angle_eq_pi_sub_angle_div_two_of_oangle_eq_of_sOppSide h₁₂ ha' (hs.trans_sOppSide hs')
-  rw [angle_pointReflection_right] at h
+  rw [angle_pointReflection_right (hp₁p₂ := h₁₂) (hp₃p₂ := h₄₂)] at h
   linear_combination h
 
 /-- If `p₃` bisects the angle `∡ p₁ p₂ p₄` externally, and `p₃` and `p₄` lie on opposite sides of
@@ -946,7 +980,10 @@ the line `p₁ p₂`, then the unoriented angle `∠ p₁ p₂ p₃` is `π / 2`
 lemma angle_eq_pi_sub_angle_div_two_of_oangle_eq_add_pi_of_sOppSide {p₁ p₂ p₃ p₄ : P}
     (h₁₂ : p₁ ≠ p₂) (ha : ∡ p₁ p₂ p₃ = ∡ p₃ p₂ p₄ + π)
     (hs : (affineSpan ℝ {p₁, p₂}).SOppSide p₃ p₄) :
-    ∠ p₁ p₂ p₃ = (π - ∠ p₁ p₂ p₄) / 2 := by
+    angle p₁ p₂ p₃ h₁₂
+        (ne_of_mem_of_not_mem (right_mem_affineSpan_pair _ _ _) hs.left_notMem).symm =
+      (π - angle p₁ p₂ p₄ h₁₂
+        (ne_of_mem_of_not_mem (right_mem_affineSpan_pair _ _ _) hs.right_notMem).symm) / 2 := by
   have h₃₂ : p₃ ≠ p₂ := by
     rintro rfl
     exact hs.left_notMem (right_mem_affineSpan_pair _ _ _)
@@ -959,7 +996,7 @@ lemma angle_eq_pi_sub_angle_div_two_of_oangle_eq_add_pi_of_sOppSide {p₁ p₂ p
   have hs' : (affineSpan ℝ {p₁, p₂}).SOppSide p₄ (AffineEquiv.pointReflection ℝ p₂ p₄) :=
     AffineSubspace.sOppSide_pointReflection (right_mem_affineSpan_pair _ _ _) (hs.right_notMem)
   obtain h := angle_eq_angle_div_two_of_oangle_eq_of_sSameSide h₁₂ ha' (hs.trans hs')
-  rw [angle_pointReflection_right] at h
+  rw [angle_pointReflection_right (hp₁p₂ := h₁₂) (hp₃p₂ := h₄₂)] at h
   exact h
 
 end EuclideanGeometry

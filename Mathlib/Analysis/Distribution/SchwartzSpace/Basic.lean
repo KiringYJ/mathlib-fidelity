@@ -137,33 +137,43 @@ open Asymptotics Filter
 
 variable (f : 𝓢(E, F))
 
-/-- Auxiliary lemma, used in proving the more general result `isBigO_cocompact_rpow`. -/
-theorem isBigO_cocompact_zpow_neg_nat (k : ℕ) :
-    f =O[cocompact E] (‖·‖ ^ (-k : ℤ)) := by
+private theorem isBigO_cocompact_rpow_neg_nat (k : ℕ) :
+    f =O[cocompact E] (‖·‖ ^ (-(k : ℝ))) := by
   obtain ⟨d, _, hd'⟩ := f.decay k 0
   simp only [norm_iteratedFDeriv_zero] at hd'
   simp_rw [Asymptotics.IsBigO, Asymptotics.IsBigOWith]
   refine ⟨d, Filter.Eventually.filter_mono Filter.cocompact_le_cofinite ?_⟩
   refine (Filter.eventually_cofinite_ne 0).mono fun x hx ↦ ?_
-  rw [Real.norm_of_nonneg (by positivity), zpow_neg, ← div_eq_mul_inv, le_div_iff₀' (by positivity)]
-  exact hd' x
+  have hpos : 0 < ‖x‖ := norm_pos_iff.mpr hx
+  rw [Real.norm_of_nonneg (Real.rpow_nonneg (norm_nonneg _) _),
+    Real.rpow_neg hpos.le (k : ℝ) (hxy := (Real.rpow_pos_of_pos hpos _).ne'.isUnit)]
+  simpa only [Real.rpow_natCast, div_eq_mul_inv₀] using
+    (le_div_iff₀' (pow_pos hpos k)).2 (hd' x)
 
 theorem isBigO_cocompact_rpow [ProperSpace E] (s : ℝ) :
     f =O[cocompact E] (‖·‖ ^ s) := by
   let k := ⌈-s⌉₊
   have hk : -(k : ℝ) ≤ s := neg_le.mp (Nat.le_ceil (-s))
-  refine (isBigO_cocompact_zpow_neg_nat f k).trans ?_
-  suffices (fun x : ℝ ↦ x ^ (-k : ℤ)) =O[atTop] fun x : ℝ ↦ x ^ s
+  refine (isBigO_cocompact_rpow_neg_nat f k).trans ?_
+  suffices (fun x : ℝ ↦ x ^ (-(k : ℝ))) =O[atTop] fun x ↦ x ^ s
     from this.comp_tendsto tendsto_norm_cocompact_atTop
   simp_rw [Asymptotics.IsBigO, Asymptotics.IsBigOWith]
   refine ⟨1, (Filter.eventually_ge_atTop 1).mono fun x hx ↦ ?_⟩
-  rw [one_mul, Real.norm_of_nonneg (by positivity), Real.norm_of_nonneg (by positivity),
-    ← Real.rpow_intCast, Int.cast_neg, Int.cast_natCast]
+  rw [one_mul, Real.norm_of_nonneg (by positivity), Real.norm_of_nonneg (by positivity)]
   exact Real.rpow_le_rpow_of_exponent_le hx hk
 
 theorem isBigO_cocompact_zpow [ProperSpace E] (k : ℤ) :
-    f =O[cocompact E] (‖·‖ ^ k) := by
-  simpa only [Real.rpow_intCast] using isBigO_cocompact_rpow f k
+    (fun x : {x : E // k < 0 → IsUnit ‖x‖} ↦ f x) =O[comap Subtype.val (cocompact E)]
+      (fun x ↦ Checked.zpow ‖(x : E)‖ k x.2) :=
+  ((isBigO_cocompact_rpow f k).comp_tendsto tendsto_comap).congr_right fun x ↦
+    Real.rpow_intCast ‖(x : E)‖ k (h := fun hk ↦ (x.2 hk).ne_zero)
+
+theorem isBigO_cocompact_zpow_neg_nat (k : ℕ) :
+    (fun x : {x : E // -(k : ℤ) < 0 → IsUnit ‖x‖} ↦ f x) =O[comap Subtype.val (cocompact E)]
+      (fun x ↦ Checked.zpow ‖(x : E)‖ (-(k : ℤ)) x.2) :=
+  ((isBigO_cocompact_rpow_neg_nat f k).comp_tendsto tendsto_comap).congr_right fun x ↦ by
+    simpa only [Function.comp_apply, Int.cast_neg, Int.cast_natCast] using
+      Real.rpow_intCast ‖(x : E)‖ (-(k : ℤ)) (h := fun hk ↦ (x.2 hk).ne_zero)
 
 end IsBigO
 
@@ -171,8 +181,7 @@ open Filter Topology in
 theorem tendsto_cocompact [ProperSpace E] (f : 𝓢(E, F)) :
     Tendsto f (cocompact E) (𝓝 0) := by
   apply (isBigO_cocompact_rpow f (-1)).trans_tendsto
-  simp_rw [Real.rpow_neg_one]
-  exact tendsto_norm_cocompact_atTop.inv_tendsto_atTop
+  exact (tendsto_rpow_neg_atTop zero_lt_one).comp tendsto_norm_cocompact_atTop
 
 section Aux
 
@@ -882,7 +891,8 @@ def smulRightCLM (L : E →L[ℝ] G →L[ℝ] ℝ) : 𝓢(E, F) →L[𝕜] 𝓢(
                 (((n + 1).choose (k + 1 + 1)) : ℝ) * ‖iteratedFDeriv ℝ (k + 1 + 1) L x‖ *
                 ‖iteratedFDeriv ℝ (n + 1 - (k + 1 + 1)) f x‖ = 0 := by
               apply Finset.sum_eq_zero
-              simp [iteratedFDeriv_succ_eq_comp_right, iteratedFDeriv_succ_const]
+              simp [iteratedFDeriv_succ_eq_comp_right, iteratedFDeriv_succ_const,
+                LinearIsometryEquiv.map_zero]
             simp [Finset.sum_range_succ', this]
         _ = ‖x‖ ^ k * ‖L x‖ * ‖iteratedFDeriv ℝ n f x‖ +
               ‖x‖ ^ k * n * ‖L‖ * ‖iteratedFDeriv ℝ (n - 1) f x‖ := by ring
@@ -1144,8 +1154,13 @@ def integralCLM : 𝓢(D, V) →L[𝕜] V := by
   have h' : ∀ x, ‖f x‖ ≤ (1 + ‖x‖) ^ (-(n : ℝ)) *
       (2 ^ n * ((Finset.Iic m).sup (fun m' => SchwartzMap.seminorm 𝕜 m'.1 m'.2) f)) := by
     intro x
-    rw [rpow_neg (by positivity), ← div_eq_inv_mul, le_div_iff₀' (by positivity), rpow_natCast]
-    simpa using one_add_le_sup_seminorm_apply (m := m) (k := n) (n := 0) le_rfl le_rfl f x
+    have hpos : 0 < 1 + ‖x‖ := by positivity
+    rw [rpow_neg hpos.le (n : ℝ) (hxy := (rpow_pos_of_pos hpos _).ne'.isUnit)]
+    have h := one_add_le_sup_seminorm_apply (𝕜 := 𝕜) (m := m) (k := n) (n := 0) le_rfl le_rfl f x
+    have hb : ‖f x‖ ≤ (2 ^ n * ((Finset.Iic m).sup (fun m' =>
+        SchwartzMap.seminorm 𝕜 m'.1 m'.2) f)) / (1 + ‖x‖) ^ n :=
+      (le_div_iff₀' (pow_pos hpos n)).2 (by simpa using h)
+    simpa only [rpow_natCast, div_eq_inv_mul₀] using hb
   apply (integral_mono (by simpa using f.integrable_pow_mul μ 0) _ h').trans
   · unfold schwartzSeminormFamily
     rw [integral_mul_const, ← mul_assoc, mul_comm (2 ^ n)]
@@ -1281,7 +1296,9 @@ theorem eLpNorm_le_seminorm (p : ℝ≥0∞) (μ : Measure E := by volume_tac)
   calc eLpNorm (⇑f) p μ
   _ = eLpNorm ((fun x : E ↦ (1 + ‖x‖) ^ (-k : ℝ)) • fun x ↦ (1 + ‖x‖) ^ k • f x) p μ := by
     refine congrArg (eLpNorm · p μ) (funext fun x ↦ ?_)
-    simp [(h_one_add x).ne']
+    simp only [Pi.smul_apply', smul_smul]
+    rw [← Real.rpow_natCast, ← Real.rpow_add (h_one_add x), neg_add_cancel, Real.rpow_zero,
+      one_smul]
   _ ≤ eLpNorm (fun x ↦ (1 + ‖x‖) ^ (-k : ℝ)) p μ * eLpNorm (fun x ↦ (1 + ‖x‖) ^ k • f x) ⊤ μ := by
     refine eLpNorm_smul_le_eLpNorm_mul_eLpNorm_top p _ ?_
     refine Continuous.aestronglyMeasurable ?_
@@ -1334,7 +1351,7 @@ theorem norm_toLp {f : 𝓢(E, F)} {p : ℝ≥0∞} {μ : Measure E} [hμ : μ.H
 
 theorem norm_toLp' {f : 𝓢(E, F)} {p : ℝ≥0∞} {μ : Measure E} (hp₁ : p ≠ 0) (hp₂ : p ≠ ⊤)
     [hμ : μ.HasTemperateGrowth] :
-    ‖f.toLp p μ‖ = (∫ x, ‖f x‖ ^ p.toReal ∂μ) ^ p.toReal⁻¹ := by
+    ‖f.toLp p μ‖ = (∫ x, ‖f x‖ ^ p.toReal ∂μ) ^ (1 / p).toReal := by
   rw [norm_toLp, MeasureTheory.MemLp.eLpNorm_eq_integral_rpow_norm hp₁ hp₂ (f.memLp p μ),
     ENNReal.toReal_ofReal (by positivity)]
 

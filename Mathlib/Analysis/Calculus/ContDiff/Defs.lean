@@ -827,11 +827,13 @@ theorem contDiffOn_succ_of_fderivWithin (hf : DifferentiableOn 𝕜 f s)
   rcases eq_or_ne n ∞ with rfl | hn
   · rw [ENat.coe_top_add_one, contDiffOn_infty]
     intro m x hx
+    have hm : (m : ℕ∞ω) ≤ ∞ :=
+      WithTop.coe_le_coe.mpr (show (m : ℕ∞) ≤ ⊤ from le_top)
     apply ContDiffWithinAt.of_le _ (show (m : ℕ∞ω) ≤ m + 1 from le_self_add)
     rw [contDiffWithinAt_succ_iff_hasFDerivWithinAt (by simp),
       insert_eq_of_mem hx]
     exact ⟨s, self_mem_nhdsWithin, (by simp), fderivWithin 𝕜 f s,
-      fun y hy => (hf y hy).hasFDerivWithinAt, (h x hx).of_le (mod_cast le_top)⟩
+      fun y hy => (hf y hy).hasFDerivWithinAt, (h x hx).of_le hm⟩
   · intro x hx
     rw [contDiffWithinAt_succ_iff_hasFDerivWithinAt hn,
       insert_eq_of_mem hx]
@@ -867,10 +869,12 @@ theorem contDiffOn_succ_iff_fderivWithin (hs : UniqueDiffOn 𝕜 s) :
     have A : fderivWithin 𝕜 f (s ∩ o) y = f' y :=
       ((hff' y (ho hy)).mono ho).fderivWithin (hs.inter o_open y hy)
     rwa [fderivWithin_inter (o_open.mem_nhds hy.2)] at A
-  match n with
-  | ω => exact (H.analyticOn.fderivWithin hs).contDiffOn hs (n := ω) x hx
-  | ∞ => exact contDiffWithinAt_infty.2 (fun m ↦ A m (mod_cast le_top))
-  | (n : ℕ) => exact A n le_rfl
+  rcases n with _ | n
+  · exact (H.analyticOn.fderivWithin hs).contDiffOn hs (n := ω) x hx
+  rcases n with _ | n
+  · exact contDiffWithinAt_infty.2 fun m ↦ A m
+      (WithTop.coe_le_coe.mpr (show (m : ℕ∞) ≤ ⊤ from le_top))
+  · exact A n le_rfl
 
 theorem contDiffOn_succ_iff_hasFDerivWithinAt_of_uniqueDiffOn (hs : UniqueDiffOn 𝕜 s) :
     ContDiffOn 𝕜 (n + 1) f s ↔ (n = ω → AnalyticOn 𝕜 f s) ∧

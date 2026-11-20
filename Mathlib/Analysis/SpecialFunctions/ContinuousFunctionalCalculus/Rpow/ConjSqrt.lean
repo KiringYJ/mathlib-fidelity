@@ -58,40 +58,42 @@ set_option linter.overlappingInstances false
 lemma isStrictlyPositive_conjSqrt_iff (c a : A) (hc : IsStrictlyPositive c := by cfc_tac) :
     IsStrictlyPositive (conjSqrt c a) ↔ IsStrictlyPositive a := by
   have hc' : IsSelfAdjoint (sqrt c) := by cfc_tac
-  rw [conjSqrt_apply]
-  by_cases ha : IsSelfAdjoint a <;> grind
+  exact (hc.isUnit_cfcSqrt c).isStrictlyPositive_iff_conjugate_of_isSelfAdjoint a (sqrt c) hc'
 
 @[grind _=_]
-lemma ringInverse_conjSqrt (c a : A) (hc : IsStrictlyPositive c := by cfc_tac) :
-    (conjSqrt c a)⁻¹ʳ = conjSqrt c⁻¹ʳ a⁻¹ʳ := by
-  by_cases ha : IsUnit a
-  · grind [conjSqrt_apply]
-  · have : ¬IsUnit (conjSqrt c a) := by grind [conjSqrt_apply, IsUnit.mul_left_iff]
-    simp [inverse_non_unit a ha, inverse_non_unit _ this]
+lemma inv_conjSqrt (c a : A) {ha : IsUnit a} (hc : IsStrictlyPositive c := by cfc_tac) :
+    Checked.inv (conjSqrt c a)
+      (((hc.isUnit_cfcSqrt c).mul ha).mul (hc.isUnit_cfcSqrt c)) =
+      conjSqrt (Checked.inv c hc.isUnit) (Checked.inv a ha) := by
+  let s := (hc.isUnit_cfcSqrt c).unit
+  let u := ha.unit
+  have h : (s * u * s)⁻¹ = s⁻¹ * u⁻¹ * s⁻¹ := by
+    simp [mul_inv_rev, mul_assoc]
+  simpa only [conjSqrt_apply, sqrt_inv hc, Units.val_mul, Units.val_inv_eq_inv_val₀,
+    s, u, IsUnit.unit_spec] using congrArg ((↑) : Aˣ → A) h
 
 @[grind =]
-lemma conjSqrt_ringInverse_conjSqrt (c a : A) (hc : IsStrictlyPositive c := by cfc_tac) :
-    conjSqrt c⁻¹ʳ (conjSqrt c a) = a := by
-  grind [IsSelfAdjoint.commute_of_mul_eq_isSelfAdjoint _ (sqrt c) 1, Ring.inverse_mul_cancel,
-         conjSqrt_apply] =>
-    have : sqrt c⁻¹ʳ * sqrt c = 1
-    have : Commute (sqrt c) (sqrt c⁻¹ʳ)
-    finish
+lemma conjSqrt_inv_conjSqrt (c a : A) (hc : IsStrictlyPositive c := by cfc_tac) :
+    conjSqrt (Checked.inv c hc.isUnit) (conjSqrt c a) = a := by
+  simp only [conjSqrt_apply, sqrt_inv hc, mul_assoc, inv_mul_cancel_left₀, mul_inv_cancel₀,
+    mul_one]
 
 @[grind =]
-lemma conjSqrt_conjSqrt_ringInverse (c a : A) (hc : IsStrictlyPositive c := by cfc_tac) :
-    conjSqrt c (conjSqrt c⁻¹ʳ a) = a := by
-  grind [conjSqrt_ringInverse_conjSqrt _ _ hc.ringInverse]
-
+lemma conjSqrt_conjSqrt_inv (c a : A) (hc : IsStrictlyPositive c := by cfc_tac) :
+    conjSqrt c (conjSqrt (Checked.inv c hc.isUnit) a) = a := by
+  simp only [conjSqrt_apply, sqrt_inv hc, mul_assoc, mul_inv_cancel_left₀, inv_mul_cancel₀,
+    mul_one]
 @[grind =]
 lemma conjSqrt_one (c : A) (hc : 0 ≤ c := by cfc_tac) : conjSqrt c 1 = c := by
   rw [conjSqrt_apply, mul_one, sqrt_mul_sqrt_self _]
 
 @[grind =]
-lemma conjSqrt_ringInverse_self (c : A) (hc : IsStrictlyPositive c := by cfc_tac) :
-    conjSqrt c⁻¹ʳ c = 1 := by
-  grind [conjSqrt_one c]
-
+lemma conjSqrt_inv_self (c : A) (hc : IsStrictlyPositive c := by cfc_tac) :
+    conjSqrt (Checked.inv c hc.isUnit) c = 1 := by
+  calc
+    _ = conjSqrt (Checked.inv c hc.isUnit) (conjSqrt c 1) :=
+      congrArg (conjSqrt (Checked.inv c hc.isUnit)) (conjSqrt_one c hc.nonneg).symm
+    _ = 1 := conjSqrt_inv_conjSqrt c 1 hc
 end ConjSqrt
 
 end CFC

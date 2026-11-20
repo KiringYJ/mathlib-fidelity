@@ -280,9 +280,12 @@ lemma starComp_eq_inv (hR : 0 < ringChar R) {φ : AddChar R ℂ} :
     (starRingEnd ℂ).compAddChar φ = φ⁻¹ := by
   ext1 a
   simp only [RingHom.toMonoidHom_eq_coe, MonoidHom.coe_compAddChar, MonoidHom.coe_coe,
-    Function.comp_apply, inv_apply']
-  have H := Complex.norm_eq_one_of_mem_rootsOfUnity <| φ.val_mem_rootsOfUnity a hR
-  exact (Complex.inv_eq_conj H).symm
+    Function.comp_apply]
+  have hnorm : ‖φ a‖ = 1 := by
+    simpa only [IsUnit.unit_spec] using
+      Complex.norm_eq_one_of_mem_rootsOfUnity (φ.val_mem_rootsOfUnity a hR)
+  rw [← Complex.inv_eq_conj hnorm, ← mul_eq_one_iff_inv_eq₀, inv_apply, ← map_add_eq_mul,
+    add_neg_cancel, map_zero_eq_one]
 
 lemma starComp_apply (hR : 0 < ringChar R) {φ : AddChar R ℂ} (a : R) :
     (starRingEnd ℂ) (φ a) = φ⁻¹ a := by

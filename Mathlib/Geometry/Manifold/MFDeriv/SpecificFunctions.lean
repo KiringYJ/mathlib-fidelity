@@ -1047,90 +1047,261 @@ end prod
 end AlgebraOverCommRing
 
 section DivisionRing
+
 open scoped RightActions
+open Filter
 
-variable {z : M} {F' : Type*} [NormedDivisionRing F'] [NormedAlgebra 𝕜 F'] {p q : M → F'}
-  {p' : TangentSpace% z →L[𝕜] F'}
+variable {z : M} {F' : Type*} [NormedDivisionRing F'] [NormedAlgebra 𝕜 F']
+  {p q r : M → F'} {p' q' : TangentSpace I z →L[𝕜] F'}
 
-lemma HasMFDerivWithinAt.inv' (hp : HasMFDerivWithinAt I 𝓘(𝕜, F') p s z p') (hp_ne : p z ≠ 0) :
-    HasMFDerivWithinAt I 𝓘(𝕜, F') (p⁻¹) s z (-((p z)⁻¹ •> p' <• (p z)⁻¹) : E →L[𝕜] F') :=
-  (hasFDerivAt_inv' hp_ne).hasMFDerivAt.comp_hasMFDerivWithinAt (hf := hp)
+private theorem hasMFDerivWithinAt_iff_sourceChart {f : M → F'}
+    {f' : TangentSpace I z →L[𝕜] F'} :
+    HasMFDerivWithinAt I 𝓘(𝕜, F') f s z f' ↔
+      HasFDerivWithinAt (f ∘ (extChartAt I z).symm) (f' ∘L (tangentSpaceCastModel I z).symm)
+        ((extChartAt I z).symm ⁻¹' s ∩ range I) (extChartAt I z z) := by
+  unfold HasMFDerivWithinAt writtenInExtChartAt
+  rw [extChartAt_model_space_eq_id]
+  apply and_iff_right_of_imp
+  intro h
+  change Tendsto f (𝓝[s] z) (𝓝 (f z))
+  rw [← map_extChartAt_symm_nhdsWithin (I := I) z, tendsto_map'_iff]
+  have hcont : ContinuousWithinAt (f ∘ (extChartAt I z).symm)
+      ((extChartAt I z).symm ⁻¹' s ∩ range I) (extChartAt I z z) :=
+    h.continuousWithinAt continuousWithinAt_id
+  rw [ContinuousWithinAt] at hcont
+  simpa only [Function.comp_def, extChartAt_to_inv] using hcont
 
-lemma HasMFDerivAt.inv' (hp : HasMFDerivAt I 𝓘(𝕜, F') p z p') (hp_ne : p z ≠ 0) :
-    HasMFDerivAt I 𝓘(𝕜, F') (p⁻¹) z (-((p z)⁻¹ •> p' <• (p z)⁻¹) : E →L[𝕜] F') :=
-  hasMFDerivWithinAt_univ.mp <| hp.hasMFDerivWithinAt.inv' hp_ne
+private theorem hasFDerivWithinAt_of_domain_agreement {A : Set E} {f : A → F'} {g : E → F'}
+    {f' : E →L[𝕜] F'} {u : A} {S : Set E}
+    (hf : HasFDerivWithinAt f f' (Subtype.val ⁻¹' S) u Subtype.val)
+    (hA : A ∈ 𝓝[S] (u : E))
+    (hEq : f =ᶠ[𝓝[Subtype.val ⁻¹' S] u] (g ∘ Subtype.val))
+    (hu : f u = g u) : HasFDerivWithinAt g f' S (u : E) := by
+  let i : A → E := Subtype.val
+  have hpull : 𝓝[i ⁻¹' S] u = comap i (𝓝[S] (u : E)) := by
+    rw [nhdsWithin, nhdsWithin, nhds_subtype, comap_inf, comap_principal]
+  have hpush : map i (𝓝[i ⁻¹' S] u) = 𝓝[S] (u : E) := by
+    rw [hpull, subtype_coe_map_comap, inf_eq_left.2 (le_principal_iff.2 hA)]
+  rw [hasFDerivWithinAt_iff_isLittleOTVS, ← hpush, Asymptotics.isLittleOTVS_map]
+  refine hf.isLittleOTVS.congr' ?_ .rfl
+  filter_upwards [hEq] with w hw
+  change f w = g (i w) at hw
+  change f w - f u - _ = g (i w) - g (i u) - _
+  rw [hw, hu]
+  rfl
+
+/-- A checked operation in the source chart supplies a manifold derivative whenever a function
+agrees with that operation on the relevant neighborhood. -/
+private theorem hasMFDerivWithinAt_of_local_chart {valid : M → Prop}
+    {f : {y : M // valid y} → F'} {f' : TangentSpace I z →L[𝕜] F'} {hz : valid z}
+    (hf : let chart := extChartAt I z
+      HasFDerivWithinAt (fun u : {u : E // valid (chart.symm u)} ↦ f ⟨chart.symm u, u.property⟩)
+        (f' ∘L (tangentSpaceCastModel I z).symm)
+        (Subtype.val ⁻¹' (chart.symm ⁻¹' s ∩ range I))
+        ⟨chart z, by
+          change valid ((extChartAt I z).symm (extChartAt I z z))
+          rwa [extChartAt_to_inv]⟩ Subtype.val)
+    (hr : ∀ᶠ y in 𝓝[insert z s] z, ∃ hy : valid y, r y = f ⟨y, hy⟩) :
+    HasMFDerivWithinAt I 𝓘(𝕜, F') r s z f' := by
+  let chart := extChartAt I z
+  let S : Set E := chart.symm ⁻¹' s ∩ range I
+  let U : Set E := {u | valid (chart.symm u)}
+  let u : U := ⟨chart z, by
+    change valid ((extChartAt I z).symm (extChartAt I z z))
+    rwa [extChartAt_to_inv]⟩
+  let i : U → E := Subtype.val
+  have h : ∀ᶠ u in 𝓝[S] chart z, ∃ hu : valid (chart.symm u), r (chart.symm u) = f ⟨_, hu⟩ :=
+    extChartAt_preimage_mem_nhdsWithin (I := I)
+      (hr.filter_mono (nhdsWithin_mono _ (subset_insert _ _)))
+  have hU : U ∈ 𝓝[S] chart z := h.mono (fun _ hu ↦ hu.choose)
+  have hi : Tendsto i (𝓝[i ⁻¹' S] u) (𝓝[S] chart z) :=
+    continuous_subtype_val.continuousWithinAt.tendsto_nhdsWithin (fun _ hv ↦ hv)
+  apply hasMFDerivWithinAt_iff_sourceChart.2
+  refine hasFDerivWithinAt_of_domain_agreement hf hU
+    ((hi.eventually h).mono fun _ hu ↦ hu.choose_spec.symm) ?_
+  obtain ⟨h, he⟩ := mem_of_mem_nhdsWithin (mem_insert z s) hr
+  simpa only [chart, Function.comp_apply, extChartAt_to_inv] using he.symm
+
+/-- A function locally equal to the checked inverse has the inverse derivative within the set. -/
+lemma HasMFDerivWithinAt.inv' (hp : HasMFDerivWithinAt I 𝓘(𝕜, F') p s z p')
+    {hu : IsUnit (p z)} (hr : ∀ᶠ y in 𝓝[insert z s] z,
+      ∃ hy : IsUnit (p y), r y = Checked.inv (p y) hy) :
+    HasMFDerivWithinAt I 𝓘(𝕜, F') r s z
+      (-((Checked.inv (p z) hu) •> p' <• (Checked.inv (p z) hu)) : E →L[𝕜] F') := by
+  apply hasMFDerivWithinAt_of_local_chart (hz := hu)
+    (f := fun y : {y : M // IsUnit (p y)} ↦ Checked.inv (p y) y.property) _ hr
+  let chart := extChartAt I z
+  let P : E → F' := p ∘ chart.symm
+  have hz : IsUnit (P (chart z)) := by
+    simpa only [P, chart, Function.comp_def, extChartAt_to_inv] using hu
+  have hval : P (chart z) = p z := by simp only [P, chart, Function.comp_def, extChartAt_to_inv]
+  have hunit : hz.unit = hu.unit := Units.ext (hz.unit_spec.trans (hval.trans hu.unit_spec.symm))
+  have hinv : (↑hz.unit⁻¹ : F') = Checked.inv (p z) hu :=
+    congrArg (fun u : F'ˣ ↦ (↑u⁻¹ : F')) hunit
+  have h := (hasMFDerivWithinAt_iff_sourceChart.1 hp).inv hz
+  have hcoeff :
+      (-ContinuousLinearMap.mulLeftRight 𝕜 F' (Checked.inv (p z) hu) (Checked.inv (p z) hu)).comp
+        (p' ∘L (tangentSpaceCastModel I z).symm.toContinuousLinearMap) =
+      (-((Checked.inv (p z) hu) •> p' <• (Checked.inv (p z) hu))) ∘L
+        (tangentSpaceCastModel I z).symm.toContinuousLinearMap := by
+    ext w
+    rfl
+  rw [hinv, hcoeff] at h
+  exact h
+
+lemma HasMFDerivAt.inv' (hp : HasMFDerivAt I 𝓘(𝕜, F') p z p')
+    {hu : IsUnit (p z)} (hr : ∀ᶠ y in 𝓝 z, ∃ hy : IsUnit (p y), r y = Checked.inv (p y) hy) :
+    HasMFDerivAt I 𝓘(𝕜, F') r z
+      (-((Checked.inv (p z) hu) •> p' <• (Checked.inv (p z) hu)) : E →L[𝕜] F') :=
+  hasMFDerivWithinAt_univ.mp <| hp.hasMFDerivWithinAt.inv' (hu := hu)
+    (by simpa only [insert_eq_of_mem (mem_univ z), nhdsWithin_univ] using hr)
 
 lemma MDifferentiableWithinAt.inv (hp : MDifferentiableWithinAt I 𝓘(𝕜, F') p s z)
-    (hp_ne : p z ≠ 0) : MDifferentiableWithinAt I 𝓘(𝕜, F') p⁻¹ s z :=
-  (hp.hasMFDerivWithinAt.inv' hp_ne).mdifferentiableWithinAt
+    (hr : ∀ᶠ y in 𝓝[insert z s] z, ∃ hy : IsUnit (p y), r y = Checked.inv (p y) hy) :
+    MDifferentiableWithinAt I 𝓘(𝕜, F') r s z := by
+  have hu : IsUnit (p z) := (mem_of_mem_nhdsWithin (mem_insert z s) hr).choose
+  exact (hp.hasMFDerivWithinAt.inv' (hu := hu) hr).mdifferentiableWithinAt
 
-lemma MDifferentiableAt.inv (hp : MDifferentiableAt I 𝓘(𝕜, F') p z) (hp_ne : p z ≠ 0) :
-    MDifferentiableAt I 𝓘(𝕜, F') p⁻¹ z :=
-  mdifferentiableWithinAt_univ.mp <| hp.mdifferentiableWithinAt.inv hp_ne
+lemma MDifferentiableAt.inv (hp : MDifferentiableAt I 𝓘(𝕜, F') p z)
+    (hr : ∀ᶠ y in 𝓝 z, ∃ hy : IsUnit (p y), r y = Checked.inv (p y) hy) :
+    MDifferentiableAt I 𝓘(𝕜, F') r z :=
+  mdifferentiableWithinAt_univ.mp <| hp.mdifferentiableWithinAt.inv
+    (by simpa only [insert_eq_of_mem (mem_univ z), nhdsWithin_univ] using hr)
 
-theorem MDifferentiableOn.inv (hp : MDifferentiableOn I 𝓘(𝕜, F') p s) (hp_ne : ∀ z ∈ s, p z ≠ 0) :
-    MDifferentiableOn I 𝓘(𝕜, F') p⁻¹ s :=
-  fun x hx ↦ (hp x hx).inv (hp_ne x hx)
+theorem MDifferentiableOn.inv (hp : MDifferentiableOn I 𝓘(𝕜, F') p s)
+    (hr : ∀ y ∈ s, ∃ hy : IsUnit (p y), r y = Checked.inv (p y) hy) :
+    MDifferentiableOn I 𝓘(𝕜, F') r s := fun x hx ↦ (hp x hx).inv
+  (by simpa only [insert_eq_of_mem hx] using (eventually_nhdsWithin_iff.2 (.of_forall (hr ·))))
 
-theorem MDifferentiable.inv (hp : MDifferentiable I 𝓘(𝕜, F') p) (hp_ne : ∀ z, p z ≠ 0) :
-    MDifferentiable I 𝓘(𝕜, F') p⁻¹ :=
-  fun x ↦ (hp x).inv (hp_ne x)
+theorem MDifferentiable.inv (hp : MDifferentiable I 𝓘(𝕜, F') p) {h : ∀ y, IsUnit (p y)} :
+    MDifferentiable I 𝓘(𝕜, F') (fun y ↦ Checked.inv (p y) (h y)) :=
+  fun x ↦ (hp x).inv (.of_forall fun y ↦ ⟨h y, rfl⟩)
+
+/-- The derivative of a right quotient in a normed division ring. -/
+lemma HasMFDerivWithinAt.div' (hp : HasMFDerivWithinAt I 𝓘(𝕜, F') p s z p')
+    (hq : HasMFDerivWithinAt I 𝓘(𝕜, F') q s z q') {hu : IsUnit (q z)}
+    (hr : ∀ᶠ y in 𝓝[insert z s] z, ∃ hy : IsUnit (q y), r y = Checked.div (p y) (q y) hy) :
+    HasMFDerivWithinAt I 𝓘(𝕜, F') r s z
+      (p z • (-((Checked.inv (q z) hu) •> q' <• (Checked.inv (q z) hu))) +
+        p' <• (Checked.inv (q z) hu) : E →L[𝕜] F') := by
+  apply hasMFDerivWithinAt_of_local_chart (hz := hu)
+    (f := fun y : {y : M // IsUnit (q y)} ↦ Checked.div (p y) (q y) y.property) _ hr
+  let chart := extChartAt I z
+  let S : Set E := chart.symm ⁻¹' s ∩ range I
+  let P : E → F' := p ∘ chart.symm
+  let Q : E → F' := q ∘ chart.symm
+  let D : Set E := {u | IsUnit (Q u)}
+  let i : D → E := Subtype.val
+  have hz : IsUnit (Q (chart z)) := by
+    simpa only [Q, chart, Function.comp_def, extChartAt_to_inv] using hu
+  let u : D := ⟨chart z, hz⟩
+  have hi : Tendsto i (𝓝[i ⁻¹' S] u) (𝓝[S] chart z) :=
+    continuous_subtype_val.continuousWithinAt.tendsto_nhdsWithin (fun _ hv ↦ hv)
+  have hpD := HasFDerivAtFilter.comp_tendsto (hasMFDerivWithinAt_iff_sourceChart.1 hp)
+    i (hi.prodMap (tendsto_pure_pure i u))
+  have hqD := (hasMFDerivWithinAt_iff_sourceChart.1 hq).inv hz
+  have hval : Q (chart z) = q z := by simp only [Q, chart, Function.comp_def, extChartAt_to_inv]
+  have hunit : hz.unit = hu.unit := Units.ext (hz.unit_spec.trans (hval.trans hu.unit_spec.symm))
+  have hinv : (↑hz.unit⁻¹ : F') = Checked.inv (q z) hu :=
+    congrArg (fun t : F'ˣ ↦ (↑t⁻¹ : F')) hunit
+  have hP : P (chart z) = p z := by simp only [P, chart, Function.comp_def, extChartAt_to_inv]
+  have h := HasFDerivWithinAt.mul' hpD hqD continuous_subtype_val.continuousWithinAt
+  change HasFDerivWithinAt _ (P (chart z) • _ + _ <• (↑hz.unit⁻¹ : F')) _ _ _ at h
+  let v := Checked.inv (q z) hu
+  let c := (tangentSpaceCastModel I z).symm.toContinuousLinearMap
+  have hcoeff :
+      p z • ((-ContinuousLinearMap.mulLeftRight 𝕜 F' v v).comp (q' ∘L c)) +
+        (p' ∘L c) <• v =
+      ((p z • (-(v •> q' <• v)) + p' <• v) : E →L[𝕜] F') ∘L c := by
+    ext w
+    rfl
+  rw [hP, hinv, hcoeff] at h
+  exact h
 
 lemma MDifferentiableWithinAt.div (hp : MDifferentiableWithinAt I 𝓘(𝕜, F') p s z)
-    (hq : MDifferentiableWithinAt I 𝓘(𝕜, F') q s z) (hq_ne : q z ≠ 0) :
-    MDifferentiableWithinAt I 𝓘(𝕜, F') (p / q) s z := by
-  simpa [div_eq_mul_inv] using hp.mul (hq.inv hq_ne)
+    (hq : MDifferentiableWithinAt I 𝓘(𝕜, F') q s z)
+    (hr : ∀ᶠ y in 𝓝[insert z s] z, ∃ hy : IsUnit (q y), r y = Checked.div (p y) (q y) hy) :
+    MDifferentiableWithinAt I 𝓘(𝕜, F') r s z := by
+  have hu : IsUnit (q z) := (mem_of_mem_nhdsWithin (mem_insert z s) hr).choose
+  exact (hp.hasMFDerivWithinAt.div' hq.hasMFDerivWithinAt (hu := hu) hr).mdifferentiableWithinAt
 
 lemma MDifferentiableAt.div (hp : MDifferentiableAt I 𝓘(𝕜, F') p z)
-    (hq : MDifferentiableAt I 𝓘(𝕜, F') q z) (hq_ne : q z ≠ 0) :
-    MDifferentiableAt I 𝓘(𝕜, F') (p / q) z := by
-  simpa [div_eq_mul_inv] using hp.mul (hq.inv hq_ne)
+    (hq : MDifferentiableAt I 𝓘(𝕜, F') q z)
+    (hr : ∀ᶠ y in 𝓝 z, ∃ hy : IsUnit (q y), r y = Checked.div (p y) (q y) hy) :
+    MDifferentiableAt I 𝓘(𝕜, F') r z :=
+  mdifferentiableWithinAt_univ.mp <| hp.mdifferentiableWithinAt.div hq.mdifferentiableWithinAt
+    (by simpa only [insert_eq_of_mem (mem_univ z), nhdsWithin_univ] using hr)
 
 lemma MDifferentiableOn.div (hp : MDifferentiableOn I 𝓘(𝕜, F') p s)
-    (hq : MDifferentiableOn I 𝓘(𝕜, F') q s) (hq_ne : ∀ z ∈ s, q z ≠ 0) :
-    MDifferentiableOn I 𝓘(𝕜, F') (p / q) s := by
-  simpa [div_eq_mul_inv] using hp.mul (hq.inv hq_ne)
+    (hq : MDifferentiableOn I 𝓘(𝕜, F') q s)
+    (hr : ∀ y ∈ s, ∃ hy : IsUnit (q y), r y = Checked.div (p y) (q y) hy) :
+    MDifferentiableOn I 𝓘(𝕜, F') r s := fun x hx ↦ (hp x hx).div (hq x hx)
+  (by simpa only [insert_eq_of_mem hx] using (eventually_nhdsWithin_iff.2 (.of_forall (hr ·))))
 
-lemma MDifferentiable.div (hp : MDifferentiable I 𝓘(𝕜, F') p)
-    (hq : MDifferentiable I 𝓘(𝕜, F') q) (hq_ne : ∀ z, q z ≠ 0) :
-    MDifferentiable I 𝓘(𝕜, F') (p / q) := by
-  simpa [div_eq_mul_inv] using hp.mul (hq.inv hq_ne)
+lemma MDifferentiable.div (hp : MDifferentiable I 𝓘(𝕜, F') p) (hq : MDifferentiable I 𝓘(𝕜, F') q)
+    {h : ∀ y, IsUnit (q y)} :
+    MDifferentiable I 𝓘(𝕜, F') (fun y ↦ Checked.div (p y) (q y) (h y)) :=
+  fun x ↦ (hp x).div (hq x) (.of_forall fun y ↦ ⟨h y, rfl⟩)
 
 end DivisionRing
 
 section Field
 
-variable {z : M} {F' : Type*} [NormedField F'] [NormedAlgebra 𝕜 F'] {p q : M → F'}
-  {p' q' : TangentSpace% z →L[𝕜] F'}
+open scoped RightActions
+open Filter
 
-set_option backward.isDefEq.respectTransparency.types false in
-lemma HasMFDerivWithinAt.inv (hp : HasMFDerivWithinAt I 𝓘(𝕜, F') p s z p') (hp_ne : p z ≠ 0) :
-    HasMFDerivWithinAt I 𝓘(𝕜, F') (p⁻¹) s z (-(p z ^ 2)⁻¹ • p' : E →L[𝕜] F') := by
-  convert! hp.inv' hp_ne
-  ext
-  simp
-  ring_nf
+variable {z : M} {F' : Type*} [NormedField F'] [NormedAlgebra 𝕜 F'] {p q r : M → F'}
+  {p' q' : TangentSpace I z →L[𝕜] F'}
 
-lemma HasMFDerivAt.inv (hp : HasMFDerivAt I 𝓘(𝕜, F') p z p') (hp_ne : p z ≠ 0) :
-    HasMFDerivAt I 𝓘(𝕜, F') (p⁻¹) z (-(p z ^ 2)⁻¹ • p' : E →L[𝕜] F') :=
-  hasMFDerivWithinAt_univ.mp <| hp.hasMFDerivWithinAt.inv hp_ne
-
-set_option backward.isDefEq.respectTransparency.types false in
-lemma HasMFDerivWithinAt.div (hp : HasMFDerivWithinAt I 𝓘(𝕜, F') p s z p')
-    (hq : HasMFDerivWithinAt I 𝓘(𝕜, F') q s z q') (hq_ne : q z ≠ 0) :
-    HasMFDerivWithinAt I 𝓘(𝕜, F') (p / q) s z
-      ((1 / q z) • p' - (p z / q z ^ 2) • q' : E →L[𝕜] F') := by
-  convert! hp.mul (hq.inv hq_ne) using 1
-  · simp [div_eq_mul_inv]
-  · ext
-    simp [div_eq_mul_inv]
+lemma HasMFDerivWithinAt.inv (hp : HasMFDerivWithinAt I 𝓘(𝕜, F') p s z p')
+    {hu : IsUnit (p z)} (hr : ∀ᶠ y in 𝓝[insert z s] z,
+      ∃ hy : IsUnit (p y), r y = Checked.inv (p y) hy) :
+    HasMFDerivWithinAt I 𝓘(𝕜, F') r s z
+      (-(Checked.inv (p z ^ 2) (hu.pow 2)) • p' : E →L[𝕜] F') := by
+  have hcoeff : (-(Checked.inv (p z ^ 2) (hu.pow 2)) • p' : E →L[𝕜] F') =
+      -((Checked.inv (p z) hu) •> p' <• (Checked.inv (p z) hu)) := by
+    ext w
+    rw [← inv_pow₀ (ha := hu) 2]
+    change -(Checked.inv (p z) hu ^ 2) * p' w =
+      -(Checked.inv (p z) hu * p' w * Checked.inv (p z) hu)
     ring
+  rw [hcoeff]
+  exact hp.inv' hr
+
+lemma HasMFDerivAt.inv (hp : HasMFDerivAt I 𝓘(𝕜, F') p z p')
+    {hu : IsUnit (p z)} (hr : ∀ᶠ y in 𝓝 z, ∃ hy : IsUnit (p y), r y = Checked.inv (p y) hy) :
+    HasMFDerivAt I 𝓘(𝕜, F') r z
+      (-(Checked.inv (p z ^ 2) (hu.pow 2)) • p' : E →L[𝕜] F') :=
+  hasMFDerivWithinAt_univ.mp <| hp.hasMFDerivWithinAt.inv (hu := hu)
+    (by simpa only [insert_eq_of_mem (mem_univ z), nhdsWithin_univ] using hr)
+
+lemma HasMFDerivWithinAt.div (hp : HasMFDerivWithinAt I 𝓘(𝕜, F') p s z p')
+    (hq : HasMFDerivWithinAt I 𝓘(𝕜, F') q s z q') {hu : IsUnit (q z)}
+    (hr : ∀ᶠ y in 𝓝[insert z s] z, ∃ hy : IsUnit (q y), r y = Checked.div (p y) (q y) hy) :
+    HasMFDerivWithinAt I 𝓘(𝕜, F') r s z
+      ((Checked.inv (q z) hu) • p' - (Checked.div (p z) (q z ^ 2) (hu.pow 2)) • q' :
+        E →L[𝕜] F') := by
+  have hcoeff :
+      ((Checked.inv (q z) hu) • p' - (Checked.div (p z) (q z ^ 2) (hu.pow 2)) • q' :
+        E →L[𝕜] F') =
+      p z • (-((Checked.inv (q z) hu) •> q' <• (Checked.inv (q z) hu))) +
+        p' <• (Checked.inv (q z) hu) := by
+    ext w
+    rw [div_eq_mul_inv₀, ← inv_pow₀ (ha := hu) 2]
+    change Checked.inv (q z) hu * p' w - (p z * Checked.inv (q z) hu ^ 2) * q' w =
+      p z * -(Checked.inv (q z) hu * q' w * Checked.inv (q z) hu) + p' w * Checked.inv (q z) hu
+    ring
+  rw [hcoeff]
+  exact hp.div' hq hr
 
 lemma HasMFDerivAt.div (hp : HasMFDerivAt I 𝓘(𝕜, F') p z p')
-    (hq : HasMFDerivAt I 𝓘(𝕜, F') q z q') (hq_ne : q z ≠ 0) :
-    HasMFDerivAt I 𝓘(𝕜, F') (p / q) z
-      ((1 / q z) • p' - (p z / q z ^ 2) • q' : E →L[𝕜] F') :=
-  hasMFDerivWithinAt_univ.mp <| hp.hasMFDerivWithinAt.div hq.hasMFDerivWithinAt hq_ne
+    (hq : HasMFDerivAt I 𝓘(𝕜, F') q z q') {hu : IsUnit (q z)}
+    (hr : ∀ᶠ y in 𝓝 z, ∃ hy : IsUnit (q y), r y = Checked.div (p y) (q y) hy) :
+    HasMFDerivAt I 𝓘(𝕜, F') r z
+      ((Checked.inv (q z) hu) • p' - (Checked.div (p z) (q z ^ 2) (hu.pow 2)) • q' :
+        E →L[𝕜] F') :=
+  hasMFDerivWithinAt_univ.mp <| hp.hasMFDerivWithinAt.div hq.hasMFDerivWithinAt (hu := hu)
+    (by simpa only [insert_eq_of_mem (mem_univ z), nhdsWithin_univ] using hr)
 
 end Field
 

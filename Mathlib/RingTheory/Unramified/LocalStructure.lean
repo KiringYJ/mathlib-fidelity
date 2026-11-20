@@ -242,8 +242,6 @@ lemma exists_notMem_forall_ne_mem_and_adjoin_eq_top
     convert! hrQ
     rw [← SetLike.mem_coe, PrimeSpectrum.coe_primesOverOrderIsoFiber_apply_asIdeal]
     simp [this]
-  have hsQ' : algebraMap R Q.ResidueField s ≠ 0 := by
-    simpa [IsScalarTower.algebraMap_apply R S Q.ResidueField]
   replace hrQ' : φ r = 1 := by
     simpa [hrQ', sub_eq_zero, @eq_comm _ _ (φ r)] using (hrid.map φ).one_sub_mul_self
   have e' : algebraMap _ _ s * φ x = algebraMap _ _ t := by
@@ -264,9 +262,16 @@ lemma exists_notMem_forall_ne_mem_and_adjoin_eq_top
     trans φ' (1 ⊗ₜ t)
     · simp [φ']
     · simpa [smul_def, H] using congr(φ' $e).symm
-  · have : φ x = (algebraMap _ p.ResidueField s)⁻¹ • algebraMap _ _ t := by
-      simpa [smul_def, ← IsScalarTower.algebraMap_apply, eq_inv_mul_iff_mul_eq₀ hsQ']
-    rw [← top_le_iff, ← hx, this]
+  · have hsκ : algebraMap R p.ResidueField s ≠ 0 := by
+      simpa only [ne_eq, Ideal.algebraMap_residueField_eq_zero] using hsQ
+    have hst : algebraMap R p.ResidueField s • φ x = algebraMap S Q.ResidueField t := by
+      simpa only [smul_def,
+        ← IsScalarTower.algebraMap_apply R p.ResidueField Q.ResidueField] using e'
+    have hxt : φ x = Checked.inv (algebraMap R p.ResidueField s) hsκ.isUnit •
+        algebraMap S Q.ResidueField t := by
+      simpa only [← mul_smul, inv_mul_cancel₀, one_smul] using
+        congrArg (Checked.inv (algebraMap R p.ResidueField s) hsκ.isUnit • ·) hst
+    rw [← top_le_iff, ← hx, hxt]
     refine adjoin_singleton_le ?_
     exact Subalgebra.smul_mem _ (self_mem_adjoin_singleton _ _) _
 

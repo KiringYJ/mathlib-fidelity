@@ -81,24 +81,29 @@ variable (K : Type*) [DivisionRing K] [DecidableEq K]
 
 /-- The one-point compactification of a division ring `K` is equivalent to
 the projectivization `ℙ K (Fin 2 → K)`. -/
-def equivProjectivization : OnePoint K ≃ ℙ K (Fin 2 → K) where
+noncomputable def equivProjectivization : OnePoint K ≃ ℙ K (Fin 2 → K) where
   toFun p := p.elim (mk K ![1, 0] (by simp)) (fun t ↦ mk K ![t, 1] (by simp))
   invFun p := by
     refine Projectivization.lift
-      (fun u : {v : Fin 2 → K // v ≠ 0} ↦ if u.1 1 = 0 then ∞ else ((u.1 1)⁻¹ * u.1 0)) ?_ p
+      (fun u : {v : Fin 2 → K // v ≠ 0} ↦
+        if h : u.val 1 = 0 then ∞ else ↑(Checked.inv (u.val 1) (IsUnit.mk0 _ h) * u.val 0)) ?_ p
     rintro ⟨-, hv⟩ ⟨w, hw⟩ t rfl
     have ht : t ≠ 0 := by rintro rfl; simp at hv
-    by_cases h₀ : w 1 = 0 <;> simp [h₀, ht, mul_assoc]
+    by_cases h₀ : w 1 = 0
+    · simp [h₀]
+    · simp [h₀, ht, mul_inv_rev₀, mul_assoc, inv_mul_cancel_left₀ (ha := ht.isUnit)]
   left_inv p := by cases p <;> simp
   right_inv p := by
     induction p using ind with | h w hw =>
-    by_cases h₀ : w 1 = 0 <;> simp only [mk_eq_mk_iff', h₀, Projectivization.lift_mk, ite_true,
-        ite_false, OnePoint.elim_infty, OnePoint.elim_some]
-    · have : w 0 ≠ 0 := fun h ↦ hw <| funext <| by simp_all
+    by_cases h₀ : w 1 = 0
+    · simp only [Projectivization.lift_mk, dite_eq_left h₀, OnePoint.elim_infty, mk_eq_mk_iff']
+      have : w 0 ≠ 0 := fun h ↦ hw <| funext <| by simp_all
       use (w 0)⁻¹
       ext i
       fin_cases i <;> simp_all
-    · exact ⟨(w 1)⁻¹, funext <| by simp [inv_mul_cancel₀ h₀]⟩
+    · have hu := IsUnit.mk0 _ h₀
+      simp only [Projectivization.lift_mk, dite_eq_right h₀, OnePoint.elim_some, mk_eq_mk_iff']
+      exact ⟨Checked.inv (w 1) hu, funext <| by simp [inv_mul_cancel₀ (ha := hu)]⟩
 
 @[simp]
 lemma equivProjectivization_apply_infinity :
@@ -112,7 +117,8 @@ lemma equivProjectivization_apply_coe (t : K) :
 
 @[simp]
 lemma equivProjectivization_symm_apply_mk (v : Fin 2 → K) (h : v ≠ 0) :
-    (equivProjectivization K).symm (mk K v h) = if v 1 = 0 then ∞ else (v 1)⁻¹ * v 0 := by
+    (equivProjectivization K).symm (mk K v h) =
+      if hv : v 1 = 0 then ∞ else ↑(Checked.inv (v 1) (IsUnit.mk0 _ hv) * v 0) := by
   simp [equivProjectivization]
 
 end DivisionRing
@@ -123,7 +129,7 @@ variable {K : Type*} [Field K] [DecidableEq K]
 
 /-- For a field `K`, the group `GL(2, K)` acts on `OnePoint K`, via the canonical identification
 with the `ℙ¹(K)` (which is given explicitly by Möbius transformations). -/
-instance instGLAction : MulAction (GL (Fin 2) K) (OnePoint K) :=
+noncomputable instance instGLAction : MulAction (GL (Fin 2) K) (OnePoint K) :=
   (equivProjectivization K).mulAction (GL (Fin 2) K)
 
 lemma equivProjectivization_smul {g : GL (Fin 2) K} (x : OnePoint K) :
@@ -138,9 +144,10 @@ lemma smul_infty_def {g : GL (Fin 2) K} :
   simp [Equiv.smul_def, mulVec_eq_sum, Units.smul_def]
 
 lemma smul_infty_eq_ite (g : GL (Fin 2) K) :
-    g • (∞ : OnePoint K) = if g 1 0 = 0 then ∞ else g 0 0 / g 1 0 := by
+    g • (∞ : OnePoint K) = if h : g 1 0 = 0 then ∞
+      else ↑(Checked.div (g 0 0) (g 1 0) (IsUnit.mk0 _ h)) := by
   by_cases h : g 1 0 = 0 <;>
-  simp [h, div_eq_inv_mul, smul_infty_def]
+  simp [h, div_eq_inv_mul₀, smul_infty_def]
 
 lemma smul_infty_eq_self_iff {g : GL (Fin 2) K} :
     g • (∞ : OnePoint K) = ∞ ↔ g 1 0 = 0 := by
@@ -148,15 +155,17 @@ lemma smul_infty_eq_self_iff {g : GL (Fin 2) K} :
 
 lemma smul_some_eq_ite {g : GL (Fin 2) K} {k : K} :
     g • (k : OnePoint K) =
-      if g 1 0 * k + g 1 1 = 0 then ∞ else (g 0 0 * k + g 0 1) / (g 1 0 * k + g 1 1) := by
-  simp [Equiv.smul_def, mulVec_eq_sum, div_eq_inv_mul, mul_comm, Units.smul_def]
+      if h : g 1 0 * k + g 1 1 = 0 then ∞
+      else ↑(Checked.div (g 0 0 * k + g 0 1) (g 1 0 * k + g 1 1) (IsUnit.mk0 _ h)) := by
+  simp [Equiv.smul_def, mulVec_eq_sum, div_eq_inv_mul₀, mul_comm, Units.smul_def]
 
 lemma map_smul {L : Type*} [Field L] [DecidableEq L]
     (f : K →+* L) (g : GL (Fin 2) K) (c : OnePoint K) :
     OnePoint.map f (g • c) = (g.map f) • (c.map f) := by
   cases c with
-  | infty => simp [smul_infty_eq_ite, apply_ite]
-  | coe c => simp [smul_some_eq_ite, ← map_mul, ← map_add, apply_ite]
+  | infty => by_cases h : g 1 0 = 0 <;> simp [smul_infty_eq_ite, h, map_div₀]
+  | coe c => by_cases h : g 1 0 * c + g 1 1 = 0 <;>
+      simp [smul_some_eq_ite, ← map_mul, ← map_add, h, map_div₀]
 
 end Field
 
@@ -179,12 +188,14 @@ lemma fixpointPolynomial_aeval_eq_zero_iff {c : K} {g : GL (Fin 2) K} :
   · refine ⟨fun hg ↦ (g.det_ne_zero ?_).elim, fun hg ↦ (infty_ne_coe _ hg).elim⟩
     rw [det_fin_two]
     grind
-  · rw [coe_eq_coe, div_eq_iff h]
+  · rw [coe_eq_coe, div_eq_iff (hb := IsUnit.mk0 _ h)]
     grind
 
 /-- If `g` is parabolic, this is the unique fixed point of `g` in `OnePoint K`. -/
-def parabolicFixedPoint (g : GL (Fin 2) K) : OnePoint K :=
-  if g 1 0 = 0 then ∞ else ↑((g 0 0 - g 1 1) / (2 * g 1 0))
+noncomputable def parabolicFixedPoint (g : GL (Fin 2) K)
+    (h₂ : g 1 0 ≠ 0 → IsUnit (2 : K) := by intro _; checked_unit) : OnePoint K :=
+  if h : g 1 0 = 0 then ∞ else
+    ↑(Checked.div (g 0 0 - g 1 1) (2 * g 1 0) ((h₂ h).mul (IsUnit.mk0 _ h)))
 
 lemma IsParabolic.smul_eq_self_iff {g : GL (Fin 2) K} (hg : g.IsParabolic) [NeZero (2 : K)]
     {c : OnePoint K} : g • c = c ↔ c = parabolicFixedPoint g := by
@@ -196,13 +207,22 @@ lemma IsParabolic.smul_eq_self_iff {g : GL (Fin 2) K} (hg : g.IsParabolic) [NeZe
     suffices g 1 0 * c ^ 2 + (g 1 1 - g 0 0) * c - g 0 1 = 0 ↔ c = g.parabolicFixedPoint by
       simpa [← fixpointPolynomial_aeval_eq_zero_iff, fixpointPolynomial]
     by_cases hc : g 1 0 = 0
-    · have hd : g 1 1 = g 0 0 := by grind
+    · have hsq : (g 1 1 - g 0 0) ^ 2 = 0 := by
+        calc
+          _ = (g 0 0 + g 1 1) ^ 2 - 4 * (g 0 0 * g 1 1 - g 0 1 * g 1 0) := by
+            rw [hc]
+            ring
+          _ = 0 := hdisc
+      have hzero : g 1 1 - g 0 0 = 0 := by
+        by_contra hz
+        exact (pow_ne_zero 2 hz) hsq
+      have hd : g 1 1 = g 0 0 := sub_eq_zero.mp hzero
       suffices g 0 1 ≠ 0 by simpa [parabolicFixedPoint, hc, hd]
       -- can't have `g 0 1 ≠ 0` since that would force `g` to be scalar
       refine fun hb ↦ fixpointPolynomial_eq_zero_iff.not.mpr hg ?_
       simp [fixpointPolynomial, hb, hc, hd]
     · have : discrim (g 1 0) (g 1 1 - g 0 0) (-g 0 1) = 0 := by rw [discrim]; grind
-      simpa [parabolicFixedPoint, ite_eq_right hc, sq, sub_eq_add_neg]
+      simpa [parabolicFixedPoint, dite_eq_right hc, sq, sub_eq_add_neg]
         using quadratic_eq_zero_iff_of_discrim_eq_zero hc this c
 
 lemma IsParabolic.parabolicFixedPoint_pow {g : GL (Fin 2) K} (hg : IsParabolic g) [CharZero K]

@@ -100,7 +100,6 @@ theorem constantCoeff_invOfUnit (φ : MvPowerSeries σ R) (u : Rˣ) :
   classical
   rw [← coeff_zero_eq_constantCoeff_apply, coeff_invOfUnit, ite_eq_left rfl]
 
-@[simp]
 theorem mul_invOfUnit (φ : MvPowerSeries σ R) (u : Rˣ) (h : constantCoeff φ = u) :
     φ * invOfUnit φ u = 1 :=
   ext fun n =>
@@ -126,7 +125,6 @@ theorem mul_invOfUnit (φ : MvPowerSeries σ R) (u : Rˣ) (h : constantCoeff φ 
       simp at h₁
 
 -- TODO : can one prove equivalence?
-@[simp]
 theorem invOfUnit_mul (φ : MvPowerSeries σ R) (u : Rˣ) (h : constantCoeff φ = u) :
     invOfUnit φ u * φ = 1 := by
   rw [← mul_cancel_right_mem_nonZeroDivisors (r := φ.invOfUnit u), mul_assoc, one_mul,

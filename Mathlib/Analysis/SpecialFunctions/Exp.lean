@@ -142,7 +142,9 @@ lemma UniformContinuousOn.cexp (a : ℝ) : UniformContinuousOn exp {x : ℂ | x.
   have hya : ‖cexp y‖ ≤ Real.exp a := by simpa only [norm_exp, Real.exp_le_exp]
   simp only [gt_iff_lt, dist_zero_right, Set.mem_ofPred_eq, norm_mul, Complex.norm_exp] at *
   apply lt_of_le_of_lt (mul_le_mul h3.le hya (Real.exp_nonneg y.re) ha.le)
-  simp [field]
+  calc
+    ε / (2 * Real.exp a) * Real.exp a = ε / 2 := by field_simp
+    _ < ε := half_lt_self hε
 
 end ComplexContinuousExpComp
 
@@ -159,7 +161,12 @@ lemma exp_sub_sum_range_isBigO_pow (n : ℕ) :
   have := (Complex.exp_sub_sum_range_isBigO_pow n).comp_tendsto
     (Complex.continuous_ofReal.tendsto' 0 0 rfl)
   simp only [Function.comp_def] at this
-  norm_cast at this
+  apply Complex.isBigO_ofReal_left.mp
+  apply Complex.isBigO_ofReal_right.mp
+  convert this using 1 <;> ext x
+  · simp only [Complex.ofReal_sub, Complex.ofReal_exp, Complex.ofReal_sum,
+      Complex.ofReal_div, Complex.ofReal_pow, Complex.ofReal_natCast]
+  · simp only [Complex.ofReal_pow]
 
 lemma exp_sub_sum_range_succ_isLittleO_pow (n : ℕ) :
     (fun x ↦ exp x - ∑ i ∈ Finset.range (n + 1), x ^ i / i !) =o[𝓝 0] (· ^ n) :=
@@ -220,7 +227,8 @@ theorem mul_exp_neg_le_exp_neg_one (y : ℝ) : y * exp (-y) ≤ exp (-1) := by
 /-- The real exponential function tends to `0` at `-∞` or, equivalently, `exp(-x)` tends to `0`
 at `+∞` -/
 theorem tendsto_exp_neg_atTop_nhds_zero : Tendsto (fun x => exp (-x)) atTop (𝓝 0) :=
-  (tendsto_inv_atTop_zero.comp tendsto_exp_atTop).congr fun x => (exp_neg x).symm
+  (tendsto_exp_atTop.fun_inv_tendsto_atTop
+    (h0 := fun x => (exp_pos x).ne'.isUnit)).congr fun x => (exp_neg x).symm
 
 /-- The real exponential function tends to `1` at `0`. -/
 theorem tendsto_exp_nhds_zero_nhds_one : Tendsto exp (𝓝 0) (𝓝 1) := by
@@ -245,59 +253,73 @@ theorem isBoundedUnder_le_exp_comp {f : α → ℝ} :
   exp_monotone.isBoundedUnder_le_comp_iff tendsto_exp_atTop
 
 /-- The function `exp(x)/x^n` tends to `+∞` at `+∞`, for any natural number `n` -/
-theorem tendsto_exp_div_pow_atTop (n : ℕ) : Tendsto (fun x => exp x / x ^ n) atTop atTop := by
-  refine (atTop_basis_Ioi.tendsto_iff (atTop_basis' 1)).2 fun C hC₁ => ?_
+theorem tendsto_exp_div_pow_atTop (n : ℕ) :
+    Tendsto (fun x : {x : ℝ // x ^ n ≠ 0} => Checked.div (exp x.1) (x.1 ^ n) x.2.isUnit)
+      (comap Subtype.val atTop) atTop := by
+  refine (atTop_basis' (1 : ℝ)).tendsto_right_iff.mpr fun C hC₁ => ?_
   have hC₀ : 0 < C := zero_lt_one.trans_le hC₁
   have : 0 < (exp 1 * C)⁻¹ := inv_pos.2 (mul_pos (exp_pos _) hC₀)
   obtain ⟨N, hN⟩ : ∃ N : ℕ, ∀ k ≥ N, (↑k : ℝ) ^ n / exp 1 ^ k < (exp 1 * C)⁻¹ :=
     eventually_atTop.1
       ((tendsto_pow_const_div_const_pow_of_one_lt n (one_lt_exp_iff.2 zero_lt_one)).eventually
         (gt_mem_nhds this))
-  simp only [← exp_nat_mul, mul_one, div_lt_iff₀, exp_pos, ← div_eq_inv_mul] at hN
-  refine ⟨N, trivial, fun x hx => ?_⟩
-  rw [Set.mem_Ioi] at hx
+  simp only [← exp_nat_mul, mul_one, div_lt_iff₀, exp_pos, ← div_eq_inv_mul₀] at hN
+  filter_upwards [tendsto_comap.eventually (eventually_gt_atTop (N : ℝ))] with x hx
+  rcases x with ⟨x, hxdom⟩
+  change (N : ℝ) < x at hx
+  change C ≤ exp x / x ^ n
   have hx₀ : 0 < x := (Nat.cast_nonneg N).trans_lt hx
-  rw [Set.mem_Ici, le_div_iff₀ (pow_pos hx₀ _), ← le_div_iff₀' hC₀]
+  rw [le_div_iff₀ (pow_pos hx₀ _), ← le_div_iff₀' hC₀]
   calc
     x ^ n ≤ ⌈x⌉₊ ^ n := by gcongr; exact Nat.le_ceil _
     _ ≤ exp ⌈x⌉₊ / (exp 1 * C) := mod_cast (hN _ (Nat.lt_ceil.2 hx).le).le
     _ ≤ exp (x + 1) / (exp 1 * C) := by gcongr; exact (Nat.ceil_lt_add_one hx₀.le).le
-    _ = exp x / C := by rw [add_comm, exp_add, mul_div_mul_left _ _ (exp_pos _).ne']
+    _ = exp x / C := by rw [add_comm, exp_add, mul_div_mul_left]
 
 /-- The function `x^n * exp(-x)` tends to `0` at `+∞`, for any natural number `n`. -/
 theorem tendsto_pow_mul_exp_neg_atTop_nhds_zero (n : ℕ) :
-    Tendsto (fun x => x ^ n * exp (-x)) atTop (𝓝 0) :=
-  (tendsto_inv_atTop_zero.comp (tendsto_exp_div_pow_atTop n)).congr fun x => by
-    rw [comp_apply, inv_eq_one_div, div_div_eq_mul_div, one_mul, div_eq_mul_inv, exp_neg]
+    Tendsto (fun x => x ^ n * exp (-x)) atTop (𝓝 0) := by
+  have hdom : ∀ᶠ x : ℝ in atTop, x ^ n ≠ 0 :=
+    (eventually_gt_atTop (0 : ℝ)).mono fun x hx => (pow_pos hx n).ne'
+  apply (tendsto_comap_val_iff hdom).mp
+  have ht := (tendsto_exp_div_pow_atTop n).fun_inv_tendsto_atTop
+      (h0 := fun x : {x : ℝ // x ^ n ≠ 0} =>
+        (exp_pos x.1).ne'.isUnit.div₀ x.2.isUnit)
+  refine ht.congr fun x => ?_
+  rw [inv_div₀, div_eq_mul_inv₀, exp_neg]
 
-/-- The function `(b * exp x + c) / (x ^ n)` tends to `+∞` at `+∞`, for any natural number
-`n` and any real numbers `b` and `c` such that `b` is positive. -/
+/-- The quotient tends to infinity on its exact domain `x ^ n ≠ 0`; for `n = 0`
+this includes every real input. -/
 theorem tendsto_mul_exp_add_div_pow_atTop (b c : ℝ) (n : ℕ) (hb : 0 < b) :
-    Tendsto (fun x => (b * exp x + c) / x ^ n) atTop atTop := by
+    Tendsto (fun x : {x : ℝ // x ^ n ≠ 0} =>
+      Checked.div (b * exp x.1 + c) (x.1 ^ n) x.2.isUnit)
+      (comap Subtype.val atTop) atTop := by
   rcases eq_or_ne n 0 with (rfl | hn)
-  · simp only [pow_zero, div_one]
-    exact (tendsto_exp_atTop.const_mul_atTop hb).atTop_add tendsto_const_nhds
-  simp only [add_div, mul_div_assoc]
-  exact
-    ((tendsto_exp_div_pow_atTop n).const_mul_atTop hb).atTop_add
-      (tendsto_const_nhds.div_atTop (tendsto_pow_atTop hn))
+  · simpa only [pow_zero, div_one₀, Function.comp_def] using
+      ((tendsto_exp_atTop.comp tendsto_comap).const_mul_atTop hb).atTop_add tendsto_const_nhds
+  simp only [add_div, mul_div_assoc₀]
+  exact ((tendsto_exp_div_pow_atTop n).const_mul_atTop hb).atTop_add
+    (tendsto_const_nhds.div_atTop ((tendsto_pow_atTop hn).comp tendsto_comap)
+      (h₀ := fun x => x.2.isUnit))
 
-/-- The function `(x ^ n) / (b * exp x + c)` tends to `0` at `+∞`, for any natural number
-`n` and any real numbers `b` and `c` such that `b` is nonzero. -/
+/-- The function `(x ^ n) / (b * exp x + c)` tends to zero on its exact denominator domain. -/
 theorem tendsto_div_pow_mul_exp_add_atTop (b c : ℝ) (n : ℕ) (hb : 0 ≠ b) :
-    Tendsto (fun x => x ^ n / (b * exp x + c)) atTop (𝓝 0) := by
-  have H : ∀ d e, 0 < d → Tendsto (fun x : ℝ => x ^ n / (d * exp x + e)) atTop (𝓝 0) := by
-    intro b' c' h
-    convert! (tendsto_mul_exp_add_div_pow_atTop b' c' n h).inv_tendsto_atTop using 1
-    ext x
-    simp
-  rcases lt_or_gt_of_ne hb with h | h
-  · exact H b c h
-  · convert! (H (-b) (-c) (neg_pos.mpr h)).neg using 1
-    · ext x
-      field_simp
-      rw [← neg_add (b * exp x) c, div_neg, neg_neg]
-    · rw [neg_zero]
+    Tendsto (fun x : {x : ℝ // b * exp x + c ≠ 0} =>
+      Checked.div (x.1 ^ n) (b * exp x.1 + c) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 0) := by
+  have he (x : ℝ) : b + c * exp (-x) = (b * exp x + c) * exp (-x) := by
+    rw [add_mul, mul_assoc, ← exp_add, add_neg_cancel, exp_zero, mul_one]
+  have hd (x : {x : ℝ // b * exp x + c ≠ 0}) : IsUnit (b + c * exp (-x.1)) := by
+    rw [he]
+    exact x.2.isUnit.mul (exp_pos _).ne'.isUnit
+  have hn := (tendsto_pow_mul_exp_neg_atTop_nhds_zero n).comp
+    (tendsto_comap (f := (Subtype.val : {x : ℝ // b * exp x + c ≠ 0} → ℝ)))
+  have hden : Tendsto (fun x : {x : ℝ // b * exp x + c ≠ 0} => b + c * exp (-x.1))
+      (comap Subtype.val atTop) (𝓝 b) := by
+    simpa only [mul_zero, add_zero, Function.comp_def] using
+      ((tendsto_exp_neg_atTop_nhds_zero.comp tendsto_comap).const_mul c).const_add b
+  have hlim := hn.div₀ hden (h₀ := hd) (hb := hb.symm.isUnit)
+  simpa only [Function.comp_def, he, mul_div_mul_right, zero_div] using hlim
 
 /-- `Real.exp` as an order isomorphism between `ℝ` and `(0, +∞)`. -/
 def expOrderIso : ℝ ≃o Ioi (0 : ℝ) :=
@@ -411,14 +433,18 @@ theorem comap_exp_nhds_exp (x : ℝ) : comap exp (𝓝 (exp x)) = 𝓝 x :=
   (isOpenEmbedding_exp.nhds_eq_comap x).symm
 
 theorem isLittleO_pow_exp_atTop {n : ℕ} : (fun x : ℝ => x ^ n) =o[atTop] Real.exp := by
-  simpa [isLittleO_iff_tendsto fun x hx => ((exp_pos x).ne' hx).elim] using
-    tendsto_div_pow_mul_exp_add_atTop 1 0 n zero_ne_one
+  apply isLittleO_of_tendsto fun x hx => ((exp_pos x).ne' hx).elim
+  simpa only [div_eq_mul_inv₀, exp_neg, Function.comp_def] using
+    (tendsto_pow_mul_exp_neg_atTop_nhds_zero n).comp tendsto_comap
 
 @[simp]
 theorem isBigO_exp_comp_exp_comp {f g : α → ℝ} :
     ((fun x => exp (f x)) =O[l] fun x => exp (g x)) ↔ IsBoundedUnder (· ≤ ·) l (f - g) :=
   Iff.trans (isBigO_iff_isBoundedUnder_le_div <| Eventually.of_forall fun _ => exp_ne_zero _) <| by
     simp only [norm_eq_abs, abs_exp, ← exp_sub, isBoundedUnder_le_exp_comp, Pi.sub_def]
+    simp only [Filter.IsBoundedUnder, Filter.IsBounded, Filter.eventually_map]
+    exact exists_congr fun C => eventually_comap_val_iff (l := l) (q := fun x => f x - g x ≤ C)
+      (Eventually.of_forall fun x => exp_ne_zero (g x))
 
 @[simp]
 theorem isTheta_exp_comp_exp_comp {f g : α → ℝ} :
@@ -432,6 +458,8 @@ theorem isLittleO_exp_comp_exp_comp {f g : α → ℝ} :
     ((fun x => exp (f x)) =o[l] fun x => exp (g x)) ↔ Tendsto (fun x => g x - f x) l atTop := by
   simp only [isLittleO_iff_tendsto, exp_ne_zero, ← exp_sub, ← tendsto_neg_atTop_iff, false_imp_iff,
     imp_true_iff, tendsto_exp_comp_nhds_zero, neg_sub]
+  exact tendsto_comap_val_iff (l := l) (F := fun x => g x - f x) (L := atTop)
+    (Eventually.of_forall fun x => exp_ne_zero (g x))
 
 theorem isLittleO_one_exp_comp {f : α → ℝ} :
     ((fun _ => 1 : α → ℝ) =o[l] fun x => exp (f x)) ↔ Tendsto f l atTop := by

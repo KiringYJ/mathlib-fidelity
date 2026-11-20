@@ -613,8 +613,8 @@ theorem lucas_lehmer_necessity (p : ℕ) (w : 3 ≤ p) (hp : (mersenne p).Prime)
   have := X.ω_pow_trace (q := mersenne (p' + 2)) (by simp)
     (legendreSym_mersenne_three w <| hp.of_mersenne.odd_of_ne_two (by lia))
     (legendreSym_mersenne_two w) (by simp [pow_add])
-  rw [succ_mersenne, pow_add, show 2 ^ 2 = 4 by norm_num, mul_div_cancel_right₀ _ (by norm_num)]
-    at this
+  rw [succ_mersenne, pow_add, show 2 ^ 2 = 4 by norm_num,
+    show (2 : ℕ) ^ p' * 4 / 4 = 2 ^ p' by omega] at this
   simp [this]
 
 namespace LucasLehmer

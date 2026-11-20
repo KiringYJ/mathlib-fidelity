@@ -13,10 +13,9 @@ public import Mathlib.Analysis.Calculus.Deriv.MeanValue
 
 In this file, we prove several forms of "L'Hôpital's rule" for computing 0/0
 indeterminate forms. The proof of `HasDerivAt.lhopital_zero_right_on_Ioo`
-is based on the one given in the corresponding
-[Wikibooks](https://en.wikibooks.org/wiki/Calculus/L%27H%C3%B4pital%27s_Rule)
-chapter, and all other statements are derived from this one by composing by
-carefully chosen functions.
+uses Cauchy's mean value theorem. For the limit at infinity we apply Rolle's theorem on
+a ray to `q * g - f`, where `q` is a value of the quotient. Each quotient is taken on the
+subtype where its denominator is invertible, with the filter induced by the original limit.
 
 Note that the filter `f'/g'` tends to isn't required to be one of `𝓝 a`,
 `atTop` or `atBot`. In fact, we give a slightly stronger statement by
@@ -48,23 +47,36 @@ to be satisfied on an explicitly-provided interval.
 -/
 
 
+/-- Express a quotient limit using its graph. This lets us use mean-value identities before
+forming a quotient, including when the point lies in a smaller interval. -/
+private theorem tendsto_divp_iff {F : Filter ℝ} :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val F) l ↔
+    ∀ s ∈ l, ∀ᶠ x in F, ∀ q, g x ≠ 0 → q * g x = f x → q ∈ s := by
+  constructor
+  · intro h s hs
+    have hmem := eventually_comap.mp (h hs)
+    filter_upwards [hmem] with x hx q hg hq
+    let u := hg.isUnit
+    have heq : q = f x /ₚ u.unit := eq_divp_iff_mul_eq.mpr (by simpa using hq)
+    exact heq ▸ hx ⟨x, u⟩ rfl
+  · intro h s hs
+    apply eventually_comap.mpr
+    filter_upwards [h s hs] with x hx y hy
+    subst x
+    exact hx _ y.property.ne_zero (by simpa using divp_mul_cancel (f y) y.property.unit)
+
 namespace HasDerivAt
 
 theorem lhopital_zero_right_on_Ioo (hab : a < b) (hff' : ∀ x ∈ Ioo a b, HasDerivAt f (f' x) x)
     (hgg' : ∀ x ∈ Ioo a b, HasDerivAt g (g' x) x) (hg' : ∀ x ∈ Ioo a b, g' x ≠ 0)
     (hfa : Tendsto f (𝓝[>] a) (𝓝 0)) (hga : Tendsto g (𝓝[>] a) (𝓝 0))
-    (hdiv : Tendsto (fun x => f' x / g' x) (𝓝[>] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[>] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l := by
   have sub : ∀ x ∈ Ioo a b, Ioo a x ⊆ Ioo a b := fun x hx =>
     Ioo_subset_Ioo (le_refl a) (le_of_lt hx.2)
-  have hg : ∀ x ∈ Ioo a b, g x ≠ 0 := by
-    intro x hx h
-    have : Tendsto g (𝓝[<] x) (𝓝 0) := by
-      rw [← h, ← nhdsWithin_Ioo_eq_nhdsLT hx.1]
-      exact ((hgg' x hx).continuousAt.continuousWithinAt.mono <| sub x hx).tendsto
-    obtain ⟨y, hyx, hy⟩ : ∃ c ∈ Ioo a x, g' c = 0 :=
-      exists_hasDerivAt_eq_zero' hx.1 hga this fun y hy => hgg' y <| sub x hx hy
-    exact hg' y (sub x hx hyx) hy
   have : ∀ x ∈ Ioo a b, ∃ c ∈ Ioo a x, f x * g' c = g x * f' c := by
     intro x hx
     rw [← sub_zero (f x), ← sub_zero (g x)]
@@ -72,27 +84,26 @@ theorem lhopital_zero_right_on_Ioo (hab : a < b) (hff' : ∀ x ∈ Ioo a b, HasD
       (fun y hy => hff' y <| sub x hx hy) hga hfa
       (tendsto_nhdsWithin_of_tendsto_nhds (hgg' x hx).continuousAt.tendsto)
       (tendsto_nhdsWithin_of_tendsto_nhds (hff' x hx).continuousAt.tendsto)
-  choose! c hc using this
-  have : ∀ x ∈ Ioo a b, ((fun x' => f' x' / g' x') ∘ c) x = f x / g x := by grind
-  have cmp : ∀ x ∈ Ioo a b, a < c x ∧ c x < x := fun x hx ↦ (hc x hx).1
-  rw [← nhdsWithin_Ioo_eq_nhdsGT hab]
-  apply tendsto_nhdsWithin_congr this
-  apply hdiv.comp
-  refine tendsto_nhdsWithin_of_tendsto_nhds_of_eventually_within _
-    (tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds
-      (tendsto_nhdsWithin_of_tendsto_nhds tendsto_id) ?_ ?_) ?_
-  all_goals
-    apply eventually_nhdsWithin_of_forall
-    intro x hx
-    have := cmp x hx
-    simp
-    linarith [this]
+  intro s hs
+  apply eventually_comap.mpr
+  obtain ⟨d, had, hd⟩ := mem_nhdsGT_iff_exists_Ioo_subset.mp ((tendsto_divp_iff.mp hdiv) s hs)
+  filter_upwards [Ioo_mem_nhdsGT (lt_min hab had)] with x hx y hy
+  subst x
+  obtain ⟨c, hc, heq⟩ := this y ⟨hx.1, hx.2.trans_le (min_le_left ..)⟩
+  have hcb : c < b := hc.2.trans (hx.2.trans_le (min_le_left ..))
+  have hcd : c < d := hc.2.trans (hx.2.trans_le (min_le_right ..))
+  apply hd ⟨hc.1, hcd⟩ _ (hg' c ⟨hc.1, hcb⟩)
+  have hq : f y /ₚ y.property.unit * g y = f y := by
+    simpa using divp_mul_cancel (f y) y.property.unit
+  exact mul_right_cancel₀ y.property.ne_zero (by linear_combination (g' c) * hq + heq)
 
 theorem lhopital_zero_right_on_Ico (hab : a < b) (hff' : ∀ x ∈ Ioo a b, HasDerivAt f (f' x) x)
     (hgg' : ∀ x ∈ Ioo a b, HasDerivAt g (g' x) x) (hcf : ContinuousOn f (Ico a b))
     (hcg : ContinuousOn g (Ico a b)) (hg' : ∀ x ∈ Ioo a b, g' x ≠ 0) (hfa : f a = 0) (hga : g a = 0)
-    (hdiv : Tendsto (fun x => f' x / g' x) (𝓝[>] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[>] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l := by
   refine lhopital_zero_right_on_Ioo hab hff' hgg' hg' ?_ ?_ hdiv
   · rw [← hfa, ← nhdsWithin_Ioo_eq_nhdsGT hab]
     exact ((hcf a <| left_mem_Ico.mpr hab).mono Ioo_subset_Ico_self).tendsto
@@ -102,8 +113,10 @@ theorem lhopital_zero_right_on_Ico (hab : a < b) (hff' : ∀ x ∈ Ioo a b, HasD
 theorem lhopital_zero_left_on_Ioo (hab : a < b) (hff' : ∀ x ∈ Ioo a b, HasDerivAt f (f' x) x)
     (hgg' : ∀ x ∈ Ioo a b, HasDerivAt g (g' x) x) (hg' : ∀ x ∈ Ioo a b, g' x ≠ 0)
     (hfb : Tendsto f (𝓝[<] b) (𝓝 0)) (hgb : Tendsto g (𝓝[<] b) (𝓝 0))
-    (hdiv : Tendsto (fun x => f' x / g' x) (𝓝[<] b) l) :
-    Tendsto (fun x => f x / g x) (𝓝[<] b) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[<] b)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[<] b)) l := by
   -- Here, we essentially compose by `Neg.neg`. The following is mostly technical details.
   have hdnf : ∀ x ∈ -Ioo a b, HasDerivAt (f ∘ Neg.neg) (f' (-x) * -1) x := fun x hx =>
     comp x (hff' (-x) hx) (hasDerivAt_neg x)
@@ -113,56 +126,86 @@ theorem lhopital_zero_left_on_Ioo (hab : a < b) (hff' : ∀ x ∈ Ioo a b, HasDe
   have := lhopital_zero_right_on_Ioo (neg_lt_neg hab) hdnf hdng (by grind)
     (hfb.comp tendsto_neg_nhdsGT_neg) (hgb.comp tendsto_neg_nhdsGT_neg)
     (by
-      simp only [neg_div_neg_eq, mul_one, mul_neg]
-      exact hdiv.comp tendsto_neg_nhdsGT_neg)
-  have := this.comp tendsto_neg_nhdsLT
-  unfold Function.comp at this
-  simpa only [neg_neg]
+      apply (tendsto_divp_iff (f := fun x ↦ f' (-x) * -1) (g := fun x ↦ g' (-x) * -1) (l := l)).mpr
+      intro s hs
+      filter_upwards [tendsto_neg_nhdsGT_neg.eventually ((tendsto_divp_iff.mp hdiv) s hs)]
+        with x hx q hg hq
+      exact hx q (by simpa using hg) (by simpa using hq))
+  apply tendsto_divp_iff.mpr
+  intro s hs
+  simpa only [Function.comp_apply, neg_neg] using
+    tendsto_neg_nhdsLT.eventually
+      ((tendsto_divp_iff (f := f ∘ Neg.neg) (g := g ∘ Neg.neg)).mp this s hs)
 
 theorem lhopital_zero_left_on_Ioc (hab : a < b) (hff' : ∀ x ∈ Ioo a b, HasDerivAt f (f' x) x)
     (hgg' : ∀ x ∈ Ioo a b, HasDerivAt g (g' x) x) (hcf : ContinuousOn f (Ioc a b))
     (hcg : ContinuousOn g (Ioc a b)) (hg' : ∀ x ∈ Ioo a b, g' x ≠ 0) (hfb : f b = 0) (hgb : g b = 0)
-    (hdiv : Tendsto (fun x => f' x / g' x) (𝓝[<] b) l) :
-    Tendsto (fun x => f x / g x) (𝓝[<] b) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[<] b)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[<] b)) l := by
   refine lhopital_zero_left_on_Ioo hab hff' hgg' hg' ?_ ?_ hdiv
   · rw [← hfb, ← nhdsWithin_Ioo_eq_nhdsLT hab]
     exact ((hcf b <| right_mem_Ioc.mpr hab).mono Ioo_subset_Ioc_self).tendsto
   · rw [← hgb, ← nhdsWithin_Ioo_eq_nhdsLT hab]
     exact ((hcg b <| right_mem_Ioc.mpr hab).mono Ioo_subset_Ioc_self).tendsto
 
+/-- Rolle's theorem on a closed ray when the value at the endpoint and the limit at infinity
+are both zero. -/
+private theorem exists_hasDerivAt_eq_zero_atTop {h h' : ℝ → ℝ} {x : ℝ}
+    (hd : ∀ t ∈ Ici x, HasDerivAt h (h' t) t) (hx : h x = 0)
+    (ht : Tendsto h atTop (𝓝 0)) : ∃ c, x < c ∧ h' c = 0 := by
+  obtain ⟨y, hxy⟩ := exists_gt x
+  have hc {z : ℝ} : ContinuousOn h (Icc x z) :=
+    fun t ht ↦ (hd t ht.1).continuousAt.continuousWithinAt
+  by_cases hy : h y = 0
+  · obtain ⟨c, hc, heq⟩ := exists_hasDerivAt_eq_zero hxy hc (hx.trans hy.symm)
+      (fun t ht ↦ hd t ht.1.le)
+    exact ⟨c, hc.1, heq⟩
+  · have hpos : 0 < h y ^ 2 := sq_pos_of_ne_zero hy
+    have ht₂ : Tendsto (fun t ↦ h t ^ 2) atTop (𝓝 0) := by simpa using ht.pow 2
+    obtain ⟨z, hyz, hz⟩ := ((eventually_gt_atTop y).and (ht₂.eventually_lt_const hpos)).exists
+    obtain ⟨c, hc', hmax⟩ := isCompact_Icc.exists_isMaxOn
+      (nonempty_Icc.mpr (hxy.trans hyz).le) (hc.pow 2)
+    have hyc : h y ^ 2 ≤ h c ^ 2 := hmax (show y ∈ Icc x z from ⟨hxy.le, hyz.le⟩)
+    have hne : h c ≠ 0 := by
+      rintro heq
+      rw [heq] at hyc
+      linarith
+    have hxc : x < c := lt_of_le_of_ne hc'.1 (fun e ↦ hne (e ▸ hx))
+    have hcz : c < z := lt_of_le_of_ne hc'.2 (by rintro rfl; exact hz.not_ge hyc)
+    rw [pow_two] at hmax
+    have heq := (hmax.isLocalMax (Icc_mem_nhds hxc hcz)).hasDerivAt_eq_zero
+      ((hd c hxc.le).mul (hd c hxc.le))
+    have hprod : h' c * h c = 0 := by linarith [mul_comm (h c) (h' c)]
+    exact ⟨c, hxc, (mul_eq_zero.mp hprod).resolve_right hne⟩
+
 theorem lhopital_zero_atTop_on_Ioi (hff' : ∀ x ∈ Ioi a, HasDerivAt f (f' x) x)
     (hgg' : ∀ x ∈ Ioi a, HasDerivAt g (g' x) x) (hg' : ∀ x ∈ Ioi a, g' x ≠ 0)
     (hftop : Tendsto f atTop (𝓝 0)) (hgtop : Tendsto g atTop (𝓝 0))
-    (hdiv : Tendsto (fun x => f' x / g' x) atTop l) : Tendsto (fun x => f x / g x) atTop l := by
-  obtain ⟨a', haa', ha'⟩ : ∃ a', a < a' ∧ 0 < a' := ⟨1 + max a 0,
-    ⟨lt_of_le_of_lt (le_max_left a 0) (lt_one_add _),
-      lt_of_le_of_lt (le_max_right a 0) (lt_one_add _)⟩⟩
-  have fact1 : ∀ x : ℝ, x ∈ Ioo 0 a'⁻¹ → x ≠ 0 := fun _ hx => (ne_of_lt hx.1).symm
-  have fact2 (x) (hx : x ∈ Ioo 0 a'⁻¹) : a < x⁻¹ := lt_trans haa' ((lt_inv_comm₀ ha' hx.1).mpr hx.2)
-  have hdnf : ∀ x ∈ Ioo 0 a'⁻¹, HasDerivAt (f ∘ Inv.inv) (f' x⁻¹ * -(x ^ 2)⁻¹) x := fun x hx =>
-    comp x (hff' x⁻¹ <| fact2 x hx) (hasDerivAt_inv <| fact1 x hx)
-  have hdng : ∀ x ∈ Ioo 0 a'⁻¹, HasDerivAt (g ∘ Inv.inv) (g' x⁻¹ * -(x ^ 2)⁻¹) x := fun x hx =>
-    comp x (hgg' x⁻¹ <| fact2 x hx) (hasDerivAt_inv <| fact1 x hx)
-  have := lhopital_zero_right_on_Ioo (inv_pos.mpr ha') hdnf hdng
-    (by
-      intro x hx
-      refine mul_ne_zero ?_ (neg_ne_zero.mpr <| inv_ne_zero <| pow_ne_zero _ <| fact1 x hx)
-      exact hg' _ (fact2 x hx))
-    (hftop.comp tendsto_inv_nhdsGT_zero) (hgtop.comp tendsto_inv_nhdsGT_zero)
-    (by
-      refine (tendsto_congr' ?_).mp (hdiv.comp tendsto_inv_nhdsGT_zero)
-      filter_upwards [self_mem_nhdsWithin] with x (hx : 0 < x)
-      simp only [Function.comp_def]
-      rw [mul_div_mul_right]
-      exact neg_ne_zero.mpr (by positivity))
-  have := this.comp tendsto_inv_atTop_nhdsGT_zero
-  unfold Function.comp at this
-  simpa only [inv_inv]
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val atTop) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val atTop) l := by
+  apply tendsto_divp_iff.mpr
+  intro s hs
+  obtain ⟨b, hb⟩ := eventually_atTop.1 ((tendsto_divp_iff.mp hdiv) s hs)
+  filter_upwards [eventually_gt_atTop (max a b)] with x hx q _ hq
+  have hax : a < x := (le_max_left ..).trans_lt hx
+  have hbx : b < x := (le_max_right ..).trans_lt hx
+  obtain ⟨c, hxc, hc⟩ := exists_hasDerivAt_eq_zero_atTop
+    (h := fun t ↦ q * g t - f t) (h' := fun t ↦ q * g' t - f' t)
+    (x := x) (fun t ht ↦ ((hgg' t (hax.trans_le ht)).const_mul q).sub (hff' t (hax.trans_le ht)))
+    (sub_eq_zero.mpr hq) (by simpa using (hgtop.const_mul q).sub hftop)
+  exact hb c (hbx.trans hxc).le q (hg' c (hax.trans hxc)) (sub_eq_zero.mp hc)
 
 theorem lhopital_zero_atBot_on_Iio (hff' : ∀ x ∈ Iio a, HasDerivAt f (f' x) x)
     (hgg' : ∀ x ∈ Iio a, HasDerivAt g (g' x) x) (hg' : ∀ x ∈ Iio a, g' x ≠ 0)
     (hfbot : Tendsto f atBot (𝓝 0)) (hgbot : Tendsto g atBot (𝓝 0))
-    (hdiv : Tendsto (fun x => f' x / g' x) atBot l) : Tendsto (fun x => f x / g x) atBot l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val atBot) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val atBot) l := by
   -- Here, we essentially compose by `Neg.neg`. The following is mostly technical details.
   have hdnf : ∀ x ∈ -Iio a, HasDerivAt (f ∘ Neg.neg) (f' (-x) * -1) x := fun x hx =>
     comp x (hff' (-x) hx) (hasDerivAt_neg x)
@@ -171,10 +214,17 @@ theorem lhopital_zero_atBot_on_Iio (hff' : ∀ x ∈ Iio a, HasDerivAt f (f' x) 
   rw [neg_Iio] at hdnf hdng
   have := lhopital_zero_atTop_on_Ioi hdnf hdng (by grind)
     (hfbot.comp tendsto_neg_atTop_atBot) (hgbot.comp tendsto_neg_atTop_atBot)
-    (by simpa using! hdiv.comp tendsto_neg_atTop_atBot)
-  have := this.comp tendsto_neg_atBot_atTop
-  unfold Function.comp at this
-  simpa only [neg_neg]
+    (by
+      apply (tendsto_divp_iff (f := fun x ↦ f' (-x) * -1) (g := fun x ↦ g' (-x) * -1) (l := l)).mpr
+      intro s hs
+      filter_upwards [tendsto_neg_atTop_atBot.eventually ((tendsto_divp_iff.mp hdiv) s hs)]
+        with x hx q hg hq
+      exact hx q (by simpa using hg) (by simpa using hq))
+  apply tendsto_divp_iff.mpr
+  intro s hs
+  simpa only [Function.comp_apply, neg_neg] using
+    tendsto_neg_atBot_atTop.eventually
+      ((tendsto_divp_iff (f := f ∘ Neg.neg) (g := g ∘ Neg.neg)).mp this s hs)
 
 end HasDerivAt
 
@@ -183,8 +233,10 @@ namespace deriv
 theorem lhopital_zero_right_on_Ioo (hab : a < b) (hdf : DifferentiableOn ℝ f (Ioo a b))
     (hg' : ∀ x ∈ Ioo a b, deriv g x ≠ 0) (hfa : Tendsto f (𝓝[>] a) (𝓝 0))
     (hga : Tendsto g (𝓝[>] a) (𝓝 0))
-    (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) (𝓝[>] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[>] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l := by
   have hdf : ∀ x ∈ Ioo a b, DifferentiableAt ℝ f x := fun x hx =>
     (hdf x hx).differentiableAt (Ioo_mem_nhds hx.1 hx.2)
   have hdg : ∀ x ∈ Ioo a b, DifferentiableAt ℝ g x := fun x hx =>
@@ -195,8 +247,10 @@ theorem lhopital_zero_right_on_Ioo (hab : a < b) (hdf : DifferentiableOn ℝ f (
 theorem lhopital_zero_right_on_Ico (hab : a < b) (hdf : DifferentiableOn ℝ f (Ioo a b))
     (hcf : ContinuousOn f (Ico a b)) (hcg : ContinuousOn g (Ico a b))
     (hg' : ∀ x ∈ Ioo a b, (deriv g) x ≠ 0) (hfa : f a = 0) (hga : g a = 0)
-    (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) (𝓝[>] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[>] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l := by
   refine lhopital_zero_right_on_Ioo hab hdf hg' ?_ ?_ hdiv
   · rw [← hfa, ← nhdsWithin_Ioo_eq_nhdsGT hab]
     exact ((hcf a <| left_mem_Ico.mpr hab).mono Ioo_subset_Ico_self).tendsto
@@ -206,8 +260,10 @@ theorem lhopital_zero_right_on_Ico (hab : a < b) (hdf : DifferentiableOn ℝ f (
 theorem lhopital_zero_left_on_Ioo (hab : a < b) (hdf : DifferentiableOn ℝ f (Ioo a b))
     (hg' : ∀ x ∈ Ioo a b, (deriv g) x ≠ 0) (hfb : Tendsto f (𝓝[<] b) (𝓝 0))
     (hgb : Tendsto g (𝓝[<] b) (𝓝 0))
-    (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) (𝓝[<] b) l) :
-    Tendsto (fun x => f x / g x) (𝓝[<] b) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[<] b)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[<] b)) l := by
   have hdf : ∀ x ∈ Ioo a b, DifferentiableAt ℝ f x := fun x hx =>
     (hdf x hx).differentiableAt (Ioo_mem_nhds hx.1 hx.2)
   have hdg : ∀ x ∈ Ioo a b, DifferentiableAt ℝ g x := fun x hx =>
@@ -217,8 +273,11 @@ theorem lhopital_zero_left_on_Ioo (hab : a < b) (hdf : DifferentiableOn ℝ f (I
 
 theorem lhopital_zero_atTop_on_Ioi (hdf : DifferentiableOn ℝ f (Ioi a))
     (hg' : ∀ x ∈ Ioi a, (deriv g) x ≠ 0) (hftop : Tendsto f atTop (𝓝 0))
-    (hgtop : Tendsto g atTop (𝓝 0)) (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) atTop l) :
-    Tendsto (fun x => f x / g x) atTop l := by
+    (hgtop : Tendsto g atTop (𝓝 0))
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val atTop) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val atTop) l := by
   have hdf : ∀ x ∈ Ioi a, DifferentiableAt ℝ f x := fun x hx =>
     (hdf x hx).differentiableAt (Ioi_mem_nhds hx)
   have hdg : ∀ x ∈ Ioi a, DifferentiableAt ℝ g x := fun x hx =>
@@ -228,8 +287,11 @@ theorem lhopital_zero_atTop_on_Ioi (hdf : DifferentiableOn ℝ f (Ioi a))
 
 theorem lhopital_zero_atBot_on_Iio (hdf : DifferentiableOn ℝ f (Iio a))
     (hg' : ∀ x ∈ Iio a, (deriv g) x ≠ 0) (hfbot : Tendsto f atBot (𝓝 0))
-    (hgbot : Tendsto g atBot (𝓝 0)) (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) atBot l) :
-    Tendsto (fun x => f x / g x) atBot l := by
+    (hgbot : Tendsto g atBot (𝓝 0))
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val atBot) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val atBot) l := by
   have hdf : ∀ x ∈ Iio a, DifferentiableAt ℝ f x := fun x hx =>
     (hdf x hx).differentiableAt (Iio_mem_nhds hx)
   have hdg : ∀ x ∈ Iio a, DifferentiableAt ℝ g x := fun x hx =>
@@ -253,8 +315,10 @@ namespace HasDerivAt
 theorem lhopital_zero_nhdsGT (hff' : ∀ᶠ x in 𝓝[>] a, HasDerivAt f (f' x) x)
     (hgg' : ∀ᶠ x in 𝓝[>] a, HasDerivAt g (g' x) x) (hg' : ∀ᶠ x in 𝓝[>] a, g' x ≠ 0)
     (hfa : Tendsto f (𝓝[>] a) (𝓝 0)) (hga : Tendsto g (𝓝[>] a) (𝓝 0))
-    (hdiv : Tendsto (fun x => f' x / g' x) (𝓝[>] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[>] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l := by
   rw [eventually_iff_exists_mem] at *
   rcases hff' with ⟨s₁, hs₁, hff'⟩
   rcases hgg' with ⟨s₂, hs₂, hgg'⟩
@@ -269,8 +333,10 @@ theorem lhopital_zero_nhdsGT (hff' : ∀ᶠ x in 𝓝[>] a, HasDerivAt f (f' x) 
 theorem lhopital_zero_nhdsLT (hff' : ∀ᶠ x in 𝓝[<] a, HasDerivAt f (f' x) x)
     (hgg' : ∀ᶠ x in 𝓝[<] a, HasDerivAt g (g' x) x) (hg' : ∀ᶠ x in 𝓝[<] a, g' x ≠ 0)
     (hfa : Tendsto f (𝓝[<] a) (𝓝 0)) (hga : Tendsto g (𝓝[<] a) (𝓝 0))
-    (hdiv : Tendsto (fun x => f' x / g' x) (𝓝[<] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[<] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[<] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[<] a)) l := by
   rw [eventually_iff_exists_mem] at *
   rcases hff' with ⟨s₁, hs₁, hff'⟩
   rcases hgg' with ⟨s₂, hs₂, hgg'⟩
@@ -286,9 +352,11 @@ theorem lhopital_zero_nhdsLT (hff' : ∀ᶠ x in 𝓝[<] a, HasDerivAt f (f' x) 
 theorem lhopital_zero_nhdsNE (hff' : ∀ᶠ x in 𝓝[≠] a, HasDerivAt f (f' x) x)
     (hgg' : ∀ᶠ x in 𝓝[≠] a, HasDerivAt g (g' x) x) (hg' : ∀ᶠ x in 𝓝[≠] a, g' x ≠ 0)
     (hfa : Tendsto f (𝓝[≠] a) (𝓝 0)) (hga : Tendsto g (𝓝[≠] a) (𝓝 0))
-    (hdiv : Tendsto (fun x => f' x / g' x) (𝓝[≠] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[≠] a) l := by
-  simp only [← Iio_union_Ioi, nhdsWithin_union, tendsto_sup, eventually_sup] at *
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[≠] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[≠] a)) l := by
+  simp only [← Iio_union_Ioi, nhdsWithin_union, comap_sup, tendsto_sup, eventually_sup] at *
   exact ⟨lhopital_zero_nhdsLT hff'.1 hgg'.1 hg'.1 hfa.1 hga.1 hdiv.1,
     lhopital_zero_nhdsGT hff'.2 hgg'.2 hg'.2 hfa.2 hga.2 hdiv.2⟩
 
@@ -299,8 +367,13 @@ theorem _root_.HasDerivWithinAt.lhopital_zero_nhdsWithin_convex {s : Set ℝ} (h
     (hgg' : ∀ᶠ x in 𝓝[s \ {a}] a, HasDerivWithinAt g (g' x) (s \ {a}) x)
     (hg' : ∀ᶠ x in 𝓝[s \ {a}] a, g' x ≠ 0)
     (hfa : Tendsto f (𝓝[s \ {a}] a) (𝓝 0)) (hga : Tendsto g (𝓝[s \ {a}] a) (𝓝 0))
-    (hdiv : Tendsto (fun x ↦ f' x / g' x) (𝓝[s \ {a}] a) l) :
-    Tendsto (fun x ↦ f x / g x) (𝓝[s \ {a}] a) l := .of_neBot_imp fun has => by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[s \ {a}] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[s \ {a}] a)) l := by
+  by_cases has : (𝓝[s \ {a}] a).NeBot
+  swap
+  · simp [not_neBot.mp has]
   replace has := closure_mono sdiff_subset (mem_closure_iff_nhdsWithin_neBot.2 has)
   have h := hs.sdiff_singleton_eventually_mem_nhds a
   replace hff' := h.mp <| hff'.mono fun _ h ↦ h.hasDerivAt
@@ -319,16 +392,23 @@ theorem _root_.HasDerivWithinAt.lhopital_zero_nhdsWithin_convex {s : Set ℝ} (h
 theorem lhopital_zero_nhds (hff' : ∀ᶠ x in 𝓝 a, HasDerivAt f (f' x) x)
     (hgg' : ∀ᶠ x in 𝓝 a, HasDerivAt g (g' x) x) (hg' : ∀ᶠ x in 𝓝 a, g' x ≠ 0)
     (hfa : Tendsto f (𝓝 a) (𝓝 0)) (hga : Tendsto g (𝓝 a) (𝓝 0))
-    (hdiv : Tendsto (fun x => f' x / g' x) (𝓝 a) l) : Tendsto (fun x => f x / g x) (𝓝[≠] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝 a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[≠] a)) l := by
   apply @lhopital_zero_nhdsNE _ _ _ f' _ g' <;>
     (first | apply eventually_nhdsWithin_of_eventually_nhds |
-      apply tendsto_nhdsWithin_of_tendsto_nhds) <;> assumption
+      apply tendsto_nhdsWithin_of_tendsto_nhds |
+      exact hdiv.mono_left (comap_mono nhdsWithin_le_nhds)) <;> assumption
 
 /-- L'Hôpital's rule for approaching +∞, `HasDerivAt` version -/
 theorem lhopital_zero_atTop (hff' : ∀ᶠ x in atTop, HasDerivAt f (f' x) x)
     (hgg' : ∀ᶠ x in atTop, HasDerivAt g (g' x) x) (hg' : ∀ᶠ x in atTop, g' x ≠ 0)
     (hftop : Tendsto f atTop (𝓝 0)) (hgtop : Tendsto g atTop (𝓝 0))
-    (hdiv : Tendsto (fun x => f' x / g' x) atTop l) : Tendsto (fun x => f x / g x) atTop l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val atTop) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val atTop) l := by
   rw [eventually_iff_exists_mem] at *
   rcases hff' with ⟨s₁, hs₁, hff'⟩
   rcases hgg' with ⟨s₂, hs₂, hgg'⟩
@@ -344,7 +424,10 @@ theorem lhopital_zero_atTop (hff' : ∀ᶠ x in atTop, HasDerivAt f (f' x) x)
 theorem lhopital_zero_atBot (hff' : ∀ᶠ x in atBot, HasDerivAt f (f' x) x)
     (hgg' : ∀ᶠ x in atBot, HasDerivAt g (g' x) x) (hg' : ∀ᶠ x in atBot, g' x ≠ 0)
     (hfbot : Tendsto f atBot (𝓝 0)) (hgbot : Tendsto g atBot (𝓝 0))
-    (hdiv : Tendsto (fun x => f' x / g' x) atBot l) : Tendsto (fun x => f x / g x) atBot l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (g' x)} ↦ f' x /ₚ x.property.unit)
+      (comap Subtype.val atBot) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val atBot) l := by
   rw [eventually_iff_exists_mem] at *
   rcases hff' with ⟨s₁, hs₁, hff'⟩
   rcases hgg' with ⟨s₂, hs₂, hgg'⟩
@@ -365,9 +448,11 @@ theorem lhopital_zero_nhdsWithin_convex {s : Set ℝ} (hs : Convex ℝ s)
     (hdf : ∀ᶠ x in 𝓝[s \ {a}] a, DifferentiableWithinAt ℝ f (s \ {a}) x)
     (hg' : ∀ᶠ x in 𝓝[s \ {a}] a, derivWithin g (s \ {a}) x ≠ 0)
     (hfa : Tendsto f (𝓝[s \ {a}] a) (𝓝 0)) (hga : Tendsto g (𝓝[s \ {a}] a) (𝓝 0))
-    (hdiv : Tendsto (fun x => derivWithin f (s \ {a}) x / derivWithin g (s \ {a}) x)
-      (𝓝[s \ {a}] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[s \ {a}] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (derivWithin g (s \ {a}) x)} ↦
+      derivWithin f (s \ {a}) x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[s \ {a}] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[s \ {a}] a)) l := by
   have hdg : ∀ᶠ x in 𝓝[s \ {a}] a, DifferentiableWithinAt ℝ g (s \ {a}) x :=
     hg'.mp (Eventually.of_forall fun _ hg' =>
       by_contradiction fun h => hg' (derivWithin_zero_of_not_differentiableWithinAt h))
@@ -385,24 +470,31 @@ namespace deriv
 theorem lhopital_zero_nhdsWithin_convex {s : Set ℝ} (hs : Convex ℝ s)
     (hdf : ∀ᶠ x in 𝓝[s \ {a}] a, DifferentiableAt ℝ f x) (hg' : ∀ᶠ x in 𝓝[s \ {a}] a, deriv g x ≠ 0)
     (hfa : Tendsto f (𝓝[s \ {a}] a) (𝓝 0)) (hga : Tendsto g (𝓝[s \ {a}] a) (𝓝 0))
-    (hdiv : Tendsto (fun x => deriv f x / deriv g x) (𝓝[s \ {a}] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[s \ {a}] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[s \ {a}] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[s \ {a}] a)) l := by
   refine derivWithin.lhopital_zero_nhdsWithin_convex hs
-    (hdf.mono fun _ h ↦ h.differentiableWithinAt) (hg'.mp ?_) hfa hga
-    (hdiv.congr' ?_)
-  all_goals
-    apply (hs.sdiff_singleton_eventually_mem_nhds a).mono
-    intros
-  · rwa [derivWithin_of_mem_nhds ‹_›]
-  · simp only
-    iterate 2 rw [derivWithin_of_mem_nhds ‹_›]
+    (hdf.mono fun _ h ↦ h.differentiableWithinAt) ?_ hfa hga ?_
+  · filter_upwards [hg', hs.sdiff_singleton_eventually_mem_nhds a] with x hg hx
+    simpa only [derivWithin_of_mem_nhds hx] using hg
+  · apply (tendsto_divp_iff (f := fun x ↦ derivWithin f (s \ {a}) x id)
+      (g := fun x ↦ derivWithin g (s \ {a}) x id)).mpr
+    intro t ht
+    have hq := (tendsto_divp_iff (f := fun x ↦ deriv f x id)
+      (g := fun x ↦ deriv g x id)).mp hdiv t ht
+    filter_upwards [hs.sdiff_singleton_eventually_mem_nhds a, hq]
+      with x hx hq
+    simpa only [derivWithin_of_mem_nhds hx] using hq
 
 /-- **L'Hôpital's rule** for approaching a real from the right, `deriv` version -/
 theorem lhopital_zero_nhdsGT (hdf : ∀ᶠ x in 𝓝[>] a, DifferentiableAt ℝ f x)
     (hg' : ∀ᶠ x in 𝓝[>] a, deriv g x ≠ 0) (hfa : Tendsto f (𝓝[>] a) (𝓝 0))
     (hga : Tendsto g (𝓝[>] a) (𝓝 0))
-    (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) (𝓝[>] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[>] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[>] a)) l := by
   rw [← Ici_sdiff_left] at *
   exact lhopital_zero_nhdsWithin_convex (convex_Ici a) hdf hg' hfa hga hdiv
 
@@ -410,8 +502,10 @@ theorem lhopital_zero_nhdsGT (hdf : ∀ᶠ x in 𝓝[>] a, DifferentiableAt ℝ 
 theorem lhopital_zero_nhdsLT (hdf : ∀ᶠ x in 𝓝[<] a, DifferentiableAt ℝ f x)
     (hg' : ∀ᶠ x in 𝓝[<] a, deriv g x ≠ 0) (hfa : Tendsto f (𝓝[<] a) (𝓝 0))
     (hga : Tendsto g (𝓝[<] a) (𝓝 0))
-    (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) (𝓝[<] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[<] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[<] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[<] a)) l := by
   rw [← Iic_sdiff_right] at *
   exact lhopital_zero_nhdsWithin_convex (convex_Iic a) hdf hg' hfa hga hdiv
 
@@ -420,25 +514,33 @@ theorem lhopital_zero_nhdsLT (hdf : ∀ᶠ x in 𝓝[<] a, DifferentiableAt ℝ 
 theorem lhopital_zero_nhdsNE (hdf : ∀ᶠ x in 𝓝[≠] a, DifferentiableAt ℝ f x)
     (hg' : ∀ᶠ x in 𝓝[≠] a, deriv g x ≠ 0) (hfa : Tendsto f (𝓝[≠] a) (𝓝 0))
     (hga : Tendsto g (𝓝[≠] a) (𝓝 0))
-    (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) (𝓝[≠] a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[≠] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[≠] a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[≠] a)) l := by
   rw [compl_eq_univ_sdiff] at *
   exact lhopital_zero_nhdsWithin_convex convex_univ hdf hg' hfa hga hdiv
 
 /-- **L'Hôpital's rule** for approaching a real, `deriv` version -/
 theorem lhopital_zero_nhds (hdf : ∀ᶠ x in 𝓝 a, DifferentiableAt ℝ f x)
     (hg' : ∀ᶠ x in 𝓝 a, deriv g x ≠ 0) (hfa : Tendsto f (𝓝 a) (𝓝 0)) (hga : Tendsto g (𝓝 a) (𝓝 0))
-    (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) (𝓝 a) l) :
-    Tendsto (fun x => f x / g x) (𝓝[≠] a) l := by
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝 a)) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val (𝓝[≠] a)) l := by
   apply lhopital_zero_nhdsNE <;>
     (first | apply eventually_nhdsWithin_of_eventually_nhds |
-      apply tendsto_nhdsWithin_of_tendsto_nhds) <;> assumption
+      apply tendsto_nhdsWithin_of_tendsto_nhds |
+      exact hdiv.mono_left (comap_mono nhdsWithin_le_nhds)) <;> assumption
 
 /-- **L'Hôpital's rule** for approaching +∞, `deriv` version -/
 theorem lhopital_zero_atTop (hdf : ∀ᶠ x : ℝ in atTop, DifferentiableAt ℝ f x)
     (hg' : ∀ᶠ x : ℝ in atTop, deriv g x ≠ 0) (hftop : Tendsto f atTop (𝓝 0))
-    (hgtop : Tendsto g atTop (𝓝 0)) (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) atTop l) :
-    Tendsto (fun x => f x / g x) atTop l := by
+    (hgtop : Tendsto g atTop (𝓝 0))
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val atTop) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val atTop) l := by
   have hdg : ∀ᶠ x in atTop, DifferentiableAt ℝ g x := hg'.mp
     (Eventually.of_forall fun _ hg' =>
       by_contradiction fun h => hg' (deriv_zero_of_not_differentiableAt h))
@@ -451,8 +553,11 @@ theorem lhopital_zero_atTop (hdf : ∀ᶠ x : ℝ in atTop, DifferentiableAt ℝ
 /-- **L'Hôpital's rule** for approaching -∞, `deriv` version -/
 theorem lhopital_zero_atBot (hdf : ∀ᶠ x : ℝ in atBot, DifferentiableAt ℝ f x)
     (hg' : ∀ᶠ x : ℝ in atBot, deriv g x ≠ 0) (hfbot : Tendsto f atBot (𝓝 0))
-    (hgbot : Tendsto g atBot (𝓝 0)) (hdiv : Tendsto (fun x => (deriv f) x / (deriv g) x) atBot l) :
-    Tendsto (fun x => f x / g x) atBot l := by
+    (hgbot : Tendsto g atBot (𝓝 0))
+    (hdiv : Tendsto (fun x : {x : ℝ // IsUnit (deriv g x)} ↦ deriv f x /ₚ x.property.unit)
+      (comap Subtype.val atBot) l) :
+    Tendsto (fun x : {x : ℝ // IsUnit (g x)} ↦ f x /ₚ x.property.unit)
+      (comap Subtype.val atBot) l := by
   have hdg : ∀ᶠ x in atBot, DifferentiableAt ℝ g x :=
     hg'.mono fun _ hg' => by_contradiction fun h => hg' (deriv_zero_of_not_differentiableAt h)
   have hdf' : ∀ᶠ x in atBot, HasDerivAt f (deriv f x) x :=

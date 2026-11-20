@@ -81,7 +81,7 @@ noncomputable instance instBinomialRing : BinomialRing ℤ_[p] where
     rw [norm_div, div_le_one (by simpa using k.factorial_ne_zero)]
     exact x.norm_ascPochhammer_le k⟩
   factorial_nsmul_multichoose x k := by rw [← Subtype.coe_inj, nsmul_eq_mul, PadicInt.coe_mul,
-    PadicInt.coe_natCast, mul_div_cancel₀ _ (mod_cast k.factorial_ne_zero), Subtype.coe_inj,
+    PadicInt.coe_natCast, mul_div_cancel₀, Subtype.coe_inj,
     Polynomial.eval_eq_smeval, Polynomial.ascPochhammer_smeval_cast]
 
 @[fun_prop]
@@ -172,13 +172,16 @@ private lemma bojanic_mahler_step2 {f : C(ℤ_[p], E)} {s t : ℕ}
     -- a binomial coefficient which is divisible by `p`
     rw [norm_neg, ← coe_nnnorm, coe_le_coe]
     refine nnnorm_sum_le_of_forall_le (fun i hi ↦ Finset.le_sup_of_le hi ?_)
-    rw [← Nat.cast_smul_eq_nsmul ℤ_[p], div_eq_inv_mul]
+    rw [← Nat.cast_smul_eq_nsmul ℤ_[p], div_eq_inv_mul₀]
     refine (nnnorm_smul_le _ _).trans <| mul_le_mul_of_nonneg_right ?_ (by simp only [zero_le])
     -- remains to show norm of binomial coeff is `≤ p⁻¹`
     rw [mem_range] at hi
     have : 0 < (p ^ t).choose (i + 1) := Nat.choose_pos (by omega)
-    rw [← zpow_neg_one, ← coe_le_coe, coe_nnnorm, PadicInt.norm_eq_zpow_neg_valuation
-      (mod_cast this.ne'), coe_zpow, NNReal.coe_natCast,
+    apply NNReal.coe_le_coe.mp
+    simp only [coe_nnnorm, NNReal.coe_inv, NNReal.coe_natCast]
+    suffices hbound : ‖((p ^ t).choose (i + 1) : ℤ_[p])‖ ≤ (p : ℝ) ^ (-1 : ℤ) by
+      simpa only [zpow_neg_one₀] using hbound
+    rw [PadicInt.norm_eq_zpow_neg_valuation (mod_cast this.ne'),
       zpow_le_zpow_iff_right₀ (mod_cast hp.out.one_lt), neg_le_neg_iff,
       PadicInt.valuation_natCast this.ne', Nat.one_le_cast]
     exact one_le_padicValNat_of_dvd this.ne' <| hp.out.dvd_choose_pow (by lia) (by omega)
@@ -193,7 +196,8 @@ private lemma bojanic_mahler_step2 {f : C(ℤ_[p], E)} {s t : ℕ}
       simpa only [← coe_intCast] using norm_le_one _
     _ ≤ ‖f‖ / p ^ s := by
       apply hst
-      rw [Nat.cast_pow, add_sub_cancel_left, norm_pow, norm_p, inv_pow, zpow_neg, zpow_natCast]
+      simp only [Nat.cast_pow, add_sub_cancel_left, norm_pow, norm_p, inv_pow₀,
+        zpow_neg₀ (by exact_mod_cast hp.out.ne_zero : (p : ℝ) ≠ 0), zpow_natCast₀, le_rfl]
 
 /--
 Explicit bound for the decay rate of the Mahler coefficients of a continuous function on `ℤ_[p]`.
@@ -207,14 +211,22 @@ lemma fwdDiff_iter_le_of_forall_le {f : C(ℤ_[p], E)} {s t : ℕ}
   intro k hk
   induction k generalizing n with
   | zero => -- base case just says that `‖Δ^[·] (⇑f) 0‖` is bounded by `‖f‖`
-    simpa only [zero_mul, pow_zero, add_zero, div_one] using norm_fwdDiff_iter_apply_le 1 f 0 n
+    simpa only [zero_mul, pow_zero, add_zero, div_one₀] using norm_fwdDiff_iter_apply_le 1 f 0 n
   | succ k IH => -- induction is the "step 2" lemma above
     rw [add_mul, one_mul, ← add_assoc]
     refine (bojanic_mahler_step2 hst (n + k * p ^ t)).trans (max_le ?_ ?_)
-    · rw [← coe_nnnorm, ← NNReal.coe_natCast, ← NNReal.coe_pow, ← NNReal.coe_div, NNReal.coe_le_coe]
+    · have hp₀ : 0 < (p : ℝ≥0) := by exact_mod_cast hp.out.pos
+      suffices hbound : (Finset.range (p ^ t - 1)).sup
+          (fun j ↦ ‖Δ_[1]^[n + k * p ^ t + (j + 1)] f 0‖₊ / p) ≤
+            ‖f‖₊ / (p : ℝ≥0) ^ (k + 1) by
+        simpa only [NNReal.coe_div, NNReal.coe_pow, NNReal.coe_natCast, coe_nnnorm] using
+          NNReal.coe_le_coe.mpr hbound
       refine Finset.sup_le fun j _ ↦ ?_
-      rw [pow_succ, ← div_div, div_le_div_iff_of_pos_right (mod_cast hp.out.pos), add_right_comm]
-      exact_mod_cast IH (n + (j + 1)) (by lia)
+      simp only [pow_succ, div_mul_eq_div_div₀]
+      rw [div_le_div_iff_of_pos_right hp₀, add_right_comm]
+      apply NNReal.coe_le_coe.mp
+      simpa only [NNReal.coe_div, NNReal.coe_pow, NNReal.coe_natCast, coe_nnnorm] using
+        IH (n + (j + 1)) (by lia)
     · exact div_le_div_of_nonneg_left (norm_nonneg _)
         (mod_cast pow_pos hp.out.pos _) (mod_cast pow_le_pow_right₀ hp.out.one_le hk)
 

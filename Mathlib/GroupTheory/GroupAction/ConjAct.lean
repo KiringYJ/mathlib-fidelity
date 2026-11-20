@@ -22,7 +22,7 @@ by conjugation. The group `ConjAct G` also acts on any normal subgroup of `G` by
 
 As a generalization, this also allows:
 * `ConjAct Mˣ` to act on `M`, when `M` is a `Monoid`
-* `ConjAct G₀` to act on `G₀`, when `G₀` is a `GroupWithZero`
+* `ConjAct G₀ˣ` to act on `G₀`, when `G₀` is a `GroupWithZero`
 
 ## Implementation Notes
 
@@ -49,6 +49,8 @@ open MulAction Subgroup
 
 variable {M G}
 
+instance [Mul G] : Mul (ConjAct G) := inferInstanceAs <| Mul G
+
 instance [DivInvMonoid G] : DivInvMonoid (ConjAct G) := inferInstanceAs <| DivInvMonoid G
 
 instance [Group G] : Group (ConjAct G) := inferInstanceAs <| Group G
@@ -59,12 +61,9 @@ instance [Fintype G] : Fintype (ConjAct G) := inferInstanceAs <| Fintype G
 theorem card [Fintype G] : Fintype.card (ConjAct G) = Fintype.card G :=
   rfl
 
-section DivInvMonoid
+section Mul
 
-variable [DivInvMonoid G]
-
-instance : Inhabited (ConjAct G) :=
-  ⟨1⟩
+variable [Mul G]
 
 /-- Reinterpret `g : ConjAct G` as an element of `G`. -/
 def ofConjAct : ConjAct G ≃* G where
@@ -102,6 +101,23 @@ theorem ofConjAct_toConjAct (x : G) : ofConjAct (toConjAct x) = x :=
   rfl
 
 @[simp]
+theorem ofConjAct_mul (x y : ConjAct G) : ofConjAct (x * y) = ofConjAct x * ofConjAct y :=
+  rfl
+
+@[simp]
+theorem toConjAct_mul (x y : G) : toConjAct (x * y) = toConjAct x * toConjAct y :=
+  rfl
+
+end Mul
+
+section DivInvMonoid
+
+variable [DivInvMonoid G]
+
+instance : Inhabited (ConjAct G) :=
+  ⟨1⟩
+
+@[simp]
 theorem ofConjAct_one : ofConjAct (1 : ConjAct G) = 1 :=
   rfl
 
@@ -115,14 +131,6 @@ theorem ofConjAct_inv (x : ConjAct G) : ofConjAct x⁻¹ = (ofConjAct x)⁻¹ :=
 
 @[simp]
 theorem toConjAct_inv (x : G) : toConjAct x⁻¹ = (toConjAct x)⁻¹ :=
-  rfl
-
-@[simp]
-theorem ofConjAct_mul (x y : ConjAct G) : ofConjAct (x * y) = ofConjAct x * ofConjAct y :=
-  rfl
-
-@[simp]
-theorem toConjAct_mul (x y : G) : toConjAct (x * y) = toConjAct x * toConjAct y :=
   rfl
 
 instance : SMul (ConjAct G) G where smul g h := ofConjAct g * h * (ofConjAct g)⁻¹

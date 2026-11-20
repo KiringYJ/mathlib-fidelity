@@ -88,8 +88,12 @@ theorem coe_pow (x : (𝓞 K)ˣ) (n : ℕ) : ((x ^ n : (𝓞 K)ˣ) : K) = (x : K
   rw [← map_pow, ← val_pow_eq_pow_val]
 
 theorem coe_zpow (x : (𝓞 K)ˣ) (n : ℤ) : (↑(x ^ n) : K) = (x : K) ^ n := by
-  change ((Units.coeHom K).comp (map (algebraMap (𝓞 K) K))) (x ^ n) = _
-  exact map_zpow _ x n
+  have hu : x.isUnit.unit = x := Units.ext x.isUnit.unit_spec
+  have hz : (↑(x ^ n) : 𝓞 K) = Checked.zpow (x : 𝓞 K) n (fun _ ↦ x.isUnit) := by
+    simpa only [hu] using (x.isUnit.zpow_eq_val_unit_zpow n).symm
+  change (algebraMap (𝓞 K) K) (↑(x ^ n) : 𝓞 K) = _
+  rw [hz]
+  exact map_zpow₀ (algebraMap (𝓞 K) K) _ _
 
 theorem coe_one : ((1 : (𝓞 K)ˣ) : K) = (1 : K) := rfl
 

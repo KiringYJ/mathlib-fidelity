@@ -48,33 +48,62 @@ variable [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [AddCommGrou
   [PartialOrder β] [IsOrderedAddMonoid β] [Module 𝕜 E] [Module 𝕜 β] [IsStrictOrderedModule 𝕜 β]
   {s : Set E} {f : E → β} {t : Finset ι} {w : ι → 𝕜} {p : ι → E} {v : 𝕜} {q : E}
 
-/-- Convex **Jensen's inequality**, `Finset.centerMass` version. -/
-theorem ConvexOn.map_centerMass_le (hf : ConvexOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 ≤ w i)
-    (h₁ : 0 < ∑ i ∈ t, w i) (hmem : ∀ i ∈ t, p i ∈ s) :
-    f (t.centerMass w p h₁.ne') ≤ t.centerMass w (f ∘ p) h₁.ne' := by
-  have hmem' : ∀ i ∈ t, (p i, (f ∘ p) i) ∈ { p : E × β | p.1 ∈ s ∧ f p.1 ≤ p.2 } := fun i hi =>
-    ⟨hmem i hi, le_rfl⟩
-  convert! (hf.convex_epigraph.centerMass_mem h₀ h₁ hmem').2 <;>
-    simp only [centerMass, Function.comp, Prod.smul_fst, Prod.fst_sum, Prod.smul_snd, Prod.snd_sum]
+/-- Convex **Jensen's inequality**, `Finset.centerMass` version. The output is a point of the
+genuine function domain whose coordinates are the weighted center of the input coordinates. -/
+theorem ConvexOn.map_centerMass_le {D : Type*} {s : Set D} {f : D → β} {coord : D → E}
+    {p : ι → D} {q : D} (hf : ConvexOn 𝕜 s f coord) (h₀ : ∀ i ∈ t, 0 ≤ w i)
+    (h₁ : 0 < ∑ i ∈ t, w i) (hmem : ∀ i ∈ t, p i ∈ s) (hq : q ∈ s)
+    (hcoord : coord q = t.centerMass w (coord ∘ p) h₁.ne' := by rfl) :
+    f q ≤ t.centerMass w (f ∘ p) h₁.ne' := by
+  let C : Set (E × β) := {v | ∃ z ∈ s, coord z = v.1 ∧ f z ≤ v.2}
+  have hC : Convex 𝕜 C := by
+    rintro a ⟨x, hx, hax, hfx⟩ b ⟨y, hy, hby, hfy⟩ u v hu hv huv
+    obtain ⟨z, hz, hcz⟩ := hf.1 ⟨x, hx, hax⟩ ⟨y, hy, hby⟩ hu hv huv
+    refine ⟨z, hz, hcz, ?_⟩
+    exact (hf.2 hx hy hu hv huv hz (by simpa only [hax, hby] using hcz)).trans
+      (add_le_add (smul_le_smul_of_nonneg_left hfx hu) (smul_le_smul_of_nonneg_left hfy hv))
+  have hpoints : ∀ i ∈ t, (coord (p i), f (p i)) ∈ C :=
+    fun i hi => ⟨p i, hmem i hi, rfl, le_rfl⟩
+  obtain ⟨z, hz, hcz, hfz⟩ := hC.centerMass_mem h₀ h₁ hpoints
+  have hcz' : coord z = t.centerMass w (coord ∘ p) h₁.ne' := by
+    simpa only [centerMass, Function.comp_apply, Prod.smul_fst, Prod.fst_sum] using hcz
+  have hfz' : f z ≤ t.centerMass w (f ∘ p) h₁.ne' := by
+    simpa only [centerMass, Function.comp_apply, Prod.smul_snd, Prod.snd_sum] using hfz
+  have hfq : f q ≤ f z := by
+    have hqz : coord q = (1 : 𝕜) • coord z + (0 : 𝕜) • coord z := by
+      simpa only [one_smul, zero_smul, add_zero] using hcoord.trans hcz'.symm
+    simpa only [one_smul, zero_smul, add_zero] using
+      hf.2 hz hz zero_le_one le_rfl (by simp) hq hqz
+  exact hfq.trans hfz'
 
 /-- Concave **Jensen's inequality**, `Finset.centerMass` version. -/
-theorem ConcaveOn.le_map_centerMass (hf : ConcaveOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 ≤ w i)
-    (h₁ : 0 < ∑ i ∈ t, w i) (hmem : ∀ i ∈ t, p i ∈ s) :
-    t.centerMass w (f ∘ p) h₁.ne' ≤ f (t.centerMass w p h₁.ne') :=
-  ConvexOn.map_centerMass_le (β := βᵒᵈ) hf h₀ h₁ hmem
+theorem ConcaveOn.le_map_centerMass {D : Type*} {s : Set D} {f : D → β} {coord : D → E}
+    {p : ι → D} {q : D} (hf : ConcaveOn 𝕜 s f coord) (h₀ : ∀ i ∈ t, 0 ≤ w i)
+    (h₁ : 0 < ∑ i ∈ t, w i) (hmem : ∀ i ∈ t, p i ∈ s) (hq : q ∈ s)
+    (hcoord : coord q = t.centerMass w (coord ∘ p) h₁.ne' := by rfl) :
+    t.centerMass w (f ∘ p) h₁.ne' ≤ f q :=
+  ConvexOn.map_centerMass_le (β := βᵒᵈ) hf h₀ h₁ hmem hq hcoord
 
 /-- Convex **Jensen's inequality**, `Finset.sum` version. -/
-theorem ConvexOn.map_sum_le (hf : ConvexOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 ≤ w i) (h₁ : ∑ i ∈ t, w i = 1)
-    (hmem : ∀ i ∈ t, p i ∈ s) : f (∑ i ∈ t, w i • p i) ≤ ∑ i ∈ t, w i • f (p i) := by
-  have h := hf.map_centerMass_le h₀ (h₁.symm ▸ zero_lt_one) hmem
-  rw [t.centerMass_eq_of_sum_1 p h₁, t.centerMass_eq_of_sum_1 (f ∘ p) h₁] at h
-  simpa only [Function.comp_apply] using h
+theorem ConvexOn.map_sum_le {D : Type*} {s : Set D} {f : D → β} {coord : D → E}
+    {p : ι → D} {q : D} (hf : ConvexOn 𝕜 s f coord) (h₀ : ∀ i ∈ t, 0 ≤ w i)
+    (h₁ : ∑ i ∈ t, w i = 1) (hmem : ∀ i ∈ t, p i ∈ s) (hq : q ∈ s)
+    (hcoord : coord q = ∑ i ∈ t, w i • coord (p i) := by rfl) :
+    f q ≤ ∑ i ∈ t, w i • f (p i) := by
+  have hpos : 0 < ∑ i ∈ t, w i := h₁.symm ▸ zero_lt_one
+  have hcoord' : coord q = t.centerMass w (coord ∘ p) hpos.ne' := by
+    rw [t.centerMass_eq_of_sum_1 (coord ∘ p) h₁]
+    exact hcoord
+  have h := hf.map_centerMass_le h₀ hpos hmem hq hcoord'
+  simpa only [t.centerMass_eq_of_sum_1 (f ∘ p) h₁, Function.comp_apply] using h
 
 /-- Concave **Jensen's inequality**, `Finset.sum` version. -/
-theorem ConcaveOn.le_map_sum (hf : ConcaveOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 ≤ w i)
-    (h₁ : ∑ i ∈ t, w i = 1) (hmem : ∀ i ∈ t, p i ∈ s) :
-    (∑ i ∈ t, w i • f (p i)) ≤ f (∑ i ∈ t, w i • p i) :=
-  ConvexOn.map_sum_le (β := βᵒᵈ) hf h₀ h₁ hmem
+theorem ConcaveOn.le_map_sum {D : Type*} {s : Set D} {f : D → β} {coord : D → E}
+    {p : ι → D} {q : D} (hf : ConcaveOn 𝕜 s f coord) (h₀ : ∀ i ∈ t, 0 ≤ w i)
+    (h₁ : ∑ i ∈ t, w i = 1) (hmem : ∀ i ∈ t, p i ∈ s) (hq : q ∈ s)
+    (hcoord : coord q = ∑ i ∈ t, w i • coord (p i) := by rfl) :
+    (∑ i ∈ t, w i • f (p i)) ≤ f q :=
+  ConvexOn.map_sum_le (β := βᵒᵈ) hf h₀ h₁ hmem hq hcoord
 
 /-- Convex **Jensen's inequality** where an element plays a distinguished role. -/
 lemma ConvexOn.map_add_sum_le (hf : ConvexOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 ≤ w i)
@@ -82,9 +111,11 @@ lemma ConvexOn.map_add_sum_le (hf : ConvexOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 �
     f (v • q + ∑ i ∈ t, w i • p i) ≤ v • f q + ∑ i ∈ t, w i • f (p i) := by
   let W j := Option.elim j v w
   let P j := Option.elim j q p
+  have hW : ∀ j ∈ insertNone t, 0 ≤ W j := forall_mem_insertNone.2 ⟨hv, h₀⟩
+  have hsum : ∑ j ∈ insertNone t, W j = 1 := by simpa using! h₁
+  have hP : ∀ j ∈ insertNone t, P j ∈ s := forall_mem_insertNone.2 ⟨hq, hmem⟩
   have : f (∑ j ∈ insertNone t, W j • P j) ≤ ∑ j ∈ insertNone t, W j • f (P j) :=
-    hf.map_sum_le (forall_mem_insertNone.2 ⟨hv, h₀⟩) (by simpa using! h₁)
-      (forall_mem_insertNone.2 ⟨hq, hmem⟩)
+    hf.map_sum_le hW hsum hP (hf.convex.sum_mem hW hsum hP)
   simpa using! this
 
 /-- Concave **Jensen's inequality** where an element plays a distinguished role. -/
@@ -237,7 +268,8 @@ theorem StrictConvexOn.map_sum_lt_iff_of_nonneg (hf : StrictConvexOn 𝕜 s f) (
     (h₁ : ∑ i ∈ t, w i = 1) (hmem : ∀ i ∈ t, p i ∈ s) :
     f (∑ i ∈ t, w i • p i) < ∑ i ∈ t, w i • f (p i) ↔
       ∃ j ∈ t, ∃ k ∈ t, w j ≠ 0 ∧ w k ≠ 0 ∧ p j ≠ p k := by
-  grind [hf.convexOn.map_sum_le h₀ h₁ hmem |>.not_lt_iff_eq, hf.map_sum_eq_iff_of_nonneg h₀ h₁ hmem]
+  grind [hf.convexOn.map_sum_le h₀ h₁ hmem (hf.convex.sum_mem h₀ h₁ hmem) |>.not_lt_iff_eq,
+    hf.map_sum_eq_iff_of_nonneg h₀ h₁ hmem]
 
 theorem StrictConcaveOn.lt_map_sum_iff_of_nonneg (hf : StrictConcaveOn 𝕜 s f)
     (h₀ : ∀ i ∈ t, 0 ≤ w i) (h₁ : ∑ i ∈ t, w i = 1) (hmem : ∀ i ∈ t, p i ∈ s) :
@@ -306,7 +338,8 @@ lemma StrictConcaveOn.map_sum_eq_iff' (hf : StrictConcaveOn 𝕜 s f) (h₀ : �
 theorem StrictConvexOn.map_sum_lt_iff_of_pos' (hf : StrictConvexOn 𝕜 s f) (h₀ : ∀ i ∈ t, 0 < w i)
     (h₁ : ∑ i ∈ t, w i = 1) (hmem : ∀ i ∈ t, p i ∈ s) :
     f (∑ i ∈ t, w i • p i) < ∑ i ∈ t, w i • f (p i) ↔ ∃ j ∈ t, p j ≠ ∑ i ∈ t, w i • p i := by
-  apply hf.convexOn.map_sum_le (h₀ · · |>.le) h₁ hmem |>.lt_iff_ne.trans
+  apply hf.convexOn.map_sum_le (h₀ · · |>.le) h₁ hmem
+    (hf.convex.sum_mem (h₀ · · |>.le) h₁ hmem) |>.lt_iff_ne.trans
   contrapose!
   exact hf.map_sum_eq_iff h₀ h₁ hmem
 
@@ -350,7 +383,8 @@ theorem ConvexOn.le_sup_of_mem_convexHull {t : Finset E} (hf : ConvexOn 𝕜 s f
     (hx : x ∈ convexHull 𝕜 (t : Set E)) :
     f x ≤ t.sup' (coe_nonempty.1 <| convexHull_nonempty_iff.1 ⟨x, hx⟩) f := by
   obtain ⟨w, hw₀, hw₁, rfl⟩ := mem_convexHull.1 hx
-  exact (hf.map_centerMass_le hw₀ (by positivity) hts).trans
+  have hpos : 0 < ∑ i ∈ t, w i := by positivity
+  exact (hf.map_centerMass_le hw₀ hpos hts (hf.convex.centerMass_mem hw₀ hpos hts)).trans
     (centerMass_le_sup hw₀ <| by positivity)
 
 theorem ConvexOn.inf_le_of_mem_convexHull {t : Finset E} (hf : ConcaveOn 𝕜 s f) (hts : ↑t ⊆ s)
@@ -372,6 +406,8 @@ lemma ConvexOn.exists_ge_of_centerMass {t : Finset ι} (h : ConvexOn 𝕜 s f)
       (t := {i ∈ t | w i ≠ 0}) (w := w) (p := p)
       (fun i hi ↦ hw₀ i (mem_filter.mp hi).1) hw'
       (fun i hi ↦ hp i (mem_filter.mp hi).1)
+      (h.convex.centerMass_mem (fun i hi ↦ hw₀ i (mem_filter.mp hi).1) hw'
+        (fun i hi ↦ hp i (mem_filter.mp hi).1))
     rw [centerMass_filter_ne_zero] at hle
     have hs := smul_le_smul_of_nonneg_left hle hw'.le
     simp only [centerMass, smul_inv_smul₀] at hs

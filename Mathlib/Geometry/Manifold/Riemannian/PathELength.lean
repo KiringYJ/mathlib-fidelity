@@ -282,7 +282,7 @@ lemma exists_lt_locally_constant_of_riemannianEDist_lt
     · linarith
   have A' (t) (ht : t < a') : (γ ∘ η) t = x := by simp [A t ht, hγx]
   have B (t) (ht : b' < t) : η t = 1 := by
-    simp only [η, Real.smoothTransition.eq_one_iff_one_le, inv_mul_eq_div]
+    simp only [η, Real.smoothTransition.eq_one_iff_one_le, inv_mul_eq_div₀]
     rw [one_le_div₀] <;> linarith
   have B' (t) (ht : b' < t) : (γ ∘ η) t = y := by simp [B t ht, hγy]
   refine ⟨γ ∘ η, A' _ haa', B' _ hb'b, ?_, ?_, ?_, ?_⟩

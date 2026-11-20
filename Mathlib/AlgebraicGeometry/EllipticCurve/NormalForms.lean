@@ -449,7 +449,7 @@ theorem toCharThreeNF_spec_of_b₂_ne_zero [DecidableEq F] (hb₂ : W.b₂ ≠ 0
     · simp [variableChange_a₁]
     · simp [variableChange_a₃]
     · simp [field, variableChange_a₄, -mul_eq_zero]
-      linear_combination W'.a₄ * W'.a₂ * (W'.a₂ ^ 2 + W'.a₄) * CharP.cast_eq_zero F 3
+      linear_combination W'.a₄ * (W'.a₂ ^ 2 + W'.a₄) * CharP.cast_eq_zero F 3
   have ha₂ : (W.toShortNFOfCharThree • W).a₂ ≠ 0 := W.toShortNFOfCharThree_a₂ ▸ hb₂
   have : (W.toShortNFOfCharThree • W).IsCharNeTwoNF := W.toCharNeTwoNF_spec
   rw [toCharThreeNF, dite_eq_right ha₂, mul_smul]
@@ -719,7 +719,7 @@ theorem toCharTwoJNeZeroNF_spec (ha₁ : W.a₁ ≠ 0) :
   · simp [field, toCharTwoJNeZeroNF, variableChange_a₃, Units.val_inv_eq_inv_val₀, -mul_eq_zero]
     linear_combination (W.a₃ * W.a₁ ^ 3 + W.a₁ ^ 2 * W.a₄ + W.a₃ ^ 2) * CharP.cast_eq_zero F 2
   · simp [field, toCharTwoJNeZeroNF, variableChange_a₄, Units.val_inv_eq_inv_val₀, -mul_eq_zero]
-    linear_combination W.a₁ ^ 4 * W.a₃ * (W.a₃ + W.a₁ * W.a₂) * CharP.cast_eq_zero F 2
+    linear_combination W.a₃ * (W.a₃ + W.a₁ * W.a₂) * CharP.cast_eq_zero F 2
 
 /-- For a `WeierstrassCurve` defined over a field of characteristic = 2,
 there is an explicit change of variables of it to `WeierstrassCurve.IsCharTwoNF`, that is,

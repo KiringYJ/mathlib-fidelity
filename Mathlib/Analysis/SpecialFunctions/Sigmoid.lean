@@ -105,14 +105,25 @@ lemma sigmoid_injective : Function.Injective sigmoid := sigmoid_strictMono.injec
 @[simp]
 lemma sigmoid_inj {a b : ℝ} : sigmoid a = sigmoid b ↔ a = b := sigmoid_injective.eq_iff
 
-lemma sigmoid_neg (x : ℝ) : sigmoid (-x) = 1 - sigmoid x := by
-  simp only [sigmoid_def]
-  field_simp
-  simp [add_mul, ← Real.exp_add, add_comm (1 : ℝ)]
+private lemma isUnit_sigmoidDenominator (x : ℝ) : IsUnit (1 + exp (-x)) :=
+  (by positivity : 1 + exp (-x) ≠ 0).isUnit
+
+private lemma sigmoid_mul_denominator (x : ℝ) : sigmoid x * (1 + exp (-x)) = 1 :=
+  inv_mul_cancel₀
 
 lemma sigmoid_mul_rexp_neg (x : ℝ) : sigmoid x * exp (-x) = sigmoid (-x) := by
-  rw [sigmoid_neg, sigmoid_def]
-  field
+  apply mul_right_cancel₀ (isUnit_sigmoidDenominator (-x)).ne_zero
+  rw [sigmoid_mul_denominator, neg_neg, mul_assoc]
+  calc
+    sigmoid x * (exp (-x) * (1 + exp x)) = sigmoid x * (1 + exp (-x)) := by
+      rw [mul_add, mul_one, ← exp_add, neg_add_cancel, exp_zero, add_comm]
+    _ = 1 := sigmoid_mul_denominator x
+
+lemma sigmoid_neg (x : ℝ) : sigmoid (-x) = 1 - sigmoid x := by
+  rw [← sigmoid_mul_rexp_neg]
+  have h := sigmoid_mul_denominator x
+  rw [mul_add, mul_one] at h
+  linarith
 
 open Set in
 lemma range_sigmoid : range Real.sigmoid = Ioo 0 1 := by
@@ -120,26 +131,44 @@ lemma range_sigmoid : range Real.sigmoid = Ioo 0 1 := by
   · rintro - ⟨x, rfl⟩
     push _ ∈ _
     bound
-  · replace hx : 0 < x⁻¹ - 1 := by rwa [sub_pos, one_lt_inv_iff₀]
-    exact ⟨-(log (x⁻¹ - 1)), by simp [sigmoid_def, exp_log hx]⟩
+  · have hx₀ : 0 < x := hx.1
+    have hx₁ : 0 < x⁻¹ - 1 := sub_pos.mpr (one_lt_inv_iff₀.mpr hx)
+    let y := -(log (x⁻¹ - 1))
+    have hd : 1 + exp (-y) = x⁻¹ := by
+      dsimp only [y]
+      rw [neg_neg, exp_log hx₁]
+      ring
+    refine ⟨y, mul_right_cancel₀ (isUnit_sigmoidDenominator y).ne_zero ?_⟩
+    rw [sigmoid_mul_denominator, hd, mul_inv_cancel₀]
 
 open Filter
 
 open scoped Topology
 
 lemma tendsto_sigmoid_atTop : Tendsto sigmoid atTop (𝓝 1) := by
-  simpa using! Real.tendsto_exp_comp_nhds_zero.mpr tendsto_neg_atTop_atBot |>.const_add 1 |>.inv₀ <|
-    by norm_num
+  have h : Tendsto (fun x : ℝ ↦ 1 + exp (-x)) atTop (𝓝 1) := by
+    simpa only [add_zero] using
+      (Real.tendsto_exp_comp_nhds_zero.mpr tendsto_neg_atTop_atBot).const_add 1
+  change Tendsto (fun x : ℝ ↦ (1 + exp (-x))⁻¹) atTop (𝓝 1)
+  simpa only [inv_one₀] using h.inv₀ (h0 := isUnit_sigmoidDenominator) (ha := isUnit_one)
 
-lemma tendsto_sigmoid_atBot : Tendsto sigmoid atBot (𝓝 0) :=
-  tendsto_const_nhds.add_atTop (tendsto_exp_comp_atTop.mpr tendsto_neg_atBot_atTop)
-    |>.inv_tendsto_atTop
+lemma tendsto_sigmoid_atBot : Tendsto sigmoid atBot (𝓝 0) := by
+  have h : Tendsto (fun x : ℝ ↦ 1 + exp (-x)) atBot atTop :=
+    tendsto_const_nhds.add_atTop (tendsto_exp_comp_atTop.mpr tendsto_neg_atBot_atTop)
+  have hu := Pi.isUnit_iff.mpr isUnit_sigmoidDenominator
+  have he : Checked.inv (fun x : ℝ ↦ 1 + exp (-x)) hu = sigmoid := funext (Pi.inv_apply₀ _)
+  simpa only [he] using h.inv_tendsto_atTop (h0 := hu)
 
 lemma hasDerivAt_sigmoid (x : ℝ) :
     HasDerivAt sigmoid (sigmoid x * (1 - sigmoid x)) x := by
-  convert! (hasDerivAt_neg' x |>.exp.const_add 1 |>.inv <| by positivity) using 1
-  rw [← sigmoid_neg, ← sigmoid_mul_rexp_neg x, sigmoid_def]
-  field [sq]
+  let lift (y : ℝ) : {y : ℝ // IsUnit (1 + exp (-y))} := ⟨y, isUnit_sigmoidDenominator y⟩
+  have h := (hasDerivAt_neg' x |>.exp.const_add 1).inv (isUnit_sigmoidDenominator x)
+  have hid : HasDerivAt (Subtype.val ∘ lift) 1 x := hasDerivAt_id x
+  have hc := h.comp x hid continuousAt_id Topology.IsEmbedding.subtypeVal
+  change HasDerivAt sigmoid (-(exp (-x) * -1) * sigmoid x ^ 2 * 1) x at hc
+  convert hc using 1
+  rw [← sigmoid_neg, ← sigmoid_mul_rexp_neg]
+  ring
 
 lemma deriv_sigmoid : deriv sigmoid = fun x => sigmoid x * (1 - sigmoid x) :=
   funext fun x => (hasDerivAt_sigmoid x).deriv
@@ -151,8 +180,10 @@ open Set Real
 variable {x : ℝ} {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] {f : E → ℝ} {s : Set E}
 
 @[fun_prop]
-lemma analyticAt_sigmoid : AnalyticAt ℝ sigmoid x :=
-  AnalyticAt.fun_inv (by fun_prop) (by positivity)
+lemma analyticAt_sigmoid : AnalyticAt ℝ sigmoid x := by
+  have h : AnalyticAt ℝ (fun y : ℝ ↦ 1 + exp (-y)) x := by fun_prop
+  let lift (y : ℝ) : {y : ℝ // IsUnit (1 + exp (-y))} := ⟨y, Real.isUnit_sigmoidDenominator y⟩
+  exact (h.inv (Real.isUnit_sigmoidDenominator x)).comp_domain (g := lift)
 
 @[fun_prop]
 lemma AnalyticAt.sigmoid {x : E} (fa : AnalyticAt ℝ f x) : AnalyticAt ℝ (sigmoid ∘ f) x :=

@@ -46,10 +46,16 @@ lemma LSeries.hasDerivAt_term (f : ℕ → ℂ) (n : ℕ) (s : ℂ) :
     HasDerivAt (fun z ↦ term f z n) (-(term (logMul f) s n)) s := by
   rcases eq_or_ne n 0 with rfl | hn
   · simp [hasDerivAt_const]
-  simp_rw [term_of_ne_zero hn, ← neg_div, ← neg_mul, mul_comm, mul_div_assoc, div_eq_mul_inv,
-    ← cpow_neg]
-  exact HasDerivAt.const_mul (f n) (by simpa only [mul_comm, ← mul_neg_one (log n), ← mul_assoc]
-    using (hasDerivAt_neg' s).const_cpow (Or.inl <| Nat.cast_ne_zero.mpr hn))
+  let p : ℕ+ := ⟨n, Nat.pos_of_ne_zero hn⟩
+  have hf (z : ℂ) : term f z n = f n * (n : ℂ) ^ (-z) := term_eq_mul_cpow_neg f z p
+  have hg : term (logMul f) s n = logMul f n * (n : ℂ) ^ (-s) :=
+    term_eq_mul_cpow_neg (logMul f) s p
+  simp_rw [hf, hg]
+  have hd := (hasDerivAt_neg' s).const_cpow (c := (n : ℂ))
+    (Or.inl (Nat.cast_ne_zero.mpr hn))
+  convert HasDerivAt.const_mul (f n) hd using 1
+  simp only [logMul]
+  ring
 
 /- This lemma proves two things at once, since their proofs are intertwined; we give separate
 non-private lemmas below that extract the two statements. -/
@@ -109,10 +115,15 @@ lemma LSeries.abscissaOfAbsConv_logMul {f : ℕ → ℂ} :
   · refine (LSeriesSummable_of_abscissaOfAbsConv_lt_re <| by simp [hs])
       |>.norm.of_norm_bounded_eventually_nat (g := fun n ↦ ‖term (logMul f) s n‖) ?_
     filter_upwards [Filter.eventually_ge_atTop <| max 1 (Nat.ceil (Real.exp 1))] with n hn
-    simp only [term_of_ne_zero (show n ≠ 0 by omega), logMul, norm_mul, mul_div_assoc,
-      ← natCast_log, norm_real]
-    refine le_mul_of_one_le_left (norm_nonneg _) (.trans ?_ <| Real.le_norm_self _)
-    simpa using Real.log_le_log (Real.exp_pos 1) <| Nat.ceil_le.mp <| (le_max_right _ _).trans hn
+    have hn₀ : n ≠ 0 := by omega
+    have hnorm : ‖term (logMul f) s n‖ = ‖log (n : ℂ)‖ * ‖term f s n‖ := by
+      rw [term_of_ne_zero hn₀, term_of_ne_zero hn₀, logMul, mul_div_assoc₀, norm_mul]
+    rw [hnorm]
+    refine le_mul_of_one_le_left (norm_nonneg (term f s n)) ?_
+    rw [← natCast_log, norm_real]
+    refine le_trans ?_ (Real.le_norm_self _)
+    simpa only [Real.log_exp] using
+      Real.log_le_log (Real.exp_pos 1) (Nat.ceil_le.mp ((le_max_right _ _).trans hn))
 
 /-!
 ### Higher derivatives of L-series
@@ -139,9 +150,12 @@ lemma LSeries_iteratedDeriv {f : ℕ → ℂ} (m : ℕ) {s : ℂ} (h : abscissaO
         ((-1) ^ m * LSeries (logMul^[m] f)) := fun _ hs ↦ ih hs
     have := derivWithin_congr ih' (ih h)
     simp_rw [derivWithin_of_isOpen (isOpen_re_gt_EReal _) h] at this
-    rw [iteratedDeriv_succ, this]
-    simp [Pi.mul_def, pow_succ, Function.iterate_succ',
-      LSeries_deriv <| absicssaOfAbsConv_logPowMul.symm ▸ h, -Function.iterate_succ]
+    rw [iteratedDeriv_succ]
+    dsimp only
+    rw [this]
+    simp only [Pi.mul_def, Pi.pow_apply, Pi.neg_apply, Pi.one_apply]
+    rw [deriv_const_mul_field, LSeries_deriv (absicssaOfAbsConv_logPowMul.symm ▸ h)]
+    simp [pow_succ, Function.iterate_succ', -Function.iterate_succ]
 
 /-!
 ### The L-series is holomorphic

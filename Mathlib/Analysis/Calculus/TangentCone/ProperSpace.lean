@@ -51,12 +51,8 @@ theorem tangentConeAt_nonempty_of_properSpace [ProperSpace E]
     simp only [Set.mem_sdiff, Metric.mem_closedBall, dist_zero_right, (c_le n).le,
       Metric.mem_ball, not_lt, true_and, le_c n]
   refine ⟨l, ?_, ?_⟩; swap
-  · push _ ∈ _
-    contrapose l_mem
-    simp only [one_div, l_mem, Set.mem_sdiff, Metric.mem_closedBall, dist_self, zero_le_one,
-      Metric.mem_ball, inv_pos, norm_pos_iff, ne_eq, not_not, true_and]
-    contrapose! hr
-    simp [hr]
+  · intro hl
+    exact l_mem.2 (hl ▸ Metric.mem_ball_self (one_div_pos.mpr (zero_lt_one.trans hr)))
   apply mem_tangentConeAt_of_seq atTop (c ∘ φ) (d ∘ φ)
   · refine Tendsto.comp ?_ φ_strict.tendsto_atTop
     exact squeeze_zero_norm (by simpa [dist_eq_norm] using hvu) u_lim

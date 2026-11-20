@@ -96,14 +96,16 @@ set_option backward.isDefEq.respectTransparency.types false in
 @[simp]
 theorem valuationOfNeZeroToFun_eq (x : Kˣ) :
     (v.valuationOfNeZeroToFun x : ℤᵐ⁰) = v.valuation K x := by
-  classical
-  rw [show v.valuation K x = _ * _ by rw [valuation_def]; rfl]
-  rw [Units.val_inv_eq_inv_val]
-  change _ = ite _ _ _ * (ite _ _ _)⁻¹
-  simp_rw [IsLocalization.toLocalizationMap_sec, SubmonoidClass.coe_subtype,
-    ite_eq_right <| IsLocalization.sec_fst_ne_zero x.ne_zero,
-    ite_eq_right (nonZeroDivisors.coe_ne_zero _),
-    ← exp_neg, ← exp_add, valuationOfNeZeroToFun, ← sub_eq_add_neg, exp]
+  let a := (IsLocalization.sec R⁰ (x : K)).1
+  let b := (IsLocalization.sec R⁰ (x : K)).2
+  have ha : a ≠ 0 := IsLocalization.sec_fst_ne_zero x.ne_zero
+  have hb : (b : R) ≠ 0 := nonZeroDivisors.coe_ne_zero b
+  calc
+    _ = v.valuation K (IsLocalization.mk' K a b) := by
+      rw [valuation_of_mk']
+      simp only [v.intValuation_if_neg ha, v.intValuation_if_neg hb, ← exp_sub]
+      rfl
+    _ = _ := congrArg (v.valuation K) (IsLocalization.mk'_sec (M := R⁰) K (x : K))
 
 /-- The multiplicative `v`-adic valuation on `Kˣ`. -/
 def valuationOfNeZero : Kˣ →* Multiplicative ℤ where

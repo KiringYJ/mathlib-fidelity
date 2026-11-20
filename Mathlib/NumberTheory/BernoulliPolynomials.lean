@@ -75,8 +75,8 @@ section Examples
 theorem bernoulli_zero : bernoulli 0 = 1 := by simp [bernoulli]
 
 @[simp]
-theorem bernoulli_one : bernoulli 1 = X - C 2⁻¹ := by
-  simp [bernoulli, ← smul_X_eq_monomial, sum_range_succ, ← C_1, -map_one, neg_div, sub_eq_add_neg]
+theorem bernoulli_one : bernoulli 1 = X - C ((2 : ℚ)⁻¹) := by
+  simp [bernoulli, ← smul_X_eq_monomial, sum_range_succ, ← C_1, -map_one, neg_div₀, sub_eq_add_neg]
 
 @[simp]
 theorem bernoulli_eval_zero (n : ℕ) : (bernoulli n).eval 0 = _root_.bernoulli n := by
@@ -160,18 +160,17 @@ theorem bernoulli_eq_sub_sum (n : ℕ) :
 theorem sum_range_pow_eq_bernoulli_sub (n p : ℕ) :
     ((p + 1 : ℚ) * ∑ k ∈ range n, (k : ℚ) ^ p) = (bernoulli p.succ).eval (n : ℚ) -
     _root_.bernoulli p.succ := by
-  rw [sum_range_pow, bernoulli_def, eval_finsetSum, ← sum_div, mul_div_cancel₀ _ _]
-  · simp_rw [eval_monomial]
-    symm
-    rw [← sum_flip _, sum_range_succ]
-    simp only [tsub_self, tsub_zero, choose_zero_right, cast_one, mul_one, _root_.pow_zero,
-      add_tsub_cancel_right]
-    apply sum_congr rfl fun x hx => _
-    intro x hx
-    apply congr_arg₂ _ (congr_arg₂ _ _ _) rfl
-    · rw [Nat.sub_sub_self (mem_range_le hx)]
-    · rw [← choose_symm (mem_range_le hx)]
-  · norm_cast
+  rw [sum_range_pow, bernoulli_def, eval_finsetSum, ← sum_div, mul_div_cancel₀]
+  simp_rw [eval_monomial]
+  symm
+  rw [← sum_flip _, sum_range_succ]
+  simp only [tsub_self, tsub_zero, choose_zero_right, cast_one, mul_one, _root_.pow_zero,
+    add_tsub_cancel_right]
+  apply sum_congr rfl
+  intro x hx
+  apply congr_arg₂ _ (congr_arg₂ _ _ _) rfl
+  · rw [Nat.sub_sub_self (mem_range_le hx)]
+  · rw [← choose_symm (mem_range_le hx)]
 
 /-- Rearrangement of `Polynomial.sum_range_pow_eq_bernoulli_sub`. -/
 theorem bernoulli_succ_eval (n p : ℕ) : (bernoulli p.succ).eval (n : ℚ) =
@@ -223,8 +222,8 @@ theorem bernoulli_comp_neg_X (n : ℕ) :
     coeff_smul, coeff_bernoulli, coeff_X_pow]
   split_ifs with h h'
   · subst h'
-    simp
-    grind
+    simp [pow_succ]
+    ring
   · cases (n + 1 - i).even_or_odd with
     | inl h => grind [neg_one_pow_eq_ite]
     | inr h => rw [bernoulli_eq_zero_of_odd] <;> grind
@@ -276,8 +275,7 @@ theorem bernoulli_generating_function (t : A) :
   -- do trivial rearrangements to make RHS (n+1)*t^n
   rw [mul_left_comm, ← map_mul]
   change _ = t ^ n * algebraMap ℚ A (((n + 1) * n ! : ℕ) * (1 / n !))
-  rw [cast_mul, mul_assoc,
-    mul_one_div_cancel (show (n ! : ℚ) ≠ 0 from cast_ne_zero.2 (factorial_ne_zero n)), mul_one,
+  rw [cast_mul, mul_assoc, mul_one_div_cancel, mul_one,
     mul_comm (t ^ n), ← aeval_monomial, cast_add, cast_one]
   -- But this is the RHS of `Polynomial.sum_bernoulli`
   rw [← sum_bernoulli, Finset.mul_sum, map_sum]

@@ -157,21 +157,34 @@ theorem natAbs_norm_eq (x : ℤ[i]) :
   rw [abs_norm (by simp)]
   simp [Zsqrtd.norm]
 
+private theorem round_intCast_div_intCast (a n : ℤ) (hn : 0 < n) :
+    round (Checked.div (a : ℚ) (n : ℚ) (Int.cast_ne_zero.mpr hn.ne').isUnit) =
+      (2 * a + n) / (2 * n) := by
+  have h₂n : 0 < 2 * n := mul_pos (by decide) hn
+  have hr : (a : ℚ) / n + 1 / 2 =
+      Checked.div ((2 * a + n : ℤ) : ℚ) ((2 * n : ℤ) : ℚ)
+        (Int.cast_ne_zero.mpr h₂n.ne').isUnit := by
+    rw [div_add_div]
+    push_cast
+    simp only [mul_one, mul_comm (a : ℚ) 2, mul_comm (n : ℚ) 2]
+  rw [round_eq, hr, Int.floor_div_cast_of_nonneg h₂n.le, Int.floor_intCast]
+
 /-- The Euclidean quotient of Gaussian integers. For `y ≠ 0`, `x / y` rounds both coordinates of
 the complex quotient `x / y = x * star y / norm y` to the nearest integer; `x / 0 = 0` is the
 Euclidean-domain convention for a zero divisor. -/
-noncomputable instance : Div ℤ[i] :=
+instance : Div ℤ[i] :=
   ⟨fun x y =>
-    if hy : norm y = 0 then 0
-    else ⟨round (Checked.div ((x * star y).re : ℚ) (norm y) (Int.cast_ne_zero.mpr hy).isUnit),
-      round (Checked.div ((x * star y).im : ℚ) (norm y) (Int.cast_ne_zero.mpr hy).isUnit)⟩⟩
+    if norm y = 0 then 0
+    else ⟨(2 * (x * star y).re + norm y) / (2 * norm y),
+      (2 * (x * star y).im + norm y) / (2 * norm y)⟩⟩
 
 theorem div_def (x y : ℤ[i]) (hy : y ≠ 0) :
     x / y = ⟨round (Checked.div ((x * star y).re : ℚ) (norm y)
         (Int.cast_ne_zero.mpr (mt norm_eq_zero.mp hy)).isUnit),
       round (Checked.div ((x * star y).im : ℚ) (norm y)
-        (Int.cast_ne_zero.mpr (mt norm_eq_zero.mp hy)).isUnit)⟩ :=
-  dite_eq_right (mt norm_eq_zero.mp hy)
+        (Int.cast_ne_zero.mpr (mt norm_eq_zero.mp hy)).isUnit)⟩ := by
+  have hn : 0 < norm y := norm_pos.mpr hy
+  simp only [HDiv.hDiv, Div.div, ite_eq_right hn.ne', round_intCast_div_intCast _ _ hn]
 
 /-- The coordinates of the complex quotient of two Gaussian integers. -/
 private theorem toComplex_div_re_im {x y : ℤ[i]} (hy : (y : ℂ) ≠ 0) (hN : (norm y : ℝ) ≠ 0) :
@@ -227,7 +240,7 @@ theorem normSq_div_sub_div_lt_one (x y : ℤ[i]) (hy : y ≠ 0) :
         exact (abs_sub_round _).trans_eq h2.symm
     _ < 1 := by rw [Complex.normSq_apply]; norm_num
 
-noncomputable instance : Mod ℤ[i] :=
+instance : Mod ℤ[i] :=
   ⟨fun x y => x - y * (x / y)⟩
 
 theorem mod_def (x y : ℤ[i]) : x % y = x - y * (x / y) :=
@@ -258,12 +271,12 @@ theorem norm_le_norm_mul_left (x : ℤ[i]) {y : ℤ[i]} (hy : y ≠ 0) :
 instance instNontrivial : Nontrivial ℤ[i] :=
   ⟨⟨0, 1, by decide⟩⟩
 
-noncomputable instance : EuclideanDomain ℤ[i] :=
+instance : EuclideanDomain ℤ[i] :=
   { GaussianInt.instCommRing,
     GaussianInt.instNontrivial with
     quotient := (· / ·)
     remainder := (· % ·)
-    quotient_zero _ := dite_eq_left (norm_eq_zero.2 rfl)
+    quotient_zero _ := ite_eq_left (norm_eq_zero.2 rfl)
     quotient_mul_add_remainder_eq := fun _ _ => by simp [mod_def]
     r := _
     r_wellFounded := (measure (Int.natAbs ∘ norm)).wf

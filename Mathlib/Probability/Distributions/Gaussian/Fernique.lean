@@ -50,7 +50,7 @@ See `charFunDual_eq_of_integral_eq_zero` -/
 lemma charFunDual_eq_of_forall_strongDual_eq_zero (hμ : ∀ L : StrongDual ℝ E, ∫ x, L x ∂μ = 0)
     (L : StrongDual ℝ E) :
     charFunDual μ L = exp (- Var[L; μ] / 2) := by
-  simp [charFunDual_eq L, hμ L, neg_div]
+  simp [charFunDual_eq L, hμ L, neg_div₀]
 
 /-- For a centered Gaussian measure `μ`, the product measure `μ.prod μ` is invariant under rotation.
 The hypothesis `∀ L : StrongDual ℝ E, ∫ x, L x ∂μ = 0` is equivalent to the simpler
@@ -158,7 +158,15 @@ lemma integrable_exp_sq_of_conv_neg (μ : Measure E) [IsGaussian μ] {C C' : ℝ
     _ = (1 + ε) * ‖x - y‖ ^ 2 + (1 + 1 / ε) * ‖y‖ ^ 2 := by ring
   calc C' * ‖x‖ ^ 2
   _ ≤ C' * ((1 + ε) * ‖x - y‖ ^ 2 + (1 + 1 / ε) * ‖y‖ ^ 2) := by gcongr
-  _ = C / ε * ‖y‖ ^ 2 + C * ‖x - y‖ ^ 2 := by grind
+  _ = C / ε * ‖y‖ ^ 2 + C * ‖x - y‖ ^ 2 := by
+    have h_ratio : C' * ε = C - C' := mul_div_cancel₀ (hb := hC'_pos.ne'.isUnit) _
+    have h_sum : C' * (1 + ε) = C := by rw [mul_add, mul_one, h_ratio]; ring
+    have h_inv : C' * (1 + 1 / ε) = C / ε := by
+      apply eq_div_iff.2
+      rw [mul_assoc, add_mul, one_mul, div_mul_cancel₀, add_comm ε 1, h_sum]
+    rw [mul_add]
+    simp only [← mul_assoc, h_sum, h_inv]
+    exact add_comm _ _
 
 /-- **Fernique's theorem**: for a Gaussian measure, there exists `C > 0` such that the function
 `x ↦ exp (C * ‖x‖ ^ 2)` is integrable. -/

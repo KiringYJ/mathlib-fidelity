@@ -94,7 +94,7 @@ theorem HasFPowerSeriesWithinAt.hasStrictFDerivWithinAt (h : HasFPowerSeriesWith
 theorem HasFPowerSeriesAt.hasStrictFDerivAt (h : HasFPowerSeriesAt f p x) :
     HasStrictFDerivAt f (continuousMultilinearCurryFin1 𝕜 E F (p 1)) x := by
   simpa only [hasStrictFDerivAt_iff_isLittleO, Set.insert_eq_of_mem, Set.mem_univ,
-      Set.univ_prod_univ, nhdsWithin_univ]
+      Set.univ_prod_univ, nhdsWithin_univ, id_eq]
     using (h.hasFPowerSeriesWithinAt (s := Set.univ)).hasStrictFDerivWithinAt
 
 theorem HasFPowerSeriesWithinAt.hasFDerivWithinAt (h : HasFPowerSeriesWithinAt f p s x) :
@@ -106,16 +106,45 @@ theorem HasFPowerSeriesWithinAt.hasFDerivWithinAt (h : HasFPowerSeriesWithinAt f
     exact Tendsto.prodMk tendsto_id (tendsto_const_nhdsWithin (by simp))
   exact this (isLittleO_iff.1 h.hasStrictFDerivWithinAt hc)
 
-theorem HasFPowerSeriesAt.hasFDerivAt (h : HasFPowerSeriesAt f p x) :
-    HasFDerivAt f (continuousMultilinearCurryFin1 𝕜 E F (p 1)) x :=
-  h.hasStrictFDerivAt.hasFDerivAt
+theorem HasFPowerSeriesAt.hasFDerivAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} (h : HasFPowerSeriesAt f p x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
+    HasFDerivAt f (continuousMultilinearCurryFin1 𝕜 E F (p 1)) x coord := by
+  obtain ⟨r, hr⟩ := h
+  obtain ⟨r', hr'0, hr'⟩ := ENNReal.lt_iff_exists_nnreal_btwn.mp hr.r_pos
+  have hr'pos : 0 < (r' : ℝ) := by exact_mod_cast hr'0
+  obtain ⟨a, ha, C, hC, hp⟩ :=
+    (hr.hasFPowerSeriesWithinOnBall (s := univ)).uniform_geometric_approx' hr'
+  have hsmall : Tendsto (fun y : D ↦ coord y - coord x) (𝓝 x) (𝓝 (0 : E)) := by
+    simpa only [Pi.sub_def, sub_self] using
+      (hcoord.sub (continuousAt_const : ContinuousAt (fun _ : D ↦ coord x) x)).tendsto
+  have hbound : (fun y : D ↦ f y - p.partialSum 2 (coord y - coord x)) =O[𝓝 x]
+      (fun y : D ↦ ‖coord y - coord x‖ ^ 2) := by
+    refine isBigO_iff.mpr ⟨C * (a / (r' : ℝ)) ^ 2, ?_⟩
+    filter_upwards [hsmall.eventually (Metric.ball_mem_nhds (0 : E) hr'pos)] with y hy
+    simpa [mul_pow, mul_div_assoc₀, mul_assoc, div_mul_eq_mul_div₀, div_pow₀] using
+      hp y hy 2 (by simp)
+  have hpartial (v : E) : p.partialSum 2 v =
+      f x + (continuousMultilinearCurryFin1 𝕜 E F (p 1)) v := by
+    simp only [FormalMultilinearSeries.partialSum, Finset.sum_range_succ, Finset.range_zero,
+      Finset.sum_empty, zero_add, hr.coeff_zero]
+    rfl
+  have hquad := (isLittleO_pow_sub_sub (coord x) (m := 2) (by decide)).comp_tendsto hcoord.tendsto
+  apply HasFDerivAt.of_isLittleO
+  have hrem := hbound.trans_isLittleO (by simpa only [Function.comp_def] using hquad)
+  refine hrem.congr_left ?_
+  intro y
+  rw [hpartial]
+  abel
 
 theorem HasFPowerSeriesWithinAt.differentiableWithinAt (h : HasFPowerSeriesWithinAt f p s x) :
     DifferentiableWithinAt 𝕜 f (insert x s) x :=
   h.hasFDerivWithinAt.differentiableWithinAt
 
-theorem HasFPowerSeriesAt.differentiableAt (h : HasFPowerSeriesAt f p x) : DifferentiableAt 𝕜 f x :=
-  h.hasFDerivAt.differentiableAt
+theorem HasFPowerSeriesAt.differentiableAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} (h : HasFPowerSeriesAt f p x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) : DifferentiableAt 𝕜 f x coord :=
+  (h.hasFDerivAt hcoord).differentiableAt
 
 theorem AnalyticWithinAt.differentiableWithinAt (h : AnalyticWithinAt 𝕜 f s x) :
     DifferentiableWithinAt 𝕜 f (insert x s) x := by
@@ -123,8 +152,11 @@ theorem AnalyticWithinAt.differentiableWithinAt (h : AnalyticWithinAt 𝕜 f s x
   exact hp.differentiableWithinAt
 
 @[fun_prop]
-theorem AnalyticAt.differentiableAt : AnalyticAt 𝕜 f x → DifferentiableAt 𝕜 f x
-  | ⟨_, hp⟩ => hp.differentiableAt
+theorem AnalyticAt.differentiableAt {D : Type*} [TopologicalSpace D]
+    {f : D → F} {coord : D → E} {x : D} (h : AnalyticAt 𝕜 f x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) : DifferentiableAt 𝕜 f x coord := by
+  obtain ⟨p, hp⟩ := h
+  exact hp.differentiableAt hcoord
 
 theorem AnalyticAt.differentiableWithinAt (h : AnalyticAt 𝕜 f x) : DifferentiableWithinAt 𝕜 f s x :=
   h.differentiableAt.differentiableWithinAt
@@ -344,7 +376,8 @@ theorem HasFPowerSeriesWithinOnBall.hasSum_derivSeries_of_hasFDerivWithinAt
     ContinuousLinearMap.compFormalMultilinearSeries_apply,
     FormalMultilinearSeries.changeOriginSeries,
     ContinuousLinearMap.compContinuousMultilinearMap_coe, ContinuousLinearEquiv.coe_coe,
-    LinearIsometryEquiv.coe_coe, Function.comp_apply, sum_apply, map_sum]
+    LinearIsometryEquiv.coe_coe, Function.comp_apply, sum_apply, map_sum, id_eq,
+    add_sub_cancel_left]
   rfl
 
 /-- If a function has a power series within a set on a ball, then so does its derivative. Version
@@ -355,11 +388,14 @@ protected theorem HasFPowerSeriesWithinOnBall.fderivWithin_of_mem_of_analyticOn
     (h : AnalyticOn 𝕜 f s) (hs : UniqueDiffOn 𝕜 s) (hx : x ∈ s) :
     HasFPowerSeriesWithinOnBall (fderivWithin 𝕜 f s) p.derivSeries s x r := by
   refine ⟨hr.r_le.trans p.radius_le_radius_derivSeries, hr.r_pos, fun {y} hy h'y ↦ ?_⟩
-  apply hr.hasSum_derivSeries_of_hasFDerivWithinAt (by simpa [edist_zero_right] using! h'y) hy
-  · rw [insert_eq_of_mem hx] at hy ⊢
-    apply DifferentiableWithinAt.hasFDerivWithinAt
-    exact h.differentiableOn _ hy
-  · rwa [insert_eq_of_mem hx]
+  have hy' : y ∈ s := by simpa only [insert_eq_of_mem hx] using hy
+  have hsum := hr.hasSum_derivSeries_of_hasFDerivWithinAt (y := y - x)
+    (by simpa [id_eq, Metric.mem_eball, edist_zero_right, enorm] using h'y)
+    (by simpa only [add_sub_cancel] using hy)
+    (by simpa only [add_sub_cancel, insert_eq_of_mem hx] using
+      (h.differentiableOn y hy').hasFDerivWithinAt)
+    (by simpa only [insert_eq_of_mem hx] using hs)
+  simpa only [id_eq, add_sub_cancel] using hsum
 
 /-- If a function is analytic within a set with unique differentials, then so is its derivative.
 Note that this theorem does not require completeness of the space. -/
@@ -527,7 +563,7 @@ theorem HasFiniteFPowerSeriesOnBall.fderiv' (h : HasFiniteFPowerSeriesOnBall f p
   · rw [zero_tsub]
     refine HasFiniteFPowerSeriesOnBall.bound_zero_of_eq_zero (fun y hy ↦ ?_) h.r_pos fun n ↦ ?_
     · rw [Filter.EventuallyEq.fderiv_eq (f := fun _ ↦ 0)]
-      · simp
+      · exact fderiv_const_apply _
       · exact Filter.eventuallyEq_iff_exists_mem.mpr ⟨Metric.eball x r,
           Metric.isOpen_eball.mem_nhds hy, fun z hz ↦ by rw [h.eq_zero_of_bound_zero z hz]⟩
     · apply ContinuousMultilinearMap.ext; intro a
@@ -666,7 +702,7 @@ theorem _root_.HasStrictFDerivAt.continuousMultilinearMap_apply {G : Type*}
         ∑ i, (f x).toContinuousLinearMap (g · x) i ∘L g' i) x := by
   convert!
     ContinuousMultilinearMap.hasStrictFDerivAt_uncurry (f x, (g · x)) |>.comp x
-      (hf.prodMk (hasStrictFDerivAt_pi.2 hg))
+      (coord' := _root_.id) (hf.prodMk (hasStrictFDerivAt_pi.2 hg))
   ext
   simp
 
@@ -681,7 +717,7 @@ theorem _root_.HasFDerivWithinAt.continuousMultilinearMap_apply {G : Type*}
   convert!
     ContinuousMultilinearMap.hasStrictFDerivAt_uncurry
         (f x, (g · x)) |>.hasFDerivAt.comp_hasFDerivWithinAt
-      x (hf.prodMk (hasFDerivWithinAt_pi.2 hg))
+      x (coord' := _root_.id) (s := s) (hf.prodMk (hasFDerivWithinAt_pi.2 hg))
   ext
   simp
 
@@ -862,9 +898,11 @@ theorem factorial_smul (n : ℕ) :
 
 theorem hasSum_iteratedFDeriv [CharZero 𝕜] {y : E} (hy : y ∈ Metric.eball 0 r) :
     HasSum (fun n ↦ (n ! : 𝕜)⁻¹ • iteratedFDeriv 𝕜 n f x fun _ ↦ y) (f (x + y)) := by
-  convert! h.hasSum hy with n
+  have hsum := h.hasSum (y := x + y) (by simpa only [id_eq, add_sub_cancel_left] using hy)
+  simp only [id_eq, add_sub_cancel_left] at hsum
+  convert! hsum with n
   rw [← h.factorial_smul y n, smul_comm, ← smul_assoc, nsmul_eq_mul,
-    mul_inv_cancel₀ <| cast_ne_zero.mpr n.factorial_ne_zero, one_smul]
+    mul_inv_cancel₀ (ha := (cast_ne_zero.mpr n.factorial_ne_zero).isUnit), one_smul]
 
 end HasFPowerSeriesOnBall
 

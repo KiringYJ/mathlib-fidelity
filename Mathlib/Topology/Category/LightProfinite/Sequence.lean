@@ -38,13 +38,12 @@ lemma isClosedEmbedding_natUnionInftyEmbedding : IsClosedEmbedding natUnionInfty
     natUnionInftyEmbedding.continuous ?_ ?_
   · rintro (_ | n) (_ | m) h
     · rfl
-    · simp only [natUnionInftyEmbedding, one_div, ContinuousMap.coe_mk, zero_eq_inv] at h
-      assumption_mod_cast
-    · simp only [natUnionInftyEmbedding, one_div, ContinuousMap.coe_mk, inv_eq_zero] at h
-      assumption_mod_cast
-    · simp only [natUnionInftyEmbedding, one_div, ContinuousMap.coe_mk, inv_inj, add_left_inj,
-        Nat.cast_inj] at h
-      rw [h]
+    · exact (one_div_ne_zero h.symm).elim
+    · exact (one_div_ne_zero h).elim
+    · change (1 : ℝ) / (n + 1) = 1 / (m + 1) at h
+      have hnm : n = m := by
+        simpa only [one_div₀, inv_inj₀, add_left_inj, Nat.cast_inj] using h
+      exact congrArg OnePoint.some hnm
   · exact fun _ hC => (hC.isCompact.image natUnionInftyEmbedding.continuous).isClosed
 
 instance : MetrizableSpace (OnePoint ℕ) := isClosedEmbedding_natUnionInftyEmbedding.metrizableSpace

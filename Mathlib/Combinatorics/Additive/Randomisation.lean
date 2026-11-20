@@ -38,9 +38,10 @@ lemma AddDissociated.randomisation (c : AddChar G ℂ → ℝ) (d : AddChar G �
     _ = (𝔼 a, ∏ ψ ∈ ∅, ((d ψ * ψ a) + conj (d ψ * ψ a)) / 2) * ∏ ψ ∈ ∅ᶜ, (c ψ : ℂ) :=
         Fintype.sum_eq_single ∅ fun t ht ↦ mul_eq_zero_of_left ?_ _
     _ = ∏ ψ, (c ψ : ℂ) := by simp
-  simp only [map_mul, prod_div_distrib, prod_add, prod_const, ← expect_div, expect_sum_comm,
-    div_eq_zero_iff, pow_eq_zero_iff', OfNat.ofNat_ne_zero, ne_eq, card_eq_zero,
-    false_and, or_false]
+  simp only [map_mul, div_eq_mul_inv₀, prod_mul_distrib, prod_const]
+  rw [← expect_mul (Finset.univ : Finset G) _ _ Finset.univ_nonempty]
+  apply mul_eq_zero_of_left
+  simp_rw [prod_add, expect_sum_comm]
   refine sum_eq_zero fun u _ ↦ ?_
   calc
     𝔼 a, (∏ ψ ∈ u, d ψ * ψ a) * ∏ ψ ∈ t \ u, conj (d ψ) * conj (ψ a)

@@ -85,6 +85,10 @@ example (x y : ℚ) : (-1/2) * x + (-1/2) * y = (-1/2) * (x + y) := by
 example (x : ℚ) : 2 * x + (1/2) * x = (5/2) * x := by
   algebra
 
+-- A symbolic denominator is an atom, and its invertibility comes from the hypothesis.
+example (x y : ℚ) (hy : y ≠ 0) : x / y + x / y = 2 * (x / y) := by
+  algebra
+
 example (x : ℚ) : (1/2) * x - x = (-1/2) * x := by
   algebra
 

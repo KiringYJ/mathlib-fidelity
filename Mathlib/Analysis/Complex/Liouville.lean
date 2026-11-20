@@ -45,28 +45,76 @@ theorem norm_iteratedDeriv_le_of_forall_mem_sphere_norm_le [CompleteSpace F] {c 
     {f : ℂ → F} (n : ℕ) (hR : 0 < R) (hf : DiffContOnCl ℂ f (ball c R))
     (hC : ∀ z ∈ sphere c R, ‖f z‖ ≤ C) :
     ‖iteratedDeriv n f c‖ ≤ n.factorial * C / R ^ n := by
-  have hp (z) (hz : z ∈ sphere c R) : ‖(z - c)⁻¹ ^ (n + 1) • f z‖ ≤ C / (R ^ n * R) := by
-    simpa [norm_smul, norm_pow, norm_inv, ← div_eq_inv_mul, mem_sphere_iff_norm.1 hz] using!
-      (div_le_div_iff_of_pos_right (mul_pos (pow_pos hR n) hR)).2 (hC z hz)
-  have hq : iteratedDeriv n f c = n.factorial • (2 * π * I)⁻¹ •
-    ∮ z in C(c, R), (z - c)⁻¹ ^ (n + 1) • f z := by
-    have : (2 * π * I / n.factorial) ≠ 0 := by simp [Nat.factorial_ne_zero]
-    rw [← inv_smul_smul₀ (ha := this.isUnit) (iteratedDeriv n f c), inv_div, div_eq_inv_mul,
-      mul_comm, ← nsmul_eq_mul, smul_assoc]
-    simp [← DiffContOnCl.circleIntegral_one_div_sub_center_pow_smul hR n hf]
+  let integrand (z : sphere c |R|) : F :=
+    Checked.div 1 ((z.val - c) ^ (n + 1))
+      ((isUnit_sub_center_of_mem_sphere hR.ne'.isUnit z).pow _) • f z.val
+  have hp (z : sphere c |R|) : ‖integrand z‖ ≤ C / R ^ (n + 1) := by
+    have hz : (z : ℂ) ∈ sphere c R := by simpa only [abs_of_pos hR] using z.property
+    have hnorm : ‖z.val - c‖ = R := mem_sphere_iff_norm.mp hz
+    simp only [integrand, one_div₀, norm_smul, norm_inv, norm_pow, hnorm, inv_mul_eq_div₀]
+    exact (div_le_div_iff_of_pos_right (pow_pos hR _)).mpr (hC z hz)
+  have hconst : ‖(2 * π * I : ℂ)‖ = 2 * π := by simp [Real.pi_pos.le]
+  have hconst₀ : IsUnit (2 * π * I : ℂ) :=
+    (norm_ne_zero_iff.mp (hconst.symm ▸ Real.two_pi_pos.ne')).isUnit
+  have hfac : (n.factorial : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr n.factorial_ne_zero
+  have hCauchy : circleIntegralOn integrand c R = (2 * π * I / n.factorial) • iteratedDeriv n f c :=
+    hf.circleIntegral_one_div_sub_center_pow_smul hR n
+  have hq : iteratedDeriv n f c =
+      n.factorial • (2 * π * I : ℂ)⁻¹ • circleIntegralOn integrand c R := by
+    have he : (n.factorial : ℂ) * (2 * π * I : ℂ)⁻¹ * (2 * π * I / n.factorial) = 1 := by
+      field_simp
+    rw [hCauchy, ← Nat.cast_smul_eq_nsmul ℂ, ← mul_smul, ← mul_smul, he, one_smul]
+  have hbound : ‖circleIntegralOn integrand c R‖ ≤ 2 * π * R * (C / R ^ (n + 1)) := by
+    calc
+      _ ≤ R * (C / R ^ (n + 1)) * |2 * π - 0| := by
+        rw [circleIntegralOn_sphere]
+        apply intervalIntegral.norm_integral_le_of_norm_le_const
+        intro θ _
+        have hθ : ‖deriv (circleMap c R) θ‖ = R := by
+          rw [deriv_circleMap, norm_mul, norm_I, mul_one, norm_circleMap_zero, abs_of_pos hR]
+        rw [norm_smul, hθ]
+        exact mul_le_mul_of_nonneg_left (hp _) hR.le
+      _ = _ := by rw [sub_zero, abs_of_pos Real.two_pi_pos]; ac_rfl
+  have hbound' : ‖(2 * π * I : ℂ)⁻¹ • circleIntegralOn integrand c R‖ ≤ R * (C / R ^ (n + 1)) := by
+    have hnorm₀ : 0 < ‖(2 * π * I : ℂ)‖ := hconst.symm ▸ Real.two_pi_pos
+    have hInv : ‖(2 * π * I : ℂ)⁻¹‖ = (2 * π)⁻¹ := calc
+      _ = ‖(2 * π * I : ℂ)‖⁻¹ := norm_inv _
+      _ = _ := inv_inj₀.mpr hconst
+    rw [norm_smul, hInv, inv_mul_eq_div₀, div_le_iff₀ Real.two_pi_pos]
+    exact hbound.trans_eq (by ring)
   calc
-    ‖iteratedDeriv n f c‖ = ‖n.factorial • (2 * π * I)⁻¹ •
-      ∮ z in C(c, R), (z - c)⁻¹ ^ (n + 1) • f z‖ := by rw [hq]
+    ‖iteratedDeriv n f c‖ = n.factorial * ‖(2 * π * I : ℂ)⁻¹ • circleIntegralOn integrand c R‖ := by
+      rw [hq, RCLike.norm_nsmul (K := ℂ), nsmul_eq_mul]
     _ ≤ n.factorial * (R * (C / (R ^ (n + 1)))) := by
-      rw [RCLike.norm_nsmul (K := ℂ), nsmul_eq_mul, mul_le_mul_iff_right₀ (by positivity)]
-      exact circleIntegral.norm_two_pi_i_inv_smul_integral_le_of_norm_le_const hR.le hp
+      exact mul_le_mul_of_nonneg_left hbound' (by positivity)
     _ = n.factorial * C / R ^ n := by
-      grind
+      field_simp
+      rw [pow_succ]
+      ring
 
 private theorem norm_deriv_le_aux [CompleteSpace F] {c : ℂ} {R C : ℝ} {f : ℂ → F} (hR : 0 < R)
     (hf : DiffContOnCl ℂ f (ball c R)) (hC : ∀ z ∈ sphere c R, ‖f z‖ ≤ C) :
     ‖deriv f c‖ ≤ C / R := by
-  simpa using norm_iteratedDeriv_le_of_forall_mem_sphere_norm_le 1 hR hf hC
+  simpa only [iteratedDeriv_one, Nat.factorial_one, Nat.cast_one, one_mul, pow_one] using
+    norm_iteratedDeriv_le_of_forall_mem_sphere_norm_le 1 hR hf hC
+
+private theorem norm_deriv_le_via_embedding {G : Type*} [NormedAddCommGroup G]
+    [NormedSpace ℂ G] [CompleteSpace G] (e : F →L[ℂ] G) (hnorm : ∀ x : F, ‖e x‖ = ‖x‖)
+    {c : ℂ} {R C : ℝ} {f : ℂ → F} (hR : 0 < R)
+    (hd : DiffContOnCl ℂ f (ball c R)) (hC : ∀ z ∈ sphere c R, ‖f z‖ ≤ C) :
+    ‖deriv f c‖ ≤ C / R := by
+  have hf : HasDerivAt f (deriv f c) c :=
+    (hd.differentiableAt isOpen_ball (mem_ball_self hR)).hasDerivAt
+  have he : HasFDerivAt (e : F → G) e (f c) := e.hasFDerivAt
+  have hcomp : HasDerivAt (e ∘ f) (e (deriv f c)) c := he.comp_hasDerivAt c hf
+  have hd' : DiffContOnCl ℂ (e ∘ f) (ball c R) := e.differentiable.comp_diffContOnCl hd
+  have hC' (z : ℂ) (hz : z ∈ sphere c R) : ‖(e ∘ f) z‖ ≤ C :=
+    (hnorm (f z)).trans_le (hC z hz)
+  have heq : deriv (e ∘ f) c = e (deriv f c) := hcomp.deriv Topology.IsOpenEmbedding.id
+  calc
+    ‖deriv f c‖ = ‖e (deriv f c)‖ := (hnorm _).symm
+    _ = ‖deriv (e ∘ f) c‖ := congrArg (fun w : G ↦ ‖w‖) heq.symm
+    _ ≤ C / R := norm_deriv_le_aux hR hd' hC'
 
 /-- **Cauchy's estimate for the first order derivative**: If `f` is complex differentiable on an
 open disc of radius `R > 0`, is continuous on its closure, and its values on the boundary circle
@@ -75,18 +123,9 @@ most `C / R`. Note that this theorem does not require the completeness of the co
 contrast, the completeness is needed for `norm_iteratedDeriv_le_of_forall_mem_sphere_norm_le`. -/
 theorem norm_deriv_le_of_forall_mem_sphere_norm_le {c : ℂ} {R C : ℝ} {f : ℂ → F} (hR : 0 < R)
     (hd : DiffContOnCl ℂ f (ball c R)) (hC : ∀ z ∈ sphere c R, ‖f z‖ ≤ C) :
-    ‖deriv f c‖ ≤ C / R := by
-  set e : F →L[ℂ] F̂ := UniformSpace.Completion.toComplL
-  have : HasDerivAt (e ∘ f) (e (deriv f c)) c :=
-    e.hasFDerivAt.comp_hasDerivAt c
-      (hd.differentiableAt isOpen_ball <| mem_ball_self hR).hasDerivAt
-  calc
-    ‖deriv f c‖ = ‖deriv (e ∘ f) c‖ := by
-      rw [this.deriv]
-      exact (UniformSpace.Completion.norm_coe _).symm
-    _ ≤ C / R :=
-      norm_deriv_le_aux hR (e.differentiable.comp_diffContOnCl hd) fun z hz =>
-        (UniformSpace.Completion.norm_coe _).trans_le (hC z hz)
+    ‖deriv f c‖ ≤ C / R :=
+  norm_deriv_le_via_embedding (G := F̂) UniformSpace.Completion.toComplL
+    UniformSpace.Completion.norm_coe hR hd hC
 
 /-- An auxiliary lemma for Liouville's theorem `Differentiable.apply_eq_apply_of_bounded`. -/
 theorem liouville_theorem_aux {f : ℂ → F} (hf : Differentiable ℂ f) (hb : IsBounded (range f))
@@ -102,7 +141,7 @@ theorem liouville_theorem_aux {f : ℂ → F} (hf : Differentiable ℂ f) (hb : 
   calc
     ‖deriv f c‖ ≤ C / (C / ε) :=
       norm_deriv_le_of_forall_mem_sphere_norm_le (div_pos C₀ ε₀) hf.diffContOnCl fun z _ => hC z
-    _ = ε := div_div_cancel₀ C₀.lt.ne'
+    _ = ε := div_div_cancel₀
 
 end Complex
 

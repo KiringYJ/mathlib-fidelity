@@ -499,25 +499,25 @@ lemma _root_.MeasureTheory.IsCondExp.ae_eq_integral_cond_of_generateFrom_singlet
     (hg : IsCondExp (generateFrom {s}) μ f g) :
     g =ᵐ[μ.restrict s] fun _ ↦ ∫ x, f x ∂μ[|s] := by
   have hm := generateFrom_singleton_le hs
+  have hu : IsUnit (μ s).toReal := (ENNReal.toReal_ne_zero.2 ⟨hμs, measure_ne_top _ _⟩).isUnit
   have hc : IsCondExp (generateFrom {s}) (μ.restrict s) f fun _ ↦ ∫ x, f x ∂μ[|s] := by
     refine ⟨aestronglyMeasurable_const, fun t _ _ ↦ ?_, fun t ht _ ↦ ?_⟩
     · rw [integrableOn_const_iff]
       exact Or.inr <| measure_lt_top (μ.restrict s) t
     obtain (h | h | h | h) := mem_generateFrom_singleton_iff.1 ht
     · simp [h]
-    · simp only [h, cond, integral_smul_measure, ENNReal.toReal_inv, integral_const,
-        MeasurableSet.univ, measureReal_restrict_apply, univ_inter, measureReal_restrict_apply_self,
-        ← measureReal_def]
+    · simp only [h, cond, integral_smul_measure, ENNReal.toReal_inv (μ s) (ha := hu),
+        integral_const, MeasurableSet.univ, measureReal_restrict_apply, univ_inter,
+        measureReal_restrict_apply_self, ← measureReal_def]
       rw [smul_inv_smul₀, Measure.restrict_restrict hs, inter_self]
-      exact ENNReal.toReal_ne_zero.2 ⟨hμs, measure_ne_top _ _⟩
     · simp only [h, integral_const, MeasurableSet.univ, measureReal_restrict_apply, univ_inter,
         measureReal_restrict_apply hs.compl, compl_inter_self, measureReal_empty, zero_smul,
         ((Measure.restrict_apply_eq_zero hs.compl).2 <| compl_inter_self s ▸ measure_empty),
         setIntegral_measure_zero]
-    · simp only [h, Measure.restrict_univ, cond, integral_smul_measure, ENNReal.toReal_inv, ←
-        measureReal_def, integral_const, MeasurableSet.univ, measureReal_restrict_apply, univ_inter]
+    · simp only [h, Measure.restrict_univ, cond, integral_smul_measure,
+        ENNReal.toReal_inv (μ s) (ha := hu), ← measureReal_def, integral_const, MeasurableSet.univ,
+        measureReal_restrict_apply, univ_inter]
       rw [smul_inv_smul₀]
-      exact (measureReal_ne_zero_iff (by finiteness)).2 hμs
   exact (hg.restrict hm (SigmaAlgebra.mem_generateFrom rfl)).ae_eq hm hf.restrict hc
 
 /-- On a measurable set `s` of positive measure, a conditional probability of a measurable set `t`

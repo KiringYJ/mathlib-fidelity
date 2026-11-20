@@ -77,13 +77,20 @@ lemma prod_sub_add_le {x y z : ℝ} (hx : 0 < x) (hy : 0 < y) (hz : 0 < z) :
 theorem imo2000_q2 {A B C : ℝ}
     (A_pos : 0 < A) (B_pos : 0 < B) (C_pos : 0 < C) (h_prod : A * B * C = 1) :
     (A - 1 + 1 / B) * (B - 1 + 1 / C) * (C - 1 + 1 / A) ≤ 1 := by
-  obtain ⟨x, y, z, x_pos, y_pos, z_pos, rfl, rfl, rfl⟩ :
-      ∃ x y z, 0 < x ∧ 0 < y ∧ 0 < z ∧ A = x / y ∧ B = y / z ∧ C = z / x :=
-    ⟨A, 1, 1 / B, by grind only [inv_pos]⟩
-  have key : (x / y - 1 + 1 / (y / z)) * (y / z - 1 + 1 / (z / x)) * (z / x - 1 + 1 / (x / y))
-      = (x - y + z) * (y - z + x) * (z - x + y) / (x * y * z) := by
-    field_simp
-  rw [key, div_le_one (by positivity)]
-  exact prod_sub_add_le x_pos y_pos z_pos
+  obtain ⟨x, y, z, hx, hy, hz, hA, hB, hC⟩ :
+      ∃ (x y z : ℝ) (hx : 0 < x) (hy : 0 < y) (hz : 0 < z),
+        A = x / y ∧ B = y / z ∧ C = z / x := by
+    refine ⟨A * B, B, 1, mul_pos A_pos B_pos, B_pos, zero_lt_one, ?_, ?_, ?_⟩
+    · exact (mul_div_cancel_right₀ A).symm
+    · simp
+    · rw [eq_div_iff, mul_comm C]
+      exact h_prod
+  subst A
+  subst B
+  subst C
+  calc
+    _ = (x - y + z) * (y - z + x) * (z - x + y) / (x * y * z) := by
+      field_simp
+    _ ≤ 1 := (div_le_one (mul_pos (mul_pos hx hy) hz)).2 (prod_sub_add_le hx hy hz)
 
 end Imo2000Q2

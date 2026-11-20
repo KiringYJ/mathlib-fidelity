@@ -389,37 +389,47 @@ end SMul
 
 @[simp]
 theorem div_const {𝕜 : Type*} {f : ℝ → 𝕜} [NormedDivisionRing 𝕜] (h : IntervalIntegrable f μ a b)
-    (c : 𝕜) : IntervalIntegrable (fun x => f x / c) μ a b := by
-  simpa only [div_eq_mul_inv] using mul_const h c⁻¹
+    (c : 𝕜) {hc : IsUnit c} : IntervalIntegrable (fun x => f x / c) μ a b := by
+  simpa only [div_eq_mul_inv₀] using mul_const h c⁻¹
 
 variable [PseudoMetrizableSpace ε]
 
-theorem comp_mul_left (hf : IntervalIntegrable f volume a b) {c : ℝ}
+theorem comp_mul_left (hf : IntervalIntegrable f volume a b) {c : ℝ} {hc : IsUnit c}
     (h : ‖f (min a b)‖ₑ ≠ ∞ := by finiteness)
     (h' : ‖f (c * min (a / c) (b / c))‖ₑ ≠ ∞ := by finiteness) :
     IntervalIntegrable (fun x => f (c * x)) volume (a / c) (b / c) := by
-  rcases eq_or_ne c 0 with (hc | hc); · rw [hc]; simp
   rw [intervalIntegrable_iff' h] at hf
   rw [intervalIntegrable_iff' h'] at ⊢
+  have hi : c⁻¹ ≠ 0 := hc.inv₀.ne_zero
+  have hmeasure : ENNReal.ofReal |c⁻¹| ≠ 0 :=
+    fun hz ↦ (not_le_of_gt (abs_pos.mpr hi)) (ENNReal.ofReal_eq_zero.mp hz)
   have A : MeasurableEmbedding fun x => x * c⁻¹ :=
-    (Homeomorph.mulRight₀ _ (inv_ne_zero hc)).isClosedEmbedding.measurableEmbedding
-  rw [← Real.smul_map_volume_mul_right (inv_ne_zero hc), IntegrableOn, Measure.restrict_smul,
-    integrable_smul_measure (by simpa : ENNReal.ofReal |c⁻¹| ≠ 0) ENNReal.ofReal_ne_top,
+    (Homeomorph.mulRight₀ _ hi).isClosedEmbedding.measurableEmbedding
+  rw [← Real.smul_map_volume_mul_right hi, IntegrableOn, Measure.restrict_smul,
+    integrable_smul_measure hmeasure ENNReal.ofReal_ne_top,
     ← IntegrableOn, MeasurableEmbedding.integrableOn_map_iff A]
   convert! hf using 1
-  · ext; simp only [comp_apply]; congr 1; field
-  · rw [preimage_mul_const_uIcc (inv_ne_zero hc)]; field_simp
+  · ext x
+    simp [← mul_assoc, mul_comm c x]
+  · rw [preimage_mul_const_uIcc hi]
+    simp [div_eq_mul_inv₀, inv_inv₀]
 
 -- Note that `h'` is **not** implied by `h` if `c` is negative.
 -- TODO: generalise this lemma to enorms!
-theorem comp_mul_left_iff {f : ℝ → E} {c : ℝ} (hc : c ≠ 0) (h : ‖f (min a b)‖ₑ ≠ ∞ := by finiteness)
+theorem comp_mul_left_iff {f : ℝ → E} {c : ℝ} {hc : IsUnit c}
+    (h : ‖f (min a b)‖ₑ ≠ ∞ := by finiteness)
     (h' : ‖f (c * min (a / c) (b / c))‖ₑ ≠ ∞ := by finiteness) :
     IntervalIntegrable (fun x ↦ f (c * x)) volume (a / c) (b / c) ↔
       IntervalIntegrable f volume a b := by
-  exact ⟨fun h ↦ by simpa [hc] using h.comp_mul_left (c := c⁻¹) h' (by simp),
-    (comp_mul_left · h h')⟩
+  refine ⟨fun hi ↦ ?_, fun hi ↦ hi.comp_mul_left h h'⟩
+  have hinv := hc.inv₀
+  have ha : a / c / c⁻¹ = a := by simp only [div_div₀, mul_inv_cancel₀, div_one₀]
+  have hb : b / c / c⁻¹ = b := by simp only [div_div₀, mul_inv_cancel₀, div_one₀]
+  have hcancel (x : ℝ) : c * (c⁻¹ * x) = x := by rw [← mul_assoc, mul_inv_cancel₀, one_mul]
+  simpa only [ha, hb, hcancel] using hi.comp_mul_left (c := c⁻¹) (hc := hinv) h'
+    (by simpa only [ha, hb, hcancel] using h)
 
-theorem comp_mul_right (hf : IntervalIntegrable f volume a b) {c : ℝ}
+theorem comp_mul_right (hf : IntervalIntegrable f volume a b) {c : ℝ} {hc : IsUnit c}
     (h : ‖f (min a b)‖ₑ ≠ ∞ := by finiteness)
     (h' : ‖f (c * min (a / c) (b / c))‖ₑ ≠ ∞ := by finiteness) :
     IntervalIntegrable (fun x => f (x * c)) volume (a / c) (b / c) := by
@@ -478,7 +488,8 @@ theorem comp_sub_right_iff {c : ℝ} (h : ‖f (min a b)‖ₑ ≠ ⊤ := by fin
 -- TODO: generalise this lemma to enorms!
 theorem iff_comp_neg {f : ℝ → E} (h : ‖f (min a b)‖ₑ ≠ ∞ := by finiteness) :
     IntervalIntegrable f volume a b ↔ IntervalIntegrable (fun x ↦ f (-x)) volume (-a) (-b) := by
-  rw [← comp_mul_left_iff (neg_ne_zero.2 one_ne_zero) h (by simp)]; simp [div_neg]
+  simpa only [neg_one_mul, div_neg₀, div_one₀] using
+    (comp_mul_left_iff (c := -1) (hc := isUnit_one.neg) h (by finiteness)).symm
 
 -- TODO: generalise this lemma to enorms!
 theorem comp_sub_left {f : ℝ → E} (hf : IntervalIntegrable f volume a b) (c : ℝ)
@@ -826,9 +837,9 @@ theorem integral_mul_const {𝕜 : Type*} [RCLike 𝕜] (r : 𝕜) (f : ℝ → 
   simpa only [mul_comm r] using integral_const_mul r f
 
 @[simp]
-theorem integral_div {𝕜 : Type*} [RCLike 𝕜] (r : 𝕜) (f : ℝ → 𝕜) :
+theorem integral_div {𝕜 : Type*} [RCLike 𝕜] (r : 𝕜) (f : ℝ → 𝕜) {hr : IsUnit r} :
     ∫ x in a..b, f x / r ∂μ = (∫ x in a..b, f x ∂μ) / r := by
-  simpa only [div_eq_mul_inv] using integral_mul_const r⁻¹ f
+  simpa only [div_eq_mul_inv₀] using integral_mul_const r⁻¹ f
 
 theorem integral_const' [CompleteSpace E] (c : E) :
     ∫ _ in a..b, c ∂μ = (μ.real (Ioc a b) - μ.real (Ioc b a)) • c := by
@@ -915,42 +926,43 @@ section Comp
 variable {a b c d : ℝ} (f : ℝ → E)
 
 @[simp]
-theorem integral_comp_mul_right (hc : c ≠ 0) :
-    (∫ x in a..b, f (x * c)) = c⁻¹ • ∫ x in a * c..b * c, f x := by
+theorem integral_comp_mul_right {hc : c ≠ 0} :
+    (∫ x in a..b, f (x * c)) = Checked.inv c hc.isUnit • ∫ x in a * c..b * c, f x := by
   have A : MeasurableEmbedding fun x => x * c :=
     (Homeomorph.mulRight₀ c hc).isClosedEmbedding.measurableEmbedding
   conv_rhs => rw [← Real.smul_map_volume_mul_right hc]
   simp_rw [integral_smul_measure, intervalIntegral, A.setIntegral_map,
     ENNReal.toReal_ofReal (abs_nonneg c)]
   rcases hc.lt_or_gt with h | h
-  · simp [h, mul_div_cancel_right₀, hc, abs_of_neg,
+  · simp [h, mul_div_cancel_right₀, abs_of_neg,
       Measure.restrict_congr_set (α := ℝ) (μ := volume) Ico_ae_eq_Ioc]
-  · simp [h, mul_div_cancel_right₀, hc, abs_of_pos]
+  · simp [h, mul_div_cancel_right₀, abs_of_pos]
 
 @[simp]
 theorem smul_integral_comp_mul_right (c) :
     (c • ∫ x in a..b, f (x * c)) = ∫ x in a * c..b * c, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_mul_right]
+  by_cases hc : c = 0
+  · simp [hc]
+  rw [integral_comp_mul_right f (hc := hc), smul_smul, mul_inv_cancel₀, one_smul]
 
 @[simp]
-theorem integral_comp_mul_left (hc : c ≠ 0) :
-    (∫ x in a..b, f (c * x)) = c⁻¹ • ∫ x in c * a..c * b, f x := by
-  simpa only [mul_comm c] using integral_comp_mul_right f hc
+theorem integral_comp_mul_left {hc : c ≠ 0} :
+    (∫ x in a..b, f (c * x)) = Checked.inv c hc.isUnit • ∫ x in c * a..c * b, f x := by
+  simpa only [mul_comm c] using integral_comp_mul_right f (hc := hc)
 
 @[simp]
 theorem smul_integral_comp_mul_left (c) :
     (c • ∫ x in a..b, f (c * x)) = ∫ x in c * a..c * b, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_mul_left]
+  simpa only [mul_comm c] using smul_integral_comp_mul_right f c
 
 @[simp]
-theorem integral_comp_div (hc : c ≠ 0) :
+theorem integral_comp_div {hc : IsUnit c} :
     (∫ x in a..b, f (x / c)) = c • ∫ x in a / c..b / c, f x := by
-  simpa only [inv_inv] using! integral_comp_mul_right f (inv_ne_zero hc)
+  simpa only [div_eq_mul_inv₀, inv_inv₀] using integral_comp_mul_right f (hc := hc.inv₀.ne_zero)
 
-@[simp]
-theorem inv_smul_integral_comp_div (c) :
+theorem inv_smul_integral_comp_div (c) {hc : IsUnit c} :
     (c⁻¹ • ∫ x in a..b, f (x / c)) = ∫ x in a / c..b / c, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_div]
+  rw [integral_comp_div f (hc := hc), smul_smul, inv_mul_cancel₀, one_smul]
 
 @[simp]
 theorem integral_comp_add_right (d) : (∫ x in a..b, f (x + d)) = ∫ x in a + d..b + d, f x :=
@@ -968,86 +980,88 @@ nonrec theorem integral_comp_add_left (d) :
   simpa only [add_comm d] using integral_comp_add_right f d
 
 @[simp]
-theorem integral_comp_mul_add (hc : c ≠ 0) (d) :
-    (∫ x in a..b, f (c * x + d)) = c⁻¹ • ∫ x in c * a + d..c * b + d, f x := by
-  rw [← integral_comp_add_right, ← integral_comp_mul_left _ hc]
+theorem integral_comp_mul_add {hc : c ≠ 0} (d) :
+    (∫ x in a..b, f (c * x + d)) = Checked.inv c hc.isUnit • ∫ x in c * a + d..c * b + d, f x := by
+  rw [← integral_comp_add_right, ← integral_comp_mul_left _ (hc := hc)]
 
 @[simp]
 theorem smul_integral_comp_mul_add (c d) :
     (c • ∫ x in a..b, f (c * x + d)) = ∫ x in c * a + d..c * b + d, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_mul_add]
+  by_cases hc : c = 0
+  · simp [hc]
+  rw [integral_comp_mul_add f (hc := hc), smul_smul, mul_inv_cancel₀, one_smul]
 
 @[simp]
-theorem integral_comp_add_mul (hc : c ≠ 0) (d) :
-    (∫ x in a..b, f (d + c * x)) = c⁻¹ • ∫ x in d + c * a..d + c * b, f x := by
-  rw [← integral_comp_add_left, ← integral_comp_mul_left _ hc]
+theorem integral_comp_add_mul {hc : c ≠ 0} (d) :
+    (∫ x in a..b, f (d + c * x)) = Checked.inv c hc.isUnit • ∫ x in d + c * a..d + c * b, f x := by
+  rw [← integral_comp_add_left, ← integral_comp_mul_left _ (hc := hc)]
 
 @[simp]
 theorem smul_integral_comp_add_mul (c d) :
     (c • ∫ x in a..b, f (d + c * x)) = ∫ x in d + c * a..d + c * b, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_add_mul]
+  by_cases hc : c = 0
+  · simp [hc]
+  rw [integral_comp_add_mul f (hc := hc), smul_smul, mul_inv_cancel₀, one_smul]
 
 @[simp]
-theorem integral_comp_div_add (hc : c ≠ 0) (d) :
+theorem integral_comp_div_add {hc : IsUnit c} (d) :
     (∫ x in a..b, f (x / c + d)) = c • ∫ x in a / c + d..b / c + d, f x := by
-  simpa only [div_eq_inv_mul, inv_inv] using integral_comp_mul_add f (inv_ne_zero hc) d
+  simpa only [div_eq_inv_mul₀, inv_inv₀] using integral_comp_mul_add f (hc := hc.inv₀.ne_zero) d
 
-@[simp]
-theorem inv_smul_integral_comp_div_add (c d) :
+theorem inv_smul_integral_comp_div_add (c d) {hc : IsUnit c} :
     (c⁻¹ • ∫ x in a..b, f (x / c + d)) = ∫ x in a / c + d..b / c + d, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_div_add]
+  rw [integral_comp_div_add f (hc := hc), smul_smul, inv_mul_cancel₀, one_smul]
 
 @[simp]
-theorem integral_comp_add_div (hc : c ≠ 0) (d) :
+theorem integral_comp_add_div {hc : IsUnit c} (d) :
     (∫ x in a..b, f (d + x / c)) = c • ∫ x in d + a / c..d + b / c, f x := by
-  simpa only [div_eq_inv_mul, inv_inv] using integral_comp_add_mul f (inv_ne_zero hc) d
+  simpa only [div_eq_inv_mul₀, inv_inv₀] using integral_comp_add_mul f (hc := hc.inv₀.ne_zero) d
 
-@[simp]
-theorem inv_smul_integral_comp_add_div (c d) :
+theorem inv_smul_integral_comp_add_div (c d) {hc : IsUnit c} :
     (c⁻¹ • ∫ x in a..b, f (d + x / c)) = ∫ x in d + a / c..d + b / c, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_add_div]
+  rw [integral_comp_add_div f (hc := hc), smul_smul, inv_mul_cancel₀, one_smul]
 
 @[simp]
-theorem integral_comp_mul_sub (hc : c ≠ 0) (d) :
-    (∫ x in a..b, f (c * x - d)) = c⁻¹ • ∫ x in c * a - d..c * b - d, f x := by
-  simpa only [sub_eq_add_neg] using integral_comp_mul_add f hc (-d)
+theorem integral_comp_mul_sub {hc : c ≠ 0} (d) :
+    (∫ x in a..b, f (c * x - d)) = Checked.inv c hc.isUnit • ∫ x in c * a - d..c * b - d, f x := by
+  simpa only [sub_eq_add_neg] using integral_comp_mul_add f (hc := hc) (-d)
 
 @[simp]
 theorem smul_integral_comp_mul_sub (c d) :
     (c • ∫ x in a..b, f (c * x - d)) = ∫ x in c * a - d..c * b - d, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_mul_sub]
+  simpa only [sub_eq_add_neg] using smul_integral_comp_mul_add f c (-d)
 
 @[simp]
-theorem integral_comp_sub_mul (hc : c ≠ 0) (d) :
-    (∫ x in a..b, f (d - c * x)) = c⁻¹ • ∫ x in d - c * b..d - c * a, f x := by
+theorem integral_comp_sub_mul {hc : c ≠ 0} (d) :
+    (∫ x in a..b, f (d - c * x)) = Checked.inv c hc.isUnit • ∫ x in d - c * b..d - c * a, f x := by
   simp only [sub_eq_add_neg, neg_mul_eq_neg_mul]
-  rw [integral_comp_add_mul f (neg_ne_zero.mpr hc) d, integral_symm]
-  simp only [inv_neg, smul_neg, neg_neg, neg_smul]
+  rw [integral_comp_add_mul f (hc := neg_ne_zero.mpr hc) d, integral_symm]
+  simp only [inv_neg₀, smul_neg, neg_neg, neg_smul]
 
 @[simp]
 theorem smul_integral_comp_sub_mul (c d) :
     (c • ∫ x in a..b, f (d - c * x)) = ∫ x in d - c * b..d - c * a, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_sub_mul]
+  by_cases hc : c = 0
+  · simp [hc]
+  rw [integral_comp_sub_mul f (hc := hc), smul_smul, mul_inv_cancel₀, one_smul]
 
 @[simp]
-theorem integral_comp_div_sub (hc : c ≠ 0) (d) :
+theorem integral_comp_div_sub {hc : IsUnit c} (d) :
     (∫ x in a..b, f (x / c - d)) = c • ∫ x in a / c - d..b / c - d, f x := by
-  simpa only [div_eq_inv_mul, inv_inv] using integral_comp_mul_sub f (inv_ne_zero hc) d
+  simpa only [div_eq_inv_mul₀, inv_inv₀] using integral_comp_mul_sub f (hc := hc.inv₀.ne_zero) d
 
-@[simp]
-theorem inv_smul_integral_comp_div_sub (c d) :
+theorem inv_smul_integral_comp_div_sub (c d) {hc : IsUnit c} :
     (c⁻¹ • ∫ x in a..b, f (x / c - d)) = ∫ x in a / c - d..b / c - d, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_div_sub]
+  rw [integral_comp_div_sub f (hc := hc), smul_smul, inv_mul_cancel₀, one_smul]
 
 @[simp]
-theorem integral_comp_sub_div (hc : c ≠ 0) (d) :
+theorem integral_comp_sub_div {hc : IsUnit c} (d) :
     (∫ x in a..b, f (d - x / c)) = c • ∫ x in d - b / c..d - a / c, f x := by
-  simpa only [div_eq_inv_mul, inv_inv] using integral_comp_sub_mul f (inv_ne_zero hc) d
+  simpa only [div_eq_inv_mul₀, inv_inv₀] using integral_comp_sub_mul f (hc := hc.inv₀.ne_zero) d
 
-@[simp]
-theorem inv_smul_integral_comp_sub_div (c d) :
+theorem inv_smul_integral_comp_sub_div (c d) {hc : IsUnit c} :
     (c⁻¹ • ∫ x in a..b, f (d - x / c)) = ∫ x in d - b / c..d - a / c, f x := by
-  by_cases hc : c = 0 <;> simp [hc, integral_comp_sub_div]
+  rw [integral_comp_sub_div f (hc := hc), smul_smul, inv_mul_cancel₀, one_smul]
 
 @[simp]
 theorem integral_comp_sub_right (d) : (∫ x in a..b, f (x - d)) = ∫ x in a - d..b - d, f x := by
@@ -1055,7 +1069,7 @@ theorem integral_comp_sub_right (d) : (∫ x in a..b, f (x - d)) = ∫ x in a - 
 
 @[simp]
 theorem integral_comp_sub_left (d) : (∫ x in a..b, f (d - x)) = ∫ x in d - b..d - a, f x := by
-  simpa only [one_mul, one_smul, inv_one] using integral_comp_sub_mul f one_ne_zero d
+  simpa only [one_mul, one_smul, inv_one₀] using integral_comp_sub_mul f (hc := one_ne_zero) d
 
 @[simp]
 theorem integral_comp_neg : (∫ x in a..b, f (-x)) = ∫ x in -b..-a, f x := by

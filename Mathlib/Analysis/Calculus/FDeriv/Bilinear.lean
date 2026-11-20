@@ -53,7 +53,8 @@ theorem IsBoundedBilinearMap.hasStrictFDerivAt (h : IsBoundedBilinearMap 𝕜 b)
     _ = fun x ↦ h.deriv (x.1 - x.2) (x.2.1, x.1.2) := by
       ext ⟨⟨x₁, y₁⟩, ⟨x₂, y₂⟩⟩
       rcases p with ⟨x, y⟩
-      simp only [map_sub, deriv_apply, Function.comp_apply, Prod.mk_add_mk, h.add_right, h.add_left,
+      simp only [id_eq, map_sub, deriv_apply, Function.comp_apply, Prod.mk_add_mk,
+        h.add_right, h.add_left,
         Prod.mk_sub_mk, h.map_sub_left, h.map_sub_right, sub_add_sub_cancel]
       abel
     -- _ =O[𝓝 (0 : T)] fun x ↦ ‖x.1 - x.2‖ * ‖(x.2.1, x.1.2)‖ :=
@@ -110,28 +111,37 @@ theorem IsBoundedBilinearMap.differentiableOn (h : IsBoundedBilinearMap 𝕜 b) 
 variable (B : E →L[𝕜] F →L[𝕜] G)
 
 @[fun_prop]
-theorem ContinuousLinearMap.hasFDerivWithinAt_of_bilinear {f : G' → E} {g : G' → F}
-    {f' : G' →L[𝕜] E} {g' : G' →L[𝕜] F} {x : G'} {s : Set G'} (hf : HasFDerivWithinAt f f' s x)
-    (hg : HasFDerivWithinAt g g' s x) :
+theorem ContinuousLinearMap.hasFDerivWithinAt_of_bilinear {D : Type*} [TopologicalSpace D]
+    {f : D → E} {g : D → F} {coord : D → G'}
+    {f' : G' →L[𝕜] E} {g' : G' →L[𝕜] F} {x : D} {s : Set D}
+    (hf : HasFDerivWithinAt f f' s x coord) (hg : HasFDerivWithinAt g g' s x coord)
+    (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id) :
     HasFDerivWithinAt (fun y => B (f y) (g y))
-      (B.precompR G' (f x) g' + B.precompL G' f' (g x)) s x := by
+      (B.precompR G' (f x) g' + B.precompL G' f' (g x)) s x coord := by
   -- need `by exact` to deal with tricky unification
-  exact (B.isBoundedBilinearMap.hasFDerivAt (f x, g x)).comp_hasFDerivWithinAt x (hf.prodMk hg)
+  exact (B.isBoundedBilinearMap.hasFDerivAt (f x, g x)).comp_hasFDerivWithinAt
+    (coord' := id) (s := s) x (hf.prodMk hg) hcoord
 
 @[fun_prop]
-theorem ContinuousLinearMap.hasFDerivAt_of_bilinear {f : G' → E} {g : G' → F} {f' : G' →L[𝕜] E}
-    {g' : G' →L[𝕜] F} {x : G'} (hf : HasFDerivAt f f' x) (hg : HasFDerivAt g g' x) :
-    HasFDerivAt (fun y => B (f y) (g y)) (B.precompR G' (f x) g' + B.precompL G' f' (g x)) x := by
+theorem ContinuousLinearMap.hasFDerivAt_of_bilinear {D : Type*} [TopologicalSpace D]
+    {f : D → E} {g : D → F} {coord : D → G'} {f' : G' →L[𝕜] E} {g' : G' →L[𝕜] F} {x : D}
+    (hf : HasFDerivAt f f' x coord) (hg : HasFDerivAt g g' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
+    HasFDerivAt (fun y => B (f y) (g y))
+      (B.precompR G' (f x) g' + B.precompL G' f' (g x)) x coord := by
   -- need `by exact` to deal with tricky unification
-  exact (B.isBoundedBilinearMap.hasFDerivAt (f x, g x)).comp x (hf.prodMk hg)
+  exact (B.isBoundedBilinearMap.hasFDerivAt (f x, g x)).comp
+    (coord' := id) x (hf.prodMk hg) hcoord
 
 @[fun_prop]
-theorem ContinuousLinearMap.hasStrictFDerivAt_of_bilinear
-    {f : G' → E} {g : G' → F} {f' : G' →L[𝕜] E}
-    {g' : G' →L[𝕜] F} {x : G'} (hf : HasStrictFDerivAt f f' x) (hg : HasStrictFDerivAt g g' x) :
+theorem ContinuousLinearMap.hasStrictFDerivAt_of_bilinear {D : Type*} [TopologicalSpace D]
+    {f : D → E} {g : D → F} {coord : D → G'} {f' : G' →L[𝕜] E} {g' : G' →L[𝕜] F} {x : D}
+    (hf : HasStrictFDerivAt f f' x coord) (hg : HasStrictFDerivAt g g' x coord)
+    (hcoord : ContinuousAt coord x := by exact continuousAt_id) :
     HasStrictFDerivAt (fun y => B (f y) (g y))
-      (B.precompR G' (f x) g' + B.precompL G' f' (g x)) x :=
-  (B.isBoundedBilinearMap.hasStrictFDerivAt (f x, g x)).comp x (hf.prodMk hg)
+      (B.precompR G' (f x) g' + B.precompL G' f' (g x)) x coord :=
+  (B.isBoundedBilinearMap.hasStrictFDerivAt (f x, g x)).comp
+    (coord' := id) x (hf.prodMk hg) hcoord
 
 theorem ContinuousLinearMap.fderivWithin_of_bilinear {f : G' → E} {g : G' → F} {x : G'} {s : Set G'}
     (hf : DifferentiableWithinAt 𝕜 f s x) (hg : DifferentiableWithinAt 𝕜 g s x)

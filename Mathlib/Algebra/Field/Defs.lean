@@ -131,7 +131,25 @@ class Semifield (K : Type*) extends CommSemiring K, DivisionSemiring K, CommGrou
 
 /-- A `Field` is a nontrivial commutative ring whose nonzero elements are units. -/
 @[stacks 09FD "first part"]
-class Field (K : Type u) extends CommRing K, DivisionRing K
+class Field (K : Type u) extends CommRing K, DivisionRing K where
+  /-- A computational unit at an element already known to be invertible, when supplied. -/
+  protected selectUnit? (d : K) : IsUnit d → Option {u : Kˣ // (u : K) = d} := fun _ ↦ none
+
+namespace Field
+
+/-- Obtain a representative of a proved unit. Only the inverse data depend on the optional
+evaluator; the underlying value is definitionally the given element. -/
+noncomputable def selectedUnit [Field K] (d : K) (hd : IsUnit d) : Kˣ :=
+  let chosen : {u : Kˣ // (u : K) = d} :=
+    match Field.selectUnit? d hd with
+    | some u => u
+    | none => ⟨hd.unit, hd.unit_spec⟩
+  chosen.1.copy d chosen.2.symm _ rfl
+
+@[simp] theorem selectedUnit_eq [Field K] (d : K) (hd : IsUnit d) :
+    selectedUnit d hd = hd.unit := Units.ext rfl
+
+end Field
 
 -- see Note [lower instance priority]
 instance (priority := 100) Field.toSemifield [Field K] : Semifield K := { ‹Field K› with }

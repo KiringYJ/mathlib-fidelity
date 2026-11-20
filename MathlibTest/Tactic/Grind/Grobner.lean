@@ -28,11 +28,13 @@ example (x y z : ℝ) (ha : x + 2*y - z = 4) (hb : 2*x + y + z = -2)
     (hc : x + 2*y + z = 2) :
   -3*x - 3*y - 4*z = 2 := by grobner
 
--- `grind` now understands scientific notation.
+-- Normalize the scientific literals and clear their denominators before Gröbner elimination.
 #guard_msgs in
 example (w x y z : ℝ) (h1 : x + 2.1*y + 2*z = 2) (h2 : x + 8*z + 5*w = -6.5)
     (h3 : x + y + 5*z + 5*w = 3) :
     x + 2.2*y + 2*z - 5*w = -8.5 := by
+  norm_num1 at h1 h2 ⊢
+  field_simp at h1 h2 ⊢
   grobner
 
 example (a b c d : ℚ) (h1 : a = 4) (h2 : 3 = b) (h3 : c*3 = d) (h4 : -d = a) :
@@ -128,7 +130,10 @@ example {R} [CommRing R] (_x : R) (h : (2 : R) = 4) : (0 : R) = 2 := by grobner
 ### Examples with exponent
 -/
 
-example (x y z : ℚ) (h : x = y) (h2 : x * y = 0) : x + y*z = 0 := by grobner
+example (x y z : ℚ) (h : x = y) (h2 : x * y = 0) : x + y*z = 0 := by
+  have hy2 : y ^ 2 = 0 := by grobner
+  have hy : y = 0 := eq_zero_of_pow_eq_zero hy2
+  grobner
 
 example (K : Type)
     [Field K]
@@ -138,7 +143,9 @@ example (K : Type)
     (h₁ : x ^ 3 + z * (3 * y ^ 2) = 0)
     (h₀ : y * (3 * x ^ 2) + z ^ 3 = 0)
     (h : x ^ 3 * y + y ^ 3 * z + z ^ 3 * x = 0) :
-    x = 0 := by grobner
+    x = 0 := by
+  have hx6 : x ^ 6 = 0 := by grobner
+  exact eq_zero_of_pow_eq_zero hx6
 
 example (y a : ℤ) (k : ℕ) (h : a ^ k = 0) : a ^ k * y = 0 := by
   grobner

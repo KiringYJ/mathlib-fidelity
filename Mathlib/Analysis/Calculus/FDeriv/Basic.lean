@@ -707,24 +707,33 @@ theorem HasFDerivAtFilter.isBigOTVS_sub {D : Type*} {f : D → F} {coord : D →
     (fun p => f p.1 - f p.2) =O[𝕜; L] fun p => coord p.1 - coord p.2 := by
   simpa using hf.isLittleOTVS.isBigOTVS.fun_add f'.isBigOTVS_comp
 
-theorem HasStrictFDerivAt.isBigOTVS_sub (hf : HasStrictFDerivAt f f' x) :
-    (fun p : E × E => f p.1 - f p.2) =O[𝕜; 𝓝 (x, x)] fun p : E × E => p.1 - p.2 :=
+section Domain
+
+variable {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+  {x : D} {s : Set D}
+
+theorem HasStrictFDerivAt.isBigOTVS_sub (hf : HasStrictFDerivAt f f' x coord) :
+    (fun p : D × D => f p.1 - f p.2) =O[𝕜; 𝓝 (x, x)]
+      fun p => coord p.1 - coord p.2 :=
   HasFDerivAtFilter.isBigOTVS_sub hf
 
-theorem HasFDerivWithinAt.isBigOTVS_sub (h : HasFDerivWithinAt f f' s x) :
-    (f · - f x) =O[𝕜; 𝓝[s] x] (· - x) := by
-  simpa using! HasFDerivAtFilter.isBigOTVS_sub h
+theorem HasFDerivWithinAt.isBigOTVS_sub (h : HasFDerivWithinAt f f' s x coord) :
+    (fun y ↦ f y - f x) =O[𝕜; 𝓝[s] x] (fun y ↦ coord y - coord x) :=
+  (HasFDerivAtFilter.isBigOTVS_sub h).comp_tendsto prod_pure.ge
 
-lemma DifferentiableWithinAt.isBigOTVS_sub (h : DifferentiableWithinAt 𝕜 f s x) :
-    (f · - f x) =O[𝕜; 𝓝[s] x] (· - x) :=
+lemma DifferentiableWithinAt.isBigOTVS_sub (h : DifferentiableWithinAt 𝕜 f s x coord) :
+    (fun y ↦ f y - f x) =O[𝕜; 𝓝[s] x] (fun y ↦ coord y - coord x) :=
   h.hasFDerivWithinAt.isBigOTVS_sub
 
-theorem HasFDerivAt.isBigOTVS_sub (h : HasFDerivAt f f' x) : (f · - f x) =O[𝕜; 𝓝 x] (· - x) := by
-  simpa using! HasFDerivAtFilter.isBigOTVS_sub h
+theorem HasFDerivAt.isBigOTVS_sub (h : HasFDerivAt f f' x coord) :
+    (fun y ↦ f y - f x) =O[𝕜; 𝓝 x] (fun y ↦ coord y - coord x) :=
+  (HasFDerivAtFilter.isBigOTVS_sub h).comp_tendsto prod_pure.ge
 
-theorem DifferentiableAt.isBigOTVS_sub (h : DifferentiableAt 𝕜 f x) :
-    (f · - f x) =O[𝕜; 𝓝 x] (· - x) :=
+theorem DifferentiableAt.isBigOTVS_sub (h : DifferentiableAt 𝕜 f x coord) :
+    (fun y ↦ f y - f x) =O[𝕜; 𝓝 x] (fun y ↦ coord y - coord x) :=
   h.hasFDerivAt.isBigOTVS_sub
+
+end Domain
 
 end Asymptotics
 
@@ -999,28 +1008,38 @@ theorem hasFDerivAt_iff_isLittleO_nhds_zero :
   rw [hasFDerivAt_iff_isLittleO, ← map_add_left_nhds_zero x, isLittleO_map]
   simp [Function.comp_def]
 
-theorem HasStrictFDerivAt.isBigO_sub (hf : HasStrictFDerivAt f f' x) :
-    (fun p : E × E => f p.1 - f p.2) =O[𝓝 (x, x)] fun p : E × E => p.1 - p.2 :=
+theorem HasFDerivAtFilter.isBigO_sub {D : Type*} {f : D → F} {coord : D → E}
+    {L : Filter (D × D)} (h : HasFDerivAtFilter f f' L coord) :
+    (fun p => f p.1 - f p.2) =O[L] fun p => coord p.1 - coord p.2 :=
+  h.isBigOTVS_sub.isBigO
+
+section Domain
+
+variable {D : Type*} [TopologicalSpace D] {f : D → F} {coord : D → E}
+  {x₀ : D} {s : Set D}
+
+theorem HasStrictFDerivAt.isBigO_sub (hf : HasStrictFDerivAt f f' x₀ coord) :
+    (fun p : D × D => f p.1 - f p.2) =O[𝓝 (x₀, x₀)]
+      fun p => coord p.1 - coord p.2 :=
   hf.isBigOTVS_sub.isBigO
 
-theorem HasFDerivAtFilter.isBigO_sub (h : HasFDerivAtFilter f f' L) :
-    (fun p => f p.1 - f p.2) =O[L] fun p => p.1 - p.2 :=
+theorem HasFDerivWithinAt.isBigO_sub (h : HasFDerivWithinAt f f' s x₀ coord) :
+    (fun y ↦ f y - f x₀) =O[𝓝[s] x₀] (fun y ↦ coord y - coord x₀) :=
   h.isBigOTVS_sub.isBigO
 
-theorem HasFDerivWithinAt.isBigO_sub (h : HasFDerivWithinAt f f' s x₀) :
-    (f · - f x₀) =O[𝓝[s] x₀] (· - x₀) :=
-  h.isBigOTVS_sub.isBigO
-
-lemma DifferentiableWithinAt.isBigO_sub (h : DifferentiableWithinAt 𝕜 f s x₀) :
-    (f · - f x₀) =O[𝓝[s] x₀] (· - x₀) :=
+lemma DifferentiableWithinAt.isBigO_sub (h : DifferentiableWithinAt 𝕜 f s x₀ coord) :
+    (fun y ↦ f y - f x₀) =O[𝓝[s] x₀] (fun y ↦ coord y - coord x₀) :=
   h.hasFDerivWithinAt.isBigO_sub
 
-theorem HasFDerivAt.isBigO_sub (h : HasFDerivAt f f' x₀) : (f · - f x₀) =O[𝓝 x₀] (· - x₀) :=
+theorem HasFDerivAt.isBigO_sub (h : HasFDerivAt f f' x₀ coord) :
+    (fun y ↦ f y - f x₀) =O[𝓝 x₀] (fun y ↦ coord y - coord x₀) :=
   h.isBigOTVS_sub.isBigO
 
-theorem DifferentiableAt.isBigO_sub (h : DifferentiableAt 𝕜 f x₀) :
-    (f · - f x₀) =O[𝓝 x₀] (· - x₀) :=
+theorem DifferentiableAt.isBigO_sub (h : DifferentiableAt 𝕜 f x₀ coord) :
+    (fun y ↦ f y - f x₀) =O[𝓝 x₀] (fun y ↦ coord y - coord x₀) :=
   h.hasFDerivAt.isBigO_sub
+
+end Domain
 
 theorem Asymptotics.IsBigO.hasFDerivWithinAt {n : ℕ}
     (h : f =O[𝓝[s] x₀] fun x => ‖x - x₀‖ ^ n) (hx₀ : x₀ ∈ s) (hn : 1 < n) :

@@ -55,42 +55,53 @@ lemma ofMulDiscriminant_apply (f : ModularForm 𝒮ℒ (k - 12)) (z : ℍ) :
     (ofMulDiscriminant f) z = Δ z * f z := rfl
 
 lemma divByDiscriminant_slash_eq (f : CuspForm 𝒮ℒ k) (γ : SL(2, ℤ)) :
-    (fun z ↦ f z / Δ z) ∣[k - 12] γ = fun z ↦ f z / Δ z := by
+    (fun z ↦ Checked.div (f z) (Δ z) (discriminant_ne_zero z).isUnit) ∣[k - 12] γ =
+      fun z ↦ Checked.div (f z) (Δ z) (discriminant_ne_zero z).isUnit := by
   have hγ : (γ : GL (Fin 2) ℝ) ∈ 𝒮ℒ := ⟨γ, rfl⟩
-  change (⇑f / ⇑CuspForm.discriminant) ∣[k - 12] γ = ⇑f / ⇑CuspForm.discriminant
+  have hΔ : IsUnit (⇑CuspForm.discriminant) :=
+    Pi.isUnit_iff.mpr fun z ↦ (discriminant_ne_zero z).isUnit
+  have hdiv : (fun z ↦ Checked.div (f z) (Δ z) (discriminant_ne_zero z).isUnit) =
+      Checked.div (⇑f) (⇑CuspForm.discriminant) hΔ := by
+    funext z
+    exact (Pi.div_apply₀ _ _ z).symm
+  rw [hdiv]
   simp_rw [div_slash_SL2, SL_slash, slash_action_eqn _ _ hγ]
 
 /-- The linear equivalence between cusp forms of weight `k` and modular forms of weight `k - 12`,
 given by division by the discriminant. -/
 def discriminantEquiv : CuspForm 𝒮ℒ k ≃ₗ[ℂ] ModularForm 𝒮ℒ (k - 12) where
   toFun f :=
-    { toFun z := f z / Δ z
+    { toFun z := Checked.div (f z) (Δ z) (discriminant_ne_zero z).isUnit
       slash_action_eq' := fun _ ⟨γ, hγ⟩ ↦ hγ ▸ divByDiscriminant_slash_eq f γ
-      holo' := f.holo'.div CuspForm.discriminant.holo' discriminant_ne_zero
+      holo' := f.holo'.div CuspForm.discriminant.holo'
+        (h := fun z ↦ (discriminant_ne_zero z).isUnit)
       bdd_at_cusps' {c} hc := by
         rw [Subgroup.IsArithmetic.isCusp_iff_isCusp_SL2Z] at hc
         rw [isBoundedAt_iff_forall_SL2Z hc]
         intro γ _
         rw [divByDiscriminant_slash_eq f γ, IsBoundedAtImInfty, BoundedAtFilter]
-        exact (div_isBoundedUnder_of_isBigO (exp_decay_isBigO_discriminant f)).isBigO_one ℝ }
+        exact (div_isBoundedUnder_of_isBigO (hg := fun z ↦ (discriminant_ne_zero z).isUnit)
+          (exp_decay_isBigO_discriminant f)).isBigO_one ℝ }
   map_add' a b := by
     ext z
+    have hΔ := discriminant_ne_zero z
     change (a z + b z) / Δ z = a z / Δ z + b z / Δ z
     rw [add_div]
   map_smul' c a := by
     ext z
+    have hΔ := discriminant_ne_zero z
     change (c * a z) / Δ z = c * (a z / Δ z)
-    rw [mul_div_assoc]
+    rw [mul_div_assoc₀]
   invFun := ofMulDiscriminant
   left_inv f := by
     ext z
-    exact mul_div_cancel₀ (f z) (discriminant_ne_zero z)
+    exact mul_div_cancel₀ (f z)
   right_inv f := by
     ext z
-    exact mul_div_cancel_left₀ (f z) (discriminant_ne_zero z)
+    exact mul_div_cancel_left₀ (f z)
 
 lemma discriminantEquiv_apply (f : CuspForm 𝒮ℒ k) (z : ℍ) :
-    (discriminantEquiv f) z = f z / Δ z := rfl
+    (discriminantEquiv f) z = Checked.div (f z) (Δ z) (discriminant_ne_zero z).isUnit := rfl
 
 /-- Divide a cusp form by the discriminant to get a modular form of weight `k - 12`. -/
 @[deprecated discriminantEquiv (since := "2026-05-18")]
@@ -98,7 +109,7 @@ def divDiscriminant (f : CuspForm 𝒮ℒ k) : ModularForm 𝒮ℒ (k - 12) := d
 
 @[deprecated discriminantEquiv_apply (since := "2026-05-18")]
 lemma divDiscriminant_apply (f : CuspForm 𝒮ℒ k) (z : ℍ) :
-    (divDiscriminant f) z = f z / Δ z := rfl
+    (divDiscriminant f) z = Checked.div (f z) (Δ z) (discriminant_ne_zero z).isUnit := rfl
 
 end CuspForm
 
@@ -107,7 +118,7 @@ namespace ModularForm
 @[simp]
 lemma discriminant_mul_discriminantEquiv_apply (f : CuspForm 𝒮ℒ k) (z : ℍ) :
     Δ z * (CuspForm.discriminantEquiv f) z = f z := by
-  rw [CuspForm.discriminantEquiv_apply, mul_div_cancel₀ _ (discriminant_ne_zero z)]
+  rw [CuspForm.discriminantEquiv_apply, mul_div_cancel₀]
 
 @[simp]
 lemma discriminant_mul_discriminantEquiv (f : CuspForm 𝒮ℒ k) :
@@ -202,10 +213,12 @@ lemma levelOne_weight_six_rank_one : Module.rank ℂ (ModularForm 𝒮ℒ 6) = 1
       (by norm_cast))
 
 lemma E₄_qExpansion_coeff_one : (qExpansion 1 E₄).coeff 1 = 240 := by
-  norm_num [E_qExpansion_coeff _ ⟨2, rfl⟩, show bernoulli 4 = -1 / 30 by decide +kernel]
+  have h : bernoulli 4 = Rat.fraction (-1) 30 (by decide) := by decide +kernel
+  norm_num [E_qExpansion_coeff _ ⟨2, rfl⟩, h, Rat.fraction_eq_div]
 
 lemma E₆_qExpansion_coeff_one : (qExpansion 1 E₆).coeff 1 = -504 := by
-  norm_num [E_qExpansion_coeff _ ⟨3, rfl⟩, show bernoulli 6 = 1 / 42 by decide +kernel]
+  have h : bernoulli 6 = Rat.fraction 1 42 (by decide) := by decide +kernel
+  norm_num [E_qExpansion_coeff _ ⟨3, rfl⟩, h, Rat.fraction_eq_div]
 
 /- Algebraic core of the weight-2 vanishing argument: if `p : PowerSeries ℂ`
 satisfies `c₄ • p₄ = p²` and `c₆ • p₆ = p³` for power series `p₄`, `p₆` with

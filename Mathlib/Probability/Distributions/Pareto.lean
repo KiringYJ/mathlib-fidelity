@@ -113,7 +113,8 @@ lemma lintegral_paretoPDF_eq_one (ht : 0 < t) (hr : 0 < r) :
   rw [← ENNReal.toReal_eq_one_iff, ← lintegral_add_compl _ measurableSet_Ici, compl_Ici,
     leftSide, rightSide, add_zero, ← integral_eq_lintegral_of_nonneg_ae]
   · rw [integral_Ici_eq_integral_Ioi, integral_const_mul, integral_Ioi_rpow_of_lt _ ht]
-    · simp [field, ← rpow_add ht]
+    · suffices h : t ^ r * t ^ (-r) = 1 by simpa [field] using h
+      rw [← rpow_add ht, add_neg_cancel, rpow_zero]
     linarith
   · rw [EventuallyLE, ae_restrict_iff' measurableSet_Ici]
     filter_upwards with x hx using by positivity [lt_of_lt_of_le ht hx]

@@ -28,36 +28,40 @@ variable {a x z : ℂ}
   `sin (arg x) = x.im / x.abs` and `cos (arg x) = x.re / x.abs`,
   `arg 0` defaults to `0` -/
 noncomputable def arg (x : ℂ) : ℝ :=
-  if 0 ≤ x.re then Real.arcsin (x.im / ‖x‖)
-  else if 0 ≤ x.im then Real.arcsin ((-x).im / ‖x‖) + π else Real.arcsin ((-x).im / ‖x‖) - π
+  if hx : x = 0 then 0 else
+    have hxnorm : ‖x‖ ≠ 0 := norm_ne_zero_iff.mpr hx
+    if 0 ≤ x.re then Real.arcsin (x.im / ‖x‖)
+    else if 0 ≤ x.im then Real.arcsin ((-x).im / ‖x‖) + π else Real.arcsin ((-x).im / ‖x‖) - π
 
-theorem sin_arg (x : ℂ) : Real.sin (arg x) = x.im / ‖x‖ := by
-  unfold arg; split_ifs <;>
+theorem sin_arg (x : ℂ) {hx : IsUnit ‖x‖} : Real.sin (arg x) = x.im / ‖x‖ := by
+  have hx₀ : x ≠ 0 := norm_ne_zero_iff.mp hx.ne_zero
+  simp only [arg, dite_eq_right hx₀]; split_ifs <;>
     simp [sub_eq_add_neg, Real.sin_arcsin (abs_le.1 (abs_im_div_norm_le_one x)).1
-      (abs_le.1 (abs_im_div_norm_le_one x)).2, Real.sin_add, neg_div, Real.arcsin_neg, Real.sin_neg]
+      (abs_le.1 (abs_im_div_norm_le_one x)).2, Real.sin_add, neg_div₀, Real.arcsin_neg,
+      Real.sin_neg]
 
 theorem cos_arg {x : ℂ} (hx : x ≠ 0) : Real.cos (arg x) = x.re / ‖x‖ := by
-  rw [arg]
+  have hcos : Real.cos (Real.arcsin (x.im / ‖x‖)) = |x.re| / ‖x‖ := by
+    rw [Real.cos_arcsin]
+    have hsq : 1 - (x.im / ‖x‖) ^ 2 = x.re ^ 2 / ‖x‖ ^ 2 := by
+      field_simp
+      nlinarith [sq_norm_sub_sq_im x]
+    rw [hsq, Real.sqrt_div _ (sq_pos_of_pos (norm_pos_iff.mpr hx))]
+    simp [Real.sqrt_sq_eq_abs]
+  simp only [arg, dite_eq_right hx]
   split_ifs with h₁ h₂
-  · rw [Real.cos_arcsin]
-    field_simp
-    simp [Real.sqrt_sq, (norm_pos_iff.mpr hx).le, *]
-    field
-  · rw [Real.cos_add_pi, Real.cos_arcsin]
-    field_simp
-    simp [Real.sqrt_div (sq_nonneg _), Real.sqrt_sq_eq_abs, _root_.abs_of_neg (not_le.1 h₁), *]
-    field
-  · rw [Real.cos_sub_pi, Real.cos_arcsin]
-    field_simp
-    simp [Real.sqrt_div (sq_nonneg _), Real.sqrt_sq_eq_abs, _root_.abs_of_neg (not_le.1 h₁), *]
-    field
+  · rw [hcos, abs_of_nonneg h₁]
+  · simp [Real.cos_add_pi, neg_im, neg_div₀, Real.arcsin_neg, hcos,
+      abs_of_neg (not_le.mp h₁)]
+  · simp [Real.cos_sub_pi, neg_im, neg_div₀, Real.arcsin_neg, hcos,
+      abs_of_neg (not_le.mp h₁)]
 
 @[simp]
 theorem norm_mul_exp_arg_mul_I (x : ℂ) : ‖x‖ * exp (arg x * I) = x := by
   rcases eq_or_ne x 0 with (rfl | hx)
   · simp
   · have : ‖x‖ ≠ 0 := norm_ne_zero_iff.mpr hx
-    apply Complex.ext <;> simp [sin_arg, cos_arg hx, this, mul_comm ‖x‖]
+    apply Complex.ext <;> simp [sin_arg x (hx := this.isUnit), cos_arg hx, mul_comm ‖x‖]
 
 @[simp]
 theorem norm_mul_cos_add_sin_mul_I (x : ℂ) : (‖x‖ * (cos (arg x) + sin (arg x) * I) : ℂ) = x := by
@@ -86,9 +90,13 @@ theorem range_exp_mul_I : (Set.range fun x : ℝ => exp (x * I)) = Metric.sphere
 
 theorem arg_mul_cos_add_sin_mul_I {r : ℝ} (hr : 0 < r) {θ : ℝ} (hθ : θ ∈ Set.Ioc (-π) π) :
     arg (r * (cos θ + sin θ * I)) = θ := by
-  simp only [arg, norm_mul, norm_cos_add_sin_mul_I, Complex.norm_of_nonneg hr.le, mul_one]
+  have hz : (r * (cos θ + sin θ * I) : ℂ) ≠ 0 := by
+    apply norm_ne_zero_iff.mp
+    simp [norm_cos_add_sin_mul_I, hr.ne']
+  simp only [arg, dite_eq_right hz, norm_mul, norm_cos_add_sin_mul_I,
+    Complex.norm_of_nonneg hr.le, mul_one]
   simp only [re_ofReal_mul, im_ofReal_mul, neg_im, ← ofReal_cos, ← ofReal_sin, ←
-    mk_eq_add_mul_I, neg_div, mul_div_cancel_left₀ _ hr.ne', mul_nonneg_iff_right_nonneg_of_pos hr]
+    mk_eq_add_mul_I, neg_div₀, mul_div_cancel_left₀, mul_nonneg_iff_right_nonneg_of_pos hr]
   by_cases h₁ : θ ∈ Set.Icc (-(π / 2)) (π / 2)
   · rw [ite_eq_left]
     exacts [Real.arcsin_sin' h₁, Real.cos_nonneg_of_mem_Icc h₁]
@@ -176,7 +184,8 @@ theorem arg_nonneg_iff {z : ℂ} : 0 ≤ arg z ↔ 0 ≤ z.im := by
         contrapose!
         intro h
         exact Real.sin_neg_of_neg_of_neg_pi_lt h (neg_pi_lt_arg _)⟩
-    _ ↔ _ := by rw [sin_arg, le_div_iff₀ (norm_pos_iff.mpr h₀), zero_mul]
+    _ ↔ _ := by rw [sin_arg z (hx := (norm_ne_zero_iff.mpr h₀).isUnit),
+      le_div_iff₀ (norm_pos_iff.mpr h₀), zero_mul]
 
 @[simp]
 theorem arg_neg_iff {z : ℂ} : arg z < 0 ↔ z.im < 0 :=
@@ -194,15 +203,11 @@ theorem arg_mul_real {r : ℝ} (hr : 0 < r) (x : ℂ) : arg (x * r) = arg x :=
 theorem arg_eq_arg_iff {x y : ℂ} (hx : x ≠ 0) (hy : y ≠ 0) :
     arg x = arg y ↔ (‖y‖ / ‖x‖ : ℂ) * x = y := by
   simp only [ext_norm_arg_iff, norm_mul, norm_div, norm_real, norm_norm,
-    div_mul_cancel₀ _ (norm_ne_zero_iff.mpr hx), true_and]
+    div_mul_cancel₀, true_and]
   rw [← ofReal_div, arg_real_mul]
   exact div_pos (norm_pos_iff.mpr hy) (norm_pos_iff.mpr hx)
 
 @[simp] lemma arg_one : arg 1 = 0 := by simp [arg, zero_le_one]
-
-/-- This holds true for all `x : ℂ` because of the junk values `0 / 0 = 0` and `arg 0 = 0`. -/
-@[simp] lemma arg_div_self (x : ℂ) : arg (x / x) = 0 := by
-  obtain rfl | hx := eq_or_ne x 0 <;> simp [*]
 
 @[simp]
 theorem arg_neg_one : arg (-1) = π := by simp [arg]
@@ -224,7 +229,7 @@ theorem tan_arg (x : ℂ) (hx : x.re ≠ 0) :
     Real.tan (arg x) (cos_arg_ne_zero_of_re_ne_zero hx) = x.im / x.re := by
   have h : x ≠ 0 := fun h ↦ hx (by rw [h, zero_re])
   rw [Real.tan_eq_sin_div_cos]
-  simp only [sin_arg, cos_arg h]
+  simp only [sin_arg x (hx := (norm_ne_zero_iff.mpr h).isUnit), cos_arg h]
   exact div_div_div_cancel_right₀ _ _
 
 theorem arg_ofReal_of_nonneg {x : ℝ} (hx : 0 ≤ x) : arg x = 0 := by simp [arg, hx]
@@ -291,31 +296,46 @@ theorem arg_eq_neg_pi_div_two_iff {z : ℂ} : arg z = -(π / 2) ↔ z.re = 0 ∧
     rw [← arg_neg_I, ← arg_real_mul (-I) (neg_pos.2 hy), mk_eq_add_mul_I]
     simp
 
-theorem arg_of_re_nonneg {x : ℂ} (hx : 0 ≤ x.re) : arg x = Real.arcsin (x.im / ‖x‖) :=
-  ite_eq_left hx
+theorem arg_of_re_nonneg {x : ℂ} (hx : 0 ≤ x.re) {hx₀ : IsUnit ‖x‖} :
+    arg x = Real.arcsin (x.im / ‖x‖) := by
+  simp only [arg, dite_eq_right (norm_ne_zero_iff.mp hx₀.ne_zero), ite_eq_left hx]
 
 theorem arg_of_re_neg_of_im_nonneg {x : ℂ} (hx_re : x.re < 0) (hx_im : 0 ≤ x.im) :
+    have hx₀ : x ≠ 0 := ne_of_apply_ne re hx_re.ne
     arg x = Real.arcsin ((-x).im / ‖x‖) + π := by
-  simp only [arg, hx_re.not_ge, hx_im, ite_true, ite_false]
+  have hx₀ : x ≠ 0 := ne_of_apply_ne re hx_re.ne
+  simp only [arg, dite_eq_right hx₀, hx_re.not_ge, hx_im, ite_true, ite_false]
 
 theorem arg_of_re_neg_of_im_neg {x : ℂ} (hx_re : x.re < 0) (hx_im : x.im < 0) :
+    have hx₀ : x ≠ 0 := ne_of_apply_ne re hx_re.ne
     arg x = Real.arcsin ((-x).im / ‖x‖) - π := by
-  simp only [arg, hx_re.not_ge, hx_im.not_ge, ite_false]
+  have hx₀ : x ≠ 0 := ne_of_apply_ne re hx_re.ne
+  simp only [arg, dite_eq_right hx₀, hx_re.not_ge, hx_im.not_ge, ite_false]
 
 theorem arg_of_im_nonneg_of_ne_zero {z : ℂ} (h₁ : 0 ≤ z.im) (h₂ : z ≠ 0) :
     arg z = Real.arccos (z.re / ‖z‖) := by
   rw [← cos_arg h₂, Real.arccos_cos (arg_nonneg_iff.2 h₁) (arg_le_pi _)]
 
-theorem arg_of_im_pos {z : ℂ} (hz : 0 < z.im) : arg z = Real.arccos (z.re / ‖z‖) :=
+theorem arg_of_im_pos {z : ℂ} (hz : 0 < z.im) :
+    have hz₀ : z ≠ 0 := ne_of_apply_ne im hz.ne'
+    arg z = Real.arccos (z.re / ‖z‖) :=
   arg_of_im_nonneg_of_ne_zero hz.le fun h => hz.ne' <| h.symm ▸ rfl
 
-theorem arg_of_im_neg {z : ℂ} (hz : z.im < 0) : arg z = -Real.arccos (z.re / ‖z‖) := by
+theorem arg_of_im_neg {z : ℂ} (hz : z.im < 0) :
+    have hz₀ : z ≠ 0 := ne_of_apply_ne im hz.ne
+    arg z = -Real.arccos (z.re / ‖z‖) := by
   have h₀ : z ≠ 0 := mt (congr_arg im) hz.ne
+  dsimp only
   rw [← cos_arg h₀, ← Real.cos_neg, Real.arccos_cos, neg_neg]
   exacts [neg_nonneg.2 (arg_neg_iff.2 hz).le, neg_le.2 (neg_pi_lt_arg z).le]
 
 theorem arg_conj (x : ℂ) : arg (conj x) = if arg x = π then π else -arg x := by
-  simp_rw [arg_eq_pi_iff, arg, neg_im, conj_im, conj_re, norm_conj, neg_div, neg_neg,
+  by_cases hx : x = 0
+  · simp [hx, Real.pi_ne_zero.symm]
+  have hc : conj x ≠ 0 := by simpa using hx
+  simp_rw [arg_eq_pi_iff, arg, dite_eq_right hx, dite_eq_right hc, neg_im, conj_im,
+    conj_re, norm_conj,
+    neg_div₀, neg_neg,
     Real.arcsin_neg]
   rcases lt_trichotomy x.re 0 with (hr | hr | hr) <;>
     rcases lt_trichotomy x.im 0 with (hi | hi | hi)
@@ -329,13 +349,12 @@ theorem arg_conj (x : ℂ) : arg (conj x) = if arg x = π then π else -arg x :=
   · simp [hr.le, hr.le.not_gt]
   · simp [hr.le, hr.le.not_gt]
 
-theorem arg_inv (x : ℂ) : arg x⁻¹ = if arg x = π then π else -arg x := by
+theorem arg_inv (x : ℂ) {hx : IsUnit x} : arg x⁻¹ = if arg x = π then π else -arg x := by
   rw [← arg_conj, inv_def, mul_comm]
-  by_cases hx : x = 0
-  · simp [hx]
-  · exact arg_real_mul (conj x) (by simp [hx])
+  exact arg_real_mul (conj x) (by simp [hx.ne_zero])
 
-@[simp] lemma abs_arg_inv (x : ℂ) : |x⁻¹.arg| = |x.arg| := by rw [arg_inv]; split_ifs <;> simp [*]
+@[simp] lemma abs_arg_inv (x : ℂ) {hx : IsUnit x} : |x⁻¹.arg| = |x.arg| := by
+  rw [arg_inv]; split_ifs <;> simp [*]
 
 -- TODO: Replace the next two lemmas by general facts about periodic functions
 lemma norm_eq_one_iff' : ‖x‖ = 1 ↔ ∃ θ ∈ Set.Ioc (-π) π, exp (θ * I) = x := by
@@ -354,13 +373,16 @@ lemma image_exp_Ioc_eq_sphere : (fun θ : ℝ ↦ exp (θ * I)) '' Set.Ioc (-π)
   ext; simpa using norm_eq_one_iff'.symm
 
 theorem arg_le_pi_div_two_iff {z : ℂ} : arg z ≤ π / 2 ↔ 0 ≤ re z ∨ im z < 0 := by
+  by_cases hz : z = 0
+  · simp [hz, Real.pi_div_two_pos.le]
   rcases le_or_gt 0 (re z) with hre | hre
-  · simp only [hre, arg_of_re_nonneg hre, Real.arcsin_le_pi_div_two, true_or]
+  · simp only [hre, arg_of_re_nonneg hre (hx₀ := (norm_ne_zero_iff.mpr hz).isUnit),
+      Real.arcsin_le_pi_div_two, true_or]
   simp only [hre.not_ge, false_or]
   rcases le_or_gt 0 (im z) with him | him
   · simp only [him.not_gt]
     rw [iff_false, not_le, arg_of_re_neg_of_im_nonneg hre him, ← sub_lt_iff_lt_add, half_sub,
-      Real.neg_pi_div_two_lt_arcsin, neg_im, neg_div, neg_lt_neg_iff, div_lt_one, ←
+      Real.neg_pi_div_two_lt_arcsin, neg_im, neg_div₀, neg_lt_neg_iff, div_lt_one, ←
       abs_of_nonneg him, abs_im_lt_norm]
     exacts [hre.ne, norm_pos_iff.mpr <| ne_of_apply_ne re hre.ne]
   · simp only [him]
@@ -368,8 +390,11 @@ theorem arg_le_pi_div_two_iff {z : ℂ} : arg z ≤ π / 2 ↔ 0 ≤ re z ∨ im
     exact (sub_le_self _ Real.pi_pos.le).trans (Real.arcsin_le_pi_div_two _)
 
 theorem neg_pi_div_two_le_arg_iff {z : ℂ} : -(π / 2) ≤ arg z ↔ 0 ≤ re z ∨ 0 ≤ im z := by
+  by_cases hz : z = 0
+  · simp [hz, Real.pi_div_two_pos.le]
   rcases le_or_gt 0 (re z) with hre | hre
-  · simp only [hre, arg_of_re_nonneg hre, Real.neg_pi_div_two_le_arcsin, true_or]
+  · simp only [hre, arg_of_re_nonneg hre (hx₀ := (norm_ne_zero_iff.mpr hz).isUnit),
+      Real.neg_pi_div_two_le_arcsin, true_or]
   simp only [hre.not_ge, false_or]
   rcases le_or_gt 0 (im z) with him | him
   · simp only [him]
@@ -414,16 +439,16 @@ theorem arg_conj_coe_angle (x : ℂ) : (arg (conj x) : Real.Angle) = -arg x := b
   by_cases h : arg x = π <;> simp [arg_conj, h]
 
 @[simp]
-theorem arg_inv_coe_angle (x : ℂ) : (arg x⁻¹ : Real.Angle) = -arg x := by
+theorem arg_inv_coe_angle (x : ℂ) {hx : IsUnit x} : (arg x⁻¹ : Real.Angle) = -arg x := by
   by_cases h : arg x = π <;> simp [arg_inv, h]
 
 theorem arg_neg_eq_arg_sub_pi_of_im_pos {x : ℂ} (hi : 0 < x.im) : arg (-x) = arg x - π := by
   rw [arg_of_im_pos hi, arg_of_im_neg (show (-x).im < 0 from Left.neg_neg_iff.2 hi)]
-  simp [neg_div, Real.arccos_neg]
+  simp [neg_div₀, Real.arccos_neg]
 
 theorem arg_neg_eq_arg_add_pi_of_im_neg {x : ℂ} (hi : x.im < 0) : arg (-x) = arg x + π := by
   rw [arg_of_im_neg hi, arg_of_im_pos (show 0 < (-x).im from Left.neg_pos_iff.2 hi)]
-  simp [neg_div, Real.arccos_neg, add_comm, ← sub_eq_add_neg]
+  simp [neg_div₀, Real.arccos_neg, add_comm, ← sub_eq_add_neg]
 
 theorem arg_neg_eq_arg_sub_pi_iff {x : ℂ} :
     arg (-x) = arg x - π ↔ 0 < x.im ∨ x.im = 0 ∧ x.re < 0 := by
@@ -504,7 +529,8 @@ theorem arg_mul_coe_angle {x y : ℂ} (hx : x ≠ 0) (hy : y ≠ 0) :
 
 theorem arg_div_coe_angle {x y : ℂ} (hx : x ≠ 0) (hy : y ≠ 0) :
     (arg (x / y) : Real.Angle) = arg x - arg y := by
-  rw [div_eq_mul_inv, arg_mul_coe_angle hx (inv_ne_zero hy), arg_inv_coe_angle, sub_eq_add_neg]
+  rw [div_eq_mul_inv₀, arg_mul_coe_angle hx (inv_ne_zero (ha := hy.isUnit)),
+    arg_inv_coe_angle, sub_eq_add_neg]
 
 theorem arg_pow_coe_angle (x : ℂ) (n : ℕ) :
     (arg (x ^ n) : Real.Angle) = n • (arg x : Real.Angle) := by
@@ -514,11 +540,13 @@ theorem arg_pow_coe_angle (x : ℂ) (n : ℕ) :
     | zero => simp
     | succ n ih => rw [pow_succ, arg_mul_coe_angle (pow_ne_zero n x0) x0, ih, succ_nsmul]
 
-theorem arg_zpow_coe_angle (x : ℂ) (n : ℤ) :
+theorem arg_zpow_coe_angle (x : ℂ) (n : ℤ) {hx : n < 0 → IsUnit x} :
     (arg (x ^ n) : Real.Angle) = n • (arg x : Real.Angle) := by
   match n with
-  | Int.ofNat m => simp [arg_pow_coe_angle]
-  | Int.negSucc m => simp [arg_pow_coe_angle]
+  | Int.ofNat m => simp [zpow_natCast₀, arg_pow_coe_angle]
+  | Int.negSucc m =>
+      have hx₀ : IsUnit x := hx (Int.negSucc_lt_zero m)
+      simp [zpow_negSucc₀, arg_pow_coe_angle, arg_inv_coe_angle]
 
 @[simp]
 theorem arg_coe_angle_toReal_eq_arg (z : ℂ) : (arg z : Real.Angle).toReal = arg z := by
@@ -558,46 +586,77 @@ end slitPlane
 
 section Continuity
 
-theorem arg_eq_nhds_of_re_pos (hx : 0 < x.re) : arg =ᶠ[𝓝 x] fun x => Real.arcsin (x.im / ‖x‖) :=
-  ((continuous_re.tendsto _).eventually (lt_mem_nhds hx)).mono fun _ hy => arg_of_re_nonneg hy.le
+theorem arg_eq_nhds_of_re_pos (hx : 0 < x.re) :
+    (fun z : {z : ℂ // z ≠ 0} => arg z) =ᶠ[comap Subtype.val (𝓝 x)]
+      fun z => Real.arcsin (Checked.div z.1.im ‖z.1‖ (norm_ne_zero_iff.mpr z.2).isUnit) := by
+  have he : ∀ᶠ z : {z : ℂ // z ≠ 0} in comap Subtype.val (𝓝 x), 0 < z.1.re :=
+    tendsto_comap.eventually ((continuous_re.tendsto x).eventually (lt_mem_nhds hx))
+  exact he.mono fun z hz => arg_of_re_nonneg hz.le (hx₀ := (norm_ne_zero_iff.mpr z.2).isUnit)
 
 theorem arg_eq_nhds_of_re_neg_of_im_pos (hx_re : x.re < 0) (hx_im : 0 < x.im) :
-    arg =ᶠ[𝓝 x] fun x => Real.arcsin ((-x).im / ‖x‖) + π := by
-  suffices h_forall_nhds : ∀ᶠ y : ℂ in 𝓝 x, y.re < 0 ∧ 0 < y.im from
-    h_forall_nhds.mono fun y hy => arg_of_re_neg_of_im_nonneg hy.1 hy.2.le
-  refine IsOpen.eventually_mem ?_ (⟨hx_re, hx_im⟩ : x.re < 0 ∧ 0 < x.im)
-  exact
-    IsOpen.and (isOpen_lt continuous_re continuous_zero) (isOpen_lt continuous_zero continuous_im)
+    (fun z : {z : ℂ // z ≠ 0} => arg z) =ᶠ[comap Subtype.val (𝓝 x)]
+      fun z => Real.arcsin (Checked.div (-z.1).im ‖z.1‖ (norm_ne_zero_iff.mpr z.2).isUnit) + π := by
+  have hre : ∀ᶠ z : {z : ℂ // z ≠ 0} in comap Subtype.val (𝓝 x), z.1.re < 0 :=
+    tendsto_comap.eventually ((continuous_re.tendsto x).eventually (gt_mem_nhds hx_re))
+  have him : ∀ᶠ z : {z : ℂ // z ≠ 0} in comap Subtype.val (𝓝 x), 0 < z.1.im :=
+    tendsto_comap.eventually ((continuous_im.tendsto x).eventually (lt_mem_nhds hx_im))
+  filter_upwards [hre, him] with z hre him
+  exact arg_of_re_neg_of_im_nonneg hre him.le
 
 theorem arg_eq_nhds_of_re_neg_of_im_neg (hx_re : x.re < 0) (hx_im : x.im < 0) :
-    arg =ᶠ[𝓝 x] fun x => Real.arcsin ((-x).im / ‖x‖) - π := by
-  suffices h_forall_nhds : ∀ᶠ y : ℂ in 𝓝 x, y.re < 0 ∧ y.im < 0 from
-    h_forall_nhds.mono fun y hy => arg_of_re_neg_of_im_neg hy.1 hy.2
-  refine IsOpen.eventually_mem ?_ (⟨hx_re, hx_im⟩ : x.re < 0 ∧ x.im < 0)
-  exact
-    IsOpen.and (isOpen_lt continuous_re continuous_zero) (isOpen_lt continuous_im continuous_zero)
+    (fun z : {z : ℂ // z ≠ 0} => arg z) =ᶠ[comap Subtype.val (𝓝 x)]
+      fun z => Real.arcsin (Checked.div (-z.1).im ‖z.1‖ (norm_ne_zero_iff.mpr z.2).isUnit) - π := by
+  have hre : ∀ᶠ z : {z : ℂ // z ≠ 0} in comap Subtype.val (𝓝 x), z.1.re < 0 :=
+    tendsto_comap.eventually ((continuous_re.tendsto x).eventually (gt_mem_nhds hx_re))
+  have him : ∀ᶠ z : {z : ℂ // z ≠ 0} in comap Subtype.val (𝓝 x), z.1.im < 0 :=
+    tendsto_comap.eventually ((continuous_im.tendsto x).eventually (gt_mem_nhds hx_im))
+  filter_upwards [hre, him] with z hre him
+  exact arg_of_re_neg_of_im_neg hre him
 
-theorem arg_eq_nhds_of_im_pos (hz : 0 < im z) : arg =ᶠ[𝓝 z] fun x => Real.arccos (x.re / ‖x‖) :=
-  ((continuous_im.tendsto _).eventually (lt_mem_nhds hz)).mono fun _ => arg_of_im_pos
+theorem arg_eq_nhds_of_im_pos (hz : 0 < im z) :
+    (fun x : {x : ℂ // x ≠ 0} => arg x) =ᶠ[comap Subtype.val (𝓝 z)]
+      fun x => Real.arccos (Checked.div x.1.re ‖x.1‖ (norm_ne_zero_iff.mpr x.2).isUnit) := by
+  have he : ∀ᶠ x : {x : ℂ // x ≠ 0} in comap Subtype.val (𝓝 z), 0 < x.1.im :=
+    tendsto_comap.eventually ((continuous_im.tendsto z).eventually (lt_mem_nhds hz))
+  exact he.mono fun _ hx => arg_of_im_pos hx
 
-theorem arg_eq_nhds_of_im_neg (hz : im z < 0) : arg =ᶠ[𝓝 z] fun x => -Real.arccos (x.re / ‖x‖) :=
-  ((continuous_im.tendsto _).eventually (gt_mem_nhds hz)).mono fun _ => arg_of_im_neg
+theorem arg_eq_nhds_of_im_neg (hz : im z < 0) :
+    (fun x : {x : ℂ // x ≠ 0} => arg x) =ᶠ[comap Subtype.val (𝓝 z)]
+      fun x => -Real.arccos (Checked.div x.1.re ‖x.1‖ (norm_ne_zero_iff.mpr x.2).isUnit) := by
+  have he : ∀ᶠ x : {x : ℂ // x ≠ 0} in comap Subtype.val (𝓝 z), x.1.im < 0 :=
+    tendsto_comap.eventually ((continuous_im.tendsto z).eventually (gt_mem_nhds hz))
+  exact he.mono fun _ hx => arg_of_im_neg hx
 
 theorem continuousAt_arg (h : x ∈ slitPlane) : ContinuousAt arg x := by
-  have h₀ : ‖x‖ ≠ 0 := by
-    rw [norm_ne_zero_iff]
-    exact slitPlane_ne_zero h
+  have hx : x ≠ 0 := slitPlane_ne_zero h
+  change Tendsto arg (𝓝 x) (𝓝 (arg x))
+  apply (tendsto_comap_val_iff (eventually_ne_nhds hx)).mp
+  have hn : Tendsto (fun z : {z : ℂ // z ≠ 0} => ‖z.1‖)
+      (comap Subtype.val (𝓝 x)) (𝓝 ‖x‖) :=
+    continuous_norm.continuousAt.tendsto.comp tendsto_comap
+  have hre : Tendsto (fun z : {z : ℂ // z ≠ 0} =>
+      Checked.div z.1.re ‖z.1‖ (norm_ne_zero_iff.mpr z.2).isUnit)
+      (comap Subtype.val (𝓝 x)) (𝓝 (x.re / ‖x‖)) :=
+    (continuous_re.continuousAt.tendsto.comp tendsto_comap).div₀
+      (h₀ := fun z => (norm_ne_zero_iff.mpr z.2).isUnit)
+      (hb := (norm_ne_zero_iff.mpr hx).isUnit) hn
+  have him : Tendsto (fun z : {z : ℂ // z ≠ 0} =>
+      Checked.div z.1.im ‖z.1‖ (norm_ne_zero_iff.mpr z.2).isUnit)
+      (comap Subtype.val (𝓝 x)) (𝓝 (x.im / ‖x‖)) :=
+    (continuous_im.continuousAt.tendsto.comp tendsto_comap).div₀
+      (h₀ := fun z => (norm_ne_zero_iff.mpr z.2).isUnit)
+      (hb := (norm_ne_zero_iff.mpr hx).isUnit) hn
   rw [mem_slitPlane_iff, ← lt_or_lt_iff_ne] at h
   rcases h with (hx_re | hx_im | hx_im)
-  exacts [(Real.continuousAt_arcsin.comp
-          (continuous_im.continuousAt.div continuous_norm.continuousAt h₀)).congr
-      (arg_eq_nhds_of_re_pos hx_re).symm,
-    (Real.continuous_arccos.continuousAt.comp
-            (continuous_re.continuousAt.div continuous_norm.continuousAt h₀)).neg.congr
-      (arg_eq_nhds_of_im_neg hx_im).symm,
-    (Real.continuous_arccos.continuousAt.comp
-          (continuous_re.continuousAt.div continuous_norm.continuousAt h₀)).congr
-      (arg_eq_nhds_of_im_pos hx_im).symm]
+  · rw [arg_of_re_nonneg hx_re.le (hx₀ := (norm_ne_zero_iff.mpr hx).isUnit)]
+    exact (Real.continuousAt_arcsin.tendsto.comp him).congr'
+      (arg_eq_nhds_of_re_pos hx_re).symm
+  · rw [arg_of_im_neg hx_im]
+    exact (Real.continuous_arccos.continuousAt.tendsto.comp hre).neg.congr'
+      (arg_eq_nhds_of_im_neg hx_im).symm
+  · rw [arg_of_im_pos hx_im]
+    exact (Real.continuous_arccos.continuousAt.tendsto.comp hre).congr'
+      (arg_eq_nhds_of_im_pos hx_im).symm
 
 @[fun_prop]
 theorem continuousOn_arg : ContinuousOn arg slitPlane :=
@@ -605,37 +664,63 @@ theorem continuousOn_arg : ContinuousOn arg slitPlane :=
 
 theorem tendsto_arg_nhdsWithin_im_neg_of_re_neg_of_im_zero {z : ℂ} (hre : z.re < 0)
     (him : z.im = 0) : Tendsto arg (𝓝[{ z : ℂ | z.im < 0 }] z) (𝓝 (-π)) := by
-  suffices H : Tendsto (fun x : ℂ => Real.arcsin ((-x).im / ‖x‖) - π)
-      (𝓝[{ z : ℂ | z.im < 0 }] z) (𝓝 (-π)) by
-    refine H.congr' ?_
-    have : ∀ᶠ x : ℂ in 𝓝 z, x.re < 0 := continuous_re.tendsto z (gt_mem_nhds hre)
-    filter_upwards [self_mem_nhdsWithin, mem_nhdsWithin_of_mem_nhds this] with _ him hre
-    rw [arg, ite_eq_right hre.not_ge, ite_eq_right him.not_ge]
-  convert!
-    (Real.continuousAt_arcsin.comp_continuousWithinAt
-          ((continuous_im.continuousAt.comp_continuousWithinAt continuousWithinAt_neg).div
-            continuous_norm.continuousWithinAt _)).sub_const
-      π using 1
-  · simp [him]
-  · lift z to ℝ using him
-    simpa using hre.ne
+  have hz : z ≠ 0 := ne_of_apply_ne re hre.ne
+  apply (tendsto_comap_val_iff (eventually_ne_nhdsWithin hz)).mp
+  have hn : Tendsto (fun x : {x : ℂ // x ≠ 0} => ‖x.1‖)
+      (comap Subtype.val (𝓝[{x : ℂ | x.im < 0}] z)) (𝓝 ‖z‖) :=
+    (continuous_norm.continuousAt.tendsto.mono_left nhdsWithin_le_nhds).comp tendsto_comap
+  have hq : Tendsto (fun x : {x : ℂ // x ≠ 0} =>
+      Checked.div (-x.1).im ‖x.1‖ (norm_ne_zero_iff.mpr x.2).isUnit)
+      (comap Subtype.val (𝓝[{x : ℂ | x.im < 0}] z)) (𝓝 ((-z).im / ‖z‖)) :=
+    (((continuous_im.comp continuous_neg).continuousAt.tendsto.mono_left
+      nhdsWithin_le_nhds).comp tendsto_comap).div₀
+        (h₀ := fun x => (norm_ne_zero_iff.mpr x.2).isUnit)
+        (hb := (norm_ne_zero_iff.mpr hz).isUnit) hn
+  have hlim : Tendsto (fun x : {x : ℂ // x ≠ 0} =>
+      Real.arcsin (Checked.div (-x.1).im ‖x.1‖ (norm_ne_zero_iff.mpr x.2).isUnit) - π)
+      (comap Subtype.val (𝓝[{x : ℂ | x.im < 0}] z)) (𝓝 (-π)) := by
+    simpa [him] using (Real.continuousAt_arcsin.tendsto.comp hq).sub_const π
+  refine hlim.congr' ?_
+  have hr : ∀ᶠ x : {x : ℂ // x ≠ 0} in
+      comap Subtype.val (𝓝[{x : ℂ | x.im < 0}] z), x.1.re < 0 :=
+    tendsto_comap.eventually (mem_nhdsWithin_of_mem_nhds
+      (continuous_re.tendsto z (gt_mem_nhds hre)))
+  have hi : ∀ᶠ x : {x : ℂ // x ≠ 0} in
+      comap Subtype.val (𝓝[{x : ℂ | x.im < 0}] z), x.1.im < 0 :=
+    tendsto_comap.eventually (self_mem_nhdsWithin (s := {x : ℂ | x.im < 0}))
+  filter_upwards [hr, hi] with x hr hi
+  exact (arg_of_re_neg_of_im_neg hr hi).symm
 
 theorem continuousWithinAt_arg_of_re_neg_of_im_zero {z : ℂ} (hre : z.re < 0) (him : z.im = 0) :
     ContinuousWithinAt arg { z : ℂ | 0 ≤ z.im } z := by
-  have : arg =ᶠ[𝓝[{ z : ℂ | 0 ≤ z.im }] z] fun x => Real.arcsin ((-x).im / ‖x‖) + π := by
-    have : ∀ᶠ x : ℂ in 𝓝 z, x.re < 0 := continuous_re.tendsto z (gt_mem_nhds hre)
-    filter_upwards [self_mem_nhdsWithin (s := { z : ℂ | 0 ≤ z.im }),
-      mem_nhdsWithin_of_mem_nhds this] with _ him hre
-    rw [arg, ite_eq_right hre.not_ge, ite_eq_left him]
-  refine ContinuousWithinAt.congr_of_eventuallyEq ?_ this ?_
-  · refine
-      (Real.continuousAt_arcsin.comp_continuousWithinAt
-            ((continuous_im.continuousAt.comp_continuousWithinAt continuousWithinAt_neg).div
-              continuous_norm.continuousWithinAt ?_)).add
-        tendsto_const_nhds
-    lift z to ℝ using him
-    simpa using hre.ne
-  · rw [arg, ite_eq_right hre.not_ge, ite_eq_left him.ge]
+  have hz : z ≠ 0 := ne_of_apply_ne re hre.ne
+  change Tendsto arg (𝓝[{x : ℂ | 0 ≤ x.im}] z) (𝓝 (arg z))
+  rw [arg_eq_pi_iff.2 ⟨hre, him⟩]
+  apply (tendsto_comap_val_iff (eventually_ne_nhdsWithin hz)).mp
+  have hn : Tendsto (fun x : {x : ℂ // x ≠ 0} => ‖x.1‖)
+      (comap Subtype.val (𝓝[{x : ℂ | 0 ≤ x.im}] z)) (𝓝 ‖z‖) :=
+    (continuous_norm.continuousAt.tendsto.mono_left nhdsWithin_le_nhds).comp tendsto_comap
+  have hq : Tendsto (fun x : {x : ℂ // x ≠ 0} =>
+      Checked.div (-x.1).im ‖x.1‖ (norm_ne_zero_iff.mpr x.2).isUnit)
+      (comap Subtype.val (𝓝[{x : ℂ | 0 ≤ x.im}] z)) (𝓝 ((-z).im / ‖z‖)) :=
+    (((continuous_im.comp continuous_neg).continuousAt.tendsto.mono_left
+      nhdsWithin_le_nhds).comp tendsto_comap).div₀
+        (h₀ := fun x => (norm_ne_zero_iff.mpr x.2).isUnit)
+        (hb := (norm_ne_zero_iff.mpr hz).isUnit) hn
+  have hlim : Tendsto (fun x : {x : ℂ // x ≠ 0} =>
+      Real.arcsin (Checked.div (-x.1).im ‖x.1‖ (norm_ne_zero_iff.mpr x.2).isUnit) + π)
+      (comap Subtype.val (𝓝[{x : ℂ | 0 ≤ x.im}] z)) (𝓝 π) := by
+    simpa [him] using (Real.continuousAt_arcsin.tendsto.comp hq).add_const π
+  refine hlim.congr' ?_
+  have hr : ∀ᶠ x : {x : ℂ // x ≠ 0} in
+      comap Subtype.val (𝓝[{x : ℂ | 0 ≤ x.im}] z), x.1.re < 0 :=
+    tendsto_comap.eventually (mem_nhdsWithin_of_mem_nhds
+      (continuous_re.tendsto z (gt_mem_nhds hre)))
+  have hi : ∀ᶠ x : {x : ℂ // x ≠ 0} in
+      comap Subtype.val (𝓝[{x : ℂ | 0 ≤ x.im}] z), 0 ≤ x.1.im :=
+    tendsto_comap.eventually (self_mem_nhdsWithin (s := {x : ℂ | 0 ≤ x.im}))
+  filter_upwards [hr, hi] with x hr hi
+  exact (arg_of_re_neg_of_im_nonneg hr hi).symm
 
 theorem tendsto_arg_nhdsWithin_im_nonneg_of_re_neg_of_im_zero {z : ℂ} (hre : z.re < 0)
     (him : z.im = 0) : Tendsto arg (𝓝[{ z : ℂ | 0 ≤ z.im }] z) (𝓝 π) := by

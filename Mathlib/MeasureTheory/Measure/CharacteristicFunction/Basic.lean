@@ -168,7 +168,8 @@ lemma charFun_eq_fourierIntegral' (t : E) :
     fourierChar_apply', Pi.ofNat_apply, Circle.smul_def, Circle.coe_exp, ofReal_mul, ofReal_ofNat,
     ofReal_inv, smul_eq_mul, mul_one]
   congr with x
-  rw [← mul_assoc, mul_inv_cancel₀ (by simp [pi_ne_zero]), one_mul]
+  have hc : IsUnit (2 * (π : ℂ)) := (mul_ne_zero two_ne_zero (ofReal_ne_zero.mpr pi_ne_zero)).isUnit
+  rw [← mul_assoc, mul_inv_cancel₀ (ha := hc), one_mul]
 
 lemma norm_charFun_le (t : E) : ‖charFun μ t‖ ≤ μ.real Set.univ := by
   rw [charFun_eq_fourierIntegral]

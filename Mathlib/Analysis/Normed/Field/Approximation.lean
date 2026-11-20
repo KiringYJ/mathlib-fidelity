@@ -43,7 +43,7 @@ namespace Polynomial
 section ContinuityOfRoots
 
 variable [NormedField K] [NormedField L] [NormedAlgebra K L] {f g : Polynomial K}
-  {f g : Polynomial K} {ε : ℝ}
+  {ε : ℝ}
 
 /-- **Continuity of Roots.** Let `f` and `g` be two monic polynomials with `g` splits.
 If the coefficients of two polynomials `f` and `g` are sufficiently close, then every root of `f`
@@ -51,23 +51,26 @@ has a corresponding root of `g` nearby. -/
 theorem exists_roots_norm_sub_lt_of_norm_coeff_sub_lt (hε : 0 < ε) {a : K} (ha : f.eval a = 0)
     (hfm : f.Monic) (hgm : g.Monic) (hdeg : g.natDegree = f.natDegree)
     (hcoeff : ∀ i : ℕ, ‖g.coeff i - f.coeff i‖ < ε) (hg : g.Splits) :
-    ∃ b ∈ g.roots, ‖a - b‖ < ((f.natDegree + 1) * ε) ^ (f.natDegree : ℝ)⁻¹ * max ‖a‖ 1 := by
+    ∃ b ∈ g.roots, ‖a - b‖ < ((f.natDegree + 1) * ε) ^
+      (Checked.inv (f.natDegree : ℝ)
+        (Nat.cast_ne_zero.mpr
+          (natDegree_pos_iff_degree_pos.mpr (degree_pos_of_root hfm.ne_zero ha)).ne').isUnit) *
+      max ‖a‖ 1 := by
   -- Let `a` be a root of `f`. To show there exists a root `b` of `g` such that `‖a - b‖` is small,
   -- it suffices to show that `∏ (b ∈ g.roots) ‖a - b‖` is small.
   suffices this : (g.roots.map fun x => ‖a - x‖).prod <
       ((f.natDegree + 1) * ε) * (max ‖a‖ 1) ^ (f.natDegree : ℝ) by
     by_contra! h
+    have hdegree := natDegree_pos_iff_degree_pos.mpr (degree_pos_of_root hfm.ne_zero ha)
+    have hu : IsUnit (f.natDegree : ℝ) := (Nat.cast_ne_zero.mpr hdegree.ne').isUnit
     have := Multiset.prod_map_le_prod_map₀ (fun b ↦ ((f.natDegree + 1) * ε) ^ (f.natDegree : ℝ)⁻¹ *
         (‖a‖ ⊔ 1)) (fun b ↦ ‖a - b‖) (by intros; positivity) h
     simp only [Multiset.map_const', (hg.natDegree_eq_card_roots hgm.ne_zero).symm ▸ hdeg,
       Multiset.prod_replicate,
       mul_pow, ← Real.rpow_natCast,
       ← Real.rpow_mul (by positivity : ((f.natDegree + 1) * ε) > 0).le] at this
-    rw [inv_mul_cancel₀, Real.rpow_one] at this
-    · linarith
-    · simp only [ne_eq, Nat.cast_eq_zero, hfm, Monic.natDegree_eq_zero]
-      intro h
-      simp [h] at ha
+    rw [inv_mul_cancel₀ (ha := hu), Real.rpow_one] at this
+    linarith
   -- `∏ (b ∈ g.roots) ‖a - b‖ = ‖g(a)‖ = ‖(g - f)(a)‖` is small since every
   -- coefficient of `‖g - f‖` is small.
   calc
@@ -115,12 +118,15 @@ field extension. -/
 theorem exists_aroots_norm_sub_lt_of_norm_coeff_sub_lt (hε : 0 < ε) {a : L} (ha : f.aeval a = 0)
     (hfm : f.Monic) (hgm : g.Monic) (hdeg : g.natDegree = f.natDegree)
     (hcoeff : ∀ i : ℕ, ‖g.coeff i - f.coeff i‖ < ε) (hg : (g.map (algebraMap K L)).Splits) :
-    ∃ b ∈ g.aroots L, ‖a - b‖ < ((f.natDegree + 1) * ε) ^ (f.natDegree : ℝ)⁻¹ * max ‖a‖ 1 := by
-  obtain ⟨b, h1, h2⟩ := exists_roots_norm_sub_lt_of_norm_coeff_sub_lt hε
-      (f := f.map (algebraMap K L)) (by simpa using ha) (hfm.map _) (hgm.map _)
+    ∃ b ∈ g.aroots L, ‖a - b‖ < ((f.natDegree + 1) * ε) ^
+      (Checked.inv (f.natDegree : ℝ)
+        (Nat.cast_ne_zero.mpr (natDegree_pos_of_monic_of_aeval_eq_zero hfm ha).ne').isUnit) *
+      max ‖a‖ 1 := by
+  have ha' : (f.map (algebraMap K L)).eval a = 0 := by simpa using ha
+  simpa [Polynomial.aroots] using
+    exists_roots_norm_sub_lt_of_norm_coeff_sub_lt hε
+      (f := f.map (algebraMap K L)) (a := a) ha' (hfm.map _) (hgm.map _)
       (by simpa using hdeg) (by simpa [← map_sub] using hcoeff) hg
-  use b, h1
-  simpa using h2
 
 end ContinuityOfRoots
 

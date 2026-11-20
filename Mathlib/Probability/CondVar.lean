@@ -277,8 +277,8 @@ mean. -/
 theorem isCondVar_bot [IsFiniteMeasure μ] (hX : MemLp X 2 μ) :
     IsCondVar ⊥ μ X fun _ ↦ ⨍ ω, (X ω - ⨍ ω', X ω' ∂μ) ^ 2 ∂μ := by
   refine ⟨fun _ ↦ ⨍ ω, X ω ∂μ, ?_, ?_⟩
-  · simpa only [average_eq] using isCondExp_bot (hX.integrable one_le_two)
-  · simpa only [average_eq, Pi.sub_apply] using
+  · exact isCondExp_bot (hX.integrable one_le_two)
+  · simpa only [Pi.sub_apply] using
       isCondExp_bot (μ := μ) (hX.sub (memLp_const (⨍ ω, X ω ∂μ))).integrable_sq
 
 /-! ### The domain -/

@@ -59,7 +59,8 @@ theorem AffineSpace.cobounded_eq_iSup_sphere_asymptoticNhds :
   rw [Set.mem_preimage, dist_eq_norm_vsub'] at hx
   let x' := ‖x -ᵥ p‖⁻¹ • (x -ᵥ p)
   have x'_mem : x' ∈ Metric.sphere 0 1 := by
-    rw [mem_sphere_zero_iff_norm, norm_smul, norm_inv, norm_norm, inv_mul_cancel₀ hx.1.ne']
+    rw [mem_sphere_zero_iff_norm, norm_smul, Real.norm_eq_abs, abs_of_pos (inv_pos.mpr hx.1),
+      inv_mul_cancel₀]
   have ⟨y, y_mem, hy⟩ := Set.mem_iUnion₂.mp (h₂ x'_mem)
   rw [← vsub_vadd x p,
     ← show ‖x -ᵥ p‖ • x' = x -ᵥ p from smul_inv_smul₀ (ha := hx.1.ne'.isUnit) (x -ᵥ p)]

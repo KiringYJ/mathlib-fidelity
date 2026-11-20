@@ -148,15 +148,12 @@ theorem centeredArc_eq_empty {r : ℝ} (hr : r ≤ 0) : centeredArc r = ∅ := b
 theorem centeredArc_zero : centeredArc 0 = ∅ :=
   centeredArc_eq_empty le_rfl
 
-theorem mem_centeredArc_div {z : Circle} {s : ℝ} {n : ℕ} (hs : s ≤ π)
+theorem mem_centeredArc_div {z : Circle} {s : ℝ} {n : ℕ} {hn0 : n ≠ 0} (hs : s ≤ π)
     (h1 : z ∈ centeredArc (π / n)) (h2 : z ^ n ∈ centeredArc s) :
     z ∈ centeredArc (s / n) := by
   have hs0 : 0 < s := by
     contrapose! h2
     simp [centeredArc_eq_empty h2]
-  have hn0 : n ≠ 0 := by
-    contrapose! h1
-    simp [h1]
   have hn : 1 ≤ (n : ℝ) := by simpa [Nat.one_le_iff_ne_zero]
   rw [mem_centeredArc ((div_le_self hs0.le hn).trans hs),
     lt_div_iff₀' (one_pos.trans_le hn)]
@@ -164,7 +161,7 @@ theorem mem_centeredArc_div {z : Circle} {s : ℝ} {n : ℕ} (hs : s ≤ π)
   rwa [mem_centeredArc hs, coe_pow, ← arg_coe_angle_toReal_eq_arg, arg_pow_coe_angle,
     (Angle.nsmul_toReal_eq_mul hn0).mpr (mem_Ioc_of_Ioo ?_), abs_mul, Nat.abs_cast,
     arg_coe_angle_toReal_eq_arg] at h2
-  rwa [neg_div, mem_Ioo, ← abs_lt, arg_coe_angle_toReal_eq_arg]
+  rwa [neg_div₀, mem_Ioo, ← abs_lt, arg_coe_angle_toReal_eq_arg]
 
 lemma exp_surjective : Surjective exp := fun z => ⟨z.val.arg, exp_arg z⟩
 
@@ -369,44 +366,52 @@ variable {T : ℝ}
 
 /-! ### Map from `AddCircle` to `Circle` -/
 
-theorem scaled_exp_map_periodic : Function.Periodic (fun x => Circle.exp (2 * π / T * x)) T := by
-  -- The case T = 0 is not interesting, but it is true, so we prove it to save hypotheses
-  rcases eq_or_ne T 0 with (rfl | hT)
-  · simp
-  · intro x; simp_rw [mul_add]; rw [div_mul_cancel₀ _ hT, Circle.periodic_exp]
+theorem scaled_exp_map_periodic {hT : IsUnit T} :
+    Function.Periodic (fun x => Circle.exp (2 * π / T * x)) T := by
+  intro x
+  simp_rw [mul_add]
+  rw [div_mul_cancel₀, Circle.periodic_exp]
 
-/-- The canonical map `fun x => exp (2 π i x / T)` from `ℝ / ℤ • T` to the unit circle in `ℂ`.
-If `T = 0` we understand this as the constant function 1. -/
-noncomputable def toCircle : AddCircle T → Circle :=
-  (@scaled_exp_map_periodic T).lift
+/-- The map `fun x => exp (2 π i x / T)` from `ℝ / ℤ • T` to the complex unit circle for a
+nonzero period `T`. -/
+noncomputable def toCircle (x : AddCircle T) (hT : IsUnit T := by checked_unit) : Circle :=
+  (scaled_exp_map_periodic (hT := hT)).lift x
 
-theorem toCircle_apply_mk (x : ℝ) : @toCircle T x = Circle.exp (2 * π / T * x) :=
+theorem toCircle_apply_mk (x : ℝ) {hT : IsUnit T} :
+    toCircle (x : AddCircle T) hT = Circle.exp (2 * π / T * x) :=
   rfl
 
-theorem toCircle_add (x y : AddCircle T) : toCircle (x + y) = toCircle x * toCircle y := by
+theorem toCircle_add (x y : AddCircle T) {hT : IsUnit T} :
+    toCircle (x + y) hT = toCircle x hT * toCircle y hT := by
   induction x using QuotientAddGroup.induction_on
   induction y using QuotientAddGroup.induction_on
   simp_rw [← coe_add, toCircle_apply_mk, mul_add, Circle.exp_add]
 
-@[simp] lemma toCircle_zero : toCircle (0 : AddCircle T) = 1 := by
+@[simp] lemma toCircle_zero {hT : IsUnit T} : toCircle (0 : AddCircle T) hT = 1 := by
   rw [← QuotientAddGroup.mk_zero, toCircle_apply_mk, mul_zero, Circle.exp_zero]
 
-theorem toCircle_neg (x : AddCircle T) : toCircle (-x) = (toCircle x)⁻¹ :=
-  (mul_left_inj (toCircle x)).mp <| by simp [← toCircle_add]
+theorem toCircle_neg (x : AddCircle T) {hT : IsUnit T} :
+    toCircle (-x) hT = (toCircle x hT)⁻¹ :=
+  (mul_left_inj (toCircle x hT)).mp <| by simp [← toCircle_add]
 
-theorem toCircle_nsmul (x : AddCircle T) (n : ℕ) : toCircle (n • x) = toCircle x ^ n := by
+theorem toCircle_nsmul (x : AddCircle T) (n : ℕ) {hT : IsUnit T} :
+    toCircle (n • x) hT = toCircle x hT ^ n := by
   induction n with
   | zero => simp
   | succ n ih => rw [succ_nsmul, toCircle_add, ih, pow_succ]
 
-theorem toCircle_zsmul (x : AddCircle T) (n : ℤ) : toCircle (n • x) = toCircle x ^ n := by
+theorem toCircle_zsmul (x : AddCircle T) (n : ℤ) {hT : IsUnit T} :
+    toCircle (n • x) hT = toCircle x hT ^ n := by
   cases n <;> simp [toCircle_nsmul, toCircle_neg]
 
 @[fun_prop, continuity]
-theorem continuous_toCircle : Continuous (@toCircle T) :=
-  continuous_coinduced_dom.mpr (Circle.exp.continuous.comp <| by fun_prop)
+theorem continuous_toCircle {hT : IsUnit T} :
+    Continuous (fun x : AddCircle T ↦ toCircle x hT) :=
+  continuous_coinduced_dom.mpr
+    (Circle.exp.continuous.comp (continuous_const.mul continuous_id))
 
-theorem injective_toCircle (hT : T ≠ 0) : Function.Injective (@toCircle T) := by
+theorem injective_toCircle {hT : IsUnit T} :
+    Function.Injective (fun x : AddCircle T ↦ toCircle x hT) := by
   intro a b h
   induction a using QuotientAddGroup.induction_on
   induction b using QuotientAddGroup.induction_on
@@ -415,7 +420,7 @@ theorem injective_toCircle (hT : T ≠ 0) : Function.Injective (@toCircle T) := 
   rw [QuotientAddGroup.eq]; simp_rw [AddSubgroup.mem_zmultiples_iff, zsmul_eq_mul]
   use m
   field_simp at hm
-  linarith
+  linear_combination -hm
 
 /-- The homeomorphism between `AddCircle (2 * π)` and `Circle`. -/
 @[simps] noncomputable def homeomorphCircle' : AddCircle (2 * π) ≃ₜ Circle where
@@ -436,11 +441,13 @@ noncomputable def homeomorphCircle (hT : T ≠ 0) : AddCircle T ≃ₜ Circle :=
   (homeomorphAddCircle T (2 * π) hT (by positivity)).trans homeomorphCircle'
 
 theorem homeomorphCircle_apply (hT : T ≠ 0) (x : AddCircle T) :
-    homeomorphCircle hT x = toCircle x := by
+    homeomorphCircle hT x = toCircle x hT.isUnit := by
   cases x using QuotientAddGroup.induction_on
   rw [homeomorphCircle, Homeomorph.trans_apply,
     homeomorphAddCircle_apply_mk, homeomorphCircle'_apply_mk, toCircle_apply_mk]
-  ring_nf
+  simp only [div_eq_mul_inv₀]
+  congr 1
+  ring
 
 end AddCircle
 
@@ -448,9 +455,7 @@ open AddCircle
 
 theorem Circle.isAddQuotientCoveringMap_exp :
     IsAddQuotientCoveringMap exp (AddSubgroup.zmultiples (2 * π)) := by
-  convert! (isAddQuotientCoveringMap_coe _).homeomorph_comp (homeomorphCircle _)
-  on_goal 2 => simp
-  ext; simp [homeomorphCircle_apply, toCircle]
+  exact (isAddQuotientCoveringMap_coe _).homeomorph_comp homeomorphCircle'
 
 theorem Circle.isCoveringMap_exp : IsCoveringMap exp := isAddQuotientCoveringMap_exp.isCoveringMap
 
@@ -466,10 +471,14 @@ theorem Circle.hasBasis_centeredArc_div_two_pow :
   apply Filter.HasBasis.map
   refine nhds_basis_uniformity <| Metric.mk_uniformity_basis_of_tendsto (l := Filter.atTop)
     (fun _ _ ↦ by positivity) (by simp) ?_
-  simp_rw [div_eq_mul_inv, pow_succ, mul_inv_rev, ← mul_assoc]
-  rw [← mul_zero (π * 2⁻¹)]
-  exact tendsto_inv_atTop_zero.comp (tendsto_pow_atTop_atTop_of_one_lt (by norm_num))
-    |>.const_mul _
+  have h := (tendsto_pow_atTop_atTop_of_one_lt (by norm_num : 1 < (2 : ℝ)))
+    |>.fun_inv_tendsto_atTop (h0 := fun n ↦ (two_ne_zero : (2 : ℝ) ≠ 0).isUnit.pow n)
+    |>.const_mul (π * (2 : ℝ)⁻¹)
+  rw [mul_zero] at h
+  refine h.congr fun n ↦ ?_
+  field_simp
+  rw [pow_succ]
+  ring
 
 theorem Circle.isOpen_centeredArc (r : ℝ) : IsOpen (centeredArc r) := by
   have hset : {x : ℝ | |x| < r} = Ioo (-r) r := by
@@ -487,7 +496,7 @@ theorem Circle.eq_one_of_forall_pow_mem_centeredArc_pi_div_two {z : Circle}
     induction n with
     | zero => simpa using hz1
     | succ n ih =>
-        simpa [div_div, ← pow_succ'] using mem_centeredArc_div
+        simpa [div_div₀, ← pow_succ'] using mem_centeredArc_div (hn0 := by positivity)
           (div_le_self pi_nonneg one_le_two) (by simpa) (hz (2 ^ (n + 1)) (by positivity))
   simpa [h] using Set.ext_iff.mp hasBasis_centeredArc_div_two_pow.ker z
 
@@ -509,7 +518,8 @@ theorem Circle.isQuotientCoveringMap_zpow (n : ℤ) [NeZero n] :
     ext; simp [zpowGroupHom, e, homeomorphCircle_apply, toCircle_zsmul]
   · convert! finite_torsion_of_isSMulRegular_int (1 : ℝ) n fun _ ↦ by simp [NeZero.ne]
     ext
-    simp [e, homeomorphCircle_apply, ← toCircle_zsmul, ← (injective_toCircle one_ne_zero).eq_iff]
+    simp [e, homeomorphCircle_apply, ← toCircle_zsmul,
+      ← (injective_toCircle (hT := isUnit_one)).eq_iff]
 
 theorem Circle.isQuotientCoveringMap_npow (n : ℕ) [NeZero n] :
     IsQuotientCoveringMap (· ^ n : Circle → _) (powMonoidHom (α := Circle) n).ker :=

@@ -41,10 +41,12 @@ theorem aemeasurable_withDensity_iff {E : Type*} [NormedAddCommGroup E] [NormedS
       simp only [Classical.not_not, mem_ofPred_eq, mem_compl_iff] at hx
       simp [hx]
   · rintro ⟨g', g'meas, hg'⟩
-    refine ⟨fun x => (f x : ℝ)⁻¹ • g' x, hf.coe_nnreal_real.inv.smul g'meas, ?_⟩
+    refine ⟨fun x => ((f x : ℝ≥0∞)⁻¹).toReal • g' x,
+      hf.coe_nnreal_ennreal.inv.ennreal_toReal.smul g'meas, ?_⟩
     rw [EventuallyEq, ae_withDensity_iff hf.coe_nnreal_ennreal]
     filter_upwards [hg']
     intro x hx h'x
+    have hu : IsUnit (f x : ℝ) := (NNReal.coe_ne_zero.2 (ENNReal.coe_ne_zero.1 h'x)).isUnit
+    rw [ENNReal.toReal_inv (f x : ℝ≥0∞) (ha := by simpa only [ENNReal.coe_toReal] using hu)]
+    change g x = Checked.inv (f x : ℝ) hu • g' x
     rw [← hx, smul_smul, inv_mul_cancel₀, one_smul]
-    simp only [Ne, ENNReal.coe_eq_zero] at h'x
-    simpa only [NNReal.coe_eq_zero, Ne] using h'x

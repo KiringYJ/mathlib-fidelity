@@ -164,3 +164,42 @@ h_carried✝ : 0 ≤ ↑x
 noncomputable example (x : {r : ℝ // 0 ≤ r}) : ℝ := (x : ℝ)⁻¹
 
 end carriedEvidence
+
+section evidence
+
+example {K : Type*} [GroupWithZero K] (a : K) [Invertible a] : ⅟(a⁻¹) = a := rfl
+
+example {A B : Type*} [Monoid A] [Monoid B] [MulDistribMulAction A B]
+    (g : A) (x : B) (hx : IsUnit x) : (g • x)⁻¹ * (g • x) = 1 := inv_mul_cancel₀
+
+example {M S : Type*} [Monoid M] [SetLike S M] [SubmonoidClass S M]
+    (s : S) (x : s) (hx : IsUnit x) : (x : M)⁻¹ * x = 1 := inv_mul_cancel₀
+
+example {K : Type*} [Field K] (s : Subfield K) (x : s) (hx : IsUnit x) :
+    (x : K)⁻¹ * x = 1 := inv_mul_cancel₀
+
+example {A B : Type*} [Monoid A] [Monoid B] [SMul A B] (_g : A) (x : B) (_hx : IsUnit x) :
+    True := by
+  fail_if_success have : IsUnit (_g • x) := by checked_unit
+  trivial
+
+example {M S : Type*} [Monoid M] [SetLike S M] [SubmonoidClass S M]
+    (s : S) (x : s) (_hx : IsUnit (x : M)) : True := by
+  fail_if_success have : IsUnit x := by checked_unit
+  trivial
+
+example (q : ℚ) (_hq : q = (q.num : ℚ) / ↑q.den) (f : ℚ → ℚ) (hf : ∀ x, f x ≠ 0) :
+    f q + 0 ≠ 0 := by checked_nonzero
+
+example (q : ℚ) (_hq : q = (q.num : ℚ) / ↑q.den) : True := by
+  fail_if_success have : q ≠ 0 := by checked_nonzero
+  trivial
+
+example (q : ℚ) (f : ℚ → ℚ) (hq : q = f q) (hf : f q ≠ 0) : q ≠ 0 := by
+  checked_nonzero
+
+example (q : ℚ) (_hq : q = (q.num : ℚ) / ↑q.den) : True := by
+  fail_if_success have : (-1 : ℤ) < 0 → IsUnit q := by checked_power
+  trivial
+
+end evidence

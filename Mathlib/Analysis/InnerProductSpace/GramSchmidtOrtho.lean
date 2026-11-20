@@ -65,10 +65,14 @@ theorem gramSchmidt_def' (f : ι → E) (n : ι) :
     f n = gramSchmidt 𝕜 f n + ∑ i ∈ Iio n, (𝕜 ∙ gramSchmidt 𝕜 f i).starProjection (f n) := by
   rw [gramSchmidt_def, sub_add_cancel]
 
+open scoped Classical in
 theorem gramSchmidt_def'' (f : ι → E) (n : ι) :
     f n = gramSchmidt 𝕜 f n + ∑ i ∈ Iio n,
-      (⟪gramSchmidt 𝕜 f i, f n⟫ / (‖gramSchmidt 𝕜 f i‖ : 𝕜) ^ 2) • gramSchmidt 𝕜 f i := by
-  simp only [← map_pow, ← starProjection_singleton, ← gramSchmidt_def' 𝕜 f n]
+      if hi : gramSchmidt 𝕜 f i = 0 then 0 else
+        Checked.div ⟪gramSchmidt 𝕜 f i, f n⟫ ((‖gramSchmidt 𝕜 f i‖ ^ 2 : ℝ) : 𝕜)
+          (RCLike.ofReal_ne_zero.mpr
+            (pow_ne_zero 2 (norm_ne_zero_iff.mpr hi))).isUnit • gramSchmidt 𝕜 f i := by
+  simpa only [starProjection_singleton] using gramSchmidt_def' 𝕜 f n
 
 @[simp]
 theorem gramSchmidt_bot {ι : Type*} [LinearOrder ι] [LocallyFiniteOrder ι] [OrderBot ι]
@@ -92,20 +96,19 @@ theorem gramSchmidt_orthogonal (f : ι → E) {a b : ι} (h₀ : a ≠ b) :
   revert a
   apply wellFounded_lt.induction b
   intro b ih a h₀
-  simp only [gramSchmidt_def 𝕜 f b, inner_sub_right, inner_sum,
-    starProjection_singleton, inner_smul_right]
+  simp only [gramSchmidt_def 𝕜 f b, inner_sub_right, inner_sum]
   rw [Finset.sum_eq_single_of_mem a (Finset.mem_Iio.mpr h₀)]
-  · by_cases h : gramSchmidt 𝕜 f a = 0
-    · simp only [h, inner_zero_left, zero_div, zero_mul, sub_zero]
-    · rw [RCLike.ofReal_pow, ← inner_self_eq_norm_sq_to_K, div_mul_cancel₀, sub_self]
-      rwa [inner_self_ne_zero]
+  · rw [← inner_starProjection_left_eq_right,
+      starProjection_eq_self_iff.mpr (mem_span_singleton_self _), sub_self]
   intro i hi hia
-  simp only [mul_eq_zero, div_eq_zero_iff]
-  right
-  rcases hia.lt_or_gt with hia₁ | hia₂
-  · rw [inner_eq_zero_symm]
-    exact ih a h₀ i hia₁
-  · exact ih i (mem_Iio.1 hi) a hia₂
+  have horth : ⟪gramSchmidt 𝕜 f a, gramSchmidt 𝕜 f i⟫ = 0 := by
+    rcases hia.lt_or_gt with hia₁ | hia₂
+    · rw [inner_eq_zero_symm]
+      exact ih a h₀ i hia₁
+    · exact ih i (mem_Iio.1 hi) a hia₂
+  rw [← inner_starProjection_left_eq_right]
+  have hmem := mem_orthogonal_singleton_iff_inner_left.mpr horth
+  simp [starProjection_apply, orthogonalProjectionOnto_apply_of_mem_orthogonal hmem]
 
 /-- This is another version of `gramSchmidt_orthogonal` using `Pairwise` instead. -/
 theorem gramSchmidt_pairwise_orthogonal (f : ι → E) :
@@ -114,8 +117,8 @@ theorem gramSchmidt_pairwise_orthogonal (f : ι → E) :
 
 theorem gramSchmidt_inv_triangular (v : ι → E) {i j : ι} (hij : i < j) :
     ⟪gramSchmidt 𝕜 v j, v i⟫ = 0 := by
-  rw [gramSchmidt_def'' 𝕜 v]
-  simp only [inner_add_right, inner_sum, inner_smul_right]
+  rw [gramSchmidt_def' 𝕜 v]
+  simp only [inner_add_right, inner_sum]
   set b : ι → E := gramSchmidt 𝕜 v
   convert! zero_add (0 : 𝕜)
   · exact gramSchmidt_orthogonal 𝕜 v hij.ne'
@@ -123,28 +126,31 @@ theorem gramSchmidt_inv_triangular (v : ι → E) {i j : ι} (hij : i < j) :
   rintro k hki'
   have hki : k < i := by simpa using hki'
   have : ⟪b j, b k⟫ = 0 := gramSchmidt_orthogonal 𝕜 v (hki.trans hij).ne'
-  simp [this]
+  rcases mem_span_singleton.mp ((𝕜 ∙ b k).starProjection_apply_mem (v i)) with ⟨c, hc⟩
+  rw [← hc, inner_smul_right, this, mul_zero]
 
 open Submodule Set
 
 theorem mem_span_gramSchmidt (f : ι → E) {i j : ι} (hij : i ≤ j) :
     f i ∈ span 𝕜 (gramSchmidt 𝕜 f '' Set.Iic j) := by
   rw [gramSchmidt_def' 𝕜 f i]
-  simp_rw [starProjection_singleton]
   exact Submodule.add_mem _ (subset_span <| mem_image_of_mem _ hij)
-    (Submodule.sum_mem _ fun k hk => smul_mem (span 𝕜 (gramSchmidt 𝕜 f '' Set.Iic j)) _ <|
-      subset_span <| mem_image_of_mem (gramSchmidt 𝕜 f) <| (Finset.mem_Iio.1 hk).le.trans hij)
+    (Submodule.sum_mem _ fun k hk =>
+      ((span_singleton_le_iff_mem (gramSchmidt 𝕜 f k)
+        (span 𝕜 (gramSchmidt 𝕜 f '' Set.Iic j))).mpr <| subset_span <|
+          mem_image_of_mem (gramSchmidt 𝕜 f) <| (Finset.mem_Iio.1 hk).le.trans hij)
+        ((𝕜 ∙ gramSchmidt 𝕜 f k).starProjection_apply_mem (f i)))
 
 theorem gramSchmidt_mem_span (f : ι → E) :
     ∀ {j i}, i ≤ j → gramSchmidt 𝕜 f i ∈ span 𝕜 (f '' Set.Iic j) := by
   intro j i hij
   rw [gramSchmidt_def 𝕜 f i]
-  simp_rw [starProjection_singleton]
   refine Submodule.sub_mem _ (subset_span (mem_image_of_mem _ hij))
     (Submodule.sum_mem _ fun k hk => ?_)
   let hkj : k < j := (Finset.mem_Iio.1 hk).trans_le hij
-  exact smul_mem _ _
-    (span_mono (image_mono <| Set.Iic_subset_Iic.2 hkj.le) <| gramSchmidt_mem_span _ le_rfl)
+  exact ((span_singleton_le_iff_mem _ _).mpr <|
+    span_mono (image_mono <| Set.Iic_subset_Iic.2 hkj.le) <| gramSchmidt_mem_span _ le_rfl)
+    ((𝕜 ∙ gramSchmidt 𝕜 f k).starProjection_apply_mem (f i))
 termination_by j => j
 
 theorem span_gramSchmidt_Iic (f : ι → E) (c : ι) :
@@ -195,13 +201,13 @@ theorem gramSchmidt_ne_zero_coe {f : ι → E} (n : ι)
     rw [← span_gramSchmidt_Iio 𝕜 f n, gramSchmidt_def' 𝕜 f, h, zero_add]
     apply Submodule.sum_mem _ _
     intro a ha
-    simp only [starProjection_singleton]
-    apply Submodule.smul_mem _ _ _
-    rw [Finset.mem_Iio] at ha
-    exact subset_span ⟨a, ha, by rfl⟩
+    exact ((span_singleton_le_iff_mem (gramSchmidt 𝕜 f a)
+      (span 𝕜 (gramSchmidt 𝕜 f '' Set.Iio n))).mpr <|
+        subset_span ⟨a, Finset.mem_Iio.mp ha, rfl⟩)
+      ((𝕜 ∙ gramSchmidt 𝕜 f a).starProjection_apply_mem (f n))
   have h₂ : (f ∘ ((↑) : Set.Iic n → ι)) ⟨n, le_refl n⟩ ∈
       span 𝕜 (f ∘ ((↑) : Set.Iic n → ι) '' Set.Iio ⟨n, le_refl n⟩) := by
-    rw [image_comp]
+    rw [Set.image_comp]
     simpa using h₁
   apply LinearIndependent.notMem_span_image h₀ _ h₂
   simp only [Set.mem_Iio, lt_self_iff_false, not_false_iff]
@@ -237,76 +243,68 @@ theorem coe_gramSchmidtBasis (b : Basis ι 𝕜 E) : (gramSchmidtBasis b : ι �
   Basis.coe_mk _ _
 
 variable (𝕜) in
-/-- the normalized `gramSchmidt` (i.e each vector in `gramSchmidtNormed` has unit length.) -/
-noncomputable def gramSchmidtNormed (f : ι → E) (n : ι) : E :=
-  (‖gramSchmidt 𝕜 f n‖ : 𝕜)⁻¹ • gramSchmidt 𝕜 f n
+/-- Normalize the nonzero vectors produced by `gramSchmidt`. The index records the exact
+domain of normalization, including when the original family is linearly dependent. -/
+noncomputable def gramSchmidtNormed (f : ι → E)
+    (n : {i // gramSchmidt 𝕜 f i ≠ 0}) : E :=
+  Checked.inv (‖gramSchmidt 𝕜 f n‖ : 𝕜)
+    (RCLike.ofReal_ne_zero.mpr (norm_ne_zero_iff.mpr n.2)).isUnit • gramSchmidt 𝕜 f n
+
+theorem gramSchmidtNormed_unit_length' {f : ι → E} (n : {i // gramSchmidt 𝕜 f i ≠ 0}) :
+    ‖gramSchmidtNormed 𝕜 f n‖ = 1 := by
+  simp [gramSchmidtNormed, norm_smul]
 
 theorem gramSchmidtNormed_unit_length_coe {f : ι → E} (n : ι)
-    (h₀ : LinearIndependent 𝕜 (f ∘ ((↑) : Set.Iic n → ι))) : ‖gramSchmidtNormed 𝕜 f n‖ = 1 := by
-  simp only [gramSchmidt_ne_zero_coe n h₀, gramSchmidtNormed, norm_smul_inv_norm, Ne,
-    not_false_iff]
+    (h₀ : LinearIndependent 𝕜 (f ∘ ((↑) : Set.Iic n → ι))) :
+    ‖gramSchmidtNormed 𝕜 f ⟨n, gramSchmidt_ne_zero_coe n h₀⟩‖ = 1 :=
+  gramSchmidtNormed_unit_length' _
 
 theorem gramSchmidtNormed_unit_length {f : ι → E} (n : ι) (h₀ : LinearIndependent 𝕜 f) :
-    ‖gramSchmidtNormed 𝕜 f n‖ = 1 :=
-  gramSchmidtNormed_unit_length_coe _ (LinearIndependent.comp h₀ _ Subtype.coe_injective)
-
-theorem gramSchmidtNormed_unit_length' {f : ι → E} {n : ι} (hn : gramSchmidtNormed 𝕜 f n ≠ 0) :
-    ‖gramSchmidtNormed 𝕜 f n‖ = 1 := by
-  rw [gramSchmidtNormed] at *
-  rw [norm_smul_inv_norm]
-  simpa using hn
+    ‖gramSchmidtNormed 𝕜 f ⟨n, gramSchmidt_ne_zero n h₀⟩‖ = 1 :=
+  gramSchmidtNormed_unit_length' _
 
 /-- **Gram-Schmidt Orthonormalization**:
-`gramSchmidtNormed` applied to a linearly independent set of vectors produces an orthonormal
-system of vectors. -/
-theorem gramSchmidtNormed_orthonormal {f : ι → E} (h₀ : LinearIndependent 𝕜 f) :
-    Orthonormal 𝕜 (gramSchmidtNormed 𝕜 f) := by
-  unfold Orthonormal
-  constructor
-  · simp only [gramSchmidtNormed_unit_length, h₀, imp_true_iff]
-  · intro i j hij
-    simp only [gramSchmidtNormed, inner_smul_left, inner_smul_right, RCLike.conj_inv,
-      RCLike.conj_ofReal, mul_eq_zero, inv_eq_zero, RCLike.ofReal_eq_zero, norm_eq_zero]
-    repeat' right
-    exact gramSchmidt_orthogonal 𝕜 f hij
-
-/-- **Gram-Schmidt Orthonormalization**:
-`gramSchmidtNormed` produces an orthonormal system of vectors after removing the vectors which
-become zero in the process. -/
+the nonzero vectors produced by `gramSchmidt` form an orthonormal family after normalization. -/
 theorem gramSchmidtNormed_orthonormal' (f : ι → E) :
-    Orthonormal 𝕜 fun i : { i | gramSchmidtNormed 𝕜 f i ≠ 0 } => gramSchmidtNormed 𝕜 f i := by
-  refine ⟨fun i => gramSchmidtNormed_unit_length' i.prop, ?_⟩
+    Orthonormal 𝕜 (gramSchmidtNormed 𝕜 f) := by
+  refine ⟨gramSchmidtNormed_unit_length', ?_⟩
   rintro i j (hij : ¬_)
   rw [Subtype.ext_iff] at hij
   simp [gramSchmidtNormed, inner_smul_left, inner_smul_right, gramSchmidt_orthogonal 𝕜 f hij]
 
+/-- **Gram-Schmidt Orthonormalization**:
+normalizing the orthogonalization of a linearly independent family keeps every original index. -/
+theorem gramSchmidtNormed_orthonormal {f : ι → E} (h₀ : LinearIndependent 𝕜 f) :
+    Orthonormal 𝕜 (fun i ↦ gramSchmidtNormed 𝕜 f ⟨i, gramSchmidt_ne_zero i h₀⟩) :=
+  (gramSchmidtNormed_orthonormal' f).comp _ (fun _ _ h ↦ congrArg Subtype.val h)
+
 open Submodule Set
 
 theorem span_gramSchmidtNormed (f : ι → E) (s : Set ι) :
-    span 𝕜 (gramSchmidtNormed 𝕜 f '' s) = span 𝕜 (gramSchmidt 𝕜 f '' s) := by
+    span 𝕜 (gramSchmidtNormed 𝕜 f '' (Subtype.val ⁻¹' s)) =
+      span 𝕜 (gramSchmidt 𝕜 f '' s) := by
   refine span_eq_span
     (Set.image_subset_iff.2 fun i hi => smul_mem _ _ <| subset_span <| mem_image_of_mem _ hi)
-    (Set.image_subset_iff.2 fun i hi =>
-      span_mono (image_mono <| singleton_subset_set_iff.2 hi) ?_)
-  simp only [coe_singleton, Set.image_singleton]
+    (Set.image_subset_iff.2 fun i hi => ?_)
+  change gramSchmidt 𝕜 f i ∈ span 𝕜 (gramSchmidtNormed 𝕜 f '' (Subtype.val ⁻¹' s))
   by_cases h : gramSchmidt 𝕜 f i = 0
-  · simp [h]
-  · refine mem_span_singleton.2 ⟨‖gramSchmidt 𝕜 f i‖, smul_inv_smul₀ ?_ _⟩
-    exact mod_cast norm_ne_zero_iff.2 h
+  · rw [h]
+    exact zero_mem _
+  · have hi' : gramSchmidt 𝕜 f i =
+        (‖gramSchmidt 𝕜 f i‖ : 𝕜) • gramSchmidtNormed 𝕜 f ⟨i, h⟩ := by
+      simp [gramSchmidtNormed, smul_smul]
+    rw [hi']
+    exact smul_mem _ _ (subset_span ⟨⟨i, h⟩, hi, rfl⟩)
 
 theorem span_gramSchmidtNormed_range (f : ι → E) :
     span 𝕜 (range (gramSchmidtNormed 𝕜 f)) = span 𝕜 (range (gramSchmidt 𝕜 f)) := by
-  simpa only [image_univ.symm] using span_gramSchmidtNormed f univ
+  simpa only [preimage_univ, image_univ] using span_gramSchmidtNormed f univ
 
 /-- `gramSchmidtNormed` produces linearly independent vectors when given linearly independent
 vectors. -/
 theorem gramSchmidtNormed_linearIndependent {f : ι → E} (h₀ : LinearIndependent 𝕜 f) :
-    LinearIndependent 𝕜 (gramSchmidtNormed 𝕜 f) := by
-  unfold gramSchmidtNormed
-  have (i : ι) : IsUnit (‖gramSchmidt 𝕜 f i‖⁻¹ : 𝕜) :=
-    isUnit_iff_ne_zero.mpr (by simp [gramSchmidt_ne_zero i h₀])
-  let w : ι → 𝕜ˣ := fun i ↦ (this i).unit
-  apply (gramSchmidt_linearIndependent h₀).units_smul (w := fun i ↦ (this i).unit)
+    LinearIndependent 𝕜 (fun i ↦ gramSchmidtNormed 𝕜 f ⟨i, gramSchmidt_ne_zero i h₀⟩) :=
+  (gramSchmidtNormed_orthonormal h₀).linearIndependent
 
 section OrthonormalBasis
 
@@ -317,42 +315,42 @@ size of the index set is the dimension of `E`, produce an orthonormal basis for 
 with the orthonormal set produced by the Gram-Schmidt orthonormalization process on the elements of
 `ι` for which this process gives a nonzero number. -/
 noncomputable def gramSchmidtOrthonormalBasis : OrthonormalBasis ι 𝕜 E :=
-  ((gramSchmidtNormed_orthonormal' f).exists_orthonormalBasis_extension_of_card_eq
-    (v := gramSchmidtNormed 𝕜 f) h).choose
+  ((gramSchmidtNormed_orthonormal' f).exists_orthonormalBasis_extension_of_card_eq h).choose
 
-theorem gramSchmidtOrthonormalBasis_apply {f : ι → E} {i : ι} (hi : gramSchmidtNormed 𝕜 f i ≠ 0) :
-    gramSchmidtOrthonormalBasis h f i = gramSchmidtNormed 𝕜 f i :=
-  ((gramSchmidtNormed_orthonormal' f).exists_orthonormalBasis_extension_of_card_eq
-    (v := gramSchmidtNormed 𝕜 f) h).choose_spec i hi
+theorem gramSchmidtOrthonormalBasis_apply {f : ι → E} {i : ι} (hi : gramSchmidt 𝕜 f i ≠ 0) :
+    gramSchmidtOrthonormalBasis h f i = gramSchmidtNormed 𝕜 f ⟨i, hi⟩ :=
+  ((gramSchmidtNormed_orthonormal' f).exists_orthonormalBasis_extension_of_card_eq h).choose_spec
+    ⟨i, hi⟩
 
 theorem gramSchmidtOrthonormalBasis_apply_of_orthogonal {f : ι → E}
     (hf : Pairwise fun i j => ⟪f i, f j⟫ = 0) {i : ι} (hi : f i ≠ 0) :
     gramSchmidtOrthonormalBasis h f i = (‖f i‖⁻¹ : 𝕜) • f i := by
-  have H : gramSchmidtNormed 𝕜 f i = (‖f i‖⁻¹ : 𝕜) • f i := by
-    rw [gramSchmidtNormed, gramSchmidt_of_orthogonal 𝕜 hf]
-  rw [gramSchmidtOrthonormalBasis_apply h, H]
-  simpa [H] using hi
+  have hi' : gramSchmidt 𝕜 f i ≠ 0 := by
+    simpa only [gramSchmidt_of_orthogonal 𝕜 hf] using hi
+  simpa only [gramSchmidtNormed, gramSchmidt_of_orthogonal 𝕜 hf, RCLike.ofReal_inv] using
+    gramSchmidtOrthonormalBasis_apply h hi'
 
 theorem inner_gramSchmidtOrthonormalBasis_eq_zero {f : ι → E} {i : ι}
-    (hi : gramSchmidtNormed 𝕜 f i = 0) (j : ι) : ⟪gramSchmidtOrthonormalBasis h f i, f j⟫ = 0 := by
+    (hi : gramSchmidt 𝕜 f i = 0) (j : ι) : ⟪gramSchmidtOrthonormalBasis h f i, f j⟫ = 0 := by
   rw [← mem_orthogonal_singleton_iff_inner_right]
-  suffices span 𝕜 (gramSchmidtNormed 𝕜 f '' Set.Iic j) ⟂ 𝕜 ∙ gramSchmidtOrthonormalBasis h f i by
-    apply this
-    rw [span_gramSchmidtNormed]
-    exact mem_span_gramSchmidt 𝕜 f le_rfl
+  suffices span 𝕜 (gramSchmidt 𝕜 f '' Set.Iic j) ⟂ 𝕜 ∙ gramSchmidtOrthonormalBasis h f i from
+    this (mem_span_gramSchmidt 𝕜 f le_rfl)
   rw [isOrtho_span]
   rintro u ⟨k, _, rfl⟩ v (rfl : v = _)
-  by_cases hk : gramSchmidtNormed 𝕜 f k = 0
+  by_cases hk : gramSchmidt 𝕜 f k = 0
   · rw [hk, inner_zero_left]
-  rw [← gramSchmidtOrthonormalBasis_apply h hk]
   have : k ≠ i := by
     rintro rfl
     exact hk hi
-  exact (gramSchmidtOrthonormalBasis h f).orthonormal.2 this
+  have hnorm : gramSchmidt 𝕜 f k =
+      (‖gramSchmidt 𝕜 f k‖ : 𝕜) • gramSchmidtOrthonormalBasis h f k := by
+    rw [gramSchmidtOrthonormalBasis_apply h hk]
+    simp [gramSchmidtNormed, smul_smul]
+  rw [hnorm, inner_smul_left, (gramSchmidtOrthonormalBasis h f).orthonormal.2 this, mul_zero]
 
 theorem gramSchmidtOrthonormalBasis_inv_triangular {i j : ι} (hij : i < j) :
     ⟪gramSchmidtOrthonormalBasis h f j, f i⟫ = 0 := by
-  by_cases hi : gramSchmidtNormed 𝕜 f j = 0
+  by_cases hi : gramSchmidt 𝕜 f j = 0
   · rw [inner_gramSchmidtOrthonormalBasis_eq_zero h hi]
   · simp [gramSchmidtOrthonormalBasis_apply h hi, gramSchmidtNormed, inner_smul_left,
       gramSchmidt_inv_triangular 𝕜 f hij]

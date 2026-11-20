@@ -97,7 +97,8 @@ lemma variance_of_ae_eq_zero_or_one {μ : Measure Ω} [IsZeroOrProbabilityMeasur
   have hX₂ : MemLp X 2 μ := .of_bound hXmeas.aestronglyMeasurable 1 hX_bdd
   -- given the trivial σ-algebra, the mean is a conditional expectation and the variance is a
   -- conditional variance
-  have hg : IsCondExp ⊥ μ X fun _ ↦ ∫ ω, X ω ∂μ := by simpa using isCondExp_bot (μ := μ) hX_int
+  have hg : IsCondExp ⊥ μ X fun _ ↦ ∫ ω, X ω ∂μ := by
+    simpa only [average_eq_integral] using isCondExp_bot (μ := μ) hX_int
   have h_var : IsCondVar ⊥ μ X fun _ ↦ (∫ ω, X ω ∂μ) * (1 - ∫ ω, X ω ∂μ) :=
     isCondVar_of_ae_eq_zero_or_one bot_le hX_int hX hg
   have h_eq : Var[X; μ] = (∫ ω, X ω ∂μ) * (1 - ∫ ω, X ω ∂μ) := by

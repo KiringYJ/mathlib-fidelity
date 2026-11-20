@@ -543,7 +543,9 @@ lemma isDiffImmersionAt (h : IsImmersionAtOfComplement F I J n f x) (hn : n ≠ 
   apply IsDiffImmersionAt.comp (I' := 𝓘(𝕜, E))
   · apply equiv.isDiffImmersionAt.comp
     dsimp
-    rw [isDiffImmersionAt_iff, mfderiv_eq_fderiv, ContinuousLinearMap.fderiv]
+    rw [isDiffImmersionAt_iff, mfderiv_eq_fderiv]
+    change (fderiv 𝕜 (ContinuousLinearMap.inl 𝕜 E F) ((p.domChart.extend I) x)).HasLeftInverse
+    rw [ContinuousLinearMap.fderiv]
     exact ContinuousLinearMap.HasLeftInverse.inl
   · exact IsDiffImmersionAt.of_mfderiv_isInvertible <| isInvertible_mfderiv_extend
       (IsManifold.maximalAtlas_subset_of_le hn' p.domChart_mem_maximalAtlas)

@@ -63,30 +63,32 @@ variable [NormedSpace ℝ E] {N : ℕ} {τ : ℝ} (a : SatelliteConfig E N τ)
 
 /-- Rescaling a satellite configuration in a vector space, to put the basepoint at `0` and the base
 radius at `1`. -/
-def centerAndRescale : SatelliteConfig E N τ where
-  c i := (a.r (last N))⁻¹ • (a.c i - a.c (last N))
-  r i := (a.r (last N))⁻¹ * a.r i
-  rpos i := by positivity
-  h i j hij := by
-    simp (disch := positivity) only [dist_smul₀, dist_sub_right, mul_left_comm τ,
-      Real.norm_of_nonneg]
-    rcases a.h hij with (⟨H₁, H₂⟩ | ⟨H₁, H₂⟩) <;> [left; right] <;> constructor <;> gcongr
-  hlast i hi := by
-    simp (disch := positivity) only [dist_smul₀, dist_sub_right, mul_left_comm τ,
-      Real.norm_of_nonneg]
-    have ⟨H₁, H₂⟩ := a.hlast i hi
-    constructor <;> gcongr
-  inter i hi := by
-    simp (disch := positivity) only [dist_smul₀, ← mul_add, dist_sub_right, Real.norm_of_nonneg]
-    gcongr
-    exact a.inter i hi
+def centerAndRescale : SatelliteConfig E N τ := by
+  have hr : 0 < a.r (last N) := a.rpos _
+  exact
+    { c i := (a.r (last N))⁻¹ • (a.c i - a.c (last N))
+      r i := (a.r (last N))⁻¹ * a.r i
+      rpos i := mul_pos (inv_pos_of_pos hr) (a.rpos i)
+      h i j hij := by
+        simp (disch := positivity) only [dist_smul₀, dist_sub_right, mul_left_comm τ,
+          Real.norm_of_nonneg]
+        rcases a.h hij with (⟨H₁, H₂⟩ | ⟨H₁, H₂⟩) <;> [left; right] <;> constructor <;> gcongr
+      hlast i hi := by
+        simp (disch := positivity) only [dist_smul₀, dist_sub_right, mul_left_comm τ,
+          Real.norm_of_nonneg]
+        have ⟨H₁, H₂⟩ := a.hlast i hi
+        constructor <;> gcongr
+      inter i hi := by
+        simp (disch := positivity) only [dist_smul₀, ← mul_add, dist_sub_right, Real.norm_of_nonneg]
+        gcongr
+        exact a.inter i hi }
 
 theorem centerAndRescale_center : a.centerAndRescale.c (last N) = 0 := by
   simp [SatelliteConfig.centerAndRescale]
 
 theorem centerAndRescale_radius {N : ℕ} {τ : ℝ} (a : SatelliteConfig E N τ) :
     a.centerAndRescale.r (last N) = 1 := by
-  simp [SatelliteConfig.centerAndRescale, inv_mul_cancel₀ (a.rpos _).ne']
+  simp [SatelliteConfig.centerAndRescale]
 
 end SatelliteConfig
 
@@ -115,28 +117,29 @@ theorem card_le_of_separated (s : Finset E) (hs : ∀ c ∈ s, ‖c‖ ≤ 2)
   let μ : Measure E := Measure.addHaar
   let δ : ℝ := (1 : ℝ) / 2
   let ρ : ℝ := (5 : ℝ) / 2
-  have ρpos : 0 < ρ := by norm_num
+  have ρpos : 0 < ρ := by dsimp [ρ]; positivity
+  have δpos : 0 < δ := by dsimp [δ]; positivity
   set A := ⋃ c ∈ s, ball (c : E) δ with hA
   have D : Set.Pairwise (s : Set E) (Disjoint on fun c => ball (c : E) δ) := by
     rintro c hc d hd hcd
     apply ball_disjoint_ball
     rw [dist_eq_norm]
     convert! h c hc d hd hcd
-    norm_num
+    dsimp [δ]
+    field
   have A_subset : A ⊆ ball (0 : E) ρ := by
     refine iUnion₂_subset fun x hx => ?_
     apply ball_subset_ball'
     calc
       δ + dist x 0 ≤ δ + 2 := by rw [dist_zero_right]; exact add_le_add le_rfl (hs x hx)
-      _ = 5 / 2 := by norm_num
+      _ = 5 / 2 := by dsimp [δ]; field
   have I :
     (s.card : ℝ≥0∞) * ENNReal.ofReal (δ ^ finrank ℝ E) * μ (ball 0 1) ≤
       ENNReal.ofReal (ρ ^ finrank ℝ E) * μ (ball 0 1) :=
     calc
       (s.card : ℝ≥0∞) * ENNReal.ofReal (δ ^ finrank ℝ E) * μ (ball 0 1) = μ A := by
         rw [hA, measure_biUnion_finset D fun c _ => measurableSet_ball]
-        have I : 0 < δ := by norm_num
-        simp only [μ.addHaar_ball_of_pos _ I]
+        simp only [μ.addHaar_ball_of_pos _ δpos]
         simp only [Finset.sum_const, nsmul_eq_mul, mul_assoc]
       _ ≤ μ (ball (0 : E) ρ) := measure_mono A_subset
       _ = ENNReal.ofReal (ρ ^ finrank ℝ E) * μ (ball 0 1) := by
@@ -144,8 +147,13 @@ theorem card_le_of_separated (s : Finset E) (hs : ∀ c ∈ s, ‖c‖ ≤ 2)
   have J : (s.card : ℝ≥0∞) * ENNReal.ofReal (δ ^ finrank ℝ E) ≤ ENNReal.ofReal (ρ ^ finrank ℝ E) :=
     (ENNReal.mul_le_mul_iff_left (measure_ball_pos _ _ zero_lt_one).ne' measure_ball_lt_top.ne).1 I
   have K : (s.card : ℝ) ≤ (5 : ℝ) ^ finrank ℝ E := by
-    have := ENNReal.toReal_le_of_le_ofReal (pow_nonneg ρpos.le _) J
-    simpa [ρ, δ, div_eq_mul_inv, mul_pow] using this
+    have hρ : ρ = 5 * δ := by dsimp [ρ, δ]; field
+    have hvol : (s.card : ℝ) * δ ^ finrank ℝ E ≤ ρ ^ finrank ℝ E := by
+      simpa only [ENNReal.toReal_mul, ENNReal.toReal_natCast,
+        ENNReal.toReal_ofReal (pow_nonneg δpos.le _)] using
+        ENNReal.toReal_le_of_le_ofReal (pow_nonneg ρpos.le _) J
+    rw [hρ, mul_pow] at hvol
+    exact le_of_mul_le_mul_right hvol (pow_pos δpos _)
   exact mod_cast K
 
 theorem multiplicity_le : multiplicity E ≤ 5 ^ finrank ℝ E := by
@@ -324,11 +332,11 @@ theorem exists_normalized_aux1 {N : ℕ} {τ : ℝ} (a : SatelliteConfig E N τ)
       _ = (1 : ℝ) - δ ^ 2 / 16 := by ring
       _ ≤ 1 := by linarith only [sq_nonneg δ]
   have J : 1 - δ ≤ 1 - δ / 4 := by linarith only [δnonneg]
-  have K : 1 - δ / 4 ≤ τ⁻¹ := by rw [inv_eq_one_div, le_div_iff₀ τpos]; exact I
+  have K : 1 - δ / 4 ≤ τ⁻¹ := by rwa [← one_div₀, le_div_iff₀ τpos]
   suffices L : τ⁻¹ ≤ ‖a.c i - a.c j‖ by linarith only [J, K, L]
   have hτ' : ∀ k, τ⁻¹ ≤ a.r k := by
     intro k
-    rw [inv_eq_one_div, div_le_iff₀ τpos, ← lastr, mul_comm]
+    rw [← one_div₀, div_le_iff₀ τpos, ← lastr, mul_comm]
     exact a.hlast' k hτ
   rcases ah inej with (H | H)
   · apply le_trans _ H.1
@@ -387,8 +395,7 @@ theorem exists_normalized_aux2 {N : ℕ} {τ : ℝ} (a : SatelliteConfig E N τ)
         gcongr
         have A : 0 ≤ 1 - 2 / ‖a.c j‖ := by simpa [div_le_iff₀ (zero_le_two.trans_lt hj)] using hj.le
         rw [← one_smul ℝ (a.c j), hd, ← sub_smul, norm_smul, norm_sub_rev, Real.norm_eq_abs,
-          abs_of_nonneg A, sub_mul]
-        field_simp
+          abs_of_nonneg A, sub_mul, one_mul, div_mul_cancel₀]
         linarith only [hcrj]
   linarith only [this]
 
@@ -421,7 +428,7 @@ theorem exists_normalized_aux3 {N : ℕ} {τ : ℝ} (a : SatelliteConfig E N τ)
       _ = ‖a.c j‖ - ‖a.c i‖ + ‖d - a.c i‖ := by
         nth_rw 1 [← one_smul ℝ (a.c j)]
         rw [add_left_inj, hd, ← sub_smul, norm_smul, Real.norm_eq_abs, abs_of_nonneg, sub_mul,
-          one_mul, div_mul_cancel₀ _ (zero_le_two.trans_lt hj).ne']
+          one_mul, div_mul_cancel₀]
         rwa [sub_nonneg, div_le_iff₀ (zero_lt_two.trans hj), one_mul]
   have J : a.r j - ‖a.c j - a.c i‖ ≤ s / 2 * δ :=
     calc
@@ -451,29 +458,29 @@ theorem exists_normalized_aux3 {N : ℕ} {τ : ℝ} (a : SatelliteConfig E N τ)
 theorem exists_normalized {N : ℕ} {τ : ℝ} (a : SatelliteConfig E N τ) (lastc : a.c (last N) = 0)
     (lastr : a.r (last N) = 1) (hτ : 1 ≤ τ) (δ : ℝ) (hδ1 : τ ≤ 1 + δ / 4) (hδ2 : δ ≤ 1) :
     ∃ c' : Fin N.succ → E, (∀ n, ‖c' n‖ ≤ 2) ∧ Pairwise fun i j => 1 - δ ≤ ‖c' i - c' j‖ := by
-  let c' : Fin N.succ → E := fun i => if ‖a.c i‖ ≤ 2 then a.c i else (2 / ‖a.c i‖) • a.c i
+  let c' : Fin N.succ → E := fun i ↦ if h : ‖a.c i‖ ≤ 2 then a.c i else
+    Checked.div 2 ‖a.c i‖ ((zero_le_two.trans_lt (lt_of_not_ge h)).ne'.isUnit) • a.c i
   have norm_c'_le : ∀ i, ‖c' i‖ ≤ 2 := by
     intro i
     simp only [c']
     split_ifs with h; · exact h
-    by_cases hi : ‖a.c i‖ = 0 <;> simp [norm_smul, hi]
+    have hpos : 0 < ‖a.c i‖ := zero_le_two.trans_lt (lt_of_not_ge h)
+    rw [norm_smul, Real.norm_of_nonneg (div_nonneg zero_le_two hpos.le), div_mul_cancel₀]
   refine ⟨c', fun n => norm_c'_le n, fun i j inej => ?_⟩
   -- up to exchanging `i` and `j`, one can assume `‖c i‖ ≤ ‖c j‖`.
   wlog hij : ‖a.c i‖ ≤ ‖a.c j‖ generalizing i j
   · rw [norm_sub_rev]; exact this j i inej.symm (le_of_not_ge hij)
   rcases le_or_gt ‖a.c j‖ 2 with (Hj | Hj)
   -- case `‖c j‖ ≤ 2` (and therefore also `‖c i‖ ≤ 2`)
-  · simp_rw [c', Hj, hij.trans Hj, ite_true]
+  · simp only [c', dite_eq_left Hj, dite_eq_left (hij.trans Hj)]
     exact exists_normalized_aux1 a lastr hτ δ hδ1 hδ2 i j inej
   -- case `2 < ‖c j‖`
-  · have H'j : ‖a.c j‖ ≤ 2 ↔ False := by simpa only [not_le, iff_false] using Hj
-    rcases le_or_gt ‖a.c i‖ 2 with (Hi | Hi)
+  · rcases le_or_gt ‖a.c i‖ 2 with (Hi | Hi)
     · -- case `‖c i‖ ≤ 2`
-      simp_rw [c', Hi, ite_true, H'j, ite_false]
+      simp only [c', dite_eq_left Hi, dite_eq_right Hj.not_ge]
       exact exists_normalized_aux2 a lastc lastr hτ δ hδ1 hδ2 i j inej Hi Hj
     · -- case `2 < ‖c i‖`
-      have H'i : ‖a.c i‖ ≤ 2 ↔ False := by simpa only [not_le, iff_false] using Hi
-      simp_rw [c', H'i, ite_false, H'j, ite_false]
+      simp only [c', dite_eq_right Hi.not_ge, dite_eq_right Hj.not_ge]
       exact exists_normalized_aux3 a lastc lastr hτ δ hδ1 i j inej Hi hij
 
 end SatelliteConfig

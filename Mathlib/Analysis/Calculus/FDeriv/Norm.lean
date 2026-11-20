@@ -49,10 +49,15 @@ theorem not_differentiableAt_norm_zero [Nontrivial E] :
     ¬DifferentiableAt ℝ (‖·‖) (0 : E) := by
   obtain ⟨x, hx⟩ := NormedSpace.exists_lt_norm ℝ E 0
   intro h
-  have : DifferentiableAt ℝ (fun t : ℝ ↦ ‖t • x‖) 0 := DifferentiableAt.comp _ (by simpa) (by simp)
+  have hline : DifferentiableAt ℝ (fun t : ℝ ↦ t • x) 0 :=
+    (differentiableAt_id (x := (0 : ℝ))).smul_const x
+  have hnorm : DifferentiableAt ℝ (‖·‖) ((0 : ℝ) • x) := by simpa only [zero_smul] using h
+  have : DifferentiableAt ℝ (fun t : ℝ ↦ ‖t • x‖) 0 := hnorm.comp 0 hline
   have : DifferentiableAt ℝ (|·|) (0 : ℝ) := by
     simp_rw [norm_smul, norm_eq_abs] at this
-    have aux : abs = fun t ↦ (1 / ‖x‖) * (|t| * ‖x‖) := by field_simp
+    have aux : abs = fun t ↦ (1 / ‖x‖) * (|t| * ‖x‖) := by
+      funext t
+      rw [div_eq_mul_inv₀, one_mul, mul_left_comm, inv_mul_cancel₀, mul_one]
     rw [aux]
     exact this.const_mul _
   exact not_differentiableAt_abs_zero this
@@ -61,18 +66,18 @@ theorem ContDiffAt.contDiffAt_norm_smul (ht : t ≠ 0) (h : ContDiffAt ℝ n (�
     ContDiffAt ℝ n (‖·‖) (t • x) := by
   have h1 : ContDiffAt ℝ n (fun y ↦ t⁻¹ • y) (t • x) := (contDiff_const_smul t⁻¹).contDiffAt
   have h2 : ContDiffAt ℝ n (fun y ↦ |t| * ‖y‖) x := h.const_smul |t|
-  conv at h2 => enter [4]; rw [← one_smul ℝ x, ← inv_mul_cancel₀ ht, mul_smul]
+  conv at h2 => enter [4]; rw [← one_smul ℝ x, ← inv_mul_cancel₀ (ha := ht.isUnit), mul_smul]
   convert! h2.comp (t • x) h1 using 1
   ext y
   simp only [Function.comp_apply]
-  rw [norm_smul, ← mul_assoc, norm_eq_abs, ← abs_mul, mul_inv_cancel₀ ht, abs_one, one_mul]
+  rw [norm_smul, ← mul_assoc, norm_eq_abs, ← abs_mul, mul_inv_cancel₀, abs_one, one_mul]
 
 theorem contDiffAt_norm_smul_iff (ht : t ≠ 0) :
     ContDiffAt ℝ n (‖·‖) x ↔ ContDiffAt ℝ n (‖·‖) (t • x) where
   mp h := h.contDiffAt_norm_smul ht
   mpr hd := by
-    convert! hd.contDiffAt_norm_smul (inv_ne_zero ht)
-    rw [smul_smul, inv_mul_cancel₀ ht, one_smul]
+    simpa only [smul_smul, inv_mul_cancel₀, one_smul] using
+      hd.contDiffAt_norm_smul ht.isUnit.inv₀.ne_zero
 
 theorem ContDiffAt.contDiffAt_norm_of_smul (h : ContDiffAt ℝ n (‖·‖) (t • x)) :
     ContDiffAt ℝ n (‖·‖) x := by
@@ -94,17 +99,20 @@ theorem HasStrictFDerivAt.hasStrictFDerivAt_norm_smul
   have h1 : HasStrictFDerivAt (fun y ↦ t⁻¹ • y) (t⁻¹ • ContinuousLinearMap.id ℝ E) (t • x) :=
     hasStrictFDerivAt_id (t • x) |>.const_smul t⁻¹
   have h2 : HasStrictFDerivAt (fun y ↦ |t| * ‖y‖) (|t| • f) x := h.const_smul |t|
-  conv at h2 => enter [3]; rw [← one_smul ℝ x, ← inv_mul_cancel₀ ht, mul_smul]
-  convert! h2.comp (t • x) h1 with y
-  · rw [norm_smul, ← mul_assoc, norm_eq_abs, ← abs_mul, mul_inv_cancel₀ ht, abs_one, one_mul]
+  conv at h2 => enter [3]; rw [← one_smul ℝ x, ← inv_mul_cancel₀ (ha := ht.isUnit), mul_smul]
+  convert! h2.comp (coord' := id) (t • x) h1 with y
+  · rw [norm_smul, ← mul_assoc, norm_eq_abs, ← abs_mul, mul_inv_cancel₀, abs_one, one_mul]
   ext y
   simp only [smul_apply, smul_eq_mul, comp_smulₛₗ, map_inv₀, RingHom.id_apply, comp_id]
-  rw [eq_inv_mul_iff_mul_eq₀ ht, ← mul_assoc, self_mul_sign]
+  rw [eq_inv_mul_iff_mul_eq₀ (hb := ht.isUnit), ← mul_assoc, self_mul_sign]
 
 theorem HasStrictFDerivAt.hasStrictDerivAt_norm_smul_neg
     (ht : t < 0) (h : HasStrictFDerivAt (‖·‖) f x) :
     HasStrictFDerivAt (‖·‖) (-f) (t • x) := by
-  simpa [ht] using h.hasStrictFDerivAt_norm_smul ht.ne
+  have hsign : ((SignType.sign t : ℝ) • f) = -f := by
+    ext y
+    simp [ht]
+  simpa only [hsign] using h.hasStrictFDerivAt_norm_smul ht.ne
 
 theorem HasStrictFDerivAt.hasStrictDerivAt_norm_smul_pos
     (ht : 0 < t) (h : HasStrictFDerivAt (‖·‖) f x) :
@@ -117,18 +125,21 @@ theorem HasFDerivAt.hasFDerivAt_norm_smul
   have h1 : HasFDerivAt (fun y ↦ t⁻¹ • y) (t⁻¹ • ContinuousLinearMap.id ℝ E) (t • x) :=
     hasFDerivAt_id (t • x) |>.const_smul t⁻¹
   have h2 : HasFDerivAt (fun y ↦ |t| * ‖y‖) (|t| • f) x := h.const_smul |t|
-  conv at h2 => enter [3]; rw [← one_smul ℝ x, ← inv_mul_cancel₀ ht, mul_smul]
-  convert! h2.comp (t • x) h1 using 2 with y
+  conv at h2 => enter [3]; rw [← one_smul ℝ x, ← inv_mul_cancel₀ (ha := ht.isUnit), mul_smul]
+  convert! h2.comp (coord' := id) (t • x) h1 using 2 with y
   · simp only [Function.comp_apply]
-    rw [norm_smul, ← mul_assoc, norm_eq_abs, ← abs_mul, mul_inv_cancel₀ ht, abs_one, one_mul]
+    rw [norm_smul, ← mul_assoc, norm_eq_abs, ← abs_mul, mul_inv_cancel₀, abs_one, one_mul]
   · ext y
     simp only [smul_apply, smul_eq_mul, comp_smulₛₗ, map_inv₀, RingHom.id_apply, comp_id]
-    rw [eq_inv_mul_iff_mul_eq₀ ht, ← mul_assoc, self_mul_sign]
+    rw [eq_inv_mul_iff_mul_eq₀ (hb := ht.isUnit), ← mul_assoc, self_mul_sign]
 
 theorem HasFDerivAt.hasFDerivAt_norm_smul_neg
     (ht : t < 0) (h : HasFDerivAt (‖·‖) f x) :
     HasFDerivAt (‖·‖) (-f) (t • x) := by
-  simpa [ht] using h.hasFDerivAt_norm_smul ht.ne
+  have hsign : ((SignType.sign t : ℝ) • f) = -f := by
+    ext y
+    simp [ht]
+  simpa only [hsign] using h.hasFDerivAt_norm_smul ht.ne
 
 theorem HasFDerivAt.hasFDerivAt_norm_smul_pos
     (ht : 0 < t) (h : HasFDerivAt (‖·‖) f x) :
@@ -139,8 +150,8 @@ theorem differentiableAt_norm_smul (ht : t ≠ 0) :
     DifferentiableAt ℝ (‖·‖) x ↔ DifferentiableAt ℝ (‖·‖) (t • x) where
   mp hd := (hd.hasFDerivAt.hasFDerivAt_norm_smul ht).differentiableAt
   mpr hd := by
-    convert! (hd.hasFDerivAt.hasFDerivAt_norm_smul (inv_ne_zero ht)).differentiableAt
-    rw [smul_smul, inv_mul_cancel₀ ht, one_smul]
+    simpa only [smul_smul, inv_mul_cancel₀, one_smul] using
+      (hd.hasFDerivAt.hasFDerivAt_norm_smul ht.isUnit.inv₀.ne_zero).differentiableAt
 
 theorem DifferentiableAt.differentiableAt_norm_of_smul (h : DifferentiableAt ℝ (‖·‖) (t • x)) :
     DifferentiableAt ℝ (‖·‖) x := by
@@ -152,7 +163,7 @@ theorem DifferentiableAt.differentiableAt_norm_of_smul (h : DifferentiableAt ℝ
   · exact differentiableAt_norm_smul ht |>.2 h
 
 theorem DifferentiableAt.fderiv_norm_self {x : E} (h : DifferentiableAt ℝ (‖·‖) x) :
-    fderiv ℝ (‖·‖) x x = ‖x‖ := by
+    fderiv ℝ (‖·‖) x id x = ‖x‖ := by
   rw [← h.lineDeriv_eq_fderiv, lineDeriv]
   have (t : ℝ) : ‖x + t • x‖ = |1 + t| * ‖x‖ := by
     rw [← norm_eq_abs, ← norm_smul, add_smul, one_smul]
@@ -169,7 +180,9 @@ variable (x t) in
 theorem fderiv_norm_smul :
     fderiv ℝ (‖·‖) (t • x) = (SignType.sign t : ℝ) • (fderiv ℝ (‖·‖) x) := by
   cases subsingleton_or_nontrivial E
-  · simp_rw [(hasFDerivAt_of_subsingleton _ _).fderiv, smul_zero]
+  · have hd (y : E) : HasFDerivAt (‖·‖) (0 : StrongDual ℝ E) y :=
+      hasFDerivAt_of_subsingleton _ _
+    simp only [(hd _).fderiv, smul_zero]
   · by_cases hd : DifferentiableAt ℝ (‖·‖) x
     · obtain rfl | ht := eq_or_ne t 0
       · simp only [zero_smul, _root_.sign_zero, SignType.coe_zero]
@@ -192,7 +205,5 @@ theorem norm_fderiv_norm [Nontrivial E] (h : DifferentiableAt ℝ (‖·‖) x) 
   have : x ≠ 0 := fun hx ↦ not_differentiableAt_norm_zero E (hx ▸ h)
   refine le_antisymm (NNReal.coe_one ▸ norm_fderiv_le_of_lipschitz ℝ lipschitzWith_one_norm) ?_
   apply le_of_mul_le_mul_right _ (norm_pos_iff.2 this)
-  calc
-    1 * ‖x‖ = fderiv ℝ (‖·‖) x x := by rw [one_mul, h.fderiv_norm_self]
-    _ ≤ ‖fderiv ℝ (‖·‖) x x‖ := le_norm_self _
-    _ ≤ ‖fderiv ℝ (‖·‖) x‖ * ‖x‖ := le_opNorm _ _
+  simpa only [h.fderiv_norm_self, norm_norm, one_mul] using
+    (fderiv ℝ (‖·‖) x id).le_opNorm x

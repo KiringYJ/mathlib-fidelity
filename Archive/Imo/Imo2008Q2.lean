@@ -25,12 +25,11 @@ for all real numbers `x`,`y`, `z`, each different from 1, and satisfying `xyz = 
 each different from 1, and satisfying `xyz = 1`.
 
 ## Solution
-(a) Since `xyz = 1`, we can apply the substitution `x = a/b`, `y = b/c`, `z = c/a`.
-Then we define `m = c-b`, `n = b-a` and rewrite the inequality as `LHS - 1 ≥ 0`
-using `c`, `m` and `n`. We factor `LHS - 1` as a square, which finishes the proof.
+(a) Multiply the difference between the left-hand side and `1` by the positive square
+`((x - 1) * (y - 1) * (z - 1)) ^ 2`. The product is `(3 - (x * y + y * z + z * x)) ^ 2`.
 
-(b) We present a set `W` of rational triples. We prove that `W` is a subset of the
-set of rational solutions to the equation, and that `W` is infinite.
+(b) A family of rational triples satisfies `x * y + y * z + z * x = 3`, so the same identity
+shows that equality holds. The third coordinates of the family have unbounded magnitude.
 -/
 
 @[expose] public section
@@ -38,82 +37,110 @@ set of rational solutions to the equation, and that `W` is infinite.
 namespace Imo2008Q2
 
 theorem subst_abc {x y z : ℝ} (h : x * y * z = 1) :
-    ∃ a b c : ℝ, a ≠ 0 ∧ b ≠ 0 ∧ c ≠ 0 ∧ x = a / b ∧ y = b / c ∧ z = c / a := by
-  use x, 1, 1 / y
-  obtain ⟨⟨hx, hy⟩, _⟩ : (x ≠ 0 ∧ y ≠ 0) ∧ z ≠ 0 := by
-    have := h.symm ▸ one_ne_zero
-    simpa [not_or] using this
-  have : z * (y * x) = 1 := by rw [← h]; ac_rfl
-  simp [field, mul_assoc, *]
+    ∃ (a b c : ℝ) (ha : a ≠ 0) (hb : b ≠ 0) (hc : c ≠ 0),
+      x = Checked.div a b (hb := isUnit_iff_ne_zero.mpr hb) ∧
+      y = Checked.div b c (hb := isUnit_iff_ne_zero.mpr hc) ∧
+      z = Checked.div c a (hb := isUnit_iff_ne_zero.mpr ha) := by
+  have hxy : x * y ≠ 0 := by
+    intro e
+    simp [e] at h
+  have hy : y ≠ 0 := fun e => hxy (by rw [e, mul_zero])
+  refine ⟨x * y, y, 1, hxy, hy, one_ne_zero, ?_, ?_, ?_⟩
+  · exact (mul_div_cancel_right₀ (hb := isUnit_iff_ne_zero.mpr hy) x).symm
+  · exact (div_one₀ y).symm
+  · exact eq_one_div_of_mul_eq_one_right₀ (ha := isUnit_iff_ne_zero.mpr hxy) h
 
-theorem imo2008_q2a (x y z : ℝ) (h : x * y * z = 1) (hx : x ≠ 1) (hy : y ≠ 1) (hz : z ≠ 1) :
-    x ^ 2 / (x - 1) ^ 2 + y ^ 2 / (y - 1) ^ 2 + z ^ 2 / (z - 1) ^ 2 ≥ 1 := by
-  obtain ⟨a, b, c, ha, hb, hc, rfl, rfl, rfl⟩ := subst_abc h
-  obtain ⟨m, n, rfl, rfl⟩ : ∃ m n, b = c - m ∧ a = c - m - n := by use c - b, b - a; simp
-  have hm_ne_zero : m ≠ 0 := by contrapose hy; simpa [field]
-  have hn_ne_zero : n ≠ 0 := by contrapose hx; simpa [field]
-  have hmn_ne_zero : m + n ≠ 0 := by contrapose hz; field_simp; linarith
-  have hc_sub_sub : c - (c - m - n) = m + n := by abel
+theorem sub_one_sq_isUnit {K : Type*} [Field K] {x : K} (hx : x ≠ 1) :
+    IsUnit ((x - 1) ^ 2) :=
+  isUnit_iff_ne_zero.mpr (pow_ne_zero 2 (sub_ne_zero.mpr hx))
+
+private theorem squareCert {K : Type*} [Field K] {x y z : K}
+    (h : x * y * z = 1) (hx : IsUnit ((x - 1) ^ 2))
+    (hy : IsUnit ((y - 1) ^ 2)) (hz : IsUnit ((z - 1) ^ 2)) :
+    (x ^ 2 / (x - 1) ^ 2 + y ^ 2 / (y - 1) ^ 2 + z ^ 2 / (z - 1) ^ 2 - 1) *
+        ((x - 1) * (y - 1) * (z - 1)) ^ 2 =
+      (3 - (x * y + y * z + z * x)) ^ 2 := by
+  calc
+    _ = (x ^ 2 / (x - 1) ^ 2 * (x - 1) ^ 2) * ((y - 1) * (z - 1)) ^ 2 +
+        (y ^ 2 / (y - 1) ^ 2 * (y - 1) ^ 2) * ((z - 1) * (x - 1)) ^ 2 +
+        (z ^ 2 / (z - 1) ^ 2 * (z - 1) ^ 2) * ((x - 1) * (y - 1)) ^ 2 -
+        ((x - 1) * (y - 1) * (z - 1)) ^ 2 := by ring
+    _ = (2 * (x * y * z) + 1 - (x * y + y * z + z * x)) ^ 2 -
+        2 * (x * y * z - 1) * ((x - 1) * (y - 1) * (z - 1)) := by
+          simp only [div_mul_cancel₀]
+          ring
+    _ = _ := by
+      rw [h]
+      ring
+
+theorem imo2008_q2a (x y z : ℝ) (h : x * y * z = 1)
+    (hx : x ≠ 1) (hy : y ≠ 1) (hz : z ≠ 1) :
+    Checked.div (x ^ 2) ((x - 1) ^ 2) (hb := sub_one_sq_isUnit hx) +
+    Checked.div (y ^ 2) ((y - 1) ^ 2) (hb := sub_one_sq_isUnit hy) +
+    Checked.div (z ^ 2) ((z - 1) ^ 2) (hb := sub_one_sq_isUnit hz) ≥ 1 := by
+  have e := squareCert h (sub_one_sq_isUnit hx) (sub_one_sq_isUnit hy) (sub_one_sq_isUnit hz)
+  have hd := mul_ne_zero (mul_ne_zero (sub_ne_zero.mpr hx) (sub_ne_zero.mpr hy))
+    (sub_ne_zero.mpr hz)
   rw [ge_iff_le, ← sub_nonneg]
-  convert! sq_nonneg ((c * (m ^ 2 + n ^ 2 + m * n) - m * (m + n) ^ 2) / (m * n * (m + n)))
-  simp [field, hc_sub_sub]; ring
+  apply (mul_nonneg_iff_of_pos_right (sq_pos_of_ne_zero hd)).mp
+  rw [e]
+  exact sq_nonneg _
 
 def rationalSolutions :=
-  {s : ℚ × ℚ × ℚ | ∃ x y z : ℚ, s = (x, y, z) ∧ x ≠ 1 ∧ y ≠ 1 ∧ z ≠ 1 ∧ x * y * z = 1 ∧
-    x ^ 2 / (x - 1) ^ 2 + y ^ 2 / (y - 1) ^ 2 + z ^ 2 / (z - 1) ^ 2 = 1}
+  {s : ℚ × ℚ × ℚ | ∃ x y z : ℚ, s = (x, y, z) ∧
+    ∃ (hx : x ≠ 1) (hy : y ≠ 1) (hz : z ≠ 1), x * y * z = 1 ∧
+      Checked.div (x ^ 2) ((x - 1) ^ 2) (hb := sub_one_sq_isUnit hx) +
+      Checked.div (y ^ 2) ((y - 1) ^ 2) (hb := sub_one_sq_isUnit hy) +
+      Checked.div (z ^ 2) ((z - 1) ^ 2) (hb := sub_one_sq_isUnit hz) = 1}
 
 theorem imo2008_q2b : Set.Infinite rationalSolutions := by
-  let W := {s : ℚ × ℚ × ℚ | ∃ x y z : ℚ, s = (x, y, z) ∧
-    ∃ t : ℚ, t > 0 ∧ x = -(t + 1) / t ^ 2 ∧ y = t / (t + 1) ^ 2 ∧ z = -t * (t + 1)}
-  have hW_sub_S : W ⊆ rationalSolutions := by
-    intro s hs_in_W
-    rw [rationalSolutions]
-    simp only [Set.mem_ofPred_eq] at hs_in_W ⊢
-    rcases hs_in_W with ⟨x, y, z, h₁, t, ht_gt_zero, hx_t, hy_t, hz_t⟩
-    use x, y, z
-    have key_gt_zero : 0 < t ^ 2 + t + 1 := by linarith [pow_pos ht_gt_zero 2, ht_gt_zero]
-    have h₂ : x ≠ 1 := by rw [hx_t]; simp [field]; linarith [key_gt_zero]
-    have h₃ : y ≠ 1 := by rw [hy_t]; simp [field]; linarith [key_gt_zero]
-    have h₄ : z ≠ 1 := by rw [hz_t]; linarith [key_gt_zero]
-    have h₅ : x * y * z = 1 := by rw [hx_t, hy_t, hz_t]; field
-    have h₆ : x ^ 2 / (x - 1) ^ 2 + y ^ 2 / (y - 1) ^ 2 + z ^ 2 / (z - 1) ^ 2 = 1 := by
-      have hx1 : (x - 1) ^ 2 = (t ^ 2 + t + 1) ^ 2 / t ^ 4 := by
-        rw [hx_t]; field
-      have hy1 : (y - 1) ^ 2 = (t ^ 2 + t + 1) ^ 2 / (t + 1) ^ 4 := by
-        rw [hy_t]; field
-      have hz1 : (z - 1) ^ 2 = (t ^ 2 + t + 1) ^ 2 := by rw [hz_t]; ring
+  let g : ℚ × ℚ × ℚ → ℚ := fun s => -s.2.2
+  have unb : ¬ BddAbove (g '' rationalSolutions) := by
+    rw [not_bddAbove_iff]
+    intro q
+    let t : ℚ := max (q + 1) 1
+    have hq : q + 1 ≤ t := le_max_left _ _
+    have ht : 0 < t := lt_of_lt_of_le zero_lt_one (le_max_right _ _)
+    have hu : 0 < t + 1 := by linarith
+    have dt := pow_ne_zero 2 ht.ne'
+    have du := pow_ne_zero 2 hu.ne'
+    let x := Checked.div (-(t + 1)) (t ^ 2) (hb := isUnit_iff_ne_zero.mpr dt)
+    let y := Checked.div t ((t + 1) ^ 2) (hb := isUnit_iff_ne_zero.mpr du)
+    let z := -t * (t + 1)
+    have ex : x * t ^ 2 = -(t + 1) := div_mul_cancel₀ (hb := isUnit_iff_ne_zero.mpr dt) _
+    have ey : y * (t + 1) ^ 2 = t := div_mul_cancel₀ (hb := isUnit_iff_ne_zero.mpr du) _
+    have hx : x ≠ 1 := by
+      intro e
+      rw [e, one_mul] at ex
+      nlinarith only [ex, ht, sq_nonneg t]
+    have hy : y ≠ 1 := by
+      intro e
+      rw [e, one_mul] at ey
+      nlinarith only [ey, ht, sq_nonneg t]
+    have hz : z ≠ 1 :=
+      ne_of_lt ((mul_neg_of_neg_of_pos (neg_lt_zero.mpr ht) hu).trans zero_lt_one)
+    have prod : x * y * z = 1 := by
+      apply mul_right_cancel₀ (mul_ne_zero dt du)
       calc
-        x ^ 2 / (x - 1) ^ 2 + y ^ 2 / (y - 1) ^ 2 + z ^ 2 / (z - 1) ^ 2 =
-            (x ^ 2 * t ^ 4 + y ^ 2 * (t + 1) ^ 4 + z ^ 2) / (t ^ 2 + t + 1) ^ 2 := by
-          rw [hx1, hy1, hz1]; field
-        _ = 1 := by rw [hx_t, hy_t, hz_t]; field
-    exact ⟨h₁, h₂, h₃, h₄, h₅, h₆⟩
-  have hW_inf : Set.Infinite W := by
-    let g : ℚ × ℚ × ℚ → ℚ := fun s => -s.2.2
-    let K := g '' W
-    have hK_not_bdd : ¬BddAbove K := by
-      rw [not_bddAbove_iff]
-      intro q
-      let t : ℚ := max (q + 1) 1
-      use t * (t + 1)
-      have h₁ : t * (t + 1) ∈ K := by
-        let x : ℚ := -(t + 1) / t ^ 2
-        let y : ℚ := t / (t + 1) ^ 2
-        set z : ℚ := -t * (t + 1) with hz_def
-        simp only [t, W, K, g, Set.mem_image, Prod.exists]
-        use x, y, z; constructor
-        · simp only [Set.mem_ofPred_eq]
-          use x, y, z; constructor
-          · rfl
-          · use t; constructor
-            · simp only [t, gt_iff_lt, lt_max_iff]; right; trivial
-            exact ⟨rfl, rfl, rfl⟩
-        · have hg : -z = g (x, y, z) := rfl
-          rw [hg, hz_def]; ring
-      have h₂ : q < t * (t + 1) := by linarith [sq_nonneg t, le_max_left (q + 1) 1]
-      exact ⟨h₁, h₂⟩
-    have hK_inf : Set.Infinite K := by intro h; apply hK_not_bdd; exact Set.Finite.bddAbove h
-    exact hK_inf.of_image g
-  exact hW_inf.mono hW_sub_S
+        _ = (x * t ^ 2) * (y * (t + 1) ^ 2) * z := by ring
+        _ = _ := by rw [ex, ey]; dsimp only [z]; ring
+    have sum : x * y + y * z + z * x = 3 := by
+      apply mul_right_cancel₀ (mul_ne_zero dt du)
+      calc
+        _ = (x * t ^ 2) * (y * (t + 1) ^ 2) +
+            (y * (t + 1) ^ 2) * z * t ^ 2 + z * (x * t ^ 2) * (t + 1) ^ 2 := by ring
+        _ = _ := by rw [ex, ey]; dsimp only [z]; ring
+    have e := squareCert prod (sub_one_sq_isUnit hx) (sub_one_sq_isUnit hy) (sub_one_sq_isUnit hz)
+    rw [sum, sub_self, zero_pow (by decide : 2 ≠ 0)] at e
+    have hd := mul_ne_zero (mul_ne_zero (sub_ne_zero.mpr hx) (sub_ne_zero.mpr hy))
+      (sub_ne_zero.mpr hz)
+    refine ⟨t * (t + 1), ⟨(x, y, z), ?_, ?_⟩, ?_⟩
+    · exact ⟨x, y, z, rfl, hx, hy, hz, prod,
+        sub_eq_zero.mp ((mul_eq_zero.mp e).resolve_right (pow_ne_zero 2 hd))⟩
+    · change -(-t * (t + 1)) = _
+      ring
+    · nlinarith only [hq, sq_nonneg t]
+  intro hfin
+  exact unb (hfin.image g).bddAbove
 
 end Imo2008Q2

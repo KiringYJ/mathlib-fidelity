@@ -242,8 +242,7 @@ theorem seq_next {x : 𝓞 K} (hx : x ≠ 0) :
     · refine div_lt_self ?_ (by simp)
       exact pos_iff.mpr hx'
   intro _ _
-  rw [ne_eq, Nonneg.mk_eq_zero, div_eq_zero_iff, map_eq_zero, not_or]
-  exact ⟨hx', by simp⟩
+  rwa [ne_eq, Nonneg.mk_eq_zero, div_eq_zero_iff, map_eq_zero]
 
 /-- An infinite sequence of nonzero algebraic integers of `K` satisfying the following properties:
 • `seq n` is nonzero;
@@ -300,15 +299,12 @@ theorem exists_unit (w₁ : InfinitePlace K) :
       (Ideal.span ({ (seq K w₁ hB n : 𝓞 K) }) = Ideal.span ({ (seq K w₁ hB m : 𝓞 K) }))
   · have hu := Ideal.span_singleton_eq_span_singleton.mp h
     refine ⟨hu.choose, fun w hw ↦ Real.log_neg (pos_at_place hu.choose w) ?_⟩
-    calc
-      _ = w (algebraMap (𝓞 K) K (seq K w₁ hB m) * (algebraMap (𝓞 K) K (seq K w₁ hB n))⁻¹) := by
-        rw [← congr_arg (algebraMap (𝓞 K) K) hu.choose_spec, mul_comm, map_mul (algebraMap _ _),
-          ← mul_assoc, inv_mul_cancel₀ (seq_ne_zero K w₁ hB n), one_mul]
-      _ = w (algebraMap (𝓞 K) K (seq K w₁ hB m)) * w (algebraMap (𝓞 K) K (seq K w₁ hB n))⁻¹ :=
-        map_mul _ _ _
-      _ < 1 := by
-        rw [map_inv₀, mul_inv_lt_iff₀' (pos_iff.mpr (seq_ne_zero K w₁ hB n)), mul_one]
-        exact seq_decreasing K w₁ hB hnm w hw
+    have hmul := congrArg (fun y : 𝓞 K ↦ w (algebraMap (𝓞 K) K y)) hu.choose_spec
+    simp only [map_mul] at hmul
+    have hpos : 0 < w (algebraMap (𝓞 K) K (seq K w₁ hB n)) :=
+      pos_iff.mpr (seq_ne_zero K w₁ hB n)
+    refine (mul_lt_mul_iff_right₀ hpos).mp ?_
+    simpa only [hmul, mul_one] using seq_decreasing K w₁ hB hnm w hw
   refine Set.Finite.exists_lt_map_eq_of_forall_mem (t := {I : Ideal (𝓞 K) | Ideal.absNorm I ≤ B})
     (fun n ↦ ?_) (Ideal.finite_setOfPred_absNorm_le B)
   rw [Set.mem_ofPred_eq, Ideal.absNorm_span_singleton]

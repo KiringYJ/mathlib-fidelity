@@ -10,6 +10,7 @@ public import Lean.Elab.Term
 public meta import Lean.Elab.BuiltinCommand
 public meta import Lean.Elab.BuiltinEvalCommand
 public meta import Lean.Elab.Tactic.Guard
+import Mathlib.Tactic.Linter.Header
 
 /-!
 # Instance inference boundary for retired rational operations
@@ -38,76 +39,91 @@ def suppressRetiredInstances : CommandElabM Unit := do
     #[`Rat.instInv, `Rat.instDiv, `Rat.instPowInt, `Lean.Grind.instFieldRat].foldl
       (fun state name => state.eraseCore name) state
 
+/-- Elaborate a declaration with the retired rational instances removed. -/
 @[command_elab Lean.Parser.Command.declaration, builtin_incremental]
 def elabDeclaration : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabDeclaration stx
 
+/-- Apply the retired-instance policy before elaborating a mutual block. -/
 @[command_elab Lean.Parser.Command.mutual, builtin_incremental]
 def elabMutual : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabMutual stx
 
+/-- Run `#synth` in the instance environment with retired rational instances removed. -/
 @[command_elab Lean.Parser.Command.synth]
 def elabSynth : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabSynth stx
 
+/-- Apply the retired-instance policy before elaborating the term in `#check`. -/
 @[command_elab Lean.Parser.Command.check]
 def elabCheck : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabCheck stx
 
+/-- Apply the retired-instance policy before checking the expected failure of a term. -/
 @[command_elab Lean.Parser.Command.check_failure]
 def elabCheckFailure : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabCheckFailure stx
 
+/-- Elaborate the term in `#eval` after removing retired rational instances. -/
 @[command_elab Lean.Parser.Command.eval]
 def elabEval : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabEval stx
 
+/-- Elaborate the term in `#eval!` under the retired-instance policy. -/
 @[command_elab Lean.Parser.Command.evalBang]
 def elabEvalBang : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabEvalBang stx
 
+/-- Apply the retired-instance policy before elaborating a `run_cmd` action. -/
 @[command_elab Lean.runCmd]
 def elabRunCmd : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabRunCmd stx
 
+/-- Apply the retired-instance policy before elaborating a `run_elab` action. -/
 @[command_elab Lean.runElab]
 def elabRunElab : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabRunElab stx
 
+/-- Apply the retired-instance policy before elaborating a `run_meta` action. -/
 @[command_elab Lean.runMeta]
 def elabRunMeta : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabRunMeta stx
 
+/-- Elaborate the binders of a `variable` command with the retired rational instances removed. -/
 @[command_elab Lean.Parser.Command.variable]
 def elabVariable : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabVariable stx
 
+/-- Apply the retired-instance policy before elaborating the term to reduce. -/
 @[command_elab Lean.reduceCmd]
 def elabReduce : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabReduce stx
 
+/-- Apply the retired-instance policy before elaborating an initialization declaration. -/
 @[command_elab Lean.Parser.Command.initialize]
 def elabInitialize : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabInitialize stx
 
+/-- Elaborate the condition tested by `#guard` under the retired-instance policy. -/
 @[command_elab Lean.Parser.Command.guardCmd]
 def elabGuard : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Tactic.GuardExpr.evalGuardCmd stx
 
+/-- Elaborate the expressions compared by `#guard_expr` under the retired-instance policy. -/
 @[command_elab Lean.Parser.Command.guardExprCmd]
 def elabGuardExpr : CommandElab := fun stx => do
   suppressRetiredInstances

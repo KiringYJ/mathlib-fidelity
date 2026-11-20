@@ -226,7 +226,8 @@ lemma continuous_convexCombPair_of_isBounded
       (add_sub_cancel ..) (x j) (y t)), dist_convexCombPair_convexCombPair_le]
     simp only [dist_self, mul_zero, zero_add, dist_convexCombPair_right]
     grw [sub_le_self _ (hf0 _), hj, hD, (le_abs_self _).trans hj'.le]
-    · field_simp; norm_num
+    · field_simp
+      nlinarith [mul_pos hr hD']
     · exact hf0 _
   · simp only [ContinuousAt, ht, sub_self, convexCombPair_one]
     rw [Metric.nhds_basis_ball.tendsto_right_iff]
@@ -240,7 +241,8 @@ lemma continuous_convexCombPair_of_isBounded
     simp only [dist_self, mul_zero, add_zero, dist_convexCombPair_left]
     grw [abs_sub_comm, ← le_abs_self] at hj'
     grw [hj.le, hj'.le, hf1, hD]
-    · field_simp; norm_num
+    · field_simp
+      nlinarith [mul_pos hr hD']
     · exact hf0 _
 
 /-- When `X` is a bounded convex metric space, to check continuity of

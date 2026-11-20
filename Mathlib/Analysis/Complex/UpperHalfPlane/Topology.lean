@@ -88,7 +88,7 @@ instance instContinuousGLSMul : ContinuousConstSMul (GL (Fin 2) ℝ) ℍ where
     refine .comp ?_ ?_
     · split_ifs
       exacts [continuous_id, continuous_conj]
-    · refine .div ?_ ?_ (fun x ↦ denom_ne_zero g x) <;>
+    · refine .div₀ ?_ ?_ (h₀ := fun x ↦ isUnit_denom g x) <;>
       exact (continuous_const.mul continuous_coe).add continuous_const
 
 section strips
@@ -233,15 +233,22 @@ lemma isOpenMap_norm : IsOpenMap (fun τ : ℍ ↦ ‖(τ : ℂ)‖) := by
     have : ‖(τ : ℂ)‖ < ε := by linarith
     have : 0 ∈ Metric.ball (τ : ℂ) ε := by rwa [mem_ball_iff_norm', sub_zero]
     simpa [UpperHalfPlane.ne_zero] using hεs this
-  have : r / ‖(τ : ℂ)‖ * (τ : ℂ) ∈ Metric.ball (τ : ℂ) ε := by
-    rwa [mem_ball_iff_norm,
-      show r / ‖(τ : ℂ)‖ * (τ : ℂ) - τ = ↑(r / ‖(τ : ℂ)‖ - 1) * (τ : ℂ) by simp; ring,
-      norm_mul, norm_real, ← norm_norm (τ : ℂ), ← norm_mul, sub_mul, norm_norm, one_mul,
-      div_mul_cancel₀ _ (by simpa using τ.ne_zero), ← mem_ball_iff_norm]
+  have hτ : IsUnit ‖(τ : ℂ)‖ := (norm_ne_zero_iff.mpr τ.ne_zero).isUnit
+  let q : ℝ := r / ‖(τ : ℂ)‖
+  have hq : q * ‖(τ : ℂ)‖ = r := div_mul_cancel₀ _
+  have hq₀ : 0 ≤ q := div_nonneg hr' (norm_nonneg _)
+  have hdist : ‖(q : ℂ) * (τ : ℂ) - (τ : ℂ)‖ = ‖r - ‖(τ : ℂ)‖‖ := calc
+    _ = ‖((q - 1 : ℝ) : ℂ) * (τ : ℂ)‖ := by congr 1; push_cast; ring
+    _ = |q - 1| * ‖(τ : ℂ)‖ := by rw [norm_mul, norm_real, Real.norm_eq_abs]
+    _ = |(q - 1) * ‖(τ : ℂ)‖| := by rw [abs_mul, abs_of_nonneg (norm_nonneg _)]
+    _ = _ := by rw [sub_mul, hq, one_mul, Real.norm_eq_abs]
+  have : (q : ℂ) * (τ : ℂ) ∈ Metric.ball (τ : ℂ) ε := by
+    rwa [mem_ball_iff_norm, hdist, ← mem_ball_iff_norm]
   obtain ⟨ξ, hξs, hξτ⟩ := Set.mem_of_mem_of_subset this hεs
   use ξ, hξs
-  simp_rw [hξτ, norm_mul, norm_div, norm_real, norm_norm]
-  rw [div_mul_cancel₀ _ (by simpa using τ.ne_zero), Real.norm_of_nonneg hr']
+  have heq : (ξ : ℂ) = (q : ℂ) * (τ : ℂ) := hξτ
+  change ‖(ξ : ℂ)‖ = r
+  rw [heq, norm_mul, norm_real, Real.norm_of_nonneg hq₀, hq]
 
 end IsOpenMap
 

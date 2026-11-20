@@ -387,16 +387,18 @@ variable {u : ℕ → ℝ≥0∞} {v : ℕ → ℕ}
 
 lemma le_expGrowthInf_comp (hu : 1 ≤ᶠ[atTop] u) (hv : Tendsto v atTop atTop) :
     (linearGrowthInf fun n ↦ v n : EReal) * expGrowthInf u ≤ expGrowthInf (u ∘ v) := by
-  apply le_linearGrowthInf_comp (hu.mono fun n h ↦ ?_) hv
-  rw [Pi.one_apply] at h
-  rwa [Pi.zero_apply, zero_le_log_iff]
+  have hlog : 0 ≤ᶠ[atTop] log ∘ u := hu.mono fun _ h ↦ zero_le_log_iff.mpr h
+  rw [expGrowthInf_def, expGrowthInf_def, ← Function.comp_assoc]
+  exact le_linearGrowthInf_comp (u := log ∘ u) (v := v) hlog hv
 
 lemma expGrowthSup_comp_le (hu : ∃ᶠ n in atTop, 1 ≤ u n)
     (hv₀ : (linearGrowthSup fun n ↦ v n : EReal) ≠ 0)
     (hv₁ : (linearGrowthSup fun n ↦ v n : EReal) ≠ ⊤) (hv₂ : Tendsto v atTop atTop) :
     expGrowthSup (u ∘ v) ≤ (linearGrowthSup fun n ↦ v n : EReal) * expGrowthSup u := by
-  apply linearGrowthSup_comp_le (u := log ∘ u) (hu.mono fun n h ↦ ?_) hv₀ hv₁ hv₂
-  rwa [comp_apply, zero_le_log_iff]
+  have hlog : ∃ᶠ n in atTop, 0 ≤ (log ∘ u) n :=
+    hu.mono fun _ h ↦ (zero_le_log_iff).2 h
+  rw [expGrowthSup_def, expGrowthSup_def, ← Function.comp_assoc]
+  exact linearGrowthSup_comp_le (u := log ∘ u) (v := v) hlog hv₀ hv₁ hv₂
 
 /-! ### Monotone sequences -/
 

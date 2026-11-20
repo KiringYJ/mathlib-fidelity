@@ -68,7 +68,7 @@ theorem iteratedDerivWithin_vcomp_two
     (ht : UniqueDiffOn 𝕜 t) (hs : UniqueDiffOn 𝕜 s) (hx : x ∈ s) (hst : MapsTo f s t) :
     iteratedDerivWithin 2 (g ∘ f) s x =
       iteratedFDerivWithin 𝕜 2 g t (f x) (fun _ ↦ derivWithin f s x) +
-      fderivWithin 𝕜 g t (f x) (iteratedDerivWithin 2 f s x) := by
+      fderivWithin 𝕜 g t (f x) id (iteratedDerivWithin 2 f s x) := by
   rw [iteratedDerivWithin_vcomp_eq_sum_orderedFinpartition hg hf ht hs hx hst le_rfl]
   simp only [← (OrderedFinpartition.extendEquiv 1).sum_comp, Fintype.sum_sigma, Fintype.sum_unique,
     OrderedFinpartition.default_eq, Fintype.sum_option]
@@ -80,9 +80,10 @@ theorem iteratedDerivWithin_vcomp_two
 
 theorem iteratedDeriv_vcomp_two (hg : ContDiffAt 𝕜 2 g (f x)) (hf : ContDiffAt 𝕜 2 f x) :
     iteratedDeriv 2 (g ∘ f) x =
-      iteratedFDeriv 𝕜 2 g (f x) (fun _ ↦ deriv f x) + fderiv 𝕜 g (f x) (iteratedDeriv 2 f x) := by
+      iteratedFDeriv 𝕜 2 g (f x) (fun _ ↦ deriv f x) +
+      fderiv 𝕜 g (f x) id (iteratedDeriv 2 f x) := by
   simp only [← iteratedDerivWithin_univ, ← iteratedFDerivWithin_univ,
-    ← derivWithin_univ, ← fderivWithin_univ]
+    ← congrFun (derivWithin_univ (f := f)) x, ← congrFun (fderivWithin_univ (f := g)) (f x)]
   exact iteratedDerivWithin_vcomp_two hg hf uniqueDiffOn_univ
     uniqueDiffOn_univ (mem_univ x) (mapsTo_univ f _)
 
@@ -95,7 +96,7 @@ theorem iteratedDerivWithin_vcomp_three
       iteratedFDerivWithin 𝕜 3 g t (f x) (fun _ ↦ derivWithin f s x) +
       iteratedFDerivWithin 𝕜 2 g t (f x) ![iteratedDerivWithin 2 f s x, derivWithin f s x] +
       2 • iteratedFDerivWithin 𝕜 2 g t (f x) ![derivWithin f s x, iteratedDerivWithin 2 f s x] +
-      fderivWithin 𝕜 g t (f x) (iteratedDerivWithin 3 f s x) := by
+      fderivWithin 𝕜 g t (f x) id (iteratedDerivWithin 3 f s x) := by
   rw [iteratedDerivWithin_vcomp_eq_sum_orderedFinpartition hg hf ht hs hx hst le_rfl]
   simp only [← (OrderedFinpartition.extendEquiv 1).sum_comp,
     ← (OrderedFinpartition.extendEquiv 2).sum_comp, Fintype.sum_sigma,
@@ -119,9 +120,9 @@ theorem iteratedDeriv_vcomp_three (hg : ContDiffAt 𝕜 3 g (f x)) (hf : ContDif
       iteratedFDeriv 𝕜 3 g (f x) (fun _ ↦ deriv f x) +
       iteratedFDeriv 𝕜 2 g (f x) ![iteratedDeriv 2 f x, deriv f x] +
       2 • iteratedFDeriv 𝕜 2 g (f x) ![deriv f x, iteratedDeriv 2 f x] +
-      fderiv 𝕜 g (f x) (iteratedDeriv 3 f x) := by
+      fderiv 𝕜 g (f x) id (iteratedDeriv 3 f x) := by
   simp only [← iteratedDerivWithin_univ, ← iteratedFDerivWithin_univ,
-    ← derivWithin_univ, ← fderivWithin_univ]
+    ← congrFun (derivWithin_univ (f := f)) x, ← congrFun (fderivWithin_univ (f := g)) (f x)]
   exact iteratedDerivWithin_vcomp_three hg hf uniqueDiffOn_univ
     uniqueDiffOn_univ (mem_univ x) (mapsTo_univ f _)
 
@@ -162,7 +163,8 @@ theorem iteratedDerivWithin_scomp_two
 theorem iteratedDeriv_scomp_two (hg : ContDiffAt 𝕜 2 g (f x)) (hf : ContDiffAt 𝕜 2 f x) :
     iteratedDeriv 2 (g ∘ f) x
       = deriv f x ^ 2 • iteratedDeriv 2 g (f x) + iteratedDeriv 2 f x • deriv g (f x) := by
-  simp only [← iteratedDerivWithin_univ, ← derivWithin_univ]
+  simp only [← iteratedDerivWithin_univ, ← congrFun (derivWithin_univ (f := f)) x,
+    ← congrFun (derivWithin_univ (f := g)) (f x)]
   exact iteratedDerivWithin_scomp_two hg hf uniqueDiffOn_univ uniqueDiffOn_univ (mem_univ _)
     (mapsTo_univ _ _)
 
@@ -183,7 +185,8 @@ theorem iteratedDeriv_scomp_three (hg : ContDiffAt 𝕜 3 g (f x)) (hf : ContDif
       deriv f x ^ 3 • iteratedDeriv 3 g (f x) +
       3 • iteratedDeriv 2 f x • deriv f x • iteratedDeriv 2 g (f x) +
       iteratedDeriv 3 f x • deriv g (f x) := by
-  simp only [← iteratedDerivWithin_univ, ← derivWithin_univ]
+  simp only [← iteratedDerivWithin_univ, ← congrFun (derivWithin_univ (f := f)) x,
+    ← congrFun (derivWithin_univ (f := g)) (f x)]
   exact iteratedDerivWithin_scomp_three hg hf uniqueDiffOn_univ uniqueDiffOn_univ (mem_univ _)
     (mapsTo_univ _ _)
 
@@ -223,7 +226,8 @@ theorem iteratedDerivWithin_comp_two
 theorem iteratedDeriv_comp_two (hg : ContDiffAt 𝕜 2 g (f x)) (hf : ContDiffAt 𝕜 2 f x) :
     iteratedDeriv 2 (g ∘ f) x =
       iteratedDeriv 2 g (f x) * deriv f x ^ 2 + deriv g (f x) * iteratedDeriv 2 f x := by
-  simp only [← iteratedDerivWithin_univ, ← derivWithin_univ]
+  simp only [← iteratedDerivWithin_univ, ← congrFun (derivWithin_univ (f := f)) x,
+    ← congrFun (derivWithin_univ (f := g)) (f x)]
   exact iteratedDerivWithin_comp_two hg hf uniqueDiffOn_univ uniqueDiffOn_univ (mem_univ _)
     (mapsTo_univ _ _)
 
@@ -243,7 +247,8 @@ theorem iteratedDeriv_comp_three (hg : ContDiffAt 𝕜 3 g (f x)) (hf : ContDiff
       iteratedDeriv 3 g (f x) * deriv f x ^ 3 +
       3 * iteratedDeriv 2 g (f x) * iteratedDeriv 2 f x * deriv f x +
       deriv g (f x) * iteratedDeriv 3 f x := by
-  simp only [← iteratedDerivWithin_univ, ← derivWithin_univ]
+  simp only [← iteratedDerivWithin_univ, ← congrFun (derivWithin_univ (f := f)) x,
+    ← congrFun (derivWithin_univ (f := g)) (f x)]
   exact iteratedDerivWithin_comp_three hg hf uniqueDiffOn_univ uniqueDiffOn_univ (mem_univ _)
     (mapsTo_univ _ _)
 

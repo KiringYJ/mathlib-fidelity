@@ -51,6 +51,125 @@ open Filter Set
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
 variable {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
 
+/-- The relation specifying an iterated scalar derivative on an actual coordinate domain.
+Order zero is evaluation, and order one requires differentiability only at the point.
+When another derivative follows, the first derivative must exist on a neighborhood.
+The witness functions are used only inside this relation; no value is chosen where
+differentiability or uniqueness fails. -/
+def HasIteratedDerivAt {D : Type*} [TopologicalSpace D] (n : ℕ) (f : D → F)
+    (d : F) (x : D) (coord : D → 𝕜 := by exact _root_.id) : Prop :=
+  match n with
+  | 0 => f x = d
+  | n + 1 => ∃ g : D → F, HasDerivAt f (g x) x coord ∧
+      (n = 0 ∨ ∀ᶠ y in 𝓝 x, HasDerivAt f (g y) y coord) ∧
+      HasIteratedDerivAt n g d x coord
+
+namespace HasIteratedDerivAt
+
+variable {D : Type*} [TopologicalSpace D] {coord : D → 𝕜}
+  {f f₁ : D → F} {d e : F} {x : D} {n : ℕ}
+
+@[simp] theorem zero : HasIteratedDerivAt 0 f d x coord ↔ f x = d := Iff.rfl
+
+@[simp] theorem one : HasIteratedDerivAt 1 f d x coord ↔ HasDerivAt f d x coord := by
+  constructor
+  · rintro ⟨g, hg, _, hzero⟩
+    change g x = d at hzero
+    simpa only [hzero] using hg
+  · intro h
+    exact ⟨fun _ ↦ d, h, Or.inl rfl, rfl⟩
+
+theorem succ_succ : HasIteratedDerivAt (n + 2) f d x coord ↔
+    ∃ g : D → F, HasDerivAt f (g x) x coord ∧
+      (∀ᶠ y in 𝓝 x, HasDerivAt f (g y) y coord) ∧
+      HasIteratedDerivAt (n + 1) g d x coord := by
+  change (∃ g : D → F, HasDerivAt f (g x) x coord ∧
+    (n + 1 = 0 ∨ ∀ᶠ y in 𝓝 x, HasDerivAt f (g y) y coord) ∧
+    HasIteratedDerivAt (n + 1) g d x coord) ↔ _
+  simp only [Nat.add_one_ne_zero, false_or]
+
+/-- Iterated differentiation depends only on the local function on its actual domain. -/
+theorem congr_of_eventuallyEq (h : HasIteratedDerivAt n f d x coord)
+    (heq : f₁ =ᶠ[𝓝 x] f) : HasIteratedDerivAt n f₁ d x coord := by
+  have hcongr {u v : D → F} {y : D} {a : F}
+      (hd : HasDerivAt u a y coord) (huv : v =ᶠ[𝓝 y] u) : HasDerivAt v a y coord := by
+    change HasFDerivAt v (ContinuousLinearMap.toSpanSingleton 𝕜 a) y coord
+    rw [hasFDerivAt_iff_isLittleOTVS]
+    apply hd.hasFDerivAt.isLittleOTVS.congr' _ Filter.EventuallyEq.rfl
+    filter_upwards [huv] with z hz
+    simp only [hz, huv.self_of_nhds]
+  cases n with
+  | zero => exact heq.self_of_nhds.trans h
+  | succ n =>
+    obtain ⟨g, hg, hlocal, hn⟩ := h
+    refine ⟨g, hcongr hg heq, ?_, hn⟩
+    rcases hlocal with hn | hg'
+    · exact Or.inl hn
+    · right
+      filter_upwards [hg', heq.eventually_nhds] with y hy heqy
+      exact hcongr hy heqy
+
+/-- Pull back an iterated derivative along a continuous map of actual domains, pulling back
+the coordinates at the same time. This asserts existence, not uniqueness on the new domain. -/
+theorem comp_domain {D' : Type*} [TopologicalSpace D'] {g : D' → D} {x : D'}
+    (h : HasIteratedDerivAt n f d (g x) coord) (hg : Continuous g) :
+    HasIteratedDerivAt n (f ∘ g) d x (coord ∘ g) := by
+  have hpull {u : D → F} {a : F} {y : D'} (hu : HasDerivAt u a (g y) coord) :
+      HasDerivAt (u ∘ g) a y (coord ∘ g) :=
+    hu.hasFDerivAt.comp_tendsto g
+      (hg.continuousAt.tendsto.prodMap (tendsto_pure_pure _ _))
+  induction n generalizing f d with
+  | zero => exact h
+  | succ n ih =>
+    obtain ⟨q, hq, hlocal, hn⟩ := h
+    refine ⟨q ∘ g, hpull hq, ?_, ih hn⟩
+    rcases hlocal with hn | hq'
+    · exact Or.inl hn
+    · right
+      filter_upwards [hg.continuousAt.tendsto.eventually hq'] with y hy
+      exact hpull hy
+
+/-- Multiplication by a constant commutes with the iterated derivative relation. -/
+theorem const_smul (h : HasIteratedDerivAt n f d x coord) (c : 𝕜) :
+    HasIteratedDerivAt n (fun y ↦ c • f y) (c • d) x coord := by
+  have hsmul {u : D → F} {a : F} {y : D} (hu : HasDerivAt u a y coord) :
+      HasDerivAt (fun z ↦ c • u z) (c • a) y coord := by
+    simpa only [Pi.smul_def, smul_apply,
+      ContinuousLinearMap.toSpanSingleton_apply, one_smul] using
+      (hu.hasFDerivAt.const_smul c).hasDerivAt
+  induction n generalizing f d with
+  | zero => exact congrArg (c • ·) h
+  | succ n ih =>
+    obtain ⟨g, hg, hlocal, hn⟩ := h
+    refine ⟨fun y ↦ c • g y, hsmul hg, ?_, ih hn⟩
+    rcases hlocal with hn | hg'
+    · exact Or.inl hn
+    · exact Or.inr (hg'.mono fun y hy ↦ hsmul hy)
+
+/-- Open coordinate embeddings ensure uniqueness, without restricting the derivative relation
+itself to this sufficient class of domains. -/
+theorem unique (h : HasIteratedDerivAt n f d x coord)
+    (h' : HasIteratedDerivAt n f e x coord)
+    (hcoord : Topology.IsOpenEmbedding coord := by exact Topology.IsOpenEmbedding.id) : d = e := by
+  induction n generalizing f d e with
+  | zero => exact h.symm.trans h'
+  | succ n ih =>
+    obtain ⟨g, hg, hglocal, hgn⟩ := h
+    obtain ⟨q, hq, hqlocal, hqn⟩ := h'
+    by_cases hn : n = 0
+    · subst n
+      change g x = d at hgn
+      change q x = e at hqn
+      exact hgn.symm.trans (((hg.deriv hcoord).symm.trans (hq.deriv hcoord)).trans hqn)
+    · have hge := hglocal.resolve_left hn
+      have hqe := hqlocal.resolve_left hn
+      have heq : q =ᶠ[𝓝 x] g := by
+        filter_upwards [hge, hqe] with y hgy hqy
+        exact (hqy.deriv hcoord).symm.trans (hgy.deriv hcoord)
+      exact ih (hgn.congr_of_eventuallyEq heq) hqn
+
+end HasIteratedDerivAt
+
 /-- The `n`-th iterated derivative of a function from `𝕜` to `F`, as a function from `𝕜` to `F`. -/
 def iteratedDeriv (n : ℕ) (f : 𝕜 → F) (x : 𝕜) : F :=
   (iteratedFDeriv 𝕜 n f x : (Fin n → 𝕜) → F) fun _ : Fin n => 1
@@ -310,10 +429,9 @@ theorem iteratedDeriv_succ : iteratedDeriv (n + 1) f = deriv (iteratedDeriv n f)
 /-- The `n`-th iterated derivative can be obtained by iterating `n` times the
 differentiation operation. -/
 theorem iteratedDeriv_eq_iterate : iteratedDeriv n f = deriv^[n] f := by
-  ext x
-  rw [← iteratedDerivWithin_univ]
-  convert! iteratedDerivWithin_eq_iterate (F := F)
-  simp [derivWithin_univ]
+  induction n with
+  | zero => rw [iteratedDeriv_zero, Function.iterate_zero_apply]
+  | succ n ih => rw [iteratedDeriv_succ, ih, Function.iterate_succ_apply']
 
 theorem iteratedDerivWithin_of_isOpen (hs : IsOpen s) :
     Set.EqOn (iteratedDerivWithin n f s) (iteratedDeriv n f) s := by
@@ -336,6 +454,34 @@ derivative. -/
 theorem iteratedDeriv_succ' : iteratedDeriv (n + 1) f = iteratedDeriv n (deriv f) := by
   rw [iteratedDeriv_eq_iterate, iteratedDeriv_eq_iterate, Function.iterate_succ_apply]
 
+/-- On the domain where the iterated derivative relation holds, the existing ambient
+projection agrees with it. No nondifferentiable or nonunique branch is used. -/
+theorem HasIteratedDerivAt.iteratedDeriv {n : ℕ} {f : 𝕜 → F} {d : F} {x : 𝕜}
+    (h : HasIteratedDerivAt n f d x) : iteratedDeriv n f x = d := by
+  induction n generalizing f d with
+  | zero => simpa only [iteratedDeriv_zero] using HasIteratedDerivAt.zero.mp h
+  | succ n ih =>
+    obtain ⟨g, hg, hlocal, hn⟩ := h
+    rw [iteratedDeriv_succ']
+    by_cases hn0 : n = 0
+    · subst n
+      change g x = d at hn
+      simpa only [iteratedDeriv_zero] using hg.deriv.trans hn
+    · have heq : deriv f =ᶠ[𝓝 x] g := by
+        filter_upwards [hlocal.resolve_left hn0] with y hy
+        exact hy.deriv
+      exact ih (hn.congr_of_eventuallyEq heq)
+
+/-- Analyticity supplies every finite derivative tower, with its genuine ambient value. -/
+theorem AnalyticAt.hasIteratedDerivAt [CompleteSpace F] {f : 𝕜 → F} {x : 𝕜}
+    (hf : AnalyticAt 𝕜 f x) (n : ℕ) : HasIteratedDerivAt n f (iteratedDeriv n f x) x := by
+  induction n generalizing f with
+  | zero => simp only [iteratedDeriv_zero, HasIteratedDerivAt.zero]
+  | succ n ih =>
+    rw [iteratedDeriv_succ']
+    refine ⟨deriv f, hf.differentiableAt.hasDerivAt, Or.inr ?_, ih hf.deriv⟩
+    exact hf.eventually_analyticAt.mono fun y hy ↦ hy.differentiableAt.hasDerivAt
+
 lemma AnalyticAt.hasFPowerSeriesAt {𝕜 : Type*} [NontriviallyNormedField 𝕜] [CompleteSpace 𝕜]
     [CharZero 𝕜] {f : 𝕜 → 𝕜} {x : 𝕜} (h : AnalyticAt 𝕜 f x) :
     HasFPowerSeriesAt f
@@ -351,8 +497,6 @@ lemma AnalyticAt.hasFPowerSeriesAt {𝕜 : Type*} [NontriviallyNormedField 𝕜]
     FormalMultilinearSeries.coeff_ofScalars, smul_eq_mul, mul_eq_mul_left_iff]
   left
   rw [div_eq_iff, mul_comm, h_fact_smul, ← iteratedDeriv_eq_iteratedFDeriv]
-  norm_cast
-  positivity
 
 theorem iteratedDeriv_const {n : ℕ} {c : F} {x : 𝕜} :
     iteratedDeriv n (fun _ ↦ c) x = if n = 0 then c else 0 := by

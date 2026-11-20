@@ -125,8 +125,15 @@ protected theorem hasFPowerSeriesOnBall_bilinear (f : E →L[𝕜] F →L[𝕜] 
     r_pos := ENNReal.coe_lt_top
     hasSum := fun _ =>
       (hasSum_nat_add_iff' 3).1 <| by
-        simp only [Finset.sum_range_succ, Prod.fst_add, Prod.snd_add, f.map_add_add]
-        simp [fpowerSeriesBilinear, hasSum_zero] }
+        simp only [Finset.sum_range_succ]
+        simp only [fpowerSeriesBilinear_apply_add_three, id_eq, zero_apply, Finset.range_zero,
+          Finset.sum_empty, fpowerSeriesBilinear_apply_zero,
+          ContinuousMultilinearMap.uncurry0_apply,
+          zero_add, fpowerSeriesBilinear_apply_one, continuousMultilinearCurryFin1_symm_apply,
+          coe_deriv₂, Prod.snd_sub, map_sub, Prod.fst_sub, sub_apply,
+          fpowerSeriesBilinear_apply_two, uncurryBilinear_apply]
+        convert (hasSum_zero : HasSum (fun _ : ℕ => (0 : G)) 0) using 1
+        abel }
 
 protected theorem hasFPowerSeriesAt_bilinear (f : E →L[𝕜] F →L[𝕜] G) (x : E × F) :
     HasFPowerSeriesAt (fun x : E × F => f x.1 x.2) (f.fpowerSeriesBilinear x) x :=

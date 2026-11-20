@@ -117,7 +117,8 @@ lemma isCusp_SL2Z_iff {c : OnePoint ℝ} : IsCusp c 𝒮ℒ ↔ c ∈ Set.range 
   constructor
   · rintro ⟨-, ⟨g, rfl⟩, hgp, hgc⟩
     simpa only [hgp.smul_eq_self_iff.mp hgc] using ⟨(mapGL ℚ g).parabolicFixedPoint,
-      by simp [GeneralLinearGroup.parabolicFixedPoint, apply_ite]⟩
+      by
+        by_cases h : g 1 0 = 0 <;> simp [GeneralLinearGroup.parabolicFixedPoint, h]⟩
   · rintro ⟨c, rfl⟩
     obtain ⟨a, rfl⟩ := c.exists_mem_SL2 ℤ
     refine ⟨_, ⟨a * ModularGroup.T * a⁻¹, rfl⟩, ?_, ?_⟩

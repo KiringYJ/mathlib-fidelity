@@ -111,3 +111,61 @@ theorem iteratedDerivWithin_tsum {f : ι → 𝕜 → F} (m : ℕ) (hs : IsOpen 
       · exact ((h m (by lia) (by lia)).summable hr).congr (fun _ ↦ by simp)
     · exact SummableLocallyUniformlyOn_congr
         (fun _ _ ht ↦ by rw [iteratedDerivWithin_succ]) (h (m + 1) (by lia) (by lia))
+
+/-- A series on an open scalar domain has the iterated derivatives obtained by summing a family
+of successive derivatives, provided the original series is pointwise summable and each
+derivative series is locally uniformly summable. -/
+theorem hasIteratedDerivAt_tsum_subtype {f : ℕ → ι → s → F} (hs : IsOpen s)
+    (hderiv : ∀ k i x, HasDerivAt (f k i) (f (k + 1) i x) x Subtype.val)
+    (hsum : ∀ x, Summable fun i ↦ f 0 i x)
+    (hlocal : ∀ k, SummableLocallyUniformlyOn (f (k + 1)) (univ : Set s))
+    (k : ℕ) (x : s) :
+    HasIteratedDerivAt k (fun y : s ↦ ∑' i, f 0 i y) (∑' i, f k i x) x Subtype.val := by
+  classical
+  let g (k : ℕ) (i : ι) : 𝕜 → F := Function.extend Subtype.val (f k i) 0
+  have hagree (k : ℕ) (i : ι) (y : s) : g k i y.val = f k i y :=
+    Subtype.val_injective.extend_apply _ _ _
+  have hsumAll (k : ℕ) (y : s) : Summable fun i ↦ f k i y := by
+    cases k with
+    | zero => exact hsum y
+    | succ k => exact (hlocal k).summable (mem_univ y)
+  have hg (k : ℕ) (i : ι) (y : s) : HasDerivAt (g k i) (g (k + 1) i y.val) y.val := by
+    have hy : HasFDerivAt (fun t : s ↦ g k i t.val)
+        (ContinuousLinearMap.toSpanSingleton 𝕜 (f (k + 1) i y)) y Subtype.val := by
+      simpa only [hagree] using (hderiv k i y).hasFDerivAt
+    rw [hagree]
+    simpa only [ContinuousLinearMap.toSpanSingleton_apply, one_smul] using
+      hasFDerivAt_iff_hasDerivAt.mp (hy.of_restrict (coord := id) (x := y) (hs.mem_nhds y.property))
+  have hsucc (k : ℕ) (y : s) :
+      HasDerivAt (fun t : s ↦ ∑' i, f k i t) (∑' i, f (k + 1) i y) y Subtype.val := by
+    have hlimit : TendstoLocallyUniformlyOn
+        (fun t : Finset ι ↦ fun z : 𝕜 ↦ ∑ i ∈ t, g (k + 1) i z)
+        (fun z ↦ ∑' i, g (k + 1) i z) atTop s := by
+      apply tendstoLocallyUniformlyOn_iff_tendstoLocallyUniformly_comp_coe.2
+      simp only [hagree]
+      obtain ⟨G, hG⟩ := hlocal k
+      apply tendstoLocallyUniformlyOn_univ.mp
+      exact (hasSumLocallyUniformlyOn_iff_tendstoLocallyUniformlyOn.mp hG).congr_right
+        (fun _ ht ↦ (hG.tsum_eqOn ht).symm)
+    have h : HasDerivAt (fun t : 𝕜 ↦ ∑' i, g k i t)
+        (∑' i, g (k + 1) i y.val) y.val :=
+      hasDerivAt_of_tendstoLocallyUniformlyOn hs hlimit
+        (Eventually.of_forall fun t z hz ↦ HasDerivAt.fun_sum fun i _ ↦ hg k i ⟨z, hz⟩)
+        (fun z hz ↦ by
+          simpa only [HasSum, SummationFilter.unconditional_filter, hagree k _ ⟨z, hz⟩] using
+            (hsumAll k ⟨z, hz⟩).hasSum)
+        y.property
+    have hpull := h.hasFDerivAt.comp_tendsto (Subtype.val : s → 𝕜)
+      (continuous_subtype_val.continuousAt.tendsto.prodMap (tendsto_pure_pure Subtype.val y))
+    simpa only [Function.comp_def, id_eq, hagree,
+      ContinuousLinearMap.toSpanSingleton_apply, one_smul] using
+      (hasFDerivAt_iff_hasDerivAt.mp hpull)
+  have hiter (m a : ℕ) :
+      HasIteratedDerivAt m (fun t : s ↦ ∑' i, f a i t) (∑' i, f (a + m) i x) x Subtype.val := by
+    induction m generalizing a with
+    | zero => rfl
+    | succ m ih =>
+      refine ⟨fun t : s ↦ ∑' i, f (a + 1) i t, hsucc a x, Or.inr (.of_forall (hsucc a)), ?_⟩
+      rw [show a + (m + 1) = a + 1 + m by omega]
+      exact ih (a + 1)
+  simpa only [Nat.zero_add] using hiter k 0

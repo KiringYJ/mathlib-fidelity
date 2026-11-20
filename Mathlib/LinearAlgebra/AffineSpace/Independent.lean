@@ -818,7 +818,7 @@ theorem AffineIndependent.affineIndependent_of_notMem_span {p : ι → P} {i : �
       let wm : ι → k := -(w i)⁻¹ • w
       have hms : s.weightedVSub p wm = (0 : V) := by simp [wm, hs]
       have hwm : ∑ i ∈ s, wm i = 0 := by simp [wm, ← Finset.mul_sum, hw]
-      have hwmi : wm i = -1 := by simp [wm, his.2]
+      have hwmi : wm i = -1 := by simp [wm]
       let w' : { y // y ≠ i } → k := fun x => wm x
       have hw' : ∑ x ∈ s', w' x = 1 := by
         simp_rw [w', s', Finset.sum_subtype_eq_sum_filter]

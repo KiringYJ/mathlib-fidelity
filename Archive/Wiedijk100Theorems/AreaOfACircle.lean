@@ -6,7 +6,7 @@ Authors: James Arthur, Benjamin Davidson, Andrew Souther
 module
 
 public import Mathlib.Analysis.SpecialFunctions.Sqrt
-public import Mathlib.Analysis.SpecialFunctions.Trigonometric.InverseDeriv
+public import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 public import Mathlib.MeasureTheory.Measure.Lebesgue.Integral
 
@@ -14,9 +14,8 @@ public import Mathlib.MeasureTheory.Measure.Lebesgue.Integral
 # Freek № 9: The Area of a Circle
 
 In this file we show that the area of a disc with nonnegative radius `r` is `π * r^2`. The main
-tools our proof uses are `volume_regionBetween_eq_integral`, which allows us to represent the area
-of the disc as an integral, and `intervalIntegral.integral_eq_sub_of_hasDerivAt_of_le`, the
-second fundamental theorem of calculus.
+tools are `volume_regionBetween_eq_integral` for the disc and `integral_sqrt_one_sub_sq`
+for the rescaled interval integral.
 
 We begin by defining `disc` in `ℝ × ℝ`, then show that `disc` can be represented as the
 `regionBetween` two functions.
@@ -28,10 +27,9 @@ calculating is indeed measurable and our result is therefore meaningful.
 In the main proof, `area_disc`, we use `volume_regionBetween_eq_integral` followed by
 `intervalIntegral.integral_of_le` to reduce our goal to a single `intervalIntegral`:
   `∫ (x : ℝ) in -r..r, 2 * sqrt (r ^ 2 - x ^ 2) = π * r ^ 2`.
-After disposing of the trivial case `r = 0`, we show that `fun x => 2 * sqrt (r ^ 2 - x ^ 2)` is
-equal to the derivative of `fun x => r ^ 2 * arcsin (x / r) + x * sqrt (r ^ 2 - x ^ 2)` everywhere
-on `Ioo (-r) r` and that those two functions are continuous, then apply the second fundamental
-theorem of calculus with those facts. Some simple algebra then completes the proof.
+The change of variables `x = r * t` reduces this integral to a constant
+multiple of the integral of `sqrt (1 - t ^ 2)` on `[-1, 1]`. The scaled integral
+identity also covers radius zero.
 
 Note that we choose to define `disc` as a set of points in `ℝ × ℝ`. This is admittedly not ideal; it
 would be more natural to define `disc` as a `Metric.ball` in `EuclideanSpace ℝ (Fin 2)` (as well as
@@ -84,7 +82,6 @@ theorem measurableSet_disc : MeasurableSet (disc r) := by
 /-- **Area of a Circle**: The area of a disc with radius `r` is `π * r ^ 2`. -/
 theorem area_disc : volume (disc r) = NNReal.pi * r ^ 2 := by
   let f x := sqrt (r ^ 2 - x ^ 2)
-  let F x := (r : ℝ) ^ 2 * arcsin (r⁻¹ * x) + x * sqrt (r ^ 2 - x ^ 2)
   have hf : Continuous f := by fun_prop
   suffices ∫ x in -r..r, 2 * f x = NNReal.pi * r ^ 2 by
     have h : IntegrableOn f (Ioc (-r) r) := hf.integrableOn_Icc.mono_set Ioc_subset_Icc_self
@@ -99,38 +96,23 @@ theorem area_disc : volume (disc r) = NNReal.pi * r ^ 2 := by
       _ = ENNReal.ofReal (∫ x in (-r : ℝ)..r, 2 * f x) := by
         rw [integral_of_le] <;> simp [two_mul]
       _ = NNReal.pi * r ^ 2 := by rw_mod_cast [this, ← ENNReal.coe_nnreal_eq]
-  have hle := NNReal.coe_nonneg r
-  obtain heq | hlt := hle.eq_or_lt; · simp [← heq]
-  have hderiv : ∀ x ∈ Ioo (-r : ℝ) r, HasDerivAt F (2 * f x) x := by
-    rintro x ⟨hx1, hx2⟩
-    convert!
-      ((hasDerivAt_const x ((r : ℝ) ^ 2)).mul
-            ((hasDerivAt_arcsin _ _).comp x
-              ((hasDerivAt_const x (r : ℝ)⁻¹).mul (hasDerivAt_id' x)))).add
-        ((hasDerivAt_id' x).mul
-          ((((hasDerivAt_id' x).fun_pow 2).const_sub ((r : ℝ) ^ 2)).sqrt _)) using 1
-    · have h₁ : 0 < (r : ℝ) ^ 2 - x ^ 2 := sub_pos_of_lt (sq_lt_sq' hx1 hx2)
-      have h : sqrt ((r : ℝ) ^ 2 - x ^ 2) ^ 3 =
-          ((r : ℝ) ^ 2 - x ^ 2) * sqrt ((r : ℝ) ^ 2 - x ^ 2) := by
-        rw [pow_three, ← mul_assoc, mul_self_sqrt (by positivity)]
-      simp [f]
-      field_simp
-      simp (disch := positivity)
-      field
-    · suffices -(1 : ℝ) < (r : ℝ)⁻¹ * x by exact this.ne'
-      calc
-        -(1 : ℝ) = (r : ℝ)⁻¹ * -r := by simp [inv_mul_cancel₀ hlt.ne']
-        _ < (r : ℝ)⁻¹ * x := by nlinarith [inv_pos.mpr hlt]
-    · suffices (r : ℝ)⁻¹ * x < 1 by exact this.ne
-      calc
-        (r : ℝ)⁻¹ * x < (r : ℝ)⁻¹ * r := by nlinarith [inv_pos.mpr hlt]
-        _ = 1 := inv_mul_cancel₀ hlt.ne'
-    · nlinarith
+  have hf_mul (x : ℝ) : f ((r : ℝ) * x) = r * sqrt (1 - x ^ 2) := by
+    change sqrt ((r : ℝ) ^ 2 - ((r : ℝ) * x) ^ 2) = r * sqrt (1 - x ^ 2)
+    rw [show (r : ℝ) ^ 2 - ((r : ℝ) * x) ^ 2 = (r : ℝ) ^ 2 * (1 - x ^ 2) by ring,
+      Real.sqrt_mul (sq_nonneg _), Real.sqrt_sq r.coe_nonneg]
   calc
-    ∫ x in -r..r, 2 * f x = F r - F (-r) :=
-      integral_eq_sub_of_hasDerivAt_of_le (neg_le_self r.2) (by fun_prop) hderiv
-        (ContinuousOn.intervalIntegrable (by fun_prop))
-    _ = NNReal.pi * (r : ℝ) ^ 2 := by
-      norm_num [F, inv_mul_cancel₀ hlt.ne', ← mul_div_assoc, mul_comm π]
+    ∫ x in -r..r, 2 * f x =
+        (r : ℝ) * ∫ x in (-1 : ℝ)..1, 2 * f ((r : ℝ) * x) := by
+      simpa only [mul_neg, mul_one, smul_eq_mul] using
+        (smul_integral_comp_mul_left (a := (-1 : ℝ)) (b := 1) (fun x ↦ 2 * f x) (r : ℝ)).symm
+    _ = (r : ℝ) * ((2 * (r : ℝ)) * (π / 2)) := by
+      congr 1
+      simp_rw [hf_mul, ← mul_assoc]
+      rw [intervalIntegral.integral_const_mul, integral_sqrt_one_sub_sq]
+    _ = NNReal.pi * r ^ 2 := by
+      have hπ : (NNReal.pi : ℝ) = π := rfl
+      rw [hπ]
+      ring
+
 
 end Theorems100

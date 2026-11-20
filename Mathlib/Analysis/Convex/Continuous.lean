@@ -42,22 +42,33 @@ lemma ConvexOn.lipschitzOnWith_of_abs_le (hf : ConvexOn ℝ (ball x₀ r) f) (h�
         _ ≤ ‖x - x₀‖ + ‖(ε / ‖x - y‖) • (x - y)‖ := norm_add_le ..
         _ < r - ε + ε :=
           add_lt_add_of_lt_of_le (mem_ball_iff_norm.1 hx) <| by
-            simp [norm_smul, abs_of_nonneg, hε.le, hxy.ne']
+            simp [norm_smul, abs_of_nonneg, hε.le]
         _ = r := by simp
     let a := ε / (ε + ‖x - y‖)
     let b := ‖x - y‖ / (ε + ‖x - y‖)
-    have hab : a + b = 1 := by simp [field, a, b]
+    have hdenom : 0 < ε + ‖x - y‖ := add_pos hε hxy
+    have hab : a + b = 1 := by
+      dsimp [a, b]
+      rw [← add_div, div_self]
     have hxyz : x = a • y + b • z := by
       calc
         x = a • x + b • x := by rw [Convex.combo_self hab]
-        _ = a • y + b • z := by simp [z, a, b, smul_smul, hxy.ne', smul_sub]; abel
+        _ = a • y + b • z := by simp [z, a, b, smul_smul, smul_sub]; abel
     rw [hK, mul_comm, ← mul_div_assoc₀, le_div_iff₀' hε]
     calc
       ε * (f x - f y) ≤ ‖x - y‖ * (f z - f x) := by
         have h := hf.map_combo_le hy' hz (by positivity) (by positivity) hab
-        simp only [← hxyz, smul_eq_mul, a, b] at h
-        field_simp at h
-        linear_combination h
+        rw [← hxyz] at h
+        change f x ≤ a * f y + b * f z at h
+        have hA : (ε + ‖x - y‖) * a = ε := by
+          dsimp [a]
+          rw [mul_comm, div_mul_cancel₀]
+        have hB : (ε + ‖x - y‖) * b = ‖x - y‖ := by
+          dsimp [b]
+          rw [mul_comm, div_mul_cancel₀]
+        have hmul := mul_le_mul_of_nonneg_left h hdenom.le
+        rw [mul_add, ← mul_assoc, ← mul_assoc, hA, hB] at hmul
+        linear_combination hmul
       _ ≤ _ := by
         rw [sub_eq_add_neg (f _), two_mul]
         gcongr
@@ -101,8 +112,8 @@ lemma ConvexOn.isBoundedUnder_abs (hf : ConvexOn ℝ C f) {x₀ : E} (hC : C ∈
     -|2 * f x₀| ≤ 2 * f x₀ := neg_abs_le _
     _ ≤ f y + f (2 • x₀ - y) := by
       have := hf.map_combo_le hx' hx (by positivity) (by positivity) (add_halves _)
-      simp only [one_div₀, ← Nat.cast_smul_eq_nsmul ℝ, Nat.cast_ofNat, smul_sub, ne_eq,
-        OfNat.ofNat_ne_zero, not_false_eq_true, inv_smul_smul₀, add_sub_cancel, smul_eq_mul] at this
+      simp only [one_div₀, ← Nat.cast_smul_eq_nsmul ℝ, Nat.cast_ofNat, smul_sub, inv_smul_smul₀,
+        add_sub_cancel, smul_eq_mul] at this
       cancel_denoms at this
       rwa [← Nat.cast_two, Nat.cast_smul_eq_nsmul] at this
     _ ≤ f y + |r| := by gcongr; exact hfr'.trans (le_abs_self _)

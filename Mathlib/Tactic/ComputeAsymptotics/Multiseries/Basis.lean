@@ -160,18 +160,21 @@ theorem push_log_last {basis_hd : ℝ → ℝ} {basis_tl : Basis}
 theorem pow_isLittleO_pow_of_log {f g : ℝ → ℝ} (a b : ℝ) (hf : ∀ᶠ x in atTop, 0 < f x)
     (hg : Tendsto g atTop atTop) (h : (Real.log ∘ f) =o[atTop] (Real.log ∘ g)) (hb : 0 < b) :
     (f ^ a) =o[atTop] (g ^ b) := by
-  apply IsLittleO.of_tendsto_div_atTop
-  apply Tendsto.congr' (f₁ := Real.exp ∘ (b • Real.log ∘ g - a • Real.log ∘ f))
-  · refine (hf.and (hg.eventually_gt_atTop 0)).mono (fun x ⟨hf, hg⟩ ↦ ?_)
-    simp [Real.exp_sub, mul_comm a, mul_comm b, Real.exp_mul, Real.exp_log hg, Real.exp_log hf]
-  apply Real.tendsto_exp_atTop.comp
+  have hg_pos := hg.eventually_gt_atTop 0
+  refine isLittleO_of_tendsto' (hg_pos.mono fun x hx hz ↦ ?_) ?_
+  · exact ((Real.rpow_pos_of_pos hx b).ne' hz).elim
   have h' : (b • Real.log ∘ g - a • Real.log ∘ f) ~[atTop] b • Real.log ∘ g := by
     replace h : (a • Real.log ∘ f) =o[atTop] (b • Real.log ∘ g) :=
       (h.const_mul_left a).const_mul_right (hb.ne')
     grind only [IsEquivalent.sub_isLittleO, IsEquivalent.refl]
-  rw [h'.tendsto_atTop_iff]
-  apply Filter.Tendsto.const_mul_atTop hb
-  apply Real.tendsto_log_atTop.comp hg
+  have htop : Tendsto (b • Real.log ∘ g - a • Real.log ∘ f) atTop atTop := by
+    rw [h'.tendsto_atTop_iff]
+    exact (Real.tendsto_log_atTop.comp hg).const_mul_atTop hb
+  have hlim := Real.tendsto_exp_atBot.comp (tendsto_neg_atBot_iff.mpr htop)
+  refine (hlim.comp tendsto_comap).congr' ?_
+  filter_upwards [hf.comap Subtype.val, hg_pos.comap Subtype.val] with x hfx hgx
+  simp [Function.comp_def, neg_sub, Real.exp_sub, mul_comm a, mul_comm b, Real.exp_mul,
+    Real.exp_log hfx, Real.exp_log hgx]
 
 /-- Any power of function from a well-formed basis' tail is Majorized by
 basis' head with zero exponent. -/

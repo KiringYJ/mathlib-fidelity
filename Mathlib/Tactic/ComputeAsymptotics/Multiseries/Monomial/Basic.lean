@@ -134,19 +134,22 @@ theorem mul_toFun {m1 m2 : UnitMonomial} {basis : Basis} (h_basis : WellFormedBa
       grind
 
 theorem inv_toFun {m : UnitMonomial} {basis : Basis} (h_basis : WellFormedBasis basis) :
-    m.inv.toFun basis =ᶠ[atTop] (m.toFun basis)⁻¹ := by
-  eta_expand
-  simp only [toFun, inv, Pi.inv_apply]
+    ∀ᶠ x in atTop, ∀ hx : m.toFun basis x ≠ 0,
+      m.inv.toFun basis x = Checked.inv (m.toFun basis x) hx.isUnit := by
   induction m generalizing basis with
-  | nil => simp
+  | nil => simp [inv]
   | cons exp exps ih =>
     cases basis with
     | nil => simp
     | cons basis_hd basis_tl =>
-      apply ((h_basis.head_eventually_pos).and (ih (h_basis.tail))).mono
-      intro x ⟨h_pos, ih⟩
-      simp only [List.map_cons, List.zipWith_cons_cons, List.prod_cons, mul_inv_rev]
-      grind [Real.rpow_neg h_pos.le]
+      filter_upwards [h_basis.head_eventually_pos, ih h_basis.tail] with x hpos htail
+      intro hx
+      change basis_hd x ^ exp * toFun exps basis_tl x ≠ 0 at hx
+      have ht : toFun exps basis_tl x ≠ 0 := fun he ↦ hx (by rw [he, mul_zero])
+      change basis_hd x ^ (-exp) * (inv exps).toFun basis_tl x =
+        Checked.inv (basis_hd x ^ exp * toFun exps basis_tl x) hx.isUnit
+      rw [htail ht, Real.rpow_neg hpos.le exp
+        (hxy := (Real.rpow_ne_zero_of_pos hpos exp).isUnit), mul_inv₀]
 
 theorem majorized_tail_toFun_head {m : UnitMonomial} {basis_hd : ℝ → ℝ} {basis_tl : Basis}
     (h_length : m.length = basis_tl.length)
@@ -355,19 +358,25 @@ lemma isLittleO_of_lt {basis : Basis} {m1 m2 : UnitMonomial}
     exact isLittleO_of_lt h_basis.tail (by simpa using h1) (by simpa using h2) h
   | rel h =>
     simp only [List.length_cons, Nat.add_right_cancel_iff, toFun_cons] at h1 h2 ⊢
-    apply IsLittleO.of_tendsto_div_atTop
-    apply Filter.Tendsto.congr' (f₁ := UnitMonomial.toFun ((exp2 - exp1) ::
-      UnitMonomial.mul m2 (UnitMonomial.inv m1)) (basis_hd :: basis_tl))
-    · simp only [toFun_cons, Pi.mul_apply, Pi.pow_apply]
-      grw [mul_toFun h_basis.tail (by grind [inv_length]), inv_toFun h_basis.tail]
-      apply h_basis.head_eventually_pos.mono
-      intro x hx
-      simp only [Pi.mul_apply, Pi.pow_apply, Pi.inv_apply, Real.rpow_sub hx]
-      field
-    · apply toFun_tendsto_top_of_firstNonzeroIsPos h_basis
-      · grind [inv_length, mul_length]
-      · apply FirstNonzeroIsPos.of_head
-        grind
+    have hpos := h_basis.head_eventually_pos
+    have htail := toFun_ne_zero (m := m2) h_basis.tail
+    have hden : ∀ᶠ x in atTop, (basis_hd ^ exp2 * toFun m2 basis_tl) x ≠ 0 := by
+      filter_upwards [hpos, htail] with x hx htx
+      exact mul_ne_zero (Real.rpow_ne_zero_of_pos hx exp2) htx
+    refine isLittleO_of_tendsto' (hden.mono fun _ hx hzero ↦ (hx hzero).elim) ?_
+    have hlim : Tendsto (toFun ((exp1 - exp2) :: mul m1 (inv m2)) (basis_hd :: basis_tl))
+        atTop (𝓝 0) := by
+      apply toFun_tendsto_zero_of_firstNonzeroIsNeg h_basis
+      · simp [mul_length (m1 := m1) (m2 := inv m2) (by simp [h1, h2]), h1]
+      · exact FirstNonzeroIsNeg.of_head _ (sub_neg.mpr h)
+    have hmul := mul_toFun (m1 := m1) (m2 := inv m2) h_basis.tail (by simp [h1, h2])
+    have hinv := inv_toFun (m := m2) h_basis.tail
+    refine (hlim.comp tendsto_comap).congr' ?_
+    filter_upwards [hpos.comap Subtype.val, htail.comap Subtype.val,
+      hmul.comap Subtype.val, hinv.comap Subtype.val] with x hx htx hm hi
+    simp only [Function.comp_def, toFun_cons, Pi.mul_apply, Pi.pow_apply, hm, hi htx,
+      Real.rpow_sub hx, div_eq_mul_inv₀, mul_inv₀]
+    ring
 
 end UnitMonomial
 
@@ -414,9 +423,9 @@ noncomputable def mul (t1 t2 : Monomial) : Monomial :=
 noncomputable def smul (t : Monomial) (c : ℝ) : Monomial :=
   ⟨c * t.coef, t.unit⟩
 
-/-- Inversion operation for monomials. -/
-noncomputable def inv (t : Monomial) : Monomial :=
-  ⟨t.coef⁻¹, t.unit.inv⟩
+/-- Inversion of a monomial with nonzero coefficient. -/
+noncomputable def inv (t : Monomial) (ht : t.coef ≠ 0) : Monomial :=
+  ⟨Checked.inv t.coef ht.isUnit, t.unit.inv⟩
 
 /-- Flipping the sign of `coef` flips the sign of `toFun`. The theorem is stated in this form,
 because it allows one to rewrite the `t.toFun basis` expression. It is used below in cases where we
@@ -441,17 +450,20 @@ theorem smul_toFun {t : Monomial} {basis : Basis} (c : ℝ) :
   simp [smul, toFun]
   ring
 
-theorem inv_toFun {t : Monomial} {basis : Basis} (h_basis : WellFormedBasis basis) :
-    t.inv.toFun basis =ᶠ[atTop] (t.toFun basis)⁻¹ := by
-  simp only [toFun, inv]
-  grw [UnitMonomial.inv_toFun h_basis]
-  filter_upwards [] with x
-  simp [Pi.smul_apply, Pi.inv_apply]
-  ring
+theorem inv_toFun {t : Monomial} {basis : Basis} (h_basis : WellFormedBasis basis)
+    (ht : t.coef ≠ 0) : ∀ᶠ x in atTop, ∀ hx : t.toFun basis x ≠ 0,
+      (t.inv ht).toFun basis x = Checked.inv (t.toFun basis x) hx.isUnit := by
+  filter_upwards [UnitMonomial.inv_toFun (m := t.unit) h_basis] with x h_unit
+  intro hx
+  change t.coef * t.unit.toFun basis x ≠ 0 at hx
+  have hu : t.unit.toFun basis x ≠ 0 := fun he ↦ hx (by rw [he, mul_zero])
+  change Checked.inv t.coef ht.isUnit * t.unit.inv.toFun basis x =
+    Checked.inv (t.coef * t.unit.toFun basis x) hx.isUnit
+  rw [h_unit hu, mul_inv₀]
 
 @[simp]
-theorem inv_length (t : Monomial) :
-    t.inv.unit.length = t.unit.length := by
+theorem inv_length (t : Monomial) (ht : t.coef ≠ 0) :
+    (t.inv ht).unit.length = t.unit.length := by
   simp [inv]
 
 /-- If `t.coef > 0` then `t.toFun` is eventually positive. -/

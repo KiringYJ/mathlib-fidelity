@@ -217,7 +217,7 @@ theorem rothNumberNat_le_ruzsaSzemerediNumberNat' :
       _ ≤ (ruzsaSzemerediNumberNat (6 * (n / 6) + 3) : ℝ) := ?_
       _ ≤ _ := by grw [Nat.mul_div_le]
     · simp only [cast_add, cast_ofNat, cast_mul, cast_one, tsub_le_iff_right]
-      rw [← div_add_one (three_ne_zero' ℝ), ← le_sub_iff_add_le, div_le_iff₀ (zero_lt_three' ℝ),
+      rw [← div_add_one, ← le_sub_iff_add_le, div_le_iff₀ (zero_lt_three' ℝ),
         add_assoc, add_sub_assoc, add_mul, mul_right_comm, add_sub_cancel_left]
       norm_cast
       rw [← mul_add_one]
@@ -253,14 +253,14 @@ theorem ruzsaSzemerediNumberNat_asymptotic_lower_bound :
   · simp_rw [sq]
     refine (IsBigO.mul ?_ ?_).mul ?_
     · trans fun n ↦ n / 3
-      · simp_rw [div_eq_inv_mul]
+      · simp_rw [div_eq_inv_mul₀]
         exact (isBigO_refl ..).const_mul_right (by simp)
-      refine IsLittleO.right_isBigO_sub ?_
-      simpa [div_eq_inv_mul, Function.comp_def] using
-        .atTop_of_const_mul₀ zero_lt_three (by simp [tendsto_natCast_atTop_atTop])
+      refine IsLittleO.right_isBigO_sub (isLittleO_const_left.mpr (Or.inr ?_))
+      simpa only [Real.norm_eq_abs, Function.comp_def] using tendsto_abs_atTop_atTop.comp
+        (Tendsto.atTop_div_const (zero_lt_three : (0 : ℝ) < 3) tendsto_natCast_atTop_atTop)
     · rw [IsBigO_def]
       refine ⟨12, ?_⟩
-      simp only [IsBigOWith, norm_natCast, eventually_atTop]
+      simp only [IsBigOWith, Real.norm_natCast, eventually_atTop]
       exact ⟨15, fun x hx ↦ by norm_cast; lia⟩
     · rw [isBigO_exp_comp_exp_comp]
       refine ⟨0, ?_⟩

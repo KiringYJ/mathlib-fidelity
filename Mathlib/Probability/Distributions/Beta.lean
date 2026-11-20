@@ -61,7 +61,8 @@ theorem beta_eq_betaIntegralReal (α β : ℝ) (hα : 0 < α) (hβ : 0 < β) :
     beta α β hα hβ = (betaIntegral α β).re := by
   rw [betaIntegral_eq_Gamma_mul_div]
   · simp_rw [beta, ← ofReal_add α β, Gamma_ofReal]
-    norm_cast
+    rw [← ofReal_mul, ← ofReal_div _ _ (hs := (Real.Gamma_pos_of_pos (add_pos hα hβ)).ne'.isUnit),
+      ofReal_re]
   all_goals simpa
 
 /-- The probability density function of the beta distribution with shape parameters `α` and `β`,
@@ -70,7 +71,7 @@ Returns `(1 / beta α β hα hβ) * x ^ (α - 1) * (1 - x) ^ (β - 1)`
 when `0 < x < 1` and `0` otherwise. -/
 noncomputable def betaPDFReal (α β : ℝ) (hα : 0 < α) (hβ : 0 < β) (x : ℝ) : ℝ :=
   if 0 < x ∧ x < 1 then
-    (1 / beta α β hα hβ) * x ^ (α - 1) * (1 - x) ^ (β - 1)
+    Checked.div 1 (beta α β hα hβ) (beta_pos hα hβ).ne'.isUnit * x ^ (α - 1) * (1 - x) ^ (β - 1)
   else
     0
 
@@ -82,7 +83,8 @@ noncomputable def betaPDF (α β : ℝ) (hα : 0 < α) (hβ : 0 < β) (x : ℝ) 
 lemma betaPDF_eq {α β : ℝ} (hα : 0 < α) (hβ : 0 < β) (x : ℝ) :
     betaPDF α β hα hβ x =
       ENNReal.ofReal (if 0 < x ∧ x < 1 then
-        (1 / beta α β hα hβ) * x ^ (α - 1) * (1 - x) ^ (β - 1) else 0) := rfl
+        Checked.div 1 (beta α β hα hβ) (beta_pos hα hβ).ne'.isUnit *
+          x ^ (α - 1) * (1 - x) ^ (β - 1) else 0) := rfl
 
 lemma betaPDF_eq_zero_of_nonpos {α β x : ℝ} (hα : 0 < α) (hβ : 0 < β) (hx : x ≤ 0) :
     betaPDF α β hα hβ x = 0 := by
@@ -95,13 +97,15 @@ lemma betaPDF_eq_zero_of_one_le {α β x : ℝ} (hα : 0 < α) (hβ : 0 < β) (h
 lemma betaPDF_of_pos_lt_one {α β x : ℝ} (hα : 0 < α) (hβ : 0 < β) (hx_pos : 0 < x)
     (hx_lt : x < 1) :
     betaPDF α β hα hβ x =
-      ENNReal.ofReal ((1 / beta α β hα hβ) * x ^ (α - 1) * (1 - x) ^ (β - 1)) := by
+      ENNReal.ofReal (Checked.div 1 (beta α β hα hβ) (beta_pos hα hβ).ne'.isUnit *
+        x ^ (α - 1) * (1 - x) ^ (β - 1)) := by
   rw [betaPDF_eq, ite_eq_left ⟨hx_pos, hx_lt⟩]
 
 lemma lintegral_betaPDF {α β : ℝ} (hα : 0 < α) (hβ : 0 < β) :
     ∫⁻ x, betaPDF α β hα hβ x =
       ∫⁻ (x : ℝ) in Ioo 0 1,
-        ENNReal.ofReal (1 / beta α β hα hβ * x ^ (α - 1) * (1 - x) ^ (β - 1)) := by
+        ENNReal.ofReal (Checked.div 1 (beta α β hα hβ) (beta_pos hα hβ).ne'.isUnit *
+          x ^ (α - 1) * (1 - x) ^ (β - 1)) := by
   rw [← lintegral_add_compl _ measurableSet_Iic,
     setLIntegral_eq_zero measurableSet_Iic
       (fun x (hx : x ≤ 0) ↦ betaPDF_eq_zero_of_nonpos hα hβ hx),
@@ -136,8 +140,7 @@ lemma lintegral_betaPDF_eq_one {α β : ℝ} (hα : 0 < α) (hβ : 0 < β) :
     ∫⁻ x, betaPDF α β hα hβ x = 1 := by
   rw [lintegral_betaPDF, ← ENNReal.toReal_eq_one_iff, ← integral_eq_lintegral_of_nonneg_ae]
   · simp_rw [mul_assoc, integral_const_mul]
-    field_simp
-    rw [div_eq_one_iff_eq (ne_of_gt (beta_pos hα hβ)), beta_eq_betaIntegralReal α β hα hβ,
+    rw [mul_comm, ← div_eq_mul_one_div₀, div_eq_one_iff_eq, beta_eq_betaIntegralReal α β hα hβ,
       betaIntegral, intervalIntegral.integral_of_le (by norm_num),
       ← integral_Ioc_eq_integral_Ioo, ← RCLike.re_to_complex, ← integral_re]
     · refine setIntegral_congr_fun measurableSet_Ioc fun x ⟨hx1, hx₂⟩ ↦ ?_

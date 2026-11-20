@@ -96,6 +96,9 @@ theorem exists_approx_polynomial_aux [Ring Fq] {d : ℕ} {m : ℕ} (hm : Fintype
 
 variable [Field Fq]
 
+local instance : NeZero (log (Fintype.card Fq)) :=
+  ⟨(log_pos (by exact_mod_cast Fintype.one_lt_card (α := Fq))).ne'⟩
+
 /-- If `A` is a family of enough low-degree polynomials over a finite field,
 there is a pair of elements in `A` (with different indices but not necessarily
 distinct), such that the difference of their remainders is close together. -/
@@ -131,14 +134,14 @@ theorem exists_approx_polynomial {b : Fq[X]} (hb : b ≠ 0) {ε : ℝ} (hε : 0 
       Int.cast_pow, Int.cast_natCast, Int.cast_pow, Int.cast_natCast,
       log_mul (pow_ne_zero _ q_pos'.ne') hε.ne', ← rpow_natCast, ← rpow_natCast, log_rpow q_pos',
       log_rpow q_pos', ← lt_div_iff₀ (log_pos one_lt_q'), add_div,
-      mul_div_cancel_right₀ _ (log_pos one_lt_q').ne']
+      mul_div_cancel_right₀]
   -- And that result follows from manipulating the result from `exists_approx_polynomial_aux`
   -- to turn the `-⌈-stuff⌉₊` into `+ stuff`.
   apply lt_of_lt_of_le (Nat.cast_lt.mpr (WithBot.coe_lt_coe.mp _)) _
   swap
   · convert deg_lt
     rw [degree_eq_natDegree h']; rfl
-  rw [← sub_neg_eq_add, ← neg_div, Nat.cast_id, Nat.cast_sub le_b.le]
+  rw [← sub_neg_eq_add, neg_div₀', Nat.cast_id, Nat.cast_sub le_b.le]
   grw [← Nat.le_ceil]
 
 /-- If `x` is close to `y` and `y` is close to `z`, then `x` and `z` are at least as close. -/

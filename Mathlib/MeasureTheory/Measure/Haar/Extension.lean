@@ -103,7 +103,7 @@ noncomputable def pushforward :
         · simp [hS', hε, exists_gt]
         · refine ⟨ε / 2 / μA.real S, by positivity, ?_⟩
           rwa [← ENNReal.ofReal_mul' measureReal_nonneg, ENNReal.ofReal_lt_ofReal_iff hε,
-            div_mul_cancel₀ _ hS', half_lt_self_iff]
+            div_mul_cancel₀, half_lt_self_iff]
       have hS {x} (hx : x ∈ U₀) {y} (hy : y ∉ S) : H.pullback f x y = 0 := by
         contrapose! hy
         exact Set.mem_mul.mpr ⟨x⁻¹, Set.inv_mem_inv.mpr hx, x * φ y,

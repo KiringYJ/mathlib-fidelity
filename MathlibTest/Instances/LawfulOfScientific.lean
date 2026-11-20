@@ -1,12 +1,16 @@
 module
 import Mathlib
 
--- `grind` will infer these instances often, so it is important that they remain fast.
+-- Numeric tactics infer these characteristic-zero literal instances frequently.
 
 set_option maxHeartbeats 10 in
 #guard_msgs in
-example : Lean.Grind.LawfulOfScientific ℚ := inferInstance
+example : OfScientific ℚ := inferInstance
 
 set_option maxHeartbeats 100 in
 #guard_msgs in
-example : Lean.Grind.LawfulOfScientific ℝ := inferInstance
+example : OfScientific ℝ := inferInstance
+
+example (m e : ℕ) (s : Bool) :
+    ((OfScientific.ofScientific m s e : ℚ) : ℝ) = (OfScientific.ofScientific m s e : ℝ) :=
+  Rat.cast_ofScientific m s e

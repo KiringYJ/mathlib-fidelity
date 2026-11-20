@@ -52,7 +52,7 @@ lemma LSeries_add {f g : ℕ → ℂ} {s : ℂ} (hf : LSeriesSummable f s) (hg :
 
 lemma LSeries.term_neg (f : ℕ → ℂ) (s : ℂ) : term (-f) s = -term f s := by
   ext ⟨- | n⟩ <;>
-  simp [neg_div]
+  simp [neg_div₀]
 
 lemma LSeries.term_neg_apply (f : ℕ → ℂ) (s : ℂ) (n : ℕ) : term (-f) s n = -term f s n := by
   simp [term_neg]
@@ -106,7 +106,7 @@ lemma LSeries_sub {f g : ℕ → ℂ} {s : ℂ} (hf : LSeriesSummable f s) (hg :
 
 lemma LSeries.term_smul (f : ℕ → ℂ) (c s : ℂ) : term (c • f) s = c • term f s := by
   ext ⟨- | n⟩ <;>
-  simp [mul_div_assoc]
+  simp [mul_div_assoc₀]
 
 lemma LSeries.term_smul_apply (f : ℕ → ℂ) (c s : ℂ) (n : ℕ) :
     term (c • f) s n = c * term f s n := by

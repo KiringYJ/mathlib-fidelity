@@ -27,15 +27,21 @@ lemma span_nonneg_inter_closedBall {r : ℝ} (hr : 0 < r) :
   intro x hx
   obtain (rfl | hx_pos) := eq_zero_or_norm_pos x
   · exact zero_mem _
-  · suffices (r * ‖x‖⁻¹ : ℂ)⁻¹ • ((r * ‖x‖⁻¹ : ℂ) • x) = x by
-      rw [← this]
-      refine smul_mem _ _ (subset_span <| Set.mem_inter ?_ ?_)
-      · norm_cast
-        exact smul_nonneg (by positivity) hx
-      · simp [mul_smul, norm_smul, abs_of_pos hr, inv_mul_cancel₀ hx_pos.ne']
-    apply inv_smul_smul₀
-    norm_cast
-    positivity
+  · let t : ℝ := r / ‖x‖
+    have ht : 0 < t := div_pos hr hx_pos
+    have hu : IsUnit (t : ℂ) := (Complex.ofReal_ne_zero.mpr ht.ne').isUnit
+    have hnorm : ‖(t : ℂ) • x‖ = r := by
+      rw [norm_smul, Complex.norm_real, Real.norm_eq_abs, abs_of_pos ht]
+      exact div_mul_cancel₀ r
+    have hmem : (t : ℂ) • x ∈ {y : A | 0 ≤ y} ∩ Metric.closedBall 0 r := by
+      refine ⟨?_, ?_⟩
+      · change 0 ≤ (t : ℂ) • x
+        norm_cast
+        exact smul_nonneg ht.le hx
+      · rw [Metric.mem_closedBall, dist_zero_right, hnorm]
+    have h := smul_mem _ ((t : ℂ)⁻¹) (subset_span hmem)
+    change x ∈ span ℂ ({y : A | 0 ≤ y} ∩ Metric.closedBall 0 r)
+    simpa only [inv_smul_smul₀] using h
 
 /-- A C⋆-algebra is spanned by nonnegative elements of norm less than `r`. -/
 lemma span_nonneg_inter_ball {r : ℝ} (hr : 0 < r) :

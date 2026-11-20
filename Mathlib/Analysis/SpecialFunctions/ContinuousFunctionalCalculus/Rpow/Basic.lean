@@ -163,11 +163,11 @@ lemma nnrpow_nnrpow {a : A} {x y : ℝ≥0} : (a ^ x) ^ y = a ^ (x * y) := by
 
 lemma nnrpow_nnrpow_inv (a : A) {x : ℝ≥0} (hx : x ≠ 0) (ha : 0 ≤ a := by cfc_tac) :
     (a ^ x) ^ x⁻¹ = a := by
-  simp [mul_inv_cancel₀ hx, nnrpow_one _ ha]
+  simp [mul_inv_cancel₀, nnrpow_one _ ha]
 
 lemma nnrpow_inv_nnrpow (a : A) {x : ℝ≥0} (hx : x ≠ 0) (ha : 0 ≤ a := by cfc_tac) :
     (a ^ x⁻¹) ^ x = a := by
-  simp [inv_mul_cancel₀ hx, nnrpow_one _ ha]
+  simp [inv_mul_cancel₀, nnrpow_one _ ha]
 
 lemma nnrpow_inv_eq (a b : A) {x : ℝ≥0} (hx : x ≠ 0) (ha : 0 ≤ a := by cfc_tac)
     (hb : 0 ≤ b := by cfc_tac) : a ^ x⁻¹ = b ↔ b ^ x = a :=
@@ -242,8 +242,8 @@ grind_pattern sqrt_nonneg => NonnegSpectrumClass ℝ A, sqrt a
 lemma sqrt_eq_nnrpow (a : A) : sqrt a = a ^ (1 / 2 : ℝ≥0) := by
   simp only [sqrt]
   congr
-  ext
-  exact_mod_cast NNReal.sqrt_eq_rpow _
+  ext x
+  simp [NNReal.nnrpow_def, NNReal.sqrt_eq_rpow]
 
 lemma sqrt_of_not_nonneg {a : A} (ha : ¬0 ≤ a) : sqrt a = 0 :=
   cfcₙ_apply_of_not_predicate a ha
@@ -255,10 +255,10 @@ variable [IsSemitopologicalRing A] [T2Space A]
 
 @[simp]
 lemma nnrpow_sqrt {a : A} {x : ℝ≥0} : (sqrt a) ^ x = a ^ (x / 2) := by
-  rw [sqrt_eq_nnrpow, nnrpow_nnrpow, one_div_mul_eq_div 2 x]
+  rw [sqrt_eq_nnrpow, nnrpow_nnrpow, one_div_mul_eq_div₀]
 
 lemma nnrpow_sqrt_two (a : A) (ha : 0 ≤ a := by cfc_tac) : (sqrt a) ^ (2 : ℝ≥0) = a := by
-  simp only [nnrpow_sqrt, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, div_self]
+  simp only [nnrpow_sqrt, div_self]
   rw [nnrpow_one a]
 
 lemma sqrt_mul_sqrt_self (a : A) (ha : 0 ≤ a := by cfc_tac) : sqrt a * sqrt a = a := by
@@ -266,10 +266,10 @@ lemma sqrt_mul_sqrt_self (a : A) (ha : 0 ≤ a := by cfc_tac) : sqrt a * sqrt a 
 
 @[simp]
 lemma sqrt_nnrpow {a : A} {x : ℝ≥0} : sqrt (a ^ x) = a ^ (x / 2) := by
-  simp [sqrt_eq_nnrpow, div_eq_mul_inv]
+  rw [sqrt_eq_nnrpow, nnrpow_nnrpow, ← mul_div_assoc₀, mul_one]
 
 lemma sqrt_nnrpow_two (a : A) (ha : 0 ≤ a := by cfc_tac) : sqrt (a ^ (2 : ℝ≥0)) = a := by
-  simp only [sqrt_nnrpow, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, div_self]
+  simp only [sqrt_nnrpow, div_self]
   rw [nnrpow_one _]
 
 lemma sqrt_mul_self (a : A) (ha : 0 ≤ a := by cfc_tac) : sqrt (a * a) = a := by
@@ -475,12 +475,12 @@ lemma rpow_rpow [IsSemitopologicalRing A] [T2Space A]
 lemma rpow_rpow_inv [IsSemitopologicalRing A] [T2Space A]
     (a : A) (x : ℝ) (hx : x ≠ 0) (ha : IsStrictlyPositive a := by cfc_tac) :
     (a ^ x) ^ x⁻¹ = a := by
-  rw [rpow_rpow a x x⁻¹ hx, mul_inv_cancel₀ hx, rpow_one a ha.nonneg]
+  rw [rpow_rpow a x x⁻¹ hx, mul_inv_cancel₀, rpow_one a ha.nonneg]
 
 lemma rpow_inv_rpow [IsSemitopologicalRing A] [T2Space A]
     (a : A) (x : ℝ) (hx : x ≠ 0) (ha : IsStrictlyPositive a := by cfc_tac) :
     (a ^ x⁻¹) ^ x = a := by
-  simpa using rpow_rpow_inv a x⁻¹ (inv_ne_zero hx)
+  rw [rpow_rpow a x⁻¹ x hx.isUnit.inv₀.ne_zero ha, inv_mul_cancel₀, rpow_one a ha.nonneg]
 
 lemma rpow_rpow_of_exponent_nonneg [IsSemitopologicalRing A] [T2Space A] (a : A) (x y : ℝ)
     (hx : 0 ≤ x) (hy : 0 ≤ y) (ha : 0 ≤ a := by cfc_tac) : (a ^ x) ^ y = a ^ (x * y) := by
@@ -502,34 +502,33 @@ lemma rpow_neg_one_eq_inv (a : Aˣ) (ha : (0 : A) ≤ a := by cfc_tac) :
   refine a.inv_eq_of_mul_eq_one_left ?_ |>.symm
   simpa [rpow_one (a : A)] using rpow_neg_mul_rpow 1 (a.isStrictlyPositive_iff.mpr ha)
 
-lemma rpow_neg_one_eq_cfc_inv {A : Type*} [PartialOrder A] [NormedRing A] [StarRing A]
-    [StarOrderedRing A] [NormedAlgebra ℝ A] [NonnegSpectrumClass ℝ A]
-    [ContinuousFunctionalCalculus ℝ A IsSelfAdjoint] (a : A) :
-    a ^ (-1 : ℝ) = cfc (·⁻¹ : ℝ≥0 → ℝ≥0) a :=
-  cfc_congr fun x _ ↦ NNReal.rpow_neg_one x
+lemma rpow_neg_one_eq_cfc_inv (a : Aˣ) (ha : (0 : A) ≤ a := by cfc_tac) :
+    (a : A) ^ (-1 : ℝ) =
+      cfcHom (R := ℝ≥0) (a := (a : A)) (p := (0 ≤ ·)) ha
+        ⟨fun x : spectrum ℝ≥0 (a : A) ↦
+          Checked.inv (x : ℝ≥0) (spectrum.ne_zero_of_mem_of_unit x.property).isUnit,
+          a.continuous_inv_spectrum⟩ :=
+  (rpow_neg_one_eq_inv a ha).trans (cfc_inv_id (R := ℝ≥0) a ha).symm
 
 lemma inverse_eq_rpow_neg_one {a : A} (ha : IsStrictlyPositive a := by cfc_tac) :
-    Ring.inverse a = a ^ (-1 : ℝ) := by
-  obtain ⟨ax, hax⟩ := ha.isUnit
-  simp only [← hax, Ring.inverse_invertible, invOf_units, CFC.rpow_neg_one_eq_inv ax]
+    Checked.inv a ha.isUnit = a ^ (-1 : ℝ) := by
+  simpa only [IsUnit.unit_spec, Units.val_inv_eq_inv_val₀] using
+    (rpow_neg_one_eq_inv ha.isUnit.unit (by simpa only [IsUnit.unit_spec] using ha.nonneg)).symm
 
 lemma rpow_neg [IsSemitopologicalRing A] [T2Space A] (a : Aˣ) (x : ℝ)
     (ha' : (0 : A) ≤ a := by cfc_tac) : (a : A) ^ (-x) = (↑a⁻¹ : A) ^ x := by
-  suffices h₁ : ContinuousOn (fun z ↦ z ^ x) (Inv.inv '' (spectrum ℝ≥0 (a : A))) by
-    rw [← cfc_inv_id (R := ℝ≥0) a, rpow_def, rpow_def,
-        ← cfc_comp' (fun z => z ^ x) (Inv.inv : ℝ≥0 → ℝ≥0) (a : A) h₁]
-    congr! 1 with _ _
-    simp [NNReal.rpow_neg, NNReal.inv_rpow]
-  refine NNReal.continuousOn_rpow_const (.inl ?_)
-  rintro ⟨z, hz, hz'⟩
-  exact spectrum.zero_notMem ℝ≥0 a.isUnit <| inv_eq_zero.mp hz' ▸ hz
+  rw [← rpow_neg_one_eq_inv a ha',
+    rpow_rpow (a : A) (-1) x (by norm_num) (a.isStrictlyPositive_iff.mpr ha')]
+  congr 1
+  ring
 
 lemma rpow_intCast (a : Aˣ) (n : ℤ) (ha : (0 : A) ≤ a := by cfc_tac) :
     (a : A) ^ (n : ℝ) = (↑(a ^ n) : A) := by
-  rw [← cfc_zpow (R := ℝ≥0) a n, rpow_def]
-  congr! 1 with _ _
-  simp
-
+  rw [← cfc_zpow (R := ℝ≥0) a n ha, rpow_def, cfc_apply _ _ ha]
+  congr 1
+  ext x
+  have hx : (x : ℝ≥0) ≠ 0 := spectrum.ne_zero_of_mem_of_unit x.property
+  exact congrArg ((↑) : ℝ≥0 → ℝ) (NNReal.rpow_intCast (x : ℝ≥0) n (h := fun _ ↦ hx))
 /-- `a ^ x` bundled as an element of `Aˣ` for `a : Aˣ`. -/
 @[simps]
 noncomputable def _root_.Units.cfcRpow (a : Aˣ) (x : ℝ) (ha : (0 : A) ≤ a := by cfc_tac) : Aˣ :=
@@ -632,8 +631,8 @@ lemma nnrpow_eq_rpow {a : A} {x : ℝ≥0} (hx : 0 < x) : a ^ x = a ^ (x : ℝ) 
   rw [nnrpow_def (A := A), rpow_def, cfcₙ_eq_cfc]
 
 lemma sqrt_eq_rpow {a : A} : sqrt a = a ^ (1 / 2 : ℝ) := by
-  have : a ^ (1 / 2 : ℝ) = a ^ ((1 / 2 : ℝ≥0) : ℝ) := rfl
-  rw [this, ← nnrpow_eq_rpow (by simp), sqrt_eq_nnrpow a]
+  have hhalf : 0 < (1 / 2 : ℝ≥0) := by positivity
+  simpa using (sqrt_eq_nnrpow a).trans (nnrpow_eq_rpow hhalf)
 
 lemma sqrt_eq_cfc {a : A} : sqrt a = cfc NNReal.sqrt a := by
   unfold sqrt
@@ -671,8 +670,8 @@ lemma sqrt_rpow {a : A} {x : ℝ} (h : IsUnit a)
     (hx : x ≠ 0) : sqrt (a ^ x) = a ^ (x / 2) := by
   by_cases hnonneg : 0 ≤ a
   case pos =>
-    have : IsStrictlyPositive a := by grind
-    simp [sqrt_eq_rpow, div_eq_mul_inv, one_mul, rpow_rpow _ _ _ hx]
+    have ha : IsStrictlyPositive a := by grind
+    rw [sqrt_eq_rpow, rpow_rpow _ _ _ hx ha, ← mul_div_assoc₀, mul_one]
   case neg =>
     simp [sqrt_eq_cfc, rpow_def, cfc_apply_of_not_predicate a hnonneg]
 
@@ -680,8 +679,7 @@ lemma sqrt_rpow {a : A} {x : ℝ} (h : IsUnit a)
 lemma rpow_sqrt (a : A) (x : ℝ) (h : IsUnit a)
     (ha : 0 ≤ a := by cfc_tac) : (sqrt a) ^ x = a ^ (x / 2) := by
   have : IsStrictlyPositive a := by grind
-  rw [sqrt_eq_rpow, div_eq_mul_inv, one_mul,
-      rpow_rpow _ _ _ (by simp), inv_mul_eq_div]
+  rw [sqrt_eq_rpow, rpow_rpow _ _ _ (by simp), one_div_mul_eq_div₀]
 
 lemma sqrt_rpow_nnreal {a : A} {x : ℝ≥0} : sqrt (a ^ (x : ℝ)) = a ^ (x / 2 : ℝ) := by
   by_cases htriv : 0 ≤ a
@@ -702,7 +700,7 @@ lemma rpow_sqrt_nnreal {a : A} {x : ℝ≥0}
     simp [hx, rpow_zero _ ha', rpow_zero _ ha]
   case neg =>
     have h₁ : 0 ≤ (x : ℝ) := NNReal.zero_le_coe
-    rw [sqrt_eq_rpow, rpow_rpow_of_exponent_nonneg _ _ _ (by simp) h₁, one_div_mul_eq_div]
+    rw [sqrt_eq_rpow, rpow_rpow_of_exponent_nonneg _ _ _ (by simp) h₁, one_div_mul_eq_div₀]
 
 @[grind =]
 lemma isUnit_nnrpow_iff (a : A) (y : ℝ≥0) (hy : y ≠ 0) (ha : 0 ≤ a := by cfc_tac) :
@@ -749,57 +747,43 @@ omit [T2Space A] [IsSemitopologicalRing A] in
 lemma _root_.IsStrictlyPositive.rpow (a : A) (y : ℝ) (ha : IsStrictlyPositive a := by cfc_tac) :
     IsStrictlyPositive (a ^ y) := by grind
 
-lemma inverse_rpow (a : A) (x : ℝ) (hx : x ≠ 0) (ha : IsStrictlyPositive a := by cfc_tac) :
-    Ring.inverse (a ^ x) = a ^ (-x) := by
-  have : a ^ (-x) = (a ^ x) ^ (-1 : ℝ) := by
-    rw [rpow_rpow (hx := hx) (ha := by grind)]
-    simp
-  rw [← inverse_eq_rpow_neg_one (by grind)] at this
-  rw [this]
+omit [IsSemitopologicalRing A] [T2Space A] in
+lemma inverse_rpow (a : A) (x : ℝ) (ha : IsStrictlyPositive a := by cfc_tac) :
+    Checked.inv (a ^ x) (ha.isUnit.cfcRpow x ha.nonneg) = a ^ (-x) :=
+  inv_eq_of_mul_eq_one_right₀ (rpow_mul_rpow_neg x ha)
 
 omit [IsSemitopologicalRing A] [T2Space A] in
 @[aesop safe apply]
-lemma _root_.IsStrictlyPositive.ringInverse {a : A} (ha : IsStrictlyPositive a) :
-    IsStrictlyPositive a⁻¹ʳ := by
-  rw [CFC.inverse_eq_rpow_neg_one]
-  cfc_tac
+lemma _root_.IsStrictlyPositive.inv {a : A} (ha : IsStrictlyPositive a) :
+    IsStrictlyPositive (Checked.inv a ha.isUnit) := by
+  rw [CFC.inverse_eq_rpow_neg_one ha]
+  exact ha.rpow a (-1)
 
 omit [IsSemitopologicalRing A] [T2Space A] in
 @[grind =]
-lemma _root_.isStrictlyPositive_ringInverse_iff {a : A} :
-    IsStrictlyPositive a⁻¹ʳ ↔ IsStrictlyPositive a := by
-  nontriviality A
-  refine ⟨fun h => ?_, IsStrictlyPositive.ringInverse⟩
-  have ha : IsUnit a := by
-    by_contra H
-    rw [Ring.inverse_non_unit _ H, IsStrictlyPositive.iff_of_unital] at h
-    exact not_isUnit_zero h.2
-  rw [← Ring.inverse_inverse ha]
-  exact h.ringInverse
+lemma _root_.isStrictlyPositive_inv_iff {a : A} {ha : IsUnit a} :
+    IsStrictlyPositive a⁻¹ ↔ IsStrictlyPositive a := by
+  constructor
+  · intro h
+    simpa only [inv_inv₀] using h.inv
+  · exact IsStrictlyPositive.inv
 
 omit [IsSemitopologicalRing A] [T2Space A] in
-open Ring in
 @[grind =]
-lemma ringInverse_nonneg_iff_nonneg_of_isUnit {a : A} (ha : IsUnit a) :
-    0 ≤ a⁻¹ʳ ↔ 0 ≤ a := by
-  grind [isStrictlyPositive_ringInverse_iff]
+lemma inv_nonneg_iff_nonneg_of_isUnit {a : A} {ha : IsUnit a} :
+    0 ≤ a⁻¹ ↔ 0 ≤ a := by
+  simpa only [IsStrictlyPositive.iff_of_unital, ha, ha.inv₀, and_true] using
+    (isStrictlyPositive_inv_iff (ha := ha))
 
-open Ring in
 @[grind _=_]
-lemma sqrt_ringInverse {a : A} : sqrt a⁻¹ʳ = (sqrt a)⁻¹ʳ := by
-  by_cases ha : IsStrictlyPositive a
-  · rw [sqrt_eq_rpow, sqrt_eq_rpow, inverse_rpow _ _ (by grind),
-        inverse_eq_rpow_neg_one, rpow_rpow _ _ _ (by grind)]
-    grind only
-  · have ha' : ¬IsUnit (sqrt a) := by rwa [CFC.isUnit_sqrt_iff_isStrictlyPositive]
-    obtain (H | H) : ¬0 ≤ a ∨ ¬IsUnit a := by grind
-    · rw [sqrt_of_not_nonneg H, inverse_zero]
-      by_cases hunit : IsUnit a
-      · have h₂ : ¬0 ≤ inverse a := by grind [CFC.ringInverse_nonneg_iff_nonneg_of_isUnit]
-        rw [sqrt_of_not_nonneg h₂]
-      · simp [inverse_non_unit _ hunit]
-    · simp [inverse_non_unit _ ha', inverse_non_unit _ H]
-
+lemma sqrt_inv {a : A} (ha : IsStrictlyPositive a) :
+    sqrt (Checked.inv a ha.isUnit) = Checked.inv (sqrt a) (ha.isUnit_cfcSqrt a) := by
+  apply eq_inv_of_mul_eq_one_left₀
+  rw [sqrt_eq_rpow, sqrt_eq_rpow]
+  have hpow : (Checked.inv a ha.isUnit) ^ (1 / 2 : ℝ) = a ^ (-(1 / 2) : ℝ) := by
+    simpa only [IsUnit.unit_spec, Units.val_inv_eq_inv_val₀] using
+      (rpow_neg ha.isUnit.unit (1 / 2) (by simpa only [IsUnit.unit_spec] using ha.nonneg)).symm
+  rw [hpow, rpow_neg_mul_rpow _ ha]
 /-- For an element `a` in a C⋆-algebra, TFAE:
 1. `a` is strictly positive,
 2. `sqrt a` is strictly positive and `a = sqrt a * sqrt a`,

@@ -33,29 +33,29 @@ so that in particular any compact subset of `ℂ` contains only finitely many ze
 /-- The zeros of Riemann's ζ-function. -/
 -- Note: `Set` has no computational content, but Lean still attempts to compile it.
 -- See https://github.com/leanprover/lean4/issues/14084.
-noncomputable def riemannZetaZeros : Set ℂ := riemannZeta ⁻¹' {0}
+noncomputable def riemannZetaZeros : Set ℂ := {z | ∃ hz : z ≠ 1, riemannZeta z hz = 0}
 
 lemma mem_riemannZetaZeros {z : ℂ} :
-    z ∈ riemannZetaZeros ↔ riemannZeta z = 0 := .rfl
+    z ∈ riemannZetaZeros ↔ ∃ hz : z ≠ 1, riemannZeta z hz = 0 := .rfl
 
-/-- The complement of the zero set of `riemannZeta` is codiscrete within `{1}ᶜ`. -/
-private lemma riemannZetaZeros_codiscreteWithin_compl_one :
-    riemannZetaZerosᶜ ∈ Filter.codiscreteWithin {1}ᶜ := by
-  refine analyticOn_riemannZeta.preimage_zero_mem_codiscreteWithin (x := 2) ?_ (by simp) ?_
-  · exact riemannZeta_ne_zero_of_one_le_re (by norm_num) Nat.one_le_ofNat
-  · exact isConnected_compl_singleton_of_one_lt_rank (by simp) 1
+open DirichletCharacter in
+private lemma riemannZetaZeros_eq_preimage :
+    riemannZetaZeros = LFunctionTrivChar₁ 1 ⁻¹' {0} := by
+  ext z
+  change (∃ hz : z ≠ 1, riemannZeta z hz = 0) ↔ LFunctionTrivChar₁ 1 z = 0
+  rcases eq_or_ne z 1 with rfl | hz
+  · simp [LFunctionTrivChar₁_apply_one]
+  · rw [LFunctionTrivChar₁, LFunction₁_eq_mul _ hz, LFunction_modOne_eq hz,
+      mul_eq_zero, or_iff_right (sub_ne_zero.mpr hz)]
+    exact ⟨fun ⟨_, h⟩ ↦ h, fun h ↦ ⟨hz, h⟩⟩
 
+open DirichletCharacter in
 /-- The complement of the zero set of `riemannZeta` is codiscrete. -/
 private lemma compl_riemannZetaZeros_mem_codiscrete :
     riemannZetaZerosᶜ ∈ Filter.codiscrete ℂ := by
-  have := riemannZetaZeros_codiscreteWithin_compl_one
-  simp only [mem_codiscreteWithin, Set.mem_compl_iff, Set.mem_singleton_iff, sdiff_compl,
-    Set.inf_eq_inter, Filter.disjoint_principal_right, mem_codiscrete, compl_compl] at this ⊢
-  intro x
-  rcases eq_or_ne x 1 with rfl | hx
-  · exact riemannZeta_eventually_ne_zero_nhds_one.filter_mono nhdsWithin_le_nhds
-  · exact Filter.mem_of_superset (this x hx)
-      (by grind [riemannZeta_one_ne_zero, mem_riemannZetaZeros])
+  rw [riemannZetaZeros_eq_preimage, ← Set.preimage_compl]
+  have hf := (differentiable_LFunctionTrivChar₁ 1).differentiableOn.analyticOnNhd isOpen_univ
+  exact hf.preimage_zero_mem_codiscrete (x := 1) (by simp [LFunctionTrivChar₁_apply_one])
 
 lemma isClosed_riemannZetaZeros : IsClosed riemannZetaZeros := by
   simpa using (mem_codiscrete'.mp compl_riemannZetaZeros_mem_codiscrete).1

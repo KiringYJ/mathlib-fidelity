@@ -40,7 +40,12 @@ variable [∀ i, SeminormedAddCommGroup (E i)] [∀ i, InnerProductSpace 𝕜 (E
 def wInner (w : ι → ℝ) (f g : ∀ i, E i) : 𝕜 := ∑ i, w i • ⟪f i, g i⟫_𝕜
 
 /-- The weight function making `wInner` into the compact inner product. -/
-noncomputable abbrev cWeight : ι → ℝ := Function.const _ (Fintype.card ι)⁻¹
+noncomputable abbrev cWeight : ι → ℝ := fun i ↦
+  Checked.inv (Fintype.card ι : ℝ) (by
+    have : Nonempty ι := ⟨i⟩
+    have h : (Fintype.card ι : ℝ) ≠ 0 := by
+      exact_mod_cast (Fintype.card_ne_zero (α := ι))
+    exact h.isUnit)
 
 @[inherit_doc wInner] notation3 "⟪" f ", " g "⟫_[" 𝕝 ", " w "]" => wInner (𝕜 := 𝕝) w f g
 
@@ -50,7 +55,7 @@ notation3 "⟪" f ", " g "⟫_[" 𝕝 "]" => ⟪f, g⟫_[𝕝, 1]
 /-- Compact inner product giving rise to the compact L2 norm. -/
 notation3 "⟪" f ", " g "⟫ₙ_[" 𝕝 "]" => ⟪f, g⟫_[𝕝, cWeight]
 
-lemma wInner_cWeight_eq_smul_wInner_one (f g : ∀ i, E i) :
+lemma wInner_cWeight_eq_smul_wInner_one [Nonempty ι] (f g : ∀ i, E i) :
     ⟪f, g⟫ₙ_[𝕜] = (Fintype.card ι : ℚ≥0)⁻¹ • ⟪f, g⟫_[𝕜] := by
   simp [wInner, smul_sum, ← NNRat.cast_smul_eq_nnqsmul ℝ]
 
@@ -101,7 +106,8 @@ lemma mul_wInner_left (c : 𝕜) (w : ι → ℝ) (f g : ∀ i, E i) :
     c * ⟪f, g⟫_[𝕜, w] = ⟪star c • f, g⟫_[𝕜, w] := by rw [wInner_smul_left, star_star, smul_eq_mul]
 
 lemma wInner_one_eq_sum (f g : ∀ i, E i) : ⟪f, g⟫_[𝕜] = ∑ i, ⟪f i, g i⟫_𝕜 := by simp [wInner]
-lemma wInner_cWeight_eq_expect (f g : ∀ i, E i) : ⟪f, g⟫ₙ_[𝕜] = 𝔼 i, ⟪f i, g i⟫_𝕜 := by
+lemma wInner_cWeight_eq_expect [Nonempty ι] (f g : ∀ i, E i) :
+    ⟪f, g⟫ₙ_[𝕜] = 𝔼 i, ⟪f i, g i⟫_𝕜 := by
   simp [wInner, expect, smul_sum, ← NNRat.cast_smul_eq_nnqsmul ℝ]
 
 end Pi
@@ -121,10 +127,10 @@ lemma wInner_const_right (f : ι → 𝕜) (a : 𝕜) :
 @[simp] lemma wInner_one_const_right (f : ι → 𝕜) (a : 𝕜) :
     ⟪f, const _ a⟫_[𝕜] = a * (∑ i, conj (f i)) := by simp [wInner_one_eq_sum, mul_sum]
 
-@[simp] lemma wInner_cWeight_const_left (a : 𝕜) (f : ι → 𝕜) :
+@[simp] lemma wInner_cWeight_const_left [Nonempty ι] (a : 𝕜) (f : ι → 𝕜) :
     ⟪const _ a, f⟫ₙ_[𝕜] = 𝔼 i, f i * conj a := by simp [wInner_cWeight_eq_expect]
 
-@[simp] lemma wInner_cWeight_const_right (f : ι → 𝕜) (a : 𝕜) :
+@[simp] lemma wInner_cWeight_const_right [Nonempty ι] (f : ι → 𝕜) (a : 𝕜) :
     ⟪f, const _ a⟫ₙ_[𝕜] = a * (𝔼 i, conj (f i)) := by simp [wInner_cWeight_eq_expect, mul_expect]
 
 lemma wInner_one_eq_inner (f g : ι → 𝕜) :

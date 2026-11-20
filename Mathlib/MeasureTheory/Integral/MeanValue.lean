@@ -103,10 +103,10 @@ theorem exists_eq_const_mul_setIntegral_of_ae_nonneg
       _ = ∫ x in s, f x ∂ν := heq
       _ = f c * ∫ x in s, (1 : ℝ) ∂ν := by
         rw [h_ave]
-        simp only [setAverage_eq, smul_eq_mul, integral_const, MeasurableSet.univ,
-          measureReal_restrict_apply, Set.univ_inter, mul_one]
-        rw [measureReal_def]
-        field_simp
+        have hνunit : IsUnit (ν.real s) := hν0'.isUnit
+        simp only [setAverage_eq ν f s (hs := hνunit), smul_eq_mul, integral_const,
+          MeasurableSet.univ, measureReal_restrict_apply, Set.univ_inter, mul_one]
+        rw [mul_right_comm, inv_mul_cancel₀, one_mul]
       _ = _ := by simp [hg1]
 
 /-- **First mean value theorem for set integrals (pointwise nonnegativity).**

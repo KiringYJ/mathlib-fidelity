@@ -130,8 +130,21 @@ theorem integrable_cexp_neg_mul_sq_add_real_mul_I (hb : 0 < b.re) (c : ℝ) :
   simp_rw [← neg_mul]
   apply integrable_exp_neg_mul_sq hb
 
+private lemma isUnit_four_mul_of_re_pos {b : ℂ} (hb : 0 < b.re) : IsUnit (4 * b) :=
+  (show IsUnit (4 : ℂ) by checked_unit).mul (ne_zero_of_re_pos hb).isUnit
+
+private lemma isUnit_of_re_neg {b : ℂ} (hb : b.re < 0) : IsUnit b :=
+  (neg_ne_zero.1 (ne_zero_of_re_pos (s := -b) (by simpa only [neg_re] using neg_pos.2 hb))).isUnit
+
+private lemma isUnit_cpow_half_of_re_pos {b : ℂ} (hb : 0 < b.re) : IsUnit (b ^ (1 / 2 : ℂ)) := by
+  apply Ne.isUnit
+  rw [Ne, cpow_eq_zero_iff, not_and_or]
+  exact Or.inl (ne_zero_of_re_pos hb)
+
 theorem integral_cexp_neg_mul_sq_add_real_mul_I (hb : 0 < b.re) (c : ℝ) :
-    ∫ x : ℝ, cexp (-b * (x + c * I) ^ 2) = (π / b) ^ (1 / 2 : ℂ) := by
+    ∫ x : ℝ, cexp (-b * (x + c * I) ^ 2) =
+      (Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit) ^ (1 / 2 : ℂ) := by
+  have hu := (ne_zero_of_re_pos hb).isUnit
   refine
     tendsto_nhds_unique
       (intervalIntegral_tendsto_integral (integrable_cexp_neg_mul_sq_add_real_mul_I hb c)
@@ -172,18 +185,27 @@ theorem integral_cexp_neg_mul_sq_add_real_mul_I (hb : 0 < b.re) (c : ℝ) :
 
 theorem _root_.integral_cexp_quadratic (hb : b.re < 0) (c d : ℂ) :
     ∫ x : ℝ,
-      cexp (b * x ^ 2 + c * x + d) = (π / -b) ^ (1 / 2 : ℂ) * cexp (d - c ^ 2 / (4 * b)) := by
-  have hb' : b ≠ 0 := by contrapose! hb; rw [hb, zero_re]
+      cexp (b * x ^ 2 + c * x + d) =
+        (Checked.div (π : ℂ) (-b) (by exact (isUnit_of_re_neg hb).neg)) ^ (1 / 2 : ℂ) *
+          cexp (d - Checked.div (c ^ 2) (4 * b)
+            (by exact (show IsUnit (4 : ℂ) by checked_unit).mul (isUnit_of_re_neg hb))) := by
+  have hu := isUnit_of_re_neg hb
+  have hb' := hu.ne_zero
   have h (x : ℝ) : cexp (b * x ^ 2 + c * x + d) =
       cexp (- -b * (x + c / (2 * b)) ^ 2) * cexp (d - c ^ 2 / (4 * b)) := by
     simp_rw [← Complex.exp_add]
     congr 1
     field
-  simp_rw [h, MeasureTheory.integral_mul_const]
-  rw [← re_add_im (c / (2 * b))]
-  simp_rw [← add_assoc, ← ofReal_add]
-  rw [integral_add_right_eq_self fun a : ℝ ↦ cexp (- -b * (↑a + ↑(c / (2 * b)).im * I) ^ 2),
-    integral_cexp_neg_mul_sq_add_real_mul_I ((neg_re b).symm ▸ (neg_pos.mpr hb))]
+  let w := c / (2 * b)
+  let g (x : ℝ) := cexp (- -b * ((x : ℂ) + (w.im : ℂ) * I) ^ 2)
+  have hw (x : ℝ) : cexp (- -b * ((x : ℂ) + c / (2 * b)) ^ 2) = g (x + w.re) := by
+    change cexp (- -b * ((x : ℂ) + w) ^ 2) = g (x + w.re)
+    simp only [g, ofReal_add, add_assoc, re_add_im]
+  simp_rw [h, MeasureTheory.integral_mul_const, hw]
+  rw [integral_add_right_eq_self g w.re]
+  exact congrArg (fun z ↦ z * cexp (d - c ^ 2 / (4 * b)))
+    (integral_cexp_neg_mul_sq_add_real_mul_I (b := -b) (by simpa only [neg_re] using neg_pos.2 hb)
+      w.im)
 
 lemma _root_.integrable_cexp_quadratic' (hb : b.re < 0) (c d : ℂ) :
     Integrable (fun (x : ℝ) ↦ cexp (b * x ^ 2 + c * x + d)) := by
@@ -199,15 +221,18 @@ lemma _root_.integrable_cexp_quadratic (hb : 0 < b.re) (c d : ℂ) :
 
 theorem _root_.fourierIntegral_gaussian (hb : 0 < b.re) (t : ℂ) :
     ∫ x : ℝ, cexp (I * t * x) * cexp (-b * x ^ 2) =
-    (π / b) ^ (1 / 2 : ℂ) * cexp (-t ^ 2 / (4 * b)) := by
+    (Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit) ^ (1 / 2 : ℂ) *
+      cexp (Checked.div (-t ^ 2) (4 * b) (by exact isUnit_four_mul_of_re_pos hb)) := by
+  have hu := (ne_zero_of_re_pos hb).isUnit
   conv => enter [1, 2, x]; rw [← Complex.exp_add, add_comm, ← add_zero (-b * x ^ 2 + I * t * x)]
-  rw [integral_cexp_quadratic (show (-b).re < 0 by rwa [neg_re, neg_lt_zero]), neg_neg, zero_sub,
-    mul_neg, div_neg, neg_neg, mul_pow, I_sq, neg_one_mul, mul_comm]
+  rw [integral_cexp_quadratic (show (-b).re < 0 by rwa [neg_re, neg_lt_zero])]
+  simp only [neg_neg, zero_sub, mul_neg, div_neg₀, mul_pow, I_sq, neg_one_mul, neg_div₀]
 
 theorem _root_.fourier_gaussian_pi' (hb : 0 < b.re) (c : ℂ) :
     (𝓕 fun x : ℝ => cexp (-π * b * x ^ 2 + 2 * π * c * x)) = fun t : ℝ =>
-    1 / b ^ (1 / 2 : ℂ) * cexp (-π / b * (t + I * c) ^ 2) := by
-  have : b ≠ 0 := by contrapose! hb; rw [hb, zero_re]
+    Checked.div 1 (b ^ (1 / 2 : ℂ)) (by exact isUnit_cpow_half_of_re_pos hb) *
+      cexp (Checked.div (-π : ℂ) b (ne_zero_of_re_pos hb).isUnit * (t + I * c) ^ 2) := by
+  have hu := (ne_zero_of_re_pos hb).isUnit
   have h : (-↑π * b).re < 0 := by
     simpa only [neg_mul, neg_re, re_ofReal_mul, neg_lt_zero] using mul_pos pi_pos hb
   ext1 t
@@ -216,7 +241,10 @@ theorem _root_.fourier_gaussian_pi' (hb : 0 < b.re) (c : ℂ) :
     -π * b * x ^ 2 + (-2 * π * I * t + 2 * π * c) * x + 0 := by push_cast; ring
   simp_rw [this, integral_cexp_quadratic h, neg_mul, neg_neg]
   congr 2
-  · rw [← div_div, div_self <| ofReal_ne_zero.mpr pi_ne_zero, one_div, inv_cpow, ← one_div]
+  · have hp : IsUnit (π : ℂ) := (ofReal_ne_zero.mpr pi_ne_zero).isUnit
+    have hquot : (π : ℂ) / ((π : ℂ) * b) = b⁻¹ :=
+      div_mul_cancel_left₀ (hab := hp.mul hu)
+    rw [hquot, one_div₀ (b ^ (1 / 2 : ℂ)), inv_cpow]
     rw [Ne, arg_eq_pi_iff, not_and_or, not_lt]
     exact Or.inl hb.le
   · field_simp
@@ -226,7 +254,8 @@ theorem _root_.fourier_gaussian_pi' (hb : 0 < b.re) (c : ℂ) :
 
 theorem _root_.fourier_gaussian_pi (hb : 0 < b.re) :
     (𝓕 fun (x : ℝ) ↦ cexp (-π * b * x ^ 2)) =
-    fun t : ℝ ↦ 1 / b ^ (1 / 2 : ℂ) * cexp (-π / b * t ^ 2) := by
+    fun t : ℝ ↦ Checked.div 1 (b ^ (1 / 2 : ℂ)) (by exact isUnit_cpow_half_of_re_pos hb) *
+      cexp (Checked.div (-π : ℂ) b (ne_zero_of_re_pos hb).isUnit * t ^ 2) := by
   simpa only [mul_zero, zero_mul, add_zero] using fourier_gaussian_pi' hb 0
 
 section InnerProductSpace
@@ -276,24 +305,27 @@ theorem integrable_cexp_neg_mul_sq_norm_add (hb : 0 < b.re) (c : ℂ) (w : V) :
 theorem integral_cexp_neg_sum_mul_add {ι : Type*} [Fintype ι] {b : ι → ℂ}
     (hb : ∀ i, 0 < (b i).re) (c : ι → ℂ) :
     ∫ v : ι → ℝ, cexp (-∑ i, b i * (v i : ℂ) ^ 2 + ∑ i, c i * v i)
-      = ∏ i, (π / b i) ^ (1 / 2 : ℂ) * cexp (c i ^ 2 / (4 * b i)) := by
+      = ∏ i, (Checked.div (π : ℂ) (b i) (ne_zero_of_re_pos (hb i)).isUnit) ^ (1 / 2 : ℂ) *
+        cexp (Checked.div (c i ^ 2) (4 * b i) (by exact isUnit_four_mul_of_re_pos (hb i))) := by
   simp_rw [← Finset.sum_neg_distrib, ← Finset.sum_add_distrib, Complex.exp_sum, ← neg_mul]
   rw [integral_fintype_prod_volume_eq_prod (f := fun i (v : ℝ) ↦ cexp (-b i * v ^ 2 + c i * v))]
   congr with i
   have : (-b i).re < 0 := by simpa using hb i
-  convert! integral_cexp_quadratic this (c i) 0 using 1 <;> simp [div_neg]
+  convert! integral_cexp_quadratic this (c i) 0 using 1 <;> simp [div_neg₀]
 
 theorem integral_cexp_neg_mul_sum_add {ι : Type*} [Fintype ι] (hb : 0 < b.re) (c : ι → ℂ) :
     ∫ v : ι → ℝ, cexp (-b * ∑ i, (v i : ℂ) ^ 2 + ∑ i, c i * v i)
-      = (π / b) ^ (Fintype.card ι / 2 : ℂ) * cexp ((∑ i, c i ^ 2) / (4 * b)) := by
-  simp_rw [neg_mul, Finset.mul_sum, integral_cexp_neg_sum_mul_add (fun _ ↦ hb) c, one_div,
+      = (Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit) ^ (Fintype.card ι / 2 : ℂ) *
+        cexp (Checked.div (∑ i, c i ^ 2) (4 * b) (by exact isUnit_four_mul_of_re_pos hb)) := by
+  simp_rw [neg_mul, Finset.mul_sum, integral_cexp_neg_sum_mul_add (fun _ ↦ hb) c, one_div₀,
     Finset.prod_mul_distrib, Finset.prod_const, ← cpow_nat_mul, ← Complex.exp_sum, Fintype.card,
-    Finset.sum_div, div_eq_mul_inv]
+    Finset.sum_div, div_eq_mul_inv₀]
 
 theorem integral_cexp_neg_mul_sq_norm_add_of_euclideanSpace
     {ι : Type*} [Fintype ι] (hb : 0 < b.re) (c : ℂ) (w : EuclideanSpace ℝ ι) :
     ∫ v : EuclideanSpace ℝ ι, cexp (- b * ‖v‖ ^ 2 + c * ⟪w, v⟫) =
-      (π / b) ^ (Fintype.card ι / 2 : ℂ) * cexp (c ^ 2 * ‖w‖ ^ 2 / (4 * b)) := by
+      (Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit) ^ (Fintype.card ι / 2 : ℂ) *
+        cexp (Checked.div (c ^ 2 * ‖w‖ ^ 2) (4 * b) (by exact isUnit_four_mul_of_re_pos hb)) := by
   rw [← (PiLp.volume_preserving_toLp ι).integral_comp
     (MeasurableEquiv.toLp 2 _).measurableEmbedding]
   simp only [neg_mul]
@@ -315,14 +347,16 @@ theorem integral_cexp_neg_mul_sq_norm_add_of_euclideanSpace
 theorem integral_cexp_neg_mul_sq_norm_add
     (hb : 0 < b.re) (c : ℂ) (w : V) :
     ∫ v : V, cexp (-b * ‖v‖ ^ 2 + c * ⟪w, v⟫) =
-      (π / b) ^ (Module.finrank ℝ V / 2 : ℂ) * cexp (c ^ 2 * ‖w‖ ^ 2 / (4 * b)) := by
+      (Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit) ^ (Module.finrank ℝ V / 2 : ℂ) *
+        cexp (Checked.div (c ^ 2 * ‖w‖ ^ 2) (4 * b) (by exact isUnit_four_mul_of_re_pos hb)) := by
   let e := (stdOrthonormalBasis ℝ V).repr.symm
   rw [← e.measurePreserving.integral_comp e.toHomeomorph.measurableEmbedding]
   convert! integral_cexp_neg_mul_sq_norm_add_of_euclideanSpace hb c (e.symm w) <;>
     simp [LinearIsometryEquiv.inner_map_eq_flip]
 
 theorem integral_cexp_neg_mul_sq_norm (hb : 0 < b.re) :
-    ∫ v : V, cexp (-b * ‖v‖ ^ 2) = (π / b) ^ (Module.finrank ℝ V / 2 : ℂ) := by
+    ∫ v : V, cexp (-b * ‖v‖ ^ 2) =
+      (Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit) ^ (Module.finrank ℝ V / 2 : ℂ) := by
   simpa using integral_cexp_neg_mul_sq_norm_add hb 0 (0 : V)
 
 set_option backward.isDefEq.respectTransparency.types false in
@@ -333,12 +367,15 @@ theorem integral_rexp_neg_mul_sq_norm {b : ℝ} (hb : 0 < b) :
   · change ofRealLI (∫ (v : V), rexp (-b * ‖v‖ ^ 2)) = ∫ (v : V), cexp (-↑b * ↑‖v‖ ^ 2)
     rw [← ofRealLI.integral_comp_comm]
     simp [ofRealLI]
-  · rw [← ofReal_div, ofReal_cpow (by positivity)]
-    simp
+  · have hdiv₂ (x : ℝ) : (↑(x / 2) : ℂ) = (x : ℂ) / 2 := by
+      simpa only [ofReal_ofNat] using ofReal_div x 2
+    have hquot := @ofReal_div π b hb.ne'.isUnit
+    simp only [ofReal_cpow (div_pos pi_pos hb).le, hdiv₂, hquot, ofReal_natCast]
 
 theorem _root_.fourier_gaussian_innerProductSpace' (hb : 0 < b.re) (x w : V) :
     𝓕 (fun v ↦ cexp (-b * ‖v‖ ^ 2 + 2 * π * Complex.I * ⟪x, v⟫)) w =
-      (π / b) ^ (Module.finrank ℝ V / 2 : ℂ) * cexp (-π ^ 2 * ‖x - w‖ ^ 2 / b) := by
+      (Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit) ^ (Module.finrank ℝ V / 2 : ℂ) *
+        cexp (Checked.div (-(π : ℂ) ^ 2 * ‖x - w‖ ^ 2) b (ne_zero_of_re_pos hb).isUnit) := by
   simp only [neg_mul, fourier_eq', ofReal_neg, ofReal_mul, ofReal_ofNat,
     smul_eq_mul, ← Complex.exp_add, real_inner_comm w]
   convert! integral_cexp_neg_mul_sq_norm_add hb (2 * π * Complex.I) (x - w) using 3 with v
@@ -351,7 +388,8 @@ theorem _root_.fourier_gaussian_innerProductSpace' (hb : 0 < b.re) (x w : V) :
 
 theorem _root_.fourier_gaussian_innerProductSpace (hb : 0 < b.re) (w : V) :
     𝓕 (fun (v : V) ↦ cexp (-b * ‖v‖ ^ 2)) w =
-      (π / b) ^ (Module.finrank ℝ V / 2 : ℂ) * cexp (-π ^ 2 * ‖w‖ ^ 2 / b) := by
+      (Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit) ^ (Module.finrank ℝ V / 2 : ℂ) *
+        cexp (Checked.div (-(π : ℂ) ^ 2 * ‖w‖ ^ 2) b (ne_zero_of_re_pos hb).isUnit) := by
   simpa using fourier_gaussian_innerProductSpace' hb 0 w
 
 end InnerProductSpace

@@ -76,7 +76,7 @@ theorem isStarProjection_iff_mem_extremePoints_setOfPred_nonneg_inter_unitClosed
         simpa using mul_self_le_of_nonneg_of_norm_le_one h1.inr (by simpa [norm_inr])
       simpa [two_smul] using le_add_of_nonneg_of_le h1 this
     refine ⟨h3 _ (Commute.mul_nonneg h1 h1 rfl) ?_ ((2 : ℝ) • e - e * e) this ?_
-      ⟨2⁻¹, 2⁻¹, by simp [smul_sub, ← one_div, smul_smul]⟩, h1.isSelfAdjoint⟩
+      ⟨2⁻¹, 2⁻¹, by norm_num [smul_sub, ← one_div₀, smul_smul]⟩, h1.isSelfAdjoint⟩
     · grw [norm_mul_le, h2, h2, one_mul]
     · rw [← norm_inr (𝕜 := ℂ), norm_le_one_iff_of_nonneg _ this.inr, ← sub_nonneg]
       calc 0 ≤ star (1 - e : A⁺¹) * (1 - e) := star_mul_self_nonneg _

@@ -68,8 +68,9 @@ theorem exists_hasSum_smul_of_apply_eq_zero (hs : HasSum (fun m => z ^ m • a m
       simpa [h1] using (hasSum_nat_add_iff' n).mpr hs
     convert! h2.const_smul (z⁻¹ ^ n) using 2 with x
     · match_scalars
-      simp [field, pow_add]
-    · simp only [inv_pow]
+      simp only [inv_pow₀, pow_add]
+      rw [mul_left_comm, inv_mul_cancel₀, mul_one]
+    · simp only [inv_pow₀]
 
 end HasSum
 
@@ -83,7 +84,8 @@ theorem has_fpower_series_dslope_fslope (hp : HasFPowerSeriesAt f p z₀) :
   refine hp.mono fun x hx => ?_
   by_cases h : x = 0
   · convert! hasSum_single (α := E) 0 _ <;> intros <;> simp [*]
-  · have hxx : ∀ n : ℕ, x⁻¹ * x ^ (n + 1) = x ^ n := fun n => by simp [field, _root_.pow_succ]
+  · have hxx : ∀ n : ℕ, x⁻¹ * x ^ (n + 1) = x ^ n := fun n => by
+      rw [_root_.pow_succ, mul_left_comm, inv_mul_cancel₀, mul_one]
     suffices HasSum (fun n => x⁻¹ • x ^ (n + 1) • p.coeff (n + 1)) (x⁻¹ • (f (z₀ + x) - f z₀)) by
       simpa [dslope, slope, h, smul_smul, hxx] using this
     simpa [hp0] using ((hasSum_nat_add_iff' 1).mpr hx).const_smul x⁻¹
@@ -147,25 +149,46 @@ neighbourhood of `z₀` we have `f z = (z - z₀) ^ n • g z`, with `g` analyti
 `z₀`. We formulate this with `n : ℤ`, and deduce the case `n : ℕ` later, for applications to
 meromorphic functions. -/
 lemma unique_eventuallyEq_zpow_smul_nonzero {m n : ℤ}
-    (hm : ∃ g, AnalyticAt 𝕜 g z₀ ∧ g z₀ ≠ 0 ∧ ∀ᶠ z in 𝓝[≠] z₀, f z = (z - z₀) ^ m • g z)
-    (hn : ∃ g, AnalyticAt 𝕜 g z₀ ∧ g z₀ ≠ 0 ∧ ∀ᶠ z in 𝓝[≠] z₀, f z = (z - z₀) ^ n • g z) :
+    (hm : ∃ g, AnalyticAt 𝕜 g z₀ ∧ g z₀ ≠ 0 ∧
+      ∀ᶠ z : {z : 𝕜 // z ≠ z₀} in comap Subtype.val (𝓝 z₀),
+        f z = Checked.zpow (z.val - z₀) m
+          (fun _ ↦ (sub_ne_zero.mpr z.property).isUnit) • g z)
+    (hn : ∃ g, AnalyticAt 𝕜 g z₀ ∧ g z₀ ≠ 0 ∧
+      ∀ᶠ z : {z : 𝕜 // z ≠ z₀} in comap Subtype.val (𝓝 z₀),
+        f z = Checked.zpow (z.val - z₀) n
+          (fun _ ↦ (sub_ne_zero.mpr z.property).isUnit) • g z) :
     m = n := by
   wlog! h_le : n ≤ m generalizing m n
   · exact ((this hn hm) h_le.le).symm
   let ⟨g, hg_an, _, hg_eq⟩ := hm
   let ⟨j, hj_an, hj_ne, hj_eq⟩ := hn
   contrapose! hj_ne
-  have : ∃ᶠ z in 𝓝[≠] z₀, j z = (z - z₀) ^ (m - n) • g z := by
+  have hmn : n + ((m - n).toNat : ℤ) = m := by
+    rw [Int.toNat_of_nonneg (sub_nonneg.mpr h_le)]
+    omega
+  have hpos : (m - n).toNat ≠ 0 := by
+    intro hzero
+    simp only [hzero, Nat.cast_zero, add_zero] at hmn
+    exact hj_ne hmn.symm
+  have : ∃ᶠ z in 𝓝[≠] z₀, j z = (z - z₀) ^ (m - n).toNat • g z := by
     apply Filter.Eventually.frequently
-    rw [eventually_nhdsWithin_iff] at hg_eq hj_eq ⊢
-    filter_upwards [hg_eq, hj_eq] with z hfz hfz' hz
-    rw [← add_sub_cancel_left n m, add_sub_assoc, zpow_add₀ <| sub_ne_zero.mpr hz, mul_smul,
-      hfz' hz, smul_right_inj <| zpow_ne_zero _ <| sub_ne_zero.mpr hz] at hfz
-    exact hfz hz
-  rw [frequently_eq_iff_eventually_eq hj_an] at this
-  · rw [EventuallyEq.eq_of_nhds this, sub_self, zero_zpow _ (sub_ne_zero.mpr hj_ne), zero_smul]
-  conv => enter [2, z, 1]; rw [← Int.toNat_sub_of_le h_le, zpow_natCast]
-  exact ((analyticAt_id.sub analyticAt_const).pow _).smul hg_an
+    rw [eventually_nhdsWithin_iff]
+    have h := hg_eq.and hj_eq
+    rw [eventually_comap] at h
+    filter_upwards [h] with z hz hne
+    have hz := hz ⟨z, hne⟩ rfl
+    have hu : IsUnit (z - z₀) := (sub_ne_zero.mpr hne).isUnit
+    have hmul : Checked.zpow (z - z₀) m (fun _ ↦ hu) =
+        Checked.zpow (z - z₀) n (fun _ ↦ hu) * (z - z₀) ^ (m - n).toNat := by
+      simpa only [hmn, zpow_natCast₀] using zpow_add₀ hu.ne_zero n ((m - n).toNat : ℤ)
+    have hgz : f z = Checked.zpow (z - z₀) m (fun _ ↦ hu) • g z := hz.1
+    have hjz : f z = Checked.zpow (z - z₀) n (fun _ ↦ hu) • j z := hz.2
+    rw [hmul, mul_smul, hjz] at hgz
+    exact (smul_right_inj (zpow_ne_zero n hu.ne_zero)).mp hgz
+  have hprod : AnalyticAt 𝕜 (fun z ↦ (z - z₀) ^ (m - n).toNat • g z) z₀ := by
+    fun_prop
+  have heq := (frequently_eq_iff_eventually_eq hj_an hprod).mp this
+  simpa only [sub_self, zero_pow hpos, zero_smul] using EventuallyEq.eq_of_nhds heq
 
 /-- For a function `f` on `𝕜`, and `z₀ ∈ 𝕜`, there exists at most one `n` such that on a
 neighbourhood of `z₀` we have `f z = (z - z₀) ^ n • g z`, with `g` analytic and nonvanishing at
@@ -174,10 +197,11 @@ lemma unique_eventuallyEq_pow_smul_nonzero {m n : ℕ}
     (hm : ∃ g, AnalyticAt 𝕜 g z₀ ∧ g z₀ ≠ 0 ∧ ∀ᶠ z in 𝓝 z₀, f z = (z - z₀) ^ m • g z)
     (hn : ∃ g, AnalyticAt 𝕜 g z₀ ∧ g z₀ ≠ 0 ∧ ∀ᶠ z in 𝓝 z₀, f z = (z - z₀) ^ n • g z) :
     m = n := by
-  simp_rw [← zpow_natCast] at hm hn
   exact Int.ofNat_inj.mp <| unique_eventuallyEq_zpow_smul_nonzero
-    (let ⟨g, h₁, h₂, h₃⟩ := hm; ⟨g, h₁, h₂, h₃.filter_mono nhdsWithin_le_nhds⟩)
-    (let ⟨g, h₁, h₂, h₃⟩ := hn; ⟨g, h₁, h₂, h₃.filter_mono nhdsWithin_le_nhds⟩)
+    (let ⟨g, h₁, h₂, h₃⟩ := hm
+     ⟨g, h₁, h₂, by simpa only [zpow_natCast₀] using tendsto_comap.eventually h₃⟩)
+    (let ⟨g, h₁, h₂, h₃⟩ := hn
+     ⟨g, h₁, h₂, by simpa only [zpow_natCast₀] using tendsto_comap.eventually h₃⟩)
 
 /-- If `f` is analytic at `z₀`, then exactly one of the following two possibilities occurs: either
 `f` vanishes identically near `z₀`, or locally around `z₀` it has the form `z ↦ (z - z₀) ^ n • g z`

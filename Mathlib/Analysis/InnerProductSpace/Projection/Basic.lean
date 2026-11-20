@@ -409,18 +409,21 @@ theorem smul_starProjection_singleton {v : E} (w : E) :
   · rw [← Submodule.mem_orthogonal', Submodule.mem_orthogonal_singleton_iff_inner_left]
     simp [inner_sub_left, inner_smul_left, inner_self_eq_norm_sq_to_K, mul_comm]
 
+open scoped Classical in
 /-- Formula for orthogonal projection onto a single vector. -/
 theorem starProjection_singleton {v : E} (w : E) :
-    (𝕜 ∙ v).starProjection w = (⟪v, w⟫ / ((‖v‖ ^ 2 : ℝ) : 𝕜)) • v := by
+    (𝕜 ∙ v).starProjection w = if hv : v = 0 then 0 else
+      Checked.div ⟪v, w⟫ ((‖v‖ ^ 2 : ℝ) : 𝕜)
+        (RCLike.ofReal_ne_zero.mpr (pow_ne_zero 2 (norm_ne_zero_iff.mpr hv))).isUnit • v := by
   by_cases hv : v = 0
   · rw [hv]
     simp [Submodule.span_zero_singleton 𝕜]
-  have hv' : ‖v‖ ≠ 0 := ne_of_gt (norm_pos_iff.mpr hv)
-  have key :
-    (((‖v‖ ^ 2 : ℝ) : 𝕜)⁻¹ * ((‖v‖ ^ 2 : ℝ) : 𝕜)) • (𝕜 ∙ v).starProjection w =
-      (((‖v‖ ^ 2 : ℝ) : 𝕜)⁻¹ * ⟪v, w⟫) • v := by
-    simp [mul_smul, smul_starProjection_singleton 𝕜 w, -map_pow]
-  convert! key using 1 <;> match_scalars <;> field_simp [hv']
+  rw [dite_eq_right hv]
+  have hA : IsUnit ((‖v‖ ^ 2 : ℝ) : 𝕜) :=
+    (RCLike.ofReal_ne_zero.mpr (pow_ne_zero 2 (norm_ne_zero_iff.mpr hv))).isUnit
+  have key := congrArg (fun z : E ↦ Checked.inv ((‖v‖ ^ 2 : ℝ) : 𝕜) hA • z)
+    (smul_starProjection_singleton 𝕜 (v := v) w)
+  simpa only [smul_smul, inv_mul_cancel₀, one_smul, div_eq_inv_mul₀] using key
 
 /-- Formula for orthogonal projection onto a single unit vector. -/
 theorem starProjection_unit_singleton {v : E} (hv : ‖v‖ = 1) (w : E) :
@@ -658,7 +661,7 @@ lemma re_inner_starProjection_eq_normSq [K.HasOrthogonalProjection] (v : E) :
     re ⟪K.starProjection v, v⟫ = ‖K.orthogonalProjectionOnto v‖ ^ 2 := by
   rw [starProjection_apply,
     re_inner_eq_norm_mul_self_add_norm_mul_self_sub_norm_sub_mul_self_div_two,
-    div_eq_iff (NeZero.ne' 2).symm, pow_two, add_sub_assoc, ← eq_sub_iff_add_eq', ← norm_coe,
+    div_eq_iff, pow_two, add_sub_assoc, ← eq_sub_iff_add_eq', ← norm_coe,
     ← mul_sub_one, show (2 : ℝ) - 1 = 1 by norm_num, mul_one, sub_eq_iff_eq_add', norm_sub_rev]
   simpa [sq, add_comm] using K.norm_sq_eq_add_norm_sq_starProjection v
 

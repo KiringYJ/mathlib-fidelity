@@ -42,15 +42,23 @@ namespace Complex
 section GammaHasDeriv
 
 /-- Rewrite the Gamma integral as an example of a Mellin transform. -/
-theorem GammaIntegral_eq_mellin : GammaIntegral = mellin fun x => ↑(Real.exp (-x)) :=
-  funext fun s => by simp only [mellin, GammaIntegral, smul_eq_mul, mul_comm]
+theorem GammaIntegral_eq_mellin :
+    GammaIntegral = mellin (fun x : Ioi (0 : ℝ) ↦ ↑(Real.exp (-x.val))) := by
+  funext s
+  rw [mellin_eq_integral (fun x : ℝ ↦ (Real.exp (-x) : ℂ)) s]
+  simp only [GammaIntegral, smul_eq_mul, mul_comm]
 
-/-- The derivative of the `Γ` integral, at any `s ∈ ℂ` with `1 < re s`, is given by the Mellin
+/-- The derivative of the `Γ` integral, at any `s ∈ ℂ` with `0 < re s`, is given by the Mellin
 transform of `log t * exp (-t)`. -/
 theorem hasDerivAt_GammaIntegral {s : ℂ} (hs : 0 < s.re) :
     HasDerivAt GammaIntegral (∫ t : ℝ in Ioi 0, t ^ (s - 1) * (Real.log t * Real.exp (-t))) s := by
   rw [GammaIntegral_eq_mellin]
-  convert! (mellin_hasDerivAt_of_isBigO_rpow (E := ℂ) _ _ (lt_add_one _) _ hs).2
+  suffices h : HasDerivAt (mellin (fun t : Ioi (0 : ℝ) ↦ ↑(Real.exp (-t.val))))
+      (mellin (fun t : Ioi (0 : ℝ) ↦ Real.log t.val • (↑(Real.exp (-t.val)) : ℂ)) s) s by
+    rw [mellin_eq_integral (fun t : ℝ ↦ Real.log t • (Real.exp (-t) : ℂ)) s] at h
+    simpa only [smul_eq_mul, real_smul, ofReal_mul] using h
+  apply (mellin_hasDerivAt_of_isBigO_rpow (E := ℂ) (a := s.re + 1) (b := 0)
+    (f := fun t : ℝ ↦ ↑(Real.exp (-t))) ?_ ?_ (lt_add_one _) ?_ hs).2
   · refine (Continuous.continuousOn ?_).locallyIntegrableOn measurableSet_Ioi
     exact continuous_ofReal.comp (Real.continuous_exp.comp continuous_neg)
   · rw [← isBigO_norm_left]
@@ -79,8 +87,19 @@ theorem differentiableAt_Gamma (s : ℂ) (hs : ∀ m : ℕ, s ≠ -m) : Differen
     have hsne : s ≠ 0 := by grind [hs 0]
     specialize IH (s + 1) (by grind [add_re, one_re]) (fun m ↦ by grind [hs (m + 1)])
     have := IH.comp s (show DifferentiableAt ℂ (fun s ↦ s + 1) s by fun_prop)
-    apply (this.fun_div differentiableAt_id hsne).congr_of_eventuallyEq
-    filter_upwards [isOpen_ne.mem_nhds hsne] using by grind
+    have hquot := this.div differentiableAt_id hsne.isUnit
+    have heq : (fun z : {z : ℂ | IsUnit z} ↦ Gamma z) =
+        (fun z : {z : ℂ | IsUnit z} ↦ Gamma ((z : ℂ) + 1) /ₚ z.property.unit) := by
+      funext z
+      change Gamma z = Gamma ((z : ℂ) + 1) / (z : ℂ)
+      rw [Gamma_add_one _ z.property.ne_zero, mul_div_cancel_left₀]
+    change DifferentiableAt ℂ
+      (fun z : {z : ℂ | IsUnit z} ↦ Gamma ((z : ℂ) + 1) /ₚ z.property.unit)
+      ⟨s, hsne.isUnit⟩ Subtype.val at hquot
+    rw [← heq] at hquot
+    exact DifferentiableAt.of_restrict (f := Gamma) (s := {z : ℂ | IsUnit z})
+      (x := ⟨s, hsne.isUnit⟩) (coord := id) hquot
+      (Units.isOpen.mem_nhds hsne.isUnit)
 
 theorem differentiableAt_Gamma_one : DifferentiableAt ℂ Gamma 1 :=
   differentiableAt_Gamma 1 (by norm_cast; simp)
@@ -123,21 +142,16 @@ theorem not_continuousAt_Gamma_neg_nat (n : ℕ) : ¬ ContinuousAt Gamma (-n) :=
 theorem not_differentiableAt_Gamma_neg_nat (n : ℕ) : ¬ DifferentiableAt ℂ Gamma (-n) :=
   mt DifferentiableAt.continuousAt (not_continuousAt_Gamma_neg_nat n)
 
-theorem deriv_Gamma_add_one (s : ℂ) (hs : s ≠ 0) :
+theorem deriv_Gamma_add_one (s : ℂ) (hs : ∀ m : ℕ, s ≠ -m) :
     deriv Gamma (s + 1) = Gamma s + s * deriv Gamma s := by
-  by_cases! h : ∃ m : ℕ, s = -m
-  · obtain ⟨m, rfl⟩ := h
-    rw [← sub_neg_eq_add, ← neg_sub', ← Nat.cast_one, ← Nat.cast_sub,
-      deriv_zero_of_not_differentiableAt (not_differentiableAt_Gamma_neg_nat m),
-      deriv_zero_of_not_differentiableAt (not_differentiableAt_Gamma_neg_nat (m - 1)),
-      Gamma_neg_nat_eq_zero, zero_add, mul_zero]
-    rwa [neg_ne_zero, Nat.cast_ne_zero, ← Nat.one_le_iff_ne_zero] at hs
-  · suffices HasDerivWithinAt (fun s ↦ Gamma (s + 1)) (Gamma s + s * deriv Gamma s) {0}ᶜ s by
-      rw [← deriv_comp_add_const]
-      exact (this.hasDerivAt (compl_singleton_mem_nhds hs)).deriv
-    refine HasDerivWithinAt.congr ?_ Gamma_add_one (Gamma_add_one s hs)
-    simpa using! HasDerivWithinAt.mul (hasDerivWithinAt_id s {0}ᶜ)
-      (differentiableAt_Gamma s h).hasDerivAt.hasDerivWithinAt
+  have hs0 : s ≠ 0 := by simpa using hs 0
+  suffices HasDerivWithinAt (fun z ↦ Gamma (z + 1))
+      (Gamma s + s * deriv Gamma s) {0}ᶜ s by
+    rw [← deriv_comp_add_const]
+    exact (this.hasDerivAt (compl_singleton_mem_nhds hs0)).deriv
+  refine HasDerivWithinAt.congr ?_ Gamma_add_one (Gamma_add_one s hs0)
+  simpa using! HasDerivWithinAt.mul (hasDerivWithinAt_id s {0}ᶜ)
+    (differentiableAt_Gamma s hs).hasDerivAt.hasDerivWithinAt
 
 end GammaHasDeriv
 

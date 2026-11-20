@@ -96,8 +96,8 @@ theorem iteratedDerivWithin_const_sub (hn : 0 < n) (c : F) :
   obtain ⟨n, rfl⟩ := n.exists_eq_succ_of_ne_zero hn.ne'
   rw [iteratedDerivWithin_succ', iteratedDerivWithin_succ']
   congr 1 with y
-  rw [derivWithin.fun_neg]
-  exact derivWithin_const_sub _
+  exact (derivWithin_const_sub (x := y) (s := s) (f := f) c).trans
+    (derivWithin.fun_neg (x := y) (s := s) (f := f)).symm
 
 include h hx in
 theorem iteratedDerivWithin_const_smul (c : R) (hf : ContDiffWithinAt 𝕜 n f s x) :
@@ -202,8 +202,11 @@ theorem iteratedDerivWithin_comp_const_smul (hf : ContDiffOn 𝕜 n f s) (c : �
       rw [← Function.comp_def]
       apply DifferentiableWithinAt.comp _ ?_ (by fun_prop) hs
       exact hf.differentiableOn_iteratedDerivWithin (Nat.cast_lt.mpr n.lt_succ_self) h _ hcx
-    rw [iteratedDerivWithin_succ, derivWithin_congr h₀ (ih hx hf.of_succ),
-      derivWithin_fun_const_smul (c ^ n) h₂, iteratedDerivWithin_succ,
+    rw [iteratedDerivWithin_succ, iteratedDerivWithin_succ]
+    change derivWithin (iteratedDerivWithin n (fun x ↦ f (c * x)) s) s x =
+      c ^ (n + 1) • derivWithin (iteratedDerivWithin n f s) s (c * x)
+    rw [derivWithin_congr h₀ (ih hx hf.of_succ),
+      derivWithin_fun_const_smul (c ^ n) h₂,
       ← Function.comp_def, derivWithin.scomp x h₁ (by fun_prop) hs,
       derivWithin_const_mul _ differentiableWithinAt_id, derivWithin_id' _ _ (h _ hx),
       smul_smul, mul_one, pow_succ]
@@ -387,9 +390,9 @@ theorem iteratedDeriv_mul_const_field {n : ℕ} (f : 𝕜 → 𝕜') (c : 𝕜')
     iteratedDerivWithin_mul_const_field (s := .univ) f c
 
 @[simp]
-theorem iteratedDeriv_div_const {n : ℕ} (f : 𝕜 → 𝕜') (c : 𝕜') :
+theorem iteratedDeriv_div_const {n : ℕ} (f : 𝕜 → 𝕜') (c : 𝕜') {hc : IsUnit c} :
     iteratedDeriv n (f · / c) x = iteratedDeriv n f x / c := by
-  simp [div_eq_mul_inv]
+  simp [div_eq_mul_inv₀]
 
 theorem iteratedDeriv_comp_const_smul {n : ℕ} {f : 𝕜 → F} (h : ContDiff 𝕜 n f) (c : 𝕜) :
     iteratedDeriv n (fun x => f (c * x)) = fun x => c ^ n • iteratedDeriv n f (c * x) := by

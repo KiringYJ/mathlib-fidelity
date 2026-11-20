@@ -66,13 +66,13 @@ theorem isIntegral_exp_neg_rat_mul_pi_mul_I (q : ℚ) :
 
 /-- `2 sin(q * π)` for `q : ℚ` is integral over `ℤ`, using the complex `sin` function. -/
 theorem isIntegral_two_mul_sin_rat_mul_pi (q : ℚ) : IsIntegral ℤ <| 2 * sin (q * π) := by
-  rw [sin.eq_1, mul_div_cancel₀ _ two_ne_zero]
+  rw [sin.eq_1, mul_div_cancel₀]
   exact (isIntegral_exp_neg_rat_mul_pi_mul_I q).sub (isIntegral_exp_rat_mul_pi_mul_I q)
     |>.mul <| isIntegral_I ℤ
 
 /-- `2 cos(q * π)` for `q : ℚ` is integral over `ℤ`, using the complex `cos` function. -/
 theorem isIntegral_two_mul_cos_rat_mul_pi (q : ℚ) : IsIntegral ℤ <| 2 * cos (q * π) := by
-  rw [cos.eq_1, mul_div_cancel₀ _ two_ne_zero]
+  rw [cos.eq_1, mul_div_cancel₀]
   exact (isIntegral_exp_rat_mul_pi_mul_I q).add (isIntegral_exp_neg_rat_mul_pi_mul_I q)
 
 /-- `sin(q * π)` for `q : ℚ` is algebraic over `ℤ`, using the complex `sin` function. -/
@@ -139,7 +139,9 @@ theorem niven (hθ : ∃ r : ℚ, θ = r * π) (hcos : ∃ q : ℚ, cos θ = q) 
     rw [Finset.mem_Icc]
     rify
     constructor <;> linarith [hk, (r * π).neg_one_le_cos, (r * π).cos_le_one]
-  rw [show cos (r * π) = k / 2 by grind]
+  rw [show cos (r * π) = k / 2 by
+    apply eq_div_iff_mul_eq.mpr
+    linarith [hk]]
   fin_cases hk_values <;> simp
 
 /-- Niven's theorem, but stated for `sin` instead of `cos`. -/
@@ -157,9 +159,8 @@ theorem niven_angle_eq (hθ : ∃ r : ℚ, θ = r * π) (hcos : ∃ q : ℚ, cos
   -- define `h₂` appropriately for each proof branch
   [have h₂ := cos_pi;
     have h₂ : cos (π * (2 / 3)) = -1 / 2 := by
-      have := cos_pi_sub (π / 3)
-      have := cos_pi_div_three
-      grind;;
+      rw [show π * (2 / 3) = π - π / 3 by ring, cos_pi_sub, cos_pi_div_three]
+      ring;;
     have h₂ := cos_pi_div_two;
     have h₂ := cos_pi_div_three;
     have h₂ := cos_zero] <;>
@@ -172,8 +173,7 @@ theorem niven_angle_div_pi_eq {r : ℚ} (hcos : ∃ q : ℚ, cos (r * π) = q)
     obtain ⟨hr, hr'⟩ := h_bnd; constructor <;> gcongr <;> norm_cast
   generalize h : (r : ℝ) * π = θ at *
   have := niven_angle_eq ⟨r, h.symm⟩ hcos (by simpa using h_bnd)
-  simp_all [Rat.smul_def]
-  grind
+  simpa [Rat.smul_def, h, div_eq_mul_inv₀, mul_comm] using this
 
 theorem niven_fract_angle_div_pi_eq {r : ℚ} (hcos : ∃ q : ℚ, cos (r * π) = q) :
     Int.fract r ∈ ({0, 1 / 3, 1 / 2, 2 / 3} : Set ℚ) := by

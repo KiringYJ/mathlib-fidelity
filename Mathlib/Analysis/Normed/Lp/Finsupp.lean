@@ -35,10 +35,13 @@ public section
 namespace Finsupp
 variable {ι X : Type*} [Zero X] {p : ℝ≥0} [Fact (1 ≤ p)]
 
-/-- The L^1 extended metric on `ι`-many copies of a metric space `X` -/
+local instance : NeZero (p : ℝ) :=
+  ⟨ne_of_gt (by exact_mod_cast (zero_lt_one.trans_le (Fact.out : 1 ≤ p)))⟩
+
+/-- The L^p extended pseudometric on `ι`-many copies of an extended pseudometric space `X`. -/
 noncomputable instance [PseudoEMetricSpace X] : PseudoEMetricSpace (WithLp p <| ι →₀ X) where
   edist f g :=
-  ((f.ofLp.zipWith edist (edist_self _) g.ofLp).sum fun i r ↦ r ^ (p : ℝ)) ^ (p⁻¹ : ℝ)
+    ((f.ofLp.zipWith edist (edist_self _) g.ofLp).sum fun i r ↦ r ^ (p : ℝ)) ^ (1 / (p : ℝ))
   edist_self f := by
     have : 0 < p := zero_lt_one.trans_le Fact.out
     simp [sum, *]
@@ -54,7 +57,7 @@ noncomputable instance [PseudoEMetricSpace X] : PseudoEMetricSpace (WithLp p <| 
     rw [sum_of_support_subset (s := s) _ (by grind [support_zipWith]) _ (by simp [*]),
       sum_of_support_subset (s := s) _ (by grind [support_zipWith]) _ (by simp [*]),
       sum_of_support_subset (s := s) _ (by grind [support_zipWith]) _ (by simp [*])]
-    simp only [zipWith_apply, ← one_div]
+    simp only [zipWith_apply]
     grw [← ENNReal.Lp_add_le _ _ _ (mod_cast Fact.out)]
     gcongr
     exact edist_triangle ..
@@ -62,19 +65,21 @@ noncomputable instance [PseudoEMetricSpace X] : PseudoEMetricSpace (WithLp p <| 
 lemma edist_def [PseudoEMetricSpace X] {p : ℝ≥0} [Fact (1 ≤ p)]
     (f g : WithLp p <| ι →₀ X) :
     edist f g =
-      ((f.ofLp.zipWith edist (edist_self _) g.ofLp).sum fun _i r ↦ r ^ (p : ℝ)) ^ (p⁻¹ : ℝ) := rfl
+      ((f.ofLp.zipWith edist (edist_self _) g.ofLp).sum fun _i r ↦ r ^ (p : ℝ)) ^
+        (1 / (p : ℝ)) := rfl
 
-/-- The L^1 extended metric on `ι`-many copies of a metric space `X` -/
+/-- The L^p extended metric on `ι`-many copies of an extended metric space `X`. -/
 noncomputable instance [EMetricSpace X] : EMetricSpace (WithLp p <| ι →₀ X) where
   eq_of_edist_eq_zero {f g} hfg := by simp_all [edist_def, sum, WithLp.ext_iff, DFunLike.ext_iff]
 
-/-- The L^1 metric on `ι`-many copies of a metric space `X` -/
+/-- The L^p pseudometric on `ι`-many copies of a pseudometric space `X`. -/
 noncomputable instance [PseudoMetricSpace X] : PseudoMetricSpace (WithLp p <| ι →₀ X) :=
   PseudoEMetricSpace.toPseudoMetricSpaceOfDist
-    (fun f g ↦ ((f.ofLp.zipWith dist (dist_self _) g.ofLp).sum fun i r ↦ r ^ (p : ℝ)) ^ (p⁻¹ : ℝ))
+    (fun f g ↦
+      ((f.ofLp.zipWith dist (dist_self _) g.ofLp).sum fun i r ↦ r ^ (p : ℝ)) ^ (1 / (p : ℝ)))
     (fun f g ↦ by dsimp [sum]; positivity) fun f g ↦ by
       simp only [edist_def, sum, zipWith_apply, ← coe_nnreal_ennreal_nndist, NNReal.zero_le_coe,
-        ← ENNReal.coe_rpow_of_nonneg, ← ENNReal.ofNNReal_finsetSum, inv_nonneg, ← coe_nndist,
+        ← ENNReal.coe_rpow_of_nonneg, ← ENNReal.ofNNReal_finsetSum, one_div_nonneg, ← coe_nndist,
         ← NNReal.coe_rpow, ← NNReal.coe_sum, ENNReal.ofReal_coe_nnreal, ENNReal.coe_inj]
       congr! 2
       ext i
@@ -82,21 +87,24 @@ noncomputable instance [PseudoMetricSpace X] : PseudoMetricSpace (WithLp p <| ι
 
 lemma dist_def [PseudoMetricSpace X] (f g : WithLp p <| ι →₀ X) :
     dist f g =
-      ((f.ofLp.zipWith dist (dist_self _) g.ofLp).sum fun _i r ↦ r ^ (p : ℝ)) ^ (p⁻¹ : ℝ) := rfl
+      ((f.ofLp.zipWith dist (dist_self _) g.ofLp).sum fun _i r ↦ r ^ (p : ℝ)) ^
+        (1 / (p : ℝ)) := rfl
 
 lemma nndist_def [PseudoMetricSpace X] (f g : WithLp p <| ι →₀ X) :
     nndist f g =
-      ((f.ofLp.zipWith nndist (nndist_self _) g.ofLp).sum fun _i r ↦ r ^ (p : ℝ)) ^ (p⁻¹ : ℝ) := by
+      ((f.ofLp.zipWith nndist (nndist_self _) g.ofLp).sum fun _i r ↦ r ^ (p : ℝ)) ^
+        (1 / (p : ℝ)) := by
   ext
   simp only [coe_nndist, dist_def, sum, zipWith_apply, NNReal.coe_sum, NNReal.coe_rpow]
   congr 2
   ext i
   simp [← coe_nndist]
 
-/-- The L^1 metric on `ι`-many copies of a metric space `X` -/
+/-- The L^p metric on `ι`-many copies of a metric space `X`. -/
 noncomputable instance [MetricSpace X] : MetricSpace (WithLp p <| ι →₀ X) :=
   EMetricSpace.toMetricSpaceOfDist
-    (fun f g ↦ ((f.ofLp.zipWith dist (dist_self _) g.ofLp).sum fun i r ↦ r ^ (p : ℝ)) ^ (p⁻¹ : ℝ))
+    (fun f g ↦
+      ((f.ofLp.zipWith dist (dist_self _) g.ofLp).sum fun i r ↦ r ^ (p : ℝ)) ^ (1 / (p : ℝ)))
     (fun f g ↦ by dsimp [sum]; positivity) fun f g ↦ by rw [edist_dist, dist_def]
 
 end Finsupp

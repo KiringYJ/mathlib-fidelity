@@ -56,7 +56,6 @@ theorem absNorm_div_norm_eq_absNorm_div_norm {I : FractionalIdeal R⁰ K} (a : R
     · simp_rw [← Nat.cast_natAbs, ← Nat.cast_mul, ← Ideal.absNorm_span_singleton]
       rw [← map_mul, ← map_mul, mul_comm, ← h', mul_comm]
     · exact LinearMap.ker_eq_bot.mpr (IsFractionRing.injective R K)
-  all_goals simp [Algebra.norm_eq_zero_iff]
 
 /-- The absolute norm of the fractional ideal `I` extending by multiplicativity the absolute norm
 on (integral) ideals. -/
@@ -66,17 +65,15 @@ noncomputable def absNorm : FractionalIdeal R⁰ K →*₀ ℚ where
     rw [num_zero_eq, Submodule.zero_eq_bot, Ideal.absNorm_bot, Nat.cast_zero, zero_div]
     exact IsFractionRing.injective R K
   map_one' := by
-    rw [absNorm_div_norm_eq_absNorm_div_norm 1 ⊤ (by simp [Submodule.one_eq_range]),
-      Ideal.absNorm_top, Nat.cast_one, OneMemClass.coe_one, map_one, abs_one,
-      Int.cast_one,
-      one_div_one]
+    rw [absNorm_div_norm_eq_absNorm_div_norm 1 ⊤ (by simp [Submodule.one_eq_range])]
+    simp
   map_mul' I J := by
     rw [absNorm_div_norm_eq_absNorm_div_norm (I.den * J.den) (I.num * J.num) (by
         have : Algebra.linearMap R K = (IsScalarTower.toAlgHom R R K).toLinearMap := rfl
         rw [coe_mul, this, Submodule.map_mul, ← this, ← den_mul_self_eq_num, ← den_mul_self_eq_num]
-        exact Submodule.mul_smul_mul_eq_smul_mul_smul _ _ _ _),
-      Submonoid.coe_mul, map_mul, map_mul, Nat.cast_mul, div_mul_div_comm,
-      Int.cast_abs, Int.cast_abs, Int.cast_abs, ← abs_mul, Int.cast_mul]
+        exact Submodule.mul_smul_mul_eq_smul_mul_smul _ _ _ _)]
+    simp only [Submonoid.coe_mul, map_mul, Nat.cast_mul, Int.cast_abs, Int.cast_mul, abs_mul]
+    exact div_mul_div_comm₀.symm
 
 theorem absNorm_eq (I : FractionalIdeal R⁰ K) :
     absNorm I = (Ideal.absNorm I.num : ℚ) / |Algebra.norm ℤ (I.den : R)| := rfl
@@ -97,13 +94,12 @@ theorem absNorm_eq_zero_iff [IsDomain K] {I : FractionalIdeal R⁰ K} :
     absNorm I = 0 ↔ I = 0 := by
   refine ⟨fun h ↦ zero_of_num_eq_bot zero_notMem_nonZeroDivisors ?_, fun h ↦ h ▸ absNorm_bot⟩
   rw [absNorm_eq, div_eq_zero_iff] at h
-  refine Ideal.absNorm_eq_zero_iff.mp <| Nat.cast_eq_zero.mp <| h.resolve_right ?_
-  simp [Algebra.norm_eq_zero_iff]
+  exact Ideal.absNorm_eq_zero_iff.mp (Nat.cast_eq_zero.mp h)
 
 theorem coeIdeal_absNorm (I₀ : Ideal R) :
     absNorm (I₀ : FractionalIdeal R⁰ K) = Ideal.absNorm I₀ := by
-  rw [absNorm_eq' 1 I₀ (by rw [one_smul]; rfl), OneMemClass.coe_one, map_one, abs_one,
-    Int.cast_one, _root_.div_one]
+  rw [absNorm_eq' 1 I₀ (by rw [one_smul]; rfl)]
+  simp
 
 section IsLocalization
 
@@ -116,9 +112,9 @@ theorem abs_det_basis_change [IsDomain K] {ι : Type*} [Fintype ι]
   let b₀ : Basis ι ℚ K := b.localizationLocalization ℚ ℤ⁰ K
   let bI.num : Basis ι ℤ I.num := bI.map
       ((equivNum (nonZeroDivisors.coe_ne_zero _)).restrictScalars ℤ)
-  rw [absNorm_eq, ← Ideal.natAbs_det_basis_change b I.num bI.num, Nat.cast_natAbs, Int.cast_abs,
-    Int.cast_abs, Basis.det_apply, Basis.det_apply]
-  change _ = |algebraMap ℤ ℚ _| / _
+  rw [absNorm_eq, eq_div_iff, ← Ideal.natAbs_det_basis_change b I.num bI.num, Nat.cast_natAbs,
+    Int.cast_abs, Int.cast_abs, Basis.det_apply, Basis.det_apply]
+  change _ = |algebraMap ℤ ℚ _|
   rw [RingHom.map_det, show RingHom.mapMatrix (algebraMap ℤ ℚ) (b.toMatrix ((↑) ∘ bI.num)) =
       b₀.toMatrix ((algebraMap R K (den I : R)) • ((↑) ∘ bI)) by
     ext : 2
@@ -129,24 +125,20 @@ theorem abs_det_basis_change [IsDomain K] {ι : Type*} [Fintype ι]
     rfl]
   rw [Basis.toMatrix_smul, Matrix.det_mul, abs_mul, ← Algebra.norm_eq_matrix_det,
     Algebra.norm_localization ℤ ℤ⁰, show (Algebra.norm ℤ (den I : R) : ℚ) =
-    algebraMap ℤ ℚ (Algebra.norm ℤ (den I : R)) by rfl, mul_div_assoc, mul_div_cancel₀ _ (by
-    rw [ne_eq, abs_eq_zero, IsFractionRing.to_map_eq_zero_iff, Algebra.norm_eq_zero_iff_of_basis b]
-    exact nonZeroDivisors.coe_ne_zero _)]
+    algebraMap ℤ ℚ (Algebra.norm ℤ (den I : R)) by rfl, mul_comm]
 
 set_option backward.isDefEq.respectTransparency false in
 variable (R) in
 @[simp]
-theorem absNorm_span_singleton [Module.Finite ℚ K] (x : K) :
+theorem absNorm_span_singleton (x : K) :
     absNorm (spanSingleton R⁰ x) = |(Algebra.norm ℚ x)| := by
   have : IsDomain K := IsFractionRing.isDomain R
   obtain ⟨d, ⟨r, hr⟩⟩ := IsLocalization.exists_integer_multiple R⁰ x
   rw [absNorm_eq' d (Ideal.span {r})]
-  · rw [Ideal.absNorm_span_singleton]
+  · rw [div_eq_iff, Ideal.absNorm_span_singleton]
     simp_rw [Nat.cast_natAbs, Int.cast_abs, show ((Algebra.norm ℤ _) : ℚ) = algebraMap ℤ ℚ
       (Algebra.norm ℤ _) by rfl, ← Algebra.norm_localization ℤ ℤ⁰ (Sₘ := K) _]
-    rw [hr, Algebra.smul_def, map_mul, abs_mul, mul_div_assoc, mul_div_cancel₀ _ (by
-      rw [ne_eq, abs_eq_zero, Algebra.norm_eq_zero_iff, IsFractionRing.to_map_eq_zero_iff]
-      exact nonZeroDivisors.coe_ne_zero _)]
+    rw [hr, Algebra.smul_def, map_mul, abs_mul, mul_comm]
   · ext
     simp_rw [Submodule.mem_smul_pointwise_iff_exists, mem_coe, mem_spanSingleton, Submodule.mem_map,
       Algebra.linearMap_apply, Submonoid.smul_def, Ideal.mem_span_singleton', exists_exists_eq_and,

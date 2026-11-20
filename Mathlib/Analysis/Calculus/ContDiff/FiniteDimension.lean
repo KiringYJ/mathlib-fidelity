@@ -69,19 +69,19 @@ often requires an inconvenient need to generalize `F`, which results in universe
 This lemma avoids these universe issues, but only applies for finite-dimensional `D`. -/
 theorem contDiff_succ_iff_fderiv_apply [FiniteDimensional 𝕜 D] :
     ContDiff 𝕜 (n + 1) f ↔ Differentiable 𝕜 f ∧
-      (n = ω → AnalyticOnNhd 𝕜 f Set.univ) ∧ ∀ y, ContDiff 𝕜 n fun x => fderiv 𝕜 f x y := by
+      (n = ω → AnalyticOnNhd 𝕜 f Set.univ) ∧ ∀ y, ContDiff 𝕜 n fun x => fderiv 𝕜 f x id y := by
   rw [contDiff_succ_iff_fderiv, contDiff_clm_apply_iff]
 
 theorem contDiffOn_succ_of_fderiv_apply [FiniteDimensional 𝕜 D]
     (hf : DifferentiableOn 𝕜 f s) (h'f : n = ω → AnalyticOn 𝕜 f s)
-    (h : ∀ y, ContDiffOn 𝕜 n (fun x => fderivWithin 𝕜 f s x y) s) :
+    (h : ∀ y, ContDiffOn 𝕜 n (fun x => fderivWithin 𝕜 f s x id y) s) :
     ContDiffOn 𝕜 (n + 1) f s :=
   contDiffOn_succ_of_fderivWithin hf h'f <| contDiffOn_clm_apply.mpr h
 
 theorem contDiffOn_succ_iff_fderiv_apply [FiniteDimensional 𝕜 D] (hs : UniqueDiffOn 𝕜 s) :
     ContDiffOn 𝕜 (n + 1) f s ↔
       DifferentiableOn 𝕜 f s ∧ (n = ω → AnalyticOn 𝕜 f s) ∧
-      ∀ y, ContDiffOn 𝕜 n (fun x => fderivWithin 𝕜 f s x y) s := by
+      ∀ y, ContDiffOn 𝕜 n (fun x => fderivWithin 𝕜 f s x id y) s := by
   rw [contDiffOn_succ_iff_fderivWithin hs, contDiffOn_clm_apply]
 
 end FiniteDimensional

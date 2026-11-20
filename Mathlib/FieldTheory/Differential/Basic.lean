@@ -47,15 +47,17 @@ lemma logDeriv_div {hb : IsUnit b} {hab : IsUnit (a / b)} :
   rw [Derivation.leibniz_div]
   simp only [smul_eq_mul]
   field_simp
-  ring
 
-@[simp]
 lemma logDeriv_pow (n : ℕ) (a : R) {ha : IsUnit a} : logDeriv (a ^ n) = n * logDeriv a := by
   induction n with
   | zero => simp
   | succ n h2 =>
     have : logDeriv (a ^ (n + 1)) = logDeriv (a ^ n * a) := by simp only [pow_succ]
     rw [this, logDeriv_mul, h2, Nat.cast_add, Nat.cast_one, add_mul, one_mul]
+
+@[simp]
+lemma logDeriv_pow_of_ne_zero (n : ℕ) (a : R) {ha : a ≠ 0} : logDeriv (a ^ n) = n * logDeriv a :=
+  logDeriv_pow n a (ha := ha.isUnit)
 
 lemma logDeriv_eq_zero {ha : IsUnit a} : logDeriv a = 0 ↔ a′ = 0 := by
   simp [logDeriv]
@@ -101,7 +103,7 @@ lemma _root_.algebraMap.coe_logDeriv {F K : Type*} [Field F] [Field K] [Differen
 variable {F : Type*} [Field F] [Differential F] [CharZero F]
 
 omit [Differential F] in
-lemma aeval_root_derivative_ne_zero (p : F[X]) [Fact (Irreducible p)] [Fact p.Monic] :
+lemma aeval_root_derivative_ne_zero (p : F[X]) [Fact (Irreducible p)] :
     aeval (AdjoinRoot.root p) (derivative p) ≠ 0 := by
   rw [AdjoinRoot.aeval_eq, ne_eq, AdjoinRoot.mk_eq_zero]
   have : 0 < p.natDegree := Irreducible.natDegree_pos (Fact.out)

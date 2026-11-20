@@ -26,22 +26,26 @@ variable {𝕜 F : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup F] 
 /-- Translation in the domain does not change the derivative. -/
 lemma HasDerivAt.comp_const_add (a x : 𝕜) (hf : HasDerivAt f f' (a + x)) :
     HasDerivAt (fun x ↦ f (a + x)) f' x := by
-  simpa [Function.comp_def] using HasDerivAt.scomp (𝕜 := 𝕜) x hf <| hasDerivAt_id' x |>.const_add a
+  simpa [Function.comp_def] using
+    HasDerivAt.scomp (𝕜 := 𝕜) (coord' := @id 𝕜) x hf ((hasDerivAt_id' x).const_add a)
 
 /-- Translation in the domain does not change the derivative. -/
 lemma HasDerivAt.comp_add_const (x a : 𝕜) (hf : HasDerivAt f f' (x + a)) :
     HasDerivAt (fun x ↦ f (x + a)) f' x := by
-  simpa [Function.comp_def] using HasDerivAt.scomp (𝕜 := 𝕜) x hf <| hasDerivAt_id' x |>.add_const a
+  simpa [Function.comp_def] using
+    HasDerivAt.scomp (𝕜 := 𝕜) (coord' := @id 𝕜) x hf ((hasDerivAt_id' x).add_const a)
 
 /-- Translation in the domain does not change the derivative. -/
 lemma HasDerivAt.comp_const_sub (a x : 𝕜) (hf : HasDerivAt f f' (a - x)) :
     HasDerivAt (fun x ↦ f (a - x)) (-f') x := by
-  simpa [Function.comp_def] using HasDerivAt.scomp (𝕜 := 𝕜) x hf <| hasDerivAt_id' x |>.const_sub a
+  simpa [Function.comp_def] using
+    HasDerivAt.scomp (𝕜 := 𝕜) (coord' := @id 𝕜) x hf ((hasDerivAt_id' x).const_sub a)
 
 /-- Translation in the domain does not change the derivative. -/
 lemma HasDerivAt.comp_sub_const (x a : 𝕜) (hf : HasDerivAt f f' (x - a)) :
     HasDerivAt (fun x ↦ f (x - a)) f' x := by
-  simpa [Function.comp_def] using HasDerivAt.scomp (𝕜 := 𝕜) x hf <| hasDerivAt_id' x |>.sub_const a
+  simpa [Function.comp_def] using
+    HasDerivAt.scomp (𝕜 := 𝕜) (coord' := @id 𝕜) x hf ((hasDerivAt_id' x).sub_const a)
 
 variable (f)
 variable (a : 𝕜) (s : Set 𝕜) (x : 𝕜)

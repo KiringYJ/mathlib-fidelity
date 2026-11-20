@@ -234,12 +234,28 @@ def pow (cR : Common.Cache sR) {a : Q($A)} {b : Q(ℕ)} (za : BaseType sAlg a)
     let ⟨_, vs, ps⟩ ← Common.evalPow₁ (Ring.ringCompute cR) rcℕ vr vb
     return ⟨_, ⟨_, vs⟩, q(pow_algebraMap $ps)⟩
 
-/-- A unit in an algebra need not come from a unit in its base ring, so checked inversion cannot in
-general be delegated to the normalized base-ring coefficient. -/
-def inv (_cR : Algebra.Cache sR) {a : Q($A)} (_fA : Q(Semifield $A)) (ha : Q(IsUnit $a))
-    (_za : BaseType sAlg a) :
+/-- Normalize the checked inverse of a numeric coefficient over a semifield. Its invertibility
+in the algebra gives nonzeroness and hence invertibility in the base semifield. -/
+def inv (cR : Algebra.Cache sR) {a : Q($A)}
+    (_fA : Q(Semifield $A)) (ha : Q(IsUnit $a)) (za : BaseType sAlg a) :
     AtomM (Option (Common.Result (BaseType sAlg) q(Checked.inv $a $ha))) :=
-  return none
+  match za with
+  | .mk _ terms =>
+    match terms with
+    | .add (a := c) (.const coeff) .zero => do
+      let some sfR := cR.dsα | return none
+      assumeInstancesCommute
+      let hr : Q(IsUnit ($c + 0)) := q(Ne.isUnit fun h : $c + 0 = 0 ↦
+        IsUnit.ne_zero $ha (by rw [h, map_zero]))
+      let hc : Q(IsUnit $c) := q(Common.isUnit_add_zero $hr)
+      let some ⟨value, normCoeff, proof⟩ ← (Ring.ringCompute cR.toCache).inv sfR hc coeff
+        | return none
+      let normProd : Ring.ExProd q($sR) value := .const normCoeff
+      let hr' : Q(Checked.inv ($c + 0) $hr = $value + 0) := q(Common.inv_single $proof)
+      return some ⟨_, .mk _ normProd.toSum,
+        q(Eq.trans (map_inv₀ (algebraMap $R $A) ($c + 0) (ha := $hr)).symm
+          (congrArg (algebraMap $R $A) $hr'))⟩
+    | _ => pure none
 
 /-- Evaluate constants in `A` using `norm_num`. -/
 def derive (cR : Algebra.Cache sR) (cA : Algebra.Cache sA) (x : Q($A)) :

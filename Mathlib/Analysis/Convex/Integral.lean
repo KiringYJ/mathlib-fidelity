@@ -310,7 +310,7 @@ theorem ae_eq_const_or_norm_average_lt_of_norm_le_const [StrictConvexSpace ℝ E
   by_cases hfi : Integrable f μ; swap
   · simp [average_eq', integral_smul_measure, integral_undef hfi, hC0]
   rcases (le_top : μ univ ≤ ∞).eq_or_lt with hμt | hμt
-  · simp [average_eq', integral_smul_measure, hμt, hC0]
+  · simp [average_eq', hμt, hC0]
   have : IsFiniteMeasure μ := ⟨hμt⟩
   replace h_le : ∀ᵐ x ∂μ, f x ∈ closedBall (0 : E) C := by simpa only [mem_closedBall_zero_iff]
   simpa only [interior_closedBall _ hC0.ne', mem_ball_zero_iff] using

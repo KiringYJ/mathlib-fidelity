@@ -129,7 +129,7 @@ theorem mahlerMeasure_mul (p q : ℂ[X]) :
   · simpa [hpq, mahlerMeasure_zero] using mul_eq_zero.mp hpq
   rw [mul_eq_zero, not_or] at hpq
   simp only [mahlerMeasure, ne_eq, mul_eq_zero, hpq, or_self, not_false_eq_true, ↓reduceIte,
-    logMahlerMeasure, eval_mul, Complex.norm_mul, circleAverage_def, mul_inv_rev, smul_eq_mul]
+    logMahlerMeasure, eval_mul, Complex.norm_mul, circleAverage_def, smul_eq_mul]
   rw [← exp_add, ← left_distrib]
   congr
   rw [← integral_add p.intervalIntegrable_mahlerMeasure q.intervalIntegrable_mahlerMeasure]
@@ -171,13 +171,14 @@ theorem logMahlerMeasure_X_add_C (z : ℂ) : (X + C z).logMahlerMeasure = log⁺
 
 theorem logMahlerMeasure_C_mul_X_add_C {a : ℂ} (ha : a ≠ 0) (b : ℂ) :
     (C a * X + C b).logMahlerMeasure = log ‖a‖ + log⁺ ‖a⁻¹ * b‖ := by
-  rw [show C a * X + C b = C a * (X + C (a⁻¹ * b)) by simp [mul_add, ← map_mul, ha],
+  rw [show C a * X + C b = C a * (X + C (a⁻¹ * b)) by simp [mul_add, ← map_mul],
     logMahlerMeasure_C_mul ha (X_add_C_ne_zero (a⁻¹ * b)), logMahlerMeasure_X_add_C]
 
-theorem logMahlerMeasure_of_degree_eq_one {p : ℂ[X]} (h : p.degree = 1) : p.logMahlerMeasure =
-    log ‖p.coeff 1‖ + log⁺ ‖(p.coeff 1)⁻¹ * p.coeff 0‖ := by
-  rw [eq_X_add_C_of_degree_le_one (le_of_eq h)]
-  simp [logMahlerMeasure_C_mul_X_add_C (show p.coeff 1 ≠ 0 by exact coeff_ne_zero_of_eq_degree h)]
+theorem logMahlerMeasure_of_degree_eq_one {p : ℂ[X]} (h : p.degree = 1) :
+    p.logMahlerMeasure = log ‖p.coeff 1‖ +
+      log⁺ ‖Checked.inv (p.coeff 1) (coeff_ne_zero_of_eq_degree h).isUnit * p.coeff 0‖ :=
+  (congrArg logMahlerMeasure (eq_X_add_C_of_degree_le_one h.le)).trans
+    (logMahlerMeasure_C_mul_X_add_C (coeff_ne_zero_of_eq_degree h) _)
 
 /-- The Mahler measure of `X - C z` equals `max 1 ‖z‖`. -/
 @[simp]
@@ -196,10 +197,10 @@ theorem mahlerMeasure_X_add_C (z : ℂ) : (X + C z).mahlerMeasure = max 1 ‖z�
 @[simp]
 theorem mahlerMeasure_C_mul_X_add_C {a : ℂ} (ha : a ≠ 0) (b : ℂ) :
     (C a * X + C b).mahlerMeasure = max ‖a‖ ‖b‖ := by
-  simp only [show C a * X + C b = C a * (X + C (a⁻¹ * b)) by simp [mul_add, ← map_mul, ha],
+  simp only [show C a * X + C b = C a * (X + C (a⁻¹ * b)) by simp [mul_add, ← map_mul],
     mahlerMeasure_mul, mahlerMeasure_const, ← coe_nnnorm, mahlerMeasure_X_add_C]
   norm_cast
-  simp [mul_max, ha]
+  simp [mul_max]
 
 theorem mahlerMeasure_of_degree_eq_one {p : ℂ[X]} (h : p.degree = 1) :
     p.mahlerMeasure = max ‖p.coeff 1‖ ‖p.coeff 0‖ := by

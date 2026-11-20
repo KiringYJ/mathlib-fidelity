@@ -405,9 +405,11 @@ theorem mul_le_addHaar_image_of_lt_det (A : E →L[ℝ] E) {m : ℝ≥0}
   let B := A.toContinuousLinearEquivOfDetNeZero hA
   -- the determinant of `B.symm` is bounded by `m⁻¹`
   have I : ENNReal.ofReal |(B.symm : E →L[ℝ] E).det| < (m⁻¹ : ℝ≥0) := by
-    simp only [ENNReal.ofReal, abs_inv, Real.toNNReal_inv, ContinuousLinearEquiv.det_coe_symm,
+    simp only [ENNReal.ofReal, abs_inv, ContinuousLinearEquiv.det_coe_symm,
       ENNReal.coe_lt_coe] at hm ⊢
-    exact NNReal.inv_lt_inv mpos.ne' hm
+    change (|A.det|⁻¹).toNNReal < m⁻¹
+    rw [Real.toNNReal_inv (abs_pos.mpr hA)]
+    exact NNReal.inv_lt_inv hm
   -- therefore, we may apply `addHaar_image_le_mul_of_det_lt` to `B.symm` and `m⁻¹`.
   obtain ⟨δ₀, δ₀pos, hδ₀⟩ :
     ∃ δ : ℝ≥0,
@@ -421,41 +423,46 @@ theorem mul_le_addHaar_image_of_lt_det (A : E →L[ℝ] E) {m : ℝ≥0}
       addHaar_image_le_mul_of_det_lt μ B.symm I
     rcases (this.and self_mem_nhdsWithin).exists with ⟨δ₀, h, h'⟩
     exact ⟨δ₀, h', h⟩
-  -- record smallness conditions for `δ` that will be needed to apply `hδ₀` below.
-  have L1 : ∀ᶠ δ in 𝓝 (0 : ℝ≥0), Subsingleton E ∨ δ < ‖(B.symm : E →L[ℝ] E)‖₊⁻¹ := by
-    by_cases h : Subsingleton E
-    · simp only [h, true_or, eventually_const]
-    simp only [h, false_or]
-    apply Iio_mem_nhds
-    simpa only [h, false_or, inv_pos] using B.subsingleton_or_nnnorm_symm_pos
-  have L2 :
-    ∀ᶠ δ in 𝓝 (0 : ℝ≥0), ‖(B.symm : E →L[ℝ] E)‖₊ * (‖(B.symm : E →L[ℝ] E)‖₊⁻¹ - δ)⁻¹ * δ < δ₀ := by
-    have :
-      Tendsto (fun δ => ‖(B.symm : E →L[ℝ] E)‖₊ * (‖(B.symm : E →L[ℝ] E)‖₊⁻¹ - δ)⁻¹ * δ) (𝓝 0)
-        (𝓝 (‖(B.symm : E →L[ℝ] E)‖₊ * (‖(B.symm : E →L[ℝ] E)‖₊⁻¹ - 0)⁻¹ * 0)) := by
-      rcases eq_or_ne ‖(B.symm : E →L[ℝ] E)‖₊ 0 with (H | H)
-      · simpa only [H, zero_mul] using tendsto_const_nhds
-      refine Tendsto.mul (tendsto_const_nhds.mul ?_) tendsto_id
-      refine (Tendsto.sub tendsto_const_nhds tendsto_id).inv₀ ?_
-      simpa only [tsub_zero, inv_eq_zero, Ne] using H
-    simp only [mul_zero] at this
-    exact (tendsto_order.1 this).2 δ₀ δ₀pos
+  -- Bounding `δ * N` by a half keeps the inverse estimate's denominator away from zero.
+  let N : ℝ≥0 := ‖(B.symm : E →L[ℝ] E)‖₊
+  have L1 : ∀ᶠ δ : ℝ≥0 in 𝓝 0, δ * N < 1 / 2 := by
+    have h : Tendsto (fun δ : ℝ≥0 ↦ δ * N) (𝓝 0) (𝓝 (0 * N)) :=
+      tendsto_id.mul tendsto_const_nhds
+    exact (tendsto_order.1 h).2 _ (by
+      simpa only [zero_mul] using half_pos (zero_lt_one : (0 : ℝ≥0) < 1))
+  have L2 : ∀ᶠ δ : ℝ≥0 in 𝓝 0, N * (2 * N) * δ < δ₀ := by
+    have h : Tendsto (fun δ : ℝ≥0 ↦ N * (2 * N) * δ) (𝓝 0) (𝓝 (N * (2 * N) * 0)) :=
+      tendsto_const_nhds.mul tendsto_id
+    exact (tendsto_order.1 h).2 _ (by simpa only [mul_zero] using δ₀pos)
   -- let `δ` be small enough, and `f` approximated by `B` up to `δ`.
   filter_upwards [L1, L2]
   intro δ h1δ h2δ s f hf
+  have hδ : δ * N < 1 := h1δ.trans (half_lt_self zero_lt_one)
+  have hden : 0 < 1 - δ * N := tsub_pos_iff_lt.mpr hδ
+  have hhalf : 1 / 2 ≤ 1 - δ * N := by
+    apply le_tsub_of_add_le_right
+    exact (add_le_add le_rfl h1δ.le).trans_eq (add_halves _)
+  have hbound : N / (1 - δ * N) ≤ 2 * N := by
+    apply (div_le_iff₀ hden).mpr
+    calc
+      N = (2 * N) * (1 / 2) := by rw [mul_right_comm, mul_one_div_cancel, one_mul]
+      _ ≤ (2 * N) * (1 - δ * N) := by gcongr
   have hf' : ApproximatesLinearOn f (B : E →L[ℝ] E) s δ := by convert! hf
-  let F := hf'.toPartialEquiv h1δ
+  let F := hf'.toPartialEquiv hδ
   -- the condition to be checked can be reformulated in terms of the inverse maps
   suffices H : μ (F.symm '' F.target) ≤ (m⁻¹ : ℝ≥0) * μ F.target by
     change (m : ℝ≥0∞) * μ F.source ≤ μ F.target
     rwa [← F.symm_image_target_eq_source, mul_comm, ← ENNReal.le_div_iff_mul_le, div_eq_mul_inv,
-      mul_comm, ← ENNReal.coe_inv mpos.ne']
+      mul_comm, ← ENNReal.coe_inv (hr := mpos.ne'.isUnit)]
     · apply Or.inl
       simpa only [ENNReal.coe_eq_zero, Ne] using mpos.ne'
     · simp
   -- as `f⁻¹` is well approximated by `B⁻¹`, the conclusion follows from `hδ₀`
   -- and our choice of `δ`.
-  exact hδ₀ _ _ ((hf'.to_inv h1δ).mono_num h2δ.le)
+  apply hδ₀ _ _ ((hf'.to_inv hδ).mono_num ?_)
+  calc
+    _ ≤ N * (2 * N) * δ := by gcongr
+    _ ≤ δ₀ := h2δ.le
 
 /-- If a differentiable function `f` is approximated by a linear map `A` on a set `s`, up to `δ`,
 then at almost every `x` in `s` one has `‖f' x - A‖ ≤ δ`. -/

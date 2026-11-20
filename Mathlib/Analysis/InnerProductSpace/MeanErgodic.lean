@@ -13,9 +13,9 @@ public import Mathlib.Dynamics.BirkhoffSum.NormedSpace
 
 In this file we prove the von Neumann Mean Ergodic Theorem for an operator in a Hilbert space.
 It says that for a contracting linear self-map `f : E →ₗ[𝕜] E` of a Hilbert space,
-the Birkhoff averages
+the Birkhoff averages, with `N > 0`,
 ```
-birkhoffAverage 𝕜 f id N x = (N : 𝕜)⁻¹ • ∑ n ∈ Finset.range N, f^[n] x
+birkhoffAverage 𝕜 f id N hN x = (N : 𝕜)⁻¹ • ∑ n ∈ Finset.range N, f^[n] x
 ```
 converge to the orthogonal projection of `x` to the subspace of fixed points of `f`,
 see `ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection`.
@@ -34,9 +34,9 @@ Let `f : E → E` be a contracting linear self-map of a normed space.
 Let `S` be the subspace of fixed points of `f`.
 Let `g : E → S` be a continuous linear projection, `g|_S=id`.
 If the range of `f - id` is dense in the kernel of `g`,
-then for each `x`, the Birkhoff averages
+then for each `x`, the Birkhoff averages, with `N > 0`,
 ```
-birkhoffAverage 𝕜 f id N x = (N : 𝕜)⁻¹ • ∑ n ∈ Finset.range N, f^[n] x
+birkhoffAverage 𝕜 f id N hN x = (N : 𝕜)⁻¹ • ∑ n ∈ Finset.range N, f^[n] x
 ```
 converge to `g x` as `N → ∞`.
 
@@ -48,20 +48,24 @@ theorem LinearMap.tendsto_birkhoffAverage_of_ker_subset_closure [NormedSpace �
     (f : E →ₗ[𝕜] E) (hf : LipschitzWith 1 f) (g : E →L[𝕜] LinearMap.eqLocus f 1)
     (hg_proj : ∀ x : LinearMap.eqLocus f 1, g x = x)
     (hg_ker : (g.ker : Set E) ⊆ closure (LinearMap.range (f - 1))) (x : E) :
-    Tendsto (birkhoffAverage 𝕜 f _root_.id · x) atTop (𝓝 (g x)) := by
+    Tendsto (fun n : ℕ+ ↦
+      birkhoffAverage 𝕜 f _root_.id n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit x)
+      atTop (𝓝 (g x)) := by
   /- Any point can be represented as a sum of `y ∈ LinearMap.ker g` and a fixed point `z`. -/
   obtain ⟨y, hy, z, hz, rfl⟩ : ∃ y, g y = 0 ∧ ∃ z, IsFixedPt f z ∧ x = y + z :=
     ⟨x - g x, by simp [hg_proj], g x, (g x).2, by simp⟩
   /- For a fixed point, the theorem is trivial,
   so it suffices to prove it for `y ∈ LinearMap.ker g`. -/
-  suffices Tendsto (birkhoffAverage 𝕜 f _root_.id · y) atTop (𝓝 0) by
+  suffices Tendsto (fun n : ℕ+ ↦
+      birkhoffAverage 𝕜 f _root_.id n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit y) atTop (𝓝 0) by
     have hgz : g z = z := congr_arg Subtype.val (hg_proj ⟨z, hz⟩)
     simpa [hy, hgz, birkhoffAverage, birkhoffSum, Finset.sum_add_distrib, smul_add]
       using this.add (hz.tendsto_birkhoffAverage 𝕜 _root_.id)
   /- By continuity, it suffices to prove the theorem on a dense subset of `LinearMap.ker g`.
   By assumption, `LinearMap.range (f - 1)` is dense in the kernel of `g`,
   so it suffices to prove the theorem for `y = f x - x`. -/
-  have : IsClosed {x | Tendsto (birkhoffAverage 𝕜 f _root_.id · x) atTop (𝓝 0)} :=
+  have : IsClosed {x | Tendsto (fun n : ℕ+ ↦
+      birkhoffAverage 𝕜 f _root_.id n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit x) atTop (𝓝 0)} :=
     isClosed_setOfPred_tendsto_birkhoffAverage 𝕜 hf uniformContinuous_id continuous_const
   refine closure_minimal (Set.forall_mem_range.2 fun x ↦ ?_) this (hg_ker hy)
   /- Finally, for `y = f x - x` the average is equal to the difference between averages
@@ -81,14 +85,15 @@ local notation "⟪" x ", " y "⟫" => inner 𝕜 x y
 set_option backward.isDefEq.respectTransparency false in
 /-- **Von Neumann Mean Ergodic Theorem** for an operator in a Hilbert space.
 For a contracting continuous linear self-map `f : E →L[𝕜] E` of a Hilbert space, `‖f‖ ≤ 1`,
-the Birkhoff averages
+the Birkhoff averages, with `N > 0`,
 ```
-birkhoffAverage 𝕜 f id N x = (N : 𝕜)⁻¹ • ∑ n ∈ Finset.range N, f^[n] x
+birkhoffAverage 𝕜 f id N hN x = (N : 𝕜)⁻¹ • ∑ n ∈ Finset.range N, f^[n] x
 ```
 converge to the orthogonal projection of `x` to the subspace of fixed points of `f`. -/
 theorem ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection (f : E →L[𝕜] E)
     (hf : ‖f‖ ≤ 1) (x : E) :
-    Tendsto (birkhoffAverage 𝕜 f _root_.id · x) atTop
+    Tendsto (fun n : ℕ+ ↦
+      birkhoffAverage 𝕜 f _root_.id n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit x) atTop
       (𝓝 <| (f.eqLocus (1 : E →L[𝕜] E)).orthogonalProjectionOnto x) := by
   /- Due to the previous theorem, it suffices to verify
   that the range of `f - 1` is dense in the orthogonal complement

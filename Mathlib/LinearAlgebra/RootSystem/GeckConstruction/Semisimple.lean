@@ -245,7 +245,7 @@ private lemma instIsIrreducible_aux₀ {U : LieSubmodule K H (b.support ⊕ ι �
     · have : χ x ≠ 0 := hχx ▸ hd₀ i
       simpa [hi, mulVec_eq_sum, diagonal_apply, hk₀, this] using! congr_fun hk (Sum.inl j)
     · rcases eq_or_ne i j with rfl | hij
-      · simp [hi]
+      · simp
       · suffices d j ≠ χ x by
           simpa [mulVec_eq_sum, diagonal_apply, sub_eq_zero, this, hij, hi] using!
             congr_fun hk (Sum.inr j)

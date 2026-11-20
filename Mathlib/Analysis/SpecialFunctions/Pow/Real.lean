@@ -54,16 +54,21 @@ theorem rpow_def_of_pos {x : ℝ} (hx : 0 < x) (y : ℝ) : x ^ y = exp (log x * 
 theorem exp_mul (x y : ℝ) : exp (x * y) = exp x ^ y := by rw [rpow_def_of_pos (exp_pos _), log_exp]
 
 @[simp, norm_cast]
-theorem rpow_intCast (x : ℝ) (n : ℤ) : x ^ (n : ℝ) = x ^ n := by
-  simp only [rpow_def, ← Complex.ofReal_zpow, Complex.cpow_intCast, Complex.ofReal_intCast,
-    Complex.ofReal_re]
+theorem rpow_intCast (x : ℝ) (n : ℤ) {h : n < 0 → x ≠ 0} :
+    x ^ (n : ℝ) = Checked.zpow x n (fun hn => (h hn).isUnit) := by
+  have hc : n < 0 → (x : ℂ) ≠ 0 := fun hn => Complex.ofReal_ne_zero.mpr (h hn)
+  rw [rpow_def, Complex.ofReal_intCast, Complex.cpow_intCast (h := hc)]
+  simpa only [Complex.ofReal_re] using
+    congrArg Complex.re (Complex.ofReal_zpow x n (h := fun hn => (h hn).isUnit)).symm
 
 @[simp, norm_cast]
-theorem rpow_natCast (x : ℝ) (n : ℕ) : x ^ (n : ℝ) = x ^ n := by simpa using rpow_intCast x n
+theorem rpow_natCast (x : ℝ) (n : ℕ) : x ^ (n : ℝ) = x ^ n := by
+  simpa using rpow_intCast x n (h := fun hn => (not_lt_of_ge (Int.natCast_nonneg n) hn).elim)
 
 @[simp, norm_cast]
-theorem rpow_neg_natCast (x : ℝ) (n : ℕ) : x ^ (-n : ℝ) = x ^ (-n : ℤ) := by
-  rw [← rpow_intCast, Int.cast_neg, Int.cast_natCast]
+theorem rpow_neg_natCast (x : ℝ) (n : ℕ) {h : 0 < n → x ≠ 0} :
+    x ^ (-n : ℝ) = Checked.zpow x (-(n : ℤ)) (fun hn => (h (by simpa using hn)).isUnit) := by
+  rw [← rpow_intCast (h := fun hn => h (by simpa using hn)), Int.cast_neg, Int.cast_natCast]
 
 @[simp]
 lemma rpow_ofNat (x : ℝ) (n : ℕ) [n.AtLeastTwo] :
@@ -71,19 +76,20 @@ lemma rpow_ofNat (x : ℝ) (n : ℕ) [n.AtLeastTwo] :
   rpow_natCast x n
 
 @[simp]
-theorem rpow_neg_ofNat (x : ℝ) (n : ℕ) [n.AtLeastTwo] : x ^ (-ofNat(n) : ℝ) = x ^ (-ofNat(n) : ℤ) :=
-  rpow_neg_natCast _ _
+theorem rpow_neg_ofNat (x : ℝ) (n : ℕ) [n.AtLeastTwo] {hx : x ≠ 0} :
+    x ^ (-ofNat(n) : ℝ) = Checked.zpow x (-ofNat(n)) (fun _ => hx.isUnit) :=
+  rpow_neg_natCast x n (h := fun _ => hx)
 
 @[simp]
 theorem exp_one_rpow (x : ℝ) : exp 1 ^ x = exp x := by rw [← exp_mul, one_mul]
 
 @[simp] lemma exp_one_pow (n : ℕ) : exp 1 ^ n = exp n := by rw [← rpow_natCast, exp_one_rpow]
 
+@[simp]
 theorem rpow_eq_zero_iff_of_nonneg (hx : 0 ≤ x) : x ^ y = 0 ↔ x = 0 ∧ y ≠ 0 := by
   simp only [rpow_def_of_nonneg hx]
   split_ifs <;> simp [*, exp_ne_zero]
 
-@[simp]
 lemma rpow_eq_zero (hx : 0 ≤ x) (hy : y ≠ 0) : x ^ y = 0 ↔ x = 0 := by
   simp [rpow_eq_zero_iff_of_nonneg, *]
 
@@ -116,6 +122,10 @@ theorem rpow_def_of_nonpos {x : ℝ} (hx : x ≤ 0) (y : ℝ) :
 @[bound]
 theorem rpow_pos_of_pos {x : ℝ} (hx : 0 < x) (y : ℝ) : 0 < x ^ y := by
   rw [rpow_def_of_pos hx]; apply exp_pos
+
+@[simp]
+theorem rpow_ne_zero_of_pos {x : ℝ} (hx : 0 < x) (y : ℝ) : x ^ y ≠ 0 :=
+  (rpow_pos_of_pos hx y).ne'
 
 @[simp]
 theorem rpow_zero (x : ℝ) : x ^ (0 : ℝ) = 1 := by simp [rpow_def]
@@ -183,21 +193,17 @@ theorem abs_rpow_le_exp_log_mul (x y : ℝ) : |x ^ y| ≤ exp (log x * y) := by
   · by_cases hy : y = 0 <;> simp [hx, hy, zero_le_one]
   · rw [rpow_def_of_pos (abs_pos.2 hx), log_abs]
 
-lemma rpow_inv_log (hx₀ : 0 < x) (hx₁ : x ≠ 1) : x ^ (log x)⁻¹ = exp 1 := by
+lemma rpow_inv_log (hx₀ : 0 < x) (hx₁ : x ≠ 1) :
+    x ^ Checked.inv (log x) (log_ne_zero.2 ⟨hx₀.ne', hx₁, by bound⟩).isUnit = exp 1 := by
   rw [rpow_def_of_pos hx₀, mul_inv_cancel₀]
-  exact log_ne_zero.2 ⟨hx₀.ne', hx₁, by bound⟩
 
 /-- See `Real.rpow_inv_log` for the equality when `x ≠ 1` is strictly positive. -/
-lemma rpow_inv_log_le_exp_one : x ^ (log x)⁻¹ ≤ exp 1 := by
+lemma rpow_inv_log_le_exp_one {hxlog : IsUnit (log x)} : x ^ (log x)⁻¹ ≤ exp 1 := by
   calc
     _ ≤ |x ^ (log x)⁻¹| := le_abs_self _
     _ ≤ |x| ^ (log x)⁻¹ := abs_rpow_le_abs_rpow ..
-  rw [← log_abs]
-  obtain hx | hx := (abs_nonneg x).eq_or_lt'
-  · simp [hx]
-  · rw [rpow_def_of_pos hx]
-    gcongr
-    exact mul_inv_le_one
+  have hx : x ≠ 0 := fun h => hxlog.ne_zero (by simp [h])
+  rw [rpow_def_of_pos (abs_pos.mpr hx), log_abs, mul_inv_cancel₀]
 
 theorem norm_rpow_of_nonneg {x y : ℝ} (hx_nonneg : 0 ≤ x) : ‖x ^ y‖ = ‖x‖ ^ y := by
   simp_rw [Real.norm_eq_abs]
@@ -253,19 +259,32 @@ theorem rpow_sum_of_nonneg {ι : Type*} {a : ℝ} (ha : 0 ≤ a) {s : Finset ι}
     rw [sum_cons, prod_cons, ← ihs h.2, rpow_add_of_nonneg ha h.1 (sum_nonneg h.2)]
 
 /-- See also `rpow_neg` for a version with `(x ^ y)⁻¹` in the RHS. -/
-theorem rpow_neg_eq_inv_rpow (x y : ℝ) : x ^ (-y) = x⁻¹ ^ y := by
-  simp [rpow_def, Complex.cpow_neg, Complex.inv_cpow_eq_ite, apply_ite]
+theorem rpow_neg_eq_inv_rpow (x y : ℝ) {hx : IsUnit x} : x ^ (-y) = x⁻¹ ^ y := by
+  have hc : IsUnit (x : ℂ) := hx.map Complex.ofRealHom
+  have hxy : IsUnit ((x : ℂ) ^ (y : ℂ)) :=
+    (Complex.cpow_ne_zero_iff.mpr (.inl hc.ne_zero)).isUnit
+  simp [rpow_def, Complex.cpow_neg _ _ (hxy := hxy), Complex.inv_cpow_eq_ite, apply_ite]
 
 /-- See also `rpow_neg_eq_inv_rpow` for a version with `x⁻¹ ^ y` in the RHS. -/
-theorem rpow_neg {x : ℝ} (hx : 0 ≤ x) (y : ℝ) : x ^ (-y) = (x ^ y)⁻¹ := by
-  simp only [rpow_def_of_nonneg hx]; split_ifs <;> simp_all [exp_neg]
+theorem rpow_neg {x : ℝ} (hx : 0 ≤ x) (y : ℝ) {hxy : IsUnit (x ^ y)} :
+    x ^ (-y) = (x ^ y)⁻¹ := by
+  rcases eq_or_lt_of_le hx with rfl | hxpos
+  · have hy : y = 0 := by simpa using hxy.ne_zero
+    subst y
+    simp
+  · simp only [rpow_def_of_pos hxpos, mul_neg, exp_neg]
 
 theorem rpow_sub {x : ℝ} (hx : 0 < x) (y z : ℝ) : x ^ (y - z) = x ^ y / x ^ z := by
-  simp only [sub_eq_add_neg, rpow_add hx, rpow_neg (le_of_lt hx), div_eq_mul_inv]
+  simp only [sub_eq_add_neg, rpow_add hx,
+    rpow_neg hx.le z (hxy := (rpow_pos_of_pos hx z).ne'.isUnit), div_eq_mul_inv₀]
 
-theorem rpow_sub' {x : ℝ} (hx : 0 ≤ x) {y z : ℝ} (h : y - z ≠ 0) : x ^ (y - z) = x ^ y / x ^ z := by
-  simp only [sub_eq_add_neg] at h ⊢
-  simp only [rpow_add' hx h, rpow_neg hx, div_eq_mul_inv]
+theorem rpow_sub' {x : ℝ} (hx : 0 ≤ x) {y z : ℝ}
+    {hxz : IsUnit (x ^ z)} : x ^ (y - z) = x ^ y / x ^ z := by
+  rcases eq_or_lt_of_le hx with rfl | hxpos
+  · have hz : z = 0 := by simpa using hxz.ne_zero
+    subst z
+    simp
+  · exact rpow_sub hxpos y z
 
 protected theorem _root_.HasCompactSupport.rpow_const {α : Type*} [TopologicalSpace α] {f : α → ℝ}
     (hf : HasCompactSupport f) {r : ℝ} (hr : r ≠ 0) : HasCompactSupport (fun x ↦ f x ^ r) :=
@@ -332,12 +351,15 @@ theorem norm_cpow_real (x : ℂ) (y : ℝ) : ‖x ^ (y : ℂ)‖ = ‖x‖ ^ y :
   rw [norm_cpow_of_imp] <;> simp
 
 @[simp]
-theorem norm_cpow_inv_nat (x : ℂ) (n : ℕ) : ‖x ^ (n⁻¹ : ℂ)‖ = ‖x‖ ^ (n⁻¹ : ℝ) := by
+theorem norm_cpow_inv_nat (x : ℂ) (n : ℕ) {hn : n ≠ 0} :
+    ‖x ^ Checked.inv (n : ℂ) (Nat.cast_ne_zero.mpr hn).isUnit‖ =
+      ‖x‖ ^ Checked.inv (n : ℝ) (Nat.cast_ne_zero.mpr hn).isUnit := by
   rw [← norm_cpow_real]; simp
 
 theorem norm_cpow_eq_rpow_re_of_pos {x : ℝ} (hx : 0 < x) (y : ℂ) : ‖(x : ℂ) ^ y‖ = x ^ y.re := by
-  rw [norm_cpow_of_ne_zero (ofReal_ne_zero.mpr hx.ne'), arg_ofReal_of_nonneg hx.le,
-    zero_mul, Real.exp_zero, div_one, Complex.norm_of_nonneg hx.le]
+  rw [norm_cpow_of_ne_zero (ofReal_ne_zero.mpr hx.ne')]
+  simp only [arg_ofReal_of_nonneg hx.le,
+    zero_mul, Real.exp_zero, div_one₀, Complex.norm_of_nonneg hx.le]
 
 theorem norm_cpow_eq_rpow_re_of_nonneg {x : ℝ} (hx : 0 ≤ x) {y : ℂ} (hy : re y ≠ 0) :
     ‖(x : ℂ) ^ y‖ = x ^ re y := by
@@ -421,34 +443,46 @@ theorem rpow_mul {x : ℝ} (hx : 0 ≤ x) (y z : ℝ) : x ^ (y * z) = (x ^ y) ^ 
 lemma rpow_pow_comm {x : ℝ} (hx : 0 ≤ x) (y : ℝ) (n : ℕ) : (x ^ y) ^ n = (x ^ n) ^ y := by
   simp_rw [← rpow_natCast, ← rpow_mul hx, mul_comm y]
 
-lemma rpow_zpow_comm {x : ℝ} (hx : 0 ≤ x) (y : ℝ) (n : ℤ) : (x ^ y) ^ n = (x ^ n) ^ y := by
-  simp_rw [← rpow_intCast, ← rpow_mul hx, mul_comm y]
+lemma rpow_zpow_comm {x : ℝ} (hx : 0 ≤ x) (y : ℝ) (n : ℤ)
+    {h : n < 0 → IsUnit x} : (x ^ y) ^ n = (x ^ n) ^ y := by
+  have hy : n < 0 → x ^ y ≠ 0 := fun hn =>
+    (rpow_pos_of_pos (lt_of_le_of_ne hx (h hn).ne_zero.symm) y).ne'
+  rw [← rpow_intCast (h := hy), ← rpow_intCast (h := fun hn => (h hn).ne_zero)]
+  simp_rw [← rpow_mul hx, mul_comm y]
 
 lemma rpow_add_intCast {x : ℝ} (hx : x ≠ 0) (y : ℝ) (n : ℤ) : x ^ (y + n) = x ^ y * x ^ n := by
+  have hc : n < 0 → (x : ℂ) ≠ 0 := fun _ => Complex.ofReal_ne_zero.mpr hx
   rw [rpow_def, rpow_def, Complex.ofReal_add,
     Complex.cpow_add _ _ (Complex.ofReal_ne_zero.mpr hx), Complex.ofReal_intCast,
-    Complex.cpow_intCast, ← Complex.ofReal_zpow, mul_comm, Complex.re_ofReal_mul, mul_comm]
+    Complex.cpow_intCast (h := hc), ← Complex.ofReal_zpow, mul_comm,
+    Complex.re_ofReal_mul, mul_comm]
 
 lemma rpow_add_natCast {x : ℝ} (hx : x ≠ 0) (y : ℝ) (n : ℕ) : x ^ (y + n) = x ^ y * x ^ n := by
   simpa using rpow_add_intCast hx y n
 
 lemma rpow_sub_intCast {x : ℝ} (hx : x ≠ 0) (y : ℝ) (n : ℤ) : x ^ (y - n) = x ^ y / x ^ n := by
-  simpa using! rpow_add_intCast hx y (-n)
+  simpa only [Int.cast_neg, sub_eq_add_neg, zpow_neg₀ hx, div_eq_mul_inv₀] using
+    rpow_add_intCast hx y (-n)
 
 lemma rpow_sub_natCast {x : ℝ} (hx : x ≠ 0) (y : ℝ) (n : ℕ) : x ^ (y - n) = x ^ y / x ^ n := by
   simpa using rpow_sub_intCast hx y n
 
-lemma rpow_add_intCast' (hx : 0 ≤ x) {n : ℤ} (h : y + n ≠ 0) : x ^ (y + n) = x ^ y * x ^ n := by
-  rw [rpow_add' hx h, rpow_intCast]
+lemma rpow_add_intCast' (hx : 0 ≤ x) {n : ℤ} (h : y + n ≠ 0)
+    {hx₀ : n < 0 → IsUnit x} : x ^ (y + n) = x ^ y * x ^ n := by
+  rw [rpow_add' hx h, rpow_intCast (h := fun hn => (hx₀ hn).ne_zero)]
 
 lemma rpow_add_natCast' (hx : 0 ≤ x) (h : y + n ≠ 0) : x ^ (y + n) = x ^ y * x ^ n := by
   rw [rpow_add' hx h, rpow_natCast]
 
-lemma rpow_sub_intCast' (hx : 0 ≤ x) {n : ℤ} (h : y - n ≠ 0) : x ^ (y - n) = x ^ y / x ^ n := by
-  rw [rpow_sub' hx h, rpow_intCast]
+lemma rpow_sub_intCast' (hx : 0 ≤ x) {n : ℤ}
+    {hx₀ : n < 0 → IsUnit x} {hxn : IsUnit (x ^ n)} : x ^ (y - n) = x ^ y / x ^ n := by
+  simpa only [rpow_intCast x n (h := fun hn => (hx₀ hn).ne_zero)] using rpow_sub' hx (z := (n : ℝ))
+    (hxz := by simpa only [rpow_intCast x n (h := fun hn => (hx₀ hn).ne_zero)] using hxn)
 
-lemma rpow_sub_natCast' (hx : 0 ≤ x) (h : y - n ≠ 0) : x ^ (y - n) = x ^ y / x ^ n := by
-  rw [rpow_sub' hx h, rpow_natCast]
+lemma rpow_sub_natCast' (hx : 0 ≤ x) {hxn : IsUnit (x ^ n)} :
+    x ^ (y - n) = x ^ y / x ^ n := by
+  simpa only [rpow_natCast] using rpow_sub' hx (z := (n : ℝ))
+    (hxz := by simpa only [rpow_natCast] using hxn)
 
 theorem rpow_add_one {x : ℝ} (hx : x ≠ 0) (y : ℝ) : x ^ (y + 1) = x ^ y * x := by
   simpa using rpow_add_natCast hx y 1
@@ -462,16 +496,17 @@ lemma rpow_add_one' (hx : 0 ≤ x) (h : y + 1 ≠ 0) : x ^ (y + 1) = x ^ y * x :
 lemma rpow_one_add' (hx : 0 ≤ x) (h : 1 + y ≠ 0) : x ^ (1 + y) = x * x ^ y := by
   rw [rpow_add' hx h, rpow_one]
 
-lemma rpow_sub_one' (hx : 0 ≤ x) (h : y - 1 ≠ 0) : x ^ (y - 1) = x ^ y / x := by
-  rw [rpow_sub' hx h, rpow_one]
+lemma rpow_sub_one' (hx : 0 ≤ x) {hx₀ : IsUnit x} : x ^ (y - 1) = x ^ y / x := by
+  simpa only [rpow_one] using rpow_sub' hx (z := 1) (hxz := by simpa only [rpow_one] using hx₀)
 
-lemma rpow_one_sub' (hx : 0 ≤ x) (h : 1 - y ≠ 0) : x ^ (1 - y) = x / x ^ y := by
-  rw [rpow_sub' hx h, rpow_one]
+lemma rpow_one_sub' (hx : 0 ≤ x) {hxy : IsUnit (x ^ y)} :
+    x ^ (1 - y) = x / x ^ y := by
+  rw [rpow_sub' hx, rpow_one]
 
 theorem rpow_two (x : ℝ) : x ^ (2 : ℝ) = x ^ 2 := by
   simp
 
-theorem rpow_neg_one (x : ℝ) : x ^ (-1 : ℝ) = x⁻¹ := by
+theorem rpow_neg_one (x : ℝ) {hx : IsUnit x} : x ^ (-1 : ℝ) = x⁻¹ := by
   rw [rpow_neg_eq_inv_rpow, rpow_one]
 
 theorem mul_rpow (hx : 0 ≤ x) (hy : 0 ≤ y) : (x * y) ^ z = x ^ z * y ^ z := by
@@ -482,11 +517,12 @@ theorem mul_rpow (hx : 0 ≤ x) (hy : 0 ≤ y) : (x * y) ^ z = x ^ z * y ^ z := 
       rpow_def_of_pos (hy.lt_of_ne' nz.2)]
   all_goals simp_all
 
-theorem inv_rpow (hx : 0 ≤ x) (y : ℝ) : x⁻¹ ^ y = (x ^ y)⁻¹ := by
+theorem inv_rpow (hx : 0 ≤ x) (y : ℝ) {hx₀ : IsUnit x} : x⁻¹ ^ y = (x ^ y)⁻¹ := by
   rw [← rpow_neg_eq_inv_rpow, rpow_neg hx]
 
-theorem div_rpow (hx : 0 ≤ x) (hy : 0 ≤ y) (z : ℝ) : (x / y) ^ z = x ^ z / y ^ z := by
-  simp only [div_eq_mul_inv, mul_rpow hx (inv_nonneg.2 hy), inv_rpow hy]
+theorem div_rpow (hx : 0 ≤ x) (hy : 0 ≤ y) (z : ℝ) {hy₀ : IsUnit y} :
+    (x / y) ^ z = x ^ z / y ^ z := by
+  simp only [div_eq_mul_inv₀, mul_rpow hx (inv_nonneg.2 hy), inv_rpow hy]
 
 @[push low] /- Lower priority than `log_pow` and `log_zpow`.
 This is because otherwise the `pull` tactic will use `log_rpow` in places where it should
@@ -501,18 +537,18 @@ theorem mul_log_eq_log_iff {x y z : ℝ} (hx : 0 < x) (hz : 0 < z) :
   by rintro rfl; rw [log_rpow hx]⟩
 
 @[simp] lemma rpow_rpow_inv (hx : 0 ≤ x) (hy : y ≠ 0) : (x ^ y) ^ y⁻¹ = x := by
-  rw [← rpow_mul hx, mul_inv_cancel₀ hy, rpow_one]
+  rw [← rpow_mul hx, mul_inv_cancel₀, rpow_one]
 
 @[simp] lemma rpow_inv_rpow (hx : 0 ≤ x) (hy : y ≠ 0) : (x ^ y⁻¹) ^ y = x := by
-  rw [← rpow_mul hx, inv_mul_cancel₀ hy, rpow_one]
+  rw [← rpow_mul hx, inv_mul_cancel₀, rpow_one]
 
 theorem pow_rpow_inv_natCast (hx : 0 ≤ x) (hn : n ≠ 0) : (x ^ n) ^ (n⁻¹ : ℝ) = x := by
   have hn0 : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.2 hn
-  rw [← rpow_natCast, ← rpow_mul hx, mul_inv_cancel₀ hn0, rpow_one]
+  rw [← rpow_natCast, ← rpow_mul hx, mul_inv_cancel₀, rpow_one]
 
 theorem rpow_inv_natCast_pow (hx : 0 ≤ x) (hn : n ≠ 0) : (x ^ (n⁻¹ : ℝ)) ^ n = x := by
   have hn0 : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.2 hn
-  rw [← rpow_natCast, ← rpow_mul hx, inv_mul_cancel₀ hn0, rpow_one]
+  rw [← rpow_natCast, ← rpow_mul hx, inv_mul_cancel₀, rpow_one]
 
 lemma rpow_natCast_mul (hx : 0 ≤ x) (n : ℕ) (z : ℝ) : x ^ (n * z) = (x ^ n) ^ z := by
   rw [rpow_mul hx, rpow_natCast]
@@ -520,11 +556,13 @@ lemma rpow_natCast_mul (hx : 0 ≤ x) (n : ℕ) (z : ℝ) : x ^ (n * z) = (x ^ n
 lemma rpow_mul_natCast (hx : 0 ≤ x) (y : ℝ) (n : ℕ) : x ^ (y * n) = (x ^ y) ^ n := by
   rw [rpow_mul hx, rpow_natCast]
 
-lemma rpow_intCast_mul (hx : 0 ≤ x) (n : ℤ) (z : ℝ) : x ^ (n * z) = (x ^ n) ^ z := by
-  rw [rpow_mul hx, rpow_intCast]
+lemma rpow_intCast_mul (hx : 0 ≤ x) (n : ℤ) (z : ℝ) {h : n < 0 → IsUnit x} :
+    x ^ (n * z) = (x ^ n) ^ z := by
+  rw [rpow_mul hx, rpow_intCast (h := fun hn => (h hn).ne_zero)]
 
-lemma rpow_mul_intCast (hx : 0 ≤ x) (y : ℝ) (n : ℤ) : x ^ (y * n) = (x ^ y) ^ n := by
-  rw [rpow_mul hx, rpow_intCast]
+lemma rpow_mul_intCast (hx : 0 ≤ x) (y : ℝ) (n : ℤ) {h : n < 0 → IsUnit (x ^ y)} :
+    x ^ (y * n) = (x ^ y) ^ n := by
+  rw [rpow_mul hx, rpow_intCast (h := fun hn => (h hn).ne_zero)]
 
 /-! Note: lemmas about `(∏ i ∈ s, f i ^ r)` such as `Real.finsetProd_rpow` are proved
 in `Mathlib/Analysis/SpecialFunctions/Pow/NNReal.lean` instead. -/
@@ -762,7 +800,8 @@ theorem rpow_lt_self_of_one_lt (h₁ : 1 < x) (h₂ : y < 1) : x ^ y < x := by
 
 theorem rpow_left_injOn {x : ℝ} (hx : x ≠ 0) : InjOn (fun y : ℝ => y ^ x) { y : ℝ | 0 ≤ y } := by
   rintro y hy z hz (hyz : y ^ x = z ^ x)
-  rw [← rpow_one y, ← rpow_one z, ← mul_inv_cancel₀ hx, rpow_mul hy, rpow_mul hz, hyz]
+  rw [← rpow_one y, ← rpow_one z, ← mul_inv_cancel₀ (ha := hx.isUnit),
+    rpow_mul hy, rpow_mul hz, hyz]
 
 lemma rpow_left_inj (hx : 0 ≤ x) (hy : 0 ≤ y) (hz : z ≠ 0) : x ^ z = y ^ z ↔ x = y :=
   (rpow_left_injOn hz).eq_iff hx hy
@@ -780,7 +819,7 @@ lemma le_pow_iff_log_le (hx : 0 < x) (hy : 0 < y) : x ≤ y ^ n ↔ log x ≤ n 
   rpow_natCast _ _ ▸ le_rpow_iff_log_le hx hy
 
 lemma le_zpow_iff_log_le {n : ℤ} (hx : 0 < x) (hy : 0 < y) : x ≤ y ^ n ↔ log x ≤ n * log y :=
-  rpow_intCast _ _ ▸ le_rpow_iff_log_le hx hy
+  rpow_intCast _ _ (h := fun _ => hy.ne') ▸ le_rpow_iff_log_le hx hy
 
 lemma le_rpow_of_log_le (hy : 0 < y) (h : log x ≤ z * log y) : x ≤ y ^ z := by
   obtain hx | hx := le_or_gt x 0
@@ -791,7 +830,7 @@ lemma le_pow_of_log_le (hy : 0 < y) (h : log x ≤ n * log y) : x ≤ y ^ n :=
   rpow_natCast _ _ ▸ le_rpow_of_log_le hy h
 
 lemma le_zpow_of_log_le {n : ℤ} (hy : 0 < y) (h : log x ≤ n * log y) : x ≤ y ^ n :=
-  rpow_intCast _ _ ▸ le_rpow_of_log_le hy h
+  rpow_intCast _ _ (h := fun _ => hy.ne') ▸ le_rpow_of_log_le hy h
 
 theorem lt_rpow_iff_log_lt (hx : 0 < x) (hy : 0 < y) : x < y ^ z ↔ log x < z * log y := by
   rw [← log_lt_log_iff hx (rpow_pos_of_pos hy z), log_rpow hy]
@@ -800,7 +839,7 @@ lemma lt_pow_iff_log_lt (hx : 0 < x) (hy : 0 < y) : x < y ^ n ↔ log x < n * lo
   rpow_natCast _ _ ▸ lt_rpow_iff_log_lt hx hy
 
 lemma lt_zpow_iff_log_lt {n : ℤ} (hx : 0 < x) (hy : 0 < y) : x < y ^ n ↔ log x < n * log y :=
-  rpow_intCast _ _ ▸ lt_rpow_iff_log_lt hx hy
+  rpow_intCast _ _ (h := fun _ => hy.ne') ▸ lt_rpow_iff_log_lt hx hy
 
 lemma lt_rpow_of_log_lt (hy : 0 < y) (h : log x < z * log y) : x < y ^ z := by
   obtain hx | hx := le_or_gt x 0
@@ -811,7 +850,7 @@ lemma lt_pow_of_log_lt (hy : 0 < y) (h : log x < n * log y) : x < y ^ n :=
   rpow_natCast _ _ ▸ lt_rpow_of_log_lt hy h
 
 lemma lt_zpow_of_log_lt {n : ℤ} (hy : 0 < y) (h : log x < n * log y) : x < y ^ n :=
-  rpow_intCast _ _ ▸ lt_rpow_of_log_lt hy h
+  rpow_intCast _ _ (h := fun _ => hy.ne') ▸ lt_rpow_of_log_lt hy h
 
 lemma rpow_le_iff_le_log (hx : 0 < x) (hy : 0 < y) : x ^ z ≤ y ↔ z * log x ≤ log y := by
   rw [← log_le_log_iff (rpow_pos_of_pos hx _) hy, log_rpow hx]
@@ -820,7 +859,7 @@ lemma pow_le_iff_le_log (hx : 0 < x) (hy : 0 < y) : x ^ n ≤ y ↔ n * log x �
   rw [← rpow_le_iff_le_log hx hy, rpow_natCast]
 
 lemma zpow_le_iff_le_log {n : ℤ} (hx : 0 < x) (hy : 0 < y) : x ^ n ≤ y ↔ n * log x ≤ log y := by
-  rw [← rpow_le_iff_le_log hx hy, rpow_intCast]
+  rw [← rpow_le_iff_le_log hx hy, rpow_intCast (h := fun _ => hx.ne')]
 
 lemma le_log_of_rpow_le (hx : 0 < x) (h : x ^ z ≤ y) : z * log x ≤ log y :=
   log_rpow hx _ ▸ log_le_log (by positivity) h
@@ -829,7 +868,7 @@ lemma le_log_of_pow_le (hx : 0 < x) (h : x ^ n ≤ y) : n * log x ≤ log y :=
   le_log_of_rpow_le hx (rpow_natCast _ _ ▸ h)
 
 lemma le_log_of_zpow_le {n : ℤ} (hx : 0 < x) (h : x ^ n ≤ y) : n * log x ≤ log y :=
-  le_log_of_rpow_le hx (rpow_intCast _ _ ▸ h)
+  le_log_of_rpow_le hx (rpow_intCast _ _ (h := fun _ => hx.ne') ▸ h)
 
 lemma rpow_le_of_le_log (hy : 0 < y) (h : log x ≤ z * log y) : x ≤ y ^ z := by
   obtain hx | hx := le_or_gt x 0
@@ -840,7 +879,7 @@ lemma pow_le_of_le_log (hy : 0 < y) (h : log x ≤ n * log y) : x ≤ y ^ n :=
   rpow_natCast _ _ ▸ rpow_le_of_le_log hy h
 
 lemma zpow_le_of_le_log {n : ℤ} (hy : 0 < y) (h : log x ≤ n * log y) : x ≤ y ^ n :=
-  rpow_intCast _ _ ▸ rpow_le_of_le_log hy h
+  rpow_intCast _ _ (h := fun _ => hy.ne') ▸ rpow_le_of_le_log hy h
 
 lemma rpow_lt_iff_lt_log (hx : 0 < x) (hy : 0 < y) : x ^ z < y ↔ z * log x < log y := by
   rw [← log_lt_log_iff (rpow_pos_of_pos hx _) hy, log_rpow hx]
@@ -849,7 +888,7 @@ lemma pow_lt_iff_lt_log (hx : 0 < x) (hy : 0 < y) : x ^ n < y ↔ n * log x < lo
   rw [← rpow_lt_iff_lt_log hx hy, rpow_natCast]
 
 lemma zpow_lt_iff_lt_log {n : ℤ} (hx : 0 < x) (hy : 0 < y) : x ^ n < y ↔ n * log x < log y := by
-  rw [← rpow_lt_iff_lt_log hx hy, rpow_intCast]
+  rw [← rpow_lt_iff_lt_log hx hy, rpow_intCast (h := fun _ => hx.ne')]
 
 lemma lt_log_of_rpow_lt (hx : 0 < x) (h : x ^ z < y) : z * log x < log y :=
   log_rpow hx _ ▸ log_lt_log (by positivity) h
@@ -858,7 +897,7 @@ lemma lt_log_of_pow_lt (hx : 0 < x) (h : x ^ n < y) : n * log x < log y :=
   lt_log_of_rpow_lt hx (rpow_natCast _ _ ▸ h)
 
 lemma lt_log_of_zpow_lt {n : ℤ} (hx : 0 < x) (h : x ^ n < y) : n * log x < log y :=
-  lt_log_of_rpow_lt hx (rpow_intCast _ _ ▸ h)
+  lt_log_of_rpow_lt hx (rpow_intCast _ _ (h := fun _ => hx.ne') ▸ h)
 
 lemma rpow_lt_of_lt_log (hy : 0 < y) (h : log x < z * log y) : x < y ^ z := by
   obtain hx | hx := le_or_gt x 0
@@ -869,7 +908,7 @@ lemma pow_lt_of_lt_log (hy : 0 < y) (h : log x < n * log y) : x < y ^ n :=
   rpow_natCast _ _ ▸ rpow_lt_of_lt_log hy h
 
 lemma zpow_lt_of_lt_log {n : ℤ} (hy : 0 < y) (h : log x < n * log y) : x < y ^ n :=
-  rpow_intCast _ _ ▸ rpow_lt_of_lt_log hy h
+  rpow_intCast _ _ (h := fun _ => hy.ne') ▸ rpow_lt_of_lt_log hy h
 
 theorem rpow_le_one_iff_of_pos (hx : 0 < x) : x ^ y ≤ 1 ↔ 1 ≤ x ∧ y ≤ 0 ∨ x ≤ 1 ∧ 0 ≤ y := by
   rw [rpow_def_of_pos hx, exp_le_one_iff, mul_nonpos_iff, log_nonneg_iff hx, log_nonpos_iff hx.le]
@@ -940,7 +979,7 @@ lemma norm_prime_cpow_le_one_half (p : Nat.Primes) {s : ℂ} (hs : 1 < s.re) :
   rw [norm_natCast_cpow_of_re_ne_zero p <| by rw [neg_re]; linarith only [hs]]
   refine (Real.rpow_le_rpow_of_nonpos zero_lt_two (Nat.cast_le.mpr p.prop.two_le) <|
     by rw [neg_re]; linarith only [hs]).trans ?_
-  rw [one_div, ← Real.rpow_neg_one]
+  rw [one_div₀, ← Real.rpow_neg_one]
   exact Real.rpow_le_rpow_of_exponent_le one_le_two <| (neg_lt_neg hs).le
 
 lemma one_sub_prime_cpow_ne_zero {p : ℕ} (hp : p.Prime) {s : ℂ} (hs : 1 < s.re) :
@@ -1003,30 +1042,38 @@ end Real
 namespace Complex
 
 lemma cpow_inv_two_re (x : ℂ) : (x ^ (2⁻¹ : ℂ)).re = √((‖x‖ + x.re) / 2) := by
-  rw [← ofReal_ofNat, ← ofReal_inv, cpow_ofReal_re, ← div_eq_mul_inv, ← one_div,
-    ← Real.sqrt_eq_rpow, cos_half, ← sqrt_mul, ← mul_div_assoc, mul_add, mul_one, norm_mul_cos_arg]
+  have htwo : (2⁻¹ : ℂ) = ((2⁻¹ : ℝ) : ℂ) := by
+    simpa only [ofReal_ofNat] using (ofReal_inv (2 : ℝ)).symm
+  rw [htwo, cpow_ofReal_re, ← div_eq_mul_inv₀, ← one_div₀,
+    ← Real.sqrt_eq_rpow, cos_half, ← sqrt_mul, ← mul_div_assoc₀, mul_add, mul_one, norm_mul_cos_arg]
   exacts [norm_nonneg _, (neg_pi_lt_arg _).le, arg_le_pi _]
 
 lemma cpow_inv_two_im_eq_sqrt {x : ℂ} (hx : 0 ≤ x.im) :
     (x ^ (2⁻¹ : ℂ)).im = √((‖x‖ - x.re) / 2) := by
-  rw [← ofReal_ofNat, ← ofReal_inv, cpow_ofReal_im, ← div_eq_mul_inv, ← one_div,
-    ← Real.sqrt_eq_rpow, sin_half_eq_sqrt, ← sqrt_mul (norm_nonneg _), ← mul_div_assoc, mul_sub,
+  have htwo : (2⁻¹ : ℂ) = ((2⁻¹ : ℝ) : ℂ) := by
+    simpa only [ofReal_ofNat] using (ofReal_inv (2 : ℝ)).symm
+  rw [htwo, cpow_ofReal_im, ← div_eq_mul_inv₀, ← one_div₀,
+    ← Real.sqrt_eq_rpow, sin_half_eq_sqrt, ← sqrt_mul (norm_nonneg _), ← mul_div_assoc₀, mul_sub,
     mul_one, norm_mul_cos_arg]
   · rwa [arg_nonneg_iff]
   · linarith [pi_pos, arg_le_pi x]
 
 lemma cpow_inv_two_im_eq_neg_sqrt {x : ℂ} (hx : x.im < 0) :
     (x ^ (2⁻¹ : ℂ)).im = -√((‖x‖ - x.re) / 2) := by
-  rw [← ofReal_ofNat, ← ofReal_inv, cpow_ofReal_im, ← div_eq_mul_inv, ← one_div,
+  have htwo : (2⁻¹ : ℂ) = ((2⁻¹ : ℝ) : ℂ) := by
+    simpa only [ofReal_ofNat] using (ofReal_inv (2 : ℝ)).symm
+  rw [htwo, cpow_ofReal_im, ← div_eq_mul_inv₀, ← one_div₀,
     ← Real.sqrt_eq_rpow, sin_half_eq_neg_sqrt, mul_neg, ← sqrt_mul (norm_nonneg _),
-    ← mul_div_assoc, mul_sub, mul_one, norm_mul_cos_arg]
+    ← mul_div_assoc₀, mul_sub, mul_one, norm_mul_cos_arg]
   · linarith [pi_pos, neg_pi_lt_arg x]
   · exact (arg_neg_iff.2 hx).le
 
 lemma abs_cpow_inv_two_im (x : ℂ) : |(x ^ (2⁻¹ : ℂ)).im| = √((‖x‖ - x.re) / 2) := by
-  rw [← ofReal_ofNat, ← ofReal_inv, cpow_ofReal_im, ← div_eq_mul_inv, ← one_div,
+  have htwo : (2⁻¹ : ℂ) = ((2⁻¹ : ℝ) : ℂ) := by
+    simpa only [ofReal_ofNat] using (ofReal_inv (2 : ℝ)).symm
+  rw [htwo, cpow_ofReal_im, ← div_eq_mul_inv₀, ← one_div₀,
     ← Real.sqrt_eq_rpow, abs_mul, abs_of_nonneg (sqrt_nonneg _), abs_sin_half,
-    ← sqrt_mul (norm_nonneg _), ← mul_div_assoc, mul_sub, mul_one, norm_mul_cos_arg]
+    ← sqrt_mul (norm_nonneg _), ← mul_div_assoc₀, mul_sub, mul_one, norm_mul_cos_arg]
 
 open scoped ComplexOrder in
 lemma inv_natCast_cpow_ofReal_pos {n : ℕ} (hn : n ≠ 0) (x : ℝ) :
@@ -1049,9 +1096,16 @@ open Lean.Meta Qq
 theorem IsNat.rpow_eq_pow {b : ℝ} {n : ℕ} (h : IsNat b n) (a : ℝ) : a ^ b = a ^ n := by
   rw [h.1, Real.rpow_natCast]
 
-theorem IsInt.rpow_eq_inv_pow {b : ℝ} {n : ℕ} (h : IsInt b (.negOfNat n)) (a : ℝ) :
-    a ^ b = (a ^ n)⁻¹ := by
-  rw [h.1, Real.rpow_intCast, Int.negOfNat_eq, zpow_neg, Int.ofNat_eq_natCast, zpow_natCast]
+theorem IsInt.rpow_eq_inv_pow {b : ℝ} {n : ℕ} (h : IsInt b (.negOfNat n)) (a : ℝ)
+    {ha : IsUnit (a ^ n)} : a ^ b = (a ^ n)⁻¹ := by
+  rcases eq_or_ne n 0 with rfl | hn
+  · simp [h.1]
+  · have ha₀ : a ≠ 0 := fun hzero => ha.ne_zero (by simp [hzero, hn])
+    calc
+      a ^ b = a ^ (Int.negOfNat n : ℝ) := congrArg (fun t : ℝ => a ^ t) h.1
+      _ = (a ^ n)⁻¹ := by
+        simpa only [Int.negOfNat_eq, zpow_neg₀ ha₀, Int.ofNat_eq_natCast, zpow_natCast₀] using
+          Real.rpow_intCast a (Int.negOfNat n) (h := fun _ => ha₀)
 
 /-- Given proofs
 - that `a` is a natural number `m`
@@ -1065,22 +1119,27 @@ theorem IsNat.rpow_isNNRat {a b : ℝ} {m n d r : ℕ} (ha : IsNat a m) (hb : Is
   rcases ha with ⟨rfl⟩
   constructor
   have : d ≠ 0 := mod_cast hb.den_nz
-  rw [hb.to_eq rfl rfl, div_eq_mul_inv, Real.rpow_natCast_mul, ← Nat.cast_pow, hm, ← hkl, ← hr,
+  rw [hb.to_eq rfl rfl, div_eq_mul_inv₀, Real.rpow_natCast_mul, ← Nat.cast_pow, hm, ← hkl, ← hr,
     Nat.cast_pow, Real.pow_rpow_inv_natCast] <;> positivity
 
 theorem IsNNRat.rpow_isNNRat (a b : ℝ) (na da : ℕ) (ha : IsNNRat a na da)
     (nr dr : ℕ) (hnum : IsNat ((na : ℝ) ^ b) nr) (hden : IsNat ((da : ℝ) ^ b) dr) :
     IsNNRat (a ^ b) nr dr := by
+  have hdr : (dr : ℝ) ≠ 0 := by
+    rw [← hden.1]
+    exact (Real.rpow_pos_of_pos (lt_of_le_of_ne' da.cast_nonneg ha.den_nz) b).ne'
   suffices IsNNRat (nr / dr : ℝ) nr dr by
     simpa [ha.to_eq, Real.div_rpow, hnum.1, hden.1]
-  apply IsNNRat.of_raw
-  rw [← hden.1]
-  apply (Real.rpow_pos_of_pos _ _).ne'
-  exact lt_of_le_of_ne' da.cast_nonneg ha.den_nz
+  exact IsNNRat.of_raw ℝ nr dr hdr
 
-theorem rpow_isRat_eq_inv_rpow (a b : ℝ) (n d : ℕ) (hb : IsRat b (Int.negOfNat n) d) :
-    a ^ b = (a⁻¹) ^ (n / d : ℝ) := by
-  rw [← Real.rpow_neg_eq_inv_rpow, hb.neg_to_eq rfl rfl]
+theorem rpow_isRat_eq_inv_rpow (a b : ℝ) (n d : ℕ) (hb : IsRat b (Int.negOfNat n) d)
+    {ha : IsUnit a} :
+    a ^ b = (a⁻¹) ^ Checked.div (n : ℝ) (d : ℝ) hb.den_nz.isUnit := by
+  rw [← Real.rpow_neg_eq_inv_rpow]
+  exact congrArg (fun t : ℝ => a ^ t) (hb.neg_to_eq rfl rfl)
+
+theorem isNat_rpow_zero {a b : ℝ} (ha : a = 0) (hb : b ≠ 0) : IsNat (a ^ b) 0 :=
+  ⟨by simp [ha, Real.zero_rpow hb]⟩
 
 open Lean in
 /-- Given proofs
@@ -1121,9 +1180,17 @@ meta def evalRPow : NormNumExt where eval {u αR} e := do
     | .isNat sβ nb pb =>
       assumeInstancesCommute
       return .eqTrans q(IsNat.rpow_eq_pow $pb _) (← derive q($a ^ $nb))
-    | .isNegNat sβ nb pb =>
+    | .isNegNat sβ nb pb => do
       assumeInstancesCommute
-      return .eqTrans q(IsInt.rpow_eq_inv_pow $pb _) (← derive q(($a ^ $nb)⁻¹))
+      match ← deriveBool q($a = 0) with
+      | ⟨true, ha⟩ =>
+        let ⟨true, hb⟩ ← deriveBool q($b ≠ 0) | failure
+        return .isNat q(inferInstance) q(nat_lit 0) q(isNat_rpow_zero $ha $hb)
+      | ⟨false, _⟩ =>
+        let ⟨true, hpow⟩ ← deriveBool q($a ^ $nb ≠ 0) | failure
+        let hu : Q(IsUnit ($a ^ $nb)) := q(($hpow).isUnit)
+        return .eqTrans q(IsInt.rpow_eq_inv_pow $pb $a (ha := $hu))
+          (← derive q(Checked.inv ($a ^ $nb) $hu))
     | .isNNRat _ qb nb db pb => do
       assumeInstancesCommute
       match ← derive a with
@@ -1136,13 +1203,22 @@ meta def evalRPow : NormNumExt where eval {u αR} e := do
           proveIsNatRPowIsNNRat q(Nat.rawCast $na) na q(IsNat.of_raw _ _) b nb db pb
         let ⟨rden, erden, pden⟩ ←
           proveIsNatRPowIsNNRat q(Nat.rawCast $da) da q(IsNat.of_raw _ _) b nb db pb
-        return .isNNRat q(inferInstance) (rnum / rden) ernum erden
+        if hden : rden = 0 then failure else
+        return .isNNRat q(inferInstance) (Rat.normalize rnum rden hden) ernum erden
           q(IsNNRat.rpow_isNNRat $a $b $na $da $pa $ernum $erden $pnum $pden)
       | _ => failure
     | .isNegNNRat _ qb nb db pb => do
-      let r ← derive q(($a⁻¹) ^ ($nb / $db : ℝ))
       assumeInstancesCommute
-      return .eqTrans q(rpow_isRat_eq_inv_rpow $a $b $nb $db $pb) r
+      match ← deriveBool q($a = 0) with
+      | ⟨true, ha⟩ =>
+        let ⟨true, hb⟩ ← deriveBool q($b ≠ 0) | failure
+        return .isNat q(inferInstance) q(nat_lit 0) q(isNat_rpow_zero $ha $hb)
+      | ⟨false, ha⟩ =>
+        let hu : Q(IsUnit $a) := q((show $a ≠ 0 from $ha).isUnit)
+        let hd : Q(IsUnit ($db : ℝ)) := q((IsRat.den_nz $pb).isUnit)
+        let r ← derive q((Checked.inv $a $hu) ^ (Checked.div ($nb : ℝ) ($db : ℝ) $hd))
+        assumeInstancesCommute
+        return .eqTrans q(rpow_isRat_eq_inv_rpow $a $b $nb $db $pb (ha := $hu)) r
     | _ => failure
   | _ => failure
 

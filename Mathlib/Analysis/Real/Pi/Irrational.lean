@@ -212,22 +212,22 @@ For a polynomial `p` with natural degree `≤ k` and integer coefficients, evalu
 rational `a / b` gives a rational of the form `z / b ^ k`.
 TODO: should this be moved elsewhere? It uses none of the pi-specific definitions.
 -/
-private lemma is_integer {p : ℤ[X]} (a b : ℤ) {k : ℕ} (hp : p.natDegree ≤ k) :
+private lemma is_integer {p : ℤ[X]} (a b : ℤ) (hb : IsUnit (b : ℝ))
+    {k : ℕ} (hp : p.natDegree ≤ k) :
     ∃ z : ℤ, p.eval₂ (Int.castRingHom ℝ) (a / b) * b ^ k = z := by
-  rcases eq_or_ne b 0 with rfl | hb
-  · rcases k.eq_zero_or_pos with rfl | hk
-    · exact ⟨p.coeff 0, by simp⟩
-    exact ⟨0, by simp [hk.ne']⟩
   refine ⟨∑ i ∈ p.support, p.coeff i * a ^ i * b ^ (k - i), ?_⟩
   conv => lhs; rw [← sum_monomial_eq p]
   rw [eval₂_sum, sum, Finset.sum_mul, Int.cast_sum]
-  simp only [eval₂_monomial, eq_intCast, div_pow, Int.cast_mul, Int.cast_pow]
+  simp only [eval₂_monomial, eq_intCast, Int.cast_mul, Int.cast_pow]
   refine Finset.sum_congr rfl (fun i hi => ?_)
-  have ik := (le_natDegree_of_mem_supp i hi).trans hp
-  rw [mul_assoc, div_mul_comm, ← Int.cast_pow, ← Int.cast_pow, ← Int.cast_pow,
-    ← pow_sub_mul_pow b ik, ← Int.cast_div_charZero, Int.mul_ediv_cancel _ (pow_ne_zero _ hb),
-    ← mul_assoc, mul_right_comm, ← Int.cast_pow]
-  exact dvd_mul_left _ _
+  have hik := (le_natDegree_of_mem_supp i hi).trans hp
+  have hbk : (b : ℝ) ^ k = (b : ℝ) ^ i * (b : ℝ) ^ (k - i) := by
+    rw [← pow_add, Nat.add_sub_of_le hik]
+  calc
+    _ = (p.coeff i : ℝ) * (((a : ℝ) / b * b) ^ i * (b : ℝ) ^ (k - i)) := by
+      rw [hbk, mul_pow ((a : ℝ) / b) (b : ℝ) i]
+      ring
+    _ = _ := by rw [div_mul_cancel₀, mul_assoc]
 
 open Filter
 
@@ -269,23 +269,29 @@ private lemma tendsto_pow_div_factorial_at_top_aux (a : ℝ) :
     Tendsto (fun n => (a : ℝ) ^ (2 * n + 1) / n !) atTop (nhds 0) := by
   rw [← mul_zero a]
   refine ((FloorSemiring.tendsto_pow_div_factorial_atTop (a ^ 2)).const_mul a).congr (fun x => ?_)
-  rw [← pow_mul, mul_div_assoc', _root_.pow_succ']
+  rw [← pow_mul, _root_.pow_succ', mul_div₀]
 
 /-- If `x` is rational, it can be written as `a / b` with `a : ℤ` and `b : ℕ` satisfying `b > 0`. -/
 private lemma not_irrational_exists_rep {x : ℝ} :
-    ¬Irrational x → ∃ (a : ℤ) (b : ℕ), 0 < b ∧ x = a / b := by
+    ¬Irrational x → ∃ (a : ℤ) (b : ℕ) (hb : 0 < b),
+      x = Checked.div (a : ℝ) (b : ℝ) ((by exact_mod_cast hb.ne' : (b : ℝ) ≠ 0).isUnit) := by
   rw [Irrational, not_not, mem_range]
   rintro ⟨q, rfl⟩
-  exact ⟨q.num, q.den, q.pos, by exact_mod_cast (Rat.num_div_den _).symm⟩
+  refine ⟨q.num, q.den, q.pos, eq_div_iff.mpr ?_⟩
+  have h := congrArg (fun r : ℚ ↦ (r : ℝ)) (Rat.mul_den_eq_num q)
+  simpa only [Rat.cast_mul, Rat.cast_natCast, Rat.cast_intCast] using h
 
 @[simp] theorem irrational_pi : Irrational π := by
-  apply Irrational.of_div_natCast 2
-  rw [Nat.cast_two]
+  suffices hπ : Irrational (π / 2) by
+    have htwo : IsUnit ((2 : ℕ) : ℝ) := (Nat.cast_ne_zero.mpr (by decide)).isUnit
+    apply Irrational.of_div_natCast 2 (hm := htwo)
+    simpa only [Nat.cast_two] using hπ
   by_contra h'
   obtain ⟨a, b, hb, h⟩ := not_irrational_exists_rep h'
-  have ha : (0 : ℝ) < a := by
-    have : 0 < (a : ℝ) / b := h ▸ pi_div_two_pos
-    rwa [lt_div_iff₀ (by positivity), zero_mul] at this
+  have hbR : (0 : ℝ) < b := by exact_mod_cast hb
+  have hab : π / 2 * (b : ℝ) = (a : ℝ) :=
+    (congrArg (fun x : ℝ ↦ x * (b : ℝ)) h).trans (div_mul_cancel₀ _)
+  have ha : (0 : ℝ) < a := by simpa only [hab] using mul_pos pi_div_two_pos hbR
   have k (n : ℕ) : 0 < (a : ℝ) ^ (2 * n + 1) / n ! := by positivity
   have j : ∀ᶠ n : ℕ in atTop, (a : ℝ) ^ (2 * n + 1) / n ! * I n (π / 2) < 1 := by
     have := (tendsto_pow_div_factorial_at_top_aux a).eventually_lt_const
@@ -295,16 +301,21 @@ private lemma not_irrational_exists_rep {x : ℝ} :
     exact hn.trans_le' (mul_le_mul_of_nonneg_left (I_le _) (by positivity))
   obtain ⟨n, hn⟩ := j.exists
   have hn' : 0 < a ^ (2 * n + 1) / n ! * I n (π / 2) := mul_pos (k _) I_pos
-  obtain ⟨z, hz⟩ : ∃ z : ℤ, (sinPoly n).eval₂ (Int.castRingHom ℝ) (a / b) * b ^ (2 * n + 1) = z :=
-    is_integer a b ((sinPoly_natDegree_le _).trans (by lia))
+  have hunit : IsUnit ((b : ℤ) : ℝ) := by simpa only [Int.cast_natCast] using hbR.ne'.isUnit
+  obtain ⟨z, hz⟩ := is_integer (p := sinPoly n) a b hunit (k := 2 * n + 1)
+    ((sinPoly_natDegree_le n).trans (by omega))
+  have hz' : (sinPoly n).eval₂ (Int.castRingHom ℝ) (π / 2) * (b : ℝ) ^ (2 * n + 1) = z := by
+    simpa only [h, Int.cast_natCast] using hz
   have e := sinPoly_add_cosPoly_eval (π / 2) n
   rw [cos_pi_div_two, sin_pi_div_two, mul_zero, mul_one, add_zero] at e
-  have : a ^ (2 * n + 1) / n ! * I n (π / 2) =
-      eval₂ (Int.castRingHom ℝ) (π / 2) (sinPoly n) * b ^ (2 * n + 1) := by
-    nth_rw 2 [h] at e
-    simp [field, div_pow] at e ⊢
-    linear_combination e
-  have : (0 : ℝ) < z ∧ (z : ℝ) < 1 := by simp [← hz, ← h, ← this, hn', hn]
+  have he : (a : ℝ) ^ (2 * n + 1) / n ! * I n (π / 2) = z := by
+    apply mul_left_cancel₀ (show (n ! : ℝ) ≠ 0 by positivity)
+    calc
+      _ = I n (π / 2) * (((a : ℝ) ^ (2 * n + 1) / n !) * (n ! : ℝ)) := by ac_rfl
+      _ = (I n (π / 2) * (π / 2) ^ (2 * n + 1)) * (b : ℝ) ^ (2 * n + 1) := by
+        rw [div_mul_cancel₀, ← hab, mul_pow, mul_assoc]
+      _ = _ := by rw [e, mul_assoc, hz']
+  have : (0 : ℝ) < z ∧ (z : ℝ) < 1 := by rw [← he]; exact ⟨hn', hn⟩
   norm_cast at this
   lia
 

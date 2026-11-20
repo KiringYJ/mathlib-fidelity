@@ -129,7 +129,7 @@ private structure BadChar (N : ℕ) [NeZero N] where
   χ : DirichletCharacter ℂ N
   χ_ne : χ ≠ 1
   χ_sq : χ ^ 2 = 1
-  hχ : χ.LFunction 1 = 0
+  hχ : χ.LFunction 1 (Or.inl χ_ne) = 0
 
 variable [NeZero N]
 
@@ -140,20 +140,22 @@ We will show that `B.F (-2) = 0` but also that `B.F (-2)` must be positive,
 giving the desired contradiction. -/
 private noncomputable
 def F (B : BadChar N) : ℂ → ℂ :=
-  Function.update (fun s : ℂ ↦ riemannZeta s * LFunction B.χ s) 1 (deriv (LFunction B.χ) 1)
+  fun s ↦ ((s - 1) * HurwitzZeta.hurwitzZetaRegularPart 0 s + reciprocalGammaℝ s) *
+    dslope (fun z ↦ LFunction B.χ z (Or.inl B.χ_ne)) 1 s
 
-private lemma F_differentiableAt_of_ne (B : BadChar N) {s : ℂ} (hs : s ≠ 1) :
-    DifferentiableAt ℂ B.F s := by
-  apply DifferentiableAt.congr_of_eventuallyEq
-  · exact (differentiableAt_riemannZeta hs).mul <| differentiableAt_LFunction B.χ s (.inl hs)
-  · filter_upwards [eventually_ne_nhds hs] with t ht using Function.update_of_ne ht ..
+private lemma F_eq_mul (B : BadChar N) {s : ℂ} (hs : s ≠ 1) :
+    B.F s = riemannZeta s hs * LFunction B.χ s (Or.inl B.χ_ne) := by
+  have hsub : s - 1 ≠ 0 := sub_ne_zero.mpr hs
+  rw [F, dslope_of_ne _ hs, slope_def_field, B.hχ, sub_zero, ← HurwitzZeta.hurwitzZeta_zero,
+    HurwitzZeta.hurwitzZeta_eq_regularPart_add hs]
+  field
 
 /-- `B.F` agrees with the L-series of `zetaMul χ` on `1 < s.re`. -/
 private lemma F_eq_LSeries (B : BadChar N) {s : ℂ} (hs : 1 < s.re) :
     B.F s = LSeries B.χ.zetaMul s := by
-  rw [F, zetaMul, ← coe_mul, LSeries_convolution']
+  rw [zetaMul, ← coe_mul, LSeries_convolution']
   · have hs' : s ≠ 1 := fun h ↦ by simp only [h, one_re, lt_self_iff_false] at hs
-    simp only [ne_eq, hs', not_false_eq_true, Function.update_of_ne, B.χ.LFunction_eq_LSeries hs]
+    rw [B.F_eq_mul hs', B.χ.LFunction_eq_LSeries hs]
     congr 1
     · simp_rw [← LSeries_zeta_eq_riemannZeta hs, ← natCoe_apply]
     · exact LSeries_congr B.χ.apply_eq_toArithmeticFunction_apply s
@@ -164,35 +166,18 @@ private lemma F_eq_LSeries (B : BadChar N) {s : ℂ} (hs : 1 < s.re) :
 
 /-- If `χ` is a bad character, then `F` is an entire function. -/
 private lemma F_differentiable (B : BadChar N) : Differentiable ℂ B.F := by
-  intro s
-  rcases ne_or_eq s 1 with hs | rfl
-  · exact B.F_differentiableAt_of_ne hs
-  -- now need to deal with `s = 1`
-  refine (analyticAt_of_differentiable_on_punctured_nhds_of_continuousAt ?_ ?_).differentiableAt
-  · filter_upwards [self_mem_nhdsWithin] with t ht
-    exact B.F_differentiableAt_of_ne ht
-  -- now reduced to showing *continuity* at s = 1
-  let G := Function.update (fun s ↦ (s - 1) * riemannZeta s) 1 1
-  let H := Function.update (fun s ↦ (B.χ.LFunction s - B.χ.LFunction 1) / (s - 1)) 1
-    (deriv B.χ.LFunction 1)
-  have : B.F = G * H := by
-    ext1 t
-    rcases eq_or_ne t 1 with rfl | ht
-    · simp only [F, G, H, Pi.mul_apply, one_mul, Function.update_self]
-    · simp only [F, G, H, Function.update_of_ne ht, mul_comm _ (riemannZeta _), B.hχ, sub_zero,
-      Pi.mul_apply, mul_assoc, mul_div_cancel₀ _ (sub_ne_zero.mpr ht)]
-  rw [this]
-  apply ContinuousAt.mul
-  · simpa only [G, continuousAt_update_same] using riemannZeta_residue_one
-  · exact (B.χ.differentiableAt_LFunction 1 (.inr B.χ_ne)).hasDerivAt.continuousAt_div
+  refine (((differentiable_id.sub_const 1).mul
+    (HurwitzZeta.differentiable_hurwitzZetaRegularPart 0)).add
+    differentiable_reciprocalGammaℝ).mul ?_
+  rw [← differentiableOn_univ, differentiableOn_dslope univ_mem]
+  exact (B.χ.differentiable_LFunction B.χ_ne).differentiableOn
 
 /-- The trivial zero at `s = -2` of the zeta function gives that `F (-2) = 0`.
 This is used later to obtain a contradiction. -/
 private lemma F_neg_two (B : BadChar N) : B.F (-2 : ℝ) = 0 := by
-  have := riemannZeta_neg_two_mul_nat_add_one 0
-  rw [Nat.cast_zero, zero_add, mul_one] at this
-  rw [F, ofReal_neg, ofReal_ofNat, Function.update_of_ne (mod_cast (by lia : (-2 : ℤ) ≠ 1)),
-    this, zero_mul]
+  have h : riemannZeta (-2) (by norm_num) = 0 := by
+    simpa only [Nat.cast_zero, zero_add, mul_one] using riemannZeta_neg_two_mul_nat_add_one 0
+  rw [ofReal_neg, ofReal_ofNat, B.F_eq_mul (by norm_num), h, zero_mul]
 
 end BadChar
 
@@ -200,7 +185,7 @@ end BadChar
 since it is later superseded by `LFunction_apply_one_ne_zero`. -/
 private theorem LFunction_apply_one_ne_zero_of_quadratic {χ : DirichletCharacter ℂ N}
     (hχ : χ ^ 2 = 1) (χ_ne : χ ≠ 1) :
-    χ.LFunction 1 ≠ 0 := by
+    χ.LFunction 1 (Or.inl χ_ne) ≠ 0 := by
   intro hL
   -- construct a "bad character" and put together a contradiction.
   let B : BadChar N := { χ := χ, χ_sq := hχ, hχ := hL, χ_ne := χ_ne }
@@ -229,15 +214,18 @@ private lemma re_log_comb_nonneg' {a : ℝ} (ha₀ : 0 ≤ a) (ha₁ : a < 1) {z
     ((hasSum_re <| hasSum_taylorSeries_neg_log hac₁).mul_left 4) |>.add
     (hasSum_re <| hasSum_taylorSeries_neg_log hac₂) |>.tsum_eq]
   refine tsum_nonneg fun n ↦ ?_
-  simp only [← ofReal_pow, div_natCast_re, ofReal_re, mul_pow, mul_re, ofReal_im, zero_mul,
-    sub_zero]
-  rcases n.eq_zero_or_pos with rfl | hn
-  · simp
-  · simp only [← mul_div_assoc, ← add_div]
-    refine div_nonneg ?_ n.cast_nonneg
-    rw [← pow_mul, pow_mul', sq, mul_re, ← sq, ← sq, ← sq_norm_sub_sq_re, norm_pow, hz]
-    convert! (show 0 ≤ 2 * a ^ n * ((z ^ n).re + 1) ^ 2 by positivity) using 1
-    ring
+  have hc : IsUnit ((n : ℂ) + 1) := (Nat.cast_add_one_ne_zero n).isUnit
+  have hr : IsUnit ((n : ℝ) + 1) := (Nat.cast_add_one_ne_zero n).isUnit
+  have hdiv (w : ℂ) : (Checked.div w ((n : ℂ) + 1) hc).re =
+      Checked.div w.re ((n : ℝ) + 1) hr := by
+    simpa only [Nat.cast_succ] using
+      div_natCast_re w (n + 1) (hn := (Nat.cast_ne_zero.mpr (Nat.succ_ne_zero n)).isUnit)
+  simp only [← ofReal_pow, hdiv, ofReal_re, mul_pow, mul_re, ofReal_im, zero_mul,
+    sub_zero, ← mul_div_assoc₀, ← add_div]
+  refine div_nonneg ?_ (by positivity)
+  rw [← pow_mul, pow_mul', sq, mul_re, ← sq, ← sq, ← sq_norm_sub_sq_re, norm_pow, hz]
+  convert! (show 0 ≤ 2 * a ^ (n + 1) * ((z ^ (n + 1)).re + 1) ^ 2 by positivity) using 1
+  ring
 
 -- This is the version of the technical positivity lemma for logarithms of Euler factors.
 private lemma re_log_comb_nonneg {n : ℕ} (hn : 2 ≤ n) {x : ℝ} (hx : 1 < x) (y : ℝ) :
@@ -246,7 +234,9 @@ private lemma re_log_comb_nonneg {n : ℕ} (hn : 2 ≤ n) {x : ℝ} (hx : 1 < x)
           (-log (1 - (χ n ^ 2) * n ^ (-(x + 2 * I * y)))).re := by
   by_cases hn' : IsUnit (n : ZMod N)
   · have hn : (n : ℝ) ^ (-x) < 1 := by
-      rw [Real.rpow_neg (Nat.cast_nonneg n), inv_lt_one_iff₀]
+      have hp : IsUnit ((n : ℝ) ^ x) :=
+        (Real.rpow_pos_of_pos (Nat.cast_pos.mpr (by omega)) x).ne'.isUnit
+      rw [Real.rpow_neg (Nat.cast_nonneg n) x (hxy := hp), inv_lt_one_iff₀]
       exact .inr <| Real.one_lt_rpow (mod_cast one_lt_two.trans_le hn) <| zero_lt_one.trans hx
     have hz : ‖χ n * (n : ℂ) ^ (-(I * y))‖ = 1 := by
       rw [norm_mul, ← hn'.unit_spec, DirichletCharacter.unit_norm_eq_one χ hn'.unit,
@@ -305,26 +295,46 @@ lemma norm_LSeries_product_ge_one {x : ℝ} (hx : 0 < x) (y : ℝ) :
 
 variable [NeZero N]
 
+/-- The Dirichlet L-function along the horizontal ray to the right of `1 + I * y`. -/
+noncomputable def LFunctionHorizontal (χ : DirichletCharacter ℂ N) (y : ℝ)
+    (x : Set.Ioi (0 : ℝ)) : ℂ :=
+  LFunction χ (1 + (x : ℝ) + I * y) (Or.inr (by
+    intro h
+    have hx := (one_lt_re_one_add x.2 y).2.1
+    simp [h] at hx))
+
+local notation "𝓝₊" => comap (Subtype.val : Set.Ioi (0 : ℝ) → ℝ) (𝓝 0)
+
 /-- A variant of `DirichletCharacter.norm_LSeries_product_ge_one` in terms of the L-functions. -/
-lemma norm_LFunction_product_ge_one {x : ℝ} (hx : 0 < x) (y : ℝ) :
-    ‖LFunctionTrivChar N (1 + x) ^ 3 * LFunction χ (1 + x + I * y) ^ 4 *
-      LFunction (χ ^ 2) (1 + x + 2 * I * y)‖ ≥ 1 := by
-  have ⟨h₀, h₁, h₂⟩ := one_lt_re_one_add hx y
-  rw [LFunctionTrivChar, DirichletCharacter.LFunction_eq_LSeries 1 h₀,
-    χ.LFunction_eq_LSeries h₁, (χ ^ 2).LFunction_eq_LSeries h₂]
-  exact norm_LSeries_product_ge_one χ hx y
+lemma norm_LFunction_product_ge_one (x : Set.Ioi (0 : ℝ)) (y : ℝ) :
+    ‖LFunctionHorizontal (1 : DirichletCharacter ℂ N) 0 x ^ 3 * LFunctionHorizontal χ y x ^ 4 *
+      LFunctionHorizontal (χ ^ 2) (2 * y) x‖ ≥ 1 := by
+  have h₀ := (one_lt_re_one_add x.2 0).2.1
+  have h₁ := (one_lt_re_one_add x.2 y).2.1
+  have h₂ := (one_lt_re_one_add x.2 (2 * y)).2.1
+  have hp : I * ((2 * y : ℝ) : ℂ) = 2 * I * y := by push_cast; ring
+  simp only [LFunctionHorizontal]
+  rw [LFunction_eq_LSeries _ h₀, LFunction_eq_LSeries _ h₁, LFunction_eq_LSeries _ h₂]
+  simpa only [ofReal_zero, mul_zero, add_zero, hp] using norm_LSeries_product_ge_one χ x.2 y
 
 lemma LFunctionTrivChar_isBigO_near_one_horizontal :
-    (fun x : ℝ ↦ LFunctionTrivChar N (1 + x)) =O[𝓝[>] 0] fun x ↦ (1 : ℂ) / x := by
-  have : (fun w : ℂ ↦ LFunctionTrivChar N (1 + w)) =O[𝓝[≠] 0] (1 / ·) := by
-    have H : Tendsto (fun w ↦ w * LFunctionTrivChar N (1 + w)) (𝓝[≠] 0)
-        (𝓝 <| ∏ p ∈ N.primeFactors, (1 - (p : ℂ)⁻¹)) := by
-      convert! (LFunctionTrivChar_residue_one (N := N)).comp (f := fun w ↦ 1 + w) ?_ using 1
-      · simp only [Function.comp_def, add_sub_cancel_left]
-      · simpa only [tendsto_iff_comap, Homeomorph.coe_addLeft, add_zero, map_le_iff_le_comap] using
-          ((Homeomorph.addLeft (1 : ℂ)).map_punctured_nhds_eq 0).le
-    exact (isBigO_mul_iff_isBigO_div eventually_mem_nhdsWithin).mp <| H.isBigO_one ℂ
-  exact (isBigO_comp_ofReal_nhds_ne this).mono <| nhdsGT_le_nhdsNE 0
+    LFunctionHorizontal (1 : DirichletCharacter ℂ N) 0 =O[𝓝₊]
+      fun x ↦ Checked.inv ((x : ℝ) : ℂ) (ofReal_ne_zero.mpr x.2.ne').isUnit := by
+  have hc : Continuous (fun x : ℝ ↦ LFunctionTrivChar₁ N (1 + x)) :=
+    (differentiable_LFunctionTrivChar₁ N).continuous.comp (by fun_prop)
+  have ht : Tendsto (fun x : Set.Ioi (0 : ℝ) ↦ LFunctionTrivChar₁ N (1 + (x : ℝ))) 𝓝₊
+      (𝓝 (LFunctionTrivChar₁ N (1 + (0 : ℝ)))) := (hc.tendsto 0).comp tendsto_comap
+  obtain ⟨c, hbound⟩ := isBigO_iff.mp (ht.isBigO_one ℂ)
+  refine isBigO_iff.mpr ⟨c, ?_⟩
+  filter_upwards [hbound] with x hx
+  have hne : ((x : ℝ) : ℂ) ≠ 0 := ofReal_ne_zero.mpr x.2.ne'
+  have hnorm : LFunctionTrivChar₁ N (1 + (x : ℝ)) =
+      (x : ℝ) * LFunctionHorizontal (1 : DirichletCharacter ℂ N) 0 x := by
+    rw [LFunctionTrivChar₁, LFunction₁_eq_mul _ (add_ne_left.mpr hne), add_sub_cancel_left]
+    simp [LFunctionHorizontal]
+  rw [hnorm, norm_mul, norm_one, mul_one] at hx
+  rw [norm_inv, ← div_eq_mul_inv₀, le_div_iff₀' (norm_pos_iff.mpr hne)]
+  simpa only [mul_comm] using hx
 
 omit [NeZero N] in
 private lemma one_add_I_mul_ne_one_or {y : ℝ} (hy : y ≠ 0 ∨ χ ≠ 1) :
@@ -332,85 +342,113 @@ private lemma one_add_I_mul_ne_one_or {y : ℝ} (hy : y ≠ 0 ∨ χ ≠ 1) :
   simpa only [ne_eq, add_eq_left, _root_.mul_eq_zero, I_ne_zero, ofReal_eq_zero, false_or]
     using hy
 
+omit [NeZero N] in
+private lemma tendsto_LFunctionHorizontal_point {y : ℝ} (hy : y ≠ 0 ∨ χ ≠ 1) :
+    Tendsto
+      (fun x : Set.Ioi (0 : ℝ) ↦ (⟨1 + (x : ℝ) + I * y, Or.inr (by
+        intro h
+        have hx := (one_lt_re_one_add x.2 y).2.1
+        simp [h] at hx)⟩ : LFunctionDomain χ))
+      𝓝₊ (𝓝 (⟨1 + I * y, (one_add_I_mul_ne_one_or χ hy).symm⟩ : LFunctionDomain χ)) := by
+  apply tendsto_subtype_rng.mpr
+  have hc : Continuous (fun x : ℝ ↦ (1 : ℂ) + x + I * y) := by fun_prop
+  have ht := (hc.tendsto 0).comp
+    (tendsto_comap : Tendsto (Subtype.val : Set.Ioi (0 : ℝ) → ℝ) 𝓝₊ (𝓝 0))
+  change Tendsto (fun x : Set.Ioi (0 : ℝ) ↦ (1 : ℂ) + (x : ℝ) + I * y) 𝓝₊
+    (𝓝 ((1 : ℂ) + (0 : ℝ) + I * y)) at ht
+  simpa only [ofReal_zero, add_zero] using ht
+
 lemma LFunction_isBigO_horizontal {y : ℝ} (hy : y ≠ 0 ∨ χ ≠ 1) :
-    (fun x : ℝ ↦ LFunction χ (1 + x + I * y)) =O[𝓝[>] 0] fun _ ↦ (1 : ℂ) := by
-  refine IsBigO.mono ?_ nhdsWithin_le_nhds
-  simp_rw [add_comm (1 : ℂ), add_assoc]
-  have := (χ.differentiableAt_LFunction _ <| one_add_I_mul_ne_one_or χ hy).continuousAt
-  rw [← zero_add (1 + _)] at this
-  exact this.comp (f := fun x : ℝ ↦ x + (1 + I * y)) (x := 0) (by fun_prop) |>.tendsto.isBigO_one ℂ
+    LFunctionHorizontal χ y =O[𝓝₊] fun _ ↦ (1 : ℂ) := by
+  have hd := χ.differentiableAt_LFunction _ (one_add_I_mul_ne_one_or χ hy)
+  have hc := hd.continuousAt continuousAt_subtype_val
+  exact (hc.tendsto.comp (tendsto_LFunctionHorizontal_point χ hy)).isBigO_one ℂ
 
 private lemma LFunction_isBigO_horizontal_of_eq_zero {y : ℝ} (hy : y ≠ 0 ∨ χ ≠ 1)
-    (h : LFunction χ (1 + I * y) = 0) :
-    (fun x : ℝ ↦ LFunction χ (1 + x + I * y)) =O[𝓝[>] 0] fun x : ℝ ↦ (x : ℂ) := by
-  simp_rw [add_comm (1 : ℂ), add_assoc]
-  have := (χ.differentiableAt_LFunction _ <| one_add_I_mul_ne_one_or χ hy).hasDerivAt
-  rw [← zero_add (1 + _)] at this
-  simpa only [zero_add, h, sub_zero]
-    using (Complex.isBigO_comp_ofReal_nhds
-      (this.comp_add_const 0 _).differentiableAt.isBigO_sub) |>.mono nhdsWithin_le_nhds
+    (h : LFunction χ (1 + I * y) (one_add_I_mul_ne_one_or χ hy).symm = 0) :
+    LFunctionHorizontal χ y =O[𝓝₊] fun x ↦ ((x : ℝ) : ℂ) := by
+  have hd := (χ.differentiableAt_LFunction _ (one_add_I_mul_ne_one_or χ hy)).isBigO_sub
+  have hb := hd.comp_tendsto (tendsto_LFunctionHorizontal_point χ hy)
+  have he : ∀ x : Set.Ioi (0 : ℝ), 1 + (x : ℝ) + I * y - (1 + I * y) = (x : ℂ) := by
+    intro x
+    ring
+  change (fun x ↦ LFunctionHorizontal χ y x -
+    LFunction χ (1 + I * y) (one_add_I_mul_ne_one_or χ hy).symm) =O[𝓝₊]
+      (fun x : Set.Ioi (0 : ℝ) ↦ 1 + (x : ℝ) + I * y - (1 + I * y)) at hb
+  simpa only [h, sub_zero, he] using hb
+
+omit [NeZero N] in
+private lemma quadratic_or_horizontal_domain {t : ℝ} (h : χ ^ 2 ≠ 1 ∨ t ≠ 0) :
+    t ≠ 0 ∨ χ ≠ 1 := h.symm.imp_right fun hχ htriv ↦ hχ (by rw [htriv, one_pow])
 
 -- intermediate statement, special case of the next theorem
 private lemma LFunction_ne_zero_of_not_quadratic_or_ne_one {t : ℝ} (h : χ ^ 2 ≠ 1 ∨ t ≠ 0) :
-    LFunction χ (1 + I * t) ≠ 0 := by
+    LFunction χ (1 + I * t)
+      (one_add_I_mul_ne_one_or χ (quadratic_or_horizontal_domain χ h)).symm ≠ 0 := by
   intro Hz
-  have hz₁ : t ≠ 0 ∨ χ ≠ 1 := by
-    refine h.symm.imp_right (fun h H ↦ ?_)
-    simp only [H, one_pow, ne_eq, not_true_eq_false] at h
+  have hz₁ := quadratic_or_horizontal_domain χ h
   have hz₂ : 2 * t ≠ 0 ∨ χ ^ 2 ≠ 1 :=
     h.symm.imp_left <| mul_ne_zero two_ne_zero
-  have help (x : ℝ) : ((1 / x) ^ 3 * x ^ 4 * 1 : ℂ) = x := by
-    rcases eq_or_ne x 0 with rfl | h
-    · rw [ofReal_zero, zero_pow (by lia), mul_zero, mul_one]
-    · rw [one_div, inv_pow, pow_succ _ 3, ← mul_assoc,
-        inv_mul_cancel₀ <| pow_ne_zero 3 (ofReal_ne_zero.mpr h), one_mul, mul_one]
+  have help (x : Set.Ioi (0 : ℝ)) :
+      Checked.inv ((x : ℝ) : ℂ) (ofReal_ne_zero.mpr x.2.ne').isUnit ^ 3 *
+        ((x : ℝ) : ℂ) ^ 4 * 1 = (x : ℂ) := by
+    rw [inv_pow₀, pow_succ _ 3, ← mul_assoc, inv_mul_cancel₀, one_mul, mul_one]
   -- put together the various `IsBigO` statements and `norm_LFunction_product_ge_one`
   -- to derive a contradiction
-  have H₀ : (fun _ : ℝ ↦ (1 : ℝ)) =O[𝓝[>] 0]
-      fun x ↦ LFunctionTrivChar N (1 + x) ^ 3 * LFunction χ (1 + x + I * t) ^ 4 *
-                   LFunction (χ ^ 2) (1 + x + 2 * I * t) :=
-    IsBigO.of_bound' <| eventually_nhdsWithin_of_forall
-      fun _ hx ↦ (norm_one (α := ℝ)).symm ▸ (χ.norm_LFunction_product_ge_one hx t).le
-  have H := (LFunctionTrivChar_isBigO_near_one_horizontal (N := N)).pow 3 |>.mul <|
-    (χ.LFunction_isBigO_horizontal_of_eq_zero hz₁ Hz).pow 4 |>.mul <|
-    LFunction_isBigO_horizontal _ hz₂
-  simp only [ofReal_mul, ofReal_ofNat, mul_left_comm I, ← mul_assoc, help] at H
+  have H₀ : (fun _ : Set.Ioi (0 : ℝ) ↦ (1 : ℝ)) =O[𝓝₊]
+      fun x ↦ LFunctionHorizontal (1 : DirichletCharacter ℂ N) 0 x ^ 3 *
+        LFunctionHorizontal χ t x ^ 4 * LFunctionHorizontal (χ ^ 2) (2 * t) x :=
+    IsBigO.of_bound' <| Eventually.of_forall
+      fun x ↦ (norm_one (α := ℝ)).symm ▸ (χ.norm_LFunction_product_ge_one x t).le
+  have H := ((LFunctionTrivChar_isBigO_near_one_horizontal (N := N)).pow 3 |>.mul
+    ((χ.LFunction_isBigO_horizontal_of_eq_zero hz₁ Hz).pow 4)).mul
+    (LFunction_isBigO_horizontal _ hz₂)
+  simp only [help] at H
   -- go via absolute value to translate into a statement over `ℝ`
   replace H := (H₀.trans H).norm_right
   simp only [norm_real] at H
+  have : (𝓝₊).NeBot := by
+    rw [← map_neBot_iff (Subtype.val : Set.Ioi (0 : ℝ) → ℝ), map_comap, Subtype.range_coe]
+    exact inferInstanceAs (𝓝[>] (0 : ℝ)).NeBot
   exact isLittleO_irrefl (.of_forall (fun _ ↦ one_ne_zero)) <|
-    H.of_norm_right.trans_isLittleO <| isLittleO_id_one.mono nhdsWithin_le_nhds
+    H.of_norm_right.trans_isLittleO <| isLittleO_id_one.comp_tendsto tendsto_comap
 
 /-- If `χ` is a Dirichlet character, then `L(χ, s)` does not vanish when `s.re = 1`
 except when `χ` is trivial and `s = 1` (then `L(χ, s)` has a simple pole at `s = 1`). -/
 theorem LFunction_ne_zero_of_re_eq_one {s : ℂ} (hs : s.re = 1) (hχs : χ ≠ 1 ∨ s ≠ 1) :
-    LFunction χ s ≠ 0 := by
+    LFunction χ s hχs ≠ 0 := by
   by_cases h : χ ^ 2 = 1 ∧ s = 1
-  · exact h.2 ▸ LFunction_apply_one_ne_zero_of_quadratic h.1 <| hχs.neg_resolve_right h.2
+  · obtain ⟨hquad, rfl⟩ := h
+    exact LFunction_apply_one_ne_zero_of_quadratic hquad (hχs.resolve_right (fun h ↦ h rfl))
   · have hs' : s = 1 + I * s.im := by
       conv_lhs => rw [← re_add_im s, hs, ofReal_one, mul_comm]
     rw [not_and_or, ← ne_eq, ← ne_eq, hs', add_ne_left] at h
     replace h : χ ^ 2 ≠ 1 ∨ s.im ≠ 0 :=
       h.imp_right (fun H ↦ by exact_mod_cast right_ne_zero_of_mul H)
-    exact hs'.symm ▸ χ.LFunction_ne_zero_of_not_quadratic_or_ne_one h
+    have he : (⟨s, hχs⟩ : LFunctionDomain χ) =
+        ⟨1 + I * s.im, (one_add_I_mul_ne_one_or χ (quadratic_or_horizontal_domain χ h)).symm⟩ :=
+      Subtype.ext hs'
+    change LFunctionOn χ ⟨s, hχs⟩ ≠ 0
+    rw [he]
+    exact χ.LFunction_ne_zero_of_not_quadratic_or_ne_one h
 
 /-- If `χ` is a Dirichlet character, then `L(χ, s)` does not vanish for `s.re ≥ 1`
 except when `χ` is trivial and `s = 1` (then `L(χ, s)` has a simple pole at `s = 1`). -/
 theorem LFunction_ne_zero_of_one_le_re ⦃s : ℂ⦄ (hχs : χ ≠ 1 ∨ s ≠ 1) (hs : 1 ≤ s.re) :
-    LFunction χ s ≠ 0 :=
+    LFunction χ s hχs ≠ 0 :=
   hs.eq_or_lt.casesOn (fun hs ↦ LFunction_ne_zero_of_re_eq_one χ hs.symm hχs)
     fun hs ↦ LFunction_eq_LSeries χ hs ▸ LSeries_ne_zero_of_one_lt_re χ hs
 
 -- Interesting special case:
 variable {χ} in
 /-- The L-function of a nontrivial Dirichlet character does not vanish at `s = 1`. -/
-theorem LFunction_apply_one_ne_zero (hχ : χ ≠ 1) : LFunction χ 1 ≠ 0 :=
+theorem LFunction_apply_one_ne_zero (hχ : χ ≠ 1) : LFunction χ 1 (Or.inl hχ) ≠ 0 :=
   LFunction_ne_zero_of_one_le_re χ (.inl hχ) <| one_re ▸ le_rfl
 
 /-- The Riemann zeta function does not vanish at `s` if `s ≠ 1` and `s.re ≥ 1`. -/
 lemma _root_.riemannZeta_ne_zero_of_one_le_re ⦃s : ℂ⦄ (hs₀ : s ≠ 1) (hs : 1 ≤ s.re) :
-    riemannZeta s ≠ 0 :=
-  LFunction_modOne_eq (χ := 1) ▸ LFunction_ne_zero_of_one_le_re _ (.inr hs₀) hs
+    riemannZeta s hs₀ ≠ 0 :=
+  LFunction_modOne_eq (χ := 1) hs₀ ▸ LFunction_ne_zero_of_one_le_re _ (.inr hs₀) hs
 
 end nonvanishing
 

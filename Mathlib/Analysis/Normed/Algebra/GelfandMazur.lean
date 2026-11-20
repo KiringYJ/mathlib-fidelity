@@ -139,8 +139,14 @@ private lemma norm_eq_of_isMinOn_of_forall_le {X E : Type*} [TopologicalSpace X]
   suffices Tendsto (fun n : ℕ ↦ M * (1 + (‖f u - f w‖ / M) ^ n)) atTop (𝓝 (M * (1 + 0))) by
     refine ge_of_tendsto (by simpa) ?_
     filter_upwards [Ioi_mem_atTop 0] with n hn
-    exact H u hw n hn
+    simpa only [div_pow₀] using H u hw n hn
   exact tendsto_pow_atTop_nhds_zero_of_lt_one (by positivity) hu |>.const_add 1 |>.const_mul M
+
+private lemma mul_one_add_div_pow {M t : ℝ} (hM : 0 < M) {n : ℕ} (hn : 0 < n) :
+    M * (1 + (t / M) ^ n) = (M ^ n + t ^ n) / M ^ (n - 1) := by
+  obtain ⟨m, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hn.ne'
+  simp only [Nat.succ_sub_one, div_pow₀, pow_succ]
+  field_simp
 
 open Filter Bornology Set in
 /-- In a normed algebra `F` over a normed field `𝕜` that is a proper space, the function
@@ -194,8 +200,7 @@ private lemma norm_sub_eq_norm_sub_of_isMinOn {x : F} {z : ℂ}
   -- show
   --  `‖x - algebraMap ℂ F w‖ ≤ M * (1 + (‖x - algebraMap ℂ F w - (x - algebraMap ℂ F y)‖ / M) ^ n)`
   rw [sub_sub_sub_cancel_left, ← map_sub, norm_algebraMap, norm_sub_rev y w, norm_one, mul_one,
-    show M * (1 + (‖w - y‖ / M) ^ n) = (M ^ n + ‖w - y‖ ^ n) / M ^ (n - 1) by
-      simp only [field, div_pow, ← pow_succ', Nat.sub_add_cancel hn],
+    mul_one_add_div_pow hM₀ hn,
     le_div_iff₀ (by positivity)]
   obtain ⟨p, hp, hrel⟩ :=
     (isMonicOfDegree_X_pow ℂ n).of_dvd_sub (by grind)
@@ -297,9 +302,7 @@ private lemma norm_φ_eq_norm_φ_of_isMinOn {x : F} {z : ℝ × ℝ} (h : IsMinO
   -- we use the key result `norm_eq_of_isMinOn_of_forall_le`
   refine norm_eq_of_isMinOn_of_forall_le hM₀ hM.symm h (continuous_φ x) (fun {w} u hw n hn ↦ ?_) w
   -- show `‖φ x u‖ ≤ M * (1 + (‖φ x u - φ x w‖ / M) ^ n)`
-  have HH : M * (1 + (‖φ x u - φ x w‖ / M) ^ n) = (M ^ n + ‖φ x u - φ x w‖ ^ n) / M ^ (n - 1) := by
-    simp only [field, div_pow, ← pow_succ', Nat.sub_add_cancel hn]
-  rw [HH, le_div_iff₀ (by positivity)]; clear HH
+  rw [mul_one_add_div_pow hM₀ hn, le_div_iff₀ (pow_pos hM₀ _)]
   -- show `‖φ x u‖ * M ^ (n - 1) ≤ M ^ n + ‖φ x u - φ x w‖ ^ n`
   let q (y : ℝ × ℝ) : ℝ[X] := X ^ 2 - C y.1 * X + C y.2
   have hq (y : ℝ × ℝ) : IsMonicOfDegree (q y) 2 := isMonicOfDegree_sub_add_two ..

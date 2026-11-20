@@ -124,27 +124,16 @@ theorem mem_box_iff' [NeZero n] {ν : ι → ℤ} {x : ι → ℝ} :
   have h : 0 < (n : ℝ) := Nat.cast_pos.mpr <| n.pos_of_neZero
   simp_rw [mem_box_iff, ← _root_.le_div_iff₀' h, ← div_lt_iff₀' h]
 
+variable [NeZero n]
+
 /-- The tag of (the index of) a `unitPartition.box`. -/
 abbrev tag (ν : ι → ℤ) : ι → ℝ := fun i ↦ (ν i + 1) / n
 
 @[simp]
 theorem tag_apply (ν : ι → ℤ) (i : ι) : tag n ν i = (ν i + 1) / n := rfl
 
-variable [NeZero n]
-
-theorem tag_injective : Function.Injective (fun ν : ι → ℤ ↦ tag n ν) := by
-  refine fun _ _ h ↦ funext_iff.mpr fun i ↦ ?_
-  have := congr_arg (fun x ↦ x i) h
-  simp_rw [tag_apply, div_left_inj' (c := (n : ℝ)) (Nat.cast_ne_zero.mpr (NeZero.ne n)),
-    add_left_inj, Int.cast_inj] at this
-  exact this
-
-theorem tag_mem (ν : ι → ℤ) :
-    tag n ν ∈ box n ν := by
-  refine mem_box_iff.mpr fun _ ↦ ?_
-  rw [tag, add_div]
-  have h : 0 < (n : ℝ) := Nat.cast_pos.mpr <| n.pos_of_neZero
-  exact ⟨lt_add_of_pos_right _ (by positivity), le_rfl⟩
+theorem tag_mem (ν : ι → ℤ) : tag n ν ∈ box n ν :=
+  mem_box_iff.mpr fun i ↦ ⟨(box n ν).lower_lt_upper i, le_rfl⟩
 
 /-- For `x : ι → ℝ`, its index is the index of the unique `unitPartition.box` to which
 it belongs. -/
@@ -163,6 +152,10 @@ theorem mem_box_iff_index {x : ι → ℝ} {ν : ι → ℤ} :
 @[simp]
 theorem index_tag (ν : ι → ℤ) :
     index n (tag n ν) = ν := mem_box_iff_index.mp (tag_mem n ν)
+
+theorem tag_injective : Function.Injective (fun ν : ι → ℤ ↦ tag n ν) := by
+  intro a b h
+  simpa only [index_tag] using congrArg (index n) h
 
 variable {n} in
 theorem disjoint {ν ν' : ι → ℤ} :
@@ -338,23 +331,25 @@ variable {n} in
 theorem mem_smul_span_iff {v : ι → ℝ} :
     v ∈ (n : ℝ)⁻¹ • L ↔ ∀ i, n * v i ∈ Set.range (algebraMap ℤ ℝ) := by
   have := Fintype.ofFinite ι
-  rw [ZSpan.smul _ (inv_ne_zero (NeZero.ne _)), Module.Basis.mem_span_iff_repr_mem]
-  simp_rw [Module.Basis.repr_isUnitSMul, Pi.basisFun_repr, Units.smul_def, Units.val_inv_eq_inv_val,
-    IsUnit.unit_spec, inv_inv, smul_eq_mul]
+  have hn : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (NeZero.ne n)
+  change v ∈ (↑((n : ℝ)⁻¹ • L) : Set (ι → ℝ)) ↔ _
+  rw [coe_pointwise_smul, Set.mem_inv_smul_set_iff₀ hn]
+  change (n : ℝ) • v ∈ L ↔ _
+  simp only [Module.Basis.mem_span_iff_repr_mem, Pi.basisFun_repr, Pi.smul_apply, smul_eq_mul]
 
 theorem tag_mem_smul_span (ν : ι → ℤ) :
     tag n ν ∈ (n : ℝ)⁻¹ • L := by
   refine mem_smul_span_iff.mpr fun i ↦ ⟨ν i + 1, ?_⟩
-  rw [tag_apply, div_eq_inv_mul, ← mul_assoc, mul_inv_cancel_of_invertible, one_mul, map_add,
-    map_one, eq_intCast]
+  change ((ν i + 1 : ℤ) : ℝ) = (n : ℝ) * tag n ν i
+  rw [tag_apply, mul_div_cancel₀, Int.cast_add, Int.cast_one]
 
 theorem tag_index_eq_self_of_mem_smul_span {x : ι → ℝ} (hx : x ∈ (n : ℝ)⁻¹ • L) :
     tag n (index n x) = x := by
   rw [mem_smul_span_iff] at hx
   ext i
-  obtain ⟨a, ha⟩ : ∃ a : ℤ, a = n * x i := hx i
-  rwa [tag_apply, index_apply, Int.cast_sub, Int.cast_one, sub_add_cancel, ← ha, Int.ceil_intCast,
-    div_eq_iff (NeZero.ne _), mul_comm]
+  obtain ⟨a, ha⟩ : ∃ a : ℤ, (a : ℝ) = n * x i := hx i
+  rw [tag_apply, index_apply, Int.cast_sub, Int.cast_one, sub_add_cancel, ← ha, Int.ceil_intCast]
+  exact div_eq_iff.mpr (ha.trans (mul_comm _ _))
 
 theorem eq_of_mem_smul_span_of_index_eq_index {x y : ι → ℝ} (hx : x ∈ (n : ℝ)⁻¹ • L)
     (hy : y ∈ (n : ℝ)⁻¹ • L) (h : index n x = index n y) : x = y := by
@@ -389,7 +384,8 @@ theorem integralSum_eq_tsum_div {B : Box ι} (hB : hasIntegralVertices B) (hs₀
   unfold integralSum
   have : Fintype ↑(s ∩ (n : ℝ)⁻¹ • L) := by
     apply Set.Finite.fintype
-    rw [← coe_pointwise_smul, ZSpan.smul _ (inv_ne_zero (NeZero.ne _))]
+    have hi : (n : ℝ)⁻¹ ≠ 0 := inv_ne_zero
+    rw [← coe_pointwise_smul, ZSpan.smul _ hi]
     exact ZSpan.setFinite_inter _ (B.isBounded.subset hs₀)
   rw [tsum_fintype, Finset.sum_set_coe, Finset.sum_div, eq_comm]
   simp_rw [Set.indicator_apply, apply_ite, BoxAdditiveMap.toSMul_apply, Measure.toBoxAdditive_apply,
@@ -409,22 +405,28 @@ theorem integralSum_eq_tsum_div {B : Box ι} (hB : hasIntegralVertices B) (hs₀
       (mem_admissibleIndex_of_mem_box n hB (hs₀ hI.2))]
     exact tag_mem_smul_span _ _
   · rw [Set.mem_toFinset] at hx
-    rw [measureReal_def, volume_box,
+    have hden : IsUnit (((n : ENNReal) ^ card ι).toReal) := by
+      simp only [ENNReal.toReal_pow, ENNReal.toReal_natCast]
+      exact (pow_pos (Nat.cast_pos.mpr n.pos_of_neZero) _).ne'.isUnit
+    simp only [measureReal_def, volume_box,
       prepartition_tag n (mem_admissibleIndex_of_mem_box n hB (hs₀ hx.1)),
-      tag_index_eq_self_of_mem_smul_span n hx.2, ENNReal.toReal_div,
-      ENNReal.toReal_one, ENNReal.toReal_pow, ENNReal.toReal_natCast, mul_comm_div, one_mul]
+      tag_index_eq_self_of_mem_smul_span n hx.2, ENNReal.toReal_div _ _ (hb := hden),
+      ENNReal.toReal_one, ENNReal.toReal_pow, ENNReal.toReal_natCast]
+    rw [mul_comm_div₀, one_mul]
 
 open Filter
 
 /-- Let `s` be a bounded, measurable set of `ι → ℝ` whose frontier has zero volume and let `F`
-be a continuous function. Then the limit as `n → ∞` of `∑ F x / n ^ card ι`, where the sum is
-over the points in `s ∩ n⁻¹ • (ι → ℤ)`, tends to the integral of `F` over `s`. -/
+be continuous. As the positive integers `n` tend to infinity, the sum of `F x / n ^ card ι`
+over the points `x ∈ s ∩ n⁻¹ • (ι → ℤ)` tends to the integral of `F` over `s`. -/
 theorem _root_.tendsto_tsum_div_pow_atTop_integral (hF : Continuous F) (hs₁ : IsBounded s)
     (hs₂ : MeasurableSet s) (hs₃ : volume (frontier s) = 0) :
-    Tendsto (fun n : ℕ ↦ (∑' x : ↑(s ∩ (n : ℝ)⁻¹ • L), F x) / n ^ card ι)
-      atTop (nhds (∫ x in s, F x)) := by
+    Tendsto (fun k : {n : ℕ // n ≠ 0} ↦
+      letI : NeZero k.val := ⟨k.property⟩
+      (∑' x : ↑(s ∩ (k.val : ℝ)⁻¹ • L), F x) / (k.val : ℝ) ^ card ι)
+      (comap Subtype.val atTop) (nhds (∫ x in s, F x)) := by
   obtain ⟨B, hB, hs₀⟩ := le_hasIntegralVertices_of_isBounded hs₁
-  refine Metric.tendsto_atTop.mpr fun ε hε ↦ ?_
+  refine Metric.tendsto_nhds.mpr fun ε hε ↦ ?_
   have h₁ : ∃ C, ∀ x ∈ Box.Icc B, ‖Set.indicator s F x‖ ≤ C := by
     obtain ⟨C₀, h₀⟩ := (Box.isCompact_Icc B).exists_bound_of_continuousOn hF.continuousOn
     refine ⟨max 0 C₀, fun x hx ↦ ?_⟩
@@ -438,76 +440,105 @@ theorem _root_.tendsto_tsum_div_pow_atTop_integral (hF : Continuous F) (hs₁ : 
   obtain ⟨r, hr₁, hr₂⟩ := (hasIntegral_iff.mp <|
       AEContinuous.hasBoxIntegral (volume : Measure (ι → ℝ)) h₁ h₂
         IntegrationParams.Riemann) (ε / 2) (half_pos hε)
-  refine ⟨⌈(r 0 0 : ℝ)⁻¹⌉₊, fun n hn ↦ lt_of_le_of_lt ?_ (half_lt_self_iff.mpr hε)⟩
-  have : NeZero n :=
-    ⟨Nat.ne_zero_iff_zero_lt.mpr <| (Nat.ceil_pos.mpr (inv_pos.mpr (r 0 0).prop)).trans_le hn⟩
+  have hrpos : 0 < (r 0 0 : ℝ) := (r 0 0).prop
+  have hv : Tendsto (Subtype.val : {n : ℕ // n ≠ 0} → ℕ)
+      (comap Subtype.val atTop) atTop := tendsto_comap
+  filter_upwards [hv.eventually (eventually_ge_atTop ⌈(r 0 0 : ℝ)⁻¹⌉₊)] with k hk
+  obtain ⟨n, hn₀⟩ := k
+  let : NeZero n := ⟨hn₀⟩
+  have hn : ⌈(r 0 0 : ℝ)⁻¹⌉₊ ≤ n := hk
+  refine lt_of_le_of_lt ?_ (half_lt_self_iff.mpr hε)
   rw [← integralSum_eq_tsum_div _ s F hB hs₀, ← Measure.restrict_restrict_of_subset hs₀,
     ← integral_indicator hs₂]
   refine hr₂ 0 _ ⟨?_, fun _ ↦ ?_, fun h ↦ ?_, fun h ↦ ?_⟩ (prepartition_isPartition _ hB)
   · rw [show r 0 = fun _ ↦ r 0 0 from funext_iff.mpr (hr₁ 0 rfl)]
     apply prepartition_isSubordinate n B
-    rw [one_div, inv_le_comm₀ (mod_cast (Nat.pos_of_neZero n)) (r 0 0).prop]
+    rw [one_div₀, inv_le_comm₀ (mod_cast (Nat.pos_of_neZero n)) hrpos]
     exact le_trans (Nat.le_ceil _) (Nat.cast_le.mpr hn)
   · exact prepartition_isHenstock n B
   · simp only [IntegrationParams.Riemann, Bool.false_eq_true] at h
   · simp only [IntegrationParams.Riemann, Bool.false_eq_true] at h
 
-/-- Let `s` be a bounded, measurable set of `ι → ℝ` whose frontier has zero volume. Then the limit
-as `n → ∞` of `card (s ∩ n⁻¹ • (ι → ℤ)) / n ^ card ι` tends to the volume of `s`. This is a
-special case of `tendsto_card_div_pow` with `F = 1`. -/
+/-- Let `s` be a bounded, measurable set of `ι → ℝ` whose frontier has zero volume. As the
+positive integers `n` tend to infinity, `card (s ∩ n⁻¹ • (ι → ℤ)) / n ^ card ι` tends to the
+volume of `s`. This is a special case of `tendsto_tsum_div_pow_atTop_integral` with `F = 1`. -/
 theorem _root_.tendsto_card_div_pow_atTop_volume (hs₁ : IsBounded s)
     (hs₂ : MeasurableSet s) (hs₃ : volume (frontier s) = 0) :
-    Tendsto (fun n : ℕ ↦ (Nat.card ↑(s ∩ (n : ℝ)⁻¹ • L) : ℝ) / n ^ card ι)
-      atTop (𝓝 (volume.real s)) := by
-  convert! tendsto_tsum_div_pow_atTop_integral s (fun _ ↦ 1) continuous_const hs₁ hs₂ hs₃
-  · rw [tsum_const, nsmul_eq_mul, mul_one, Nat.cast_inj]
-  · rw [setIntegral_const, smul_eq_mul, mul_one]
+    Tendsto (fun k : {n : ℕ // n ≠ 0} ↦
+      letI : NeZero k.val := ⟨k.property⟩
+      (Nat.card ↑(s ∩ (k.val : ℝ)⁻¹ • L) : ℝ) / (k.val : ℝ) ^ card ι)
+      (comap Subtype.val atTop) (𝓝 (volume.real s)) := by
+  simpa only [tsum_const, nsmul_eq_mul, setIntegral_const, smul_eq_mul, mul_one] using
+    tendsto_tsum_div_pow_atTop_integral s (fun _ ↦ (1 : ℝ)) continuous_const hs₁ hs₂ hs₃
 
-private theorem tendsto_card_div_pow₃ (hs₁ : IsBounded s)
-    (hs₄ : ∀ ⦃x y : ℝ⦄, 0 < x → x ≤ y → x • s ⊆ y • s) :
-    ∀ᶠ x : ℝ in atTop, (Nat.card ↑(s ∩ (⌊x⌋₊ : ℝ)⁻¹ • L) : ℝ) / x ^ card ι ≤
-      (Nat.card ↑(s ∩ x⁻¹ • L) : ℝ) / x ^ card ι := by
-  filter_upwards [eventually_ge_atTop 1] with x hx
-  gcongr
-  exact tendsto_card_div_pow₂ s hs₁ hs₄ (Nat.cast_pos.mpr (Nat.floor_pos.mpr hx))
-    (Nat.floor_le (zero_le_one.trans hx))
-
-private theorem tendsto_card_div_pow₄ (hs₁ : IsBounded s)
-    (hs₄ : ∀ ⦃x y : ℝ⦄, 0 < x → x ≤ y → x • s ⊆ y • s) :
-    ∀ᶠ x : ℝ in atTop, (Nat.card ↑(s ∩ x⁻¹ • L) : ℝ) / x ^ card ι ≤
-      (Nat.card ↑(s ∩ (⌈x⌉₊ : ℝ)⁻¹ • L) : ℝ) / x ^ card ι := by
-  filter_upwards [eventually_gt_atTop 0] with x hx
-  gcongr
-  exact tendsto_card_div_pow₂ s hs₁ hs₄ hx (Nat.le_ceil _)
-
-private theorem tendsto_card_div_pow₅ :
-    (fun x ↦ (Nat.card ↑(s ∩ (⌊x⌋₊ : ℝ)⁻¹ • L) : ℝ) / ⌊x⌋₊ ^ card ι * (⌊x⌋₊ / x) ^ card ι)
-      =ᶠ[atTop] (fun x ↦ (Nat.card ↑(s ∩ (⌊x⌋₊ : ℝ)⁻¹ • L) : ℝ) / x ^ card ι) := by
-  filter_upwards [eventually_ge_atTop 1] with x hx
-  have : 0 < ⌊x⌋₊ := Nat.floor_pos.mpr hx
-  rw [div_pow, mul_div, div_mul_cancel₀ _ (by positivity)]
-
-private theorem tendsto_card_div_pow₆ :
-    (fun x ↦ (Nat.card ↑(s ∩ (⌈x⌉₊ : ℝ)⁻¹ • L) : ℝ) / ⌈x⌉₊ ^ card ι * (⌈x⌉₊ / x) ^ card ι)
-          =ᶠ[atTop] (fun x ↦ (Nat.card ↑(s ∩ (⌈x⌉₊ : ℝ)⁻¹ • L) : ℝ) / x ^ card ι) := by
-  filter_upwards [eventually_ge_atTop 1] with x hx
-  rw [div_pow, mul_div, div_mul_cancel₀ _ (by positivity)]
-
-/-- A version of `tendsto_card_div_pow_atTop_volume` for a real variable. -/
+/-- A version of `tendsto_card_div_pow_atTop_volume` for a nonzero real variable. -/
 theorem _root_.tendsto_card_div_pow_atTop_volume' (hs₁ : IsBounded s)
     (hs₂ : MeasurableSet s) (hs₃ : volume (frontier s) = 0)
     (hs₄ : ∀ ⦃x y : ℝ⦄, 0 < x → x ≤ y → x • s ⊆ y • s) :
-    Tendsto (fun x : ℝ ↦ (Nat.card ↑(s ∩ x⁻¹ • L) : ℝ) / x ^ card ι)
-      atTop (𝓝 (volume.real s)) := by
-  rw [show volume.real s = volume.real s * 1 ^ card ι by ring]
-  refine tendsto_of_tendsto_of_tendsto_of_le_of_le' ?_ ?_
-    (tendsto_card_div_pow₃ s hs₁ hs₄) (tendsto_card_div_pow₄ s hs₁ hs₄)
-  · refine Tendsto.congr' (tendsto_card_div_pow₅ s) (Tendsto.mul ?_ (Tendsto.pow ?_ _))
-    · exact Tendsto.comp (tendsto_card_div_pow_atTop_volume s hs₁ hs₂ hs₃) tendsto_nat_floor_atTop
-    · exact tendsto_nat_floor_div_atTop
-  · refine Tendsto.congr' (tendsto_card_div_pow₆ s) (Tendsto.mul ?_ (Tendsto.pow ?_ _))
-    · exact Tendsto.comp (tendsto_card_div_pow_atTop_volume s hs₁ hs₂ hs₃) tendsto_nat_ceil_atTop
-    · exact tendsto_nat_ceil_div_atTop
+    Tendsto (fun x : {x : ℝ // x ≠ 0} ↦
+      letI : NeZero x.val := ⟨x.property⟩
+      (Nat.card ↑(s ∩ x.val⁻¹ • L) : ℝ) / x.val ^ card ι)
+      (comap Subtype.val atTop) (𝓝 (volume.real s)) := by
+  -- Above one, both natural roundings are nonzero.
+  let Tail := {x : ℝ // 1 ≤ x}
+  let Grid := {n : ℕ // n ≠ 0}
+  let l : Filter Tail := comap Subtype.val atTop
+  have hv : Tendsto (fun x : Tail ↦ x.val) l atTop := tendsto_comap
+  have pos (x : Tail) : 0 < x.val := zero_lt_one.trans_le x.property
+  let toNonzero (x : Tail) : {x : ℝ // x ≠ 0} := ⟨x.val, (pos x).ne'⟩
+  have hnonzero : Tendsto toNonzero l (comap Subtype.val atTop) := tendsto_comap_iff.mpr hv
+  have nz (k : Grid) : (k.val : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr k.property
+  let count (a : ℝ) (ha : a ≠ 0) : ℝ := Nat.card ↑(s ∩ Checked.inv a ha.isUnit • L)
+  let quotient (v : ℝ) (x : Tail) : ℝ :=
+    Checked.div v (x.val ^ card ι) ((pos x).ne'.isUnit.pow _)
+  have mono {a b : ℝ} (ha : 0 < a) (hab : a ≤ b) :
+      count a ha.ne' ≤ count b (ha.trans_le hab).ne' :=
+    Nat.cast_le.mpr (tendsto_card_div_pow₂ s hs₁ hs₄ ha hab)
+  have quotient_mono {u v : ℝ} (h : u ≤ v) (x : Tail) : quotient u x ≤ quotient v x :=
+    (div_le_div_iff_of_pos_right (pow_pos (pos x) _)).mpr h
+  have rounded (k : Tail → Grid) (hk : Tendsto (fun x ↦ (k x).val) l atTop)
+      (hr : Tendsto (fun x ↦ Checked.div ((k x).val : ℝ) x.val (pos x).ne'.isUnit) l (𝓝 1)) :
+      Tendsto (fun x ↦ quotient (count _ (nz (k x))) x) l (𝓝 (volume.real s)) := by
+    have hk' : Tendsto k l (comap Subtype.val atTop) := tendsto_comap_iff.mpr hk
+    have h := ((tendsto_card_div_pow_atTop_volume s hs₁ hs₂ hs₃).comp hk').mul
+      (hr.pow (card ι))
+    simp only [one_pow, mul_one] at h
+    refine h.congr' (Eventually.of_forall fun x ↦ ?_)
+    let a : ℝ := (k x).val
+    let b : ℝ := x.val
+    have ha : a ≠ 0 := nz (k x)
+    have hb : b ≠ 0 := (pos x).ne'
+    change count a ha / a ^ card ι * (a / b) ^ card ι = count a ha / b ^ card ι
+    rw [div_pow₀, ← mul_div_assoc₀, div_mul_cancel₀]
+  let lo (x : Tail) : Grid := ⟨⌊x.val⌋₊, (Nat.floor_pos.mpr x.property).ne'⟩
+  let hi (x : Tail) : Grid := ⟨⌈x.val⌉₊, (Nat.ceil_pos.mpr (pos x)).ne'⟩
+  have hlo (x : Tail) : ((lo x).val : ℝ) ≤ x.val := Nat.floor_le (pos x).le
+  have hhi (x : Tail) : x.val ≤ ((hi x).val : ℝ) := Nat.le_ceil _
+  have hlo_tendsto : Tendsto (fun x : Tail ↦ (lo x).val) l atTop :=
+    (tendsto_nat_floor_atTop (α := ℝ)).comp hv
+  have hhi_tendsto : Tendsto (fun x : Tail ↦ (hi x).val) l atTop :=
+    (tendsto_nat_ceil_atTop (α := ℝ)).comp hv
+  have hlo_ratio :
+      Tendsto (fun x : Tail ↦ Checked.div ((lo x).val : ℝ) x.val (pos x).ne'.isUnit) l (𝓝 1) := by
+    simpa only [Function.comp_def, toNonzero, lo] using
+      (tendsto_nat_floor_div_atTop (R := ℝ)).comp hnonzero
+  have hhi_ratio :
+      Tendsto (fun x : Tail ↦ Checked.div ((hi x).val : ℝ) x.val (pos x).ne'.isUnit) l (𝓝 1) := by
+    simpa only [Function.comp_def, toNonzero, hi] using
+      (tendsto_nat_ceil_div_atTop (R := ℝ)).comp hnonzero
+  have low := rounded lo hlo_tendsto hlo_ratio
+  have high := rounded hi hhi_tendsto hhi_ratio
+  have hlim : Tendsto (fun x : Tail ↦ quotient (count x.val (pos x).ne') x)
+      l (𝓝 (volume.real s)) :=
+    tendsto_of_tendsto_of_tendsto_of_le_of_le' low high
+      (Eventually.of_forall fun x ↦
+        quotient_mono (mono (Nat.cast_pos.mpr (Nat.floor_pos.mpr x.property)) (hlo x)) x)
+      (Eventually.of_forall fun x ↦ quotient_mono (mono (pos x) (hhi x)) x)
+  intro U hU
+  obtain ⟨P, hP, hPU⟩ := hlim hU
+  refine ⟨P ∩ Set.Ici 1, inter_mem hP (Ici_mem_atTop 1), ?_⟩
+  intro x hx
+  exact @hPU ⟨x.val, hx.2⟩ hx.1
 
 end fintype
 

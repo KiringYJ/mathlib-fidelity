@@ -91,13 +91,16 @@ lemma hasDerivAt_klFun (hx : x ≠ 0) : HasDerivAt klFun (log x) x := by
   ring
 
 lemma not_differentiableAt_klFun_zero : ¬ DifferentiableAt ℝ klFun 0 := by
-  unfold klFun; simpa using not_DifferentiableAt_log_mul_zero
+  intro h
+  apply not_DifferentiableAt_log_mul_zero
+  convert (h.add differentiableAt_id).sub (differentiableAt_const (1 : ℝ)) using 1
+  ext x
+  simp [klFun]
 
 /-- The derivative of `klFun` is `log x`. This also holds at `x = 0` although `klFun` is not
 differentiable there since the default value of `deriv` in that case is 0. -/
 @[simp]
-lemma deriv_klFun : deriv klFun = log := by
-  ext x
+lemma deriv_klFun (x : ℝ) : deriv klFun x = log x := by
   by_cases h0 : x = 0
   · simp only [h0, log_zero]
     exact deriv_zero_of_not_differentiableAt not_differentiableAt_klFun_zero
@@ -105,12 +108,12 @@ lemma deriv_klFun : deriv klFun = log := by
 
 lemma not_differentiableWithinAt_klFun_Ioi_zero : ¬ DifferentiableWithinAt ℝ klFun (Ioi 0) 0 := by
   refine not_differentiableWithinAt_of_deriv_tendsto_atBot_Ioi _ ?_
-  rw [deriv_klFun]
+  simp only [deriv_klFun]
   exact tendsto_log_nhdsGT_zero
 
 lemma not_differentiableWithinAt_klFun_Iio_zero : ¬ DifferentiableWithinAt ℝ klFun (Iio 0) 0 := by
   refine not_differentiableWithinAt_of_deriv_tendsto_atBot_Iio _ ?_
-  rw [deriv_klFun]
+  simp only [deriv_klFun]
   exact tendsto_log_nhdsLT_zero
 
 /-- The right derivative of `klFun` is `log x`. This also holds at `x = 0` although `klFun` is not

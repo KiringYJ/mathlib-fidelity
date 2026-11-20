@@ -11,6 +11,12 @@ set_option warn.sorry false
 
 variable {R : Type} [CommRing R]
 
+-- The quotient fixture retains the instance layout that triggered the original panic.
+private class QuotientGroupWithZero (K : Type) extends MonoidWithZero K, DivInvMonoid K,
+    Nontrivial K where
+  mul_inv_cancel : ∀ (a : K), a ≠ 0 → a * a⁻¹ = 1
+  inv_zero : (0 : K)⁻¹ = 0
+
 class DivisionRing (K : Type) extends Ring K, DivInvMonoid K, Nontrivial K where
   protected mul_inv_cancel : ∀ (a : K), a ≠ 0 → a * a⁻¹ = 1
   protected inv_zero : (0 : K)⁻¹ = 0
@@ -39,7 +45,7 @@ variable (I J : Ideal R)
 instance commRing {R} [CommRing R] (I : Ideal R) : CommRing I.Quotient := sorry
 
 protected noncomputable abbrev groupWithZero [hI : I.IsMaximal] :
-    GroupWithZero (I.Quotient) :=
+    QuotientGroupWithZero (I.Quotient) :=
   { inv := sorry
     mul_inv_cancel := sorry
     inv_zero := sorry

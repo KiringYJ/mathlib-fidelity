@@ -67,7 +67,7 @@ theorem Real.fourierCoeff_tsum_comp_add {f : C(ℝ, ℂ)}
   calc
     fourierCoeff (Periodic.lift <| f.periodic_tsum_comp_add_zsmul 1) m =
         ∫ x in (0 : ℝ)..1, e x * (∑' n : ℤ, f.comp (ContinuousMap.addRight n)) x := by
-      simp_rw [fourierCoeff_eq_intervalIntegral _ m 0, div_one, one_smul, zero_add, e, comp_apply,
+      simp_rw [fourierCoeff_eq_intervalIntegral _ m 0, div_one₀, one_smul, zero_add, e, comp_apply,
         coe_mk, Periodic.lift_coe, zsmul_one, smul_eq_mul]
     -- Transform sum in C(ℝ, ℂ) evaluated at x into pointwise sum of values.
     _ = ∫ x in (0 : ℝ)..1, ∑' n : ℤ, (e * f.comp (ContinuousMap.addRight n)) x := by

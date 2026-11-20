@@ -99,8 +99,9 @@ theorem evariance_lt_top [IsFiniteMeasure μ] (hX : MemLp X 2 μ) : evariance X 
   have := ENNReal.pow_lt_top (hX.sub <| memLp_const <| ∫ ω, X ω ∂μ).2 (n := 2)
   rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top, ← ENNReal.rpow_two]
     at this
-  simp only [ENNReal.toReal_ofNat, Pi.sub_apply, one_div] at this
-  rw [← ENNReal.rpow_mul, inv_mul_cancel₀ (two_ne_zero : (2 : ℝ) ≠ 0), ENNReal.rpow_one] at this
+  simp only [ENNReal.toReal_ofNat, Pi.sub_apply] at this
+  rw [← ENNReal.rpow_mul, div_mul_cancel₀ (1 : ℝ) (hb := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit),
+    ENNReal.rpow_one] at this
   simp_rw [ENNReal.rpow_two] at this
   exact this
 
@@ -375,9 +376,9 @@ theorem evariance_def' [IsProbabilityMeasure μ] {X : Ω → ℝ} (hX : AEStrong
     rw [MemLp, not_and] at hℒ
     specialize hℒ hX
     simp only [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top, not_lt,
-      top_le_iff, ENNReal.toReal_ofNat, one_div, ENNReal.rpow_eq_top_iff, inv_lt_zero, inv_pos,
-      and_true, or_iff_not_imp_left, not_and_or, zero_lt_two] at hℒ
-    exact mod_cast hℒ fun _ => zero_le_two
+      top_le_iff, ENNReal.toReal_ofNat, ENNReal.rpow_eq_top_iff, or_iff_not_imp_left,
+      not_and_or] at hℒ
+    simpa only [ENNReal.rpow_two] using (hℒ (fun _ ↦ by positivity)).1
 
 /-- **Chebyshev's inequality** for `ℝ≥0∞`-valued variance. -/
 theorem meas_ge_le_evariance_div_sq {X : Ω → ℝ} (hX : AEStronglyMeasurable X μ) {c : ℝ≥0}
@@ -389,11 +390,12 @@ theorem meas_ge_le_evariance_div_sq {X : Ω → ℝ} (hX : AEStronglyMeasurable 
     using 1
   · norm_cast
   rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top]
-  simp only [ENNReal.toReal_ofNat, one_div, Pi.sub_apply]
+  simp only [ENNReal.toReal_ofNat, Pi.sub_apply]
   rw [div_eq_mul_inv, ENNReal.inv_pow, mul_comm, ENNReal.rpow_two]
   congr
-  simp_rw [← ENNReal.rpow_mul, inv_mul_cancel₀ (two_ne_zero : (2 : ℝ) ≠ 0), ENNReal.rpow_two,
-    ENNReal.rpow_one, evariance]
+  simp_rw [← ENNReal.rpow_mul,
+    div_mul_cancel₀ (1 : ℝ) (hb := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit),
+    ENNReal.rpow_two, ENNReal.rpow_one, evariance]
 
 /-- **Chebyshev's inequality**: one can control the deviation probability of a real random variable
 from its expectation in terms of the variance. -/

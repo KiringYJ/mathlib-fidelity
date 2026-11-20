@@ -9,11 +9,11 @@ public import Mathlib.Algebra.GroupWithZero.Basic
 public import Mathlib.GroupTheory.GroupAction.ConjAct
 
 /-!
-# Conjugation action of a group with zero on itself
+# Conjugation by the units of a group with zero
 
-A group with zero has no ambient inverse, so conjugation by `0` is not defined. Conjugation by the
-nonzero elements is the action of `ConjAct G₀ˣ` on `G₀`; see `ConjAct.unitsMulDistribMulAction`
-and `ConjAct.units_smul_def`.
+The nonzero elements of a group with zero `G₀` act on `G₀` by conjugation through `ConjAct G₀ˣ`.
+See `ConjAct.unitsMulDistribMulAction` and `ConjAct.units_smul_def`. This file also equips the type
+alias `ConjAct G₀` with its group-with-zero structure.
 -/
 
 public section
@@ -26,5 +26,8 @@ namespace ConjAct
 variable [GroupWithZero G₀]
 
 instance : GroupWithZero (ConjAct G₀) := inferInstanceAs <| GroupWithZero G₀
+
+@[simp] lemma ofConjAct_zero : ofConjAct 0 = (0 : G₀) := rfl
+@[simp] lemma toConjAct_zero : toConjAct (0 : G₀) = 0 := rfl
 
 end ConjAct

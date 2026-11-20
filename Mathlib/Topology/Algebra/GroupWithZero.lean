@@ -24,8 +24,9 @@ Then we prove lemmas about continuity of `x ↦ x⁻¹` and `f / g` providing do
 and `Continuous`. The inverse and the quotient are the checked operations: the function `f⁻¹`
 exists when `f` is invertible, `fun x ↦ (f x)⁻¹` when every value `f x` is, and the lemmas take
 this evidence implicitly from the term. The `*.fun_inv₀` and `*.div₀` versions are about the
-pointwise functions `fun x ↦ (f x)⁻¹` and `fun x ↦ f x / g x`. For a function that is invertible
-only on part of its domain, apply them on the subtype where it is invertible. As a special case,
+pointwise functions `fun x ↦ (f x)⁻¹` and `fun x ↦ f x / g x`. The `*_restrict` versions give
+limits and continuity on the subtype where the inverted function takes invertible values.
+As a special case,
 we provide `*.div_const` operations that require only `DivInvMonoid` and `ContinuousMul`
 instances, and `*.div_const₀` operations for a quotient by an invertible element of a monoid.
 
@@ -158,6 +159,14 @@ theorem Filter.Tendsto.inv₀ {a : G₀} {h0 : ∀ x, IsUnit (f x)} {ha : IsUnit
   (tendsto_inv₀ ⟨a, ha⟩).comp (tendsto_subtype_rng.mpr hf :
     Tendsto (fun x ↦ (⟨f x, h0 x⟩ : {y : G₀ | IsUnit y})) l (𝓝 ⟨a, ha⟩))
 
+/-- The pointwise inverse converges on the subtype of inputs with invertible values, equipped with
+the restriction of the original filter. -/
+theorem Filter.Tendsto.inv₀_restrict {b : G₀} {hb : IsUnit b}
+    (hf : Tendsto f l (𝓝 b)) :
+    Tendsto (fun x : {x // IsUnit (f x)} ↦ Checked.inv (f x.val) x.property)
+      (comap Subtype.val l) (𝓝 (Checked.inv b hb)) :=
+  (hf.comp tendsto_comap).inv₀ (h0 := fun x ↦ x.property)
+
 variable [TopologicalSpace α]
 
 @[fun_prop]
@@ -165,6 +174,17 @@ nonrec theorem ContinuousWithinAt.fun_inv₀ {h0 : ∀ x, IsUnit (f x)}
     (hf : ContinuousWithinAt f s a) :
     ContinuousWithinAt (fun x ↦ Checked.inv (f x) (h0 x)) s a :=
   hf.inv₀ (ha := h0 a)
+
+/-- The pointwise inverse is continuous within the restriction of `s` to the inputs with
+invertible values, at an input where the value is invertible. -/
+theorem ContinuousWithinAt.fun_inv₀_restrict (hf : ContinuousWithinAt f s a)
+    (ha : IsUnit (f a)) :
+    ContinuousWithinAt (fun x : {x // IsUnit (f x)} ↦ Checked.inv (f x.val) x.property)
+      (Subtype.val ⁻¹' s) ⟨a, ha⟩ := by
+  have h : ContinuousWithinAt (f ∘ Subtype.val) (Subtype.val ⁻¹' s)
+      (⟨a, ha⟩ : {x // IsUnit (f x)}) :=
+    hf.comp continuous_subtype_val.continuousWithinAt (fun _ hx ↦ hx)
+  exact h.fun_inv₀
 
 @[fun_prop]
 theorem ContinuousWithinAt.inv₀ {h0 : IsUnit f} (hf : ContinuousWithinAt f s a) :
@@ -196,6 +216,14 @@ theorem Continuous.inv₀ {h0 : IsUnit f} (hf : Continuous f) : Continuous f⁻�
 theorem ContinuousOn.fun_inv₀ {h0 : ∀ x, IsUnit (f x)} (hf : ContinuousOn f s) :
     ContinuousOn (fun x ↦ Checked.inv (f x) (h0 x)) s :=
   fun x hx ↦ (hf x hx).fun_inv₀
+
+/-- The pointwise inverse of a function continuous on `s` is continuous on the restriction of
+`s` to inputs with invertible values. -/
+theorem ContinuousOn.fun_inv₀_restrict (hf : ContinuousOn f s) :
+    ContinuousOn (fun x : {x // IsUnit (f x)} ↦ Checked.inv (f x.val) x.property)
+      (Subtype.val ⁻¹' s) := by
+  rintro ⟨x, hx⟩ hxs
+  exact (hf x hxs).fun_inv₀_restrict hx
 
 @[fun_prop]
 theorem ContinuousOn.inv₀ {h0 : IsUnit f} (hf : ContinuousOn f s) : ContinuousOn f⁻¹ s := by
@@ -265,6 +293,15 @@ theorem Filter.Tendsto.div₀ {l : Filter α} {a b : G₀} {h₀ : ∀ x, IsUnit
     Tendsto (fun x ↦ Checked.div (f x) (g x) (h₀ x)) l (𝓝 (a / b)) := by
   simpa only [div_eq_mul_inv₀] using hf.mul (hg.inv₀ (h0 := h₀) (ha := hb))
 
+/-- The pointwise quotient converges on the subtype where the denominator is invertible,
+equipped with the restriction of the original filter. -/
+theorem Filter.Tendsto.div₀_restrict {l : Filter α} {a b : G₀} {hb : IsUnit b}
+    (hf : Tendsto f l (𝓝 a)) (hg : Tendsto g l (𝓝 b)) :
+    Tendsto (fun x : {x // IsUnit (g x)} ↦ Checked.div (f x.val) (g x.val) x.property)
+      (comap Subtype.val l) (𝓝 (Checked.div a b hb)) := by
+  simpa only [div_eq_mul_inv₀, Function.comp_apply] using
+    (hf.comp tendsto_comap).mul (hg.inv₀_restrict (hb := hb))
+
 theorem Filter.Tendsto.div {l : Filter α} {a b : G₀} {h₀ : IsUnit g} {hb : IsUnit b}
     (hf : Tendsto f l (𝓝 a)) (hg : Tendsto g l (𝓝 b)) : Tendsto (f / g) l (𝓝 (a / b)) := by
   rw [funext (Pi.div_apply₀ f g)]
@@ -305,6 +342,18 @@ nonrec theorem ContinuousWithinAt.div₀ {h₀ : ∀ x, IsUnit (g x)} (hf : Cont
     ContinuousWithinAt (fun x ↦ Checked.div (f x) (g x) (h₀ x)) s a :=
   hf.div₀ hg (hb := h₀ a)
 
+/-- The pointwise quotient is continuous within the restriction of `s` to inputs with invertible
+denominator, at an input where the denominator is invertible. -/
+theorem ContinuousWithinAt.div₀_restrict (hf : ContinuousWithinAt f s a)
+    (hg : ContinuousWithinAt g s a) (ha : IsUnit (g a)) :
+    ContinuousWithinAt (fun x : {x // IsUnit (g x)} ↦ Checked.div (f x.val) (g x.val) x.property)
+      (Subtype.val ⁻¹' s) ⟨a, ha⟩ := by
+  have h : ContinuousWithinAt (f ∘ Subtype.val) (Subtype.val ⁻¹' s)
+      (⟨a, ha⟩ : {x // IsUnit (g x)}) :=
+    hf.comp continuous_subtype_val.continuousWithinAt (fun _ hx ↦ hx)
+  simpa only [div_eq_mul_inv₀, Pi.mul_def, Function.comp_apply] using
+    h.mul (hg.fun_inv₀_restrict ha)
+
 theorem ContinuousWithinAt.div {h₀ : IsUnit g} (hf : ContinuousWithinAt f s a)
     (hg : ContinuousWithinAt g s a) : ContinuousWithinAt (f / g) s a := by
   rw [funext (Pi.div_apply₀ f g)]
@@ -314,6 +363,14 @@ theorem ContinuousWithinAt.div {h₀ : IsUnit g} (hf : ContinuousWithinAt f s a)
 theorem ContinuousOn.div₀ {h₀ : ∀ x, IsUnit (g x)} (hf : ContinuousOn f s)
     (hg : ContinuousOn g s) : ContinuousOn (fun x ↦ Checked.div (f x) (g x) (h₀ x)) s :=
   fun x hx => (hf x hx).div₀ (hg x hx)
+
+/-- The pointwise quotient of functions continuous on `s` is continuous on the restriction of
+`s` to inputs with invertible denominator. -/
+theorem ContinuousOn.div₀_restrict (hf : ContinuousOn f s) (hg : ContinuousOn g s) :
+    ContinuousOn (fun x : {x // IsUnit (g x)} ↦ Checked.div (f x.val) (g x.val) x.property)
+      (Subtype.val ⁻¹' s) := by
+  rintro ⟨x, hx⟩ hxs
+  exact (hf x hxs).div₀_restrict (hg x hxs) hx
 
 theorem ContinuousOn.div {h₀ : IsUnit g} (hf : ContinuousOn f s) (hg : ContinuousOn g s) :
     ContinuousOn (f / g) s := by

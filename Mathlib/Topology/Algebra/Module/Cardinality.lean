@@ -68,6 +68,10 @@ lemma cardinal_eq_of_mem_nhds_zero
   where `c` is any element of `𝕜` with norm `> 1`. All these sets are in bijection and have
   therefore the same cardinality. The conclusion follows. -/
   obtain ⟨c, hc⟩ : ∃ x : 𝕜, 1 < ‖x‖ := NormedField.exists_lt_norm 𝕜 1
+  have hc0 : c ≠ 0 := by
+    rintro rfl
+    simp only [norm_zero] at hc
+    exact lt_irrefl _ (hc.trans zero_lt_one)
   have cn_ne : ∀ n, c ^ n ≠ 0 := by
     intro n
     apply pow_ne_zero
@@ -78,7 +82,7 @@ lemma cardinal_eq_of_mem_nhds_zero
     intro x
     have : Tendsto (fun n ↦ (c ^ n)⁻¹ • x) atTop (𝓝 ((0 : 𝕜) • x)) := by
       have : Tendsto (fun n ↦ (c ^ n)⁻¹) atTop (𝓝 0) := by
-        simp_rw [← inv_pow]
+        simp_rw [← inv_pow₀ (ha := hc0.isUnit)]
         apply tendsto_pow_atTop_nhds_zero_of_norm_lt_one
         rw [norm_inv]
         exact inv_lt_one_of_one_lt₀ hc
@@ -91,8 +95,8 @@ lemma cardinal_eq_of_mem_nhds_zero
     have : (c ^ n • s :) ≃ s :=
     { toFun := fun x ↦ ⟨(c ^ n)⁻¹ • x.1, (mem_smul_set_iff_inv_smul_mem₀ (cn_ne n) _ _).1 x.2⟩
       invFun := fun x ↦ ⟨(c^n) • x.1, smul_mem_smul_set x.2⟩
-      left_inv := fun x ↦ by simp [smul_smul, mul_inv_cancel₀ (cn_ne n)]
-      right_inv := fun x ↦ by simp [smul_smul, inv_mul_cancel₀ (cn_ne n)] }
+      left_inv := fun x ↦ by simp [smul_smul, mul_inv_cancel₀ (ha := (cn_ne n).isUnit)]
+      right_inv := fun x ↦ by simp [smul_smul, inv_mul_cancel₀ (ha := (cn_ne n).isUnit)] }
     exact Cardinal.mk_congr this
   apply (Cardinal.mk_of_countable_eventually_mem A B).symm
 

@@ -68,10 +68,11 @@ abbrev HolderConjugate (p q : ℝ) := HolderTriple p q 1
 
 /-- The conjugate exponent of `p` is `q = p / (p - 1)`, so that `p⁻¹ + q⁻¹ = 1` when `p ≠ 0`.
 
-It is defined for `p ≠ 1`, where the denominator `p - 1` is a unit; the evidence `hp` is found by
-`checked_unit` from the context, for example from `1 < p` or from a hypothesis
-`p.HolderConjugate q`. -/
-def conjExponent (p : ℝ) (hp : IsUnit (p - 1) := by checked_unit) : ℝ := p / (p - 1)
+It is defined for `p ≠ 1`. The default proof uses the local context, for example `1 < p`,
+`p < 1`, or `p.HolderConjugate q`. -/
+def conjExponent (p : ℝ)
+    (hp : p ≠ 1 := by first | checked_nonzero | exact sub_ne_zero.mp (by checked_nonzero)) : ℝ :=
+  Checked.div p (p - 1) (sub_ne_zero.mpr hp).isUnit
 
 variable {a b p q r : ℝ}
 
@@ -281,9 +282,16 @@ abbrev HolderConjugate (p q : ℝ≥0) := HolderTriple p q 1
 
 /-- The conjugate exponent of `p` is `q = p/(p-1)`, so that `p⁻¹ + q⁻¹ = 1`.
 
-It is defined for `1 < p`, where the truncated difference `p - 1` is a unit; the evidence `hp` is
-found by `checked_unit` from the context, for example from a hypothesis `p.HolderConjugate q`. -/
-def conjExponent (p : ℝ≥0) (hp : IsUnit (p - 1) := by checked_unit) : ℝ≥0 := p / (p - 1)
+It is defined for `1 < p`. The default proof uses the local context, for example
+`p.HolderConjugate q`. -/
+def conjExponent (p : ℝ≥0)
+    (hp : 1 < p := by
+      solve
+      | assumption
+      | exact Fact.out
+      | exact tsub_pos_iff_lt.mp (pos_iff_ne_zero.mpr (by checked_nonzero))
+      | norm_num) : ℝ≥0 :=
+  Checked.div p (p - 1) (tsub_pos_of_lt hp).ne'.isUnit
 
 @[simp, norm_cast]
 lemma holderTriple_coe_iff {p q r : ℝ≥0} :
@@ -477,7 +485,7 @@ lemma holderConjugate_iff_eq_conjExponent (hp : 1 < p) :
   rw [inv_div₀, div_eq_mul_inv₀, ← one_add_mul, add_tsub_cancel_of_le hp.le, mul_inv_cancel₀]
 
 lemma HolderConjugate.conjExponent (h : 1 < p) :
-    p.HolderConjugate (conjExponent p (tsub_pos_of_lt h).ne'.isUnit) :=
+    p.HolderConjugate (conjExponent p h) :=
   (holderConjugate_iff_eq_conjExponent h).2 rfl
 
 lemma holderConjugate_one_div (ha : 0 < a) (hb : 0 < b) (hab : a + b = 1) :
@@ -499,7 +507,7 @@ namespace ENNReal
 noncomputable def conjExponent (p : ℝ≥0∞) : ℝ≥0∞ := 1 + (p - 1)⁻¹
 
 lemma coe_conjExponent {p : ℝ≥0} (hp : 1 < p) :
-    p.conjExponent (tsub_pos_of_lt hp).ne'.isUnit = conjExponent p := by
+    p.conjExponent hp = conjExponent p := by
   have hp' : p - 1 ≠ 0 := (tsub_pos_of_lt hp).ne'
   have h : p / (p - 1) = 1 + (p - 1)⁻¹ := by
     rw [div_eq_iff, add_mul, one_mul, inv_mul_cancel₀, tsub_add_cancel_of_le hp.le]

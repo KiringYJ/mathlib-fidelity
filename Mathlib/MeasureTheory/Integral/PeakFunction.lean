@@ -237,6 +237,42 @@ theorem tendsto_integral_peak_smul_of_integrable_of_tendsto
 ### Peak functions of the form `x ↦ (c x) ^ n / ∫ (c y) ^ n`
 -/
 
+/-- Every powered integral is positive when the function is positive at a point and every
+neighborhood of that point within the compact set has positive measure. -/
+lemma setIntegral_pow_pos_of_measure_nhdsWithin_pos
+    [MetrizableSpace α] [IsLocallyFiniteMeasure μ] (hs : IsCompact s)
+    (hμ : ∀ u, IsOpen u → x₀ ∈ u → 0 < μ (u ∩ s)) {c : α → ℝ} (hc : ContinuousOn c s)
+    (hnc : ∀ x ∈ s, 0 ≤ c x) (hnc₀ : 0 < c x₀) (h₀ : x₀ ∈ s) (n : ℕ) :
+    0 < ∫ x in s, c x ^ n ∂μ := by
+  have hnonneg : 0 ≤ᵐ[μ.restrict s] fun x : α ↦ c x ^ n := by
+    filter_upwards [ae_restrict_mem hs.measurableSet] with x hx
+    exact pow_nonneg (hnc x hx) n
+  refine (setIntegral_pos_iff_support_of_nonneg_ae hnonneg
+    ((hc.pow n).integrableOn_compact hs)).2 ?_
+  obtain ⟨u, hu, hx, hpos⟩ : ∃ u : Set α, IsOpen u ∧ x₀ ∈ u ∧ u ∩ s ⊆ c ⁻¹' Ioi 0 :=
+    continuousOn_iff.1 hc x₀ h₀ (Ioi (0 : ℝ)) isOpen_Ioi hnc₀
+  refine (hμ u hu hx).trans_le (measure_mono fun x hx ↦ ?_)
+  exact ⟨(pow_pos (hpos hx) n).ne', hx.2⟩
+
+omit [BorelSpace α] in
+/-- Positive mass on nonempty opens gives positive mass on intersections of open neighborhoods
+with a set whenever the point is in the closure of its interior. -/
+lemma measure_inter_pos_of_mem_closure_interior [IsOpenPosMeasure μ]
+    {u : Set α} (h₀ : x₀ ∈ closure (interior s)) (hu : IsOpen u) (hx : x₀ ∈ u) :
+    0 < μ (u ∩ s) := by
+  refine ((hu.inter isOpen_interior).measure_pos μ (mem_closure_iff.1 h₀ u hu hx)).trans_le
+    (measure_mono (inter_subset_inter_right _ interior_subset))
+
+/-- A point in the closure of the interior of a compact set gives a positive powered integral
+when the function is nonnegative and is positive at that point. -/
+lemma setIntegral_pow_pos_of_mem_closure_interior
+    [MetrizableSpace α] [IsLocallyFiniteMeasure μ] [IsOpenPosMeasure μ] (hs : IsCompact s)
+    {c : α → ℝ} (hc : ContinuousOn c s) (hnc : ∀ x ∈ s, 0 ≤ c x) (hnc₀ : 0 < c x₀)
+    (h₀ : x₀ ∈ closure (interior s)) (n : ℕ) : 0 < ∫ x in s, c x ^ n ∂μ :=
+  setIntegral_pow_pos_of_measure_nhdsWithin_pos hs
+    (fun _ hu hx ↦ measure_inter_pos_of_mem_closure_interior h₀ hu hx) hc hnc hnc₀
+    (closure_minimal interior_subset hs.isClosed h₀) n
+
 /-- If a continuous function `c` realizes its maximum at a unique point `x₀` in a compact set `s`,
 then the sequence of functions `(c x) ^ n / ∫ (c x) ^ n` is a sequence of peak functions
 concentrating around `x₀`. Therefore, `∫ (c x) ^ n * g / ∫ (c x) ^ n` converges to `g x₀` if `g` is
@@ -251,7 +287,9 @@ theorem tendsto_setIntegral_pow_smul_of_unique_maximum_of_isCompact_of_measure_n
     (hμ : ∀ u, IsOpen u → x₀ ∈ u → 0 < μ (u ∩ s)) {c : α → ℝ} (hc : ContinuousOn c s)
     (h'c : ∀ y ∈ s, y ≠ x₀ → c y < c x₀) (hnc : ∀ x ∈ s, 0 ≤ c x) (hnc₀ : 0 < c x₀) (h₀ : x₀ ∈ s)
     (hmg : IntegrableOn g s μ) (hcg : ContinuousWithinAt g s x₀) :
-    Tendsto (fun n : ℕ => (∫ x in s, c x ^ n ∂μ)⁻¹ • ∫ x in s, c x ^ n • g x ∂μ)
+    Tendsto (fun n : ℕ ↦ Checked.inv (∫ x in s, c x ^ n ∂μ)
+      (setIntegral_pow_pos_of_measure_nhdsWithin_pos hs hμ hc hnc hnc₀ h₀ n).ne'.isUnit •
+      ∫ x in s, c x ^ n • g x ∂μ)
       atTop (𝓝 (g x₀)) := by
   /- We apply the general result
     `tendsto_setIntegral_peak_smul_of_integrableOn_of_continuousWithinAt` to the sequence of
@@ -261,26 +299,18 @@ theorem tendsto_setIntegral_pow_smul_of_unique_maximum_of_isCompact_of_measure_n
     of `x₀` where `c x ≥ t'`, by continuity. Then `∫ (c x) ^ n` is bounded below by `t' ^ n μ v`.
     It follows that, on `s \ u`, then `φₙ x ≤ t ^ n / (t' ^ n μ v)`,
     which tends (exponentially fast) to zero with `n`. -/
-  let φ : ℕ → α → ℝ := fun n x => (∫ x in s, c x ^ n ∂μ)⁻¹ * c x ^ n
-  have hnφ : ∀ n, ∀ x ∈ s, 0 ≤ φ n x := by
-    intro n x hx
-    apply mul_nonneg (inv_nonneg.2 _) (pow_nonneg (hnc x hx) _)
-    exact setIntegral_nonneg hs.measurableSet fun x hx => pow_nonneg (hnc x hx) _
+  have P := setIntegral_pow_pos_of_measure_nhdsWithin_pos hs hμ hc hnc hnc₀ h₀
+  let φ (n : ℕ) (x : α) := Checked.inv (∫ y in s, c y ^ n ∂μ) (P n).ne'.isUnit * c x ^ n
+  have hnφ (n : ℕ) (x : α) (hx : x ∈ s) : 0 ≤ φ n x :=
+    mul_nonneg (inv_nonneg.2 (P n).le) (pow_nonneg (hnc x hx) _)
   have I : ∀ n, IntegrableOn (fun x => c x ^ n) s μ := fun n =>
     ContinuousOn.integrableOn_compact hs (hc.pow n)
   have J : ∀ n, 0 ≤ᵐ[μ.restrict s] fun x : α => c x ^ n := by
     intro n
     filter_upwards [ae_restrict_mem hs.measurableSet] with x hx
     exact pow_nonneg (hnc x hx) n
-  have P : ∀ n, (0 : ℝ) < ∫ x in s, c x ^ n ∂μ := by
-    intro n
-    refine (setIntegral_pos_iff_support_of_nonneg_ae (J n) (I n)).2 ?_
-    obtain ⟨u, u_open, x₀_u, hu⟩ : ∃ u : Set α, IsOpen u ∧ x₀ ∈ u ∧ u ∩ s ⊆ c ⁻¹' Ioi 0 :=
-      _root_.continuousOn_iff.1 hc x₀ h₀ (Ioi (0 : ℝ)) isOpen_Ioi hnc₀
-    apply (hμ u u_open x₀_u).trans_le
-    exact measure_mono fun x hx => ⟨ne_of_gt (pow_pos (a := c x) (hu hx) _), hx.2⟩
   have hiφ : ∀ n, ∫ x in s, φ n x ∂μ = 1 := fun n => by
-    rw [integral_const_mul, inv_mul_cancel₀ (P n).ne']
+    rw [integral_const_mul, inv_mul_cancel₀]
   have A : ∀ u : Set α, IsOpen u → x₀ ∈ u → TendstoUniformlyOn φ 0 atTop (s \ u) := by
     intro u u_open x₀u
     obtain ⟨t, t_pos, tx₀, ht⟩ : ∃ t, 0 ≤ t ∧ t < c x₀ ∧ ∀ x ∈ s \ u, c x ≤ t := by
@@ -296,6 +326,8 @@ theorem tendsto_setIntegral_pow_smul_of_unique_maximum_of_isCompact_of_measure_n
     have t'_pos : 0 < t' := t_pos.trans_lt tt'
     obtain ⟨v, v_open, x₀_v, hv⟩ : ∃ v : Set α, IsOpen v ∧ x₀ ∈ v ∧ v ∩ s ⊆ c ⁻¹' Ioi t' :=
       _root_.continuousOn_iff.1 hc x₀ h₀ (Ioi t') isOpen_Ioi t'x₀
+    have hvol : 0 < μ.real (v ∩ s) := ENNReal.toReal_pos (hμ v v_open x₀_v).ne'
+      ((measure_mono inter_subset_right).trans_lt hs.measure_lt_top).ne
     have M : ∀ n, ∀ x ∈ s \ u, φ n x ≤ (μ.real (v ∩ s))⁻¹ * (t / t') ^ n := by
       intro n x hx
       have B : t' ^ n * μ.real (v ∩ s) ≤ ∫ y in s, c y ^ n ∂μ :=
@@ -310,12 +342,15 @@ theorem tendsto_setIntegral_pow_smul_of_unique_maximum_of_isCompact_of_measure_n
               exact pow_le_pow_left₀ t'_pos.le (hv hx).le _
           _ ≤ ∫ y in s, c y ^ n ∂μ :=
             setIntegral_mono_set (I n) (J n) (Eventually.of_forall inter_subset_right)
-      simp_rw [φ, ← div_eq_inv_mul, div_pow, div_div]
-      have := ENNReal.toReal_pos (hμ v v_open x₀_v).ne'
-        ((measure_mono inter_subset_right).trans_lt hs.measure_lt_top).ne
-      gcongr
-      · exact hnc _ hx.1
-      · exact ht x hx
+      have hden : 0 < t' ^ n * μ.real (v ∩ s) := mul_pos (pow_pos t'_pos n) hvol
+      calc
+        φ n x ≤ (t' ^ n * μ.real (v ∩ s))⁻¹ * t ^ n := by
+          exact mul_le_mul ((inv_le_inv₀ (P n) hden).mpr B)
+            (pow_le_pow_left₀ (hnc x hx.1) (ht x hx) _) (pow_nonneg (hnc x hx.1) _)
+            (inv_nonneg.2 hden.le)
+        _ = (μ.real (v ∩ s))⁻¹ * (t / t') ^ n := by
+          rw [mul_inv_rev₀, div_pow₀, div_eq_mul_inv₀]
+          ring
     have N :
       Tendsto (fun n => (μ.real (v ∩ s))⁻¹ * (t / t') ^ n) atTop
         (𝓝 ((μ.real (v ∩ s))⁻¹ * 0)) := by
@@ -352,17 +387,13 @@ theorem tendsto_setIntegral_pow_smul_of_unique_maximum_of_isCompact_of_integrabl
     {c : α → ℝ} (hc : ContinuousOn c s) (h'c : ∀ y ∈ s, y ≠ x₀ → c y < c x₀)
     (hnc : ∀ x ∈ s, 0 ≤ c x) (hnc₀ : 0 < c x₀) (h₀ : x₀ ∈ closure (interior s))
     (hmg : IntegrableOn g s μ) (hcg : ContinuousWithinAt g s x₀) :
-    Tendsto (fun n : ℕ => (∫ x in s, c x ^ n ∂μ)⁻¹ • ∫ x in s, c x ^ n • g x ∂μ) atTop
+    Tendsto (fun n : ℕ ↦ Checked.inv (∫ x in s, c x ^ n ∂μ)
+      (setIntegral_pow_pos_of_mem_closure_interior hs hc hnc hnc₀ h₀ n).ne'.isUnit •
+      ∫ x in s, c x ^ n • g x ∂μ) atTop
       (𝓝 (g x₀)) := by
-  have : x₀ ∈ s := by rw [← hs.isClosed.closure_eq]; exact closure_mono interior_subset h₀
-  apply
-    tendsto_setIntegral_pow_smul_of_unique_maximum_of_isCompact_of_measure_nhdsWithin_pos hs _ hc
-      h'c hnc hnc₀ this hmg hcg
-  intro u u_open x₀_u
-  calc
-    0 < μ (u ∩ interior s) :=
-      (u_open.inter isOpen_interior).measure_pos μ (_root_.mem_closure_iff.1 h₀ u u_open x₀_u)
-    _ ≤ μ (u ∩ s) := by gcongr; apply interior_subset
+  exact tendsto_setIntegral_pow_smul_of_unique_maximum_of_isCompact_of_measure_nhdsWithin_pos hs
+    (fun _ hu hx ↦ measure_inter_pos_of_mem_closure_interior h₀ hu hx) hc h'c hnc hnc₀
+    (closure_minimal interior_subset hs.isClosed h₀) hmg hcg
 
 /-- If a continuous function `c` realizes its maximum at a unique point `x₀` in a compact set `s`,
 then the sequence of functions `(c x) ^ n / ∫ (c x) ^ n` is a sequence of peak functions
@@ -373,10 +404,12 @@ theorem tendsto_setIntegral_pow_smul_of_unique_maximum_of_isCompact_of_continuou
     {c : α → ℝ} (hc : ContinuousOn c s) (h'c : ∀ y ∈ s, y ≠ x₀ → c y < c x₀)
     (hnc : ∀ x ∈ s, 0 ≤ c x) (hnc₀ : 0 < c x₀) (h₀ : x₀ ∈ closure (interior s))
     (hmg : ContinuousOn g s) :
-    Tendsto (fun n : ℕ => (∫ x in s, c x ^ n ∂μ)⁻¹ • ∫ x in s, c x ^ n • g x ∂μ) atTop (𝓝 (g x₀)) :=
-  haveI : x₀ ∈ s := by rw [← hs.isClosed.closure_eq]; exact closure_mono interior_subset h₀
+    Tendsto (fun n : ℕ ↦ Checked.inv (∫ x in s, c x ^ n ∂μ)
+      (setIntegral_pow_pos_of_mem_closure_interior hs hc hnc hnc₀ h₀ n).ne'.isUnit •
+      ∫ x in s, c x ^ n • g x ∂μ) atTop (𝓝 (g x₀)) :=
+  have hx : x₀ ∈ s := closure_minimal interior_subset hs.isClosed h₀
   tendsto_setIntegral_pow_smul_of_unique_maximum_of_isCompact_of_integrableOn hs hc h'c hnc hnc₀ h₀
-    (hmg.integrableOn_compact hs) (hmg x₀ this)
+    (hmg.integrableOn_compact hs) (hmg x₀ hx)
 
 /-!
 ### Peak functions of the form `x ↦ c ^ dim * φ (c x)`
@@ -438,7 +471,7 @@ theorem tendsto_integral_comp_smul_smul_of_integrable
     apply this.congr'
     filter_upwards [Ioi_mem_atTop 0] with c (hc : 0 < c)
     rw [integral_const_mul, setIntegral_comp_smul_of_pos _ _ _ hc, smul_eq_mul, ← mul_assoc,
-      mul_inv_cancel₀ (by positivity), _root_.smul_closedBall _ _ zero_le_one]
+      mul_inv_cancel₀, _root_.smul_closedBall _ _ zero_le_one]
     simp [abs_of_nonneg hc.le]
   · filter_upwards [Ioi_mem_atTop 0] with c (hc : 0 < c)
     exact (I.comp_smul hc.ne').aestronglyMeasurable.const_mul _

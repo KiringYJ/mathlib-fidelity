@@ -14,13 +14,14 @@ public import Mathlib.LinearAlgebra.Dual.Lemmas
 # Convergence of `p`-series on lattices
 
 Let `E` be a finite dimensional normed `ℝ`-space, and `L` a discrete subgroup of `E` of rank `d`.
-We show that `∑ z ∈ L, ‖z - x‖ʳ` is convergent for `r < -d`.
+We show that `∑ z ∈ L, z ≠ x, ‖z - x‖ʳ` is convergent for `r < -d`.
 
 ## Main results
-- `ZLattice.summable_norm_rpow`: `∑ z ∈ L, ‖z‖ʳ` converges when `r < -d`.
-- `ZLattice.summable_norm_sub_rpow`: `∑ z ∈ L, ‖z - x‖ʳ` converges when `r < -d`.
+- `ZLattice.summable_norm_rpow`: `∑ z ∈ L, z ≠ 0, ‖z‖ʳ` converges when `r < -d`.
+- `ZLattice.summable_norm_sub_rpow`: `∑ z ∈ L, z ≠ x, ‖z - x‖ʳ` converges when `r < -d`.
 - `ZLattice.tsum_norm_rpow_le`:
-  `∑ z ∈ L, ‖z‖ʳ ≤ Aʳ * ∑ k : ℕ, kᵈ⁺ʳ⁻¹` for some `A > 0` depending only on `L`.
+  `∑ z ∈ L, z ≠ 0, ‖z‖ʳ ≤ Aʳ * ∑ k : ℕ, (k + 1)ᵈ⁺ʳ⁻¹` for some `A > 0`
+  depending only on `L`.
 
 -/
 
@@ -58,12 +59,20 @@ lemma exists_forall_abs_repr_le_norm :
   refine ⟨ε / 2, by positivity, fun x i ↦ ?_⟩
   by_cases hx : x = 0
   · simp [hx]
-  have hx : ‖x.1‖ ≠ 0 := by simpa
+  have hxpos : 0 < ‖x‖ := norm_pos_iff.mpr hx
+  have hx : ‖x‖ ≠ 0 := hxpos.ne'
+  have hscaled : (ε / 2) • ‖x‖⁻¹ • (x : E) ∈ Metric.ball (0 : E) ε := by
+    rw [Metric.mem_ball, dist_zero_right, norm_smul, norm_smul, Real.norm_eq_abs,
+      Real.norm_eq_abs, abs_of_pos (by positivity : 0 < ε / 2),
+      abs_of_pos (inv_pos_of_pos hxpos)]
+    have hcancel : ‖x‖⁻¹ * ‖(x : E)‖ = 1 := by rw [Submodule.norm_coe, inv_mul_cancel₀]
+    rw [hcancel, mul_one]
+    exact half_lt_self hε
   have : |ε / 2 * (‖↑x‖⁻¹ * (b.repr x) i)| < 1 := by
-    simpa [e, b', ← abs_lt] using! @hε' ((ε / 2) • ‖x‖⁻¹ • x)
-      (by simpa [norm_smul, inv_mul_cancel₀ hx, abs_eq_self.mpr hε.le]) i trivial
-  rw [abs_mul, abs_mul, abs_inv, mul_left_comm, abs_norm, inv_mul_lt_iff₀ (by positivity),
-    mul_one, abs_eq_self.mpr (by positivity), ← Int.cast_abs] at this
+    simpa [e, b', ← abs_lt] using! @hε' ((ε / 2) • ‖x‖⁻¹ • x) hscaled i trivial
+  rw [abs_mul, abs_mul, abs_of_pos (inv_pos_of_pos hxpos),
+    abs_of_pos (by positivity : 0 < ε / 2), mul_left_comm, inv_mul_lt_iff₀ hxpos,
+    mul_one, ← Int.cast_abs] at this
   exact this.le
 
 /--
@@ -82,7 +91,7 @@ lemma normBound_spec {ι : Type*} (b : Basis ι ℤ L) (x : L) (i : ι) :
   (exists_forall_abs_repr_le_norm b).choose_spec.2 x i
 
 lemma abs_repr_le {ι : Type*} (b : Basis ι ℤ L) (x : L) (i : ι) :
-    |b.repr x i| ≤ (normBound b)⁻¹ * ‖x‖ := by
+    |b.repr x i| ≤ Checked.inv (normBound b) (normBound_pos b).ne'.isUnit * ‖x‖ := by
   rw [le_inv_mul_iff₀ (normBound_pos b)]
   exact normBound_spec b x i
 
@@ -100,27 +109,39 @@ open Finset in
 lemma sum_piFinset_Icc_rpow_le {ι : Type*} [Fintype ι] [DecidableEq ι]
     (b : Basis ι ℤ L) {d : ℕ} (hd : d = Fintype.card ι)
     (n : ℕ) (r : ℝ) (hr : r < -d) :
-    ∑ p ∈ Fintype.piFinset fun _ : ι ↦ Icc (-n : ℤ) n, ‖∑ i, p i • b i‖ ^ r ≤
-      2 * d * 3 ^ (d - 1) * normBound b ^ r * ∑' k : ℕ, (k : ℝ) ^ (d - 1 + r) := by
+    ∑ p ∈ (Fintype.piFinset fun _ : ι ↦ Icc (-n : ℤ) n).erase 0, ‖∑ i, p i • b i‖ ^ r ≤
+      2 * d * 3 ^ (d - 1) * normBound b ^ r * ∑' k : ℕ, ((k : ℝ) + 1) ^ (d - 1 + r) := by
   let s (n : ℕ) := Fintype.piFinset fun i : ι ↦ Icc (-n : ℤ) n
   subst hd
   set d := Fintype.card ι
   have hr' : r < 0 := hr.trans_le (by linarith)
   by_cases hd : d = 0
-  · have : IsEmpty ι := Fintype.card_eq_zero_iff.mp hd
-    simp [hd, hr'.ne]
+  · let : IsEmpty ι := Fintype.card_eq_zero_iff.mp hd
+    have hzero : (s n).erase 0 = ∅ := by
+      ext p
+      simp [Subsingleton.elim p (0 : ι → ℤ)]
+    change (∑ p ∈ (s n).erase 0, ‖∑ i, p i • b i‖ ^ r) ≤ _
+    simp only [hzero, Finset.sum_empty, hd, Nat.cast_zero, mul_zero, zero_mul, le_refl]
   replace hd : 1 ≤ d := by rwa [Nat.one_le_iff_ne_zero]
   have hs0 : s 0 = {0} := by ext; simp [s, funext_iff]
   have hs {a b : ℕ} (ha : a ≤ b) : s a ⊆ s b := by grind
+  have hse : Monotone fun n ↦ (s n).erase 0 := fun _ _ h ↦ erase_subset_erase _ (hs h)
+  have hse0 : (s 0).erase 0 = ∅ := by simp [hs0]
+  have hsdiff (k : ℕ) : (s (k + 1)).erase 0 \ (s k).erase 0 = s (k + 1) \ s k := by
+    ext p
+    by_cases h : p = 0
+    · subst p
+      simp [s]
+    · simp [h]
   have (k : ℕ) : #(s (k + 1) \ s k) ≤ 2 * d * (2 * k + 3) ^ (d - 1) := by
     simp only [le_add_iff_nonneg_right, zero_le, hs, card_sdiff_of_subset, s, Fintype.card_piFinset,
       Int.card_Icc, prod_const]
     grind [abs_pow_sub_pow_le (α := ℤ) (2 * k + 3) (2 * k + 1) d]
   let ε := normBound b
   have hε : 0 < ε := normBound_pos b
-  calc ∑ p ∈ s n, ‖∑ i, p i • b i‖ ^ r
+  calc ∑ p ∈ (s n).erase 0, ‖∑ i, p i • b i‖ ^ r
       = ∑ k ∈ range n, ∑ p ∈ (s (k + 1) \ s k), ‖∑ i, p i • b i‖ ^ r := by
-        simp [Finset.sum_eq_sum_range_sdiff _ @hs, hs0, hr'.ne]
+        simp only [Finset.sum_eq_sum_range_sdiff _ hse, hse0, sum_empty, zero_add, hsdiff]
     _ ≤ ∑ k ∈ range n, ∑ p ∈ (s (k + 1) \ s k), ((k + 1) * ε) ^ r := by
         gcongr ∑ k ∈ Finset.range n, ∑ p ∈ (s (k + 1) \ s k), ?_ with k hk v hv
         rw [← Nat.cast_one, ← Nat.cast_add]
@@ -147,22 +168,27 @@ lemma sum_piFinset_Icc_rpow_le {ι : Type*} [Fintype ι] [DecidableEq ι]
         congr with k
         rw [← Real.rpow_natCast, ← Real.rpow_add (by positivity), Nat.cast_sub hd]
         norm_cast
-    _ ≤ 2 * d * 3 ^ (d - 1) * ε ^ r * ∑ k ∈ range (n + 1), (k : ℝ) ^ (d - 1 + r) := by
-        grw [Finset.sum_range_succ', Nat.cast_zero, ← Real.rpow_nonneg le_rfl, add_zero]
-    _ ≤ 2 * d * 3 ^ (d - 1) * ε ^ r * ∑' k : ℕ, (k : ℝ) ^ (d - 1 + r) := by
+    _ ≤ 2 * d * 3 ^ (d - 1) * ε ^ r * ∑' k : ℕ, ((k : ℝ) + 1) ^ (d - 1 + r) := by
+        simp_rw [Nat.cast_add, Nat.cast_one]
         gcongr
-        refine Summable.sum_le_tsum _ (fun _ _ ↦ by positivity) (Real.summable_nat_rpow.mpr ?_)
-        linarith
+        refine Summable.sum_le_tsum _ (fun _ _ ↦ by positivity) ?_
+        simpa only [Nat.cast_add, Nat.cast_one] using
+          (summable_nat_add_iff 1).mpr (Real.summable_nat_rpow.mpr (by linarith : d - 1 + r < -1))
 
 variable (L)
 
 lemma exists_finsetSum_norm_rpow_le_tsum :
-    ∃ A > (0 : ℝ), ∀ r < (-Module.finrank ℤ L : ℝ), ∀ s : Finset L,
-      ∑ z ∈ s, ‖z‖ ^ r ≤ A ^ r * ∑' k : ℕ, (k : ℝ) ^ (Module.finrank ℤ L - 1 + r) := by
+    ∃ A > (0 : ℝ), ∀ r < (-Module.finrank ℤ L : ℝ), ∀ s : Finset L, 0 ∉ s →
+      ∑ z ∈ s, ‖z‖ ^ r ≤ A ^ r * ∑' k : ℕ, ((k : ℝ) + 1) ^ (Module.finrank ℤ L - 1 + r) := by
   cases subsingleton_or_nontrivial L
   · refine ⟨1, zero_lt_one, fun r hr s ↦ ?_⟩
-    have hr : r ≠ 0 := by linarith
-    simpa [Subsingleton.elim _ (0 : L), Real.zero_rpow hr] using tsum_nonneg fun _ ↦ by positivity
+    intro hs
+    have hs' : s = ∅ := by
+      apply Finset.eq_empty_iff_forall_notMem.mpr
+      intro z hz
+      exact hs (Subsingleton.elim z 0 ▸ hz)
+    simpa [hs'] using tsum_nonneg (g := fun k : ℕ ↦ ((k : ℝ) + 1) ^
+      (Module.finrank ℤ L - 1 + r)) fun _ ↦ by positivity
   classical
   let I : Type _ := Module.Free.ChooseBasisIndex ℤ L
   have : Fintype I := inferInstance
@@ -171,13 +197,15 @@ lemma exists_finsetSum_norm_rpow_le_tsum :
   set d := Fintype.card I
   have hd : d ≠ 0 := by simp [d]
   let ε := normBound b
-  obtain ⟨A, hA, B, hB, H⟩ : ∃ A > (0 : ℝ), ∃ B > (0 : ℝ), ∀ r < (-d : ℝ), ∀ s : Finset L,
-      ∑ z ∈ s, ‖z‖ ^ r ≤ A * B ^ r * ∑' k : ℕ, (k : ℝ) ^ (d - 1 + r) := by
-    refine ⟨2 * d * 3 ^ (d - 1), by positivity, ε, normBound_pos b, fun r hr u ↦ ?_⟩
+  obtain ⟨A, hA, B, hB, H⟩ : ∃ A > (0 : ℝ), ∃ B > (0 : ℝ), ∀ r < (-d : ℝ),
+      ∀ s : Finset L, 0 ∉ s →
+        ∑ z ∈ s, ‖z‖ ^ r ≤ A * B ^ r * ∑' k : ℕ, ((k : ℝ) + 1) ^ (d - 1 + r) := by
+    refine ⟨2 * d * 3 ^ (d - 1), by positivity, ε, normBound_pos b, fun r hr u h₀ ↦ ?_⟩
     let e : (I → ℤ) ≃ₗ[ℤ] L := (b.repr ≪≫ₗ Finsupp.linearEquivFunOnFinite _ _ _).symm
     obtain ⟨u, rfl⟩ : ∃ u' : Finset _, u = u'.image e.toEmbedding :=
       ⟨u.image e.symm.toEmbedding, Finset.coe_injective
         (by simpa using (e.image_symm_image _).symm)⟩
+    have hu₀ : 0 ∉ u := fun h ↦ h₀ (Finset.mem_image.mpr ⟨0, h, by simp⟩)
     dsimp
     simp only [EmbeddingLike.apply_eq_iff_eq, implies_true, Set.injOn_of_eq_iff_eq,
       Finset.sum_image, ge_iff_le]
@@ -189,15 +217,17 @@ lemma exists_finsetSum_norm_rpow_le_tsum :
       simp only [Metric.mem_closedBall, dist_zero_right, pi_norm_le_iff_of_nonneg hr.le,
         Int.norm_eq_abs, ← Int.cast_abs, ← Int.le_floor] at this
       simpa only [Int.ofNat_toNat, Fintype.mem_piFinset, Finset.mem_Icc, ← abs_le, hr'']
-    refine (Finset.sum_le_sum_of_subset_of_nonneg hn (by intros; positivity)).trans ?_
+    have hn' : u ⊆ (Fintype.piFinset fun _ : I ↦ Finset.Icc (-n : ℤ) n).erase 0 :=
+      fun p hp ↦ Finset.mem_erase.mpr ⟨fun h ↦ hu₀ (h ▸ hp), hn hp⟩
+    refine (Finset.sum_le_sum_of_subset_of_nonneg hn' (by intros; positivity)).trans ?_
     simp only [Submodule.norm_coe]
     convert! sum_piFinset_Icc_rpow_le b rfl n r hr with x
     simp [e, Finsupp.linearCombination]
   by_cases hA' : A ≤ 1
-  · refine ⟨B, hB, fun r hr s ↦ (H r hr s).trans ?_⟩
+  · refine ⟨B, hB, fun r hr s hs ↦ (H r hr s hs).trans ?_⟩
     rw [mul_assoc]
     exact mul_le_of_le_one_left (mul_nonneg (by positivity) (by positivity)) hA'
-  · refine ⟨A⁻¹ * B, mul_pos (inv_pos.mpr hA) hB, fun r hr s ↦ (H r hr s).trans ?_⟩
+  · refine ⟨A⁻¹ * B, mul_pos (inv_pos.mpr hA) hB, fun r hr s hs ↦ (H r hr s hs).trans ?_⟩
     rw [Real.mul_rpow (inv_pos.mpr hA).le hB.le, mul_assoc, mul_assoc]
     gcongr
     rw [← Real.rpow_neg_one, ← Real.rpow_mul hA.le]
@@ -208,7 +238,8 @@ lemma exists_finsetSum_norm_rpow_le_tsum :
 
 /--
 Let `L` be a lattice with (possibly non-full) rank `d`, and `r : ℝ` such that `d < r`.
-Then `∑ z ∈ L, ‖z‖⁻ʳ ≤ A⁻ʳ * ∑ k : ℕ, kᵈ⁻ʳ⁻¹` for some `A > 0` depending only on `L`.
+Then `∑ z ∈ L, z ≠ 0, ‖z‖⁻ʳ ≤ A⁻ʳ * ∑ k : ℕ, (k + 1)ᵈ⁻ʳ⁻¹`
+for some `A > 0` depending only on `L`.
 This is an arbitrary choice of `A`. See `ZLattice.tsum_norm_rpow_le`.
 -/
 def tsumNormRPowBound : ℝ :=
@@ -217,60 +248,98 @@ def tsumNormRPowBound : ℝ :=
 lemma tsumNormRPowBound_pos : 0 < tsumNormRPowBound L :=
   (exists_finsetSum_norm_rpow_le_tsum L).choose_spec.1
 
-lemma tsumNormRPowBound_spec (r : ℝ) (h : r < -Module.finrank ℤ L) (s : Finset L) :
+lemma tsumNormRPowBound_spec (r : ℝ) (h : r < -Module.finrank ℤ L) (s : Finset L)
+    (hs : 0 ∉ s) :
     ∑ z ∈ s, ‖z‖ ^ r ≤
-      tsumNormRPowBound L ^ r * ∑' k : ℕ, (k : ℝ) ^ (Module.finrank ℤ L - 1 + r) :=
-  (exists_finsetSum_norm_rpow_le_tsum L).choose_spec.2 r h s
+      tsumNormRPowBound L ^ r * ∑' k : ℕ, ((k : ℝ) + 1) ^ (Module.finrank ℤ L - 1 + r) :=
+  (exists_finsetSum_norm_rpow_le_tsum L).choose_spec.2 r h s hs
 
-/-- If `L` is a `ℤ`-lattice with rank `d` in `E`, then `∑ z ∈ L, ‖z‖ʳ` converges when `r < -d`. -/
+private lemma sum_norm_rpow_le (r : ℝ) (h : r < -Module.finrank ℤ L)
+    (s : Finset {z : L // (z : E) ≠ 0}) :
+    ∑ z ∈ s, ‖(z.1 : E)‖ ^ r ≤
+      tsumNormRPowBound L ^ r * ∑' k : ℕ, ((k : ℝ) + 1) ^ (Module.finrank ℤ L - 1 + r) := by
+  let e : {z : L // (z : E) ≠ 0} ↪ L := ⟨Subtype.val, Subtype.val_injective⟩
+  have hs : (0 : L) ∉ s.map e := by
+    intro hs
+    obtain ⟨z, _, hz⟩ := Finset.mem_map.mp hs
+    change z.1 = (0 : L) at hz
+    exact z.2 (by simpa using congrArg (fun x : L ↦ (x : E)) hz)
+  have H := tsumNormRPowBound_spec L r h (s.map e) hs
+  rw [Finset.sum_map] at H
+  exact H
+
+/-- If `L` is a `ℤ`-lattice with rank `d` in `E`, then the sum of `‖z‖ʳ` over its nonzero
+points converges when `r < -d`. -/
 lemma summable_norm_rpow (r : ℝ) (hr : r < -Module.finrank ℤ L) :
-    Summable fun z : L ↦ ‖z‖ ^ r :=
-  summable_of_sum_le (fun _ ↦ by positivity) (tsumNormRPowBound_spec L r hr)
+    Summable fun z : {z : L // (z : E) ≠ 0} ↦ ‖(z.1 : E)‖ ^ r :=
+  summable_of_sum_le (fun _ ↦ by positivity) (sum_norm_rpow_le L r hr)
 
-/-- `∑ z ∈ L, ‖z‖⁻ʳ ≤ A⁻ʳ * ∑ k : ℕ, kᵈ⁻ʳ⁻¹` for some `A > 0` depending only on `L`. -/
+/-- The sum over the nonzero lattice points is bounded by the scaled positive-index `p`-series. -/
 lemma tsum_norm_rpow_le (r : ℝ) (hr : r < -Module.finrank ℤ L) :
-    ∑' z : L, ‖z‖ ^ r ≤
-      tsumNormRPowBound L ^ r * ∑' k : ℕ, (k : ℝ) ^ (Module.finrank ℤ L - 1 + r) :=
-  Summable.tsum_le_of_sum_le (summable_norm_rpow L r hr) (tsumNormRPowBound_spec L r hr)
+    ∑' z : {z : L // (z : E) ≠ 0}, ‖(z.1 : E)‖ ^ r ≤
+      tsumNormRPowBound L ^ r * ∑' k : ℕ, ((k : ℝ) + 1) ^ (Module.finrank ℤ L - 1 + r) :=
+  Summable.tsum_le_of_sum_le (summable_norm_rpow L r hr) (sum_norm_rpow_le L r hr)
 
 set_option backward.isDefEq.respectTransparency false in
 lemma summable_norm_sub_rpow (r : ℝ) (hr : r < -Module.finrank ℤ L) (x : E) :
-    Summable fun z : L ↦ ‖z - x‖ ^ r := by
-  cases subsingleton_or_nontrivial L
-  · exact .of_finite
-  refine Summable.of_norm_bounded_eventually
-    (.mul_left ((1 / 2) ^ r) (summable_norm_rpow L r hr)) ?_
+    Summable fun z : {z : L // (z : E) ≠ x} ↦ ‖(z.1 : E) - x‖ ^ r := by
+  let s : Set L := {z | (z : E) ≠ 0}
+  let t : Set L := {z | (z : E) ≠ x}
+  have hs : Summable (s.indicator fun z : L ↦ ‖(z : E)‖ ^ r) :=
+    (summable_subtype_iff_indicator (s := s)).mp (summable_norm_rpow L r hr)
+  apply (summable_subtype_iff_indicator (s := t) (f := fun z : L ↦ ‖(z : E) - x‖ ^ r)).mpr
+  refine Summable.of_norm_bounded_eventually (.mul_left ((1 / 2) ^ r) hs) ?_
   have H : IsClosed (X := E) L := L.toAddSubgroup.isClosed_of_discreteTopology
   refine ((Metric.finite_isBounded_inter_isClosed DiscreteTopology.isDiscrete
     (Metric.isBounded_closedBall (x := (0 : E)) (r := 2 * ‖x‖)) H).preimage_embedding
     (.subtype _)).subset ?_
-  intro t ht
-  by_cases ht₁ : ‖t‖ = 0
-  · simp [show t = 0 by simpa using ht₁]
-  by_cases ht₂ : ‖t - x‖ = 0
-  · simpa [show t = x by simpa [sub_eq_zero] using ht₂, two_mul] using t.2
-  have : 0 < Module.finrank ℤ L := Module.finrank_pos
-  have : ‖t - x‖ < 2⁻¹ * ‖t‖ := by
-    rw [← Real.rpow_lt_rpow_iff_of_neg (by positivity) (by positivity) (hr.trans (by simpa))]
-    simpa [Real.mul_rpow, abs_eq_self.mpr (show 0 ≤ ‖t - x‖ ^ r by positivity)] using ht
-  have := (norm_sub_norm_le _ _).trans_lt this
-  rw [sub_lt_iff_lt_add, ← sub_lt_iff_lt_add', AddSubgroupClass.coe_norm] at this
-  simpa using show ‖t.1‖ ≤ 2 * ‖x‖ by linarith
+  intro z hz
+  by_cases hz₀ : (z : E) = 0
+  · have hz' : z = 0 := Subtype.ext hz₀
+    simp [hz']
+  by_cases hzx : (z : E) = x
+  · simpa [hzx, two_mul] using z.2
+  have hneg : r < 0 := hr.trans_le (neg_nonpos.mpr (Nat.cast_nonneg _))
+  have hpos₁ : 0 < ‖(z : E) - x‖ := norm_pos_iff.mpr (sub_ne_zero.mpr hzx)
+  have hpos₂ : 0 < ‖(z : E)‖ := norm_pos_iff.mpr hz₀
+  have hc : (0 : ℝ) < 1 / 2 := by norm_num
+  have hbound : ‖(z : E) - x‖ < (1 / 2) * ‖(z : E)‖ := by
+    apply (Real.rpow_lt_rpow_iff_of_neg (mul_pos hc hpos₂) hpos₁ hneg).mp
+    rw [Real.mul_rpow hc.le hpos₂.le]
+    simpa only [Set.mem_compl_iff, Set.mem_ofPred_eq, not_le,
+      Set.indicator_of_mem (show z ∈ s from hz₀), Set.indicator_of_mem (show z ∈ t from hzx),
+      Real.norm_of_nonneg (Real.rpow_nonneg hpos₁.le r)] using hz
+  have h := (norm_sub_norm_le _ _).trans_lt hbound
+  refine ⟨?_, z.2⟩
+  change (z : E) ∈ Metric.closedBall (0 : E) (2 * ‖x‖)
+  simpa only [Metric.mem_closedBall, dist_zero_right] using
+    (show ‖(z : E)‖ ≤ 2 * ‖x‖ by linarith)
 
 lemma summable_norm_sub_zpow (n : ℤ) (hn : n < -Module.finrank ℤ L) (x : E) :
-    Summable fun z : L ↦ ‖z - x‖ ^ n :=
-  mod_cast summable_norm_sub_rpow L n (mod_cast hn) x
+    Summable fun z : {z : L // (z : E) ≠ x} ↦
+      Checked.zpow ‖(z.1 : E) - x‖ n
+        (fun _ ↦ (norm_ne_zero_iff.mpr (sub_ne_zero.mpr z.2)).isUnit) := by
+  refine (summable_norm_sub_rpow L n (by exact_mod_cast hn) x).congr ?_
+  intro z
+  exact Real.rpow_intCast _ _ (h := fun _ ↦ norm_ne_zero_iff.mpr (sub_ne_zero.mpr z.2))
 
 lemma summable_norm_zpow (n : ℤ) (hn : n < -Module.finrank ℤ L) :
-    Summable fun z : L ↦ ‖z‖ ^ n := by
-  simpa using summable_norm_sub_zpow L n hn 0
+    Summable fun z : {z : L // (z : E) ≠ 0} ↦
+      Checked.zpow ‖(z.1 : E)‖ n (fun _ ↦ (norm_ne_zero_iff.mpr z.2).isUnit) := by
+  simpa only [sub_zero] using summable_norm_sub_zpow L n hn 0
 
 lemma summable_norm_sub_inv_pow (n : ℕ) (hn : Module.finrank ℤ L < n) (x : E) :
-    Summable fun z : L ↦ ‖z - x‖⁻¹ ^ n := by
-  simpa using summable_norm_sub_zpow L (-n) (by gcongr) x
+    Summable fun z : {z : L // (z : E) ≠ x} ↦
+      Checked.inv ‖(z.1 : E) - x‖ (norm_ne_zero_iff.mpr (sub_ne_zero.mpr z.2)).isUnit ^ n := by
+  refine (summable_norm_sub_zpow L (-n) (by gcongr) x).congr ?_
+  intro z
+  have hz : ‖(z.1 : E) - x‖ ≠ 0 := norm_ne_zero_iff.mpr (sub_ne_zero.mpr z.2)
+  rw [zpow_neg₀ hz]
+  exact (inv_pow₀ (ha := hz.isUnit) n).symm
 
 lemma summable_norm_pow_inv (n : ℕ) (hn : Module.finrank ℤ L < n) :
-    Summable fun z : L ↦ ‖z‖⁻¹ ^ n := by
-  simpa using summable_norm_sub_inv_pow L n hn 0
+    Summable fun z : {z : L // (z : E) ≠ 0} ↦
+      Checked.inv ‖(z.1 : E)‖ (norm_ne_zero_iff.mpr z.2).isUnit ^ n := by
+  simpa only [sub_zero] using summable_norm_sub_inv_pow L n hn 0
 
 end ZLattice

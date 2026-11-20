@@ -13,8 +13,8 @@ public import Mathlib.FieldTheory.RatFunc.AsPolynomial
 ## Main definitions
 We define the degree of a rational function, with values in `ℤ`:
 - `intDegree` is the degree of a rational function, defined as the difference between the
-  `natDegree` of its numerator and the `natDegree` of its denominator. In particular,
-  `intDegree 0 = 0`.
+  `natDegree` of its numerator and the `natDegree` of its denominator. It is defined for
+  nonzero rational functions.
 -/
 
 @[expose] public section
@@ -75,17 +75,16 @@ theorem intDegree_mul {x y : RatFunc K} (hx : x ≠ 0) (hy : y ≠ 0) :
     RatFunc.num_denom_mul]
 
 @[simp]
-theorem intDegree_inv {x : RatFunc K} (hx : x ≠ 0) :
-    intDegree x⁻¹ (inv_ne_zero hx) = - intDegree x := by
-  have := intDegree_mul (inv_ne_zero hx) hx
-  simp only [inv_mul_cancel₀ hx, intDegree_one] at this
+theorem intDegree_inv {x : RatFunc K} {hx : IsUnit x} :
+    intDegree x⁻¹ inv_ne_zero = -intDegree x hx.ne_zero := by
+  have h := intDegree_mul (inv_ne_zero (ha := hx)) hx.ne_zero
+  simp only [inv_mul_cancel₀, intDegree_one] at h
   lia
 
-lemma intDegree_div {x y : RatFunc K} (hx : x ≠ 0) (hy : y ≠ 0) :
-    (x / y).intDegree (div_ne_zero hx hy) = x.intDegree - y.intDegree := by
-  have := intDegree_mul hx (inv_ne_zero hy)
-  simp only [← div_eq_mul_inv, intDegree_inv hy] at this
-  rw [this, sub_eq_add_neg]
+lemma intDegree_div {x y : RatFunc K} (hx : x ≠ 0) {hy : IsUnit y} :
+    (x / y).intDegree (div_ne_zero hx) = x.intDegree hx - y.intDegree hy.ne_zero := by
+  simpa only [← div_eq_mul_inv₀, intDegree_inv, sub_eq_add_neg] using
+    intDegree_mul hx (inv_ne_zero (ha := hy))
 
 @[simp]
 theorem intDegree_neg {x : RatFunc K} (hx : x ≠ 0) :

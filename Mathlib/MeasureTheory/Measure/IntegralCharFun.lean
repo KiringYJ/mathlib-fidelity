@@ -63,12 +63,13 @@ lemma integral_charFun_Icc [IsFiniteMeasure μ] (hr : 0 < r) :
   _ = ∫ x in -r..r, ∫ y, cexp (x * y * I) ∂μ := by simp_rw [charFun_apply_real]
   _ = ∫ y, ∫ x in -r..r, cexp (x * y * I) ∂volume ∂μ := by
     rw [intervalIntegral_integral_swap h_int_iterated]
-  _ = ∫ y, if r * y = 0 then 2 * (r : ℂ)
-      else y⁻¹ * ∫ x in -(y * r)..y * r, cexp (x * I) ∂volume ∂μ := by
+  _ = ∫ y, if hy : y = 0 then 2 * (r : ℂ)
+      else ((Checked.inv y (Ne.isUnit hy) : ℝ) : ℂ) *
+        ∫ x in -(y * r)..y * r, cexp (x * I) ∂volume ∂μ := by
     congr with y
     by_cases hy : y = 0
     · simp [hy, two_mul]
-    simp only [mul_eq_zero, hr.ne', hy, or_self, ↓reduceIte, ofReal_inv]
+    simp only [dite_eq_right hy, ofReal_inv]
     have h := intervalIntegral.integral_deriv_smul_comp (E := ℂ) (a := -r) (b := r)
       (f := fun x ↦ y * x) (f' := fun _ ↦ y) (g := fun x ↦ cexp (x * I)) ?_ (by fun_prop)
       (by fun_prop)
@@ -80,13 +81,12 @@ lemma integral_charFun_Icc [IsFiniteMeasure μ] (hr : 0 < r) :
       mul_neg] at h
     rw [← h, ← mul_assoc]
     norm_cast
-    simp [mul_comm _ y, mul_inv_cancel₀ hy]
+    simp [mul_comm _ y]
   _ = ∫ x, 2 * (r : ℂ) * sinc (r * x) ∂μ := by
     congr with y
     rw [integral_exp_mul_I_eq_sinc]
-    split_ifs with hry
-    · simp [hry]
-    have hy : y ≠ 0 := fun hy ↦ hry (by simp [hy])
+    split_ifs with hy
+    · simp [hy]
     norm_cast
     field_simp
   _ = 2 * r * ∫ x, sinc (r * x) ∂μ := by
@@ -105,12 +105,12 @@ lemma measureReal_abs_gt_le_integral_charFun [IsProbabilityMeasure μ] (hr : 0 <
     congr 1 with x
     simp only [Set.mem_ofPred_eq, abs_mul, Nat.abs_ofNat]
     rw [abs_of_nonneg (a := r⁻¹) (by positivity), mul_assoc, ← inv_mul_lt_iff₀ (by positivity),
-      inv_mul_cancel₀ (by positivity), lt_inv_mul_iff₀ (by positivity), mul_one]
+      inv_mul_cancel₀ (ha := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit), lt_inv_mul_iff₀ hr, mul_one]
   _ = ∫ x in {x | 2 < |2 * r⁻¹ * x|}, 1 ∂μ := by simp
   _ = 2 * ∫ x in {x | 2 < |2 * r⁻¹ * x|}, 2⁻¹ ∂μ := by
     rw [← integral_const_mul]
     congr with _
-    rw [mul_inv_cancel₀ (by positivity)]
+    rw [mul_inv_cancel₀ (ha := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit)]
   _ ≤ 2 * ∫ x in {x | 2 < |2 * r⁻¹ * x|}, 1 - sinc (2 * r⁻¹ * x) ∂μ := by
     gcongr (2 : ℝ) * ?_
     refine setIntegral_mono_on ?_
@@ -123,9 +123,9 @@ lemma measureReal_abs_gt_le_integral_charFun [IsProbabilityMeasure μ] (hr : 0 <
         linarith
       rw [le_sub_iff_add_le, ← le_sub_iff_add_le']
       norm_num
-      rw [one_div]
+      rw [one_div₀ (2 : ℝ)]
       refine (sinc_le_inv_abs hx_ne).trans ?_
-      exact (inv_le_inv₀ (by positivity) (by positivity)).mpr (le_of_lt hx)
+      exact (inv_le_inv₀ (abs_pos.2 hx_ne) zero_lt_two).mpr (le_of_lt hx)
   _ ≤ 2 * ∫ x, 1 - sinc (2 * r⁻¹ * x) ∂μ := by
     grw [setIntegral_le_integral (by fun_prop) <| ae_of_all _ fun x ↦ ?_]
     simp only [Pi.zero_apply, sub_nonneg]
@@ -135,12 +135,14 @@ lemma measureReal_abs_gt_le_integral_charFun [IsProbabilityMeasure μ] (hr : 0 <
     exact Real.le_norm_self _
   _ = 2⁻¹ * r *
       ‖2 * (r : ℂ)⁻¹ + 2 * r⁻¹ - 2 * (2 * r⁻¹) * ∫ x, sinc (2 * r⁻¹ * x) ∂μ‖ := by
+    have hcast : ((r⁻¹ : ℝ) : ℂ) = (r : ℂ)⁻¹ := by rw [ofReal_inv]
+    rw [← hcast]
     norm_cast
     rw [← two_mul, mul_assoc 2, ← mul_sub, norm_mul, Real.norm_ofNat, ← mul_assoc,
       ← mul_one_sub, norm_mul, Real.norm_of_nonneg (r := 2 * r⁻¹) (by positivity), ← mul_assoc]
     congr
     · ring_nf
-      rw [mul_inv_cancel₀ (by positivity), one_mul]
+      rw [mul_inv_cancel₀ (ha := hr.ne'.isUnit), one_mul]
     · rw [integral_sub (integrable_const _) (integrable_sinc_const_mul _)]
       simp
   _ = 2⁻¹ * r * ‖∫ t in (-2 * r⁻¹)..(2 * r⁻¹), 1 - charFun μ t‖ := by

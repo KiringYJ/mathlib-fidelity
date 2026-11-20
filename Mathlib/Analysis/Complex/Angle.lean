@@ -35,32 +35,57 @@ namespace Complex
 variable {a x y : ℂ}
 
 /-- The angle between two non-zero complex numbers is the absolute value of the argument of their
-quotient.
-
-Note that this does not hold when `x` or `y` is `0` as the LHS is `π / 2` while the RHS is `0`. -/
+quotient. -/
 lemma angle_eq_abs_arg (hx : x ≠ 0) (hy : y ≠ 0) : angle x y = |(x / y).arg| := by
+  let q : ℂ := x / y
+  have hqy : q * y = x := div_mul_cancel₀ x
+  have hq : q ≠ 0 := div_ne_zero hx
+  have hd : ‖x‖ * ‖y‖ ≠ 0 :=
+    mul_ne_zero (norm_ne_zero_iff.mpr hx) (norm_ne_zero_iff.mpr hy)
+  have hnorm : ‖x‖ = ‖q‖ * ‖y‖ := by rw [← norm_mul, hqy]
+  have hinner : inner ℝ x y = q.re * ‖y‖ ^ 2 := by
+    rw [← hqy, Complex.inner, ← Complex.normSq_eq_norm_sq, Complex.normSq_apply]
+    simp only [Complex.mul_re, Complex.mul_im, Complex.conj_re, Complex.conj_im]
+    ring
+  change angle x y = |q.arg|
   refine Real.arccos_eq_of_eq_cos (abs_nonneg _) (abs_arg_le_pi _) ?_
-  rw [Real.cos_abs, Complex.cos_arg (div_ne_zero hx hy)]
-  simp [div_eq_mul_inv, Complex.normSq_eq_norm_sq]
-  field
+  rw [Real.cos_abs, Complex.cos_arg hq]
+  apply mul_right_cancel₀ hd
+  rw [div_mul_cancel₀, hinner]
+  have hqr : (q.re / ‖q‖) * ‖q‖ = q.re := div_mul_cancel₀ _
+  calc
+    _ = ((q.re / ‖q‖) * ‖q‖) * ‖y‖ ^ 2 := by rw [hqr]
+    _ = _ := by rw [hnorm]; ring
 
-lemma angle_one_left (hy : y ≠ 0) : angle 1 y = |y.arg| := by simp [angle_eq_abs_arg, hy]
-lemma angle_one_right (hx : x ≠ 0) : angle x 1 = |x.arg| := by simp [angle_eq_abs_arg, hx]
+lemma angle_one_right (hx : x ≠ 0) : angle x 1 = |x.arg| := by
+  simpa only [div_one₀] using angle_eq_abs_arg hx (one_ne_zero : (1 : ℂ) ≠ 0)
 
-@[simp] lemma angle_mul_left (ha : a ≠ 0) (x y : ℂ) : angle (a * x) (a * y) = angle x y := by
-  obtain rfl | hx := eq_or_ne x 0 <;> obtain rfl | hy := eq_or_ne y 0 <;>
-    simp [angle_eq_abs_arg, mul_div_mul_left, *]
+lemma angle_one_left (hy : y ≠ 0) : angle 1 y = |y.arg| :=
+  (angle_comm 1 y).trans (angle_one_right hy)
 
-@[simp] lemma angle_mul_right (ha : a ≠ 0) (x y : ℂ) : angle (x * a) (y * a) = angle x y := by
-  simp [mul_comm, angle_mul_left ha]
+@[simp] lemma angle_mul_left (ha : a ≠ 0) (x y : ℂ) (hx : x ≠ 0) (hy : y ≠ 0) :
+    angle (a * x) (a * y) = angle x y := by
+  rw [angle_eq_abs_arg (mul_ne_zero ha hx) (mul_ne_zero ha hy), angle_eq_abs_arg hx hy,
+    mul_div_mul_left]
 
-lemma angle_div_left_eq_angle_mul_right (a x y : ℂ) : angle (x / a) y = angle x (y * a) := by
-  obtain rfl | ha := eq_or_ne a 0
-  · simp
-  · rw [← angle_mul_right ha, div_mul_cancel₀ _ ha]
+@[simp] lemma angle_mul_right (ha : a ≠ 0) (x y : ℂ) (hx : x ≠ 0) (hy : y ≠ 0) :
+    angle (x * a) (y * a) = angle x y := by
+  simpa only [mul_comm a x, mul_comm a y] using angle_mul_left ha x y hx hy
 
-lemma angle_div_right_eq_angle_mul_left (a x y : ℂ) : angle x (y / a) = angle (x * a) y := by
-  rw [angle_comm, angle_div_left_eq_angle_mul_right, angle_comm]
+lemma angle_div_left_eq_angle_mul_right (a x y : ℂ) {ha : IsUnit a} (hx : x ≠ 0) (hy : y ≠ 0) :
+    angle (x / a) y (hx := div_ne_zero hx) (hy := hy) = angle x (y * a) := by
+  let q : ℂ := x / a
+  have hq : q ≠ 0 := div_ne_zero hx
+  have hqa : q * a = x := div_mul_cancel₀ x
+  have hangle : angle (q * a) (y * a) = angle x (y * a) := by simp only [hqa]
+  exact (angle_mul_right ha.ne_zero q y hq hy).symm.trans hangle
+
+lemma angle_div_right_eq_angle_mul_left (a x y : ℂ) {ha : IsUnit a} (hx : x ≠ 0) (hy : y ≠ 0) :
+    angle x (y / a) (hx := hx) (hy := div_ne_zero hy) = angle (x * a) y := by
+  calc
+    _ = angle (y / a) x (hx := div_ne_zero hy) (hy := hx) := angle_comm _ _
+    _ = angle y (x * a) := angle_div_left_eq_angle_mul_right a y x hy hx
+    _ = _ := angle_comm _ _
 
 lemma angle_exp_exp (x y : ℝ) :
     angle (exp (x * I)) (exp (y * I)) = |toIocMod Real.two_pi_pos (-π) (x - y)| := by
@@ -81,14 +106,15 @@ up to a factor of `π / 2`.
 lemma norm_sub_mem_Icc_angle (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) :
     ‖x - y‖ ∈ Icc (2 / π * angle x y) (angle x y) := by
   wlog h : y = 1
-  · have := @this (x / y) 1 (by simp only [norm_div, hx, hy, div_one]) norm_one rfl
-    rwa [angle_div_left_eq_angle_mul_right, div_sub_one, norm_div, hy, div_one, one_mul]
-      at this
-    rintro rfl
-    simp at hy
+  · have hnx : x ≠ 0 := norm_ne_zero_iff.mp (hx.trans_ne one_ne_zero)
+    have hny : y ≠ 0 := norm_ne_zero_iff.mp (hy.trans_ne one_ne_zero)
+    have hq : ‖x / y‖ = 1 := by simp only [norm_div, hx, hy, div_one₀]
+    have hchord : ‖x / y - 1‖ = ‖x - y‖ := by simp only [div_sub_one, norm_div, hy, div_one₀]
+    have hangle : angle (x / y) 1 (hx := div_ne_zero hnx) = angle x y := by
+      simpa only [one_mul] using angle_div_left_eq_angle_mul_right y x 1 hnx one_ne_zero
+    simpa only [hchord, hangle] using (@this (x / y) 1 hq norm_one rfl)
   subst y
-  rw [norm_eq_one_iff'] at hx
-  obtain ⟨θ, hθ, rfl⟩ := hx
+  obtain ⟨θ, hθ, rfl⟩ := norm_eq_one_iff'.mp hx
   rw [angle_exp_one, exp_mul_I, add_sub_right_comm, (toIocMod_eq_self _).2]
   · norm_cast
     rw [norm_add_mul_I]
@@ -117,6 +143,7 @@ lemma mul_angle_le_norm_sub (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) : 2 / π * ang
 
 /-- Arc-length is always less than a multiple of chord-length. -/
 lemma angle_le_mul_norm_sub (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) : angle x y ≤ π / 2 * ‖x - y‖ := by
-  rw [← div_le_iff₀' <| by positivity, div_eq_inv_mul, inv_div]; exact mul_angle_le_norm_sub hx hy
+  rw [← div_le_iff₀' (by positivity : 0 < π / 2), div_eq_inv_mul₀, inv_div₀]
+  exact mul_angle_le_norm_sub hx hy
 
 end Complex

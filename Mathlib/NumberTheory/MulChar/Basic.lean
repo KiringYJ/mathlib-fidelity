@@ -298,23 +298,11 @@ theorem inv_apply_eq_inv (χ : MulChar R R') (a : R) {ha : IsUnit (χ a)} : χ�
   rw [inv_eq_val_inv_of_eq_val₀ (χ.toUnitHom u) (coe_toUnitHom χ u).symm]
   exact ofUnitHom_coe χ.toUnitHom⁻¹ u
 
-/-- The inverse of a multiplicative character `χ`, applied to `a`, is the inverse of `χ a`
-whenever `χ a` is invertible. Variant when the target is a field -/
-theorem inv_apply_eq_inv' {R' : Type*} [CommGroupWithZero R'] (χ : MulChar R R') (a : R)
-    {ha : IsUnit (χ a)} : χ⁻¹ a = (χ a)⁻¹ :=
-  inv_apply_eq_inv χ a
-
 /-- The inverse of a multiplicative character `χ`, applied to a unit `a`, is `χ` applied to the
 inverse of `a`. -/
 theorem inv_apply (χ : MulChar R R') (a : R) {ha : IsUnit a} : χ⁻¹ a = χ a⁻¹ := by
   rw [inv_apply_eq_inv χ a (ha := ha.map χ)]
   exact inv_eq_of_mul_eq_one_right₀ (by rw [← map_mul, mul_inv_cancel₀, map_one])
-
-/-- When the domain is a group with zero, the inverse of a multiplicative character `χ`,
-applied to a nonzero `a`, is `χ` applied to the inverse of `a`. -/
-theorem inv_apply' {R : Type*} [CommGroupWithZero R] (χ : MulChar R R') (a : R)
-    {ha : IsUnit a} : χ⁻¹ a = χ a⁻¹ :=
-  inv_apply χ a
 
 /-- The product of a character with its inverse is the trivial character. -/
 theorem inv_mul (χ : MulChar R R') : χ⁻¹ * χ = 1 := by

@@ -33,90 +33,88 @@ monotone and concave on the strictly positive elements of a unital C⋆-algebra.
 public section
 
 open scoped Topology
+open Filter Set
 
 variable {A : Type*} [CStarAlgebra A] [PartialOrder A] [StarOrderedRing A]
 
-open Filter in
 lemma CFC.tendsto_cfc_rpow_sub_one_log {a : A} (ha : IsStrictlyPositive a := by cfc_tac) :
-    Tendsto (fun p : ℝ => cfc (fun x => p⁻¹ * (x ^ p - 1)) a) (𝓝[>] 0) (𝓝 (CFC.log a)) := by
+    Tendsto (fun p : Ioi (0 : ℝ) ↦ cfc
+      (fun x : ℝ ↦ Checked.inv (p : ℝ) p.property.ne'.isUnit * (x ^ (p : ℝ) - 1)) a)
+      (comap Subtype.val (𝓝 0)) (𝓝 (CFC.log a)) := by
   refine tendsto_cfc_fun ?tendsto ?cont
   case cont =>
-    exact .of_forall fun p ↦ by fun_prop (disch := grind -abstractProof)
+    exact .of_forall fun p ↦
+      (continuous_const.mul ((Real.continuous_rpow_const p.property.le).sub
+        continuous_const)).continuousOn
   case tendsto =>
-    let s := {a : A | IsStrictlyPositive a}
-    let f (p : ℝ) (x : ℝ) := if p > 0 then p⁻¹ * (x ^ p - 1) else Real.log x
     have hmain := Real.tendstoLocallyUniformlyOn_rpow_sub_one_log
     rw [tendstoLocallyUniformlyOn_iff_forall_isCompact isOpen_Ioi] at hmain
-    exact hmain (spectrum ℝ a) (by grind) (by grind)
+    exact hmain (spectrum ℝ a) (fun _ hx ↦ ha.spectrum_pos hx) (spectrum.isCompact _)
 
-open Filter Classical Real in
-lemma CFC.tendsto_ite_cfc_rpow_sub_one_ite_log :
-    Tendsto (fun (p : ℝ) (a : A) =>
-      if a ∈ {b : A | IsStrictlyPositive b} then cfc (fun x => p⁻¹ * (x ^ p - 1)) a else 0) (𝓝[>] 0)
-      (𝓝 (fun a => if a ∈ {b : A | IsStrictlyPositive b} then CFC.log a else 0)) := by
-  rw [tendsto_pi_nhds]
-  intro a
-  by_cases ha : IsStrictlyPositive a
-  · simpa [ha] using CFC.tendsto_cfc_rpow_sub_one_log ha
-  · simp_all
+private lemma CFC.cfc_rpow_sub_one_eq (p : Ioi (0 : ℝ)) {a : A} (ha : IsStrictlyPositive a) :
+    cfc (fun x : ℝ ↦ Checked.inv (p : ℝ) p.property.ne'.isUnit * (x ^ (p : ℝ) - 1)) a =
+      Checked.inv (p : ℝ) p.property.ne'.isUnit • (a ^ (p : ℝ) - (1 : A)) := by
+  let r : ℝ := Checked.inv (p : ℝ) p.property.ne'.isUnit
+  have hf := (Real.continuous_rpow_const p.property.le).continuousOn (s := spectrum ℝ a)
+  have hdiff : cfc (fun x : ℝ ↦ x ^ (p : ℝ) - 1) a = a ^ (p : ℝ) - (1 : A) := by
+    calc
+      _ = cfc (fun x : ℝ ↦ x ^ (p : ℝ)) a - cfc (fun _ : ℝ ↦ 1) a :=
+        cfc_sub _ _ a hf continuousOn_const
+      _ = _ := by rw [rpow_eq_cfc_real ha.nonneg, cfc_const_one (R := ℝ) a ha.isSelfAdjoint]
+  calc
+    _ = r • cfc (fun x : ℝ ↦ x ^ (p : ℝ) - 1) a :=
+      cfc_smul r _ a (hf.sub continuousOn_const)
+    _ = _ := congrArg (r • ·) hdiff
 
-open scoped Classical in
-private lemma CFC.cfc_rpow_sub_one_eqOn {p : ℝ} :
-    {a : A | IsStrictlyPositive a}.EqOn
-      (fun a => if a ∈ {b : A | IsStrictlyPositive b}
-        then cfc (fun x => p⁻¹ * (x ^ p - 1)) a else 0) (fun a => p⁻¹ • (a ^ p - (1 : A))) := by
-  intro a ha
-  simp only [ha, ↓reduceIte, ← smul_eq_mul]
-  rw [cfc_smul _ (hf := by fun_prop (disch := grind)),
-    cfc_sub _ _ (hf := by fun_prop (disch := grind)),
-    cfc_const_one .., rpow_eq_cfc_real ..]
+private lemma CFC.tendsto_rpow_sub_one_log {a : A} (ha : IsStrictlyPositive a) :
+    Tendsto (fun p : Ioi (0 : ℝ) ↦
+      Checked.inv (p : ℝ) p.property.ne'.isUnit • (a ^ (p : ℝ) - (1 : A)))
+      (comap Subtype.val (𝓝 0)) (𝓝 (CFC.log a)) :=
+  (tendsto_cfc_rpow_sub_one_log ha).congr fun p ↦ cfc_rpow_sub_one_eq p ha
 
-open Classical Real in
+private lemma neBot_comap_positive_nhds_zero :
+    NeBot (comap (Subtype.val : Ioi (0 : ℝ) → ℝ) (𝓝 0)) := by
+  have h : NeBot (comap (Subtype.val : Ioi (0 : ℝ) → ℝ) (𝓝[>] 0)) := by
+    apply NeBot.comap_of_range_mem (by infer_instance)
+    rw [Subtype.range_coe]
+    exact self_mem_nhdsWithin
+  exact h.mono (comap_mono nhdsWithin_le_nhds)
+
 /-- `log` is operator monotone. -/
 lemma CFC.log_monotoneOn : MonotoneOn log {a : A | IsStrictlyPositive a} := by
-  /- We have that `log x = lim_{p → 0} p⁻¹ * (x ^ p - 1)` with uniform convergence on the spectrum
-  of any positive definite operator, which means that `CFC.log a = lim_{p → 0} p⁻¹ * (a ^ p - 1)`
-  by the continuity of the continuous functional calculus (`tendsto_cfc_fun`). Then, we use the
-  fact that `x^p` is monotone for `p ∈ [0,1]` (`CFC.monotone_nnrpow`) and that the set of
-  monotone functions is closed (`isClosed_monotoneOn`) to conclude the proof. -/
-  let s := {a : A | IsStrictlyPositive a}
-  let f (p : ℝ) := fun a => if a ∈ s then cfc (A := A) (fun x => p⁻¹ * (x ^ p - 1)) a else 0
-  let g := fun a => if a ∈ s then log (A := A) a else 0
-  have hg : s.EqOn g (log (A := A)) := by simp +contextual [g, Set.EqOn]
-  refine MonotoneOn.congr ?_ hg
-  refine isClosed_monotoneOn.mem_of_tendsto (f := f) (b := (𝓝[>] 0))
-    tendsto_ite_cfc_rpow_sub_one_ite_log ?_
-  have h₁ : ∀ᶠ (p : ℝ) in 𝓝[>] 0, 0 < p ∧ p < 1 := nhdsGT_basis 0 |>.mem_of_mem zero_lt_one
-  filter_upwards [h₁] with p ⟨hp, hp'⟩
-  refine MonotoneOn.congr (fun a ha b hb hab ↦ ?_) CFC.cfc_rpow_sub_one_eqOn.symm
-  gcongr
-  grind
+  intro a ha b hb hab
+  let := neBot_comap_positive_nhds_zero
+  refine le_of_tendsto_of_tendsto (tendsto_rpow_sub_one_log ha) (tendsto_rpow_sub_one_log hb) ?_
+  filter_upwards [tendsto_comap.eventually (eventually_lt_nhds (zero_lt_one : (0 : ℝ) < 1))]
+    with p hp
+  exact smul_le_smul_of_nonneg_left
+    (sub_le_sub_right (CFC.monotone_rpow ⟨p.property.le, hp.le⟩ hab) 1)
+    (_root_.inv_nonneg.mpr p.property.le)
 
 @[gcongr]
 lemma CFC.log_le_log {a b : A} (hab : a ≤ b) (ha : IsStrictlyPositive a := by cfc_tac) :
     log a ≤ log b :=
   log_monotoneOn ha (ha.of_le hab) hab
 
-open Classical Real Set in
 /-- `log` is operator concave. -/
 lemma CFC.concaveOn_log : ConcaveOn ℝ {a : A | IsStrictlyPositive a} log := by
-  /- We have that `log x = lim_{p → 0} p⁻¹ * (x ^ p - 1)` with uniform convergence on the spectrum
-  of any positive definite operator, which means that `CFC.log a = lim_{p → 0} p⁻¹ * (a ^ p - 1)`
-  by the continuity of the continuous functional calculus (`tendsto_cfc_fun`). Then, we use the
-  fact that `x^p` is concave for `p ∈ [0,1]` (`CFC.concaveOn_rpow`) and that the set of
-  concave functions is closed (`isClosed_setOfPred_concaveOn`) to conclude the proof. -/
-  set s := {a : A | IsStrictlyPositive a}
-  let f (p : ℝ) := fun a => if a ∈ s then cfc (A := A) (fun x => p⁻¹ * (x ^ p - 1)) a else 0
-  let g := fun a => if a ∈ s then log (A := A) a else 0
-  have hg : s.EqOn g (log (A := A)) := by simp +contextual [g, Set.EqOn]
-  refine ConcaveOn.congr ?_ hg
-  apply isClosed_setOfPred_concaveOn.mem_of_tendsto (f := f) (b := (𝓝[>] (0 : ℝ)))
-    tendsto_ite_cfc_rpow_sub_one_ite_log ?_
-  have h₁ : ∀ᶠ (p : ℝ) in 𝓝[>] 0, 0 < p ∧ p < 1 := nhdsGT_basis 0 |>.mem_of_mem zero_lt_one
-  filter_upwards [h₁] with p ⟨hp, hp'⟩
-  refine ConcaveOn.congr ?_ CFC.cfc_rpow_sub_one_eqOn.symm
-  refine ConcaveOn.smul (by positivity) ?_
-  have h_convex : Convex ℝ s := by grind [convex_iff_forall_pos]
-  refine ConcaveOn.sub ?_ (convexOn_const _ h_convex)
-  refine ConcaveOn.subset (t := Ici 0) ?_ (by grind) h_convex
-  exact CFC.concaveOn_rpow (by grind)
+  have hconv : Convex ℝ {a : A | IsStrictlyPositive a} := by
+    apply convex_iff_forall_pos.mpr
+    intro x hx y hy a b ha hb _
+    exact (IsStrictlyPositive.smul ha hx).add_nonneg
+      (smul_nonneg hb.le (show IsStrictlyPositive y from hy).nonneg)
+  refine concaveOn_iff.mpr ⟨hconv, ?_⟩
+  intro x hx y hy a b ha hb hab
+  have hz : IsStrictlyPositive (a • x + b • y) := hconv hx hy ha hb hab
+  let := neBot_comap_positive_nhds_zero
+  refine le_of_tendsto_of_tendsto
+    (((tendsto_rpow_sub_one_log hx).const_smul a).add
+      ((tendsto_rpow_sub_one_log hy).const_smul b)) (tendsto_rpow_sub_one_log hz) ?_
+  filter_upwards [tendsto_comap.eventually (eventually_lt_nhds (zero_lt_one : (0 : ℝ) < 1))]
+    with p hp
+  have hpow : ConcaveOn ℝ (Ici (0 : A)) (fun a : A ↦ a ^ (p : ℝ)) :=
+    CFC.concaveOn_rpow ⟨p.property.le, hp.le⟩
+  have hp₀ : 0 ≤ Checked.inv (p : ℝ) p.property.ne'.isUnit := _root_.inv_nonneg.mpr p.property.le
+  have hquot := (hpow.sub (convexOn_const (1 : A) (convex_Ici 0))).smul hp₀
+  exact (concaveOn_iff.mp hquot).2 (show IsStrictlyPositive x from hx).nonneg
+    (show IsStrictlyPositive y from hy).nonneg ha hb hab

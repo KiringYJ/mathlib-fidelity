@@ -84,7 +84,6 @@ theorem hasFDerivAt_integral_of_dominated_loc_of_lip' {F' : α → H →L[𝕜] 
     Integrable F' μ ∧ HasFDerivAt (fun x ↦ ∫ a, F x a ∂μ) (∫ a, F' a ∂μ) x₀ := by
   obtain ⟨ε, ε_pos, hε⟩ := Metric.mem_nhds_iff.1 hs
   have x₀_in : x₀ ∈ ball x₀ ε := mem_ball_self ε_pos
-  have nneg : ∀ x, 0 ≤ ‖x - x₀‖⁻¹ := fun x ↦ inv_nonneg.mpr (norm_nonneg _)
   set b : α → ℝ := fun a ↦ |bound a|
   have b_int : Integrable b μ := bound_integrable.norm
   have b_nonneg : ∀ a, 0 ≤ b a := fun a ↦ abs_nonneg _
@@ -116,47 +115,48 @@ theorem hasFDerivAt_integral_of_dominated_loc_of_lip' {F' : α → H →L[𝕜] 
         simpa [SeparatingDual.completeSpace_continuousLinearMap_iff] using hE
       simp only [integral, hE, ↓reduceDIte, this]
       exact hasFDerivAt_const 0 x₀
-  have h_ball : ball x₀ ε ∈ 𝓝 x₀ := ball_mem_nhds x₀ ε_pos
-  have : ∀ᶠ x in 𝓝 x₀, ‖x - x₀‖⁻¹ * ‖((∫ a, F x a ∂μ) - ∫ a, F x₀ a ∂μ) - (∫ a, F' a ∂μ) (x - x₀)‖ =
-      ‖∫ a, ‖x - x₀‖⁻¹ • (F x a - F x₀ a - F' a (x - x₀)) ∂μ‖ := by
-    apply mem_of_superset (ball_mem_nhds _ ε_pos)
-    intro x x_in; simp only
-    rw [Set.mem_ofPred_eq, ← norm_smul_of_nonneg (nneg _), integral_smul, integral_sub,
+  let D := {x : H // x - x₀ ≠ 0}
+  let L : Filter D := comap Subtype.val (𝓝 x₀)
+  let d (x : D) := ‖x.val - x₀‖
+  have hdu (x : D) : IsUnit (d x) := (norm_ne_zero_iff.mpr x.2).isUnit
+  have hnonneg (x : D) : 0 ≤ Checked.inv (d x) (hdu x) := inv_nonneg.mpr (norm_nonneg _)
+  let G (x : D) (a : α) :=
+    Checked.inv (d x) (hdu x) • (F x.val a - F x₀ a - F' a (x.val - x₀))
+  have hball : ∀ᶠ x : D in L, x.val ∈ ball x₀ ε :=
+    tendsto_comap.eventually (ball_mem_nhds x₀ ε_pos)
+  have hnorm : ∀ᶠ x : D in L,
+      Checked.div
+        ‖((∫ a, F x.val a ∂μ) - ∫ a, F x₀ a ∂μ) - (∫ a, F' a ∂μ) (x.val - x₀)‖
+        (d x) (hdu x) = ‖∫ a, G x a ∂μ‖ := by
+    filter_upwards [hball] with x hx
+    simp only [G]
+    rw [div_eq_inv_mul₀, ← norm_smul_of_nonneg (hnonneg x), integral_smul, integral_sub,
       integral_sub, ← ContinuousLinearMap.integral_apply hF'_int]
-    exacts [hF_int' x x_in, hF_int, (hF_int' x x_in).sub hF_int,
+    exacts [hF_int' x.val hx, hF_int, (hF_int' x.val hx).sub hF_int,
       hF'_int.apply_continuousLinearMap _]
-  rw [hasFDerivAt_iff_tendsto, tendsto_congr' this, ← tendsto_zero_iff_norm_tendsto_zero, ←
-    show (∫ a : α, ‖x₀ - x₀‖⁻¹ • (F x₀ a - F x₀ a - (F' a) (x₀ - x₀)) ∂μ) = 0 by simp]
-  apply tendsto_integral_filter_of_dominated_convergence (bound := fun a => b a + ‖F' a‖)
-  · filter_upwards [h_ball] with _ x_in
-    apply AEStronglyMeasurable.const_smul
-    exact ((hF_meas _ (hε x_in)).sub (hF_meas _ (hε x₀_in))).sub
-      (hF'_meas.apply_continuousLinearMap _)
-  · refine mem_of_superset h_ball fun x hx ↦ ?_
-    apply (h_diff.and h_lipsch).mono
-    rintro a ⟨-, ha_bound⟩
-    replace ha_bound : ‖F x a - F x₀ a‖ ≤ b a * ‖x - x₀‖ := ha_bound x hx
-    calc
-      ‖‖x - x₀‖⁻¹ • (F x a - F x₀ a - F' a (x - x₀))‖ =
-          ‖‖x - x₀‖⁻¹ • (F x a - F x₀ a) - ‖x - x₀‖⁻¹ • F' a (x - x₀)‖ := by rw [smul_sub]
-      _ ≤ ‖‖x - x₀‖⁻¹ • (F x a - F x₀ a)‖ + ‖‖x - x₀‖⁻¹ • F' a (x - x₀)‖ := norm_sub_le _ _
-      _ = ‖x - x₀‖⁻¹ * ‖F x a - F x₀ a‖ + ‖x - x₀‖⁻¹ * ‖F' a (x - x₀)‖ := by
-        rw [norm_smul_of_nonneg, norm_smul_of_nonneg] <;> exact nneg _
-      _ ≤ ‖x - x₀‖⁻¹ * (b a * ‖x - x₀‖) + ‖x - x₀‖⁻¹ * (‖F' a‖ * ‖x - x₀‖) := by
-        gcongr; exact (F' a).le_opNorm _
-      _ ≤ b a + ‖F' a‖ := ?_
-    simp only [← div_eq_inv_mul]
-    apply_rules [add_le_add, div_le_of_le_mul₀] <;> first | rfl | positivity
-  · exact b_int.add hF'_int.norm
-  · apply h_diff.mono
-    intro a ha
-    suffices Tendsto (fun x ↦ ‖x - x₀‖⁻¹ • (F x a - F x₀ a - F' a (x - x₀))) (𝓝 x₀) (𝓝 0) by simpa
+  refine (hasFDerivAt_iff_tendsto (coord := id)
+    (Eventually.of_forall fun y hy ↦ congrArg (fun z ↦ ∫ a, F z a ∂μ) hy)).mpr ?_
+  suffices Tendsto (fun x : D ↦ ∫ a, G x a ∂μ) L (𝓝 0) from
+    (tendsto_congr' hnorm).mpr (tendsto_zero_iff_norm_tendsto_zero.mp this)
+  rw [← show (∫ _ : α, (0 : E) ∂μ) = 0 by simp]
+  refine tendsto_integral_filter_of_dominated_convergence (fun a ↦ b a + ‖F' a‖) ?_ ?_
+    (b_int.add hF'_int.norm) ?_
+  · filter_upwards [hball] with x hx
+    exact (((hF_meas x.val (hε hx)).sub (hF_meas _ (hε x₀_in))).sub
+      (hF'_meas.apply_continuousLinearMap _)).const_smul _
+  · filter_upwards [hball] with x hx
+    refine h_lipsch.mono fun a ha ↦ ?_
+    simp only [G]
+    rw [norm_smul_of_nonneg (hnonneg x), ← div_eq_inv_mul₀,
+      div_le_iff₀ (norm_pos_iff.mpr x.2), add_mul]
+    exact (norm_sub_le _ _).trans <| add_le_add (ha x.val hx) ((F' a).le_opNorm _)
+  · refine h_diff.mono fun a ha ↦ ?_
     rw [tendsto_zero_iff_norm_tendsto_zero]
-    have : (fun x ↦ ‖x - x₀‖⁻¹ * ‖F x a - F x₀ a - F' a (x - x₀)‖) = fun x ↦
-        ‖‖x - x₀‖⁻¹ • (F x a - F x₀ a - F' a (x - x₀))‖ := by
-      ext x
-      rw [norm_smul_of_nonneg (nneg _)]
-    rwa [hasFDerivAt_iff_tendsto, this] at ha
+    have hG (x : D) : ‖G x a‖ =
+        Checked.div ‖F x.val a - F x₀ a - F' a (x.val - x₀)‖ (d x) (hdu x) := by
+      simp only [G, norm_smul_of_nonneg (hnonneg x), div_eq_inv_mul₀]
+    simpa only [hG, id_eq] using (hasFDerivAt_iff_tendsto (coord := id)
+      (Eventually.of_forall fun y hy ↦ congrArg (F · a) hy)).mp ha
 
 /-- Differentiation under integral of `x ↦ ∫ F x a` at a given point `x₀`, assuming
 `F x₀` is integrable, `x ↦ F x a` is locally Lipschitz in a neighborhood of `x₀` for ae `a`
@@ -281,11 +281,7 @@ theorem hasDerivAt_integral_of_dominated_loc_of_lip {F' : α → E} (hs : s ∈ 
   simp_rw [hasDerivAt_iff_hasFDerivAt] at h_diff ⊢
   simpa only [(· ∘ ·), ContinuousLinearMap.integral_comp_comm _ hF'_int] using! key
 
-/-- Derivative under integral of `x ↦ ∫ F x a` at a given point `x₀ : ℝ`, assuming
-`F x₀` is integrable, `x ↦ F x a` is differentiable on an interval around `x₀` for ae `a`
-(with interval radius independent of `a`) with derivative uniformly bounded by an integrable
-function, and `F x` is ae-measurable for `x` in a possibly smaller neighborhood of `x₀`. -/
-theorem hasDerivAt_integral_of_dominated_loc_of_deriv_le (hs : s ∈ 𝓝 x₀)
+private theorem hasDerivAt_integral_of_dominated_loc_of_deriv_le_aux (hs : s ∈ 𝓝 x₀)
     (hF_meas : ∀ᶠ x in 𝓝 x₀, AEStronglyMeasurable (F x) μ) (hF_int : Integrable (F x₀) μ)
     {F' : 𝕜 → α → E} (hF'_meas : AEStronglyMeasurable (F' x₀) μ)
     (h_bound : ∀ᵐ a ∂μ, ∀ x ∈ s, ‖F' x a‖ ≤ bound a) (bound_integrable : Integrable bound μ)
@@ -306,3 +302,44 @@ theorem hasDerivAt_integral_of_dominated_loc_of_deriv_le (hs : s ∈ 𝓝 x₀)
     hF'_meas this bound_integrable diff_x₀
 
 end
+
+/-- Differentiate a parametric integral on an open coordinate domain when its pointwise
+derivative is bounded on a common neighborhood by an integrable function. -/
+theorem hasDerivAt_integral_of_dominated_loc_of_deriv_le {D : Type*} [TopologicalSpace D]
+    {coord : D → 𝕜} {F F' : D → α → E} {x₀ : D} {s : Set D} (hs : s ∈ 𝓝 x₀)
+    (hF_meas : ∀ᶠ x in 𝓝 x₀, AEStronglyMeasurable (F x) μ) (hF_int : Integrable (F x₀) μ)
+    (hF'_meas : AEStronglyMeasurable (F' x₀) μ)
+    (h_bound : ∀ᵐ a ∂μ, ∀ x ∈ s, ‖F' x a‖ ≤ bound a) (bound_integrable : Integrable bound μ)
+    (h_diff : ∀ᵐ a ∂μ, ∀ x ∈ s, HasDerivAt (F · a) (F' x a) x coord)
+    (hcoord : Topology.IsOpenEmbedding coord := by exact Topology.IsOpenEmbedding.id) :
+    Integrable (F' x₀) μ ∧
+      HasDerivAt (fun x ↦ ∫ a, F x a ∂μ) (∫ a, F' x₀ a ∂μ) x₀ coord := by
+  let G := Function.extend coord F 0
+  let G' := Function.extend coord F' 0
+  have hG (x : D) : G (coord x) = F x := hcoord.injective.extend_apply _ _ _
+  have hG' (x : D) : G' (coord x) = F' x := hcoord.injective.extend_apply _ _ _
+  have hmap (x : D) := hcoord.map_nhds_eq x
+  have hs' : coord '' s ∈ 𝓝 (coord x₀) :=
+    hmap x₀ ▸ image_mem_map hs
+  have h_meas : ∀ᶠ y in 𝓝 (coord x₀), AEStronglyMeasurable (G y) μ := by
+    rw [← hmap x₀, eventually_map]
+    simpa only [hG] using hF_meas
+  have h_bound' : ∀ᵐ a ∂μ, ∀ y ∈ coord '' s, ‖G' y a‖ ≤ bound a := by
+    filter_upwards [h_bound] with a ha y hy
+    obtain ⟨x, hx, rfl⟩ := hy
+    simpa only [hG'] using ha x hx
+  have h_diff' : ∀ᵐ a ∂μ, ∀ y ∈ coord '' s, HasDerivAt (G · a) (G' y a) y := by
+    filter_upwards [h_diff] with a ha y hy
+    obtain ⟨x, hx, rfl⟩ := hy
+    rw [hasDerivAt_iff_hasFDerivAt, hasFDerivAt_iff_isLittleOTVS, ← hmap x,
+      Asymptotics.isLittleOTVS_map]
+    simpa only [Function.comp_def, id_eq, hG, hG'] using (ha x hx).hasFDerivAt.isLittleOTVS
+  obtain ⟨hi, hd⟩ := hasDerivAt_integral_of_dominated_loc_of_deriv_le_aux hs' h_meas
+    (by simpa only [hG] using hF_int) (by simpa only [hG'] using hF'_meas)
+    h_bound' bound_integrable h_diff'
+  refine ⟨by simpa only [hG'] using hi, ?_⟩
+  apply hasDerivAt_iff_hasFDerivAt.mpr
+  simpa only [HasFDerivAt, Function.comp_def, id_eq, hG, hG'] using
+    hd.hasFDerivAt.comp_tendsto coord
+      ((hcoord.continuous.continuousAt : ContinuousAt coord x₀).tendsto.prodMap
+        (Filter.tendsto_pure_pure ..))

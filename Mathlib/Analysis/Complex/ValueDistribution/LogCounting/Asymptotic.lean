@@ -182,12 +182,12 @@ variable
 A meromorphic function has only removable singularities if and only if the logarithmic counting
 function for its pole divisor is asymptotically bounded.
 -/
-theorem logCounting_isBigO_one_iff_analyticOnNhd {f : 𝕜 → E} (h : Meromorphic f) :
+theorem logCounting_isBigO_one_iff_regular {f : 𝕜 → E} (h : Meromorphic f) :
     logCounting f ⊤ h =O[atTop] (1 : ℝ → ℝ) ↔
-      AnalyticOnNhd 𝕜 (toMeromorphicNFOn f univ h.meromorphicOn) univ := by
+      ∀ x, MeromorphicAt.IsRegular f x := by
   rw [logCounting_top, ← locallyFinsuppWithin.zero_iff_logCounting_bounded
-      (MeromorphicOn.poleDivisor_nonneg _), ← h.meromorphicOn.poleDivisor_of_toMeromorphicNFOn,
-    (meromorphicNFOn_toMeromorphicNFOn _ _).poleDivisor_eq_zero_iff_analyticOnNhd]
+      (MeromorphicOn.poleDivisor_nonneg _), MeromorphicOn.poleDivisor_eq_zero_iff_regular]
+  simp
 
 /--
 A meromorphic function has a finite set of poles if and only if the logarithmic counting function

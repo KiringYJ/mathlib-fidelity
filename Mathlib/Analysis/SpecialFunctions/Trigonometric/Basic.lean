@@ -133,20 +133,20 @@ scoped notation "π" => Real.pi
 
 @[simp]
 theorem cos_pi_div_two : cos (π / 2) = 0 := by
-  rw [Real.pi, mul_div_cancel_left₀ _ two_ne_zero]
+  rw [Real.pi, mul_div_cancel_left₀]
   exact (Classical.choose_spec exists_cos_eq_zero).2
 
 theorem one_le_pi_div_two : (1 : ℝ) ≤ π / 2 := by
-  rw [Real.pi, mul_div_cancel_left₀ _ two_ne_zero]
+  rw [Real.pi, mul_div_cancel_left₀]
   exact (Classical.choose_spec exists_cos_eq_zero).1.1
 
 theorem pi_div_two_le_two : π / 2 ≤ 2 := by
-  rw [Real.pi, mul_div_cancel_left₀ _ two_ne_zero]
+  rw [Real.pi, mul_div_cancel_left₀]
   exact (Classical.choose_spec exists_cos_eq_zero).1.2
 
 theorem two_le_pi : (2 : ℝ) ≤ π :=
   (div_le_div_iff_of_pos_right zero_lt_two).1
-    (by rw [div_self two_ne_zero]; exact one_le_pi_div_two)
+    (by rw [div_self]; exact one_le_pi_div_two)
 
 theorem pi_le_four : π ≤ 4 :=
   (div_le_div_iff_of_pos_right zero_lt_two).1
@@ -215,11 +215,14 @@ namespace Real
 
 @[simp]
 theorem sin_pi : sin π = 0 := by
-  rw [← mul_div_cancel_left₀ π two_ne_zero, two_mul, add_div, sin_add, cos_pi_div_two]; simp
+  rw [← mul_div_cancel_left₀ (ha := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit) π,
+    two_mul, add_div, sin_add, cos_pi_div_two]
+  simp
 
 @[simp]
 theorem cos_pi : cos π = -1 := by
-  rw [← mul_div_cancel_left₀ π two_ne_zero, mul_div_assoc, cos_two_mul, cos_pi_div_two]
+  rw [← mul_div_cancel_left₀ (ha := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit) π,
+    mul_div_assoc₀, cos_two_mul, cos_pi_div_two]
   norm_num
 
 @[simp]
@@ -289,20 +292,26 @@ theorem sin_nat_mul_two_pi_sub (x : ℝ) (n : ℕ) : sin (n * (2 * π) - x) = -s
 theorem sin_int_mul_two_pi_sub (x : ℝ) (n : ℤ) : sin (n * (2 * π) - x) = -sin x :=
   sin_neg x ▸ sin_periodic.int_mul_sub_eq n
 
-theorem sin_add_int_mul_pi (x : ℝ) (n : ℤ) : sin (x + n * π) = (-1) ^ n * sin x :=
-  n.cast_negOnePow ℝ ▸ sin_antiperiodic.add_int_mul_eq n
+theorem sin_add_int_mul_pi (x : ℝ) (n : ℤ) : sin (x + n * π) = (-1) ^ n * sin x := by
+  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
+  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu] using
+    sin_antiperiodic.add_int_mul_eq n
 
 theorem sin_add_nat_mul_pi (x : ℝ) (n : ℕ) : sin (x + n * π) = (-1) ^ n * sin x :=
   sin_antiperiodic.add_nat_mul_eq n
 
-theorem sin_sub_int_mul_pi (x : ℝ) (n : ℤ) : sin (x - n * π) = (-1) ^ n * sin x :=
-  n.cast_negOnePow ℝ ▸ sin_antiperiodic.sub_int_mul_eq n
+theorem sin_sub_int_mul_pi (x : ℝ) (n : ℤ) : sin (x - n * π) = (-1) ^ n * sin x := by
+  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
+  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu] using
+    sin_antiperiodic.sub_int_mul_eq n
 
 theorem sin_sub_nat_mul_pi (x : ℝ) (n : ℕ) : sin (x - n * π) = (-1) ^ n * sin x :=
   sin_antiperiodic.sub_nat_mul_eq n
 
 theorem sin_int_mul_pi_sub (x : ℝ) (n : ℤ) : sin (n * π - x) = -((-1) ^ n * sin x) := by
-  simpa only [sin_neg, mul_neg, Int.cast_negOnePow] using sin_antiperiodic.int_mul_sub_eq n
+  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
+  simpa only [sin_neg, mul_neg, Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu]
+    using sin_antiperiodic.int_mul_sub_eq n
 
 theorem sin_nat_mul_pi_sub (x : ℝ) (n : ℕ) : sin (n * π - x) = -((-1) ^ n * sin x) := by
   simpa only [sin_neg, mul_neg] using sin_antiperiodic.nat_mul_sub_eq n
@@ -372,8 +381,10 @@ theorem cos_nat_mul_two_pi_sub (x : ℝ) (n : ℕ) : cos (n * (2 * π) - x) = co
 theorem cos_int_mul_two_pi_sub (x : ℝ) (n : ℤ) : cos (n * (2 * π) - x) = cos x :=
   cos_neg x ▸ cos_periodic.int_mul_sub_eq n
 
-theorem cos_add_int_mul_pi (x : ℝ) (n : ℤ) : cos (x + n * π) = (-1) ^ n * cos x :=
-  n.cast_negOnePow ℝ ▸ cos_antiperiodic.add_int_mul_eq n
+theorem cos_add_int_mul_pi (x : ℝ) (n : ℤ) : cos (x + n * π) = (-1) ^ n * cos x := by
+  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
+  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu] using
+    cos_antiperiodic.add_int_mul_eq n
 
 theorem cos_int_mul_pi (n : ℤ) : cos (n * π) = (-1) ^ n := by
   simpa using cos_add_int_mul_pi 0 n
@@ -384,14 +395,18 @@ theorem cos_add_nat_mul_pi (x : ℝ) (n : ℕ) : cos (x + n * π) = (-1) ^ n * c
 theorem cos_nat_mul_pi (n : ℕ) : cos (n * π) = (-1) ^ n := by
   simpa using cos_add_nat_mul_pi 0 n
 
-theorem cos_sub_int_mul_pi (x : ℝ) (n : ℤ) : cos (x - n * π) = (-1) ^ n * cos x :=
-  n.cast_negOnePow ℝ ▸ cos_antiperiodic.sub_int_mul_eq n
+theorem cos_sub_int_mul_pi (x : ℝ) (n : ℤ) : cos (x - n * π) = (-1) ^ n * cos x := by
+  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
+  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu] using
+    cos_antiperiodic.sub_int_mul_eq n
 
 theorem cos_sub_nat_mul_pi (x : ℝ) (n : ℕ) : cos (x - n * π) = (-1) ^ n * cos x :=
   cos_antiperiodic.sub_nat_mul_eq n
 
-theorem cos_int_mul_pi_sub (x : ℝ) (n : ℤ) : cos (n * π - x) = (-1) ^ n * cos x :=
-  n.cast_negOnePow ℝ ▸ cos_neg x ▸ cos_antiperiodic.int_mul_sub_eq n
+theorem cos_int_mul_pi_sub (x : ℝ) (n : ℤ) : cos (n * π - x) = (-1) ^ n * cos x := by
+  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
+  simpa only [cos_neg, Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu] using
+    cos_antiperiodic.int_mul_sub_eq n
 
 theorem cos_nat_mul_pi_sub (x : ℝ) (n : ℕ) : cos (n * π - x) = (-1) ^ n * cos x :=
   cos_neg x ▸ cos_antiperiodic.nat_mul_sub_eq n
@@ -687,9 +702,11 @@ theorem cos_pi_over_two_pow : ∀ n : ℕ, cos (π / 2 ^ (n + 1)) = sqrtTwoAddSe
     have A : (1 : ℝ) < 2 ^ (n + 1) := one_lt_pow₀ one_lt_two n.succ_ne_zero
     have B : π / 2 ^ (n + 1) < π := div_lt_self pi_pos A
     have C : 0 < π / 2 ^ (n + 1) := by positivity
-    rw [pow_succ, div_mul_eq_div_div, cos_half, cos_pi_over_two_pow n, sqrtTwoAddSeries,
-      add_div_eq_mul_add_div, one_mul, ← div_mul_eq_div_div, sqrt_div, sqrt_mul_self] <;>
-      linarith [sqrtTwoAddSeries_nonneg le_rfl n]
+    simp only [pow_succ (2 : ℝ) (n + 1)]
+    rw [div_mul_eq_div_div₀, cos_half, cos_pi_over_two_pow n, sqrtTwoAddSeries,
+      add_div_eq_mul_add_div, one_mul, ← div_mul_eq_div_div₀, sqrt_div]
+    · simp only [sqrt_mul_self (show (0 : ℝ) ≤ 2 by norm_num)]
+    all_goals (try norm_num) <;> linarith [pi_pos, sqrtTwoAddSeries_nonneg le_rfl n]
 
 theorem sin_sq_pi_over_two_pow (n : ℕ) :
     sin (π / 2 ^ (n + 1)) ^ 2 = 1 - (sqrtTwoAddSeries 0 n / 2) ^ 2 := by
@@ -697,7 +714,7 @@ theorem sin_sq_pi_over_two_pow (n : ℕ) :
 
 theorem sin_sq_pi_over_two_pow_succ (n : ℕ) :
     sin (π / 2 ^ (n + 2)) ^ 2 = 1 / 2 - sqrtTwoAddSeries 0 n / 4 := by
-  rw [sin_sq_pi_over_two_pow, sqrtTwoAddSeries, div_pow, sq_sqrt, add_div, ← sub_sub]
+  rw [sin_sq_pi_over_two_pow, sqrtTwoAddSeries, div_pow₀, sq_sqrt, add_div, ← sub_sub]
   · congr
     · norm_num
     · norm_num
@@ -706,7 +723,7 @@ theorem sin_sq_pi_over_two_pow_succ (n : ℕ) :
 @[simp]
 theorem sin_pi_over_two_pow_succ (n : ℕ) :
     sin (π / 2 ^ (n + 2)) = √(2 - sqrtTwoAddSeries 0 n) / 2 := by
-  rw [eq_div_iff_mul_eq two_ne_zero, eq_comm, sqrt_eq_iff_eq_sq, mul_pow,
+  rw [eq_div_iff_mul_eq, eq_comm, sqrt_eq_iff_eq_sq, mul_pow,
     sin_sq_pi_over_two_pow_succ, sub_mul]
   · congr <;> norm_num
   · rw [sub_nonneg]
@@ -789,13 +806,16 @@ theorem cos_pi_div_three : cos (π / 3) = 1 / 2 := by
 /-- The cosine of `π / 6` is `√3 / 2`. -/
 @[simp]
 theorem cos_pi_div_six : cos (π / 6) = √3 / 2 := by
-  rw [show (6 : ℝ) = 3 * 2 by norm_num, div_mul_eq_div_div, cos_half, cos_pi_div_three, one_add_div,
-    ← div_mul_eq_div_div, two_add_one_eq_three, sqrt_div, sqrt_mul_self] <;> linarith [pi_pos]
+  simp only [show (6 : ℝ) = 3 * 2 by norm_num]
+  rw [div_mul_eq_div_div₀, cos_half, cos_pi_div_three, one_add_div,
+    ← div_mul_eq_div_div₀, two_add_one_eq_three, sqrt_div]
+  · simp only [sqrt_mul_self (show (0 : ℝ) ≤ 2 by norm_num)]
+  all_goals (try norm_num) <;> linarith [pi_pos]
 
 /-- The square of the cosine of `π / 6` is `3 / 4` (this is sometimes more convenient than the
 result for cosine itself). -/
 theorem sq_cos_pi_div_six : cos (π / 6) ^ 2 = 3 / 4 := by
-  rw [cos_pi_div_six, div_pow, sq_sqrt] <;> norm_num
+  rw [cos_pi_div_six, div_pow₀, sq_sqrt] <;> norm_num
 
 /-- The sine of `π / 6` is `1 / 2`. -/
 @[simp]
@@ -829,7 +849,10 @@ theorem quadratic_root_cos_pi_div_five :
     rw [ne_eq, sin_eq_zero_iff, hθ]
     push Not
     intro n hn
-    replace hn : n * 5 = 1 := by field_simp at hn; norm_cast at hn
+    replace hn : n * 5 = 1 := by
+      have hn' : ((n : ℝ) * 5) * π = 1 * π := by
+        nlinarith [hn]
+      exact_mod_cast mul_right_cancel₀ pi_ne_zero hn'
     lia
   suffices s * (2 * c) = s * (4 * c ^ 2 - 1) from mul_left_cancel₀ hs this
   calc s * (2 * c) = 2 * s * c := by rw [← mul_assoc, mul_comm 2]
@@ -970,6 +993,15 @@ theorem tan_add_pi (x : ℝ) {h : cos (x + π) ≠ 0} :
   tan_eq_tan_of_eq_mul (c := -1) (by rw [sin_add_pi, neg_one_mul])
     (by rw [cos_add_pi, neg_one_mul])
 
+/-- Tangent has period π as a partial function, including invariance of its domain. -/
+theorem tan_periodic :
+    Function.Periodic (fun x : ℝ ↦ (⟨cos x ≠ 0, fun h ↦ tan x h⟩ : Part ℝ)) π := by
+  intro x
+  apply Part.ext'
+  · change cos (x + π) ≠ 0 ↔ cos x ≠ 0
+    rw [cos_add_pi, neg_ne_zero]
+  · exact fun hx _ ↦ tan_add_pi x (h := hx)
+
 theorem tan_sub_pi (x : ℝ) {h : cos (x - π) ≠ 0} :
     tan (x - π) h = tan x fun hx ↦ h (by rw [cos_sub_pi, hx, neg_zero]) :=
   tan_eq_tan_of_eq_mul (c := -1) (by rw [sin_sub_pi, neg_one_mul])
@@ -1035,7 +1067,7 @@ theorem tendsto_tan_pi_div_two :
   have hcos : Tendsto (fun x : {x : ℝ // cos x ≠ 0} ↦ ((Units.mk0 (cos x) x.2 : ℝˣ) : ℝ))
       (comap Subtype.val (𝓝[<] (π / 2))) (𝓝[>] 0) :=
     tendsto_cos_pi_div_two.comp tendsto_comap
-  refine (hcos.inv_tendsto_nhdsGT_zero.atTop_mul_pos zero_lt_one
+  refine ((hcos.fun_inv_tendsto_nhdsGT_zero (h0 := fun x ↦ x.2.isUnit)).atTop_mul_pos zero_lt_one
     (tendsto_sin_pi_div_two.comp tendsto_comap)).congr fun x ↦ ?_
   rw [tan_eq_sin_div_cos, div_eq_inv_mul₀]
   rfl
@@ -1058,7 +1090,7 @@ theorem tendsto_tan_neg_pi_div_two :
   have hcos : Tendsto (fun x : {x : ℝ // cos x ≠ 0} ↦ ((Units.mk0 (cos x) x.2 : ℝˣ) : ℝ))
       (comap Subtype.val (𝓝[>] (-(π / 2)))) (𝓝[>] 0) :=
     tendsto_cos_neg_pi_div_two.comp tendsto_comap
-  refine (hcos.inv_tendsto_nhdsGT_zero.atTop_mul_neg (by simp)
+  refine ((hcos.fun_inv_tendsto_nhdsGT_zero (h0 := fun x ↦ x.2.isUnit)).atTop_mul_neg (by simp)
     (tendsto_sin_neg_pi_div_two.comp tendsto_comap)).congr fun x ↦ ?_
   rw [tan_eq_sin_div_cos, div_eq_inv_mul₀]
   rfl
@@ -1239,6 +1271,15 @@ theorem tan_add_pi (x : ℂ) {h : cos (x + π) ≠ 0} :
   tan_eq_tan_of_eq_mul (c := -1) (by rw [sin_add_pi, neg_one_mul])
     (by rw [cos_add_pi, neg_one_mul])
 
+/-- Tangent has period π as a partial function, including invariance of its domain. -/
+theorem tan_periodic :
+    Function.Periodic (fun x : ℂ ↦ (⟨cos x ≠ 0, fun h ↦ tan x h⟩ : Part ℂ)) (π : ℂ) := by
+  intro x
+  apply Part.ext'
+  · change cos (x + π) ≠ 0 ↔ cos x ≠ 0
+    rw [cos_add_pi, neg_ne_zero]
+  · exact fun hx _ ↦ tan_add_pi x (h := hx)
+
 theorem tan_sub_pi (x : ℂ) {h : cos (x - π) ≠ 0} :
     tan (x - π) h = tan x fun hx ↦ h (by rw [cos_sub_pi, hx, neg_zero]) :=
   tan_eq_tan_of_eq_mul (c := -1) (by rw [sin_sub_pi, neg_one_mul])
@@ -1303,7 +1344,8 @@ theorem exp_periodic : Function.Periodic exp (2 * π * I) :=
   (mul_assoc (2 : ℂ) π I).symm ▸ exp_antiperiodic.periodic_two_mul
 
 theorem exp_mul_I_antiperiodic : Function.Antiperiodic (fun x => exp (x * I)) π := by
-  simpa only [mul_inv_cancel_right₀ I_ne_zero] using exp_antiperiodic.mul_const I_ne_zero
+  simpa only [mul_assoc, inv_I, mul_neg, I_mul_I, mul_neg_one, neg_neg, mul_one] using
+    exp_antiperiodic.mul_const (a := I) (ha := I_ne_zero.isUnit)
 
 theorem exp_mul_I_periodic : Function.Periodic (fun x => exp (x * I)) (2 * π) :=
   exp_mul_I_antiperiodic.periodic_two_mul
@@ -1326,8 +1368,8 @@ lemma exp_pi_div_two_mul_I : exp (π / 2 * I) = I := by
 
 @[simp]
 lemma exp_neg_pi_div_two_mul_I : exp (-π / 2 * I) = -I := by
-  rw [← cos_add_sin_I, neg_div, cos_neg, cos_pi_div_two, sin_neg, sin_pi_div_two, zero_add, neg_mul,
-    one_mul]
+  rw [← cos_add_sin_I, neg_div₀, cos_neg, cos_pi_div_two, sin_neg, sin_pi_div_two, zero_add,
+    neg_mul, one_mul]
 
 @[simp]
 theorem exp_nat_mul_two_pi_mul_I (n : ℕ) : exp (n * (2 * π * I)) = 1 :=
@@ -1397,6 +1439,15 @@ theorem cosh_sub_pi_mul_I (z : ℂ) : cosh (z - π * I) = -cosh z :=
 theorem tanh_add_pi_mul_I (z : ℂ) {h : cosh (z + π * I) ≠ 0} :
     tanh (z + π * I) h = tanh z fun hz ↦ h (by rw [cosh_add_pi_mul_I, hz, neg_zero]) := by
   simp only [tanh_eq_sinh_div_cosh, sinh_add_pi_mul_I, cosh_add_pi_mul_I, neg_div_neg_eq₀]
+
+/-- Hyperbolic tangent has imaginary period πi as a partial function. -/
+theorem tanh_periodic :
+    Function.Periodic (fun z : ℂ ↦ (⟨cosh z ≠ 0, fun h ↦ tanh z h⟩ : Part ℂ)) (π * I) := by
+  intro z
+  apply Part.ext'
+  · change cosh (z + π * I) ≠ 0 ↔ cosh z ≠ 0
+    rw [cosh_add_pi_mul_I, neg_ne_zero]
+  · exact fun hz _ ↦ tanh_add_pi_mul_I z (h := hz)
 
 @[simp]
 theorem tanh_sub_pi_mul_I (z : ℂ) {h : cosh (z - π * I) ≠ 0} :

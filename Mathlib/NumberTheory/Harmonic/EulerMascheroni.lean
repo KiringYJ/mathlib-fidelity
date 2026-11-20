@@ -54,10 +54,11 @@ lemma eulerMascheroniSeq_zero : eulerMascheroniSeq 0 = 0 := by
 
 lemma strictMono_eulerMascheroniSeq : StrictMono eulerMascheroniSeq := by
   refine strictMono_nat_of_lt_succ (fun n ↦ ?_)
+  have hden : IsUnit ((n : ℝ) + 1) := (Nat.cast_add_one_pos n).ne'.isUnit
   rw [eulerMascheroniSeq, eulerMascheroniSeq, ← sub_pos, sub_sub_sub_comm,
     harmonic_succ, add_comm, Rat.cast_add, add_sub_cancel_right,
-    ← log_div (by positivity) (by positivity), add_div, Nat.cast_add_one,
-    Nat.cast_add_one, div_self (by positivity), sub_pos, one_div, Rat.cast_inv, Rat.cast_add,
+    ← log_div (by positivity) (hy := hden), add_div]
+  simp only [Nat.cast_add_one, div_self, sub_pos, one_div₀, Rat.cast_inv, Rat.cast_add,
     Rat.cast_one, Rat.cast_natCast]
   refine (log_lt_sub_one_of_pos ?_ (ne_of_gt <| lt_add_of_pos_right _ ?_)).trans_le (le_of_eq ?_)
   · positivity
@@ -89,11 +90,14 @@ lemma strictAnti_eulerMascheroniSeq' : StrictAnti eulerMascheroniSeq' := by
   refine strictAnti_nat_of_succ_lt (fun n ↦ ?_)
   rcases Nat.eq_zero_or_pos n with rfl | hn
   · simp [eulerMascheroniSeq']
+  have hden : IsUnit (n : ℝ) := (Nat.cast_pos.mpr hn).ne'.isUnit
+  have hquot : IsUnit (((n + 1 : ℕ) : ℝ) / n) :=
+    (div_pos (Nat.cast_pos.mpr (Nat.succ_pos n)) (Nat.cast_pos.mpr hn)).ne'.isUnit
   simp_rw [eulerMascheroniSeq', eq_false_intro hn.ne', reduceCtorEq, ite_false]
   rw [← sub_pos, sub_sub_sub_comm,
     harmonic_succ, Rat.cast_add, ← sub_sub, sub_self, zero_sub, sub_eq_add_neg, neg_sub,
-    ← sub_eq_neg_add, sub_pos, ← log_div (by positivity) (by positivity), ← neg_lt_neg_iff,
-    ← log_inv]
+    ← sub_eq_neg_add, sub_pos, ← log_div (by positivity) (hy := hden), ← neg_lt_neg_iff,
+    ← log_inv _ (hx := hquot)]
   refine (log_lt_sub_one_of_pos ?_ ?_).trans_le (le_of_eq ?_)
   · positivity
   · simp [field]
@@ -105,12 +109,18 @@ lemma eulerMascheroniSeq'_six_lt_two_thirds : eulerMascheroniSeq' 6 < 2 / 3 := b
     norm_num
   rw [h1, sub_lt_iff_lt_add, ← sub_lt_iff_lt_add', lt_log_iff_exp_lt (by positivity)]
   norm_num
+  have hdecimal : (2.7182818286 : ℝ) = 27182818286 / 10000000000 := by
+    simp [NNRatCast.ofScientific_eq_ite, NNRat.cast_divNat]
+  have hpos : 0 < (2.7182818286 : ℝ) := by
+    simp only [hdecimal]
+    norm_num
   have := rpow_lt_rpow (exp_pos _).le exp_one_lt_d9 (by simp : (0 : ℝ) < 107 / 60)
   rw [exp_one_rpow] at this
   refine lt_trans this ?_
   rw [← rpow_lt_rpow_iff (z := 60), ← rpow_mul, div_mul_cancel₀, ← Nat.cast_ofNat,
     ← Nat.cast_ofNat, rpow_natCast, Nat.cast_ofNat, ← Nat.cast_ofNat (n := 60), rpow_natCast]
-  · norm_num
+  · simp only [hdecimal]
+    norm_num
   all_goals positivity
 
 lemma eulerMascheroniSeq_lt_eulerMascheroniSeq' (m n : ℕ) :

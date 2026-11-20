@@ -30,9 +30,11 @@ open scoped Topology
 exponential growth rate arbitrarily close to `1`, then `u n / n` tends to `l`. -/
 theorem tendsto_div_of_monotone_of_exists_subseq_tendsto_div (u : ℕ → ℝ) (l : ℝ)
     (hmono : Monotone u)
-    (hlim : ∀ a : ℝ, 1 < a → ∃ c : ℕ → ℕ, (∀ᶠ n in atTop, (c (n + 1) : ℝ) ≤ a * c n) ∧
-      Tendsto c atTop atTop ∧ Tendsto (fun n => u (c n) / c n) atTop (𝓝 l)) :
-    Tendsto (fun n => u n / n) atTop (𝓝 l) := by
+    (hlim : ∀ a : ℝ, 1 < a → ∃ (c : ℕ → ℕ) (hc : ∀ n, 0 < c n),
+      (∀ᶠ n in atTop, (c (n + 1) : ℝ) ≤ a * c n) ∧ Tendsto c atTop atTop ∧
+        Tendsto (fun n => Checked.div (u (c n)) (c n : ℝ)
+          (Nat.cast_pos.mpr (hc n)).ne'.isUnit) atTop (𝓝 l)) :
+    Tendsto (fun n : ℕ ↦ u (n + 1) / ((n + 1 : ℕ) : ℝ)) atTop (𝓝 l) := by
   /- To check the result up to some `ε > 0`, we use a sequence `c` for which the ratio
     `c (N+1) / c N` is bounded by `1 + ε`. Sandwiching a given `n` between two consecutive values of
     `c`, say `c N` and `c (N+1)`, one can then bound `u n / n` from above by `u (c N) / c (N - 1)`
@@ -41,20 +43,22 @@ theorem tendsto_div_of_monotone_of_exists_subseq_tendsto_div (u : ℕ → ℝ) (
     We give a version of this proof by clearing out denominators first, to avoid discussing the sign
     of different quantities. -/
   have lnonneg : 0 ≤ l := by
-    rcases hlim 2 one_lt_two with ⟨c, _, ctop, clim⟩
-    have : Tendsto (fun n => u 0 / c n) atTop (𝓝 0) :=
-      tendsto_const_nhds.div_atTop (tendsto_natCast_atTop_iff.2 ctop)
+    rcases hlim 2 one_lt_two with ⟨c, hc, _, ctop, clim⟩
+    have hc' (n : ℕ) : 0 < (c n : ℝ) := Nat.cast_pos.mpr (hc n)
+    have : Tendsto (fun n => Checked.div (u 0) (c n : ℝ) (hc' n).ne'.isUnit) atTop (𝓝 0) :=
+      tendsto_const_nhds.div_atTop (h₀ := fun n ↦ (hc' n).ne'.isUnit)
+        (tendsto_natCast_atTop_iff.2 ctop)
     apply le_of_tendsto_of_tendsto' this clim fun n => ?_
     gcongr
     exact hmono zero_le
   have A : ∀ ε : ℝ, 0 < ε → ∀ᶠ n in atTop, u n - n * l ≤ ε * (1 + ε + l) * n := by
     intro ε εpos
-    rcases hlim (1 + ε) ((lt_add_iff_pos_right _).2 εpos) with ⟨c, cgrowth, ctop, clim⟩
+    rcases hlim (1 + ε) ((lt_add_iff_pos_right _).2 εpos) with ⟨c, hc, cgrowth, ctop, clim⟩
     have L : ∀ᶠ n in atTop, u (c n) - c n * l ≤ ε * c n := by
       rw [← tendsto_sub_nhds_zero_iff, ← Asymptotics.isLittleO_one_iff ℝ,
         Asymptotics.isLittleO_iff] at clim
-      filter_upwards [clim εpos, ctop (Ioi_mem_atTop 0)] with n hn cnpos'
-      have cnpos : 0 < c n := cnpos'
+      filter_upwards [clim εpos] with n hn
+      have cnpos : 0 < (c n : ℝ) := Nat.cast_pos.mpr (hc n)
       calc
         u (c n) - c n * l = (u (c n) / c n - l) * c n := by field
         _ ≤ ε * c n := by
@@ -99,12 +103,12 @@ theorem tendsto_div_of_monotone_of_exists_subseq_tendsto_div (u : ℕ → ℝ) (
       _ ≤ ε * (1 + ε + l) * n := by gcongr
   have B : ∀ ε : ℝ, 0 < ε → ∀ᶠ n : ℕ in atTop, (n : ℝ) * l - u n ≤ ε * (1 + l) * n := by
     intro ε εpos
-    rcases hlim (1 + ε) ((lt_add_iff_pos_right _).2 εpos) with ⟨c, cgrowth, ctop, clim⟩
+    rcases hlim (1 + ε) ((lt_add_iff_pos_right _).2 εpos) with ⟨c, hc, cgrowth, ctop, clim⟩
     have L : ∀ᶠ n : ℕ in atTop, (c n : ℝ) * l - u (c n) ≤ ε * c n := by
       rw [← tendsto_sub_nhds_zero_iff, ← Asymptotics.isLittleO_one_iff ℝ,
         Asymptotics.isLittleO_iff] at clim
-      filter_upwards [clim εpos, ctop (Ioi_mem_atTop 0)] with n hn cnpos'
-      have cnpos : 0 < c n := cnpos'
+      filter_upwards [clim εpos] with n hn
+      have cnpos : 0 < (c n : ℝ) := Nat.cast_pos.mpr (hc n)
       calc
         (c n : ℝ) * l - u (c n) = -(u (c n) / c n - l) * c n := by field
         _ ≤ ε * c n := by
@@ -153,15 +157,10 @@ theorem tendsto_div_of_monotone_of_exists_subseq_tendsto_div (u : ℕ → ℝ) (
         exact tendsto_const_nhds.add (tendsto_id.mul tendsto_const_nhds)
       simp only [zero_mul, add_zero] at L
       exact (((tendsto_order.1 L).2 l hd).and self_mem_nhdsWithin).exists
-    filter_upwards [B ε εpos, Ioi_mem_atTop 0] with n hn npos
-    simp_rw [div_eq_inv_mul]
-    calc
-      d < (n : ℝ)⁻¹ * n * (l - ε * (1 + l)) := by
-        rw [inv_mul_cancel₀, one_mul]
-        · linarith only [hε]
-        · exact Nat.cast_ne_zero.2 (ne_of_gt npos)
-      _ = (n : ℝ)⁻¹ * (n * l - ε * (1 + l) * n) := by ring
-      _ ≤ (n : ℝ)⁻¹ * u n := by gcongr; linarith only [hn]
+    filter_upwards [(tendsto_add_atTop_nat 1).eventually (B ε εpos)] with n hn
+    have hpos : 0 < ((n + 1 : ℕ) : ℝ) := by positivity
+    apply (lt_div_iff₀ hpos).2
+    linarith only [hn, mul_lt_mul_of_pos_right hε hpos]
   · obtain ⟨ε, hε, εpos⟩ : ∃ ε : ℝ, l + ε * (1 + ε + l) < d ∧ 0 < ε := by
       have L : Tendsto (fun ε => l + ε * (1 + ε + l)) (𝓝[>] 0) (𝓝 (l + 0 * (1 + 0 + l))) := by
         apply Tendsto.mono_left _ nhdsWithin_le_nhds
@@ -170,42 +169,51 @@ theorem tendsto_div_of_monotone_of_exists_subseq_tendsto_div (u : ℕ → ℝ) (
             (tendsto_id.mul ((tendsto_const_nhds.add tendsto_id).add tendsto_const_nhds))
       simp only [zero_mul, add_zero] at L
       exact (((tendsto_order.1 L).2 d hd).and self_mem_nhdsWithin).exists
-    filter_upwards [A ε εpos, Ioi_mem_atTop 0] with n hn (npos : 0 < n)
-    calc
-      u n / n ≤ (n * l + ε * (1 + ε + l) * n) / n := by gcongr; linarith only [hn]
-      _ = (l + ε * (1 + ε + l)) := by field
-      _ < d := hε
+    filter_upwards [(tendsto_add_atTop_nat 1).eventually (A ε εpos)] with n hn
+    have hpos : 0 < ((n + 1 : ℕ) : ℝ) := by positivity
+    apply (div_lt_iff₀ hpos).2
+    linarith only [hn, mul_lt_mul_of_pos_right hε hpos]
+
+/-- The floor of a power with base greater than one is always positive. -/
+theorem nat_floor_pow_pos_of_one_lt {c : ℝ} (hc : 1 < c) (n : ℕ) : 0 < ⌊c ^ n⌋₊ := by
+  apply Nat.le_floor
+  simpa only [Nat.cast_one] using (one_le_pow₀ hc.le : 1 ≤ c ^ n)
 
 /-- If a monotone sequence `u` is such that `u ⌊c^n⌋₊ / ⌊c^n⌋₊` converges to a limit `l` for all
 `c > 1`, then `u n / n` tends to `l`. It is even enough to have the assumption for a sequence of
 `c`s converging to `1`. -/
 theorem tendsto_div_of_monotone_of_tendsto_div_floor_pow (u : ℕ → ℝ) (l : ℝ) (hmono : Monotone u)
     (c : ℕ → ℝ) (cone : ∀ k, 1 < c k) (clim : Tendsto c atTop (𝓝 1))
-    (hc : ∀ k, Tendsto (fun n : ℕ => u ⌊c k ^ n⌋₊ / ⌊c k ^ n⌋₊) atTop (𝓝 l)) :
-    Tendsto (fun n => u n / n) atTop (𝓝 l) := by
+    (hc : ∀ k, Tendsto (fun n : ℕ => Checked.div (u ⌊c k ^ n⌋₊) (⌊c k ^ n⌋₊ : ℝ)
+      (Nat.cast_pos.mpr (nat_floor_pow_pos_of_one_lt (cone k) n)).ne'.isUnit) atTop (𝓝 l)) :
+    Tendsto (fun n : ℕ ↦ u (n + 1) / ((n + 1 : ℕ) : ℝ)) atTop (𝓝 l) := by
   apply tendsto_div_of_monotone_of_exists_subseq_tendsto_div u l hmono
   intro a ha
   obtain ⟨k, hk⟩ : ∃ k, c k < a := ((tendsto_order.1 clim).2 a ha).exists
   refine
-    ⟨fun n => ⌊c k ^ n⌋₊, ?_,
+    ⟨fun n => ⌊c k ^ n⌋₊, nat_floor_pow_pos_of_one_lt (cone k), ?_,
       (tendsto_nat_floor_atTop (α := ℝ)).comp (tendsto_pow_atTop_atTop_of_one_lt (cone k)), hc k⟩
-  have H : ∀ n : ℕ, (0 : ℝ) < ⌊c k ^ n⌋₊ := by
-    intro n
-    refine zero_lt_one.trans_le ?_
-    simp only [Nat.one_le_cast, Nat.one_le_floor_iff, one_le_pow₀ (cone k).le]
-  have A :
-    Tendsto (fun n : ℕ => (⌊c k ^ (n + 1)⌋₊ : ℝ) / c k ^ (n + 1) * c k / (⌊c k ^ n⌋₊ / c k ^ n))
-      atTop (𝓝 (1 * c k / 1)) := by
-    refine Tendsto.div (Tendsto.mul ?_ tendsto_const_nhds) ?_ one_ne_zero
-    · refine tendsto_nat_floor_div_atTop.comp ?_
-      exact (tendsto_pow_atTop_atTop_of_one_lt (cone k)).comp (tendsto_add_atTop_nat 1)
-    · refine tendsto_nat_floor_div_atTop.comp ?_
-      exact tendsto_pow_atTop_atTop_of_one_lt (cone k)
-  have B : Tendsto (fun n : ℕ => (⌊c k ^ (n + 1)⌋₊ : ℝ) / ⌊c k ^ n⌋₊) atTop (𝓝 (c k)) := by
-    simp only [one_mul, div_one] at A
-    convert! A using 1
-    ext1 n
-    field [(zero_lt_one.trans (cone k)).ne']
+  have H (n : ℕ) : (0 : ℝ) < ⌊c k ^ n⌋₊ :=
+    Nat.cast_pos.mpr (nat_floor_pow_pos_of_one_lt (cone k) n)
+  have hpos (n : ℕ) : 0 < c k ^ n := pow_pos (zero_lt_one.trans (cone k)) n
+  let p (n : ℕ) : {x : ℝ // x ≠ 0} := ⟨c k ^ n, (hpos n).ne'⟩
+  have hp : Tendsto p atTop (comap Subtype.val atTop) :=
+    tendsto_comap_iff.mpr (tendsto_pow_atTop_atTop_of_one_lt (cone k))
+  have hratio := tendsto_nat_floor_div_atTop.comp hp
+  have hu (n : ℕ) : IsUnit ((⌊(p n : ℝ)⌋₊ : ℝ) / (p n : ℝ)) :=
+    (div_pos (H n) (hpos n)).ne'.isUnit
+  have A := ((hratio.comp (tendsto_add_atTop_nat 1)).mul
+    (tendsto_const_nhds (x := c k))).div₀ (h₀ := hu) (hb := isUnit_one) hratio
+  have B : Tendsto (fun n : ℕ => Checked.div (⌊c k ^ (n + 1)⌋₊ : ℝ) (⌊c k ^ n⌋₊ : ℝ)
+      (H n).ne'.isUnit) atTop (𝓝 (c k)) := by
+    simp only [one_mul, div_one₀] at A
+    convert A using 1
+    funext n
+    have hcPos := zero_lt_one.trans (cone k)
+    dsimp only [p, Function.comp_apply]
+    field_simp
+    rw [pow_succ]
+    ring
   filter_upwards [(tendsto_order.1 B).2 a hk] with n hn
   exact (div_le_iff₀ (H n)).1 hn.le
 
@@ -214,16 +222,15 @@ constant. -/
 theorem sum_div_pow_sq_le_div_sq (N : ℕ) {j : ℝ} (hj : 0 < j) {c : ℝ} (hc : 1 < c) :
     (∑ i ∈ range N with j < c ^ i, (1 : ℝ) / (c ^ i) ^ 2) ≤ c ^ 3 * (c - 1)⁻¹ / j ^ 2 := by
   have cpos : 0 < c := zero_lt_one.trans hc
+  have hlog : IsUnit (Real.log c) := (Real.log_pos hc).ne'.isUnit
   have A : (0 : ℝ) < c⁻¹ ^ 2 := sq_pos_of_pos (inv_pos.2 cpos)
-  have B : c ^ 2 * ((1 : ℝ) - c⁻¹ ^ 2)⁻¹ ≤ c ^ 3 * (c - 1)⁻¹ := by
-    rw [← div_eq_mul_inv, ← div_eq_mul_inv, div_le_div_iff₀ _ (sub_pos.2 hc)]
-    swap
-    · exact sub_pos.2 (pow_lt_one₀ (inv_nonneg.2 cpos.le) (inv_lt_one_of_one_lt₀ hc) two_ne_zero)
-    have : c ^ 3 = c ^ 2 * c := by ring
-    simp only [mul_sub, this, mul_one, inv_pow, sub_le_sub_iff_left]
-    rw [mul_assoc, mul_comm c, ← mul_assoc, mul_inv_cancel₀ (sq_pos_of_pos cpos).ne', one_mul]
-    simpa using pow_right_mono₀ hc.le one_le_two
   have C : c⁻¹ ^ 2 < 1 := pow_lt_one₀ (inv_nonneg.2 cpos.le) (inv_lt_one_of_one_lt₀ hc) two_ne_zero
+  have B : c ^ 2 * ((1 : ℝ) - c⁻¹ ^ 2)⁻¹ ≤ c ^ 3 * (c - 1)⁻¹ := by
+    rw [← div_eq_mul_inv₀, ← div_eq_mul_inv₀, div_le_div_iff₀ (sub_pos.2 C) (sub_pos.2 hc)]
+    have : c ^ 3 = c ^ 2 * c := by ring
+    simp only [mul_sub, this, mul_one, inv_pow₀, sub_le_sub_iff_left]
+    rw [mul_assoc, mul_comm c, ← mul_assoc, mul_inv_cancel₀, one_mul]
+    simpa using pow_right_mono₀ hc.le one_le_two
   calc
     (∑ i ∈ range N with j < c ^ i, (1 : ℝ) / (c ^ i) ^ 2) ≤
         ∑ i ∈ Ico ⌊Real.log j / Real.log c⌋₊ N, (1 : ℝ) / (c ^ i) ^ 2 := by
@@ -236,7 +243,7 @@ theorem sum_div_pow_sq_le_div_sq (N : ℕ) {j : ℝ} (hj : 0 < j) {c : ℝ} (hc 
       rw [div_lt_iff₀ (Real.log_pos hc), ← Real.log_pow]
       exact Real.log_lt_log hj hi.2
     _ = ∑ i ∈ Ico ⌊Real.log j / Real.log c⌋₊ N, (c⁻¹ ^ 2) ^ i := by
-      simp [← pow_mul, mul_comm]
+      simp only [one_div₀, ← pow_mul, inv_pow₀, mul_comm]
     _ ≤ (c⁻¹ ^ 2) ^ ⌊Real.log j / Real.log c⌋₊ / ((1 : ℝ) - c⁻¹ ^ 2) :=
       geom_sum_Ico_le_of_lt_one (sq_nonneg _) C
     _ ≤ (c⁻¹ ^ 2) ^ (Real.log j / Real.log c - 1) / ((1 : ℝ) - c⁻¹ ^ 2) := by
@@ -248,11 +255,11 @@ theorem sum_div_pow_sq_le_div_sq (N : ℕ) {j : ℝ} (hj : 0 < j) {c : ℝ} (hc 
         apply Real.log_injOn_pos (Real.rpow_pos_of_pos A _)
         · rw [Set.mem_Ioi]; positivity
         rw [Real.log_rpow A]
-        simp only [one_div, Real.log_inv, Real.log_pow, mul_neg, neg_inj]
+        simp only [one_div₀, Real.log_inv, Real.log_pow, mul_neg, neg_inj]
         field [(Real.log_pos hc).ne']
       rw [Real.rpow_sub A, I]
-      simp
-      ring
+      simp only [Real.rpow_one]
+      field
     _ ≤ c ^ 3 * (c - 1)⁻¹ / j ^ 2 := by gcongr
 
 theorem mul_pow_le_nat_floor_pow {c : ℝ} (hc : 1 < c) (i : ℕ) : (1 - c⁻¹) * c ^ i ≤ ⌊c ^ i⌋₊ := by
@@ -263,33 +270,37 @@ theorem mul_pow_le_nat_floor_pow {c : ℝ} (hc : 1 < c) (i : ℕ) : (1 - c⁻¹)
     (1 - c⁻¹) * c ^ i = c ^ i - c ^ i * c⁻¹ := by ring
     _ ≤ c ^ i - 1 := by
       gcongr
-      simpa only [← div_eq_mul_inv, one_le_div cpos, pow_one] using le_self_pow₀ hc.le hi
+      simpa only [← div_eq_mul_inv₀, one_le_div₀ cpos, pow_one] using le_self_pow₀ hc.le hi
     _ ≤ ⌊c ^ i⌋₊ := (Nat.sub_one_lt_floor _).le
 
 /-- The sum of `1/⌊c^i⌋₊^2` above a threshold `j` is comparable to `1/j^2`, up to a multiplicative
 constant. -/
 theorem sum_div_nat_floor_pow_sq_le_div_sq (N : ℕ) {j : ℝ} (hj : 0 < j) {c : ℝ} (hc : 1 < c) :
-    (∑ i ∈ range N with j < ⌊c ^ i⌋₊, (1 : ℝ) / (⌊c ^ i⌋₊ : ℝ) ^ 2) ≤
+    (∑ i ∈ range N with j < ⌊c ^ i⌋₊,
+      Checked.div 1 ((⌊c ^ i⌋₊ : ℝ) ^ 2)
+        ((Nat.cast_pos.mpr (nat_floor_pow_pos_of_one_lt hc i) :
+          (0 : ℝ) < ⌊c ^ i⌋₊).ne'.isUnit.pow 2)) ≤
       c ^ 5 * (c - 1)⁻¹ ^ 3 / j ^ 2 := by
   have cpos : 0 < c := zero_lt_one.trans hc
   have A : 0 < 1 - c⁻¹ := sub_pos.2 (inv_lt_one_of_one_lt₀ hc)
+  have hfloor (i : ℕ) : (0 : ℝ) < ⌊c ^ i⌋₊ :=
+    Nat.cast_pos.mpr (nat_floor_pow_pos_of_one_lt hc i)
+  let term (i : ℕ) := Checked.div 1 ((⌊c ^ i⌋₊ : ℝ) ^ 2) ((hfloor i).ne'.isUnit.pow 2)
   calc
-    (∑ i ∈ range N with j < ⌊c ^ i⌋₊, (1 : ℝ) / (⌊c ^ i⌋₊ : ℝ) ^ 2) ≤
-        ∑ i ∈ range N with j < c ^ i, (1 : ℝ) / (⌊c ^ i⌋₊ : ℝ) ^ 2 := by
-      gcongr with k hk; exact Nat.floor_le (by positivity)
+    (∑ i ∈ range N with j < ⌊c ^ i⌋₊, term i) ≤ ∑ i ∈ range N with j < c ^ i, term i := by
+      gcongr with k hk
+      exact Nat.floor_le (by positivity)
     _ ≤ ∑ i ∈ range N with j < c ^ i, (1 - c⁻¹)⁻¹ ^ 2 * ((1 : ℝ) / (c ^ i) ^ 2) := by
       gcongr with i
-      rw [mul_div_assoc', mul_one, div_le_div_iff₀]; rotate_left
-      · apply sq_pos_of_pos
-        refine zero_lt_one.trans_le ?_
-        simp only [Nat.le_floor, one_le_pow₀, hc.le, Nat.one_le_cast, Nat.cast_one]
-      · exact sq_pos_of_pos (pow_pos cpos _)
+      dsimp only [term]
+      rw [← mul_div_assoc₀, mul_one, div_le_div_iff₀ (sq_pos_of_pos (hfloor i))
+        (sq_pos_of_pos (pow_pos cpos _))]
       rw [one_mul, ← mul_pow]
       gcongr
-      rw [← div_eq_inv_mul, le_div_iff₀ A, mul_comm]
+      rw [← div_eq_inv_mul₀, le_div_iff₀ A, mul_comm]
       exact mul_pow_le_nat_floor_pow hc i
     _ ≤ (1 - c⁻¹)⁻¹ ^ 2 * (c ^ 3 * (c - 1)⁻¹) / j ^ 2 := by
-      rw [← mul_sum, ← mul_div_assoc']
+      rw [← mul_sum, mul_div_assoc₀]
       gcongr
       exact sum_div_pow_sq_le_div_sq N hj hc
     _ = c ^ 5 * (c - 1)⁻¹ ^ 3 / j ^ 2 := by

@@ -75,10 +75,10 @@ lemma isGaussian_iff_gaussian_charFunDual [IsFiniteMeasure μ] :
   simp_rw [charFun_map_eq_charFunDual_smul, h, charFun_gaussianReal,
     smul_apply, map_smul, smul_apply, smul_eq_mul]
   norm_cast
-  congrm exp (_ - ofReal ?_)
-  rw [Real.coe_toNNReal]
-  · ring
-  exact hf.nonneg L
+  congrm exp (_ - ofReal ?_ / 2)
+  have hnonneg : 0 ≤ f L L := hf.nonneg L
+  rw [Real.coe_toNNReal _ hnonneg]
+  ring
 
 lemma gaussian_charFunDual_congr [IsFiniteMeasure μ] {m : E}
     {f : StrongDual ℝ E →L[ℝ] StrongDual ℝ E →L[ℝ] ℝ}
@@ -89,8 +89,8 @@ lemma gaussian_charFunDual_congr [IsFiniteMeasure μ] {m : E}
   choose n hn using h
   have h L : (n L : ℂ) = (L (∫ x, x ∂μ) * I - covarianceBilinDual μ L L / 2 -
       L m * I + f L L / 2) / (2 * π * I) := by
+    apply eq_div_iff.2
     rw [hn L]
-    field_simp
     ring
   have : Continuous n := by
     rw [← Complex.isometry_intCast.comp_continuous_iff]
@@ -102,9 +102,8 @@ lemma gaussian_charFunDual_congr [IsFiniteMeasure μ] {m : E}
     rw [this 0, ← Int.cast_inj (α := ℂ)]
     simp [h]
   simp only [this, Int.cast_zero, zero_mul, add_zero, Complex.ext_iff, sub_re, mul_re, ofReal_re,
-    I_re, mul_zero, ofReal_im, I_im, mul_one, sub_self, div_ofNat_re, zero_sub, neg_inj, ne_eq,
-    OfNat.ofNat_ne_zero, not_false_eq_true, div_left_inj', sub_im, mul_im, div_ofNat_im, zero_div,
-    sub_zero] at hn
+    I_re, mul_zero, ofReal_im, I_im, mul_one, sub_self, div_ofNat_re, zero_sub, neg_inj,
+    div_left_inj', sub_im, mul_im, div_ofNat_im, zero_div, sub_zero] at hn
   constructor
   · rw [SeparatingDual.eq_iff_forall_dual_eq (R := ℝ)]
     simp [hn]

@@ -22,17 +22,16 @@ that Lie groups here are not necessarily finite dimensional.
 
 * `LieAddGroup I G` : a Lie additive group where `G` is a manifold on the model with corners `I`.
 * `LieGroup I G` : a Lie multiplicative group where `G` is a manifold on the model with corners `I`.
-* `ContMDiffInv₀`: typeclass for `C^n` manifolds with `0` and `Inv` such that inversion is `C^n`
-  map at each non-zero point. This includes complete normed fields and (multiplicative) Lie groups.
+* `ContMDiffInv₀`: inversion in a monoid is `C^n` on its invertibility domain.
 
 
 ## Main results
 * `ContMDiff.inv`, `ContMDiff.div` and variants: point-wise inversion and division of maps `M → G`
   is `C^n`.
 * `ContMDiff.inv₀` and variants: if `ContMDiffInv₀ I n N`, point-wise inversion of `C^n`
-  maps `f : M → N` is `C^n` at all points at which `f` doesn't vanish.
-* `ContMDiff.div₀` and variants: if also `ContMDiffMul I n N` (i.e., `N` is a Lie group except
-  possibly for smoothness of inversion at `0`), similar results hold for point-wise division.
+  maps `f : M → N` is `C^n` on the domain where the values of `f` are invertible.
+* `ContMDiff.div₀` and variants: if also `ContMDiffMul I n N`, similar results hold for point-wise
+  division on its domain.
 * `instNormedSpaceLieAddGroup` : a normed vector space over a nontrivially normed field
   is an additive Lie group.
 * `Instances/UnitsOfNormedAlgebra` shows that the group of units of a complete normed `𝕜`-algebra
@@ -53,7 +52,8 @@ public section
 
 noncomputable section
 
-open scoped Manifold ContDiff
+open Set Filter
+open scoped Manifold ContDiff Topology
 
 -- See note [Design choices about smooth algebraic structures]
 /-- An additive Lie group is a group and a `C^n` manifold at the same time in which
@@ -197,40 +197,39 @@ instance instNormedSpaceLieAddGroup {𝕜 : Type*} [NontriviallyNormedField 𝕜
     {E : Type*} [NormedAddCommGroup E] [NormedSpace 𝕜 E] : LieAddGroup 𝓘(𝕜, E) n E where
   contMDiff_neg := contDiff_neg.contMDiff
 
-/-! ## `C^n` manifolds with `C^n` inversion away from zero
+/-! ## Smooth inversion and division on the invertibility domain -/
 
-Typeclass for `C^n` manifolds with `0` and `Inv` such that inversion is `C^n` at all non-zero
-points. (This includes multiplicative Lie groups, but also complete normed semifields.)
-Point-wise inversion is `C^n` when the function/denominator is non-zero. -/
 section ContMDiffInv₀
 
 -- See note [Design choices about smooth algebraic structures]
-/-- A `C^n` manifold with `0` and `Inv` such that `fun x ↦ x⁻¹` is `C^n` at all nonzero points.
-Any complete normed (semi)field has this property. -/
+/-- Inversion is smooth on the set of invertible elements. The smoothness condition is
+expressed using any ambient representative agreeing with the checked inverse on that set. -/
 class ContMDiffInv₀ {𝕜 : Type*} [NontriviallyNormedField 𝕜] {H : Type*} [TopologicalSpace H]
     {E : Type*} [NormedAddCommGroup E] [NormedSpace 𝕜 E] (I : ModelWithCorners 𝕜 E H)
-    (n : ℕ∞ω) (G : Type*)
-    [Inv G] [Zero G] [TopologicalSpace G] [ChartedSpace H G] : Prop where
-  /-- Inversion is `C^n` away from `0`. -/
-  contMDiffAt_inv₀ : ∀ ⦃x : G⦄, x ≠ 0 → CMDiffAt n (fun (y : G) ↦ y⁻¹) x
+    (n : ℕ∞ω) (G : Type*) [Monoid G] [TopologicalSpace G] [ChartedSpace H G] : Prop where
+  /-- A representative of inversion on the units is smooth there. -/
+  contMDiffOn_inv₀ (g : G → G) (hg : ∀ x (hx : IsUnit x), g x = Checked.inv x hx) :
+    CMDiff[{x : G | IsUnit x}] n g
 
 instance {𝕜 : Type*} [NontriviallyNormedField 𝕜] {n : ℕ∞ω} : ContMDiffInv₀ 𝓘(𝕜) n 𝕜 where
-  contMDiffAt_inv₀ x hx := by
-    change ContMDiffAt 𝓘(𝕜) 𝓘(𝕜) n Inv.inv x
-    rw [contMDiffAt_iff_contDiffAt]
-    exact contDiffAt_inv 𝕜 hx
+  contMDiffOn_inv₀ g hg := by
+    rw [contMDiffOn_iff_contDiffOn]
+    apply contDiffOn_inv
+    intro y
+    rw [Units.val_inv_eq_inv_val₀]
+    exact hg y y.isUnit
 
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] {n : ℕ∞ω}
   {H : Type*} [TopologicalSpace H] {E : Type*}
   [NormedAddCommGroup E] [NormedSpace 𝕜 E] {I : ModelWithCorners 𝕜 E H} {G : Type*}
-  [TopologicalSpace G] [ChartedSpace H G] [Inv G] [Zero G] {E' : Type*}
+  [TopologicalSpace G] [ChartedSpace H G] [Monoid G] {E' : Type*}
   [NormedAddCommGroup E'] [NormedSpace 𝕜 E'] {H' : Type*} [TopologicalSpace H']
   {I' : ModelWithCorners 𝕜 E' H'} {M : Type*} [TopologicalSpace M] [ChartedSpace H' M]
   {f : M → G}
 
 protected theorem ContMDiffInv₀.of_le {m n : ℕ∞ω} (hmn : m ≤ n)
-    [h : ContMDiffInv₀ I n G] : ContMDiffInv₀ I m G := by
-  exact ⟨fun x hx ↦ (h.contMDiffAt_inv₀ hx).of_le hmn⟩
+    [h : ContMDiffInv₀ I n G] : ContMDiffInv₀ I m G :=
+  ⟨fun g hg ↦ (h.contMDiffOn_inv₀ g hg).of_le hmn⟩
 
 instance {a : ℕ∞ω} [ContMDiffInv₀ I ∞ G] [h : ENat.LEInfty a] : ContMDiffInv₀ I a G :=
   ContMDiffInv₀.of_le h.out
@@ -239,83 +238,127 @@ instance {a : ℕ∞ω} [ContMDiffInv₀ I ω G] : ContMDiffInv₀ I a G :=
   ContMDiffInv₀.of_le le_top
 
 instance [ContinuousInv₀ G] : ContMDiffInv₀ I 0 G := by
-  have : T1Space G := I.t1Space G
   constructor
-  have A : CMDiff[{0}ᶜ] 0 (fun (x : G) ↦ x⁻¹) := by
-    rw [contMDiffOn_zero_iff]
-    exact continuousOn_inv₀
-  intro x hx
-  have : ContMDiffWithinAt I I 0 (fun (x : G) ↦ x⁻¹) {0}ᶜ x := A x hx
-  apply ContMDiffWithinAt.contMDiffAt this
-  exact IsOpen.mem_nhds isOpen_compl_singleton hx
+  intro g hg
+  rw [contMDiffOn_zero_iff, continuousOn_iff_continuous_domRestrict]
+  change Continuous (fun x : {x : G | IsUnit x} ↦ g x.val)
+  have he : (fun x : {x : G | IsUnit x} ↦ g x.val) = fun x ↦ Checked.inv x.val x.2 :=
+    funext fun x ↦ hg x x.2
+  rw [he]
+  exact ContinuousInv₀.continuous_inv
 
 instance [ContMDiffInv₀ I 2 G] : ContMDiffInv₀ I 1 G :=
   ContMDiffInv₀.of_le one_le_two
 
 variable [ContMDiffInv₀ I n G]
 
-theorem contMDiffAt_inv₀ {x : G} (hx : x ≠ 0) : ContMDiffAt I I n (fun y ↦ y⁻¹) x :=
-  ContMDiffInv₀.contMDiffAt_inv₀ hx
+theorem contMDiffOn_inv₀ (g : G → G) (hg : ∀ x (hx : IsUnit x), g x = Checked.inv x hx) :
+    CMDiff[{x : G | IsUnit x}] n g :=
+  ContMDiffInv₀.contMDiffOn_inv₀ g hg
+
+/-- A representative of inversion is smooth at points with a neighborhood of invertible elements. -/
+theorem contMDiffAt_inv₀ {g : G → G} {x : G} (hx : {x : G | IsUnit x} ∈ 𝓝 x)
+    (hg : ∀ y (hy : IsUnit y), g y = Checked.inv y hy) : ContMDiffAt I I n g x :=
+  (contMDiffOn_inv₀ g hg x (mem_of_mem_nhds hx)).contMDiffAt hx
 
 include I n in
-/-- In a manifold with `C^n` inverse away from `0`, the inverse is continuous away from `0`.
-This is not an instance for technical reasons, see
-note [Design choices about smooth algebraic structures]. -/
-theorem continuousInv₀_of_contMDiffInv₀ : ContinuousInv₀ G :=
-  { continuousAt_inv₀ := fun _ hx ↦ (contMDiffAt_inv₀ (I := I) (n := n) hx).continuousAt }
-
-theorem contMDiffOn_inv₀ : CMDiff[{0}ᶜ] n (Inv.inv : G → G) :=
-  fun _x hx ↦ (contMDiffAt_inv₀ hx).contMDiffWithinAt
+/-- Smooth inversion is continuous on the subtype of invertible elements. -/
+theorem continuousInv₀_of_contMDiffInv₀ : ContinuousInv₀ G := by
+  classical
+  let g (x : G) := if hx : IsUnit x then Checked.inv x hx else x
+  have hg (x : G) (hx : IsUnit x) : g x = Checked.inv x hx := dite_eq_left hx
+  have hcont := continuousOn_iff_continuous_domRestrict.mp
+    (contMDiffOn_inv₀ (I := I) (n := n) g hg).continuousOn
+  change Continuous (fun x : {x : G | IsUnit x} ↦ g x.val) at hcont
+  have he : (fun x : {x : G | IsUnit x} ↦ g x.val) = fun x ↦ Checked.inv x.val x.2 :=
+    funext fun x ↦ hg x x.2
+  rw [he] at hcont
+  exact ⟨hcont⟩
 
 variable {s : Set M} {a : M}
 
-theorem ContMDiffWithinAt.inv₀ (hf : CMDiffAt[s] n f a) (ha : f a ≠ 0) :
-    CMDiffAt[s] n (fun x ↦ (f x)⁻¹) a :=
-  (contMDiffAt_inv₀ ha).comp_contMDiffWithinAt a hf
+/-- A representative of the checked inverse of a smooth function is smooth locally. -/
+theorem ContMDiffWithinAt.inv₀ {q : M → G} (hf : CMDiffAt[s] n f a)
+    (hq : ∀ᶠ x in 𝓝[insert a s] a, ∃ hx : IsUnit (f x), q x = Checked.inv (f x) hx) :
+    CMDiffAt[s] n q a := by
+  classical
+  let r (x : G) := if hx : IsUnit x then Checked.inv x hx else x
+  have hr (x : G) (hx : IsUnit x) : r x = Checked.inv x hx := dite_eq_left hx
+  obtain ⟨ha, hqa⟩ := mem_of_mem_nhdsWithin (mem_insert a s) hq
+  have hq' := hq.filter_mono (nhdsWithin_mono a (subset_insert a s))
+  let t := s ∩ {x | IsUnit (f x)}
+  have ht : t ∈ 𝓝[s] a := Filter.inter_mem self_mem_nhdsWithin
+    (hq'.mono (fun _ ⟨hx, _⟩ ↦ hx))
+  have hc : CMDiffAt[t] n (r ∘ f) a :=
+    (contMDiffOn_inv₀ r hr (f a) ha).comp a (hf.mono inter_subset_left) (fun _ hx ↦ hx.2)
+  refine (hc.mono_of_mem_nhdsWithin ht).congr_of_eventuallyEq ?_ (hqa.trans (hr (f a) ha).symm)
+  filter_upwards [hq'] with x hx
+  obtain ⟨hu, he⟩ := hx
+  exact he.trans (hr (f x) hu).symm
 
-theorem ContMDiffAt.inv₀ (hf : CMDiffAt n f a) (ha : f a ≠ 0) : CMDiffAt n (fun x ↦ (f x)⁻¹) a :=
-  (contMDiffAt_inv₀ ha).comp a hf
+theorem ContMDiffAt.inv₀ {q : M → G} (hf : CMDiffAt n f a)
+    (hq : ∀ᶠ x in 𝓝 a, ∃ hx : IsUnit (f x), q x = Checked.inv (f x) hx) : CMDiffAt n q a := by
+  rw [← contMDiffWithinAt_univ] at hf ⊢
+  apply hf.inv₀
+  simpa only [insert_eq_of_mem (mem_univ a), nhdsWithin_univ] using hq
 
-theorem ContMDiff.inv₀ (hf : CMDiff n f) (h0 : ∀ x, f x ≠ 0) :
-    CMDiff n (fun x ↦ (f x)⁻¹) :=
-  fun x ↦ ContMDiffAt.inv₀ (hf x) (h0 x)
+theorem ContMDiff.inv₀ (hf : CMDiff n f) {h : ∀ x, IsUnit (f x)} :
+    CMDiff n (fun x ↦ Checked.inv (f x) (h x)) :=
+  fun x ↦ (hf x).inv₀ (.of_forall fun y ↦ ⟨h y, rfl⟩)
 
-theorem ContMDiffOn.inv₀ (hf : CMDiff[s] n f) (h0 : ∀ x ∈ s, f x ≠ 0) :
-    CMDiff[s] n (fun x ↦ (f x)⁻¹) :=
-  fun x hx ↦ ContMDiffWithinAt.inv₀ (hf x hx) (h0 x hx)
+theorem ContMDiffOn.inv₀ {q : M → G} (hf : CMDiff[s] n f)
+    (hq : ∀ x ∈ s, ∃ hx : IsUnit (f x), q x = Checked.inv (f x) hx) : CMDiff[s] n q := by
+  intro x hx
+  apply (hf x hx).inv₀
+  rw [insert_eq_of_mem hx]
+  filter_upwards [self_mem_nhdsWithin] with y hy using hq y hy
 
 end ContMDiffInv₀
 
-/-! ### Point-wise division of `C^n` functions
-
-If `[ContMDiffMul I n N]` and `[ContMDiffInv₀ I n N]`, point-wise division of `C^n`
-functions `f : M → N` is `C^n` whenever the denominator is non-zero.
-(This includes `N` being a completely normed field.)
--/
+/-! ### Smoothness of checked quotients -/
 section Div
 
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] {n : ℕ∞ω}
   {H : Type*} [TopologicalSpace H] {E : Type*}
   [NormedAddCommGroup E] [NormedSpace 𝕜 E] {I : ModelWithCorners 𝕜 E H} {G : Type*}
-  [TopologicalSpace G] [ChartedSpace H G] [GroupWithZero G] [ContMDiffInv₀ I n G]
+  [TopologicalSpace G] [ChartedSpace H G] [Monoid G] [ContMDiffInv₀ I n G]
   [ContMDiffMul I n G]
   {E' : Type*} [NormedAddCommGroup E'] [NormedSpace 𝕜 E'] {H' : Type*} [TopologicalSpace H']
   {I' : ModelWithCorners 𝕜 E' H'} {M : Type*} [TopologicalSpace M] [ChartedSpace H' M]
-  {f g : M → G} {s : Set M} {a : M}
+  {f g q : M → G} {s : Set M} {a : M}
 
-theorem ContMDiffWithinAt.div₀
-    (hf : CMDiffAt[s] n f a) (hg : CMDiffAt[s] n g a) (h₀ : g a ≠ 0) : CMDiffAt[s] n (f / g) a := by
-  simpa [div_eq_mul_inv] using! hf.mul (hg.inv₀ h₀)
+/-- A representative of a checked quotient is smooth wherever both factors are smooth. -/
+theorem ContMDiffWithinAt.div₀ (hf : CMDiffAt[s] n f a) (hg : CMDiffAt[s] n g a)
+    (hq : ∀ᶠ x in 𝓝[insert a s] a, ∃ hx : IsUnit (g x), q x = Checked.div (f x) (g x) hx) :
+    CMDiffAt[s] n q a := by
+  classical
+  let r (x : M) := if hx : IsUnit (g x) then Checked.inv (g x) hx else g x
+  have hr : CMDiffAt[s] n r a := hg.inv₀ (hq.mono fun x ⟨hx, _⟩ ↦ ⟨hx, dite_eq_left hx⟩)
+  have heq (x : M) (hx : ∃ hx : IsUnit (g x), q x = Checked.div (f x) (g x) hx) :
+      q x = f x * r x := by
+    obtain ⟨hu, he⟩ := hx
+    simpa only [r, dite_eq_left hu, div_eq_mul_inv₀] using he
+  have hqa : ∃ hx : IsUnit (g a), q a = Checked.div (f a) (g a) hx :=
+    mem_of_mem_nhdsWithin (t := {x : M | ∃ hx : IsUnit (g x), q x = Checked.div (f x) (g x) hx})
+      (mem_insert a s) hq
+  refine (hf.mul hr).congr_of_eventuallyEq ?_ (heq a hqa)
+  exact (hq.filter_mono (nhdsWithin_mono a (subset_insert a s))).mono heq
 
 theorem ContMDiffOn.div₀ (hf : CMDiff[s] n f) (hg : CMDiff[s] n g)
-    (h₀ : ∀ x ∈ s, g x ≠ 0) : CMDiff[s] n (f / g) := by
-  simpa [div_eq_mul_inv] using! hf.mul (hg.inv₀ h₀)
+    (hq : ∀ x ∈ s, ∃ hx : IsUnit (g x), q x = Checked.div (f x) (g x) hx) : CMDiff[s] n q := by
+  intro x hx
+  apply (hf x hx).div₀ (hg x hx)
+  rw [insert_eq_of_mem hx]
+  filter_upwards [self_mem_nhdsWithin] with y hy using hq y hy
 
 theorem ContMDiffAt.div₀ (hf : CMDiffAt n f a) (hg : CMDiffAt n g a)
-    (h₀ : g a ≠ 0) : CMDiffAt n (f / g) a := by
-  simpa [div_eq_mul_inv] using! hf.mul (hg.inv₀ h₀)
+    (hq : ∀ᶠ x in 𝓝 a, ∃ hx : IsUnit (g x), q x = Checked.div (f x) (g x) hx) : CMDiffAt n q a := by
+  rw [← contMDiffWithinAt_univ] at hf hg ⊢
+  apply hf.div₀ hg
+  simpa only [insert_eq_of_mem (mem_univ a), nhdsWithin_univ] using hq
 
-theorem ContMDiff.div₀ (hf : CMDiff n f) (hg : CMDiff n g) (h₀ : ∀ x, g x ≠ 0) :
-    CMDiff n (f / g) := by simpa only [div_eq_mul_inv] using! hf.mul (hg.inv₀ h₀)
+theorem ContMDiff.div₀ (hf : CMDiff n f) (hg : CMDiff n g) {h : ∀ x, IsUnit (g x)} :
+    CMDiff n (fun x ↦ Checked.div (f x) (g x) (h x)) :=
+  fun x ↦ (hf x).div₀ (hg x) (.of_forall fun y ↦ ⟨h y, rfl⟩)
 
 end Div

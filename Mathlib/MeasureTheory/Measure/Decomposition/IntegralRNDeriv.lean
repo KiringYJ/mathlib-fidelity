@@ -19,7 +19,7 @@ import Mathlib.Probability.Kernel.Composition.RadonNikodym
 ## Main statements
 
 * `mul_le_integral_rnDeriv_of_ac`: for a convex continuous function `f` on `[0, ∞)`, if `μ`
-  is absolutely continuous with respect to `ν`, then
+  is absolutely continuous with respect to a nonzero finite measure `ν`, then
   `ν.real univ * f (μ.real univ / ν.real univ) ≤ ∫ x, f (μ.rnDeriv ν x).toReal ∂ν`.
 * `ConvexOn.integrable_apply_rnDeriv_of_integrable_compProd`: for `f` a convex function on `[0, ∞)`,
   if `f ((μ ⊗ₘ κ).rnDeriv (ν ⊗ₘ η) (a, b))` is integrable, then `f (μ.rnDeriv ν a)` is integrable.
@@ -58,16 +58,15 @@ lemma le_integral_rnDeriv_of_ac [IsFiniteMeasure μ] [IsProbabilityMeasure ν]
       Measure.integrable_toReal_rnDeriv hf_int
 
 /-- For a convex continuous function `f` on `[0, ∞)`, if `μ` is absolutely continuous
-with respect to `ν`, then
+with respect to a nonzero finite measure `ν`, then
 `ν.real univ * f (μ.real univ / ν.real univ) ≤ ∫ x, f (μ.rnDeriv ν x).toReal ∂ν`. -/
-lemma mul_le_integral_rnDeriv_of_ac [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+lemma mul_le_integral_rnDeriv_of_ac [IsFiniteMeasure μ] [IsFiniteMeasure ν] [NeZero ν]
     (hf_cvx : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
     (hf_int : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) (hμν : μ ≪ ν) :
-    ν.real univ * f (μ.real univ / ν.real univ)
+    ν.real univ * f (Checked.div (μ.real univ) (ν.real univ) measureReal_univ_ne_zero.isUnit)
       ≤ ∫ x, f (μ.rnDeriv ν x).toReal ∂ν := by
-  by_cases hν : ν = 0
-  · simp [hν]
-  have : NeZero ν := ⟨hν⟩
+  have hν : ν ≠ 0 := NeZero.ne ν
+  have hνunit : IsUnit (ν.real univ) := measureReal_univ_ne_zero.isUnit
   let μ' := (ν univ)⁻¹ • μ
   let ν' := (ν univ)⁻¹ • ν
   have : IsFiniteMeasure μ' := μ.smul_finite (by simp [hν])
@@ -88,7 +87,7 @@ lemma mul_le_integral_rnDeriv_of_ac [IsFiniteMeasure μ] [IsFiniteMeasure ν]
     · simp
   have h_eq : ∫ x, f (μ'.rnDeriv ν' x).toReal ∂ν'
       = (ν.real univ)⁻¹ * ∫ x, f ((μ.rnDeriv ν x).toReal) ∂ν := by
-    rw [integral_smul_measure, smul_eq_mul, ENNReal.toReal_inv]
+    rw [integral_smul_measure, smul_eq_mul, ENNReal.toReal_inv (ν univ) (ha := hνunit)]
     congr 1
     refine integral_congr_ae ?_
     filter_upwards [h_rnDeriv_eq] with x hx
@@ -100,11 +99,13 @@ lemma mul_le_integral_rnDeriv_of_ac [IsFiniteMeasure μ] [IsFiniteMeasure ν]
     refine (integrable_congr ?_).mpr hf_int
     filter_upwards [h_rnDeriv_eq] with x hx
     rw [hx]
-  rw [h_eq, mul_comm, ← div_le_iff₀, div_eq_inv_mul, inv_inv] at h
-  · convert! h
-    · simp only [div_eq_inv_mul, Measure.smul_apply, smul_eq_mul, ENNReal.toReal_mul,
-      ENNReal.toReal_inv, μ', measureReal_def]
-  · simp [ENNReal.toReal_pos_iff, hν, measureReal_def]
+  have hμ'_mass : μ'.real univ = μ.real univ / ν.real univ := by
+    simp only [div_eq_inv_mul₀, Measure.smul_apply, smul_eq_mul, ENNReal.toReal_mul,
+      ENNReal.toReal_inv (ν univ) (ha := hνunit), μ', measureReal_def]
+  rw [h_eq, hμ'_mass] at h
+  rw [mul_comm]
+  apply (le_div_iff₀ measureReal_univ_pos).mp
+  simpa only [div_eq_inv_mul₀] using h
 
 section Integrable
 

@@ -46,6 +46,9 @@ theorem exist_eLpNorm_sub_le_of_continuous (μ : Measure E := by volume_tac)
       (by intro; positivity)
     refine ⟨g, h₁.mono hg₃, hg₁, eLpNormEssSup_le_of_ae_bound (.of_forall fun x ↦ ?_)⟩
     simpa [← dist_eq_norm_sub'] using (hg₂ x).le
+  rcases eq_or_ne p 0 with rfl | hp₀
+  · exact ⟨0, HasCompactSupport.zero, contDiff_const, by simp [eLpNorm_exponent_zero]⟩
+  have hp_real : p.toReal ≠ 0 := (ENNReal.toReal_pos hp₀ hp).ne'
   by_cases hf : f =ᵐ[μ] 0
   -- We will need that the support is non-empty, so we treat the trivial case `f = 0` first.
   · use 0
@@ -57,8 +60,9 @@ theorem exist_eLpNorm_sub_le_of_continuous (μ : Measure E := by volume_tac)
     exact toReal_pos (pos_mono (subset_tsupport f) (pos_of_ne_zero hf)).ne' hs₁
   set ε' := ε * (μ <| tsupport f).toReal ^ (-(1 / p.toReal)) with ε'_def
   have hε' : 0 < ε' := by positivity
-  have hε₂ : ENNReal.ofReal ε' * μ (tsupport f) ^ (1 / p.toReal) ≤ ENNReal.ofReal ε := by
-    rw [← ofReal_toReal hs₁, ofReal_rpow_of_pos hs₂, ← ofReal_mul hε'.le,
+  have hε₂ : ENNReal.ofReal ε' * μ (tsupport f) ^ (1 / p).toReal ≤ ENNReal.ofReal ε := by
+    rw [ENNReal.toReal_div (hb := hp_real.isUnit), ENNReal.toReal_one,
+      ← ofReal_toReal hs₁, ofReal_rpow_of_pos hs₂, ← ofReal_mul hε'.le,
       ofReal_le_ofReal_iff hε.le, ε'_def, mul_assoc, ← Real.rpow_add hs₂, neg_add_cancel,
       Real.rpow_zero, mul_one]
   obtain ⟨g, hg₁, hg₂, hg₃⟩ := h₂.exists_contDiff_approx ⊤ (ε := fun _ ↦ ε') (by fun_prop)

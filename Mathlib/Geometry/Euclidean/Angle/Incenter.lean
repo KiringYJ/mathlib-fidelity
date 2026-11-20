@@ -36,19 +36,27 @@ between that excenter and its touchpoints on those faces. -/
 lemma ExcenterExists.angle_excenter_touchpoint_eq {signs : Finset (Fin (n + 1))}
     (h : s.ExcenterExists signs) {p : P} {i₁ i₂ : Fin (n + 1)}
     (hp₁ : p ∈ affineSpan ℝ (Set.range (s.faceOpposite i₁).points))
-    (hp₂ : p ∈ affineSpan ℝ (Set.range (s.faceOpposite i₂).points)) :
-    ∠ (s.excenter signs) p (s.touchpoint signs i₁) =
-      ∠ (s.excenter signs) p (s.touchpoint signs i₂) :=
-  (dist_orthogonalProjection_eq_iff_angle_eq hp₁ hp₂).1 (h.dist_excenter_eq_dist_excenter i₁ i₂)
+    (hp₂ : p ∈ affineSpan ℝ (Set.range (s.faceOpposite i₂).points))
+    {ht₁ : s.touchpoint signs i₁ ≠ p} {ht₂ : s.touchpoint signs i₂ ≠ p} :
+    angle (s.excenter signs) p (s.touchpoint signs i₁)
+        (ne_of_mem_of_not_mem hp₁ (h.excenter_notMem_affineSpan_faceOpposite i₁)).symm ht₁ =
+      angle (s.excenter signs) p (s.touchpoint signs i₂)
+        (ne_of_mem_of_not_mem hp₁ (h.excenter_notMem_affineSpan_faceOpposite i₁)).symm ht₂ :=
+  (dist_orthogonalProjection_eq_iff_angle_eq hp₁ hp₂
+    (ne_of_mem_of_not_mem hp₁ (h.excenter_notMem_affineSpan_faceOpposite i₁)).symm ht₁ ht₂).1
+    (h.dist_excenter_eq_dist_excenter i₁ i₂)
 
 variable {s} in
 /-- The incenter of a simplex bisects the angle at a point shared between two faces, as measured
 between the incenter and its touchpoints on those faces. -/
 lemma angle_incenter_touchpoint_eq {p : P} {i₁ i₂ : Fin (n + 1)}
     (hp₁ : p ∈ affineSpan ℝ (Set.range (s.faceOpposite i₁).points))
-    (hp₂ : p ∈ affineSpan ℝ (Set.range (s.faceOpposite i₂).points)) :
-    ∠ s.incenter p (s.touchpoint ∅ i₁) =
-      ∠ s.incenter p (s.touchpoint ∅ i₂) :=
+    (hp₂ : p ∈ affineSpan ℝ (Set.range (s.faceOpposite i₂).points))
+    {ht₁ : s.touchpoint ∅ i₁ ≠ p} {ht₂ : s.touchpoint ∅ i₂ ≠ p} :
+    angle s.incenter p (s.touchpoint ∅ i₁)
+        (ne_of_mem_of_not_mem hp₁ (s.incenter_notMem_affineSpan_faceOpposite i₁)).symm ht₁ =
+      angle s.incenter p (s.touchpoint ∅ i₂)
+        (ne_of_mem_of_not_mem hp₁ (s.incenter_notMem_affineSpan_faceOpposite i₁)).symm ht₂ :=
   s.excenterExists_empty.angle_excenter_touchpoint_eq hp₁ hp₂
 
 variable {s} in
@@ -59,16 +67,18 @@ lemma exists_excenterExists_and_eq_excenter_of_forall_angle_orthogonalProjection
     (hp : p ∈ affineSpan ℝ (Set.range s.points)) {i₁ : Fin (n + 1)}
     (h : ∀ i₂, i₂ ≠ i₁ → ∃ p' : P, p' ∈ affineSpan ℝ (Set.range (s.faceOpposite i₁).points) ∧
       p' ∈ affineSpan ℝ (Set.range (s.faceOpposite i₂).points) ∧
-      ∠ p p' ((s.faceOpposite i₁).orthogonalProjectionSpan p) =
-        ∠ p p' ((s.faceOpposite i₂).orthogonalProjectionSpan p)) :
+      ∃ (hp' : p ≠ p') (hq₁ : (s.faceOpposite i₁).orthogonalProjectionSpan p ≠ p')
+        (hq₂ : (s.faceOpposite i₂).orthogonalProjectionSpan p ≠ p'),
+        angle p p' ((s.faceOpposite i₁).orthogonalProjectionSpan p) hp' hq₁ =
+          angle p p' ((s.faceOpposite i₂).orthogonalProjectionSpan p) hp' hq₂) :
     ∃ signs, ∃ h : s.ExcenterExists signs, p = s.excenter signs h := by
   rw [← s.exists_forall_dist_eq_iff_exists_excenterExists_and_eq_excenter hp]
   refine ⟨dist p ((s.faceOpposite i₁).orthogonalProjectionSpan p), ?_⟩
   intro i
   by_cases hi : i = i₁
   · rw [hi]
-  obtain ⟨p', hp'₁, hp'₂, ha⟩ := h i hi
-  exact ((dist_orthogonalProjection_eq_iff_angle_eq hp'₁ hp'₂).2 ha).symm
+  obtain ⟨p', hp'₁, hp'₂, hneq, hq₁, hq₂, ha⟩ := h i hi
+  exact ((dist_orthogonalProjection_eq_iff_angle_eq hp'₁ hp'₂ hneq hq₁ hq₂).2 ha).symm
 
 end Simplex
 
@@ -278,11 +288,16 @@ variable (t : Triangle ℝ P)
 /-- The incenter of a triangle bisects the angle at a vertex. -/
 lemma angle_incenter_eq_angle_div_two {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃)
     (h₂₃ : i₂ ≠ i₃) :
-    ∠ (t.points i₂) (t.points i₁) t.incenter = ∠ (t.points i₂) (t.points i₁) (t.points i₃) / 2 := by
+    (angle (t.points i₂) (t.points i₁) t.incenter
+      (t.independent.injective.ne h₁₂.symm) (t.incenter_ne_point i₁)) =
+      (angle (t.points i₂) (t.points i₁) (t.points i₃)
+      (t.independent.injective.ne h₁₂.symm) (t.independent.injective.ne h₁₃.symm)) / 2 := by
   let S : AffineSubspace ℝ P := affineSpan ℝ (Set.range t.points)
   let t' : Triangle ℝ S := t.restrict S le_rfl
-  suffices ∠ (t'.points i₂) (t'.points i₁) t'.incenter =
-      ∠ (t'.points i₂) (t'.points i₁) (t'.points i₃) / 2 by
+  suffices (angle (t'.points i₂) (t'.points i₁) t'.incenter
+      (t'.independent.injective.ne h₁₂.symm) (t'.incenter_ne_point i₁)) =
+      (angle (t'.points i₂) (t'.points i₁) (t'.points i₃)
+      (t'.independent.injective.ne h₁₂.symm) (t'.independent.injective.ne h₁₃.symm)) / 2 by
     simpa [t', ← S.angle_coe] using this
   exact angle_eq_angle_div_two_of_oangle_eq_of_sSameSide (t'.independent.injective.ne h₁₂.symm)
     (t'.oangle_incenter_eq h₁₂ h₁₃ h₂₃)
@@ -291,26 +306,38 @@ lemma angle_incenter_eq_angle_div_two {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ �
 /-- The incenter of a triangle bisects the angle at a vertex. -/
 lemma two_mul_angle_incenter {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃)
     (h₂₃ : i₂ ≠ i₃) :
-    2 * ∠ (t.points i₂) (t.points i₁) t.incenter = ∠ (t.points i₂) (t.points i₁) (t.points i₃) := by
+    2 * (angle (t.points i₂) (t.points i₁) t.incenter
+      (t.independent.injective.ne h₁₂.symm) (t.incenter_ne_point i₁)) =
+      (angle (t.points i₂) (t.points i₁) (t.points i₃)
+      (t.independent.injective.ne h₁₂.symm) (t.independent.injective.ne h₁₃.symm)) := by
   rw [t.angle_incenter_eq_angle_div_two h₁₂ h₁₃ h₂₃]
   field
 
 /-- The incenter of a triangle bisects the angle at a vertex. -/
 lemma angle_incenter {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃)
     (h₂₃ : i₂ ≠ i₃) :
-    ∠ (t.points i₂) (t.points i₁) t.incenter = ∠ t.incenter (t.points i₁) (t.points i₃) := by
+    (angle (t.points i₂) (t.points i₁) t.incenter
+      (t.independent.injective.ne h₁₂.symm) (t.incenter_ne_point i₁)) =
+      (angle t.incenter (t.points i₁) (t.points i₃)
+      (t.incenter_ne_point i₁) (t.independent.injective.ne h₁₃.symm)) := by
   rw [t.angle_incenter_eq_angle_div_two h₁₂ h₁₃ h₂₃, angle_comm,
     ← t.angle_incenter_eq_angle_div_two h₁₃ h₁₂ h₂₃.symm, angle_comm]
 
 /-- The excenter of a triangle opposite a vertex bisects the angle at that vertex. -/
 lemma angle_excenter_singleton_eq_angle_div_two {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃)
     (h₂₃ : i₂ ≠ i₃) :
-    ∠ (t.points i₂) (t.points i₁) (t.excenter {i₁}) =
-      ∠ (t.points i₂) (t.points i₁) (t.points i₃) / 2 := by
+    (angle (t.points i₂) (t.points i₁) (t.excenter {i₁})
+      (t.independent.injective.ne h₁₂.symm)
+      ((t.excenterExists_singleton i₁).excenter_ne_point i₁)) =
+      (angle (t.points i₂) (t.points i₁) (t.points i₃)
+      (t.independent.injective.ne h₁₂.symm) (t.independent.injective.ne h₁₃.symm)) / 2 := by
   let S : AffineSubspace ℝ P := affineSpan ℝ (Set.range t.points)
   let t' : Triangle ℝ S := t.restrict S le_rfl
-  suffices ∠ (t'.points i₂) (t'.points i₁) (t'.excenter {i₁}) =
-      ∠ (t'.points i₂) (t'.points i₁) (t'.points i₃) / 2 by
+  suffices (angle (t'.points i₂) (t'.points i₁) (t'.excenter {i₁})
+      (t'.independent.injective.ne h₁₂.symm)
+      ((t'.excenterExists_singleton i₁).excenter_ne_point i₁)) =
+      (angle (t'.points i₂) (t'.points i₁) (t'.points i₃)
+      (t'.independent.injective.ne h₁₂.symm) (t'.independent.injective.ne h₁₃.symm)) / 2 by
     simpa [t', ← S.angle_coe, t.excenterExists_singleton i₁] using this
   refine angle_eq_angle_div_two_of_oangle_eq_of_sSameSide (t'.independent.injective.ne h₁₂.symm)
     (t'.oangle_excenter_singleton_eq h₁₂ h₁₃ h₂₃) ?_
@@ -320,28 +347,41 @@ lemma angle_excenter_singleton_eq_angle_div_two {i₁ i₂ i₃ : Fin 3} (h₁�
 /-- The excenter of a triangle opposite a vertex bisects the angle at that vertex. -/
 lemma two_mul_angle_excenter_singleton {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃)
     (h₂₃ : i₂ ≠ i₃) :
-    2 * ∠ (t.points i₂) (t.points i₁) (t.excenter {i₁}) =
-      ∠ (t.points i₂) (t.points i₁) (t.points i₃) := by
+    2 * (angle (t.points i₂) (t.points i₁) (t.excenter {i₁})
+      (t.independent.injective.ne h₁₂.symm)
+      ((t.excenterExists_singleton i₁).excenter_ne_point i₁)) =
+      (angle (t.points i₂) (t.points i₁) (t.points i₃)
+      (t.independent.injective.ne h₁₂.symm) (t.independent.injective.ne h₁₃.symm)) := by
   rw [t.angle_excenter_singleton_eq_angle_div_two h₁₂ h₁₃ h₂₃]
   field
 
 /-- The excenter of a triangle opposite a vertex bisects the angle at that vertex. -/
 lemma angle_excenter_singleton {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃)
     (h₂₃ : i₂ ≠ i₃) :
-    ∠ (t.points i₂) (t.points i₁) (t.excenter {i₁}) =
-      ∠ (t.excenter {i₁}) (t.points i₁) (t.points i₃) := by
+    (angle (t.points i₂) (t.points i₁) (t.excenter {i₁})
+      (t.independent.injective.ne h₁₂.symm)
+      ((t.excenterExists_singleton i₁).excenter_ne_point i₁)) =
+      (angle (t.excenter {i₁}) (t.points i₁) (t.points i₃)
+      ((t.excenterExists_singleton i₁).excenter_ne_point i₁)
+      (t.independent.injective.ne h₁₃.symm)) := by
   rw [t.angle_excenter_singleton_eq_angle_div_two h₁₂ h₁₃ h₂₃, angle_comm,
     ← t.angle_excenter_singleton_eq_angle_div_two h₁₃ h₁₂ h₂₃.symm, angle_comm]
 
 /-- The excenter of a triangle opposite a vertex bisects the angle at another vertex. -/
 lemma angle_excenter_singleton_eq_angle_add_pi_div_two {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂)
     (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    ∠ (t.points i₁) (t.points i₂) (t.excenter {i₁}) =
-      (∠ (t.points i₁) (t.points i₂) (t.points i₃) + π) / 2 := by
+    (angle (t.points i₁) (t.points i₂) (t.excenter {i₁})
+      (t.independent.injective.ne h₁₂)
+      ((t.excenterExists_singleton i₁).excenter_ne_point i₂)) =
+      ((angle (t.points i₁) (t.points i₂) (t.points i₃)
+      (t.independent.injective.ne h₁₂) (t.independent.injective.ne h₂₃.symm)) + π) / 2 := by
   let S : AffineSubspace ℝ P := affineSpan ℝ (Set.range t.points)
   let t' : Triangle ℝ S := t.restrict S le_rfl
-  suffices ∠ (t'.points i₁) (t'.points i₂) (t'.excenter {i₁}) =
-      (∠ (t'.points i₁) (t'.points i₂) (t'.points i₃) + π) / 2 by
+  suffices (angle (t'.points i₁) (t'.points i₂) (t'.excenter {i₁})
+      (t'.independent.injective.ne h₁₂)
+      ((t'.excenterExists_singleton i₁).excenter_ne_point i₂)) =
+      ((angle (t'.points i₁) (t'.points i₂) (t'.points i₃)
+      (t'.independent.injective.ne h₁₂) (t'.independent.injective.ne h₂₃.symm)) + π) / 2 by
     simpa [t', ← S.angle_coe, t.excenterExists_singleton i₁] using this
   exact angle_eq_angle_add_pi_div_two_of_oangle_eq_add_pi_of_sSameSide
     (t'.independent.injective.ne h₁₂) (t'.oangle_excenter_singleton_eq_add_pi h₁₂ h₁₃ h₂₃)
@@ -350,20 +390,29 @@ lemma angle_excenter_singleton_eq_angle_add_pi_div_two {i₁ i₂ i₃ : Fin 3} 
 /-- The excenter of a triangle opposite a vertex bisects the angle at another vertex. -/
 lemma two_mul_angle_excenter_singleton_eq_angle_add_pi {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂)
     (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    2 * ∠ (t.points i₁) (t.points i₂) (t.excenter {i₁}) =
-      ∠ (t.points i₁) (t.points i₂) (t.points i₃) + π := by
+    2 * (angle (t.points i₁) (t.points i₂) (t.excenter {i₁})
+      (t.independent.injective.ne h₁₂)
+      ((t.excenterExists_singleton i₁).excenter_ne_point i₂)) =
+      (angle (t.points i₁) (t.points i₂) (t.points i₃)
+      (t.independent.injective.ne h₁₂) (t.independent.injective.ne h₂₃.symm)) + π := by
   rw [t.angle_excenter_singleton_eq_angle_add_pi_div_two h₁₂ h₁₃ h₂₃]
   field
 
 /-- The excenter of a triangle opposite a vertex bisects the angle at another vertex. -/
 lemma angle_excenter_singleton_eq_pi_sub_angle_div_two {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂)
     (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    ∠ (t.points i₃) (t.points i₂) (t.excenter {i₁}) =
-      (π - ∠ (t.points i₃) (t.points i₂) (t.points i₁)) / 2 := by
+    (angle (t.points i₃) (t.points i₂) (t.excenter {i₁})
+      (t.independent.injective.ne h₂₃.symm)
+      ((t.excenterExists_singleton i₁).excenter_ne_point i₂)) =
+      (π - (angle (t.points i₃) (t.points i₂) (t.points i₁)
+      (t.independent.injective.ne h₂₃.symm) (t.independent.injective.ne h₁₂))) / 2 := by
   let S : AffineSubspace ℝ P := affineSpan ℝ (Set.range t.points)
   let t' : Triangle ℝ S := t.restrict S le_rfl
-  suffices ∠ (t'.points i₃) (t'.points i₂) (t'.excenter {i₁}) =
-      (π - ∠ (t'.points i₃) (t'.points i₂) (t'.points i₁)) / 2 by
+  suffices (angle (t'.points i₃) (t'.points i₂) (t'.excenter {i₁})
+      (t'.independent.injective.ne h₂₃.symm)
+      ((t'.excenterExists_singleton i₁).excenter_ne_point i₂)) =
+      (π - (angle (t'.points i₃) (t'.points i₂) (t'.points i₁)
+      (t'.independent.injective.ne h₂₃.symm) (t'.independent.injective.ne h₁₂))) / 2 by
     simpa [t', ← S.angle_coe, t.excenterExists_singleton i₁] using this
   refine angle_eq_pi_sub_angle_div_two_of_oangle_eq_add_pi_of_sOppSide
     (t'.independent.injective.ne h₂₃.symm) ?_
@@ -374,17 +423,25 @@ lemma angle_excenter_singleton_eq_pi_sub_angle_div_two {i₁ i₂ i₃ : Fin 3} 
 /-- The excenter of a triangle opposite a vertex bisects the angle at another vertex. -/
 lemma two_mul_angle_excenter_singleton_eq_pi_sub_angle {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂)
     (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    2 * ∠ (t.points i₃) (t.points i₂) (t.excenter {i₁}) =
-      π - ∠ (t.points i₃) (t.points i₂) (t.points i₁) := by
+    2 * (angle (t.points i₃) (t.points i₂) (t.excenter {i₁})
+      (t.independent.injective.ne h₂₃.symm)
+      ((t.excenterExists_singleton i₁).excenter_ne_point i₂)) =
+      π - (angle (t.points i₃) (t.points i₂) (t.points i₁)
+      (t.independent.injective.ne h₂₃.symm) (t.independent.injective.ne h₁₂)) := by
   rw [t.angle_excenter_singleton_eq_pi_sub_angle_div_two h₁₂ h₁₃ h₂₃]
   field
 
 /-- The excenter of a triangle opposite a vertex bisects the angle at another vertex. -/
 lemma angle_excenter_singleton_sub {i₁ i₂ i₃ : Fin 3} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃)
     (h₂₃ : i₂ ≠ i₃) :
-    ∠ (t.points i₁) (t.points i₂) (t.excenter {i₁}) -
-      ∠ (t.points i₃) (t.points i₂) (t.excenter {i₁}) =
-      ∠ (t.points i₁) (t.points i₂) (t.points i₃) := by
+    (angle (t.points i₁) (t.points i₂) (t.excenter {i₁})
+      (t.independent.injective.ne h₁₂)
+      ((t.excenterExists_singleton i₁).excenter_ne_point i₂)) -
+      (angle (t.points i₃) (t.points i₂) (t.excenter {i₁})
+      (t.independent.injective.ne h₂₃.symm)
+      ((t.excenterExists_singleton i₁).excenter_ne_point i₂)) =
+      (angle (t.points i₁) (t.points i₂) (t.points i₃)
+      (t.independent.injective.ne h₁₂) (t.independent.injective.ne h₂₃.symm)) := by
   rw [t.angle_excenter_singleton_eq_angle_add_pi_div_two h₁₂ h₁₃ h₂₃,
       t.angle_excenter_singleton_eq_pi_sub_angle_div_two h₁₂ h₁₃ h₂₃, angle_comm]
   field

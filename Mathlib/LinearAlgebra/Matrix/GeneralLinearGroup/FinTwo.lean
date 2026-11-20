@@ -136,7 +136,7 @@ lemma IsParabolic.hasEigenvalue_trace_div_two [NeZero (2 : K)] (hm : m.IsParabol
   have hdisc : m.trace ^ 2 = 4 * m.det := by
     simpa [discr_fin_two, sub_eq_zero] using hm.2
   field_simp
-  linear_combination (-2 : K) * hdisc
+  linear_combination -hdisc
 
 /-- A scalar is an eigenvalue of a parabolic `2 × 2` matrix if and only if it is half the trace,
 when two is nonzero. -/

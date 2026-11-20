@@ -129,86 +129,78 @@ theorem eq_C_iff (f : RatFunc K) :
   refine ⟨by rintro ⟨c, rfl⟩; simp, ?_⟩
   rw [Polynomial.natDegree_eq_zero, Polynomial.natDegree_eq_zero]
   rintro ⟨⟨a, ha⟩, ⟨b, hb⟩⟩
+  have hb0 : b ≠ 0 := by
+    rintro rfl
+    exact denom_ne_zero f (by simpa using hb.symm)
   use a / b
-  rw [← num_div_denom f, ← ha, ← hb, algebraMap_C, algebraMap_C, map_div₀]
+  rw [map_div₀]
+  apply eq_div_iff.mpr
+  simpa only [← ha, ← hb, algebraMap_C] using ((div_eq_iff.mp (num_div_denom f)).symm)
 
 variable {L : Type u} [Field L]
 
-/-- Evaluate a rational function `p` given a ring hom `f` from the scalar field
-to the target and a value `x` for the variable in the target.
-
-Fractions are reduced by clearing common denominators before evaluating:
-`eval id 1 ((X^2 - 1) / (X - 1)) = eval id 1 (X + 1) = 2`, not `0 / 0 = 0`.
--/
-def eval (f : K →+* L) (a : L) (p : RatFunc K) : L :=
-  (num p).eval₂ f a / (denom p).eval₂ f a
+/-- Evaluate the reduced rational function `p` at `a`, after mapping coefficients along `f`.
+The reduced denominator must be a unit at `a`. In particular, cancelling a common factor can
+make evaluation possible at a point where the original fraction had a zero denominator. -/
+noncomputable def eval (f : K →+* L) (a : L) (p : RatFunc K)
+    (h : IsUnit ((denom p).eval₂ f a) := by first | checked_unit | simp) : L :=
+  Checked.div ((num p).eval₂ f a) ((denom p).eval₂ f a) h
 
 variable {f : K →+* L} {a : L}
 
-theorem eval_eq_zero_of_eval₂_denom_eq_zero {x : RatFunc K}
-    (h : Polynomial.eval₂ f a (denom x) = 0) : eval f a x = 0 := by rw [eval, h, div_zero]
-
-theorem eval₂_denom_ne_zero {x : RatFunc K} (h : eval f a x ≠ 0) :
-    Polynomial.eval₂ f a (denom x) ≠ 0 :=
-  mt eval_eq_zero_of_eval₂_denom_eq_zero h
+private theorem isUnit_eval₂_of_dvd {p q : K[X]} (h : p ∣ q)
+    (hq : IsUnit (q.eval₂ f a)) : IsUnit (p.eval₂ f a) := by
+  apply Ne.isUnit
+  intro hp
+  exact hq.ne_zero (Polynomial.eval₂_eq_zero_of_dvd_of_eval₂_eq_zero f a h hp)
 
 variable (f a)
 
 @[simp]
-theorem eval_C {c : K} : eval f a (C c) = f c := by simp [eval]
+theorem eval_C {c : K} : eval f a (C c) (by simp) = f c := by simp [eval]
 
 @[simp]
-theorem eval_X : eval f a X = a := by simp [eval]
+theorem eval_X : eval f a X (by simp) = a := by simp [eval]
 
 @[simp]
-theorem eval_zero : eval f a 0 = 0 := by simp [eval]
+theorem eval_zero : eval f a 0 (by simp) = 0 := by simp [eval]
 
 @[simp]
-theorem eval_one : eval f a 1 = 1 := by simp [eval]
+theorem eval_one : eval f a 1 (by simp) = 1 := by simp [eval]
 
 @[simp]
 theorem eval_algebraMap {S : Type*} [CommSemiring S] [Algebra S K[X]] (p : S) :
-    eval f a (algebraMap _ _ p) = (algebraMap _ K[X] p).eval₂ f a := by
+    eval f a (algebraMap _ _ p) (by simp [IsScalarTower.algebraMap_apply S K[X] (RatFunc K)]) =
+      (algebraMap _ K[X] p).eval₂ f a := by
   simp [eval, IsScalarTower.algebraMap_apply S K[X] (RatFunc K)]
 
-/-- `eval` is an additive homomorphism except when a denominator evaluates to `0`.
+/-- The sum of two rational functions regular at `a` is regular at `a`. -/
+theorem isUnit_eval₂_denom_add {x y : RatFunc K} (hx : IsUnit ((denom x).eval₂ f a))
+    (hy : IsUnit ((denom y).eval₂ f a)) : IsUnit ((denom (x + y)).eval₂ f a) :=
+  isUnit_eval₂_of_dvd (denom_add_dvd x y) (by simpa only [Polynomial.eval₂_mul] using hx.mul hy)
 
-Counterexample: `eval _ 1 (X / (X-1)) + eval _ 1 (-1 / (X-1)) = 0`
-`... ≠ 1 = eval _ 1 ((X-1) / (X-1))`.
-
-See also `RatFunc.eval₂_denom_ne_zero` to make the hypotheses simpler but less general.
--/
-theorem eval_add {x y : RatFunc K} (hx : Polynomial.eval₂ f a (denom x) ≠ 0)
-    (hy : Polynomial.eval₂ f a (denom y) ≠ 0) : eval f a (x + y) = eval f a x + eval f a y := by
+/-- Evaluation preserves addition on its domain. -/
+theorem eval_add {x y : RatFunc K} {hx : IsUnit ((denom x).eval₂ f a)}
+    {hy : IsUnit ((denom y).eval₂ f a)} :
+    eval f a (x + y) (isUnit_eval₂_denom_add f a hx hy) = eval f a x hx + eval f a y hy := by
   unfold eval
-  by_cases hxy : Polynomial.eval₂ f a (denom (x + y)) = 0
-  · have := Polynomial.eval₂_eq_zero_of_dvd_of_eval₂_eq_zero f a (denom_add_dvd x y) hxy
-    rw [Polynomial.eval₂_mul] at this
-    cases mul_eq_zero.mp this <;> contradiction
-  rw [div_add_div _ _ hx hy, eq_div_iff (mul_ne_zero hx hy), div_eq_mul_inv, mul_right_comm, ←
-    div_eq_mul_inv, div_eq_iff hxy]
-  simp only [← Polynomial.eval₂_mul, ← Polynomial.eval₂_add]
-  congr 1
-  apply num_denom_add
+  rw [div_add_div]
+  apply div_eq_div_iff.mpr
+  simpa only [Polynomial.eval₂_mul, Polynomial.eval₂_add, mul_comm ((denom x).eval₂ f a)] using
+    congrArg (Polynomial.eval₂ f a) (num_denom_add x y)
 
-/-- `eval` is a multiplicative homomorphism except when a denominator evaluates to `0`.
+/-- The product of two rational functions regular at `a` is regular at `a`. -/
+theorem isUnit_eval₂_denom_mul {x y : RatFunc K} (hx : IsUnit ((denom x).eval₂ f a))
+    (hy : IsUnit ((denom y).eval₂ f a)) : IsUnit ((denom (x * y)).eval₂ f a) :=
+  isUnit_eval₂_of_dvd (denom_mul_dvd x y) (by simpa only [Polynomial.eval₂_mul] using hx.mul hy)
 
-Counterexample: `eval _ 0 X * eval _ 0 (1/X) = 0 ≠ 1 = eval _ 0 1 = eval _ 0 (X * 1/X)`.
-
-See also `RatFunc.eval₂_denom_ne_zero` to make the hypotheses simpler but less general.
--/
-theorem eval_mul {x y : RatFunc K} (hx : Polynomial.eval₂ f a (denom x) ≠ 0)
-    (hy : Polynomial.eval₂ f a (denom y) ≠ 0) : eval f a (x * y) = eval f a x * eval f a y := by
+/-- Evaluation preserves multiplication on its domain. -/
+theorem eval_mul {x y : RatFunc K} {hx : IsUnit ((denom x).eval₂ f a)}
+    {hy : IsUnit ((denom y).eval₂ f a)} :
+    eval f a (x * y) (isUnit_eval₂_denom_mul f a hx hy) = eval f a x hx * eval f a y hy := by
   unfold eval
-  by_cases hxy : Polynomial.eval₂ f a (denom (x * y)) = 0
-  · have := Polynomial.eval₂_eq_zero_of_dvd_of_eval₂_eq_zero f a (denom_mul_dvd x y) hxy
-    rw [Polynomial.eval₂_mul] at this
-    cases mul_eq_zero.mp this <;> contradiction
-  rw [div_mul_div_comm, eq_div_iff (mul_ne_zero hx hy), div_eq_mul_inv, mul_right_comm, ←
-    div_eq_mul_inv, div_eq_iff hxy]
-  repeat' rw [← Polynomial.eval₂_mul]
-  congr 1
-  apply num_denom_mul
+  rw [← mul_div_mul_comm₀ (hcd := hx.mul hy), div_eq_div_iff]
+  simpa only [Polynomial.eval₂_mul] using congrArg (Polynomial.eval₂ f a) (num_denom_mul x y)
 
 end Field
 
@@ -238,7 +230,11 @@ theorem algEquivOfTranscendental_X :
   simp [← algebraMap_X]
 
 theorem algEquivOfTranscendental_apply (u : RatFunc K) :
-    algEquivOfTranscendental f h u = aeval f u.num / aeval f u.denom := by
+    algEquivOfTranscendental f h u =
+      Checked.div (aeval f u.num) (aeval f u.denom) (by
+        apply Ne.isUnit
+        intro hz
+        exact h ⟨u.denom, u.denom_ne_zero, hz⟩) := by
   conv_lhs => rw [← num_div_denom u]
   simp [-num_div_denom]
 
@@ -299,7 +295,8 @@ theorem valuation_X_eq_neg_one :
 
 theorem valuation_of_mk (f : Polynomial K) {g : Polynomial K} (hg : g ≠ 0) :
     (Polynomial.idealX K).valuation _ (RatFunc.mk f g) =
-      (Polynomial.idealX K).intValuation f / (Polynomial.idealX K).intValuation g := by
+      Checked.div ((Polynomial.idealX K).intValuation f) ((Polynomial.idealX K).intValuation g)
+        (((Polynomial.idealX K).intValuation_ne_zero g hg).isUnit) := by
   simp only [RatFunc.mk_eq_mk' _ hg, valuation_of_mk']
 
 end HeightOneSpectrum
@@ -345,8 +342,12 @@ theorem valuation_le_one_of_valuation_X_le_one (hle : v RatFunc.X ≤ 1) (p : K[
 `1 / (monomial n a)` (as an element of the field of rational functions) is equal
 to `(v RatFunc.X) ^ (- n)`. -/
 lemma valuation_inv_monomial_eq_valuation_X_zpow (n : ℕ) {a : K} (ha : a ≠ 0) :
-    v (1 / monomial n a) = v RatFunc.X ^ (-(n : ℤ)) := by
-  simp [← RatFunc.algebraMap_eq_C, hv.eq_one _ ha]
+    v (Checked.div 1 (monomial n a : RatFunc K)
+        ((RatFunc.algebraMap_ne_zero (by simp [ha])).isUnit)) =
+      Checked.zpow (v RatFunc.X) (-(n : ℤ)) (fun _ ↦ RatFunc.X_ne_zero.isUnit.map v) := by
+  simp only [coePolynomial_eq_algebraMap, algebraMap_monomial, ← algebraMap_eq_C, one_div₀,
+    mul_inv_rev₀, map_mul, map_inv₀, map_pow, hv.eq_one _ ha, inv_one₀, mul_one]
+  exact (zpow_neg₀ (RatFunc.X_ne_zero.isUnit.map v).ne_zero (n : ℤ)).symm
 
 end TrivialOnConstants
 
@@ -370,7 +371,7 @@ lemma valuation_surjective : Function.Surjective (Valued.v (R := RatFunc K)) := 
   intro n
   by_cases hn0 : n = 0
   · use 0; simp [hn0]
-  · use (RatFunc.X ^ (-WithZero.log n))
+  · use Checked.zpow (RatFunc.X : RatFunc K) (-WithZero.log n) (fun _ ↦ RatFunc.X_ne_zero.isUnit)
     simp [WithZero.exp_log hn0]
 
 end RatFunc

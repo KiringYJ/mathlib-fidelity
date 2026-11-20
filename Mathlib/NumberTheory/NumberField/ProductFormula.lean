@@ -44,9 +44,11 @@ open Function Ideal IsDedekindDomain HeightOneSpectrum in
 /-- For any non-zero `x` in `𝓞 K`, the product of `w x`, where `w` runs over `FinitePlace K`, is
 equal to the inverse of the absolute value of `Algebra.norm ℤ x`. -/
 theorem FinitePlace.prod_eq_inv_abs_norm_int {x : 𝓞 K} (h_x_nezero : x ≠ 0) :
-    ∏ᶠ w : FinitePlace K, w x = (|norm ℤ x| : ℝ)⁻¹ := by
+    ∏ᶠ w : FinitePlace K, w x = Checked.inv (|norm ℤ x| : ℝ)
+      (abs_ne_zero.mpr
+        (Int.cast_ne_zero.mpr (Algebra.norm_ne_zero_iff.mpr h_x_nezero))).isUnit := by
   simp only [← finprod_comp_equiv equivHeightOneSpectrum.symm, equivHeightOneSpectrum_symm_apply]
-  refine (inv_eq_of_mul_eq_one_left ?_).symm
+  refine (inv_eq_of_mul_eq_one_left₀ ?_).symm
   norm_cast
   have h_span_nezero : span {x} ≠ 0 := by simp [h_x_nezero]
   rw [Int.abs_eq_natAbs, ← absNorm_span_singleton,
@@ -75,23 +77,24 @@ theorem FinitePlace.prod_eq_inv_abs_norm_int {x : 𝓞 K} (h_x_nezero : x ≠ 0)
 /-- For any non-zero `x` in `K`, the product of `w x`, where `w` runs over `FinitePlace K`, is
 equal to the inverse of the absolute value of `Algebra.norm ℚ x`. -/
 theorem FinitePlace.prod_eq_inv_abs_norm {x : K} (h_x_nezero : x ≠ 0) :
-    ∏ᶠ w : FinitePlace K, w x = |(Algebra.norm ℚ) x|⁻¹ := by
-  --reduce to 𝓞 K
-  rcases IsFractionRing.div_surjective (𝓞 K) x with ⟨a, b, hb, rfl⟩
-  apply nonZeroDivisors.ne_zero at hb
-  have ha : a ≠ 0 := by
-    rintro rfl
-    simp at h_x_nezero
-  simp_rw [map_div₀, Rat.cast_inv, Rat.cast_abs,
-    finprod_div_distrib (hasFiniteMulSupport_int ha) (hasFiniteMulSupport_int hb),
-    prod_eq_inv_abs_norm_int ha, prod_eq_inv_abs_norm_int hb]
-  rw [← inv_eq_iff_eq_inv, inv_inv_div_inv, ← abs_div]
-  congr
-  have hb₀ : ((Algebra.norm ℤ) b : ℝ) ≠ 0 := by simp [hb]
-  refine (eq_div_of_mul_eq hb₀ ?_).symm
-  norm_cast
-  rw [coe_norm_int a, coe_norm_int b, ← map_mul,
-    div_mul_cancel₀ _ (RingOfIntegers.coe_ne_zero_iff.mpr hb)]
+    ∏ᶠ w : FinitePlace K, w x = (Checked.inv |(Algebra.norm ℚ) x|
+      (abs_ne_zero.mpr (Algebra.norm_ne_zero_iff.mpr h_x_nezero)).isUnit : ℚ) := by
+  obtain ⟨a, b, hb, hfrac⟩ := IsFractionRing.div_surjective (𝓞 K) x
+  have hb₀ := nonZeroDivisors.ne_zero hb
+  have hmul : x * (b : K) = (a : K) := eq_div_iff.mp hfrac.symm
+  have ha : a ≠ 0 := fun ha ↦
+    mul_ne_zero h_x_nezero (RingOfIntegers.coe_ne_zero_iff.mpr hb₀) (by simpa [ha] using hmul)
+  have hnorm : |(norm ℚ x : ℝ)| * (|norm ℤ b| : ℝ) = (|norm ℤ a| : ℝ) := by
+    have coe_norm (c : 𝓞 K) : (norm ℤ c : ℝ) = (norm ℚ (c : K) : ℝ) := by
+      rw [← Rat.cast_intCast, coe_norm_int]
+    rw [coe_norm a, coe_norm b, ← abs_mul, ← Rat.cast_mul, ← map_mul, hmul]
+  have hprod := finprod_mul_distrib (hasFiniteMulSupport h_x_nezero) (hasFiniteMulSupport_int hb₀)
+  simp only [← map_mul, hmul, prod_eq_inv_abs_norm_int ha, prod_eq_inv_abs_norm_int hb₀,
+    ← hnorm, mul_inv₀] at hprod
+  simp only [Rat.cast_inv, Rat.cast_abs]
+  have hb_norm : (|norm ℤ b| : ℝ) ≠ 0 :=
+    abs_ne_zero.mpr (Int.cast_ne_zero.mpr (Algebra.norm_ne_zero_iff.mpr hb₀))
+  exact mul_right_cancel₀ (inv_ne_zero (ha := hb_norm.isUnit)) hprod.symm
 
 open FinitePlace in
 /-- The Product Formula for the Number Field `K`. -/

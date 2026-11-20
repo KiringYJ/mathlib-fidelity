@@ -29,9 +29,9 @@ variable
 If `f : ℂ → ℝ` is harmonic at `x`, then `∂f/∂1 - I • ∂f/∂I` is complex differentiable at `x`.
 -/
 theorem HarmonicAt.differentiableAt_complex_partial (hf : HarmonicAt f x) :
-    DifferentiableAt ℂ (fun z ↦ fderiv ℝ f z 1 - I * fderiv ℝ f z I) x := by
-  have : (fun z ↦ fderiv ℝ f z 1 - I * fderiv ℝ f z I) =
-      (ofRealCLM ∘ (fderiv ℝ f · 1) - I • ofRealCLM ∘ (fderiv ℝ f · I)) := by
+    DifferentiableAt ℂ (fun z ↦ fderiv ℝ f z id 1 - I * fderiv ℝ f z id I) x := by
+  have : (fun z ↦ fderiv ℝ f z id 1 - I * fderiv ℝ f z id I) =
+      (ofRealCLM ∘ (fderiv ℝ f · id 1) - I • ofRealCLM ∘ (fderiv ℝ f · id I)) := by
     ext; simp
   rw [this]
   have h₁f := hf.1
@@ -42,7 +42,7 @@ theorem HarmonicAt.differentiableAt_complex_partial (hf : HarmonicAt f x) :
     smul_apply, smul_eq_mul]
   ring_nf
   rw [fderiv_clm_apply (by fun_prop) (by fun_prop), fderiv_clm_apply (by fun_prop) (by fun_prop)]
-  simp only [fderiv_fun_const, Pi.zero_apply, ContinuousLinearMap.comp_zero, zero_add,
+  simp only [fderiv_const_apply, ContinuousLinearMap.comp_zero, zero_add,
     ContinuousLinearMap.flip_apply, I_sq, neg_mul, one_mul, sub_neg_eq_add]
   rw [add_comm, sub_eq_add_neg]
   congr 1
@@ -58,7 +58,7 @@ theorem HarmonicAt.differentiableAt_complex_partial (hf : HarmonicAt f x) :
 If `f : ℂ → ℝ` is harmonic at `x`, then `∂f/∂1 - I • ∂f/∂I` is complex analytic at `x`.
 -/
 theorem HarmonicAt.analyticAt_complex_partial (hf : HarmonicAt f x) :
-    AnalyticAt ℂ (fun z ↦ fderiv ℝ f z 1 - I * fderiv ℝ f z I) x :=
+    AnalyticAt ℂ (fun z ↦ fderiv ℝ f z id 1 - I * fderiv ℝ f z id I) x :=
   DifferentiableOn.analyticAt (s := { x | HarmonicAt f x })
     (fun _ hy ↦ (HarmonicAt.differentiableAt_complex_partial hy).differentiableWithinAt)
     ((isOpen_setOfPred_harmonicAt f).mem_nhds hf)
@@ -72,7 +72,7 @@ theorem InnerProductSpace.HarmonicOnNhd.exists_analyticOnNhd_ball_re_eq {z : ℂ
     ∃ F : ℂ → ℂ, (AnalyticOnNhd ℂ F (ball z R)) ∧ ((ball z R).EqOn (fun z ↦ (F z).re) f) := by
   by_cases hR : R ≤ 0
   · simp [ball_eq_empty.2 hR]
-  let g := ofRealCLM ∘ (fderiv ℝ f · 1) - I • ofRealCLM ∘ (fderiv ℝ f · I)
+  let g := ofRealCLM ∘ (fderiv ℝ f · id 1) - I • ofRealCLM ∘ (fderiv ℝ f · id I)
   have hg : DifferentiableOn ℂ g (ball z R) :=
     fun x hx ↦ (HarmonicAt.differentiableAt_complex_partial (hf x hx)).differentiableWithinAt
   obtain ⟨F, hF⟩ := hg.isExactOn_ball.with_val_at z (f z)
@@ -89,6 +89,8 @@ theorem InnerProductSpace.HarmonicOnNhd.exists_analyticOnNhd_ball_re_eq {z : ℂ
   · intro y hy
     have h₄F := (hF.2 y hy).differentiableAt
     have h₅F := h₄F.restrictScalars (𝕜 := ℝ) (𝕜' := ℂ)
+    change fderivWithin ℝ (reCLM ∘ F) (ball z R) y id =
+      fderivWithin ℝ f (ball z R) y id
     rw [fderivWithin_eq_fderiv (isOpen_ball.uniqueDiffWithinAt hy)
       (reCLM.differentiableAt.comp y h₅F), fderivWithin_eq_fderiv
       (isOpen_ball.uniqueDiffWithinAt hy) ((hf y hy).1.differentiableAt two_ne_zero), fderiv_comp y
@@ -109,7 +111,7 @@ If a function `f : ℂ → ℝ` is harmonic, then `f` is the real part of a holo
 theorem InnerProductSpace.HarmonicOnNhd.exists_analyticOnNhd_univ_re_eq {f : ℂ → ℝ}
     (hf : HarmonicOnNhd f univ) :
     ∃ F : ℂ → ℂ, (AnalyticOnNhd ℂ F univ) ∧ ((fun z ↦ (F z).re) = f) := by
-  let g := ofRealCLM ∘ (fderiv ℝ f · 1) - I • ofRealCLM ∘ (fderiv ℝ f · I)
+  let g := ofRealCLM ∘ (fderiv ℝ f · id 1) - I • ofRealCLM ∘ (fderiv ℝ f · id I)
   have hg : Differentiable ℂ g :=
     fun x ↦ (HarmonicAt.differentiableAt_complex_partial (hf x (mem_univ x)))
   obtain ⟨F, hF⟩ := hg.isExactOn_univ.with_val_at 0 (f 0)
@@ -123,10 +125,13 @@ theorem InnerProductSpace.HarmonicOnNhd.exists_analyticOnNhd_univ_re_eq {f : ℂ
   case hd => exact hf.contDiffOn.differentiableOn two_ne_zero
   case heq =>
     intro y hy
-    simp only [fderivWithin_univ]
-    rw [fderiv_comp y (by fun_prop) (by fun_prop)]
+    have hyu : UniqueDiffWithinAt ℝ univ y := isOpen_univ.uniqueDiffWithinAt hy
+    change fderivWithin ℝ (reCLM ∘ F) univ y id = fderivWithin ℝ f univ y id
+    rw [fderivWithin_eq_fderiv hyu (reCLM.differentiableAt.comp y (h₃F y)),
+      fderivWithin_eq_fderiv hyu ((hf y hy).1.differentiableAt two_ne_zero),
+      fderiv_comp y (by fun_prop) (h₃F y)]
     ext x
-    trans fderiv ℝ f y (x.re • (1 : ℂ) + x.im • (I : ℂ))
+    trans fderiv ℝ f y id (x.re • (1 : ℂ) + x.im • (I : ℂ))
     · simp only [map_smul, map_add]
       simp [(h₁F y).hasFDerivAt.restrictScalars ℝ |>.fderiv, g]
     · simp

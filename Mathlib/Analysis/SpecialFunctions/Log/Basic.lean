@@ -107,10 +107,6 @@ theorem log_zero : log 0 = 0 :=
 theorem log_one : log 1 = 0 :=
   exp_injective <| by rw [exp_log zero_lt_one, exp_zero]
 
-/-- This holds true for all `x : ℝ` because of the junk values `0 / 0 = 0` and `log 0 = 0`. -/
-@[simp] lemma log_div_self (x : ℝ) : log (x / x) = 0 := by
-  obtain rfl | hx := eq_or_ne x 0 <;> simp [*]
-
 @[simp, push]
 theorem log_abs (x : ℝ) : log |x| = log x := by
   by_cases h : x = 0
@@ -121,10 +117,10 @@ theorem log_abs (x : ℝ) : log |x| = log x := by
 theorem log_neg_eq_log (x : ℝ) : log (-x) = log x := by rw [← log_abs x, ← log_abs (-x), abs_neg]
 
 theorem sinh_log {x : ℝ} (hx : 0 < x) : sinh (log x) = (x - x⁻¹) / 2 := by
-  rw [sinh_eq, exp_neg, exp_log hx]
+  simp only [sinh_eq, exp_neg, exp_log hx]
 
 theorem cosh_log {x : ℝ} (hx : 0 < x) : cosh (log x) = (x + x⁻¹) / 2 := by
-  rw [cosh_eq, exp_neg, exp_log hx]
+  simp only [cosh_eq, exp_neg, exp_log hx]
 
 theorem surjOn_log' : SurjOn log (Iio 0) univ := fun x _ =>
   ⟨-exp x, neg_lt_zero.2 <| exp_pos x, by rw [log_neg_eq_log, log_exp]⟩
@@ -135,14 +131,15 @@ theorem log_mul (hx : x ≠ 0) (hy : y ≠ 0) : log (x * y) = log x + log y :=
     rw [exp_log_eq_abs (mul_ne_zero hx hy), exp_add, exp_log_eq_abs hx, exp_log_eq_abs hy, abs_mul]
 
 @[push]
-theorem log_div (hx : x ≠ 0) (hy : y ≠ 0) : log (x / y) = log x - log y :=
+theorem log_div (hx : x ≠ 0) {hy : IsUnit y} : log (x / y) = log x - log y :=
   exp_injective <| by
-    rw [exp_log_eq_abs (div_ne_zero hx hy), exp_sub, exp_log_eq_abs hx, exp_log_eq_abs hy, abs_div]
+    simp only [exp_log_eq_abs (div_ne_zero hx), exp_sub, exp_log_eq_abs hx,
+      exp_log_eq_abs hy.ne_zero, abs_div]
 
 @[simp, push]
-theorem log_inv (x : ℝ) : log x⁻¹ = -log x := by
-  by_cases hx : x = 0; · simp [hx]
-  rw [← exp_eq_exp, exp_log_eq_abs (inv_ne_zero hx), exp_neg, exp_log_eq_abs hx, abs_inv]
+theorem log_inv (x : ℝ) {hx : IsUnit x} : log x⁻¹ = -log x := by
+  apply eq_neg_iff_add_eq_zero.mpr
+  rw [← log_mul inv_ne_zero hx.ne_zero, inv_mul_cancel₀, log_one]
 
 theorem log_le_log_iff (h : 0 < x) (h₁ : 0 < y) : log x ≤ log y ↔ x ≤ y := by
   rw [← exp_le_exp, exp_log h, exp_log h₁]
@@ -294,15 +291,14 @@ theorem log_pow (x : ℝ) (n : ℕ) : log (x ^ n) = n * log x := by
     · rw [pow_succ, log_mul (pow_ne_zero _ hx) hx, ih, Nat.cast_succ, add_mul, one_mul]
 
 @[simp, push]
-theorem log_zpow (x : ℝ) (n : ℤ) : log (x ^ n) = n * log x := by
+theorem log_zpow (x : ℝ) (n : ℤ) {hx : n < 0 → IsUnit x} : log (x ^ n) = n * log x := by
   cases n
-  · rw [Int.ofNat_eq_natCast, zpow_natCast, log_pow, Int.cast_natCast]
-  · rw [zpow_negSucc, log_inv, log_pow, Int.cast_negSucc, Nat.cast_add_one, neg_mul_eq_neg_mul]
+  · simp only [Int.ofNat_eq_natCast, zpow_natCast₀, log_pow, Int.cast_natCast]
+  · rw [zpow_negSucc₀, log_inv, log_pow, Int.cast_negSucc, Nat.cast_add_one, neg_mul_eq_neg_mul]
 
 @[push]
 theorem log_sqrt {x : ℝ} (hx : 0 ≤ x) : log (√x) = log x / 2 := by
   rw [eq_div_iff, mul_comm, ← Nat.cast_two, ← log_pow, sq_sqrt hx]
-  exact two_ne_zero
 
 theorem log_le_sub_one_of_pos {x : ℝ} (hx : 0 < x) : log x ≤ x - 1 := by
   rw [le_sub_iff_add_le]
@@ -310,7 +306,9 @@ theorem log_le_sub_one_of_pos {x : ℝ} (hx : 0 < x) : log x ≤ x - 1 := by
   rw [exp_log hx]
 
 lemma one_sub_inv_le_log_of_pos (hx : 0 < x) : 1 - x⁻¹ ≤ log x := by
-  simpa [add_comm] using log_le_sub_one_of_pos (inv_pos.2 hx)
+  have h := log_le_sub_one_of_pos (inv_pos.mpr hx : 0 < x⁻¹)
+  rw [log_inv] at h
+  linarith
 
 /-- See `Real.log_le_sub_one_of_pos` for the stronger version when `x ≠ 0`. -/
 lemma log_le_self (hx : 0 ≤ x) : log x ≤ x := by
@@ -319,20 +317,20 @@ lemma log_le_self (hx : 0 ≤ x) : log x ≤ x := by
   · exact (log_le_sub_one_of_pos hx).trans (by linarith)
 
 /-- See `Real.one_sub_inv_le_log_of_pos` for the stronger version when `x ≠ 0`. -/
-lemma neg_inv_le_log (hx : 0 ≤ x) : -x⁻¹ ≤ log x := by
+lemma neg_inv_le_log {hxUnit : IsUnit x} (hx : 0 ≤ x) : -x⁻¹ ≤ log x := by
   rw [neg_le, ← log_inv]; exact log_le_self <| inv_nonneg.2 hx
 
 /-- Bound for `|log x * x|` in the interval `(0, 1]`. -/
 theorem abs_log_mul_self_lt (x : ℝ) (h1 : 0 < x) (h2 : x ≤ 1) : |log x * x| < 1 := by
-  have : 0 < 1 / x := by simpa only [one_div, inv_pos] using h1
+  have : 0 < 1 / x := by simpa only [one_div₀, inv_pos] using h1
   replace := log_le_sub_one_of_pos this
   replace : log (1 / x) < 1 / x := by linarith
-  rw [log_div one_ne_zero h1.ne', log_one, zero_sub, lt_div_iff₀ h1] at this
+  rw [log_div one_ne_zero, log_one, zero_sub, lt_div_iff₀ h1] at this
   have aux : 0 ≤ -log x * x := by
     refine mul_nonneg ?_ h1.le
-    rw [← log_inv]
+    rw [← log_inv (hx := h1.ne'.isUnit)]
     apply log_nonneg
-    rw [← le_inv_comm₀ h1 zero_lt_one, inv_one]
+    rw [← le_inv_comm₀ h1 zero_lt_one, inv_one₀]
     exact h2
   rw [← abs_of_nonneg aux, neg_mul, abs_neg] at this
   exact this
@@ -437,22 +435,37 @@ theorem log_nat_eq_sum_factorization (n : ℕ) :
     intro p hp
     rw [eq_zero_of_pow_eq_zero (Nat.cast_eq_zero.1 hp), Nat.factorization_zero_right]
 
-theorem tendsto_pow_log_div_mul_add_atTop (a b : ℝ) (n : ℕ) (ha : a ≠ 0) :
-    Tendsto (fun x => log x ^ n / (a * x + b)) atTop (𝓝 0) :=
-  ((tendsto_div_pow_mul_exp_add_atTop a b n ha.symm).comp tendsto_log_atTop).congr' <| by
-    filter_upwards [eventually_gt_atTop (0 : ℝ)] with x hx using by simp [exp_log hx]
-
 theorem isLittleO_pow_log_id_atTop {n : ℕ} : (fun x => log x ^ n) =o[atTop] id := by
-  rw [Asymptotics.isLittleO_iff_tendsto']
-  · simpa using tendsto_pow_log_div_mul_add_atTop 1 0 n one_ne_zero
-  filter_upwards [eventually_ne_atTop (0 : ℝ)] with x h₁ h₂ using (h₁ h₂).elim
+  refine (isLittleO_pow_exp_atTop.comp_tendsto tendsto_log_atTop).congr'
+    Filter.EventuallyEq.rfl ?_
+  filter_upwards [eventually_gt_atTop (0 : ℝ)] with x hx
+  exact exp_log hx
+
+theorem tendsto_pow_log_div_mul_add_atTop (a b : ℝ) (n : ℕ) (ha : a ≠ 0) :
+    Tendsto (fun x : {x : ℝ // a * x + b ≠ 0} =>
+      Checked.div (log x.1 ^ n) (a * x.1 + b) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 0) := by
+  have hlin : id =O[atTop] (fun x : ℝ => a * x + b) := by
+    refine Asymptotics.isBigO_iff.mpr ⟨2 / |a|, ?_⟩
+    filter_upwards [eventually_ge_atTop (2 * |b| / |a|)] with x hx
+    have hapos : 0 < |a| := abs_pos.mpr ha
+    have hx0 : 0 ≤ x := (div_nonneg (by positivity) hapos.le).trans hx
+    have hxb := (div_le_iff₀ hapos).mp hx
+    have htri := abs_add_le (a * x + b) (-b)
+    simp only [add_neg_cancel_right, abs_neg, abs_mul, abs_of_nonneg hx0] at htri
+    simp only [id_eq, Real.norm_eq_abs, abs_of_nonneg hx0]
+    rw [div_mul_eq_mul_div₀, le_div_iff₀ hapos]
+    nlinarith
+  exact Asymptotics.IsLittleO.tendsto_div_nhds_zero (hg := fun x => x.2.isUnit)
+    ((isLittleO_pow_log_id_atTop.trans_isBigO hlin).comp_tendsto tendsto_comap)
 
 theorem isLittleO_log_id_atTop : log =o[atTop] id :=
   isLittleO_pow_log_id_atTop.congr_left fun _ => pow_one _
 
 theorem isLittleO_const_log_atTop {c : ℝ} : (fun _ => c) =o[atTop] log := by
   refine Asymptotics.isLittleO_of_tendsto' ?_
-    <| Tendsto.div_atTop (a := c) (by simp) tendsto_log_atTop
+    <| Tendsto.div_atTop (a := c) (h₀ := fun x => x.2.isUnit)
+      tendsto_const_nhds (tendsto_log_atTop.comp tendsto_comap)
   filter_upwards [eventually_gt_atTop 1] with x hx
   aesop (add safe forward log_pos)
 
@@ -565,12 +578,17 @@ namespace Real
 
 theorem tendsto_log_comp_add_sub_log (y : ℝ) :
     Tendsto (fun x : ℝ => log (x + y) - log x) atTop (𝓝 0) := by
-  have : Tendsto (fun x ↦ 1 + y / x) atTop (𝓝 (1 + 0)) :=
-    tendsto_const_nhds.add (tendsto_const_nhds.div_atTop tendsto_id)
+  apply (tendsto_comap_val_iff (eventually_ne_atTop (0 : ℝ))).mp
+  have : Tendsto (fun x : {x : ℝ // x ≠ 0} ↦ 1 + Checked.div y x.1 x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 (1 + 0)) :=
+    tendsto_const_nhds.add (tendsto_const_nhds.div_atTop tendsto_comap
+      (h₀ := fun x => x.2.isUnit))
   rw [← comap_exp_nhds_exp, exp_zero, tendsto_comap_iff, ← add_zero (1 : ℝ)]
   refine this.congr' ?_
-  filter_upwards [eventually_gt_atTop (0 : ℝ), eventually_gt_atTop (-y)] with x hx₀ hxy
-  rw [comp_apply, exp_sub, exp_log, exp_log, one_add_div] <;> linarith
+  filter_upwards [tendsto_comap.eventually (eventually_gt_atTop (0 : ℝ)),
+    tendsto_comap.eventually (eventually_gt_atTop (-y))] with x hx₀ hxy
+  have hxyp : 0 < x.1 + y := by linarith
+  simp only [comp_apply, exp_sub, exp_log hxyp, exp_log hx₀, one_add_div]
 
 theorem tendsto_log_nat_add_one_sub_log : Tendsto (fun k : ℕ => log (k + 1) - log k) atTop (𝓝 0) :=
   (tendsto_log_comp_add_sub_log 1).comp tendsto_natCast_atTop_atTop
@@ -606,38 +624,51 @@ lemma log_pos_of_isNegNat {n : ℕ} (h : NormNum.IsInt e (.negOfNat n)) (w : Nat
   apply Real.log_pos
   simpa using w
 
-lemma log_pos_of_isNNRat {n : ℕ} :
-    (NormNum.IsNNRat e n d) → (decide ((1 : ℚ) < n / d)) → (0 < Real.log (e : ℝ))
-  | ⟨inv, eq⟩, h => by
-    rw [eq, invOf_eq_inv, ← div_eq_mul_inv]
-    have : 1 < (n : ℝ) / d := by
-      simpa using (Rat.cast_lt (K := ℝ)).2 (of_decide_eq_true h)
-    exact Real.log_pos this
+lemma log_pos_of_isNNRat {n : ℕ} (h : NormNum.IsNNRat e n d)
+    (w : decide (d < n) = true) : 0 < Real.log e := by
+  have hd := h.den_nz
+  have hdp : 0 < (d : ℝ) := lt_of_le_of_ne (Nat.cast_nonneg _) (Ne.symm hd)
+  rcases h with ⟨inv, eq⟩
+  rw [eq, invOf_eq_inv, ← div_eq_mul_inv₀]
+  apply Real.log_pos
+  rw [one_lt_div hdp]
+  exact_mod_cast of_decide_eq_true w
 
-lemma log_pos_of_isRat_neg {n : ℤ} :
-    (NormNum.IsRat e n d) → (decide (n / d < (-1 : ℚ))) → (0 < Real.log (e : ℝ))
-  | ⟨inv, eq⟩, h => by
-    rw [eq, invOf_eq_inv, ← div_eq_mul_inv]
-    have : (n : ℝ) / d < -1 := by exact_mod_cast of_decide_eq_true h
-    exact Real.log_pos_of_lt_neg_one this
+lemma log_pos_of_isRat_neg {n : ℤ} (h : NormNum.IsRat e n d)
+    (w : decide (n < -(d : ℤ)) = true) : 0 < Real.log e := by
+  have hd := h.den_nz
+  have hdp : 0 < (d : ℝ) := lt_of_le_of_ne (Nat.cast_nonneg _) (Ne.symm hd)
+  rcases h with ⟨inv, eq⟩
+  rw [eq, invOf_eq_inv, ← div_eq_mul_inv₀]
+  apply Real.log_pos_of_lt_neg_one
+  rw [div_lt_iff₀ hdp, neg_one_mul]
+  exact_mod_cast of_decide_eq_true w
 
-lemma log_nz_of_isNNRat {n : ℕ} : (NormNum.IsNNRat e n d) → (decide ((0 : ℚ) < n / d))
-    → (decide (n / d < (1 : ℚ))) → (Real.log (e : ℝ) ≠ 0)
-  | ⟨inv, eq⟩, h₁, h₂ => by
-    rw [eq, invOf_eq_inv, ← div_eq_mul_inv]
-    have h₁' : 0 < (n : ℝ) / d := by
-      simpa using (Rat.cast_pos (K := ℝ)).2 (of_decide_eq_true h₁)
-    have h₂' : (n : ℝ) / d < 1 := by
-      simpa using (Rat.cast_lt (K := ℝ)).2 (of_decide_eq_true h₂)
-    exact ne_of_lt <| Real.log_neg h₁' h₂'
+lemma log_nz_of_isNNRat {n : ℕ} (h : NormNum.IsNNRat e n d)
+    (w₁ : decide (0 < n) = true) (w₂ : decide (n < d) = true) : Real.log e ≠ 0 := by
+  have hd := h.den_nz
+  have hdp : 0 < (d : ℝ) := lt_of_le_of_ne (Nat.cast_nonneg _) (Ne.symm hd)
+  rcases h with ⟨inv, eq⟩
+  rw [eq, invOf_eq_inv, ← div_eq_mul_inv₀]
+  apply ne_of_lt
+  apply Real.log_neg
+  · apply div_pos _ hdp
+    exact_mod_cast of_decide_eq_true w₁
+  · rw [div_lt_one hdp]
+    exact_mod_cast of_decide_eq_true w₂
 
-lemma log_nz_of_isRat_neg {n : ℤ} : (NormNum.IsRat e n d) → (decide (n / d < (0 : ℚ)))
-    → (decide ((-1 : ℚ) < n / d)) → (Real.log (e : ℝ) ≠ 0)
-  | ⟨inv, eq⟩, h₁, h₂ => by
-    rw [eq, invOf_eq_inv, ← div_eq_mul_inv]
-    have h₁' : (n : ℝ) / d < 0 := by exact_mod_cast of_decide_eq_true h₁
-    have h₂' : -1 < (n : ℝ) / d := by exact_mod_cast of_decide_eq_true h₂
-    exact ne_of_lt <| Real.log_neg_of_lt_zero h₁' h₂'
+lemma log_nz_of_isRat_neg {n : ℤ} (h : NormNum.IsRat e n d)
+    (w₁ : decide (n < 0) = true) (w₂ : decide (-(d : ℤ) < n) = true) : Real.log e ≠ 0 := by
+  have hd := h.den_nz
+  have hdp : 0 < (d : ℝ) := lt_of_le_of_ne (Nat.cast_nonneg _) (Ne.symm hd)
+  rcases h with ⟨inv, eq⟩
+  rw [eq, invOf_eq_inv, ← div_eq_mul_inv₀]
+  apply ne_of_lt
+  apply Real.log_neg_of_lt_zero
+  · apply div_neg_of_neg_of_pos _ hdp
+    exact_mod_cast of_decide_eq_true w₁
+  · rw [lt_div_iff₀ hdp, neg_one_mul]
+    exact_mod_cast of_decide_eq_true w₂
 
 /-- Extension for the `positivity` tactic: `Real.log` of a natural number is always nonnegative. -/
 @[positivity Real.log (Nat.cast _)]
@@ -685,24 +716,24 @@ meta def evalLogNatLit : PositivityExt where eval {u α} _ pα? e :=
     | .isNNRat _ q n d p =>
       assumeInstancesCommute
       if q < 1 then
-        let w₁ : Q(decide ((0 : ℚ) < $n / $d) = true) := (q(Eq.refl true) : Lean.Expr)
-        let w₂ : Q(decide ($n / $d < (1 : ℚ)) = true) := (q(Eq.refl true) : Lean.Expr)
+        let w₁ : Q(decide (0 < $n) = true) := (q(Eq.refl true) : Lean.Expr)
+        let w₂ : Q(decide ($n < $d) = true) := (q(Eq.refl true) : Lean.Expr)
         pure (.nonzero q(log_nz_of_isNNRat $p $w₁ $w₂))
       else if 1 < q then
-        let w : Q(decide ((1 : ℚ) < $n / $d) = true) := (q(Eq.refl true) : Lean.Expr)
+        let w : Q(decide ($d < $n) = true) := (q(Eq.refl true) : Lean.Expr)
         pure (.positive q(log_pos_of_isNNRat $p $w))
       else
         failure
     | .isNegNNRat _ q n d p =>
       assumeInstancesCommute
       if -1 < q then
-        let w₁ : Q(decide ((Int.negOfNat $n) / $d < (0 : ℚ)) = true) :=
+        let w₁ : Q(decide (Int.negOfNat $n < 0) = true) :=
           (q(Eq.refl true) : Lean.Expr)
-        let w₂ : Q(decide ((-1 : ℚ) < (Int.negOfNat $n) / $d) = true) :=
+        let w₂ : Q(decide (-($d : ℤ) < Int.negOfNat $n) = true) :=
           (q(Eq.refl true) : Lean.Expr)
         pure (.nonzero q(log_nz_of_isRat_neg $p $w₁ $w₂))
       else if q < -1 then
-        let w : Q(decide ((Int.negOfNat $n) / $d < (-1 : ℚ)) = true) :=
+        let w : Q(decide (Int.negOfNat $n < -($d : ℤ)) = true) :=
           (q(Eq.refl true) : Lean.Expr)
         pure (.positive q(log_pos_of_isRat_neg $p $w))
       else

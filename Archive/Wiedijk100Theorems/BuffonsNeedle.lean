@@ -31,7 +31,6 @@ vertical line if its projection onto the x-axis contains `0`.
 
 We define a random variable `N : Ω → ℝ` that is `1` if the needle crosses a vertical line, and `0`
 otherwise. This is defined as `fun ω => Set.indicator (needleProjX l (B ω).1 (B ω).2) 1 0`.
-f
 As in many references, the problem is split into two cases, `l ≤ d` (`buffon_short`), and `d ≤ l`
 (`buffon_long`). For both cases, we show that
 ```lean
@@ -46,7 +45,7 @@ In the short case `l ≤ d`, we show that `[-l * θ.sin/2, l * θ.sin/2] ⊆ [-d
 ```
 Which then concludes in the short case being `∫ ω, N ω ∂ℙ = (2 * l) / (d * π)`.
 
-In the long case, `l ≤ d` (`buffon_long`), we show the outer integral simplifies to
+In the long case, `d ≤ l` (`buffon_long`), we show the outer integral simplifies to
 ```lean
 ∫ θ in 0..π, min d (θ.sin * l)
 ```
@@ -184,7 +183,7 @@ lemma integrable_needleCrossesIndicator :
     simp_rw [Pi.one_apply, MeasureTheory.lintegral_const, one_mul,
       Measure.productBySections_restrict,
       Measure.restrict_apply MeasurableSet.univ, Set.univ_inter, Measure.productBySections_prod,
-      Real.volume_Icc, neg_div, sub_neg_eq_add, add_halves, sub_zero,
+      Real.volume_Icc, neg_div₀ (2 : ℝ), sub_neg_eq_add, add_halves, sub_zero,
       ← ENNReal.ofReal_mul hd.le, ENNReal.ofReal_lt_top]
 
 include hd hB hBₘ in
@@ -234,7 +233,7 @@ lemma buffon_integral :
     have :
         x ≤ Real.sin θ * l / 2 ∧ 0 ≤ x + Real.sin θ * l / 2 ↔
         -(Real.sin θ * l) / 2 ≤ x ∧ x ≤ Real.sin θ * l / 2 := by
-      rw [neg_div, and_comm, ← tsub_le_iff_right, zero_sub]
+      rw [neg_div₀, and_comm, ← tsub_le_iff_right, zero_sub]
     by_cases h : x ≤ Real.sin θ * l / 2 ∧ 0 ≤ x + Real.sin θ * l / 2
     · rw [ite_eq_left h, ite_eq_left (this.mp h)]
     · rw [ite_eq_right h, ite_eq_right (this.not.mp h)]
@@ -349,7 +348,7 @@ theorem buffon_long (h : d ≤ l) :
     MeasurableSet.univ, Measure.restrict_apply, Set.univ_inter, Set.Icc_inter_Icc, Real.volume_Icc,
     min_div_div_right zero_le_two d, max_div_div_right zero_le_two (-d),
     div_sub_div_same, neg_mul, max_neg_neg, sub_neg_eq_add, ← mul_two,
-    mul_div_cancel_right₀ (min d (Real.sin _ * l)) two_ne_zero, MeasureTheory.measureReal_def
+    mul_div_cancel_right₀ (min d (Real.sin _ * l)), MeasureTheory.measureReal_def
   ]
   have : ∀ᵐ θ, θ ∈ Set.Icc 0 π →
       ENNReal.toReal (ENNReal.ofReal (min d (θ.sin * l))) = min d (θ.sin * l) := by
@@ -364,8 +363,22 @@ theorem buffon_long (h : d ≤ l) :
     ← intervalIntegral.integral_add_adjacent_intervals
       (intervalIntegrable_min_const_sin_mul d l _ _) (intervalIntegrable_min_const_sin_mul d l _ _),
     integral_zero_to_arcsin_min d l hd hl, integral_arcsin_to_pi_div_two_min d l hl h]
-  field_simp
-  simp (disch := positivity)
-  field
+  let q := d / l
+  let n := (d * π)⁻¹
+  have hql : q * l = d := div_mul_cancel₀ d
+  have hn : n * (d * π) = 1 := inv_mul_cancel₀
+  have hrad : l ^ 2 * (1 - q ^ 2) = l ^ 2 - d ^ 2 := calc
+    _ = l ^ 2 - (q * l) ^ 2 := by ring
+    _ = _ := by rw [hql]
+  have hs : √(1 - q ^ 2) * l = √(l ^ 2 - d ^ 2) := calc
+    _ = √(l ^ 2) * √(1 - q ^ 2) := by rw [Real.sqrt_sq hl.le, mul_comm]
+    _ = √(l ^ 2 * (1 - q ^ 2)) := (Real.sqrt_mul (sq_nonneg l) _).symm
+    _ = _ := congrArg Real.sqrt hrad
+  change n * (2 * ((1 - √(1 - q ^ 2)) * l + (π / 2 - q.arcsin) * d)) =
+    (2 * l) * n - (2 * n) * (√(l ^ 2 - d ^ 2) + d * q.arcsin) + 1
+  calc
+    _ = (2 * l) * n - (2 * n) * (√(1 - q ^ 2) * l + d * q.arcsin) +
+        n * (d * (π / 2 + π / 2)) := by ring
+    _ = _ := by rw [add_halves, hs, hn]
 
 end BuffonsNeedle

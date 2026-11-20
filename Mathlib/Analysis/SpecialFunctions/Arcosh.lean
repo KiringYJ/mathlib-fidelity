@@ -70,24 +70,33 @@ theorem arcosh_zero : arcosh 1 = 0 := by simp [arcosh]
 
 lemma add_sqrt_self_sq_sub_one_inv {x : ℝ} (hx : 1 ≤ x) :
     (x + √(x ^ 2 - 1))⁻¹ = x - √(x ^ 2 - 1) := by
-  apply inv_eq_of_mul_eq_one_right
+  apply inv_eq_of_mul_eq_one_right₀
   rw [← pow_two_sub_pow_two, sq_sqrt (sub_nonneg_of_le (one_le_pow₀ hx)), sub_sub_cancel]
+
+private theorem exp_neg_arcosh {x : ℝ} (hx : 1 ≤ x) : exp (-arcosh x) = x - √(x ^ 2 - 1) := by
+  rw [exp_neg]
+  apply inv_eq_of_mul_eq_one_right₀
+  rw [exp_arcosh hx, ← pow_two_sub_pow_two, sq_sqrt (sub_nonneg_of_le (one_le_pow₀ hx))]
+  ring
 
 /-- `arcosh` is the right inverse of `cosh` over $[1, ∞)$. -/
 theorem cosh_arcosh {x : ℝ} (hx : 1 ≤ x) : cosh (arcosh x) = x := by
-  rw [arcosh, cosh_eq, exp_neg, exp_log (by positivity), add_sqrt_self_sq_sub_one_inv hx]
+  rw [cosh_eq, exp_arcosh hx, exp_neg_arcosh hx]
   ring
 
 theorem arcosh_eq_zero_iff {x : ℝ} (hx : 1 ≤ x) : arcosh x = 0 ↔ x = 1 := by
-  rw [← exp_injective.eq_iff, exp_arcosh hx, exp_zero]
-  grind
+  constructor
+  · intro h
+    simpa [h] using (cosh_arcosh hx).symm
+  · rintro rfl
+    exact arcosh_zero
 
 theorem sinh_arcosh {x : ℝ} (hx : 1 ≤ x) : sinh (arcosh x) = √(x ^ 2 - 1) := by
-  rw [arcosh, sinh_eq, exp_neg, exp_log (by positivity), add_sqrt_self_sq_sub_one_inv hx]
+  rw [sinh_eq, exp_arcosh hx, exp_neg_arcosh hx]
   ring
 
 theorem tanh_arcosh {x : ℝ} (hx : 1 ≤ x) : tanh (arcosh x) = √(x ^ 2 - 1) / x := by
-  rw [tanh_eq_sinh_div_cosh, sinh_arcosh hx, cosh_arcosh hx]
+  rw [tanh_eq_sinh_div_cosh, div_eq_div_iff, sinh_arcosh hx, cosh_arcosh hx]
 
 /-- `arcosh` is the left inverse of `cosh` over $[0, ∞)$. -/
 theorem arcosh_cosh {x : ℝ} (hx : 0 ≤ x) : arcosh (cosh x) = x := by
@@ -151,13 +160,19 @@ def coshOpenPartialHomeomorph : OpenPartialHomeomorph ℝ ℝ where
   continuousOn_invFun := continuousOn_arcosh.mono Ioi_subset_Ici_self
 
 theorem hasStrictDerivAt_arcosh {x : ℝ} (hx : x ∈ Ioi 1) :
-    HasStrictDerivAt arcosh (√(x ^ 2 - 1))⁻¹ x := by
-  rw [← sinh_arcosh (le_of_lt hx)]
-  refine coshOpenPartialHomeomorph.hasStrictDerivAt_symm hx ?_ (hasStrictDerivAt_cosh _)
-  rw [ne_eq, sinh_eq_zero]
-  exact ne_of_gt (arcosh_pos hx)
+    HasStrictDerivAt arcosh (Checked.inv √(x ^ 2 - 1)
+      (sqrt_pos.mpr (sub_pos.mpr
+        ((one_lt_sq_iff₀ (zero_le_one.trans hx.le)).mpr hx))).ne'.isUnit) x := by
+  have hne : sinh (arcosh x) ≠ 0 := sinh_ne_zero.mpr (arcosh_pos hx).ne'
+  have hd := coshOpenPartialHomeomorph.hasStrictDerivAt_symm hx hne (hasStrictDerivAt_cosh _)
+  convert hd using 1
+  · rfl
+  · exact inv_inj₀.mpr (sinh_arcosh hx.le).symm
 
-theorem hasDerivAt_arcosh {x : ℝ} (hx : x ∈ Ioi 1) : HasDerivAt arcosh (√(x ^ 2 - 1))⁻¹ x :=
+theorem hasDerivAt_arcosh {x : ℝ} (hx : x ∈ Ioi 1) :
+    HasDerivAt arcosh (Checked.inv √(x ^ 2 - 1)
+      (sqrt_pos.mpr (sub_pos.mpr
+        ((one_lt_sq_iff₀ (zero_le_one.trans hx.le)).mpr hx))).ne'.isUnit) x :=
   (hasStrictDerivAt_arcosh hx).hasDerivAt
 
 theorem differentiableAt_arcosh {x : ℝ} (hx : x ∈ Ioi 1) : DifferentiableAt ℝ arcosh x :=

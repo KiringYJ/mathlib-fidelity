@@ -37,27 +37,35 @@ open scoped MatrixGroups
 namespace EisensteinSeries
 
 lemma summable_norm_eisSummand {k : ℤ} (hk : 3 ≤ k) (z : ℍ) :
-    Summable fun (x : Fin 2 → ℤ) ↦ ‖(eisSummand k x z)‖ := by
+    Summable fun x : {x : Fin 2 → ℤ // x ≠ 0} ↦ ‖eisSummand k x z (fun _ ↦ x.property)‖ := by
   have hk' : (2 : ℝ) < k := by norm_cast
-  apply ((summable_one_div_norm_rpow hk').mul_left <| r z ^ (-k : ℝ)).of_nonneg_of_le
+  apply (((summable_one_div_norm_rpow hk').subtype (fun x ↦ x ≠ 0)).mul_left
+      (r z ^ (-k : ℝ))).of_nonneg_of_le
     (fun _ ↦ norm_nonneg _)
   intro b
-  simp only [eisSummand, norm_zpow]
-  exact_mod_cast summand_bound z (show 0 ≤ (k : ℝ) by positivity) b
+  have hpow := Real.rpow_intCast ‖(b.val 0 : ℂ) * z + b.val 1‖ (-k)
+    (h := fun _ ↦ norm_ne_zero_iff.mpr (eisSummand_base_ne_zero b.property z))
+  simpa only [Function.comp_apply, eisSummand, norm_zpow, ← hpow, Int.cast_neg] using
+    summand_bound z (show 0 ≤ (k : ℝ) by positivity) b.val
 
 /-- The norm of the restricted sum is less than the full sum of the norms. -/
 lemma norm_le_tsum_norm (N : ℕ) (a : Fin 2 → ZMod N) (k : ℤ) (hk : 3 ≤ k) (z : ℍ) :
-    ‖eisensteinSeries a k z‖ ≤ ∑' (x : Fin 2 → ℤ), ‖eisSummand k x z‖ := by
-  simp_rw [eisensteinSeries]
-  apply le_trans (norm_tsum_le_tsum_norm ((summable_norm_eisSummand hk z).subtype _))
-    (Summable.tsum_subtype_le (fun (x : Fin 2 → ℤ) ↦ ‖(eisSummand k x z)‖) _ (fun _ ↦ norm_nonneg _)
-      (summable_norm_eisSummand hk z))
+    ‖eisensteinSeries a k z‖ ≤
+      ∑' x : {x : Fin 2 → ℤ // x ≠ 0}, ‖eisSummand k x z (fun _ ↦ x.property)‖ := by
+  let q (x : gammaSet N 1 a) : {x : Fin 2 → ℤ // x ≠ 0} := ⟨x.val, gammaSet_ne_zero x one_ne_zero⟩
+  have hq : Function.Injective q := fun _ _ h ↦
+    Subtype.ext (congrArg (fun x : {x : Fin 2 → ℤ // x ≠ 0} ↦ x.val) h)
+  have hs := summable_norm_eisSummand hk z
+  have hsq := hs.comp_injective hq
+  exact (norm_tsum_le_tsum_norm hsq).trans
+    (hsq.tsum_le_tsum_of_inj q hq (fun _ _ ↦ norm_nonneg _) (fun _ ↦ le_rfl) hs)
 
 /-- Eisenstein series are bounded at infinity. -/
 theorem isBoundedAtImInfty_eisensteinSeriesSIF {N : ℕ} [NeZero N] (a : Fin 2 → ZMod N) {k : ℤ}
     (hk : 3 ≤ k) (A : SL(2, ℤ)) : IsBoundedAtImInfty (eisensteinSeriesSIF a k ∣[k] A) := by
   simp_rw [UpperHalfPlane.isBoundedAtImInfty_iff, eisensteinSeriesSIF] at *
-  refine ⟨∑'(x : Fin 2 → ℤ), r ⟨⟨N, 2⟩, Nat.ofNat_pos⟩ ^ (-k) * ‖x‖ ^ (-k), 2, ?_⟩
+  refine ⟨∑' x : {x : Fin 2 → ℤ // x ≠ 0},
+    r ⟨⟨N, 2⟩, Nat.ofNat_pos⟩ ^ (-k : ℝ) * ‖x.val‖ ^ (-k : ℝ), 2, ?_⟩
   intro z hz
   obtain ⟨n, hn⟩ := (ModularGroup_T_zpow_mem_verticalStrip z (NeZero.pos N))
   rw [SlashInvariantForm.coe_mk, eisensteinSeries_slash_apply, ← eisensteinSeriesSIF_apply,
@@ -65,11 +73,13 @@ theorem isBoundedAtImInfty_eisensteinSeriesSIF {N : ℕ} [NeZero N] (a : Fin 2 �
   apply le_trans (norm_le_tsum_norm N (a ᵥ* A) k hk _)
   have hk' : (2 : ℝ) < k := by norm_cast
   apply (summable_norm_eisSummand hk _).tsum_le_tsum _
-  · exact_mod_cast (summable_one_div_norm_rpow hk').mul_left <| r ⟨⟨N, 2⟩, Nat.ofNat_pos⟩ ^ (-k)
+  · exact ((summable_one_div_norm_rpow hk').subtype (fun x ↦ x ≠ 0)).mul_left
+      (r ⟨⟨N, 2⟩, Nat.ofNat_pos⟩ ^ (-k : ℝ))
   · intro x
-    simp_rw [eisSummand, norm_zpow]
-    exact_mod_cast
-      summand_bound_of_mem_verticalStrip (lt_trans two_pos hk').le x two_pos
-      (verticalStrip_anti_right N hz hn)
+    have hpow (w : ℍ) := Real.rpow_intCast ‖(x.val 0 : ℂ) * w + x.val 1‖ (-k)
+      (h := fun _ ↦ norm_ne_zero_iff.mpr (eisSummand_base_ne_zero x.property w))
+    simpa only [eisSummand, norm_zpow, ← hpow, Int.cast_neg] using
+      summand_bound_of_mem_verticalStrip (lt_trans two_pos hk').le x.val two_pos
+        (verticalStrip_anti_right N hz hn)
 
 end EisensteinSeries

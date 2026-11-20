@@ -11,6 +11,7 @@ public import Mathlib.MeasureTheory.Function.SpecialFunctions.Basic
 public import Mathlib.MeasureTheory.Integral.Lebesgue.Add
 
 import Mathlib.MeasureTheory.Integral.Lebesgue.Markov
+import Mathlib.Tactic.LinearCombination
 
 /-!
 # Mean value inequalities for integrals
@@ -99,24 +100,26 @@ theorem lintegral_mul_eq_one_iff_of_lintegral_rpow_eq_one {p q : ℝ} (hpq : p.H
   · exact fun ⟨hf, hg⟩ ↦ lt_top_of_mul_ne_top_right ha hf |>.trans_eq' hg |>.false
 
 /-- Function multiplied by the inverse of its p-seminorm `(∫⁻ f^p ∂μ) ^ 1/p` -/
-private def funMulInvSnorm (f : α → ℝ≥0∞) (p : ℝ) (μ : Measure α) : α → ℝ≥0∞ := fun a =>
+private def funMulInvSnorm (f : α → ℝ≥0∞) (p : ℝ) (μ : Measure α)
+    (hp : IsUnit p := by checked_unit) : α → ℝ≥0∞ := fun a =>
   f a * ((∫⁻ c, f c ^ p ∂μ) ^ (1 / p))⁻¹
 
 private theorem _root_.AEMeasurable.funMulInvSnorm {f : α → ℝ≥0∞} (p : ℝ) {μ : Measure α}
-    (hf : AEMeasurable f μ) : AEMeasurable (funMulInvSnorm f p μ) μ :=
+    (hf : AEMeasurable f μ) {hp : IsUnit p} : AEMeasurable (funMulInvSnorm f p μ) μ :=
   hf.mul_const _
 
-private theorem fun_eq_funMulInvSnorm_mul_eLpNorm {p : ℝ} (f : α → ℝ≥0∞)
+private theorem fun_eq_funMulInvSnorm_mul_eLpNorm {p : ℝ} {hp : IsUnit p} (f : α → ℝ≥0∞)
     (hf_nonzero : (∫⁻ a, f a ^ p ∂μ) ≠ 0) (hf_top : (∫⁻ a, f a ^ p ∂μ) ≠ ⊤) {a : α} :
-    f a = funMulInvSnorm f p μ a * (∫⁻ c, f c ^ p ∂μ) ^ (1 / p) := by
+    f a = funMulInvSnorm f p μ (hp := hp) a * (∫⁻ c, f c ^ p ∂μ) ^ (1 / p) := by
   simp [funMulInvSnorm, mul_assoc, ENNReal.inv_mul_cancel, hf_nonzero, hf_top]
 
 private theorem funMulInvSnorm_rpow {p : ℝ} (hp0 : 0 < p) {f : α → ℝ≥0∞} {a : α} :
-    funMulInvSnorm f p μ a ^ p = f a ^ p * (∫⁻ c, f c ^ p ∂μ)⁻¹ := by
+    funMulInvSnorm f p μ (hp := hp0.ne'.isUnit) a ^ p =
+      f a ^ p * (∫⁻ c, f c ^ p ∂μ)⁻¹ := by
   rw [funMulInvSnorm, mul_rpow_of_nonneg _ _ (le_of_lt hp0)]
   suffices h_inv_rpow : ((∫⁻ c : α, f c ^ p ∂μ) ^ (1 / p))⁻¹ ^ p = (∫⁻ c : α, f c ^ p ∂μ)⁻¹ by
     rw [h_inv_rpow]
-  rw [inv_rpow, ← rpow_mul, one_div_mul_cancel hp0.ne', rpow_one]
+  rw [inv_rpow, ← rpow_mul, one_div_mul_cancel, rpow_one]
 
 private theorem funMulInvSnorm_rpow' {p : ℝ} (hp0 : 0 < p) (f : α → ℝ≥0∞) :
     funMulInvSnorm f p μ ^ p = (∫⁻ c, f c ^ p ∂μ)⁻¹ • f ^ p := by
@@ -125,13 +128,14 @@ private theorem funMulInvSnorm_rpow' {p : ℝ} (hp0 : 0 < p) (f : α → ℝ≥0
 
 private theorem lintegral_rpow_funMulInvSnorm_eq_one {p : ℝ} (hp0_lt : 0 < p) {f : α → ℝ≥0∞}
     (hf_nonzero : (∫⁻ a, f a ^ p ∂μ) ≠ 0) (hf_top : (∫⁻ a, f a ^ p ∂μ) ≠ ⊤) :
-    ∫⁻ c, funMulInvSnorm f p μ c ^ p ∂μ = 1 := by
+    ∫⁻ c, funMulInvSnorm f p μ (hp := hp0_lt.ne'.isUnit) c ^ p ∂μ = 1 := by
   simp_rw [funMulInvSnorm_rpow hp0_lt]
   rw [lintegral_mul_const', ENNReal.mul_inv_cancel hf_nonzero hf_top]
   rwa [inv_ne_top]
 
 private theorem lintegral_mul_eq_lintegral_funMulInvSnorm_mul_funMulInvSnorm_mul_Lp_mul_Lq {p q : ℝ}
-    {f g : α → ℝ≥0∞} (hf_nontop : ∫⁻ a, f a ^ p ∂μ ≠ ⊤) (hg_nontop : ∫⁻ a, g a ^ q ∂μ ≠ ⊤)
+    {hp : IsUnit p} {hq : IsUnit q} {f g : α → ℝ≥0∞}
+    (hf_nontop : ∫⁻ a, f a ^ p ∂μ ≠ ⊤) (hg_nontop : ∫⁻ a, g a ^ q ∂μ ≠ ⊤)
     (hf_nonzero : ∫⁻ a, f a ^ p ∂μ ≠ 0) (hg_nonzero : ∫⁻ a, g a ^ q ∂μ ≠ 0) :
     ∫⁻ a, (f * g) a ∂μ = (∫⁻ a, (funMulInvSnorm f p μ * funMulInvSnorm g q μ) a ∂μ) *
       ((∫⁻ c : α, f c ^ p ∂μ) ^ (1 / p) * (∫⁻ c : α, g c ^ q ∂μ) ^ (1 / q)) := by
@@ -139,8 +143,8 @@ private theorem lintegral_mul_eq_lintegral_funMulInvSnorm_mul_funMulInvSnorm_mul
     grind [mul_eq_top, rpow_eq_top_iff]
   rw [← lintegral_mul_const' _ _ this]
   refine lintegral_congr fun a ↦ ?_
-  rw [Pi.mul_apply, fun_eq_funMulInvSnorm_mul_eLpNorm f hf_nonzero hf_nontop,
-    fun_eq_funMulInvSnorm_mul_eLpNorm g hg_nonzero hg_nontop, Pi.mul_apply]
+  rw [Pi.mul_apply, fun_eq_funMulInvSnorm_mul_eLpNorm (hp := hp) f hf_nonzero hf_nontop,
+    fun_eq_funMulInvSnorm_mul_eLpNorm (hp := hq) g hg_nonzero hg_nontop, Pi.mul_apply]
   ring
 
 /-- Hölder's inequality in case of finite non-zero integrals -/
@@ -149,7 +153,8 @@ theorem lintegral_mul_le_Lp_mul_Lq_of_ne_zero_of_ne_top {p q : ℝ} (hpq : p.Hol
     (hg_nontop : ∫⁻ a, g a ^ q ∂μ ≠ ⊤) (hf_nonzero : ∫⁻ a, f a ^ p ∂μ ≠ 0)
     (hg_nonzero : ∫⁻ a, g a ^ q ∂μ ≠ 0) :
     ∫⁻ a, (f * g) a ∂μ ≤ (∫⁻ a, f a ^ p ∂μ) ^ (1 / p) * (∫⁻ a, g a ^ q ∂μ) ^ (1 / q) := by
-  rw [lintegral_mul_eq_lintegral_funMulInvSnorm_mul_funMulInvSnorm_mul_Lp_mul_Lq hf_nontop hg_nontop
+  rw [lintegral_mul_eq_lintegral_funMulInvSnorm_mul_funMulInvSnorm_mul_Lp_mul_Lq
+      (hp := hpq.pos.ne'.isUnit) (hq := hpq.symm.pos.ne'.isUnit) hf_nontop hg_nontop
       hf_nonzero hg_nonzero]
   apply mul_le_of_le_one_left'
   have hf1 := lintegral_rpow_funMulInvSnorm_eq_one hpq.pos hf_nonzero hf_nontop
@@ -163,7 +168,8 @@ theorem lintegral_mul_eq_Lp_mul_Lq_iff_of_ne_zero_of_ne_top {p q : ℝ} (hpq : p
     (hf_nonzero : ∫⁻ a, f a ^ p ∂μ ≠ 0) (hg_nonzero : ∫⁻ a, g a ^ q ∂μ ≠ 0) :
     ∫⁻ a, (f * g) a ∂μ = (∫⁻ a, f a ^ p ∂μ) ^ (1 / p) * (∫⁻ a, g a ^ q ∂μ) ^ (1 / q) ↔
       (∫⁻ a, f a ^ p ∂μ)⁻¹ • f ^ p =ᵐ[μ] (∫⁻ a, g a ^ q ∂μ)⁻¹ • g ^ q := by
-  rw [lintegral_mul_eq_lintegral_funMulInvSnorm_mul_funMulInvSnorm_mul_Lp_mul_Lq hf_nontop hg_nontop
+  rw [lintegral_mul_eq_lintegral_funMulInvSnorm_mul_funMulInvSnorm_mul_Lp_mul_Lq
+      (hp := hpq.pos.ne'.isUnit) (hq := hpq.symm.pos.ne'.isUnit) hf_nontop hg_nontop
       hf_nonzero hg_nonzero]
   have hf0 := rpow_eq_zero_iff_of_pos hpq.one_div_pos |>.not.mpr hf_nonzero
   have hg0 := rpow_eq_zero_iff_of_pos hpq.symm.one_div_pos |>.not.mpr hg_nonzero
@@ -192,7 +198,8 @@ theorem lintegral_mul_eq_zero_of_lintegral_rpow_eq_zero {p : ℝ} (hp0 : 0 ≤ p
   exact hf_eq_zero.mul (ae_eq_refl g)
 
 theorem lintegral_mul_le_Lp_mul_Lq_of_ne_zero_of_eq_top {p q : ℝ} (hp0_lt : 0 < p) (hq0 : 0 ≤ q)
-    {f g : α → ℝ≥0∞} (hf_top : ∫⁻ a, f a ^ p ∂μ = ⊤) (hg_nonzero : (∫⁻ a, g a ^ q ∂μ) ≠ 0) :
+    {hq : IsUnit q} {f g : α → ℝ≥0∞}
+    (hf_top : ∫⁻ a, f a ^ p ∂μ = ⊤) (hg_nonzero : (∫⁻ a, g a ^ q ∂μ) ≠ 0) :
     (∫⁻ a, (f * g) a ∂μ) ≤ (∫⁻ a, f a ^ p ∂μ) ^ (1 / p) * (∫⁻ a, g a ^ q ∂μ) ^ (1 / q) := by
   simp [*]
 
@@ -230,10 +237,11 @@ theorem lintegral_mul_norm_pow_le {α} [SigmaAlgebra α] {μ : Measure α}
   · rw [add_zero] at hpq
     simp [hpq]
   have h2p : 1 < 1 / p := by
-    rw [one_div, one_lt_inv₀ hp]
+    rw [one_div₀, one_lt_inv₀ hp]
     linarith
   have h2pq : (1 / p)⁻¹ + (1 / q)⁻¹ = 1 := by simp [hpq]
-  have := ENNReal.lintegral_mul_le_Lp_mul_Lq μ (Real.holderConjugate_iff.mpr ⟨h2p, h2pq⟩)
+  have := ENNReal.lintegral_mul_le_Lp_mul_Lq μ
+    (Real.holderConjugate_iff.mpr ⟨h2p, (one_div_pos.mpr hq).ne', h2pq⟩)
     (hf.pow_const p) (hg.pow_const q)
   simpa [← ENNReal.rpow_mul, hp.ne', hq.ne'] using this
 
@@ -266,14 +274,14 @@ theorem lintegral_prod_norm_pow_le {α ι : Type*} [SigmaAlgebra α] {μ : Measu
         rwa [sub_ne_zero, ne_comm]
       let q := fun i ↦ p i / (1 - p i₀)
       have hq : ∑ i ∈ s, q i = 1 := by
-        rw [← Finset.sum_div, ← sum_insert_sub hi₀, hp, div_self h2pi₀]
+        rw [← Finset.sum_div, ← sum_insert_sub hi₀, hp, div_self]
       have h2q : ∀ i ∈ s, 0 ≤ q i :=
         fun i hi ↦ div_nonneg (h2p i <| mem_insert_of_mem hi) hpi₀
       calc ∫⁻ a, ∏ i ∈ insert i₀ s, f i a ^ p i ∂μ
           = ∫⁻ a, f i₀ a ^ p i₀ * ∏ i ∈ s, f i a ^ p i ∂μ := by simp [hi₀]
         _ = ∫⁻ a, f i₀ a ^ p i₀ * (∏ i ∈ s, f i a ^ q i) ^ (1 - p i₀) ∂μ := by
             simp [q, ← ENNReal.prod_rpow_of_nonneg hpi₀, ← ENNReal.rpow_mul,
-              div_mul_cancel₀ (h := h2pi₀)]
+              div_mul_cancel₀]
         _ ≤ (∫⁻ a, f i₀ a ∂μ) ^ p i₀ * (∫⁻ a, ∏ i ∈ s, f i a ^ q i ∂μ) ^ (1 - p i₀) := by
             apply ENNReal.lintegral_mul_norm_pow_le
             · exact hf i₀ <| mem_insert_self ..
@@ -286,7 +294,7 @@ theorem lintegral_prod_norm_pow_le {α ι : Type*} [SigmaAlgebra α] {μ : Measu
             exact ih (fun i hi ↦ hf i <| mem_insert_of_mem hi) hq h2q
         _ = (∫⁻ a, f i₀ a ∂μ) ^ p i₀ * ∏ i ∈ s, (∫⁻ a, f i a ∂μ) ^ p i := by
             simp [q, ← ENNReal.prod_rpow_of_nonneg hpi₀, ← ENNReal.rpow_mul,
-              div_mul_cancel₀ (h := h2pi₀)]
+              div_mul_cancel₀]
         _ = ∏ i ∈ insert i₀ s, (∫⁻ a, f i a ∂μ) ^ p i := by simp [hi₀]
 
 /-- A version of Hölder with multiple arguments, one of which plays a distinguished role. -/
@@ -327,19 +335,22 @@ theorem lintegral_rpow_add_lt_top_of_lintegral_rpow_lt_top {p : ℝ} {f g : α �
       · fun_prop
 
 theorem lintegral_Lp_mul_le_Lq_mul_Lr {α} [SigmaAlgebra α] {p q r : ℝ} (hp0_lt : 0 < p)
-    (hpq : p < q) (hpqr : 1 / p = 1 / q + 1 / r) (μ : Measure α) {f g : α → ℝ≥0∞}
+    (hpq : p < q) {hrUnit : IsUnit r}
+    (hpqr : 1 / p = Checked.div 1 q (hp0_lt.trans hpq).ne'.isUnit + 1 / r)
+    (μ : Measure α) {f g : α → ℝ≥0∞}
     (hf : AEMeasurable f μ) (hg : AEMeasurable g μ) :
     (∫⁻ a, (f * g) a ^ p ∂μ) ^ (1 / p) ≤
-      (∫⁻ a, f a ^ q ∂μ) ^ (1 / q) * (∫⁻ a, g a ^ r ∂μ) ^ (1 / r) := by
+      (∫⁻ a, f a ^ q ∂μ) ^ Checked.div 1 q (hp0_lt.trans hpq).ne'.isUnit *
+        (∫⁻ a, g a ^ r ∂μ) ^ (1 / r) := by
   have hp0_ne : p ≠ 0 := (ne_of_lt hp0_lt).symm
   have hp0 : 0 ≤ p := le_of_lt hp0_lt
   have hq0_lt : 0 < q := lt_of_le_of_lt hp0 hpq
   have hq0_ne : q ≠ 0 := (ne_of_lt hq0_lt).symm
-  have h_one_div_r : 1 / r = 1 / p - 1 / q := by rw [hpqr]; simp
   let p2 := q / p
+  have hp2 : 1 < p2 := by simpa [p2, _root_.lt_div_iff₀ hp0_lt] using hpq
   let q2 := p2.conjExponent
   have hp2q2 : p2.HolderConjugate q2 :=
-    .conjExponent (by simp [p2, _root_.lt_div_iff₀, hpq, hp0_lt])
+    .conjExponent hp2
   calc
     (∫⁻ a : α, (f * g) a ^ p ∂μ) ^ (1 / p) = (∫⁻ a : α, f a ^ p * g a ^ p ∂μ) ^ (1 / p) := by
       simp_rw [Pi.mul_apply, ENNReal.mul_rpow_of_nonneg _ _ hp0]
@@ -352,12 +363,12 @@ theorem lintegral_Lp_mul_le_Lq_mul_Lr {α} [SigmaAlgebra α] {p q r : ℝ} (hp0_
       rw [@ENNReal.mul_rpow_of_nonneg _ _ (1 / p) (by simp [hp0]), ← ENNReal.rpow_mul, ←
         ENNReal.rpow_mul]
       have hpp2 : p * p2 = q := by
-        symm
-        rw [mul_comm, ← div_eq_iff hp0_ne]
+        simp [p2, mul_div_cancel₀]
       have hpq2 : p * q2 = r := by
-        rw [← inv_inv r, ← one_div, ← one_div, h_one_div_r]
-        simp [field, p2, q2, Real.conjExponent]
-      simp_rw [div_mul_div_comm, mul_one, mul_comm p2, mul_comm q2, hpp2, hpq2]
+        dsimp [q2, p2, Real.conjExponent]
+        field_simp at hpqr ⊢
+        linear_combination -hpqr
+      simp_rw [div_mul_div_comm₀, mul_one, mul_comm p2, mul_comm q2, hpp2, hpq2]
 
 theorem lintegral_mul_rpow_le_lintegral_rpow_mul_lintegral_rpow {p q : ℝ}
     (hpq : p.HolderConjugate q) {f g : α → ℝ≥0∞} (hf : AEMeasurable f μ) (hg : AEMeasurable g μ) :
@@ -419,8 +430,9 @@ private theorem lintegral_Lp_add_le_aux {p q : ℝ} (hpq : p.HolderConjugate q) 
         (∫⁻ a : α, (f + g) a ^ p ∂μ) ^ (1 / q) :=
     lintegral_rpow_add_le_add_eLpNorm_mul_lintegral_rpow_add hpq hf hg
   have h_one_div_q : 1 / q = 1 - 1 / p := by
-    nth_rw 2 [← hpq.inv_add_inv_eq_one]
-    ring
+    have h := hpq.inv_add_inv_eq_one
+    simp only [← one_div₀] at h
+    linear_combination h
   simp_rw [h_one_div_q, sub_eq_add_neg 1 (1 / p), ENNReal.rpow_add _ _ h_add_zero h_add_top,
     rpow_one] at h
   conv_rhs at h => enter [2]; rw [mul_comm]
@@ -440,7 +452,7 @@ theorem lintegral_Lp_add_le {p : ℝ} {f g : α → ℝ≥0∞} (hf : AEMeasurab
   · simp [hg_top, hp_pos]
   by_cases h1 : p = 1
   · refine le_of_eq ?_
-    simp_rw [h1, one_div_one, ENNReal.rpow_one]
+    simp_rw [h1, one_div_one₀, ENNReal.rpow_one]
     exact lintegral_add_left' hf _
   have hp1_lt : 1 < p := by
     refine lt_of_le_of_ne hp1 ?_
@@ -456,14 +468,12 @@ theorem lintegral_Lp_add_le {p : ℝ} {f g : α → ℝ≥0∞} (hf : AEMeasurab
 /-- Variant of Minkowski's inequality for functions `α → ℝ≥0∞` in `ℒp` with `p ≤ 1`: the `ℒp`
 seminorm of the sum of two functions is bounded by a constant multiple of the sum
 of their `ℒp` seminorms. -/
-theorem lintegral_Lp_add_le_of_le_one {p : ℝ} {f g : α → ℝ≥0∞} (hf : AEMeasurable f μ) (hp0 : 0 ≤ p)
+theorem lintegral_Lp_add_le_of_le_one {p : ℝ} {hpUnit : IsUnit p} {f g : α → ℝ≥0∞}
+    (hf : AEMeasurable f μ) (hp0 : 0 ≤ p)
     (hp1 : p ≤ 1) :
     (∫⁻ a, (f + g) a ^ p ∂μ) ^ (1 / p) ≤
       (2 : ℝ≥0∞) ^ (1 / p - 1) * ((∫⁻ a, f a ^ p ∂μ) ^ (1 / p) + (∫⁻ a, g a ^ p ∂μ) ^ (1 / p)) := by
-  rcases eq_or_lt_of_le hp0 with (rfl | hp)
-  · simp only [Pi.add_apply, rpow_zero, lintegral_one, _root_.div_zero, zero_sub]
-    norm_num
-    rw [rpow_neg, rpow_one, ENNReal.inv_mul_cancel two_ne_zero ofNat_ne_top]
+  have hp : 0 < p := lt_of_le_of_ne hp0 hpUnit.ne_zero.symm
   calc
     (∫⁻ a, (f + g) a ^ p ∂μ) ^ (1 / p) ≤ ((∫⁻ a, f a ^ p ∂μ) + ∫⁻ a, g a ^ p ∂μ) ^ (1 / p) := by
       rw [← lintegral_add_left' (hf.pow_const p)]

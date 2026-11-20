@@ -119,9 +119,9 @@ lemma isMIntegralCurveOn_comp_mul_ne_zero {a : ℝ} (ha : a ≠ 0) :
   refine ⟨fun hγ ↦ ?_, fun hγ ↦ hγ.comp_mul a⟩
   convert! hγ.comp_mul a⁻¹
   · ext t
-    simp only [Function.comp_apply, mul_assoc, inv_mul_eq_div, div_self ha, mul_one]
-  · simp only [smul_smul, inv_mul_eq_div, div_self ha, one_smul]
-  · simp only [mem_ofPred_eq, mul_assoc, inv_mul_eq_div, div_self ha, mul_one, ofPred_mem_eq]
+    simp only [Function.comp_apply, mul_assoc, inv_mul_cancel₀, mul_one]
+  · simp only [smul_smul, inv_mul_cancel₀, one_smul]
+  · simp only [mem_ofPred_eq, mul_assoc, inv_mul_cancel₀, mul_one, ofPred_mem_eq]
 
 lemma IsMIntegralCurveAt.comp_mul_ne_zero (hγ : IsMIntegralCurveAt γ v t₀) {a : ℝ} (ha : a ≠ 0) :
     IsMIntegralCurveAt (γ ∘ (· * a)) (a • v) (t₀ / a) := by
@@ -131,16 +131,16 @@ lemma IsMIntegralCurveAt.comp_mul_ne_zero (hγ : IsMIntegralCurveAt γ v t₀) {
   convert! h.comp_mul a
   ext t
   rw [mem_ofPred_eq, Metric.mem_ball, Metric.mem_ball, Real.dist_eq, Real.dist_eq,
-    lt_div_iff₀ (abs_pos.mpr ha), ← abs_mul, sub_mul, div_mul_cancel₀ _ ha]
+    lt_div_iff₀ (abs_pos.mpr ha), ← abs_mul, sub_mul, div_mul_cancel₀]
 
 lemma isMIntegralCurveAt_comp_mul_ne_zero {a : ℝ} (ha : a ≠ 0) :
     IsMIntegralCurveAt (γ ∘ (· * a)) (a • v) (t₀ / a) ↔ IsMIntegralCurveAt γ v t₀ := by
   refine ⟨fun hγ ↦ ?_, fun hγ ↦ hγ.comp_mul_ne_zero ha⟩
-  convert! hγ.comp_mul_ne_zero (inv_ne_zero ha)
+  convert! hγ.comp_mul_ne_zero (inv_ne_zero (ha := ha.isUnit))
   · ext t
-    simp only [Function.comp_apply, mul_assoc, inv_mul_eq_div, div_self ha, mul_one]
-  · simp only [smul_smul, inv_mul_eq_div, div_self ha, one_smul]
-  · simp only [div_inv_eq_mul, div_mul_cancel₀ _ ha]
+    simp only [Function.comp_apply, mul_assoc, inv_mul_cancel₀, mul_one]
+  · simp only [smul_smul, inv_mul_cancel₀, one_smul]
+  · simp only [div_inv_eq_mul₀, div_mul_cancel₀]
 
 lemma IsMIntegralCurve.comp_mul (hγ : IsMIntegralCurve γ v) (a : ℝ) :
     IsMIntegralCurve (γ ∘ (· * a)) (a • v) := by
@@ -152,8 +152,8 @@ lemma isMIntegralCurve_comp_mul_ne_zero {a : ℝ} (ha : a ≠ 0) :
   refine ⟨fun hγ ↦ ?_, fun hγ ↦ hγ.comp_mul _⟩
   convert! hγ.comp_mul a⁻¹
   · ext t
-    simp only [Function.comp_apply, mul_assoc, inv_mul_eq_div, div_self ha, mul_one]
-  · simp only [smul_smul, inv_mul_eq_div, div_self ha, one_smul]
+    simp only [Function.comp_apply, mul_assoc, inv_mul_cancel₀, mul_one]
+  · simp only [smul_smul, inv_mul_cancel₀, one_smul]
 
 open ContinuousLinearMap in
 /-- If the vector field `v` vanishes at `x₀`, then the constant curve at `x₀`

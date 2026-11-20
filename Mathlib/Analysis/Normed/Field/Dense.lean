@@ -100,11 +100,10 @@ theorem IsAlgClosed.of_denseRange {K L : Type*} [Field K] [NontriviallyNormedFie
       hε fa0 fmon (gmon.map _) (gdeg ▸ (g.natDegree_map _)) gcoeff
       (by simpa [Polynomial.map_map] using (IsAlgClosed.splits g).map ((algebraMap L F).comp _))
   have hab : ‖a - b‖ < δ := by
-    rw [← Real.rpow_natCast, ← mul_comm_div, div_self, one_mul,
-        ← Real.rpow_mul (div_pos δpos (by positivity)).le, mul_inv_cancel₀] at hab
-    · simpa [mul_assoc, div_mul_cancel₀ _ (by positivity : (max ‖a‖ 1) > 0).ne'] using hab
-    · simp [fnatdeg0]
-    · positivity
+    have hu : IsUnit (f.natDegree : ℝ) := (Nat.cast_ne_zero.mpr fnatdeg0).isUnit
+    rw [mul_div_cancel₀, ← Real.rpow_natCast, ← Real.rpow_mul (div_pos δpos (by positivity)).le,
+      mul_inv_cancel₀ (ha := hu), Real.rpow_one, div_mul_cancel₀] at hab
+    exact hab
   have bbot : b ∈ (⊥ : IntermediateField L F) := by
     rw [Polynomial.aroots_def, Splits.roots_map ((IsAlgClosed.splits g).map _)
         (gmon.map _).ne_zero, Multiset.mem_map] at hb

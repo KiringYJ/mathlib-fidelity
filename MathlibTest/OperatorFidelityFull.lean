@@ -3,18 +3,17 @@ Copyright (c) 2026 Yi-Jing Tseng. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yi-Jing Tseng
 -/
-module
-
-public import Mathlib
-public import Mathlib.Tactic.Linter.OperatorFidelity
+import Mathlib
+import Mathlib.Tactic.Linter.OperatorFidelity
 
 /-!
 # Mathlib package operator-fidelity gate
 
-This target audits the declarations owned by the Mathlib package after importing `Mathlib`.
-It does not audit declarations owned by MathlibTest, Archive, Counterexamples, or Wanted.
-The semantic command fails closed; the proof command reports without failing.
+This target audits Mathlib's elaborated declarations. The legacy import mode loads private
+declarations throughout the library. The proof report fails if its traversal is incomplete.
+Use `scripts/operator_fidelity_packages.py` to audit the other maintained packages.
 -/
 
-#operator_fidelity in Mathlib
-#operator_fidelity_proofs in Mathlib
+set_option maxHeartbeats 0
+
+#operator_fidelity with_proofs in Mathlib

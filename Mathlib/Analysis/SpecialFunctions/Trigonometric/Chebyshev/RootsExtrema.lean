@@ -68,14 +68,16 @@ theorem one_le_negOnePow_mul_eval_T_real (n : ℤ) {x : ℝ} (hx : x ≤ -1) :
     1 ≤ n.negOnePow * (T ℝ n).eval x := by
   rw [← neg_neg x, T_eval_neg]
   convert! one_le_eval_T_real n (le_neg_of_le_neg hx)
-  rw [Int.cast_negOnePow, ← mul_assoc, ← mul_zpow]
+  rw [← mul_assoc, ← Int.cast_mul, ← Units.val_mul, ← Int.negOnePow_add, ← two_mul,
+    Int.negOnePow_two_mul]
   simp
 
 theorem one_lt_negOnePow_mul_eval_T_real {n : ℤ} (hn : n ≠ 0) {x : ℝ} (hx : x < -1) :
     1 < n.negOnePow * (T ℝ n).eval x := by
   rw [← neg_neg x, T_eval_neg]
   convert! one_lt_eval_T_real hn (lt_neg_of_lt_neg hx)
-  rw [Int.cast_negOnePow, ← mul_assoc, ← mul_zpow]
+  rw [← mul_assoc, ← Int.cast_mul, ← Units.val_mul, ← Int.negOnePow_add, ← two_mul,
+    Int.negOnePow_two_mul]
   simp
 
 theorem one_le_abs_eval_T_real (n : ℤ) {x : ℝ} (hx : 1 ≤ |x|) :
@@ -102,7 +104,8 @@ theorem abs_eval_T_real_eq_one_iff {n : ℕ} (hn : n ≠ 0) (x : ℝ) :
     rw [← cos_arccos (neg_le_of_abs_le hx) (le_of_max_le_left hx), T_real_cos,
       Int.cast_natCast, abs_cos_eq_one_iff] at hTx
     obtain ⟨k, hk⟩ := hTx
-    have hk' : k = n * (arccos x / π) := by simpa [field]
+    have hk' : k = n * (arccos x / π) := by
+      rwa [← mul_div_assoc₀, eq_div_iff]
     lift k to ℕ using (by rw [← Int.cast_nonneg_iff (R := ℝ), hk']; positivity [arccos_nonneg x])
     simp only [Int.cast_natCast] at hk hk'
     have hkn : (k : ℝ) ≤ n := by
@@ -110,8 +113,8 @@ theorem abs_eval_T_real_eq_one_iff {n : ℕ} (hn : n ≠ 0) (x : ℝ) :
       gcongr
       exact div_le_one_of_le₀ (arccos_le_pi x) (by positivity)
     refine ⟨k, by simpa using hkn, ?_⟩
-    convert! congr(cos ($hk.symm / n))
-    rw [mul_div_cancel_left₀ _ (by simpa), cos_arccos (by grind) (by grind)]
+    have hr : (k : ℝ) * π / n = arccos x := (div_eq_iff).mpr (hk.trans (mul_comm _ _))
+    rw [hr, cos_arccos (by grind) (by grind)]
   · rintro ⟨k, hk, rfl⟩
     rw [T_real_cos, abs_cos_eq_one_iff]
     exact ⟨k, by simp [field]⟩
@@ -150,34 +153,49 @@ theorem eval_T_real_eq_neg_one_iff {n : ℕ} (hn : n ≠ 0) (x : ℝ) :
     rw [hx, eval_T_real_cos_int_mul_pi_div hn, Int.negOnePow_odd k ((Int.odd_coe_nat k).mpr hk₂)]
     norm_cast
 
+/-- The angle of the `k`th real root of the Chebyshev polynomial `T ℝ n`. -/
+noncomputable def rootAngleTReal {n : ℕ} (k : Fin n) : ℝ :=
+  Checked.div ((2 * (k.val : ℝ) + 1) * π) (2 * (n : ℝ))
+    (mul_pos two_pos (Nat.cast_pos.mpr k.pos)).ne'.isUnit
+
 theorem roots_T_real_nodup (n : ℕ) :
-    (Multiset.map (fun k : ℕ ↦ cos ((2 * k + 1) * π / (2 * n))) (.range n)).Nodup := by
-  wlog! hn : n ≠ 0
-  · simp [hn]
-  refine (Finset.range n).nodup_map_iff_injOn.mpr ?_
-  refine injOn_cos.comp (by aesop) fun k hk => Set.mem_Icc.mpr ⟨by positivity, ?_⟩
-  field_simp
-  norm_cast
-  grind
+    (Multiset.map (fun k : Fin n ↦ cos (rootAngleTReal k)) Finset.univ.val).Nodup := by
+  refine Finset.univ.nodup_map_iff_injOn.mpr
+    (injOn_cos.comp (fun k _ l _ h => ?_) fun k _ => ?_)
+  · have he := mul_right_cancel₀ Real.pi_ne_zero (div_left_inj'.mp h)
+    apply Fin.ext
+    exact_mod_cast (show (k.val : ℝ) = l.val by linarith)
+  · have hn : (0 : ℝ) < n := Nat.cast_pos.mpr k.pos
+    have hk : (k.val : ℝ) + 1 ≤ n := by exact_mod_cast Nat.succ_le_of_lt k.isLt
+    refine Set.mem_Icc.mpr ⟨by unfold rootAngleTReal; positivity, ?_⟩
+    unfold rootAngleTReal
+    rw [div_le_iff₀ (mul_pos two_pos hn)]
+    calc
+      (2 * (k.val : ℝ) + 1) * π ≤ (2 * (n : ℝ)) * π :=
+        mul_le_mul_of_nonneg_right (by linarith) pi_pos.le
+      _ = π * (2 * (n : ℝ)) := mul_comm _ _
 
 theorem roots_T_real (n : ℕ) :
     (T ℝ n).roots (T_ne_zero ℝ n) =
-    ((Finset.range n).image (fun (k : ℕ) => cos ((2 * k + 1) * π / (2 * n)))).val := by
-  wlog! hn : n ≠ 0
-  · simp [hn]
+    (Finset.univ.image (fun k : Fin n => cos (rootAngleTReal k))).val := by
   refine roots_eq_of_degree_eq_card (fun x hx ↦ ?_) ?_
   · obtain ⟨k, hk, hx⟩ := Finset.mem_image.mp hx
+    have hn := k.pos.ne'
     rw [← hx, T_real_cos, cos_eq_zero_iff]
-    use k
+    use (k.val : ℤ)
+    unfold rootAngleTReal
+    push_cast
     field_simp
-    norm_cast
-  · rw [Finset.card_image_of_injOn, Finset.card_range, degree_T, Int.natAbs_natCast]
-    exact (Finset.range n).nodup_map_iff_injOn.mp (roots_T_real_nodup n)
+  · rw [Finset.card_image_of_injOn, Finset.card_univ, Fintype.card_fin, degree_T,
+      Int.natAbs_natCast]
+    exact Finset.univ.nodup_map_iff_injOn.mp (roots_T_real_nodup n)
 
 theorem rootMultiplicity_T_real {n k : ℕ} (hk : k < n) :
-    (T ℝ n).rootMultiplicity (cos ((2 * k + 1) * π / (2 * n))) (T_ne_zero ℝ n) = 1 := by
-  rw [← count_roots _ (T_ne_zero ℝ n), roots_T_real, Multiset.count_eq_one_of_mem (by simp)]
-  grind
+    (T ℝ n).rootMultiplicity (cos (rootAngleTReal ⟨k, hk⟩)) (T_ne_zero ℝ n) = 1 := by
+  rw [← count_roots _ (T_ne_zero ℝ n), roots_T_real]
+  apply Multiset.count_eq_one_of_mem (Finset.nodup _)
+  rw [Finset.mem_val]
+  exact Finset.mem_image_of_mem _ (Finset.mem_univ (⟨k, hk⟩ : Fin n))
 
 theorem roots_U_real_nodup (n : ℕ) :
     (Multiset.map (fun k : ℕ ↦ cos ((k + 1) * π / (n + 1))) (.range n)).Nodup := by
@@ -222,7 +240,7 @@ theorem isLocalMax_T_real {n k : ℕ} (hn : n ≠ 0) (hk₀ : 0 < k) (hk₁ : k 
   have zero_lt : 0 < k * π / n := by positivity
   have lt_pi : k * π / n < π := calc
     k * π / n < n * π / n := by gcongr
-    _ = π := mul_div_cancel_left₀ _ (Nat.cast_ne_zero.mpr hn)
+    _ = π := mul_div_cancel_left₀ _
   refine eventually_nhds_iff.mpr ⟨Set.Ioo (-1) 1, ?_, isOpen_Ioo, ?_, ?_⟩
   · intro x hx
     dsimp
@@ -239,7 +257,7 @@ theorem isLocalMin_T_real {n k : ℕ} (hn : n ≠ 0) (hk₁ : k < n) (hk₂ : Od
   have zero_lt : 0 < k * π / n := by positivity
   have lt_pi : k * π / n < π := calc
     k * π / n < n * π / n := by gcongr
-    _ = π := mul_div_cancel_left₀ _ (Nat.cast_ne_zero.mpr hn)
+    _ = π := mul_div_cancel_left₀ _
   refine eventually_nhds_iff.mpr ⟨Set.Ioo (-1) 1, ?_, isOpen_Ioo, ?_, ?_⟩
   · intro x hx
     dsimp
@@ -316,18 +334,32 @@ theorem irrational_of_isRoot_T_real {n : ℕ} {x : ℝ} (hroot : (T ℝ n).IsRoo
     Irrational x := by
   rw [← mem_roots (T_ne_zero ℝ n), roots_T_real, Finset.mem_val] at hroot
   obtain ⟨k, hk₁, hk₂⟩ := Finset.mem_image.mp hroot
-  have hn : n ≠ 0 := by grind
-  suffices Irrational (cos ((Rat.divInt (2 * k + 1) (2 * n)) * π)) by
-    rw [← hk₂]; convert! this using 2; push_cast; field_simp
+  have hn : n ≠ 0 := k.pos.ne'
+  have hden : 2 * n ≠ 0 := Nat.mul_ne_zero (by decide) hn
+  let q := Rat.fraction ((2 * k.val + 1 : ℕ) : ℤ) (2 * n) hden
+  suffices Irrational (cos ((q : ℝ) * π)) by
+    rw [← hk₂]
+    convert! this using 2
+    dsimp [q, rootAngleTReal]
+    rw [Rat.fraction_eq_div]
+    push_cast
+    field_simp
   apply irrational_cos_rat_mul_pi
   contrapose! hnz
-  have : (Rat.divInt (2 * k + 1) (2 * n)).den = 2 * (n / n.gcd (2 * k + 1)) := calc
-    _ = 2 * n / (2 * n).gcd (2 * k + 1) := by rw [Rat.den_divInt]; norm_cast; simp [hn]
+  have : q.den = 2 * (n / n.gcd (2 * k.val + 1)) := calc
+    _ = 2 * n / (2 * n).gcd (2 * k.val + 1) := by
+      simp only [q, Rat.fraction, Rat.den_normalize, Int.natAbs_natCast, Nat.gcd_comm]
     _ = _ := by rw [Nat.Coprime.gcd_mul_left_cancel n (by simp),
       Nat.mul_div_assoc _ (Nat.gcd_dvd_left ..)]
-  have hn : 2 * k + 1 = n := Nat.eq_of_dvd_of_lt_two_mul (by simp) (Nat.gcd_eq_left_iff_dvd.mp <|
-    Nat.eq_of_dvd_of_div_eq_one (Nat.gcd_dvd_left ..) (by grind [Rat.den_pos])) (by grind)
-  rw_mod_cast [← hk₂, hn]; convert! cos_pi_div_two using 2; push_cast; field_simp
+  have hkn : 2 * k.val + 1 = n := Nat.eq_of_dvd_of_lt_two_mul (by simp)
+    (Nat.gcd_eq_left_iff_dvd.mp <|
+      Nat.eq_of_dvd_of_div_eq_one (Nat.gcd_dvd_left ..) (by grind [Rat.den_pos]))
+    (by have := k.isLt; omega)
+  have hangle : rootAngleTReal k = π / 2 := by
+    unfold rootAngleTReal
+    rw [show 2 * (k.val : ℝ) + 1 = (n : ℝ) by exact_mod_cast hkn, div_eq_div_iff]
+    ring
+  rw [← hk₂, hangle, cos_pi_div_two]
 
 theorem abs_iterate_derivative_T_real_le (n : ℤ) (k : ℕ) {x : ℝ} (hx : |x| ≤ 1) :
     |(derivative^[k] (T ℝ n)).eval x| ≤ (derivative^[k] (T ℝ n)).eval 1 := by

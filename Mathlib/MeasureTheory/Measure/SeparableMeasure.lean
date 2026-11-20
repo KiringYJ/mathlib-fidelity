@@ -146,24 +146,24 @@ theorem Measure.MeasureDense.indicatorConstLp_subset_closure (h𝒜 : μ.Measure
     simp_rw [indicatorConstLp]
     simp
   · have p_pos : 0 < p := lt_of_lt_of_le (by simp) one_le_p.elim
+    have hp_real : 0 < p.toReal := toReal_pos p_pos.ne' p_ne_top.elim
     rintro - ⟨s, ms, hμs, rfl⟩
     refine Metric.mem_closure_iff.2 fun ε hε ↦ ?_
     have aux : 0 < (ε / ‖c‖) ^ p.toReal := rpow_pos_of_pos (div_pos hε (norm_pos_iff.2 hc)) _
     obtain ⟨t, ht, hμt, hμst⟩ := h𝒜.fin_meas_approx ms hμs ((ε / ‖c‖) ^ p.toReal) aux
     refine ⟨indicatorConstLp p (h𝒜.measurable t ht) hμt c,
       ⟨t, ht, hμt, rfl⟩, ?_⟩
-    rw [dist_indicatorConstLp_eq_norm, norm_indicatorConstLp p_pos.ne.symm p_ne_top.elim]
+    rw [dist_indicatorConstLp_eq_norm, norm_indicatorConstLp p_pos.ne.symm p_ne_top.elim,
+      toReal_div 1 p (hb := hp_real.ne'.isUnit), toReal_one]
     calc
       ‖c‖ * μ.real (s ∆ t) ^ (1 / p.toReal)
         < ‖c‖ * (ENNReal.ofReal ((ε / ‖c‖) ^ p.toReal)).toReal ^ (1 / p.toReal) := by
-          have := toReal_pos p_pos.ne.symm p_ne_top.elim
           rw [measureReal_def]
           gcongr
           exact ofReal_ne_top
       _ = ε := by
         rw [toReal_ofReal (by positivity),
-          one_div, Real.rpow_rpow_inv (by positivity) (toReal_pos p_pos.ne.symm p_ne_top.elim).ne',
-          mul_div_cancel₀ _ (norm_ne_zero_iff.2 hc)]
+          one_div₀, Real.rpow_rpow_inv (by positivity) hp_real.ne', mul_div_cancel₀]
 
 /-- If a family of sets `𝒜` is measure-dense in `X`, then it is also the case for the sets in `𝒜`
 with finite measure. -/
@@ -256,10 +256,7 @@ theorem Measure.MeasureDense.of_generateFrom_isSetAlgebra_finite [IsFiniteMeasur
                     _ ≤ ε / 2 := by
                           simp only [Finset.sum_const, Finset.card_range, nsmul_eq_mul,
                             Nat.cast_add, Nat.cast_one]
-                          rw [div_mul_eq_div_mul_one_div, ← mul_assoc, mul_comm ((N : ℝ) + 1),
-                            mul_assoc]
-                          exact mul_le_of_le_one_right (by linarith [ε_pos]) <|
-                            le_of_eq <| mul_one_div_cancel <| Nat.cast_add_one_ne_zero _
+                          rw [← mul_div_assoc₀, mul_comm ((N : ℝ) + 1), mul_div_mul_right]
     rintro - ε ε_pos
     rcases this.2 ε ε_pos with ⟨t, t_mem, hμst⟩
     exact ⟨t, t_mem, (lt_ofReal_iff_toReal_lt (measure_ne_top _ _)).2 hμst⟩
@@ -438,6 +435,7 @@ instance Lp.SecondCountableTopology [IsSeparable μ] [TopologicalSpace.Separable
   have count_𝒜₀ : 𝒜₀.Countable := count_𝒜.mono fun _ ⟨h, _⟩ ↦ h
   -- `1 ≤ p` so `p ≠ 0`, we prove it now as it is often needed.
   have p_ne_zero : p ≠ 0 := ne_of_gt <| lt_of_lt_of_le (by simp) one_le_p.elim
+  have hp_real : 0 < p.toReal := toReal_pos p_ne_zero p_ne_top.elim
   -- `E` is second-countable, therefore separable and admits a countable and dense subset `u`.
   rcases exists_countable_dense E with ⟨u, countable_u, dense_u⟩
   -- The countable and dense subset of `Lᵖ` we are going to build is the set of finite sums of
@@ -490,16 +488,16 @@ instance Lp.SecondCountableTopology [IsSeparable μ] [TopologicalSpace.Separable
       rw [Lp.simpleFunc.coe_indicatorConst,
         ← sub_add_sub_cancel _ (indicatorConstLp p ms hμs b), ← add_halves ε]
       refine lt_of_le_of_lt (b := ε / 3 + ε / 3) (norm_add_le_of_le ?_ hst.le) (by linarith [ε_pos])
-      rw [indicatorConstLp_sub, norm_indicatorConstLp p_ne_zero p_ne_top.elim]
+      rw [indicatorConstLp_sub, norm_indicatorConstLp p_ne_zero p_ne_top.elim,
+        toReal_div 1 p (hb := hp_real.ne'.isUnit), toReal_one]
       calc
         ‖a - b‖ * μ.real s ^ (1 / p.toReal)
           ≤ (ε / (3 * (1 + μ.real s ^ (1 / p.toReal)))) * μ.real s ^ (1 / p.toReal) :=
               mul_le_mul_of_nonneg_right (le_of_lt hb) μs_pow_nonneg
         _ ≤ ε / 3 := by
-            rw [← mul_one (ε / 3), div_mul_eq_div_mul_one_div, mul_assoc, one_div_mul_eq_div]
-            exact mul_le_mul_of_nonneg_left
+            rw [div_mul_eq_div_div₀, div_mul_eq_mul_div₀, mul_div_assoc₀]
+            exact mul_le_of_le_one_right (by positivity)
               ((div_le_one (by linarith [μs_pow_nonneg])).2 (by linarith))
-              (by linarith [ε_pos])
     · -- Now we have to show that the closure of `D` is closed by sum. Let `f` and `g` be two
       -- functions in `Lᵖ` which are also in the closure of `D`.
       rintro f g hf hg - f_mem g_mem

@@ -195,7 +195,7 @@ private local instance isLiouville_of_finiteDimensional_galois [FiniteDimensiona
       simp_rw [mul_sum]
       rw [sum_comm, ← sum_add_distrib]
       trans ∑ _ : (K ≃ₐ[F] K), a
-      · simp [mul_comm]
+      · simp
       · rcongr e
         apply_fun e at h
         simp only [AlgEquiv.commutes, map_add, map_sum, map_mul] at h

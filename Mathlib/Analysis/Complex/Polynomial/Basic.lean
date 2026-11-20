@@ -45,8 +45,10 @@ theorem exists_root {f : ℂ[X]} (hf : 0 < degree f) : ∃ z : ℂ, IsRoot f z :
       rw [← Metric.cobounded_eq_cocompact]
       apply Filter.tendsto_inv₀_cobounded.comp
       apply Filter.tendsto_comap_iff.mpr
-      simpa only [IsUnit.unit_spec, tendsto_norm_atTop_iff_cobounded]
-        using f.tendsto_norm_atTop hf tendsto_norm_cobounded_atTop
+      have hval : (fun u : ℂˣ ↦ (u : ℂ)) ∘ (fun x ↦ (hu x).unit) = f.eval :=
+        funext fun x ↦ (hu x).unit_spec
+      rw [hval, ← tendsto_norm_atTop_iff_cobounded]
+      exact f.tendsto_norm_atTop hf tendsto_norm_cobounded_atTop
   exact (hu 0).unit⁻¹.ne_zero hzero
 
 /-- **Fundamental theorem of algebra**: the field `ℂ` of complex numbers is algebraically closed. -/
@@ -207,7 +209,7 @@ lemma Irreducible.natDegree_le_two {p : ℝ[X]} (hp : Irreducible p) : natDegree
     IsAlgClosed.exists_aeval_eq_zero _ p (degree_pos_of_irreducible hp).ne'
   rw [← finrank_real_complex]
   suffices p.natDegree = (minpoly ℝ z).natDegree from this ▸ minpoly.natDegree_le (A := ℝ) z
-  rw [← minpoly.eq_of_irreducible hp hz, natDegree_mul hp.ne_zero (by simpa using hp.ne_zero),
+  rw [← minpoly.eq_of_irreducible hp hz, natDegree_mul hp.ne_zero (by simp),
     natDegree_C, add_zero]
 
 /-- An irreducible real polynomial has degree at most two. -/

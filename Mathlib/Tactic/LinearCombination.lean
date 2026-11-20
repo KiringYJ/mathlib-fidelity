@@ -85,12 +85,13 @@ def divide (ty : Option Expr) (p c : Term) (rel : Ineq) : TermElabM Expanded := 
   let c ← e.toSyntax
   let finish (rel : Ineq) (stx : Term) : TermElabM Expanded := do
     let saved ← Term.saveState
-    let pf ← Term.withoutErrToSorry <| withSynthesize <| Term.elabTerm stx none
-    let pf ← instantiateMVars pf
-    if pf.hasSyntheticSorry then
-      saved.restore
-      throwError "division in a linear combination requires valid denominator evidence"
-    return .proof rel (← pf.toSyntax)
+    let pf? ← observing? <| Term.withoutErrToSorry <| withSynthesize <| Term.elabTerm stx none
+    if let some pf := pf? then
+      let pf ← instantiateMVars pf
+      unless pf.hasSyntheticSorry do
+        return .proof rel (← pf.toSyntax)
+    saved.restore
+    throwError "division in a linear combination requires valid denominator evidence"
   if rel == .eq then
     let α ← (← inferType e).toSyntax
     return ← finish .eq (← ``(congrArg (fun x : $α => x / $c) $p))

@@ -72,7 +72,8 @@ theorem exists_injective_not_dense_image_deriv_ne_zero {U : Set ℂ} (hUo : IsOp
     simpa [hfz, (ne_of_mem_of_not_mem hz hU₀).symm] using hf_inv z
   -- Note that `f` is strictly differentiable at every point of `U`
   -- with derivative `1 / (2 * f z)`.
-  have hdf : ∀ z ∈ U, HasStrictDerivAt f (2 * f z)⁻¹ z := by
+  have hdf : ∀ z (hz : z ∈ U), HasStrictDerivAt f
+      (Checked.inv (2 * f z) (mul_ne_zero two_ne_zero (hf₀ z hz)).isUnit) z := by
     intro z hz
     apply HasStrictDerivAt.of_local_left_inverse
     · exact hfc.continuousAt <| hUo.mem_nhds hz
@@ -89,7 +90,7 @@ theorem exists_injective_not_dense_image_deriv_ne_zero {U : Set ℂ} (hUo : IsOp
     -- Since `f` is strictly differentiable at `x` with nonzero derivative,
     -- `f '' U` is a neighborhood of `f x`.
     have : f '' U ∈ 𝓝 (f x) := by
-      rw [← (hdf x hx).map_nhds_eq (by simpa using hf₀ x hx)]
+      rw [← (hdf x hx).map_nhds_eq inv_ne_zero]
       exact Filter.image_mem_map <| hUo.mem_nhds hx
     -- Then `-f '' U` is a neighborhood of `-f x`.
     rw [nhds_neg, eventually_neg]
@@ -103,7 +104,8 @@ theorem exists_injective_not_dense_image_deriv_ne_zero {U : Set ℂ} (hUo : IsOp
       simp [hf_inv a]
     refine hf₀ a ha ?_
     linear_combination hab / 2
-  · simpa [(hdf z hz).hasDerivAt.deriv] using hf₀ z hz
+  · rw [(hdf z hz).hasDerivAt.deriv]
+    exact inv_ne_zero
 
 /-- Proof of the Riemann Mapping Theorem, step 2.
 
@@ -120,6 +122,7 @@ this lemma will be made private.
 lemma exists_mapsTo_unitBall_injOn_deriv_ne_zero {U : Set ℂ} (hUo : IsOpen U)
     (hUc : IsSimplyConnected U) (hU : U ≠ univ) :
     ∃ f : ℂ → ℂ, MapsTo f U (ball 0 1) ∧ InjOn f U ∧ ∀ z ∈ U, deriv f z ≠ 0 := by
+  classical
   -- Take a continuous branch of the square root on `U`.
   -- It is injective, differentiable function on `U`, and `f '' U` isn't dense in `ℂ`.
   rcases exists_injective_not_dense_image_deriv_ne_zero hUo hUc hU with ⟨f, hf_inj, hfd, hdf⟩
@@ -127,21 +130,47 @@ lemma exists_mapsTo_unitBall_injOn_deriv_ne_zero {U : Set ℂ} (hUo : IsOpen U)
   obtain ⟨x, ε, hε₀, hε⟩ : ∃ (x : ℂ) (ε : ℝ), 0 < ε ∧ ∀ a ∈ U, ε < dist (f a) x := by
     simpa [Dense, mem_closure_iff_nhds_basis Metric.nhds_basis_closedBall] using hfd
   have hfx : ∀ z ∈ U, f z ≠ x := fun z hz ↦ by simpa using hε₀.trans (hε z hz)
-  -- Then `z ↦ ε / (f z - x)` satisfies all the assertions.
-  use fun z ↦ ε / (f z - x)
+  -- Extend the restriction of `f` to `U` with a value in `f '' U` so that its range avoids `x`.
+  obtain ⟨a, ha⟩ := hUc.nonempty
+  let g : ℂ → ℂ := U.piecewise f (fun _ ↦ f a)
+  have hg (z : ℂ) : IsUnit (g z - x) := by
+    apply Ne.isUnit
+    rw [sub_ne_zero]
+    by_cases hz : z ∈ U
+    · simpa [g, hz] using hfx z hz
+    · simpa [g, hz] using hfx a ha
+  let G (z : ℂ) := Checked.div (ε : ℂ) (g z - x) (hg z)
+  use G
   refine ⟨?mapsTo, ?injOn, ?deriv⟩
   case mapsTo =>
     intro z hz
-    rw [mem_ball_zero_iff, norm_div, norm_real, Real.norm_of_nonneg hε₀.le, div_lt_one₀]
-    · simpa [dist_eq_norm] using hε z hz
-    · simpa [sub_eq_zero] using hfx z hz
+    rw [mem_ball_zero_iff]
+    change ‖Checked.div (ε : ℂ) (g z - x) (hg z)‖ < 1
+    rw [norm_div, norm_real, Real.norm_of_nonneg hε₀.le,
+      div_lt_one₀ (norm_pos_iff.2 (hg z).ne_zero)]
+    simpa [dist_eq_norm, g, hz] using hε z hz
   case injOn =>
     intro z hz w hw heq
-    simpa [div_eq_mul_inv, hε₀.ne', hf_inj.eq_iff] using heq
+    have he : (ε : ℂ) * (g w - x) = (ε : ℂ) * (g z - x) := div_eq_div_iff.mp heq
+    apply hf_inj
+    simpa [g, hz, hw] using (mul_left_cancel₀ (ofReal_ne_zero.mpr hε₀.ne') he).symm
   case deriv =>
     intro z hz
     have hdz : DifferentiableAt ℂ f z := differentiableAt_of_deriv_ne_zero (hdf z hz)
-    rw [(hasDerivAt_const _ _).fun_div (hdz.hasDerivAt.sub_const _) _ |>.deriv] <;>
-      simp [*, ne_of_gt, sub_eq_zero]
+    have hdg : HasDerivAt g (deriv f z) z := hdz.hasDerivAt.congr_of_eventuallyEq <| by
+      filter_upwards [hUo.mem_nhds hz] with y hy
+      simp [g, hy]
+    let lift (y : ℂ) : {y : ℂ // IsUnit (g y - x)} := ⟨y, hg y⟩
+    have hlift : Continuous lift := continuous_id.subtype_mk _
+    have hd := (hasDerivAt_const z (ε : ℂ)).div (hdg.sub_const x) (hg z)
+    have hcomp := hd.hasFDerivAt.comp_tendsto lift
+      (hlift.continuousAt.tendsto.prodMap (tendsto_pure_pure lift z))
+    have hG : HasDerivAt G
+        ((0 * (g z - x) - (ε : ℂ) * deriv f z) /ₚ ((hg z).unit ^ 2)) z := by
+      have h := hcomp.hasDerivAtFilter
+      simp only [lift, Function.comp_def, ContinuousLinearMap.toSpanSingleton_apply, one_smul] at h
+      exact h
+    rw [hG.deriv]
+    simp [divp, ofReal_ne_zero.mpr hε₀.ne', hdf z hz]
 
 end Complex

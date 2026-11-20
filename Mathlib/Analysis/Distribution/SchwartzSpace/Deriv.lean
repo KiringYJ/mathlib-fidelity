@@ -102,7 +102,7 @@ instance : LineDeriv E 𝓢(E, F) 𝓢(E, F) where
   lineDerivOp m f := (SchwartzMap.evalCLM ℝ E F m ∘L fderivCLM ℝ E F) f
 
 theorem lineDerivOp_apply_eq_fderiv (m : E) (f : 𝓢(E, F)) (x : E) :
-    ∂_{m} f x = fderiv ℝ f x m := rfl
+    ∂_{m} f x = fderiv ℝ f x id m := rfl
 
 instance : LineDerivAdd E 𝓢(E, F) 𝓢(E, F) where
   lineDerivOp_add m := ((SchwartzMap.evalCLM ℝ E F m).comp (fderivCLM ℝ E F)).map_add
@@ -253,7 +253,7 @@ theorem integral_smul_deriv_right_eq_neg_left (f : 𝓢(ℝ, 𝕜)) (g : 𝓢(�
 
 Version for a Schwartz function with values in continuous linear maps. -/
 theorem integral_clm_comp_deriv_right_eq_neg_left (f : 𝓢(ℝ, F →L[𝕜] V)) (g : 𝓢(ℝ, F)) :
-    ∫ (x : ℝ), f x (deriv g x) = -∫ (x : ℝ), deriv f x (g x) :=
+    ∫ (x : ℝ), f x (deriv g x) = -∫ (x : ℝ), deriv f x id (g x) :=
   integral_bilinear_deriv_right_eq_neg_left f g
     ((ContinuousLinearMap.id 𝕜 (F →L[𝕜] V)).bilinearRestrictScalars ℝ)
 

@@ -94,7 +94,16 @@ theorem zero_mem_cantorSet : 0 ∈ cantorSet := by simp [cantorSet, zero_mem_pre
 
 theorem preCantorSet_antitone : Antitone preCantorSet := by
   refine antitone_nat_of_succ_le fun m ↦ ?_
-  induction m with grind [preCantorSet_zero, preCantorSet_succ]
+  induction m with
+  | zero =>
+    rw [preCantorSet_succ, preCantorSet_zero]
+    rintro x (⟨y, hy, rfl⟩ | ⟨y, hy, rfl⟩)
+    · exact ⟨div_nonneg hy.1 (by norm_num), (div_le_iff₀ (by norm_num)).2 (by linarith [hy.2])⟩
+    · exact ⟨div_nonneg (by linarith [hy.1]) (by norm_num),
+        (div_le_iff₀ (by norm_num)).2 (by linarith [hy.2])⟩
+  | succ m ih =>
+    rw [preCantorSet_succ (m + 1), preCantorSet_succ m]
+    exact Set.union_subset_union (Set.image_mono ih) (Set.image_mono ih)
 
 lemma preCantorSet_subset_unitInterval {n : ℕ} : preCantorSet n ⊆ Set.Icc 0 1 := by
   rw [← preCantorSet_zero]
@@ -110,8 +119,8 @@ theorem cantorSet_eq_union_halves :
   simp only [cantorSet]
   rw [Set.image_iInter, Set.image_iInter]
   rotate_left
-  · exact (mulRight_bijective₀ 3⁻¹ (by simp)).comp (AddGroup.addLeft_bijective 2)
-  · exact mulRight_bijective₀ 3⁻¹ (by simp)
+  · exact (mulRight_bijective₀ ((3 : ℝ)⁻¹) inv_ne_zero).comp (AddGroup.addLeft_bijective 2)
+  · exact mulRight_bijective₀ ((3 : ℝ)⁻¹) inv_ne_zero
   simp_rw [← Function.comp_def,
     ← Set.iInter_union_of_antitone
       (Set.monotone_image.comp_antitone preCantorSet_antitone)
@@ -128,8 +137,8 @@ lemma isClosed_preCantorSet (n : ℕ) : IsClosed (preCantorSet n) := by
   | zero => exact isClosed_Icc
   | succ n ih =>
     refine IsClosed.union ?_ ?_
-    · simpa [f, div_eq_inv_mul] using f.isClosedEmbedding.isClosed_iff_image_isClosed.mp ih
-    · simpa [g, f, div_eq_inv_mul] using g.isClosedEmbedding.isClosed_iff_image_isClosed.mp ih
+    · simpa [f, div_eq_inv_mul₀] using f.isClosedEmbedding.isClosed_iff_image_isClosed.mp ih
+    · simpa [g, f, div_eq_inv_mul₀] using g.isClosedEmbedding.isClosed_iff_image_isClosed.mp ih
 
 /-- The ternary Cantor set is closed. -/
 lemma isClosed_cantorSet : IsClosed cantorSet :=
@@ -184,24 +193,21 @@ theorem ofDigits_zero_two_sequence_unique {a b : ℕ → Fin 3} (ha : ∀ n, a n
   · exact this hb ha h.symm (fun n hn ↦ (h1 n hn).symm) h2.symm (by grind)
   obtain ⟨h3, h4⟩ := h3
   clear h2
-  have : ∑ x ∈ Finset.range n1, ofDigitsTerm a x = ∑ x ∈ Finset.range n1, ofDigitsTerm b x := by
+  have hprefix :
+      ∑ x ∈ Finset.range n1, ofDigitsTerm a x = ∑ x ∈ Finset.range n1, ofDigitsTerm b x := by
     apply Finset.sum_congr rfl
     grind [ofDigitsTerm]
   rw [ofDigits_eq_sum_add_ofDigits a (n1 + 1),
-    ofDigits_eq_sum_add_ofDigits b (n1 + 1), Finset.sum_range_succ,
-    Finset.sum_range_succ, this] at h
-  replace h : ofDigitsTerm a n1 + (3⁻¹ ^ n1 * ofDigits fun i ↦ a (1 + n1 + i)) * (1 / 3) =
-      (3⁻¹ ^ n1 * ofDigits fun i ↦ b (1 + n1 + i)) * (1 / 3) + ofDigitsTerm b n1 := by
-    ring_nf at h
-    linarith
-  simp only [ofDigitsTerm, h3, Fin.isValue, Fin.coe_ofNat_eq_mod, Nat.zero_mod, CharP.cast_eq_zero,
-    Nat.cast_ofNat, pow_succ, mul_inv_rev, zero_mul, inv_pow, one_div, zero_add, h4,
-    Nat.mod_succ] at h
-  replace h : (ofDigits fun i ↦ a (1 + n1 + i)) * 3⁻¹ =
-      (ofDigits fun i ↦ b (1 + n1 + i)) * 3⁻¹ + 2 * 3⁻¹ := by
-    rw [← mul_right_inj' (show ((3 : ℝ) ^ n1)⁻¹ ≠ 0 by positivity)]
-    linarith
-  linarith [ofDigits_nonneg (fun i ↦ b (1 + n1 + i)), ofDigits_le_one (fun i ↦ a (1 + n1 + i))]
+    ofDigits_eq_sum_add_ofDigits b (n1 + 1)] at h
+  simp only [Finset.sum_range_succ, hprefix, add_assoc] at h
+  have htail := add_left_cancel h
+  norm_num [ofDigitsTerm, h3, h4] at htail
+  have hscale : ((3 : ℝ) ^ (n1 + 1))⁻¹ ≠ 0 := inv_ne_zero
+  have he : (ofDigits fun i ↦ a (i + (n1 + 1))) = 2 + (ofDigits fun i ↦ b (i + (n1 + 1))) := by
+    apply mul_right_injective₀ hscale
+    simpa only [mul_add, mul_comm (2 : ℝ)] using htail
+  linarith [ofDigits_nonneg (fun i ↦ b (i + (n1 + 1))),
+    ofDigits_le_one (fun i ↦ a (i + (n1 + 1)))]
 
 /-- Given `x ∈ [0, 1/3] ∪ [2/3, 1]` (i.e. a level of the Cantor set),
 this function rescales the interval containing `x` back to `[0, 1]`.
@@ -217,8 +223,17 @@ theorem cantorStep_mem_cantorSet {x : ℝ} (hx : x ∈ cantorSet) : cantorStep x
   obtain ⟨y, hy, rfl | rfl⟩ : ∃ y ∈ cantorSet, y / 3 = x ∨ (2 + y) / 3 = x := by
     rw [cantorSet_eq_union_halves] at hx
     grind
-  all_goals
-    grind [cantorSet_subset_unitInterval]
+  · have hy' := cantorSet_subset_unitInterval hy
+    have himem : y / 3 ∈ Set.Icc (0 : ℝ) (1 / 3) :=
+      ⟨div_nonneg hy'.1 (by norm_num), (div_le_div_iff_of_pos_right (by norm_num)).2 hy'.2⟩
+    rw [ite_eq_left himem, mul_div_cancel₀]
+    exact hy
+  · have hy' := cantorSet_subset_unitInterval hy
+    have hnot : (2 + y) / 3 ∉ Set.Icc 0 (1 / 3) := by
+      intro h
+      have hle : 2 + y ≤ 1 := (div_le_div_iff_of_pos_right (by norm_num)).1 h.2
+      linarith [hy'.1]
+    rwa [ite_eq_right hnot, mul_div_cancel₀, add_sub_cancel_left]
 
 /-- The infinite sequence obtained by repeatedly applying `cantorStep` to `x`. -/
 noncomputable def cantorSequence (x : ℝ) : Stream' ℝ :=
@@ -285,8 +300,8 @@ theorem le_ofDigits_cantorToTernary_sum {x : ℝ} (hx : x ∈ cantorSet) {n : �
   rw [cantorSequence_eq_self_sub_sum_cantorToTernary x n] at h_mem
   apply cantorSet_subset_unitInterval at h_mem
   simp only [Set.mem_Icc] at h_mem
-  rw [← mul_le_mul_iff_left₀ (show 0 < (3 : ℝ) ^ n by positivity), sub_mul, inv_pow,
-    inv_mul_cancel₀ (by simp)]
+  rw [← mul_le_mul_iff_left₀ (show 0 < (3 : ℝ) ^ n by positivity), sub_mul, inv_pow₀,
+    inv_mul_cancel₀]
   linarith!
 
 theorem ofDigits_cantorToTernary {x : ℝ} (hx : x ∈ cantorSet) :
@@ -299,8 +314,8 @@ theorem ofDigits_cantorToTernary {x : ℝ} (hx : x ∈ cantorSet) :
   apply tendsto_of_tendsto_of_tendsto_of_le_of_le (g := fun n ↦ x - (3⁻¹ : ℝ) ^ n) (h := fun _ ↦ x)
   · rw [← tendsto_sub_nhds_zero_iff]
     simp only [sub_sub_cancel_left]
-    rw [show 0 = -(0 : ℝ) by simp]
-    exact (tendsto_pow_atTop_nhds_zero_of_abs_lt_one (by norm_num)).neg
+    simpa only [neg_zero] using (tendsto_pow_atTop_nhds_zero_of_abs_lt_one
+      (show |(3 : ℝ)⁻¹| < 1 from by norm_num)).neg
   · exact tendsto_const_nhds
   · exact fun _ ↦ le_ofDigits_cantorToTernary_sum hx
   · exact fun _ ↦ ofDigits_cantorToTernary_sum_le hx

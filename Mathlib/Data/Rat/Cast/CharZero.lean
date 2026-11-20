@@ -96,6 +96,11 @@ def castHom : ℚ →+* α where
     ((p / q : ℚ) : α) = (p : α) / (q : α) :=
   map_div₀ (castHom α) ..
 
+@[norm_cast]
+theorem cast_fractionInt (n d : ℤ) (hd : d ≠ 0) :
+    (fractionInt n d hd : α) = (n : α) / (d : α) := by
+  simp only [fractionInt_eq_div, cast_div, cast_intCast]
+
 @[simp, norm_cast]
 lemma cast_zpow (p : ℚ) (n : ℤ) {h : n < 0 → IsUnit p} :
     ((p ^ n : ℚ) : α) =

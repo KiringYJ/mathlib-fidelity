@@ -36,6 +36,31 @@ namespace MeromorphicOn
 ## Definition of the Divisor
 -/
 
+/-- The nonzero finite orders on a punctured presentation form a discrete set. An
+ambient representative used to prove discreteness may be chosen arbitrarily away from
+the image; the numerator identity determines every order on the domain. -/
+theorem codiscreteWithin_order_eq_zero_or_top {D : Type*} {coord : D → 𝕜} {f : D → E}
+    (hf : MeromorphicOn f U coord) :
+    {x : 𝕜 | ∃ hx : x ∈ U, meromorphicOrderAt f x (hf x hx) = 0 ∨
+      meromorphicOrderAt f x (hf x hx) = ⊤} ∈ Filter.codiscreteWithin U := by
+  classical
+  let F : 𝕜 → E := fun y ↦ if hy : y ∈ Set.range coord then f hy.choose else 0
+  have hlocal (x : 𝕜) (hx : x ∈ U) :
+      ∃ h : MeromorphicAt F x, meromorphicOrderAt F x h = meromorphicOrderAt f x (hf x hx) := by
+    obtain ⟨hc, m, a, ha, he⟩ := hf x hx
+    have he' : ∀ᶠ y in 𝓝[≠] x, (y - x) ^ m • F y = a y := by
+      filter_upwards [hc, Filter.eventually_comap.mp he] with y hy hh
+      simpa only [F, dite_eq_left hy, hy.choose_spec] using hh hy.choose hy.choose_spec
+    have he'' : ∀ᶠ y in Filter.comap _root_.id (𝓝[≠] x), (y - x) ^ m • F y = a y := by
+      simpa only [Filter.comap_id] using he'
+    have hF : MeromorphicAt F x := ⟨by simp, m, a, ha, he''⟩
+    exact ⟨hF, (hF.order_eq_of_presentation ha he'').trans
+      ((hf x hx).order_eq_of_presentation ha he).symm⟩
+  have hF : MeromorphicOn F U := fun x hx ↦ (hlocal x hx).choose
+  filter_upwards [hF.codiscreteWithin_setOfPred_meromorphicOrderAt_eq_zero_or_top]
+    with x ⟨hx, hh⟩
+  exact ⟨hx, (hlocal x hx).choose_spec ▸ hh⟩
+
 open scoped Classical in
 /--
 The divisor of a function `f` that is meromorphic on `U` and has finite order at every point of
@@ -43,7 +68,8 @@ The divisor of a function `f` that is meromorphic on `U` and has finite order at
 the meromorphy proof. A function that vanishes on a punctured neighborhood of a point of `U` has
 order `⊤` there and no divisor; its pole divisor `MeromorphicOn.poleDivisor` exists.
 -/
-noncomputable def divisor (f : 𝕜 → E) (U : Set 𝕜) {hf : MeromorphicOn f U}
+noncomputable def divisor {D : Type*} (f : D → E) (U : Set 𝕜) {coord : D → 𝕜}
+    {hf : MeromorphicOn f U coord}
     (h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤) :
     Function.locallyFinsuppWithin U ℤ where
   toFun z := if hz : z ∈ U then (meromorphicOrderAt f z (hf z hz)).untop (h z hz) else 0
@@ -54,7 +80,7 @@ noncomputable def divisor (f : 𝕜 → E) (U : Set 𝕜) {hf : MeromorphicOn f 
     rw [← supportDiscreteWithin_iff_locallyFiniteWithin fun z hz ↦ by
       by_contra h₂z
       simp [h₂z] at hz]
-    filter_upwards [hf.codiscreteWithin_setOfPred_meromorphicOrderAt_eq_zero_or_top]
+    filter_upwards [hf.codiscreteWithin_order_eq_zero_or_top]
       with z ⟨hz, h'⟩
     rcases h' with h' | h'
     · simp [hz, h']
@@ -62,7 +88,8 @@ noncomputable def divisor (f : 𝕜 → E) (U : Set 𝕜) {hf : MeromorphicOn f 
 
 open scoped Classical in
 /-- Definition of the divisor -/
-theorem divisor_def (f : 𝕜 → E) (U : Set 𝕜) {hf : MeromorphicOn f U}
+theorem divisor_def {D : Type*} (f : D → E) (U : Set 𝕜) {coord : D → 𝕜}
+    {hf : MeromorphicOn f U coord}
     (h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤) :
     divisor f U h z =
       if hz : z ∈ U then (meromorphicOrderAt f z (hf z hz)).untop (h z hz) else 0 :=
@@ -72,13 +99,13 @@ theorem divisor_def (f : 𝕜 → E) (U : Set 𝕜) {hf : MeromorphicOn f U}
 Simplifier lemma: on `U`, the divisor of a function `f` evaluates to the order of `f`.
 -/
 @[simp]
-lemma divisor_apply {f : 𝕜 → E} (hf : MeromorphicOn f U)
+lemma divisor_apply {D : Type*} {coord : D → 𝕜} {f : D → E} (hf : MeromorphicOn f U coord)
     {h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤} (hz : z ∈ U) :
     divisor f U h z = (meromorphicOrderAt f z (hf z hz)).untop (h z hz) := by
   simp [divisor_def, hz]
 
 /-- On `U`, the divisor of a function `f`, as an element of `WithTop ℤ`, is the order of `f`. -/
-lemma coe_divisor_apply {f : 𝕜 → E} (hf : MeromorphicOn f U)
+lemma coe_divisor_apply {D : Type*} {coord : D → 𝕜} {f : D → E} (hf : MeromorphicOn f U coord)
     {h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤} (hz : z ∈ U) :
     (divisor f U h z : WithTop ℤ) = meromorphicOrderAt f z (hf z hz) := by
   simp [divisor_apply hf hz]
@@ -149,7 +176,8 @@ lemma divisor_ball_support_finite [ProperSpace 𝕜] {f : 𝕜 → E} {R : ℝ} 
 /--
 Two divisors on `U` agree if the orders of the two functions agree at every point of `U`.
 -/
-theorem divisor_congr {f₁ f₂ : 𝕜 → E} {hf₁ : MeromorphicOn f₁ U} {hf₂ : MeromorphicOn f₂ U}
+theorem divisor_congr {D₁ D₂ : Type*} {c₁ : D₁ → 𝕜} {c₂ : D₂ → 𝕜}
+    {f₁ : D₁ → E} {f₂ : D₂ → E} {hf₁ : MeromorphicOn f₁ U c₁} {hf₂ : MeromorphicOn f₂ U c₂}
     {h₁ : ∀ z (hz : z ∈ U), meromorphicOrderAt f₁ z (hf₁ z hz) ≠ ⊤}
     {h₂ : ∀ z (hz : z ∈ U), meromorphicOrderAt f₂ z (hf₂ z hz) ≠ ⊤}
     (h : ∀ z (hz : z ∈ U),
@@ -275,8 +303,8 @@ every function that is meromorphic on `U`: a function that vanishes on a punctur
 point has no pole there. It is the negative part of the divisor where that is defined
 (`MeromorphicOn.poleDivisor_eq_negPart_divisor`).
 -/
-noncomputable def poleDivisor (f : 𝕜 → E) (U : Set 𝕜)
-    (hf : MeromorphicOn f U := by fun_prop_default) : Function.locallyFinsuppWithin U ℤ where
+noncomputable def poleDivisor {D : Type*} (f : D → E) (U : Set 𝕜) {coord : D → 𝕜}
+    (hf : MeromorphicOn f U coord := by fun_prop_default) : Function.locallyFinsuppWithin U ℤ where
   toFun z := if hz : z ∈ U then
     -(min (meromorphicOrderAt f z (hf z hz)) 0).untop
       (ne_top_of_le_ne_top WithTop.coe_ne_top (min_le_right _ 0)) else 0
@@ -287,27 +315,49 @@ noncomputable def poleDivisor (f : 𝕜 → E) (U : Set 𝕜)
     rw [← supportDiscreteWithin_iff_locallyFiniteWithin fun z hz ↦ by
       by_contra h₂z
       simp [h₂z] at hz]
-    filter_upwards [hf.codiscreteWithin_setOfPred_meromorphicOrderAt_eq_zero_or_top]
+    filter_upwards [hf.codiscreteWithin_order_eq_zero_or_top]
       with z ⟨hz, h'⟩
     rcases h' with h' | h' <;> simp [hz, h']
 
 open scoped Classical in
 /-- Definition of the pole divisor -/
-theorem poleDivisor_def (f : 𝕜 → E) (U : Set 𝕜) (hf : MeromorphicOn f U) :
+theorem poleDivisor_def {D : Type*} (f : D → E) (U : Set 𝕜) {coord : D → 𝕜}
+    (hf : MeromorphicOn f U coord) :
     poleDivisor f U hf z = if hz : z ∈ U then -(min (meromorphicOrderAt f z (hf z hz)) 0).untop
       (ne_top_of_le_ne_top WithTop.coe_ne_top (min_le_right _ 0)) else 0 :=
   rfl
 
 /-- On `U`, the pole divisor of `f` is the negative of the minimum of the order and `0`. -/
-lemma coe_poleDivisor_apply {f : 𝕜 → E} (hf : MeromorphicOn f U) (hz : z ∈ U) :
+lemma coe_poleDivisor_apply {D : Type*} {coord : D → 𝕜} {f : D → E}
+    (hf : MeromorphicOn f U coord) (hz : z ∈ U) :
     (poleDivisor f U hf z : WithTop ℤ) = -min (meromorphicOrderAt f z (hf z hz)) 0 := by
   simp only [poleDivisor_def, hz, ↓reduceDIte]
   rw [WithTop.LinearOrderedAddCommGroup.coe_neg, WithTop.coe_untop]
 
 /-- The minimum of the order and `0` is the negative of the pole divisor. -/
-private lemma min_meromorphicOrderAt_zero {f : 𝕜 → E} (hf : MeromorphicOn f U) (hz : z ∈ U) :
+private lemma min_meromorphicOrderAt_zero {D : Type*} {coord : D → 𝕜} {f : D → E}
+    (hf : MeromorphicOn f U coord) (hz : z ∈ U) :
     min (meromorphicOrderAt f z (hf z hz)) 0 = ((-poleDivisor f U hf z : ℤ) : WithTop ℤ) := by
   rw [WithTop.LinearOrderedAddCommGroup.coe_neg, coe_poleDivisor_apply hf hz, neg_neg]
+
+/-- The pole divisor vanishes exactly when the meromorphic function extends analytically
+at every point. -/
+theorem poleDivisor_eq_zero_iff_regular {D : Type*} {coord : D → 𝕜} {f : D → E}
+    (hf : MeromorphicOn f U coord) :
+    poleDivisor f U hf = 0 ↔ ∀ z ∈ U, MeromorphicAt.IsRegular f z coord := by
+  constructor
+  · intro h z hz
+    apply (hf z hz).meromorphicOrderAt_nonneg_iff.mp
+    have hmin := min_meromorphicOrderAt_zero hf hz
+    simpa [h, min_eq_right_iff] using hmin
+  · intro h
+    ext z
+    by_cases hz : z ∈ U
+    · have hle := (hf z hz).meromorphicOrderAt_nonneg_iff.mpr (h z hz)
+      have hzero := (min_meromorphicOrderAt_zero hf hz).symm.trans (min_eq_right hle)
+      have hneg : -(poleDivisor f U hf z) = 0 := by exact_mod_cast hzero
+      exact neg_eq_zero.mp hneg
+    · exact Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz
 
 /-- The pole divisor is non-negative. -/
 theorem poleDivisor_nonneg {f : 𝕜 → E} (hf : MeromorphicOn f U) : 0 ≤ poleDivisor f U hf := by
@@ -335,8 +385,9 @@ theorem poleDivisor_eq_negPart_divisor {f : 𝕜 → E} {hf : MeromorphicOn f U}
 
 /-- Two pole divisors on `U` agree if the minima of the orders with `0` agree at every point of
 `U`. -/
-private theorem poleDivisor_congr' {f₁ f₂ : 𝕜 → E} {hf₁ : MeromorphicOn f₁ U}
-    {hf₂ : MeromorphicOn f₂ U}
+private theorem poleDivisor_congr' {D₁ D₂ : Type*} {c₁ : D₁ → 𝕜} {c₂ : D₂ → 𝕜}
+    {f₁ : D₁ → E} {f₂ : D₂ → E} {hf₁ : MeromorphicOn f₁ U c₁}
+    {hf₂ : MeromorphicOn f₂ U c₂}
     (h : ∀ z (hz : z ∈ U), min (meromorphicOrderAt f₁ z (hf₁ z hz)) 0 =
       min (meromorphicOrderAt f₂ z (hf₂ z hz)) 0) :
     poleDivisor f₁ U hf₁ = poleDivisor f₂ U hf₂ := by
@@ -348,7 +399,8 @@ private theorem poleDivisor_congr' {f₁ f₂ : 𝕜 → E} {hf₁ : Meromorphic
 
 /-- Two pole divisors on `U` agree if the orders of the two functions agree at every point of
 `U`. -/
-theorem poleDivisor_congr {f₁ f₂ : 𝕜 → E} {hf₁ : MeromorphicOn f₁ U} {hf₂ : MeromorphicOn f₂ U}
+theorem poleDivisor_congr {D₁ D₂ : Type*} {c₁ : D₁ → 𝕜} {c₂ : D₂ → 𝕜}
+    {f₁ : D₁ → E} {f₂ : D₂ → E} {hf₁ : MeromorphicOn f₁ U c₁} {hf₂ : MeromorphicOn f₂ U c₂}
     (h : ∀ z (hz : z ∈ U),
       meromorphicOrderAt f₁ z (hf₁ z hz) = meromorphicOrderAt f₂ z (hf₂ z hz)) :
     poleDivisor f₁ U hf₁ = poleDivisor f₂ U hf₂ :=
@@ -606,27 +658,21 @@ theorem divisor_fun_prod {ι : Type*} {s : Finset ι} {f : ι → 𝕜 → 𝕜}
     (fun i hi ↦ h₁f i hi z hz) fun i hi ↦ h₂f i hi z hz)]
   exact divisor_congr fun z hz ↦ meromorphicOrderAt_congr _ (.of_eq (by ext; simp))
 
-/-- The divisor of the inverse is the negative of the divisor. -/
-theorem divisor_inv {f : 𝕜 → 𝕜} {hf : MeromorphicOn f U}
-    (h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤) {hf' : MeromorphicOn f⁻¹ U}
-    {h' : ∀ z (hz : z ∈ U), meromorphicOrderAt f⁻¹ z (hf' z hz) ≠ ⊤} :
-    divisor f⁻¹ U h' = -divisor f U h := by
+/-- The divisor of the reciprocal on its unit locus is the negative of the original divisor. -/
+theorem divisor_inv {D : Type*} {coord : D → 𝕜} {f : D → 𝕜} {hf : MeromorphicOn f U coord}
+    (h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤)
+    {hf' : MeromorphicOn (fun y : {y : D | IsUnit (f y)} ↦ Checked.inv (f y) y.property)
+      U (coord ∘ Subtype.val)}
+    {h' : ∀ z (hz : z ∈ U), meromorphicOrderAt _ z (hf' z hz) ≠ ⊤} :
+    divisor _ U h' = -divisor f U h := by
   ext z
   by_cases hz : z ∈ U
-  · have := meromorphicOrderAt_inv (hf z hz)
+  · have ho := meromorphicOrderAt_inv (hf z hz) (hf' z hz).1
     rw [← coe_divisor_apply hf hz (h := h), ← coe_divisor_apply hf' hz (h := h'),
-      ← WithTop.LinearOrderedAddCommGroup.coe_neg] at this
+      ← WithTop.LinearOrderedAddCommGroup.coe_neg] at ho
     simp only [Function.locallyFinsuppWithin.coe_neg, Pi.neg_apply]
-    exact_mod_cast this
+    exact_mod_cast ho
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
-
-/-- The divisor of the inverse is the negative of the divisor. -/
-theorem divisor_fun_inv {f : 𝕜 → 𝕜} {hf : MeromorphicOn f U}
-    (h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤)
-    {hf' : MeromorphicOn (fun z ↦ (f z)⁻¹) U}
-    {h' : ∀ z (hz : z ∈ U), meromorphicOrderAt (fun z ↦ (f z)⁻¹) z (hf' z hz) ≠ ⊤} :
-    divisor (fun z ↦ (f z)⁻¹) U h' = -divisor f U h :=
-  divisor_inv h
 
 /--
 If orders are finite, then the divisor of `f ^ n` is `n` times the divisor of `f`.
@@ -680,44 +726,39 @@ theorem poleDivisor_pow {f : 𝕜 → 𝕜} (hf : MeromorphicOn f U) (n : ℕ) :
       rw [e₁', e₂', mul_neg, mul_min_of_nonneg _ _ (Int.natCast_nonneg n), mul_zero]
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
 
-/--
-If orders are finite, then the divisor of `f ^ n` is `n` times the divisor of `f`.
--/
-theorem divisor_zpow {f : 𝕜 → 𝕜} {hf : MeromorphicOn f U}
+/-- The divisor of an integer power on its exponent-dependent domain is the exponent
+times the original divisor. -/
+theorem divisor_zpow {D : Type*} {coord : D → 𝕜} {f : D → 𝕜} {hf : MeromorphicOn f U coord}
     (h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤) (n : ℤ)
-    {hf' : MeromorphicOn (f ^ n) U}
-    {h' : ∀ z (hz : z ∈ U), meromorphicOrderAt (f ^ n) z (hf' z hz) ≠ ⊤} :
-    divisor (f ^ n) U h' = n • divisor f U h := by
+    {hf' : MeromorphicOn (fun y : {y : D | n < 0 → IsUnit (f y)} ↦ Checked.zpow (f y) n y.property)
+      U (coord ∘ Subtype.val)}
+    {h' : ∀ z (hz : z ∈ U), meromorphicOrderAt _ z (hf' z hz) ≠ ⊤} :
+    divisor _ U h' = n • divisor f U h := by
   ext z
   by_cases hz : z ∈ U
-  · have := meromorphicOrderAt_zpow (hf z hz) (n := n)
-    rw [← coe_divisor_apply hf hz (h := h), ← coe_divisor_apply hf' hz (h := h')] at this
+  · have ho := meromorphicOrderAt_zpow (hf z hz) n (hf' z hz).1
+    rw [← coe_divisor_apply hf hz (h := h), ← coe_divisor_apply hf' hz (h := h')] at ho
     simp only [Function.locallyFinsuppWithin.coe_zsmul, Pi.smul_apply, zsmul_eq_mul]
-    exact_mod_cast this
+    exact_mod_cast ho
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
-
-/--
-If orders are finite, then the divisor of `f ^ n` is `n` times the divisor of `f`.
--/
-theorem divisor_fun_zpow {f : 𝕜 → 𝕜} {hf : MeromorphicOn f U}
-    (h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤) (n : ℤ)
-    {hf' : MeromorphicOn (fun z ↦ f z ^ n) U}
-    {h' : ∀ z (hz : z ∈ U), meromorphicOrderAt (fun z ↦ f z ^ n) z (hf' z hz) ≠ ⊤} :
-    divisor (fun z ↦ f z ^ n) U h' = n • divisor f U h :=
-  divisor_zpow h n
 
 /--
 Taking the divisor of a meromorphic function commutes with restriction.
 -/
 @[simp]
-theorem divisor_restrict {f : 𝕜 → E} {V : Set 𝕜} {hf : MeromorphicOn f U}
+theorem divisor_restrict {D : Type*} {coord : D → 𝕜} {f : D → E} {V : Set 𝕜}
+    {hf : MeromorphicOn f U coord}
     {h : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (hf z hz) ≠ ⊤} (hV : V ⊆ U) :
-    (divisor f U h).restrict hV = divisor f V (hf := hf.mono_set hV) fun z hz ↦ h z (hV hz) := by
+    Function.locallyFinsuppWithin.restrict (divisor f U (coord := coord) (hf := hf) h) hV =
+      divisor f V (coord := coord) (hf := fun z hz ↦ hf z (hV hz)) (fun z hz ↦ h z (hV hz)) := by
+  classical
   ext x
+  change (if x ∈ V then (if hx : x ∈ U then (meromorphicOrderAt f x (hf x hx)).untop (h x hx)
+    else 0) else 0) =
+      (if hx : x ∈ V then (meromorphicOrderAt f x (hf x (hV hx))).untop (h x (hV hx)) else 0)
   by_cases hx : x ∈ V
-  · rw [Function.locallyFinsuppWithin.restrict_apply]
-    simp [hx, hV hx]
-  · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hx]
+  · rw [ite_eq_left hx, dite_eq_left (hV hx), dite_eq_left hx]
+  · rw [ite_eq_right hx, dite_eq_right hx]
 
 /-- Taking the pole divisor of a meromorphic function commutes with restriction. -/
 @[simp]

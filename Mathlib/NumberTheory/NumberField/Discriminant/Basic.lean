@@ -75,9 +75,11 @@ section rootDiscr
 
 /-- The root discriminant of a number field `K`. -/
 noncomputable def rootDiscr : ℝ :=
-  |discr K| ^ (finrank ℚ K : ℝ)⁻¹
+  |discr K| ^ Checked.inv (finrank ℚ K : ℝ)
+    (Nat.cast_ne_zero.mpr (finrank_pos (R := ℚ) (M := K)).ne').isUnit
 
-theorem rootDiscr_def : rootDiscr K = |discr K| ^ (finrank ℚ K : ℝ)⁻¹ := by
+theorem rootDiscr_def : rootDiscr K = |discr K| ^ Checked.inv (finrank ℚ K : ℝ)
+    (Nat.cast_ne_zero.mpr (finrank_pos (R := ℚ) (M := K)).ne').isUnit := by
   rw [rootDiscr]
 
 theorem rootDiscr_rat : rootDiscr ℚ = 1 := by
@@ -107,9 +109,12 @@ theorem _root_.NumberField.mixedEmbedding.volume_fundamentalDomain_latticeBasis 
           det_mul, det_transpose, det_reindex_self]
       _ = (2 : ℝ≥0∞)⁻¹ ^ Fintype.card {w : InfinitePlace K // IsComplex w} * sqrt ‖N.det ^ 2‖₊ := by
         have : ‖Complex.I‖₊ = 1 := by rw [← norm_toNNReal, norm_I, Real.toNNReal_one]
-        rw [det_matrixToStdBasis, nnnorm_mul, nnnorm_pow, nnnorm_mul, this, mul_one, nnnorm_inv,
-          coe_mul, ENNReal.coe_pow, ← norm_toNNReal, RCLike.norm_two, Real.toNNReal_ofNat,
-          coe_inv two_ne_zero, coe_ofNat, nnnorm_pow, NNReal.sqrt_sq]
+        have htwo : ‖(2 : ℂ)⁻¹‖₊ = (2 : ℝ≥0)⁻¹ := by
+          rw [nnnorm_inv]
+          apply inv_inj₀.mpr
+          simp only [← norm_toNNReal, RCLike.norm_two, Real.toNNReal_ofNat]
+        rw [det_matrixToStdBasis, nnnorm_mul, nnnorm_pow, nnnorm_mul, this, mul_one, htwo,
+          coe_mul, ENNReal.coe_pow, ENNReal.coe_inv_two, nnnorm_pow, NNReal.sqrt_sq]
       _ = (2 : ℝ≥0∞)⁻¹ ^ Fintype.card { w // IsComplex w } * NNReal.sqrt ‖discr K‖₊ := by
         rw [← Algebra.discr_eq_det_embeddingsMatrixReindex_pow_two, Algebra.discr_reindex,
           ← coe_discr, map_intCast, ← Complex.nnnorm_intCast]
@@ -124,10 +129,15 @@ open scoped Classical in
 theorem _root_.NumberField.mixedEmbedding.covolume_integerLattice :
     ZLattice.covolume (mixedEmbedding.integerLattice K) =
       (2⁻¹) ^ nrComplexPlaces K * √|discr K| := by
+  have htwo : ((2 : ℝ≥0∞)⁻¹).toReal = (2 : ℝ)⁻¹ := by
+    have h : (2 : ℝ≥0∞).toReal = (2 : ℝ) := toReal_ofNat 2
+    have hu : IsUnit (2 : ℝ≥0∞).toReal := h.symm ▸ (two_ne_zero : (2 : ℝ) ≠ 0).isUnit
+    rw [ENNReal.toReal_inv _ (ha := hu)]
+    exact inv_inj₀.mpr h
   rw [ZLattice.covolume_eq_measure_fundamentalDomain _ _ (fundamentalDomain_integerLattice K),
     measureReal_def,
     volume_fundamentalDomain_latticeBasis, ENNReal.toReal_mul, ENNReal.toReal_pow,
-    ENNReal.toReal_inv, toReal_ofNat, ENNReal.coe_toReal, Real.coe_sqrt, coe_nnnorm,
+    htwo, ENNReal.coe_toReal, Real.coe_sqrt, coe_nnnorm,
     Int.norm_eq_abs]
 
 open scoped Classical in
@@ -136,11 +146,11 @@ theorem _root_.NumberField.mixedEmbedding.covolume_idealLattice (I : (Fractional
       (FractionalIdeal.absNorm (I : FractionalIdeal (𝓞 K)⁰ K)) *
         (2⁻¹) ^ nrComplexPlaces K * √|discr K| := by
   rw [ZLattice.covolume_eq_measure_fundamentalDomain _ _ (fundamentalDomain_idealLattice K I),
-    measureReal_def,
-    volume_fundamentalDomain_fractionalIdealLatticeBasis, volume_fundamentalDomain_latticeBasis,
-    ENNReal.toReal_mul, ENNReal.toReal_mul, ENNReal.toReal_pow, ENNReal.toReal_inv, toReal_ofNat,
-    ENNReal.coe_toReal, Real.coe_sqrt, coe_nnnorm, Int.norm_eq_abs,
-    ENNReal.toReal_ofReal (Rat.cast_nonneg.mpr (FractionalIdeal.absNorm_nonneg I.val)), mul_assoc]
+    measureReal_def, volume_fundamentalDomain_fractionalIdealLatticeBasis, ENNReal.toReal_mul,
+    ENNReal.toReal_ofReal (Rat.cast_nonneg.mpr (FractionalIdeal.absNorm_nonneg I.val)),
+    ← measureReal_def,
+    ← ZLattice.covolume_eq_measure_fundamentalDomain _ _ (fundamentalDomain_integerLattice K),
+    covolume_integerLattice, mul_assoc]
 
 theorem exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr (I : (FractionalIdeal (𝓞 K)⁰ K)ˣ) :
     ∃ a ∈ (I : FractionalIdeal (𝓞 K)⁰ K), a ≠ 0 ∧
@@ -148,48 +158,54 @@ theorem exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr (I : (FractionalIdeal
         (finrank ℚ K).factorial / (finrank ℚ K) ^ (finrank ℚ K) * Real.sqrt |discr K| := by
   classical
   -- The smallest possible value for `exists_ne_zero_mem_ideal_of_norm_le`
-  let B := (minkowskiBound K I * (convexBodySumFactor K)⁻¹).toReal ^ (1 / (finrank ℚ K : ℝ))
+  have hdeg : 0 < (finrank ℚ K : ℝ) := Nat.cast_pos.mpr finrank_pos
+  have hfactor : (convexBodySumFactor K : ℝ≥0∞) ≠ 0 :=
+    ENNReal.coe_ne_zero.mpr (convexBodySumFactor_ne_zero K)
+  let A := (minkowskiBound K I / (convexBodySumFactor K : ℝ≥0∞)).toReal
+  let B := A ^ (1 / (finrank ℚ K : ℝ))
+  have hA : 0 ≤ A := ENNReal.toReal_nonneg
+  have hB : 0 ≤ B := Real.rpow_nonneg hA _
+  have hpow : B ^ finrank ℚ K = A := by
+    rw [← Real.rpow_natCast]
+    dsimp only [B]
+    rw [← Real.rpow_mul hA, div_mul_cancel₀, Real.rpow_one]
   have h_le : (minkowskiBound K I) ≤ volume (convexBodySum K B) := by
-    refine le_of_eq ?_
-    rw [convexBodySum_volume, ← ENNReal.ofReal_pow (by positivity), ← Real.rpow_natCast,
-      ← Real.rpow_mul toReal_nonneg, div_mul_cancel₀, Real.rpow_one, ofReal_toReal, mul_comm,
-      mul_assoc, ← coe_mul, inv_mul_cancel₀ (convexBodySumFactor_ne_zero K), ENNReal.coe_one,
-      mul_one]
-    · exact mul_ne_top (ne_of_lt (minkowskiBound_lt_top K I)) coe_ne_top
-    · exact (Nat.cast_ne_zero.mpr (ne_of_gt finrank_pos))
-  convert! exists_ne_zero_mem_ideal_of_norm_le K I h_le
-  rw [div_pow B, ← Real.rpow_natCast B, ← Real.rpow_mul (by positivity), div_mul_cancel₀ _
-    (Nat.cast_ne_zero.mpr <| ne_of_gt finrank_pos), Real.rpow_one, mul_comm_div, mul_div_assoc']
-  congr 1
-  rw [eq_comm]
-  calc
-    _ = FractionalIdeal.absNorm I.1 * (2 : ℝ)⁻¹ ^ nrComplexPlaces K * sqrt ‖discr K‖₊ *
-          (2 : ℝ) ^ finrank ℚ K * ((2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K /
-            (Nat.factorial (finrank ℚ K)))⁻¹ := by
-      simp_rw [minkowskiBound, convexBodySumFactor,
-        volume_fundamentalDomain_fractionalIdealLatticeBasis,
-        volume_fundamentalDomain_latticeBasis, toReal_mul, toReal_pow, toReal_inv, coe_toReal,
-        toReal_ofNat, mixedEmbedding.finrank, mul_assoc]
-      rw [ENNReal.toReal_ofReal (Rat.cast_nonneg.mpr (FractionalIdeal.absNorm_nonneg I.1))]
-      simp_rw [NNReal.coe_inv, NNReal.coe_div, NNReal.coe_mul, NNReal.coe_pow, NNReal.coe_div,
-        coe_real_pi, NNReal.coe_ofNat, NNReal.coe_natCast]
-    _ = FractionalIdeal.absNorm I.1 * (2 : ℝ) ^ (finrank ℚ K - nrComplexPlaces K - nrRealPlaces K +
-          nrComplexPlaces K : ℤ) * Real.sqrt ‖discr K‖ * Nat.factorial (finrank ℚ K) *
-            π⁻¹ ^ (nrComplexPlaces K) := by
-      simp_rw [inv_div, div_eq_mul_inv, mul_inv, ← zpow_neg_one, ← zpow_natCast, mul_zpow,
-        ← zpow_mul, neg_one_mul, mul_neg_one, neg_neg, Real.coe_sqrt, coe_nnnorm, sub_eq_add_neg,
-        zpow_add₀ (two_ne_zero : (2 : ℝ) ≠ 0)]
-      ring
-    _ = FractionalIdeal.absNorm I.1 * (2 : ℝ) ^ (2 * nrComplexPlaces K : ℤ) * Real.sqrt ‖discr K‖ *
-          Nat.factorial (finrank ℚ K) * π⁻¹ ^ (nrComplexPlaces K) := by
-      congr
-      rw [← card_add_two_mul_card_eq_rank, Nat.cast_add, Nat.cast_mul, Nat.cast_ofNat]
-      ring
-    _ = FractionalIdeal.absNorm I.1 * (4 / π) ^ nrComplexPlaces K * (finrank ℚ K).factorial *
-          Real.sqrt |discr K| := by
-      rw [Int.norm_eq_abs, zpow_mul, show (2 : ℝ) ^ (2 : ℤ) = 4 by norm_cast, div_pow,
-        inv_eq_one_div, div_pow, one_pow, zpow_natCast]
-      ring
+    rw [convexBodySum_volume, ← ENNReal.ofReal_pow hB, hpow]
+    dsimp only [A]
+    rw [ENNReal.ofReal_toReal (ENNReal.div_ne_top (minkowskiBound_lt_top K I).ne hfactor),
+      ENNReal.mul_div_cancel hfactor ENNReal.coe_ne_top]
+  obtain ⟨a, ha, hne, hbound⟩ := exists_ne_zero_mem_ideal_of_norm_le K I h_le
+  refine ⟨a, ha, hne, hbound.trans_eq ?_⟩
+  rw [div_pow₀, hpow]
+  have hfactor_real : IsUnit ((convexBodySumFactor K : ℝ≥0∞).toReal) := by
+    rw [ENNReal.coe_toReal, isUnit_iff_ne_zero, NNReal.coe_ne_zero]
+    exact convexBodySumFactor_ne_zero K
+  have hnum : (minkowskiBound K I).toReal =
+      (FractionalIdeal.absNorm I.1 : ℝ) * (2⁻¹ : ℝ) ^ nrComplexPlaces K *
+        Real.sqrt |(discr K : ℝ)| * (2 : ℝ) ^ finrank ℚ K := by
+    rw [minkowskiBound, ENNReal.toReal_mul, ← measureReal_def,
+      ← ZLattice.covolume_eq_measure_fundamentalDomain _ _ (fundamentalDomain_idealLattice K I),
+      covolume_idealLattice, ENNReal.toReal_pow, ENNReal.toReal_ofNat, mixedEmbedding.finrank]
+  have hden : (convexBodySumFactor K : ℝ≥0∞).toReal =
+      (2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K / (finrank ℚ K).factorial := by
+    simp only [ENNReal.coe_toReal, convexBodySumFactor, NNReal.coe_div, NNReal.coe_mul,
+      NNReal.coe_pow, NNReal.coe_real_pi, NNReal.coe_ofNat, NNReal.coe_natCast]
+  have hquot : A = Checked.div
+      ((FractionalIdeal.absNorm I.1 : ℝ) * (2⁻¹ : ℝ) ^ nrComplexPlaces K *
+        Real.sqrt |(discr K : ℝ)| * (2 : ℝ) ^ finrank ℚ K)
+      ((2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K / (finrank ℚ K).factorial)
+      (hden ▸ hfactor_real) := by
+    dsimp only [A]
+    rw [ENNReal.toReal_div _ _ (hb := hfactor_real)]
+    apply div_eq_div_iff.mpr
+    rw [hnum, hden]
+  have htwo : (2 : ℝ) ^ finrank ℚ K =
+      (2 : ℝ) ^ nrRealPlaces K * ((2 : ℝ) ^ nrComplexPlaces K) ^ 2 := by
+    rw [← card_add_two_mul_card_eq_rank, pow_add, mul_comm 2, pow_mul]
+  have hfour : (4 : ℝ) ^ nrComplexPlaces K = ((2 : ℝ) ^ nrComplexPlaces K) ^ 2 := by
+    rw [show (4 : ℝ) = 2 ^ 2 by norm_num, ← pow_mul, mul_comm 2, pow_mul]
+  simp only [hquot, htwo, div_pow₀, inv_pow₀, hfour]
+  field
 
 theorem exists_ne_zero_mem_ringOfIntegers_of_norm_le_mul_sqrt_discr :
     ∃ (a : 𝓞 K), a ≠ 0 ∧
@@ -216,25 +232,42 @@ theorem abs_discr_ge' :
     rw [← Algebra.coe_norm_int, ← Int.cast_one, ← Int.cast_abs, Rat.cast_intCast, Int.cast_le]
     exact Int.one_le_abs (Algebra.norm_ne_zero_iff.mpr h_nz)
   replace h_bd := le_trans h_nm h_bd
-  rwa [← inv_mul_le_iff₀, inv_div, mul_one, Real.le_sqrt (by positivity) (by positivity),
-    ← Int.cast_abs, div_pow, mul_pow, ← pow_mul, mul_comm _ 2, ← pow_mul, mul_comm _ 2] at h_bd
-  exact div_pos (by positivity) <| pow_pos (Nat.cast_pos.mpr finrank_pos) (finrank ℚ K)
+  have hpos : (0 : ℝ) < (4 / π) ^ nrComplexPlaces K * (finrank ℚ K).factorial /
+      (finrank ℚ K) ^ finrank ℚ K :=
+    div_pos (by positivity) (pow_pos (Nat.cast_pos.mpr finrank_pos) _)
+  rw [← inv_mul_le_iff₀ hpos, inv_div₀, mul_one, Real.le_sqrt (by positivity) (by positivity),
+    ← Int.cast_abs] at h_bd
+  simpa only [div_pow₀, mul_pow, ← pow_mul, Nat.mul_comm] using h_bd
 
 theorem abs_discr_ge_of_isTotallyComplex [IsTotallyComplex K] :
     (finrank ℚ K) ^ (2 * finrank ℚ K) / ((4 / π) ^ (finrank ℚ K) *
       (finrank ℚ K).factorial ^ 2) ≤ |discr K| := by
-  have := abs_discr_ge' K
-  rwa [← IsTotallyComplex.finrank] at this
+  simpa only [← IsTotallyComplex.finrank] using abs_discr_ge' K
 
 theorem abs_discr_rpow_ge_of_isTotallyComplex [IsTotallyComplex K] :
-    (finrank ℚ K) ^ 2 / ((4 / π) * (finrank ℚ K).factorial ^ (2 * (finrank ℚ K : ℝ)⁻¹)) ≤
-        |discr K| ^ (finrank ℚ K : ℝ)⁻¹ := by
+    (finrank ℚ K) ^ 2 / ((4 / π) * (finrank ℚ K).factorial ^
+      (2 * Checked.inv (finrank ℚ K : ℝ)
+        (Nat.cast_ne_zero.mpr (finrank_pos (R := ℚ) (M := K)).ne').isUnit)) ≤
+      |discr K| ^ Checked.inv (finrank ℚ K : ℝ)
+        (Nat.cast_ne_zero.mpr (finrank_pos (R := ℚ) (M := K)).ne').isUnit := by
   have h : 0 < (finrank ℚ K : ℝ) := Nat.cast_pos.mpr finrank_pos
   rw [← Real.rpow_le_rpow_iff (z := finrank ℚ K) (by positivity) (by positivity) h, Real.div_rpow
-    (by positivity) (by positivity), ← Real.rpow_mul (by positivity), inv_mul_cancel₀ h.ne',
-    Real.rpow_one, Real.mul_rpow (by positivity) (by positivity), Real.rpow_natCast,
-    Real.rpow_natCast, ← pow_mul, ← Real.rpow_mul (by positivity),
-    inv_mul_cancel_right₀ h.ne', Real.rpow_two]
+    (by positivity) (by positivity), ← Real.rpow_mul (by positivity),
+    inv_mul_cancel₀ (ha := h.ne'.isUnit), Real.rpow_one]
+  have hnum : (((finrank ℚ K : ℝ) ^ 2) ^ (finrank ℚ K : ℝ)) =
+      (finrank ℚ K : ℝ) ^ (2 * finrank ℚ K) := by rw [Real.rpow_natCast, ← pow_mul]
+  let f : ℝ := (finrank ℚ K).factorial
+  have hf : 0 < f := Nat.cast_pos.mpr (Nat.factorial_pos _)
+  have hden : ((4 / π) * f ^ (2 * (finrank ℚ K : ℝ)⁻¹)) ^ (finrank ℚ K : ℝ) =
+      (4 / π) ^ finrank ℚ K * f ^ 2 := by
+    rw [Real.mul_rpow (by positivity) (by positivity), Real.rpow_natCast (4 / π),
+      ← Real.rpow_mul hf.le, inv_mul_cancel_right₀ (hb := h.ne'.isUnit), Real.rpow_two]
+  have hquot : (((finrank ℚ K : ℝ) ^ 2) ^ (finrank ℚ K : ℝ)) /
+      (((4 / π) * f ^ (2 * (finrank ℚ K : ℝ)⁻¹)) ^ (finrank ℚ K : ℝ)) =
+      (finrank ℚ K : ℝ) ^ (2 * finrank ℚ K) / ((4 / π) ^ finrank ℚ K * f ^ 2) := by
+    apply div_eq_div_iff.mpr
+    rw [hnum, hden]
+  rw [hquot]
   exact abs_discr_ge_of_isTotallyComplex K
 
 variable {K}
@@ -261,7 +294,7 @@ theorem abs_discr_ge (h : 1 < finrank ℚ K) :
         convert_to _ ≤ (a m) * (1 + 1 / m : ℝ) ^ (2 * m) / (4 / π)
         · simp_rw [a, add_mul, one_mul, pow_succ, Nat.factorial_succ]
           field_simp
-          simp [field, div_pow]
+          simp [field]
           ring
         · rw [_root_.le_div_iff₀ (by positivity), pow_succ]
           convert! (mul_le_mul h_m this (by positivity) (by positivity)) using 1
@@ -330,7 +363,10 @@ variable (N : ℕ)
 /-- An upper bound on the degree of a number field `K` with `|discr K| ≤ N`,
 see `rank_le_rankOfDiscrBdd`. -/
 noncomputable abbrev rankOfDiscrBdd : ℕ :=
-  max 1 (Nat.floor ((Real.log ((9 / 4 : ℝ) * N) / Real.log (3 * π / 4))))
+  max 1 (Nat.floor (Checked.div (Real.log ((9 / 4 : ℝ) * N)) (Real.log (3 * π / 4))
+    (Real.log_pos (by
+      rw [_root_.lt_div_iff₀ (by norm_num)]
+      linarith [Real.pi_gt_three])).ne'.isUnit))
 
 /-- An upper bound on the Minkowski bound of a number field `K` with `|discr K| ≤ N`;
 see `minkowskiBound_lt_boundOfDiscBdd`. -/
@@ -354,13 +390,16 @@ theorem rank_le_rankOfDiscrBdd :
     · have h := le_trans (abs_discr_ge h) (Int.cast_le.mpr hK)
       contrapose! h
       rw [← Real.rpow_natCast]
-      rw [Real.log_div_log] at h
+      have hN : (N : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr h_nz
+      rw [Real.log_div_log (hb0 := (zero_lt_one.trans h₂).ne')
+        (hx := mul_ne_zero (by norm_num) hN)] at h
       refine lt_of_le_of_lt ?_ (mul_lt_mul_of_pos_left
         (Real.rpow_lt_rpow_of_exponent_lt h₂ h) (by positivity : (0 : ℝ) < 4 / 9))
-      rw [Real.rpow_logb (lt_trans zero_lt_one h₂) (ne_of_gt h₂) (by positivity), ← mul_assoc,
-            ← inv_div, inv_mul_cancel₀ (by simp), one_mul, Int.cast_natCast]
+      rw [Real.rpow_logb (lt_trans zero_lt_one h₂) (ne_of_gt h₂) (by positivity), Int.cast_natCast]
+      ring_nf
+      exact le_rfl
     · refine div_nonneg (Real.log_nonneg ?_) (Real.log_nonneg (le_of_lt h₂))
-      rw [mul_comm, ← mul_div_assoc, _root_.le_div_iff₀ (by positivity), one_mul,
+      rw [mul_comm, ← mul_div_assoc₀, _root_.le_div_iff₀ (by positivity), one_mul,
         ← _root_.div_le_iff₀ (by positivity)]
       exact le_trans (by norm_num) (Nat.one_le_cast.mpr (Nat.one_le_iff_ne_zero.mpr h_nz))
   · exact le_max_of_le_left h

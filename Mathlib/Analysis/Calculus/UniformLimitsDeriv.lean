@@ -38,29 +38,31 @@ Each of the above statements also has variations that support `deriv` instead of
 
 Our technique for proving the main result is the famous "`ε / 3` proof." In words, you can find it
 explained, for instance, at [this StackExchange post](https://math.stackexchange.com/questions/214218/uniform-convergence-of-derivatives-tao-14-2-7).
-The subtlety is that we want to prove that the difference quotients of the `g` converge to the `g'`.
-That is, we want to prove something like:
+The subtlety is that we want to prove that the difference quotients of `g` converge to `g'`.
+The quotients are taken at points distinct from the base point. Let `L` be the pullback of
+`𝓝 x` along the inclusion of those points. We want to prove something like:
 
 ```
-∀ ε > 0, ∃ δ > 0, ∀ y ∈ B_δ(x), |y - x|⁻¹ * |(g y - g x) - g' x (y - x)| < ε.
+∀ ε > 0, ∃ δ > 0, ∀ y ∈ B_δ(x) ∖ {x}, |y - x|⁻¹ * |(g y - g x) - g' x (y - x)| < ε.
 ```
 
 To do so, we will need to introduce a pair of quantifiers
 
 ```lean
-∀ ε > 0, ∃ N, ∀ n ≥ N, ∃ δ > 0, ∀ y ∈ B_δ(x), |y - x|⁻¹ * |(g y - g x) - g' x (y - x)| < ε.
+∀ ε > 0, ∃ N, ∀ n ≥ N, ∃ δ > 0, ∀ y ∈ B_δ(x) ∖ {x},
+  |y - x|⁻¹ * |(g y - g x) - g' x (y - x)| < ε.
 ```
 
 So how do we write this in terms of filters? Well, the initial definition of the derivative is
 
 ```lean
-tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) (𝓝 x) (𝓝 0)
+tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) L (𝓝 0)
 ```
 
 There are two ways we might introduce `n`. We could do:
 
 ```lean
-∀ᶠ (n : ℕ) in atTop, Tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) (𝓝 x) (𝓝 0)
+∀ᶠ (n : ℕ) in atTop, Tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) L (𝓝 0)
 ```
 
 but this is equivalent to the quantifier order `∃ N, ∀ n ≥ N, ∀ ε > 0, ∃ δ > 0, ∀ y ∈ B_δ(x)`,
@@ -68,7 +70,7 @@ which _implies_ our desired `∀ ∃ ∀ ∃ ∀` but is _not_ equivalent to it.
 try
 
 ```lean
-Tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) (atTop ×ˢ 𝓝 x) (𝓝 0)
+Tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) (atTop ×ˢ L) (𝓝 0)
 ```
 
 but this is equivalent to the quantifier order `∀ ε > 0, ∃ N, ∃ δ > 0, ∀ n ≥ N, ∀ y ∈ B_δ(x)`, which
@@ -78,7 +80,7 @@ So to get the quantifier order we want, we need to introduce a new filter constr
 call a "curried filter"
 
 ```lean
-Tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) (atTop.curry (𝓝 x)) (𝓝 0)
+Tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) (atTop.curry L) (𝓝 0)
 ```
 
 Then the above implications are `Filter.Tendsto.curry` and
@@ -256,7 +258,7 @@ theorem cauchy_map_of_uniformCauchySeqOn_fderiv {s : Set E} (hs : IsOpen s) (h's
 
 /-- If `f_n → g` pointwise and the derivatives `(f_n)' → h` _uniformly_ converge, then
 in fact for a fixed `y`, the difference quotients `‖z - y‖⁻¹ • (f_n z - f_n y)` converge
-_uniformly_ to `‖z - y‖⁻¹ • (g z - g y)` -/
+_uniformly_ to `‖z - y‖⁻¹ • (g z - g y)` on the subtype of points distinct from `y`. -/
 theorem difference_quotients_converge_uniformly
     {E : Type*} [NormedAddCommGroup E] {𝕜 : Type*} [RCLike 𝕜]
     [NormedSpace 𝕜 E] {G : Type*} [NormedAddCommGroup G] [NormedSpace 𝕜 G] {f : ι → E → G}
@@ -264,39 +266,53 @@ theorem difference_quotients_converge_uniformly
     (hf' : TendstoUniformlyOnFilter f' g' l (𝓝 x))
     (hf : ∀ᶠ n : ι × E in l ×ˢ 𝓝 x, HasFDerivAt (f n.1) (f' n.1 n.2) n.2)
     (hfg : ∀ᶠ y : E in 𝓝 x, Tendsto (fun n => f n y) l (𝓝 (g y))) :
-    TendstoUniformlyOnFilter (fun n : ι => fun y : E => (‖y - x‖⁻¹ : 𝕜) • (f n y - f n x))
-      (fun y : E => (‖y - x‖⁻¹ : 𝕜) • (g y - g x)) l (𝓝 x) := by
-  let A : NormedSpace ℝ E := NormedSpace.restrictScalars ℝ 𝕜 _
-  refine
-    UniformCauchySeqOnFilter.tendstoUniformlyOnFilter_of_tendsto ?_
-      ((hfg.and (eventually_const.mpr hfg.self_of_nhds)).mono fun y hy =>
-        (hy.1.sub hy.2).const_smul _)
+    TendstoUniformlyOnFilter
+      (fun (n : ι) (y : {y : E // y - x ≠ 0}) ↦
+        ((Checked.inv ‖(y : E) - x‖ (norm_ne_zero_iff.mpr y.property).isUnit : ℝ) : 𝕜) •
+          (f n y - f n x))
+      (fun y : {y : E // y - x ≠ 0} ↦
+        ((Checked.inv ‖(y : E) - x‖ (norm_ne_zero_iff.mpr y.property).isUnit : ℝ) : 𝕜) •
+          (g y - g x)) l (comap Subtype.val (𝓝 x)) := by
+  let D := {y : E // y - x ≠ 0}
+  let k : Filter D := comap Subtype.val (𝓝 x)
+  let q (y : D) : ℝ := Checked.inv ‖(y : E) - x‖ (norm_ne_zero_iff.mpr y.property).isUnit
+  let : NormedSpace ℝ E := NormedSpace.restrictScalars ℝ 𝕜 _
+  have hv : Tendsto (Subtype.val : D → E) k (𝓝 x) := tendsto_comap
+  change TendstoUniformlyOnFilter (fun n (y : D) ↦ (q y : 𝕜) • (f n y - f n x))
+    (fun y : D ↦ (q y : 𝕜) • (g y - g x)) l k
+  rcases eq_or_ne k ⊥ with hk | hk
+  · rw [hk, Metric.tendstoUniformlyOnFilter_iff]
+    simp
+  let : k.NeBot := ⟨hk⟩
+  refine UniformCauchySeqOnFilter.tendstoUniformlyOnFilter_of_tendsto ?_
+    (((hv.eventually hfg).and (eventually_const.mpr hfg.self_of_nhds)).mono fun y hy ↦
+      (hy.1.sub hy.2).const_smul (q y : 𝕜))
   rw [SeminormedAddGroup.uniformCauchySeqOnFilter_iff_tendstoUniformlyOnFilter_zero]
   rw [Metric.tendstoUniformlyOnFilter_iff]
   have hfg' := hf'.uniformCauchySeqOnFilter
   rw [SeminormedAddGroup.uniformCauchySeqOnFilter_iff_tendstoUniformlyOnFilter_zero] at hfg'
   rw [Metric.tendstoUniformlyOnFilter_iff] at hfg'
   intro ε hε
-  obtain ⟨q, hqpos, hqε⟩ := exists_pos_rat_lt hε
-  specialize hfg' (q : ℝ) (by simp [hqpos])
-  have := (tendsto_swap4_prod.eventually (hf.prod_mk hf)).diag_of_prod_right
-  obtain ⟨a, b, c, d, e⟩ := eventually_prod_iff.1 (hfg'.and this)
+  obtain ⟨u, hupos, huε⟩ := exists_pos_rat_lt hε
+  specialize hfg' (u : ℝ) (by simp [hupos])
+  have hpair := (tendsto_swap4_prod.eventually (hf.prod_mk hf)).diag_of_prod_right
+  obtain ⟨a, b, c, d, e⟩ := eventually_prod_iff.1 (hfg'.and hpair)
   obtain ⟨r, hr, hr'⟩ := Metric.nhds_basis_ball.eventually_iff.mp d
   rw [eventually_prod_iff]
-  refine
-    ⟨_, b, (· ∈ Metric.ball x r),
-      eventually_mem_set.mpr (Metric.nhds_basis_ball.mem_of_mem hr), fun {n} hn {y} hy => ?_⟩
+  refine ⟨a, b, (fun y : D ↦ (y : E) ∈ Metric.ball x r),
+    hv.eventually (eventually_mem_set.mpr (Metric.nhds_basis_ball.mem_of_mem hr)), ?_⟩
+  intro n hn y hy
+  have hyz : 0 < ‖(y : E) - x‖ := norm_pos_iff.mpr y.property
+  have hqnorm : ‖(q y : 𝕜)‖ = ‖(y : E) - x‖⁻¹ :=
+    (@RCLike.norm_ofReal 𝕜 _ (q y)).trans (abs_of_nonneg (inv_nonneg.mpr hyz.le))
   simp only [Pi.zero_apply, dist_zero_left]
-  rw [norm_neg_add, ← smul_sub, norm_smul, norm_inv, RCLike.norm_coe_norm]
-  refine lt_of_le_of_lt ?_ hqε
-  by_cases hyz' : x = y; · simp [hyz', hqpos.le]
-  have hyz : 0 < ‖y - x‖ := by rw [norm_pos_iff]; intro hy'; exact hyz' (eq_of_sub_eq_zero hy').symm
+  rw [norm_neg_add, ← smul_sub, norm_smul, hqnorm]
+  refine lt_of_le_of_lt ?_ huε
   rw [inv_mul_le_iff₀ hyz, mul_comm, sub_sub_sub_comm]
   simp only [Pi.zero_apply, dist_zero_left, norm_neg_add] at e
-  refine
-    Convex.norm_image_sub_le_of_norm_hasFDerivWithin_le
-      (fun y hy => ((e hn (hr' hy)).2.1.sub (e hn (hr' hy)).2.2).hasFDerivWithinAt)
-      (fun y hy => (e hn (hr' hy)).1.le) (convex_ball x r) (Metric.mem_ball_self hr) hy
+  exact Convex.norm_image_sub_le_of_norm_hasFDerivWithin_le
+    (fun z hz ↦ ((e hn (hr' hz)).2.1.sub (e hn (hr' hz)).2.2).hasFDerivWithinAt)
+    (fun z hz ↦ (e hn (hr' hz)).1.le) (convex_ball x r) (Metric.mem_ball_self hr) hy
 
 /-- `(d/dx) lim_{n → ∞} f n x = lim_{n → ∞} f' n x` when the `f' n` converge
 _uniformly_ to their limit at `x`.
@@ -312,88 +328,77 @@ theorem hasFDerivAt_of_tendstoUniformlyOnFilter [NeBot l]
     (hf : ∀ᶠ n : ι × E in l ×ˢ 𝓝 x, HasFDerivAt (f n.1) (f' n.1 n.2) n.2)
     (hfg : ∀ᶠ y in 𝓝 x, Tendsto (fun n => f n y) l (𝓝 (g y))) : HasFDerivAt g (g' x) x := by
   let : RCLike 𝕜 := IsRCLikeNormedField.rclike 𝕜
-  -- The proof strategy follows several steps:
-  --   1. The quantifiers in the definition of the derivative are
-  --      `∀ ε > 0, ∃ δ > 0, ∀ y ∈ B_δ(x)`. We will introduce a quantifier in the middle:
-  --      `∀ ε > 0, ∃ N, ∀ n ≥ N, ∃ δ > 0, ∀ y ∈ B_δ(x)` which will allow us to introduce the
-  --      `f(') n`
-  --   2. The order of the quantifiers `hfg` are opposite to what we need. We will be able to swap
-  --      the quantifiers using the uniform convergence assumption
-  rw [hasFDerivAt_iff_tendsto]
-  -- Introduce extra quantifier via curried filters
-  suffices
-    Tendsto (fun y : ι × E => ‖y.2 - x‖⁻¹ * ‖g y.2 - g x - (g' x) (y.2 - x)‖)
-      (l.curry (𝓝 x)) (𝓝 0) by
-    rw [Metric.tendsto_nhds] at this ⊢
+  let D := {y : E // y - x ≠ 0}
+  let k : Filter D := comap Subtype.val (𝓝 x)
+  let q (y : D) : ℝ := Checked.inv ‖(y : E) - x‖ (norm_ne_zero_iff.mpr y.property).isUnit
+  have hpos (y : D) : 0 < ‖(y : E) - x‖ := norm_pos_iff.mpr y.property
+  have hq (y : D) (v : G) : ‖(q y : 𝕜) • v‖ = ‖v‖ / ‖(y : E) - x‖ := by
+    rw [norm_smul, RCLike.norm_ofReal, div_eq_inv_mul₀]
+    exact congrArg (fun t : ℝ ↦ t * ‖v‖) (abs_of_nonneg (inv_nonneg.mpr (hpos y).le))
+  apply (hasFDerivAt_iff_tendsto (coord := @id E)).mpr
+  change Tendsto (fun y : D ↦ ‖g y - g x - (g' x) (y.val - x)‖ / ‖y.val - x‖) k (𝓝 0)
+  suffices h : Tendsto (fun a : ι × D ↦ (q a.2 : 𝕜) •
+      (g a.2 - g x - (g' x) (a.2.val - x))) (l.curry k) (𝓝 0) by
+    rw [Metric.tendsto_nhds] at h ⊢
     intro ε hε
-    specialize this ε hε
-    rw [eventually_curry_iff] at this
-    simp only at this
-    exact (eventually_const.mp this).mono (by simp only [imp_self, forall_const])
-  -- With the new quantifier in hand, we can perform the famous `ε/3` proof. Specifically,
-  -- we will break up the limit (the difference functions minus the derivative go to 0) into 3:
-  --   * The difference functions of the `f n` converge *uniformly* to the difference functions
-  --     of the `g n`
-  --   * The `f' n` are the derivatives of the `f n`
-  --   * The `f' n` converge to `g'` at `x`
-  conv =>
+    have hε' := h ε hε
+    rw [eventually_curry_iff] at hε'
+    simp only at hε'
+    have hk : ∀ᶠ y : D in k, dist ((q y : 𝕜) • (g y - g x - (g' x) (y.val - x))) 0 < ε :=
+      eventually_const.mp hε'
+    refine hk.mono fun y hy ↦ ?_
+    rw [dist_zero_right, hq] at hy
+    rw [dist_zero_right, Real.norm_eq_abs,
+      abs_of_nonneg (div_nonneg (norm_nonneg _) (norm_nonneg _))]
+    exact hy
+  -- Split the error into the approximation of the difference, the differentiation error of
+  -- an approximating function, and the variation of the limiting derivative.
+  have hsum :
+      (fun a : ι × D ↦ (q a.2 : 𝕜) • (g a.2 - g x - (g' x) (a.2.val - x))) =
+        ((fun a : ι × D ↦ (q a.2 : 𝕜) • (g a.2 - g x - (f a.1 a.2 - f a.1 x))) +
+          (fun a : ι × D ↦ (q a.2 : 𝕜) •
+            (f a.1 a.2 - f a.1 x - ((f' a.1 x) a.2 - (f' a.1 x) x)))) +
+        (fun a : ι × D ↦ (q a.2 : 𝕜) • (f' a.1 x - g' x) (a.2.val - x)) := by
+    ext a
+    simp only [Pi.add_apply]
+    rw [← smul_add, ← smul_add]
     congr
-    ext
-    rw [← abs_norm, ← abs_inv, ← @RCLike.norm_ofReal 𝕜 _ _, RCLike.ofReal_inv, ← norm_smul]
-  rw [← tendsto_zero_iff_norm_tendsto_zero]
-  have :
-    (fun a : ι × E => (‖a.2 - x‖⁻¹ : 𝕜) • (g a.2 - g x - (g' x) (a.2 - x))) =
-      ((fun a : ι × E => (‖a.2 - x‖⁻¹ : 𝕜) • (g a.2 - g x - (f a.1 a.2 - f a.1 x))) +
-          fun a : ι × E =>
-          (‖a.2 - x‖⁻¹ : 𝕜) • (f a.1 a.2 - f a.1 x - ((f' a.1 x) a.2 - (f' a.1 x) x))) +
-        fun a : ι × E => (‖a.2 - x‖⁻¹ : 𝕜) • (f' a.1 x - g' x) (a.2 - x) := by
-    ext; simp only [Pi.add_apply]; rw [← smul_add, ← smul_add]; congr
     simp only [map_sub, sub_add_sub_cancel, FunLike.coe_sub, Pi.sub_apply]
     abel
-  simp_rw [this]
-  have : 𝓝 (0 : G) = 𝓝 (0 + 0 + 0) := by simp only [add_zero]
-  rw [this]
+  rw [hsum, show 𝓝 (0 : G) = 𝓝 (0 + 0 + 0) by simp only [add_zero]]
   refine Tendsto.add (Tendsto.add ?_ ?_) ?_
-  · have := difference_quotients_converge_uniformly hf' hf hfg
-    rw [Metric.tendstoUniformlyOnFilter_iff] at this
+  · have hu := difference_quotients_converge_uniformly hf' hf hfg
+    change TendstoUniformlyOnFilter (fun n (y : D) ↦ (q y : 𝕜) • (f n y - f n x))
+      (fun y : D ↦ (q y : 𝕜) • (g y - g x)) l k at hu
+    rw [Metric.tendstoUniformlyOnFilter_iff] at hu
     rw [Metric.tendsto_nhds]
     intro ε hε
-    apply ((this ε hε).filter_mono curry_le_prod).mono
+    apply ((hu ε hε).filter_mono curry_le_prod).mono
     intro n hn
     rw [dist_eq_norm] at hn ⊢
     module_nf at hn ⊢
     exact hn
-  · -- (Almost) the definition of the derivatives
-    rw [Metric.tendsto_nhds]
+  · rw [Metric.tendsto_nhds]
     intro ε hε
     rw [eventually_curry_iff]
-    refine hf.curry.mono fun n hn => ?_
-    have := hn.self_of_nhds
-    rw [hasFDerivAt_iff_tendsto, Metric.tendsto_nhds] at this
-    refine (this ε hε).mono fun y hy => ?_
-    rw [dist_eq_norm] at hy ⊢
-    simp only [sub_zero, map_sub, norm_mul, norm_inv, norm_norm] at hy ⊢
-    rw [norm_smul, norm_inv, RCLike.norm_coe_norm]
-    exact hy
-  · -- hfg' after specializing to `x` and applying the definition of the operator norm
-    refine Tendsto.mono_left ?_ curry_le_prod
-    have h1 : Tendsto (fun n : ι × E => g' n.2 - f' n.1 n.2) (l ×ˢ 𝓝 x) (𝓝 0) := by
+    refine hf.curry.mono fun n hn ↦ ?_
+    have hd := (hasFDerivAt_iff_tendsto (coord := @id E)).mp hn.self_of_nhds
+    rw [Metric.tendsto_nhds] at hd
+    refine (hd ε hε).mono fun y hy ↦ ?_
+    rw [dist_zero_right, hq, ← map_sub]
+    rw [dist_zero_right, Real.norm_eq_abs] at hy
+    exact (le_abs_self _).trans_lt hy
+  · refine Tendsto.mono_left ?_ curry_le_prod
+    have h1 : Tendsto (fun n : ι × E ↦ g' n.2 - f' n.1 n.2) (l ×ˢ 𝓝 x) (𝓝 0) := by
       rw [Metric.tendstoUniformlyOnFilter_iff] at hf'
-      exact Metric.tendsto_nhds.mpr fun ε hε => by simpa [dist_eq_norm] using hf' ε hε
-    have h2 : Tendsto (fun n : ι => g' x - f' n x) l (𝓝 0) := by
+      exact Metric.tendsto_nhds.mpr fun ε hε ↦ by simpa [dist_eq_norm] using hf' ε hε
+    have h2 : Tendsto (fun n : ι ↦ g' x - f' n x) l (𝓝 0) := by
       rw [Metric.tendsto_nhds] at h1 ⊢
-      exact fun ε hε => (h1 ε hε).curry.mono fun n hn => hn.self_of_nhds
-    refine squeeze_zero_norm ?_
-      (tendsto_zero_iff_norm_tendsto_zero.mp (tendsto_fst.comp (h2.prodMap tendsto_id)))
+      exact fun ε hε ↦ (h1 ε hε).curry.mono fun n hn ↦ hn.self_of_nhds
+    refine squeeze_zero_norm ?_ (tendsto_zero_iff_norm_tendsto_zero.mp (h2.comp tendsto_fst))
     intro n
-    simp_rw [norm_smul, norm_inv, RCLike.norm_coe_norm]
-    by_cases hx : x = n.2; · simp [hx]
-    have hnx : 0 < ‖n.2 - x‖ := by
-      rw [norm_pos_iff]; intro hx'; exact hx (eq_of_sub_eq_zero hx').symm
-    rw [inv_mul_le_iff₀ hnx, mul_comm]
-    simp only [Function.comp_apply, Prod.map_apply']
-    rw [norm_sub_rev]
-    exact (f' n.1 x - g' x).le_opNorm (n.2 - x)
+    rw [hq, div_le_iff₀ (hpos n.2), Function.comp_apply, norm_sub_rev (g' x) (f' n.1 x)]
+    exact (f' n.1 x - g' x).le_opNorm (n.2.val - x)
 
 theorem hasFDerivAt_of_tendstoLocallyUniformlyOn [NeBot l] {s : Set E} (hs : IsOpen s)
     (hf' : TendstoLocallyUniformlyOn f' g' l s) (hf : ∀ n, ∀ x ∈ s, HasFDerivAt (f n) (f' n x) x)

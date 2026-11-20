@@ -468,11 +468,8 @@ lemma equiv_of_Z_eq_zero {P Q : Fin 3 → F} (hP : W.Nonsingular P) (hQ : W.Nons
   simp only [Units.smul_def, smul_fin3, Units.val_mul, val_div_eq_divp, divp,
     Units.val_inv_eq_inv_val₀, IsUnit.unit_spec, hQz, mul_zero]
   conv_rhs => rw [← fin3_def P, hPz]
-  congr! 2
-  · field_simp
+  congr! 2 <;> field_simp <;>
     linear_combination Q x ^ 3 * hP.left - P x ^ 3 * hQ.left
-  · field_simp
-    linear_combination P y * Q y * (Q x ^ 3 * hP.left - P x ^ 3 * hQ.left)
 
 lemma equiv_zero_of_Z_eq_zero {P : Fin 3 → F} (hP : W.Nonsingular P) (hPz : P z = 0) :
     P ≈ ![1, 1, 0] :=

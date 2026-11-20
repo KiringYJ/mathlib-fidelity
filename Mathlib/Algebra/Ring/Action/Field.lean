@@ -20,7 +20,6 @@ variable {M} [Monoid M] {F} [DivisionRing F]
 /-- Note that `smul_inv'` refers to the group case, and `smul_inv` has an additional inverse
 on `x`. The invertibility of `x • m` is that of `m`, transported by the ring homomorphism
 `m ↦ x • m`. -/
-@[simp]
 theorem smul_inv'' [MulSemiringAction M F] (x : M) (m : F) {hm : IsUnit m} :
     x • m⁻¹ = Checked.inv (x • m) (hm.map (MulSemiringAction.toRingHom M F x)) :=
   map_inv₀ (MulSemiringAction.toRingHom M F x) _

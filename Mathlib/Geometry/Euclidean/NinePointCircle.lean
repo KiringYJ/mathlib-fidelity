@@ -221,8 +221,11 @@ theorem eulerPoint_mem_ninePointCircle {n : ℕ} [NeZero n] (s : Simplex ℝ P n
 theorem orthogonalProjectionSpan_eulerPoint_mem_ninePointCircle {n : ℕ} [NeZero n]
     (s : Simplex ℝ P n) (i : Fin (n + 1)) :
     ((s.faceOpposite i).orthogonalProjectionSpan (s.eulerPoint i)).val ∈ s.ninePointCircle := by
-  rw [← Sphere.thales_theorem (s.isDiameter_ninePointCircle i), orthogonalProjectionSpan]
-  exact angle_orthogonalProjection_self _ <| faceOppositeCentroid_mem_affineSpan_face s i
+  rw [← Sphere.inner_vsub_vsub_eq_zero_iff_mem_sphere_of_isDiameter
+    (s.isDiameter_ninePointCircle i), orthogonalProjectionSpan]
+  exact Submodule.inner_right_of_mem_orthogonal
+    (vsub_orthogonalProjection_mem_direction _ (faceOppositeCentroid_mem_affineSpan_face s i))
+    (vsub_orthogonalProjection_mem_direction_orthogonal _ _)
 
 end Affine.Simplex
 

@@ -106,7 +106,9 @@ example (x : Rat) (h : 0 < x) : 0 < x/(2/3) := by linarith
 
 variable {K : Type*} [Field K] [LinearOrder K] [IsStrictOrderedRing K]
 
-example (a : K) (ha : 10 / (8 + 2) ≤ a) : 1 ≤ a := by linarith
+example (a : K)
+    (ha : Checked.div 10 (8 + 2 : K) (by exact (by positivity : (0 : K) < 8 + 2).ne'.isUnit)
+      ≤ a) : 1 ≤ a := by linarith
 
 example (a : K) (ha : 10 / 10 ^ 1 ≤ a) : 1 ≤ a := by linarith
 
@@ -117,7 +119,7 @@ example (a : K) (ha : 1.0 ≤ a) : 1 ≤ a := by linarith
 end cancel_denoms
 
 example (a b c : Rat) (h2 : b + 2 > 3 + b) : False := by
-  linarith (config := {discharger := do Lean.Elab.Tactic.evalTactic (←`(tactic| ring1))})
+  linarith (config := {discharger := do Lean.Elab.Tactic.evalTactic (← `(tactic| ring1))})
 
 example (a b c : Rat) (h2 : b + 2 > 3 + b) : False := by
   linarith
@@ -265,7 +267,7 @@ example (mess : ℕ → ℕ) (S n : ℕ) :
 example (p n p' n' : ℕ) (h : p + n' = p' + n) : n + p' = n' + p := by
   linarith
 
-example (a b c : ℚ) (h1 : 1 / a < b) (h2 : b < c) : 1 / a < c := by
+example (a b c : ℚ) (ha : IsUnit a) (h1 : 1 / a < b) (h2 : b < c) : 1 / a < c := by
   linarith
 
 example (N : ℕ) (n : ℕ) (Hirrelevant : n > N) (A : Rat) (l : Rat) (h : A - l ≤ -(A - l))

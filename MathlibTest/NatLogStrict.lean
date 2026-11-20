@@ -86,6 +86,6 @@ error: the logarithms `Int.log b r` and `Int.clog b r` need `1 < b` and `0 < r`
 ⊢ 0 < 0
 -/
 #guard_msgs in
-example : ℤ := Int.log 2 (0 : ℚ)
+noncomputable example : ℤ := Int.log 2 (0 : ℚ)
 
 example (r : ℚ) (hr : 0 < r) : (2 : ℚ) ^ Int.log 2 r ≤ r := Int.zpow_log_le_self (by norm_num) hr

@@ -137,7 +137,7 @@ protected theorem ContMDiffWithinAt.mfderivWithin {x₀ : N} {f : N → M → M'
   have : CMDiffAt[t'] m
       (fun x ↦ fderivWithin 𝕜 (extChartAt I' (f x₀ (g x₀)) ∘ f x ∘ (extChartAt I (g x₀)).symm)
       ((extChartAt I (g x₀)).target ∩ (extChartAt I (g x₀)).symm ⁻¹' u)
-        (extChartAt I (g x₀) (g x))) x₀ := by
+        (extChartAt I (g x₀) (g x)) id) x₀ := by
     simp_rw [contMDiffWithinAt_iff_source (x := x₀),
       contMDiffWithinAt_iff_contDiffWithinAt, Function.comp_def]
     exact this
@@ -350,10 +350,12 @@ theorem tangentMap_tangentBundle_pure [Is : IsManifold I 1 M]
     haveI : CMDiff 1 (zeroSection E (TangentSpace I : M → Type _)) :=
       Bundle.contMDiff_zeroSection 𝕜 (TangentSpace I : M → Type _)
     this.mdifferentiableAt one_ne_zero
-  have B : fderivWithin 𝕜 (fun x' : E ↦ (x', (0 : E))) (Set.range I) (I ((chartAt H x) x)) v
+  have B : fderivWithin 𝕜 (fun x' : E ↦ (x', (0 : E))) (Set.range I) (I ((chartAt H x) x)) id v
       = (v, 0) := by
     rw [fderivWithin_eq_fderiv, DifferentiableAt.fderiv_prodMk]
-    · simp
+    · have hid : fderiv 𝕜 (fun y : E ↦ y) (I ((chartAt H x) x)) id = ContinuousLinearMap.id 𝕜 E :=
+        (hasFDerivAt_id (𝕜 := 𝕜) (I ((chartAt H x) x))).fderiv
+      simp [hid, fderiv_const_apply]
     · exact differentiableAt_fun_id
     · exact differentiableAt_const _
     · exact ModelWithCorners.uniqueDiffWithinAt_image I
@@ -361,6 +363,9 @@ theorem tangentMap_tangentBundle_pure [Is : IsManifold I 1 M]
   simp +unfoldPartialApp only [Bundle.zeroSection, tangentMap, mfderiv, A,
     ite_eq_left, chartAt, FiberBundle.chartedSpace_chartAt, TangentBundle.trivializationAt_apply,
     Function.comp_def, map_zero, mfld_simps]
+  change fderivWithin 𝕜
+    (fun y : E ↦ (I ((chartAt H x) ((chartAt H x).symm (I.symm y))), (0 : E)))
+    (Set.range I) (I ((chartAt H x) x)) id v = (v, 0)
   rw [← fderivWithin_inter N] at B
   rw [← fderivWithin_inter N, ← B]
   congr 1
@@ -478,7 +483,7 @@ lemma contMDiff_equivTangentBundleProd_symm :
           differentiableWithinAt_snd (by simp [mapsTo_snd_prod])
       exact D'
     simp only [TangentBundle.trivializationAt_apply, mfld_simps]
-    change fderivWithin 𝕜 (φ ∘ Prod.fst) _ _ _ = fderivWithin 𝕜 φ _ _ _
+    change fderivWithin 𝕜 (φ ∘ Prod.fst) _ _ id _ = fderivWithin 𝕜 φ _ _ id _
     rw [range_prodMap] at U
     rw [fderivWithin_comp _ (by exact D0) differentiableWithinAt_fst mapsTo_fst_prod (U _ _)]
     simp [fderivWithin_fst, U]
@@ -517,7 +522,7 @@ lemma contMDiff_equivTangentBundleProd_symm :
           differentiableWithinAt_fst (by simp [mapsTo_fst_prod])
       exact D'
     simp only [TangentBundle.trivializationAt_apply, mfld_simps]
-    change fderivWithin 𝕜 (φ ∘ Prod.snd) _ _ _ = fderivWithin 𝕜 φ _ _ _
+    change fderivWithin 𝕜 (φ ∘ Prod.snd) _ _ id _ = fderivWithin 𝕜 φ _ _ id _
     rw [range_prodMap] at U
     rw [fderivWithin_comp _ (by exact D0) differentiableWithinAt_snd mapsTo_snd_prod (U _ _)]
     simp [fderivWithin_snd, U]

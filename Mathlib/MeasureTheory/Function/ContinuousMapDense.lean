@@ -197,14 +197,16 @@ theorem MemLp.exists_hasCompactSupport_integral_rpow_sub_le
   have A : ENNReal.ofReal (ε ^ (1 / p)) ≠ 0 := by
     simp only [Ne, ENNReal.ofReal_eq_zero, not_le, I]
   have B : ENNReal.ofReal p ≠ 0 := by simpa only [Ne, ENNReal.ofReal_eq_zero, not_le] using hp
+  have hpUnit : IsUnit (ENNReal.ofReal p).toReal :=
+    (ENNReal.toReal_pos B ENNReal.coe_ne_top).ne'.isUnit
   rcases hf.exists_hasCompactSupport_eLpNorm_sub_le ENNReal.coe_ne_top A with
     ⟨g, g_support, hg, g_cont, g_mem⟩
   change eLpNorm _ (ENNReal.ofReal p) _ ≤ _ at hg
   refine ⟨g, g_support, ?_, g_cont, g_mem⟩
-  rwa [(hf.sub g_mem).eLpNorm_eq_integral_rpow_norm B ENNReal.coe_ne_top,
-    ENNReal.ofReal_le_ofReal_iff I.le, one_div, ENNReal.toReal_ofReal hp.le,
-    Real.rpow_le_rpow_iff _ hε.le (inv_pos.2 hp)] at hg
-  positivity
+  rw [(hf.sub g_mem).eLpNorm_eq_integral_rpow_norm B ENNReal.coe_ne_top,
+    ENNReal.ofReal_le_ofReal_iff I.le, one_div, ENNReal.toReal_inv (ha := hpUnit)] at hg
+  simp only [ENNReal.toReal_ofReal hp.le, one_div₀] at hg
+  exact (Real.rpow_le_rpow_iff (by positivity) hε.le (inv_pos.2 hp)).mp hg
 
 
 /-- In a locally compact space, any integrable function can be approximated by compactly supported
@@ -288,13 +290,15 @@ theorem MemLp.exists_boundedContinuous_integral_rpow_sub_le [μ.WeaklyRegular] {
   have A : ENNReal.ofReal (ε ^ (1 / p)) ≠ 0 := by
     simp only [Ne, ENNReal.ofReal_eq_zero, not_le, I]
   have B : ENNReal.ofReal p ≠ 0 := by simpa only [Ne, ENNReal.ofReal_eq_zero, not_le] using hp
+  have hpUnit : IsUnit (ENNReal.ofReal p).toReal :=
+    (ENNReal.toReal_pos B ENNReal.coe_ne_top).ne'.isUnit
   rcases hf.exists_boundedContinuous_eLpNorm_sub_le ENNReal.coe_ne_top A with ⟨g, hg, g_mem⟩
   change eLpNorm _ (ENNReal.ofReal p) _ ≤ _ at hg
   refine ⟨g, ?_, g_mem⟩
-  rwa [(hf.sub g_mem).eLpNorm_eq_integral_rpow_norm B ENNReal.coe_ne_top,
-    ENNReal.ofReal_le_ofReal_iff I.le, one_div, ENNReal.toReal_ofReal hp.le,
-    Real.rpow_le_rpow_iff _ hε.le (inv_pos.2 hp)] at hg
-  positivity
+  rw [(hf.sub g_mem).eLpNorm_eq_integral_rpow_norm B ENNReal.coe_ne_top,
+    ENNReal.ofReal_le_ofReal_iff I.le, one_div, ENNReal.toReal_inv (ha := hpUnit)] at hg
+  simp only [ENNReal.toReal_ofReal hp.le, one_div₀] at hg
+  exact (Real.rpow_le_rpow_iff (by positivity) hε.le (inv_pos.2 hp)).mp hg
 
 /-- Any integrable function can be approximated by bounded continuous functions,
 version in terms of `∫⁻`. -/

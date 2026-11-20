@@ -57,8 +57,8 @@ The proof of von Staudt-Clausen's theorem follows Rado's JLMS 1934 paper
 
 * `sum_bernoulli : ∑ k ∈ range n, (n.choose k : ℚ) * bernoulli k =
   if n = 1 then 1 else 0`
-* `Bernoulli.vonStaudt_clausen : bernoulli (2 * k) + ∑ p ∈ range (2 * k + 2)
-  with p.Prime ∧ (p - 1) ∣ 2 * k, (1 : ℚ) / p ∈ Set.range Int.cast`
+* `Bernoulli.vonStaudt_clausen`: adding the reciprocals of the primes `p < 2 * k + 2`
+  with `(p - 1) ∣ 2 * k` to `bernoulli (2 * k)` gives an integer.
 
 ## References
 
@@ -81,28 +81,36 @@ variable (A : Type*) [CommRing A] [Algebra ℚ A]
 the $n$-th Bernoulli number $B_n$ is defined recursively via
 $$B_n = 1 - \sum_{k < n} \binom{n}{k}\frac{B_k}{n+1-k}$$ -/
 def bernoulli' (n : ℕ) : ℚ :=
-  1 - ∑ k : Fin n, n.choose k / (n - k + 1) * bernoulli' k
+  1 - ∑ k : Fin n, Rat.fraction (n.choose k.val) (n - k.val + 1)
+    (Nat.succ_ne_zero _) * bernoulli' k.val
 
 theorem bernoulli'_def' (n : ℕ) :
-    bernoulli' n = 1 - ∑ k : Fin n, n.choose k / (n - k + 1) * bernoulli' k := by
+    bernoulli' n = 1 - ∑ k : Fin n,
+      Checked.div (n.choose k : ℚ) ((n - k.val + 1 : ℕ) : ℚ)
+        (Nat.cast_ne_zero.mpr (Nat.succ_ne_zero _)).isUnit * bernoulli' k := by
   rw [bernoulli']
+  simp only [Rat.fraction_eq_div, Int.cast_natCast]
 
 theorem bernoulli'_def (n : ℕ) :
-    bernoulli' n = 1 - ∑ k ∈ range n, n.choose k / (n - k + 1) * bernoulli' k := by
+    bernoulli' n = 1 - ∑ k ∈ range n,
+      Checked.div (n.choose k : ℚ) ((n - k + 1 : ℕ) : ℚ)
+        (Nat.cast_ne_zero.mpr (Nat.succ_ne_zero _)).isUnit * bernoulli' k := by
   rw [bernoulli'_def', ← Fin.sum_univ_eq_sum_range]
 
 theorem bernoulli'_spec (n : ℕ) :
-    (∑ k ∈ range n.succ, (n.choose (n - k) : ℚ) / (n - k + 1) * bernoulli' k) = 1 := by
-  rw [sum_range_succ_comm, bernoulli'_def n, tsub_self, choose_zero_right, sub_self, zero_add,
-    div_one, cast_one, one_mul, sub_add, ← sum_sub_distrib, ← sub_eq_zero, sub_sub_cancel_left,
-    neg_eq_zero]
+    (∑ k ∈ range n.succ, Checked.div (n.choose (n - k) : ℚ) ((n - k + 1 : ℕ) : ℚ)
+      (Nat.cast_ne_zero.mpr (Nat.succ_ne_zero _)).isUnit * bernoulli' k) = 1 := by
+  rw [sum_range_succ_comm, bernoulli'_def n]
+  simp only [Nat.sub_self, choose_zero_right, zero_add, Nat.cast_one, div_one₀, one_mul]
+  rw [sub_add, ← sum_sub_distrib, ← sub_eq_zero, sub_sub_cancel_left, neg_eq_zero]
   exact Finset.sum_eq_zero (fun x hx => by rw [choose_symm (le_of_lt (mem_range.1 hx)), sub_self])
 
 theorem bernoulli'_spec' (n : ℕ) :
-    (∑ k ∈ antidiagonal n, ((k.1 + k.2).choose k.2 : ℚ) / (k.2 + 1) * bernoulli' k.1) = 1 := by
+    (∑ k ∈ antidiagonal n, Checked.div ((k.1 + k.2).choose k.2 : ℚ) ((k.2 + 1 : ℕ) : ℚ)
+      (Nat.cast_ne_zero.mpr (Nat.succ_ne_zero _)).isUnit * bernoulli' k.1) = 1 := by
   refine ((sum_antidiagonal_eq_sum_range_succ_mk _ n).trans ?_).trans (bernoulli'_spec n)
   refine sum_congr rfl fun x hx => ?_
-  simp only [add_tsub_cancel_of_le, mem_range_succ_iff.mp hx, cast_sub]
+  simp only [add_tsub_cancel_of_le, mem_range_succ_iff.mp hx]
 
 /-! ### Examples -/
 
@@ -141,7 +149,8 @@ end Examples
 theorem sum_bernoulli' (n : ℕ) : (∑ k ∈ range n, (n.choose k : ℚ) * bernoulli' k) = n := by
   cases n with | zero => simp | succ n =>
   suffices
-    ((n + 1 : ℚ) * ∑ k ∈ range n, ↑(n.choose k) / (n - k + 1) * bernoulli' k) =
+    ((n + 1 : ℚ) * ∑ k ∈ range n, Checked.div (n.choose k : ℚ) ((n - k + 1 : ℕ) : ℚ)
+      (Nat.cast_ne_zero.mpr (Nat.succ_ne_zero _)).isUnit * bernoulli' k) =
       ∑ x ∈ range n, ↑(n.succ.choose x) * bernoulli' x by
     rw_mod_cast [sum_range_succ, bernoulli'_def, ← this, choose_succ_self_right]
     ring
@@ -149,12 +158,13 @@ theorem sum_bernoulli' (n : ℕ) : (∑ k ∈ range n, (n.choose k : ℚ) * bern
   refine sum_congr rfl fun k hk => ?_
   congr
   have : ((n - k : ℕ) : ℚ) + 1 ≠ 0 := by norm_cast
-  simp only [← cast_sub (mem_range.1 hk).le, succ_eq_add_one, field, mul_comm]
+  simp only [succ_eq_add_one, field, mul_comm]
   rw_mod_cast [tsub_add_eq_add_tsub (mem_range.1 hk).le, choose_mul_succ_eq]
+  exact mul_comm _ _
 
 /-- The exponential generating function for the Bernoulli numbers `bernoulli' n`. -/
 def bernoulli'PowerSeries :=
-  mk fun n => algebraMap ℚ A (bernoulli' n / n !)
+  mk fun n => algebraMap ℚ A (bernoulli' n * Rat.fraction 1 n.factorial (factorial_ne_zero n))
 
 theorem bernoulli'PowerSeries_mul_exp_sub_one :
     bernoulli'PowerSeries A * (exp A - 1) = X * exp A := by
@@ -164,15 +174,37 @@ theorem bernoulli'PowerSeries_mul_exp_sub_one :
   rw [bernoulli'PowerSeries, coeff_mul, mul_comm X, sum_antidiagonal_succ']
   suffices (∑ p ∈ antidiagonal n,
       bernoulli' p.1 / p.1! * ((p.2 + 1) * p.2! : ℚ)⁻¹) = (n ! : ℚ)⁻¹ by
-    simpa [map_sum, Nat.factorial] using congr_arg (algebraMap ℚ A) this
-  apply eq_inv_of_mul_eq_one_left
+    simpa [map_sum, Nat.factorial, Rat.fraction_eq_div, one_div₀, div_eq_mul_inv₀] using
+      congr_arg (algebraMap ℚ A) this
+  apply eq_inv_of_mul_eq_one_left₀ (hb := (Nat.cast_ne_zero.mpr (factorial_ne_zero n)).isUnit)
   rw [sum_mul]
   convert! bernoulli'_spec' n using 1
   apply sum_congr rfl
   simp_rw [mem_antidiagonal]
   rintro ⟨i, j⟩ rfl
-  have := factorial_mul_factorial_dvd_factorial_add i j
-  simp [field, add_choose, *]
+  have hfacNat : (i + j).choose j * j ! * i ! = (i + j)! := by
+    simpa using (Nat.choose_mul_factorial_mul_factorial (n := i + j) (k := j) (by omega))
+  have hfac : ((i + j).choose j : ℚ) * (j ! : ℚ) * (i ! : ℚ) = ((i + j)! : ℚ) := by
+    exact_mod_cast hfacNat
+  field_simp
+  rw [← hfac]
+  push_cast
+  ring
+
+private lemma evalNegHom_bernoulli'PowerSeries_mul_exp_sub_one :
+    evalNegHom (bernoulli'PowerSeries A) * (exp A - 1) = X := by
+  have h : evalNegHom (bernoulli'PowerSeries A) * (evalNegHom (exp A) - 1) =
+      -X * evalNegHom (exp A) := by
+    simpa only [map_mul, map_sub, map_one, evalNegHom_X] using
+      congrArg (fun s : A⟦X⟧ ↦ evalNegHom s) (bernoulli'PowerSeries_mul_exp_sub_one A)
+  have he : evalNegHom (exp A) * exp A = 1 := by
+    simpa only [mul_comm] using (exp_mul_exp_neg_eq_one (A := A))
+  have hh : evalNegHom (bernoulli'PowerSeries A) * (1 - exp A) = -X := by
+    simpa only [mul_assoc, sub_mul, he, one_mul, mul_one] using
+      congrArg (fun s : A⟦X⟧ ↦ s * exp A) h
+  calc
+    _ = -(evalNegHom (bernoulli'PowerSeries A) * (1 - exp A)) := by rw [← mul_neg, neg_sub]
+    _ = X := by rw [hh, neg_neg]
 
 /-- Odd Bernoulli numbers (greater than 1) are zero. -/
 theorem bernoulli'_eq_zero_of_odd {n : ℕ} (h_odd : Odd n) (hlt : 1 < n) : bernoulli' n = 0 := by
@@ -182,14 +214,15 @@ theorem bernoulli'_eq_zero_of_odd {n : ℕ} (h_odd : Odd n) (hlt : 1 < n) : bern
       simp only [PowerSeries.ext_iff, evalNegHom, coeff_X] at h
     · apply eq_zero_of_neg_eq
       specialize h n
-      split_ifs at h <;> simp_all [B, h_odd.neg_one_pow, factorial_ne_zero]
+      split_ifs at h <;> simp_all [B, h_odd.neg_one_pow]
     · simpa +decide [Nat.factorial] using h 1
   have h : B * (exp ℚ - 1) = X * exp ℚ := by
-    simpa [bernoulli'PowerSeries] using bernoulli'PowerSeries_mul_exp_sub_one ℚ
-  rw [sub_mul, h, mul_sub X, sub_right_inj, ← neg_sub, mul_neg, neg_eq_iff_eq_neg]
-  suffices evalNegHom (B * (exp ℚ - 1)) * exp ℚ = evalNegHom (X * exp ℚ) * exp ℚ by
-    simpa [mul_assoc, sub_mul, mul_comm (evalNegHom (exp ℚ)), exp_mul_exp_neg_eq_one]
-  congr
+    simpa [B, bernoulli'PowerSeries, Rat.fraction_eq_div, one_div₀, div_eq_mul_inv₀] using
+      bernoulli'PowerSeries_mul_exp_sub_one ℚ
+  have hNeg : evalNegHom B * (exp ℚ - 1) = X := by
+    simpa [B, bernoulli'PowerSeries, Rat.fraction_eq_div, one_div₀, div_eq_mul_inv₀] using
+      evalNegHom_bernoulli'PowerSeries_mul_exp_sub_one ℚ
+  rw [sub_mul, h, hNeg, mul_sub X, mul_one]
 
 /-- The Bernoulli numbers are defined to be `bernoulli'` with a parity sign. -/
 def bernoulli (n : ℕ) : ℚ :=
@@ -264,25 +297,14 @@ theorem bernoulli_spec' (n : ℕ) :
 
 /-- The exponential generating function for the Bernoulli numbers `bernoulli n`. -/
 def bernoulliPowerSeries :=
-  mk fun n => algebraMap ℚ A (bernoulli n / n !)
+  mk fun n => algebraMap ℚ A (bernoulli n * Rat.fraction 1 n.factorial (factorial_ne_zero n))
 
 theorem bernoulliPowerSeries_mul_exp_sub_one : bernoulliPowerSeries A * (exp A - 1) = X := by
-  ext n
-  -- constant coefficient is a special case
-  cases n with | zero => simp | succ n =>
-  simp only [bernoulliPowerSeries, coeff_mul, coeff_X, sum_antidiagonal_succ', one_div, coeff_mk,
-    coeff_one, coeff_exp, map_sub, factorial, ite_eq_left, cast_succ, cast_mul,
-    sub_zero, add_eq_zero, ite_false, one_ne_zero, and_false, ← map_mul, ← map_sum]
-  cases n with | zero => simp | succ n =>
-  rw [ite_eq_right n.succ_succ_ne_one]
-  have hfact : ∀ m, (m ! : ℚ) ≠ 0 := fun m => mod_cast factorial_ne_zero m
-  have hite2 : ite (n.succ = 0) 1 0 = (0 : ℚ) := ite_eq_right n.succ_ne_zero
-  simp only [CharP.cast_eq_zero, zero_add, inv_one, map_one, sub_self, mul_zero]
-  rw [← map_zero (algebraMap ℚ A), ← zero_div (n.succ ! : ℚ), ← hite2, ← bernoulli_spec', sum_div]
-  refine congr_arg (algebraMap ℚ A) (sum_congr rfl fun x h => eq_div_of_mul_eq (hfact n.succ) ?_)
-  rw [mem_antidiagonal] at h
-  rw [← h, add_choose, cast_div_charZero (factorial_mul_factorial_dvd_factorial_add _ _)]
-  simp [field, mul_comm _ (bernoulli x.1), mul_assoc]
+  have h : bernoulliPowerSeries A = evalNegHom (bernoulli'PowerSeries A) := by
+    ext n
+    simp [bernoulliPowerSeries, bernoulli'PowerSeries, bernoulli, evalNegHom, mul_assoc]
+  rw [h]
+  exact evalNegHom_bernoulli'PowerSeries_mul_exp_sub_one A
 
 section Faulhaber
 
@@ -305,18 +327,15 @@ theorem sum_range_pow (n p : ℕ) :
     simp only [f, coeff_mul, coeff_mk, sum_antidiagonal_eq_sum_range_succ f]
     apply sum_congr rfl
     intro m h
-    simp only [exp_pow_eq_rescale_exp, rescale, RingHom.coe_mk]
-    -- manipulate factorials and binomial coefficients
     have h : m < q + 1 := by simpa using h
-    rw [choose_eq_factorial_div_factorial h.le, eq_comm, div_eq_iff (hne q.succ), succ_eq_add_one,
-      mul_assoc _ _ (q.succ ! : ℚ), mul_comm _ (q.succ ! : ℚ), ← mul_assoc, div_mul_eq_mul_div]
-    simp only [MonoidHom.coe_mk, OneHom.coe_mk, coeff_exp, Algebra.algebraMap_self, one_div,
-      map_inv₀, map_natCast, coeff_mk]
-    rw [mul_comm ((n : ℚ) ^ (q - m + 1)), ← mul_assoc _ _ ((n : ℚ) ^ (q - m + 1)), ← one_div,
-      mul_one_div, div_div, tsub_add_eq_add_tsub (le_of_lt_succ h), cast_div, cast_mul]
-    · ring
-    · exact factorial_mul_factorial_dvd_factorial h.le
-    · simp [factorial_ne_zero]
+    have hindex : q - m + 1 = q + 1 - m := by omega
+    have hfac : ((q + 1).choose m : ℚ) * (m ! : ℚ) * ((q + 1 - m)! : ℚ) =
+        ((q + 1)! : ℚ) := by exact_mod_cast choose_mul_factorial_mul_factorial h.le
+    rw [exp_pow_eq_rescale_exp, coeff_rescale, hindex, coeff_exp, Algebra.algebraMap_self,
+      RingHom.id_apply]
+    field_simp
+    rw [← hfac]
+    ring
   -- same as our goal except we pull out `p!` for convenience
   have hps :
     (∑ k ∈ range n, (k : ℚ) ^ p) =
@@ -326,7 +345,7 @@ theorem sum_range_pow (n p : ℕ) :
       (mk fun p => ∑ k ∈ range n, (k : ℚ) ^ p * algebraMap ℚ ℚ p !⁻¹) =
         mk fun p =>
           ∑ i ∈ range (p + 1), bernoulli i * (p + 1).choose i * (n : ℚ) ^ (p + 1 - i) / (p + 1)! by
-      rw [← div_eq_iff (hne p), div_eq_mul_inv, sum_mul]
+      rw [← div_eq_iff (hb := (hne p).isUnit), div_eq_mul_inv₀, sum_mul]
       rw [PowerSeries.ext_iff] at this
       simpa using this p
     -- the power series `exp ℚ - 1` is non-zero, a fact we need in order to use `mul_right_inj'`
@@ -345,11 +364,13 @@ theorem sum_range_pow (n p : ℕ) :
     refine Eq.trans (mul_eq_mul_right_iff.mpr ?_) (Eq.trans h_cauchy ?_)
     · left
       congr
+      funext m
+      simp [Rat.fraction_eq_div, div_eq_mul_inv₀]
     · simp only [mul_comm, factorial]
   -- massage `hps` into our goal
   rw [hps, sum_mul]
   refine sum_congr rfl fun x _ => ?_
-  simp [field, factorial]
+  simp [field, factorial, mul_left_comm, mul_comm]
 
 /-- Alternate form of **Faulhaber's theorem**, relating the sum of p-th powers to the Bernoulli
 numbers:
@@ -358,7 +379,7 @@ Deduced from `sum_range_pow`. -/
 theorem sum_Ico_pow (n p : ℕ) :
     (∑ k ∈ Ico 1 (n + 1), (k : ℚ) ^ p) =
       ∑ i ∈ range (p + 1), bernoulli' i * (p + 1).choose i * (n : ℚ) ^ (p + 1 - i) / (p + 1) := by
-  rw [← Nat.cast_succ]
+  simp only [← Nat.cast_succ]
   -- dispose of the trivial case
   cases p with | zero => simp | succ p =>
   let f i := bernoulli i * p.succ.succ.choose i * (n : ℚ) ^ (p.succ.succ - i) / p.succ.succ
@@ -369,7 +390,7 @@ theorem sum_Ico_pow (n p : ℕ) :
   have hle := Nat.le_add_left 1 n
   have hne : (p + 1 + 1 : ℚ) ≠ 0 := by norm_cast
   have h1 : ∀ r : ℚ, r * (p + 1 + 1) * (n : ℚ) ^ p.succ / (p + 1 + 1 : ℚ) = r * (n : ℚ) ^ p.succ :=
-      fun r => by rw [mul_div_right_comm, mul_div_cancel_right₀ _ hne]
+      fun r => by rw [mul_div_right_comm₀, mul_div_cancel_right₀ (hb := hne.isUnit)]
   have h2 : f 1 + (n : ℚ) ^ p.succ = 1 / 2 * (n : ℚ) ^ p.succ := by
     simp_rw [f, bernoulli_one, choose_one_right, succ_sub_succ_eq_sub, cast_succ, tsub_zero, h1]
     ring
@@ -416,8 +437,8 @@ private noncomputable def vonStaudtIndicator (k p : ℕ) : ℚ :=
 
 /- The primes `q < 2k + 2` with `(q - 1) ∣ 2k` — the primes appearing in the
 von Staudt-Clausen correction sum. -/
-private abbrev vonStaudtPrimes (k : ℕ) : Finset ℕ :=
-  (range (2 * k + 2)).filter fun q ↦ q.Prime ∧ (q - 1) ∣ 2 * k
+private abbrev vonStaudtPrimes (k : ℕ) : Finset {p : ℕ // p.Prime} :=
+  ((range (2 * k + 2)).subtype Nat.Prime).filter fun q ↦ (q.val - 1) ∣ 2 * k
 
 /- Over `ZMod p`, the nonzero `l`-th power sum equals the negative indicator of `(p - 1) ∣ l`. -/
 private lemma sum_pow_add_indicator_eq_zero {p : ℕ} (l : ℕ) [Fact p.Prime] :
@@ -445,25 +466,31 @@ private lemma pIntegral_mul {p : ℕ} [Fact p.Prime] {x y : ℚ}
 /- Denominators of the "other primes" part of the indicator sum
 stay coprime to a fixed prime `p`. -/
 private lemma prod_one_div_prime_den_coprime (k : ℕ) {p : ℕ} [Fact p.Prime] :
-    (∏ q ∈ vonStaudtPrimes k with q ≠ p, ((1 : ℚ) / q).den).Coprime p := by
+    (∏ q ∈ vonStaudtPrimes k with q ≠ ⟨p, Fact.out⟩,
+      (Rat.fraction 1 q.val q.prop.ne_zero).den).Coprime p := by
   refine Nat.Coprime.prod_left fun q hq ↦ ?_
-  simp only [Finset.mem_filter, Finset.mem_range] at hq
-  obtain ⟨⟨_, hq_prime, _⟩, hne⟩ := hq
-  rw [show ((1 : ℚ) / q).den = q by simp [hq_prime.ne_zero]]
-  exact (Nat.coprime_primes hq_prime Fact.out).mpr hne
+  have hne : q.val ≠ p := fun h ↦ (Finset.mem_filter.mp hq).2 (Subtype.ext h)
+  simp only [Rat.fraction_eq_div, Int.cast_one, one_div₀, Rat.inv_natCast_den]
+  exact (Nat.coprime_primes q.prop Fact.out).mpr hne
 
 /- Splits the prime-indexed correction sum into the `p`-term (`vonStaudtIndicator / p`)
 plus the rest. -/
 private lemma sum_one_div_prime_eq_indicator_div_add {k p : ℕ} (hk : k > 0) [Fact p.Prime] :
-    (∑ q ∈ vonStaudtPrimes k, (1 : ℚ) / q) =
-    vonStaudtIndicator (2 * k) p / p + ∑ q ∈ vonStaudtPrimes k with q ≠ p, (1 : ℚ) / q := by
-  rw [Finset.sum_congr (Finset.filter_ne' (vonStaudtPrimes k) p) fun _ _ ↦ rfl]
+    (∑ q ∈ vonStaudtPrimes k, Rat.fraction 1 q.val q.prop.ne_zero) =
+    vonStaudtIndicator (2 * k) p / p + ∑ q ∈ vonStaudtPrimes k with q ≠ ⟨p, Fact.out⟩,
+      Rat.fraction 1 q.val q.prop.ne_zero := by
+  let q : {p : ℕ // p.Prime} := ⟨p, Fact.out⟩
+  rw [Finset.filter_ne' (vonStaudtPrimes k) q]
   by_cases hdvd : (p - 1) ∣ 2 * k
-  · have hp_mem : p ∈ vonStaudtPrimes k := Finset.mem_filter.mpr
-      ⟨Finset.mem_range.mpr (by have := Nat.le_of_dvd (by lia) hdvd; lia), Fact.out, hdvd⟩
+  · have hp_mem : q ∈ vonStaudtPrimes k := Finset.mem_filter.mpr
+      ⟨Finset.mem_subtype.mpr (Finset.mem_range.mpr (by
+        have := Nat.le_of_dvd (by lia) hdvd
+        change p < 2 * k + 2
+        lia)), hdvd⟩
     rw [← Finset.add_sum_erase _ _ hp_mem]
-    simp [vonStaudtIndicator, hdvd]
-  · rw [Finset.erase_eq_of_notMem fun h ↦ hdvd (Finset.mem_filter.mp h).2.2]
+    simp [q, vonStaudtIndicator, hdvd, Rat.fraction_eq_div]
+  · have hp_notMem : q ∉ vonStaudtPrimes k := fun h ↦ hdvd (Finset.mem_filter.mp h).2
+    rw [Finset.erase_eq_of_notMem hp_notMem]
     simp [vonStaudtIndicator, hdvd]
 
 /- If the `p`-adic valuation of `M` is at most `N`, then `p^N / M` is `p`-integral. -/
@@ -475,18 +502,24 @@ private lemma pIntegral_pow_div {p M N : ℕ} [Fact p.Prime] (hM : M ≠ 0)
   have hp_ne : (p : ℚ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.Prime.ne_zero Fact.out)
   -- Rewrite p^N / M as p^(N-e) / M' where M' = M / p^e is coprime to p
   have hdecomp : p ^ e * M' = M := Nat.ordProj_mul_ordCompl_eq_self M p
+  have hM'_nz : M' ≠ 0 := by
+    intro h
+    apply hM
+    rw [← hdecomp, h, Nat.mul_zero]
   have hM_eq : (M : ℚ) = ↑(p ^ e) * ↑M' := by rw [← hdecomp]; simp
   have hrw : (p : ℚ) ^ N / M = (p : ℚ) ^ (N - e) / M' := by
-    rw [hM_eq, Nat.cast_pow, div_mul_eq_div_div]
-    congr 1
-    rw [div_eq_iff (pow_ne_zero e hp_ne), ← pow_add, Nat.sub_add_cancel hv]
-  have hM'_eq : ((p : ℚ) ^ (N - e) / (M' : ℚ)) = Rat.divInt (p ^ (N - e) : ℤ) (M' : ℤ) := by
-    norm_cast
-    simp
+    apply div_eq_iff.mpr
+    calc
+      (p : ℚ) ^ N = (p : ℚ) ^ (N - e) * p ^ e := by rw [← pow_add, Nat.sub_add_cancel hv]
+      _ = ((p : ℚ) ^ (N - e) / M') * M' * p ^ e := by rw [div_mul_cancel₀]
+      _ = ((p : ℚ) ^ (N - e) / M') * M := by rw [hM_eq, Nat.cast_pow]; ring
+  have hM'_eq : ((p : ℚ) ^ (N - e) / (M' : ℚ)) =
+      Rat.fraction (p ^ (N - e) : ℤ) M' hM'_nz := by
+    simp only [Rat.fraction_eq_div, Int.cast_pow, Int.cast_natCast]
   rw [hrw]
   exact Rat.padicValuation_le_one_iff.2 ((Nat.Prime.coprime_iff_not_dvd Fact.out).1
     (hM'_cop.coprime_dvd_left (by
-      rw [hM'_eq]; exact Int.natCast_dvd_natCast.mp (Rat.den_dvd _ _))).symm)
+      rw [hM'_eq]; exact Rat.den_dvd _ _ hM'_nz)).symm)
 
 /- Main valuation estimate behind the contradiction step for even-index summands. -/
 private lemma factorization_succ_le_sub_one {p d : ℕ} [Fact p.Prime] (hd : d ≥ 2) :
@@ -511,24 +544,20 @@ private lemma factorization_succ_le_sub_one {p d : ℕ} [Fact p.Prime] (hd : d �
 as in Rado's summand. -/
 private lemma choose_two_mul_succ_mul_div_eq {k m : ℕ} (x : ℚ) (hm_lt : m < k) :
     ((2 * k + 1).choose (2 * m) : ℚ) * x / (2 * k + 1) =
-    ((2 * k).choose (2 * m) : ℚ) * x / (2 * k - 2 * m + 1) := by
-  rw [div_eq_div_iff (by norm_cast) (by norm_cast; lia), mul_right_comm _ x, mul_right_comm _ x]
+    ((2 * k).choose (2 * m) : ℚ) * x / ((2 * k - 2 * m + 1 : ℕ) : ℚ) := by
+  rw [div_eq_div_iff, mul_right_comm _ x, mul_right_comm _ x]
   refine congrArg (· * x) ?_
-  rw [show (2 * (k : ℚ) - 2 * (m : ℚ) + 1) = (↑(2 * k + 1 - 2 * m) : ℚ) by norm_cast; lia]
+  rw [show 2 * k - 2 * m + 1 = 2 * k + 1 - 2 * m by omega]
   exact_mod_cast Nat.choose_mul_succ_eq (2 * k) (2 * m) |>.symm
 
 /- `p`-integrality of the core even-index summand after denominator normalization. -/
-private lemma pIntegral_choose_mul_pow_div {k m p : ℕ} (hm_lt : m < k) [Fact p.Prime]
+private lemma pIntegral_choose_mul_pow_div {k m p : ℕ} [Fact p.Prime]
     (hd : 2 * k - 2 * m ≥ 2) :
-    pIntegral p (((2 * k).choose (2 * m) : ℚ) * p ^ (2 * k - 2 * m - 1) / (2 * k - 2 * m + 1)) := by
-  set d := 2 * k - 2 * m with hd_def
-  have ⟨hd_plus_one_ne_zero, h_exp, hkm⟩ :
-      d + 1 ≠ 0 ∧ 2 * k - 2 * m - 1 = d - 1 ∧ 2 * m ≤ 2 * k := by lia
-  have h_denom_rat : (2 * (k : ℚ) - 2 * m + 1) = ((d + 1 : ℕ) : ℚ) := by
-    simp only [hd_def]; push_cast [Nat.cast_sub hkm]; ring
-  rw [h_exp, h_denom_rat, mul_div_assoc]
+    pIntegral p (((2 * k).choose (2 * m) : ℚ) * p ^ (2 * k - 2 * m - 1) /
+      ((2 * k - 2 * m + 1 : ℕ) : ℚ)) := by
+  rw [mul_div_assoc₀]
   exact pIntegral_mul (mod_cast Int.padicValuation_le_one p ((2 * k).choose (2 * m)))
-    (pIntegral_pow_div hd_plus_one_ne_zero (factorization_succ_le_sub_one hd))
+    (pIntegral_pow_div (Nat.succ_ne_zero _) (factorization_succ_le_sub_one hd))
 
 /- Uses the induction hypothesis on `B_{2m} + e_{2m}(p)/p`
 to prove `p`-integrality of the even term. -/
@@ -547,14 +576,14 @@ private lemma pIntegral_bernoulli_even_term {k m p : ℕ} (hm_lt : m < k) [Fact 
     vonStaudtIndicator (2 * m) p * ((2 * k + 1).choose (2 * m)) *
       P / (2 * k + 1) := by rw [hpow]; field_simp [hp_ne]; ring
   rw [hdecomp]
-  have hcmp := pIntegral_choose_mul_pow_div (p := p) hm_lt (by lia)
+  have hcmp := pIntegral_choose_mul_pow_div (k := k) (m := m) (p := p) (by lia)
   have H x := choose_two_mul_succ_mul_div_eq x hm_lt
   apply (Rat.padicValuation p).map_sub_le
-  · rw [mul_assoc, mul_div_assoc]
+  · rw [mul_assoc, mul_div_assoc₀]
     apply pIntegral_mul ih
     have hpow_mul : ((2 * k).choose (2 * m) : ℚ) * (p : ℚ) ^ (2 * k - 2 * m) /
-        (2 * k - 2 * m + 1) =
-        (p : ℚ) * (((2 * k).choose (2 * m) : ℚ) * P / (2 * k - 2 * m + 1)) := by
+        ((2 * k - 2 * m + 1 : ℕ) : ℚ) =
+        (p : ℚ) * (((2 * k).choose (2 * m) : ℚ) * P / ((2 * k - 2 * m + 1 : ℕ) : ℚ)) := by
       rw [hpow]; ring
     rw [H, hpow_mul]
     exact pIntegral_mul (Int.padicValuation_le_one p p) hcmp
@@ -574,15 +603,17 @@ private lemma pIntegral_faulhaber_sum {k p : ℕ} (hk : k > 0) [Fact p.Prime]
   · simp only [bernoulli_zero, one_mul, Nat.choose_zero_right, Nat.cast_one, Nat.sub_zero]
     exact_mod_cast pIntegral_pow_div (by lia)
       (factorization_succ_le_sub_one (by lia) |>.trans tsub_le_self)
-  · rw [zero_add, Nat.choose_one_right, bernoulli_one]
-    push_cast
-    field_simp
+  · have hterm : bernoulli 1 * ((2 * k + 1).choose 1 : ℚ) * (p : ℚ) ^ (2 * k - 1) /
+        (2 * k + 1) = -((p : ℚ) ^ (2 * k - 1) / 2) := by
+      rw [Nat.choose_one_right, bernoulli_one]
+      push_cast
+      field_simp
+    rw [hterm, Valuation.map_neg]
     obtain rfl | hp2 := eq_or_ne p 2
     · push_cast
-      rw [show 2 * k - 1 = (2 * k - 2) + 1 by lia, pow_succ, mul_div_cancel_right₀ _ two_ne_zero]
+      rw [show 2 * k - 1 = (2 * k - 2) + 1 by lia, pow_succ, mul_div_cancel_right₀]
       exact_mod_cast Int.padicValuation_le_one ..
-    · rw [Valuation.map_neg]
-      refine pIntegral_pow_div two_ne_zero <|
+    · refine pIntegral_pow_div (M := 2) two_ne_zero <|
          (factorization_eq_zero_of_lt ?_).trans_le (by lia)
       exact (Prime.odd_iff Fact.out).mp <| Prime.odd_of_ne_two Fact.out hp2
   · rcases Nat.even_or_odd (i + 2) with ⟨m, hm⟩ | hodd
@@ -631,7 +662,8 @@ private lemma bernoulli_add_indicator_eq_sub {k p : ℕ} (hk : k > 0) [Fact p.Pr
   have hAlg : bernoulli (2 * k) + vonStaudtIndicator (2 * k) p / p =
       T - (∑ i ∈ range (2 * k), bernoulli i * ((2 * k + 1).choose i) *
         (p : ℚ) ^ (2 * k + 1 - i) / (2 * k + 1)) / p := by
-    field_simp [hp_ne]; linarith [hT, sum_pow_filter_eq_faulhaber p hk]
+    field_simp [hp_ne]
+    linear_combination hT - sum_pow_filter_eq_faulhaber p hk
   rw [hAlg]; congr 1; simpa using faulhaber_sum_div_prime_eq
 
 /- For fixed prime `p`, the denominator of `B_{2k} + e_{2k}(p)/p` is not divisible by `p`. -/
@@ -648,7 +680,8 @@ private lemma not_dvd_den_bernoulli_add_indicator {k p : ℕ} (hk : k > 0) [Fact
 
 /- Extends the fixed-prime nondivisibility result to the full prime correction sum. -/
 private lemma not_dvd_den_vonStaudt_sum {k p : ℕ} (hk : k > 0) [Fact p.Prime] :
-    ¬ p ∣ (bernoulli (2 * k) + ∑ q ∈ vonStaudtPrimes k, (1 : ℚ) / q).den := by
+    ¬ p ∣ (bernoulli (2 * k) + ∑ q ∈ vonStaudtPrimes k,
+      Rat.fraction 1 q.val q.prop.ne_zero).den := by
   rw [sum_one_div_prime_eq_indicator_div_add (p := p) hk, ← add_assoc]
   have hcop_ind := ((Nat.Prime.coprime_iff_not_dvd Fact.out).mpr
     (not_dvd_den_bernoulli_add_indicator (p := p) hk)).symm
@@ -661,8 +694,8 @@ private lemma not_dvd_den_vonStaudt_sum {k p : ℕ} (hk : k > 0) [Fact p.Prime] 
 $$B_{2k} + \sum_{p - 1 \mid 2k} \frac{1}{p}$$ is an integer.
 -/
 theorem vonStaudt_clausen (k : ℕ) :
-    bernoulli (2 * k) + ∑ p ∈ range (2 * k + 2) with p.Prime ∧ (p - 1) ∣ 2 * k,
-      (1 : ℚ) / p ∈ Set.range Int.cast := by
+    bernoulli (2 * k) + ∑ p ∈ (range (2 * k + 2)).subtype Nat.Prime with (p.val - 1) ∣ 2 * k,
+      Rat.fraction 1 p.val p.prop.ne_zero ∈ Set.range Int.cast := by
   rcases Nat.eq_zero_or_pos k with rfl | hk
   · exact ⟨1, by decide +kernel⟩
   · rw [Set.mem_range]
@@ -722,7 +755,7 @@ theorem not_sq_dvd_den_bernoulli (hk : 0 < k) (hpk : p - 1 ∣ 2 * k) :
     simp [← Rat.padicValuation_le_one_iff, padicValuation_bernoulli hk hpk, ← WithZero.exp_add]
   have h2 : (bernoulli (2 * k)).den ∣ p * ((p : ℚ) * bernoulli (2 * k)).den := by
     have hd := Rat.mul_den_dvd (1 / (p : ℚ)) ((p : ℚ) * bernoulli (2 * k))
-    rwa [one_div, inv_mul_cancel_left₀ hpne, show ((p : ℚ)⁻¹).den = p by simp [hp.ne_zero]] at hd
+    simpa only [one_div₀, inv_mul_cancel_left₀, Rat.inv_natCast_den] using hd
   contrapose! h1
   simpa [Nat.mul_dvd_mul_iff_left hp.pos, pow_two] using h1.trans h2
 

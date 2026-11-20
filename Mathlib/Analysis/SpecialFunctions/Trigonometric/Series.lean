@@ -38,6 +38,7 @@ theorem Complex.hasSum_cos' (z : ℂ) :
   rw [Complex.cos, Complex.exp_eq_exp_ℂ]
   have := ((expSeries_div_hasSum_exp (z * Complex.I)).add
     (expSeries_div_hasSum_exp (-z * Complex.I))).div_const 2
+      (hb := (two_ne_zero : (2 : ℂ) ≠ 0).isUnit)
   replace := (Nat.divModEquiv 2).symm.hasSum_iff.mpr this
   dsimp [Function.comp_def] at this
   simp_rw [← mul_comm 2 _] at this
@@ -46,8 +47,7 @@ theorem Complex.hasSum_cos' (z : ℂ) :
   convert! hasSum_fintype (_ : Fin 2 → ℂ) using 1
   rw [Fin.sum_univ_two]
   simp_rw [Fin.val_zero, Fin.val_one, add_zero, pow_succ, pow_mul, mul_pow, neg_sq, ← two_mul,
-    neg_mul, mul_neg, neg_div, add_neg_cancel, zero_div, add_zero,
-    mul_div_cancel_left₀ _ (two_ne_zero : (2 : ℂ) ≠ 0)]
+    neg_mul, mul_neg, neg_div₀, add_neg_cancel, zero_div, add_zero, mul_div_cancel_left₀]
 
 set_option backward.defeqAttrib.useBackward true in
 theorem Complex.hasSum_sin' (z : ℂ) :
@@ -56,6 +56,7 @@ theorem Complex.hasSum_sin' (z : ℂ) :
   rw [Complex.sin, Complex.exp_eq_exp_ℂ]
   have := (((expSeries_div_hasSum_exp (-z * Complex.I)).sub
     (expSeries_div_hasSum_exp (z * Complex.I))).mul_right Complex.I).div_const 2
+      (hb := (two_ne_zero : (2 : ℂ) ≠ 0).isUnit)
   replace := (Nat.divModEquiv 2).symm.hasSum_iff.mpr this
   dsimp [Function.comp_def] at this
   simp_rw [← mul_comm 2 _] at this
@@ -64,8 +65,8 @@ theorem Complex.hasSum_sin' (z : ℂ) :
   convert! hasSum_fintype (_ : Fin 2 → ℂ) using 1
   rw [Fin.sum_univ_two]
   simp_rw [Fin.val_zero, Fin.val_one, add_zero, pow_succ, pow_mul, mul_pow, neg_sq, sub_self,
-    zero_mul, zero_div, zero_add, neg_mul, mul_neg, neg_div, ← neg_add', ← two_mul,
-    neg_mul, neg_div, mul_assoc, mul_div_cancel_left₀ _ (two_ne_zero : (2 : ℂ) ≠ 0), Complex.div_I]
+    zero_mul, zero_div, zero_add, neg_mul, mul_neg, neg_div₀, ← neg_add', ← two_mul,
+    neg_mul, neg_div₀, mul_assoc, mul_div_cancel_left₀, Complex.div_I]
 
 /-- The power series expansion of `Complex.cos`. -/
 theorem Complex.hasSum_cos (z : ℂ) :
@@ -77,8 +78,8 @@ theorem Complex.hasSum_cos (z : ℂ) :
 theorem Complex.hasSum_sin (z : ℂ) :
     HasSum (fun n : ℕ => (-1) ^ n * z ^ (2 * n + 1) / ↑(2 * n + 1)!) (Complex.sin z) := by
   convert! Complex.hasSum_sin' z using 1
-  simp_rw [mul_pow, pow_succ, pow_mul, Complex.I_sq, ← mul_assoc, mul_div_assoc, div_right_comm,
-    div_self Complex.I_ne_zero, mul_comm _ ((-1 : ℂ) ^ _), mul_one_div, mul_div_assoc, mul_assoc]
+  simp_rw [mul_pow, pow_succ, pow_mul, Complex.I_sq, ← mul_assoc, mul_div_assoc₀, div_right_comm₀,
+    div_self, mul_comm _ ((-1 : ℂ) ^ _), mul_one_div₀, mul_div_assoc₀, mul_assoc]
 
 theorem Complex.cos_eq_tsum' (z : ℂ) :
     Complex.cos z = ∑' n : ℕ, (z * Complex.I) ^ (2 * n) / ↑(2 * n)! :=
@@ -98,13 +99,17 @@ theorem Complex.sin_eq_tsum (z : ℂ) :
 
 /-- The power series expansion of `Real.cos`. -/
 theorem Real.hasSum_cos (r : ℝ) :
-    HasSum (fun n : ℕ => (-1) ^ n * r ^ (2 * n) / ↑(2 * n)!) (Real.cos r) :=
-  mod_cast Complex.hasSum_cos r
+    HasSum (fun n : ℕ => (-1) ^ n * r ^ (2 * n) / ↑(2 * n)!) (Real.cos r) := by
+  apply Complex.hasSum_ofReal.mp
+  simpa only [Complex.ofReal_div, Complex.ofReal_mul, Complex.ofReal_pow, Complex.ofReal_neg,
+    Complex.ofReal_one, Complex.ofReal_natCast, Complex.ofReal_cos] using Complex.hasSum_cos r
 
 /-- The power series expansion of `Real.sin`. -/
 theorem Real.hasSum_sin (r : ℝ) :
-    HasSum (fun n : ℕ => (-1) ^ n * r ^ (2 * n + 1) / ↑(2 * n + 1)!) (Real.sin r) :=
-  mod_cast Complex.hasSum_sin r
+    HasSum (fun n : ℕ => (-1) ^ n * r ^ (2 * n + 1) / ↑(2 * n + 1)!) (Real.sin r) := by
+  apply Complex.hasSum_ofReal.mp
+  simpa only [Complex.ofReal_div, Complex.ofReal_mul, Complex.ofReal_pow, Complex.ofReal_neg,
+    Complex.ofReal_one, Complex.ofReal_natCast, Complex.ofReal_sin] using Complex.hasSum_sin r
 
 theorem Real.cos_eq_tsum (r : ℝ) : Real.cos r = ∑' n : ℕ, (-1) ^ n * r ^ (2 * n) / ↑(2 * n)! :=
   (Real.hasSum_cos r).tsum_eq.symm
@@ -126,7 +131,7 @@ lemma hasSum_cosh (z : ℂ) : HasSum (fun n ↦ z ^ (2 * n) / ↑(2 * n)!) (cosh
 
 /-- The power series expansion of `Complex.sinh`. -/
 lemma hasSum_sinh (z : ℂ) : HasSum (fun n ↦ z ^ (2 * n + 1) / ↑(2 * n + 1)!) (sinh z) := by
-  simpa [mul_assoc, sin_mul_I, neg_pow z, pow_add, pow_mul, neg_mul, neg_div]
+  simpa [mul_assoc, sin_mul_I, neg_pow z, pow_add, pow_mul, neg_mul, neg_div₀]
     using (hasSum_sin' (z * I)).mul_right (-I)
 
 lemma cosh_eq_tsum (z : ℂ) : cosh z = ∑' n, z ^ (2 * n) / ↑(2 * n)! := z.hasSum_cosh.tsum_eq.symm
@@ -139,12 +144,16 @@ end Complex
 namespace Real
 
 /-- The power series expansion of `Real.cosh`. -/
-lemma hasSum_cosh (r : ℝ) : HasSum (fun n ↦ r ^ (2 * n) / ↑(2 * n)!) (cosh r) :=
-  mod_cast Complex.hasSum_cosh r
+lemma hasSum_cosh (r : ℝ) : HasSum (fun n ↦ r ^ (2 * n) / ↑(2 * n)!) (cosh r) := by
+  apply Complex.hasSum_ofReal.mp
+  simpa only [Complex.ofReal_div, Complex.ofReal_pow, Complex.ofReal_natCast, Complex.ofReal_cosh]
+    using Complex.hasSum_cosh r
 
 /-- The power series expansion of `Real.sinh`. -/
-lemma hasSum_sinh (r : ℝ) : HasSum (fun n ↦ r ^ (2 * n + 1) / ↑(2 * n + 1)!) (sinh r) :=
-  mod_cast Complex.hasSum_sinh r
+lemma hasSum_sinh (r : ℝ) : HasSum (fun n ↦ r ^ (2 * n + 1) / ↑(2 * n + 1)!) (sinh r) := by
+  apply Complex.hasSum_ofReal.mp
+  simpa only [Complex.ofReal_div, Complex.ofReal_pow, Complex.ofReal_natCast, Complex.ofReal_sinh]
+    using Complex.hasSum_sinh r
 
 lemma cosh_eq_tsum (r : ℝ) : cosh r = ∑' n, r ^ (2 * n) / ↑(2 * n)! := r.hasSum_cosh.tsum_eq.symm
 
@@ -154,7 +163,7 @@ lemma sinh_eq_tsum (r : ℝ) : sinh r = ∑' n, r ^ (2 * n + 1) / ↑(2 * n + 1)
 lemma cosh_le_exp_half_sq (x : ℝ) : cosh x ≤ exp (x ^ 2 / 2) := by
   rw [cosh_eq_tsum, exp_eq_exp_ℝ, exp_eq_tsum ℝ]
   refine x.hasSum_cosh.summable.tsum_le_tsum (fun i ↦ ?_) <| expSeries_summable' (x ^ 2 / 2)
-  simp only [div_pow, pow_mul, smul_eq_mul, inv_mul_eq_div, div_div]
+  simp only [div_pow₀, pow_mul, smul_eq_mul, ← div_eq_inv_mul₀, div_div₀]
   gcongr
   norm_cast
   exact Nat.two_pow_mul_factorial_le_factorial_two_mul _

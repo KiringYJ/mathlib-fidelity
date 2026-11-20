@@ -85,23 +85,32 @@ theorem hasFDerivAt_prodMk_right (e₀ : E) (f₀ : F) :
   (hasFDerivAt_const e₀ f₀).prodMk (hasFDerivAt_id f₀)
 
 @[fun_prop]
-theorem DifferentiableWithinAt.prodMk (hf₁ : DifferentiableWithinAt 𝕜 f₁ s x)
-    (hf₂ : DifferentiableWithinAt 𝕜 f₂ s x) :
-    DifferentiableWithinAt 𝕜 (fun x : E => (f₁ x, f₂ x)) s x :=
+theorem DifferentiableWithinAt.prodMk {D : Type*} [TopologicalSpace D]
+    {f₁ : D → F} {f₂ : D → G} {coord : D → E} {s : Set D} {x : D}
+    (hf₁ : DifferentiableWithinAt 𝕜 f₁ s x coord)
+    (hf₂ : DifferentiableWithinAt 𝕜 f₂ s x coord) :
+    DifferentiableWithinAt 𝕜 (fun x => (f₁ x, f₂ x)) s x coord :=
   (hf₁.hasFDerivWithinAt.prodMk hf₂.hasFDerivWithinAt).differentiableWithinAt
 
 @[simp, fun_prop]
-theorem DifferentiableAt.prodMk (hf₁ : DifferentiableAt 𝕜 f₁ x) (hf₂ : DifferentiableAt 𝕜 f₂ x) :
-    DifferentiableAt 𝕜 (fun x : E => (f₁ x, f₂ x)) x :=
+theorem DifferentiableAt.prodMk {D : Type*} [TopologicalSpace D]
+    {f₁ : D → F} {f₂ : D → G} {coord : D → E} {x : D}
+    (hf₁ : DifferentiableAt 𝕜 f₁ x coord) (hf₂ : DifferentiableAt 𝕜 f₂ x coord) :
+    DifferentiableAt 𝕜 (fun x => (f₁ x, f₂ x)) x coord :=
   (hf₁.hasFDerivAt.prodMk hf₂.hasFDerivAt).differentiableAt
 
 @[fun_prop]
-theorem DifferentiableOn.prodMk (hf₁ : DifferentiableOn 𝕜 f₁ s) (hf₂ : DifferentiableOn 𝕜 f₂ s) :
-    DifferentiableOn 𝕜 (fun x : E => (f₁ x, f₂ x)) s := fun x hx => (hf₁ x hx).prodMk (hf₂ x hx)
+theorem DifferentiableOn.prodMk {D : Type*} [TopologicalSpace D]
+    {f₁ : D → F} {f₂ : D → G} {coord : D → E} {s : Set D}
+    (hf₁ : DifferentiableOn 𝕜 f₁ s coord) (hf₂ : DifferentiableOn 𝕜 f₂ s coord) :
+    DifferentiableOn 𝕜 (fun x => (f₁ x, f₂ x)) s coord :=
+  fun x hx => (hf₁ x hx).prodMk (hf₂ x hx)
 
 @[simp, fun_prop]
-theorem Differentiable.prodMk (hf₁ : Differentiable 𝕜 f₁) (hf₂ : Differentiable 𝕜 f₂) :
-    Differentiable 𝕜 fun x : E => (f₁ x, f₂ x) := fun x ↦
+theorem Differentiable.prodMk {D : Type*} [TopologicalSpace D]
+    {f₁ : D → F} {f₂ : D → G} {coord : D → E}
+    (hf₁ : Differentiable 𝕜 f₁ coord) (hf₂ : Differentiable 𝕜 f₂ coord) :
+    Differentiable 𝕜 (fun x => (f₁ x, f₂ x)) coord := fun x ↦
   (hf₁ x).prodMk (hf₂ x)
 
 theorem DifferentiableAt.fderiv_prodMk (hf₁ : DifferentiableAt 𝕜 f₁ x)
@@ -130,21 +139,24 @@ theorem hasStrictFDerivAt_fst : HasStrictFDerivAt (@Prod.fst E F) (fst 𝕜 E F)
   hasFDerivAtFilter_fst
 
 @[fun_prop]
-protected theorem HasStrictFDerivAt.fst (h : HasStrictFDerivAt f₂ f₂' x) :
-    HasStrictFDerivAt (fun x => (f₂ x).1) ((fst 𝕜 F G).comp f₂') x :=
-  hasStrictFDerivAt_fst.comp x h
+protected theorem HasStrictFDerivAt.fst {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {x : D} (h : HasStrictFDerivAt f₂ f₂' x coord) :
+    HasStrictFDerivAt (fun x => (f₂ x).1) ((fst 𝕜 F G).comp f₂') x coord :=
+  hasFDerivAtFilter_fst.comp (coord' := id) h tendsto_map
 
-protected theorem HasFDerivAtFilter.fst (h : HasFDerivAtFilter f₂ f₂' L) :
-    HasFDerivAtFilter (fun x => (f₂ x).1) ((fst 𝕜 F G).comp f₂') L :=
-  hasFDerivAtFilter_fst.comp h tendsto_map
+protected theorem HasFDerivAtFilter.fst {D : Type*} {f₂ : D → F × G} {coord : D → E}
+    {L : Filter (D × D)} (h : HasFDerivAtFilter f₂ f₂' L coord) :
+    HasFDerivAtFilter (fun x => (f₂ x).1) ((fst 𝕜 F G).comp f₂') L coord :=
+  hasFDerivAtFilter_fst.comp (coord' := id) h tendsto_map
 
 @[fun_prop]
 theorem hasFDerivAt_fst : HasFDerivAt (@Prod.fst E F) (fst 𝕜 E F) p :=
   hasFDerivAtFilter_fst
 
 @[fun_prop]
-protected nonrec theorem HasFDerivAt.fst (h : HasFDerivAt f₂ f₂' x) :
-    HasFDerivAt (fun x => (f₂ x).1) ((fst 𝕜 F G).comp f₂') x :=
+protected nonrec theorem HasFDerivAt.fst {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {x : D} (h : HasFDerivAt f₂ f₂' x coord) :
+    HasFDerivAt (fun x => (f₂ x).1) ((fst 𝕜 F G).comp f₂') x coord :=
   h.fst
 
 @[fun_prop]
@@ -153,8 +165,10 @@ theorem hasFDerivWithinAt_fst {s : Set (E × F)} :
   hasFDerivAtFilter_fst
 
 @[fun_prop]
-protected nonrec theorem HasFDerivWithinAt.fst (h : HasFDerivWithinAt f₂ f₂' s x) :
-    HasFDerivWithinAt (fun x => (f₂ x).1) ((fst 𝕜 F G).comp f₂') s x :=
+protected nonrec theorem HasFDerivWithinAt.fst {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {x : D} {s : Set D}
+    (h : HasFDerivWithinAt f₂ f₂' s x coord) :
+    HasFDerivWithinAt (fun x => (f₂ x).1) ((fst 𝕜 F G).comp f₂') s x coord :=
   h.fst
 
 @[fun_prop]
@@ -162,36 +176,41 @@ theorem differentiableAt_fst : DifferentiableAt 𝕜 Prod.fst p :=
   hasFDerivAt_fst.differentiableAt
 
 @[simp, fun_prop]
-protected theorem DifferentiableAt.fst (h : DifferentiableAt 𝕜 f₂ x) :
-    DifferentiableAt 𝕜 (fun x => (f₂ x).1) x :=
-  differentiableAt_fst.comp x h
+protected theorem DifferentiableAt.fst {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {x : D} (h : DifferentiableAt 𝕜 f₂ x coord) :
+    DifferentiableAt 𝕜 (fun x => (f₂ x).1) x coord :=
+  h.hasFDerivAt.fst.differentiableAt
 
 @[fun_prop]
 theorem differentiable_fst : Differentiable 𝕜 (Prod.fst : E × F → E) := fun _ =>
   differentiableAt_fst
 
 @[simp, fun_prop]
-protected theorem Differentiable.fst (h : Differentiable 𝕜 f₂) :
-    Differentiable 𝕜 fun x => (f₂ x).1 :=
-  differentiable_fst.comp h
+protected theorem Differentiable.fst {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} (h : Differentiable 𝕜 f₂ coord) :
+    Differentiable 𝕜 (fun x => (f₂ x).1) coord :=
+  fun x ↦ (h x).fst
 
 @[fun_prop]
 theorem differentiableWithinAt_fst {s : Set (E × F)} : DifferentiableWithinAt 𝕜 Prod.fst s p :=
   differentiableAt_fst.differentiableWithinAt
 
 @[fun_prop]
-protected theorem DifferentiableWithinAt.fst (h : DifferentiableWithinAt 𝕜 f₂ s x) :
-    DifferentiableWithinAt 𝕜 (fun x => (f₂ x).1) s x :=
-  differentiableAt_fst.comp_differentiableWithinAt x h
+protected theorem DifferentiableWithinAt.fst {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {x : D} {s : Set D}
+    (h : DifferentiableWithinAt 𝕜 f₂ s x coord) :
+    DifferentiableWithinAt 𝕜 (fun x => (f₂ x).1) s x coord :=
+  h.hasFDerivWithinAt.fst.differentiableWithinAt
 
 @[fun_prop]
 theorem differentiableOn_fst {s : Set (E × F)} : DifferentiableOn 𝕜 Prod.fst s :=
   differentiable_fst.differentiableOn
 
 @[fun_prop]
-protected theorem DifferentiableOn.fst (h : DifferentiableOn 𝕜 f₂ s) :
-    DifferentiableOn 𝕜 (fun x => (f₂ x).1) s :=
-  differentiable_fst.comp_differentiableOn h
+protected theorem DifferentiableOn.fst {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {s : Set D} (h : DifferentiableOn 𝕜 f₂ s coord) :
+    DifferentiableOn 𝕜 (fun x => (f₂ x).1) s coord :=
+  fun x hx ↦ (h x hx).fst
 
 theorem fderiv_fst : fderiv 𝕜 Prod.fst p = fst 𝕜 E F :=
   hasFDerivAt_fst.fderiv
@@ -218,17 +237,19 @@ theorem hasFDerivAtFilter_snd {L : Filter ((E × F) × (E × F))} :
     HasFDerivAtFilter (@Prod.snd E F) (snd 𝕜 E F) L :=
   (snd 𝕜 E F).hasFDerivAtFilter
 
-protected theorem HasFDerivAtFilter.snd (h : HasFDerivAtFilter f₂ f₂' L) :
-    HasFDerivAtFilter (fun x => (f₂ x).2) ((snd 𝕜 F G).comp f₂') L :=
-  hasFDerivAtFilter_snd.comp h tendsto_map
+protected theorem HasFDerivAtFilter.snd {D : Type*} {f₂ : D → F × G} {coord : D → E}
+    {L : Filter (D × D)} (h : HasFDerivAtFilter f₂ f₂' L coord) :
+    HasFDerivAtFilter (fun x => (f₂ x).2) ((snd 𝕜 F G).comp f₂') L coord :=
+  hasFDerivAtFilter_snd.comp (coord' := id) h tendsto_map
 
 @[fun_prop]
 theorem hasStrictFDerivAt_snd : HasStrictFDerivAt (@Prod.snd E F) (snd 𝕜 E F) p :=
   hasFDerivAtFilter_snd
 
 @[fun_prop]
-protected theorem HasStrictFDerivAt.snd (h : HasStrictFDerivAt f₂ f₂' x) :
-    HasStrictFDerivAt (fun x => (f₂ x).2) ((snd 𝕜 F G).comp f₂') x :=
+protected theorem HasStrictFDerivAt.snd {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {x : D} (h : HasStrictFDerivAt f₂ f₂' x coord) :
+    HasStrictFDerivAt (fun x => (f₂ x).2) ((snd 𝕜 F G).comp f₂') x coord :=
   HasFDerivAtFilter.snd h
 
 @[fun_prop]
@@ -236,8 +257,9 @@ theorem hasFDerivAt_snd : HasFDerivAt (@Prod.snd E F) (snd 𝕜 E F) p :=
   hasFDerivAtFilter_snd
 
 @[fun_prop]
-protected theorem HasFDerivAt.snd (h : HasFDerivAt f₂ f₂' x) :
-    HasFDerivAt (fun x => (f₂ x).2) ((snd 𝕜 F G).comp f₂') x :=
+protected theorem HasFDerivAt.snd {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {x : D} (h : HasFDerivAt f₂ f₂' x coord) :
+    HasFDerivAt (fun x => (f₂ x).2) ((snd 𝕜 F G).comp f₂') x coord :=
   HasFDerivAtFilter.snd h
 
 @[fun_prop]
@@ -246,8 +268,10 @@ theorem hasFDerivWithinAt_snd {s : Set (E × F)} :
   hasFDerivAtFilter_snd
 
 @[fun_prop]
-protected theorem HasFDerivWithinAt.snd (h : HasFDerivWithinAt f₂ f₂' s x) :
-    HasFDerivWithinAt (fun x => (f₂ x).2) ((snd 𝕜 F G).comp f₂') s x :=
+protected theorem HasFDerivWithinAt.snd {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {x : D} {s : Set D}
+    (h : HasFDerivWithinAt f₂ f₂' s x coord) :
+    HasFDerivWithinAt (fun x => (f₂ x).2) ((snd 𝕜 F G).comp f₂') s x coord :=
   HasFDerivAtFilter.snd h
 
 @[fun_prop]
@@ -255,36 +279,41 @@ theorem differentiableAt_snd : DifferentiableAt 𝕜 Prod.snd p :=
   hasFDerivAt_snd.differentiableAt
 
 @[simp, fun_prop]
-protected theorem DifferentiableAt.snd (h : DifferentiableAt 𝕜 f₂ x) :
-    DifferentiableAt 𝕜 (fun x => (f₂ x).2) x :=
-  differentiableAt_snd.comp x h
+protected theorem DifferentiableAt.snd {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {x : D} (h : DifferentiableAt 𝕜 f₂ x coord) :
+    DifferentiableAt 𝕜 (fun x => (f₂ x).2) x coord :=
+  h.hasFDerivAt.snd.differentiableAt
 
 @[fun_prop]
 theorem differentiable_snd : Differentiable 𝕜 (Prod.snd : E × F → F) := fun _ =>
   differentiableAt_snd
 
 @[simp, fun_prop]
-protected theorem Differentiable.snd (h : Differentiable 𝕜 f₂) :
-    Differentiable 𝕜 fun x => (f₂ x).2 :=
-  differentiable_snd.comp h
+protected theorem Differentiable.snd {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} (h : Differentiable 𝕜 f₂ coord) :
+    Differentiable 𝕜 (fun x => (f₂ x).2) coord :=
+  fun x ↦ (h x).snd
 
 @[fun_prop]
 theorem differentiableWithinAt_snd {s : Set (E × F)} : DifferentiableWithinAt 𝕜 Prod.snd s p :=
   differentiableAt_snd.differentiableWithinAt
 
 @[fun_prop]
-protected theorem DifferentiableWithinAt.snd (h : DifferentiableWithinAt 𝕜 f₂ s x) :
-    DifferentiableWithinAt 𝕜 (fun x => (f₂ x).2) s x :=
-  differentiableAt_snd.comp_differentiableWithinAt x h
+protected theorem DifferentiableWithinAt.snd {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {x : D} {s : Set D}
+    (h : DifferentiableWithinAt 𝕜 f₂ s x coord) :
+    DifferentiableWithinAt 𝕜 (fun x => (f₂ x).2) s x coord :=
+  h.hasFDerivWithinAt.snd.differentiableWithinAt
 
 @[fun_prop]
 theorem differentiableOn_snd {s : Set (E × F)} : DifferentiableOn 𝕜 Prod.snd s :=
   differentiable_snd.differentiableOn
 
 @[fun_prop]
-protected theorem DifferentiableOn.snd (h : DifferentiableOn 𝕜 f₂ s) :
-    DifferentiableOn 𝕜 (fun x => (f₂ x).2) s :=
-  differentiable_snd.comp_differentiableOn h
+protected theorem DifferentiableOn.snd {D : Type*} [TopologicalSpace D]
+    {f₂ : D → F × G} {coord : D → E} {s : Set D} (h : DifferentiableOn 𝕜 f₂ s coord) :
+    DifferentiableOn 𝕜 (fun x => (f₂ x).2) s coord :=
+  fun x hx ↦ (h x hx).snd
 
 theorem fderiv_snd : fderiv 𝕜 Prod.snd p = snd 𝕜 E F :=
   hasFDerivAt_snd.fderiv

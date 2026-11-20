@@ -407,18 +407,26 @@ theorem single_one_eq_pow {R : Type*} [Semiring R] (n : ℕ) :
   simp
 
 theorem single_zpow (n : ℤ) :
-    single (n : ℤ) (1 : F) = single (1 : ℤ) 1 ^ n := by
-  match n with
-  | (n : ℕ) => apply single_one_eq_pow
-  | -(n + 1 : ℕ) =>
-    rw [← Nat.cast_one, ← inv_one, ← HahnSeries.inv_single, zpow_neg,
-      ← Nat.cast_one, Nat.cast_one,
-      inv_inj, zpow_natCast, single_one_eq_pow, inv_one]
+    single n (1 : F) =
+      Checked.zpow (single (1 : ℤ) (1 : F)) n (fun _ ↦ (single_ne_zero one_ne_zero).isUnit) := by
+  cases n with
+  | ofNat n => exact single_one_eq_pow n
+  | negSucc n =>
+    rw [zpow_negSucc₀]
+    apply eq_inv_of_mul_eq_one_left₀
+    rw [← single_one_eq_pow, single_mul_single, one_mul,
+      show Int.negSucc n + ((n + 1 : ℕ) : ℤ) = 0 by omega, single_zero_one]
 
-theorem algebraMap_apply_div :
-    algebraMap (RatFunc F) F⸨X⸩ (algebraMap _ _ p / algebraMap _ _ q) =
-      algebraMap F[X] F⸨X⸩ p / algebraMap _ _ q := by
-  simp only [map_div₀, IsScalarTower.algebraMap_apply F[X] (RatFunc F) F⸨X⸩]
+theorem algebraMap_apply_div (hq : q ≠ 0) :
+    algebraMap (RatFunc F) F⸨X⸩
+      (Checked.div (algebraMap F[X] (RatFunc F) p) (algebraMap F[X] (RatFunc F) q)
+        (algebraMap_ne_zero hq).isUnit) =
+      Checked.div (algebraMap F[X] F⸨X⸩ p) (algebraMap F[X] F⸨X⸩ q) (by
+        rw [IsScalarTower.algebraMap_apply F[X] (RatFunc F) F⸨X⸩]
+        exact (algebraMap_ne_zero hq).isUnit.map (algebraMap (RatFunc F) F⸨X⸩)) := by
+  simpa only [IsScalarTower.algebraMap_apply F[X] (RatFunc F) F⸨X⸩] using
+    map_div₀ (algebraMap (RatFunc F) F⸨X⸩) (algebraMap F[X] (RatFunc F) p)
+      (algebraMap F[X] (RatFunc F) q) (hb := (algebraMap_ne_zero hq).isUnit)
 
 end RatFunc
 
@@ -447,7 +455,7 @@ theorem intValuation_eq_of_coe (P : K[X]) :
   by_cases hP : P = 0
   · rw [hP, Valuation.map_zero, Polynomial.coe_zero, Valuation.map_zero]
   rw [intValuation_if_neg _ hP, intValuation_if_neg _ <| (by simp [hP])]
-  simp only [idealX_span, exp_neg, inv_inj, exp_inj, Nat.cast_inj]
+  simp only [idealX_span, exp_inj, neg_inj, Nat.cast_inj]
   have span_ne_zero :
     (Ideal.span {P} : Ideal K[X]) ≠ 0 ∧ (Ideal.span {Polynomial.X} : Ideal K[X]) ≠ 0 := by
     simp only [Ideal.zero_eq_bot, ne_eq, Ideal.span_singleton_eq_bot, hP, Polynomial.X_ne_zero,
@@ -516,11 +524,11 @@ theorem valuation_X_pow (s : ℕ) :
 
 theorem valuation_single_zpow (s : ℤ) :
     Valued.v (HahnSeries.single s (1 : K) : K⸨X⸩) = exp (-(s : ℤ)) := by
-  obtain s | s := s
-  · rw [Int.ofNat_eq_natCast, ← HahnSeries.ofPowerSeries_X_pow, PowerSeries.coe_pow,
-      valuation_X_pow]
-  · rw [Int.negSucc_eq, ← inv_inj, ← map_inv₀, inv_single, neg_neg, ← Int.natCast_succ, inv_one,
-      ← HahnSeries.ofPowerSeries_X_pow, PowerSeries.coe_pow, valuation_X_pow, exp_neg]
+  have h : Valued.v (HahnSeries.single (1 : ℤ) (1 : K) : K⸨X⸩) = exp (-1 : ℤ) := by
+    simpa only [pow_one, Int.natCast_one, PowerSeries.coe_X] using valuation_X_pow K 1
+  simp only [RatFunc.single_zpow s, map_zpow₀, h, ← exp_zsmul]
+  congr 1
+  simp
 
 /-- The coefficients of a power series vanish in degree strictly less than its valuation. -/
 theorem coeff_zero_of_lt_intValuation {n d : ℕ} {f : K⟦X⟧}
@@ -573,37 +581,27 @@ theorem valuation_le_iff_coeff_lt_eq_zero {D : ℤ} {f : K⸨X⸩} :
     Valued.v f ≤ exp (-D : ℤ) ↔ ∀ n : ℤ, n < D → f.coeff n = 0 := by
   refine ⟨fun hnD n hn => coeff_zero_of_lt_valuation K hnD hn, fun h_val_f => ?_⟩
   let F := powerSeriesPart f
-  by_cases! ord_nonpos : f.order ≤ 0
-  · obtain ⟨s, hs⟩ := Int.exists_eq_neg_ofNat ord_nonpos
-    rw [← f.single_order_mul_powerSeriesPart, hs, map_mul, valuation_single_zpow, neg_neg, mul_comm,
-      ← le_mul_inv_iff₀, exp_neg, ← mul_inv, ← exp_add, ← exp_neg]
-    · by_cases! hDs : D + s ≤ 0
-      · apply le_trans ((PowerSeries.idealX K).valuation_le_one F)
-        rwa [← log_le_iff_le_exp one_ne_zero, le_neg, log_one, neg_zero]
-      · obtain ⟨d, hd⟩ := Int.eq_ofNat_of_zero_le hDs.le
-        rw [hd]
-        apply (intValuation_le_iff_coeff_lt_eq_zero K F).mpr
-        intro n hn
-        rw [powerSeriesPart_coeff f n, hs]
-        apply h_val_f
-        lia
-    · simp [ne_eq, zero_lt_iff]
-  · obtain ⟨s, hs⟩ := Int.exists_eq_neg_ofNat <| neg_nonpos_of_nonneg ord_nonpos.le
-    rw [neg_inj] at hs
-    rw [← f.single_order_mul_powerSeriesPart, hs, map_mul, valuation_single_zpow, mul_comm,
-      ← le_mul_inv_iff₀, ← exp_neg, ← exp_add, neg_neg]
-    · by_cases! hDs : D - s ≤ 0
-      · apply le_trans ((PowerSeries.idealX K).valuation_le_one F)
-        rw [← log_le_iff_le_exp one_ne_zero, log_one]
-        lia
-      · obtain ⟨d, hd⟩ := Int.eq_ofNat_of_zero_le hDs.le
-        rw [← neg_neg (-D + ↑s), ← sub_eq_neg_add, neg_sub, hd]
-        apply (intValuation_le_iff_coeff_lt_eq_zero K F).mpr
-        intro n hn
-        rw [powerSeriesPart_coeff f n, hs]
-        apply h_val_f (s + n)
-        lia
-    · simp [ne_eq, zero_lt_iff]
+  have hF : Valued.v (F : K⸨X⸩) ≤ exp (-(D - f.order)) := by
+    by_cases h : 0 ≤ D - f.order
+    · obtain ⟨d, hd⟩ := Int.eq_ofNat_of_zero_le h
+      rw [hd]
+      apply (intValuation_le_iff_coeff_lt_eq_zero K F).mpr
+      intro j hj
+      change PowerSeries.coeff j (powerSeriesPart f) = 0
+      rw [powerSeriesPart_coeff]
+      exact h_val_f _ (by lia)
+    · apply le_trans ((PowerSeries.idealX K).valuation_le_one F)
+      rw [← log_le_iff_le_exp one_ne_zero, log_one]
+      lia
+  calc
+    Valued.v f =
+        Valued.v (HahnSeries.single f.order (1 : K) : K⸨X⸩) * Valued.v (F : K⸨X⸩) := by
+      simpa only [map_mul] using
+        congrArg (fun a : K⸨X⸩ ↦ Valued.v a) f.single_order_mul_powerSeriesPart.symm
+    _ ≤ exp (-f.order) * exp (-(D - f.order)) := by
+      rw [valuation_single_zpow]
+      gcongr
+    _ = exp (-D) := by rw [← exp_add, show -f.order + -(D - f.order) = -D by lia]
 
 theorem valuation_le_iff_coeff_lt_log_eq_zero {D : ℤᵐ⁰} (hD : D ≠ 0) {f : K⸨X⸩} :
     Valued.v f ≤ D ↔ ∀ n : ℤ, n < -log D → f.coeff n = 0 := by
@@ -861,33 +859,28 @@ theorem exists_Polynomial_intValuation_lt (F : K⟦X⟧) (η : ℤᵐ⁰ˣ) :
 that the `X`-adic valuation `v` satisfies `v (f - Q) < γ`. -/
 theorem exists_ratFunc_val_lt (f : K⸨X⸩) (γ : ℤᵐ⁰ˣ) :
     ∃ Q : RatFunc K, Valued.v (f - Q) < γ := by
-  set F := f.powerSeriesPart with hF
-  by_cases! ord_nonpos : f.order < 0
-  · set η : ℤᵐ⁰ˣ := Units.mk0 (exp f.order) coe_ne_zero
-      with hη
-    obtain ⟨P, hP⟩ := exists_Polynomial_intValuation_lt F (η * γ)
-    use RatFunc.X ^ f.order * (P : RatFunc K)
-    have F_mul := f.ofPowerSeries_powerSeriesPart
-    obtain ⟨s, hs⟩ := Int.exists_eq_neg_ofNat (le_of_lt ord_nonpos)
-    rw [← hF, hs, neg_neg, ← ofPowerSeries_X_pow s, ← inv_mul_eq_iff_eq_mul₀] at F_mul
-    · have : (algebraMap (RatFunc K) K⸨X⸩) 1 = 1 := by exact algebraMap.coe_one
-      rw [hs, ← F_mul, PowerSeries.coe_pow, PowerSeries.coe_X, map_mul, zpow_neg,
-        zpow_natCast, inv_eq_one_div (RatFunc.X ^ s), map_div₀, map_pow,
-        RatFunc.coe_X]
-      simp only [map_one]
-      rw [← inv_eq_one_div, ← mul_sub, map_mul, map_inv₀,
-        ← PowerSeries.coe_X, valuation_X_pow, ← hs, ← RatFunc.coe_coe, ← PowerSeries.coe_sub,
-        ← coe_algebraMap, adicValued_apply, valuation_of_algebraMap,
-        ← Units.val_mk0 (a := exp f.order) exp_ne_zero, ← hη]
-      apply inv_mul_lt_of_lt_mul₀
-      rwa [← Units.val_mul]
-    · simp
-  · obtain ⟨s, hs⟩ := Int.exists_eq_neg_ofNat (Int.neg_nonpos_of_nonneg ord_nonpos)
-    obtain ⟨P, hP⟩ := exists_Polynomial_intValuation_lt (PowerSeries.X ^ s * F) γ
-    use P
-    rw [← X_order_mul_powerSeriesPart (neg_inj.1 hs).symm, ← RatFunc.coe_coe,
-      ← PowerSeries.coe_sub, ← coe_algebraMap, adicValued_apply, valuation_of_algebraMap]
-    exact hP
+  let F := powerSeriesPart f
+  let η : ℤᵐ⁰ˣ := Units.mk0 (exp f.order) exp_ne_zero
+  obtain ⟨P, hP⟩ := exists_Polynomial_intValuation_lt F (η * γ)
+  let A := Checked.zpow (RatFunc.X : RatFunc K) f.order (fun _ ↦ RatFunc.X_ne_zero.isUnit)
+  refine ⟨A * (P : RatFunc K), ?_⟩
+  have hA : (A : K⸨X⸩) = HahnSeries.single f.order (1 : K) := by
+    simp only [A, map_zpow₀, RatFunc.coe_X, ← RatFunc.single_zpow]
+  have hsub :
+      f - ((A * (P : RatFunc K) : RatFunc K) : K⸨X⸩) =
+        (HahnSeries.single f.order (1 : K) : K⸨X⸩) *
+          ((F - (P : K⟦X⟧) : K⟦X⟧) : K⸨X⸩) := by
+    rw [PowerSeries.coe_sub, mul_sub, f.single_order_mul_powerSeriesPart,
+      map_mul, hA, RatFunc.coe_coe]
+  have hv : Valued.v ((F - (P : K⟦X⟧) : K⟦X⟧) : K⸨X⸩) < (↑(η * γ) : ℤᵐ⁰) := by
+    rwa [← coe_algebraMap, valuation_def, valuation_of_algebraMap]
+  rw [hsub, map_mul, valuation_single_zpow]
+  calc
+    _ < exp (-f.order) * (↑(η * γ) : ℤᵐ⁰) :=
+      mul_lt_mul_of_pos_left hv (zero_lt_iff.mpr exp_ne_zero)
+    _ = _ := by
+      change exp (-f.order) * (exp f.order * (γ : ℤᵐ⁰)) = _
+      rw [← mul_assoc, ← exp_add, neg_add_cancel, exp_zero, one_mul]
 
 open MonoidWithZeroHom.ValueGroup₀
 
@@ -920,8 +913,9 @@ lemma exists_ratFunc_eq_v (x : K⸨X⸩) : ∃ f : RatFunc K, Valued.v f = Value
   by_cases hx : Valued.v x = 0
   · use 0
     simp [hx]
-  use RatFunc.X ^ (-log (Valued.v x))
-  rw [zpow_neg, map_inv₀, map_zpow₀, v_def, valuation_X_eq_neg_one, ← exp_zsmul, ← exp_neg]
+  use Checked.zpow (RatFunc.X : RatFunc K) (-log (Valued.v x))
+    (fun _ ↦ RatFunc.X_ne_zero.isUnit)
+  simp only [map_zpow₀, v_def, valuation_X_eq_neg_one, ← exp_zsmul]
   simp [exp_log, hx]
 
 open MonoidWithZeroHom.ValueGroup₀

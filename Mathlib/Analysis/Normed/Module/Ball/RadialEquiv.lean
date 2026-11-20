@@ -31,7 +31,7 @@ and `Metric.sphere (0 : E) r × Set.Ioi (0 : ℝ)`, `0 < r`.
 The forward map sends `⟨x, hx⟩` to `⟨r • ‖x‖⁻¹ • x, ‖x‖ / r⟩`,
 the inverse map sends `(x, r)` to `r • x`.
 
-In the case of the unit sphere `r = `,
+In the case of the unit sphere `r = 1`,
 one may think about it as generalization of polar coordinates to any normed space. -/
 @[simps apply_fst_coe apply_snd_coe symm_apply_coe]
 noncomputable def homeomorphSphereProd (E : Type*) [NormedAddCommGroup E] [NormedSpace ℝ E]
@@ -39,13 +39,15 @@ noncomputable def homeomorphSphereProd (E : Type*) [NormedAddCommGroup E] [Norme
     ({0}ᶜ : Set E) ≃ₜ (sphere (0 : E) r × Ioi (0 : ℝ)) where
   toFun x :=
     have : 0 < ‖(x : E)‖ := by simpa [-Subtype.coe_prop] using x.2
-    (⟨r • ‖x.1‖⁻¹ • x.1, by simp [norm_smul, abs_of_pos hr, this.ne']⟩,
+    (⟨r • ‖x.1‖⁻¹ • x.1, by simp [norm_smul, abs_of_pos hr]⟩,
       ⟨‖x.1‖ / r, by rw [mem_Ioi]; positivity⟩)
   invFun x := ⟨x.2.1 • x.1.1, smul_ne_zero x.2.2.out.ne' (ne_of_mem_sphere x.1.2 hr.ne')⟩
   left_inv
   | ⟨x, hx⟩ => by
-    have : 0 < ‖x‖ := by simpa using hx
-    ext; simp only [smul_smul]; field_simp; simp
+    have hn : 0 < ‖x‖ := by simpa using hx
+    apply Subtype.ext
+    change (‖x‖ / r) • (r • (‖x‖⁻¹ • x)) = x
+    rw [← mul_smul, div_mul_cancel₀, ← mul_smul, mul_inv_cancel₀, one_smul]
   right_inv
   | (⟨x, hx⟩, ⟨d, hd⟩) => by
     rw [mem_Ioi] at hd

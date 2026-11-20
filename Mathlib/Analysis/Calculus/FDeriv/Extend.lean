@@ -124,7 +124,7 @@ theorem hasDerivWithinAt_Ici_of_tendsto_deriv {s : Set ℝ} {e : E} {a : ℝ} {f
     by_cases h : y = a
     · rw [h]; exact f_lim.mono ts
     · have : y ∈ s := sab ⟨lt_of_le_of_ne hy.1 (Ne.symm h), hy.2⟩
-      exact (f_diff.continuousOn y this).mono ts
+      exact (f_diff.continuousOn continuous_id.continuousOn y this).mono ts
   have t_diff' : Tendsto (fun x => fderiv ℝ f x) (𝓝[t] a) (𝓝 (smulRight (1 : ℝ →L[ℝ] ℝ) e)) := by
     simp only [toSpanSingleton_deriv.symm]
     exact Tendsto.comp
@@ -159,7 +159,7 @@ theorem hasDerivWithinAt_Iic_of_tendsto_deriv {s : Set ℝ} {e : E} {a : ℝ}
     by_cases h : y = a
     · rw [h]; exact f_lim.mono ts
     · have : y ∈ s := sab ⟨hy.1, lt_of_le_of_ne hy.2 h⟩
-      exact (f_diff.continuousOn y this).mono ts
+      exact (f_diff.continuousOn continuous_id.continuousOn y this).mono ts
   have t_diff' : Tendsto (fun x => fderiv ℝ f x) (𝓝[t] a) (𝓝 (smulRight (1 : ℝ →L[ℝ] ℝ) e)) := by
     simp only [toSpanSingleton_deriv.symm]
     exact Tendsto.comp

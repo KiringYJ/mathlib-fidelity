@@ -259,10 +259,13 @@ theorem exists_Gamma_le_conj (g : GL (Fin 2) ℚ) (M : ℕ) [NeZero M] :
     conv_rhs => rw [← A₁.inv_denom_smul_num, ← A₂.inv_denom_smul_num, Matrix.map_smul _ _ (by simp)]
     simp only [Matrix.smul_mul, Matrix.mul_smul, Matrix.map_smul (Int.cast : ℤ → ℚ) M (by simp),
       Matrix.map_mul_intCast]
+    have h₁ : IsUnit (A₁.den : ℚ) := (Nat.cast_ne_zero.mpr A₁.den_ne_zero).isUnit
+    have h₂ : IsUnit (A₂.den : ℚ) := (Nat.cast_ne_zero.mpr A₂.den_ne_zero).isUnit
     rw [← Nat.cast_smul_eq_nsmul ℚ (_ * M), ← mul_smul, ← mul_smul,
-      mul_comm a₁ a₂, Nat.cast_mul, Nat.cast_mul, mul_assoc _ _ (M : ℚ), mul_comm _ (M : ℚ),
-      inv_mul_cancel_left₀ (mod_cast A₂.den_ne_zero),
-      mul_inv_cancel_right₀ (mod_cast A₁.den_ne_zero), Nat.cast_smul_eq_nsmul]
+      mul_comm a₁ a₂, Nat.cast_mul, Nat.cast_mul, mul_assoc _ _ (M : ℚ), mul_comm _ (M : ℚ)]
+    dsimp only [a₁, a₂]
+    rw [inv_mul_cancel_left₀ (ha := h₂), mul_inv_cancel_right₀ (hb := h₁),
+      Nat.cast_smul_eq_nsmul]
   have hz_det : z.det = 1 := by
     have := congr_arg Matrix.det hz_coe
     simp_rw [Matrix.det_mul, ← Int.cast_det] at this

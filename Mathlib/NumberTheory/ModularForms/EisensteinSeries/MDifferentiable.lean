@@ -28,27 +28,38 @@ open scoped Manifold
 
 namespace EisensteinSeries
 
-/-- Auxiliary lemma showing that for any `k : ℤ` the function `z → 1/(c*z+d)^k` is
-differentiable on `{z : ℂ | 0 < z.im}`. -/
-lemma div_linear_zpow_differentiableOn (k : ℤ) (a : Fin 2 → ℤ) :
-    DifferentiableOn ℂ (fun z : ℂ => (a 0 * z + a 1) ^ (-k)) {z : ℂ | 0 < z.im} := by
-  rcases ne_or_eq a 0 with ha | rfl
-  · apply DifferentiableOn.zpow
-    · fun_prop
-    · left
-      exact fun z hz ↦ linear_ne_zero ⟨z, hz⟩
-        ((comp_ne_zero_iff _ Int.cast_injective Int.cast_zero).mpr ha)
-  · simp only [Pi.zero_apply, Int.cast_zero, zero_mul, add_zero]
-    apply differentiableOn_const
+/-- A representative of the inverse power of a linear function is differentiable on the
+upper half-plane when the lattice vector is admissible for the weight. -/
+lemma div_linear_zpow_differentiableOn (k : ℤ) (a : Fin 2 → ℤ) (ha : 0 < k → a ≠ 0)
+    {f : ℂ → ℂ} (hf : ∀ z : ℍ, f z = eisSummand k a z ha) :
+    DifferentiableOn ℂ f upperHalfPlaneSet := by
+  intro w hw
+  let W : ℂ → ℂ := fun z ↦ (a 0 : ℂ) * z + a 1
+  let q (y : upperHalfPlaneSet) : {x : ℂ // -k < 0 → IsUnit (W x)} :=
+    ⟨y.val, fun h ↦ (eisSummand_base_ne_zero (ha (by omega)) ⟨y.val, y.property⟩).isUnit⟩
+  let z : upperHalfPlaneSet := ⟨w, hw⟩
+  have hW : DifferentiableAt ℂ W (q z).val := by dsimp [W]; fun_prop
+  have hq : Continuous q := continuous_subtype_val.subtype_mk _
+  have hqc : ContinuousAt q z := hq.continuousAt
+  have hPower : DifferentiableAt ℂ
+      (fun y : {x : ℂ // -k < 0 → IsUnit (W x)} ↦ Checked.zpow (W y.val) (-k) y.property)
+      (q z) Subtype.val := hW.zpow (m := -k) (q z).property
+  have hp := hPower.hasFDerivAt.comp_tendsto q
+    (hqc.tendsto.prodMap (tendsto_pure_pure q z))
+  have heq : (fun y : upperHalfPlaneSet ↦ f y.val) =
+      (fun y : {x : ℂ // -k < 0 → IsUnit (W x)} ↦ Checked.zpow (W y.val) (-k) y.property) ∘ q :=
+    funext fun y ↦ hf ⟨y.val, y.property⟩
+  rw [← heq] at hp
+  exact (HasFDerivAt.of_restrict (coord := id) (x := z) hp
+    (isOpen_upperHalfPlaneSet.mem_nhds hw)).differentiableAt.differentiableWithinAt
 
 /-- Auxiliary lemma showing that for any `k : ℤ` and `(a : Fin 2 → ℤ)`
 the extension of `eisSummand` is differentiable on `{z : ℂ | 0 < z.im}`. -/
-lemma eisSummand_extension_differentiableOn (k : ℤ) (a : Fin 2 → ℤ) :
-    DifferentiableOn ℂ (↑ₕeisSummand k a) {z : ℂ | 0 < z.im} := by
-  apply DifferentiableOn.congr (div_linear_zpow_differentiableOn k a)
-  intro z hz
-  lift z to ℍ using hz
-  apply comp_ofComplex
+lemma eisSummand_extension_differentiableOn (k : ℤ) (a : Fin 2 → ℤ) (ha : 0 < k → a ≠ 0) :
+    DifferentiableOn ℂ (↑ₕ(fun z ↦ eisSummand k a z ha)) upperHalfPlaneSet := by
+  apply div_linear_zpow_differentiableOn k a ha
+  intro z
+  exact comp_ofComplex _ z
 
 /-- Eisenstein series are MDifferentiable (i.e. holomorphic functions from `ℍ → ℂ`). -/
 theorem eisensteinSeriesSIF_mdifferentiable {k : ℤ} {N : ℕ} (hk : 3 ≤ k) (a : Fin 2 → ZMod N) :
@@ -61,6 +72,7 @@ theorem eisensteinSeriesSIF_mdifferentiable {k : ℤ} {N : ℕ} (hk : 3 ≤ k) (
   refine DifferentiableOn.differentiableAt ?_ (isOpen_upperHalfPlaneSet.mem_nhds τ.2)
   exact (eisensteinSeries_tendstoLocallyUniformlyOn hk a).differentiableOn
     (Eventually.of_forall fun s ↦ DifferentiableOn.fun_sum
-    fun _ _ ↦ eisSummand_extension_differentiableOn _ _) isOpen_upperHalfPlaneSet
+    fun v _ ↦ eisSummand_extension_differentiableOn _ v
+      (fun _ ↦ gammaSet_ne_zero v one_ne_zero)) isOpen_upperHalfPlaneSet
 
 end EisensteinSeries

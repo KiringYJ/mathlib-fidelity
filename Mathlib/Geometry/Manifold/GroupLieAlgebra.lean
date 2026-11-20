@@ -99,9 +99,12 @@ lemma GroupLieAlgebra.bracket_def (v w : GroupLieAlgebra I G) :
 
 variable [LieGroup I (minSmoothness 𝕜 3) G]
 
-@[to_additive (attr := simp)]
-lemma inverse_mfderiv_mul_left {g h : G} :
-    (mfderiv% (fun b ↦ g * b) h).inverse = mfderiv% (fun b ↦ g⁻¹ * b) (g * h) := by
+/-- The derivative of left translation is a linear equivalence, with inverse given by
+translation by the inverse group element. -/
+@[to_additive /-- The derivative of left translation is a linear equivalence, with inverse given
+by translation by the negative group element. -/]
+noncomputable def mfderivMulLeftEquiv (g h : G) :
+    TangentSpace I h ≃L[𝕜] TangentSpace I (g * h) := by
   have M : minSmoothness 𝕜 3 ≠ 0 := lt_of_lt_of_le (by simp) le_minSmoothness |>.ne'
   have A : mfderiv% ((fun x ↦ g⁻¹ * x) ∘ (fun x ↦ g * x)) h =
       ContinuousLinearMap.id _ _ := by
@@ -115,31 +118,70 @@ lemma inverse_mfderiv_mul_left {g h : G} :
     rw [this, id_eq, mfderiv_id]
   rw [mfderiv_comp (I' := I) _ (contMDiff_mul_left.contMDiffAt.mdifferentiableAt M)
     (contMDiff_mul_left.contMDiffAt.mdifferentiableAt M), inv_mul_cancel_left g h] at A'
-  exact ContinuousLinearMap.inverse_eq A' A
+  exact ContinuousLinearEquiv.equivOfInverse' _ _ A' A
+
+@[to_additive (attr := simp)]
+lemma coe_mfderivMulLeftEquiv {g h : G} :
+    (mfderivMulLeftEquiv (I := I) g h : _ →L[𝕜] _) = mfderiv I I (g * ·) h := by rfl
+
+@[to_additive (attr := simp)]
+lemma inverse_mfderiv_mul_left {g h : G} :
+    ((mfderivMulLeftEquiv (I := I) g h).symm : TangentSpace I (g * h) →L[𝕜] TangentSpace I h) =
+      ((tangentSpaceCast I (g⁻¹ * (g * h)) h) :
+        TangentSpace I (g⁻¹ * (g * h)) →L[𝕜] TangentSpace I h).comp
+          (mfderiv I I (g⁻¹ * ·) (g * h)) := by
+  rfl
+
+/-- The vector field obtained by left translation is related to itself by each left translation. -/
+@[to_additive /-- The vector field obtained by left translation is related to itself by each
+left translation. -/]
+lemma isMRelatedWithinAt_mulInvariantVectorField (g h : G) (v : GroupLieAlgebra I G) :
+    IsMRelatedWithinAt (g * ·) (mulInvariantVectorField v) (mulInvariantVectorField v)
+      Set.univ h := by
+  have hreg : minSmoothness 𝕜 3 ≠ 0 := (lt_of_lt_of_le (by simp) le_minSmoothness).ne'
+  refine ⟨_, (contMDiffAt_mul_left (I := I) (n := minSmoothness 𝕜 3)).mdifferentiableAt hreg
+    |>.hasMFDerivAt.hasMFDerivWithinAt, ?_⟩
+  have heq : (fun x : G ↦ g * x) ∘ (fun x ↦ h * x) = (fun x ↦ g * h * x) :=
+    funext fun x ↦ (mul_assoc g h x).symm
+  have hd := mfderiv_comp (I' := I) (1 : G)
+    (contMDiffAt_mul_left (I := I) (a := g) (n := minSmoothness 𝕜 3) |>.mdifferentiableAt hreg)
+    (contMDiffAt_mul_left (I := I) (a := h) (n := minSmoothness 𝕜 3) |>.mdifferentiableAt hreg)
+  let d (k : G → G) (z : G) (v : E) : E := mfderiv I I k z v
+  have he : d (g * ·) (h * 1) (d (h * ·) 1 v) = d ((g * ·) ∘ (h * ·)) 1 v :=
+    congrArg (fun A : TangentSpace I 1 →L[𝕜] E ↦ A v) hd.symm
+  rw [heq, mul_one] at he
+  exact he
 
 /-- Invariant vector fields are invariant under pullbacks. -/
 @[to_additive /-- Invariant vector fields are invariant under pullbacks. -/]
-lemma mpullback_mulInvariantVectorField (g : G) (v : GroupLieAlgebra I G) :
-    mpullback I I (g * ·) (mulInvariantVectorField v) = mulInvariantVectorField v := by
-  have M : minSmoothness 𝕜 3 ≠ 0 := lt_of_lt_of_le (by simp) le_minSmoothness |>.ne'
-  ext h
-  simp only [mpullback, inverse_mfderiv_mul_left, mulInvariantVectorField]
-  have D : (fun x ↦ h * x) = (fun b ↦ g⁻¹ * b) ∘ (fun x ↦ g * h * x) := by
-    ext x; simp only [comp_apply]; group
-  rw [D, mfderiv_comp (I' := I)]
-  · congr 2
-    simp
-  · exact contMDiff_mul_left.contMDiffAt.mdifferentiableAt M
-  · exact contMDiff_mul_left.contMDiffAt.mdifferentiableAt M
+lemma mpullback_mulInvariantVectorField (g : G) (v : GroupLieAlgebra I G) (h : G) :
+    mpullback I I (g * ·) (mulInvariantVectorField v) h
+      ((contMDiffAt_mul_left (n := minSmoothness 𝕜 3)).mdifferentiableAt
+        (lt_of_lt_of_le (by simp) le_minSmoothness).ne')
+      ((mfderivMulLeftEquiv (I := I) g h).bijective.existsUnique _) =
+      mulInvariantVectorField v h := by
+  apply mpullback_apply.mpr
+  simpa only [mfderivWithin_univ] using
+    (isMRelatedWithinAt_mulInvariantVectorField g h v).mfderivWithin_apply
+      (uniqueMDiffWithinAt_univ I)
 
 set_option backward.isDefEq.respectTransparency false in
 @[to_additive]
-lemma mulInvariantVectorField_eq_mpullback (g : G) (V : Π (g : G), TangentSpace% g) :
-    mulInvariantVectorField (V 1) g = mpullback I I (g⁻¹ * ·) V g := by
-  have A : 1 = g⁻¹ * g := by simp
-  simp only [mulInvariantVectorField, mpullback, inverse_mfderiv_mul_left]
-  congr
-  simp
+lemma mulInvariantVectorField_eq_mpullback (g : G) (V : Π g : G, TangentSpace I g) :
+    mulInvariantVectorField (V 1) g = mpullback I I (g⁻¹ * ·) V g
+      ((contMDiffAt_mul_left (n := minSmoothness 𝕜 3)).mdifferentiableAt
+        (lt_of_lt_of_le (by simp) le_minSmoothness).ne')
+      ((mfderivMulLeftEquiv (I := I) g⁻¹ g).bijective.existsUnique _) := by
+  apply Eq.symm
+  apply mpullback_apply.mpr
+  let d (k z : G) (v : E) : E := mfderiv I I (k * ·) z v
+  have hinv : ((mfderivMulLeftEquiv (I := I) g⁻¹ g).symm (V (g⁻¹ * g)) : E) =
+      mulInvariantVectorField (V 1) g := calc
+    _ = d g⁻¹⁻¹ (g⁻¹ * g) (V (g⁻¹ * g)) := rfl
+    _ = d g (g⁻¹ * g) (V (g⁻¹ * g)) := by rw [inv_inv]
+    _ = _ := congrArg (fun z : G ↦ d g z (V z)) (inv_mul_cancel g)
+  exact (congrArg (d g⁻¹ g) hinv).symm.trans
+    ((mfderivMulLeftEquiv (I := I) g⁻¹ g).apply_symm_apply (V (g⁻¹ * g)))
 
 set_option backward.defeqAttrib.useBackward true in
 set_option backward.isDefEq.respectTransparency false in
@@ -215,13 +257,15 @@ lemma mulInvariantVector_mlieBracket (v w : GroupLieAlgebra I G) :
     mulInvariantVectorField
       (mlieBracket I (mulInvariantVectorField v) (mulInvariantVectorField w) 1) =
     mlieBracket I (mulInvariantVectorField v) (mulInvariantVectorField w) := by
-  ext g
-  rw [mulInvariantVectorField_eq_mpullback, mpullback_mlieBracket (n := minSmoothness 𝕜 3),
-    mpullback_mulInvariantVectorField, mpullback_mulInvariantVectorField]
-  · exact mdifferentiableAt_mulInvariantVectorField _
-  · exact mdifferentiableAt_mulInvariantVectorField _
-  · exact contMDiffAt_mul_left
-  · exact minSmoothness_monotone (by norm_cast)
+  funext g
+  have hinv : (mfderiv I I (g⁻¹ * ·) g).IsInvertible := ⟨mfderivMulLeftEquiv g⁻¹ g, rfl⟩
+  rw [mulInvariantVectorField_eq_mpullback g]
+  exact mpullback_mlieBracket (n := minSmoothness 𝕜 3)
+    (mdifferentiableAt_mulInvariantVectorField _) (mdifferentiableAt_mulInvariantVectorField _)
+    contMDiffAt_mul_left
+    (minSmoothness_monotone (by norm_cast))
+    hinv (Filter.Eventually.of_forall fun y ↦ isMRelatedWithinAt_mulInvariantVectorField g⁻¹ y v)
+    (Filter.Eventually.of_forall fun y ↦ isMRelatedWithinAt_mulInvariantVectorField g⁻¹ y w)
 
 /-- The tangent space at the identity of a Lie group is a Lie ring, for the bracket
 given by the Lie bracket of invariant vector fields. -/

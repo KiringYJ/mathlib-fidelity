@@ -122,15 +122,22 @@ theorem ae_convolution_tendsto_right_of_locallyIntegrable
       hg.integrableOn_isCompact (isCompact_closedBall _ _)
   · apply tendsto_const_nhds.congr (fun i ↦ ?_)
     rw [← integral_neg_eq_self]
-    simp only [sub_neg_eq_add, integral_add_left_eq_self, integral_normed]
+    simp only [sub_neg_eq_add]
+    have hi := ((φ i).integral_pos (μ := μ)).ne'.isUnit
+    exact ((φ i).integral_normed (hμ := hi)).symm.trans
+      (integral_add_left_eq_self (μ := μ) (fun x ↦ (φ i).normed μ x hi) x₀).symm
   · filter_upwards with i
     change support ((ContDiffBump.normed (φ i) μ) ∘ (fun y ↦ x₀ - y)) ⊆ closedBall x₀ (φ i).rOut
     simp only [support_comp_eq_preimage, support_normed_eq]
     intro x hx
     simp only [mem_preimage, mem_ball, dist_zero_right] at hx
     simpa [dist_eq_norm_sub'] using hx.le
-  · filter_upwards [h'φ] with i hi x
-    rw [abs_of_nonneg (nonneg_normed _ _), addHaar_real_closedBall_center]
-    exact (φ i).normed_le_div_measure_closedBall_rOut _ _ hi _
+  · filter_upwards [h'φ] with i hi
+    have hball : 0 < μ.real (closedBall x₀ (φ i).rOut) :=
+      measureReal_closedBall_pos μ (φ i).rOut_pos
+    refine ⟨hball, fun x ↦ ?_⟩
+    rw [abs_of_nonneg (nonneg_normed _ _), le_div_iff₀ hball, addHaar_real_closedBall_center μ x₀]
+    exact (le_div_iff₀ (measureReal_closedBall_pos μ (φ i).rOut_pos)).mp
+      ((φ i).normed_le_div_measure_closedBall_rOut μ K hi (x₀ - x))
 
 end ContDiffBump

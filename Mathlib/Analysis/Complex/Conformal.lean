@@ -83,7 +83,7 @@ theorem isConformalMap_complex_linear {map : ℂ →L[ℂ] E} (nonzero : map ≠
     simp only [map.coe_coe, map.map_smul, norm_smul, norm_inv, norm_norm]
     field
   · ext1
-    simp [minor₁]
+    simp
 
 theorem isConformalMap_complex_linear_conj {map : ℂ →L[ℂ] E} (nonzero : map ≠ 0) :
     IsConformalMap ((map.restrictScalars ℝ).comp (conjCLE : ℂ →L[ℝ] ℂ)) :=
@@ -231,11 +231,10 @@ at `x` within `s` iff the derivative `fderivWithin ℝ f s x` maps `I` to
 theorem differentiableWithinAt_complex_iff_differentiableWithinAt_real
     (hs : UniqueDiffWithinAt ℝ s x) :
     DifferentiableWithinAt ℂ f s x ↔ DifferentiableWithinAt ℝ f s x ∧
-      (fderivWithin ℝ f s x I = I • fderivWithin ℝ f s x 1) := by
+      (fderivWithin ℝ f s x id I = I • fderivWithin ℝ f s x id 1) := by
   refine ⟨fun h ↦ ⟨h.restrictScalars ℝ, ?_⟩, fun ⟨h₁, h₂⟩ ↦ ?_⟩
   · simp only [← h.restrictScalars_fderivWithin ℝ hs, ContinuousLinearMap.coe_restrictScalars']
-    rw [(by simp : I = I • 1), (fderivWithin ℂ f s x).map_smul]
-    simp
+    simpa only [smul_eq_mul, mul_one] using (fderivWithin ℂ f s x id).map_smul I (1 : ℂ)
   · apply (differentiableWithinAt_iff_restrictScalars ℝ h₁ hs).2
     use (fderivWithin ℝ f s x).complexOfReal h₂
     rfl
@@ -254,7 +253,8 @@ In cases where the **Cauchy-Riemann Equation** guarantees complex differentiabil
 complex derivative equals `ContinuousLinearMap.complexOfReal` of the real derivative.
 -/
 theorem complexOfReal_fderivWithin (h₁ : DifferentiableWithinAt ℝ f s x)
-    (h₂ : fderivWithin ℝ f s x I = I • fderivWithin ℝ f s x 1) (hs : UniqueDiffWithinAt ℝ s x) :
+    (h₂ : fderivWithin ℝ f s x id I = I • fderivWithin ℝ f s x id 1)
+    (hs : UniqueDiffWithinAt ℝ s x) :
     fderivWithin ℂ f s x = (fderivWithin ℝ f s x).complexOfReal h₂ := by
   have := ((differentiableWithinAt_complex_iff_differentiableWithinAt_real hs).2
       ⟨h₁, h₂⟩).restrictScalars_fderivWithin ℝ hs
@@ -265,7 +265,7 @@ In cases where the **Cauchy-Riemann Equation** guarantees complex differentiabil
 complex derivative equals `ContinuousLinearMap.complexOfReal` of the real derivative.
 -/
 theorem complexOfReal_hasDerivWithinAt (h₁ : DifferentiableWithinAt ℝ f s x)
-    (h₂ : fderivWithin ℝ f s x I = I • fderivWithin ℝ f s x 1) :
+    (h₂ : fderivWithin ℝ f s x id I = I • fderivWithin ℝ f s x id 1) :
     HasDerivWithinAt f ((fderivWithin ℝ f s x).complexOfReal h₂ 1) s x := by
   rw [hasDerivWithinAt_iff_hasFDerivWithinAt, toSpanSingleton_apply_map_one]
   exact h₁.hasFDerivWithinAt.complexOfReal h₂
@@ -275,8 +275,9 @@ In cases where the **Cauchy-Riemann Equation** guarantees complex differentiabil
 complex derivative equals the real derivative.
 -/
 theorem complexOfReal_derivWithin (h₁ : DifferentiableWithinAt ℝ f s x)
-    (h₂ : fderivWithin ℝ f s x I = I • fderivWithin ℝ f s x 1) (hs : UniqueDiffWithinAt ℂ s x) :
-    derivWithin f s x = fderivWithin ℝ f s x 1 :=
+    (h₂ : fderivWithin ℝ f s x id I = I • fderivWithin ℝ f s x id 1)
+    (hs : UniqueDiffWithinAt ℂ s x) :
+    derivWithin f s x = fderivWithin ℝ f s x id 1 :=
   HasDerivWithinAt.derivWithin (complexOfReal_hasDerivWithinAt h₁ h₂) hs
 
 /--
@@ -285,7 +286,7 @@ at `x` if and only if the derivative `fderiv ℝ f x` maps `I` to `I • (fderiv
 -/
 theorem differentiableAt_complex_iff_differentiableAt_real :
     DifferentiableAt ℂ f x ↔ DifferentiableAt ℝ f x ∧
-      fderiv ℝ f x I = I • fderiv ℝ f x 1 :=
+      fderiv ℝ f x id I = I • fderiv ℝ f x id 1 :=
   ⟨fun h ↦ by simp [h.restrictScalars ℝ, h.fderiv_restrictScalars ℝ],
     fun ⟨h₁, h₂⟩ ↦ (differentiableAt_iff_restrictScalars ℝ h₁).2
     ⟨(fderiv ℝ f x).complexOfReal h₂, rfl⟩⟩
@@ -304,7 +305,7 @@ In cases where the **Cauchy-Riemann Equation** guarantees complex differentiabil
 complex derivative equals `ContinuousLinearMap.complexOfReal` of the real derivative.
 -/
 theorem complexOfReal_hasDerivAt (h₁ : DifferentiableAt ℝ f x)
-    (h₂ : fderiv ℝ f x I = I • fderiv ℝ f x 1) :
+    (h₂ : fderiv ℝ f x id I = I • fderiv ℝ f x id 1) :
     HasDerivAt f ((fderiv ℝ f x).complexOfReal h₂ 1) x := by
   rw [hasDerivAt_iff_hasFDerivAt, toSpanSingleton_apply_map_one]
   exact hasFDerivAt_of_restrictScalars ℝ h₁.hasFDerivAt rfl
@@ -314,8 +315,8 @@ In cases where the **Cauchy-Riemann Equation** guarantees complex differentiabil
 complex derivative equals the real derivative.
 -/
 theorem complexOfReal_deriv (h₁ : DifferentiableAt ℝ f x)
-    (h₂ : fderiv ℝ f x I = I • fderiv ℝ f x 1) :
-    deriv f x = fderiv ℝ f x 1 :=
+    (h₂ : fderiv ℝ f x id I = I • fderiv ℝ f x id 1) :
+    deriv f x = fderiv ℝ f x id 1 :=
   HasDerivAt.deriv (complexOfReal_hasDerivAt h₁ h₂)
 
 /--
@@ -323,7 +324,7 @@ In cases where the **Cauchy-Riemann Equation** guarantees complex differentiabil
 complex derivative equals `ContinuousLinearMap.complexOfReal` of the real derivative.
 -/
 theorem complexOfReal_fderiv (h₁ : DifferentiableAt ℝ f x)
-    (h₂ : fderiv ℝ f x I = I • fderiv ℝ f x 1) :
+    (h₂ : fderiv ℝ f x id I = I • fderiv ℝ f x id 1) :
     (fderiv ℝ f x).complexOfReal h₂ = fderiv ℂ f x :=
   (h₁.hasFDerivAt.complexOfReal_hasFDerivAt h₂).fderiv.symm
 

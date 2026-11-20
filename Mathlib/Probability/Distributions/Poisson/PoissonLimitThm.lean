@@ -46,10 +46,9 @@ variable {p : ℕ → ℝ} {r : ℝ} (k : ℕ)
 
 lemma tendsto_zero_of_tendsto_mul_atTop (hr : Tendsto (fun n => n * p n) atTop (𝓝 r)) :
     Tendsto p atTop (𝓝 0) := by
-  have : (fun n => (n * p n) * (1 / n)) =ᶠ[atTop] p := by
-    filter_upwards [eventually_ge_atTop 1] with n hn
-    field
-  simpa using (hr.mul tendsto_one_div_atTop_nhds_zero_nat).congr' this
+  refine tendsto_zero_of_isBoundedUnder_smul_of_tendsto_cobounded
+    (f := fun n : ℕ ↦ (n : ℝ)) (g := p) ?_ tendsto_natCast_atTop_cobounded
+  simpa only [smul_eq_mul] using hr.norm.isBoundedUnder_le
 
 open Asymptotics in
 lemma tendsto_choose_mul_pow_atTop (hr : Tendsto (fun n => n * p n) atTop (𝓝 r)) :
@@ -61,7 +60,7 @@ lemma tendsto_choose_mul_pow_atTop (hr : Tendsto (fun n => n * p n) atTop (𝓝 
     _ ~[atTop] (fun n ↦ ((n * p n) ^ k) / k.factorial) :=
       EventuallyEq.isEquivalent (.of_eq (by ext; field))
   refine (IsEquivalent.tendsto_nhds_iff this).mpr ?_
-  simpa [div_eq_mul_inv] using (hr.pow k).mul_const ((k.factorial : ℝ)⁻¹)
+  simpa [div_eq_mul_inv₀] using (hr.pow k).mul_const ((k.factorial : ℝ)⁻¹)
 
 /--
 **Poisson limit Theorem**: If `n * p n → r` as `n → ∞`. Then
@@ -70,21 +69,33 @@ lemma tendsto_choose_mul_pow_atTop (hr : Tendsto (fun n => n * p n) atTop (𝓝 
 theorem tendsto_choose_mul_pow_of_tendsto_mul_atTop (hr : Tendsto (fun n => n * p n) atTop (𝓝 r)) :
     Tendsto (fun n => n.choose k * (p n) ^ k * (1 - p n) ^ (n - k))
     atTop (𝓝 (Real.exp (-r) * (r ^ k) / k.factorial)) := by
-  rw [mul_div_assoc, mul_comm]
+  rw [mul_div_assoc₀, mul_comm]
   refine (tendsto_choose_mul_pow_atTop k hr).mul ?_
   have hp_lt_half : ∀ᶠ n in atTop, p n < 1 / 2 :=
     (tendsto_zero_of_tendsto_mul_atTop hr).eventually (Iio_mem_nhds (by norm_num))
-  have hEq : (fun n => (1 - p n) ^ (n - k)) =ᶠ[atTop]
-      (fun n => (1 - p n) ^ n * ((1 - p n) ^ k)⁻¹) := by
-    filter_upwards [eventually_ge_atTop k, hp_lt_half] with n hn hne
-    rw [pow_sub₀ _ (by grind) hn]
-  refine Tendsto.congr' hEq.symm ?_
-  have : Real.exp (-r) = Real.exp (-r) * (1 ^ k)⁻¹ := by field
-  rw [this]
-  refine Tendsto.mul (Real.tendsto_one_add_pow_exp_of_tendsto ?_) ?_
-  · simpa using hr.neg
-  refine Tendsto.inv₀ (.pow ?_ k) (by simp)
-  · simpa using tendsto_const_nhds.sub (tendsto_zero_of_tendsto_mul_atTop hr)
+  have hp_ne_one : ∀ᶠ n in atTop, p n ≠ 1 := hp_lt_half.mono fun n hn ↦ by linarith
+  apply (tendsto_comap_val_iff hp_ne_one).mp
+  have hunit (n : {n : ℕ // p n ≠ 1}) : IsUnit ((1 - p n) ^ k) :=
+    (sub_ne_zero.mpr n.2.symm).isUnit.pow k
+  have h_subtype : Tendsto (Subtype.val : {n : ℕ // p n ≠ 1} → ℕ)
+      (comap Subtype.val atTop) atTop := tendsto_comap
+  have hnum : Tendsto (fun n : {n : ℕ // p n ≠ 1} ↦ (1 - p n) ^ (n : ℕ))
+      (comap Subtype.val atTop) (𝓝 (Real.exp (-r))) := by
+    have h_neg : Tendsto (fun n : ℕ ↦ (n : ℝ) * (-p n)) atTop (𝓝 (-r)) := by
+      simpa only [mul_neg] using hr.neg
+    simpa only [Function.comp_def, sub_eq_add_neg, id_eq] using
+      (Real.tendsto_one_add_pow_exp_of_tendsto (n := id) tendsto_id h_neg).comp h_subtype
+  have hden : Tendsto (fun n : {n : ℕ // p n ≠ 1} ↦ (1 - p n) ^ k)
+      (comap Subtype.val atTop) (𝓝 1) := by
+    have h_one : Tendsto (fun n : ℕ ↦ 1 - p n) atTop (𝓝 (1 - 0)) :=
+      tendsto_const_nhds.sub (tendsto_zero_of_tendsto_mul_atTop hr)
+    simpa only [Function.comp_def, sub_zero, one_pow] using (h_one.pow k).comp h_subtype
+  have hquot := hnum.div₀ (h₀ := hunit) (hb := isUnit_one) hden
+  simp only [div_one₀] at hquot
+  refine hquot.congr' ?_
+  filter_upwards [tendsto_comap.eventually (eventually_ge_atTop k)] with n hn
+  apply div_eq_iff.2
+  rw [← pow_add, Nat.sub_add_cancel hn]
 
 /--
 Another version of Poisson Limit Theorem: convergence of `PMF.binomial` to `poissonPMF` in `ℝ≥0∞`
@@ -97,7 +108,8 @@ lemma binomial_tendsto_poissonPMFReal_atTop {r : ℝ≥0} {p : ℕ → unitInter
   have t1 : Tendsto (fun n => (ENNReal.ofReal (n.choose k * (p n) ^ k * (1 - p n) ^ (n - k) : ℝ)))
       atTop (𝓝 (poissonMeasure r {k})) := by
     simp_rw [poissonMeasure_singleton]
-    exact tendsto_ofReal (tendsto_choose_mul_pow_of_tendsto_mul_atTop k (by norm_cast))
+    exact tendsto_ofReal
+      (tendsto_choose_mul_pow_of_tendsto_mul_atTop (p := fun n ↦ (p n : ℝ)) k hr)
   refine Tendsto.congr' ?_ t1
   simpa only [EventuallyEq, eventually_atTop, ge_iff_le] using
     ⟨k, fun b hb ↦ (binomial_singleton b k (p b)).symm⟩

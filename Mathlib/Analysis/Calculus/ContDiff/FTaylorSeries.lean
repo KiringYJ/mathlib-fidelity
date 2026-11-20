@@ -288,6 +288,7 @@ theorem hasFTaylorSeriesUpToOn_succ_iff_left {n : ℕ} :
         rw [this]
         exact h.2.2
 
+set_option backward.isDefEq.respectTransparency false in
 theorem HasFTaylorSeriesUpToOn.shift_of_succ
     {n : ℕ} (H : HasFTaylorSeriesUpToOn (n + 1 : ℕ) f p s) :
     (HasFTaylorSeriesUpToOn n (fun x => continuousMultilinearCurryFin1 𝕜 E F (p x 1))
@@ -301,7 +302,9 @@ theorem HasFTaylorSeriesUpToOn.shift_of_succ
       exact Nat.succ_lt_succ hm
     change HasFDerivWithinAt (continuousMultilinearCurryRightEquiv' 𝕜 m E F ∘ (p · m.succ))
       (p x m.succ.succ).curryRight.curryLeft s x
-    rw [(continuousMultilinearCurryRightEquiv' 𝕜 m E F).comp_hasFDerivWithinAt_iff']
+    rw [(continuousMultilinearCurryRightEquiv' 𝕜 m E F).comp_hasFDerivWithinAt_iff'
+      (𝕜 := 𝕜) (F := E [×m]→L[𝕜] E →L[𝕜] F)
+      (f := fun y : E ↦ p y m.succ) (s := s) (x := x)]
     convert! H.fderivWithin _ A x hx
     ext y v
     change p x (m + 2) (snoc (cons y (init v)) (v (last _))) = p x (m + 2) (cons y v)
@@ -465,6 +468,7 @@ theorem norm_iteratedFDerivWithin_one (f : E → F) (h : UniqueDiffWithinAt 𝕜
     iteratedFDerivWithin_zero_eq_comp, LinearIsometryEquiv.comp_fderivWithin _ h]
   apply (continuousMultilinearCurryFin0 𝕜 E F).symm.toLinearIsometry.norm_toContinuousLinearMap_comp
 
+set_option backward.isDefEq.respectTransparency false in
 theorem iteratedFDerivWithin_succ_apply_right {n : ℕ} (hs : UniqueDiffOn 𝕜 s) (hx : x ∈ s)
     (m : Fin (n + 1) → E) :
     (iteratedFDerivWithin 𝕜 (n + 1) f s x : (Fin (n + 1) → E) → F) m =
@@ -477,25 +481,29 @@ theorem iteratedFDerivWithin_succ_apply_right {n : ℕ} (hs : UniqueDiffOn 𝕜 
     simp
   | succ n IH =>
     let I := (continuousMultilinearCurryRightEquiv' 𝕜 n E F).symm
+    let g : E → E →L[𝕜] F := fun y ↦ fderivWithin 𝕜 f s y _root_.id
     have A : ∀ y ∈ s, iteratedFDerivWithin 𝕜 n.succ f s y =
-        (I ∘ iteratedFDerivWithin 𝕜 n (fun y => fderivWithin 𝕜 f s y) s) y := fun y hy ↦ by
+        (I ∘ iteratedFDerivWithin 𝕜 n g s) y := fun y hy ↦ by
       ext m
-      simp [IH hy m, I]
+      simp [IH hy m, I, g]
     calc
       (iteratedFDerivWithin 𝕜 (n + 2) f s x : (Fin (n + 2) → E) → F) m =
-          (fderivWithin 𝕜 (iteratedFDerivWithin 𝕜 n.succ f s) s x : E → E [×n + 1]→L[𝕜] F) (m 0)
+          (fderivWithin 𝕜 (iteratedFDerivWithin 𝕜 n.succ f s) s x _root_.id :
+            E → E [×n + 1]→L[𝕜] F) (m 0)
             (tail m) := by
         simp [iteratedFDerivWithin_succ_eq_comp_left]
-      _ = (fderivWithin 𝕜 (I ∘ iteratedFDerivWithin 𝕜 n (fderivWithin 𝕜 f s) s) s x :
+      _ = (fderivWithin 𝕜 (I ∘ iteratedFDerivWithin 𝕜 n g s) s x _root_.id :
               E → E [×n + 1]→L[𝕜] F) (m 0) (tail m) := by
         rw [fderivWithin_congr A (A x hx)]
-      _ = (I ∘ fderivWithin 𝕜 (iteratedFDerivWithin 𝕜 n (fderivWithin 𝕜 f s) s) s x :
+      _ = (I ∘ fderivWithin 𝕜 (iteratedFDerivWithin 𝕜 n g s) s x _root_.id :
               E → E [×n + 1]→L[𝕜] F) (m 0) (tail m) := by
-        simp [LinearIsometryEquiv.comp_fderivWithin _ (hs x hx)]
-      _ = (fderivWithin 𝕜 (iteratedFDerivWithin 𝕜 n (fun y => fderivWithin 𝕜 f s y) s) s x :
+        rw [I.comp_fderivWithin (𝕜 := 𝕜) (F := E [×n.succ]→L[𝕜] F)
+          (f := iteratedFDerivWithin 𝕜 n g s) (hs x hx)]
+        rfl
+      _ = (fderivWithin 𝕜 (iteratedFDerivWithin 𝕜 n g s) s x _root_.id :
               E → E [×n]→L[𝕜] E →L[𝕜] F) (m 0) (init (tail m)) ((tail m) (last n)) := by
         simp [I]
-      _ = iteratedFDerivWithin 𝕜 (Nat.succ n) (fun y => fderivWithin 𝕜 f s y) s x (init m)
+      _ = iteratedFDerivWithin 𝕜 (Nat.succ n) g s x (init m)
             (m (last (n + 1))) := by
         rw [iteratedFDerivWithin_succ_apply_left, tail_init_eq_init_tail]
         simp [init, tail]
@@ -516,7 +524,7 @@ theorem norm_iteratedFDerivWithin_fderivWithin {n : ℕ} (hs : UniqueDiffOn 𝕜
 
 @[simp]
 theorem iteratedFDerivWithin_one_apply (h : UniqueDiffWithinAt 𝕜 s x) (m : Fin 1 → E) :
-    iteratedFDerivWithin 𝕜 1 f s x m = fderivWithin 𝕜 f s x (m 0) := by
+    iteratedFDerivWithin 𝕜 1 f s x m = (fderivWithin 𝕜 f s x _root_.id) (m 0) := by
   simp [iteratedFDerivWithin_succ_apply_left, iteratedFDerivWithin_zero_eq_comp,
     (continuousMultilinearCurryFin0 𝕜 E F).symm.comp_fderivWithin h]
 
@@ -524,7 +532,8 @@ theorem iteratedFDerivWithin_one_apply (h : UniqueDiffWithinAt 𝕜 s x) (m : Fi
 derivative of the derivative. -/
 lemma iteratedFDerivWithin_two_apply (f : E → F) {z : E} (hs : UniqueDiffOn 𝕜 s) (hz : z ∈ s)
     (m : Fin 2 → E) :
-    iteratedFDerivWithin 𝕜 2 f s z m = fderivWithin 𝕜 (fderivWithin 𝕜 f s) s z (m 0) (m 1) := by
+    iteratedFDerivWithin 𝕜 2 f s z m =
+      (fderivWithin 𝕜 (fderivWithin 𝕜 f s) s z _root_.id) (m 0) (m 1) := by
   simp only [iteratedFDerivWithin_succ_apply_right hs hz]
   rfl
 
@@ -532,7 +541,8 @@ lemma iteratedFDerivWithin_two_apply (f : E → F) {z : E} (hs : UniqueDiffOn �
 derivative of the derivative. -/
 lemma iteratedFDerivWithin_two_apply' (f : E → F) {z : E} (hs : UniqueDiffOn 𝕜 s) (hz : z ∈ s)
     (v w : E) :
-    iteratedFDerivWithin 𝕜 2 f s z ![v, w] = fderivWithin 𝕜 (fderivWithin 𝕜 f s) s z v w :=
+    iteratedFDerivWithin 𝕜 2 f s z ![v, w] =
+      (fderivWithin 𝕜 (fderivWithin 𝕜 f s) s z _root_.id) v w :=
   iteratedFDerivWithin_two_apply f hs hz _
 
 theorem Filter.EventuallyEq.iteratedFDerivWithin' (h : f₁ =ᶠ[𝓝[s] x] f) (ht : t ⊆ s) (n : ℕ) :
@@ -835,7 +845,7 @@ theorem iteratedFDeriv_succ_apply_left {n : ℕ} (m : Fin (n + 1) → E) :
 theorem DifferentiableAt.iteratedFDeriv_succ_apply_left' {n : ℕ} {m : Fin (n + 1) → E}
     (hf : DifferentiableAt 𝕜 (iteratedFDeriv 𝕜 n f) x) :
     iteratedFDeriv 𝕜 (n + 1) f x m =
-    fderiv 𝕜 (fun y ↦ iteratedFDeriv 𝕜 n f y (Fin.tail m)) x (m 0) := by
+    (fderiv 𝕜 (fun y ↦ iteratedFDeriv 𝕜 n f y (Fin.tail m)) x _root_.id) (m 0) := by
   convert iteratedFDeriv_succ_apply_left m
   simp [fderiv_continuousMultilinear_apply_const hf]
 
@@ -863,7 +873,8 @@ theorem tsupport_iteratedFDeriv_subset (n : ℕ) : tsupport (iteratedFDeriv 𝕜
       isClosed_closure
   | succ n IH =>
     rw [iteratedFDeriv_succ_eq_comp_left]
-    exact closure_minimal ((support_comp_subset (map_zero _) _).trans
+    exact closure_minimal ((support_comp_subset
+      (continuousMultilinearCurryLeftEquiv 𝕜 (fun _ : Fin (n + 1) ↦ E) F).symm.map_zero _).trans
       ((support_fderiv_subset 𝕜).trans IH)) isClosed_closure
 
 theorem support_iteratedFDeriv_subset (n : ℕ) : support (iteratedFDeriv 𝕜 n f) ⊆ tsupport f :=
@@ -879,7 +890,12 @@ theorem norm_fderiv_iteratedFDeriv {n : ℕ} :
 
 theorem iteratedFDerivWithin_univ {n : ℕ} :
     iteratedFDerivWithin 𝕜 n f univ = iteratedFDeriv 𝕜 n f := by
-  simp [iteratedFDerivWithin, iteratedFDeriv]
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+    ext x m
+    rw [iteratedFDerivWithin_succ_apply_left, iteratedFDeriv_succ_apply_left, ih,
+      congrFun fderivWithin_univ x]
 
 variable (𝕜) in
 /-- If two functions agree in a neighborhood, then so do their iterated derivatives. -/
@@ -937,17 +953,17 @@ theorem norm_iteratedFDeriv_fderiv {n : ℕ} :
 
 @[simp]
 theorem iteratedFDeriv_one_apply (m : Fin 1 → E) :
-    iteratedFDeriv 𝕜 1 f x m = fderiv 𝕜 f x (m 0) := by
+    iteratedFDeriv 𝕜 1 f x m = (fderiv 𝕜 f x _root_.id) (m 0) := by
   rw [iteratedFDeriv_succ_apply_right, iteratedFDeriv_zero_apply, last_zero]
 
 @[simp]
 theorem norm_iteratedFDeriv_one (f : E → F) :
     ‖iteratedFDeriv 𝕜 1 f x‖ = ‖fderiv 𝕜 f x‖ := by
-  rw [← iteratedFDerivWithin_univ, ← fderivWithin_univ]
+  rw [← iteratedFDerivWithin_univ, ← congrFun fderivWithin_univ x]
   exact norm_iteratedFDerivWithin_one f uniqueDiffWithinAt_univ
 
 lemma iteratedFDeriv_two_apply (f : E → F) (z : E) (m : Fin 2 → E) :
-    iteratedFDeriv 𝕜 2 f z m = fderiv 𝕜 (fderiv 𝕜 f) z (m 0) (m 1) := by
+    iteratedFDeriv 𝕜 2 f z m = (fderiv 𝕜 (fderiv 𝕜 f) z _root_.id) (m 0) (m 1) := by
   simp [iteratedFDeriv_succ_apply_right, init]
 
 /-- The iterated derivative commutes with shifting the function by a constant on the left. -/
@@ -994,7 +1010,7 @@ lemma iteratedFDerivWithin_comp_neg {f : 𝕜 → F} {s : Set 𝕜} (n : ℕ) (a
     rw [iteratedFDerivWithin_succ_eq_comp_left, iteratedFDerivWithin_succ_eq_comp_left,
       Function.comp_apply, Function.comp_apply, ih', ← Pi.smul_def,
       fderivWithin_const_smul_field' ((-1 : 𝕜) ^ n) (f := fun a ↦ g (-a)),
-      fderivWithin_comp_neg (f := g), ← neg_one_smul 𝕜 (fderivWithin 𝕜 _ (-s) (-a)),
+      fderivWithin_comp_neg (f := g), ← neg_one_smul 𝕜 (fderivWithin 𝕜 _ (-s) (-a) _root_.id),
       ← mul_smul _ (-1), ← pow_succ (-1) n, map_smul]
 
 theorem iteratedFDerivWithin_comp_const_sub {f : 𝕜 → F} {s : Set 𝕜} (n : ℕ) (c : 𝕜) :

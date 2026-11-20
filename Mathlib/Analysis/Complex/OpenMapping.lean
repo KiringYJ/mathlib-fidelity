@@ -141,13 +141,13 @@ theorem AnalyticAt.eventually_constant_or_nhds_le_map_nhds {z₀ : E} (hg : Anal
     let w : E := ‖z - z₀‖⁻¹ • (z - z₀)
     have h3 : ∀ t ∈ ball (0 : ℂ) r, gray w t = g z₀ := by
       have e1 : IsPreconnected (ball (0 : ℂ) r) := (convex_ball 0 r).isPreconnected
-      have e2 : w ∈ sphere (0 : E) 1 := by simp [w, norm_smul, inv_mul_cancel₀ h']
+      have e2 : w ∈ sphere (0 : E) 1 := by simp [w, norm_smul, inv_mul_cancel₀]
       specialize h1 w e2
       apply h1.eqOn_of_preconnected_of_eventuallyEq analyticOnNhd_const e1 (mem_ball_self hr)
       simpa [ray, gray] using! h w e2
     have h4 : ‖z - z₀‖ < r := by simpa [dist_eq_norm] using! mem_ball.mp hz
     replace h4 : ↑‖z - z₀‖ ∈ ball (0 : ℂ) r := by simpa
-    simpa only [ray, gray, w, smul_smul, mul_inv_cancel₀ h', one_smul, add_sub_cancel,
+    simpa only [ray, gray, w, smul_smul, mul_inv_cancel₀, one_smul, add_sub_cancel,
       Function.comp_apply, coe_smul] using! h3 (↑‖z - z₀‖) h4
   · right
     simp only [not_forall] at h
@@ -272,6 +272,7 @@ theorem isOpenQuotientMap_zpow_compl_zero (n : ℤ) [NeZero n] :
     exact isOpenQuotientMap_pow_compl_zero n
   · have : NeZero n := ⟨Nat.cast_ne_zero.mp <| neg_ne_zero.mp (NeZero.ne (-n : ℤ))⟩
     convert! (isOpenQuotientMap_pow_compl_zero n).comp (Homeomorph.inv₀ ℂ).isOpenQuotientMap
-    simp [Homeomorph.inv₀]
+    rename_i z
+    simp [Homeomorph.inv₀, zpow_neg₀ z.2]
 
 end Complex

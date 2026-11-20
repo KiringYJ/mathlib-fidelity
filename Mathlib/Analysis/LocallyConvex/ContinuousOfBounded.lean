@@ -63,7 +63,7 @@ def LinearMap.clmOfExistsBoundedImage [IsTopologicalAddGroup F] (f : E →ₛₗ
           rw [x_ne.isUnit.preimage_smul_setₛₗ _, inv_smul_smul₀ (ha := x_ne.isUnit) _]
     -- Using this inclusion, it suffices to show that `x⁻¹ • V` is in `𝓝 0`, which is trivial.
     grw [← this]
-    rwa [set_smul_mem_nhds_zero_iff (inv_ne_zero x_ne)]⟩
+    rwa [set_smul_mem_nhds_zero_iff (inv_ne_zero (ha := x_ne.isUnit))]⟩
 
 theorem LinearMap.clmOfExistsBoundedImage_coe [IsTopologicalAddGroup F] {f : E →ₛₗ[σ] F}
     {h : ∃ V ∈ 𝓝 (0 : E), Bornology.IsVonNBounded 𝕜' (f '' V)} :
@@ -117,7 +117,7 @@ theorem LinearMap.continuousAt_zero_of_locally_bounded (f : E →ₛₗ[σ] F)
     have : Tendsto (fun n ↦ σ c ^ n) atTop (𝓝 0) :=
       tendsto_pow_atTop_nhds_zero_of_norm_lt_one (by simpa using hc1)
     have := hf.smul_tendsto_zero (.of_forall fun n ↦ Set.mem_range_self n) this
-    exact this.congr fun n ↦ by simp [c_ne]
+    exact this.congr fun n ↦ by simp
   -- But this is a contradiction.
   refine frequently_false (atTop : Filter ℕ) <| Eventually.frequently ?_
   filter_upwards [this.eventually_mem hV] using hu'

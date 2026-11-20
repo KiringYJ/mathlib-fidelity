@@ -221,7 +221,6 @@ lemma inv_mulVec_eq_vec {A : Matrix n n α} {hA : IsUnit A} {u v : n → α}
   rw [hM, Matrix.mulVec_mulVec, inv_mul_cancel₀, Matrix.one_mulVec]
 
 /-- The inverse solves the linear system of an invertible matrix. -/
-@[simp]
 theorem mulVec_nonsing_inv_mulVec {hA : IsUnit A} (b : n → α) : A *ᵥ (A⁻¹ *ᵥ b) = b := by
   rw [mulVec_mulVec, mul_inv_cancel₀, one_mulVec]
 

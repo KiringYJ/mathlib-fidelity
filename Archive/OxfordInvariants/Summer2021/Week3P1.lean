@@ -5,6 +5,7 @@ Authors: Yaël Dillies, Bhavik Mehta
 -/
 module
 
+public import Mathlib.Algebra.BigOperators.Fin
 public import Mathlib.Algebra.BigOperators.Ring.Finset
 public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Mathlib.Data.Nat.Cast.Field
@@ -75,73 +76,67 @@ public section
 
 variable {α : Type*} [Field α] [LinearOrder α] [IsStrictOrderedRing α]
 
+private noncomputable def week3Summand (a : ℕ → ℕ) {n : ℕ} (a_pos : ∀ i ≤ n, 0 < a i)
+    (i : Fin n) : α :=
+  Checked.div ((a 0 : α) * a n) ((a i : α) * a (i + 1))
+    ((Nat.cast_ne_zero.mpr (a_pos i i.isLt.le).ne').isUnit.mul
+      (Nat.cast_ne_zero.mpr (a_pos (i + 1) (Nat.succ_le_of_lt i.isLt)).ne').isUnit)
+
 theorem OxfordInvariants.Week3P1 (n : ℕ) (a : ℕ → ℕ) (a_pos : ∀ i ≤ n, 0 < a i)
     (ha : ∀ i, i + 2 ≤ n → a (i + 1) ∣ a i + a (i + 2)) :
-    ∃ b : ℕ, (b : α) = ∑ i ∈ Finset.range n, (a 0 : α) * a n / (a i * a (i + 1)) := by
-  -- Treat separately `n = 0` and `n ≥ 1`
+    ∃ b : ℕ, (b : α) = ∑ i : Fin n,
+      Checked.div ((a 0 : α) * a n) ((a i : α) * a (i + 1))
+        ((Nat.cast_ne_zero.mpr (a_pos i i.isLt.le).ne').isUnit.mul
+          (Nat.cast_ne_zero.mpr (a_pos (i + 1) (Nat.succ_le_of_lt i.isLt)).ne').isUnit) := by
+  change ∃ b : ℕ, (b : α) = ∑ i : Fin n, week3Summand a a_pos i
   rcases n with - | n
-  /- Case `n = 0`
-    The sum is trivially equal to `0` -/
-  · exact ⟨0, by rw [Nat.cast_zero, Finset.sum_range_zero]⟩
-  -- `⟨Claim it, Prove it⟩`
-  /- Case `n ≥ 1`. We replace `n` by `n + 1` everywhere to make this inequality explicit
-    Set up the stronger induction hypothesis -/
+  · exact ⟨0, by simp⟩
   rsuffices ⟨b, hb, -⟩ :
     ∃ b : ℕ,
-      (b : α) = ∑ i ∈ Finset.range (n + 1), (a 0 : α) * a (n + 1) / (a i * a (i + 1)) ∧
+      (b : α) = ∑ i : Fin (n + 1), week3Summand a a_pos i ∧
         a (n + 1) ∣ a n * b - a 0
   · exact ⟨b, hb⟩
-  simp_rw [← @Nat.cast_pos α] at a_pos
-  /- Declare the induction
-    `ih` will be the induction hypothesis -/
   induction n with
   | zero =>
-  /- Base case
-    Claim that the sum equals `1` -/
-    refine ⟨1, ?_, ?_⟩
-    -- Check that this indeed equals the sum
-    · rw [Nat.cast_one, Finset.sum_range_one, zero_add, div_self]
-      exact (mul_pos (a_pos 0 (Nat.zero_le _)) (a_pos 1 (Nat.zero_lt_succ _))).ne'
-    -- Check the divisibility condition
-    · rw [mul_one, tsub_self]
-      exact dvd_zero _
+    exact ⟨1, by simp [week3Summand], by simp⟩
   | succ n ih =>
-  /- Induction step
-    `b` is the value of the previous sum as a natural, `hb` is the proof that it is indeed the
-    value, and `han` is the divisibility condition -/
-  obtain ⟨b, hb, han⟩ :=
-    ih (fun i hi => ha i <| Nat.le_succ_of_le hi) fun i hi => a_pos i <| Nat.le_succ_of_le hi
-  specialize ha n le_rfl
-  have ha₀ : a 0 ≤ a n * b := by
-    -- Needing this is an artifact of `ℕ`-subtraction.
-    rw [← @Nat.cast_le α, Nat.cast_mul, hb, ←
-      div_le_iff₀' (a_pos _ <| n.le_succ.trans <| Nat.le_succ _), ←
-      mul_div_mul_right _ _ (a_pos _ <| Nat.le_succ _).ne']
-    suffices h : ∀ i, i ∈ Finset.range (n + 1) → 0 ≤ (a 0 : α) * a (n + 1) / (a i * a (i + 1)) from
-      Finset.single_le_sum h (Finset.self_mem_range_succ n)
-    intro i hi
-    positivity
-  -- Claim that the sum equals `(aₙ + aₙ₊₂)/aₙ₊₁ * b - (aₙ * b - a₀)/aₙ₊₁`
-  refine ⟨(a n + a (n + 2)) / a (n + 1) * b - (a n * b - a 0) / a (n + 1), ?_, ?_⟩
-  -- Check that this indeed equals the sum
-  · calc
-      (((a n + a (n + 2)) / a (n + 1) * b - (a n * b - a 0) / a (n + 1) : ℕ) : α) =
-          ((a n + a (n + 2)) / a (n + 1) * b - (a n * b - a 0) / a (n + 1)) := by
-        have : ((a (n + 1)) : α) ≠ 0 := ne_of_gt <| a_pos (n + 1) <| Nat.le_succ (n + 1)
-        simp only [← Nat.cast_add, ← Nat.cast_div ha this, ← Nat.cast_mul, ← Nat.cast_sub ha₀,
-            ← Nat.cast_div han this]
-        rw [Nat.cast_sub (Nat.div_le_of_le_mul _)]
-        rw [← mul_assoc, Nat.mul_div_cancel' ha, add_mul]
-        exact tsub_le_self.trans (Nat.le_add_right _ _)
-      _ = a (n + 2) / a (n + 1) * b + a 0 * a (n + 2) / (a (n + 1) * a (n + 2)) := by
-        rw [add_div, add_mul, sub_div, mul_div_right_comm, add_sub_sub_cancel,
-          mul_div_mul_right _ _ (a_pos _ le_rfl).ne']
-      _ = ∑ i ∈ Finset.range (n + 2), (a 0 : α) * a (n + 2) / (a i * a (i + 1)) := by
-        rw [Finset.sum_range_succ, hb, Finset.mul_sum]
-        congr; ext i
-        rw [← mul_div_assoc, ← mul_div_right_comm, mul_div_assoc,
-          mul_div_cancel_right₀ _ (a_pos _ <| Nat.le_succ _).ne', mul_comm]
-  -- Check the divisibility condition
-  · rw [Nat.mul_sub, ← mul_assoc, Nat.mul_div_cancel' ha, add_mul, Nat.mul_div_cancel' han,
-      add_tsub_tsub_cancel ha₀, add_tsub_cancel_right]
-    exact dvd_mul_right _ _
+    have a_prev (i : ℕ) (hi : i ≤ n + 1) : 0 < a i :=
+      a_pos i (Nat.le_succ_of_le hi)
+    obtain ⟨b, hb, han⟩ := ih (a_pos := a_prev) (ha := fun i hi ↦ ha i (Nat.le_succ_of_le hi))
+    have hdiv : a (n + 1) ∣ a n + a (n + 2) := ha n le_rfl
+    have hmid : (a (n + 1) : α) ≠ 0 := Nat.cast_ne_zero.mpr (a_prev _ le_rfl).ne'
+    have hn : (0 : α) < a n := Nat.cast_pos.mpr (a_prev _ (Nat.le_succ _))
+    have ha₀ : a 0 ≤ a n * b := by
+      suffices h : (a 0 : α) ≤ (a n : α) * (b : α) by exact_mod_cast h
+      apply (div_le_iff₀' hn).mp
+      have hlast : (a 0 : α) / a n = week3Summand a a_prev (Fin.last n) := by
+        exact (mul_div_mul_right _ _).symm
+      rw [hlast, hb]
+      exact Finset.single_le_sum
+        (fun i _ ↦ div_nonneg (mul_nonneg (Nat.cast_nonneg _) (Nat.cast_nonneg _))
+          (mul_nonneg (Nat.cast_nonneg _) (Nat.cast_nonneg _))) (Finset.mem_univ (Fin.last n))
+    refine ⟨(a n + a (n + 2)) / a (n + 1) * b - (a n * b - a 0) / a (n + 1), ?_, ?_⟩
+    · calc
+        (((a n + a (n + 2)) / a (n + 1) * b - (a n * b - a 0) / a (n + 1) : ℕ) : α) =
+            (((a n : α) + a (n + 2)) / a (n + 1) * b -
+              (a n * (b : α) - a 0) / a (n + 1)) := by
+          have hle : (a n * b - a 0) / a (n + 1) ≤ (a n + a (n + 2)) / a (n + 1) * b := by
+            apply Nat.div_le_of_le_mul
+            rw [← mul_assoc, Nat.mul_div_cancel' hdiv, add_mul]
+            exact tsub_le_self.trans (Nat.le_add_right _ _)
+          rw [Nat.cast_sub hle, Nat.cast_mul, Nat.cast_div hdiv hmid, Nat.cast_div han hmid,
+            Nat.cast_add, Nat.cast_sub ha₀, Nat.cast_mul]
+        _ = (a (n + 2) : α) / a (n + 1) * b + (a 0 : α) / a (n + 1) := by
+          rw [add_div, add_mul, sub_div, mul_div_right_comm₀, add_sub_sub_cancel]
+        _ = ∑ i : Fin (n + 2), week3Summand a a_pos i := by
+          rw [Fin.sum_univ_castSucc, hb, Finset.mul_sum]
+          congr 1
+          · apply Finset.sum_congr rfl
+            intro i _
+            simp only [week3Summand, Fin.val_castSucc]
+            rw [← mul_div_assoc₀, ← mul_div_right_comm₀, ← mul_assoc, mul_div_cancel_right₀,
+              mul_comm (a (n + 2) : α) (a 0 : α)]
+          · exact (mul_div_mul_right _ _).symm
+    · rw [Nat.mul_sub, ← mul_assoc, Nat.mul_div_cancel' hdiv, add_mul, Nat.mul_div_cancel' han,
+        add_tsub_tsub_cancel ha₀, add_tsub_cancel_right]
+      exact dvd_mul_right _ _

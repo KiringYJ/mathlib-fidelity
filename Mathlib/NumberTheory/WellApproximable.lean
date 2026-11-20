@@ -167,13 +167,17 @@ theorem mem_approxAddOrderOf_iff {δ : ℝ} {x : UnitAddCircle} {n : ℕ} (hn : 
 
 theorem mem_addWellApproximable_iff (δ : ℕ → ℝ) (x : UnitAddCircle) :
     x ∈ addWellApproximable UnitAddCircle δ ↔
-      {n : ℕ | ∃ m < n, gcd m n = 1 ∧ ‖x - ↑((m : ℝ) / n)‖ < δ n}.Infinite := by
+      {n : ℕ | ∃ (m : ℕ) (hm : m < n), gcd m n = 1 ∧
+        ‖x - ↑(Checked.div (m : ℝ) n (Nat.cast_ne_zero.mpr (Nat.ne_zero_of_lt hm)).isUnit)‖ <
+          δ n}.Infinite := by
   simp only [mem_add_wellApproximable_iff, ← Nat.cofinite_eq_atTop, cofinite.blimsup_set_eq,
     mem_ofPred_eq]
   refine iff_of_eq (congr_arg Set.Infinite <| ext fun n => ⟨fun hn => ?_, fun hn => ?_⟩)
-  · exact (mem_approxAddOrderOf_iff hn.1).mp hn.2
-  · have h : 0 < n := by obtain ⟨m, hm₁, _, _⟩ := hn; exact pos_of_gt hm₁
-    exact ⟨h, (mem_approxAddOrderOf_iff h).mpr hn⟩
+  · obtain ⟨m, hm, hg, hd⟩ := (mem_approxAddOrderOf_iff hn.1).mp hn.2
+    exact ⟨m, hm, hg, hd⟩
+  · obtain ⟨m, hm, hg, hd⟩ := hn
+    have h : 0 < n := pos_of_gt hm
+    exact ⟨h, (mem_approxAddOrderOf_iff h).mpr ⟨m, hm, hg, hd⟩⟩
 
 end UnitAddCircle
 
@@ -358,7 +362,6 @@ lemma exists_norm_nsmul_le (ξ : 𝕊) {n : ℕ} (hn : 0 < n) :
     ∃ j ∈ Icc 1 n, ‖j • ξ‖ ≤ T / ↑(n + 1) := by
   apply NormedAddCommGroup.exists_norm_nsmul_le (μ := volume) ξ hn
   rw [AddCircle.measure_univ, volume_closedBall, ← ENNReal.ofReal_nsmul,
-    mul_div_cancel₀ _ two_ne_zero, min_eq_right (div_le_self hT.out.le <| by simp), nsmul_eq_mul,
-    mul_div_cancel₀ _ (Nat.cast_ne_zero.mpr n.succ_ne_zero)]
+    mul_div_cancel₀, min_eq_right (div_le_self hT.out.le <| by simp), nsmul_eq_mul, mul_div_cancel₀]
 
 end AddCircle

@@ -33,7 +33,7 @@ theorem AnalyticWithinAt.aeval_polynomial (hf : AnalyticWithinAt 𝕜 f s z) (p 
   · simp_rw [aeval_C]; apply analyticWithinAt_const
   · simp_rw [aeval_add]; exact hp.add hq
   · convert! hp.mul hf
-    simp_rw [pow_succ, aeval_mul, ← mul_assoc, aeval_X]
+    simp only [Pi.mul_apply, pow_succ, aeval_mul, ← mul_assoc, aeval_X]
 
 theorem AnalyticAt.aeval_polynomial (hf : AnalyticAt 𝕜 f z) (p : A[X]) :
     AnalyticAt 𝕜 (fun x ↦ aeval (f x) p) z := by

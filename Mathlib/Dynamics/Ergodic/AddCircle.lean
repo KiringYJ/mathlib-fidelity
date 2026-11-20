@@ -55,7 +55,7 @@ theorem ae_empty_or_univ_of_forall_vadd_ae_eq_self {s : Set <| AddCircle T}
     of diameter `1 / nⱼ` where `nⱼ` is the additive order of `uⱼ`. Since `d` has positive density we
     must have `μ (s ∩ Iⱼ) / μ Iⱼ → 1` along `l`. However since `s` is invariant under the action of
     `uⱼ` and since `Iⱼ` is a fundamental domain for this action, we must have
-    `μ (s ∩ Iⱼ) = nⱼ * μ s = (μ Iⱼ) * μ s`. We thus have `μ s → 1` and thus `μ s = 1`. -/
+    `μ (s ∩ Iⱼ) = μ s / nⱼ = (μ Iⱼ) * μ s`. We thus have `μ s → 1` and thus `μ s = 1`. -/
   set μ := (volume : Measure <| AddCircle T)
   set n : ι → ℕ := addOrderOf ∘ u
   have hT₀ : 0 < T := hT.out
@@ -68,45 +68,54 @@ theorem ae_empty_or_univ_of_forall_vadd_ae_eq_self {s : Set <| AddCircle T}
       Tendsto (fun j => μ (s ∩ closedBall (w j) (δ j)) / μ (closedBall (w j) (δ j))) l (𝓝 1) :=
     exists_mem_of_measure_ne_zero_of_ae h
       (IsUnifLocDoublingMeasure.ae_tendsto_measure_inter_div μ s 1)
-  let I : ι → Set (AddCircle T) := fun j => closedBall d (T / (2 * ↑(n j)))
-  replace hd : Tendsto (fun j => μ (s ∩ I j) / μ (I j)) l (𝓝 1) := by
-    let δ : ι → ℝ := fun j => T / (2 * ↑(n j))
-    have hδ₀ : ∀ᶠ j in l, 0 < δ j :=
-      (hu₂.eventually_gt_atTop 0).mono fun j hj => div_pos hT₀ <| by positivity
-    have hδ₁ : Tendsto δ l (𝓝[>] 0) := by
+  let D := {j : ι // 0 < n j}
+  let l' : Filter D := comap Subtype.val l
+  have hD : {j | 0 < n j} ∈ l := hu₂.eventually_gt_atTop 0
+  let : l'.NeBot := comap_coe_neBot_of_le_principal (le_principal_iff.mpr hD)
+  have hn (j : D) : 0 < (n j : ℝ) := Nat.cast_pos.mpr j.property
+  have hUnit (j : D) : IsUnit (2 * (n j : ℝ)) :=
+    isUnit_iff_ne_zero.mpr (mul_pos two_pos (hn j)).ne'
+  let δ (j : D) := Checked.div T (2 * (n j : ℝ)) (hUnit j)
+  let I (j : D) := closedBall d (δ j)
+  have hδ (j : D) : 0 < δ j := div_pos hT₀ (mul_pos two_pos (hn j))
+  have hδ_eq (j : D) : T / 2 / (n j : ℝ) = δ j := div_div₀
+  replace hd : Tendsto (fun j => μ (s ∩ I j) / μ (I j)) l' (𝓝 1) := by
+    have hδ₀ : ∀ᶠ j in l', 0 < δ j := .of_forall hδ
+    have hδ₁ : Tendsto δ l' (𝓝[>] 0) := by
       refine tendsto_nhdsWithin_iff.mpr ⟨?_, hδ₀⟩
-      replace hu₂ : Tendsto (fun j => T⁻¹ * 2 * n j) l atTop :=
-        (tendsto_natCast_atTop_iff.mpr hu₂).const_mul_atTop (by positivity : 0 < T⁻¹ * 2)
-      convert! hu₂.inv_tendsto_atTop
-      ext j
-      simp only [δ, Pi.inv_apply, mul_inv_rev, inv_inv, div_eq_inv_mul, ← mul_assoc]
-    have hw : ∀ᶠ j in l, d ∈ closedBall d (1 * δ j) := hδ₀.mono fun j hj => by
+      let m (j : D) : {a : ℕ // a ≠ 0} := ⟨n j, j.property.ne'⟩
+      have hm : Tendsto m l' (comap Subtype.val atTop) :=
+        tendsto_comap_iff.mpr (hu₂.comp tendsto_comap)
+      exact ((tendsto_const_div_atTop_nhds_zero_nat (T / 2)).comp hm).congr hδ_eq
+    have hw : ∀ᶠ j in l', d ∈ closedBall d (1 * δ j) := hδ₀.mono fun j hj => by
       simp only [one_mul, mem_closedBall, dist_self]
       apply hj.le
     exact hd _ δ hδ₁ hw
-  suffices ∀ᶠ j in l, μ (s ∩ I j) / μ (I j) = μ s / ENNReal.ofReal T by
+  suffices ∀ᶠ j in l', μ (s ∩ I j) / μ (I j) = μ s / ENNReal.ofReal T by
     replace hd := hd.congr' this
     rwa [tendsto_const_nhds_iff, ENNReal.div_eq_one_iff hT₁ ENNReal.ofReal_ne_top] at hd
-  refine (hu₂.eventually_gt_atTop 0).mono fun j hj => ?_
-  have : addOrderOf (u j) = n j := rfl
-  have huj : IsOfFinAddOrder (u j) := addOrderOf_pos_iff.mp hj
-  have huj' : 1 ≤ (↑(n j) : ℝ) := by norm_cast
-  have hI₀ : μ (I j) ≠ 0 := (measure_closedBall_pos _ d <| by positivity).ne.symm
+  refine .of_forall fun j ↦ ?_
+  have huj : IsOfFinAddOrder (u j) := addOrderOf_pos_iff.mp j.property
+  have huj' : 1 ≤ (n j : ℝ) := by exact_mod_cast j.property
+  have hI₀ : μ (I j) ≠ 0 := (measure_closedBall_pos _ d (hδ j)).ne.symm
   have hI₁ : μ (I j) ≠ ⊤ := measure_ne_top _ _
+  have hdiam : 2 * δ j = T / (n j : ℝ) := by
+    rw [← hδ_eq j, ← mul_div_assoc₀, mul_div_cancel₀]
   have hI₂ : μ (I j) * ↑(n j) = ENNReal.ofReal T := by
-    rw [volume_closedBall, mul_div, mul_div_mul_left T _ two_ne_zero,
+    rw [volume_closedBall, hdiam,
       min_eq_right (div_le_self hT₀.le huj'), mul_comm, ← nsmul_eq_mul, ← ENNReal.ofReal_nsmul,
       nsmul_eq_mul, mul_div_cancel₀]
-    exact Nat.cast_ne_zero.mpr hj.ne'
-  rw [ENNReal.div_eq_div_iff hT₁ ENNReal.ofReal_ne_top hI₀ hI₁,
-    volume_of_add_preimage_eq s _ (u j) d huj (hu₁ j) closedBall_ae_eq_ball, nsmul_eq_mul, ←
-    mul_assoc, this, hI₂]
+  have hsI : μ s = n j • μ (s ∩ I j) :=
+    volume_of_add_preimage_eq s _ (u j) d huj (hu₁ j) closedBall_ae_eq_ball
+  rw [ENNReal.div_eq_div_iff hT₁ ENNReal.ofReal_ne_top hI₀ hI₁, hsI, nsmul_eq_mul, ← mul_assoc, hI₂]
 
 theorem ergodic_zsmul {n : ℤ} (hn : 1 < |n|) : Ergodic fun y : AddCircle T => n • y :=
   { measurePreserving_zsmul volume (abs_pos.mp <| lt_trans zero_lt_one hn) with
     aeconst_set := fun s hs hs' => by
-      let u : ℕ → AddCircle T := fun j => ↑((↑1 : ℝ) / ↑(n.natAbs ^ j) * T)
       replace hn : 1 < n.natAbs := by rwa [Int.abs_eq_natAbs, Nat.one_lt_cast] at hn
+      have hu (j : ℕ) : IsUnit ((n.natAbs ^ j : ℕ) : ℝ) :=
+        isUnit_iff_ne_zero.mpr (Nat.cast_ne_zero.mpr (pow_pos (pos_of_gt hn) j).ne')
+      let u (j : ℕ) : AddCircle T := ↑(Checked.div 1 ((n.natAbs ^ j : ℕ) : ℝ) (hu j) * T)
       have hu₀ : ∀ j, addOrderOf (u j) = n.natAbs ^ j := fun j => by
         convert!
           addOrderOf_div_of_gcd_eq_one (p := T) (m := 1) (pow_pos (pos_of_gt hn) j) (gcd_one_left _)

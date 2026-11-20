@@ -38,9 +38,8 @@ Note that this depends on `SzemerediRegularity.bound`, which is a tower-type exp
 Its formula divides by `ε` and by `⌈4 / ε⌉₊`, so it is defined for `0 < ε`; the evidence is found
 by `positivity` by default.
 
-This definition is meant to be used for small values of `ε`, and in particular is junk for values
-of `ε` greater than or equal to `1`. The junk value is chosen to be positive, so that
-`0 < triangleRemovalBound ε` regardless of whether `ε < 1` or not. -/
+The quantitative estimate uses the formula for `ε ≤ 1`. The factor `1 - min 1 ε / 4` stays
+positive for every `ε` in the domain. -/
 noncomputable def triangleRemovalBound (ε : ℝ) (hε : 0 < ε := by positivity) : ℝ :=
   min (2 * ⌈4 / ε⌉₊ ^ 3)⁻¹ ((1 - min 1 ε / 4) * (ε / (16 * bound (ε / 8) ⌈4 / ε⌉₊)) ^ 3)
 
@@ -101,7 +100,6 @@ private lemma triangle_removal_aux (hε : 0 < ε) (hε₁ : ε ≤ 1) (hP₁ : P
       gcongr; exact triangleRemovalBound_le hε₁
     _ = (1 - 2 * (ε / 8)) * (ε / 8) ^ 3 * (card α / (2 * bound (ε / 8) ⌈4 / ε⌉₊)) *
           (card α / (2 * bound (ε / 8) ⌈4 / ε⌉₊)) * (card α / (2 * bound (ε / 8) ⌈4 / ε⌉₊)) := by
-      field_simp
       ring
     _ ≤ (1 - 2 * (ε / 8)) * (ε / 8) ^ 3 * #s * #Y * #Z := by
       gcongr <;> exact card_bound hε hP₁ hP₃ ‹_›
@@ -175,7 +173,7 @@ open Lean.Meta Qq SimpleGraph
 
 /-- Extension for the `positivity` tactic: `SimpleGraph.triangleRemovalBound ε` is positive.
 
-This exploits the positivity of the junk value of `triangleRemovalBound ε` for `ε ≥ 1`. -/
+The bound is positive throughout its domain. -/
 @[positivity triangleRemovalBound _ _]
 meta def evalTriangleRemovalBound : PositivityExt where eval {u α} _zα pα? e :=
   match pα? with | none => pure .none | some _ => do

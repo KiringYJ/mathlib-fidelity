@@ -41,24 +41,14 @@ countably many points of its interior, then for every point `w` in the disk, the
 theorem circleAverage_sub_sub_inv_smul_of_differentiable_on_off_countable (hs : s.Countable)
     (h₁f : ContinuousOn f (closedBall c |R|)) (h₂f : ∀ z ∈ ball c |R| \ s, DifferentiableAt ℂ f z)
     (hw : w ∈ ball c |R|) :
-    circleAverage (fun z ↦ ((z - c) / (z - w)) • f z) c R = f w := by
-  rw [← circleAverage_abs_radius]
-  rcases le_or_gt |R| 0 with hR | hR
-  · simp_all [ball_eq_empty.2 hR]
-  calc circleAverage (fun z ↦ ((z - c) * (z - w)⁻¹) • f z) c |R|
-  _ = (2 * π * I)⁻¹ • (∮ z in C(c, |R|), (z - w)⁻¹ • f z) := by
-    simp only [circleAverage_eq_circleIntegral hR.ne', mul_inv_rev, inv_I, neg_mul, neg_smul,
-      neg_inj, ne_eq, mul_eq_zero, I_ne_zero, inv_eq_zero, ofReal_eq_zero, pi_ne_zero,
-      OfNat.ofNat_ne_zero, or_self, not_false_eq_true, smul_right_inj]
-    apply circleIntegral.integral_congr hR.le
-    intro z hz
-    match_scalars
-    have : z - c ≠ 0 := by grind [ne_of_mem_sphere]
-    grind
-  _ = f w := by
-    rw [circleIntegral_sub_inv_smul_of_differentiable_on_off_countable hs hw h₁f h₂f]
-    match_scalars
-    simp [field]
+    circleAverageOn (fun z : sphere c |R| ↦ Checked.div (z.val - c) (z.val - w)
+      (isUnit_sub_of_mem_sphere_of_mem_ball hw ⟨z.val, by simpa only [abs_abs] using z.2⟩) •
+        f z.val) = f w := by
+  have hR : R ≠ 0 := abs_pos.mp (dist_nonneg.trans_lt hw)
+  rw [circleAverageOn_eq_circleIntegralOn hR]
+  simpa only [div_eq_mul_inv₀, mul_smul, inv_smul_smul₀] using
+    two_pi_I_inv_smul_circleIntegral_sub_inv_smul_of_differentiable_on_off_countable
+      hs hw h₁f h₂f
 
 /--
 The **Generalized Mean Value Property** of complex differentiable functions: If `f : ℂ → E` is
@@ -68,11 +58,12 @@ equals `f w`.
 -/
 theorem DiffContOnCl.circleAverage_smul_div (hf : DiffContOnCl ℂ f (ball c |R|))
     (hw : w ∈ ball c |R|) :
-    circleAverage (fun z ↦ ((z - c) / (z - w)) • f z) c R = f w := by
-  by_cases hR : |R| ≤ 0
-  · simp_all [ball_eq_empty.2 hR]
+    circleAverageOn (fun z : sphere c |R| ↦ Checked.div (z.val - c) (z.val - w)
+      (isUnit_sub_of_mem_sphere_of_mem_ball hw ⟨z.val, by simpa only [abs_abs] using z.2⟩) •
+        f z.val) = f w := by
+  have hR : 0 < |R| := dist_nonneg.trans_lt hw
   apply circleAverage_sub_sub_inv_smul_of_differentiable_on_off_countable countable_empty _ _ hw
-  · simpa [← closure_ball _ (ne_of_not_ge hR).symm] using hf.2
+  · simpa [← closure_ball _ hR.ne'] using hf.2
   · intro z hz
     rw [sdiff_empty] at hz
     apply (hf.1 z hz).differentiableAt (isOpen_ball.mem_nhds hz)
@@ -95,10 +86,9 @@ theorem circleAverage_of_differentiable_on_off_countable (hs : s.Countable)
     circleAverage f c R = f c := by
   by_cases hR : R = 0
   · simp [hR]
-  · rw [← circleAverage_sub_sub_inv_smul_of_differentiable_on_off_countable hs h₁f h₂f (by aesop)]
-    apply circleAverage_congr_sphere fun z hz ↦ ?_
-    have : z - c ≠ 0 := by grind [ne_of_mem_sphere]
-    simp_all
+  · simpa only [div_self, one_smul, circleAverageOn_restrict] using
+      circleAverage_sub_sub_inv_smul_of_differentiable_on_off_countable hs h₁f h₂f
+        (mem_ball_self (abs_pos.mpr hR))
 
 /--
 The **Mean Value Property** of complex differentiable functions: If `f : ℂ → E` is complex
@@ -109,7 +99,5 @@ theorem DiffContOnCl.circleAverage (hf : DiffContOnCl ℂ f (ball c |R|)) :
     circleAverage f c R = f c := by
   by_cases hR : R = 0
   · simp [hR]
-  · rw [← circleAverage_smul_div hf (by aesop)]
-    apply circleAverage_congr_sphere fun z hz ↦ ?_
-    have : z - c ≠ 0 := by grind [ne_of_mem_sphere]
-    simp_all
+  · simpa only [div_self, one_smul, circleAverageOn_restrict] using
+      hf.circleAverage_smul_div (mem_ball_self (abs_pos.mpr hR))

@@ -63,7 +63,7 @@ lemma not_LSeriesSummable_moebius_at_one : ¬ LSeriesSummable ↗μ 1 := by
   refine fun h ↦ not_summable_one_div_on_primes <| summable_ofReal.mp <| .of_neg ?_
   refine (h.indicator {n | n.Prime}).congr fun n ↦ ?_
   by_cases hn : n.Prime
-  · simp [hn, hn.ne_zero, moebius_apply_prime hn, push_cast, neg_div]
+  · simp [hn, hn.ne_zero, moebius_apply_prime hn, push_cast, neg_div₀]
   · simp [hn]
 
 /-- The L-series of the Möbius function converges absolutely at `s` if and only if `re s > 1`. -/
@@ -173,14 +173,16 @@ lemma LSeries_modOne_eq : L ↗χ₁ = L 1 :=
 /-- The L-series of a Dirichlet character mod `N > 0` does not converge absolutely at `s = 1`. -/
 lemma not_LSeriesSummable_at_one {N : ℕ} (hN : N ≠ 0) (χ : DirichletCharacter ℂ N) :
     ¬ LSeriesSummable ↗χ 1 := by
-  refine fun h ↦ (Real.not_summable_indicator_one_div_natCast hN 1) ?_
-  refine h.norm.of_nonneg_of_le (fun m ↦ Set.indicator_apply_nonneg (fun _ ↦ by positivity))
-    (fun n ↦ ?_)
-  simp only [norm_term_eq, Set.indicator, Set.mem_ofPred_eq]
-  split_ifs with h₁ h₂
-  · simp [h₂]
-  · simp [h₁, χ.map_one]
-  all_goals positivity
+  intro h
+  apply Real.not_summable_one_div_natCast_residueClass hN 1
+  have hsum : Summable
+      (fun n : {n : ℕ+ // ((n : ℕ) : ZMod N) = 1} ↦
+        ‖LSeries.term ↗χ 1 ((n : ℕ+) : ℕ)‖) :=
+    h.norm.comp_injective (fun a b hab ↦ Subtype.ext (PNat.coe_injective hab))
+  refine hsum.of_nonneg_of_le (fun _ ↦ by positivity) fun n ↦ ?_
+  have hn : ((n : ℕ+) : ℕ) ≠ 0 := (n : ℕ+).ne_zero
+  have hχ : χ (((n : ℕ+) : ℕ) : ZMod N) = 1 := by rw [n.2, χ.map_one]
+  simp [hn, hχ]
 
 /-- The L-series of a Dirichlet character converges absolutely at `s` if `re s > 1`. -/
 lemma LSeriesSummable_of_one_lt_re {N : ℕ} (χ : DirichletCharacter ℂ N) {s : ℂ} (hs : 1 < s.re) :
@@ -234,6 +236,13 @@ end DirichletCharacter
 
 section zeta
 
+private lemma zeta_regular_of_one_lt_re {s : ℂ} (hs : 1 < s.re) : s ≠ 1 := by
+  rintro rfl
+  simp at hs
+
+private lemma zeta_regular_of_one_lt {x : ℝ} (hx : 1 < x) : (x : ℂ) ≠ 1 :=
+  zeta_regular_of_one_lt_re (by simpa only [Complex.ofReal_re] using hx)
+
 /-!
 ### The L-series of the constant sequence 1 / the arithmetic function ζ
 
@@ -275,16 +284,15 @@ lemma abscissaOfAbsConv_zeta : abscissaOfAbsConv ↗ζ = 1 := by
 
 /-- The L-series of the arithmetic function `ζ` equals the Riemann Zeta Function on its
 domain of convergence `1 < re s`. -/
-lemma LSeries_zeta_eq_riemannZeta {s : ℂ} (hs : 1 < s.re) : L ↗ζ s = riemannZeta s := by
-  suffices ∑' n, term (fun n ↦ if n = 0 then 0 else 1) s n = ∑' n : ℕ, 1 / (n : ℂ) ^ s by
-    simpa [LSeries, zeta_eq_tsum_one_div_nat_cpow hs]
-  refine tsum_congr fun n ↦ ?_
-  rcases eq_or_ne n 0 with hn | hn <;>
-  simp [hn, ne_zero_of_one_lt_re hs]
+lemma LSeries_zeta_eq_riemannZeta {s : ℂ} (hs : 1 < s.re) :
+    L ↗ζ s = riemannZeta s (by exact zeta_regular_of_one_lt_re hs) := by
+  rw [LSeries_def, zeta_eq_tsum_one_div_nat_cpow hs]
+  exact tsum_congr fun n ↦ by simp [n.ne_zero]
 
 /-- The L-series of the arithmetic function `ζ` equals the Riemann Zeta Function on its
 domain of convergence `1 < re s`. -/
-lemma LSeriesHasSum_zeta {s : ℂ} (hs : 1 < s.re) : LSeriesHasSum ↗ζ s (riemannZeta s) :=
+lemma LSeriesHasSum_zeta {s : ℂ} (hs : 1 < s.re) :
+    LSeriesHasSum ↗ζ s (riemannZeta s (by exact zeta_regular_of_one_lt_re hs)) :=
   LSeries_zeta_eq_riemannZeta hs ▸ (LSeriesSummable_zeta_iff.mpr hs).LSeriesHasSum
 
 /-- The L-series of the arithmetic function `ζ` and of the Möbius function are inverses. -/
@@ -304,12 +312,14 @@ open ArithmeticFunction
 
 /-- The L-series of the constant sequence `1` equals the Riemann Zeta Function on its
 domain of convergence `1 < re s`. -/
-lemma LSeries_one_eq_riemannZeta {s : ℂ} (hs : 1 < s.re) : L 1 s = riemannZeta s :=
+lemma LSeries_one_eq_riemannZeta {s : ℂ} (hs : 1 < s.re) :
+    L 1 s = riemannZeta s (by exact zeta_regular_of_one_lt_re hs) :=
   LSeries_zeta_eq ▸ LSeries_zeta_eq_riemannZeta hs
 
 /-- The L-series of the constant sequence `1` equals the Riemann zeta function on its
 domain of convergence `1 < re s`. -/
-lemma LSeriesHasSum_one {s : ℂ} (hs : 1 < s.re) : LSeriesHasSum 1 s (riemannZeta s) :=
+lemma LSeriesHasSum_one {s : ℂ} (hs : 1 < s.re) :
+    LSeriesHasSum 1 s (riemannZeta s (by exact zeta_regular_of_one_lt_re hs)) :=
   LSeries_one_eq_riemannZeta hs ▸ (LSeriesSummable_one_iff.mpr hs).LSeriesHasSum
 
 open scoped Moebius in -- access notation `μ`
@@ -323,7 +333,8 @@ lemma LSeries_one_ne_zero_of_one_lt_re {s : ℂ} (hs : 1 < s.re) : L 1 s ≠ 0 :
   LSeries_zeta_eq ▸ LSeries_zeta_ne_zero_of_one_lt_re hs
 
 /-- The Riemann Zeta Function does not vanish on the half-plane `re s > 1`. -/
-lemma riemannZeta_ne_zero_of_one_lt_re {s : ℂ} (hs : 1 < s.re) : riemannZeta s ≠ 0 :=
+lemma riemannZeta_ne_zero_of_one_lt_re {s : ℂ} (hs : 1 < s.re) :
+    riemannZeta s (by exact zeta_regular_of_one_lt_re hs) ≠ 0 :=
   LSeries_one_eq_riemannZeta hs ▸ LSeries_one_ne_zero_of_one_lt_re hs
 
 section ComplexOrderLemmas
@@ -333,18 +344,21 @@ open scoped ComplexOrder
 /-- The Riemann zeta function is positive in `ComplexOrder` for real arguments greater than 1.
 This means it is a positive real number:
 both `(riemannZeta x).re > 0` and `(riemannZeta x).im = 0`. -/
-lemma riemannZeta_pos_of_one_lt {x : ℝ} (hx : 1 < x) : 0 < riemannZeta x := by
+lemma riemannZeta_pos_of_one_lt {x : ℝ} (hx : 1 < x) :
+    0 < riemannZeta x (by exact zeta_regular_of_one_lt hx) := by
   have hx' : 1 < (x : ℂ).re := by simpa using hx
   rw [← LSeries_one_eq_riemannZeta hx']
   refine LSeries.positive (fun _ ↦ by simp) (by simp) ?_
   simpa [LSeries.abscissaOfAbsConv_one] using (by exact_mod_cast hx : (1 : EReal) < x)
 
 /-- The real part of the Riemann zeta function is positive for real arguments greater than 1. -/
-lemma riemannZeta_re_pos_of_one_lt {x : ℝ} (hx : 1 < x) : 0 < (riemannZeta x).re :=
+lemma riemannZeta_re_pos_of_one_lt {x : ℝ} (hx : 1 < x) :
+    0 < (riemannZeta x (by exact zeta_regular_of_one_lt hx)).re :=
   (Complex.pos_iff.mp (riemannZeta_pos_of_one_lt hx)).1
 
 /-- The Riemann zeta function is real-valued for real arguments greater than 1. -/
-lemma riemannZeta_im_eq_zero_of_one_lt {x : ℝ} (hx : 1 < x) : (riemannZeta x).im = 0 :=
+lemma riemannZeta_im_eq_zero_of_one_lt {x : ℝ} (hx : 1 < x) :
+    (riemannZeta x (by exact zeta_regular_of_one_lt hx)).im = 0 :=
   (Complex.pos_iff.mp (riemannZeta_pos_of_one_lt hx)).2.symm
 
 end ComplexOrderLemmas
@@ -405,15 +419,16 @@ lemma LSeriesSummable_twist_vonMangoldt {N : ℕ} (χ : DirichletCharacter ℂ N
 /-- The L-series of the twist of the von Mangoldt function `Λ` by a Dirichlet character `χ` at `s`
 equals the negative logarithmic derivative of the L-series of `χ` when `re s > 1`. -/
 lemma LSeries_twist_vonMangoldt_eq {N : ℕ} (χ : DirichletCharacter ℂ N) {s : ℂ} (hs : 1 < s.re) :
-    L (↗χ * ↗Λ) s = -deriv (L ↗χ) s / L ↗χ s := by
+    L (↗χ * ↗Λ) s = Checked.div (-deriv (L ↗χ) s) (L ↗χ s)
+      (LSeries_ne_zero_of_one_lt_re χ hs).isUnit := by
   rcases eq_or_ne N 0 with rfl | hN
-  · simp [modZero_eq_delta, delta_mul_eq_smul_delta, LSeries_delta]
+  · simp [modZero_eq_delta, delta_mul_eq_smul_delta, LSeries_delta, Pi.one_def, deriv_const]
   -- now `N ≠ 0`
   have hχ : LSeriesSummable ↗χ s := (LSeriesSummable_iff hN χ).mpr hs
   have hs' : abscissaOfAbsConv ↗χ < s.re := by
     rwa [absicssaOfAbsConv_eq_one hN, ← EReal.coe_one, EReal.coe_lt_coe_iff]
   have hΛ : LSeriesSummable (↗χ * ↗Λ) s := LSeriesSummable_twist_vonMangoldt χ hs
-  rw [eq_div_iff <| LSeries_ne_zero_of_one_lt_re χ hs, ← LSeries_convolution' hΛ hχ,
+  rw [eq_div_iff, ← LSeries_convolution' hΛ hχ,
     convolution_twist_vonMangoldt, LSeries_deriv hs', neg_neg]
   exact LSeries_congr (fun _ ↦ by simp [mul_comm, logMul]) s
 
@@ -424,20 +439,49 @@ namespace ArithmeticFunction
 open DirichletCharacter in
 /-- The L-series of the von Mangoldt function `Λ` equals the negative logarithmic derivative
 of the L-series of the constant sequence `1` on its domain of convergence `re s > 1`. -/
-lemma LSeries_vonMangoldt_eq {s : ℂ} (hs : 1 < s.re) : L ↗Λ s = - deriv (L 1) s / L 1 s := by
-  refine (LSeries_congr (fun {n} _ ↦ ?_) s).trans <|
-    LSeries_modOne_eq ▸ LSeries_twist_vonMangoldt_eq χ₁ hs
-  simp [Subsingleton.eq_one (α := ZMod 1)]
+lemma LSeries_vonMangoldt_eq {s : ℂ} (hs : 1 < s.re) :
+    L ↗Λ s = Checked.div (-deriv (L 1) s) (L 1 s) (LSeries_one_ne_zero_of_one_lt_re hs).isUnit := by
+  apply (eq_div_iff).mpr
+  have h := (eq_div_iff.mp (LSeries_twist_vonMangoldt_eq χ₁ hs))
+  have h₁ : L (↗χ₁ * ↗Λ) s = L ↗Λ s :=
+    LSeries_congr (fun _ ↦ by simp [Subsingleton.eq_one (α := ZMod 1)]) s
+  rwa [h₁, LSeries_modOne_eq] at h
 
+open Filter in
+open scoped Topology in
 /-- The L-series of the von Mangoldt function `Λ` equals the negative logarithmic derivative
 of the Riemann zeta function on its domain of convergence `re s > 1`. -/
 lemma LSeries_vonMangoldt_eq_deriv_riemannZeta_div {s : ℂ} (hs : 1 < s.re) :
-    L ↗Λ s = - deriv riemannZeta s / riemannZeta s := by
-  suffices deriv (L 1) s = deriv riemannZeta s by
-    rw [LSeries_vonMangoldt_eq hs, ← LSeries_one_eq_riemannZeta hs, this]
-  refine Filter.EventuallyEq.deriv_eq <| Filter.eventuallyEq_iff_exists_mem.mpr ?_
-  exact ⟨{z | 1 < z.re}, (isOpen_lt continuous_const continuous_re).mem_nhds hs,
-    fun _ ↦ LSeries_one_eq_riemannZeta⟩
+    L ↗Λ s = Checked.div
+      (-deriv (fun z : {z : ℂ // z ≠ 1} ↦ riemannZeta z z.2)
+        ⟨s, by exact zeta_regular_of_one_lt_re hs⟩ Subtype.val)
+      (riemannZeta s (by exact zeta_regular_of_one_lt_re hs))
+      (riemannZeta_ne_zero_of_one_lt_re hs).isUnit := by
+  let D := {z : ℂ // z ≠ 1}
+  let x : D := ⟨s, zeta_regular_of_one_lt_re hs⟩
+  let f (z : D) := L 1 z
+  let g (z : D) := riemannZeta z z.2
+  have habs : abscissaOfAbsConv (1 : ℕ → ℂ) < s.re := by
+    simpa only [abscissaOfAbsConv_one, ← EReal.coe_one, EReal.coe_lt_coe_iff] using hs
+  have hd := (LSeries_hasDerivAt habs).differentiableAt.hasDerivAt
+  have hf : HasDerivAt f (deriv (L 1) s) x Subtype.val :=
+    hasDerivAt_iff_hasFDerivAt.mpr <| hd.hasFDerivAt.comp_tendsto Subtype.val
+      ((continuous_subtype_val.tendsto x).prodMap (tendsto_pure_pure Subtype.val x))
+  have he : g =ᶠ[𝓝 x] f := by
+    filter_upwards [((continuous_re.comp continuous_subtype_val).tendsto x).eventually
+      (eventually_gt_nhds hs)] with z hz
+    exact (LSeries_one_eq_riemannZeta hz).symm
+  have hg : HasDerivAt g (deriv (L 1) s) x Subtype.val := by
+    refine hasDerivAt_iff_hasFDerivAt.mpr <| HasFDerivAt.of_isLittleO ?_
+    refine hf.hasFDerivAt.isLittleO.congr' ?_ EventuallyEq.rfl
+    filter_upwards [he] with z hz
+    rw [hz, he.eq_of_nhds]
+  have hD : Topology.IsOpenEmbedding (Subtype.val : D → ℂ) :=
+    (isOpen_compl_singleton (x := (1 : ℂ))).isOpenEmbedding_subtypeVal
+  apply (eq_div_iff).mpr
+  change L ↗Λ s * g x = -deriv g x Subtype.val
+  rw [hg.deriv hD, show g x = L 1 s from (LSeries_one_eq_riemannZeta hs).symm]
+  exact eq_div_iff.mp (LSeries_vonMangoldt_eq hs)
 
 end ArithmeticFunction
 

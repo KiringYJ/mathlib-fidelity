@@ -60,21 +60,25 @@ private theorem hasProd_subset_valued_one_lt (x : 𝔸ᶠ[R, K]) :
 
 open Filter HeightOneSpectrum Valued in
 private theorem hasProd_zero_subset_lt_one_valued {x : 𝔸ᶠ[R, K]} (hx : ¬IsUnit x)
-    (hx₀ : ∀ v, x v ≠ 0) : HasProd (fun v : {v | Valued.v (x v) < 1} ↦ ‖x v‖) 0 :=
+    (hx₀ : ∀ v, x v ≠ 0) : HasProd (fun v : {v | Valued.v (x v) < 1} ↦ ‖x v‖) 0 := by
   have hx := infinite_valued_ne_one_of_not_isUnit (by simpa using hx₀) hx
   have hx_prop : {v | 1 < Valued.v (x v)}.Finite := finite_valued_one_lt x
   have hx_inf : {v | Valued.v (x v) < 1}.Infinite := (hx.sdiff hx_prop).mono (by grind)
-  have : atTop.Tendsto (fun s : Finset {v | Valued.v (x v) < 1} ↦ (∏ v ∈ s, ‖x v‖)⁻¹) atTop := by
-    have h_le (S : Finset {v | Valued.v (x v) < 1}) : 2 ^ S.card ≤ (∏ v ∈ S, ‖x v‖)⁻¹ := by
-      have (v : _) (h : v ∈ S) : 2 ≤ ‖(x v)⁻¹‖ := by
-        apply FinitePlace.two_le_norm_of_one_lt_norm
-        grind [toNormedField.one_lt_norm_iff, map_inv₀, one_lt_inv₀ (Valued.v.pos_iff.2 (hx₀ v))]
-      simpa [Finset.prod_const] using (Finset.prod_le_prod₀ (by grind) this).trans (by simp)
-    apply tendsto_atTop_mono h_le ((tendsto_pow_atTop_atTop_of_one_lt (by norm_num)).comp ?_)
-    apply Filter.tendsto_atTop_atTop_of_monotone Finset.card_mono fun N ↦ ?_
-    obtain ⟨t, ht, _⟩ := hx_inf.exists_subset_card_eq N
-    exact ⟨t.subtype _, by grind [Finset.card_subtype, Finset.card_filter_eq_iff.2 ht]⟩
-  (tendsto_inv_atTop_zero.comp this).congr (by simp)
+  let : Infinite {v | Valued.v (x v) < 1} := hx_inf.to_subtype
+  have hnorm (v : {v | Valued.v (x v) < 1}) : ‖x v‖ ≤ (2 : ℝ)⁻¹ := by
+    have htwo : 2 ≤ ‖(x v)⁻¹‖ := by
+      apply FinitePlace.two_le_norm_of_one_lt_norm
+      grind [toNormedField.one_lt_norm_iff, map_inv₀, one_lt_inv₀ (Valued.v.pos_iff.2 (hx₀ v))]
+    rw [norm_inv] at htwo
+    simpa only [inv_inv₀] using inv_anti₀ (by norm_num : (0 : ℝ) < 2) htwo
+  have hprod (s : Finset {v | Valued.v (x v) < 1}) :
+      ∏ v ∈ s, ‖x v‖ ≤ ((2 : ℝ)⁻¹) ^ s.card := by
+    simpa only [Finset.prod_const] using
+      Finset.prod_le_prod₀ (s := s) (fun v _ ↦ norm_nonneg (x v)) (fun v _ ↦ hnorm v)
+  have hlim := (tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num : (0 : ℝ) ≤ 2⁻¹)
+    (by norm_num)).comp (tendsto_card_atTop_atTop (α := {v | Valued.v (x v) < 1}))
+  exact tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hlim
+    (fun _ ↦ Finset.prod_nonneg fun _ _ ↦ norm_nonneg _) hprod
 
 theorem hasProd_zero_of_not_isUnit {x : 𝔸ᶠ[R, K]} (hx : ¬IsUnit x) :
     HasProd (fun v ↦ ‖x v‖) 0 := by
@@ -126,10 +130,13 @@ theorem unitEmbedding_norm_apply_eq_finprod_finitePlace (x : Kˣ) :
   exact finprod_congr fun _ ↦ rfl
 
 theorem unitEmbedding_norm_eq_inv_abs_norm (x : Kˣ) :
-    ‖(unitEmbedding (𝓞 K) K x : 𝔸ᶠ[𝓞 K, K])‖ = |Algebra.norm ℚ (x : K)|⁻¹ := by
+    ‖(unitEmbedding (𝓞 K) K x : 𝔸ᶠ[𝓞 K, K])‖ = (Checked.inv |Algebra.norm ℚ (x : K)|
+      (abs_ne_zero.mpr (Algebra.norm_ne_zero_iff.mpr x.ne_zero)).isUnit : ℚ) := by
   rw [← FinitePlace.prod_eq_inv_abs_norm x.ne_zero, unitEmbedding_norm_apply_eq_finprod_finitePlace]
 
 theorem coe_norm_eq_inv_abs_norm {x : K} (hx : x ≠ 0) :
-    ‖algebraMap K 𝔸ᶠ[K] x‖ = |Algebra.norm ℚ x|⁻¹ := unitEmbedding_norm_eq_inv_abs_norm (.mk0 x hx)
+    ‖algebraMap K 𝔸ᶠ[K] x‖ = (Checked.inv |Algebra.norm ℚ x|
+      (abs_ne_zero.mpr (Algebra.norm_ne_zero_iff.mpr hx)).isUnit : ℚ) :=
+  unitEmbedding_norm_eq_inv_abs_norm (.mk0 x hx)
 
 end NumberField.FiniteAdeleRing

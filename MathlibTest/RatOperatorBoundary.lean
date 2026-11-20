@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yi-Jing Tseng
 -/
 module
-import Mathlib.Data.Rat.Init
+import Mathlib.Algebra.Field.Rat
+import Mathlib.Algebra.GroupWithZero.Pi
 
 /-- error: failed to synthesize
   Inv ℚ
@@ -21,11 +22,44 @@ Hint: Additional diagnostic information may be available using the `set_option d
 #synth Div ℚ
 
 /-- error: failed to synthesize
-  Pow ℚ Int
+  Pow ℚ ℤ
 
 Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command. -/
 #guard_msgs in
-#synth Pow ℚ Int
+#synth Pow ℚ ℤ
+
+/-- error: failed to synthesize
+  Inv (Fin 1 → ℚ)
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command. -/
+#guard_msgs in
+#synth Inv (Fin 1 → ℚ)
+
+/-- error: failed to synthesize
+  Div (Fin 1 → ℚ)
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command. -/
+#guard_msgs in
+#synth Div (Fin 1 → ℚ)
+
+/-- error: failed to synthesize
+  Pow (Fin 1 → ℚ) ℤ
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command. -/
+#guard_msgs in
+#synth Pow (Fin 1 → ℚ) ℤ
+
+/--
+error: could not synthesize default value for parameter 'ha' using tactics
+---
+error: an invertibility proof is required
+f : Fin 1 → ℚ
+⊢ IsUnit f
+-/
+#guard_msgs in
+noncomputable example (f : Fin 1 → ℚ) : Fin 1 → ℚ := f⁻¹
+
+example (f g : Fin 1 → ℚ) (hg : IsUnit g) : (f / g) * g = f := div_mul_cancel₀ f
 
 /-- error: Type mismatch
   Rat.reciprocal 0

@@ -101,6 +101,8 @@ def someContDiffBumpBase (E : Type*) [NormedAddCommGroup E] [NormedSpace ℝ E]
 
 namespace ContDiffBump
 
+local instance {c : E} (f : ContDiffBump c) : NeZero f.rIn := ⟨f.rIn_pos.ne'⟩
+
 theorem rOut_pos {c : E} (f : ContDiffBump c) : 0 < f.rOut :=
   f.rIn_pos.trans f.rIn_lt_rOut
 
@@ -136,7 +138,7 @@ open Metric
 
 theorem one_of_mem_closedBall (hx : x ∈ closedBall c f.rIn) : f x = 1 := by
   apply ContDiffBumpBase.eq_one _ _ f.one_lt_rOut_div_rIn
-  simpa only [norm_smul, Real.norm_eq_abs, abs_inv, abs_of_nonneg f.rIn_pos.le, ← div_eq_inv_mul,
+  simpa only [norm_smul, Real.norm_eq_abs, abs_inv, abs_of_nonneg f.rIn_pos.le, ← div_eq_inv_mul₀,
     div_le_one f.rIn_pos] using mem_closedBall_iff_norm.1 hx
 
 theorem nonneg : 0 ≤ f x :=
@@ -152,7 +154,7 @@ theorem support_eq : Function.support f = Metric.ball c f.rOut := by
   simp only [toFun, support_comp_eq_preimage, ContDiffBumpBase.support _ _ f.one_lt_rOut_div_rIn]
   ext x
   simp only [mem_ball_iff_norm, sub_zero, norm_smul, mem_preimage, Real.norm_eq_abs, abs_inv,
-    abs_of_pos f.rIn_pos, ← div_eq_inv_mul, div_lt_div_iff_of_pos_right f.rIn_pos]
+    abs_of_pos f.rIn_pos, ← div_eq_inv_mul₀, div_lt_div_iff_of_pos_right f.rIn_pos]
 
 theorem tsupport_eq : tsupport f = closedBall c f.rOut := by
   simp_rw [tsupport, f.support_eq, closure_ball _ f.rOut_pos.ne']
@@ -184,7 +186,8 @@ protected theorem _root_.ContDiffWithinAt.contDiffBump {c g : X → E} {s : Set 
   refine (((someContDiffBumpBase E).smooth.contDiffAt ?_).of_le
     (mod_cast le_top)).comp_contDiffWithinAt x ?_
   · exact prod_mem_nhds (Ioi_mem_nhds (f x).one_lt_rOut_div_rIn) univ_mem
-  · exact (hR.div hr (f x).rIn_pos.ne').prodMk ((hr.inv (f x).rIn_pos.ne').smul (hg.sub hc))
+  · exact (hR.div hr (.of_forall fun y ↦ ⟨(f y).rIn_pos.ne'.isUnit, rfl⟩)).prodMk
+      ((hr.inv (.of_forall fun y ↦ ⟨(f y).rIn_pos.ne'.isUnit, rfl⟩)).smul (hg.sub hc))
 
 /-- `ContDiffBump` is `𝒞ⁿ` in all its arguments. -/
 protected nonrec theorem _root_.ContDiffAt.contDiffBump {c g : X → E} {f : ∀ x, ContDiffBump (c x)}

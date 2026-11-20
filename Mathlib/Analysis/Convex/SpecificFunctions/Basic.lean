@@ -74,23 +74,23 @@ theorem strictConcaveOn_log_Ioi : StrictConcaveOn ℝ (Ioi 0) log := by
     have hyz' : 0 < z / y := by positivity
     have hyz'' : z / y ≠ 1 := by
       contrapose! h
-      rw [div_eq_one_iff_eq hy.ne'] at h
+      rw [div_eq_one_iff_eq] at h
       simp [h]
     calc
-      log z - log y = log (z / y) := by rw [← log_div hz.ne' hy.ne']
+      log z - log y = log (z / y) := by rw [← log_div hz.ne']
       _ < z / y - 1 := log_lt_sub_one_of_pos hyz' hyz''
-      _ = y⁻¹ * (z - y) := by field
+      _ = y⁻¹ * (z - y) := by rw [div_eq_inv_mul₀, mul_sub, inv_mul_cancel₀]
   · have h : 0 < y - x := by linarith
     rw [lt_div_iff₀ h]
     have hxy' : 0 < x / y := by positivity
     have hxy'' : x / y ≠ 1 := by
       contrapose! h
-      rw [div_eq_one_iff_eq hy.ne'] at h
+      rw [div_eq_one_iff_eq] at h
       simp [h]
     calc
-      y⁻¹ * (y - x) = 1 - x / y := by field
+      y⁻¹ * (y - x) = 1 - x / y := by rw [div_eq_inv_mul₀, mul_sub, inv_mul_cancel₀]
       _ < -log (x / y) := by linarith [log_lt_sub_one_of_pos hxy' hxy'']
-      _ = -(log x - log y) := by rw [log_div hx.ne' hy.ne']
+      _ = -(log x - log y) := by rw [log_div hx.ne']
       _ = log y - log x := by ring
 
 /-- **Bernoulli's inequality** for real exponents, strict version: for `1 < p` and `-1 ≤ s`, with
@@ -111,14 +111,14 @@ theorem one_add_mul_self_lt_rpow_one_add {s : ℝ} (hs : -1 ≤ s) (hs' : s ≠ 
   rcases lt_or_gt_of_ne hs' with hs' | hs'
   · rw [← div_lt_iff₀ hp', ← div_lt_div_right_of_neg hs']
     convert! strictConcaveOn_log_Ioi.secant_strict_mono (zero_lt_one' ℝ) hs2 hs1 hs4 hs3 _ using 1
-    · rw [add_sub_cancel_left, log_one, sub_zero]
-    · rw [add_sub_cancel_left, div_div₀, log_one, sub_zero]
+    · simp only [add_sub_cancel_left, log_one, sub_zero]
+    · simp only [add_sub_cancel_left, div_div₀, log_one, sub_zero]
     · gcongr
       exact mul_lt_of_one_lt_left hs' hp
   · rw [← div_lt_iff₀ hp', ← div_lt_div_iff_of_pos_right hs']
     convert! strictConcaveOn_log_Ioi.secant_strict_mono (zero_lt_one' ℝ) hs1 hs2 hs3 hs4 _ using 1
-    · rw [add_sub_cancel_left, div_div₀, log_one, sub_zero]
-    · rw [add_sub_cancel_left, log_one, sub_zero]
+    · simp only [add_sub_cancel_left, div_div₀, log_one, sub_zero]
+    · simp only [add_sub_cancel_left, log_one, sub_zero]
     · gcongr
       exact lt_mul_of_one_lt_left hs' hp
 
@@ -152,14 +152,14 @@ theorem rpow_one_add_lt_one_add_mul_self {s : ℝ} (hs : -1 ≤ s) (hs' : s ≠ 
   rcases lt_or_gt_of_ne hs' with hs' | hs'
   · rw [← lt_div_iff₀ hp1, ← div_lt_div_right_of_neg hs']
     convert! strictConcaveOn_log_Ioi.secant_strict_mono (zero_lt_one' ℝ) hs1 hs2 hs3 hs4 _ using 1
-    · rw [add_sub_cancel_left, div_div₀, log_one, sub_zero]
-    · rw [add_sub_cancel_left, log_one, sub_zero]
+    · simp only [add_sub_cancel_left, div_div₀, log_one, sub_zero]
+    · simp only [add_sub_cancel_left, log_one, sub_zero]
     · gcongr
       exact lt_mul_of_lt_one_left hs' hp2
   · rw [← lt_div_iff₀ hp1, ← div_lt_div_iff_of_pos_right hs']
     convert! strictConcaveOn_log_Ioi.secant_strict_mono (zero_lt_one' ℝ) hs2 hs1 hs4 hs3 _ using 1
-    · rw [add_sub_cancel_left, log_one, sub_zero]
-    · rw [add_sub_cancel_left, div_div₀, log_one, sub_zero]
+    · simp only [add_sub_cancel_left, log_one, sub_zero]
+    · simp only [add_sub_cancel_left, div_div₀, log_one, sub_zero]
     · gcongr
       exact mul_lt_of_lt_one_left hs' hp2
 
@@ -183,21 +183,24 @@ theorem strictConvexOn_rpow {p : ℝ} (hp : 1 < p) : StrictConvexOn ℝ (Ici 0) 
   have hy' : 0 < y ^ p := rpow_pos_of_pos hy _
   trans p * y ^ (p - 1)
   · have q : 0 < y - x := by rwa [sub_pos]
-    rw [div_lt_iff₀ q, ← div_lt_div_iff_of_pos_right hy', _root_.sub_div, div_self hy'.ne',
-      ← div_rpow hx hy.le, sub_lt_comm, ← add_sub_cancel_right (x / y) 1, add_comm, add_sub_assoc,
-      ← div_mul_eq_mul_div, mul_div_assoc, ← rpow_sub hy, sub_sub_cancel_left, rpow_neg_one,
-      mul_assoc, ← div_eq_inv_mul, sub_eq_add_neg, ← mul_neg, ← neg_div, neg_sub, _root_.sub_div,
-      div_self hy.ne']
+    rw [div_lt_iff₀ q, ← div_lt_div_iff_of_pos_right hy', _root_.sub_div, div_self,
+      ← div_rpow hx hy.le (hy₀ := hy.ne'.isUnit), sub_lt_comm,
+      ← add_sub_cancel_right (x / y) 1, add_comm, add_sub_assoc,
+      ← div_mul_eq_mul_div₀, mul_div_assoc₀, ← rpow_sub hy, sub_sub_cancel_left,
+      rpow_neg_one (hx := hy.ne'.isUnit),
+      mul_assoc, ← div_eq_inv_mul₀, sub_eq_add_neg, ← mul_neg, ← neg_div₀, neg_sub, _root_.sub_div,
+      div_self]
     apply one_add_mul_self_lt_rpow_one_add _ _ hp
     · rw [le_sub_iff_add_le, neg_add_cancel, div_nonneg_iff]
       exact Or.inl ⟨hx, hy.le⟩
     · rw [sub_ne_zero]
       exact ((div_lt_one hy).mpr hxy).ne
   · have q : 0 < z - y := by rwa [sub_pos]
-    rw [lt_div_iff₀ q, ← div_lt_div_iff_of_pos_right hy', _root_.sub_div, div_self hy'.ne',
-      ← div_rpow hz hy.le, lt_sub_iff_add_lt', ← add_sub_cancel_right (z / y) 1, add_comm _ 1,
-      add_sub_assoc, ← div_mul_eq_mul_div, mul_div_assoc, ← rpow_sub hy, sub_sub_cancel_left,
-      rpow_neg_one, mul_assoc, ← div_eq_inv_mul, _root_.sub_div, div_self hy.ne']
+    rw [lt_div_iff₀ q, ← div_lt_div_iff_of_pos_right hy', _root_.sub_div, div_self,
+      ← div_rpow hz hy.le (hy₀ := hy.ne'.isUnit), lt_sub_iff_add_lt',
+      ← add_sub_cancel_right (z / y) 1, add_comm _ 1,
+      add_sub_assoc, ← div_mul_eq_mul_div₀, mul_div_assoc₀, ← rpow_sub hy, sub_sub_cancel_left,
+      rpow_neg_one (hx := hy.ne'.isUnit), mul_assoc, ← div_eq_inv_mul₀, _root_.sub_div, div_self]
     apply one_add_mul_self_lt_rpow_one_add _ _ hp
     · rw [le_sub_iff_add_le, neg_add_cancel, div_nonneg_iff]
       exact Or.inl ⟨hz, hy.le⟩

@@ -152,11 +152,15 @@ theorem measurePreserving_homeomorphUnitSphereProd :
     fun s hs ↦ forall_mem_range.2 fun r ↦ ?_
   have : Ioo (0 : ℝ) r = r.1 • Ioo (0 : ℝ) 1 := by simp [LinearOrderedField.smul_Ioo r.2.out]
   have hpos : 0 < dim E := Module.finrank_pos
+  have hdim : (0 : ℝ) < dim E := Nat.cast_pos.mpr hpos
+  have hdiv : (r.1 ^ dim E : ℝ) / ((↑(dim E - 1) : ℝ) + 1) =
+      r.1 ^ dim E / (dim E : ℝ) := by
+    apply div_eq_div_iff.2
+    rw [Nat.cast_pred hpos, sub_add_cancel]
   rw [(Homeomorph.measurableEmbedding _).map_apply, toSphere_apply' _ hs, volumeIoiPow_apply_Iio,
     comap_subtype_coe_apply (measurableSet_singleton _).compl, toSphere_apply_aux, this,
-    smul_assoc, μ.addHaar_smul_of_nonneg r.2.out.le, Nat.sub_add_cancel hpos, Nat.cast_pred hpos,
-    sub_add_cancel, mul_right_comm, ← ENNReal.ofReal_natCast, ← ENNReal.ofReal_mul, mul_div_cancel₀]
-  exacts [(Nat.cast_pos.2 hpos).ne', Nat.cast_nonneg _]
+    smul_assoc, μ.addHaar_smul_of_nonneg r.2.out.le, Nat.sub_add_cancel hpos, hdiv,
+    mul_right_comm, ← ENNReal.ofReal_natCast, ← ENNReal.ofReal_mul hdim.le, mul_div_cancel₀]
 
 /-- An auxiliary lemma for `toSphereBallBound_mul_measure_unitBall_le_toSphere_ball`.
 The estimate in this lemma is highly suboptimal.
@@ -183,8 +187,8 @@ private lemma ball_subset_sector_of_small_epsilon
     _ = 1 := by simp [norm_smul, habs, hx]
   -- Let $u = y / \|y\|$. We show $\|u - x\| < \epsilon$.
   set u : E := ‖y‖⁻¹ • y
-  have hu₁ : ‖u‖ = 1 := by simp [u, hy₀, norm_smul]
-  refine ⟨‖y‖, ⟨by simpa, hy₁⟩, u, ⟨?_, by simpa⟩, by simp [u, hy₀]⟩
+  have hu₁ : ‖u‖ = 1 := by simp [u, norm_smul]
+  refine ⟨‖y‖, ⟨by simpa, hy₁⟩, u, ⟨?_, by simpa⟩, by simp [u]⟩
   rw [mem_ball]
   have hyx := calc
     dist y x ≤ dist y ((1 - ε / 4) • x) + dist ((1 - ε / 4) • x) x := dist_triangle ..
@@ -192,7 +196,7 @@ private lemma ball_subset_sector_of_small_epsilon
     _ = ε / 4 + ε / 4 := by simp [sub_smul, norm_smul, hx, abs_of_pos hε]
     _ = ε / 2 := by ring
   have huy : dist u y ≤ dist x y := by
-    have H : u - y = (1 - ‖y‖) • u := by simp [u, hy₀, sub_smul]
+    have H : u - y = (1 - ‖y‖) • u := by simp [u, sub_smul]
     simpa [dist_eq_norm_sub, H, norm_smul, abs_of_nonneg, hy₁.le, hu₁, hx]
       using dist_triangle x y 0
   linarith [dist_triangle u y x, dist_comm x y]

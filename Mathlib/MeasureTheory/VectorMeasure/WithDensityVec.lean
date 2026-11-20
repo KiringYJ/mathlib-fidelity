@@ -82,7 +82,7 @@ lemma restrict_withDensity (hf : μ.Integrable f) :
 
 lemma variation_WithDensity_le (hf : μ.Integrable f) :
     (μ.withDensity f B hf).variation ≤
-      (μ.transpose B).variation.withDensity (fun x ↦ ‖f x‖ₑ) := by
+      ((μ.transpose B).variation (V := E →L[ℝ] G)).withDensity (fun x ↦ ‖f x‖ₑ) := by
   apply variation_le_of_forall_enorm_le (fun s hs ↦ ?_)
   rw [withDensity_apply hf, MeasureTheory.withDensity_apply _ hs]
   apply enorm_setIntegral_le_lintegral_enorm_transpose
@@ -100,7 +100,7 @@ See also `variation_withDensity` under the very common condition `‖B x y‖ = 
 lemma variation_withDensity' [CompleteSpace G]
     (hf : μ.Integrable f) (hB : ∀ x y, ‖B x y‖₊ = ‖B.flip y‖₊ * ‖x‖₊) :
     (μ.withDensity f B hf).variation =
-      (μ.transpose B).variation.withDensity (fun x ↦ ‖f x‖ₑ) := by
+      ((μ.transpose B).variation (V := E →L[ℝ] G)).withDensity (fun x ↦ ‖f x‖ₑ) := by
   apply le_antisymm (variation_WithDensity_le hf)
   apply Measure.le_iff.2 (fun s hs ↦ ?_)
   /- For the nontrivial direction, we have to show that for each measurable set `s`,
@@ -119,52 +119,53 @@ lemma variation_withDensity' [CompleteSpace G]
   let δ := ε / 3
   have δpos : 0 < δ := div_pos εpos (by norm_num)
   -- first step: approximate `f` by a simple function `g`.
-  obtain ⟨g, hg, gmem⟩ : ∃ (g : X →ₛ E), eLpNorm (f - ⇑g) 1 (μ.transpose B).variation ≤ δ
+  obtain ⟨g, hg, gmem⟩ : ∃ (g : X →ₛ E),
+      eLpNorm (f - ⇑g) 1 ((μ.transpose B).variation (V := E →L[ℝ] G)) ≤ δ
       ∧ MemLp (⇑g) 1 μ.variation := by
     obtain ⟨ρ, ρpos, hδ⟩ : ∃ ρ > 0, ‖B‖₊ * ρ ≤ δ := by
       rcases eq_or_ne (‖B‖₊) 0 with hB | hB
       · exact ⟨1, zero_lt_one, by simp [hB]⟩
       · refine ⟨‖B‖₊ ⁻¹ * δ, by positivity, ?_⟩
-        rw [← mul_assoc]
-        apply mul_le_of_le_one_left (by positivity) mul_inv_le_one
+        rw [← mul_assoc, mul_inv_cancel₀, one_mul]
     obtain ⟨g, h'g, gmem⟩ : ∃ (g : X →ₛ E), eLpNorm (f - ⇑g) 1 μ.variation < ρ
         ∧ MemLp (⇑g) 1 μ.variation :=
       (memLp_one_iff_integrable.2 hf).exists_simpleFunc_eLpNorm_sub_lt (by simp)
         (by simpa using ρpos.ne')
     refine ⟨g, ?_, gmem⟩
     grw [variation_transpose_le]
-    rw [eLpNorm_smul_measure_of_ne_top' (by simp)]
+    rw [ENNReal.smul_def, eLpNorm_one_smul_measure]
     grw [h'g.le]
-    simp only [ENNReal.toReal_one, inv_one, NNReal.rpow_one, ENNReal.smul_def, smul_eq_mul]
     exact_mod_cast hδ
   -- the integral of `‖f‖ₑ` is approximated up to `δ` by that of `‖g‖ₑ`.
-  have I1 : ∫⁻ a in s, ‖f a‖ₑ ∂(μ.transpose B).variation
-        ≤ ∫⁻ a in s, ‖g a‖ₑ ∂(μ.transpose B).variation + δ := calc
-    _ ≤ ∫⁻ a in s, ‖f a - g a‖ₑ + ‖g a‖ₑ ∂(μ.transpose B).variation := by
+  have I1 : ∫⁻ a in s, ‖f a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G))
+        ≤ ∫⁻ a in s, ‖g a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G)) + δ := calc
+    _ ≤ ∫⁻ a in s, ‖f a - g a‖ₑ + ‖g a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G)) := by
       gcongr with a
       nth_rw 1 [show f a = (f a - g a) + g a by abel]
       exact enorm_add_le (f a - g a) (g a)
-    _ = ∫⁻ a in s, ‖g a‖ₑ ∂(μ.transpose B).variation +
-          ∫⁻ a in s, ‖f a - g a‖ₑ ∂(μ.transpose B).variation := by
+    _ = ∫⁻ a in s, ‖g a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G)) +
+          ∫⁻ a in s, ‖f a - g a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G)) := by
       rw [lintegral_add_right, add_comm]
       exact g.stronglyMeasurable.enorm
-    _ ≤ ∫⁻ a in s, ‖g a‖ₑ ∂(μ.transpose B).variation +
-          ∫⁻ a, ‖f a - g a‖ₑ ∂(μ.transpose B).variation := by
+    _ ≤ ∫⁻ a in s, ‖g a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G)) +
+          ∫⁻ a, ‖f a - g a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G)) := by
       gcongr
       exact Measure.restrict_le_self
-    _ ≤ ∫⁻ a in s, ‖g a‖ₑ ∂(μ.transpose B).variation + δ := by
+    _ ≤ ∫⁻ a in s, ‖g a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G)) + δ := by
       rw [eLpNorm_one_eq_lintegral_enorm] at hg
       gcongr
       exact hg
   -- the integral of `‖g‖ₑ` can be rewritten as a weighted sum of measures, as `g` is a simple
   -- function.
-  have I2 : ∫⁻ a in s, ‖g a‖ₑ ∂(μ.transpose B).variation =
-      ∑ i ∈ g.range, ‖i‖ₑ * ((μ.transpose B).restrict s).variation (g ⁻¹' {i}) := calc
-    _ = (g.map (‖·‖ₑ)).lintegral ((μ.transpose B).variation.restrict s) :=
+  have I2 : ∫⁻ a in s, ‖g a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G)) =
+      ∑ i ∈ g.range, ‖i‖ₑ *
+        (((μ.transpose B).restrict s).variation (V := E →L[ℝ] G)) (g ⁻¹' {i}) := calc
+    _ = (g.map (‖·‖ₑ)).lintegral (((μ.transpose B).variation (V := E →L[ℝ] G)).restrict s) :=
       SimpleFunc.lintegral_eq_lintegral _ _
-    _ = ∑ i ∈ g.range, ‖i‖ₑ * (μ.transpose B).variation.restrict s (g ⁻¹' {i}) :=
+    _ = ∑ i ∈ g.range, ‖i‖ₑ * ((μ.transpose B).variation (V := E →L[ℝ] G)).restrict s (g ⁻¹' {i}) :=
       SimpleFunc.map_lintegral _ _
-    _ = ∑ i ∈ g.range, ‖i‖ₑ * ((μ.transpose B).restrict s).variation (g ⁻¹' {i}) := by
+    _ = ∑ i ∈ g.range, ‖i‖ₑ *
+        (((μ.transpose B).restrict s).variation (V := E →L[ℝ] G)) (g ⁻¹' {i}) := by
       simp_rw [variation_restrict hs]
   -- For each `i`, choose a partition `P i` of `g ⁻¹' {i}` such that the sum of the enorms
   -- of their measures approximates well enough the variation, by definition of the variation.
@@ -174,27 +175,28 @@ lemma variation_withDensity' [CompleteSpace G]
   have C i : ∃ (P : Finset (Set X)), (∀ t ∈ P, t ⊆ g ⁻¹' {i})
       ∧ ((P : Set (Set X)).PairwiseDisjoint id) ∧
       (∀ t ∈ P, MeasurableSet t) ∧
-      ‖i‖ₑ * ((μ.transpose B).restrict s).variation (g ⁻¹' {i}) ≤
+      ‖i‖ₑ * (((μ.transpose B).restrict s).variation (V := E →L[ℝ] G)) (g ⁻¹' {i}) ≤
         ‖i‖ₑ * (∑ p ∈ P, ‖(μ.transpose B).restrict s p‖ₑ + ρ) := by
     rcases eq_or_ne i 0 with rfl | hi
     · exact ⟨∅, by simp⟩
     suffices ∃ (P : Finset (Set X)), (∀ t ∈ P, t ⊆ g ⁻¹' {i})
         ∧ ((P : Set (Set X)).PairwiseDisjoint id) ∧ (∀ t ∈ P, MeasurableSet t) ∧
-        ((μ.transpose B).restrict s).variation (g ⁻¹' {i}) ≤
+        (((μ.transpose B).restrict s).variation (V := E →L[ℝ] G)) (g ⁻¹' {i}) ≤
         (∑ p ∈ P, ‖(μ.transpose B).restrict s p‖ₑ + ρ) by
       obtain ⟨P, hP, h'P, h''P, h'''P⟩ := this
       exact ⟨P, hP, h'P, h''P, by gcongr⟩
     apply exists_variation_le_add' _ (g.measurableSet_fiber i) ρpos
     rw [variation_restrict hs]
-    have : MemLp (⇑g) 1 (μ.transpose B).variation :=
+    have : MemLp (⇑g) 1 ((μ.transpose B).variation (V := E →L[ℝ] G)) :=
       gmem.of_measure_le_smul (c := ‖B‖₊) (by simp) (variation_transpose_le _ _)
     exact (g.integrable_iff.1 (memLp_one_iff_integrable.1 this).restrict i hi).ne
   choose P Pg Pdisj Pmeas hP using C
   -- rewrite everything in terms of the global partition made by putting together the `Pᵢ`,
   -- and register that the resulting error is bounded by `δ`.
-  have I3 : ∑ i ∈ g.range, ‖i‖ₑ * ((μ.transpose B).restrict s).variation (g ⁻¹' {i}) ≤
+  have I3 : ∑ i ∈ g.range, ‖i‖ₑ *
+      (((μ.transpose B).restrict s).variation (V := E →L[ℝ] G)) (g ⁻¹' {i}) ≤
       ∑ i ∈ g.range.sigma P, ‖i.1‖ₑ * ‖(μ.transpose B).restrict s i.2‖ₑ + δ := calc
-    ∑ i ∈ g.range, ‖i‖ₑ * ((μ.transpose B).restrict s).variation (g ⁻¹' {i})
+    ∑ i ∈ g.range, ‖i‖ₑ * (((μ.transpose B).restrict s).variation (V := E →L[ℝ] G)) (g ⁻¹' {i})
     _ ≤ ∑ i ∈ g.range, ‖i‖ₑ * ((∑ p ∈ P i, ‖(μ.transpose B).restrict s p‖ₑ) + ρ) := by
       gcongr 1 with i hi
       exact hP i
@@ -241,7 +243,8 @@ lemma variation_withDensity' [CompleteSpace G]
       rw [← Finset.sum_add_distrib]
       gcongr with i hi
       apply enorm_add_le
-    _ ≤ ∑ i ∈ g.range.sigma P, ∫⁻ x in i.2, ‖g x - f x‖ₑ ∂(μ.transpose B).variation
+    _ ≤ ∑ i ∈ g.range.sigma P,
+          ∫⁻ x in i.2, ‖g x - f x‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G))
         + ∑ i ∈ g.range.sigma P, ‖∫ᵛ x in i.2, f x ∂[B; μ.restrict s]‖ₑ := by
       gcongr with i hi
       grw [enorm_setIntegral_le_lintegral_enorm_transpose]
@@ -249,7 +252,8 @@ lemma variation_withDensity' [CompleteSpace G]
       apply Measure.restrict_mono le_rfl
       rw [transpose_restrict, variation_restrict hs]
       apply Measure.restrict_le_self
-    _ = ∫⁻ x in (⋃ i ∈ g.range.sigma P, i.2), ‖g x - f x‖ₑ ∂(μ.transpose B).variation
+    _ = ∫⁻ x in (⋃ i ∈ g.range.sigma P, i.2), ‖g x - f x‖ₑ
+          ∂((μ.transpose B).variation (V := E →L[ℝ] G))
         + ∑ i ∈ g.range.sigma P, ‖∫ᵛ x in i.2, f x ∂[B; μ.restrict s]‖ₑ := by
       rw [lintegral_biUnion_finset]
       · rintro ⟨i, p⟩ hi ⟨j, q⟩ hj hijpq
@@ -264,7 +268,7 @@ lemma variation_withDensity' [CompleteSpace G]
         simp only [Finset.mem_sigma, SimpleFunc.mem_range, mem_range] at hip
         exact Pmeas i p hip.2
     _ ≤ ∑ i ∈ g.range.sigma P, ‖∫ᵛ x in i.2, f x ∂[B; μ.restrict s]‖ₑ +
-        ∫⁻ x, ‖g x - f x‖ₑ ∂(μ.transpose B).variation := by
+        ∫⁻ x, ‖g x - f x‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G)) := by
       rw [add_comm]
       gcongr
       apply Measure.restrict_le_self
@@ -322,15 +326,16 @@ lemma variation_withDensity' [CompleteSpace G]
           exact this.mono (Pg (g i) p hi) (Pg (g j) q hj)
   -- finally, put together the above inequalities, and argue that the overall error `3δ` is
   -- bounded by `ε` by design.
-  calc ∫⁻ (a : X) in s, ‖f a‖ₑ ∂(μ.transpose B).variation
-  _ ≤ ∫⁻ a in s, ‖g a‖ₑ ∂(μ.transpose B).variation + δ := I1
-  _ = ∑ i ∈ g.range, ‖i‖ₑ * ((μ.transpose B).restrict s).variation (g ⁻¹' {i}) + δ := by rw [I2]
+  calc ∫⁻ (a : X) in s, ‖f a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G))
+  _ ≤ ∫⁻ a in s, ‖g a‖ₑ ∂((μ.transpose B).variation (V := E →L[ℝ] G)) + δ := I1
+  _ = ∑ i ∈ g.range, ‖i‖ₑ *
+      (((μ.transpose B).restrict s).variation (V := E →L[ℝ] G)) (g ⁻¹' {i}) + δ := by rw [I2]
   _ ≤ (∑ i ∈ g.range.sigma P, ‖i.1‖ₑ * ‖(μ.transpose B).restrict s i.2‖ₑ + δ) + δ := by gcongr
   _ ≤ ((∑ i ∈ g.range.sigma P, ‖∫ᵛ x in i.2, f x ∂[B; μ.restrict s]‖ₑ + δ) + δ) + δ := by gcongr
   _ = (∑ i ∈ g.range.sigma P, ‖∫ᵛ x in i.2, f x ∂[B; μ.restrict s]‖ₑ) + 3 * δ := by ring
   _ ≤ (μ.withDensity f B hf).variation s + 3 * δ := by gcongr
   _ ≤ (μ.withDensity f B hf).variation s + ε := by
-    simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, ENNReal.coe_div, ENNReal.coe_ofNat, δ]
+    simp only [ENNReal.coe_div, ENNReal.coe_ofNat, δ]
     rw [ENNReal.mul_div_cancel (by simp) (by simp)]
 
 /-- If `‖B x y‖ = ‖x‖ * ‖y‖` for all `x, y`, then the variation of a vector measure with
@@ -343,7 +348,7 @@ Then `μ.withDensity f B hf = 0` so its variation is zero, while the integral of
 lemma variation_withDensity [CompleteSpace G]
     (hf : μ.Integrable f) (hB : ∀ x y, ‖B x y‖₊ = ‖x‖₊ * ‖y‖₊) :
     (μ.withDensity f B hf).variation =
-      (μ.transpose B).variation.withDensity (fun x ↦ ‖f x‖ₑ) := by
+      ((μ.transpose B).variation (V := E →L[ℝ] G)).withDensity (fun x ↦ ‖f x‖ₑ) := by
   apply variation_withDensity' hf (fun x y ↦ ?_)
   refine le_antisymm (ContinuousLinearMap.le_opNorm (B.flip y) x) ?_
   rw [hB, mul_comm]
@@ -356,40 +361,55 @@ is the measure with density `‖f‖ₑ` with respect to `μ`. -/
 lemma _root_.MeasureTheory.Measure.variation_withDensityᵥ [CompleteSpace E]
     {μ : Measure X} {f : X → E} (hf : Integrable f μ) :
     (μ.withDensityᵥ f hf).variation = μ.withDensity (fun x ↦ ‖f x‖ₑ) := by
-  /- We deduce this statement from the statement `variation_withDensity` for vector measures
-  with density. For this, we write `μ.withDensityᵥ f hf` as the vector measure with density
-  `f / ‖f‖` with respect to the measure `μ.withDensity ‖f‖` interpreted as a signed measure. -/
+  /- Use the finite measure with density `‖f‖`. Its almost-everywhere positive norm
+  admits an everywhere invertible representative `d`; normalization uses only `d⁻¹`.
+  Values of the representative on the zero-weight set do not affect either measure. -/
   rcases subsingleton_or_nontrivial E with hE | hE
   · simp [show f = 0 from Subsingleton.elim _ _]
-  have : IsFiniteMeasure (μ.withDensity fun x ↦ ‖f x‖ₑ) := ⟨by simpa using! hf.2⟩
-  have I : (μ.withDensity fun x ↦ ‖f x‖ₑ).toSignedMeasure.Integrable (fun x ↦ ‖f x‖⁻¹ • f x) := by
+  let ν := μ.withDensity (fun x ↦ ‖f x‖ₑ)
+  have : IsFiniteMeasure ν := ⟨by simpa [ν] using! hf.2⟩
+  have hn : AEStronglyMeasurable (fun x ↦ ‖f x‖) ν :=
+    hf.aestronglyMeasurable.norm.mono_ac (withDensity_absolutelyContinuous _ _)
+  have hnu : ∀ᵐ x ∂ν, IsUnit ‖f x‖ := by
+    apply (ae_withDensity_iff' hf.aestronglyMeasurable.enorm).mpr
+    filter_upwards with x hx
+    exact (show ‖f x‖ ≠ 0 by simpa using hx).isUnit
+  obtain ⟨d, hd, hdu, heq⟩ := hn.exists_stronglyMeasurable_isUnit hnu
+  let g : X → E := fun x ↦ Checked.inv (d x) (hdu x) • f x
+  have hg : AEStronglyMeasurable g μ :=
+    (hd.fun_inv₀ (h0 := hdu)).aestronglyMeasurable.fun_smul hf.aestronglyMeasurable
+  have hnorm : ∀ᵐ x ∂ν, ‖g x‖ = 1 := by
+    filter_upwards [heq] with x hx
+    have hu : IsUnit ‖f x‖ := hx.symm ▸ hdu x
+    simp only [g, ← hx, norm_smul, norm_inv, norm_norm, inv_mul_cancel₀]
+  have I : ν.toSignedMeasure.Integrable g := by
     simp only [VectorMeasure.Integrable, Measure.variation_toSignedMeasure]
     apply Integrable.of_bound (C := 1)
-    · apply AEStronglyMeasurable.mono_ac (withDensity_absolutelyContinuous _ _)
-      exact hf.aestronglyMeasurable.norm.inv₀.smul hf.aestronglyMeasurable
-    · filter_upwards with x using by simp [norm_smul, inv_mul_le_one]
-  have : μ.withDensityᵥ f hf = (μ.withDensity (‖f ·‖ₑ)).toSignedMeasure.withDensity
-      (fun x ↦ ‖f x‖⁻¹ • f x) (ContinuousLinearMap.lsmul ℝ ℝ).flip I := by
+    · exact hg.mono_ac (withDensity_absolutelyContinuous _ _)
+    · exact hnorm.mono fun x hx => hx.le
+  have heqμ : ∀ᵐ x ∂μ, ‖f x‖ₑ ≠ 0 → ‖f x‖ = d x :=
+    (ae_withDensity_iff' hf.aestronglyMeasurable.enorm).mp heq
+  have hμ : μ.withDensityᵥ f hf = ν.toSignedMeasure.withDensity
+      g (ContinuousLinearMap.lsmul ℝ ℝ).flip I := by
     ext s hs
     rw [withDensityᵥ_apply hf hs, withDensity_apply I, setIntegral_toSignedMeasure hs,
-        setIntegral_withDensity_eq_setIntegral_toReal_smul₀ _ _ _ hs]; rotate_left
+      setIntegral_withDensity_eq_setIntegral_toReal_smul₀ _ _ _ hs]; rotate_left
     · exact hf.aestronglyMeasurable.restrict.enorm
     · filter_upwards with x using by simp
-    congr with x
-    rcases eq_or_ne (f x) 0 with hx | hx
-    · simp [hx]
-    simp only [toReal_enorm, smul_smul]
-    rw [mul_inv_cancel₀, one_smul]
-    simpa using hx
-  rw [this, variation_withDensity I (by simp [nnnorm_smul, mul_comm]),
-    variation_transpose_eq _ _ (by simp [nnnorm_smul, mul_comm]), Measure.variation_toSignedMeasure,
-    ← withDensity_mul₀ hf.aestronglyMeasurable.enorm]; swap
-  · exact (hf.aestronglyMeasurable.norm.inv₀.smul hf.aestronglyMeasurable).enorm
-  congr with x
-  rcases eq_or_ne (f x) 0 with hx | hx
-  · simp [hx]
-  have h'x : ‖f x‖ ≠ 0 := by simp [hx]
-  simp only [enorm_smul, Pi.mul_apply, ne_eq, h'x, not_false_eq_true, enorm_inv, enorm_norm]
-  rw [ENNReal.inv_mul_cancel (by simpa using hx) (by simp), mul_one]
+    apply MeasureTheory.setIntegral_congr_ae hs
+    filter_upwards [heqμ] with x hx _
+    by_cases hfx : f x = 0
+    · simp [g, hfx]
+    have hd_eq : ‖f x‖ = d x := hx (by simpa using hfx)
+    have hu : IsUnit ‖f x‖ := hd_eq.symm ▸ hdu x
+    simp only [g, toReal_enorm, ← hd_eq, smul_smul, mul_inv_cancel₀, one_smul]
+  rw [hμ, variation_withDensity I (by simp [nnnorm_smul, mul_comm]),
+    variation_transpose_eq _ _ (by simp [nnnorm_smul, mul_comm]), Measure.variation_toSignedMeasure]
+  calc
+    ν.withDensity (fun x ↦ ‖g x‖ₑ) = ν.withDensity (fun _ ↦ 1) := by
+      apply withDensity_congr_ae
+      filter_upwards [hnorm] with x hx
+      simp [← ofReal_norm, hx]
+    _ = ν := withDensity_one
 
 end MeasureTheory.VectorMeasure

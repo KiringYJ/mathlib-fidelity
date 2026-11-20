@@ -47,58 +47,73 @@ namespace Polynomial.Chebyshev
 
 open Polynomial Real
 
-/-- For `n ≠ 0` and `i ≤ n`, `node n i` is one of the extremal points of the Chebyshev `T`
-polynomial over the interval `[-1, 1]`. -/
-noncomputable def node (n i : ℕ) : ℝ := cos (i * π / n)
+/-- The Chebyshev node at angle `i * π / n`. The degree-zero interpolation grid consists
+of the single right endpoint, indexed by zero. -/
+noncomputable def node (n i : ℕ) (h : n ≠ 0 ∨ i = 0 := by omega) : ℝ :=
+  match i with
+  | 0 => 1
+  | i + 1 => cos (Checked.div ((i + 1 : ℕ) * π) n
+      (Nat.cast_ne_zero.mpr (h.resolve_right (by omega))).isUnit)
 
-lemma node_eq_one {n : ℕ} : node n 0 = 1 := by simp [node]
+lemma node_eq_one {n : ℕ} : node n 0 = 1 := rfl
+
+private lemma node_of_ne_zero {n : ℕ} (hn : n ≠ 0) (i : ℕ) :
+    node n i = cos (i * π / n) := by
+  cases i <;> simp [node]
 
 lemma node_eq_neg_one {n : ℕ} (hn : n ≠ 0) : node n n = -1 := by
-  have : n * π / n = π := by aesop
-  simp [node, this]
+  have h : (n : ℝ) * π / n = π := div_eq_iff.mpr (mul_comm ..)
+  rw [node_of_ne_zero hn, h, cos_pi]
 
-lemma node_mem_Icc {n i : ℕ} : node n i ∈ Set.Icc (-1) 1 :=
-  Set.mem_Icc.mpr ⟨neg_one_le_cos _, cos_le_one _⟩
+lemma node_mem_Icc {n i : ℕ} {h : n ≠ 0 ∨ i = 0} : node n i h ∈ Set.Icc (-1) 1 := by
+  rcases h with hn | rfl
+  · rw [node_of_ne_zero hn]
+    exact ⟨neg_one_le_cos _, cos_le_one _⟩
+  · simp [node_eq_one]
 
 lemma eval_T_real_node {n i : ℕ} (hi : i ∈ Finset.Iic n) :
-    (T ℝ n).eval (node n i) = (-1) ^ i := by
+    (T ℝ n).eval (node n i (by have := Finset.mem_Iic.mp hi; omega)) = (-1) ^ i := by
   rcases eq_or_ne n 0 with rfl | hn
-  · simp [show i = 0 by grind]
-  have : (n : ℤ) * (i * π / n) = i * π := by norm_cast; field
-  rw [node, T_real_cos, this, cos_nat_mul_pi]
+  · simp [show i = 0 by simpa using Finset.mem_Iic.mp hi]
+  have h : (n : ℤ) * (i * π / n) = i * π := by norm_cast; field
+  rw [node_of_ne_zero hn, T_real_cos, h, cos_nat_mul_pi]
 
-lemma strictAntiOn_node (n : ℕ) :
-    StrictAntiOn (node n ·) (Finset.range (n + 1)) := by
-  rcases eq_or_ne n 0 with rfl | hn
-  · simp
-  refine strictAntiOn_cos.comp_strictMonoOn ?_ (fun x hx => Set.mem_Icc.mpr ⟨by positivity, ?_⟩)
-  · apply StrictMono.strictMonoOn
-    exact StrictMono.mul_const
-      (StrictMono.mul_const Nat.strictMono_cast (by positivity)) (by positivity)
-  rw [Finset.mem_coe, Finset.mem_range_succ_iff] at hx
-  rw [mul_div_assoc]
-  nth_rewrite 2 [← mul_div_cancel₀ π (Nat.cast_ne_zero.mpr hn)]
-  gcongr
+/-- The grid of the `n + 1` interpolation nodes. -/
+noncomputable def gridNode (n : ℕ) (i : Fin (n + 1)) : ℝ :=
+  node n i (by have := i.isLt; omega)
+
+lemma strictAntiOn_node (n : ℕ) : StrictAnti (gridNode n) := by
+  intro i j hij
+  have hn : n ≠ 0 := by have := j.isLt; have := i.isLt; have : i.val < j.val := hij; omega
+  have hn' : 0 < (n : ℝ) := by positivity
+  have hmem (k : Fin (n + 1)) : (k.val * π / (n : ℝ)) ∈ Set.Icc 0 π := by
+    refine ⟨by positivity, (div_le_iff₀ hn').mpr ?_⟩
+    rw [mul_comm π]
+    gcongr
+    exact_mod_cast Nat.le_of_lt_succ k.isLt
+  simp only [gridNode, node_of_ne_zero hn]
+  apply strictAntiOn_cos (hmem i) (hmem j)
+  exact div_lt_div_of_pos_right (mul_lt_mul_of_pos_right (by exact_mod_cast hij) pi_pos) hn'
 
 lemma node_lt {n i j : ℕ} (hj : j ≤ n) (hij : i < j) :
     node n j < node n i :=
-  strictAntiOn_node n (Finset.mem_coe.mpr (Finset.mem_range_succ_iff.mpr (by grind)))
-    (Finset.mem_coe.mpr (Finset.mem_range_succ_iff.mpr hj)) hij
+  @strictAntiOn_node n ⟨i, by omega⟩ ⟨j, by omega⟩ hij
 
-lemma zero_lt_prod_node_sub_node {n i : ℕ} (hi : i ≤ n) :
-    0 < (-1) ^ i * ∏ j ∈ (Finset.range (n + 1)).erase i, (node n i - node n j) := by
-  rcases eq_or_ne n 0 with rfl | hn
-  · simp [Nat.le_zero.mp hi]
-  have h₁ : 0 < ∏ j ∈ Finset.range i, ((-1) * (node n i - node n j)) :=
-    Finset.prod_pos (fun j hj => mul_pos_of_neg_of_neg neg_one_lt_zero <| sub_neg.mpr <|
-    node_lt hi (Finset.mem_range.mp hj))
-  rw [Finset.prod_mul_distrib, Finset.prod_const, Finset.card_range] at h₁
-  have h₂ : 0 < ∏ j ∈ Finset.Ioc i n, (node n i - node n j) :=
-    Finset.prod_pos (fun j hj => sub_pos.mpr <|
-      node_lt (Finset.mem_Ioc.mp hj).2 (Finset.mem_Ioc.mp hj).1)
-  have union : (Finset.range (n + 1)).erase i = (Finset.range i) ∪ Finset.Ioc i n := by grind
-  have disjoint : Disjoint (Finset.range i) (Finset.Ioc i n) := by grind [Finset.disjoint_iff_ne]
-  rw [union, Finset.prod_union disjoint, ← mul_assoc]
+lemma zero_lt_prod_node_sub_node {n : ℕ} (i : Fin (n + 1)) :
+    0 < (-1) ^ i.val * ∏ j ∈ Finset.univ.erase i, (gridNode n i - gridNode n j) := by
+  have h₁ : 0 < ∏ j ∈ Finset.Iio i, ((-1) * (gridNode n i - gridNode n j)) :=
+    Finset.prod_pos fun j hj ↦ mul_pos_of_neg_of_neg neg_one_lt_zero
+      (sub_neg.mpr (strictAntiOn_node n (Finset.mem_Iio.mp hj)))
+  rw [Finset.prod_mul_distrib, Finset.prod_const, Fin.card_Iio] at h₁
+  have h₂ : 0 < ∏ j ∈ Finset.Ioi i, (gridNode n i - gridNode n j) :=
+    Finset.prod_pos fun j hj ↦ sub_pos.mpr (strictAntiOn_node n (Finset.mem_Ioi.mp hj))
+  have hu : Finset.univ.erase i = Finset.Iio i ∪ Finset.Ioi i := by
+    ext j
+    simp only [Finset.mem_erase, Finset.mem_univ, and_true, Finset.mem_union, Finset.mem_Iio,
+      Finset.mem_Ioi, ne_iff_lt_or_gt]
+  have hd : Disjoint (Finset.Iio i) (Finset.Ioi i) :=
+    Finset.disjoint_left.mpr fun j hj hj' ↦ (Finset.mem_Iio.mp hj).not_gt (Finset.mem_Ioi.mp hj')
+  rw [hu, Finset.prod_union hd, ← mul_assoc]
   exact mul_pos h₁ h₂
 
 private lemma negOnePow_mul_le {α : ℝ} {i : ℕ} (hα : |α| ≤ 1) : (-1) ^ i * α ≤ 1 := by
@@ -112,72 +127,58 @@ private lemma negOnePow_mul_negOnePow_mul_cancel {α β : ℝ} {i : ℕ} :
 
 /-- For a polynomial `P` and coefficient function `c`, `sumNodes n c P` is a linear combination
 of `P` evaluated at the `n`'th order Chebyshev nodes, with coefficients taken from `c`. -/
-noncomputable def sumNodes (n : ℕ) (c : ℕ → ℝ) (P : ℝ[X]) := ∑ i ≤ n, P.eval (node n i) * (c i)
+noncomputable def sumNodes (n : ℕ) (c : Fin (n + 1) → ℝ) (P : ℝ[X]) :=
+  ∑ i, P.eval (gridNode n i) * c i
 
-theorem sumNodes_le_sumNodes_T {n : ℕ} {c : ℕ → ℝ}
-    (hcnonneg : ∀ i ≤ n, 0 ≤ (-1) ^ i * (c i))
+private theorem eval_T_gridNode {n : ℕ} (i : Fin (n + 1)) :
+    (T ℝ n).eval (gridNode n i) = (-1) ^ i.val :=
+  eval_T_real_node (Finset.mem_Iic.mpr (Nat.le_of_lt_succ i.isLt))
+
+private theorem eval_node_mul_le {n : ℕ} {c : Fin (n + 1) → ℝ}
+    (hc : ∀ i, 0 ≤ (-1) ^ i.val * c i) {P : ℝ[X]}
+    (hp : ∀ x ∈ Set.Icc (-1) 1, |P.eval x| ≤ 1) (i : Fin (n + 1)) :
+    P.eval (gridNode n i) * c i ≤ (T ℝ n).eval (gridNode n i) * c i := calc
+  _ = ((-1) ^ i.val * P.eval (gridNode n i)) * ((-1) ^ i.val * c i) :=
+    negOnePow_mul_negOnePow_mul_cancel.symm
+  _ ≤ 1 * ((-1) ^ i.val * c i) :=
+    mul_le_mul_of_nonneg_right (negOnePow_mul_le (hp _ node_mem_Icc)) (hc i)
+  _ = _ := by rw [one_mul, eval_T_gridNode]
+
+theorem sumNodes_le_sumNodes_T {n : ℕ} {c : Fin (n + 1) → ℝ}
+    (hc : ∀ i, 0 ≤ (-1) ^ i.val * c i)
     {P : ℝ[X]} (hPbnd : ∀ x ∈ Set.Icc (-1) 1, |P.eval x| ≤ 1) :
-    sumNodes n c P ≤ sumNodes n c (T ℝ n) := by
-  rw [sumNodes, sumNodes]
-  refine Finset.sum_le_sum (fun i hi => ?_)
-  calc
-    P.eval (node n i) * (c i) =
-      ((-1) ^ i * P.eval (node n i)) * ((-1) ^ i * (c i)) :=
-      negOnePow_mul_negOnePow_mul_cancel.symm
-    _ ≤ 1 * ((-1) ^ i * (c i)) := by
-      gcongr
-      · exact (hcnonneg i (Finset.mem_Iic.mp hi))
-      · exact (negOnePow_mul_le (hPbnd _ node_mem_Icc))
-    _ = (T ℝ n).eval (node n i) * (c i) := by
-      rw [eval_T_real_node hi, one_mul]
+    sumNodes n c P ≤ sumNodes n c (T ℝ n) :=
+  Finset.sum_le_sum fun i _ ↦ eval_node_mul_le hc hPbnd i
 
-theorem sumNodes_eq_sumNodes_T_iff {n : ℕ} {c : ℕ → ℝ}
-    (hcpos : ∀ i ≤ n, 0 < (-1) ^ i * (c i))
+theorem sumNodes_eq_sumNodes_T_iff {n : ℕ} {c : Fin (n + 1) → ℝ}
+    (hc : ∀ i, 0 < (-1) ^ i.val * c i)
     {P : ℝ[X]} (hPdeg : P.degree ≤ n) (hPbnd : ∀ x ∈ Set.Icc (-1) 1, |P.eval x| ≤ 1) :
     (sumNodes n c P = sumNodes n c (T ℝ n)) ↔ P = T ℝ n := by
-  refine ⟨fun h => ?_, by intro h; rw [h]⟩
-  rw [sumNodes, sumNodes] at h
-  apply eq_of_degrees_lt_of_eval_finset_eq ((Finset.range (n + 1)).image (node n ·))
-  · apply lt_of_le_of_lt hPdeg
-    rw [Nat.cast_lt, Finset.card_image_of_injOn (strictAntiOn_node n).injOn,
-      Finset.card_range, Nat.lt_succ_iff]
-  · rw [degree_T, Int.natAbs_natCast, Nat.cast_lt,
-      Finset.card_image_of_injOn (strictAntiOn_node n).injOn,
-      Finset.card_range, Nat.lt_succ_iff]
-  replace h := ge_of_eq h
-  contrapose! h
-  obtain ⟨x, hx, hPx⟩ := h
-  obtain ⟨i, hi, hix⟩ := Finset.mem_image.mp hx
-  replace hi := Finset.mem_Iic.mpr (Finset.mem_range_succ_iff.mp hi)
-  suffices ∑ i ≤ n, ((-1) ^ i * P.eval (node n i)) * ((-1) ^ i * c i) <
-      ∑ i ≤ n, ((-1) ^ i * (T ℝ n).eval (node n i)) * ((-1) ^ i * c i) by
-    simpa [negOnePow_mul_negOnePow_mul_cancel]
-  have h_le {i : ℕ} (hi : i ∈ Finset.Iic n) :
-    (-1) ^ i * P.eval (node n i) * ((-1) ^ i * c i) ≤
-    (-1) ^ i * (T ℝ n).eval (node n i) * ((-1) ^ i * c i) := by
-    refine mul_le_mul_of_nonneg_right ?_ (le_of_lt (hcpos i (Finset.mem_Iic.mp hi)))
-    rw [eval_T_real_node hi, ← neg_pow', neg_neg, one_pow]
-    exact negOnePow_mul_le (hPbnd _ node_mem_Icc)
-  refine Finset.sum_lt_sum (fun i hi => h_le hi) ⟨i, hi, lt_of_le_of_ne (h_le hi) ?_⟩
-  have := ne_of_lt (hcpos i (Finset.mem_Iic.mp hi))
-  grind => ring
+  refine ⟨fun h ↦ ?_, fun h ↦ h ▸ rfl⟩
+  apply eq_of_degrees_lt_of_eval_finset_eq (Finset.univ.image (gridNode n))
+  · simpa [Finset.card_image_of_injective _ (strictAntiOn_node n).injective] using
+      (hPdeg.trans_lt (by exact_mod_cast Nat.lt_succ_self n))
+  · rw [Finset.card_image_of_injective _ (strictAntiOn_node n).injective, Finset.card_univ,
+      Fintype.card_fin, degree_T, Int.natAbs_natCast]
+    exact_mod_cast Nat.lt_succ_self n
+  intro x hx
+  obtain ⟨i, _, rfl⟩ := Finset.mem_image.mp hx
+  have hterms := (Finset.sum_eq_sum_iff_of_le
+    (fun j (_ : j ∈ Finset.univ) ↦ eval_node_mul_le (fun t ↦ (hc t).le) hPbnd j)).mp h
+  have hci : c i ≠ 0 := fun hz ↦ (hc i).ne' (by rw [hz, mul_zero])
+  exact mul_right_cancel₀ hci (hterms i (Finset.mem_univ _))
 
-/-- Coefficients use to reproduce the leading coefficient of a polynomial given its values on the
-Chebyshev nodes. -/
-private noncomputable def leadingCoeffC (n i : ℕ) :=
-  (∏ j ∈ (Finset.range (n + 1)).erase i, (node n i - node n j))⁻¹
+/-- The contribution of a node to the leading coefficient in Lagrange interpolation. -/
+private noncomputable def leadingCoeffC (n : ℕ) (i : Fin (n + 1)) : ℝ :=
+  Checked.inv (∏ j ∈ Finset.univ.erase i, (gridNode n i - gridNode n j))
+    (Lagrange.isUnit_prod_sub (fun _ _ h ↦ (strictAntiOn_node n).injective h))
 
 private theorem sumNodes_eq_coeff {n : ℕ} {P : ℝ[X]} (hP : P.degree ≤ n) :
     sumNodes n (leadingCoeffC n) P = P.coeff n := by
-  simp_rw [sumNodes, leadingCoeffC]
-  have : P.degree < (Finset.range (n + 1)).card := by
-    rw [Finset.card_range]
-    grw [hP]
-    norm_cast
-    simp
-  convert! (Lagrange.coeff_eq_sum (strictAntiOn_node n).injOn this).symm using 2
-  · exact Eq.symm (Nat.range_succ_eq_Iic n)
-  · simp
+  have hdeg : P.degree < (Finset.univ : Finset (Fin (n + 1))).card := by
+    simpa using hP.trans_lt (by exact_mod_cast Nat.lt_succ_self n)
+  have h := Lagrange.coeff_eq_sum (s := Finset.univ) (strictAntiOn_node n).injective.injOn hdeg
+  simpa [sumNodes, leadingCoeffC, div_eq_mul_inv₀, Finset.sum_subtype] using h.symm
 
 private theorem sumNodes_T_eq (n : ℕ) :
     sumNodes n (leadingCoeffC n) (T ℝ n) = 2 ^ (n - 1) := by
@@ -186,15 +187,18 @@ private theorem sumNodes_T_eq (n : ℕ) :
   · simp [leadingCoeff]
   · simp
 
-private theorem negOnePow_mul_leadingCoeffC_pos {n i : ℕ} (hi : i ≤ n) :
-    0 < (-1) ^ i * leadingCoeffC n i := by
-  have := inv_pos_of_pos <| zero_lt_prod_node_sub_node hi
-  rwa [mul_inv, ← inv_pow, inv_neg_one] at this
+private theorem negOnePow_mul_leadingCoeffC_pos {n : ℕ} (i : Fin (n + 1)) :
+    0 < (-1) ^ i.val * leadingCoeffC n i := by
+  let p := ∏ j ∈ Finset.univ.erase i, (gridNode n i - gridNode n j)
+  have hp : IsUnit p := Lagrange.isUnit_prod_sub fun _ _ h ↦ (strictAntiOn_node n).injective h
+  have hsign : 0 < (-1) ^ i.val * p := zero_lt_prod_node_sub_node i
+  have h : 0 < ((-1) ^ i.val * p)⁻¹ := inv_pos.mpr hsign
+  simpa [leadingCoeffC, p, mul_inv₀, ← inv_pow₀, inv_neg_one₀, mul_comm] using h
 
 theorem coeff_le_of_forall_abs_le_one {n : ℕ} {P : ℝ[X]}
     (hPdeg : P.degree ≤ n) (hPbnd : ∀ x ∈ Set.Icc (-1) 1, |P.eval x| ≤ 1) :
     P.coeff n ≤ 2 ^ (n - 1) := by
-  convert! sumNodes_le_sumNodes_T (fun i hi => le_of_lt <| negOnePow_mul_leadingCoeffC_pos hi) hPbnd
+  convert! sumNodes_le_sumNodes_T (fun i => le_of_lt <| negOnePow_mul_leadingCoeffC_pos i) hPbnd
   · rw [sumNodes_eq_coeff hPdeg]
   · rw [sumNodes_T_eq]
 
@@ -213,7 +217,7 @@ theorem leadingCoeff_le_of_forall_abs_le_one {n : ℕ} {P : ℝ[X]}
 theorem coeff_eq_iff_of_forall_abs_le_one {n : ℕ} {P : ℝ[X]}
     (hPdeg : P.degree ≤ n) (hPbnd : ∀ x ∈ Set.Icc (-1) 1, |P.eval x| ≤ 1) :
     P.coeff n = 2 ^ (n - 1) ↔ P = T ℝ n := by
-  convert! sumNodes_eq_sumNodes_T_iff (fun i hi => negOnePow_mul_leadingCoeffC_pos hi) hPdeg hPbnd
+  convert! sumNodes_eq_sumNodes_T_iff (fun i => negOnePow_mul_leadingCoeffC_pos i) hPdeg hPbnd
   · rw [sumNodes_eq_coeff hPdeg]
   · rw [sumNodes_T_eq]
 
@@ -237,48 +241,52 @@ theorem leadingCoeff_eq_iff_of_forall_abs_le_one {n : ℕ} {P : ℝ[X]} (hn : 2 
 
 /-- Coefficients used to compute the iterated derivative of a polynomial given its values on the
 Chebyshev nodes. -/
-private noncomputable def iterateDerivativeC (n k : ℕ) (x : ℝ) (i : ℕ) :=
-    k.factorial * (∏ j ∈ (Finset.range (n + 1)).erase i, ((node n i) - (node n j)))⁻¹ *
-    ∑ t ∈ ((Finset.range (n + 1)).erase i).powersetCard (n - k), ∏ a ∈ t, (x - node n a)
+private noncomputable def iterateDerivativeC (n k : ℕ) (x : ℝ) (i : Fin (n + 1)) :=
+  k.factorial * leadingCoeffC n i *
+    ∑ t ∈ (Finset.univ.erase i).powersetCard (n - k), ∏ a ∈ t, (x - gridNode n a)
 
 private theorem sumNodes_eq_eval_iterate_derivative {n k : ℕ} (hk : k ≤ n) (x : ℝ)
     {P : ℝ[X]} (hP : P.degree ≤ n) :
     sumNodes n (iterateDerivativeC n k x) P = (derivative^[k] P).eval x := by
-  simp_rw [sumNodes, iterateDerivativeC]
-  have h₁ : P.degree < (Finset.range (n + 1)).card := by
-    rw [Finset.card_range]; grw [hP]; norm_cast; simp
-  convert!
-    (Lagrange.eval_iterate_derivative_eq_sum (strictAntiOn_node n).injOn h₁
-        (show k < _ by simp [hk]) x).symm
-  rw [Finset.mul_sum]
-  grind [Nat.range_succ_eq_Iic, Nat.card_Iic]
+  have hdeg : P.degree < (Finset.univ : Finset (Fin (n + 1))).card := by
+    simpa using hP.trans_lt (by exact_mod_cast Nat.lt_succ_self n)
+  have h := Lagrange.eval_iterate_derivative_eq_sum (s := Finset.univ) (k := k) (P := P)
+    (strictAntiOn_node n).injective.injOn hdeg (by simpa using Nat.lt_succ_of_le hk) x
+  rw [h, Finset.mul_sum]
+  simp only [sumNodes, iterateDerivativeC, leadingCoeffC, div_eq_mul_inv₀,
+    Finset.card_univ, Fintype.card_fin, Nat.add_sub_add_right]
+  let e : Fin (n + 1) ≃ (Finset.univ : Finset (Fin (n + 1))) :=
+    ⟨fun i ↦ ⟨i, Finset.mem_univ _⟩, Subtype.val, fun _ ↦ rfl, fun _ ↦ rfl⟩
+  refine Fintype.sum_equiv e _ _ fun i ↦ ?_
+  dsimp [e]
+  ring
 
-private theorem negOnePow_mul_iterateDerivativeC_nonneg
-    {n k i : ℕ} (hi : i ≤ n) {x : ℝ} (hx : 1 ≤ x) :
-    0 ≤ (-1) ^ i * iterateDerivativeC n k x i := by
-  rw [iterateDerivativeC, ← mul_assoc]
-  refine mul_nonneg ?_ (Finset.sum_nonneg fun t _ => ?_)
-  · rw [← mul_assoc, mul_comm (a := (-1) ^ i), mul_assoc]
-    exact le_of_lt <| mul_pos (Nat.cast_pos.mpr <| Nat.factorial_pos k)
-      (negOnePow_mul_leadingCoeffC_pos hi)
-  · exact Finset.prod_nonneg (fun a _ => by grind [show node n a ≤ 1 from cos_le_one _])
+private theorem negOnePow_mul_iterateDerivativeC_nonneg {n k : ℕ} (i : Fin (n + 1))
+    {x : ℝ} (hx : 1 ≤ x) :
+    0 ≤ (-1) ^ i.val * iterateDerivativeC n k x i := by
+  rw [iterateDerivativeC, ← mul_assoc, mul_left_comm ((-1) ^ i.val)]
+  refine mul_nonneg (mul_pos (Nat.cast_pos.mpr (Nat.factorial_pos k))
+    (negOnePow_mul_leadingCoeffC_pos i)).le (Finset.sum_nonneg fun t _ ↦ ?_)
+  exact Finset.prod_nonneg fun a _ ↦ sub_nonneg.mpr (node_mem_Icc.2.trans hx)
 
-private theorem negOnePow_mul_iterateDerivativeC_pos
-    {n k i : ℕ} (hk₁ : 0 < k) (hk₂ : k ≤ n) (hi : i ≤ n) {x : ℝ} (hx : 1 ≤ x) :
-    0 < (-1) ^ i * iterateDerivativeC n k x i := by
-  rw [iterateDerivativeC, ← mul_assoc]
-  refine mul_pos ?_ (Finset.sum_pos' ?_ ?_)
-  · rw [← mul_assoc, mul_comm (a := (-1) ^ i), mul_assoc]
-    exact mul_pos (Nat.cast_pos.mpr <| Nat.factorial_pos k) (negOnePow_mul_leadingCoeffC_pos hi)
-  · exact fun t _ => Finset.prod_nonneg (fun a _ => by grind [show node n a ≤ 1 from cos_le_one _])
-  · have : ∃ s ⊆ (Finset.range (n + 1)).erase i, s.card = n - k ∧ 0 ∉ s := by
-      by_cases 1 ≤ i ∧ i ≤ n - k
-      case neg => exact ⟨Finset.Icc 1 (n - k), by grind, by grind [Nat.card_Icc], by simp⟩
-      case pos => exact ⟨(Finset.Icc 1 (n - k + 1)).erase i, by grind, by grind [Nat.card_Icc],
-        by simp⟩
-    obtain ⟨s, hs, hscard, hsn⟩ := this
-    refine ⟨s, by simp [hs, hscard], Finset.prod_pos (fun a ha => ?_)⟩
-    grind [show node n a < 1 by rw [← node_eq_one (n := n)]; exact node_lt (by grind) (by grind)]
+private theorem negOnePow_mul_iterateDerivativeC_pos {n k : ℕ} (hk₁ : 0 < k) (hk₂ : k ≤ n)
+    (i : Fin (n + 1)) {x : ℝ} (hx : 1 ≤ x) :
+    0 < (-1) ^ i.val * iterateDerivativeC n k x i := by
+  rw [iterateDerivativeC, ← mul_assoc, mul_left_comm ((-1) ^ i.val)]
+  apply mul_pos (mul_pos (Nat.cast_pos.mpr (Nat.factorial_pos k))
+    (negOnePow_mul_leadingCoeffC_pos i))
+  refine Finset.sum_pos' (fun t _ ↦ Finset.prod_nonneg fun a _ ↦
+    sub_nonneg.mpr (node_mem_Icc.2.trans hx)) ?_
+  have hc : n - k ≤ ((Finset.univ.erase i).erase (0 : Fin (n + 1))).card := by
+    have h := Finset.pred_card_le_card_erase (s := Finset.univ.erase i) (a := (0 : Fin (n + 1)))
+    simp only [Finset.card_erase_of_mem (Finset.mem_univ i), Finset.card_univ, Fintype.card_fin,
+      Nat.add_sub_cancel] at h
+    omega
+  obtain ⟨t, ht, hcard⟩ := Finset.exists_subset_card_eq hc
+  refine ⟨t, Finset.mem_powersetCard.mpr ⟨fun a ha ↦ Finset.mem_of_mem_erase (ht ha), hcard⟩,
+    Finset.prod_pos fun a ha ↦ ?_⟩
+  have ha0 : 0 < a := Fin.pos_iff_ne_zero.mpr (Finset.ne_of_mem_erase (ht ha))
+  exact sub_pos.mpr ((strictAntiOn_node n ha0).trans_le (by simpa [gridNode, node_eq_one] using hx))
 
 theorem eval_iterate_derivative_le_of_forall_abs_le_one {n : ℕ} {P : ℝ[X]}
     {k : ℕ} {x : ℝ} (hx : 1 ≤ x)
@@ -288,7 +296,7 @@ theorem eval_iterate_derivative_le_of_forall_abs_le_one {n : ℕ} {P : ℝ[X]}
   · rw [iterate_derivative_eq_zero_of_degree_lt (by grw [hPdeg]; simpa),
       iterate_derivative_eq_zero_of_degree_lt (by simp [hk])]
   convert!
-    sumNodes_le_sumNodes_T (fun i hi => negOnePow_mul_iterateDerivativeC_nonneg hi hx) hPbnd using 1
+    sumNodes_le_sumNodes_T (fun i => negOnePow_mul_iterateDerivativeC_nonneg i hx) hPbnd using 1
   · rw [sumNodes_eq_eval_iterate_derivative hk x hPdeg]
   · rw [sumNodes_eq_eval_iterate_derivative hk x (le_of_eq (degree_T ℝ n))]
 
@@ -297,7 +305,7 @@ theorem eval_iterate_derivative_eq_iff_of_bounded {n : ℕ} {P : ℝ[X]}
     (hPdeg : P.degree ≤ n) (hPbnd : ∀ x ∈ Set.Icc (-1) 1, |P.eval x| ≤ 1) :
     (derivative^[k] P).eval x = (derivative^[k] (T ℝ n)).eval x ↔ P = T ℝ n := by
   convert!
-    sumNodes_eq_sumNodes_T_iff (fun i hi => negOnePow_mul_iterateDerivativeC_pos hk₁ hk₂ hi hx)
+    sumNodes_eq_sumNodes_T_iff (fun i => negOnePow_mul_iterateDerivativeC_pos hk₁ hk₂ i hx)
       hPdeg hPbnd using 2
   · rw [sumNodes_eq_eval_iterate_derivative hk₂ x hPdeg]
   · rw [sumNodes_eq_eval_iterate_derivative hk₂ x (le_of_eq (degree_T ℝ n))]

@@ -56,7 +56,7 @@ abbrev mathlibTestOptions : Array LeanOption := #[
 
 package mathlib where
   testDriver := "MathlibTest"
-  lintDriver := "batteries/runLinter"
+  lintDriver := "lintMathlib"
   lintDriverArgs := #["Mathlib"]
   -- Run the builtin linting steps in addition to the `lintDriver` set above.
   builtinLint := true
@@ -71,6 +71,19 @@ package mathlib where
   -- Warning: Do not put any options here that actually change the olean files,
   -- or inconsistent behavior may result
   -- weakLeanArgs := #[]
+
+/-- Check operator fidelity on the full Mathlib scope before running the Batteries linters. -/
+script lintMathlib (args) do
+  let lake ← getLake
+  let pkg ← getRootPackage
+  let runLake (arguments : Array String) : IO UInt32 := do
+    let child ← IO.Process.spawn { cmd := lake.toString, args := arguments, cwd := some pkg.dir }
+    child.wait
+  let buildOptions := if args.contains "--no-build" then #["--no-build"] else #[]
+  let status ← runLake (buildOptions ++ #["build", "MathlibTest.OperatorFidelityFull"])
+  if status != 0 then
+    return status
+  runLake (#["exe", "batteries/runLinter"] ++ args.toArray)
 
 /-!
 ## Mathlib libraries

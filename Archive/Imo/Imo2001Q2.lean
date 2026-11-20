@@ -64,9 +64,12 @@ end Imo2001Q2
 open Imo2001Q2
 
 theorem imo2001_q2 (ha : 0 < a) (hb : 0 < b) (hc : 0 < c) : ↑1 ≤
-    a / sqrt (a ^ 2 + ↑8 * b * c) + b / sqrt (b ^ 2 + ↑8 * c * a) + c / sqrt (c ^ 2 + ↑8 * a * b) :=
-  have h3 : ∀ {x : ℝ}, 0 < x → (x ^ (3 : ℝ)⁻¹) ^ 3 = x := fun hx =>
-    show ↑3 = (3 : ℝ) by simp ▸ rpow_inv_natCast_pow hx.le three_ne_zero
-  calc
-    1 ≤ _ := imo2001_q2' (rpow_pos_of_pos ha _) (rpow_pos_of_pos hb _) (rpow_pos_of_pos hc _)
-    _ = _ := by rw [h3 ha, h3 hb, h3 hc]
+    a / sqrt (a ^ 2 + ↑8 * b * c) + b / sqrt (b ^ 2 + ↑8 * c * a) +
+      c / sqrt (c ^ 2 + ↑8 * a * b) := by
+  have cube {x : ℝ} (hx : 0 < x) : ∃ y : ℝ, 0 < y ∧ y ^ (3 : ℕ) = x := by
+    refine ⟨_, ?_, rpow_inv_natCast_pow hx.le (by decide : (3 : ℕ) ≠ 0)⟩
+    exact rpow_pos_of_pos hx _
+  obtain ⟨u, hu, rfl⟩ := cube ha
+  obtain ⟨v, hv, rfl⟩ := cube hb
+  obtain ⟨w, hw, rfl⟩ := cube hc
+  exact imo2001_q2' hu hv hw

@@ -39,16 +39,20 @@ theorem perfectlyNormalSpace_iff_forall_isClosed_preimage_zero :
     -- for each `n`, construct a continuous function `f n` that separates `s` from `(U n)ᶜ`
     choose f hfs hfu hfr using fun n =>
       exists_continuous_zero_one_of_isClosed hs (ho n).isClosed_compl (this n)
-    have hsb (x : X) (n : ℕ) : ‖(f n) x * (1 / 2 / 2 ^ n)‖ ≤ 1 / 2 / 2 ^ n := by
-      simp [abs_of_nonneg (hfr n x).1, (hfr n x).2]
-    have hsx (x : X) : Summable fun n => f n x * (1 / 2 / 2 ^ n) :=
-      (summable_geometric_two' 1).of_norm_bounded fun n => hsb x n
+    let w (n : ℕ) : ℝ := 1 / 2 / 2 ^ n
+    have hw (n : ℕ) : 0 < w n := by dsimp [w]; positivity
+    have hsw : Summable w := summable_geometric_two' 1
+    have hsb (x : X) (n : ℕ) : ‖f n x * w n‖ ≤ w n := by
+      rw [Real.norm_eq_abs, abs_mul, abs_of_nonneg (hfr n x).1, abs_of_nonneg (hw n).le]
+      exact mul_le_of_le_one_left (hw n).le (hfr n x).2
+    have hsx (x : X) : Summable fun n => f n x * w n :=
+      hsw.of_norm_bounded fun n => hsb x n
     -- consider the infinite sum of `f n x * (1 / 2 / 2 ^ n)`, which is uniformly convergent and
     -- thus continuous because it is dominated by a geometric series
     let h : C(X, ℝ) :=
-      { toFun x := ∑' n, f n x * (1 / 2 / 2 ^ n)
+      { toFun x := ∑' n, f n x * w n
         continuous_toFun :=
-          continuous_tsum (fun n => by fun_prop) (summable_geometric_two' 1) fun n x => hsb x n }
+          continuous_tsum (fun n => by fun_prop) hsw fun n x => hsb x n }
     refine ⟨h, ?_, fun x => ⟨?_, ?_⟩⟩
     · ext x
       refine ⟨fun hp => ?_, fun hp => ?_⟩
@@ -59,15 +63,15 @@ theorem perfectlyNormalSpace_iff_forall_isClosed_preimage_zero :
         apply ne_of_gt
         obtain ⟨i, hi⟩ := mem_iUnion.1 <| compl_iInter _ ▸ mem_compl (hu ▸ h)
         calc
-        _ < 1 / 2 / 2 ^ i := by positivity
-        _ = f i x * (1 / 2 / 2 ^ i) := by simp [hfu i hi]
-        _ ≤ _ := (hsx x).le_tsum i fun j hj => by positivity [(hfr j x).1]
-    · exact tsum_nonneg fun n => by simp [(hfr n x).1]
+        0 < w i := hw i
+        _ = f i x * w i := by simp [hfu i hi]
+        _ ≤ _ := (hsx x).le_tsum i fun j _ => mul_nonneg (hfr j x).1 (hw j).le
+    · exact tsum_nonneg fun n => mul_nonneg (hfr n x).1 (hw n).le
     · calc
-      _ = ∑' n, f n x * (1 / 2 / 2 ^ n) := by simp [h]
-      _ ≤ ∑' n, 1 / 2 / 2 ^ n :=
-        (hsx x).tsum_le_tsum (fun n => by simp [(hfr n x).2]) (summable_geometric_two' 1)
-      _ = _ := tsum_geometric_two' 1
+      h x = ∑' n, f n x * w n := rfl
+      _ ≤ ∑' n, w n :=
+        (hsx x).tsum_le_tsum (fun n => mul_le_of_le_one_left (hw n).le (hfr n x).2) hsw
+      _ = 1 := tsum_geometric_two' 1
   mpr h :=
     { normal s t hs ht hst := by
         -- pick `f, g` such that `s = f ⁻¹' {0}` and `t = g ⁻¹' {0}`, and then the function
@@ -82,10 +86,12 @@ theorem perfectlyNormalSpace_iff_forall_isClosed_preimage_zero :
           by_cases! hfx : f x = 0
           · simpa [hfx] using hst.notMem_of_mem_left hfx
           · positivity [(hgr x).1, (hfr x).1]
-        have hp : s = (fun a => f a / (f a + g a)) ⁻¹' {0} := by simp_all [preimage]
-        have : t = (fun a => f a / (f a + g a)) ⁻¹' {1} := by simp_all [preimage, div_eq_one_iff_eq]
-        rw [hp, this]
-        exact hsn.preimage (f.continuous.div₀ (f.continuous.add g.continuous) hfg)
+        let k (x : X) : ℝ := Checked.div (f x) (f x + g x) (hfg x).isUnit
+        have hp : s = k ⁻¹' {0} := by rw [hf]; ext x; simp [k]
+        have hq : t = k ⁻¹' {1} := by rw [hg]; ext x; simp [k, div_eq_one_iff_eq]
+        rw [hp, hq]
+        exact hsn.preimage (f.continuous.div₀ (f.continuous.add g.continuous)
+          (h₀ := fun x ↦ (hfg x).isUnit))
       closed_gdelta s hs := by
         by_cases! hse : s = ∅
         · simp_all

@@ -58,10 +58,10 @@ theorem Filter.Tendsto.pos_mul_atTop {C : 𝕜} (hC : 0 < C) (hf : Tendsto f l (
 right neighbourhood of zero. -/
 @[simp]
 lemma inv_atTop₀ :
-    map (fun x : {x : 𝕜 | IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) (comap Subtype.val atTop) =
+    map (fun x : {x : 𝕜 // IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) (comap Subtype.val atTop) =
       𝓝[>] 0 := by
   have himg (a : 𝕜) (ha : 0 < a) :
-      (fun x : {x : 𝕜 | IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) '' (Subtype.val ⁻¹' Ioi a) =
+      (fun x : {x : 𝕜 // IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) '' (Subtype.val ⁻¹' Ioi a) =
         Ioo 0 a⁻¹ := by
     ext y
     constructor
@@ -79,10 +79,10 @@ lemma inv_atTop₀ :
 filter at positive infinity. -/
 @[simp]
 lemma inv_nhdsGT_zero :
-    map (fun x : {x : 𝕜 | IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) (comap Subtype.val (𝓝[>] 0)) =
+    map (fun x : {x : 𝕜 // IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) (comap Subtype.val (𝓝[>] 0)) =
       atTop := by
   have himg (a : 𝕜) (ha : 0 < a) :
-      (fun x : {x : 𝕜 | IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) '' (Subtype.val ⁻¹' Ioo 0 a) =
+      (fun x : {x : 𝕜 // IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) '' (Subtype.val ⁻¹' Ioo 0 a) =
         Ioi a⁻¹ := by
     ext y
     constructor
@@ -255,10 +255,10 @@ theorem Filter.Tendsto.neg_mul_atBot {C : 𝕜} (hC : C < 0) (hf : Tendsto f l (
 left neighbourhood of zero. -/
 @[simp]
 lemma inv_atBot₀ :
-    map (fun x : {x : 𝕜 | IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) (comap Subtype.val atBot) =
+    map (fun x : {x : 𝕜 // IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) (comap Subtype.val atBot) =
       𝓝[<] 0 := by
   have himg (a : 𝕜) (ha : a < 0) :
-      (fun x : {x : 𝕜 | IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) '' (Subtype.val ⁻¹' Iio a) =
+      (fun x : {x : 𝕜 // IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) '' (Subtype.val ⁻¹' Iio a) =
         Ioo a⁻¹ 0 := by
     ext y
     constructor
@@ -276,10 +276,10 @@ lemma inv_atBot₀ :
 filter at negative infinity. -/
 @[simp]
 lemma inv_nhdsLT_zero :
-    map (fun x : {x : 𝕜 | IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) (comap Subtype.val (𝓝[<] 0)) =
+    map (fun x : {x : 𝕜 // IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) (comap Subtype.val (𝓝[<] 0)) =
       atBot := by
   have himg (a : 𝕜) (ha : a < 0) :
-      (fun x : {x : 𝕜 | IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) '' (Subtype.val ⁻¹' Ioo a 0) =
+      (fun x : {x : 𝕜 // IsUnit x} ↦ Checked.inv (x : 𝕜) x.2) '' (Subtype.val ⁻¹' Ioo a 0) =
         Iio a⁻¹ := by
     ext y
     constructor

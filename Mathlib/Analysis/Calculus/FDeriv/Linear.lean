@@ -43,7 +43,7 @@ This section deals with the first form, see below for the unbundled version
 
 protected theorem hasFDerivAtFilter : HasFDerivAtFilter f f L :=
   .of_isLittleOTVS <| (IsLittleOTVS.zero _ _).congr_left fun x => by
-    simp only [f.map_sub, sub_self, Pi.zero_apply]
+    simp only [id_eq, f.map_sub, sub_self, Pi.zero_apply]
 
 @[fun_prop]
 protected theorem hasStrictFDerivAt : HasStrictFDerivAt f f x :=

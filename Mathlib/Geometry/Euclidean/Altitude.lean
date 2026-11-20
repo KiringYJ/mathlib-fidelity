@@ -416,7 +416,7 @@ lemma abs_inner_vsub_altitudeFoot_div_lt_one {i j : Fin (n + 1)} (hij : i ≠ j)
 lemma neg_one_lt_inner_vsub_altitudeFoot_div (s : Simplex ℝ P n) (i j : Fin (n + 1)) :
     -1 < ⟪s.points i -ᵥ s.altitudeFoot i, s.points j -ᵥ s.altitudeFoot j⟫
             / (s.height i * s.height j) := by
-  rw [neg_lt, neg_div', div_lt_one (by simp [height]), neg_lt]
+  rw [neg_lt, ← neg_div₀, div_lt_one (by simp [height]), neg_lt]
   exact neg_mul_lt_inner_vsub_altitudeFoot _ _ _
 
 end Simplex

@@ -34,8 +34,9 @@ theorem dense_addSubgroupClosure_pair_iff {a b : ℝ} {hb : IsUnit b} :
       AddSubgroup.coe_zmultiples, pair_subset_iff]
     refine ⟨⟨r.num, ?_⟩, r.den, ?_⟩
     · rw [Rat.cast_def, div_eq_div_iff] at hr
-      simp [field, hr]
-    · simp [field, mul_comm]
+      change r.num • (b / (r.den : ℝ)) = a
+      rwa [zsmul_eq_mul, ← mul_div_assoc₀, div_eq_iff]
+    · simp [field]
   · intro h
     contrapose h
     rcases (AddSubgroup.dense_or_cyclic _).resolve_left h with ⟨c, hc⟩

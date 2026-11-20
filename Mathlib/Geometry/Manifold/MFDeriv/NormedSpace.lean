@@ -127,12 +127,14 @@ end extChartAt
 theorem MDifferentiableWithinAt.clm_precomp {f : M → F₁ →L[𝕜] F₂} {s : Set M} {x : M}
     (hf : MDiffAt[s] f x) :
     MDiffAt[s] (fun y ↦ (f y).precomp F₃ : M → (F₂ →L[𝕜] F₃) →L[𝕜] (F₁ →L[𝕜] F₃)) x :=
-  Differentiable.comp_mdifferentiableWithinAt
+  Differentiable.comp_mdifferentiableWithinAt (f := f)
+    (g := fun h : F₁ →L[𝕜] F₂ ↦ h.precomp F₃)
     (ContinuousLinearMap.differentiable (ContinuousLinearMap.compL 𝕜 F₁ F₂ F₃).flip) hf
 
 nonrec theorem MDifferentiableAt.clm_precomp {f : M → F₁ →L[𝕜] F₂} {x : M} (hf : MDiffAt f x) :
     MDiffAt (fun y ↦ (f y).precomp F₃ : M → (F₂ →L[𝕜] F₃) →L[𝕜] (F₁ →L[𝕜] F₃)) x :=
-  Differentiable.comp_mdifferentiableAt
+  Differentiable.comp_mdifferentiableAt (f := f)
+    (g := fun h : F₁ →L[𝕜] F₂ ↦ h.precomp F₃)
     (ContinuousLinearMap.differentiable (ContinuousLinearMap.compL 𝕜 F₁ F₂ F₃).flip) hf
 
 theorem MDifferentiableOn.clm_precomp {f : M → F₁ →L[𝕜] F₂} {s : Set M} (hf : MDiff[s] f) :
@@ -146,12 +148,14 @@ theorem MDifferentiable.clm_precomp {f : M → F₁ →L[𝕜] F₂} (hf : MDiff
 theorem MDifferentiableWithinAt.clm_postcomp {f : M → F₂ →L[𝕜] F₃} {s : Set M} {x : M}
     (hf : MDiffAt[s] f x) :
     MDiffAt[s] (fun y ↦ (f y).postcomp F₁ : M → (F₁ →L[𝕜] F₂) →L[𝕜] (F₁ →L[𝕜] F₃)) x :=
-  Differentiable.comp_mdifferentiableWithinAt
+  Differentiable.comp_mdifferentiableWithinAt (f := f)
+    (g := fun h : F₂ →L[𝕜] F₃ ↦ h.postcomp F₁)
     (ContinuousLinearMap.differentiable (ContinuousLinearMap.compL 𝕜 F₁ F₂ F₃)) hf
 
 theorem MDifferentiableAt.clm_postcomp {f : M → F₂ →L[𝕜] F₃} {x : M} (hf : MDiffAt f x) :
     MDiffAt (fun y ↦ (f y).postcomp F₁ : M → (F₁ →L[𝕜] F₂) →L[𝕜] (F₁ →L[𝕜] F₃)) x :=
-  Differentiable.comp_mdifferentiableAt
+  Differentiable.comp_mdifferentiableAt (f := f)
+    (g := fun h : F₂ →L[𝕜] F₃ ↦ h.postcomp F₁)
     (ContinuousLinearMap.differentiable (ContinuousLinearMap.compL 𝕜 F₁ F₂ F₃)) hf
 
 nonrec theorem MDifferentiableOn.clm_postcomp {f : M → F₂ →L[𝕜] F₃} {s : Set M} (hf : MDiff[s] f) :
@@ -623,7 +627,8 @@ theorem mvfderivWithin_eq_fderivWithin :
 /-- For maps between vector spaces, `mvfderiv` and `fderiv` coincide. -/
 @[simp]
 theorem mvfderiv_eq_fderiv : d% f x = fderiv 𝕜 f x := by
-  rw [← mvfderivWithin_univ, ← fderivWithin_univ, mvfderivWithin_eq_fderivWithin]
+  rw [← mvfderivWithin_univ, mvfderivWithin_eq_fderivWithin]
+  exact congrFun (fderivWithin_univ (𝕜 := 𝕜) (f := f)) x
 
 /-- For maps between vector spaces, `mfderivWithin` and `fderivWithin` coincide. -/
 theorem mfderivWithin_eq_fderivWithin : mfderiv[s] f x = fderivWithin 𝕜 f s x := by

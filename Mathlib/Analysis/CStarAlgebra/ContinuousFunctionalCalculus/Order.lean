@@ -117,16 +117,16 @@ alias ⟨le_of_inr, inr_mono⟩ := inr_le_inr_iff
 lemma convexOn_of_convexOn_inr_comp {f : A → A} {s : Set A}
     (hf : ConvexOn ℝ s (inr (R := ℂ) ∘ f)) : ConvexOn ℝ s f := by
   refine ⟨hf.1, ?_⟩
-  intro x hx y hy a b ha hb hab
+  intro x hx y hy a b ha hb hab z hz heq
   rw [← inr_le_inr_iff]
-  simpa using hf.2 hx hy ha hb hab
+  simpa using hf.2 hx hy ha hb hab (z := z) hz heq
 
 lemma concaveOn_of_concaveOn_inr_comp {f : A → A} {s : Set A}
     (hf₂ : ConcaveOn ℝ s (inr (R := ℂ) ∘ f)) : ConcaveOn ℝ s f := by
   refine ⟨hf₂.1, ?_⟩
-  intro x hx y hy a b ha hb hab
+  intro x hx y hy a b ha hb hab z hz heq
   rw [← inr_le_inr_iff]
-  simpa using hf₂.2 hx hy ha hb hab
+  simpa using hf₂.2 hx hy ha hb hab (z := z) hz heq
 
 lemma nnreal_cfcₙ_eq_cfc_inr (a : A) (f : ℝ≥0 → ℝ≥0)
     (hf₀ : f 0 = 0 := by cfc_zero_tac) : cfcₙ f a = cfc f (a : A⁺¹) :=
@@ -420,16 +420,20 @@ lemma _root_.isStrictlyPositive_add {a b : A}
     IsStrictlyPositive (a + b) := by
   grind [IsStrictlyPositive.add_nonneg, IsStrictlyPositive.nonneg_add]
 
-lemma antitoneOn_ringInverse : AntitoneOn Ring.inverse {a : A | IsStrictlyPositive a} := by
-  intro a (apos : IsStrictlyPositive a) b (bpos : IsStrictlyPositive b) hab
-  rw [Ring.inverse_of_isUnit (by grind), Ring.inverse_of_isUnit (by grind)]
-  exact CStarAlgebra.inv_le_inv (Units.isStrictlyPositive_iff.mp apos) hab
-
-open Ring in
 @[gcongr]
 lemma ringInverse_le_ringInverse {a b : A} (hab : a ≤ b) (ha : IsStrictlyPositive a := by cfc_tac) :
-    b⁻¹ʳ ≤ a⁻¹ʳ :=
-  antitoneOn_ringInverse ha (IsStrictlyPositive.of_le ha hab) hab
+    Checked.inv b (ha.of_le hab).isUnit ≤ Checked.inv a ha.isUnit := by
+  have hb := ha.of_le hab
+  have hab' : (ha.isUnit.unit : A) ≤ hb.isUnit.unit := by
+    simpa only [IsUnit.unit_spec] using hab
+  simpa only [Units.val_inv_eq_inv_val₀, IsUnit.unit_spec] using
+    CStarAlgebra.inv_le_inv (a := ha.isUnit.unit) (b := hb.isUnit.unit)
+      (by simpa only [IsUnit.unit_spec] using ha.nonneg) hab'
+
+/-- Inversion on strictly positive operators reverses order. -/
+lemma antitone_ringInverse :
+    Antitone (fun a : {a : A // IsStrictlyPositive a} ↦ Checked.inv a.1 a.property.isUnit) :=
+  fun a b hab ↦ ringInverse_le_ringInverse (show (a : A) ≤ b from hab) a.property
 
 end CStarAlgebra
 
@@ -557,7 +561,10 @@ lemma convexOn_cfcₙ_of_convexOn_cfc {f : ℝ → ℝ} {s : Set A}
       simp [cfcₙ_apply_of_not_map_zero _ hf₀]
     rw [this]
     refine convexOn_const _ ?_
-    have : Convex ℝ (inrl ⁻¹' inrl '' s) := Convex.linear_preimage hf.1 _
+    have hc : Convex ℝ (inrl '' s) := by
+      change Convex ℝ (inr (R := ℂ) '' s)
+      simpa only [Set.image_id] using hf.1
+    have : Convex ℝ (inrl ⁻¹' inrl '' s) := hc.linear_preimage inrl
     rwa [Set.preimage_image_eq _ inrHom_injective] at this
   refine convexOn_of_convexOn_inr_comp ?_
   have h₁ : inr (R := ℂ) ∘ (cfcₙ f) = fun x : A => ((cfcₙ f x : A) : A⁺¹) := rfl

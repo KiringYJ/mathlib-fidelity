@@ -175,10 +175,11 @@ instance instProdEDist : EDist (WithLp p (α × β)) where
   edist f g :=
     if _hp : p = 0 then
       (if edist f.fst g.fst = 0 then 0 else 1) + (if edist f.snd g.snd = 0 then 0 else 1)
-    else if p = ∞ then
+    else if hptop : p = ∞ then
       edist f.fst g.fst ⊔ edist f.snd g.snd
     else
-      (edist f.fst g.fst ^ p.toReal + edist f.snd g.snd ^ p.toReal) ^ (1 / p.toReal)
+      (edist f.fst g.fst ^ p.toReal + edist f.snd g.snd ^ p.toReal) ^
+        Checked.div 1 p.toReal (ENNReal.toReal_pos _hp hptop).ne'.isUnit
 
 variable {p α β}
 
@@ -186,12 +187,12 @@ variable {p α β}
 theorem prod_edist_eq_card (f g : WithLp 0 (α × β)) :
     edist f g =
       (if edist f.fst g.fst = 0 then 0 else 1) + (if edist f.snd g.snd = 0 then 0 else 1) := by
-  convert! ite_eq_left rfl
+  exact dite_eq_left rfl
 
 theorem prod_edist_eq_add (hp : 0 < p.toReal) (f g : WithLp p (α × β)) :
     edist f g = (edist f.fst g.fst ^ p.toReal + edist f.snd g.snd ^ p.toReal) ^ (1 / p.toReal) :=
   let hp' := ENNReal.toReal_pos_iff.mp hp
-  (ite_eq_right hp'.1.ne').trans (ite_eq_right hp'.2.ne)
+  (dite_eq_right hp'.1.ne').trans (dite_eq_right hp'.2.ne)
 
 theorem prod_edist_eq_sup (f g : WithLp ∞ (α × β)) :
     edist f g = edist f.fst g.fst ⊔ edist f.snd g.snd := rfl
@@ -242,21 +243,22 @@ instance instProdDist : Dist (WithLp p (α × β)) where
   dist f g :=
     if _hp : p = 0 then
       (if dist f.fst g.fst = 0 then 0 else 1) + (if dist f.snd g.snd = 0 then 0 else 1)
-    else if p = ∞ then
+    else if hptop : p = ∞ then
       dist f.fst g.fst ⊔ dist f.snd g.snd
     else
-      (dist f.fst g.fst ^ p.toReal + dist f.snd g.snd ^ p.toReal) ^ (1 / p.toReal)
+      (dist f.fst g.fst ^ p.toReal + dist f.snd g.snd ^ p.toReal) ^
+        Checked.div 1 p.toReal (ENNReal.toReal_pos _hp hptop).ne'.isUnit
 
 variable {p α β}
 
 theorem prod_dist_eq_card (f g : WithLp 0 (α × β)) : dist f g =
     (if dist f.fst g.fst = 0 then 0 else 1) + (if dist f.snd g.snd = 0 then 0 else 1) := by
-  convert! ite_eq_left rfl
+  exact dite_eq_left rfl
 
 theorem prod_dist_eq_add (hp : 0 < p.toReal) (f g : WithLp p (α × β)) :
     dist f g = (dist f.fst g.fst ^ p.toReal + dist f.snd g.snd ^ p.toReal) ^ (1 / p.toReal) :=
   let hp' := ENNReal.toReal_pos_iff.mp hp
-  (ite_eq_right hp'.1.ne').trans (ite_eq_right hp'.2.ne)
+  (dite_eq_right hp'.1.ne').trans (dite_eq_right hp'.2.ne)
 
 theorem prod_dist_eq_sup (f g : WithLp ∞ (α × β)) :
     dist f g = dist f.fst g.fst ⊔ dist f.snd g.snd := rfl
@@ -277,24 +279,25 @@ instance instProdNorm : Norm (WithLp p (α × β)) where
   norm f :=
     if _hp : p = 0 then
       (if ‖f.fst‖ = 0 then 0 else 1) + (if ‖f.snd‖ = 0 then 0 else 1)
-    else if p = ∞ then
+    else if hptop : p = ∞ then
       ‖f.fst‖ ⊔ ‖f.snd‖
     else
-      (‖f.fst‖ ^ p.toReal + ‖f.snd‖ ^ p.toReal) ^ (1 / p.toReal)
+      (‖f.fst‖ ^ p.toReal + ‖f.snd‖ ^ p.toReal) ^
+        Checked.div 1 p.toReal (ENNReal.toReal_pos _hp hptop).ne'.isUnit
 
 variable {p α β}
 
 @[simp]
 theorem prod_norm_eq_card (f : WithLp 0 (α × β)) :
     ‖f‖ = (if ‖f.fst‖ = 0 then 0 else 1) + (if ‖f.snd‖ = 0 then 0 else 1) := by
-  convert! ite_eq_left rfl
+  exact dite_eq_left rfl
 
 theorem prod_norm_eq_sup (f : WithLp ∞ (α × β)) : ‖f‖ = ‖f.fst‖ ⊔ ‖f.snd‖ := rfl
 
 theorem prod_norm_eq_add (hp : 0 < p.toReal) (f : WithLp p (α × β)) :
     ‖f‖ = (‖f.fst‖ ^ p.toReal + ‖f.snd‖ ^ p.toReal) ^ (1 / p.toReal) :=
   let hp' := ENNReal.toReal_pos_iff.mp hp
-  (ite_eq_right hp'.1.ne').trans (ite_eq_right hp'.2.ne)
+  (dite_eq_right hp'.1.ne').trans (dite_eq_right hp'.2.ne)
 
 end Norm
 
@@ -383,14 +386,14 @@ abbrev prodPseudoMetricAux [PseudoMetricSpace α] [PseudoMetricSpace β] :
     (fun f g => by
       rcases p.dichotomy with (rfl | h)
       · simp [prod_dist_eq_sup]
-      · simp only [dist, one_div, dite_eq_ite]
+      · simp only [dist]
         split_ifs with hp' <;> positivity)
     fun f g => by
     rcases p.dichotomy with (rfl | h)
     · refine ENNReal.eq_of_forall_le_nnreal_iff fun r ↦ ?_
       simp [prod_edist_eq_sup, prod_dist_eq_sup]
     · have : 0 < p.toReal := by rw [ENNReal.toReal_pos_iff_ne_top]; rintro rfl; norm_num at h
-      simp only [prod_edist_eq_add, edist_dist, one_div, prod_dist_eq_add, this]
+      simp only [prod_edist_eq_add, edist_dist, prod_dist_eq_add, this]
       rw [← ENNReal.ofReal_rpow_of_nonneg, ENNReal.ofReal_add, ← ENNReal.ofReal_rpow_of_nonneg,
         ← ENNReal.ofReal_rpow_of_nonneg] <;> simp [Real.rpow_nonneg, add_nonneg]
 
@@ -402,7 +405,7 @@ private theorem edist_proj_le_edist_aux [PseudoEMetricSpace α] [PseudoEMetricSp
     edist x.fst y.fst ≤ edist x y ∧ edist x.snd y.snd ≤ edist x y := by
   rcases p.dichotomy with (rfl | h)
   · simp [prod_edist_eq_sup]
-  · have cancel : p.toReal * (1 / p.toReal) = 1 := mul_div_cancel₀ 1 (zero_lt_one.trans_le h).ne'
+  · have cancel : p.toReal * (1 / p.toReal) = 1 := mul_one_div_cancel
     rw [prod_edist_eq_add (zero_lt_one.trans_le h)]
     constructor
     · calc
@@ -432,8 +435,8 @@ private lemma prod_antilipschitzWith_ofLp_aux [PseudoEMetricSpace α] [PseudoEMe
   · simp [edist]
   · have pos : 0 < p.toReal := by positivity
     have nonneg : 0 ≤ 1 / p.toReal := by positivity
-    have cancel : p.toReal * (1 / p.toReal) = 1 := mul_div_cancel₀ 1 (ne_of_gt pos)
-    rw [prod_edist_eq_add pos, ENNReal.toReal_div 1 p]
+    have cancel : p.toReal * (1 / p.toReal) = 1 := mul_one_div_cancel
+    rw [prod_edist_eq_add pos, ENNReal.toReal_div 1 p (hb := pos.ne'.isUnit)]
     simp only [edist, ENNReal.toReal_one]
     calc
       (edist x.fst y.fst ^ p.toReal + edist x.snd y.snd ^ p.toReal) ^ (1 / p.toReal) ≤
@@ -609,7 +612,8 @@ variable {p α β}
 
 theorem prod_nndist_eq_add [PseudoMetricSpace α] [PseudoMetricSpace β]
     (hp : p ≠ ∞) (x y : WithLp p (α × β)) :
-    nndist x y = (nndist x.fst y.fst ^ p.toReal + nndist x.snd y.snd ^ p.toReal) ^ (1 / p.toReal) :=
+    nndist x y = (nndist x.fst y.fst ^ p.toReal + nndist x.snd y.snd ^ p.toReal) ^
+      Checked.div 1 p.toReal (p.toReal_pos_iff_ne_top.mpr hp).ne'.isUnit :=
   NNReal.eq <| by
     push_cast
     exact prod_dist_eq_add (p.toReal_pos_iff_ne_top.mpr hp) _ _
@@ -741,15 +745,18 @@ section norm_of
 variable {p α β}
 
 theorem prod_norm_eq_of_nat [Norm α] [Norm β] (n : ℕ) (h : p = n) (f : WithLp p (α × β)) :
-    ‖f‖ = (‖f.fst‖ ^ n + ‖f.snd‖ ^ n) ^ (1 / (n : ℝ)) := by
+    ‖f‖ = (‖f.fst‖ ^ n + ‖f.snd‖ ^ n) ^ (1 / (n : ℝ≥0∞)).toReal := by
   have := p.toReal_pos_iff_ne_top.mpr (ne_of_eq_of_ne h <| ENNReal.natCast_ne_top n)
-  simp only [one_div, h, Real.rpow_natCast, ENNReal.toReal_natCast,
-    prod_norm_eq_add this]
+  have hpUnit : IsUnit p.toReal := this.ne'.isUnit
+  rw [← h, show (1 / p).toReal = 1 / p.toReal by
+    simp [ENNReal.toReal_inv (ha := hpUnit)]]
+  simp only [h, Real.rpow_natCast, ENNReal.toReal_natCast, prod_norm_eq_add this]
 
 variable [SeminormedAddCommGroup α] [SeminormedAddCommGroup β]
 
 theorem prod_nnnorm_eq_add (hp : p ≠ ∞) (f : WithLp p (α × β)) :
-    ‖f‖₊ = (‖f.fst‖₊ ^ p.toReal + ‖f.snd‖₊ ^ p.toReal) ^ (1 / p.toReal) := by
+    ‖f‖₊ = (‖f.fst‖₊ ^ p.toReal + ‖f.snd‖₊ ^ p.toReal) ^
+      Checked.div 1 p.toReal (p.toReal_pos_iff_ne_top.mpr hp).ne'.isUnit := by
   ext
   simp [prod_norm_eq_add (p.toReal_pos_iff_ne_top.mpr hp)]
 
@@ -804,7 +811,7 @@ section L2
 theorem prod_norm_eq_of_L2 (x : WithLp 2 (α × β)) :
     ‖x‖ = √(‖x.fst‖ ^ 2 + ‖x.snd‖ ^ 2) := by
   rw [prod_norm_eq_of_nat 2 (by norm_cast) _, Real.sqrt_eq_rpow]
-  norm_cast
+  norm_num [ENNReal.toReal_div 1 2 (hb := by checked_unit)]
 
 theorem prod_nnnorm_eq_of_L2 (x : WithLp 2 (α × β)) :
     ‖x‖₊ = NNReal.sqrt (‖x.fst‖₊ ^ 2 + ‖x.snd‖₊ ^ 2) :=
@@ -845,7 +852,7 @@ section Single
     simp [prod_nnnorm_eq_sup]
   | coe p =>
     have hp0 : (p : ℝ) ≠ 0 := mod_cast (zero_lt_one.trans_le <| Fact.out (p := 1 ≤ (p : ℝ≥0∞))).ne'
-    simp [prod_nnnorm_eq_add, NNReal.zero_rpow hp0, ← NNReal.rpow_mul, mul_inv_cancel₀ hp0]
+    simp [prod_nnnorm_eq_add, NNReal.zero_rpow hp0, ← NNReal.rpow_mul, mul_inv_cancel₀]
 
 @[simp] lemma nnnorm_toLp_inr (y : β) : ‖toLp p ((0 : α), y)‖₊ = ‖y‖₊ := by
   induction p generalizing hp with
@@ -853,7 +860,7 @@ section Single
     simp [prod_nnnorm_eq_sup]
   | coe p =>
     have hp0 : (p : ℝ) ≠ 0 := mod_cast (zero_lt_one.trans_le <| Fact.out (p := 1 ≤ (p : ℝ≥0∞))).ne'
-    simp [prod_nnnorm_eq_add, NNReal.zero_rpow hp0, ← NNReal.rpow_mul, mul_inv_cancel₀ hp0]
+    simp [prod_nnnorm_eq_add, NNReal.zero_rpow hp0, ← NNReal.rpow_mul, mul_inv_cancel₀]
 
 @[simp]
 lemma norm_toLp_fst (x : α) : ‖toLp p (x, (0 : β))‖ = ‖x‖ :=
@@ -905,8 +912,8 @@ instance instProdIsBoundedSMul : IsBoundedSMul 𝕜 (WithLp p (α × β)) :=
       exact norm_smul_le _ _
     · have hp0 : 0 < p.toReal := zero_lt_one.trans_le hp
       have hpt : p ≠ ⊤ := p.toReal_pos_iff_ne_top.mp hp0
-      rw [prod_nnnorm_eq_add hpt, prod_nnnorm_eq_add hpt, one_div, NNReal.rpow_inv_le_iff hp0,
-        NNReal.mul_rpow, ← NNReal.rpow_mul, inv_mul_cancel₀ hp0.ne', NNReal.rpow_one, mul_add,
+      rw [prod_nnnorm_eq_add hpt, prod_nnnorm_eq_add hpt, one_div₀, NNReal.rpow_inv_le_iff hp0,
+        NNReal.mul_rpow, ← NNReal.rpow_mul, inv_mul_cancel₀, NNReal.rpow_one, mul_add,
         ← NNReal.mul_rpow, ← NNReal.mul_rpow]
       gcongr <;> exact nnnorm_smul_le _ _
 
@@ -930,8 +937,8 @@ instance instProdNormSMulClass [SeminormedRing 𝕜] [Module 𝕜 α] [Module �
     · simp only [← prod_nnnorm_ofLp, WithLp.ofLp_smul, nnnorm_smul]
     · have hp0 : 0 < p.toReal := zero_lt_one.trans_le hp
       have hpt : p ≠ ⊤ := p.toReal_pos_iff_ne_top.mp hp0
-      rw [prod_nnnorm_eq_add hpt, prod_nnnorm_eq_add hpt, one_div, NNReal.rpow_inv_eq_iff hp0.ne',
-        NNReal.mul_rpow, ← NNReal.rpow_mul, inv_mul_cancel₀ hp0.ne', NNReal.rpow_one, mul_add,
+      rw [prod_nnnorm_eq_add hpt, prod_nnnorm_eq_add hpt, one_div₀, NNReal.rpow_inv_eq_iff hp0.ne',
+        NNReal.mul_rpow, ← NNReal.rpow_mul, inv_mul_cancel₀, NNReal.rpow_one, mul_add,
         ← NNReal.mul_rpow, ← NNReal.mul_rpow, smul_fst, smul_snd, nnnorm_smul, nnnorm_smul]
 
 section SeminormedAddCommGroup
@@ -985,7 +992,7 @@ lemma prod_norm_eq_add_idemFst [Fact (1 ≤ p)] (hp : 0 < p.toReal) (x : WithLp 
 
 lemma prod_norm_eq_idemFst_of_L1 (x : WithLp 1 (α × β)) : ‖x‖ = ‖idemFst x‖ + ‖idemSnd x‖ := by
   rw [prod_norm_eq_add_idemFst (lt_of_lt_of_eq zero_lt_one toReal_one.symm)]
-  simp only [toReal_one, Real.rpow_one, ne_eq, one_ne_zero, not_false_eq_true, div_self]
+  simp only [toReal_one, div_one₀, Real.rpow_one]
 
 end SeminormedAddCommGroup
 
@@ -1154,7 +1161,7 @@ def withLpProdUnique [Unique β] : WithLp p (α × β) ≃ᵢ α where
     · absurd hp.elim; simp
     · simp_rw [WithLp.prod_edist_eq_sup, Unique.eq_default, edist_self, max_zero]
     · simp_rw [WithLp.prod_edist_eq_add hp, Unique.eq_default, edist_self,
-        ENNReal.zero_rpow_of_pos hp, add_zero, one_div, ENNReal.rpow_rpow_inv hp.ne']
+        ENNReal.zero_rpow_of_pos hp, add_zero, one_div₀, ENNReal.rpow_rpow_inv hp.ne']
 
 theorem coe_withLpProdUnique [Unique β] : ⇑(withLpProdUnique p α β) = WithLp.fst :=
   rfl

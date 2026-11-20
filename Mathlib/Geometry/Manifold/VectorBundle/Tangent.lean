@@ -92,11 +92,14 @@ def tangentBundleCore : VectorBundleCore 𝕜 M E (atlas H M) where
   coordChange i j x :=
     fderivWithin 𝕜 (j.1.extend I ∘ (i.1.extend I).symm) (range I) (i.1.extend I x)
   coordChange_self i x hx v := by
-    rw [Filter.EventuallyEq.fderivWithin_eq, fderivWithin_fun_id, ContinuousLinearMap.id_apply]
-    · exact I.uniqueDiffWithinAt_image
-    · filter_upwards [i.1.extend_target_mem_nhdsWithin hx] with y hy
+    have h : (i.1.extend I ∘ (i.1.extend I).symm) =ᶠ[𝓝[range I] (i.1.extend I x)] id := by
+      filter_upwards [i.1.extend_target_mem_nhdsWithin hx] with y hy
       exact (i.1.extend I).right_inv hy
-    · simp_rw [Function.comp_apply, i.1.extend_left_inv hx]
+    have hu : UniqueDiffWithinAt 𝕜 (range I) (i.1.extend I x) := by
+      change UniqueDiffWithinAt 𝕜 (range I) (I (i.1 x))
+      exact I.uniqueDiffWithinAt_image
+    rw [h.fderivWithin_eq_of_mem (mem_range_self _), fderivWithin_id hu,
+      ContinuousLinearMap.id_apply]
   continuousOn_coordChange i j := by
     have : IsManifold I (0 + 1) M := by simpa
     refine (contDiffOn_fderiv_coord_change (n := 0) i j).continuousOn.comp
@@ -227,7 +230,7 @@ theorem trivializationAt_baseSet (x : M) :
 theorem trivializationAt_apply (x : M) (z : TM) :
     trivializationAt E (TangentSpace I) x z =
       (z.1, fderivWithin 𝕜 ((chartAt H x).extend I ∘ ((chartAt H z.1).extend I).symm) (range I)
-        ((chartAt H z.1).extend I z.1) z.2) :=
+        ((chartAt H z.1).extend I z.1) id z.2) :=
   rfl
 
 @[simp, mfld_simps]

@@ -172,8 +172,15 @@ theorem dist_nil_cons (x : α) (s : Seq α) : dist nil (cons x s) = 1 := by
 theorem dist_le_half_iff {s t : Seq α} :
     dist s t ≤ 2⁻¹ ↔ (s = .nil ∧ t = .nil) ∨ ∃ hd s' t', s = .cons hd s' ∧ t = .cons hd t' where
   mp h := by
-    cases s <;> cases t <;> norm_num at h <;> simp
-    grind [dist_cons_cons_eq_one]
+    cases s <;> cases t <;> norm_num at h
+    · exact Or.inl ⟨rfl, rfl⟩
+    · rename_i x s y t
+      have hxy : x = y := by
+        by_contra hne
+        rw [dist_cons_cons_eq_one hne] at h
+        norm_num at h
+      subst y
+      exact Or.inr ⟨x, s, t, rfl, rfl⟩
   mpr h := by
     obtain ⟨rfl, rfl⟩ | ⟨hd, s', t', rfl, rfl⟩ := h <;> simp
 

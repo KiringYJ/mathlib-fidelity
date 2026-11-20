@@ -52,23 +52,23 @@ variable {V E : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
 namespace Real
 
 lemma tendsto_integral_cexp_sq_smul (hf : Integrable f) :
-    Tendsto (fun (c : ℝ) ↦ (∫ v : V, cexp (- c⁻¹ * ‖v‖ ^ 2) • f v))
-      atTop (𝓝 (∫ v : V, f v)) := by
+    Tendsto (fun c : {c : ℝ | IsUnit c} ↦
+      ∫ v : V, cexp ((-Checked.inv c.val c.2 * ‖v‖ ^ 2 : ℝ) : ℂ) • f v)
+      (comap Subtype.val atTop) (𝓝 (∫ v : V, f v)) := by
   apply tendsto_integral_filter_of_dominated_convergence _ _ _ hf.norm
   · filter_upwards with v
-    nth_rewrite 2 [show f v = cexp (- (0 : ℝ) * ‖v‖ ^ 2) • f v by simp]
-    apply (Tendsto.cexp _).smul_const
-    exact tendsto_inv_atTop_zero.ofReal.neg.mul_const _
+    have hv := (tendsto_inv_atTop_zero.neg.mul_const (‖v‖ ^ 2)).ofReal.cexp.smul_const (f v)
+    simp only [neg_zero, zero_mul, ofReal_zero, Complex.exp_zero, one_smul] at hv
+    convert hv using 1
+    rfl
   · filter_upwards with c using
       AEStronglyMeasurable.smul (Continuous.aestronglyMeasurable (by fun_prop)) hf.1
-  · filter_upwards [Ici_mem_atTop (0 : ℝ)] with c (hc : 0 ≤ c)
+  · filter_upwards [tendsto_comap.eventually (Ici_mem_atTop (0 : ℝ))] with c (hc : 0 ≤ c.val)
     filter_upwards with v
-    simp only [ofReal_inv, neg_mul, norm_smul]
-    norm_cast
-    conv_rhs => rw [← one_mul (‖f v‖)]
-    gcongr
-    simp only [norm_eq_abs, abs_exp, exp_le_one_iff, Left.neg_nonpos_iff]
-    positivity
+    rw [norm_smul, Complex.norm_exp, ofReal_re]
+    apply mul_le_of_le_one_left (norm_nonneg _)
+    exact exp_le_one_iff.mpr (mul_nonpos_of_nonpos_of_nonneg
+      (neg_nonpos.mpr (inv_nonneg.mpr hc)) (sq_nonneg _))
 
 variable [CompleteSpace E]
 
@@ -77,8 +77,11 @@ lemma tendsto_integral_gaussian_smul (hf : Integrable f) (h'f : Integrable (𝓕
     Tendsto (fun (c : ℝ) ↦
       ∫ w : V, ((π * c) ^ (finrank ℝ V / 2 : ℂ) * cexp (-π ^ 2 * c * ‖v - w‖ ^ 2)) • f w)
     atTop (𝓝 (𝓕⁻ (𝓕 f) v)) := by
-  have A : Tendsto (fun (c : ℝ) ↦ (∫ w : V, cexp (- c⁻¹ * ‖w‖ ^ 2 + 2 * π * I * ⟪v, w⟫)
-       • (𝓕 f) w)) atTop (𝓝 (𝓕⁻ (𝓕 f) v)) := by
+  let S : Set ℝ := {c | IsUnit c}
+  let a (c : S) : ℝ := Checked.inv c.val c.2
+  have A : Tendsto (fun c : S ↦
+      ∫ w : V, cexp (-a c * ‖w‖ ^ 2 + 2 * π * I * ⟪v, w⟫) • (𝓕 f) w)
+      (comap Subtype.val atTop) (𝓝 (𝓕⁻ (𝓕 f) v)) := by
     have : Integrable (fun w ↦ 𝐞 ⟪w, v⟫ • (𝓕 f) w) := by
       have B : Continuous fun p : V × V => (- innerₗ V) p.1 p.2 := continuous_inner.neg
       simpa using!
@@ -86,25 +89,32 @@ lemma tendsto_integral_gaussian_smul (hf : Integrable f) (h'f : Integrable (𝓕
     convert! tendsto_integral_cexp_sq_smul this using 4 with c w
     · rw [Submonoid.smul_def, Real.fourierChar_apply, smul_smul, ← Complex.exp_add, real_inner_comm]
       congr 3
-      simp only [ofReal_mul, ofReal_ofNat]
-      ring
+      · simp only [a, ofReal_mul, ofReal_neg, ofReal_pow]
+      · push_cast
+        ring
     · simp [fourierInv_eq]
-  have B : Tendsto (fun (c : ℝ) ↦ (∫ w : V,
-        𝓕 (fun w ↦ cexp (- c⁻¹ * ‖w‖ ^ 2 + 2 * π * I * ⟪v, w⟫)) w • f w)) atTop
-      (𝓝 (𝓕⁻ (𝓕 f) v)) := by
+  have B : Tendsto (fun c : S ↦
+      ∫ w : V, 𝓕 (fun w ↦ cexp (-a c * ‖w‖ ^ 2 + 2 * π * I * ⟪v, w⟫)) w • f w)
+      (comap Subtype.val atTop) (𝓝 (𝓕⁻ (𝓕 f) v)) := by
     apply A.congr'
-    filter_upwards [Ioi_mem_atTop 0] with c (hc : 0 < c)
-    have J : Integrable (fun w ↦ cexp (- c⁻¹ * ‖w‖ ^ 2 + 2 * π * I * ⟪v, w⟫)) :=
-      GaussianFourier.integrable_cexp_neg_mul_sq_norm_add (by simpa) _ _
+    filter_upwards [tendsto_comap.eventually (Ioi_mem_atTop (0 : ℝ))] with c (hc : 0 < c.val)
+    have J : Integrable (fun w ↦ cexp (-a c * ‖w‖ ^ 2 + 2 * π * I * ⟪v, w⟫)) :=
+      GaussianFourier.integrable_cexp_neg_mul_sq_norm_add (inv_pos.mpr hc) _ _
     simpa using! (VectorFourier.integral_fourierIntegral_smul_eq_flip (L := innerₗ V)
       Real.continuous_fourierChar continuous_inner J hf).symm
+  have hlarge : Set.range (Subtype.val : S → ℝ) ∈ (atTop : Filter ℝ) := by
+    rw [Subtype.range_val]
+    exact mem_of_superset (Ioi_mem_atTop (0 : ℝ)) fun c hc ↦ (show 0 < c from hc).ne'.isUnit
+  apply (tendsto_comap'_iff hlarge).mp
   apply B.congr'
-  filter_upwards [Ioi_mem_atTop 0] with c (hc : 0 < c)
+  filter_upwards [tendsto_comap.eventually (Ioi_mem_atTop (0 : ℝ))] with c (hc : 0 < c.val)
+  dsimp only [Function.comp_def]
   congr with w
-  rw [fourier_gaussian_innerProductSpace' (by simpa)]
+  rw [fourier_gaussian_innerProductSpace' (inv_pos.mpr hc)]
+  have hcUnit : IsUnit (c.val : ℂ) := (ofReal_ne_zero.mpr hc.ne').isUnit
   congr
-  · simp
-  · simp; ring
+  · simp [a, div_inv_eq_mul₀]
+  · simp [a, div_inv_eq_mul₀]; ring
 
 lemma tendsto_integral_gaussian_smul' (hf : Integrable f) {v : V} (h'f : ContinuousAt f v) :
     Tendsto (fun (c : ℝ) ↦
@@ -116,11 +126,9 @@ lemma tendsto_integral_gaussian_smul' (hf : Integrable f) {v : V} (h'f : Continu
     apply tendsto_integral_comp_smul_smul_of_integrable'
     · exact fun x ↦ by positivity
     · rw [integral_const_mul, GaussianFourier.integral_rexp_neg_mul_sq_norm (by positivity)]
-      nth_rewrite 2 [← pow_one π]
-      rw [← rpow_natCast, ← rpow_natCast, ← rpow_sub pi_pos, ← rpow_mul pi_nonneg,
-        ← rpow_add pi_pos]
-      ring_nf
-      exact rpow_zero _
+      have hπ : π / π ^ 2 = π⁻¹ := by
+        simp only [pow_two, div_eq_mul_inv₀, mul_inv_rev₀, mul_inv_cancel_left₀]
+      simp only [hπ, inv_rpow pi_pos.le, mul_inv_cancel₀]
     · have A : Tendsto (fun (w : V) ↦ π ^ 2 * ‖w‖ ^ 2) (cobounded V) atTop := by
         rw [tendsto_const_mul_atTop_of_pos (by positivity)]
         apply (tendsto_pow_atTop two_ne_zero).comp tendsto_norm_cobounded_atTop
@@ -149,9 +157,9 @@ lemma tendsto_integral_gaussian_smul' (hf : Integrable f) {v : V} (h'f : Continu
   congr
   · rw [mul_cpow_ofReal_nonneg pi_nonneg hc.le, ← rpow_natCast, ← rpow_mul hc.le, mul_comm,
       ofReal_cpow pi_nonneg, ofReal_cpow hc.le]
-    simp [div_eq_inv_mul]
+    simp [div_eq_inv_mul₀]
   · norm_cast
-    simp only [one_div, norm_smul, Real.norm_eq_abs, mul_pow, sq_abs, neg_mul, neg_inj,
+    simp only [one_div₀, norm_smul, Real.norm_eq_abs, mul_pow, sq_abs, neg_mul, neg_inj,
       ← rpow_natCast, ← rpow_mul hc.le, mul_assoc]
     simp
 

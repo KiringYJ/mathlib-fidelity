@@ -311,7 +311,6 @@ private lemma toAffine_negAddY_of_eq {P : Fin 3 → F} (hPz : P z ≠ 0) {n d : 
         + P y * d ^ 3) / (P z * d) ^ 3 := by
   rw [Affine.negAddY, toAffine_addX_of_eq hPz hd]
   simp [field]
-  ring1
 
 lemma negDblY_of_Z_ne_zero [DecidableEq F] {P Q : Fin 3 → F} (hP : W.Equation P) (hQ : W.Equation Q)
     (hPz : P z ≠ 0) (hQz : Q z ≠ 0) (hx : P x * Q z ^ 2 = Q x * P z ^ 2)
@@ -415,7 +414,6 @@ lemma addU_smul {P Q : Fin 3 → F} (hPz : P z ≠ 0) (hQz : Q z ≠ 0) {u v : F
       (u * v) ^ 2 * addU P Q := by
   simp only [addU, smul_fin3_ext]
   field_simp
-  ring
 
 lemma addU_ne_zero_of_Y_ne {P Q : Fin 3 → F} (hPz : P z ≠ 0) (hQz : Q z ≠ 0)
     (hy : P y * Q z ^ 3 ≠ Q y * P z ^ 3) : addU P Q ≠ 0 :=
@@ -465,7 +463,6 @@ private lemma toAffine_slope_of_ne [DecidableEq F] {P Q : Fin 3 → F} (hPz : P 
         ((hPz.isUnit.mul hQz.isUnit).mul (isUnit_addZ_of_X_ne hx)) := by
   rw [Affine.slope_of_X_ne <| by rwa [ne_eq, ← X_eq_iff hPz hQz], div_eq_div_iff, addZ]
   field_simp
-  ring
 
 variable (W') in
 /-- The `X`-coordinate of a representative of `P + Q` for two distinct Jacobian point
@@ -529,7 +526,6 @@ private lemma toAffine_addX_of_ne {P Q : Fin 3 → F} (hPz : P z ≠ 0) (hQz : Q
       (n ^ 2 + W.a₁ * n * P z * Q z * d - W.a₂ * P z ^ 2 * Q z ^ 2 * d ^ 2 - P x * Q z ^ 2 * d ^ 2
         - Q x * P z ^ 2 * d ^ 2) / (P z * Q z) ^ 2 / d ^ 2 := by
   simp [field]
-  ring1
 
 lemma addX_of_Z_ne_zero [DecidableEq F] {P Q : Fin 3 → F}
     (hP : W.Equation P) (hQ : W.Equation Q) (hPz : P z ≠ 0) (hQz : Q z ≠ 0)
@@ -605,7 +601,6 @@ private lemma toAffine_negAddY_of_ne {P Q : Fin 3 → F} (hPz : P z ≠ 0) (hQz 
         + P y * Q z ^ 3 * d ^ 3) / (P z * Q z) ^ 3 / d ^ 3 := by
   rw [Affine.negAddY, toAffine_addX_of_ne hPz hQz hd]
   simp [field]
-  ring1
 
 lemma negAddY_of_Z_ne_zero [DecidableEq F] {P Q : Fin 3 → F} (hP : W.Equation P) (hQ : W.Equation Q)
     (hPz : P z ≠ 0) (hQz : Q z ≠ 0) (hx : P x * Q z ^ 2 ≠ Q x * P z ^ 2) :

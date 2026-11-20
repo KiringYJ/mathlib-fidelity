@@ -226,15 +226,16 @@ open Imo1998Q2
 theorem imo1998_q2 [Fintype J] [Fintype C] (a b k : ℕ) (hC : Fintype.card C = a)
     (hJ : Fintype.card J = b) (ha : 0 < a) (hb : Odd b)
     (hk : ∀ p : JudgePair J, p.Distinct → (agreedContestants r p).card ≤ k) :
-    (b - 1 : ℚ) / (2 * b) ≤ k / a := by
+    Checked.div (b - 1 : ℚ) (2 * (b : ℚ))
+        (mul_ne_zero two_ne_zero (Nat.cast_ne_zero.mpr hb.pos.ne')).isUnit ≤ k / a := by
   rw [clear_denominators ha hb.pos]
   obtain ⟨z, hz⟩ := hb; rw [hz] at hJ; rw [hz]
   have h := le_trans (A_card_lower_bound r hJ) (A_card_upper_bound r hk)
   rw [hC, hJ] at h
   -- We are now essentially done; we just need to bash `h` into exactly the right shape.
   have hl : k * ((2 * z + 1) * (2 * z + 1) - (2 * z + 1)) = k * (2 * (2 * z + 1)) * z := by
-    have : 0 < 2 * z + 1 := by aesop
-    simp only [mul_comm, add_mul, one_mul, add_tsub_cancel_right]; ring
+    simp only [add_mul, one_mul, add_tsub_cancel_right]
+    ring
   have hr : 2 * z * z * a = 2 * z * a * z := by ring
   rw [hl, hr] at h
   rcases z with - | z

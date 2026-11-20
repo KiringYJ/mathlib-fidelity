@@ -37,7 +37,8 @@ variable {m n : ℕ}
 
 lemma Equilateral.angle_eq_pi_div_three {s : Simplex ℝ P n} (he : s.Equilateral)
     {i₁ i₂ i₃ : Fin (n + 1)} (h₁₂ : i₁ ≠ i₂) (h₁₃ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃) :
-    ∠ (s.points i₁) (s.points i₂) (s.points i₃) = π / 3 := by
+    angle (s.points i₁) (s.points i₂) (s.points i₃)
+      (s.independent.injective.ne h₁₂) (s.independent.injective.ne h₂₃.symm) = π / 3 := by
   rcases he with ⟨r, hr⟩
   rw [angle, InnerProductGeometry.angle,
     real_inner_eq_norm_mul_self_add_norm_mul_self_sub_norm_sub_mul_self_div_two]
@@ -53,12 +54,13 @@ lemma Equilateral.angle_eq_pi_div_three {s : Simplex ℝ P n} (he : s.Equilatera
 
 /-- The property of all angles of a simplex being acute. -/
 def AcuteAngled (s : Simplex ℝ P n) : Prop :=
-  ∀ i₁ i₂ i₃ : Fin (n + 1), i₁ ≠ i₂ → i₁ ≠ i₃ → i₂ ≠ i₃ →
-    ∠ (s.points i₁) (s.points i₂) (s.points i₃) < π / 2
+  ∀ (i₁ i₂ i₃ : Fin (n + 1)) (h₁₂ : i₁ ≠ i₂) (_ : i₁ ≠ i₃) (h₂₃ : i₂ ≠ i₃),
+    angle (s.points i₁) (s.points i₂) (s.points i₃)
+      (s.independent.injective.ne h₁₂) (s.independent.injective.ne h₂₃.symm) < π / 2
 
 @[simp] lemma acuteAngled_reindex_iff {s : Simplex ℝ P m} (e : Fin (m + 1) ≃ Fin (n + 1)) :
     (s.reindex e).AcuteAngled ↔ s.AcuteAngled := by
-  refine ⟨fun h {i₁ i₂ i₃} h₁₂ h₁₃ h₂₃ ↦ ?_, fun h {i₁ i₂ i₃} h₁₂ h₁₃ h₂₃ ↦ ?_⟩
+  refine ⟨fun h i₁ i₂ i₃ h₁₂ h₁₃ h₂₃ ↦ ?_, fun h i₁ i₂ i₃ h₁₂ h₁₃ h₂₃ ↦ ?_⟩
   · convert! h (i₁ := e i₁) (i₂ := e i₂) (i₃ := e i₃) ?_ ?_ ?_ using 1 <;> simp [*]
   · convert! h (i₁ := e.symm i₁) (i₂ := e.symm i₂) (i₃ := e.symm i₃) ?_ ?_ ?_ using 1 <;> simp [*]
 
@@ -87,9 +89,13 @@ end Simplex
 namespace Triangle
 
 lemma acuteAngled_iff_angle_lt {t : Triangle ℝ P} : t.AcuteAngled ↔
-    ∠ (t.points 0) (t.points 1) (t.points 2) < π / 2 ∧
-    ∠ (t.points 1) (t.points 2) (t.points 0) < π / 2 ∧
-    ∠ (t.points 2) (t.points 0) (t.points 1) < π / 2 := by
+    angle (t.points 0) (t.points 1) (t.points 2)
+      (t.independent.injective.ne (by decide)) (t.independent.injective.ne (by decide)) < π / 2 ∧
+    angle (t.points 1) (t.points 2) (t.points 0)
+      (t.independent.injective.ne (by decide)) (t.independent.injective.ne (by decide)) < π / 2 ∧
+    angle (t.points 2) (t.points 0) (t.points 1)
+      (t.independent.injective.ne (by decide))
+      (t.independent.injective.ne (by decide)) < π / 2 := by
   refine ⟨fun h ↦ ⟨h _ _ _ (by decide) (by decide) (by decide),
                    h _ _ _ (by decide) (by decide) (by decide),
                    h _ _ _ (by decide) (by decide) (by decide)⟩,
@@ -98,7 +104,8 @@ lemma acuteAngled_iff_angle_lt {t : Triangle ℝ P} : t.AcuteAngled ↔
   have h021 := angle_comm (t.points 1) _ _ ▸ h120
   have h102 := angle_comm (t.points 2) _ _ ▸ h201
   intro i₁ i₂ i₃ h₁₂ h₁₃ h₂₃
-  fin_cases i₁ <;> fin_cases i₂ <;> fin_cases i₃ <;> simp [*] at *
+  fin_cases i₁ <;> fin_cases i₂ <;> fin_cases i₃ <;>
+    first | exact (h₁₂ rfl).elim | exact (h₁₃ rfl).elim | exact (h₂₃ rfl).elim | assumption
 
 /-- In a triangle, the distance from a vertex to the `centroid` equals twice the distance from the
 `centroid` to the `faceOppositeCentroid`. -/

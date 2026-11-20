@@ -66,7 +66,8 @@ lemma isTightMeasureSet_of_tendsto_charFun {μ : ℕ → Measure E} [∀ i, IsPr
     _ ≤ 4 := by
       simp only [intervalIntegral.integral_const, sub_neg_eq_add, smul_eq_mul]
       field_simp
-      norm_num
+      ring_nf
+      exact le_rfl
   have h_le n r (hr : 0 < r) : (μ n).real {x | r < |⟪z, x⟫|} ≤
       2⁻¹ * r * ‖∫ t in -2 * r⁻¹..2 * r⁻¹, 1 - charFun (μ n) (t • z)‖ :=
     measureReal_abs_inner_gt_le_integral_charFun hr
@@ -93,8 +94,10 @@ lemma isTightMeasureSet_of_tendsto_charFun {μ : ℕ → Measure E} [∀ i, IsPr
       · exact fun _ ↦ ae_of_all _ fun _ ↦ norm_one_sub_charFun_le_two
       · exact ae_of_all _ fun _ ↦ tendsto_const_nhds.sub (h _)
   -- It suffices to show that the upper bound tends to 0.
+  let B (r : ℝ) : ℝ :=
+    2⁻¹ * max r 1 * ‖∫ t in -2 * (max r 1)⁻¹..2 * (max r 1)⁻¹, 1 - f (t • z)‖
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds
-    (h := fun r ↦ 2⁻¹ * r * ‖∫ t in -2 * r⁻¹..2 * r⁻¹, 1 - f (t • z)‖) ?_ ?_ ?_
+    (h := B) ?_ ?_ ?_
   rotate_left
   · filter_upwards [eventually_gt_atTop 0] with r hr
     refine le_limsup_of_le ?_ fun u hu ↦ ?_
@@ -102,7 +105,8 @@ lemma isTightMeasureSet_of_tendsto_charFun {μ : ℕ → Measure E} [∀ i, IsPr
       simp only [eventually_map, eventually_atTop]
       exact ⟨0, fun n _ ↦ (h_le n r hr).trans (h_le_4 n r hr)⟩
     · exact ENNReal.toReal_nonneg.trans hu.exists.choose_spec
-  · filter_upwards [eventually_gt_atTop 0] with r hr using h_limsup_le r hr
+  · filter_upwards [eventually_ge_atTop (1 : ℝ)] with r hr
+    simpa only [B, max_eq_left hr, Real.norm_eq_abs] using h_limsup_le r (zero_lt_one.trans_le hr)
   -- We now show that the upper bound tends to 0.
   -- This will follow from the fact that `f` is continuous at `0`.
   -- `⊢ Tendsto (fun r ↦ 2⁻¹ * r * ‖∫ t in -2 * r⁻¹..2 * r⁻¹, 1 - f (t • z)‖) atTop (𝓝 0)`
@@ -112,11 +116,13 @@ lemma isTightMeasureSet_of_tendsto_charFun {μ : ℕ → Measure E} [∀ i, IsPr
   intro ε hε
   have hf0 : f 0 = 1 := by symm; simpa using h 0
   simp only [gt_iff_lt, dist_eq_norm_sub', zero_sub, norm_neg, hf0] at hf_tendsto
-  simp only [ge_iff_le, neg_mul, dist_zero_right, norm_mul, norm_inv,
-    Real.norm_ofNat, Real.norm_eq_abs, abs_of_nonneg (norm_nonneg _)]
   obtain ⟨δ, hδ, hδ_lt⟩ : ∃ δ, 0 < δ ∧ ∀ ⦃x : E⦄, ‖x‖ < δ → ‖1 - f x‖ < ε / 4 :=
     hf_tendsto (ε / 4) (by positivity)
-  refine ⟨4 * δ⁻¹, fun r hrδ ↦ ?_⟩
+  refine ⟨max 1 (4 * δ⁻¹), fun r hmax ↦ ?_⟩
+  have hr₁ : 1 ≤ r := (le_max_left _ _).trans hmax
+  have hrδ : 4 * δ⁻¹ ≤ r := (le_max_right _ _).trans hmax
+  simp only [B, max_eq_left hr₁, neg_mul, dist_zero_right, norm_mul, norm_inv,
+    Real.norm_ofNat, Real.norm_eq_abs, abs_of_nonneg (norm_nonneg _)]
   have hr : 0 < r := lt_of_lt_of_le (by positivity) hrδ
   have hr' : -(2 * r⁻¹) ≤ 2 * r⁻¹ := by rw [neg_le_self_iff]; positivity
   have h_le_Ioc x (hx : x ∈ Set.Ioc (-(2 * r⁻¹)) (2 * r⁻¹)) : ‖1 - f (x • z)‖ ≤ ε / 4 := by
@@ -128,7 +134,7 @@ lemma isTightMeasureSet_of_tendsto_charFun {μ : ℕ → Measure E} [∀ i, IsPr
       rw [← lt_div_iff₀' (by positivity), inv_lt_comm₀ hr (by positivity)]
       refine lt_of_lt_of_le ?_ hrδ
       field_simp
-      norm_num
+      nlinarith [show 0 < δ ^ 3 by positivity]
   rw [abs_of_nonneg hr.le]
   calc 2⁻¹ * r * ‖∫ t in -(2 * r⁻¹)..2 * r⁻¹, 1 - f (t • z)‖
   _ ≤ 2⁻¹ * r * ∫ t in -(2 * r⁻¹)..2 * r⁻¹, ‖1 - f (t • z)‖ := by

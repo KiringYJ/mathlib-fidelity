@@ -38,7 +38,7 @@ theorem Complex.sqrt_eq_real_add_ite {a : ℂ} :
 
 open Complex in
 lemma sqrt_eq_exp {z : ℂ} (hz : z ≠ 0) : sqrt z = exp (log z / 2) := by
-  simp [sqrt, cpow_def, hz, div_eq_mul_inv]
+  simp [sqrt, cpow_def, hz, div_eq_mul_inv₀]
 
 /-- The square root on `RCLike`. -/
 noncomputable def RCLike.sqrt (a : 𝕜) : 𝕜 := map ℂ 𝕜 (map 𝕜 ℂ a).sqrt
@@ -62,7 +62,7 @@ theorem RCLike.sqrt_eq_real_add_ite {a : 𝕜} :
   obtain (h | h) := I_eq_zero_or_im_I_eq_one (K := 𝕜)
   · rw [← re_add_im a]
     simp [h, im_eq_zero]
-  aesop
+  apply RCLike.ext <;> by_cases ha : 0 ≤ im a <;> simp [map_apply, h, ha]
 
 @[simp] theorem RCLike.sqrt_zero : sqrt (0 : 𝕜) = 0 := by simp [sqrt]
 @[simp] theorem RCLike.sqrt_one : sqrt (1 : 𝕜) = 1 := by simp [sqrt]
@@ -70,7 +70,9 @@ theorem RCLike.sqrt_eq_real_add_ite {a : 𝕜} :
 theorem Complex.re_sqrt_ofReal {a : ℝ} :
     (sqrt (a : ℂ)).re = √a := by
   simp only [cpow_inv_two_re, norm_real, Real.norm_eq_abs, ofReal_re, Complex.sqrt]
-  grind
+  by_cases ha : 0 ≤ a
+  · simp [abs_of_nonneg ha]
+  · simp [abs_of_nonpos (le_of_not_ge ha), Real.sqrt_eq_zero_of_nonpos (le_of_not_ge ha)]
 
 theorem RCLike.re_sqrt_ofReal {a : ℝ} :
     re (sqrt (a : 𝕜)) = √a := by
@@ -129,11 +131,12 @@ theorem RCLike.sqrt_neg_one : sqrt (-1) = (I : 𝕜) := by
   simp [sqrt_neg_of_nonneg (a := (1 : 𝕜)) (by simp)]
 
 theorem Complex.sqrt_I : sqrt (I : ℂ) = √2⁻¹ * (1 + I) := by
-  rw [sqrt, ← re_add_im (I ^ 2⁻¹), cpow_inv_two_im_eq_sqrt (by simp), cpow_inv_two_re]
+  rw [sqrt, ← re_add_im (I ^ (2⁻¹ : ℂ)), cpow_inv_two_im_eq_sqrt (by simp), cpow_inv_two_re]
   simp [mul_add]
 
 theorem Complex.sqrt_neg_I : sqrt (-I : ℂ) = √2⁻¹ * (1 - I) := by
-  rw [sqrt, ← re_add_im ((-I) ^ 2⁻¹), cpow_inv_two_im_eq_neg_sqrt (by simp), cpow_inv_two_re]
+  rw [sqrt, ← re_add_im ((-I) ^ (2⁻¹ : ℂ)), cpow_inv_two_im_eq_neg_sqrt (by simp),
+    cpow_inv_two_re]
   simp [mul_sub, ← sub_eq_add_neg]
 
 theorem RCLike.sqrt_I : sqrt (I : 𝕜) = √2⁻¹ * (1 - I) * I := by

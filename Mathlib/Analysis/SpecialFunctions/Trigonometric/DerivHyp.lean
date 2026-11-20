@@ -36,7 +36,7 @@ namespace Complex
 /-- The complex hyperbolic sine function is everywhere strictly differentiable, with the derivative
 `cosh x`. -/
 theorem hasStrictDerivAt_sinh (x : ℂ) : HasStrictDerivAt sinh (cosh x) x := by
-  simp only [cosh, div_eq_mul_inv]
+  simp only [cosh, div_eq_mul_inv₀]
   convert!
     ((hasStrictDerivAt_exp x).sub (hasStrictDerivAt_id x).fun_neg.cexp).mul_const (2 : ℂ)⁻¹ using 1
   rw [id, mul_neg_one, sub_eq_add_neg, neg_neg]
@@ -84,7 +84,7 @@ theorem deriv_sinh : deriv sinh = cosh :=
 /-- The complex hyperbolic cosine function is everywhere strictly differentiable, with the
 derivative `sinh x`. -/
 theorem hasStrictDerivAt_cosh (x : ℂ) : HasStrictDerivAt cosh (sinh x) x := by
-  simp only [sinh, div_eq_mul_inv]
+  simp only [sinh, div_eq_mul_inv₀]
   convert!
     ((hasStrictDerivAt_exp x).add (hasStrictDerivAt_id x).fun_neg.cexp).mul_const (2 : ℂ)⁻¹ using 1
   rw [id, mul_neg_one, sub_eq_add_neg]
@@ -386,7 +386,7 @@ theorem deriv_cosh : deriv cosh = sinh :=
 
 /-- `sinh` is strictly monotone. -/
 theorem sinh_strictMono : StrictMono sinh :=
-  strictMono_of_deriv_pos <| by rw [Real.deriv_sinh]; exact cosh_pos
+  strictMono_of_deriv_pos fun x ↦ (Real.hasDerivAt_sinh x).deriv.symm ▸ cosh_pos x
 
 /-- `sinh` is injective, `∀ a b, sinh a = sinh b → a = b`. -/
 theorem sinh_injective : Function.Injective sinh :=
@@ -425,7 +425,7 @@ theorem abs_sinh (x : ℝ) : |sinh x| = sinh |x| := by
 
 theorem cosh_strictMonoOn : StrictMonoOn cosh (Ici 0) :=
   strictMonoOn_of_deriv_pos (convex_Ici _) continuous_cosh.continuousOn fun x hx => by
-    rw [interior_Ici, mem_Ioi] at hx; rwa [deriv_cosh, sinh_pos_iff]
+    rw [interior_Ici, mem_Ioi] at hx; rwa [(hasDerivAt_cosh x).deriv, sinh_pos_iff]
 
 @[simp]
 theorem cosh_le_cosh : cosh x ≤ cosh y ↔ |x| ≤ |y| :=
@@ -448,7 +448,8 @@ theorem sinh_sub_id_strictMono : StrictMono fun x => sinh x - x := by
   refine strictMonoOn_of_deriv_pos (convex_Ici _) ?_ fun x hx => ?_
   · exact (continuous_sinh.sub continuous_id).continuousOn
   · rw [interior_Ici, mem_Ioi] at hx
-    rw [deriv_fun_sub, deriv_sinh, deriv_id'', sub_pos, one_lt_cosh]
+    rw [deriv_fun_sub, (hasDerivAt_sinh x).deriv,
+      show deriv (fun y : ℝ ↦ y) x id = 1 from (hasDerivAt_id x).deriv, sub_pos, one_lt_cosh]
     exacts [hx.ne', differentiableAt_sinh, differentiableAt_id]
 
 @[simp]
@@ -491,7 +492,9 @@ theorem iteratedDeriv_add_one_sinh (n : ℕ) :
 theorem iteratedDeriv_add_one_cosh (n : ℕ) :
     iteratedDeriv (n + 1) cosh = iteratedDeriv n sinh := by
   induction n with
-  | zero => ext; simp
+  | zero =>
+    ext x
+    simpa only [Nat.zero_add, iteratedDeriv_one, iteratedDeriv_zero] using (hasDerivAt_cosh x).deriv
   | succ n ih =>
     rw [iteratedDeriv_succ, ih, iteratedDeriv_succ]
 
@@ -545,7 +548,9 @@ theorem iteratedDeriv_add_one_sinh (n : ℕ) :
 theorem iteratedDeriv_add_one_cosh (n : ℕ) :
     iteratedDeriv (n + 1) cosh = iteratedDeriv n sinh := by
   induction n with
-  | zero => ext; simp
+  | zero =>
+    ext x
+    simpa only [Nat.zero_add, iteratedDeriv_one, iteratedDeriv_zero] using (hasDerivAt_cosh x).deriv
   | succ n ih =>
     rw [iteratedDeriv_succ, ih, iteratedDeriv_succ]
 
@@ -778,15 +783,18 @@ theorem ContDiffWithinAt.sinh {n} (hf : ContDiffWithinAt ℝ n f s x) :
 
 section LogDeriv
 
-@[simp]
-theorem Complex.logDeriv_cosh : logDeriv (Complex.cosh) = Complex.tanh := by
-  ext
-  rw [logDeriv, Complex.deriv_cosh, Pi.div_apply, Complex.tanh]
+/-- The complex logarithmic derivative is defined away from the zeros of cosh. -/
+@[simp] theorem Complex.logDeriv_cosh (z : ℂ) {hz : IsUnit (Complex.cosh z)} :
+    logDeriv Complex.cosh z id (Complex.hasDerivAt_cosh z).existsUnique_hasDerivAt hz =
+      Complex.tanh z hz.ne_zero := by
+  rw [logDeriv_eq (Complex.hasDerivAt_cosh z), Complex.tanh_eq_sinh_div_cosh]
 
-@[simp]
-theorem Real.logDeriv_cosh : logDeriv (Real.cosh) = Real.tanh := by
-  ext
-  rw [logDeriv, Real.deriv_cosh, Pi.div_apply, Real.tanh_eq_sinh_div_cosh]
+/-- Real cosh is strictly positive, so its logarithmic derivative is tanh everywhere. -/
+@[simp] theorem Real.logDeriv_cosh (x : ℝ) :
+    logDeriv Real.cosh x id (Real.hasDerivAt_cosh x).existsUnique_hasDerivAt
+      (Real.cosh_pos x).ne'.isUnit =
+      Real.tanh x := by
+  rw [logDeriv_eq (Real.hasDerivAt_cosh x), Real.tanh_eq_sinh_div_cosh]
 
 end LogDeriv
 

@@ -92,7 +92,7 @@ theorem exists_norm_eq_iInf_of_complete_convex {K : Set F} (ne : K.Nonempty) (h�
               ‖(2 : ℝ) • (u - half • (wq + wp))‖ * ‖(2 : ℝ) • (u - half • (wq + wp))‖ +
                 ‖wp - wq‖ * ‖wp - wq‖ := by simp [norm_smul]
           _ = ‖a + b‖ * ‖a + b‖ + ‖a - b‖ * ‖a - b‖ := by
-            rw [smul_sub, smul_smul, mul_one_div_cancel (_root_.two_ne_zero : (2 : ℝ) ≠ 0), ←
+            rw [smul_sub, smul_smul, mul_one_div_cancel, ←
               one_add_one_eq_two, add_smul]
             simp only [one_smul]
             have eq₁ : wp - wq = a - b := (sub_sub_sub_cancel_left _ _ _).symm
@@ -192,7 +192,7 @@ theorem norm_eq_iInf_iff_real_inner_le_zero {K : Set F} (h : Convex ℝ K) {u : 
       have eq₁ : θ * q ≤ p :=
         calc
           θ * q ≤ p / q * q := mul_le_mul_of_nonneg_right (min_le_right _ _) (sq_nonneg _)
-          _ = p := div_mul_cancel₀ _ hq
+          _ = p := div_mul_cancel₀ _
       have : 2 * p ≤ p :=
         calc
           2 * p ≤ θ * q := by

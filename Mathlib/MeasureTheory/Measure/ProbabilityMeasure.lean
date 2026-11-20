@@ -505,12 +505,12 @@ Since `hμ` is an explicit argument, write `(μ.normalize) s` or `μ.normalize h
 normalized measure on a set `s`. -/
 def normalize (μ : FiniteMeasure Ω) (hμ : μ ≠ 0 := by finite_measure_ne_zero) :
     ProbabilityMeasure Ω where
-  val := μ.mass⁻¹ • (μ : Measure Ω)
+  val := Checked.inv μ.mass ((mass_nonzero_iff μ).mpr hμ).isUnit • (μ : Measure Ω)
   property := by
     have hm : μ.mass ≠ 0 := (mass_nonzero_iff μ).mpr hμ
     refine ⟨?_⟩
     simp only [Measure.coe_smul, Pi.smul_apply, Measure.nnreal_smul_coe_apply,
-      ENNReal.coe_inv hm, ennreal_mass]
+      ENNReal.coe_inv, ennreal_mass]
     rw [← ENNReal.coe_ne_zero, ennreal_mass] at hm
     exact ENNReal.inv_mul_cancel hm (measure_lt_top _ _).ne
 
@@ -518,23 +518,25 @@ variable {μ : FiniteMeasure Ω}
 
 @[simp]
 theorem toMeasure_normalize (hμ : μ ≠ 0) :
-    (μ.normalize hμ : Measure Ω) = μ.mass⁻¹ • (μ : Measure Ω) := rfl
+    (μ.normalize hμ : Measure Ω) =
+      Checked.inv μ.mass ((mass_nonzero_iff μ).mpr hμ).isUnit • (μ : Measure Ω) := rfl
 
 @[simp]
 theorem toFiniteMeasure_normalize (hμ : μ ≠ 0) :
-    (μ.normalize hμ).toFiniteMeasure = μ.mass⁻¹ • μ := rfl
+    (μ.normalize hμ).toFiniteMeasure =
+      Checked.inv μ.mass ((mass_nonzero_iff μ).mpr hμ).isUnit • μ := rfl
 
 @[simp]
-theorem normalize_apply (hμ : μ ≠ 0) (s : Set Ω) : μ.normalize hμ s = μ.mass⁻¹ * μ s := by
+theorem normalize_apply (hμ : μ ≠ 0) (s : Set Ω) :
+    μ.normalize hμ s = Checked.inv μ.mass ((mass_nonzero_iff μ).mpr hμ).isUnit * μ s := by
   rw [← ProbabilityMeasure.toFiniteMeasure_apply_eq_apply, toFiniteMeasure_normalize,
     smul_apply, smul_eq_mul]
 
 theorem mass_mul_normalize_apply (hμ : μ ≠ 0) (s : Set Ω) : μ.mass * μ.normalize hμ s = μ s := by
-  rw [normalize_apply, ← mul_assoc, mul_inv_cancel₀ ((mass_nonzero_iff μ).mpr hμ), one_mul]
+  rw [normalize_apply, ← mul_assoc, mul_inv_cancel₀, one_mul]
 
 theorem mass_smul_normalize (hμ : μ ≠ 0) : μ.mass • (μ.normalize hμ).toFiniteMeasure = μ := by
-  rw [toFiniteMeasure_normalize, smul_smul, mul_inv_cancel₀ ((mass_nonzero_iff μ).mpr hμ),
-    one_smul]
+  rw [toFiniteMeasure_normalize, smul_smul, mul_inv_cancel₀, one_smul]
 
 /-- The normalization of a nonzero finite measure `μ` is the unique probability measure whose
 multiple by the total mass of `μ` is `μ`. -/
@@ -547,10 +549,15 @@ theorem eq_normalize_iff {P : ProbabilityMeasure Ω} (hμ : μ ≠ 0) :
 /-- Normalization is invariant under multiplication by a nonzero scalar. -/
 theorem normalize_smul {c : ℝ≥0} (hc : c ≠ 0) (hμ : μ ≠ 0) :
     (c • μ).normalize (smul_ne_zero hc hμ) = μ.normalize hμ := by
+  have hm : μ.mass ≠ 0 := (mass_nonzero_iff μ).mpr hμ
+  have hcm₀ : (c • μ).mass ≠ 0 := (mass_nonzero_iff _).mpr (smul_ne_zero hc hμ)
   apply Subtype.ext
   change (c • μ).mass⁻¹ • ((c • μ : FiniteMeasure Ω) : Measure Ω) = μ.mass⁻¹ • (μ : Measure Ω)
   have hcm : (c • μ).mass = c * μ.mass := by simp [mass]
-  rw [hcm, toMeasure_smul, smul_smul, mul_inv_rev, mul_assoc, inv_mul_cancel₀ hc, mul_one]
+  have hinv : (c • μ).mass⁻¹ = μ.mass⁻¹ * c⁻¹ := by
+    apply inv_eq_of_mul_eq_one_right₀
+    rw [hcm, mul_assoc, mul_inv_cancel_left₀, mul_inv_cancel₀]
+  rw [hinv, toMeasure_smul, smul_smul, mul_assoc, inv_mul_cancel₀, mul_one]
 
 @[simp]
 theorem _root_.MeasureTheory.ProbabilityMeasure.toFiniteMeasure_normalize_eq_self
@@ -564,7 +571,7 @@ theorem average_eq_integral_normalize {E : Type*} [NormedAddCommGroup E] [Normed
     average (μ : Measure Ω) f = ∫ ω, f ω ∂(μ.normalize hμ : Measure Ω) := by
   rw [toMeasure_normalize, average]
   congr
-  simp [ENNReal.coe_inv ((mass_nonzero_iff μ).mpr hμ), ennreal_mass]
+  simp [ENNReal.coe_inv, ennreal_mass]
 
 variable {γ : Type*} {F : Filter γ} {μs : γ → FiniteMeasure Ω}
 
@@ -577,7 +584,8 @@ theorem eventually_ne_zero_of_tendsto_mass {m : ℝ≥0}
 variable [TopologicalSpace Ω]
 
 theorem testAgainstNN_normalize (hμ : μ ≠ 0) (f : Ω →ᵇ ℝ≥0) :
-    (μ.normalize hμ).toFiniteMeasure.testAgainstNN f = μ.mass⁻¹ * μ.testAgainstNN f := by
+    (μ.normalize hμ).toFiniteMeasure.testAgainstNN f =
+      Checked.inv μ.mass ((mass_nonzero_iff μ).mpr hμ).isUnit * μ.testAgainstNN f := by
   rw [toFiniteMeasure_normalize, smul_testAgainstNN_apply, smul_eq_mul]
 
 variable [OpensSigmaAlgebra Ω]
@@ -587,8 +595,8 @@ theorem continuous_normalize :
     Continuous fun ν : {ν : FiniteMeasure Ω // ν ≠ 0} ↦ ν.1.normalize ν.2 := by
   rw [(ProbabilityMeasure.toFiniteMeasure_isEmbedding Ω).continuous_iff]
   simp only [Function.comp_def, toFiniteMeasure_normalize]
-  exact ((continuous_mass.comp continuous_subtype_val).inv₀
-    fun ν ↦ (mass_nonzero_iff _).mpr ν.2).smul continuous_subtype_val
+  exact ((continuous_mass.comp continuous_subtype_val).fun_inv₀
+    (h0 := fun ν ↦ ((mass_nonzero_iff _).mpr ν.2).isUnit)).smul continuous_subtype_val
 
 /-- Finite measures converging to a nonzero limit are eventually nonzero. -/
 theorem eventually_ne_zero_of_tendsto (h : Tendsto μs F (𝓝 μ)) (hμ : μ ≠ 0) :

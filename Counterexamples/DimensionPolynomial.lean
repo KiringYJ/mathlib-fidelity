@@ -41,15 +41,18 @@ noncomputable abbrev A : Subring (RatFunc k)⟦X⟧ :=
 theorem ringKrullDim_A_eq_one : ringKrullDim (A k) = 1 := by
   have h_unit : ∀ (x : (RatFunc k)⟦X⟧) (hx : x ∈ A k), IsUnit x → IsUnit (⟨x, hx⟩ : A k) := by
     intro x ⟨z, hz⟩ ⟨y, hxy⟩
-    refine ⟨⟨⟨y.val, hxy ▸ ⟨z, hz⟩⟩, ⟨y.inv, ⟨z⁻¹, ?_⟩⟩, Subtype.ext y.3, Subtype.ext y.4⟩,
-      Subtype.ext hxy⟩
-    have := hxy ▸ congr(PowerSeries.constantCoeff $(y.3))
-    simp only [map_mul, ← hz, constantCoeff_one] at this
-    have hz : z ≠ 0 := by
-      intro rfl
-      simp at this
-    simpa only [← mul_assoc, ← RatFunc.C.map_mul, inv_mul_cancel₀ hz, RatFunc.C.map_one,
-    one_mul, mul_one] using congr(RatFunc.C z⁻¹ * $this.symm)
+    subst x
+    have hprod : RatFunc.C z * PowerSeries.constantCoeff y.inv = 1 := by
+      simpa only [map_mul, ← hz, constantCoeff_one] using
+        congrArg PowerSeries.constantCoeff y.val_inv
+    have hz0 : z ≠ 0 := by
+      intro h
+      simp [h] at hprod
+    obtain ⟨u, rfl⟩ := hz0.isUnit
+    refine ⟨⟨⟨y.val, ⟨u.val, hz⟩⟩, ⟨y.inv, ⟨u.inv, ?_⟩⟩,
+      Subtype.ext y.val_inv, Subtype.ext y.inv_val⟩, rfl⟩
+    simpa only [← mul_assoc, ← RatFunc.C.map_mul, u.inv_val, RatFunc.C.map_one,
+      one_mul, mul_one] using congrArg (fun t : RatFunc k ↦ RatFunc.C u.inv * t) hprod.symm
   have : IsLocalRing (A k) := Subring.isLocalRing_of_unit (A k) h_unit
   have : ¬ IsField (A k) := fun h ↦ by
     let Y : A k := ⟨PowerSeries.X, by simp [A]⟩

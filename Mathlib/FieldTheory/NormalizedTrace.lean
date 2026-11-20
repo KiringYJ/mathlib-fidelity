@@ -41,39 +41,54 @@ variable (F K : Type*) [Field F] [Field K] [Algebra F K]
 
 open IntermediateField
 
+private theorem isUnit_finrank [CharZero F] [FiniteDimensional F K] :
+    IsUnit (Module.finrank F K : F) :=
+  (Nat.cast_ne_zero.mpr (Module.finrank_pos (R := F) (M := K)).ne').isUnit
+
+variable [CharZero F] [Algebra.IsIntegral F K]
+
+private theorem isUnit_finrank_adjoin (a : K) : IsUnit (Module.finrank F F⟮a⟯ : F) := by
+  have : FiniteDimensional F F⟮a⟯ := adjoin.finiteDimensional (IsIntegral.isIntegral a)
+  exact isUnit_finrank F F⟮a⟯
+
 set_option backward.privateInPublic true in
-/- The normalized trace function from an extension `K` to the base field `F`.
-Note: this definition does not require the extension `K / F` to be integral (algebraic)
-nor the fields to be of characteristic zero. -/
+/- The normalized trace of an element is its trace from its simple extension scaled by the
+reciprocal of the extension degree. -/
 private noncomputable def normalizedTraceAux (a : K) : F :=
-  (Module.finrank F F⟮a⟯ : F)⁻¹ • trace F F⟮a⟯ (AdjoinSimple.gen F a)
+  Checked.inv (Module.finrank F F⟮a⟯ : F) (isUnit_finrank_adjoin F K a) •
+    trace F F⟮a⟯ (AdjoinSimple.gen F a)
 
 private theorem normalizedTraceAux_def (a : K) : normalizedTraceAux F K a =
-    (Module.finrank F F⟮a⟯ : F)⁻¹ • trace F F⟮a⟯ (AdjoinSimple.gen F a) := rfl
+    Checked.inv (Module.finrank F F⟮a⟯ : F) (isUnit_finrank_adjoin F K a) •
+      trace F F⟮a⟯ (AdjoinSimple.gen F a) := rfl
 
-private theorem normalizedTraceAux_map {E : Type*} [Field E] [Algebra F E] (f : E →ₐ[F] K) (a : E) :
+private theorem normalizedTraceAux_map {E : Type*} [Field E] [Algebra F E] [Algebra.IsIntegral F E]
+    (f : E →ₐ[F] K) (a : E) :
     normalizedTraceAux F K (f a) = normalizedTraceAux F E a := by
   let e := (F⟮a⟯.equivMap f).trans (equivOfEq <| Set.image_singleton ▸ adjoin_map F {a} f)
-  simp_rw [normalizedTraceAux, ← LinearEquiv.finrank_eq e.toLinearEquiv]
-  congr
-  exact trace_eq_of_algEquiv e <| AdjoinSimple.gen F a
+  have hunit : (isUnit_finrank_adjoin F K (f a)).unit = (isUnit_finrank_adjoin F E a).unit := by
+    apply Units.ext
+    simpa only [IsUnit.unit_spec] using
+      congrArg (fun n : ℕ ↦ (n : F)) (LinearEquiv.finrank_eq e.toLinearEquiv).symm
+  rw [normalizedTraceAux_def, normalizedTraceAux_def]
+  change (↑((isUnit_finrank_adjoin F K (f a)).unit⁻¹) : F) • _ =
+    (↑((isUnit_finrank_adjoin F E a).unit⁻¹) : F) • _
+  rw [hunit]
+  congr 1
+  exact trace_eq_of_algEquiv e (AdjoinSimple.gen F a)
 
 private theorem normalizedTraceAux_intermediateField {E : IntermediateField F K} (a : E) :
     normalizedTraceAux F K a = normalizedTraceAux F E a :=
   normalizedTraceAux_map F K E.val a
 
-variable [CharZero F]
-
 variable {K} in
 private theorem normalizedTraceAux_eq_of_finiteDimensional [FiniteDimensional F K] (a : K) :
-    normalizedTraceAux F K a = (Module.finrank F K : F)⁻¹ • trace F K a := by
-  have h := (Nat.cast_ne_zero (R := F)).mpr <|
-    Nat.pos_iff_ne_zero.mp <| Module.finrank_pos (R := F⟮a⟯) (M := K)
-  rw [smul_eq_mul, mul_comm, ← div_eq_mul_inv, trace_eq_trace_adjoin F a,
-    ← Module.finrank_mul_finrank F F⟮a⟯ K, nsmul_eq_mul, Nat.cast_mul, mul_comm,
-    mul_div_mul_right _ _ h, div_eq_mul_inv, mul_comm, ← smul_eq_mul, normalizedTraceAux_def]
-
-variable [Algebra.IsIntegral F K]
+    normalizedTraceAux F K a =
+      Checked.inv (Module.finrank F K : F) (isUnit_finrank F K) • trace F K a := by
+  simp only [normalizedTraceAux_def, smul_eq_mul, ← div_eq_inv_mul₀]
+  apply eq_div_iff.mpr
+  rw [← Module.finrank_mul_finrank F F⟮a⟯ K, Nat.cast_mul, ← mul_assoc, div_mul_cancel₀]
+  rw [trace_eq_trace_adjoin F a, nsmul_eq_mul, mul_comm]
 
 set_option backward.privateInPublic true in
 set_option backward.privateInPublic.warn false in
@@ -112,22 +127,32 @@ noncomputable def normalizedTrace : K →ₗ[F] F where
       smul_comm, ← map_smul _ m, SetLike.mk_smul_mk]
 
 theorem normalizedTrace_def (a : K) : normalizedTrace F K a =
-    (Module.finrank F F⟮a⟯ : F)⁻¹ • trace F F⟮a⟯ (AdjoinSimple.gen F a) :=
+    Checked.inv (Module.finrank F F⟮a⟯ : F) (by exact isUnit_finrank_adjoin F K a) •
+      trace F F⟮a⟯ (AdjoinSimple.gen F a) :=
   rfl
 
 variable {K} in
 /-- Normalized trace defined purely in terms of the degree and the next coefficient of the minimal
 polynomial. Could be an alternative definition but it is harder to work with linearity. -/
 theorem normalizedTrace_minpoly (a : K) :
-    normalizedTrace F K a = ((minpoly F a).natDegree : F)⁻¹ • -(minpoly F a).nextCoeff :=
+    normalizedTrace F K a = Checked.inv ((minpoly F a).natDegree : F) (by
+      rw [← adjoin.finrank (IsIntegral.isIntegral a)]
+      exact isUnit_finrank_adjoin F K a) • -(minpoly F a).nextCoeff := by
   have ha : IsIntegral F a := IsIntegral.isIntegral a
-  IntermediateField.adjoin.finrank ha ▸ trace_adjoinSimpleGen ha ▸ normalizedTrace_def F K a
+  rw [normalizedTrace_def, trace_adjoinSimpleGen ha]
+  congr 1
+  let d : {x : F // IsUnit x} := ⟨(Module.finrank F F⟮a⟯ : F), isUnit_finrank_adjoin F K a⟩
+  let e : {x : F // IsUnit x} := ⟨((minpoly F a).natDegree : F), by
+    rw [← adjoin.finrank ha]
+    exact isUnit_finrank_adjoin F K a⟩
+  have h : d = e := Subtype.ext (congrArg (fun n : ℕ ↦ (n : F)) (adjoin.finrank ha))
+  exact congrArg (fun d : {x : F // IsUnit x} ↦ Checked.inv d.val d.property) h
 
 variable {F} in
 theorem normalizedTrace_self_apply (a : F) : normalizedTrace F F a = a := by
   dsimp [normalizedTrace]
-  rw [normalizedTraceAux_eq_of_finiteDimensional F a, Module.finrank_self F,
-    Nat.cast_one, inv_one, one_smul, trace_self_apply]
+  rw [normalizedTraceAux_eq_of_finiteDimensional F a, trace_self_apply]
+  simp [Module.finrank_self]
 
 @[simp]
 theorem normalizedTrace_self : normalizedTrace F F = LinearMap.id :=
@@ -135,11 +160,13 @@ theorem normalizedTrace_self : normalizedTrace F F = LinearMap.id :=
 
 variable {K} in
 theorem normalizedTrace_eq_of_finiteDimensional_apply [FiniteDimensional F K] (a : K) :
-    normalizedTrace F K a = (Module.finrank F K : F)⁻¹ • trace F K a :=
+    normalizedTrace F K a =
+      Checked.inv (Module.finrank F K : F) (by exact isUnit_finrank F K) • trace F K a :=
   normalizedTraceAux_eq_of_finiteDimensional F a
 
 theorem normalizedTrace_eq_of_finiteDimensional [FiniteDimensional F K] :
-    normalizedTrace F K = (Module.finrank F K : F)⁻¹ • trace F K :=
+    normalizedTrace F K =
+      Checked.inv (Module.finrank F K : F) (by exact isUnit_finrank F K) • trace F K :=
   LinearMap.ext <| normalizedTrace_eq_of_finiteDimensional_apply F
 
 /-- The normalized trace transfers via (injective) maps. -/
@@ -188,19 +215,32 @@ private theorem normalizedTrace_trans_apply_aux [FiniteDimensional F E] [Algebra
     normalizedTrace F E (normalizedTrace E K a) = normalizedTrace F K a := by
   have : FiniteDimensional E E⟮a⟯ :=
     IntermediateField.adjoin.finiteDimensional (IsIntegral.isIntegral a)
-  rw [normalizedTrace_def E K, inv_natCast_smul_eq (R := E) (S := F), map_smul,
-    normalizedTrace_eq_of_finiteDimensional F E, LinearMap.smul_apply, ← smul_assoc,
-    smul_eq_mul (a := _⁻¹), ← mul_inv, trace_trace, mul_comm,
-    ← Nat.cast_mul, Module.finrank_mul_finrank, eq_comm]
   let E' := E⟮a⟯.restrictScalars F
   have : FiniteDimensional F E' := Module.Finite.trans E E⟮a⟯
-  have h_finrank_eq : Module.finrank F E⟮a⟯ = Module.finrank F E' := rfl
-  have h_trace_eq : trace F E⟮a⟯ (AdjoinSimple.gen E a) = trace F E' (AdjoinSimple.gen E a : E') :=
-    rfl
   let a' : E' := AdjoinSimple.gen E a
-  rw [h_finrank_eq, h_trace_eq, ← normalizedTrace_eq_of_finiteDimensional_apply F,
+  let d : F := Module.finrank E E⟮a⟯
+  let e : F := Module.finrank F E
+  have hd : IsUnit d :=
+    (Nat.cast_ne_zero.mpr (Module.finrank_pos (R := E) (M := E⟮a⟯)).ne').isUnit
+  have he : IsUnit e := isUnit_finrank F E
+  have hdegree : (Module.finrank F E' : F) = d * e := by
+    change (Module.finrank F E⟮a⟯ : F) = (Module.finrank E E⟮a⟯ : F) * (Module.finrank F E : F)
+    rw [mul_comm, ← Nat.cast_mul, Module.finrank_mul_finrank F E E⟮a⟯]
+  have hcoeff : d⁻¹ * e⁻¹ = Checked.inv (Module.finrank F E' : F) (isUnit_finrank F E') := by
+    apply mul_right_cancel₀ (isUnit_finrank F E').ne_zero
+    rw [inv_mul_cancel₀, hdegree]
+    calc
+      _ = (d⁻¹ * d) * (e⁻¹ * e) := by ring
+      _ = 1 := by simp only [inv_mul_cancel₀, one_mul]
+  rw [normalizedTrace_def E K, inv_natCast_smul_eq (R := E) (S := F), map_smul,
+    normalizedTrace_eq_of_finiteDimensional F E, LinearMap.smul_apply, ← smul_assoc]
+  conv_lhs => arg 1; rw [smul_eq_mul]
+  change (d⁻¹ * e⁻¹) • trace F E (trace E E⟮a⟯ (AdjoinSimple.gen E a)) = _
+  rw [hcoeff, trace_trace]
+  change Checked.inv (Module.finrank F E' : F) (isUnit_finrank F E') • trace F E' a' =
+    normalizedTrace F K (a' : K)
+  rw [← normalizedTrace_eq_of_finiteDimensional_apply F,
     ← normalizedTrace_intermediateField F K a']
-  congr
 
 /-- For a tower `K / E / F` of algebraic extensions, the normalized trace from `K` to `E` composed
 with the normalized trace from `E` to `F` equals the normalized trace from `K` to `F`. -/

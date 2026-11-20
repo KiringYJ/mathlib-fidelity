@@ -40,14 +40,13 @@ section lemmas
 
 private theorem irrational_rpow_rat_of_not_power {q : ℚ} {a b : ℕ}
     (h : ∀ p : ℚ, q ^ a ≠ p ^ b) (hb : 0 < b) (hq : 0 ≤ q) :
-    Irrational (Real.rpow q (a / b : ℚ)) := by
-  simp only [Irrational, Rat.cast_div, Rat.cast_natCast, Real.rpow_eq_pow, Set.mem_range,
-    not_exists]
+    Irrational (Real.rpow q (Rat.fraction a b hb.ne' : ℚ)) := by
+  simp only [Rat.fraction_eq_div, Int.cast_natCast, Irrational, Rat.cast_div, Rat.cast_natCast,
+    Real.rpow_eq_pow, Set.mem_range, not_exists]
   intro x hx
   absurd h x
   rify
-  rw [hx, ← Real.rpow_mul_natCast (by simpa), div_mul_cancel₀ _ (by simp; lia)]
-  simp
+  rw [hx, ← Real.rpow_mul_natCast (by simpa), div_mul_cancel₀]; simp
 
 private theorem not_power_nat_pow {n p q : ℕ} (h_coprime : p.Coprime q) (hq : 0 < q)
     (h : ∀ m, n ≠ m ^ q) (m : ℕ) : n ^ p ≠ m ^ q := by
@@ -90,51 +89,39 @@ private lemma eq_of_mul_eq_mul_of_coprime {a b x y : ℕ} (hab : a.Coprime b) (h
   · exact eq_of_mul_eq_mul_of_coprime_aux hab h
   · exact eq_of_mul_eq_mul_of_coprime_aux (x := b) hxy.symm (by rw [mul_comm, ← h, mul_comm])
 
-/-- Weaker version of `not_power_rat_of_num` with extra `q ≥ 0` assumption. -/
-private theorem not_power_rat_of_num_aux {a b d : ℕ}
-    (h_coprime : a.Coprime b) (ha : ∀ x, a ≠ x ^ d) {q : ℚ} (hq : 0 ≤ q) :
-    (a / b : ℚ) ≠ q ^ d := by
-  by_cases hb_zero : b = 0
-  · subst hb_zero
-    contrapose! ha
-    simp only [Nat.coprime_zero_right] at h_coprime
-    subst h_coprime
-    use 1
-    simp
-  by_contra! h
-  rw [← Rat.num_div_den q] at h
-  set x' := q.num
-  set y := q.den
-  obtain ⟨x, hx'⟩ := Int.eq_ofNat_of_zero_le (show 0 ≤ x' by rwa [Rat.num_nonneg])
-  rw [hx'] at h
-  specialize ha x
-  simp only [Int.cast_natCast, div_pow] at h
-  rw [div_eq_div_iff] at h
-  rotate_left
-  · simpa
-  · simp [y]
-  replace h : a * y ^ d = x ^ d * b := by
-    qify
-    assumption
-  apply ha
-  conv at h => rhs; rw [mul_comm]
-  apply eq_of_mul_eq_mul_of_coprime h_coprime _ h
-  apply Nat.Coprime.pow_left
-  apply Nat.Coprime.pow_right
-  apply Nat.Coprime.symm
-  simpa [hx'] using (show x'.natAbs.Coprime y from Rat.reduced q)
+private theorem fraction_power_parts {a b p d : ℕ} (hb : b ≠ 0)
+    (hab : a.Coprime b) {r : ℚ} (h : Rat.fraction a b hb ^ p = r ^ d) :
+    a ^ p = r.num.natAbs ^ d ∧ b ^ p = r.den ^ d := by
+  have ha := congrArg (fun x : ℚ ↦ x ^ p) (Rat.fraction_mul_den (a : ℤ) b hb)
+  have hr := congrArg (fun x : ℚ ↦ x ^ d) (Rat.mul_den_eq_num r)
+  simp only [Int.cast_natCast, mul_pow] at ha hr
+  have hc : (a : ℚ) ^ p * (r.den : ℚ) ^ d = (b : ℚ) ^ p * (r.num : ℚ) ^ d := by
+    rw [← ha, ← hr, h]
+    ring
+  have hZ : (a : ℤ) ^ p * (r.den : ℤ) ^ d = (b : ℤ) ^ p * r.num ^ d := by
+    exact_mod_cast hc
+  have hN : a ^ p * r.den ^ d = b ^ p * r.num.natAbs ^ d := by
+    simpa [Int.natAbs_mul, Int.natAbs_pow] using congrArg Int.natAbs hZ
+  have h₁ : (a ^ p).Coprime (b ^ p) := Nat.Coprime.pow _ _ hab
+  have h₂ : (r.den ^ d).Coprime (r.num.natAbs ^ d) := Nat.Coprime.pow _ _ (Rat.reduced r).symm
+  exact ⟨eq_of_mul_eq_mul_of_coprime h₁ h₂ hN,
+    eq_of_mul_eq_mul_of_coprime h₁.symm h₂.symm hN.symm⟩
 
-private theorem not_power_rat_of_num {a b d : ℕ}
-    (h_coprime : a.Coprime b) (ha : ∀ x, a ≠ x ^ d) (q : ℚ) :
-    (a / b : ℚ) ≠ q ^ d := by
-  by_cases hq : 0 ≤ q
-  · apply not_power_rat_of_num_aux h_coprime ha hq
-  rcases d.even_or_odd with (h_even | h_odd)
-  · have := not_power_rat_of_num_aux h_coprime (q := -q) ha (by linarith)
-    rwa [h_even.neg_pow] at this
-  · contrapose hq
-    rw [← h_odd.pow_nonneg_iff, ← hq]
-    positivity
+private theorem irrational_rpow_of_bad_part {x y : ℝ} {a b p d : ℕ}
+    (hx : IsNNRat x a b) (hy : IsNNRat y p d) (hab : a.Coprime b)
+    (bad : 0 < d → (∀ m : ℕ, a ^ p ≠ m ^ d) ∨ (∀ m : ℕ, b ^ p ≠ m ^ d)) :
+    Irrational (x ^ y) := by
+  have hb : b ≠ 0 := Nat.cast_ne_zero.mp hx.den_nz
+  have hd : d ≠ 0 := Nat.cast_ne_zero.mp hy.den_nz
+  have hdpos := Nat.pos_of_ne_zero hd
+  rw [hx.eq_cast_fraction x a b hb, hy.eq_cast_fraction y p d hd]
+  refine irrational_rpow_rat_of_not_power (q := Rat.fraction a b hb) ?_ hdpos
+    (Rat.fraction_nonneg (Int.natCast_nonneg _) _ hb)
+  intro r hr
+  obtain ⟨hnum, hden⟩ := fraction_power_parts hb hab hr
+  rcases bad hdpos with hn | hn
+  · exact hn _ hnum
+  · exact hn _ hden
 
 theorem irrational_rpow_rat_rat_of_num {x y : ℝ} {x_num x_den y_num y_den k_num : ℕ}
     (hx_isNNRat : IsNNRat x x_num x_den)
@@ -144,27 +131,9 @@ theorem irrational_rpow_rat_rat_of_num {x y : ℝ} {x_num x_den y_num y_den k_nu
     (hn1 : k_num ^ y_den < x_num)
     (hn2 : x_num < (k_num + 1) ^ y_den) :
     Irrational (x ^ y) := by
-  have hy_den_pos : 0 < y_den := by
-    by_contra! h
-    simp only [nonpos_iff_eq_zero] at h
-    simp only [h, pow_zero, Nat.lt_one_iff] at hn1 hn2
-    lia
-  rcases hx_isNNRat with ⟨hx_inv, hx_eq⟩
-  rcases hy_isNNRat with ⟨hy_inv, hy_eq⟩
-  rw [hy_eq, hx_eq]
-  have h1 : (y_num * ⅟(y_den : ℝ) : ℝ) = ((y_num / y_den : ℚ) : ℝ) := by
-    simp
-    rfl
-  have h2 : (x_num * ⅟(x_den : ℝ) : ℝ) = ((x_num / x_den : ℚ) : ℝ) := by
-    simp
-    rfl
-  rw [h1, h2]
-  refine irrational_rpow_rat_of_not_power ?_ hy_den_pos ?_
-  · simp only [div_pow, ← Nat.cast_pow]
-    apply not_power_rat_of_num
-    · apply Nat.Coprime.pow _ _ hx_coprime
-    · apply not_power_nat_pow_of_bounds hy_den_pos hy_coprime hn1 hn2
-  · positivity
+  apply irrational_rpow_of_bad_part hx_isNNRat hy_isNNRat hx_coprime
+  intro hd
+  exact Or.inl (not_power_nat_pow_of_bounds hd hy_coprime hn1 hn2)
 
 theorem irrational_rpow_rat_rat_of_den {x y : ℝ} {x_num x_den y_num y_den k_den : ℕ}
     (hx_isNNRat : IsNNRat x x_num x_den)
@@ -174,13 +143,9 @@ theorem irrational_rpow_rat_rat_of_den {x y : ℝ} {x_num x_den y_num y_den k_de
     (hd1 : k_den ^ y_den < x_den)
     (hd2 : x_den < (k_den + 1) ^ y_den) :
     Irrational (x ^ y) := by
-  rcases hx_isNNRat with ⟨hx_inv, hx_eq⟩
-  apply Irrational.of_inv
-  rw [← Real.inv_rpow (by simp only [hx_eq, invOf_eq_inv]; positivity)]
-  apply irrational_rpow_rat_rat_of_num (x_num := x_den) (x_den := x_num) _ hy_isNNRat
-    (Nat.coprime_comm.mp hx_coprime) hy_coprime hd1 hd2
-  refine ⟨invertibleOfNonzero (fun _ ↦ ?_), by simp [hx_eq]⟩
-  simp_all
+  apply irrational_rpow_of_bad_part hx_isNNRat hy_isNNRat hx_coprime
+  intro hd
+  exact Or.inr (not_power_nat_pow_of_bounds hd hy_coprime hd1 hd2)
 
 theorem irrational_rpow_nat_rat {x y : ℝ} {x_num y_num y_den k : ℕ}
     (hx_isNat : IsNat x x_num)

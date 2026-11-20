@@ -162,45 +162,51 @@ variable [IsDomain R] [IsDiscreteValuationRing R]
 variable {K : Type*} [Field K] [Algebra R K] [IsFractionRing R K]
 
 lemma ordMonoidWithZeroHom_eq_intValuation {x : R} (h : x ∈ nonZeroDivisors R) :
-    (ordMonoidWithZeroHom R) x = ((IsDiscreteValuationRing.maximalIdeal R).intValuation x)⁻¹ := by
-  simp [ordMonoidWithZeroHom_eq_ord h, IsDiscreteValuationRing.intValuation_maximalIdeal]
+    (ordMonoidWithZeroHom R) x =
+      Checked.inv ((IsDiscreteValuationRing.maximalIdeal R).intValuation x)
+        ((IsDiscreteValuationRing.maximalIdeal R).intValuation_ne_zero x
+          (nonZeroDivisors.ne_zero h)).isUnit := by
+  obtain ⟨n, hn⟩ := ENat.ne_top_iff_exists.mp (ord_ne_top h)
+  have hv : (IsDiscreteValuationRing.maximalIdeal R).intValuation x = WithZero.exp (-(n : ℤ)) := by
+    simp [IsDiscreteValuationRing.intValuation_maximalIdeal, ← ord_eq_addVal, ← hn]
+  simp [ordMonoidWithZeroHom_eq_coe R h hn.symm, hv, WithZero.exp_eq_coe_ofAdd]
 
 lemma ordFrac_eq_intValuation {x : R} (h : x ≠ 0) : (ordFrac R) ((algebraMap R K) x) =
-    ((IsDiscreteValuationRing.maximalIdeal R).intValuation x)⁻¹ := by
+    Checked.inv ((IsDiscreteValuationRing.maximalIdeal R).intValuation x)
+      ((IsDiscreteValuationRing.maximalIdeal R).intValuation_ne_zero x h).isUnit := by
   rw [ordFrac_eq_ord R h,
       ordMonoidWithZeroHom_eq_intValuation (mem_nonZeroDivisors_of_ne_zero h)]
 
-theorem ordFrac_eq_inverse_comp_valuation :
-    ordFrac R = MonoidWithZeroHom.comp MonoidWithZero.inverse
-    ((IsDiscreteValuationRing.maximalIdeal R).valuation K).toMonoidWithZeroHom := by
-  ext a
-  by_cases ha : a = 0
-  · simp_all
-  obtain ⟨x, y, hy, rfl⟩ := IsFractionRing.div_surjective (A := R) a
-  simp_all [ordFrac_eq_intValuation _, IsDedekindDomain.HeightOneSpectrum.valuation_of_algebraMap,
-    IsDiscreteValuationRing.intValuation_maximalIdeal]
-
-theorem ordFrac_eq_valuation_inv (x : K) :
+theorem ordFrac_eq_valuation_inv (x : K) (hx : x ≠ 0) :
     ordFrac R x = ((IsDiscreteValuationRing.maximalIdeal R).valuation K x)⁻¹ := by
-  simp [ordFrac_eq_inverse_comp_valuation]
+  obtain ⟨a, b, hb, rfl⟩ := IsFractionRing.div_surjective (A := R) x
+  have ha : a ≠ 0 := fun ha ↦ hx (by rw [ha, map_zero, zero_div])
+  simp only [map_div₀, ordFrac_eq_intValuation ha,
+    ordFrac_eq_intValuation (nonZeroDivisors.ne_zero hb),
+    IsDedekindDomain.HeightOneSpectrum.valuation_of_algebraMap, inv_div₀']
 
 lemma ordFrac_irreducible
     {ϖ : R} (hϖ : Irreducible ϖ) : ordFrac R (algebraMap R K ϖ) = WithZero.exp 1 := by
-  simp [ordFrac_eq_valuation_inv, IsDedekindDomain.HeightOneSpectrum.valuation_of_algebraMap,
-    IsDiscreteValuationRing.intValuation_maximalIdeal,
-    IsDiscreteValuationRing.addVal_uniformizer hϖ, ← WithZero.exp_eq_coe_ofAdd]
+  rw [ordFrac_eq_ord R hϖ.ne_zero,
+    ordMonoidWithZeroHom_eq_ord (mem_nonZeroDivisors_of_ne_zero hϖ.ne_zero),
+    ord_eq_addVal, IsDiscreteValuationRing.addVal_uniformizer hϖ]
+  rfl
 
 open IsDedekindDomain
 
 lemma isUnit_iff_ordFrac_one_of_isDiscreteValuationRing {x : R} :
     IsUnit x ↔ ordFrac R (algebraMap R K x) = 1 := by
-  simp [ordFrac_eq_valuation_inv, IsDiscreteValuationRing.maximalIdeal]
+  by_cases hx : x = 0
+  · simp [hx]
+  simp [ordFrac_eq_intValuation hx, IsDiscreteValuationRing.maximalIdeal]
 
 lemma mker_ordFrac_eq_isUnitSubmonoid :
     MonoidHom.mker (ordFrac R) = (IsUnit.submonoid R).map (algebraMap R K) := by
-  rw [ordFrac_eq_inverse_comp_valuation, ← MonoidWithZeroHom.comap_mker,
-      MonoidWithZeroHom.mker_inverse]
-  exact IsDiscreteValuationRing.mker_valuation_eq_isUnitSubmonoid
+  rw [← IsDiscreteValuationRing.mker_valuation_eq_isUnitSubmonoid]
+  ext x
+  by_cases hx : x = 0
+  · simp [hx]
+  simp [ordFrac_eq_valuation_inv x hx]
 
 /--
 For `x y : R`, if `x + y ≠ 0` then `min (ordFrac R x) (ordFrac R y) ≤ ordFrac R (x + y)`. The
@@ -210,13 +216,25 @@ uses the ordering on `ℕ∞`), since these orders correspond on non `⊤` eleme
 -/
 theorem ordFrac_add (x y : K) (h1 : x + y ≠ 0) :
     min (Ring.ordFrac R x) (Ring.ordFrac R y) ≤ Ring.ordFrac R (x + y) := by
-  simp only [ordFrac_eq_valuation_inv]
-  grw [Valuation.map_add, min_inv_inv_le]
-  simpa [WithZero.pos_iff_ne_zero]
+  by_cases hx : x = 0
+  · simp [hx]
+  by_cases hy : y = 0
+  · simp [hy]
+  simp only [ordFrac_eq_valuation_inv x hx, ordFrac_eq_valuation_inv y hy,
+    ordFrac_eq_valuation_inv (x + y) h1]
+  let v := (IsDiscreteValuationRing.maximalIdeal R).valuation K
+  have hadd := (v.map_add x y).trans_eq (max_def (v x) (v y))
+  split_ifs at hadd
+  · exact (min_le_right _ _).trans (inv_anti₀ (v.pos_iff.mpr h1) hadd)
+  · exact (min_le_left _ _).trans (inv_anti₀ (v.pos_iff.mpr h1) hadd)
 
 theorem associated_of_ordFrac_eq (x y : K)
     (h : ordFrac R x = ordFrac R y) : ∃ u : Rˣ, u • x = y := by
-  rw [ordFrac_eq_valuation_inv, ordFrac_eq_valuation_inv, inv_inj] at h
+  by_cases hx : x = 0
+  · have hy : y = 0 := (ordFrac R).map_eq_zero_iff.mp (by simpa [hx] using h.symm)
+    exact ⟨1, by simp [hx, hy]⟩
+  have hy : y ≠ 0 := fun hy ↦ hx ((ordFrac R).map_eq_zero_iff.mp (by simpa [hy] using h))
+  rw [ordFrac_eq_valuation_inv x hx, ordFrac_eq_valuation_inv y hy, inv_inj₀] at h
   exact IsDiscreteValuationRing.associated_of_valuation_eq _ _ h
 
 end IsDiscreteValuationRing

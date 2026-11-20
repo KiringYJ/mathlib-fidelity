@@ -103,12 +103,14 @@ variable (a b c : Real) (ha : 0 < a) (hc : 0 < c)
 set_option pp.numericTypes true in
 /-- info: Real.log (a ^ (4 : ℝ) * c⁻¹ / a ^ b) + b -/
 #guard_msgs in
-#pull (disch := positivity) Real.log => 4 * Real.log a + -Real.log c - b * Real.log a + b
+#pull (disch := first | positivity | exact isUnit_iff_ne_zero.mpr (by positivity)) Real.log =>
+  4 * Real.log a + -Real.log c - b * Real.log a + b
 
 set_option pp.numericTypes true in
 /-- info: Real.log (a ^ (4 : ℕ) * c⁻¹ / a ^ b) + b -/
 #guard_msgs in
-#pull (disch := positivity) Real.log => (4 : Nat) * Real.log a + -Real.log c - b * Real.log a + b
+#pull (disch := first | positivity | exact isUnit_iff_ne_zero.mpr (by positivity)) Real.log =>
+  (4 : Nat) * Real.log a + -Real.log c - b * Real.log a + b
 
 end log
 

@@ -137,12 +137,12 @@ instance : ValuationRing A where
     · use ⟨a / b, hh⟩
       right
       ext
-      simp [field, mul_comm]
+      simp [field]
     · rw [show (a / b : K)⁻¹ = b / a by simp] at hh
       use ⟨b / a, hh⟩
       left
       ext
-      simp [field, mul_comm]
+      simp [field]
 
 instance : Algebra A K := inferInstance
 

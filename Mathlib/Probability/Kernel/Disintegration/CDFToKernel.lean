@@ -568,7 +568,7 @@ the sets where `‖f (a, ·) n‖ ≥ 1 / 2`, for `n : ℕ`, have finite measure
 integrable, and they cover `β` since `f (a, b)` tends to `1` at `+∞`. -/
 lemma IsCondKernelCDF.sigmaFinite (hf : IsCondKernelCDF f κ ν) (a : α) : SigmaFinite (ν a) := by
   refine ⟨⟨⟨fun n : ℕ ↦ {b | 1 / 2 ≤ ‖f (a, b) n‖}, fun _ ↦ mem_univ _,
-    fun n ↦ (hf.integrable a n).measure_norm_ge_lt_top (by norm_num), ?_⟩⟩⟩
+    fun n ↦ (hf.integrable a n).measure_norm_ge_lt_top (by norm_num : (0 : ℝ) < 1 / 2), ?_⟩⟩⟩
   refine eq_univ_of_forall fun b ↦ ?_
   have h := (hf.tendsto_atTop_one (a, b)).comp tendsto_natCast_atTop_atTop
   obtain ⟨n, hn⟩ := (h.eventually (lt_mem_nhds (by norm_num : (1 / 2 : ℝ) < 1))).exists

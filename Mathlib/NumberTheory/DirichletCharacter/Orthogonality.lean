@@ -77,7 +77,8 @@ theorem sum_characters_eq (a : ZMod n) :
 in `ZMod n` with `a` a unit, the sum of `χ a⁻¹ * χ b` over all Dirichlet characters
 mod `n` with values in `R` vanishes if `a ≠ b` and has the value `n.totient` if `a = b`. -/
 theorem sum_char_inv_mul_char_eq {a : ZMod n} (ha : IsUnit a) (b : ZMod n) :
-    ∑ χ : DirichletCharacter R n, χ a⁻¹ * χ b = if a = b then (n.totient : R) else 0 := by
-  simp only [← map_mul, sum_characters_eq, ZMod.inv_mul_eq_one_of_isUnit ha]
+    ∑ χ : DirichletCharacter R n, χ (Checked.inv a ha) * χ b =
+      if a = b then (n.totient : R) else 0 := by
+  simp only [← map_mul, sum_characters_eq, Checked.inv, Units.inv_mul_eq_one, IsUnit.unit_spec]
 
 end DirichletCharacter

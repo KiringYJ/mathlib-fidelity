@@ -95,4 +95,7 @@ end Normed
 @[simp] lemma Set.extremePoints_Icc {a b : ℝ} (hab : a ≤ b) :
     extremePoints ℝ (Icc a b) = {a, b} := by
   rw [Real.Icc_eq_closedBall, StrictConvexSpace.extremePoints_closedBall_eq_sphere]
-  grind [Real.sphere_eq_pair]
+  have h : 0 ≤ (b - a) / 2 := div_nonneg (sub_nonneg.mpr hab) (by norm_num)
+  have ha : (a + b) / 2 - (b - a) / 2 = a := by ring
+  have hb : (a + b) / 2 + (b - a) / 2 = b := by ring
+  rw [Real.sphere_eq_pair _ h, ha, hb]

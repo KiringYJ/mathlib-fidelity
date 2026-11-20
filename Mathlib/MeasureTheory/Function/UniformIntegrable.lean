@@ -294,11 +294,12 @@ theorem MemLp.eLpNorm_indicator_norm_ge_le (hf : MemLp f p μ) (hmeas : Strongly
     obtain ⟨M, hM⟩ := hf.eLpNormEssSup_indicator_norm_ge_eq_zero hmeas
     refine ⟨M, ?_⟩
     simp only [eLpNorm_exponent_top, hM, zero_le]
+  have hpUnit : IsUnit p.toReal := (toReal_pos hp_ne_zero hp_ne_top).ne'.isUnit
   obtain ⟨M, hM', hM⟩ := MemLp.integral_indicator_norm_ge_nonneg_le
     (μ := μ) (hf.norm_rpow hp_ne_zero hp_ne_top) (rpow_pos_of_nonneg hε toReal_nonneg)
   refine ⟨M ^ (1 / p.toReal), ?_⟩
   rw [eLpNorm_eq_lintegral_rpow_enorm_toReal hp_ne_zero hp_ne_top, ← rpow_one ε]
-  conv_rhs => rw [← mul_one_div_cancel (toReal_pos hp_ne_zero hp_ne_top).ne']
+  conv_rhs => rw [← mul_one_div_cancel (ha := hpUnit)]
   rw [rpow_mul]
   gcongr
   convert! hM using 3 with x
@@ -307,7 +308,7 @@ theorem MemLp.eLpNorm_indicator_norm_ge_le (hf : MemLp f p μ) (hmeas : Strongly
     rw [coe_nnnorm, coe_nnnorm, Real.norm_rpow_of_nonneg (norm_nonneg _), norm_norm,
       ← Real.rpow_le_rpow_iff hM' (by positivity)
         (one_div_pos.2 <| toReal_pos hp_ne_zero hp_ne_top), ← Real.rpow_mul (norm_nonneg _),
-      mul_one_div_cancel (toReal_pos hp_ne_zero hp_ne_top).ne', Real.rpow_one]
+      mul_one_div_cancel, Real.rpow_one]
   by_cases hx : x ∈ { x : α | M ^ (1 / p.toReal) ≤ ‖f x‖₊ }
   · rw [Set.indicator_of_mem hx, Set.indicator_of_mem, Real.enorm_of_nonneg (by positivity),
       ← ofReal_rpow_of_nonneg (norm_nonneg _) toReal_nonneg, ofReal_norm]
@@ -345,11 +346,14 @@ theorem eLpNorm_indicator_le_of_bound {f : α → β} (hp_top : p ≠ ∞) {ε :
   intro s hs hμ
   by_cases hp : p = 0
   · simp [hp]
+  have hpUnit : IsUnit p.toReal := (toReal_pos hp hp_top).ne'.isUnit
   rw [eLpNorm_indicator_eq_eLpNorm_restrict hs]
   have haebdd : ∀ᵐ x ∂μ.restrict s, ‖f x‖ ≤ M := by
     filter_upwards
     exact fun x ↦ (hf x).le
-  refine (eLpNorm_le_of_ae_bound haebdd).trans ?_
+  have hbound := eLpNorm_le_of_ae_bound (p := p) haebdd
+  rw [one_div, toReal_inv (ha := hpUnit)] at hbound
+  refine hbound.trans ?_
   rw [Measure.restrict_apply MeasurableSet.univ, Set.univ_inter,
     ← ENNReal.le_div_iff_mul_le (.inl _) (.inl ofReal_ne_top)]
   · rwa [rpow_inv_le_iff (toReal_pos hp hp_top)]
@@ -463,6 +467,7 @@ theorem tendsto_Lp_finite_of_tendsto_ae_of_meas [IsFiniteMeasure μ] (hp : 1 ≤
   by_cases hμ : μ = 0
   · exact ⟨0, fun n _ => by simp [hμ]⟩
   have hε' : 0 < ε / 3 := ε.div_pos hε.ne' ofNat_ne_top
+  have hpUnit : IsUnit p.toReal := (toReal_pos (zero_lt_one.trans_le hp).ne' hp').ne'.isUnit
   have hdivp : 0 ≤ 1 / p.toReal := by positivity
   have hpow : 0 < measureUnivNNReal μ ^ (1 / p.toReal) :=
     Real.rpow_pos_of_pos (measureUnivNNReal_pos hμ) _
@@ -493,13 +498,16 @@ theorem tendsto_Lp_finite_of_tendsto_ae_of_meas [IsFiniteMeasure μ] (hp : 1 ≤
     have := eLpNorm_indicator_sub_le_of_dist_bdd μ hp' htm.compl this fun x hx =>
       (dist_comm (g x) (f n x) ▸ (hN x hx).le :
         dist (f n x) (g x) ≤ ε.toReal / (3 * measureUnivNNReal μ ^ (1 / p.toReal)))
+    have hpRecip : (1 / p).toReal = 1 / p.toReal := by
+      rw [one_div, toReal_inv (ha := hpUnit), one_div₀]
+    rw [hpRecip] at this
     refine this.trans ?_
-    rw [div_mul_eq_div_mul_one_div, ← ofReal_toReal (measure_lt_top μ tᶜ).ne,
+    rw [div_mul_eq_div_mul_one_div₀, ← ofReal_toReal (measure_lt_top μ tᶜ).ne,
       ofReal_rpow_of_nonneg toReal_nonneg hdivp, ← ofReal_mul, mul_assoc]; swap
     · positivity
     rw [ofReal_mul (by positivity), hε₃]
     refine mul_le_of_le_one_right (by positivity) (ofReal_le_one.2 ?_)
-    rw [mul_comm, mul_one_div, div_le_one]
+    rw [mul_comm, mul_one_div₀, div_le_one]
     · gcongr
       refine (toReal_le_of_le_ofReal (measureUnivNNReal_pos hμ).le ?_)
       rw [ofReal_coe_nnreal, coe_measureUnivNNReal]
@@ -581,6 +589,7 @@ theorem unifIntegrable_of' (hp : 1 ≤ p) (hp' : p ≠ ∞) {f : ι → α → �
       ∀ i, eLpNorm ({ x | C ≤ ‖f i x‖₊ }.indicator (f i)) p μ ≤ ε) :
     UnifIntegrable f p μ := by
   have hpzero := (lt_of_lt_of_le zero_lt_one hp).ne'
+  have hpUnit : IsUnit p.toReal := (toReal_pos hpzero hp').ne'.isUnit
   by_cases hμ : μ Set.univ = 0
   · rw [Measure.measure_univ_eq_zero] at hμ
     exact hμ.symm ▸ unifIntegrable_zero_meas
@@ -618,7 +627,7 @@ theorem unifIntegrable_of' (hp : 1 ≤ p) (hp' : p ≠ ∞) {f : ι → α → �
         rw [Set.mem_ofPred_eq] at hx₁ hx₂
         exact False.elim (hx₂.ne (eq_of_le_of_not_lt hx₁ (not_lt.2 hx₂.le)).symm)
     _ ≤ eLpNorm (Set.indicator { x | C ≤ ‖f i x‖₊ } (f i)) p μ +
-        (C : ℝ≥0∞) * μ s ^ (1 / ENNReal.toReal p) := by
+        (C : ℝ≥0∞) * μ s ^ (1 / p).toReal := by
       refine add_le_add
         (eLpNorm_mono fun x => norm_indicator_le_of_subset Set.inter_subset_right _ _) ?_
       rw [← Set.indicator_indicator]
@@ -628,11 +637,11 @@ theorem unifIntegrable_of' (hp : 1 ≤ p) (hp' : p ≠ ∞) {f : ι → α → �
         simp_rw [norm_indicator_eq_indicator_norm]
         exact Set.indicator_le' (fun x (hx : _ < _) => hx.le) fun _ _ => NNReal.coe_nonneg _
       refine le_trans (eLpNorm_le_of_ae_bound this) ?_
-      rw [mul_comm, Measure.restrict_apply' hs, Set.univ_inter, ofReal_coe_nnreal, one_div]
+      rw [mul_comm, Measure.restrict_apply' hs, Set.univ_inter, ofReal_coe_nnreal]
     _ ≤ (ε / 2) + C * (ε / (2 * C)) := by
       grw [hC i]
       gcongr
-      rwa [one_div, rpow_inv_le_iff (toReal_pos hpzero hp')]
+      rwa [one_div, toReal_inv (ha := hpUnit), rpow_inv_le_iff (toReal_pos hpzero hp')]
     _ ≤ (ε / 2) + (ε / 2) := by
       apply add_le_add_right
       rw [← ENNReal.mul_comm_div, ENNReal.le_div_iff_mul_le (.inr hε.ne') (.inl ofNat_ne_top),
@@ -765,7 +774,7 @@ theorem uniformIntegrable_of' [IsFiniteMeasure μ] (hp : 1 ≤ p) (hp' : p ≠ �
   refine ⟨fun i => (hf i).aestronglyMeasurable,
     unifIntegrable_of hp hp' (fun i => (hf i).aestronglyMeasurable) h, ?_⟩
   obtain ⟨C, hC⟩ := h 1 one_pos
-  refine ⟨((C : ℝ≥0∞) * μ Set.univ ^ p.toReal⁻¹ + 1).toNNReal, fun i => ?_⟩
+  refine ⟨((C : ℝ≥0∞) * μ Set.univ ^ (1 / p).toReal + 1).toNNReal, fun i => ?_⟩
   calc
     eLpNorm (f i) p μ ≤
         eLpNorm ({ x : α | ‖f i x‖₊ < C }.indicator (f i)) p μ +
@@ -781,7 +790,7 @@ theorem uniformIntegrable_of' [IsFiniteMeasure μ] (hp : 1 ≤ p) (hp' : p ≠ �
         simpa using hx
       · rw [Set.indicator_of_mem, zero_add]
         simpa using hx
-    _ ≤ (C : ℝ≥0∞) * μ Set.univ ^ p.toReal⁻¹ + 1 := by
+    _ ≤ (C : ℝ≥0∞) * μ Set.univ ^ (1 / p).toReal + 1 := by
       have : ∀ᵐ x ∂μ, ‖{ x : α | ‖f i x‖₊ < C }.indicator (f i) x‖₊ ≤ C := by
         filter_upwards
         simp_rw [nnnorm_indicator_eq_indicator_nnnorm]
@@ -789,7 +798,7 @@ theorem uniformIntegrable_of' [IsFiniteMeasure μ] (hp : 1 ≤ p) (hp' : p ≠ �
       refine add_le_add (le_trans (eLpNorm_le_of_ae_bound this) ?_) (ofReal_one ▸ hC i)
       simp_rw [NNReal.val_eq_coe, ofReal_coe_nnreal, mul_comm]
       exact le_rfl
-    _ = ((C : ℝ≥0∞) * μ Set.univ ^ p.toReal⁻¹ + 1 : ℝ≥0∞).toNNReal := by
+    _ = ((C : ℝ≥0∞) * μ Set.univ ^ (1 / p).toReal + 1 : ℝ≥0∞).toNNReal := by
       rw [coe_toNNReal (by finiteness)]
 
 /-- A sequence of functions `(fₙ)` is uniformly integrable in the probability sense if for all
@@ -816,6 +825,7 @@ theorem uniformIntegrable_of [IsFiniteMeasure μ] (hp : 1 ≤ p) (hp' : p ≠ �
 theorem UniformIntegrable.spec' (hp : p ≠ 0) (hp' : p ≠ ∞) (hf : ∀ i, StronglyMeasurable (f i))
     (hfu : UniformIntegrable f p μ) {ε : ℝ≥0∞} (hε : 0 < ε) :
     ∃ C : ℝ≥0, ∀ i, eLpNorm ({ x | C ≤ ‖f i x‖₊ }.indicator (f i)) p μ ≤ ε := by
+  have hpUnit : IsUnit p.toReal := (toReal_pos hp hp').ne'.isUnit
   obtain ⟨-, hfu, M, hM⟩ := hfu
   obtain ⟨δ, hδpos, hδ⟩ := (unifIntegrable_iff.1 hfu) ε hε
   obtain ⟨C, hC⟩ : ∃ C : ℝ≥0, ∀ i, μ { x | C ≤ ‖f i x‖₊ } ≤ δ := by
@@ -877,7 +887,8 @@ theorem uniformIntegrable_iff [IsFiniteMeasure μ] (hp : 1 ≤ p) (hp' : p ≠ �
 theorem uniformIntegrable_average
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (hp : 1 ≤ p) {f : ℕ → α → E} (hf : UniformIntegrable f p μ) :
-    UniformIntegrable (fun (n : ℕ) => (n : ℝ)⁻¹ • (∑ i ∈ Finset.range n, f i)) p μ := by
+    UniformIntegrable (fun n : ℕ ↦ ((n + 1 : ℕ) : ℝ)⁻¹ • (∑ i ∈ Finset.range (n + 1), f i))
+      p μ := by
   obtain ⟨hf₁, hf₂, hf₃⟩ := hf
   refine ⟨fun n ↦ ?_, unifIntegrable_iff'.2 fun ε hε ↦ ?_, ?_⟩
   · exact (Finset.aestronglyMeasurable_sum _ fun i _ => hf₁ i).const_smul _
@@ -886,32 +897,28 @@ theorem uniformIntegrable_average
     simp_rw [Finset.smul_sum]
     refine (eLpNorm_sum_le (fun i _ ↦ ((hf₁ i).const_smul _).mono_measure
       μ.restrict_le_self) hp).trans ?_
-    have this i : s.indicator ((n : ℝ)⁻¹ • f i) = (↑n : ℝ)⁻¹ • s.indicator (f i) :=
-      indicator_const_smul _ _ _
-    obtain rfl | hn := eq_or_ne n 0
-    · simp
     simp_rw [eLpNorm_const_smul, ← Finset.mul_sum]
-    rw [enorm_inv (by positivity), Real.enorm_natCast, ← ENNReal.div_eq_inv_mul]
+    rw [enorm_inv, Real.enorm_natCast, ← ENNReal.div_eq_inv_mul]
     refine div_le_of_le_mul' ?_
-    have key := Finset.sum_le_card_nsmul (.range n) (fun i ↦ eLpNorm (f i) p (μ.restrict s)) ε
+    have key := Finset.sum_le_card_nsmul (.range (n + 1))
+      (fun i ↦ eLpNorm (f i) p (μ.restrict s)) ε
     simp only [Finset.mem_range, Finset.card_range, nsmul_eq_mul] at key
     exact key fun i _ ↦ hδ₂ i s hle
   · obtain ⟨C, hC⟩ := hf₃
     simp_rw [Finset.smul_sum]
     refine ⟨C, fun n => (eLpNorm_sum_le (fun i _ => (hf₁ i).const_smul _) hp).trans ?_⟩
-    obtain rfl | hn := eq_or_ne n 0
-    · simp
     simp_rw [eLpNorm_const_smul, ← Finset.mul_sum]
-    rw [enorm_inv (by positivity), Real.enorm_natCast, ← ENNReal.div_eq_inv_mul]
+    rw [enorm_inv, Real.enorm_natCast, ← ENNReal.div_eq_inv_mul]
     refine div_le_of_le_mul' ?_
-    simpa using Finset.sum_le_card_nsmul (.range n) _ _ fun i _ => hC i
+    simpa using Finset.sum_le_card_nsmul (.range (n + 1)) _ _ fun i _ => hC i
 
 /-- The averaging of a uniformly integrable real-valued sequence is also uniformly integrable. -/
 theorem uniformIntegrable_average_real (hp : 1 ≤ p) {f : ℕ → α → ℝ} (hf : UniformIntegrable f p μ) :
-    UniformIntegrable (fun n => (∑ i ∈ Finset.range n, f i) / (n : α → ℝ)) p μ := by
-  convert! uniformIntegrable_average hp hf using 2 with n
-  ext x
-  simp [div_eq_inv_mul]
+    UniformIntegrable (fun (n : ℕ) x ↦
+      (∑ i ∈ Finset.range (n + 1), f i x) / ((n + 1 : ℕ) : ℝ)) p μ := by
+  convert uniformIntegrable_average hp hf using 1
+  ext n x
+  simp only [div_eq_inv_mul₀, Pi.smul_apply, Finset.sum_apply, smul_eq_mul]
 
 /-- If `fn` is `UniformIntegrable`, then the family of limits in probability of sequences of `fn` is
 `UniformIntegrable`. -/

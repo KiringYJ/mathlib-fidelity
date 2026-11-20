@@ -25,7 +25,8 @@ open IntermediateField algebraAdjoinAdjoin Polynomial Algebra
 variable (f : RatFunc K)
 
 theorem adjoin_X : K⟮(X : RatFunc K)⟯ = ⊤ :=
-  eq_top_iff.mpr fun g _ ↦ (mem_adjoin_simple_iff _ _).mpr ⟨g.num, g.denom, by simp, by simp⟩
+  eq_top_iff.mpr fun g _ ↦ (mem_adjoin_simple_iff _ _).mpr
+    ⟨g.num, g.denom, by simpa using g.denom_ne_zero, by simp⟩
 
 theorem IntermediateField.adjoin_X (E : IntermediateField K (RatFunc K)) :
     E⟮(X : RatFunc K)⟯ = ⊤ := by
@@ -58,15 +59,17 @@ theorem C_minpolyX (x : K) : (C x).minpolyX K⟮C x⟯ = 0 := by
 theorem minpolyX_aeval_X : (f.minpolyX K⟮f⟯).aeval (X : RatFunc K) = 0 := by
   simp only [aeval_sub, aeval_map_algebraMap, aeval_X_left_eq_algebraMap, map_mul, aeval_C,
     IntermediateField.algebraMap_apply, coe_algebraMap]
-  nth_rw 2 [← num_div_denom f]
-  rw [div_mul_cancel₀ _ (algebraMap_ne_zero f.denom_ne_zero)]
-  exact sub_self _
+  exact sub_eq_zero.mpr (div_eq_iff.mp (num_div_denom f))
+
+private theorem eq_C_of_mul_C_eq {g : RatFunc K} {a b : K} (hb : b ≠ 0)
+    (h : g * C b = C a) : ∃ c, g = C c := by
+  exact ⟨a / b, by rw [map_div₀, eq_div_iff]; exact h⟩
 
 theorem eq_C_of_minpolyX_coeff_eq_zero
-  (hf : (f.minpolyX K⟮f⟯).coeff f.denom.natDegree = (0 : RatFunc K)) : ∃ c, f = C c := by
-  use f.num.coeff f.denom.natDegree / f.denom.leadingCoeff
-  rw [map_div₀, eq_div_iff ((_root_.map_ne_zero C).mpr
-    (leadingCoeff_ne_zero.mpr f.denom_ne_zero)), eq_comm]
+    (hf : (f.minpolyX K⟮f⟯).coeff f.denom.natDegree = (0 : RatFunc K)) : ∃ c, f = C c := by
+  apply eq_C_of_mul_C_eq (a := f.num.coeff f.denom.natDegree)
+    (leadingCoeff_ne_zero.mpr f.denom_ne_zero)
+  symm
   simpa [sub_eq_zero] using hf
 
 theorem minpolyX_eq_zero_iff : (f.minpolyX K⟮f⟯) = 0 ↔ ∃ c, f = C c :=
@@ -96,10 +99,11 @@ theorem natDegree_num_le_natDegree_minpolyX (hf : ¬∃ c, f = C c) :
   simp only [coeff_sub, coeff_map, coeff_natDegree, coeff_C_mul, AddSubgroupClass.coe_sub,
     SubalgebraClass.coe_algebraMap, algebraMap_eq_C, MulMemClass.coe_mul, coe_algebraMap,
     ZeroMemClass.coe_zero] at H
-  rw [sub_eq_zero, ← mul_right_inj' (inv_ne_zero f_ne_zero), ← mul_assoc, inv_mul_cancel₀ f_ne_zero,
-    one_mul, ← eq_div_iff <| (_root_.map_ne_zero C).mpr <| Polynomial.leadingCoeff_ne_zero.mpr
-    (num_ne_zero f_ne_zero), ← inv_inj, inv_inv, ← map_div₀, ← map_inv₀] at H
-  exact hf ⟨_, H⟩
+  have h := sub_eq_zero.mp H
+  have ha : C f.num.leadingCoeff ≠ 0 :=
+    (_root_.map_ne_zero C).mpr (leadingCoeff_ne_zero.mpr (num_ne_zero f_ne_zero))
+  have hb : f.denom.coeff f.num.natDegree ≠ 0 := fun hb ↦ ha (by simpa [hb] using h)
+  exact hf (eq_C_of_mul_C_eq hb h.symm)
 
 theorem natDegree_minpolyX :
     (f.minpolyX K⟮f⟯).natDegree = max f.num.natDegree f.denom.natDegree := by
@@ -133,11 +137,7 @@ theorem irreducible_minpolyX' (hf : ¬∃ c, f = C c) : Irreducible (f.minpolyX 
   rw [← φ_map, MulEquiv.irreducible_iff]
   have : φ = Bivariate.swap
       (Polynomial.C f.num - Polynomial.X * Polynomial.C f.denom) := by
-    simp only [X_mul_C, Bivariate.swap_apply, aevalAeval, aevalAevalEquiv, Equiv.coe_fn_mk,
-      AlgHom.coe_comp, AlgHom.coe_restrictScalars', coe_aeval_eq_eval, Function.comp_apply,
-      aeval_sub, aeval_C, algebraMap_def, coe_mapRingHom, map_mul, aeval_X, eval_sub,
-      eval_map_algebraMap, Polynomial.eval_mul, Polynomial.eval_C]
-    rw [mul_comm]
+    rw [map_sub, map_mul, Bivariate.swap_C, Bivariate.swap_Y, Bivariate.swap_C]
     rfl
   rw [this, MulEquiv.irreducible_iff]
   convert!
@@ -170,8 +170,7 @@ theorem finrank_eq_max_natDegree :
   rw [← (IntermediateField.adjoinXEquiv K⟮f⟯).toLinearEquiv.finrank_eq,
     adjoin.finrank (f.isAlgebraic_adjoin_simple_X hf).isIntegral,
     ← minpoly.eq_of_irreducible (f.irreducible_minpolyX hf) f.minpolyX_aeval_X, mul_comm,
-    natDegree_C_mul <| inv_ne_zero <| leadingCoeff_ne_zero.mpr fun H ↦
-    hf ((minpolyX_eq_zero_iff f).mp H), natDegree_minpolyX]
+    natDegree_C_mul inv_ne_zero, natDegree_minpolyX]
 
 theorem IntermediateField.isAlgebraic_X {E : IntermediateField K (RatFunc K)} (hE : E ≠ ⊥) :
     IsAlgebraic E (X : RatFunc K) := by

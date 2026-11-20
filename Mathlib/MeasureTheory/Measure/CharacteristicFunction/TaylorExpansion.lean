@@ -79,7 +79,7 @@ theorem iteratedFDeriv_charFun {n : ℕ} {t : E} (hint : MemLp id n μ) (x : Fin
   swap
   · rw [h]
     exact contDiff_fourierIntegral _ hint'
-  simp only [mul_inv_rev, neg_smul]
+  simp only [neg_smul]
   rw [h, iteratedFDeriv_fourierIntegral _ hint' (by fun_prop) le_rfl]
   simp only [smul_apply, real_smul, ofReal_pow, ofReal_neg, ofReal_mul, ofReal_inv, ofReal_ofNat,
     ofReal_prod]
@@ -93,8 +93,10 @@ theorem iteratedFDeriv_charFun {n : ℕ} {t : E} (hint : MemLp id n μ) (x : Fin
     Circle.smul_def]
   simp_rw [mul_left_comm (exp _), integral_const_mul, ← mul_assoc, ← mul_pow]
   field_simp
-  congr with
-  ring
+  ring_nf
+  congr 2
+  apply integral_congr_ae
+  exact ae_of_all _ fun _ ↦ mul_comm _ _
 
 end InnerProductSpace
 
@@ -119,7 +121,8 @@ lemma taylorWithinEval_charFun_zero {n : ℕ} (hint : MemLp id n μ) (t : ℝ) :
   refine Finset.sum_congr rfl fun k hkn ↦ ?_
   push_cast
   have hint' : MemLp id k μ := hint.mono_exponent (by simp_all)
-  simp [iteratedDeriv_charFun_zero hint', mul_pow, mul_comm, mul_assoc, mul_left_comm]
+  rw [iteratedDerivWithin_univ, iteratedDeriv_charFun_zero hint', mul_pow]
+  ac_rfl
 
 variable {Ω : Type*} {mΩ : SigmaAlgebra Ω} {P : Measure Ω} [IsProbabilityMeasure P]
   {X : Ω → ℝ}
@@ -130,13 +133,12 @@ lemma taylorWithinEval_charFun_two_zero (hX : AEMeasurable X P)
       1 + (∫ x, X x ∂P : ℝ) * t * I - (∫ x, (X ^ 2) x ∂P : ℝ) * t ^ 2 / 2 := by
   convert! taylorWithinEval_charFun_zero hint t with x
   simp only [Pi.pow_apply, Nat.reduceAdd, Finset.sum_range_succ, Finset.range_one,
-    Finset.sum_singleton, Nat.factorial_zero, Nat.cast_one, inv_one, pow_zero, mul_one,
-    integral_const, probReal_univ, smul_eq_mul, ofReal_one, Nat.factorial_one, pow_one, one_mul,
+    Finset.sum_singleton, Nat.factorial_zero, Nat.cast_one, pow_zero, mul_one,
+    integral_const, probReal_univ, smul_eq_mul, ofReal_one, Nat.factorial_one, pow_one,
     Nat.factorial_two, Nat.cast_ofNat]
   rw [integral_map, integral_map]
   any_goals fun_prop
-  simp [field]
-  ring
+  simp [field, sub_eq_add_neg]
 
 lemma taylorWithinEval_charFun_two_zero' (hX : AEMeasurable X P)
     (h0 : ∫ x, X x ∂P = 0) (h1 : ∫ x, (X ^ 2) x ∂P = 1) (t : ℝ) :

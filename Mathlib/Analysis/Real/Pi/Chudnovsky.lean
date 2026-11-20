@@ -52,7 +52,7 @@ def chudnovskyDenom (n : ℕ) : ℕ :=
 
 /-- The term at index `n` in Chudnovsky's series for `π⁻¹` -/
 def chudnovskyTerm (n : ℕ) : ℚ :=
-  chudnovskyNum n / chudnovskyDenom n
+  Rat.fraction (chudnovskyNum n) (chudnovskyDenom n) (by unfold chudnovskyDenom; positivity)
 
 -- Sanity check that when calculated in `Float` we get the right answer:
 /-- info: 3.141593 -/

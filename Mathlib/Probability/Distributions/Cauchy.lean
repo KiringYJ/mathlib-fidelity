@@ -57,22 +57,26 @@ section CauchyPDF
 
 /-- The pdf of the Cauchy distribution with location parameter `x₀` and scale parameter `γ`,
 defined for `γ ≠ 0`. -/
-@[nolint unusedArguments]
-noncomputable def cauchyPDFReal (x₀ : ℝ) (γ : ℝ≥0) (_hγ : γ ≠ 0) (x : ℝ) : ℝ :=
-  π⁻¹ * γ * ((x - x₀) ^ 2 + γ ^ 2)⁻¹
+noncomputable def cauchyPDFReal (x₀ : ℝ) (γ : ℝ≥0) (hγ : γ ≠ 0) (x : ℝ) : ℝ :=
+  π⁻¹ * γ * Checked.inv ((x - x₀) ^ 2 + (γ : ℝ) ^ 2)
+    (add_pos_of_nonneg_of_pos (sq_nonneg _)
+      (sq_pos_of_ne_zero (NNReal.coe_ne_zero.mpr hγ))).ne'.isUnit
 
 @[deprecated (since := "2026-03-06")] alias _root_Probability.CauchyPDFReal := cauchyPDFReal
 
 lemma cauchyPDFReal_def (x₀ : ℝ) {γ : ℝ≥0} (hγ : γ ≠ 0) (x : ℝ) :
-    cauchyPDFReal x₀ γ hγ x = π⁻¹ * γ * ((x - x₀) ^ 2 + γ ^ 2)⁻¹ := by rfl
+    cauchyPDFReal x₀ γ hγ x = π⁻¹ * γ * Checked.inv ((x - x₀) ^ 2 + (γ : ℝ) ^ 2)
+      (add_pos_of_nonneg_of_pos (sq_nonneg _)
+        (sq_pos_of_ne_zero (NNReal.coe_ne_zero.mpr hγ))).ne'.isUnit := rfl
 
 @[deprecated (since := "2026-03-06")]
 alias _root_Probability.CauchyPDFReal_def := cauchyPDFReal_def
 
 lemma cauchyPDFReal_def' (x₀ : ℝ) {γ : ℝ≥0} (hγ : γ ≠ 0) (x : ℝ) :
-    cauchyPDFReal x₀ γ hγ x = π⁻¹ * γ⁻¹ * (1 + ((x - x₀) / γ) ^ 2)⁻¹ := by
-  rw [cauchyPDFReal_def]
-  simp
+    cauchyPDFReal x₀ γ hγ x = π⁻¹ * Checked.inv (γ : ℝ) (NNReal.coe_ne_zero.mpr hγ).isUnit *
+      (1 + (Checked.div (x - x₀) (γ : ℝ) (NNReal.coe_ne_zero.mpr hγ).isUnit) ^ 2)⁻¹ := by
+  have hγ₀ : (γ : ℝ) ≠ 0 := NNReal.coe_ne_zero.mpr hγ
+  unfold cauchyPDFReal
   field
 
 @[deprecated (since := "2026-03-06")]
@@ -134,10 +138,17 @@ alias _root_Probability.cauchyPDF_pos := cauchyPDFReal_pos
 
 lemma integral_cauchyPDFReal_eq_one (x₀ : ℝ) {γ : ℝ≥0} (hγ : γ ≠ 0) :
     ∫ x, cauchyPDFReal x₀ γ hγ x = 1 := by
-  simp [cauchyPDFReal_def', NNReal.coe_inv, integral_const_mul,
-    integral_sub_right_eq_self (f := fun x : ℝ ↦ (1 + (x / ↑γ) ^ 2)⁻¹),
-    integral_comp_div (g := fun x : ℝ ↦ (1 + x ^ 2)⁻¹)]
-  field
+  have hγ₀ : (γ : ℝ) ≠ 0 := NNReal.coe_ne_zero.mpr hγ
+  let k (x : ℝ) : ℝ := (1 + x ^ 2)⁻¹
+  have hk : (∫ x : ℝ, k ((x - x₀) / (γ : ℝ))) = (γ : ℝ) * π := by
+    rw [integral_sub_right_eq_self (f := fun x : ℝ ↦ k (x / (γ : ℝ))),
+      integral_comp_div k (γ : ℝ) (ha := hγ₀.isUnit), smul_eq_mul,
+      abs_of_nonneg (NNReal.coe_nonneg γ)]
+    exact congrArg (fun x ↦ (γ : ℝ) * x) integral_univ_inv_one_add_sq
+  calc
+    _ = (π⁻¹ * (γ : ℝ)⁻¹) * ∫ x : ℝ, k ((x - x₀) / (γ : ℝ)) := by
+      simp only [cauchyPDFReal_def', integral_const_mul, k]
+    _ = _ := by rw [hk, mul_assoc, inv_mul_cancel_left₀, inv_mul_cancel₀]
 
 @[deprecated (since := "2026-03-06")]
 alias _root_Probability.integral_cauchyPDFReal := integral_cauchyPDFReal_eq_one

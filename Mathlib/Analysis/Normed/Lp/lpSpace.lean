@@ -235,9 +235,11 @@ theorem of_exponent_ge {p q : ℝ≥0∞} {f : ∀ i, E i} (hfq : Memℓp f q) (
     obtain ⟨A, hA⟩ := (hfq.summable hq).tendsto_cofinite_zero.bddAbove_range_of_cofinite
     use A ^ q.toReal⁻¹
     rintro x ⟨i, rfl⟩
-    have : 0 ≤ ‖f i‖ ^ q.toReal := by positivity
-    simpa [← Real.rpow_mul, mul_inv_cancel₀ hq.ne'] using
-      Real.rpow_le_rpow this (hA ⟨i, rfl⟩) (inv_nonneg.mpr hq.le)
+    calc
+      ‖f i‖ = (‖f i‖ ^ q.toReal) ^ q.toReal⁻¹ := by
+        rw [← Real.rpow_mul (norm_nonneg _), mul_inv_cancel₀, Real.rpow_one]
+      _ ≤ A ^ q.toReal⁻¹ := Real.rpow_le_rpow (by positivity)
+        (hA ⟨i, rfl⟩) (inv_nonneg.mpr hq.le)
   · apply memℓp_gen
     have hf' := hfq.summable hq
     refine .of_norm_bounded_eventually hf' (@Set.Finite.subset _ { i | 1 ≤ ‖f i‖ } ?_ _ ?_)
@@ -444,7 +446,9 @@ instance : Norm (lp E p) where
     if hp : p = 0 then by
       subst hp
       exact ((lp.memℓp f).finite_dsupport.toFinset.card : ℝ)
-    else if p = ∞ then ⨆ i, ‖f i‖ else (∑' i, ‖f i‖ ^ p.toReal) ^ (1 / p.toReal)
+    else if hptop : p = ∞ then ⨆ i, ‖f i‖ else
+      (∑' i, ‖f i‖ ^ p.toReal) ^
+        Checked.div 1 p.toReal (ENNReal.toReal_pos hp hptop).ne'.isUnit
 
 theorem norm_eq_card_dsupport (f : lp E 0) : ‖f‖ = (lp.memℓp f).finite_dsupport.toFinset.card :=
   dite_eq_left rfl
@@ -459,7 +463,7 @@ theorem norm_eq_tsum_rpow (hp : 0 < p.toReal) (f : lp E p) :
     ‖f‖ = (∑' i, ‖f i‖ ^ p.toReal) ^ (1 / p.toReal) := by
   dsimp [norm]
   rw [ENNReal.toReal_pos_iff] at hp
-  rw [dite_eq_right hp.1.ne', ite_eq_right hp.2.ne]
+  rw [dite_eq_right hp.1.ne', dite_eq_right hp.2.ne]
 
 theorem norm_rpow_eq_tsum (hp : 0 < p.toReal) (f : lp E p) :
     ‖f‖ ^ p.toReal = ∑' i, ‖f i‖ ^ p.toReal := by
@@ -502,8 +506,8 @@ theorem norm_zero : ‖(0 : lp E p)‖ = 0 := by
   · simp [lp.norm_eq_card_dsupport]
   · simp [lp.norm_eq_ciSup]
   · rw [lp.norm_eq_tsum_rpow hp]
-    have hp' : 1 / p.toReal ≠ 0 := one_div_ne_zero hp.ne'
-    simpa [Real.zero_rpow hp.ne'] using Real.zero_rpow hp'
+    have hp' : 1 / p.toReal ≠ 0 := one_div_ne_zero
+    simp [Real.zero_rpow hp.ne']
 
 theorem norm_eq_zero_iff {f : lp E p} : ‖f‖ = 0 ↔ f = 0 := by
   refine ⟨fun h => ?_, by rintro rfl; exact norm_zero⟩
@@ -773,7 +777,7 @@ theorem norm_const_smul (hp : p ≠ 0) {c : 𝕜} (f : lp E p) : ‖c • f‖ =
   refine le_antisymm (norm_const_smul_le hp c f) ?_
   have := mul_le_mul_of_nonneg_left (norm_const_smul_le hp c⁻¹ (c • f)) (norm_nonneg c)
   rwa [inv_smul_smul₀ (ha := hc.isUnit), norm_inv,
-    mul_inv_cancel_left₀ (norm_ne_zero_iff.mpr hc)] at this
+    mul_inv_cancel_left₀ (ha := (norm_ne_zero_iff.mpr hc).isUnit)] at this
 
 end DivisionRing
 
@@ -1113,7 +1117,7 @@ protected theorem norm_single (hp : 0 < p) (i : α) (x : E i) : ‖lp.single p i
     · rw [Pi.single_eq_same]
   | coe p =>
     have : 0 < (p : ℝ≥0∞).toReal := by simpa using hp
-    rw [norm_eq_tsum_rpow this, tsum_eq_single i, lp.coeFn_single, one_div,
+    rw [norm_eq_tsum_rpow this, tsum_eq_single i, lp.coeFn_single, one_div₀,
       Real.rpow_rpow_inv _ this.ne', Pi.single_eq_same]
     · exact norm_nonneg _
     · intro j hji

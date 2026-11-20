@@ -308,7 +308,7 @@ private lemma exists_variableChange_of_char_ne_two_or_three
   have hu6 : u ^ 6 = E.a₆ / E'.a₆ := by
     rw [pow_mul u 2 3, hu]
     simp [field]
-    linear_combination -(E.a₆ * E'.a₆) * heq
+    linear_combination -heq
   have hu0 : u ≠ 0 := by
     rw [← pow_ne_zero_iff four_ne_zero, hu4, div_ne_zero_iff]
     exact ha₄

@@ -241,7 +241,7 @@ theorem den_le_and_le_num_le_of_sub_lt_one_div_den_sq {ξ q : ℚ}
   replace h : |ξ * q.den - q.num| < 1 / q.den := by
     rw [← mul_lt_mul_iff_left₀ hq₀] at h
     conv_lhs at h => rw [← abs_of_pos hq₀, ← abs_mul, sub_mul, mul_den_eq_num]
-    have e : (1 : ℚ) / (q.den : ℚ) ^ 2 * q.den = 1 / q.den := by field_simp; ring
+    have e : (1 : ℚ) / (q.den : ℚ) ^ 2 * q.den = 1 / q.den := by field_simp
     rwa [e] at h
   constructor
   · rcases eq_or_ne ξ q with (rfl | H)

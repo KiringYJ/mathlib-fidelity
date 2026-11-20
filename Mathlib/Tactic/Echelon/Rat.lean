@@ -38,7 +38,7 @@ def evalRatEntry (charZero : Bool) (e : Expr) : MetaM Rat := do
 matrix together with the row scales, which are later folded back into `L`. -/
 def scaleRowsIntegral (ratRows : Array (Array Rat)) : Array (Array Int) × Array Nat :=
   let scales : Array Nat := ratRows.map fun row => row.foldl (fun l v => Nat.lcm l v.den) 1
-  ((ratRows.zipWith (bs := scales) fun row s => row.map fun v => (mkRat s 1 * v).num), scales)
+  ((ratRows.zipWith (bs := scales) fun row s => row.map fun v => ((s : Rat) * v).num), scales)
 
 /-- The restoration for `scaleRowsIntegral`: fold the row scales into the transform,
 scaling column `j` by the factor of the row that ends up in position `j`. -/

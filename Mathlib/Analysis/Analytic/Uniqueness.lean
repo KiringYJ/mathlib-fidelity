@@ -62,7 +62,7 @@ theorem Asymptotics.IsBigO.continuousMultilinearMap_apply_eq_zero {n : ℕ} {p :
       (lt_min (mul_pos δ_pos (inv_pos.mpr hy)) (mul_pos ε_pos (inv_pos.mpr h₀)))
     have h₁ : ‖k • y‖ < δ := by
       rw [norm_smul]
-      exact inv_mul_cancel_right₀ hy.ne.symm δ ▸
+      exact inv_mul_cancel_right₀ (hb := hy.ne'.isUnit) δ ▸
         mul_lt_mul_of_pos_right (lt_of_lt_of_le k_norm (min_le_left _ _)) hy
     have h₂ :=
       calc
@@ -72,25 +72,30 @@ theorem Asymptotics.IsBigO.continuousMultilinearMap_apply_eq_zero {n : ℕ} {p :
           simp only [norm_smul, mul_pow]
           ring
     have h₃ : ‖k‖ * (c * ‖y‖ ^ (n.succ + 1)) < ε :=
-      inv_mul_cancel_right₀ h₀.ne.symm ε ▸
+      inv_mul_cancel_right₀ (hb := h₀.ne'.isUnit) ε ▸
         mul_lt_mul_of_pos_right (lt_of_lt_of_le k_norm (min_le_right _ _)) h₀
     calc
       ‖p fun _ => y‖ = ‖k⁻¹ ^ n.succ‖ * ‖p fun _ => k • y‖ := by
-        simpa only [inv_smul_smul₀ (ha := (norm_pos_iff.mp k_pos).isUnit), norm_smul,
-          Finset.prod_const, Finset.card_fin] using!
-          congr_arg norm (p.map_smul_univ (fun _ : Fin n.succ => k⁻¹) fun _ : Fin n.succ => k • y)
+        have hscale := congr_arg norm
+          (p.map_smul_univ (fun _ : Fin n.succ => k⁻¹) fun _ : Fin n.succ => k • y)
+        rw [Finset.prod_const, Finset.card_fin] at hscale
+        simpa only [inv_smul_smul₀ (ha := (norm_pos_iff.mp k_pos).isUnit), norm_smul] using hscale
       _ ≤ ‖k⁻¹ ^ n.succ‖ * (‖k‖ ^ n.succ * (‖k‖ * (c * ‖y‖ ^ (n.succ + 1)))) := by gcongr
       _ = ‖(k⁻¹ * k) ^ n.succ‖ * (‖k‖ * (c * ‖y‖ ^ (n.succ + 1))) := by
         rw [← mul_assoc]
-        simp [norm_mul, mul_pow]
+        simp
       _ ≤ 0 + ε := by
-        rw [inv_mul_cancel₀ (norm_pos_iff.mp k_pos)]
+        rw [inv_mul_cancel₀ (ha := (norm_pos_iff.mp k_pos).isUnit)]
         simpa using! h₃.le
 
-/-- If a formal multilinear series `p` represents the zero function at `x : E`, then the
-terms `p n (fun i ↦ y)` appearing in the sum are zero for any `n : ℕ`, `y : E`. -/
-theorem HasFPowerSeriesAt.apply_eq_zero {p : FormalMultilinearSeries 𝕜 E F} {x : E}
-    (h : HasFPowerSeriesAt 0 p x) (n : ℕ) : ∀ y : E, (p n fun _ => y) = 0 := by
+/-- If a formal multilinear series represents the zero function on a coordinate domain covering
+a neighbourhood of its centre, then its diagonal terms vanish. -/
+theorem HasFPowerSeriesAt.apply_eq_zero {D : Type*} {coord : D → E}
+    {p : FormalMultilinearSeries 𝕜 E F} {x : D}
+    (h : HasFPowerSeriesAt 0 p x coord) (n : ℕ) (y : E)
+    (hcover : Set.range coord ∈ 𝓝 (coord x) := by simp) : (p n fun _ => y) = 0 := by
+  have h : HasFPowerSeriesAt (0 : E → F) p (coord x) := h.of_comp_domain hcover
+  revert y
   refine Nat.strong_induction_on n fun k hk => ?_
   have psum_eq : p.partialSum (k + 1) = fun y => p k fun _ => y := by
     funext z
@@ -102,17 +107,30 @@ theorem HasFPowerSeriesAt.apply_eq_zero {p : FormalMultilinearSeries 𝕜 E F} {
   simp only [psum_eq, zero_sub, Pi.zero_apply, Asymptotics.isBigO_neg_left] at h
   exact h.continuousMultilinearMap_apply_eq_zero
 
-/-- A one-dimensional formal multilinear series representing the zero function is zero. -/
-theorem HasFPowerSeriesAt.eq_zero {p : FormalMultilinearSeries 𝕜 𝕜 E} {x : 𝕜}
-    (h : HasFPowerSeriesAt 0 p x) : p = 0 := by
+/-- A one-dimensional formal multilinear series representing the zero function on a coordinate
+domain covering a neighbourhood of its centre is zero. -/
+theorem HasFPowerSeriesAt.eq_zero {D : Type*} {coord : D → 𝕜}
+    {p : FormalMultilinearSeries 𝕜 𝕜 E} {x : D}
+    (h : HasFPowerSeriesAt 0 p x coord)
+    (hcover : Set.range coord ∈ 𝓝 (coord x) := by simp) : p = 0 := by
   ext n
   rw [← mkPiRing_apply_one_eq_self (p n)]
-  simp [h.apply_eq_zero n 1]
+  simp [h.apply_eq_zero n 1 hcover]
 
-/-- One-dimensional formal multilinear series representing the same function are equal. -/
-theorem HasFPowerSeriesAt.eq_formalMultilinearSeries {p₁ p₂ : FormalMultilinearSeries 𝕜 𝕜 E}
-    {f : 𝕜 → E} {x : 𝕜} (h₁ : HasFPowerSeriesAt f p₁ x) (h₂ : HasFPowerSeriesAt f p₂ x) : p₁ = p₂ :=
-  sub_eq_zero.mp (HasFPowerSeriesAt.eq_zero (x := x) (by simpa only [sub_self] using h₁.sub h₂))
+/-- One-dimensional formal multilinear series representing the same function are equal when
+the coordinate domain covers a neighbourhood of the centre. -/
+theorem HasFPowerSeriesAt.eq_formalMultilinearSeries {D : Type*} {coord : D → 𝕜}
+    {p₁ p₂ : FormalMultilinearSeries 𝕜 𝕜 E} {f : D → E} {x : D}
+    (h₁ : HasFPowerSeriesAt f p₁ x coord) (h₂ : HasFPowerSeriesAt f p₂ x coord)
+    (hcover : Set.range coord ∈ 𝓝 (coord x) := by simp) : p₁ = p₂ := by
+  obtain ⟨r₁, h₁⟩ := h₁
+  obtain ⟨r₂, h₂⟩ := h₂
+  have hzero : HasFPowerSeriesAt ((0 : 𝕜 → E) ∘ coord) (p₁ - p₂) x coord := by
+    refine ⟨min r₁ r₂, ?_⟩
+    simpa only [Function.comp_def, Pi.zero_def, sub_self] using
+      (h₁.mono (lt_min h₁.r_pos h₂.r_pos) (min_le_left _ _)).sub
+        (h₂.mono (lt_min h₁.r_pos h₂.r_pos) (min_le_right _ _))
+  exact sub_eq_zero.mp (hzero.eq_zero hcover)
 
 theorem HasFPowerSeriesAt.eq_formalMultilinearSeries_of_eventually
     {p q : FormalMultilinearSeries 𝕜 𝕜 E} {f g : 𝕜 → E} {x : 𝕜} (hp : HasFPowerSeriesAt f p x)
@@ -124,13 +142,16 @@ theorem HasFPowerSeriesAt.eq_zero_of_eventually {p : FormalMultilinearSeries �
     {x : 𝕜} (hp : HasFPowerSeriesAt f p x) (hf : f =ᶠ[𝓝 x] 0) : p = 0 :=
   (hp.congr hf).eq_zero
 
-/-- If a function `f : 𝕜 → E` has two power series representations at `x`, then the given radii in
-which convergence is guaranteed may be interchanged. This can be useful when the formal multilinear
-series in one representation has a particularly nice form, but the other has a larger radius. -/
-theorem HasFPowerSeriesOnBall.exchange_radius {p₁ p₂ : FormalMultilinearSeries 𝕜 𝕜 E} {f : 𝕜 → E}
-    {r₁ r₂ : ℝ≥0∞} {x : 𝕜} (h₁ : HasFPowerSeriesOnBall f p₁ x r₁)
-    (h₂ : HasFPowerSeriesOnBall f p₂ x r₂) : HasFPowerSeriesOnBall f p₁ x r₂ :=
-  h₂.hasFPowerSeriesAt.eq_formalMultilinearSeries h₁.hasFPowerSeriesAt ▸ h₂
+/-- Two power series representations on a coordinate domain covering a neighbourhood of the
+centre may exchange their convergence radii. This can be useful when the formal multilinear series
+in one representation has a particularly nice form, but the other has a larger radius. -/
+theorem HasFPowerSeriesOnBall.exchange_radius {D : Type*} {coord : D → 𝕜}
+    {p₁ p₂ : FormalMultilinearSeries 𝕜 𝕜 E} {f : D → E} {r₁ r₂ : ℝ≥0∞} {x : D}
+    (h₁ : HasFPowerSeriesOnBall f p₁ x r₁ coord)
+    (h₂ : HasFPowerSeriesOnBall f p₂ x r₂ coord)
+    (hcover : Set.range coord ∈ 𝓝 (coord x) := by simp) :
+    HasFPowerSeriesOnBall f p₁ x r₂ coord :=
+  h₂.hasFPowerSeriesAt.eq_formalMultilinearSeries h₁.hasFPowerSeriesAt hcover ▸ h₂
 
 /-- If a function `f : 𝕜 → E` has power series representation `p` on a ball of some radius and for
 each positive radius it has some power series representation, then `p` converges to `f` on the whole
@@ -145,9 +166,10 @@ theorem HasFPowerSeriesOnBall.r_eq_top_of_exists {f : 𝕜 → E} {r : ℝ≥0�
       (h.exchange_radius hp').r_le
     r_pos := ENNReal.coe_lt_top
     hasSum := fun {y} _ =>
-      let ⟨r', hr'⟩ := exists_gt ‖y‖₊
+      let ⟨r', hr'⟩ := exists_gt ‖y - x‖₊
       let ⟨_, hp'⟩ := h' r' hr'.ne_bot.bot_lt
-      (h.exchange_radius hp').hasSum <| mem_eball_zero_iff.mpr (ENNReal.coe_lt_coe.2 hr') }
+      (h.exchange_radius hp').hasSum (y := y) <|
+        mem_eball_zero_iff.mpr (ENNReal.coe_lt_coe.2 hr') }
 
 end Uniqueness
 

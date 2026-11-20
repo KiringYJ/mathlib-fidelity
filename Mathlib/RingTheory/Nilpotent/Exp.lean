@@ -109,7 +109,8 @@ theorem exp_add_of_commute {a b : A} (h₁ : Commute a b) (h₂ : IsNilpotent a)
         norm_cast
       rw [Nat.choose_eq_factorial_div_factorial hj,
         Nat.cast_div (Nat.factorial_mul_factorial_dvd_factorial hj) (by positivity)]
-      simp [field]
+      rw [← mul_div_assoc₀, inv_mul_cancel₀, one_div₀]
+      simp only [Nat.cast_mul, mul_inv₀]
     · rw [hR2N, sum_sigma']
       apply sum_bij (fun ⟨i, j⟩ _ ↦ (j, i - j))
       · simp only [mem_sigma, mem_range, mem_filter, mem_product, and_imp]

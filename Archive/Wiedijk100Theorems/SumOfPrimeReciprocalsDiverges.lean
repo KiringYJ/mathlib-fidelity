@@ -69,28 +69,41 @@ More precisely, for any `x : ℕ`, the sum of the reciprocals of the primes betw
 is less than 1/2.
 -/
 theorem sum_lt_half_of_not_tendsto
-    (h : ¬Tendsto (fun n => ∑ p ∈ range n with p.Prime, 1 / (p : ℝ))
-      atTop atTop) :
-    ∃ k, ∀ x, ∑ p ∈ P x k, 1 / (p : ℝ) < 1 / 2 := by
-  have h0 :
-    (fun n => ∑ p ∈ range n with p.Prime, 1 / (p : ℝ)) = fun n =>
-      ∑ p ∈ range n, ite (Nat.Prime p) (1 / (p : ℝ)) 0 := by
-    simp only [sum_filter]
-  have hf : ∀ n : ℕ, 0 ≤ ite (Nat.Prime n) (1 / (n : ℝ)) 0 := by
-    intro n; split_ifs
-    · simp only [one_div, inv_nonneg, Nat.cast_nonneg]
-    · exact le_rfl
-  rw [h0, ← summable_iff_not_tendsto_nat_atTop_of_nonneg hf, summable_iff_vanishing] at h
+    (h : ¬Tendsto (fun n => ∑ p ∈ (range n).subtype Nat.Prime,
+      Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit) atTop atTop) :
+    ∃ k, ∀ x, (∑ p ∈ (P x k).subtype Nat.Prime,
+      Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit) < 1 / 2 := by
+  let a (n : ℕ) : ℝ := if hp : n.Prime then
+    Checked.div 1 (n : ℝ) (Nat.cast_ne_zero.mpr hp.ne_zero).isUnit else 0
+  have hf (n : ℕ) : 0 ≤ a n := by
+    by_cases hp : n.Prime
+    · simp only [a, dite_eq_left hp]
+      exact div_nonneg zero_le_one (Nat.cast_nonneg n)
+    · simp [a, hp]
+  have hs (s : Finset ℕ) : (∑ p ∈ s.subtype Nat.Prime,
+      Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit) = ∑ n ∈ s, a n := by
+    calc
+      _ = ∑ p ∈ s.subtype Nat.Prime, a p.val := by
+        apply sum_congr rfl
+        intro p _
+        simp [a, p.property]
+      _ = ∑ n ∈ s.filter Nat.Prime, a n := sum_subtype_eq_sum_filter a
+      _ = _ := by
+        rw [sum_filter]
+        apply sum_congr rfl
+        intro p _
+        by_cases hp : p.Prime <;> simp [a, hp]
+  simp only [hs] at h
+  rw [← summable_iff_not_tendsto_nat_atTop_of_nonneg hf, summable_iff_vanishing] at h
   obtain ⟨s, h⟩ := h (Set.Ioo (-1) (1 / 2)) (isOpen_Ioo.mem_nhds (by simp))
   obtain ⟨k, hk⟩ := exists_nat_subset_range s
   use k
   intro x
-  rw [P, ← filter_filter, sum_filter]
+  rw [hs]
   refine (h _ ?_).2
   rw [disjoint_iff_ne]
-  simp only [mem_filter]
-  intro a ha b hb
-  exact ((mem_range.mp (hk hb)).trans ha.2).ne'
+  intro n hn b hb
+  exact ((mem_range.mp (hk hb)).trans (mem_filter.mp hn).2.1).ne'
 
 /--
 Removing from {0, ..., x - 1} those elements `e` for which `e + 1` is a product of powers of primes
@@ -115,16 +128,22 @@ theorem range_sdiff_eq_biUnion {x k : ℕ} : range x \ M x k = U x k := by
 The number of `e < x` for which `e + 1` has a prime factor `p > k` is bounded by `x` times the sum
 of reciprocals of primes in `(k, x]`.
 -/
-theorem card_le_mul_sum {x k : ℕ} : #(U x k) ≤ x * ∑ p ∈ P x k, 1 / (p : ℝ) := by
-  let P := {p ∈ range (x + 1) | k < p ∧ p.Prime}
+theorem card_le_mul_sum {x k : ℕ} :
+    #(U x k) ≤ x * ∑ p ∈ (P x k).subtype Nat.Prime,
+      Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit := by
   let N p := {e ∈ range x | p ∣ e + 1}
-  have h : #(P.biUnion N) ≤ ∑ p ∈ P, #(N p) := card_biUnion_le
+  have h : #((P x k).biUnion N) ≤ ∑ p ∈ P x k, #(N p) := card_biUnion_le
   calc
-    (#(P.biUnion N) : ℝ) ≤ ∑ p ∈ P, (#(N p) : ℝ) := by assumption_mod_cast
-    _ ≤ ∑ p ∈ P, x * (1 / (p : ℝ)) := by
-      gcongr with p _
-      simp only [N, mul_one_div, Nat.card_multiples, Nat.cast_div_le]
-    _ = x * ∑ p ∈ P, 1 / (p : ℝ) := by rw [mul_sum]
+    (#((P x k).biUnion N) : ℝ) ≤ ∑ p ∈ P x k, (#(N p) : ℝ) := by assumption_mod_cast
+    _ = ∑ p ∈ (P x k).subtype Nat.Prime, (#(N p.val) : ℝ) :=
+      (sum_subtype_of_mem (fun p ↦ (#(N p) : ℝ)) (fun _ hp ↦ (mem_filter.mp hp).2.2)).symm
+    _ ≤ ∑ p ∈ (P x k).subtype Nat.Prime,
+        x * Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit := by
+      apply sum_le_sum
+      intro p _
+      simp only [N, Nat.card_multiples, mul_one_div₀]
+      exact Nat.cast_div_le (hn := (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit)
+    _ = _ := by rw [mul_sum]
 
 /--
 The number of `e < x` for which `e + 1` is a squarefree product of primes smaller than or equal to
@@ -196,8 +215,8 @@ theorem card_le_two_pow_mul_sqrt {x k : ℕ} : #(M x k) ≤ 2 ^ k * Nat.sqrt x :
     _ ≤ 2 ^ k * x.sqrt := mul_le_mul' card_le_two_pow h2
 
 theorem Real.tendsto_sum_one_div_prime_atTop :
-    Tendsto (fun n => ∑ p ∈ range n with p.Prime, 1 / (p : ℝ))
-      atTop atTop := by
+    Tendsto (fun n => ∑ p ∈ (range n).subtype Nat.Prime,
+      Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit) atTop atTop := by
   -- Assume that the sum of the reciprocals of the primes converges.
   by_contra h
   -- Then there is a natural number `k` such that for all `x`, the sum of the reciprocals of primes
@@ -211,7 +230,6 @@ theorem Real.tendsto_sum_one_div_prime_atTop :
   --   than or equal to `k`;
   set M' := M x k with hM'
   -- * `U`, the subset of those `e` for which there is a prime `p > k` that divides `e + 1`.
-  let P := {p ∈ range (x + 1) | k < p ∧ p.Prime}
   set U' := U x k with hU'
   -- This is indeed a partition, so `|U| + |M| = |range x| = x`.
   have h2 : x = #U' + #M' := by
@@ -222,14 +240,18 @@ theorem Real.tendsto_sum_one_div_prime_atTop :
   -- and for U, the inequality is strict.
   have h3 :=
     calc
-      (#U' : ℝ) ≤ x * ∑ p ∈ P, 1 / (p : ℝ) := card_le_mul_sum
+      (#U' : ℝ) ≤ x * ∑ p ∈ (P x k).subtype Nat.Prime,
+        Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit := card_le_mul_sum
       _ < x * (1 / 2) := mul_lt_mul_of_pos_left (h1 x) (by simp [x])
-      _ = x / 2 := mul_one_div (x : ℝ) 2
+      _ = x / 2 := mul_one_div₀ (x : ℝ) 2
   have h4 :=
     calc
       (#M' : ℝ) ≤ 2 ^ k * x.sqrt := by exact mod_cast card_le_two_pow_mul_sqrt
       _ = 2 ^ k * (2 ^ (k + 1) : ℕ) := by rw [Nat.sqrt_eq]
-      _ = x / 2 := by simp [field, x, ← pow_succ]
+      _ = x / 2 := by
+        apply eq_div_iff.mpr
+        simp only [x, Nat.cast_mul, Nat.cast_pow, Nat.cast_ofNat, pow_succ (2 : ℝ) k]
+        ring
   refine lt_irrefl (x : ℝ) ?_
   calc
     (x : ℝ) = (#U' : ℝ) + (#M' : ℝ) := by assumption_mod_cast

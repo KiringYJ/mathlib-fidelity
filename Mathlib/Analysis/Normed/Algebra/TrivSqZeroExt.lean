@@ -62,8 +62,8 @@ namespace TrivSqZeroExt
 
 section Topology
 
-section not_charZero
-variable [Field 𝕜] [Ring R] [AddCommGroup M]
+section ScalarSeries
+variable [Field 𝕜] [CharZero 𝕜] [Ring R] [AddCommGroup M]
   [Algebra 𝕜 R] [Module 𝕜 M] [Module R M] [Module Rᵐᵒᵖ M]
   [SMulCommClass R Rᵐᵒᵖ M] [IsScalarTower 𝕜 R M] [IsScalarTower 𝕜 Rᵐᵒᵖ M]
   [TopologicalSpace R] [TopologicalSpace M]
@@ -73,7 +73,7 @@ variable [Field 𝕜] [Ring R] [AddCommGroup M]
     fst (expSeries 𝕜 (tsze R M) n fun _ => x) = expSeries 𝕜 R n fun _ => x.fst := by
   simp [expSeries_apply_eq]
 
-end not_charZero
+end ScalarSeries
 
 section Ring
 variable [Field 𝕜] [CharZero 𝕜] [Ring R] [AddCommGroup M]
@@ -87,8 +87,7 @@ theorem snd_expSeries_of_smul_comm
     snd (expSeries 𝕜 (tsze R M) (n + 1) fun _ => x) = (expSeries 𝕜 R n fun _ => x.fst) • x.snd := by
   simp_rw [expSeries_apply_eq, snd_smul, snd_pow_of_smul_comm _ _ hx,
     ← Nat.cast_smul_eq_nsmul 𝕜 (n + 1), smul_smul, smul_assoc, Nat.factorial_succ, Nat.pred_succ,
-    Nat.cast_mul, mul_inv_rev,
-    inv_mul_cancel_right₀ ((Nat.cast_ne_zero (R := 𝕜)).mpr <| Nat.succ_ne_zero n)]
+    Nat.cast_mul, mul_inv_rev₀, inv_mul_cancel_right₀]
 
 /-- If `NormedSpace.exp R x.fst` converges to `e`
 then `(NormedSpace.exp R x).snd` converges to `e • x.snd`. -/
@@ -99,9 +98,8 @@ theorem hasSum_snd_expSeries_of_smul_comm (x : tsze R M)
   rw [← hasSum_nat_add_iff' 1]
   simp_rw [snd_expSeries_of_smul_comm _ _ hx]
   simp_rw [expSeries_apply_eq] at *
-  rw [Finset.range_one, Finset.sum_singleton, Nat.factorial_zero, Nat.cast_one, pow_zero,
-    inv_one, one_smul, snd_one, sub_zero]
-  exact h.smul_const _
+  simpa only [Finset.range_one, Finset.sum_singleton, Nat.factorial_zero, Nat.cast_one, pow_zero,
+    inv_one₀, one_smul, snd_one, sub_zero] using h.smul_const x.snd
 
 /-- If `NormedSpace.exp R x.fst` converges to `e`
 then `NormedSpace.exp R x` converges to `inl e + inr (e • x.snd)`. -/
@@ -212,8 +210,8 @@ set_option backward.isDefEq.respectTransparency false in
 theorem norm_def (x : tsze R M) : ‖x‖ = ‖fst x‖ + ‖snd x‖ := by
   erw [WithLp.norm_seminormedAddCommGroupToProd]
   rw [WithLp.prod_norm_eq_add (by norm_num)]
-  simp only [WithLp.toLp_fst, ENNReal.toReal_one, Real.rpow_one, WithLp.toLp_snd, ne_eq,
-    one_ne_zero, not_false_eq_true, div_self, fst, snd]
+  simp only [WithLp.toLp_fst, ENNReal.toReal_one, Real.rpow_one, WithLp.toLp_snd,
+    div_self, fst, snd]
 
 theorem nnnorm_def (x : tsze R M) : ‖x‖₊ = ‖fst x‖₊ + ‖snd x‖₊ := by
   ext; simp [norm_def]

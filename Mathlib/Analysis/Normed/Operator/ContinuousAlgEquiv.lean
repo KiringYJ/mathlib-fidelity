@@ -105,6 +105,13 @@ section auxiliaryDefs
 variable (e : V ≃L[𝕜] W) {α α' : 𝕜} (hα : α ≠ 0)
   (hα2 : α' * α' = α⁻¹) (he : e.toContinuousLinearMap.adjoint ∘L e = α • .id 𝕜 V)
   (he' : e ∘L e.toContinuousLinearMap.adjoint = α • .id 𝕜 W)
+
+include hα hα2 in
+private theorem isUnit_auxScale : IsUnit α' := by
+  have h : α' * α' * α = 1 := by rw [hα2, inv_mul_cancel₀]
+  refine isUnit_iff_ne_zero.mpr fun hz ↦ ?_
+  simp [hz] at h
+
 include hα hα2 he he'
 
 /-- Scalar multiple of a continuous linear equivalence (given certain properties are satisfied). -/
@@ -114,10 +121,10 @@ noncomputable abbrev auxContinuousLinearEquiv :
   invFun := (α' • e.toContinuousLinearMap.adjoint).toLinearMap
   left_inv x := by
     have := by simpa using congr($he x)
-    simp [smul_smul, hα2, this, hα, ← mul_assoc]
+    simp [smul_smul, hα2, this, ← mul_assoc]
   right_inv x := by
     have := by simpa using congr($he' x)
-    simp [smul_smul, hα2, this, hα, ← mul_assoc]
+    simp [smul_smul, hα2, this, ← mul_assoc]
   continuous_toFun := (α' • e.toContinuousLinearMap).continuous
   continuous_invFun := (α' • e.toContinuousLinearMap.adjoint).continuous
 
@@ -135,7 +142,7 @@ noncomputable abbrev auxIsometry (hαa : starRingEnd 𝕜 α' = α') :
       norm_map_iff_adjoint_comp_self, coe_auxContinuousLinearEquiv,
       MulActionSemiHomClass.map_smulₛₗ]
     simp only [hαa, comp_smulₛₗ, RingHom.id_apply, smul_comp, smul_smul, hα2]
-    simp [he, smul_smul, hα, one_def]
+    simp [he, smul_smul, one_def]
 
 @[simp] theorem coe_auxIsometry (hαa : starRingEnd 𝕜 α' = α') :
     (auxIsometry e hα hα2 he he' hαa).toContinuousLinearEquiv.toContinuousLinearMap =
@@ -143,10 +150,10 @@ noncomputable abbrev auxIsometry (hαa : starRingEnd 𝕜 α' = α') :
 
 @[simp] theorem coe_symm_auxIsometry (hαa : starRingEnd 𝕜 α' = α') :
     (auxIsometry e hα hα2 he he' hαa).toContinuousLinearEquiv.symm.toContinuousLinearMap =
-      α'⁻¹ • e.symm.toContinuousLinearMap := by
+      Checked.inv α' (isUnit_auxScale hα hα2) • e.symm.toContinuousLinearMap := by
   ext y
   apply (auxIsometry e hα hα2 he he' hαa).toContinuousLinearEquiv.injective
-  simp [smul_smul, inv_mul_cancel₀ (a := α') (by grind)]
+  simp [smul_smul, inv_mul_cancel₀ (a := α')]
 
 end auxiliaryDefs
 
@@ -216,15 +223,22 @@ public theorem StarAlgEquiv.eq_linearIsometryEquivConjStarAlgEquiv
   -- Finally, we construct our isometry `1/√(re α) • y`.
   set β := (((RCLike.re α : ℝ) ^ (-(1 / 2 : ℝ)) : ℝ) : 𝕜)
   have hβ : β * β = α⁻¹ := by
-    rw [hα_re]
-    norm_num [β, ← RCLike.ofReal_mul, ← Real.rpow_add hα_pos, Real.rpow_neg_one]
+    apply mul_left_injective₀ hα_ne_zero
+    change β * β * α = α⁻¹ * α
+    rw [inv_mul_cancel₀]
+    calc
+      β * β * α = β * β * (RCLike.re α : 𝕜) := by rw [← hα_re]
+      _ = 1 := by
+        have h : (RCLike.re α) ^ (-(1 / 2 : ℝ)) * (RCLike.re α) ^ (-(1 / 2 : ℝ)) *
+            RCLike.re α = 1 := by
+          rw [← Real.rpow_add hα_pos, show -(1 / 2 : ℝ) + -(1 / 2 : ℝ) = -1 by norm_num,
+            Real.rpow_neg_one, inv_mul_cancel₀]
+          exact isUnit_iff_ne_zero.mpr hα_pos.ne'
+        simpa only [β, RCLike.ofReal_mul, RCLike.ofReal_one] using
+          congrArg (fun r : ℝ ↦ (r : 𝕜)) h
   set U := auxIsometry y hα_ne_zero hβ hα.symm h_comp_adjoint (by simp [β])
   use U
-  have hβ₂ : β⁻¹ * β = 1 := by
-    refine inv_mul_cancel₀ ?_
-    simp only [β, ne_eq, map_eq_zero]
-    rw [Real.rpow_eq_zero hα_pos.le (by simp)]
-    exact ne_of_gt hα_pos
+  have hβ₂ : Checked.inv β (isUnit_auxScale hα_ne_zero hβ) * β = 1 := inv_mul_cancel₀
   ext
   simp [U.conjStarAlgEquiv_apply, U, smul_smul, hβ₂, ← conjContinuousAlgEquiv_apply, ← hy]
 

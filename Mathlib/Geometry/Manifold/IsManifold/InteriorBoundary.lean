@@ -228,7 +228,7 @@ lemma _root_.DifferentiableAt.mem_interior_convex_of_surjective_fderiv
   contrapose hfx
   have ⟨F, hF⟩ := geometric_hahn_banach_open_point hs.interior isOpen_interior hfx
   -- It suffices to show that `fderiv ℝ f x` sends everything to the kernel of `F`.
-  suffices h : ∀ y, F (fderiv ℝ f x y) = 0 by
+  suffices h : ∀ y, F (fderiv ℝ f x id y) = 0 by
     have ⟨y, hy⟩ := hs''
     unfold Function.Surjective; push Not
     refine ⟨f x - y, fun z ↦ ne_of_apply_ne F ?_⟩

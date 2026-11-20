@@ -82,25 +82,26 @@ variable (p : ℕ) [hp : Fact p.Prime]
 
 set_option backward.privateInPublic true in
 /-- The family `ℕ → ℚ_[p] → ℚ_[p]` given by `dpow n x = x ^ n / n!`. -/
-private noncomputable def dpow' : ℕ → ℚ_[p] → ℚ_[p] := fun m x => inverse (m ! : ℚ_[p]) * x ^ m
+private noncomputable def dpow' : ℕ → ℚ_[p] → ℚ_[p] := fun m x =>
+  Checked.inv (m ! : ℚ_[p]) (IsUnit.natCast_factorial_of_algebra ℚ m) * x ^ m
 
 private lemma dpow'_norm_le_of_ne_zero {n : ℕ} (hn : n ≠ 0) {x : ℤ_[p]}
-    (hx : x ∈ Ideal.span {(p : ℤ_[p])}) : ‖dpow' p n x‖ ≤ (p : ℝ)⁻¹ := by
+    (hx : x ∈ Ideal.span {(p : ℤ_[p])}) : ‖dpow' p n x‖ ≤ (p : ℝ) ^ (-1 : ℤ) := by
   unfold dpow'
   by_cases hx0 : x = 0
   · rw [hx0]
-    simp [inverse_eq_inv', coe_zero, ne_eq, hn, not_false_eq_true, zero_pow, mul_zero,
-      norm_zero, inv_nonneg, cast_nonneg]
+    simp [hn]
   · have hlt : (padicValNat p n.factorial : ℤ) < n := by
       exact_mod_cast padicValNat_factorial_lt_of_ne_zero p hn
     have hnorm : 0 < ‖(n ! : ℚ_[p])‖ := by
       simp only [norm_pos_iff, ne_eq, cast_eq_zero]
       exact factorial_ne_zero n
-    rw [← zpow_neg_one, ← Nat.cast_one (R := ℤ), Padic.norm_le_pow_iff_norm_lt_pow_add_one]
-    simp only [inverse_eq_inv', Padic.padicNormE.mul, norm_inv, _root_.norm_pow,
-      padic_norm_e_of_padicInt, cast_one, Int.reduceNeg, neg_add_cancel, zpow_zero]
+    rw [Padic.norm_le_pow_iff_norm_lt_pow_add_one]
+    simp only [Padic.padicNormE.mul, norm_inv, _root_.norm_pow,
+      padic_norm_e_of_padicInt, Int.reduceNeg, neg_add_cancel, zpow_zero₀]
     rw [norm_eq_zpow_neg_valuation hx0, inv_mul_lt_one₀ hnorm, Padic.norm_eq_zpow_neg_valuation
-      (cast_ne_zero.mpr n.factorial_ne_zero), ← zpow_natCast, ← zpow_mul]
+      (cast_ne_zero.mpr n.factorial_ne_zero), ← zpow_natCast₀,
+      ← zpow_mul₀ (by exact_mod_cast hp.out.ne_zero : (p : ℝ) ≠ 0)]
     gcongr
     · exact_mod_cast Nat.Prime.one_lt hp.elim
     · simp only [neg_mul, Padic.valuation_natCast (factorial_ne_zero n), neg_lt_neg_iff]
@@ -113,14 +114,11 @@ private lemma dpow'_norm_le_of_ne_zero {n : ℕ} (hn : n ≠ 0) {x : ℤ_[p]}
 set_option backward.privateInPublic true in
 private lemma dpow'_int (n : ℕ) {x : ℤ_[p]} (hx : x ∈ Ideal.span {(p : ℤ_[p])}) :
     ‖dpow' p n x‖ ≤ 1 := by
-  unfold dpow'
   by_cases hn : n = 0
-  · simp [hn]
-  · apply le_trans (dpow'_norm_le_of_ne_zero p hn hx)
-    rw [← zpow_neg_one, ← zpow_zero ↑p]
-    gcongr
-    · exact_mod_cast Nat.Prime.one_le hp.elim
-    · norm_num
+  · simp [dpow', hn]
+  · refine (dpow'_norm_le_of_ne_zero p hn hx).trans ?_
+    rw [zpow_neg_one₀]
+    exact inv_le_one_of_one_le₀ (by exact_mod_cast hp.out.one_le)
 
 set_option backward.privateInPublic true in
 private theorem dpow'_mem {n : ℕ} {x : ℤ_[p]} (hm : n ≠ 0) (hx : x ∈ Ideal.span {↑p}) :
@@ -128,7 +126,7 @@ private theorem dpow'_mem {n : ℕ} {x : ℤ_[p]} (hm : n ≠ 0) (hx : x ∈ Ide
   have hiff := PadicInt.norm_le_pow_iff_mem_span_pow ⟨dpow' p n x, dpow'_int p n hx⟩ 1
   rw [pow_one] at hiff
   rw [← hiff]
-  simp only [cast_one, zpow_neg_one]
+  simp only [cast_one]
   exact dpow'_norm_le_of_ne_zero p hm hx
 
 set_option backward.isDefEq.respectTransparency false in
@@ -146,7 +144,7 @@ noncomputable def dividedPowers : DividedPowers (Ideal.span {(p : ℤ_[p])}) := 
     exact Nat.Prime.ne_zero hp.elim
   · intro n x hx
     exact ⟨⟨dpow' p n x, dpow'_int p n hx⟩, fun hn ↦ dpow'_mem p hn hx, by
-      simp [dpow', inverse_eq_inv', Coe.ringHom_apply, RatAlgebra.dpow_apply,
+      simp [dpow', Coe.ringHom_apply, RatAlgebra.dpow_apply,
         Submodule.mem_top, ↓reduceIte]⟩
 
 open Function
@@ -160,8 +158,8 @@ private lemma dividedPowers_eq (n : ℕ) (x : ℤ_[p]) :
   · have hinj : Injective (PadicInt.Coe.ringHom (p := p)) :=
       (Set.injective_codRestrict Subtype.property).mp fun ⦃a₁ a₂⦄ a ↦ a
     have heq : Coe.ringHom ⟨dpow' p n x, dpow'_int p n hx⟩ =
-        inverse (n ! : ℚ_[p]) * Coe.ringHom x ^ n := by
-      simp [dpow', inverse_eq_inv', Coe.ringHom_apply]
+        Checked.inv (n ! : ℚ_[p]) (IsUnit.natCast_factorial_of_algebra ℚ n) * Coe.ringHom x ^ n :=
+      rfl
     simpa only [← hinj.eq_iff, (Exists.choose_spec (_ : ∃ a, ∃ _, Coe.ringHom a = _)).2,
       RatAlgebra.dpow_apply, Submodule.mem_top] using! heq.symm
   · rfl
@@ -169,8 +167,9 @@ private lemma dividedPowers_eq (n : ℕ) (x : ℤ_[p]) :
 set_option backward.isDefEq.respectTransparency false in
 lemma coe_dpow_eq (n : ℕ) (x : ℤ_[p]) :
     ((dividedPowers p).dpow n x : ℚ_[p]) = open scoped Classical in
-      if _ : x ∈ Ideal.span {(p : ℤ_[p])} then inverse (n ! : ℚ_[p]) * x ^ n else 0 := by
-  simp only [dividedPowers_eq, dpow', inverse_eq_inv', dite_eq_ite]
+      if _ : x ∈ Ideal.span {(p : ℤ_[p])} then
+        Checked.inv (n ! : ℚ_[p]) (IsUnit.natCast_factorial_of_algebra ℚ n) * x ^ n else 0 := by
+  simp only [dividedPowers_eq, dpow', dite_eq_ite]
   split_ifs <;> simp
 
 end Padic

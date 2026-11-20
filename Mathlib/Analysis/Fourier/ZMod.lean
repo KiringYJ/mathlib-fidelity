@@ -93,11 +93,11 @@ noncomputable def dft : (ZMod N → E) ≃ₗ[ℂ] (ZMod N → E) where
     ext; simp only [auxDFT, Pi.smul_apply, RingHom.id_apply, smul_sum, smul_comm c]
   invFun Φ k := (N : ℂ)⁻¹ • auxDFT Φ (-k)
   left_inv Φ := by
-    simp only [auxDFT_auxDFT, neg_neg, ← mul_smul, inv_mul_cancel₀ (NeZero.ne _), one_smul]
+    simp only [auxDFT_auxDFT, neg_neg, ← mul_smul, inv_mul_cancel₀, one_smul]
   right_inv Φ := by
     ext1 j
     simp only [← Pi.smul_def, auxDFT_smul, auxDFT_neg, auxDFT_auxDFT, neg_neg, ← mul_smul,
-      inv_mul_cancel₀ (NeZero.ne _), one_smul]
+      inv_mul_cancel₀, one_smul]
 
 @[inherit_doc] scoped notation "𝓕" => dft
 

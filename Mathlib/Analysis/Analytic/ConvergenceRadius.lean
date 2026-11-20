@@ -176,7 +176,7 @@ theorem isLittleO_of_lt_radius (h : ↑r < p.radius) :
   refine ⟨_, rt, C, Or.inr zero_lt_one, fun n => ?_⟩
   calc
     |‖p n‖ * (r : ℝ) ^ n| = ‖p n‖ * (t : ℝ) ^ n * (r / t : ℝ) ^ n := by
-      simp [field, abs_mul, div_pow]
+      simp [field, abs_mul, div_pow₀]
     _ ≤ C * (r / t : ℝ) ^ n := by gcongr; apply hC
 
 /-- For `r` strictly smaller than the radius of `p`, then `‖pₙ‖ rⁿ = o(1)`. -/
@@ -201,12 +201,15 @@ theorem lt_radius_of_isBigO (h₀ : r ≠ 0) {a : ℝ} (ha : a ∈ Ioo (-1 : ℝ
   rcases this.mp ⟨a, ha, hp⟩ with ⟨a, ha, C, hC, hp⟩
   rw [← pos_iff_ne_zero, ← NNReal.coe_pos] at h₀
   lift a to ℝ≥0 using ha.1.le
+  have ha₀ : (0 : ℝ) < a := ha.1
   have : (r : ℝ) < r / a := by
-    simpa only [div_one] using (div_lt_div_iff_of_pos_left h₀ zero_lt_one ha.1).2 ha.2
-  norm_cast at this
-  rw [← ENNReal.coe_lt_coe] at this
-  refine this.trans_le (p.le_radius_of_bound C fun n => ?_)
-  rw [NNReal.coe_div, div_pow, ← mul_div_assoc, div_le_iff₀ (pow_pos ha.1 n)]
+    simpa only [div_one₀] using (div_lt_div_iff_of_pos_left h₀ zero_lt_one ha.1).2 ha.2
+  have haN : a ≠ 0 := NNReal.coe_ne_zero.mp ha₀.ne'
+  have hrat : r < r / a := by
+    apply NNReal.coe_lt_coe.mp
+    simpa only [NNReal.coe_div] using this
+  refine (ENNReal.coe_lt_coe.mpr hrat).trans_le (p.le_radius_of_bound C fun n => ?_)
+  rw [NNReal.coe_div, div_pow₀, ← mul_div_assoc₀, div_le_iff₀ (pow_pos ha.1 n)]
   exact (le_abs_self _).trans (hp n)
 
 /-- For `r` strictly smaller than the radius of `p`, then `‖pₙ‖ rⁿ` is bounded. -/
@@ -219,7 +222,7 @@ theorem norm_mul_pow_le_of_lt_radius (p : FormalMultilinearSeries 𝕜 E F) {r :
 theorem norm_le_div_pow_of_pos_of_lt_radius (p : FormalMultilinearSeries 𝕜 E F) {r : ℝ≥0}
     (h0 : 0 < r) (h : (r : ℝ≥0∞) < p.radius) : ∃ C > 0, ∀ n, ‖p n‖ ≤ C / (r : ℝ) ^ n :=
   let ⟨C, hC, hp⟩ := p.norm_mul_pow_le_of_lt_radius h
-  ⟨C, hC, fun n => Iff.mpr (le_div_iff₀ (pow_pos h0 _)) (hp n)⟩
+  ⟨C, hC, fun n => Iff.mpr (le_div_iff₀ (pow_pos (NNReal.coe_pos.mpr h0) _)) (hp n)⟩
 
 /-- For `r` strictly smaller than the radius of `p`, then `‖pₙ‖ rⁿ` is bounded. -/
 theorem nnnorm_mul_pow_le_of_lt_radius (p : FormalMultilinearSeries 𝕜 E F) {r : ℝ≥0}
@@ -285,8 +288,8 @@ theorem le_mul_pow_of_radius_pos (p : FormalMultilinearSeries 𝕜 E F) (h : 0 <
   rcases ENNReal.lt_iff_exists_nnreal_btwn.1 h with ⟨r, r0, rlt⟩
   have rpos : 0 < (r : ℝ) := by simp [ENNReal.coe_pos.1 r0]
   rcases norm_le_div_pow_of_pos_of_lt_radius p rpos rlt with ⟨C, Cpos, hCp⟩
-  refine ⟨C, r⁻¹, Cpos, by simp only [inv_pos, rpos], fun n => ?_⟩
-  rw [inv_pow, ← div_eq_mul_inv]
+  refine ⟨C, (r : ℝ)⁻¹, Cpos, inv_pos.mpr rpos, fun n => ?_⟩
+  rw [inv_pow₀, ← div_eq_mul_inv₀]
   exact hCp n
 
 lemma radius_le_of_le {𝕜' E' F' : Type*}
@@ -323,7 +326,12 @@ theorem radius_le_smul {p : FormalMultilinearSeries 𝕜 E F} {𝕜' : Type*} {c
   refine iSup_mono fun r ↦ iSup_mono' fun C ↦ ⟨‖c‖ * C, iSup_mono' fun h ↦ ?_⟩
   simp only [le_refl, exists_prop, and_true]
   intro n
-  grw [norm_smul_le, mul_assoc, h]
+  calc
+    ‖c • p n‖ * (r : ℝ) ^ n ≤ (‖c‖ * ‖p n‖) * (r : ℝ) ^ n :=
+      mul_le_mul_of_nonneg_right (ContinuousMultilinearMap.opNorm_smul_le _ _)
+        (pow_nonneg r.coe_nonneg _)
+    _ = ‖c‖ * (‖p n‖ * (r : ℝ) ^ n) := mul_assoc _ _ _
+    _ ≤ ‖c‖ * C := mul_le_mul_of_nonneg_left (h n) (norm_nonneg c)
 
 theorem radius_smul_eq (p : FormalMultilinearSeries 𝕜 E F)
     {𝕜' : Type*} {c : 𝕜'} [NormedDivisionRing 𝕜'] [Module 𝕜' F] [NormSMulClass 𝕜' F]
@@ -353,9 +361,13 @@ theorem div_le_radius_compContinuousLinearMap (p : FormalMultilinearSeries 𝕜 
     p.radius / ‖u‖ₑ ≤ (p.compContinuousLinearMap u).radius := by
   obtain (rfl | h_zero) := eq_zero_or_nnnorm_pos u
   · simp
-  rw [ENNReal.div_le_iff (by simpa using h_zero) (by simp)]
+  have huₑ : ‖u‖ₑ ≠ 0 := by
+    rw [enorm_eq_nnnorm]
+    exact ENNReal.coe_ne_zero.mpr h_zero.ne'
+  rw [ENNReal.div_le_iff huₑ (by simp)]
   refine le_of_forall_nnreal_lt fun r hr ↦ ?_
-  rw [← ENNReal.div_le_iff (by simpa using h_zero) (by simp), enorm_eq_nnnorm, ← coe_div h_zero.ne']
+  rw [← ENNReal.div_le_iff huₑ (by simp), enorm_eq_nnnorm, ← coe_div (hr := h_zero.ne'.isUnit)]
+  have hu : ‖u‖ ≠ 0 := (show (0 : ℝ) < ‖u‖ from h_zero).ne'
   obtain ⟨C, hC_pos, hC⟩ := p.norm_mul_pow_le_of_lt_radius hr
   refine le_radius_of_bound _ C fun n ↦ ?_
   calc
@@ -363,10 +375,8 @@ theorem div_le_radius_compContinuousLinearMap (p : FormalMultilinearSeries 𝕜 
       gcongr
       exact nnnorm_compContinuousLinearMap_le p u n
     _ = ‖p n‖ * r ^ n := by
-      simp only [NNReal.coe_div, coe_nnnorm, div_pow, mul_assoc]
-      rw [mul_div_cancel₀]
-      rw [← NNReal.coe_pos] at h_zero
-      positivity
+      simp only [NNReal.coe_div, coe_nnnorm, div_pow₀, mul_assoc]
+      rw [mul_div_cancel₀ (hb := (pow_ne_zero n hu).isUnit)]
     _ ≤ C := hC n
 
 theorem le_radius_compContinuousLinearMap (p : FormalMultilinearSeries 𝕜 F G) (u : E →ₗᵢ[𝕜] F) :
@@ -384,7 +394,10 @@ theorem radius_compContinuousLinearMap_le [Nontrivial F]
     u.symm.toContinuousLinearMap
   simp only [compContinuousLinearMap_comp, ContinuousLinearEquiv.coe_comp_coe_symm,
     compContinuousLinearMap_id] at this
-  rwa [ENNReal.div_le_iff' (by simpa [DFunLike.ext_iff] using exists_ne 0) (by simp)] at this
+  have hu : ‖u.symm.toContinuousLinearMap‖ₑ ≠ 0 := by
+    rw [enorm_eq_nnnorm]
+    exact ENNReal.coe_ne_zero.mpr (NNReal.coe_ne_zero.mp u.symm.norm_pos.ne')
+  rwa [ENNReal.div_le_iff' hu (by simp)] at this
 
 @[simp]
 theorem radius_compContinuousLinearMap_linearIsometryEquiv_eq [Nontrivial E]
@@ -418,6 +431,9 @@ theorem radius_shift (p : FormalMultilinearSeries 𝕜 E F) : p.shift.radius = p
   simp only [radius, shift, Nat.succ_eq_add_one, ContinuousMultilinearMap.curryRight_norm]
   congr
   ext r
+  by_cases hr₀ : r = 0
+  · subst r
+    simp
   apply eq_of_le_of_ge
   · apply iSup_mono'
     intro C
@@ -438,16 +454,11 @@ theorem radius_shift (p : FormalMultilinearSeries 𝕜 E F) : p.shift.radius = p
     intro h
     simp only [le_refl, le_sup_iff, exists_prop, and_true]
     intro n
-    cases eq_zero_or_pos r with
-    | inl hr =>
-      rw [hr]
-      cases n <;> simp
-    | inr hr =>
-      right
-      rw [← NNReal.coe_pos] at hr
-      specialize h (n + 1)
-      rw [le_div_iff₀ hr]
-      rwa [pow_succ, ← mul_assoc] at h
+    right
+    have hr : (0 : ℝ) < r := NNReal.coe_pos.mpr (pos_iff_ne_zero.mpr hr₀)
+    specialize h (n + 1)
+    rw [le_div_iff₀ hr]
+    rwa [pow_succ, ← mul_assoc] at h
 
 @[simp]
 theorem radius_unshift (p : FormalMultilinearSeries 𝕜 E (E →L[𝕜] F)) (z : F) :

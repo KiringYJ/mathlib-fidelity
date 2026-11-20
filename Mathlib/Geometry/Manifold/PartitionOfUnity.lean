@@ -772,17 +772,18 @@ theorem exists_contMDiff_support_eq_eq_one_iff
       linarith [f_pos x]
   refine ⟨fun x ↦ f x / (f x + g x), ?_, ?_, ?_, ?_⟩
   -- show that `f / (f + g)` is smooth
-  · exact f_diff.div₀ (f_diff.add g_diff) (fun x ↦ ne_of_gt (A x))
+  · exact f_diff.div₀ (f_diff.add g_diff) (h := fun x ↦ (A x).ne'.isUnit)
   -- show that the range is included in `[0, 1]`
-  · refine range_subset_iff.2 (fun x ↦ ⟨div_nonneg (f_pos x) (A x).le, ?_⟩)
-    apply div_le_one_of_le₀ _ (A x).le
-    simpa only [le_add_iff_nonneg_right] using g_pos x
+  · exact range_subset_iff.2 (fun x ↦ ⟨div_nonneg (f_pos x) (A x).le,
+      (div_le_one (A x)).2 (le_add_of_nonneg_right (g_pos x))⟩)
   -- show that the support is `s`
-  · have B : support (fun x ↦ f x + g x) = univ := eq_univ_of_forall (fun x ↦ (A x).ne')
-    simp only [support_div, f_supp, B, inter_univ]
+  · rw [← f_supp]
+    ext x
+    simp only [mem_support]
+    exact not_congr (div_eq_zero_iff (hb := (A x).ne'.isUnit))
   -- show that the function equals one exactly on `t`
   · intro x
-    simp [div_eq_one_iff_eq (A x).ne', left_eq_add, ← notMem_support, g_supp]
+    simp [div_eq_one_iff_eq, left_eq_add, ← notMem_support, g_supp]
 
 /-- The `ContDiff` counterpart of `exists_contMDiff_support_eq_eq_one_iff` for a
 finite-dimensional real normed space. -/

@@ -193,15 +193,16 @@ lemma variation_transpose_eq_smul [Nontrivial E] {C : ℝ≥0}
     apply opNNNorm_le_bound _ _ (fun x ↦ opNNNorm_le_bound _ _ (fun y ↦ by simp [hB]))
   · rcases eq_or_ne C 0 with rfl | hC
     · simp [Measure.zero_le]
+    have hCunit : IsUnit C := hC.isUnit
     suffices μ.variation ≤ C⁻¹ • (μ.transpose B).variation by
-      grw [this, smul_smul, mul_inv_cancel₀ hC, one_smul]
+      grw [this, smul_smul, mul_inv_cancel₀, one_smul]
     apply variation_le_of_forall_enorm_le (fun s hs ↦ ?_)
     have : ‖μ s‖ₑ ≤ C⁻¹ • ‖(μ.transpose B) s‖ₑ := by
       obtain ⟨x, hx⟩ : ∃ (x : E), x ≠ 0 := exists_ne 0
       have : ‖B.flip (μ s) x‖₊ ≤ ‖B.flip (μ s)‖₊ * ‖x‖₊ := le_opNNNorm _ _
       simp only [flip_apply, hB] at this
       rw [mul_right_comm, mul_le_mul_iff_left₀ (by simpa), ← le_div_iff₀' (by positivity),
-        div_eq_inv_mul, ← ENNReal.coe_le_coe] at this
+        div_eq_inv_mul₀, ← ENNReal.coe_le_coe] at this
       exact this
     grw [this, enorm_measure_le_variation, Measure.smul_apply]
 

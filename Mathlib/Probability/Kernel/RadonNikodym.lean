@@ -285,11 +285,8 @@ lemma singularPart_compl_mutuallySingularSetSlice (κ η : Kernel α γ) [IsSFin
   refine ae_of_all _ (fun x hx ↦ ?_)
   simp only [mem_compl_iff, mutuallySingularSetSlice, mem_ofPred, not_le] at hx
   simp_rw [rnDeriv]
-  rw [← ENNReal.ofReal_div_of_pos, div_eq_inv_mul, ← ENNReal.ofReal_mul, ← mul_assoc,
-    mul_inv_cancel₀, one_mul, tsub_self, Pi.zero_apply]
-  · simp only [ne_eq, sub_eq_zero, hx.ne', not_false_eq_true]
-  · simp only [sub_nonneg, hx.le]
-  · simp only [sub_pos, hx]
+  rw [ENNReal.mul_div_cancel (ENNReal.ofReal_pos.mpr (sub_pos.mpr hx)).ne'
+    ENNReal.ofReal_ne_top, tsub_self, Pi.zero_apply]
 
 lemma singularPart_of_subset_compl_mutuallySingularSetSlice [IsSFiniteKernel κ]
     [IsFiniteKernel η] {a : α} {s : Set γ} (hs : s ⊆ (mutuallySingularSetSlice κ η a)ᶜ) :
@@ -362,12 +359,9 @@ lemma withDensity_rnDeriv_of_subset_compl_mutuallySingularSetSlice
         ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x)) ∂(κ + η) a
   _ = ∫⁻ x in s, ENNReal.ofReal (rnDerivAux κ (κ + η) a x) ∂(κ + η) a := by
       refine setLIntegral_congr_fun hsm (fun x hx ↦ ?_)
-      rw [ofNNReal_toNNReal, ← ENNReal.ofReal_div_of_pos, div_eq_inv_mul, ← ENNReal.ofReal_mul,
-        ← mul_assoc, mul_inv_cancel₀, one_mul]
-      · rw [ne_eq, sub_eq_zero]
-        exact (hs' x hx).ne'
-      · simp [(hs' x hx).le]
-      · simp [hs' x hx]
+      rw [ofNNReal_toNNReal,
+        ENNReal.mul_div_cancel (ENNReal.ofReal_pos.mpr (sub_pos.mpr (hs' x hx))).ne'
+          ENNReal.ofReal_ne_top]
   _ = κ a s := setLIntegral_rnDerivAux κ η a hsm
 
 /-- The singular part of `κ` with respect to `η` is mutually singular with `η`. -/

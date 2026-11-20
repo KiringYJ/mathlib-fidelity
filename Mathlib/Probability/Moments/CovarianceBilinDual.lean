@@ -98,12 +98,13 @@ lemma norm_toLpₗ_le [OpensSigmaAlgebra E] (L : StrongDual 𝕜 E) :
     refine this.trans_eq ?_
     simp only [ENNReal.toReal_mul]
     rw [← ENNReal.toReal_rpow, Real.mul_rpow (by positivity) (by positivity),
-      ← Real.rpow_mul (by positivity), mul_inv_cancel₀ h0.ne', Real.rpow_one, toReal_enorm]
+      ← Real.rpow_mul (by positivity), mul_inv_cancel₀ (ha := h0.ne'.isUnit), Real.rpow_one,
+      toReal_enorm]
     rw [eLpNorm_eq_lintegral_rpow_enorm_toReal (by simp [hp]) hp_top, ENNReal.toReal_rpow]
     simp
   rw [StrongDual.toLpₗ_apply h_Lp, Lp.norm_toLp,
     eLpNorm_eq_lintegral_rpow_enorm_toReal (by simp [hp]) hp_top]
-  simp only [one_div]
+  simp only [one_div₀]
   refine ENNReal.toReal_le_of_le_ofReal (by positivity) ?_
   suffices ∫⁻ x, ‖L x‖ₑ ^ p.toReal ∂μ ≤ ‖L‖ₑ ^ p.toReal * ∫⁻ x, ‖x‖ₑ ^ p.toReal ∂μ by
     rw [← ENNReal.ofReal_rpow_of_nonneg (by positivity) (by positivity)]

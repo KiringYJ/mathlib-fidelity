@@ -24,7 +24,7 @@ variable {α β : Type*}
 namespace Int
 
 /-- Exact integer division is preserved when the denominator is nonzero. -/
-@[simp, norm_cast]
+@[norm_cast]
 theorem cast_div_charZero {k : Type*} [DivisionRing k] [CharZero k] {m n : ℤ}
     (n_dvd : n ∣ m) (hn : n ≠ 0) :
     ((m / n : ℤ) : k) = m / n :=

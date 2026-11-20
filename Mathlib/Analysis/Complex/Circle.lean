@@ -83,7 +83,7 @@ lemma coe_inj : (x : ℂ) = y ↔ x = y := coe_injective.eq_iff
 @[simp, norm_cast] lemma coe_mul (z w : Circle) : ↑(z * w) = (z : ℂ) * w := rfl
 @[simp, norm_cast] lemma coe_inv (z : Circle) : ↑z⁻¹ = (z : ℂ)⁻¹ := rfl
 lemma coe_inv_eq_conj (z : Circle) : ↑z⁻¹ = conj (z : ℂ) := by
-  rw [coe_inv, inv_def, normSq_coe, inv_one, ofReal_one, mul_one]
+  simp only [coe_inv, inv_def, normSq_coe, inv_one₀, ofReal_one, mul_one]
 
 @[simp, norm_cast] lemma coe_div (z w : Circle) : ↑(z / w) = (z : ℂ) / w := rfl
 @[simp, norm_cast] lemma coe_pow (z : Circle) (n : ℕ) : ↑(z ^ n) = (z : ℂ) ^ n := rfl
@@ -115,7 +115,7 @@ instance instUniformSpace : UniformSpace Circle := inferInstanceAs <| UniformSpa
 def ofConjDivSelf (z : ℂ) (hz : z ≠ 0) : Circle where
   val := conj z / z
   property := mem_sphere_zero_iff_norm.2 <| by
-    rw [norm_div, RCLike.norm_conj, div_self]; exact norm_ne_zero_iff.mpr hz
+    simp only [norm_div, RCLike.norm_conj, div_self]
 
 /-- The map `fun t => exp (t * I)` from `ℝ` to the unit circle in `ℂ`. -/
 def exp : C(ℝ, Circle) where
@@ -239,7 +239,7 @@ theorem fourierChar_ne_one : fourierChar ≠ 1 := by
   rw [DFunLike.ne_iff]
   use 2⁻¹
   simp only [fourierChar_apply', AddChar.one_apply]
-  rw [mul_comm, ← mul_assoc, inv_mul_cancel₀ (by positivity), one_mul]
+  rw [mul_comm, ← mul_assoc, inv_mul_cancel₀, one_mul]
   exact Circle.exp_pi_ne_one
 
 /-- The additive character from `ℝ` onto the circle, given by `fun x ↦ exp (x * I)`. This uses the

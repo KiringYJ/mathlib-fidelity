@@ -190,7 +190,8 @@ lemma sum_le_preVariationFun_iUnion {s : ℕ → Set X} (hs : ∀ i, MeasurableS
     _ ≤ ∑ i ∈ Finset.range n, (∑ p ∈ (P i).parts, f p + ε) := Finset.sum_le_sum fun i _ => hP i
     _ = ∑ i ∈ Finset.range n, ∑ p ∈ (P i).parts, f p + ε' := by
       rw [Finset.sum_add_distrib]; norm_cast
-      simp [show n * ε = ε' by field]
+      have hn₀ : (n : ℝ≥0) ≠ 0 := Nat.cast_ne_zero.mpr hn
+      simp [show n * ε = ε' from mul_div_cancel₀ (hb := hn₀.isUnit) ε']
     _ ≤ preVariationFun f (⋃ i, s i) + ε' := by
       gcongr; exact sum_le_preVariationFun_iUnion' f hs hs' P n
 

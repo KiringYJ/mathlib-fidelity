@@ -75,17 +75,24 @@ theorem sameRay_iff_norm_smul_eq : SameRay ℝ x y ↔ ‖x‖ • y = ‖y‖ �
 vectors `‖x‖⁻¹ • x` and `‖y‖⁻¹ • y` are equal. -/
 theorem sameRay_iff_inv_norm_smul_eq_of_ne (hx : x ≠ 0) (hy : y ≠ 0) :
     SameRay ℝ x y ↔ ‖x‖⁻¹ • x = ‖y‖⁻¹ • y := by
-  rw [inv_smul_eq_iff₀, smul_comm, eq_comm, inv_smul_eq_iff₀, sameRay_iff_norm_smul_eq] <;>
-    rwa [norm_ne_zero_iff]
+  rw [inv_smul_eq_iff₀, smul_comm, eq_comm, inv_smul_eq_iff₀, sameRay_iff_norm_smul_eq]
 
 alias ⟨SameRay.inv_norm_smul_eq, _⟩ := sameRay_iff_inv_norm_smul_eq_of_ne
 
-/-- Two vectors `x y` in a real normed space are on the ray if and only if one of them is zero or
+/-- Two vectors `x y` in a real normed space are on the same ray if and only if one is zero or
 the unit vectors `‖x‖⁻¹ • x` and `‖y‖⁻¹ • y` are equal. -/
-theorem sameRay_iff_inv_norm_smul_eq : SameRay ℝ x y ↔ x = 0 ∨ y = 0 ∨ ‖x‖⁻¹ • x = ‖y‖⁻¹ • y := by
-  rcases eq_or_ne x 0 with (rfl | hx); · simp [SameRay.zero_left]
-  rcases eq_or_ne y 0 with (rfl | hy); · simp [SameRay.zero_right]
-  simp only [sameRay_iff_inv_norm_smul_eq_of_ne hx hy, *, false_or]
+theorem sameRay_iff_inv_norm_smul_eq :
+    SameRay ℝ x y ↔ x = 0 ∨ y = 0 ∨ ∃ (hx : x ≠ 0) (hy : y ≠ 0), ‖x‖⁻¹ • x = ‖y‖⁻¹ • y := by
+  refine ⟨fun h ↦ ?_, ?_⟩
+  · rcases eq_or_ne x 0 with hx | hx
+    · exact Or.inl hx
+    rcases eq_or_ne y 0 with hy | hy
+    · exact Or.inr (Or.inl hy)
+    exact Or.inr (Or.inr ⟨hx, hy, h.inv_norm_smul_eq hx hy⟩)
+  · rintro (rfl | rfl | ⟨hx, hy, h⟩)
+    · exact SameRay.zero_left _
+    · exact SameRay.zero_right _
+    · exact (sameRay_iff_inv_norm_smul_eq_of_ne hx hy).mpr h
 
 /-- Two vectors of the same norm are on the same ray if and only if they are equal. -/
 theorem sameRay_iff_of_norm_eq (h : ‖x‖ = ‖y‖) : SameRay ℝ x y ↔ x = y := by

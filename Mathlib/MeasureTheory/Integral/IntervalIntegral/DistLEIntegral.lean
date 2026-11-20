@@ -52,11 +52,10 @@ lemma norm_sub_le_integral_of_norm_deriv_le_of_le {B : ℝ → ℝ} (hab : a ≤
     have hgd : DifferentiableOn ℝ g (Ioo a b) :=
       UniformSpace.Completion.toComplL.differentiable.comp_differentiableOn hfd
     have hdg t (ht : t ∈ Ioo a b) : deriv g t = deriv f t := by
-      have : HasFDerivAt (𝕜 := ℝ) (↑) UniformSpace.Completion.toComplL (f t) := by
-        rw [← UniformSpace.Completion.coe_toComplL (S := ℝ)]
-        exact (UniformSpace.Completion.toComplL (α := E) (S := ℝ)).hasFDerivAt
+      let e := UniformSpace.Completion.toComplL (α := E) (S := ℝ)
       have hdft : HasDerivAt f (deriv f t) t := hfd.hasDerivAt <| Ioo_mem_nhds ht.1 ht.2
-      rw [hg, (this.comp_hasDerivAt t hdft).deriv, UniformSpace.Completion.coe_toComplL]
+      change deriv (e ∘ f) t = _
+      rw [(e.hasFDerivAt.comp_hasDerivAt t hdft).deriv, UniformSpace.Completion.coe_toComplL]
     have hgn : ∀ᵐ t, t ∈ Ioo a b → ‖deriv g t‖ ≤ B t :=
       hfB.mono fun t htB ht ↦ by
         simpa only [hdg t ht, UniformSpace.Completion.norm_coe] using htB ht
@@ -88,23 +87,21 @@ lemma norm_sub_le_mul_volume_of_norm_deriv_le_of_le {C : ℝ} (hab : a ≤ b)
     ‖f b - f a‖ ≤ C * volume.real {x ∈ Ioo a b | deriv f x ≠ 0} := by
   set s := toMeasurable volume {x | deriv f x ≠ 0}
   have hsm : MeasurableSet s := by measurability
-  calc
-    ‖f b - f a‖ ≤ ∫ t in a..b, indicator s (fun _ ↦ C) t := by
-      apply norm_sub_le_integral_of_norm_deriv_le_of_le hab hfc hfd
-      · refine hnorm.mono fun t ht ht_mem ↦ ?_
-        apply le_indicator_apply
-        · exact fun ht' ↦ ht ht_mem
-        · simp only [s, norm_le_zero_iff]
-          exact not_imp_comm.2 fun h ↦ subset_toMeasurable _ _ h
-      · rw [intervalIntegrable_iff_integrableOn_Ioo_of_le hab]
-        refine (integrableOn_const ?_ ?_).indicator hsm <;> simp
-    _ = C * volume.real {x ∈ Ioo a b | deriv f x ≠ 0} := by
-      rw [intervalIntegral.integral_of_le hab, Measure.restrict_congr_set Ioo_ae_eq_Ioc.symm,
-        integral_indicator hsm, Measure.restrict_restrict hsm,
-        setIntegral_const, smul_eq_mul, mul_comm]
-      simp only [s, Measure.real,
-        Measure.measure_toMeasurable_inter_of_sFinite measurableSet_Ioo]
-      simp only [inter_def, mem_ofPred_eq, and_comm]
+  have hle : ‖f b - f a‖ ≤ ∫ t in a..b, indicator s (fun _ ↦ C) t := by
+    apply norm_sub_le_integral_of_norm_deriv_le_of_le hab hfc hfd
+    · refine hnorm.mono fun t ht ht_mem ↦ ?_
+      apply le_indicator_apply
+      · exact fun _ ↦ ht ht_mem
+      · simp only [s, norm_le_zero_iff]
+        exact not_imp_comm.2 fun h ↦ subset_toMeasurable _ _ h
+    · rw [intervalIntegrable_iff_integrableOn_Ioo_of_le hab]
+      refine (integrableOn_const ?_ ?_).indicator hsm <;> simp
+  refine hle.trans_eq ?_
+  rw [intervalIntegral.integral_of_le hab, Measure.restrict_congr_set Ioo_ae_eq_Ioc.symm,
+    integral_indicator hsm, Measure.restrict_restrict hsm, setIntegral_const, smul_eq_mul, mul_comm]
+  simp only [measureReal_def, s]
+  rw [Measure.measure_toMeasurable_inter_of_sFinite measurableSet_Ioo]
+  simp only [inter_def, mem_ofPred_eq, and_comm]
 
 end Line
 

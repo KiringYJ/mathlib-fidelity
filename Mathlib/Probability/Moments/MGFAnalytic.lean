@@ -187,62 +187,69 @@ end AnalyticCGF
 
 section DerivCGF
 
-lemma deriv_cgf (h : v ∈ interior (integrableExpSet X μ)) :
-    deriv (cgf X μ) v = (∫ ω, X ω * exp (v * X ω) ∂μ) / mgf X μ v := by
-  by_cases hμ : μ = 0
-  · simp only [hμ, cgf_zero_measure, integral_zero_measure, mgf_zero_measure, div_zero,
-      Pi.zero_apply]
-    exact deriv_const v 0
-  have hv : Integrable (fun ω ↦ exp (v * X ω)) μ := interior_subset (s := integrableExpSet X μ) h
-  calc deriv (fun x ↦ log (mgf X μ x)) v
-  _ = deriv (mgf X μ) v / mgf X μ v := by
-    rw [deriv.log (differentiableAt_mgf h) ((mgf_pos' hμ hv).ne')]
-  _ = (∫ ω, X ω * exp (v * X ω) ∂μ) / mgf X μ v := by rw [deriv_mgf h]
+/-- The moment-generating function of a nonzero measure is positive at interior parameters. -/
+lemma isUnit_mgf_of_mem_interior [NeZero μ] (h : v ∈ interior (integrableExpSet X μ)) :
+    IsUnit (mgf X μ v) :=
+  (mgf_pos' (NeZero.ne _) (interior_subset (s := integrableExpSet X μ) h)).ne'.isUnit
 
-lemma deriv_cgf_zero (h : 0 ∈ interior (integrableExpSet X μ)) :
-    deriv (cgf X μ) 0 = (∫ ω, X ω ∂μ) / μ.real Set.univ := by simp [deriv_cgf h]
+lemma deriv_cgf [NeZero μ] (h : v ∈ interior (integrableExpSet X μ)) :
+    deriv (cgf X μ) v =
+      Checked.div (∫ ω, X ω * exp (v * X ω) ∂μ) (mgf X μ v) (isUnit_mgf_of_mem_interior h) := by
+  change deriv (fun u ↦ log (mgf X μ u)) v = _
+  simpa only [deriv_mgf h] using
+    deriv.log (differentiableAt_mgf h) (hx := (isUnit_mgf_of_mem_interior h).ne_zero)
 
-lemma iteratedDeriv_two_cgf (h : v ∈ interior (integrableExpSet X μ)) :
+lemma isUnit_measureReal_univ_of_zero_mem_interior [NeZero μ]
+    (h : 0 ∈ interior (integrableExpSet X μ)) : IsUnit (μ.real Set.univ) := by
+  simpa only [mgf_zero'] using isUnit_mgf_of_mem_interior h
+
+lemma deriv_cgf_zero [NeZero μ] (h : 0 ∈ interior (integrableExpSet X μ)) :
+    deriv (cgf X μ) 0 = Checked.div (∫ ω, X ω ∂μ) (μ.real Set.univ)
+      (isUnit_measureReal_univ_of_zero_mem_interior h) := by
+  apply eq_div_iff.2
+  rw [← mgf_zero' (X := X), deriv_cgf h, div_mul_cancel₀]
+  simp
+
+lemma iteratedDeriv_two_cgf [NeZero μ] (h : v ∈ interior (integrableExpSet X μ)) :
     iteratedDeriv 2 (cgf X μ) v
-      = (∫ ω, (X ω) ^ 2 * exp (v * X ω) ∂μ) / mgf X μ v - deriv (cgf X μ) v ^ 2 := by
-  rw [iteratedDeriv_succ, iteratedDeriv_one]
-  by_cases hμ : μ = 0
-  · simp [hμ]
-  have h_mem : ∀ᶠ y in 𝓝 v, y ∈ interior (integrableExpSet X μ) :=
+      = Checked.div (∫ ω, (X ω) ^ 2 * exp (v * X ω) ∂μ) (mgf X μ v)
+          (isUnit_mgf_of_mem_interior h) - deriv (cgf X μ) v ^ 2 := by
+  let A (u : ℝ) := ∫ ω, X ω * exp (u * X ω) ∂μ
+  let B := ∫ ω, (X ω) ^ 2 * exp (v * X ω) ∂μ
+  let D := {u : ℝ | IsUnit (mgf X μ u)}
+  have hA : HasDerivAt A B v := by
+    simpa only [A, B, pow_one] using hasDerivAt_integral_pow_mul_exp_real h 1
+  have hv := isUnit_mgf_of_mem_interior h
+  let w : D := ⟨v, hv⟩
+  have h_mem : ∀ᶠ u in 𝓝 v, u ∈ interior (integrableExpSet X μ) :=
     isOpen_interior.eventually_mem h
-  have h_d_cgf : deriv (cgf X μ) =ᶠ[𝓝 v] fun u ↦ (∫ ω, X ω * exp (u * X ω) ∂μ) / mgf X μ u := by
-    filter_upwards [h_mem] with u hu using deriv_cgf hu
-  have h_d_mgf : deriv (mgf X μ) =ᶠ[𝓝 v] fun u ↦ ∫ ω, X ω * exp (u * X ω) ∂μ := by
-    filter_upwards [h_mem] with u hu using deriv_mgf hu
-  rw [h_d_cgf.deriv_eq]
-  calc deriv (fun u ↦ (∫ ω, X ω * exp (u * X ω) ∂μ) / mgf X μ u) v
-  _ = (deriv (fun u ↦ ∫ ω, X ω * exp (u * X ω) ∂μ) v * mgf X μ v -
-      (∫ ω, X ω * exp (v * X ω) ∂μ) * deriv (mgf X μ) v) / mgf X μ v ^ 2 := by
-    rw [deriv_fun_div]
-    · rw [h_d_mgf.symm.differentiableAt_iff, ← iteratedDeriv_one]
-      exact differentiableAt_iteratedDeriv_mgf h 1
-    · exact differentiableAt_mgf h
-    · exact (mgf_pos' hμ (interior_subset (s := integrableExpSet X μ) h)).ne'
-  _ = (deriv (fun u ↦ ∫ ω, X ω * exp (u * X ω) ∂μ) v * mgf X μ v -
-      (∫ ω, X ω * exp (v * X ω) ∂μ) * ∫ ω, X ω * exp (v * X ω) ∂μ) / mgf X μ v ^ 2 := by
-    rw [deriv_mgf h]
-  _ = deriv (fun u ↦ ∫ ω, X ω * exp (u * X ω) ∂μ) v / mgf X μ v - deriv (cgf X μ) v ^ 2 := by
-    rw [sub_div]
-    congr 1
-    · rw [pow_two, div_mul_eq_div_div, mul_div_assoc, div_self, mul_one]
-      exact (mgf_pos' hμ (interior_subset (s := integrableExpSet X μ) h)).ne'
-    · rw [deriv_cgf h]
-      ring
-  _ = (∫ ω, (X ω) ^ 2 * exp (v * X ω) ∂μ) / mgf X μ v - deriv (cgf X μ) v ^ 2 := by
-    congr
-    convert! (hasDerivAt_integral_pow_mul_exp_real h 1).deriv using 1
-    simp
+  have hD : D ∈ 𝓝 v := h_mem.mono fun _ hu ↦ isUnit_mgf_of_mem_interior hu
+  have h_eq : (fun u : D ↦ deriv (cgf X μ) u) =ᶠ[𝓝 w]
+      (fun u ↦ A u /ₚ u.property.unit) := by
+    filter_upwards [continuous_subtype_val.continuousAt.tendsto.eventually h_mem] with u hu
+    exact deriv_cgf hu
+  have h_quot := hA.div (hasDerivAt_mgf h) hv
+  have h_deriv : HasDerivAt (deriv (cgf X μ))
+      (Checked.div (B * mgf X μ v - A v * A v) (mgf X μ v ^ 2) (hv.pow 2)) v := by
+    rw [hasDerivAt_iff_hasFDerivAt, Checked.div, hv.unit_pow 2]
+    refine HasFDerivAt.of_restrict (s := D) (x := w) ?_ hD
+    apply HasFDerivAt.of_isLittleOTVS
+    refine h_quot.hasFDerivAt.isLittleOTVS.congr' ?_ .rfl
+    filter_upwards [h_eq] with u hu
+    rw [hu, h_eq.eq_of_nhds]
+    rfl
+  rw [iteratedDeriv_succ, iteratedDeriv_one]
+  change deriv (deriv (cgf X μ)) v = B / mgf X μ v - deriv (cgf X μ) v ^ 2
+  rw [h_deriv.deriv, deriv_cgf h, sub_div, div_pow₀, ← pow_two (A v)]
+  congr 1
+  rw [div_eq_div_iff]
+  ring
 
-lemma iteratedDeriv_two_cgf_eq_integral (h : v ∈ interior (integrableExpSet X μ)) :
+lemma iteratedDeriv_two_cgf_eq_integral [NeZero μ] (h : v ∈ interior (integrableExpSet X μ)) :
     iteratedDeriv 2 (cgf X μ) v
-      = (∫ ω, (X ω - deriv (cgf X μ) v) ^ 2 * exp (v * X ω) ∂μ) / mgf X μ v := by
-  by_cases hμ : μ = 0
-  · simp [hμ]
+      = Checked.div (∫ ω, (X ω - deriv (cgf X μ) v) ^ 2 * exp (v * X ω) ∂μ)
+          (mgf X μ v) (isUnit_mgf_of_mem_interior h) := by
+  have hv := isUnit_mgf_of_mem_interior h
   rw [iteratedDeriv_two_cgf h]
   calc (∫ ω, (X ω) ^ 2 * exp (v * X ω) ∂μ) / mgf X μ v - deriv (cgf X μ) v ^ 2
   _ = (∫ ω, (X ω) ^ 2 * exp (v * X ω) ∂μ - 2 * (∫ ω, X ω * exp (v * X ω) ∂μ) * deriv (cgf X μ) v
@@ -250,8 +257,7 @@ lemma iteratedDeriv_two_cgf_eq_integral (h : v ∈ interior (integrableExpSet X 
     rw [add_div, sub_div, sub_add]
     congr 1
     rw [mul_div_cancel_right₀, deriv_cgf h]
-    · ring
-    · exact (mgf_pos' hμ (interior_subset (s := integrableExpSet X μ) h)).ne'
+    ring
   _ = (∫ ω, ((X ω) ^ 2 - 2 * X ω * deriv (cgf X μ) v + deriv (cgf X μ) v ^ 2) * exp (v * X ω) ∂μ)
       / mgf X μ v := by
     congr 1
@@ -287,7 +293,12 @@ lemma exists_cgf_eq_iteratedDeriv_two_cgf_mul [IsZeroOrProbabilityMeasure μ] (h
   convert! taylor_mean_remainder_lagrange_iteratedDeriv ht.ne ?_
   · have hd : derivWithin (cgf X μ) (Set.Icc 0 t) 0 = 0 := by
       convert! (analyticAt_cgf (hs ⟨le_refl 0, le_of_lt ht⟩)).differentiableAt.derivWithin _
-      · simpa [hc] using (deriv_cgf_zero (hs ⟨le_refl 0, le_of_lt ht⟩)).symm
+      · by_cases hμ : μ = 0
+        · rw [hμ, cgf_zero_measure]
+          change 0 = deriv (fun _ : ℝ ↦ (0 : ℝ)) 0
+          rw [deriv_const]
+        · have : NeZero μ := ⟨hμ⟩
+          simpa [hc] using (deriv_cgf_zero (hs ⟨le_refl 0, le_of_lt ht⟩)).symm
       · exact hu 0 ⟨le_refl 0, le_of_lt ht⟩
     simp [hd, Set.uIcc_of_lt ht]
   · rw [Set.uIcc_of_lt ht]

@@ -213,11 +213,10 @@ theorem eLpNorm_eq [NormedAddCommGroup γ] [OpensSigmaAlgebra γ] (h : IdentDist
   by_cases h0 : p = 0
   · simp [h0]
   by_cases h_top : p = ∞
-  · simp only [h_top, eLpNorm, eLpNormEssSup, ENNReal.top_ne_zero, ite_true,
-      ite_false]
+  · simp only [h_top, eLpNorm, eLpNormEssSup, ENNReal.top_ne_zero]
     apply essSup_eq
     exact h.comp (measurable_coe_nnreal_ennreal.comp measurable_nnnorm)
-  simp only [eLpNorm_eq_eLpNorm' h0 h_top, eLpNorm', one_div]
+  simp only [eLpNorm_eq_eLpNorm' h0 h_top, eLpNorm']
   congr 1
   apply lintegral_eq
   exact h.comp (Measurable.pow_const (measurable_coe_nnreal_ennreal.comp measurable_nnnorm)

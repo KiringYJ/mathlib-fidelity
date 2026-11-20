@@ -66,22 +66,37 @@ of `1/p` over the primes `k ≤ p ≤ N`. -/
 -- instead of in `Mathlib/NumberTheory/SmoothNumbers.lean`.
 lemma Nat.roughNumbersUpTo_card_le' (N k : ℕ) :
     (roughNumbersUpTo N k).card ≤
-      N * (N.succ.primesBelow \ k.primesBelow).sum (fun p ↦ (1 : ℝ) / p) := by
-  simp_rw [Finset.mul_sum, mul_one_div]
-  exact (Nat.cast_le.mpr <| roughNumbersUpTo_card_le N k).trans <|
-    cast_sum (R := ℝ) .. ▸ Finset.sum_le_sum fun n _ ↦ cast_div_le
+      N * ∑ p : ↥(N.succ.primesBelow \ k.primesBelow), Checked.div (1 : ℝ) p
+        (Nat.cast_ne_zero.mpr
+          (prime_of_mem_primesBelow (Finset.mem_sdiff.mp p.2).1).ne_zero).isUnit := by
+  rw [Finset.mul_sum]
+  refine (Nat.cast_le.mpr <| roughNumbersUpTo_card_le N k).trans ?_
+  rw [cast_sum, ← Finset.sum_coe_sort]
+  refine Finset.sum_le_sum fun p _ ↦ ?_
+  have hp : (p : ℕ) ≠ 0 := (prime_of_mem_primesBelow (Finset.mem_sdiff.mp p.2).1).ne_zero
+  rw [mul_one_div₀]
+  exact cast_div_le
 
 /-- The sum over primes `k ≤ p ≤ 4^(π(k-1)+1)` over `1/p` (as a real number) is at least `1/2`. -/
 lemma one_half_le_sum_primes_ge_one_div (k : ℕ) :
-    1 / 2 ≤ ∑ p ∈ (4 ^ (k.primesBelow.card + 1)).succ.primesBelow \ k.primesBelow,
-      (1 / p : ℝ) := by
+    1 / 2 ≤ ∑ p : ↥((4 ^ (k.primesBelow.card + 1)).succ.primesBelow \ k.primesBelow),
+      Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr
+        (prime_of_mem_primesBelow (Finset.mem_sdiff.mp p.2).1).ne_zero).isUnit := by
   set m : ℕ := 2 ^ k.primesBelow.card
   set N₀ : ℕ := 2 * m ^ 2 with hN₀
-  let S : ℝ := ((2 * N₀).succ.primesBelow \ k.primesBelow).sum (fun p ↦ (1 / p : ℝ))
+  let S : ℝ := ∑ p : ↥((2 * N₀).succ.primesBelow \ k.primesBelow), Checked.div 1 p
+    (Nat.cast_ne_zero.mpr
+      (prime_of_mem_primesBelow (Finset.mem_sdiff.mp p.2).1).ne_zero).isUnit
   suffices 1 / 2 ≤ S by
-    convert! this using 5
-    rw [show 4 = 2 ^ 2 by simp, pow_right_comm]
-    ring
+    have hbound : 4 ^ (k.primesBelow.card + 1) = 2 * N₀ := by
+      dsimp [N₀, m]
+      rw [show (4 : ℕ) = 2 ^ 2 by norm_num, pow_right_comm, pow_succ]
+      ring
+    convert this using 1
+    refine Fintype.sum_equiv
+      (Equiv.subtypeEquivRight fun p ↦ by rw [hbound]) _ _ ?_
+    intro p
+    rfl
   suffices 2 * N₀ ≤ m * (2 * N₀).sqrt + 2 * N₀ * S by
     rwa [hN₀, ← mul_assoc, ← pow_two 2, ← mul_pow, sqrt_eq', ← sub_le_iff_le_add',
       cast_mul, cast_mul, cast_pow, cast_two,
@@ -96,28 +111,61 @@ lemma one_half_le_sum_primes_ge_one_div (k : ℕ) :
 
 /-- The sum over the reciprocals of the primes diverges. -/
 theorem not_summable_one_div_on_primes :
-    ¬ Summable (indicator {p | p.Prime} (fun n : ℕ ↦ (1 : ℝ) / n)) := by
+    ¬ Summable (fun n : ℕ ↦ if hn : n.Prime then
+      Checked.div (1 : ℝ) n (Nat.cast_ne_zero.mpr hn.ne_zero).isUnit else 0) := by
+  let f : ℕ → ℝ := fun n ↦ if hn : n.Prime then
+    Checked.div 1 n (Nat.cast_ne_zero.mpr hn.ne_zero).isUnit else 0
+  change ¬ Summable f
   intro h
   obtain ⟨k, hk⟩ := h.nat_tsum_vanishing (Iio_mem_nhds one_half_pos : Iio (1 / 2 : ℝ) ∈ 𝓝 0)
   specialize hk ({p | Nat.Prime p} ∩ {p | k ≤ p}) inter_subset_right
-  rw [tsum_subtype, indicator_indicator, inter_eq_left.mpr fun n hn ↦ hn.1, mem_Iio] at hk
-  have h' : Summable (indicator ({p | Nat.Prime p} ∩ {p | k ≤ p}) fun n ↦ (1 : ℝ) / n) := by
-    convert! h.indicator {n : ℕ | k ≤ n} using 1
-    simp only [indicator_indicator, inter_comm]
-  refine ((one_half_le_sum_primes_ge_one_div k).trans_lt <| LE.le.trans_lt ?_ hk).false
-  convert!
-    Summable.sum_le_tsum (primesBelow ((4 ^ (k.primesBelow.card + 1)).succ) \ primesBelow k)
-      (fun n _ ↦ indicator_nonneg (fun p _ ↦ by positivity) _) h' using
-    2 with p hp
-  obtain ⟨hp₁, hp₂⟩ := mem_ofPred_eq ▸ Finset.mem_sdiff.mp hp
-  have hpp := prime_of_mem_primesBelow hp₁
-  refine (indicator_of_mem ?_ fun n : ℕ ↦ (1 / n : ℝ)).symm
-  exact ⟨hpp, by simpa [primesBelow, hpp] using hp₂⟩
+  have hmask : indicator ({p | Nat.Prime p} ∩ {p | k ≤ p}) f = indicator {p | k ≤ p} f := by
+    funext n
+    by_cases hp : n.Prime <;> by_cases hkn : k ≤ n <;> simp [indicator, f, hp, hkn]
+  rw [tsum_subtype, hmask, mem_Iio] at hk
+  have h' := h.indicator {n : ℕ | k ≤ n}
+  let B := primesBelow ((4 ^ (k.primesBelow.card + 1)).succ) \ primesBelow k
+  have hfinite :
+      (∑ p : B, Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr
+        (prime_of_mem_primesBelow (Finset.mem_sdiff.mp p.2).1).ne_zero).isUnit) =
+        ∑ p ∈ B, indicator {n | k ≤ n} f p := by
+    conv_rhs => rw [← Finset.sum_coe_sort]
+    refine Finset.sum_congr rfl fun p _ ↦ ?_
+    obtain ⟨hp₁, hp₂⟩ := Finset.mem_sdiff.mp p.2
+    have hpp := prime_of_mem_primesBelow hp₁
+    have hpk : k ≤ (p : ℕ) := by
+      by_contra hn
+      exact hp₂ (mem_primesBelow.mpr ⟨lt_of_not_ge hn, hpp⟩)
+    simp [indicator, f, hpk, hpp]
+  have hnonneg (n : ℕ) : 0 ≤ indicator {p | k ≤ p} f n := by
+    apply indicator_nonneg
+    intro p _
+    dsimp only [f]
+    split_ifs <;> positivity
+  have hupper := Summable.sum_le_tsum B (fun n _ ↦ hnonneg n) h'
+  have hlower : 1 / 2 ≤ ∑ p ∈ B, indicator {n | k ≤ n} f p := by
+    rw [← hfinite]
+    exact one_half_le_sum_primes_ge_one_div k
+  exact (not_lt_of_ge (hlower.trans hupper)) hk
 
 set_option backward.isDefEq.respectTransparency false in
 /-- The sum over the reciprocals of the primes diverges. -/
-theorem Nat.Primes.not_summable_one_div : ¬ Summable (fun p : Nat.Primes ↦ (1 / p : ℝ)) := by
-  convert! summable_subtype_iff_indicator.mp.mt not_summable_one_div_on_primes
+theorem Nat.Primes.not_summable_one_div :
+    ¬ Summable (fun p : Nat.Primes ↦ Checked.div (1 : ℝ) p
+      (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit) := by
+  intro h
+  apply not_summable_one_div_on_primes
+  let f : ℕ → ℝ := fun n ↦ if hn : n.Prime then
+    Checked.div 1 n (Nat.cast_ne_zero.mpr hn.ne_zero).isUnit else 0
+  have hf : Function.support f ⊆ {n | n.Prime} := by
+    intro n hn
+    by_contra hp
+    exact hn (dite_eq_right hp)
+  have hs : Summable (fun p : Nat.Primes ↦ f p) := by
+    refine h.congr fun p ↦ ?_
+    dsimp only [f]
+    rw [dite_eq_left p.property]
+  exact ((hasSum_subtype_iff_of_support_subset hf).mp hs.hasSum).summable
 
 /-- The series over `p^r` for primes `p` converges if and only if `r < -1`. -/
 theorem Nat.Primes.summable_rpow {r : ℝ} :
@@ -130,5 +178,5 @@ theorem Nat.Primes.summable_rpow {r : ℝ} :
     simp only [h, iff_false]
     refine fun H ↦ Nat.Primes.not_summable_one_div <| H.of_nonneg_of_le (fun _ ↦ by positivity) ?_
     intro p
-    rw [one_div, ← Real.rpow_neg_one]
+    rw [one_div₀, ← Real.rpow_neg_one]
     exact Real.rpow_le_rpow_of_exponent_le (by exact_mod_cast p.prop.one_lt.le) <| not_lt.mp h

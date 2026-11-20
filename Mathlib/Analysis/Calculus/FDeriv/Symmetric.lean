@@ -81,7 +81,8 @@ a point. This is automatic in most cases of interest (open sets over real or com
 or general case for analytic functions), but we can express theorems of calculus using this
 as a general assumption, and then specialize to these situations. -/
 def IsSymmSndFDerivWithinAt (f : E → F) (s : Set E) (x : E) : Prop :=
-  ∀ v w, fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x v w = fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x w v
+  ∀ v w, fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x id v w =
+    fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x id w v
 
 variable (𝕜) in
 /-- Definition recording that a function has a symmetric second derivative at
@@ -89,15 +90,16 @@ a point. This is automatic in most cases of interest (open sets over real or com
 or general case for analytic functions), but we can express theorems of calculus using this
 as a general assumption, and then specialize to these situations. -/
 def IsSymmSndFDerivAt (f : E → F) (x : E) : Prop :=
-  ∀ v w, fderiv 𝕜 (fderiv 𝕜 f) x v w = fderiv 𝕜 (fderiv 𝕜 f) x w v
+  ∀ v w, fderiv 𝕜 (fderiv 𝕜 f) x id v w = fderiv 𝕜 (fderiv 𝕜 f) x id w v
 
 protected lemma IsSymmSndFDerivWithinAt.eq (h : IsSymmSndFDerivWithinAt 𝕜 f s x) (v w : E) :
-    fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x v w = fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x w v :=
+    fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x id v w =
+      fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x id w v :=
   h v w
 
 protected lemma IsSymmSndFDerivAt.eq
     (h : IsSymmSndFDerivAt 𝕜 f x) (v w : E) :
-    fderiv 𝕜 (fderiv 𝕜 f) x v w = fderiv 𝕜 (fderiv 𝕜 f) x w v :=
+    fderiv 𝕜 (fderiv 𝕜 f) x id v w = fderiv 𝕜 (fderiv 𝕜 f) x id w v :=
   h v w
 
 lemma fderivWithin_fderivWithin_eq_of_mem_nhdsWithin (h : t ∈ 𝓝[s] x)
@@ -131,13 +133,16 @@ alias fderivWithin_fderivWithin_eq_of_eventuallyEq :=
 lemma fderivWithin_fderivWithin_eq_of_mem_nhds {f : E → F} {x : E} {s : Set E}
     (h : s ∈ 𝓝 x) :
     fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x = fderiv 𝕜 (fderiv 𝕜 f) x := by
-  simp only [← fderivWithin_univ]
-  apply fderivWithin_fderivWithin_eq_of_eventuallyEqSet
-  simp [h]
+  have h' : s =ᶠ[𝓝 x] (univ : Set E) := by simp [h]
+  have hinner : fderivWithin 𝕜 f univ = fderiv 𝕜 f := fderivWithin_univ
+  have houter : fderivWithin 𝕜 (fderivWithin 𝕜 f univ) univ x = fderiv 𝕜 (fderiv 𝕜 f) x := by
+    rw [hinner]
+    exact congrFun (fderivWithin_univ (𝕜 := 𝕜) (f := fderiv 𝕜 f)) x
+  exact (fderivWithin_fderivWithin_eq_of_eventuallyEqSet h').trans houter
 
 @[simp] lemma isSymmSndFDerivWithinAt_univ :
     IsSymmSndFDerivWithinAt 𝕜 f univ x ↔ IsSymmSndFDerivAt 𝕜 f x := by
-  simp [IsSymmSndFDerivWithinAt, IsSymmSndFDerivAt]
+  rw [IsSymmSndFDerivWithinAt, IsSymmSndFDerivAt, fderivWithin_fderivWithin_eq_of_mem_nhds univ_mem]
 
 theorem IsSymmSndFDerivWithinAt.mono_of_mem_nhdsWithin (h : IsSymmSndFDerivWithinAt 𝕜 f t x)
     (hst : t ∈ 𝓝[s] x) (hf : ContDiffWithinAt 𝕜 2 f t x)
@@ -306,7 +311,7 @@ theorem Convex.taylor_approx_two_segment {v w : E} (hv : x + v ∈ interior s)
           refine ⟨?_, xt_mem t ⟨ht.1, ht.2.le⟩⟩
           rw [add_assoc, add_mem_ball_iff_norm]
           exact I.trans_lt hδ
-        simpa only [mem_ofPred_eq, add_assoc x, add_sub_cancel_left] using sδ H
+        simpa only [mem_ofPred_eq, id_eq, add_assoc x, add_sub_cancel_left] using sδ H
       _ ≤ ε * (‖h • v‖ + ‖h • w‖) * ‖h • w‖ := by
         gcongr
         apply (norm_add_le _ _).trans
@@ -382,14 +387,12 @@ theorem Convex.second_derivative_within_at_symmetric_of_mem_interior {v w : E}
     simp only [add_comm, smul_add, smul_sub]
     abel
   have B : (fun _ : ℝ => f'' w v - f'' v w) =o[𝓝[>] 0] fun _ => (1 : ℝ) := by
-    have : (fun h : ℝ => 1 / h ^ 2) =O[𝓝[>] 0] fun h => 1 / h ^ 2 := isBigO_refl _ _
-    have C := this.smul_isLittleO A
-    apply C.congr' _ _
-    · filter_upwards [self_mem_nhdsWithin]
-      intro h (hpos : 0 < h)
-      match_scalars <;> field
-    · filter_upwards [self_mem_nhdsWithin] with h (hpos : 0 < h)
-      simp [field]
+    refine isLittleO_iff.2 fun ε hε ↦ ?_
+    filter_upwards [isLittleO_iff.1 A hε, self_mem_nhdsWithin] with h hbound (hpos : 0 < h)
+    have hh : 0 < h ^ 2 := sq_pos_of_pos hpos
+    simp only [norm_smul, Real.norm_of_nonneg hh.le] at hbound
+    simp only [norm_one, mul_one]
+    exact le_of_mul_le_mul_left (by simpa only [mul_comm ε (h ^ 2)] using hbound) hh
   simpa only [sub_eq_zero] using isLittleO_const_const_iff.1 B
 
 end
@@ -473,8 +476,8 @@ theorem second_derivative_symmetric_of_eventually [IsRCLikeNormedField 𝕜]
   have hfR : ∀ᶠ y in 𝓝 x, HasFDerivAt f (f'R y) y := by
     filter_upwards [hf] with y hy using HasFDerivAt.restrictScalars ℝ hy
   have : HasFDerivAt f'R f''R x := by
-    simp only [hasFDerivAt_iff_tendsto] at hx ⊢
-    exact hx
+    exact (ContinuousLinearMap.restrictScalarsL 𝕜 E F ℝ ℝ).hasFDerivAt.comp x
+      (hx.restrictScalars ℝ)
   change f''R v w = f''R w v
   exact second_derivative_symmetric_of_eventually_of_real hfR this v w
 
@@ -598,12 +601,12 @@ theorem ContDiffWithinAt.isSymmSndFDerivWithinAt {n : ℕ∞ω}
       apply tendsto_nhdsWithin_iff.2 ⟨y_lim, ?_⟩
       filter_upwards [L] with k hk using ⟨interior_subset (hy k), hk⟩
     exact (A x ⟨h'x, xu⟩ ).tendsto.comp this
-  have C (v w : E) : Tendsto (fun k ↦ fderivWithin 𝕜 (fderivWithin 𝕜 f s) s (y k) v w) atTop
-      (𝓝 (fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x v w)) := by
+  have C (v w : E) : Tendsto (fun k ↦ fderivWithin 𝕜 (fderivWithin 𝕜 f s) s (y k) id v w) atTop
+      (𝓝 (fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x id v w)) := by
     have : Continuous (fun (A : E →L[𝕜] E →L[𝕜] F) ↦ A v w) := by fun_prop
     exact (this.tendsto _).comp B
-  have C' (v w : E) : Tendsto (fun k ↦ fderivWithin 𝕜 (fderivWithin 𝕜 f s) s (y k) w v) atTop
-      (𝓝 (fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x v w)) := by
+  have C' (v w : E) : Tendsto (fun k ↦ fderivWithin 𝕜 (fderivWithin 𝕜 f s) s (y k) id w v) atTop
+      (𝓝 (fderivWithin 𝕜 (fderivWithin 𝕜 f s) s x id v w)) := by
     apply (C v w).congr'
     filter_upwards [I] with k hk using hk v w
   intro v w

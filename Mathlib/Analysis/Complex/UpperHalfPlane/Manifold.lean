@@ -87,14 +87,15 @@ lemma contMDiff_num (g : GL (Fin 2) ℝ) : CMDiff n (fun τ : ℍ ↦ num g τ) 
 lemma contMDiff_denom (g : GL (Fin 2) ℝ) : CMDiff n (fun τ : ℍ ↦ denom g τ) :=
   (contMDiff_const.mul contMDiff_coe).add contMDiff_const
 
-lemma contMDiff_denom_zpow (g : GL (Fin 2) ℝ) (k : ℤ) : CMDiff n (denom g · ^ k : ℍ → ℂ) := by
-  intro τ
-  have : AnalyticAt ℂ (· ^ k) (denom g τ) := (differentiableOn_zpow k _ (by tauto)).analyticOnNhd
-    isOpen_compl_singleton _ (denom_ne_zero g τ)
-  exact this.contDiffAt.contMDiffAt.comp τ (contMDiff_denom g τ)
+lemma contMDiff_inv_denom (g : GL (Fin 2) ℝ) : CMDiff n (fun τ : ℍ ↦ (denom g τ)⁻¹) :=
+  (contMDiff_denom g).inv₀ (h := fun τ ↦ (denom_ne_zero g τ).isUnit)
 
-lemma contMDiff_inv_denom (g : GL (Fin 2) ℝ) : CMDiff n (fun τ : ℍ ↦ (denom g τ)⁻¹) := by
-  simpa using contMDiff_denom_zpow g (-1)
+lemma contMDiff_denom_zpow (g : GL (Fin 2) ℝ) (k : ℤ) : CMDiff n (denom g · ^ k : ℍ → ℂ) := by
+  cases k with
+  | ofNat k =>
+    simpa only [Int.ofNat_eq_natCast, zpow_natCast₀] using (contMDiff_denom g).pow k
+  | negSucc k =>
+    simpa only [zpow_negSucc₀, inv_pow₀] using (contMDiff_inv_denom g).pow (k + 1)
 
 /-- Each element of `GL(2, ℝ)⁺` defines a map of `C ^ n` manifolds `ℍ → ℍ`. -/
 lemma contMDiff_smul {g : GL (Fin 2) ℝ} (hg : 0 < g.det.val) : CMDiff n (fun τ : ℍ ↦ g • τ) := by
@@ -157,54 +158,101 @@ TODO(MR): investigate if using `mvfderiv` can avoid the "pain" above, and be a c
 
 section Complex
 
+/-- The derivative of a function defined near an upper-half-plane point can be checked on
+its restriction to the upper half-plane. -/
+lemma hasDerivAt_of_restrict {f : ℂ → ℂ} {d : ℂ} {τ : ℍ}
+    (h : HasDerivAt (fun z : ℍ ↦ f z) d τ ((↑) : ℍ → ℂ)) : HasDerivAt f d (τ : ℂ) := by
+  rw [hasDerivAt_iff_hasFDerivAt, hasFDerivAt_iff_isLittleOTVS,
+    ← isOpenEmbedding_coe.map_nhds_eq, Asymptotics.isLittleOTVS_map]
+  exact h.hasFDerivAt.isLittleOTVS
+
 /-- Derivative of `z ↦ (denom g z) ^ k`: $\frac{d}{dz}[(cz+d)^k] = k \cdot c \cdot (cz+d)^{k-1}$. -/
 lemma hasDerivAt_denom_zpow (g : GL (Fin 2) ℝ) (k : ℤ) (τ : ℍ) :
-    HasDerivAt (fun z ↦ denom g z ^ k) (k * g 1 0 * denom g τ ^ (k - 1)) τ := by
-  have hd : HasDerivAt (denom g ·) (g 1 0) τ := by
-    simpa [denom] using hasDerivAt_id _ |>.const_mul _ |>.add_const (g 1 1 : ℂ)
-  have := (hasDerivAt_zpow k (denom g τ) (Or.inl (denom_ne_zero g τ))).comp _ hd
-  simpa only [Function.comp_def, mul_right_comm] using this
+    HasDerivAt (fun z : ℍ ↦ Checked.zpow (denom g z) k
+      (fun _ ↦ (denom_ne_zero g z).isUnit))
+      ((k : ℂ) * (g 1 0 : ℂ) * Checked.zpow (denom g τ) (k - 1)
+        (fun _ ↦ (denom_ne_zero g τ).isUnit)) τ ((↑) : ℍ → ℂ) := by
+  have hd : HasDerivAt (fun z : ℂ ↦ denom g z) (g 1 0 : ℂ) (τ : ℂ) := by
+    simpa [denom] using (((hasDerivAt_id (τ : ℂ)).const_mul (g 1 0 : ℂ)).add_const (g 1 1 : ℂ))
+  let D := {z : ℂ // k < 0 → IsUnit (denom g z)}
+  let q (z : ℍ) : D := ⟨z, fun _ ↦ (denom_ne_zero g z).isUnit⟩
+  have hq : Continuous q := continuous_coe.subtype_mk _
+  have hpull := (hd.zpow k (q τ).property).hasFDerivAt.comp_tendsto q
+    (hq.continuousAt.tendsto.prodMap (tendsto_pure_pure q τ))
+  have h := hasFDerivAtFilter_iff_hasDerivAtFilter.mp hpull
+  unfold HasDerivAt
+  by_cases hk : k = 0
+  · subst k
+    simpa only [q, Function.comp_def, id_eq, zpow_zero₀,
+      ContinuousLinearMap.toSpanSingleton_apply, one_smul, dite_true, Int.cast_zero, zero_mul]
+      using h
+  · simpa only [q, Function.comp_def, id_eq, ContinuousLinearMap.toSpanSingleton_apply,
+      one_smul, dite_eq_right hk, mul_right_comm] using h
 
 /-- Derivative of `z ↦ (denom g z) ^ k`:
 $\frac{d}{dz}[(cz+d)^k] = k \cdot c \cdot (cz+d)^{k-1}$. -/
 lemma deriv_denom_zpow (g : GL (Fin 2) ℝ) (k : ℤ) (τ : ℍ) :
-    deriv (fun z ↦ denom g z ^ k) τ = k * g 1 0 * denom g τ ^ (k - 1) :=
-  (hasDerivAt_denom_zpow g k τ).deriv
-
-lemma hasStrictDerivAt_smul {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det) (τ : ℍ) :
-    HasStrictDerivAt (fun z ↦ ↑(g • ofComplex z) : ℂ → ℂ) (g.val.det / denom g τ ^ 2) τ := by
-  suffices HasStrictDerivAt (num g / denom g) (g.val.det / denom g τ ^ 2) τ by
-    refine this.congr_of_eventuallyEq ?_
-    rw [← isOpenEmbedding_coe.map_nhds_eq, eventuallyEq_map]
-    simp [Function.comp_def, coe_smul_of_det_pos hg]
-  convert!
-    ((hasStrictDerivAt_id (τ : ℂ)).const_mul _ |>.add_const _).div
-      ((hasStrictDerivAt_id (τ : ℂ)).const_mul _ |>.add_const _) _ using 2
-  · simp [Matrix.det_fin_two]; ring
-  · apply denom_ne_zero
-
-lemma deriv_smul {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det) (τ : ℍ) :
-    deriv (fun z ↦ ↑(g • ofComplex z) : ℂ → ℂ) τ = g.val.det / denom g τ ^ 2 :=
-  hasStrictDerivAt_smul hg τ |>.hasDerivAt |>.deriv
-
-lemma deriv_smul_ne_zero {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det) (τ : ℍ) :
-    deriv (fun z ↦ ↑(g • ofComplex z) : ℂ → ℂ) τ ≠ 0 := by
-  rw [deriv_smul hg]
-  apply div_ne_zero
-  · exact_mod_cast hg.ne'
-  · exact pow_ne_zero _ (denom_ne_zero g τ)
+    deriv (fun z : ℍ ↦ Checked.zpow (denom g z) k
+      (fun _ ↦ (denom_ne_zero g z).isUnit)) τ ((↑) : ℍ → ℂ) =
+      (k : ℂ) * (g 1 0 : ℂ) * Checked.zpow (denom g τ) (k - 1)
+        (fun _ ↦ (denom_ne_zero g τ).isUnit) :=
+  (hasDerivAt_denom_zpow g k τ).deriv isOpenEmbedding_coe
 
 lemma analyticAt_smul {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det) (τ : ℍ) :
-    AnalyticAt ℂ (fun z ↦ ↑(g • ofComplex z) : ℂ → ℂ) τ := by
+    AnalyticAt ℂ (fun z : ℂ ↦ (↑(g • ofComplex z) : ℂ)) (τ : ℂ) := by
   refine DifferentiableOn.analyticAt (fun z hz ↦ ?_) (isOpen_upperHalfPlaneSet.mem_nhds τ.im_pos)
   apply DifferentiableAt.differentiableWithinAt
   simpa [mdifferentiableAt_iff] using!
     (mdifferentiable_coe.comp <| (mdifferentiable_smul hg)).mdifferentiableAt (x := ⟨z, hz⟩)
 
+lemma hasStrictDerivAt_smul {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det) (τ : ℍ) :
+    HasStrictDerivAt (fun z : ℂ ↦ (↑(g • ofComplex z) : ℂ))
+      (Checked.div (g.val.det : ℂ) (denom g τ ^ 2) ((isUnit_denom g τ).pow 2)) (τ : ℂ) := by
+  let f (z : ℂ) : ℂ := ↑(g • ofComplex z)
+  let d := Checked.div (g.val.det : ℂ) (denom g τ ^ 2) ((isUnit_denom g τ).pow 2)
+  have hnum : HasDerivAt (fun z : ℂ ↦ num g z) (g 0 0 : ℂ) (τ : ℂ) := by
+    simpa [num] using (((hasDerivAt_id (τ : ℂ)).const_mul (g 0 0 : ℂ)).add_const (g 0 1 : ℂ))
+  have hden : HasDerivAt (fun z : ℂ ↦ denom g z) (g 1 0 : ℂ) (τ : ℂ) := by
+    simpa [denom] using (((hasDerivAt_id (τ : ℂ)).const_mul (g 1 0 : ℂ)).add_const (g 1 1 : ℂ))
+  let D := {z : ℂ | IsUnit (denom g z)}
+  let q (z : ℍ) : D := ⟨z, isUnit_denom g z⟩
+  have hq : Continuous q := continuous_coe.subtype_mk _
+  have hpull := (hnum.div hden (isUnit_denom g τ)).hasFDerivAt.comp_tendsto q
+    (hq.continuousAt.tendsto.prodMap (tendsto_pure_pure q τ))
+  have hdet : (g 0 0 : ℂ) * denom g τ - num g τ * (g 1 0 : ℂ) = (g.val.det : ℂ) := by
+    simp [num, denom, Matrix.det_fin_two]
+    ring
+  have hunit : (isUnit_denom g τ).unit ^ 2 = ((isUnit_denom g τ).pow 2).unit := Units.ext (by simp)
+  have hf (z : ℍ) : f z = num g z /ₚ (isUnit_denom g z).unit := by
+    change (↑(g • ofComplex (z : ℂ)) : ℂ) = _
+    rw [ofComplex_apply, coe_smul_of_det_pos hg]
+    rfl
+  have hd : HasDerivAt f d (τ : ℂ) := by
+    apply hasDerivAt_of_restrict
+    change HasDerivAt (fun z : ℍ ↦ f z)
+      ((g.val.det : ℂ) /ₚ ((isUnit_denom g τ).pow 2).unit) τ ((↑) : ℍ → ℂ)
+    unfold HasDerivAt
+    simpa only [hf, q, Function.comp_def, id_eq, ContinuousLinearMap.toSpanSingleton_apply,
+      one_smul, hdet, hunit] using (hasFDerivAtFilter_iff_hasDerivAtFilter.mp hpull)
+  have h := (analyticAt_smul hg τ).hasStrictDerivAt
+  change HasStrictDerivAt f (deriv f (τ : ℂ)) (τ : ℂ) at h
+  rw [hd.deriv] at h
+  exact h
+
+lemma deriv_smul {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det) (τ : ℍ) :
+    deriv (fun z : ℂ ↦ (↑(g • ofComplex z) : ℂ)) (τ : ℂ) =
+      Checked.div (g.val.det : ℂ) (denom g τ ^ 2) ((isUnit_denom g τ).pow 2) :=
+  hasStrictDerivAt_smul hg τ |>.hasDerivAt |>.deriv
+
+lemma deriv_smul_ne_zero {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det) (τ : ℍ) :
+    deriv (fun z ↦ ↑(g • ofComplex z) : ℂ → ℂ) τ ≠ 0 := by
+  rw [deriv_smul hg]
+  exact div_ne_zero (by exact_mod_cast hg.ne')
+
 /-- If `f` is meromorphic at `g • τ`, then `z ↦ f (g • z)` is meromorphic at `τ`. -/
 lemma meromorphicAt_comp_smul {f : ℍ → ℂ} {τ : ℍ} {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det)
-    (hf : MeromorphicAt (fun z ↦ f (ofComplex z)) ↑(g • τ)) :
-    MeromorphicAt (fun z ↦ f (g • ofComplex z)) τ := by
+    (hf : MeromorphicAt (fun z ↦ f (ofComplex z)) (↑(g • τ) : ℂ)) :
+    MeromorphicAt (fun z ↦ f (g • ofComplex z)) (τ : ℂ) := by
   have : (fun z : ℂ ↦ f (g • ofComplex z)) =
       (fun z ↦ f (ofComplex z)) ∘ (fun z ↦ ↑(g • ofComplex z) : ℂ → ℂ) := by
     ext; simp
@@ -212,9 +260,9 @@ lemma meromorphicAt_comp_smul {f : ℍ → ℂ} {τ : ℍ} {g : GL (Fin 2) ℝ} 
   exact .comp_analyticAt (by simpa using hf) (τ.analyticAt_smul hg)
 
 lemma meromorphicOrderAt_comp_smul {f : ℍ → ℂ} {τ : ℍ} {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det)
-    (hf : MeromorphicAt (fun z ↦ f (ofComplex z)) ↑(g • τ)) :
-    meromorphicOrderAt (fun z ↦ f (g • ofComplex z)) τ (meromorphicAt_comp_smul hg hf) =
-      meromorphicOrderAt (fun z ↦ f (ofComplex z)) ↑(g • τ) hf := by
+    (hf : MeromorphicAt (fun z ↦ f (ofComplex z)) (↑(g • τ) : ℂ)) :
+    meromorphicOrderAt (fun z ↦ f (g • ofComplex z)) (τ : ℂ) (meromorphicAt_comp_smul hg hf) =
+      meromorphicOrderAt (fun z ↦ f (ofComplex z)) (↑(g • τ) : ℂ) hf := by
   let G z : ℂ := ↑(g • ofComplex z)
   let F z := f (ofComplex z)
   have hF : MeromorphicAt F (G τ) := by simpa [F, G] using hf
@@ -231,27 +279,29 @@ section Real
 
 /-- `ℝ`-linear map from `ℂ` to itself, which we shall show is the real derivative of the
 `GL(2, ℝ)`-action on `ℍ`. -/
-noncomputable def smulFDeriv (g : GL (Fin 2) ℝ) (z : ℂ) : ℂ →L[ℝ] ℂ :=
-  (σ g) ∘L (ContinuousLinearMap.toSpanSingleton ℂ (g.det.val / denom g z ^ 2)).restrictScalars ℝ
+noncomputable def smulFDeriv (g : GL (Fin 2) ℝ) (τ : ℍ) : ℂ →L[ℝ] ℂ :=
+  (σ g) ∘L (ContinuousLinearMap.toSpanSingleton ℂ
+    (Checked.div (g.det.val : ℂ) (denom g τ ^ 2) ((isUnit_denom g τ).pow 2))).restrictScalars ℝ
 
 @[simp]
-theorem smulFDeriv_J_mul (g : GL (Fin 2) ℝ) (z : ℂ) :
-    smulFDeriv (J * g) z = -Complex.conjCLE ∘L smulFDeriv g z := by
+theorem smulFDeriv_J_mul (g : GL (Fin 2) ℝ) (τ : ℍ) :
+    smulFDeriv (J * g) τ = -Complex.conjCLE ∘L smulFDeriv g τ := by
   ext
   by_cases hg : 0 < g.val.det
-  · simp [smulFDeriv, σ, hg, hg.not_gt, neg_div]
-  · simp [smulFDeriv, σ, hg, g.det_ne_zero.lt_or_gt.resolve_right hg, neg_div]
+  · simp [smulFDeriv, σ, hg, hg.not_gt, neg_div₀]
+  · simp [smulFDeriv, σ, hg, g.det_ne_zero.lt_or_gt.resolve_right hg, neg_div₀]
 
 /-- Determinant of the derivative of `g : ℍ → ℍ` considered as an `ℝ`-linear map. This is used in
 the proof that the action is measure-preserving. Note this formula applies for both orientation-
 preserving and orientation-reserving isometries. -/
-lemma det_smulFDeriv (g : GL (Fin 2) ℝ) (z : ℂ) :
-    (smulFDeriv g z).det =
-      SignType.sign g.det.val * g.det ^ 2 / ‖denom g z‖ ^ 4 := by
+lemma det_smulFDeriv (g : GL (Fin 2) ℝ) (τ : ℍ) :
+    (smulFDeriv g τ).det =
+      Checked.div ((SignType.sign g.det.val : ℝ) * g.det.val ^ 2) (‖denom g τ‖ ^ 4)
+        ((norm_ne_zero_iff.2 (denom_ne_zero g τ)).isUnit.pow 4) := by
   simp only [smulFDeriv, σ]
   rcases g.det_ne_zero.lt_or_gt with h | h
   · simp [h.not_gt, ContinuousLinearMap.det, LinearMap.det_restrictScalars,
-      Algebra.norm_complex_eq, Complex.normSq_eq_norm_sq, ← pow_mul, sign_neg h, neg_div]
+      Algebra.norm_complex_eq, Complex.normSq_eq_norm_sq, ← pow_mul, sign_neg h, neg_div₀]
   · simp [ContinuousLinearMap.det, h, LinearMap.det_restrictScalars,
       Algebra.norm_complex_eq, Complex.normSq_eq_norm_sq, ← pow_mul]
 

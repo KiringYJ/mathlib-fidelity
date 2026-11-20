@@ -592,7 +592,7 @@ theorem hausdorffMeasure_zero_or_top {d₁ d₂ : ℝ} (h : d₁ < d₂) (s : Se
   · have : (r : ℝ≥0∞) ≠ 0 := by simpa only [ENNReal.coe_eq_zero, Ne] using hr₀
     rw [← ENNReal.rpow_sub _ _ this ENNReal.coe_ne_top]
     refine (ENNReal.rpow_lt_rpow hrc (sub_pos.2 h)).le.trans ?_
-    rw [← ENNReal.rpow_mul, inv_mul_cancel₀ (sub_pos.2 h).ne', ENNReal.rpow_one]
+    rw [← ENNReal.rpow_mul, inv_mul_cancel₀ (ha := (sub_pos.2 h).ne'.isUnit), ENNReal.rpow_one]
 
 /-- Hausdorff measure `μH[d] s` is monotone in `d`. -/
 theorem hausdorffMeasure_mono {d₁ d₂ : ℝ} (h : d₁ ≤ d₂) (s : Set X) : μH[d₂] s ≤ μH[d₁] s := by
@@ -760,9 +760,10 @@ theorem MeasureTheory.Measure.hausdorffMeasure_smul₀ {𝕜 E : Type*} [NormedA
   refine le_antisymm (this s) ?_
   rw [← le_inv_smul_iff_of_pos]
   · dsimp
-    rw [← NNReal.inv_rpow, ← nnnorm_inv]
-    · refine Eq.trans_le ?_ (this (r • s))
-      rw [inv_smul_smul₀ (ha := hr.isUnit)]
+    rw [← NNReal.inv_rpow (hx := (nnnorm_pos.2 hr).ne'.isUnit),
+      ← nnnorm_inv r (ha := hr.isUnit)]
+    refine Eq.trans_le ?_ (this (r := r⁻¹) (r • s))
+    rw [inv_smul_smul₀ (ha := hr.isUnit)]
   · simp [pos_iff_ne_zero, hr]
 
 /-!
@@ -912,47 +913,54 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
     `0` and `⌈(b i - a i) * n⌉`. Their number is asymptotic to `n^d * Π (b i - a i)`. -/
   have I : ∀ i, 0 ≤ (b i : ℝ) - a i := fun i => by
     simpa only [sub_nonneg, Rat.cast_le] using (H i).le
-  let γ := fun n : ℕ => ∀ i : ι, Fin ⌈((b i : ℝ) - a i) * n⌉₊
-  let t : ∀ n : ℕ, γ n → Set (ι → ℝ) := fun n f =>
-    Set.pi univ fun i => Icc (a i + f i / n) (a i + (f i + 1) / n)
-  have A : Tendsto (fun n : ℕ => 1 / (n : ℝ≥0∞)) atTop (𝓝 0) := by
-    simp only [one_div, ENNReal.tendsto_inv_nat_nhds_zero]
+  let γ := fun n : ℕ+ => ∀ i : ι, Fin ⌈((b i : ℝ) - a i) * (n : ℕ)⌉₊
+  have npos (n : ℕ+) : 0 < ((n : ℕ) : ℝ) := Nat.cast_pos.2 n.2
+  let t : ∀ n : ℕ+, γ n → Set (ι → ℝ) := fun n f => by
+    have hn := (npos n).ne'
+    exact Set.pi univ fun i => Icc (a i + f i / (n : ℕ)) (a i + (f i + 1) / (n : ℕ))
+  have A : Tendsto (fun n : ℕ+ => 1 / ((n : ℕ) : ℝ≥0∞)) atTop (𝓝 0) := by
+    simpa only [one_div, Function.comp_def] using
+      ENNReal.tendsto_inv_nat_nhds_zero.comp tendsto_PNat_val_atTop_atTop
   have B : ∀ᶠ n in atTop, ∀ i : γ n, ediam (t n i) ≤ 1 / n := by
-    refine eventually_atTop.2 ⟨1, fun n hn => ?_⟩
-    intro f
+    refine Eventually.of_forall fun n f => ?_
     refine ediam_pi_le_of_le fun b => ?_
-    simp only [Real.ediam_Icc, add_div, ENNReal.ofReal_div_of_pos (Nat.cast_pos.mpr hn), le_refl,
+    simp only [Real.ediam_Icc, add_div, ENNReal.ofReal_div_of_pos (npos n), le_refl,
       add_sub_add_left_eq_sub, add_sub_cancel_left, ENNReal.ofReal_one, ENNReal.ofReal_natCast]
   have C : ∀ᶠ n in atTop, (Set.pi univ fun i : ι => Ioo (a i : ℝ) (b i)) ⊆ ⋃ i : γ n, t n i := by
-    refine eventually_atTop.2 ⟨1, fun n hn => ?_⟩
-    have npos : (0 : ℝ) < n := Nat.cast_pos.2 hn
+    refine Eventually.of_forall fun n => ?_
+    have hn := npos n
     intro x hx
     simp only [mem_Ioo, mem_univ_pi] at hx
     simp only [t, mem_iUnion, mem_univ_pi]
     let f : γ n := fun i =>
-      ⟨⌊(x i - a i) * n⌋₊, by
+      ⟨⌊(x i - a i) * (n : ℕ)⌋₊, by
         apply Nat.floor_lt_ceil_of_lt_of_pos
         · gcongr
           exact (hx i).right
-        · refine mul_pos ?_ npos
+        · refine mul_pos ?_ hn
           simpa only [Rat.cast_lt, sub_pos] using H i⟩
     refine ⟨f, fun i => ⟨?_, ?_⟩⟩
     · calc
-        (a i : ℝ) + ⌊(x i - a i) * n⌋₊ / n ≤ (a i : ℝ) + (x i - a i) * n / n := by
+        (a i : ℝ) + ⌊(x i - a i) * (n : ℕ)⌋₊ / (n : ℕ) ≤
+            (a i : ℝ) + (x i - a i) * (n : ℕ) / (n : ℕ) := by
           gcongr
-          exact Nat.floor_le (mul_nonneg (sub_nonneg.2 (hx i).1.le) npos.le)
+          exact Nat.floor_le (mul_nonneg (sub_nonneg.2 (hx i).1.le) hn.le)
         _ = x i := by field
     · calc
-        x i = (a i : ℝ) + (x i - a i) * n / n := by field
-        _ ≤ (a i : ℝ) + (⌊(x i - a i) * n⌋₊ + 1) / n := by
+        x i = (a i : ℝ) + (x i - a i) * (n : ℕ) / (n : ℕ) := by field
+        _ ≤ (a i : ℝ) + (⌊(x i - a i) * (n : ℕ)⌋₊ + 1) / (n : ℕ) := by
           gcongr
           exact (Nat.lt_floor_add_one _).le
+  have hcast : Tendsto (fun n : ℕ+ ↦
+      (⟨((n : ℕ) : ℝ), (npos n).ne'⟩ : {x : ℝ // x ≠ 0})) atTop
+      (comap Subtype.val atTop) :=
+    tendsto_comap_iff.2 (tendsto_natCast_atTop_atTop.comp tendsto_PNat_val_atTop_atTop)
   calc
     μH[Fintype.card ι] (Set.pi univ fun i : ι => Ioo (a i : ℝ) (b i)) ≤
-        liminf (fun n : ℕ => ∑ i : γ n, ediam (t n i) ^ ((Fintype.card ι) : ℝ)) atTop :=
+        liminf (fun n : ℕ+ => ∑ i : γ n, ediam (t n i) ^ ((Fintype.card ι) : ℝ)) atTop :=
       hausdorffMeasure_le_liminf_sum _ (Set.pi univ fun i => Ioo (a i : ℝ) (b i))
-        (fun n : ℕ => 1 / (n : ℝ≥0∞)) A t B C
-    _ ≤ liminf (fun n : ℕ => ∑ i : γ n, (1 / (n : ℝ≥0∞)) ^ Fintype.card ι) atTop := by
+        (fun n : ℕ+ => 1 / ((n : ℕ) : ℝ≥0∞)) A t B C
+    _ ≤ liminf (fun n : ℕ+ => ∑ i : γ n, (1 / ((n : ℕ) : ℝ≥0∞)) ^ Fintype.card ι) atTop := by
       refine liminf_le_liminf ?_ ?_
       · filter_upwards [B] with _ hn
         apply Finset.sum_le_sum fun i _ => _
@@ -960,7 +968,8 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
         intro i _
         exact pow_le_pow_left' (hn i) _
       · isBoundedDefault
-    _ = liminf (fun n : ℕ => ∏ i : ι, (⌈((b i : ℝ) - a i) * n⌉₊ : ℝ≥0∞) / n) atTop := by
+    _ = liminf (fun n : ℕ+ => ∏ i : ι, (⌈((b i : ℝ) - a i) * (n : ℕ)⌉₊ : ℝ≥0∞) /
+        (n : ℕ)) atTop := by
       simp only [γ, Finset.card_univ, Nat.cast_prod, one_mul, Fintype.card_fin, Finset.sum_const,
         nsmul_eq_mul, Fintype.card_pi, div_eq_mul_inv, Finset.prod_mul_distrib, Finset.prod_const]
     _ = ∏ i : ι, volume (Ioo (a i : ℝ) (b i)) := by
@@ -970,10 +979,9 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
       · apply
           Tendsto.congr' _
             ((ENNReal.continuous_ofReal.tendsto _).comp
-              ((tendsto_nat_ceil_mul_div_atTop (I i)).comp tendsto_natCast_atTop_atTop))
-        apply eventually_atTop.2 ⟨1, fun n hn => _⟩
-        intro n hn
-        simp only [ENNReal.ofReal_div_of_pos (Nat.cast_pos.mpr hn), comp_apply,
+              ((tendsto_nat_ceil_mul_div_atTop (I i)).comp hcast))
+        refine Eventually.of_forall fun n ↦ ?_
+        simp only [ENNReal.ofReal_div_of_pos (npos n), comp_apply,
           ENNReal.ofReal_natCast]
       · simp only [ENNReal.ofReal_ne_top, Ne, not_false_iff]
 
@@ -1059,7 +1067,8 @@ theorem hausdorffMeasure_smul_right_image [NormedAddCommGroup E] [NormedSpace �
       LinearMap.toSpanSingleton_apply] using this
   have iso_smul : Isometry (LinearMap.toSpanSingleton ℝ E (‖v‖⁻¹ • v)) := by
     refine AddMonoidHomClass.isometry_of_norm _ fun x => (norm_smul _ _).trans ?_
-    rw [norm_smul, norm_inv, norm_norm, inv_mul_cancel₀ hn, mul_one, LinearMap.id_apply]
+    have hinv : ‖‖v‖‖⁻¹ = ‖v‖⁻¹ := inv_inj₀.mpr (norm_norm _)
+    rw [norm_smul, norm_inv, hinv, inv_mul_cancel₀, mul_one, LinearMap.id_apply]
   rw [Set.image_smul, Measure.hausdorffMeasure_smul₀ zero_le_one hn, nnnorm_norm,
       NNReal.rpow_one, iso_smul.hausdorffMeasure_image (Or.inl <| zero_le_one' ℝ)]
 
@@ -1083,8 +1092,9 @@ theorem hausdorffMeasure_homothety_preimage {d : ℝ} (hd : 0 ≤ d) (x : P) {c 
     (s : Set P) : μH[d] (AffineMap.homothety x c ⁻¹' s) = ‖c‖₊⁻¹ ^ d • μH[d] s := by
   change μH[d] (AffineEquiv.homothetyUnitsMulHom x (Units.mk0 c hc) ⁻¹' s) = _
   rw [← AffineEquiv.image_symm, AffineEquiv.coe_homothetyUnitsMulHom_apply_symm,
-    hausdorffMeasure_homothety_image hd x (_ : 𝕜ˣ).isUnit.ne_zero, Units.val_inv_eq_inv_val,
-    Units.val_mk0, nnnorm_inv]
+    hausdorffMeasure_homothety_image hd x (_ : 𝕜ˣ).isUnit.ne_zero]
+  change ‖c⁻¹‖₊ ^ d • μH[d] s = _
+  rw [nnnorm_inv]
 
 theorem map_homothety_hausdorffMeasure {d : ℝ} (hd : 0 ≤ d) (x : P) {c : 𝕜} (hc : c ≠ 0) :
     Measure.map (AffineMap.homothety x c) μH[d] = ‖c‖₊⁻¹ ^ d • μH[d] := by

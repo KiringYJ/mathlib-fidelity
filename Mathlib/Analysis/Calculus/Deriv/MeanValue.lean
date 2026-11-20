@@ -125,7 +125,7 @@ theorem exists_hasDerivAt_eq_slope : ∃ c ∈ Ioo a b, f' c = (f b - f a) / (b 
     exists_ratio_hasDerivAt_eq_ratio_slope f f' hab hfc hff' id 1 continuousOn_id
       fun x _ => hasDerivAt_id x
   use c, cmem
-  rwa [mul_one, mul_comm, ← eq_div_iff (sub_ne_zero.2 hab.ne')] at hc
+  rwa [mul_one, mul_comm, ← eq_div_iff] at hc
 
 include hab hfc hgc hgd hfd in
 /-- Cauchy's Mean Value Theorem, `deriv` version. -/
@@ -156,7 +156,7 @@ theorem exists_deriv_eq_slope : ∃ c ∈ Ioo a b, deriv f c = (f b - f a) / (b 
 
 include hab hfc hfd in
 /-- Lagrange's **Mean Value Theorem**, `deriv` version. -/
-theorem exists_deriv_eq_slope' : ∃ c ∈ Ioo a b, deriv f c = slope f a b := by
+theorem exists_deriv_eq_slope' : ∃ c ∈ Ioo a b, deriv f c = slope f a b hab.ne := by
   rw [slope_def_field]
   exact exists_deriv_eq_slope f hab hfc hfd
 
@@ -177,8 +177,7 @@ theorem not_differentiableWithinAt_of_deriv_tendsto_atTop_Ioi (f : ℝ → ℝ) 
     simp at hcont_at_a
   case pos =>
     intro hdiff
-    replace hdiff := hdiff.hasDerivWithinAt
-    rw [hasDerivWithinAt_iff_tendsto_slope, Set.sdiff_singleton_eq_self self_notMem_Ioi] at hdiff
+    have hd := (hasDerivWithinAt_iff_tendsto_slope' self_notMem_Ioi).mp hdiff.hasDerivWithinAt
     have h₀ : ∀ᶠ b in 𝓝[>] a,
         ∀ x ∈ Ioc a b, max (derivWithin f (Ioi a) a + 1) 0 < derivWithin f (Ioi a) x := by
       rw [(nhdsGT_basis a).eventually_iff]
@@ -187,20 +186,24 @@ theorem not_differentiableWithinAt_of_deriv_tendsto_atTop_Ioi (f : ℝ → ℝ) 
       refine ⟨b, hab, fun x hx z hz => ?_⟩
       simp only [MapsTo, mem_Ioo, mem_Ioi, and_imp] at hb
       exact hb hz.1 <| hz.2.trans_lt hx.2
-    have h₁ : ∀ᶠ b in 𝓝[>] a, slope f a b < derivWithin f (Ioi a) a + 1 := by
-      rw [(nhds_basis_Ioo _).tendsto_right_iff] at hdiff
-      specialize hdiff ⟨derivWithin f (Ioi a) a - 1, derivWithin f (Ioi a) a + 1⟩ <| by simp
-      filter_upwards [hdiff] with z hz using hz.2
-    have hcontra : ∀ᶠ _ in 𝓝[>] a, False := by
-      filter_upwards [h₀, h₁, eventually_mem_nhdsWithin] with b hb hslope (hab : a < b)
+    have h₁ : ∀ᶠ b : Ioi a in comap Subtype.val (𝓝 a),
+        slope f a b b.2.ne < derivWithin f (Ioi a) a + 1 :=
+      hd (Iio_mem_nhds (lt_add_one _))
+    have hval : Tendsto (Subtype.val : Ioi a → ℝ) (comap Subtype.val (𝓝 a)) (𝓝[>] a) :=
+      tendsto_nhdsWithin_iff.mpr ⟨tendsto_comap, Eventually.of_forall Subtype.property⟩
+    have hcontra : ∀ᶠ _ : Ioi a in comap Subtype.val (𝓝 a), False := by
+      filter_upwards [hval.eventually h₀, h₁] with z hb hslope
+      let b := (z : ℝ)
+      have hab : a < b := z.2
+      change slope f a b hab.ne < derivWithin f (Ioi a) a + 1 at hslope
       have hdiff' : DifferentiableOn ℝ f (Ioc a b) := fun z hz => by
         refine DifferentiableWithinAt.mono (t := Ioi a) ?_ Ioc_subset_Ioi_self
-        have : derivWithin f (Ioi a) z ≠ 0 := ne_of_gt <| by
-          simp_all only [and_imp, mem_Ioc, max_lt_iff]
-        exact differentiableWithinAt_of_derivWithin_ne_zero this
+        have hpos : 0 < derivWithin f (Ioi a) z := (le_max_right _ _).trans_lt (hb z hz)
+        exact differentiableWithinAt_of_derivWithin_ne_zero hpos.ne'
+      have hfcont : ContinuousOn f (Ioc a b) := hdiff'.continuousOn
       have hcont_Ioc : ∀ z ∈ Ioc a b, ContinuousWithinAt f (Icc a b) z := by
         intro z hz''
-        refine (hdiff'.continuousOn z hz'').mono_of_mem_nhdsWithin ?_
+        refine (hfcont z hz'').mono_of_mem_nhdsWithin ?_
         have hfinal : 𝓝[Ioc a b] z = 𝓝[Icc a b] z := by
           refine nhdsWithin_eq_nhdsWithin' (s := Ioi a) (Ioi_mem_nhds hz''.1) ?_
           simp only [Ioc_inter_Ioi, le_refl, sup_of_le_left]
@@ -217,12 +220,15 @@ theorem not_differentiableWithinAt_of_deriv_tendsto_atTop_Ioi (f : ℝ → ℝ) 
       obtain ⟨x, hx₁, hx₂⟩ :=
         exists_deriv_eq_slope' f hab hcont (hdiff'.mono (Ioo_subset_Ioc_self))
       specialize hb x ⟨hx₁.1, le_of_lt hx₁.2⟩
-      replace hx₂ : derivWithin f (Ioi a) x = slope f a b := by
+      replace hx₂ : derivWithin f (Ioi a) x = slope f a b hab.ne := by
         have : Ioi a ∈ 𝓝 x := by simp [← mem_interior_iff_mem_nhds, hx₁.1]
         rwa [derivWithin_of_mem_nhds this]
       rw [hx₂, max_lt_iff] at hb
       linarith
-    simp [Filter.eventually_false_iff_eq_bot, ← notMem_closure_iff_nhdsWithin_eq_bot] at hcontra
+    have : (comap (Subtype.val : Ioi a → ℝ) (𝓝 a)).NeBot :=
+      mem_closure_iff_comap_neBot.mp (by simp)
+    obtain ⟨_, h⟩ := hcontra.exists
+    exact h
 
 /-- A real function whose derivative tends to minus infinity from the right at a point is not
 differentiable on the right at that point -/
@@ -337,8 +343,10 @@ theorem Convex.image_sub_lt_mul_sub_of_deriv_lt {D : Set ℝ} (hD : Convex ℝ D
     (lt_hf' : ∀ x ∈ interior D, deriv f x < C) (x : ℝ) (hx : x ∈ D) (y : ℝ) (hy : y ∈ D)
     (hxy : x < y) : f y - f x < C * (y - x) := by
   have hf'_gt : ∀ x ∈ interior D, -C < deriv (fun y => -f y) x := fun x hx => by
-    rw [deriv.fun_neg, neg_lt_neg_iff]
-    exact lt_hf' x hx
+    have hd := (hf' x hx).differentiableAt (isOpen_interior.mem_nhds hx)
+    have heq : deriv (fun y ↦ -f y) x = -deriv f x := hd.hasDerivAt.fun_neg.deriv
+    rw [heq]
+    exact neg_lt_neg (lt_hf' x hx)
   linarith [hD.mul_sub_lt_image_sub_of_lt_deriv hf.fun_neg hf'.neg hf'_gt x hx y hy hxy]
 
 /-- Let `f : ℝ → ℝ` be a differentiable function. If `f' < C`, then `f` grows slower than
@@ -357,8 +365,10 @@ theorem Convex.image_sub_le_mul_sub_of_deriv_le {D : Set ℝ} (hD : Convex ℝ D
     (le_hf' : ∀ x ∈ interior D, deriv f x ≤ C) (x : ℝ) (hx : x ∈ D) (y : ℝ) (hy : y ∈ D)
     (hxy : x ≤ y) : f y - f x ≤ C * (y - x) := by
   have hf'_ge : ∀ x ∈ interior D, -C ≤ deriv (fun y => -f y) x := fun x hx => by
-    rw [deriv.fun_neg, neg_le_neg_iff]
-    exact le_hf' x hx
+    have hd := (hf' x hx).differentiableAt (isOpen_interior.mem_nhds hx)
+    have heq : deriv (fun y ↦ -f y) x = -deriv f x := hd.hasDerivAt.fun_neg.deriv
+    rw [heq]
+    exact neg_le_neg (le_hf' x hx)
   linarith [hD.mul_sub_le_image_sub_of_le_deriv hf.fun_neg hf'.neg hf'_ge x hx y hy hxy]
 
 /-- Let `f : ℝ → ℝ` be a differentiable function. If `f' ≤ C`, then `f` grows at most as fast
@@ -397,7 +407,9 @@ lemma strictMonoOn_of_hasDerivWithinAt_pos {D : Set ℝ} (hD : Convex ℝ D) {f 
     (hf : ContinuousOn f D) (hf' : ∀ x ∈ interior D, HasDerivWithinAt f (f' x) (interior D) x)
     (hf'₀ : ∀ x ∈ interior D, 0 < f' x) : StrictMonoOn f D :=
   strictMonoOn_of_deriv_pos hD hf fun x hx ↦ by
-    rw [deriv_eqOn isOpen_interior hf' hx]; exact hf'₀ _ hx
+    have heq : deriv f x = f' x := deriv_eqOn isOpen_interior hf' hx
+    rw [heq]
+    exact hf'₀ _ hx
 
 /-- Let `f : ℝ → ℝ` be a differentiable function. If `f'` is strictly positive, then
 `f` is a strictly monotone function. -/
@@ -429,7 +441,9 @@ lemma monotoneOn_of_hasDerivWithinAt_nonneg {D : Set ℝ} (hD : Convex ℝ D) {f
     (hf : ContinuousOn f D) (hf' : ∀ x ∈ interior D, HasDerivWithinAt f (f' x) (interior D) x)
     (hf'₀ : ∀ x ∈ interior D, 0 ≤ f' x) : MonotoneOn f D :=
   monotoneOn_of_deriv_nonneg hD hf (fun _ hx ↦ (hf' _ hx).differentiableWithinAt) fun x hx ↦ by
-    rw [deriv_eqOn isOpen_interior hf' hx]; exact hf'₀ _ hx
+    have heq : deriv f x = f' x := deriv_eqOn isOpen_interior hf' hx
+    rw [heq]
+    exact hf'₀ _ hx
 
 /-- Let `f : ℝ → ℝ` be a differentiable function. If `f'` is nonnegative, then
 `f` is a monotone function. -/
@@ -466,7 +480,9 @@ lemma strictAntiOn_of_hasDerivWithinAt_neg {D : Set ℝ} (hD : Convex ℝ D) {f 
     (hf : ContinuousOn f D) (hf' : ∀ x ∈ interior D, HasDerivWithinAt f (f' x) (interior D) x)
     (hf'₀ : ∀ x ∈ interior D, f' x < 0) : StrictAntiOn f D :=
   strictAntiOn_of_deriv_neg hD hf fun x hx ↦ by
-    rw [deriv_eqOn isOpen_interior hf' hx]; exact hf'₀ _ hx
+    have heq : deriv f x = f' x := deriv_eqOn isOpen_interior hf' hx
+    rw [heq]
+    exact hf'₀ _ hx
 
 /-- Let `f : ℝ → ℝ` be a differentiable function. If `f'` is strictly positive, then
 `f` is a strictly monotone function. -/
@@ -498,7 +514,9 @@ lemma antitoneOn_of_hasDerivWithinAt_nonpos {D : Set ℝ} (hD : Convex ℝ D) {f
     (hf : ContinuousOn f D) (hf' : ∀ x ∈ interior D, HasDerivWithinAt f (f' x) (interior D) x)
     (hf'₀ : ∀ x ∈ interior D, f' x ≤ 0) : AntitoneOn f D :=
   antitoneOn_of_deriv_nonpos hD hf (fun _ hx ↦ (hf' _ hx).differentiableWithinAt) fun x hx ↦ by
-    rw [deriv_eqOn isOpen_interior hf' hx]; exact hf'₀ _ hx
+    have heq : deriv f x = f' x := deriv_eqOn isOpen_interior hf' hx
+    rw [heq]
+    exact hf'₀ _ hx
 
 /-- Let `f : ℝ → ℝ` be a differentiable function. If `f'` is nonpositive, then `f` is an antitone
 function. -/

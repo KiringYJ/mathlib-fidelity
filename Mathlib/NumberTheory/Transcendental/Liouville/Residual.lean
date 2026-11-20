@@ -29,7 +29,7 @@ theorem setOfPred_liouville_eq_iInter_iUnion :
       ⋂ n : ℕ, ⋃ (a : ℤ) (b : ℤ) (_ : 1 < b),
       ball ((a : ℝ) / b) (1 / (b : ℝ) ^ n) \ {(a : ℝ) / b} := by
   ext x
-  simp only [mem_iInter, mem_iUnion, Liouville, mem_ofPred_eq, exists_prop, Set.mem_sdiff,
+  simp only [mem_iInter, mem_iUnion, Liouville, mem_ofPred_eq, Set.mem_sdiff,
     mem_singleton_iff, mem_ball, Real.dist_eq, and_comm]
 
 @[deprecated (since := "2026-07-09")]
@@ -55,7 +55,9 @@ theorem setOfPred_liouville_eq_irrational_inter_iInter_iUnion :
   · simp only [inter_iInter, inter_iUnion, setOfPred_liouville_eq_iInter_iUnion]
     refine iInter_mono fun n => iUnion₂_mono fun a b => iUnion_mono fun hb => ?_
     rw [inter_comm]
-    exact sdiff_subset_sdiff Subset.rfl (singleton_subset_iff.2 ⟨a / b, by norm_cast⟩)
+    exact sdiff_subset_sdiff Subset.rfl
+      (singleton_subset_iff.2 ⟨a / b, by
+        simp only [Rat.cast_div, Rat.cast_intCast]⟩)
 
 @[deprecated (since := "2026-07-09")]
 alias setOf_liouville_eq_irrational_inter_iInter_iUnion :=
@@ -74,11 +76,7 @@ theorem eventually_residual_liouville : ∀ᶠ x in residual ℝ, Liouville x :=
     · have := r.pos; lia
     · convert! @mem_ball_self ℝ _ (r : ℝ) _ _
       · push_cast
-        -- Workaround for https://github.com/leanprover/lean4/pull/6438; this eliminates an
-        -- `Expr.mdata` that would cause `norm_cast` to skip a numeral.
-        rw [Eq.refl (2 : ℝ)]
-        norm_cast
-        simp [Rat.divInt_mul_right (two_ne_zero)]
+        rw [mul_div_mul_right, ← Rat.cast_def]
       · refine one_div_pos.2 (pow_pos (Int.cast_pos.2 ?_) _)
         exact mul_pos (Int.natCast_pos.2 r.pos) zero_lt_two
 

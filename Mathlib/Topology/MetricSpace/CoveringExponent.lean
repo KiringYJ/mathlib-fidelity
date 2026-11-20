@@ -71,8 +71,7 @@ lemma HasCoveringExponent.subset (h : HasCoveringExponent A c d) (hBA : B ⊆ A)
     _ ≤ c * (ε / 2 : ℝ≥0∞)⁻¹ ^ d := by
       replace h := h.coveringNumber_le (ε / 2) ?_
       · simpa using h
-      · simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, ENNReal.coe_div,
-          ENNReal.coe_ofNat]
+      · simp only [ENNReal.coe_div, ENNReal.coe_ofNat]
         calc (ε / 2 : ℝ≥0∞) ≤ ε := ENNReal.half_le_self
         _ ≤ Metric.ediam B := hε_le
         _ ≤ Metric.ediam A := Metric.ediam_mono hBA

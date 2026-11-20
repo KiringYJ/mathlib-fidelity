@@ -63,7 +63,7 @@ lemma poissonMeasure_real_singleton_pos {r : ℝ≥0} (n : ℕ) (hr : 0 < r) :
 
 lemma hasSum_one_poissonMeasure (r : ℝ≥0) : HasSum (fun n ↦ exp (-r) * r ^ n / (n)!) 1 := by
   convert! (NormedSpace.expSeries_div_hasSum_exp (r : ℝ)).mul_left (exp (-r)) using 1
-  · simp_rw [mul_div_assoc]
+  · simp_rw [mul_div_assoc₀]
   · simp [← exp_eq_exp_ℝ, ← exp_add]
 
 instance (r : ℝ≥0) : IsProbabilityMeasure Po(r) :=

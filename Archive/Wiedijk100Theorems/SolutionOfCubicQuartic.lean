@@ -25,9 +25,9 @@ terms of a quantity that is a root of a particular cubic equation.
 ## Main statements
 
 - `cubic_eq_zero_iff`: gives the roots of the cubic equation
-  where the discriminant `p = 3 * a * c - b^2` is nonzero.
+  where the linear coefficient of the depressed cubic is nonzero.
 - `cubic_eq_zero_iff_of_p_eq_zero`: gives the roots of the cubic equation
-  where the discriminant equals zero.
+  where the linear coefficient of the depressed cubic is zero.
 - `quartic_eq_zero_iff`: gives the roots of the quartic equation
   where the quantity `b^3 - 4 * a * b * c + 8 * a^2 * d` is nonzero, in terms of a root `u`
   to a cubic resolvent.
@@ -105,8 +105,16 @@ theorem cubic_depressed_eq_zero_iff (hω : IsPrimitiveRoot ω 3) (hp_nonzero : p
 
 variable [Invertible (2 : K)] [Invertible (3 : K)]
 
+local instance : NeZero (9 : K) := ⟨by
+  rw [show (9 : K) = 3 ^ 2 by norm_num]
+  exact pow_ne_zero _ (Invertible.ne_zero _)⟩
+
+local instance : NeZero (54 : K) := ⟨by
+  rw [show (54 : K) = 2 * 3 ^ 3 by norm_num]
+  exact mul_ne_zero (Invertible.ne_zero _) (pow_ne_zero _ (Invertible.ne_zero _))⟩
+
 /-- **The Solution of Cubic**.
-  The roots of a cubic polynomial whose discriminant is nonzero. -/
+  The roots of a cubic polynomial when the linear coefficient of its depressed form is nonzero. -/
 theorem cubic_eq_zero_iff (ha : a ≠ 0) (hω : IsPrimitiveRoot ω 3)
     (hp : p = (3 * a * c - b ^ 2) / (9 * a ^ 2)) (hp_nonzero : p ≠ 0)
     (hq : q = (9 * a * b * c - 2 * b ^ 3 - 27 * a ^ 2 * d) / (54 * a ^ 3))
@@ -159,32 +167,58 @@ end Cubic
 
 section Quartic
 
+private lemma quartic_resolvent_factorization
+    (hu : u ^ 3 - p * u ^ 2 - 4 * r * u + 4 * p * r - q ^ 2 = 0) (hs : s ^ 2 = u - p) :
+    (u ^ 2 - 4 * r) * s ^ 2 = q ^ 2 := by
+  linear_combination (u ^ 2 - 4 * r) * hs + hu
+
+/-- A nonzero linear term in a depressed quartic forces the square root used in its
+resolvent factorization to be nonzero. -/
+lemma quartic_resolvent_sqrt_ne_zero (hq : q ≠ 0)
+    (hu : u ^ 3 - p * u ^ 2 - 4 * r * u + 4 * p * r - q ^ 2 = 0) (hs : s ^ 2 = u - p) :
+    s ≠ 0 := by
+  intro hz
+  exact pow_ne_zero 2 hq (by simpa [hz] using (quartic_resolvent_factorization hu hs).symm)
+
 variable [Invertible (2 : K)]
+
+local instance : NeZero (4 : K) := ⟨by
+  rw [show (4 : K) = 2 ^ 2 by norm_num]
+  exact pow_ne_zero _ (Invertible.ne_zero _)⟩
+
+local instance : NeZero (8 : K) := ⟨by
+  rw [show (8 : K) = 2 ^ 3 by norm_num]
+  exact pow_ne_zero _ (Invertible.ne_zero _)⟩
+
+local instance : NeZero (256 : K) := ⟨by
+  rw [show (256 : K) = 2 ^ 8 by norm_num]
+  exact pow_ne_zero _ (Invertible.ne_zero _)⟩
 
 /-- Roots of a quartic whose cubic term is zero and linear term is nonzero,
   In terms of some `u` that satisfies a particular cubic resolvent. -/
 theorem quartic_depressed_eq_zero_iff
     (hq_nonzero : q ≠ 0)
     (hu : u ^ 3 - p * u ^ 2 - 4 * r * u + 4 * p * r - q ^ 2 = 0)
-    (hs : s ^ 2 = u - p)
-    (hv : v ^ 2 = 4 * s ^ 2 - 8 * (u - q / s))
-    (hw : w ^ 2 = 4 * s ^ 2 - 8 * (u + q / s))
-    (x : K) :
+    (hs : s ^ 2 = u - p) :
+    have hs_nonzero := quartic_resolvent_sqrt_ne_zero hq_nonzero hu hs
+    ∀ (hv : v ^ 2 = 4 * s ^ 2 - 8 * (u - q / s))
+      (hw : w ^ 2 = 4 * s ^ 2 - 8 * (u + q / s)) (x : K),
     x ^ 4 + p * x ^ 2 + q * x + r = 0 ↔
       x = (-2 * s - v) / 4 ∨ x = (-2 * s + v) / 4 ∨ x = (2 * s - w) / 4 ∨ x = (2 * s + w) / 4 := by
+  intro hs_nonzero hv hw x
   have hi2 : (2 : K) ≠ 0 := Invertible.ne_zero _
   have h4 : (4 : K) = 2 ^ 2 := by norm_num
-  have hs_nonzero : s ≠ 0 := by
-    contrapose hq_nonzero with hs0
-    linear_combination (exp := 2) -hu + (4 * r - u ^ 2) * hs + (u ^ 2 * s - 4 * r * s) * hs0
+  have ht : (q / s) * s = q := div_mul_cancel₀ _
+  have hprod := quartic_resolvent_factorization hu hs
+  have htsq : (q / s) ^ 2 = u ^ 2 - 4 * r := by
+    apply mul_right_cancel₀ (pow_ne_zero 2 hs_nonzero)
+    rw [← mul_pow, ht, hprod]
   calc
     _ ↔ 4 * (x ^ 4 + p * x ^ 2 + q * x + r) = 0 := by simp [h4, hi2]
     _ ↔ (2 * (x * x) + 2 * s * x + (u - q / s)) * (2 * (x * x) + -(2 * s) * x + (u + q / s)) =
         0 := by
       apply Eq.congr_left
-      field_simp
-      linear_combination -hu + (-x ^ 2 * s ^ 2 - x ^ 2 * p + x ^ 2 * u) * hw +
-        (x ^ 2 * w ^ 2 + 8 * x ^ 2 * u + 8 * x ^ 2 * q / s - u ^ 2 + 4 * r) * hs
+      linear_combination 4 * x ^ 2 * hs - 4 * x * ht + htsq
     _ ↔ _ := by
       have hv' : discrim 2 (2 * s) (u - q / s) = v * v := by rw [discrim]; linear_combination -hv
       have hw' : discrim 2 (-(2 * s)) (u + q / s) = w * w := by rw [discrim]; linear_combination -hw
@@ -201,12 +235,14 @@ theorem quartic_eq_zero_iff (ha : a ≠ 0)
     (hr : r =
       (16 * a * b ^ 2 * c + 256 * a ^ 3 * e - 3 * b ^ 4 - 64 * a ^ 2 * b * d) / (256 * a ^ 4))
     (hu : u ^ 3 - p * u ^ 2 - 4 * r * u + 4 * p * r - q ^ 2 = 0)
-    (hs : s ^ 2 = u - p)
-    (hv : v ^ 2 = 4 * s ^ 2 - 8 * (u - q / s))
-    (hw : w ^ 2 = 4 * s ^ 2 - 8 * (u + q / s)) (x : K) :
+    (hs : s ^ 2 = u - p) :
+    have hs_nonzero := quartic_resolvent_sqrt_ne_zero hq_nonzero hu hs
+    ∀ (hv : v ^ 2 = 4 * s ^ 2 - 8 * (u - q / s))
+      (hw : w ^ 2 = 4 * s ^ 2 - 8 * (u + q / s)) (x : K),
     a * x ^ 4 + b * x ^ 3 + c * x ^ 2 + d * x + e = 0 ↔
       x = (-2 * s - v) / 4 - b / (4 * a) ∨ x = (-2 * s + v) / 4 - b / (4 * a) ∨
         x = (2 * s - w) / 4 - b / (4 * a) ∨ x = (2 * s + w) / 4 - b / (4 * a) := by
+  intro hs_nonzero hv hw x
   let y := x + b / (4 * a)
   have h4 : (4 : K) = 2 ^ 2 := by norm_num
   have h8 : (8 : K) = 2 ^ 3 := by norm_num
@@ -245,7 +281,7 @@ theorem quartic_eq_zero_iff_of_q_eq_zero (ha : a ≠ 0)
       ring
     _ ↔ y ^ 2 = (-p + t) / 2 ∨ y ^ 2 = (-p - t) / 2 := by
       have ht' : discrim 1 p r = t * t := by rw [discrim]; linear_combination -ht
-      rw [quadratic_eq_zero_iff one_ne_zero ht', mul_one]
+      simpa only [mul_one] using quadratic_eq_zero_iff one_ne_zero ht' (y ^ 2)
     _ ↔ _ := by
       simp_rw [y, ← hv, ← hw, pow_two, mul_self_eq_mul_self_iff, eq_sub_iff_add_eq, or_assoc]
 

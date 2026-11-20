@@ -81,9 +81,9 @@ theorem Unitary.spectrum_subset_circle (u : unitary E) :
   · simpa only [CStarRing.norm_coe_unitary u] using norm_le_norm_of_mem hk
   · rw [← Unitary.val_toUnits_apply u] at hk
     have hnk := ne_zero_of_mem_of_unit hk
-    rw [← inv_inv (Unitary.toUnits u), ← spectrum.map_inv, Set.mem_inv] at hk
     have : ‖k‖⁻¹ ≤ ‖(↑(Unitary.toUnits u)⁻¹ : E)‖ := by
-      simpa only [norm_inv] using norm_le_norm_of_mem hk
+      simpa only [norm_inv] using
+        norm_le_norm_of_mem (spectrum.inv₀_mem_inv (hr := hnk.isUnit) hk)
     simpa using inv_le_of_inv_le₀ (norm_pos_iff.mpr hnk) this
 
 theorem spectrum.subset_circle_of_unitary {u : E} (h : u ∈ unitary E) :
@@ -118,7 +118,10 @@ theorem IsSelfAdjoint.spectralRadius_eq_nnnorm {a : A} (ha : IsSelfAdjoint a) :
     spectralRadius ℂ a = ‖a‖₊ := by
   have hconst : Tendsto (fun _n : ℕ => (‖a‖₊ : ℝ≥0∞)) atTop _ := tendsto_const_nhds
   refine tendsto_nhds_unique_of_forall ((pow_nnnorm_pow_one_div_tendsto_nhds_spectralRadius a).comp
-      (tendsto_pow_atTop_atTop_of_one_lt one_lt_two)) hconst fun n ↦ ?_
+      (show Tendsto (fun n : ℕ ↦
+          (⟨2 ^ n, pow_ne_zero _ (by decide)⟩ : {n : ℕ // n ≠ 0})) atTop
+          (comap Subtype.val atTop) from
+        tendsto_comap_iff.mpr (tendsto_pow_atTop_atTop_of_one_lt one_lt_two))) hconst fun n ↦ ?_
   rw [Function.comp_apply, ha.nnnorm_pow_two_pow, ENNReal.coe_pow, ← rpow_natCast, ← rpow_mul]
   simp
 
@@ -131,10 +134,16 @@ lemma IsSelfAdjoint.toReal_spectralRadius_complex_eq_norm {a : A} (ha : IsSelfAd
 
 theorem IsStarNormal.spectralRadius_eq_nnnorm (a : A) [IsStarNormal a] :
     spectralRadius ℂ a = ‖a‖₊ := by
+  have : (comap (Subtype.val : {n : ℕ // n ≠ 0} → ℕ) atTop).NeBot :=
+    atTop_neBot.comap_of_range_mem <| by
+      rw [Subtype.range_coe_subtype]
+      exact eventually_iff.mp ((eventually_gt_atTop (0 : ℕ)).mono fun n hn ↦ hn.ne')
   refine (ENNReal.pow_right_strictMono two_ne_zero).injective ?_
   have heq :
-    (fun n : ℕ => (‖(a⋆ * a) ^ n‖₊ : ℝ≥0∞) ^ (1 / n : ℝ)) =
-      (fun x => x ^ 2) ∘ fun n : ℕ => (‖a ^ n‖₊ : ℝ≥0∞) ^ (1 / n : ℝ) := by
+    (fun n : {n : ℕ // n ≠ 0} ↦
+      (‖(a⋆ * a) ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ)) =
+      (fun x => x ^ 2) ∘ fun n : {n : ℕ // n ≠ 0} ↦
+        (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ) := by
     funext n
     rw [Function.comp_apply, ← rpow_natCast, ← rpow_mul, mul_comm, rpow_mul, rpow_natCast, ←
       coe_pow, sq, ← nnnorm_star_mul_self, Commute.mul_pow (star_comm_self' a), star_pow]

@@ -156,7 +156,7 @@ variable [Field R] [Module R V] [ContinuousConstSMul R V]
 
 theorem homothety_isOpenMap (x : P) (t : R) (ht : t ≠ 0) : IsOpenMap <| homothety x t := by
   apply IsOpenMap.of_inverse (homothety_continuous x t⁻¹) <;> intro e <;>
-    simp [← AffineMap.comp_apply, ← homothety_mul, ht]
+    simp [← AffineMap.comp_apply, ← homothety_mul]
 
 end Field
 

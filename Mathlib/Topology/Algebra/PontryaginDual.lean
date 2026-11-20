@@ -46,8 +46,9 @@ instance [LocallyCompactSpace H] : LocallyCompactSpace (PontryaginDual H) := by
   refine ContinuousMonoidHom.locallyCompactSpace_of_hasBasis Vn ?_ ?_
   · intro n x h1 h2
     rw [hVn] at h1 h2 ⊢
-    rwa [Circle.coe_mul, Complex.arg_mul x.coe_ne_zero x.coe_ne_zero,
-      ← two_mul, abs_mul, abs_two, ← lt_div_iff₀' two_pos, div_div, ← pow_succ] at h2
+    rw [Circle.coe_mul, Complex.arg_mul x.coe_ne_zero x.coe_ne_zero,
+      ← two_mul, abs_mul, abs_two, ← lt_div_iff₀' two_pos, div_div₀] at h2
+    · simpa only [pow_succ] using h2
     apply Set.Ioo_subset_Ioc_self
     rw [← two_mul, Set.mem_Ioo, ← abs_lt, abs_mul, abs_two, ← lt_div_iff₀' two_pos]
     refine h1.trans_le ?_

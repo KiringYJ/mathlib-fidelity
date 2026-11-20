@@ -24,6 +24,12 @@ theorem not_charZero : ¬CharZero (ZMod p) := fun h =>
 /-- Field structure on `ZMod p` if `p` is prime. Its characteristic is not zero, so it has no
 rational embedding. -/
 instance : Field (ZMod p) where
+  selectUnit? d hd := by
+    letI : NeZero p := ⟨hp.out.ne_zero⟩
+    have hc : Nat.Coprime d.val p := (ZMod.isUnit_iff_coprime d.val p).mp
+      (by simpa only [ZMod.natCast_zmod_val] using hd)
+    exact some ⟨ZMod.unitOfCoprime d.val hc,
+      (ZMod.coe_unitOfCoprime ..).trans (ZMod.natCast_zmod_val d)⟩
   isUnit_of_ne_zero {a} ha := by
     obtain ⟨k, rfl⟩ := natCast_zmod_surjective a
     apply (isUnit_iff_coprime k p).2

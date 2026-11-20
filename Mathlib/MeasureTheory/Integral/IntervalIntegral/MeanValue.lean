@@ -190,7 +190,7 @@ theorem exists_eq_const_mul_intervalIntegral_of_nonneg_of_antitoneOn
     · simpa [mul_comm] using intervalIntegral.integral_mono_on hfa.le hH_int
         intervalIntegrable_const fun r hr ↦ (hH_bounds r hr).2
   obtain ⟨ξ, hξ, hGξ⟩ := (isPreconnected_Icc.intermediate_value hξmin hξmax hGcont) hy_mem
-  exact ⟨ξ, hξ, by grind⟩
+  exact ⟨ξ, hξ, (eq_div_iff.mp hGξ).symm.trans (mul_comm _ _)⟩
 
 /-- **Second mean value theorem for interval integrals** with a nonnegative monotone weight. -/
 theorem exists_eq_const_mul_intervalIntegral_of_nonneg_of_monotoneOn

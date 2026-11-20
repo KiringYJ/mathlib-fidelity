@@ -72,14 +72,15 @@ theorem subst_wlog {x y z s : ℝ} (hxy : 0 ≤ x * y) (hxyz : x + y + z = 0) :
       rw [mul_pow, sq_abs, hz]; ring
     _ ≤ 32 * ((2 * (x ^ 2 + y ^ 2 + (x + y) ^ 2) + 2 * s ^ 2) ^ 4 / 4 ^ 4) := by gcongr
     _ = (sqrt 2 * (x ^ 2 + y ^ 2 + z ^ 2 + s ^ 2) ^ 2) ^ 2 := by
-      simp [field, hz]
+      rw [hz, ← mul_add, mul_pow, mul_pow, Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 2)]
+      rw [mul_comm ((2 : ℝ) ^ 4), mul_div_assoc₀]
       ring
 
 /-- Proof that `M = 9 * sqrt 2 / 32` works with the substitution. -/
 theorem subst_proof₁ (x y z s : ℝ) (hxyz : x + y + z = 0) :
     |x * y * z * s| ≤ sqrt 2 / 32 * (x ^ 2 + y ^ 2 + z ^ 2 + s ^ 2) ^ 2 := by
   wlog h' : 0 ≤ x * y generalizing x y z; swap
-  · rw [div_mul_eq_mul_div, le_div_iff₀' zero_lt_32]
+  · rw [div_mul_eq_mul_div₀, le_div_iff₀' zero_lt_32]
     exact subst_wlog h' hxyz
   rcases (mul_nonneg_of_three x y z).resolve_left h' with h | h
   · convert! this y z x _ h using 2 <;> linarith

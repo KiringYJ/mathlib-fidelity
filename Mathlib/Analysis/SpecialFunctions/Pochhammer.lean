@@ -40,7 +40,8 @@ variable {n : ℕ} {𝕜 : Type*} {k : 𝕜} [NontriviallyNormedField 𝕜]
 
 /-- `descPochhammer 𝕜 n` is differentiable. -/
 theorem differentiable_descPochhammer_eval : Differentiable 𝕜 (descPochhammer 𝕜 n).eval := by
-  simp [descPochhammer_eval_eq_prod_range, Differentiable.fun_finsetProd]
+  simp only [descPochhammer_eval_eq_prod_range]
+  exact Differentiable.fun_finsetProd (fun _ _ ↦ by fun_prop)
 
 /-- `descPochhammer 𝕜 n` is continuous. -/
 theorem continuous_descPochhammer_eval : Continuous (descPochhammer 𝕜 n).eval := by
@@ -49,7 +50,10 @@ theorem continuous_descPochhammer_eval : Continuous (descPochhammer 𝕜 n).eval
 lemma deriv_descPochhammer_eval_eq_sum_prod_range_erase (n : ℕ) (k : 𝕜) :
     deriv (descPochhammer 𝕜 n).eval k
       = ∑ i ∈ Finset.range n, ∏ j ∈ (Finset.range n).erase i, (k - j) := by
-  simp [descPochhammer_eval_eq_prod_range, deriv_fun_finsetProd]
+  have hd (j : ℕ) : HasDerivAt (fun x : 𝕜 ↦ x - j) 1 k := (hasDerivAt_id k).sub_const _
+  simp only [descPochhammer_eval_eq_prod_range]
+  rw [deriv_fun_finsetProd (fun i _ ↦ (hd i).differentiableAt)]
+  simp only [(hd _).deriv, smul_eq_mul, mul_one]
 
 /-- `deriv (descPochhammer ℝ n)` is monotone on `(n-1, ∞)`. -/
 lemma monotoneOn_deriv_descPochhammer_eval (n : ℕ) :
@@ -102,7 +106,8 @@ theorem descPochhammer_eval_le_sum_descFactorial
   suffices h_jensen : f (∑ i ∈ t, w i • p i) ≤ ∑ i ∈ t, w i • f (p i) by
     simpa only [smul_eq_mul, f, Set.piecewise_eq_of_mem (Set.Ici (n - 1 : ℝ)) _ _ h_avg,
       piecewise_Ici_descPochhammer_eval_zero_eq_descFactorial] using h_jensen
-  exact ConvexOn.map_sum_le (convexOn_piecewise_Ici_descPochhammer_eval_zero hn) h₀ h₁ (by simp)
+  exact ConvexOn.map_sum_le (p := fun i ↦ (p i : ℝ))
+    (convexOn_piecewise_Ici_descPochhammer_eval_zero hn) h₀ h₁ (by simp) (by simp)
 
 /-- Special case of **Jensen's inequality** for `Nat.choose`. -/
 theorem descPochhammer_eval_div_factorial_le_sum_choose
@@ -111,7 +116,7 @@ theorem descPochhammer_eval_div_factorial_le_sum_choose
     (descPochhammer ℝ n).eval (∑ i ∈ t, w i * p i) / n.factorial
       ≤ ∑ i ∈ t, w i * (p i).choose n := by
   simp_rw [Nat.cast_choose_eq_descPochhammer_div,
-    mul_div, ← Finset.sum_div, descPochhammer_eval_eq_descFactorial]
+    ← mul_div_assoc₀, ← Finset.sum_div, descPochhammer_eval_eq_descFactorial]
   apply div_le_div_of_nonneg_right _ (by positivity)
   exact descPochhammer_eval_le_sum_descFactorial hn p w h₀ h₁ h_avg
 

@@ -58,7 +58,7 @@ theorem mem_Lp (f : α →ᵇ E) : f.toContinuousMap.toAEEqFun μ ∈ Lp E p μ 
 of the whole space) times its sup-norm. -/
 theorem Lp_nnnorm_le (f : α →ᵇ E) :
     ‖(⟨f.toContinuousMap.toAEEqFun μ, mem_Lp f⟩ : Lp E p μ)‖₊ ≤
-      measureUnivNNReal μ ^ p.toReal⁻¹ * ‖f‖₊ := by
+      measureUnivNNReal μ ^ (1 / p).toReal * ‖f‖₊ := by
   apply Lp.nnnorm_le_of_ae_bound
   refine (f.toContinuousMap.coeFn_toAEEqFun μ).mono ?_
   intro x hx
@@ -69,7 +69,7 @@ theorem Lp_nnnorm_le (f : α →ᵇ E) :
 of the whole space) times its sup-norm. -/
 theorem Lp_norm_le (f : α →ᵇ E) :
     ‖(⟨f.toContinuousMap.toAEEqFun μ, mem_Lp f⟩ : Lp E p μ)‖ ≤
-      measureUnivNNReal μ ^ p.toReal⁻¹ * ‖f‖ :=
+      measureUnivNNReal μ ^ (1 / p).toReal * ‖f‖ :=
   Lp_nnnorm_le f
 
 variable (p μ)
@@ -113,8 +113,8 @@ theorem range_toLp :
 variable {p}
 
 theorem toLp_norm_le {𝕜 : Type*} [NontriviallyNormedField 𝕜] [NormedSpace 𝕜 E] :
-    ‖(toLp p μ 𝕜 : (α →ᵇ E) →L[𝕜] Lp E p μ)‖ ≤ measureUnivNNReal μ ^ p.toReal⁻¹ :=
-  LinearMap.mkContinuous_norm_le _ (measureUnivNNReal μ ^ p.toReal⁻¹).coe_nonneg _
+    ‖(toLp p μ 𝕜 : (α →ᵇ E) →L[𝕜] Lp E p μ)‖ ≤ measureUnivNNReal μ ^ (1 / p).toReal :=
+  LinearMap.mkContinuous_norm_le _ (measureUnivNNReal μ ^ (1 / p).toReal).coe_nonneg _
 
 theorem toLp_inj {f g : α →ᵇ E} [μ.IsOpenPosMeasure] :
     toLp (E := E) p μ 𝕜 f = toLp (E := E) p μ 𝕜 g ↔ f = g := by
@@ -202,7 +202,7 @@ theorem toLp_norm_eq_toLp_norm_coe :
 
 /-- Bound for the operator norm of `ContinuousMap.toLp`. -/
 theorem toLp_norm_le :
-    ‖(toLp p μ 𝕜 : C(α, E) →L[𝕜] Lp E p μ)‖ ≤ measureUnivNNReal μ ^ p.toReal⁻¹ := by
+    ‖(toLp p μ 𝕜 : C(α, E) →L[𝕜] Lp E p μ)‖ ≤ measureUnivNNReal μ ^ (1 / p).toReal := by
   rw [toLp_norm_eq_toLp_norm_coe]
   exact BoundedContinuousFunction.toLp_norm_le μ
 

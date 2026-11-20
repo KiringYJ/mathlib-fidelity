@@ -75,7 +75,12 @@ example (n : ℤ) (h : n + 1 > 0) : ((n + 1 : ℤ) : ℚ) > 0 := mod_cast h
 
 -- testing the heuristic
 example (h : bn ≤ an) : an - bn = 1 ↔ (an - bn : ℤ) = 1 := by norm_cast
-example (h : (cz : ℚ) = az / bz) : (cz : ℝ) = az / bz := by assumption_mod_cast
+example (hb : bz ≠ 0)
+    (h : (cz : ℚ) = Checked.div (az : ℚ) (bz : ℚ) (Int.cast_ne_zero.mpr hb).isUnit) :
+    (cz : ℝ) = Checked.div (az : ℝ) (bz : ℝ) (Int.cast_ne_zero.mpr hb).isUnit := by
+  have hc : ((cz : ℚ) : ℝ) = ((az : ℚ) / (bz : ℚ) : ℚ) := by
+    assumption_mod_cast
+  simpa only [Rat.cast_intCast, Rat.cast_div] using hc
 
 namespace hidden
 
@@ -128,14 +133,14 @@ example (a b : ℕ) (h2 : ((a + b + 0 : ℕ) : ℤ) = 10) :
 namespace ENNReal
 lemma half_lt_self_bis {a : ℝ≥0∞} (hz : a ≠ 0) (ht : a ≠ ⊤) : a / 2 < a := by
   lift a to NNReal using ht
-  have h : (2 : ℝ≥0∞) = ((2 : NNReal) : ℝ≥0∞) := rfl
-  have h' : (2 : NNReal) ≠ 0 := two_ne_zero
-  rw [h, ← coe_div h', coe_lt_coe] -- `norm_cast` fails to apply `coe_div`
   norm_cast at hz
-  exact NNReal.half_lt_self hz
+  calc
+    (a : ℝ≥0∞) / 2 = ↑(a / (2 : NNReal)) := ENNReal.coe_div.symm
+    _ < (a : ℝ≥0∞) := coe_lt_coe.mpr (NNReal.half_lt_self hz)
 
 example (x : NNReal) : (x : ENNReal) / 3 = ↑(x / 3) := by
-  norm_cast
+  have h₃ : IsUnit (3 : NNReal) := (by norm_num : (3 : NNReal) ≠ 0).isUnit
+  exact_mod_cast (ENNReal.coe_div (p := x) (hr := h₃)).symm
 
 end ENNReal
 

@@ -91,7 +91,7 @@ theorem isMongePoint_zero_iff (s : Simplex ℝ P 0) (p : P) :
   · rintro rfl
     refine ⟨mem_affineSpan _ (Set.mem_range_self _), ?_⟩
     intro i j _
-    have hij : i = j := Subsingleton.elim _ _
+    have hij : i = j := by omega
     simp [hij]
 
 theorem isMongePoint_one_iff (s : Simplex ℝ P 1) (p : P) :
@@ -131,7 +131,7 @@ theorem mongePoint_eq_smul_vsub_vadd_circumcenter {n : ℕ} (s : Simplex ℝ P n
     s.mongePoint (by omega) =
       (((n + 1 : ℕ) : ℝ) / ((n - 1 : ℕ) : ℝ)) • (s.centroid -ᵥ s.circumcenter) +ᵥ
         s.circumcenter := by
-  simp only [mongePoint, dif_neg (show n ≠ 0 by omega)]
+  simp only [mongePoint, dite_eq_right (show n ≠ 0 by omega)]
 
 /-- The denominator-free Euler-line relation for the Monge point. -/
 theorem smul_mongePoint_vsub_circumcenter_eq_smul_centroid_vsub {n : ℕ}
@@ -231,7 +231,7 @@ theorem mongePoint_eq_affineCombination_of_pointsWithCircumcenter {n : ℕ}
     s.mongePoint =
       (univ : Finset (PointsWithCircumcenterIndex (n + 2))).affineCombination ℝ
         s.pointsWithCircumcenter (mongePointWeightsWithCircumcenter n) := by
-  rw [mongePoint_eq_smul_vsub_vadd_circumcenter s (by omega),
+  rw [mongePoint_eq_smul_vsub_vadd_circumcenter s (by omega), Simplex.centroid,
     centroid_eq_affineCombination_of_pointsWithCircumcenter s univ univ_nonempty,
     circumcenter_eq_affineCombination_of_pointsWithCircumcenter, affineCombination_vsub, ← map_smul,
     weightedVSub_vadd_affineCombination]
@@ -364,11 +364,12 @@ lemma mongePlane_reindex {m n : ℕ} (s : Simplex ℝ P (n + 2)) (e : Fin (n + 3
     ext i
     simp [← e.eq_symm_apply]
   have hc := (({i₁, i₂}ᶜ : Finset (Fin (n + 3))).centroid_map ℝ
-    e.symm.toEmbedding s.points
-      (Nat.cast_ne_zero.mpr (card_ne_zero.mpr (pair_compl_nonempty i₁ i₂)))).symm
+    e.symm.toEmbedding s.points (h := by
+      rw [card_map]
+      exact Nat.cast_ne_zero.mpr (card_ne_zero.mpr (pair_compl_nonempty i₁ i₂)))).symm
   simp only [hmap, Equiv.coe_toEmbedding] at hc
   simp only [mongePlane, reindex_points, reindex_range_points, Function.comp_apply]
-  rw [hc]
+  congr 2
 
 /-- The Monge plane associated with vertices `i₁` and `i₂` equals that
 associated with `i₂` and `i₁`. -/
@@ -524,8 +525,15 @@ theorem altitude_eq_mongePlane (t : Triangle ℝ P) {i₁ i₂ i₃ : Fin 3} (h�
     (h₂₃ : i₂ ≠ i₃) : t.altitude i₁ = t.mongePlane i₂ i₃ := by
   have hs : ({i₂, i₃}ᶜ : Finset (Fin 3)) = {i₁} := by decide +revert
   have he : ({i₁}ᶜ : Set (Fin 3)) = {i₂, i₃} := by grind
-  rw [mongePlane_def, altitude_def, direction_affineSpan, hs, he, centroid_singleton,
+  rw [mongePlane_def, altitude_def, direction_affineSpan, he,
     vectorSpan_image_eq_span_vsub_set_left_ne ℝ _ (Set.mem_insert i₂ _)]
+  have hc : ({i₂, i₃}ᶜ : Finset (Fin 3)).centroid ℝ t.points
+      (Nat.cast_ne_zero.mpr (card_ne_zero.mpr (pair_compl_nonempty i₂ i₃))) = t.points i₁ := by
+    suffices ∀ (fs : Finset (Fin 3)) (hfs : (#fs : ℝ) ≠ 0),
+        fs = {i₁} → fs.centroid ℝ t.points hfs = t.points i₁ by exact this _ _ hs
+    rintro fs hfs rfl
+    exact centroid_singleton ℝ t.points i₁
+  rw [hc]
   simp [h₂₃]
 
 /-- The orthocenter lies in the altitudes. -/

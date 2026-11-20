@@ -139,10 +139,10 @@ theorem hasDerivAt_pow (n : ℕ) (x : 𝕜) :
   simpa using (hasStrictDerivAt_pow n x).hasDerivAt
 
 theorem derivWithin_pow_field (h : UniqueDiffWithinAt 𝕜 s x) (n : ℕ) :
-    derivWithin (fun x => x ^ n) s x = (n : 𝕜) * x ^ (n - 1) := by
-  rw [derivWithin_fun_pow (differentiableWithinAt_fun_id) n, derivWithin_id' _ _ h, mul_one]
+    derivWithin (fun x => x ^ n) s x = (n : 𝕜) * x ^ (n - 1) :=
+  (hasDerivWithinAt_pow n x).derivWithin h
 
-theorem deriv_pow_field (n : ℕ) : deriv (fun x => x ^ n) x = (n : 𝕜) * x ^ (n - 1) := by
-  simp
+theorem deriv_pow_field (n : ℕ) : deriv (fun x => x ^ n) x = (n : 𝕜) * x ^ (n - 1) :=
+  (hasDerivAt_pow n x).deriv
 
 end NontriviallyNormedField

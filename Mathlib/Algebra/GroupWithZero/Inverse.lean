@@ -264,9 +264,9 @@ theorem div_mul_div_cancel₀ {hb : IsUnit b} {hc : IsUnit c} : a / b * (b / c) 
 
 @[simp, norm_cast] theorem zpow_natCast₀ (a : M) (n : ℕ) : a ^ (n : ℤ) = a ^ n := rfl
 
-@[simp] theorem zpow_zero₀ (a : M) : a ^ (0 : ℤ) = 1 := pow_zero a
+theorem zpow_zero₀ (a : M) : a ^ (0 : ℤ) = 1 := pow_zero a
 
-@[simp] theorem zpow_one₀ (a : M) : a ^ (1 : ℤ) = a := pow_one a
+theorem zpow_one₀ (a : M) : a ^ (1 : ℤ) = a := pow_one a
 
 @[simp] theorem zpow_ofNat₀ (a : M) (n : ℕ) {h : (OfNat.ofNat n : ℤ) < 0 → IsUnit a} :
     a ^ (ofNat(n) : ℤ) = a ^ (OfNat.ofNat n : ℕ) := rfl
@@ -421,7 +421,7 @@ theorem div_div_div_comm₀ {hb : IsUnit b} {hd : IsUnit d} {hcd : IsUnit (c / d
   rw [div_div_eq_mul_div₀, div_div_eq_mul_div₀, div_mul_eq_mul_div₀, div_mul_eq_mul_div₀,
     div_right_comm₀]
 
-@[simp] theorem div_div_cancel₀ {hb : IsUnit b} {hab : IsUnit (a / b)} : a / (a / b) = b := by
+theorem div_div_cancel₀ {hb : IsUnit b} {hab : IsUnit (a / b)} : a / (a / b) = b := by
   rw [div_div_eq_mul_div₀, mul_div_cancel_left₀]
 
 theorem div_div_cancel_left' {ha : IsUnit a} {hb : IsUnit b} : a / b / a = b⁻¹ := by

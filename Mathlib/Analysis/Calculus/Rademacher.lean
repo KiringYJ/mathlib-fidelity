@@ -104,7 +104,9 @@ function is linear, this gives the result.
 
 theorem integral_inv_smul_sub_mul_tendsto_integral_lineDeriv_mul
     (hf : LipschitzWith C f) (hg : Integrable g μ) (v : E) :
-    Tendsto (fun (t : ℝ) ↦ ∫ x, (t⁻¹ • (f (x + t • v) - f x)) * g x ∂μ) (𝓝[>] 0)
+    Tendsto
+      (fun (t : ↥({0}ᶜ : Set ℝ)) ↦ ∫ x, ((t : ℝ)⁻¹ • (f (x + (t : ℝ) • v) - f x)) * g x ∂μ)
+      (comap (↑) (𝓝[>] (0 : ℝ)))
       (𝓝 (∫ x, lineDeriv ℝ f x v * g x ∂μ)) := by
   apply tendsto_integral_filter_of_dominated_convergence (fun x ↦ (C * ‖v‖) * ‖g x‖)
   · filter_upwards with t
@@ -113,20 +115,25 @@ theorem integral_inv_smul_sub_mul_tendsto_integral_lineDeriv_mul
     apply AEStronglyMeasurable.sub _ hf.continuous.measurable.aestronglyMeasurable
     apply AEMeasurable.aestronglyMeasurable
     exact hf.continuous.measurable.comp_aemeasurable' (aemeasurable_id'.add_const _)
-  · filter_upwards [self_mem_nhdsWithin] with t (ht : 0 < t)
+  · have hpos : ∀ᶠ t : ↥({0}ᶜ : Set ℝ) in comap (↑) (𝓝[>] (0 : ℝ)), 0 < (t : ℝ) :=
+      tendsto_comap.eventually self_mem_nhdsWithin
+    filter_upwards [hpos] with t ht
     filter_upwards with x
-    calc ‖t⁻¹ • (f (x + t • v) - f x) * g x‖
-      = (t⁻¹ * ‖f (x + t • v) - f x‖) * ‖g x‖ := by simp [norm_mul, ht.le]
-    _ ≤ (t⁻¹ * (C * ‖(x + t • v) - x‖)) * ‖g x‖ := by
-      gcongr; exact LipschitzWith.norm_sub_le hf (x + t • v) x
-    _ = (C * ‖v‖) * ‖g x‖ := by simp [field, norm_smul, abs_of_nonneg ht.le]
+    calc ‖(t : ℝ)⁻¹ • (f (x + (t : ℝ) • v) - f x) * g x‖
+      = ((t : ℝ)⁻¹ * ‖f (x + (t : ℝ) • v) - f x‖) * ‖g x‖ := by simp [norm_mul, ht.le]
+    _ ≤ ((t : ℝ)⁻¹ * (C * ‖(x + (t : ℝ) • v) - x‖)) * ‖g x‖ := by
+      gcongr; exact LipschitzWith.norm_sub_le hf (x + (t : ℝ) • v) x
+    _ = (C * ‖v‖) * ‖g x‖ := by
+      simp [field, norm_smul, abs_of_nonneg ht.le]
   · exact hg.norm.const_mul _
   · filter_upwards [hf.ae_lineDifferentiableAt v] with x hx
     exact hx.hasLineDerivAt.tendsto_slope_zero_right.mul tendsto_const_nhds
 
 theorem integral_inv_smul_sub_mul_tendsto_integral_lineDeriv_mul'
     (hf : LipschitzWith C f) (h'f : HasCompactSupport f) (hg : Continuous g) (v : E) :
-    Tendsto (fun (t : ℝ) ↦ ∫ x, (t⁻¹ • (f (x + t • v) - f x)) * g x ∂μ) (𝓝[>] 0)
+    Tendsto
+      (fun (t : ↥({0}ᶜ : Set ℝ)) ↦ ∫ x, ((t : ℝ)⁻¹ • (f (x + (t : ℝ) • v) - f x)) * g x ∂μ)
+      (comap (↑) (𝓝[>] (0 : ℝ)))
       (𝓝 (∫ x, lineDeriv ℝ f x v * g x ∂μ)) := by
   let K := cthickening (‖v‖) (tsupport f)
   have K_compact : IsCompact K := IsCompact.cthickening h'f
@@ -138,21 +145,24 @@ theorem integral_inv_smul_sub_mul_tendsto_integral_lineDeriv_mul'
     apply AEStronglyMeasurable.sub _ hf.continuous.measurable.aestronglyMeasurable
     apply AEMeasurable.aestronglyMeasurable
     exact hf.continuous.measurable.comp_aemeasurable' (aemeasurable_id'.add_const _)
-  · filter_upwards [Ioc_mem_nhdsGT zero_lt_one] with t ht
-    have t_pos : 0 < t := ht.1
+  · have hbound : ∀ᶠ t : ↥({0}ᶜ : Set ℝ) in comap (↑) (𝓝[>] (0 : ℝ)),
+        (t : ℝ) ∈ Ioc 0 1 := tendsto_comap.eventually (Ioc_mem_nhdsGT zero_lt_one)
+    filter_upwards [hbound] with t ht
+    have t_pos : 0 < (t : ℝ) := ht.1
     filter_upwards with x
     by_cases hx : x ∈ K
-    · calc ‖t⁻¹ • (f (x + t • v) - f x) * g x‖
-        = (t⁻¹ * ‖f (x + t • v) - f x‖) * ‖g x‖ := by simp [norm_mul, t_pos.le]
-      _ ≤ (t⁻¹ * (C * ‖(x + t • v) - x‖)) * ‖g x‖ := by
-        gcongr; exact LipschitzWith.norm_sub_le hf (x + t • v) x
-      _ = (C * ‖v‖) * ‖g x‖ := by simp [field, norm_smul, abs_of_nonneg t_pos.le]
+    · calc ‖(t : ℝ)⁻¹ • (f (x + (t : ℝ) • v) - f x) * g x‖
+        = ((t : ℝ)⁻¹ * ‖f (x + (t : ℝ) • v) - f x‖) * ‖g x‖ := by simp [norm_mul, t_pos.le]
+      _ ≤ ((t : ℝ)⁻¹ * (C * ‖(x + (t : ℝ) • v) - x‖)) * ‖g x‖ := by
+        gcongr; exact LipschitzWith.norm_sub_le hf (x + (t : ℝ) • v) x
+      _ = (C * ‖v‖) * ‖g x‖ := by
+        simp [field, norm_smul, abs_of_nonneg t_pos.le]
       _ = K.indicator (fun x ↦ (C * ‖v‖) * ‖g x‖) x := by rw [indicator_of_mem hx]
     · have A : f x = 0 := by
         rw [← Function.notMem_support]
         contrapose hx
         exact self_subset_cthickening _ (subset_tsupport _ hx)
-      have B : f (x + t • v) = 0 := by
+      have B : f (x + (t : ℝ) • v) = 0 := by
         rw [← Function.notMem_support]
         contrapose hx
         apply mem_cthickening_of_dist_le _ _ (‖v‖) (tsupport f) (subset_tsupport _ hx)
@@ -175,26 +185,30 @@ theorem integral_lineDeriv_mul_eq
   `(g (x - t v) - g x) / t`, and therefore the integrals as limits of the corresponding integrals
   thanks to the dominated convergence theorem. At fixed positive `t`, the integrals coincide
   (with the change of variables `y = x + t v`), so the limits also coincide. -/
-  have A : Tendsto (fun (t : ℝ) ↦ ∫ x, (t⁻¹ • (f (x + t • v) - f x)) * g x ∂μ) (𝓝[>] 0)
-              (𝓝 (∫ x, lineDeriv ℝ f x v * g x ∂μ)) :=
-    integral_inv_smul_sub_mul_tendsto_integral_lineDeriv_mul
-      hf (hg.continuous.integrable_of_hasCompactSupport h'g) v
-  have B : Tendsto (fun (t : ℝ) ↦ ∫ x, (t⁻¹ • (g (x + t • (-v)) - g x)) * f x ∂μ) (𝓝[>] 0)
-              (𝓝 (∫ x, lineDeriv ℝ g x (-v) * f x ∂μ)) :=
-    integral_inv_smul_sub_mul_tendsto_integral_lineDeriv_mul' hg h'g hf.continuous (-v)
-  suffices S1 : ∀ (t : ℝ), ∫ x, (t⁻¹ • (f (x + t • v) - f x)) * g x ∂μ =
-                            ∫ x, (t⁻¹ • (g (x + t • (-v)) - g x)) * f x ∂μ by
+  have A := integral_inv_smul_sub_mul_tendsto_integral_lineDeriv_mul (μ := μ)
+    hf (hg.continuous.integrable_of_hasCompactSupport h'g) v
+  have B := integral_inv_smul_sub_mul_tendsto_integral_lineDeriv_mul' (μ := μ)
+    hg h'g hf.continuous (-v)
+  let D := ↥({0}ᶜ : Set ℝ)
+  have hr : Set.range (Subtype.val : D → ℝ) ∈ 𝓝[>] (0 : ℝ) := by
+    filter_upwards [self_mem_nhdsWithin] with t ht
+    exact ⟨⟨t, (show 0 < t from ht).ne'⟩, rfl⟩
+  have : NeBot (comap (Subtype.val : D → ℝ) (𝓝[>] (0 : ℝ))) :=
+    (inferInstance : NeBot (𝓝[>] (0 : ℝ))).comap_of_range_mem hr
+  suffices S1 : ∀ (t : D), ∫ x, ((t : ℝ)⁻¹ • (f (x + (t : ℝ) • v) - f x)) * g x ∂μ =
+                            ∫ x, ((t : ℝ)⁻¹ • (g (x + (t : ℝ) • (-v)) - g x)) * f x ∂μ by
     simp only [S1] at A; exact tendsto_nhds_unique A B
   intro t
-  suffices S2 : ∫ x, (f (x + t • v) - f x) * g x ∂μ = ∫ x, f x * (g (x + t • (-v)) - g x) ∂μ by
+  suffices S2 : ∫ x, (f (x + (t : ℝ) • v) - f x) * g x ∂μ =
+      ∫ x, f x * (g (x + (t : ℝ) • (-v)) - g x) ∂μ by
     simp only [smul_eq_mul, mul_assoc, integral_const_mul, S2, mul_comm (f _)]
-  have S3 : ∫ x, f (x + t • v) * g x ∂μ = ∫ x, f x * g (x + t • (-v)) ∂μ := by
-    rw [← integral_add_right_eq_self _ (t • (-v))]; simp
+  have S3 : ∫ x, f (x + (t : ℝ) • v) * g x ∂μ = ∫ x, f x * g (x + (t : ℝ) • (-v)) ∂μ := by
+    rw [← integral_add_right_eq_self _ ((t : ℝ) • (-v))]; simp
   simp_rw [_root_.sub_mul, _root_.mul_sub]
   rw [integral_sub, integral_sub, S3]
   · apply Continuous.integrable_of_hasCompactSupport
     · exact hf.continuous.mul (hg.continuous.comp (continuous_add_const _))
-    · exact (h'g.comp_homeomorph (Homeomorph.addRight (t • (-v)))).mul_left
+    · exact (h'g.comp_homeomorph (Homeomorph.addRight ((t : ℝ) • (-v)))).mul_left
   · exact (hf.continuous.mul hg.continuous).integrable_of_hasCompactSupport h'g.mul_left
   · apply Continuous.integrable_of_hasCompactSupport
     · exact (hf.continuous.comp (continuous_add_const _)).mul hg.continuous
@@ -221,8 +235,8 @@ theorem ae_lineDeriv_sum_eq
       = ∑ i ∈ s, a i * ∫ x, lineDeriv ℝ f x (v i) * g x ∂μ by
     dsimp only [smul_eq_mul, Pi.smul_apply]
     simp_rw [← mul_assoc, mul_comm _ (a _), mul_assoc, integral_const_mul, mul_comm (g _), S1]
-  suffices S2 : ∫ x, (∑ i ∈ s, a i * fderiv ℝ g x (v i)) * f x ∂μ =
-                  ∑ i ∈ s, a i * ∫ x, fderiv ℝ g x (v i) * f x ∂μ by
+  suffices S2 : ∫ x, (∑ i ∈ s, a i * fderiv ℝ g x id (v i)) * f x ∂μ =
+                  ∑ i ∈ s, a i * ∫ x, fderiv ℝ g x id (v i) * f x ∂μ by
     obtain ⟨D, g_lip⟩ : ∃ D, LipschitzWith D g :=
       ContDiff.lipschitzWith_of_hasCompactSupport g_comp g_smooth (by simp)
     simp_rw [integral_lineDeriv_mul_eq hf g_lip g_comp]
@@ -230,7 +244,7 @@ theorem ae_lineDeriv_sum_eq
     simp only [map_neg, _root_.map_sum, map_smul, smul_eq_mul, neg_mul]
     simp only [integral_neg, mul_neg, Finset.sum_neg_distrib, neg_inj]
     exact S2
-  suffices B : ∀ i ∈ s, Integrable (fun x ↦ a i * (fderiv ℝ g x (v i) * f x)) μ by
+  suffices B : ∀ i ∈ s, Integrable (fun x ↦ a i * (fderiv ℝ g x id (v i) * f x)) μ by
     simp_rw [Finset.sum_mul, mul_assoc, integral_finsetSum s B, integral_const_mul]
   intro i _hi
   let L : StrongDual ℝ E → ℝ := fun f ↦ f (v i)
@@ -270,7 +284,7 @@ theorem hasFDerivAt_of_hasLineDerivAt_of_closure
   rw [hasFDerivAt_iff_isLittleO_nhds_zero, isLittleO_iff]
   intro ε εpos
   obtain ⟨δ, δpos, hδ⟩ : ∃ δ, 0 < δ ∧ (C + ‖L‖ + 1) * δ = ε :=
-    ⟨ε / (C + ‖L‖ + 1), by positivity, mul_div_cancel₀ ε (by positivity)⟩
+    ⟨ε / (C + ‖L‖ + 1), by positivity, mul_div_cancel₀ ε⟩
   obtain ⟨q, hqs, q_fin, hq⟩ : ∃ q, q ⊆ s ∧ q.Finite ∧ sphere 0 1 ⊆ ⋃ y ∈ q, ball y δ := by
     have : sphere 0 1 ⊆ ⋃ y ∈ s, ball y δ := by
       apply hs.trans (fun z hz ↦ ?_)
@@ -289,8 +303,8 @@ theorem hasFDerivAt_of_hasLineDerivAt_of_closure
   rcases eq_or_ne v 0 with rfl | v_ne
   · simp
   obtain ⟨w, ρ, w_mem, hvw, hρ⟩ : ∃ w ρ, w ∈ sphere 0 1 ∧ v = ρ • w ∧ ρ = ‖v‖ := by
-    refine ⟨‖v‖⁻¹ • v, ‖v‖, by simp [norm_smul, inv_mul_cancel₀ (norm_ne_zero_iff.2 v_ne)], ?_, rfl⟩
-    simp [smul_smul, mul_inv_cancel₀ (norm_ne_zero_iff.2 v_ne)]
+    refine ⟨‖v‖⁻¹ • v, ‖v‖, by simp [norm_smul, inv_mul_cancel₀], ?_, rfl⟩
+    simp [smul_smul, mul_inv_cancel₀]
   have norm_rho : ‖ρ‖ = ρ := by rw [hρ, norm_norm]
   have rho_pos : 0 ≤ ρ := by simp [hρ]
   obtain ⟨y, yq, hy⟩ : ∃ y ∈ q, ‖w - y‖ < δ := by simpa [← dist_eq_norm] using hq w_mem

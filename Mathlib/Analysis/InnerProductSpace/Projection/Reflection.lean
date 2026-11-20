@@ -102,9 +102,13 @@ theorem reflection_orthogonal : Kᗮ.reflection = .trans K.reflection (.neg _) :
 
 variable {K}
 
+open scoped Classical in
 theorem reflection_singleton_apply (u v : E) :
-    reflection (𝕜 ∙ u) v = 2 • (⟪u, v⟫ / ((‖u‖ : 𝕜) ^ 2)) • u - v := by
-  rw [reflection_apply, starProjection_singleton, ofReal_pow]
+    reflection (𝕜 ∙ u) v = if hu : u = 0 then -v else
+      2 • (Checked.div ⟪u, v⟫ ((‖u‖ ^ 2 : ℝ) : 𝕜)
+        (RCLike.ofReal_ne_zero.mpr (pow_ne_zero 2 (norm_ne_zero_iff.mpr hu))).isUnit • u) - v := by
+  rw [reflection_apply, starProjection_singleton]
+  split <;> simp_all
 
 /-- A point is its own reflection if and only if it is in the subspace. -/
 theorem reflection_eq_self_iff (x : E) : K.reflection x = x ↔ x ∈ K := by

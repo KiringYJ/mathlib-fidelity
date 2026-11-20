@@ -47,40 +47,55 @@ theorem mul_log_strictAntiOn :
   have hpos : 0 < x := by simp_all [interior_Icc, mem_Ioo]
   grind [deriv_mul_log, Real.log_lt_iff_lt_exp hpos |>.mpr hgt]
 
-theorem log_div_self_antitoneOn : AntitoneOn (fun x : ℝ ↦ log x / x) <| .Ici (exp 1) := by
-  intro x hex y hey hxy
+theorem log_div_self_antitoneOn :
+    AntitoneOn (fun x : {x : ℝ // x ≠ 0} ↦ Checked.div (log x.1) x.1 x.2.isUnit)
+      {x | exp 1 ≤ x.1} := by
+  rintro ⟨x, hx0⟩ hex ⟨y, hy0⟩ hey hxy
+  change log y / y ≤ log x / x
   have x_pos : 0 < x := (exp_pos 1).trans_le hex
   have y_pos : 0 < y := (exp_pos 1).trans_le hey
   have hlogx : 1 ≤ log x := by rwa [le_log_iff_exp_le x_pos]
   have hyx : 0 ≤ y / x - 1 := by rwa [le_sub_iff_add_le, le_div_iff₀ x_pos, zero_add, one_mul]
   rw [div_le_iff₀ y_pos, ← sub_le_sub_iff_right (log x)]
   calc
-    log y - log x = log (y / x) := by rw [log_div y_pos.ne' x_pos.ne']
+    log y - log x = log (y / x) := by rw [log_div y_pos.ne']
     _ ≤ y / x - 1 := log_le_sub_one_of_pos (div_pos y_pos x_pos)
     _ ≤ log x * (y / x - 1) := le_mul_of_one_le_left hyx hlogx
-    _ = log x / x * y - log x := by ring
+    _ = log x / x * y - log x := by simp only [div_eq_mul_inv₀]; ring
 
 theorem log_div_self_rpow_antitoneOn {a : ℝ} (ha : 0 < a) :
-    AntitoneOn (fun x : ℝ ↦ log x / x ^ a) <| .Ici (exp a⁻¹) := by
-  intro x hex y _ hxy
-  simp only
+    AntitoneOn (fun x : {x : ℝ // x ≠ 0 ∧ x ^ a ≠ 0} ↦
+      Checked.div (log x.1) (x.1 ^ a) x.2.2.isUnit) {x | exp a⁻¹ ≤ x.1} := by
+  rintro ⟨x, hx0, hxpow⟩ hex ⟨y, hy0, hypow⟩ _ hxy
+  change log y / y ^ a ≤ log x / x ^ a
   have x_pos : 0 < x := lt_of_lt_of_le (exp_pos a⁻¹) (le_of_le_of_eq hex rfl)
-  have y_pos : 0 < y := by linarith
+  change x ≤ y at hxy
+  have y_pos : 0 < y := x_pos.trans_le hxy
   nth_rw 1 [← rpow_one y, ← rpow_one x]
-  rw [← div_self (ne_of_lt ha).symm, div_eq_mul_one_div a a, rpow_mul y_pos.le, rpow_mul x_pos.le,
-    log_rpow (rpow_pos_of_pos y_pos a), log_rpow (rpow_pos_of_pos x_pos a), mul_div_assoc,
-    mul_div_assoc, mul_le_mul_iff_right₀ (one_div_pos.mpr ha)]
+  rw [← div_self (a := a) (ha := ha.ne'.isUnit), div_eq_mul_one_div₀ a a,
+    rpow_mul y_pos.le, rpow_mul x_pos.le,
+    log_rpow (rpow_pos_of_pos y_pos a), log_rpow (rpow_pos_of_pos x_pos a), mul_div_assoc₀,
+    mul_div_assoc₀, mul_le_mul_iff_right₀ (one_div_pos.mpr ha)]
   have hbound {z : ℝ} (hz : z ∈ Ici (rexp a⁻¹)) : z ^ a ∈ {b | rexp 1 ≤ b} := by
     rw [mem_ofPred_eq]
     convert! rpow_le_rpow _ hz (le_of_lt ha) using 1
-    · simp only [← exp_mul, Real.exp_eq_exp, field]
+    · simp only [← exp_mul, inv_mul_cancel₀]
     positivity
-  refine log_div_self_antitoneOn (hbound hex) (hbound (hex.trans hxy)) ?_
+  refine log_div_self_antitoneOn
+    (a := ⟨(x : ℝ) ^ a, (rpow_pos_of_pos x_pos a).ne'⟩)
+    (b := ⟨(y : ℝ) ^ a, (rpow_pos_of_pos y_pos a).ne'⟩)
+    (hbound hex) (hbound (hex.trans hxy)) ?_
   gcongr
 
-theorem log_div_sqrt_antitoneOn : AntitoneOn (fun x : ℝ ↦ log x / √x) <| .Ici (exp 2) := by
-  simp_rw [sqrt_eq_rpow]
-  convert! log_div_self_rpow_antitoneOn one_half_pos
-  norm_num
+theorem log_div_sqrt_antitoneOn :
+    AntitoneOn (fun x : {x : ℝ // 0 < x} ↦
+      Checked.div (log x.1) (√x.1) (sqrt_pos.mpr x.2).ne'.isUnit) {x | exp 2 ≤ x.1} := by
+  intro x hx y hy hxy
+  have hx' : (x.1 : ℝ) ^ (1 / 2 : ℝ) ≠ 0 := (rpow_pos_of_pos x.2 _).ne'
+  have hy' : (y.1 : ℝ) ^ (1 / 2 : ℝ) ≠ 0 := (rpow_pos_of_pos y.2 _).ne'
+  have H := log_div_self_rpow_antitoneOn (a := (1 / 2 : ℝ)) one_half_pos
+  have h := H (a := ⟨x.1, x.2.ne', hx'⟩) (b := ⟨y.1, y.2.ne', hy'⟩)
+    (by simpa using hx) (by simpa using hy) hxy
+  simpa only [sqrt_eq_rpow] using h
 
 end Real

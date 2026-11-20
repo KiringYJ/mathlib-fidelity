@@ -106,8 +106,8 @@ lemma normal : Normal K L := by
     simp_rw [← IsScalarTower.algebraMap_eq]
   replace h_eval : ((q.map (algebraMap A (A ⧸ P))).map (algebraMap (A ⧸ P) K)).aeval d = 0 := by
     simp_rw [q, map_comp, Polynomial.map_mul, map_C, map_X, aeval_comp, aeval_mul, aeval_C, aeval_X,
-      ← RingHom.comp_apply, ← RingHom.comp_assoc, comm₁, RingHom.comp_apply, d, mul_div, ← map_mul]
-    rw [← Algebra.smul_def, h, map_mul, mul_div_cancel_left₀ _ (by simpa using hy),
+      ← RingHom.comp_apply, ← RingHom.comp_assoc, comm₁, RingHom.comp_apply, d, mul_div₀, ← map_mul]
+    rw [← Algebra.smul_def, h, map_mul, mul_div_cancel_left₀,
       aeval_map_algebraMap, aeval_algebraMap_apply, aeval_map_algebraMap, aeval_algebraMap_apply,
       h_eval, map_zero, map_zero]
   replace h_splits : (p.map (algebraMap A B)).Splits := by

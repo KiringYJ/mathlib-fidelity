@@ -661,13 +661,13 @@ section StateReversionBug
 @[fun_prop] theorem div_Con' [Zero β] [Div β] (f g : α → β) (hf : Con f) (hg : Con g)
     (h : ∀ x, g x ≠ 0) : Con (fun x => f x / g x) := silentSorry
 
-example (f g : α → Rat) (hf : Con f) (hg : Con g) (h : ∀ x, 0 < g x) :
+example (f g : α → Int) (hf : Con f) (hg : Con g) (h : ∀ x, 0 < g x) :
     Con (fun x => f x / g x) := by
   fun_prop (disch := grind)
 
 -- In case the behaviour of `grind` changes, here's a more explicit test.
 open Lean Elab Tactic Meta in
-example (f g : α → Rat) (hf : Con f) (hg : Con g) (h : ∀ x, 0 < g x) :
+example (f g : α → Int) (hf : Con f) (hg : Con g) (h : ∀ x, 0 < g x) :
     Con (fun x => f x / g x) := by
   have : ∀ x, g x ≠ 0 := by grind
   fun_prop (disch := run_tac

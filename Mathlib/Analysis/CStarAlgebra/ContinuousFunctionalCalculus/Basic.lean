@@ -279,8 +279,9 @@ lemma SpectrumRestricts.smul_of_nonneg {A : Type*} [Ring A] [Algebra ℝ A] {a :
     exact hx.symm.le
   · lift r to ℝˣ using IsUnit.mk0 r hr'
     rw [← Units.smul_def, spectrum.unit_smul_eq_smul, Set.mem_smul_set_iff_inv_smul_mem] at hx
-    refine le_of_smul_le_smul_left ?_ (inv_pos.mpr <| lt_of_le_of_ne hr <| ne_comm.mpr hr')
-    simpa [Units.smul_def] using ha _ hx
+    calc
+      0 ≤ (r : ℝ) • ((r⁻¹ : ℝˣ) • x) := smul_nonneg hr (ha _ hx)
+      _ = x := by rw [← Units.smul_def, smul_inv_smul]
 
 /-- The `ℝ`-spectrum of an element of the form `star b * b` in a C⋆-algebra is nonnegative.
 

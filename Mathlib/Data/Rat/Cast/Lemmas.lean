@@ -10,7 +10,7 @@ public import Mathlib.Data.Rat.Cast.CharZero
 public import Mathlib.Tactic.Positivity.Basic
 
 /-!
-# Characteristic-zero rational cast lemmas
+# Rational evaluation and characteristic-zero cast lemmas
 -/
 
 public section
@@ -46,6 +46,33 @@ theorem cast_ofScientific {K : Type*} [DivisionRing K] [CharZero K] (m : ℕ) (s
 end Rat
 
 namespace NNRat
+
+/-- Evaluation preserves a quotient when its operands can be evaluated and the evaluated divisor
+is nonzero. -/
+theorem eval_div {α : Type*} [DivisionSemiring α] (a b : ℚ≥0) {hb : IsUnit b}
+    (ha : (a.den : α) ≠ 0) (hd : (b.den : α) ≠ 0) (hv : eval b hd ≠ 0) :
+    eval (a / b) (by
+      rw [div_eq_mul_inv₀]
+      apply mul_den_ne_zero _ _ ha
+      rw [den_inv_of_ne_zero, ← eval_mul_den b hd]
+      exact mul_ne_zero hv hd) = eval a ha / eval b hd := by
+  apply eq_div_of_mul_eq
+  calc
+    _ = eval ((a / b) * b) (by simpa only [div_mul_cancel₀] using ha) :=
+      (eval_mul _ _ _ hd _).symm
+    _ = eval a ha := by simp only [div_mul_cancel₀]
+
+/-- Evaluate a natural fraction wherever its original denominator remains nonzero. -/
+theorem eval_divNat {α : Type*} [DivisionSemiring α] (n d : ℕ) (hd : (d : α) ≠ 0) :
+    eval (divNat n d (fun h => hd (h ▸ Nat.cast_zero)))
+      (Rat.normalize_den_ne_zero (R := α) n d (fun h => hd (h ▸ Nat.cast_zero)) hd) =
+      (n : α) / (d : α) := by
+  have hd' : d ≠ 0 := fun h => hd (h ▸ Nat.cast_zero)
+  have hunit : IsUnit (d : ℚ≥0) := (Nat.cast_ne_zero.mpr hd').isUnit
+  have h := eval_div (n : ℚ≥0) (d : ℚ≥0) (α := α) (hb := hunit) (by simp) (by simp)
+    (by simpa only [eval_natCast] using hd)
+  apply eq_div_of_mul_eq
+  simpa only [divNat_eq_div, eval_natCast] using eq_div_iff_mul_eq.mp h
 
 @[simp, norm_cast] theorem cast_pow {α : Type*} [DivisionSemiring α] [CharZero α]
     (q : ℚ≥0) (n : ℕ) : ((q^n : ℚ≥0) : α) = (q : α)^n :=

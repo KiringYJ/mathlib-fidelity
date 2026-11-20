@@ -7,19 +7,23 @@ module
 
 public import Mathlib.Analysis.Analytic.Composition
 public import Mathlib.Analysis.Analytic.Constructions
-public import Mathlib.Analysis.Complex.CauchyIntegral
+public import Mathlib.Analysis.Calculus.Deriv.ZPow
+public import Mathlib.Analysis.Calculus.IteratedDeriv.ConvergenceOnBall
 public import Mathlib.Analysis.SpecialFunctions.Complex.LogDeriv
+public import Mathlib.Analysis.SpecialFunctions.ExpDeriv
+public import Mathlib.Analysis.SpecialFunctions.Pow.Complex
 
 /-!
 # Various complex special functions are analytic
 
-`log`, and `cpow` are analytic, since they are differentiable.
+`log` is analytic on its slit plane by the analytic inverse theorem for `exp`.
+The corresponding `cpow` is analytic there by composition.
 -/
 
 public section
 
-open Complex Set
-open scoped Topology
+open Complex Filter Set
+open scoped Topology Nat
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E]
   {f g : E → ℂ} {z : ℂ} {x : E} {s : Set E}
@@ -27,10 +31,14 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E]
 /-- `log` is analytic away from nonpositive reals -/
 @[fun_prop]
 theorem analyticAt_clog (m : z ∈ slitPlane) : AnalyticAt ℂ log z := by
-  rw [analyticAt_iff_eventually_differentiableAt]
-  filter_upwards [isOpen_slitPlane.eventually_mem m]
-  intro z m
-  exact differentiableAt_id.clog m
+  let u := (Complex.exp_ne_zero (log z)).isUnit.unit
+  apply Complex.expOpenPartialHomeomorph.analyticAt_symm
+    (i := ContinuousLinearEquiv.unitsEquivAut ℂ u) m analyticAt_cexp
+  change fderiv ℂ Complex.exp (log z) = _
+  rw [(Complex.hasDerivAt_exp (log z)).hasFDerivAt.fderiv]
+  ext
+  simp only [ContinuousLinearEquiv.coe_coe, ContinuousLinearEquiv.unitsEquivAut_apply,
+    ContinuousLinearMap.toSpanSingleton_apply, smul_eq_mul, u, IsUnit.unit_spec]
 
 /-- `log` is analytic away from nonpositive reals -/
 @[fun_prop]
@@ -156,50 +164,93 @@ lemma AnalyticOn.log (fs : AnalyticOn ℝ f s) (m : ∀ x ∈ s, 0 < f x) :
     AnalyticOn ℝ (fun z ↦ Real.log (f z)) s :=
   fun z n ↦ (analyticAt_log (m z n)).analyticWithinAt.comp (fs z n) m
 
-theorem iteratedDeriv_succ_log {n : ℕ} {x : ℂ} (hx : x ∈ slitPlane) :
-    iteratedDeriv (n + 1) log x = (-1 : ℂ) ^ n * n.factorial * x ^ (-(n : ℤ) - 1) := by
-  have h_eq : deriv log =ᶠ[𝓝 x] Inv.inv := by
-    filter_upwards [isOpen_slitPlane.mem_nhds hx] with y hy
-    simp [Complex.deriv_log hy]
-  rw [iteratedDeriv_succ', h_eq.iteratedDeriv_eq, iteratedDeriv_eq_iterate, iter_deriv_inv]
-  grind
+/-- The higher derivatives of the logarithm on its slit plane. -/
+theorem iteratedDeriv_succ_log {n : ℕ} (x : slitPlane) :
+    HasIteratedDerivAt (n + 1) (fun z : slitPlane ↦ log z)
+      ((-1 : ℂ) ^ n * n.factorial *
+        Checked.zpow (x : ℂ) (-(n : ℤ) - 1) (fun _ ↦ (slitPlane_ne_zero x.property).isUnit))
+      x Subtype.val := by
+  let u (z : slitPlane) : ℂˣ := (slitPlane_ne_zero z.property).isUnit.unit
+  let g (z : slitPlane) : ℂ := ↑((u z)⁻¹)
+  have hu : Continuous u := Units.isOpenEmbedding_val.isEmbedding.isInducing.continuous_iff.mpr
+    (by simpa only [u, Function.comp_def, IsUnit.unit_spec] using continuous_subtype_val)
+  have hder (z : slitPlane) : HasDerivAt (fun z : slitPlane ↦ log z) (g z) z Subtype.val := by
+    have hz : (z : ℂ) ≠ 0 := slitPlane_ne_zero z.property
+    have h : HasFDerivAt (fun z : slitPlane ↦ log z)
+        (ContinuousLinearMap.toSpanSingleton ℂ ((z : ℂ)⁻¹)) z Subtype.val :=
+      (Complex.hasDerivAt_log z.property).hasFDerivAt.comp_tendsto Subtype.val
+        (continuous_subtype_val.continuousAt.tendsto.prodMap (tendsto_pure_pure ..))
+    simpa only [g, u, Units.val_inv_eq_inv_val₀, IsUnit.unit_spec,
+      ContinuousLinearMap.toSpanSingleton_apply, one_smul]
+      using h.hasDerivAt
+  refine ⟨g, hder x, Or.inr (Eventually.of_forall hder), ?_⟩
+  have h := (hasIteratedDerivAt_inv n (u x)).comp_domain hu
+  have hn : -1 - (n : ℤ) = -(n : ℤ) - 1 := by omega
+  simpa only [g, u, Function.comp_def, IsUnit.unit_spec, hn,
+    ← IsUnit.zpow_eq_val_unit_zpow] using h
+
+/-- The degree-zero coefficient of the series for `log (1 + x)` is zero. The coefficient
+in degree `n + 1` is `(-1)^n / (n + 1)`. -/
+noncomputable def logSeriesCoefficient {𝕜 : Type*} [Field 𝕜] [CharZero 𝕜] (n : ℕ) : 𝕜 :=
+  match n with
+  | 0 => 0
+  | k + 1 => (-1) ^ k / (k + 1)
 
 theorem hasFPowerSeriesAt_clog_one :
-    HasFPowerSeriesAt log (.ofScalars ℂ (fun n ↦ -(-1 : ℂ) ^ n / n)) 1 := by
-  suffices ((FormalMultilinearSeries.ofScalars ℂ (fun n ↦ -(-1 : ℂ) ^ n / n)) =
-      FormalMultilinearSeries.ofScalars ℂ (fun n ↦ iteratedDeriv n log 1 / (n.factorial : ℂ))) by
-    convert! AnalyticAt.hasFPowerSeriesAt _ using 1 <;> try infer_instance
-    exact analyticAt_clog (by simp)
-  ext n
-  simp only [FormalMultilinearSeries.apply_eq_prod_smul_coeff, Finset.prod_const_one,
-    FormalMultilinearSeries.coeff_ofScalars, smul_eq_mul, one_mul]
-  obtain _ | n := n
-  · simp
-  simp [iteratedDeriv_succ_log one_mem_slitPlane, Nat.factorial_succ, pow_succ]
-  field_simp [show n.factorial ≠ 0 by positivity]
+    HasFPowerSeriesAt log (.ofScalars (𝕜 := ℂ) ℂ logSeriesCoefficient) 1 := by
+  obtain ⟨p, hp⟩ := analyticAt_clog one_mem_slitPlane
+  let x : slitPlane := ⟨1, one_mem_slitPlane⟩
+  have hpx := hp.comp_domain (g := Subtype.val) (x := x)
+  have hcoeff (n : ℕ) : p.coeff n = logSeriesCoefficient n := by
+    cases n with
+    | zero =>
+        exact (hp.coeff_zero (1 : Fin 0 → ℂ)).trans log_one
+    | succ n =>
+        have hj := hpx.hasIteratedDerivAt_coeff continuous_subtype_val (n + 1)
+        have h := hj.unique (iteratedDeriv_succ_log (n := n) x)
+          isOpen_slitPlane.isOpenEmbedding_subtypeVal
+        have hn : (n ! : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero n)
+        change p.coeff (n + 1) = (-1 : ℂ) ^ n / (n + 1)
+        apply eq_div_iff.mpr
+        apply mul_right_cancel₀ hn
+        simpa only [x, Subtype.coe_mk, one_zpow₀, mul_one, one_mul, ← Nat.cast_smul_eq_nsmul ℂ,
+          smul_eq_mul, Nat.factorial_succ, Nat.cast_mul, Nat.cast_add, Nat.cast_one,
+          mul_assoc, mul_comm, mul_left_comm] using h
+  have he : p = FormalMultilinearSeries.ofScalars ℂ logSeriesCoefficient := by
+    refine FormalMultilinearSeries.ext fun n ↦ ?_
+    rw [← ContinuousMultilinearMap.mkPiRing_apply_one_eq_self (p n),
+      ← ContinuousMultilinearMap.mkPiRing_apply_one_eq_self
+        (FormalMultilinearSeries.ofScalars ℂ logSeriesCoefficient n)]
+    have h := (hcoeff n).trans FormalMultilinearSeries.coeff_ofScalars.symm
+    exact congrArg (ContinuousMultilinearMap.mkPiRing ℂ (Fin n)) h
+  exact he ▸ hp
 
 theorem hasFPowerSeriesAt_clog_one_add :
-    HasFPowerSeriesAt (fun x ↦ log (1 + x)) (.ofScalars ℂ (fun n ↦ -(-1 : ℂ) ^ n / n)) 0 := by
+    HasFPowerSeriesAt (fun x ↦ log (1 + x)) (.ofScalars (𝕜 := ℂ) ℂ logSeriesCoefficient) 0 := by
   convert HasFPowerSeriesAt.comp_sub hasFPowerSeriesAt_clog_one (-1) using 3 <;> ring
 
+private lemma ofReal_logSeriesCoefficient (n : ℕ) :
+    (logSeriesCoefficient (𝕜 := ℝ) n : ℂ) = logSeriesCoefficient (𝕜 := ℂ) n := by
+  cases n <;> simp [logSeriesCoefficient, Complex.ofReal_div]
+
 theorem hasFPowerSeriesAt_log_one :
-    HasFPowerSeriesAt Real.log (.ofScalars ℝ (fun n ↦ -(-1 : ℝ) ^ n / n)) 1 := by
+    HasFPowerSeriesAt Real.log (.ofScalars (𝕜 := ℝ) ℝ logSeriesCoefficient) 1 := by
   obtain ⟨r, hp⟩ := hasFPowerSeriesAt_clog_one
-  have : HasFPowerSeriesOnBall log
-      ((FormalMultilinearSeries.ofScalars ℂ (fun n ↦ -(-1 : ℂ) ^ n / n)).restrictScalars ℝ)
+  have h : HasFPowerSeriesOnBall log
+      ((FormalMultilinearSeries.ofScalars (𝕜 := ℂ) ℂ logSeriesCoefficient).restrictScalars ℝ)
       (ofRealCLM 1) r := by
     simpa using hp.restrictScalars
-  convert ((reCLM.comp_hasFPowerSeriesOnBall this.compContinuousLinearMap).congr
+  convert ((reCLM.comp_hasFPowerSeriesOnBall h.compContinuousLinearMap).congr
     (fun x _ ↦ log_ofReal_re x)).hasFPowerSeriesAt
   ext n
   simp only [ContinuousLinearMap.compFormalMultilinearSeries_apply,
     ContinuousLinearMap.compContinuousMultilinearMap_coe, Function.comp_apply,
     FormalMultilinearSeries.compContinuousLinearMap_apply]
-  simp
-  norm_cast
+  simp [← ofReal_logSeriesCoefficient]
 
 theorem hasFPowerSeriesAt_log_one_add :
-    HasFPowerSeriesAt (fun x ↦ Real.log (1 + x)) (.ofScalars ℝ (fun n ↦ -(-1 : ℝ) ^ n / n)) 0 := by
+    HasFPowerSeriesAt (fun x ↦ Real.log (1 + x))
+      (.ofScalars (𝕜 := ℝ) ℝ logSeriesCoefficient) 0 := by
   convert HasFPowerSeriesAt.comp_sub hasFPowerSeriesAt_log_one (-1) using 3 <;> ring
 
 end Real

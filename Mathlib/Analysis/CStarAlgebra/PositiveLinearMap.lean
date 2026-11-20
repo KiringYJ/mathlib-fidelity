@@ -83,17 +83,20 @@ lemma exists_norm_apply_le (f : A₁ →ₚ[ℂ] A₂) : ∃ C : ℝ≥0, ∀ a,
     set x := Classical.choose (hcontra (2 ^ (2 * n)))
     have hx := (eq_zero_or_norm_pos x).resolve_left (fun hx ↦ by simp_all)
     refine ⟨‖x‖⁻¹ • x, smul_nonneg (by positivity) hx₁, ?_, ?_⟩
-    · simp [norm_smul, inv_mul_cancel₀ hx.ne']
+    · rw [norm_smul, Real.norm_of_nonneg (by positivity), inv_mul_cancel₀]
     · simpa [norm_smul] using (lt_inv_mul_iff₀' hx).mpr hx₂
   -- Let `x n` be a sequence of nonnegative elements such that `‖x n‖ = 1` and `‖f (x n)‖ ≥ 4 ^ n`.
   choose x hx using this
   simp only [forall_and] at hx
   obtain ⟨hx_nonneg, hx_norm, hx⟩ := hx
+  have hweight (n : ℕ) : (2 : ℝ) ^ (-(n : ℤ)) = (2 ^ n)⁻¹ :=
+    zpow_neg₀ (two_ne_zero : (2 : ℝ) ≠ 0) n
   -- `∑ n, 2 ^ (-n) • x n` converges
   have x_summable : Summable fun n : ℕ => (2 : ℝ) ^ (-(n : ℤ)) • x n := by
     refine Summable.of_norm ?_
-    have : (2 : ℝ)⁻¹ < 1 := by norm_num
-    simp [norm_smul, hx_norm, ← inv_pow, this]
+    have hgeom : Summable (fun n : ℕ ↦ (2 : ℝ)⁻¹ ^ n) :=
+      summable_geometric_of_lt_one (by positivity) (by norm_num)
+    simpa [norm_smul, hx_norm, hweight] using hgeom
   -- There is some `n` such that `‖f (∑' m, 2 ^ (-m) • x m)‖ < 2 ^ n`
   obtain ⟨n, hn⟩ : ∃ n : ℕ, ‖f (∑' (n : ℕ), (2 : ℝ) ^ (-(n : ℤ)) • x n)‖ < (2 : ℝ) ^ n :=
     tendsto_pow_atTop_atTop_of_one_lt one_lt_two |>.eventually_gt_atTop _
@@ -103,7 +106,8 @@ lemma exists_norm_apply_le (f : A₁ →ₚ[ℂ] A₂) : ∃ C : ℝ≥0, ∀ a,
   trans ‖f ((2 : ℝ) ^ (-n : ℤ) • x n)‖
   · have := hx n |>.le
     rw [pow_mul', sq] at this
-    simpa [norm_smul] using (le_inv_mul_iff₀ (show 0 < (2 : ℝ) ^ n by positivity)).mpr this
+    simpa [norm_smul, hweight] using
+      (le_inv_mul_iff₀ (show 0 < (2 : ℝ) ^ n by positivity)).mpr this
   · have (m : ℕ) : 0 ≤ ((2 : ℝ) ^ (-(m : ℤ)) • x m) := smul_nonneg (by positivity) (hx_nonneg m)
     refine CStarAlgebra.norm_le_norm_of_le_of_nonneg ?_ (f.map_nonneg (this n))
     gcongr

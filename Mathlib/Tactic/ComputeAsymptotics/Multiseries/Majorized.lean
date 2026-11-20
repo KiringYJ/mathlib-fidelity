@@ -51,13 +51,12 @@ theorem self (h : Tendsto f atTop atTop) :
   simp only [Majorized]
   intro exp' h_exp
   apply (isLittleO_iff_tendsto' _).mpr
-  · have : (fun t ↦ f t ^ exp / f t ^ exp') =ᶠ[atTop] fun t ↦ (f t) ^ (exp - exp') :=
-      (h.eventually_gt_atTop 0).mono (fun _ h ↦ by simp [← Real.rpow_sub h])
-    apply Tendsto.congr' this.symm
-    conv =>
-      arg 1
-      rw [show (fun t ↦ f t ^ (exp - exp')) = ((fun t ↦ t ^ (-(exp' - exp))) ∘ f) by ext; simp]
-    exact (tendsto_rpow_neg_atTop (by linarith)).comp h
+  · have hpow : Tendsto (fun t ↦ f t ^ (exp - exp')) atTop (𝓝 0) := by
+      rw [show exp - exp' = -(exp' - exp) by ring]
+      exact (tendsto_rpow_neg_atTop (sub_pos.mpr h_exp)).comp h
+    apply (hpow.comp tendsto_comap).congr'
+    filter_upwards [tendsto_comap.eventually (h.eventually_gt_atTop 0)] with t ht
+    exact Real.rpow_sub ht exp exp'
   · apply (Tendsto.eventually_gt_atTop h 0).mono
     intro t h1 h2
     absurd h2

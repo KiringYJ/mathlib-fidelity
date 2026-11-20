@@ -98,8 +98,8 @@ theorem valuation_coe (x : PadicAlgCl p) : ((Valued.v x : ℝ≥0) : ℝ) = ‖x
 theorem valuation_p (p : ℕ) [Fact p.Prime] : Valued.v (p : PadicAlgCl p) = 1 / (p : ℝ≥0) := by
   rw [← map_natCast (algebraMap ℚ_[p] (PadicAlgCl p))]
   ext
-  rw [valuation_coe, norm_extends, Padic.norm_p, one_div, NNReal.coe_inv,
-    NNReal.coe_natCast]
+  rw [valuation_coe, norm_extends, Padic.norm_p, one_div₀, NNReal.coe_inv]
+  simp only [NNReal.coe_natCast]
 
 open MonoidWithZeroHom.ValueGroup₀
 
@@ -111,9 +111,8 @@ instance : RankOne (PadicAlgCl.valued p).v where
   exists_val_nontrivial := by
     use p
     have hp : Nat.Prime p := hp.1
-    simp only [valuation_p, one_div, ne_eq, inv_eq_zero, Nat.cast_eq_zero, inv_eq_one,
-      Nat.cast_eq_one]
-    exact ⟨hp.ne_zero, hp.ne_one⟩
+    rw [valuation_p, one_div₀]
+    exact ⟨inv_ne_zero, by simpa only [ne_eq, inv_eq_one₀, Nat.cast_eq_one] using hp.ne_one⟩
 
 instance : UniformContinuousConstSMul ℚ_[p] (PadicAlgCl p) :=
   uniformContinuousConstSMul_of_continuousConstSMul ℚ_[p] (PadicAlgCl p)
@@ -173,9 +172,8 @@ instance : RankOne (PadicComplex.valued p).v where
   exists_val_nontrivial := by
     use p
     have hp : Nat.Prime p := hp.1
-    simp only [valuation_p, one_div, ne_eq, inv_eq_zero, Nat.cast_eq_zero, inv_eq_one,
-      Nat.cast_eq_one]
-    exact ⟨hp.ne_zero, hp.ne_one⟩
+    rw [valuation_p, one_div₀]
+    exact ⟨inv_ne_zero, by simpa only [ne_eq, inv_eq_one₀, Nat.cast_eq_one] using hp.ne_one⟩
 
 @[simp]
 theorem RankOne.hom_eq_embedding : RankOne.hom (PadicComplex.valued p).v = embedding := rfl

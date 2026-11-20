@@ -35,8 +35,8 @@ lemma oangle_self_orthogonalProjection (p : P) {p' : P} {s : AffineSubspace ℝ 
   have : Nonempty s := ⟨p', h⟩
   have hpne : p ≠ orthogonalProjection s p := Ne.symm (orthogonalProjection_eq_self_iff.not.2 hp)
   have ha := oangle_eq_angle_or_eq_neg_angle hpne hp'
-  rw [angle_self_orthogonalProjection p h] at ha
-  rwa [neg_div]
+  rw [angle_self_orthogonalProjection p h hp hp'] at ha
+  simpa only [neg_div₀, Real.Angle.coe_neg] using ha
 
 lemma oangle_orthogonalProjection_self (p : P) {p' : P} {s : AffineSubspace ℝ P}
     [s.direction.HasOrthogonalProjection] (hp : p ∉ s) (h : p' ∈ s)
@@ -44,8 +44,8 @@ lemma oangle_orthogonalProjection_self (p : P) {p' : P} {s : AffineSubspace ℝ 
     haveI : Nonempty s := ⟨p', h⟩
     ∡ p' (orthogonalProjection s p) p = (π / 2 : ℝ) ∨
       ∡ p' (orthogonalProjection s p) p = (-π / 2 : ℝ) := by
-  rw [oangle_rev, neg_eq_iff_eq_neg, neg_eq_iff_eq_neg, or_comm, ← Real.Angle.coe_neg, neg_div,
-    neg_neg, ← Real.Angle.coe_neg, ← neg_div]
+  rw [oangle_rev, neg_eq_iff_eq_neg, neg_eq_iff_eq_neg, or_comm, ← Real.Angle.coe_neg, neg_div₀,
+    neg_neg, ← Real.Angle.coe_neg, ← neg_div₀]
   exact oangle_self_orthogonalProjection p hp h hp'
 
 lemma two_zsmul_oangle_self_orthogonalProjection (p : P) {p' : P} {s : AffineSubspace ℝ P}

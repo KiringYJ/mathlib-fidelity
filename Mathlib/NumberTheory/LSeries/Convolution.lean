@@ -104,8 +104,11 @@ lemma term_convolution (f g : ℕ → ℂ) (s : ℂ) (n : ℕ) :
   rw [term_of_ne_zero hn, convolution_def, Finset.sum_div]
   refine Finset.sum_congr rfl fun p hp ↦ ?_
   have ⟨hp₁, hp₂⟩ := ne_zero_of_mem_divisorsAntidiagonal hp
-  rw [term_of_ne_zero hp₁, term_of_ne_zero hp₂, mul_comm_div, div_div, ← mul_div_assoc,
-    ← natCast_mul_natCast_cpow, ← cast_mul, mul_comm p.2, (mem_divisorsAntidiagonal.mp hp).1]
+  have hpow : (p.1 : ℂ) ^ s * (p.2 : ℂ) ^ s = (n : ℂ) ^ s := by
+    rw [← natCast_mul_natCast_cpow, ← cast_mul, (mem_divisorsAntidiagonal.mp hp).1]
+  rw [term_of_ne_zero hp₁, term_of_ne_zero hp₂, div_mul_div_comm₀]
+  apply (eq_div_iff).mpr
+  rw [hpow, div_mul_cancel₀]
 
 open Set in
 /-- We give an expression of the `LSeries.term` of the convolution of two functions

@@ -17,11 +17,9 @@ example : (a / b) * b = a := by
 
 example : a / b + c / b = (a + c) / b := by
   field_simp
-  simp [mul_add, mul_left_comm, mul_comm]
 
 example : (a / b) / c = a / (b * c) := by
   field_simp
 
 example (ha : a ≠ 0) : a ^ (-1 : Int) * a = 1 := by
   field_simp
-  simp [mul_comm]

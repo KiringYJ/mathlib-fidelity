@@ -32,7 +32,10 @@ lemma analyticAt_localInverse (hf : AnalyticAt 𝕜 f x) (hf' : deriv f x ≠ 0)
   refine R.hasFPowerSeriesAt_symm hx hf.hasFPowerSeriesAt (r := (i.symm : 𝕜 →L[𝕜] 𝕜)) ?_
     |>.analyticAt
   intro v
-  simp [i, hf']
+  have hmul : deriv f x * (↑(Units.mk0 (deriv f x) hf')⁻¹ : 𝕜) = 1 := by
+    simpa only [Units.val_mk0, Units.inv_eq_val_inv] using
+      (Units.mk0 (deriv f x _root_.id) hf').val_inv
+  simp [i, mul_assoc, hmul]
 
 end AnalyticAt
 

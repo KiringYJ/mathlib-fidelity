@@ -52,24 +52,53 @@ namespace EuclideanGeometry
 variable {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
 variable {P : Type*} [MetricSpace P] [NormedAddTorsor V P]
 
-/-- **Ptolemy’s Theorem**. -/
+/-- **Ptolemy's theorem** for cospherical points whose diagonals intersect strictly. -/
 theorem mul_dist_add_mul_dist_eq_mul_dist_of_cospherical {a b c d p : P}
-    (h : Cospherical ({a, b, c, d} : Set P)) (hapc : ∠ a p c = π) (hbpd : ∠ b p d = π) :
+    {hap : a ≠ p} {hbp : b ≠ p} {hcp : c ≠ p} {hdp : d ≠ p}
+    (h : Cospherical ({a, b, c, d} : Set P)) (hapc : angle a p c hap hcp = π)
+    (hbpd : angle b p d hbp hdp = π) :
     dist a b * dist c d + dist b c * dist d a = dist a c * dist b d := by
   have h' : Cospherical ({a, c, b, d} : Set P) := by rwa [Set.insert_comm c b {d}]
   have hmul := mul_dist_eq_mul_dist_of_cospherical_of_angle_eq_pi h' hapc hbpd
-  have hbp := left_dist_ne_zero_of_angle_eq_pi hbpd
+  have hbp' := dist_ne_zero.mpr hbp
   have h₁ : dist c d = dist c p / dist b p * dist a b := by
-    rw [dist_mul_of_eq_angle_of_dist_mul b p a c p d, dist_comm a b]
-    · rw [angle_eq_angle_of_angle_eq_pi_of_angle_eq_pi hbpd hapc, angle_comm]
-    all_goals simp [field, mul_comm, hmul]
+    rw [dist_comm a b]
+    apply dist_mul_of_eq_angle_of_dist_mul b p a c p d _ (hab₀ := hbp) (hcb₀ := hap)
+      (hab₀' := hcp) (hcb₀' := hdp)
+    · exact (angle_comm c p d).trans
+        (angle_eq_angle_of_angle_eq_pi_of_angle_eq_pi hbpd hapc).symm
+    · exact (div_mul_cancel₀ _).symm
+    · rw [div_mul_eq_mul_div₀, eq_div_iff]
+      simpa only [mul_comm] using hmul.symm
   have h₂ : dist d a = dist a p / dist b p * dist b c := by
-    rw [dist_mul_of_eq_angle_of_dist_mul c p b d p a, dist_comm c b]
-    · rwa [angle_comm, angle_eq_angle_of_angle_eq_pi_of_angle_eq_pi]; rwa [angle_comm]
-    all_goals simp [field, mul_comm, hmul]
-  have h₃ : dist d p = dist a p * dist c p / dist b p := by simp [field, hmul]
-  have h₄ : ∀ x y : ℝ, x * (y * x) = x * x * y := fun x y => by rw [mul_left_comm, mul_comm]
-  simp [field, h₁, h₂, dist_eq_add_dist_of_angle_eq_pi hbpd, h₃, dist_comm a b, h₄, ← sq,
-    dist_sq_mul_dist_add_dist_sq_mul_dist b, hapc]
+    rw [dist_comm b c]
+    apply dist_mul_of_eq_angle_of_dist_mul c p b d p a _ (hab₀ := hcp) (hcb₀ := hbp)
+      (hab₀' := hdp) (hcb₀' := hap)
+    · exact (angle_eq_angle_of_angle_eq_pi_of_angle_eq_pi hbpd
+        ((angle_comm c p a).trans hapc)).symm.trans (angle_comm b p c)
+    · rw [div_mul_eq_mul_div₀, eq_div_iff]
+      simpa only [mul_comm] using hmul.symm
+    · exact (div_mul_cancel₀ _).symm
+  have hs := dist_sq_mul_dist_add_dist_sq_mul_dist b a c p hapc
+  rw [dist_comm b a] at hs
+  rw [h₁, h₂, dist_eq_add_dist_of_angle_eq_pi hbpd]
+  simp only [div_mul_eq_mul_div₀, ← mul_div_assoc₀, ← add_div, div_eq_iff]
+  linear_combination hs + (dist a c) * hmul
+
+/-- Ptolemy's identity also holds when the diagonals meet at an endpoint. -/
+theorem mul_dist_add_mul_dist_eq_mul_dist_of_cospherical_of_wbtw {a b c d p : P}
+    (h : Cospherical ({a, b, c, d} : Set P)) (hapc : Wbtw ℝ a p c) (hbpd : Wbtw ℝ b p d) :
+    dist a b * dist c d + dist b c * dist d a = dist a c * dist b d := by
+  have h' : Cospherical ({a, c, b, d} : Set P) := by rwa [Set.insert_comm c b {d}]
+  have hm := mul_dist_eq_mul_dist_of_cospherical h' hapc.mem_affineSpan hbpd.mem_affineSpan
+  by_cases h₀ : a = p ∨ b = p ∨ c = p ∨ d = p
+  · rcases h₀ with rfl | rfl | rfl | rfl <;>
+      simp only [dist_self, zero_mul, mul_zero, zero_eq_mul, mul_eq_zero, dist_eq_zero] at hm <;>
+      rcases hm with e | e <;> subst_vars <;> simp [dist_comm, mul_comm]
+  push Not at h₀
+  obtain ⟨ha, hb, hc, hd⟩ := h₀
+  exact mul_dist_add_mul_dist_eq_mul_dist_of_cospherical h
+    (Sbtw.angle₁₂₃_eq_pi ⟨hapc, ha.symm, hc.symm⟩)
+    (Sbtw.angle₁₂₃_eq_pi ⟨hbpd, hb.symm, hd.symm⟩)
 
 end EuclideanGeometry

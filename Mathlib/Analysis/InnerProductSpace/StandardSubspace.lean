@@ -88,6 +88,8 @@ def _root_.Complex.UnitI : ℂˣ where
   val_inv := by simp
   inv_val := by simp
 
+private lemma coe_unitI_inv : (↑(UnitI⁻¹) : ℂ) = -I := rfl
+
 /-- The image of a closed submodule by the multiplication by `Complex.I`. -/
 noncomputable abbrev mulI (S : ClosedSubmodule ℝ H) := S.mapEquiv (scalarSMulCLE H UnitI)
 
@@ -102,7 +104,7 @@ lemma mem_iff (S : ClosedSubmodule ℝ H) {x : H} : x ∈ S ↔ x ∈ S.toSubmod
 lemma mem_symplComp_iff {x : H} {S : ClosedSubmodule ℝ H} :
     x ∈ S.symplComp ↔ ∀ y ∈ S, ⟪y, x⟫.im = 0 := by
   simp only [mem_orthogonal, mem_mapEquiv_iff, scalarSMulCLE_symm_apply, Units.smul_def,
-    Units.val_inv_eq_inv_val, val_UnitI, inv_I, neg_smul]
+    coe_unitI_inv, neg_smul]
   constructor
   · intro h y hy
     have hiy := h (I • y)
@@ -115,7 +117,7 @@ lemma mem_symplComp_iff {x : H} {S : ClosedSubmodule ℝ H} :
 lemma mulI_orthogonal_eq_symplComp (S : ClosedSubmodule ℝ H) : Sᗮ.mulI = S.symplComp := by
   ext x
   rw [← mem_iff, ← mem_iff, mem_symplComp_iff, mem_mapEquiv_iff, scalarSMulCLE_symm_apply,
-    Units.inv_mk, Units.smul_mk_apply]
+    Units.smul_def, coe_unitI_inv]
   simp [inner_real_eq_re_inner]
 
 
@@ -134,10 +136,10 @@ lemma mulI_mulI_eq (S : ClosedSubmodule ℝ H) : S.mulI.mulI = S := by
   constructor
   · intro h
     rw [mem_mapEquiv_iff (scalarSMulCLE H UnitI), ← SetLike.forall_smul_mem_iff] at h
-    simpa [← smul_assoc, Units.smul_def] using (h (-1 : ℝ))
+    simpa [← smul_assoc, Units.smul_def, coe_unitI_inv] using (h (-1 : ℝ))
   · intro h
     rw [← SetLike.forall_smul_mem_iff] at h
-    simpa [← smul_assoc, Units.smul_def] using (h (-1 : ℝ))
+    simpa [← smul_assoc, Units.smul_def, coe_unitI_inv] using (h (-1 : ℝ))
 
 lemma involutive_mulI :
     Function.Involutive (mulI : ClosedSubmodule ℝ H → ClosedSubmodule ℝ H) := mulI_mulI_eq

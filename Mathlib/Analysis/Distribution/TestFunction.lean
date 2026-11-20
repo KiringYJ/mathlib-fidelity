@@ -502,7 +502,7 @@ its derivative as an element of `𝓓^{k}(Ω, E →L[ℝ] F)`. It is defined whe
 noncomputable def fderivCLM (hk : k + 1 ≤ n := by regularity_le) :
     𝓓^{n}(Ω, F) →L[𝕜] 𝓓^{k}(Ω, E →L[ℝ] F) :=
   letI Φ (f : 𝓓^{n}(Ω, F)) : 𝓓^{k}(Ω, E →L[ℝ] F) :=
-    ⟨fderiv ℝ f, f.contDiff.fderiv_right (mod_cast hk),
+    ⟨fun x ↦ fderiv ℝ f x id, f.contDiff.fderiv_right (mod_cast hk),
       f.hasCompactSupport.fderiv ℝ, tsupport_fderiv_subset ℝ |>.trans f.tsupport_subset⟩
   TestFunction.limitCLM 𝕜 Φ
     (fun _ K_sub_Ω ↦ ofSupportedInCLM 𝕜 K_sub_Ω ∘L ContDiffMapSupportedIn.fderivCLM 𝕜 n k hk)
@@ -510,7 +510,7 @@ noncomputable def fderivCLM (hk : k + 1 ≤ n := by regularity_le) :
 
 @[simp]
 lemma fderivCLM_apply (hk : k + 1 ≤ n) (f : 𝓓^{n}(Ω, F)) :
-    fderivCLM 𝕜 n k hk f = fderiv ℝ f :=
+    (fderivCLM 𝕜 n k hk f : E → E →L[ℝ] F) = fun x ↦ fderiv ℝ f x id :=
   rfl
 
 variable (𝕜) in

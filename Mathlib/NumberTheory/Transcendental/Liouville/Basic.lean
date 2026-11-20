@@ -34,7 +34,7 @@ Liouville numbers.
 In the implementation, the condition `x ≠ a/b` replaces the traditional equivalent `0 < |x - a/b|`.
 -/
 def Liouville (x : ℝ) :=
-  ∀ n : ℕ, ∃ a b : ℤ, 1 < b ∧ x ≠ a / b ∧ |x - a / b| < 1 / (b : ℝ) ^ n
+  ∀ n : ℕ, ∃ (a b : ℤ) (_ : 1 < b), x ≠ a / b ∧ |x - a / b| < 1 / (b : ℝ) ^ n
 
 namespace Liouville
 
@@ -52,12 +52,13 @@ protected theorem irrational {x : ℝ} (h : Liouville x) : Irrational x := by
   have bq0 : (0 : ℝ) < b * q := mul_pos (Nat.cast_pos.mpr bN0.bot_lt) qR0
   -- At a1, clear denominators...
   replace a1 : |a * q - b * p| * q ^ (b + 1) < b * q := by
-    rw [div_sub_div _ _ b0 qR0.ne', abs_div, div_lt_div_iff₀ (abs_pos.mpr bq0.ne') (pow_pos qR0 _),
+    rw [div_sub_div _ _ (hb := b0.isUnit) (hd := qR0.ne'.isUnit),
+      abs_div, div_lt_div_iff₀ (abs_pos.mpr bq0.ne') (pow_pos qR0 _),
       abs_of_pos bq0, one_mul] at a1
     exact mod_cast a1
   -- At a0, clear denominators...
   replace a0 : a * q - ↑b * p ≠ 0 := by
-    rw [Ne, div_eq_div_iff b0 qR0.ne', mul_comm (p : ℝ), ← sub_eq_zero] at a0
+    rw [Ne, div_eq_div_iff, mul_comm (p : ℝ), ← sub_eq_zero] at a0
     exact mod_cast a0
   -- Actually, `q` is a natural number
   lift q to ℕ using (zero_lt_one.trans q1).le
@@ -163,16 +164,19 @@ theorem exists_pos_real_of_irrational_root {α : ℝ} (ha : Irrational α) {f : 
   -- 3: the weird inequality of Liouville type with powers of the denominators.
   · change 1 ≤ (a + 1 : ℝ) ^ f.natDegree * |eval α fR - eval ((z : ℝ) / (a + 1)) fR|
     rw [fa, zero_sub, abs_neg]
-    rw [show (a + 1 : ℝ) = ((a + 1 : ℕ) : ℤ) by norm_cast] at hq ⊢
     -- key observation: the right-hand side of the inequality is an *integer*.  Therefore,
     -- if its absolute value is not at least one, then it vanishes.  Proceed by contradiction
+    suffices h : 1 ≤ ((↑(a + 1 : ℕ) : ℤ) : ℝ) ^ f.natDegree *
+        |eval ((z : ℝ) / ((↑(a + 1 : ℕ) : ℤ) : ℝ)) fR| by
+      simpa only [Int.cast_add, Int.cast_natCast, Int.cast_one, Nat.cast_succ] using h
     refine one_le_pow_mul_abs_eval_div (Int.natCast_succ_pos a) fun hy => ?_
     -- As the evaluation of the polynomial vanishes, we found a root of `fR` that is rational.
     -- We know that `α` is the only root of `fR` in our interval, and `α` is irrational:
     -- follow your nose.
     refine ha.ne_rational z (a + 1) (by omega) (mem_singleton_iff.mp ?_).symm
     refine U.subset ?_
-    refine ⟨hq, Finset.mem_coe.mp (Multiset.mem_toFinset.mpr ?_)⟩
+    refine ⟨?_, Finset.mem_coe.mp (Multiset.mem_toFinset.mpr ?_)⟩
+    · simpa only [Int.cast_add, Int.cast_natCast, Int.cast_one] using hq
     exact (mem_roots fR0).mpr (IsRoot.def.mpr hy)
 
 /-- **Liouville's Theorem** -/
@@ -191,9 +195,7 @@ protected theorem transcendental {x : ℝ} (lx : Liouville x) : Transcendental �
   -- Since the real numbers are Archimedean, a power of `2` exceeds `A`: `hn : A < 2 ^ r`.
   rcases pow_unbounded_of_one_lt A (lt_add_one 1) with ⟨r, hn⟩
   -- Use the Liouville property, with exponent `r + deg f`.
-  obtain ⟨a, b, b1, -, a1⟩ : ∃ a b : ℤ, 1 < b ∧ x ≠ a / b ∧
-      |x - a / b| < 1 / (b : ℝ) ^ (r + f.natDegree) :=
-    lx (r + f.natDegree)
+  obtain ⟨a, b, b1, -, a1⟩ := lx (r + f.natDegree)
   have b0 : (0 : ℝ) < b := zero_lt_one.trans (by rw [← Int.cast_one]; exact Int.cast_lt.mpr b1)
   -- Prove that `b ^ f.nat_degree * abs (x - a / b)` is strictly smaller than itself
   -- recall, this is a proof by contradiction!
@@ -213,9 +215,9 @@ protected theorem transcendental {x : ℝ} (lx : Liouville x) : Transcendental �
   -- this branch of the proof exploits the "integrality" of evaluations of polynomials
   -- at ratios of integers.
   · lift b to ℕ using zero_le_one.trans b1.le
-    specialize h a b.pred
-    rwa [← Nat.cast_succ, Nat.succ_pred_eq_of_pos (zero_lt_one.trans _), ← mul_assoc, ←
-      div_le_iff₀ hA] at h
-    exact Int.ofNat_lt.mp b1
+    have hb : 0 < b := zero_lt_one.trans (Int.ofNat_lt.mp b1)
+    apply (div_le_iff₀ hA).mpr
+    simpa only [← Nat.cast_succ, Nat.succ_pred_eq_of_pos hb, Int.cast_natCast, mul_assoc]
+      using h a b.pred
 
 end Liouville

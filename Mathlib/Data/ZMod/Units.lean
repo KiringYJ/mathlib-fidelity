@@ -114,44 +114,35 @@ lemma eq_unit_mul_divisor {N : ℕ} (a : ZMod N) :
   simp only [hN₀, Nat.mul_mod_mul_left, Nat.mul_right_inj hd]
   rw [← Nat.ModEq, ← natCast_eq_natCast_iff, ← hu, natCast_val, castHom_apply]
 
-theorem coe_int_mul_inv_eq_one {n : ℕ} {x : ℤ} (h : IsCoprime x n) :
-    (x : ZMod n) * (x : ZMod n)⁻¹ = 1 := by
-  by_cases hn : n = 0
-  · simp only [hn, Nat.cast_zero, isCoprime_zero_right] at h
-    rcases Int.isUnit_eq_one_or h with h | h <;> simp [h]
-  have : NeZero n := ⟨hn⟩
-  rw [← natCast_zmod_val x]
-  apply coe_mul_inv_eq_one
-  rwa [Int.isCoprime_iff_gcd_eq_one, ← Int.gcd_emod, ← val_intCast] at h
-
-theorem coe_int_inv_mul_eq_one {n : ℕ} {x : ℤ} (h : IsCoprime x n) :
-    (x : ZMod n)⁻¹ * (x : ZMod n) = 1 := by
-  rw [mul_comm, coe_int_mul_inv_eq_one h]
-
-lemma coe_int_mul_val_inv {n : ℕ} [NeZero n] {m : ℤ} (h : IsCoprime m n) :
-    (m * (m⁻¹ : ZMod n).val : ZMod n) = 1 := by
-  rw [natCast_zmod_val, coe_int_mul_inv_eq_one h]
-
-lemma coe_int_val_inv_mul {n : ℕ} [NeZero n] {m : ℤ} (h : IsCoprime m n) :
-    ((m⁻¹ : ZMod n).val : ZMod n) * m = 1 := by
-  rw [mul_comm, coe_int_mul_val_inv h]
-
-/-- The unit of `ZMod m` associated with an integer prime to `n`. -/
-def unitOfIsCoprime {m : ℕ} (n : ℤ)
-    (h : IsCoprime n (m : ℤ)) : (ZMod m)ˣ where
-  val := n
-  inv := n⁻¹
-  val_inv := coe_int_mul_inv_eq_one h
-  inv_val := coe_int_inv_mul_eq_one h
+/-- The unit of `ZMod m` associated with an integer coprime to `m`. Its inverse is the first
+integer Bézout coefficient, including when `m = 0`. -/
+def unitOfIsCoprime {m : ℕ} (n : ℤ) (h : IsCoprime n (m : ℤ)) : (ZMod m)ˣ :=
+  let inv : ZMod m := Int.gcdA n m
+  have hi : (n : ZMod m) * inv = 1 := by
+    have hz := congrArg (fun z : ℤ ↦ (z : ZMod m)) (Int.gcd_eq_gcd_ab n m)
+    simpa only [Int.cast_add, Int.cast_mul, Int.cast_natCast, Int.isCoprime_iff_gcd_eq_one.mp h,
+      Int.cast_one, Nat.cast_one, natCast_self, zero_mul, add_zero] using hz.symm
+  ⟨n, inv, hi, (mul_comm ..).trans hi⟩
 
 @[simp]
 theorem coe_unitOfIsCoprime {m : ℕ} (n : ℤ) (h : IsCoprime n ↑m) :
     (unitOfIsCoprime n h : ZMod m) = n := rfl
 
-theorem isUnit_inv {m : ℕ} {n : ℤ} (h : IsUnit (n : ZMod m)) :
-    IsUnit (n : ZMod m)⁻¹ := by
-  rw [isUnit_iff_exists]
-  exact ⟨n, inv_mul_of_unit _ h, mul_inv_of_unit _ h⟩
+theorem coe_int_mul_inv_eq_one {n : ℕ} {x : ℤ} (h : IsCoprime x n) :
+    (x : ZMod n) * ↑(unitOfIsCoprime x h)⁻¹ = 1 :=
+  (unitOfIsCoprime x h).val_inv
+
+theorem coe_int_inv_mul_eq_one {n : ℕ} {x : ℤ} (h : IsCoprime x n) :
+    (↑(unitOfIsCoprime x h)⁻¹ : ZMod n) * x = 1 :=
+  (unitOfIsCoprime x h).inv_val
+
+lemma coe_int_mul_val_inv {n : ℕ} [NeZero n] {m : ℤ} (h : IsCoprime m n) :
+    (m * (↑(unitOfIsCoprime m h)⁻¹ : ZMod n).val : ZMod n) = 1 := by
+  rw [natCast_zmod_val, coe_int_mul_inv_eq_one]
+
+lemma coe_int_val_inv_mul {n : ℕ} [NeZero n] {m : ℤ} (h : IsCoprime m n) :
+    ((↑(unitOfIsCoprime m h)⁻¹ : ZMod n).val * m : ZMod n) = 1 := by
+  rw [natCast_zmod_val, coe_int_inv_mul_eq_one]
 
 theorem coe_int_isUnit_iff_isCoprime (n : ℤ) (m : ℕ) :
     IsUnit (n : ZMod m) ↔ IsCoprime (m : ℤ) n := by

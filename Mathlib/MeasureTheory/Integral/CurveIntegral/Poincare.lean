@@ -193,11 +193,13 @@ private theorem curveIntegral_add_curveIntegral_eq_of_hasFDerivWithinAt_off_coun
   set f' : ℝ × ℝ → ℝ × ℝ →L[ℝ] F := fun a ↦ ContinuousLinearMap.apply ℝ F (0, 1) ∘L dη a
   have hf' : ∀ a ∈ U \ s', HasFDerivAt f (f' a) a := by
     intro a ha
-    exact (ContinuousLinearMap.apply ℝ F (0, 1)).hasFDerivAt.comp a (hdη a ha)
+    exact (ContinuousLinearMap.apply ℝ F ((0, 1) : ℝ × ℝ)).hasFDerivAt.comp
+      (f := η) (coord := id) (coord' := id) a (hdη a ha)
   set g' : ℝ × ℝ → ℝ × ℝ →L[ℝ] F := fun a ↦ -(ContinuousLinearMap.apply ℝ F (1, 0) ∘L dη a)
   have hg' : ∀ a ∈ U \ s', HasFDerivAt g (g' a) a := by
     intro a ha
-    exact (ContinuousLinearMap.apply ℝ F (1, 0)).hasFDerivAt.comp a (hdη a ha) |>.neg
+    exact (ContinuousLinearMap.apply ℝ F ((1, 0) : ℝ × ℝ)).hasFDerivAt.comp
+      (f := η) (coord := id) (coord' := id) a (hdη a ha) |>.neg
   -- Note that the divergence of `(f, g)` is a.e. zero.
   have hf'g' : (fun a ↦ f' a (1, 0) + g' a (0, 1)) =ᵐ[volume.restrict (Icc 0 1)] 0 := by
     rw [Icc_prod_eq, Measure.volume_eq_productBySections,
@@ -277,7 +279,7 @@ theorem curveIntegral_add_curveIntegral_eq_of_diffContOnCl
     (hφt : ∀ a ∈ Ioo 0 1, ∀ b ∈ Ioo 0 1, φ (a, b) ∈ t)
     (hω : DiffContOnCl ℝ ω t)
     (hdω_symm : ∀ x ∈ t, ∀ u ∈ tangentConeAt ℝ t x, ∀ v ∈ tangentConeAt ℝ t x,
-      fderivWithin ℝ ω t x u v = fderivWithin ℝ ω t x v u)
+      fderivWithin ℝ ω t x id u v = fderivWithin ℝ ω t x id v u)
     (hcontdiff : ContDiffOn ℝ 2
       (fun xy : ℝ × ℝ ↦ Set.IccExtend zero_le_one (φ.extend xy.1) xy.2) (Icc 0 1)) :
     ∫ᶜ x in γ₁, ω x + ∫ᶜ x in φ.evalAt 1, ω x = ∫ᶜ x in γ₂, ω x + ∫ᶜ x in φ.evalAt 0, ω x :=
@@ -369,7 +371,7 @@ a version stated in terms of `fderivWithin`. -/
 theorem exists_forall_hasFDerivWithinAt_of_fderivWithin_symmetric
     (hs : Convex ℝ s) (hω : DifferentiableOn ℝ ω s)
     (hdω : ∀ a ∈ s, ∀ x ∈ tangentConeAt ℝ s a, ∀ y ∈ tangentConeAt ℝ s a,
-      fderivWithin ℝ ω s a x y = fderivWithin ℝ ω s a y x) :
+      fderivWithin ℝ ω s a id x y = fderivWithin ℝ ω s a id y x) :
     ∃ f, ∀ a ∈ s, HasFDerivWithinAt f (ω a) s a :=
   hs.exists_forall_hasFDerivWithinAt_of_hasFDerivWithinAt_symmetric
     (fun a ha ↦ (hω a ha).hasFDerivWithinAt) hdω
@@ -377,7 +379,8 @@ theorem exists_forall_hasFDerivWithinAt_of_fderivWithin_symmetric
 /-- If `ω` is a closed `1`-form on an open convex set `s`, then it admits a primitive,
 a version stated in terms of `fderiv`. -/
 theorem exists_forall_hasFDerivAt_of_fderiv_symmetric (hs : Convex ℝ s) (hso : IsOpen s)
-    (hω : DifferentiableOn ℝ ω s) (hdω : ∀ a ∈ s, ∀ x y, fderiv ℝ ω a x y = fderiv ℝ ω a y x) :
+    (hω : DifferentiableOn ℝ ω s)
+    (hdω : ∀ a ∈ s, ∀ x y, fderiv ℝ ω a id x y = fderiv ℝ ω a id y x) :
     ∃ f, ∀ a ∈ s, HasFDerivAt f (ω a) a := by
   obtain ⟨f, hf⟩ : ∃ f, ∀ a ∈ s, HasFDerivWithinAt f (ω a) s a := by
     refine hs.exists_forall_hasFDerivWithinAt_of_fderivWithin_symmetric hω fun a ha x _ y _ ↦ ?_

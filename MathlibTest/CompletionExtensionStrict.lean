@@ -16,8 +16,8 @@ the extension of a map that is not uniformly continuous, a constant, is removed.
 addition, subtraction, and multiplication of a completion exist exactly for Cauchy continuous
 operations, in particular for a uniform additive group and a topological ring, possibly
 non-unital, with a uniform additive group; the scalar action exists for a uniformly continuous
-action, the norm for a seminormed group, and the inverse for a completable field whose inversion is
-continuous away from zero.
+action, and the norm for a seminormed group. A completable topological field with a uniform
+additive group has a field completion, with inversion on its invertible elements.
 -/
 
 open UniformSpace
@@ -411,50 +411,61 @@ example {α : Type*} [Ring α] [UniformSpace α] [IsUniformAddGroup α] (x y : C
 
 noncomputable example {A : Type*} [SeminormedRing A] (x y : Completion A) : Completion A := x * y
 
-/-! The completion of a completable field whose inversion is continuous away from zero carries the
-extended inverse; without these hypotheses, the completion has no inverse. -/
+/-! Inversion in the completion extends inversion of invertible elements in the original field. -/
 
-example {K : Type*} [Field K] [UniformSpace K] [ContinuousInv₀ K] [CompletableTopField K]
-    (x : K) : (x : Completion K)⁻¹ = ((x⁻¹ : K) : Completion K) :=
+example {K : Type*} [Field K] [UniformSpace K] [IsTopologicalRing K] [IsUniformAddGroup K]
+    [CompletableTopField K] (x : K) (hx : IsUnit x) :
+    Checked.inv (x : Completion K) (hx.map Completion.coeRingHom) =
+      ((Checked.inv x hx : K) : Completion K) :=
   Completion.coe_inv x
 
-example {K : Type*} [Field K] [UniformSpace K] [ContinuousInv₀ K] [CompletableTopField K]
-    {x : Completion K} (hx : x ≠ 0) : ContinuousAt (fun y : Completion K ↦ y⁻¹) x :=
-  continuousAt_inv₀ hx
+example {K : Type*} [Field K] [UniformSpace K] [IsTopologicalRing K] [IsUniformAddGroup K]
+    [CompletableTopField K] {x : Completion K} (hx : x ≠ 0) :
+    ContinuousAt (fun y : {y : Completion K // IsUnit y} ↦ Checked.inv y.val y.property)
+      ⟨x, hx.isUnit⟩ :=
+  continuousAt_inv₀ ⟨x, hx.isUnit⟩
 
 /--
 error: failed to synthesize instance of type class
-  Inv (Completion K)
+  Field (Completion K)
 
 Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 -/
 #guard_msgs in
-example {K : Type*} [Field K] [UniformSpace K] (x : Completion K) : Completion K := x⁻¹
+example {K : Type*} [Field K] [UniformSpace K] : Field (Completion K) := inferInstance
 
-/-! Each of the two hypotheses is needed. -/
+/-! Neither the ring topology with its additive uniformity nor completability suffices on its own. -/
 
 /--
 error: failed to synthesize instance of type class
-  Inv (Completion K)
+  Field (Completion K)
 
 Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 -/
 #guard_msgs in
-example {K : Type*} [Field K] [UniformSpace K] [IsTopologicalDivisionRing K] (x : Completion K) :
-    Completion K :=
-  x⁻¹
+example {K : Type*} [Field K] [UniformSpace K] [IsTopologicalRing K] [IsUniformAddGroup K] :
+    Field (Completion K) := inferInstance
 
 /--
 error: failed to synthesize instance of type class
-  Inv (Completion K)
+  Field (Completion K)
 
 Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 -/
 #guard_msgs in
-example {K : Type*} [Field K] [UniformSpace K] [CompletableTopField K] (x : Completion K) :
-    Completion K :=
-  x⁻¹
+example {K : Type*} [Field K] [UniformSpace K] [CompletableTopField K] : Field (Completion K) :=
+  inferInstance
 
 /-! A normed field is a routine sufficient condition. -/
 
-noncomputable example {K : Type*} [NormedField K] (x : Completion K) : Completion K := x⁻¹
+noncomputable example {K : Type*} [NormedField K] (x : Completion K) (hx : x ≠ 0) :
+    Completion K := Checked.inv x hx.isUnit
+
+/--
+error: failed to synthesize instance of type class
+  Inv (Completion K)
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example {K : Type*} [NormedField K] : Inv (Completion K) := inferInstance

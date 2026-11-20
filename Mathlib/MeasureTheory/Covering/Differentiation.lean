@@ -559,15 +559,15 @@ theorem withDensity_le_mul {s : Set α} (hs : MeasurableSet s) {t : ℝ≥0} (ht
         abel
       _ ≤ (t : ℝ≥0∞) ^ (2 : ℤ) * ρ (s ∩ f ⁻¹' I) := by
         gcongr
-        rw [← ENNReal.coe_zpow (zero_lt_one.trans ht).ne']
+        rw [← ENNReal.coe_zpow (n - 1) (h := fun _ ↦ t_ne_zero'.isUnit)]
         apply v.mul_measure_le_of_subset_lt_limRatioMeas hρ
         intro x hx
         apply lt_of_lt_of_le _ hx.2.1
-        rw [← ENNReal.coe_zpow (zero_lt_one.trans ht).ne', ENNReal.coe_lt_coe, sub_eq_add_neg,
-          zpow_add₀ t_ne_zero']
+        rw [← ENNReal.coe_zpow n (h := fun _ ↦ t_ne_zero'.isUnit), ENNReal.coe_lt_coe,
+          sub_eq_add_neg, zpow_add₀ t_ne_zero']
         conv_rhs => rw [← mul_one (t ^ n)]
         gcongr
-        rw [zpow_neg_one]
+        rw [zpow_neg_one₀]
         exact inv_lt_one_of_one_lt₀ ht
   calc
     ν s =
@@ -612,11 +612,11 @@ theorem le_mul_withDensity {s : Set α} (hs : MeasurableSet s) {t : ℝ≥0} (ht
     simp only [ν, I, M, withDensity_apply, coe_nnreal_smul_apply]
     calc
       ρ (s ∩ f ⁻¹' I) ≤ (t : ℝ≥0∞) ^ (n + 1) * μ (s ∩ f ⁻¹' I) := by
-        rw [← ENNReal.coe_zpow t_ne_zero']
+        rw [← ENNReal.coe_zpow (n + 1) (h := fun _ ↦ t_ne_zero'.isUnit)]
         apply v.measure_le_mul_of_subset_limRatioMeas_lt hρ
         intro x hx
         apply hx.2.2.trans_le (le_of_eq _)
-        rw [ENNReal.coe_zpow t_ne_zero']
+        rw [ENNReal.coe_zpow (n + 1)]
       _ = ∫⁻ _ in s ∩ f ⁻¹' I, (t : ℝ≥0∞) ^ (n + 1) ∂μ := by
         simp only [lintegral_const, MeasurableSet.univ, Measure.restrict_apply, univ_inter]
       _ ≤ ∫⁻ x in s ∩ f ⁻¹' I, t * f x ∂μ := by
@@ -866,13 +866,16 @@ theorem ae_tendsto_lintegral_enorm_sub_div {f : α → E} (hf : LocallyIntegrabl
 average of `‖f y - f x‖` on `a` tends to `0` as `a` shrinks to `x` along a Vitali family. -/
 theorem ae_tendsto_average_norm_sub {f : α → E} (hf : LocallyIntegrable f μ) :
     ∀ᵐ x ∂μ, Tendsto (fun a => ⨍ y in a, ‖f y - f x‖ ∂μ) (v.filterAt x) (𝓝 0) := by
-  filter_upwards [v.ae_tendsto_lintegral_enorm_sub_div hf] with x hx
+  filter_upwards [v.ae_tendsto_lintegral_enorm_sub_div hf, v.ae_eventually_measure_pos]
+    with x hx hpos
   have := (ENNReal.tendsto_toReal ENNReal.zero_ne_top).comp hx
   simp only [ENNReal.toReal_zero] at this
   apply Tendsto.congr' _ this
-  filter_upwards [v.eventually_measure_lt_top x, v.eventually_filterAt_integrableOn x hf]
-    with a h'a h''a
-  simp only [Function.comp_apply, ENNReal.toReal_div, setAverage_eq, div_eq_inv_mul]
+  filter_upwards [v.eventually_measure_lt_top x, v.eventually_filterAt_integrableOn x hf, hpos]
+    with a h'a h''a ha
+  have haUnit : IsUnit (μ a).toReal := (ENNReal.toReal_pos ha.ne' h'a.ne).ne'.isUnit
+  simp only [Function.comp_apply, ENNReal.toReal_div _ _ (hb := haUnit),
+    setAverage_eq μ (fun y ↦ ‖f y - f x‖) a (hs := haUnit), div_eq_inv_mul₀]
   have A : IntegrableOn (fun y => (‖f y - f x‖₊ : ℝ)) a μ := by
     simp_rw [coe_nnnorm]
     exact (h''a.sub (integrableOn_const h'a.ne)).norm

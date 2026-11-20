@@ -793,6 +793,17 @@ lemma I_zpow_eq_zpow_mod (m : ℤ) : I ^ m = I ^ (m % 4) := by
     exact Units.ext <| by simp
   rw [hI.zpow_eq_val_unit_zpow, hI.zpow_eq_val_unit_zpow, zpow_eq_zpow_emod m hfour]
 
+open Qq in
+/-- Reduce a literal integer power of `Complex.I` modulo four. -/
+simproc I_zpow_eq_zpow_mod' (Checked.zpow I _ _) := .ofQ fun u a e =>
+  match u, a, e with
+  | 1, ~q(ℂ), ~q(Checked.zpow I $n $_hi) => do
+    let some m ← Lean.Meta.getIntValue? n | return .continue
+    if 0 ≤ m ∧ m < 4 then return .continue
+    return .visit <| .mk q(Checked.zpow I ($n % 4) (fun _ ↦ I_ne_zero.isUnit)) <|
+      .some q(I_zpow_eq_zpow_mod $n)
+  | _, _, _ => return .continue
+
 theorem normSq_inv (z : ℂ) {hz : IsUnit z} : normSq z⁻¹ = (normSq z)⁻¹ :=
   map_inv₀ normSq z
 

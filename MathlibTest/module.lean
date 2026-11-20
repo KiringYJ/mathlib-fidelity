@@ -267,10 +267,17 @@ example (hab : 0 < a * b + c * d) :
   · field_simp
 
 example (h₁ : 1 = a ^ 2 + b ^ 2) (h₂ : 1 - a ≠ 0) :
-    ((2 / (1 - a)) ^ 2 * b ^ 2 + 4)⁻¹ • (4:K) • ((2 / (1 - a)) • y)
-    + ((2 / (1 - a)) ^ 2 * b ^ 2 + 4)⁻¹ • ((2 / (1 - a)) ^ 2 * b ^ 2 - 4) • x
-    = a • x + y := by
-  linear_combination (norm := skip) (h₁ * (b ^ 2 + (1 - a) ^ 2)⁻¹) • (y + (a - 1) • x)
+    let c := Checked.div (2 : K) (1 - a) h₂.isUnit
+    let d := c ^ 2 * b ^ 2 + 4
+    let hd : IsUnit d :=
+      (add_pos_of_nonneg_of_pos (mul_nonneg (sq_nonneg c) (sq_nonneg b)) (by positivity)).ne'.isUnit
+    Checked.inv d hd • (4 : K) • (c • y) +
+      Checked.inv d hd • (c ^ 2 * b ^ 2 - 4) • x = a • x + y := by
+  dsimp only
+  have h₃ : IsUnit (b ^ 2 + (1 - a) ^ 2) :=
+    (add_pos_of_nonneg_of_pos (sq_nonneg b) (sq_pos_of_ne_zero h₂)).ne'.isUnit
+  linear_combination (norm := skip)
+    (h₁ * Checked.inv (b ^ 2 + (1 - a) ^ 2) h₃) • (y + (a - 1) • x)
   match_scalars
   · field_simp
     ring
@@ -278,9 +285,13 @@ example (h₁ : 1 = a ^ 2 + b ^ 2) (h₂ : 1 - a ≠ 0) :
     ring
 
 example (h₁ : 1 = a ^ 2 + b ^ 2) (h₂ : 1 - a ≠ 0) :
-    ((2 / (1 - a)) ^ 2 * b ^ 2 + 4)⁻¹ • (4:K) • ((2 / (1 - a)) • y)
-    + ((2 / (1 - a)) ^ 2 * b ^ 2 + 4)⁻¹ • ((2 / (1 - a)) ^ 2 * b ^ 2 - 4) • x
-    = a • x + y := by
+    let c := Checked.div (2 : K) (1 - a) h₂.isUnit
+    let d := c ^ 2 * b ^ 2 + 4
+    let hd : IsUnit d :=
+      (add_pos_of_nonneg_of_pos (mul_nonneg (sq_nonneg c) (sq_nonneg b)) (by positivity)).ne'.isUnit
+    Checked.inv d hd • (4 : K) • (c • y) +
+      Checked.inv d hd • (c ^ 2 * b ^ 2 - 4) • x = a • x + y := by
+  dsimp only
   match_scalars
   · field_simp
     linear_combination 4 * h₁

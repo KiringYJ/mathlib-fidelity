@@ -323,23 +323,19 @@ theorem MemSobolev.lineDerivOp {s : ℝ} {f : 𝓢'(E, F)} (hf : MemSobolev s 2 
   intro x
   apply le_of_sq_le_sq _ (by positivity)
   simp only [Complex.ofReal_mul, Complex.norm_mul, Complex.norm_real, Real.norm_eq_abs, mul_pow]
-  have h₁ : |(1 + ‖x‖ ^ 2) ^ (-1 / 2 : ℝ)| ^ 2 = (1 + ‖x‖ ^ 2)⁻¹ := by
-    field_simp
-    norm_cast
-    rw [Real.rpow_neg (by positivity), sq_abs, inv_pow]
-    field_simp
-    calc
-      _ = ((1 + ‖x‖ ^ 2) ^ (1 / 2 : ℝ)) ^ (2 : ℝ) := by
-        rw [← Real.rpow_mul (by positivity)]; simp
-      _ = _ := by simp
+  have hx : 0 < 1 + ‖x‖ ^ 2 := by positivity
+  have h₁ : |(1 + ‖x‖ ^ 2) ^ (-1 / 2 : ℝ)| ^ 2 =
+      Checked.inv (1 + ‖x‖ ^ 2) hx.ne'.isUnit := by
+    rw [abs_of_nonneg (Real.rpow_nonneg hx.le _), ← Real.rpow_natCast, ← Real.rpow_mul hx.le,
+      show (-1 / 2 : ℝ) * ((2 : ℕ) : ℝ) = -1 by norm_num,
+      Real.rpow_neg_one _ (hx := hx.ne'.isUnit)]
   have h₂ : |inner ℝ x m| ^ 2 ≤ ‖m‖ ^ 2 * (1 + ‖x‖ ^ 2) := by
     grw [abs_real_inner_le_norm]
     rw [mul_pow, mul_comm]
     gcongr
     simp
   grw [h₁, h₂]
-  apply le_of_eq
-  field_simp
+  rw [mul_assoc, mul_inv_cancel₀, mul_one]
 
 /-- The Laplacian maps `H ^ s` to `H ^ {s - 2}`. -/
 theorem MemSobolev.laplacian {s : ℝ} {f : 𝓢'(E, F)} (hf : MemSobolev s 2 f) :
@@ -349,11 +345,10 @@ theorem MemSobolev.laplacian {s : ℝ} {f : 𝓢'(E, F)} (hf : MemSobolev s 2 f)
   apply (hf.fourierMultiplierCLM_of_bounded (by fun_prop) ?_).smul
   use 1
   intro x
-  rw [Real.rpow_neg (by positivity)]
-  norm_cast
-  simp only [norm_mul, norm_pow, abs_norm, norm_inv, Real.norm_eq_abs]
-  rw [abs_of_nonneg (by positivity), mul_inv_le_iff₀ (by positivity)]
-  grind
+  have hx : 0 < 1 + ‖x‖ ^ 2 := by positivity
+  rw [Complex.norm_real, Real.norm_eq_abs, Real.rpow_neg_one _ (hx := hx.ne'.isUnit),
+    abs_of_nonneg (by positivity), mul_inv_le_iff₀ hx]
+  simp
 
 end LineDeriv
 

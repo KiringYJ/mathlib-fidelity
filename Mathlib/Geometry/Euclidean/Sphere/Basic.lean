@@ -339,7 +339,7 @@ protected def ofDiameter (p₁ p₂ : P) : Sphere P :=
   ⟨midpoint ℝ p₁ p₂, (dist p₁ p₂) / 2⟩
 
 lemma isDiameter_ofDiameter (p₁ p₂ : P) : (Sphere.ofDiameter p₁ p₂).IsDiameter p₁ p₂ :=
-  ⟨by simp [Sphere.ofDiameter, mem_sphere, inv_mul_eq_div], rfl⟩
+  ⟨by simp [Sphere.ofDiameter, mem_sphere, div_eq_inv_mul₀], rfl⟩
 
 lemma IsDiameter.ofDiameter_eq (h : s.IsDiameter p₁ p₂) : .ofDiameter p₁ p₂ = s := by
   ext
@@ -395,6 +395,7 @@ theorem Cospherical.affineIndependent {s : Set P} (hs : Cospherical s) {p : Fin 
     intro h
     have he : p 1 = p 0 := by simpa [h] using hv 1
     exact (by decide : (1 : Fin 3) ≠ 0) (hpi he)
+  have hvi : ⟪v, v⟫ ≠ 0 := by simpa using hv0
   rcases hs with ⟨c, r, hs⟩
   have hs' := fun i => hs (p i) (Set.mem_of_mem_of_subset (Set.mem_range_self _) hps)
   choose f hf using hv

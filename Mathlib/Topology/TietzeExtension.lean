@@ -195,7 +195,7 @@ theorem tietze_extension_step (f : X →ᵇ ℝ) (e : C(X, Y)) (he : IsClosedEmb
   rcases exists_bounded_mem_Icc_of_closed_of_le hc₁ hc₂ hd hf3.le with ⟨g, hg₁, hg₂, hgf⟩
   refine ⟨g, ?_, ?_⟩
   · refine (norm_le <| div_nonneg hf.le h3.le).mpr fun y => ?_
-    simpa [abs_le, neg_div] using hgf y
+    simpa only [Real.norm_eq_abs, abs_le, neg_div₀, mem_Icc] using hgf y
   · refine (dist_le <| mul_nonneg h23.le hf.le).mpr fun x => ?_
     have hfx : -‖f‖ ≤ f x ∧ f x ≤ ‖f‖ := by
       simpa only [Real.norm_eq_abs, abs_le] using f.norm_coe_le_norm x
@@ -206,10 +206,12 @@ theorem tietze_extension_step (f : X →ᵇ ℝ) (e : C(X, Y)) (he : IsClosedEmb
             abs_of_nonneg (sub_nonneg.2 hle₁)]
         _ ≤ 2 / 3 * ‖f‖ := by linarith
     · rcases le_total (f x) (‖f‖ / 3) with hle₂ | hle₂
-      · simp only [neg_div] at *
+      · have hgx : |g (e x)| ≤ ‖f‖ / 3 := by
+          simpa only [abs_le, neg_div₀, mem_Icc] using hgf (e x)
+        have hle₁' : -(‖f‖ / 3) ≤ f x := by simpa only [neg_div₀] using hle₁
         calc
           dist (g (e x)) (f x) ≤ |g (e x)| + |f x| := dist_le_norm_add_norm _ _
-          _ ≤ ‖f‖ / 3 + ‖f‖ / 3 := (add_le_add (abs_le.2 <| hgf _) (abs_le.2 ⟨hle₁, hle₂⟩))
+          _ ≤ ‖f‖ / 3 + ‖f‖ / 3 := add_le_add hgx (abs_le.2 ⟨hle₁', hle₂⟩)
           _ = 2 / 3 * ‖f‖ := by linarith
       · calc
           |g (e x) - f x| = f x - ‖f‖ / 3 := by
@@ -244,7 +246,8 @@ theorem exists_extension_norm_eq_of_isClosedEmbedding' (f : X →ᵇ ℝ) (e : C
       dist (g n) (g (n + 1)) = ‖F (f - (g n).compContinuous e)‖ := by
         rw [g_succ, dist_eq_norm', add_sub_cancel_left]
       _ ≤ ‖f - (g n).compContinuous e‖ / 3 := hF_norm _
-      _ = 1 / 3 * dist ((g n).compContinuous e) f := by rw [dist_eq_norm', one_div, div_eq_inv_mul]
+      _ = 1 / 3 * dist ((g n).compContinuous e) f := by
+        rw [dist_eq_norm', one_div₀, div_eq_inv_mul₀]
       _ ≤ 1 / 3 * ((2 / 3) ^ n * ‖f‖) := mul_le_mul_of_nonneg_left (hgf n) (by norm_num1)
       _ = 1 / 3 * ‖f‖ * (2 / 3) ^ n := by ac_rfl
   have hg_cau : CauchySeq g := cauchySeq_of_le_geometric _ _ (by norm_num1) hg_dist

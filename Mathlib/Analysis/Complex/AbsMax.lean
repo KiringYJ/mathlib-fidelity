@@ -117,29 +117,36 @@ theorem norm_max_aux₁ [CompleteSpace F] {f : ℂ → F} {z w : ℂ}
   refine (isMaxOn_iff.1 hz _ hw).antisymm (not_lt.1 ?_)
   rintro hw_lt : ‖f w‖ < ‖f z‖
   have hr : 0 < r := dist_pos.2 (ne_of_apply_ne (norm ∘ f) hw_lt.ne)
-  -- Due to Cauchy integral formula, it suffices to prove the following inequality.
-  suffices ‖∮ ζ in C(z, r), (ζ - z)⁻¹ • f ζ‖ < 2 * π * ‖f z‖ by
-    refine this.ne ?_
-    have A : (∮ ζ in C(z, r), (ζ - z)⁻¹ • f ζ) = (2 * π * I : ℂ) • f z :=
-      hd.circleIntegral_sub_inv_smul (mem_ball_self hr)
-    simp [A, norm_smul]
-  suffices ‖∮ ζ in C(z, r), (ζ - z)⁻¹ • f ζ‖ < 2 * π * r * (‖f z‖ / r) by
-    rwa [mul_assoc, mul_div_cancel₀ _ hr.ne'] at this
-  /- This inequality is true because `‖(ζ - z)⁻¹ • f ζ‖ ≤ ‖f z‖ / r` for all `ζ` on the circle and
-    this inequality is strict at `ζ = w`. -/
-  have hsub : sphere z r ⊆ closedBall z r := sphere_subset_closedBall
-  refine circleIntegral.norm_integral_lt_of_norm_le_const_of_lt hr ?_ ?_ ⟨w, rfl, ?_⟩
-  · show ContinuousOn (fun ζ : ℂ => (ζ - z)⁻¹ • f ζ) (sphere z r)
-    refine ((continuousOn_id.sub continuousOn_const).inv₀ ?_).smul (hd.continuousOn_ball.mono hsub)
-    exact fun ζ hζ => sub_ne_zero.2 (ne_of_mem_sphere hζ hr.ne')
-  · show ∀ ζ ∈ sphere z r, ‖(ζ - z)⁻¹ • f ζ‖ ≤ ‖f z‖ / r
-    rintro ζ hζ
-    rw [le_div_iff₀ hr, norm_smul, norm_inv, mem_sphere_iff_norm.1 hζ, mul_comm,
-      mul_inv_cancel_left₀ hr.ne']
-    exact hz (hsub hζ)
-  show ‖(w - z)⁻¹ • f w‖ < ‖f z‖ / r
-  rw [norm_smul, norm_inv, ← div_eq_inv_mul, ← dist_eq_norm]
-  exact (div_lt_div_iff_of_pos_right hr).2 hw_lt
+  have hzball : z ∈ ball z r := mem_ball_self hr
+  have hkernel (θ : ℝ) : deriv (circleMap z r) θ •
+      Checked.inv (circleMap z r θ - z) (isUnit_sub_of_mem_sphere_of_mem_ball hzball
+        ⟨circleMap z r θ, circleMap_mem_sphere' z r θ⟩) = I := by
+    rw [deriv_circleMap, smul_eq_mul, ← circleMap_sub_center z r θ, mul_comm _ I,
+      mul_assoc, mul_inv_cancel₀, mul_one]
+  have hCauchy : (∫ θ in 0..2 * π, I • f (circleMap z r θ)) = (2 * π * I : ℂ) • f z := by
+    simpa only [circleIntegralOn_sphere, ← smul_assoc, hkernel] using
+      hd.circleIntegral_sub_inv_smul hzball
+  suffices ‖∫ θ in 0..2 * π, I • f (circleMap z r θ)‖ < 2 * π * ‖f z‖ by
+    apply this.ne
+    simp [hCauchy, norm_smul]
+  have hws : w ∈ sphere z |r| := by
+    change dist w z = |r|
+    rw [abs_of_pos hr]
+  rw [← image_circleMap_Ioc] at hws
+  obtain ⟨θ₀, hθ₀, hθw⟩ := hws
+  calc
+    _ ≤ ∫ θ in 0..2 * π, ‖f (circleMap z r θ)‖ := by
+      simpa only [norm_smul, norm_I, one_mul] using
+        (intervalIntegral.norm_integral_le_integral_norm (f := fun θ ↦ I • f (circleMap z r θ))
+          Real.two_pi_pos.le)
+    _ < ∫ _ : ℝ in 0..2 * π, ‖f z‖ := by
+      refine intervalIntegral.integral_lt_integral_of_continuousOn_of_le_of_exists_lt
+        Real.two_pi_pos ?_ continuousOn_const (fun θ _ ↦ ?_) ⟨θ₀, Ioc_subset_Icc_self hθ₀, ?_⟩
+      · exact (hd.continuousOn_ball.comp (continuous_circleMap _ _).continuousOn fun θ _ ↦
+          sphere_subset_closedBall (circleMap_mem_sphere z hr.le θ)).norm
+      · exact hz (sphere_subset_closedBall (circleMap_mem_sphere z hr.le θ))
+      · simpa only [hθw] using hw_lt
+    _ = _ := by simp [intervalIntegral.integral_const, smul_eq_mul]
 
 /-!
 Now we drop the assumption `CompleteSpace F` by embedding `F` into its completion.
@@ -363,10 +370,26 @@ theorem eventually_eq_or_eq_zero_of_isLocalMin_norm {f : E → ℂ} {c : E}
     (∀ᶠ z in 𝓝 c, f z = f c) ∨ f c = 0 := by
   refine or_iff_not_imp_right.mpr fun h => ?_
   have h1 : ∀ᶠ z in 𝓝 c, f z ≠ 0 := hf.self_of_nhds.continuousAt.eventually_ne h
-  have h2 : IsLocalMax (norm ∘ f)⁻¹ c := hc.inv (h1.mono fun z => norm_pos_iff.mpr)
-  have h3 : IsLocalMax (norm ∘ f⁻¹) c := by refine h2.congr (Eventually.of_forall ?_); simp
-  have h4 : ∀ᶠ z in 𝓝 c, DifferentiableAt ℂ f⁻¹ z := by filter_upwards [hf, h1] with z h using h.inv
-  filter_upwards [eventually_eq_of_isLocalMax_norm h4 h3] with z using inv_inj.mp
+  have hunit : IsUnit (f c) := Ne.isUnit h
+  let S : Set E := {z | IsUnit (f z)}
+  let g : E → ℂ := Function.extend (Subtype.val : S → E)
+    (fun z : S ↦ Checked.inv (f z.val) z.property) 0
+  have hg (z : E) (hz : IsUnit (f z)) : g z = Checked.inv (f z) hz :=
+    Subtype.val_injective.extend_apply _ _ (⟨z, hz⟩ : S)
+  have hmax : IsLocalMax (norm ∘ g) c := by
+    filter_upwards [hc, h1] with z hz hne
+    simp only [Function.comp_apply, hg z hne.isUnit, hg c hunit, norm_inv]
+    exact inv_anti₀ (norm_pos_iff.mpr h) hz
+  have hdg : ∀ᶠ z in 𝓝 c, DifferentiableAt ℂ g z := by
+    filter_upwards [hf, h1] with z hz hne
+    have hmem : S ∈ 𝓝 z := (hz.continuousAt.eventually_ne hne).mono fun _ hw ↦ hw.isUnit
+    refine DifferentiableAt.of_restrict (s := S) (x := ⟨z, hne.isUnit⟩) ?_ hmem
+    have hfun : (fun y : S ↦ g y.val) = fun y : S ↦ Checked.inv (f y.val) y.property :=
+      funext fun y ↦ hg y.val y.property
+    rw [hfun]
+    exact hz.inv hne.isUnit
+  filter_upwards [eventually_eq_of_isLocalMax_norm hdg hmax, h1] with z hz hne
+  exact inv_inj₀.mp (by simpa only [hg z hne.isUnit, hg c hunit] using hz)
 
 end StrictConvex
 
@@ -411,6 +434,7 @@ theorem norm_le_of_forall_mem_frontier_norm_le {f : E → F} {U : Set E} (hU : I
   rcases exists_ne z with ⟨w, hne⟩
   set e := (lineMap z w : ℂ → E)
   have hde : Differentiable ℂ e := (differentiable_id.smul_const (w - z)).add_const z
+  have he : IsUnit (nndist z w) := (by simpa using hne.symm : nndist z w ≠ 0).isUnit
   have hL : AntilipschitzWith (nndist z w)⁻¹ e := antilipschitzWith_lineMap hne.symm
   replace hd : DiffContOnCl ℂ (f ∘ e) (e ⁻¹' U) :=
     hd.comp hde.diffContOnCl (mapsTo_preimage _ _)

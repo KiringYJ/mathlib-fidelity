@@ -348,7 +348,7 @@ theorem exists_of_not_isSquare (h₀ : 0 < d) (hd : ¬IsSquare d) :
       exact q.pos
     calc (q.den : ℝ) ^ 2 * (|ξ + q| * |ξ - q|) < (q.den : ℝ) ^ 2 * (M * (1 / (q.den : ℝ) ^ 2)) := by
           gcongr
-      _ = (M : ℝ) := by field_simp; ring
+      _ = (M : ℝ) := by field_simp
   obtain ⟨m, hm⟩ : ∃ m : ℤ, {q : ℚ | q.1 ^ 2 - d * (q.den : ℤ) ^ 2 = m}.Infinite := by
     contrapose! hM
     refine (congr_arg _ (ext fun x => ?_)).mp (Finite.biUnion (finite_Ioo (-M) M) fun m _ => hM m)

@@ -118,9 +118,9 @@ lemma Metric.diam_sphere_eq (x : E) {r : ℝ} (hr : 0 ≤ r) : diam (sphere x r)
   obtain ⟨y, hy⟩ := exists_ne (0 : E)
   calc
     2 * r = dist (x + r • ‖y‖⁻¹ • y) (x - r • ‖y‖⁻¹ • y) := by
-      simp [dist_eq_norm, ← two_nsmul, ← smul_assoc, norm_smul, abs_of_nonneg hr, hy, mul_assoc]
+      simp [dist_eq_norm, ← two_nsmul, ← smul_assoc, norm_smul, abs_of_nonneg hr, mul_assoc]
     _ ≤ diam (sphere x r) := by
-      apply dist_le_diam_of_mem isBounded_sphere <;> simp [norm_smul, hy, abs_of_nonneg hr]
+      apply dist_le_diam_of_mem isBounded_sphere <;> simp [norm_smul, abs_of_nonneg hr]
 
 lemma Metric.diam_closedBall_eq (x : E) {r : ℝ} (hr : 0 ≤ r) : diam (closedBall x r) = 2 * r :=
   le_antisymm (diam_closedBall hr) <|
@@ -787,7 +787,7 @@ lemma AddMonoidHom.continuous_of_isBounded_nhds_zero (f : G →+ H) (hs : s ∈ 
   refine ⟨δ / n, div_pos hδ hnpos, fun {x} hxδ => ?_⟩
   calc
     ‖f x‖
-    _ = ‖(n : ℝ)⁻¹ • f (n • x)‖ := by simp [← Nat.cast_smul_eq_nsmul ℝ, hn₀]
+    _ = ‖(n : ℝ)⁻¹ • f (n • x)‖ := by simp [← Nat.cast_smul_eq_nsmul ℝ]
     _ ≤ ‖(n : ℝ)⁻¹‖ * ‖f (n • x)‖ := norm_smul_le ..
     _ < ‖(n : ℝ)⁻¹‖ * C := by
       gcongr
@@ -796,7 +796,7 @@ lemma AddMonoidHom.continuous_of_isBounded_nhds_zero (f : G →+ H) (hs : s ∈ 
         simpa only [norm_mul, Real.norm_natCast, lt_div_iff₀ hnpos, mul_comm] using hxδ
     _ = (n : ℝ)⁻¹ * C := by simp
     _ < (C / ε : ℝ)⁻¹ * C := by gcongr
-    _ = ε := by simp [hC₀.ne']
+    _ = ε := by simp
 
 attribute [local instance] IsUnital.toSeminormedRing in
 /-- A unital non-unital normed algebra is a normed algebra.

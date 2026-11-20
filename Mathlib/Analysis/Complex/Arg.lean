@@ -40,11 +40,11 @@ theorem sameRay_iff : SameRay ℝ x y ↔ x = 0 ∨ y = 0 ∨ x.arg = y.arg := b
   simp only [hx, hy, sameRay_iff_norm_smul_eq, arg_eq_arg_iff hx hy]
   simp [field, hx, mul_comm, eq_comm]
 
-theorem sameRay_iff_arg_div_eq_zero : SameRay ℝ x y ↔ arg (x / y) = 0 := by
+theorem sameRay_iff_arg_div_eq_zero {hy : IsUnit y} :
+    SameRay ℝ x y ↔ arg (x / y) = 0 := by
   rw [← Real.Angle.toReal_zero, ← arg_coe_angle_eq_iff_eq_toReal, sameRay_iff]
   by_cases hx : x = 0; · simp [hx]
-  by_cases hy : y = 0; · simp [hy]
-  simp [hx, hy, arg_div_coe_angle, sub_eq_zero]
+  simp [hx, hy.ne_zero, arg_div_coe_angle, sub_eq_zero]
 
 theorem norm_add_eq_iff : ‖x + y‖ = ‖x‖ + ‖y‖ ↔ x = 0 ∨ y = 0 ∨ x.arg = y.arg :=
   sameRay_iff_norm_add.symm.trans sameRay_iff

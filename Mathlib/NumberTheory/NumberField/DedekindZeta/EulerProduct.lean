@@ -54,12 +54,19 @@ theorem dedekindZeta_re_eq_tsum {s : ℝ} (hs : 1 < s) :
       by_cases hn : n = 0
       · simp [hn, hzero]
       · rw [LSeries.term_of_ne_zero hn]
-        rw [show (n : ℂ) ^ (s : ℂ) = (((n : ℝ) ^ s : ℝ) : ℂ) from
-          (Complex.ofReal_cpow (Nat.cast_nonneg n) s).symm]
-        change (((Nat.card {I : Ideal (𝓞 K) // absNorm I = n} : ℝ) : ℂ) /
-          (((n : ℝ) ^ s : ℝ) : ℂ)).re = _
-        rw [← Complex.ofReal_div, Complex.ofReal_re,
-          Real.rpow_neg (Nat.cast_nonneg n), div_eq_mul_inv]
+        let m := Nat.card {I : Ideal (𝓞 K) // absNorm I = n}
+        have hpos : 0 < (n : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+        have hu : IsUnit ((n : ℝ) ^ s) := (Real.rpow_pos_of_pos hpos s).ne'.isUnit
+        calc
+          _ = ((Checked.div (m : ℝ) ((n : ℝ) ^ s) hu : ℝ) : ℂ).re := by
+            rw [Complex.ofReal_div]
+            congr 1
+            rw [div_eq_div_iff]
+            have hc : (n : ℂ) ^ (s : ℂ) = (((n : ℝ) ^ s : ℝ) : ℂ) :=
+              (Complex.ofReal_cpow (Nat.cast_nonneg n) s).symm
+            simp only [hc, m, Complex.ofReal_natCast]
+          _ = _ := by
+            rw [Complex.ofReal_re, div_eq_mul_inv₀, Real.rpow_neg (Nat.cast_nonneg n)]
     _ = _ := by
       rw [← hsum.hasSum.tsum_fiberwise absNorm |>.tsum_eq]
       apply tsum_congr
@@ -249,7 +256,7 @@ theorem log_dedekindZeta_eq_tsum {s : ℝ} (hs : 1 < s) :
     exact (tendsto_tsum_sievedWeight K hs).congr (tsum_sievedWeight K hs)
   rw [dedekindZeta_re_eq_tsum K hs]
   change Real.log (∑' I, idealWeight K s I) = _
-  rw [eq_div_iff (Real.exp_ne_zero _) |>.mpr heq, one_div, Real.log_inv, Real.log_exp,
-    tsum_neg]
+  rw [(eq_div_iff (hb := (Real.exp_ne_zero _).isUnit)).mpr heq,
+    one_div₀, Real.log_inv, Real.log_exp, tsum_neg]
 
 end NumberField

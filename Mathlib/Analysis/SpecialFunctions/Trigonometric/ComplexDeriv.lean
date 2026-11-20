@@ -12,6 +12,8 @@ public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
 # Complex trigonometric functions
 
 Basic facts and derivatives for the complex trigonometric functions.
+The smoothness theorem on the open tangent domain is in
+`Mathlib.Analysis.SpecialFunctions.Trigonometric.Meromorphic`.
 -/
 
 public section
@@ -42,7 +44,7 @@ theorem hasStrictDerivAt_tan {x : ℂ} (h : cos x ≠ 0) :
       (continuous_toUnitsDomain.tendsto ⟨x, h⟩))
   have hD : (cos x * cos x - sin x * -sin x) /ₚ (h.isUnit.unit ^ 2) = 1 / cos x ^ 2 := by
     rw [mul_neg, sub_neg_eq_add, ← sq, ← sq, cos_sq_add_sin_sq]
-    show 1 /ₚ _ = 1 /ₚ _
+    change 1 /ₚ _ = 1 /ₚ _
     congr 1
     ext
     simp
@@ -50,8 +52,9 @@ theorem hasStrictDerivAt_tan {x : ℂ} (h : cos x ≠ 0) :
   exact key
 
 theorem hasDerivAt_tan {x : ℂ} (h : cos x ≠ 0) :
-    HasDerivAt (fun y : {y : ℂ // cos y ≠ 0} ↦ tan y y.2) (1 / cos x ^ 2) ⟨x, h⟩ Subtype.val :=
-  (hasStrictDerivAt_tan h).hasDerivAt
+    HasDerivAt (fun y : {y : ℂ // cos y ≠ 0} ↦ tan y y.2) (1 / cos x ^ 2) ⟨x, h⟩ Subtype.val := by
+  have hd := (hasStrictDerivAt_tan h).hasStrictFDerivAt.hasFDerivAt
+  simpa only [ContinuousLinearMap.toSpanSingleton_apply, one_smul] using hd.hasDerivAt
 
 open scoped Topology
 
@@ -61,16 +64,16 @@ theorem tendsto_norm_tan_of_cos_eq_zero {x : ℂ} (hx : cos x = 0) :
   have A : sin x ≠ 0 := fun h => by simpa [*, sq] using sin_sq_add_cos_sq x
   have B : Tendsto cos (𝓝[≠] x) (𝓝[≠] 0) :=
     hx ▸ (hasDerivAt_cos x).tendsto_nhdsNE (neg_ne_zero.2 A)
-  have hcos : Tendsto (fun y : {y : ℂ // cos y ≠ 0} ↦
-      ((Units.mk0 ‖cos (y : ℂ)‖ (norm_ne_zero_iff.2 y.2) : ℝˣ) : ℝ))
+  have hcos : Tendsto (fun y : {y : ℂ // cos y ≠ 0} ↦ ‖cos (y : ℂ)‖)
       (comap Subtype.val (𝓝[≠] x)) (𝓝[>] 0) :=
     (tendsto_norm_nhdsNE_zero.comp B).comp tendsto_comap
   have hsin : Tendsto (fun y : {y : ℂ // cos y ≠ 0} ↦ ‖sin (y : ℂ)‖)
       (comap Subtype.val (𝓝[≠] x)) (𝓝 ‖sin x‖) :=
     ((continuous_sin.norm.tendsto x).mono_left nhdsWithin_le_nhds).comp tendsto_comap
-  refine (hcos.inv_tendsto_nhdsGT_zero.atTop_mul_pos (norm_pos_iff.2 A) hsin).congr fun y ↦ ?_
+  have hinv := hcos.fun_inv_tendsto_nhdsGT_zero
+    (h0 := fun y ↦ (norm_ne_zero_iff.2 y.2).isUnit)
+  refine (hinv.atTop_mul_pos (norm_pos_iff.2 A) hsin).congr fun y ↦ ?_
   rw [tan_eq_sin_div_cos, norm_div, div_eq_inv_mul₀]
-  rfl
 
 theorem tendsto_norm_tan_atTop (k : ℤ) :
     Tendsto (fun y : {y : ℂ // cos y ≠ 0} ↦ ‖tan y y.2‖)
@@ -81,6 +84,12 @@ theorem continuousAt_tan {x : ℂ} (hx : cos x ≠ 0) :
     ContinuousAt (fun y : {y : ℂ // cos y ≠ 0} ↦ tan y y.2) ⟨x, hx⟩ :=
   continuous_tan.continuousAt
 
+/-- The tangent is analytic at every point of its domain, in the ambient coordinates. -/
+theorem analyticAt_tan {x : ℂ} (hx : cos x ≠ 0) :
+    AnalyticAt ℂ (fun y : {y : ℂ // cos y ≠ 0} ↦ tan y.val y.2) ⟨x, hx⟩ Subtype.val :=
+  (analyticAt_sin.div analyticAt_cos hx.isUnit).comp_domain (g := toUnitsDomain)
+    (x := (⟨x, hx⟩ : {y : ℂ // cos y ≠ 0}))
+
 theorem differentiableAt_tan {x : ℂ} (hx : cos x ≠ 0) :
     DifferentiableAt ℂ (fun y : {y : ℂ // cos y ≠ 0} ↦ tan y y.2) ⟨x, hx⟩ Subtype.val :=
   (hasDerivAt_tan hx).differentiableAt
@@ -88,8 +97,7 @@ theorem differentiableAt_tan {x : ℂ} (hx : cos x ≠ 0) :
 @[simp]
 theorem deriv_tan (x : ℂ) {hx : cos x ≠ 0} :
     deriv (fun y : {y : ℂ // cos y ≠ 0} ↦ tan y y.2) ⟨x, hx⟩ Subtype.val = 1 / cos x ^ 2 := by
-  apply (hasDerivAt_tan hx).deriv_of_mem_nhds Topology.IsEmbedding.subtypeVal
-  rw [Subtype.range_val]
-  exact (isOpen_ne_fun continuous_cos continuous_const).mem_nhds hx
+  have hdom : IsOpen {y : ℂ | cos y ≠ 0} := isOpen_ne_fun continuous_cos continuous_const
+  exact (hasDerivAt_tan hx).deriv hdom.isOpenEmbedding_subtypeVal
 
 end Complex

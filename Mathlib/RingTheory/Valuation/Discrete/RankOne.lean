@@ -88,8 +88,13 @@ lemma valueGroup₀_equiv_withZeroMulInt_restrict_apply_of_surjective (hsurj : F
     ← (MulEquiv.injective (intEquivOfZPowersEqTop _
     (Subgroup.zpowers_inv (g := hv.generator') ▸ hv.generator'_zpowers_eq_top))).eq_iff]
     ext
-    simp [generator', generator_eq_exp_neg_one_of_surjective hsurj, toAdd_unzero_eq_log h0,
-      exp_log h0]
+    simp [generator', generator_eq_exp_neg_one_of_surjective hsurj, toAdd_unzero_eq_log h0]
+    have hpow (n : ℤ) : (↑(Units.mk0 (exp (-1 : ℤ)) (by simp) ^ n) : ℤᵐ⁰) =
+        exp (n • (-1 : ℤ)) := by
+      rw [exp_zsmul]
+      exact ((GroupWithZero.isUnit_of_ne_zero exp_ne_zero).zpow_eq_val_unit_zpow n).symm
+    simp only [Units.val_inv_eq_inv_val₀, hpow, inv_exp]
+    simpa using (exp_log h0).symm
 
 end WithZeroMulInt
 

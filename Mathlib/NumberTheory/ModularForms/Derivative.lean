@@ -192,17 +192,22 @@ lemma normalizedDerivOfComplex_slash {k : ℤ} {F : ℍ → ℂ} (hF : MDiff F)
   have h_F : HasDerivAt (F ∘ ofComplex) (deriv (F ∘ ofComplex) ↑(g • ofComplex (z : ℂ)))
       ↑(g • ofComplex (z : ℂ)) :=
     (ofComplex_apply z).symm ▸ (mdifferentiableAt_iff.mp (hF (g • z))).hasDerivAt
-  have h_denom : HasDerivAt (fun w ↦ (denom g w) ^ (-k))
+  have h_denom : HasDerivAt (fun w : ℂ ↦ denom g (ofComplex w) ^ (-k))
       (-k * (g 1 0 : ℂ) * (denom g z) ^ (-k - 1)) ↑z := by
-    simpa using hasDerivAt_denom_zpow g (-k) z
+    apply UpperHalfPlane.hasDerivAt_of_restrict
+    simpa [ofComplex_apply] using hasDerivAt_denom_zpow g (-k) z
   have hcomp : ((F ∣[k] g) ∘ ofComplex) =ᶠ[𝓝 ↑z]
       fun w ↦ (g.val.det : ℂ) ^ (k - 1) *
-        ((F ∘ ofComplex) ↑(g • ofComplex w) * (denom g w) ^ (-k)) := by
+        ((F ∘ ofComplex) ↑(g • ofComplex w) * denom g (ofComplex w) ^ (-k)) := by
     filter_upwards [isOpen_upperHalfPlaneSet.mem_nhds z.im_pos] with w hw
     grind [ofComplex_apply_of_im_pos, ofComplex_apply, ModularForm.slash_apply]
-  rw [((((h_F.comp (z : ℂ) h_smul).mul h_denom).const_mul _).congr_of_eventuallyEq hcomp).deriv]
+  have hprod := (h_F.comp (h := fun w : ℂ ↦ (↑(g • ofComplex w) : ℂ)) (coord' := id)
+    (z : ℂ) h_smul).mul h_denom
+  rw [((hprod.const_mul _).congr_of_eventuallyEq hcomp).deriv]
   simp only [hσ, hdet, abs_of_pos hg, ofComplex_apply, Function.comp_apply]
-  rw [show k + 2 - 1 = (k - 1) + 2 by ring, show -(k + 2) = -k + -2 by ring,
+  have hpow : denom g z ^ (-(k + 2)) = denom g z ^ (-k + -2) :=
+    congrArg (fun n : ℤ ↦ denom g z ^ n) (by ring)
+  rw [show k + 2 - 1 = (k - 1) + 2 by ring, hpow,
     zpow_add₀ hdetℂ, zpow_add₀ hz, zpow_sub_one₀ hz]
   field
 
@@ -212,10 +217,12 @@ lemma normalizedDerivOfComplex_SL_slash {k : ℤ} {F : ℍ → ℂ} (hF : MDiff 
       (fun z : ℍ ↦ (k : ℂ) * (2 * π * I)⁻¹ * (γ 1 0 / denom γ z) * (F ∣[k] γ) z) := by
   have hdet : (γ : GL (Fin 2) ℝ).val.det = 1 := by
     rw [← Matrix.GeneralLinearGroup.val_det_apply]; simp
+  have hdetℂ : ((γ : GL (Fin 2) ℝ).val.det : ℂ) = 1 := by exact_mod_cast hdet
+  have hinv : Checked.inv _ (hdetℂ.symm ▸ isUnit_one) = 1 := inv_eq_one₀.mpr hdetℂ
   ext z
   have := congrFun
     (normalizedDerivOfComplex_slash (k := k) hF (g := (γ : GL (Fin 2) ℝ)) (by grind)) z
-  rw [hdet] at this
+  rw [hinv, one_mul] at this
   simpa [ModularForm.SL_slash] using this
 
 /--
@@ -232,10 +239,21 @@ theorem serreDerivative_slash_equivariant {k : ℤ} {F : ℍ → ℂ} (hF : MDif
   have hDz : (D (F ∣[k] γ)) z = (D F ∣[k + 2] γ) z -
       (k * (2 * π * I)⁻¹ * (γ 1 0 / denom γ z) * (F ∣[k] γ) z) := by
     simp [normalizedDerivOfComplex_SL_slash hF]
+  let c := Checked.div 1 (2 * riemannZeta 2) EisensteinSeries.isUnit_two_mul_riemannZeta_two
   have hE2z : (EisensteinSeries.E2 ∣[(2 : ℤ)] γ) z =
-      EisensteinSeries.E2 z - 1 / (2 * riemannZeta 2) * EisensteinSeries.D2 γ z := by
-    simp [EisensteinSeries.E2_slash_action]
-  grind [serreDerivative_apply, EisensteinSeries.D2, riemannZeta_two, I_sq]
+      EisensteinSeries.E2 z - c * EisensteinSeries.D2 γ z := by
+    simpa only [Pi.sub_apply, Pi.smul_apply, smul_eq_mul, c] using
+      congrFun (EisensteinSeries.E2_slash_action γ) z
+  have hcor : (12 : ℂ)⁻¹ * c * (2 * π * I) = -(2 * π * I : ℂ)⁻¹ := by
+    have hp : (π : ℂ) ≠ 0 := ofReal_ne_zero.mpr Real.pi_ne_zero
+    simp only [c, riemannZeta_two]
+    field_simp
+    ring_nf
+    simp [I_sq]
+  have hD2 : EisensteinSeries.D2 γ z = (2 * π * I) * (γ 1 0 / denom γ z) := by
+    rw [EisensteinSeries.D2, mul_div_assoc₀]
+  rw [hLHS, serreDerivative_apply, hDz, hE2z, hD2]
+  linear_combination (k : ℂ) * (γ 1 0 / denom γ z) * (F ∣[k] γ) z * hcor
 
 /--
 As a corollary, if `F` is invariant under the slash action of weight `k`, then
@@ -296,10 +314,12 @@ theorem isBoundedAtImInfty_normalizedDerivOfComplex {F : ℍ → ℂ} (hF : MDif
 /-- The Serre derivative of a holomorphic function that is bounded at infinity is again bounded at
 infinity. -/
 theorem isBoundedAtImInfty_serreDerivative {F : ℍ → ℂ} (k : ℂ) (hF : MDiff F)
-    (hb : IsBoundedAtImInfty F) : IsBoundedAtImInfty (serreDerivative k F) :=
-  Asymptotics.IsBigO.sub (isBoundedAtImInfty_normalizedDerivOfComplex hF hb) <|
-    ((Filter.const_boundedAtFilter atImInfty (k * 12⁻¹)).mul
-      EisensteinSeries.isBoundedAtImInfty_E2).mul hb
+    (hb : IsBoundedAtImInfty F) : IsBoundedAtImInfty (serreDerivative k F) := by
+  have hE2F := Filter.BoundedAtFilter.mul EisensteinSeries.isBoundedAtImInfty_E2 hb
+  have hprod : IsBoundedAtImInfty (fun z ↦ k * 12⁻¹ * EisensteinSeries.E2 z * F z) := by
+    simpa only [IsBoundedAtImInfty, Filter.BoundedAtFilter, Pi.mul_apply, mul_assoc] using
+      Asymptotics.IsBigO.const_mul_left hE2F (k * (12 : ℂ)⁻¹)
+  exact Asymptotics.IsBigO.sub (isBoundedAtImInfty_normalizedDerivOfComplex hF hb) hprod
 
 /--
 The Serre derivative preserves modularity: if `f` is a modular form of weight `k` for a subgroup

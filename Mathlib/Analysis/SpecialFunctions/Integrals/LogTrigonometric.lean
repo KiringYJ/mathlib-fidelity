@@ -42,6 +42,7 @@ private lemma integral_log_sin_zero_pi_eq_two_mul_integral_log_sin_zero_pi_div_t
 The integral of `log ∘ sin` on `0 … π/2` equals `-log 2 * π / 2`.
 -/
 theorem integral_log_sin_zero_pi_div_two : ∫ x in 0..(π / 2), log (sin x) = -log 2 * π / 2 := by
+  have h₂ : IsUnit (2 : ℝ) := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit
   calc ∫ x in 0..(π / 2), log (sin x)
     _ = ∫ x in 0..(π / 2), (log (sin (2 * x)) - log 2 - log (cos x)) := by
       apply intervalIntegral.integral_congr_codiscreteWithin
@@ -62,20 +63,20 @@ theorem integral_log_sin_zero_pi_div_two : ∫ x in 0..(π / 2), log (sin x) = -
         intervalIntegral.integral_sub _ intervalIntegrable_const,
         intervalIntegral.integral_const]
       · simp
-      · simpa using (intervalIntegrable_log_sin (a := 0) (b := π)).comp_mul_left
+      · simpa using (intervalIntegrable_log_sin (a := 0) (b := π)).comp_mul_left (hc := h₂)
       · apply IntervalIntegrable.sub _ intervalIntegrable_const
-        simpa using (intervalIntegrable_log_sin (a := 0) (b := π)).comp_mul_left
+        simpa using (intervalIntegrable_log_sin (a := 0) (b := π)).comp_mul_left (hc := h₂)
       · exact intervalIntegrable_log_cos
     _ = (∫ x in 0..(π / 2), log (sin (2 * x)))
         - π / 2 * log 2 - ∫ x in 0..(π / 2), log (sin x) := by
       simp [← sin_pi_div_two_sub,
         intervalIntegral.integral_comp_sub_left (fun x ↦ log (sin x)) (π / 2)]
     _ = -log 2 * π / 2 := by
-      simp only [intervalIntegral.integral_comp_mul_left (f := fun x ↦ log (sin x)) two_ne_zero,
+      rw [intervalIntegral.integral_comp_mul_left (f := fun x ↦ log (sin x)) (hc := h₂.ne_zero),
         mul_zero, (by linarith : 2 * (π / 2) = π),
-        integral_log_sin_zero_pi_eq_two_mul_integral_log_sin_zero_pi_div_two, smul_eq_mul, ne_eq,
-        OfNat.ofNat_ne_zero, not_false_eq_true, inv_mul_cancel_left₀, sub_sub_cancel_left, neg_mul]
-      linarith
+        integral_log_sin_zero_pi_eq_two_mul_integral_log_sin_zero_pi_div_two,
+        smul_eq_mul, inv_mul_cancel_left₀]
+      ring
 
 /--
 The integral of `log ∘ sin` on `0 … π` equals `-log 2 * π`.

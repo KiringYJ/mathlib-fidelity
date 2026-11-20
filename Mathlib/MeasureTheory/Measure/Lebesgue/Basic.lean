@@ -311,17 +311,17 @@ theorem smul_map_volume_mul_left {a : ℝ} (h : a ≠ 0) :
       Measure.map_apply measurableSet_Ioo (measurable_const_mul a).aemeasurable, neg_sub_neg,
       neg_mul,
       preimage_const_mul_Ioo_of_neg _ _ h, abs_of_neg h, mul_sub, smul_eq_mul,
-      mul_div_cancel₀ _ (ne_of_lt h)]
+      mul_div_cancel₀]
   · simp only [Real.volume_Ioo, Measure.smul_apply, ← ENNReal.ofReal_mul (le_of_lt h),
       Measure.map_apply measurableSet_Ioo (measurable_const_mul a).aemeasurable,
       preimage_const_mul_Ioo₀ _ _ h,
-      abs_of_pos h, mul_sub, mul_div_cancel₀ _ (ne_of_gt h), smul_eq_mul]
+      abs_of_pos h, mul_sub, mul_div_cancel₀, smul_eq_mul]
 
 theorem map_volume_mul_left {a : ℝ} (h : a ≠ 0) :
     Measure.map (a * ·) volume = ENNReal.ofReal |a⁻¹| • volume := by
   conv_rhs =>
     rw [← Real.smul_map_volume_mul_left h, smul_smul, ← ENNReal.ofReal_mul (abs_nonneg _), ←
-      abs_mul, inv_mul_cancel₀ h, abs_one, ENNReal.ofReal_one, one_smul]
+      abs_mul, inv_mul_cancel₀, abs_one, ENNReal.ofReal_one, one_smul]
 
 @[simp]
 theorem volume_preimage_mul_left {a : ℝ} (h : a ≠ 0) (s : Set ℝ) :
@@ -378,7 +378,7 @@ theorem smul_map_diagonal_volume_pi [DecidableEq ι] {D : ι → ℝ} (h : det (
       simp only [det_diagonal, Ne] at h
       exact Finset.prod_ne_zero_iff.1 h i (Finset.mem_univ i)
     rw [volume_preimage_mul_left A, ← mul_assoc, ← ENNReal.ofReal_mul (abs_nonneg _), ← abs_mul,
-      mul_inv_cancel₀ A, abs_one, ENNReal.ofReal_one, one_mul]
+      mul_inv_cancel₀, abs_one, ENNReal.ofReal_one, one_mul]
   rw [this, volume_pi_pi, Finset.abs_prod,
     ENNReal.ofReal_prod_of_nonneg fun i _ => abs_nonneg (D i), ← Finset.prod_mul_distrib]
   simp only [B]
@@ -410,15 +410,20 @@ theorem map_matrix_volume_pi_eq_smul_volume_pi [DecidableEq ι] {M : Matrix ι �
     Measure.map (toLin' M) volume = ENNReal.ofReal (abs (det M)⁻¹) • volume := by
   -- This follows from the cases we have already proved, of diagonal matrices and transvections,
   -- as these matrices generate all invertible matrices.
-  apply diagonal_transvection_induction_of_det_ne_zero _ M hM
-  · intro D hD
+  apply (diagonal_transvection_induction_of_det_ne_zero
+    (fun N ↦ ∀ hN : det N ≠ 0,
+      Measure.map (toLin' N) volume =
+        ENNReal.ofReal (abs (Checked.inv (det N) hN.isUnit)) • volume) M hM ?_ ?_ ?_) hM
+  · intro D hD hD'
     conv_rhs => rw [← smul_map_diagonal_volume_pi hD]
-    rw [smul_smul, ← ENNReal.ofReal_mul (abs_nonneg _), ← abs_mul, inv_mul_cancel₀ hD, abs_one,
+    rw [smul_smul, ← ENNReal.ofReal_mul (abs_nonneg _), ← abs_mul, inv_mul_cancel₀, abs_one,
       ENNReal.ofReal_one, one_smul]
-  · intro t
-    simp_rw [Matrix.TransvectionStruct.det, _root_.inv_one, abs_one, ENNReal.ofReal_one, one_smul,
+  · intro t ht
+    simp only [Matrix.TransvectionStruct.det, inv_one₀, abs_one, ENNReal.ofReal_one, one_smul,
       (volume_preserving_transvectionStruct _).map_eq]
-  · intro A B _ _ IHA IHB
+  · intro A B hA_det hB_det IHA IHB hAB_det
+    specialize IHA hA_det
+    specialize IHB hB_det
     have hA : Measurable (toLin' A) := (LinearMap.continuous_on_pi _).measurable
     have hB : Measurable (toLin' B) := (LinearMap.continuous_on_pi _).measurable
     calc
@@ -434,8 +439,8 @@ theorem map_matrix_volume_pi_eq_smul_volume_pi [DecidableEq ι] {M : Matrix ι �
       _ = ENNReal.ofReal (abs (det B)⁻¹) •
           (ENNReal.ofReal (abs (det A)⁻¹) • volume) := by rw [IHA]
       _ = ENNReal.ofReal (abs (det (A * B))⁻¹) • volume := by
-        rw [det_mul, smul_smul, ← ENNReal.ofReal_mul (abs_nonneg _), ← abs_mul, mul_comm,
-          mul_inv]
+        rw [smul_smul, ← ENNReal.ofReal_mul (abs_nonneg _), ← abs_mul, mul_comm]
+        simp only [det_mul, mul_inv₀]
 
 /-- Any invertible linear map rescales Lebesgue measure through the absolute value of its
 determinant. -/
@@ -447,9 +452,9 @@ theorem map_linearMap_volume_pi_eq_smul_volume_pi {f : (ι → ℝ) →ₗ[ℝ] 
     let M := LinearMap.toMatrix' f
     have A : LinearMap.det f = det M := by simp only [M, LinearMap.det_toMatrix']
     have B : f = toLin' M := by simp only [M, toLin'_toMatrix']
-    rw [A, B]
-    apply map_matrix_volume_pi_eq_smul_volume_pi
-    rwa [A] at hf
+    have hM : det M ≠ 0 := by rwa [← A]
+    have h := map_matrix_volume_pi_eq_smul_volume_pi hM
+    simpa only [← A, ← B] using h
 
 end Real
 

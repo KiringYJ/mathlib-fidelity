@@ -9,6 +9,8 @@ public import Mathlib.Analysis.Complex.UpperHalfPlane.Topology
 public import Mathlib.Analysis.PSeries
 public import Mathlib.Order.Interval.Finset.Box
 public import Mathlib.Analysis.Asymptotics.Defs
+public import Mathlib.Analysis.Normed.Field.Lemmas
+public import Mathlib.Topology.Bornology.BoundedOperation
 
 /-!
 # Summability of Eisenstein series
@@ -68,7 +70,9 @@ section bounding_functions
 def r1 : ℝ := z.im ^ 2 / (z.re ^ 2 + z.im ^ 2)
 
 lemma r1_eq : r1 z = 1 / ((z.re / z.im) ^ 2 + 1) := by
-  rw [div_pow, div_add_one (by positivity), one_div_div, r1]
+  have him := z.im_pos
+  unfold r1
+  field_simp
 
 lemma r1_pos : 0 < r1 z := by
   dsimp only [r1]
@@ -95,7 +99,7 @@ lemma r_lower_bound_on_verticalStrip {A B : ℝ} (h : 0 < B) (hz : z ∈ vertica
     r ⟨⟨A, B⟩, h⟩ ≤ r z := by
   apply min_le_min hz.2
   gcongr
-  simp only [r1_eq, div_pow, one_div]
+  simp only [r1_eq, div_pow₀, one_div₀]
   rw [inv_le_inv₀ (by positivity) (by positivity), add_le_add_iff_right, ← even_two.pow_abs]
   gcongr
   exacts [hz.1, hz.2]
@@ -119,24 +123,24 @@ lemma div_max_sq_ge_one (x : Fin 2 → ℤ) (hx : x ≠ 0) :
   refine (max_choice (x 0).natAbs (x 1).natAbs).imp (fun H0 ↦ ?_) (fun H1 ↦ ?_)
   · have : x 0 ≠ 0 := by
       rwa [← norm_ne_zero_iff, norm_eq_max_natAbs, H0, Nat.cast_ne_zero, Int.natAbs_ne_zero] at hx
-    simp only [norm_eq_max_natAbs, H0, Nat.cast_natAbs, Int.cast_abs, div_pow, sq_abs, ne_eq,
-      OfNat.ofNat_ne_zero, not_false_eq_true, pow_eq_zero_iff, Int.cast_eq_zero, this, div_self,
+    simp only [norm_eq_max_natAbs, H0, Nat.cast_natAbs, Int.cast_abs, div_pow₀, sq_abs, div_self,
       le_refl]
   · have : x 1 ≠ 0 := by
       rwa [← norm_ne_zero_iff, norm_eq_max_natAbs, H1, Nat.cast_ne_zero, Int.natAbs_ne_zero] at hx
-    simp only [norm_eq_max_natAbs, H1, Nat.cast_natAbs, Int.cast_abs, div_pow, sq_abs, ne_eq,
-      OfNat.ofNat_ne_zero, not_false_eq_true, pow_eq_zero_iff, Int.cast_eq_zero, this, div_self,
+    simp only [norm_eq_max_natAbs, H1, Nat.cast_natAbs, Int.cast_abs, div_pow₀, sq_abs, div_self,
       le_refl]
 
 lemma r_mul_max_le {x : Fin 2 → ℤ} (hx : x ≠ 0) : r z * ‖x‖ ≤ ‖x 0 * (z : ℂ) + x 1‖ := by
   have hn0 : ‖x‖ ≠ 0 := by rwa [norm_ne_zero_iff]
   have h11 : x 0 * (z : ℂ) + x 1 = (x 0 / ‖x‖ * z + x 1 / ‖x‖) * ‖x‖ := by
-    rw [div_mul_eq_mul_div, ← add_div, div_mul_cancel₀ _ (mod_cast hn0)]
-  rw [norm_eq_max_natAbs, h11, norm_mul, norm_real, norm_norm, norm_eq_max_natAbs]
+    rw [div_mul_eq_mul_div₀, ← add_div, div_mul_cancel₀]
+  rw [h11, norm_mul, norm_real, norm_norm]
   gcongr
   · rcases div_max_sq_ge_one x hx with H1 | H2
-    · simpa only [norm_eq_max_natAbs, ofReal_div, ofReal_intCast] using auxbound1 z (x 1 / ‖x‖) H1
-    · simpa only [norm_eq_max_natAbs, ofReal_div, ofReal_intCast] using auxbound2 z (x 0 / ‖x‖) H2
+    · simpa only [ofReal_div _ _ (hs := hn0.isUnit), ofReal_intCast] using
+        auxbound1 z (x 1 / ‖x‖) H1
+    · simpa only [ofReal_div _ _ (hs := hn0.isUnit), ofReal_intCast] using
+        auxbound2 z (x 0 / ‖x‖) H2
 
 /-- Upper bound for the summand `|c * z + d| ^ (-k)`, as a product of a function of `z` and a
 function of `c, d`. -/
@@ -174,27 +178,56 @@ lemma linear_isTheta_left (d : ℤ) {z : ℂ} (hz : z ≠ 0) :
   · simp only [isLittleO_const_left, Int.cast_eq_zero,
       tendsto_norm_comp_cofinite_atTop_of_isClosedEmbedding Int.isClosedEmbedding_coe_real, or_true]
 
-lemma linear_inv_isBigO_right_add (c e : ℤ) (z : ℂ) :
-    (fun (d : ℤ) ↦ (c * z + d + e)⁻¹) =O[cofinite] fun n ↦ (n : ℝ)⁻¹ :=
-  (linear_isTheta_right_add c e z).inv.isBigO
+/-! Inverse estimates use a coordinate map from the actual domain. A punctured lattice,
+or an intersection of several denominator domains, is obtained by taking a subtype and
+its inclusion. No value is assigned at a pole. -/
 
-lemma linear_inv_isBigO_right (c : ℤ) (z : ℂ) :
-    (fun (d : ℤ) ↦ (c * z + d)⁻¹) =O[cofinite] fun n ↦ (n : ℝ)⁻¹ := by
-  grind [add_zero, (linear_isTheta_right_add c 0 z).inv.isBigO]
+lemma linear_inv_isBigO_right_add (c e : ℤ) (z : ℂ) {D : Type*} {l : Filter D}
+    (d : D → ℤ) (hd : Tendsto d l cofinite)
+    {hlinear : ∀ x, IsUnit (c * z + d x + e)} {hcast : ∀ x, IsUnit (d x : ℝ)} :
+    (fun x ↦ Checked.inv (c * z + d x + e) (hlinear x)) =O[l]
+      fun x ↦ Checked.inv (d x : ℝ) (hcast x) :=
+  ((linear_isTheta_right_add c e z).comp_tendsto hd).inv.isBigO
 
-lemma linear_inv_isBigO_left (d : ℤ) {z : ℂ} (hz : z ≠ 0) :
-    (fun (c : ℤ) ↦ (c * z + d)⁻¹) =O[cofinite] fun n ↦ (n : ℝ)⁻¹ :=
-  (linear_isTheta_left d hz).inv.isBigO
+lemma linear_inv_isBigO_right (c : ℤ) (z : ℂ) {D : Type*} {l : Filter D}
+    (d : D → ℤ) (hd : Tendsto d l cofinite)
+    {hlinear : ∀ x, IsUnit (c * z + d x)} {hcast : ∀ x, IsUnit (d x : ℝ)} :
+    (fun x ↦ Checked.inv (c * z + d x) (hlinear x)) =O[l]
+      fun x ↦ Checked.inv (d x : ℝ) (hcast x) := by
+  have h : (fun n : ℤ ↦ c * z + n) =Θ[cofinite] (fun n ↦ (n : ℝ)) := by
+    simpa only [Int.cast_zero, add_zero] using linear_isTheta_right_add c 0 z
+  exact (h.comp_tendsto hd).inv.isBigO
 
-lemma tendsto_zero_inv_linear (z : ℂ) (b : ℤ) :
-    Tendsto (fun d : ℕ ↦ 1 / ((b : ℂ) * z + d)) atTop (𝓝 0) := by
-  apply IsBigO.trans_tendsto ?_ tendsto_inv_atTop_nhds_zero_nat (F'' := ℝ)
-  have := (isBigO_sup.mp (Int.cofinite_eq ▸ linear_inv_isBigO_right b z)).2
-  simpa [← Nat.map_cast_int_atTop, isBigO_map]
+lemma linear_inv_isBigO_left (d : ℤ) {z : ℂ} (hz : z ≠ 0) {D : Type*} {l : Filter D}
+    (c : D → ℤ) (hc : Tendsto c l cofinite)
+    {hlinear : ∀ x, IsUnit (c x * z + d)} {hcast : ∀ x, IsUnit (c x : ℝ)} :
+    (fun x ↦ Checked.inv (c x * z + d) (hlinear x)) =O[l]
+      fun x ↦ Checked.inv (c x : ℝ) (hcast x) :=
+  ((linear_isTheta_left d hz).comp_tendsto hc).inv.isBigO
 
-lemma tendsto_zero_inv_linear_sub (z : ℂ) (b : ℤ) :
-    Tendsto (fun d : ℕ ↦ 1 / ((b : ℂ) * z - d)) atTop (𝓝 0) := by
-  grind [neg_zero, (tendsto_zero_inv_linear z (-b)).neg]
+lemma tendsto_zero_inv_linear (z : ℂ) (b : ℤ) {D : Type*} {l : Filter D}
+    (d : D → ℕ) (hd : Tendsto d l atTop)
+    {hlinear : ∀ x, IsUnit ((b : ℂ) * z + d x)} :
+    Tendsto (fun x ↦ Checked.div 1 ((b : ℂ) * z + d x) (hlinear x)) l (𝓝 0) := by
+  have hlin : Tendsto (fun x ↦ (b : ℂ) * z + d x) l (Bornology.cobounded ℂ) :=
+    (tendsto_const_add_cobounded _).comp (tendsto_natCast_atTop_cobounded.comp hd)
+  have hu : Tendsto (fun x ↦ (hlinear x).unit) l
+      (comap (fun u : ℂˣ ↦ (u : ℂ)) (Bornology.cobounded ℂ)) := by
+    apply tendsto_comap_iff.mpr
+    simpa only [Function.comp_def, IsUnit.unit_spec] using hlin
+  simpa only [Checked.div, one_divp, Function.comp_def] using tendsto_inv₀_cobounded.comp hu
+
+lemma tendsto_zero_inv_linear_sub (z : ℂ) (b : ℤ) {D : Type*} {l : Filter D}
+    (d : D → ℕ) (hd : Tendsto d l atTop)
+    {hlinear : ∀ x, IsUnit ((b : ℂ) * z - d x)} :
+    Tendsto (fun x ↦ Checked.div 1 ((b : ℂ) * z - d x) (hlinear x)) l (𝓝 0) := by
+  have hlin : Tendsto (fun x ↦ (b : ℂ) * z - d x) l (Bornology.cobounded ℂ) :=
+    (tendsto_const_sub_cobounded _).comp (tendsto_natCast_atTop_cobounded.comp hd)
+  have hu : Tendsto (fun x ↦ (hlinear x).unit) l
+      (comap (fun u : ℂˣ ↦ (u : ℂ)) (Bornology.cobounded ℂ)) := by
+    apply tendsto_comap_iff.mpr
+    simpa only [Function.comp_def, IsUnit.unit_spec] using hlin
+  simpa only [Checked.div, one_divp, Function.comp_def] using tendsto_inv₀_cobounded.comp hu
 
 end bounding_functions
 
@@ -217,59 +250,143 @@ lemma summable_one_div_norm_rpow {k : ℝ} (hk : 2 < k) :
       Real.rpow_add (Nat.cast_pos.mpr hn), Real.rpow_one, Nat.cast_mul, Nat.cast_ofNat, mul_assoc]
   · exact fun n ↦ Real.rpow_nonneg (norm_nonneg _) _
 
-/-- If the inverse of a function `isBigO` to `(|(n : ℝ)| ^ a)⁻¹` for `1 < a`, then the function is
-Summable. -/
+/-- An inverse with a summable power bound is summable on its actual domain. The comparison
+omits the coordinate zero, whose preimage is finite and is restored in the conclusion. -/
 lemma summable_inv_of_isBigO_rpow_inv {α : Type*} [NormedField α] [CompleteSpace α]
-    {f : ℤ → α} {a : ℝ} (hab : 1 < a)
-    (hf : (fun n ↦ (f n)⁻¹) =O[cofinite] fun n ↦ (|(n : ℝ)| ^ a)⁻¹) :
-    Summable fun n ↦ (f n)⁻¹ :=
-  summable_of_isBigO
-    ((Real.summable_abs_int_rpow hab).congr fun b ↦ Real.rpow_neg (abs_nonneg ↑b) a) hf
+    {D : Type*} {f : D → α} {a : ℝ} (hab : 1 < a)
+    (n : D → ℤ) (hn : Function.Injective n) {hf : ∀ x, IsUnit (f x)}
+    (hbound : (fun x : {x // n x ≠ 0} ↦ Checked.inv (f x) (hf x)) =O[cofinite]
+      fun x : {x // n x ≠ 0} ↦ Checked.inv (|(n x : ℝ)| ^ a)
+        (Real.rpow_pos_of_pos (abs_pos.mpr (Int.cast_ne_zero.mpr x.2)) a).ne'.isUnit) :
+    Summable fun x ↦ Checked.inv (f x) (hf x) := by
+  have hs : {x | n x = 0}.Finite :=
+    (Set.finite_singleton (0 : ℤ)).preimage (fun _ _ _ _ h ↦ hn h)
+  apply hs.summable_compl_iff.mp
+  apply summable_of_isBigO (g := fun x : {x // n x ≠ 0} ↦
+    Checked.inv (|(n x : ℝ)| ^ a)
+      (Real.rpow_pos_of_pos (abs_pos.mpr (Int.cast_ne_zero.mpr x.2)) a).ne'.isUnit) ?_ hbound
+  refine ((Real.summable_abs_int_rpow hab).comp_injective
+    (hn.comp Subtype.coe_injective)).congr fun x ↦ ?_
+  exact Real.rpow_neg (abs_nonneg _) a
 
-/-- For `z : ℂ` the function `d : ℤ ↦ ((c z + d) ^ k)⁻¹` is Summable for `2 ≤ k`. -/
-lemma linear_right_summable (z : ℂ) (c : ℤ) {k : ℤ} (hk : 2 ≤ k) :
-    Summable fun d : ℤ ↦ ((c * z + d) ^ k)⁻¹ := by
-  apply summable_inv_of_isBigO_rpow_inv (a := k) (by norm_cast)
+/-- For `2 ≤ k`, the inverse power of `c z + d` is summable on any injectively indexed
+integer domain on which the denominator is invertible. -/
+lemma linear_right_summable (z : ℂ) (c : ℤ) {k : ℤ} (hk : 2 ≤ k)
+    {D : Type*} (d : D → ℤ) (hd : Function.Injective d)
+    {hpower : ∀ x, IsUnit (Checked.zpow (c * z + d x) k (by intro h; omega))} :
+    Summable fun x ↦ Checked.inv
+      (Checked.zpow (c * z + d x) k (by intro h; omega)) (hpower x) := by
+  apply summable_inv_of_isBigO_rpow_inv (a := k) (by norm_cast) d hd
   lift k to ℕ using by lia
-  grind [(linear_inv_isBigO_right c z).abs_right.pow k,
-    zpow_natCast, Int.cast_natCast, Real.rpow_natCast, ← inv_pow]
+  have hlinear (x : {x // d x ≠ 0}) : IsUnit (c * z + d x) :=
+    (isUnit_pow_iff (by omega : k ≠ 0)).mp (hpower x)
+  have hcast (x : {x // d x ≠ 0}) : IsUnit (d x : ℝ) :=
+    (Int.cast_ne_zero.mpr x.2).isUnit
+  simpa only [zpow_natCast₀, Int.cast_natCast, Real.rpow_natCast, inv_pow₀, abs_inv] using
+    (linear_inv_isBigO_right c z (fun x : {x // d x ≠ 0} ↦ d x)
+      (hd.comp Subtype.coe_injective).tendsto_cofinite
+      (hlinear := hlinear) (hcast := hcast)).abs_right.pow k
 
-/-- For `z : ℂ` the function `c : ℤ ↦ ((c z + d) ^ k)⁻¹` is Summable for `2 ≤ k`. -/
-lemma linear_left_summable {z : ℂ} (hz : z ≠ 0) (d : ℤ) {k : ℤ} (hk : 2 ≤ k) :
-    Summable fun c : ℤ ↦ ((c * z + d) ^ k)⁻¹ := by
-  apply summable_inv_of_isBigO_rpow_inv (a := k) (by norm_cast)
+/-- For `2 ≤ k` and nonzero `z`, the inverse power of `c z + d` is summable on any
+injectively indexed integer domain on which the denominator is invertible. -/
+lemma linear_left_summable {z : ℂ} (hz : z ≠ 0) (d : ℤ) {k : ℤ} (hk : 2 ≤ k)
+    {D : Type*} (c : D → ℤ) (hc : Function.Injective c)
+    {hpower : ∀ x, IsUnit (Checked.zpow (c x * z + d) k (by intro h; omega))} :
+    Summable fun x ↦ Checked.inv
+      (Checked.zpow (c x * z + d) k (by intro h; omega)) (hpower x) := by
+  apply summable_inv_of_isBigO_rpow_inv (a := k) (by norm_cast) c hc
   lift k to ℕ using (by lia)
-  simp only [zpow_natCast, Int.cast_natCast, Real.rpow_natCast, ← inv_pow, ← abs_inv]
-  apply (linear_inv_isBigO_left d hz).abs_right.pow
+  have hlinear (x : {x // c x ≠ 0}) : IsUnit (c x * z + d) :=
+    (isUnit_pow_iff (by omega : k ≠ 0)).mp (hpower x)
+  have hcast (x : {x // c x ≠ 0}) : IsUnit (c x : ℝ) :=
+    (Int.cast_ne_zero.mpr x.2).isUnit
+  simpa only [zpow_natCast₀, Int.cast_natCast, Real.rpow_natCast, inv_pow₀, abs_inv] using
+    (linear_inv_isBigO_left d hz (fun x : {x // c x ≠ 0} ↦ c x)
+      (hc.comp Subtype.coe_injective).tendsto_cofinite
+      (hlinear := hlinear) (hcast := hcast)).abs_right.pow k
 
-lemma summable_linear_sub_mul_linear_add (z : ℂ) (c₁ c₂ : ℤ) :
-    Summable fun n : ℤ ↦ ((c₁ * z - n) * (c₂ * z + n))⁻¹ := by
-  apply summable_inv_of_isBigO_rpow_inv (a := 2) (by norm_cast)
-  simpa [pow_two] using! (linear_inv_isBigO_right c₂ z).mul
-      (linear_inv_isBigO_right c₁ z).comp_neg_int
+lemma summable_linear_sub_mul_linear_add (z : ℂ) (c₁ c₂ : ℤ)
+    {D : Type*} (n : D → ℤ) (hn : Function.Injective n)
+    {hprod : ∀ x, IsUnit ((c₁ * z - n x) * (c₂ * z + n x))} :
+    Summable fun x ↦ Checked.inv ((c₁ * z - n x) * (c₂ * z + n x)) (hprod x) := by
+  apply summable_inv_of_isBigO_rpow_inv (a := 2) (by norm_cast) n hn
+  have h₁ (x : {x // n x ≠ 0}) : IsUnit (c₁ * z - n x) :=
+    ((Commute.all _ _).isUnit_mul_iff.mp (hprod x)).1
+  have h₂ (x : {x // n x ≠ 0}) : IsUnit (c₂ * z + n x) :=
+    ((Commute.all _ _).isUnit_mul_iff.mp (hprod x)).2
+  have hcast (x : {x // n x ≠ 0}) : IsUnit (n x : ℝ) :=
+    (Int.cast_ne_zero.mpr x.2).isUnit
+  have hneg : Function.Injective (fun x : {x // n x ≠ 0} ↦ -n x) :=
+    neg_injective.comp (hn.comp Subtype.coe_injective)
+  have hleft := linear_inv_isBigO_right c₁ z (fun x : {x // n x ≠ 0} ↦ -n x)
+    hneg.tendsto_cofinite
+    (hlinear := fun x ↦ by simpa only [Int.cast_neg, ← sub_eq_add_neg] using h₁ x)
+    (hcast := fun x ↦ by simpa only [Int.cast_neg] using (hcast x).neg)
+  have hright := linear_inv_isBigO_right c₂ z (fun x : {x // n x ≠ 0} ↦ n x)
+    (hn.comp Subtype.coe_injective).tendsto_cofinite (hlinear := h₂) (hcast := hcast)
+  simpa only [Real.rpow_two, pow_two, mul_inv₀, Int.cast_neg, sub_eq_add_neg,
+    inv_neg₀, abs_inv, abs_neg] using hleft.abs_right.mul hright.abs_right
 
-lemma summable_linear_right_add_one_mul_linear_right (z : ℂ) (c₁ c₂ : ℤ) :
-    Summable fun n : ℤ ↦ ((c₁ * z + n + 1) * (c₂ * z + n))⁻¹ := by
-  apply summable_inv_of_isBigO_rpow_inv (a := 2) (by norm_cast)
-  simpa [pow_two] using (linear_inv_isBigO_right c₂ z).mul
-    (linear_inv_isBigO_right_add c₁ 1 z)
+lemma summable_linear_right_add_one_mul_linear_right (z : ℂ) (c₁ c₂ : ℤ)
+    {D : Type*} (n : D → ℤ) (hn : Function.Injective n)
+    {hprod : ∀ x, IsUnit ((c₁ * z + n x + 1) * (c₂ * z + n x))} :
+    Summable fun x ↦ Checked.inv ((c₁ * z + n x + 1) * (c₂ * z + n x)) (hprod x) := by
+  apply summable_inv_of_isBigO_rpow_inv (a := 2) (by norm_cast) n hn
+  have h₁ (x : {x // n x ≠ 0}) : IsUnit (c₁ * z + n x + 1) :=
+    ((Commute.all _ _).isUnit_mul_iff.mp (hprod x)).1
+  have h₂ (x : {x // n x ≠ 0}) : IsUnit (c₂ * z + n x) :=
+    ((Commute.all _ _).isUnit_mul_iff.mp (hprod x)).2
+  have hcast (x : {x // n x ≠ 0}) : IsUnit (n x : ℝ) :=
+    (Int.cast_ne_zero.mpr x.2).isUnit
+  have hleft := linear_inv_isBigO_right_add c₁ 1 z (fun x : {x // n x ≠ 0} ↦ n x)
+    (hn.comp Subtype.coe_injective).tendsto_cofinite
+    (hlinear := fun x ↦ by simpa only [Int.cast_one] using h₁ x) (hcast := hcast)
+  have hright := linear_inv_isBigO_right c₂ z (fun x : {x // n x ≠ 0} ↦ n x)
+    (hn.comp Subtype.coe_injective).tendsto_cofinite (hlinear := h₂) (hcast := hcast)
+  simpa only [Real.rpow_two, pow_two, mul_inv₀, abs_inv, Int.cast_one] using
+    hleft.abs_right.mul hright.abs_right
 
-lemma summable_linear_left_mul_linear_left {z : ℂ} (hz : z ≠ 0) (c₁ c₂ : ℤ) :
-    Summable fun n : ℤ ↦ ((n * z + c₁) * (n * z + c₂))⁻¹ := by
-  apply summable_inv_of_isBigO_rpow_inv (a := 2) (by norm_cast)
-  simp only [Real.rpow_two, abs_mul_abs_self, pow_two]
-  simpa using (linear_inv_isBigO_left c₂ hz).mul (linear_inv_isBigO_left c₁ hz)
+lemma summable_linear_left_mul_linear_left {z : ℂ} (hz : z ≠ 0) (c₁ c₂ : ℤ)
+    {D : Type*} (n : D → ℤ) (hn : Function.Injective n)
+    {hprod : ∀ x, IsUnit ((n x * z + c₁) * (n x * z + c₂))} :
+    Summable fun x ↦ Checked.inv ((n x * z + c₁) * (n x * z + c₂)) (hprod x) := by
+  apply summable_inv_of_isBigO_rpow_inv (a := 2) (by norm_cast) n hn
+  have h₁ (x : {x // n x ≠ 0}) : IsUnit (n x * z + c₁) :=
+    ((Commute.all _ _).isUnit_mul_iff.mp (hprod x)).1
+  have h₂ (x : {x // n x ≠ 0}) : IsUnit (n x * z + c₂) :=
+    ((Commute.all _ _).isUnit_mul_iff.mp (hprod x)).2
+  have hcast (x : {x // n x ≠ 0}) : IsUnit (n x : ℝ) :=
+    (Int.cast_ne_zero.mpr x.2).isUnit
+  have hleft := linear_inv_isBigO_left c₁ hz (fun x : {x // n x ≠ 0} ↦ n x)
+    (hn.comp Subtype.coe_injective).tendsto_cofinite (hlinear := h₁) (hcast := hcast)
+  have hright := linear_inv_isBigO_left c₂ hz (fun x : {x // n x ≠ 0} ↦ n x)
+    (hn.comp Subtype.coe_injective).tendsto_cofinite (hlinear := h₂) (hcast := hcast)
+  simpa only [Real.rpow_two, pow_two, mul_inv₀, abs_inv, Int.cast_one] using
+    hleft.abs_right.mul hright.abs_right
 
-private lemma aux_isBigO_linear (z : ℍ) (a b : ℤ) :
-    (fun (m : Fin 2 → ℤ) ↦ ((m 0 + a : ℂ) * z + m 1 + b)⁻¹) =O[cofinite]
-    fun (m : Fin 2 → ℤ) ↦ ‖![m 0 + a, m 1 + b]‖⁻¹ := by
+private lemma aux_isBigO_linear (z : ℍ) (a b : ℤ) {D : Type*}
+    (m : D → Fin 2 → ℤ) (l : Filter D)
+    {hlinear : ∀ x, IsUnit (((m x 0 : ℂ) + a) * z + m x 1 + b)}
+    {hnorm : ∀ x, IsUnit ‖![m x 0 + a, m x 1 + b]‖} :
+    (fun x ↦ Checked.inv (((m x 0 : ℂ) + a) * z + m x 1 + b) (hlinear x)) =O[l]
+    fun x ↦ Checked.inv ‖![m x 0 + a, m x 1 + b]‖ (hnorm x) := by
   rw [Asymptotics.isBigO_iff]
   have h0 : z ∈ verticalStrip |z.re| (z.im) := by simp [mem_verticalStrip_iff]
-  use ‖r ⟨⟨|z.re|, z.im⟩, z.2⟩‖⁻¹
-  filter_upwards with m
-  apply le_trans (by simpa [Real.rpow_neg_one, add_assoc] using
-    summand_bound_of_mem_verticalStrip zero_le_one ![m 0 + a, m 1 + b] z.2 h0)
-  simp [abs_of_pos (r_pos _)]
+  have hr := r_pos ⟨⟨|z.re|, z.im⟩, z.2⟩
+  use (r ⟨⟨|z.re|, z.im⟩, z.2⟩)⁻¹
+  filter_upwards with x
+  have hx : ![m x 0 + a, m x 1 + b] ≠ 0 := norm_ne_zero_iff.mp (hnorm x).ne_zero
+  have hbound : r ⟨⟨|z.re|, z.im⟩, z.2⟩ * ‖![m x 0 + a, m x 1 + b]‖ ≤
+      ‖((m x 0 : ℂ) + a) * z + m x 1 + b‖ := by
+    refine (mul_le_mul_of_nonneg_right (r_lower_bound_on_verticalStrip z z.2 h0)
+      (norm_nonneg _)).trans ?_
+    simpa only [Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val_fin_one,
+      Int.cast_add, add_assoc] using r_mul_max_le z hx
+  simp only [norm_inv, norm_norm]
+  have hunit := hr.ne'.isUnit.mul (hnorm x)
+  rw [← mul_inv₀ (hab := hunit)]
+  exact (inv_le_inv₀ (norm_pos_iff.mpr (hlinear x).ne_zero)
+    (mul_pos hr (norm_pos_iff.mpr hx))).mpr hbound
 
 lemma isLittleO_const_left_of_properSpace_of_discreteTopology
     {α : Type*} (a : α) [NormedAddCommGroup α] [DiscreteTopology α]
@@ -277,21 +394,56 @@ lemma isLittleO_const_left_of_properSpace_of_discreteTopology
   simpa [isLittleO_const_left, Function.comp_def] using
     .inr <| tendsto_norm_comp_cofinite_atTop_of_isClosedEmbedding IsClosedEmbedding.id
 
-lemma vec_add_const_isTheta (a b : ℤ) :
-    (fun (m : Fin 2 → ℤ) => ‖![m 0 + a, m 1 + b]‖⁻¹) =Θ[cofinite] (fun m => ‖m‖⁻¹) := by
+lemma vec_add_const_isTheta (a b : ℤ) {D : Type*} {l : Filter D}
+    (m : D → Fin 2 → ℤ) (hm : Tendsto m l cofinite)
+    {hshift : ∀ x, IsUnit ‖![m x 0 + a, m x 1 + b]‖}
+    {hnorm : ∀ x, IsUnit ‖m x‖} :
+    (fun x ↦ Checked.inv ‖![m x 0 + a, m x 1 + b]‖ (hshift x)) =Θ[l]
+      (fun x ↦ Checked.inv ‖m x‖ (hnorm x)) := by
   have (x : Fin 2 → ℤ) : ![x 0 + a, x 1 + b] = x + ![a, b] := List.ofFn_inj.mp rfl
-  simpa only [isTheta_inv, isTheta_norm_left, this] using! (IsTheta.add_isLittleO
-  (by rw [← isTheta_norm_left]) (isLittleO_const_left_of_properSpace_of_discreteTopology ![a, b]))
+  apply IsTheta.inv
+  have h : (fun x : Fin 2 → ℤ ↦ x + ![a, b]) =Θ[cofinite] (fun x ↦ x) :=
+    IsTheta.add_isLittleO isTheta_rfl
+      (isLittleO_const_left_of_properSpace_of_discreteTopology ![a, b]).of_norm_right
+  simpa only [Function.comp_def, this] using (h.norm_left.norm_right.comp_tendsto hm)
 
-lemma isBigO_linear_add_const_vec (z : ℍ) (a b : ℤ) :
-    (fun m : (Fin 2 → ℤ) => (((m 0 : ℂ) + a) * z + m 1 + b)⁻¹) =O[cofinite] (fun m => ‖m‖⁻¹) :=
-  (aux_isBigO_linear z a b).trans (vec_add_const_isTheta a b).isBigO
+lemma isBigO_linear_add_const_vec (z : ℍ) (a b : ℤ) {D : Type*} {l : Filter D}
+    (m : D → Fin 2 → ℤ) (hm : Tendsto m l cofinite)
+    {hlinear : ∀ x, IsUnit (((m x 0 : ℂ) + a) * z + m x 1 + b)}
+    {hnorm : ∀ x, IsUnit ‖m x‖} :
+    (fun x ↦ Checked.inv (((m x 0 : ℂ) + a) * z + m x 1 + b) (hlinear x)) =O[l]
+      (fun x ↦ Checked.inv ‖m x‖ (hnorm x)) := by
+  have hshift (x : D) : IsUnit ‖![m x 0 + a, m x 1 + b]‖ := by
+    apply IsUnit.mk0
+    rw [norm_ne_zero_iff]
+    intro hx
+    have ha : m x 0 + a = 0 := by simpa using congrFun hx 0
+    have hb : m x 1 + b = 0 := by simpa using congrFun hx 1
+    apply (hlinear x).ne_zero
+    calc
+      ((m x 0 : ℂ) + a) * z + m x 1 + b =
+          ((m x 0 + a : ℤ) : ℂ) * z + ((m x 1 + b : ℤ) : ℂ) := by
+        push_cast
+        ring
+      _ = 0 := by simp [ha, hb]
+  exact (aux_isBigO_linear z a b m l (hnorm := hshift)).trans
+    (vec_add_const_isTheta a b m hm (hshift := hshift)).isBigO
 
-/-- If a function `ℤ² → ℂ` is `O (‖n‖ ^ a)⁻¹` for `2 < a`, then the function is summable. -/
+/-- A function on an injectively indexed lattice domain with a power bound of exponent
+greater than two is summable. The comparison is only taken at nonzero lattice coordinates. -/
 lemma summable_of_isBigO_rpow_norm {E : Type*} [NormedAddCommGroup E] [CompleteSpace E]
-    {f : (Fin 2 → ℤ) → E} {a : ℝ} (hab : 2 < a)
-    (hf : f =O[cofinite] fun n ↦ (‖n‖ ^ a)⁻¹) : Summable f :=
-  summable_of_isBigO
-    ((summable_one_div_norm_rpow hab).congr fun b ↦ Real.rpow_neg (norm_nonneg b) a) hf
+    {D : Type*} {f : D → E} {a : ℝ} (hab : 2 < a)
+    (m : D → Fin 2 → ℤ) (hm : Function.Injective m)
+    (hf : (fun x : {x // m x ≠ 0} ↦ f x) =O[cofinite]
+      fun x : {x // m x ≠ 0} ↦ Checked.inv (‖m x‖ ^ a)
+        (Real.rpow_pos_of_pos (norm_pos_iff.mpr x.2) a).ne'.isUnit) : Summable f := by
+  have hs : {x | m x = 0}.Finite :=
+    (Set.finite_singleton (0 : Fin 2 → ℤ)).preimage (fun _ _ _ _ h ↦ hm h)
+  apply hs.summable_compl_iff.mp
+  apply summable_of_isBigO (g := fun x : {x // m x ≠ 0} ↦ Checked.inv (‖m x‖ ^ a)
+    (Real.rpow_pos_of_pos (norm_pos_iff.mpr x.2) a).ne'.isUnit) ?_ hf
+  refine ((summable_one_div_norm_rpow hab).comp_injective
+    (hm.comp Subtype.coe_injective)).congr fun x ↦ ?_
+  exact Real.rpow_neg (norm_nonneg (m x)) a
 
 end EisensteinSeries

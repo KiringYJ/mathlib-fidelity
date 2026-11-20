@@ -39,6 +39,19 @@ theorem prod_lemma (m : ℕ → ℕ+) (k : ℕ) (nm : ℕ+) :
     Finset.prod_congr rfl this
   grind
 
+private theorem step_eq (n s d : ℕ+) {a b : ℚ}
+    (h : ((n : ℚ) + a) * (s : ℚ) * (d : ℚ) =
+      ((s : ℚ) + b) * ((d : ℚ) + 1) * (n : ℚ)) :
+    1 + a / (n : ℚ) = (1 + b / (s : ℚ)) * (1 + 1 / (d : ℚ)) := by
+  suffices h' : (1 + a / (n : ℚ)) * (n : ℚ) * (s : ℚ) * (d : ℚ) =
+      ((1 + b / (s : ℚ)) * (1 + 1 / (d : ℚ))) * (n : ℚ) * (s : ℚ) * (d : ℚ) by
+    simpa only [mul_div_cancel_right₀] using
+      congrArg (fun z : ℚ => z / (d : ℚ) / (s : ℚ) / (n : ℚ)) h'
+  calc
+    _ = ((1 + b / (s : ℚ)) * (s : ℚ)) * ((1 + 1 / (d : ℚ)) * (d : ℚ)) * (n : ℚ) := by
+      simpa only [add_mul, one_mul, div_mul_cancel₀] using h
+    _ = _ := by ac_rfl
+
 end Imo2013Q1
 
 open Imo2013Q1
@@ -63,17 +76,12 @@ theorem imo2013_q1 (n : ℕ+) (k : ℕ) :
     use m
     have hmpk : (m pk : ℚ) = 2 * t + 2 ^ pk.succ := by
       have : m pk = ⟨2 * t + 2 ^ pk.succ, _⟩ := ite_eq_right (irrefl pk); simp [this]
-    calc
-      ((1 : ℚ) + (2 ^ pk.succ - 1) / (n : ℚ) : ℚ) = 1 + (2 * 2 ^ pk - 1) / (2 * (t + 1) : ℕ) := by
-        rw [ht, pow_succ']
-      _ = (1 + 1 / (2 * t + 2 * 2 ^ pk)) * (1 + (2 ^ pk - 1) / (↑t + 1)) := by
-        simp [field, -mul_eq_mul_right_iff]
-        ring
-      _ = (1 + 1 / (2 * t + 2 ^ pk.succ)) * (1 + (2 ^ pk - 1) / t_succ) := by
-        simp [pow_succ', PNat.mk_coe, t_succ]
-      _ = (∏ i ∈ Finset.range pk, (1 + 1 / (m i : ℚ))) * (1 + 1 / m pk) := by
-        rw [prod_lemma, hpm, ← hmpk, mul_comm]
-      _ = ∏ i ∈ Finset.range pk.succ, (1 + 1 / (m i : ℚ)) := by rw [← Finset.prod_range_succ _ pk]
+    rw [Finset.prod_range_succ, prod_lemma, ← hpm]
+    apply step_eq n t_succ (m pk)
+    have hnq : (n : ℚ) = 2 * ((t : ℚ) + 1) := by exact_mod_cast ht
+    have hsq : (t_succ : ℚ) = (t : ℚ) + 1 := by simp [t_succ, PNat.mk_coe]
+    simp only [hnq, hsq, hmpk, pow_succ']
+    ring
   · -- odd case
     let t_succ : ℕ+ := ⟨t + 1, t.succ_pos⟩
     obtain ⟨pm, hpm⟩ := hpk t_succ
@@ -82,13 +90,9 @@ theorem imo2013_q1 (n : ℕ+) (k : ℕ) :
     have hmpk : (m pk : ℚ) = 2 * t + 1 := by
       have : m pk = ⟨2 * t + 1, _⟩ := ite_eq_right (irrefl pk)
       simp [this]
-    calc
-      ((1 : ℚ) + (2 ^ pk.succ - 1) / ↑n : ℚ) = 1 + (2 * 2 ^ pk - 1) / (2 * t + 1 : ℕ) := by
-        rw [ht, pow_succ']
-      _ = (1 + 1 / (2 * t + 1)) * (1 + (2 ^ pk - 1) / (t + 1)) := by
-        simp [field]
-        ring
-      _ = (1 + 1 / (2 * t + 1)) * (1 + (2 ^ pk - 1) / t_succ) := by norm_cast
-      _ = (∏ i ∈ Finset.range pk, (1 + 1 / (m i : ℚ))) * (1 + 1 / ↑(m pk)) := by
-        rw [prod_lemma, hpm, ← hmpk, mul_comm]
-      _ = ∏ i ∈ Finset.range pk.succ, (1 + 1 / (m i : ℚ)) := by rw [← Finset.prod_range_succ _ pk]
+    rw [Finset.prod_range_succ, prod_lemma, ← hpm]
+    apply step_eq n t_succ (m pk)
+    have hnq : (n : ℚ) = 2 * (t : ℚ) + 1 := by exact_mod_cast ht
+    have hsq : (t_succ : ℚ) = (t : ℚ) + 1 := by simp [t_succ, PNat.mk_coe]
+    simp only [hnq, hsq, hmpk, pow_succ']
+    ring

@@ -75,8 +75,13 @@ lemma addHaarScalarFactor_smul_inv_eq_distribHaarChar (g : G) :
 
 variable (μ) in
 lemma addHaarScalarFactor_smul_eq_distribHaarChar_inv (g : G) :
-    addHaarScalarFactor μ (DomMulAct.mk g • μ) = (distribHaarChar A g)⁻¹ := by
-  rw [← map_inv, ← addHaarScalarFactor_smul_inv_eq_distribHaarChar μ, DomMulAct.mk_inv, inv_inv]
+    addHaarScalarFactor μ (DomMulAct.mk g • μ) =
+      Checked.inv (distribHaarChar A g) (distribHaarChar_pos (A := A) (g := g)).ne'.isUnit := by
+  calc
+    _ = distribHaarChar A g⁻¹ := by
+      simpa only [DomMulAct.mk_inv, inv_inv] using
+        addHaarScalarFactor_smul_inv_eq_distribHaarChar μ g⁻¹
+    _ = _ := eq_inv_of_mul_eq_one_right₀ (by rw [← map_mul, mul_inv_cancel, map_one])
 
 variable [Regular μ] {s : Set A}
 

@@ -544,14 +544,15 @@ theorem comp_summable_nnreal (q : FormalMultilinearSeries 𝕜 F G) (p : FormalM
       _ ≤ Cq * Cp ^ n * r0 ^ n := mul_le_mul' (mul_le_mul' A B) le_rfl
       _ = Cq / 4 ^ n := by
         simp only [r0]
-        simp [field, mul_pow]
+        rw [mul_assoc, ← mul_pow, mul_inv_rev₀, ← mul_assoc, mul_inv_cancel₀, one_mul,
+          inv_pow₀, div_eq_mul_inv₀]
   refine ⟨r, r_pos, NNReal.summable_of_le I ?_⟩
-  simp_rw [div_eq_mul_inv]
+  simp_rw [div_eq_mul_inv₀]
   refine Summable.mul_left _ ?_
   have : ∀ n : ℕ, HasSum (fun c : Composition n => (4 ^ n : ℝ≥0)⁻¹) (2 ^ (n - 1) / 4 ^ n) := by
     intro n
     convert! hasSum_fintype fun c : Composition n => (4 ^ n : ℝ≥0)⁻¹
-    simp [Finset.card_univ, composition_card, div_eq_mul_inv]
+    simp [Finset.card_univ, composition_card, div_eq_mul_inv₀]
   refine NNReal.summable_sigma.2 ⟨fun n => (this n).summable, (NNReal.summable_nat_add_iff 1).1 ?_⟩
   convert! (NNReal.summable_geometric (NNReal.div_lt_one_of_lt one_lt_two)).mul_left (1 / 4) using 1
   ext1 n
@@ -808,7 +809,9 @@ theorem HasFPowerSeriesWithinAt.comp {D D' : Type*}
       rw [eventually_atTop]
       refine ⟨1, fun n hn => ?_⟩
       symm
-      rw [eq_sub_iff_add_eq', Finset.range_eq_Ico, ← Hf.coeff_zero fun _i => y,
+      have hzero := Hf.coeff_zero (fun _i => y)
+      simp only [Function.comp_def] at hzero
+      rw [eq_sub_iff_add_eq', Finset.range_eq_Ico, ← hzero,
         Finset.sum_eq_sum_Ico_succ_bot hn]
     have :
       Tendsto (fun n => (∑ a ∈ Finset.range n, p a fun _b => y) - coord' (f x)) atTop
@@ -885,7 +888,8 @@ theorem HasFPowerSeriesAt.comp {D D' : Type*} [TopologicalSpace D] [TopologicalS
 two sets `s` and `t` such that `f` maps `s` to `t`, then `g ∘ f` is analytic at `x` within `s`. -/
 theorem AnalyticWithinAt.comp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
     {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {x : D} {t : Set D'} {s : Set D}
-    (hg : AnalyticWithinAt 𝕜 g t (f x) coord') (hf : AnalyticWithinAt 𝕜 (coord' ∘ f) s x coord) (h : Set.MapsTo f s t)
+    (hg : AnalyticWithinAt 𝕜 g t (f x) coord')
+    (hf : AnalyticWithinAt 𝕜 (coord' ∘ f) s x coord) (h : Set.MapsTo f s t)
     (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
     (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
     AnalyticWithinAt 𝕜 (g ∘ f) s x coord := by
@@ -895,8 +899,10 @@ theorem AnalyticWithinAt.comp {D D' : Type*} [TopologicalSpace D] [TopologicalSp
 
 /-- Version of `AnalyticWithinAt.comp` where point equality is a separate hypothesis. -/
 theorem AnalyticWithinAt.comp_of_eq {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
-    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {y : D'} {x : D} {t : Set D'} {s : Set D}
-    (hg : AnalyticWithinAt 𝕜 g t y coord') (hf : AnalyticWithinAt 𝕜 (coord' ∘ f) s x coord) (h : Set.MapsTo f s t)
+    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'}
+    {y : D'} {x : D} {t : Set D'} {s : Set D}
+    (hg : AnalyticWithinAt 𝕜 g t y coord')
+    (hf : AnalyticWithinAt 𝕜 (coord' ∘ f) s x coord) (h : Set.MapsTo f s t)
     (hy : f x = y)
     (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
     (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
@@ -916,20 +922,24 @@ attribute [local push ←] Function.comp_def
 analytic at `x`. -/
 @[to_fun (attr := fun_prop)]
 theorem AnalyticAt.comp {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
-    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {x : D} (hg : AnalyticAt 𝕜 g (f x) coord')
+    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {x : D}
+    (hg : AnalyticAt 𝕜 g (f x) coord')
     (hf : AnalyticAt 𝕜 (coord' ∘ f) x coord)
     (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
-    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) : AnalyticAt 𝕜 (g ∘ f) x coord := by
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    AnalyticAt 𝕜 (g ∘ f) x coord := by
   rw [← analyticWithinAt_univ] at hg hf ⊢
   exact hg.comp hf (by simp) hcoord hcoord'
 
 /-- Version of `AnalyticAt.comp` where point equality is a separate hypothesis. -/
 @[to_fun]
 theorem AnalyticAt.comp_of_eq {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
-    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {y : D'} {x : D} (hg : AnalyticAt 𝕜 g y coord')
+    {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {y : D'} {x : D}
+    (hg : AnalyticAt 𝕜 g y coord')
     (hf : AnalyticAt 𝕜 (coord' ∘ f) x coord) (hy : f x = y)
     (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)
-    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) : AnalyticAt 𝕜 (g ∘ f) x coord := by
+    (hcoord' : Topology.IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
+    AnalyticAt 𝕜 (g ∘ f) x coord := by
   rw [← hy] at hg
   exact hg.comp hf hcoord hcoord'
 @[deprecated (since := "2026-05-18")] alias AnalyticAt.comp_of_eq' := AnalyticAt.fun_comp_of_eq
@@ -943,7 +953,8 @@ theorem AnalyticAt.comp_analyticWithinAt {D D' : Type*} [TopologicalSpace D] [To
   rw [← analyticWithinAt_univ] at hg
   exact hg.comp hf (Set.mapsTo_univ _ _) hcoord hcoord'
 
-theorem AnalyticAt.comp_analyticWithinAt_of_eq {D D' : Type*} [TopologicalSpace D] [TopologicalSpace D']
+theorem AnalyticAt.comp_analyticWithinAt_of_eq {D D' : Type*}
+    [TopologicalSpace D] [TopologicalSpace D']
     {coord : D → E} {coord' : D' → F} {g : D' → G} {f : D → D'} {x : D} {y : D'} {s : Set D}
     (hg : AnalyticAt 𝕜 g y coord') (hf : AnalyticWithinAt 𝕜 (coord' ∘ f) s x coord) (h : f x = y)
     (hcoord : Topology.IsEmbedding coord := by exact Topology.IsEmbedding.id)

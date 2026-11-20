@@ -209,6 +209,23 @@ theorem tendsto_mul_add_inv_atTop_nhds_zero (a c : ℝ) (ha : a ≠ 0) :
   · exact (tendsto_atTop_add_const_right _ c (h.const_mul_atTop ha')).fun_inv_tendsto_atTop
       (h0 := fun x : {x : ℝ // a * x + c ≠ 0} ↦ x.2.isUnit)
 
+/-- If `g` is eventually nonzero, the checked quotient `f x / g x` eventually exists and
+satisfies `(f x / g x) * g x = f x`. -/
+theorem Filter.EventuallyEq.div_mul_cancel {α G : Type*} [GroupWithZero G] {f g : α → G}
+    {l : Filter α} (hg : Tendsto g l (𝓟 {0}ᶜ)) :
+    ∀ᶠ x in l, ∃ h : IsUnit (g x), Checked.div (f x) (g x) h * g x = f x := by
+  filter_upwards [hg.eventually_mem (mem_principal_self ({0} : Set G)ᶜ)] with x hx
+  have hx' : g x ≠ 0 := hx
+  exact ⟨hx'.isUnit, div_mul_cancel₀ _⟩
+
+/-- If `g` tends to `∞`, the checked quotient `f x / g x` eventually exists and cancels. -/
+theorem Filter.EventuallyEq.div_mul_cancel_atTop {α K : Type*}
+    [DivisionSemiring K] [LinearOrder K] [IsStrictOrderedRing K]
+    {f g : α → K} {l : Filter α} (hg : Tendsto g l atTop) :
+    ∀ᶠ x in l, ∃ h : IsUnit (g x), Checked.div (f x) (g x) h * g x = f x :=
+  div_mul_cancel <| hg.mono_right <| le_principal_iff.mpr <|
+    mem_of_superset (Ioi_mem_atTop 0) fun _ hx ↦ ne_of_gt hx
+
 /-- If when `x` tends to `∞`, `g` tends to `∞` and `f x / g x` tends to a positive
   constant, then `f` tends to `∞`. -/
 theorem Filter.Tendsto.num {α K : Type*} [Field K] [LinearOrder K] [IsStrictOrderedRing K]

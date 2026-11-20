@@ -247,7 +247,7 @@ theorem posSemidef_tfae : List.TFAE [K.PosSemidef, K.IsHermitian ∧ ∀ (f : X 
   tfae_have 1 → 2 := fun h ff ↦ by
     rw [Finsupp.sum_comm]
     convert! h (ff.sum fun xv z ↦ .single xv.1 ((z / ‖v‖ ^ 2) • (innerSL 𝕜 v).smulRight xv.2)) v
-    simp [Finsupp.sum_sum_index, inner_add_right, inner_add_left, ← smul_assoc, hv]
+    simp [Finsupp.sum_sum_index, inner_add_right, inner_add_left, ← smul_assoc]
     simp [inner_smul_left, inner_smul_right, ← mul_assoc, mul_comm]
   tfae_have 2 → 3 := fun h vv ↦ by
     simpa [add_mul, Finsupp.sum_sum_index] using (h (vv.sum fun x v ↦ .single ⟨x, v⟩ 1))
@@ -514,10 +514,19 @@ lemma posSemidef_outerKernel (f : X → V) : (outerKernel 𝕜 f).PosSemidef := 
 instance (f : X → V) : Fact (outerKernel 𝕜 f).PosSemidef := by
   simp [fact_iff, posSemidef_outerKernel 𝕜 f]
 
+open scoped Classical in
 lemma kernel_span_singleton (f : H) :
-    kernel (𝕜 ∙ f) = (‖f‖⁻¹ : 𝕜) ^ 2 • outerKernel 𝕜 f := by
-  ext
-  simp [kernel_submodule, starProjection_singleton, division_def, smul_smul, mul_comm]
+    kernel (𝕜 ∙ f) = if hf : f = 0 then 0 else
+      Checked.inv ((‖f‖ ^ 2 : ℝ) : 𝕜)
+        (RCLike.ofReal_ne_zero.mpr (pow_ne_zero 2 (norm_ne_zero_iff.mpr hf))).isUnit •
+          outerKernel 𝕜 f := by
+  by_cases hf : f = 0
+  · subst f
+    ext
+    simp [kernel_submodule]
+  · rw [dite_eq_right hf]
+    ext
+    simp [kernel_submodule, starProjection_singleton, hf, div_eq_inv_mul₀, smul_smul]
 
 open ComplexOrder in
 theorem posSemidef_norm_sq_smul_kernel_sub_outerKernel (f : OfKernel K) :
@@ -527,7 +536,8 @@ theorem posSemidef_norm_sq_smul_kernel_sub_outerKernel (f : OfKernel K) :
   have hp : (‖f‖ ^ 2 : 𝕜) ≠ 0 := by simpa
   rw [← smul_inv_smul₀ (ha := hp.isUnit) (outerKernel 𝕜 f), ← smul_sub]
   refine Matrix.PosSemidef.smul ?_ (by simp)
-  simpa [kernel_span_singleton, kernel_orthogonal] using posSemidef_kernel (𝕜 ∙ f)ᗮ
+  simpa [kernel_span_singleton, kernel_orthogonal, hf, RCLike.ofReal_pow] using
+    posSemidef_kernel (𝕜 ∙ f)ᗮ
 
 end outerKernel
 

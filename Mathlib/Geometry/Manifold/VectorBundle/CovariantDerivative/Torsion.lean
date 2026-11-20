@@ -45,7 +45,7 @@ private def torsionAux
     (Π x : M, TangentSpace I x) → (Π x : M, TangentSpace I x) → (Π x : M, TangentSpace I x) :=
   fun X Y x ↦ cov Y x (X x) - cov X x (Y x) - VectorField.mlieBracket I X Y x
 
-variable [IsManifold I 2 M] [CompleteSpace E]
+variable [IsManifold I 2 M]
   {cov : (Π x : M, TangentSpace I x) → (Π x : M, TangentSpace I x →L[𝕜] TangentSpace I x)}
   {X Y : Π x : M, TangentSpace I x}
 
@@ -112,7 +112,7 @@ namespace CovariantDerivative
 
 open VectorField
 
-variable [CompleteSpace 𝕜] [CompleteSpace E] [FiniteDimensional 𝕜 E] [IsManifold I 2 M]
+variable [CompleteSpace 𝕜] [FiniteDimensional 𝕜 E] [IsManifold I 2 M]
   (cov : CovariantDerivative I E (TangentSpace I : M → Type _))
   {X Y : Π x : M, TangentSpace I x}
 

@@ -53,14 +53,8 @@ namespace Real
 /-- Asymptotic bound for the `Γ` function integrand. -/
 theorem Gamma_integrand_isLittleO (s : ℝ) :
     (fun x : ℝ => exp (-x) * x ^ s) =o[atTop] fun x : ℝ => exp (-(1 / 2) * x) := by
-  refine isLittleO_of_tendsto (fun x hx => ?_) ?_
-  · exfalso; exact (exp_pos (-(1 / 2) * x)).ne' hx
-  have : (fun x : ℝ => exp (-x) * x ^ s / exp (-(1 / 2) * x)) =
-      (fun x : ℝ => exp (1 / 2 * x) / x ^ s)⁻¹ := by
-    ext1 x
-    simp [field, ← exp_nsmul, exp_neg]
-  rw [this]
-  exact (tendsto_exp_mul_div_rpow_atTop s (1 / 2) one_half_pos).inv_tendsto_atTop
+  simpa only [neg_one_mul] using
+    isLittleO_exp_mul_rpow_of_lt s (a := -1) (b := -(1 / 2)) (by norm_num)
 
 /-- The Euler integral for the `Γ` function converges for positive real `s`. -/
 theorem GammaIntegral_convergent {s : ℝ} (h : 0 < s) :
@@ -247,16 +241,20 @@ section GammaDef
 /-- The `n`th function in this family is `Γ(s)` if `-n < s.re`, and junk otherwise. -/
 private noncomputable def GammaAux : ℕ → ℂ → ℂ
   | 0 => GammaIntegral
-  | n + 1 => fun s : ℂ => GammaAux n (s + 1) / s
+  | n + 1 => fun s : ℂ => by
+    classical
+    exact if hs : s = 0 then 0 else GammaAux n (s + 1) / s
 
 private theorem GammaAux_recurrence1 (s : ℂ) (n : ℕ) (h1 : -s.re < ↑n) :
-    GammaAux n s = GammaAux n (s + 1) / s := by
+    GammaAux n s = if hs : s = 0 then 0 else GammaAux n (s + 1) / s := by
   induction n generalizing s with
   | zero =>
     simp only [CharP.cast_eq_zero, Left.neg_neg_iff] at h1
-    dsimp only [GammaAux]; rw [GammaIntegral_add_one h1]
-    rw [mul_comm, mul_div_cancel_right₀]; contrapose! h1; rw [h1]
-    simp
+    have hs : s ≠ 0 := by
+      rintro rfl
+      simp at h1
+    simp only [GammaAux, dite_eq_right hs]
+    rw [GammaIntegral_add_one h1, mul_comm, mul_div_cancel_right₀]
   | succ n hn =>
     dsimp only [GammaAux]
     have hh1 : -(s + 1).re < n := by
@@ -265,21 +263,8 @@ private theorem GammaAux_recurrence1 (s : ℂ) (n : ℕ) (h1 : -s.re < ↑n) :
     rw [← hn (s + 1) hh1]
 
 private theorem GammaAux_recurrence2 (s : ℂ) (n : ℕ) (h1 : -s.re < ↑n) :
-    GammaAux n s = GammaAux (n + 1) s := by
-  rcases n with - | n
-  · simp only [CharP.cast_eq_zero, Left.neg_neg_iff] at h1
-    dsimp only [GammaAux]
-    rw [GammaIntegral_add_one h1, mul_div_cancel_left₀]
-    rintro rfl
-    rw [zero_re] at h1
-    exact h1.false
-  · dsimp only [GammaAux]
-    have : GammaAux n (s + 1 + 1) / (s + 1) = GammaAux n (s + 1) := by
-      have hh1 : -(s + 1).re < n := by
-        rw [Nat.cast_add, Nat.cast_one] at h1
-        rw [add_re, one_re]; linarith
-      rw [GammaAux_recurrence1 (s + 1) n hh1]
-    rw [this]
+    GammaAux n s = GammaAux (n + 1) s :=
+  GammaAux_recurrence1 s n h1
 
 /- This definition is deliberately not @[expose]'d, since `GammaAux` is not mathematically
 interesting. -/
@@ -313,11 +298,18 @@ theorem Gamma_add_one (s : ℂ) (h2 : s ≠ 0) : Gamma (s + 1) = s * Gamma s := 
   let n := ⌊1 - s.re⌋₊
   have t1 : -s.re < n := by simpa only [sub_sub_cancel_left] using Nat.sub_one_lt_floor (1 - s.re)
   have t2 : -(s + 1).re < n := by rw [add_re, one_re]; linarith
-  rw [Gamma_eq_GammaAux s n t1, Gamma_eq_GammaAux (s + 1) n t2, GammaAux_recurrence1 s n t1]
+  rw [Gamma_eq_GammaAux s n t1, Gamma_eq_GammaAux (s + 1) n t2,
+    GammaAux_recurrence1 s n t1, dite_eq_right h2]
   field
 
 theorem Gamma_eq_integral {s : ℂ} (hs : 0 < s.re) : Gamma s = GammaIntegral s :=
   Gamma_eq_GammaAux s 0 (by norm_cast; linarith)
+
+/-- The right half-plane avoids every pole of Gamma. -/
+theorem Gamma_regular_of_re_pos {s : ℂ} (hs : 0 < s.re) (n : ℕ) : s ≠ -n := by
+  intro hn
+  rw [hn, neg_re, natCast_re] at hs
+  exact (not_lt_of_ge (neg_nonpos.mpr n.cast_nonneg)) hs
 
 @[simp]
 theorem Gamma_one : Gamma 1 = 1 := by rw [Gamma_eq_integral] <;> simp
@@ -338,7 +330,7 @@ theorem Gamma_ofNat_eq_factorial (n : ℕ) [(n + 1).AtLeastTwo] :
 /-- At `0` the Gamma function is undefined; by convention we assign it the value `0`. -/
 @[simp]
 theorem Gamma_zero : Gamma 0 = 0 := by
-  simp_rw [Gamma, zero_re, sub_zero, Nat.floor_one, GammaAux, div_zero]
+  simp only [Gamma, zero_re, sub_zero, Nat.floor_one, GammaAux, dite_eq_left rfl]
 
 /-- At `-n` for `n ∈ ℕ`, the Gamma function is undefined; by convention we assign it the value 0. -/
 theorem Gamma_neg_nat_eq_zero (n : ℕ) : Gamma (-n) = 0 := by
@@ -361,9 +353,10 @@ theorem Gamma_conj (s : ℂ) : Gamma (conj s) = conj (Gamma s) := by
   | zero => rw [GammaAux]; exact GammaIntegral_conj
   | succ n IH =>
     intro s
-    rw [GammaAux]
-    dsimp only
-    rw [div_eq_mul_inv _ s, map_mul, conj_inv, ← div_eq_mul_inv]
+    by_cases hs : s = 0
+    · simp [GammaAux, hs]
+    have hc : conj s ≠ 0 := (map_ne_zero conj).mpr hs
+    simp only [GammaAux, dite_eq_right hs, dite_eq_right hc, map_div₀]
     suffices conj s + 1 = conj (s + 1) by rw [this, IH]
     rw [map_add, map_one]
 
@@ -373,18 +366,20 @@ lemma integral_cpow_mul_exp_neg_mul_Ioi {a : ℂ} {r : ℝ} (ha : 0 < a.re) (hr 
     ∫ (t : ℝ) in Ioi 0, t ^ (a - 1) * exp (-(r * t)) = (1 / r) ^ a * Gamma a := by
   have aux : (1 / r : ℂ) ^ a = 1 / r * (1 / r) ^ (a - 1) := by
     nth_rewrite 2 [← cpow_one (1 / r : ℂ)]
-    rw [← cpow_add _ _ (one_div_ne_zero <| ofReal_ne_zero.mpr hr.ne'), add_sub_cancel]
+    rw [← cpow_add _ _ (one_div_ne_zero (ha := (ofReal_ne_zero.mpr hr.ne').isUnit)),
+      add_sub_cancel]
   calc
     _ = ∫ (t : ℝ) in Ioi 0, (1 / r) ^ (a - 1) * (r * t) ^ (a - 1) * exp (-(r * t)) := by
       refine MeasureTheory.setIntegral_congr_fun measurableSet_Ioi (fun x hx ↦ ?_)
       rw [mem_Ioi] at hx
-      rw [mul_cpow_ofReal_nonneg hr.le hx.le, ← mul_assoc, one_div, ← ofReal_inv,
+      rw [mul_cpow_ofReal_nonneg hr.le hx.le, ← mul_assoc, one_div₀,
+        ← ofReal_inv (hr := hr.ne'.isUnit),
         ← mul_cpow_ofReal_nonneg (inv_pos.mpr hr).le hr.le, ← ofReal_mul r⁻¹,
-        inv_mul_cancel₀ hr.ne', ofReal_one, one_cpow, one_mul]
+        inv_mul_cancel₀, ofReal_one, one_cpow, one_mul]
     _ = 1 / r * ∫ (t : ℝ) in Ioi 0, (1 / r) ^ (a - 1) * t ^ (a - 1) * exp (-t) := by
       simp_rw [← ofReal_mul]
       rw [integral_comp_mul_left_Ioi (fun x ↦ _ * x ^ (a - 1) * exp (-x)) _ hr, mul_zero,
-        real_smul, ← one_div, ofReal_div, ofReal_one]
+        real_smul, ← one_div₀, ofReal_div, ofReal_one]
     _ = 1 / r * (1 / r : ℂ) ^ (a - 1) * (∫ (t : ℝ) in Ioi 0, t ^ (a - 1) * exp (-t)) := by
       simp_rw [← MeasureTheory.integral_const_mul, mul_assoc]
     _ = (1 / r) ^ a * Gamma a := by

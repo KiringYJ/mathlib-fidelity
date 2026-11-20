@@ -201,12 +201,12 @@ If `B f g` is integrable, as well as `B f' g` and `B f g'` where `f'` and `g'` a
 of `f` and `g` in a given direction `v`, then `∫ B f g' = - ∫ B f' g`. -/
 theorem integral_bilinear_fderiv_right_eq_neg_left_of_integrable
     {f : E → F} {g : E → G} {v : E} {B : F →L[ℝ] G →L[ℝ] W}
-    (hf'g : Integrable (fun x ↦ B (fderiv ℝ f x v) (g x)) μ)
-    (hfg' : Integrable (fun x ↦ B (f x) (fderiv ℝ g x v)) μ)
+    (hf'g : Integrable (fun x ↦ B (fderiv ℝ f x id v) (g x)) μ)
+    (hfg' : Integrable (fun x ↦ B (f x) (fderiv ℝ g x id v)) μ)
     (hfg : Integrable (fun x ↦ B (f x) (g x)) μ)
     (hf : ∀ x ∈ tsupport g, DifferentiableAt ℝ f x)
     (hg : ∀ x ∈ tsupport f, DifferentiableAt ℝ g x) :
-    ∫ x, B (f x) (fderiv ℝ g x v) ∂μ = - ∫ x, B (fderiv ℝ f x v) (g x) ∂μ :=
+    ∫ x, B (f x) (fderiv ℝ g x id v) ∂μ = - ∫ x, B (fderiv ℝ f x id v) (g x) ∂μ :=
   integral_bilinear_hasFDerivAt_right_eq_neg_left_of_integrable hf'g hfg' hfg
     (hf · · |>.hasFDerivAt) (hg · · |>.hasFDerivAt)
 
@@ -218,12 +218,12 @@ Version with a scalar function: `∫ f • g' = - ∫ f' • g` when `f • g'` 
 are integrable, where `f'` and `g'` are the derivatives of `f` and `g` in a given direction `v`. -/
 theorem integral_smul_fderiv_eq_neg_fderiv_smul_of_integrable
     {f : E → 𝕜} {g : E → G} {v : E}
-    (hf'g : Integrable (fun x ↦ fderiv ℝ f x v • g x) μ)
-    (hfg' : Integrable (fun x ↦ f x • fderiv ℝ g x v) μ)
+    (hf'g : Integrable (fun x ↦ fderiv ℝ f x id v • g x) μ)
+    (hfg' : Integrable (fun x ↦ f x • fderiv ℝ g x id v) μ)
     (hfg : Integrable (fun x ↦ f x • g x) μ)
     (hf : ∀ x ∈ tsupport g, DifferentiableAt ℝ f x)
     (hg : ∀ x ∈ tsupport f, DifferentiableAt ℝ g x) :
-    ∫ x, f x • fderiv ℝ g x v ∂μ = - ∫ x, fderiv ℝ f x v • g x ∂μ :=
+    ∫ x, f x • fderiv ℝ g x id v ∂μ = - ∫ x, fderiv ℝ f x id v • g x ∂μ :=
   integral_bilinear_fderiv_right_eq_neg_left_of_integrable
     (B := ContinuousLinearMap.lsmul ℝ 𝕜) hf'g hfg' hfg hf hg
 
@@ -232,11 +232,11 @@ Version with two scalar functions: `∫ f * g' = - ∫ f' * g` when `f * g'` and
 are integrable, where `f'` and `g'` are the derivatives of `f` and `g` in a given direction `v`. -/
 theorem integral_mul_fderiv_eq_neg_fderiv_mul_of_integrable
     {f : E → 𝕜} {g : E → 𝕜} {v : E}
-    (hf'g : Integrable (fun x ↦ fderiv ℝ f x v * g x) μ)
-    (hfg' : Integrable (fun x ↦ f x * fderiv ℝ g x v) μ)
+    (hf'g : Integrable (fun x ↦ fderiv ℝ f x id v * g x) μ)
+    (hfg' : Integrable (fun x ↦ f x * fderiv ℝ g x id v) μ)
     (hfg : Integrable (fun x ↦ f x * g x) μ)
     (hf : ∀ x ∈ tsupport g, DifferentiableAt ℝ f x)
     (hg : ∀ x ∈ tsupport f, DifferentiableAt ℝ g x) :
-    ∫ x, f x * fderiv ℝ g x v ∂μ = - ∫ x, fderiv ℝ f x v * g x ∂μ :=
+    ∫ x, f x * fderiv ℝ g x id v ∂μ = - ∫ x, fderiv ℝ f x id v * g x ∂μ :=
   integral_bilinear_fderiv_right_eq_neg_left_of_integrable
     (B := ContinuousLinearMap.mul ℝ 𝕜) hf'g hfg' hfg hf hg

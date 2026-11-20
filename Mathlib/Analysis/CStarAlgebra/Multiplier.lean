@@ -317,8 +317,8 @@ theorem range_toProdMulOpposite :
 `DoubleCentralizer.toProdMulOpposite : 𝓜(𝕜, A) → (A →L[𝕜] A) × (A →L[𝕜] A)ᵐᵒᵖ` -/
 instance instRing : Ring 𝓜(𝕜, A) :=
   toProdMulOpposite_injective.ring _ rfl rfl (fun _ _ => rfl) (fun _ _ => rfl) (fun _ => rfl)
-    (fun _ _ => rfl) (fun _x _n => Prod.ext rfl <| MulOpposite.op_smul _ _)
-    (fun _x _n => Prod.ext rfl <| MulOpposite.op_smul _ _)
+    (fun _ _ => rfl) (fun n x => Prod.ext rfl <| MulOpposite.op_smul n x.snd)
+    (fun n x => Prod.ext rfl <| MulOpposite.op_smul n x.snd)
     (fun _x _n => Prod.ext rfl <| MulOpposite.op_pow _ _) (fun _ => rfl) fun _ => rfl
 
 /-- The canonical map `DoubleCentralizer.toProd` as an additive group homomorphism. -/
@@ -533,13 +533,12 @@ theorem norm_fst_eq_snd (a : 𝓜(𝕜, A)) : ‖a.fst‖ = ‖a.snd‖ := by
   -- a handy lemma for this proof
   have h0 : ∀ f : A →L[𝕜] A, ∀ C : ℝ≥0, (∀ b : A, ‖f b‖₊ ^ 2 ≤ C * ‖f b‖₊ * ‖b‖₊) → ‖f‖₊ ≤ C := by
     intro f C h
-    have h1 b : C * ‖f b‖₊ * ‖b‖₊ ≤ C * ‖f‖₊ * ‖b‖₊ ^ 2 := by grw [f.le_opNNNorm b]; ring_nf; rfl
-    have := NNReal.div_le_of_le_mul <| f.opNNNorm_le_bound _ <| by
-      simpa only [sqrt_sq, sqrt_mul] using fun b ↦ sqrt_le_sqrt.2 <| (h b).trans (h1 b)
-    convert! NNReal.rpow_le_rpow this two_pos.le
-    · simp only [NNReal.rpow_two, div_pow, sq_sqrt]
-      simp only [sq, mul_self_div_self]
-    · simp only [NNReal.rpow_two, sq_sqrt]
+    apply f.opNNNorm_le_bound
+    intro b
+    rcases eq_or_ne ‖f b‖₊ 0 with hb | hb
+    · simp [hb]
+    · apply (mul_le_mul_iff_left₀ (pos_iff_ne_zero.mpr hb)).mp
+      simpa only [sq, mul_assoc, mul_left_comm, mul_comm] using h b
   have h1 : ∀ b, ‖a.fst b‖₊ ^ 2 ≤ ‖a.snd‖₊ * ‖a.fst b‖₊ * ‖b‖₊ := by
     intro b
     calc

@@ -63,25 +63,32 @@ theorem laurentAux_ofFractionRing_mk (q : R[X]⁰) :
 
 variable [IsDomain R]
 
-theorem laurentAux_div :
-    laurentAux r (algebraMap _ _ p / algebraMap _ _ q) =
-      algebraMap _ _ (taylor r p) / algebraMap _ _ (taylor r q) :=
-  -- Porting note: added `by exact taylor_mem_nonZeroDivisors r`
-  map_apply_div _ (by exact taylor_mem_nonZeroDivisors r) _ _
+theorem laurentAux_div (hq : q ≠ 0) :
+    laurentAux r
+      (Checked.div (algebraMap R[X] (RatFunc R) p) (algebraMap R[X] (RatFunc R) q)
+        (algebraMap_ne_zero hq).isUnit) =
+      Checked.div (algebraMap R[X] (RatFunc R) (taylor r p))
+        (algebraMap R[X] (RatFunc R) (taylor r q))
+        (algebraMap_ne_zero (show taylor r q ≠ 0 by simpa using hq)).isUnit :=
+  map_apply_div _ (by exact taylor_mem_nonZeroDivisors r) p q (hq := (algebraMap_ne_zero hq).isUnit)
 
 @[simp]
 theorem laurentAux_algebraMap : laurentAux r (algebraMap _ _ p) = algebraMap _ _ (taylor r p) := by
-  rw [← mk_one, ← mk_one, mk_eq_div, laurentAux_div, mk_eq_div, taylor_one, map_one, map_one]
+  simpa only [taylor_one, map_one, div_one₀] using laurentAux_div r p 1 one_ne_zero
 
 /-- The Laurent expansion of rational functions about a value. -/
 def laurent : RatFunc R →ₐ[R] RatFunc R :=
   RatFunc.mapAlgHom (.ofLinearMap (taylor r) (taylor_one _) (taylor_mul _))
     (taylor_mem_nonZeroDivisors _)
 
-theorem laurent_div :
-    laurent r (algebraMap _ _ p / algebraMap _ _ q) =
-      algebraMap _ _ (taylor r p) / algebraMap _ _ (taylor r q) :=
-  laurentAux_div r p q
+theorem laurent_div (hq : q ≠ 0) :
+    laurent r
+      (Checked.div (algebraMap R[X] (RatFunc R) p) (algebraMap R[X] (RatFunc R) q)
+        (algebraMap_ne_zero hq).isUnit) =
+      Checked.div (algebraMap R[X] (RatFunc R) (taylor r p))
+        (algebraMap R[X] (RatFunc R) (taylor r q))
+        (algebraMap_ne_zero (show taylor r q ≠ 0 by simpa using hq)).isUnit :=
+  laurentAux_div r p q hq
 
 @[simp]
 theorem laurent_algebraMap : laurent r (algebraMap _ _ p) = algebraMap _ _ (taylor r p) :=
@@ -96,11 +103,17 @@ theorem laurent_C (x : R) : laurent r (C x) = C x := by
   rw [← algebraMap_C, laurent_algebraMap, taylor_C]
 
 @[simp]
-theorem laurent_at_zero : laurent 0 f = f := by induction f using RatFunc.induction_on; simp
+theorem laurent_at_zero : laurent 0 f = f := by
+  refine RatFunc.induction_on (P := fun f ↦ laurent 0 f = f) f fun p q hq ↦ ?_
+  rw [laurent_div 0 p q hq]
+  simp only [taylor_zero]
 
 theorem laurent_laurent : laurent r (laurent s f) = laurent (r + s) f := by
-  induction f using RatFunc.induction_on
-  simp_rw [laurent_div, taylor_taylor]
+  refine RatFunc.induction_on (P := fun f ↦ laurent r (laurent s f) = laurent (r + s) f)
+    f fun p q hq ↦ ?_
+  have ht : taylor s q ≠ 0 := by simpa using hq
+  rw [laurent_div s p q hq, laurent_div r (taylor s p) (taylor s q) ht, laurent_div (r + s) p q hq]
+  simp only [taylor_taylor]
 
 theorem laurent_injective : Function.Injective (laurent r) := fun _ _ h => by
   simpa [laurent_laurent] using congr_arg (laurent (-r)) h

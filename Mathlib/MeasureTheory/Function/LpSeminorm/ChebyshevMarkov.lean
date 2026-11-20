@@ -25,7 +25,9 @@ variable {α E ε' : Type*} {m0 : SigmaAlgebra α} [NormedAddCommGroup E]
 
 theorem pow_mul_meas_ge_le_eLpNorm (hp_ne_zero : p ≠ 0) (hp_ne_top : p ≠ ∞)
     {f : α → ε'} (hf : AEStronglyMeasurable f μ) (ε : ℝ≥0∞) :
-    (ε * μ { x | ε ≤ ‖f x‖ₑ ^ p.toReal }) ^ (1 / p.toReal) ≤ eLpNorm f p μ := by
+    (ε * μ { x | ε ≤ ‖f x‖ₑ ^ p.toReal }) ^
+      Checked.div 1 p.toReal (ENNReal.toReal_pos hp_ne_zero hp_ne_top).ne'.isUnit ≤
+        eLpNorm f p μ := by
   rw [eLpNorm_eq_lintegral_rpow_enorm_toReal hp_ne_zero hp_ne_top]
   gcongr
   exact mul_meas_ge_le_lintegral₀ (hf.enorm.pow_const _) ε
@@ -33,10 +35,8 @@ theorem pow_mul_meas_ge_le_eLpNorm (hp_ne_zero : p ≠ 0) (hp_ne_top : p ≠ ∞
 theorem mul_meas_ge_le_pow_eLpNorm (hp_ne_zero : p ≠ 0) (hp_ne_top : p ≠ ∞)
     {f : α → ε'} (hf : AEStronglyMeasurable f μ) (ε : ℝ≥0∞) :
     ε * μ { x | ε ≤ ‖f x‖ₑ ^ p.toReal } ≤ eLpNorm f p μ ^ p.toReal := by
-  have : 1 / p.toReal * p.toReal = 1 := by
-    refine one_div_mul_cancel ?_
-    rw [Ne, ENNReal.toReal_eq_zero_iff]
-    exact not_or_intro hp_ne_zero hp_ne_top
+  have hpUnit : IsUnit p.toReal := (ENNReal.toReal_pos hp_ne_zero hp_ne_top).ne'.isUnit
+  have : 1 / p.toReal * p.toReal = 1 := by simp
   rw [← ENNReal.rpow_one (ε * μ { x | ε ≤ ‖f x‖ₑ ^ p.toReal }), ← this, ENNReal.rpow_mul]
   gcongr
   exact pow_mul_meas_ge_le_eLpNorm μ hp_ne_zero hp_ne_top hf ε

@@ -9,10 +9,12 @@ evidence, while the unique character modulo 1 remains in its domain.
 
 open DirichletCharacter
 
-example {N : ℕ} [NeZero N] {χ : DirichletCharacter ℂ N} (hχ : IsPrimitive χ) (s : ℂ) :
-    completedLFunction χ (1 - s) =
-      N ^ (s - 1 / 2) * rootNumber χ hχ * completedLFunction χ⁻¹ s :=
-  hχ.completedLFunction_one_sub s
+example {N : ℕ} [NeZero N] {χ : DirichletCharacter ℂ N} (hχ : IsPrimitive χ) (s : ℂ)
+    (hs : s ∈ χ.completedLFunctionDomain) (hleft : 1 - s ∈ χ.completedLFunctionDomain)
+    (hright : s ∈ (χ⁻¹).completedLFunctionDomain) :
+    completedLFunction χ (1 - s) (hs := hleft) =
+      N ^ (s - 1 / 2) * rootNumber χ hχ * completedLFunction χ⁻¹ s (hs := hright) :=
+  hχ.completedLFunction_one_sub s hs
 
 example (χ : DirichletCharacter ℂ 1) (hχ₁ hχ₂ : IsPrimitive χ) :
     rootNumber χ hχ₁ = rootNumber χ hχ₂ ∧ rootNumber χ hχ₁ = 1 := by

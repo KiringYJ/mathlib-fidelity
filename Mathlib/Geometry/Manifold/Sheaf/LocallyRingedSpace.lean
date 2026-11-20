@@ -91,7 +91,9 @@ theorem smoothSheafCommRing.isUnit_stalk_iff {x : M}
     have hVf : ∀ y : V, f (Set.inclusion hUV y) ≠ 0 :=
       fun y ↦ hV₀f (Set.inclusion hUV y) (Set.mem_range_self y)
     -- Let `g` be the pointwise inverse of `f` on `V`, which is smooth since `f` is nonzero there
-    let g : C^∞⟮IM, V; 𝓘(𝕜), 𝕜⟯ := ⟨(f ∘ Set.inclusion hUV)⁻¹, ?_⟩
+    let g : C^∞⟮IM, V; 𝓘(𝕜), 𝕜⟯ :=
+      ⟨fun y ↦ Checked.inv (f (Set.inclusion hUV y)) (hVf y).isUnit,
+        (f.contMDiff.comp (contMDiff_inclusion hUV)).inv₀⟩
     -- The germ of `g` is inverse to the germ of `f`, so `f` is a unit
     · refine ⟨⟨S.germ _ x (hxV) (ContMDiffMap.restrictRingHom IM 𝓘(𝕜) 𝕜 hUV f), S.germ _ x hxV g,
         ?_, ?_⟩, S.germ_res_apply hUV.hom x hxV f⟩
@@ -100,18 +102,15 @@ theorem smoothSheafCommRing.isUnit_stalk_iff {x : M}
         convert! RingHom.map_one _
         apply Subtype.ext
         ext y
-        apply mul_inv_cancel₀
-        exact hVf y
+        change f (Set.inclusion hUV y) * Checked.inv _ (hVf y).isUnit = 1
+        exact mul_inv_cancel₀
       · rw [← map_mul]
         -- Qualified the name to avoid Lean not finding a `OneHomClass` https://github.com/leanprover-community/mathlib4/pull/8386
         convert! RingHom.map_one _
         apply Subtype.ext
         ext y
-        apply inv_mul_cancel₀
-        exact hVf y
-    · intro y
-      exact (((contDiffAt_inv _ (hVf y)).contMDiffAt).comp y
-        (f.contMDiff.comp (contMDiff_inclusion hUV)).contMDiffAt :)
+        change Checked.inv _ (hVf y).isUnit * f (Set.inclusion hUV y) = 1
+        exact inv_mul_cancel₀
 
 /-- The non-units of the stalk at `x` of the sheaf of smooth functions from `M` to `𝕜`, considered
 as a sheaf of commutative rings, are the functions whose values at `x` are zero. -/

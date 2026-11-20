@@ -101,7 +101,7 @@ private lemma exists_integral_variableChange_of_completion (W : WeierstrassCurve
     (⟨u₁, x 0, x 1, x 2⟩ : VariableChange K̂) • W.baseChange K̂
   have hF : IsIntegral R̂ (F ![C.r, C.s, C.t]) := by
     rw [isIntegral_completion_iff] at hC ⊢
-    simpa [F, variableChange_def, map_mul, map_pow, Units.val_inv_eq_inv_val,
+    simpa [F, variableChange_def, map_mul, map_pow, Units.val_inv_eq_inv_val₀,
       map_inv₀, hu₁] using hC
   have hopen : IsOpen {x : Fin 3 → K̂ | IsIntegral R̂ (F x)} := by
     simp only [isIntegral_completion_iff]
@@ -140,7 +140,7 @@ instance isMinimal_baseChange_adicCompletion (W : WeierstrassCurve K) [IsMinimal
     rw [discriminantValuationAux_eq_of_isIntegral,
       discriminantValuationAux_eq_of_isIntegral] at hDle
     simpa only [variableChange_Δ, baseChange, map_Δ, map_mul, map_pow,
-      Units.val_inv_eq_inv_val, map_inv₀, hu, algebraMap_adicCompletion, Function.comp_apply,
+      Units.val_inv_eq_inv_val₀, map_inv₀, hu, algebraMap_adicCompletion, Function.comp_apply,
       Algebra.algebraMap_self, RingHom.id_apply, valuedAdicCompletion_eq_valuation'] using hDle
 
 /-- The integral model over the completed ring is obtained by extending coefficients. -/

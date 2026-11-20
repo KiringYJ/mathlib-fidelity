@@ -74,12 +74,17 @@ instance : LieGroup 𝓘(𝕜, R) n Rˣ where
     rw [contMDiff_iff_contDiff]
     exact contDiff_mul
   contMDiff_inv := by
+    classical
     apply ContMDiff.of_comp_isOpenEmbedding Units.isOpenEmbedding_val
-    have : (val : Rˣ → R) ∘ (fun x : Rˣ => x⁻¹) = Ring.inverse ∘ val := by ext; simp
-    rw [this, ContMDiff]
+    let g (x : R) := if hx : IsUnit x then Checked.inv x hx else x
+    have hg (x : Rˣ) : g x = (↑x⁻¹ : R) := by
+      simp only [g, dite_eq_left x.isUnit, Units.val_inv_eq_inv_val₀]
+    have he : (val : Rˣ → R) ∘ (fun x : Rˣ => x⁻¹) = g ∘ val :=
+      funext fun x ↦ (hg x).symm
+    rw [he, ContMDiff]
     refine fun x => ContMDiffAt.comp x ?_ (contMDiff_val x)
     rw [contMDiffAt_iff_contDiffAt]
-    exact contDiffAt_ringInverse _ _
+    exact contDiffAt_ringInverse 𝕜 x hg
 
 /-- If a complete normed ring `R` acts continuously differentiably on a manifold `M`, its
 submanifold of units does as well. -/

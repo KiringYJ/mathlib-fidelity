@@ -60,7 +60,6 @@ section InvLit
 
 variable [DivisionRing α]
 
-example : (0 : α)⁻¹ = 0 := by norm_num1
 example : (1 : α)⁻¹ = 1 := by norm_num1
 example : (-1 : α)⁻¹ = -1 := by norm_num1
 
@@ -75,10 +74,10 @@ section ConstructorsEtc
 
 example : Int.ofNat 3 = 3 := by norm_num1
 
-example : mkRat 3 4 = 3/4 := by norm_num1
-example : mkRat 6 8 = 3/4 := by norm_num1
-example : mkRat 5 0 = 0 := by norm_num1
-example : mkRat (10 + 6) (5 * 4) = 4/5 := by norm_num1
+example : Rat.fraction 3 4 (by decide) = 3 / 4 := by norm_num [Rat.fraction_eq_div]
+example : Rat.fraction 6 8 (by decide) = 3 / 4 := by norm_num [Rat.fraction_eq_div]
+example : Rat.fraction (10 + 6) (5 * 4) (by decide) = 4 / 5 := by
+  norm_num [Rat.fraction_eq_div]
 
 end ConstructorsEtc
 
@@ -86,12 +85,12 @@ section ScientificNotation
 
 variable [DivisionSemiring α] [CharZero α]
 
-example : (0.1 : ℚ) = 1/10 := by norm_num1
-example : (3.14 : ℚ) = 157/50 := by norm_num1
-example : (3.14159 : ℚ) = 314159/100000 := by norm_num1
-example : (0.1 : α) = 1/10 := by norm_num1
-example : (3.14 : α) = 157/50 := by norm_num1
-example : (3.14159 : α) = 314159/100000 := by norm_num1
+example : (0.1 : ℚ) = 1 / 10 := by norm_num1
+example : (3.14 : ℚ) = 157 / 50 := by norm_num1
+example : (3.14159 : ℚ) = 314159 / 100000 := by norm_num1
+example : (0.1 : α) = 1 / 10 := by norm_num1
+example : (3.14 : α) = 157 / 50 := by norm_num1
+example : (3.14159 : α) = 314159 / 100000 := by norm_num1
 
 example : (42e7 : ℚ) = 420000000 := by norm_num1
 example : (42e7 : α) = 420000000 := by norm_num1
@@ -566,7 +565,6 @@ example : (50 : α) / 5 = 10 := by norm_num1
 example : (1056 : α) / 1 = 1056 := by norm_num1
 example : (6 : α) / 4 = 3/2 := by norm_num1
 example : (0 : α) / 3 = 0 := by norm_num1
-example : (3 : α) / 0 = 0 := by norm_num1
 example : (9 * 9 * 9) * (12 : α) / 27 = 81 * (2 + 2) := by norm_num1
 example : (-2 : α) * 4 / 3 = -8 / 3 := by norm_num1
 example : - (-4 / 3) = 1 / (3 / (4 : α)) := by norm_num1
@@ -629,6 +627,10 @@ attribute [-norm_num] Mathlib.Meta.NormNum.evalPow
 end norm_num_erase
 
 -- auto gen tests
+-- The generated numerals require a proof that each composite denominator is nonzero.
+macro_rules
+  | `(tactic| checked_nonzero) => `(tactic| norm_num)
+
 variable [Field α] [LinearOrder α] [IsStrictOrderedRing α]
 example : ((25 * (1 / 1)) + (30 - 16)) = (39 : α) := by norm_num1
 example : ((19 * (- 2 - 3)) / 6) = (-95/6 : α) := by norm_num1

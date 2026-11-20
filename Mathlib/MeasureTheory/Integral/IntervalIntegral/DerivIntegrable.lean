@@ -46,7 +46,7 @@ lemma MonotoneOn.exists_tendsto_deriv_liminf_lintegral_enorm_le
   `x < a` and `g x = f b` for `x > b`. `g` is globally monotone and `g'` agrees with `f'` on
   `(a, b)`. We let `G c x = slope g x (x + c)` for `c > 0`. Then `G c x` is nonnegative,
   `∫⁻ (x : ℝ) in Icc a b, ‖G c x‖ₑ ≤ f b - f a`, and `G c x` tends to `f' x` as `c` tends to `0`
-  from the right. The function `fun n x ↦ G (n : ℝ)⁻¹ x` is a witness to the conclusion of the
+   from the right. The function `fun n x ↦ G ((n + 1 : ℕ) : ℝ)⁻¹ x` witnesses the conclusion of the
   lemma. -/
   let g (x : ℝ) : ℝ := f (max a (min x b))
   have hg : Monotone g := monotoneOn_univ.mp <| hf.comp
@@ -54,20 +54,31 @@ lemma MonotoneOn.exists_tendsto_deriv_liminf_lintegral_enorm_le
   have hfg : EqOn f g (Ioo a b) := fun x ⟨hxa, hxb⟩ => congrArg f <|
     min_eq_left hxb.le |>.symm ▸ (max_eq_right hxa.le).symm
   replace hfg := hfg.deriv isOpen_Ioo
-  let G (c x : ℝ) := slope g x (x + c)
-  have G_integrable (n : ℕ) : Integrable (G (↑n)⁻¹) (volume.restrict (Icc a b)) := by
-    have := hg.monotoneOn (Icc a (b + (n : ℝ)⁻¹)) |>.intervalIntegrable_slope hab (by simp)
+  let c (n : ℕ) : ℝ := ((↑(n + 1 : ℕ)) : ℝ)⁻¹
+  have hc (n : ℕ) : 0 < c n := inv_pos.mpr (by positivity)
+  let G (n : ℕ) (x : ℝ) := slope g x (x + c n) (lt_add_of_pos_right x (hc n)).ne
+  have G_integrable (n : ℕ) : Integrable (G n) (volume.restrict (Icc a b)) := by
+    have := hg.monotoneOn (Icc a (b + c n)) |>.intervalIntegrable_slope hab (hc n)
     exact intervalIntegrable_iff_integrableOn_Icc_of_le hab |>.mp this
-  refine ⟨fun n x ↦ G (n : ℝ)⁻¹ x, ?_, fun n ↦ G_integrable n |>.aestronglyMeasurable, ?_⟩
+  refine ⟨G, ?_, fun n ↦ G_integrable n |>.aestronglyMeasurable, ?_⟩
   · rw [← restrict_Ioo_eq_restrict_Icc, MeasureTheory.ae_restrict_iff' measurableSet_Ioo]
     filter_upwards [hg.ae_differentiableAt] with x hx₁ hx₂
-    rw [hfg hx₂]
-    exact hx₁.hasDerivAt.tendsto_slope.comp <|
-      tendsto_nhdsWithin_of_tendsto_nhds_of_eventually_within _
-      (by convert! tendsto_const_nhds.add (tendsto_inv_atTop_nhds_zero_nat (𝕜 := ℝ)); simp)
-      (by simp [eventually_ne_atTop 0])
+    have hderiv : deriv f x = deriv g x := hfg hx₂
+    rw [hderiv]
+    let u (n : ℕ) : ({x}ᶜ : Set ℝ) := ⟨x + c n, (lt_add_of_pos_right x (hc n)).ne'⟩
+    have hn : Tendsto (fun n : ℕ ↦ (↑(n + 1 : ℕ) : ℝ)) atTop atTop :=
+      tendsto_natCast_atTop_atTop.comp (tendsto_add_atTop_nat 1)
+    have hc₀ : Tendsto c atTop (𝓝 0) := hn.fun_inv_tendsto_atTop (h0 := fun n ↦
+      (Nat.cast_ne_zero.mpr (Nat.succ_ne_zero n) : ((n + 1 : ℕ) : ℝ) ≠ 0).isUnit)
+    have hu : Tendsto u atTop (comap Subtype.val (𝓝 x)) := by
+      refine tendsto_comap_iff.mpr ?_
+      change Tendsto (fun n ↦ x + c n) atTop (𝓝 x)
+      have hsum : Tendsto (fun n ↦ x + c n) atTop (𝓝 (x + 0)) :=
+        tendsto_const_nhds.add hc₀
+      simpa only [add_zero] using hsum
+    simpa only [Function.comp_def, G, u] using hx₁.hasDerivAt.tendsto_slope.comp hu
   · calc
-      _ = liminf (fun (n : ℕ) ↦ ENNReal.ofReal (∫ (x : ℝ) in Icc a b, (G (n : ℝ)⁻¹) x)) atTop := by
+      _ = liminf (fun (n : ℕ) ↦ ENNReal.ofReal (∫ (x : ℝ) in Icc a b, G n x)) atTop := by
         apply Filter.liminf_congr
         filter_upwards with n
         rw [← MeasureTheory.ofReal_integral_norm_eq_lintegral_enorm (G_integrable n)]
@@ -77,9 +88,9 @@ lemma MonotoneOn.exists_tendsto_deriv_liminf_lintegral_enorm_le
         refine Filter.liminf_le_of_frequently_le'
           (Filter.Frequently.of_forall fun n ↦ ENNReal.ofReal_le_ofReal ?_)
         rw [integral_Icc_eq_integral_Ioc, ← intervalIntegral.integral_of_le hab]
-        convert!
-          hg.monotoneOn (Icc a (b + (n : ℝ)⁻¹)) |>.intervalIntegral_slope_le hab (by simp) using 2
-        simp [g]
+        have hcn := (hc n).le
+        convert! hg.monotoneOn (Icc a (b + c n)) |>.intervalIntegral_slope_le hab (hc n) using 2
+        simp [g, min_eq_right (le_add_of_nonneg_right hcn)]
       _ = ENNReal.ofReal (f b - f a) := by grind
 
 /-- If `f` is monotone on `a..b`, then `f'` is interval integrable on `a..b`. -/

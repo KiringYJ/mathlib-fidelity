@@ -464,13 +464,23 @@ mutual
 
 end
 
+/-- Elaborate an operator tree, using the expected type to guide coercions. -/
 def elabOp : TermElab := fun stx expectedType? => do
   toExpr (← toTree stx) expectedType?
 
+/-- Elaborate the ordinary binary operator notation `binop%`. -/
 @[term_elab Lean.Parser.Term.binop] def elabBinOp : TermElab := elabOp
+
+/-- Elaborate `binop_lazy%`, passing the right operand as a thunk. -/
 @[term_elab Lean.Parser.Term.binop_lazy] def elabBinOpLazy : TermElab := elabOp
+
+/-- Elaborate `leftact%`, where the left operand acts on the right operand. -/
 @[term_elab Lean.Parser.Term.leftact] def elabLeftact : TermElab := elabOp
+
+/-- Elaborate `rightact%`, where the right operand acts on the left operand. -/
 @[term_elab Lean.Parser.Term.rightact] def elabRightact : TermElab := elabOp
+
+/-- Elaborate unary operators through the common operator tree. -/
 @[term_elab Lean.Parser.Term.unop] def elabUnOp : TermElab := elabOp
 
 /--
@@ -565,8 +575,10 @@ where
         return (← ensureHasType (Lean.mkConst ``Bool) e)
     return e
 
+/-- Elaborate `binrel%` by coordinating coercions between the operands. -/
 @[term_elab Lean.Parser.Term.binrel] def elabBinRel : TermElab := elabBinRelCore false
 
+/-- Elaborate `binrel_no_prop%`, coercing propositional operands to `Bool`. -/
 @[term_elab Lean.Parser.Term.binrel_no_prop] def elabBinRelNoProp : TermElab := elabBinRelCore true
 
 /-- The elaboration target of `a⁻¹`. It is a leaf of any surrounding operator tree, as in the

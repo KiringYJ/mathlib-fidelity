@@ -378,7 +378,7 @@ theorem liftMonoidWithZeroHom_apply_ofFractionRing_mk (φ : R[X] →*₀ G₀) (
       Checked.div (φ n) (φ d) (nonZeroDivisors.ne_zero (hφ d.2)).isUnit :=
   rfl
 
-theorem liftMonoidWithZeroHom_injective [Nontrivial R] (φ : R[X] →*₀ G₀) (hφ : Function.Injective φ)
+theorem liftMonoidWithZeroHom_injective (φ : R[X] →*₀ G₀) (hφ : Function.Injective φ)
     (hφ' : R[X]⁰ ≤ G₀⁰.comap φ := nonZeroDivisors_le_comap_nonZeroDivisors_of_injective _ hφ) :
     Function.Injective (liftMonoidWithZeroHom φ hφ') := by
   rintro ⟨x⟩ ⟨y⟩
@@ -424,7 +424,7 @@ lemma liftRingHom_ofFractionRing_algebraMap
   rw [← Localization.mk_one_eq_algebraMap, liftRingHom_apply_ofFractionRing_mk]
   simp
 
-theorem liftRingHom_injective [Nontrivial R] (φ : R[X] →+* L) (hφ : Function.Injective φ)
+theorem liftRingHom_injective (φ : R[X] →+* L) (hφ : Function.Injective φ)
     (hφ' : R[X]⁰ ≤ L⁰.comap φ := nonZeroDivisors_le_comap_nonZeroDivisors_of_injective _ hφ) :
     Function.Injective (liftRingHom φ hφ') :=
   liftMonoidWithZeroHom_injective _ hφ
@@ -536,7 +536,6 @@ theorem algebraMap_apply {R : Type*} [CommSemiring R] [Algebra R K[X]] (x : R) :
 
 /-- A rational function `p / q` is mapped to `φ p / φ q`. The quotient on the right exists
 because `φ` maps nonzero divisors to nonzero divisors. -/
-@[simp]
 theorem map_apply_div {R F : Type*} [CommRing R] [IsDomain R]
     [FunLike F K[X] R[X]] [MonoidHomClass F K[X] R[X]]
     (φ : F) (hφ : K[X]⁰ ≤ R[X]⁰.comap φ) (p q : K[X])
@@ -549,6 +548,13 @@ theorem map_apply_div {R F : Type*} [CommRing R] [IsDomain R]
   have hφq : φ q ≠ 0 := nonZeroDivisors.ne_zero (hφ (mem_nonZeroDivisors_of_ne_zero hq'))
   rw [← mk_eq_div (hq := hq'), mk_eq_localization_mk, map_apply_ofFractionRing_mk,
     ← mk_eq_div (hq := hφq), mk_eq_localization_mk]
+
+@[simp]
+theorem map_apply_algebraMap {R F : Type*} [CommRing R] [IsDomain R]
+    [FunLike F K[X] R[X]] [MonoidHomClass F K[X] R[X]]
+    (φ : F) (hφ : K[X]⁰ ≤ R[X]⁰.comap φ) (p : K[X]) :
+    map φ hφ (algebraMap K[X] (RatFunc K) p) = algebraMap R[X] (RatFunc R) (φ p) := by
+  simpa only [map_one, div_one₀] using map_apply_div φ hφ p 1 (hq := isUnit_one.map _)
 
 /-- The lift of `φ` maps `p / q` to `φ p / φ q`. The quotient on the right exists because `φ`
 maps nonzero divisors to nonzero divisors. -/
@@ -896,20 +902,23 @@ theorem num_one : num (1 : RatFunc K) = 1 := by
 theorem num_algebraMap (p : K[X]) : num (algebraMap _ _ p) = p := by
   convert! num_div p 1 (hq := isUnit_one.map _) <;> simp
 
+open scoped Classical in
+@[simp] private theorem div_gcd_dvd_left (p q : K[X]) : p / gcd p q ∣ p :=
+  EuclideanDomain.div_dvd_of_dvd (gcd_dvd_left p q)
+
 theorem num_div_dvd (p : K[X]) {q : K[X]} (hq : q ≠ 0) :
     num (algebraMap _ _ p / algebraMap _ _ q) ∣ p := by
   classical
   rw [num_div _ q, C_mul_dvd inv_ne_zero]
-  exact EuclideanDomain.div_dvd_of_dvd (gcd_dvd_left p q)
+  exact div_gcd_dvd_left p q
 
 open scoped Classical in
-/-- A version of `num_div_dvd` with the LHS in simp normal form -/
-@[simp]
+/-- The normalized numerator of `p / q`, expressed in terms of `gcd p q`, divides `p`. -/
 theorem num_div_dvd' (p : K[X]) {q : K[X]} (hq : q ≠ 0) :
     C (Checked.inv (q / gcd p q).leadingCoeff
       (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit) * (p / gcd p q) ∣ p := by
-  have h := num_div_dvd p hq
-  simpa using h
+  rw [C_mul_dvd inv_ne_zero]
+  exact div_gcd_dvd_left p q
 
 /-- `RatFunc.denom` is the denominator of a rational function,
 normalized such that it is monic. -/

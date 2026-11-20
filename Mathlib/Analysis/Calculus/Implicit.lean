@@ -230,7 +230,7 @@ theorem differentiableAt_implicitFunction (φ : ImplicitFunctionData 𝕜 E F G)
   φ.hasStrictFDerivAt_implicitFunction_fderiv.hasFDerivAt.differentiableAt
 
 theorem fderiv_implicitFunction_apply_eq_iff (φ : ImplicitFunctionData 𝕜 E F G) {x : G} {y : E} :
-    fderiv 𝕜 (φ.implicitFunction (φ.leftFun φ.pt)) (φ.rightFun φ.pt) x = y ↔
+    fderiv 𝕜 (φ.implicitFunction (φ.leftFun φ.pt)) (φ.rightFun φ.pt) id x = y ↔
       φ.leftDeriv y = 0 ∧ φ.rightDeriv y = x := by
   unfold implicitFunction Function.curry toOpenPartialHomeomorph
   simp only [← HasStrictFDerivAt.localInverse_def]
@@ -241,12 +241,12 @@ theorem fderiv_implicitFunction_apply_eq_iff (φ : ImplicitFunctionData 𝕜 E F
 
 @[simp]
 theorem leftDeriv_fderiv_implicitFunction (φ : ImplicitFunctionData 𝕜 E F G) (x : G) :
-    φ.leftDeriv (fderiv 𝕜 (φ.implicitFunction (φ.leftFun φ.pt)) (φ.rightFun φ.pt) x) = 0 := by
+    φ.leftDeriv (fderiv 𝕜 (φ.implicitFunction (φ.leftFun φ.pt)) (φ.rightFun φ.pt) id x) = 0 := by
   exact φ.fderiv_implicitFunction_apply_eq_iff.mp rfl |>.left
 
 @[simp]
 theorem rightDeriv_fderiv_implicitFunction (φ : ImplicitFunctionData 𝕜 E F G) (x : G) :
-    φ.rightDeriv (fderiv 𝕜 (φ.implicitFunction (φ.leftFun φ.pt)) (φ.rightFun φ.pt) x) = x := by
+    φ.rightDeriv (fderiv 𝕜 (φ.implicitFunction (φ.leftFun φ.pt)) (φ.rightFun φ.pt) id x) = x := by
   exact φ.fderiv_implicitFunction_apply_eq_iff.mp rfl |>.right
 
 theorem hasStrictFDerivAt_implicitFunction (g'inv : G →L[𝕜] E)

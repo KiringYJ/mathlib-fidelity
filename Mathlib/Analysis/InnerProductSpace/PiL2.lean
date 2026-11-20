@@ -13,6 +13,7 @@ public import Mathlib.LinearAlgebra.UnitaryGroup
 public import Mathlib.Tactic.CrossRefAttribute
 public import Mathlib.Util.Superscript
 public import Mathlib.LinearAlgebra.Matrix.InvariantBasisNumber
+public import Mathlib.Logic.Equiv.Fintype
 
 /-!
 # `L²` inner product space structure on finite products of inner product spaces
@@ -1045,24 +1046,25 @@ theorem Orthonormal.exists_orthonormalBasis_extension (hv : Orthonormal 𝕜 ((�
   · simp
 
 theorem Orthonormal.exists_orthonormalBasis_extension_of_card_eq {ι : Type*} [Fintype ι]
-    (card_ι : finrank 𝕜 E = Fintype.card ι) {v : ι → E} {s : Set ι}
-    (hv : Orthonormal 𝕜 (s.domRestrict v)) :
-    ∃ b : OrthonormalBasis ι 𝕜 E, ∀ i ∈ s, b i = v i := by
-  have hsv : Injective (s.domRestrict v) := hv.linearIndependent.injective
-  have hX : Orthonormal 𝕜 ((↑) : Set.range (s.domRestrict v) → E) := by
+    (card_ι : finrank 𝕜 E = Fintype.card ι) {s : Set ι} {v : s → E}
+    (hv : Orthonormal 𝕜 v) :
+    ∃ b : OrthonormalBasis ι 𝕜 E, ∀ i : s, b i = v i := by
+  classical
+  have hsv : Injective v := hv.linearIndependent.injective
+  have hX : Orthonormal 𝕜 ((↑) : Set.range v → E) := by
     rwa [orthonormal_subtype_range hsv]
   obtain ⟨Y, b₀, hX, hb₀⟩ := hX.exists_orthonormalBasis_extension
   have hιY : Fintype.card ι = Y.card := by
     refine card_ι.symm.trans ?_
     exact Module.finrank_eq_card_finset_basis b₀.toBasis
-  have hvsY : s.MapsTo v Y := (s.mapsTo_image v).mono_right (by rwa [← range_domRestrict])
-  have hsv' : Set.InjOn v s := by
-    rw [Set.injOn_iff_injective]
-    exact hsv
-  obtain ⟨g, hg⟩ := hvsY.exists_equiv_extend_of_card_eq hιY hsv'
-  use b₀.reindex g.symm
-  intro i hi
-  simp [hb₀, hg i hi]
+  let e : ι ≃ Y := Fintype.equivOfCardEq (by simpa using hιY)
+  let w : s → Y := fun i ↦ ⟨v i, hX ⟨i, rfl⟩⟩
+  have hw : Injective w := fun i j hij ↦ hsv (congrArg Subtype.val hij)
+  obtain ⟨σ, hσ⟩ := Equiv.Perm.exists_extending_pair
+    (fun i : s ↦ e i) w (e.injective.comp Subtype.val_injective) hw
+  use b₀.reindex (e.trans σ).symm
+  intro i
+  simp [hb₀, hσ, w]
 
 variable (𝕜 E)
 

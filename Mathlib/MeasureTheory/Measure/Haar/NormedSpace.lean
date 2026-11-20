@@ -88,48 +88,53 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [SigmaAlgebra E]
   [NormedSpace ℝ F]
 
 /-- The integral of `f (R • x)` with respect to an additive Haar measure is a multiple of the
-integral of `f`. The formula we give works even when `f` is not integrable or `R = 0`
-thanks to the convention that a non-integrable function has integral zero. -/
-theorem integral_comp_smul (f : E → F) (R : ℝ) :
+integral of `f` whenever the scaling determinant is invertible. This includes every scalar
+in dimension zero. -/
+theorem integral_comp_smul (f : E → F) (R : ℝ) {hR : IsUnit (R ^ finrank ℝ E)} :
     ∫ x, f (R • x) ∂μ = |(R ^ finrank ℝ E)⁻¹| • ∫ x, f x ∂μ := by
   by_cases hF : CompleteSpace F; swap
   · simp [integral, hF]
-  rcases eq_or_ne R 0 with (rfl | hR)
-  · simp only [zero_smul, integral_const]
-    rcases Nat.eq_zero_or_pos (finrank ℝ E) with (hE | hE)
-    · have : Subsingleton E := finrank_zero_iff.1 hE
-      have : f = fun _ => f 0 := by ext x; rw [Subsingleton.elim x 0]
-      conv_rhs => rw [this]
-      simp only [hE, pow_zero, inv_one, abs_one, one_smul, integral_const]
-    · have : Nontrivial E := finrank_pos_iff.1 hE
-      simp [zero_pow hE.ne', measure_univ_of_isAddLeftInvariant, measureReal_def]
+  rcases eq_or_ne R 0 with (rfl | hR₀)
+  · have hE : finrank ℝ E = 0 := by
+      by_contra h
+      exact hR.ne_zero (zero_pow h)
+    have : Subsingleton E := finrank_zero_iff.1 hE
+    have hf : (fun x : E ↦ f ((0 : ℝ) • x)) = f := by
+      funext x
+      exact congrArg f (Subsingleton.elim _ _)
+    have hinv : ((0 : ℝ) ^ finrank ℝ E)⁻¹ = 1 := by
+      apply inv_eq_of_mul_eq_one_right₀
+      simp only [hE, pow_zero, mul_one]
+    rw [hf, hinv, abs_one, one_smul]
   · calc
       (∫ x, f (R • x) ∂μ) = ∫ y, f y ∂Measure.map (fun x => R • x) μ :=
-        (integral_map_equiv (Homeomorph.smul (isUnit_iff_ne_zero.2 hR).unit).toMeasurableEquiv
+        (integral_map_equiv (Homeomorph.smul hR₀.isUnit.unit).toMeasurableEquiv
             f).symm
       _ = |(R ^ finrank ℝ E)⁻¹| • ∫ x, f x ∂μ := by
-        simp only [map_addHaar_smul μ hR, integral_smul_measure, ENNReal.toReal_ofReal, abs_nonneg]
+        simp only [map_addHaar_smul μ hR₀, integral_smul_measure, ENNReal.toReal_ofReal, abs_nonneg]
 
-/-- The integral of `f (R • x)` with respect to an additive Haar measure is a multiple of the
-integral of `f`. The formula we give works even when `f` is not integrable or `R = 0`
-thanks to the convention that a non-integrable function has integral zero. -/
-theorem integral_comp_smul_of_nonneg (f : E → F) (R : ℝ) {hR : 0 ≤ R} :
+/-- Scaling by a nonnegative real with invertible determinant multiplies a Haar integral
+by the reciprocal determinant. -/
+theorem integral_comp_smul_of_nonneg (f : E → F) (R : ℝ)
+    {hR : IsUnit (R ^ finrank ℝ E)} {hR₀ : 0 ≤ R} :
     ∫ x, f (R • x) ∂μ = (R ^ finrank ℝ E)⁻¹ • ∫ x, f x ∂μ := by
-  rw [integral_comp_smul μ f R, abs_of_nonneg (inv_nonneg.2 (pow_nonneg hR _))]
+  rw [integral_comp_smul μ f R (hR := hR), abs_of_nonneg (inv_nonneg.2 (pow_nonneg hR₀ _))]
 
 /-- The integral of `f (R⁻¹ • x)` with respect to an additive Haar measure is a multiple of the
-integral of `f`. The formula we give works even when `f` is not integrable or `R = 0`
-thanks to the convention that a non-integrable function has integral zero. -/
-theorem integral_comp_inv_smul (f : E → F) (R : ℝ) :
+integral of `f` for an invertible scalar `R`. -/
+theorem integral_comp_inv_smul (f : E → F) (R : ℝ) {hR : IsUnit R} :
     ∫ x, f (R⁻¹ • x) ∂μ = |R ^ finrank ℝ E| • ∫ x, f x ∂μ := by
-  rw [integral_comp_smul μ f R⁻¹, inv_pow, inv_inv]
+  have he : (R⁻¹ ^ finrank ℝ E)⁻¹ = R ^ finrank ℝ E := by
+    apply inv_eq_of_mul_eq_one_right₀
+    rw [inv_pow₀, inv_mul_cancel₀]
+  rw [integral_comp_smul μ f R⁻¹ (hR := hR.inv₀.pow _), he]
 
-/-- The integral of `f (R⁻¹ • x)` with respect to an additive Haar measure is a multiple of the
-integral of `f`. The formula we give works even when `f` is not integrable or `R = 0`
-thanks to the convention that a non-integrable function has integral zero. -/
-theorem integral_comp_inv_smul_of_nonneg (f : E → F) {R : ℝ} (hR : 0 ≤ R) :
+/-- Scaling by the reciprocal of a nonnegative unit multiplies a Haar integral by the
+determinant of the original scaling. -/
+theorem integral_comp_inv_smul_of_nonneg (f : E → F) {R : ℝ}
+    {hR : IsUnit R} (hR₀ : 0 ≤ R) :
     ∫ x, f (R⁻¹ • x) ∂μ = R ^ finrank ℝ E • ∫ x, f x ∂μ := by
-  rw [integral_comp_inv_smul μ f R, abs_of_nonneg (pow_nonneg hR _)]
+  rw [integral_comp_inv_smul μ f R (hR := hR), abs_of_nonneg (pow_nonneg hR₀ _)]
 
 theorem setIntegral_comp_smul (f : E → F) {R : ℝ} (s : Set E) (hR : R ≠ 0) :
     ∫ x in s, f (R • x) ∂μ = |(R ^ finrank ℝ E)⁻¹| • ∫ x in R • s, f x ∂μ := by
@@ -150,24 +155,27 @@ theorem setIntegral_comp_smul_of_pos (f : E → F) {R : ℝ} (s : Set E) (hR : 0
     ∫ x in s, f (R • x) ∂μ = (R ^ finrank ℝ E)⁻¹ • ∫ x in R • s, f x ∂μ := by
   rw [setIntegral_comp_smul μ f s hR.ne', abs_of_nonneg (inv_nonneg.2 (pow_nonneg hR.le _))]
 
-theorem integral_comp_mul_left (g : ℝ → F) (a : ℝ) :
+theorem integral_comp_mul_left (g : ℝ → F) (a : ℝ) {ha : IsUnit a} :
     (∫ x : ℝ, g (a * x)) = |a⁻¹| • ∫ y : ℝ, g y := by
-  simp_rw [← smul_eq_mul, Measure.integral_comp_smul, Module.finrank_self, pow_one]
+  simpa only [smul_eq_mul, finrank_self, pow_one] using
+    integral_comp_smul volume g a (hR := ha.pow _)
 
-theorem integral_comp_inv_mul_left (g : ℝ → F) (a : ℝ) :
+theorem integral_comp_inv_mul_left (g : ℝ → F) (a : ℝ) {ha : IsUnit a} :
     (∫ x : ℝ, g (a⁻¹ * x)) = |a| • ∫ y : ℝ, g y := by
-  simp_rw [← smul_eq_mul, Measure.integral_comp_inv_smul, Module.finrank_self, pow_one]
+  simpa only [smul_eq_mul, finrank_self, pow_one] using
+    integral_comp_inv_smul volume g a (hR := ha)
 
-theorem integral_comp_mul_right (g : ℝ → F) (a : ℝ) :
+theorem integral_comp_mul_right (g : ℝ → F) (a : ℝ) {ha : IsUnit a} :
     (∫ x : ℝ, g (x * a)) = |a⁻¹| • ∫ y : ℝ, g y := by
-  simpa only [mul_comm] using integral_comp_mul_left g a
+  simpa only [mul_comm] using integral_comp_mul_left g a (ha := ha)
 
-theorem integral_comp_inv_mul_right (g : ℝ → F) (a : ℝ) :
+theorem integral_comp_inv_mul_right (g : ℝ → F) (a : ℝ) {ha : IsUnit a} :
     (∫ x : ℝ, g (x * a⁻¹)) = |a| • ∫ y : ℝ, g y := by
-  simpa only [mul_comm] using integral_comp_inv_mul_left g a
+  simpa only [mul_comm] using integral_comp_inv_mul_left g a (ha := ha)
 
-theorem integral_comp_div (g : ℝ → F) (a : ℝ) : (∫ x : ℝ, g (x / a)) = |a| • ∫ y : ℝ, g y :=
-  integral_comp_inv_mul_right g a
+theorem integral_comp_div (g : ℝ → F) (a : ℝ) {ha : IsUnit a} :
+    (∫ x : ℝ, g (x / a)) = |a| • ∫ y : ℝ, g y := by
+  simpa only [div_eq_mul_inv₀] using integral_comp_inv_mul_right g a (ha := ha)
 
 end Measure
 
@@ -180,14 +188,15 @@ theorem integrable_comp_smul_iff {E : Type*} [NormedAddCommGroup E] [NormedSpace
   suffices
     ∀ {g : E → F} (_ : Integrable g μ) {S : ℝ} (_ : S ≠ 0), Integrable (fun x => g (S • x)) μ by
     refine ⟨fun hf => ?_, fun hf => this hf hR⟩
-    convert! this hf (inv_ne_zero hR)
-    rw [← mul_smul, mul_inv_cancel₀ hR, one_smul]
+    convert! this hf (inv_ne_zero (ha := hR.isUnit))
+    rw [← mul_smul, mul_inv_cancel₀, one_smul]
   -- now prove
   intro g hg S hS
   let t := ((Homeomorph.smul (isUnit_iff_ne_zero.2 hS).unit).toMeasurableEquiv : E ≃ᵐ E)
   refine (integrable_map_equiv t g).mp (?_ : Integrable g (map (S • ·) μ))
   rwa [map_addHaar_smul μ hS, integrable_smul_measure _ ENNReal.ofReal_ne_top]
-  simpa only [Ne, ENNReal.ofReal_eq_zero, not_le, abs_pos] using inv_ne_zero (pow_ne_zero _ hS)
+  simpa only [Ne, ENNReal.ofReal_eq_zero, not_le, abs_pos] using
+    (inv_ne_zero (ha := hS.isUnit.pow (finrank ℝ E)))
 
 theorem Integrable.comp_smul {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [SigmaAlgebra E] [BorelSpace E] [FiniteDimensional ℝ E] {μ : Measure E} [IsAddHaarMeasure μ]
@@ -210,13 +219,14 @@ theorem Integrable.comp_mul_right' {g : ℝ → F} (hg : Integrable g) {R : ℝ}
     Integrable fun x => g (x * R) :=
   (integrable_comp_mul_right_iff g hR).2 hg
 
-theorem integrable_comp_div_iff (g : ℝ → F) {R : ℝ} (hR : R ≠ 0) :
-    (Integrable fun x => g (x / R)) ↔ Integrable g :=
-  integrable_comp_mul_right_iff g (inv_ne_zero hR)
+theorem integrable_comp_div_iff (g : ℝ → F) {R : ℝ} {hR : IsUnit R} :
+    (Integrable fun x => g (x / R)) ↔ Integrable g := by
+  simpa only [div_eq_mul_inv₀] using
+    integrable_comp_mul_right_iff g (inv_ne_zero (ha := hR))
 
-theorem Integrable.comp_div {g : ℝ → F} (hg : Integrable g) {R : ℝ} (hR : R ≠ 0) :
+theorem Integrable.comp_div {g : ℝ → F} (hg : Integrable g) {R : ℝ} {hR : IsUnit R} :
     Integrable fun x => g (x / R) :=
-  (integrable_comp_div_iff g hR).2 hg
+  (integrable_comp_div_iff g (hR := hR)).2 hg
 
 section InnerProductSpace
 

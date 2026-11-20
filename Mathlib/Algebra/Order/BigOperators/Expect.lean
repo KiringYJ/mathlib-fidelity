@@ -243,8 +243,8 @@ meta def evalFinsetExpect : PositivityExt where eval {u α} zα pα? e :=
     let rbody ← core zα pα body
     let p_pos : Option Q(0 < $e) ← do
       let .positive pbody := rbody | pure none -- Fail if the body is not provably positive
-      let .some pα' ← trySynthInstanceQ q(IsOrderedCancelAddMonoid $α) | pure none
-      let .some instαordsmul ← trySynthInstanceQ q(PosSMulStrictMono ℚ≥0 $α) | pure none
+      let .some _pα' ← trySynthInstanceQ q(IsOrderedCancelAddMonoid $α) | pure none
+      let .some _instαordsmul ← trySynthInstanceQ q(PosSMulStrictMono ℚ≥0 $α) | pure none
       assertInstancesCommute
       let pr : Q(∀ i, 0 < $f i) ← mkLambdaFVars #[i] pbody
       pure <| some
@@ -256,8 +256,8 @@ meta def evalFinsetExpect : PositivityExt where eval {u α} zα pα? e :=
     else
       let some pbody := rbody.toNonneg | pure .none
       let pr : Q(∀ i, 0 ≤ $f i) ← mkLambdaFVars #[i] pbody
-      let instαordmon ← synthInstanceQ q(IsOrderedAddMonoid $α)
-      let instαordsmul ← synthInstanceQ q(PosSMulMono ℚ≥0 $α)
+      let _instαordmon ← synthInstanceQ q(IsOrderedAddMonoid $α)
+      let _instαordsmul ← synthInstanceQ q(PosSMulMono ℚ≥0 $α)
       assertInstancesCommute
       return .nonnegative
         q(expect_nonneg (s := $s) (f := $f) $hs fun i _ ↦ $pr i)

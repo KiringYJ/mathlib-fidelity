@@ -122,22 +122,24 @@ theorem hasDerivAt_iff_tendsto_slope_left_right [LinearOrder 𝕜] : HasDerivAt 
     ← hasDerivWithinAt_sdiff_singleton, ← compl_eq_univ_sdiff, ← Iio_union_Ioi]
   exact ⟨fun h ↦ ⟨h.mono subset_union_left, h.mono subset_union_right⟩, fun h ↦ h.1.union h.2⟩
 
-/-- The derivative is the limit of the slope `t⁻¹ • (f (x + t) - f x)` over the increments
+/-- The derivative is the limit of the slope `t⁻¹ • (f (x + (t : 𝕜)) - f x)` over the increments
 `t ≠ 0`. -/
 theorem hasDerivAt_iff_tendsto_slope_zero :
     HasDerivAt f f' x ↔
-      Tendsto (fun t : ↥({0}ᶜ : Set 𝕜) ↦ Checked.inv (t : 𝕜) (Ne.isUnit t.2) • (f (x + t) - f x))
-        (comap (↑) (𝓝 0)) (𝓝 f') := by
+      Tendsto (fun t : ↥({0}ᶜ : Set 𝕜) ↦
+        Checked.inv (t : 𝕜) (Ne.isUnit t.2) • (f (x + (t : 𝕜)) - f x))
+        (comap (↑) (𝓝 (0 : 𝕜))) (𝓝 f') := by
   rw [hasDerivAt_iff_tendsto_slope]
-  have hσ : Tendsto (fun y : ↥({x}ᶜ : Set 𝕜) ↦ (⟨y - x, sub_ne_zero.2 y.2⟩ : ↥({0}ᶜ : Set 𝕜)))
-      (comap (↑) (𝓝 x)) (comap (↑) (𝓝 0)) := by
+  have hσ : Tendsto (fun y : ↥({x}ᶜ : Set 𝕜) ↦ (⟨(y : 𝕜) - x, sub_ne_zero.2 y.2⟩ : ↥({0}ᶜ : Set 𝕜)))
+      (comap (↑) (𝓝 x)) (comap (↑) (𝓝 (0 : 𝕜))) := by
     refine tendsto_comap_iff.2 ?_
     exact ((continuous_sub_right x).tendsto' x 0 (sub_self x)).comp tendsto_comap
   have hτ : Tendsto
-      (fun t : ↥({0}ᶜ : Set 𝕜) ↦ (⟨x + t, fun h ↦ t.2 (add_eq_left.1 h)⟩ : ↥({x}ᶜ : Set 𝕜)))
-      (comap (↑) (𝓝 0)) (comap (↑) (𝓝 x)) := by
+      (fun t : ↥({0}ᶜ : Set 𝕜) ↦ (⟨x + (t : 𝕜), fun h ↦ t.2 (add_eq_left.1 h)⟩ : ↥({x}ᶜ : Set 𝕜)))
+      (comap (↑) (𝓝 (0 : 𝕜))) (comap (↑) (𝓝 x)) := by
     refine tendsto_comap_iff.2 ?_
-    exact ((continuous_add_left x).tendsto' 0 x (add_zero x)).comp tendsto_comap
+    exact ((continuous_const.add continuous_id : Continuous (fun t : 𝕜 ↦ x + t)).tendsto'
+      0 x (add_zero x)).comp tendsto_comap
   constructor
   · intro h
     refine (h.comp hτ).congr fun t ↦ ?_
@@ -149,14 +151,14 @@ theorem hasDerivAt_iff_tendsto_slope_zero :
 alias ⟨HasDerivAt.tendsto_slope_zero, _⟩ := hasDerivAt_iff_tendsto_slope_zero
 
 theorem HasDerivAt.tendsto_slope_zero_right [Preorder 𝕜] (h : HasDerivAt f f' x) :
-    Tendsto (fun t : ↥(Ioi (0 : 𝕜)) ↦ Checked.inv (t : 𝕜) t.2.ne'.isUnit • (f (x + t) - f x))
-      (comap (↑) (𝓝 0)) (𝓝 f') :=
+    Tendsto (fun t : ↥(Ioi (0 : 𝕜)) ↦ Checked.inv (t : 𝕜) t.2.ne'.isUnit • (f (x + (t : 𝕜)) - f x))
+      (comap (↑) (𝓝 (0 : 𝕜))) (𝓝 f') :=
   h.tendsto_slope_zero.comp <| (tendsto_comap_iff (f := fun t : ↥(Ioi (0 : 𝕜)) ↦
     (⟨t, t.2.ne'⟩ : ↥({0}ᶜ : Set 𝕜)))).2 tendsto_comap
 
 theorem HasDerivAt.tendsto_slope_zero_left [Preorder 𝕜] (h : HasDerivAt f f' x) :
-    Tendsto (fun t : ↥(Iio (0 : 𝕜)) ↦ Checked.inv (t : 𝕜) t.2.ne.isUnit • (f (x + t) - f x))
-      (comap (↑) (𝓝 0)) (𝓝 f') :=
+    Tendsto (fun t : ↥(Iio (0 : 𝕜)) ↦ Checked.inv (t : 𝕜) t.2.ne.isUnit • (f (x + (t : 𝕜)) - f x))
+      (comap (↑) (𝓝 (0 : 𝕜))) (𝓝 f') :=
   h.tendsto_slope_zero.comp <| (tendsto_comap_iff (f := fun t : ↥(Iio (0 : 𝕜)) ↦
     (⟨t, t.2.ne⟩ : ↥({0}ᶜ : Set 𝕜)))).2 tendsto_comap
 
@@ -166,6 +168,7 @@ theorem range_derivWithin_subset_closure_span_image
     (f : 𝕜 → F) {s t : Set 𝕜} (h : s ⊆ closure (s ∩ t)) :
     range (derivWithin f s) ⊆ closure (Submodule.span 𝕜 (f '' t)) := by
   rintro - ⟨x, rfl⟩
+  change derivWithin f s x ∈ closure (Submodule.span 𝕜 (f '' t))
   by_cases H : UniqueDiffWithinAt 𝕜 s x; swap
   · simpa [derivWithin_zero_of_not_uniqueDiffWithinAt H] using subset_closure (zero_mem _)
   by_cases H' : DifferentiableWithinAt 𝕜 f s x; swap
@@ -225,9 +228,9 @@ lemma HasDerivAt.continuousAt_div [DecidableEq 𝕜] {f : 𝕜 → 𝕜} {c a : 
     rw [map_comap, Subtype.range_coe]
     rfl
   refine continuousWithinAt_compl_self.1 ?_
-  rw [ContinuousWithinAt, dif_pos rfl, hc, tendsto_map'_iff]
+  rw [ContinuousWithinAt, dite_eq_left rfl, hc, tendsto_map'_iff]
   refine (hasDerivAt_iff_tendsto_slope.1 hf).congr fun y ↦ ?_
-  simp only [Function.comp_apply, dif_neg (show (y : 𝕜) ≠ c from y.2), slope_def_field]
+  simp only [Function.comp_apply, dite_eq_right (show (y : 𝕜) ≠ c from y.2), slope_def_field]
 
 section Order
 
@@ -262,7 +265,7 @@ lemma HasDerivAt.nonneg_of_monotone (hd : HasDerivAt g g' x) (hg : Monotone g) :
 
 /-- The derivative of a monotone function is nonnegative. -/
 lemma Monotone.deriv_nonneg (hg : Monotone g) : 0 ≤ deriv g x := by
-  rw [← derivWithin_univ]
+  rw [← congrFun derivWithin_univ x]
   exact (hg.monotoneOn univ).derivWithin_nonneg
 
 /-- If an antitone function has a derivative within a set at a non-isolated point, then this
@@ -275,7 +278,9 @@ lemma HasDerivWithinAt.nonpos_of_antitoneOn (hx : AccPt x (𝓟 s))
 /-- The derivative within a set of an antitone function is nonpositive. -/
 lemma AntitoneOn.derivWithin_nonpos (hg : AntitoneOn g s) :
     derivWithin g s x ≤ 0 := by
-  simpa [derivWithin.fun_neg] using hg.neg.derivWithin_nonneg
+  have h := hg.neg.derivWithin_nonneg (x := x)
+  change 0 ≤ derivWithin (-g) s x at h
+  simpa only [derivWithin.neg, neg_nonneg] using h
 
 /-- If an antitone function has a derivative, then this derivative is nonpositive. -/
 lemma HasDerivAt.nonpos_of_antitone (hd : HasDerivAt g g' x) (hg : Antitone g) : g' ≤ 0 := by
@@ -285,7 +290,7 @@ lemma HasDerivAt.nonpos_of_antitone (hd : HasDerivAt g g' x) (hg : Antitone g) :
 
 /-- The derivative of an antitone function is nonpositive. -/
 lemma Antitone.deriv_nonpos (hg : Antitone g) : deriv g x ≤ 0 := by
-  rw [← derivWithin_univ]
+  rw [← congrFun derivWithin_univ x]
   exact (hg.antitoneOn univ).derivWithin_nonpos
 
 end Order
@@ -302,16 +307,17 @@ section Real
 variable {f : ℝ → ℝ} {f' : ℝ} {s : Set ℝ} {x : ℝ} {r : ℝ}
 
 theorem HasDerivWithinAt.limsup_slope_le (hf : HasDerivWithinAt f f' s x) (hr : f' < r) :
-    ∀ᶠ z in comap ((↑) : ↥(s \ {x}) → ℝ) (𝓝 x), slope f x z (fun h ↦ z.2.2 h.symm) < r :=
+    ∀ᶠ (z : ↥(s \ {x})) in comap ((↑) : ↥(s \ {x}) → ℝ) (𝓝 x),
+      slope f x z (fun h ↦ z.2.2 h.symm) < r :=
   hasDerivWithinAt_iff_tendsto_slope.1 hf (IsOpen.mem_nhds isOpen_Iio hr)
 
 theorem HasDerivWithinAt.limsup_slope_le' (hf : HasDerivWithinAt f f' s x) (hs : x ∉ s)
     (hr : f' < r) :
-    ∀ᶠ z in comap ((↑) : ↥s → ℝ) (𝓝 x), slope f x z (ne_of_mem_of_not_mem z.2 hs).symm < r :=
+    ∀ᶠ (z : ↥s) in comap ((↑) : ↥s → ℝ) (𝓝 x), slope f x z (ne_of_mem_of_not_mem z.2 hs).symm < r :=
   (hasDerivWithinAt_iff_tendsto_slope' hs).1 hf (IsOpen.mem_nhds isOpen_Iio hr)
 
 theorem HasDerivWithinAt.liminf_right_slope_le (hf : HasDerivWithinAt f f' (Ici x) x)
-    (hr : f' < r) : ∃ᶠ z in comap ((↑) : ↥(Ioi x) → ℝ) (𝓝 x), slope f x z z.2.ne < r :=
+    (hr : f' < r) : ∃ᶠ (z : ↥(Ioi x)) in comap ((↑) : ↥(Ioi x) → ℝ) (𝓝 x), slope f x z z.2.ne < r :=
   have : (comap ((↑) : ↥(Ioi x) → ℝ) (𝓝 x)).NeBot := mem_closure_iff_comap_neBot.1 (by simp)
   (hf.Ioi_of_Ici.limsup_slope_le' (lt_irrefl x) hr).frequently
 
@@ -327,12 +333,12 @@ variable {E : Type u} [NormedAddCommGroup E] [NormedSpace ℝ E] {f : ℝ → E}
 In other words, the limit superior of this ratio as `z` tends to `x` along `s`
 is less than or equal to `‖f'‖`. -/
 theorem HasDerivWithinAt.limsup_norm_slope_le (hf : HasDerivWithinAt f f' s x) (hr : ‖f'‖ < r) :
-    ∀ᶠ z in comap ((↑) : ↥(s \ {x}) → ℝ) (𝓝 x),
+    ∀ᶠ (z : ↥(s \ {x})) in comap ((↑) : ↥(s \ {x}) → ℝ) (𝓝 x),
       Checked.inv ‖(z : ℝ) - x‖ (norm_ne_zero_iff.2 (sub_ne_zero.2 fun h ↦ z.2.2 h)).isUnit *
         ‖f z - f x‖ < r := by
   filter_upwards [(hasDerivWithinAt_iff_tendsto_slope.1 hf).norm (IsOpen.mem_nhds isOpen_Iio hr)]
     with z hz
-  simpa only [mem_Iio, slope_def_module, norm_smul, norm_inv] using hz
+  simpa only [mem_preimage, mem_Iio, slope_def_module, norm_smul, norm_inv] using hz
 
 /-- If `f` has derivative `f'` within `s` at `x`, then for any `r > ‖f'‖` the ratio
 `(‖f z‖ - ‖f x‖) / ‖z - x‖` is less than `r` at the points `z ≠ x` of `s` near `x`.
@@ -342,7 +348,7 @@ is less than or equal to `‖f'‖`.
 This lemma is a weaker version of `HasDerivWithinAt.limsup_norm_slope_le`
 where `‖f z‖ - ‖f x‖` is replaced by `‖f z - f x‖`. -/
 theorem HasDerivWithinAt.limsup_slope_norm_le (hf : HasDerivWithinAt f f' s x) (hr : ‖f'‖ < r) :
-    ∀ᶠ z in comap ((↑) : ↥(s \ {x}) → ℝ) (𝓝 x),
+    ∀ᶠ (z : ↥(s \ {x})) in comap ((↑) : ↥(s \ {x}) → ℝ) (𝓝 x),
       Checked.inv ‖(z : ℝ) - x‖ (norm_ne_zero_iff.2 (sub_ne_zero.2 fun h ↦ z.2.2 h)).isUnit *
         (‖f z‖ - ‖f x‖) < r := by
   refine (hf.limsup_norm_slope_le hr).mono fun z hz ↦ ?_
@@ -355,14 +361,14 @@ is less than or equal to `‖f'‖`. See also `HasDerivWithinAt.limsup_norm_slop
 for a stronger version using limit superior and any set `s`. -/
 theorem HasDerivWithinAt.liminf_right_norm_slope_le (hf : HasDerivWithinAt f f' (Ici x) x)
     (hr : ‖f'‖ < r) :
-    ∃ᶠ z in comap ((↑) : ↥(Ioi x) → ℝ) (𝓝 x),
+    ∃ᶠ (z : ↥(Ioi x)) in comap ((↑) : ↥(Ioi x) → ℝ) (𝓝 x),
       Checked.inv ‖(z : ℝ) - x‖ (norm_ne_zero_iff.2 (sub_ne_zero.2 z.2.ne')).isUnit *
         ‖f z - f x‖ < r := by
   have : (comap ((↑) : ↥(Ioi x) → ℝ) (𝓝 x)).NeBot := mem_closure_iff_comap_neBot.1 (by simp)
   refine Eventually.frequently ?_
   filter_upwards [((hasDerivWithinAt_iff_tendsto_slope' self_notMem_Ioi).1 hf.Ioi_of_Ici).norm
     (IsOpen.mem_nhds isOpen_Iio hr)] with z hz
-  simpa only [mem_Iio, slope_def_module, norm_smul, norm_inv] using hz
+  simpa only [mem_preimage, mem_Iio, slope_def_module, norm_smul, norm_inv] using hz
 
 /-- If `f` has derivative `f'` within `(x, +∞)` at `x`, then for any `r > ‖f'‖` the ratio
 `(‖f z‖ - ‖f x‖) / (z - x)` is frequently less than `r` as `z → x+0`.
@@ -377,7 +383,7 @@ See also
   `‖f z - f xp‖` instead of `‖f z‖ - ‖f x‖`. -/
 theorem HasDerivWithinAt.liminf_right_slope_norm_le (hf : HasDerivWithinAt f f' (Ici x) x)
     (hr : ‖f'‖ < r) :
-    ∃ᶠ z in comap ((↑) : ↥(Ioi x) → ℝ) (𝓝 x),
+    ∃ᶠ (z : ↥(Ioi x)) in comap ((↑) : ↥(Ioi x) → ℝ) (𝓝 x),
       Checked.inv ((z : ℝ) - x) (sub_ne_zero.2 z.2.ne').isUnit * (‖f z‖ - ‖f x‖) < r := by
   refine (hf.liminf_right_norm_slope_le hr).mono fun z hz ↦ ?_
   have hxz : 0 ≤ (z : ℝ) - x := (sub_pos.2 z.2).le

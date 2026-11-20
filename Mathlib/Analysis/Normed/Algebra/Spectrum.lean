@@ -12,6 +12,7 @@ public import Mathlib.Analysis.Normed.Algebra.UnitizationL1
 public import Mathlib.Analysis.Normed.Ring.Units
 public import Mathlib.Analysis.SpecialFunctions.Pow.Continuity
 public import Mathlib.FieldTheory.IsAlgClosed.Spectrum
+public import Mathlib.Order.Filter.ENNReal
 public import Mathlib.Tactic.CrossRefAttribute
 public import Mathlib.Topology.Algebra.Module.Spaces.CharacterSpace
 public import Mathlib.Topology.Semicontinuity.Hemicontinuity
@@ -175,9 +176,17 @@ theorem mem_resolventSet_of_norm_lt_mul {a : A} {k : 𝕜} (h : ‖a‖ * ‖(1 
   have hk : k ≠ 0 :=
     ne_zero_of_norm_ne_zero ((mul_nonneg (norm_nonneg _) (norm_nonneg _)).trans_lt h).ne'
   let ku := Units.map ↑ₐ.toMonoidHom (Units.mk0 k hk)
-  rw [← inv_inv ‖(1 : A)‖,
-    mul_inv_lt_iff₀' (inv_pos.2 <| norm_pos_iff.2 (one_ne_zero : (1 : A) ≠ 0))] at h
-  have hku : ‖-a‖ < ‖(↑ku⁻¹ : A)‖⁻¹ := by simpa [ku, norm_algebraMap] using h
+  have hkuval : (↑ku⁻¹ : A) = ↑ₐ (k⁻¹) := by
+    change (↑((Units.map ↑ₐ.toMonoidHom (Units.mk0 k hk))⁻¹) : A) = _
+    rw [← map_inv]
+    change ↑ₐ (↑((Units.mk0 k hk)⁻¹) : 𝕜) = _
+    rw [Units.val_inv_eq_inv_val₀]
+    rfl
+  have hku : ‖(↑ku⁻¹ : A)‖ * ‖-a‖ < 1 := by
+    have hm : ‖k‖⁻¹ * (‖a‖ * ‖(1 : A)‖) < 1 :=
+      (inv_mul_lt_one₀ (norm_pos_iff.mpr hk)).mpr h
+    simpa [hkuval, norm_algebraMap, norm_inv,
+      mul_assoc, mul_left_comm, mul_comm] using hm
   simpa [ku, sub_eq_add_neg, Algebra.algebraMap_eq_smul_one] using (ku.add (-a) hku).isUnit
 
 theorem mem_resolventSet_of_norm_lt [NormOneClass A] {a : A} {k : 𝕜} (h : ‖a‖ < ‖k‖) : k ∈ ρ a :=
@@ -279,28 +288,32 @@ theorem spectralRadius_le_pow_nnnorm_pow_one_div (a : A) (n : ℕ) :
   -- take (n + 1)ᵗʰ roots and clean up the left-hand side
   have hn : 0 < ((n + 1 : ℕ) : ℝ) := mod_cast Nat.succ_pos'
   convert monotone_rpow_of_nonneg (one_div_pos.mpr hn).le nnnorm_pow_le
-  all_goals dsimp
-  · rw [one_div, pow_rpow_inv_natCast]
-    positivity
-  rw [Nat.cast_succ, ENNReal.coe_mul_rpow]
+  · change (‖k‖₊ : ℝ≥0∞) = (↑(‖k‖₊ ^ (n + 1)) : ℝ≥0∞) ^
+      (1 / ((n + 1 : ℕ) : ℝ))
+    rw [ENNReal.coe_pow, one_div₀, ENNReal.pow_rpow_inv_natCast (Nat.succ_ne_zero n)]
+  · simpa only [Nat.cast_succ] using
+      (ENNReal.coe_mul_rpow ‖a ^ (n + 1)‖₊ ‖(1 : A)‖₊ (1 / ((n + 1 : ℕ) : ℝ))).symm
 
 theorem spectralRadius_le_liminf_pow_nnnorm_pow_one_div (a : A) :
-    spectralRadius 𝕜 a ≤ atTop.liminf fun n : ℕ => (‖a ^ n‖₊ : ℝ≥0∞) ^ (1 / n : ℝ) := by
+    spectralRadius 𝕜 a ≤ (comap Subtype.val atTop).liminf
+      fun n : {n : ℕ // n ≠ 0} ↦ (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ) := by
   refine ENNReal.le_of_forall_lt_one_mul_le fun ε hε => ?_
   by_cases h : ε = 0
   · simp [h]
-  simp only [ENNReal.mul_le_iff_le_inv h (hε.trans_le le_top).ne, mul_comm ε⁻¹,
-    liminf_eq_iSup_iInf_of_nat', ENNReal.iSup_mul]
-  conv_rhs => arg 1; intro i; rw [ENNReal.iInf_mul (by simp [h])]
-  rw [← ENNReal.inv_lt_inv, inv_one] at hε
-  obtain ⟨N, hN⟩ := eventually_atTop.mp
-    (ENNReal.eventually_pow_one_div_le (ENNReal.coe_ne_top : ↑‖(1 : A)‖₊ ≠ ∞) hε)
-  refine le_trans ?_ (le_iSup _ (N + 1))
-  refine le_iInf fun n => ?_
-  simp only [← add_assoc]
-  refine (spectralRadius_le_pow_nnnorm_pow_one_div 𝕜 a (n + N)).trans ?_
-  norm_cast
-  grw [hN (n + N + 1) (by lia)]
+  have hεtop : ε ≠ ∞ := (hε.trans_le le_top).ne
+  rw [ENNReal.mul_le_iff_le_inv h hεtop,
+    ← ENNReal.liminf_mul_const_of_ne_zero_of_ne_top (ENNReal.inv_ne_zero.mpr hεtop)
+      (ENNReal.inv_ne_top.mpr h)]
+  apply le_liminf_of_le
+  · infer_param
+  · have hεinv : 1 < ε⁻¹ := by simpa only [inv_one] using ENNReal.inv_lt_inv.mpr hε
+    filter_upwards [ENNReal.eventually_pow_one_div_le
+      (ENNReal.coe_ne_top : ↑‖(1 : A)‖₊ ≠ ∞) hεinv] with n hn
+    rcases n with ⟨_ | k, hn₀⟩
+    · exact (hn₀ rfl).elim
+    · simp only [Nat.cast_add, Nat.cast_one] at hn ⊢
+      exact (spectralRadius_le_pow_nnnorm_pow_one_div 𝕜 a k).trans
+        (by gcongr)
 
 end Unital
 
@@ -322,6 +335,7 @@ theorem eventually_mem_resolventSet (a : A) : ∀ᶠ z in cobounded 𝕜, z ∈ 
   rw [atTop_basis_Ioi.cobounded_of_norm.eventually_iff]
   exact ⟨‖a‖ * ‖(1 : A)‖, trivial, fun _ ↦ mem_resolventSet_of_norm_lt_mul⟩
 
+omit [CompleteSpace A] in
 /-- The reciprocal comparison is made where both the scalar and the resolvent are invertible. -/
 theorem resolvent_isBigO_inv (a : A) :
     (fun z : {z : 𝕜ˣ | (z : 𝕜) ∈ ρ a} ↦ resolvent a ⟨(z.val : 𝕜), z.property⟩) =O[
@@ -337,19 +351,21 @@ theorem resolvent_isBigO_inv (a : A) :
       Units.inv_mul, map_one] using h
   have hmap : Tendsto (fun z : D ↦
       (⟨(↑z.val⁻¹ : 𝕜) • a, hs z⟩ : {t : A | IsUnit (1 - t)})) L
-      (𝓝 ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩) :=
+      (𝓝 ⟨0, by simp⟩) :=
     tendsto_subtype_rng.mpr (by simpa only [zero_smul] using hz.smul_const a)
   have hbound := (NormedRing.inverse_one_sub_norm (R := A)).comp_tendsto hmap
   have heq (z : D) : resolvent a ⟨(z.val : 𝕜), z.property⟩ =
       (↑z.val⁻¹ : 𝕜) • (↑(hs z).unit⁻¹ : A) := by
     have h := congrArg (fun b : A ↦ z.val⁻¹ • b)
       (units_smul_resolvent_self (r := z.val) z.property)
-    simpa only [inv_smul_smul, resolvent, Units.smul_def, map_one] using h
+    simp only [inv_smul_smul] at h
+    simpa only [resolvent, Units.smul_def, map_one] using h
   simp_rw [heq]
   exact .of_norm_right <| by
-    simpa only [mul_one, Function.comp_def] using
+    simpa only [mul_one, smul_eq_mul, Function.comp_def] using
       (isBigO_refl (fun z : D ↦ (↑z.val⁻¹ : 𝕜)) L).norm_right.smul hbound
 
+omit [CompleteSpace A] in
 /-- The resolvent tends to zero at infinity along its exact domain. -/
 theorem resolvent_tendsto_cobounded (a : A) :
     Tendsto (resolvent a) (comap (Subtype.val : ρ a → 𝕜) (cobounded 𝕜)) (𝓝 0) := by
@@ -384,7 +400,7 @@ theorem hasFPowerSeriesOnBall_inverse_one_sub_smul [HasSummableGeomSeries A] (a 
     HasFPowerSeriesOnBall
       (fun z : {z : 𝕜 | IsUnit (1 - z • a)} ↦ (↑z.property.unit⁻¹ : A))
       (fun n => ContinuousMultilinearMap.mkPiRing 𝕜 (Fin n) (a ^ n))
-      ⟨0, by simpa using (isUnit_one : IsUnit (1 : A))⟩
+      ⟨0, by simp⟩
       (‖a‖₊ : ℝ≥0∞)⁻¹ Subtype.val :=
   { r_le := by
       refine le_of_forall_nnreal_lt fun r hr =>
@@ -401,9 +417,8 @@ theorem hasFPowerSeriesOnBall_inverse_one_sub_smul [HasSummableGeomSeries A] (a 
             rw [← ENNReal.coe_mul, show (↑u⁻¹ : ℝ≥0) * ‖a‖₊ = 1 from u.inv_mul, ENNReal.coe_one]
           rw [← hcoe, ENNReal.coe_lt_coe] at hr
           have hm : r * ‖a‖₊ < 1 := by
-            simpa only [mul_one, mul_comm] using
-              (Units.lt_inv_mul_iff (u := u) (pos_iff_ne_zero.mpr h)).mp
-                (by simpa only [mul_one] using hr)
+            apply (lt_inv_mul_iff₀' (pos_iff_ne_zero.mpr h)).mp
+            simpa only [mul_one, Units.val_inv_eq_inv_val₀, u, Units.val_mk0] using hr
           simpa only [← mul_pow, mul_comm] using pow_le_one' hm.le n.succ
     r_pos := ENNReal.inv_pos.mpr coe_ne_top
     hasSum := fun {y} hy => by
@@ -415,11 +430,11 @@ theorem hasFPowerSeriesOnBall_inverse_one_sub_smul [HasSummableGeomSeries A] (a 
             apply ENNReal.eq_inv_of_mul_eq_one_left
             rw [← ENNReal.coe_mul, show (↑u⁻¹ : ℝ≥0) * ‖a‖₊ = 1 from u.inv_mul, ENNReal.coe_one]
           have hy' : ‖y.val‖₊ < (↑u⁻¹ : ℝ≥0) := by
-            simpa only [sub_zero, ← hcoe, mem_ball_zero_iff, Metric.eball_coe] using hy
+            apply NNReal.coe_lt_coe.mp
+            simpa only [sub_zero, ← hcoe, mem_ball_zero_iff, Metric.eball_coe, coe_nnnorm] using hy
           have hm : ‖y.val‖₊ * ‖a‖₊ < 1 := by
-            simpa only [mul_one, mul_comm] using
-              (Units.lt_inv_mul_iff (u := u) (pos_iff_ne_zero.mpr h)).mp
-                (by simpa only [mul_one] using hy')
+            apply (lt_inv_mul_iff₀' (pos_iff_ne_zero.mpr h)).mp
+            simpa only [mul_one, Units.val_inv_eq_inv_val₀, u, Units.val_mk0] using hy'
           rw [norm_smul]
           exact_mod_cast hm
       have hu : y.property.unit = Units.oneSub (y.val • a) norm_lt := Units.ext rfl
@@ -434,8 +449,7 @@ theorem isUnit_one_sub_smul_of_lt_inv_radius {a : A} {z : 𝕜} (h : ↑‖z‖�
       rwa [IsUnit.smul_sub_iff_sub_inv_smul, inv_inv u] at hu
     rw [Units.smul_def, ← Algebra.algebraMap_eq_smul_one, ← mem_resolventSet_iff]
     refine mem_resolventSet_of_spectralRadius_lt ?_
-    rwa [Units.val_inv_eq_inv_val, nnnorm_inv,
-      coe_inv (nnnorm_ne_zero_iff.mpr (Units.val_mk0 hz ▸ hz : (u : 𝕜) ≠ 0)), lt_inv_iff_lt_inv]
+    rwa [Units.val_inv_eq_inv_val₀, nnnorm_inv, coe_inv, lt_inv_iff_lt_inv]
 
 end OneSubSMul
 
@@ -455,7 +469,8 @@ theorem exp_mem_exp [RCLike 𝕜] [NormedRing A] [NormedAlgebra 𝕜 A] [Complet
   have hb : Summable fun n : ℕ => ((n + 1).factorial⁻¹ : 𝕜) • (a - ↑ₐ z) ^ n := by
     refine .of_norm_bounded_eventually (Real.summable_pow_div_factorial ‖a - ↑ₐ z‖) ?_
     filter_upwards [Filter.eventually_cofinite_ne 0] with n hn
-    rw [norm_smul, mul_comm, norm_inv, RCLike.norm_natCast, ← div_eq_mul_inv]
+    simp only [norm_smul, norm_inv, RCLike.norm_natCast]
+    rw [mul_comm, ← div_eq_mul_inv₀]
     gcongr
     · exact norm_pow_le' _ (pos_iff_ne_zero.mpr hn)
     · exact n.le_succ
@@ -466,7 +481,7 @@ theorem exp_mem_exp [RCLike 𝕜] [NormedRing A] [NormedAlgebra 𝕜 A] [Complet
   have h₃ : exp (a - ↑ₐ z) = 1 + (a - ↑ₐ z) * b := by
     rw [exp_eq_tsum 𝕜]
     convert! (expSeries_summable' (𝕂 := 𝕜) (a - ↑ₐ z)).tsum_eq_zero_add
-    · simp only [Nat.factorial_zero, Nat.cast_one, inv_one, pow_zero, one_smul]
+    · simp only [Nat.factorial_zero, Nat.cast_one, inv_one₀, pow_zero, one_smul]
     · exact h₀.symm
   rw [spectrum.mem_iff, IsUnit.sub_iff, ← one_mul (↑ₐ (exp z)), hexpmul, ← _root_.sub_mul,
     Commute.isUnit_mul_iff (Algebra.commutes (exp z) (exp (a - ↑ₐ z) - 1)).symm,
@@ -648,6 +663,7 @@ variable [NormedField 𝕜] [NormedAlgebra 𝕜 A] [instSMulMem : SMulMemClass S
 variable (S : SA) [hS : IsClosed (S : Set A)] (x : S)
 
 set_option backward.isDefEq.respectTransparency.types false in
+omit [CompleteSpace A] in
 open SubalgebraClass in
 include instSMulMem in
 /-- Let `S` be a closed subalgebra of a Banach algebra `A`. If `a : S` is invertible in `A`,
@@ -659,8 +675,9 @@ lemma _root_.Subalgebra.isUnit_of_isUnit_val_of_eventually {l : Filter S} {a : S
   let D := {x : S | IsUnit x}
   let L := comap (Subtype.val : D → S) l
   have hrange : Set.range (Subtype.val : D → S) ∈ l := by
-    simpa only [Subtype.range_val] using hl
-  haveI : L.NeBot := hl'.comap_of_range_mem hrange
+    rw [Subtype.range_coe_subtype]
+    exact hl
+  have : L.NeBot := hl'.comap_of_range_mem hrange
   have hbase : Tendsto (fun x : D ↦ (x.val : A)) L (𝓝 (a : A)) :=
     continuous_subtype_val.tendsto a |>.comp (tendsto_comap.mono_right hla)
   have hmap : Tendsto (fun x : D ↦

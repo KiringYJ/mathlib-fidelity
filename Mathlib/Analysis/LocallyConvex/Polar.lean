@@ -148,7 +148,7 @@ theorem polar_univ (h : SeparatingRight B) : B.polar Set.univ = {(0 : F)} := by
   calc
     ‖B x y‖ = ‖c‖ * ‖B (c⁻¹ • x) y‖ := by
       rw [B.map_smul, LinearMap.smul_apply, smul_eq_mul, norm_mul, norm_inv,
-        mul_inv_cancel_left₀ hc.ne']
+        mul_inv_cancel_left₀ (ha := hc.ne'.isUnit)]
     _ ≤ ε * 1 := by gcongr; exact hy _ trivial
     _ = ε := mul_one _
 
@@ -157,9 +157,11 @@ theorem polar_subMulAction {S : Type*} [SetLike S E] [SMulMemClass S 𝕜 E] (m 
   ext y
   constructor
   · intro hy x hx
+    by_contra hxy
+    have hnorm : ‖B x y‖ ≠ 0 := norm_ne_zero_iff.mpr hxy
     obtain ⟨r, hr⟩ := NormedField.exists_lt_norm 𝕜 ‖B x y‖⁻¹
-    contrapose! hr
-    rw [← one_div, le_div_iff₀ (norm_pos_iff.2 hr)]
+    apply (not_le_of_gt hr)
+    rw [← one_div₀, le_div_iff₀ (norm_pos_iff.2 hxy)]
     simpa using hy _ (SMulMemClass.smul_mem r hx)
   · intro h x hx
     simp [h x hx]

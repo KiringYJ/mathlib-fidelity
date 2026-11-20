@@ -23,52 +23,26 @@ namespace EuclideanGeometry
 variable {V P : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P]
 variable [NormedAddTorsor V P]
 
-/-- Auxiliary lemma for the degenerate case of `dist_orthogonalProjection_eq_iff_angle_eq` where
-`p` lies in `s₁`. -/
-private lemma dist_orthogonalProjection_eq_iff_angle_eq_aux₁ {p p' : P}
-    {s₁ s₂ : AffineSubspace ℝ P}
-    [s₁.direction.HasOrthogonalProjection] [s₂.direction.HasOrthogonalProjection]
-    (hp'₁ : p' ∈ s₁) (hp'₂ : p' ∈ s₂) (h' : p ∈ s₁) :
-    haveI : Nonempty s₁ := ⟨p', hp'₁⟩
-    haveI : Nonempty s₂ := ⟨p', hp'₂⟩
-    dist p (orthogonalProjection s₁ p) = dist p (orthogonalProjection s₂ p) ↔
-      ∠ p p' (orthogonalProjection s₁ p) = ∠ p p' (orthogonalProjection s₂ p) := by
-  have : Nonempty s₁ := ⟨p', hp'₁⟩
-  have : Nonempty s₂ := ⟨p', hp'₂⟩
-  refine ⟨fun h ↦ ?_, fun h ↦ ?_⟩
-  · rw [orthogonalProjection_eq_self_iff.2 h'] at h ⊢
-    rw [dist_self, zero_eq_dist, eq_comm, orthogonalProjection_eq_self_iff] at h
-    rw [orthogonalProjection_eq_self_iff.2 h]
-  · rw [orthogonalProjection_eq_self_iff.2 h'] at h ⊢
-    rw [dist_self, zero_eq_dist, eq_comm, orthogonalProjection_eq_self_iff]
-    obtain rfl | hpp' := eq_or_ne p p'
-    · exact hp'₂
-    · by_contra hn
-      rw [angle_self_of_ne hpp', angle_comm,
-        angle_eq_arcsin_of_angle_eq_pi_div_two (angle_self_orthogonalProjection p hp'₂),
-        Real.zero_eq_arcsin_iff, div_eq_zero_iff] at h
-      · simp only [dist_eq_zero, hpp', or_false] at h
-        rw [eq_comm] at h
-        simp [orthogonalProjection_eq_self_iff, hn] at h
-      · exact .inl (Ne.symm (orthogonalProjection_eq_self_iff.symm.not.1 hn))
-
-/-- Auxiliary lemma for the degenerate case of `dist_orthogonalProjection_eq_iff_angle_eq` where
-`p` lies in `s₁` or `s₂`. -/
-private lemma dist_orthogonalProjection_eq_iff_angle_eq_aux {p p' : P}
-    {s₁ s₂ : AffineSubspace ℝ P}
-    [s₁.direction.HasOrthogonalProjection] [s₂.direction.HasOrthogonalProjection]
-    (hp'₁ : p' ∈ s₁) (hp'₂ : p' ∈ s₂) (h' : p ∈ s₁ ∨ p ∈ s₂) :
-    haveI : Nonempty s₁ := ⟨p', hp'₁⟩
-    haveI : Nonempty s₂ := ⟨p', hp'₂⟩
-    dist p (orthogonalProjection s₁ p) = dist p (orthogonalProjection s₂ p) ↔
-      ∠ p p' (orthogonalProjection s₁ p) = ∠ p p' (orthogonalProjection s₂ p) := by
-  have : Nonempty s₁ := ⟨p', hp'₁⟩
-  have : Nonempty s₂ := ⟨p', hp'₂⟩
-  rcases h' with h' | h'
-  · exact dist_orthogonalProjection_eq_iff_angle_eq_aux₁ hp'₁ hp'₂ h'
-  · nth_rw 1 [eq_comm]
-    nth_rw 2 [eq_comm]
-    exact dist_orthogonalProjection_eq_iff_angle_eq_aux₁ hp'₂ hp'₁ h'
+private lemma cos_angle_orthogonalProjection_mul_dist {p p' : P} {s : AffineSubspace ℝ P}
+    [Nonempty s] [s.direction.HasOrthogonalProjection] (hp' : p' ∈ s) (hp : p ≠ p')
+    (hq : (orthogonalProjection s p : P) ≠ p') :
+    Real.cos (angle p p' (orthogonalProjection s p) hp hq) * dist p p' =
+      dist p' (orthogonalProjection s p) := by
+  let q : P := orthogonalProjection s p
+  change Real.cos (angle p p' q hp hq) * dist p p' = dist p' q
+  rw [dist_comm p' q, dist_eq_norm_vsub V p p', dist_eq_norm_vsub V q p']
+  apply mul_right_cancel₀ (norm_ne_zero_iff.2 (vsub_ne_zero.2 hq))
+  rw [mul_assoc, angle, InnerProductGeometry.cos_angle_mul_norm_mul_norm,
+    ← real_inner_self_eq_norm_mul_norm]
+  have ho : inner ℝ (p' -ᵥ q) (q -ᵥ p) = 0 :=
+    Submodule.inner_right_of_mem_orthogonal (vsub_orthogonalProjection_mem_direction p hp')
+      (orthogonalProjection_vsub_mem_direction_orthogonal s p)
+  have ho' : inner ℝ (p -ᵥ q) (q -ᵥ p') = 0 := calc
+    _ = inner ℝ (q -ᵥ p') (p -ᵥ q) := real_inner_comm _ _
+    _ = inner ℝ (p' -ᵥ q) (q -ᵥ p) := by
+      rw [← neg_vsub_eq_vsub_rev p' q, ← neg_vsub_eq_vsub_rev q p, inner_neg_neg]
+    _ = 0 := ho
+  rw [← vsub_add_vsub_cancel p q p', inner_add_left, ho', zero_add]
 
 /-- A point `p` is equidistant to two affine subspaces if and only if the angles at a point `p'`
 in their intersection between `p` and its orthogonal projections onto the subspaces are equal. -/
@@ -77,33 +51,37 @@ lemma dist_orthogonalProjection_eq_iff_angle_eq {p p' : P} {s₁ s₂ : AffineSu
     (hp'₁ : p' ∈ s₁) (hp'₂ : p' ∈ s₂) :
     haveI : Nonempty s₁ := ⟨p', hp'₁⟩
     haveI : Nonempty s₂ := ⟨p', hp'₂⟩
-    dist p (orthogonalProjection s₁ p) = dist p (orthogonalProjection s₂ p) ↔
-      ∠ p p' (orthogonalProjection s₁ p) = ∠ p p' (orthogonalProjection s₂ p) := by
+    ∀ (hp : p ≠ p') (hq₁ : (orthogonalProjection s₁ p : P) ≠ p')
+      (hq₂ : (orthogonalProjection s₂ p : P) ≠ p'),
+      dist p (orthogonalProjection s₁ p) = dist p (orthogonalProjection s₂ p) ↔
+        angle p p' (orthogonalProjection s₁ p) hp hq₁ =
+          angle p p' (orthogonalProjection s₂ p) hp hq₂ := by
+  intro hp hq₁ hq₂
   have : Nonempty s₁ := ⟨p', hp'₁⟩
   have : Nonempty s₂ := ⟨p', hp'₂⟩
-  by_cases h' : p ∈ s₁ ∨ p ∈ s₂
-  · exact dist_orthogonalProjection_eq_iff_angle_eq_aux hp'₁ hp'₂ h'
-  rw [not_or] at h'
-  rw [angle_comm,
-    angle_eq_arcsin_of_angle_eq_pi_div_two (angle_self_orthogonalProjection p hp'₁)
-      (.inl (Ne.symm (orthogonalProjection_eq_self_iff.symm.not.1 h'.1))),
-    angle_comm,
-    angle_eq_arcsin_of_angle_eq_pi_div_two (angle_self_orthogonalProjection p hp'₂)
-      (.inl (Ne.symm (orthogonalProjection_eq_self_iff.symm.not.1 h'.2)))]
-  · refine ⟨fun h ↦ ?_, fun h ↦ ?_⟩
-    · rw [h]
-    · have hp : p ≠ p' := by
-        rintro rfl
-        exact h'.1 hp'₁
-      have hpd : 0 < dist p p' := dist_pos.2 hp
-      rw [Real.arcsin_inj (le_trans (by norm_num : (-1 : ℝ) ≤ 0) (by positivity))
-        ((div_le_one hpd).2 ?_)
-        (le_trans (by norm_num : (-1 : ℝ) ≤ 0) (by positivity)) ((div_le_one hpd).2 ?_)] at h
-      · rwa [div_left_inj' hpd.ne'] at h
-      · rw [dist_orthogonalProjection_eq_infDist]
-        exact Metric.infDist_le_dist_of_mem (SetLike.mem_coe.1 hp'₁)
-      · rw [dist_orthogonalProjection_eq_infDist]
-        exact Metric.infDist_le_dist_of_mem (SetLike.mem_coe.1 hp'₂)
+  let q₁ : P := orthogonalProjection s₁ p
+  let q₂ : P := orthogonalProjection s₂ p
+  have hpy₁ := dist_sq_eq_dist_orthogonalProjection_sq_add_dist_orthogonalProjection_sq p hp'₁
+  have hpy₂ := dist_sq_eq_dist_orthogonalProjection_sq_add_dist_orthogonalProjection_sq p hp'₂
+  have hlegs : dist p q₁ = dist p q₂ ↔ dist p' q₁ = dist p' q₂ := by
+    change dist p' p * dist p' p =
+      dist p' q₁ * dist p' q₁ + dist p q₁ * dist p q₁ at hpy₁
+    change dist p' p * dist p' p =
+      dist p' q₂ * dist p' q₂ + dist p q₂ * dist p q₂ at hpy₂
+    constructor <;> intro heq <;> rw [heq] at hpy₁ <;>
+      apply (sq_eq_sq₀ dist_nonneg dist_nonneg).1 <;> nlinarith only [hpy₁, hpy₂]
+  have hcos₁ := cos_angle_orthogonalProjection_mul_dist hp'₁ hp hq₁
+  have hcos₂ := cos_angle_orthogonalProjection_mul_dist hp'₂ hp hq₂
+  change dist p q₁ = dist p q₂ ↔ angle p p' q₁ hp hq₁ = angle p p' q₂ hp hq₂
+  rw [hlegs]
+  constructor
+  · intro h
+    apply Real.injOn_cos ⟨angle_nonneg _ _ _, angle_le_pi _ _ _⟩
+      ⟨angle_nonneg _ _ _, angle_le_pi _ _ _⟩
+    apply mul_right_cancel₀ (dist_ne_zero.2 hp)
+    rw [hcos₁, hcos₂, h]
+  · intro h
+    rw [← hcos₁, ← hcos₂, h]
 
 section Oriented
 
@@ -126,8 +104,13 @@ lemma dist_orthogonalProjection_eq_of_oangle_eq {p p' : P} {s₁ s₂ : AffineSu
     ∡ (orthogonalProjection s₁ p : P) p' p = ∡ p p' (orthogonalProjection s₂ p) →
     dist p (orthogonalProjection s₁ p) = dist p (orthogonalProjection s₂ p) := by
   intro hp₁ hp₂ h
-  rw [dist_orthogonalProjection_eq_iff_angle_eq hp'₁ hp'₂, angle_comm,
-      angle_eq_iff_oangle_eq_or_wbtw hp₁ hp₂]
+  have : Nonempty s₁ := ⟨p', hp'₁⟩
+  have : Nonempty s₂ := ⟨p', hp'₂⟩
+  have hp : p ≠ p' := by
+    rintro rfl
+    exact hp₁ (orthogonalProjection_eq_self_iff.2 hp'₁)
+  rw [dist_orthogonalProjection_eq_iff_angle_eq hp'₁ hp'₂ hp hp₁ hp₂, angle_comm,
+    angle_eq_iff_oangle_eq_or_wbtw hp₁ (hp₃ := hp) hp₂]
   exact .inl h
 
 -- See https://github.com/leanprover/lean4/issues/11182 for why hypotheses are after the colon.
@@ -153,6 +136,9 @@ lemma oangle_eq_of_dist_orthogonalProjection_eq {p p' : P} {s₁ s₂ : AffineSu
     intro hp
     rw [hp, dist_orthogonalProjection_eq_dist_iff_eq_of_mem hp'₁] at h
     grind
+  have hp : p ≠ p' := by
+    rintro rfl
+    exact hp₁ (orthogonalProjection_eq_self_iff.2 hp'₁)
   have hc : ¬ Collinear ℝ {p', (orthogonalProjection s₁ p : P),
       (orthogonalProjection s₂ p : P)} := by
     intro hc
@@ -178,8 +164,8 @@ lemma oangle_eq_of_dist_orthogonalProjection_eq {p p' : P} {s₁ s₂ : AffineSu
       grind
     apply hne
     rw [h₁'', h₂'']
-  rw [dist_orthogonalProjection_eq_iff_angle_eq hp'₁ hp'₂, angle_comm,
-    angle_eq_iff_oangle_eq_or_wbtw hp₁ hp₂] at h
+  rw [dist_orthogonalProjection_eq_iff_angle_eq hp'₁ hp'₂ hp hp₁ hp₂, angle_comm,
+    angle_eq_iff_oangle_eq_or_wbtw hp₁ (hp₃ := hp) hp₂] at h
   rcases h with h | h | h
   · exact h
   · exfalso
@@ -205,6 +191,15 @@ lemma dist_orthogonalProjection_eq_iff_oangle_eq {p p' : P} {s₁ s₂ : AffineS
   fun hne hp₁ hp₂ ↦ ⟨oangle_eq_of_dist_orthogonalProjection_eq hp'₁ hp'₂ hne,
     dist_orthogonalProjection_eq_of_oangle_eq hp'₁ hp'₂ hp₁ hp₂⟩
 
+private lemma mem_of_two_zsmul_oangle_orthogonalProjection_eq_zero
+    {p p' : P} {s : AffineSubspace ℝ P} [Nonempty s] [s.direction.HasOrthogonalProjection]
+    (hp' : p' ∈ s) (hq : (orthogonalProjection s p : P) ≠ p')
+    (h : (2 : ℤ) • ∡ p p' (orthogonalProjection s p : P) = 0) : p ∈ s := by
+  have hcol := oangle_eq_zero_or_eq_pi_iff_collinear.mp (Real.Angle.two_zsmul_eq_zero_iff.mp h)
+  exact SetLike.le_def.1 (affineSpan_pair_le_of_mem_of_mem hp' (orthogonalProjection_mem p))
+    (hcol.mem_affineSpan_of_mem_of_ne (p₁ := p') (p₂ := (orthogonalProjection s p : P))
+      (p₃ := p) (by simp) (by simp) (by simp) hq.symm)
+
 /-- A point `p` is equidistant to two affine subspaces (typically lines, for this version of the
 lemma) if twice the oriented angles at a point `p'` in their intersection between `p` and its
 orthogonal projections onto the subspaces are equal. -/
@@ -221,9 +216,23 @@ lemma dist_orthogonalProjection_eq_of_two_zsmul_oangle_eq {p p' : P}
   intro hp₁ hp₂ h
   have : Nonempty s₁ := ⟨p', hp'₁⟩
   have : Nonempty s₂ := ⟨p', hp'₂⟩
+  by_cases hs₁ : p ∈ s₁
+  · have hzero : (2 : ℤ) • ∡ p p' (orthogonalProjection s₂ p : P) = 0 := by
+      simpa only [orthogonalProjection_eq_self_iff.2 hs₁, oangle_self_left_right, smul_zero]
+        using h.symm
+    have hs₂ := mem_of_two_zsmul_oangle_orthogonalProjection_eq_zero hp'₂ hp₂ hzero
+    simp [orthogonalProjection_eq_self_iff.2 hs₁, orthogonalProjection_eq_self_iff.2 hs₂]
+  by_cases hs₂ : p ∈ s₂
+  · have hzero : (2 : ℤ) • ∡ (orthogonalProjection s₁ p : P) p' p = 0 := by
+      simpa only [orthogonalProjection_eq_self_iff.2 hs₂, oangle_self_left_right, smul_zero]
+        using h
+    rw [oangle_rev p p' (orthogonalProjection s₁ p : P), smul_neg, neg_eq_zero] at hzero
+    have hs₁' := mem_of_two_zsmul_oangle_orthogonalProjection_eq_zero hp'₁ hp₁ hzero
+    simp [orthogonalProjection_eq_self_iff.2 hs₁', orthogonalProjection_eq_self_iff.2 hs₂]
   have h' : ∡ (orthogonalProjection s₁ p : P) p' p = ∡ p p' (orthogonalProjection s₂ p) :=
     oangle_eq_oangle_rev_of_two_zsmul_eq_of_angle_eq_pi_div_two h
-      (angle_self_orthogonalProjection _ hp'₁) (angle_self_orthogonalProjection _ hp'₂)
+      (angle_self_orthogonalProjection _ hp'₁ hs₁ hp₁.symm)
+      (angle_self_orthogonalProjection _ hp'₂ hs₂ hp₂.symm)
   exact dist_orthogonalProjection_eq_of_oangle_eq hp'₁ hp'₂ hp₁ hp₂ h'
 
 /-- Auxiliary lemma for the special case of

@@ -119,7 +119,7 @@ protected lemma smul [Semifield 𝕜] [PartialOrder 𝕜] [Algebra 𝕜 A] [PosS
     (hc : 0 < c) {a : A} (ha : IsStrictlyPositive a) :
     IsStrictlyPositive (c • a) := by
   have hunit : IsUnit (c • a) :=
-    isUnit_iff_exists.mpr ⟨c⁻¹ • ha.isUnit.unit⁻¹, by simp [(ne_of_lt hc).symm]⟩
+    isUnit_iff_exists.mpr ⟨c⁻¹ • ha.isUnit.unit⁻¹, by simp⟩
   exact hunit.isStrictlyPositive (smul_nonneg hc.le ha.nonneg)
 
 @[grind ←, aesop safe apply]

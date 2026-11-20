@@ -89,7 +89,7 @@ section Metric
 
 noncomputable local instance : PseudoMetricSpace ℕ where
   dist := fun n m ↦ |2 ^ (- n : ℤ) - 2 ^ (- m : ℤ)|
-  dist_self := by simp only [zpow_neg, zpow_natCast, sub_self, abs_zero, implies_true]
+  dist_self := fun _ ↦ by simp only [sub_self, abs_zero]
   dist_comm := fun _ _ ↦ abs_sub_comm ..
   dist_triangle := fun _ _ _ ↦ abs_sub_le ..
 
@@ -98,37 +98,25 @@ lemma dist_def {n m : ℕ} : dist n m = |2 ^ (-n : ℤ) - 2 ^ (-m : ℤ)| := rfl
 
 lemma Int.eq_of_pow_sub_le {d : ℕ} {m n : ℤ} (hd1 : 1 < d)
     (h : |(d : ℝ) ^ (-m) - d ^ (-n)| < d ^ (-n - 1)) : m = n := by
-  have hd0 : 0 < d := one_pos.trans hd1
-  replace h : |(1 : ℝ) - d ^ (n - m)| < (d : ℝ)⁻¹ := by
-    rw [← mul_lt_mul_iff_of_pos_left (a := (d : ℝ) ^ (-n)) (zpow_pos _ _),
-      ← abs_of_nonneg (a := (d : ℝ) ^ (-n)) (le_of_lt <| zpow_pos _ _), ← abs_mul, mul_sub, mul_one,
-      ← zpow_add₀ <| Nat.cast_ne_zero.mpr (ne_of_gt hd0), sub_eq_add_neg (b := m),
-      neg_add_cancel_left, ← abs_neg, neg_sub,
-      abs_of_nonneg (a := (d : ℝ) ^ (-n)) (le_of_lt <| zpow_pos _ _), ← zpow_neg_one,
-      ← zpow_add₀ <| Nat.cast_ne_zero.mpr (ne_of_gt hd0), ← sub_eq_add_neg]
-    · exact h
-    all_goals exact Nat.cast_pos'.mpr hd0
-  by_cases H : (m : ℤ) ≤ n
-  · obtain ⟨a, ha⟩ := Int.eq_ofNat_of_zero_le (sub_nonneg.mpr H)
-    rw [ha, ← mul_lt_mul_iff_of_pos_left (a := (d : ℝ)) <| Nat.cast_pos'.mpr hd0,
-      mul_inv_cancel₀ <| Nat.cast_ne_zero.mpr (ne_of_gt hd0),
-      ← abs_of_nonneg (a := (d : ℝ)) <| Nat.cast_nonneg' d, ← abs_mul,
-      show |(d : ℝ) * (1 - |(d : ℝ)| ^ (a : ℤ))| = |(d : ℤ) * (1 - |(d : ℤ)| ^ a)| by norm_cast,
-      ← Int.cast_one (R := ℝ), Int.cast_lt, Int.abs_lt_one_iff, Int.mul_eq_zero,
-      sub_eq_zero, eq_comm (a := 1), pow_eq_one_iff_cases] at h
-    simp only [Nat.cast_eq_zero, ne_of_gt hd0, Nat.abs_cast, Nat.cast_eq_one, ne_of_gt hd1,
-      Int.reduceNeg, reduceCtorEq, false_and, or_self, or_false, false_or] at h
-    rwa [h, Nat.cast_zero, sub_eq_zero, eq_comm] at ha
-  · have h1 : (d : ℝ) ^ (n - m) ≤ 1 - (d : ℝ)⁻¹ := calc
-      (d : ℝ) ^ (n - m) ≤ (d : ℝ)⁻¹ := by
-        rw [← zpow_neg_one]
-        apply zpow_right_mono₀ <| Nat.one_le_cast.mpr hd0
-        linarith
-      _ ≤ 1 - (d : ℝ)⁻¹ := by
-        rw [inv_eq_one_div, one_sub_div <| Nat.cast_ne_zero.mpr (ne_of_gt hd0),
-          div_le_div_iff_of_pos_right <| Nat.cast_pos'.mpr hd0, le_sub_iff_add_le]
-        norm_cast
-    linarith [sub_lt_of_abs_sub_lt_right (a := (1 : ℝ)) (b := d ^ (n - m)) (c := d⁻¹) h]
+  have hd : (2 : ℝ) ≤ d := by exact_mod_cast (show 2 ≤ d by omega)
+  have hp : 0 < (d : ℝ) := by linarith
+  let P (i : ℤ) : ℝ := Checked.zpow (d : ℝ) i (fun _ ↦ hp.ne'.isUnit)
+  change |P (-m) - P (-n)| < P (-n - 1) at h
+  have hm : Monotone P := zpow_right_mono₀ (show (1 : ℝ) ≤ d by linarith)
+  have gap (i : ℤ) : P i + P i ≤ P (i + 1) := by
+    have hadd : P (i + 1) = P i * (d : ℝ) := by
+      simpa [P] using zpow_add₀ hp.ne' i 1
+    rw [hadd, ← mul_two]
+    exact mul_le_mul_of_nonneg_left hd (zpow_pos hp i).le
+  rcases lt_trichotomy m n with hmn | he | hnm
+  · have h₁ := hm (show -n + 1 ≤ -m by omega)
+    have h₂ := hm (show -n - 1 ≤ -n by omega)
+    linarith [gap (-n), (abs_lt.mp h).2]
+  · exact he
+  · have h₁ := hm (show -m ≤ -n - 1 by omega)
+    have h₂ : P (-n - 1) + P (-n - 1) ≤ P (-n) := by
+      simpa only [sub_add_cancel] using gap (-n - 1)
+    linarith [(abs_lt.mp h).1]
 
 lemma ball_eq_singleton {n : ℕ} : Metric.ball n ((2 : ℝ) ^ (-n - 1 : ℤ)) = {n} := by
   ext m
@@ -146,17 +134,10 @@ theorem TopIsDiscrete : DiscreteTopology ℕ := by
   simpa only [← ball_eq_singleton] using isOpen_ball
 
 lemma idIsCauchy : CauchySeq (id : ℕ → ℕ) := by
-  rw [Metric.cauchySeq_iff]
-  refine fun ε ↦ Metric.cauchySeq_iff.mp
-    (@cauchySeq_of_le_geometric_two ℝ _ 1 (fun n ↦ 2 ^ (-n : ℤ)) fun n ↦ le_of_eq ?_) ε
-  simp only [Nat.cast_add, Nat.cast_one, neg_add_rev, Int.reduceNeg, one_div]
-  rw [Real.dist_eq, zpow_add' <| Or.intro_left _ two_ne_zero]
-  calc
-    |2 ^ (- n : ℤ) - 2 ^ (-1 : ℤ) * 2 ^ (- n : ℤ)|
-    _ = |(1 - (2 : ℝ)⁻¹) * 2 ^ (- n : ℤ)| := by rw [← one_sub_mul, zpow_neg_one]
-    _ = |2⁻¹ * 2 ^ (-(n : ℤ))| := by congr; rw [inv_eq_one_div 2, sub_half 1]
-    _ = 2⁻¹ / 2 ^ n := by rw [zpow_neg, abs_mul, abs_inv, abs_inv, inv_eq_one_div,
-        Nat.abs_ofNat, one_div, zpow_natCast, abs_pow, ← div_eq_mul_inv, Nat.abs_ofNat]
+  have hlim : Tendsto (fun n : ℕ ↦ ((2 : ℝ)⁻¹) ^ n) atTop (nhds 0) :=
+    tendsto_pow_atTop_nhds_zero_of_lt_one (by positivity) (inv_lt_one_of_one_lt₀ one_lt_two)
+  simpa only [Metric.cauchySeq_iff, id_eq, dist_def, Real.dist_eq,
+    zpow_neg₀ (two_ne_zero : (2 : ℝ) ≠ 0), zpow_natCast₀, inv_pow₀] using hlim.cauchySeq
 
 end Metric
 

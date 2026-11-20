@@ -55,8 +55,8 @@ lemma aemeasurable_of_aemeasurable_exp (hf : AEMeasurable (fun x ↦ exp (f x)) 
 lemma aemeasurable_of_aemeasurable_exp_mul {t : ℝ}
     (ht : t ≠ 0) (hf : AEMeasurable (fun x ↦ exp (t * f x)) μ) :
     AEMeasurable f μ := by
-  simpa only [mul_div_cancel_left₀ _ ht]
-    using (aemeasurable_of_aemeasurable_exp hf).fun_div (aemeasurable_const (b := t))
+  simpa only [inv_mul_cancel_left₀ (ha := ht.isUnit)] using
+    (aemeasurable_of_aemeasurable_exp hf).const_mul t⁻¹
 
 theorem measurable_sin : Measurable sin :=
   continuous_sin.measurable
@@ -108,9 +108,33 @@ theorem measurable_sinh : Measurable sinh :=
 theorem measurable_cosh : Measurable cosh :=
   continuous_cosh.measurable
 
-theorem measurable_arg : Measurable arg :=
-  Measurable.ite (by measurability) (by fun_prop) <|
-    Measurable.ite (by measurability) (by fun_prop) (by fun_prop)
+theorem measurable_arg : Measurable arg := by
+  classical
+  apply measurable_of_measurable_on_compl_singleton 0
+  have hu : ∀ z : ↑{z : ℂ | z ≠ 0}, IsUnit ‖(z : ℂ)‖ := fun z =>
+    (norm_ne_zero_iff.mpr (show (z : ℂ) ≠ 0 from Set.mem_ofPred.mp z.property)).isUnit
+  have hre : Measurable (fun z : ↑{z : ℂ | z ≠ 0} => (z : ℂ).re) :=
+    (continuous_re.comp continuous_subtype_val).measurable
+  have him : Measurable (fun z : ↑{z : ℂ | z ≠ 0} => (z : ℂ).im) :=
+    (continuous_im.comp continuous_subtype_val).measurable
+  have hq : Continuous (fun z : ↑{z : ℂ | z ≠ 0} =>
+      Checked.div (z : ℂ).im ‖(z : ℂ)‖ (hu z)) :=
+    (continuous_im.comp continuous_subtype_val).div₀
+      (continuous_norm.comp continuous_subtype_val)
+  have h : Measurable (fun z : ↑{z : ℂ | z ≠ 0} =>
+      if 0 ≤ (z : ℂ).re then Real.arcsin (Checked.div (z : ℂ).im ‖(z : ℂ)‖ (hu z))
+      else if 0 ≤ (z : ℂ).im then
+        Real.arcsin (-Checked.div (z : ℂ).im ‖(z : ℂ)‖ (hu z)) + Real.pi
+      else Real.arcsin (-Checked.div (z : ℂ).im ‖(z : ℂ)‖ (hu z)) - Real.pi) :=
+    Measurable.ite (measurableSet_le (measurable_const (a := (0 : ℝ))) hre)
+    (Real.measurable_arcsin.comp hq.measurable)
+    (Measurable.ite (measurableSet_le (measurable_const (a := (0 : ℝ))) him)
+      ((Real.measurable_arcsin.comp hq.neg.measurable).add_const Real.pi)
+      ((Real.measurable_arcsin.comp hq.neg.measurable).sub_const Real.pi))
+  convert h using 1
+  funext z
+  simp only [Set.domRestrict, arg,
+    dite_eq_right (show (z : ℂ) ≠ 0 from Set.mem_ofPred.mp z.property), neg_im, neg_div₀]
 
 theorem measurable_log : Measurable log :=
   (measurable_ofReal.comp <| Real.measurable_log.comp measurable_norm).add <|

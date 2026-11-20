@@ -103,10 +103,13 @@ theorem inftyValuation.C {k : F} (hk : k ≠ 0) :
 theorem inftyValuation.X : inftyValuation F RatFunc.X = exp 1 := by
   rw [inftyValuation_apply, inftyValuation_of_nonzero F RatFunc.X_ne_zero, RatFunc.intDegree_X]
 
-lemma inftyValuation.X_zpow (m : ℤ) : inftyValuation F (RatFunc.X ^ m) = exp m := by simp
+lemma inftyValuation.X_zpow (m : ℤ) :
+    inftyValuation F (Checked.zpow (RatFunc.X : RatFunc F) m (fun _ ↦ X_ne_zero.isUnit)) =
+      exp m := by simp
 
-theorem inftyValuation.X_inv : inftyValuation F (1 / RatFunc.X) = exp (-1) := by
-  rw [one_div, ← zpow_neg_one, inftyValuation.X_zpow]
+theorem inftyValuation.X_inv :
+    inftyValuation F (Checked.div 1 (RatFunc.X : RatFunc F) X_ne_zero.isUnit) = exp (-1) := by
+  simpa only [one_div₀, zpow_neg_one₀] using inftyValuation.X_zpow F (-1)
 
 -- Dropped attribute `@[simp]` due to issue described here:
 -- https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/.60synthInstance.2EmaxHeartbeats.60.20error.20but.20only.20in.20.60simpNF.60

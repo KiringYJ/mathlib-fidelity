@@ -167,9 +167,9 @@ lemma isTightMeasureSet_of_forall_basis_tendsto (b : OrthonormalBasis ι 𝕜 E)
       gcongr with i
       exact le_biSup (fun μ ↦ μ {x | r / √(Fintype.card ι) < ‖⟪b i, x⟫_𝕜‖}) hμS
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds ?_ (fun _ ↦ zero_le) h_le
-  rw [← Finset.sum_const_zero]
-  refine tendsto_finsetSum Finset.univ fun i _ ↦ (h i).comp ?_
-  exact tendsto_id.atTop_div_const (by positivity)
+  have hsum := tendsto_finsetSum Finset.univ fun i _ ↦
+    (h i).comp (tendsto_id.atTop_div_const (Real.sqrt_pos.2 h_rank))
+  simpa only [Finset.sum_const_zero, Function.comp_apply, id_eq] using hsum
 
 variable (𝕜)
 
@@ -254,7 +254,7 @@ lemma isTightMeasureSet_range_of_tendsto_limsup_inner_of_norm_eq_one
       atTop) atTop (𝓝 0) := by
     specialize h ((‖y‖⁻¹ : 𝕜) • y) ?_
     · simp only [norm_smul, norm_inv, norm_algebraMap', Real.norm_eq_abs, abs_norm]
-      rw [inv_mul_cancel₀ (by positivity)]
+      rw [inv_mul_cancel₀ (ha := (norm_pos_iff.2 hy).ne'.isUnit)]
     exact h.comp <| (tendsto_const_mul_atTop_of_pos (by positivity)).mpr tendsto_id
   convert! h' using 7 with r n x
   rw [inner_smul_left]

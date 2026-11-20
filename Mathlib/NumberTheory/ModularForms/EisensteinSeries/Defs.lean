@@ -70,6 +70,20 @@ def gammaSet_one_equiv (a a' : Fin 2 → ZMod 1) : gammaSet 1 r a ≃ gammaSet 1
 /-- The map from `Fin 2 → ℤ` sending `![a,b]` to `a.gcd b`. -/
 abbrev finGcdMap (v : Fin 2 → ℤ) : ℕ := (v 0).gcd (v 1)
 
+lemma finGcdMap_eq_zero_iff {v : Fin 2 → ℤ} : finGcdMap v = 0 ↔ v = 0 := by
+  rw [Int.gcd_eq_zero_iff]
+  constructor
+  · rintro ⟨h₀, h₁⟩
+    ext i
+    fin_cases i <;> assumption
+  · rintro rfl
+    exact ⟨rfl, rfl⟩
+
+lemma gammaSet_ne_zero {N r : ℕ} {a : Fin 2 → ZMod N} (v : gammaSet N r a)
+    (hr : r ≠ 0) : v.val ≠ 0 := by
+  intro hv
+  exact hr (v.property.2.symm.trans (finGcdMap_eq_zero_iff.mpr hv))
+
 lemma finGcdMap_div {r : ℕ} [NeZero r] (v : Fin 2 → ℤ) (hv : finGcdMap v = r) :
     IsCoprime ((v / r) 0) ((v / r) 1) := by
   rw [← hv]
@@ -182,36 +196,77 @@ end gamma_action
 
 section eisSummand
 
-/-- The function on `(Fin 2 → ℤ)` whose sum defines an Eisenstein series. -/
-def eisSummand (k : ℤ) (v : Fin 2 → ℤ) (z : ℍ) : ℂ := (v 0 * z + v 1) ^ (-k)
+lemma eisSummand_base_ne_zero {v : Fin 2 → ℤ} (hv : v ≠ 0) (z : ℍ) :
+    (v 0 : ℂ) * z + v 1 ≠ 0 := by
+  have hv' : (fun i ↦ (v i : ℝ)) ≠ 0 := by
+    intro h
+    apply hv
+    ext i
+    exact Int.cast_eq_zero.mp (congrFun h i)
+  simpa only [Complex.ofReal_intCast] using linear_ne_zero z hv'
+
+/-- The summand defining an Eisenstein series. Positive weight requires a nonzero lattice
+vector; nonpositive weight retains the zero vector, since its exponent is nonnegative. -/
+def eisSummand (k : ℤ) (v : Fin 2 → ℤ) (z : ℍ)
+    (hv : 0 < k → v ≠ 0 := by intro hk; first | omega | checked_nonzero) : ℂ :=
+  Checked.zpow (v 0 * z + v 1) (-k) (fun hk ↦ (eisSummand_base_ne_zero (hv (by omega)) z).isUnit)
+
+lemma eisSummand_nat_eq (k : ℕ) {v : Fin 2 → ℤ} (hv : v ≠ 0) (z : ℍ) :
+    eisSummand k v z (fun _ ↦ hv) = Checked.inv (((v 0 : ℂ) * z + v 1) ^ k)
+      ((eisSummand_base_ne_zero hv z).isUnit.pow k) := by
+  simp only [eisSummand, zpow_neg₀ (eisSummand_base_ne_zero hv z), zpow_natCast₀]
 
 /-- How the `eisSummand` function changes under the Moebius action. -/
-theorem eisSummand_SL2_apply (k : ℤ) (i : (Fin 2 → ℤ)) (A : SL(2, ℤ)) (z : ℍ) :
-    eisSummand k i (A • z) = (denom A z) ^ k * eisSummand k (i ᵥ* A) z := by
-  simp only [eisSummand, vecMul, vec2_dotProduct, denom, UpperHalfPlane.specialLinearGroup_apply]
-  have h (a b c d u v : ℂ) (hc : c * z + d ≠ 0) : (u * ((a * z + b) / (c * z + d)) + v) ^ (-k) =
-      (c * z + d) ^ k * ((u * a + v * c) * z + (u * b + v * d)) ^ (-k) := by
-    replace hc : z * c + d ≠ 0 := by convert! hc using 1; ring
+theorem eisSummand_SL2_apply (k : ℤ) (i : (Fin 2 → ℤ)) (A : SL(2, ℤ)) (z : ℍ)
+    {hi : 0 < k → i ≠ 0} {hiA : 0 < k → i ᵥ* (A : Matrix (Fin 2) (Fin 2) ℤ) ≠ 0} :
+    eisSummand k i (A • z) hi =
+      Checked.zpow (denom A z) k (fun _ ↦ (denom_ne_zero A z).isUnit) *
+        eisSummand k (i ᵥ* A) z hiA := by
+  have hd : IsUnit (denom A z) := (denom_ne_zero A z).isUnit
+  let j : Fin 2 → ℤ := i ᵥ* (A : Matrix (Fin 2) (Fin 2) ℤ)
+  have hlinear : (i 0 : ℂ) * (A • z : ℍ) + i 1 =
+      ((j 0 : ℂ) * z + j 1) / denom A z := by
+    have hu : IsUnit ((A 1 0 : ℂ) * z + A 1 1) := by
+      simpa only [ModularGroup.denom_apply] using hd
+    simp only [j, vecMul, vec2_dotProduct, ModularGroup.denom_apply A z,
+      UpperHalfPlane.coe_specialLinearGroup_apply, algebraMap_int_eq, Int.coe_castRingHom,
+      Complex.ofReal_intCast]
+    push_cast
     field_simp
-    simp [div_zpow]
-    ring_nf
-  simpa using h (hc := denom_ne_zero A z) ..
+    ring
+  have hbase (h : -k < 0) : IsUnit ((j 0 : ℂ) * z + j 1) :=
+    (eisSummand_base_ne_zero (hiA (by omega)) z).isUnit
+  simp only [eisSummand, hlinear]
+  refine (div_zpow₀ ((j 0 : ℂ) * z + j 1) (denom A z) (-k) (hb := hd)
+    (h := fun h ↦ (hbase h).div₀ hd)).trans ?_
+  have hn : (denom A z ^ (-k))⁻¹ = denom A z ^ k := by
+    simpa only [neg_neg] using (zpow_neg₀ hd.ne_zero (-k)).symm
+  rw [div_eq_mul_inv₀ _ _ (hb := hd.zpow₀ (-k)), hn]
+  exact mul_comm _ _
 
 end eisSummand
 
 variable (a)
 
 /-- An Eisenstein series of weight `k` and level `Γ(N)`, with congruence condition `a`. -/
-def _root_.eisensteinSeries (k : ℤ) (z : ℍ) : ℂ := ∑' x : gammaSet N 1 a, eisSummand k x z
+def _root_.eisensteinSeries (k : ℤ) (z : ℍ) : ℂ :=
+  ∑' x : gammaSet N 1 a, eisSummand k x z (fun _ ↦ gammaSet_ne_zero x one_ne_zero)
 
 lemma eisensteinSeries_slash_apply (k : ℤ) (γ : SL(2, ℤ)) :
     eisensteinSeries a k ∣[k] γ = eisensteinSeries (a ᵥ* γ) k := by
   ext1 z
-  simp_rw [SL_slash_apply, zpow_neg,
-    mul_inv_eq_iff_eq_mul₀ (zpow_ne_zero _ <| denom_ne_zero _ z),
-    eisensteinSeries, eisSummand_SL2_apply, tsum_mul_left, mul_comm (_ ^ k)]
-  congr 1
-  exact (gammaSetEquiv a γ).tsum_eq (eisSummand k · z)
+  have hd := denom_ne_zero (γ : GL (Fin 2) ℝ) z
+  have hdu := hd.isUnit.zpow₀ k
+  rw [SL_slash_apply, zpow_neg₀ hd]
+  simp only [eisensteinSeries, ← tsum_mul_right]
+  trans ∑' x : gammaSet N 1 a, eisSummand k (gammaSetEquiv a γ x) z
+    (fun _ ↦ gammaSet_ne_zero (gammaSetEquiv a γ x) one_ne_zero)
+  · refine tsum_congr fun x ↦ ?_
+    rw [eisSummand_SL2_apply (hiA := fun _ ↦ gammaSet_ne_zero (gammaSetEquiv a γ x) one_ne_zero)]
+    rw [mul_comm (denom γ z ^ k), mul_assoc, mul_inv_cancel₀ (ha := hdu), mul_one]
+    rfl
+  · exact (gammaSetEquiv a γ).tsum_eq (fun x ↦
+      eisSummand k x z (fun _ ↦ gammaSet_ne_zero x one_ne_zero))
 
 /-- The `SlashInvariantForm` defined by an Eisenstein series of weight `k : ℤ`, level `Γ(N)`,
 and congruence condition given by `a : Fin 2 → ZMod N`. -/

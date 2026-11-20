@@ -348,13 +348,16 @@ lemma one_le_mulHeight (x : ι → K) : 1 ≤ mulHeight x := by
   rcases eq_or_ne x 0 with rfl | hx
   · simp
   obtain ⟨i, hi⟩ : ∃ i, x i ≠ 0 := ne_iff.mp hx
-  have hx' : (x i)⁻¹ • x ≠ 0 := by simp [hi, hx]
-  rw [← mulHeight_smul_eq_mulHeight _ <| inv_ne_zero hi, mulHeight_eq hx']
+  let c := Checked.inv (x i) hi.isUnit
+  have hc : c ≠ 0 := inv_ne_zero (ha := hi.isUnit)
+  have hcoord : (c • x) i = 1 := inv_mul_cancel₀ (ha := hi.isUnit)
+  have hx' : c • x ≠ 0 := by
+    intro h
+    exact one_ne_zero (hcoord.symm.trans (congrFun h i))
+  rw [← mulHeight_smul_eq_mulHeight x hc, mulHeight_eq hx']
   refine one_le_mul_of_one_le_of_one_le (Multiset.one_le_prod_map fun v _ ↦ ?_) ?_
-  · refine Finite.le_ciSup_of_le i <| le_of_eq ?_
-    simpa using (inv_mul_cancel₀ <| v.ne_zero_iff.mpr hi).symm
-  · refine one_le_finprod fun v ↦ Finite.le_ciSup_of_le i ?_
-    simp [inv_mul_cancel₀ <| v.val.ne_zero_iff.mpr hi]
+  · exact Finite.le_ciSup_of_le i (by rw [hcoord, map_one])
+  · exact one_le_finprod fun v ↦ Finite.le_ciSup_of_le i (by rw [hcoord, map_one])
 
 lemma mulHeight_pos (x : ι → K) : 0 < mulHeight x :=
   zero_lt_one.trans_le <| one_le_mulHeight x
@@ -436,11 +439,15 @@ lemma mulHeight_eq_one_of_subsingleton {ι : Type*} [Subsingleton ι] (x : ι �
   rcases eq_or_ne x 0 with rfl | hx
   · simp
   obtain ⟨i, hi⟩ := Function.ne_iff.mp hx
+  have hi' : x i ≠ 0 := hi
   have : Nonempty ι := .intro i
-  rw [← mulHeight_smul_eq_mulHeight x (inv_ne_zero hi)]
-  convert! mulHeight_one
-  ext1 j
-  simpa [Subsingleton.elim j i] using inv_mul_cancel₀ hi
+  let c := Checked.inv (x i) hi'.isUnit
+  have hc : c ≠ 0 := inv_ne_zero (ha := hi'.isUnit)
+  have hnormalized : c • x = 1 := by
+    funext j
+    rw [Subsingleton.elim j i]
+    exact inv_mul_cancel₀ (ha := hi'.isUnit)
+  rw [← mulHeight_smul_eq_mulHeight x hc, hnormalized, mulHeight_one]
 
 @[simp]
 lemma logHeight_eq_zero_of_subsingleton {ι : Type*} [Subsingleton ι] (x : ι → K) :
@@ -562,15 +569,15 @@ lemma mulHeight₁_eq_mulHeight (x : K) : mulHeight₁ x = mulHeight ![x, 1] := 
 lemma logHeight₁_eq_logHeight (x : K) : logHeight₁ x = logHeight ![x, 1] := by
   simp only [logHeight₁_eq_log_mulHeight₁, logHeight_eq_log_mulHeight, mulHeight₁_eq_mulHeight x]
 
-lemma mulHeight₁_div_eq_mulHeight (x y : K) :
-    mulHeight₁ (x / y) = mulHeight ![x, y] := by
-  rcases eq_or_ne y 0 with rfl | hy
-  · simp
-  · rw [mulHeight₁_eq_mulHeight, ← mulHeight_smul_eq_mulHeight _ hy]
-    simp [mul_div_cancel₀ x hy]
+lemma mulHeight₁_div_eq_mulHeight (x y : K) {hy : IsUnit y} :
+    mulHeight₁ (Checked.div x y hy) = mulHeight ![x, y] := by
+  have h : y • ![Checked.div x y hy, 1] = ![x, y] := by
+    ext1 i
+    fin_cases i <;> simp [mul_div_cancel₀]
+  rw [mulHeight₁_eq_mulHeight, ← mulHeight_smul_eq_mulHeight _ hy.ne_zero, h]
 
-lemma logHeight₁_div_eq_logHeight (x y : K) :
-    logHeight₁ (x / y) = logHeight ![x, y] := by
+lemma logHeight₁_div_eq_logHeight (x y : K) {hy : IsUnit y} :
+    logHeight₁ (Checked.div x y hy) = logHeight ![x, y] := by
   rw [logHeight₁_eq_log_mulHeight₁, logHeight_eq_log_mulHeight, mulHeight₁_div_eq_mulHeight x y]
 
 /-- The multiplicative height of the coordinate-wise `n`th power of a tuple
@@ -597,16 +604,14 @@ lemma logHeight_pow (x : ι → K) (n : ℕ) : logHeight (x ^ n) = n * logHeight
 
 /-- The multiplicative height of the inverse of a field element `x`
 is the same as the multiplicative height of `x`. -/
-lemma mulHeight₁_inv (x : K) : mulHeight₁ (x⁻¹) = mulHeight₁ x := by
-  simp_rw [mulHeight₁_eq_mulHeight]
-  rcases eq_or_ne x 0 with rfl | hx
-  · rw [inv_zero]
-  · have H : x • ![x⁻¹, 1] = ![1, x] := by ext1 i; fin_cases i <;> simp [hx]
-    rw [← mulHeight_smul_eq_mulHeight _ hx, H, mulHeight_swap]
+lemma mulHeight₁_inv (x : K) {hx : IsUnit x} :
+    mulHeight₁ (Checked.inv x hx) = mulHeight₁ x := by
+  rw [← one_div₀, mulHeight₁_div_eq_mulHeight, mulHeight_swap, ← mulHeight₁_eq_mulHeight]
 
 /-- The logarithmic height of the inverse of a field element `x`
 is the same as the logarithmic height of `x`. -/
-lemma logHeight₁_inv (x : K) : logHeight₁ (x⁻¹) = logHeight₁ x := by
+lemma logHeight₁_inv (x : K) {hx : IsUnit x} :
+    logHeight₁ (Checked.inv x hx) = logHeight₁ x := by
   simp only [logHeight₁_eq_log_mulHeight₁, mulHeight₁_inv]
 
 /-- The multiplicative height of the `n`th power of a field element `x` (with `n : ℕ`)
@@ -624,16 +629,16 @@ lemma logHeight₁_pow (x : K) (n : ℕ) : logHeight₁ (x ^ n) = n * logHeight�
 
 /-- The multiplicative height of the `n`th power of a field element `x` (with `n : ℤ`)
 is the `|n|`th power of the multiplicative height of `x`. -/
-lemma mulHeight₁_zpow (x : K) (n : ℤ) : mulHeight₁ (x ^ n) = mulHeight₁ x ^ n.natAbs := by
-  rcases le_or_gt 0 n with h | h
-  · lift n to ℕ using h
-    rw [zpow_natCast, mulHeight₁_pow, Int.natAbs_natCast]
-  · nth_rewrite 1 [show n = -n.natAbs by grind]
-    rw [zpow_neg, mulHeight₁_inv, zpow_natCast, mulHeight₁_pow]
+lemma mulHeight₁_zpow (x : K) (n : ℤ) {hx : n < 0 → IsUnit x} :
+    mulHeight₁ (Checked.zpow x n hx) = mulHeight₁ x ^ n.natAbs := by
+  cases n with
+  | ofNat n => exact mulHeight₁_pow x n
+  | negSucc n => rw [zpow_negSucc₀, mulHeight₁_inv, mulHeight₁_pow, Int.natAbs_negSucc]
 
 /-- The logarithmic height of the `n`th power of a field element `x` (with `n : ℤ`)
 is `|n|` times the logarithmic height of `x`. -/
-lemma logHeight₁_zpow (x : K) (n : ℤ) : logHeight₁ (x ^ n) = n.natAbs * logHeight₁ x := by
+lemma logHeight₁_zpow (x : K) (n : ℤ) {hx : n < 0 → IsUnit x} :
+    logHeight₁ (Checked.zpow x n hx) = n.natAbs * logHeight₁ x := by
   simp only [logHeight₁_eq_log_mulHeight₁, mulHeight₁_zpow, log_pow]
 
 end Height

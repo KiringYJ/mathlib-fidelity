@@ -55,7 +55,7 @@ public section
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] {F : Type*} [NormedAddCommGroup F]
   [NormedSpace ℝ F]
 
-open Metric Set Asymptotics ContinuousLinearMap Filter
+open Metric Set Asymptotics ContinuousLinearMap Filter Topology
 
 open scoped Topology NNReal
 
@@ -75,7 +75,8 @@ Then `f x ≤ B x` everywhere on `[a, b]`. -/
 theorem image_le_of_liminf_slope_right_lt_deriv_boundary' {f f' : ℝ → ℝ} {a b : ℝ}
     (hf : ContinuousOn f (Icc a b))
     -- `hf'` actually says `liminf (f z - f x) / (z - x) ≤ f' x`
-    (hf' : ∀ x ∈ Ico a b, ∀ r, f' x < r → ∃ᶠ z in 𝓝[>] x, slope f x z < r)
+    (hf' : ∀ x ∈ Ico a b, ∀ r, f' x < r →
+      ∃ᶠ z : Ioi x in comap Subtype.val (𝓝 x), slope f x z z.2.ne < r)
     {B B' : ℝ → ℝ} (ha : f a ≤ B a) (hB : ContinuousOn B (Icc a b))
     (hB' : ∀ x ∈ Ico a b, HasDerivWithinAt B (B' x) (Ici x) x)
     (bound : ∀ x ∈ Ico a b, f x = B x → f' x < B' x) : ∀ ⦃x⦄, x ∈ Icc a b → f x ≤ B x := by
@@ -96,11 +97,13 @@ theorem image_le_of_liminf_slope_right_lt_deriv_boundary' {f f' : ℝ → ℝ} {
     exact this.mono fun y => le_of_lt
   · rcases exists_between (bound x xab hxB) with ⟨r, hfr, hrB⟩
     specialize hf' x xab r hfr
-    have HB : ∀ᶠ z in 𝓝[>] x, r < slope B x z :=
+    have HB : ∀ᶠ z : Ioi x in comap Subtype.val (𝓝 x), r < slope B x z z.2.ne :=
       (hasDerivWithinAt_iff_tendsto_slope' <| lt_irrefl x).1 (hB' x xab).Ioi_of_Ici
         (Ioi_mem_nhds hrB)
-    obtain ⟨z, hfz, hzB, hz⟩ : ∃ z, slope f x z < r ∧ r < slope B x z ∧ z ∈ Ioc x y :=
-      hf'.and_eventually (HB.and (Ioc_mem_nhdsGT hy)) |>.exists
+    have hval : Tendsto (Subtype.val : Ioi x → ℝ) (comap Subtype.val (𝓝 x)) (𝓝[>] x) :=
+      tendsto_nhdsWithin_iff.mpr ⟨tendsto_comap, Eventually.of_forall Subtype.property⟩
+    obtain ⟨z, hfz, hzB, hz⟩ := (hf'.and_eventually (HB.and (hval.eventually
+      (Ioc_mem_nhdsGT hy)))).exists
     refine ⟨z, ?_, hz⟩
     have := (hfz.trans hzB).le
     rwa [slope_def_field, slope_def_field, div_le_div_iff_of_pos_right (sub_pos.2 hz.1), hxB,
@@ -119,7 +122,8 @@ Then `f x ≤ B x` everywhere on `[a, b]`. -/
 theorem image_le_of_liminf_slope_right_lt_deriv_boundary {f f' : ℝ → ℝ} {a b : ℝ}
     (hf : ContinuousOn f (Icc a b))
     -- `hf'` actually says `liminf (f z - f x) / (z - x) ≤ f' x`
-    (hf' : ∀ x ∈ Ico a b, ∀ r, f' x < r → ∃ᶠ z in 𝓝[>] x, slope f x z < r)
+    (hf' : ∀ x ∈ Ico a b, ∀ r, f' x < r →
+      ∃ᶠ z : Ioi x in comap Subtype.val (𝓝 x), slope f x z z.2.ne < r)
     {B B' : ℝ → ℝ} (ha : f a ≤ B a) (hB : ∀ x, HasDerivAt B (B' x) x)
     (bound : ∀ x ∈ Ico a b, f x = B x → f' x < B' x) : ∀ ⦃x⦄, x ∈ Icc a b → f x ≤ B x :=
   image_le_of_liminf_slope_right_lt_deriv_boundary' hf hf' ha
@@ -138,7 +142,8 @@ theorem image_le_of_liminf_slope_right_le_deriv_boundary {f : ℝ → ℝ} {a b 
     (hf : ContinuousOn f (Icc a b)) {B B' : ℝ → ℝ} (ha : f a ≤ B a) (hB : ContinuousOn B (Icc a b))
     (hB' : ∀ x ∈ Ico a b, HasDerivWithinAt B (B' x) (Ici x) x)
     -- `bound` actually says `liminf (f z - f x) / (z - x) ≤ B' x`
-    (bound : ∀ x ∈ Ico a b, ∀ r, B' x < r → ∃ᶠ z in 𝓝[>] x, slope f x z < r) :
+    (bound : ∀ x ∈ Ico a b, ∀ r, B' x < r →
+      ∃ᶠ z : Ioi x in comap Subtype.val (𝓝 x), slope f x z z.2.ne < r) :
     ∀ ⦃x⦄, x ∈ Icc a b → f x ≤ B x := by
   have Hr : ∀ x ∈ Icc a b, ∀ r > 0, f x ≤ B x + r * (x - a) := fun x hx r hr => by
     apply image_le_of_liminf_slope_right_lt_deriv_boundary' hf bound
@@ -224,7 +229,8 @@ Then `‖f x‖ ≤ B x` everywhere on `[a, b]`. -/
 theorem image_norm_le_of_liminf_right_slope_norm_lt_deriv_boundary {E : Type*}
     [NormedAddCommGroup E] {f : ℝ → E} {f' : ℝ → ℝ} (hf : ContinuousOn f (Icc a b))
     -- `hf'` actually says `liminf (‖f z‖ - ‖f x‖) / (z - x) ≤ f' x`
-    (hf' : ∀ x ∈ Ico a b, ∀ r, f' x < r → ∃ᶠ z in 𝓝[>] x, slope (norm ∘ f) x z < r)
+    (hf' : ∀ x ∈ Ico a b, ∀ r, f' x < r →
+      ∃ᶠ z : Ioi x in comap Subtype.val (𝓝 x), slope (norm ∘ f) x z z.2.ne < r)
     {B B' : ℝ → ℝ} (ha : ‖f a‖ ≤ B a) (hB : ContinuousOn B (Icc a b))
     (hB' : ∀ x ∈ Ico a b, HasDerivWithinAt B (B' x) (Ici x) x)
     (bound : ∀ x ∈ Ico a b, ‖f x‖ = B x → f' x < B' x) : ∀ ⦃x⦄, x ∈ Icc a b → ‖f x‖ ≤ B x :=
@@ -393,7 +399,8 @@ theorem eq_of_derivWithin_eq (fdiff : DifferentiableOn ℝ f (Icc a b))
   have B : ∀ y ∈ Ico a b, HasDerivWithinAt g (derivWithin g (Icc a b) y) (Ici y) y := fun y hy =>
     (gdiff y (mem_Icc_of_Ico hy)).hasDerivWithinAt.mono_of_mem_nhdsWithin
     (Icc_mem_nhdsGE_of_mem hy)
-  exact eq_of_has_deriv_right_eq A (fun y hy => (hderiv hy).symm ▸ B y hy) fdiff.continuousOn
+  exact eq_of_has_deriv_right_eq A (fun y hy => (B y hy).congr_deriv (hderiv hy).symm)
+    fdiff.continuousOn
     gdiff.continuousOn hi
 
 end
@@ -569,7 +576,7 @@ theorem _root_.is_const_of_fderiv_eq_zero
   let : RCLike 𝕜 := IsRCLikeNormedField.rclike 𝕜
   let A : NormedSpace ℝ E := .restrictScalars ℝ 𝕜 E
   exact convex_univ.is_const_of_fderivWithin_eq_zero hf.differentiableOn
-    (fun x _ => by rw [fderivWithin_univ]; exact hf' x) trivial trivial
+    (fun x _ => (congrFun fderivWithin_univ x).trans (hf' x)) trivial trivial
 
 /-- If two functions have equal Fréchet derivatives at every point of a convex set, and are equal at
 one point in that set, then they are equal on that set. -/
@@ -579,7 +586,8 @@ theorem eqOn_of_fderivWithin_eq (hs : Convex ℝ s) (hf : DifferentiableOn 𝕜 
     s.EqOn f g := fun y hy => by
   suffices f x - g x = f y - g y by rwa [hfgx, sub_self, eq_comm, sub_eq_zero] at this
   refine hs.is_const_of_fderivWithin_eq_zero (hf.sub hg) (fun z hz => ?_) hx hy
-  rw [fderivWithin_sub (hs' _ hz) (hf _ hz) (hg _ hz), sub_eq_zero, hf' hz]
+  rw [fderivWithin_sub (hs' _ hz) (hf _ hz) (hg _ hz), sub_eq_zero]
+  exact hf' hz
 
 /-- If `f` has zero derivative on an open set, then `f` is locally constant on `s`. -/
 -- TODO: change the spelling once we have `IsLocallyConstantOn`.
@@ -626,8 +634,10 @@ theorem _root_.IsOpen.exists_eq_add_of_fderiv_eq (hs : IsOpen s) (hs' : IsPrecon
     (hf' : s.EqOn (fderiv 𝕜 f) (fderiv 𝕜 g)) : ∃ a, s.EqOn f (g · + a) := by
   simp_rw [Set.EqOn, ← sub_eq_iff_eq_add']
   refine hs.exists_is_const_of_fderiv_eq_zero hs' (hf.sub hg) fun x hx ↦ ?_
+  change fderiv 𝕜 (fun y ↦ f y - g y) x = 0
   rw [fderiv_fun_sub (hf.differentiableAt (hs.mem_nhds hx)) (hg.differentiableAt (hs.mem_nhds hx)),
-    hf' hx, sub_self, Pi.zero_apply]
+    sub_eq_zero]
+  exact hf' hx
 
 /-- If two functions have equal Fréchet derivatives at every point of a connected open set,
 and are equal at one point in that set, then they are equal on that set. -/
@@ -647,7 +657,8 @@ theorem _root_.eq_of_fderiv_eq
   let A : NormedSpace ℝ E := .restrictScalars ℝ 𝕜 E
   suffices Set.univ.EqOn f g from funext fun x => this <| mem_univ x
   exact convex_univ.eqOn_of_fderivWithin_eq hf.differentiableOn hg.differentiableOn
-    uniqueDiffOn_univ (fun x _ => by simpa using hf' _) (mem_univ _) hfgx
+    uniqueDiffOn_univ (fun x _ => (congrFun fderivWithin_univ x).trans
+      ((hf' x).trans (congrFun fderivWithin_univ x).symm)) (mem_univ _) hfgx
 
 lemma isLittleO_pow_succ {x₀ : E} {n : ℕ} (hs : Convex ℝ s) (hx₀s : x₀ ∈ s)
     (hff' : ∀ x ∈ s, HasFDerivWithinAt f (f' x) s x) (hf' : f' =o[𝓝[s] x₀] fun x ↦ ‖x - x₀‖ ^ n) :
@@ -693,11 +704,31 @@ variable {𝕜 G : Type*} [RCLike 𝕜] [NormedAddCommGroup G] [NormedSpace 𝕜
 /-- The mean value theorem on a convex set in dimension 1: if the derivative of a function is
 bounded by `C`, then the function is `C`-Lipschitz. Version with `HasDerivWithinAt`. -/
 theorem norm_image_sub_le_of_norm_hasDerivWithin_le {C : ℝ}
-    (hf : ∀ x ∈ s, HasDerivWithinAt f (f' x) s x) (bound : ∀ x ∈ s, ‖f' x‖ ≤ C) (hs : Convex ℝ s)
-    (xs : x ∈ s) (ys : y ∈ s) : ‖f y - f x‖ ≤ C * ‖y - x‖ :=
-  Convex.norm_image_sub_le_of_norm_hasFDerivWithin_le (fun x hx => (hf x hx).hasFDerivWithinAt)
-    (fun x hx => le_trans (by simp) (bound x hx)) hs xs ys
-
+    {D : Type*} [TopologicalSpace D] {coord : D → 𝕜} {f f' : D → G} {x y : D}
+    (hf : ∀ x, coord x ∈ s → HasDerivWithinAt f (f' x) (coord ⁻¹' s) x coord)
+    (bound : ∀ x, coord x ∈ s → ‖f' x‖ ≤ C) (hs : Convex ℝ s)
+    (xs : coord x ∈ s) (ys : coord y ∈ s)
+    (hcoord : IsEmbedding coord := by exact Topology.IsEmbedding.id)
+    (hcover : s ⊆ Set.range coord := by intro z _; exact ⟨z, rfl⟩) :
+    ‖f y - f x‖ ≤ C * ‖coord y - coord x‖ := by
+  let F : 𝕜 → G := Function.extend coord f 0
+  let F' : 𝕜 → G := Function.extend coord f' 0
+  have hF (z : D) : F (coord z) = f z := hcoord.injective.extend_apply _ _ _
+  have hF' (z : D) : F' (coord z) = f' z := hcoord.injective.extend_apply _ _ _
+  have hmap (z : D) : Filter.map coord (𝓝[coord ⁻¹' s] z) = 𝓝[s] (coord z) := by
+    rw [hcoord.map_nhdsWithin_eq, Set.image_preimage_eq_of_subset hcover]
+  have hderiv : ∀ z ∈ s,
+      HasFDerivWithinAt F (ContinuousLinearMap.toSpanSingleton 𝕜 (F' z)) s z := by
+    intro z hz
+    obtain ⟨w, rfl⟩ := hcover hz
+    rw [hasFDerivWithinAt_iff_isLittleOTVS, ← hmap w, Asymptotics.isLittleOTVS_map]
+    simpa only [Function.comp_def, hF, hF', id_eq] using (hf w hz).hasFDerivWithinAt.isLittleOTVS
+  have hbound : ∀ z ∈ s, ‖ContinuousLinearMap.toSpanSingleton 𝕜 (F' z)‖ ≤ C := by
+    intro z hz
+    obtain ⟨w, rfl⟩ := hcover hz
+    simpa only [hF', ContinuousLinearMap.norm_toSpanSingleton] using bound w hz
+  simpa only [hF] using
+    Convex.norm_image_sub_le_of_norm_hasFDerivWithin_le hderiv hbound hs xs ys
 /-- The mean value theorem on a convex set in dimension 1: if the derivative of a function is
 bounded by `C` on `s`, then the function is `C`-Lipschitz on `s`.
 Version with `HasDerivWithinAt` and `LipschitzOnWith`. -/
@@ -712,7 +743,8 @@ this set is bounded by `C`, then the function is `C`-Lipschitz. Version with `de
 theorem norm_image_sub_le_of_norm_derivWithin_le {C : ℝ} (hf : DifferentiableOn 𝕜 f s)
     (bound : ∀ x ∈ s, ‖derivWithin f s x‖ ≤ C) (hs : Convex ℝ s) (xs : x ∈ s) (ys : y ∈ s) :
     ‖f y - f x‖ ≤ C * ‖y - x‖ :=
-  hs.norm_image_sub_le_of_norm_hasDerivWithin_le (fun x hx => (hf x hx).hasDerivWithinAt) bound xs
+  hs.norm_image_sub_le_of_norm_hasDerivWithin_le (coord := id)
+    (fun x hx => (hf x hx).hasDerivWithinAt) bound xs
     ys
 
 /-- The mean value theorem on a convex set in dimension 1: if the derivative of a function is
@@ -728,7 +760,7 @@ bounded by `C`, then the function is `C`-Lipschitz. Version with `deriv`. -/
 theorem norm_image_sub_le_of_norm_deriv_le {C : ℝ} (hf : ∀ x ∈ s, DifferentiableAt 𝕜 f x)
     (bound : ∀ x ∈ s, ‖deriv f x‖ ≤ C) (hs : Convex ℝ s) (xs : x ∈ s) (ys : y ∈ s) :
     ‖f y - f x‖ ≤ C * ‖y - x‖ :=
-  hs.norm_image_sub_le_of_norm_hasDerivWithin_le
+  hs.norm_image_sub_le_of_norm_hasDerivWithin_le (coord := id)
     (fun x hx => (hf x hx).hasDerivAt.hasDerivWithinAt) bound xs ys
 
 /-- The mean value theorem on a convex set in dimension 1: if the derivative of a function is
@@ -758,18 +790,45 @@ theorem _root_.IsOpen.isOpen_inter_preimage_of_deriv_eq_zero
   hs.isOpen_inter_preimage_of_fderiv_eq_zero hf
     (fun x hx ↦ by simp [← toSpanSingleton_deriv, hf' hx]) t
 
+/-- A function with zero derivative is constant on a preconnected open subset of an
+open coordinate domain. Openness of the coordinate embedding is essential here. -/
 theorem _root_.IsOpen.exists_is_const_of_deriv_eq_zero
-    (hs : IsOpen s) (hs' : IsPreconnected s) (hf : DifferentiableOn 𝕜 f s)
-    (hf' : s.EqOn (deriv f) 0) : ∃ a, ∀ x ∈ s, f x = a :=
-  hs.exists_is_const_of_fderiv_eq_zero hs' hf (fun {x} hx ↦ by
-    ext; simp [← toSpanSingleton_deriv, hf' hx])
+    {D : Type*} [TopologicalSpace D] {f : D → G} {s : Set D} {coord : D → 𝕜}
+    (hs : IsOpen s) (hs' : IsPreconnected s) (hf : DifferentiableOn 𝕜 f s coord)
+    (hf' : s.EqOn (fun x ↦ deriv f x coord) 0)
+    (hcoord : IsOpenEmbedding coord := by exact Topology.IsOpenEmbedding.id) :
+    ∃ a, ∀ x ∈ s, f x = a := by
+  let F : 𝕜 → G := Function.extend coord f 0
+  have hF (x : D) : F (coord x) = f x := hcoord.injective.extend_apply _ _ _
+  have hzero (x : D) (hx : x ∈ s) : HasFDerivAt f (0 : 𝕜 →L[𝕜] G) x coord := by
+    obtain ⟨L, hL⟩ := hf x hx
+    have hLAt : HasFDerivAt f L x coord := by
+      simpa only [HasFDerivWithinAt, HasFDerivAt, nhdsWithin_eq_nhds.mpr (hs.mem_nhds hx)] using hL
+    have hL1 : L 1 = 0 := by
+      have h := hf' hx
+      change fderiv 𝕜 f x coord 1 = 0 at h
+      rwa [hLAt.fderiv hcoord] at h
+    have hLzero : L = 0 := by
+      ext
+      simp [hL1]
+    exact hLzero ▸ hLAt
+  have hFzero : ∀ y ∈ coord '' s, HasFDerivAt F (0 : 𝕜 →L[𝕜] G) y := by
+    rintro y ⟨x, hx, rfl⟩
+    rw [hasFDerivAt_iff_isLittleOTVS, ← hcoord.map_nhds_eq x, Asymptotics.isLittleOTVS_map]
+    simpa only [Function.comp_def, hF, id_eq] using (hzero x hx).isLittleOTVS
+  obtain ⟨a, ha⟩ := (hcoord.isOpenMap s hs).exists_is_const_of_fderiv_eq_zero
+    (hs'.image coord hcoord.continuous.continuousOn)
+    (fun y hy ↦ (hFzero y hy).differentiableAt.differentiableWithinAt)
+    (fun y hy ↦ (hFzero y hy).fderiv)
+  exact ⟨a, fun x hx ↦ (hF x).symm.trans (ha (coord x) ⟨x, hx, rfl⟩)⟩
 
 theorem _root_.IsOpen.is_const_of_deriv_eq_zero
-    (hs : IsOpen s) (hs' : IsPreconnected s) (hf : DifferentiableOn 𝕜 f s)
-    (hf' : s.EqOn (deriv f) 0) {x y : 𝕜} (hx : x ∈ s) (hy : y ∈ s) : f x = f y :=
-  hs.is_const_of_fderiv_eq_zero hs' hf (fun a ha ↦ by
-    ext; simp [← toSpanSingleton_deriv, hf' ha]) hx hy
-
+    {D : Type*} [TopologicalSpace D] {f : D → G} {s : Set D} {coord : D → 𝕜}
+    (hs : IsOpen s) (hs' : IsPreconnected s) (hf : DifferentiableOn 𝕜 f s coord)
+    (hf' : s.EqOn (fun x ↦ deriv f x coord) 0) {x y : D} (hx : x ∈ s) (hy : y ∈ s)
+    (hcoord : IsOpenEmbedding coord := by exact Topology.IsOpenEmbedding.id) : f x = f y := by
+  obtain ⟨a, ha⟩ := hs.exists_is_const_of_deriv_eq_zero hs' hf hf' hcoord
+  rw [ha x hx, ha y hy]
 theorem _root_.IsOpen.exists_eq_add_of_deriv_eq {f g : 𝕜 → G} (hs : IsOpen s)
     (hs' : IsPreconnected s)
     (hf : DifferentiableOn 𝕜 f s) (hg : DifferentiableOn 𝕜 g s)

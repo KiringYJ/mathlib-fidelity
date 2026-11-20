@@ -262,8 +262,8 @@ theorem memLp_top (f : α →ₛ E) (μ : Measure α) : MemLp f ∞ μ :=
   let ⟨C, hfC⟩ := f.exists_forall_norm_le
   memLp_top_of_bound f.aestronglyMeasurable C <| Eventually.of_forall hfC
 
-protected theorem eLpNorm'_eq {p : ℝ} (f : α →ₛ F) (μ : Measure α) :
-    eLpNorm' f p μ = (∑ y ∈ f.range, ‖y‖ₑ ^ p * μ (f ⁻¹' {y})) ^ (1 / p) := by
+protected theorem eLpNorm'_eq {p : ℝ} (f : α →ₛ F) (μ : Measure α) {hp : IsUnit p} :
+    eLpNorm' f p μ hp = (∑ y ∈ f.range, ‖y‖ₑ ^ p * μ (f ⁻¹' {y})) ^ (1 / p) := by
   have h_map : (‖f ·‖ₑ ^ p) = f.map (‖·‖ₑ ^ p) := by simp; rfl
   rw [eLpNorm'_eq_lintegral_enorm, h_map, lintegral_eq_lintegral, map_lintegral]
 

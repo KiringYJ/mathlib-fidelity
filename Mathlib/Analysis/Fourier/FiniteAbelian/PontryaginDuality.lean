@@ -45,7 +45,9 @@ variable (n : ℕ) [NeZero n]
 /-- Indexing of the complex characters of `ZMod n`. `AddChar.zmod n x` is the character sending `y`
 to `e ^ (2 * π * i * x * y / n)`. -/
 def zmod (x : ZMod n) : AddChar (ZMod n) Circle :=
-  AddChar.compAddMonoidHom ⟨AddCircle.toCircle, AddCircle.toCircle_zero, AddCircle.toCircle_add⟩ <|
+  AddChar.compAddMonoidHom
+    (⟨fun y ↦ AddCircle.toCircle y isUnit_one, AddCircle.toCircle_zero,
+      fun a b ↦ AddCircle.toCircle_add a b⟩ : AddChar (AddCircle (1 : ℝ)) Circle) <|
     ZMod.toAddCircle.comp <| .mulLeft x
 
 @[simp] lemma zmod_intCast (x y : ℤ) : zmod n x y = exp (2 * π * (x * y / n)) := by

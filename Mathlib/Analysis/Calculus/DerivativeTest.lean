@@ -341,10 +341,12 @@ lemma eventually_nhdsWithin_sign_eq_of_deriv_pos (hf : deriv f x₀ > 0) (hx : f
   refine ⟨?_, by simpa⟩
   have h_tendsto := hasDerivAt_iff_tendsto_slope.mp
     (differentiableAt_of_deriv_ne_zero <| ne_of_gt hf).hasDerivAt
-  filter_upwards [(h_tendsto.eventually <| eventually_gt_nhds hf),
-    self_mem_nhdsWithin] with x hx₀ hx₁
-  rw [mem_compl_iff, mem_singleton_iff, ← Ne.eq_def] at hx₁
-  obtain (hx' | hx') := hx₁.lt_or_gt
+  rw [eventually_nhdsWithin_iff]
+  filter_upwards [eventually_comap.mp (h_tendsto.eventually <| eventually_gt_nhds hf)]
+      with x hpos hx₁
+  have hx₀ := hpos ⟨x, hx₁⟩ rfl
+  have hxne : x ≠ x₀ := hx₁
+  obtain (hx' | hx') := hxne.lt_or_gt
   · rw [sign_neg (neg_of_slope_pos hx' hx₀ hx), sign_neg (sub_neg.mpr hx')]
   · rw [sign_pos (pos_of_slope_pos hx' hx₀ hx), sign_pos (sub_pos.mpr hx')]
 
@@ -352,9 +354,9 @@ lemma eventually_nhdsWithin_sign_eq_of_deriv_pos (hf : deriv f x₀ > 0) (hx : f
 matches `x₀ - x`. -/
 lemma eventually_nhdsWithin_sign_eq_of_deriv_neg (hf : deriv f x₀ < 0) (hx : f x₀ = 0) :
     ∀ᶠ x in 𝓝 x₀, sign (f x) = sign (x₀ - x) := by
-  simpa [Left.sign_neg, -neg_sub, ← neg_sub x₀] using
+  simpa [Pi.neg_apply, Left.sign_neg, -neg_sub, ← neg_sub x₀] using
     eventually_nhdsWithin_sign_eq_of_deriv_pos
-      (f := (-f ·)) (x₀ := x₀) (by simpa [deriv.neg]) (by simpa)
+      (f := -f) (x₀ := x₀) (by simpa [deriv.neg] using hf) (by simp [hx])
 
 lemma deriv_neg_left_of_sign_deriv {f : ℝ → ℝ} {x₀ : ℝ}
     (h₀ : ∀ᶠ (x : ℝ) in 𝓝[≠] x₀, sign (deriv f x) = sign (x - x₀)) :
@@ -395,8 +397,8 @@ theorem isLocalMax_of_sign_deriv {f : ℝ → ℝ} {x₀ : ℝ} (h : ContinuousA
 theorem isLocalMin_of_sign_deriv {f : ℝ → ℝ} {x₀ : ℝ} (h : ContinuousAt f x₀)
     (hf : ∀ᶠ x in 𝓝[≠] x₀, sign (deriv f x) = sign (x - x₀)) :
     IsLocalMin f x₀ := by
-  refine neg_neg f ▸ (isLocalMax_of_sign_deriv (f := (-f ·)) h.neg ?foo |>.neg)
-  simpa [Left.sign_neg, -neg_sub, ← neg_sub _ x₀, deriv.neg]
+  refine neg_neg f ▸ (isLocalMax_of_sign_deriv (f := -f) h.neg ?_ |>.neg)
+  simpa [Left.sign_neg, -neg_sub, ← neg_sub _ x₀, deriv.neg] using hf
 
 /-- The Second-Derivative Test from calculus, minimum version.
 Applies to functions like `x^2 + 1[x ≥ 0]` as well as twice differentiable
@@ -409,6 +411,12 @@ theorem isLocalMin_of_deriv_deriv_pos (hf : deriv (deriv f) x₀ > 0) (hd : deri
 /-- The Second-Derivative Test from calculus, maximum version. -/
 theorem isLocalMax_of_deriv_deriv_neg (hf : deriv (deriv f) x₀ < 0) (hd : deriv f x₀ = 0)
     (hc : ContinuousAt f x₀) : IsLocalMax f x₀ := by
-  simpa using isLocalMin_of_deriv_deriv_pos (by simpa) (by simpa) hc.neg |>.neg
+  have hf' : 0 < deriv (deriv (-f)) x₀ := by
+    rw [deriv.neg']
+    change 0 < deriv (-deriv f) x₀
+    rw [deriv.neg]
+    exact neg_pos.mpr hf
+  have hd' : deriv (-f) x₀ = 0 := by rw [deriv.neg, hd, neg_zero]
+  simpa using (isLocalMin_of_deriv_deriv_pos hf' hd' hc.neg).neg
 
 end SecondDeriv

@@ -35,7 +35,7 @@ lemma cast_div (hnm : n ∣ m) (hn : (n : K) ≠ 0) : (↑(m / n) : K) = m / n :
 
 variable [CharZero K]
 
-@[simp, norm_cast]
+@[norm_cast]
 lemma cast_div_charZero (hnm : n ∣ m) (hn : n ≠ 0) : (↑(m / n) : K) = m / n :=
   cast_div hnm (Nat.cast_ne_zero.mpr hn)
 

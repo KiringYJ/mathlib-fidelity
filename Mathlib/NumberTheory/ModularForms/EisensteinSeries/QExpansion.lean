@@ -13,6 +13,7 @@ public import Mathlib.NumberTheory.ModularForms.EisensteinSeries.Basic
 public import Mathlib.NumberTheory.ModularForms.LevelOne.Basic
 public import Mathlib.NumberTheory.TsumDivisorsAntidiagonal
 public import Mathlib.Tactic.NormNum.Parity
+import Mathlib.Tactic.LinearCombination
 
 /-!
 # Eisenstein series q-expansions
@@ -49,7 +50,8 @@ open UpperHalfPlane hiding I
 
 local notation "ℍₒ" => upperHalfPlaneSet
 
-private lemma iteratedDerivWithin_cexp_aux (k m : ℕ) (p : ℝ) {S : Set ℂ} (hs : IsOpen S) :
+private lemma iteratedDerivWithin_cexp_aux (k m : ℕ) (p : ℝ) {hp : IsUnit (p : ℂ)}
+    {S : Set ℂ} (hs : IsOpen S) :
     EqOn (iteratedDerivWithin k (fun s : ℂ ↦ cexp (2 * π * I * m * s / p)) S)
     (fun s ↦ (2 * π * I * m / p) ^ k * cexp (2 * π * I * m * s / p)) S := by
   apply EqOn.trans (iteratedDerivWithin_of_isOpen hs)
@@ -60,7 +62,7 @@ private lemma iteratedDerivWithin_cexp_aux (k m : ℕ) (p : ℝ) {S : Set ℂ} (
   simp only [this, iteratedDeriv_cexp_const_mul]
   ring_nf
 
-private lemma aux_IsBigO_mul (k l : ℕ) (p : ℝ) {f : ℕ → ℂ}
+private lemma aux_IsBigO_mul (k l : ℕ) (p : ℝ) {hp : IsUnit (p : ℂ)} {f : ℕ → ℂ}
     (hf : f =O[atTop] fun n ↦ ((n ^ l) : ℝ)) :
     (fun n ↦ f n * (2 * π * I * n / p) ^ k) =O[atTop] fun n ↦ (↑(n ^ (l + k)) : ℝ) := by
   have h0 : (fun n : ℕ ↦ (2 * π * I * n / p) ^ k) =O[atTop] fun n ↦ ((n ^ k) : ℝ) := by
@@ -68,8 +70,10 @@ private lemma aux_IsBigO_mul (k l : ℕ) (p : ℝ) {f : ℕ → ℂ}
         fun n : ℕ ↦ ((2 * π * I / p) ^ k) * n ^ k := by
       ext z
       ring
-    simpa [h1] using isBigO_ofReal_right.mp (Asymptotics.isBigO_const_mul_self
-      ((2 * π * I / p) ^ k) (fun (n : ℕ) ↦ (↑(n ^ k) : ℝ)) atTop)
+    rw [h1]
+    simpa only [Nat.cast_pow, Complex.ofReal_pow, Complex.ofReal_natCast] using!
+      isBigO_ofReal_right.mp (Asymptotics.isBigO_const_mul_self
+        ((2 * π * I / p) ^ k) (fun (n : ℕ) ↦ (↑(n ^ k) : ℝ)) atTop)
   push_cast
   convert! hf.mul h0
   ring
@@ -80,7 +84,9 @@ function that grows polynomially is absolutely and uniformly convergent. -/
 theorem summableLocallyUniformlyOn_iteratedDerivWithin_smul_cexp (k l : ℕ) {f : ℕ → ℂ} {p : ℝ}
     (hp : 0 < p) (hf : f =O[atTop] (fun n ↦ ((n ^ l) : ℝ))) :
     SummableLocallyUniformlyOn (fun n ↦ (f n) •
-      iteratedDerivWithin k (fun z ↦ cexp (2 * π * I * z / p) ^ n) ℍₒ) ℍₒ := by
+      iteratedDerivWithin k (fun z ↦ cexp (Checked.div (2 * π * I * z) (p : ℂ)
+        (Complex.ofReal_ne_zero.mpr hp.ne').isUnit) ^ n) ℍₒ) ℍₒ := by
+  have hpu := (Complex.ofReal_ne_zero.mpr hp.ne').isUnit
   apply SummableLocallyUniformlyOn_of_locally_bounded isOpen_upperHalfPlaneSet
   intro K hK hKc
   have : CompactSpace K := isCompact_univ_iff.mp (isCompact_iff_isCompact_univ.mp hKc)
@@ -92,19 +98,24 @@ theorem summableLocallyUniformlyOn_iteratedDerivWithin_smul_cexp (k l : ℕ) {f 
     intro x
     have h1 : cexp (2 * π * I * (x / p)) = cexp (2 * π * I * x / p) := by
       ring_nf
-    simpa using h1 ▸ norm_exp_two_pi_I_lt_one ⟨((x : ℂ) / p), by aesop⟩
-  refine ⟨fun n ↦ ‖f n‖ * (2 * π * n / |p|) ^ k * |r| ^ n, by
+    have hx : 0 < (x : ℂ).im := hK x.property
+    have hx' : 0 < (((x : ℂ) / p : ℂ)).im := by
+      rw [Complex.div_ofReal_im]
+      exact div_pos hx hp
+    simpa using h1 ▸ norm_exp_two_pi_I_lt_one ⟨((x : ℂ) / p), hx'⟩
+  have hpabs : IsUnit |p| := (abs_pos.mpr hp.ne').isUnit
+  refine ⟨fun n ↦ ‖f n‖ * (Checked.div (2 * π * n) |p| hpabs) ^ k * |r| ^ n, by
     simpa using (summable_norm_mul_geometric_of_norm_lt_one' hr
-      (Asymptotics.isBigO_norm_left.mpr (aux_IsBigO_mul k l p hf))), fun n z hz ↦ ?_⟩
+      (Asymptotics.isBigO_norm_left.mpr (aux_IsBigO_mul k l p (hp := hpu) hf))), fun n z hz ↦ ?_⟩
   have h0 := pow_le_pow_left₀ (norm_nonneg _) (norm_coe_le_norm (mkOfCompact c) ⟨z, hz⟩) n
   simp only [norm_mkOfCompact, mkOfCompact_apply, ContinuousMap.coe_mk, ← exp_nsmul', Pi.smul_apply,
-    iteratedDerivWithin_cexp_aux k n p isOpen_upperHalfPlaneSet (hK hz), smul_eq_mul,
+    iteratedDerivWithin_cexp_aux k n p (hp := hpu) isOpen_upperHalfPlaneSet (hK hz), smul_eq_mul,
     norm_mul, norm_pow, Complex.norm_div, norm_ofNat, norm_real, Real.norm_eq_abs, norm_I, mul_one,
     norm_natCast, abs_norm, ge_iff_le, Real.abs_pi, r, c] at *
   rw [← mul_assoc]
   gcongr
-  convert! h0
-  rw [← norm_pow, ← exp_nsmul']
+  · exact (div_pow₀ _ _ _).le
+  · simpa only [exp_nsmul' z (2 * π * I) p (hp := hpu), norm_pow] using! h0
 
 /-- This is a version of `summableLocallyUniformlyOn_iteratedDerivWithin_smul_cexp` for level one
 and q-expansion coefficients all `1`. -/
@@ -164,30 +175,75 @@ private lemma iteratedDerivWithin_tsum_exp_aux_eq {k : ℕ} (hk : 1 ≤ k) (z : 
     OfNat.ofNat_ne_zero, ofReal_eq_zero, Real.pi_ne_zero, or_self, I_ne_zero, or_false]
   congr
   ext n
-  have := exp_nsmul' (p := 1) (a := 2 * π * I) (n := n)
-  simp_rw [div_one] at this
+  have := exp_nsmul' (p := 1) (hp := isUnit_one) (a := 2 * π * I) (n := n)
+  simp_rw [div_one₀] at this
   simpa [this, UpperHalfPlane.coe] using
-    iteratedDerivWithin_cexp_aux k n 1 isOpen_upperHalfPlaneSet z.2
+    iteratedDerivWithin_cexp_aux k n 1 (hp := by simp) isOpen_upperHalfPlaneSet z.2
+
+private lemma hasIteratedDerivAt_subtype_of_contDiffOn {s : Set ℂ} (hs : IsOpen s)
+    (k : ℕ) {f : ℂ → ℂ} (hf : ContDiffOn ℂ (k : ℕ∞) f s) (z : s) :
+    HasIteratedDerivAt k (fun y : s ↦ f y.val) (iteratedDerivWithin k f s z.val)
+      z Subtype.val := by
+  induction k generalizing f with
+  | zero => simp only [HasIteratedDerivAt.zero, iteratedDerivWithin_zero]
+  | succ k ih =>
+    have hderiv (y : s) : HasDerivAt (fun w : s ↦ f w.val) (derivWithin f s y.val)
+        y Subtype.val := by
+      have h := ((hf.differentiableOn (by simp) y.val y.property).hasDerivWithinAt.hasDerivAt
+        (hs.mem_nhds y.property)).hasFDerivAt.comp_tendsto Subtype.val
+        (continuous_subtype_val.continuousAt.tendsto.prodMap (tendsto_pure_pure Subtype.val y))
+      simpa only [Function.comp_def, id_eq, ContinuousLinearMap.toSpanSingleton_apply, one_smul]
+        using hasFDerivAt_iff_hasDerivAt.mp h
+    rw [iteratedDerivWithin_succ']
+    exact ⟨fun y : s ↦ derivWithin f s y.val, hderiv z, Or.inr (.of_forall hderiv),
+      ih (hf.derivWithin hs.uniqueDiffOn (by simp))⟩
 
 /-- This is one key identity relating infinite series to q-expansions which shows that
 `∑' n, 1 / (z + n) ^ (k + 1) = ((-2 π I) ^ (k + 1) / k !) * ∑' n, n ^ k q ^n` where
 `q = cexp (2 π I z)`. -/
 theorem EisensteinSeries.qExpansion_identity {k : ℕ} (hk : 1 ≤ k) (z : ℍ) :
-    ∑' n : ℤ, 1 / ((z : ℂ) + n) ^ (k + 1) = ((-2 * π * I) ^ (k + 1) / k !) *
-    ∑' n : ℕ, n ^ k * cexp (2 * π * I * z) ^ n := by
-  have : (-1) ^ k * k ! * ∑' n : ℤ, 1 / ((z : ℂ) + n) ^ (k + 1) =
-    -(2 * π * I) ^ (k + 1) * ∑' n : ℕ, n ^ k * cexp (2 * π * I * z) ^ n := by
-    rw [← iteratedDerivWithin_tsum_exp_aux_eq hk z,
-      ← iteratedDerivWithin_cot_pi_mul_eq_mul_tsum_div_pow hk (by simpa using z.2)]
-    exact iteratedDerivWithin_congr (fun x hx ↦ by (simpa using pi_mul_cot_pi_q_exp ⟨x, hx⟩))
-      (by simpa using z.2)
-  simp_rw [(eq_inv_mul_iff_mul_eq₀ (by simp [Nat.factorial_ne_zero])).mpr this, ← tsum_mul_left]
-  congr
-  ext n
-  rw [show (-2 * π * I) ^ (k + 1) = (-1) ^ (k + 1) * (2 * π * I) ^ (k + 1) by rw [← neg_pow]; ring]
-  field_simp
-  ring_nf
-  simp [Nat.mul_two]
+    (∑' n : ℤ, Checked.div 1 (((z : ℂ) + n) ^ (k + 1))
+      ((integerComplement_add_ne_zero z.coe_mem_integerComplement n).isUnit.pow _)) =
+      Checked.div ((-2 * π * I) ^ (k + 1)) (k ! : ℂ)
+        (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero k)).isUnit *
+      ∑' n : ℕ, n ^ k * cexp (2 * π * I * z) ^ n := by
+  let z₀ : ℍₒ := ⟨z, z.im_pos⟩
+  let q (y : ℍₒ) : integerComplement := ⟨y.val, coe_mem_integerComplement ⟨y.val, y.property⟩⟩
+  let F (y : ℂ) : ℂ := π * I - (2 * π * I) * ∑' n : ℕ, cexp (2 * π * I * y) ^ n
+  let A : ℂ := ∑' n : ℤ, Checked.div 1 (((z : ℂ) + n) ^ (k + 1))
+    ((integerComplement_add_ne_zero z.coe_mem_integerComplement n).isUnit.pow _)
+  let B : ℂ := ∑' n : ℕ, n ^ k * cexp (2 * π * I * z) ^ n
+  have hF : ContDiffOn ℂ (k : ℕ∞) F ℍₒ :=
+    contDiffOn_const.sub (contDiffOn_const.mul (contDiffOn_tsum_cexp k))
+  have hleft : HasIteratedDerivAt k (fun y : ℍₒ ↦ F y.val) ((-1) ^ k * k ! * A)
+      z₀ Subtype.val := by
+    have h := (hasIteratedDerivAt_cot_pi_mul hk (q z₀)).comp_domain (g := q)
+      (continuous_subtype_val.subtype_mk _)
+    exact h.congr_of_eventuallyEq
+      (.of_forall fun y ↦ (pi_mul_cot_pi_q_exp ⟨y.val, y.property⟩).symm)
+  have heq : (-1) ^ k * k ! * A = -(2 * π * I) ^ (k + 1) * B :=
+    (hleft.unique
+      (hasIteratedDerivAt_subtype_of_contDiffOn isOpen_upperHalfPlaneSet k hF z₀)
+      isOpen_upperHalfPlaneSet.isOpenEmbedding_subtypeVal).trans
+        (iteratedDerivWithin_tsum_exp_aux_eq hk z)
+  have hfact : (k ! : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero k)
+  have hneg : ((-1 : ℂ) ^ k) ≠ 0 := pow_ne_zero _ (neg_ne_zero.mpr one_ne_zero)
+  change A = Checked.div ((-2 * π * I) ^ (k + 1)) (k ! : ℂ) hfact.isUnit * B
+  apply mul_left_cancel₀ (mul_ne_zero hneg hfact)
+  rw [heq]
+  have hpow : (-2 * π * I : ℂ) ^ (k + 1) = (-1) ^ (k + 1) * (2 * π * I) ^ (k + 1) := by
+    rw [← mul_pow]
+    congr 1
+    ring
+  have hsign : (-1 : ℂ) ^ k * (-1) ^ (k + 1) = -1 := by
+    rw [← pow_add, show k + (k + 1) = 2 * k + 1 by omega, pow_succ, pow_mul]
+    norm_num
+  rw [hpow]
+  calc
+    -(2 * π * I) ^ (k + 1) * B = ((-1) ^ k * (-1) ^ (k + 1)) * (2 * π * I) ^ (k + 1) * B := by
+      rw [hsign]
+      ring
+    _ = _ := by field_simp
 
 lemma summable_pow_mul_cexp (k : ℕ) (e : ℕ+) (z : ℍ) :
     Summable fun c : ℕ ↦ (c : ℂ) ^ k * cexp (2 * π * I * e * z) ^ c := by
@@ -196,117 +252,287 @@ lemma summable_pow_mul_cexp (k : ℕ) (e : ℕ+) (z : ℍ) :
   apply ((summableLocallyUniformlyOn_iteratedDerivWithin_smul_cexp 0 k (p := 1)
     (f := fun n ↦ (n ^ k : ℂ)) (by norm_num)
     (by simp [← Complex.isBigO_ofReal_right, Asymptotics.isBigO_refl])).summable he).congr
-  grind [ofReal_one, iteratedDerivWithin_zero, Pi.smul_apply, smul_eq_mul]
+  intro n
+  simp only [ofReal_one, div_one₀, iteratedDerivWithin_zero, Pi.smul_apply, smul_eq_mul, mul_assoc]
 
 /-- This is a version of `EisensteinSeries.qExpansion_identity` for positive naturals,
 which shows that  `∑' n, 1 / (z + n) ^ (k + 1) = ((-2 π I) ^ (k + 1) / k !) * ∑' n : ℕ+, n ^ k q ^n`
 where `q = cexp (2 π I z)`. -/
 theorem EisensteinSeries.qExpansion_identity_pnat {k : ℕ} (hk : 1 ≤ k) (z : ℍ) :
-    ∑' n : ℤ, 1 / ((z : ℂ) + n) ^ (k + 1) = ((-2 * π * I) ^ (k + 1) / k !) *
-    ∑' n : ℕ+, n ^ k * cexp (2 * π * I * z) ^ (n : ℕ) := by
+    (∑' n : ℤ, Checked.div 1 (((z : ℂ) + n) ^ (k + 1))
+      ((integerComplement_add_ne_zero z.coe_mem_integerComplement n).isUnit.pow _)) =
+      Checked.div ((-2 * π * I) ^ (k + 1)) (k ! : ℂ)
+        (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero k)).isUnit *
+      ∑' n : ℕ+, n ^ k * cexp (2 * π * I * z) ^ (n : ℕ) := by
   rw [EisensteinSeries.qExpansion_identity hk z, ← tsum_zero_pnat_eq_tsum_nat]
   · simp [show k ≠ 0 by grind]
   · apply (summable_pow_mul_cexp k 1 z).congr
     simp
 
 lemma summable_eisSummand {k : ℕ} (hk : 3 ≤ k) (z : ℍ) :
-    Summable (eisSummand k · z) :=
-  summable_norm_iff.mp <| summable_norm_eisSummand (Int.toNat_le.mp hk) z
+    Summable (fun v : {v : Fin 2 → ℤ // v ≠ 0} ↦ eisSummand k v z (fun _ ↦ v.property)) :=
+  summable_norm_iff.mp (summable_norm_eisSummand (by exact_mod_cast hk) z)
+
+lemma eisensteinPair_ne_zero {a b : ℤ} (h : a ≠ 0 ∨ b ≠ 0) :
+    (![a, b] : Fin 2 → ℤ) ≠ 0 := by
+  intro hv
+  rcases h with h | h
+  · exact h (by simpa using congrFun hv (0 : Fin 2))
+  · exact h (by simpa using congrFun hv (1 : Fin 2))
+
+/-- A nonzero lattice vector has either zero first coordinate and a nonzero second coordinate,
+or a nonzero first coordinate and an arbitrary second coordinate. -/
+private def nonzeroLatticeEquiv :
+    {v : Fin 2 → ℤ // v ≠ 0} ≃ ({d : ℤ // d ≠ 0} ⊕ ({c : ℤ // c ≠ 0} × ℤ)) where
+  toFun v := if h : v.val 0 = 0 then
+    .inl ⟨v.val 1, fun h₁ ↦ v.property (by
+      ext i
+      fin_cases i <;> assumption)⟩
+    else .inr (⟨v.val 0, h⟩, v.val 1)
+  invFun := Sum.elim (fun d ↦ ⟨![0, d.val], eisensteinPair_ne_zero (.inr d.property)⟩)
+    (fun a ↦ ⟨![a.1.val, a.2], eisensteinPair_ne_zero (.inl a.1.property)⟩)
+  left_inv := by
+    rintro ⟨v, hv⟩
+    dsimp
+    split_ifs with h
+    · apply Subtype.ext
+      ext i
+      fin_cases i <;> simp [h]
+    · apply Subtype.ext
+      ext i
+      fin_cases i <;> simp
+  right_inv := by
+    rintro (d | ⟨a, d⟩)
+    · simp
+    · simp [a.property]
 
 lemma summable_prod_eisSummand {k : ℕ} (hk : 3 ≤ k) (z : ℍ) :
-    Summable fun x : ℤ × ℤ ↦ eisSummand k ![x.1, x.2] z := by
-  refine (finTwoArrowEquiv ℤ).summable_iff.mp <| (summable_eisSummand hk z).congr (fun v ↦ ?_)
-  simp [show ![v 0, v 1] = v from List.ofFn_inj.mp rfl]
+    Summable (fun p : {c : ℤ // c ≠ 0} × ℤ ↦
+      eisSummand k ![p.1.val, p.2] z (fun _ ↦ eisensteinPair_ne_zero (.inl p.1.property))) := by
+  let q (p : {c : ℤ // c ≠ 0} × ℤ) : {v : Fin 2 → ℤ // v ≠ 0} :=
+    ⟨![p.1.val, p.2], eisensteinPair_ne_zero (.inl p.1.property)⟩
+  have hq : Function.Injective q := by
+    intro a b h
+    have he : ![a.1.val, a.2] = ![b.1.val, b.2] :=
+      congrArg (fun v : {v : Fin 2 → ℤ // v ≠ 0} ↦ v.val) h
+    exact Prod.ext (Subtype.ext (congrFun he 0)) (congrFun he 1)
+  change Summable ((fun v : {v : Fin 2 → ℤ // v ≠ 0} ↦ eisSummand k v z (fun _ ↦ v.2)) ∘ q)
+  exact (summable_eisSummand hk z).comp_injective hq
+
+private lemma tsum_nonzeroLattice_partition {f : {v : Fin 2 → ℤ // v ≠ 0} → ℂ}
+    (hf : Summable f) :
+    (∑' v, f v) =
+      (∑' d : {d : ℤ // d ≠ 0}, f ⟨![0, d.val], eisensteinPair_ne_zero (.inr d.2)⟩) +
+      ∑' c : {c : ℤ // c ≠ 0}, ∑' d : ℤ,
+        f ⟨![c.val, d], eisensteinPair_ne_zero (.inl c.2)⟩ := by
+  let e := nonzeroLatticeEquiv
+  let h := f ∘ e.symm
+  have hh : Summable h := hf.comp_injective e.symm.injective
+  have h₀ : Summable (h ∘ Sum.inl) := hh.comp_injective Sum.inl_injective
+  have h₁ : Summable (h ∘ Sum.inr) := hh.comp_injective Sum.inr_injective
+  calc
+    _ = ∑' v, h v := (e.symm.tsum_eq f).symm
+    _ = (∑' d, h (.inl d)) + ∑' p, h (.inr p) := Summable.tsum_sum h₀ h₁
+    _ = _ := congrArg ((∑' d, h (.inl d)) + ·) h₁.tsum_prod
 
 lemma tsum_eisSummand_eq_tsum_sigma_mul_cexp_pow {k : ℕ} (hk : 3 ≤ k) (hk2 : Even k) (z : ℍ) :
-    ∑' v, eisSummand k v z = 2 * riemannZeta k + 2 * ((-2 * π * I) ^ k / (k - 1)!) *
-    ∑' (n : ℕ+), σ (k - 1) n * cexp (2 * π * I * z) ^ (n : ℕ) := by
-  rw [← (finTwoArrowEquiv ℤ).symm.tsum_eq, finTwoArrowEquiv_symm_apply,
-    Summable.tsum_prod (summable_prod_eisSummand hk z),
-    tsum_int_eq_zero_add_two_mul_tsum_pnat (fun n ↦ ?h₁)
-      (by simpa using (summable_prod_eisSummand hk z).prod)]
-  case h₁ =>
+    (∑' v : {v : Fin 2 → ℤ // v ≠ 0}, eisSummand k v z (fun _ ↦ v.property)) =
+      2 * riemannZeta k (hs := by exact_mod_cast (by omega : k ≠ 1)) +
+      2 * Checked.div ((-2 * π * I) ^ k) ((k - 1)! : ℂ)
+        (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero (k - 1))).isUnit *
+        ∑' (n : ℕ+), σ (k - 1) n * cexp (2 * π * I * z) ^ (n : ℕ) := by
+  let f (v : {v : Fin 2 → ℤ // v ≠ 0}) := eisSummand (k : ℤ) v z (fun _ ↦ v.property)
+  let g (c : {c : ℤ // c ≠ 0}) (d : ℤ) := eisSummand (k : ℤ) ![c.val, d] z
+    (fun _ ↦ eisensteinPair_ne_zero (.inl c.property))
+  let L (d : {d : ℤ // d ≠ 0}) := eisSummand (k : ℤ) ![0, d.val] z
+    (fun _ ↦ eisensteinPair_ne_zero (.inr d.property))
+  have hg : Summable (Function.uncurry g) := summable_prod_eisSummand hk z
+  have hsum : (∑' v, f v) = (∑' d, L d) + ∑' c, ∑' d, g c d :=
+    tsum_nonzeroLattice_partition (summable_eisSummand hk z)
+  have hzero : (∑' d, L d) = 2 * riemannZeta k (hs := by exact_mod_cast (by omega : k ≠ 1)) := by
+    rw [two_mul_riemannZeta_eq_tsum_int_inv_pow_of_even (by omega) hk2]
+    refine tsum_congr fun d ↦ ?_
+    simp only [L, eisSummand_nat_eq, Matrix.cons_val_zero, Matrix.cons_val_one,
+      Matrix.cons_val_fin_one, Int.cast_zero, zero_mul, zero_add]
+  let pos (n : ℕ+) : {c : ℤ // c ≠ 0} :=
+    ⟨(n : ℕ), by exact_mod_cast n.pos.ne'⟩
+  let neg (n : ℕ+) : {c : ℤ // c ≠ 0} :=
+    ⟨-((n : ℕ) : ℤ), neg_ne_zero.mpr (by exact_mod_cast n.pos.ne')⟩
+  have hneg (n : ℕ+) : (∑' d, g (neg n) d) = ∑' d, g (pos n) d := by
     nth_rewrite 1 [← tsum_comp_neg]
-    exact tsum_congr fun y ↦ by simp [eisSummand, ← neg_add _ (y : ℂ), -neg_add_rev, hk2.neg_pow]
-  have H (b : ℕ+) := qExpansion_identity_pnat (k := k - 1) (by grind) ⟨b * z, by simpa using z.2⟩
-  simp_rw [show k - 1 + 1 = k by grind, one_div] at H
-  simp only [neg_mul] at H
-  rw [nsmul_eq_mul, mul_assoc]
-  congr
-  · simp [eisSummand, two_mul_riemannZeta_eq_tsum_int_inv_pow_of_even (by grind) hk2]
-  · suffices ∑' (m : ℕ+) (n : ℕ+), (n : ℕ) ^ (k - 1) * cexp (2 * π * I * (m * z)) ^ (n : ℕ) =
-        ∑' (m : ℕ+) (n : ℕ+), (n : ℕ) ^ (k - 1) * cexp (2 * π * I * z) ^ (m * n : ℕ) by
-      simp [eisSummand, H, tsum_mul_left,
-        ← tsum_prod_pow_eq_tsum_sigma (k - 1) (norm_exp_two_pi_I_lt_one z), this]
-    simp_rw [← Complex.exp_nat_mul]
-    exact tsum_congr₂ (fun m n ↦ by push_cast; ring_nf)
+    refine tsum_congr fun d ↦ ?_
+    simp only [g, pos, neg, eisSummand_nat_eq, Matrix.cons_val_zero,
+      Matrix.cons_val_one, Matrix.cons_val_fin_one, Int.cast_neg, neg_mul,
+      ← neg_add, hk2.neg_pow]
+  have hpair : (∑' c, ∑' d, g c d) = 2 * ∑' n : ℕ+, ∑' d, g (pos n) d := by
+    have hadd :
+        (∑' n : ℕ+, ((∑' d, g (pos n) d) + (∑' d, g (neg n) d))) =
+          ∑' c, ∑' d, g c d := (hg.prod.hasSum.int_pos_add_neg).tsum_eq
+    rw [← hadd, ← tsum_mul_left]
+    refine tsum_congr fun n ↦ ?_
+    rw [hneg, two_mul]
+  have hshift : k - 1 + 1 = k := by omega
+  let A := Checked.div ((-2 * π * I) ^ k) ((k - 1)! : ℂ)
+    (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero (k - 1))).isUnit
+  have hrow (m : ℕ+) : (∑' d, g (pos m) d) =
+      A * ∑' n : ℕ+, (n : ℂ) ^ (k - 1) * cexp (2 * π * I * z) ^ (m * n : ℕ) := by
+    let w : ℍ := ⟨m * z, by simpa using z.2⟩
+    have H := qExpansion_identity_pnat (k := k - 1) (by omega) w
+    simp only [hshift, one_div₀] at H
+    calc
+      _ = A * ∑' n : ℕ+, (n : ℂ) ^ (k - 1) * cexp (2 * π * I * w) ^ (n : ℕ) := by
+        simpa only [g, pos, eisSummand_nat_eq, Matrix.cons_val_zero, Matrix.cons_val_one,
+          Matrix.cons_val_fin_one, Int.cast_natCast, w, A] using H
+      _ = _ := congrArg (A * ·) (tsum_congr fun n ↦ by
+        simp only [w, ← Complex.exp_nat_mul]
+        congr 2
+        push_cast
+        ring)
+  have hrows : (∑' m : ℕ+, ∑' d, g (pos m) d) =
+      A * ∑' n : ℕ+, σ (k - 1) n * cexp (2 * π * I * z) ^ (n : ℕ) := by
+    simp only [hrow, tsum_mul_left,
+      tsum_prod_pow_eq_tsum_sigma (k - 1) (norm_exp_two_pi_I_lt_one z)]
+  change (∑' v, f v) = _
+  rw [hsum, hzero, hpair, hrows, ← mul_assoc (2 : ℂ) A]
 
-lemma eisSummand_of_gammaSet_eq_divIntMap (k : ℤ) (z : ℍ) {n : ℕ} (v : gammaSet 1 n 0) :
-    eisSummand k v z = ((n : ℂ) ^ k)⁻¹ * eisSummand k (divIntMap n v) z := by
-  simp_rw [eisSummand]
-  nth_rw 1 2 [gammaSet_eq_gcd_mul_divIntMap v.2]
-  simp [← mul_inv, ← mul_zpow, mul_add, mul_assoc]
+private def gammaSetDivGcdSigmaEquivPNat :
+    {v : Fin 2 → ℤ // v ≠ 0} ≃ Σ n : ℕ+, gammaSet 1 (n : ℕ) 0 where
+  toFun v := ⟨⟨finGcdMap v.val, Nat.pos_of_ne_zero
+    (fun h ↦ v.property (finGcdMap_eq_zero_iff.mp h))⟩, ⟨v.val,
+      (gammaSet_one_mem_iff _ v.val).mpr rfl⟩⟩
+  invFun a := ⟨a.2.val, gammaSet_ne_zero a.2 a.1.pos.ne'⟩
+  left_inv := fun _ ↦ rfl
+  right_inv := by
+    rintro ⟨⟨n, hn⟩, ⟨v, hv⟩⟩
+    have he : finGcdMap v = n := hv.2
+    subst n
+    rfl
+
+lemma eisSummand_of_gammaSet_eq_divIntMap (k : ℤ) (z : ℍ) {n : ℕ} [NeZero n]
+    (v : gammaSet 1 n 0) :
+    eisSummand k v z (fun _ ↦ gammaSet_ne_zero v (NeZero.ne n)) =
+      Checked.zpow (n : ℂ) (-k) (fun _ ↦ (Nat.cast_ne_zero.mpr (NeZero.ne n)).isUnit) *
+        eisSummand k (gammaSetDivGcdEquiv n v) z
+          (fun _ ↦ gammaSet_ne_zero (gammaSetDivGcdEquiv n v) one_ne_zero) := by
+  have hv := gammaSet_eq_gcd_mul_divIntMap v.property
+  have hcoord (i : Fin 2) : (v.val i : ℂ) = (n : ℂ) * ((divIntMap n v.val i : ℤ) : ℂ) := by
+    exact_mod_cast (show v.val i = (n : ℤ) * divIntMap n v.val i by
+      simpa only [Pi.smul_apply, nsmul_eq_mul] using congrFun hv i)
+  have hlinear : (v.val 0 : ℂ) * z + v.val 1 =
+      (n : ℂ) * ((divIntMap n v.val 0 : ℂ) * z + (divIntMap n v.val 1 : ℂ)) := by
+    rw [hcoord 0, hcoord 1, mul_add, mul_assoc]
+  simp only [eisSummand, gammaSetDivGcdEquiv_eq, hlinear, mul_zpow₀]
 
 lemma tsum_eisSummand_eq_riemannZeta_mul_eisensteinSeries {k : ℕ} (hk : 3 ≤ k) (z : ℍ) :
-    ∑' v : Fin 2 → ℤ, eisSummand k v z = riemannZeta k * eisensteinSeries (N := 1) 0 k z := by
-  have hk1 : 1 < k := by grind
-  have hk2 : 3 ≤ (k : ℤ) := mod_cast hk
-  simp_rw [← gammaSetDivGcdSigmaEquiv.symm.tsum_eq, gammaSetDivGcdSigmaEquiv_symm_eq]
-  rw [eisensteinSeries, Summable.tsum_sigma ?hsumm, zeta_nat_eq_tsum_of_gt_one hk1,
-    tsum_mul_tsum_of_summable_norm (by simp [hk1]) ((summable_norm_eisSummand hk2 z).subtype _)]
-  case hsumm =>
-    exact gammaSetDivGcdSigmaEquiv.symm.summable_iff.mpr (summable_norm_eisSummand hk2 z).of_norm
-      |>.congr <| by simp
-  simp_rw [one_div]
-  rw [Summable.tsum_prod' ?h₁ fun b ↦ ?h₂]
-  case h₁ =>
-    exact summable_mul_of_summable_norm (f := fun (n : ℕ) ↦ ((n : ℂ) ^ k)⁻¹)
-      (g := fun (v : gammaSet 1 1 0) ↦ eisSummand k v z) (by simp [hk1])
-      ((summable_norm_eisSummand hk2 z).subtype _)
-  case h₂ =>
-    simpa using ((summable_norm_eisSummand hk2 z).subtype _).of_norm.mul_left (a := ((b : ℂ) ^ k)⁻¹)
-  refine tsum_congr fun b ↦ ?_
-  rcases eq_or_ne b 0 with rfl | hb
-  · simp [show ((0 : ℂ) ^ k)⁻¹ = 0 by aesop, eisSummand_of_gammaSet_eq_divIntMap]
-  · have : NeZero b := ⟨hb⟩
-    simpa [eisSummand_of_gammaSet_eq_divIntMap k z, tsum_mul_left, hb]
-      using (gammaSetDivGcdEquiv b).tsum_eq (eisSummand k · z)
+    (∑' v : {v : Fin 2 → ℤ // v ≠ 0}, eisSummand k v z (fun _ ↦ v.property)) =
+      riemannZeta k (hs := by exact_mod_cast (by omega : k ≠ 1)) *
+        eisensteinSeries (N := 1) 0 k z := by
+  let s (v : {v : Fin 2 → ℤ // v ≠ 0}) := eisSummand (k : ℤ) v z (fun _ ↦ v.property)
+  let e := gammaSetDivGcdSigmaEquivPNat
+  have hs : Summable s := summable_norm_iff.mp (summable_norm_eisSummand (by exact_mod_cast hk) z)
+  have he : Summable (s ∘ e.symm) := hs.comp_injective e.symm.injective
+  change (∑' v, s v) = _
+  rw [← e.symm.tsum_eq s]
+  change (∑' p, (s ∘ e.symm) p) = _
+  rw [he.tsum_sigma, zeta_nat_eq_tsum_of_gt_one (by omega : 1 < k),
+    ← tsum_mul_right]
+  refine tsum_congr fun n ↦ ?_
+  have : NeZero (n : ℕ) := ⟨n.pos.ne'⟩
+  have hn : (((n : ℕ) : ℂ)) ≠ 0 := Nat.cast_ne_zero.mpr n.pos.ne'
+  let a := Checked.inv (((n : ℕ) : ℂ) ^ k) (hn.isUnit.pow k)
+  let f (v : gammaSet 1 1 0) :=
+    eisSummand k v z (fun _ ↦ gammaSet_ne_zero v one_ne_zero)
+  calc
+    _ = ∑' v : gammaSet 1 (n : ℕ) 0, a * f (gammaSetDivGcdEquiv (n : ℕ) v) := by
+      refine tsum_congr fun v ↦ ?_
+      change eisSummand (k : ℤ) v z (fun _ ↦ gammaSet_ne_zero v n.pos.ne') = _
+      rw [eisSummand_of_gammaSet_eq_divIntMap (k : ℤ) z v]
+      simp only [zpow_neg₀ hn, zpow_natCast₀, a, f]
+    _ = _ := by
+      rw [tsum_mul_left, (gammaSetDivGcdEquiv (n : ℕ)).tsum_eq f]
+      simp only [a, f, eisensteinSeries, one_div₀]
 
-/-- The q-Expansion of normalised Eisenstein series of level one with `riemannZeta` term. -/
+lemma riemannZeta_nat_isUnit {k : ℕ} (hk : 1 < k) :
+    IsUnit (riemannZeta k (hs := by exact_mod_cast hk.ne')) := by
+  have h : 1 < (k : ℂ).re := by
+    have hk' : (1 : ℝ) < k := by exact_mod_cast hk
+    simpa using hk'
+  exact (riemannZeta_ne_zero_of_one_lt_re h).isUnit
+
+lemma bernoulli_nat_isUnit {k : ℕ} (hk : k ≠ 0) (he : Even k) :
+    IsUnit (bernoulli k : ℂ) := by
+  obtain ⟨j, rfl⟩ := even_iff_exists_two_mul.mp he
+  have h := riemannZeta_two_mul_nat (k := j) (by omega)
+  apply Ne.isUnit
+  intro hB
+  simp only [hB, mul_zero, zero_div] at h
+  exact (riemannZeta_nat_isUnit (k := 2 * j) (by omega)).ne_zero
+    (by simpa only [Nat.cast_mul, Nat.cast_two] using h)
+
+/-- The q-expansion of the normalized Eisenstein series of level one in terms of the Riemann
+zeta value. -/
 lemma EisensteinSeries.q_expansion_riemannZeta {k : ℕ} (hk : 3 ≤ k) (hk2 : Even k) (z : ℍ) :
-    E hk z = 1 + (riemannZeta k)⁻¹ * (-2 * π * I) ^ k / (k - 1)! *
-    ∑' n : ℕ+, σ (k - 1) n * cexp (2 * π * I * z) ^ (n : ℤ) := by
+    E hk z = 1 + Checked.div ((-2 * π * I) ^ k)
+      (riemannZeta k (hs := by exact_mod_cast (by omega : k ≠ 1)) * ((k - 1)! : ℂ))
+      ((riemannZeta_nat_isUnit (by omega : 1 < k)).mul
+        (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero (k - 1))).isUnit) *
+      ∑' n : ℕ+, σ (k - 1) n * cexp (2 * π * I * z) ^ (n : ℕ) := by
   rw [show E hk z = (1 / 2 : ℂ) • eisensteinSeriesSIF (N := 1) 0 k z from rfl,
-    eisensteinSeriesSIF_apply 0 k z, eisensteinSeries]
-  have HE1 := tsum_eisSummand_eq_tsum_sigma_mul_cexp_pow hk hk2 z
-  have HE2 := tsum_eisSummand_eq_riemannZeta_mul_eisensteinSeries hk z
-  have z2 : riemannZeta k ≠ 0 := riemannZeta_ne_zero_of_one_lt_re <| by norm_cast; grind
-  simp [eisSummand, eisensteinSeries, ← inv_mul_eq_iff_eq_mul₀ z2] at HE1 HE2 ⊢
-  grind
+    smul_eq_mul, eisensteinSeriesSIF_apply]
+  have h := (tsum_eisSummand_eq_riemannZeta_mul_eisensteinSeries hk z).symm.trans
+    (tsum_eisSummand_eq_tsum_sigma_mul_cexp_pow hk hk2 z)
+  have hz := (riemannZeta_nat_isUnit (by omega : 1 < k)).ne_zero
+  have hfn : ((k - 1)! : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero (k - 1))
+  field_simp at h ⊢
+  linear_combination h
 
-private lemma eisensteinSeries_coeff_identity {k : ℕ} (hk2 : Even k) (hkn0 : k ≠ 0) :
-    (riemannZeta k)⁻¹ * (-2 * π * I) ^ k / (k - 1)! = -(2 * k / bernoulli k) := by
-  have h2 : k = 2 * (k / 2 - 1 + 1) := by grind
-  set m := k / 2 - 1
-  rw [h2, Nat.cast_mul 2 (m + 1), Nat.cast_two, riemannZeta_two_mul_nat (show m + 1 ≠ 0 by grind),
-    show (2 * (m + 1))! = 2 * (m + 1) * (2 * m + 1)! by grind [Nat.factorial_succ],
-    show 2 * (m + 1) - 1 = 2 * m + 1 by grind, mul_pow, mul_pow, pow_mul I, I_sq]
-  norm_cast
-  simp [field]
-  grind
+private lemma eisensteinSeries_coeff_identity {k : ℕ} (hk : 1 < k) (hk2 : Even k) :
+    Checked.div ((-2 * π * I) ^ k)
+      (riemannZeta k (hs := by exact_mod_cast hk.ne') * ((k - 1)! : ℂ))
+      ((riemannZeta_nat_isUnit hk).mul
+        (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero (k - 1))).isUnit) =
+        -Checked.div (2 * k : ℂ) (bernoulli k : ℂ) (bernoulli_nat_isUnit (by omega) hk2) := by
+  obtain ⟨m, rfl⟩ := even_iff_exists_two_mul.mp hk2
+  have hmpos : 0 < m := by omega
+  have hsucc : 2 * m - 1 + 1 = 2 * m := Nat.sub_add_cancel (by omega)
+  have hfact : ((2 * m)! : ℂ) = ((2 * m : ℕ) : ℂ) * ((2 * m - 1)! : ℂ) := by
+    exact_mod_cast (show (2 * m)! = (2 * m) * (2 * m - 1)! from
+      (congrArg Nat.factorial hsucc.symm).trans (by rw [Nat.factorial_succ, hsucc]))
+  let Z := riemannZeta ((2 * m : ℕ) : ℂ) (hs := by exact_mod_cast hk.ne')
+  have hZ : Z * ((2 * m)! : ℂ) =
+      (-1) ^ (m + 1) * (2 : ℂ) ^ (2 * m - 1) * π ^ (2 * m) * bernoulli (2 * m) := by
+    apply (eq_div_iff (hb := (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero (2 * m))).isUnit)).mp
+    simpa only [Z, Nat.cast_mul, Nat.cast_two] using riemannZeta_two_mul_nat hmpos.ne'
+  have hpow : (-2 * π * I : ℂ) ^ (2 * m) =
+      (-1) ^ m * (2 : ℂ) ^ (2 * m) * π ^ (2 * m) := by
+    have he : Even (2 * m) := ⟨m, by omega⟩
+    rw [mul_pow, mul_pow, he.neg_pow, pow_mul I, I_sq]
+    ring
+  have htwo : (2 : ℂ) ^ (2 * m) = 2 * 2 ^ (2 * m - 1) := by
+    calc
+      (2 : ℂ) ^ (2 * m) = 2 ^ (2 * m - 1 + 1) := by rw [hsucc]
+      _ = _ := by rw [pow_succ']
+  rw [← neg_div₀, div_eq_div_iff]
+  change (-2 * π * I : ℂ) ^ (2 * m) * bernoulli (2 * m) =
+    -(2 * ((2 * m : ℕ) : ℂ)) * (Z * ((2 * m - 1)! : ℂ))
+  calc
+    _ = -(2 : ℂ) * (Z * ((2 * m)! : ℂ)) := by
+      rw [hpow, htwo, hZ, pow_succ]
+      ring
+    _ = _ := by rw [hfact]; ring
 
-/-- The q-Expansion of normalised Eisenstein series of level one with `bernoulli` term. -/
+/-- The q-expansion of the normalized Eisenstein series of level one in terms of the Bernoulli
+number. -/
 lemma EisensteinSeries.q_expansion_bernoulli {k : ℕ} (hk : 3 ≤ k) (hk2 : Even k) (z : ℍ) :
-    E hk z = 1 - (2 * k / bernoulli k) *
-    ∑' n : ℕ+, σ (k - 1) n * cexp (2 * π * I * z) ^ (n : ℤ) := by
-  convert! q_expansion_riemannZeta hk hk2 z using 1
-  rw [eisensteinSeries_coeff_identity hk2 (by grind), neg_mul, ← sub_eq_add_neg]
+    E hk z = 1 - Checked.div (2 * k : ℂ) (bernoulli k : ℂ) (bernoulli_nat_isUnit (by omega) hk2) *
+      ∑' n : ℕ+, σ (k - 1) n * cexp (2 * π * I * z) ^ (n : ℕ) := by
+  rw [q_expansion_riemannZeta hk hk2 z, eisensteinSeries_coeff_identity (by omega) hk2,
+    neg_mul, ← sub_eq_add_neg]
 
 section NonZero
 
 open ModularFormClass
 
-local notation "𝕢" => Periodic.qParam
 
 /-- Summability of the divisor-sum q-expansion series `∑ σ_{k-1}(n) q^n`. -/
 lemma EisensteinSeries.summable_sigma_mul_cexp_pow {k : ℕ} (hk : 1 ≤ k) (z : ℍ) :
@@ -323,10 +549,12 @@ lemma EisensteinSeries.summable_sigma_mul_cexp_pow {k : ℕ} (hk : 1 ≤ k) (z :
 `k`-th Bernoulli number. -/
 lemma EisensteinSeries.E_qExpansion_coeff {k : ℕ} (hk : 3 ≤ k) (hk2 : Even k) (m : ℕ) :
     (qExpansion 1 (E hk)).coeff m =
-    if m = 0 then 1 else -(2 * k / bernoulli k : ℂ) * (σ (k - 1) m) := by
-  set β : ℂ := -(2 * k / bernoulli k : ℂ)
+    if m = 0 then 1 else
+      -Checked.div (2 * k : ℂ) (bernoulli k : ℂ) (bernoulli_nat_isUnit (by omega) hk2) *
+        (σ (k - 1) m) := by
+  set β : ℂ := -Checked.div (2 * k : ℂ) (bernoulli k : ℂ) (bernoulli_nat_isUnit (by omega) hk2)
   set c : ℕ → ℂ := fun m ↦ if m = 0 then 1 else β * ↑(σ (k - 1) m)
-  suffices ∀ τ : ℍ, HasSum (fun m ↦ c m • 𝕢 (1 : ℝ) τ ^ m) (E hk τ) from
+  suffices ∀ τ : ℍ, HasSum (fun m ↦ c m • Function.Periodic.qParam (1 : ℝ) τ ^ m) (E hk τ) from
     (ModularFormClass.qExpansion_coeff_unique one_pos one_mem_strictPeriods_SL this m).symm
   intro τ
   have hS : Summable fun n : ℕ ↦ (σ (k - 1) (n + 1) : ℂ) * cexp (2 * π * I * τ) ^ (n + 1) :=
@@ -336,12 +564,12 @@ lemma EisensteinSeries.E_qExpansion_coeff {k : ℕ} (hk : 3 ≤ k) (hk2 : Even k
     ite_mul, one_mul, Finset.sum_singleton, pow_zero, c]
   have hval : E hk τ - 1 = β * ∑' n : ℕ, (σ (k - 1) (n + 1)) * cexp (2 * π * I * τ) ^ (n + 1) := by
     have := q_expansion_bernoulli hk hk2 τ
-    simp_rw [zpow_natCast] at this
     rw [this, ← tsum_pnat_eq_tsum_succ (f := fun n ↦ (σ (k - 1) n : ℂ) * cexp (2 * π * I * τ) ^ n)]
     ring
   rw [hval]
   convert! (hS.mul_left β).hasSum using 1
-  · grind [Periodic.qParam, ofReal_one, div_one]
+  · funext n
+    simp only [Periodic.qParam, ofReal_one, div_one₀, mul_assoc]
   · rw [tsum_mul_left]
 
 /-- The q-expansion constant coefficient of the normalised Eisenstein series `E k` is `1`. -/

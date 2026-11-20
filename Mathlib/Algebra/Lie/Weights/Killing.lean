@@ -527,7 +527,7 @@ lemma traceForm_eq_zero_of_mem_ker_of_mem_span_coroot {α : Weight K H L} (hα :
   | add _ _ _ _ hx hy => simp [hx, hy]
   | smul _ _ _ hz => simp [hz]
 
-@[simp] lemma orthogonal_span_coroot_eq_ker {α : Weight K H L} (hα : α.IsNonZero) :
+lemma orthogonal_span_coroot_eq_ker {α : Weight K H L} (hα : α.IsNonZero) :
     (traceForm K H L).orthogonal (K ∙ coroot α) = α.ker := by
   refine le_antisymm (fun x hx ↦ ?_) (fun x hx y hy ↦ ?_)
   · simp only [LinearMap.BilinForm.mem_orthogonal_iff] at hx
@@ -538,7 +538,7 @@ lemma traceForm_eq_zero_of_mem_ker_of_mem_span_coroot {α : Weight K H L} (hα :
   · have := traceForm_eq_zero_of_mem_ker_of_mem_span_coroot hα hx hy
     rwa [traceForm_comm] at this
 
-@[simp] lemma coroot_eq_iff {α β : Weight K H L} (hα : α.IsNonZero) (hβ : β.IsNonZero) :
+lemma coroot_eq_iff {α β : Weight K H L} (hα : α.IsNonZero) (hβ : β.IsNonZero) :
     coroot α = coroot β ↔ α = β := by
   refine ⟨fun hyp ↦ ?_, fun h ↦ by subst h; rfl⟩
   have : α.ker = β.ker := by
@@ -548,6 +548,18 @@ lemma traceForm_eq_zero_of_mem_ker_of_mem_span_coroot {α : Weight K H L} (hα :
   · rw [Weight.toLinear_apply, root_apply_coroot hα, hyp, Weight.toLinear_apply,
       root_apply_coroot hβ]
   · simp [root_apply_coroot hα]
+
+@[simp] lemma orthogonal_span_coroot_eq_ker_of_isUnit {α : Weight K H L}
+    {hα : IsUnit (α ((cartanEquivDual H).symm α))} :
+    (traceForm K H L).orthogonal (K ∙ coroot α hα) = α.ker :=
+  orthogonal_span_coroot_eq_ker (fun h ↦ hα.ne_zero (congrFun h.eq _))
+
+@[simp] lemma coroot_eq_iff_of_isUnit {α β : Weight K H L}
+    {hα : IsUnit (α ((cartanEquivDual H).symm α))}
+    {hβ : IsUnit (β ((cartanEquivDual H).symm β))} :
+    coroot α hα = coroot β hβ ↔ α = β :=
+  coroot_eq_iff (fun h ↦ hα.ne_zero (congrFun h.eq _))
+    (fun h ↦ hβ.ne_zero (congrFun h.eq _))
 
 lemma exists_isSl2Triple_of_weight_isNonZero {α : Weight K H L} (hα : α.IsNonZero) :
     ∃ h e f : L, IsSl2Triple h e f ∧ e ∈ rootSpace H α ∧ f ∈ rootSpace H (-α) := by

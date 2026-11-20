@@ -207,27 +207,27 @@ theorem isPathConnected_sphere (h : 1 < Module.rank ℝ E) (x : E) {r : ℝ} (hr
   is path connected, this concludes the proof. -/
   rcases hr.eq_or_lt with rfl | rpos
   · simpa using isPathConnected_singleton x
-  let f : E → E := fun y ↦ x + (r * ‖y‖⁻¹) • y
-  have A : ContinuousOn f {0}ᶜ := by
-    intro y hy
-    apply (continuousAt_const.add _).continuousWithinAt
-    apply (continuousAt_const.mul (ContinuousAt.inv₀ continuousAt_id.norm ?_)).smul continuousAt_id
-    simpa using hy
-  have B : IsPathConnected ({0}ᶜ : Set E) := isPathConnected_compl_singleton_of_one_lt_rank h 0
-  have C : IsPathConnected (f '' {0}ᶜ) := B.image' A
-  have : f '' {0}ᶜ = sphere x r := by
+  let f (y : {y : E // y ≠ 0}) : E := x + (r * ‖y.1‖⁻¹) • y.1
+  have hcont : Continuous f :=
+    continuous_const.add ((continuous_const.mul continuous_subtype_val.norm.fun_inv₀).smul
+      continuous_subtype_val)
+  let : PathConnectedSpace {y : E // y ≠ 0} :=
+    isPathConnected_iff_pathConnectedSpace.mp (isPathConnected_compl_singleton_of_one_lt_rank h 0)
+  have hrange : Set.range f = sphere x r := by
     apply Subset.antisymm
-    · rintro - ⟨y, hy, rfl⟩
-      have : ‖y‖ ≠ 0 := by simpa using hy
-      simp [f, norm_smul, abs_of_nonneg hr, mul_assoc, inv_mul_cancel₀ this]
+    · rintro - ⟨y, rfl⟩
+      have hy : 0 < ‖y.1‖ := norm_pos_iff.mpr y.2
+      simp only [mem_sphere_iff_norm, f, add_sub_cancel_left, norm_smul, Real.norm_eq_abs, abs_mul,
+        abs_of_nonneg hr, abs_of_pos (inv_pos_of_pos hy), mul_assoc, inv_mul_cancel₀, mul_one]
     · intro y hy
-      refine ⟨y - x, ?_, ?_⟩
-      · intro H
-        simp only [mem_singleton_iff, sub_eq_zero] at H
-        simp only [H, mem_sphere_iff_norm, sub_self, norm_zero] at hy
-        exact rpos.ne hy
-      · simp [f, mem_sphere_iff_norm.1 hy, mul_inv_cancel₀ rpos.ne']
-  rwa [this] at C
+      have heq : ‖y - x‖ = r := mem_sphere_iff_norm.mp hy
+      have hne : ‖y - x‖ ≠ 0 := heq.trans_ne rpos.ne'
+      refine ⟨⟨y - x, norm_ne_zero_iff.mp hne⟩, ?_⟩
+      have hinv : ‖y - x‖⁻¹ = r⁻¹ := inv_inj₀.mpr heq
+      simp only [f, hinv, mul_inv_cancel₀, one_smul]
+      abel
+  rw [← hrange]
+  exact isPathConnected_range hcont
 
 /-- In a real vector space of dimension `> 1`, any sphere of nonnegative radius is connected. -/
 theorem isConnected_sphere (h : 1 < Module.rank ℝ E) (x : E) {r : ℝ} (hr : 0 ≤ r) :

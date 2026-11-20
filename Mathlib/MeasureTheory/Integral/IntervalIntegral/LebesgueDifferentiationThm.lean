@@ -43,22 +43,35 @@ theorem LocallyIntegrable.ae_hasDerivAt_integral {f : ℝ → E} (hf : LocallyIn
   have LDT := (vitaliFamily volume 1).ae_tendsto_average hf
   have h {a b : ℝ} : ∫ (t : ℝ) in Ioc a b, f t = ∫ (t : ℝ) in Icc a b, f t :=
     integral_Icc_eq_integral_Ioc (x := a) (y := b) (X := ℝ) |>.symm
+  have hAvg {a b : ℝ} (hab : a < b) :
+      (⨍ t in Icc a b, f t) = (b - a)⁻¹ • ∫ t in Icc a b, f t := by
+    have hReal : volume.real (Icc a b) = b - a := by
+      simp [measureReal_def, Real.volume_Icc, ENNReal.toReal_ofReal (sub_nonneg.mpr hab.le)]
+    have hUnit : IsUnit (volume.real (Icc a b)) := by
+      rw [hReal]
+      exact (sub_pos.mpr hab).ne'.isUnit
+    simpa only [hReal] using setAverage_eq volume f (Icc a b) (hs := hUnit)
   filter_upwards [LDT] with x hx
   intro c
   rw [hasDerivAt_iff_tendsto_slope_left_right]
   constructor
-  · refine Filter.tendsto_congr' ?_ |>.mpr (hx.comp x.tendsto_Icc_vitaliFamily_left)
-    filter_upwards [self_mem_nhdsWithin] with y hy
-    replace hy : y ≤ x := hy.le
-    suffices -((y - x)⁻¹ • ∫ (t : ℝ) in Icc y x, f t) = (x - y)⁻¹ • ∫ (t : ℝ) in Icc y x, f t by
-      simpa [slope, average, intervalIntegral.integral_interval_sub_left, hg,
-        intervalIntegral.integral_of_ge, hy, h]
-    rw [← neg_smul, neg_inv, neg_sub]
-  · refine Filter.tendsto_congr' ?_ |>.mpr (hx.comp x.tendsto_Icc_vitaliFamily_right)
-    filter_upwards [self_mem_nhdsWithin] with y hy
-    replace hy : x ≤ y := hy.le
-    simp [slope, average, intervalIntegral.integral_interval_sub_left, hg,
-        intervalIntegral.integral_of_le, hy, h]
+  · have hv : Tendsto (Subtype.val : Iio x → ℝ) (comap Subtype.val (𝓝 x)) (𝓝[<] x) :=
+      tendsto_nhdsWithin_iff.mpr ⟨tendsto_comap, .of_forall fun y ↦ y.2⟩
+    refine Filter.tendsto_congr' ?_ |>.mpr ((hx.comp x.tendsto_Icc_vitaliFamily_left).comp hv)
+    filter_upwards with y
+    have hy : (y : ℝ) < x := y.2
+    have hInv : ((y : ℝ) - x)⁻¹ = -(x - (y : ℝ))⁻¹ := by
+      apply inv_eq_of_mul_eq_one_right₀
+      rw [← neg_sub, neg_mul_neg, mul_inv_cancel₀]
+    simp [Function.comp_apply, slope, intervalIntegral.integral_interval_sub_left, hg,
+      intervalIntegral.integral_of_ge, hy.le, h, hInv, hAvg hy]
+  · have hv : Tendsto (Subtype.val : Ioi x → ℝ) (comap Subtype.val (𝓝 x)) (𝓝[>] x) :=
+      tendsto_nhdsWithin_iff.mpr ⟨tendsto_comap, .of_forall fun y ↦ y.2⟩
+    refine Filter.tendsto_congr' ?_ |>.mpr ((hx.comp x.tendsto_Icc_vitaliFamily_right).comp hv)
+    filter_upwards with y
+    have hy : x < (y : ℝ) := y.2
+    simp [Function.comp_apply, slope, intervalIntegral.integral_interval_sub_left, hg,
+      intervalIntegral.integral_of_le, hy.le, h, hAvg hy]
 
 /-- The (local) interval version of the *Lebesgue Differentiation Theorem*: if `f : ℝ → E` is
 interval integrable on `a..b`, then for almost every `x ∈ uIcc a b`, for any `c ∈ uIcc a b`, the

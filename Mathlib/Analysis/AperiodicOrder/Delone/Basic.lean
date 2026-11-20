@@ -141,7 +141,8 @@ lemma eq_of_mem_ball (D : DeloneSet X) {r : ℝ≥0} (hr : r ≤ D.packingRadius
 centered at a point of `D` contains at most one point of `D`. -/
 lemma subset_ball_singleton (D : DeloneSet X) :
     ∃ r > 0, ∀ {x y z}, x ∈ D → y ∈ D → x ∈ ball z r → y ∈ ball z r → x = y :=
-  ⟨D.packingRadius / 2, half_pos D.packingRadius_pos, fun hx hy => D.eq_of_mem_ball le_rfl hx hy⟩
+  ⟨↑(D.packingRadius / 2 : ℝ≥0), NNReal.coe_pos.mpr (half_pos D.packingRadius_pos),
+    fun hx hy => D.eq_of_mem_ball le_rfl hx hy⟩
 
 /-- Bilipschitz maps send Delone sets to Delone sets. -/
 @[simps]
@@ -158,7 +159,7 @@ noncomputable def mapBilipschitz (f : X ≃ Y) (K₁ K₂ : ℝ≥0) (hK₁ : 0 
 set_option backward.isDefEq.respectTransparency false in
 @[simp] lemma mapBilipschitz_refl (D : DeloneSet X) (hK1 hK2 hA hL) :
     D.mapBilipschitz (.refl X) 1 1 hK1 hK2 hA hL = D := by
-  ext <;> simp only [mapBilipschitz, Equiv.refl_apply, Set.image_id', div_one, one_mul]
+  ext <;> simp only [mapBilipschitz, Equiv.refl_apply, Set.image_id', div_one₀, one_mul]
 
 set_option backward.isDefEq.respectTransparency false in
 lemma mapBilipschitz_trans {Z : Type*} [MetricSpace Z] (D : DeloneSet X)
@@ -175,7 +176,7 @@ lemma mapBilipschitz_trans {Z : Type*} [MetricSpace Z] (D : DeloneSet X)
   ext
   · simp only [mapBilipschitz_carrier, Equiv.trans_apply, Set.mem_image]
     exact exists_exists_and_eq_and
-  · simp only [mapBilipschitz_packingRadius, NNReal.coe_div, div_div]
+  · simp only [mapBilipschitz_packingRadius, NNReal.coe_div, div_div₀]
   · simp only [mapBilipschitz_coveringRadius, NNReal.coe_mul, mul_assoc]
 
 set_option backward.isDefEq.respectTransparency false in

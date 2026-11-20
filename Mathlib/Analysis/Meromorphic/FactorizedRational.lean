@@ -14,20 +14,10 @@ public import Mathlib.Analysis.SpecialFunctions.Log.Basic
 /-!
 # Factorized Rational Functions
 
-This file discusses functions `𝕜 → 𝕜` of the form `∏ᶠ u, (· - u) ^ d u`, where `d : 𝕜 → ℤ` is
-integer-valued. We show that these "factorized rational functions" are meromorphic in normal form,
-with divisor equal to `d`.
-
-Under suitable assumptions, we show that meromorphic functions are equivalent, modulo equality on
-codiscrete sets, to the product of a factorized rational function and an analytic function without
-zeros.
-
-Implementation Note: For consistency, we use `∏ᶠ u, (· - u) ^ d u` throughout. If the support of `d`
-is finite, then evaluation of functions commutes with finprod, and the helper lemma
-`Function.FactorizedRational.finprod_eval` asserts that `∏ᶠ u, (· - u) ^ d u` equals the function
-`fun x ↦ ∏ᶠ u, (x - u) ^ d u`. If `d` has infinite support, this equality is wrong in general.
-There are elementary examples of functions `d` where `∏ᶠ u, (· - u) ^ d u` is constant one, while
-`fun x ↦ ∏ᶠ u, (x - u) ^ d u` is not continuous.
+A finite integer divisor prescribes the powers of the linear factors of a rational function.
+Its positive multiplicities form the numerator, and its negative multiplicities form the
+denominator. Scalar evaluation is defined exactly where the prescribed multiplicity is
+nonnegative. The order at every point, including poles, is its prescribed multiplicity.
 -/
 
 public section
@@ -38,259 +28,284 @@ variable
   {U : Set 𝕜}
 
 open Filter Function Real Set
+open scoped Topology
 
 namespace Function.FactorizedRational
 
-/-!
-## Elementary Properties of Factorized Rational Functions
--/
+section Field
 
-/--
-Helper Lemma: Identify the support of `d` as the mulsupport of the product defining the factorized
-rational function.
--/
-lemma mulSupport (d : 𝕜 → ℤ) :
-    (fun u ↦ (· - u) ^ d u).mulSupport = d.support := by
-  ext u
-  constructor <;> intro h
-  · simp_all only [mem_mulSupport, ne_eq, mem_support]
-    by_contra hCon
-    simp_all
-  · simp_all only [mem_mulSupport, ne_eq, ne_iff]
-    use u
-    simp_all [zero_zpow_eq_one₀]
+variable {K : Type*} [Field K]
 
-set_option backward.isDefEq.respectTransparency false in
-/--
-Helper Lemma: If the support of `d` is finite, then evaluation of functions commutes with finprod,
-and the function `∏ᶠ u, (· - u) ^ d u` equals `fun x ↦ ∏ᶠ u, (x - u) ^ d u`.
--/
-lemma finprod_eq_fun {d : 𝕜 → ℤ} (h : d.HasFiniteSupport) :
-    (∏ᶠ u, (· - u) ^ d u) = fun x ↦ ∏ᶠ u, (x - u) ^ d u := by
-  ext x
-  rw [finprod_eq_prod_of_mulSupport_subset (s := h.toFinset),
-    finprod_eq_prod_of_mulSupport_subset (s := h.toFinset)]
-  · simp
-  · intro u
-    contrapose
-    simp_all
-  · simp [mulSupport d]
+/-- The product of the indicated nonnegative powers of the linear factors. -/
+def polynomialPart (s : Finset K) (n : K → ℕ) (x : K) : K :=
+  ∏ u ∈ s, (x - u) ^ n u
 
-/--
-Factorized rational functions are analytic wherever the exponent is non-negative.
--/
-theorem analyticAt {d : 𝕜 → ℤ} {x : 𝕜} (h : 0 ≤ d x) :
-    AnalyticAt 𝕜 (∏ᶠ u, (· - u) ^ d u) x := by
-  apply analyticAt_finprod
-  intro u
-  by_cases h₂ : x = u
-  · apply AnalyticAt.fun_zpow_nonneg (by fun_prop)
-    rwa [← h₂]
-  · apply AnalyticAt.fun_zpow (by fun_prop)
-    rwa [sub_ne_zero]
+/-- A product of polynomial factors is nonzero at a point exactly when that point has zero
+multiplicity. -/
+theorem polynomialPart_ne_zero_iff (s : Finset K) (n : K → ℕ) (x : K) :
+    polynomialPart s n x ≠ 0 ↔ x ∈ s → n x = 0 := by
+  rw [polynomialPart, Finset.prod_ne_zero_iff]
+  constructor
+  · intro h hx
+    by_contra hn
+    exact h x hx (by simp [hn])
+  · intro h u hu
+    by_cases he : x = u
+    · subst u
+      simp [h hu]
+    · exact pow_ne_zero _ (sub_ne_zero.mpr he)
 
-/--
-Factorized rational functions are non-zero wherever the exponent is zero.
--/
-theorem ne_zero {d : 𝕜 → ℤ} {x : 𝕜} (h : d x = 0) :
-    (∏ᶠ u, (· - u) ^ d u) x ≠ 0 := by
-  by_cases h₁ : (fun u ↦ (· - u) ^ d u).HasFiniteMulSupport
-  · rw [finprod_eq_prod _ h₁, Finset.prod_apply, Finset.prod_ne_zero_iff]
-    intro z hz
-    simp only [Pi.pow_apply, ne_eq]
-    by_cases h₂ : x = z <;> simp_all [zpow_ne_zero, sub_ne_zero]
-  · simp [finprod_of_infinite_mulSupport h₁]
+/-- The numerator of the rational function with prescribed finite divisor. -/
+noncomputable def numerator (d : K → ℤ) (hd : d.support.Finite) : K → K :=
+  polynomialPart hd.toFinset (fun u ↦ (d u).toNat)
 
-set_option backward.isDefEq.respectTransparency false in
-open scoped Classical in
-/--
-Helper Lemma for Computations: Extract one factor out of a factorized rational function.
--/
-lemma extractFactor {d : 𝕜 → ℤ} (u₀ : 𝕜) (hd : d.HasFiniteSupport) :
-    (∏ᶠ u, (· - u) ^ d u) = ((· - u₀) ^ d u₀) * (∏ᶠ u, (· - u) ^ (update d u₀ 0 u)) := by
-  by_cases h₁d : d u₀ = 0
-  · simp [← eq_update_self_iff.2 h₁d, h₁d]
-  · have : (fun u ↦ (fun x ↦ x - u) ^ d u).mulSupport ⊆ hd.toFinset := by
-      simp [mulSupport]
-    rw [finprod_eq_prod_of_mulSupport_subset _ this]
-    have : u₀ ∈ hd.toFinset := by simp_all
-    rw [← Finset.mul_prod_erase hd.toFinset _ this]
-    congr 1
-    have : (fun u ↦ (· - u) ^ (update d u₀ 0 u)).mulSupport ⊆ hd.toFinset.erase u₀ := by
-      rw [mulSupport]
-      intro x hx
-      by_cases h₁x : x = u₀ <;> simp_all
-    simp_all [finprod_eq_prod_of_mulSupport_subset _ this, Finset.prod_congr rfl]
+/-- The denominator formed from the negative multiplicities of the divisor. -/
+noncomputable def denominator (d : K → ℤ) (hd : d.support.Finite) : K → K :=
+  polynomialPart hd.toFinset (fun u ↦ (-d u).toNat)
 
-/--
-Factorized rational functions are meromorphic in normal form on `univ`.
--/
-theorem meromorphicNFOn_univ (d : 𝕜 → ℤ) :
-    MeromorphicNFOn (∏ᶠ u, (· - u) ^ d u) univ := by
+theorem denominator_ne_zero_iff {d : K → ℤ} (hd : d.support.Finite) (x : K) :
+    denominator d hd x ≠ 0 ↔ 0 ≤ d x := by
+  rw [denominator, polynomialPart_ne_zero_iff]
+  simp only [Finite.mem_toFinset, mem_support]
+  omega
+
+theorem numerator_ne_zero_iff {d : K → ℤ} (hd : d.support.Finite) (x : K) :
+    numerator d hd x ≠ 0 ↔ d x ≤ 0 := by
+  rw [numerator, polynomialPart_ne_zero_iff]
+  simp only [Finite.mem_toFinset, mem_support]
+  omega
+
+/-- Scalar evaluation exists exactly away from the prescribed negative multiplicities. -/
+noncomputable def eval (d : K → ℤ) (hd : d.support.Finite) (x : {x // 0 ≤ d x}) : K :=
+  Checked.div (numerator d hd x) (denominator d hd x)
+    ((denominator_ne_zero_iff hd (x : K)).mpr x.property).isUnit
+
+/-- A point outside the divisor support has a nonzero rational value. -/
+theorem eval_ne_zero {d : K → ℤ} (hd : d.support.Finite) (x : {x // 0 ≤ d x}) (hx : d x = 0) :
+    eval d hd x ≠ 0 :=
+  div_ne_zero ((numerator_ne_zero_iff hd (x : K)).mpr hx.le)
+
+/-- The unit remaining after removing the factor at the center has this scalar value. -/
+noncomputable def leadingValue (d : K → ℤ) (hd : d.support.Finite) (x : K) : K := by
   classical
-  by_cases hd : d.support.Finite
-  · intro z hz
-    rw [extractFactor z hd]
-    right
-    use d z, (∏ᶠ u, (· - u) ^ update d z 0 u)
-    simp [analyticAt, ne_zero]
-  · rw [← mulSupport d] at hd
-    rw [finprod_of_infinite_mulSupport hd]
-    exact AnalyticOnNhd.meromorphicNFOn analyticOnNhd_const
+  let s := hd.toFinset.erase x
+  have h : polynomialPart s (fun u ↦ (-d u).toNat) x ≠ 0 :=
+    (polynomialPart_ne_zero_iff _ _ _).mpr fun hx ↦ (Finset.notMem_erase _ _ hx).elim
+  exact Checked.div (polynomialPart s (fun u ↦ (d u).toNat) x)
+    (polynomialPart s (fun u ↦ (-d u).toNat) x) h.isUnit
 
-/--
-Factorized rational functions are meromorphic in normal form on arbitrary subsets of `𝕜`.
--/
-theorem meromorphicNFOn (d : 𝕜 → ℤ) (U : Set 𝕜) :
-    MeromorphicNFOn (∏ᶠ u, (· - u) ^ d u) U := fun _ _ ↦ meromorphicNFOn_univ d (trivial)
-
-/-!
-## Orders and Divisors of Factorized Rational Functions
--/
-
-/--
-The order of the factorized rational function `(∏ᶠ u, fun z ↦ (z - u) ^ d u)` at `z` equals `d z`.
--/
-theorem meromorphicOrderAt_eq {z : 𝕜} (d : 𝕜 → ℤ) (h₁d : d.HasFiniteSupport) :
-    meromorphicOrderAt (∏ᶠ u, (· - u) ^ d u) z = d z := by
+theorem leadingValue_ne_zero (d : K → ℤ) (hd : d.support.Finite) (x : K) :
+    leadingValue d hd x ≠ 0 := by
   classical
-  rw [meromorphicOrderAt_eq_int_iff ((meromorphicNFOn_univ d).meromorphicOn _ (mem_univ _))]
-  use ∏ᶠ u, (· - u) ^ update d z 0 u
-  simp only [update_self, le_refl, analyticAt, ne_eq, ne_zero, not_false_eq_true, smul_eq_mul,
-    true_and]
-  filter_upwards
-  simp [extractFactor z h₁d]
+  apply div_ne_zero
+  exact (polynomialPart_ne_zero_iff _ _ _).mpr fun hx ↦ (Finset.notMem_erase _ _ hx).elim
 
-/--
-Factorized rational functions are nowhere locally constant zero.
--/
-theorem meromorphicOrderAt_ne_top {z : 𝕜} (d : 𝕜 → ℤ) :
-    meromorphicOrderAt (∏ᶠ u, (· - u) ^ d u) z ≠ ⊤ := by
+private theorem polynomialPart_extract [DecidableEq K] (s : Finset K) (n : K → ℕ) (x : K)
+    (h : x ∉ s → n x = 0) :
+    ∀ z : K, polynomialPart s n z = (z - x) ^ n x * polynomialPart (s.erase x) n z := by
   classical
-  by_cases hd : d.support.Finite
-  · simp [meromorphicOrderAt_eq d hd]
-  · rw [← mulSupport] at hd
-    simp [finprod_of_infinite_mulSupport hd]
+  intro z
+  by_cases hx : x ∈ s
+  · exact (s.mul_prod_erase (fun u ↦ (z - u) ^ n u) hx).symm
+  · simp [h hx, Finset.erase_eq_of_notMem hx]
 
-/--
-If `D` is a divisor, then the divisor of the factorized rational function equals `D`.
--/
-theorem divisor {U : Set 𝕜} {D : locallyFinsuppWithin U ℤ} (hD : D.support.Finite)
-    {hf : MeromorphicOn (∏ᶠ u, (· - u) ^ D u) U}
-    {h : ∀ z (hz : z ∈ U), meromorphicOrderAt (∏ᶠ u, (· - u) ^ D u) z (hf z hz) ≠ ⊤} :
-    MeromorphicOn.divisor (∏ᶠ u, (· - u) ^ D u) U h = D := by
+private theorem div_centered_powers (c a b v : K) (hc : c ≠ 0) (hv : b * v = 1) (d : ℤ)
+    (h : IsUnit (c ^ (-d).toNat * b)) :
+    Checked.div (c ^ d.toNat * a) (c ^ (-d).toNat * b) h =
+    Checked.zpow c d (fun _ ↦ hc.isUnit) * (a * v) := by
+  apply div_eq_iff.mpr
+  have hpow : Checked.zpow c d (fun _ ↦ hc.isUnit) * c ^ (-d).toNat = c ^ d.toNat := by
+    let u := hc.isUnit.unit
+    rw [hc.isUnit.zpow_eq_val_unit_zpow]
+    have he : (d + ((-d).toNat : ℤ)) = (d.toNat : ℤ) := by omega
+    have hp := congrArg (fun z : ℤ ↦ (↑(u ^ z) : K)) he
+    simpa only [zpow_add, Units.val_mul, zpow_natCast, Units.val_pow_eq_pow_val, u,
+      IsUnit.unit_spec] using hp
+  calc
+    _ = (Checked.zpow c d (fun _ ↦ hc.isUnit) * c ^ (-d).toNat) * a * (b * v) := by
+      rw [hpow, hv, mul_one]
+    _ = _ := by ac_rfl
+
+end Field
+
+private theorem analyticAt_polynomialPart (s : Finset 𝕜) (n : 𝕜 → ℕ) (x : 𝕜) :
+    AnalyticAt 𝕜 (polynomialPart s n) x :=
+  s.analyticAt_fun_prod fun u _ ↦ (analyticAt_id.sub analyticAt_const).pow (n u)
+
+/-- The order of a polynomial product at a point is its multiplicity in that product. -/
+private theorem analyticOrderAt_polynomialPart (s : Finset 𝕜) (n : 𝕜 → ℕ) (x : 𝕜)
+    (hx : x ∉ s → n x = 0) :
+    analyticOrderAt (polynomialPart s n) x (analyticAt_polynomialPart s n x) = n x := by
+  classical
+  by_cases h : x ∈ s
+  · have he : polynomialPart s n =
+        ((· - x) ^ n x) * polynomialPart (s.erase x) n := by
+      funext t
+      exact (s.mul_prod_erase (fun u ↦ (t - u) ^ n u) h).symm
+    have hg := analyticAt_polynomialPart (s.erase x) n x
+    have hn : polynomialPart (s.erase x) n x ≠ 0 :=
+      (polynomialPart_ne_zero_iff _ _ _).mpr fun hx ↦ (Finset.notMem_erase x s hx).elim
+    have hc : AnalyticAt 𝕜 (fun z ↦ z - x) x := analyticAt_id.sub analyticAt_const
+    rw [analyticOrderAt_congr _ (.of_eq he), analyticOrderAt_mul (hc.pow (n x)) hg,
+      analyticOrderAt_centeredMonomial,
+      hg.analyticOrderAt_eq_zero.mpr hn, add_zero]
+  · rw [hx h]
+    exact (analyticAt_polynomialPart s n x).analyticOrderAt_eq_zero.mpr
+      ((polynomialPart_ne_zero_iff _ _ _).mpr fun hs ↦ (h hs).elim)
+
+private theorem analyticOrderAt_numerator {d : 𝕜 → ℤ} (hd : d.support.Finite) (x : 𝕜) :
+    analyticOrderAt (numerator d hd) x (analyticAt_polynomialPart _ _ _) = (d x).toNat := by
+  apply analyticOrderAt_polynomialPart
+  intro hx
+  have he : d x = 0 := by simpa only [Finite.mem_toFinset, mem_support, not_not] using hx
+  simp [he]
+
+private theorem analyticOrderAt_denominator {d : 𝕜 → ℤ} (hd : d.support.Finite) (x : 𝕜) :
+    analyticOrderAt (denominator d hd) x (analyticAt_polynomialPart _ _ _) = (-d x).toNat := by
+  apply analyticOrderAt_polynomialPart
+  intro hx
+  have he : d x = 0 := by simpa only [Finite.mem_toFinset, mem_support, not_not] using hx
+  simp [he]
+
+/-- A factorized rational function is normalized at every point, including each of its poles. -/
+theorem meromorphicNFOn {d : 𝕜 → ℤ} (hd : d.support.Finite) (U : Set 𝕜) :
+    MeromorphicNFOn (eval d hd) U Subtype.val := by
+  intro x _
+  have ha : AnalyticAt 𝕜 (numerator d hd) x := analyticAt_polynomialPart _ _ _
+  have hb : AnalyticAt 𝕜 (denominator d hd) x := analyticAt_polynomialPart _ _ _
+  have hn : ¬ denominator d hd =ᶠ[𝓝 x] 0 := by
+    intro h
+    have ho := (analyticOrderAt_eq_top hb).mpr h
+    rw [analyticOrderAt_denominator hd x] at ho
+    exact ENat.natCast_ne_top _ ho
+  have hcop (hb : denominator d hd x = 0) : numerator d hd x ≠ 0 := by
+    apply (numerator_ne_zero_iff hd x).mpr
+    exact (lt_of_not_ge (fun h ↦ (denominator_ne_zero_iff hd x).mpr h hb)).le
+  apply (ha.meromorphicNFAt_div hb hn hcop).congr_subtype
+    (Set.ext (denominator_ne_zero_iff hd))
+  exact fun _ _ ↦ rfl
+
+/-- The valuation of the scalar representative, including at an excluded pole. -/
+theorem meromorphicOrderAt_eq {d : 𝕜 → ℤ} (hd : d.support.Finite) (x : 𝕜) :
+    meromorphicOrderAt (eval d hd) x ((meromorphicNFOn hd univ trivial).meromorphicAt) = d x := by
+  have ha : AnalyticAt 𝕜 (numerator d hd) x := analyticAt_polynomialPart _ _ _
+  have hb : AnalyticAt 𝕜 (denominator d hd) x := analyticAt_polynomialPart _ _ _
+  have hmer := (meromorphicNFOn hd univ (z := x) trivial).meromorphicAt
+  have hc : range (fun y : {t : 𝕜 | IsUnit (denominator d hd t)} ↦ _root_.id y.val) ∈ 𝓝[≠] x := by
+    filter_upwards [hmer.1] with t ⟨y, hyt⟩
+    exact ⟨⟨y, ((denominator_ne_zero_iff hd y).mpr y.property).isUnit⟩, hyt⟩
+  have h := hmer.order_eq_of_eventuallyEq (ha.meromorphicAt.div hb.meromorphicAt hc)
+    (.of_forall fun t ⟨a, ha⟩ ⟨b, hb⟩ hat hbt ↦ by
+      obtain rfl : a = b := hat.trans hbt.symm
+      rfl)
+  rw [meromorphicOrderAt_div ha.meromorphicAt hb.meromorphicAt hc,
+    ha.meromorphicOrderAt_eq, hb.meromorphicOrderAt_eq,
+    analyticOrderAt_numerator, analyticOrderAt_denominator, ENat.map_natCast, ENat.map_natCast] at h
+  exact h.trans (congrArg ((↑) : ℤ → WithTop ℤ)
+    (show ((d x).toNat : ℤ) - (-d x).toNat = d x by omega))
+
+/-- A factorized rational function realizes its prescribed finite divisor. -/
+theorem divisor {U : Set 𝕜} {d : locallyFinsuppWithin U ℤ} (hd : d.support.Finite)
+    {h : ∀ z (hz : z ∈ U), meromorphicOrderAt (eval d hd) z
+      ((meromorphicNFOn hd U hz).meromorphicAt) ≠ ⊤} :
+    MeromorphicOn.divisor (eval d hd) U h = d := by
   ext z
   by_cases hz : z ∈ U
-  · have := MeromorphicOn.coe_divisor_apply hf hz (h := h)
-    rw [meromorphicOrderAt_eq D hD] at this
-    exact_mod_cast this
+  · exact_mod_cast (MeromorphicOn.coe_divisor_apply ((meromorphicNFOn hd U).meromorphicOn)
+      hz (h := h)).trans (meromorphicOrderAt_eq hd z)
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
 
-open scoped Classical in
-private lemma mulSupport_update {d : 𝕜 → ℤ} {x : 𝕜}
-    (h : d.support.Finite) :
-    (fun u ↦ (x - u) ^ Function.update d x 0 u).mulSupport ⊆ h.toFinset := by
-  intro u
-  contrapose
-  simp only [mem_mulSupport, ne_eq, Decidable.not_not]
-  by_cases h₁ : u = x
-  · rw [h₁]
-    simp
-  · simp_all
+/-- The leading coefficient is the quotient obtained by removing the factor at the center. -/
+theorem meromorphicTrailingCoeffAt_factorizedRational {d : 𝕜 → ℤ} (hd : d.support.Finite) (x : 𝕜)
+    {h : meromorphicOrderAt (eval d hd) x ((meromorphicNFOn hd univ trivial).meromorphicAt) ≠ ⊤} :
+    meromorphicTrailingCoeffAt (eval d hd) x h = leadingValue d hd x := by
+  classical
+  let s := hd.toFinset.erase x
+  let a := polynomialPart s (fun u ↦ (d u).toNat)
+  let b := polynomialPart s (fun u ↦ (-d u).toNat)
+  have ha : AnalyticAt 𝕜 a x := analyticAt_polynomialPart _ _ _
+  have hb : AnalyticAt 𝕜 b x := analyticAt_polynomialPart _ _ _
+  have hbx : b x ≠ 0 :=
+    (polynomialPart_ne_zero_iff _ _ _).mpr fun hx ↦ (Finset.notMem_erase _ _ hx).elim
+  obtain ⟨v, hv, hbv⟩ := hb.exists_mul_eq_one hbx.isUnit
+  have hx' (hx : x ∉ hd.toFinset) : d x = 0 := by
+    simpa only [Finite.mem_toFinset, mem_support, not_not] using hx
+  have hA := polynomialPart_extract hd.toFinset (fun u ↦ (d u).toNat) x
+    (fun h ↦ by simp [hx' h])
+  have hB := polynomialPart_extract hd.toFinset (fun u ↦ (-d u).toNat) x
+    (fun h ↦ by simp [hx' h])
+  have hm := (meromorphicNFOn hd univ (z := x) trivial).meromorphicAt
+  have ho : (meromorphicOrderAt (eval d hd) x hm).untop h = d x :=
+    (WithTop.untop_eq_iff _).mpr (meromorphicOrderAt_eq hd x)
+  have hfactor : meromorphicTrailingCoeffAt (eval d hd) x h = (a * v) x := by
+    apply (ha.mul hv).meromorphicTrailingCoeffAt_of_eq_nhdsNE hm h
+    filter_upwards [tendsto_comap.eventually (hbv.filter_mono nhdsWithin_le_nhds)] with y hy
+    intro hyx
+    rw [ho]
+    have hd' : IsUnit (((y : 𝕜) - x) ^ (-d x).toNat * b y) := by
+      rw [← hB]
+      exact ((denominator_ne_zero_iff hd y).mpr y.property).isUnit
+    have hp := div_centered_powers ((y : 𝕜) - x) (a y) (b y) (v y)
+      (sub_ne_zero.mpr hyx) hy (d x) hd'
+    change Checked.div (numerator d hd y) (denominator d hd y) _ = _
+    apply div_eq_iff.mpr
+    change numerator d hd y = _ * denominator d hd y
+    rw [show numerator d hd y = _ from hA y, show denominator d hd y = _ from hB y]
+    exact div_eq_iff.mp hp
+  rw [hfactor]
+  change a x * v x = Checked.div (a x) (b x) _
+  apply eq_div_iff.mpr
+  rw [mul_assoc, mul_comm (v x), hbv.self_of_nhds, mul_one]
 
-/-- Each factor `(· - u) ^ n` of a factorized rational function has finite order at every
-point. -/
-private lemma meromorphicOrderAt_sub_zpow_ne_top {x u : 𝕜} (n : ℤ) :
-    meromorphicOrderAt ((· - u) ^ n) x ≠ ⊤ := by
-  rw [meromorphicOrderAt_zpow (x := x) (f := (· - u)) (by fun_prop)]
-  exact WithTop.mul_ne_top WithTop.coe_ne_top meromorphicOrderAt_id_sub_const_ne_top
-
-set_option backward.isDefEq.respectTransparency false in
-open scoped Classical in
-/--
-Compute the trailing coefficient of the factorized rational function associated with `d : 𝕜 → ℤ`.
--/
-/-
-Low-priority TODO: Using that non-trivially normed fields contain infinitely many elements that are
-no roots of unity, it might be possible to drop assumption `h` here and in some of the theorems
-below.
--/
-theorem meromorphicTrailingCoeffAt_factorizedRational {d : 𝕜 → ℤ} {x : 𝕜} (h : d.HasFiniteSupport)
-    {hf : MeromorphicAt (∏ᶠ u, (· - u) ^ d u) x}
-    {h' : meromorphicOrderAt (∏ᶠ u, (· - u) ^ d u) x hf ≠ ⊤} :
-    meromorphicTrailingCoeffAt (∏ᶠ u, (· - u) ^ d u) x h' = ∏ᶠ u, (x - u) ^ update d x 0 u := by
-  have : (fun u ↦ (· - u) ^ d u).mulSupport ⊆ h.toFinset := by
-    simp [Function.FactorizedRational.mulSupport]
-  have hfin : meromorphicOrderAt (∏ u ∈ h.toFinset, (· - u) ^ d u) x
-      (MeromorphicAt.prod fun _ _ ↦ by fun_prop) ≠ ⊤ :=
-    meromorphicOrderAt_prod_ne_top _ fun u _ ↦ meromorphicOrderAt_sub_zpow_ne_top (d u)
-  rw [meromorphicTrailingCoeffAt_congr_nhdsNE
-      (.of_eq (finprod_eq_prod_of_mulSupport_subset _ this)) (h₂ := hfin),
-    meromorphicTrailingCoeffAt_prod (fun _ ↦ by fun_prop)
-      (fun u ↦ meromorphicOrderAt_sub_zpow_ne_top (d u)),
-    finprod_eq_prod_of_mulSupport_subset _ (mulSupport_update h)]
-  apply Finset.prod_congr rfl
-  intro y hy
-  rw [MeromorphicAt.meromorphicTrailingCoeffAt_zpow (f := (· - y)) (x := x) (by fun_prop)
-    meromorphicOrderAt_id_sub_const_ne_top, meromorphicTrailingCoeffAt_id_sub_const]
-  by_cases hxy : x = y
-  · simp_all
-  · simp [hxy, Function.update_of_ne (Ne.symm hxy)]
-
-set_option backward.isDefEq.respectTransparency false in
-/--
-Variant of `meromorphicTrailingCoeffAt_factorizedRational`: Compute the trailing coefficient of the
-factorized rational function associated with `d : 𝕜 → ℤ` at points outside the support of `d`.
--/
+/-- Off the support the trailing coefficient is the ordinary scalar value. -/
 theorem meromorphicTrailingCoeffAt_factorizedRational_off_support {d : 𝕜 → ℤ} {x : 𝕜}
-    (h₁ : d.HasFiniteSupport) (h₂ : x ∉ d.support) {hf : MeromorphicAt (∏ᶠ u, (· - u) ^ d u) x}
-    {h' : meromorphicOrderAt (∏ᶠ u, (· - u) ^ d u) x hf ≠ ⊤} :
-    meromorphicTrailingCoeffAt (∏ᶠ u, (· - u) ^ d u) x h' = ∏ᶠ u, (x - u) ^ d u := by
+    (hd : d.support.Finite) (hx : d x = 0)
+    {h : meromorphicOrderAt (eval d hd) x ((meromorphicNFOn hd univ trivial).meromorphicAt) ≠ ⊤} :
+    meromorphicTrailingCoeffAt (eval d hd) x h = eval d hd ⟨x, hx.ge⟩ := by
   classical
-  rw [meromorphicTrailingCoeffAt_factorizedRational h₁,
-    finprod_eq_prod_of_mulSupport_subset _ (mulSupport_update h₁)]
-  have : (fun u ↦ (x - u) ^ d u).mulSupport ⊆ h₁.toFinset := by
-    intro u
-    contrapose
-    simp_all
-  rw [finprod_eq_prod_of_mulSupport_subset _ this, Finset.prod_congr rfl]
-  intro y hy
-  congr
-  apply Function.update_of_ne
-  by_contra hCon
-  simp_all
+  rw [meromorphicTrailingCoeffAt_factorizedRational]
+  have hmem : x ∉ hd.toFinset := by simp [hx]
+  simp only [leadingValue, Finset.erase_eq_of_notMem hmem, eval, numerator, denominator]
 
-set_option backward.isDefEq.respectTransparency false in
-/--
-Variant of `meromorphicTrailingCoeffAt_factorizedRational`: Compute log of the norm of the trailing
-coefficient.  The convention that `log 0 = 0` gives a closed formula easier than the one in
-`meromorphicTrailingCoeffAt_factorizedRational`.
--/
-theorem log_norm_meromorphicTrailingCoeffAt {d : 𝕜 → ℤ} {x : 𝕜} (h : d.HasFiniteSupport)
-    {hf : MeromorphicAt (∏ᶠ u, (· - u) ^ d u) x}
-    {h' : meromorphicOrderAt (∏ᶠ u, (· - u) ^ d u) x hf ≠ ⊤} :
-    log ‖meromorphicTrailingCoeffAt (∏ᶠ u, (· - u) ^ d u) x h'‖ = ∑ᶠ u, (d u) * log ‖x - u‖ := by
+private theorem log_norm_polynomialPart (s : Finset 𝕜) (n : 𝕜 → ℕ) {x : 𝕜} (hx : x ∉ s) :
+    log ‖polynomialPart s n x‖ = ∑ u ∈ s, n u * log ‖x - u‖ := by
+  rw [polynomialPart, norm_prod, log_prod]
+  · simp only [norm_pow, log_pow]
+  · intro u hu
+    exact norm_ne_zero_iff.mpr (pow_ne_zero _ (sub_ne_zero.mpr (fun he ↦ hx (he ▸ hu))))
+
+/-- Removing the central factor gives the logarithm of the norm of the leading value. -/
+theorem log_norm_leadingValue {d : 𝕜 → ℤ} (hd : d.support.Finite) (x : 𝕜) :
+    log ‖leadingValue d hd x‖ = ∑ᶠ u, (d u : ℝ) * log ‖x - u‖ := by
   classical
-  rw [meromorphicTrailingCoeffAt_factorizedRational h,
-    finprod_eq_prod_of_mulSupport_subset _ (mulSupport_update h)]
-  have : ∀ y ∈ h.toFinset, ‖(x - y) ^ update d x 0 y‖ ≠ 0 := by
-    intro y _
-    by_cases h : x = y
-    · rw [h]
-      simp_all
-    · simp_all [zpow_ne_zero, sub_ne_zero]
-  rw [norm_prod, log_prod this]
-  have : (fun u ↦ (d u) * log ‖x - u‖).support ⊆ h.toFinset := by
-    intro u
-    contrapose
-    simp_all
-  rw [finsum_eq_sum_of_support_subset _ this]
+  let s := hd.toFinset.erase x
+  have hx : x ∉ s := Finset.notMem_erase _ _
+  have ha : polynomialPart s (fun u ↦ (d u).toNat) x ≠ 0 :=
+    (polynomialPart_ne_zero_iff _ _ _).mpr fun h ↦ (hx h).elim
+  have hs : (fun u ↦ (d u : ℝ) * log ‖x - u‖).support ⊆ s := by
+    intro u hu
+    refine Finset.mem_erase.mpr ⟨?_, ?_⟩
+    · intro he
+      subst u
+      exact hu (by simp)
+    · apply hd.mem_toFinset.mpr
+      intro h
+      exact hu (by simp [h])
+  rw [leadingValue, norm_div, log_div (norm_ne_zero_iff.mpr ha),
+    log_norm_polynomialPart s _ hx, log_norm_polynomialPart s _ hx,
+    ← Finset.sum_sub_distrib, finsum_eq_sum_of_support_subset _ hs]
   apply Finset.sum_congr rfl
-  intro y hy
-  rw [norm_zpow, Real.log_zpow]
-  by_cases h : x = y
-  · simp [h]
-  · rw [Function.update_of_ne (by tauto)]
+  intro u _
+  rw [← sub_mul]
+  congr 1
+  exact_mod_cast (show ((d u).toNat : ℤ) - (-d u).toNat = d u by omega)
+
+/-- The logarithmic norm of the trailing coefficient is the finite sum of the prescribed
+multiplicities times the logarithmic distances. -/
+theorem log_norm_meromorphicTrailingCoeffAt {d : 𝕜 → ℤ} (hd : d.support.Finite) (x : 𝕜)
+    {h : meromorphicOrderAt (eval d hd) x ((meromorphicNFOn hd univ trivial).meromorphicAt) ≠ ⊤} :
+    log ‖meromorphicTrailingCoeffAt (eval d hd) x h‖ = ∑ᶠ u, (d u : ℝ) * log ‖x - u‖ := by
+  rw [meromorphicTrailingCoeffAt_factorizedRational, log_norm_leadingValue]
 
 end Function.FactorizedRational
 
@@ -306,9 +321,38 @@ function without zeros.
 We provide analogous results for functions of the form `log ‖meromorphic‖`.
 -/
 
-/-
-TODO: Identify some of the terms that appear in the decomposition.
--/
+private theorem exists_analytic_extension_on {U S : Set 𝕜}
+    (hS : ∀ x, S ∈ 𝓝[≠] x) (hUS : Uᶜ ⊆ S) (q : S → E)
+    (H : ∀ x ∈ U, ∃ a : 𝕜 → E, AnalyticAt 𝕜 a x ∧ a x ≠ 0 ∧
+      ∀ᶠ y in 𝓝[≠] x, ∀ hy : y ∈ S, a y = q ⟨y, hy⟩) :
+    ∃ G : 𝕜 → E, AnalyticOnNhd 𝕜 G U ∧ (∀ x ∈ U, G x ≠ 0) ∧
+      ∀ᶠ x in codiscreteWithin U, ∀ hx : x ∈ S, G x = q ⟨x, hx⟩ := by
+  classical
+  choose a ha using H
+  let G (x : 𝕜) : E := if hx : x ∈ U then a x hx x else q ⟨x, hUS hx⟩
+  have hloc (x : 𝕜) (hx : x ∈ U) : G =ᶠ[𝓝 x] a x hx := by
+    have he := eventually_eventually_nhds.mpr (eventually_nhdsWithin_iff.mp (ha x hx).2.2)
+    filter_upwards [he, (ha x hx).1.eventually_continuousAt] with y hy hcont
+    by_cases hyx : y = x
+    · subst y
+      simp [G, hx]
+    by_cases hyU : y ∈ U
+    · have hne : ∀ᶠ z in 𝓝 y, z ≠ x := isOpen_ne.mem_nhds hyx
+      have heq : a y hyU =ᶠ[𝓝[≠] y] a x hx := by
+        filter_upwards [(ha y hyU).2.2, hS y, hy.filter_mono nhdsWithin_le_nhds,
+          hne.filter_mono nhdsWithin_le_nhds] with z hz hzS hz' hzx
+        exact (hz hzS).trans (hz' hzx hzS).symm
+      have heval := tendsto_nhds_unique_of_eventuallyEq
+        (ha y hyU).1.continuousAt.continuousWithinAt hcont.continuousWithinAt heq
+      simpa [G, hyU] using heval
+    · exact (dite_eq_right hyU).trans (hy.self_of_nhds hyx (hUS hyU)).symm
+  refine ⟨G, fun x hx ↦ (ha x hx).1.congr (hloc x hx).symm, ?_, ?_⟩
+  · intro x hx
+    simpa [G, hx] using (ha x hx).2.1
+  · apply eventually_codiscreteWithin_iff_forall_eventually_nhdsNE.mpr
+    intro x hx
+    filter_upwards [(hloc x hx).filter_mono nhdsWithin_le_nhds, (ha x hx).2.2] with y hy he
+    exact fun _ hyS ↦ hy.trans (he hyS)
 
 /--
 If `f` is meromorphic on an open set `U`, if `f` is nowhere locally constant zero, and if the
@@ -320,133 +364,151 @@ theorem MeromorphicOn.extract_zeros_poles {f : 𝕜 → E} (h₁f : MeromorphicO
     (h₂f : ∀ z (hz : z ∈ U), meromorphicOrderAt f z (h₁f z hz) ≠ ⊤)
     (h₃f : (divisor f U h₂f).support.Finite) :
     ∃ g : 𝕜 → E, AnalyticOnNhd 𝕜 g U ∧ (∀ u : U, g u ≠ 0) ∧
-      f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ divisor f U h₂f u) • g := by
-  -- Take `g` as the inverse of the Laurent polynomial defined below, converted to a meromorphic
-  -- function in normal form. Then check all the properties.
-  let φ := ∏ᶠ u, (· - u) ^ (divisor f U h₂f u)
-  have hφ : MeromorphicOn φ U := (meromorphicNFOn (divisor f U h₂f) U).meromorphicOn
-  have hφ' (z) (hz : z ∈ U) : meromorphicOrderAt φ z (hφ z hz) ≠ ⊤ :=
-    meromorphicOrderAt_ne_top (divisor f U h₂f)
-  have hφ'' (z) (hz : z ∈ U) : meromorphicOrderAt φ⁻¹ z (hφ.inv z hz) ≠ ⊤ := by
-    rw [meromorphicOrderAt_inv (hφ z hz)]
-    simpa using hφ' z hz
-  have hφf (z) (hz : z ∈ U) : meromorphicOrderAt (φ⁻¹ • f) z ((hφ.inv.smul h₁f) z hz) ≠ ⊤ := by
-    rw [meromorphicOrderAt_smul (hφ.inv z hz) (h₁f z hz)]
-    exact WithTop.add_ne_top.2 ⟨hφ'' z hz, h₂f z hz⟩
-  let g := toMeromorphicNFOn (φ⁻¹ • f) U (hφ.inv.smul h₁f)
-  have hg : MeromorphicNFOn g U := by apply meromorphicNFOn_toMeromorphicNFOn
-  have hg' (z) (hz : z ∈ U) : meromorphicOrderAt g z (hg.meromorphicOn z hz) ≠ ⊤ :=
-    (meromorphicOrderAt_toMeromorphicNFOn (hφ.inv.smul h₁f) hz).trans_ne (hφf z hz)
-  refine ⟨g, ?_, ?_, ?_⟩
-  · -- AnalyticOnNhd 𝕜 g U
-    rw [← hg.divisor_nonneg_iff_analyticOnNhd (h := hg'),
-      divisor_of_toMeromorphicNFOn (hφ.inv.smul h₁f) hφf, divisor_smul hφ.inv h₁f hφ'' h₂f,
-      divisor_inv hφ', Function.FactorizedRational.divisor h₃f, neg_add_cancel]
-  · -- ∀ (u : ↑U), g ↑u ≠ 0
-    intro ⟨u, hu⟩
-    rw [← (hg hu).meromorphicOrderAt_eq_zero_iff,
-      meromorphicOrderAt_toMeromorphicNFOn (hφ.inv.smul h₁f) hu,
-      meromorphicOrderAt_smul (hφ u hu).inv (h₁f u hu), meromorphicOrderAt_inv (hφ u hu),
-      meromorphicOrderAt_eq _ h₃f, ← coe_divisor_apply h₁f hu (h := h₂f),
-      ← WithTop.LinearOrderedAddCommGroup.coe_neg, ← WithTop.coe_add]
-    simp
-  · -- f =ᶠ[codiscreteWithin U] (∏ᶠ (u : 𝕜), fun z ↦ (z - u) ^ (divisor f U) u) * g
-    filter_upwards [(divisor f U h₂f).eq_zero_codiscreteWithin,
-      (hφ.inv.smul h₁f).meromorphicNFAt_mem_codiscreteWithin,
-      self_mem_codiscreteWithin U] with a h₂a h₃a h₄a
-    unfold g
-    simp only [Pi.smul_apply', toMeromorphicNFOn_eq_toMeromorphicNFAt (hφ.inv.smul h₁f) h₄a,
-      toMeromorphicNFAt_eq_self.2 h₃a, Pi.inv_apply]
-    rw [← smul_assoc, smul_eq_mul, mul_inv_cancel₀ _, one_smul]
-    rwa [← ((meromorphicNFOn_univ (divisor f U h₂f)) trivial).meromorphicOrderAt_eq_zero_iff,
-      meromorphicOrderAt_eq, h₂a, Pi.zero_apply, WithTop.coe_zero]
+      ∀ᶠ z in codiscreteWithin U, ∃ hz : divisor f U h₂f z = 0,
+        f z = Function.FactorizedRational.eval (divisor f U h₂f) h₃f ⟨z, hz.ge⟩ • g z := by
+  let d := divisor f U h₂f
+  let S := {z : 𝕜 | d z = 0}
+  let R := Function.FactorizedRational.eval d h₃f
+  have hS (x : 𝕜) : S ∈ 𝓝[≠] x := by
+    filter_upwards [(nhdsNE_le_cofinite x) h₃f.compl_mem_cofinite] with y hy
+    exact not_not.mp hy
+  have hUS : Uᶜ ⊆ S := fun z hz ↦ d.apply_eq_zero_of_notMem hz
+  let u (z : S) := ((eval_ne_zero h₃f ⟨z.val, z.property.ge⟩ z.property).isUnit).unit
+  let q (z : S) := (u z)⁻¹ • f z
+  have H (x : 𝕜) (hx : x ∈ U) : ∃ a : 𝕜 → E, AnalyticAt 𝕜 a x ∧ a x ≠ 0 ∧
+      ∀ᶠ y in 𝓝[≠] x, ∀ hy : y ∈ S, a y = q ⟨y, hy⟩ := by
+    let hR := (Function.FactorizedRational.meromorphicNFOn h₃f univ (z := x) trivial).meromorphicAt
+    have hor : meromorphicOrderAt R x hR = (d x : ℤ) := meromorphicOrderAt_eq h₃f x
+    have hrfin : meromorphicOrderAt R x hR ≠ ⊤ := hor.trans_ne WithTop.coe_ne_top
+    obtain ⟨B, hB, hBx, hRB⟩ := hR.exists_analytic_factor hrfin
+    obtain ⟨A, hA, hAx, hfA⟩ := (h₁f x hx).exists_analytic_factor (h₂f x hx)
+    obtain ⟨v, hv, hvB⟩ := hB.exists_mul_eq_one hBx.isUnit
+    have hvx : v x ≠ 0 := right_ne_zero_of_mul_eq_one hvB.self_of_nhds
+    refine ⟨v • A, hv.smul hA, smul_ne_zero hvx hAx, ?_⟩
+    have ho : (meromorphicOrderAt R x hR).untop hrfin =
+        (meromorphicOrderAt f x (h₁f x hx)).untop (h₂f x hx) := by
+      apply WithTop.coe_injective
+      rw [WithTop.coe_untop, WithTop.coe_untop, hor]
+      exact coe_divisor_apply h₁f hx
+    filter_upwards [eventually_comap.mp hRB, eventually_comap.mp hfA,
+      hvB.filter_mono nhdsWithin_le_nhds, self_mem_nhdsWithin] with y hR' hf' hv' hyx
+    intro hy
+    let z : S := ⟨y, hy⟩
+    let w : {y : 𝕜 | 0 ≤ d y} := ⟨y, hy.ge⟩
+    have hR'' := hR' w rfl hyx
+    have hf'' := hf' y rfl hyx
+    change v y • A y = (u z)⁻¹ • f y
+    apply MulAction.injective (u z)
+    change u z • (v y • A y) = u z • ((u z)⁻¹ • f y)
+    rw [smul_inv_smul]
+    change (↑(u z) : 𝕜) • (v y • A y) = f y
+    have hvu : (u z : 𝕜) = R w := IsUnit.unit_spec _
+    change R w = Checked.zpow (y - x) ((meromorphicOrderAt R x hR).untop hrfin)
+      (fun _ ↦ (sub_ne_zero.mpr hyx).isUnit) * B y at hR''
+    change f y = Checked.zpow (y - x) ((meromorphicOrderAt f x (h₁f x hx)).untop (h₂f x hx))
+      (fun _ ↦ (sub_ne_zero.mpr hyx).isUnit) • A y at hf''
+    rw [hvu, hR'', ho, hf'', ← mul_smul, mul_assoc, hv', mul_one]
+  obtain ⟨G, hG, hGx, hq⟩ := exists_analytic_extension_on hS hUS q H
+  refine ⟨G, hG, fun z ↦ hGx z z.property, ?_⟩
+  filter_upwards [hq, d.eq_zero_codiscreteWithin] with y hy hdy
+  have h : d y = 0 := hdy
+  refine ⟨h, ?_⟩
+  rw [hy h]
+  exact (smul_inv_smul (u ⟨y, h⟩) (f y)).symm
 
 /--
 In the setting of `MeromorphicOn.extract_zeros_poles`, the function `log ‖f‖` is equivalent, modulo
 equality on codiscrete subsets, to `∑ᶠ u, (divisor f U u * log ‖· - u‖) + log ‖g ·‖`.
 -/
 theorem MeromorphicOn.extract_zeros_poles_log {f g : 𝕜 → E} {D : Function.locallyFinsuppWithin U ℤ}
-    (hg : ∀ u : U, g u ≠ 0) (h : f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ D u) • g) :
+    {hD : D.support.Finite} (hg : ∀ u : U, g u ≠ 0)
+    (h : ∀ᶠ z in codiscreteWithin U, ∃ hz : D z = 0,
+      f z = Function.FactorizedRational.eval D hD ⟨z, hz.ge⟩ • g z) :
     (log ‖f ·‖) =ᶠ[codiscreteWithin U] ∑ᶠ u, (D u * log ‖· - u‖) + (log ‖g ·‖) := by
-  -- Identify support of the sum in the goal
-  have t₁ : (fun u ↦ (D u * log ‖· - u‖)).support = D.support := by
-    ext u
-    rw [← not_iff_not]
-    simp only [ne_eq, not_not, Function.mem_support]
-    constructor <;> intro hx
-    · obtain ⟨y, hy⟩ := NormedField.exists_one_lt_norm 𝕜
-      have := congrFun hx (y + u)
-      simp only [add_sub_cancel_right, Pi.zero_apply, mul_eq_zero, Int.cast_eq_zero, log_eq_zero,
-        norm_eq_zero] at this
-      rcases this with h | h | h | h
-      · assumption
-      · simp only [h, norm_zero] at hy
-        linarith
-      · simp only [h, lt_self_iff_false] at hy
-      · simp only [h, lt_neg_self_iff] at hy
-        linarith
-    · simp_all [Pi.zero_def]
-  -- Trivial case: the support of D is infinite
-  by_cases h₃f : D.support.Finite
-  case neg =>
-    rw [finsum_of_infinite_support (by simpa [t₁] using h₃f)]
-    rw [finprod_of_infinite_mulSupport (by simpa [FactorizedRational.mulSupport] using h₃f)] at h
-    filter_upwards [h] with x hx
-    simp [hx]
-  -- General case
-  filter_upwards [h, D.eq_zero_codiscreteWithin, self_mem_codiscreteWithin U] with z hz h₂z h₃z
-  rw [Pi.zero_apply] at h₂z
-  rw [hz, finprod_eq_prod_of_mulSupport_subset (s := h₃f.toFinset) _
-      (by simp_all [FactorizedRational.mulSupport]),
-    finsum_eq_sum_of_support_subset (s := h₃f.toFinset) _ (by simp_all)]
-  have : ∀ x ∈ h₃f.toFinset, ‖z - x‖ ^ D x ≠ 0 := by
-    intro x hx
-    rw [Finite.mem_toFinset, Function.mem_support] at hx
-    rw [ne_eq, zpow_eq_zero_iff hx, norm_eq_zero, sub_eq_zero, eq_comm]
-    apply ne_of_apply_ne D
-    rwa [h₂z]
-  simp only [Pi.smul_apply', Finset.prod_apply, Pi.pow_apply, norm_smul, norm_prod, norm_zpow]
-  rw [log_mul (Finset.prod_ne_zero_iff.2 this) (by simp [hg ⟨z, h₃z⟩]), log_prod this]
-  simp [log_zpow]
+  classical
+  have hs : (fun u ↦ (fun z : 𝕜 ↦ (D u : ℝ) * log ‖z - u‖)).support ⊆ hD.toFinset := by
+    intro u hu
+    apply hD.mem_toFinset.mpr
+    intro hd
+    exact hu (by ext; simp [hd])
+  rw [finsum_eq_sum_of_support_subset _ hs]
+  filter_upwards [h, self_mem_codiscreteWithin U] with z ⟨hz, he⟩ hzU
+  have hm := (Function.FactorizedRational.meromorphicNFOn hD univ (z := z) trivial).meromorphicAt
+  have hfin : meromorphicOrderAt _ z hm ≠ ⊤ :=
+    (meromorphicOrderAt_eq hD z).trans_ne WithTop.coe_ne_top
+  have hcoef := meromorphicTrailingCoeffAt_factorizedRational_off_support hD hz (h := hfin)
+  have hlog := log_norm_meromorphicTrailingCoeffAt hD z (h := hfin)
+  rw [hcoef, finsum_eq_sum_of_support_subset (s := hD.toFinset) _ (by
+    intro u hu
+    apply hD.mem_toFinset.mpr
+    intro hd
+    exact hu (by simp [hd]))] at hlog
+  rw [he, norm_smul, log_mul (norm_ne_zero_iff.mpr (eval_ne_zero hD _ hz))
+    (norm_ne_zero_iff.mpr (hg ⟨z, hzU⟩)), hlog]
+  simp
 
-open scoped Classical in
-/--
-In the setting of `MeromorphicOn.extract_zeros_poles`, compute the trailing
-coefficient of `f` in terms of `divisor f U` and `g x`.
--/
-theorem MeromorphicOn.meromorphicTrailingCoeffAt_extract_zeros_poles
-    {x : 𝕜} {f g : 𝕜 → E} {D : 𝕜 → ℤ} (hD : D.HasFiniteSupport) (h₁x : x ∈ U) (h₂x : AccPt x (𝓟 U))
-    (hf : MeromorphicAt f x) (h₁g : AnalyticAt 𝕜 g x) (h₂g : g x ≠ 0)
-    (h : f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ D u) • g)
-    {h' : meromorphicOrderAt f x hf ≠ ⊤} :
-    meromorphicTrailingCoeffAt f x h' = (∏ᶠ u, (x - u) ^ Function.update D x 0 u) • g x := by
-  have t₀ : MeromorphicAt (∏ᶠ u, (· - u) ^ D u) x :=
-    (FactorizedRational.meromorphicNFOn D U).meromorphicOn x h₁x
-  have t₁ := FactorizedRational.meromorphicOrderAt_ne_top D (z := x)
-  have t₂ := h₁g.meromorphicOrderAt_ne_top_of_ne_zero h₂g
-  have t₃ : meromorphicOrderAt ((∏ᶠ u, (· - u) ^ D u) • g) x (t₀.smul h₁g.meromorphicAt) ≠ ⊤ := by
-    rw [meromorphicOrderAt_smul t₀ h₁g.meromorphicAt]
-    exact WithTop.add_ne_top.2 ⟨t₁, t₂⟩
-  rw [meromorphicTrailingCoeffAt_congr_nhdsNE (h₂ := t₃)
-      (hf.eventuallyEq_nhdsNE_of_eventuallyEq_codiscreteWithin (t₀.smul h₁g.meromorphicAt) h₁x h₂x
-        h),
-    t₀.meromorphicTrailingCoeffAt_smul h₁g.meromorphicAt t₁ t₂,
-    h₁g.meromorphicTrailingCoeffAt_of_ne_zero h₂g]
-  simp [meromorphicTrailingCoeffAt_factorizedRational hD]
+/-- If a meromorphic function agrees codiscretely with a factorized rational function
+times an analytic unit, its leading coefficient is the product of their leading values. -/
+theorem MeromorphicOn.meromorphicTrailingCoeffAt_extract_zeros_poles {x : 𝕜} {f g : 𝕜 → E}
+    {d : 𝕜 → ℤ} (hd : d.support.Finite) (hx : x ∈ U) (hacc : AccPt x (𝓟 U))
+    (hf : MeromorphicAt f x) (hg : AnalyticAt 𝕜 g x) (hgx : g x ≠ 0)
+    (he : ∀ᶠ z in codiscreteWithin U, ∃ hz : d z = 0,
+      f z = Function.FactorizedRational.eval d hd ⟨z, hz.ge⟩ • g z)
+    {h : meromorphicOrderAt f x hf ≠ ⊤} :
+    meromorphicTrailingCoeffAt f x h = leadingValue d hd x • g x := by
+  let R := Function.FactorizedRational.eval d hd
+  have ha : AnalyticAt 𝕜 (numerator d hd) x := analyticAt_polynomialPart _ _ _
+  have hb : AnalyticAt 𝕜 (denominator d hd) x := analyticAt_polynomialPart _ _ _
+  have hclear : denominator d hd • f =ᶠ[𝓝[≠] x] numerator d hd • g := by
+    apply (hb.meromorphicAt.smul hf).eventuallyEq_nhdsNE_of_eventuallyEq_codiscreteWithin
+      (ha.meromorphicAt.smul hg.meromorphicAt) hx hacc
+    filter_upwards [he] with y ⟨hy, hfy⟩
+    have hn := (denominator_ne_zero_iff hd y).mpr hy.ge
+    change denominator d hd y • f y = numerator d hd y • g y
+    rw [hfy, ← mul_smul]
+    rw [mul_comm (denominator d hd y), show Function.FactorizedRational.eval d hd ⟨y, hy.ge⟩ *
+      denominator d hd y = numerator d hd y from div_mul_cancel₀ _]
+  have hR := (Function.FactorizedRational.meromorphicNFOn hd univ (z := x) trivial).meromorphicAt
+  have hfin : meromorphicOrderAt R x hR ≠ ⊤ :=
+    (meromorphicOrderAt_eq hd x).trans_ne WithTop.coe_ne_top
+  obtain ⟨B, hB, hBx, hRB⟩ := hR.exists_analytic_factor hfin
+  have hBval : meromorphicTrailingCoeffAt R x hfin = B x :=
+    hB.meromorphicTrailingCoeffAt_of_eq_nhdsNE hR hfin hRB
+  have ho : (meromorphicOrderAt R x hR).untop hfin = d x :=
+    (WithTop.untop_eq_iff _).mpr (meromorphicOrderAt_eq hd x)
+  have ht : ∀ᶠ y in 𝓝[≠] x, ∀ hne : y ≠ x, f y =
+      Checked.zpow (y - x) (d x) (fun _ ↦ (sub_ne_zero.mpr hne).isUnit) • (B y • g y) := by
+    filter_upwards [hclear, eventually_comap.mp hRB, (nhdsNE_le_cofinite x) hd.compl_mem_cofinite]
+      with y hy hR' hyS
+    intro hne
+    have hz : d y = 0 := not_not.mp hyS
+    have hn := (denominator_ne_zero_iff hd y).mpr hz.ge
+    have hval := hR' ⟨y, hz.ge⟩ rfl hne
+    rw [ho] at hval
+    have hval' : R ⟨y, hz.ge⟩ = Checked.zpow (y - x) (d x)
+        (fun _ ↦ (sub_ne_zero.mpr hne).isUnit) * B y := hval
+    rw [← mul_smul, ← hval']
+    apply (smul_right_inj hn).mp
+    rw [← mul_smul, mul_comm (denominator d hd y),
+      show R ⟨y, hz.ge⟩ * denominator d hd y = numerator d hd y from div_mul_cancel₀ _]
+    exact hy
+  have hcoef : meromorphicTrailingCoeffAt f x h = B x • g x := by
+    apply (hB.smul hg).meromorphicTrailingCoeffAt_of_ne_zero_of_eq_nhdsNE
+      (n := d x) (smul_ne_zero hBx hgx)
+    filter_upwards [tendsto_comap.eventually (eventually_nhdsWithin_iff.mp ht)] with z hz
+    exact hz z.property z.property
+  rw [hcoef, ← hBval]
+  exact congrArg (· • g x) (meromorphicTrailingCoeffAt_factorizedRational hd x)
 
-/--
-In the setting of `MeromorphicOn.extract_zeros_poles`, compute the log of the
-norm of the trailing coefficient of `f` in terms of `divisor f U` and `g x`.
--/
+/-- The logarithm of the leading norm splits into the contributions of the finite divisor
+and the analytic unit at the center. -/
 theorem MeromorphicOn.log_norm_meromorphicTrailingCoeffAt_extract_zeros_poles
-    {x : 𝕜} {f g : 𝕜 → E} {D : 𝕜 → ℤ} (hD : D.HasFiniteSupport) (h₁x : x ∈ U) (h₂x : AccPt x (𝓟 U))
-    (hf : MeromorphicAt f x) (h₁g : AnalyticAt 𝕜 g x) (h₂g : g x ≠ 0)
-    (h : f =ᶠ[codiscreteWithin U] (∏ᶠ u, (· - u) ^ D u) • g)
-    {h' : meromorphicOrderAt f x hf ≠ ⊤} :
-    log ‖meromorphicTrailingCoeffAt f x h'‖ = ∑ᶠ u, (D u) * log ‖x - u‖ + log ‖g x‖ := by
-  rw [MeromorphicOn.meromorphicTrailingCoeffAt_extract_zeros_poles hD h₁x h₂x hf h₁g h₂g h,
-    ← meromorphicTrailingCoeffAt_factorizedRational hD
-      (h' := FactorizedRational.meromorphicOrderAt_ne_top D),
-    norm_smul, log_mul, log_norm_meromorphicTrailingCoeffAt hD]
-  · exact norm_ne_zero_iff.2 (MeromorphicAt.meromorphicTrailingCoeffAt_ne_zero _ _)
-  · simp_all
+    {x : 𝕜} {f g : 𝕜 → E} {d : 𝕜 → ℤ} (hd : d.support.Finite) (hx : x ∈ U) (hacc : AccPt x (𝓟 U))
+    (hf : MeromorphicAt f x) (hg : AnalyticAt 𝕜 g x) (hgx : g x ≠ 0)
+    (he : ∀ᶠ z in codiscreteWithin U, ∃ hz : d z = 0,
+      f z = Function.FactorizedRational.eval d hd ⟨z, hz.ge⟩ • g z)
+    {h : meromorphicOrderAt f x hf ≠ ⊤} :
+    log ‖meromorphicTrailingCoeffAt f x h‖ = ∑ᶠ u, (d u : ℝ) * log ‖x - u‖ + log ‖g x‖ := by
+  rw [MeromorphicOn.meromorphicTrailingCoeffAt_extract_zeros_poles hd hx hacc hf hg hgx he,
+    norm_smul, log_mul (norm_ne_zero_iff.mpr (leadingValue_ne_zero d hd x))
+    (norm_ne_zero_iff.mpr hgx), log_norm_leadingValue]

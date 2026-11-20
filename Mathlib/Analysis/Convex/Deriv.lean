@@ -238,10 +238,10 @@ lemma convexOn_of_hasDerivWithinAt2_nonneg {D : Set ℝ} (hD : Convex ℝ D) {f 
   · rw [differentiableOn_congr this]
     exact fun x hx ↦ (hf'' _ hx).differentiableWithinAt
   · rintro x hx
-    convert hf''₀ _ hx
-    dsimp
-    rw [deriv_eqOn isOpen_interior (fun y hy ↦ ?_) hx]
-    exact (hf'' _ hy).congr this <| by rw [this hy]
+    have hEq : (interior D).EqOn (deriv (deriv f)) f'' :=
+      deriv_eqOn isOpen_interior fun y hy ↦ (hf'' _ hy).congr this (this hy)
+    change 0 ≤ deriv (deriv f) x
+    exact (hf''₀ x hx).trans ((hEq hx).symm.le)
 
 /-- If a function `f` is continuous on a convex set `D ⊆ ℝ`, is twice differentiable on its
 interior, and `f''` is nonpositive on the interior, then `f` is concave on `D`. -/
@@ -254,10 +254,12 @@ lemma concaveOn_of_hasDerivWithinAt2_nonpos {D : Set ℝ} (hD : Convex ℝ D) {f
   · rw [differentiableOn_congr this]
     exact fun x hx ↦ (hf'' _ hx).differentiableWithinAt
   · rintro x hx
-    convert hf''₀ _ hx
-    dsimp
-    rw [deriv_eqOn isOpen_interior (fun y hy ↦ ?_) hx]
-    exact (hf'' _ hy).congr this <| by rw [this hy]
+    have hEq : (interior D).EqOn (deriv (deriv f)) f'' :=
+      deriv_eqOn isOpen_interior fun y hy ↦ (hf'' _ hy).congr this (this hy)
+    change deriv (deriv f) x ≤ 0
+    calc
+      deriv (deriv f) x = f'' x := hEq hx
+      _ ≤ 0 := hf''₀ x hx
 
 /-- If a function `f` is continuous on a convex set `D ⊆ ℝ` and `f''` is strictly positive on the
 interior, then `f` is strictly convex on `D`.
@@ -945,7 +947,10 @@ lemma antitoneOn_derivWithin (hfc : ConcaveOn ℝ S f) (hfd : DifferentiableOn �
 antitone (monotone decreasing) on `S`. -/
 theorem antitoneOn_deriv (hfc : ConcaveOn ℝ S f) (hfd : ∀ x ∈ S, DifferentiableAt ℝ f x) :
     AntitoneOn (deriv f) S := by
-  simpa using (hfc.neg.monotoneOn_deriv (fun x hx ↦ (hfd x hx).neg)).neg
+  intro x hx y hy hxy
+  have h := (hfc.neg.monotoneOn_deriv (fun z hz ↦ (hfd z hz).neg)).neg hx hy hxy
+  simpa only [((hfd x hx).hasDerivAt.neg).deriv, ((hfd y hy).hasDerivAt.neg).deriv,
+    neg_neg] using h
 
 end ConcaveOn
 
@@ -1041,7 +1046,10 @@ lemma strictAntiOn_derivWithin (hfc : StrictConcaveOn ℝ S f) (hfd : Differenti
 
 theorem strictAntiOn_deriv (hfc : StrictConcaveOn ℝ S f) (hfd : ∀ x ∈ S, DifferentiableAt ℝ f x) :
     StrictAntiOn (deriv f) S := by
-  simpa using (hfc.neg.strictMonoOn_deriv (fun x hx ↦ (hfd x hx).neg)).neg
+  intro x hx y hy hxy
+  have h := (hfc.neg.strictMonoOn_deriv (fun z hz ↦ (hfd z hz).neg)).neg hx hy hxy
+  simpa only [((hfd x hx).hasDerivAt.neg).deriv, ((hfd y hy).hasDerivAt.neg).deriv,
+    neg_neg] using h
 
 end StrictConcaveOn
 

@@ -14,7 +14,7 @@ public import Mathlib.Data.Nat.Factorial.DoubleFactorial
 # Gaussian integral
 
 We prove various versions of the formula for the Gaussian integral:
-* `integral_gaussian`: for real `b` we have `∫ x:ℝ, exp (-b * x^2) = √(π / b)`.
+* `integral_gaussian`: for nonzero real `b` we have `∫ x:ℝ, exp (-b * x^2) = √(π / b)`.
 * `integral_gaussian_complex`: for complex `b` with `0 < re b` we have
   `∫ x:ℝ, exp (-b * x^2) = (π / b) ^ (1 / 2)`.
 * `integral_gaussian_Ioi` and `integral_gaussian_complex_Ioi`: variants for integrals over `Ioi 0`.
@@ -82,9 +82,10 @@ theorem integrableOn_rpow_mul_exp_neg_mul_rpow {p s b : ℝ} (hs : -1 < s) (hp :
     https://github.com/leanprover/lean4/pull/13762
     This will be removed once app elaboration itself does beta reduction. -/
     dsimp only
+    have hx' := mem_Ioi.mp hx
     rw [← mul_assoc, mul_rpow, mul_rpow, ← rpow_mul (z := p), neg_mul, neg_mul, inv_mul_cancel₀,
-      rpow_neg_one, mul_inv_cancel_left₀]
-    all_goals linarith [mem_Ioi.mp hx]
+      rpow_neg_one b (hx := hb.ne'.isUnit), mul_inv_cancel_left₀]
+    all_goals positivity
   refine Integrable.const_mul ?_ _
   rw [← IntegrableOn]
   exact integrableOn_rpow_mul_exp_neg_rpow hs hp
@@ -157,8 +158,10 @@ theorem integrable_mul_cexp_neg_mul_sq {b : ℂ} (hb : 0 < b.re) :
   rw [norm_mul, norm_mul, norm_cexp_neg_mul_sq b, norm_real, norm_of_nonneg (exp_pos _).le]
 
 theorem integral_mul_cexp_neg_mul_sq {b : ℂ} (hb : 0 < b.re) :
-    ∫ r : ℝ in Ioi 0, (r : ℂ) * cexp (-b * (r : ℂ) ^ 2) = (2 * b)⁻¹ := by
-  have hb' : b ≠ 0 := by contrapose! hb; rw [hb, zero_re]
+    ∫ r : ℝ in Ioi 0, (r : ℂ) * cexp (-b * (r : ℂ) ^ 2) =
+      Checked.inv (2 * b)
+        ((two_ne_zero : (2 : ℂ) ≠ 0).isUnit.mul (ne_zero_of_re_pos hb).isUnit) := by
+  have hb' := ne_zero_of_re_pos hb
   have A : ∀ x : ℂ, HasDerivAt (fun x => -(2 * b)⁻¹ * cexp (-b * x ^ 2))
     (x * cexp (-b * x ^ 2)) x := by
     intro x
@@ -178,7 +181,9 @@ theorem integral_mul_cexp_neg_mul_sq {b : ℂ} (hb : 0 < b.re) :
 
 /-- The *square* of the Gaussian integral `∫ x:ℝ, exp (-b * x^2)` is equal to `π / b`. -/
 theorem integral_gaussian_sq_complex {b : ℂ} (hb : 0 < b.re) :
-    (∫ x : ℝ, cexp (-b * (x : ℂ) ^ 2)) ^ 2 = π / b := by
+    (∫ x : ℝ, cexp (-b * (x : ℂ) ^ 2)) ^ 2 =
+      Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit := by
+  have hu := (ne_zero_of_re_pos hb).isUnit
   /- We compute `(∫ exp (-b x^2))^2` as an integral over `ℝ^2`, and then make a polar change
   of coordinates. We are left with `∫ r * exp (-b r^2)`, which has been computed in
   `integral_mul_cexp_neg_mul_sq` using the fact that this function has an obvious primitive. -/
@@ -208,8 +213,9 @@ theorem integral_gaussian_sq_complex {b : ℂ} (hb : 0 < b.re) :
       simp
       ring
 
-theorem integral_gaussian (b : ℝ) : ∫ x : ℝ, exp (-b * x ^ 2) = √(π / b) := by
-  -- First we deal with the crazy case where `b ≤ 0`: then both sides vanish.
+theorem integral_gaussian (b : ℝ) {hb₀ : IsUnit b} :
+    ∫ x : ℝ, exp (-b * x ^ 2) = √(π / b) := by
+  -- For negative `b`, both sides vanish.
   rcases le_or_gt b 0 with (hb | hb)
   · rw [integral_undef, sqrt_eq_zero_of_nonpos]
     · exact div_nonpos_of_nonneg_of_nonpos pi_pos.le hb
@@ -235,46 +241,54 @@ theorem continuousAt_gaussian_integral (b : ℂ) (hb : 0 < re b) :
     (integrable_exp_neg_mul_sq hd) (ae_of_all _ (by fun_prop))
 
 theorem integral_gaussian_complex {b : ℂ} (hb : 0 < re b) :
-    ∫ x : ℝ, cexp (-b * (x : ℂ) ^ 2) = (π / b) ^ (1 / 2 : ℂ) := by
-  have nv : ∀ {b : ℂ}, 0 < re b → b ≠ 0 := by intro b hb; contrapose! hb; rw [hb]; simp
-  apply
-    (convex_halfSpace_re_gt 0).isPreconnected.eq_of_sq_eq ?_ ?_ (fun c hc => ?_) (fun {c} hc => ?_)
-      (by simp : 0 < re (1 : ℂ)) ?_ hb
-  · -- integral is continuous
-    exact continuousOn_of_forall_continuousAt continuousAt_gaussian_integral
-  · -- `(π / b) ^ (1 / 2 : ℂ)` is continuous
-    refine
-      continuousOn_of_forall_continuousAt fun b hb =>
-        (continuousAt_cpow_const (Or.inl ?_)).comp (continuousAt_const.div continuousAt_id (nv hb))
+    ∫ x : ℝ, cexp (-b * (x : ℂ) ^ 2) =
+      (Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit) ^ (1 / 2 : ℂ) := by
+  let D := {c : ℂ | 0 < c.re}
+  let _ : PreconnectedSpace D :=
+    isPreconnected_iff_preconnectedSpace.mp (convex_halfSpace_re_gt 0).isPreconnected
+  let f (c : D) : ℂ := ∫ x : ℝ, cexp (-(c : ℂ) * (x : ℂ) ^ 2)
+  let q (c : D) : ℂ := Checked.div (π : ℂ) (c : ℂ) (ne_zero_of_re_pos c.2).isUnit
+  let g (c : D) : ℂ := q c ^ (1 / 2 : ℂ)
+  have hf : Continuous f := continuous_iff_continuousAt.2 fun c ↦
+    (continuousAt_gaussian_integral c c.2).comp continuous_subtype_val.continuousAt
+  have hq : Continuous q := continuous_const.mul
+    (continuous_subtype_val.fun_inv₀ (h0 := fun c : D ↦ (ne_zero_of_re_pos c.2).isUnit))
+  have hg : Continuous g := by
+    refine continuous_iff_continuousAt.2 fun c ↦
+      (continuousAt_cpow_const (Or.inl ?_)).comp hq.continuousAt
+    have hn : 0 < normSq (c : ℂ) := normSq_pos.mpr (ne_zero_of_re_pos c.2)
+    dsimp only [q]
     rw [div_re, ofReal_im, ofReal_re, zero_mul, zero_div, add_zero]
-    exact div_pos (mul_pos pi_pos hb) (normSq_pos.mpr (nv hb))
-  · -- equality at 1
-    have : ∀ x : ℝ, cexp (-(1 : ℂ) * (x : ℂ) ^ 2) = exp (-(1 : ℝ) * x ^ 2) := by
-      intro x
-      simp only [ofReal_exp, neg_mul, one_mul, ofReal_neg, ofReal_pow]
-    simp_rw [this, ← coe_algebraMap, RCLike.algebraMap_eq_ofReal, integral_ofReal,
-      ← RCLike.algebraMap_eq_ofReal, coe_algebraMap]
-    conv_rhs =>
-      congr
-      · rw [← ofReal_one, ← ofReal_div]
-      · rw [← ofReal_one, ← ofReal_ofNat, ← ofReal_div]
-    rw [← ofReal_cpow, ofReal_inj]
-    · convert! integral_gaussian (1 : ℝ) using 1
-      rw [sqrt_eq_rpow]
-    · rw [div_one]; exact pi_pos.le
-  · -- squares of both sides agree
-    dsimp only [Pi.pow_apply]
-    rw [integral_gaussian_sq_complex hc, sq]
-    conv_lhs => rw [← cpow_one (↑π / c)]
-    rw [← cpow_add _ _ (div_ne_zero (ofReal_ne_zero.mpr pi_ne_zero) (nv hc))]
-    norm_num
-  · -- RHS doesn't vanish
-    rw [Ne, cpow_eq_zero_iff, not_and_or]
-    exact Or.inl (div_ne_zero (ofReal_ne_zero.mpr pi_ne_zero) (nv hc))
+    exact div_pos (mul_pos pi_pos c.2) hn
+  have hq_ne (c : D) : q c ≠ 0 := div_ne_zero (ofReal_ne_zero.mpr pi_ne_zero)
+  let c₀ : D := ⟨1, by change 0 < (1 : ℂ).re; simp⟩
+  have heq : EqOn f g univ := by
+    refine (isPreconnected_univ : IsPreconnected (univ : Set D)).eq_of_sq_eq hf.continuousOn
+      hg.continuousOn (fun c _ ↦ ?_) (fun {c} _ ↦ ?_) (y := c₀) (mem_univ _) ?_
+    · change f c ^ 2 = g c ^ 2
+      dsimp only [f]
+      rw [integral_gaussian_sq_complex c.2]
+      change q c = (q c ^ (1 / 2 : ℂ)) ^ 2
+      rw [sq, ← cpow_add _ _ (hq_ne c), show (1 / 2 + 1 / 2 : ℂ) = 1 by norm_num, cpow_one]
+    · dsimp only [g]
+      rw [Ne, cpow_eq_zero_iff, not_and_or]
+      exact Or.inl (hq_ne c)
+    · change (∫ x : ℝ, cexp (-(1 : ℂ) * (x : ℂ) ^ 2)) = (π / (1 : ℂ)) ^ (1 / 2 : ℂ)
+      have hcast (x : ℝ) : cexp (-(1 : ℂ) * (x : ℂ) ^ 2) = exp (-(1 : ℝ) * x ^ 2) := by
+        simp only [ofReal_exp, neg_mul, one_mul, ofReal_neg, ofReal_pow]
+      have hhalf : (↑(1 / (2 : ℝ)) : ℂ) = (1 / 2 : ℂ) := by
+        simpa only [ofReal_one, ofReal_ofNat] using ofReal_div (1 : ℝ) 2
+      simp_rw [hcast, ← coe_algebraMap, RCLike.algebraMap_eq_ofReal, integral_ofReal,
+        ← RCLike.algebraMap_eq_ofReal, coe_algebraMap]
+      rw [div_one₀, ← hhalf, ← ofReal_cpow pi_pos.le, ofReal_inj]
+      simpa only [div_one₀, sqrt_eq_rpow] using integral_gaussian 1 (hb₀ := isUnit_one)
+  exact heq (x := ⟨b, hb⟩) (mem_univ _)
 
 -- The Gaussian integral on the half-line, `∫ x in Ioi 0, exp (-b * x^2)`, for complex `b`.
 theorem integral_gaussian_complex_Ioi {b : ℂ} (hb : 0 < re b) :
-    ∫ x : ℝ in Ioi 0, cexp (-b * (x : ℂ) ^ 2) = (π / b) ^ (1 / 2 : ℂ) / 2 := by
+    ∫ x : ℝ in Ioi 0, cexp (-b * (x : ℂ) ^ 2) =
+      (Checked.div (π : ℂ) b (ne_zero_of_re_pos hb).isUnit) ^ (1 / 2 : ℂ) / 2 := by
+  have hu := (ne_zero_of_re_pos hb).isUnit
   let f : ℝ → ℂ := fun x => cexp (-b * (x : ℂ) ^ 2)
   have full_integral := integral_gaussian_complex hb
   have h_eq := calc
@@ -284,10 +298,10 @@ theorem integral_gaussian_complex_Ioi {b : ℂ} (hb : 0 < re b) :
       setIntegral_congr_fun measurableSet_Ioi fun _ _ ↦ (by simp [f])
   rw [← integral_add_compl (s := Ioi 0) (by simp) (integrable_cexp_neg_mul_sq hb), compl_Ioi, h_eq,
     ← mul_two] at full_integral
-  exact (eq_div_iff two_ne_zero).2 (by simpa using full_integral)
+  exact eq_div_iff.2 (by simpa using full_integral)
 
 -- The Gaussian integral on the half-line, `∫ x in Ioi 0, exp (-b * x^2)`, for real `b`.
-theorem integral_gaussian_Ioi (b : ℝ) :
+theorem integral_gaussian_Ioi (b : ℝ) {hb₀ : IsUnit b} :
     ∫ x in Ioi (0 : ℝ), exp (-b * x ^ 2) = √(π / b) / 2 := by
   rcases le_or_gt b 0 with (hb | hb)
   · rw [integral_undef, sqrt_eq_zero_of_nonpos, zero_div]
@@ -297,32 +311,35 @@ theorem integral_gaussian_Ioi (b : ℝ) :
     coe_algebraMap]
   convert! integral_gaussian_complex_Ioi (by rwa [ofReal_re] : 0 < (b : ℂ).re)
   · simp
-  · rw [sqrt_eq_rpow, ← ofReal_div, ofReal_div, ofReal_cpow]
-    · simp
-    · exact (div_pos pi_pos hb).le
+  · have hdiv₂ (x : ℝ) : (↑(x / 2) : ℂ) = (x : ℂ) / 2 := by
+      simpa only [ofReal_ofNat] using ofReal_div x 2
+    have hquot : (↑(π / b) : ℂ) = (π : ℂ) / (b : ℂ) := @ofReal_div π b hb₀
+    simp only [hdiv₂, sqrt_eq_rpow, ofReal_cpow (div_pos pi_pos hb).le, hquot, ofReal_one]
 
 -- see https://github.com/leanprover-community/mathlib4/issues/29041
 set_option linter.unusedSimpArgs false in
 /-- The special-value formula `Γ(1/2) = √π`, which is equivalent to the Gaussian integral. -/
 theorem Real.Gamma_one_half_eq : Real.Gamma (1 / 2) = √π := by
   rw [Gamma_eq_integral one_half_pos, ← integral_comp_rpow_Ioi_of_pos zero_lt_two]
-  convert! congr_arg (fun x : ℝ => 2 * x) (integral_gaussian_Ioi 1) using 1
+  convert! congr_arg (fun x : ℝ => 2 * x) (integral_gaussian_Ioi 1 (hb₀ := isUnit_one)) using 1
   · rw [← integral_const_mul]
     refine setIntegral_congr_fun measurableSet_Ioi fun x hx => ?_
+    have hx' : 0 < x := mem_Ioi.mp hx
     have : (x ^ (2 : ℝ)) ^ (1 / (2 : ℝ) - 1) = x⁻¹ := by
-      rw [← rpow_mul (le_of_lt hx)]
-      norm_num
-      rw [rpow_neg (le_of_lt hx), rpow_one]
+      rw [← rpow_mul hx'.le, show (2 : ℝ) * (1 / 2 - 1) = -1 by norm_num,
+        rpow_neg_one x (hx := hx'.ne'.isUnit)]
     rw [smul_eq_mul, this]
     simp [field, (ne_of_lt (show 0 < x from hx)).symm]
     norm_num
-  · rw [div_one, ← mul_div_assoc, mul_comm, mul_div_cancel_right₀ _ (two_ne_zero' ℝ)]
+  · rw [div_one₀, mul_div_cancel₀]
 
 /-- The special-value formula `Γ(1/2) = √π`, which is equivalent to the Gaussian integral. -/
 theorem Complex.Gamma_one_half_eq : Complex.Gamma (1 / 2) = (π : ℂ) ^ (1 / 2 : ℂ) := by
-  convert! congr_arg ((↑) : ℝ → ℂ) Real.Gamma_one_half_eq
-  · simpa only [one_div, ofReal_inv, ofReal_ofNat] using Gamma_ofReal (1 / 2)
-  · rw [sqrt_eq_rpow, ofReal_cpow pi_pos.le, ofReal_div, ofReal_ofNat, ofReal_one]
+  have hhalf : (↑(1 / (2 : ℝ)) : ℂ) = (1 / 2 : ℂ) := by
+    simpa only [ofReal_one, ofReal_ofNat] using ofReal_div (1 : ℝ) 2
+  rw [← hhalf]
+  simpa only [Real.Gamma_one_half_eq, sqrt_eq_rpow,
+    ofReal_cpow pi_pos.le] using Gamma_ofReal (1 / 2 : ℝ)
 
 open scoped Nat in
 /-- The special-value formula `Γ(k + 1 + 1/2) = (2 * k + 1)‼ * √π / (2 ^ (k + 1))` for half-integer
@@ -330,7 +347,7 @@ values of the gamma function in terms of `Nat.doubleFactorial`. -/
 lemma Real.Gamma_nat_add_one_add_half (k : ℕ) :
     Gamma (k + 1 + 1 / 2) = (2 * k + 1 : ℕ)‼ * √π / (2 ^ (k + 1)) := by
   induction k with
-  | zero => simp [-one_div, add_comm (1 : ℝ), Gamma_add_one, Gamma_one_half_eq]; ring
+  | zero => simp [-one_div₀, add_comm (1 : ℝ), Gamma_add_one, Gamma_one_half_eq]; ring
   | succ k ih =>
     rw [add_right_comm, Gamma_add_one (by positivity), Nat.cast_add, Nat.cast_one, ih, Nat.mul_add]
     simp
@@ -342,5 +359,5 @@ values of the gamma function in terms of `Nat.doubleFactorial`. -/
 lemma Real.Gamma_nat_add_half (k : ℕ) :
     Gamma (k + 1 / 2) = (2 * k - 1 : ℕ)‼ * √π / (2 ^ k) := by
   cases k with
-  | zero => simp [-one_div, Gamma_one_half_eq]
-  | succ k => simpa [-one_div, mul_add] using Gamma_nat_add_one_add_half k
+  | zero => simp [-one_div₀, Gamma_one_half_eq]
+  | succ k => simpa [-one_div₀, mul_add] using Gamma_nat_add_one_add_half k

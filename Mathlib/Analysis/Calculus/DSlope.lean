@@ -32,19 +32,17 @@ variable {𝕜 E : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup E] 
 open scoped Classical in
 /-- `dslope f a b` is defined as `slope f a b = (b - a)⁻¹ • (f b - f a)` for `a ≠ b` and
 `deriv f a` for `a = b`. -/
-noncomputable def dslope (f : 𝕜 → E) (a : 𝕜) : 𝕜 → E :=
-  update (slope f a) a (deriv f a)
+noncomputable def dslope (f : 𝕜 → E) (a b : 𝕜) : E :=
+  if h : b = a then deriv f a else slope f a b (Ne.symm h)
 
 @[simp]
 theorem dslope_same (f : 𝕜 → E) (a : 𝕜) : dslope f a a = deriv f a := by
-  classical
-  exact update_self ..
+  simp [dslope]
 
 variable {f : 𝕜 → E} {a b : 𝕜} {s : Set 𝕜}
 
-theorem dslope_of_ne (f : 𝕜 → E) (h : b ≠ a) : dslope f a b = slope f a b := by
-  classical
-  exact update_of_ne h ..
+theorem dslope_of_ne (f : 𝕜 → E) (h : b ≠ a) : dslope f a b = slope f a b h.symm := by
+  simp [dslope, h]
 
 theorem ContinuousLinearMap.dslope_comp {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
     (f : E →L[𝕜] F) (g : 𝕜 → E) (a b : 𝕜) (H : a = b → DifferentiableAt 𝕜 g a) :
@@ -52,16 +50,13 @@ theorem ContinuousLinearMap.dslope_comp {F : Type*} [NormedAddCommGroup F] [Norm
   rcases eq_or_ne b a with (rfl | hne)
   · simp only [dslope_same]
     exact (f.hasFDerivAt.comp_hasDerivAt b (H rfl).hasDerivAt).deriv
-  · simpa only [dslope_of_ne _ hne] using! f.toLinearMap.slope_comp g a b
+  · simpa only [dslope_of_ne _ hne] using! f.toLinearMap.slope_comp g a b (hab := hne.symm)
 
-theorem eqOn_dslope_slope (f : 𝕜 → E) (a : 𝕜) : EqOn (dslope f a) (slope f a) {a}ᶜ := fun _ =>
-  dslope_of_ne f
-
-theorem dslope_eventuallyEq_slope_of_ne (f : 𝕜 → E) (h : b ≠ a) : dslope f a =ᶠ[𝓝 b] slope f a :=
-  (eqOn_dslope_slope f a).eventuallyEq_of_mem (isOpen_ne.mem_nhds h)
-
-theorem dslope_eventuallyEq_slope_nhdsNE (f : 𝕜 → E) : dslope f a =ᶠ[𝓝[≠] a] slope f a :=
-  (eqOn_dslope_slope f a).eventuallyEq_of_mem self_mem_nhdsWithin
+/-- On its genuine punctured domain, the derivative extension agrees with the slope. -/
+theorem dslope_eq_slope (f : 𝕜 → E) (a : 𝕜) :
+    (fun y : ↥({a}ᶜ : Set 𝕜) ↦ dslope f a y) =
+      fun y : ↥({a}ᶜ : Set 𝕜) ↦ slope f a y (Ne.symm y.2) :=
+  funext fun y : ↥({a}ᶜ : Set 𝕜) ↦ dslope_of_ne f y.2
 
 @[simp]
 theorem sub_smul_dslope (f : 𝕜 → E) (a b : 𝕜) : (b - a) • dslope f a b = f b - f a := by
@@ -80,7 +75,13 @@ theorem dslope_sub_smul [DecidableEq 𝕜] (f : 𝕜 → E) (a : 𝕜) :
 
 @[simp]
 theorem continuousAt_dslope_same : ContinuousAt (dslope f a) a ↔ DifferentiableAt 𝕜 f a := by
-  simp only [dslope, continuousAt_update_same, ← hasDerivAt_deriv_iff, hasDerivAt_iff_tendsto_slope]
+  have hmap : map ((↑) : ↥({a}ᶜ : Set 𝕜) → 𝕜) (comap (↑) (𝓝 a)) = 𝓝[≠] a := by
+    rw [map_comap, Subtype.range_coe]
+    rfl
+  rw [← continuousWithinAt_compl_self, ContinuousWithinAt, dslope_same,
+    ← hasDerivAt_deriv_iff, hasDerivAt_iff_tendsto_slope, ← hmap, tendsto_map'_iff]
+  change Tendsto (fun y : ↥({a}ᶜ : Set 𝕜) ↦ dslope f a y) _ _ ↔ _
+  rw [dslope_eq_slope]
 
 theorem ContinuousWithinAt.of_dslope (h : ContinuousWithinAt (dslope f a) s b) :
     ContinuousWithinAt f s b := by
@@ -97,10 +98,23 @@ theorem ContinuousOn.of_dslope (h : ContinuousOn (dslope f a) s) : ContinuousOn 
 theorem continuousWithinAt_dslope_of_ne (h : b ≠ a) :
     ContinuousWithinAt (dslope f a) s b ↔ ContinuousWithinAt f s b := by
   refine ⟨ContinuousWithinAt.of_dslope, fun hc => ?_⟩
-  classical
-  simp only [dslope, continuousWithinAt_update_of_ne h]
-  exact ((continuousWithinAt_id.sub continuousWithinAt_const).inv₀ (sub_ne_zero.2 h)).smul
-    (hc.sub continuousWithinAt_const)
+  let U := {y : 𝕜 | IsUnit (y - a)}
+  let z : U := ⟨b, (sub_ne_zero.mpr h).isUnit⟩
+  have hopen : IsOpen U := Units.isOpen.preimage (continuous_id.sub continuous_const)
+  have hinv : Continuous (fun y : U ↦ Checked.inv ((y : 𝕜) - a) y.2) :=
+    (continuous_subtype_val.sub continuous_const).fun_inv₀ (h0 := fun y : U ↦ y.2)
+  have hEq : (fun y : U ↦ Checked.inv ((y : 𝕜) - a) y.2 • (f y - f a)) =
+      fun y : U ↦ dslope f a y := by
+    funext y
+    rw [dslope_of_ne f (fun hy ↦ y.2.ne_zero (sub_eq_zero.mpr hy)), slope_def_module]
+  have hlocal : ContinuousWithinAt (fun y : U ↦ dslope f a y) (Subtype.val ⁻¹' s) z := by
+    rw [← hEq]
+    exact hinv.continuousWithinAt.smul
+      ((hc.comp continuous_subtype_val.continuousWithinAt (fun _ hy ↦ hy)).sub
+        continuousWithinAt_const)
+  change Tendsto (dslope f a) (𝓝[s] b) (𝓝 (dslope f a b))
+  rw [← hopen.isOpenEmbedding_subtypeVal.map_nhdsWithin_preimage_eq s z, tendsto_map'_iff]
+  exact hlocal
 
 theorem continuousAt_dslope_of_ne (h : b ≠ a) : ContinuousAt (dslope f a) b ↔ ContinuousAt f b := by
   simp only [← continuousWithinAt_univ, continuousWithinAt_dslope_of_ne h]
@@ -115,8 +129,10 @@ theorem continuousOn_dslope (h : s ∈ 𝓝 a) :
 
 theorem DifferentiableWithinAt.of_dslope (h : DifferentiableWithinAt 𝕜 (dslope f a) s b) :
     DifferentiableWithinAt 𝕜 f s b := by
-  simpa only [id, sub_smul_dslope f a, sub_add_cancel] using
-    ((differentiableWithinAt_id.sub_const a).fun_smul h).add_const (f a)
+  have heq : (fun y ↦ (y - a) • dslope f a y + f a) = f :=
+    funext fun y ↦ by rw [sub_smul_dslope, sub_add_cancel]
+  rw [← heq]
+  exact ((differentiableWithinAt_id.sub_const a).fun_smul h).add_const (f a)
 
 theorem DifferentiableAt.of_dslope (h : DifferentiableAt 𝕜 (dslope f a) b) :
     DifferentiableAt 𝕜 f b :=
@@ -128,10 +144,32 @@ theorem DifferentiableOn.of_dslope (h : DifferentiableOn 𝕜 (dslope f a) s) :
 theorem differentiableWithinAt_dslope_of_ne (h : b ≠ a) :
     DifferentiableWithinAt 𝕜 (dslope f a) s b ↔ DifferentiableWithinAt 𝕜 f s b := by
   refine ⟨DifferentiableWithinAt.of_dslope, fun hd => ?_⟩
-  refine (((differentiableWithinAt_id.sub_const a).inv (sub_ne_zero.2 h)).smul
-    (hd.sub_const (f a))).congr_of_eventuallyEq ?_ (dslope_of_ne _ h)
-  refine (eqOn_dslope_slope _ _).eventuallyEq_of_mem ?_
-  exact mem_nhdsWithin_of_mem_nhds (isOpen_ne.mem_nhds h)
+  let U := {y : 𝕜 | IsUnit (y - a)}
+  let z : U := ⟨b, (sub_ne_zero.mpr h).isUnit⟩
+  have hopen : IsOpen U := Units.isOpen.preimage (continuous_id.sub continuous_const)
+  have hi := ((differentiableWithinAt_id (𝕜 := 𝕜) (s := s) (x := b)).sub_const a)
+    |>.hasFDerivWithinAt.inv z.2
+  have hf : HasFDerivWithinAt (fun y : U ↦ f y) (fderivWithin 𝕜 f s b)
+      (Subtype.val ⁻¹' s) z (fun y ↦ (y : 𝕜)) := by
+    exact HasFDerivAtFilter.comp_tendsto hd.hasFDerivWithinAt Subtype.val
+      ((continuous_subtype_val.continuousWithinAt.tendsto_nhdsWithin (fun _ hy ↦ hy)).prodMap
+        (tendsto_pure_pure ..))
+  let B : 𝕜 →L[𝕜] E →L[𝕜] E := ContinuousLinearMap.lsmul 𝕜 𝕜
+  have hlocal := (B.hasFDerivWithinAt_of_bilinear hi (hf.sub_const (f a))
+    continuous_subtype_val.continuousWithinAt).differentiableWithinAt
+  have hEq : (fun y : U ↦ Checked.inv ((y : 𝕜) - a) y.2 • (f y - f a)) =
+      fun y : U ↦ dslope f a y := by
+    funext y
+    rw [dslope_of_ne f (fun hy ↦ y.2.ne_zero (sub_eq_zero.mpr hy)), slope_def_module]
+  change DifferentiableWithinAt 𝕜
+    (fun y : U ↦ Checked.inv ((y : 𝕜) - a) y.2 • (f y - f a))
+    (Subtype.val ⁻¹' s) z (fun y ↦ (y : 𝕜)) at hlocal
+  rw [hEq] at hlocal
+  obtain ⟨g', hg'⟩ := hlocal
+  refine ⟨g', ?_⟩
+  rw [hasFDerivWithinAt_iff_isLittleOTVS,
+    ← hopen.isOpenEmbedding_subtypeVal.map_nhdsWithin_preimage_eq s z, Asymptotics.isLittleOTVS_map]
+  exact hg'.isLittleOTVS
 
 theorem differentiableOn_dslope_of_notMem (h : a ∉ s) :
     DifferentiableOn 𝕜 (dslope f a) s ↔ DifferentiableOn 𝕜 f s :=

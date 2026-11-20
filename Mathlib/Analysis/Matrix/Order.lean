@@ -143,9 +143,10 @@ variable [DecidableEq n] {A : Matrix n n 𝕜} (hA : PosSemidef A)
 
 include hA
 
-lemma inv_sqrt : (CFC.sqrt A)⁻¹ = CFC.sqrt A⁻¹ := by
-  rw [eq_comm, CFC.sqrt_eq_iff _ _ hA.inv.nonneg (CFC.sqrt_nonneg A).posSemidef.inv.nonneg, ← sq,
-    inv_pow', CFC.sq_sqrt A]
+lemma inv_sqrt {ha : IsUnit A} :
+    Checked.inv (CFC.sqrt A) ((ha.isStrictlyPositive hA.nonneg).isUnit_cfcSqrt A) =
+      CFC.sqrt (Checked.inv A ha) :=
+  (CFC.sqrt_inv (ha.isStrictlyPositive hA.nonneg)).symm
 
 end sqrtDeprecated
 
@@ -155,7 +156,10 @@ theorem det_sqrt [DecidableEq n] {A : Matrix n n 𝕜} (hA : A.PosSemidef) :
   simp only [IsHermitian.cfc, Real.coe_sqrt, Real.coe_toNNReal', det_map, det_diagonal,
     Function.comp_apply, hA.isHermitian.det_eq_prod_eigenvalues, ← RCLike.ofReal_prod,
     RCLike.ofReal_re, Real.sqrt_prod _ fun _ _ ↦ hA.eigenvalues_nonneg _]
-  grind
+  apply congrArg (algebraMap ℝ 𝕜)
+  apply Finset.prod_congr rfl
+  intro i _
+  rw [max_eq_left (hA.eigenvalues_nonneg i)]
 
 end PosSemidef
 

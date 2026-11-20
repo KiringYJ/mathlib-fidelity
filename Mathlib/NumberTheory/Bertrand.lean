@@ -60,12 +60,14 @@ theorem real_main_inequality {x : ℝ} (x_large : (512 : ℝ) ≤ x) :
     intro x h5
     have h6 := mul_pos (zero_lt_two' ℝ) h5
     have h7 := rpow_pos_of_pos h6 (√(2 * x))
-    rw [log_div (mul_pos h5 h7).ne' (rpow_pos_of_pos four_pos _).ne', log_mul h5.ne' h7.ne',
-      log_rpow h6, log_rpow zero_lt_four, ← mul_div_right_comm, ← mul_div, mul_comm x]
+    rw [log_div (mul_pos h5 h7).ne', log_mul h5.ne' h7.ne',
+      log_rpow h6, log_rpow zero_lt_four]
+    ring
   have h5 : 0 < x := lt_of_lt_of_le (by norm_num1) x_large
-  rw [← div_le_one (rpow_pos_of_pos four_pos x), ← div_div_eq_mul_div, ← rpow_sub four_pos, ←
-    mul_div 2 x, mul_div_left_comm, ← mul_one_sub, (by norm_num1 : (1 : ℝ) - 2 / 3 = 1 / 3),
-    mul_one_div, ← log_nonpos_iff (hf' x h5).le, ← hf x h5]
+  have hpow : (4 : ℝ) ^ (x / 3) * 4 ^ (2 * x / 3) = 4 ^ x := by
+    rw [← rpow_add four_pos, show x / 3 + 2 * x / 3 = x by ring]
+  rw [← hpow, mul_le_mul_iff_left₀ (rpow_pos_of_pos four_pos _),
+    ← div_le_one (rpow_pos_of_pos four_pos (x / 3)), ← log_nonpos_iff (hf' x h5).le, ← hf x h5]
   -- Porting note (https://github.com/leanprover-community/mathlib4/issues/11083): the proof was rewritten, because it was too slow
   -- Original:
   /-
@@ -134,7 +136,7 @@ theorem bertrand_main_inequality {n : ℕ} (n_large : 512 ≤ n) :
     exact mod_cast n2_pos
   · exact_mod_cast Real.nat_sqrt_le_real_sqrt
   · norm_num1
-  · exact cast_div_le.trans (by norm_cast)
+  · exact (cast_div_le (hn := (by norm_num : (↑(3 : ℕ) : ℝ) ≠ 0).isUnit)).trans (by norm_cast)
 
 /-- A lemma that tells us that, in the case where Bertrand's postulate does not hold, the prime
 factorization of the central binomial coefficient only has factors at most `2 * n / 3 + 1`.

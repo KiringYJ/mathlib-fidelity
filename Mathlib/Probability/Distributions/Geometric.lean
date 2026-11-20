@@ -86,8 +86,10 @@ lemma geometricMeasure_real_singleton_pos (h1 : p ≠ 0) (h2 : p ≠ 1) n :
 
 lemma hasSum_one_geometricMeasure (hp : p ≠ 0) :
     HasSum (fun n ↦ (1 - p : ℝ) ^ n * p) 1 := by
-  convert! (hasSum_geometric_of_lt_one (r := 1 - p) (by grind) (by grind)).mul_right (p : ℝ)
-  grind
+  have hp_pos : 0 < (p : ℝ) := unitInterval.coe_pos.mpr (unitInterval.pos_iff_ne_zero.mpr hp)
+  have h := (hasSum_geometric_of_lt_one (sub_nonneg.mpr p.2.2) (sub_lt_self 1 hp_pos)).mul_right
+    (p : ℝ)
+  simpa only [sub_sub_cancel, inv_mul_cancel₀] using h
 
 instance isProbabilityMeasure_geometricMeasure (hp : p ≠ 0) :
     IsProbabilityMeasure (geometricMeasure p hp) :=
@@ -156,7 +158,7 @@ lemma geometricPMFRealSum (hp_pos : 0 < p) (hp_le_one : p ≤ 1) :
   have := hasSum_geometric_of_lt_one (sub_nonneg.mpr hp_le_one) (sub_lt_self 1 hp_pos)
   apply (hasSum_mul_right_iff (hp_pos.ne')).mpr at this
   simp only [sub_sub_cancel] at this
-  rw [inv_mul_eq_div, div_self hp_pos.ne'] at this
+  rw [inv_mul_cancel₀] at this
   exact this
 
 @[deprecated geometricMeasure_real_singleton_pos (since := "2026-03-08")]

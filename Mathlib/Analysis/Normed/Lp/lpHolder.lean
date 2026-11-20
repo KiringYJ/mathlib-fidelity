@@ -237,8 +237,7 @@ noncomputable def holderL [Fact (1 ≤ p)] [Fact (1 ≤ q)] [Fact (1 ≤ r)]
             (sum_rpow_le_norm_rpow hp e) (sum_rpow_le_norm_rpow hq f) s
         _ ≤ _ := by
           rw [← Real.rpow_mul, ← Real.rpow_mul]
-          · simp only [← mul_div_assoc, ne_eq, hp.ne', not_false_eq_true, mul_div_cancel_left₀,
-            hq.ne', fieldLe]
+          · simp only [← mul_div_assoc₀, mul_div_cancel_left₀]
             rw [Real.mul_rpow, Real.mul_rpow]
             all_goals positivity
           all_goals positivity

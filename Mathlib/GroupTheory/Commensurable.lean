@@ -157,8 +157,12 @@ theorem commensurator_mem_iff (H : Subgroup G) (g : G) :
 @[deprecated "Use `commensurator_mem_iff` instead." (since := "2026-06-25")]
 theorem commensurator'_mem_iff (H : Subgroup G) (g : ConjAct G) :
     g ∈ commensurator' H ↔ Commensurable (g • H) H := by
-  rw [commensurator', map_equiv_eq_comap_symm']
-  rfl
+  change (∃ x ∈ commensurator H, ConjAct.toConjAct x = g) ↔ _
+  constructor
+  · rintro ⟨x, hx, rfl⟩
+    exact hx
+  · intro hg
+    exact ⟨ConjAct.ofConjAct g, hg, ConjAct.toConjAct_ofConjAct g⟩
 
 theorem eq (hk : Commensurable H K) : commensurator H = commensurator K :=
   Subgroup.ext fun x =>

@@ -93,7 +93,7 @@ noncomputable def extDerivWithin (ω : E → E [⋀^Fin n]→L[𝕜] F) (s : Set
 theorem extDerivWithin_univ (ω : E → E [⋀^Fin n]→L[𝕜] F) :
     extDerivWithin ω univ = extDeriv ω := by
   ext1 x
-  rw [extDerivWithin, extDeriv, fderivWithin_univ]
+  rw [extDerivWithin, extDeriv, congrFun fderivWithin_univ x]
 
 theorem extDerivWithin_add (hsx : UniqueDiffWithinAt 𝕜 s x)
     (hω₁ : DifferentiableWithinAt 𝕜 ω₁ s x) (hω₂ : DifferentiableWithinAt 𝕜 ω₂ s x) :
@@ -144,7 +144,7 @@ is the 1-form given by the derivative of `f`. -/
 theorem extDeriv_constOfIsEmpty (f : E → F) (x : E) :
     extDeriv (fun x ↦ constOfIsEmpty 𝕜 E (Fin 0) (f x)) x =
       .ofSubsingleton _ _ _ (0 : Fin 1) (fderiv 𝕜 f x) := by
-  simp [← extDerivWithin_univ, extDerivWithin_constOfIsEmpty, fderivWithin_univ]
+  simp [← extDerivWithin_univ, extDerivWithin_constOfIsEmpty, congrFun fderivWithin_univ x]
 
 theorem Filter.EventuallyEq.extDerivWithin_eq (hs : ω₁ =ᶠ[𝓝[s] x] ω₂) (hx : ω₁ x = ω₂ x) :
     extDerivWithin ω₁ s x = extDerivWithin ω₂ s x := by
@@ -192,13 +192,14 @@ theorem Filter.EventuallyEq.extDeriv_eq (h : ω₁ =ᶠ[𝓝 x] ω₂) : extDeri
 theorem extDerivWithin_apply (h : DifferentiableWithinAt 𝕜 ω s x) (hs : UniqueDiffWithinAt 𝕜 s x)
     (v : Fin (n + 1) → E) :
     extDerivWithin ω s x v =
-      ∑ i, (-1) ^ i.val • fderivWithin 𝕜 (ω · (i.removeNth v)) s x (v i) := by
+      ∑ i, (-1) ^ i.val • fderivWithin 𝕜 (ω · (i.removeNth v)) s x id (v i) := by
   simp [extDerivWithin, ContinuousAlternatingMap.alternatizeUncurryFin_apply,
     fderivWithin_continuousAlternatingMap_apply_const_apply, *]
 
 theorem extDeriv_apply (h : DifferentiableAt 𝕜 ω x) (v : Fin (n + 1) → E) :
-    extDeriv ω x v = ∑ i, (-1) ^ i.val • fderiv 𝕜 (ω · (i.removeNth v)) x (v i) := by
-  simp [← extDerivWithin_univ, extDerivWithin_apply h.differentiableWithinAt]
+    extDeriv ω x v = ∑ i, (-1) ^ i.val • fderiv 𝕜 (ω · (i.removeNth v)) x id (v i) := by
+  simp [← extDerivWithin_univ, extDerivWithin_apply h.differentiableWithinAt,
+    congrFun fderivWithin_univ x]
 
 /-- The second exterior derivative of a sufficiently smooth differential form is zero. -/
 theorem extDerivWithin_extDerivWithin_apply (hω : ContDiffWithinAt 𝕜 r ω s x)
@@ -208,7 +209,7 @@ theorem extDerivWithin_extDerivWithin_apply (hω : ContDiffWithinAt 𝕜 r ω s 
     = alternatizeUncurryFin (fderivWithin 𝕜 (fun y ↦
         alternatizeUncurryFin (fderivWithin 𝕜 ω s y)) s x) := rfl
   _ = alternatizeUncurryFin (alternatizeUncurryFinCLM _ _ _ ∘L
-        fderivWithin 𝕜 (fderivWithin 𝕜 ω s) s x) := by
+        fderivWithin 𝕜 (fun y ↦ fderivWithin 𝕜 ω s y id) s x id) := by
     congr 1
     have : DifferentiableWithinAt 𝕜 (fderivWithin 𝕜 ω s) s x := by
       refine (hω.fderivWithin_right hs ?_ h'x).differentiableWithinAt one_ne_zero
@@ -247,10 +248,13 @@ theorem extDerivWithin_pullback {ω : F → F [⋀^Fin n]→L[𝕜] G} {f : E �
     hf.differentiableWithinAt <| (two_pos.trans_le <| le_minSmoothness.trans hr).ne'
   have hd2f : DifferentiableWithinAt 𝕜 (fderivWithin 𝕜 f s) s x :=
     (hf.fderivWithin_right hs (le_minSmoothness.trans hr) hxs).differentiableWithinAt one_ne_zero
+  have hcomp : fderivWithin 𝕜 (fun y ↦ ω (f y)) s x =
+      (fderivWithin 𝕜 ω t (f x)).comp (fderivWithin 𝕜 f s x) :=
+    fderivWithin_fun_comp x hω hdf hst (hs x hxs)
   rw [extDerivWithin,
     fderivWithin_continuousAlternatingMapCompContinuousLinearMap (by exact hω.comp x hdf hst) hd2f
       (hs x hxs),
-    alternatizeUncurryFin_add, fderivWithin_fun_comp _ hω hdf hst (hs x hxs), extDerivWithin,
+    alternatizeUncurryFin_add, hcomp, extDerivWithin,
     alternatizeUncurryFin_fderivCompContinuousLinearMap_eq_zero, add_zero]
   · ext v
     simp +unfoldPartialApp [alternatizeUncurryFin_apply, Fin.removeNth, Function.comp_def]
@@ -262,5 +266,5 @@ theorem extDeriv_pullback {ω : F → F [⋀^Fin n]→L[𝕜] G} {f : E → F}
     extDeriv (fun x ↦ (ω (f x)).compContinuousLinearMap (fderiv 𝕜 f x)) x =
       (extDeriv ω (f x)).compContinuousLinearMap (fderiv 𝕜 f x) := by
   simp only [← differentiableWithinAt_univ, ← extDerivWithin_univ, ← contDiffWithinAt_univ,
-    ← fderivWithin_univ] at *
+    ← congrFun fderivWithin_univ _] at *
   apply extDerivWithin_pullback (r := r) <;> simp [*]

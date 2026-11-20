@@ -710,42 +710,17 @@ instance nontrivial' : Nontrivial (ZMod 0) := by
 lemma one_eq_zero_iff {n : ℕ} : (1 : ZMod n) = 0 ↔ n = 1 := by
   rw [← Nat.cast_one, natCast_eq_zero_iff, Nat.dvd_one]
 
-/-- The inversion on `ZMod n`.
-It is setup in such a way that `a * a⁻¹` is equal to `gcd a.val n`.
-In particular, if `a` is coprime to `n`, and hence a unit, `a * a⁻¹ = 1`. -/
-def inv : ∀ n : ℕ, ZMod n → ZMod n
-  | 0, i => Int.sign i
-  | n + 1, i => Nat.gcdA i.val (n + 1)
+/-- Reducing Bézout's identity modulo `n` leaves its first coefficient. This also holds at
+modulus zero. For a signed integer the corresponding identity is `Int.mul_sign_self`. -/
+theorem natCast_mul_gcdA (x n : ℕ) : (x : ZMod n) * (Nat.gcdA x n : ZMod n) = Nat.gcd x n := by
+  have h := congrArg (fun z : ℤ ↦ (z : ZMod n)) (Nat.gcd_eq_gcd_ab x n)
+  simpa only [Int.cast_add, Int.cast_mul, Int.cast_natCast, ZMod.natCast_self, zero_mul, add_zero]
+    using h.symm
 
-instance (n : ℕ) : Inv (ZMod n) :=
-  ⟨inv n⟩
-
-theorem inv_zero : ∀ n : ℕ, (0 : ZMod n)⁻¹ = 0
-  | 0 => Int.sign_zero
-  | n + 1 =>
-    show (Nat.gcdA _ (n + 1) : ZMod (n + 1)) = 0 by
-      simp [Nat.gcdA, Nat.xgcd, Nat.xgcdAux, Nat.strongRec_eq]
-
-theorem mul_inv_eq_gcd {n : ℕ} (a : ZMod n) : a * a⁻¹ = Nat.gcd a.val n := by
-  rcases n with - | n
-  · dsimp [ZMod] at a ⊢
-    calc
-      _ = a * Int.sign a := rfl
-      _ = a.natAbs := by rw [Int.mul_sign_self]
-      _ = a.natAbs.gcd 0 := by rw [Nat.gcd_zero_right]
-  · calc
-      a * a⁻¹ = a * a⁻¹ + n.succ * Nat.gcdB (val a) n.succ := by
-        rw [natCast_self, zero_mul, add_zero]
-      _ = ↑(↑a.val * Nat.gcdA (val a) n.succ + n.succ * Nat.gcdB (val a) n.succ) := by
-        push_cast
-        rw [natCast_zmod_val]
-        rfl
-      _ = Nat.gcd a.val n.succ := by rw [← Nat.gcd_eq_gcd_ab a.val n.succ]; rfl
-
-@[simp] protected lemma inv_one (n : ℕ) : (1⁻¹ : ZMod n) = 1 := by
-  obtain rfl | hn := eq_or_ne n 1
-  · exact Subsingleton.elim _ _
-  · simpa [ZMod.val_one'' hn] using mul_inv_eq_gcd (1 : ZMod n)
+/-- The Bézout coefficient of the natural representative gives its gcd with the modulus. -/
+theorem mul_gcdA_val {n : ℕ} [NeZero n] (a : ZMod n) :
+    a * (Nat.gcdA a.val n : ZMod n) = Nat.gcd a.val n := by
+  simpa only [natCast_zmod_val] using natCast_mul_gcdA a.val n
 
 @[simp, grind =]
 theorem natCast_mod (a : ℕ) (n : ℕ) : ((a % n : ℕ) : ZMod n) = a :=
@@ -775,29 +750,35 @@ alias ⟨_, _root_.Odd.natCast_zmod_two⟩ := natCast_eq_one_iff_odd
 theorem natCast_ne_zero_iff_odd {n : ℕ} : (n : ZMod 2) ≠ 0 ↔ Odd n := by
   simp [natCast_eq_zero_iff_even]
 
-theorem coe_mul_inv_eq_one {n : ℕ} (x : ℕ) (h : Nat.Coprime x n) :
-    ((x : ZMod n) * (x : ZMod n)⁻¹) = 1 := by
-  rw [Nat.Coprime, Nat.gcd_comm, Nat.gcd_rec] at h
-  rw [mul_inv_eq_gcd, val_natCast, h, Nat.cast_one]
-
-lemma mul_val_inv (hmn : m.Coprime n) : (m * (m⁻¹ : ZMod n).val : ZMod n) = 1 := by
-  obtain rfl | hn := eq_or_ne n 0
-  · simp [m.coprime_zero_right.1 hmn]
-  have : NeZero n := ⟨hn⟩
-  rw [ZMod.natCast_zmod_val, ZMod.coe_mul_inv_eq_one _ hmn]
-
-lemma val_inv_mul (hmn : m.Coprime n) : ((m⁻¹ : ZMod n).val * m : ZMod n) = 1 := by
-  rw [mul_comm, mul_val_inv hmn]
-
 /-- `unitOfCoprime` makes an element of `(ZMod n)ˣ` given
 a natural number `x` and a proof that `x` is coprime to `n` -/
 def unitOfCoprime {n : ℕ} (x : ℕ) (h : Nat.Coprime x n) : (ZMod n)ˣ :=
-  ⟨x, x⁻¹, coe_mul_inv_eq_one x h, by rw [mul_comm, coe_mul_inv_eq_one x h]⟩
+  let inv : ZMod n := Nat.gcdA x n
+  have hi : (x : ZMod n) * inv = 1 := by
+    simpa only [h.gcd_eq_one, Nat.cast_one] using natCast_mul_gcdA x n
+  ⟨x, inv, hi, (mul_comm ..).trans hi⟩
 
 @[simp]
 theorem coe_unitOfCoprime {n : ℕ} (x : ℕ) (h : Nat.Coprime x n) :
     (unitOfCoprime x h : ZMod n) = x :=
   rfl
+
+theorem coe_mul_inv_eq_one {n : ℕ} (x : ℕ) (h : Nat.Coprime x n) :
+    (x : ZMod n) * ↑(unitOfCoprime x h)⁻¹ = 1 :=
+  (unitOfCoprime x h).val_inv
+
+lemma mul_val_inv (hmn : m.Coprime n) :
+    (m * (↑(unitOfCoprime m hmn)⁻¹ : ZMod n).val : ZMod n) = 1 := by
+  obtain rfl | hn := eq_or_ne n 0
+  · obtain rfl := (Nat.coprime_zero_right m).mp hmn
+    have hu : unitOfCoprime 1 hmn = 1 := Units.ext (by simp)
+    simp [hu]
+  have : NeZero n := ⟨hn⟩
+  rw [natCast_zmod_val, coe_mul_inv_eq_one]
+
+lemma val_inv_mul (hmn : m.Coprime n) :
+    ((↑(unitOfCoprime m hmn)⁻¹ : ZMod n).val * m : ZMod n) = 1 := by
+  rw [mul_comm, mul_val_inv]
 
 set_option backward.isDefEq.respectTransparency false in
 theorem val_coe_unit_coprime {n : ℕ} (u : (ZMod n)ˣ) : Nat.Coprime (u : ZMod n).val n := by
@@ -839,36 +820,6 @@ theorem prime_natCast_not_isUnit_pow {p d : ℕ} (hp : p.Prime) (hd : 0 < d) :
     ¬ IsUnit ((p : ℕ) : ZMod (p ^ d)) := by
   simp [isUnit_prime_iff_not_dvd hp]
   lia
-
-@[simp]
-theorem inv_coe_unit {n : ℕ} (u : (ZMod n)ˣ) : (u : ZMod n)⁻¹ = (u⁻¹ : (ZMod n)ˣ) := by
-  have := congr_arg ((↑) : ℕ → ZMod n) (val_coe_unit_coprime u)
-  rw [← mul_inv_eq_gcd, Nat.cast_one] at this
-  exact (Units.inv_eq_of_mul_eq_one_right this).symm
-
-theorem mul_inv_of_unit {n : ℕ} (a : ZMod n) (h : IsUnit a) : a * a⁻¹ = 1 := by
-  rcases h with ⟨u, rfl⟩
-  rw [inv_coe_unit, u.mul_inv]
-
-theorem inv_mul_of_unit {n : ℕ} (a : ZMod n) (h : IsUnit a) : a⁻¹ * a = 1 := by
-  rw [mul_comm, mul_inv_of_unit a h]
-
--- TODO: If we changed `⁻¹` so that `ZMod n` is always a `DivisionMonoid`,
--- then we could use the general lemma `inv_eq_of_mul_eq_one`
-protected theorem inv_eq_of_mul_eq_one (n : ℕ) (a b : ZMod n) (h : a * b = 1) : a⁻¹ = b :=
-  left_inv_eq_right_inv (inv_mul_of_unit a ⟨⟨a, b, h, mul_comm a b ▸ h⟩, rfl⟩) h
-
-@[simp]
-theorem inv_neg_one (n : ℕ) : (-1 : ZMod n)⁻¹ = -1 :=
-  ZMod.inv_eq_of_mul_eq_one n (-1) (-1) (by simp)
-
-lemma inv_mul_eq_one_of_isUnit {n : ℕ} {a : ZMod n} (ha : IsUnit a) (b : ZMod n) :
-    a⁻¹ * b = 1 ↔ a = b := by
-  -- ideally, this would be `ha.inv_mul_eq_one`, but `ZMod n` is not a `DivisionMonoid`...
-  -- (see the "TODO" above)
-  refine ⟨fun H ↦ ?_, fun H ↦ H ▸ a.inv_mul_of_unit ha⟩
-  apply_fun (a * ·) at H
-  rwa [← mul_assoc, a.mul_inv_of_unit ha, one_mul, mul_one, eq_comm] at H
 
 -- TODO: this equivalence is true for `ZMod 0 = ℤ`, but needs to use different functions.
 /-- Equivalence between the units of `ZMod n` and
@@ -1269,14 +1220,15 @@ variable {α : Type*} [Group α] {n : ℕ}
 
 @[to_additive (attr := simp) nsmul_zmod_val_inv_nsmul]
 lemma pow_zmod_val_inv_pow (hn : (Nat.card α).gcd n = 1) (a : α) :
-    (a ^ (n⁻¹ : ZMod (Nat.card α)).val) ^ n = a := by
+    (a ^ (↑(ZMod.unitOfCoprime n (Nat.Coprime.symm hn))⁻¹ : ZMod (Nat.card α)).val) ^ n = a := by
   replace hn : (Nat.card α).Coprime n := hn
   rw [← pow_mul', ← pow_mod_natCard, ← ZMod.val_natCast, Nat.cast_mul, ZMod.mul_val_inv hn.symm,
     ZMod.val_one_eq_one_mod, pow_mod_natCard, pow_one]
 
 @[to_additive (attr := simp) zmod_val_inv_nsmul_nsmul]
 lemma pow_pow_zmod_val_inv (hn : (Nat.card α).gcd n = 1) (a : α) :
-    (a ^ n) ^ (n⁻¹ : ZMod (Nat.card α)).val = a := by rw [pow_right_comm, pow_zmod_val_inv_pow hn]
+    (a ^ n) ^ (↑(ZMod.unitOfCoprime n (Nat.Coprime.symm hn))⁻¹ : ZMod (Nat.card α)).val = a := by
+  rw [pow_right_comm, pow_zmod_val_inv_pow hn]
 
 end Group
 

@@ -116,18 +116,23 @@ lemma LSeries.abscissaOfAbsConv_le_one_of_isBigO_one {f : ℕ → ℂ} (h : f =O
   simpa using abscissaOfAbsConv_le_of_isBigO_rpow (x := 0) (by simpa using h)
 
 /-- If `f` is real-valued and `x` is strictly greater than the abscissa of absolute convergence
-of `f`, then the real series `∑' n, f n / n ^ x` converges. -/
+of `f`, then the real series `∑' n : ℕ+, f n / n ^ x` converges. -/
 lemma LSeries.summable_real_of_abscissaOfAbsConv_lt {f : ℕ → ℝ} {x : ℝ}
     (h : abscissaOfAbsConv (f ·) < x) :
-    Summable fun n : ℕ ↦ f n / (n : ℝ) ^ x := by
-  have aux : term (f ·) x = fun n ↦ ↑(if n = 0 then 0 else f n / (n : ℝ) ^ x) := by
-    ext n
-    simp [term_def, apply_ite ((↑) : ℝ → ℂ), ofReal_cpow n.cast_nonneg]
-  have := LSeriesSummable_of_abscissaOfAbsConv_lt_re (ofReal_re x ▸ h)
-  simp only [LSeriesSummable, aux, summable_ofReal] at this
-  refine this.congr_cofinite ?_
-  filter_upwards [(Set.finite_singleton 0).compl_mem_cofinite] with n hn
-    using ite_eq_right (by simpa using hn)
+    Summable fun n : ℕ+ ↦ Checked.div (f n) ((n : ℝ) ^ x)
+      (Real.rpow_ne_zero_of_pos (Nat.cast_pos.mpr n.pos) x).isUnit := by
+  have hcomplex : Summable (term (f ·) (x : ℂ)) :=
+    LSeriesSummable_of_abscissaOfAbsConv_lt_re (ofReal_re x ▸ h)
+  have hpos : Summable (fun n : ℕ+ ↦ term (f ·) (x : ℂ) n) :=
+    hcomplex.comp_injective Subtype.val_injective
+  apply (summable_ofReal).mp
+  refine hpos.congr fun n ↦ ?_
+  rw [term_of_ne_zero n.ne_zero]
+  symm
+  apply (eq_div_iff).mpr
+  have hpow : (((n : ℝ) ^ x : ℝ) : ℂ) = ((n : ℕ) : ℂ) ^ (x : ℂ) := by
+    rw [ofReal_cpow (Nat.cast_nonneg (n : ℕ)), ofReal_natCast]
+  rw [← hpow, ← ofReal_mul, div_mul_cancel₀]
 
 /-- If `F` is a binary operation on `ℕ → ℂ` with the property that the `LSeries` of `F f g`
 converges whenever the `LSeries` of `f` and `g` do, then the abscissa of absolute convergence

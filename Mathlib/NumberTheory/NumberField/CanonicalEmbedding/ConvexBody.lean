@@ -125,15 +125,18 @@ theorem adjust_f {w₁ : InfinitePlace K} (B : ℝ≥0) (hf : ∀ w, w ≠ w₁ 
     ∃ g : InfinitePlace K → ℝ≥0, (∀ w, w ≠ w₁ → g w = f w) ∧ ∏ w, (g w) ^ mult w = B := by
   classical
   let S := ∏ w ∈ Finset.univ.erase w₁, (f w) ^ mult w
+  have hS : S ≠ 0 := by
+    rw [Finset.prod_ne_zero_iff]
+    exact fun w hw => pow_ne_zero _ (hf w (Finset.ne_of_mem_erase hw))
+  have hmult : (mult w₁ : ℝ) ≠ 0 := by
+    rw [mult]
+    split_ifs <;> norm_num
   refine ⟨Function.update f w₁ ((B * S⁻¹) ^ (mult w₁ : ℝ)⁻¹), ?_, ?_⟩
   · exact fun w hw => Function.update_of_ne hw _ f
   · rw [← Finset.mul_prod_erase Finset.univ _ (Finset.mem_univ w₁), Function.update_self,
       Finset.prod_congr rfl fun w hw => by rw [Function.update_of_ne (Finset.ne_of_mem_erase hw)],
       ← NNReal.rpow_natCast, ← NNReal.rpow_mul, inv_mul_cancel₀, NNReal.rpow_one, mul_assoc,
       inv_mul_cancel₀, mul_one]
-    · rw [Finset.prod_ne_zero_iff]
-      exact fun w hw => pow_ne_zero _ (hf w (Finset.ne_of_mem_erase hw))
-    · rw [mult]; split_ifs <;> norm_num
 
 end convexBodyLT
 
@@ -371,9 +374,9 @@ noncomputable abbrev convexBodySumFactor : ℝ≥0 :=
   (2 : ℝ≥0) ^ nrRealPlaces K * (NNReal.pi / 2) ^ nrComplexPlaces K / (finrank ℚ K).factorial
 
 theorem convexBodySumFactor_ne_zero : convexBodySumFactor K ≠ 0 := by
-  refine div_ne_zero ?_ <| Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero _)
+  apply div_ne_zero
   exact mul_ne_zero (pow_ne_zero _ two_ne_zero)
-    (pow_ne_zero _ (div_ne_zero NNReal.pi_ne_zero two_ne_zero))
+    (pow_ne_zero _ (div_ne_zero NNReal.pi_ne_zero))
 
 open MeasureTheory MeasureTheory.Measure Real in
 open scoped Classical in
@@ -385,9 +388,10 @@ theorem convexBodySum_volume :
   · suffices volume (convexBodySum K 1) = (convexBodySumFactor K) by
       rw [mul_comm]
       convert! addHaar_smul volume B (convexBodySum K 1)
-      · simp_rw [← Set.preimage_smul_inv₀ (ne_of_gt hB), Set.preimage_ofPred_eq, convexBodySumFun,
-        normAtPlace_smul, abs_inv, abs_eq_self.mpr (le_of_lt hB), ← mul_assoc, mul_comm, mul_assoc,
-        ← Finset.mul_sum, inv_mul_le_iff₀ hB, mul_one]
+      · have habs : |B⁻¹| = B⁻¹ := abs_of_pos (inv_pos.mpr hB)
+        simp_rw [← Set.preimage_smul_inv₀ (ne_of_gt hB), Set.preimage_ofPred_eq, convexBodySumFun,
+          normAtPlace_smul, habs, ← mul_assoc, mul_comm, mul_assoc, ← Finset.mul_sum,
+          inv_mul_le_iff₀ hB, mul_one]
       · rw [abs_pow, ofReal_pow (abs_nonneg _), abs_eq_self.mpr (le_of_lt hB),
           mixedEmbedding.finrank]
       · exact this.symm
@@ -399,14 +403,14 @@ theorem convexBodySum_volume :
       volume ((convexBodySumFun_eq_zero_iff 0).mpr rfl) convexBodySumFun_neg convexBodySumFun_add_le
       (fun hx => (convexBodySumFun_eq_zero_iff _).mp hx)
       (fun r x => le_of_eq (convexBodySumFun_smul r x)) zero_lt_one]
-    simp_rw [mixedEmbedding.finrank, div_one, Gamma_nat_eq_factorial, ofReal_div_of_pos
+    simp_rw [mixedEmbedding.finrank, div_one₀, Gamma_nat_eq_factorial, ofReal_div_of_pos
       (Nat.cast_pos.mpr (Nat.factorial_pos _)), Real.rpow_one, ofReal_natCast]
     suffices ∫ x : mixedSpace K, exp (-convexBodySumFun x) =
         (2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K by
       rw [this, convexBodySumFactor, ofReal_mul (by positivity), ofReal_pow zero_le_two,
         ofReal_pow (by positivity), ofReal_div_of_pos zero_lt_two, ofReal_ofNat,
-        ← NNReal.coe_real_pi, ofReal_coe_nnreal, coe_div (Nat.cast_ne_zero.mpr
-        (Nat.factorial_ne_zero _)), coe_mul, coe_pow, coe_pow, coe_ofNat, coe_div two_ne_zero,
+        ← NNReal.coe_real_pi, ofReal_coe_nnreal, ENNReal.coe_div, coe_mul, coe_pow, coe_pow,
+        coe_ofNat, ENNReal.coe_div,
         coe_ofNat, coe_natCast]
     calc
       _ = (∫ x : {w : InfinitePlace K // IsReal w} → ℝ, ∏ w, exp (-‖x w‖)) *
@@ -425,9 +429,11 @@ theorem convexBodySum_volume :
           ← Complex.integral_exp_neg_mul_rpow le_rfl zero_lt_two]
         simp_rw [Real.rpow_one]
       _ = (2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K := by
-        simp_rw [div_one, one_add_one_eq_two, Gamma_add_one two_ne_zero, Gamma_two, mul_one,
-          mul_assoc, ← Real.rpow_add_one two_ne_zero, show (-2 : ℝ) + 1 = -1 by norm_num,
-          Real.rpow_neg_one, div_eq_mul_inv]
+        have h : (2 : ℝ) ^ (-2 : ℝ) * Gamma (2 + 1) = (2 : ℝ)⁻¹ := by
+          rw [Gamma_add_one two_ne_zero, Gamma_two, mul_one, ← Real.rpow_add_one two_ne_zero]
+          norm_num [Real.rpow_neg_one]
+        simp only [div_one₀, one_add_one_eq_two, Gamma_two, mul_one]
+        rw [mul_assoc π, h, div_eq_mul_inv₀]
 
 end convexBodySum
 
@@ -587,13 +593,15 @@ that `|Norm a| < (B / d) ^ d` where `d` is the degree of `K`. -/
 theorem exists_ne_zero_mem_ideal_of_norm_le {B : ℝ}
     (h : (minkowskiBound K I) ≤ volume (convexBodySum K B)) :
     ∃ a ∈ (I : FractionalIdeal (𝓞 K)⁰ K), a ≠ 0 ∧
-      |Algebra.norm ℚ (a : K)| ≤ (B / finrank ℚ K) ^ finrank ℚ K := by
+      |Algebra.norm ℚ (a : K)| ≤ (Checked.div B (finrank ℚ K : ℝ)
+        (Nat.cast_ne_zero.mpr (finrank_pos (R := ℚ) (M := K)).ne').isUnit) ^ finrank ℚ K := by
   have hB : 0 ≤ B := by
     contrapose! h
     rw [convexBodySum_volume_eq_zero_of_le_zero K (le_of_lt h)]
     exact minkowskiBound_pos K I
   -- Some inequalities that will be useful later on
-  have h1 : 0 < (finrank ℚ K : ℝ)⁻¹ := inv_pos.mpr (Nat.cast_pos.mpr finrank_pos)
+  have hd : 0 < (finrank ℚ K : ℝ) := Nat.cast_pos.mpr finrank_pos
+  have h1 : 0 < (finrank ℚ K : ℝ)⁻¹ := inv_pos.mpr hd
   have h2 : 0 ≤ B / (finrank ℚ K) := div_nonneg hB (Nat.cast_nonneg _)
   have h_fund := ZSpan.isAddFundamentalDomain' (fractionalIdealLatticeBasis K I) volume
   have : Countable (span ℤ (Set.range (fractionalIdealLatticeBasis K I))).toAddSubgroup := by
@@ -606,21 +614,25 @@ theorem exists_ne_zero_mem_ideal_of_norm_le {B : ℝ}
   obtain ⟨a, ha, rfl⟩ := hx
   refine ⟨a, ha, by simpa using h_nz, ?_⟩
   rw [← rpow_natCast, ← rpow_le_rpow_iff (by simp only [Rat.cast_abs, abs_nonneg])
-      (rpow_nonneg h2 _) h1, ← rpow_mul h2, mul_inv_cancel₀ (Nat.cast_ne_zero.mpr
-      (ne_of_gt finrank_pos)), rpow_one, le_div_iff₀' (Nat.cast_pos.mpr finrank_pos)]
+      (rpow_nonneg h2 _) h1, ← rpow_mul h2, mul_inv_cancel₀ (ha := hd.ne'.isUnit), rpow_one,
+      le_div_iff₀' hd]
   refine le_trans ?_ ((convexBodySum_mem K B).mp h_mem)
-  rw [← le_div_iff₀' (Nat.cast_pos.mpr finrank_pos), ← sum_mult_eq, Nat.cast_sum]
-  refine le_trans ?_ (geom_mean_le_arith_mean Finset.univ _ _ (fun _ _ => Nat.cast_nonneg _)
-    ?_ (fun _ _ => AbsoluteValue.nonneg _ _))
-  · simp_rw [← prod_eq_abs_norm, rpow_natCast]
-    exact le_of_eq rfl
-  · rw [← Nat.cast_sum, sum_mult_eq, Nat.cast_pos]
-    exact finrank_pos
+  rw [← le_div_iff₀' hd]
+  have hsum : 0 < ∑ w : InfinitePlace K, (w.mult : ℝ) := by
+    rwa [← Nat.cast_sum, sum_mult_eq]
+  have hprod : (∏ w : InfinitePlace K, w.val a ^ w.mult) =
+      ((|Algebra.norm ℚ a| : ℚ) : ℝ) := prod_eq_abs_norm a
+  simpa only [rpow_natCast, hprod, ← Nat.cast_sum, sum_mult_eq] using
+    geom_mean_le_arith_mean Finset.univ (fun w : InfinitePlace K ↦ (w.mult : ℝ))
+      (fun w ↦ w.val a) (fun _ _ ↦ Nat.cast_nonneg _) hsum
+      (fun _ _ ↦ AbsoluteValue.nonneg _ _)
 
 open scoped Classical in
 theorem exists_ne_zero_mem_ringOfIntegers_of_norm_le {B : ℝ}
     (h : (minkowskiBound K ↑1) ≤ volume (convexBodySum K B)) :
-    ∃ a : 𝓞 K, a ≠ 0 ∧ |Algebra.norm ℚ (a : K)| ≤ (B / finrank ℚ K) ^ finrank ℚ K := by
+    ∃ a : 𝓞 K, a ≠ 0 ∧ |Algebra.norm ℚ (a : K)| ≤
+      (Checked.div B (finrank ℚ K : ℝ)
+        (Nat.cast_ne_zero.mpr (finrank_pos (R := ℚ) (M := K)).ne').isUnit) ^ finrank ℚ K := by
   obtain ⟨_, h_mem, h_nz, h_bd⟩ := exists_ne_zero_mem_ideal_of_norm_le K ↑1 h
   obtain ⟨a, rfl⟩ := (FractionalIdeal.mem_one_iff _).mp h_mem
   exact ⟨a, RingOfIntegers.coe_ne_zero_iff.mp h_nz, h_bd⟩

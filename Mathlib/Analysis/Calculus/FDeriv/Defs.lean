@@ -254,7 +254,8 @@ variable {E : Type*} [SeminormedAddCommGroup E] [NormedSpace 𝕜 E]
 variable {F : Type*} [SeminormedAddCommGroup F] [NormedSpace 𝕜 F]
 variable {f : E → F} {f' : E →L[𝕜] F} {s : Set E} {x : E}
 
-theorem hasFDerivAtFilter_iff_isLittleO {D : Type*} {f : D → F} {coord : D → E} {L : Filter (D × D)} :
+theorem hasFDerivAtFilter_iff_isLittleO {D : Type*} {f : D → F} {coord : D → E}
+    {L : Filter (D × D)} :
     HasFDerivAtFilter f f' L coord ↔
       (fun p => f p.1 - f p.2 - f' (coord p.1 - coord p.2)) =o[L] fun p => coord p.1 - coord p.2 :=
   (hasFDerivAtFilter_iff_isLittleOTVS f f' L coord).trans isLittleOTVS_iff_isLittleO

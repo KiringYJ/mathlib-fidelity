@@ -46,17 +46,19 @@ theorem deriv_gaussian_eq_hermite_mul_gaussian (n : ℕ) (x : ℝ) :
   induction n generalizing x with
   | zero => rw [Function.iterate_zero_apply, pow_zero, one_mul, hermite_zero, C_1, map_one, one_mul]
   | succ n ih =>
-    replace ih : deriv^[n] _ = _ := _root_.funext ih
-    have deriv_gaussian :
-      deriv (fun y => Real.exp (-(y ^ 2 / 2))) x = -x * Real.exp (-(x ^ 2 / 2)) := by
-      -- Porting note (https://github.com/leanprover-community/mathlib4/issues/10745): was `simp [mul_comm, ← neg_mul]`
-      rw [deriv_exp (by simp)]
-      simp [mul_comm]
-    rw [Function.iterate_succ_apply', ih, deriv_const_mul_field, deriv_fun_mul, pow_succ (-1 : ℝ),
-      deriv_gaussian, hermite_succ, map_sub, map_mul, aeval_X, Polynomial.deriv_aeval]
+    have ih' := _root_.funext ih
+    have hGauss : HasDerivAt (fun y => Real.exp (-(y ^ 2 / 2)))
+        (-x * Real.exp (-(x ^ 2 / 2))) x := by
+      have h := (((hasDerivAt_id' x).fun_pow 2).div_const (2 : ℝ)
+        (hd := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit)).fun_neg.exp
+      convert h using 1
+      simp only [Nat.cast_ofNat, Nat.reduceSub, pow_one, mul_one]
+      ring
+    rw [Function.iterate_succ_apply', ih', deriv_const_mul_field, deriv_fun_mul, pow_succ (-1 : ℝ),
+      hGauss.deriv, hermite_succ, map_sub, map_mul, aeval_X, Polynomial.deriv_aeval]
     · ring
     · apply Polynomial.differentiable_aeval
-    · apply DifferentiableAt.exp; simp -- Porting note: was just `simp`
+    · exact hGauss.differentiableAt
 
 theorem hermite_eq_deriv_gaussian (n : ℕ) (x : ℝ) : aeval x (hermite n) =
     (-1 : ℝ) ^ n * deriv^[n] (fun y => Real.exp (-(y ^ 2 / 2))) x / Real.exp (-(x ^ 2 / 2)) := by
@@ -67,7 +69,7 @@ theorem hermite_eq_deriv_gaussian (n : ℕ) (x : ℝ) : aeval x (hermite n) =
 
 theorem hermite_eq_deriv_gaussian' (n : ℕ) (x : ℝ) : aeval x (hermite n) =
     (-1 : ℝ) ^ n * deriv^[n] (fun y => Real.exp (-(y ^ 2 / 2))) x * Real.exp (x ^ 2 / 2) := by
-  rw [hermite_eq_deriv_gaussian, Real.exp_neg]
-  field
+  rw [hermite_eq_deriv_gaussian, div_eq_iff]
+  rw [mul_assoc, ← Real.exp_add, add_neg_cancel, Real.exp_zero, mul_one]
 
 end Polynomial

@@ -45,7 +45,7 @@ def ρ : ℍ := ⟨⟨-1 / 2, Real.sqrt 3 / 2⟩, by positivity⟩
 
 lemma ρ_sq : (ρ : ℂ) ^ 2 = -ρ - 1 := by
   simp [Complex.ext_iff, pow_two, ρ]
-  grind
+  constructor <;> nlinarith [Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 3)]
 
 lemma norm_ρ : ‖(ρ : ℂ)‖ = 1 := by norm_num [norm_def, normSq, ← pow_two, ρ, div_pow]
 
@@ -166,12 +166,16 @@ theorem normSq_pos (z : ℍ) : 0 < Complex.normSq (z : ℂ) := by
 theorem normSq_ne_zero (z : ℍ) : Complex.normSq (z : ℂ) ≠ 0 :=
   (normSq_pos z).ne'
 
-theorem im_inv_neg_coe_pos (z : ℍ) : 0 < (-z : ℂ)⁻¹.im := by
-  simpa [neg_div] using div_pos z.im_pos (normSq_pos z)
+theorem im_inv_neg_coe_pos (z : ℍ) :
+    0 < (Checked.inv (-z : ℂ) (neg_ne_zero.mpr z.ne_zero).isUnit).im := by
+  simpa [neg_div₀] using div_pos z.im_pos (normSq_pos z)
 
-lemma im_pnat_div_pos (n : ℕ) [NeZero n] (z : ℍ) : 0 < (-(n : ℂ) / z).im := by
-  suffices 0 < n * z.im / Complex.normSq z by simpa [Complex.div_im, neg_div]
-  positivity [NeZero.ne n, z.normSq_pos]
+lemma im_pnat_div_pos (n : ℕ) [NeZero n] (z : ℍ) :
+    0 < (Checked.div (-(n : ℂ)) z z.ne_zero.isUnit).im := by
+  have hz : Complex.normSq (z : ℂ) ≠ 0 := z.normSq_ne_zero
+  suffices 0 < n * z.im / Complex.normSq z by simpa [Complex.div_im, neg_div₀]
+  exact div_pos (mul_pos (by exact_mod_cast Nat.pos_of_ne_zero (NeZero.ne n)) z.im_pos)
+    z.normSq_pos
 
 lemma ne_ofReal (z : ℍ) (x : ℝ) : (z : ℂ) ≠ x :=
   ne_of_apply_ne Complex.im <| by simp [im_ne_zero]

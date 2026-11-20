@@ -46,6 +46,10 @@ def proofUsesRetiredOperator : True := consumeRetiredProof Rat.inv_zero
 set_option linter.defProp false in
 def proofUsesOfficialRetiredOperator : True := consumeProof Rat.inv_zero
 
+private theorem retiredWitness : ∃ q : Rat, q = 0 := ⟨Rat.inv 0, Rat.inv_zero⟩
+
+theorem inheritedRetiredWitness : ∃ q : Rat, q = 0 := retiredWitness
+
 def goodPackage : Package where
   value := Rat.normalize 1 2 (by decide)
   law := True.intro
@@ -128,6 +132,13 @@ elab "#guard_operator_fidelity" : command => do
   let officialStatement ← liftTermElabM <| auditDeclaration ``Rat.inv_zero
   assertContains officialStatement.statementRoots ``Rat.inv "official theorem statement"
 
+  let inheritedProof ← liftTermElabM <| auditDeclaration ``inheritedRetiredWitness
+  assertEmpty inheritedProof.statementRoots "inherited theorem statement"
+  assertEmpty inheritedProof.dataRoots "inherited theorem data"
+  unless inheritedProof.proofUses.any (fun use => use.root == ``Rat.inv &&
+      use.ownership == .project) do
+    throwError "theorem body: expected a project-owned proof dependency on Rat.inv"
+
   let officialProof ← liftTermElabM <| auditDeclaration ``proofUsesOfficialRetiredOperator
   unless officialProof.proofUses.any (fun use => use.root == ``Rat.inv &&
       use.ownership == .officialToolchain) do
@@ -140,6 +151,8 @@ elab "#guard_operator_fidelity" : command => do
       (``goodUnitsInverse, "Units inversion"),
       (``goodSelectedProjection, "projection-selected structure data")] do
     let result ← liftTermElabM <| auditDeclaration name
+    if result.incomplete then
+      throwError "{context}: the audit must complete for this lawful declaration"
     assertEmpty result.statementRoots context
     assertEmpty result.dataRoots context
 

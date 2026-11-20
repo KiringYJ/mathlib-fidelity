@@ -62,13 +62,11 @@ lemma threeAPFree_frontier {𝕜 E : Type*} [Field 𝕜] [LinearOrder 𝕜] [IsS
     ThreeAPFree (frontier s) := by
   intro a ha b hb c hc habc
   obtain rfl : (1 / 2 : 𝕜) • a + (1 / 2 : 𝕜) • c = b := by
-    rwa [← smul_add, one_div, inv_smul_eq_iff₀ (ha := (show (2 : 𝕜) ≠ 0 by simp).isUnit), two_smul]
-  have :=
+    rw [← smul_add, habc, smul_add, ← add_smul, add_halves, one_smul]
+  have hac :=
     hs₁.eq (hs₀.frontier_subset ha) (hs₀.frontier_subset hc) one_half_pos one_half_pos
       (add_halves _) hb.2
-  simp [this, ← add_smul]
-  ring_nf
-  simp
+  simp only [hac, ← add_smul, add_halves, one_smul]
 
 lemma threeAPFree_sphere {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [StrictConvexSpace ℝ E] (x : E) (r : ℝ) : ThreeAPFree (sphere x r) := by
@@ -239,18 +237,17 @@ theorem exists_large_sphere_aux (n d : ℕ) : ∃ k ∈ range (n * (d - 1) ^ 2 +
   refine exists_le_card_fiber_of_nsmul_le_card_of_maps_to (fun x hx => ?_) nonempty_range_add_one ?_
   · rw [mem_range, Nat.lt_succ_iff]
     exact sum_sq_le_of_mem_box hx
-  · rw [card_range, nsmul_eq_mul, mul_div_assoc', cast_add_one, mul_div_cancel_left₀, card_box]
-    exact (cast_add_one_pos _).ne'
+  · rw [card_range, nsmul_eq_mul, cast_add_one, card_box, mul_comm]
+    exact (le_div_iff₀ (cast_add_one_pos _)).mp le_rfl
 
-theorem exists_large_sphere (n d : ℕ) :
-    ∃ k, ((d ^ n :) / (n * d ^ 2 :) : ℝ) ≤ #(sphere n d k) := by
+lemma sphereDenominator_pos (hn : 0 < n) (hd : 0 < d) : 0 < ((n * d ^ 2 : ℕ) : ℝ) :=
+  Nat.cast_pos.2 (Nat.mul_pos hn (pow_pos hd _))
+
+theorem exists_large_sphere (n d : ℕ) (hn : 0 < n) (hd : 0 < d) :
+    ∃ k, Checked.div ((d ^ n : ℕ) : ℝ) ((n * d ^ 2 : ℕ) : ℝ)
+      (sphereDenominator_pos hn hd).ne'.isUnit ≤ #(sphere n d k) := by
   obtain ⟨k, -, hk⟩ := exists_large_sphere_aux n d
-  refine ⟨k, ?_⟩
-  obtain rfl | hn := n.eq_zero_or_pos
-  · simp
-  obtain rfl | hd := d.eq_zero_or_pos
-  · simp
-  refine (div_le_div_of_nonneg_left (by positivity) (by positivity) ?_).trans hk
+  refine ⟨k, (div_le_div_of_nonneg_left (by positivity) (cast_add_one_pos _) ?_).trans hk⟩
   simp only [← le_sub_iff_add_le', cast_mul, ← mul_sub, cast_pow, cast_sub hd, sub_sq, one_pow,
     cast_one, mul_one, sub_add, sub_sub_self]
   apply one_le_mul_of_one_le_of_one_le
@@ -259,19 +256,32 @@ theorem exists_large_sphere (n d : ℕ) :
   norm_num
   exact one_le_cast.2 hd
 
-theorem bound_aux' (n d : ℕ) : ((d ^ n :) / (n * d ^ 2 :) : ℝ) ≤ rothNumberNat ((2 * d - 1) ^ n) :=
-  let ⟨_, h⟩ := exists_large_sphere n d
+theorem bound_aux' (n d : ℕ) (hn : 0 < n) (hd : 0 < d) :
+    Checked.div ((d ^ n : ℕ) : ℝ) ((n * d ^ 2 : ℕ) : ℝ)
+      (sphereDenominator_pos hn hd).ne'.isUnit ≤ rothNumberNat ((2 * d - 1) ^ n) :=
+  let ⟨_, h⟩ := exists_large_sphere n d hn hd
   h.trans <| cast_le.2 <| card_sphere_le_rothNumberNat _ _ _
 
 theorem bound_aux (hd : d ≠ 0) (hn : 2 ≤ n) :
-    (d ^ (n - 2 :) / n : ℝ) ≤ rothNumberNat ((2 * d - 1) ^ n) := by
-  convert! bound_aux' n d using 1
-  rw [cast_mul, cast_pow, mul_comm, ← div_div, pow_sub₀ _ _ hn, ← div_eq_mul_inv, cast_pow]
-  rwa [cast_ne_zero]
+    Checked.div ((d : ℝ) ^ (n - 2)) (n : ℝ)
+      (Nat.cast_ne_zero.mpr (show n ≠ 0 by omega)).isUnit ≤ rothNumberNat ((2 * d - 1) ^ n) := by
+  have hn₀ : 0 < n := by omega
+  have hd₀ := Nat.pos_of_ne_zero hd
+  have H := (div_le_iff₀ (sphereDenominator_pos hn₀ hd₀)).1 (bound_aux' n d hn₀ hd₀)
+  have hnum : ((d ^ n : ℕ) : ℝ) = (d : ℝ) ^ (n - 2) * (d : ℝ) ^ 2 := by
+    rw [Nat.cast_pow, ← _root_.pow_add, Nat.sub_add_cancel hn]
+  rw [hnum, Nat.cast_mul, Nat.cast_pow, ← mul_assoc] at H
+  apply (div_le_iff₀ (Nat.cast_pos.2 hn₀ : (0 : ℝ) < n)).2
+  exact (mul_le_mul_iff_left₀ (pow_pos (Nat.cast_pos.2 hd₀ : (0 : ℝ) < d) 2)).mp H
 
 open scoped Filter Topology
 
 open Real
+
+lemma one_sub_two_div_exp_pos : 0 < (1 : ℝ) - 2 / exp 1 :=
+  sub_pos.2 ((div_lt_one (exp_pos 1)).2 exp_one_gt_two)
+
+local notation "B" => Checked.div (2 : ℝ) (1 - 2 / exp 1) one_sub_two_div_exp_pos.ne'.isUnit
 
 section NumericalBounds
 
@@ -282,19 +292,18 @@ theorem log_two_mul_two_le_sqrt_log_eight : log 2 * 2 ≤ √(log 8) := by
   gcongr
   linarith only [log_two_lt_d9.le]
 
-theorem two_div_one_sub_two_div_e_le_eight : 2 / (1 - 2 / exp 1) ≤ 8 := by
-  rw [div_le_iff₀, mul_sub, mul_one, mul_div_assoc', le_sub_comm, div_le_iff₀ (exp_pos _)]
-  · linarith [exp_one_gt_d9]
-  rw [sub_pos, div_lt_one] <;> exact exp_one_gt_d9.trans' (by norm_num)
+theorem two_div_one_sub_two_div_e_le_eight : B ≤ 8 := by
+  apply (div_le_iff₀ one_sub_two_div_exp_pos).2
+  apply (mul_le_mul_iff_left₀ (exp_pos 1)).mp
+  rw [mul_assoc (8 : ℝ), sub_mul, one_mul, div_mul_cancel₀]
+  linarith only [exp_one_gt_d9]
 
-theorem le_sqrt_log (hN : 4096 ≤ N) : log (2 / (1 - 2 / exp 1)) * (69 / 50) ≤ √(log ↑N) := by
+theorem le_sqrt_log (hN : 4096 ≤ N) : log B * (69 / 50) ≤ √(log ↑N) := by
   calc
-    _ ≤ log (2 ^ 3) * (69 / 50) := by
-      gcongr
-      · field_simp
-        simp (disch := positivity) [exp_one_gt_two]
-      · norm_num1
-        exact two_div_one_sub_two_div_e_le_eight
+    _ ≤ log ((2 : ℝ) ^ 3) * (69 / 50) := by
+      apply mul_le_mul_of_nonneg_right _ (by norm_num)
+      apply log_le_log (div_pos zero_lt_two one_sub_two_div_exp_pos)
+      simpa only [show (2 : ℝ) ^ 3 = 8 by norm_num] using two_div_one_sub_two_div_e_le_eight
     _ ≤ √(log (2 ^ 12)) := by
       simp only [Real.log_pow, Nat.cast_ofNat]
       apply le_sqrt_of_sq_le
@@ -314,23 +323,17 @@ theorem exp_neg_two_mul_le {x : ℝ} (hx : 0 < x) : exp (-2 * x) < exp (2 - ⌈x
     sub_neg_eq_add, two_mul, sub_add_add_cancel, add_comm _ x]
   exact le_trans (le_add_of_nonneg_right zero_le_one) (add_one_le_exp _)
 
-theorem div_lt_floor {x : ℝ} (hx : 2 / (1 - 2 / exp 1) ≤ x) : x / exp 1 < (⌊x / 2⌋₊ : ℝ) := by
-  apply lt_of_le_of_lt _ (sub_one_lt_floor _)
-  have : 0 < 1 - 2 / exp 1 := by
-    rw [sub_pos, div_lt_one (exp_pos _)]
-    exact exp_one_gt_two
-  rwa [le_sub_comm, div_eq_mul_one_div x, div_eq_mul_one_div x, ← mul_sub, div_sub', ←
-    div_eq_mul_one_div, mul_div_assoc', one_le_div, ← div_le_iff₀ this]
-  · exact zero_lt_two
-  · exact two_ne_zero
+theorem div_lt_floor {x : ℝ} (hx : B ≤ x) : x / exp 1 < (⌊x / 2⌋₊ : ℝ) := by
+  have h := (div_le_iff₀ one_sub_two_div_exp_pos).1 hx
+  rw [mul_sub, mul_one, ← mul_div_assoc₀, mul_comm x 2, mul_div_assoc₀] at h
+  refine lt_of_le_of_lt ?_ (sub_one_lt_floor (x / 2))
+  have hx₂ : x / 2 * 2 = x := div_mul_cancel₀ x
+  linarith only [h, hx₂]
 
 theorem ceil_lt_mul {x : ℝ} (hx : 50 / 19 ≤ x) : (⌈x⌉₊ : ℝ) < 1.38 * x := by
-  refine (ceil_lt_add_one <| hx.trans' <| by norm_num).trans_le ?_
-  rw [← le_sub_iff_add_le', ← sub_one_mul]
-  have : (1.38 : ℝ) = 69 / 50 := by norm_num
-  rwa [this, show (69 / 50 - 1 : ℝ) = (50 / 19)⁻¹ by norm_num1, ←
-    div_eq_inv_mul, one_le_div]
-  norm_num1
+  refine (ceil_lt_add_one ((show (0 : ℝ) ≤ 50 / 19 by norm_num).trans hx)).trans_le ?_
+  have h := (div_le_iff₀ (show (0 : ℝ) < 19 by norm_num)).1 hx
+  linarith
 
 end NumericalBounds
 
@@ -338,11 +341,26 @@ end NumericalBounds
 noncomputable def nValue (N : ℕ) : ℕ :=
   ⌈√(log N)⌉₊
 
-/-- The (almost) optimal value of `d` in `Behrend.bound_aux`. -/
-noncomputable def dValue (N : ℕ) : ℕ := ⌊(N : ℝ) ^ (nValue N : ℝ)⁻¹ / 2⌋₊
-
 theorem nValue_pos (hN : 2 ≤ N) : 0 < nValue N :=
   ceil_pos.2 <| Real.sqrt_pos.2 <| log_pos <| one_lt_cast.2 <| hN
+
+/-- The positive real root used to choose the digit bound. -/
+noncomputable abbrev dimRoot (N : ℕ) (hN : 2 ≤ N) : ℝ :=
+  (N : ℝ) ^ Checked.inv (nValue N : ℝ) (Nat.cast_ne_zero.mpr (nValue_pos hN).ne').isUnit
+
+/-- The (almost) optimal value of `d` in `Behrend.bound_aux`. -/
+noncomputable def dValue (N : ℕ) (hN : 2 ≤ N) : ℕ := ⌊dimRoot N hN / 2⌋₊
+
+private lemma dimRoot_pos (hN : 2 ≤ N) : 0 < dimRoot N hN :=
+  rpow_pos_of_pos (Nat.cast_pos.2 (show 0 < N by omega)) _
+
+private lemma log_dimRoot_mul (hN : 2 ≤ N) :
+    log (dimRoot N hN) * (nValue N : ℝ) = log (N : ℝ) := by
+  have h : (0 : ℝ) < N := Nat.cast_pos.2 (by omega)
+  rw [dimRoot, log_rpow h, mul_right_comm, inv_mul_cancel₀, one_mul]
+
+private lemma dimRoot_pow (hN : 2 ≤ N) : dimRoot N hN ^ nValue N = (N : ℝ) := by
+  rw [dimRoot, ← rpow_natCast, ← rpow_mul (Nat.cast_nonneg N), inv_mul_cancel₀, rpow_one]
 
 theorem three_le_nValue (hN : 64 ≤ N) : 3 ≤ nValue N := by
   rw [nValue, ← lt_iff_add_one_le, lt_ceil, cast_two]
@@ -355,100 +373,117 @@ theorem three_le_nValue (hN : 64 ≤ N) : 3 ≤ nValue N := by
   · exact log_two_gt_d9.trans_le' (by norm_num1)
   · norm_num1
 
-theorem dValue_pos (hN₃ : 8 ≤ N) : 0 < dValue N := by
-  have hN₀ : 0 < (N : ℝ) := cast_pos.2 (succ_pos'.trans_le hN₃)
-  rw [dValue, floor_pos, ← log_le_log_iff zero_lt_one, log_one, log_div _ two_ne_zero, log_rpow hN₀,
-    inv_mul_eq_div, sub_nonneg, le_div_iff₀]
-  · have : (nValue N : ℝ) ≤ 2 * √(log N) := by
-      apply (ceil_lt_add_one <| sqrt_nonneg _).le.trans
-      rw [two_mul, add_le_add_iff_left]
-      apply le_sqrt_of_sq_le
-      rw [one_pow, le_log_iff_exp_le hN₀]
-      exact (exp_one_lt_d9.le.trans <| by norm_num).trans (cast_le.2 hN₃)
-    apply (mul_le_mul_of_nonneg_left this <| log_nonneg one_le_two).trans _
-    rw [← mul_assoc, ← le_div_iff₀ (Real.sqrt_pos.2 <| log_pos <| one_lt_cast.2 _), div_sqrt]
-    · apply log_two_mul_two_le_sqrt_log_eight.trans
-      apply Real.sqrt_le_sqrt
-      exact log_le_log (by simp) (mod_cast hN₃)
-    exact hN₃.trans_lt' (by simp)
-  · exact cast_pos.2 (nValue_pos <| hN₃.trans' <| by simp)
-  · exact (rpow_pos_of_pos hN₀ _).ne'
-  · exact div_pos (rpow_pos_of_pos hN₀ _) zero_lt_two
-
-theorem le_N (hN : 2 ≤ N) : (2 * dValue N - 1) ^ nValue N ≤ N := by
-  have : (2 * dValue N - 1) ^ nValue N ≤ (2 * dValue N) ^ nValue N :=
-    Nat.pow_le_pow_left (Nat.sub_le _ _) _
-  apply this.trans
-  suffices ((2 * dValue N) ^ nValue N : ℝ) ≤ N from mod_cast this
-  suffices i : (2 * dValue N : ℝ) ≤ (N : ℝ) ^ (nValue N : ℝ)⁻¹ by
-    rw [← rpow_natCast]
-    apply (rpow_le_rpow (mul_nonneg zero_le_two (cast_nonneg _)) i (cast_nonneg _)).trans
-    rw [← rpow_mul (cast_nonneg _), inv_mul_cancel₀, rpow_one]
-    rw [cast_ne_zero]
-    apply (nValue_pos hN).ne'
-  rw [← le_div_iff₀']
-  · exact floor_le (by positivity)
-  apply zero_lt_two
-
-theorem bound (hN : 4096 ≤ N) : (N : ℝ) ^ (nValue N : ℝ)⁻¹ / exp 1 < dValue N := by
-  apply div_lt_floor _
-  rw [← log_le_log_iff, log_rpow, mul_comm, ← div_eq_mul_inv, nValue]
-  · grw [ceil_lt_mul]
-    · rw [mul_comm, ← div_div, div_sqrt, le_div_iff₀]
-      · norm_num [le_sqrt_log hN]
-      · norm_num1
-    · rw [cast_pos, lt_ceil, cast_zero, Real.sqrt_pos]
-      refine log_pos ?_
-      rw [one_lt_cast]
-      exact hN.trans_lt' (by norm_num1)
+theorem dValue_pos (hN₃ : 8 ≤ N) : 0 < dValue N (by omega) := by
+  have h₂ : 2 ≤ N := by omega
+  have hN₀ : (0 : ℝ) < N := Nat.cast_pos.2 (by omega)
+  have h₁ : (1 : ℝ) ≤ N := Nat.one_le_cast.2 (by omega)
+  have hn : (0 : ℝ) < nValue N := Nat.cast_pos.2 (nValue_pos h₂)
+  change 0 < ⌊dimRoot N h₂ / 2⌋₊
+  rw [floor_pos, le_div_iff₀ (show (0 : ℝ) < 2 by norm_num), one_mul,
+    ← log_le_log_iff zero_lt_two (dimRoot_pos h₂)]
+  apply (mul_le_mul_iff_left₀ hn).mp
+  rw [log_dimRoot_mul]
+  have hc : (nValue N : ℝ) ≤ 2 * √(log N) := by
+    apply (ceil_lt_add_one (sqrt_nonneg _)).le.trans
+    rw [two_mul, add_le_add_iff_left]
     apply le_sqrt_of_sq_le
-    have : (12 : ℕ) * log 2 ≤ log N := by
+    rw [one_pow, le_log_iff_exp_le hN₀]
+    exact (exp_one_lt_d9.le.trans <| by norm_num).trans (Nat.cast_le.2 hN₃)
+  have hs : log 2 * 2 ≤ √(log N) :=
+    log_two_mul_two_le_sqrt_log_eight.trans
+      (Real.sqrt_le_sqrt (log_le_log (by norm_num) (by exact_mod_cast hN₃)))
+  calc
+    _ ≤ log 2 * (2 * √(log N)) :=
+      mul_le_mul_of_nonneg_left hc (log_nonneg one_le_two)
+    _ = (log 2 * 2) * √(log N) := (mul_assoc _ _ _).symm
+    _ ≤ √(log N) * √(log N) := mul_le_mul_of_nonneg_right hs (sqrt_nonneg _)
+    _ = _ := by rw [← sq, Real.sq_sqrt (log_nonneg h₁)]
+
+theorem le_N (hN : 2 ≤ N) : (2 * dValue N hN - 1) ^ nValue N ≤ N := by
+  have hf : (dValue N hN : ℝ) ≤ dimRoot N hN / 2 :=
+    floor_le (div_nonneg (dimRoot_pos hN).le zero_le_two)
+  have hi : (2 : ℝ) * dValue N hN ≤ dimRoot N hN := by
+    rw [mul_comm]
+    exact (le_div_iff₀ (show (0 : ℝ) < 2 by norm_num)).1 hf
+  apply (Nat.pow_le_pow_left (Nat.sub_le (2 * dValue N hN) 1) (nValue N)).trans
+  have H : ((2 : ℝ) * dValue N hN) ^ nValue N ≤ (N : ℝ) := calc
+    _ ≤ dimRoot N hN ^ nValue N :=
+      pow_le_pow_left₀ (mul_nonneg zero_le_two (Nat.cast_nonneg _)) hi _
+    _ = _ := dimRoot_pow hN
+  exact_mod_cast H
+
+theorem bound (hN : 4096 ≤ N) :
+    dimRoot N (by omega) / exp 1 < dValue N (by omega) := by
+  have h₂ : 2 ≤ N := by omega
+  change dimRoot N h₂ / exp 1 < (⌊dimRoot N h₂ / 2⌋₊ : ℝ)
+  apply div_lt_floor
+  apply (log_le_log_iff (div_pos zero_lt_two one_sub_two_div_exp_pos) (dimRoot_pos h₂)).1
+  apply (mul_le_mul_iff_left₀ (Nat.cast_pos.2 (nValue_pos h₂) : (0 : ℝ) < nValue N)).mp
+  rw [log_dimRoot_mul]
+  have hc : (50 / 19 : ℝ) ≤ √(log N) := by
+    apply le_sqrt_of_sq_le
+    have h₁₂ : (12 : ℕ) * log 2 ≤ log N := by
       rw [← log_rpow zero_lt_two, rpow_natCast]
       exact log_le_log (by positivity) (mod_cast hN)
-    refine le_trans ?_ this
+    refine le_trans ?_ h₁₂
     rw [← div_le_iff₀']
     · exact log_two_gt_d9.le.trans' (by norm_num1)
     · norm_num1
-  · rw [cast_pos]
-    exact hN.trans_lt' (by norm_num1)
-  · refine div_pos zero_lt_two ?_
-    rw [sub_pos, div_lt_one (exp_pos _)]
-    exact exp_one_gt_two
-  positivity
+  have hB : 1 ≤ B := by
+    apply (le_div_iff₀ one_sub_two_div_exp_pos).2
+    rw [one_mul]
+    have he : 0 ≤ (2 : ℝ) / exp 1 := div_nonneg zero_le_two (exp_pos 1).le
+    linarith only [he]
+  calc
+    _ ≤ log B * (1.38 * √(log N)) :=
+      mul_le_mul_of_nonneg_left (ceil_lt_mul hc).le (log_nonneg hB)
+    _ = (log B * (69 / 50)) * √(log N) := by
+      rw [mul_assoc, show (1.38 : ℝ) = 69 / 50 by norm_num]
+    _ ≤ √(log N) * √(log N) :=
+      mul_le_mul_of_nonneg_right (le_sqrt_log hN) (sqrt_nonneg _)
+    _ = _ := by rw [← sq, Real.sq_sqrt (log_nonneg (Nat.one_le_cast.2 (by omega : 1 ≤ N)))]
 
 theorem roth_lower_bound_explicit (hN : 4096 ≤ N) :
     (N : ℝ) * exp (-4 * √(log N)) < rothNumberNat N := by
+  have h₂ : 2 ≤ N := by omega
   let n := nValue N
-  have hn : 0 < (n : ℝ) := cast_pos.2 (nValue_pos <| hN.trans' <| by norm_num1)
-  have hd : 0 < dValue N := dValue_pos (hN.trans' <| by norm_num1)
-  have hN₀ : 0 < (N : ℝ) := cast_pos.2 (hN.trans' <| by norm_num1)
-  have hn₂ : 2 < n := three_le_nValue <| hN.trans' <| by norm_num1
-  have : (2 * dValue N - 1) ^ n ≤ N := le_N (hN.trans' <| by norm_num1)
+  let d := dValue N h₂
+  let r := dimRoot N h₂
+  let s := √(log (N : ℝ))
+  have hn : (0 : ℝ) < n := Nat.cast_pos.2 (nValue_pos h₂)
+  have hd : 0 < d := dValue_pos (by omega : 8 ≤ N)
+  have hn₂ : 2 < n := three_le_nValue (by omega : 64 ≤ N)
+  have hN₀ : (0 : ℝ) < N := Nat.cast_pos.2 (by omega)
+  have hlog : 0 < log (N : ℝ) := log_pos (Nat.one_lt_cast.2 h₂)
+  have hs : 0 < s := Real.sqrt_pos.2 hlog
+  have hs₂ : s ^ 2 = log (N : ℝ) := Real.sq_sqrt hlog.le
+  have hsn : s ≤ (n : ℝ) := le_ceil _
+  have hr : 0 < r := dimRoot_pos h₂
+  have hrn : log r * (n : ℝ) = log (N : ℝ) := log_dimRoot_mul h₂
+  have hrs : log r ≤ s := by
+    apply (mul_le_mul_iff_left₀ hn).mp
+    rw [hrn, ← hs₂, sq]
+    exact mul_le_mul_of_nonneg_left hsn hs.le
+  have he : exp (-2 * s) * (n : ℝ) ≤ exp (2 - (n : ℝ)) :=
+    (le_div_iff₀ hn).1 (exp_neg_two_mul_le hs).le
+  have hel := log_le_log (mul_pos (exp_pos _) hn) he
+  simp only [log_mul (exp_pos (-2 * s)).ne' hn.ne', log_exp] at hel
+  have hq : 0 < r / exp 1 := div_pos hr (exp_pos _)
+  have hrd : r / exp 1 < (d : ℝ) := bound hN
   calc
-    _ ≤ (N ^ (nValue N : ℝ)⁻¹ / rexp 1 : ℝ) ^ (n - 2) / n := ?_
-    _ < _ := by gcongr; exacts [(tsub_pos_of_lt hn₂).ne', bound hN]
-    _ ≤ rothNumberNat ((2 * dValue N - 1) ^ n) := bound_aux hd.ne' hn₂.le
-    _ ≤ rothNumberNat N := mod_cast rothNumberNat.mono this
-  rw [← rpow_natCast, div_rpow (rpow_nonneg hN₀.le _) (exp_pos _).le, ← rpow_mul hN₀.le,
-    inv_mul_eq_div, cast_sub hn₂.le, cast_two, same_sub_div hn.ne', exp_one_rpow,
-    div_div, rpow_sub hN₀, rpow_one, div_div, div_eq_mul_inv]
-  gcongr _ * ?_
-  rw [mul_inv, mul_inv, ← exp_neg, ← rpow_neg (cast_nonneg _), neg_sub, ← div_eq_mul_inv]
-  have : exp (-4 * √(log N)) = exp (-2 * √(log N)) * exp (-2 * √(log N)) := by
-    rw [← exp_add, ← add_mul]
-    norm_num
-  rw [this]
-  gcongr
-  · rw [← le_log_iff_exp_le (rpow_pos_of_pos hN₀ _), log_rpow hN₀, ← le_div_iff₀, mul_div_assoc,
-      div_sqrt, neg_mul, neg_le_neg_iff, div_mul_eq_mul_div, div_le_iff₀ hn]
-    · gcongr
-      apply le_ceil
-    refine Real.sqrt_pos.2 (log_pos ?_)
-    rw [one_lt_cast]
-    exact hN.trans_lt' (by norm_num1)
-  · refine (exp_neg_two_mul_le <| Real.sqrt_pos.2 <| log_pos ?_).le
-    rw [one_lt_cast]
-    exact hN.trans_lt' (by norm_num1)
+    (N : ℝ) * exp (-4 * s) ≤ ((r / exp 1) ^ (n - 2)) / (n : ℝ) := by
+      apply (le_div_iff₀ hn).2
+      apply (log_le_log_iff (mul_pos (mul_pos hN₀ (exp_pos _)) hn) (pow_pos hq _)).1
+      rw [log_mul (mul_pos hN₀ (exp_pos (-4 * s))).ne' hn.ne',
+        log_mul hN₀.ne' (exp_pos (-4 * s)).ne', Real.log_pow, log_div hr.ne',
+        Nat.cast_sub hn₂.le]
+      simp only [log_exp, Nat.cast_ofNat]
+      nlinarith only [hrn, hrs, hel]
+    _ < (d : ℝ) ^ (n - 2) / (n : ℝ) := by
+      apply (div_lt_div_iff_of_pos_right hn).2
+      exact pow_lt_pow_left₀ hrd hq.le (Nat.sub_ne_zero_of_lt hn₂)
+    _ ≤ rothNumberNat ((2 * d - 1) ^ n) := bound_aux hd.ne' hn₂.le
+    _ ≤ rothNumberNat N := by exact_mod_cast rothNumberNat.mono (le_N h₂)
 
 theorem exp_four_lt : exp 4 < 64 := by
   rw [show (64 : ℝ) = 2 ^ ((6 : ℕ) : ℝ) by rw [rpow_natCast]; norm_num1,

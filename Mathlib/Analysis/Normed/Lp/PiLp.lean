@@ -258,20 +258,22 @@ satisfying a relaxed triangle inequality. The terminology for this varies throug
 literature, but it is sometimes called a *quasi-metric* or *semi-metric*. -/
 instance : EDist (PiLp p β) where
   edist f g :=
-    if p = 0 then {i | edist (f i) (g i) ≠ 0}.toFinite.toFinset.card
+    if hp0 : p = 0 then {i | edist (f i) (g i) ≠ 0}.toFinite.toFinset.card
     else
-      if p = ∞ then ⨆ i, edist (f i) (g i) else (∑ i, edist (f i) (g i) ^ p.toReal) ^ (1 / p.toReal)
+      if hptop : p = ∞ then ⨆ i, edist (f i) (g i) else
+        (∑ i, edist (f i) (g i) ^ p.toReal) ^
+          Checked.div 1 p.toReal (ENNReal.toReal_pos hp0 hptop).ne'.isUnit
 
 variable {β}
 
 theorem edist_eq_card (f g : PiLp 0 β) :
     edist f g = {i | edist (f i) (g i) ≠ 0}.toFinite.toFinset.card :=
-  ite_eq_left rfl
+  dite_eq_left rfl
 
 theorem edist_eq_sum {p : ℝ≥0∞} (hp : 0 < p.toReal) (f g : PiLp p β) :
     edist f g = (∑ i, edist (f i) (g i) ^ p.toReal) ^ (1 / p.toReal) :=
   let hp' := ENNReal.toReal_pos_iff.mp hp
-  (ite_eq_right hp'.1.ne').trans (ite_eq_right hp'.2.ne)
+  (dite_eq_right hp'.1.ne').trans (dite_eq_right hp'.2.ne)
 
 theorem edist_eq_iSup (f g : PiLp ∞ β) : edist f g = ⨆ i, edist (f i) (g i) := rfl
 
@@ -313,20 +315,22 @@ satisfying a relaxed triangle inequality. The terminology for this varies throug
 literature, but it is sometimes called a *quasi-metric* or *semi-metric*. -/
 instance : Dist (PiLp p α) where
   dist f g :=
-    if p = 0 then {i | dist (f i) (g i) ≠ 0}.toFinite.toFinset.card
+    if hp0 : p = 0 then {i | dist (f i) (g i) ≠ 0}.toFinite.toFinset.card
     else
-      if p = ∞ then ⨆ i, dist (f i) (g i) else (∑ i, dist (f i) (g i) ^ p.toReal) ^ (1 / p.toReal)
+      if hptop : p = ∞ then ⨆ i, dist (f i) (g i) else
+        (∑ i, dist (f i) (g i) ^ p.toReal) ^
+          Checked.div 1 p.toReal (ENNReal.toReal_pos hp0 hptop).ne'.isUnit
 
 variable {α}
 
 theorem dist_eq_card (f g : PiLp 0 α) :
     dist f g = {i | dist (f i) (g i) ≠ 0}.toFinite.toFinset.card :=
-  ite_eq_left rfl
+  dite_eq_left rfl
 
 theorem dist_eq_sum {p : ℝ≥0∞} (hp : 0 < p.toReal) (f g : PiLp p α) :
     dist f g = (∑ i, dist (f i) (g i) ^ p.toReal) ^ (1 / p.toReal) :=
   let hp' := ENNReal.toReal_pos_iff.mp hp
-  (ite_eq_right hp'.1.ne').trans (ite_eq_right hp'.2.ne)
+  (dite_eq_right hp'.1.ne').trans (dite_eq_right hp'.2.ne)
 
 theorem dist_eq_iSup (f g : PiLp ∞ α) : dist f g = ⨆ i, dist (f i) (g i) := rfl
 
@@ -344,20 +348,22 @@ Registering this separately allows for a future norm-like structure on `PiLp p �
 satisfying a relaxed triangle inequality. These are called *quasi-norms*. -/
 instance instNorm : Norm (PiLp p β) where
   norm f :=
-    if p = 0 then {i | ‖f i‖ ≠ 0}.toFinite.toFinset.card
-    else if p = ∞ then ⨆ i, ‖f i‖ else (∑ i, ‖f i‖ ^ p.toReal) ^ (1 / p.toReal)
+    if hp0 : p = 0 then {i | ‖f i‖ ≠ 0}.toFinite.toFinset.card
+    else if hptop : p = ∞ then ⨆ i, ‖f i‖ else
+      (∑ i, ‖f i‖ ^ p.toReal) ^
+        Checked.div 1 p.toReal (ENNReal.toReal_pos hp0 hptop).ne'.isUnit
 
 variable {p β}
 
 theorem norm_eq_card (f : PiLp 0 β) : ‖f‖ = {i | ‖f i‖ ≠ 0}.toFinite.toFinset.card :=
-  ite_eq_left rfl
+  dite_eq_left rfl
 
 theorem norm_eq_ciSup (f : PiLp ∞ β) : ‖f‖ = ⨆ i, ‖f i‖ := rfl
 
 theorem norm_eq_sum (hp : 0 < p.toReal) (f : PiLp p β) :
     ‖f‖ = (∑ i, ‖f i‖ ^ p.toReal) ^ (1 / p.toReal) :=
   let hp' := ENNReal.toReal_pos_iff.mp hp
-  (ite_eq_right hp'.1.ne').trans (ite_eq_right hp'.2.ne)
+  (dite_eq_right hp'.1.ne').trans (dite_eq_right hp'.2.ne)
 
 end Norm
 
@@ -443,7 +449,7 @@ abbrev pseudoMetricAux : PseudoMetricSpace (PiLp p α) :=
   PseudoEMetricSpace.toPseudoMetricSpaceOfDist dist
     (fun f g => by
       rcases p.dichotomy with (rfl | h)
-      · simp only [dist, top_ne_zero, ↓reduceIte]
+      · simp only [dist, top_ne_zero]
         exact Real.iSup_nonneg fun i ↦ dist_nonneg
       · simp only [dist]
         split_ifs with hp
@@ -470,11 +476,10 @@ private theorem edist_apply_le_edist_aux (x y : PiLp p β) (i : ι) :
     edist (x i) (y i) ≤ edist x y := by
   rcases p.dichotomy with (rfl | h)
   · simpa only [edist_eq_iSup] using le_iSup (fun i => edist (x i) (y i)) i
-  · have cancel : p.toReal * (1 / p.toReal) = 1 := mul_div_cancel₀ 1 (zero_lt_one.trans_le h).ne'
-    rw [edist_eq_sum (zero_lt_one.trans_le h)]
+  · rw [edist_eq_sum (zero_lt_one.trans_le h)]
     calc
       edist (x i) (y i) = (edist (x i) (y i) ^ p.toReal) ^ (1 / p.toReal) := by
-        simp [← ENNReal.rpow_mul, cancel, -one_div]
+        simp [← ENNReal.rpow_mul, -one_div]
       _ ≤ (∑ i, edist (x i) (y i) ^ p.toReal) ^ (1 / p.toReal) := by
         grw [← Finset.single_le_sum (fun i _ => (bot_le : (0 : ℝ≥0∞) ≤ _)) (Finset.mem_univ i)]
 
@@ -493,8 +498,8 @@ private lemma antilipschitzWith_ofLp_aux :
     exact fun i => Finset.le_sup (f := fun i => edist (x i) (y i)) (Finset.mem_univ i)
   · have pos : 0 < p.toReal := zero_lt_one.trans_le h
     have nonneg : 0 ≤ 1 / p.toReal := one_div_nonneg.2 (le_of_lt pos)
-    have cancel : p.toReal * (1 / p.toReal) = 1 := mul_div_cancel₀ 1 (ne_of_gt pos)
-    rw [edist_eq_sum pos, ENNReal.toReal_div 1 p]
+    have cancel : p.toReal * (1 / p.toReal) = 1 := mul_one_div_cancel
+    rw [edist_eq_sum pos, ENNReal.toReal_div 1 p (hb := pos.ne'.isUnit)]
     simp only [edist, ENNReal.toReal_one]
     calc
       (∑ i, edist (x i) (y i) ^ p.toReal) ^ (1 / p.toReal) ≤
@@ -627,7 +632,8 @@ instance [∀ i, MetricSpace (α i)] : MetricSpace (PiLp p α) :=
 
 theorem nndist_eq_sum {p : ℝ≥0∞} [Fact (1 ≤ p)] {β : ι → Type*} [∀ i, PseudoMetricSpace (β i)]
     (hp : p ≠ ∞) (x y : PiLp p β) :
-    nndist x y = (∑ i : ι, nndist (x i) (y i) ^ p.toReal) ^ (1 / p.toReal) :=
+    nndist x y = (∑ i : ι, nndist (x i) (y i) ^ p.toReal) ^
+      Checked.div 1 p.toReal (p.toReal_pos_iff_ne_top.mpr hp).ne'.isUnit :=
   NNReal.eq <| by
     push_cast
     exact dist_eq_sum (p.toReal_pos_iff_ne_top.mpr hp) _ _
@@ -723,7 +729,8 @@ instance normedAddCommGroup [∀ i, NormedAddCommGroup (α i)] : NormedAddCommGr
 
 theorem nnnorm_eq_sum {p : ℝ≥0∞} [Fact (1 ≤ p)] {β : ι → Type*} (hp : p ≠ ∞)
     [∀ i, SeminormedAddCommGroup (β i)] (f : PiLp p β) :
-    ‖f‖₊ = (∑ i, ‖f i‖₊ ^ p.toReal) ^ (1 / p.toReal) := by
+    ‖f‖₊ = (∑ i, ‖f i‖₊ ^ p.toReal) ^
+      Checked.div 1 p.toReal (p.toReal_pos_iff_ne_top.mpr hp).ne'.isUnit := by
   ext
   simp [NNReal.coe_sum, norm_eq_sum (p.toReal_pos_iff_ne_top.mpr hp)]
 
@@ -747,9 +754,13 @@ end Linfty
 
 theorem norm_eq_of_nat {p : ℝ≥0∞} [Fact (1 ≤ p)] {β : ι → Type*}
     [∀ i, SeminormedAddCommGroup (β i)] (n : ℕ) (h : p = n) (f : PiLp p β) :
-    ‖f‖ = (∑ i, ‖f i‖ ^ n) ^ (1 / (n : ℝ)) := by
+    ‖f‖ = (∑ i, ‖f i‖ ^ n) ^ Checked.div 1 (n : ℝ)
+      (by
+        have hp0 : (0 : ℝ≥0∞) < p := zero_lt_one.trans_le Fact.out
+        have hn : (0 : ℝ) < n := by exact_mod_cast (h ▸ hp0)
+        exact hn.ne'.isUnit) := by
   have := p.toReal_pos_iff_ne_top.mpr (ne_of_eq_of_ne h <| ENNReal.natCast_ne_top n)
-  simp only [one_div, h, Real.rpow_natCast, ENNReal.toReal_natCast,
+  simp only [one_div₀, h, Real.rpow_natCast, ENNReal.toReal_natCast,
     norm_eq_sum this]
 
 section L1
@@ -823,8 +834,8 @@ instance instIsBoundedSMul [SeminormedRing 𝕜] [∀ i, SeminormedAddCommGroup 
       exact nnnorm_smul_le c (ofLp f)
     · have hp0 : 0 < p.toReal := zero_lt_one.trans_le hp
       have hpt : p ≠ ⊤ := p.toReal_pos_iff_ne_top.mp hp0
-      rw [nnnorm_eq_sum hpt, nnnorm_eq_sum hpt, one_div, NNReal.rpow_inv_le_iff hp0,
-        NNReal.mul_rpow, ← NNReal.rpow_mul, inv_mul_cancel₀ hp0.ne', NNReal.rpow_one,
+      rw [nnnorm_eq_sum hpt, nnnorm_eq_sum hpt, one_div₀, NNReal.rpow_inv_le_iff hp0,
+        NNReal.mul_rpow, ← NNReal.rpow_mul, inv_mul_cancel₀, NNReal.rpow_one,
         Finset.mul_sum]
       simp_rw [← NNReal.mul_rpow, smul_apply]
       gcongr
@@ -838,8 +849,8 @@ instance instNormSMulClass [SeminormedRing 𝕜] [∀ i, SeminormedAddCommGroup 
     · rw [← nnnorm_ofLp, ← nnnorm_ofLp, WithLp.ofLp_smul, nnnorm_smul]
     · have hp0 : 0 < p.toReal := zero_lt_one.trans_le hp
       have hpt : p ≠ ⊤ := p.toReal_pos_iff_ne_top.mp hp0
-      rw [nnnorm_eq_sum hpt, nnnorm_eq_sum hpt, one_div, NNReal.rpow_inv_eq_iff hp0.ne',
-        NNReal.mul_rpow, ← NNReal.rpow_mul, inv_mul_cancel₀ hp0.ne', NNReal.rpow_one,
+      rw [nnnorm_eq_sum hpt, nnnorm_eq_sum hpt, one_div₀, NNReal.rpow_inv_eq_iff hp0.ne',
+        NNReal.mul_rpow, ← NNReal.rpow_mul, inv_mul_cancel₀, NNReal.rpow_one,
         Finset.mul_sum]
       simp_rw [← NNReal.mul_rpow, smul_apply, nnnorm_smul]
 
@@ -923,7 +934,7 @@ protected def _root_.LinearIsometryEquiv.piLpCongrRight (e : ∀ i, α i ≃ₗ�
         LinearIsometryEquiv.coe_toLinearEquiv, LinearIsometryEquiv.nnnorm_map]
     · have : 0 < p.toReal := zero_lt_one.trans_le <| by norm_cast
       simp only [PiLp.norm_eq_sum this, LinearEquiv.piCongrRight_apply,
-        LinearIsometryEquiv.coe_toLinearEquiv, LinearIsometryEquiv.norm_map, one_div]
+        LinearIsometryEquiv.coe_toLinearEquiv, LinearIsometryEquiv.norm_map]
 
 @[simp]
 theorem _root_.LinearIsometryEquiv.piLpCongrRight_apply (e : ∀ i, α i ≃ₗᵢ[𝕜] β i) (x : PiLp p α) :
@@ -1030,9 +1041,11 @@ theorem nnnorm_single (i : ι) (b : β i) : ‖single p i b‖₊ = ‖b‖₊ :
   | coe p =>
     have hp0 : (p : ℝ) ≠ 0 :=
       mod_cast (zero_lt_one.trans_le <| Fact.out (p := 1 ≤ (p : ℝ≥0∞))).ne'
-    rw [nnnorm_eq_sum ENNReal.coe_ne_top, ENNReal.coe_toReal, Fintype.sum_eq_single i,
-      toLp_apply, single_eq_same, ← NNReal.rpow_mul, one_div,
-      mul_inv_cancel₀ hp0, NNReal.rpow_one]
+    rw [nnnorm_eq_sum ENNReal.coe_ne_top]
+    simp only [ENNReal.coe_toReal]
+    rw [Fintype.sum_eq_single i,
+      toLp_apply, single_eq_same, ← NNReal.rpow_mul, one_div₀,
+      mul_inv_cancel₀, NNReal.rpow_one]
     intro j hij
     rw [toLp_apply, single_eq_of_ne _ hij, nnnorm_zero, NNReal.zero_rpow hp0]
 
@@ -1092,7 +1105,8 @@ lemma nnnorm_toLp_const {β} [SeminormedAddCommGroup β] (hp : p ≠ ∞) (b : �
   · have ne_zero : p.toReal ≠ 0 := (zero_lt_one.trans_le h).ne'
     simp_rw [nnnorm_eq_sum hp, Function.const_apply, Finset.sum_const,
       Finset.card_univ, nsmul_eq_mul, NNReal.mul_rpow, ← NNReal.rpow_mul,
-      mul_one_div_cancel ne_zero, NNReal.rpow_one, ENNReal.toReal_div, ENNReal.toReal_one]
+      mul_one_div_cancel, NNReal.rpow_one,
+      ENNReal.toReal_div (hb := ne_zero.isUnit), ENNReal.toReal_one]
 
 /-- When `IsEmpty ι`, this lemma does not hold without the additional assumption `p ≠ ∞` because
 the left-hand side simplifies to `0`, while the right-hand side simplifies to `‖b‖₊`. See

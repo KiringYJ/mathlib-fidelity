@@ -54,8 +54,14 @@ theorem rpow_neg_one_add_norm_sq_le {r : ℝ} (x : E) (hr : 0 < r) :
   calc
     ((1 : ℝ) + ‖x‖ ^ 2) ^ (-r / 2)
       = (2 : ℝ) ^ (r / 2) * ((√2 * √((1 : ℝ) + ‖x‖ ^ 2)) ^ r)⁻¹ := by
-      rw [rpow_div_two_eq_sqrt, rpow_div_two_eq_sqrt, mul_rpow, mul_inv, rpow_neg,
-        mul_inv_cancel_left₀] <;> positivity
+      have ha : 0 < (√2 : ℝ) := by positivity
+      have hb : 0 < √((1 : ℝ) + ‖x‖ ^ 2) := by positivity
+      have har := (rpow_pos_of_pos ha r).ne'.isUnit
+      have hbr := (rpow_pos_of_pos hb r).ne'.isUnit
+      rw [rpow_div_two_eq_sqrt (-r) (by positivity), rpow_div_two_eq_sqrt r (by positivity),
+        rpow_neg hb.le r (hxy := hbr)]
+      apply eq_mul_inv_iff_mul_eq₀.mpr
+      rw [mul_rpow ha.le hb.le, mul_comm (√2 ^ r), inv_mul_cancel_left₀ (ha := hbr)]
     _ ≤ (2 : ℝ) ^ (r / 2) * ((1 + ‖x‖) ^ r)⁻¹ := by
       gcongr
       apply one_add_norm_le_sqrt_two_mul_sqrt
@@ -63,7 +69,7 @@ theorem rpow_neg_one_add_norm_sq_le {r : ℝ} (x : E) (hr : 0 < r) :
 
 theorem le_rpow_one_add_norm_iff_norm_le {r t : ℝ} (hr : 0 < r) (ht : 0 < t) (x : E) :
     t ≤ (1 + ‖x‖) ^ (-r) ↔ ‖x‖ ≤ t ^ (-r⁻¹) - 1 := by
-  rw [le_sub_iff_add_le', neg_inv]
+  rw [le_sub_iff_add_le', ← inv_neg₀ (ha := hr.ne'.isUnit.neg)]
   exact (Real.le_rpow_inv_iff_of_neg (by positivity) ht (neg_lt_zero.mpr hr)).symm
 
 variable (E)

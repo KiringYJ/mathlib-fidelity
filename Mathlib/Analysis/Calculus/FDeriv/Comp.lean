@@ -80,7 +80,7 @@ protected theorem HasStrictFDerivAt.comp {D D' : Type*}
     (hg : HasStrictFDerivAt g g' (f x) coord')
     (hf : HasStrictFDerivAt (coord' ∘ f) f' x coord)
     (hcoord : ContinuousAt coord x := by exact continuousAt_id)
-    (hcoord' : IsEmbedding coord' := by exact IsEmbedding.id) :
+    (hcoord' : IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
     HasStrictFDerivAt (fun x => g (f x)) (g'.comp f') x coord := by
   have hcont : ContinuousAt f x :=
     hcoord'.isInducing.continuousAt_iff.2 (hf.continuousAt hcoord)
@@ -93,7 +93,7 @@ theorem HasFDerivWithinAt.comp {D D' : Type*}
     (hg : HasFDerivWithinAt g g' t (f x) coord')
     (hf : HasFDerivWithinAt (coord' ∘ f) f' s x coord) (hst : MapsTo f s t)
     (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id)
-    (hcoord' : IsEmbedding coord' := by exact IsEmbedding.id) :
+    (hcoord' : IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
     HasFDerivWithinAt (g ∘ f) (g'.comp f') s x coord := by
   have hcont : ContinuousWithinAt f s x :=
     hcoord'.isInducing.continuousWithinAt_iff.2 (hf.continuousWithinAt hcoord)
@@ -107,7 +107,7 @@ theorem HasFDerivAt.comp_hasFDerivWithinAt {D D' : Type*}
     (hg : HasFDerivAt g g' (f x) coord')
     (hf : HasFDerivWithinAt (coord' ∘ f) f' s x coord)
     (hcoord : ContinuousWithinAt coord s x := by exact continuousWithinAt_id)
-    (hcoord' : IsEmbedding coord' := by exact IsEmbedding.id) :
+    (hcoord' : IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
     HasFDerivWithinAt (g ∘ f) (g'.comp f') s x coord :=
   hg.hasFDerivWithinAt.comp x hf (mapsTo_univ _ _) hcoord hcoord'
 
@@ -140,7 +140,7 @@ theorem HasFDerivAt.comp {D D' : Type*}
     (hg : HasFDerivAt g g' (f x) coord')
     (hf : HasFDerivAt (coord' ∘ f) f' x coord)
     (hcoord : ContinuousAt coord x := by exact continuousAt_id)
-    (hcoord' : IsEmbedding coord' := by exact IsEmbedding.id) :
+    (hcoord' : IsEmbedding coord' := by exact Topology.IsEmbedding.id) :
     HasFDerivAt (g ∘ f) (g'.comp f') x coord := by
   have hcont : ContinuousAt f x :=
     hcoord'.isInducing.continuousAt_iff.2 (hf.continuousAt hcoord)
@@ -197,7 +197,8 @@ theorem fderivWithin_comp_of_eq {g : F → G} {t : Set F} {y : F}
 theorem fderivWithin_fderivWithin {g : F → G} {f : E → F} {x : E} {y : F} {s : Set E} {t : Set F}
     (hg : DifferentiableWithinAt 𝕜 g t y) (hf : DifferentiableWithinAt 𝕜 f s x) (h : MapsTo f s t)
     (hxs : UniqueDiffWithinAt 𝕜 s x) (hy : f x = y) (v : E) :
-    fderivWithin 𝕜 g t y (fderivWithin 𝕜 f s x v) = fderivWithin 𝕜 (g ∘ f) s x v := by
+    fderivWithin 𝕜 g t y id (fderivWithin 𝕜 f s x id v) =
+      fderivWithin 𝕜 (g ∘ f) s x id v := by
   subst y
   rw [fderivWithin_comp x hg hf h hxs, comp_apply]
 
@@ -210,8 +211,9 @@ theorem fderivWithin_comp₃ {g' : G → G'} {g : F → G} {t : Set F} {u : Set 
     fderivWithin 𝕜 (g' ∘ g ∘ f) s x =
       (fderivWithin 𝕜 g' u y').comp ((fderivWithin 𝕜 g t y).comp (fderivWithin 𝕜 f s x)) := by
   subst h3g h3f
-  exact (hg'.hasFDerivWithinAt.comp x (hg.hasFDerivWithinAt.comp x hf.hasFDerivWithinAt h2f) <|
-    h2g.comp h2f).fderivWithin hxs
+  exact (hg'.hasFDerivWithinAt.comp (coord' := id) x
+    (hg.hasFDerivWithinAt.comp (coord' := id) x hf.hasFDerivWithinAt h2f)
+    (h2g.comp h2f)).fderivWithin hxs
 
 @[to_fun fderiv_fun_comp]
 theorem fderiv_comp {g : F → G} (hg : DifferentiableAt 𝕜 g (f x)) (hf : DifferentiableAt 𝕜 f x) :

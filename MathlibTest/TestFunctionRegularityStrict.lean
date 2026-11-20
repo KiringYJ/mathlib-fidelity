@@ -66,7 +66,7 @@ noncomputable example {n k : ℕ∞} (hk : k + 1 ≤ n) :
     𝓓^{n}(Ω, F) →L[ℝ] 𝓓^{k}(Ω, E →L[ℝ] F) :=
   TestFunction.fderivCLM ℝ n k
 
-example (f : 𝓓_{K}(E, F)) : fderivCLM ℝ ⊤ ⊤ le_top f = fderiv ℝ f := rfl
+example (f : 𝓓_{K}(E, F)) : ⇑(fderivCLM ℝ ⊤ ⊤ le_top f) = fderiv ℝ f := rfl
 
 /-! A seminorm of an order beyond the regularity does not exist; it was formerly `0`. -/
 

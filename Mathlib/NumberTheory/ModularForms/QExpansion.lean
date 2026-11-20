@@ -6,7 +6,7 @@ Authors: David Loeffler
 module
 
 public import Mathlib.Analysis.Complex.TaylorSeries
-public import Mathlib.Analysis.Complex.UpperHalfPlane.Exp
+public import Mathlib.Analysis.Complex.UpperHalfPlane.QParam
 public import Mathlib.NumberTheory.ModularForms.Basic
 public import Mathlib.NumberTheory.ModularForms.Identities
 public import Mathlib.RingTheory.PowerSeries.Basic
@@ -16,9 +16,9 @@ public import Mathlib.RingTheory.MvPowerSeries.NoZeroDivisors
 # q-expansions of functions on the upper half plane
 
 We show that a function on the upper half plane with strict period `n` can be written as
-`τ ↦ F (𝕢 n τ)` where `F` is analytic on the open unit disc, and `𝕢 n` is the parameter
-`τ ↦ exp (2 * I * π * τ / n)`. As an application, we show that cusp forms decay exponentially to 0
-as `im τ → ∞`.
+`τ ↦ F (Periodic.qParam n τ)` where `F` is analytic on the open unit disc. The parameter
+`Periodic.qParam n` is `τ ↦ exp (2 * I * π * τ / n)`. As an application, we show that cusp forms
+decay exponentially to 0 as `im τ → ∞`.
 
 We also define the `q`-expansion of a function `f` on the upper half plane, either as a power series
 or as a `FormalMultilinearSeries`, and show that it converges to `f` if `f` is periodic, holomorphic
@@ -33,8 +33,8 @@ and bounded at infinity.
   infinity, its `cuspFunction` is differentiable on the open unit disc (including at `0`).
 * `UpperHalfPlane.qExpansion`: the `q`-expansion of a function on the upper half plane (defined as
   the Taylor series of its `cuspFunction`), bundled as a `PowerSeries`.
-* `UpperHalfPlane.hasSum_qExpansion`: the `q`-expansion evaluated at `𝕢 n τ` sums to `f τ`, for
-  `τ` in the upper half plane.
+* `UpperHalfPlane.hasSum_qExpansion`: the `q`-expansion evaluated at `Periodic.qParam n τ`
+  sums to `f τ` for `τ` in the upper half plane.
 * `ModularForm.qExpansionRingHom` defines the ring homomorphism from the graded ring of
   modular forms to power series given by taking `q`-expansions.
 * `ModularForm.qExpansionAlgHom` upgrades it to a `ℂ`-algebra homomorphism, when `Γ` consists of
@@ -64,7 +64,6 @@ open scoped Real MatrixGroups CongruenceSubgroup Topology Manifold
 variable {k : ℤ} {F : Type*} [FunLike F ℍ ℂ] {Γ : Subgroup (GL (Fin 2) ℝ)} {h : ℝ} (f : F)
 
 local notation "I∞" => comap Complex.im atTop
-local notation "𝕢" => Periodic.qParam
 
 namespace UpperHalfPlane
 
@@ -77,7 +76,7 @@ lemma IsZeroAtImInfty.valueAtInfty_eq_zero {f : ℍ → ℂ} (hf : IsZeroAtImInf
   hf.limUnder_eq
 
 lemma qParam_tendsto_atImInfty {h : ℝ} (hh : 0 < h) :
-    Tendsto (fun τ : ℍ ↦ 𝕢 h τ) atImInfty (nhds 0) :=
+    Tendsto (fun τ : ℍ ↦ Function.Periodic.qParam h τ) atImInfty (nhds 0) :=
   ((Periodic.qParam_tendsto hh).mono_right nhdsWithin_le_nhds).comp tendsto_coe_atImInfty
 
 variable (h) in
@@ -85,11 +84,11 @@ variable (h) in
 The analytic function `F` such that `f τ = F (exp (2 * π * I * τ / h))`, extended by a choice of
 limit at `0`.
 -/
-def cuspFunction (f : ℍ → ℂ) : ℂ → ℂ :=
-  Function.Periodic.cuspFunction h (f ∘ ofComplex)
+def cuspFunction (f : ℍ → ℂ) (q : ℂ) (hh : h ≠ 0 := by checked_nonzero) : ℂ :=
+  Function.Periodic.cuspFunction h (f ∘ ofComplex) hh q
 
 theorem eq_cuspFunction {f : ℍ → ℂ} (τ : ℍ) (hh : h ≠ 0)
-    (hfper : Periodic (f ∘ ofComplex) h) : cuspFunction h f (𝕢 h τ) = f τ := by
+    (hfper : Periodic (f ∘ ofComplex) h) : cuspFunction h f (Periodic.qParam h τ) = f τ := by
   simpa [cuspFunction] using (Periodic.eq_cuspFunction hh hfper τ)
 
 theorem differentiableAt_cuspFunction {f : ℍ → ℂ} (hh : 0 < h)
@@ -120,7 +119,7 @@ lemma cuspFunction_apply_zero {f : ℍ → ℂ} (hh : 0 < h)
     (hfanalytic : AnalyticAt ℂ (cuspFunction h f) 0)
     (hfper : Periodic (f ∘ UpperHalfPlane.ofComplex) h) : cuspFunction h f 0 = valueAtInfty f := by
   refine (Tendsto.limUnder_eq ?_).symm
-  have : (cuspFunction h f ∘ fun τ ↦ 𝕢 h τ : ℍ → ℂ) = f := by
+  have : (cuspFunction h f ∘ fun τ ↦ Function.Periodic.qParam h τ : ℍ → ℂ) = f := by
     funext τ
     simpa using eq_cuspFunction τ hh.ne' hfper
   simpa [this] using hfanalytic.continuousAt.tendsto.comp (qParam_tendsto_atImInfty hh)
@@ -135,7 +134,7 @@ theorem periodic_comp_ofComplex [SlashInvariantFormClass F Γ k] (hΓ : h ∈ Γ
     SlashInvariantForm.vAdd_apply_of_mem_strictPeriods f τ hΓ
 
 protected theorem eq_cuspFunction [SlashInvariantFormClass F Γ k] (τ : ℍ)
-    (hΓ : h ∈ Γ.strictPeriods) (hh : h ≠ 0) : cuspFunction h f (𝕢 h τ) = f τ :=
+    (hΓ : h ∈ Γ.strictPeriods) (hh : h ≠ 0) : cuspFunction h f (Periodic.qParam h τ) = f τ :=
   eq_cuspFunction τ hh (SlashInvariantFormClass.periodic_comp_ofComplex f hΓ)
 
 end SlashInvariantFormClass
@@ -168,11 +167,15 @@ variable (h) in
 /-- The `q`-expansion of a function on the upper half plane with strict period `h`, bundled as a
 `PowerSeries`. The `m`-th coefficient is the Taylor coefficient of the `cuspFunction` at `q = 0`,
 where `q = exp(2πiτ/h)` is the local parameter at the cusp. -/
-def qExpansion (f : ℍ → ℂ) : PowerSeries ℂ :=
-  .mk fun m ↦ (↑m.factorial)⁻¹ * iteratedDeriv m (cuspFunction h f) 0
+def qExpansion (f : ℍ → ℂ) (hh : h ≠ 0 := by checked_nonzero) : PowerSeries ℂ :=
+  .mk fun m ↦
+    Checked.inv (m.factorial : ℂ) (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero m)).isUnit *
+    iteratedDeriv m (fun q ↦ cuspFunction h f q hh) 0
 
-lemma qExpansion_coeff (f : ℍ → ℂ) (m : ℕ) :
-    (qExpansion h f).coeff m = (↑m.factorial)⁻¹ * iteratedDeriv m (cuspFunction h f) 0 := by
+lemma qExpansion_coeff (f : ℍ → ℂ) (m : ℕ) (hh : h ≠ 0 := by checked_nonzero) :
+    (qExpansion h f hh).coeff m =
+      Checked.inv (m.factorial : ℂ) (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero m)).isUnit *
+        iteratedDeriv m (fun q ↦ cuspFunction h f q hh) 0 := by
   simp [qExpansion]
 
 lemma qExpansion_coeff_zero {f : ℍ → ℂ} (hh : 0 < h)
@@ -193,8 +196,8 @@ lemma hasSum_qExpansion_of_norm_lt {f : ℍ → ℂ} (hh : 0 < h)
 
 lemma hasSum_qExpansion {f : ℍ → ℂ} (hh : 0 < h)
     (hfper : Periodic (f ∘ ofComplex) h) (hfhol : MDiff f) (hfbdd : IsBoundedAtImInfty f)
-    (τ : ℍ) : HasSum (fun m : ℕ ↦ (qExpansion h f).coeff m • 𝕢 h τ ^ m) (f τ) := by
-  have : ‖𝕢 h τ‖ < 1 := Periodic.norm_qParam_lt_one hh τ.im_pos
+    (τ : ℍ) : HasSum (fun m : ℕ ↦ (qExpansion h f).coeff m • Periodic.qParam h τ ^ m) (f τ) := by
+  have : ‖Function.Periodic.qParam h τ‖ < 1 := Periodic.norm_qParam_lt_one hh τ.im_pos
   simpa [eq_cuspFunction τ hh.ne' hfper] using
     hasSum_qExpansion_of_norm_lt hh hfper hfhol hfbdd this
 
@@ -205,16 +208,17 @@ The `q`-expansion of a function on the upper half plane, bundled as a `FormalMul
 TODO: Maybe get rid of this and instead define a general API for converting `PowerSeries` to
 `FormalMultilinearSeries`.
 -/
-def qExpansionFormalMultilinearSeries : FormalMultilinearSeries ℂ ℂ ℂ :=
-  .ofScalars ℂ fun m ↦ (qExpansion h f).coeff m
+def qExpansionFormalMultilinearSeries (hh : h ≠ 0 := by checked_nonzero) :
+    FormalMultilinearSeries ℂ ℂ ℂ :=
+  .ofScalars ℂ fun m ↦ (qExpansion h f hh).coeff m
 
 @[simp]
-lemma qExpansionFormalMultilinearSeries_coeff (m : ℕ) :
-    (qExpansionFormalMultilinearSeries h f).coeff m = (qExpansion h f).coeff m := by
+lemma qExpansionFormalMultilinearSeries_coeff (m : ℕ) (hh : h ≠ 0 := by checked_nonzero) :
+    (qExpansionFormalMultilinearSeries h f hh).coeff m = (qExpansion h f hh).coeff m := by
   simp [qExpansionFormalMultilinearSeries, FormalMultilinearSeries.coeff_ofScalars]
 
-lemma qExpansionFormalMultilinearSeries_apply_norm (m : ℕ) :
-    ‖qExpansionFormalMultilinearSeries h f m‖ = ‖(qExpansion h f).coeff m‖ := by
+lemma qExpansionFormalMultilinearSeries_apply_norm (m : ℕ) (hh : h ≠ 0 := by checked_nonzero) :
+    ‖qExpansionFormalMultilinearSeries h f hh m‖ = ‖(qExpansion h f hh).coeff m‖ := by
   rw [qExpansionFormalMultilinearSeries,
     ← (ContinuousMultilinearMap.piFieldEquiv ℂ (Fin m) ℂ).symm.norm_map]
   simp
@@ -232,17 +236,17 @@ lemma qExpansionFormalMultilinearSeries_radius (hh : 0 < h)
     (by simpa using hr)).summable.norm
 
 private lemma hasSum_cuspFunction_of_hasSum_punctured {f : ℍ → ℂ} (hh : 0 < h) {c : ℕ → ℂ}
-    (hf : ∀ (τ : ℍ), HasSum (fun m ↦ c m • 𝕢 h τ ^ m) (f τ)) {q : ℂ} (hq : ‖q‖ < 1)
+    (hf : ∀ (τ : ℍ), HasSum (fun m ↦ c m • Periodic.qParam h τ ^ m) (f τ)) {q : ℂ} (hq : ‖q‖ < 1)
     (hq1 : q ≠ 0) : HasSum (fun m ↦ c m • q ^ m) (cuspFunction h f q) := by
   have h1 := Periodic.im_invQParam_pos_of_norm_lt_one hh hq hq1
-  let τ : ℍ := ⟨Periodic.invQParam h q, h1⟩
-  have h2 := (Periodic.cuspFunction_eq_of_nonzero h (f ∘ ofComplex) hq1)
+  let τ : ℍ := ⟨Periodic.invQParam h q hh.ne' hq1, h1⟩
+  have h2 := Periodic.cuspFunction_eq_of_nonzero h (f ∘ ofComplex) hh.ne' hq1
   have : cuspFunction h f q = f τ := by simpa [UpperHalfPlane.ofComplex_apply_of_im_pos h1]
     using! h2
   grind [hf τ, Periodic.qParam_right_inv]
 
 private lemma hasFPowerSeriesOnBall_update {f : ℍ → ℂ} (hh : 0 < h) {c : ℕ → ℂ}
-    (hf : ∀ τ : ℍ, HasSum (fun m : ℕ ↦ (c m) • 𝕢 h τ ^ m) (f τ)) :
+    (hf : ∀ τ : ℍ, HasSum (fun m : ℕ ↦ (c m) • Function.Periodic.qParam h τ ^ m) (f τ)) :
     HasFPowerSeriesOnBall (update (cuspFunction h f) 0 (c 0)) (.ofScalars ℂ c) 0 1 := by
   constructor
   · refine le_of_forall_lt_imp_le_of_dense fun r hr ↦ ?_
@@ -259,16 +263,17 @@ private lemma hasFPowerSeriesOnBall_update {f : ℍ → ℂ} (hh : 0 < h) {c : �
     rw [← ENNReal.coe_one, Metric.eball_coe, NNReal.coe_one, mem_ball_zero_iff] at hy
     rcases eq_or_ne y 0 with rfl | hy'
     · simpa +contextual [zero_pow_eq] using hasSum_ite_eq 0 (c 0)
-    · simpa [update_of_ne hy', mul_comm]
-        using hasSum_cuspFunction_of_hasSum_punctured hh hf hy hy'
+    · have hne : id y - id (0 : ℂ) ≠ 0 := by simpa only [id_eq, sub_zero] using hy'
+      simpa [update_of_ne hy', update_of_ne hne, mul_comm]
+        using hasSum_cuspFunction_of_hasSum_punctured hh hf hy hne
 
 /-- A function on the upper half plane that is given everywhere by a convergent `q`-expansion with
-non-negative exponents, `f τ = ∑' m, c m * 𝕢 h τ ^ m`, tends to the constant term of its
-`q`-expansion at `i∞`. -/
+non-negative exponents, `f τ = ∑' m, c m * Periodic.qParam h τ ^ m`, tends to the constant
+term of its `q`-expansion at `i∞`. -/
 theorem tendsto_atImInfty_of_hasSum_qExpansion {f : ℍ → ℂ} {c : ℕ → ℂ} (hh : 0 < h)
-    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • 𝕢 h τ ^ m) (f τ)) :
+    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • Function.Periodic.qParam h τ ^ m) (f τ)) :
     Tendsto f atImInfty (𝓝 (c 0)) := by
-  have hfeq : f = fun τ : ℍ ↦ update (cuspFunction h f) 0 (c 0) (𝕢 h τ) := by
+  have hfeq : f = fun τ : ℍ ↦ update (cuspFunction h f) 0 (c 0) (Function.Periodic.qParam h τ) := by
     funext τ
     rw [update_of_ne (Periodic.qParam_ne_zero _)]
     exact (hf τ).unique (hasSum_cuspFunction_of_hasSum_punctured hh hf
@@ -279,17 +284,18 @@ theorem tendsto_atImInfty_of_hasSum_qExpansion {f : ℍ → ℂ} {c : ℕ → �
       (qParam_tendsto_atImInfty hh)
 
 /-- A function on the upper half plane that is given everywhere by a convergent `q`-expansion with
-non-negative exponents, `f τ = ∑' m, c m * 𝕢 h τ ^ m`, is bounded at `i∞`. This is a converse to
+non-negative exponents, `f τ = ∑' m, c m * Periodic.qParam h τ ^ m`, is bounded at `i∞`.
+This is a converse to
 `hasSum_qExpansion`: there, boundedness is a hypothesis used to produce the `q`-expansion, while
 here convergence of the `q`-expansion is enough to deduce boundedness. -/
 theorem isBoundedAtImInfty_of_hasSum_qExpansion {f : ℍ → ℂ} {c : ℕ → ℂ} (hh : 0 < h)
-    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • 𝕢 h τ ^ m) (f τ)) : IsBoundedAtImInfty f :=
+    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • Periodic.qParam h τ ^ m) (f τ)) : IsBoundedAtImInfty f :=
   -- `IsBoundedAtImInfty f = BoundedAtFilter atImInfty f = (f =O[atImInfty] 1)` by definition.
   (tendsto_atImInfty_of_hasSum_qExpansion hh hf).isBigO_one ℝ
 
 lemma hasFPowerSeriesOnBall_cuspFunction {f : ℍ → ℂ} {c : ℕ → ℂ} (hh : 0 < h)
     (hfanalytic : AnalyticAt ℂ (cuspFunction h f) 0)
-    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • 𝕢 h τ ^ m) (f τ)) :
+    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • Function.Periodic.qParam h τ ^ m) (f τ)) :
     HasFPowerSeriesOnBall (cuspFunction h f) (.ofScalars ℂ c) 0 1 := by
   -- previous lemma gives result after updating at 0
   have H1 : HasFPowerSeriesOnBall (update (cuspFunction h f) 0 (c 0)) (.ofScalars ℂ c) 0 1 :=
@@ -308,13 +314,18 @@ lemma hasFPowerSeriesOnBall_cuspFunction {f : ℍ → ℂ} {c : ℕ → ℂ} (hh
 -/
 lemma qExpansion_coeff_eq_circleIntegral {f : ℍ → ℂ} (hh : 0 < h)
     (hfper : Periodic (f ∘ ofComplex) h) (hfhol : MDiff f) (hfbdd : IsBoundedAtImInfty f)
-    (n : ℕ) {R : ℝ} (hR : 0 < R) (hR' : R < 1) : (qExpansion h f).coeff n =
-      ((2 * π * Complex.I)⁻¹ * ∮ (z : ℂ) in C(0, R), cuspFunction h f z / z ^ (n + 1)) := by
-  have := ((differentiableOn_cuspFunction_ball hh hfper hfhol hfbdd).mono
+    (n : ℕ) {R : ℝ} (hR : 0 < R) (hR' : R < 1) : (qExpansion h f hh.ne').coeff n =
+      Checked.inv (2 * π * Complex.I) two_pi_I_ne_zero.isUnit *
+        circleIntegralOn (fun z : Metric.sphere (0 : ℂ) |R| ↦
+          Checked.div 1 ((z.val - 0) ^ (n + 1))
+            ((isUnit_sub_center_of_mem_sphere hR.ne'.isUnit z).pow _) •
+            cuspFunction h f z.val hh.ne') 0 R := by
+  have hC := ((differentiableOn_cuspFunction_ball hh hfper hfhol hfbdd).mono
     (Metric.closedBall_subset_ball hR')).circleIntegral_one_div_sub_center_pow_smul hR n
-  rw [smul_eq_mul, div_eq_mul_inv, mul_assoc, mul_comm, ← div_eq_iff two_pi_I_ne_zero] at this
-  simp_rw [qExpansion, PowerSeries.coeff_mk, ← this, sub_zero, smul_eq_mul, one_div_mul_eq_div,
-    div_eq_inv_mul]
+  rw [qExpansion_coeff (h := h) f n hh.ne', hC, smul_eq_mul]
+  have hp : (2 * π * Complex.I : ℂ) ≠ 0 := two_pi_I_ne_zero
+  have hn : (n.factorial : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero n)
+  field_simp
 
 /--
 If `h` is a positive strict period of `f`, then the `q`-expansion coefficient can be expressed
@@ -323,32 +334,52 @@ any `0 < t`.
 -/
 lemma qExpansion_coeff_eq_intervalIntegral {f : ℍ → ℂ} (hh : 0 < h)
     (hfper : Periodic (f ∘ ofComplex) h) (hfhol : MDiff f) (hfbdd : IsBoundedAtImInfty f)
-    (n : ℕ) {t : ℝ} (ht : 0 < t) : (qExpansion h f).coeff n =
-      1 / h * ∫ u in 0..h, 1 / 𝕢 h (u + t * I) ^ n * f ⟨u + t * I, by simpa using ht⟩ := by
+    (n : ℕ) {t : ℝ} (ht : 0 < t) : (qExpansion h f hh.ne').coeff n =
+      Checked.div 1 (h : ℂ) (ofReal_ne_zero.mpr hh.ne').isUnit * ∫ u in 0..h,
+        Checked.div 1 ((Periodic.qParam h (u + t * I) hh.ne') ^ n)
+          ((Periodic.qParam_ne_zero (u + t * I) hh.ne').isUnit.pow n) *
+          f ⟨u + t * I, by simpa using ht⟩ := by
   -- We use a circle integral in the `q`-domain of radius `R = exp (-2 * π * t / h)`.
   let R := Real.exp (-2 * π * t / h)
   have hR0 : 0 < R := Real.exp_pos _
-  have hR1 : R < 1 := Real.exp_lt_one_iff.2 <| by simpa [neg_div] using div_pos (by positivity) hh
-  -- First apply `qExpansion_coeff_eq_circleIntegral` and rescale from `0 .. 2 * π` to `0 .. h`.
-  rw [qExpansion_coeff_eq_circleIntegral hh hfper hfhol hfbdd n hR0 hR1, circleIntegral,
-    show 2 * π = h * (2 * π / h) by field_simp]
-  conv => enter [1, 2, 2]; rw [show 0 = 0 * (2 * π / h) by simp]
-  simp_rw [← intervalIntegral.smul_integral_comp_mul_right, real_smul, ← mul_assoc,
+  have hR1 : R < 1 := Real.exp_lt_one_iff.2 <| div_neg_of_neg_of_pos
+    (by simpa only [neg_mul] using neg_lt_zero.mpr (mul_pos Real.two_pi_pos ht)) hh
+  let s : ℝ := 2 * π / h
+  have hsh : h * s = 2 * π := mul_div_cancel₀ (2 * π) (hb := hh.ne'.isUnit)
+  let P (θ : ℝ) : ℂ :=
+    let z : Metric.sphere (0 : ℂ) |R| := ⟨circleMap 0 R θ, circleMap_mem_sphere' 0 R θ⟩
+    deriv (circleMap 0 R) θ •
+      (Checked.div 1 ((z.val - 0) ^ (n + 1))
+        ((isUnit_sub_center_of_mem_sphere hR0.ne'.isUnit z).pow _) •
+        cuspFunction h f z.val hh.ne')
+  have hrescale : (∫ θ in (0 : ℝ)..2 * π, P θ) = s • ∫ u in (0 : ℝ)..h, P (u * s) := by
+    simpa only [zero_mul, hsh] using
+      (intervalIntegral.smul_integral_comp_mul_right (f := P) (a := 0) (b := h) s).symm
+  rw [qExpansion_coeff_eq_circleIntegral hh hfper hfhol hfbdd n hR0 hR1, circleIntegralOn_sphere]
+  change Checked.inv (2 * π * Complex.I) two_pi_I_ne_zero.isUnit *
+    (∫ θ in (0 : ℝ)..2 * π, P θ) = _
+  rw [hrescale, Complex.real_smul, ← mul_assoc, ← intervalIntegral.integral_const_mul,
     ← intervalIntegral.integral_const_mul]
-  -- Compare the integrands
-  congr 1 with u
+  refine intervalIntegral.integral_congr fun u _ ↦ ?_
   let τ : ℍ := ⟨u + t * I, by simpa using ht⟩
-  have : circleMap 0 R (u * (2 * π / h)) = 𝕢 h τ := by
-    simp only [circleMap, ofReal_exp, ← exp_add, zero_add, τ, R]
+  have heq : circleMap 0 R (u * s) = Periodic.qParam h τ hh.ne' := by
+    simp only [circleMap, ofReal_exp, ← Complex.exp_add, zero_add, τ, R, s, Periodic.qParam,
+      UpperHalfPlane.coe_I]
     congr 1
     push_cast
-    have := I_sq
-    grind
-  -- now just complex exponential arithmetic to finish
-  simp_rw [deriv_circleMap, this, show ↑I = Complex.I by rfl, show u + t * Complex.I = τ by rfl,
-    show ⟨↑τ, τ.2⟩ = τ by rfl, eq_cuspFunction _ hh.ne' hfper, smul_eq_mul, pow_succ]
-  field_simp [(show 𝕢 h τ ≠ 0 from Complex.exp_ne_zero _), Real.pi_ne_zero, NeZero.ne]
-  push_cast
+    have hTI : (2 * (π : ℂ) * Complex.I) * ((t : ℂ) * Complex.I) = -(2 * (π : ℂ) * t) := by
+      calc
+        _ = (2 * (π : ℂ) * t) * Complex.I ^ 2 := by ring
+        _ = _ := by rw [Complex.I_sq, mul_neg_one]
+    simp only [mul_add, hTI]
+    field_simp
+    ring
+  have hQ := Periodic.qParam_ne_zero (τ : ℂ) hh.ne'
+  have hπ := Complex.ofReal_ne_zero.mpr Real.pi_ne_zero
+  simp only [P, deriv_circleMap, heq, sub_zero, smul_eq_mul, eq_cuspFunction τ hh.ne' hfper,
+    pow_succ, s, Complex.ofReal_div _ _ (hs := hh.ne'.isUnit), Complex.ofReal_mul,
+    Complex.ofReal_ofNat]
+  field_simp
   ring
 
 theorem exp_decay_sub_atImInfty {f : ℍ → ℂ} (hh : 0 < h)
@@ -387,8 +418,11 @@ namespace ModularFormClass
 
 protected lemma qExpansion_coeff_eq_intervalIntegral [ModularFormClass F Γ k]
     (hh : 0 < h) (hΓ : h ∈ Γ.strictPeriods) (n : ℕ) {t : ℝ} (ht : 0 < t) :
-    (qExpansion h f).coeff n =
-      1 / h * ∫ u in 0..h, 1 / 𝕢 h (u + t * I) ^ n * f ⟨u + t * I, by simpa using ht⟩ :=
+    (qExpansion h f hh.ne').coeff n =
+      Checked.div 1 (h : ℂ) (ofReal_ne_zero.mpr hh.ne').isUnit * ∫ u in 0..h,
+        Checked.div 1 ((Periodic.qParam h (u + t * I) hh.ne') ^ n)
+          ((Periodic.qParam_ne_zero (u + t * I) hh.ne').isUnit.pow n) *
+          f ⟨u + t * I, by simpa using ht⟩ :=
   have : Fact (IsCusp OnePoint.infty Γ) := ⟨Γ.isCusp_of_mem_strictPeriods hh hΓ⟩
   qExpansion_coeff_eq_intervalIntegral hh (periodic_comp_ofComplex f hΓ)
     (holo f) (bdd_at_infty f) n ht
@@ -463,11 +497,18 @@ section ring
 
 namespace UpperHalfPlane
 
-theorem cuspFunction_mul_zero {f g : ℂ → ℂ} (hfcts : ContinuousAt (Periodic.cuspFunction h f) 0)
-    (hgcts : ContinuousAt (Periodic.cuspFunction h g) 0) : Periodic.cuspFunction h (f * g) 0 =
-    Periodic.cuspFunction h f 0 * Periodic.cuspFunction h g 0 := by
-  rw [Periodic.cuspFunction, update_self]
-  exact (Periodic.tendsto_nhds_zero hfcts).mul (Periodic.tendsto_nhds_zero hgcts) |>.limUnder_eq
+section CuspArithmetic
+
+variable {h_ne : h ≠ 0}
+
+theorem cuspFunction_mul_zero {f g : ℂ → ℂ}
+    (hfcts : ContinuousAt (Periodic.cuspFunction h f h_ne) 0)
+    (hgcts : ContinuousAt (Periodic.cuspFunction h g h_ne) 0) :
+    Periodic.cuspFunction h (f * g) h_ne 0 =
+      Periodic.cuspFunction h f h_ne 0 * Periodic.cuspFunction h g h_ne 0 := by
+  let := Periodic.neBot_cuspSubtype_nhds
+  simpa only [Periodic.cuspFunction, dite_true, Pi.mul_apply] using
+    ((Periodic.tendsto_nhds_zero hfcts).mul (Periodic.tendsto_nhds_zero hgcts)).limUnder_eq
 
 lemma qExpansion_mul_coeff_zero {f g : ℍ → ℂ} (hfcts : ContinuousAt (cuspFunction h f) 0)
     (hgcts : ContinuousAt (cuspFunction h g) 0) :
@@ -534,10 +575,21 @@ lemma qExpansion_sub {f g : ℍ → ℂ} (hf : AnalyticAt ℂ (cuspFunction h f)
     simpa [cuspFunction_neg hg.continuousAt] using hg.neg
   simpa [sub_eq_add_neg, qExpansion_neg hg] using (qExpansion_add hf hg')
 
-lemma qExpansion_zero (h) : qExpansion h 0 = 0 := by
-  suffices cuspFunction h 0 = 0 by ext; simp [qExpansion_coeff, this]
-  simpa [cuspFunction, Periodic.cuspFunction]
-    using! (tendsto_const_nhds.mono_left nhdsWithin_le_nhds).limUnder_eq
+end CuspArithmetic
+
+private lemma cuspFunction_const (h : ℝ) (a : ℂ) (hh : h ≠ 0) :
+    (fun q ↦ cuspFunction h (fun _ ↦ a) q hh) = fun _ ↦ a := by
+  let := Periodic.neBot_cuspSubtype_nhds
+  funext q
+  rcases eq_or_ne q 0 with rfl | hq
+  · simp only [cuspFunction, Periodic.cuspFunction, dite_true, Function.comp_def]
+    exact tendsto_const_nhds.limUnder_eq
+  · simp only [cuspFunction, Periodic.cuspFunction, dite_eq_right hq, Function.comp_def]
+
+lemma qExpansion_zero (h : ℝ) (hh : h ≠ 0 := by checked_nonzero) : qExpansion h 0 hh = 0 := by
+  have h0 : (fun q ↦ cuspFunction h 0 q hh) = 0 := cuspFunction_const h 0 hh
+  ext m
+  simp [qExpansion_coeff, h0]
 
 lemma qExpansion_eq_zero_iff {f : ℍ → ℂ} (hh : 0 < h)
     (hfper : Periodic (f ∘ ofComplex) h) (hfhol : MDiff f) (hfbdd : IsBoundedAtImInfty f) :
@@ -547,15 +599,12 @@ lemma qExpansion_eq_zero_iff {f : ℍ → ℂ} (hh : 0 < h)
     ext z
     simp [← (hasSum_qExpansion hh hfper hfhol hfbdd z).tsum_eq, H]
   · intro H
-    simpa [H] using qExpansion_zero h
+    simpa [H] using qExpansion_zero h hh.ne'
 
-lemma qExpansion_one (h) : qExpansion h (1 : ℍ → ℂ) = 1 := by
+lemma qExpansion_one (h : ℝ) (hh : h ≠ 0 := by checked_nonzero) :
+    qExpansion h (1 : ℍ → ℂ) hh = 1 := by
   ext m
-  have h1 : cuspFunction h 1 = 1 := by
-    ext q
-    rcases eq_or_ne q 0 with rfl | hq
-    · simpa [cuspFunction, Periodic.cuspFunction] using! tendsto_const_nhds.limUnder_eq
-    · simp [cuspFunction, Periodic.cuspFunction_eq_of_nonzero h _ hq]
+  have h1 : (fun q ↦ cuspFunction h 1 q hh) = 1 := cuspFunction_const h 1 hh
   have h2 : iteratedDeriv m (1 : ℂ → ℂ) 0 = if m = 0 then 1 else 0 := by
     simpa [ite_apply] using! iteratedDeriv_const
   simp +contextual [qExpansion_coeff, h1, h2]
@@ -628,14 +677,14 @@ protected lemma qExpansion_eq_zero_iff (hh : 0 < h) (hΓ : h ∈ Γ.strictPeriod
   have : Fact (IsCusp OnePoint.infty Γ) := ⟨Γ.isCusp_of_mem_strictPeriods hh hΓ⟩
   simp [qExpansion_eq_zero_iff hh (periodic_comp_ofComplex f hΓ) (holo f) (bdd_at_infty f)]
 
-protected lemma qExpansion_one [Γ.HasDetPlusMinusOne] :
-    qExpansion h (1 : ModularForm Γ 0) = 1 := by
+protected lemma qExpansion_one [Γ.HasDetPlusMinusOne] (hh : h ≠ 0 := by checked_nonzero) :
+    qExpansion h (1 : ModularForm Γ 0) hh = 1 := by
   simp [qExpansion_one]
 
 @[simp]
 protected lemma qExpansion_mcast {a b : ℤ} {Γ' : Subgroup (GL (Fin 2) ℝ)}
-    (heq : a = b) (hΓ : Γ' = Γ) (f : ModularForm Γ a) :
-    qExpansion h (ModularForm.mcast heq f hΓ) = qExpansion h f := rfl
+    (heq : a = b) (hΓ : Γ' = Γ) (f : ModularForm Γ a) (hh : h ≠ 0 := by checked_nonzero) :
+    qExpansion h (ModularForm.mcast heq f hΓ) hh = qExpansion h f hh := rfl
 
 protected lemma qExpansion_pow [Γ.HasDetPlusMinusOne] (hh : 0 < h)
     (hΓ : h ∈ Γ.strictPeriods) (f : ModularForm Γ k) (n : ℕ) :
@@ -731,7 +780,7 @@ lemma qExpansion_of_pow [Γ.HasDetPlusMinusOne] (hh : 0 < h)
 arguments filled in automatically. -/
 lemma hasSum_qExpansion (hh : 0 < h) {k : ℤ} [ModularFormClass F Γ k]
     [Fact (IsCusp .infty Γ)] (hΓ : h ∈ Γ.strictPeriods) (τ : ℍ) :
-    HasSum (fun m ↦ (qExpansion h f).coeff m * 𝕢 h τ ^ m) (f τ) :=
+    HasSum (fun m ↦ (qExpansion h f).coeff m * Function.Periodic.qParam h τ ^ m) (f τ) :=
   τ.hasSum_qExpansion hh (periodic_comp_ofComplex f hΓ) (holo f) (bdd_at_infty f)
 
 end ModularForm
@@ -773,17 +822,17 @@ namespace UpperHalfPlane
 /-- The `q`-expansion of `f` is an `FPowerSeries` representing `cuspFunction n f`. -/
 lemma hasFPowerSeries_cuspFunction {c : ℕ → ℂ} (hh : 0 < h)
     (hfanalytic : AnalyticAt ℂ (cuspFunction h f) 0)
-    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • 𝕢 h τ ^ m) (f τ)) :
+    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • Function.Periodic.qParam h τ ^ m) (f τ)) :
     HasFPowerSeriesOnBall (cuspFunction h f) (qExpansionFormalMultilinearSeries h f) 0 1 := by
   have h1 := (hasFPowerSeriesOnBall_cuspFunction hh hfanalytic hf).hasFPowerSeriesAt
   have h2 : HasFPowerSeriesAt (cuspFunction h f) (qExpansionFormalMultilinearSeries h f) 0 := by
-    simpa [qExpansionFormalMultilinearSeries, qExpansion_coeff, div_eq_mul_inv, mul_comm]
+    simpa [qExpansionFormalMultilinearSeries, qExpansion_coeff, div_eq_mul_inv₀, mul_comm]
       using hfanalytic.hasFPowerSeriesAt
   simpa [h1.eq_formalMultilinearSeries h2] using hasFPowerSeriesOnBall_cuspFunction hh hfanalytic hf
 
 lemma qExpansion_coeff_unique {c : ℕ → ℂ} (hh : 0 < h)
     (hfanalytic : AnalyticAt ℂ (cuspFunction h f) 0)
-    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • 𝕢 h τ ^ m) (f τ)) (m : ℕ) :
+    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • Function.Periodic.qParam h τ ^ m) (f τ)) (m : ℕ) :
     c m = (qExpansion h f).coeff m := by
   have h1 := (hasFPowerSeriesOnBall_cuspFunction hh hfanalytic hf).hasFPowerSeriesAt
   have h2 := (hasFPowerSeries_cuspFunction f hh hfanalytic hf).hasFPowerSeriesAt
@@ -793,6 +842,6 @@ end UpperHalfPlane
 
 protected lemma ModularFormClass.qExpansion_coeff_unique {c : ℕ → ℂ} (hh : 0 < h)
     (hΓ : h ∈ Γ.strictPeriods) {f : F} [ModularFormClass F Γ k]
-    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • 𝕢 h τ ^ m) (f τ)) (m : ℕ) :
+    (hf : ∀ τ : ℍ, HasSum (fun m ↦ c m • Function.Periodic.qParam h τ ^ m) (f τ)) (m : ℕ) :
     c m = (qExpansion h f).coeff m :=
   qExpansion_coeff_unique f hh (ModularFormClass.analyticAt_cuspFunction_zero f hh hΓ) hf m

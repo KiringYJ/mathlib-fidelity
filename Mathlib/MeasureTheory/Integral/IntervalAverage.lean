@@ -13,7 +13,7 @@ public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 
 In this file we introduce notation `⨍ x in a..b, f x` for the average `⨍ x in Ι a b, f x` of `f`
 over the interval `Ι a b = Set.Ioc (min a b) (max a b)` w.r.t. the Lebesgue measure, then prove
-formulas for this average:
+formulas for this average when the endpoints are distinct:
 
 * `interval_average_eq`: `⨍ x in a..b, f x = (b - a)⁻¹ • ∫ x in a..b, f x`;
 * `interval_average_eq_div`: `⨍ x in a..b, f x = (∫ x in a..b, f x) / (b - a)`;
@@ -47,24 +47,38 @@ notation3 "⨍ "(...)" in "a".."b",
   "r:60:(scoped f => average (Measure.restrict volume (uIoc a b)) f) => r
 
 theorem interval_average_symm (f : ℝ → E) (a b : ℝ) : (⨍ x in a..b, f x) = ⨍ x in b..a, f x := by
-  rw [setAverage_eq, setAverage_eq, uIoc_comm]
+  rw [uIoc_comm a b]
 
-theorem interval_average_eq (f : ℝ → E) (a b : ℝ) :
+theorem interval_average_eq (f : ℝ → E) (a b : ℝ) (hab : a ≠ b) :
     (⨍ x in a..b, f x) = (b - a)⁻¹ • ∫ x in a..b, f x := by
-  rcases le_or_gt a b with h | h
-  · rw [setAverage_eq, uIoc_of_le h, Real.volume_real_Ioc_of_le h, integral_of_le h]
-  · rw [setAverage_eq, uIoc_of_ge h.le, Real.volume_real_Ioc_of_le h.le, integral_of_ge h.le,
-      smul_neg, ← neg_smul, ← inv_neg, neg_sub]
+  have hba : IsUnit (b - a) := (sub_ne_zero.mpr hab.symm).isUnit
+  rcases lt_or_gt_of_ne hab with h | h
+  · rw [uIoc_of_le h.le, integral_of_le h.le]
+    have hv : IsUnit ((volume : Measure ℝ).real (Ioc a b)) := by
+      rwa [Real.volume_real_Ioc_of_le h.le]
+    rw [setAverage_eq _ (hs := hv)]
+    simp only [Real.volume_real_Ioc_of_le h.le]
+  · have hab' : IsUnit (a - b) := (sub_ne_zero.mpr hab).isUnit
+    rw [uIoc_of_ge h.le, integral_of_ge h.le]
+    have hv : IsUnit ((volume : Measure ℝ).real (Ioc b a)) := by
+      rwa [Real.volume_real_Ioc_of_le h.le]
+    have hneg : (a - b)⁻¹ = -(b - a)⁻¹ := by
+      simpa only [neg_sub] using (inv_neg₀ (a := b - a) (ha := (IsUnit.neg_iff _).2 hba))
+    rw [setAverage_eq _ (hs := hv)]
+    simp only [Real.volume_real_Ioc_of_le h.le, smul_neg, ← neg_smul, hneg]
 
-theorem interval_average_eq_div (f : ℝ → ℝ) (a b : ℝ) :
+theorem interval_average_eq_div (f : ℝ → ℝ) (a b : ℝ) (hab : a ≠ b) :
     (⨍ x in a..b, f x) = (∫ x in a..b, f x) / (b - a) := by
-  rw [interval_average_eq, smul_eq_mul, div_eq_inv_mul]
+  rw [interval_average_eq f a b hab, smul_eq_mul, div_eq_inv_mul₀]
 
 /-- Interval averages are invariant when functions change along discrete sets. -/
 theorem intervalAverage_congr_codiscreteWithin {a b : ℝ} {f₁ f₂ : ℝ → ℝ}
     (hf : f₁ =ᶠ[Filter.codiscreteWithin (Ι a b)] f₂) :
     ⨍ (x : ℝ) in a..b, f₁ x = ⨍ (x : ℝ) in a..b, f₂ x := by
-  rw [interval_average_eq, integral_congr_codiscreteWithin hf, ← interval_average_eq]
+  rcases eq_or_ne a b with rfl | hab
+  · simp
+  · rw [interval_average_eq f₁ a b hab, interval_average_eq f₂ a b hab,
+      integral_congr_codiscreteWithin hf]
 
 variable {f : ℝ → ℝ} {a b : ℝ} {μ : Measure ℝ}
 

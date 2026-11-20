@@ -190,7 +190,7 @@ example {S : Type*} [CommRing S] [Algebra R S] [Module S M] [IsScalarTower R S M
 example {K : Type*} [Field K] [Module K M] (a : K) (ha : a ≠ 0) (x : M) :
     a⁻¹ • a • x = x := by
   module_nf
-  rw [mul_inv_cancel₀ ha, one_smul]
+  rw [mul_inv_cancel₀, one_smul]
 
 example (x : M) (P : M → Prop) (h : P ((2 : ℤ) • x)) :
     P (x + x) ∧ P ((2 : ℤ) • x) := by

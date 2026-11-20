@@ -10,7 +10,7 @@ example {x : Dyadic} {prec : Int} : x.roundDown prec ≤ x := by
 -- Verify that `sineQuaNon` finds Mathlib theorems, too.
 open Real
 -- This is exactly `rpowIntegrand₀₁_nonneg`
-example (hp : 0 < p) (ht : 0 ≤ t) (hx : 0 ≤ x) :
+example (p : ℝ) (t : Set.Ioi (0 : ℝ)) (x : NNReal) :
     0 ≤ rpowIntegrand₀₁ p t x := by
   fail_if_success grind
   grind +suggestions

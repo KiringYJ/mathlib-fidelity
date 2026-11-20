@@ -47,16 +47,18 @@ variable {α β : Type*} [Fintype α] [Fintype β] (A : Matrix α β ℤ)
 
 local notation3 "m" => Fintype.card α
 local notation3 "n" => Fintype.card β
-local notation3 "e" => m / ((n : ℝ) - m) -- exponent
-local notation3 "B" => Nat.floor (((n : ℝ) * max 1 ‖A‖) ^ e)
--- B' is the vector with all components = B
-local notation3 "B'" => fun _ : β => (B : ℤ)
--- T is the box [0 B]^n
-local notation3 "T" => Finset.Icc 0 B'
-local notation3 "P" => fun i : α => ∑ j : β, B * posPart (A i j)
-local notation3 "N" => fun i : α => ∑ j : β, B * (-negPart (A i j))
--- S is the box where the image of T goes
-local notation3 "S" => Finset.Icc N P
+
+private lemma card_gap_pos (hn : Fintype.card α < Fintype.card β) :
+    0 < (n : ℝ) - m :=
+  sub_pos.mpr (Nat.cast_lt.mpr hn)
+
+local notation3 "e[" h "]" =>
+  Checked.div (m : ℝ) ((n : ℝ) - m) (by exact (card_gap_pos h).ne'.isUnit)
+-- T[B] is the box [0, B]^n; S[B] bounds its image under A.
+local notation3 "T[" B "]" => Finset.Icc (0 : β → ℤ) (fun _ : β => (B : ℤ))
+local notation3 "P[" B "]" => fun i : α => ∑ j : β, (B : ℤ) * posPart (A i j)
+local notation3 "N[" B "]" => fun i : α => ∑ j : β, (B : ℤ) * (-negPart (A i j))
+local notation3 "S[" B "]" => Finset.Icc N[B] P[B]
 
 section preparation
 
@@ -70,7 +72,8 @@ Their difference is the solution we are looking for.
 
 -- # Step 1: ∀ v ∈ T, A *ᵥ v ∈  S
 
-private lemma image_T_subset_S [DecidableEq α] [DecidableEq β] (v) (hv : v ∈ T) : A *ᵥ v ∈ S := by
+private lemma image_T_subset_S [DecidableEq α] [DecidableEq β] (B : ℕ)
+    (v) (hv : v ∈ T[B]) : A *ᵥ v ∈ S[B] := by
   rw [mem_Icc] at hv ⊢
   refine ⟨fun i ↦ ?_, fun i ↦ ?_⟩
   all_goals
@@ -84,22 +87,24 @@ private lemma image_T_subset_S [DecidableEq α] [DecidableEq β] (v) (hv : v ∈
 
 -- # Preparation for Step 2
 
-private lemma card_T_eq [DecidableEq β] : #T = (B + 1) ^ n := by
+private lemma card_T_eq [DecidableEq β] (B : ℕ) : #T[B] = (B + 1) ^ n := by
   simp [Pi.card_Icc]
 
 -- This lemma is necessary to be able to apply the formula #(Icc a b) = b + 1 - a
-private lemma N_le_P_add_one (i : α) : N i ≤ P i + 1 := by
+omit [Fintype α] in
+private lemma N_le_P_add_one (B : ℕ) (i : α) : N[B] i ≤ P[B] i + 1 := by
   calc
-    N i ≤ 0 := by
+    N[B] i ≤ 0 := by
       simpa using sum_nonneg fun _ _ ↦ by positivity
-    _ ≤ P i + 1 :=
+    _ ≤ P[B] i + 1 :=
       add_nonneg (sum_nonneg fun _ _ ↦ by positivity) zero_le_one
 
-private lemma card_S_eq [DecidableEq α] : #(Finset.Icc N P) = ∏ i : α, (P i - N i + 1) := by
-  rw [Pi.card_Icc N P, Nat.cast_prod]
+private lemma card_S_eq [DecidableEq α] (B : ℕ) :
+    #S[B] = ∏ i : α, (P[B] i - N[B] i + 1) := by
+  rw [Pi.card_Icc N[B] P[B], Nat.cast_prod]
   congr with i
-  rw [Int.card_Icc_of_le (N i) (P i) (N_le_P_add_one A i)]
-  exact add_sub_right_comm (P i) 1 (N i)
+  rw [Int.card_Icc_of_le (N[B] i) (P[B] i) (N_le_P_add_one A B i)]
+  exact add_sub_right_comm (P[B] i) 1 (N[B] i)
 
 /-- The sup norm of a non-zero integer matrix is at least one. -/
 lemma one_le_norm_A_of_ne_zero (hA : A ≠ 0) : 1 ≤ ‖A‖ := by
@@ -115,16 +120,17 @@ lemma one_le_norm_A_of_ne_zero (hA : A ≠ 0) : 1 ≤ ‖A‖ := by
 open Real Nat
 
 private lemma card_S_lt_card_T [DecidableEq α] [DecidableEq β]
-    (hn : Fintype.card α < Fintype.card β) (hm : 0 < Fintype.card α) :
-    #S < #T := by
+    (hn : Fintype.card α < Fintype.card β) (hm : 0 < Fintype.card α) (B : ℕ)
+    (hB : ((n : ℝ) * max 1 ‖A‖) ^ e[hn] < (B : ℝ) + 1) :
+    #S[B] < #T[B] := by
   zify -- This is necessary to use card_S_eq
-  rw [card_T_eq A, card_S_eq]
+  rw [card_T_eq B, card_S_eq]
   rify -- This is necessary because ‖A‖ is a real number
   calc
   ∏ x : α, (∑ x_1 : β, ↑B * ↑(A x x_1)⁺ - ∑ x_1 : β, ↑B * -↑(A x x_1)⁻ + 1)
     ≤ ∏ x : α, (n * max 1 ‖A‖ * B + 1) := by
       refine Finset.prod_le_prod₀ (fun i _ ↦ ?_) (fun i _ ↦ ?_)
-      · have h := N_le_P_add_one A i
+      · have h := N_le_P_add_one A B i
         rify at h
         linarith only [h]
       · simp only [mul_neg, sum_neg_distrib, sub_neg_eq_add, add_le_add_iff_right]
@@ -139,14 +145,12 @@ private lemma card_S_lt_card_T [DecidableEq α] [DecidableEq β]
         rw [← mul_pow, mul_add, mul_one]
         gcongr
         exact one_le_mul_of_one_le_of_one_le (mod_cast hm.trans hn) <| le_max_left ..
-  _ = ((n * max 1 ‖A‖) ^ (m / ((n : ℝ) - m))) ^ ((n : ℝ) - m) * (B + 1) ^ m := by
+  _ = ((n * max 1 ‖A‖) ^ e[hn]) ^ ((n : ℝ) - m) * (B + 1) ^ m := by
         congr 1
-        rw [← rpow_mul (by positivity), ← Real.rpow_natCast, div_mul_cancel₀]
-        exact sub_ne_zero_of_ne (mod_cast hn.ne')
+        rw [← rpow_mul (by positivity), div_mul_cancel₀, Real.rpow_natCast]
   _ < (B + 1) ^ ((n : ℝ) - m) * (B + 1) ^ m := by
         gcongr
-        · exact sub_pos.mpr (mod_cast hn)
-        · exact Nat.lt_floor_add_one _
+        exact card_gap_pos hn
   _ = (B + 1) ^ n := by
         rw [← rpow_natCast, ← rpow_add (Nat.cast_add_one_pos B), ← rpow_natCast, sub_add_cancel]
 
@@ -154,15 +158,18 @@ end preparation
 
 theorem exists_ne_zero_int_vec_norm_le
     (hn : Fintype.card α < Fintype.card β) (hm : 0 < Fintype.card α) : ∃ t : β → ℤ, t ≠ 0 ∧
-    A *ᵥ t = 0 ∧ ‖t‖ ≤ (n * max 1 ‖A‖) ^ ((m : ℝ) / (n - m)) := by
+    A *ᵥ t = 0 ∧ ‖t‖ ≤ (n * max 1 ‖A‖) ^ e[hn] := by
   classical
+  let B := Nat.floor (((n : ℝ) * max 1 ‖A‖) ^ e[hn])
+  have hB : ((n : ℝ) * max 1 ‖A‖) ^ e[hn] < (B : ℝ) + 1 := Nat.lt_floor_add_one _
   -- Pigeonhole
-  rcases exists_ne_map_eq_of_card_lt_of_maps_to (card_S_lt_card_T A hn hm) (image_T_subset_S A)
+  rcases exists_ne_map_eq_of_card_lt_of_maps_to (card_S_lt_card_T A hn hm B hB)
+    (image_T_subset_S A B)
     with ⟨x, hxT, y, hyT, hneq, hfeq⟩
   -- Proofs that x - y ≠ 0 and x - y is a solution
   refine ⟨x - y, sub_ne_zero.mpr hneq, by simp [mulVec_sub, hfeq], ?_⟩
   -- Inequality
-  have n_mul_norm_A_pow_e_nonneg : 0 ≤ (n * max 1 ‖A‖) ^ e := by positivity
+  have n_mul_norm_A_pow_e_nonneg : 0 ≤ (n * max 1 ‖A‖) ^ e[hn] := by positivity
   rw [← norm_replicateCol (ι := Unit), norm_le_iff n_mul_norm_A_pow_e_nonneg]
   intro i j
   simp only [replicateCol_apply, Pi.sub_apply, Int.norm_eq_abs, ← Int.cast_abs]
@@ -177,7 +184,7 @@ theorem exists_ne_zero_int_vec_norm_le
 theorem exists_ne_zero_int_vec_norm_le'
     (hn : Fintype.card α < Fintype.card β) (hm : 0 < Fintype.card α) (hA : A ≠ 0) :
     ∃ t : β → ℤ, t ≠ 0 ∧
-    A *ᵥ t = 0 ∧ ‖t‖ ≤ (n * ‖A‖) ^ ((m : ℝ) / (n - m)) := by
+    A *ᵥ t = 0 ∧ ‖t‖ ≤ (n * ‖A‖) ^ e[hn] := by
   simpa [max_eq_right (one_le_norm_A_of_ne_zero A hA)] using
     exists_ne_zero_int_vec_norm_le A hn hm
 

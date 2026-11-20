@@ -289,6 +289,9 @@ trace: [Tactic.evalRank] equality in the element type does not reduce in the ker
 #guard_msgs in
 example : Matrix.rank (R := ℚ[X]) !![X, 1; 1, X] = 2 := by eval_rank
 
+private theorem three_isUnit_mod_seven : IsUnit (3 : ZMod 7) :=
+  Ne.isUnit (by decide)
+
 -- Requires an extension to compute the modulo inverse and handle the syntax parsing
 /--
 error: `eval_rank` made no progress.
@@ -298,7 +301,7 @@ trace: [Tactic.evalRank] the following entry cannot be simplified to a numeral
       2 / 3
 -/
 #guard_msgs in
-example : Matrix.rank (R := ZMod 7) !![2/3, 0; 0, 1] = 2 := by eval_rank
+example : Matrix.rank (R := ZMod 7) !![Checked.div 2 3 three_isUnit_mod_seven, 0; 0, 1] = 2 := by eval_rank
 
 -- under bare `simp` the same failure is reported without the trace hint
 /--
@@ -308,5 +311,5 @@ trace: [Tactic.evalRank] the following entry cannot be simplified to a numeral
       2 / 3
 -/
 #guard_msgs in
-example : Matrix.rank (R := ZMod 7) !![2/3, 0; 0, 1] = 2 := by
+example : Matrix.rank (R := ZMod 7) !![Checked.div 2 3 three_isUnit_mod_seven, 0; 0, 1] = 2 := by
   simp only [norm_rank]

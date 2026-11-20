@@ -106,9 +106,11 @@ theorem isEquiv_iff_lt_one_iff :
   refine ⟨fun h _ ↦ h.lt_one_iff, fun h x y ↦ ?_⟩
   rcases eq_or_ne (v x) 0 with (_ | hy₀)
   · simp_all
+  have hx0 : x ≠ 0 := v.ne_zero_iff.mp hy₀
   rw [le_iff_le_iff_lt_iff_lt, ← one_mul (v x), ← mul_inv_lt_iff₀ (by simp_all), ← one_mul (w x),
     ← mul_inv_lt_iff₀ (by simp_all), ← map_inv₀, ← map_mul, ← map_inv₀, ← map_mul]
-  exact h _
+  · exact h _
+  · exact hx0.isUnit
 
 variable [Archimedean S] [ExistsAddOfLE S]
 
@@ -119,11 +121,13 @@ theorem isEquiv_of_lt_one_imp (hv : v.IsNontrivial) (h : ∀ x, v x < 1 → w x 
   refine ⟨h a, fun hw ↦ ?_⟩
   let ⟨x₀, hx₀⟩ := hv.exists_abv_lt_one
   have hpow (n : ℕ) (hv : 1 ≤ v a) : w x₀ < w a ^ n := by
-    rw [← one_mul (_ ^ _), ← mul_inv_lt_iff₀ (pow_pos (by simp_all) _),
-      ← map_pow, ← map_inv₀, ← map_mul]
-    apply h
-    rw [map_mul, map_inv₀, map_pow, mul_inv_lt_iff₀ (pow_pos (by simp [ha₀]) _), one_mul]
-    exact lt_of_lt_of_le hx₀.2 <| one_le_pow₀ hv
+    have hh : v (x₀ * (a ^ n)⁻¹) < 1 := by
+      simp only [map_mul, map_inv₀, map_pow]
+      rw [mul_inv_lt_iff₀ (pow_pos (v.pos ha₀) _), one_mul]
+      exact lt_of_lt_of_le hx₀.2 <| one_le_pow₀ hv
+    have hw := h _ hh
+    simp only [map_mul, map_inv₀, map_pow] at hw
+    simpa only [one_mul] using (mul_inv_lt_iff₀ (pow_pos (w.pos ha₀) n)).mp hw
   obtain ⟨n, hn⟩ := exists_pow_lt_of_lt_one (w.pos hx₀.1) hw
   exact not_le.1 <| mt (hpow n) <| not_lt.2 hn.le
 
@@ -145,6 +149,7 @@ theorem exists_one_lt_lt_one_of_not_isEquiv {v w : AbsoluteValue R S} (hv : v.Is
     ∃ a : R, 1 < v a ∧ w a < 1 := by
   let ⟨a, hva, hwa⟩ := exists_lt_one_one_le_of_not_isEquiv hv h
   let ⟨b, hwb, hvb⟩ := exists_lt_one_one_le_of_not_isEquiv hw (mt .symm h)
+  have ha0 : a ≠ 0 := w.pos_iff.mp (zero_lt_one.trans_le hwa)
   exact ⟨b / a, by simp [w.pos_iff.1 (lt_of_lt_of_le zero_lt_one hwa), one_lt_div, div_lt_one,
     lt_of_le_of_lt' hvb hva, lt_of_le_of_lt' hwa hwb]⟩
 
@@ -203,17 +208,26 @@ private theorem exists_one_lt_lt_one_pi_of_one_lt (ha : 1 < v i a) (haj : ∀ j 
     (haw : 1 < w a) (hb : 1 < v i b) (hbw : w b < 1) :
     ∃ k : R, 1 < v i k ∧ (∀ j ≠ i, v j k < 1) ∧ w k < 1 := by
   classical
-  let c : ℕ → R := fun n ↦ 1 / (1 + a⁻¹ ^ n) * b
+  have ha0 : a ≠ 0 := fun he => by
+    simp only [he, map_zero] at ha
+    exact (not_lt_of_ge zero_le_one) ha
+  have hainv : v i a⁻¹ < 1 := map_inv₀ (v i) a ▸ inv_lt_one_of_one_lt₀ ha
+  have hden (n : ℕ) : 1 + a⁻¹ ^ (n + 1) ≠ 0 :=
+    one_add_pow_ne_zero hainv.ne (Nat.succ_ne_zero n)
+  let u (n : ℕ) : {n : ℕ // 1 + a⁻¹ ^ n ≠ 0} := ⟨n + 1, hden n⟩
+  have hu : Tendsto u atTop (comap Subtype.val atTop) :=
+    tendsto_comap_iff.mpr (tendsto_add_atTop_nat 1)
+  let c : ℕ → R := fun n ↦ Checked.div 1 (1 + a⁻¹ ^ (n + 1)) (hden n).isUnit * b
   have hcᵢ : Tendsto (fun n ↦ v i (c n)) atTop (𝓝 (v i b)) := by
     have : v i a⁻¹ < 1 := map_inv₀ (v i) a ▸ inv_lt_one_of_one_lt₀ ha
-    simpa [c] using (tendsto_div_one_add_pow_nhds_one this).mul_const (v i b)
+    simpa [c, u] using ((tendsto_div_one_add_pow_nhds_one this).comp hu).mul_const (v i b)
   have hcⱼ (j : ι) (hj : j ≠ i) : atTop.Tendsto (fun n ↦ v j (c n)) (𝓝 0) := by
     have : 1 < v j a⁻¹ := map_inv₀ (v j) _ ▸
       (one_lt_inv₀ <| (v j).pos fun h ↦ by linarith [map_zero (v _) ▸ h ▸ ha]).2 (haj j hj)
-    simpa [c] using (tendsto_div_one_add_pow_nhds_zero this).mul_const _
+    simpa [c, u] using ((tendsto_div_one_add_pow_nhds_zero this).comp hu).mul_const _
   have hcₙ : atTop.Tendsto (fun n ↦ w (c n)) (𝓝 (w b)) := by
     have : w a⁻¹ < 1 := map_inv₀ w _ ▸ inv_lt_one_of_one_lt₀ haw
-    simpa [c] using (tendsto_div_one_add_pow_nhds_one this).mul_const (w b)
+    simpa [c, u] using ((tendsto_div_one_add_pow_nhds_one this).comp hu).mul_const (w b)
   simp_rw +instances [OrderTopology.topology_eq_generate_intervals,
     TopologicalSpace.tendsto_nhds_generateFrom_iff, mem_atTop_sets, Set.mem_preimage] at hcⱼ
   choose r₁ hr₁ using Filter.eventually_atTop.1 <| Filter.Tendsto.eventually_const_lt hb hcᵢ
@@ -287,9 +301,10 @@ open Real Topology
 variable {F : Type*} [Field F] {v w : AbsoluteValue F ℝ}
 
 theorem IsEquiv.log_div_log_pos (h : v.IsEquiv w) {a : F} (ha₀ : a ≠ 0) (ha₁ : w a ≠ 1) :
-    0 < (w a).log / (v a).log := by
+    0 < Checked.div (w a).log (v a).log
+      (log_ne_zero_of_pos_of_ne_one (v.pos ha₀) (h.eq_one_iff.not.mpr ha₁)).isUnit := by
   rcases ha₁.lt_or_gt with hwa | hwa
-  · simpa using div_pos (neg_pos_of_neg <| log_neg (w.pos ha₀) (hwa))
+  · simpa only [neg_div_neg_eq₀] using div_pos (neg_pos_of_neg <| log_neg (w.pos ha₀) (hwa))
       (neg_pos_of_neg <| log_neg (v.pos ha₀) (h.lt_one_iff.2 hwa))
   · exact div_pos (log_pos <| hwa) (log_pos (h.one_lt_iff.2 hwa))
 
@@ -300,29 +315,59 @@ constant for all $0 \neq a\in F$ with $v(a) \neq 1$.
 -/
 theorem IsEquiv.log_div_log_eq_log_div_log (h : v.IsEquiv w)
     {a : F} (ha₀ : a ≠ 0) (ha₁ : v a ≠ 1) {b : F} (hb₀ : b ≠ 0) (hb₁ : v b ≠ 1) :
-    (v b).log / (w b).log = (v a).log / (w a).log := by
+    Checked.div (v b).log (w b).log
+      (log_ne_zero_of_pos_of_ne_one (w.pos hb₀) (h.eq_one_iff.not.mp hb₁)).isUnit =
+    Checked.div (v a).log (w a).log
+      (log_ne_zero_of_pos_of_ne_one (w.pos ha₀) (h.eq_one_iff.not.mp ha₁)).isUnit := by
   by_contra! h_ne
   wlog! ha : 1 < v a generalizing a b
-  · apply this (inv_ne_zero ha₀) (by simpa) hb₀ hb₁ (by simpa)
+  · have hl (u : AbsoluteValue F ℝ) : log (u a⁻¹) = -log (u a) := by
+      rw [map_inv₀]
+      apply eq_neg_iff_add_eq_zero.mpr
+      rw [← log_mul (inv_ne_zero (ha := (u.ne_zero ha₀).isUnit)) (u.ne_zero ha₀),
+        inv_mul_cancel₀, log_one]
+    apply this (a := a⁻¹) inv_ne_zero (by simpa) hb₀ hb₁
+      (by simpa only [hl, neg_div_neg_eq₀] using h_ne)
     simpa using one_lt_inv_iff₀.2 ⟨v.pos ha₀, ha₁.lt_of_le ha⟩
   wlog! hb : 1 < v b generalizing a b
-  · apply this ha₀ ha₁ (inv_ne_zero hb₀) (by simpa) (by simpa) ha
+  · have hl (u : AbsoluteValue F ℝ) : log (u b⁻¹) = -log (u b) := by
+      rw [map_inv₀]
+      apply eq_neg_iff_add_eq_zero.mpr
+      rw [← log_mul (inv_ne_zero (ha := (u.ne_zero hb₀).isUnit)) (u.ne_zero hb₀),
+        inv_mul_cancel₀, log_one]
+    apply this (b := b⁻¹) ha₀ ha₁ inv_ne_zero (by simpa)
+      (by simpa only [hl, neg_div_neg_eq₀] using h_ne) ha
     simpa using one_lt_inv_iff₀.2 ⟨v.pos hb₀, hb₁.lt_of_le hb⟩
-  wlog! h_lt : (v b).log / (w b).log < (v a).log / (w a).log generalizing a b
+  wlog! h_lt : Checked.div (v b).log (w b).log
+      (log_ne_zero_of_pos_of_ne_one (w.pos hb₀) (h.eq_one_iff.not.mp hb₁)).isUnit <
+    Checked.div (v a).log (w a).log
+      (log_ne_zero_of_pos_of_ne_one (w.pos ha₀) (h.eq_one_iff.not.mp ha₁)).isUnit generalizing a b
   · exact this hb₀ hb₁ ha₀ ha₁ h_ne.symm hb ha <| lt_of_le_of_ne h_lt h_ne.symm
   have hwa := h.one_lt_iff.1 ha
   have hwb := h.one_lt_iff.1 hb
   rw [div_lt_div_iff₀ (log_pos hwb) (log_pos hwa), mul_comm (v a).log,
     ← div_lt_div_iff₀ (log_pos ha) (log_pos hwa)] at h_lt
   let ⟨q, ⟨hq₁, hq₂⟩⟩ := exists_rat_btwn h_lt
-  rw [← Rat.num_div_den q, Rat.cast_div, Rat.cast_intCast, Rat.cast_natCast] at hq₁ hq₂
-  rw [div_lt_div_iff₀ (log_pos ha) (by simp [q.den_pos]), mul_comm, ← log_pow, ← log_zpow,
-    log_lt_log_iff (pow_pos (by linarith) _) (zpow_pos (by linarith) _),
-    ← div_lt_one (zpow_pos (by linarith) _), ← map_pow, ← map_zpow₀, ← map_div₀] at hq₁
+  have hqpos : 0 < q := by
+    exact_mod_cast (div_pos (log_pos hb) (log_pos ha)).trans hq₁
+  have hm : (q.num : ℝ) = (q.num.toNat : ℝ) := by
+    exact_mod_cast (Int.toNat_of_nonneg (Rat.num_pos.mpr hqpos).le).symm
+  rw [← Rat.num_div_den q] at hq₁ hq₂
+  simp only [Rat.cast_div, Rat.cast_intCast, Rat.cast_natCast] at hq₁ hq₂
+  simp only [hm] at hq₁ hq₂
+  rw [div_lt_div_iff₀ (log_pos ha) (by simp [q.den_pos]), mul_comm,
+    ← log_pow, ← log_pow,
+    log_lt_log_iff (pow_pos (v.pos hb₀) _) (pow_pos (v.pos ha₀) _)] at hq₁
   rw [div_lt_div_iff₀ (by simp [q.den_pos]) (log_pos hwa), mul_comm (w _).log,
-    ← log_pow, ← log_zpow, log_lt_log_iff (zpow_pos (by linarith) _) (pow_pos (by linarith) _),
-    ← one_lt_div (zpow_pos (by linarith) _), ← map_pow, ← map_zpow₀, ← map_div₀] at hq₂
-  exact not_lt_of_gt (h.lt_one_iff.1 hq₁) hq₂
+    ← log_pow, ← log_pow,
+    log_lt_log_iff (pow_pos (w.pos ha₀) _) (pow_pos (w.pos hb₀) _)] at hq₂
+  have hvq : v (b ^ q.den / a ^ q.num.toNat) < 1 := by
+    simpa only [map_div₀, map_pow] using
+      (div_lt_one (pow_pos (v.pos ha₀) _)).mpr hq₁
+  have hwq : 1 < w (b ^ q.den / a ^ q.num.toNat) := by
+    simpa only [map_div₀, map_pow] using
+      (one_lt_div (pow_pos (w.pos ha₀) _)).mpr hq₂
+  exact not_lt_of_gt (h.lt_one_iff.mp hvq) hwq
 
 /--
 If `v` and `w` are two real absolute values on a field `F`, then `v` and `w` are equivalent if
@@ -334,11 +379,14 @@ theorem isEquiv_iff_exists_rpow_eq {v w : AbsoluteValue F ℝ} :
     fun x ↦ h ▸ (rpow_lt_one_iff' (v.nonneg x) ht).symm⟩
   by_cases hw : w.IsNontrivial
   · let ⟨a, ha₀, ha₁⟩ := hw
+    have hlog : (v a).log ≠ 0 :=
+      log_ne_zero_of_pos_of_ne_one (v.pos ha₀) (h.eq_one_iff.not.mpr ha₁)
     refine ⟨(w a).log / (v a).log, h.log_div_log_pos ha₀ ha₁, funext fun b ↦ ?_⟩
     rcases eq_or_ne b 0 with rfl | hb₀; · simp [zero_rpow (by linarith [h.log_div_log_pos ha₀ ha₁])]
     rcases eq_or_ne (w b) 1 with hb₁ | hb₁; · simp [hb₁, h.eq_one_iff.2 hb₁]
-    rw [← h.symm.log_div_log_eq_log_div_log ha₀ ha₁ hb₀ hb₁, div_eq_inv_mul, rpow_mul (v.nonneg _),
-      rpow_inv_log (v.pos hb₀) (h.eq_one_iff.not.2 hb₁), exp_one_rpow, exp_log (w.pos hb₀)]
+    rw [← h.symm.log_div_log_eq_log_div_log ha₀ ha₁ hb₀ hb₁,
+      rpow_def_of_pos (v.pos hb₀), div_eq_mul_inv₀, mul_left_comm,
+      mul_inv_cancel₀, mul_one, exp_log (w.pos hb₀)]
   · exact ⟨1, zero_lt_one,
       funext fun x ↦ by
         rcases eq_or_ne x 0 with rfl | h₀ <;>
@@ -412,7 +460,20 @@ theorem denseRange_algebraMap_pi {ι : Type*} [Finite ι] {v : ι → AbsoluteVa
   have := Fintype.ofFinite ι
   refine Metric.denseRange_iff.mpr fun z r hr ↦ ?_
   choose a hx using exists_one_lt_lt_one_pi_of_not_isEquiv h hv
-  let y := fun n : ℕ ↦ ∑ i, (1 / (1 + (a i)⁻¹ ^ n)) * WithAbs.equiv (v i) (z i)
+  have ha0 (i : ι) : a i ≠ 0 := fun he => by
+    have hi := (hx i).1
+    simp only [he, map_zero] at hi
+    exact (not_lt_of_ge zero_le_one) hi
+  have hainv (i : ι) : (v i) (a i)⁻¹ < 1 := by
+    rw [map_inv₀]
+    exact inv_lt_one_of_one_lt₀ (hx i).1
+  have hden (i : ι) (n : ℕ) : 1 + (a i)⁻¹ ^ (n + 1) ≠ 0 :=
+    one_add_pow_ne_zero (hainv i).ne (Nat.succ_ne_zero n)
+  let positiveIndex (i : ι) (n : ℕ) : {n : ℕ // 1 + (a i)⁻¹ ^ n ≠ 0} := ⟨n + 1, hden i n⟩
+  have hu (i : ι) : Tendsto (positiveIndex i) atTop (comap Subtype.val atTop) :=
+    tendsto_comap_iff.mpr (tendsto_add_atTop_nat 1)
+  let y := fun n : ℕ ↦ ∑ i,
+    Checked.div 1 (1 + (a i)⁻¹ ^ (n + 1)) (hden i n).isUnit * WithAbs.equiv (v i) (z i)
   have htend : atTop.Tendsto (fun n i ↦ (WithAbs.equiv (v i)).symm (y n)) (𝓝 z) := by
     refine tendsto_pi_nhds.mpr fun u ↦ ?_
     simp_rw [← Fintype.sum_pi_single u z, y, map_sum, map_mul]
@@ -421,15 +482,16 @@ theorem denseRange_algebraMap_pi {ι : Type*} [Finite ι] {v : ι → AbsoluteVa
     · rw [← hw, Pi.single_eq_same]
       have hlt : (v u) (a u)⁻¹ < 1 := by
         simpa [← inv_pow, inv_lt_one_iff₀] using Or.inr (hx u).1
-      simpa using (WithAbs.tendsto_one_div_one_add_pow_nhds_one hlt).mul_const (z u)
+      simpa [positiveIndex] using
+        ((WithAbs.tendsto_one_div_one_add_pow_nhds_one hlt).comp (hu u)).mul_const (z u)
     · rw [Pi.single_eq_of_ne (M := fun i ↦ WithAbs (v i)) hw (z w)]
       have hgt : 1 < (v u) (a w)⁻¹ := by
         rw [map_inv₀]
         refine one_lt_inv_iff₀.mpr ⟨(v u).pos_iff.mpr fun ha ↦ ?_, (hx w).2 u hw⟩
         linarith [map_zero (v w) ▸ ha ▸ (hx w).1]
-      have := (v u).tendsto_div_one_add_pow_nhds_zero hgt
+      have := ((v u).tendsto_div_one_add_pow_nhds_zero hgt).comp (hu w)
       simp_rw [← WithAbs.norm_toAbs_eq] at this
-      simpa using (tendsto_zero_iff_norm_tendsto_zero.2 this).mul_const
+      simpa [positiveIndex] using (tendsto_zero_iff_norm_tendsto_zero.2 this).mul_const
         ((WithAbs.equiv (v u)).symm _)
   let ⟨N, hN⟩ := Metric.tendsto_atTop.1 htend r hr
   exact ⟨y N, dist_comm z (algebraMap F _ (y N)) ▸ hN N le_rfl⟩

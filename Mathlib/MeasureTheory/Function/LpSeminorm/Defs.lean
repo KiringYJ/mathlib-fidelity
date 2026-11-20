@@ -21,7 +21,8 @@ and is almost everywhere strongly measurable.
 
 ## Main definitions
 
-* `eLpNorm' f p μ` : `(∫ ‖f a‖^p ∂μ) ^ (1/p)` for `f : α → F` and `p : ℝ`, where `α` is a measurable
+* `eLpNorm' f p μ` : `(∫ ‖f a‖^p ∂μ) ^ (1/p)` for `f : α → F` and nonzero `p : ℝ`,
+  where `α` is a measurable
   space and `F` is a normed group.
 * `eLpNormEssSup f μ` : seminorm in `ℒ∞`, equal to the essential supremum `essSup ‖f‖ μ`.
 * `eLpNorm f p μ` : for `p : ℝ≥0∞`, seminorm in `ℒp`, equal to `0` for `p=0`, to `eLpNorm' f p μ`
@@ -61,15 +62,17 @@ deduce it for `eLpNorm`, and translate it in terms of `MemLp`.
 -/
 
 
-/-- `(∫ ‖f a‖^q ∂μ) ^ (1/q)`, which is a seminorm on the space of measurable functions for which
-this quantity is finite.
+/-- The integral expression `(∫ ‖f a‖^q ∂μ) ^ (1/q)` for a nonzero real exponent `q`.
+For `q ≥ 1`, this gives a seminorm on the space of measurable functions for which it is finite.
+Negative exponents are also admitted by the formula; no value is assigned at `q = 0`.
 
 Note: this is a purely auxiliary quantity; lemmas about `eLpNorm'` should only be used to
 prove results about `eLpNorm`; every `eLpNorm'` lemma should have a `eLpNorm` version. -/
-def eLpNorm' {_ : SigmaAlgebra α} (f : α → ε) (q : ℝ) (μ : Measure α) : ℝ≥0∞ :=
+def eLpNorm' {_ : SigmaAlgebra α} (f : α → ε) (q : ℝ) (μ : Measure α)
+    (hq : IsUnit q := by checked_unit) : ℝ≥0∞ :=
   (∫⁻ a, ‖f a‖ₑ ^ q ∂μ) ^ (1 / q)
 
-lemma eLpNorm'_eq_lintegral_enorm (f : α → ε) (q : ℝ) (μ : Measure α) :
+lemma eLpNorm'_eq_lintegral_enorm (f : α → ε) (q : ℝ) (μ : Measure α) {hq : IsUnit q} :
     eLpNorm' f q μ = (∫⁻ a, ‖f a‖ₑ ^ q ∂μ) ^ (1 / q) :=
   rfl
 
@@ -81,22 +84,27 @@ lemma eLpNormEssSup_eq_essSup_enorm (f : α → ε) (μ : Measure α) :
     eLpNormEssSup f μ = essSup (‖f ·‖ₑ) μ := rfl
 
 /-- `ℒp` seminorm, equal to `0` for `p=0`, to `(∫ ‖f a‖^p ∂μ) ^ (1/p)` for `0 < p < ∞` and to
-`essSup ‖f‖ μ` for `p = ∞`. -/
+`essSup ‖f‖ μ` for `p = ∞`.
+The `p = 0` branch is an inherited convention, not a value of the real-exponent integral formula. -/
 def eLpNorm {_ : SigmaAlgebra α}
     (f : α → ε) (p : ℝ≥0∞) (μ : Measure α := by volume_tac) : ℝ≥0∞ :=
-  if p = 0 then 0 else if p = ∞ then eLpNormEssSup f μ else eLpNorm' f (ENNReal.toReal p) μ
+  if hp0 : p = 0 then 0 else if hptop : p = ∞ then eLpNormEssSup f μ
+  else eLpNorm' f p.toReal μ (ENNReal.toReal_pos hp0 hptop).ne'.isUnit
 
 variable {μ : Measure α}
 
 theorem eLpNorm_eq_eLpNorm' (hp_ne_zero : p ≠ 0) (hp_ne_top : p ≠ ∞) {f : α → ε} :
-    eLpNorm f p μ = eLpNorm' f (ENNReal.toReal p) μ := by simp [eLpNorm, hp_ne_zero, hp_ne_top]
+    eLpNorm f p μ = eLpNorm' f p.toReal μ
+      (ENNReal.toReal_pos hp_ne_zero hp_ne_top).ne'.isUnit := by
+  simp [eLpNorm, hp_ne_zero, hp_ne_top]
 
 lemma eLpNorm_nnreal_eq_eLpNorm' {f : α → ε} {p : ℝ≥0} (hp : p ≠ 0) :
     eLpNorm f p μ = eLpNorm' f p μ :=
   eLpNorm_eq_eLpNorm' (by exact_mod_cast hp) ENNReal.coe_ne_top
 
 lemma eLpNorm_eq_lintegral_rpow_enorm_toReal (hp_ne_zero : p ≠ 0) (hp_ne_top : p ≠ ∞) {f : α → ε} :
-    eLpNorm f p μ = (∫⁻ x, ‖f x‖ₑ ^ p.toReal ∂μ) ^ (1 / p.toReal) := by
+    eLpNorm f p μ = (∫⁻ x, ‖f x‖ₑ ^ p.toReal ∂μ) ^
+      Checked.div 1 p.toReal (ENNReal.toReal_pos hp_ne_zero hp_ne_top).ne'.isUnit := by
   rw [eLpNorm_eq_eLpNorm' hp_ne_zero hp_ne_top, eLpNorm'_eq_lintegral_enorm]
 
 lemma eLpNorm_nnreal_eq_lintegral {f : α → ε} {p : ℝ≥0} (hp : p ≠ 0) :
@@ -104,8 +112,7 @@ lemma eLpNorm_nnreal_eq_lintegral {f : α → ε} {p : ℝ≥0} (hp : p ≠ 0) :
   eLpNorm_nnreal_eq_eLpNorm' hp
 
 theorem eLpNorm_one_eq_lintegral_enorm {f : α → ε} : eLpNorm f 1 μ = ∫⁻ x, ‖f x‖ₑ ∂μ := by
-  simp_rw [eLpNorm_eq_lintegral_rpow_enorm_toReal one_ne_zero ENNReal.coe_ne_top,
-    ENNReal.toReal_one, one_div_one, ENNReal.rpow_one]
+  simp [eLpNorm, eLpNorm']
 
 @[simp]
 theorem eLpNorm_exponent_top {f : α → ε} : eLpNorm f ∞ μ = eLpNormEssSup f μ := by simp [eLpNorm]
@@ -127,8 +134,8 @@ lemma MemLp.aemeasurable [SigmaAlgebra ε] [TopologicalSpace ε]
 
 theorem lintegral_rpow_enorm_eq_rpow_eLpNorm' {f : α → ε} (hq0_lt : 0 < q) :
     ∫⁻ a, ‖f a‖ₑ ^ q ∂μ = eLpNorm' f q μ ^ q := by
-  rw [eLpNorm'_eq_lintegral_enorm, ← ENNReal.rpow_mul, one_div, inv_mul_cancel₀, ENNReal.rpow_one]
-  exact hq0_lt.ne'
+  rw [eLpNorm'_eq_lintegral_enorm, ← ENNReal.rpow_mul, one_div₀, inv_mul_cancel₀,
+    ENNReal.rpow_one]
 
 lemma eLpNorm_nnreal_pow_eq_lintegral {f : α → ε} {p : ℝ≥0} (hp : p ≠ 0) :
     eLpNorm f p μ ^ (p : ℝ) = ∫⁻ x, ‖f x‖ₑ ^ (p : ℝ) ∂μ := by

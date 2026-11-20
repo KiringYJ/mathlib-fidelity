@@ -72,12 +72,11 @@ theorem serreDerivative_E₆ : serreDerivative 6 E₆ = (-2⁻¹ : ℂ) • E₄
 lemma normalizedDerivOfComplex_D2 (γ : SL(2, ℤ)) :
     D (D2 γ) = fun z : ℍ ↦ -(γ 1 0 : ℂ) ^ 2 / denom γ z ^ 2 := by
   ext z
-  have hcomp : (D2 γ ∘ ofComplex) =ᶠ[𝓝 (z : ℂ)]
-      fun w ↦ 2 * π * I * (γ 1 0 : ℂ) * denom γ w ^ (-1 : ℤ) := by
-    filter_upwards [isOpen_upperHalfPlaneSet.mem_nhds z.im_pos] with w hw
-    simp [EisensteinSeries.D2, ofComplex_apply_of_im_pos hw, div_eq_mul_inv]
-  simp only [normalizedDerivOfComplex, (((hasDerivAt_denom_zpow γ (-1) z).const_mul
-    (2 * π * I * (γ 1 0 : ℂ))).congr_of_eventuallyEq hcomp).deriv]
+  have h := (hasDerivAt_denom_zpow γ (-1) z).const_mul (2 * π * I * (γ 1 0 : ℂ))
+  have hd := UpperHalfPlane.hasDerivAt_of_restrict (f := D2 γ ∘ ofComplex) (τ := z)
+    (by simpa only [EisensteinSeries.D2, Function.comp_def, ofComplex_apply, div_eq_mul_inv₀,
+      zpow_neg_one₀] using h)
+  simp only [normalizedDerivOfComplex, hd.deriv]
   push_cast [show ((γ : GL (Fin 2) ℝ) 1 0 : ℝ) = (γ 1 0 : ℝ) by norm_cast]
   field_simp
 
@@ -85,7 +84,8 @@ lemma normalizedDerivOfComplex_D2 (γ : SL(2, ℤ)) :
 is invariant under the weight-4 slash action of `SL(2, ℤ)`. -/
 private lemma serreDerivativeOne_E2_slash (γ : SL(2, ℤ)) :
     serreDerivative 1 E2 ∣[(4 : ℤ)] γ = serreDerivative 1 E2 := by
-  have hD2 : MDiff (D2 γ) := mdifferentiable_const.div (mdifferentiable_denom _) (denom_ne_zero _)
+  have hD2 : MDiff (D2 γ) :=
+    mdifferentiable_const.div (mdifferentiable_denom _) (h := fun z ↦ (denom_ne_zero _ z).isUnit)
   -- One can apply slash-equivariance of Serre derivative after rewriting in terms of `∂₂`
   have h₁₂ : serreDerivative 1 E2 = serreDerivative 2 E2 + (12⁻¹ : ℂ) • (E2 * E2) := by
     ext z
@@ -98,8 +98,11 @@ private lemma serreDerivativeOne_E2_slash (γ : SL(2, ℤ)) :
     rw [h₁₂, SlashAction.add_slash, SL_smul_slash, heq, show (4 : ℤ) = 2 + 2 from rfl,
       mul_slash_SL2]
   -- Derivative of `D2`
-  have hDD2 : D (D2 γ) = (1 / (24 * riemannZeta 2)) • (D2 γ * D2 γ) := by
-    rw [normalizedDerivOfComplex_D2, riemannZeta_two]
+  have hζ24 : IsUnit (24 * riemannZeta 2) := (by checked_unit : IsUnit (24 : ℂ)).mul
+    (isUnit_of_mul_isUnit_right EisensteinSeries.isUnit_two_mul_riemannZeta_two)
+  have hDD2 : D (D2 γ) = Checked.div 1 (24 * riemannZeta 2) hζ24 • (D2 γ * D2 γ) := by
+    rw [normalizedDerivOfComplex_D2]
+    simp only [riemannZeta_two]
     ext z
     simp only [Pi.smul_apply, Pi.mul_apply, smul_eq_mul, EisensteinSeries.D2]
     field_simp [denom_ne_zero, Complex.ofReal_ne_zero.mpr Real.pi_ne_zero]

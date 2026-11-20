@@ -191,9 +191,9 @@ example {a b : ℚ} (ha : a ≠ 0) (hb : 0 < b) : a * b ≠ 0 := by positivity
 example {a b : ℚ} (ha : a ≠ 0) (hb : b ≠ 0) : a * b ≠ 0 := by positivity
 
 example {a b : ℚ} (ha : 0 < a) (hb : 0 < b) : 0 < a / b := by positivity
-example {a b : ℚ} (ha : 0 < a) (hb : 0 ≤ b) : 0 ≤ a / b := by positivity
+example {a b : ℚ} (ha : 0 < a) (hb : 0 ≤ b) (hb₀ : b ≠ 0) : 0 ≤ a / b := by positivity
 example {a b : ℚ} (ha : 0 ≤ a) (hb : 0 < b) : 0 ≤ a / b := by positivity
-example {a b : ℚ} (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ a / b := by positivity
+example {a b : ℚ} (ha : 0 ≤ a) (hb : 0 ≤ b) (hb₀ : b ≠ 0) : 0 ≤ a / b := by positivity
 example {a b : ℚ} (ha : 0 < a) (hb : b ≠ 0) : a / b ≠ 0 := by positivity
 example {a b : ℚ} (ha : a ≠ 0) (hb : 0 < b) : a / b ≠ 0 := by positivity
 example {a b : ℚ} (ha : a ≠ 0) (hb : b ≠ 0) : a / b ≠ 0 := by positivity
@@ -205,7 +205,7 @@ example {a b : ℤ} (ha : 0 ≤ a) (hb : 0 < b) : 0 ≤ a / b := by positivity
 example {a b : ℤ} (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ a / b := by positivity
 
 example {a : ℚ} (ha : 0 < a) : 0 < a⁻¹ := by positivity
-example {a : ℚ} (ha : 0 ≤ a) : 0 ≤ a⁻¹ := by positivity
+example {a : ℚ} (ha : 0 ≤ a) (ha₀ : a ≠ 0) : 0 ≤ a⁻¹ := by positivity
 example {a : ℚ} (ha : a ≠ 0) : a⁻¹ ≠ 0 := by positivity
 
 example {a : ℚ} (n : ℕ) (ha : 0 < a) : 0 < a ^ n := by positivity

@@ -36,8 +36,11 @@ theorem nonneg_of_iteratedDeriv_nonneg {f : ℂ → ℂ} {c : ℂ} {r : ℝ}
   have hz' := eq_re_of_ofReal_le hz₁
   rw [hz'] at hz₁ H
   refine H ▸ tsum_nonneg fun n ↦ ?_
-  rw [← ofReal_natCast, ← ofReal_pow, ← ofReal_inv, eq_re_of_ofReal_le (h n), ← ofReal_mul,
-    ← ofReal_mul]
+  have hn : IsUnit (n.factorial : ℝ) := (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero n)).isUnit
+  have hnC : IsUnit (n.factorial : ℂ) := (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero n)).isUnit
+  have hinv : Checked.inv (n.factorial : ℂ) hnC = ((Checked.inv (n.factorial : ℝ) hn : ℝ) : ℂ) := by
+    simpa only [Complex.ofReal_natCast] using (Complex.ofReal_inv (n.factorial : ℝ) (hr := hn)).symm
+  rw [hinv, ← ofReal_pow, eq_re_of_ofReal_le (h n), ← ofReal_mul, ← ofReal_mul]
   norm_cast at hz₁ ⊢
   positivity [zero_re ▸ (Complex.le_def.mp (h n)).1]
 

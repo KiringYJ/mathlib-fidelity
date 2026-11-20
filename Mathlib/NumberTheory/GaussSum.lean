@@ -82,8 +82,7 @@ theorem gaussSum_mulShift (χ : MulChar R R') (ψ : AddChar R R') (a : Rˣ) :
 /-- Replacing `ψ` by `mulShift ψ a` multiplies the Gauss sum by `χ⁻¹ a`. -/
 theorem gaussSum_mulShift_eq (χ : MulChar R R') (ψ : AddChar R R') (a : Rˣ) :
     gaussSum χ (ψ.mulShift a) = χ⁻¹ a * gaussSum χ ψ := by
-  rw [← gaussSum_mulShift χ ψ a, inv_apply_eq_inv,
-    Ring.inverse_mul_cancel_left _ _ (a.isUnit.map χ)]
+  rw [← gaussSum_mulShift χ ψ a, inv_apply_eq_inv χ a (ha := a.isUnit.map χ), inv_mul_cancel_left₀]
 
 /-- Taking complex conjugates of a Gauss sum inverts both characters. -/
 lemma star_gaussSum_eq (χ : MulChar R ℂ) (ψ : AddChar R ℂ) :
@@ -174,25 +173,25 @@ variable [IsDomain R'] --  From now on, `R'` needs to be a domain.
 -- Is this useful enough in other contexts to be public?
 private theorem gaussSum_mul_aux {χ : MulChar R R'} (hχ : χ ≠ 1) (ψ : AddChar R R')
     (b : R) :
-    ∑ a, χ (a * b⁻¹) * ψ (a - b) = ∑ c, χ c * ψ (b * (c - 1)) := by
+    ∑ a, χ a * χ⁻¹ b * ψ (a - b) = ∑ c, χ c * ψ (b * (c - 1)) := by
   rcases eq_or_ne b 0 with hb | hb
-  · -- case `b = 0`
-    simp only [hb, inv_zero, mul_zero, MulChar.map_zero, zero_mul,
+  · simp only [hb, mul_zero, MulChar.map_zero, zero_mul,
       Finset.sum_const_zero, map_zero_eq_one, mul_one, χ.sum_eq_zero_of_ne_one hχ]
-  · -- case `b ≠ 0`
-    refine (Fintype.sum_bijective _ (mulLeft_bijective₀ b hb) _ _ fun x ↦ ?_).symm
-    rw [mul_assoc, mul_comm x, ← mul_assoc, mul_inv_cancel₀ hb, one_mul, mul_sub, mul_one]
+  · have hprod : χ b * χ⁻¹ b = 1 := by
+      rw [← MulChar.mul_apply, mul_inv_cancel, MulChar.one_apply hb.isUnit]
+    refine (Fintype.sum_bijective _ (Equiv.mulLeft₀ b hb).bijective _ _ fun x ↦ ?_).symm
+    change χ x * ψ (b * (x - 1)) = χ (b * x) * χ⁻¹ b * ψ (b * x - b)
+    rw [map_mul χ b x, mul_right_comm (χ b), hprod, one_mul, mul_sub, mul_one]
 
 /-- We have `gaussSum χ ψ * gaussSum χ⁻¹ ψ⁻¹ = Fintype.card R`
 when `χ` is nontrivial and `ψ` is primitive (and `R` is a field). -/
 theorem gaussSum_mul_gaussSum_eq_card {χ : MulChar R R'} (hχ : χ ≠ 1) {ψ : AddChar R R'}
     (hψ : IsPrimitive ψ) :
     gaussSum χ ψ * gaussSum χ⁻¹ ψ⁻¹ = Fintype.card R := by
-  simp only [gaussSum, AddChar.inv_apply, Finset.sum_mul, Finset.mul_sum, MulChar.inv_apply']
+  simp only [gaussSum, AddChar.inv_apply, Finset.sum_mul, Finset.mul_sum]
   conv =>
     enter [1, 2, x, 2, y]
-    rw [mul_mul_mul_comm, ← map_mul, ← map_add_eq_mul, ← sub_eq_add_neg]
---  conv in _ * _ * (_ * _) => rw [mul_mul_mul_comm, ← map_mul, ← map_add_eq_mul, ← sub_eq_add_neg]
+    rw [mul_mul_mul_comm, ← map_add_eq_mul, ← sub_eq_add_neg]
   simp_rw [gaussSum_mul_aux hχ ψ]
   rw [Finset.sum_comm]
   classical -- to get `[DecidableEq R]` for `sum_mulShift`
@@ -209,7 +208,7 @@ lemma gaussSum_mul_gaussSum_pow_orderOf_sub_one {χ : MulChar R R'} {ψ : AddCha
     refine (inv_eq_of_mul_eq_one_right ?_).symm
     rw [← pow_succ', Nat.sub_one_add_one_eq_of_pos χ.orderOf_pos, pow_orderOf_eq_one]
   rw [h, ← mul_gaussSum_inv_eq_gaussSum χ⁻¹, mul_left_comm, gaussSum_mul_gaussSum_eq_card hχ hψ,
-    MulChar.inv_apply', inv_neg_one]
+    MulChar.inv_apply χ _ (ha := isUnit_one.neg), inv_neg_one₀]
 
 /-- The Gauss sum of a nontrivial character on a finite field does not vanish. -/
 lemma gaussSum_ne_zero_of_nontrivial (h : (Fintype.card R : R') ≠ 0) {χ : MulChar R R'}

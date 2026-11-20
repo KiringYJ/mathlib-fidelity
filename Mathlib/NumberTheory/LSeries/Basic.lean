@@ -5,9 +5,7 @@ Authors: Aaron Anderson, Michael Stoll
 -/
 module
 
-public import Mathlib.Analysis.PSeries
-public import Mathlib.Analysis.Normed.Module.FiniteDimension
-public import Mathlib.LinearAlgebra.Complex.FiniteDimensional
+public import Mathlib.Analysis.PSeriesComplex
 
 /-!
 # L-series
@@ -72,17 +70,17 @@ namespace LSeries
 /-- The `n`th term of the L-series of `f` evaluated at `s`. We set it to zero when `n = 0`. -/
 noncomputable
 def term (f : ℕ → ℂ) (s : ℂ) (n : ℕ) : ℂ :=
-  if n = 0 then 0 else f n / n ^ s
+  if hn : n = 0 then 0 else Checked.div (f n) ((n : ℂ) ^ s)
+    (cpow_ne_zero_iff.mpr (Or.inl (Nat.cast_ne_zero.mpr hn))).isUnit
 
 lemma term_def (f : ℕ → ℂ) (s : ℂ) (n : ℕ) :
-    term f s n = if n = 0 then 0 else f n / n ^ s :=
+    term f s n = if hn : n = 0 then 0 else f n / n ^ s :=
   rfl
 
-/-- An alternate spelling of `term_def` for the case `f 0 = 0`. -/
-lemma term_def₀ {f : ℕ → ℂ} (hf : f 0 = 0) (s : ℂ) (n : ℕ) :
-    LSeries.term f s n = f n * (n : ℂ) ^ (-s) := by
-  rw [LSeries.term]
-  split_ifs with h <;> simp [h, hf, cpow_neg, div_eq_inv_mul, mul_comm]
+/-- A positive-index term written using a complex power of negative exponent. -/
+lemma term_eq_mul_cpow_neg (f : ℕ → ℂ) (s : ℂ) (n : ℕ+) :
+    term f s n = f n * (n : ℂ) ^ (-s) := by
+  simp [term, n.ne_zero, cpow_neg, div_eq_mul_inv₀]
 
 @[simp]
 lemma term_zero (f : ℕ → ℂ) (s : ℂ) : term f s 0 = 0 := rfl
@@ -91,17 +89,7 @@ lemma term_zero (f : ℕ → ℂ) (s : ℂ) : term f s 0 = 0 := rfl
 @[simp]
 lemma term_of_ne_zero {n : ℕ} (hn : n ≠ 0) (f : ℕ → ℂ) (s : ℂ) :
     term f s n = f n / n ^ s :=
-  ite_eq_right hn
-
-/--
-If `s ≠ 0`, then the `if .. then .. else` construction in `LSeries.term` isn't needed, since
-`0 ^ s = 0`.
--/
-lemma term_of_ne_zero' {s : ℂ} (hs : s ≠ 0) (f : ℕ → ℂ) (n : ℕ) :
-    term f s n = f n / n ^ s := by
-  rcases eq_or_ne n 0 with rfl | hn
-  · rw [term_zero, Nat.cast_zero, zero_cpow hs, div_zero]
-  · rw [term_of_ne_zero hn]
+  dite_eq_right hn
 
 lemma term_congr {f g : ℕ → ℂ} (h : ∀ {n}, n ≠ 0 → f n = g n) (s : ℂ) (n : ℕ) :
     term f s n = term g s n := by
@@ -109,10 +97,10 @@ lemma term_congr {f g : ℕ → ℂ} (h : ∀ {n}, n ≠ 0 → f n = g n) (s : �
 
 lemma pow_mul_term_eq (f : ℕ → ℂ) (s : ℂ) (n : ℕ) :
     (n + 1) ^ s * term f s (n + 1) = f (n + 1) := by
-  simp [term, natCast_add_one_cpow_ne_zero n _, mul_div_assoc']
+  simp [term, mul_div_cancel₀]
 
 lemma norm_term_eq (f : ℕ → ℂ) (s : ℂ) (n : ℕ) :
-    ‖term f s n‖ = if n = 0 then 0 else ‖f n‖ / n ^ s.re := by
+    ‖term f s n‖ = if hn : n = 0 then 0 else ‖f n‖ / n ^ s.re := by
   rcases eq_or_ne n 0 with rfl | hn
   · simp
   · simp [hn, norm_natCast_cpow_of_pos <| Nat.pos_of_ne_zero hn]
@@ -169,10 +157,11 @@ lemma LSeries_congr {f g : ℕ → ℂ} (h : ∀ {n}, n ≠ 0 → f n = g n) (s 
     LSeries f s = LSeries g s :=
   tsum_congr <| term_congr h s
 
-/-- An alternate spelling of `LSeries` as `∑' n, f n / n ^ s` for the case `f 0 = 0`. -/
-lemma LSeries_def₀ {f : ℕ → ℂ} (hf : f 0 = 0) (s : ℂ) :
-    LSeries f s = ∑' n, f n / (n ^ s) := by
-  simp [LSeries, LSeries.term_def₀ hf, cpow_neg, div_eq_mul_inv]
+/-- The defining series, indexed by the positive integers on which each quotient exists. -/
+lemma LSeries_def (f : ℕ → ℂ) (s : ℂ) :
+    LSeries f s = ∑' n : ℕ+, f n / ((n : ℂ) ^ s) := by
+  rw [LSeries, ← tsum_pnat_eq_tsum_of_eq_zero (term_zero f s)]
+  exact tsum_congr fun n ↦ term_of_ne_zero n.ne_zero f s
 
 /-- `LSeriesSummable f s` indicates that the L-series of `f` converges absolutely at `s`. -/
 def LSeriesSummable (f : ℕ → ℂ) (s : ℂ) : Prop :=
@@ -216,6 +205,22 @@ theorem LSeriesSummable_zero {s : ℂ} : LSeriesSummable 0 s := by
 the value there is `a`. -/
 def LSeriesHasSum (f : ℕ → ℂ) (s a : ℂ) : Prop :=
   HasSum (term f s) a
+
+/-- Absolute convergence is unchanged by omitting the zero index. -/
+lemma LSeriesSummable_iff_summable_pnat {f : ℕ → ℂ} {s : ℂ} :
+    LSeriesSummable f s ↔ Summable (fun n : ℕ+ ↦ f n / (n : ℂ) ^ s) := by
+  have ht : (fun n : ℕ+ ↦ term f s n) = fun n : ℕ+ ↦ f n / (n : ℂ) ^ s :=
+    funext fun n ↦ term_of_ne_zero n.ne_zero f s
+  simpa only [LSeriesSummable, ht] using
+    (summable_pnat_iff_summable_nat (f := term f s)).symm
+
+/-- The defining sum can be stated directly on the actual positive-index quotient domain. -/
+lemma LSeriesHasSum_iff_hasSum_pnat {f : ℕ → ℂ} {s a : ℂ} :
+    LSeriesHasSum f s a ↔ HasSum (fun n : ℕ+ ↦ f n / (n : ℂ) ^ s) a := by
+  have ht : (fun n : ℕ+ ↦ term f s n) = fun n : ℕ+ ↦ f n / (n : ℂ) ^ s :=
+    funext fun n ↦ term_of_ne_zero n.ne_zero f s
+  simpa only [LSeriesHasSum, ht, term_zero, add_zero] using
+    (hasSum_pnat_iff (f := term f s) (a := a)).symm
 
 lemma LSeriesHasSum.LSeriesSummable {f : ℕ → ℂ} {s a : ℂ}
     (h : LSeriesHasSum f s a) : LSeriesSummable f s :=
@@ -328,7 +333,7 @@ lemma LSeriesSummable.le_const_mul_rpow {f : ℕ → ℂ} {s : ℂ} (h : LSeries
   use tsum fun n ↦ ‖term f s n‖
   by_contra! ⟨n, hn₀, hn⟩
   have := h.le_tsum n fun _ _ ↦ norm_nonneg _
-  rw [norm_term_eq, ite_eq_right hn₀,
+  rw [norm_term_eq, dite_eq_right hn₀,
     div_le_iff₀ <| Real.rpow_pos_of_pos (Nat.cast_pos.mpr <| Nat.pos_of_ne_zero hn₀) _] at this
   exact (this.trans_lt hn).false.elim
 
@@ -348,22 +353,19 @@ lemma LSeriesSummable_of_le_const_mul_rpow {f : ℕ → ℂ} {x : ℝ} {s : ℂ}
     LSeriesSummable f s := by
   obtain ⟨C, hC⟩ := h
   have hC₀ : 0 ≤ C := (norm_nonneg <| f 1).trans <| by simpa using hC 1 one_ne_zero
-  have hsum : Summable fun n : ℕ ↦ ‖(C : ℂ) / n ^ (s + (1 - x))‖ := by
-    simp_rw [div_eq_mul_inv, norm_mul, ← cpow_neg]
-    have hsx : -s.re + x - 1 < -1 := by linarith only [hs]
-    refine Summable.mul_left _ <|
-      Summable.of_norm_bounded_eventually_nat (g := fun n ↦ (n : ℝ) ^ (-s.re + x - 1)) ?_ ?_
-    · simpa
-    · simp only [norm_norm, Filter.eventually_atTop]
-      refine ⟨1, fun n hn ↦ le_of_eq ?_⟩
-      simp only [norm_natCast_cpow_of_pos hn, add_re, sub_re, neg_re, ofReal_re, one_re]
-      ring_nf
+  have hsx : 1 < (s + (1 - (x : ℂ))).re := by
+    simp only [add_re, sub_re, one_re, ofReal_re]
+    linarith only [hs]
+  have hsum : Summable fun n : ℕ+ ↦ ‖(C : ℂ) / (n : ℂ) ^ (s + (1 - x))‖ := by
+    simpa only [mul_one_div₀] using
+      (((Complex.summable_one_div_nat_cpow (p := s + (1 - x))).mpr hsx).mul_left
+        (C : ℂ)).norm
+  apply summable_pnat_iff_summable_nat.mp
   refine Summable.of_norm <| hsum.of_nonneg_of_le (fun _ ↦ norm_nonneg _) (fun n ↦ ?_)
-  rcases n.eq_zero_or_pos with rfl | hn
-  · simpa only [term_zero, norm_zero] using norm_nonneg _
+  have hn : 0 < (n : ℕ) := n.pos
   have hn' : 0 < (n : ℝ) ^ s.re := Real.rpow_pos_of_pos (Nat.cast_pos.mpr hn) _
   simp_rw [term_of_ne_zero hn.ne', norm_div, norm_natCast_cpow_of_pos hn, div_le_iff₀ hn',
-    norm_real, Real.norm_of_nonneg hC₀, div_eq_mul_inv, mul_assoc,
+    norm_real, Real.norm_of_nonneg hC₀, div_eq_mul_inv₀, mul_assoc,
     ← Real.rpow_neg <| Nat.cast_nonneg _, ← Real.rpow_add <| Nat.cast_pos.mpr hn]
   simpa using hC n <| Nat.pos_iff_ne_zero.mp hn
 
@@ -374,7 +376,8 @@ lemma LSeriesSummable_of_isBigO_rpow {f : ℕ → ℂ} {x : ℝ} {s : ℂ} (hs :
     LSeriesSummable f s := by
   obtain ⟨C, hC⟩ := Asymptotics.isBigO_iff.mp h
   obtain ⟨m, hm⟩ := eventually_atTop.mp hC
-  let C' := max C (max' (insert 0 (image (fun n : ℕ ↦ ‖f n‖ / (n : ℝ) ^ (x - 1)) (range m)))
+  let C' := max C (max' (insert 0
+    (image (fun n : ℕ ↦ ‖f (n + 1)‖ / (n + 1 : ℝ) ^ (x - 1)) (range m)))
     (insert_nonempty 0 _))
   have hC'₀ : 0 ≤ C' := (le_max' _ _ (mem_insert.mpr (Or.inl rfl))).trans <| le_max_right ..
   have hCC' : C ≤ C' := le_max_left ..
@@ -387,7 +390,8 @@ lemma LSeriesSummable_of_isBigO_rpow {f : ℕ → ℂ} {x : ℝ} {s : ℂ} (hs :
   · have hn' : 0 < n := Nat.pos_of_ne_zero hn₀
     refine (div_le_iff₀ <| rpow_pos_of_pos (cast_pos.mpr hn') _).mp ?_
     refine (le_max' _ _ <| mem_insert_of_mem ?_).trans <| le_max_right ..
-    exact mem_image.mpr ⟨n, mem_range.mpr hn, rfl⟩
+    refine mem_image.mpr ⟨n - 1, mem_range.mpr (by omega), ?_⟩
+    simp only [← Nat.cast_add_one, Nat.sub_add_cancel (Nat.one_le_iff_ne_zero.mpr hn₀)]
 
 /-- If `f` is bounded, then its `LSeries` is summable at `s` when `re s > 1`. -/
 theorem LSeriesSummable_of_bounded_of_one_lt_re {f : ℕ → ℂ} {m : ℝ}

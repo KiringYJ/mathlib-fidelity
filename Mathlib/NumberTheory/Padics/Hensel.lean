@@ -125,22 +125,8 @@ section Hensel
 
 open Nat
 
-variable (p : ℕ) [Fact p.Prime] {R : Type*} [CommSemiring R] [Algebra R ℤ_[p]]
-  (F : Polynomial R) (a : ℤ_[p])
-
-/-- `T` is an auxiliary value that is used to control the behavior of the polynomial `F`. -/
-private def T_gen : ℝ := ‖F.aeval a / ((F.derivative.aeval a ^ 2 : ℤ_[p]) : ℚ_[p])‖
-
-local notation "T" => @T_gen p _ _ _ _ F a
-
-variable {p F a}
-
-private theorem T_def : T = ‖F.aeval a‖ / ‖F.derivative.aeval a‖ ^ 2 := by
-  simp [T_gen]
-
-private theorem T_nonneg : 0 ≤ T := norm_nonneg _
-
-private theorem T_pow_nonneg (n : ℕ) : 0 ≤ T ^ n := pow_nonneg T_nonneg _
+variable {p : ℕ} [Fact p.Prime] {R : Type*} [CommSemiring R] [Algebra R ℤ_[p]]
+  {F : Polynomial R} {a : ℤ_[p]}
 
 variable (hnorm : ‖F.aeval a‖ < ‖F.derivative.aeval a‖ ^ 2)
 include hnorm
@@ -160,82 +146,106 @@ private theorem deriv_norm_pos : 0 < ‖F.derivative.aeval a‖ :=
 private theorem deriv_ne_zero : F.derivative.aeval a ≠ 0 :=
   mt norm_eq_zero.2 (deriv_norm_ne_zero hnorm)
 
+omit hnorm in
+/-- `T` controls the Newton iteration. Its denominator is positive under the Hensel hypothesis. -/
+private def T_gen (h : ‖F.derivative.aeval a‖ ^ 2 ≠ 0) : ℝ :=
+  Checked.div ‖F.aeval a‖ (‖F.derivative.aeval a‖ ^ 2) h.isUnit
 
-private theorem T_lt_one : T < 1 := by
-  have h := (div_lt_one (deriv_sq_norm_pos hnorm)).2 hnorm
-  rw [T_def]; exact h
+local notation "T" => T_gen (deriv_sq_norm_ne_zero hnorm)
 
-private theorem T_pow {n : ℕ} (hn : n ≠ 0) : T ^ n < 1 := pow_lt_one₀ T_nonneg (T_lt_one hnorm) hn
+local notation "residualNorm" => fun z : ℤ_[p] ↦
+  Checked.div ‖F.aeval z‖ ‖F.derivative.aeval a‖ (Ne.isUnit (deriv_norm_ne_zero hnorm))
+
+private theorem T_nonneg : 0 ≤ T := div_nonneg (norm_nonneg _) (sq_nonneg _)
+
+private theorem T_pow_nonneg (n : ℕ) : 0 ≤ T ^ n := pow_nonneg (T_nonneg hnorm) _
+
+private theorem T_lt_one : T < 1 := (div_lt_one (deriv_sq_norm_pos hnorm)).2 hnorm
+
+private theorem T_pow {n : ℕ} (hn : n ≠ 0) : T ^ n < 1 :=
+  pow_lt_one₀ (T_nonneg hnorm) (T_lt_one hnorm) hn
 
 private theorem T_pow' (n : ℕ) : T ^ 2 ^ n < 1 := T_pow hnorm (pow_ne_zero _ two_ne_zero)
 
 /-- We will construct a sequence of elements of `ℤ_p` satisfying successive values of `ih`. -/
-private def ih_gen (n : ℕ) (z : ℤ_[p]) : Prop :=
+local notation "ih" => fun n : ℕ ↦ fun z : ℤ_[p] ↦
   ‖F.derivative.aeval z‖ = ‖F.derivative.aeval a‖ ∧ ‖F.aeval z‖ ≤
     ‖F.derivative.aeval a‖ ^ 2 * T ^ 2 ^ n
 
-local notation "ih" => @ih_gen p _ _ _ _ F a
-
 private theorem ih_0 : ih 0 a :=
-  ⟨rfl, by simp [T_def, mul_div_cancel₀ _ (ne_of_gt (deriv_sq_norm_pos hnorm))]⟩
+  ⟨rfl, by simp only [pow_zero, pow_one, T_gen, mul_div_cancel₀, le_refl]⟩
 
-private theorem calc_norm_le_one {n : ℕ} {z : ℤ_[p]} (hz : ih n z) :
-    ‖(↑(F.aeval z) : ℚ_[p]) / ↑(F.derivative.aeval z)‖ ≤ 1 :=
+private theorem residualNorm_le {n : ℕ} {z : ℤ_[p]} (hz : ih n z) :
+    residualNorm z ≤ ‖F.derivative.aeval a‖ * T ^ 2 ^ n := by
+  have hd := deriv_norm_ne_zero hnorm
   calc
-    ‖(↑(F.aeval z) : ℚ_[p]) / ↑(F.derivative.aeval z)‖ =
-        ‖(↑(F.aeval z) : ℚ_[p])‖ / ‖(↑(F.derivative.aeval z) : ℚ_[p])‖ :=
-      norm_div _ _
-    _ = ‖F.aeval z‖ / ‖F.derivative.aeval a‖ := by simp [hz.1]
-    _ ≤ ‖F.derivative.aeval a‖ ^ 2 * T ^ 2 ^ n / ‖F.derivative.aeval a‖ := by
-      gcongr
-      apply hz.2
+    _ ≤ ‖F.derivative.aeval a‖ ^ 2 * T ^ 2 ^ n / ‖F.derivative.aeval a‖ :=
+      (div_le_div_iff_of_pos_right (deriv_norm_pos hnorm)).2 hz.2
     _ = ‖F.derivative.aeval a‖ * T ^ 2 ^ n := div_sq_cancel _ _
-    _ ≤ 1 := by bound [T_pow' hnorm n]
 
-private theorem calc_deriv_dist {z z' z1 : ℤ_[p]} (hz' : z' = z - z1)
-    (hz1 : ‖z1‖ = ‖F.aeval z‖ / ‖F.derivative.aeval a‖) {n} (hz : ih n z) :
+private theorem deriv_ne_zero_of_ih {n : ℕ} {z : ℤ_[p]} (hz : ih n z) :
+    F.derivative.aeval z ≠ 0 :=
+  norm_ne_zero_iff.mp (hz.1.trans_ne (deriv_norm_ne_zero hnorm))
+
+omit hnorm in
+private def newtonQuotient {z : ℤ_[p]} (hz : F.derivative.aeval z ≠ 0) : ℚ_[p] :=
+  Checked.div (↑(F.aeval z) : ℚ_[p]) (↑(F.derivative.aeval z) : ℚ_[p])
+    (PadicInt.coe_ne_zero.2 hz).isUnit
+
+private theorem norm_newtonQuotient {n : ℕ} {z : ℤ_[p]} (hz : ih n z) :
+    ‖newtonQuotient (deriv_ne_zero_of_ih hnorm hz)‖ = residualNorm z := by
+  simp only [newtonQuotient, norm_div, PadicInt.padic_norm_e_of_padicInt, hz.1]
+
+private def newtonCorrection {n : ℕ} {z : ℤ_[p]} (hz : ih n z) : ℤ_[p] :=
+  ⟨newtonQuotient (deriv_ne_zero_of_ih hnorm hz), (norm_newtonQuotient hnorm hz).trans_le <|
+    (residualNorm_le hnorm hz).trans <| by
+      calc
+        _ ≤ 1 * T ^ 2 ^ n :=
+          mul_le_mul_of_nonneg_right (PadicInt.norm_le_one _) (T_pow_nonneg hnorm _)
+        _ ≤ 1 := by simpa only [one_mul] using (T_pow' hnorm n).le⟩
+
+private theorem norm_newtonCorrection {n : ℕ} {z : ℤ_[p]} (hz : ih n z) :
+    ‖newtonCorrection hnorm hz‖ = residualNorm z :=
+  norm_newtonQuotient hnorm hz
+
+private theorem calc_deriv_dist {z z' : ℤ_[p]} {n} (hz : ih n z)
+    (hz' : z' = z - newtonCorrection hnorm hz) :
     ‖F.derivative.aeval z' - F.derivative.aeval z‖ < ‖F.derivative.aeval a‖ :=
   calc
     ‖F.derivative.aeval z' - F.derivative.aeval z‖ ≤ ‖z' - z‖ := padic_polynomial_dist _ _ _
-    _ = ‖z1‖ := by simp only [sub_eq_add_neg, add_assoc, hz', add_add_neg_cancel'_right, norm_neg]
-    _ = ‖F.aeval z‖ / ‖F.derivative.aeval a‖ := hz1
-    _ ≤ ‖F.derivative.aeval a‖ ^ 2 * T ^ 2 ^ n / ‖F.derivative.aeval a‖ := by
-      gcongr
-      apply hz.2
-    _ = ‖F.derivative.aeval a‖ * T ^ 2 ^ n := div_sq_cancel _ _
-    _ < ‖F.derivative.aeval a‖ := (mul_lt_iff_lt_one_right (deriv_norm_pos hnorm)).2
-      (T_pow' hnorm _)
-
+    _ = ‖newtonCorrection hnorm hz‖ := by
+      simp only [sub_eq_add_neg, add_assoc, hz', add_add_neg_cancel'_right, norm_neg]
+    _ = residualNorm z := norm_newtonCorrection hnorm hz
+    _ ≤ ‖F.derivative.aeval a‖ * T ^ 2 ^ n := residualNorm_le hnorm hz
+    _ < ‖F.derivative.aeval a‖ :=
+      (mul_lt_iff_lt_one_right (deriv_norm_pos hnorm)).2 (T_pow' hnorm _)
 
 set_option backward.isDefEq.respectTransparency false in
-private def calc_eval_z' {z z' z1 : ℤ_[p]} (hz' : z' = z - z1) {n} (hz : ih n z)
-    (h1 : ‖(↑(F.aeval z) : ℚ_[p]) / ↑(F.derivative.aeval z)‖ ≤ 1) (hzeq : z1 = ⟨_, h1⟩) :
-    { q : ℤ_[p] // F.aeval z' = q * z1 ^ 2 } := by
-  have hdzne : F.derivative.aeval z ≠ 0 :=
-    mt norm_eq_zero.2 (by rw [hz.1]; apply deriv_norm_ne_zero; assumption)
-  have hdzne' : (↑(F.derivative.aeval z) : ℚ_[p]) ≠ 0 := fun h => hdzne (Subtype.ext_iff.2 h)
+private def calc_eval_z' {z z' : ℤ_[p]} {n} (hz : ih n z)
+    (hz' : z' = z - newtonCorrection hnorm hz) :
+    { q : ℤ_[p] // F.aeval z' = q * newtonCorrection hnorm hz ^ 2 } := by
+  let z1 := newtonCorrection hnorm hz
   obtain ⟨q, hq⟩ := (F.map (algebraMap R ℤ_[p])).binomExpansion z (-z1)
-  have : ‖(↑(F.derivative.aeval z) * (↑(F.aeval z) / ↑(F.derivative.aeval z)) : ℚ_[p])‖ ≤ 1 := by
-    rw [norm_mul, PadicInt.padic_norm_e_of_padicInt]; bound
-  have : F.derivative.aeval z * -z1 = -F.aeval z := by
-    calc
-      F.derivative.aeval z * -z1 =
-          F.derivative.aeval z * -⟨↑(F.aeval z) / ↑(F.derivative.aeval z), h1⟩ := by rw [hzeq]
-      _ = -(F.derivative.aeval z * ⟨↑(F.aeval z) / ↑(F.derivative.aeval z), h1⟩) := mul_neg _ _
-      _ = -⟨F.derivative.aeval z * (F.aeval z / (F.derivative.aeval z : ℤ_[p]) : ℚ_[p]), this⟩ :=
-        (Subtype.ext <| by simp only [PadicInt.coe_neg, PadicInt.coe_mul])
-      _ = -F.aeval z := by simp only [mul_div_cancel₀ _ hdzne', Subtype.coe_eta]
-  exact ⟨q, by simpa [sub_eq_add_neg, neg_mul_eq_mul_neg, this, hz'] using hq⟩
+  have hcancel : F.derivative.aeval z * z1 = F.aeval z := by
+    apply PadicInt.ext
+    change (↑(F.derivative.aeval z) : ℚ_[p]) *
+      newtonQuotient (deriv_ne_zero_of_ih hnorm hz) = _
+    rw [newtonQuotient, mul_comm, div_mul_cancel₀]
+  have hcancel_neg : F.derivative.aeval z * -z1 = -F.aeval z := by rw [mul_neg, hcancel]
+  refine ⟨q, ?_⟩
+  change F.aeval z' = q * z1 ^ 2
+  rw [show z' = z - z1 from hz']
+  simpa [sub_eq_add_neg, neg_mul_eq_mul_neg, hcancel_neg] using hq
 
-omit hnorm in
-private theorem calc_eval_z'_norm {z z' z1 : ℤ_[p]} {n} (hz : ih n z) {q}
-    (heq : F.aeval z' = q * z1 ^ 2)
-    (h1 : ‖(↑(F.aeval z) : ℚ_[p]) / ↑(F.derivative.aeval z)‖ ≤ 1) (hzeq : z1 = ⟨_, h1⟩) :
+private theorem calc_eval_z'_norm {z z' : ℤ_[p]} {n} (hz : ih n z) {q}
+    (heq : F.aeval z' = q * newtonCorrection hnorm hz ^ 2) :
     ‖F.aeval z'‖ ≤ ‖F.derivative.aeval a‖ ^ 2 * T ^ 2 ^ (n + 1) := by
+  have hd := deriv_norm_ne_zero hnorm
   calc
-    ‖F.aeval z'‖ = ‖q‖ * ‖z1‖ ^ 2 := by simp [heq]
-    _ ≤ 1 * ‖z1‖ ^ 2 := by gcongr; apply PadicInt.norm_le_one
-    _ = ‖F.aeval z‖ ^ 2 / ‖F.derivative.aeval a‖ ^ 2 := by simp [hzeq, hz.1, div_pow]
+    ‖F.aeval z'‖ = ‖q‖ * ‖newtonCorrection hnorm hz‖ ^ 2 := by simp [heq]
+    _ ≤ 1 * ‖newtonCorrection hnorm hz‖ ^ 2 := by gcongr; apply PadicInt.norm_le_one
+    _ = ‖F.aeval z‖ ^ 2 / ‖F.derivative.aeval a‖ ^ 2 := by
+      rw [norm_newtonCorrection, div_pow₀, one_mul]
     _ ≤ (‖F.derivative.aeval a‖ ^ 2 * T ^ 2 ^ n) ^ 2 / ‖F.derivative.aeval a‖ ^ 2 := by
       gcongr
       exact hz.2
@@ -248,19 +258,17 @@ private theorem calc_eval_z'_norm {z z' z1 : ℤ_[p]} {n} (hz : ih n z) {q}
 /-- Given `z : ℤ_[p]` satisfying `ih n z`, construct `z' : ℤ_[p]` satisfying `ih (n+1) z'`. We need
 the hypothesis `ih n z`, since otherwise `z'` is not necessarily an integer. -/
 private def ih_n {n : ℕ} {z : ℤ_[p]} (hz : ih n z) : { z' : ℤ_[p] // ih (n + 1) z' } :=
-  have h1 : ‖(↑(F.aeval z) : ℚ_[p]) / ↑(F.derivative.aeval z)‖ ≤ 1 := calc_norm_le_one hnorm hz
-  let z1 : ℤ_[p] := ⟨_, h1⟩
-  let z' : ℤ_[p] := z - z1
+  let z' : ℤ_[p] := z - newtonCorrection hnorm hz
   ⟨z',
     have hdist : ‖F.derivative.aeval z' - F.derivative.aeval z‖ < ‖F.derivative.aeval a‖ :=
-      calc_deriv_dist hnorm rfl (by simp [z1, hz.1]) hz
+      calc_deriv_dist hnorm hz rfl
     have hfeq : ‖F.derivative.aeval z'‖ = ‖F.derivative.aeval a‖ := by
       rw [sub_eq_add_neg, ← hz.1, ← norm_neg (F.derivative.aeval z)] at hdist
       have := PadicInt.norm_eq_of_norm_add_lt_right hdist
       rwa [norm_neg, hz.1] at this
-    let ⟨_, heq⟩ := calc_eval_z' hnorm rfl hz h1 rfl
+    let ⟨_, heq⟩ := calc_eval_z' hnorm hz rfl
     have hnle : ‖F.aeval z'‖ ≤ ‖F.derivative.aeval a‖ ^ 2 * T ^ 2 ^ (n + 1) :=
-      calc_eval_z'_norm hz heq h1 rfl
+      calc_eval_z'_norm hnorm hz heq
     ⟨hfeq, hnle⟩⟩
 
 private def newton_seq_aux : ∀ n : ℕ, { z : ℤ_[p] // ih n z }
@@ -282,26 +290,20 @@ private theorem newton_seq_norm_le (n : ℕ) :
 
 set_option backward.isDefEq.respectTransparency false in
 private theorem newton_seq_norm_eq (n : ℕ) :
-    ‖newton_seq (n + 1) - newton_seq n‖ =
-    ‖F.aeval (newton_seq n)‖ / ‖F.derivative.aeval (newton_seq n)‖ := by
+    ‖newton_seq (n + 1) - newton_seq n‖ = residualNorm (newton_seq n) := by
   rw [newton_seq_gen, newton_seq_gen, newton_seq_aux, ih_n]
-  simp [sub_eq_add_neg, add_comm]
+  simp [sub_eq_add_neg, add_comm, norm_newtonCorrection]
 
 private theorem newton_seq_succ_dist (n : ℕ) :
-    ‖newton_seq (n + 1) - newton_seq n‖ ≤ ‖F.derivative.aeval a‖ * T ^ 2 ^ n :=
-  calc
-    ‖newton_seq (n + 1) - newton_seq n‖ =
-        ‖F.aeval (newton_seq n)‖ / ‖F.derivative.aeval (newton_seq n)‖ :=
-      newton_seq_norm_eq hnorm _
-    _ = ‖F.aeval (newton_seq n)‖ / ‖F.derivative.aeval a‖ := by rw [newton_seq_deriv_norm]
-    _ ≤ ‖F.derivative.aeval a‖ ^ 2 * T ^ 2 ^ n / ‖F.derivative.aeval a‖ := by
-      gcongr
-      apply newton_seq_norm_le
-    _ = ‖F.derivative.aeval a‖ * T ^ 2 ^ n := div_sq_cancel _ _
+    ‖newton_seq (n + 1) - newton_seq n‖ ≤ ‖F.derivative.aeval a‖ * T ^ 2 ^ n := by
+  rw [newton_seq_norm_eq]
+  exact residualNorm_le hnorm (newton_seq_aux hnorm n).2
 
 private theorem newton_seq_dist_aux (n : ℕ) :
     ∀ k : ℕ, ‖newton_seq (n + k) - newton_seq n‖ ≤ ‖F.derivative.aeval a‖ * T ^ 2 ^ n
-  | 0 => by simp [T_pow_nonneg, mul_nonneg]
+  | 0 => by
+    rw [add_zero, sub_self, norm_zero]
+    exact mul_nonneg (norm_nonneg _) (T_pow_nonneg hnorm _)
   | k + 1 =>
     have : 2 ^ n ≤ 2 ^ (n + k) := by
       apply pow_right_mono₀
@@ -318,7 +320,7 @@ private theorem newton_seq_dist_aux (n : ℕ) :
         (max_le_max (newton_seq_succ_dist _ _) (newton_seq_dist_aux _ _))
       _ = ‖F.derivative.aeval a‖ * T ^ 2 ^ n :=
         max_eq_right <|
-          mul_le_mul_of_nonneg_left (pow_le_pow_of_le_one (norm_nonneg _)
+          mul_le_mul_of_nonneg_left (pow_le_pow_of_le_one (T_nonneg hnorm)
             (le_of_lt (T_lt_one hnorm)) this) (norm_nonneg _)
 
 private theorem newton_seq_dist {n k : ℕ} (hnk : n ≤ k) :
@@ -331,7 +333,7 @@ private theorem bound' : Tendsto (fun n : ℕ => ‖F.derivative.aeval a‖ * T 
   rw [← mul_zero ‖F.derivative.aeval a‖]
   exact
     tendsto_const_nhds.mul
-      (Tendsto.comp (tendsto_pow_atTop_nhds_zero_of_lt_one (norm_nonneg _) (T_lt_one hnorm))
+      (Tendsto.comp (tendsto_pow_atTop_nhds_zero_of_lt_one (T_nonneg hnorm) (T_lt_one hnorm))
         (tendsto_pow_atTop_atTop_of_one_lt (by simp)))
 
 private theorem bound :
@@ -377,12 +379,11 @@ private theorem eval_soln : F.aeval soln = 0 :=
 variable (hnsol : F.aeval a ≠ 0)
 include hnsol
 
-private theorem T_pos : T > 0 := by
-  rw [T_def]
-  exact div_pos (norm_pos_iff.2 hnsol) (deriv_sq_norm_pos hnorm)
+private theorem T_pos : T > 0 :=
+  div_pos (norm_pos_iff.2 hnsol) (deriv_sq_norm_pos hnorm)
 
 private theorem newton_seq_succ_dist_weak (n : ℕ) :
-    ‖newton_seq (n + 2) - newton_seq (n + 1)‖ < ‖F.aeval a‖ / ‖F.derivative.aeval a‖ :=
+    ‖newton_seq (n + 2) - newton_seq (n + 1)‖ < residualNorm a :=
   have : 2 ≤ 2 ^ (n + 1) := by
     have := pow_right_mono₀ (by simp : 1 ≤ 2) (Nat.le_add_left _ _ : 1 ≤ n + 1)
     simpa using this
@@ -390,21 +391,18 @@ private theorem newton_seq_succ_dist_weak (n : ℕ) :
     ‖newton_seq (n + 2) - newton_seq (n + 1)‖ ≤ ‖F.derivative.aeval a‖ * T ^ 2 ^ (n + 1) :=
       newton_seq_succ_dist hnorm _
     _ ≤ ‖F.derivative.aeval a‖ * T ^ 2 :=
-      (mul_le_mul_of_nonneg_left (pow_le_pow_of_le_one (norm_nonneg _)
+      (mul_le_mul_of_nonneg_left (pow_le_pow_of_le_one (T_nonneg hnorm)
         (le_of_lt (T_lt_one hnorm)) this) (norm_nonneg _))
     _ < ‖F.derivative.aeval a‖ * T ^ 1 :=
       (mul_lt_mul_of_pos_left (pow_lt_pow_right_of_lt_one₀ (T_pos hnorm hnsol)
         (T_lt_one hnorm) (by norm_num)) (deriv_norm_pos hnorm))
-    _ = ‖F.aeval a‖ / ‖F.derivative.aeval a‖ := by
-      rw [T_gen, sq, pow_one, norm_div, ← mul_div_assoc, PadicInt.padic_norm_e_of_padicInt,
-        PadicInt.coe_mul, norm_mul]
-      apply mul_div_mul_left
-      apply deriv_norm_ne_zero; assumption
+    _ = residualNorm a := by
+      simp only [pow_one, T_gen, ← mul_div_assoc₀, pow_two, mul_div_mul_left]
 
 set_option backward.isDefEq.respectTransparency false in
 private theorem newton_seq_dist_to_a :
-    ∀ n : ℕ, 0 < n → ‖newton_seq n - a‖ = ‖F.aeval a‖ / ‖F.derivative.aeval a‖
-  | 1, _h => by simp [sub_eq_add_neg, add_assoc, newton_seq_gen, newton_seq_aux, ih_n]
+    ∀ n : ℕ, 0 < n → ‖newton_seq n - a‖ = residualNorm a
+  | 1, _h => newton_seq_norm_eq hnorm 0
   | k + 2, _h =>
     have hlt : ‖newton_seq (k + 2) - newton_seq (k + 1)‖ < ‖newton_seq (k + 1) - a‖ := by
       rw [newton_seq_dist_to_a (k + 1) (succ_pos _)]; apply newton_seq_succ_dist_weak
@@ -417,20 +415,20 @@ private theorem newton_seq_dist_to_a :
       _ = max ‖newton_seq (k + 2) - newton_seq (k + 1)‖ ‖newton_seq (k + 1) - a‖ :=
         (PadicInt.norm_add_eq_max_of_ne hne')
       _ = ‖newton_seq (k + 1) - a‖ := max_eq_right_of_lt hlt
-      _ = ‖Polynomial.aeval a F‖ / ‖Polynomial.aeval a (Polynomial.derivative F)‖ :=
-        newton_seq_dist_to_a (k + 1) (succ_pos _)
+      _ = residualNorm a := newton_seq_dist_to_a (k + 1) (succ_pos _)
 
 private theorem newton_seq_dist_tendsto :
     Tendsto (fun n => ‖newton_cau_seq hnorm n - a‖)
-    atTop (𝓝 (‖F.aeval a‖ / ‖F.derivative.aeval a‖)) :=
+    atTop (𝓝 (residualNorm a)) :=
   tendsto_const_nhds.congr' (eventually_atTop.2
     ⟨1, fun _ hx => (newton_seq_dist_to_a hnorm hnsol _ hx).symm⟩)
 
-private theorem soln_dist_to_a : ‖soln - a‖ = ‖F.aeval a‖ / ‖F.derivative.aeval a‖ :=
+private theorem soln_dist_to_a : ‖soln - a‖ = residualNorm a :=
   tendsto_nhds_unique (newton_seq_dist_tendsto' hnorm) (newton_seq_dist_tendsto hnorm hnsol)
 
 private theorem soln_dist_to_a_lt_deriv : ‖soln - a‖ < ‖F.derivative.aeval a‖ := by
-  rw [soln_dist_to_a, div_lt_iff₀ (deriv_norm_pos _), ← sq] <;> assumption
+  rw [soln_dist_to_a hnorm hnsol]
+  exact (div_lt_iff₀ (deriv_norm_pos hnorm)).2 (by simpa only [pow_two] using hnorm)
 
 private theorem soln_unique (z : ℤ_[p]) (hev : F.aeval z = 0)
     (hnlt : ‖z - a‖ < ‖F.derivative.aeval a‖) : z = soln := by

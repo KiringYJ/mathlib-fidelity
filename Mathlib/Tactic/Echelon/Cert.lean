@@ -7,14 +7,17 @@ module
 
 public import Mathlib.LinearAlgebra.Matrix.Echelon.Decomposition  -- shake: keep (Qq dependency)
 public import Mathlib.Tactic.Echelon.Core
+import Mathlib.Tactic.FinCases
+import Mathlib.Tactic.NormNum.Eq
 public import Mathlib.Util.Qq
 public meta import Mathlib.Tactic.Echelon.Core
 
 /-!
 # Certificate construction for the Bareiss decomposition
 
-The certificate constructor from the decomposition data, and the default certifier
-`mkCertificate`, which currently proves the certificate conditions by `decide +kernel`.
+The certificate constructor checks the decomposition conditions by kernel reduction. For matrix
+equalities containing proof-selected inverses, it can also verify the individual entries with
+`norm_num`.
 
 This will eventually be generalised to a general certificate
 constructor that is parametric on a leaf normaliser.
@@ -29,7 +32,7 @@ constructor that is parametric on a leaf normaliser.
 ## Implementation notes
 
 The elimination records its echelon form `U`, making the product a certificate obligation
-of its own, `L * A_σ = U`, decided separately from the pivot condition on `U`.
+of its own, `L * A_σ = U`, verified separately from the pivot condition on `U`.
 -/
 
 public meta section
@@ -64,9 +67,8 @@ def mkPerm (m : Nat) (swaps : Array (Nat × Nat)) : MetaM Q(Equiv.Perm (Fin $m))
     acc := q((Equiv.swap $(← mkFinNumeral m a) $(← mkFinNumeral m b)).trans $acc)
   return acc
 
-/-- Check that equality with zero in `α` reduces to a verdict in the kernel, as the
-certificate conditions will be decided by kernel reduction. This needs to be changed when
-the cert-checking tactic is updated. -/
+/-- Check that equality with zero in `α` reduces in the kernel, as required to verify the
+echelon pivots and the nonzero diagonal. -/
 def checkKernelDecide {u : Level} (α : Q(Type u)) : MetaM Unit := do
   have _cr : Q(CommRing $α) := ← synthInstanceQ q(CommRing $α)
   -- `Decidable` of the single equality rather than `DecidableEq`: a ring where equality
@@ -78,15 +80,33 @@ def checkKernelDecide {u : Level} (α : Q(Type u)) : MetaM Unit := do
       (·.isAppOf ``Decidable.isFalse) do
     throwError "equality in the element type does not reduce in the kernel{indentExpr α}"
 
-/-- Prove the certificate condition `c` by a kernel-checked `decide`, with `name` naming
-the condition in errors. -/
-def certifyCondition (name : String) (c : Q(Prop)) : MetaM Q($c) := do
+/-- Prove the certificate condition by kernel reduction. If the decision procedure is stuck,
+`onStuck` can provide another proof. A negative decision always rejects the certificate. -/
+def certifyCondition (name : String) (c : Q(Prop))
+    (onStuck : MetaM Q($c) := throwError
+      "cannot verify the rank certificate: {name} does not reduce in the kernel") :
+    MetaM Q($c) := do
   let d ← mkDecide c
   let .ok r := Kernel.whnf (← getEnv) (← getLCtx) d
     | throwError "cannot verify the rank certificate: {name} does not reduce in the kernel"
-  unless r.isConstOf ``Bool.true do
-    throwError "cannot verify the rank certificate: {name} failed"
-  mkDecideProofQ c
+  if r.isConstOf ``Bool.true then return ← mkDecideProofQ c
+  if r.isConstOf ``Bool.false then throwError "cannot verify the rank certificate: {name} failed"
+  onStuck
+
+/-- A checked fraction can contain a proof-selected inverse even when its operands are numerals.
+Verify a matrix equality entrywise if those inverses prevent kernel reduction. -/
+private def certifyMatrixEquality (name : String) (c : Q(Prop)) : MetaM Q($c) :=
+  certifyCondition name c do
+    let goal ← mkFreshExprSyntheticOpaqueMVar c
+    -- The simproc runs at reducible transparency. The finite index cases need the usual
+    -- transparency to expose their concrete elements.
+    let remaining ← withTransparency .default <| Elab.Term.TermElabM.run' <|
+      Elab.Term.withoutErrToSorry <| Elab.Tactic.run goal.mvarId! <| Elab.Tactic.withoutRecover <|
+        Elab.Tactic.evalTactic (← `(tactic|
+          apply Matrix.ext <;> intro i j <;> fin_cases i <;> fin_cases j <;>
+            first | rfl | norm_num [Matrix.mul_apply, Fin.sum_univ_succ]))
+    unless remaining.isEmpty do throwError "cannot verify the rank certificate: {name} failed"
+    instantiateMVars goal
 
 /-- Build the `Echelon.Decomposition` certificate of `A` from the decomposition data and
 `entries`, the parsed entries of `A`. -/
@@ -99,9 +119,8 @@ def mkCertificate {u : Level} {m n : ℕ} {α : Q(Type u)} (_cr : Q(CommRing $α
   have Aσ := mkMatrixLit α m n (data.rowOrder.map (entries[·]!))
   let σ ← mkPerm m data.swaps
   let pivot ← mkPivotLit m n data.pivot
-  let hperm ← certifyCondition "the row arrangement" q(($A).submatrix $σ id = $Aσ)
-  -- TODO: switch to a dedicated matrix multiplication tactic once implemented
-  let hprod ← certifyCondition "the product of the transform" q($L * $Aσ = $U)
+  let hperm ← certifyMatrixEquality "the row arrangement" q(($A).submatrix $σ id = $Aσ)
+  let hprod ← certifyMatrixEquality "the product of the transform" q($L * $Aσ = $U)
   have hU : Q($L * ($A).submatrix $σ id = $U) := q($hperm ▸ $hprod)
   let hpivot ← certifyCondition "the echelon-pivot condition" q(($U).IsPivotedBy $pivot)
   let hlower ← certifyCondition "lower triangularity of the transform" q(($L).IsLowerTriangular)

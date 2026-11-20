@@ -197,6 +197,9 @@ end Algebra
 
 @[simp] theorem algebraMap_apply (k : K) : algebraMap K v.Completion k = (k : v.Completion) := rfl
 
+instance [CharZero K] : CharZero v.Completion :=
+  charZero_of_injective_algebraMap (algebraMap K v.Completion).injective
+
 lemma norm_coe (x : WithAbs v.1) :
     ‖(x : v.Completion)‖ = v (WithAbs.equiv v.1 x) :=
   UniformSpace.Completion.norm_coe x

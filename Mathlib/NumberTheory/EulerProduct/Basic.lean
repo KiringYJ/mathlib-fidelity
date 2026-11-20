@@ -284,7 +284,9 @@ namespace EulerProduct
 -- a helper lemma that is useful below
 lemma one_sub_inv_eq_geometric_of_summable_norm {f : ℕ →*₀ F} {p : ℕ} (hp : p.Prime)
     (hsum : Summable fun x ↦ ‖f x‖) :
-    (1 - f p)⁻¹ = ∑' (e : ℕ), f (p ^ e) := by
+    Checked.inv (1 - f p) (isUnit_one_sub_of_norm_lt_one
+      (Summable.norm_lt_one (f := f.toMonoidHom) hsum.of_norm hp.one_lt)) =
+        ∑' (e : ℕ), f (p ^ e) := by
   simp only [map_pow]
   refine (tsum_geometric_of_norm_lt_one <| summable_geometric_iff_norm_lt_one.mp ?_).symm
   refine Summable.of_norm ?_
@@ -298,13 +300,18 @@ we show that the sum involved converges absolutely. -/
 lemma summable_and_hasSum_factoredNumbers_prod_filter_prime_geometric {f : ℕ →* F}
     (h : ∀ {p : ℕ}, p.Prime → ‖f p‖ < 1) (s : Finset ℕ) :
     Summable (fun m : factoredNumbers s ↦ ‖f m‖) ∧
-      HasSum (fun m : factoredNumbers s ↦ f m) (∏ p ∈ s with p.Prime, (1 - f p)⁻¹) := by
+      HasSum (fun m : factoredNumbers s ↦ f m)
+        (∏ p : s.filter Nat.Prime, Checked.inv (1 - f p)
+          (isUnit_one_sub_of_norm_lt_one (h (mem_filter.mp p.2).2))) := by
   have hmul {m n} (_ : Nat.Coprime m n) := f.map_mul m n
   have H₁ :
-      ∏ p ∈ s with p.Prime, ∑' n : ℕ, f (p ^ n) = ∏ p ∈ s with p.Prime, (1 - f p)⁻¹ := by
-    refine prod_congr rfl fun p hp ↦ ?_
+      (∏ p ∈ s with p.Prime, ∑' n : ℕ, f (p ^ n)) =
+        ∏ p : s.filter Nat.Prime, Checked.inv (1 - f p)
+          (isUnit_one_sub_of_norm_lt_one (h (mem_filter.mp p.2).2)) := by
+    rw [← prod_coe_sort]
+    refine prod_congr rfl fun p _ ↦ ?_
     simp only [map_pow]
-    exact tsum_geometric_of_norm_lt_one <| h (mem_filter.mp hp).2
+    exact tsum_geometric_of_norm_lt_one <| h (mem_filter.mp p.2).2
   have H₂ : ∀ {p : ℕ}, p.Prime → Summable fun n ↦ ‖f (p ^ n)‖ := by
     intro p hp
     simp only [map_pow]
@@ -316,7 +323,9 @@ lemma summable_and_hasSum_factoredNumbers_prod_filter_prime_geometric {f : ℕ �
 in terms of the value of the series. -/
 lemma prod_filter_prime_geometric_eq_tsum_factoredNumbers {f : ℕ →* F} (hsum : Summable f)
     (s : Finset ℕ) :
-    ∏ p ∈ s with p.Prime, (1 - f p)⁻¹ = ∑' m : factoredNumbers s, f m := by
+    (∏ p : s.filter Nat.Prime, Checked.inv (1 - f p)
+      (isUnit_one_sub_of_norm_lt_one (hsum.norm_lt_one (mem_filter.mp p.2).2.one_lt))) =
+        ∑' m : factoredNumbers s, f m := by
   refine (summable_and_hasSum_factoredNumbers_prod_filter_prime_geometric ?_ s).2.tsum_eq.symm
   exact fun {_} hp ↦ hsum.norm_lt_one hp.one_lt
 
@@ -327,16 +336,20 @@ we show that the sum involved converges absolutely. -/
 lemma summable_and_hasSum_smoothNumbers_prod_primesBelow_geometric {f : ℕ →* F}
     (h : ∀ {p : ℕ}, p.Prime → ‖f p‖ < 1) (N : ℕ) :
     Summable (fun m : N.smoothNumbers ↦ ‖f m‖) ∧
-      HasSum (fun m : N.smoothNumbers ↦ f m) (∏ p ∈ N.primesBelow, (1 - f p)⁻¹) := by
-  rw [smoothNumbers_eq_factoredNumbers, primesBelow]
-  exact summable_and_hasSum_factoredNumbers_prod_filter_prime_geometric h _
+      HasSum (fun m : N.smoothNumbers ↦ f m)
+        (∏ p : N.primesBelow, Checked.inv (1 - f p)
+          (isUnit_one_sub_of_norm_lt_one (h (mem_filter.mp p.2).2))) := by
+  rw [smoothNumbers_eq_factoredNumbers]
+  exact summable_and_hasSum_factoredNumbers_prod_filter_prime_geometric h (range N)
 
 /-- A version of `EulerProduct.summable_and_hasSum_smoothNumbers_prod_primesBelow_geometric`
 in terms of the value of the series. -/
 lemma prod_primesBelow_geometric_eq_tsum_smoothNumbers {f : ℕ →* F} (hsum : Summable f) (N : ℕ) :
-    ∏ p ∈ N.primesBelow, (1 - f p)⁻¹ = ∑' m : N.smoothNumbers, f m := by
-  rw [smoothNumbers_eq_factoredNumbers, primesBelow]
-  exact prod_filter_prime_geometric_eq_tsum_factoredNumbers hsum _
+    (∏ p : N.primesBelow, Checked.inv (1 - f p)
+      (isUnit_one_sub_of_norm_lt_one (hsum.norm_lt_one (mem_filter.mp p.2).2.one_lt))) =
+        ∑' m : N.smoothNumbers, f m := by
+  rw [smoothNumbers_eq_factoredNumbers]
+  exact prod_filter_prime_geometric_eq_tsum_factoredNumbers hsum (range N)
 
 /-- The *Euler Product* for completely multiplicative functions.
 
@@ -344,8 +357,14 @@ If `f : ℕ →*₀ F`, where `F` is a complete normed field and `‖f ·‖` is
 `∏' p : Nat.Primes, (1 - f p)⁻¹ = ∑' n, f n`.
 This version is stated in terms of `HasProd`. -/
 theorem eulerProduct_completely_multiplicative_hasProd {f : ℕ →*₀ F} (hsum : Summable (‖f ·‖)) :
-    HasProd (fun p : Primes ↦ (1 - f p)⁻¹) (∑' n, f n) := by
-  have H : (fun p : Primes ↦ (1 - f p)⁻¹) = fun p : Primes ↦ ∑' (e : ℕ), f (p ^ e) :=
+    HasProd (fun p : Primes ↦ Checked.inv (1 - f p)
+      (isUnit_one_sub_of_norm_lt_one
+        (Summable.norm_lt_one (f := f.toMonoidHom) hsum.of_norm p.2.one_lt)))
+      (∑' n, f n) := by
+  have H : (fun p : Primes ↦ Checked.inv (1 - f p)
+      (isUnit_one_sub_of_norm_lt_one
+        (Summable.norm_lt_one (f := f.toMonoidHom) hsum.of_norm p.2.one_lt))) =
+        fun p : Primes ↦ ∑' (e : ℕ), f (p ^ e) :=
     funext <| fun p ↦ one_sub_inv_eq_geometric_of_summable_norm p.prop hsum
   simpa only [map_pow, H]
     using eulerProduct_hasProd f.map_one (fun {m n} _ ↦ f.map_mul m n) hsum f.map_zero
@@ -355,7 +374,9 @@ theorem eulerProduct_completely_multiplicative_hasProd {f : ℕ →*₀ F} (hsum
 If `f : ℕ →*₀ F`, where `F` is a complete normed field and `‖f ·‖` is summable, then
 `∏' p : Nat.Primes, (1 - f p)⁻¹ = ∑' n, f n`. -/
 theorem eulerProduct_completely_multiplicative_tprod {f : ℕ →*₀ F} (hsum : Summable (‖f ·‖)) :
-    ∏' p : Primes, (1 - f p)⁻¹ = ∑' n, f n :=
+    (∏' p : Primes, Checked.inv (1 - f p)
+      (isUnit_one_sub_of_norm_lt_one
+        (Summable.norm_lt_one (f := f.toMonoidHom) hsum.of_norm p.2.one_lt))) = ∑' n, f n :=
   (eulerProduct_completely_multiplicative_hasProd hsum).tprod_eq
 
 open Filter in
@@ -365,17 +386,22 @@ If `f : ℕ →*₀ F`, where `F` is a complete normed field and `‖f ·‖` is
 `∏' p : Nat.Primes, (1 - f p)⁻¹ = ∑' n, f n`.
 This version is stated in the form of convergence of finite partial products. -/
 theorem eulerProduct_completely_multiplicative {f : ℕ →*₀ F} (hsum : Summable (‖f ·‖)) :
-    Tendsto (fun n : ℕ ↦ ∏ p ∈ primesBelow n, (1 - f p)⁻¹) atTop (𝓝 (∑' n, f n)) := by
+    Tendsto (fun n : ℕ ↦ ∏ p : primesBelow n, Checked.inv (1 - f p)
+      (isUnit_one_sub_of_norm_lt_one
+        (Summable.norm_lt_one (f := f.toMonoidHom) hsum.of_norm (mem_filter.mp p.2).2.one_lt)))
+      atTop (𝓝 (∑' n, f n)) := by
   have hmul {m n} (_ : Nat.Coprime m n) := f.map_mul m n
   have := (eulerProduct_hasProd_mulIndicator f.map_one hmul hsum f.map_zero).tendsto_prod_nat
-  have H (n : ℕ) : ∏ p ∈ range n, {p | Nat.Prime p}.mulIndicator (fun p ↦ (1 - f p)⁻¹) p =
-                     ∏ p ∈ primesBelow n, (1 - f p)⁻¹ :=
-    prod_mulIndicator_eq_prod_filter
-      (range n) (fun _ ↦ fun p ↦ (1 - f p)⁻¹) (fun _ ↦ {p | Nat.Prime p}) id
-  have H' : {p | Nat.Prime p}.mulIndicator (fun p ↦ (1 - f p)⁻¹) =
-              {p | Nat.Prime p}.mulIndicator (fun p ↦ ∑' e : ℕ, f (p ^ e)) :=
-    Set.mulIndicator_congr fun p hp ↦ one_sub_inv_eq_geometric_of_summable_norm hp hsum
-  simpa only [← H, H'] using this
+  have H (n : ℕ) :
+      (∏ p ∈ range n, {p | Nat.Prime p}.mulIndicator (fun p ↦ ∑' e : ℕ, f (p ^ e)) p) =
+        ∏ p : primesBelow n, Checked.inv (1 - f p)
+          (isUnit_one_sub_of_norm_lt_one
+            (Summable.norm_lt_one (f := f.toMonoidHom) hsum.of_norm
+              (mem_filter.mp p.2).2.one_lt)) := by
+    rw [prod_mulIndicator_eq_prod_filter, ← prod_coe_sort]
+    refine prod_congr rfl fun p _ ↦ ?_
+    exact (one_sub_inv_eq_geometric_of_summable_norm (mem_filter.mp p.2).2 hsum).symm
+  simpa only [H] using this
 
 end EulerProduct
 

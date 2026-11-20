@@ -105,13 +105,8 @@ theorem dist_smul_vadd_eq_dist {v : V} (p₁ p₂ : P) (hv : v ≠ 0) (r : ℝ) 
       ← sub_eq_zero, add_sub_assoc, dist_eq_norm_vsub V p₁ p₂, ← real_inner_self_eq_norm_mul_norm,
       sub_self]
   have hvi : ⟪v, v⟫ ≠ 0 := by simpa using hv
-  have hd : discrim ⟪v, v⟫ (2 * ⟪v, p₁ -ᵥ p₂⟫) 0 = 2 * ⟪v, p₁ -ᵥ p₂⟫ * (2 * ⟪v, p₁ -ᵥ p₂⟫) := by
-    rw [discrim]
-    ring
-  rw [quadratic_eq_zero_iff hvi hd, neg_add_cancel, zero_div, neg_mul_eq_neg_mul, ←
-    mul_sub_right_distrib, sub_eq_add_neg, ← mul_two, mul_assoc, mul_div_assoc, mul_div_mul_left,
-    mul_div_assoc]
-  simp
+  rw [add_zero, ← mul_assoc, ← add_mul, mul_eq_zero, add_eq_zero_iff_eq_neg,
+    mul_comm ⟪v, v⟫ r, ← eq_div_iff (hb := hvi.isUnit), neg_mul, or_comm]
 
 open AffineSubspace Module
 

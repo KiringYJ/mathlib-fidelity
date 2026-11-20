@@ -34,7 +34,8 @@ theorem eLpNorm'_add_le (hf : AEStronglyMeasurable f μ) (hg : AEStronglyMeasura
       simp only [Pi.add_apply, enorm_add_le]
     _ ≤ eLpNorm' f q μ + eLpNorm' g q μ := ENNReal.lintegral_Lp_add_le hf.enorm hg.enorm hq1
 
-theorem eLpNorm'_add_le_of_le_one (hf : AEStronglyMeasurable f μ) (hq0 : 0 ≤ q) (hq1 : q ≤ 1) :
+theorem eLpNorm'_add_le_of_le_one {hqUnit : IsUnit q} (hf : AEStronglyMeasurable f μ)
+    (hq0 : 0 ≤ q) (hq1 : q ≤ 1) :
     eLpNorm' (f + g) q μ ≤ 2 ^ (1 / q - 1) * (eLpNorm' f q μ + eLpNorm' g q μ) :=
   calc
     (∫⁻ a, ‖(f + g) a‖ₑ ^ q ∂μ) ^ (1 / q) ≤ (∫⁻ a, (((‖f ·‖ₑ)) + (‖g ·‖ₑ)) a ^ q ∂μ) ^ (1 / q) := by
@@ -67,9 +68,11 @@ theorem eLpNorm_add_le' (hf : AEStronglyMeasurable f μ) (hg : AEStronglyMeasura
   · simp
   rcases lt_or_ge p 1 with (h'p | h'p)
   · simp only [eLpNorm_eq_eLpNorm' hp (h'p.trans ENNReal.one_lt_top).ne]
-    convert! eLpNorm'_add_le_of_le_one hf ENNReal.toReal_nonneg _
+    convert! eLpNorm'_add_le_of_le_one
+      (hqUnit := (ENNReal.toReal_pos hp (h'p.trans ENNReal.one_lt_top).ne).ne'.isUnit)
+      hf ENNReal.toReal_nonneg _
     · have : p ∈ Set.Ioo (0 : ℝ≥0∞) 1 := ⟨hp.bot_lt, h'p⟩
-      simp only [LpAddConst, ite_eq_left this]
+      simp only [LpAddConst, dite_eq_left this]
     · simpa using ENNReal.toReal_mono ENNReal.one_ne_top h'p.le
   · simpa [LpAddConst_of_one_le h'p] using eLpNorm_add_le hf hg h'p
 

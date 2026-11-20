@@ -9,6 +9,7 @@ public import Mathlib.Analysis.SpecialFunctions.Log.NegMulLog
 public import Mathlib.Analysis.SpecialFunctions.NonIntegrable
 public import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
 public import Mathlib.Analysis.SpecialFunctions.Integrability.Basic
+public import Mathlib.Analysis.SpecialFunctions.Trigonometric.ArctanDeriv
 public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Sinc
 public import Mathlib.Analysis.SpecialFunctions.Log.InvLog
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.IntegrationByParts
@@ -37,9 +38,9 @@ integrate, integration, integrable
 public section
 
 
-open Real Set Finset
+open Real Set Finset Filter
 
-open scoped Real Interval
+open scoped Real Interval Topology
 
 variable {a b : ℝ} (n : ℕ)
 
@@ -60,8 +61,8 @@ theorem mul_integral_comp_mul_right : (c * ∫ x in a..b, f (x * c)) = ∫ x in 
 theorem mul_integral_comp_mul_left : (c * ∫ x in a..b, f (c * x)) = ∫ x in c * a..c * b, f x :=
   smul_integral_comp_mul_left f c
 
-@[simp]
-theorem inv_mul_integral_comp_div : (c⁻¹ * ∫ x in a..b, f (x / c)) = ∫ x in a / c..b / c, f x :=
+theorem inv_mul_integral_comp_div {hc : IsUnit c} :
+    (c⁻¹ * ∫ x in a..b, f (x / c)) = ∫ x in a / c..b / c, f x :=
   inv_smul_integral_comp_div f c
 
 @[simp]
@@ -74,13 +75,11 @@ theorem mul_integral_comp_add_mul :
     (c * ∫ x in a..b, f (d + c * x)) = ∫ x in d + c * a..d + c * b, f x :=
   smul_integral_comp_add_mul f c d
 
-@[simp]
-theorem inv_mul_integral_comp_div_add :
+theorem inv_mul_integral_comp_div_add {hc : IsUnit c} :
     (c⁻¹ * ∫ x in a..b, f (x / c + d)) = ∫ x in a / c + d..b / c + d, f x :=
   inv_smul_integral_comp_div_add f c d
 
-@[simp]
-theorem inv_mul_integral_comp_add_div :
+theorem inv_mul_integral_comp_add_div {hc : IsUnit c} :
     (c⁻¹ * ∫ x in a..b, f (d + x / c)) = ∫ x in d + a / c..d + b / c, f x :=
   inv_smul_integral_comp_add_div f c d
 
@@ -94,13 +93,11 @@ theorem mul_integral_comp_sub_mul :
     (c * ∫ x in a..b, f (d - c * x)) = ∫ x in d - c * b..d - c * a, f x :=
   smul_integral_comp_sub_mul f c d
 
-@[simp]
-theorem inv_mul_integral_comp_div_sub :
+theorem inv_mul_integral_comp_div_sub {hc : IsUnit c} :
     (c⁻¹ * ∫ x in a..b, f (x / c - d)) = ∫ x in a / c - d..b / c - d, f x :=
   inv_smul_integral_comp_div_sub f c d
 
-@[simp]
-theorem inv_mul_integral_comp_sub_div :
+theorem inv_mul_integral_comp_sub_div {hc : IsUnit c} :
     (c⁻¹ * ∫ x in a..b, f (d - x / c)) = ∫ x in d - b / c..d - a / c, f x :=
   inv_smul_integral_comp_sub_div f c d
 
@@ -113,46 +110,63 @@ open intervalIntegral
 /-! ### Integrals of simple functions -/
 
 
+/-- An exponent satisfying the hypotheses for the complex power integral is different from `-1`. -/
+theorem complex_add_one_ne_zero_of_exponent {r : ℂ}
+    (h : -1 < r.re ∨ r ≠ -1 ∧ (0 : ℝ) ∉ [[a, b]]) : r + 1 ≠ 0 := by
+  rw [Ne, add_eq_zero_iff_eq_neg]
+  rcases h with h | h
+  · intro hr
+    simp [hr] at h
+  · exact h.1
+
 theorem integral_cpow {r : ℂ} (h : -1 < r.re ∨ r ≠ -1 ∧ (0 : ℝ) ∉ [[a, b]]) :
-    (∫ x : ℝ in a..b, (x : ℂ) ^ r) = ((b : ℂ) ^ (r + 1) - (a : ℂ) ^ (r + 1)) / (r + 1) := by
-  rw [sub_div]
-  have hr : r + 1 ≠ 0 := by
-    rcases h with h | h
-    · apply_fun Complex.re
-      rw [Complex.add_re, Complex.one_re, Complex.zero_re, Ne, add_eq_zero_iff_eq_neg]
-      exact h.ne'
-    · rw [Ne, ← add_eq_zero_iff_eq_neg] at h; exact h.1
+    (∫ x : ℝ in a..b, (x : ℂ) ^ r) =
+      Checked.div ((b : ℂ) ^ (r + 1) - (a : ℂ) ^ (r + 1)) (r + 1)
+        (complex_add_one_ne_zero_of_exponent h).isUnit := by
+  have hr : IsUnit (r + 1) := (complex_add_one_ne_zero_of_exponent h).isUnit
+  let F (x : ℝ) := Checked.div ((x : ℂ) ^ (r + 1)) (r + 1) hr
+  have hF (x : ℝ) (hx : x ≠ 0) : HasDerivAt F ((x : ℂ) ^ r) x :=
+    hasDerivAt_ofReal_cpow_const' (r := r) (hr := hr) hx
+  rw [_root_.sub_div]
+  change (∫ x : ℝ in a..b, (x : ℂ) ^ r) = F b - F a
   by_cases hab : (0 : ℝ) ∉ [[a, b]]
-  · apply integral_eq_sub_of_hasDerivAt (fun x hx => ?_)
+  · exact integral_eq_sub_of_hasDerivAt (f := F) (fun x hx ↦ hF x (ne_of_mem_of_not_mem hx hab))
       (intervalIntegrable_cpow (r := r) <| Or.inr hab)
-    refine hasDerivAt_ofReal_cpow_const' (ne_of_mem_of_not_mem hx hab) ?_
-    contrapose hr; rwa [add_eq_zero_iff_eq_neg]
   replace h : -1 < r.re := by tauto
-  suffices ∀ c : ℝ, (∫ x : ℝ in 0..c, (x : ℂ) ^ r) =
-      (c : ℂ) ^ (r + 1) / (r + 1) - (0 : ℂ) ^ (r + 1) / (r + 1) by
+  suffices ∀ c : ℝ, (∫ x : ℝ in 0..c, (x : ℂ) ^ r) = F c - F 0 by
     rw [← integral_add_adjacent_intervals (@intervalIntegrable_cpow' a 0 r h)
-      (@intervalIntegrable_cpow' 0 b r h), integral_symm, this a, this b, Complex.zero_cpow hr]
-    ring
+      (@intervalIntegrable_cpow' 0 b r h), integral_symm, this a, this b]
+    abel
   intro c
-  apply integral_eq_sub_of_hasDeriv_right
-  · refine ((Complex.continuous_ofReal_cpow_const ?_).div_const _).continuousOn
+  apply integral_eq_sub_of_hasDeriv_right (f := F)
+  · simp only [F, div_eq_mul_inv₀]
+    refine ((Complex.continuous_ofReal_cpow_const ?_).mul continuous_const).continuousOn
     rwa [Complex.add_re, Complex.one_re, ← neg_lt_iff_pos_add]
-  · refine fun x hx => (hasDerivAt_ofReal_cpow_const' ?_ ?_).hasDerivWithinAt
-    · rcases le_total c 0 with (hc | hc)
-      · rw [max_eq_left hc] at hx; exact hx.2.ne
-      · rw [min_eq_left hc] at hx; exact hx.1.ne'
-    · contrapose hr; rw [hr]; ring
+  · intro x hx
+    apply (hF x ?_).hasDerivWithinAt
+    rcases le_total c 0 with (hc | hc)
+    · rw [max_eq_left hc] at hx
+      exact hx.2.ne
+    · rw [min_eq_left hc] at hx
+      exact hx.1.ne'
   · exact intervalIntegrable_cpow' h
 
+/-- An exponent satisfying the hypotheses for the real power integral is different from `-1`. -/
+theorem real_add_one_ne_zero_of_exponent {r : ℝ}
+    (h : -1 < r ∨ r ≠ -1 ∧ (0 : ℝ) ∉ [[a, b]]) : r + 1 ≠ 0 := by
+  rw [Ne, add_eq_zero_iff_eq_neg]
+  exact h.elim (·.ne') And.left
+
 theorem integral_rpow {r : ℝ} (h : -1 < r ∨ r ≠ -1 ∧ (0 : ℝ) ∉ [[a, b]]) :
-    ∫ x in a..b, x ^ r = (b ^ (r + 1) - a ^ (r + 1)) / (r + 1) := by
+    (∫ x in a..b, x ^ r) =
+      Checked.div (b ^ (r + 1) - a ^ (r + 1)) (r + 1)
+        (real_add_one_ne_zero_of_exponent h).isUnit := by
+  have hr := real_add_one_ne_zero_of_exponent h
   have h' : -1 < (r : ℂ).re ∨ (r : ℂ) ≠ -1 ∧ (0 : ℝ) ∉ [[a, b]] := by
     cases h
     · left; rwa [Complex.ofReal_re]
     · right; rwa [← Complex.ofReal_one, ← Complex.ofReal_neg, Ne, Complex.ofReal_inj]
-  have :
-    (∫ x in a..b, (x : ℂ) ^ (r : ℂ)) = ((b : ℂ) ^ (r + 1 : ℂ) - (a : ℂ) ^ (r + 1 : ℂ)) / (r + 1) :=
-    integral_cpow h'
+  have := integral_cpow h'
   apply_fun Complex.re at this; convert! this
   · simp_rw [intervalIntegral_eq_integral_uIoc, Complex.real_smul, Complex.re_ofReal_mul, rpow_def,
       ← RCLike.re_eq_complex_re, smul_eq_mul]
@@ -161,17 +175,43 @@ theorem integral_rpow {r : ℝ} (h : -1 < r ∨ r ≠ -1 ∧ (0 : ℝ) ∉ [[a, 
     rcases h' with h' | h'
     · exact intervalIntegrable_cpow' h'
     · exact intervalIntegrable_cpow (Or.inr h'.2)
-  · rw [(by push_cast; rfl : (r : ℂ) + 1 = ((r + 1 : ℝ) : ℂ))]
-    simp_rw [div_eq_inv_mul, ← Complex.ofReal_inv, Complex.re_ofReal_mul, Complex.sub_re, rpow_def]
+  · have hInv : Checked.inv ((r + 1 : ℝ) : ℂ) (hr.isUnit.map Complex.ofRealHom) =
+        ((Checked.inv (r + 1) hr.isUnit : ℝ) : ℂ) :=
+      (Complex.ofReal_inv (r + 1) (hr := hr.isUnit)).symm
+    simp only [(by push_cast; rfl : (r : ℂ) + 1 = ((r + 1 : ℝ) : ℂ)), div_eq_inv_mul₀,
+      hInv, Complex.re_ofReal_mul, Complex.sub_re, rpow_def]
 
 theorem integral_zpow {n : ℤ} (h : 0 ≤ n ∨ n ≠ -1 ∧ (0 : ℝ) ∉ [[a, b]]) :
-    ∫ x in a..b, x ^ n = (b ^ (n + 1) - a ^ (n + 1)) / (n + 1) := by
-  replace h : -1 < (n : ℝ) ∨ (n : ℝ) ≠ -1 ∧ (0 : ℝ) ∉ [[a, b]] := mod_cast h
-  exact mod_cast integral_rpow h
+    integralSubtype (fun x : [[a, b]] ↦ Checked.zpow x.val n fun hn ↦
+      (ne_of_mem_of_not_mem x.2 (h.resolve_left hn.not_ge).2).isUnit) =
+      Checked.div
+        (Checked.zpow b (n + 1) (fun hn ↦ (ne_of_mem_of_not_mem Set.right_mem_uIcc
+          (h.resolve_left (by omega)).2).isUnit) -
+          Checked.zpow a (n + 1) (fun hn ↦ (ne_of_mem_of_not_mem Set.left_mem_uIcc
+            (h.resolve_left (by omega)).2).isUnit))
+        (n + 1 : ℝ) (show (n + 1 : ℝ) ≠ 0 by
+          norm_cast
+          rcases h with h | h <;> omega).isUnit := by
+  have h' : -1 < (n : ℝ) ∨ (n : ℝ) ≠ -1 ∧ (0 : ℝ) ∉ [[a, b]] := by
+    rcases h with h | h
+    · exact .inl (neg_one_lt_zero.trans_le (by exact_mod_cast h))
+    · exact .inr ⟨by exact_mod_cast h.1, h.2⟩
+  have h₀ (x : [[a, b]]) : n < 0 → IsUnit x.val :=
+    fun hn ↦ (ne_of_mem_of_not_mem x.2 (h.resolve_left hn.not_ge).2).isUnit
+  have heq : (fun x : [[a, b]] ↦ Checked.zpow x.val n (h₀ x)) =
+      (fun x ↦ x.val ^ (n : ℝ)) := funext fun x ↦
+        (Real.rpow_intCast x.val n (h := fun hn ↦ (h₀ x hn).ne_zero)).symm
+  rw [heq, integral_subtype_eq_integral (fun z : ℝ ↦ z ^ (n : ℝ)), integral_rpow h']
+  have hcast : (n : ℝ) + 1 = ((n + 1 : ℤ) : ℝ) := by push_cast; rfl
+  have ha (hn : n + 1 < 0) : a ≠ 0 := (h₀ ⟨a, Set.left_mem_uIcc⟩ (by omega)).ne_zero
+  have hb (hn : n + 1 < 0) : b ≠ 0 := (h₀ ⟨b, Set.right_mem_uIcc⟩ (by omega)).ne_zero
+  simp only [hcast, Real.rpow_intCast a (n + 1) (h := ha), Real.rpow_intCast b (n + 1) (h := hb)]
 
 @[simp]
 theorem integral_pow : ∫ x in a..b, x ^ n = (b ^ (n + 1) - a ^ (n + 1)) / (n + 1) := by
-  simpa only [← Int.natCast_succ, zpow_natCast] using! integral_zpow (Or.inl n.cast_nonneg)
+  simpa only [← Nat.cast_succ, Real.rpow_natCast] using
+    integral_rpow (r := (n : ℝ)) (a := a) (b := b)
+      (.inl (neg_one_lt_zero.trans_le (Nat.cast_nonneg _)))
 
 /-- Integral of `|x - a| ^ n` over `Ι a b`. This integral appears in the proof of the
 Picard-Lindelöf/Cauchy-Lipschitz theorem. -/
@@ -209,28 +249,54 @@ theorem integral_one : (∫ _ in a..b, (1 : ℝ)) = b - a := by
 theorem integral_const_on_unit_interval : ∫ _ in a..a + 1, b = b := by simp
 
 @[simp]
-theorem integral_inv (h : (0 : ℝ) ∉ [[a, b]]) : ∫ x in a..b, x⁻¹ = log (b / a) := by
-  have h' := fun x (hx : x ∈ [[a, b]]) => ne_of_mem_of_not_mem hx h
-  rw [integral_deriv_eq_sub' _ deriv_log' (fun x hx => differentiableAt_log (h' x hx))
-      (continuousOn_inv₀.mono <| subset_compl_singleton_iff.mpr h),
-    log_div (h' b right_mem_uIcc) (h' a left_mem_uIcc)]
+theorem integral_inv (h : (0 : ℝ) ∉ [[a, b]]) :
+    integralSubtype (fun x : [[a, b]] ↦ Checked.inv x.val (ne_of_mem_of_not_mem x.2 h).isUnit) =
+      log (Checked.div b a (ne_of_mem_of_not_mem Set.left_mem_uIcc h).isUnit) := by
+  have h' (x : [[a, b]]) : IsUnit x.val := (ne_of_mem_of_not_mem x.2 h).isUnit
+  have hd (x : [[a, b]]) :
+      HasDerivAt (fun t : [[a, b]] ↦ log t.val) (Checked.inv x.val (h' x)) x Subtype.val := by
+    change HasDerivAtFilter _ _ (𝓝 x ×ˢ pure x) (fun t : [[a, b]] ↦ t.val)
+    simpa only [ContinuousLinearMap.toSpanSingleton_apply, one_smul, id_eq, Function.comp_def]
+      using ((Real.hasDerivAt_log (hx := h' x)).hasFDerivAt.comp_tendsto Subtype.val
+        (continuousAt_subtype_val.tendsto.prodMap (tendsto_pure_pure ..))).hasDerivAtFilter
+  have hc : Continuous (fun x : [[a, b]] ↦ log x.val) := by
+    rw [continuous_iff_continuousAt]
+    exact fun x ↦ (hd x).hasFDerivAt.continuousAt continuousAt_subtype_val
+  rw [integral_subtype_uIcc_eq_sub_of_hasDerivAt hc (fun x _ ↦ hd x)
+    (integrable_subtype_uIcc (continuous_subtype_val.fun_inv₀ (h0 := h')))]
+  exact (log_div (h' ⟨b, right_mem_uIcc⟩).ne_zero (hy := h' ⟨a, left_mem_uIcc⟩)).symm
 
 @[simp]
-theorem integral_inv_of_pos (ha : 0 < a) (hb : 0 < b) : ∫ x in a..b, x⁻¹ = log (b / a) :=
+theorem integral_inv_of_pos (ha : 0 < a) (hb : 0 < b) :
+    integralSubtype (fun x : [[a, b]] ↦
+      Checked.inv x.val (ne_of_mem_of_not_mem x.2 (notMem_uIcc_of_lt ha hb)).isUnit) =
+      log (Checked.div b a ha.ne'.isUnit) :=
   integral_inv <| notMem_uIcc_of_lt ha hb
 
 @[simp]
-theorem integral_inv_of_neg (ha : a < 0) (hb : b < 0) : ∫ x in a..b, x⁻¹ = log (b / a) :=
+theorem integral_inv_of_neg (ha : a < 0) (hb : b < 0) :
+    integralSubtype (fun x : [[a, b]] ↦
+      Checked.inv x.val (ne_of_mem_of_not_mem x.2 (notMem_uIcc_of_gt ha hb)).isUnit) =
+      log (Checked.div b a ha.ne.isUnit) :=
   integral_inv <| notMem_uIcc_of_gt ha hb
 
-theorem integral_one_div (h : (0 : ℝ) ∉ [[a, b]]) : ∫ x : ℝ in a..b, 1 / x = log (b / a) := by
-  simp only [one_div, integral_inv h]
+theorem integral_one_div (h : (0 : ℝ) ∉ [[a, b]]) :
+    integralSubtype (fun x : [[a, b]] ↦
+      Checked.div 1 x.val (ne_of_mem_of_not_mem x.2 h).isUnit) =
+      log (Checked.div b a (ne_of_mem_of_not_mem Set.left_mem_uIcc h).isUnit) := by
+  simp only [one_div₀, integral_inv h]
 
 theorem integral_one_div_of_pos (ha : 0 < a) (hb : 0 < b) :
-    ∫ x : ℝ in a..b, 1 / x = log (b / a) := by simp only [one_div, integral_inv_of_pos ha hb]
+    integralSubtype (fun x : [[a, b]] ↦
+      Checked.div 1 x.val (ne_of_mem_of_not_mem x.2 (notMem_uIcc_of_lt ha hb)).isUnit) =
+      log (Checked.div b a ha.ne'.isUnit) := by
+  simp only [one_div₀, integral_inv_of_pos ha hb]
 
 theorem integral_one_div_of_neg (ha : a < 0) (hb : b < 0) :
-    ∫ x : ℝ in a..b, 1 / x = log (b / a) := by simp only [one_div, integral_inv_of_neg ha hb]
+    integralSubtype (fun x : [[a, b]] ↦
+      Checked.div 1 x.val (ne_of_mem_of_not_mem x.2 (notMem_uIcc_of_gt ha hb)).isUnit) =
+      log (Checked.div b a ha.ne.isUnit) := by
+  simp only [one_div₀, integral_inv_of_neg ha hb]
 
 @[simp]
 theorem integral_exp : ∫ x in a..b, exp x = exp b - exp a := by
@@ -244,7 +310,7 @@ theorem integral_exp_mul_complex {c : ℂ} (hc : c ≠ 0) :
   have D : ∀ x : ℝ, HasDerivAt (fun y : ℝ => Complex.exp (c * y) / c) (Complex.exp (c * x)) x := by
     intro x
     conv => congr
-    rw [← mul_div_cancel_right₀ (Complex.exp (c * x)) hc]
+    rw [← mul_div_cancel_right₀ (Complex.exp (c * x)) (hb := hc.isUnit)]
     apply ((Complex.hasDerivAt_exp _).comp x _).div_const c
     simpa only [mul_one] using! ((hasDerivAt_id (x : ℂ)).const_mul _).comp_ofReal
   rw [integral_deriv_eq_sub' _ (funext fun x => (D x).deriv) fun x _ => (D x).differentiableAt]
@@ -308,30 +374,27 @@ theorem integral_log : ∫ s in a..b, log s = b * log b - a * log a - b + a := b
 
 @[simp]
 theorem integral_sin : ∫ x in a..b, sin x = cos a - cos b := by
-  rw [integral_deriv_eq_sub' fun x => -cos x]
-  · ring
-  · simp
-  · simp
-  · exact continuousOn_sin
+  have h (x : ℝ) : HasDerivAt (-cos) (sin x) x := by
+    simpa only [neg_neg] using (hasDerivAt_cos x).neg
+  simpa only [Pi.neg_apply, neg_sub_neg] using
+    integral_eq_sub_of_hasDerivAt (fun x _ ↦ h x) (continuous_sin.intervalIntegrable _ _)
 
 @[simp]
 theorem integral_cos : ∫ x in a..b, cos x = sin b - sin a := by
-  rw [integral_deriv_eq_sub']
-  · simp
-  · simp only [differentiableAt_sin, implies_true]
-  · exact continuousOn_cos
+  exact integral_eq_sub_of_hasDerivAt (fun x _ ↦ hasDerivAt_sin x)
+    (continuous_cos.intervalIntegrable _ _)
 
 theorem integral_cos_mul_complex {z : ℂ} (hz : z ≠ 0) (a b : ℝ) :
     (∫ x in a..b, Complex.cos (z * x)) = Complex.sin (z * b) / z - Complex.sin (z * a) / z := by
-  apply integral_eq_sub_of_hasDerivAt
-  swap
-  · apply Continuous.intervalIntegrable <| by fun_prop
-  intro x _
-  have a := Complex.hasDerivAt_sin (↑x * z)
-  have b : HasDerivAt (fun y => y * z : ℂ → ℂ) z ↑x := hasDerivAt_mul_const _
-  have c : HasDerivAt (Complex.sin ∘ fun y : ℂ => (y * z)) _ ↑x := HasDerivAt.comp (𝕜 := ℂ) x a b
-  have d := HasDerivAt.comp_ofReal (c.div_const z)
-  grind
+  have hd (w : ℂ) : HasDerivAt (fun t : ℂ ↦ Checked.div (Complex.sin (z * t)) z hz.isUnit)
+      (Complex.cos (z * w)) w := by
+    have hzmul : HasDerivAt (fun t : ℂ ↦ z * t) z w := by
+      simpa only [id_eq, mul_one] using (hasDerivAt_id w).const_mul z
+    have hs := (Complex.hasDerivAt_sin (z * w)).comp
+      (h := fun t : ℂ ↦ z * t) (coord' := id) w hzmul
+    simpa only [Function.comp_def, mul_div_cancel_right₀] using hs.div_const z (hd := hz.isUnit)
+  exact integral_eq_sub_of_hasDerivAt (f := fun x : ℝ ↦ Complex.sin (z * x) / z)
+    (fun x _ ↦ (hd x).comp_ofReal) (Continuous.intervalIntegrable (by fun_prop) _ _)
 
 theorem integral_cos_sq_sub_sin_sq :
     ∫ x in a..b, cos x ^ 2 - sin x ^ 2 = sin b * cos b - sin a * cos a := by
@@ -340,32 +403,36 @@ theorem integral_cos_sq_sub_sin_sq :
       continuousOn_cos.intervalIntegrable continuousOn_sin.neg.intervalIntegrable
 
 theorem integral_one_div_one_add_sq :
-    (∫ x : ℝ in a..b, ↑1 / (↑1 + x ^ 2)) = arctan b - arctan a := by
-  refine integral_deriv_eq_sub' _ Real.deriv_arctan (fun _ _ => differentiableAt_arctan _)
-    (continuous_const.div ?_ fun x => ?_).continuousOn
-  · fun_prop
-  · nlinarith
+    (∫ x : ℝ in a..b, 1 / (1 + x ^ 2)) = arctan b - arctan a :=
+  integral_eq_sub_of_hasDerivAt (fun x _ ↦ hasDerivAt_arctan x)
+    intervalIntegrable_one_div_one_add_sq
 
 @[simp]
-theorem integral_inv_one_add_sq : (∫ x : ℝ in a..b, (↑1 + x ^ 2)⁻¹) = arctan b - arctan a := by
-  simp only [← one_div, integral_one_div_one_add_sq]
+theorem integral_inv_one_add_sq : (∫ x : ℝ in a..b, (1 + x ^ 2)⁻¹) = arctan b - arctan a := by
+  simp only [← one_div₀, integral_one_div_one_add_sq]
 
 @[simp]
 theorem integral_inv_sq_add_sq {c : ℝ} (hc : c ≠ 0) :
-    ∫ x : ℝ in a..b, (c ^ 2 + x ^ 2)⁻¹ = c⁻¹ * (arctan (b / c) - arctan (a / c)) := calc
-  _ = ∫ x : ℝ in a..b, (c ^ 2)⁻¹ * (1 + (x / c) ^ 2)⁻¹ := by field_simp
-  _ = _ := by
-    simp [integral_comp_div (fun x => (c ^ 2)⁻¹ * (1 + x ^ 2)⁻¹) hc]
-    field_simp
+    ∫ x : ℝ in a..b, (c ^ 2 + x ^ 2)⁻¹ = c⁻¹ * (arctan (b / c) - arctan (a / c)) := by
+  have hu (x : ℝ) : IsUnit (c ^ 2 + x ^ 2) :=
+    (add_pos_of_pos_of_nonneg (sq_pos_of_ne_zero hc) (sq_nonneg x)).ne'.isUnit
+  rw [mul_sub, ← div_eq_inv_mul₀, ← div_eq_inv_mul₀]
+  apply integral_eq_sub_of_hasDerivAt (f := fun x : ℝ ↦ arctan (x / c) / c)
+  · intro x _
+    have hinner : HasDerivAt (fun t : ℝ ↦ t / c) c⁻¹ x := by
+      simpa only [one_div₀, id_eq] using (hasDerivAt_id x).div_const c (hd := hc.isUnit)
+    have hd := (hasDerivAt_arctan' (x / c)).comp
+      (h := fun t : ℝ ↦ t / c) (coord' := id) x hinner
+    convert hd.div_const c (hd := hc.isUnit) using 1
+    · rfl
+    · field [hc, (hu x).ne_zero]
+  · exact ((continuous_const.add (continuous_id.pow 2)).fun_inv₀ (h0 := hu)).intervalIntegrable _ _
 
-theorem integral_div_sq_add_sq {c : ℝ} :
+theorem integral_div_sq_add_sq {c : ℝ} (hc : c ≠ 0) :
     ∫ x : ℝ in a..b, c / (c ^ 2 + x ^ 2) = arctan (b / c) - arctan (a / c) := calc
   _ = ∫ x : ℝ in a..b, c * (c ^ 2 + x ^ 2)⁻¹ := by ring_nf
   _ = _ := by
-    by_cases hc : c = 0
-    · simp [hc]
-    · rw [integral_const_mul, integral_inv_sq_add_sq hc]
-      field_simp
+    rw [integral_const_mul, integral_inv_sq_add_sq hc, ← mul_assoc, mul_inv_cancel₀, one_mul]
 
 theorem integral_id_div_sq_add_sq {c : ℝ} (hc : c ≠ 0) :
     ∫ x : ℝ in a..b, x / (c ^ 2 + x ^ 2) = (log (c ^ 2 + b ^ 2) - log (c ^ 2 + a ^ 2)) / 2 := by
@@ -381,26 +448,66 @@ theorem integral_id_div_sq_add_sq {c : ℝ} (hc : c ≠ 0) :
 /-- The integrand is chosen to match the conclusion of `Real.deriv_log_log`. -/
 @[simp]
 theorem integral_inv_div_log (ha : 1 < a) (hb : 1 < b) :
-    ∫ t in a..b, t⁻¹ / log t = log (log b) - log (log a) := by
-  rw [← intervalIntegral.integral_congr (fun _ _ ↦ deriv_log_log_apply)]
-  refine integral_deriv_eq_sub (fun _ _ ↦ ?_) ?_
-  · exact differentiableOn_log_log.differentiableAt (Ioi_mem_nhds (by grind [Set.uIcc]))
-  refine (?_ : ContinuousOn _ _).congr (fun _ _ ↦ deriv_log_log_apply) |>.intervalIntegrable
-  fun_prop (disch := grind [log_pos, Set.uIcc])
+    integralSubtype (fun t : [[a, b]] ↦
+      Checked.div
+        (Checked.inv t.val (zero_lt_one.trans_le ((lt_min ha hb).le.trans t.2.1)).ne'.isUnit)
+        (log t.val) (log_pos ((lt_min ha hb).trans_le t.2.1)).ne'.isUnit) =
+      log (log b) - log (log a) := by
+  have ht (t : [[a, b]]) : 1 < t.val := (lt_min ha hb).trans_le t.2.1
+  have h₀ (t : [[a, b]]) : IsUnit t.val := (zero_lt_one.trans (ht t)).ne'.isUnit
+  have hl (t : [[a, b]]) : IsUnit (log t.val) := (log_pos (ht t)).ne'.isUnit
+  let j (t : [[a, b]]) : {x : ℝ // IsUnit (log x)} := ⟨t.val, hl t⟩
+  have hj : Continuous j := continuous_subtype_val.subtype_mk hl
+  have hd (t : [[a, b]]) : HasDerivAt (fun x : [[a, b]] ↦ log (log x.val))
+      (Checked.div (Checked.inv t.val (h₀ t)) (log t.val) (hl t)) t Subtype.val := by
+    change HasDerivAtFilter _ _ (𝓝 t ×ˢ pure t) (fun x : [[a, b]] ↦ x.val)
+    simpa only [ContinuousLinearMap.toSpanSingleton_apply, one_smul, Function.comp_def] using
+      ((Real.hasDerivAt_log_log (j t)).hasFDerivAt.comp_tendsto j
+        (hj.continuousAt.tendsto.prodMap (tendsto_pure_pure ..))).hasDerivAtFilter
+  have hclog : Continuous (fun x : [[a, b]] ↦ log x.val) :=
+    continuous_iff_continuousAt.mpr fun x ↦
+      (continuousAt_log (h₀ x).ne_zero).comp continuousAt_subtype_val
+  have hc : Continuous (fun x : [[a, b]] ↦ log (log x.val)) :=
+    continuous_iff_continuousAt.mpr fun x ↦
+      (hd x).hasFDerivAt.continuousAt continuousAt_subtype_val
+  exact integral_subtype_uIcc_eq_sub_of_hasDerivAt hc (fun x _ ↦ hd x) <|
+    integrable_subtype_uIcc ((continuous_subtype_val.fun_inv₀ (h0 := h₀)).div₀ hclog (h₀ := hl))
 
 /-- The integrand is chosen to match the conclusion of `Real.deriv_inv_log`. -/
 @[simp]
 theorem integral_inv_div_log_sq (ha : 1 < a) (hb : 1 < b) :
-    ∫ t in a..b, t⁻¹ / log t ^ 2 = (log a)⁻¹ - (log b)⁻¹ := by
-  suffices ∫ t in a..b, deriv (fun t ↦ (log t)⁻¹) t = (log b)⁻¹ - (log a)⁻¹ by
-    simp_rw [deriv_inv_log, neg_div, intervalIntegral.integral_neg] at this
-    linarith
-  refine integral_deriv_eq_sub (fun _ _ ↦ ?_) (ContinuousOn.intervalIntegrable ?_)
-  · exact differentiableOn_inv_log.differentiableAt (Ioi_mem_nhds (by grind [Set.uIcc]))
-  suffices ContinuousOn (fun x ↦ (-x⁻¹) * ((log x)⁻¹) ^ 2) (.uIcc a b) by
-    convert this using 2 with x
-    simp [field]
-  fun_prop (disch := grind [log_pos, Set.uIcc])
+    integralSubtype (fun t : [[a, b]] ↦
+      Checked.div
+        (Checked.inv t.val (zero_lt_one.trans_le ((lt_min ha hb).le.trans t.2.1)).ne'.isUnit)
+        (log t.val ^ 2) ((log_pos ((lt_min ha hb).trans_le t.2.1)).ne'.isUnit.pow 2)) =
+      Checked.inv (log a) (log_pos ha).ne'.isUnit -
+        Checked.inv (log b) (log_pos hb).ne'.isUnit := by
+  have ht (t : [[a, b]]) : 1 < t.val := (lt_min ha hb).trans_le t.2.1
+  have h₀ (t : [[a, b]]) : IsUnit t.val := (zero_lt_one.trans (ht t)).ne'.isUnit
+  have hl (t : [[a, b]]) : IsUnit (log t.val) := (log_pos (ht t)).ne'.isUnit
+  let j (t : [[a, b]]) : {x : ℝ // IsUnit (log x)} := ⟨t.val, hl t⟩
+  have hj : Continuous j := continuous_subtype_val.subtype_mk hl
+  let F (t : [[a, b]]) := -(Checked.inv (log t.val) (hl t))
+  let G (t : [[a, b]]) := Checked.div (Checked.inv t.val (h₀ t)) (log t.val ^ 2) ((hl t).pow 2)
+  have hd (t : [[a, b]]) : HasDerivAt F (G t) t Subtype.val := by
+    let J (x : [[a, b]]) := Checked.inv (log x.val) (hl x)
+    have hJ : HasDerivAt J (-G t) t Subtype.val := by
+      change HasDerivAtFilter J (-G t) (𝓝 t ×ˢ pure t) (fun x : [[a, b]] ↦ x.val)
+      simpa only [J, G, j, Function.comp_def, ContinuousLinearMap.toSpanSingleton_apply,
+        one_smul, neg_div₀] using
+        ((Real.hasDerivAt_inv_log (j t)).hasFDerivAt.comp_tendsto j
+          (hj.continuousAt.tendsto.prodMap (tendsto_pure_pure ..))).hasDerivAtFilter
+    simpa only [F, J, Function.comp_def, neg_mul, one_mul, neg_neg] using
+      (hasDerivAt_neg (J t)).comp (h := J) (coord' := id) t hJ continuousAt_subtype_val
+  have hc : Continuous F := continuous_iff_continuousAt.mpr fun x ↦
+    (hd x).hasFDerivAt.continuousAt continuousAt_subtype_val
+  have hclog : Continuous (fun x : [[a, b]] ↦ log x.val) :=
+    continuous_iff_continuousAt.mpr fun x ↦
+      (continuousAt_log (h₀ x).ne_zero).comp continuousAt_subtype_val
+  have hci : Continuous G :=
+    (continuous_subtype_val.fun_inv₀ (h0 := h₀)).div₀ (hclog.pow 2)
+  simpa only [F, G, neg_sub_neg] using
+    integral_subtype_uIcc_eq_sub_of_hasDerivAt hc (fun x _ ↦ hd x) (integrable_subtype_uIcc hci)
 
 section RpowCpow
 
@@ -408,40 +515,40 @@ open Complex
 
 theorem integral_mul_cpow_one_add_sq {t : ℂ} (ht : t ≠ -1) :
     (∫ x : ℝ in a..b, (x : ℂ) * ((1 : ℂ) + ↑x ^ 2) ^ t) =
-      ((1 : ℂ) + (b : ℂ) ^ 2) ^ (t + 1) / (2 * (t + ↑1)) -
-      ((1 : ℂ) + (a : ℂ) ^ 2) ^ (t + 1) / (2 * (t + ↑1)) := by
-  have : t + 1 ≠ 0 := by contrapose ht; rwa [add_eq_zero_iff_eq_neg] at ht
-  apply integral_eq_sub_of_hasDerivAt
+      let hu := (mul_ne_zero (by norm_num : (2 : ℂ) ≠ 0) (mt add_eq_zero_iff_eq_neg.mp ht)).isUnit
+      Checked.div (((1 : ℂ) + (b : ℂ) ^ 2) ^ (t + 1)) (2 * (t + 1)) hu -
+        Checked.div (((1 : ℂ) + (a : ℂ) ^ 2) ^ (t + 1)) (2 * (t + 1)) hu := by
+  have ht₁ : t + 1 ≠ 0 := mt add_eq_zero_iff_eq_neg.mp ht
+  have hu : IsUnit (2 * (t + 1)) := (mul_ne_zero (by norm_num) ht₁).isUnit
+  have hslit (x : ℝ) : (1 + (x : ℂ) ^ 2) ∈ slitPlane := by
+    rw [← ofReal_pow, ← ofReal_one, ← ofReal_add]
+    exact ofReal_mem_slitPlane.2 (add_pos_of_pos_of_nonneg one_pos (sq_nonneg x))
+  apply integral_eq_sub_of_hasDerivAt (f := fun x : ℝ ↦
+    Checked.div (((1 : ℂ) + (x : ℂ) ^ 2) ^ (t + 1)) (2 * (t + 1)) hu)
   · intro x _
-    have f : HasDerivAt (fun y : ℂ => 1 + y ^ 2) (2 * x : ℂ) x := by
+    have hinner : HasDerivAt (fun y : ℂ => 1 + y ^ 2) (2 * x : ℂ) x := by
       convert! (hasDerivAt_pow 2 (x : ℂ)).const_add 1
       simp
-    have g :
-      ∀ {z : ℂ}, 0 < z.re → HasDerivAt (fun z => z ^ (t + 1) / (2 * (t + 1))) (z ^ t / 2) z := by
-      intro z hz
-      convert!
-        (HasDerivAt.cpow_const (c := t + 1) (hasDerivAt_id _) (Or.inl hz)).div_const
-          (2 * (t + 1)) using 1
-      simp [field]
-    convert! (HasDerivAt.comp (↑x) (g _) f).comp_ofReal using 1
-    · ring
-    · exact mod_cast add_pos_of_pos_of_nonneg zero_lt_one (sq_nonneg x)
+    have h := (hinner.cpow_const (c := t + 1) (hslit x)).div_const (2 * (t + 1)) (hd := hu)
+    convert h.comp_ofReal using 1
+    rw [add_sub_cancel_right]
+    field [ht₁]
   · apply Continuous.intervalIntegrable
     refine continuous_ofReal.mul ?_
     apply Continuous.cpow (by fun_prop) continuous_const
-    intro a
-    norm_cast
-    exact ofReal_mem_slitPlane.2 <| add_pos_of_pos_of_nonneg one_pos <| sq_nonneg a
+    exact hslit
 
 theorem integral_mul_rpow_one_add_sq {t : ℝ} (ht : t ≠ -1) :
     (∫ x : ℝ in a..b, x * (↑1 + x ^ 2) ^ t) =
-      (↑1 + b ^ 2) ^ (t + 1) / (↑2 * (t + ↑1)) - (↑1 + a ^ 2) ^ (t + 1) / (↑2 * (t + ↑1)) := by
+      let hu := (mul_ne_zero (by norm_num : (2 : ℝ) ≠ 0) (mt add_eq_zero_iff_eq_neg.mp ht)).isUnit
+      Checked.div ((1 + b ^ 2) ^ (t + 1)) (2 * (t + 1)) hu -
+        Checked.div ((1 + a ^ 2) ^ (t + 1)) (2 * (t + 1)) hu := by
   have : ∀ x s : ℝ, (((↑1 + x ^ 2) ^ s : ℝ) : ℂ) = (1 + (x : ℂ) ^ 2) ^ (s : ℂ) := by
     intro x s
     norm_cast
     rw [ofReal_cpow, ofReal_add, ofReal_pow, ofReal_one]
     exact add_nonneg zero_le_one (sq_nonneg x)
-  rw [← ofReal_inj]
+  apply ofReal_injective
   convert! integral_mul_cpow_one_add_sq (_ : (t : ℂ) ≠ -1)
   · rw [← intervalIntegral.integral_ofReal]
     congr with x : 1
@@ -485,9 +592,9 @@ theorem integral_sin_pow :
     (∫ x in a..b, sin x ^ (n + 2)) =
       (sin a ^ (n + 1) * cos a - sin b ^ (n + 1) * cos b) / (n + 2) +
         (n + 1) / (n + 2) * ∫ x in a..b, sin x ^ n := by
-  field_simp
-  convert! eq_sub_iff_add_eq.mp (integral_sin_pow_aux n) using 1
-  ring
+  rw [div_mul_eq_mul_div₀, ← _root_.add_div]
+  apply (eq_div_iff (hb := (show 0 < (n : ℝ) + 2 by positivity).ne'.isUnit)).mpr
+  linear_combination integral_sin_pow_aux (a := a) (b := b) n
 
 @[simp]
 theorem integral_sin_sq : ∫ x in a..b, sin x ^ 2 = (sin a * cos a - sin b * cos b + b - a) / 2 := by
@@ -558,9 +665,9 @@ theorem integral_cos_pow :
     (∫ x in a..b, cos x ^ (n + 2)) =
       (cos b ^ (n + 1) * sin b - cos a ^ (n + 1) * sin a) / (n + 2) +
         (n + 1) / (n + 2) * ∫ x in a..b, cos x ^ n := by
-  field_simp
-  convert! eq_sub_iff_add_eq.mp (integral_cos_pow_aux n) using 1
-  ring
+  rw [div_mul_eq_mul_div₀, ← _root_.add_div]
+  apply (eq_div_iff (hb := (show 0 < (n : ℝ) + 2 by positivity).ne'.isUnit)).mpr
+  linear_combination integral_cos_pow_aux (a := a) (b := b) n
 
 @[simp]
 theorem integral_cos_sq : ∫ x in a..b, cos x ^ 2 = (cos b * sin b - cos a * sin a + b - a) / 2 := by
@@ -637,9 +744,11 @@ theorem integral_sin_pow_three :
 theorem integral_sin_pow_even_mul_cos_pow_even (m n : ℕ) :
     (∫ x in a..b, sin x ^ (2 * m) * cos x ^ (2 * n)) =
       ∫ x in a..b, ((1 - cos (2 * x)) / 2) ^ m * ((1 + cos (2 * x)) / 2) ^ n := by
-  simp [pow_mul, sin_sq, cos_sq, ← sub_sub]
-  field_simp
-  norm_num
+  apply integral_congr
+  intro x _
+  have hs : sin x ^ 2 = (1 - cos (2 * x)) / 2 := by rw [cos_two_mul_eq_one_sub]; ring
+  have hc : cos x ^ 2 = (1 + cos (2 * x)) / 2 := by rw [cos_two_mul]; ring
+  simp only [pow_mul, hs, hc]
 
 @[simp]
 theorem integral_sin_sq_mul_cos_sq :

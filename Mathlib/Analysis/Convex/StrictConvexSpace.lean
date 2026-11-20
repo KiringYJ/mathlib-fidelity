@@ -120,8 +120,8 @@ theorem StrictConvexSpace.of_norm_add_ne_two
   refine
     StrictConvexSpace.of_norm_combo_ne_one fun x y hx hy hne =>
       ⟨1 / 2, 1 / 2, one_half_pos.le, one_half_pos.le, add_halves _, ?_⟩
-  rw [← smul_add, norm_smul, Real.norm_of_nonneg one_half_pos.le, one_div, ← div_eq_inv_mul, Ne,
-    div_eq_one_iff_eq (two_ne_zero' ℝ)]
+  rw [← smul_add, norm_smul, Real.norm_of_nonneg one_half_pos.le, one_div₀, ← div_eq_inv_mul₀, Ne,
+    div_eq_one_iff_eq]
   exact h hx hy hne
 
 theorem StrictConvexSpace.of_pairwise_sphere_norm_ne_two
@@ -165,17 +165,19 @@ theorem norm_combo_lt_of_ne (hx : ‖x‖ ≤ r) (hy : ‖y‖ ≤ r) (hne : x �
 /-- In a strictly convex space, if `x` and `y` are not in the same ray, then `‖x + y‖ < ‖x‖ + ‖y‖`.
 -/
 theorem norm_add_lt_of_not_sameRay (h : ¬SameRay ℝ x y) : ‖x + y‖ < ‖x‖ + ‖y‖ := by
-  simp only [sameRay_iff_inv_norm_smul_eq, not_or, ← Ne.eq_def] at h
-  rcases h with ⟨hx, hy, hne⟩
-  rw [← norm_pos_iff] at hx hy
+  have hx₀ : x ≠ 0 := fun e ↦ h (e ▸ SameRay.zero_left _)
+  have hy₀ : y ≠ 0 := fun e ↦ h (e ▸ SameRay.zero_right _)
+  have hne := (sameRay_iff_inv_norm_smul_eq_of_ne hx₀ hy₀).not.mp h
+  have hx := norm_pos_iff.mpr hx₀
+  have hy := norm_pos_iff.mpr hy₀
   have hxy : 0 < ‖x‖ + ‖y‖ := add_pos hx hy
   have :=
     combo_mem_ball_of_ne (inv_norm_smul_mem_unitClosedBall x)
       (inv_norm_smul_mem_unitClosedBall y) hne (div_pos hx hxy) (div_pos hy hxy)
-      (by rw [← add_div, div_self hxy.ne'])
-  rwa [mem_ball_zero_iff, div_eq_inv_mul, div_eq_inv_mul, mul_smul, mul_smul,
+      (by rw [← add_div, div_self])
+  rwa [mem_ball_zero_iff, div_eq_inv_mul₀, div_eq_inv_mul₀, mul_smul, mul_smul,
     smul_inv_smul₀ (ha := hx.ne'.isUnit), smul_inv_smul₀ (ha := hy.ne'.isUnit), ← smul_add,
-    norm_smul, Real.norm_of_nonneg (inv_pos.2 hxy).le, ← div_eq_inv_mul, div_lt_one hxy] at this
+    norm_smul, Real.norm_of_nonneg (inv_pos.2 hxy).le, ← div_eq_inv_mul₀, div_lt_one hxy] at this
 
 theorem lt_norm_sub_of_not_sameRay (h : ¬SameRay ℝ x y) : ‖x‖ - ‖y‖ < ‖x - y‖ := by
   nth_rw 1 [← sub_add_cancel x y] at h ⊢
@@ -209,8 +211,8 @@ theorem not_sameRay_iff_abs_lt_norm_sub : ¬SameRay ℝ x y ↔ |‖x‖ - ‖y�
   sameRay_iff_norm_sub.not.trans <| ne_comm.trans (abs_norm_sub_norm_le _ _).lt_iff_ne.symm
 
 theorem norm_midpoint_lt_iff (h : ‖x‖ = ‖y‖) : ‖(1 / 2 : ℝ) • (x + y)‖ < ‖x‖ ↔ x ≠ y := by
-  rw [norm_smul, Real.norm_of_nonneg (one_div_nonneg.2 zero_le_two), ← inv_eq_one_div, ←
-    div_eq_inv_mul, div_lt_iff₀ (zero_lt_two' ℝ), mul_two, ← not_sameRay_iff_of_norm_eq h,
+  rw [norm_smul, Real.norm_of_nonneg (one_div_nonneg.2 zero_le_two), one_div₀, ←
+    div_eq_inv_mul₀, div_lt_iff₀ (zero_lt_two' ℝ), mul_two, ← not_sameRay_iff_of_norm_eq h,
     not_sameRay_iff_norm_add_lt, h]
 
 instance Real.instStrictConvexSpace : StrictConvexSpace ℝ ℝ where

@@ -68,14 +68,32 @@ section tsum
 
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] [CompleteSpace 𝕜] [NormSMulClass ℤ 𝕜]
 
+omit [CompleteSpace 𝕜] [NormSMulClass ℤ 𝕜] in
+lemma one_sub_pow_pnat_ne_zero_of_norm_lt_one {r : 𝕜} (hr : ‖r‖ < 1) (n : ℕ+) :
+    1 - r ^ (n : ℕ) ≠ 0 := by
+  intro h
+  have heq : r ^ (n : ℕ) = 1 := (sub_eq_zero.mp h).symm
+  have hnorm : ‖r ^ (n : ℕ)‖ < 1 := by
+    rw [norm_pow]
+    exact pow_lt_one₀ (norm_nonneg _) hr n.2.ne'
+  simp only [heq, norm_one, lt_self_iff_false] at hnorm
+
 omit [NormSMulClass ℤ 𝕜] in
 lemma summable_norm_pow_mul_geometric_div_one_sub (k : ℕ) {r : 𝕜} (hr : ‖r‖ < 1) :
-    Summable fun n : ℕ ↦ n ^ k * r ^ n / (1 - r ^ n) := by
-  simp only [div_eq_mul_one_div (_ * _ ^ _)]
-  apply Summable.mul_tendsto_const (c := 1 / (1 - 0))
-    (by simpa using! summable_norm_pow_mul_geometric_of_norm_lt_one k hr)
-  simpa only [Nat.cofinite_eq_atTop] using!
-   tendsto_const_nhds.div ((tendsto_pow_atTop_nhds_zero_of_norm_lt_one hr).const_sub 1) (by simp)
+    Summable fun n : ℕ+ ↦ Checked.div ((n : 𝕜) ^ k * r ^ (n : ℕ))
+      (1 - r ^ (n : ℕ)) (one_sub_pow_pnat_ne_zero_of_norm_lt_one hr n).isUnit := by
+  simp only [div_eq_mul_inv₀]
+  refine Summable.mul_tendsto_const (c := (1 : 𝕜)) ?_ ?_
+  · exact ((summable_norm_pow_mul_geometric_of_norm_lt_one k hr).comp_injective
+      PNat.coe_injective).congr (fun _ ↦ rfl)
+  have hpow : Tendsto (fun n : ℕ+ => r ^ (n : ℕ)) cofinite (𝓝 0) :=
+    (show Tendsto (fun n : ℕ => r ^ n) cofinite (𝓝 0) by
+      simpa only [Nat.cofinite_eq_atTop] using tendsto_pow_atTop_nhds_zero_of_norm_lt_one hr).comp
+        PNat.coe_injective.tendsto_cofinite
+  have hden : Tendsto (fun n : ℕ+ => 1 - r ^ (n : ℕ)) cofinite (𝓝 (1 : 𝕜)) := by
+    simpa only [sub_zero] using tendsto_const_nhds.sub hpow
+  simpa only [inv_one₀] using hden.inv₀
+    (h0 := fun n => (one_sub_pow_pnat_ne_zero_of_norm_lt_one hr n).isUnit) (ha := isUnit_one)
 
 private lemma summable_divisorsAntidiagonal_aux (k : ℕ) {r : 𝕜} (hr : ‖r‖ < 1) :
     Summable fun c : (n : ℕ+) × {x // x ∈ (n : ℕ).divisorsAntidiagonal} ↦
@@ -120,10 +138,14 @@ theorem tsum_prod_pow_eq_tsum_sigma (k : ℕ) {r : 𝕜} (hr : ‖r‖ < 1) :
       using Finset.sum_congr rfl fun i hi ↦ by rw [Nat.mul_div_cancel' (dvd_of_mem_divisors hi)]
 
 lemma tsum_pow_div_one_sub_eq_tsum_sigma {r : 𝕜} (hr : ‖r‖ < 1) (k : ℕ) :
-    ∑' n : ℕ+, n ^ k * r ^ (n : ℕ) / (1 - r ^ (n : ℕ)) = ∑' n : ℕ+, σ k n * r ^ (n : ℕ) := by
-  have (m : ℕ) [NeZero m] := tsum_geometric_of_norm_lt_one (ξ := r ^ m)
-    (by simpa using pow_lt_one₀ (by simp) hr (NeZero.ne _))
-  simp only [div_eq_mul_inv, ← this, ← tsum_mul_left, mul_assoc, ← _root_.pow_succ',
+    ∑' n : ℕ+, Checked.div ((n : 𝕜) ^ k * r ^ (n : ℕ)) (1 - r ^ (n : ℕ))
+      (one_sub_pow_pnat_ne_zero_of_norm_lt_one hr n).isUnit = ∑' n : ℕ+, σ k n * r ^ (n : ℕ) := by
+  have hgeom (m : ℕ+) : ∑' i : ℕ, (r ^ (m : ℕ)) ^ i =
+      Checked.inv (1 - r ^ (m : ℕ)) (one_sub_pow_pnat_ne_zero_of_norm_lt_one hr m).isUnit := by
+    apply tsum_geometric_of_norm_lt_one
+    rw [norm_pow]
+    exact pow_lt_one₀ (norm_nonneg _) hr m.2.ne'
+  simp only [div_eq_mul_inv₀, ← hgeom, ← tsum_mul_left, mul_assoc, ← _root_.pow_succ',
     ← fun (n : ℕ) ↦ tsum_pnat_eq_tsum_succ (f := fun m ↦ n ^ k * (r ^ n) ^ m)]
   have h00 := tsum_prod_pow_eq_tsum_sigma k hr
   rw [Summable.tsum_comm (by apply (summable_prod_mul_pow k hr).prod_symm)] at h00
@@ -135,12 +157,20 @@ lemma tendsto_zero_geometric_tsum_pnat {r : 𝕜} (hr : ‖r‖ < 1) :
     Tendsto (fun m : ℕ+ ↦ ∑' n : ℕ+, r ^ (n * m : ℕ)) atTop (𝓝 0) := by
   have h1 (m : ℕ+) : ‖r ^ (m : ℕ)‖ < 1 := by
     rwa [norm_pow, pow_lt_one_iff_of_nonneg (norm_nonneg _) (NeZero.ne _)]
-  have h2 (m : ℕ+) : ∑' n : ℕ+, r ^ (n * m : ℕ) = (1 - r ^ (m : ℕ))⁻¹ - 1 := by
+  have h2 (m : ℕ+) : ∑' n : ℕ+, r ^ (n * m : ℕ) =
+      Checked.inv (1 - r ^ (m : ℕ)) (one_sub_pow_pnat_ne_zero_of_norm_lt_one hr m).isUnit - 1 := by
     have := tsum_geometric_of_norm_lt_one (h1 m)
     rw [← tsum_zero_pnat_eq_tsum_nat (summable_geometric_of_norm_lt_one (h1 m) :)] at this
     simp_rw [← this, pow_zero, add_sub_cancel_left, mul_comm, pow_mul]
-  rw [funext h2, (by simp : 𝓝 (0 : 𝕜) = 𝓝 ((1 - 0)⁻¹ - 1)), tendsto_sub_const_iff,
-    tendsto_inv_iff₀ (by simp), tendsto_const_sub_iff]
-  exact (tendsto_pow_atTop_nhds_zero_of_norm_lt_one hr).comp <| tendsto_PNat_val_atTop_atTop
+  have hpow : Tendsto (fun m : ℕ+ ↦ r ^ (m : ℕ)) atTop (𝓝 0) :=
+    (tendsto_pow_atTop_nhds_zero_of_norm_lt_one hr).comp tendsto_PNat_val_atTop_atTop
+  have hden : Tendsto (fun m : ℕ+ => 1 - r ^ (m : ℕ)) atTop (𝓝 (1 : 𝕜)) := by
+    simpa only [sub_zero] using tendsto_const_nhds.sub hpow
+  have hinv := (hden.inv₀ (h0 := fun m => (one_sub_pow_pnat_ne_zero_of_norm_lt_one hr m).isUnit)
+    (ha := isUnit_one)).sub_const 1
+  have hlim : Tendsto (fun m : ℕ+ =>
+      Checked.inv (1 - r ^ (m : ℕ)) (one_sub_pow_pnat_ne_zero_of_norm_lt_one hr m).isUnit - 1)
+      atTop (𝓝 (0 : 𝕜)) := by simpa only [inv_one₀, sub_self] using hinv
+  exact hlim.congr fun m => (h2 m).symm
 
 end tsum

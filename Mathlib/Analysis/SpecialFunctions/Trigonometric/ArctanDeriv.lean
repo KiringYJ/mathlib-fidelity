@@ -12,6 +12,8 @@ public import Mathlib.Analysis.SpecialFunctions.Trigonometric.ComplexDeriv
 # Derivatives of the `tan` and `arctan` functions.
 
 Continuity and derivatives of the tangent and arctangent functions.
+The smoothness theorem on the open tangent domain is in
+`Mathlib.Analysis.SpecialFunctions.Trigonometric.Meromorphic`.
 -/
 
 public section
@@ -42,7 +44,7 @@ theorem hasStrictDerivAt_tan {x : ℝ} (h : cos x ≠ 0) :
       (continuous_toUnitsDomain.tendsto ⟨x, h⟩))
   have hD : (cos x * cos x - sin x * -sin x) /ₚ (h.isUnit.unit ^ 2) = 1 / cos x ^ 2 := by
     rw [mul_neg, sub_neg_eq_add, ← sq, ← sq, cos_sq_add_sin_sq]
-    show 1 /ₚ _ = 1 /ₚ _
+    change 1 /ₚ _ = 1 /ₚ _
     congr 1
     ext
     simp
@@ -50,8 +52,9 @@ theorem hasStrictDerivAt_tan {x : ℝ} (h : cos x ≠ 0) :
   exact key
 
 theorem hasDerivAt_tan {x : ℝ} (h : cos x ≠ 0) :
-    HasDerivAt (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y y.2) (1 / cos x ^ 2) ⟨x, h⟩ Subtype.val :=
-  (hasStrictDerivAt_tan h).hasDerivAt
+    HasDerivAt (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y y.2) (1 / cos x ^ 2) ⟨x, h⟩ Subtype.val := by
+  have hd := (hasStrictDerivAt_tan h).hasStrictFDerivAt.hasFDerivAt
+  simpa only [ContinuousLinearMap.toSpanSingleton_apply, one_smul] using hd.hasDerivAt
 
 /-- The absolute value of the tangent tends to infinity at a pole, as a function on its domain. -/
 theorem tendsto_abs_tan_of_cos_eq_zero {x : ℝ} (hx : cos x = 0) :
@@ -59,18 +62,18 @@ theorem tendsto_abs_tan_of_cos_eq_zero {x : ℝ} (hx : cos x = 0) :
   have A : sin x ≠ 0 := fun h => by simpa [*, sq] using sin_sq_add_cos_sq x
   have B : Tendsto cos (𝓝[≠] x) (𝓝[≠] 0) :=
     hx ▸ (hasDerivAt_cos x).tendsto_nhdsNE (neg_ne_zero.2 A)
-  have hcos : Tendsto (fun y : {y : ℝ // cos y ≠ 0} ↦
-      ((Units.mk0 |cos (y : ℝ)| (abs_ne_zero.2 y.2) : ℝˣ) : ℝ))
+  have hcos : Tendsto (fun y : {y : ℝ // cos y ≠ 0} ↦ |cos (y : ℝ)|)
       (comap Subtype.val (𝓝[≠] x)) (𝓝[>] 0) := by
     have : Tendsto (fun y : ℝ ↦ |y|) (𝓝[≠] 0) (𝓝[>] 0) := by
-      simpa only [Real.norm_eq_abs] using tendsto_norm_nhdsNE_zero
+      have hn : Tendsto (fun y : ℝ ↦ ‖y‖) (𝓝[≠] 0) (𝓝[>] 0) := tendsto_norm_nhdsNE_zero
+      exact hn.congr Real.norm_eq_abs
     exact (this.comp B).comp tendsto_comap
   have hsin : Tendsto (fun y : {y : ℝ // cos y ≠ 0} ↦ |sin (y : ℝ)|)
       (comap Subtype.val (𝓝[≠] x)) (𝓝 |sin x|) :=
     ((continuous_sin.abs.tendsto x).mono_left nhdsWithin_le_nhds).comp tendsto_comap
-  refine (hcos.inv_tendsto_nhdsGT_zero.atTop_mul_pos (abs_pos.2 A) hsin).congr fun y ↦ ?_
+  have hinv := hcos.fun_inv_tendsto_nhdsGT_zero (h0 := fun y ↦ (abs_ne_zero.2 y.2).isUnit)
+  refine (hinv.atTop_mul_pos (abs_pos.2 A) hsin).congr fun y ↦ ?_
   rw [tan_eq_sin_div_cos, abs_div, div_eq_inv_mul₀]
-  rfl
 
 theorem tendsto_abs_tan_atTop (k : ℤ) :
     Tendsto (fun y : {y : ℝ // cos y ≠ 0} ↦ |tan y y.2|)
@@ -81,6 +84,12 @@ theorem continuousAt_tan {x : ℝ} (hx : cos x ≠ 0) :
     ContinuousAt (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y y.2) ⟨x, hx⟩ :=
   continuous_tan.continuousAt
 
+/-- The tangent is analytic at every point of its domain, in the ambient coordinates. -/
+theorem analyticAt_tan {x : ℝ} (hx : cos x ≠ 0) :
+    AnalyticAt ℝ (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y.val y.2) ⟨x, hx⟩ Subtype.val :=
+  (analyticAt_sin.div analyticAt_cos hx.isUnit).comp_domain (g := toUnitsDomain)
+    (x := (⟨x, hx⟩ : {y : ℝ // cos y ≠ 0}))
+
 theorem differentiableAt_tan {x : ℝ} (hx : cos x ≠ 0) :
     DifferentiableAt ℝ (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y y.2) ⟨x, hx⟩ Subtype.val :=
   (hasDerivAt_tan hx).differentiableAt
@@ -88,14 +97,13 @@ theorem differentiableAt_tan {x : ℝ} (hx : cos x ≠ 0) :
 @[simp]
 theorem deriv_tan (x : ℝ) {hx : cos x ≠ 0} :
     deriv (fun y : {y : ℝ // cos y ≠ 0} ↦ tan y y.2) ⟨x, hx⟩ Subtype.val = 1 / cos x ^ 2 := by
-  apply (hasDerivAt_tan hx).deriv_of_mem_nhds Topology.IsEmbedding.subtypeVal
-  rw [Subtype.range_val]
-  exact (isOpen_ne_fun continuous_cos continuous_const).mem_nhds hx
+  have hdom : IsOpen {y : ℝ | cos y ≠ 0} := isOpen_ne_fun continuous_cos continuous_const
+  exact (hasDerivAt_tan hx).deriv hdom.isOpenEmbedding_subtypeVal
 
 /-- The tangent restricted to `(-(π / 2), π / 2)` has derivative `1 / cos x ^ 2`. -/
 theorem hasDerivAt_tan_of_mem_Ioo {x : ℝ} (h : x ∈ Ioo (-(π / 2) : ℝ) (π / 2)) :
     HasDerivAt (fun y : Ioo (-(π / 2) : ℝ) (π / 2) ↦ tan y (cos_pos_of_mem_Ioo y.2).ne')
-      (1 / cos x ^ 2) ⟨x, h⟩ Subtype.val := by
+      (Checked.div 1 (cos x ^ 2) ((cos_pos_of_mem_Ioo h).ne'.isUnit.pow 2)) ⟨x, h⟩ Subtype.val := by
   have he : Continuous fun y : Ioo (-(π / 2) : ℝ) (π / 2) ↦
       (⟨y, (cos_pos_of_mem_Ioo y.2).ne'⟩ : {y : ℝ // cos y ≠ 0}) :=
     continuous_subtype_val.subtype_mk _
@@ -107,16 +115,61 @@ theorem differentiableAt_tan_of_mem_Ioo {x : ℝ} (h : x ∈ Ioo (-(π / 2) : �
       ⟨x, h⟩ Subtype.val :=
   (hasDerivAt_tan_of_mem_Ioo h).differentiableAt
 
-theorem hasStrictDerivAt_arctan (x : ℝ) : HasStrictDerivAt arctan (1 / (1 + x ^ 2)) x := by
-  have A : cos (arctan x) ≠ 0 := (cos_arctan_pos x).ne'
-  simpa [cos_sq_arctan] using
-    tanPartialHomeomorph.hasStrictDerivAt_symm trivial (by simpa) (hasStrictDerivAt_tan A)
+private theorem arctan_deriv_contDiff (x : ℝ) :
+    HasStrictDerivAt arctan (1 / (1 + x ^ 2)) x ∧ ∀ n : WithTop ℕ∞, ContDiffAt ℝ n arctan x := by
+  let s := Ioo (-(π / 2) : ℝ) (π / 2)
+  let τ (y : s) : ℝ := tan y (cos_pos_of_mem_Ioo y.2).ne'
+  have hs : IsOpen s := isOpen_Ioo
+  have ha : Topology.IsOpenEmbedding arctan :=
+    hs.isOpenEmbedding_subtypeVal.comp tanHomeomorph.symm.isOpenEmbedding
+  let e := (ha.toOpenPartialHomeomorph arctan).symm
+  let F : ℝ → ℝ := e
+  have hF (y : s) : F y = τ y := by
+    have hy : arctan (τ y) = y.val := arctan_tan y.2.1 y.2.2
+    change (ha.toOpenPartialHomeomorph arctan).symm y.val = τ y
+    rw [← hy]
+    exact ha.toOpenPartialHomeomorph_left_inv arctan
+  let y : s := ⟨arctan x, arctan_mem_Ioo x⟩
+  let i (v : s) : {v : ℝ // cos v ≠ 0} := ⟨v, (cos_pos_of_mem_Ioo v.2).ne'⟩
+  have hi : Continuous i := continuous_subtype_val.subtype_mk _
+  have hcos : cos (arctan x) ≠ 0 := (cos_arctan_pos x).ne'
+  have hunit := hcos.isUnit.pow 2
+  let d : ℝ := Checked.div 1 (cos (arctan x) ^ 2) hunit
+  let L := ContinuousLinearMap.toSpanSingleton ℝ d
+  have hstrict : HasStrictFDerivAt (fun v : s ↦ F v) L y Subtype.val := by
+    rw [funext hF]
+    exact (hasStrictDerivAt_tan hcos).hasStrictFDerivAt.comp_tendsto i
+      (hi.continuousAt.tendsto.prodMap_nhds hi.continuousAt.tendsto)
+  have hpair : map (Prod.map (Subtype.val : s → ℝ) Subtype.val) (𝓝 (y, y)) =
+      𝓝 (arctan x, arctan x) := by
+    exact (hs.isOpenEmbedding_subtypeVal.prodMap hs.isOpenEmbedding_subtypeVal).map_nhds_eq (y, y)
+  have hstrictF : HasStrictFDerivAt F L (arctan x) := by
+    rw [hasStrictFDerivAt_iff_isLittleOTVS, ← hpair, Asymptotics.isLittleOTVS_map]
+    simpa only [Function.comp_def, id_eq, Prod.map_fst, Prod.map_snd] using hstrict.isLittleOTVS
+  have hd : HasStrictDerivAt F d (arctan x) := by
+    simpa only [L, ContinuousLinearMap.toSpanSingleton_apply, one_smul] using
+      hstrictF.hasStrictDerivAt
+  have hd₀ : d ≠ 0 := div_ne_zero one_ne_zero
+  constructor
+  · have hinv := e.hasStrictDerivAt_symm (mem_univ x) hd₀ hd
+    have hinv' : HasStrictDerivAt arctan d⁻¹ x := by
+      convert! hinv using 1
+    simpa only [d, one_div₀, inv_inv₀, cos_sq_arctan] using hinv'
+  · intro n
+    have hFdiff : ContDiffAt ℝ n F (arctan x) := by
+      refine contDiff_sin.contDiffAt.div contDiff_cos.contDiffAt ?_
+      filter_upwards [hs.mem_nhds (arctan_mem_Ioo x)] with v hv
+      exact ⟨(cos_pos_of_mem_Ioo hv).ne'.isUnit, hF ⟨v, hv⟩⟩
+    exact e.contDiffAt_symm_deriv hd₀ (mem_univ x) hd.hasDerivAt hFdiff
+
+theorem hasStrictDerivAt_arctan (x : ℝ) : HasStrictDerivAt arctan (1 / (1 + x ^ 2)) x :=
+  (arctan_deriv_contDiff x).1
 
 theorem hasDerivAt_arctan (x : ℝ) : HasDerivAt arctan (1 / (1 + x ^ 2)) x :=
   (hasStrictDerivAt_arctan x).hasDerivAt
 
-theorem hasDerivAt_arctan' (x : ℝ) : HasDerivAt arctan (1 + x ^ 2)⁻¹ x :=
-  one_div (1 + x ^ 2) ▸ hasDerivAt_arctan x
+theorem hasDerivAt_arctan' (x : ℝ) : HasDerivAt arctan (1 + x ^ 2)⁻¹ x := by
+  simpa only [one_div₀] using hasDerivAt_arctan x
 
 theorem differentiableAt_arctan (x : ℝ) : DifferentiableAt ℝ arctan x :=
   (hasDerivAt_arctan x).differentiableAt
@@ -124,15 +177,14 @@ theorem differentiableAt_arctan (x : ℝ) : DifferentiableAt ℝ arctan x :=
 theorem differentiable_arctan : Differentiable ℝ arctan :=
   differentiableAt_arctan
 
-@[simp]
+@[simp] theorem deriv_arctan_apply (x : ℝ) : deriv arctan x = 1 / (1 + x ^ 2) :=
+  (hasDerivAt_arctan x).deriv
+
 theorem deriv_arctan : deriv arctan = fun (x : ℝ) => 1 / (1 + x ^ 2) :=
-  funext fun x => (hasDerivAt_arctan x).deriv
+  funext deriv_arctan_apply
 
 theorem contDiff_arctan {n : WithTop ℕ∞} : ContDiff ℝ n arctan :=
-  contDiff_iff_contDiffAt.2 fun x =>
-    have : cos (arctan x) ≠ 0 := (cos_arctan_pos x).ne'
-    tanPartialHomeomorph.contDiffAt_symm_deriv (by simpa) trivial (hasDerivAt_tan this)
-      (contDiffAt_tan.2 this)
+  contDiff_iff_contDiffAt.2 fun x => (arctan_deriv_contDiff x).2 n
 
 end Real
 

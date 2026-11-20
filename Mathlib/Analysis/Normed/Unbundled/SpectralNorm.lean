@@ -99,14 +99,18 @@ variable [SeminormedRing R]
 /-- The function `ℕ → ℝ` sending `n` to `‖ p.coeff n ‖^(1/(p.natDegree - n : ℝ))`, if
   `n < p.natDegree`, or to `0` otherwise. -/
 def spectralValueTerms (p : R[X]) : ℕ → ℝ := fun n : ℕ ↦
-  if n < p.natDegree then ‖p.coeff n‖ ^ (1 / (p.natDegree - n : ℝ)) else 0
+  if hn : n < p.natDegree then
+    ‖p.coeff n‖ ^ Checked.div 1 (p.natDegree - n : ℝ)
+      (sub_pos.mpr (Nat.cast_lt.mpr hn)).ne'.isUnit
+  else 0
 
 theorem spectralValueTerms_of_lt_natDegree (p : R[X]) {n : ℕ} (hn : n < p.natDegree) :
-    spectralValueTerms p n = ‖p.coeff n‖ ^ (1 / (p.natDegree - n : ℝ)) := by
-  simp [spectralValueTerms, ite_eq_left hn]
+    spectralValueTerms p n = ‖p.coeff n‖ ^ Checked.div 1 (p.natDegree - n : ℝ)
+      (sub_pos.mpr (Nat.cast_lt.mpr hn)).ne'.isUnit := by
+  rw [spectralValueTerms, dite_eq_left hn]
 
 theorem spectralValueTerms_of_natDegree_le (p : R[X]) {n : ℕ} (hn : p.natDegree ≤ n) :
-    spectralValueTerms p n = 0 := by simp only [spectralValueTerms, ite_eq_right (not_lt.mpr hn)]
+    spectralValueTerms p n = 0 := by simp only [spectralValueTerms, dite_eq_right (not_lt.mpr hn)]
 
 /-- The spectral value of a polynomial in `R[X]`, where `R` is a seminormed ring. One motivation
   for the spectral value: if the norm on `R` is nonarchimedean, and if a monic polynomial
@@ -115,10 +119,13 @@ theorem spectralValueTerms_of_natDegree_le (p : R[X]) {n : ℕ} (hn : p.natDegre
 def spectralValue (p : R[X]) : ℝ := iSup (spectralValueTerms p)
 
 /-- The range of `spectralValue_terms p` is a finite set. -/
-theorem spectralValueTerms_finite_range (p : R[X]) : (Set.range (spectralValueTerms p)).Finite :=
-  Set.Finite.subset (Set.Finite.union (Set.finite_singleton 0) <|
-    (Set.finite_Iio p.natDegree).image (fun n ↦ ‖p.coeff n‖ ^ (1 / (p.natDegree - n : ℝ)))) <| by
-      aesop (add simp [Set.range_subset_iff, spectralValueTerms])
+theorem spectralValueTerms_finite_range (p : R[X]) : (Set.range (spectralValueTerms p)).Finite := by
+  refine ((Set.finite_singleton 0).union
+    ((Set.finite_Iio p.natDegree).image (spectralValueTerms p))).subset ?_
+  rintro _ ⟨n, rfl⟩
+  by_cases hn : n < p.natDegree
+  · exact Or.inr ⟨n, hn, rfl⟩
+  · exact Or.inl (spectralValueTerms_of_natDegree_le p (le_of_not_gt hn))
 
 open List in
 /-- The sequence `spectralValue_terms p` is bounded above. -/
@@ -140,37 +147,31 @@ variable [Nontrivial R]
 
 /-- The polynomial `X - r` has spectral value `‖ r ‖`. -/
 theorem spectralValue_X_sub_C (r : R) : spectralValue (X - C r) = ‖r‖ := by
+  have hterm : spectralValueTerms (X - C r) 0 = ‖r‖ := by
+    rw [spectralValueTerms_of_lt_natDegree _ (by simp : 0 < (X - C r).natDegree)]
+    simp
   rw [spectralValue]
-  unfold spectralValueTerms
-  simp only [natDegree_X_sub_C, lt_one_iff, coeff_sub, cast_one, one_div]
-  suffices (⨆ n : ℕ, ite (n = 0) ‖r‖ 0) = ‖r‖ by
-    rw [← this]
-    apply congr_arg
-    ext n
-    by_cases hn : n = 0
-    · rw [ite_eq_left hn, ite_eq_left hn, hn, cast_zero, sub_zero, coeff_X_zero, coeff_C_zero,
-        zero_sub, norm_neg, inv_one, rpow_one]
-    · rw [ite_eq_right hn, ite_eq_right hn]
-  · apply ciSup_eq_of_forall_le_of_forall_lt_exists_gt (fun n ↦ ?_)
-      (fun _ hx ↦ ⟨0, by simp only [ite_true, hx]⟩)
-    split_ifs
-    · exact le_refl _
-    · exact norm_nonneg _
+  refine le_antisymm (ciSup_le fun n ↦ ?_) ?_
+  · cases n with
+    | zero => exact hterm.le
+    | succ n =>
+      rw [spectralValueTerms_of_natDegree_le _ (by simp)]
+      exact norm_nonneg _
+  · rw [← hterm]
+    exact le_ciSup (spectralValueTerms_bddAbove (X - C r)) 0
 
 /-- The polynomial `X ^ n` has spectral value `0`. -/
 theorem spectralValue_X_pow (n : ℕ) : spectralValue (X ^ n : R[X]) = 0 := by
-  rw [spectralValue]
-  unfold spectralValueTerms
-  simp_rw [coeff_X_pow n, natDegree_X_pow]
-  convert! ciSup_const using 2
-  · ext m
-    by_cases hmn : m < n
-    · rw [ite_eq_left hmn, rpow_eq_zero_iff_of_nonneg (norm_nonneg _),
-        ite_eq_right (_root_.ne_of_lt hmn), norm_zero, one_div, ne_eq, inv_eq_zero,
-        ← cast_sub (le_of_lt hmn), cast_eq_zero, Nat.sub_eq_zero_iff_le]
-      exact ⟨Eq.refl _, not_le_of_gt hmn⟩
-    · rw [ite_eq_right hmn]
-  · infer_instance
+  have hterm (m : ℕ) : spectralValueTerms (X ^ n : R[X]) m = 0 := by
+    by_cases hmn : m < (X ^ n : R[X]).natDegree
+    · have hmn' : m < n := by simpa only [natDegree_X_pow] using hmn
+      have hpos : 0 < ((X ^ n : R[X]).natDegree - m : ℝ) :=
+        sub_pos.mpr (Nat.cast_lt.mpr hmn)
+      rw [spectralValueTerms_of_lt_natDegree _ hmn, coeff_X_pow,
+        ite_eq_right (_root_.ne_of_lt hmn'), norm_zero, zero_rpow (one_div_pos.mpr hpos).ne']
+    · exact spectralValueTerms_of_natDegree_le _ (le_of_not_gt hmn)
+  change (⨆ m, spectralValueTerms (X ^ n : R[X]) m) = 0
+  simp only [hterm, Real.iSup_const_zero]
 
 end Seminormed
 
@@ -209,14 +210,14 @@ theorem spectralValue_le_one_iff {P : R[X]} (hP : Monic P) :
     · have : spectralValueTerms P n ≤ 1 := le_ciSup (spectralValueTerms_bddAbove P) n |>.trans h
       contrapose! this
       simp only [spectralValueTerms_of_lt_natDegree _ hPn]
-      exact Real.one_lt_rpow this (by simp [hPn])
+      exact Real.one_lt_rpow this (one_div_pos.mpr (sub_pos.mpr (Nat.cast_lt.mpr hPn)))
   · apply ciSup_le (fun n ↦ ?_)
-    rw [spectralValueTerms]
-    split_ifs with hn
-    · apply Real.rpow_le_one (norm_nonneg _) (h n)
-      rw [one_div_nonneg, sub_nonneg, Nat.cast_le]
-      exact le_of_lt hn
-    · exact zero_le_one
+    rcases lt_or_ge n P.natDegree with hn | hn
+    · rw [spectralValueTerms_of_lt_natDegree _ hn]
+      exact Real.rpow_le_one (norm_nonneg _) (h n)
+        (one_div_pos.mpr (sub_pos.mpr (Nat.cast_lt.mpr hn))).le
+    · rw [spectralValueTerms_of_natDegree_le _ hn]
+      exact zero_le_one
 
 end NormedDivisionRing
 
@@ -241,21 +242,19 @@ theorem norm_root_le_spectralValue {f : AlgebraNorm K L} (hf_pm : IsPowMul f)
   · rw [hx0]; exact spectralValue_nonneg p
   · by_contra h_ge
     have hn_lt (n : ℕ) (hn : n < p.natDegree) : ‖p.coeff n‖ < f x ^ (p.natDegree - n) := by
-      have hexp : (‖p.coeff n‖ ^ (1 / (p.natDegree - n : ℝ))) ^ (p.natDegree - n) =
-          ‖p.coeff n‖ := by
-        rw [← rpow_natCast, ← rpow_mul (norm_nonneg _), mul_comm, rpow_mul (norm_nonneg _),
-          rpow_natCast, ← cast_sub (le_of_lt hn), one_div,
-          pow_rpow_inv_natCast (norm_nonneg _) (_root_.ne_of_gt (tsub_pos_of_lt hn))]
-      have h_base : ‖p.coeff n‖ ^ (1 / (p.natDegree - n : ℝ)) < f x := by
+      have hpos : 0 < (p.natDegree - n : ℝ) := sub_pos.mpr (Nat.cast_lt.mpr hn)
+      have hprod : (1 / (p.natDegree - n : ℝ)) * ((p.natDegree - n : ℕ) : ℝ) = 1 := by
+        rw [Nat.cast_sub hn.le, div_mul_cancel₀]
+      have hexp : spectralValueTerms p n ^ (p.natDegree - n) = ‖p.coeff n‖ := by
+        rw [spectralValueTerms_of_lt_natDegree _ hn, ← rpow_natCast, ← rpow_mul (norm_nonneg _),
+          hprod, Real.rpow_one]
+      have h_base : spectralValueTerms p n < f x := by
         rw [spectralValue, iSup, not_le, Set.Finite.csSup_lt_iff (spectralValueTerms_finite_range p)
           (Set.range_nonempty (spectralValueTerms p))] at h_ge
-        have h_rg : ‖p.coeff n‖ ^ (1 / (p.natDegree - n : ℝ)) ∈
-            Set.range (spectralValueTerms p) := by
-          use n; simp only [spectralValueTerms, ite_eq_left hn]
-        exact h_ge (‖p.coeff n‖₊ ^ (1 / (p.natDegree - n : ℝ))) h_rg
+        exact h_ge _ ⟨n, rfl⟩
       rw [← hexp, ← rpow_natCast, ← rpow_natCast]
-      gcongr
-      exact cast_pos.mpr (tsub_pos_of_lt hn)
+      exact Real.rpow_lt_rpow (spectralValueTerms_nonneg _ _) h_base
+        (Nat.cast_pos.mpr (tsub_pos_of_lt hn))
     have h_deg : 0 < p.natDegree := natDegree_pos_of_monic_of_aeval_eq_zero hp hx
     have h_lt : f ((Finset.range p.natDegree).sum fun i : ℕ ↦ p.coeff i • x ^ i) <
         f (x ^ p.natDegree) := by
@@ -312,7 +311,8 @@ theorem max_norm_root_eq_spectralValue [DecidableEq L] {f : AlgebraNorm K L} (hf
     · rw [spectralValueTerms_of_lt_natDegree _ hm]
       have h : 0 < (p.natDegree - m : ℝ) := by rw [sub_pos, Nat.cast_lt]; exact hm
       rw [← rpow_le_rpow_iff (rpow_nonneg (norm_nonneg _) _) h_le h, ← rpow_mul (norm_nonneg _),
-        one_div_mul_cancel (ne_of_gt h), rpow_one, ← Nat.cast_sub (le_of_lt hm), rpow_natCast]
+        one_div_mul_cancel (ha := h.ne'.isUnit), rpow_one, ← Nat.cast_sub (le_of_lt hm),
+        rpow_natCast]
       have hps : card s = p.natDegree := by
         rw [← natDegree_map (algebraMap K L), ← mapAlg_eq_map, hp,
           natDegree_multiset_prod_X_sub_C_eq_card]
@@ -360,7 +360,8 @@ theorem max_norm_root_eq_spectralValue [DecidableEq L] {f : AlgebraNorm K L} (hf
         · exact apply_nonneg _ _
       exact le_trans this (pow_le_pow_left₀ (apply_nonneg _ _)
         (le_trans (by rw [ite_eq_left hyx]) (le_ciSup h_bdd y)) _)
-    · simp only [spectralValueTerms, ite_eq_right hm, h_le]
+    · rw [spectralValueTerms_of_natDegree_le _ (le_of_not_gt hm)]
+      exact h_le
 
 end BddBySpectralValue
 
@@ -972,14 +973,16 @@ theorem spectralNorm_pow_natDegree_eq_prod_roots (x : L) {E : Type*}
 /-- For `x : L` with minimal polynomial `f(X) := X^n + a_{n-1}X^{n-1} + ... + a_0` over `K`,
   the spectral norm of `x` is equal to `‖a_0‖^(1/(degree(f(X))))`. -/
 theorem spectralNorm_eq_norm_coeff_zero_rpow (x : L) :
-    spectralNorm K L x = ‖(minpoly K x).coeff 0‖ ^ (1 / (minpoly K x).natDegree : ℝ) := by
+    spectralNorm K L x = ‖(minpoly K x).coeff 0‖ ^ Checked.div 1 ((minpoly K x).natDegree : ℝ)
+      (Nat.cast_ne_zero.mpr
+        (minpoly.natDegree_pos (Algebra.IsIntegral.isIntegral x)).ne').isUnit := by
   set E := (mapAlg K L (minpoly K x)).SplittingField
   have hspl : Splits (mapAlg K E (minpoly K x)) :=
     IsSplittingField.IsScalarTower.splits (K := L) E (minpoly K x)
   have : Algebra.IsAlgebraic L E :=
     IsSplittingField.IsScalarTower.isAlgebraic E (mapAlg K L (minpoly K x))
   have : Algebra.IsAlgebraic K E := Algebra.IsAlgebraic.trans K L E
-  rw [one_div, Real.eq_rpow_inv (spectralNorm_nonneg x) (norm_nonneg ((minpoly K x).coeff 0)),
+  rw [one_div₀, Real.eq_rpow_inv (spectralNorm_nonneg x) (norm_nonneg ((minpoly K x).coeff 0)),
     Real.rpow_natCast, @spectralNorm.eq_of_tower K _ E,
     ← @spectralNorm_extends K _ L _ _ ((minpoly K x).coeff 0),
     @spectralNorm.eq_of_tower K _ E _ _ L, ← spectralMulAlgNorm_def,

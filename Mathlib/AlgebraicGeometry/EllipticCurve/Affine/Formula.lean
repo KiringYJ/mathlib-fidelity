@@ -189,8 +189,9 @@ the value `0`.
 This depends on `W`, and has argument order: `x₁`, `x₂`, `y₁`, `y₂`. -/
 noncomputable def slope (x₁ x₂ y₁ y₂ : F) : F :=
   if hx : x₁ = x₂ then if hy : y₁ = W.negY x₂ y₂ then 0
-    else (3 * x₁ ^ 2 + 2 * W.a₂ * x₁ + W.a₄ - W.a₁ * y₁) / (y₁ - W.negY x₂ y₂)
-  else (y₁ - y₂) / (x₁ - x₂)
+    else (3 * x₁ ^ 2 + 2 * W.a₂ * x₁ + W.a₄ - W.a₁ * y₁) /ₚ
+      Field.selectedUnit (y₁ - W.negY x₂ y₂) (sub_ne_zero.mpr hy).isUnit
+  else (y₁ - y₂) /ₚ Field.selectedUnit (x₁ - x₂) (sub_ne_zero.mpr hx).isUnit
 
 @[simp]
 lemma slope_of_Y_eq {x₁ x₂ y₁ y₂ : F} (hx : x₁ = x₂) (hy : y₁ = W.negY x₂ y₂) :
@@ -201,17 +202,17 @@ lemma slope_of_Y_eq {x₁ x₂ y₁ y₂ : F} (hx : x₁ = x₂) (hy : y₁ = W.
 lemma slope_of_Y_ne' {x₂ y₁ y₂ : F} (hy : ¬y₁ = -y₂ - W.a₁ * x₂ - W.a₃) :
     W.slope x₂ x₂ y₁ y₂ =
       (3 * x₂ ^ 2 + 2 * W.a₂ * x₂ + W.a₄ - W.a₁ * y₁) / (y₁ - (-y₂ - W.a₁ * x₂ - W.a₃)) := by
-  simp [slope, hy]
+  simp [slope, hy, Checked.div]
 
 lemma slope_of_Y_ne {x₁ x₂ y₁ y₂ : F} (hx : x₁ = x₂) (hy : y₁ ≠ W.negY x₂ y₂) :
     W.slope x₁ x₂ y₁ y₂ =
       (3 * x₁ ^ 2 + 2 * W.a₂ * x₁ + W.a₄ - W.a₁ * y₁) / (y₁ - W.negY x₂ y₂) := by
-  rw [slope, dite_eq_left hx, dite_eq_right hy]
+  rw [slope, dite_eq_left hx, dite_eq_right hy, Field.selectedUnit_eq, Checked.div]
 
 @[simp]
 lemma slope_of_X_ne {x₁ x₂ y₁ y₂ : F} (hx : x₁ ≠ x₂) :
     W.slope x₁ x₂ y₁ y₂ = (y₁ - y₂) / (x₁ - x₂) := by
-  rw [slope, dite_eq_right hx]
+  rw [slope, dite_eq_right hx, Field.selectedUnit_eq, Checked.div]
 
 lemma slope_of_Y_ne_eq_evalEval {x₁ x₂ y₁ y₂ : F} (h₁ : W.Equation x₁ y₁) (h₂ : W.Equation x₂ y₂)
     (hx : x₁ = x₂) (hy : y₁ ≠ W.negY x₂ y₂) :

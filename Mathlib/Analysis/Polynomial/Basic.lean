@@ -142,149 +142,206 @@ theorem abs_tendsto_atBot_iff : Tendsto (|P.eval ·|) atBot atTop ↔ 0 < P.degr
 
 end PolynomialAtBot
 
-section PolynomialDivAtTop
+section PolynomialDiv
 
-theorem isEquivalent_atTop_div :
-    (fun x => eval x P / eval x Q) ~[atTop] fun x =>
-      P.leadingCoeff / Q.leadingCoeff * x ^ (P.natDegree - Q.natDegree : ℤ) := by
-  by_cases hP : P = 0
-  · simp [hP, IsEquivalent.refl]
-  by_cases hQ : Q = 0
-  · simp [hQ, IsEquivalent.refl]
-  refine
-    (P.isEquivalent_atTop_lead.symm.div Q.isEquivalent_atTop_lead.symm).symm.trans
-      (EventuallyEq.isEquivalent ((eventually_gt_atTop 0).mono fun x hx => ?_))
-  simp [← div_mul_div_comm, zpow_sub₀ hx.ne.symm]
+omit [OrderTopology 𝕜] in
+private theorem isEquivalent_div_lead {ι : Type*} {l : Filter ι} {u : ι → 𝕜}
+    {hQ : IsUnit Q.leadingCoeff} (hu : ∀ᶠ x in l, IsUnit (u x))
+    (hq : ∀ x, Q.eval (u x) ≠ 0)
+    (hz : ∀ x, (P.natDegree : ℤ) - Q.natDegree < 0 → IsUnit (u x))
+    (hp' : (fun x ↦ P.eval (u x)) ~[l] fun x ↦ P.leadingCoeff * u x ^ P.natDegree)
+    (hq' : (fun x ↦ Q.eval (u x)) ~[l] fun x ↦ Q.leadingCoeff * u x ^ Q.natDegree) :
+    (fun x ↦ Checked.div (P.eval (u x)) (Q.eval (u x)) (hq x).isUnit) ~[l]
+      fun x ↦ P.leadingCoeff / Q.leadingCoeff *
+        Checked.zpow (u x) ((P.natDegree : ℤ) - Q.natDegree) (hz x) := by
+  let v := (Subtype.val : {x // IsUnit (u x)} → ι)
+  have hr : Set.range v ∈ l := hu.mono fun x hx ↦ ⟨⟨x, hx⟩, rfl⟩
+  rw [← map_comap_of_mem hr, isEquivalent_map]
+  refine ((hp'.comp_tendsto (tendsto_comap (f := v))).div
+    (hv := fun x ↦ (hq (v x)).isUnit) (hw := fun x ↦ hQ.mul (x.2.pow _))
+    (hq'.comp_tendsto tendsto_comap)).trans ?_
+  apply EventuallyEq.isEquivalent
+  exact Eventually.of_forall fun x ↦ by
+    simp [v, zpow_sub₀ x.2.ne_zero, div_mul_div_comm₀]
+
+/-- At infinity the quotient is equivalent to the ratio of the leading monomials,
+on the common domain of the quotient and the integer power. -/
+theorem isEquivalent_atTop_div {hQ : IsUnit Q.leadingCoeff} :
+    (fun x : {x : 𝕜 // Q.eval x ≠ 0 ∧ ((P.natDegree : ℤ) - Q.natDegree < 0 → IsUnit x)} ↦
+      Checked.div (P.eval x.val) (Q.eval x.val) x.2.1.isUnit) ~[comap Subtype.val atTop]
+      fun x ↦ P.leadingCoeff / Q.leadingCoeff *
+        Checked.zpow (x : 𝕜) ((P.natDegree : ℤ) - Q.natDegree) x.2.2 :=
+  isEquivalent_div_lead P Q (tendsto_comap.eventually ((eventually_gt_atTop 0).mono
+    fun _ hx ↦ hx.ne'.isUnit)) (fun x ↦ x.2.1) (fun x ↦ x.2.2)
+    (P.isEquivalent_atTop_lead.comp_tendsto tendsto_comap)
+    (Q.isEquivalent_atTop_lead.comp_tendsto tendsto_comap)
+
+theorem isEquivalent_atBot_div {hQ : IsUnit Q.leadingCoeff} :
+    (fun x : {x : 𝕜 // Q.eval x ≠ 0 ∧ ((P.natDegree : ℤ) - Q.natDegree < 0 → IsUnit x)} ↦
+      Checked.div (P.eval x.val) (Q.eval x.val) x.2.1.isUnit) ~[comap Subtype.val atBot]
+      fun x ↦ P.leadingCoeff / Q.leadingCoeff *
+        Checked.zpow (x : 𝕜) ((P.natDegree : ℤ) - Q.natDegree) x.2.2 :=
+  isEquivalent_div_lead P Q (tendsto_comap.eventually ((eventually_lt_atBot 0).mono
+    fun _ hx ↦ hx.ne.isUnit)) (fun x ↦ x.2.1) (fun x ↦ x.2.2)
+    (P.isEquivalent_atBot_lead.comp_tendsto tendsto_comap)
+    (Q.isEquivalent_atBot_lead.comp_tendsto tendsto_comap)
+
+private theorem map_comap_subtype_of_eventually {α : Type*} {l : Filter α} {p r : α → Prop}
+    (h : ∀ x, r x → p x) (hr : ∀ᶠ x in l, r x) :
+    Filter.map (fun x : Subtype r ↦ (⟨x, h x x.2⟩ : Subtype p)) (comap Subtype.val l) =
+      comap Subtype.val l := by
+  let i := fun x : Subtype r ↦ (⟨x, h x x.2⟩ : Subtype p)
+  change Filter.map i _ = _
+  have heq : comap (Subtype.val : Subtype r → α) l = comap i (comap Subtype.val l) :=
+    (comap_comap (m := i) (n := Subtype.val)).symm
+  rw [heq]
+  apply map_comap_of_mem
+  filter_upwards [tendsto_comap.eventually hr] with x hx
+  exact ⟨⟨x, hx⟩, Subtype.ext rfl⟩
+
+private theorem div_tendsto_atTop_iff_lead {hQ : IsUnit Q.leadingCoeff} {L : Filter 𝕜}
+    (hL : ∀ {f g : {x // Q.eval x ≠ 0 ∧ IsUnit x} → 𝕜},
+      f ~[comap Subtype.val atTop] g →
+      (Tendsto f (comap Subtype.val atTop) L ↔ Tendsto g (comap Subtype.val atTop) L)) :
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atTop) L ↔
+    Tendsto (fun x : {x : 𝕜 // IsUnit x} ↦ P.leadingCoeff / Q.leadingCoeff *
+      Checked.zpow (x : 𝕜) ((P.natDegree : ℤ) - Q.natDegree) fun _ ↦ x.2)
+      (comap Subtype.val atTop) L := by
+  have hr : ∀ᶠ x in atTop, Q.eval x ≠ 0 ∧ IsUnit x :=
+    (Q.eventually_atTop_not_isRoot (leadingCoeff_ne_zero.mp hQ.ne_zero)).and
+      ((eventually_gt_atTop 0).mono fun _ hx ↦ hx.ne'.isUnit)
+  rw [← map_comap_subtype_of_eventually (fun _ h ↦ h.1) hr,
+    ← map_comap_subtype_of_eventually (fun _ h ↦ h.2) hr, tendsto_map'_iff, tendsto_map'_iff]
+  apply hL
+  exact isEquivalent_div_lead P Q (Eventually.of_forall fun x ↦ x.2.2)
+    (fun x ↦ x.2.1) (fun x _ ↦ x.2.2) (P.isEquivalent_atTop_lead.comp_tendsto tendsto_comap)
+    (Q.isEquivalent_atTop_lead.comp_tendsto tendsto_comap)
 
 theorem div_tendsto_atTop_zero_of_degree_lt (hdeg : P.degree < Q.degree) :
-    Tendsto (fun x => eval x P / eval x Q) atTop (𝓝 0) := by
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 0) := by
   by_cases hP : P = 0
-  · simp [hP]
-  rw [← natDegree_lt_natDegree_iff hP] at hdeg
-  refine (isEquivalent_atTop_div P Q).symm.tendsto_nhds ?_
-  rw [← mul_zero]
-  refine (tendsto_zpow_atTop_zero ?_).const_mul _
-  lia
+  · subst P
+    simpa using (tendsto_const_nhds (x := (0 : 𝕜)))
+  have hQ := (leadingCoeff_ne_zero.mpr (ne_zero_of_degree_gt hdeg)).isUnit
+  apply (div_tendsto_atTop_iff_lead P Q (hQ := hQ) fun h ↦ h.tendsto_nhds_iff).2
+  exact tendsto_const_mul_zpow_atTop_zero (by have := natDegree_lt_natDegree hP hdeg; omega)
 
 theorem div_tendsto_atTop_zero_iff_degree_lt (hQ : Q ≠ 0) :
-    Tendsto (fun x => eval x P / eval x Q) atTop (𝓝 0) ↔ P.degree < Q.degree := by
-  refine ⟨fun h => ?_, div_tendsto_atTop_zero_of_degree_lt P Q⟩
-  by_cases hPQ : P.leadingCoeff / Q.leadingCoeff = 0
-  · simp only [div_eq_mul_inv, inv_eq_zero, mul_eq_zero] at hPQ
-    rcases hPQ with hP0 | hQ0
-    · rw [leadingCoeff_eq_zero.1 hP0, degree_zero]
-      exact bot_lt_iff_ne_bot.2 fun hQ' => hQ (degree_eq_bot.1 hQ')
-    · exact absurd (leadingCoeff_eq_zero.1 hQ0) hQ
-  · have := (isEquivalent_atTop_div P Q).tendsto_nhds h
-    rw [tendsto_const_mul_zpow_atTop_nhds_iff hPQ] at this
-    rcases this with h | h
-    · exact absurd h.2 hPQ
-    · rw [sub_lt_iff_lt_add, zero_add, Int.ofNat_lt] at h
-      exact degree_lt_degree h.1
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 0) ↔ P.degree < Q.degree := by
+  refine ⟨fun h ↦ ?_, div_tendsto_atTop_zero_of_degree_lt P Q⟩
+  by_cases hP : P = 0
+  · simpa [hP] using (bot_lt_iff_ne_bot.mpr (degree_ne_bot.mpr hQ))
+  have hu := (leadingCoeff_ne_zero.mpr hQ).isUnit
+  have hc : P.leadingCoeff / Q.leadingCoeff ≠ 0 := div_ne_zero (leadingCoeff_ne_zero.mpr hP)
+  have hlim := (div_tendsto_atTop_iff_lead P Q (hQ := hu) fun e ↦ e.tendsto_nhds_iff).1 h
+  rcases (tendsto_const_mul_zpow_atTop_nhds_iff hc).1 hlim with h | h
+  · exact (hc h.2).elim
+  · exact degree_lt_degree (by omega)
 
-theorem div_tendsto_atTop_leadingCoeff_div_of_degree_eq (hdeg : P.degree = Q.degree) :
-    Tendsto (fun x => eval x P / eval x Q) atTop (𝓝 <| P.leadingCoeff / Q.leadingCoeff) := by
-  refine (isEquivalent_atTop_div P Q).symm.tendsto_nhds ?_
-  rw [show (P.natDegree : ℤ) = Q.natDegree by simp [hdeg, natDegree]]
-  simp
+theorem div_tendsto_atTop_leadingCoeff_div_of_degree_eq (hdeg : P.degree = Q.degree)
+    {hQ : IsUnit Q.leadingCoeff} :
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atTop) (𝓝 (P.leadingCoeff / Q.leadingCoeff)) := by
+  apply (div_tendsto_atTop_iff_lead P Q (hQ := hQ) fun h ↦ h.tendsto_nhds_iff).2
+  simpa [natDegree_eq_natDegree hdeg] using
+    (tendsto_const_nhds (x := P.leadingCoeff / Q.leadingCoeff))
 
 theorem div_tendsto_atTop_of_degree_gt' (hdeg : Q.degree < P.degree)
-    (hpos : 0 < P.leadingCoeff / Q.leadingCoeff) :
-    Tendsto (fun x => eval x P / eval x Q) atTop atTop := by
-  have hQ : Q ≠ 0 := fun h => by
-    simp only [h, div_zero, leadingCoeff_zero] at hpos
-    exact hpos.false
-  rw [← natDegree_lt_natDegree_iff hQ] at hdeg
-  refine (isEquivalent_atTop_div P Q).symm.tendsto_atTop ?_
-  apply Tendsto.const_mul_atTop hpos
-  apply tendsto_zpow_atTop_atTop
-  lia
+    {hQ : IsUnit Q.leadingCoeff} (hpos : 0 < P.leadingCoeff / Q.leadingCoeff) :
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atTop) atTop := by
+  have hd := natDegree_lt_natDegree (leadingCoeff_ne_zero.mp hQ.ne_zero) hdeg
+  apply (div_tendsto_atTop_iff_lead P Q (hQ := hQ) fun h ↦ h.tendsto_atTop_iff).2
+  exact ((tendsto_zpow_atTop_atTop (by omega : 0 < (P.natDegree : ℤ) - Q.natDegree)).comp
+    tendsto_comap).const_mul_atTop hpos
 
-theorem div_tendsto_atTop_of_degree_gt (hdeg : Q.degree < P.degree) (hQ : Q ≠ 0)
+theorem div_tendsto_atTop_of_degree_gt (hdeg : Q.degree < P.degree) {hQ : IsUnit Q.leadingCoeff}
     (hnng : 0 ≤ P.leadingCoeff / Q.leadingCoeff) :
-    Tendsto (fun x => eval x P / eval x Q) atTop atTop :=
-  have ratio_pos : 0 < P.leadingCoeff / Q.leadingCoeff :=
-    lt_of_le_of_ne hnng
-      (div_ne_zero (fun h => ne_zero_of_degree_gt hdeg <| leadingCoeff_eq_zero.mp h) fun h =>
-          hQ <| leadingCoeff_eq_zero.mp h).symm
-  div_tendsto_atTop_of_degree_gt' P Q hdeg ratio_pos
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atTop) atTop :=
+  div_tendsto_atTop_of_degree_gt' P Q hdeg (hnng.lt_of_ne' (div_ne_zero
+    (leadingCoeff_ne_zero.mpr (ne_zero_of_degree_gt hdeg))))
 
 theorem div_tendsto_atBot_of_degree_gt' (hdeg : Q.degree < P.degree)
-    (hneg : P.leadingCoeff / Q.leadingCoeff < 0) :
-    Tendsto (fun x => eval x P / eval x Q) atTop atBot := by
-  have hQ : Q ≠ 0 := fun h => by
-    simp only [h, div_zero, leadingCoeff_zero] at hneg
-    exact hneg.false
-  rw [← natDegree_lt_natDegree_iff hQ] at hdeg
-  refine (isEquivalent_atTop_div P Q).symm.tendsto_atBot ?_
-  apply Tendsto.const_mul_atTop_of_neg hneg
-  apply tendsto_zpow_atTop_atTop
-  lia
+    {hQ : IsUnit Q.leadingCoeff} (hneg : P.leadingCoeff / Q.leadingCoeff < 0) :
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atTop) atBot := by
+  have hd := natDegree_lt_natDegree (leadingCoeff_ne_zero.mp hQ.ne_zero) hdeg
+  apply (div_tendsto_atTop_iff_lead P Q (hQ := hQ) fun h ↦ h.tendsto_atBot_iff).2
+  exact ((tendsto_zpow_atTop_atTop (by omega : 0 < (P.natDegree : ℤ) - Q.natDegree)).comp
+    tendsto_comap).const_mul_atTop_of_neg hneg
 
-theorem div_tendsto_atBot_of_degree_gt (hdeg : Q.degree < P.degree) (hQ : Q ≠ 0)
+theorem div_tendsto_atBot_of_degree_gt (hdeg : Q.degree < P.degree) {hQ : IsUnit Q.leadingCoeff}
     (hnps : P.leadingCoeff / Q.leadingCoeff ≤ 0) :
-    Tendsto (fun x => eval x P / eval x Q) atTop atBot :=
-  have ratio_neg : P.leadingCoeff / Q.leadingCoeff < 0 :=
-    lt_of_le_of_ne hnps
-      (div_ne_zero (fun h => ne_zero_of_degree_gt hdeg <| leadingCoeff_eq_zero.mp h) fun h =>
-        hQ <| leadingCoeff_eq_zero.mp h)
-  div_tendsto_atBot_of_degree_gt' P Q hdeg ratio_neg
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atTop) atBot :=
+  div_tendsto_atBot_of_degree_gt' P Q hdeg (hnps.lt_of_ne (div_ne_zero
+    (leadingCoeff_ne_zero.mpr (ne_zero_of_degree_gt hdeg))))
 
 theorem abs_div_tendsto_atTop_atTop_of_degree_gt (hdeg : Q.degree < P.degree) (hQ : Q ≠ 0) :
-    Tendsto (fun x => |eval x P / eval x Q|) atTop atTop := by
-  by_cases! h : 0 ≤ P.leadingCoeff / Q.leadingCoeff
-  · exact tendsto_abs_atTop_atTop.comp (P.div_tendsto_atTop_of_degree_gt Q hdeg hQ h)
-  · exact tendsto_abs_atBot_atTop.comp (P.div_tendsto_atBot_of_degree_gt Q hdeg hQ h.le)
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ |Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit|)
+      (comap Subtype.val atTop) atTop := by
+  have hu := (leadingCoeff_ne_zero.mpr hQ).isUnit
+  rcases le_total 0 (P.leadingCoeff / Q.leadingCoeff) with h | h
+  · exact tendsto_abs_atTop_atTop.comp (P.div_tendsto_atTop_of_degree_gt Q hdeg h)
+  · exact tendsto_abs_atBot_atTop.comp (P.div_tendsto_atBot_of_degree_gt Q hdeg h)
 
-end PolynomialDivAtTop
-
-section PolynomialDivAtBot
-
-theorem isEquivalent_atBot_div :
-    (fun x ↦ P.eval x / Q.eval x) ~[atBot] fun x ↦
-      P.leadingCoeff / Q.leadingCoeff * x ^ (P.natDegree - Q.natDegree : ℤ) := by
-  by_cases hP : P = 0
-  · simp [hP, IsEquivalent.refl]
-  by_cases hQ : Q = 0
-  · simp [hQ, IsEquivalent.refl]
-  refine
-    (P.isEquivalent_atBot_lead.symm.div Q.isEquivalent_atBot_lead.symm).symm.trans
-      (EventuallyEq.isEquivalent ((eventually_lt_atBot 0).mono fun x hx => ?_))
-  simp [← div_mul_div_comm, zpow_sub₀ hx.ne]
+omit [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [OrderTopology 𝕜] in
+private theorem tendsto_div_comp_neg_X {l l' L : Filter 𝕜} {f : 𝕜 → 𝕜}
+    (hn : Tendsto (fun x : 𝕜 ↦ -x) l l')
+    (h : Tendsto (fun x : {x // (Q.comp (-X)).eval x ≠ 0} ↦
+      f (Checked.div ((P.comp (-X)).eval x.val) ((Q.comp (-X)).eval x.val) x.2.isUnit))
+      (comap Subtype.val l') L) :
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ f (Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit))
+      (comap Subtype.val l) L := by
+  let i := fun x : {x // Q.eval x ≠ 0} ↦
+    (⟨-(x : 𝕜), by simpa using x.2⟩ : {x // (Q.comp (-X)).eval x ≠ 0})
+  have hi : Tendsto i (comap Subtype.val l) (comap Subtype.val l') :=
+    tendsto_comap_iff.mpr (hn.comp tendsto_comap)
+  simpa [i, Function.comp_def] using h.comp hi
 
 theorem div_tendsto_atBot_zero_of_degree_lt (hdeg : P.degree < Q.degree) :
-    Tendsto (fun x ↦ eval x P / eval x Q) atBot (𝓝 0) := by
-  rw [← P.degree_comp_neg_X, ← Q.degree_comp_neg_X] at hdeg
-  convert! (div_tendsto_atTop_zero_of_degree_lt _ _ hdeg).comp tendsto_neg_atBot_atTop using 2
-  simp
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atBot) (𝓝 0) := by
+  apply tendsto_div_comp_neg_X P Q (f := id) tendsto_neg_atBot_atTop
+  exact div_tendsto_atTop_zero_of_degree_lt _ _ (by simpa using hdeg)
 
 theorem div_tendsto_atBot_zero_iff_degree_lt (hQ : Q ≠ 0) :
-    Tendsto (fun x ↦ eval x P / eval x Q) atBot (𝓝 0) ↔ P.degree < Q.degree := by
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atBot) (𝓝 0) ↔ P.degree < Q.degree := by
   refine ⟨fun h ↦ ?_, div_tendsto_atBot_zero_of_degree_lt P Q⟩
   rw [← P.degree_comp_neg_X, ← Q.degree_comp_neg_X]
-  replace hQ : Q.comp (-X) ≠ 0 := by
-    rw [Ne, comp_eq_zero_iff]
-    simp [hQ]
-  rw [← div_tendsto_atTop_zero_iff_degree_lt _ _ hQ]
-  convert! h.comp tendsto_neg_atTop_atBot using 2
-  simp
+  apply (div_tendsto_atTop_zero_iff_degree_lt _ _ (by simp [comp_eq_zero_iff, hQ])).1
+  apply tendsto_div_comp_neg_X _ _ (f := id) tendsto_neg_atTop_atBot
+  let T (p q : 𝕜[X]) := Tendsto
+    (fun x : {x // q.eval x ≠ 0} ↦ Checked.div (p.eval x.val) (q.eval x.val) x.2.isUnit)
+    (comap Subtype.val atBot) (𝓝 0)
+  change T ((P.comp (-X)).comp (-X)) ((Q.comp (-X)).comp (-X))
+  simpa only [comp_neg_X_comp_neg_X] using (show T P Q from h)
 
-theorem div_tendsto_atBot_leadingCoeff_div_of_degree_eq (hdeg : P.degree = Q.degree) :
-    Tendsto (fun x ↦ eval x P / eval x Q) atBot (𝓝 (P.leadingCoeff / Q.leadingCoeff)) := by
-  refine (isEquivalent_atBot_div P Q).symm.tendsto_nhds ?_
-  simp [natDegree_eq_natDegree hdeg]
+theorem div_tendsto_atBot_leadingCoeff_div_of_degree_eq (hdeg : P.degree = Q.degree)
+    {hQ : IsUnit Q.leadingCoeff} :
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit)
+      (comap Subtype.val atBot) (𝓝 (P.leadingCoeff / Q.leadingCoeff)) := by
+  refine (isEquivalent_div_lead P Q (hQ := hQ)
+    (tendsto_comap.eventually ((eventually_lt_atBot 0).mono fun _ hx ↦ hx.ne.isUnit))
+    (fun x ↦ x.2) (fun _ hz ↦ False.elim (by simp [natDegree_eq_natDegree hdeg] at hz))
+    (P.isEquivalent_atBot_lead.comp_tendsto tendsto_comap)
+    (Q.isEquivalent_atBot_lead.comp_tendsto tendsto_comap)).symm.tendsto_nhds ?_
+  simpa [natDegree_eq_natDegree hdeg] using
+    (tendsto_const_nhds (x := P.leadingCoeff / Q.leadingCoeff))
 
 theorem abs_div_tendsto_atBot_atTop_of_degree_gt (hdeg : Q.degree < P.degree) (hQ : Q ≠ 0) :
-    Tendsto (fun x ↦ |eval x P / eval x Q|) atBot atTop := by
-  rw [← P.degree_comp_neg_X, ← Q.degree_comp_neg_X] at hdeg
-  replace hQ : Q.comp (-X) ≠ 0 := by
-    rw [Ne, comp_eq_zero_iff]
-    simp [hQ]
-  convert! (abs_div_tendsto_atTop_atTop_of_degree_gt _ _ hdeg hQ).comp tendsto_neg_atBot_atTop
-    using 2
-  simp
+    Tendsto (fun x : {x // Q.eval x ≠ 0} ↦ |Checked.div (P.eval x.val) (Q.eval x.val) x.2.isUnit|)
+      (comap Subtype.val atBot) atTop := by
+  apply tendsto_div_comp_neg_X P Q (f := abs) tendsto_neg_atBot_atTop
+  exact abs_div_tendsto_atTop_atTop_of_degree_gt _ _ (by simpa using hdeg)
+    (by simp [comp_eq_zero_iff, hQ])
 
-end PolynomialDivAtBot
+end PolynomialDiv
 
 theorem isLittleO_atTop_of_degree_lt (h : P.degree < Q.degree) : P.eval =o[atTop] Q.eval := by
   by_cases hp : P = 0
@@ -307,7 +364,8 @@ theorem isBigO_atTop_of_degree_le (h : P.degree ≤ Q.degree) : P.eval =O[atTop]
       mem_of_superset (eventually_atTop_not_isRoot Q hq) fun x h h' ↦ absurd h' h
     rcases le_iff_lt_or_eq.mp h with h | h
     · exact isBigO_of_div_tendsto_nhds hPQ 0 (div_tendsto_atTop_zero_of_degree_lt P Q h)
-    · exact isBigO_of_div_tendsto_nhds hPQ _ (div_tendsto_atTop_leadingCoeff_div_of_degree_eq P Q h)
+    · exact isBigO_of_div_tendsto_nhds hPQ _ (div_tendsto_atTop_leadingCoeff_div_of_degree_eq P Q h
+        (hQ := (leadingCoeff_ne_zero.mpr hq).isUnit))
 
 theorem isBigO_atBot_of_degree_le (h : P.degree ≤ Q.degree) : P.eval =O[atBot] Q.eval := by
   rw [← P.degree_comp_neg_X, ← Q.degree_comp_neg_X] at h

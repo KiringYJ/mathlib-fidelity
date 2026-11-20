@@ -418,7 +418,7 @@ theorem average_congr (h : f =ᵐ[μ] g) : ⨍ x, f x ∂μ = ⨍ x, g x ∂μ :
   simp only [average_eq', integral_smul_measure, integral_congr_ae h]
 
 theorem setAverage_congr (h : s =ᵐ[μ] t) : ⨍ x in s, f x ∂μ = ⨍ x in t, f x ∂μ := by
-  simp only [setAverage_eq', restrict_congr_set h, measure_congr h]
+  simp only [setAverage_eq', restrict_congr_set h]
 
 theorem setAverage_congr_fun (hs : MeasurableSet s) (h : ∀ᵐ x ∂μ, x ∈ s → f x = g x) :
     ⨍ x in s, f x ∂μ = ⨍ x in s, g x ∂μ := by
@@ -491,8 +491,13 @@ theorem average_mem_openSegment_compl_self [IsFiniteMeasure μ] {f : α → E} {
       (measure_ne_top _ _) hfi.integrableOn hfi.integrableOn
 
 @[simp] lemma average_count [Module ℚ≥0 E] [CompleteSpace E] [MeasurableSingletonClass α]
-    [Fintype α] (f : α → E) : ⨍ a, f a ∂.count = 𝔼 a, f a := by
-  simp [average, Finset.expect, ← NNRat.cast_smul_eq_nnqsmul ℝ]
+    [Fintype α] [Nonempty α] (f : α → E) : ⨍ a, f a ∂.count = 𝔼 a, f a := by
+  simp only [average, count_univ, ENat.card_eq_coe_fintype_card, ENat.toENNReal_coe,
+    integral_smul_measure, toReal_natCast, ne_eq, Nat.cast_eq_zero, Fintype.card_ne_zero,
+    not_false_eq_true, toReal_inv_of_toReal_ne_zero, integral_count, Finset.expect,
+    Finset.card_univ]
+  rw [← NNRat.cast_smul_eq_nnqsmul ℝ]
+  simp only [NNRat.cast_divNat, Nat.cast_one, one_div₀]
 
 section PartialOrder
 variable [PartialOrder E] [IsOrderedAddMonoid E] [IsOrderedModule ℝ E] [ClosedIciTopology E]

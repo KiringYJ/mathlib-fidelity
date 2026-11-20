@@ -46,17 +46,23 @@ If `a : ℂ` has norm smaller than one, then `circleAverage (log ‖· - a‖) 0
 -/
 @[simp]
 theorem circleAverage_log_norm_sub_const₀ (h : ‖a‖ < 1) : circleAverage (log ‖· - a‖) 0 1 = 0 := by
+  let u (z : sphere (0 : ℂ) |(1 : ℝ)|) :=
+    Checked.inv z.val (by
+      simpa only [sub_zero] using isUnit_sub_center_of_mem_sphere (c := 0) (R := 1) isUnit_one z)
   calc circleAverage (log ‖· - a‖) 0 1
-  _ = circleAverage (log ‖1 - ·⁻¹ * a‖) 0 1 := by
-    apply circleAverage_congr_sphere
-    intro z hz
-    simp_all only [abs_one, mem_sphere_iff_norm, sub_zero]
+  _ = circleAverageOn (fun z : sphere (0 : ℂ) |(1 : ℝ)| ↦ log ‖z.val - a‖) :=
+    circleAverageOn_restrict.symm
+  _ = circleAverageOn (fun z ↦ log ‖1 - u z * a‖) := by
     congr 1
-    have : z ≠ 0 := fun h ↦ by simp [h] at hz
-    calc ‖z - a‖
-    _ = ‖z⁻¹ * (z - a)‖ := by simp [hz]
-    _ = ‖1 - z⁻¹ * a‖ := by field_simp
+    funext z
+    congr 1
+    have hz : ‖z.val‖ = 1 := by simpa only [abs_one, mem_sphere_iff_norm, sub_zero] using z.2
+    have hu : IsUnit z.val := (norm_ne_zero_iff.mp (hz.symm ▸ one_ne_zero)).isUnit
+    calc ‖z.val - a‖
+    _ = ‖u z * (z.val - a)‖ := by simp [u, hz]
+    _ = ‖1 - u z * a‖ := by simp [u, mul_sub, inv_mul_cancel₀]
   _ = 0 := by
+    change circleAverageOn (fun z ↦ (fun x : ℂ ↦ log ‖1 - x * a‖) (u z)) = 0
     rw [circleAverage_zero_one_congr_inv (f := fun x ↦ log ‖1 - x * a‖),
       InnerProductSpace.HarmonicOnNhd.circleAverage_eq, zero_mul, sub_zero,
       CStarRing.norm_of_mem_unitary (unitary ℂ).one_mem, log_one]
@@ -111,9 +117,8 @@ theorem circleAverage_log_norm_sub_const₁ (h : ‖a‖ = 1) :
   -- Observing that the problem is rotation invariant, we rotate by an angle of `ζ = - arg a` and
   -- reduce the problem to the case where `a = 1`. The integral can then be evaluated by a direct
   -- computation.
-  simp only [circleAverage, mul_inv_rev, smul_eq_mul, mul_eq_zero, inv_eq_zero, OfNat.ofNat_ne_zero,
-    or_false]
-  right
+  suffices (∫ x in 0..2 * π, log ‖circleMap 0 1 x - a‖) = 0 by simp [circleAverage, this]
+  have ha : IsUnit a := (norm_ne_zero_iff.mp (by rw [h]; exact one_ne_zero)).isUnit
   obtain ⟨ζ, hζ⟩ : ∃ ζ, a⁻¹ = circleMap 0 1 ζ := by simp [Set.exists_range_iff.1, h]
   calc ∫ x in 0..(2 * π), log ‖circleMap 0 1 x - a‖
   _ = ∫ x in 0..(2 * π), log ‖(circleMap 0 1 ζ) * (circleMap 0 1 x - a)‖ := by
@@ -121,7 +126,7 @@ theorem circleAverage_log_norm_sub_const₁ (h : ‖a‖ = 1) :
   _ = ∫ x in 0..(2 * π), log ‖circleMap 0 1 (ζ + x) - (circleMap 0 1 ζ) * a‖ := by
     simp [mul_sub, circleMap, add_mul, Complex.exp_add]
   _ = ∫ x in 0..(2 * π), log ‖circleMap 0 1 (ζ + x) - 1‖ := by
-    simp [← hζ, inv_mul_cancel₀ (by aesop : a ≠ 0)]
+    simp [← hζ, inv_mul_cancel₀]
   _ = ∫ x in 0..(2 * π), log ‖circleMap 0 1 x - 1‖ := by
     have : Function.Periodic (log ‖circleMap 0 1 · - 1‖) (2 * π) :=
       fun x ↦ by simp [periodic_circleMap 0 1 x]
@@ -142,7 +147,7 @@ theorem circleAverage_log_norm_sub_const₁ (h : ‖a‖ = 1) :
       rw [sin_sq_add_cos_sq]
       norm_num
     _ = 2 - 2 * cos (2 * (x / 2)) := by
-      rw [← mul_div_assoc]
+      rw [← mul_div_assoc₀]
       simp
     _ = 4 - 4 * cos (x / 2) ^ 2 := by
       rw [cos_two_mul]
@@ -222,7 +227,7 @@ theorem circleAverage_log_norm_sub_const_eq_log_radius_add_posLog (hR : R ≠ 0)
         true_and]
       apply Set.Subsingleton.finite
       intro z₁ hz₁ z₂ hz₂
-      simp_all only [ne_eq, abs_one, mem_sphere_iff_norm, sub_zero, Set.mem_sdiff,
+      simp_all only [abs_one, mem_sphere_iff_norm, sub_zero, Set.mem_sdiff,
         Set.mem_ofPred_eq, Decidable.not_not]
       rw [add_eq_zero_iff_eq_neg.1 hz₁.2, add_eq_zero_iff_eq_neg.1 hz₂.2]
     filter_upwards [this] with z hz
@@ -236,7 +241,7 @@ theorem circleAverage_log_norm_sub_const_eq_log_radius_add_posLog (hR : R ≠ 0)
     congr 1
     rcases hR.lt_or_gt with h | h
     · simp [abs_of_neg h]
-    · rw [abs_of_pos h]
+    · simp only [abs_of_pos h]
 
 /--
 Trivial corollary of

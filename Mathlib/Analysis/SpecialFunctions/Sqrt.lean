@@ -44,28 +44,38 @@ noncomputable def sqPartialHomeomorph : OpenPartialHomeomorph ℝ ℝ where
   continuousOn_toFun := (continuous_pow 2).continuousOn
   continuousOn_invFun := continuousOn_id.sqrt
 
+theorem isUnit_two_mul_sqrt {x : ℝ} (hx : 0 < x) : IsUnit (2 * √x) :=
+  (mul_pos two_pos (sqrt_pos.2 hx)).ne'.isUnit
+
 theorem deriv_sqrt_aux {x : ℝ} (hx : x ≠ 0) :
-    HasStrictDerivAt (√·) (1 / (2 * √x)) x ∧ ∀ n, ContDiffAt ℝ n (√·) x := by
+    HasStrictDerivAt (√·) (if h : 0 < x then Checked.div 1 (2 * √x) (isUnit_two_mul_sqrt h)
+      else 0) x ∧ ∀ n, ContDiffAt ℝ n (√·) x := by
   rcases hx.lt_or_gt with hx | hx
-  · rw [sqrt_eq_zero_of_nonpos hx.le, mul_zero, div_zero]
+  · rw [dite_eq_right (not_lt_of_gt hx)]
     have : (√·) =ᶠ[𝓝 x] fun _ => 0 := (gt_mem_nhds hx).mono fun x hx => sqrt_eq_zero_of_nonpos hx.le
     exact
       ⟨(hasStrictDerivAt_const x (0 : ℝ)).congr_of_eventuallyEq this.symm, fun n =>
         contDiffAt_const.congr_of_eventuallyEq this⟩
-  · have : ↑2 * √x ^ (2 - 1) ≠ 0 := by simp [(sqrt_pos.2 hx).ne', @two_ne_zero ℝ]
+  · have hunit := isUnit_two_mul_sqrt hx
+    have hpow : HasStrictDerivAt (fun y : ℝ ↦ y ^ 2) (2 * √x) (√x) := by
+      simpa using hasStrictDerivAt_pow 2 (√x)
     constructor
-    · simpa using! sqPartialHomeomorph.hasStrictDerivAt_symm hx this (hasStrictDerivAt_pow 2 _)
-    · exact fun n => sqPartialHomeomorph.contDiffAt_symm_deriv this hx (hasDerivAt_pow 2 (√x))
+    · rw [dite_eq_left hx, one_div₀]
+      exact sqPartialHomeomorph.hasStrictDerivAt_symm hx hunit.ne_zero hpow
+    · exact fun n => sqPartialHomeomorph.contDiffAt_symm_deriv hunit.ne_zero hx hpow.hasDerivAt
         (contDiffAt_id.pow 2)
 
-theorem hasStrictDerivAt_sqrt {x : ℝ} (hx : x ≠ 0) : HasStrictDerivAt (√·) (1 / (2 * √x)) x :=
+theorem hasStrictDerivAt_sqrt {x : ℝ} (hx : x ≠ 0) :
+    HasStrictDerivAt (√·) (if h : 0 < x then Checked.div 1 (2 * √x) (isUnit_two_mul_sqrt h)
+      else 0) x :=
   (deriv_sqrt_aux hx).1
 
 @[fun_prop]
 theorem contDiffAt_sqrt {x : ℝ} {n : WithTop ℕ∞} (hx : x ≠ 0) : ContDiffAt ℝ n (√·) x :=
   (deriv_sqrt_aux hx).2 n
 
-theorem hasDerivAt_sqrt {x : ℝ} (hx : x ≠ 0) : HasDerivAt (√·) (1 / (2 * √x)) x :=
+theorem hasDerivAt_sqrt {x : ℝ} (hx : x ≠ 0) :
+    HasDerivAt (√·) (if h : 0 < x then Checked.div 1 (2 * √x) (isUnit_two_mul_sqrt h) else 0) x :=
   (hasStrictDerivAt_sqrt hx).hasDerivAt
 
 end Real
@@ -77,26 +87,31 @@ section deriv
 variable {f : ℝ → ℝ} {s : Set ℝ} {f' x : ℝ}
 
 theorem HasDerivWithinAt.sqrt (hf : HasDerivWithinAt f f' s x) (hx : f x ≠ 0) :
-    HasDerivWithinAt (fun y => √(f y)) (f' / (2 * √(f x))) s x := by
-  simpa only [(· ∘ ·), div_eq_inv_mul, mul_one] using!
-    (hasDerivAt_sqrt hx).comp_hasDerivWithinAt x hf
+    HasDerivWithinAt (fun y => √(f y))
+      ((if h : 0 < f x then Checked.div 1 (2 * √(f x)) (isUnit_two_mul_sqrt h) else 0) * f') s x :=
+  (hasDerivAt_sqrt hx).comp_hasDerivWithinAt (coord' := id) x hf
 
 theorem HasDerivAt.sqrt (hf : HasDerivAt f f' x) (hx : f x ≠ 0) :
-    HasDerivAt (fun y => √(f y)) (f' / (2 * √(f x))) x := by
-  simpa only [(· ∘ ·), div_eq_inv_mul, mul_one] using! (hasDerivAt_sqrt hx).comp x hf
+    HasDerivAt (fun y => √(f y))
+      ((if h : 0 < f x then Checked.div 1 (2 * √(f x)) (isUnit_two_mul_sqrt h) else 0) * f') x :=
+  (hasDerivAt_sqrt hx).comp (coord' := id) x hf
 
 theorem HasStrictDerivAt.sqrt (hf : HasStrictDerivAt f f' x) (hx : f x ≠ 0) :
-    HasStrictDerivAt (fun t => √(f t)) (f' / (2 * √(f x))) x := by
-  simpa only [(· ∘ ·), div_eq_inv_mul, mul_one] using! (hasStrictDerivAt_sqrt hx).comp x hf
+    HasStrictDerivAt (fun t => √(f t))
+      ((if h : 0 < f x then Checked.div 1 (2 * √(f x)) (isUnit_two_mul_sqrt h) else 0) * f') x :=
+  (hasStrictDerivAt_sqrt hx).comp (coord' := id) x hf
 
 theorem derivWithin_sqrt (hf : DifferentiableWithinAt ℝ f s x) (hx : f x ≠ 0)
     (hxs : UniqueDiffWithinAt ℝ s x) :
-    derivWithin (fun x => √(f x)) s x = derivWithin f s x / (2 * √(f x)) :=
+    derivWithin (fun x => √(f x)) s x =
+      (if h : 0 < f x then Checked.div 1 (2 * √(f x)) (isUnit_two_mul_sqrt h) else 0) *
+        derivWithin f s x :=
   (hf.hasDerivWithinAt.sqrt hx).derivWithin hxs
 
 @[simp]
 theorem deriv_sqrt (hf : DifferentiableAt ℝ f x) (hx : f x ≠ 0) :
-    deriv (fun x => √(f x)) x = deriv f x / (2 * √(f x)) :=
+    deriv (fun x => √(f x)) x =
+      (if h : 0 < f x then Checked.div 1 (2 * √(f x)) (isUnit_two_mul_sqrt h) else 0) * deriv f x :=
   (hf.hasDerivAt.sqrt hx).deriv
 
 end deriv
@@ -107,15 +122,18 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] {f : E → ℝ} 
   {s : Set E} {x : E} {f' : StrongDual ℝ E}
 
 theorem HasFDerivAt.sqrt (hf : HasFDerivAt f f' x) (hx : f x ≠ 0) :
-    HasFDerivAt (fun y => √(f y)) ((1 / (2 * √(f x))) • f') x :=
+    HasFDerivAt (fun y => √(f y))
+      ((if h : 0 < f x then Checked.div 1 (2 * √(f x)) (isUnit_two_mul_sqrt h) else 0) • f') x :=
   (hasDerivAt_sqrt hx).comp_hasFDerivAt x hf
 
 theorem HasStrictFDerivAt.sqrt (hf : HasStrictFDerivAt f f' x) (hx : f x ≠ 0) :
-    HasStrictFDerivAt (fun y => √(f y)) ((1 / (2 * √(f x))) • f') x :=
+    HasStrictFDerivAt (fun y => √(f y))
+      ((if h : 0 < f x then Checked.div 1 (2 * √(f x)) (isUnit_two_mul_sqrt h) else 0) • f') x :=
   (hasStrictDerivAt_sqrt hx).comp_hasStrictFDerivAt x hf
 
 theorem HasFDerivWithinAt.sqrt (hf : HasFDerivWithinAt f f' s x) (hx : f x ≠ 0) :
-    HasFDerivWithinAt (fun y => √(f y)) ((1 / (2 * √(f x))) • f') s x :=
+    HasFDerivWithinAt (fun y => √(f y))
+      ((if h : 0 < f x then Checked.div 1 (2 * √(f x)) (isUnit_two_mul_sqrt h) else 0) • f') s x :=
   (hasDerivAt_sqrt hx).comp_hasFDerivWithinAt x hf
 
 @[fun_prop]
@@ -138,12 +156,16 @@ theorem Differentiable.sqrt (hf : Differentiable ℝ f) (hs : ∀ x, f x ≠ 0) 
 
 theorem fderivWithin_sqrt (hf : DifferentiableWithinAt ℝ f s x) (hx : f x ≠ 0)
     (hxs : UniqueDiffWithinAt ℝ s x) :
-    fderivWithin ℝ (fun x => √(f x)) s x = (1 / (2 * √(f x))) • fderivWithin ℝ f s x :=
+    fderivWithin ℝ (fun x => √(f x)) s x =
+      (if h : 0 < f x then Checked.div 1 (2 * √(f x)) (isUnit_two_mul_sqrt h) else 0) •
+        fderivWithin ℝ f s x :=
   (hf.hasFDerivWithinAt.sqrt hx).fderivWithin hxs
 
 @[simp]
 theorem fderiv_sqrt (hf : DifferentiableAt ℝ f x) (hx : f x ≠ 0) :
-    fderiv ℝ (fun x => √(f x)) x = (1 / (2 * √(f x))) • fderiv ℝ f x :=
+    fderiv ℝ (fun x => √(f x)) x =
+      (if h : 0 < f x then Checked.div 1 (2 * √(f x)) (isUnit_two_mul_sqrt h) else 0) •
+        fderiv ℝ f x :=
   (hf.hasFDerivAt.sqrt hx).fderiv
 
 @[fun_prop]

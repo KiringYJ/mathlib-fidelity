@@ -32,7 +32,7 @@ namespace Complex
 
 /-- The complex sine function is everywhere strictly differentiable, with the derivative `cos x`. -/
 theorem hasStrictDerivAt_sin (x : ℂ) : HasStrictDerivAt sin (cos x) x := by
-  simp only [cos, div_eq_mul_inv]
+  simp only [cos, div_eq_mul_inv₀]
   convert!
     ((((hasStrictDerivAt_id x).fun_neg.mul_const I).cexp.sub
               ((hasStrictDerivAt_id x).mul_const I).cexp).mul_const
@@ -85,7 +85,7 @@ theorem deriv_sin : deriv sin = cos :=
 /-- The complex cosine function is everywhere strictly differentiable, with the derivative
 `-sin x`. -/
 theorem hasStrictDerivAt_cos (x : ℂ) : HasStrictDerivAt cos (-sin x) x := by
-  simp only [sin, div_eq_mul_inv, neg_mul_eq_neg_mul]
+  simp only [sin, div_eq_mul_inv₀, neg_mul_eq_neg_mul]
   convert!
     (((hasStrictDerivAt_id x).mul_const I).cexp.add
           ((hasStrictDerivAt_id x).fun_neg.mul_const I).cexp).mul_const
@@ -419,7 +419,9 @@ theorem iteratedDeriv_add_one_sin (n : ℕ) :
 theorem iteratedDeriv_add_one_cos (n : ℕ) :
     iteratedDeriv (n + 1) cos = - iteratedDeriv n sin := by
   induction n with
-  | zero => ext; simp
+  | zero =>
+    rw [Nat.zero_add, iteratedDeriv_one, iteratedDeriv_zero]
+    exact deriv_cos'
   | succ n ih =>
     rw [iteratedDeriv_succ, ih, iteratedDeriv_succ, deriv.neg']
     ext x
@@ -475,7 +477,9 @@ theorem iteratedDeriv_add_one_sin (n : ℕ) :
 theorem iteratedDeriv_add_one_cos (n : ℕ) :
     iteratedDeriv (n + 1) cos = - iteratedDeriv n sin := by
   induction n with
-  | zero => ext; simp
+  | zero =>
+    rw [Nat.zero_add, iteratedDeriv_one, iteratedDeriv_zero]
+    exact deriv_cos'
   | succ n ih =>
     rw [iteratedDeriv_succ, ih, iteratedDeriv_succ, deriv.neg']
     ext x
@@ -519,14 +523,16 @@ theorem abs_iteratedDeriv_sin_le_one (n : ℕ) (x : ℝ) :
     |iteratedDeriv n sin x| ≤ 1 :=
   match n with
   | 0 => by simpa using Real.abs_sin_le_one x
-  | 1 => by simpa using Real.abs_cos_le_one x
+  | 1 => by
+    have h : deriv sin x = cos x := congrFun Real.deriv_sin x
+    simpa only [iteratedDeriv_one, h] using Real.abs_cos_le_one x
   | n + 2 => by simpa using abs_iteratedDeriv_sin_le_one n x
 
 theorem abs_iteratedDeriv_cos_le_one (n : ℕ) (x : ℝ) :
     |iteratedDeriv n cos x| ≤ 1 :=
   match n with
   | 0 => by simpa using Real.abs_cos_le_one x
-  | 1 => by simpa using Real.abs_sin_le_one x
+  | 1 => by simpa only [iteratedDeriv_one, Real.deriv_cos, abs_neg] using Real.abs_sin_le_one x
   | n + 2 => by simpa using abs_iteratedDeriv_cos_le_one n x
 
 @[simp]
@@ -727,34 +733,40 @@ theorem ContDiffWithinAt.sin {n} (hf : ContDiffWithinAt ℝ n f s x) :
 section LogDeriv
 
 @[simp]
-theorem Complex.logDeriv_sin : logDeriv (Complex.sin) = Complex.cot := by
-  ext
-  rw [logDeriv, Complex.deriv_sin, Pi.div_apply, Complex.cot]
+theorem Complex.logDeriv_sin (z : ℂ) {hz : Complex.sin z ≠ 0} :
+    logDeriv Complex.sin z id (Complex.hasDerivAt_sin z).existsUnique_hasDerivAt hz.isUnit =
+      Complex.cot z hz :=
+  logDeriv_eq (Complex.hasDerivAt_sin z)
 
 @[simp]
-theorem Real.logDeriv_sin : logDeriv (Real.sin) = Real.cot := by
-  ext
-  rw [logDeriv, Real.deriv_sin, Pi.div_apply, Real.cot_eq_cos_div_sin]
+theorem Real.logDeriv_sin (x : ℝ) {hx : Real.sin x ≠ 0} :
+    logDeriv Real.sin x id (Real.hasDerivAt_sin x).existsUnique_hasDerivAt hx.isUnit =
+      Real.cot x hx :=
+  logDeriv_eq (Real.hasDerivAt_sin x)
 
 @[simp]
-theorem Complex.logDeriv_cos : logDeriv (Complex.cos) = -Complex.tan := by
-  ext
-  rw [logDeriv, Complex.deriv_cos', Pi.div_apply, Pi.neg_apply, Complex.tan, neg_div]
+theorem Complex.logDeriv_cos (z : ℂ) {hz : Complex.cos z ≠ 0} :
+    logDeriv Complex.cos z id (Complex.hasDerivAt_cos z).existsUnique_hasDerivAt hz.isUnit =
+      -Complex.tan z hz := by
+  rw [logDeriv_eq (Complex.hasDerivAt_cos z), Complex.tan, neg_div₀]
 
 @[simp]
-theorem Real.logDeriv_cos : logDeriv (Real.cos) = -Real.tan := by
-  ext
-  rw [logDeriv, Real.deriv_cos', Pi.div_apply, Pi.neg_apply, neg_div, Real.tan_eq_sin_div_cos]
+theorem Real.logDeriv_cos (x : ℝ) {hx : Real.cos x ≠ 0} :
+    logDeriv Real.cos x id (Real.hasDerivAt_cos x).existsUnique_hasDerivAt hx.isUnit =
+      -Real.tan x hx := by
+  rw [logDeriv_eq (Real.hasDerivAt_cos x), Real.tan, neg_div₀]
 
 @[simp]
-theorem Complex.logDeriv_exp : logDeriv (Complex.exp) = 1 := by
-  ext
-  rw [logDeriv, Complex.deriv_exp, Pi.div_apply, ← exp_sub, sub_self, exp_zero, Pi.one_apply]
+theorem Complex.logDeriv_exp (z : ℂ) :
+    logDeriv Complex.exp z id (Complex.hasDerivAt_exp z).existsUnique_hasDerivAt
+      (Complex.exp_ne_zero z).isUnit = 1 := by
+  rw [logDeriv_eq (Complex.hasDerivAt_exp z), div_self]
 
 @[simp]
-theorem Real.logDeriv_exp : logDeriv (Real.exp) = 1 := by
-  ext
-  rw [logDeriv, Real.deriv_exp, Pi.div_apply, ← exp_sub, sub_self, exp_zero, Pi.one_apply]
+theorem Real.logDeriv_exp (x : ℝ) :
+    logDeriv Real.exp x id (Real.hasDerivAt_exp x).existsUnique_hasDerivAt
+      (Real.exp_ne_zero x).isUnit = 1 := by
+  rw [logDeriv_eq (Real.hasDerivAt_exp x), div_self]
 
 end LogDeriv
 

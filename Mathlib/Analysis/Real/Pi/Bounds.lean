@@ -33,7 +33,7 @@ theorem pi_gt_sqrtTwoAddSeries (n : ℕ) : 2 ^ (n + 1) * √(2 - sqrtTwoAddSerie
       apply div_pos pi_pos
     all_goals apply pow_pos; norm_num
   refine lt_of_le_of_lt (le_of_eq ?_) this
-  rw [pow_succ' _ (n + 1), ← mul_assoc, div_mul_cancel₀, mul_comm]; simp
+  rw [pow_succ' _ (n + 1), ← mul_assoc, div_mul_cancel₀, mul_comm]
 
 theorem pi_lt_sqrtTwoAddSeries (n : ℕ) :
     π < 2 ^ (n + 1) * √(2 - sqrtTwoAddSeries 0 n) + 1 / 4 ^ n := by
@@ -43,13 +43,20 @@ theorem pi_lt_sqrtTwoAddSeries (n : ℕ) :
       π / 2 ^ (n + 2) - sin (π / 2 ^ (n + 2)) < (π / 2 ^ (n + 2)) ^ 3 / 6 :=
         sub_lt_comm.1 <| sin_gt_sub_cube (by positivity)
       _ ≤ (4 / 2 ^ (n + 2)) ^ 3 / 4 := by gcongr; exacts [pi_le_four, by norm_num]
-      _ = 1 / (2 ^ n) ^ 3 / 4 := by simp [add_comm n, pow_add, div_mul_eq_div_div]; norm_num
+      _ = 1 / (2 ^ n) ^ 3 / 4 := by
+        have h : (4 : ℝ) / 2 ^ (n + 2) = 1 / 2 ^ n := by
+          apply div_eq_div_iff.mpr
+          rw [pow_add, one_mul]
+          norm_num [mul_comm]
+        rw [h, div_pow₀, one_pow]
   refine lt_of_lt_of_le this (le_of_eq ?_); rw [add_mul]; congr 1
   · ring
-  simp only [show (4 : ℝ) = 2 ^ 2 by norm_num, ← pow_mul, div_div, ← pow_add]
-  rw [one_div, one_div, inv_mul_eq_iff_eq_mul₀, eq_comm, mul_inv_eq_iff_eq_mul₀, ← pow_add]
-  · rw [add_assoc, Nat.mul_succ, add_comm, add_comm n, add_assoc, mul_comm n]
-  all_goals norm_num
+  have h : (2 : ℝ) ^ (n + 2) * 4 ^ n = (2 ^ n) ^ 3 * 4 := by
+    simp only [show (4 : ℝ) = 2 ^ 2 by norm_num, ← pow_mul, ← pow_add]
+    congr 1
+    omega
+  apply eq_div_iff.mpr
+  rw [mul_assoc, h, div_div₀, div_mul_cancel₀]
 
 /-- From an upper bound on `sqrtTwoAddSeries 0 n = 2 cos (π / 2 ^ (n+1))` of the form
 `sqrtTwoAddSeries 0 n ≤ 2 - (a / 2 ^ (n + 1)) ^ 2)`, one can deduce the lower bound `a < π`
@@ -59,16 +66,18 @@ theorem pi_lower_bound_start (n : ℕ) {a}
     a < π := by
   refine lt_of_le_of_lt ?_ (pi_gt_sqrtTwoAddSeries n); rw [mul_comm]
   refine (div_le_iff₀ (pow_pos (by simp) _)).mp (le_sqrt_of_sq_le ?_)
-  rwa [le_sub_comm, show (0 : ℝ) = (0 : ℕ) / (1 : ℕ) by rw [Nat.cast_zero, zero_div]]
+  rw [le_sub_comm]
+  simpa only [Nat.cast_zero, zero_div] using h
 
-theorem sqrtTwoAddSeries_step_up (c d : ℕ) {a b n : ℕ} {z : ℝ} (hz : sqrtTwoAddSeries (c / d) n ≤ z)
-    (hb : 0 < b) (hd : 0 < d) (h : (2 * b + a) * d ^ 2 ≤ c ^ 2 * b) :
+theorem sqrtTwoAddSeries_step_up (c d : ℕ) {a b n : ℕ} {z : ℝ}
+    (hb : 0 < b) (hd : 0 < d) (hz : sqrtTwoAddSeries (c / d) n ≤ z)
+    (h : (2 * b + a) * d ^ 2 ≤ c ^ 2 * b) :
     sqrtTwoAddSeries (a / b) (n + 1) ≤ z := by
   refine le_trans ?_ hz; rw [sqrtTwoAddSeries_succ]; apply sqrtTwoAddSeries_monotone_left
   have hb' : 0 < (b : ℝ) := Nat.cast_pos.2 hb
   have hd' : 0 < (d : ℝ) := Nat.cast_pos.2 hd
-  rw [sqrt_le_left (div_nonneg c.cast_nonneg d.cast_nonneg), div_pow,
-    add_div_eq_mul_add_div _ _ (ne_of_gt hb'), div_le_div_iff₀ hb' (pow_pos hd' _)]
+  rw [sqrt_le_left (div_nonneg c.cast_nonneg d.cast_nonneg), div_pow₀,
+    add_div_eq_mul_add_div _ _, div_le_div_iff₀ hb' (pow_pos hd' _)]
   exact mod_cast h
 
 /-- From a lower bound on `sqrtTwoAddSeries 0 n = 2 cos (π / 2 ^ (n+1))` of the form
@@ -80,23 +89,30 @@ theorem pi_upper_bound_start (n : ℕ) {a}
     (h₂ : (1 : ℝ) / (4 : ℝ) ^ n ≤ a) : π < a := by
   refine lt_of_lt_of_le (pi_lt_sqrtTwoAddSeries n) ?_
   rw [← le_sub_iff_add_le, ← le_div_iff₀', sqrt_le_left, sub_le_comm]
-  · rwa [Nat.cast_zero, zero_div] at h
+  · simpa only [Nat.cast_zero, zero_div] using h
   · exact div_nonneg (sub_nonneg.2 h₂) (pow_nonneg (le_of_lt zero_lt_two) _)
   · exact pow_pos zero_lt_two _
 
 theorem sqrtTwoAddSeries_step_down (a b : ℕ) {c d n : ℕ} {z : ℝ}
-    (hz : z ≤ sqrtTwoAddSeries (a / b) n) (hb : 0 < b) (hd : 0 < d)
+    (hb : 0 < b) (hd : 0 < d) (hz : z ≤ sqrtTwoAddSeries (a / b) n)
     (h : a ^ 2 * d ≤ (2 * d + c) * b ^ 2) : z ≤ sqrtTwoAddSeries (c / d) (n + 1) := by
   apply le_trans hz; rw [sqrtTwoAddSeries_succ]; apply sqrtTwoAddSeries_monotone_left
   apply le_sqrt_of_sq_le
   have hb' : 0 < (b : ℝ) := Nat.cast_pos.2 hb
   have hd' : 0 < (d : ℝ) := Nat.cast_pos.2 hd
-  rw [div_pow, add_div_eq_mul_add_div _ _ (ne_of_gt hd'), div_le_div_iff₀ (pow_pos hb' _) hd']
+  rw [div_pow₀, add_div_eq_mul_add_div _ _, div_le_div_iff₀ (pow_pos hb' _) hd']
   exact mod_cast h
 
 section Tactic
 
-open Lean Elab Tactic Qq
+open Lean Elab Tactic Qq Mathlib.Meta.NormNum
+
+private meta def piBoundWitness (witness : Syntax) : TacticM (ℕ × ℕ) := do
+  let e : Q(ℚ) ← Term.elabTermAndSynthesize witness (some q(ℚ))
+  let ⟨value, _, _, _⟩ ← deriveRat e (_inst := q(inferInstance))
+  if value.num < 0 then
+    throwErrorAt witness "expected a nonnegative rational witness"
+  return (value.num.toNat, value.den)
 
 /-- Create a proof of `a < π` for a fixed rational number `a`, given a witness, which is a
 sequence of rational numbers `√2 < r 1 < r 2 < ... < r n < 2` satisfying the property that
@@ -106,8 +122,9 @@ elab "pi_lower_bound " "[" l:term,* "]" : tactic => do
   let n := quote els.size
   evalTactic (← `(tactic| apply pi_lower_bound_start $n))
   for l in els do
-    let {num, den, ..} ← unsafe Meta.evalExpr ℚ q(ℚ) (← Term.elabTermAndSynthesize l (some q(ℚ)))
-    evalTactic (← `(tactic| apply sqrtTwoAddSeries_step_up $(quote num.toNat) $(quote den)))
+    let (num, den) ← piBoundWitness l
+    evalTactic (← `(tactic| refine sqrtTwoAddSeries_step_up $(quote num) $(quote den)
+      (by norm_num) (by norm_num) ?_ ?_))
   evalTactic (← `(tactic| simp [sqrtTwoAddSeries]))
   allGoals <| evalTactic (← `(tactic| norm_num1))
 
@@ -119,8 +136,9 @@ elab "pi_upper_bound " "[" l:term,* "]" : tactic => do
   let n := quote els.size
   evalTactic (← `(tactic| apply pi_upper_bound_start $n))
   for l in els do
-    let {num, den, ..} ← unsafe Meta.evalExpr ℚ q(ℚ) (← Term.elabTermAndSynthesize l (some q(ℚ)))
-    evalTactic (← `(tactic| apply sqrtTwoAddSeries_step_down $(quote num.toNat) $(quote den)))
+    let (num, den) ← piBoundWitness l
+    evalTactic (← `(tactic| refine sqrtTwoAddSeries_step_down $(quote num) $(quote den)
+      (by norm_num) (by norm_num) ?_ ?_))
   evalTactic (← `(tactic| simp [sqrtTwoAddSeries]))
   allGoals <| evalTactic (← `(tactic| norm_num1))
 
@@ -226,8 +244,10 @@ theorem ceil_pi_eq_four : ⌈π⌉ = 4 :=
   Int.ceil_eq_iff.mpr ⟨by exact_mod_cast pi_gt_three, pi_lt_four.le⟩
 
 theorem round_pi_eq_three : round π = 3 := by
-  refine round_eq _ |>.trans <| Int.floor_eq_iff.mpr ⟨by grind [pi_gt_three], ?_⟩
-  grw [pi_lt_d2]
-  norm_num
+  refine round_eq _ |>.trans <| Int.floor_eq_iff.mpr ⟨?_, ?_⟩
+  · have h : (0 : ℝ) ≤ 1 / 2 := by positivity
+    exact_mod_cast pi_gt_three.le.trans (le_add_of_nonneg_right h)
+  · grw [pi_lt_d2]
+    norm_num
 
 end Real

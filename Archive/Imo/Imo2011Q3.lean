@@ -38,16 +38,18 @@ theorem imo2011_q3 (f : ℝ → ℝ) (hf : ∀ x y, f (x + y) ≤ y * f x + f (f
     add_le_iff_nonpos_left.mp (h_ab_combined a (2 * f a))
   have h_f_nonpos : ∀ x, f x ≤ 0 := fun x => by
     by_contra h_suppose_not
+    have hp : 0 < f x := not_le.mp h_suppose_not
+    have hu : IsUnit (f x) := isUnit_iff_ne_zero.mpr hp.ne'
     -- If we choose a small enough argument for f, then we get a contradiction.
-    let s := (x * f x - f (f x)) / f x
+    let s := Checked.div (x * f x - f (f x)) (f x) hu
+    have hs : s * f x = x * f x - f (f x) := div_mul_cancel₀ _ (hb := hu)
     have hm : min 0 s - 1 < s := (sub_one_lt _).trans_le (min_le_right 0 s)
     have hml : min 0 s - 1 < 0 := (sub_one_lt _).trans_le (min_le_left 0 s)
     suffices f (min 0 s - 1) < 0 from not_le.mpr this (h_f_nonneg_of_pos (min 0 s - 1) hml)
-    have hp : 0 < f x := not_le.mp h_suppose_not
     calc
       f (min 0 s - 1) ≤ (min 0 s - 1) * f x - x * f x + f (f x) := hxt x (min 0 s - 1)
       _ < s * f x - x * f x + f (f x) := by linarith [mul_lt_mul_of_pos_right hm hp]
-      _ = 0 := by rw [(eq_div_iff hp.ne.symm).mp rfl]; linarith
+      _ = 0 := by linarith only [hs]
   have h_fx_zero_of_neg : ∀ x < 0, f x = 0 := fun x hxz =>
     (h_f_nonpos x).antisymm (h_f_nonneg_of_pos x hxz)
   intro x hx

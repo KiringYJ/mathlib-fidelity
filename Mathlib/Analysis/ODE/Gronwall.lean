@@ -39,16 +39,18 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 /-! ### Technical lemmas about `gronwallBound` -/
 
 
-/-- Upper bound used in several Grönwall-like inequalities. -/
+/-- Upper bound used in several Grönwall-like inequalities, with its limiting value at `K = 0`. -/
 noncomputable def gronwallBound (δ K ε x : ℝ) : ℝ :=
-  if K = 0 then δ + ε * x else δ * exp (K * x) + ε / K * (exp (K * x) - 1)
+  if hK : K = 0 then δ + ε * x
+  else δ * exp (K * x) + Checked.div ε K (Ne.isUnit hK) * (exp (K * x) - 1)
 
 theorem gronwallBound_K0 (δ ε : ℝ) : gronwallBound δ 0 ε = fun x => δ + ε * x :=
-  funext fun _ => ite_eq_left rfl
+  funext fun _ => dite_eq_left rfl
 
 theorem gronwallBound_of_K_ne_0 {δ K ε : ℝ} (hK : K ≠ 0) :
-    gronwallBound δ K ε = fun x => δ * exp (K * x) + ε / K * (exp (K * x) - 1) :=
-  funext fun _ => ite_eq_right hK
+    gronwallBound δ K ε = fun x => δ * exp (K * x) +
+      Checked.div ε K hK.isUnit * (exp (K * x) - 1) :=
+  funext fun _ => dite_eq_right hK
 
 theorem hasDerivAt_gronwallBound (δ K ε x : ℝ) :
     HasDerivAt (gronwallBound δ K ε) (K * gronwallBound δ K ε x + ε) x := by
@@ -61,19 +63,18 @@ theorem hasDerivAt_gronwallBound (δ K ε x : ℝ) :
     convert!
       (((hasDerivAt_id x).const_mul K).exp.const_mul δ).add
         ((((hasDerivAt_id x).const_mul K).exp.sub_const 1).const_mul (ε / K)) using 1
-    simp only [id]
+    simp only [id_eq]
     field
 
 theorem hasDerivAt_gronwallBound_shift (δ K ε x a : ℝ) :
     HasDerivAt (fun y => gronwallBound δ K ε (y - a)) (K * gronwallBound δ K ε (x - a) + ε) x := by
   convert! (hasDerivAt_gronwallBound δ K ε _).comp x ((hasDerivAt_id x).sub_const a) using 1
-  rw [id, mul_one]
+  simp only [id_eq, mul_one]
 
 theorem gronwallBound_x0 (δ K ε : ℝ) : gronwallBound δ K ε 0 = δ := by
   by_cases hK : K = 0
-  · simp only [gronwallBound, ite_eq_left hK, mul_zero, add_zero]
-  · simp only [gronwallBound, ite_eq_right hK, mul_zero, exp_zero, sub_self, mul_one,
-      add_zero]
+  · simp only [gronwallBound, dite_eq_left hK, mul_zero, add_zero]
+  · simp only [gronwallBound, dite_eq_right hK, mul_zero, exp_zero, sub_self, mul_one, add_zero]
 
 theorem gronwallBound_ε0 (δ K x : ℝ) : gronwallBound δ K 0 x = δ * exp (K * x) := by
   by_cases hK : K = 0
@@ -111,7 +112,8 @@ See also `norm_le_gronwallBound_of_norm_deriv_right_le` for a version bounding `
 `f : ℝ → E`. -/
 theorem le_gronwallBound_of_liminf_deriv_right_le {f f' : ℝ → ℝ} {δ K ε : ℝ} {a b : ℝ}
     (hf : ContinuousOn f (Icc a b))
-    (hf' : ∀ x ∈ Ico a b, ∀ r, f' x < r → ∃ᶠ z in 𝓝[>] x, (z - x)⁻¹ * (f z - f x) < r)
+    (hf' : ∀ x ∈ Ico a b, ∀ r, f' x < r →
+      ∃ᶠ z : Ioi x in comap Subtype.val (𝓝 x), slope f x z z.2.ne < r)
     (ha : f a ≤ δ) (bound : ∀ x ∈ Ico a b, f' x ≤ K * f x + ε) :
     ∀ x ∈ Icc a b, f x ≤ gronwallBound δ K ε (x - a) := by
   have H : ∀ x ∈ Icc a b, ∀ ε' ∈ Ioi ε, f x ≤ gronwallBound δ K ε' (x - a) := by

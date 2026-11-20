@@ -64,6 +64,9 @@ theorem denom_ne_zero_of_im (g : GL (Fin 2) ℝ) {z : ℂ} (hz : z.im ≠ 0) : d
 theorem denom_ne_zero (g : GL (Fin 2) ℝ) (z : ℍ) : denom g z ≠ 0 :=
   denom_ne_zero_of_im g z.im_ne_zero
 
+theorem isUnit_denom (g : GL (Fin 2) ℝ) (z : ℍ) : IsUnit (denom g z) :=
+  (denom_ne_zero g z).isUnit
+
 theorem normSq_denom_pos (g : GL (Fin 2) ℝ) {z : ℂ} (hz : z.im ≠ 0) :
     0 < Complex.normSq (denom g z) :=
   Complex.normSq_pos.mpr (denom_ne_zero_of_im g hz)
@@ -72,17 +75,27 @@ theorem normSq_denom_ne_zero (g : GL (Fin 2) ℝ) {z : ℂ} (hz : z.im ≠ 0) :
     Complex.normSq (denom g z) ≠ 0 :=
   ne_of_gt (normSq_denom_pos g hz)
 
-lemma denom_cocycle (g h : GL (Fin 2) ℝ) {z : ℂ} (hz : z.im ≠ 0) :
+lemma denom_cocycle (g h : GL (Fin 2) ℝ) {z : ℂ} {hh : IsUnit (denom h z)} :
     denom (g * h) z = denom g (num h z / denom h z) * denom h z := by
-  change _ = (_ * (_ / _) + _) * _
-  field_simp [denom_ne_zero_of_im h hz]
+  change _ = ((g 1 0 : ℂ) * (num h z / denom h z) + (g 1 1 : ℂ)) * denom h z
+  field_simp
   simp only [denom, Units.val_mul, mul_apply, Fin.sum_univ_succ, Finset.univ_unique,
     Fin.default_eq_zero, Finset.sum_singleton, Fin.succ_zero_eq_one, Complex.ofReal_add,
     Complex.ofReal_mul, num]
   ring
 
-lemma moebius_im (g : GL (Fin 2) ℝ) (z : ℂ) :
-    (num g z / denom g z).im = g.det.val * z.im / Complex.normSq (denom g z) := by
+private lemma num_cocycle (g h : GL (Fin 2) ℝ) {z : ℂ} {hh : IsUnit (denom h z)} :
+    num (g * h) z = num g (num h z / denom h z) * denom h z := by
+  change _ = ((g 0 0 : ℂ) * (num h z / denom h z) + (g 0 1 : ℂ)) * denom h z
+  field_simp
+  simp only [denom, Units.val_mul, mul_apply, Fin.sum_univ_succ, Finset.univ_unique,
+    Fin.default_eq_zero, Finset.sum_singleton, Fin.succ_zero_eq_one, Complex.ofReal_add,
+    Complex.ofReal_mul, num]
+  ring
+
+lemma moebius_im (g : GL (Fin 2) ℝ) (z : ℂ) {hg : IsUnit (denom g z)} :
+    (num g z / denom g z).im = Checked.div (g.det.val * z.im) (Complex.normSq (denom g z))
+      (Complex.normSq_pos.mpr hg.ne_zero).ne'.isUnit := by
   simp only [num, denom, Complex.div_im, Complex.add_im, Complex.mul_im, Complex.ofReal_re,
     Complex.ofReal_im, zero_mul, add_zero, Complex.add_re, Complex.mul_re, sub_zero, ← sub_div,
     GeneralLinearGroup.val_det_apply, g.1.det_fin_two]
@@ -138,44 +151,46 @@ lemma σ_mul_comm (g h : GL (Fin 2) ℝ) (z : ℂ) : σ g (σ h z) = σ h (σ g 
   split_ifs <;> simp
 
 /-- Fractional linear transformation, also known as the Moebius transformation -/
-def smulAux' (g : GL (Fin 2) ℝ) (z : ℂ) : ℂ := σ g (num g z / denom g z)
+def smulAux' (g : GL (Fin 2) ℝ) (z : ℂ) (hg : IsUnit (denom g z) := by checked_unit) : ℂ :=
+  σ g (num g z / denom g z)
 
-lemma smulAux'_im (g : GL (Fin 2) ℝ) (z : ℂ) :
-    (smulAux' g z).im = |g.det.val| * z.im / Complex.normSq (denom g z) := by
+lemma smulAux'_im (g : GL (Fin 2) ℝ) (z : ℂ) {hg : IsUnit (denom g z)} :
+    (smulAux' g z hg).im = Checked.div (|g.det.val| * z.im) (Complex.normSq (denom g z))
+      (Complex.normSq_pos.mpr hg.ne_zero).ne'.isUnit := by
   simp only [smulAux', σ]
   split_ifs with h <;>
   [rw [abs_of_pos h]; rw [abs_of_nonpos (not_lt.mp h)]] <;>
   simpa only [Complex.conjCAE_apply, Complex.star_def, Complex.conj_im,
-    neg_mul, neg_div, neg_inj] using! moebius_im g z
+     neg_mul, neg_div₀, neg_inj] using! moebius_im g z (hg := hg)
 
 /-- Fractional linear transformation, also known as the Moebius transformation -/
 def smulAux (g : GL (Fin 2) ℝ) (z : ℍ) : ℍ :=
-  mk (smulAux' g z) <| by
+  mk (smulAux' g z (isUnit_denom g z)) <| by
     rw [smulAux'_im]
     exact div_pos (mul_pos (abs_pos.mpr g.det.ne_zero) z.im_pos) (normSq_denom_pos _ z.im_ne_zero)
 
 lemma denom_cocycle' (g h : GL (Fin 2) ℝ) (z : ℍ) :
     denom (g * h) z = σ h (denom g (smulAux h z)) * denom h z := by
-  simpa [smulAux, smulAux', denom, σ_sq] using denom_cocycle g h z.im_ne_zero
+  simpa only [smulAux, coe_mk, smulAux', σ_denom, σ_sq] using
+    denom_cocycle g h (hh := isUnit_denom h z)
 
 theorem mul_smul' (g h : GL (Fin 2) ℝ) (z : ℍ) :
     smulAux (g * h) z = smulAux g (smulAux h z) := by
+  have him (u : ℂ) (hu : u.im ≠ 0) :
+      (Checked.div (num h u) (denom h u) (denom_ne_zero_of_im h hu).isUnit).im ≠ 0 := by
+    rw [moebius_im]
+    exact div_ne_zero (mul_ne_zero h.det_ne_zero hu)
+  have hcompose (u : ℂ) (hu : u.im ≠ 0) :
+      Checked.div (num (g * h) u) (denom (g * h) u) (denom_ne_zero_of_im (g * h) hu).isUnit =
+        let w := Checked.div (num h u) (denom h u) (denom_ne_zero_of_im h hu).isUnit
+        Checked.div (num g w) (denom g w) (denom_ne_zero_of_im g (him u hu)).isUnit := by
+    dsimp only
+    rw [div_eq_div_iff, num_cocycle (hh := (denom_ne_zero_of_im h hu).isUnit),
+      denom_cocycle (hh := (denom_ne_zero_of_im h hu).isUnit)]
+    ring
   ext : 1
   simp only [smulAux, coe_mk, smulAux', map_div₀, σ_num, σ_denom, σ_mul]
-  generalize hu : σ g (σ h z) = u
-  have hu : u.im ≠ 0 := by simpa only [← hu, σ_im_ne_zero] using! z.im_ne_zero
-  have hu' : (num h u / denom h u).im ≠ 0 := by
-    rw [moebius_im]
-    exact div_ne_zero (mul_ne_zero h.det_ne_zero hu) (normSq_denom_ne_zero _ hu)
-  rw [div_eq_div_iff (denom_ne_zero_of_im _ hu) (denom_ne_zero_of_im _ hu'),
-    denom, mul_div, div_add' _ _ _ (denom_ne_zero_of_im _ hu), mul_div]
-  conv_rhs => rw [num]
-  rw [mul_div, div_add' _ _ _ (denom_ne_zero_of_im _ hu), div_mul_eq_mul_div]
-  congr 1
-  simp only [num, denom, Units.val_mul, mul_apply, Fin.sum_univ_succ,
-    Finset.univ_unique, Fin.default_eq_zero, Finset.sum_singleton, Fin.succ_zero_eq_one,
-    Complex.ofReal_add, Complex.ofReal_mul]
-  ring
+  exact hcompose (σ g (σ h z)) (by simpa only [σ_im_ne_zero] using! z.im_ne_zero)
 
 /-- Action of `GL (Fin 2) ℝ` on the upper half-plane, with `GL(2, ℝ)⁺` acting by Moebius
 transformations in the usual way, extended to all of `GL (Fin 2) ℝ` using complex conjugation. -/
@@ -187,38 +202,40 @@ instance glAction : MulAction (GL (Fin 2) ℝ) ℍ where
   mul_smul := mul_smul'
 
 lemma coe_smul (g : GL (Fin 2) ℝ) (z : ℍ) :
-    ↑(g • z) = σ g (num g z / denom g z) := rfl
+    ↑(g • z) = σ g (Checked.div (num g z) (denom g z) (isUnit_denom g z)) := rfl
 
 lemma coe_smul_of_det_pos {g : GL (Fin 2) ℝ} (hg : 0 < g.det.val) (z : ℍ) :
-    ↑(g • z) = num g z / denom g z := by
-  change smulAux' g z = _
-  rw [smulAux', σ, ite_eq_left hg, ContinuousAlgEquiv.refl_apply, num, denom]
+    ↑(g • z) = Checked.div (num g z) (denom g z) (isUnit_denom g z) := by
+  rw [coe_smul, σ, ite_eq_left hg, ContinuousAlgEquiv.refl_apply]
 
 lemma denom_cocycle_σ (g h : GL (Fin 2) ℝ) (z : ℍ) :
     denom (g * h) z = σ h (denom g ↑(h • z)) * denom h z :=
   denom_cocycle' g h z
 
 lemma glPos_smul_def {g : GL (Fin 2) ℝ} (hg : 0 < g.det.val) (z : ℍ) :
-    g • z = ⟨num g z / denom g z, coe_smul_of_det_pos hg z ▸ (g • z).im_pos⟩ := by
+    g • z = ⟨Checked.div (num g z) (denom g z) (isUnit_denom g z),
+      coe_smul_of_det_pos hg z ▸ (g • z).im_pos⟩ := by
   ext; simp [coe_smul_of_det_pos hg]
 
 section GLAction
 variable (g : GL (Fin 2) ℝ) (z : ℍ)
 
-theorem re_smul : (g • z).re = (num g z / denom g z).re := by
-  change (smulAux' g z).re = _
+theorem re_smul : (g • z).re = (Checked.div (num g z) (denom g z) (isUnit_denom g z)).re := by
+  change (smulAux' g z (isUnit_denom g z)).re = _
   simp +contextual [smulAux', σ, DFunLike.ite_apply, apply_ite, Complex.div_re]
 
-theorem im_smul : (g • z).im = |(num g z / denom g z).im| := by
-  change (smulAux' g z).im = _
+theorem im_smul : (g • z).im = |(Checked.div (num g z) (denom g z) (isUnit_denom g z)).im| := by
+  change (smulAux' g z (isUnit_denom g z)).im = _
   simp only [smulAux', σ, DFunLike.ite_apply, ContinuousAlgEquiv.refl_apply, apply_ite, moebius_im,
-    Complex.conjCAE_apply, Complex.conj_im, ← neg_div, ← neg_mul, abs_div, abs_mul,
+     Complex.conjCAE_apply, Complex.conj_im, ← neg_div₀, ← neg_mul, abs_div, abs_mul,
     abs_of_pos (show 0 < (z : ℂ).im from z.coe_im ▸ z.im_pos),
     abs_of_nonneg <| Complex.normSq_nonneg _]
   split_ifs with h <;> [rw [abs_of_pos h]; rw [abs_of_nonpos (not_lt.mp h)]]
 
-lemma im_smul_eq_div_normSq : (g • z).im = |g.det.val| * z.im / Complex.normSq (denom g z) :=
-  smulAux'_im g z
+lemma im_smul_eq_div_normSq : (g • z).im =
+    Checked.div (|g.det.val| * z.im) (Complex.normSq (denom g z))
+      (normSq_denom_ne_zero g z.im_ne_zero).isUnit :=
+  smulAux'_im g z (hg := isUnit_denom g z)
 
 theorem c_mul_im_sq_le_normSq_denom : (g 1 0 * z.im) ^ 2 ≤ Complex.normSq (denom g z) := by
   set c := g 1 0
@@ -230,7 +247,7 @@ theorem c_mul_im_sq_le_normSq_denom : (g 1 0 * z.im) ^ 2 ≤ Complex.normSq (den
 @[simp]
 theorem neg_smul : -g • z = g • z := by
   ext1
-  simp [coe_smul]
+  simp [coe_smul, neg_div_neg_eq₀]
 
 @[simp]
 lemma num_one : num 1 z = z := by simp [num]
@@ -259,7 +276,7 @@ instance : MulAction.IsPretransitive (GL (Fin 2) ℝ) ℍ where
     set m : Matrix (Fin 2) (Fin 2) ℝ := !![w.im, z.im * w.re - w.im * z.re; 0, z.im]
     refine ⟨.mkOfDetNeZero m <| by simp [m, im_ne_zero], ?_⟩
     ext
-    simp [coe_smul_of_det_pos, im_pos, num, denom, m, Complex.ext_iff, im_ne_zero]
+    simp [coe_smul_of_det_pos, im_pos, num, denom, m, Complex.ext_iff]
 
 end GLAction
 
@@ -283,33 +300,42 @@ section SLAction
 noncomputable instance SLAction {R : Type*} [CommRing R] [Algebra R ℝ] : MulAction SL(2, R) ℍ :=
   MulAction.compHom ℍ <| SpecialLinearGroup.mapGL ℝ
 
+private theorem isUnit_sl_denom {R : Type*} [CommRing R] [Algebra R ℝ]
+    (g : SL(2, R)) (z : ℍ) :
+    IsUnit ((algebraMap R ℝ (g 1 0) : ℂ) * (z : ℂ) + (algebraMap R ℝ (g 1 1) : ℂ)) :=
+  isUnit_denom (SpecialLinearGroup.mapGL ℝ g) z
+
 theorem coe_specialLinearGroup_apply {R : Type*} [CommRing R] [Algebra R ℝ] (g : SL(2, R)) (z : ℍ) :
     ↑(g • z) =
-      (((algebraMap R ℝ (g 0 0) : ℂ) * z + (algebraMap R ℝ (g 0 1) : ℂ)) /
-      ((algebraMap R ℝ (g 1 0) : ℂ) * z + (algebraMap R ℝ (g 1 1) : ℂ))) := by
+      Checked.div ((algebraMap R ℝ (g 0 0) : ℂ) * z + (algebraMap R ℝ (g 0 1) : ℂ))
+        ((algebraMap R ℝ (g 1 0) : ℂ) * z + (algebraMap R ℝ (g 1 1) : ℂ))
+        (by exact isUnit_sl_denom g z) := by
   rw [MulAction.compHom_smul_def, coe_smul_of_det_pos (by simp)]
   rfl
 
 theorem specialLinearGroup_apply {R : Type*} [CommRing R] [Algebra R ℝ] (g : SL(2, R)) (z : ℍ) :
     g • z = mk
-      (((algebraMap R ℝ (g 0 0) : ℂ) * z + (algebraMap R ℝ (g 0 1) : ℂ)) /
-      ((algebraMap R ℝ (g 1 0) : ℂ) * z + (algebraMap R ℝ (g 1 1) : ℂ)))
-      (coe_specialLinearGroup_apply g z ▸ (g • z).im_pos) := by
+      (Checked.div ((algebraMap R ℝ (g 0 0) : ℂ) * z + (algebraMap R ℝ (g 0 1) : ℂ))
+        ((algebraMap R ℝ (g 1 0) : ℂ) * z + (algebraMap R ℝ (g 1 1) : ℂ))
+        (by exact isUnit_sl_denom g z))
+      (by
+        have hp : 0 < (↑(g • z) : ℂ).im := (g • z).im_pos
+        exact coe_specialLinearGroup_apply g z ▸ hp) := by
   ext; simp [coe_specialLinearGroup_apply]
 
 /-! these next few lemmas are *not* flagged `@simp` because of the constructors on the RHS;
 instead we use the versions with coercions to `ℂ` as simp lemmas instead. -/
 
 theorem modular_S_smul (z : ℍ) :
-    ModularGroup.S • z = mk (-z : ℂ)⁻¹ z.im_inv_neg_coe_pos := by
+    ModularGroup.S • z = mk (Checked.inv (-z : ℂ) z.ne_zero.isUnit.neg) z.im_inv_neg_coe_pos := by
   rw [specialLinearGroup_apply]
-  simp [ModularGroup.S, neg_div, inv_neg]
+  simp [ModularGroup.S, neg_div₀, inv_neg₀, one_div₀]
 
 theorem modular_T_zpow_smul (z : ℍ) (n : ℤ) : ModularGroup.T ^ n • z = (n : ℝ) +ᵥ z := by
   rw [UpperHalfPlane.ext_iff, coe_vadd, add_comm, coe_specialLinearGroup_apply]
   simp [ModularGroup.coe_T_zpow,
     of_apply, cons_val_zero, Complex.ofReal_one, one_mul, cons_val_one,
-    zero_mul, zero_add, div_one]
+    zero_mul, zero_add, div_one₀]
 
 theorem modular_T_smul (z : ℍ) : ModularGroup.T • z = (1 : ℝ) +ᵥ z := by
   simpa only [zpow_one, Int.cast_one] using modular_T_zpow_smul z 1
@@ -320,7 +346,9 @@ theorem exists_SL2_smul_eq_of_apply_zero_one_eq_zero (g : SL(2, ℝ)) (hc : g 1 
   obtain ⟨a, b, ha, rfl⟩ := g.fin_two_exists_eq_mk_of_apply_zero_one_eq_zero hc
   refine ⟨⟨_, mul_self_pos.mpr ha⟩, b * a, ?_⟩
   ext1 ⟨z, hz⟩; ext1
-  suffices ↑a * z * a + b * a = b * a + a * a * z by simpa [specialLinearGroup_apply, add_mul]
+  have ha' := (Complex.ofReal_ne_zero.mpr ha).isUnit
+  suffices ↑a * z * a + b * a = b * a + a * a * z by
+    simpa [specialLinearGroup_apply, add_mul, div_inv_eq_mul₀]
   ring
 
 set_option backward.isDefEq.respectTransparency false in
@@ -333,36 +361,53 @@ theorem exists_SL2_smul_eq_of_apply_zero_one_ne_zero (g : SL(2, ℝ)) (hc : g 1 
   replace hc : c ≠ 0 := by simpa using! hc
   refine ⟨⟨_, mul_self_pos.mpr hc⟩, c * d, a / c, ?_⟩
   ext1 ⟨z, hz⟩; ext1
+  have hc' : (c : ℂ) ≠ 0 := by exact_mod_cast hc
+  have hd' : ↑c * z + d ≠ 0 := by simpa [denom] using h_denom ⟨z, hz⟩
+  have hq : IsUnit (c * d + ↑c * ↑c * z : ℂ) := by
+    convert hc'.isUnit.mul hd'.isUnit using 1
+    ring
   suffices (↑a * z + b) / (↑c * z + d) = a / c - (c * d + ↑c * ↑c * z)⁻¹ by
     simpa [modular_S_smul, coe_specialLinearGroup_apply]
-  replace hc : (c : ℂ) ≠ 0 := by norm_cast
-  replace h_denom : ↑c * z + d ≠ 0 := by simpa using! h_denom ⟨z, hz⟩
   replace h : (a * d - b * c : ℂ) = (1 : ℂ) := by norm_cast
-  grind
+  have hp : IsUnit ((c : ℂ) * ((c : ℂ) * z + d)) := hc'.isUnit.mul hd'.isUnit
+  have heq : (c * d + ↑c * ↑c * z : ℂ) = (c : ℂ) * ((c : ℂ) * z + d) := by ring
+  have hinv : (c * d + ↑c * ↑c * z : ℂ)⁻¹ * ((c : ℂ) * ((c : ℂ) * z + d)) = 1 := by
+    rw [← heq, inv_mul_cancel₀]
+  apply mul_right_cancel₀ hp.ne_zero
+  calc
+    _ = (↑a * z + b) * (c : ℂ) := by
+      rw [← mul_assoc, div_mul_eq_mul_div₀, div_mul_cancel₀]
+    _ = (a : ℂ) * ((c : ℂ) * z + d) - 1 := by linear_combination -h
+    _ = _ := by rw [sub_mul, hinv, ← mul_assoc, div_mul_cancel₀]
 
 end SLAction
 
 section toSL2R
 
+private theorem sqrt_im_isUnit (z : ℍ) : IsUnit (√z.im) :=
+  (Real.sqrt_ne_zero'.mpr z.im_pos).isUnit
+
 /-- Map from `ℍ` to `SL(2, ℝ)`, giving a continuous section of the map `g ↦ g • I`. -/
 noncomputable def toSL2R (z : ℍ) : SL(2, ℝ) :=
-  ⟨!![√z.im, z.re / √z.im; 0, 1 / √z.im], by
-    simp [mul_inv_cancel₀ (Real.sqrt_ne_zero'.mpr z.im_pos)]⟩
+  ⟨!![√z.im, Checked.div z.re (√z.im) (by exact sqrt_im_isUnit z);
+      0, Checked.div 1 (√z.im) (by exact sqrt_im_isUnit z)], by simp [one_div₀]⟩
 
 lemma toSL2R_apply (z : ℍ) : z.toSL2R =
-  ⟨!![√z.im, z.re / √z.im; 0, 1 / √z.im], by
-    simp [mul_inv_cancel₀ (Real.sqrt_ne_zero'.mpr z.im_pos)]⟩ := (rfl)
+    ⟨!![√z.im, Checked.div z.re (√z.im) (by exact sqrt_im_isUnit z);
+        0, Checked.div 1 (√z.im) (by exact sqrt_im_isUnit z)], by simp [one_div₀]⟩ := rfl
 
-@[simp] lemma coe_toSL2R (z : ℍ) : z.toSL2R = !![√z.im, z.re / √z.im; 0, 1 / √z.im] := (rfl)
+@[simp] lemma coe_toSL2R (z : ℍ) : z.toSL2R =
+    !![√z.im, Checked.div z.re (√z.im) (by exact sqrt_im_isUnit z);
+       0, Checked.div 1 (√z.im) (by exact sqrt_im_isUnit z)] := rfl
 
 @[simp] lemma toSL2R_smul_I (z : ℍ) : z.toSL2R • I = z := by
   have : √z.im ≠ (0 : ℂ) := by simpa [Real.sqrt_ne_zero'] using z.im_pos
   ext
   suffices z.re / √z.im + √z.im * Complex.I = z * (↑√z.im)⁻¹ by
-    rw [coe_specialLinearGroup_apply, div_eq_iff (mod_cast denom_ne_zero z.toSL2R I)]
+    rw [coe_specialLinearGroup_apply, div_eq_iff]
     simpa [add_comm]
-  rw [div_add' (hc := this), mul_right_comm, ← Complex.ofReal_mul, ← Real.sqrt_mul z.im_pos.le,
-    Real.sqrt_mul_self z.im_pos.le, re_add_im, div_eq_mul_inv]
+  rw [div_add' (hc := this.isUnit), mul_right_comm, ← Complex.ofReal_mul,
+    ← Real.sqrt_mul z.im_pos.le, Real.sqrt_mul_self z.im_pos.le, re_add_im, div_eq_mul_inv₀]
 
 /-- `SL(2, ℝ)` acts transitively on the upper half-plane. -/
 instance isPretransitiveSL2R : MulAction.IsPretransitive SL(2, ℝ) ℍ :=

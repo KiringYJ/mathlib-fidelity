@@ -26,7 +26,6 @@ open UpperHalfPlane ModularGroup SlashInvariantForm ModularForm Complex
 
 open scoped MatrixGroups
 
-local notation "𝕢" => qParam
 
 variable {F : Type*} [FunLike F ℍ ℂ] {k : ℤ}
 
@@ -51,9 +50,12 @@ lemma wt_eq_zero_of_eq_const {f : F} {c : ℂ} (hf : ⇑f = Function.const _ c) 
   have hI := slash_action_eqn_SL'' f (mem_Gamma_one S) I
   have h2I2 := slash_action_eqn_SL'' f (mem_Gamma_one S) ((⟨2, two_pos⟩ : {x : ℝ // 0 < x}) • .I)
   simp_rw [sl_moeb, hf, Function.const, denom_S] at hI h2I2
-  suffices (2 : ℂ) ^ k = 1 ↔ k = 0 by
-    simpa [mul_zpow, zpow_ne_zero, this] using h2I2.symm.trans hI
-  simpa using ofReal_inj.trans <| zpow_eq_one_iff_right₀ (two_pos.le : (0 : ℝ) ≤ 2) (by norm_num1)
+  have hnorm := congrArg (‖·‖) (h2I2.symm.trans hI)
+  by_cases hc : c = 0
+  · exact Or.inr hc
+  left
+  simpa [norm_mul, norm_zpow, mul_eq_right₀ (norm_ne_zero_iff.mpr hc),
+    zpow_eq_one_iff_right₀ (two_pos.le : (0 : ℝ) ≤ 2) (by norm_num : (2 : ℝ) ≠ 1)] using hnorm
 
 theorem slash_action_generators_SL2Z {f : ℍ → ℂ} {k : ℤ}
     (hS : f ∣[k] S = f) (hT : f ∣[k] T = f) : ∀ γ : SL(2, ℤ), f ∣[k] γ = f := by
@@ -91,7 +93,7 @@ private theorem cuspFunction_eqOn_const_of_nonpos_wt (hk : k ≤ 0) (f : F) :
 private theorem levelOne_nonpos_wt_const (hk : k ≤ 0) (f : F) :
     f = Function.const ℍ (cuspFunction 1 f 0) := by
   ext z
-  have hQ : 𝕢 1 z ∈ (Metric.ball 0 1) := by
+  have hQ : Function.Periodic.qParam 1 z ∈ (Metric.ball 0 1) := by
     simpa using (norm_qParam_lt_iff zero_lt_one 0 z.1).mpr z.2
   simpa [← SlashInvariantFormClass.eq_cuspFunction f _ one_mem_strictPeriods_SL one_ne_zero]
     using cuspFunction_eqOn_const_of_nonpos_wt hk f hQ

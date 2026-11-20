@@ -74,8 +74,8 @@ theorem HasDerivAt.of_comp_left {f g h : 𝕜 → 𝕜} {f' h' a : 𝕜} (hst : 
     (hf : HasDerivAt f f' (g a)) (hh : HasDerivAt h h' a) (hf' : f' ≠ 0)
     (hcomp : f ∘ g =ᶠ[𝓝 a] h) : HasDerivAt g (h' / f') a := by
   convert! hf.hasFDerivAt.of_comp_of_leftInverse hst hh hcomp (f'symm := .toSpanSingleton 𝕜 f'⁻¹)
-    (fun _ ↦ by simp [hf']) |>.hasDerivAt using 1
-  simp [div_eq_mul_inv]
+    (fun _ ↦ by simp) |>.hasDerivAt using 1
+  simp [div_eq_mul_inv₀]
 
 /-- If `f (g y) = y` for `y` in some neighborhood of `a`, `g` is continuous at `a`, and `f` has an
 invertible derivative `f'` at `g a`, then `g` has the derivative `f'⁻¹` at `a`.
@@ -148,7 +148,7 @@ theorem derivWithin_zero_of_frequently_mem (t : Set F) (ht : ¬ AccPt (f x) (�
 then its derivative at `x` equals zero,
 either because it has derivative zero or because it isn't differentiable at this point. -/
 theorem deriv_zero_of_frequently_const {c} (h : ∃ᶠ y in 𝓝[≠] x, f y = c) : deriv f x = 0 := by
-  rw [← derivWithin_univ, derivWithin_zero_of_frequently_const]
+  rw [← congrFun derivWithin_univ x, derivWithin_zero_of_frequently_const]
   rwa [← compl_eq_univ_sdiff]
 
 /-- If a function frequently (in `𝓝[≠] x`) takes values in a set `t` that does not
@@ -156,7 +156,7 @@ accumulate at `f x`, then its derivative at `x` equals zero,
 either because it has derivative zero or because it isn't differentiable at this point. -/
 theorem deriv_zero_of_frequently_mem (t : Set F) (ht : ¬ AccPt (f x) (𝓟 t))
     (h : ∃ᶠ y in 𝓝[≠] x, f y ∈ t) : deriv f x = 0 := by
-  rw [← derivWithin_univ, derivWithin_zero_of_frequently_mem t ht]
+  rw [← congrFun derivWithin_univ x, derivWithin_zero_of_frequently_mem t ht]
   rwa [← compl_eq_univ_sdiff]
 
 theorem not_differentiableWithinAt_of_local_left_inverse_hasDerivWithinAt_zero {f g : 𝕜 → 𝕜} {a : 𝕜}

@@ -68,6 +68,22 @@ meta def Checked.addSubtypeFacts : TacticM Unit := withMainContext do
     goal := next
   replaceMainGoal [goal]
 
+open Lean Meta Elab Tactic in
+/-- Simplify the evidence goal with local facts. An equality such as `q = f q` cannot
+serve as a left-to-right rewrite rule. Use its converse so that the fact remains available. -/
+meta def Checked.simpEvidence : TacticM Unit := withMainContext do
+  let { ctx, simprocs, .. } ← mkSimpContext (← `(tactic| simp_all))
+    (eraseLocal := true) (kind := .simpAll) (ignoreStarArg := true)
+  let mut thms := ctx.simpTheorems
+  for h in ← getPropHyps do
+    let some (_, lhs, rhs) := (← h.getType).getForallBody.eq? | continue
+    if lhs != rhs && lhs.occurs rhs then
+      thms := thms.eraseTheorem (.fvar h)
+      thms ← thms.modifyM 0 fun set ↦ do
+        set.add (.other (← mkFreshId)) #[] (mkFVar h) (inv := true) (config := ctx.indexConfig)
+  let (remaining, _) ← simpAll (← getMainGoal) (ctx.setSimpTheorems thms) (simprocs := simprocs)
+  replaceMainGoal remaining.toList
+
 /-- Find a nonzero proof from the local context and standard closure facts. -/
 syntax (name := checkedNonzero) "checked_nonzero" : tactic
 
@@ -106,16 +122,17 @@ macro_rules
         | (apply $(Lean.mkIdent `Int.cast_ne_zero).mpr; omega)
         | ((with_reducible apply $(Lean.mkIdent `Rat.cast_ne_zero).mpr); checked_nonzero)
         | ((with_reducible apply $(Lean.mkIdent `NNRat.cast_ne_zero).mpr); checked_nonzero)
-        | (simp_all; done)
+        | ((run_tac Checked.simpEvidence); done)
         | decide
         | fail "a nonzero denominator proof is required"))
 
 /-- Find invertibility without installing an ambient inverse operation.
 
 Besides local hypotheses and nonzero evidence in a group with zero, this uses closure under
-products, natural powers, inverses and quotients. The evidence carried by an inverse or a quotient
-is reused rather than requested again. Invertibility of a factor is recovered from a product or a
-quotient in a local hypothesis, and invertibility of a value `f i` from that of a function `f`.
+products, natural powers, inverses, quotients, multiplicative actions and submonoid coercions.
+The evidence carried by an inverse or a quotient is reused. Invertibility of a factor is recovered
+from a product or a quotient in a local hypothesis, and invertibility of a value `f i` from that of
+a function `f`.
 The closure rules match the goal reducibly: a power `x ^ 2` is not unfolded into a product, whose
 evidence would type-check only after unfolding the power. -/
 syntax (name := checkedUnit) "checked_unit" : tactic
@@ -134,6 +151,9 @@ macro_rules
         | ((with_reducible apply $(Lean.mkIdent `IsUnit.pow)) <;> checked_unit)
         | ((with_reducible apply $(Lean.mkIdent `IsUnit.mul)) <;> checked_unit)
         | ((with_reducible apply $(Lean.mkIdent `IsUnit.zpow₀)); checked_unit)
+        | ((with_reducible apply $(Lean.mkIdent `IsUnit.smul')); checked_unit)
+        | (refine $(Lean.mkIdent `IsUnit.map) ($(Lean.mkIdent `SubmonoidClass.subtype) _) ?_;
+            checked_unit)
         | (apply $(Lean.mkIdent `isUnit_of_mul_isUnit_left); assumption)
         | (apply $(Lean.mkIdent `isUnit_of_mul_isUnit_right); assumption)
         | (apply $(Lean.mkIdent `IsUnit.of_div₀); assumption)
@@ -158,7 +178,7 @@ macro_rules
             | omega
             | checked_unit
             | (simp only [h, true_implies] at *; checked_unit)
-            | (simp_all; done))))
+            | ((run_tac Checked.simpEvidence); done))))
 
 namespace Checked
 

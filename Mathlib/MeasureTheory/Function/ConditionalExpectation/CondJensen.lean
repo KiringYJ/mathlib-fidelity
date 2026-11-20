@@ -169,7 +169,8 @@ private lemma ConvexOn.map_condExp_le_of_hereditarilyLindelofSpace [IsFiniteMeas
       ((L i).integrable_comp hf_int) (integrable_const (c i))
     refine hi.mono hm hk (((L i).integrable_comp hf_int).add (integrable_const (c i))) hφ_int ?_
     filter_upwards [hf] with a ha using hLc1 i ⟨f a, ha⟩
-  filter_upwards [hw, hφ_cvx.1.condExp_mem hm hf_int hs hf hg] with a hw hq
+  have hconvex : Convex ℝ s := by simpa only [Set.image_id] using hφ_cvx.1
+  filter_upwards [hw, hconvex.condExp_mem hm hf_int hs hf hg] with a hw hq
   rw [comp_apply, show φ (g a) = s.domRestrict φ ⟨g a, hq⟩ by simp, ← hLc2]
   simpa using! ciSup_le hw
 
@@ -399,13 +400,13 @@ theorem norm_rpow_le {p : ℝ} (hp : 1 ≤ p) (hm : m ≤ mα) (hg : IsCondExp m
     (‖g ·‖ ^ p) ≤ᵐ[μ] k := by
   have hp' : 0 < p := by linarith
   have hcvx : ConvexOn ℝ univ fun x : E ↦ ‖x‖ ^ p := by
-    refine ⟨convex_univ, fun x _ y _ a b ha hb hab ↦ ?_⟩
+    refine convexOn_iff.2 ⟨convex_univ, fun x _ y _ a b ha hb hab ↦ ?_⟩
     calc ‖a • x + b • y‖ ^ p
         ≤ (a * ‖x‖ + b * ‖y‖) ^ p := by
           refine Real.rpow_le_rpow (norm_nonneg _) ?_ hp'.le
-          simpa using convexOn_univ_norm.2 (mem_univ x) (mem_univ y) ha hb hab
+          simpa using convexOn_univ_norm.map_combo_le (mem_univ x) (mem_univ y) ha hb hab
       _ ≤ a * ‖x‖ ^ p + b * ‖y‖ ^ p := by
-          simpa using (convexOn_rpow hp).2 (mem_Ici.2 (norm_nonneg x))
+          simpa using (convexOn_rpow hp).map_combo_le (mem_Ici.2 (norm_nonneg x))
             (mem_Ici.2 (norm_nonneg y)) ha hb hab
   exact hcvx.map_condExp_le_univ hm
     ((Real.continuous_rpow_const hp'.le).comp continuous_norm).lowerSemicontinuous hf hfp hg hk

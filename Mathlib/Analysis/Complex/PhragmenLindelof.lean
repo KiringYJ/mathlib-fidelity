@@ -111,7 +111,8 @@ Then `‖f z‖` is bounded by the same constant on the closed strip
 only for sufficiently large values of `|re z|`.
 -/
 theorem horizontal_strip (hfd : DiffContOnCl ℂ f (im ⁻¹' Ioo a b))
-    (hB : ∃ c < π / (b - a), ∃ B, f =O[comap (_root_.abs ∘ re) atTop ⊓ 𝓟 (im ⁻¹' Ioo a b)]
+    (hB : ∀ hab : a < b, ∃ c < π / (b - a), ∃ B,
+      f =O[comap (_root_.abs ∘ re) atTop ⊓ 𝓟 (im ⁻¹' Ioo a b)]
       fun z ↦ expR (B * expR (c * |z.re|)))
     (hle_a : ∀ z : ℂ, im z = a → ‖f z‖ ≤ C) (hle_b : ∀ z, im z = b → ‖f z‖ ≤ C) (hza : a ≤ im z)
     (hzb : im z ≤ b) : ‖f z‖ ≤ C := by
@@ -119,6 +120,7 @@ theorem horizontal_strip (hfd : DiffContOnCl ℂ f (im ⁻¹' Ioo a b))
   rw [le_iff_eq_or_lt] at hza hzb
   rcases hza with hza | hza; · exact hle_a _ hza.symm
   rcases hzb with hzb | hzb; · exact hle_b _ hzb
+  specialize hB (hza.trans hzb)
   wlog hC₀ : 0 < C generalizing C
   · refine le_of_forall_gt_imp_ge_of_dense fun C' hC' => this (fun w hw => ?_) (fun w hw => ?_) ?_
     · exact (hle_a _ hw).trans hC'.le
@@ -131,7 +133,7 @@ theorem horizontal_strip (hfd : DiffContOnCl ℂ f (im ⁻¹' Ioo a b))
     ⟨(a + b) / 2, (b - a) / 2, by ring, by ring⟩
   have hab : a - b < a + b := hza.trans hzb
   have hb : 0 < b := by simpa only [sub_eq_add_neg, add_lt_add_iff_left, neg_lt_self_iff] using hab
-  rw [add_sub_sub_cancel, ← two_mul, div_mul_eq_div_div] at hB
+  simp only [add_sub_sub_cancel, ← two_mul, div_mul_eq_div_div₀] at hB
   have hπb : 0 < π / 2 / b := div_pos Real.pi_div_two_pos hb
   -- Choose some `c B : ℝ` satisfying `hB`, then choose `max c 0 < d < π / 2 / b`.
   rcases hB with ⟨c, hc, B, hO⟩
@@ -189,12 +191,13 @@ theorem horizontal_strip (hfd : DiffContOnCl ℂ f (im ⁻¹' Ioo a b))
     suffices H : Tendsto (fun R => δ + B * (expR ((d - c) * R))⁻¹) atTop (𝓝 (δ + B * 0)) by
       rw [mul_zero, add_zero] at H
       refine Tendsto.atBot_add ?_ tendsto_const_nhds
-      simpa only [id, (· ∘ ·), add_mul, mul_assoc, ← div_eq_inv_mul, ← Real.exp_sub, ← sub_mul,
+      simpa only [id, (· ∘ ·), add_mul, mul_assoc, ← div_eq_inv_mul₀, ← Real.exp_sub, ← sub_mul,
         sub_sub_cancel]
         using H.neg_mul_atTop δ₀ <| Real.tendsto_exp_atTop.comp <| tendsto_id.const_mul_atTop hd₀
     refine tendsto_const_nhds.add (tendsto_const_nhds.mul ?_)
-    exact tendsto_inv_atTop_zero.comp <| Real.tendsto_exp_atTop.comp <|
-      tendsto_id.const_mul_atTop (sub_pos.2 hcd)
+    exact (Real.tendsto_exp_atTop.comp
+      (tendsto_id.const_mul_atTop (sub_pos.2 hcd))).fun_inv_tendsto_atTop
+        (h0 := fun _ ↦ (Real.exp_pos _).ne'.isUnit)
   have hR₀ : 0 < R := (_root_.abs_nonneg _).trans_lt hzR
   /- Finally, we apply the bounded version of the maximum modulus principle to the rectangle
     `(-R, R) × (a - b, a + b)`. The function is bounded by `C` on the horizontal sides by assumption
@@ -229,7 +232,8 @@ Let `f : ℂ → E` be a function such that
 Then `f` is equal to zero on the closed strip `{z : ℂ | a ≤ im z ≤ b}`.
 -/
 theorem eq_zero_on_horizontal_strip (hd : DiffContOnCl ℂ f (im ⁻¹' Ioo a b))
-    (hB : ∃ c < π / (b - a), ∃ B, f =O[comap (_root_.abs ∘ re) atTop ⊓ 𝓟 (im ⁻¹' Ioo a b)]
+    (hB : ∀ hab : a < b, ∃ c < π / (b - a), ∃ B,
+      f =O[comap (_root_.abs ∘ re) atTop ⊓ 𝓟 (im ⁻¹' Ioo a b)]
       fun z ↦ expR (B * expR (c * |z.re|)))
     (ha : ∀ z : ℂ, z.im = a → f z = 0) (hb : ∀ z : ℂ, z.im = b → f z = 0) :
     EqOn f 0 (im ⁻¹' Icc a b) := fun _z hz =>
@@ -247,14 +251,17 @@ Let `f g : ℂ → E` be functions such that
 Then `f` is equal to `g` on the closed strip `{z : ℂ | a ≤ im z ≤ b}`.
 -/
 theorem eqOn_horizontal_strip {g : ℂ → E} (hdf : DiffContOnCl ℂ f (im ⁻¹' Ioo a b))
-    (hBf : ∃ c < π / (b - a), ∃ B, f =O[comap (_root_.abs ∘ re) atTop ⊓ 𝓟 (im ⁻¹' Ioo a b)]
+    (hBf : ∀ hab : a < b, ∃ c < π / (b - a), ∃ B,
+      f =O[comap (_root_.abs ∘ re) atTop ⊓ 𝓟 (im ⁻¹' Ioo a b)]
       fun z ↦ expR (B * expR (c * |z.re|)))
     (hdg : DiffContOnCl ℂ g (im ⁻¹' Ioo a b))
-    (hBg : ∃ c < π / (b - a), ∃ B, g =O[comap (_root_.abs ∘ re) atTop ⊓ 𝓟 (im ⁻¹' Ioo a b)]
+    (hBg : ∀ hab : a < b, ∃ c < π / (b - a), ∃ B,
+      g =O[comap (_root_.abs ∘ re) atTop ⊓ 𝓟 (im ⁻¹' Ioo a b)]
       fun z ↦ expR (B * expR (c * |z.re|)))
     (ha : ∀ z : ℂ, z.im = a → f z = g z) (hb : ∀ z : ℂ, z.im = b → f z = g z) :
     EqOn f g (im ⁻¹' Icc a b) := fun _z hz =>
-  sub_eq_zero.1 (eq_zero_on_horizontal_strip (hdf.sub hdg) (isBigO_sub_exp_exp hBf hBg)
+  sub_eq_zero.1 (eq_zero_on_horizontal_strip (hdf.sub hdg)
+    (fun hab ↦ isBigO_sub_exp_exp (hBf hab) (hBg hab))
     (fun w hw => sub_eq_zero.2 (ha w hw)) (fun w hw => sub_eq_zero.2 (hb w hw)) hz)
 
 /-!
@@ -273,7 +280,8 @@ Then `‖f z‖` is bounded by the same constant on the closed strip
 only for sufficiently large values of `|im z|`.
 -/
 theorem vertical_strip (hfd : DiffContOnCl ℂ f (re ⁻¹' Ioo a b))
-    (hB : ∃ c < π / (b - a), ∃ B, f =O[comap (_root_.abs ∘ im) atTop ⊓ 𝓟 (re ⁻¹' Ioo a b)]
+    (hB : ∀ hab : a < b, ∃ c < π / (b - a), ∃ B,
+      f =O[comap (_root_.abs ∘ im) atTop ⊓ 𝓟 (re ⁻¹' Ioo a b)]
       fun z ↦ expR (B * expR (c * |z.im|)))
     (hle_a : ∀ z : ℂ, re z = a → ‖f z‖ ≤ C) (hle_b : ∀ z, re z = b → ‖f z‖ ≤ C) (hza : a ≤ re z)
     (hzb : re z ≤ b) : ‖f z‖ ≤ C := by
@@ -282,7 +290,8 @@ theorem vertical_strip (hfd : DiffContOnCl ℂ f (re ⁻¹' Ioo a b))
   refine horizontal_strip (f := fun z ↦ f (z * -I))
     (hfd.comp (differentiable_id.mul_const _).diffContOnCl H) ?_ (fun z hz => hle_a _ ?_)
     (fun z hz => hle_b _ ?_) ?_ ?_
-  · rcases hB with ⟨c, hc, B, hO⟩
+  · intro hab
+    rcases hB hab with ⟨c, hc, B, hO⟩
     refine ⟨c, hc, B, ?_⟩
     have : Tendsto (· * -I) (comap (|re ·|) atTop ⊓ 𝓟 (im ⁻¹' Ioo a b))
         (comap (|im ·|) atTop ⊓ 𝓟 (re ⁻¹' Ioo a b)) := by
@@ -301,7 +310,8 @@ Let `f : ℂ → E` be a function such that
 Then `f` is equal to zero on the closed strip `{z : ℂ | a ≤ re z ≤ b}`.
 -/
 theorem eq_zero_on_vertical_strip (hd : DiffContOnCl ℂ f (re ⁻¹' Ioo a b))
-    (hB : ∃ c < π / (b - a), ∃ B, f =O[comap (_root_.abs ∘ im) atTop ⊓ 𝓟 (re ⁻¹' Ioo a b)]
+    (hB : ∀ hab : a < b, ∃ c < π / (b - a), ∃ B,
+      f =O[comap (_root_.abs ∘ im) atTop ⊓ 𝓟 (re ⁻¹' Ioo a b)]
       fun z ↦ expR (B * expR (c * |z.im|)))
     (ha : ∀ z : ℂ, re z = a → f z = 0) (hb : ∀ z : ℂ, re z = b → f z = 0) :
     EqOn f 0 (re ⁻¹' Icc a b) := fun _z hz =>
@@ -319,14 +329,17 @@ Let `f g : ℂ → E` be functions such that
 Then `f` is equal to `g` on the closed strip `{z : ℂ | a ≤ re z ≤ b}`.
 -/
 theorem eqOn_vertical_strip {g : ℂ → E} (hdf : DiffContOnCl ℂ f (re ⁻¹' Ioo a b))
-    (hBf : ∃ c < π / (b - a), ∃ B, f =O[comap (_root_.abs ∘ im) atTop ⊓ 𝓟 (re ⁻¹' Ioo a b)]
+    (hBf : ∀ hab : a < b, ∃ c < π / (b - a), ∃ B,
+      f =O[comap (_root_.abs ∘ im) atTop ⊓ 𝓟 (re ⁻¹' Ioo a b)]
       fun z ↦ expR (B * expR (c * |z.im|)))
     (hdg : DiffContOnCl ℂ g (re ⁻¹' Ioo a b))
-    (hBg : ∃ c < π / (b - a), ∃ B, g =O[comap (_root_.abs ∘ im) atTop ⊓ 𝓟 (re ⁻¹' Ioo a b)]
+    (hBg : ∀ hab : a < b, ∃ c < π / (b - a), ∃ B,
+      g =O[comap (_root_.abs ∘ im) atTop ⊓ 𝓟 (re ⁻¹' Ioo a b)]
       fun z ↦ expR (B * expR (c * |z.im|)))
     (ha : ∀ z : ℂ, re z = a → f z = g z) (hb : ∀ z : ℂ, re z = b → f z = g z) :
     EqOn f g (re ⁻¹' Icc a b) := fun _z hz =>
-  sub_eq_zero.1 (eq_zero_on_vertical_strip (hdf.sub hdg) (isBigO_sub_exp_exp hBf hBg)
+  sub_eq_zero.1 (eq_zero_on_vertical_strip (hdf.sub hdg)
+    (fun hab ↦ isBigO_sub_exp_exp (hBf hab) (hBg hab))
     (fun w hw => sub_eq_zero.2 (ha w hw)) (fun w hw => sub_eq_zero.2 (hb w hw)) hz)
 
 /-!
@@ -365,7 +378,8 @@ nonrec theorem quadrant_I (hd : DiffContOnCl ℂ f (Ioi 0 ×ℂ Ioi 0))
   refine horizontal_strip (hd.comp differentiable_exp.diffContOnCl H) ?_ ?_ ?_ hζ.1 hζ.2
   · -- The estimate `hB` on `f` implies the required estimate on
     -- `f ∘ exp` with the same `c` and `B' = max B 0`.
-    rw [sub_zero, div_div_cancel₀ Real.pi_pos.ne']
+    intro hab
+    simp only [sub_zero, div_div_cancel₀]
     rcases hB with ⟨c, hc, B, hO⟩
     refine ⟨c, hc, max B 0, ?_⟩
     rw [← comap_comap, comap_abs_atTop, comap_sup, inf_sup_right]
@@ -448,7 +462,7 @@ theorem quadrant_II (hd : DiffContOnCl ℂ f (Iio 0 ×ℂ Ioi 0))
       f =O[cobounded ℂ ⊓ 𝓟 (Iio 0 ×ℂ Ioi 0)] fun z => expR (B * ‖z‖ ^ c))
     (hre : ∀ x : ℝ, x ≤ 0 → ‖f x‖ ≤ C) (him : ∀ x : ℝ, 0 ≤ x → ‖f (x * I)‖ ≤ C) (hz_re : z.re ≤ 0)
     (hz_im : 0 ≤ z.im) : ‖f z‖ ≤ C := by
-  obtain ⟨z, rfl⟩ : ∃ z', z' * I = z := ⟨z / I, div_mul_cancel₀ _ I_ne_zero⟩
+  obtain ⟨z, rfl⟩ : ∃ z', z' * I = z := ⟨z / I, div_mul_cancel₀ _⟩
   simp only [mul_I_re, mul_I_im, neg_nonpos] at hz_re hz_im
   change ‖(f ∘ (· * I)) z‖ ≤ C
   have H : MapsTo (· * I) (Ioi 0 ×ℂ Ioi 0) (Iio 0 ×ℂ Ioi 0) := fun w hw ↦ by

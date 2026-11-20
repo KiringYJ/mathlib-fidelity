@@ -45,7 +45,8 @@ lemma norm_nnrpow (a : A) {r : ℝ≥0} (hr : 0 < r) (ha : 0 ≤ a := by cfc_tac
 
 lemma nnnorm_sqrt (a : A) (ha : 0 ≤ a := by cfc_tac) : ‖sqrt a‖₊ = NNReal.sqrt ‖a‖₊ := by
   rw [sqrt_eq_nnrpow, NNReal.sqrt_eq_rpow]
-  exact nnnorm_nnrpow a (by simp) ha
+  have hhalf : 0 < (1 / 2 : ℝ≥0) := by positivity
+  simpa only [NNReal.coe_div, NNReal.coe_one, NNReal.coe_ofNat] using nnnorm_nnrpow a hhalf ha
 
 lemma norm_sqrt (a : A) (ha : 0 ≤ a := by cfc_tac) : ‖sqrt a‖ = √‖a‖ := by
   simpa using congr(NNReal.toReal $(nnnorm_sqrt a ha))

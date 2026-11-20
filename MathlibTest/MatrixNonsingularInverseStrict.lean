@@ -20,6 +20,27 @@ namespace MatrixNonsingularInverseStrict
 
 open Matrix
 
+/-- error: failed to synthesize
+  Inv (Matrix (Fin 1) (Fin 1) ℚ)
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command. -/
+#guard_msgs in
+#synth Inv (Matrix (Fin 1) (Fin 1) ℚ)
+
+/-- error: failed to synthesize
+  Div (Matrix (Fin 1) (Fin 1) ℚ)
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command. -/
+#guard_msgs in
+#synth Div (Matrix (Fin 1) (Fin 1) ℚ)
+
+/-- error: failed to synthesize
+  Pow (Matrix (Fin 1) (Fin 1) ℚ) ℤ
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command. -/
+#guard_msgs in
+#synth Pow (Matrix (Fin 1) (Fin 1) ℚ) ℤ
+
 /-! Without invertibility evidence a raw matrix has no inverse, quotient or negative power, even
 over a field. The failure names the missing obligation. -/
 
@@ -100,6 +121,17 @@ example (A : Matrix n n R) (h : IsUnit A.det) (z : ℤ) :
     Units.map detMonoidHom (nonsingInvUnit A h ^ z) =
       Units.map detMonoidHom (nonsingInvUnit A h) ^ z :=
   unitsMap_det_zpow (nonsingInvUnit A h) z
+
+/-! Transposition and symmetry for checked integer powers. -/
+
+example : ((0 : Matrix (Fin 2) (Fin 2) ℤ) ^ (2 : ℤ)).IsSymm := by
+  have h : (0 : Matrix (Fin 2) (Fin 2) ℤ).IsSymm := by simp [Matrix.IsSymm]
+  exact h.zpow 2
+
+example (A : Matrix n n R) (hA : IsUnit A) : (A ^ (-3 : ℤ))ᵀ = Aᵀ ^ (-3 : ℤ) := by simp
+
+example [StarRing R] (A : Matrix n n R) (z : ℤ) (hz : z < 0 → IsUnit A) :
+    (A ^ z)ᴴ = Aᴴ ^ z := by simp
 
 /-! Different proofs of invertibility give the same inverse. -/
 

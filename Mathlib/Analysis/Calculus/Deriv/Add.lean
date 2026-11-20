@@ -164,9 +164,9 @@ theorem deriv_const_add' (c : F) : (deriv (c + f ·)) = deriv f :=
   funext fun _ ↦ deriv_const_add c
 
 theorem deriv_const_add_id (c : 𝕜) : deriv (c + ·) x = 1 := by
-  rw [deriv_const_add c, deriv_id'']
+  rw [deriv_const_add c]
+  exact congrFun deriv_id'' x
 
-@[simp]
 theorem deriv_const_add_id' (c : 𝕜) : (deriv (c + ·)) = fun _ => 1 :=
   funext fun _ ↦ deriv_const_add_id c
 
@@ -308,7 +308,6 @@ theorem hasStrictDerivAt_neg : HasStrictDerivAt Neg.neg (-1) x :=
 theorem deriv_neg : deriv Neg.neg x = -1 :=
   HasDerivAt.deriv (hasDerivAt_neg x)
 
-@[simp]
 theorem deriv_neg' : deriv (Neg.neg : 𝕜 → 𝕜) = fun _ ↦ -1 :=
   funext deriv_neg
 
@@ -365,7 +364,9 @@ theorem HasStrictDerivAt.sub (hf : HasStrictDerivAt f f' x) (hg : HasStrictDeriv
 theorem derivWithin_fun_sub (hf : DifferentiableWithinAt 𝕜 f s x)
     (hg : DifferentiableWithinAt 𝕜 g s x) :
     derivWithin (fun y ↦ f y - g y) s x = derivWithin f s x - derivWithin g s x := by
-  simp only [sub_eq_add_neg, derivWithin_fun_add hf hg.fun_neg, derivWithin.fun_neg]
+  by_cases hsx : UniqueDiffWithinAt 𝕜 s x
+  · exact (hf.hasDerivWithinAt.sub hg.hasDerivWithinAt).derivWithin hsx
+  · simp [derivWithin_zero_of_not_uniqueDiffWithinAt hsx]
 
 theorem derivWithin_sub (hf : DifferentiableWithinAt 𝕜 f s x)
     (hg : DifferentiableWithinAt 𝕜 g s x) :
@@ -437,19 +438,22 @@ nonrec theorem HasDerivAt.const_sub (c : F) (hf : HasDerivAt f f' x) :
 
 theorem derivWithin_const_sub (c : F) :
     derivWithin (fun y ↦ c - f y) s x = -derivWithin f s x := by
-  simp [sub_eq_add_neg, derivWithin.fun_neg]
+  simp only [sub_eq_add_neg, derivWithin_const_add]
+  exact derivWithin.neg (f := f)
 
 theorem deriv_const_sub (c : F) : deriv (c - f ·) x = -deriv f x := by
-  simp only [← derivWithin_univ, derivWithin_const_sub]
+  simp only [sub_eq_add_neg, deriv_const_add]
+  exact deriv.neg (f := f)
 
 @[simp]
 theorem deriv_const_sub' (c : F) : deriv (c - f ·) = (-deriv f ·) :=
   funext fun _ => deriv_const_sub c
 
-theorem deriv_const_sub_id (c : 𝕜) : deriv (c - ·) x = -1 := by
-  rw [deriv_const_sub c, deriv_id'']
-
 @[simp]
+theorem deriv_const_sub_id (c : 𝕜) : deriv (c - ·) x = -1 := by
+  rw [deriv_const_sub c]
+  exact congrArg Neg.neg (congrFun deriv_id'' x)
+
 theorem deriv_const_sub_id' (c : 𝕜) : deriv (c - ·) = fun _ => -1 :=
   funext fun _ => deriv_const_sub_id c
 

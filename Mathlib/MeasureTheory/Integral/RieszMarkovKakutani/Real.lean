@@ -174,16 +174,17 @@ lemma exists_open_approx (f : C_c(X, ℝ)) {ε : ℝ} (hε : 0 < ε) (E : Set X)
       _ = _ := by rw [Content.measure_apply μ hμ', ENNReal.ofNNReal_toNNReal]
 
 /-- Choose `N` sufficiently large such that a particular quantity is small. -/
-private lemma exists_nat_large (a' b' : ℝ) {ε : ℝ} (hε : 0 < ε) : ∃ (N : ℕ), 0 < N ∧
+private lemma exists_nat_large (a' b' : ℝ) {ε : ℝ} (hε : 0 < ε) : ∃ (N : ℕ) (hN : 0 < N),
     a' / N * (b' + a' / N) ≤ ε := by
-  have A : Tendsto (fun (N : ℝ) ↦ a' / N * (b' + a' / N)) atTop (𝓝 (0 * (b' + 0))) := by
-    apply Tendsto.mul
-    · exact Tendsto.div_atTop tendsto_const_nhds tendsto_id
-    · exact Tendsto.add tendsto_const_nhds (Tendsto.div_atTop tendsto_const_nhds tendsto_id)
-  have B := A.comp tendsto_natCast_atTop_atTop
+  let n (k : ℕ) : ℝ := ((k + 1 : ℕ) : ℝ)
+  have hn : Tendsto n atTop atTop := tendsto_natCast_atTop_atTop.comp (tendsto_add_atTop_nat 1)
+  have hu (k : ℕ) : IsUnit (n k) := (Nat.cast_pos'.mpr (Nat.succ_pos k) : 0 < n k).ne'.isUnit
+  have A : Tendsto (fun k ↦ Checked.div a' (n k) (hu k)) atTop (𝓝 0) :=
+    hn.const_div_atTop (h₀ := hu) a'
+  have B := A.mul ((tendsto_const_nhds (x := b')).add A)
   simp only [add_zero, zero_mul] at B
-  obtain ⟨N, hN, h'N⟩ := (((tendsto_order.1 B).2 _ hε).and (Ici_mem_atTop 1)).exists
-  exact ⟨N, h'N, hN.le⟩
+  obtain ⟨k, hk⟩ := ((tendsto_order.1 B).2 _ hε).exists
+  exact ⟨k + 1, Nat.succ_pos k, hk.le⟩
 
 set_option backward.isDefEq.respectTransparency false in
 /-- The main estimate in the proof of the Riesz-Markov-Kakutani: `Λ f` is bounded above by the
@@ -204,11 +205,13 @@ private lemma integral_riesz_aux (f : C_c(X, ℝ)) : Λ f ≤ ∫ x, f x ∂(rie
   let ε' := (b - a) / N
   replace hε' : 0 < ε' ∧ ε' * (2 * μ.real K + |a| + b + ε') ≤ ε :=
     ⟨div_pos (sub_pos.mpr hab.1) (Nat.cast_pos'.mpr hN), hε'⟩
+  have hcut : a + N * ε' = b := by
+    dsimp [ε']
+    rw [mul_div_cancel₀]
+    ring
   -- Take a partition of the support of `f` into sets `E` by partitioning the range.
   obtain ⟨E, hE⟩ := range_cut_partition f a hε'.1 N <| by
-    dsimp [ε']
-    field_simp
-    simp [hab.2]
+    simpa only [hcut] using hab.2
   -- Introduce notation for the partition of the range.
   let y : Fin N → ℝ := fun n ↦ a + ε' * (n + 1)
   -- The measure of each `E n` is finite.
@@ -332,12 +335,12 @@ private lemma integral_riesz_aux (f : C_c(X, ℝ)) : Λ f ≤ ∫ x, f x ∂(rie
     have h : ∑ n : Fin N, y n ≤ N * b := by
       have (n : Fin N) := calc y n
         _ ≤ a + ε' * N := by simp_all [y, show (n : ℝ) + 1 ≤ N by norm_cast; lia]
-        _ = b := by simp [field, ε']
+        _ = b := by simpa only [mul_comm ε'] using hcut
       have : ∑ n, y n ≤ ∑ n, b := Finset.sum_le_sum (fun n ↦ fun _ ↦ this n)
       simp_all
     simp only [Finset.sum_add_distrib, Finset.sum_add_distrib,
                Fin.sum_const, Fin.sum_const, nsmul_eq_mul, ← add_assoc, mul_add, ← mul_assoc]
-    simpa [show (N : ℝ) ≠ 0 by simp [hN.ne.symm], mul_comm _ ε', div_eq_mul_inv, mul_assoc]
+    simpa [show (N : ℝ) ≠ 0 by simp [hN.ne.symm], mul_comm _ ε', div_eq_mul_inv₀, mul_assoc]
       using (mul_le_mul_iff_of_pos_left hε'.1).mpr <| (inv_mul_le_iff₀ (Nat.cast_pos'.mpr hN)).mpr h
 
 /-- The **Riesz-Markov-Kakutani representation theorem**: given a positive linear functional `Λ`,

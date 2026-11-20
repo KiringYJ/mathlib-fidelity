@@ -149,8 +149,10 @@ The Laplacian equals the Laplacian with respect to `Set.univ`.
 theorem laplacianWithin_univ :
     Δ[(Set.univ : Set E)] f = Δ f := by
   ext x
+  have hd : fderivWithin ℝ (fun z : E ↦ fderiv ℝ f z) Set.univ x =
+      fderiv ℝ (fun z : E ↦ fderiv ℝ f z) x := congrFun fderivWithin_univ x
   simp [laplacian, tensorIteratedFDerivTwo, bilinearIteratedFDerivTwo,
-    laplacianWithin, tensorIteratedFDerivWithinTwo, bilinearIteratedFDerivWithinTwo]
+    laplacianWithin, tensorIteratedFDerivWithinTwo, bilinearIteratedFDerivWithinTwo, hd]
 
 /-!
 ## Computation of Δ in Terms of Orthonormal Bases

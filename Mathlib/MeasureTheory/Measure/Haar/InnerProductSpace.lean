@@ -230,11 +230,13 @@ theorem MeasureTheory.volume_eq_of_finrank_eq_one (h : Module.finrank ℝ E = 1)
       apply exists_smul_eq_of_finrank_eq_one h
       simpa
     let f : ℝ ≃ₗᵢ[ℝ] E := (LinearIsometryEquiv.toSpanUnitSingleton (‖v‖⁻¹ • v)
-      (by simp [norm_smul, hv])).trans (LinearIsometryEquiv.ofTop E _ hv')
+      (by simp [norm_smul])).trans (LinearIsometryEquiv.ofTop E _ hv')
     rw [map_map (by fun_prop) (by fun_prop)]
     convert! f.measurePreserving.map_eq.symm
     ext x
     simp [f, mul_comm, smul_smul]
   _ = ‖v‖ₑ • (volume : Measure ℝ).map (· • v) := by
-    rw [map_addHaar_smul _ (by simpa using hv), Measure.map_smul _ (by fun_prop)]
-    simp
+    have hnv : ‖v‖ ≠ 0 := norm_ne_zero_iff.mpr hv
+    rw [map_addHaar_smul _ (inv_ne_zero (ha := hnv.isUnit)),
+      Measure.map_smul _ (by fun_prop)]
+    simp only [finrank_self, pow_one, inv_inv₀, abs_norm, ofReal_norm]

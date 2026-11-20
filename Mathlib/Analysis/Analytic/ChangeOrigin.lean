@@ -185,7 +185,7 @@ theorem changeOriginSeries_summable_aux₂ (hr : (r : ℝ≥0∞) < p.radius) (k
     Summable fun s : Σ l : ℕ, { s : Finset (Fin (k + l)) // s.card = l } =>
       ‖p (k + s.1)‖₊ * r ^ s.1 := by
   rcases ENNReal.lt_iff_exists_add_pos_lt.1 hr with ⟨r', h0, hr'⟩
-  simpa only [mul_inv_cancel_right₀ (pow_pos h0 _).ne'] using
+  simpa only [mul_inv_cancel_right₀ (hb := (pow_pos h0 k).ne'.isUnit)] using
     ((NNReal.summable_sigma.1 (p.changeOriginSeries_summable_aux₁ hr')).1 k).mul_right (r' ^ k)⁻¹
 
 theorem changeOriginSeries_summable_aux₃ {r : ℝ≥0} (hr : ↑r < p.radius) (k : ℕ) :
@@ -241,7 +241,7 @@ theorem derivSeries_eq_zero {n : ℕ} (hp : p (n + 1) = 0) : p.derivSeries n = 0
   suffices p.changeOriginSeries 1 n = 0 by ext v; simp [derivSeries, this]
   apply Finset.sum_eq_zero (fun s hs ↦ ?_)
   have : p (1 + n) = 0 := p.congr_zero (by abel) hp
-  simp [changeOriginSeriesTerm, this]
+  simp only [changeOriginSeriesTerm, this, LinearIsometryEquiv.map_zero]
 
 end
 
@@ -276,8 +276,9 @@ theorem changeOrigin_eval (h : (‖x‖₊ + ‖y‖₊ : ℝ≥0∞) < p.radius
     refine HasSum.sigma_of_hasSum ((p.changeOrigin x).summable y_mem_ball).hasSum (fun k => ?_) hsf
     · dsimp +instances only [f]
       refine ContinuousMultilinearMap.hasSum_eval ?_ _
-      have := (p.hasFPowerSeriesOnBall_changeOrigin k h.pos).hasSum x_mem_ball
-      rw [zero_add] at this
+      have := (p.hasFPowerSeriesOnBall_changeOrigin k h.pos).hasSum (y := x)
+        (by simpa only [id_eq, sub_zero] using x_mem_ball)
+      simp only [id_eq, sub_zero] at this
       refine HasSum.sigma_of_hasSum this (fun l => ?_) ?_
       · simp only [changeOriginSeries, sum_apply]
         apply hasSum_fintype
@@ -317,17 +318,19 @@ theorem HasFPowerSeriesWithinOnBall.changeOrigin (hf : HasFPowerSeriesWithinOnBa
     exact tsub_le_tsub hf.r_le le_rfl
   r_pos := by simp [h]
   hasSum {z} h'z hz := by
-    have : f (x + y + z) =
-        FormalMultilinearSeries.sum (FormalMultilinearSeries.changeOrigin p y) z := by
-      rw [mem_eball_zero_iff, lt_tsub_iff_right, add_comm] at hz
-      rw [p.changeOrigin_eval (hz.trans_le hf.r_le), add_assoc, hf.sum]
-      · have : insert (x + y) s ⊆ insert (x + y) (insert x s) := by
-          apply insert_subset_insert (subset_insert _ _)
-        rw [insert_eq_of_mem hy] at this
-        apply this
-        simpa [add_assoc] using h'z
-      exact mem_eball_zero_iff.2 (lt_of_le_of_lt (enorm_add_le _ _) hz)
-    rw [this]
+    simp only [id_eq] at hz ⊢
+    have hz' : ‖y‖ₑ + ‖z - (x + y)‖ₑ < r := by
+      simpa only [mem_eball_zero_iff, lt_tsub_iff_right, add_comm] using hz
+    have hzmem : z ∈ insert x s :=
+      (insert_subset_iff.2 ⟨hy, subset_insert x s⟩) h'z
+    have hdist : z - x = y + (z - (x + y)) := by abel
+    have hsum : f z = (p.changeOrigin y).sum (z - (x + y)) := by
+      rw [p.changeOrigin_eval (hz'.trans_le hf.r_le)]
+      have hbase := hf.sum (y := z - x) (by simpa only [add_sub_cancel] using hzmem)
+        (mem_eball_zero_iff.2 (hdist ▸ (enorm_add_le _ _).trans_lt hz'))
+      simp only [add_sub_cancel] at hbase
+      simpa only [hdist] using hbase
+    rw [hsum]
     apply (p.changeOrigin y).hasSum
     refine Metric.eball_subset_eball (le_trans ?_ p.changeOrigin_radius) hz
     exact tsub_le_tsub hf.r_le le_rfl

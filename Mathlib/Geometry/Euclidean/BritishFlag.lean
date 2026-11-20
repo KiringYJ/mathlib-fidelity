@@ -81,18 +81,22 @@ theorem dist_sq_add_dist_sq_eq_dist_sq_add_dist_sq_add_two_mul_inner {a b c d : 
 /-- The British flag theorem generalized to parallelograms, with a correction term of twice the
 product of the sides at `a` and the cosine of the angle at `a`. -/
 theorem dist_sq_add_dist_sq_eq_dist_sq_add_dist_sq_add_two_mul_dist_mul_dist_mul_cos_angle
-    {a b c d : P} (h : midpoint ℝ a c = midpoint ℝ b d) (p : P) :
+    {a b c d : P} {hb : b ≠ a} {hd : d ≠ a}
+    (h : midpoint ℝ a c = midpoint ℝ b d) (p : P) :
     dist p a ^ 2 + dist p c ^ 2 =
-      dist p b ^ 2 + dist p d ^ 2 + 2 * dist b a * dist d a * Real.cos (∠ b a d) := by
+      dist p b ^ 2 + dist p d ^ 2 + 2 * dist b a * dist d a * Real.cos (angle b a d hb hd) := by
+  have hx : b -ᵥ a ≠ 0 := vsub_ne_zero.mpr hb
+  have hy : d -ᵥ a ≠ 0 := vsub_ne_zero.mpr hd
   rw [dist_sq_add_dist_sq_eq_dist_sq_add_dist_sq_add_two_mul_inner h p, dist_eq_norm_vsub V b a,
-    dist_eq_norm_vsub V d a, angle, ← cos_angle_mul_norm_mul_norm]
+    dist_eq_norm_vsub V d a, angle, ← cos_angle_mul_norm_mul_norm _ _ (hx := hx) (hy := hy)]
   ring
 
 /-- **British flag theorem**, if-and-only-if form: for a parallelogram `a b c d` and any point
 `p`, the British flag identity holds if and only if the angle at `a` is a right angle. -/
 theorem dist_sq_add_dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two {a b c d : P}
+    {hb : b ≠ a} {hd : d ≠ a}
     (h : midpoint ℝ a c = midpoint ℝ b d) (p : P) :
-    dist p a ^ 2 + dist p c ^ 2 = dist p b ^ 2 + dist p d ^ 2 ↔ ∠ b a d = π / 2 := by
+    dist p a ^ 2 + dist p c ^ 2 = dist p b ^ 2 + dist p d ^ 2 ↔ angle b a d hb hd = π / 2 := by
   rw [angle, ← inner_eq_zero_iff_angle_eq_pi_div_two,
     dist_sq_add_dist_sq_eq_dist_sq_add_dist_sq_add_two_mul_inner h p, add_eq_left,
     mul_eq_zero_iff_left two_ne_zero]
@@ -101,7 +105,8 @@ theorem dist_sq_add_dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two {a b 
 the plane of the rectangle), the sum of the squares of the distances from `p` to the opposite
 corners `a` and `c` equals the sum of the squares of the distances from `p` to `b` and `d`. -/
 theorem dist_sq_add_dist_sq_eq_dist_sq_add_dist_sq_of_angle_eq_pi_div_two {a b c d : P}
-    (h : midpoint ℝ a c = midpoint ℝ b d) (ha : ∠ b a d = π / 2) (p : P) :
+    {hb : b ≠ a} {hd : d ≠ a}
+    (h : midpoint ℝ a c = midpoint ℝ b d) (ha : angle b a d hb hd = π / 2) (p : P) :
     dist p a ^ 2 + dist p c ^ 2 = dist p b ^ 2 + dist p d ^ 2 :=
   (dist_sq_add_dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two h p).mpr ha
 

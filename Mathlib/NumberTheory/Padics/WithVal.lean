@@ -44,9 +44,12 @@ lemma isUniformInducing_cast_withVal : IsUniformInducing ((Rat.castHom ℚ_[p]).
   have hp0 : 0 < (p : ℝ)⁻¹ := by simp [Nat.Prime.pos Fact.out]
   have hp1' : 1 < (p : ℚ) := by simp [Nat.Prime.one_lt Fact.out]
   have hp1 : (p : ℝ)⁻¹ < 1 := by simp [inv_lt_one_iff₀, Nat.Prime.one_lt Fact.out]
+  have hpow (n : ℕ) : (((p : ℚ) ^ (-(n : ℤ)) : ℚ) : ℝ) = (p : ℝ)⁻¹ ^ n := by
+    simp only [Rat.cast_zpow, Rat.cast_natCast, zpow_neg₀ (NeZero.ne (p : ℝ)),
+      zpow_natCast₀, inv_pow₀]
   rw [Filter.HasBasis.isUniformInducing_iff (Valued.hasBasis_uniformity _ _)
     (Metric.uniformity_basis_dist_le_pow hp0 hp1)]
-  simp only [Set.mem_ofPred_eq, dist_eq_norm_sub, inv_pow, RingEquiv.toRingHom_eq_coe,
+  simp only [Set.mem_ofPred_eq, dist_eq_norm_sub, RingEquiv.toRingHom_eq_coe,
     RingHom.coe_comp, Rat.coe_castHom, RingHom.coe_coe, Function.comp_apply, ← Rat.cast_sub,
     ← map_sub, Padic.eq_padicNorm, true_and, forall_const]
   constructor
@@ -54,7 +57,7 @@ lemma isUniformInducing_cast_withVal : IsUniformInducing ((Rat.castHom ℚ_[p]).
     have hn : Valued.v (R := (WithVal (Rat.padicValuation p))) (p ^ n) =
       exp (-n : ℤ) := by
       simp only [← WithVal.val_apply_equiv, map_pow, map_natCast, Rat.padicValuation_self,
-        Int.reduceNeg, exp_neg, inv_pow, ← exp_nsmul, nsmul_eq_mul, mul_one]
+        ← exp_nsmul, nsmul_eq_mul, mul_neg, mul_one]
     use Units.mk0 (Valued.v.restrict (p ^ n)) (by
       simp [Valuation.restrict_def, Nat.Prime.ne_zero Fact.out])
     intro x y h
@@ -62,16 +65,12 @@ lemma isUniformInducing_cast_withVal : IsUniformInducing ((Rat.castHom ℚ_[p]).
     set y' := (WithVal.equiv (Rat.padicValuation p)) y with hy
     rw [Valuation.map_sub_swap, Units.val_mk0, Valuation.restrict_lt_iff, hn] at h
     change Rat.padicValuation p (x' - y') < exp _ at h
-    rw [← Nat.cast_pow, ← Rat.cast_natCast, ← Rat.cast_inv_of_ne_zero, Rat.cast_le]
-    · rw [map_sub, ← hx, ← hy]
-      by_cases H : x' - y' = 0
-      · simp [H]
-      rw [Rat.padicValuation_of_ne_zero H, exp_lt_exp, neg_lt_neg_iff] at h
-      rw [padicNorm.eq_zpow_of_nonzero H]
-      simp only [zpow_neg, Nat.cast_pow]
-      simpa [hp0', zpow_pos, pow_pos, inv_le_inv₀] using
-        zpow_right_mono₀ (by exact_mod_cast (Nat.Prime.one_le Fact.out)) h.le
-    · simp [Nat.Prime.ne_zero Fact.out]
+    rw [← hpow, Rat.cast_le, map_sub, ← hx, ← hy]
+    by_cases H : x' - y' = 0
+    · simp [H, (zpow_pos hp0' (-(n : ℤ))).le]
+    rw [Rat.padicValuation_of_ne_zero H, exp_lt_exp] at h
+    rw [padicNorm.eq_zpow_of_nonzero H, zpow_le_zpow_iff_right₀ hp1']
+    exact h.le
   · intro γ
     use (log ((embedding γ.val) * exp (-1))).natAbs
     intro x y h
@@ -79,18 +78,14 @@ lemma isUniformInducing_cast_withVal : IsUniformInducing ((Rat.castHom ℚ_[p]).
     set y' := (WithVal.equiv (Rat.padicValuation p)) y with hy
     rw [Valuation.map_sub_swap, Valuation.restrict_lt_iff_lt_embedding]
     change Rat.padicValuation p (x' - y') < embedding γ.1
-    rw [← Nat.cast_pow, ← Rat.cast_natCast, ← Rat.cast_inv_of_ne_zero, Rat.cast_le] at h
-    · change padicNorm p (x' - y') ≤ _ at h
-      by_cases H : x' - y' = 0
-      · rw [H, map_zero]
-        exact embedding_unit_pos _
-      rw [Rat.padicValuation_of_ne_zero H]
-      rw [padicNorm.eq_zpow_of_nonzero H] at h
-      simp only [zpow_neg, Nat.cast_pow] at h
-      rw [← lt_log_iff_exp_lt (embedding_unit_ne_zero _)]
-      simp_all [← zpow_natCast, zpow_pos, inv_le_inv₀, zpow_le_zpow_iff_right₀ hp1', abs_le,
-        Int.lt_iff_add_one_le]
-    · simp [Nat.Prime.ne_zero Fact.out]
+    rw [← hpow, Rat.cast_le, map_sub, ← hx, ← hy] at h
+    by_cases H : x' - y' = 0
+    · rw [H, map_zero]
+      exact embedding_unit_pos _
+    rw [padicNorm.eq_zpow_of_nonzero H, zpow_le_zpow_iff_right₀ hp1'] at h
+    rw [Rat.padicValuation_of_ne_zero H, ← lt_log_iff_exp_lt (embedding_unit_ne_zero _)]
+    rw [log_mul (embedding_unit_ne_zero γ) exp_ne_zero, log_exp] at h
+    omega
 
 lemma isDenseInducing_cast_withVal : IsDenseInducing ((Rat.castHom ℚ_[p]).comp
     (WithVal.equiv (Rat.padicValuation p)).toRingHom) := by

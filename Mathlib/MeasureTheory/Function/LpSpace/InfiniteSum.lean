@@ -44,6 +44,8 @@ theorem summable_norm_of_tsum_eLpNorm_ne_top {ι : Type*} [Countable ι]
   /- Let us now consider `p < ∞`. In a measurable set `s` of finite measure, the `L^1` norm is
   controlled by a multiple of the `L^p` norm, so the `L^1` norms are summable, i.e.,
   `∫ x ∈ s, ∑ ‖f n x‖ₑ ∂μ < ∞`. This forces the sum to be finite ae. -/
+  have hpUnit : IsUnit p.toReal :=
+    (ENNReal.toReal_pos (zero_lt_one.trans_le hp).ne' h'p.ne).ne'.isUnit
   have A (s : Set X) (hs : MeasurableSet s) (h's : μ s ≠ ∞) :
       ∀ᵐ x ∂μ, x ∈ s → ∑' n, ‖f n x‖ₑ < ∞ := by
     rw [← ae_restrict_iff' hs]
@@ -51,14 +53,14 @@ theorem summable_norm_of_tsum_eLpNorm_ne_top {ι : Type*} [Countable ι]
     rw [lintegral_tsum (fun i ↦ (hf i).restrict.enorm)]
     apply ne_of_lt
     have : ∑' n, eLpNorm (f n) p (μ.restrict s) *
-        (μ.restrict s) Set.univ ^ (1 / ENNReal.toReal 1 - 1 / p.toReal) < ∞ := by
+        (μ.restrict s) Set.univ ^ ((1 / (1 : ℝ≥0∞)).toReal - (1 / p).toReal) < ∞ := by
       rw [ENNReal.tsum_mul_right]
       apply ENNReal.mul_lt_top ?_ ?_
       · apply lt_of_le_of_lt ?_ h'f.lt_top
         gcongr
         exact Measure.restrict_le_self
       · simp only [MeasurableSet.univ, Measure.restrict_apply, Set.univ_inter, ENNReal.toReal_one,
-          ne_eq, one_ne_zero, not_false_eq_true, div_self, one_div]
+          one_div, inv_one, ENNReal.toReal_inv (ha := hpUnit)]
         apply ENNReal.rpow_lt_top_of_nonneg _ h's
         simp only [sub_nonneg]
         apply inv_le_one_of_one_le₀

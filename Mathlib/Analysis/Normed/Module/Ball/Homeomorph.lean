@@ -21,9 +21,9 @@ We formalize it in two ways:
 - as a `Homeomorph`, see `Homeomorph.unitBall`;
 - as an `OpenPartialHomeomorph` with `source = Set.univ` and `target = Metric.ball (0 : E) 1`.
 
-While the former approach is more natural, the latter approach provides us
-with a globally defined inverse function which makes it easier to say
-that this homeomorphism is in fact a diffeomorphism.
+The inverse formula is defined on the open unit ball. The ambient inverse field required by
+`OpenPartialHomeomorph` extends it anonymously outside that target; the homeomorphism laws
+and continuity statements use only its genuine target domain.
 
 We also show that the unit ball `Metric.ball (0 : E) 1` is homeomorphic
 to a ball of positive radius in an affine space over `E`, see `OpenPartialHomeomorph.unitBallBall`.
@@ -40,43 +40,90 @@ variable {E : Type*} [SeminormedAddCommGroup E] [NormedSpace ℝ E]
 
 noncomputable section
 
+open scoped Classical in
 /-- Local homeomorphism between a real (semi)normed space and the unit ball.
 See also `Homeomorph.unitBall`. -/
-@[simps -isSimp]
 def OpenPartialHomeomorph.univUnitBall : OpenPartialHomeomorph E E where
   toFun x := (√(1 + ‖x‖ ^ 2))⁻¹ • x
-  invFun y := (√(1 - ‖(y : E)‖ ^ 2))⁻¹ • (y : E)
+  invFun y := if hy : y ∈ ball (0 : E) 1 then
+    Checked.inv (√(1 - ‖y‖ ^ 2)) (by
+      apply Ne.isUnit
+      apply Real.sqrt_ne_zero'.mpr
+      nlinarith [norm_nonneg y, mem_ball_zero_iff.mp hy]) • y else 0
   source := univ
   target := ball 0 1
   map_source' x _ := by
     have : 0 < 1 + ‖x‖ ^ 2 := by positivity
-    rw [mem_ball_zero_iff, norm_smul, Real.norm_eq_abs, abs_inv, ← _root_.div_eq_inv_mul,
+    rw [mem_ball_zero_iff, norm_smul, Real.norm_eq_abs, abs_inv, ← _root_.div_eq_inv_mul₀,
       div_lt_one (abs_pos.mpr <| Real.sqrt_ne_zero'.mpr this), ← abs_norm x, ← sq_lt_sq,
       abs_norm, Real.sq_sqrt this.le]
     exact lt_one_add _
   map_target' _ _ := trivial
   left_inv' x _ := by
+    have hball : (√(1 + ‖x‖ ^ 2))⁻¹ • x ∈ ball (0 : E) 1 := by
+      have hpos : 0 < 1 + ‖x‖ ^ 2 := by positivity
+      rw [mem_ball_zero_iff, norm_smul, Real.norm_eq_abs, abs_inv, ← div_eq_inv_mul₀,
+        div_lt_one (abs_pos.mpr <| Real.sqrt_ne_zero'.mpr hpos), ← abs_norm x, ← sq_lt_sq,
+        abs_norm, Real.sq_sqrt hpos.le]
+      exact lt_one_add _
+    rw [dite_eq_left hball]
     match_scalars
     simp [norm_smul]
     field_simp
-    simp [sq_abs, Real.sq_sqrt (zero_lt_one_add_norm_sq x).le]
+    have hpos : 0 < 1 + ‖x‖ ^ 2 := zero_lt_one_add_norm_sq x
+    rw [← Real.sqrt_mul' _ hpos.le]
+    conv_lhs => rw [← Real.sqrt_one]
+    congr 1
+    simp only [sq_abs, Real.sq_sqrt hpos.le]
+    field_simp
+    ring
   right_inv' y hy := by
+    rw [dite_eq_left hy]
     have : 0 < 1 - ‖y‖ ^ 2 := by nlinarith [norm_nonneg y, mem_ball_zero_iff.1 hy]
     match_scalars
     simp [norm_smul]
     field_simp
-    simp [field, sq_abs, Real.sq_sqrt this.le]
+    rw [← Real.sqrt_mul' _ this.le]
+    conv_lhs => rw [← Real.sqrt_one]
+    congr 1
+    simp only [sq_abs, Real.sq_sqrt this.le]
+    field_simp
+    ring
   open_source := isOpen_univ
   open_target := isOpen_ball
   continuousOn_toFun := by
     suffices Continuous fun (x : E) => (√(1 + ‖x‖ ^ 2))⁻¹ by fun_prop
-    exact Continuous.inv₀ (by fun_prop) fun x => Real.sqrt_ne_zero'.mpr (by positivity)
+    exact Continuous.fun_inv₀ (h0 := fun x ↦
+      (Real.sqrt_ne_zero'.mpr (show 0 < 1 + ‖x‖ ^ 2 by positivity)).isUnit) (by fun_prop)
   continuousOn_invFun := by
-    have : ∀ y ∈ ball (0 : E) 1, √(1 - ‖(y : E)‖ ^ 2) ≠ 0 := fun y hy ↦ by
-      rw [Real.sqrt_ne_zero']
-      nlinarith [norm_nonneg y, mem_ball_zero_iff.1 hy]
-    exact ContinuousOn.smul (ContinuousOn.inv₀
-      (continuousOn_const.sub (continuous_norm.continuousOn.pow _)).sqrt this) continuousOn_id
+    rw [continuousOn_iff_continuous_domRestrict]
+    have h0 : ∀ y : ball (0 : E) 1, IsUnit (√(1 - ‖(y : E)‖ ^ 2)) := by
+      intro y
+      apply Ne.isUnit
+      apply Real.sqrt_ne_zero'.mpr
+      nlinarith [norm_nonneg (y : E), mem_ball_zero_iff.mp y.prop]
+    have hc : Continuous (fun y : ball (0 : E) 1 ↦ √(1 - ‖(y : E)‖ ^ 2)) := by fun_prop
+    exact ((hc.fun_inv₀ (h0 := h0)).smul continuous_subtype_val).congr
+      (fun y ↦ by
+        dsimp only [Set.domRestrict, Pi.smul_apply]
+        rw [dite_eq_left y.prop]
+        rfl)
+
+theorem OpenPartialHomeomorph.univUnitBall_apply (x : E) :
+    univUnitBall x = (√(1 + ‖x‖ ^ 2))⁻¹ • x := rfl
+
+/-- The inverse formula is evaluated only on the unit-ball target. -/
+theorem OpenPartialHomeomorph.univUnitBall_symm_apply {y : E} (hy : y ∈ ball (0 : E) 1) :
+    univUnitBall.symm y = Checked.inv (√(1 - ‖y‖ ^ 2)) (by
+      apply Ne.isUnit
+      apply Real.sqrt_ne_zero'.mpr
+      nlinarith [norm_nonneg y, mem_ball_zero_iff.mp hy]) • y :=
+  dite_eq_left hy
+
+theorem OpenPartialHomeomorph.univUnitBall_source : (univUnitBall (E := E)).source = univ := rfl
+
+theorem OpenPartialHomeomorph.univUnitBall_target :
+    (univUnitBall (E := E)).target = ball (0 : E) 1 := rfl
 
 @[simp]
 theorem OpenPartialHomeomorph.univUnitBall_apply_zero : univUnitBall (0 : E) = 0 := by
@@ -84,7 +131,8 @@ theorem OpenPartialHomeomorph.univUnitBall_apply_zero : univUnitBall (0 : E) = 0
 
 @[simp]
 theorem OpenPartialHomeomorph.univUnitBall_symm_apply_zero : univUnitBall.symm (0 : E) = 0 := by
-  simp [OpenPartialHomeomorph.univUnitBall_symm_apply]
+  rw [OpenPartialHomeomorph.univUnitBall_symm_apply (by simp)]
+  simp
 
 /-- A (semi) normed real vector space is homeomorphic to the unit ball in the same space.
 This homeomorphism sends `x : E` to `(1 + ‖x‖²)^(- ½) • x`.

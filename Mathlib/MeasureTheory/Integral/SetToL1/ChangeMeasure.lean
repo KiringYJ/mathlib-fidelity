@@ -111,6 +111,7 @@ theorem continuous_L1_toL1 {μ' : Measure α} (c' : ℝ≥0∞) (hc' : c' ≠ �
       ext1 f; ext1; simp_rw [hμ'0]; simp only [ae_zero, EventuallyEq, eventually_bot]
     rw [h_im_zero]
     exact continuous_zero
+  have hc_unit : IsUnit c'.toReal := (ENNReal.toReal_pos hc'0 hc').ne'.isUnit
   rw [Metric.continuous_iff]
   intro f ε hε_pos
   use ε / 2 / c'.toReal
@@ -133,8 +134,7 @@ theorem continuous_L1_toL1 {μ' : Measure α} (c' : ℝ≥0∞) (hc' : c' ≠ �
       simp
     _ = c'.toReal * (eLpNorm (⇑g - ⇑f) 1 μ).toReal := toReal_mul
     _ ≤ c'.toReal * (ε / 2 / c'.toReal) := by gcongr
-    _ = ε / 2 := by
-      refine mul_div_cancel₀ (ε / 2) ?_; rw [Ne, toReal_eq_zero_iff]; simp [hc', hc'0]
+    _ = ε / 2 := mul_div_cancel₀ (ε / 2)
     _ < ε := half_lt_self hε_pos
 
 theorem setToFun_congr_measure_of_integrable {μ' : Measure α} (c' : ℝ≥0∞) (hc' : c' ≠ ∞)

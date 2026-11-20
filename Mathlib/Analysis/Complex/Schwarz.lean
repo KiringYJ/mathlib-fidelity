@@ -69,51 +69,76 @@ theorem schwarz_aux {f : ℂ → ℂ} {c z : ℂ} {R₁ R₂ : ℝ} {n : ℕ}
   -- By slightly reducing `R₁`, we can assume that `f` is differentiable on `closedBall c R₁`
   -- and it maps this ball to the closed ball in the codomain.
   have hR₁ : 0 < R₁ := nonempty_ball.1 ⟨z, hz⟩
-  wlog hd' : DifferentiableOn ℂ f (closedBall c R₁) ∧
+  wlog hd' : DifferentiableOn ℂ f (closedBall c R₁) id ∧
     MapsTo f (closedBall c R₁) (closedBall (f c) R₂) generalizing R₁
-  · suffices ∀ᶠ r in 𝓝[<] R₁, ‖f z - f c‖ ≤ R₂ * (‖z - c‖ / r) ^ (n + 1) by
-      refine ge_of_tendsto ?_ this
-      refine ContinuousAt.continuousWithinAt ?_
-      fun_prop (disch := positivity)
-    rw [mem_ball_iff_norm] at hz
-    filter_upwards [Ioo_mem_nhdsLT hz] with r ⟨hzr, hrR₁⟩
-    apply this
-    · exact hd.mono <| by gcongr
-    · exact h_maps.mono_left <| by gcongr
-    · rwa [mem_ball_iff_norm]
-    · exact (norm_nonneg _).trans_lt hzr
-    · exact ⟨hd.mono <| closedBall_subset_ball hrR₁, h_maps.mono_left <|
-        closedBall_subset_ball hrR₁⟩
+  · let l := comap (Subtype.val : Ioi (0 : ℝ) → ℝ) (𝓝[<] R₁)
+    have hpos : Ioi (0 : ℝ) ∈ 𝓝[<] R₁ :=
+      mem_nhdsWithin_of_mem_nhds (isOpen_Ioi.mem_nhds hR₁)
+    have hlarge : Set.range (Subtype.val : Ioi (0 : ℝ) → ℝ) ∈ 𝓝[<] R₁ := by
+      simpa only [Subtype.range_val] using hpos
+    have hl : l.NeBot := (inferInstance : NeBot (𝓝[<] R₁)).comap_of_range_mem hlarge
+    have hval : Tendsto (Subtype.val : Ioi (0 : ℝ) → ℝ) l (𝓝 R₁) :=
+      tendsto_comap.mono_right nhdsWithin_le_nhds
+    have hconst : Tendsto (fun _ : Ioi (0 : ℝ) ↦ ‖z - c‖) l (𝓝 ‖z - c‖) :=
+      tendsto_const_nhds
+    have hquot := hconst.div₀ hval (h₀ := fun r ↦ (mem_Ioi.mp r.2).ne'.isUnit)
+      (hb := hR₁.ne'.isUnit)
+    refine ge_of_tendsto ((hquot.pow (n + 1)).const_mul R₂) ?_
+    rw [show l = comap (Subtype.val : Ioi (0 : ℝ) → ℝ) (𝓝[<] R₁) from rfl, eventually_comap]
+    filter_upwards [Ioo_mem_nhdsLT (mem_ball_iff_norm.mp hz)] with r ⟨hzr, hrR₁⟩ y hy
+    subst r
+    exact this (hd.mono (ball_subset_ball hrR₁.le))
+      (h_maps.mono_left (ball_subset_ball hrR₁.le)) (mem_ball_iff_norm.mpr hzr) y.2
+      ⟨hd.mono (closedBall_subset_ball hrR₁), h_maps.mono_left (closedBall_subset_ball hrR₁)⟩
   -- Cleanup, discard the case `z = c`.
   clear hd h_maps
   rcases hd' with ⟨hd, h_maps⟩
   rcases eq_or_ne z c with rfl | hne
   · simp
-  -- Consider the function given by `g w := ((w - c) ^ (n + 1))⁻¹ * (f w - f c)`.
-  -- It is differentiable away from `c` and satisfies `g w = o((w - c)⁻¹)`,
-  -- thus it can be extended to a function g'` differentiable on the whole closed ball
-  -- with center c` and radius `R₁`.
-  set g : ℂ → ℂ := fun w ↦ ((w - c) ^ (n + 1))⁻¹ * (f w - f c)
-  set g' := update g c (limUnder (𝓝[≠] c) g)
+  let D : Set ℂ := ({c} : Set ℂ)ᶜ
+  have hD : IsOpen D := isClosed_singleton.isOpen_compl
+  have hp (w : D) : IsUnit ((w.val - c) ^ (n + 1)) :=
+    (sub_ne_zero.mpr w.property).isUnit.pow _
+  let p (w : D) := Checked.inv ((w.val - c) ^ (n + 1)) (hp w)
+  let Q := Function.extend (Subtype.val : D → ℂ) p 0
+  have hQ (w : D) : Q w.val = p w := Subtype.val_injective.extend_apply _ _ _
+  have hQd (w : D) : DifferentiableAt ℂ Q w.val := by
+    apply DifferentiableAt.of_restrict (s := D) (x := w) ?_ (hD.mem_nhds w.property)
+    let q (y : D) : {y : ℂ // IsUnit ((y - c) ^ (n + 1))} := ⟨y.val, hp y⟩
+    have hpow : AnalyticAt ℂ (fun y : ℂ ↦ (y - c) ^ (n + 1)) w.val := by fun_prop
+    have ha := (hpow.inv (hp w)).comp_domain (g := q) (x := w)
+    simpa only [q, Function.comp_def, hQ, p, Checked.inv, id_eq] using
+      ha.differentiableAt continuous_subtype_val.continuousAt
+  let g (w : ℂ) := Q w * (f w - f c)
+  let g' := update g c (limUnder (𝓝[≠] c) g)
   have hdg' : DifferentiableOn ℂ g' (closedBall c R₁) := by
     refine .mono ?_ (subset_insert_sdiff_singleton c _)
     apply differentiableOn_update_limUnder_insert_of_isLittleO
     · exact sdiff_mem_nhdsWithin_compl (closedBall_mem_nhds _ hR₁) _
     · refine .mul ?_ (hd.mono sdiff_subset |>.sub_const _)
-      fun_prop (disch := simp +contextual [sub_eq_zero])
-    · refine Asymptotics.isBigO_refl (fun w ↦ ((w - c) ^ (n + 1))⁻¹) _ |>.mul_isLittleO hn
-        |>.mono (nhdsWithin_le_nhds (s := {c}ᶜ)) |>.congr' ?_ ?_
-      · simp [g]
-      · refine eventually_mem_nhdsWithin.mono fun w hw ↦ ?_
-        rw [mem_compl_singleton_iff, ← sub_ne_zero] at hw
-        simp [pow_succ, field]
+      exact fun w hw ↦ (hQd ⟨w, hw.2⟩).differentiableWithinAt
+    · have hv : Tendsto (Subtype.val : D → ℂ) (comap Subtype.val (𝓝[≠] c)) (𝓝 c) :=
+        tendsto_comap.mono_right nhdsWithin_le_nhds
+      refine ((Asymptotics.isBigO_refl p _).mul_isLittleO (hn.comp_tendsto hv)).congr'
+        (Eventually.of_forall fun w ↦ ?_) (Eventually.of_forall fun w ↦ ?_)
+      · simp [g, hQ]
+      · simp only [p, Function.comp_def, pow_succ, mul_inv_rev₀, mul_assoc,
+          inv_mul_cancel₀, mul_one]
+  have hg' (w : ℂ) (hw : w ≠ c) :
+      g' w = Checked.inv ((w - c) ^ (n + 1)) ((sub_ne_zero.mpr hw).isUnit.pow _) *
+        (f w - f c) := by
+    simp only [g', g, update_of_ne hw, hQ (⟨w, hw⟩ : D), p]
   -- Finally, we apply the maximum modulus principle to this function.
   -- On the sphere `dist w c = R₁`, its norm is bounded by `R₂ / R₁ ^ (n + 1)`,
   -- thus it's bounded by the same constant on the whole closed ball,
   -- in particular, at `w = z`.
   suffices ‖g' z‖ ≤ R₂ / R₁ ^ (n + 1) by
-    have hz' : ‖z - c‖ ≠ 0 := by simpa [sub_eq_zero] using hne
-    simpa [g', hne, g, div_pow, mul_comm, field] using this
+    have hquot : ‖f z - f c‖ / ‖z - c‖ ^ (n + 1) ≤ R₂ / R₁ ^ (n + 1) := by
+      simpa only [hg' z hne, inv_mul_eq_div₀, norm_div, norm_pow] using this
+    have hz' : 0 < ‖z - c‖ ^ (n + 1) := pow_pos (norm_pos_iff.mpr (sub_ne_zero.mpr hne)) _
+    calc
+      ‖f z - f c‖ ≤ (R₂ / R₁ ^ (n + 1)) * ‖z - c‖ ^ (n + 1) := (div_le_iff₀ hz').mp hquot
+      _ = _ := by rw [div_pow₀]; ring
   refine norm_le_of_forall_mem_frontier_norm_le isBounded_ball (hdg'.diffContOnCl_ball subset_rfl)
     ?_ ?_
   · grw [frontier_ball_subset_sphere]
@@ -122,7 +147,10 @@ theorem schwarz_aux {f : ℂ → ℂ} {c z : ℂ} {R₁ R₂ : ℝ} {n : ℕ}
     have hfw : ‖f w - f c‖ ≤ R₂ := by
       simpa [dist_eq_norm] using h_maps (sphere_subset_closedBall hw)
     rw [mem_sphere_iff_norm] at hw
-    simpa [g', hwc, g, hw, field]
+    calc
+      ‖g' w‖ = ‖f w - f c‖ / R₁ ^ (n + 1) := by
+        simp only [hg' w hwc, inv_mul_eq_div₀, norm_div, norm_pow, hw]
+      _ ≤ _ := (div_le_div_iff_of_pos_right (pow_pos hR₁ _)).mpr hfw
   · exact subset_closure hz
 
 public section
@@ -192,7 +220,7 @@ theorem dist_le_div_mul_dist_of_mapsTo_ball (hd : DifferentiableOn ℂ f (ball c
   refine dist_le_mul_div_pow_of_mapsTo_ball_of_isLittleO (n := 0) hd h_maps ?_ hz |>.trans_eq ?_
   · simpa using hd.continuousOn.continuousAt
       (ball_mem_nhds _ <| nonempty_ball.mp ⟨_, hz⟩) |>.sub_const (f c)
-  · simp [field]
+  · rw [pow_one, ← mul_div_assoc₀, div_mul_eq_mul_div₀]
 
 /-- The **Schwarz Lemma**. Let `f : E → F` be a complex analytic function
 on an open ball with center `c` and positive radius `R₁`.
@@ -260,7 +288,7 @@ then the norm of the derivative of `f` at the center of this disk is at most `1`
 -/
 theorem norm_deriv_le_one_of_mapsTo_ball (hd : DifferentiableOn ℂ f (ball c R))
     (h_maps : MapsTo f (ball c R) (closedBall (f c) R)) (h₀ : 0 < R) : ‖deriv f c‖ ≤ 1 :=
-  (norm_deriv_le_div_of_mapsTo_ball hd h_maps h₀).trans_eq (div_self h₀.ne')
+  (norm_deriv_le_div_of_mapsTo_ball hd h_maps h₀).trans_eq div_self
 
 /-- Two cases of the **Schwarz Lemma** (derivative and distance), merged together.
 
@@ -274,10 +302,10 @@ theorem norm_dslope_le_div_of_mapsTo_ball (hd : DifferentiableOn ℂ f (ball c R
     ‖dslope f c z‖ ≤ R₂ / R₁ := by
   rcases eq_or_ne z c with rfl | hne
   · simpa using norm_deriv_le_div_of_mapsTo_ball hd h_maps (by simpa using hz)
-  · rw [dslope_of_ne _ hne, slope_def_module, norm_smul, norm_inv, ← dist_eq_norm_sub,
-      ← dist_eq_norm_sub, ← div_eq_inv_mul, div_le_iff₀]
-    · exact dist_le_div_mul_dist_of_mapsTo_ball hd h_maps hz
-    · simpa
+  · rw [dslope_of_ne _ hne, slope_def_module]
+    simp only [norm_smul, norm_inv, inv_mul_eq_div₀]
+    refine (div_le_iff₀ (norm_pos_iff.mpr (sub_ne_zero.mpr hne))).2 ?_
+    simpa only [dist_eq_norm] using dist_le_div_mul_dist_of_mapsTo_ball hd h_maps hz
 
 /-- Equality case in the **Schwarz Lemma**: in the setup of `norm_dslope_le_div_of_mapsTo_ball`,
 if `‖dslope f c z₀‖ = R₂ / R₁` holds at a point in the ball
@@ -334,10 +362,12 @@ rename this theorem to `affine_of_mapsTo_ball_of_exists_norm_dslope_eq_div`.
 theorem affine_of_mapsTo_ball_of_exists_norm_dslope_eq_div'
     [StrictConvexSpace ℝ E] (hd : DifferentiableOn ℂ f (ball c R₁))
     (h_maps : Set.MapsTo f (ball c R₁) (closedBall (f c) R₂))
-    (h_z₀ : ∃ z₀ ∈ ball c R₁, ‖dslope f c z₀‖ = R₂ / R₁) :
-    ∃ C : E, ‖C‖ = R₂ / R₁ ∧ Set.EqOn f (fun z => f c + (z - c) • C) (ball c R₁) :=
-  let ⟨z₀, h_z₀, h_eq⟩ := h_z₀
-  ⟨dslope f c z₀, h_eq, affine_of_mapsTo_ball_of_norm_dslope_eq_div hd h_maps h_z₀ h_eq⟩
+    (h_z₀ : ∃ z₀ : ball c R₁, ‖dslope f c z₀.val‖ =
+      Checked.div R₂ R₁ (pos_of_mem_ball z₀.2).ne'.isUnit) :
+    ∃ C : E, ‖C‖ = Checked.div R₂ R₁ (pos_of_mem_ball h_z₀.choose.2).ne'.isUnit ∧
+      Set.EqOn f (fun z => f c + (z - c) • C) (ball c R₁) :=
+  ⟨dslope f c h_z₀.choose.val, h_z₀.choose_spec,
+    affine_of_mapsTo_ball_of_norm_dslope_eq_div hd h_maps h_z₀.choose.2 h_z₀.choose_spec⟩
 
 end DimOne
 

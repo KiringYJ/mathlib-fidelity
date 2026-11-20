@@ -92,7 +92,7 @@ theorem exists_ideal_in_class_of_norm_le (C : ClassGroup (𝓞 K)) :
   · rw [← FractionalIdeal.absNorm_span_singleton (𝓞 K), Algebra.linearMap_apply,
       ← FractionalIdeal.coeIdeal_span_singleton, FractionalIdeal.coeIdeal_absNorm, hI, map_mul,
       cast_mul, Rat.cast_mul, absNorm_apply, Rat.cast_natCast, Rat.cast_natCast,
-      FractionalIdeal.coe_mk0, FractionalIdeal.coeIdeal_absNorm, Rat.cast_natCast, mul_div_assoc,
+      FractionalIdeal.coe_mk0, FractionalIdeal.coeIdeal_absNorm, Rat.cast_natCast, mul_div_assoc₀,
       mul_assoc, mul_assoc] at h_nm
     refine le_of_mul_le_mul_of_pos_left h_nm ?_
     exact cast_pos.mpr <| pos_of_ne_zero <| absNorm_ne_zero_of_nonZeroDivisors J
@@ -202,8 +202,9 @@ theorem isPrincipalIdealRing_of_abs_discr_lt
       ((finrank ℚ K) ^ (finrank ℚ K) / (finrank ℚ K)!)) ^ 2) :
     IsPrincipalIdealRing (𝓞 K) := by
   have : 0 < finrank ℚ K := finrank_pos -- Lean needs to know this for `positivity` to succeed
+  have hpi4 : IsUnit (π / 4 : ℝ) := (show 0 < (π / 4 : ℝ) by positivity).ne'.isUnit
   rw [← Real.sqrt_lt (by positivity) (by positivity), mul_assoc, ← inv_mul_lt_iff₀' (by positivity),
-    mul_inv, ← inv_pow, inv_div, inv_div, mul_assoc, Int.cast_abs] at h
+    mul_inv₀, ← inv_pow₀ (ha := hpi4), inv_div₀, inv_div₀, mul_assoc, Int.cast_abs] at h
   refine isPrincipalIdealRing_of_isPrincipal_of_norm_le (fun I hI ↦ ?_)
   rw [absNorm_eq_one_iff.mp <| le_antisymm (Nat.lt_succ_iff.mp (cast_lt.mp
     (lt_of_le_of_lt hI h))) <| one_le_iff_ne_zero.mpr (absNorm_ne_zero_of_nonZeroDivisors I)]

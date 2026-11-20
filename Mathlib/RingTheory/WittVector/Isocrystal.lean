@@ -173,7 +173,9 @@ instance (m : ℤ) : Isocrystal p k (StandardOneDimIsocrystal p k m) where
 set_option backward.isDefEq.respectTransparency.types false in
 @[simp]
 theorem StandardOneDimIsocrystal.frobenius_apply (m : ℤ) (x : StandardOneDimIsocrystal p k m) :
-    Φ(p, k) x = (p : K(p, k)) ^ m • φ(p, k) x := rfl
+    Φ(p, k) x =
+      Checked.zpow (p : K(p, k)) m (fun _ ↦ (WittVector.FractionRing.p_nonzero p k).isUnit) •
+        φ(p, k) x := rfl
 
 end PerfectRing
 
@@ -194,7 +196,9 @@ theorem isocrystal_classification (k : Type*) [Field k] [IsAlgClosed k] [CharP k
     apply this
     simp only [← ha, ha', zero_smul]
   obtain ⟨b, hb, m, hmb⟩ := WittVector.exists_frobenius_solution_fractionRing p ha
-  replace hmb : φ(p, k) b * a = (p : K(p, k)) ^ m * b := by convert! hmb
+  replace hmb : φ(p, k) b * a =
+      Checked.zpow (p : K(p, k)) m (fun _ ↦ (WittVector.FractionRing.p_nonzero p k).isUnit) * b :=
+    hmb
   use m
   let F₀ : StandardOneDimIsocrystal p k m →ₗ[K(p, k)] V := LinearMap.toSpanSingleton K(p, k) V x
   let F : StandardOneDimIsocrystal p k m ≃ₗ[K(p, k)] V := by

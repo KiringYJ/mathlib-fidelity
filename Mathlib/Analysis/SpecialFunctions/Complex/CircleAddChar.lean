@@ -28,10 +28,11 @@ open Complex Function
 open scoped Real
 
 /-- The canonical map from the additive to the multiplicative circle, as an `AddChar`. -/
-noncomputable def AddCircle.toCircle_addChar {T : ℝ} : AddChar (AddCircle T) Circle where
-  toFun := toCircle
+noncomputable def AddCircle.toCircle_addChar {T : ℝ} (hT : IsUnit T := by checked_unit) :
+    AddChar (AddCircle T) Circle where
+  toFun x := toCircle x hT
   map_zero_eq_one' := toCircle_zero
-  map_add_eq_mul' := toCircle_add
+  map_add_eq_mul' x y := toCircle_add x y (hT := hT)
 
 open AddCircle
 
@@ -48,12 +49,12 @@ variable {N : ℕ} [NeZero N]
 /-- The additive character from `ZMod N` to the unit circle in `ℂ`, sending `j mod N` to
 `exp (2 * π * I * j / N)`. -/
 noncomputable def toCircle : AddChar (ZMod N) Circle :=
-  toCircle_addChar.compAddMonoidHom toAddCircle
+  (toCircle_addChar isUnit_one).compAddMonoidHom toAddCircle
 
 lemma toCircle_intCast (j : ℤ) :
     toCircle (j : ZMod N) = exp (2 * π * I * j / N) := by
   rw [toCircle, AddChar.compAddMonoidHom_apply, toCircle_addChar, AddChar.coe_mk,
-    AddCircle.toCircle, toAddCircle_intCast, Function.Periodic.lift_coe, Circle.coe_exp]
+    toAddCircle_intCast, AddCircle.toCircle_apply_mk, Circle.coe_exp, div_one₀]
   push_cast
   ring_nf
 
@@ -76,8 +77,9 @@ lemma toCircle_eq_circleExp (j : ZMod N) :
   push_cast
   congr; ring
 
-lemma injective_toCircle : Injective (toCircle : ZMod N → Circle) :=
-  (AddCircle.injective_toCircle one_ne_zero).comp (toAddCircle_injective N)
+lemma injective_toCircle : Injective (toCircle : ZMod N → Circle) := by
+  change Injective ((fun x : AddCircle 1 ↦ AddCircle.toCircle x isUnit_one) ∘ toAddCircle)
+  exact (AddCircle.injective_toCircle (hT := isUnit_one)).comp (toAddCircle_injective N)
 
 /-- The additive character from `ZMod N` to `ℂ`, sending `j mod N` to `exp (2 * π * I * j / N)`. -/
 noncomputable def stdAddChar : AddChar (ZMod N) ℂ := Circle.coeHom.compAddChar toCircle
@@ -145,7 +147,7 @@ lemma rootsOfUnityCircleEquiv_comp_rootsOfUnityAddChar_val (j : ZMod n) :
 theorem surjective_rootsOfUnityCircleEquiv_comp_rootsOfUnityAddChar (n : ℕ) [NeZero n] :
     Surjective (rootsOfUnityCircleEquiv n ∘ ZMod.rootsOfUnityAddChar n) := fun ⟨w, hw⟩ ↦ by
   obtain ⟨j, hj1, hj2⟩ := (Complex.mem_rootsOfUnity n w).mp hw
-  exact ⟨j, by simp [Units.ext_iff, Subtype.ext_iff, ← hj2, ZMod.toCircle_natCast, mul_div_assoc]⟩
+  exact ⟨j, by simp [Units.ext_iff, Subtype.ext_iff, ← hj2, ZMod.toCircle_natCast, mul_div_assoc₀]⟩
 
 lemma bijective_rootsOfUnityAddChar :
     Bijective (ZMod.rootsOfUnityAddChar n) where

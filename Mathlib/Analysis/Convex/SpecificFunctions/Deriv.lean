@@ -12,6 +12,8 @@ public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
 public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
 public import Mathlib.Analysis.Convex.Deriv
 
+import Mathlib.Analysis.Convex.SpecificFunctions.Basic
+
 /-!
 # Collection of convex functions
 
@@ -131,11 +133,15 @@ theorem strictConvexOn_zpow {m : ℤ} (hm₀ : m ≠ 0) (hm₁ : m ≠ 1) :
   have e : ∀ w : Ioi (0 : ℝ), Checked.zpow (w : ℝ) (Int.negSucc n) (fun _ ↦ w.2.ne'.isUnit) =
       Checked.inv (w : ℝ) w.2.ne'.isUnit ^ (n + 1) := fun w ↦ by
     rw [zpow_negSucc₀, inv_pow₀]
+  have hp : (1 : ℝ) ≤ (↑(n + 1 : ℕ) : ℝ) := by
+    exact_mod_cast Nat.succ_le_succ (Nat.zero_le n)
+  have hconv : ConvexOn ℝ (Ici 0) (fun w : ℝ ↦ w ^ (n + 1)) := by
+    simpa only [Real.rpow_natCast] using convexOn_rpow hp
   simp only [e]
   calc Checked.inv (z : ℝ) z.2.ne'.isUnit ^ (n + 1)
       < (a * (x : ℝ)⁻¹ + b * (y : ℝ)⁻¹) ^ (n + 1) := by gcongr
     _ ≤ a * (x : ℝ)⁻¹ ^ (n + 1) + b * (y : ℝ)⁻¹ ^ (n + 1) :=
-      (convexOn_pow (n + 1)).map_combo_le (inv_pos_of_pos hx).le (inv_pos_of_pos hy).le ha.le
+      hconv.map_combo_le (inv_pos_of_pos hx).le (inv_pos_of_pos hy).le ha.le
         hb.le hab
 
 section SqrtMulLog
@@ -143,9 +149,15 @@ section SqrtMulLog
 theorem hasDerivAt_sqrt_mul_log {x : ℝ} (hx : 0 < x) :
     HasDerivAt (fun x => √x * log x) ((2 + log x) / (2 * √x)) x := by
   have hs : √x * √x = x := mul_self_sqrt hx.le
-  convert! (hasDerivAt_sqrt hx.ne').mul (hasDerivAt_log hx.ne') using 1
-  field_simp
-  linear_combination (-4 * √x) * hs
+  have hxU := hx.ne'.isUnit
+  have hden := isUnit_two_mul_sqrt hx
+  have hsqrt : HasDerivAt (√·) (1 / (2 * √x)) x := by
+    simpa only [dite_eq_left hx] using hasDerivAt_sqrt hx.ne'
+  have hfrac : √x / x = 2 / (2 * √x) := by
+    apply div_eq_div_iff.mpr
+    linear_combination 2 * hs
+  apply (hsqrt.mul (hasDerivAt_log (hx := hxU))).congr_deriv
+  rw [one_div_mul_eq_div₀, ← div_eq_mul_inv₀, hfrac, ← add_div, add_comm]
 
 theorem deriv_sqrt_mul_log {x : ℝ} (hx : 0 < x) :
     deriv (fun x => √x * log x) x = (2 + log x) / (2 * √x) :=
@@ -164,14 +176,17 @@ theorem deriv2_sqrt_mul_log {x : ℝ} (hx : 0 < x) :
     filter_upwards [Ioi_mem_nhds hx] with y (hy : 0 < y)
     rw [deriv_sqrt_mul_log hy, div_eq_iff]
     linear_combination (-(2 + log y)) * hE hy
-  have hlog := hasDerivAt_log hx.ne'
-  have hg := (((hlog.const_add 2).mul (hlog.div_const 2).neg.exp)).div_const 2
+  have hlog := hasDerivAt_log (hx := hx.ne'.isUnit)
+  have htwo := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit
+  have hg := ((hlog.const_add 2).mul (hlog.div_const 2 (hd := htwo)).neg.exp).div_const 2
+    (hd := htwo)
+  have hg' : HasDerivAt (fun y : ℝ ↦ (2 + log y) * exp (-(log y / 2)) / 2) _ x := hg
   simp only [Nat.iterate]
-  rw [hderiv.deriv_eq, hg.deriv]
+  rw [hderiv.deriv_eq, hg'.deriv]
   have hs : √x ^ 2 = x := sq_sqrt hx.le
   have hs₀ : 0 < √x := sqrt_pos.2 hx
   field_simp
-  linear_combination (-4 * x * log x * √x ^ 2) * hE hx + (-4 * x * log x) * hs
+  linear_combination (-4 * log x * √x ^ 2) * hE hx + (-4 * log x) * hs
 
 theorem strictConcaveOn_sqrt_mul_log_Ioi :
     StrictConcaveOn ℝ (Set.Ioi 1) fun x => √x * log x := by
@@ -189,9 +204,17 @@ open scoped Real
 theorem strictConcaveOn_sin_Icc : StrictConcaveOn ℝ (Icc 0 π) sin := by
   apply strictConcaveOn_of_deriv2_neg (convex_Icc _ _) continuousOn_sin fun x hx => ?_
   rw [interior_Icc] at hx
-  simp [sin_pos_of_mem_Ioo hx]
+  change deriv (fun y ↦ deriv sin y) x < 0
+  have hsin : (fun y ↦ deriv sin y _root_.id) = cos := Real.deriv_sin
+  rw [hsin, Real.deriv_cos]
+  exact neg_lt_zero.mpr (sin_pos_of_mem_Ioo hx)
 
 theorem strictConcaveOn_cos_Icc : StrictConcaveOn ℝ (Icc (-(π / 2)) (π / 2)) cos := by
   apply strictConcaveOn_of_deriv2_neg (convex_Icc _ _) continuousOn_cos fun x hx => ?_
   rw [interior_Icc] at hx
-  simp [cos_pos_of_mem_Ioo hx]
+  change deriv (fun y ↦ deriv cos y) x < 0
+  have hcos : (fun y ↦ deriv cos y _root_.id) = fun y ↦ -sin y := Real.deriv_cos'
+  rw [hcos]
+  have h : deriv (fun y ↦ -sin y) x = -cos x := (hasDerivAt_sin x).fun_neg.deriv
+  rw [h]
+  exact neg_lt_zero.mpr (cos_pos_of_mem_Ioo hx)

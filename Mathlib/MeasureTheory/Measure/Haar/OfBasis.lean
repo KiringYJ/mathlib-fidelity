@@ -160,8 +160,12 @@ theorem parallelepiped_single [DecidableEq ι] (a : ι → ℝ) :
     · rw [sup_eq_right.mpr hai, inf_eq_left.mpr hai]
       exact ⟨mul_nonneg ht.1 hai, mul_le_of_le_one_left hai ht.2⟩
   · intro h
-    refine ⟨fun i => x i / a i, fun i => ?_, funext fun i => ?_⟩
-    · specialize h i
+    refine ⟨fun i => if hai : a i = 0 then 0 else x i / a i,
+      fun i => ?_, funext fun i => ?_⟩
+    · dsimp only
+      split_ifs with hai0
+      · simp
+      specialize h i
       rcases le_total (a i) 0 with hai | hai
       · rw [sup_eq_left.mpr hai, inf_eq_right.mpr hai] at h
         exact ⟨div_nonneg_of_nonpos h.2 hai, div_le_one_of_ge h.1 hai⟩
@@ -169,10 +173,10 @@ theorem parallelepiped_single [DecidableEq ι] (a : ι → ℝ) :
         exact ⟨div_nonneg h.1 hai, div_le_one_of_le₀ h.2 hai⟩
     · specialize h i
       simp only [smul_eq_mul, Pi.mul_apply]
-      rcases eq_or_ne (a i) 0 with hai | hai
+      split_ifs with hai
       · rw [hai, inf_idem, sup_idem, ← le_antisymm_iff] at h
-        rw [hai, ← h, zero_div, zero_mul]
-      · rw [div_mul_cancel₀ _ hai]
+        simpa only [hai, mul_zero] using h.symm
+      · exact (div_mul_cancel₀ (x i) (hb := (show a i ≠ 0 from hai).isUnit)).symm
 
 end AddCommGroup
 

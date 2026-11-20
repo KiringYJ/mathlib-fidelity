@@ -88,18 +88,19 @@ theorem HasFDerivWithinAt.inner (hf : HasFDerivWithinAt f f' s x)
       x := by
   -- `by exact` to handle a tricky unification.
   exact isBoundedBilinearMap_inner (𝕜 := 𝕜) (E := E)
-    |>.hasFDerivAt (f x, g x) |>.comp_hasFDerivWithinAt x (hf.prodMk hg)
+    |>.hasFDerivAt (f x, g x) |>.comp_hasFDerivWithinAt
+      (coord' := @id (E × E)) (s := s) x (hf.prodMk hg)
 
 theorem HasStrictFDerivAt.inner (hf : HasStrictFDerivAt f f' x) (hg : HasStrictFDerivAt g g' x) :
     HasStrictFDerivAt (fun t => ⟪f t, g t⟫) ((fderivInnerCLM 𝕜 (f x, g x)).comp <| f'.prod g') x :=
   isBoundedBilinearMap_inner (𝕜 := 𝕜) (E := E)
-    |>.hasStrictFDerivAt (f x, g x) |>.comp x (hf.prodMk hg)
+    |>.hasStrictFDerivAt (f x, g x) |>.comp (coord' := @id (E × E)) x (hf.prodMk hg)
 
 theorem HasFDerivAt.inner (hf : HasFDerivAt f f' x) (hg : HasFDerivAt g g' x) :
     HasFDerivAt (fun t => ⟪f t, g t⟫) ((fderivInnerCLM 𝕜 (f x, g x)).comp <| f'.prod g') x := by
   -- `by exact` to handle a tricky unification.
   exact isBoundedBilinearMap_inner (𝕜 := 𝕜) (E := E)
-    |>.hasFDerivAt (f x, g x) |>.comp x (hf.prodMk hg)
+    |>.hasFDerivAt (f x, g x) |>.comp (coord' := @id (E × E)) x (hf.prodMk hg)
 
 theorem HasDerivWithinAt.inner {f g : ℝ → E} {f' g' : E} {s : Set ℝ} {x : ℝ}
     (hf : HasDerivWithinAt f f' s x) (hg : HasDerivWithinAt g g' s x) :
@@ -126,7 +127,8 @@ theorem Differentiable.inner (hf : Differentiable ℝ f) (hg : Differentiable �
     Differentiable ℝ fun x => ⟪f x, g x⟫ := fun x => (hf x).inner 𝕜 (hg x)
 
 theorem fderiv_inner_apply (hf : DifferentiableAt ℝ f x) (hg : DifferentiableAt ℝ g x) (y : G) :
-    fderiv ℝ (fun t => ⟪f t, g t⟫) x y = ⟪f x, fderiv ℝ g x y⟫ + ⟪fderiv ℝ f x y, g x⟫ := by
+    fderiv ℝ (fun t => ⟪f t, g t⟫) x id y =
+      ⟪f x, fderiv ℝ g x id y⟫ + ⟪fderiv ℝ f x id y, g x⟫ := by
   rw [(hf.hasFDerivAt.inner 𝕜 hg.hasFDerivAt).fderiv]; rfl
 
 theorem deriv_inner_apply {f g : ℝ → E} {x : ℝ} (hf : DifferentiableAt ℝ f x)
@@ -205,8 +207,9 @@ theorem hasStrictFDerivAt_norm_sq (x : F) :
 theorem fderiv_norm_sq_apply (x : F) : fderiv ℝ (fun (x : F) ↦ ‖x‖ ^ 2) x = 2 • innerSL ℝ x :=
   (hasStrictFDerivAt_norm_sq x).hasFDerivAt.fderiv
 
-theorem fderiv_norm_sq : fderiv ℝ (fun (x : F) ↦ ‖x‖ ^ 2) = 2 • (innerSL ℝ (E := F)) := by
-  ext1; simp
+theorem fderiv_norm_sq :
+    (fun x : F ↦ fderiv ℝ (fun y : F ↦ ‖y‖ ^ 2) x) = fun x ↦ 2 • innerSL ℝ x :=
+  funext fderiv_norm_sq_apply
 
 theorem HasFDerivAt.norm_sq {f : G → F} {f' : G →L[ℝ] F} (hf : HasFDerivAt f f' x) :
     HasFDerivAt (‖f ·‖ ^ 2) (2 • (innerSL ℝ (f x)).comp f') x :=
@@ -352,19 +355,33 @@ variable {n : ℕ∞} {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ 
 theorem OpenPartialHomeomorph.contDiff_univUnitBall : ContDiff ℝ n (univUnitBall : E → E) := by
   suffices ContDiff ℝ n fun x : E => (√(1 + ‖x‖ ^ 2 : ℝ))⁻¹ from this.smul contDiff_id
   have h : ∀ x : E, (0 : ℝ) < (1 : ℝ) + ‖x‖ ^ 2 := fun x => by positivity
-  refine ContDiff.inv ?_ fun x => Real.sqrt_ne_zero'.mpr (h x)
-  exact (contDiff_const.add <| contDiff_norm_sq ℝ).sqrt fun x => (h x).ne'
+  exact ((contDiff_const.add (contDiff_norm_sq ℝ)).sqrt fun x ↦ (h x).ne').inv
+    (h := fun x ↦ (Real.sqrt_ne_zero'.mpr (h x)).isUnit)
 
 theorem OpenPartialHomeomorph.contDiffOn_univUnitBall_symm :
     ContDiffOn ℝ n univUnitBall.symm (ball (0 : E) 1) := fun y hy ↦ by
+  classical
   apply ContDiffAt.contDiffWithinAt
-  suffices ContDiffAt ℝ n (fun y : E => (√(1 - ‖y‖ ^ 2 : ℝ))⁻¹) y from this.smul contDiffAt_id
-  have h : (0 : ℝ) < (1 : ℝ) - ‖(y : E)‖ ^ 2 := by
-    rwa [mem_ball_zero_iff, ← _root_.abs_one, ← abs_norm, ← sq_lt_sq, one_pow, ← sub_pos] at hy
-  refine ContDiffAt.inv ?_ (Real.sqrt_ne_zero'.mpr h)
-  change ContDiffAt ℝ n ((fun y ↦ √(y)) ∘ fun y ↦ (1 - ‖y‖ ^ 2)) y
-  refine (contDiffAt_sqrt h.ne').comp y ?_
-  exact contDiffAt_const.sub (contDiff_norm_sq ℝ).contDiffAt
+  have hpos (z : E) (hz : z ∈ ball (0 : E) 1) : (0 : ℝ) < 1 - ‖z‖ ^ 2 := by
+    rwa [mem_ball_zero_iff, ← _root_.abs_one, ← abs_norm, ← sq_lt_sq, one_pow, ← sub_pos] at hz
+  let q (z : E) : ℝ :=
+    if hz : z ∈ ball (0 : E) 1 then
+      Checked.inv (√(1 - ‖z‖ ^ 2 : ℝ)) (Real.sqrt_ne_zero'.mpr (hpos z hz)).isUnit
+    else 0
+  have hs : ContDiffAt ℝ n (fun z : E ↦ √(1 - ‖z‖ ^ 2 : ℝ)) y :=
+    (contDiffAt_sqrt (hpos y hy).ne').comp y
+      (contDiffAt_const.sub (contDiff_norm_sq ℝ).contDiffAt)
+  have hball := isOpen_ball.mem_nhds hy
+  have hq : ContDiffAt ℝ n q y := hs.inv <| by
+    filter_upwards [hball] with z hz
+    exact ⟨(Real.sqrt_ne_zero'.mpr (hpos z hz)).isUnit, dite_eq_left hz⟩
+  apply (hq.smul contDiffAt_id).congr_of_eventuallyEq
+  filter_upwards [hball] with z hz
+  rw [OpenPartialHomeomorph.univUnitBall_symm_apply hz]
+  change _ = q z • z
+  have hqz : q z = Checked.inv (√(1 - ‖z‖ ^ 2 : ℝ))
+      (Real.sqrt_ne_zero'.mpr (hpos z hz)).isUnit := dite_eq_left hz
+  exact congrArg (fun r : ℝ ↦ r • z) hqz.symm
 
 theorem Homeomorph.contDiff_unitBall : ContDiff ℝ n fun x : E => (unitBall x : E) :=
   OpenPartialHomeomorph.contDiff_univUnitBall

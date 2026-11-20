@@ -33,114 +33,91 @@ This section proves the pointwise **separation lemma**, over a general normed fi
 
 variable {𝕜 : Type*} [NormedField 𝕜]
 
-/-
-If `w` keeps distance at least `c` from every point of a finite set `s`, then
-`∑ a ∈ s, log⁺ ‖w - a‖⁻¹` is bounded by `#s * log⁺ c⁻¹`.
--/
-private lemma sum_posLog_inv_norm_sub_le {s : Finset 𝕜} {w : 𝕜} {c : ℝ} (hc : 0 < c)
-    (h : ∀ a ∈ s, c ≤ ‖w - a‖) :
-    ∑ a ∈ s, log⁺ ‖w - a‖⁻¹ ≤ #s * log⁺ c⁻¹ := by
-  calc ∑ a ∈ s, log⁺ ‖w - a‖⁻¹
-      ≤ ∑ a ∈ s, log⁺ c⁻¹ := by
-        refine sum_le_sum fun a ha ↦
-          posLog_le_posLog (le_trans (by norm_num) (by positivity : (0:ℝ) ≤ ‖w - a‖⁻¹)) ?_
-        gcongr
-        exact h a ha
-    _ = #s * log⁺ c⁻¹ := by rw [sum_const, nsmul_eq_mul]
-
-/--
-**Separation lemma**: for a finite set `s` of points, closeness to one point of `s`, measured by
-`∑ a ∈ s, log⁺ ‖· - a‖⁻¹`, is detected by the single function `log⁺ ‖∑ a ∈ s, (· - a)⁻¹‖`, up to a
-constant depending only on `s`.
--/
+/-- The separation lemma for a finite set of points in a normed field. Off the given points,
+the sum of their individual logarithmic proximities is controlled, up to a fixed constant,
+by the positive logarithm of the norm of the sum of their reciprocals. -/
 theorem exists_sum_posLog_inv_norm_sub_le (s : Finset 𝕜) :
-    ∃ C, ∀ w : 𝕜, ∑ a ∈ s, log⁺ ‖w - a‖⁻¹ ≤ log⁺ ‖∑ a ∈ s, (w - a)⁻¹‖ + C := by
-  -- If `w` is close to one point `a₀` of `s`, the singular term `(w - a₀)⁻¹` dominates the sum, so
-  -- the single function `‖∑ a ∈ s, (· - a)⁻¹‖` detects closeness to *any* point of `s`; if `w` is
-  -- far from all points of `s`, the left-hand side is bounded by a constant.
+    ∃ C : ℝ, ∀ w : {w : 𝕜 // w ∉ s},
+      let q (a : s) := Checked.inv (w.val - a.val)
+        (sub_ne_zero.mpr (fun (e : w.val = a.val) ↦ w.property (e.symm ▸ a.property))).isUnit
+      ∑ a : s, log⁺ ‖q a‖ ≤ log⁺ ‖∑ a : s, q a‖ + C := by
   classical
   obtain (rfl | ⟨a, rfl⟩ | hs) : s = ∅ ∨ (∃ a, s = {a}) ∨ s.Nontrivial := by
     grind [Finset.Nonempty.exists_eq_singleton_or_nontrivial]
-  case inl | inr.inl => exact ⟨0, by simp⟩ -- For `#s ≤ 1` the constant `0` works.
-  case inr.inr => -- Main case `2 ≤ #s`: take `δ` as the minimal separation in `s`, capped at `1`.
-    obtain ⟨δ, hδ₀, hδ₁, hδgap⟩ :
-        ∃ δ, 0 < δ ∧ δ ≤ 1 ∧ ∀ a ∈ s, ∀ b ∈ s, a ≠ b → δ ≤ ‖a - b‖ := by
-      refine ⟨min 1 (s : Set 𝕜).infsep, lt_min zero_lt_one ?_, min_le_left .., ?_⟩
-      · simpa [Finset.infsep_pos_iff_nontrivial]
-      · refine fun a ha b hb hab ↦ ?_
-        grw [min_le_right, ← dist_eq_norm]
-        exact Set.le_edist_of_le_infsep ha hb hab le_rfl
-    have hq2 : (2 : ℝ) ≤ #s := mod_cast hs.two_le_card
-    have hlogq : 0 ≤ log #s := by positivity
-    have hposA : 0 ≤ log⁺ (2 * #s / δ) := posLog_nonneg
-    refine ⟨#s * log⁺ (2 * #s / δ) + log #s, fun w ↦ ?_⟩
-    by_cases! hfar : ∀ a ∈ s, δ / (2 * #s) ≤ ‖w - a‖
-    · -- Case (i): `w` keeps distance `δ/(2 #s)` from every point of `s`; then already the
-      -- left-hand side is bounded by the constant.
-      have h1 := sum_posLog_inv_norm_sub_le (by positivity) hfar
-      rw [inv_div] at h1
-      have h2 : 0 ≤ log⁺ ‖∑ a ∈ s, (w - a)⁻¹‖ := posLog_nonneg
-      linarith
-    · -- Case (ii): `w` is `δ/(2 #s)`-close to some `a₀ ∈ s`, hence `δ/2`-far from every
-      -- other point of `s`.
-      obtain ⟨a₀, ha₀, hnear⟩ := hfar
-      have hcaste : #(s.erase a₀) = (#s : ℝ) - 1 := by grind [Nat.cast_sub]
-      have hother (b) (hb : b ∈ s.erase a₀) : δ / 2 ≤ ‖w - b‖ := by
-        have h1 : δ / (2 * #s) ≤ δ / 4 := by
-          gcongr
-          linarith
-        have h2 : δ ≤ ‖w - a₀‖ + ‖w - b‖ := hδgap a₀ ha₀ b (by grind) (by grind) |>.trans <| by
-          simpa [norm_sub_rev] using norm_sub_le (w - a₀) (w - b)
-        linarith
-      -- Tail estimate: the sum over `s \ {a₀}` is bounded by the constant.
-      have htail : ∑ b ∈ s.erase a₀, log⁺ ‖w - b‖⁻¹ ≤ (#s - 1) * log⁺ (2 * #s / δ) := by
-        have h1 := sum_posLog_inv_norm_sub_le (by positivity) hother
-        rw [inv_div, hcaste] at h1
-        have hd2 : (0 : ℝ) < 2 / δ := by positivity
-        apply h1.trans
-        gcongr <;> linarith
-      -- Head estimate: the singular term `(w - a₀)⁻¹` dominates `∑ a ∈ s, (w - a)⁻¹`, so
-      -- its `log⁺` is controlled by the right-hand side.
-      have hhead : log⁺ ‖w - a₀‖⁻¹ ≤ log #s + log⁺ ‖∑ a ∈ s, (w - a)⁻¹‖ := by
-        rcases eq_or_ne w a₀ with rfl | hne
-        -- At `w = a₀` the junk-value convention gives `log⁺ ‖w - a₀‖⁻¹ = log⁺ 0⁻¹ = 0`.
-        · simpa only [sub_self, norm_zero, inv_zero, posLog_zero]
-            using add_nonneg hlogq posLog_nonneg
-        · have hpos : 0 < ‖w - a₀‖ := norm_pos_iff.mpr (sub_ne_zero.mpr hne)
-          -- The singular term is large …
-          have hlarge : 2 * #s / δ ≤ ‖w - a₀‖⁻¹ := by
-            rw [← inv_div]
-            gcongr
-          -- … while the remaining terms are uniformly bounded …
-          have htv := calc
-            ‖∑ b ∈ s.erase a₀, (w - b)⁻¹‖ ≤ ∑ b ∈ s.erase a₀, ‖(w - b)⁻¹‖ := norm_sum_le _ _
-            _ ≤ ∑ b ∈ s.erase a₀, 2 / δ := by
-              refine sum_le_sum fun b hb ↦ ?_
-              rw [norm_inv, ← inv_div]
-              gcongr
-              exact hother b hb
-            _ = (#s - 1) * (2 / δ) := by
-              rw [sum_const, nsmul_eq_mul, hcaste]
-          -- … so the full sum has norm at least `‖w - a₀‖⁻¹ / #s`.
-          have hlow : ‖w - a₀‖⁻¹ - (#s - 1) * (2 / δ) ≤ ‖∑ a ∈ s, (w - a)⁻¹‖ := by
-            have h5 : ‖w - a₀‖⁻¹ ≤ ‖∑ a ∈ s, (w - a)⁻¹‖ + ‖∑ b ∈ s.erase a₀, (w - b)⁻¹‖ := by
-              simpa [← add_sum_erase s _ ha₀] using
-                norm_sub_le ((w - a₀)⁻¹ + ∑ b ∈ s.erase a₀, (w - b)⁻¹) (∑ b ∈ s.erase a₀, (w - b)⁻¹)
-            linarith
-          have hdom : ‖w - a₀‖⁻¹ ≤ #s * ‖∑ a ∈ s, (w - a)⁻¹‖ := by
-            have h7 : #s * (2 / δ) = 2 * #s / δ := by ring
-            have h8 : 0 ≤ (#s - 1) * (‖w - a₀‖⁻¹ - #s * (2 / δ)) := by
-              apply mul_nonneg <;> linarith
-            nlinarith [mul_le_mul_of_nonneg_left hlow (by positivity : (0 : ℝ) ≤ #s)]
-          calc log⁺ ‖w - a₀‖⁻¹ ≤ log⁺ (#s * ‖∑ a ∈ s, (w - a)⁻¹‖) := by
-                have : (0 : ℝ) ≤ ‖w - a₀‖⁻¹ := by positivity
-                gcongr
-                linarith
-            _ ≤ log #s + log⁺ ‖∑ a ∈ s, (w - a)⁻¹‖ := posLog_nat_mul
-      -- Assemble the two estimates.
-      rw [← add_sum_erase s (fun a ↦ log⁺ ‖w - a‖⁻¹) ha₀]
-      have h6 : (#s - 1) * log⁺ (2 * #s / δ) ≤ #s * log⁺ (2 * #s / δ) := by
-        gcongr; linarith
-      linarith
+  · exact ⟨0, by simp⟩
+  · let : Unique ↥({a} : Finset 𝕜) :=
+      { default := ⟨a, mem_singleton_self _⟩
+        uniq := fun x ↦ Subtype.ext (mem_singleton.mp x.property) }
+    exact ⟨0, by simp⟩
+  obtain ⟨δ, hδ, hgap⟩ : ∃ δ : ℝ, 0 < δ ∧ ∀ a ∈ s, ∀ b ∈ s, a ≠ b → δ ≤ ‖a - b‖ := by
+    refine ⟨(s : Set 𝕜).infsep, (Finset.infsep_pos_iff_nontrivial _).mpr hs, ?_⟩
+    intro a ha b hb hab
+    rw [← dist_eq_norm]
+    exact Set.le_edist_of_le_infsep ha hb hab le_rfl
+  let d := δ / 2
+  have hd : 0 < d := half_pos hδ
+  let B := Checked.inv d hd.ne'.isUnit
+  have hBd : B * d = 1 := inv_mul_cancel₀
+  have hB : 0 < B := inv_pos.mpr hd
+  have hN : (2 : ℝ) ≤ #s := by exact_mod_cast hs.two_le_card
+  have hB' : B ≤ #s * B := by nlinarith
+  have hn : 0 ≤ log #s := log_nonneg (by linarith)
+  let K := log⁺ ((#s : ℝ) * B)
+  have hK : 0 ≤ K := posLog_nonneg
+  refine ⟨#s * K + log #s, fun w ↦ ?_⟩
+  let q (a : s) := Checked.inv (w.val - a.val)
+    (sub_ne_zero.mpr (fun (e : w.val = a.val) ↦ w.property (e.symm ▸ a.property))).isUnit
+  change ∑ a : s, log⁺ ‖q a‖ ≤ log⁺ ‖∑ a : s, q a‖ + (#s * K + log #s)
+  have hq (a : s) : ‖q a‖ * ‖w.val - a.val‖ = 1 := by
+    rw [← norm_mul, show q a * (w.val - a.val) = 1 from inv_mul_cancel₀, norm_one]
+  have hle (t : Finset s) (ht : ∀ i ∈ t, ‖q i‖ ≤ #s * B) :
+      ∑ i ∈ t, log⁺ ‖q i‖ ≤ #t * K := by
+    calc
+      _ ≤ ∑ _ ∈ t, K := sum_le_sum fun i hi ↦
+        posLog_le_posLog (by linarith [norm_nonneg (q i)]) (ht i hi)
+      _ = _ := by rw [sum_const, nsmul_eq_mul]
+  by_cases hfar : ∀ a : s, ‖q a‖ ≤ #s * B
+  · have hsum := hle univ (fun i _ ↦ hfar i)
+    simp only [card_univ, Fintype.card_coe] at hsum
+    linarith [show 0 ≤ log⁺ ‖∑ a : s, q a‖ from posLog_nonneg]
+  push Not at hfar
+  obtain ⟨a, ha⟩ := hfar
+  have hnear : ‖w.val - a.val‖ < d := by
+    by_contra! h
+    have h₁ := (mul_lt_mul_of_pos_right (hB'.trans_lt ha) hd).trans_le
+      (mul_le_mul_of_nonneg_left h (norm_nonneg _))
+    linarith [hq a]
+  let t := (univ : Finset s).erase a
+  have hcard : (#t : ℝ) = #s - 1 := by
+    have e : t.card + 1 = s.card := by
+      simpa [t] using card_erase_add_one (mem_univ a)
+    exact eq_sub_of_add_eq (by exact_mod_cast e)
+  have hother (i : s) (hi : i ∈ t) : ‖q i‖ ≤ B := by
+    have hne : a.val ≠ i.val := fun he ↦ (mem_erase.mp hi).1 (Subtype.ext he).symm
+    have htriangle : δ ≤ ‖w.val - a.val‖ + ‖w.val - i.val‖ :=
+      (hgap _ a.property _ i.property hne).trans (by
+        simpa [norm_sub_rev] using norm_sub_le (w.val - a.val) (w.val - i.val))
+    have hdist : d ≤ ‖w.val - i.val‖ := by dsimp [d] at *; linarith
+    by_contra! h
+    have h₁ := (mul_lt_mul_of_pos_right h hd).trans_le
+      (mul_le_mul_of_nonneg_left hdist (norm_nonneg _))
+    linarith [hq i]
+  have htail := hle t (fun i hi ↦ (hother i hi).trans hB')
+  rw [hcard] at htail
+  have hnorm : ‖∑ i ∈ t, q i‖ ≤ (#s - 1) * B := calc
+    _ ≤ ∑ i ∈ t, ‖q i‖ := norm_sum_le _ _
+    _ ≤ ∑ _ ∈ t, B := sum_le_sum hother
+    _ = _ := by rw [sum_const, nsmul_eq_mul, hcard]
+  have hsplit : q a + ∑ i ∈ t, q i = ∑ i : s, q i := add_sum_erase _ _ (mem_univ a)
+  have hh := norm_sub_le (q a + ∑ i ∈ t, q i) (∑ i ∈ t, q i)
+  rw [add_sub_cancel_right, hsplit] at hh
+  have hlow : ‖q a‖ - (#s - 1) * B ≤ ‖∑ i : s, q i‖ := by linarith
+  have hdom : ‖q a‖ ≤ #s * ‖∑ i : s, q i‖ := by
+    have h₁ := mul_nonneg (show (0 : ℝ) ≤ #s - 1 by linarith) (sub_nonneg.mpr ha.le)
+    nlinarith [mul_le_mul_of_nonneg_left hlow (show 0 ≤ (#s : ℝ) by positivity)]
+  have hhead := (posLog_le_posLog (by linarith [norm_nonneg (q a)]) hdom).trans posLog_nat_mul
+  rw [← add_sum_erase (univ : Finset s) (fun i ↦ log⁺ ‖q i‖) (mem_univ a)]
+  change log⁺ ‖q a‖ + ∑ i ∈ t, log⁺ ‖q i‖ ≤ _
+  nlinarith
 
 end Real

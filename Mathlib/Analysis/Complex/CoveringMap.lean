@@ -81,19 +81,34 @@ theorem isCoveringMap_npow (n : ℕ) (hn : (n : 𝕜) ≠ 0) :
 theorem isCoveringMap_zpow (n : ℤ) (hn : (n : 𝕜) ≠ 0) :
     IsCoveringMap fun x : {x : 𝕜 // x ≠ 0} ↦ (⟨x ^ n, zpow_ne_zero n x.2⟩ : {x : 𝕜 // x ≠ 0}) := by
   obtain ⟨n, rfl | rfl⟩ := n.eq_nat_or_neg
-  · convert! isCoveringMap_npow n _ <;> aesop
-  · convert! (isCoveringMap_npow n _).comp_homeomorph (.inv₀ 𝕜)
-    · simp [Homeomorph.inv₀]
-    · simpa using hn
+  · exact isCoveringMap_npow n (by simpa using hn)
+  · have hn' : (n : 𝕜) ≠ 0 := by simpa using hn
+    convert (isCoveringMap_npow n hn').homeomorph_comp (Homeomorph.inv₀ 𝕜) using 1
+    funext x
+    apply Subtype.ext
+    exact zpow_neg₀ x.property (n : ℤ)
 
 theorem isCoveringMapOn_zpow (n : ℤ) (hn : (n : 𝕜) ≠ 0) :
-    IsCoveringMapOn (fun x : 𝕜 ↦ x ^ n) {0}ᶜ := by
-  have (x : 𝕜) : x ^ n = 0 ↔ x = 0 := zpow_eq_zero_iff (by aesop)
-  refine .of_isCoveringMap_restrictPreimage _ (by simp) ?_ ?_
-  · convert isClosed_singleton (x := (0 : 𝕜)).isOpen_compl
-    ext; simp [this]
-  · convert! (isCoveringMap_zpow n hn).comp_homeomorph (.setCongr _) using 1
-    ext; simpa using! (this _).not
+    IsCoveringMapOn (fun x : {x : 𝕜 // n < 0 → x ≠ 0} ↦
+      Checked.zpow (x : 𝕜) n (fun h ↦ (x.property h).isUnit)) {0}ᶜ := by
+  obtain ⟨n, rfl | rfl⟩ := n.eq_nat_or_neg
+  · let e : {x : 𝕜 // (n : ℤ) < 0 → x ≠ 0} ≃ₜ 𝕜 :=
+      (Homeomorph.setCongr (s := {x : 𝕜 | (n : ℤ) < 0 → x ≠ 0}) (t := Set.univ) (by
+        ext x
+        simp)).trans (Homeomorph.Set.univ 𝕜)
+    exact (isCoveringMapOn_npow n (by simpa using hn)).comp_homeomorph e
+  · have hn' : n ≠ 0 := by
+      rintro rfl
+      simp at hn
+    have hneg : -(n : ℤ) < 0 := by omega
+    let e : {x : 𝕜 // -(n : ℤ) < 0 → x ≠ 0} ≃ₜ {x : 𝕜 // x ≠ 0} :=
+      Homeomorph.setCongr (Set.ext fun x ↦ by
+        change (-(n : ℤ) < 0 → x ≠ 0) ↔ x ≠ 0
+        exact ⟨fun hx ↦ hx hneg, fun hx _ ↦ hx⟩)
+    refine .of_isCoveringMap_subtype isClosed_singleton.isOpen_compl (fun x ↦ ?_) ?_
+    · simpa only [Set.mem_compl_iff, Set.mem_singleton_iff] using
+        zpow_ne_zero (-(n : ℤ)) (x.property hneg)
+    · exact (isCoveringMap_zpow (-(n : ℤ)) hn).comp_homeomorph e
 
 attribute [-instance] Units.mulAction'
 
@@ -118,13 +133,27 @@ protected theorem Complex.isQuotientCoveringMap_npow (n : ℕ) [NeZero n] :
   isQuotientCoveringMap_npow n (by simp [NeZero.ne]) fun _ ↦ ⟨_, cpow_nat_inv_pow _ (NeZero.ne n)⟩
 
 theorem isQuotientCoveringMap_zpow (n : ℤ) (hn : (n : 𝕜) ≠ 0)
-    (surj : (fun x : 𝕜 ↦ x ^ n).Surjective) :
+    (surj : (fun x : 𝕜ˣ ↦ x ^ n).Surjective) :
     IsQuotientCoveringMap (fun x : 𝕜ˣ ↦ x ^ n) (zpowGroupHom (α := 𝕜ˣ) n).ker := by
+  have surjPow {k : ℕ} (hk : (k : 𝕜) ≠ 0) (h : (fun x : 𝕜ˣ ↦ x ^ k).Surjective) :
+      (fun x : 𝕜 ↦ x ^ k).Surjective := by
+    intro y
+    by_cases hy : y = 0
+    · have hk' : k ≠ 0 := by rintro rfl; simp at hk
+      exact ⟨0, by simp [hy, hk']⟩
+    · obtain ⟨x, hx⟩ := h (Units.mk0 y hy)
+      exact ⟨x, by simpa using congrArg Units.val hx⟩
   obtain ⟨n, rfl | rfl⟩ := n.eq_nat_or_neg
-  · exact isQuotientCoveringMap_npow n (by aesop) (by simpa using surj)
-  rw [show (zpowGroupHom (α := 𝕜ˣ) (-n)).ker = (powMonoidHom n).ker by ext; simp]
-  convert (isQuotientCoveringMap_npow n (by aesop) _).homeomorph_comp (.inv 𝕜ˣ)
-  · ext; simp
-  convert! inv_involutive.surjective.comp surj; simp
+  · exact isQuotientCoveringMap_npow n (by simpa using hn) (surjPow (by simpa using hn) (by
+      simpa using surj))
+  · have hn' : (n : 𝕜) ≠ 0 := by simpa using hn
+    have hs : (fun x : 𝕜ˣ ↦ x ^ n).Surjective := by
+      intro y
+      obtain ⟨x, hx⟩ := surj y⁻¹
+      exact ⟨x, by simpa [zpow_neg] using congrArg Inv.inv hx⟩
+    rw [show (zpowGroupHom (α := 𝕜ˣ) (-n)).ker = (powMonoidHom n).ker by ext; simp]
+    convert (isQuotientCoveringMap_npow n hn' (surjPow hn' hs)).homeomorph_comp (.inv 𝕜ˣ) using 1
+    funext x
+    simp [zpow_neg]
 
 end

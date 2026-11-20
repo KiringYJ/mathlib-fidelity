@@ -195,13 +195,13 @@ lemma of_le {C D s : ℝ≥0} {A : Set X}
   set θ₁ : ℝ≥0 := .mk (s / r) (by positivity)
   set θ₂ : ℝ≥0 := .mk (1 - s / r) (by simpa using div_le_one_of_le₀ hsr (by positivity))
   have hθ : θ₁ + θ₂ = 1 := by ext; simp [θ₁, θ₂]
-  have hθt : r * θ₁ + 0 * θ₂ = s := by ext; simp [θ₁, mul_div_cancel₀ _ hr.ne']
+  have hθt : r * θ₁ + 0 * θ₂ = s := by ext; simp [θ₁, mul_div_cancel₀]
   have hθC : C * D ^ (r - s : ℝ) = C ^ (θ₁ : ℝ) * (C * D ^ (r : ℝ)) ^ (θ₂ : ℝ) := by
     simp (discharger := positivity) only [NNReal.mul_rpow, ← mul_assoc,
       ← NNReal.rpow_add_of_nonneg, ← NNReal.rpow_mul, ← NNReal.coe_add, hθ, NNReal.coe_one,
       NNReal.rpow_one]
     congr
-    simp [mul_sub, θ₂, mul_div_cancel₀ _ hr.ne']
+    simp [mul_sub, θ₂, mul_div_cancel₀]
   rw [hθC, ← hθt]
   exact hf.interpolate (hf.holderOnWith_zero_of_bounded hA) hθ
 

@@ -41,14 +41,20 @@ lemma measurableEmbedding_coe : MeasurableEmbedding UpperHalfPlane.coe :=
 lemma measurable_coe : Measurable UpperHalfPlane.coe :=
   measurableEmbedding_coe.measurable
 
+private lemma isUnit_nnnorm_im (z : ℍ) : IsUnit ‖z.im‖₊ :=
+  ((NNReal.coe_ne_zero (r := ‖z.im‖₊)).mp (norm_pos_iff.2 z.im_ne_zero).ne').isUnit
+
+/-- The hyperbolic area density with respect to the restricted Lebesgue measure. -/
+def volumeDensity (z : ℍ) : ℝ≥0 := (Checked.div 1 ‖z.im‖₊ (isUnit_nnnorm_im z)) ^ 2
+
 /-- The invariant measure on the upper half-plane, defined by `dx dy / y ^ 2`. -/
 instance : MeasureSpace ℍ :=
   ⟨(volume.comap UpperHalfPlane.coe).withDensity
-    fun z ↦ ↑((1 / NNReal.mk z.im z.im_pos.le : ℝ≥0) ^ 2)⟩
+    fun z ↦ ↑(volumeDensity z)⟩
 
 theorem volume_def :
     (volume : Measure ℍ) = (volume.comap UpperHalfPlane.coe).withDensity fun z ↦
-      ↑((1 / NNReal.mk z.im z.im_pos.le : ℝ≥0) ^ 2) :=
+      ↑(volumeDensity z) :=
   rfl
 
 instance : IsFiniteMeasureOnCompacts (volume.comap UpperHalfPlane.coe) :=
@@ -62,9 +68,7 @@ instance : SFinite (volume.comap UpperHalfPlane.coe) := inferInstance
 
 instance : IsLocallyFiniteMeasure (volume : Measure ℍ) := by
   refine .withDensity_coe ?_
-  refine .pow (.div₀ continuous_const ?_ ?_) _
-  · exact continuous_im.subtype_mk _
-  · exact fun x ↦ NNReal.ne_iff.mp x.im_ne_zero
+  exact (continuous_const.div₀ (h₀ := isUnit_nnnorm_im) continuous_im.nnnorm).pow 2
 
 instance : IsFiniteMeasureOnCompacts (volume : Measure ℍ) := inferInstance
 
@@ -75,14 +79,14 @@ instance : SFinite (volume : Measure ℍ) := inferInstance
 /-- Express the volume of a measurable set as a Lebesgue integral
 over the corresponding subset of `ℂ`. -/
 lemma volume_eq_lintegral (s : Set ℍ) :
-    volume s = ∫⁻ z : ℂ in (↑) '' s, ↑((1 / ‖z.im‖₊) ^ 2 : NNReal) := by
+    volume s = ∫⁻ z : ℂ in (↑) '' s, ↑(volumeDensity (ofComplex z)) := by
   have : MeasurePreserving UpperHalfPlane.coe (volume.comap UpperHalfPlane.coe)
       (volume.restrict (.range UpperHalfPlane.coe)) :=
     ⟨measurable_coe, by rw [measurableEmbedding_coe.map_comap]⟩
   rw [volume_def, withDensity_apply',
     ← Set.inter_eq_self_of_subset_left (Set.image_subset_range _ _),
     ← Measure.restrict_restrict', ← this.setLIntegral_comp_emb measurableEmbedding_coe]
-  · simp [Real.nnnorm_of_nonneg (im_pos _).le]
+  · simp
   · exact measurableEmbedding_coe.measurableSet_range
 
 /-- The measure on the upper half-plane is invariant under `GL(2, ℝ)`. -/
@@ -95,16 +99,18 @@ instance : SMulInvariantMeasure (GL (Fin 2) ℝ) ℍ volume := by
   have hinj : Set.InjOn (fun z ↦ ↑(g • ofComplex z) : ℂ → ℂ) (UpperHalfPlane.coe '' s) :=
     .image_of_comp <| by simp
   have main := MeasureTheory.lintegral_image_eq_lintegral_abs_det_fderiv_mul
+      (f' := fun z : ℂ ↦ smulFDeriv g (ofComplex z))
       volume (measurableEmbedding_coe.measurableSet_image.mpr hs)
-      (Set.forall_mem_image.mpr fun z hz ↦
-        (hasStrictFDerivAt_smul g _).hasFDerivAt.hasFDerivWithinAt)
+      (Set.forall_mem_image.mpr fun z _ ↦ by
+        simp only [ofComplex_apply]
+        exact (hasStrictFDerivAt_smul g z).hasFDerivAt.hasFDerivWithinAt)
       hinj
-      (fun z ↦ ↑((1 / ‖z.im‖₊) ^ 2 : NNReal))
+      (fun z ↦ ↑(volumeDensity (ofComplex z)))
   convert! main using 1
   · simp [Set.image_image]
   · apply setLIntegral_congr_fun (measurableEmbedding_coe.measurableSet_image.mpr hs)
     rintro _ ⟨τ, -, rfl⟩
-    simp only [← Real.enorm_eq_ofReal_abs, enorm_eq_nnnorm]
+    simp only [← Real.enorm_eq_ofReal_abs, enorm_eq_nnnorm, volumeDensity]
     have : ‖(SignType.sign g.val.det : ℝ)‖₊ = 1 := by
       rcases g.det_ne_zero.lt_or_gt with h | h <;> simp [h]
     have := g.det_ne_zero

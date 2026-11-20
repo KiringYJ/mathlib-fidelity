@@ -26,7 +26,8 @@ contains results on the integral of `mulExpNegMulSq g ε` with respect to a fini
   finite measure `P` converges to the integral of `g`, as `ε → 0`;
 - `tendsto_integral_mul_one_add_inv_smul_sq_pow`: The integral of `mulExpNegMulSq ε ∘ g` with
   respect to a finite measure `P` can be approximated by the integral of the sequence approximating
-  the exponential function, `fun x => (g * (1 + (n : ℝ)⁻¹ • -(ε • g * g)) ^ n) x`. This allows to
+  the exponential function, `fun x => (g * (1 + (n + 1 : ℝ)⁻¹ • -(ε • g * g)) ^ (n + 1)) x`.
+  The positive indices keep each reciprocal on its domain. This allows to
   transfer properties of a subalgebra of functions containing `g` to the function
   `mulExpNegMulSq ε ∘ g`, see e.g. `integral_mulExpNegMulSq_comp_eq`.
 
@@ -79,52 +80,58 @@ theorem tendsto_integral_mulExpNegMulSq_comp (g : E →ᵇ ℝ) :
 /-- The integral of `mulExpNegMulSq ε ∘ g` with respect to a finite measure `P` can be
 approximated by the integral of the sequence approximating the exponential function. -/
 theorem tendsto_integral_mul_one_add_inv_smul_sq_pow (g : E →ᵇ ℝ) (hε : 0 < ε) :
-    Tendsto (fun (n : ℕ) => ∫ x, (g * (1 + (n : ℝ)⁻¹ • -(ε • g * g)) ^ n) x ∂P)
+    Tendsto (fun (n : ℕ) => ∫ x, (g * (1 + (n + 1 : ℝ)⁻¹ • -(ε • g * g)) ^ (n + 1)) x ∂P)
     atTop (𝓝 (∫ x, mulExpNegMulSq ε (g x) ∂P)) := by
   apply tendsto_integral_filter_of_norm_le_const ?h_meas ?h_bound ?h_lim
   · apply Eventually.of_forall
     exact fun n => StronglyMeasurable.aestronglyMeasurable (Continuous.stronglyMeasurable
-        (Continuous.mul g.continuous ((1 + ((n : ℝ)⁻¹ • -(ε • g * g))) ^ n).continuous))
+        (Continuous.mul g.continuous ((1 + ((n + 1 : ℝ)⁻¹ • -(ε • g * g))) ^ (n + 1)).continuous))
   · obtain ⟨N, hgN⟩ := exists_nat_gt (ε * (norm g * norm g))
     use norm g
     rw [eventually_atTop]
     use N
     intro n hn
-    have hnpos : 0 < (n : ℝ) := by
-      apply lt_of_lt_of_le (lt_of_le_of_lt _ hgN) (Nat.cast_le.mpr hn)
-      exact (mul_nonneg (le_of_lt hε) (mul_self_nonneg (norm g)))
+    have hnpos : 0 < (n : ℝ) + 1 := by positivity
     apply Eventually.of_forall
     intro x
     simp only [smul_neg, BoundedContinuousFunction.coe_mul, Pi.mul_apply, pow_apply,
       BoundedContinuousFunction.coe_add, BoundedContinuousFunction.coe_one, coe_neg,
       BoundedContinuousFunction.coe_smul, smul_eq_mul, Pi.add_apply, Pi.one_apply, Pi.neg_apply,
       norm_mul, norm_eq_abs, norm_pow]
-    refine (mul_le_mul_of_nonneg_right (norm_coe_le_norm g x) (pow_nonneg (abs_nonneg _) n)).trans
+    refine (mul_le_mul_of_nonneg_right (norm_coe_le_norm g x)
+      (pow_nonneg (abs_nonneg _) (n + 1))).trans
       <| mul_le_of_le_one_right (norm_nonneg _) ?_
     apply pow_le_one₀ (abs_nonneg _)
-    rw [mul_assoc, inv_mul_eq_div, abs_le]
+    rw [mul_assoc, inv_mul_eq_div₀, abs_le]
     refine ⟨?_, (add_le_iff_nonpos_right 1).mpr (Left.neg_nonpos_iff.mpr
       (div_nonneg (mul_nonneg (le_of_lt hε) (mul_self_nonneg (g x))) (le_of_lt hnpos)))⟩
     apply le_trans (by linarith) (sub_nonneg_of_le ((div_le_one hnpos).mpr _))
-    apply le_trans (le_trans _ (le_of_lt hgN)) (Nat.cast_le.mpr hn)
+    apply le_trans (le_trans _ (le_of_lt hgN))
+      (show (N : ℝ) ≤ (n : ℝ) + 1 by exact_mod_cast hn.trans (Nat.le_succ n))
     apply mul_le_mul (le_refl ε) _ (mul_self_nonneg (g x)) (le_of_lt hε)
     rw [← abs_le_iff_mul_self_le, abs_norm]
     exact norm_coe_le_norm g x
   · apply Eventually.of_forall
     intro x
     apply Tendsto.const_mul (g x)
-    simpa [mul_assoc, inv_mul_eq_div, ← neg_div] using
-      tendsto_one_add_div_pow_exp (-(ε * (g x * g x)))
+    have hshift : Tendsto
+        (fun n : ℕ ↦ (⟨n + 1, n.succ_ne_zero⟩ : {n : ℕ // n ≠ 0})) atTop
+        (comap Subtype.val atTop) := tendsto_comap_iff.2 (tendsto_add_atTop_nat 1)
+    simpa [Function.comp_def, mul_assoc, inv_mul_eq_div₀, ← neg_div₀] using
+      (tendsto_one_add_div_pow_exp (-(ε * (g x * g x)))).comp hshift
 
 theorem integral_mulExpNegMulSq_comp_eq {P' : Measure E} [IsFiniteMeasure P']
     {A : Subalgebra ℝ (E →ᵇ ℝ)} (hε : 0 < ε)
     (heq : ∀ g ∈ A, ∫ x, (g : E → ℝ) x ∂P = ∫ x, (g : E → ℝ) x ∂P') {g : E →ᵇ ℝ} (hgA : g ∈ A) :
     ∫ x, mulExpNegMulSq ε (g x) ∂P = ∫ x, mulExpNegMulSq ε (g x) ∂P' := by
-  have one_add_inv_mul_mem (n : ℕ) : g * (1 + (n : ℝ)⁻¹ • -(ε • g * g)) ^ n ∈ A := by
-    apply Subalgebra.mul_mem A hgA (Subalgebra.pow_mem A _ n)
-    apply Subalgebra.add_mem A (Subalgebra.one_mem A) (Subalgebra.smul_mem A _ n⁻¹)
+  have one_add_inv_mul_mem (n : ℕ) :
+      g * (1 + (n + 1 : ℝ)⁻¹ • -(ε • g * g)) ^ (n + 1) ∈ A := by
+    apply Subalgebra.mul_mem A hgA (Subalgebra.pow_mem A _ (n + 1))
+    apply Subalgebra.add_mem A (Subalgebra.one_mem A)
+      (Subalgebra.smul_mem A _ ((n : ℝ) + 1)⁻¹)
     exact Subalgebra.neg_mem A (Subalgebra.mul_mem A (Subalgebra.smul_mem A hgA ε) hgA)
-  have limP : Tendsto (fun n : ℕ => ∫ x, (g * (1 + (n : ℝ)⁻¹ • -(ε • g * g)) ^ n) x ∂P) atTop
+  have limP : Tendsto
+      (fun n : ℕ => ∫ x, (g * (1 + (n + 1 : ℝ)⁻¹ • -(ε • g * g)) ^ (n + 1)) x ∂P) atTop
       (𝓝 (∫ x, mulExpNegMulSq ε (g x) ∂P')) := by
     rw [funext fun n => heq _ (one_add_inv_mul_mem n)]
     exact tendsto_integral_mul_one_add_inv_smul_sq_pow g hε

@@ -235,7 +235,7 @@ lemma IsPreBrownianReal.smul (hB : IsPreBrownianReal B P) {c : ℝ≥0} (hc : c 
     exact (hB.isGaussianProcess.comp_right _).smul _
   · rw [integral_const_mul, hB.integral_eval, mul_zero]
   · rw [covariance_const_mul_left, covariance_const_mul_right, hB.covariance_eval, min_eq_left]
-    · simp [field]
+    · simp [field, mul_comm]
     · exact mul_le_mul_right hst c
 
 /-- **Weak Markov property**: If `B` is a pre-Brownian motion, then
@@ -283,18 +283,30 @@ lemma IsPreBrownianReal.indepFun_shift (hB : IsPreBrownianReal B P) (t₀ : ℝ�
     · simp [ht, le_add_right]
     all_goals exact (hB.isGaussianProcess.hasGaussianLaw_eval _).memLp_two
 
-/-- If `B` is a pre-Brownian motion then `t ↦ t * B (1 / t)` is a pre-Brownian motion. -/
+/-- If `B` is a pre-Brownian motion, then `t ↦ t * B (1 / t)` for positive `t`, with value zero
+at time zero, is a pre-Brownian motion. -/
 lemma IsPreBrownianReal.inv (hB : IsPreBrownianReal B P) :
-    IsPreBrownianReal (fun t ω ↦ t * (B (1 / t) ω)) P := by
+    IsPreBrownianReal (fun t ω ↦ if ht : t ≠ 0 then t * B (1 / t) ω else 0) P := by
   refine IsGaussianProcess.isPreBrownianReal_of_covariance ?_ (fun t ↦ ?_) (fun s t hst ↦ ?_)
-  · exact (IsGaussianProcess.comp_right hB.isGaussianProcess _).smul _
-  · rw [integral_const_mul, hB.integral_eval, mul_zero]
+  · apply hB.isGaussianProcess.of_isGaussianProcess
+    intro t
+    by_cases ht : t ≠ 0
+    · let u : ℝ≥0 := 1 / t
+      exact ⟨{u},
+        { toFun x := t * x ⟨u, by simp⟩
+          map_add' x y := by simp [mul_add]
+          map_smul' c x := by simp [mul_left_comm] },
+        fun ω ↦ by simp [ht, u, Finset.restrict_def]⟩
+    · exact ⟨∅, 0, fun ω ↦ by simp [ht]⟩
+  · by_cases ht : t ≠ 0
+    · simp only [dite_eq_left ht, integral_const_mul, hB.integral_eval, mul_zero]
+    · simp [ht]
   · have := hB.isGaussianProcess.isProbabilityMeasure
-    rw [covariance_const_mul_left, covariance_const_mul_right, hB.covariance_eval]
     obtain rfl | hs := eq_or_ne s 0
     · simp
-    have : 0 < t := (pos_of_ne_zero hs).trans_le hst
-    rw [min_eq_right]
+    have ht := ((pos_of_ne_zero hs).trans_le hst).ne'
+    simp only [dite_eq_left hs, dite_eq_left ht]
+    rw [covariance_const_mul_left, covariance_const_mul_right, hB.covariance_eval, min_eq_right]
     · norm_cast
       field_simp
     exact one_div_le_one_div_of_le (pos_of_ne_zero hs) hst
