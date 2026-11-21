@@ -95,9 +95,9 @@ and the hash of `Lean.githash`.
 def getRootHash : CacheM UInt64 := do
   let mathlibDepPath := (← read).mathlibDepPath
   let rootFiles : List FilePath := [
-    mathlibDepPath / "lakefile.lean",
-    mathlibDepPath / "lean-toolchain",
-    mathlibDepPath / "lake-manifest.json"]
+    mathlibDepPath.join "lakefile.lean",
+    mathlibDepPath.join "lean-toolchain",
+    mathlibDepPath.join "lake-manifest.json"]
   let hashes ← rootFiles.mapM fun path =>
     hashFileContents <$> IO.FS.readFile path
   return hash (rootHashGeneration :: hashes)
@@ -156,7 +156,7 @@ partial def getHash (mod : Name) (sourceFile : FilePath) (visited : Std.HashSet 
 /-- Files to start hashing from. -/
 def roots : CacheM <| Array <| Name × FilePath := do
   let mathlibDepPath := (← read).mathlibDepPath
-  return #[(`Mathlib, (mathlibDepPath / "Mathlib.lean"))]
+  return #[(`Mathlib, mathlibDepPath.join "Mathlib.lean")]
 
 /-- Main API to retrieve the hashes of the Lean files -/
 def getHashMemo (extraRoots : Std.HashMap Name FilePath) : CacheM HashMemo :=

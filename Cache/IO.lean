@@ -16,11 +16,11 @@ open System (FilePath)
 
 /-- Target directory for build files -/
 def LIBDIR : FilePath :=
-  ".lake" / "build" / "lib" / "lean"
+  System.mkFilePath [".lake", "build", "lib", "lean"]
 
 /-- Target directory for IR files -/
 def IRDIR : FilePath :=
-  ".lake" / "build" / "ir"
+  System.mkFilePath [".lake", "build", "ir"]
 
 /-- Determine if the package `mod` is part of the mathlib cache.
 
@@ -58,7 +58,7 @@ initialize CACHEDIR : FilePath ← do
   | some path => return path
   | none =>
     match ← IO.getEnv "XDG_CACHE_HOME" with
-    | some path => return path / "mathlib"
+    | some path => return FilePath.join path "mathlib"
     | none =>
       let home ← if System.Platform.isWindows then
         let drive ← IO.getEnv "HOMEDRIVE"
@@ -66,7 +66,7 @@ initialize CACHEDIR : FilePath ← do
         pure <| return (← drive) ++ (← path)
       else IO.getEnv "HOME"
       match home with
-      | some path => return path / ".cache" / "mathlib"
+      | some path => return (FilePath.join path ".cache").join "mathlib"
       | none => pure ⟨".cache"⟩
 
 /--
@@ -86,7 +86,7 @@ initialize PROCTAG : String ← toString <$> IO.Process.getPID
 
 /-- The curl configuration file this process writes under `dir`; see `PROCTAG`. -/
 def curlConfigIn (dir : FilePath) : FilePath :=
-  dir / s!"curl-{PROCTAG}.cfg"
+  dir.join s!"curl-{PROCTAG}.cfg"
 
 /-- This process's curl configuration file in the local cache directory (`curlConfigIn`). -/
 def CURLCFG :=
@@ -105,7 +105,7 @@ def CURLVERSION :=
 
 def CURLBIN :=
   -- change file name if we ever need a more recent version to trigger re-download
-  IO.CACHEDIR / s!"curl-{CURLVERSION}"
+  IO.CACHEDIR.join s!"curl-{CURLVERSION}"
 
 def EXE := if System.Platform.isWindows then ".exe" else ""
 
@@ -114,7 +114,7 @@ Windows, `/dev/null` elsewhere. -/
 def nullDevice : String := if System.Platform.isWindows then "NUL" else "/dev/null"
 
 def LAKEPACKAGESDIR : FilePath :=
-  ".lake" / "packages"
+  System.mkFilePath [".lake", "packages"]
 
 def getCurl : IO String := do
   return if (← CURLBIN.pathExists) then CURLBIN.toString else "curl"
@@ -124,7 +124,7 @@ def getCurl : IO String := do
 private initialize leantarSysrootBin : String ← do
   let out ← IO.Process.output { cmd := "lean", args := #["--print-prefix"] }
   if out.exitCode == 0 then
-    let path : FilePath := out.stdout.trimAscii.toString / "bin" / s!"leantar{EXE}"
+    let path := (FilePath.join out.stdout.trimAscii.toString "bin").join s!"leantar{EXE}"
     if ← path.pathExists then return path.toString
   throw <| IO.userError "leantar not found in Lean sysroot. This toolchain may predate nightly-2026-03-09."
 
@@ -300,7 +300,7 @@ if `keep` is false, the result will contain the entries that do not exist.
 -/
 def filterExists (hashMap : ModuleHashMap) (keep : Bool) : IO ModuleHashMap :=
   hashMap.foldM (init := ∅) fun acc mod hash => do
-    let exist ← (CACHEDIR / hash.asLTar).pathExists
+    let exist ← (CACHEDIR.join hash.asLTar).pathExists
     let add := if keep then exist else !exist
     if add then return acc.insert mod hash else return acc
 
@@ -327,30 +327,33 @@ def mkBuildPaths (mod : Name) : CacheM <| List (FilePath × Bool) := do
   let sp := (← read).srcSearchPath
   let packageDir ← getSrcDir sp mod
   let path := (System.mkFilePath <| mod.components.map toString)
-  if !(← (packageDir / ".lake").isDir) then
-    IO.eprintln <| s!"Warning: {packageDir / ".lake"} seems not to exist, most likely `cache` \
+  let lakeDir := packageDir.join ".lake"
+  if !(← lakeDir.isDir) then
+    IO.eprintln <| s!"Warning: {lakeDir} seems not to exist, most likely `cache` \
       will not work as expected!"
 
+  let libDir := packageDir.join LIBDIR
+  let irDir := packageDir.join IRDIR
   return [
     -- Note that `packCache` below requires that the `.trace` file is first in this list.
-    (packageDir / LIBDIR / path.withExtension "trace", true),
+    (libDir.join (path.withExtension "trace"), true),
     -- Note: the `.olean`, `.olean.server`, `.olean.private` files must be consecutive,
     -- and in this order. The corresponding `.hash` files can come afterwards, in any order.
-    (packageDir / LIBDIR / path.withExtension "olean", true),
-    (packageDir / LIBDIR / path.withExtension "olean.server", false),
-    (packageDir / LIBDIR / path.withExtension "olean.private", false),
-    (packageDir / LIBDIR / path.withExtension "olean.hash", true),
-    (packageDir / LIBDIR / path.withExtension "olean.server.hash", false),
-    (packageDir / LIBDIR / path.withExtension "olean.private.hash", false),
-    (packageDir / LIBDIR / path.withExtension "ilean", true),
-    (packageDir / LIBDIR / path.withExtension "ilean.hash", true),
-    (packageDir / LIBDIR / path.withExtension "ir.sig", false),
-    (packageDir / LIBDIR / path.withExtension "ir.sig.hash", false),
-    (packageDir / LIBDIR / path.withExtension "ir", false),
-    (packageDir / LIBDIR / path.withExtension "ir.hash", false),
-    (packageDir / IRDIR  / path.withExtension "c", true),
-    (packageDir / IRDIR  / path.withExtension "c.hash", true),
-    (packageDir / LIBDIR / path.withExtension "extra", false)]
+    (libDir.join (path.withExtension "olean"), true),
+    (libDir.join (path.withExtension "olean.server"), false),
+    (libDir.join (path.withExtension "olean.private"), false),
+    (libDir.join (path.withExtension "olean.hash"), true),
+    (libDir.join (path.withExtension "olean.server.hash"), false),
+    (libDir.join (path.withExtension "olean.private.hash"), false),
+    (libDir.join (path.withExtension "ilean"), true),
+    (libDir.join (path.withExtension "ilean.hash"), true),
+    (libDir.join (path.withExtension "ir.sig"), false),
+    (libDir.join (path.withExtension "ir.sig.hash"), false),
+    (libDir.join (path.withExtension "ir"), false),
+    (libDir.join (path.withExtension "ir.hash"), false),
+    (irDir.join (path.withExtension "c"), true),
+    (irDir.join (path.withExtension "c.hash"), true),
+    (libDir.join (path.withExtension "extra"), false)]
 
 /-- Check that all required build files exist. -/
 def allExist (paths : List (FilePath × Bool)) : IO Bool := do
@@ -374,7 +377,7 @@ def packCache (hashMap : ModuleHashMap) (overwrite verbose unpackedOnly : Bool)
   for (mod, hash) in hashMap.toList do
     let sourceFile ← Lean.findLean sp mod
     let zip := hash.asLTar
-    let zipPath := CACHEDIR / zip
+    let zipPath := CACHEDIR.join zip
     let buildPaths ← mkBuildPaths mod
     if ← allExist buildPaths then
       if overwrite || !(← zipPath.pathExists) then
@@ -409,7 +412,7 @@ def getTracePath (mod : Name) : CacheM FilePath := do
   let sp := (← read).srcSearchPath
   let packageDir ← getSrcDir sp mod
   let path := (System.mkFilePath <| mod.components.map toString)
-  return packageDir / LIBDIR / path.withExtension "trace"
+  return (packageDir.join LIBDIR).join (path.withExtension "trace")
 
 /-- Read the `depHash` from a trace file, if it exists and is valid.
     Returns the hash as a UInt64. -/
@@ -445,7 +448,7 @@ def readLtarHash (ltarPath : FilePath) : IO (Option UInt64) := do
     Returns `true` if the module needs decompression, `false` if it can be skipped. -/
 def needsDecompression (mod : Name) (mathlibHash : UInt64) : CacheM Bool := do
   -- Read the Lake depHash from the ltar file header
-  let ltarPath := CACHEDIR / mathlibHash.asLTar
+  let ltarPath := CACHEDIR.join mathlibHash.asLTar
   let some ltarHash ← readLtarHash ltarPath | return true
   -- Read the trace file hash
   let tracePath ← getTracePath mod
@@ -469,7 +472,7 @@ def mkLeanTarConfig (hashMap : ModuleHashMap) : CacheM (Array Lean.Json) := do
   let isMathlibRoot ← isMathlibRoot
   let mathlibDepPath := (← read).mathlibDepPath.toString
   return hashMap.fold (init := #[]) fun config mod hash =>
-    let pathStr := s!"{CACHEDIR / hash.asLTar}"
+    let pathStr := (CACHEDIR.join hash.asLTar).toString
     if isMathlibRoot || !isFromMathlib mod then
       config.push <| .str pathStr
     else
@@ -537,7 +540,7 @@ def lookup (hashMap : ModuleHashMap) (modules : List Name) : IO Unit := do
   let mut err := false
   for mod in modules do
     let some hash := hashMap[mod]? | err := true
-    let ltar := CACHEDIR / hash.asLTar
+    let ltar := CACHEDIR.join hash.asLTar
     IO.println s!"{mod}: {ltar}"
     for line in (← runCmd (← getLeanTar) #["-k", ltar.toString]).splitOn "\n" |>.dropLast do
       println! "  comment: {line}"

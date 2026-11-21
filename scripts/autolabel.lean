@@ -159,11 +159,13 @@ A `LabelData` consists of the
   and which should be excluded if the label is present.
 -/
 structure LabelData (label : Label) where
-  /-- Array of paths which fall under this label. e.g. `"Mathlib" / "Algebra"`.
+  /-- Array of paths which fall under this label, e.g. `mkFilePath ["Mathlib", "Algebra"]`.
 
-  For a label of the form `t-set-theory` this defaults to `#["Mathlib" / "SetTheory"]`. -/
+  For a label of the form `t-set-theory`, this defaults to
+  `#[mkFilePath ["Mathlib", "SetTheory"]]`. -/
   dirs : Array FilePath := if label.toString.startsWith "t-" then
-      #["Mathlib" / ("".intercalate (label.toString.splitOn "-" |>.drop 1 |>.map .capitalize))]
+      let dir := "".intercalate (label.toString.splitOn "-" |>.drop 1 |>.map .capitalize)
+      #[FilePath.join "Mathlib" dir]
     else #[]
   /-- Array of paths which should be excluded.
   Any modifications to a file in an excluded path are ignored for the purposes of labelling. -/
@@ -178,15 +180,15 @@ structure LabelData (label : Label) where
 def mathlibLabelData : (l : Label) → LabelData l
   | .«t-algebra» => {
     dirs := #[
-      "Mathlib" / "Algebra",
-      "Mathlib" / "FieldTheory",
-      "Mathlib" / "RepresentationTheory",
-      "Mathlib" / "LinearAlgebra"],
+      mkFilePath ["Mathlib", "Algebra"],
+      mkFilePath ["Mathlib", "FieldTheory"],
+      mkFilePath ["Mathlib", "RepresentationTheory"],
+      mkFilePath ["Mathlib", "LinearAlgebra"]],
     dependencies := #[.«t-data»] }
   | .«t-algebraic-geometry» => {
     dirs := #[
-      "Mathlib" / "AlgebraicGeometry",
-      "Mathlib" / "Geometry" / "RingedSpace"],
+      mkFilePath ["Mathlib", "AlgebraicGeometry"],
+      mkFilePath ["Mathlib", "Geometry", "RingedSpace"]],
       dependencies := #[.«t-ring-theory»] }
   | .«t-algebraic-topology» => {}
   | .«t-analysis» => {}
@@ -196,51 +198,51 @@ def mathlibLabelData : (l : Label) → LabelData l
   | .«t-computability» => {}
   | .«t-condensed» => {}
   | .«t-convex-geometry» => {
-    dirs := #["Mathlib" / "Geometry" / "Convex"],
+    dirs := #[mkFilePath ["Mathlib", "Geometry", "Convex"]],
     dependencies := #[.«t-algebra»] }
   | .«t-data» => {
     dirs := #[
-      "Mathlib" / "Basic",
-      "Mathlib" / "Control",
-      "Mathlib" / "Data"] }
+      mkFilePath ["Mathlib", "Basic"],
+      mkFilePath ["Mathlib", "Control"],
+      mkFilePath ["Mathlib", "Data"]] }
   | .«t-differential-geometry» => {
     dirs := #[
-      "Mathlib" / "Geometry" / "Diffeology",
-      "Mathlib" / "Geometry" / "Manifold"],
+      mkFilePath ["Mathlib", "Geometry", "Diffeology"],
+      mkFilePath ["Mathlib", "Geometry", "Manifold"]],
     dependencies := #[.«t-analysis», .«t-topology»] }
   | .«t-dynamics» => {}
   | .«t-euclidean-geometry» => {
     dirs := #[
-      "Mathlib" / "Geometry" / "Euclidean",
-      "Mathlib" / "Geometry" / "Polygon"] }
+      mkFilePath ["Mathlib", "Geometry", "Euclidean"],
+      mkFilePath ["Mathlib", "Geometry", "Polygon"]] }
   | .«t-geometric-group-theory» => {
-    dirs := #["Mathlib" / "Geometry" / "Group"] }
+    dirs := #[mkFilePath ["Mathlib", "Geometry", "Group"]] }
   | .«t-group-theory» => {
     dependencies := #[.«t-algebra»] }
   | .«t-linter» => {
     dirs := #[
-      "Mathlib" / "Tactic" / "Linter",
-      "MathlibTest" / "Linter",
-      "scripts" / "lint-style.lean",
-      "scripts" / "lint-style.py",
+      mkFilePath ["Mathlib", "Tactic", "Linter"],
+      mkFilePath ["MathlibTest", "Linter"],
+      mkFilePath ["scripts", "lint-style.lean"],
+      mkFilePath ["scripts", "lint-style.py"],
     ] }
   | .«t-logic» => {
     dirs := #[
-      "Mathlib" / "Logic",
-      "Mathlib" / "ModelTheory"] }
+      mkFilePath ["Mathlib", "Logic"],
+      mkFilePath ["Mathlib", "ModelTheory"]] }
   | .«t-measure-probability» => {
     dirs := #[
-      "Mathlib" / "MeasureTheory",
-      "Mathlib" / "Probability",
-      "Mathlib" / "InformationTheory"]
+      mkFilePath ["Mathlib", "MeasureTheory"],
+      mkFilePath ["Mathlib", "Probability"],
+      mkFilePath ["Mathlib", "InformationTheory"]]
     dependencies := #[.«t-analysis», .«t-algebra»] }
   | .«t-meta» => {
     dirs := #[
-      "Mathlib" / "Lean",
-      "Mathlib" / "Tactic",
-      "Mathlib" / "Util",
-      "MathlibTest" / "Tactic", ],
-    exclusions := #["Mathlib" / "Tactic" / "Linter"] }
+      mkFilePath ["Mathlib", "Lean"],
+      mkFilePath ["Mathlib", "Tactic"],
+      mkFilePath ["Mathlib", "Util"],
+      mkFilePath ["MathlibTest", "Tactic"], ],
+    exclusions := #[mkFilePath ["Mathlib", "Tactic", "Linter"]] }
   | .«t-number-theory» => {}
   | .«t-order» => {
     dependencies := #[.«t-data»] }
@@ -254,35 +256,35 @@ def mathlibLabelData : (l : Label) → LabelData l
       ".github",
       "Cache",
       "scripts",
-      "scripts" / "nolints.json",
-      "scripts" / "nolints-style.txt",
-      "scripts" / "nolints_prime_decls.txt",
+      mkFilePath ["scripts", "nolints.json"],
+      mkFilePath ["scripts", "nolints-style.txt"],
+      mkFilePath ["scripts", "nolints_prime_decls.txt"],
       "bors.toml",
     ],
     exclusions := #[
-      "scripts" / "lint-style.lean",
-      "scripts" / "lint-style.py",
-      "scripts" / "noshake.json",
-      "scripts" / "nolints.json",
-      "scripts" / "nolints-style.txt",
-      "scripts" / "nolints_prime_decls.txt",
+      mkFilePath ["scripts", "lint-style.lean"],
+      mkFilePath ["scripts", "lint-style.py"],
+      mkFilePath ["scripts", "noshake.json"],
+      mkFilePath ["scripts", "nolints.json"],
+      mkFilePath ["scripts", "nolints-style.txt"],
+      mkFilePath ["scripts", "nolints_prime_decls.txt"],
     ] }
   | .«IMO» => {
-    dirs := #["Archive" / "Imo"] }
+    dirs := #[mkFilePath ["Archive", "Imo"]] }
   | .«dependency-bump» => {
     dirs := #["lake-manifest.json"] }
 
 /-- Exceptions inside `Mathlib/` which are not covered by any label. -/
 def mathlibUnlabelled : Array FilePath := #[
-    "Mathlib" / "Deprecated",
-    "Mathlib" / "Init",
-    "Mathlib" / "Testing",
-    "Mathlib" / "Std" ]
+    mkFilePath ["Mathlib", "Deprecated"],
+    mkFilePath ["Mathlib", "Init"],
+    mkFilePath ["Mathlib", "Testing"],
+    mkFilePath ["Mathlib", "Std"] ]
 
 /-- Checks if the folder `path` lies inside the folder `dir`. -/
 def _root_.System.FilePath.isPrefixOf (dir path : FilePath) : Bool :=
   -- use `dir / ""` to prevent partial matching of folder names
-  (dir / "").normalize.toString.isPrefixOf (path / "").normalize.toString
+  (dir.join "").normalize.toString.isPrefixOf (path.join "").normalize.toString
 
 /--
 Return all labels in `mathlibLabels` which match
@@ -319,30 +321,34 @@ Testing the functionality of the declarations defined in this script
 section Tests
 
 -- Test `FilePath.isPrefixOf`
-#guard ("Mathlib" / "Algebra" : FilePath).isPrefixOf ("Mathlib" / "Algebra" / "Basic.lean")
+#guard (mkFilePath ["Mathlib", "Algebra"]).isPrefixOf
+  (mkFilePath ["Mathlib", "Algebra", "Basic.lean"])
 
 -- Test `FilePath.isPrefixOf` does not trigger on partial prefixes
-#guard ! ("Mathlib" / "Algebra" : FilePath).isPrefixOf ("Mathlib" / "AlgebraicGeometry")
+#guard ! (mkFilePath ["Mathlib", "Algebra"]).isPrefixOf
+  (mkFilePath ["Mathlib", "AlgebraicGeometry"])
 
 #guard getMatchingLabels #[] == #[]
 -- Test default value for `label.dirs` works
-#guard getMatchingLabels #["Mathlib" / "SetTheory" / "ZFC"] == #[.«t-set-theory»]
+#guard getMatchingLabels #[mkFilePath ["Mathlib", "SetTheory", "ZFC"]] == #[.«t-set-theory»]
 -- Test exclusion
-#guard getMatchingLabels #["Mathlib" / "Tactic"/ "Abel.lean"] == #[.«t-meta»]
-#guard getMatchingLabels #["Mathlib" / "Tactic"/ "Linter" / "Lint.lean"] == #[.«t-linter»]
+#guard getMatchingLabels #[mkFilePath ["Mathlib", "Tactic", "Abel.lean"]] == #[.«t-meta»]
+#guard getMatchingLabels #[mkFilePath ["Mathlib", "Tactic", "Linter", "Lint.lean"]] ==
+  #[.«t-linter»]
 #guard getMatchingLabels #[
-  "Mathlib" / "Tactic"/ "Linter" / "Lint.lean",
-  "Mathlib" / "Tactic" / "Abel.lean" ] == #[.«t-linter», .«t-meta»]
+  mkFilePath ["Mathlib", "Tactic", "Linter", "Lint.lean"],
+  mkFilePath ["Mathlib", "Tactic", "Abel.lean"] ] == #[.«t-linter», .«t-meta»]
 
 -- Test targeting a file instead of a directory
 #guard getMatchingLabels #["lake-manifest.json"] == #[.«dependency-bump»]
 
 -- Test linting of specific changes touching linting and CI.
-#guard getMatchingLabels #["scripts" / "add_deprecations.sh"] == #[.«CI»]
-#guard getMatchingLabels #["scripts" / "lint-style.lean"] == #[.«t-linter»]
-#guard getMatchingLabels #["Mathlib" / "Tactic" / "Linter" / "TextBased.lean",
-  "scripts" / "lint-style.lean", "scripts" / "lint-style.py"] == #[.«t-linter»]
-#guard getMatchingLabels #["scripts" / "noshake.json"] == #[]
+#guard getMatchingLabels #[mkFilePath ["scripts", "add_deprecations.sh"]] == #[.«CI»]
+#guard getMatchingLabels #[mkFilePath ["scripts", "lint-style.lean"]] == #[.«t-linter»]
+#guard getMatchingLabels #[mkFilePath ["Mathlib", "Tactic", "Linter", "TextBased.lean"],
+  mkFilePath ["scripts", "lint-style.lean"], mkFilePath ["scripts", "lint-style.py"]] ==
+  #[.«t-linter»]
+#guard getMatchingLabels #[mkFilePath ["scripts", "noshake.json"]] == #[]
 
 /-- Testing function to ensure the labels defined in `mathlibLabels` cover all
 subfolders of `Mathlib/`. -/

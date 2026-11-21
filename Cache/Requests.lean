@@ -434,7 +434,7 @@ def mkGetConfigContent (container : Option Container) (repo containerURL : Strin
     -- removes when the download is successful. The suffix carries this process's tag, so a
     -- concurrent `cache` run sharing this `CACHEDIR` writes its own in-flight files, not ours.
     pure <| acc ++ s!"url = {mkFileURL container repo containerURL fileName scope?}\n\
-      -o {(IO.CACHEDIR / (fileName ++ IO.PARTSUFFIX)).toString.quote}\n"
+      -o {(IO.CACHEDIR.join (fileName ++ IO.PARTSUFFIX)).toString.quote}\n"
 
 /--
 Whether an HTTP status returned for a single-file read should be treated as a
@@ -522,9 +522,9 @@ def downloadFile (container : Option Container) (repo containerURL : String)
     IO (TransferVerdict .download) := do
   let fileName := hash.asLTar
   let url := mkFileURL container repo containerURL fileName scope?
-  let path := IO.CACHEDIR / fileName
+  let path := IO.CACHEDIR.join fileName
   let partFileName := fileName ++ IO.PARTSUFFIX
-  let partPath := IO.CACHEDIR / partFileName
+  let partPath := IO.CACHEDIR.join partFileName
   let out ← IO.Process.output
     { cmd := (← IO.getCurl),
       args := #[url, "--silent"] ++ curlFollowRedirectArgs ++
@@ -965,7 +965,7 @@ def downloadFiles
 /-- Check if the project's `lean-toolchain` file matches mathlib's.
 Print and error and exit the process with error code 1 otherwise. -/
 def checkForToolchainMismatch : IO.CacheM Unit := do
-  let mathlibToolchainFile := (← read).mathlibDepPath / "lean-toolchain"
+  let mathlibToolchainFile := (← read).mathlibDepPath.join "lean-toolchain"
   let downstreamToolchain ← IO.FS.readFile "lean-toolchain"
   let mathlibToolchain ← IO.FS.readFile mathlibToolchainFile
   if !(mathlibToolchain.trimAscii == downstreamToolchain.trimAscii) then
@@ -1003,7 +1003,7 @@ wrong hashes. -/
 def checkForManifestMismatch : IO.CacheM Unit := do
   let mathlibDepPath := (← read).mathlibDepPath
   let downstreamEntries ← Lake.Manifest.tryLoadEntries "lake-manifest.json"
-  let mathlibEntries ← Lake.Manifest.tryLoadEntries (mathlibDepPath / "lake-manifest.json")
+  let mathlibEntries ← Lake.Manifest.tryLoadEntries (mathlibDepPath.join "lake-manifest.json")
   let downstreamByName : Std.HashMap Lean.Name Lake.PackageEntry :=
     downstreamEntries.foldl (init := ∅) fun m e => m.insert e.name e
   let mut directMismatches : Array (String × String × String) := #[]
@@ -1114,7 +1114,7 @@ def stageFiles
   let size := fileNames.size
   if size > 0 then
     IO.FS.createDirAll destinationPath
-    let paths := fileNames.map (s!"{IO.CACHEDIR / ↑·}")
+    let paths := fileNames.map fun (name : String) => (IO.CACHEDIR.join name).toString
     let args := paths.push destinationPath.toString
     IO.println s!"Copying {size} file(s) to {destinationPath}"
     discard <| IO.runCmd copyCmd args
@@ -1130,7 +1130,7 @@ def unstageFiles (stagingDir : FilePath) (overwrite : Bool) : IO Unit := do
   IO.println s!"{enumerationSize} files found in staging directory"
   let files ← if overwrite then pure files else
     files.filterM fun file => do
-      let dest := IO.CACHEDIR / file.fileName.get!
+      let dest := IO.CACHEDIR.join file.fileName.get!
       return !(← dest.pathExists)
   let size := files.size
   if !overwrite then

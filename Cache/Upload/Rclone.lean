@@ -82,7 +82,7 @@ def putStagedViaRclone (dest : StagedUploadDest) (env : Array (String × Option 
       {dest.base}/{dest.filesPrefix}"
     let dir ← IO.FS.createTempDir
     let code ← try
-      let filesFrom := dir / "files-from.txt"
+      let filesFrom := dir.join "files-from.txt"
       IO.FS.writeFile filesFrom ("\n".intercalate fileNames.toList ++ "\n")
       run (rcloneFilesArgs bucketPath dest srcDir filesFrom overwrite)
     finally

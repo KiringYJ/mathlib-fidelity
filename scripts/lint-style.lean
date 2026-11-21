@@ -123,7 +123,8 @@ def missingInitImports (opts : LinterOptions) : IO Nat := do
   -- Every file importing the `header` linter should be (transitively) imported by `Mathlib.Init`.
   -- (Downstream files should import `Mathlib.Init` and not the header linter.)
   -- The only exceptions are auto-generated import-only files.
-  let initTransitiveImports ← findTransitiveImportsFromSource ("Mathlib" / "Init.lean") (some `Mathlib)
+  let initTransitiveImports ←
+    findTransitiveImportsFromSource (System.mkFilePath ["Mathlib", "Init.lean"]) (some `Mathlib)
   let mismatch := importsHeaderLinter.filter (fun mod ↦
     ![`Mathlib, `Mathlib.Tactic, `Mathlib.Init].contains mod && !initTransitiveImports.contains mod)
   if mismatch.size > 0 then
@@ -176,7 +177,7 @@ def undocumentedScripts (opts : LinterOptions) : IO Nat := do
     if entry.fileName == "bench" || entry.fileName == "README.md" then none
     else some entry.fileName
   -- Check if the README text contains each file enclosed in backticks.
-  let readme : String ← IO.FS.readFile ("scripts" / "README.md")
+  let readme : String ← IO.FS.readFile (System.mkFilePath ["scripts", "README.md"])
   -- These are data files for linter exceptions: don't complain about these *for now*.
   let dataFiles := #["noshake.json", "nolints-style.txt"]
   let undocumented := allScripts.filter fun script ↦
@@ -262,7 +263,7 @@ def lintStyleCli (args : Cli.Parsed) : IO UInt32 := do
   -- file could re-use an outdated version of the nolints file.
   -- (For syntax linters, such a bug actually occurred in mathlib.)
   -- This script is re-run each time, hence is immune to such issues.
-  let filename : System.FilePath := ("scripts" / "nolints-style.txt")
+  let filename := System.mkFilePath ["scripts", "nolints-style.txt"]
   let nolints ← try
     IO.FS.lines filename
   catch _ =>

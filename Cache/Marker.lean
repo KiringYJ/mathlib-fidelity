@@ -66,7 +66,7 @@ def uploadMarkerWith (markerURL sha : String) (transfer : FilePath → IO Unit) 
     IO Unit := do
   let dir ← IO.FS.createTempDir
   try
-    let file := dir / sha
+    let file := dir.join sha
     IO.FS.writeFile file s!"{sha}\n"
     transfer file
   catch e =>

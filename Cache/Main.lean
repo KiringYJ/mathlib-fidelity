@@ -297,7 +297,7 @@ def main (args : List String) : IO Unit := do
   | ["unstage"] => unstage
   | ["unstage!"] => unstage (overwrite := true)
   | ["clean"] =>
-    cleanCache <| hashMap.fold (fun acc _ hash => acc.insert <| CACHEDIR / hash.asLTar) .empty
+    cleanCache <| hashMap.fold (fun acc _ hash => acc.insert <| CACHEDIR.join hash.asLTar) .empty
   | ["clean!"] => cleanCache
   | "stage" :: _ => if (stagingDir?.isNone) then IO.println "stage requires --staging-dir=" return else
     stage stagingDir?.get!

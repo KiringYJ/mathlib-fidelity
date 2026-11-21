@@ -199,9 +199,10 @@ def mkModName (fname : System.FilePath) : String :=
         [if last.endsWith ".lean" then last.dropEnd ".lean".length |>.toString else last]
   ".".intercalate cpts
 
-#guard mkModName ("Mathlib" / "Data" / "Nat" / "Basic.lean") == "Mathlib.Data.Nat.Basic"
+#guard mkModName (System.mkFilePath ["Mathlib", "Data", "Nat", "Basic.lean"]) ==
+  "Mathlib.Data.Nat.Basic"
 #guard mkModName "" == ""
-#guard mkModName ("" / "") == "."
+#guard mkModName (System.mkFilePath ["", ""]) == "."
 
 /--
 `deprecateFilePath fname rename comment` takes as input
