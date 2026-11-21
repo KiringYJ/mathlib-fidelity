@@ -47,14 +47,13 @@ Before promoting an unchecked candidate to an implementation task:
    implementation or proposed carrier;
 2. determine its exact domain and separate necessary conditions from convenient sufficient
    hypotheses supplied by typeclasses or automation;
-3. classify the current total behavior as a genuine total invariant, explicitly sourced convention,
-   choice of a unique value, chosen representative of an equivalence class, checked projection, or
-   semantically unsupported fallback; a chosen representative is replaced by its class, and a
-   fallback does not remain as a permanent public extension; when identifiable mathematical
-   literature uses the same total convention for the same inputs and degenerate cases, audit it as
-   an independent total mathematical object with its own specifying properties; record the
-   bibliographic citation and exact definition, theorem, or page--a more explicit name, source-code
-   docstring, or convenient theorem is not enough;
+3. classify the current behavior as an independently specified total object, choice of a unique
+   value, chosen representative of an equivalence class, checked projection, or fallback.
+   Require an independent total object's specifying properties to determine its value at every
+   input, including degenerate cases. Record the exact mathematical source for those properties.
+   A value assigned solely to make a partial operation total is a fallback regardless of its use
+   in other libraries. Replace a chosen representative by its class and remove fallbacks from
+   the permanent public interface.
 4. test positive, negative, degenerate, characteristic-sensitive, and nonunique examples so that a
    strict facade does not exclude valid mathematics or manufacture canonicity;
 5. audit whether the proposed name and notation communicate that exact object without inviting a
@@ -2648,10 +2647,10 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `Filter.lim` and `Filter.limUnder` in `Mathlib/Topology/Defs/Filter.lean:255` and `:260` use
   `Classical.epsilon` and choose a point satisfying the limit relation when one exists.  This is a
   choice projection, not by itself a false mathematical statement.  Inventory whether any public
-  theorem omits convergence, separation, or nontrivial-filter hypotheses.  Retaining the ordinary
-  `lim` name for a value at nonconvergent filters additionally requires literature using the same
-  total convention; otherwise expose the canonical value only on its exact existence-and-uniqueness
-  domain, or use the limit relation, and remove the selected projection's fallback.
+  theorem omits convergence, separation, or nontrivial-filter hypotheses. A total object covering
+  nonconvergent filters would require an independent mathematical specification of those values.
+  Expose the canonical limit on its exact existence-and-uniqueness domain or use the limit relation.
+  Remove the selected projection's fallback.
   Audit `IsDenseInducing.extend`/`extendFrom` under the same distinction between
   a chosen representative and a claimed canonical extension.
   Documented consumers of `limUnder` are `UpperHalfPlane.valueAtInfty`

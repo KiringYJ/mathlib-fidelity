@@ -241,11 +241,11 @@ the interface.
   appear only as private witnesses inside proofs of Prop-valued existence
   statements. Such a witness construction is a proof device, not an
   implementation bridge: no public definition unfolds to it.
-- If mathematical literature defines a genuinely total object on the same
-  inputs, including the degenerate cases, treat that as an independent
-  mathematical object with its own specifying properties rather than as a
-  retained extension of the partial operation. Record the exact source and
-  convention; a renamed operation or source-code docstring is not evidence.
+- An independent total object needs its own mathematical specification that
+  determines its value at every input, including degenerate cases. Record the
+  exact mathematical source and the defining properties. A value assigned
+  solely to make a partial operation total remains a fallback regardless of
+  its use in other libraries.
 - Keep domain and other semantic obligations machine-visible. A theorem that
   happens to hold on a totalized fallback branch must not use that accident to
   hide a missing hypothesis in its intended mathematical statement.
