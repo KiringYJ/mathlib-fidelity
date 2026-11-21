@@ -797,12 +797,11 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   (`modByMonic_add_div`, `modByMonic_eq_sub_mul_div`, `degree_divByMonic_le`,
   `degree_modByMonic_le_left`) or as implicit ones where it occurs on the left-hand side.
   `minpoly.aeval_modByMonic_minpoly` takes the monicity of the minimal polynomial as such an
-  implicit hypothesis, so that it stays a simp lemma.  The polynomial division and remainder over a
-  field in `Mathlib/Algebra/Polynomial/FieldDivision.lean` state `p / 0 = 0` and `p % 0 = p`
-  explicitly, as the `EuclideanDomain` interface requires (see "Classify inverse and division
-  semantics"), and `div_def` and `mod_def` take `q ≠ 0`.  Tests cover the removed names, the
-  printing, every discharger rule, the field values at `0`, and the failures for a divisor that is
-  not monic, for a hypothesis about another concrete polynomial, and for an undetermined divisor.
+  implicit hypothesis, so that it stays a simp lemma. The Euclidean quotient over a field in
+  `Mathlib/Algebra/Polynomial/FieldDivision.lean` requires `q ≠ 0`. The remainder at zero is `p`.
+  Tests cover the removed names, printing, discharger rules, a rejected zero Euclidean divisor,
+  and the failures of division by a monic polynomial for a divisor that is not monic, a hypothesis
+  about another concrete polynomial, and an undetermined divisor.
 
 - [x] **Give `Polynomial.rootMultiplicity` its domain.**
   `rootMultiplicity a p hp` in `Mathlib/Algebra/Polynomial/Div.lean` takes `hp : p ≠ 0` and is
@@ -3739,10 +3738,9 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `nonsingularInverse` and `unitOfIsUnitDet` surfaces are removed. Its consumer migration still
   needs verification.
   Treat matrix inversion, scalar field inversion, units, and
-  Euclidean quotient/remainder as separate mathematical contracts: `EuclideanDomain` requires
-  `a / 0 = 0` and derives `a % 0 = a` in
-  `Mathlib/Algebra/EuclideanDomain/Defs.lean:159` and `:152`, respectively, while a nonzero
-  Euclidean divisor need not be a unit and its quotient is not exact field division.
+  Euclidean quotient and remainder as separate mathematical contracts. A Euclidean divisor can
+  be a nonunit. At this checkpoint, `EuclideanDomain` still supplied a zero-divisor quotient
+  fallback. See the separate Euclidean quotient migration below for the checked interface.
   Reuse the property-level role of `IsField` and the existing `Units`/`divp` substrate; construct
   units from existence evidence without restoring ambient total inverse through `IsField.toField`.
   Test the actual hierarchy and automation, including Cramer solution and uniqueness, local
@@ -4207,10 +4205,10 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     `NNReal.conjExponent` use `p ≠ 1` on `ℝ` and `1 < p` on `ℝ≥0`. The default proofs use
     `HolderConjugate` or order hypotheses. Scoped checks passed for both mean-inequality consumers,
     the Sobolev boundary, valid real zero and negative exponents, and the rejected endpoints.
-    `Div ℤ[i]` (`NumberTheory/Zsqrtd/GaussianInt.lean`)
-    uses computable integer rounding `(2 * a + n) / (2 * n)` for positive norm `n`. The existing
-    `div_def` and complex comparison lemmas pass, along with native signed, half-integer, and
-    zero-divisor examples. `FractionalIdeal.colon I J (hJ : J ≠ 0)` follows the
+    At the round 6 checkpoint, the former `Div ℤ[i]` in `NumberTheory/Zsqrtd/GaussianInt.lean`
+    used computable integer rounding `(2 * a + n) / (2 * n)` for positive norm `n`. The
+    comparison lemmas and signed and half-integer examples passed. `FractionalIdeal.colon I J
+    (hJ : J ≠ 0)` follows the
     literature's domain; the exact domain of a fractional colon is `J ≠ 0 ∨ IsField R₁`, whose
     field case gives the unit fractional ideal. The definition keeps the uniform nonzero domain
     and its docstring records this field case. `DihedralGroup.commProb_odd` keeps `[NeZero n]`
@@ -4460,14 +4458,36 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
     and `Analysis/Analytic/Basic` were fixed during checkpoint cleanup. Do not interpret clean
     whitespace hooks or `mk_all --check` as a complete lint pass.
 
-- [ ] **Audit the independently specified Euclidean zero-divisor convention.**
-  `EuclideanDomain.quotient_zero` and its remainder law belong to Euclidean division, including
-  nonunit divisors, rather than exact division by an invertible element. In
-  `Mathlib/Algebra/EuclideanDomain/Field.lean`, `Field.toEuclideanDomain` explicitly selects this
-  contract and is not a global instance. `Field.quotient_eq_divp` proves agreement with unit
-  division only under `b ≠ 0`; the zero branch cannot justify an inverse or cancellation theorem.
-  Audit Euclidean algorithms and their zero-divisor statements under their own contract. Preserve
-  this proved nonzero boundary while replacing any future unsupported Euclidean convention.
+- [x] **Expose the nonzero domain of the Euclidean quotient.**
+  **Implementation, 2026-11-21.** `EuclideanDomain.quotient a b hb` requires `hb : b ≠ 0`,
+  because reconstruction determines only the remainder when `b = 0`. The class has a separate
+  remainder law at zero. Ordinary Euclidean `/` selects the checked quotient, including for
+  nonunit divisors. The proof-free Euclidean `Div` routes and the quotient fallback are removed.
+
+  The extended Euclidean algorithm takes a quotient only in its nonzero branch. `lcm` handles
+  the zero gcd directly, and `lcm_zero_left` and `lcm_zero_right` follow from the corresponding
+  common-multiple laws since zero divides only zero. Remainder divisibility and the gcd recurrence
+  apply at zero. The integer, field, polynomial, Gaussian integer, transported and discrete
+  valuation ring structures supply the checked quotient. The dependent quotient evidence is
+  propagated through divisibility, polynomial and rational function consumers.
+
+  `Field.quotient_eq_div` proves agreement with checked exact division for nonzero divisors.
+  `MathlibTest/CheckedOperations.lean` checks the named and notation boundaries, including
+  pending powers, nominal integer carriers, local `Div` instances, and exact field notation.
+  `MathlibTest/DivByMonicStrict.lean` covers the polynomial divisor domain and the remainder at
+  zero.
+
+  **Final verification.** `lake --wfail build Mathlib MathlibTest Archive Counterexamples Wanted`,
+  `lake test`, `lake lint`, `lake exe lint-style`, `lake exe mk_all --check`, the four companion
+  operator audits, and `git diff --check` passed. The source scan found no references to the
+  retired Euclidean quotient surface and no added proof holes or axioms.
+
+- [ ] **Audit the domain of native natural and integer quotients.**
+  The official Lean definitions `Nat.div` and `Int.ediv` and their native `/` instances
+  have values at divisor zero. `Int.euclideanDomain` takes a nonzero proof before using
+  `Int.ediv` to compute its checked quotient. Audit the native-carrier notation, instances,
+  and maintained uses separately under the official-toolchain boundary. Preserve the
+  remainder law at zero and the arithmetic on nonzero divisors.
 
 - [ ] **Audit negation at the top element of additive ordered groups with top.**
   `LinearOrderedAddCommGroupWithTop` in `Mathlib/Algebra/Order/AddGroupWithTop.lean` retains total

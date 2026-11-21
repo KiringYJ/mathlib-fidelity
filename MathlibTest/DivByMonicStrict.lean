@@ -75,16 +75,26 @@ noncomputable example {S : Type*} [CommRing S] [Algebra ℤ S] (f : ℤ[X])
 
 noncomputable example (p q : ℚ[X]) (hq : q ≠ 0) : ℚ[X] := p /ₘ (q * C (leadingCoeff q)⁻¹)
 
-/-! Division and remainder over a field keep the values that `EuclideanDomain` requires at `0`,
-and unfold to division by a monic polynomial only for a nonzero divisor. -/
-
-example (p : ℚ[X]) : p / 0 = 0 := EuclideanDomain.div_zero p
+/-! Euclidean division over a field is defined for every nonzero polynomial divisor. -/
 
 example (p : ℚ[X]) : p % 0 = p := EuclideanDomain.mod_zero p
 
 example (p q : ℚ[X]) (hq : q ≠ 0) :
     p / q = C (leadingCoeff q)⁻¹ * (p /ₘ (q * C (leadingCoeff q)⁻¹)) :=
   div_def hq
+
+example (p q : ℚ[X]) (hq : q.Monic) : p / q = p /ₘ q := (divByMonic_eq_div p hq).symm
+
+example (p : ℚ[X]) : (X : ℚ[X]) * (p / X) + p % X = p :=
+  EuclideanDomain.div_add_mod _ _ X_ne_zero
+
+example (p q : ℚ[X]) (hp : p ≠ 0) (hq : 0 < q.degree) : (p / q).degree < p.degree :=
+  degree_div_lt hp hq
+
+noncomputable example (p q : ℚ[X]) : ℚ[X] := by
+  fail_if_success exact p / q
+  fail_if_success exact p / 0
+  exact p + q
 
 /-! Without a proof that the divisor is monic, there is no quotient. -/
 

@@ -31,38 +31,32 @@ open EuclideanDomain Set Ideal
 
 section GCDMonoid
 
+open EuclideanDomain (quotient)
+
 variable {R : Type*} [EuclideanDomain R] [GCDMonoid R] {p q : R}
 
-theorem left_div_gcd_ne_zero {p q : R} (hp : p ≠ 0) : p / GCDMonoid.gcd p q ≠ 0 := by
-  obtain ⟨r, hr⟩ := GCDMonoid.gcd_dvd_left p q
-  obtain ⟨pq0, r0⟩ : GCDMonoid.gcd p q ≠ 0 ∧ r ≠ 0 := mul_ne_zero_iff.mp (hr ▸ hp)
-  nth_rw 1 [hr]
-  rw [mul_comm, MulDivCancelClass.mul_div_cancel_right₀ _ pq0]
-  exact r0
+theorem left_div_gcd_ne_zero {p q : R} (hp : p ≠ 0) :
+    quotient p (GCDMonoid.gcd p q) (gcd_ne_zero_of_left hp) ≠ 0 := by
+  have h := EuclideanDomain.mul_div_cancel' (gcd_ne_zero_of_left hp) (GCDMonoid.gcd_dvd_left p q)
+  exact right_ne_zero_of_mul (h.symm ▸ hp)
 
-theorem right_div_gcd_ne_zero {p q : R} (hq : q ≠ 0) : q / GCDMonoid.gcd p q ≠ 0 := by
-  obtain ⟨r, hr⟩ := GCDMonoid.gcd_dvd_right p q
-  obtain ⟨pq0, r0⟩ : GCDMonoid.gcd p q ≠ 0 ∧ r ≠ 0 := mul_ne_zero_iff.mp (hr ▸ hq)
-  nth_rw 1 [hr]
-  rw [mul_comm, MulDivCancelClass.mul_div_cancel_right₀ _ pq0]
-  exact r0
+theorem right_div_gcd_ne_zero {p q : R} (hq : q ≠ 0) :
+    quotient q (GCDMonoid.gcd p q) (gcd_ne_zero_of_right hq) ≠ 0 := by
+  have h := EuclideanDomain.mul_div_cancel' (gcd_ne_zero_of_right hq) (GCDMonoid.gcd_dvd_right p q)
+  exact right_ne_zero_of_mul (h.symm ▸ hq)
+
+/-- Dividing two elements by their nonzero gcd gives coprime quotients. -/
+theorem isCoprime_div_gcd_div_gcd_of_gcd_ne_zero (hpq : GCDMonoid.gcd p q ≠ 0) :
+    IsCoprime (quotient p (GCDMonoid.gcd p q) hpq) (quotient q (GCDMonoid.gcd p q) hpq) :=
+  (gcd_isUnit_iff _ _).1 <|
+    isUnit_gcd_of_eq_mul_gcd
+        (EuclideanDomain.mul_div_cancel' hpq <| gcd_dvd_left _ _).symm
+        (EuclideanDomain.mul_div_cancel' hpq <| gcd_dvd_right _ _).symm <| hpq
 
 theorem isCoprime_div_gcd_div_gcd (hq : q ≠ 0) :
-    IsCoprime (p / GCDMonoid.gcd p q) (q / GCDMonoid.gcd p q) :=
-  (gcd_isUnit_iff _ _).1 <|
-    isUnit_gcd_of_eq_mul_gcd
-        (EuclideanDomain.mul_div_cancel' (gcd_ne_zero_of_right hq) <| gcd_dvd_left _ _).symm
-        (EuclideanDomain.mul_div_cancel' (gcd_ne_zero_of_right hq) <| gcd_dvd_right _ _).symm <|
-      gcd_ne_zero_of_right hq
-
-/-- This is a version of `isCoprime_div_gcd_div_gcd` which replaces the `q ≠ 0` assumption with
-`gcd p q ≠ 0`. -/
-theorem isCoprime_div_gcd_div_gcd_of_gcd_ne_zero (hpq : GCDMonoid.gcd p q ≠ 0) :
-    IsCoprime (p / GCDMonoid.gcd p q) (q / GCDMonoid.gcd p q) :=
-  (gcd_isUnit_iff _ _).1 <|
-    isUnit_gcd_of_eq_mul_gcd
-        (EuclideanDomain.mul_div_cancel' (hpq) <| gcd_dvd_left _ _).symm
-        (EuclideanDomain.mul_div_cancel' (hpq) <| gcd_dvd_right _ _).symm <| hpq
+    IsCoprime (quotient p (GCDMonoid.gcd p q) (gcd_ne_zero_of_right hq))
+      (quotient q (GCDMonoid.gcd p q) (gcd_ne_zero_of_right hq)) :=
+  isCoprime_div_gcd_div_gcd_of_gcd_ne_zero (gcd_ne_zero_of_right hq)
 
 end GCDMonoid
 

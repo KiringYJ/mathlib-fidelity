@@ -17,10 +17,13 @@ In a monoid without an ambient inverse, such as a group with zero or a field, `a
 with invertibility evidence found by `checked_unit`. The same operations are displayed with this
 ordinary notation.
 
+On a Euclidean domain, `a / b` uses the Euclidean quotient with nonzero divisor, except where
+exact division is already selected or the carrier has Lean's native natural or integer division.
+
 The operator-tree algorithm follows the pinned official Lean elaborator in Lean/Elab/Extra.lean.
 Coercions are chosen for the complete expression before inverse, division, or integer-power
-applications are constructed. Only construction of selected operations differs: it uses a unit
-obligation. Genuine group operations and natural powers retain their ordinary elaborated heads.
+applications are constructed. Selected operations use a unit or nonzero obligation.
+Genuine group operations and natural powers retain their ordinary elaborated heads.
 -/
 
 public meta section
@@ -204,17 +207,27 @@ private def hasInstance (name : Name) (args : Array Expr) : TermElabM Bool := do
   catch _ =>
     return false
 
+/-- Euclidean domains are defined downstream. Look up the class in the elaboration environment
+so foundational imports continue to work without it. Lean's integer and natural division use
+their native operations. -/
+private def usesEuclideanQuotient (carrier : Expr) : TermElabM Bool := do
+  unless (← getEnv).contains `EuclideanDomain do return false
+  if carrier.isConstOf ``Int || carrier.isConstOf ``Nat then return false
+  hasInstance `EuclideanDomain #[carrier]
+
 /-- The type of an operand of a checked operation can still be a metavariable, for instance the
 output type of a power whose exponent type is pending a default instance. When the operator tree
 has a known uniform type that is a checked carrier, the operand has that type, as the homogeneous
 instance would eventually require. -/
-private def alignOperandType (maxType? : Option Expr) (type : Expr) : TermElabM Expr := do
+private def alignOperandType (maxType? : Option Expr) (type : Expr) (division := false) :
+    TermElabM Expr := do
   let type ← instantiateMVars type
   unless type.hasExprMVar do return type
   let some maxType := maxType? | return type
   let maxType ← instantiateMVars maxType
   if maxType.hasExprMVar then return type
-  unless ← selectedCarrier maxType do return type
+  unless (← selectedCarrier maxType) || (division && (← usesEuclideanQuotient maxType)) do
+    return type
   if ← isDefEqGuarded type maxType then instantiateMVars type else return type
 
 /-- Recover supplied unit data after coercion insertion. Every recovered value is checked
@@ -250,17 +263,21 @@ private def mkBinOp (maxType? : Option Expr) (lazy : Bool) (f : Expr) (lhs rhs :
   let mut lhsType ← instantiateMVars (← inferType lhs)
   let mut rhsType ← instantiateMVars (← inferType rhs)
   if f.isConstOf ``HDiv.hDiv then
-    lhsType ← alignOperandType maxType? lhsType
-    rhsType ← alignOperandType maxType? rhsType
+    lhsType ← alignOperandType maxType? lhsType (division := true)
+    rhsType ← alignOperandType maxType? rhsType (division := true)
     -- An operand type with its own division, such as `ℕ`, `ℤ` or a group whose type still has a
     -- placeholder, decides the operation, so a pending type need not postpone the quotient.
     let ambient (type : Expr) : TermElabM Bool := do
-      return !(← selectedCarrier type) && (← hasInstance ``HDiv #[type, type, type])
+      return !(← selectedCarrier type) && !(← usesEuclideanQuotient type) &&
+        (← hasInstance ``HDiv #[type, type, type])
     if (lhsType.hasExprMVar || rhsType.hasExprMVar) && !(← ambient lhsType) &&
         !(← ambient rhsType) then
       tryPostpone
     if ← isDefEqGuarded lhsType rhsType then
-      if (← selectedCarrier rhsType) ||
+      let exact ← selectedCarrier rhsType
+      if !exact && (← usesEuclideanQuotient rhsType) then
+        return ← checkedApp `EuclideanDomain.quotient #[lhs, rhs]
+      if exact ||
           (!(← hasInstance ``HDiv #[lhsType, rhsType, lhsType]) &&
             (← hasInstance ``Monoid #[rhsType])) then
         if let some u ← recoverUnit? rhs then

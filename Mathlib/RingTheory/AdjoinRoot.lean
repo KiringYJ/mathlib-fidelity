@@ -652,7 +652,8 @@ theorem coe_injective' [Fact (Irreducible f)] : Function.Injective ((â†‘) : K â†
 variable (f)
 
 theorem mul_div_root_cancel [Fact (Irreducible f)] :
-    (X - C (root f)) * ((f.map (of f)) / (X - C (root f))) = f.map (of f) :=
+    (X - C (root f)) * EuclideanDomain.quotient (f.map (of f)) (X - C (root f))
+      (X_sub_C_ne_zero _) = f.map (of f) :=
   (isRoot_root _).mul_div_eq
 
 end Irreducible

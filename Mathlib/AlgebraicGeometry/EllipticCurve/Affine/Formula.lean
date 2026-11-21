@@ -76,7 +76,7 @@ local macro "eval_simp" : tactic =>
 local macro "map_simp" : tactic =>
   `(tactic| simp only [map_ofNat, map_neg, map_add, map_sub, map_mul, map_pow, map_div₀,
     Polynomial.map_ofNat, map_C, map_X, Polynomial.map_neg, Polynomial.map_add, Polynomial.map_sub,
-    Polynomial.map_mul, Polynomial.map_pow, Polynomial.map_div, coe_mapRingHom,
+    Polynomial.map_mul, Polynomial.map_pow, coe_mapRingHom,
     WeierstrassCurve.map])
 
 universe r s u v w

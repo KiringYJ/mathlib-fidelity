@@ -261,8 +261,6 @@ theorem fermatLastTheoremWith'_polynomial {n : ℕ} (hn : 3 ≤ n) (chn : (n : k
     rw [← hc', C_ne_zero] at hc
     exact ⟨ha.right.isUnit_C, hb.right.isUnit_C, hc.right.isUnit_C⟩
   apply flt hn chn ha.right hb.right hc.right _ heq
-  convert! isCoprime_div_gcd_div_gcd _
-  · exact EuclideanDomain.eq_div_of_mul_eq_left ha.left eq_a.symm
-  · exact EuclideanDomain.eq_div_of_mul_eq_left ha.left eq_b.symm
-  · rw [eq_b]
-    exact mul_ne_zero hb.right hb.left
+  convert! isCoprime_div_gcd_div_gcd_of_gcd_ne_zero (p := a) (q := b) hd
+  · exact EuclideanDomain.eq_div_of_mul_eq_left hd eq_a.symm
+  · exact EuclideanDomain.eq_div_of_mul_eq_left hd eq_b.symm

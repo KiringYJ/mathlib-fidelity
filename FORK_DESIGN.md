@@ -2,28 +2,25 @@
 
 ## Status
 
-This document records the accepted direction of the personal fork. It is a
-design contract, not a claim that the described APIs already exist.
+This document records the personal fork's design contracts. Implementation
+and verification status is tracked in [`TODO.md`](TODO.md).
 
 The interface goals and complete-migration policy below are adopted. Every
 accepted migration must deliver the final design across its selected scope in
 one complete change, without compatibility stages or transitional layers.
 Independent lower-level problems may remain tracked work under the dependency
 boundary below.
-Concrete API names, representations, and automation still require source
-inspection and validation in real consumers; recording a design does not
-certify its implementation. The total-inverse contract below is planned work.
-This documentation does not authorize its Lean implementation; that requires
-an explicit implementation request.
+Concrete API names, representations, and automation require source inspection
+and validation in real consumers. The inverse and exact division migration is
+complete within the [scope below](#total-inverse-migration-contract).
 
 The conjecture and proof-status policy is also adopted, with two epistemic
 kinds sharing one Lean mechanism. Its registry, admission gate, dependency
 index, and migrations are pending work in `TODO.md`; recording them here does
 not implement or authorize those changes.
 
-The official-Lean and operator-fidelity boundary below is adopted. Operator
-migrations and their semantic dependency checks remain implementation work;
-earlier inverse experiments do not establish completion.
+The official-Lean and operator-fidelity boundary below applies to each
+operator migration and its semantic dependency checks.
 
 ## Purpose
 
@@ -949,17 +946,11 @@ migration.
 
 ## Total-Inverse Migration Contract
 
-When its implementation is authorized, this migration must replace the ordinary
-inverse and division interfaces and their affected consumers in one complete
-delivery. There is no prototype-only delivery, compatibility stage, or
-transitional totalized hierarchy. The requirements below define the work and
-its acceptance criteria; they do not claim that the migration has been
-implemented or that its concrete API has been validated.
-
-Implementation resumed on 2026-10-30 after the user's requested 2026-10-28 checkpoint.
-The checkpoint commits preserve unfinished work. The inverse item in `TODO.md`
-records the remaining proof, consumer, audit, and verification obligations;
-the complete-delivery acceptance criteria remain open.
+The inverse and exact division migration replaced the former totalized
+interfaces and migrated their affected consumers in one delivery, including
+the rational operators. Final verification was recorded on 2026-11-20 in the
+[completed migration entry](TODO.md#xl----foundational-work-implementation-requires-an-explicit-task).
+The requirements below define the scope and acceptance criteria of that migration.
 
 ### Inventory and mathematical contracts
 
@@ -976,13 +967,35 @@ division. Classify totalizations rather than searching and replacing blindly:
    declaration, notation, coercion, instance, or mathematical name and must be
    removed.
 
-Record the exact specification and domain of each operation. Scalar field
-inversion, unit inversion, matrix inversion, and Euclidean quotient/remainder
-are separate mathematical contracts. Nonzero is sufficient for field inversion;
-in a general ring, inversion requires a unit. For finite square matrices over
-a commutative ring, the determinant must be a unit. Euclidean division does not
-require its nonzero divisor to be a unit and is not inverse-based division.
-Preserve these distinctions while migrating every affected connection.
+Record the exact specification and domain of each operation. A nonzero
+element of a field is a unit. Inversion in a general ring requires a unit,
+and inversion of a finite square matrix over a commutative ring requires a
+unit determinant.
+
+### Euclidean quotient and remainder
+
+For a chosen Euclidean division algorithm, the reconstruction identity
+`b * q + r = a` determines the quotient `q` from the remainder `r` by
+cancellation when `b ≠ 0`. The remainder decreases in the chosen well-founded
+relation on that domain. Such a divisor can be a nonunit. At `b = 0` the
+identity forces `r = a` and leaves `q` undetermined. Congruence modulo zero
+is equality, so the remainder at zero has a specification independent of
+any quotient value.
+
+`EuclideanDomain.quotient a b hb` carries the nonzero proof. Ordinary `/`
+in a generic Euclidean domain uses this quotient with routine proof search.
+The remainder has its own law at zero. If the gcd is zero, the least common
+multiple is zero by its divisibility specification. The nonzero-gcd branch
+divides the product by the gcd.
+
+`Field.toEuclideanDomain` explicitly supplies this structure for a field.
+`Field.quotient_eq_div` gives agreement with checked exact division when
+`b ≠ 0`. Field `/` syntax requires invertibility evidence even with the
+Euclidean structure installed locally.
+
+`Int.euclideanDomain` calls Lean's native integer algorithm on the checked
+nonzero domain. Native `Int` and `Nat` division belong to the official Lean
+toolchain and have a separate domain audit in [`TODO.md`](TODO.md).
 
 ### Final algebra and operational interface
 

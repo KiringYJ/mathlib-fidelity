@@ -156,16 +156,17 @@ lemma valuation_eq_valuation_uniformizingPolynomial_pow_of_valuation_X_le_one {p
   obtain ⟨k, q, hnq, heq⟩ := WfDvdMonoid.max_power_factor hp hπirr
   have hπ : π ∈ _ := degree_lt_wf.min_mem _ hne
   simp only [ne_eq, mem_ofPred] at hπ
+  have hπ₀ : π ≠ 0 := hπ.2
   nth_rw 1 [heq]
   simp only [map_mul, map_pow]
   suffices v (algebraMap K[X] (RatFunc K) q) = 1 by
     simp only [this, mul_one]
     congr
     exact (Ideal.count_associates_eq (irreducible_iff_prime.mp hπirr) hnq heq).symm
-  rw [← mod_add_div q π, map_add]
+  rw [← mod_add_div q π hπ₀, map_add]
   rw [← mod_eq_zero] at hnq
   suffices v (algebraMap K[X] (RatFunc K) (q % π)) = 1 ∧
-      v (algebraMap K[X] (RatFunc K) (π * (q / π))) < 1 by
+      v (algebraMap K[X] (RatFunc K) (π * EuclideanDomain.quotient q π hπ₀)) < 1 by
     obtain ⟨h₁, h₂⟩ := this
     rw [← h₁] at h₂ ⊢
     exact Valuation.map_add_eq_of_lt_left _ h₂
@@ -176,7 +177,8 @@ lemma valuation_eq_valuation_uniformizingPolynomial_pow_of_valuation_X_le_one {p
     have := Polynomial.valuation_le_one_of_valuation_X_le_one _ hle (q % π)
     grind
   · simpa only [map_mul, ← coePolynomial_eq_algebraMap]
-      using mul_lt_one_of_lt_of_le hπ.1 <| (q / π).valuation_le_one_of_valuation_X_le_one _ hle
+      using mul_lt_one_of_lt_of_le hπ.1 <|
+        (EuclideanDomain.quotient q π hπ₀).valuation_le_one_of_valuation_X_le_one _ hle
 
 lemma exists_zpow_uniformizingPolynomial {f : RatFunc K} (hf : f ≠ 0) :
     have hπ : v πᵥ ≠ 0 := by simpa using uniformizingPolynomial_ne_zero hle

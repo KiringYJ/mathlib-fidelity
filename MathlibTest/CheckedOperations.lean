@@ -3,6 +3,9 @@ Copyright (c) 2026 Yi-Jing Tseng. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yi-Jing Tseng
 -/
+import Mathlib.Algebra.EuclideanDomain.Basic
+import Mathlib.Algebra.EuclideanDomain.Field
+import Mathlib.Algebra.EuclideanDomain.Int
 import Mathlib.Algebra.GroupWithZero.Inverse
 import Mathlib.Algebra.Field.Defs
 import Mathlib.Algebra.CharZero.Defs
@@ -127,6 +130,133 @@ example (a : K) : a ^ (0 : Int) = 1 := zpow_zero₀ a
 example (a : K) : a ^ (2 : Nat) = a * a := pow_two a
 
 end AmbientOperations
+
+section GenericEuclideanDivision
+
+variable {R : Type*} [EuclideanDomain R]
+
+example (a b : R) (hb : b ≠ 0) : a / b = EuclideanDomain.quotient a b hb := rfl
+
+example (a b : R) (hb : b ≠ 0) :
+    a ^ 2 / b ^ 2 = EuclideanDomain.quotient (a ^ 2) (b ^ 2) (pow_ne_zero 2 hb) := rfl
+
+example (a : R) (u : Rˣ) : a / (u : R) = EuclideanDomain.quotient a u u.ne_zero := rfl
+
+example (a b : R) (hb : b ≠ 0) : b * (a / b) + a % b = a :=
+  EuclideanDomain.div_add_mod a b hb
+
+example [DecidableEq R] : EuclideanDomain.lcm (0 : R) 0 = 0 :=
+  zero_dvd_iff.mp (EuclideanDomain.dvd_lcm_left 0 0)
+
+/--
+error: failed to synthesize
+  Div R
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+-/
+#guard_msgs in
+#synth Div R
+
+/--
+error: could not synthesize default value for parameter 'hb' using tactics
+---
+error: a nonzero denominator proof is required
+R : Type u_1
+inst✝ : EuclideanDomain R
+a : R
+⊢ 0 ≠ 0
+-/
+#guard_msgs in
+example (a : R) : R := EuclideanDomain.quotient a 0
+
+local instance : Div R := ⟨fun _ _ => 0⟩
+
+example (a b : R) (hb : b ≠ 0) : a / b = EuclideanDomain.quotient a b hb := rfl
+
+/--
+error: could not synthesize default value for parameter 'hb' using tactics
+---
+error: a nonzero denominator proof is required
+R : Type u_1
+inst✝ : EuclideanDomain R
+a : R
+⊢ 0 ≠ 0
+-/
+#guard_msgs in
+example (a : R) : R := a / 0
+
+/--
+error: could not synthesize default value for parameter 'hb' using tactics
+---
+error: a nonzero denominator proof is required
+R : Type u_1
+inst✝ : EuclideanDomain R
+a : R
+⊢ 0 ^ 2 ≠ 0
+-/
+#guard_msgs in
+example (a : R) : R := a ^ 2 / (0 : R) ^ 2
+
+end GenericEuclideanDivision
+
+example : EuclideanDomain.quotient (7 : ℤ) 2 (by decide) = 3 := by decide
+
+section NamedEuclideanCarrier
+
+private def EuclideanInt := ℤ
+
+private instance : EuclideanDomain EuclideanInt := Int.euclideanDomain
+
+local instance : Div EuclideanInt := ⟨fun _ _ => 0⟩
+
+example (a b : EuclideanInt) (hb : b ≠ 0) : a / b = EuclideanDomain.quotient a b hb := rfl
+
+/--
+error: could not synthesize default value for parameter 'hb' using tactics
+---
+error: a nonzero denominator proof is required
+a : EuclideanInt
+⊢ 0 ≠ 0
+-/
+#guard_msgs in
+example (a : EuclideanInt) : EuclideanInt := a / 0
+
+end NamedEuclideanCarrier
+
+section EuclideanDivision
+
+variable {K : Type*} [Field K]
+
+/--
+error: failed to synthesize
+  EuclideanDomain K
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+-/
+#guard_msgs in
+#synth EuclideanDomain K
+
+attribute [local instance] Field.toEuclideanDomain
+
+example (a : K) : EuclideanDomain.remainder a 0 = a :=
+  EuclideanDomain.mod_zero a
+
+example (a b : K) (hb : b ≠ 0) : EuclideanDomain.quotient a b hb = Checked.div a b hb.isUnit :=
+  Field.quotient_eq_div a hb
+
+/--
+error: could not synthesize default value for parameter 'hb' using tactics
+---
+error: an invertibility proof is required
+K : Type u_1
+inst✝ : Field K
+a : K
+⊢ IsUnit 0
+-/
+#guard_msgs in
+noncomputable example (a : K) : K := a / 0
+
+end EuclideanDivision
 
 namespace CarriedUnitData
 

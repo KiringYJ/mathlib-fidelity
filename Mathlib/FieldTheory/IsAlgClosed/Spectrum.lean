@@ -86,7 +86,8 @@ theorem subset_polynomial_aeval (a : A) (p : 𝕜[X]) : (eval · p) '' σ a ⊆ 
   have aeval_q_eq : ↑ₐ (eval k p) - aeval a p = aeval a q := by
     simp only [q, aeval_C, map_sub]
   rw [mem_iff, aeval_q_eq, ← hroot, aeval_mul]
-  have hcomm := (Commute.all (C k - X) (-(q / (X - C k)))).map (aeval a : 𝕜[X] →ₐ[𝕜] A)
+  have hcomm := (Commute.all (C k - X)
+    (-EuclideanDomain.quotient q (X - C k) (X_sub_C_ne_zero _))).map (aeval a : 𝕜[X] →ₐ[𝕜] A)
   apply mt fun h => (hcomm.isUnit_mul_iff.mp h).1
   simpa only [aeval_X, aeval_C, map_sub] using! hk
 

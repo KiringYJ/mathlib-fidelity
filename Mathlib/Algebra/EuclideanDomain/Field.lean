@@ -14,8 +14,7 @@ public import Mathlib.Algebra.GroupWithZero.Units.Basic
 
 * `Field.toEuclideanDomain`: explicitly equips a field with Euclidean quotient and remainder.
 
-This is not a global instance: Euclidean quotient has a separate domain convention and must
-not install ambient inverse-based division through the ordinary field hierarchy.
+The explicit construction uses checked field division on the nonzero domain of the quotient.
 -/
 
 public section
@@ -25,19 +24,17 @@ namespace Field
 variable {K : Type*} [Field K]
 
 /-- Equip a field with Euclidean division, explicitly selecting the Euclidean quotient contract. -/
-@[instance_reducible]
+@[expose, instance_reducible]
 noncomputable def toEuclideanDomain : EuclideanDomain K := by
   classical
   exact
     { toCommRing := toCommRing
-      quotient := fun a b => if hb : b = 0 then 0 else a / b
+      quotient := fun a b hb => Checked.div a b hb.isUnit
       remainder := fun a b => if b = 0 then a else 0
-      quotient_zero := fun a => by simp
-      quotient_mul_add_remainder_eq := fun a b => by
-        by_cases hb : b = 0
-        · simp [hb]
-        · simp only [dite_eq_right hb, ite_eq_right hb, add_zero]
-          exact mul_div_cancel₀ a
+      remainder_zero := fun a => by simp
+      quotient_mul_add_remainder_eq := fun a b hb => by
+        simp only [ite_eq_right hb, add_zero]
+        exact mul_div_cancel₀ a
       r := fun a b => a = 0 ∧ b ≠ 0
       r_wellFounded :=
         WellFounded.intro fun _ =>
@@ -55,9 +52,8 @@ protected theorem mod_eq (a b : K) : a % b = if b = 0 then a else 0 := by
 
 /-- Euclidean quotient agrees with field division for a nonzero divisor. -/
 protected theorem quotient_eq_div (a : K) {b : K} (hb : b ≠ 0) :
-    EuclideanDomain.quotient a b = a / b := by
-  classical
-  exact dite_eq_right hb
+    EuclideanDomain.quotient a b hb = a / b :=
+  rfl
 
 @[simp]
 protected theorem gcd_eq [DecidableEq K] (a b : K) :

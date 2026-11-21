@@ -34,7 +34,7 @@ Lemmas relating to natural numbers and integers are in `Mathlib.RingTheory.Radic
 
 ### For Euclidean domains
 
-- `EuclideanDomain.divRadical`: For an element `a` in a Euclidean domain, `a / radical a`.
+- `EuclideanDomain.divRadical`: The Euclidean quotient of `a` by its nonzero radical.
 - `EuclideanDomain.divRadical_mul`: `divRadical` of a product is the product of `divRadical`s.
 - `IsCoprime.divRadical`: `divRadical` of coprime elements are coprime.
 
@@ -381,11 +381,10 @@ variable {E : Type*} [EuclideanDomain E] [NormalizationMonoid E] [UniqueFactoriz
   {a b u x : E}
 
 /-- Division of an element by its radical in a Euclidean domain. -/
-def divRadical (a : E) : E := a / radical a
+def divRadical (a : E) : E := EuclideanDomain.quotient a (radical a) radical_ne_zero
 
-theorem radical_mul_divRadical : radical a * divRadical a = a := by
-  rw [divRadical, ← EuclideanDomain.mul_div_assoc _ radical_dvd_self,
-    MulDivCancelClass.mul_div_cancel_left₀ _ radical_ne_zero]
+theorem radical_mul_divRadical : radical a * divRadical a = a :=
+  EuclideanDomain.mul_div_cancel' radical_ne_zero radical_dvd_self
 
 theorem divRadical_mul_radical : divRadical a * radical a = a := by
   rw [mul_comm]
@@ -396,7 +395,9 @@ theorem divRadical_ne_zero (ha : a ≠ 0) : divRadical a ≠ 0 := by
   exact right_ne_zero_of_mul ha
 
 theorem divRadical_isUnit (hu : IsUnit u) : IsUnit (divRadical u) := by
-  rwa [divRadical, radical_of_isUnit hu, EuclideanDomain.div_one]
+  have h := radical_mul_divRadical (a := u)
+  rw [radical_of_isUnit hu, one_mul] at h
+  exact h.symm ▸ hu
 
 theorem eq_divRadical (h : radical a * x = a) : x = divRadical a := by
   apply EuclideanDomain.eq_div_of_mul_eq_left radical_ne_zero

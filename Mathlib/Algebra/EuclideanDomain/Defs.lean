@@ -5,6 +5,8 @@ Authors: Louis Carlin, Mario Carneiro
 -/
 module
 
+public import Mathlib.Algebra.GroupWithZero.Checked.Notation
+public import Mathlib.Algebra.GroupWithZero.Units.Basic
 public import Mathlib.Algebra.Ring.Defs
 public import Mathlib.Order.RelClasses
 
@@ -19,21 +21,22 @@ don't satisfy the classical notion were provided independently by Hiblot and Nag
 
 ## Main definitions
 
-* `EuclideanDomain`: Defines Euclidean domain with functions `quotient` and `remainder`. Instances
-  of `Div` and `Mod` are provided, so that one can write `a = b * (a / b) + a % b`.
+* `EuclideanDomain` supplies a quotient for every nonzero divisor and a remainder for every divisor.
+  The default tactic for `quotient` finds routine nonzero evidence.
 * `gcd`: defines the greatest common divisors of two elements of a Euclidean domain.
 * `xgcd`: given two elements `a b : R`, `xgcd a b` defines the pair `(x, y)` such that
   `x * a + y * b = gcd a b`.
-* `lcm`: defines the lowest common multiple of two elements `a` and `b` of a Euclidean domain as
-  `a * b / (gcd a b)`
+* `lcm`: defines the least common multiple of two elements `a` and `b` of a Euclidean domain.
+  It is zero if `gcd a b = 0` and otherwise divides the product by the gcd.
 
 ## Main statements
 
 See `Algebra.EuclideanDomain.Basic` for most of the theorems about Euclidean domains,
 including Bézout's lemma.
 
-See `Algebra.EuclideanDomain.Instances` for the fact that `ℤ` is a Euclidean domain,
-as is any field.
+`Mathlib.Algebra.EuclideanDomain.Int` equips `ℤ` with this structure.
+`Field.toEuclideanDomain` in `Mathlib.Algebra.EuclideanDomain.Field` constructs it
+explicitly on a field.
 
 ## Notation
 
@@ -65,24 +68,23 @@ Euclidean domain, transfinite Euclidean domain, Bézout's lemma
 
 universe u
 
-/-- A `EuclideanDomain` is a non-trivial commutative ring with a division and a remainder,
-  satisfying `b * (a / b) + a % b = a`.
+/-- A `EuclideanDomain` is a nontrivial commutative ring with quotient and remainder satisfying
+  `b * quotient a b hb + remainder a b = a` when `hb : b ≠ 0`. At divisor zero the remainder
+  equals the dividend.
   The definition of a Euclidean domain usually includes a valuation function `R → ℕ`.
   This definition is slightly generalised to include a well-founded relation
   `r` with the property that `r (a % b) b`, instead of a valuation. -/
 @[wikidata Q867345]
 class EuclideanDomain (R : Type u) extends CommRing R, Nontrivial R where
-  /-- A division function (denoted `/`) on `R`.
-    This satisfies the property `b * (a / b) + a % b = a`, where `%` denotes `remainder`. -/
-  protected quotient : R → R → R
-  /-- Division by zero should always give zero by convention. -/
-  protected quotient_zero : ∀ a, quotient a 0 = 0
-  /-- A remainder function (denoted `%`) on `R`.
-    This satisfies the property `b * (a / b) + a % b = a`, where `/` denotes `quotient`. -/
+  /-- The quotient of the chosen Euclidean division algorithm at a nonzero divisor. -/
+  protected quotient (a b : R) (hb : b ≠ 0 := by checked_nonzero) : R
+  /-- The remainder of the chosen Euclidean division algorithm, denoted `%`. -/
   protected remainder : R → R → R
-  /-- The property that links the quotient and remainder functions.
-    This allows us to compute GCDs and LCMs. -/
-  protected quotient_mul_add_remainder_eq : ∀ a b, b * quotient a b + remainder a b = a
+  /-- A remainder congruent to the dividend modulo zero is the dividend. -/
+  protected remainder_zero : ∀ a, remainder a 0 = a
+  /-- The quotient and remainder reconstruct the dividend at a nonzero divisor. -/
+  protected quotient_mul_add_remainder_eq (a b : R) (hb : b ≠ 0) :
+    b * quotient a b hb + remainder a b = a
   /-- A well-founded relation on `R`, satisfying `r (a % b) b`.
     This ensures that the GCD algorithm always terminates. -/
   protected r : R → R → Prop
@@ -95,12 +97,7 @@ class EuclideanDomain (R : Type u) extends CommRing R, Nontrivial R where
   mul_left_not_lt : ∀ (a) {b}, b ≠ 0 → ¬r (a * b) a
 
 /-
-Lean has far more theorems about fields than about Euclidean domains. We thus
-lower the priority of `Euclideandomain.toCommRing`, encouraging typeclass inference
-to try `Field.toCommRing` first. Without this priority-lowering, typeclass inference
-finds the more inefficient path `Field.toEuclideanDomain.toCommRing` by default. This
-priority change saves over 500G instructions across mathlib. See
-https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/We.20need.20to.20talk.20about.20Euclidean.20Domains/near/594655420
+Prefer a direct `CommRing` instance when both it and a Euclidean structure are available.
 -/
 -- see Note [lower instance priority]
 attribute [instance 100] EuclideanDomain.toCommRing
@@ -117,26 +114,26 @@ local instance wellFoundedRelation : WellFoundedRelation R where
   wf := r_wellFounded
 
 -- see Note [lower instance priority]
-instance (priority := 70) : Div R :=
-  ⟨EuclideanDomain.quotient⟩
-
--- see Note [lower instance priority]
 instance (priority := 70) : Mod R :=
   ⟨EuclideanDomain.remainder⟩
 
-theorem div_add_mod (a b : R) : b * (a / b) + a % b = a :=
-  EuclideanDomain.quotient_mul_add_remainder_eq _ _
+theorem div_add_mod (a b : R) (hb : b ≠ 0) :
+    b * EuclideanDomain.quotient a b hb + a % b = a :=
+  EuclideanDomain.quotient_mul_add_remainder_eq a b hb
 
-theorem mod_add_div (a b : R) : a % b + b * (a / b) = a :=
-  (add_comm _ _).trans (div_add_mod _ _)
+theorem mod_add_div (a b : R) (hb : b ≠ 0) :
+    a % b + b * EuclideanDomain.quotient a b hb = a :=
+  (add_comm _ _).trans (div_add_mod a b hb)
 
-theorem mod_add_div' (m k : R) : m % k + m / k * k = m := by
+theorem mod_add_div' (m k : R) (hk : k ≠ 0) :
+    m % k + EuclideanDomain.quotient m k hk * k = m := by
   rw [mul_comm]
-  exact mod_add_div _ _
+  exact mod_add_div m k hk
 
-theorem div_add_mod' (m k : R) : m / k * k + m % k = m := by
+theorem div_add_mod' (m k : R) (hk : k ≠ 0) :
+    EuclideanDomain.quotient m k hk * k + m % k = m := by
   rw [mul_comm]
-  exact div_add_mod _ _
+  exact div_add_mod m k hk
 
 theorem mod_lt : ∀ (a) {b : R}, b ≠ 0 → a % b ≺ b :=
   EuclideanDomain.remainder_lt
@@ -146,15 +143,12 @@ theorem mul_right_not_lt {a : R} (b) (h : a ≠ 0) : ¬a * b ≺ b := by
   exact mul_left_not_lt b h
 
 @[simp]
-theorem mod_zero (a : R) : a % 0 = a := by simpa only [zero_mul, zero_add] using div_add_mod a 0
+theorem mod_zero (a : R) : a % 0 = a :=
+  EuclideanDomain.remainder_zero a
 
 theorem lt_one (a : R) : a ≺ (1 : R) → a = 0 :=
   haveI := Classical.dec
   not_imp_not.1 fun h => by simpa only [one_mul] using mul_left_not_lt 1 h
-
-@[simp]
-theorem div_zero (a : R) : a / 0 = 0 :=
-  EuclideanDomain.quotient_zero a
 
 section
 
@@ -193,30 +187,30 @@ theorem gcd_zero_left (a : R) : gcd 0 a = a := by
 At each step we are computing a triple `(r, s, t)`, where `r` is the next value of the GCD
 algorithm, to compute the greatest common divisor of the input (say `x` and `y`), and `s` and `t`
 are the coefficients in front of `x` and `y` to obtain `r` (i.e. `r = s * x + t * y`).
-The function `xgcdAux` takes in two triples, and from these recursively computes the next triple:
-```
-xgcdAux (r, s, t) (r', s', t') = xgcdAux (r' % r, s' - (r' / r) * s, t' - (r' / r) * t) (r, s, t)
-```
+When `r` is nonzero, the next triple is `(r' % r, s' - q * s, t' - q * t)`, where `q` is the
+quotient of `r'` by `r`. At `r = 0` the algorithm returns the preceding triple.
 -/
 def xgcdAux (r s t r' s' t' : R) : R × R × R :=
-  if _hr : r = 0 then (r', s', t')
+  if hr : r = 0 then (r', s', t')
   else
-    let q := r' / r
-    have _ := mod_lt r' _hr
+    let q := EuclideanDomain.quotient r' r hr
+    have _ := mod_lt r' hr
     xgcdAux (r' % r) (s' - q * s) (t' - q * t) r s t
 termination_by r
 
 @[simp]
 theorem xgcd_zero_left {s t r' s' t' : R} : xgcdAux 0 s t r' s' t' = (r', s', t') := by
   unfold xgcdAux
-  exact ite_eq_left rfl
+  exact dite_eq_left rfl
 
 theorem xgcdAux_rec {r s t r' s' t' : R} (h : r ≠ 0) :
-    xgcdAux r s t r' s' t' = xgcdAux (r' % r) (s' - r' / r * s) (t' - r' / r * t) r s t := by
+    xgcdAux r s t r' s' t' =
+      xgcdAux (r' % r) (s' - EuclideanDomain.quotient r' r h * s)
+        (t' - EuclideanDomain.quotient r' r h * t) r s t := by
   conv =>
     lhs
     rw [xgcdAux]
-  exact ite_eq_right h
+  exact dite_eq_right h
 
 /-- Use the extended GCD algorithm to generate the `a` and `b` values
   satisfying `gcd x y = x * a + y * b`. -/
@@ -253,7 +247,7 @@ variable [DecidableEq R]
 /-- `lcm a b` is a (non-unique) element such that `a ∣ lcm a b` `b ∣ lcm a b`, and for
   any element `c` such that `a ∣ c` and `b ∣ c`, then `lcm a b ∣ c` -/
 def lcm (x y : R) : R :=
-  x * y / gcd x y
+  if h : gcd x y = 0 then 0 else EuclideanDomain.quotient (x * y) (gcd x y) h
 
 end LCM
 

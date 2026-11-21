@@ -822,6 +822,7 @@ section NumDenom
 /-! ### Numerator and denominator -/
 
 open GCDMonoid Polynomial
+open EuclideanDomain (quotient)
 
 variable [Field K]
 
@@ -833,47 +834,50 @@ def numDenom (x : RatFunc K) : K[X] × K[X] :=
     (fun p q =>
       if hq : q = 0 then ⟨0, 1⟩
       else
-        let r := gcd p q
-        ⟨Polynomial.C (Checked.inv (q / r).leadingCoeff
-            (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit) * (p / r),
-          Polynomial.C (Checked.inv (q / r).leadingCoeff
-            (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit) * (q / r)⟩)
+        let hg := gcd_ne_zero_of_right (a := p) hq
+        let q' := quotient q (gcd p q) hg
+        let lcInv := Checked.inv q'.leadingCoeff
+          (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit
+        ⟨C lcInv * quotient p (gcd p q) hg, C lcInv * q'⟩)
   (by
       intro p q a hq ha
       dsimp only
       rw [dite_eq_right hq, dite_eq_right (mul_ne_zero ha hq)]
       have ha' : a.leadingCoeff ≠ 0 := Polynomial.leadingCoeff_ne_zero.mpr ha
       have hainv : a.leadingCoeff⁻¹ ≠ 0 := inv_ne_zero
-      have hg : gcd (a * p) (a * q) = Polynomial.C a.leadingCoeff⁻¹ * a * gcd p q := by
+      have hg : gcd (a * p) (a * q) = a * (Polynomial.C a.leadingCoeff⁻¹ * gcd p q) := by
         rw [gcd_mul_left, normalize_apply a, Polynomial.coe_normUnit,
-          CommGroupWithZero.coe_normUnit _ ha', mul_comm a]
-      have hdivp : Polynomial.C a.leadingCoeff⁻¹ * gcd p q ∣ p :=
-        (C_mul_dvd hainv).mpr (gcd_dvd_left p q)
-      have hdivq : Polynomial.C a.leadingCoeff⁻¹ * gcd p q ∣ q :=
-        (C_mul_dvd hainv).mpr (gcd_dvd_right p q)
-      have hp' : a * p / gcd (a * p) (a * q) = Polynomial.C a.leadingCoeff * (p / gcd p q) := by
-        rw [hg, mul_comm _ a, mul_assoc, EuclideanDomain.mul_div_mul_cancel ha hdivp,
-          div_C_mul (ha := hainv.isUnit), inv_inv₀]
-      have hq' : a * q / gcd (a * p) (a * q) = Polynomial.C a.leadingCoeff * (q / gcd p q) := by
-        rw [hg, mul_comm _ a, mul_assoc, EuclideanDomain.mul_div_mul_cancel ha hdivq,
-          div_C_mul (ha := hainv.isUnit), inv_inv₀]
-      have hqg : (q / gcd p q).leadingCoeff ≠ 0 :=
+          CommGroupWithZero.coe_normUnit _ ha', mul_assoc]
+      have hg₀ : gcd p q ≠ 0 := gcd_ne_zero_of_right hq
+      have hquotient (x : K[X]) (hx : gcd p q ∣ x) :
+          quotient (a * x) (gcd (a * p) (a * q)) (gcd_ne_zero_of_right (mul_ne_zero ha hq)) =
+            C a.leadingCoeff * quotient x (gcd p q) hg₀ := by
+        have hc := mul_ne_zero (C_ne_zero.mpr hainv) hg₀
+        calc
+          _ = quotient (a * x) (a * (C a.leadingCoeff⁻¹ * gcd p q)) (mul_ne_zero ha hc) := by
+            congr 1
+          _ = _ := by
+            rw [EuclideanDomain.mul_div_mul_cancel ha ((C_mul_dvd hainv).mpr hx) (hc := hc),
+              div_C_mul (ha := hainv.isUnit) hg₀, inv_inv₀]
+      have hqg : (quotient q (gcd p q) hg₀).leadingCoeff ≠ 0 :=
         leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)
-      have key : ∀ X : K[X], Polynomial.C (a.leadingCoeff * (q / gcd p q).leadingCoeff)⁻¹ *
-          (Polynomial.C a.leadingCoeff * X) = Polynomial.C (q / gcd p q).leadingCoeff⁻¹ * X := by
-        intro X
+      have key (r : K[X]) : C (a.leadingCoeff * (quotient q (gcd p q) hg₀).leadingCoeff)⁻¹ *
+          (C a.leadingCoeff * r) = C (quotient q (gcd p q) hg₀).leadingCoeff⁻¹ * r := by
         rw [← mul_assoc, ← Polynomial.C_mul, mul_inv₀, mul_comm a.leadingCoeff⁻¹, mul_assoc,
           inv_mul_cancel₀, mul_one]
-      simp only [hp', hq', leadingCoeff_mul, leadingCoeff_C, key])
+      simp only [hquotient p (gcd_dvd_left p q), hquotient q (gcd_dvd_right p q),
+        leadingCoeff_mul, leadingCoeff_C, key])
 
 open scoped Classical in
 @[simp]
 theorem numDenom_div (p : K[X]) {q : K[X]} (hq : q ≠ 0) :
+    let hg := gcd_ne_zero_of_right (a := p) hq
+    let q' := quotient q (gcd p q) hg
+    let lcInv := Checked.inv q'.leadingCoeff
+      (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit
     numDenom (algebraMap _ _ p / algebraMap _ _ q) =
-      (Polynomial.C (Checked.inv (q / gcd p q).leadingCoeff
-          (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit) * (p / gcd p q),
-        Polynomial.C (Checked.inv (q / gcd p q).leadingCoeff
-          (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit) * (q / gcd p q)) := by
+      (C lcInv * quotient p (gcd p q) hg, C lcInv * q') := by
+  dsimp only
   rw [numDenom, liftOn'_div, dite_eq_right hq]
 
 /-- `RatFunc.num` is the numerator of a rational function,
@@ -884,10 +888,13 @@ def num (x : RatFunc K) : K[X] :=
 open scoped Classical in
 @[simp]
 theorem num_div (p q : K[X]) {hq : IsUnit (algebraMap K[X] (RatFunc K) q)} :
+    let hq₀ : q ≠ 0 := fun h ↦ hq.ne_zero (by rw [h, map_zero])
+    let hg := gcd_ne_zero_of_right (a := p) hq₀
     num (algebraMap _ _ p / algebraMap _ _ q) =
-      Polynomial.C (Checked.inv (q / gcd p q).leadingCoeff (leadingCoeff_ne_zero.mpr
-        (right_div_gcd_ne_zero fun h ↦ hq.ne_zero (by rw [h, map_zero]))).isUnit) *
-        (p / gcd p q) := by
+      C (Checked.inv (quotient q (gcd p q) hg).leadingCoeff
+        (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq₀)).isUnit) *
+          quotient p (gcd p q) hg := by
+  dsimp only
   rw [num, numDenom_div _ fun h ↦ hq.ne_zero (by rw [h, map_zero])]
 
 @[simp]
@@ -902,23 +909,22 @@ theorem num_one : num (1 : RatFunc K) = 1 := by
 theorem num_algebraMap (p : K[X]) : num (algebraMap _ _ p) = p := by
   convert! num_div p 1 (hq := isUnit_one.map _) <;> simp
 
-open scoped Classical in
-@[simp] private theorem div_gcd_dvd_left (p q : K[X]) : p / gcd p q ∣ p :=
-  EuclideanDomain.div_dvd_of_dvd (gcd_dvd_left p q)
-
 theorem num_div_dvd (p : K[X]) {q : K[X]} (hq : q ≠ 0) :
     num (algebraMap _ _ p / algebraMap _ _ q) ∣ p := by
   classical
   rw [num_div _ q, C_mul_dvd inv_ne_zero]
-  exact div_gcd_dvd_left p q
+  exact EuclideanDomain.div_dvd_of_dvd (gcd_dvd_left p q) (hq := gcd_ne_zero_of_right hq)
 
 open scoped Classical in
 /-- The normalized numerator of `p / q`, expressed in terms of `gcd p q`, divides `p`. -/
 theorem num_div_dvd' (p : K[X]) {q : K[X]} (hq : q ≠ 0) :
-    C (Checked.inv (q / gcd p q).leadingCoeff
-      (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit) * (p / gcd p q) ∣ p := by
+    let hg := gcd_ne_zero_of_right (a := p) hq
+    C (Checked.inv (quotient q (gcd p q) hg).leadingCoeff
+      (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit) *
+        quotient p (gcd p q) hg ∣ p := by
+  dsimp only
   rw [C_mul_dvd inv_ne_zero]
-  exact div_gcd_dvd_left p q
+  exact EuclideanDomain.div_dvd_of_dvd (gcd_dvd_left p q) (hq := gcd_ne_zero_of_right hq)
 
 /-- `RatFunc.denom` is the denominator of a rational function,
 normalized such that it is monic. -/
@@ -928,9 +934,11 @@ def denom (x : RatFunc K) : K[X] :=
 open scoped Classical in
 @[simp]
 theorem denom_div (p : K[X]) {q : K[X]} (hq : q ≠ 0) :
+    let q' := quotient q (gcd p q) (gcd_ne_zero_of_right hq)
     denom (algebraMap _ _ p / algebraMap _ _ q) =
-      Polynomial.C (Checked.inv (q / gcd p q).leadingCoeff
-        (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit) * (q / gcd p q) := by
+      C (Checked.inv q'.leadingCoeff
+        (leadingCoeff_ne_zero.mpr (right_div_gcd_ne_zero hq)).isUnit) * q' := by
+  dsimp only
   rw [denom, numDenom_div _ hq]
 
 theorem monic_denom (x : RatFunc K) : (denom x).Monic := by
@@ -966,17 +974,19 @@ theorem denom_algebraMap (p : K[X]) : denom (algebraMap _ (RatFunc K) p) = 1 := 
 theorem denom_div_dvd (p q : K[X]) {hq : IsUnit (algebraMap K[X] (RatFunc K) q)} :
     denom (algebraMap _ _ p / algebraMap _ _ q) ∣ q := by
   classical
-  rw [denom_div _ fun h ↦ hq.ne_zero (by rw [h, map_zero]), C_mul_dvd inv_ne_zero]
-  exact EuclideanDomain.div_dvd_of_dvd (gcd_dvd_right p q)
+  have hq₀ : q ≠ 0 := fun h ↦ hq.ne_zero (by rw [h, map_zero])
+  rw [denom_div _ hq₀, C_mul_dvd inv_ne_zero]
+  exact EuclideanDomain.div_dvd_of_dvd (gcd_dvd_right p q) (hq := gcd_ne_zero_of_right hq₀)
 
 @[simp]
 theorem num_div_denom (x : RatFunc K) : algebraMap _ _ (num x) / algebraMap _ _ (denom x) = x := by
   classical
   induction x using RatFunc.induction_on with | _ p q hq
   simp only [num_div, denom_div p hq, map_mul]
+  have hg := gcd_ne_zero_of_right (a := p) hq
   rw [mul_div_mul_left, div_eq_div_iff, ← map_mul, ← map_mul, mul_comm _ q,
-    ← EuclideanDomain.mul_div_assoc _ (gcd_dvd_right p q),
-    ← EuclideanDomain.mul_div_assoc _ (gcd_dvd_left p q), mul_comm]
+    ← EuclideanDomain.mul_div_assoc _ (gcd_dvd_right p q) (hz := hg),
+    ← EuclideanDomain.mul_div_assoc _ (gcd_dvd_left p q) (hz := hg), mul_comm]
 
 theorem isCoprime_num_denom (x : RatFunc K) : IsCoprime x.num x.denom := by
   classical

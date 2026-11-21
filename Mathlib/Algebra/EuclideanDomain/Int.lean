@@ -13,15 +13,18 @@ public import Mathlib.Algebra.Ring.Int.Defs
 /-!
 # Instances for Euclidean domains
 
-* `Int.euclideanDomain`: shows that `ℤ` is a Euclidean domain.
+* `Int.euclideanDomain`: equips `ℤ` with Euclidean division. The quotient uses Lean's integer
+  algorithm on the domain of nonzero divisors.
 -/
 
 public section
 
 instance Int.euclideanDomain : EuclideanDomain ℤ :=
   { (inferInstance : CommRing Int), (inferInstance : Nontrivial Int) with
-    quotient := (· / ·), quotient_zero := Int.ediv_zero, remainder := (· % ·),
-    quotient_mul_add_remainder_eq := Int.mul_ediv_add_emod,
+    quotient := fun a b _ => Int.ediv a b,
+    remainder := (· % ·),
+    remainder_zero := Int.emod_zero,
+    quotient_mul_add_remainder_eq := fun a b _ => Int.mul_ediv_add_emod a b,
     r := fun a b => a.natAbs < b.natAbs,
     r_wellFounded := (measure natAbs).wf
     remainder_lt := fun a b b0 => Int.ofNat_lt.1 <| by

@@ -83,10 +83,11 @@ baseline.
 
 ## Getting started
 
-Use the official Lean release selected by `lean-toolchain`; this fork does not
-require a custom compiler or standard library. The rational-operator migration
-is an adopted design commitment tracked in `TODO.md`, not a completed property
-of the current source tree.
+Use the official Lean release and standard library selected by `lean-toolchain`.
+The inverse and exact division migration is complete, including the checked
+rational operators. Field inversion and exact division require invertibility
+evidence. The [Euclidean quotient](FORK_DESIGN.md#euclidean-quotient-and-remainder)
+requires a nonzero divisor.
 
 Install Lean and the supporting tools using the
 [upstream mathlib instructions](https://leanprover-community.github.io/get_started.html),

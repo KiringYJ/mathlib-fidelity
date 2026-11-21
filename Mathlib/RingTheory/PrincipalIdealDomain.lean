@@ -279,9 +279,11 @@ open EuclideanDomain
 
 variable [EuclideanDomain R]
 
-theorem mod_mem_iff {S : Ideal R} {x y : R} (hy : y ∈ S) : x % y ∈ S ↔ x ∈ S :=
-  ⟨fun hxy => div_add_mod x y ▸ S.add_mem (S.mul_mem_right _ hy) hxy, fun hx =>
-    (mod_eq_sub_mul_div x y).symm ▸ S.sub_mem hx (S.mul_mem_right _ hy)⟩
+theorem mod_mem_iff {S : Ideal R} {x y : R} (hy : y ∈ S) : x % y ∈ S ↔ x ∈ S := by
+  by_cases hy0 : y = 0
+  · simp [hy0]
+  · exact ⟨fun hxy => div_add_mod x y hy0 ▸ S.add_mem (S.mul_mem_right _ hy) hxy, fun hx =>
+      (mod_eq_sub_mul_div x y hy0).symm ▸ S.sub_mem hx (S.mul_mem_right _ hy)⟩
 
 -- see Note [lower instance priority]
 instance (priority := 100) EuclideanDomain.instIsPrincipalIdealRing : IsPrincipalIdealRing R where

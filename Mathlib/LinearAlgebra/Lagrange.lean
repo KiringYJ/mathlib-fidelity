@@ -663,8 +663,8 @@ theorem nodalWeight_eq_eval_nodal_erase_inv {hvi : ∀ ⦃j⦄, j ∈ s → v i 
   simp only [nodalWeight, eval_nodal]
 
 theorem nodal_erase_eq_nodal_div (hi : i ∈ s) :
-    nodal (s.erase i) v = nodal s v / (X - C (v i)) := by
-  rw [nodal_eq_mul_nodal_erase hi, MulDivCancelClass.mul_div_cancel_left₀ _ (X_sub_C_ne_zero _)]
+    nodal (s.erase i) v = EuclideanDomain.quotient (nodal s v) (X - C (v i)) (X_sub_C_ne_zero _) :=
+  EuclideanDomain.eq_div_of_mul_eq_right (X_sub_C_ne_zero _) (nodal_eq_mul_nodal_erase hi).symm
 
 theorem nodalWeight_eq_eval_derivative_nodal {hvi : ∀ ⦃j⦄, j ∈ s → v i = v j → i = j}
     (hi : i ∈ s) :
@@ -687,7 +687,8 @@ open Finset
 
 theorem basis_eq_prod_sub_inv_mul_nodal_div {hvi : ∀ ⦃j⦄, j ∈ s → v i = v j → i = j}
     (hi : i ∈ s) :
-    Lagrange.basis s v i hvi = C (nodalWeight s v i hvi) * (nodal s v / (X - C (v i))) := by
+    Lagrange.basis s v i hvi = C (nodalWeight s v i hvi) *
+      EuclideanDomain.quotient (nodal s v) (X - C (v i)) (X_sub_C_ne_zero _) := by
   rw [← nodal_erase_eq_nodal_div hi, Lagrange.basis, nodalWeight, nodal]
 
 theorem eval_basis_not_at_node {hvi : ∀ ⦃j⦄, j ∈ s → v i = v j → i = j} (hi : i ∈ s)
@@ -701,7 +702,8 @@ theorem eval_basis_not_at_node {hvi : ∀ ⦃j⦄, j ∈ s → v i = v j → i =
 
 theorem interpolate_eq_nodalWeight_mul_nodal_div_X_sub_C {hvs : Set.InjOn v s} :
     interpolate s v hvs r =
-      ∑ i : s, C (nodalWeight s v i (hvs i.2)) * (nodal s v / (X - C (v i))) * C (r i) :=
+      ∑ i : s, C (nodalWeight s v i (hvs i.2)) *
+        EuclideanDomain.quotient (nodal s v) (X - C (v i)) (X_sub_C_ne_zero _) * C (r i) :=
   sum_congr rfl fun j _ => by rw [mul_comm, basis_eq_prod_sub_inv_mul_nodal_div j.2]
 
 /-- This is the first barycentric form of the Lagrange interpolant. -/

@@ -86,10 +86,9 @@ lemma gammaSet_ne_zero {N r : ℕ} {a : Fin 2 → ZMod N} (v : gammaSet N r a)
 
 lemma finGcdMap_div {r : ℕ} [NeZero r] (v : Fin 2 → ℤ) (hv : finGcdMap v = r) :
     IsCoprime ((v / r) 0) ((v / r) 1) := by
-  rw [← hv]
-  apply isCoprime_div_gcd_div_gcd_of_gcd_ne_zero
-  have := NeZero.ne r
-  aesop
+  have hg : 0 < finGcdMap v := hv ▸ Nat.pos_of_ne_zero (NeZero.ne r)
+  rw [← hv, Int.isCoprime_iff_gcd_eq_one]
+  exact Int.gcd_ediv_gcd_ediv_gcd hg
 
 lemma finGcdMap_smul {r : ℕ} (a : ℤ) {v : Fin 2 → ℤ} (hv : finGcdMap v = r) :
     finGcdMap (a • v) = a.natAbs * r := by
