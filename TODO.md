@@ -4512,6 +4512,41 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `Mathlib.Tactic.Linter.OperatorFidelity`, followed by
   `#operator_fidelity with_proofs in Mathlib.Data.Nat.Factorization.Defs`.
 
+- [ ] **Expose the exact domain of extended nonnegative division.**
+  **Accepted design, pending implementation.** The ordinary `ENNReal` quotient is the continuous
+  extension of the positive finite quotient on the complement of `(0, 0)` and `(⊤, ⊤)`.
+  `ENNReal.Tendsto.div` gives continuity there. For any positive finite `c`, the pairs `(c * t, t)`
+  approach either excluded point as `t` approaches the corresponding endpoint, with quotient `c`.
+  Hence neither point has a unique limiting value.
+
+  - Elaborate `a / b` to `ENNReal.div a b h`, with `h` proving
+    `(a ≠ 0 ∨ b ≠ 0) ∧ (a ≠ ⊤ ∨ b ≠ ⊤)`. Use `a * b⁻¹` on this domain. In particular,
+    `a / 0 = ⊤` for `a ≠ 0` and `a / ⊤ = 0` for `a ≠ ⊤`. Prove agreement with
+    `Checked.div` for unit denominators.
+  - Expose `ENNReal.divInf a b = sInf {q | a ≤ b * q}` as a named total quotient, implemented
+    by `a * b⁻¹` with the zero-absorbing product. Both excluded pairs have value zero.
+    The ratio test `FormalMultilinearSeries.ofScalars_radius_eq_inv_of_tendsto_ENNReal` in
+    `Mathlib/Analysis/Analytic/OfScalars.lean` uses this convention for eventually zero
+    coefficients. See the lower product and reciprocal in
+    [Valverde-Albacete and Peláez-Moreno, Theorem 1 and Example 2](https://www.mdpi.com/1099-4300/21/8/780).
+  - Supply `IsQuantale ℝ≥0∞` from `ENNReal.mul_sSup` and `ENNReal.sSup_mul`. Use the existing
+    `Quantale.leftMulResiduation b a` (`b ⇨ₗ a`) in `Mathlib/Algebra/Order/Quantale.lean` for
+    `sSup {q | q * b ≤ a}`. Its adjunction holds for all operands and both excluded pairs have
+    value `⊤`. For example, `div_le_radius_compContinuousLinearMap` in
+    `Mathlib/Analysis/Analytic/ConvergenceRadius.lean` can give the exact infinite bound after
+    precomposition by the zero map even for a series of radius zero. See
+    [Bacci et al., Rational Lawvere Logic, §2 and Table 1](https://drops.dagstuhl.de/storage/00lipics/lipics-vol363-csl2026/html/LIPIcs.CSL.2026.3/LIPIcs.CSL.2026.3.html).
+
+  A scratch Lean check using a local `IsQuantale` instance verified the endpoint values,
+  agreement of the two extensions exactly on the ordinary domain, and continuity there.
+  Implement the slash selection, proof discharge, and checked delaboration in
+  `Mathlib/Lean/Elab/OperatorTree.lean`. Remove the ambient `DivInvMonoid` and `DivInvOneMonoid`
+  instances in `Mathlib/Basic/ENNReal/{Basic,Inv}.lean` and provide reciprocal and integer powers
+  independently of `Div`. Audit the affected callers for the intended division specification and
+  update the ordinary division contract in `FORK_DESIGN.md` in the same migration. Check that both
+  indeterminate quotients fail to elaborate, that the other boundary cases elaborate with evidence,
+  and that instance inference cannot recover ambient `Div` or `HDiv` on `ENNReal`.
+
 - [ ] **Restrict inverse operations in additive ordered groups with top to additive units.**
   In `Mathlib/Algebra/Order/AddGroupWithTop.lean`, replace the `SubNegMonoid` parent and axioms
   involving ambient negation with `isAddUnit_of_ne_top : a ≠ ⊤ → IsAddUnit a`. Derive
